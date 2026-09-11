@@ -14,7 +14,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FarmingEligibilitySection } from "@/components/calc/inheritance/FarmingEligibilitySection";
-import { FarmingDeductionDetailRow } from "@/components/calc/results/InheritanceTaxResultView";
+// 실렌더 컴포넌트를 직접 렌더한다 (IG-152) — 종전에는 한도 30억이 고정된 «복제본»을 봤다.
+import { FarmingDeductionDetailRowContent as FarmingDeductionDetailRow } from "@/components/calc/results/deduction-breakdown/FarmingDeductionDetailCard";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 
@@ -312,7 +313,9 @@ describe("[RD-UI] FarmingDeductionDetailRow — 5-way 분기 (F-6)", () => {
       cappedDeduction: 0,
     };
     render(<FarmingDeductionDetailRow detail={detail} />);
-    expect(screen.queryByText(/자격 미충족으로 공제 0원/)).not.toBeNull();
+    // 실렌더 문구는 「자격 미충족으로 공제 적용 불가」다 — 종전 단언 「공제 0원」은
+    // 화면에 없는 «복제본»의 문구였다 (IG-152).
+    expect(screen.queryByText(/자격 미충족으로 공제 적용 불가/)).not.toBeNull();
     expect(screen.queryByText(/8년 영농 미충족/)).not.toBeNull();
     expect(screen.queryByText(/결격소득/)).not.toBeNull();
   });

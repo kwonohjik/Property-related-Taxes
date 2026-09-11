@@ -69,25 +69,18 @@ function DeductionLimitContent({
       />
       {detail.legateeAmountNonHeir > 0 && (
         <DetailRow
-          label="(−) 상속인 외 유증액 (§24 ①1호)"
+          label="(−) 상속인 외 유증액 (§24 1호)"
           value={`− ${formatKRW(detail.legateeAmountNonHeir)}`}
           indent
           muted
           deduction
         />
       )}
+      {/* 같은 `heirWaiverAmount`를 라벨만 바꿔 «두 번» 차감하는 것처럼 그리던 행 하나를 제거했다
+          — 엔진은 이 값을 ceiling에서 한 번만 뺀다. 사용자에겐 산식과 한도가 안 맞아 보였다. (IG-077) */}
       {detail.heirWaiverAmount > 0 && (
         <DetailRow
-          label="(−) 선순위 상속포기 후순위 상속액 (§24 ②2호)"
-          value={`− ${formatKRW(detail.heirWaiverAmount)}`}
-          indent
-          muted
-          deduction
-        />
-      )}
-      {detail.heirWaiverAmount > 0 && (
-        <DetailRow
-          label="(−) 상속포기 후순위 상속인액 (§24 ①2호)"
+          label="(−) 선순위 상속인의 상속포기로 후순위가 받은 재산 (§24 2호)"
           value={`− ${formatKRW(detail.heirWaiverAmount)}`}
           indent
           muted
@@ -97,7 +90,7 @@ function DeductionLimitContent({
       {detail.totalPriorGiftAmount > 0 && (
         <>
           <DetailRow
-            label="사전증여 합산가액 (§24 ①3호)"
+            label="사전증여 합산가액 (§24 3호)"
             value={formatKRW(detail.totalPriorGiftAmount)}
             indent
             muted

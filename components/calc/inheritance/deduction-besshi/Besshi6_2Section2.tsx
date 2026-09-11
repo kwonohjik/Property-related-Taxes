@@ -10,12 +10,15 @@
  *  행3: ③10년이상(span7, rowspan2) | [√]해당(span11)
  *  행4: [√]해당안됨(span2) | ④예외유형(span7) | 빈(span2)  → + ③ rowspan2 점유
  *
- * 상속인별 표 (rowspan7 구조):
- *  헤더1: 상속인(rowspan7) | 성명(span3,rowspan2) | 주민번호(span2,rowspan2) | ⑤지분(span2,rowspan2)
- *         | 요건충족여부(span9) | ⑧충족지분(span2,rowspan2)
+ * 상속인별 표 (19열 · 라벨 밴드는 thead/tbody 각각):
+ *  ⚠️ rowspan은 **행 그룹(thead/tbody)을 넘지 못한다** — 종전 문서·구현의 「rowspan7」은
+ *     thead 2행만 덮어 tbody 전 행이 col1을 잃었다(헤더 19열 vs 본문 18열). (IG-039)
+ *  헤더1: 상속인(rowspan2) | 성명(span3,rowspan2) | 주민번호(span2,rowspan2) | ⑤지분(span2,rowspan2)
+ *         | 요건충족여부(span9) | ⑧충족지분(span2,rowspan2)          → 19열
  *  헤더2: ⑥10년이상동거(span2) | ⑦무주택자(span7)
- *  데이터행×4: 성명(span3)|주민번호(span2)|⑤(span2)|⑥(span2)|⑦(span7)|⑧(span2)
- *  ⑨계: span16 + 빈span2  (합계값은 빈span2 위치에 표시)
+ *  tbody 첫 행: 라벨 밴드(rowspan = minRows+1) + 성명(span3)|주민번호(span2)|⑤(span2)|⑥(span2)|⑦(span7)|⑧(span2) → 19열
+ *  이후 행: 밴드가 덮으므로 18열
+ *  ⑨계: span16 + 값span2 = 18열 (밴드가 덮는다)
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -172,8 +175,14 @@ export function Besshi6_2Section2({ data }: Props) {
         <thead>
           {/* 헤더1행 */}
           <tr>
-            {/* 상속인: col1=span1, rowspan7 */}
-            <th className={H} rowSpan={7}>
+            {/* 상속인 라벨 밴드 — col1.
+                ⚠️ HTML 표 모델에서 **rowspan은 행 그룹(thead/tbody/tfoot)을 넘지 못한다**.
+                종전 `rowSpan={7}`은 thead에 있으면서 tbody 5행까지 덮으려 했고, 실제로는
+                thead 2행만 덮어 **tbody 전 행이 col1을 잃었다**(헤더 19열 vs 본문 18열).
+                그 결과 인쇄·PDF 제출 서식에서 본문이 한 칸 왼쪽으로 밀려, 성명이 「상속인」
+                칸 아래에 오고 ⑧ 요건충족지분이 ⑦ 무주택자 칸에 걸렸다.
+                ⇒ 여기서는 헤더 2행만 덮고, tbody 첫 행에 별도 밴드 셀을 둔다. (IG-039) */}
+            <th className={H} rowSpan={2}>
               상속인
             </th>
             {/* 성명: col2-4=span3, rowspan2 */}
@@ -218,9 +227,12 @@ export function Besshi6_2Section2({ data }: Props) {
           </tr>
         </thead>
         <tbody>
-          {/* 데이터행 */}
+          {/* 데이터행 — 첫 행에 col1 라벨 밴드를 둔다(tbody 행도 19열이 되게).
+              행 수는 `minRows + 1`(데이터+패딩 + ⑨계)로 «파생»한다 — 하드코딩 7은
+              동거 상속인이 5명 이상이면 가정 자체가 어긋났다. */}
           {data.heirRows.map((row, i) => (
             <tr key={i} data-testid={`cohabit-besshi-heir-row-${i + 1}`}>
+              {i === 0 && <td className={H} rowSpan={minRows + 1} />}
               {/* 성명: col2-4=span3 */}
               <td className={V} colSpan={3}>
                 {row.name}
@@ -259,6 +271,10 @@ export function Besshi6_2Section2({ data }: Props) {
           {/* 패딩 행 (공식 4행 기준) */}
           {Array.from({ length: padCount }).map((_, i) => (
             <tr key={`pad-${i}`}>
+              {/* 상속인이 한 명도 없으면 밴드가 여기서 시작한다 */}
+              {data.heirRows.length === 0 && i === 0 && (
+                <td className={H} rowSpan={minRows + 1} />
+              )}
               <td className={V} colSpan={3}>&nbsp;</td>
               <td className={V} colSpan={2}>&nbsp;</td>
               <td className={A} colSpan={2}>&nbsp;</td>

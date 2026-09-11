@@ -49,8 +49,6 @@ import { useInheritanceResultDerived } from "./useInheritanceResultDerived";
 import { STEPS as INHERITANCE_STEPS } from "@/components/calc/inheritance/shared";
 // re-export 보존 — shared.tsx 에서 실제 구현
 export { Row, formatBillion, LawBadge } from "./deduction-breakdown/shared";
-// re-export 보존 — FarmingDeductionDetailRow (farming-section.test.tsx 사용)
-export { FarmingDeductionDetailRow } from "./deduction-breakdown/FarmingDeductionDetailRowExport";
 
 // ============================================================
 // 과세 요약 Row
@@ -132,6 +130,7 @@ export function InheritanceTaxResultView({
     estateItems,
     priorGifts,
     deathDate,
+    decedentType,
     installmentEnabled,
     paymentInKindEnabled,
     paymentInKindIneligibleAmount,
@@ -259,19 +258,31 @@ export function InheritanceTaxResultView({
            * 🔴 G-07 B1: 신고불성실가산세 — 「국세기본법」 §47의2·§47의3. **신고 단위 1회**다
            * (상속인별 안분 아님). `finalTax`(결정세액)는 불변이고 총 납부세액을 따로 낸다.
            */}
+          {/* 게이트를 «가산세 종류별»로 나눈다 (IG-070).
+              종전에는 두 행이 `underreportPenalty > 0` 하나에 함께 묶여 있어, 기한 내 정확히
+              신고했지만 납부만 늦은 경우(신고불성실 0 · 납부지연 >0) 요약이 «결정세액»에서
+              끝났다 — 사용자가 그 숫자를 실제 납부액으로 오인한다(별지9호 ㊳에 해당하는 값). */}
           {(result.underreportPenalty ?? 0) > 0 && (
-            <>
-              <SummaryRow
-                label="신고불성실가산세 (국세기본법 §47의2·§47의3)"
-                value={`+ ${formatKRW(result.underreportPenalty ?? 0)}`}
-                sub
-              />
-              <SummaryRow
-                label="총 납부세액 (결정세액 + 가산세)"
-                value={formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
-                highlight
-              />
-            </>
+            <SummaryRow
+              label="신고불성실가산세 (국세기본법 §47의2·§47의3)"
+              value={`+ ${formatKRW(result.underreportPenalty ?? 0)}`}
+              sub
+            />
+          )}
+          {(result.latePaymentPenalty ?? 0) > 0 && (
+            <SummaryRow
+              label="납부지연가산세 (국세기본법 §47의4)"
+              value={`+ ${formatKRW(result.latePaymentPenalty ?? 0)}`}
+              sub
+            />
+          )}
+          {((result.underreportPenalty ?? 0) > 0 ||
+            (result.latePaymentPenalty ?? 0) > 0) && (
+            <SummaryRow
+              label="총 납부세액 (결정세액 + 가산세)"
+              value={formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
+              highlight
+            />
           )}
         </div>
 

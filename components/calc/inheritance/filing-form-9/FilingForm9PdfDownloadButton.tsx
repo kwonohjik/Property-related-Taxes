@@ -44,6 +44,20 @@ interface Props {
   deathDate?: string;
   decedentName?: string;
   decedentResidentNumber?: string;
+  /**
+   * ㊶ 분납액 · ㊵ 물납액 (IG-052).
+   *
+   * 종전에는 Props에 이 둘이 «아예 없어» 부모가 값을 넘겨줄 수도 없었고(명시 prop 매핑 strip),
+   * 같은 어댑터를 5인자로만 불러 화면 별지9호에는 금액이 찍히는데 PDF에는 대시로 비어 나갔다.
+   * 제출용 서식 두 벌이 서로 다른 납부방법을 말하게 된다 — 「단일 어댑터로 dual-truth를
+   * 막는다」는 이 모듈의 전제가 깨진 지점이다.
+   *
+   * ⚠️ 8번째 인자 `decedentAddress`는 넘겨도 PDF가 달라지지 않는다 —
+   * `InheritanceFilingForm9PdfDocument`의 metaRow가 ⑩을 렌더하지 않기 때문이다.
+   * 그래서 Props에 추가하지 않는다(안 쓰는 prop을 만들지 않는다).
+   */
+  splitPaymentAmount?: number;
+  paymentInKindAmount?: number;
 }
 
 export function FilingForm9PdfDownloadButton({
@@ -52,10 +66,29 @@ export function FilingForm9PdfDownloadButton({
   deathDate,
   decedentName,
   decedentResidentNumber,
+  splitPaymentAmount,
+  paymentInKindAmount,
 }: Props) {
   const data = useMemo(
-    () => buildFilingForm9Data(result, heirs, deathDate, decedentName, decedentResidentNumber),
-    [result, heirs, deathDate, decedentName, decedentResidentNumber],
+    () =>
+      buildFilingForm9Data(
+        result,
+        heirs,
+        deathDate,
+        decedentName,
+        decedentResidentNumber,
+        splitPaymentAmount,
+        paymentInKindAmount,
+      ),
+    [
+      result,
+      heirs,
+      deathDate,
+      decedentName,
+      decedentResidentNumber,
+      splitPaymentAmount,
+      paymentInKindAmount,
+    ],
   );
   const document = useMemo(
     () => <InheritanceFilingForm9PdfDocument data={data} />,

@@ -132,12 +132,14 @@ export function FarmingDeductionDetailCard({ detail, triggerLabel, triggerValue 
 }
 
 // ============================================================
-// re-export — FarmingDeductionDetailRow 경로 보존
-// (farming-section.test.tsx 가 "@/components/calc/results/InheritanceTaxResultView"에서 import)
-// InheritanceTaxResultView.tsx 에서 re-export하므로 이 파일은 컨텐츠 공급만
+// 테스트 진입점 — «실제로 렌더되는» 본문 (IG-152)
+//
+// 종전에는 같은 이름의 **복제본**(FarmingDeductionDetailRowExport.tsx)이 따로 있었고
+// 영농 UI 테스트 12건이 전부 그 복제본만 렌더했다. 복제본은 한도를 30억으로 고정해,
+// 실렌더 카드의 연도별 한도(30억/15억/5억) 표시가 깨져도 테스트가 초록이었다.
+// 안전망이 «다른 컴포넌트»를 보고 있었던 셈이라 복제본과 re-export를 제거했다.
 // ============================================================
 
-/** @deprecated InheritanceTaxResultView re-export 사용 */
 export function FarmingDeductionDetailRowContent({
   detail,
 }: {

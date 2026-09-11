@@ -6,6 +6,7 @@
  * Row, LawBadge, InstallmentGuide — GiftTaxResultView.tsx에서 추출.
  */
 
+import { CURRENT_SURCHARGE_RATE } from "@/lib/tax-engine/data/installment-surcharge-rates";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -85,7 +86,10 @@ export function InstallmentGuide({
           <span className="font-medium">{formatKRW(result.annualPrincipal)}</span>
         </div>
         <p className="text-amber-600 dark:text-amber-400 mt-1">
-          ※ 이자 상당액(연 1.8% 기준) 별도 납부 — 세무사 확인 권장
+          {/* 가산율은 고시로 바뀐다 — 정본 테이블 상수를 쓴다(하드코딩 금지, IG-072).
+              종전 「연 1.8%」는 2020-03-13~2021-03-15 구간 값이라 현행(3.1%)의 약 절반이었고,
+              같은 사안을 안내하는 상속세 결과 화면과 서로 다른 가산율을 말하고 있었다. */}
+          ※ 이자 상당액(연 {(CURRENT_SURCHARGE_RATE * 100).toFixed(1)}% 기준) 별도 납부 — 세무사 확인 권장
         </p>
         <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-700 space-y-1">
           <p className="font-medium text-gray-700 dark:text-gray-200">납세담보 제공 (상증법 §71 ②)</p>

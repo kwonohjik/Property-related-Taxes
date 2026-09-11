@@ -340,6 +340,11 @@ export function GiftTaxForm() {
           giftAmount: pg.giftAmount,
           sourceCalculationId: pg.sourceCalculationId,
           donor: pg.donor,
+          // §47② 합산 판정 3키 — 부표 1 본문 A24 행을 엔진 판정 집합으로 좁히는 데 쓴다.
+          // 이 둘을 빠뜨리면 조특법 특례 회차·증여자 사망 회차가 본문에 남아
+          // 행 합과 ⑭·⑮가 어긋난다 (IG-073 · feedback_explicit_prop_mapping_strip).
+          specialTreatmentType: pg.specialTreatmentType,
+          donorDeceasedDate: pg.donorDeceasedDate,
           // 부표 1 표시 메타 (2026-05-20) — 결과 화면 ②/③ 컬럼 표시용
           propertyCategory: pg.propertyCategory,
           propertyName: pg.propertyName,
