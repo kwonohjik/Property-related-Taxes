@@ -258,6 +258,13 @@ export function normalizeAcquisitionForm(
       (legacy.deemedMajorNewShareRatio as string) ?? INITIAL_FORM.deemedMajorNewShareRatio,
     deemedMajorShareholderDate:
       (legacy.deemedMajorShareholderDate as string) ?? INITIAL_FORM.deemedMajorShareholderDate,
+    // §15② 단서 물건별 구분 (2026-09-12 신규) — 기존 저장 이력엔 없다. 반드시 기본값으로 내려앉힌다.
+    deemedMajorUseBuckets: typeof legacy.deemedMajorUseBuckets === "boolean"
+      ? (legacy.deemedMajorUseBuckets as boolean)
+      : INITIAL_FORM.deemedMajorUseBuckets,
+    deemedMajorAssetBuckets: Array.isArray(legacy.deemedMajorAssetBuckets)
+      ? (legacy.deemedMajorAssetBuckets as FormState["deemedMajorAssetBuckets"])
+      : INITIAL_FORM.deemedMajorAssetBuckets,
 
     // 간주취득 — 지목변경
     deemedLandPrevCategory:

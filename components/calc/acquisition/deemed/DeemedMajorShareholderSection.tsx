@@ -9,9 +9,14 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import {
+  deemedProvisoRate,
+  provisoFromLuxuryFlag,
+} from "@/lib/tax-engine/acquisition-deemed-proviso";
 import { assessMajorShareholder } from "@/lib/tax-engine/acquisition-deemed";
-import type { FormState } from "../shared";
+import { DeemedProvisoCard } from "./DeemedProvisoCard";
+import { DeemedMajorAssetBuckets } from "./DeemedMajorAssetBuckets";
+import type { DeemedAssetBucketRow, FormState } from "../shared";
 
 interface Props {
   form: FormState;
@@ -22,22 +27,24 @@ function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
 }
 
-// 과점주주 간주취득 세율 — 엔진 단일 진실 (2%)
-const DEEMED_RATE = getBasicRate("building", "deemed_major_shareholder", 0).rate;
-const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
-
 export function DeemedMajorShareholderSection({ form, set }: Props) {
   const isListed = form.deemedMajorIsListed ?? false;
   const isFounding = form.deemedMajorIsFoundingShare ?? false;
   /** 비과세 확정 케이스 — 상장법인 또는 설립 시 취득 (§7⑤) */
   const isExemptCase = isListed || isFounding;
 
+  /** §15② 단서 — 물건별 구분 입력 모드 (법인이 사치성 물건과 일반 물건을 함께 보유) */
+  const useBuckets = form.deemedMajorUseBuckets ?? false;
+  const bucketRows = form.deemedMajorAssetBuckets ?? [];
+
   // 과세 미리보기 계산 — 엔진(assessMajorShareholder) 단일 진실 재사용.
   // 폼은 지분율을 퍼센트(0~100)로, 엔진은 소수(0~1)로 다루므로 ÷100 변환.
   const corpVal = parseAmount(form.deemedMajorCorporateAssetValue ?? "") ?? 0;
   const prevR   = parseFloat(form.deemedMajorPrevShareRatio ?? "0") || 0;
   const newR    = parseFloat(form.deemedMajorNewShareRatio  ?? "0") || 0;
-  const msh = !isExemptCase && corpVal > 0
+  // ⚠️ 금액과 무관하게 지분율 판정을 돌린다 — 버킷 모드에서는 단일 금액 칸이 비어 있어도
+  //    과세 지분율(최초 과점주주는 취득 후 전체)이 필요하다.
+  const msh = !isExemptCase
     ? assessMajorShareholder({
         corporateAssetValue: corpVal,
         prevShareRatio: prevR / 100,
@@ -48,9 +55,17 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
     : undefined;
   // 최초 과점주주(비과점→과점)는 취득 후 전체 지분율, 이미 과점주주면 증가분만 과세
   const isFirstMajor = prevR <= 50 && newR > 50;
-  const taxableRatioPct = (msh?.taxableRatio ?? 0) * 100;
+  const taxableRatio = msh?.taxableRatio ?? 0;
+  const taxableRatioPct = taxableRatio * 100;
   const deemedBase = msh?.deemedTaxBase ?? 0;
-  const showPreview = msh?.isSubjectToTax === true;
+  const showPreview = msh?.isSubjectToTax === true && corpVal > 0 && !useBuckets;
+
+  /**
+   * 세율 — 엔진 단일 진실(`deemedProvisoRate`). §15② 본문 2%, 단서(§13⑤ 해당) 10%.
+   * 버킷 모드에서는 행마다 세율이 달라 여기서 단일 세율을 쓰지 않는다.
+   */
+  const deemedRate = deemedProvisoRate(provisoFromLuxuryFlag(form.isLuxuryProperty));
+  const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
     <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
@@ -106,19 +121,26 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         </div>
       </ToggleCard>
 
-      {/* 법인 보유 자산 시가표준액 */}
-      <div>
-        <CurrencyInput
-          label="법인 보유 자산 시가표준액 합계"
-          value={form.deemedMajorCorporateAssetValue ?? ""}
-          onChange={(v) => set("deemedMajorCorporateAssetValue", v)}
-          placeholder="금액 입력 (원)"
-          disabled={isExemptCase}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          법인이 보유한 토지·건물 등 과세대상 자산의 시가표준액 합계 (§7⑤ 본문)
-        </p>
-      </div>
+      {/*
+        법인 보유 부동산등 장부상 총가액 (§10의6④)
+        🔴 종전 라벨은 「시가표준액 합계」였으나 법문은 「결산서와 그 밖의 장부 등에 따른
+           그 부동산등의 총가액」이다. 조심 1998-0634도 「법인 장부가액」으로 과세했다.
+        버킷 모드에서는 합계가 버킷에서 나오므로 이 칸을 감춘다(두 진실 방지).
+      */}
+      {!useBuckets && (
+        <div>
+          <CurrencyInput
+            label="법인 보유 부동산등 장부상 총가액"
+            value={form.deemedMajorCorporateAssetValue ?? ""}
+            onChange={(v) => set("deemedMajorCorporateAssetValue", v)}
+            placeholder="금액 입력 (원)"
+            disabled={isExemptCase}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            법인의 결산서·장부상 부동산등 총가액 (지방세법 §10의6④ — 시가표준액 아님)
+          </p>
+        </div>
+      )}
 
       {/* 취득 전 지분율 */}
       <div>
@@ -165,6 +187,47 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         </p>
       </div>
 
+      {/* §15② 단서 — 물건별 구분 입력 모드 */}
+      {!isExemptCase && (
+        <ToggleCard
+          tone="amber"
+          title="물건별로 구분해 입력 (§15② 단서)"
+          description="법인이 사치성 재산(골프장·고급오락장 등)과 일반 물건을 함께 보유하면 물건마다 세율이 갈립니다. 전부 10% 또는 전부 2%로는 둘 다 틀립니다."
+          checked={useBuckets}
+          onCheckedChange={(v) => {
+            set("deemedMajorUseBuckets", v);
+            if (v) {
+              // 단일 토글과 이중 적용되지 않도록 최상위 사치성 플래그를 끈다(④도 strip 한다)
+              set("isLuxuryProperty", false);
+              set("luxuryType", "");
+              if (bucketRows.length === 0) {
+                set("deemedMajorAssetBuckets", [
+                  { id: crypto.randomUUID(), label: "", bookValue: "", proviso: "none", luxuryType: "" },
+                ] as DeemedAssetBucketRow[]);
+              }
+            }
+          }}
+          data-testid="deemed-bucket-mode"
+        >
+          <DeemedMajorAssetBuckets
+            rows={bucketRows}
+            taxableRatio={taxableRatio}
+            onChange={(rows) => set("deemedMajorAssetBuckets", rows)}
+          />
+        </ToggleCard>
+      )}
+
+      {/* §15② 단서 — 사치성 재산(§13⑤) 해당 여부 (단일 물건 입력일 때) */}
+      {!useBuckets && (
+        <DeemedProvisoCard
+          form={form}
+          set={set}
+          context="major_shareholder"
+          disabled={isExemptCase}
+          disabledReason="비과세 케이스에서는 세율 판정이 필요 없습니다."
+        />
+      )}
+
       {/* 과세 미리보기 */}
       {showPreview && (
         <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
@@ -180,7 +243,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
             간주취득 과세표준 = {formatKRW(corpVal)} × {taxableRatioPct.toFixed(2)}% = {formatKRW(deemedBase)}
           </p>
           <p className="font-medium text-amber-800">
-            예상 취득세 = {formatKRW(deemedBase)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(deemedBase * DEEMED_RATE))}
+            예상 취득세 = {formatKRW(deemedBase)} × {deemedRateLabel} = {formatKRW(Math.floor(deemedBase * deemedRate))}
           </p>
           <p className="text-xs text-amber-600">* 농어촌특별세·지방교육세 별도</p>
         </div>

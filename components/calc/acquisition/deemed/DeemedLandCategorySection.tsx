@@ -7,7 +7,11 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DateInput } from "@/components/ui/date-input";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import {
+  deemedProvisoRate,
+  provisoFromLuxuryFlag,
+} from "@/lib/tax-engine/acquisition-deemed-proviso";
+import { DeemedProvisoCard } from "./DeemedProvisoCard";
 import { selectCls } from "../shared";
 import { LAND_CATEGORY_OPTIONS } from "../shared";
 import type { FormState } from "../shared";
@@ -21,15 +25,19 @@ function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
 }
 
-// 지목변경 간주취득 세율 — 엔진 단일 진실 (2%)
-const DEEMED_RATE = getBasicRate("land", "deemed_land_category", 0).rate;
-const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
-
 export function DeemedLandCategorySection({ form, set }: Props) {
   const prevSv = parseAmount(form.deemedLandPrevStandardValue ?? "") ?? 0;
   const newSv  = parseAmount(form.deemedLandNewStandardValue  ?? "") ?? 0;
   const diff   = newSv - prevSv;
   const showPreview = prevSv > 0 || newSv > 0;
+
+  /**
+   * 세율 — 엔진 단일 진실(`deemedProvisoRate`). §15② 본문 2%, 단서(§13⑤ 해당) 10%.
+   * 종전에는 `getBasicRate(...)` 상수라 사치성을 켜도 미리보기가 2%로 굳어 결과와 갈렸다.
+   */
+  const proviso = provisoFromLuxuryFlag(form.isLuxuryProperty);
+  const deemedRate = deemedProvisoRate(proviso);
+  const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
     <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
@@ -109,6 +117,9 @@ export function DeemedLandCategorySection({ form, set }: Props) {
         />
       </div>
 
+      {/* §15② 단서 — 사치성 재산(§13⑤) 해당 여부 */}
+      <DeemedProvisoCard form={form} set={set} context="land_category" />
+
       {/* 과세 미리보기 */}
       {showPreview && (
         <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-sm space-y-1">
@@ -119,7 +130,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
                 과세표준 = 변경 후 {formatKRW(newSv)} - 변경 전 {formatKRW(prevSv)} = {formatKRW(diff)}
               </p>
               <p className="font-medium text-sky-800">
-                예상 취득세 = {formatKRW(diff)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(diff * DEEMED_RATE))}
+                예상 취득세 = {formatKRW(diff)} × {deemedRateLabel} = {formatKRW(Math.floor(diff * deemedRate))}
               </p>
             </>
           ) : (

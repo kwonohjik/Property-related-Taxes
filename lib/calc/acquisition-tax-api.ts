@@ -274,8 +274,21 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     }
   }
 
-  // ─── 사치성 재산 ───
-  if (form.isLuxuryProperty) {
+  /**
+   * ─── 사치성 재산 ───
+   *
+   * 간주취득에서는 이 플래그가 **§15② 단서**(취득물건이 §13⑤ 해당 → 중과기준세율 ×500%)의
+   * 입력이다. §13⑤ 산식(표준세율 + 중과기준세율×400%)이 간주취득에서 대수적으로 같은
+   * 10%에 착지하므로 배선은 하나로 족하다 — `acquisition-deemed-proviso.ts` 참조.
+   *
+   * ⚠️ 과점주주 **물건별 구분 모드**에서는 행마다 `proviso`를 들고 있으므로 최상위 플래그를
+   *    **strip** 한다. 안 하면 버킷 세액과 최상위 사치성 중과가 이중 적용된다.
+   */
+  const deemedMajorBucketMode =
+    form.acquisitionCause === "deemed_major_shareholder" &&
+    form.deemedMajorUseBuckets === true;
+
+  if (form.isLuxuryProperty && !deemedMajorBucketMode) {
     body.isLuxuryProperty = true;
     const lt = strOrUndef(form.luxuryType);
     if (lt) body.luxuryType = lt;
@@ -399,6 +412,22 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
   const isDeemedReno  = form.acquisitionCause === "deemed_renovation";
 
   if (isDeemedMajor) {
+    /**
+     * 물건별 구분 행 → 엔진 `assetBuckets`.
+     * 금액이 비어 있는 행은 보내지 않는다(⑧ validate가 이미 차단하지만, 전송 단계에서도
+     * 0원 버킷이 섞이지 않게 한다 — 0원 버킷은 세액엔 영향이 없지만 결과 카드에 빈 행을 만든다).
+     */
+    const bucketRows = deemedMajorBucketMode
+      ? (form.deemedMajorAssetBuckets ?? [])
+          .map((r) => ({
+            ...(r.label.trim() ? { label: r.label.trim() } : {}),
+            bookValue: parseAmount(r.bookValue) ?? 0,
+            proviso: r.proviso,
+            ...(r.proviso === "luxury" && r.luxuryType ? { luxuryType: r.luxuryType } : {}),
+          }))
+          .filter((r) => r.bookValue > 0)
+      : [];
+
     const corporateAssetValue = parseAmount(form.deemedMajorCorporateAssetValue ?? "");
     const prevRatio = parseFloatOrUndef(form.deemedMajorPrevShareRatio ?? "");
     const newRatio  = parseFloatOrUndef(form.deemedMajorNewShareRatio ?? "");
@@ -412,6 +441,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
         isListed: form.deemedMajorIsListed ?? false,
         // 법인 설립 시 발행 주식 취득 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함)
         ...(form.deemedMajorIsFoundingShare ? { isFoundingShare: true } : {}),
+        // §15② 단서 물건별 내역 — 구분 모드에서만. 엔진이 합계를 총가액으로 삼는다.
+        ...(bucketRows.length > 0 ? { assetBuckets: bucketRows } : {}),
       },
     };
 

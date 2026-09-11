@@ -17,6 +17,11 @@ import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 import type { PropertyObjectType, AcquisitionCause } from "@/lib/tax-engine/types/acquisition.types";
 import type { FormState } from "./shared";
 import { STEPS, isDeemedAcquisitionCause } from "./shared";
+import {
+  deemedProvisoRate,
+  provisoFromLuxuryFlag,
+} from "@/lib/tax-engine/acquisition-deemed-proviso";
+import { assessMajorShareholder } from "@/lib/tax-engine/acquisition-deemed";
 
 // ============================================================
 // 예상 세율 라벨 — 세율·임계는 전부 엔진 export 단일 진실
@@ -58,12 +63,14 @@ function estimateNonHousingRateLabel(form: FormState, acqValue: number): string 
 }
 
 /** 간주취득 세율 — 엔진 getBasicRate 단일 진실 (개수 2.8%·지목변경/과점주주 2%) */
+/**
+ * 간주취득 세율 — 「지방세법」 §15②: 본문 중과기준세율 2%, 단서(취득물건이 §13⑤) 10%.
+ *
+ * 🔴 종전에는 `getBasicRate(...)`만 불러 **사치성을 켜도 2%로 굳었다** — 결과 화면과 갈렸다.
+ *    버킷 모드는 행마다 세율이 달라 여기서 단일 세율을 쓰지 않는다(호출부가 합계로 낸다).
+ */
 function deemedBasicRate(form: FormState): number {
-  return getBasicRate(
-    form.propertyType as PropertyObjectType,
-    form.acquisitionCause as AcquisitionCause,
-    0,
-  ).rate;
+  return deemedProvisoRate(provisoFromLuxuryFlag(form.isLuxuryProperty));
 }
 
 // ============================================================
@@ -85,8 +92,10 @@ export interface AcquisitionSummary {
   isInstallment?: boolean;
   /** 연부 회차 수 */
   installmentCount?: number;
-  /** 간주취득 기본세율 (엔진 getBasicRate — 개수 2.8%·지목변경/과점주주 2%) */
+  /** 간주취득 세율 (§15② — 본문 2% / 단서 10%). 물건별 구분 모드에서는 undefined */
   deemedRate?: number;
+  /** 물건별 구분(§15② 단서) 모드의 취득세 합계 — 행마다 세율이 달라 단일 세율이 없다 */
+  deemedTax?: number;
 }
 
 /**
@@ -119,7 +128,39 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const corpVal = parseAmount(form.deemedMajorCorporateAssetValue ?? "") ?? 0;
     const prevR   = parseFloat(form.deemedMajorPrevShareRatio ?? "0") / 100;
     const newR    = parseFloat(form.deemedMajorNewShareRatio  ?? "0") / 100;
-    const taxableRatio = Math.max(0, newR - prevR);
+    /**
+     * 🔴 과세 지분율은 **엔진 leaf**로 낸다. 종전 `Math.max(0, newR − prevR)`는 손으로 적은
+     *    사본이라 §7⑤의 「**최초 과점주주는 취득 후 전체 지분율**」 규칙이 빠져 있었다
+     *    (30%→60%이면 엔진 60% vs 사이드바 30% — 과세표준이 절반으로 표시됐다).
+     */
+    const taxableRatio = assessMajorShareholder({
+      corporateAssetValue: corpVal,
+      prevShareRatio: prevR,
+      newShareRatio: newR,
+      isListed: false,
+      isFoundingShare: false,
+    }).taxableRatio;
+
+    // §15② 단서 물건별 구분 — 버킷 합계가 과세표준·세액이 된다(단일 세율 없음)
+    if (form.deemedMajorUseBuckets) {
+      const rows = form.deemedMajorAssetBuckets ?? [];
+      let base = 0;
+      let tax = 0;
+      for (const r of rows) {
+        const b = Math.floor((parseAmount(r.bookValue) ?? 0) * taxableRatio);
+        base += b;
+        tax += Math.floor(b * deemedProvisoRate(r.proviso));
+      }
+      return {
+        acquisitionValue: null, standardValue: null, houseCountAfter: null,
+        isRegulated: false, isCorporation: false,
+        estimatedBaseRate: base > 0 ? `물건별 ${rows.length}건 (§15② 단서)` : null,
+        deemedType: "과점주주",
+        deemedTaxBase: base > 0 ? base : null,
+        deemedTax: tax > 0 ? tax : undefined,
+      };
+    }
+
     const deemedBase = corpVal > 0 && taxableRatio > 0
       ? Math.floor(corpVal * taxableRatio)
       : null;
@@ -149,7 +190,8 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     const prevSv = parseAmount(form.deemedRenovationPrevStandardValue ?? "") ?? 0;
     const newSv  = parseAmount(form.deemedRenovationNewStandardValue  ?? "") ?? 0;
     const deemedBase = newSv > prevSv ? newSv - prevSv : null;
-    // 건물 개수는 원시취득 2.8% (§11①3호) — 지목변경·과점주주 2%와 상이
+    // 개수도 §15②1호로 지목변경·과점주주와 동일한 중과기준세율 2%다
+    // (2.8%는 **면적이 증가하는** 개수의 증가분에만 §11③으로 붙는다 — anchor AT-DEEMED-R01)
     const rate = deemedBasicRate(form);
     return {
       acquisitionValue: null, standardValue: null, houseCountAfter: null,
@@ -273,6 +315,10 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     form.deemedLandNewStandardValue,
     form.deemedRenovationPrevStandardValue,
     form.deemedRenovationNewStandardValue,
+    // §15② 단서 — 사치성 여부·물건별 구분이 세율·합계를 바꾼다. 빠뜨리면 사이드바가 stale 된다.
+    form.isLuxuryProperty,
+    form.deemedMajorUseBuckets,
+    form.deemedMajorAssetBuckets,
     form.isInstallmentAcquisition,
     form.installments,
     form.installmentTotalContractPrice,
@@ -300,12 +346,15 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
       summary.deemedTaxBase !== null &&
       summary.deemedTaxBase !== undefined &&
       summary.deemedTaxBase > 0 &&
-      summary.deemedRate !== undefined
+      (summary.deemedRate !== undefined || summary.deemedTax !== undefined)
     ) {
       summaryItems.push({ label: "과세표준 (차액)", value: summary.deemedTaxBase });
       summaryItems.push({
-        label: `예상 취득세 (${pct(summary.deemedRate)})`,
-        value: Math.floor(summary.deemedTaxBase * summary.deemedRate),
+        // 물건별 구분 모드는 행마다 세율이 갈려 단일 세율을 못 적는다
+        label: summary.deemedRate !== undefined
+          ? `예상 취득세 (${pct(summary.deemedRate)})`
+          : "예상 취득세 (물건별)",
+        value: summary.deemedTax ?? Math.floor(summary.deemedTaxBase * (summary.deemedRate ?? 0)),
         highlight: true,
       });
     }
