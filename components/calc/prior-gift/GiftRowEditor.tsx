@@ -110,6 +110,11 @@ export function GiftRowEditor({
         corporateGiftComputedTax: tax > 0 ? tax : undefined,
         giftTaxPaid: 0,
         giftTaxBase: undefined,
+        // 값과 «모드 플래그»를 항상 같은 층에서 정리한다 (IG-065).
+        // GiftTaxBaseModeBlock은 `showIsHeir && !isCorporate` 게이트라 이 순간
+        // 언마운트되는데, 플래그만 남으면 「직접 입력 모드: 과세표준을 입력하세요」로
+        // 차단되면서 그 입력칸도 모드 라디오도 화면에 없다.
+        priorGiftTaxBaseInputMode: undefined,
       };
     }
     return { giftTaxPaid: tax };
@@ -157,7 +162,11 @@ export function GiftRowEditor({
       beneficiaryType: deriveBeneficiaryTypeFromHeir(selectedHeir),
       doneeRelation: deriveDoneeRelationFromHeir(selectedHeir.relation),
     };
-    set({ ...corePatch, ...computeTaxPatch({ ...gift, ...corePatch }) });
+    set({
+      ...corePatch,
+      ...marriageBirthCleanup(corePatch.doneeRelation),
+      ...computeTaxPatch({ ...gift, ...corePatch }),
+    });
   }
 
   // 증여재산가액 onChange — 가액 반영 후 자동 세액 재계산 (단일 set)
@@ -173,9 +182,28 @@ export function GiftRowEditor({
     });
   }
 
+  /**
+   * 게이트가 닫힐 때 함께 정리해야 하는 값 (IG-064).
+   *
+   * §53의2 입력 카드는 `isInheritancePriorGiftMarriageBirthEligible(doneeRelation)` 게이트
+   * 안에만 있다. 관계를 배우자·수유자·영리법인으로 바꾸면 카드만 언마운트되고 값은 store에
+   * 남아, validate·Zod가 「§53의2는 …직계비속에만 적용됩니다」로 계산을 차단하는데
+   * 그 값을 지울 입력칸이 화면에 없다.
+   * §30 라디오가 priorSpecialTaxPaid를 정리하는 같은 파일의 형제 관례와 동형이다.
+   */
+  function marriageBirthCleanup(rel: DonorRelation | undefined): Partial<PriorGift> {
+    return isInheritancePriorGiftMarriageBirthEligible(rel)
+      ? {}
+      : { marriageBirthDeduction: undefined };
+  }
+
   // 수동 경로 관계 onChange — doneeRelation 반영 후 자동 세액 재계산 (P6 경로2)
   function handleManualRelationChange(rel: DonorRelation | undefined) {
-    set({ doneeRelation: rel, ...computeTaxPatch({ ...gift, doneeRelation: rel }) });
+    set({
+      doneeRelation: rel,
+      ...marriageBirthCleanup(rel),
+      ...computeTaxPatch({ ...gift, doneeRelation: rel }),
+    });
   }
 
   // 세액 입력란 수동 수정 — userTouchedTax 플래그 set 후 자동 덮어쓰기 차단
@@ -257,7 +285,15 @@ export function GiftRowEditor({
               const donor = (e.target.value || undefined) as
                 | GiftDonorRelation
                 | undefined;
-              set({ donor, ...computeBaseTaxPatch({ ...gift, donor }) });
+              // 증여자 사망 ToggleCard는 `showGiftPhaseA && gift.donor` 게이트 안에 있다.
+              // 증여자를 「선택」으로 되돌리면 카드가 언마운트되는데 종전엔 `donorDeceasedDate`가
+              // `""`로 남아 서버 Zod가 「증여자 사망일을 입력하세요」로 400을 냈다 —
+              // 그 날짜를 넣거나 토글을 끌 UI가 화면에 없는 상태로. (IG-139)
+              set({
+                donor,
+                ...(donor ? {} : { donorDeceasedDate: undefined }),
+                ...computeBaseTaxPatch({ ...gift, donor }),
+              });
             }}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

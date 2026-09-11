@@ -182,9 +182,18 @@ function ManualChip({
 
   const handleClick = () => {
     if (chipKey === "casualtyLoss") {
-      // casualtyLoss는 단일 진실 casualtyLossEnabled 직접 토글
+      // casualtyLoss는 «계산 축»이 casualtyLossEnabled 단일 진실이다.
+      // override는 계산에 안 쓰이고 «표시 축»으로만 쓴다(isManualItemActive는 casualtyLoss에서
+      // override를 보지 않는다) — 칩을 끄기 전까지 카드를 붙잡아 두어, 카드 안 스위치를
+      // OFF로 내렸을 때 카드가 스스로 사라지지 않게 한다. (IG-112)
       const willBeActive = !form.casualtyLossEnabled;
-      set({ casualtyLossEnabled: willBeActive });
+      set({
+        casualtyLossEnabled: willBeActive,
+        deductionChecklistOverrides: {
+          ...form.deductionChecklistOverrides,
+          casualtyLoss: willBeActive,
+        },
+      });
       onToggle?.(chipKey, willBeActive);
       return;
     }

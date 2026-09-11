@@ -102,8 +102,19 @@ export function PreIpoListingToggle({
         preparationType: "exchange_listing", // factory 기본 (E 3중 일치)
       });
     } else if (isOn) {
+      // 폐기 확인 Dialog 본문이 폐기 대상으로 「공모가격·신고일·상장일」을 명시하는데
+      // 종전 게이트는 공모가격·상장일만 봤다 — 준비 유형을 §63②2호로 바꾸고 신고일만
+      // 고친 사용자는 경고 없이 입력을 잃었다. 신고일은 ON 시 evaluationDate로 seed되므로
+      // 「seed와 다른가」로 판정한다. (IG-138)
+      const filingDateTouched =
+        value?.securitiesFilingDate != null &&
+        (evaluationDate == null ||
+          value.securitiesFilingDate.getTime() !== evaluationDate.getTime());
       const hasData =
-        (value?.publicOfferingPrice ?? 0) > 0 || !!value?.listingDate;
+        (value?.publicOfferingPrice ?? 0) > 0 ||
+        !!value?.listingDate ||
+        (value != null && value.preparationType !== "exchange_listing") ||
+        filingDateTouched;
       if (hasData) setDiscardOpen(true);
       else onChange(undefined);
     }
