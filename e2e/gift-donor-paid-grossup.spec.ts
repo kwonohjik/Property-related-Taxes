@@ -90,15 +90,18 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
 
     // 흐름 표시 확인 — 신규 라벨 (부분 대납 확장 후)
     await expect(page.getByText(/증여자 대납분 \(총세액 − 수증자 납부\)/)).toBeVisible();
-    await expect(page.getByText(/gross-up 후 최종 과세표준/)).toBeVisible();
+    // 대장 IG-069 — 「최종 과세표준」이 아니다. grossedUpNetGift는 §53 증여재산공제를
+    // 차감하기 «전» 합산 과세가액이고, 엔진 타입 주석이 과세표준임을 명시적으로 부정한다
+    // (inheritance-gift.types.ts:731-736). 같은 카드 ①행이 이미 「과세가액」이라 부른다.
+    await expect(page.getByText(/gross-up 후 증여세 과세가액/)).toBeVisible();
     await expect(page.getByText(/원본 증여세 과세가액/)).toBeVisible();
 
     // 반복 횟수 표시 (수렴 비교용 줄)
     await expect(page.getByText(/수렴 비교용, 반복/)).toBeVisible();
 
-    // 흐름 식 표시 — 증여자 대납분 라벨 + 최종 과표
+    // 흐름 식 표시 — 증여자 대납분 라벨 + 과세가액 (IG-069: 「최종 과표」가 아니다)
     await expect(page.getByText(/\(증여자 대납분\)/)).toBeVisible();
-    await expect(page.getByText(/\(최종 과표\)/)).toBeVisible();
+    await expect(page.getByText(/\(과세가액\)/)).toBeVisible();
   });
 
   test("E-2: 대납 ON + 연대납세의무 ON → gross-up 미적용 amber 안내 노출", async ({
@@ -236,11 +239,11 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
     await expect(page.getByText("총 결정세액 (수렴값)")).toBeVisible();
     await expect(page.getByText("수증자 본인 납부")).toBeVisible();
     await expect(page.getByText("증여자 대납분 (총세액 − 수증자 납부)")).toBeVisible();
-    await expect(page.getByText("gross-up 후 최종 과세표준")).toBeVisible();
+    await expect(page.getByText("gross-up 후 증여세 과세가액")).toBeVisible();
 
     // 흐름행 — 증여자 대납분 라벨 확인
     await expect(page.getByText(/\(증여자 대납분\)/)).toBeVisible();
-    await expect(page.getByText(/\(최종 과표\)/)).toBeVisible();
+    await expect(page.getByText(/\(과세가액\)/)).toBeVisible();
   });
 
   test("E-5: 수증자 납부액 ≥ 총세액 → 증여자 대납분 없음 안내 노출", async ({ page }) => {

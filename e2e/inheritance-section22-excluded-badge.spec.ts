@@ -48,7 +48,10 @@ async function gotoStep1WithListedStock(page: Page) {
   await page.getByText("상장주식", { exact: true }).click();
 
   // 최소 평가액 입력: 주당 평균가 100,000 × 수량 100 = 10,000,000 (값 커밋 검증)
-  await fillAndVerify(page.getByPlaceholder("주당 순손익 입력 (원)"), "100000");
+  // 셀렉터는 testid 축을 쓴다 — 종전의 `getByPlaceholder("주당 순손익 입력 (원)")`는
+  // 그 placeholder 자체가 «틀린 문구»였고(라벨은 「전후 2개월 종가 단순평균」), 대장 IG-129로
+  // 제거되면서 이 spec이 깨졌다. 저장소 관례는 testid다(gift-stock-burdened-debt 등 6 spec).
+  await fillAndVerify(page.getByTestId("ls-avg-price"), "100000");
   await fillAndVerify(page.getByPlaceholder("주식 수 입력"), "100");
 }
 

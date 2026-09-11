@@ -63,9 +63,11 @@ test.describe("물납 (§73)", () => {
     // 물납 안내 카드 — 요건 충족 + 허용한도 + 충당순서
     await expect(page.getByText("물납 안내 (상증법 §73)")).toBeVisible();
     await expect(page.getByText("물납 신청 가능")).toBeVisible();
-    await expect(page.getByText("물납 허용한도 (§73①, 적은 금액)")).toBeVisible();
+    // 대장 IG-151 — 법 §73은 ②까지뿐이라 한도(§73①)·충당순서(§74②)는 «상증령»이다.
+    // 법 §74②는 문화유산 징수유예분 즉시징수로 뜻이 전혀 다르다.
+    await expect(page.getByText("물납 허용한도 (상증령 §73①, 적은 금액)")).toBeVisible();
     await expect(
-      page.getByText("충당순서 (§74②, 정당사유 없는 한)"),
+      page.getByText("충당순서 (상증령 §74②, 정당사유 없는 한)"),
     ).toBeVisible();
   });
 

@@ -61,7 +61,9 @@ test.describe("장례비 식대/봉안 별도 입력 UI", () => {
 
       // Step2(비과세·장례비) 진입 확인
       await expect(
-        page.getByText("장례비 (§14①3호)"),
+        // 대장 IG-142 — §14①은 1호 공과금·2호 «장례비용»·3호 채무다. 3호 인용은
+        // 저장소 안에서도 소수였다(heir-allocation-summary.ts:248은 이미 2호였다).
+        page.getByText("장례비 (§14①2호)"),
       ).toBeVisible({ timeout: 10_000 });
 
       // 신규: "일반 장례비(식대·제수 등)" 텍스트 노출

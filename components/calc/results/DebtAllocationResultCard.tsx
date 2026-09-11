@@ -5,7 +5,7 @@
  *
  * 표시:
  *  ① 카테고리별 입력 합계 (financial·tax·personal·funeral) — §5.2
- *  ② 장례비 한도 적용 결과 (§14①3호) — §5.3
+ *  ② 장례비 한도 적용 결과 (§14①2호 · 한도는 §14③ 위임을 받은 상증령 §9②) — §5.3
  *  ③ 상속인별 채무·공과·장례비 분담 표 — §5.4
  *
  * 진입 조건: `result.heirAllocationResult !== undefined` AND `debtItems !== undefined`.
