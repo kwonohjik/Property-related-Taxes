@@ -59,7 +59,9 @@ export function calcLandStandardPropertyTax(kind: LandKind, propertyTaxBase: num
  *
  * 산식과 floor 횟수는 종전 그대로다. 다만 부동소수 곱을 정수 연산으로 바꿔
  * **1원 과소산정만 제거**한다 — (단가·면적·지분) 4만8천 조합 중 5,048건(10.5%)이
- * 어긋났고 전부 1원 과소였다. 지분 적용 «순서»는 바꾸지 않았다(미결 — `multiplyByAreaShare` 주석).
+ * 어긋났고 전부 1원 과소였다. 지분 적용 «순서»는 바꾸지 않았다 — 그 순서(ⓐ)는 이후
+ * **확정으로 종결**됐다(2026-09-10 `5da0765a` · 「지방세법」 §113① + 조심2011지0554 +
+ * 「Σ지분가액 = 전체가액」 실측. 근거·기각 3안은 `multiplyByAreaShare` 주석).
  */
 function parcelOfficialValue(area: number, shareRatio: number, pricePerSqm: number): number {
   return multiplyByAreaShare(pricePerSqm, area, shareRatio);
