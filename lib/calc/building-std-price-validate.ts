@@ -23,6 +23,7 @@ import {
   MAX_YEAR,
   buildAncillary,
   intOrUndef,
+  transferYearVisible,
   parseNos,
   type BuildingStdPriceFormState,
 } from "./building-std-price-form";
@@ -146,6 +147,26 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
 
   // 양도
   const acqY = intOrUndef(f.acquisitionYear);
+
+  /**
+   * **연도 순서** — 취득 전에 양도할 수는 없다.
+   *
+   * 🔴 종전에는 **어느 경로도** 이것을 보지 않아, 역순 입력(취득 2020 · 양도 2010)이
+   *    일반 2시점·복합·단일시점(양도)·기계식 **네 경로 전부에서** 경고 없이 끝까지
+   *    계산됐다(실측: 취득 107,800,000 · 양도 95,000,000).
+   *    형제 모듈은 이미 같은 규칙을 쓴다 — 양도세 `transfer-tax-validate-asset.ts:69·107`,
+   *    주식양도세 `stock-transfer-tax-validate.ts:279`. 이 계산기만 예외였다.
+   *
+   * ⚠️ **`transferYearVisible` leaf 를 거친다.** 양도연도 칸은 공동주택 환산·취득 전용
+   *    모드에서 숨으므로, 그 상태의 stale 값으로 차단하면 화면에 없는 칸 때문에 막히는
+   *    dead-end 가 된다(F-16 의 실패모드).
+   */
+  if (transferYearVisible(f)) {
+    const tY = intOrUndef(f.transferYear);
+    if (acqY !== undefined && tY !== undefined && tY < acqY) {
+      return `양도연도(${tY})가 취득연도(${acqY})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`;
+    }
+  }
 
   // 공동주택 고시 전 취득 환산(양도 전용) — 취득연도 + 환산 필드만 필요(양도연도 불요)
   if (f.apartmentConversionMode && !f.isMechanicalParking) {
