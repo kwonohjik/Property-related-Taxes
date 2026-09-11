@@ -189,7 +189,7 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
 
     // 🔑 단계 표시줄의 「필요경비·신고」는 **모든 단계에서 보인다**(STEPS 라벨)이라
     //    도달 증명이 되지 않는다. Step3 «본문»에만 있는 섹션 제목으로 확인한다.
-    await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("기본공제 (§103①)")).toBeVisible({ timeout: 10_000 });
   });
 
   test("KA-3: 라벨이 「이전 1개월」이다 (소득세법 §99①3 문언)", async ({ page }) => {
