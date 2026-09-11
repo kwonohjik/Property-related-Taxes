@@ -142,7 +142,7 @@ describe("케이스 25 — 국세기본법 §47조의3 ①1호 가목 — 과소
     expect(result.transferIncome).toBe(100_000_000);
   });
 
-  it("C25-06: basicDeduction = 2,500,000 (§103②2호 주식 그룹)", () => {
+  it("C25-06: basicDeduction = 2,500,000 (§103①2호 주식 그룹)", () => {
     expect(result.basicDeduction).toBe(2_500_000);
   });
 

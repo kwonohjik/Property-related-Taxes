@@ -431,7 +431,7 @@ export type StockTransferInput = {
   /** 실제 납부일 — 미입력 시 계산 기준일(오늘) */
   actualPaymentDate?: Date;
 
-  /** §103② — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
+  /** §103①1호 — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
   realEstateGroupBasicDeductionUsed: number;
 
   // ── 분할 매수·분할 양도 (선택) — split 모드 활성 시 사용 ──
