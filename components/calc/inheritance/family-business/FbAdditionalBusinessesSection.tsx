@@ -46,6 +46,16 @@ interface Props {
   mainValue: number;
   /** 상속개시일 — 시기별 한도 (familyBusinessCap) */
   deathDate?: string;
+  /**
+   * 주 가업 자격 충족 여부 (IG-123).
+   *
+   * 엔진은 `hasMultiple = finalEligible && additional.length > 0` 게이트를 두어 자격
+   * 미충족이면 순차공제를 «아예 계산하지 않고» 공제액을 0으로 만든다. 그런데 이 미리보기는
+   * 자격을 prop으로 받지 않아, 「✗ 자격 미충족」 카드 **바로 아래**에서 「복수가업 공제 합계
+   * nn원」을 보여줬다 — 실제 결과 화면의 0과 어긋난다.
+   * undefined(판정 전)는 종전 동작을 보존한다.
+   */
+  eligible?: boolean;
 }
 
 export function FbAdditionalBusinessesSection({
@@ -54,6 +64,7 @@ export function FbAdditionalBusinessesSection({
   mainOperatingYears,
   mainValue,
   deathDate,
+  eligible,
 }: Props) {
   const isActive = value !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -63,6 +74,8 @@ export function FbAdditionalBusinessesSection({
   // 미리보기 — 엔진 단일 소스 (주 가업 + 추가 가업)
   const preview = useMemo(() => {
     if (!value || value.length === 0) return null;
+    // 자격 미충족이면 엔진이 순차공제를 계산하지 않는다 — 미리보기도 숨긴다 (IG-123).
+    if (eligible === false) return null;
     const units: FamilyBusinessUnit[] = [
       { operatingYears: mainOperatingYears, value: mainValue, label: "주 가업" },
       ...value.map((b) => ({
@@ -72,7 +85,7 @@ export function FbAdditionalBusinessesSection({
       })),
     ];
     return calcMultipleFamilyBusinessDeduction(units, deathDate);
-  }, [value, mainOperatingYears, mainValue, deathDate]);
+  }, [value, mainOperatingYears, mainValue, deathDate, eligible]);
 
   const hasData = list.some((b) => b.operatingYears > 0 || b.businessValue > 0 || (b.label ?? "").trim());
 
@@ -180,6 +193,16 @@ export function FbAdditionalBusinessesSection({
           </button>
 
           {/* 미리보기 — 엔진 단일 소스 순차공제 */}
+          {/* 자격 미충족이면 «왜 0인지»를 말한다 — 조용히 숨기면 사용자가 이유를 알 수 없다. (IG-123) */}
+          {eligible === false && list.length > 0 && (
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-2 text-caption text-amber-800 dark:text-amber-200"
+              data-testid="fb-multi-preview-ineligible"
+            >
+              주 가업이 자격 미충족이라 순차공제가 적용되지 않습니다 — 실제 공제액은 0원입니다
+              (상증령 §15④).
+            </div>
+          )}
           {preview && (
             <div className="rounded-md border border-sky-300 bg-sky-100/60 dark:bg-sky-900/30 dark:border-sky-700 p-2 space-y-1.5">
               <p className="text-caption font-semibold text-sky-800 dark:text-sky-200">

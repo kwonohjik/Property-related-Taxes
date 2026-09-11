@@ -249,7 +249,11 @@ export function EstateBodyRealEstate({
         set={set}
         showLeaseDeposit={showLeaseDeposit}
         showCollateralDeductToggle={showCollateralDeductToggle}
-        showCohabitToggle={showLeaseDeposit && mode === "inheritance"}
+        // §23의2는 «주택»을 요구한다 — 임대보증금 노출축(apartment||building, 실질은
+        // 「land가 아님」)을 재사용하면 상업용 건물 카드에도 토글이 열린다. 하류에는
+        // 카테고리 필터가 전혀 없어(inheritance-deduction-suggest·validate) 그대로 최대
+        // 6억 공제가 도출된다. 저장소 카테고리 정의상 「주택」은 apartment뿐이다. (IG-043)
+        showCohabitToggle={cat === "real_estate_apartment" && mode === "inheritance"}
         hasCohabitantChild={hasCohabitantChild}
         mode={mode}
       />
@@ -276,7 +280,7 @@ interface RealEstateAdvancedFieldsProps {
   set: (patch: Partial<EstateItem>) => void;
   showLeaseDeposit: boolean;
   showCollateralDeductToggle: boolean;
-  /** §23의2 동거주택 체크 노출 (주택 카테고리: apartment·building) */
+  /** §23의2 동거주택 체크 노출 — «주택»(apartment)에만. 상업용 건물(building)은 대상이 아니다. */
   showCohabitToggle: boolean;
   /** 동거 자녀 존재 여부 — 미존재 시 체크 disabled */
   hasCohabitantChild: boolean;
@@ -330,7 +334,11 @@ function ValuationAccordionFields({
   const hasArea = !!(item.areaSqm && item.areaSqm > 0);
   const hasStandardPrice = !!(item.standardPrice && item.standardPrice > 0);
 
-  const rtmsDisabled = !hasAddress || !hasSigunguCode || !hasArea || !hasStandardPrice;
+  // 모달 렌더가 valuationDate를 요구하므로(:464 게이트) disabled 조건에도 포함한다 (IG-121).
+  // 종전에는 주소·면적·기준시가만 채우면 버튼이 «활성»으로 보이는데 눌러도 모달이 열리지
+  // 않고 안내도 없어, 사용자는 기능이 고장 났다고 판단했다.
+  const rtmsDisabled =
+    !hasAddress || !hasSigunguCode || !hasArea || !hasStandardPrice || !valuationDate;
 
   const rtmsDisabledReason = !hasAddress
     ? "소재지를 먼저 입력해주세요"
@@ -340,7 +348,11 @@ function ValuationAccordionFields({
         ? "전용면적(㎡)을 먼저 입력해주세요"
         : !hasStandardPrice
           ? "주택 기준시가(공동주택가격)를 먼저 입력해주세요"
-          : "";
+          : !valuationDate
+            ? mode === "gift"
+              ? "증여일을 먼저 입력해주세요"
+              : "상속개시일을 먼저 입력해주세요"
+            : "";
 
   // 단지명: item.name 또는 estateAddress.building 또는 빈 문자열
   const aptName =

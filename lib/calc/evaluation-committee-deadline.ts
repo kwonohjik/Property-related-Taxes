@@ -1,44 +1,88 @@
 /**
- * PR-K-4 — §54⑥ 평가심의위원회 신청 기한 계산 헬퍼
+ * 평가심의위원회 신청·통지 기한 (상증령 §49의2⑤·⑥)
  *
- * 법령: 상증법 §67(상속세 신고기한) + §68(증여세 신고기한) + 상증령 §49의2⑤·⑥
+ * ## 실측 근거 (KoreanLaw · 상증법 시행령 제49조의2, 시행 2026-02-27)
  *
- * 신고 기한 기준 (KoreanLaw MCP 2026-05-24):
- *   - 상속세 (§67): 상속개시일이 속하는 달의 말일부터 6개월 이내
- *     (피상속인이 비거주자 / 상속재산 전부가 국외 → 9개월)
- *   - 증여세 (§68): 증여받은 날이 속하는 달의 말일부터 3개월 이내
+ * - **⑤ 신청기한**: 「법 제67조에 따른 상속세 과세표준 신고기한 만료 **4개월 전**
+ *   (증여의 경우에는 법 제68조에 따른 증여세 과세표준 신고기한 만료 **70일 전**)까지 신청해야 한다」
+ * - **⑥ 통지기한**: 「해당 상속세 과세표준 신고기한 만료 **1개월 전**
+ *   (증여의 경우에는 증여세 과세표준 신고기한 만료 **20일 전**)까지 그 결과를 서면으로 통지해야 한다」
  *
- * 평가심의위 신청 기한 (상증령 §49의2⑤ — 본 모듈은 기본 가이드):
- *   상속·증여 신고기한 이전 (일반적으로 신고기한과 동일).
- *   ⚠️ 인용 정정 (2026-09-11) — ④는 «위원의 해임·해촉» 사유다. 신청기한은 ⑤, 통지기한은 ⑥.
- *      본문상 신청기한은 «신고기한 만료 4개월 전(증여 70일 전)»이라 이 헬퍼가 반환하는
- *      「신고기한」과 다르다 — 산식 자체의 정정은 대장 IG-058(별건)에서 다룬다.
+ * ## 이 모듈이 왜 다시 쓰였나 (IG-058)
  *
- * 본 모듈은 UI 카운트다운(D-N일) 표시용 헬퍼만 제공.
- * 본 결과(보충적 평가가액)에 영향 없음.
+ * 종전 `inheritanceApplicationDeadline`·`giftApplicationDeadline`은 이름이 「신청기한」인데
+ * **신고기한 그 자체**를 반환했다. 결과 카드가 그 값을 D-N으로 표시해 **상속은 4개월,
+ * 증여는 70일 늦은 날짜**를 신청기한으로 안내했다 — 그 카운트다운을 믿고 기다리면
+ * §54⑥ 신청 자체가 불가능해진다. 같은 화면의 `EvaluationCommitteeFilingGuideCard`는
+ * 「4개월 전」이라 적어 **두 카드가 서로 다른 기한**을 말하고 있었다.
+ *
+ * ⇒ 이름을 사실과 맞추고(`…FilingDeadline` = 신고기한), 신청·통지 기한을 별도 파생한다.
+ * 신고기한 산정은 저장소 정본 헬퍼(`inheritance-gift-filing-deadline.ts`)에 위임한다 —
+ * §67④ 비거주자 9개월 분기가 그쪽에만 있다.
+ *
+ * 본 모듈은 UI 카운트다운(D-N일) 표시용이다. 본 결과(보충적 평가가액)에 영향 없음.
  */
 
-import { addMonths, differenceInCalendarDays, lastDayOfMonth } from "date-fns";
+import { addMonths, differenceInCalendarDays, parseISO, subDays, subMonths } from "date-fns";
+import {
+  getGiftFilingDueDates,
+  getInheritanceFilingDueDates,
+} from "@/lib/calc/inheritance-gift-filing-deadline";
 
-/**
- * 상속세 신고기한 = 상속개시월 말일 + 6개월 (비거주자/국외 자산 시 9개월 옵션은 별도 모듈)
- */
-export function inheritanceApplicationDeadline(deathDate: Date): Date {
-  const endOfMonth = lastDayOfMonth(deathDate);
-  return addMonths(endOfMonth, 6);
+export type EvaluationTaxKind = "inheritance" | "gift";
+
+/** 상속세 신고기한 (§67① 말일 + 6개월 · §67④ 비거주자 9개월). 정본 헬퍼 위임. */
+export function inheritanceFilingDeadline(
+  deathDate: Date,
+  decedentType?: "resident" | "non_resident",
+): Date {
+  const iso = getInheritanceFilingDueDates(toISO(deathDate), decedentType).filing;
+  return iso ? parseISO(iso) : addMonths(deathDate, 6);
+}
+
+/** 증여세 신고기한 (§68① 말일 + 3개월). 정본 헬퍼 위임. */
+export function giftFilingDeadline(giftDate: Date): Date {
+  const d = getGiftFilingDueDates(toISO(giftDate));
+  return d ? parseISO(d.filing) : addMonths(giftDate, 3);
 }
 
 /**
- * 증여세 신고기한 = 증여월 말일 + 3개월
+ * 평가심의위 **신청기한** (§49의2⑤).
+ *   상속 = 신고기한 − 4개월 · 증여 = 신고기한 − 70일
  */
-export function giftApplicationDeadline(giftDate: Date): Date {
-  const endOfMonth = lastDayOfMonth(giftDate);
-  return addMonths(endOfMonth, 3);
+export function evaluationCommitteeApplicationDeadline(
+  baseDate: Date,
+  taxKind: EvaluationTaxKind,
+  decedentType?: "resident" | "non_resident",
+): Date {
+  return taxKind === "inheritance"
+    ? subMonths(inheritanceFilingDeadline(baseDate, decedentType), 4)
+    : subDays(giftFilingDeadline(baseDate), 70);
 }
 
 /**
- * 기한까지 남은 일수 (양수 = 미래, 음수 = 초과).
+ * 평가심의위 **통지기한** (§49의2⑥).
+ *   상속 = 신고기한 − 1개월 · 증여 = 신고기한 − 20일
  */
+export function evaluationCommitteeNotificationDeadline(
+  baseDate: Date,
+  taxKind: EvaluationTaxKind,
+  decedentType?: "resident" | "non_resident",
+): Date {
+  return taxKind === "inheritance"
+    ? subMonths(inheritanceFilingDeadline(baseDate, decedentType), 1)
+    : subDays(giftFilingDeadline(baseDate), 20);
+}
+
+/** 기한까지 남은 일수 (양수 = 미래, 음수 = 초과). */
 export function daysUntilDeadline(deadline: Date, today: Date = new Date()): number {
   return differenceInCalendarDays(deadline, today);
+}
+
+/** Date → "YYYY-MM-DD" (로컬 기준 — 정본 헬퍼가 parseISO로 로컬 자정을 쓴다). */
+function toISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

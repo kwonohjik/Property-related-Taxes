@@ -244,6 +244,13 @@ function ListedStockEditor({
         onCheckedChange={(v) =>
           set({
             isCapitalIncreaseUnlistedShare: v || undefined,
+            // 같은 사실을 가리키는 두 필드를 «같은 patch에서» 함께 쓴다 (IG-056).
+            // 갑지의 액면가·배당률 입력 패널은 `unlistedShareMode`만 보고 게이팅하는데
+            // 종전에는 이 토글이 엔진 플래그만 세워, 토글만 켜면 패널이 안 뜨는데
+            // validateListedStockBesshi가 「1주당 액면가 입력 필요」로 계산 전체를 막았다
+            // — 오류가 가리키는 칸이 화면에 없었다. 반대로 끄면 라디오는 「증자」, 토글은
+            // OFF로 같은 플래그가 모순 표시됐다.
+            unlistedShareMode: v ? "capital_increase" : "none",
             ...(v ? {} : { listedStockDividendDifference: undefined, dividendBaseDateSameAsListed: undefined }),
           })
         }

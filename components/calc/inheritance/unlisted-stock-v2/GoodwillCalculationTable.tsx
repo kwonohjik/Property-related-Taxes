@@ -26,11 +26,20 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export interface GoodwillCalculationTableProps {
   goodwill: UnlistedGoodwillResult;
-  /** 매입 무체재산권 차감액 (선택 입력) */
-  onIntangibleDeductionChange?: (value: number) => void;
   /** 섹션 번호 (부모 UnlistedStockV2Card 단일 출처 — 다-섹션 카드 패턴) */
   sectionNum?: number;
 }
+
+/**
+ * ⚠️ 「아. 매입 무체재산권 차감액」은 현재 **입력 경로가 없다** (IG-135).
+ *
+ * 종전에는 `onIntangibleDeductionChange?: (value: number) => void`가 「선택 입력」이라는
+ * 주석과 함께 선언돼 있었지만, 컴포넌트가 구조분해조차 하지 않았고 부모도 넘기지 않았다.
+ * 아 행은 read-only로만 렌더되고 값은 엔진 기본 0으로 고정된다(goodwill.ts). 즉 «입력
+ * 가능한 것처럼 보이는 죽은 계약»이었고, 나중에 이 prop을 넘기는 호출자가 생기면 조용히
+ * 무시된다. ⇒ 계약을 사실과 맞춘다(prop 제거).
+ * 입력을 지원하려면 ①폼~⑫Zod~⑭엔진 전달까지 함께 배선해야 한다.
+ */
 
 function fmt(n: number): string {
   return n.toLocaleString();

@@ -24,8 +24,12 @@ export type SupportedCategory = Exclude<
 
 export type DeemedCategoryKey = "none" | "insurance" | "trust" | "retirement";
 
-/** 상속세 폼에서 노출하는 SupportedCategory 전체 (deposit 포함) */
-const INHERITANCE_CATEGORIES: SupportedCategory[] = [
+/**
+ * 상속세 폼에서 노출하는 SupportedCategory 전체 (deposit 포함).
+ * 카테고리 «변경» 다이얼로그도 이 목록을 쓴다 — 사본을 두면 신규 카테고리가 한쪽에만
+ * 추가돼 조용히 갈린다(실제로 `crypto_asset`이 그랬다 · IG-040).
+ */
+export const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "real_estate_apartment",
   "real_estate_building",
   "real_estate_land",

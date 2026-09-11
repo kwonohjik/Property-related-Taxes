@@ -543,6 +543,19 @@ export const convertibleBondItemSchema = baseItemSchema
     const need = (cond: boolean, path: string, message: string) => {
       if (!cond) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
     };
+    // 거래소 거래 + 신주인수권증서 — UI가 노출하는 칸은 「전체 거래일 종가평균」 하나뿐인데
+    // 종전에는 «거래소 분기가 이 종류를 제외»하고, 이어지는 비거래소 분기도 isPreemptive면
+    // 원금·만기년수를 건너뛰고 cbConvertible(이 조합에서 렌더 안 됨 → false)만 봐서
+    // **필수 검증이 하나도 실행되지 않았다**. 비워둔 채 계산하면 엔진이 `?? 0`으로 받아
+    // 그 자산 평가액이 0원이 되고, 카드에 미리보기가 없어 알아챌 수도 없다. (IG-044)
+    if (item.cbTradedOnExchange && item.cbSecurityType === "preemptive_right") {
+      need(
+        (item.cbExchange2mAvg ?? 0) > 0,
+        "cbExchange2mAvg",
+        "전체 거래일 종가평균을 입력하세요.",
+      );
+      return;
+    }
     if (item.cbTradedOnExchange && item.cbSecurityType !== "preemptive_right") {
       // A. 거래소
       if (item.cbHasTradeRecord) {

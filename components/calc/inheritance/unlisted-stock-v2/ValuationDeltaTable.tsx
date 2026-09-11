@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { EvaluationDeltaRow } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 
 // 행 max 제한 (계획서 §6 정책)
@@ -64,6 +65,11 @@ export function ValuationDeltaTable({
   // 사용자가 명시적으로 OFF 시 행이 보존되어 있어도 fallback 모드로 (DM3 정정)
   const hasRows = evaluationDeltaRows.length > 0;
   const [inputModeUserPreference, setInputModeUserPreference] = useState<boolean>(hasRows);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  /** 사용자가 실제로 넣은 값이 있는가 — 계정과목 또는 금액. 빈 행만 있으면 false. */
+  const hasRowData = evaluationDeltaRows.some(
+    (r) => (r.accountName ?? "").trim() !== "" || r.bookAmount > 0 || r.evaluationAmount > 0,
+  );
   const inputMode = inputModeUserPreference || hasRows;
 
   const assetRows = useMemo(
@@ -102,14 +108,35 @@ export function ValuationDeltaTable({
     onRowsChange(evaluationDeltaRows.filter((r) => r.rowId !== rowId));
   }
 
+  /**
+   * 행 모드 OFF — 자산 50행·부채 30행까지의 계정과목별 입력을 «되돌릴 수 없이» 파기한다.
+   * 형제 토글 3개(PreIpoListing·EstimatedProfit·EvaluationCommittee)는 모두 확인 Dialog를
+   * 거친다. 게다가 종전에는 `onFallbackChange`를 안 불러 ② 평가차액이 행 합계에서
+   * **stale 총액(대개 0)** 으로 조용히 떨어져 순자산가액·1주당 평가액·세액이 바뀌었다. (IG-061)
+   */
+  function discardRows() {
+    // 파기 전에 «지금 계산된 평가차액»을 총액 모드로 이월한다 — 값이 0으로 증발하지 않게.
+    onFallbackChange?.(evaluationDelta);
+    onRowsChange([]);
+  }
+
   function toggleInputMode(next: boolean) {
+    if (!next && hasRowData) {
+      // 확인 Dialog를 거친다 — preference는 확인 후에 내린다(취소 시 ON 유지).
+      // ⚠️ 게이트는 `hasRows`가 아니라 «실제 입력이 있는가»다. ON 토글이 자동 생성한
+      //    빈 행 2개에까지 확인을 물으면 «잃을 것이 없는» 상황에 마찰만 생긴다 —
+      //    형제 토글 3개도 전부 hasData 축이다(G4 IG-131·138과 같은 기준).
+      setDiscardOpen(true);
+      return;
+    }
     setInputModeUserPreference(next);
     if (next && evaluationDeltaRows.length === 0) {
       // ON 토글 시 자산·부채 빈 행 1개씩 자동 생성 → 바로 입력 가능
       onRowsChange([makeNewRow("asset"), makeNewRow("liability")]);
     } else if (!next && hasRows) {
-      // OFF 토글 시 행 클리어 + fallback 총액으로 전환 (silent omission 차단)
-      onRowsChange([]);
+      // 데이터 없는 빈 행은 확인 없이 즉시 정리한다 —
+      // `inputMode = preference || hasRows`이므로 행을 남기면 모드가 꺼지지 않는다.
+      discardRows();
     }
   }
 
@@ -341,6 +368,20 @@ export function ValuationDeltaTable({
           )}
         </div>
       )}
+
+      {/* 행 폐기 확인 — 형제 토글 3개와 동일 관례 (memory feedback_dialog_data_discard_confirm) */}
+      <ConfirmDialog
+        open={discardOpen}
+        onOpenChange={setDiscardOpen}
+        title="행 단위 입력을 폐기할까요?"
+        description={`입력한 계정과목 ${evaluationDeltaRows.length}행이 모두 삭제되고 총액 직접 입력 모드로 돌아갑니다. 현재 계산된 평가차액은 총액 칸으로 이월됩니다.`}
+        confirmLabel="삭제하고 총액 모드로"
+        destructive
+        onConfirm={() => {
+          setInputModeUserPreference(false);
+          discardRows();
+        }}
+      />
     </ToneCard>
   );
 }
