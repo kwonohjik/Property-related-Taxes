@@ -202,3 +202,67 @@ describe("[AT-D15-API] §3 ⑥ 사이드바 — 엔진과 같은 수를 보여�
     expect(s.deemedRate).toBeUndefined(); // 단일 세율이 없다
   });
 });
+
+describe("[AT-D15-API] §4 §13①②⑦ 법인 플래그 누수 차단 — 「끌 수 없다」의 나머지 절반", () => {
+  /**
+   * 이 플래그들은 **Step 4(법인·특수) 전용 입력**인데 간주취득은 `computeNextStep`이
+   * 2단계에서 끝내 Step 4에 도달하지 못한다. 그래서 간주취득에서 값이 남아 있다면
+   * **다른 취득 원인으로 입력했다가 남은 stale 값**이다.
+   *
+   * 실측(2026-09-12 재검토): 법인 취득자가 매매 단계에서 과밀억제+본점신축을 켜 두고
+   * 간주취득으로 바꾸면 3유형 **전부** `2% → 6%`로 뛰었다(10억 기준 **+4,000만원**).
+   * 사치성은 카드를 달아 껐지만 §13①은 끌 칸이 없어 되돌릴 방법이 없었다.
+   */
+  const CORP_FLAGS: Partial<FormState> = {
+    acquiredBy: "corporation",
+    isMetropolitanCongestion: true,
+    isHeadquarterNewBuild: true,
+    isNonUrbanFactory: true,
+    factoryComponent: "land",
+    isWithin5YearsOfEstablishment: true,
+    isCorpMetroSurcharge: true,
+  };
+
+  it("[AT-D15-API-30] 간주취득 3유형 모두에서 §13①②⑦ 플래그를 strip 한다", () => {
+    for (const cause of [
+      "deemed_major_shareholder",
+      "deemed_land_category",
+      "deemed_renovation",
+    ] as const) {
+      const body = buildAcquisitionTaxBody(
+        form({
+          ...CORP_FLAGS,
+          acquisitionCause: cause,
+          deemedMajorCorporateAssetValue: "1000000000",
+          deemedLandPrevCategory: "임야",
+          deemedLandNewCategory: "체육용지",
+          deemedLandPrevStandardValue: "500000000",
+          deemedLandNewStandardValue: "1500000000",
+          deemedRenovationType: "structural_change",
+          deemedRenovationPrevStandardValue: "500000000",
+          deemedRenovationNewStandardValue: "1500000000",
+        }),
+      ) as Record<string, unknown>;
+      expect(body.isMetropolitanCongestion, cause).toBeUndefined();
+      expect(body.isHeadquarterNewBuild, cause).toBeUndefined();
+      expect(body.isNonUrbanFactory, cause).toBeUndefined();
+      expect(body.factoryComponent, cause).toBeUndefined();
+      expect(body.isWithin5YearsOfEstablishment, cause).toBeUndefined();
+      expect(body.isCorpMetroSurcharge, cause).toBeUndefined();
+    }
+  });
+
+  it("[AT-D15-API-31] ★ 역방향 — 비-간주취득(매매)에서는 그대로 전달한다", () => {
+    // 이 짝이 없으면 §4가 「안 보낸다」만 말하고 「원래 보내야 할 때는 보낸다」를 못 말한다
+    const body = buildAcquisitionTaxBody({
+      ...INITIAL_FORM,
+      propertyType: "land",
+      acquisitionCause: "purchase",
+      reportedPrice: "1000000000",
+      ...CORP_FLAGS,
+    } as FormState) as Record<string, unknown>;
+    expect(body.isMetropolitanCongestion).toBe(true);
+    expect(body.isHeadquarterNewBuild).toBe(true);
+    expect(body.isCorpMetroSurcharge).toBe(true);
+  });
+});

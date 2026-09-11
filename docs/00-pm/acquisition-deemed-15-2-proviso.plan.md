@@ -1,9 +1,13 @@
 # 간주취득(과점주주·지목변경) §15② 단서 구현 계획
 
-> 대상 TODO: `lib/tax-engine/acquisition-tax-rate.ts:124-130` — 「자산 종류별 입력 구현 후 종류별 세율로 개선」
-> 작성: 2026-09-12 · 상태: **✅ Phase A+B 구현 완료** (U-1 §13① 축만 미결)
+> 대상 TODO: `acquisition-tax-rate.ts` `getBasicRate` 간주취득 분기 — 「자산 종류별 입력 구현 후 종류별 세율로 개선」
+> 작성: 2026-09-12 · 상태: **✅ Phase A+B 구현 완료** (U-1 §13① 축은 **입력 경로 차단**으로 정리)
 > 사용자 결정(2026-09-12): ① **개수 포함**(3유형 전부) ② **A+B 한 번에**
 > 법령 확인: 「지방세법」 MST `282559`(시행 2026-01-01) · 조심 1998-0634
+>
+> 🔴 **§2·§4는 «변경 전» 기록이다** — 기준 커밋 `f61d3dd0`(PR #1606 merge-base).
+> 그 시점 file:line 은 지금과 다르다(줄이 밀렸거나 코드가 바뀌었다). **현행 대조표는 §9.1**.
+> 재검토에서 **살아 있던 결함 1건을 새로 찾아 닫았다** — §9.3.
 
 ---
 
@@ -81,7 +85,7 @@
 
 ---
 
-## 2. 현행 실측 — 엔진은 이미 맞고, 화면이 없다
+## 2. 실측 — 엔진은 이미 맞고, 화면이 없다  〔**변경 전**(`f61d3dd0`) 기준〕
 
 ### 2.1 엔진 세율 (probe, mock 없음 · 과세표준 10억)
 
@@ -103,7 +107,7 @@
 
 지방교육세는 7건 모두 **0원**이다 — §151①1 본문 괄호(§15② 해당분 제외), `acquisition-tax-rate.ts:338` [M3].
 
-### 2.2 그런데 화면에 입력 칸이 없다
+### 2.2 그런데 화면에 입력 칸이 없다  〔당시 줄 번호 — 현행은 §9.1〕
 
 | 층 | 사치성(`isLuxuryProperty`) | §13①(`isHeadquarterNewBuild` 등) |
 |---|---|---|
@@ -157,7 +161,8 @@ isMetropolitanCongestion=undefined  isHeadquarterNewBuild=undefined   ← 개인
   - `isLuxuryProperty` + `luxuryType`을 **재사용**한다(①②③④⑫ 이미 배선됨 — ⑤만 없다).
   - 문구는 §15② 단서 전용으로 새로 쓴다: 「중과기준세율 × 500% = **10%**」.
     일반취득 카드의 「표준세율 + 8%p」 문구를 복사하면 **근거가 틀린다**(수는 같아도 조문이 다르다).
-  - `TaxHelp legalBasis="지방세법 제15조 제2항 단서"`.
+  - `TaxHelp legalBasis=` → **실제 구현은 `"지방세법 제15조 제2항"`**(본문). 카드가 본문 2%와
+    단서 10%를 **함께** 설명하므로 본문을 인용하는 쪽이 맞다 — 초안이 과했다.
   - **§13① 축은 넣지 않는다** — §5 미확정.
 
 **A-2.** `DeemedLandCategorySection.tsx` · `DeemedRenovationSection.tsx`에 A-1 카드 배치.
@@ -169,29 +174,37 @@ isMetropolitanCongestion=undefined  isHeadquarterNewBuild=undefined   ← 개인
 > ✅ **결정: 개수(`deemed_renovation`) 포함** — §15②**1호**로 같은 단서를 받는다. 카드는 하나다.
 
 **verify A**
-- [ ] anchor: 지목변경 + 사치성 → `appliedRate === 0.1`, 미체크 → `0.02` (**Pre-Do: 먼저 red 확인**)
-- [ ] anchor(부정형의 짝): 사치성 OFF로 전환 시 `body.isLuxuryProperty`가 **사라지는지** — 누수 차단
-- [ ] RTL: 간주취득 3유형에서 카드가 **렌더된다** (현재는 0건 — 이게 GAP-1의 증거)
-- [ ] `npx vitest run __tests__/tax-engine/acquisition-tax/ __tests__/calc/`
-- [ ] 브라우저: 지목변경 → 사치성 ON → 결과 10% · 산식에 §15② 단서 표기
+- [x] anchor: 지목변경 + 사치성 → `0.1` / 미체크 → `0.02` (`AT-D15-02`)
+      — ⚠️ **「Pre-Do red」는 틀린 예상이었다.** 엔진은 변경 전에도 10%를 냈다(§8.4).
+- [x] anchor(부정형의 짝): 토글 OFF 시 `luxuryType`도 함께 지운다 (`AT-D15-UI-04`)
+- [x] RTL: 3유형에서 카드가 렌더된다 (`AT-D15-UI-01~03`) — **이쪽이 진짜 pre-Do red 였다**
+      (뮤테이션 「카드 제거」 → 7 failed)
+- [x] `npm run test:acquisition` 858 passed
+- [x] 브라우저: `e2e/acquisition-deemed-15-2-proviso.spec.ts` — 지목변경 + 사치성 → 10% · 「§15② 단서」 표기
 
 ### Phase B — GAP-2 (과점주주: 물건별 버킷)
 
 §15② 단서가 「취득**물건이**」라고 하고 1998-0634가 물건별로 갈랐으므로, 법인 보유 물건을
-**단서 구분 단위**로 쪼갠다. 쪼개는 축은 **「중과 해당 여부」 3값**이지 물건 종류가 아니다
+**단서 구분 단위**로 쪼갠다. 쪼개는 축은 **「중과 해당 여부」**이지 물건 종류가 아니다
 (§15② 본문이 표준세율을 이미 치환했으므로 토지 4%·주택 1~3% 따위는 등장하지 않는다).
+
+> ⚠️ **정정**: 초안은 「3값」이라 적었으나 **2값**(`"none" | "luxury"`)이다.
+> §13①(6%)을 U-1로 제외했으므로 세 번째 값이 없다 — 바로 아래 B-1 코드블록과 어긋나 있었다.
 
 **B-1.** ① `FormState` 확장 (`components/calc/acquisition/shared.ts`)
 ```ts
+// ⚠️ 실제 구현 (초안과 다른 곳 표시)
 /** §15② 단서 구분 입력 모드 — OFF면 전액 일반(2%) */
-deemedMajorUseBuckets: boolean;
-deemedMajorAssetBuckets: Array<{
+deemedMajorUseBuckets?: boolean;              // ← optional (기존 이력 호환)
+deemedMajorAssetBuckets?: DeemedAssetBucketRow[];
+
+export interface DeemedAssetBucketRow {
   id: string;
   label: string;                       // 예: "회원제 골프장 구분등록 토지"
-  bookValue: string;                   // §10의6④ 장부상 총가액
-  proviso: "none" | "luxury";          // §13① 축은 §5 확정 후
-  luxuryType?: LuxuryPropertyType;
-}>;
+  bookValue: string;                   // §10의6④ 장부상 가액
+  proviso: "none" | "luxury";
+  luxuryType: string;                  // ← 필수 string ("" = 미선택). enum 아님
+}
 ```
 ② `INITIAL_FORM` · ③ `normalize` 기본값(기존 이력에 없는 신규 필드 — `undefined` 가드 필수).
 
@@ -202,22 +215,28 @@ deemedMajorAssetBuckets: Array<{
 - 버킷별 `deemedTaxBase = floor(bookValue × taxableRatio)` — 지분율 적용 **순서 ⓐ** 준수
   (`project_share_ratio_application_order_open` ✅ 확정분).
 - 버킷 미제공 시 **현행과 완전 동일**(회귀 0) — `corporateAssetValue` 단일 경로 유지.
-- 결과에 `buckets: Array<{ label, taxBase, provisoRate, tax }>` echo.
+- 결과에 `buckets` echo. ⚠️ 실제 필드명은 `provisoRate`가 아니라 **`rate`** 다
+  (`DeemedBucketBreakdown = { label?, bookValue, proviso, luxuryType?, taxBase, rate?, tax? }`).
 
 **B-4.** 세액 합산 — `acquisition-tax.ts`가 버킷별 세율로 `Σ floor(과세표준 × 세율)`.
   농특세도 버킷별 산출 후 합산(현행 `resolveRuralStandardRate` 산식 그대로 반복).
   지방교육세는 0 유지(§151①1 본문 괄호).
 
-**B-5.** ④⑤⑥⑦⑧ — 변환 · 행 편집 UI(3-state optional 모드) · 사이드바 합계 · 결과 카드 버킷 행 ·
-  **전수입력 강제** validate(`feedback_silent_omission_full_input_enforcement` — 합계 미일치 차단).
+**B-5.** ④⑤⑥⑦⑧ — 변환 · 행 편집 UI · 사이드바 합계 · 결과 카드 버킷 행 · **전수입력 강제** validate.
+
+> ⚠️ **정정 — 「합계 미일치 차단」은 구현하지 않았고, 애초에 성립하지 않는다.**
+> 대조할 「전체」가 없기 때문이다: 구분 모드에서 단일 장부가액 칸을 **감췄고**(두 진실 방지)
+> 엔진도 **버킷 합계를 총가액의 단일 진실로** 삼는다(`AT-D15-12`). 즉 버킷 합계가 곧 전체다.
+> 실제 ⑧은 **행별**로 강제한다 — 행 0건 차단 · 금액 미입력 행 차단 · 사치성 행의 유형 미선택 차단.
 
 **verify B**
-- [ ] anchor: 골프장 30억 + 일반토지 70억 · 지분 100% → `3억 + 1.4억 = 4.4억`
-      (전부 10% = 10억 / 전부 2% = 2억 **둘 다 아님**)
-- [ ] anchor(회귀): 버킷 미제공 → 현행 값과 **완전 동일**
-- [ ] 뮤테이션: 버킷 세율을 일괄 2%로 되돌리면 위 anchor가 red 인지 (**구별력 실측**)
-- [ ] ⑫⑬⑭ self-grep — 14 동기화 지점
-- [ ] `npm run test:acquisition` + `npx playwright test e2e/acquisition-tax.spec.ts`
+- [x] anchor: 골프장 30억 + 일반토지 70억 · 지분 100% → **4억 4,000만** (`AT-D15-10`)
+- [x] anchor(회귀): 버킷 미제공 → 단일 경로와 **완전 동일** (`AT-D15-15`)
+- [x] 뮤테이션 구별력 실측 — 단서 세율 ×1로 되돌리면 **9 failed**, 버킷 분기 제거 **7 failed** (§8.3)
+- [x] ⑫⑬⑭ — ⑫ Zod strip 가드(`AT-D15-API-04`). ⑬⑭는 취득세에 별도 지점이 없다:
+      `callAcquisitionTaxAPI`가 `buildAcquisitionTaxBody` 결과를 그대로 body 로 보내고(⑬=④),
+      `route.ts`는 `parsed.data`를 캐스팅 없이 대입한다(⑭ — 1:1 미러 가드).
+- [x] `npm run test:acquisition` + `e2e/acquisition-tax.spec.ts` 3 passed + 신규 E2E 2 passed
 
 ### 마지막 — TODO 주석 정정 (Phase A와 함께)
 
@@ -231,7 +250,7 @@ deemedMajorAssetBuckets: Array<{
 
 | # | 질문 | 왜 막아 두는가 |
 |---|---|---|
-| **U-1** | **§13①이 과점주주·지목변경의 「취득물건」에 성립하는가?** §13①은 「신축·증축」·「공장 신설·증설」이라는 **행위** 요건이다. 간주취득에 이 요건이 어떻게 대응되는지 유권해석 필요 | 6%는 2%의 **3배**다. 근거 없이 적용하면 **법 근거 없는 불리 적용** (`feedback_no_unfavorable_application_without_legal_basis`) ⇒ **Phase A·B에서 제외** |
+| **U-1** | **§13①이 과점주주·지목변경의 「취득물건」에 성립하는가?** §13①은 「신축·증축」·「공장 신설·증설」이라는 **행위** 요건이다. 간주취득에 이 요건이 어떻게 대응되는지 유권해석 필요 | 6%는 2%의 **3배**다. 근거 없이 적용하면 **법 근거 없는 불리 적용** (`feedback_no_unfavorable_application_without_legal_basis`) ⇒ **입력 경로를 ④에서 차단**했다(§9.3). 엔진은 그대로 둔다 — U-1이 풀리면 칸만 열면 된다 |
 | U-2 | 골프장 §13⑤ 후단의 적용 상황 4종(등록·승계취득·사실상 사용·사실상 사용 골프장 승계취득) 중 과점주주 간주취득이 어디에 해당하는가 | 1998-0634가 **전제로만 삼고** 판단하지 않았다. 현행법 문언으로 재확인 필요. 단 토글은 **사용자 판단**이므로 착수는 막지 않는다 |
 | U-3 | 간주취득의 **농어촌특별세** 기준율 — 농특세법 §5①6호는 「§11·§12의 표준세율을 2%로 적용」인데 §15② 취득에는 그 표준세율이 없다 | 현행 동작(비중과 0.2% / 사치성 1.0%)을 버킷별로 반복할 뿐 **바꾸지 않는다**. 별도 조사 |
 
@@ -245,8 +264,10 @@ deemedMajorAssetBuckets: Array<{
   현행 `assessLandCategoryChange`는 **시가표준액 차액만** 쓴다(보충법을 본칙처럼).
   UI에도 형질변경 공사비 입력 칸이 없다.
 - **과점주주**: §10의6④은 **「결산서와 그 밖의 장부 등에 따른 총가액」**이다.
-  현행 UI 라벨은 「법인 보유 자산 **시가표준액** 합계」(`DeemedMajorShareholderSection.tsx:112`) — **법문과 다르다.**
-  1998-0634도 「법인 장부가액」으로 과세했다. ⇒ Phase B에서 `bookValue`로 쓰므로 **라벨만이라도 함께 정정**할 것.
+  종전 UI 라벨은 「법인 보유 자산 **시가표준액** 합계」로 **법문과 달랐다.**
+  1998-0634도 「법인 장부가액」으로 과세했다.
+  ⇒ ✅ **정정 완료** — 「법인 보유 부동산등 장부상 총가액」(§10의6④). 결과 카드 행 라벨도 같이 바꿨다.
+  (⚠️ **금액의 «출처»만 바로잡았을 뿐 산정 방식은 그대로다** — 사용자가 장부가액을 직접 넣는다.)
 
 **§15① 본문의 §13① 배제 근거** — `acquisition-tax-rate-special.ts:169`가
 「§15 본문 단서: §13① 중과세율이 적용되는 경우에는 그 중과세율 적용」이라 적었는데,
@@ -257,12 +278,14 @@ deemedMajorAssetBuckets: Array<{
 ## 7. 실행 순서
 
 ```
-1. TODO 주석 정정 + Phase A (지목변경·개수·과점주주 단일 토글)  → verify A → PR
-2. U-1 조사 (§13① 성립 여부)                                    → 결론만 이 문서에 추기
-3. Phase B (과점주주 버킷) + 과세표준 라벨 정정                  → verify B → PR
+1. TODO 주석 정정 + Phase A (지목변경·개수·과점주주 단일 토글)  → verify A ┐
+2. U-1 조사 (§13① 성립 여부)                                    → 미수행    │ PR #1606
+3. Phase B (과점주주 버킷) + 과세표준 라벨 정정                  → verify B ┘
+4. 〔재검토에서 추가〕 §13① stale 누수 차단 + 근거 역산 정정      → §9.3
 ```
 
-✅ **결정: A+B를 한 PR로 간다.** U-1(§13①)만 미확정으로 남기고 §13⑤ 축은 전부 닫는다.
+✅ **결정대로 A+B를 한 PR(#1606)로 갔다.** 2번(U-1 조사)은 수행하지 않았고, 대신 §9.3에서
+**입력 경로를 막아** 문서의 「제외」 결정과 코드 동작을 일치시켰다.
 
 
 ---
@@ -351,3 +374,109 @@ red-first anchor가 아니라 **그 항등을 고정하는** anchor다 — 한�
 파일 크기: `acquisition-tax.ts` **675** · `acquisition-tax-helpers.ts` **241** ·
 `acquisition-deemed.ts` 402 · `acquisition-deemed-proviso.ts` 88 · `acquisition-deemed-bucket-tax.ts` 101
 — 전부 ≤700 착지.
+
+
+---
+
+## 9. 재검토 (2026-09-12, PR #1606 머지 후)
+
+### 9.1 🔴 file:line 인용이 8/12 드리프트했다
+
+§2·§4는 **변경 전**(`f61d3dd0`) 기록이라 머지 후 줄이 밀렸다. 현행 대조표:
+
+| 계획서 인용 | 현행 | 상태 |
+|---|---|---|
+| `acquisition-tax-rate.ts:124-130` (TODO) | `:126` 분기 · `:130` 정정 주석 | **구 TODO 문구는 이제 없다** |
+| `acquisition-tax-rate.ts:338` [M3] 교육세 | `:353` | 이동 |
+| `acquisition-tax-api.ts:277` 사치성 블록 | `:291` | 이동 |
+| `acquisition-tax-api.ts:289` 법인 게이트 | `:302~304` | 이동 + **조건 변경**(§9.3) |
+| `acquisition-input.ts:273·311·316·317` | `:291·329·334·335` | 이동 |
+| `AcquisitionSidebar.tsx:281` activeSteps | `:327` | 이동 |
+| `AcquisitionTaxForm.tsx:60` computeNextStep | `:55` (`:60`은 `isDeemed` 줄) | **초안부터 부정확** |
+| `DeemedMajorShareholderSection.tsx:112` 「시가표준액」 | `:133` 「장부상 총가액」 | **내용 자체가 바뀜** |
+| `Step1.tsx:51` 조기반환 | `:51` | ✅ 유효 (지금도 그대로) |
+| `Step1.tsx:146` 사치성 토글 | `:146` | ✅ 유효 |
+| `Step4.tsx:115` 과밀억제 | `:115` | ✅ 유효 |
+| `acquisition-tax-rate-special.ts:169` | `:169` | ✅ 유효 |
+
+> 📌 `Step1.tsx:51`의 **조기반환은 지금도 있다.** 고친 방식이 「조기반환 제거」가 아니라
+> 「각 간주취득 섹션 **안**에 카드를 넣기」였기 때문이다. 그래서 **Step 2~5는 여전히 도달 불가**이고,
+> 그것이 §9.3의 전제다.
+
+### 9.2 계획 ≠ 구현 5건 (본문에 인라인 정정 표시)
+
+| # | 초안 | 실제 | 어느 쪽이 맞나 |
+|---|---|---|---|
+| 1 | 버킷 축 「**3값**」 | 2값 (`none`/`luxury`) | **실제** — §13①을 U-1로 뺐으므로 |
+| 2 | `deemedMajorUseBuckets: boolean` · `luxuryType?: LuxuryPropertyType` | `?: boolean` · `luxuryType: string` | **실제** — 기존 이력 호환·`""`=미선택 |
+| 3 | 버킷 필드 `provisoRate` | `rate` | 실제 |
+| 4 | ⑧ 「**합계 미일치 차단**」 | 행별 강제만 | **실제** — 대조할 「전체」가 없다(§4 B-5 정정 참조) |
+| 5 | `TaxHelp legalBasis="…제2항 **단서**"` | `"…제2항"` | **실제** — 카드가 본문·단서를 함께 설명 |
+
+### 9.3 🔴 살아 있던 결함 — §13① stale 누수 (재검토에서 발견·해소)
+
+**계획서는 「§13①은 미확정이라 제외」라고 적었는데, 코드는 stale 값으로 적용하고 있었다.**
+
+실측 — 법인 취득자가 매매 단계에서 과밀억제+본점신축을 켜 두고 간주취득으로 바꾸면:
+
+| 원인 | 세율 | 취득세(10억) | 농특세 |
+|---|---:|---:|---:|
+| 기준(플래그 없음) | 2% | 20,000,000 | 2,000,000 |
+| **§13① 본점신축** | **6%** | **60,000,000** | **6,000,000** |
+| **§13① 비도시형공장** | **6%** | **60,000,000** | **6,000,000** |
+| §13② 대도시법인 5년내 | 2% | 20,000,000 | 2,000,000 (`isSurcharged`만 true) |
+| §13⑦ · 휴면법인 | 2% | 20,000,000 | 영향 없음 |
+
+**과점주주·지목변경·개수 3유형 전부** 같았다. 10억 기준 **+4,000만원**.
+
+이건 §2.3 「끌 수 없다」 결함의 **나머지 절반**이다 — 사치성(§13⑤)은 카드를 달아 끌 수 있게
+했지만, §13①은 (U-1 미확정이라) 카드를 안 달았으니 **끌 방법이 전혀 없었다**.
+Step 4는 간주취득에서 도달 불가이므로 그 값은 **화면에 없는 값**이고, 남아 있다면
+다른 취득 원인에서 넘어온 stale 값이다.
+
+⇒ **④에서 간주취득이면 §13①②⑦ 법인 블록을 통째로 건너뛴다.**
+- **엔진은 그대로 둔다** — §15② 단서에 §13①이 **명문으로** 있다. U-1이 풀리면 칸만 열면 된다.
+  막는 자리는 **입력 경로(④)** 다.
+- §13②·§13⑦·휴면법인은 세액을 안 바꿨지만(실측) 같은 이유로 함께 막았다 —
+  `isSurcharged` 표시가 화면에 없는 값으로 흔들린다.
+
+**곁다리 — 근거 표시도 틀렸다**: 6%인데 `rateLegalBasis`가 「§15②」(본문=2%)로 떴다.
+판정이 `finalRate >= 10%`만 봤기 때문이다. §15② 단서에는 §13①(×300%)도 있으므로
+**본문을 넘는 순간 단서**다 → `finalRate > deemedProvisoRate("none")`으로 정정.
+(④가 막으므로 UI 경로로는 6%가 안 나오지만, 엔진 직접 호출 표시 규칙을 고정해 둔다)
+
+**뮤테이션 실측**
+
+| 뮤테이션 | 실패 |
+|---|---:|
+| 누수 차단 제거 (= 변경 전 상태) | 1 |
+| 근거 역산을 10% 기준으로 되돌림 | 1 |
+| 간주취득 판별을 「과점주주만」으로 좁힘 (형태 열거 오류) | 1 |
+
+신규 anchor 3건 — `AT-D15-API-30`(3유형 strip) · `AT-D15-API-31`(역방향: 매매는 그대로 전달) ·
+`AT-D15-23`(6%면 근거는 단서).
+
+### 9.4 §8 수치 정정
+
+lint `--fix`가 커밋 시 줄 수를 바꿨다. 실제:
+
+| 파일 | §8 기재 | 실제 |
+|---|---:|---:|
+| `acquisition-tax.ts` | 675 | **669** |
+| `acquisition-tax-helpers.ts` | 241 | **242** |
+| `acquisition-deemed-proviso.ts` | 88 | **79** |
+| `acquisition-deemed-bucket-tax.ts` | 101 | **100** |
+| `acquisition-deemed.ts` | 402 | 402 ✅ |
+
+anchor 건수 43(16+13+14)은 정확했고, §9.3에서 **+3 → 46건**이 됐다.
+
+### 9.5 여전히 남은 것
+
+| # | 항목 | 성격 |
+|---|---|---|
+| U-1 | §13①이 간주취득 「취득물건」에 성립하는가 | 🛑 유권해석 필요. **입력 경로는 막아 뒀다** |
+| U-2 | 골프장 §13⑤ 후단 적용상황 4종 중 과점주주가 어디에 해당하는가 | 🟡 토글이 사용자 판단이라 착수는 막지 않음 |
+| U-3 | 간주취득의 농특세 기준율 (농특세법 §5①6호에 §15② 표준세율이 없다) | 🟡 현행 동작 유지 |
+| GAP-3a | 지목변경 과세표준 — §10의6① 「사실상취득가격」이 본칙, 시가표준액은 §10의6② 보충 | 📐 미착수 (세율 축과 독립) |
+| 별건 | `acquisition-tax-rate-special.ts:169` — §15① 단서에 §13①이 없는데 주석은 있다고 적었다 | 🟡 미검증 |
+| dead | `DeemedAcquisitionResultCard.tsx:28` `RENOVATION_TYPE_LABELS` | 이 작업 **이전부터** 미사용. 내 고아가 아니라 삭제하지 않음 |

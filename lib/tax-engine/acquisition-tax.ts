@@ -359,9 +359,12 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
    *    세율 2%인데 근거만 「단서」로 뜨는 드리프트가 생긴다.
    */
   if (deemedDetailResult) {
+    // ⚠️ 「10% 이상일 때만 단서」가 아니다 — §15② 단서에는 §13①(×300% = 6%)도 있다.
+    //    본문(중과기준세율)을 **넘는 순간** 그 세율은 단서에서 나온 것이다.
+    //    (10%만 보던 종전 판정은 6%를 「본문」으로 잘못 표기했다 — 실측 2026-09-12)
     const provisoApplied: DeemedProviso =
       (deemedBuckets?.some((b) => b.proviso === "luxury") ?? false) ||
-      finalRate >= deemedProvisoRate("luxury")
+      finalRate > deemedProvisoRate("none")
         ? "luxury"
         : "none";
     deemedDetailResult = {

@@ -260,6 +260,21 @@ describe("[AT-D15] §3 역방향 가드", () => {
     expect(renovation().appliedRate).not.toBe(0.1);
   });
 
+  it("[AT-D15-23] §13①(6%)이 엔진에 도달하면 근거는 「본문」이 아니라 「단서」다", () => {
+    /**
+     * §15② 단서에는 §13⑤(×500% = 10%) 말고 **§13①(×300% = 6%)** 도 있다.
+     * 종전 판정은 `finalRate >= 10%` 만 봐서 **6%를 「본문」으로 잘못 표기**했다
+     * (본문은 2%다 — 실측 2026-09-12 재검토).
+     *
+     * ⚠️ ④는 간주취득에서 §13① 플래그를 strip 하므로 **UI 경로로는 6%가 나오지 않는다**
+     *    (계획서 U-1 미확정 — `AT-D15-API-30`). 여기서는 엔진을 직접 불러 표시 규칙만 고정한다.
+     */
+    const r = landCategory({ acquiredBy: "corporation", isMetropolitanCongestion: true, isHeadquarterNewBuild: true });
+    expect(r.appliedRate).toBe(0.06);
+    expect(r.deemedDetail?.rateLegalBasis).toBe("지방세법 §15② 단서");
+    expect(r.deemedDetail?.rateLegalBasis).not.toBe("지방세법 §15②");
+  });
+
   it("[AT-D15-22] 별장은 2023-03-14 이후 중과 폐지 — 켜도 2%, 근거도 본문", () => {
     const villa = { isLuxuryProperty: true, luxuryType: "villa" };
     const after = landCategory({ ...villa, balancePaymentDate: "2025-06-01" });

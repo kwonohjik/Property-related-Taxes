@@ -8,6 +8,8 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { FormState, OwnedHouseInfo as FormOwnedHouseInfo } from "@/components/calc/acquisition/shared";
+// 간주취득 판별 leaf — ⑤·⑧과 같은 술어를 쓴다(손술어 사본 금지)
+import { isDeemedAcquisitionCause } from "@/components/calc/acquisition/shared";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import type { HouseCountInput, OwnedHouseInfo as EngineOwnedHouseInfo, RightAsset, OfficeAsset, PendingAcquisition } from "@/lib/tax-engine/house-count/types";
 
@@ -294,13 +296,38 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     if (lt) body.luxuryType = lt;
   }
 
-  // ─── 법인 중과 §13⑦ ───
-  if (isCorporation && form.isCorpMetroSurcharge) {
+  /**
+   * ─── 법인 중과 §13①②⑦ ───
+   *
+   * 🔴 **간주취득에서는 통째로 건너뛴다** (2026-09-12 — §15② 단서 작업 재검토에서 실측).
+   *
+   * 이 플래그들은 **Step 4(법인·특수) 전용 입력**인데, 간주취득은 `computeNextStep`이
+   * `Step0 → Step1 → API 호출`로 **2단계에서 끝나** Step 4에 도달하지 못한다
+   * (사이드바도 2칸만 그린다). 즉 간주취득에서 이 값들은 **화면에 없는 값**이고,
+   * 남아 있다면 **다른 취득 원인으로 입력했다가 남은 stale 값**이다.
+   *
+   * 실측 — 법인 취득자가 매매 단계에서 과밀억제+본점신축을 켜 두고 간주취득으로 바꾸면
+   * 3유형(과점주주·지목변경·개수) **전부** 세율이 `2% → 6%`로 뛰었다
+   * (10억 기준 **+4,000만원** · 농특세 200만 → 600만). 끌 칸이 화면에 없으므로
+   * 되돌릴 방법도 없었다 — 사치성(§13⑤)에서 막은 「끌 수 없다」 결함의 **나머지 절반**이다.
+   *
+   * ⚠️ 「§13①은 간주취득에 적용하지 않는다」는 것은 **계획서 U-1의 결정**이기도 하다
+   *    (§13①은 「신축·증축」·「공장 신설·증설」이라는 **행위** 요건이라 간주취득 대응이
+   *    미확정 — 6%는 2%의 3배라 근거 없이 적용하면 불리 적용).
+   *    종전에는 문서가 「제외」라 적고 코드가 stale 경로로 적용하고 있었다.
+   *    ⇒ **엔진은 그대로 둔다** — §15② 단서에 §13①이 명문으로 있으므로 U-1이 풀리면
+   *    입력 경로만 열면 된다. 막는 자리는 ④(입력 경로)다.
+   *
+   * §13②·§13⑦·휴면법인은 세액을 바꾸지 않았지만(실측 2% 유지) 같은 이유로 함께 막는다 —
+   * `isSurcharged` 표시가 화면에 없는 값으로 흔들린다.
+   */
+  const isDeemedCauseForCorp = isDeemedAcquisitionCause(form.acquisitionCause);
+
+  if (isCorporation && !isDeemedCauseForCorp && form.isCorpMetroSurcharge) {
     body.isCorpMetroSurcharge = true;
   }
 
-  // ─── 법인·공장 중과 §13①② ───
-  if (isCorporation) {
+  if (isCorporation && !isDeemedCauseForCorp) {
     if (form.isMetropolitanCongestion) body.isMetropolitanCongestion = true;
     if (form.isHeadquarterNewBuild) body.isHeadquarterNewBuild = true;
     if (form.isNonUrbanFactory) {
