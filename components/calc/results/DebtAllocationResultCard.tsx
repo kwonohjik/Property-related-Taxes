@@ -16,6 +16,7 @@
  *  - feedback_ui_engine_dual_truth_avoidance — 사이드바 컴퓨팅 함수가 아닌 자체 합산 OK (UI display용, 엔진 매트릭스 무관)
  */
 
+import { calcFuneralExpenseDeduction } from "@/lib/tax-engine/inheritance-gift-common";
 import { useState } from "react";
 import type {
   DebtItem,
@@ -34,8 +35,6 @@ interface Props {
   collateralDebtDetail?: DerivedCollateralDebt[];
 }
 
-const FUNERAL_MEAL_LIMIT = 10_000_000;
-const FUNERAL_BONGAN_LIMIT = 5_000_000;
 
 export function DebtAllocationResultCard({
   debtItems,
@@ -61,11 +60,17 @@ export function DebtAllocationResultCard({
       else funeralMeal += di.amount;
     }
   }
-  const funeralMealApplied = Math.min(funeralMeal, FUNERAL_MEAL_LIMIT);
-  const funeralBonganApplied = Math.min(funeralBongan, FUNERAL_BONGAN_LIMIT);
-  const funeralApplied = funeralMealApplied + funeralBonganApplied;
-  const funeralExcess =
-    (funeralMeal - funeralMealApplied) + (funeralBongan - funeralBonganApplied);
+  // 엔진 단일 진실 — 상증령 §9②1호는 식대를 clamp[500만, 1천만]으로 «하한까지» 둔다.
+  // 종전 로컬 재구현은 상한만 적용해 지출이 500만 미만이면 카드 합계가 엔진 공제액보다 작았다.
+  const funeralCalc = calcFuneralExpenseDeduction(funeralMeal, funeralBongan);
+  const funeralMealApplied = funeralCalc.mealApplied;
+  const funeralBonganApplied = funeralCalc.bonganApplied;
+  const funeralApplied = funeralCalc.deduction;
+  // 하한이 걸리면 인정액 > 지출액이라 초과분은 음수가 된다 — 0으로 바닥을 깐다.
+  const funeralExcess = Math.max(
+    0,
+    (funeralMeal - funeralMealApplied) + (funeralBongan - funeralBonganApplied),
+  );
 
   const totalInput = totals.financial + totals.tax + totals.personal + totals.funeral;
   const totalAfterLimit =

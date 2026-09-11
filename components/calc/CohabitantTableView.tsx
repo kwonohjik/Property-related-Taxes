@@ -13,6 +13,7 @@
  * 설계: docs/02-design/features/inheritance-cohabitant-table-view.ui.design.md
  */
 
+import { resolveS20Params } from "@/lib/tax-engine/deductions/personal-deduction-calc";
 import { differenceInYears } from "date-fns";
 import type { CohabitantDependent } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -98,8 +99,13 @@ function CohabitantTableRow({ dep, isSelected, onSelect, deathDate }: RowProps) 
         })()
       : null;
 
-  const isMinor = age !== null && age < 19;
-  const isElderly = age !== null && age >= 65;
+  // §20 인적공제 임계는 상속개시일 tier에 따라 갈린다 — 2016-01-01 前은 미성년 20세·연로자 60세.
+  // 엔진 단일 진실 `resolveS20Params`를 그대로 쓴다(임계값 재정의 금지).
+  // ⚠️ §57 세대생략 할증의 「미성년」은 민법 §4 성년(19세) 고정이라 다른 축이다
+  //    (resolveMinorBeneficiary) — 여기 인적공제 배지와 혼용하지 말 것.
+  const s20 = resolveS20Params(deathDate);
+  const isMinor = age !== null && age < s20.minorAgeLimit;
+  const isElderly = age !== null && age >= s20.elderAgeThreshold;
 
   // 특이사항 배지
   const badges: React.ReactNode[] = [];

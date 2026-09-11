@@ -72,8 +72,15 @@ export function computeStockValuation(item: EstateItem, valuationDate?: string):
     const shares = item.listedStockShares ?? 0;
     if (avg <= 0 || shares <= 0) return 0;
     // §63③ 할증 (LS-02·LS-10): evaluateListedStock 통합 산식 사용 — 사이드바·결과뷰 단일 source
+    //
+    // ⚠️ valuationDate를 반드시 넘긴다. `resolveListedPremiumRate`는 §53⑧2호(평가기준일 전후
+    //    6개월 내 주식 전부 매각) 배제를 판정할 때 `toOptionalDate(valuationDate)`가 undefined면
+    //    게이트를 돌리지 않고 exclusionEffective를 none으로 무효화한 뒤 대기업 분기로 떨어져
+    //    할증 20%를 붙인다. 즉 날짜를 안 넘기면 «배제가 조용히 죽어» 세액이 과대해진다.
+    //    이 함수는 실제 세액 경로다 — 저장소의 다른 6개 호출부는 전부 날짜를 넘기고 있었고
+    //    여기만 `{}`였다(대장 IG-053 근거가 예고한 지점).
     try {
-      const r = evaluateListedStock(item, {});
+      const r = evaluateListedStock(item, { valuationDate });
       return r.valuatedAmount;
     } catch {
       // 산식 폴백 — §63②3호만 우선 (기존 동작 호환)

@@ -386,8 +386,8 @@ export function calcCohabitYears(
 // G4: §23의2① 주택부수토지 면적한도 차감
 // ============================================================
 
-/** 지역별 배율 (소득세 시행령 §154⑦) */
-const ANCILLARY_LAND_RATIO: Record<AncillaryLandRegion, number> = {
+/** 지역별 배율 (소득세 시행령 §154⑦). UI 미리보기(CohabitAncillaryLandBlock)도 이 상수를 쓴다. */
+export const ANCILLARY_LAND_RATIO: Record<AncillaryLandRegion, number> = {
   metro_residential_commercial_industrial: 3, // §154⑦1호가
   metro_green: 5,                             // §154⑦1호나
   non_metro: 5,                               // §154⑦1호다

@@ -233,7 +233,9 @@ describe("Table D — PriorGiftSummaryTable", () => {
         giftAmount: 700_000_000,
         giftTaxPaid: 0,
         giftTaxBase: 700_000_000,
-        computedTax: 150_000_000,
+        // 영리법인 행의 산출세액은 `corporateGiftComputedTax`에 담긴다 — `computedTax`를 쓰는
+        // 픽스처는 어떤 쓰기 지점도 만들지 않는 데이터였다(GiftRowEditor:107-113 · prior-gift-lookup:313).
+        corporateGiftComputedTax: 150_000_000,
       },
       {
         giftDate: "2022-06-10",
@@ -265,5 +267,24 @@ describe("Table D — PriorGiftSummaryTable", () => {
     expect(screen.getByText(/영리법인/)).toBeTruthy();
     expect(screen.getByText(/592,000,000/)).toBeTruthy(); // 산출세액 소계
     expect(screen.getByText(/2,960,000,000/)).toBeTruthy(); // 증여재산가액 소계
+  });
+
+  it("U-12: 영리법인 행은 cgct를 읽고 stray computedTax는 무시한다 (형제표 InheritanceFilingFormTable:199-201 동형)", () => {
+    const gifts: PriorGift[] = [
+      {
+        giftDate: "2021-08-10",
+        isHeir: false,
+        beneficiaryType: "corporate",
+        propertyCategory: "other",
+        propertyName: "대여금",
+        giftAmount: 700_000_000,
+        giftTaxPaid: 0,
+        corporateGiftComputedTax: 150_000_000,
+        computedTax: 999_999_999, // 미끼 — 영리법인 분기가 읽으면 안 되는 값
+      },
+    ];
+    render(<PriorGiftSummaryTable priorGifts={gifts} />);
+    expect(screen.getAllByText(/150,000,000/).length).toBeGreaterThan(0); // 양성: cgct가 표시·합산된다
+    expect(screen.queryByText(/999,999,999/)).toBeNull();                 // 음성: computedTax는 안 읽는다
   });
 });

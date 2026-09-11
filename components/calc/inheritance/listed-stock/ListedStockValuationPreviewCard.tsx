@@ -20,9 +20,11 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 interface Props {
   item: EstateItem;
+  /** 평가기준일(상속개시일·증여일) — §53⑧2호 전부매각 할증배제 게이트의 필수 인자 */
+  valuationDate?: string;
 }
 
-export function ListedStockValuationPreviewCard({ item }: Props) {
+export function ListedStockValuationPreviewCard({ item, valuationDate }: Props) {
   const shares = item.listedStockShares ?? 0;
   const avgPriceRaw = item.listedStockAvgPrice ?? 0;
   if (avgPriceRaw <= 0 || shares <= 0) return null;
@@ -39,7 +41,11 @@ export function ListedStockValuationPreviewCard({ item }: Props) {
   let isCapIncSection = false;
 
   try {
-    const r = evaluateListedStock(item, {});
+    // 평가기준일을 반드시 넘긴다 — `resolveListedPremiumRate`는 §53⑧2호(전부매각) 배제를
+    // 판정할 때 `toOptionalDate(valuationDate)`가 undefined면 게이트를 아예 돌리지 않고
+    // exclusionEffective를 none으로 무효화한 뒤 대기업 분기로 떨어져 할증 20%를 붙인다.
+    // 형제 ListedStockBesshiPreviewCard:41이 이미 { valuationDate }를 넘긴다.
+    const r = evaluateListedStock(item, { valuationDate });
     totalValue = r.valuatedAmount;
     const p1 = r.besshiData?.page1Values;
     if (p1) {

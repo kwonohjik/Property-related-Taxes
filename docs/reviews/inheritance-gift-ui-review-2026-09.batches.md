@@ -14,7 +14,7 @@ BLOCKER 10건은 **PR #1581로 종결**. 이 문서는 **MAJOR 81 + MINOR 73 = 1
 | # | 배치 | 건수 | MAJOR | MINOR | 파일 | 수정 행위 | 검증 수단 |
 |---|---|---:|---:|---:|---:|---|---|
 | ~~G1~~ ✅ | ~~문구·조문표기~~ | 33 | 6 | 27 | 28 | 라벨·hint·조문 인용 1~3줄 | typecheck + 기존 테스트 (값 무변동) |
-| G2 | 엔진 단일소스 위임 | 23 | 16 | 7 | 22 | UI 로컬 재구현 삭제 → 엔진 헬퍼 import | 「UI 표시값 == 엔진 값」 anchor |
+| ~~G2~~ ✅ | ~~엔진 단일소스 위임~~ | 23 | 16 | 7 | 22 | UI 로컬 재구현 삭제 → 엔진 헬퍼 import | 「UI 표시값 == 엔진 값」 anchor |
 | G4 | 게이트 OFF 값 정리 | 16 | 9 | 7 | 12 | 게이트가 닫힐 때 patch에서 값도 정리 | RTL anchor (OFF → store 키 부재) |
 | G5 | 공용컴포넌트·인쇄·저장 | 13 | 3 | 10 | 11 | 저장소 확립 패턴으로 교체 | RTL + E2E 셀렉터 |
 | G6 | 결과뷰·별지서식 | 14 | 13 | 1 | 13 | 화면 ↔ 별지 값·산식 불일치 해소 | 결과뷰 anchor + PDF 행 대조 |
@@ -89,6 +89,55 @@ D-4는 제목부터 「증여세 모드 → doneeRelation 라벨만」이었는�
 뮤테이션에 **구별력 0**이었다(라벨 함수는 맞는데 표가 `{}`를 넘겨도 통과). 렌더 anchor를
 짝으로 추가해야 「컴포넌트가 그 단일 소스를 부른다」가 증명된다
 (memory `feedback_library_anchor_does_not_prove_component_uses_it`).
+
+## G2 종결 기록 (2026-09-11)
+
+전건 23건 수정 완료(28파일). 축은 넷으로 갈렸다 — **평가기준일 미전달 10 · UI가 엔진 산식
+재구현 7 · 엔진 echo 미사용 4 · 게이트 술어 불일치 2**.
+
+**⭐ ① 대장이 UI 결함으로 적은 것이 «실제 세액 경로»에도 있었다.** `IG-053`이 부록으로
+적어둔 「청크 밖이지만 함께 확인 필요」를 따라가니, `lib/tax-engine/valuation/resolve-estate-item-value.ts:76`의
+`evaluateListedStock(item, {})`가 **저장소에서 유일하게** 평가기준일을 안 넘기고 있었다
+(나머지 6개 호출부는 전부 넘긴다). 이 함수는 `valuationDate`를 **이미 파라미터로 받으면서
+쓰지 않았다.** 결과는 §53⑧2호 전부매각 할증배제가 조용히 죽어 **세액이 과대**해지는 것이다.
+⇒ **UI 리뷰 항목의 「부록」이 엔진 결함을 가리킬 수 있다** — 청크 밖이라고 접지 말 것.
+
+**② 모집단이 대장보다 넓었다.** `computeStockValuation`에 날짜를 안 넘기는 곳이 대장 지적
+3건 외에 **4곳 더** 있었다. G1 ④(`IG-142`)와 같은 형태다 — 리뷰는 파일 단위로 훑은 것이라
+그 파일을 안 본 인스턴스는 목록에 없다.
+
+**③ 호 번호를 UI가 재현하면 안 되는 경우가 있다.** `IG-034`에서 가업 공제한도 라벨을
+「10년 이상(1호)」식으로 고치려다, **2014~2017 tier는 구간 경계 자체가 다르다**는 것을
+확인했다(10~15 / 15~20 / 20+). 같은 금액이 다른 호에 대응하므로 **금액으로 호를 역산하면
+틀린다.** ⇒ 엔진이 준 한도와 입력 연수만 적는다.
+
+**④ 픽스처가 «어떤 쓰기 지점도 만들지 않는 데이터»였다.** `source-data-summary.test.tsx`의
+U-10이 영리법인 사전증여에 `computedTax: 150_000_000`을 주고 소계 592,000,000을 단언했다.
+그런데 영리법인 행의 산출세액을 쓰는 지점은 `GiftRowEditor:107-113`(cgct에 기록,
+`giftTaxBase`는 명시적으로 undefined) · `prior-gift-lookup.ts:313`(이력의 computedTax →
+**cgct로 매핑**) 둘뿐이고, 엔진(`inheritance-corporate-exemption-step.ts:65`)도 cgct를 읽는다.
+결정적으로 **같은 배열을 받는 형제표**(`InheritanceTaxResultView:328` vs `:337`)의
+`InheritanceFilingFormTable.tsx:199-201`은 **이미 분기하고 있었다** — 두 표가 같은 데이터로
+다른 값을 그리고 있었던 것이다. ⇒ 픽스처를 실재 가능한 데이터로 고치고, **미끼
+`computedTax: 999,999,999`를 함께 둔 U-12**(양성=cgct 표시 / 음성=미끼 무시)를 더했다
+(memory `feedback_fixture_default_masks_gate_defect` · `feedback_negative_anchor_needs_positive_twin`).
+
+**⑤ 내가 실측 없이 단정했다 — 틀렸다.** `IG-049`에서 「`getShareThresholdByDate() * 100`이
+G1에서 고친 부동소수 함정을 재현한다」고 적었으나, 실측하니 **0.2·0.3·0.4·0.5는 정확히
+떨어진다**(0.07만 문제였다). 헬퍼(`ratePercent`)는 미래 임계값 대비로 유지하되 **근거를
+정정**했다. 규칙은 이미 메모리에 있었다 — `feedback_numeric_impact_verify_before_bug_claim`.
+
+**⑥ 「미성년」은 두 축이다.** `resolveMinorBeneficiary`의 19세는 **민법 §4 성년**이고
+(§57 세대생략이 쓴다 — `inheritance-generation-skip.ts:115`), `resolveS20Params().minorAgeLimit`은
+**§20 인적공제 tier**다(2016-01-01 前 20세). 하드코딩된 19를 무조건 tier로 바꾸면 틀린다.
+
+**뮤테이션 프로브 — 구별력 0이 또 나왔다.** `IG-088`의 첫 anchor는 헬퍼만 단언해 호출부를
+되돌려도 통과했다(G1 `IG-141`과 **같은 형태의 재발**). 렌더 anchor(R-5·R-6)를 짝으로 추가한
+뒤에야 잡혔다. ⇒ **단일소스 위임 배치의 anchor는 기본형이 «렌더»다.**
+
+**🟠 별건으로 남긴 것**: `resolveEstateItemValue`는 `valuationDate` 파라미터가 **아예 없는데**,
+docstring은 `computeEffectiveValuation`과 「동치(단일 진실)」라고 적는다. 시그니처를 넓히면
+호출부 폭발 범위가 이 배치를 넘어서므로 **건드리지 않고 남긴다.**
 
 ## 배치별 착수 노트
 

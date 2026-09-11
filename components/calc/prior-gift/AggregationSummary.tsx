@@ -20,7 +20,12 @@ export function AggregationSummary({
   if (gifts.length === 0) return null;
 
   const total = gifts.reduce((s, g) => s + g.giftAmount, 0);
-  const totalTaxPaid = gifts.reduce((s, g) => s + g.giftTaxPaid, 0);
+  // §28 공제 대상은 제척기간이 «만료되지 않은» 회차뿐이다 — 엔진과 같은 술어로 거른다.
+  // 종전에는 전 회차를 더하고 「§28 공제 대상」이라 라벨링해, 만료 회차가 있으면 실제
+  // 공제액보다 큰 금액이 표시됐다.
+  const totalTaxPaid = gifts
+    .filter((g) => g.giftTaxTimeBarred !== true)
+    .reduce((s, g) => s + g.giftTaxPaid, 0);
 
   if (total === 0) return null;
 

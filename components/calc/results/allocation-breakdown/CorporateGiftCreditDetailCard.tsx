@@ -28,7 +28,6 @@ export function CorporateGiftCreditDetailCard({
   const corps = sortHeirs(heirs).filter((h) => h.relation === "corporate");
   if (corps.length === 0) return null;
 
-  const corpGiftTaxBase = result.taxBase - (a?.computedTaxShareDenominator ?? 0); // 역산 R4
   const exemption = result.corporateExemption?.amount ?? 0;
   const limitDisplay = result.summaryTable?.corporateExemptionLimitDisplay ?? 0;
 
@@ -54,8 +53,14 @@ export function CorporateGiftCreditDetailCard({
                   label={
                     <>
                       = 산출세액 {formatKRW(result.computedTax)} ×{" "}
+                      {/* 분자는 «그 법인 하나의» 과세표준이어야 한다 — ⓑ 한도(p.priorGiftCreditLimit)가
+                          그렇게 계산된 값이다. 종전에는 `taxBase − computedTaxShareDenominator`로
+                          역산했는데, 엔진 분모는 `taxBase − corporateGiftTaxBase −
+                          nonPayerNaturalGiftTaxBase`라 그 역산값은 (전 영리법인 합계 + 비상속인
+                          자연인 사전증여 과세표준)이 된다. 법인이 2곳 이상이거나 비상속인 자연인
+                          사전증여가 있으면 산식과 값이 어긋났다. 엔진 echo를 행마다 그대로 쓴다. */}
                       <Frac
-                        top={`영리법인 과세표준 ${formatKRW(corpGiftTaxBase)}`}
+                        top={`영리법인 과세표준 ${formatKRW(p.directTaxBaseShare ?? 0)}`}
                         bottom={`과세표준 ${formatKRW(result.taxBase)}`}
                       />
                     </>

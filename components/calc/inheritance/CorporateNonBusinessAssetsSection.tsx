@@ -18,6 +18,7 @@
  *   - feedback_three_state_optional_mode_toggle (과다현금 자동산정 cashByYearEnd undefined/[]/[...])
  */
 
+import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import { useMemo } from "react";
 
 import { CurrencyInput, formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -58,8 +59,13 @@ export function CorporateNonBusinessAssetsSection({
 
   const assets = item.corporateNonBusinessAssets;
   const totalAssets = item.corporateTotalAssets;
-  const stockValue =
-    item.marketValue ?? item.appraisedValue ?? item.standardPrice ?? 0;
+  // §60 평가순위 단일 소스 — 엔진·lib/calc가 모두 이 헬퍼를 쓴다.
+  // 종전 로컬 계산은 similarSalesValue(§49④)와 «주식 보충평가»(상장=평균종가×주식수,
+  // 비상장=V2/V1) 단계를 건너뛰었다. corporate_stock 분류는 listed_stock·unlisted_stock
+  // 자산에서만 고를 수 있고 그 자산들은 marketValue를 store에 쓰지 않는 정책이라
+  // (inheritance-deduction-suggest.ts:70 — mirror 금지·derive만) 대개 0이 되어
+  // 차감 미리보기 카드가 아예 뜨지 않았다.
+  const stockValue = resolveEstateItemValue(item);
 
   const cashAuto = assets?.cashByYearEnd !== undefined;
   const exclude = exclusionApplicable(deathDate);

@@ -46,6 +46,7 @@ import {
   evaluateFamilyBusinessEligibility,
   familyBusinessCap,
   resolveFamilyBusinessHeirId,
+  resolveFamilyBusinessRequirements,
   suggestFBOperatingYears,
 } from "@/lib/tax-engine/deductions/family-business";
 import type { FamilyBusinessInheritanceInput } from "@/lib/tax-engine/types/inheritance-family-business.types";
@@ -159,22 +160,6 @@ export function FamilyBusinessEligibilitySection({
   const isActive = familyBusiness !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
 
-  // 엔진 단일 소스 — 자격 판정 (single-source-engine-helper)
-  const evalResult = useMemo(
-    () =>
-      familyBusiness ? evaluateFamilyBusinessEligibility(familyBusiness) : null,
-    [familyBusiness],
-  );
-
-  // 한도 미리보기 (엔진 단일 소스)
-  const capPreview = useMemo(
-    () =>
-      familyBusiness
-        ? familyBusinessCap(familyBusiness.operatingYears)
-        : null,
-    [familyBusiness],
-  );
-
   // 영위연수 제안값 (useMemo — store 미러링 없음, 제안만)
   const suggestedYears = useMemo(() => {
     if (!familyBusiness?.openingDate || !deathDate) return null;
@@ -193,6 +178,33 @@ export function FamilyBusinessEligibilitySection({
     if (!resolvedHeirId) return undefined;
     return heirs.find((h) => h.id === resolvedHeirId)?.birthDate;
   }, [familyBusiness, heirs]);
+
+  // 엔진 단일 소스 — 자격 판정 (single-source-engine-helper)
+  //
+  // ⚠️ «원본 폼값»을 그대로 넘기면 안 된다. heirIsAdult·heirTwoYearEngagement·
+  //    heirOfficerByFilingDeadline·heirCEOWithinTwoYears 4개는 UI가 절대 쓰지 않고
+  //    (EMPTY_FB에서 false 고정, FbHeirRequirementsSection은 날짜와 *Override만 기록)
+  //    엔진이 `resolveFamilyBusinessRequirements`로 날짜에서 도출한다.
+  //    미리보기만 원본을 넘겨 4개가 늘 false → 「항상 미충족」으로 표시됐다.
+  const evalResult = useMemo(() => {
+    if (!familyBusiness || !deathDate) return null;
+    const { resolvedInput } = resolveFamilyBusinessRequirements(
+      familyBusiness,
+      selectedHeirBirthDate,
+      deathDate,
+    );
+    return evaluateFamilyBusinessEligibility(resolvedInput);
+  }, [familyBusiness, selectedHeirBirthDate, deathDate]);
+
+  // 한도 미리보기 (엔진 단일 소스) — 한도는 «상속개시일 시기별»이다
+  // (2018~2022는 200/300/500억, 2014~2017은 구간 경계까지 다르다).
+  const capPreview = useMemo(
+    () =>
+      familyBusiness
+        ? familyBusinessCap(familyBusiness.operatingYears, deathDate)
+        : null,
+    [familyBusiness, deathDate],
+  );
 
   const handleToggleOn = () => onChange({ ...EMPTY_FB });
   const handleToggleOff = () => {
@@ -307,13 +319,12 @@ export function FamilyBusinessEligibilitySection({
               )}
               {capPreview !== null && (
                 <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-caption text-amber-800 dark:text-amber-200">
+                  {/* 호 번호를 UI가 재현하지 않는다 — 구간 경계가 시기별로 다르다
+                      (2014~2017은 10~15·15~20·20+). 같은 금액이 다른 호에 대응하므로
+                      금액으로 호를 역산하면 틀린다. 엔진이 준 한도와 입력 연수만 적는다. */}
                   {capPreview === 0
                     ? "⚠️ 10년 미만 — 공제 자격 미충족"
-                    : capPreview === 30_000_000_000
-                      ? "✓ 10년 이상 (1호) — 한도 300억"
-                      : capPreview === 40_000_000_000
-                        ? "✓ 20년 이상 (2호) — 한도 400억"
-                        : "✓ 30년 이상 (3호) — 한도 600억"}
+                    : `✓ 영위 ${familyBusiness?.operatingYears ?? "—"}년 — 한도 ${(capPreview / 100_000_000).toLocaleString("ko-KR")}억`}
                 </div>
               )}
             </div>

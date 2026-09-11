@@ -74,10 +74,12 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
     (acc, g) => acc + (g.giftTaxBase ?? 0),
     0,
   );
-  const totalComputed = priorGifts.reduce(
-    (acc, g) => acc + (g.computedTax ?? 0),
-    0,
-  );
+  // 영리법인 행은 산출세액을 `corporateGiftComputedTax`에 저장하고 `computedTax`는 두지 않는다
+  // — 형제 표(InheritanceFilingFormTable:200)와 같은 분기를 쓴다. 종전에는 computedTax만 읽어
+  // 영리법인 사전증여의 산출세액 칸·소계가 항상 공란이었다.
+  const computedTaxOf = (g: (typeof priorGifts)[number]): number | undefined =>
+    g.beneficiaryType === "corporate" ? g.corporateGiftComputedTax : g.computedTax;
+  const totalComputed = priorGifts.reduce((acc, g) => acc + (computedTaxOf(g) ?? 0), 0);
   /** 전 회차가 auto(과세표준 미입력)면 공제·과세표준 소계는 의미가 없다. */
   const allAutoDerived = priorGifts.every((g) => g.giftTaxBase == null);
 
@@ -139,7 +141,7 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
                   {gift.giftTaxBase == null ? AUTO_DERIVED : formatCellOrDash(gift.giftTaxBase)}
                 </td>
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {formatCellOrDash(gift.computedTax)}
+                  {formatCellOrDash(computedTaxOf(gift))}
                 </td>
                 <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600">
                   {gift.beneficiaryType === "corporate" ? "§3의2②" : ""}

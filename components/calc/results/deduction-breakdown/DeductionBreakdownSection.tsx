@@ -37,9 +37,11 @@ interface Props {
   heirs?: Heir[];
   /** 가업상속인 heirId — familyBusiness.heirId (resolvedRequirements 표시) */
   familyBusinessHeirId?: string;
+  /** 상속개시일 — §20 인적공제 단가·상한연령 tier(2016-01-01 前/後) 라벨 파생 */
+  deathDate?: string;
 }
 
-export function DeductionBreakdownSection({ result, estateItems, debtItems, heirs, familyBusinessHeirId }: Props) {
+export function DeductionBreakdownSection({ result, estateItems, debtItems, heirs, familyBusinessHeirId, deathDate }: Props) {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const dd = result.deductionDetail;
@@ -89,6 +91,7 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
               />
               <PersonalDeductionDetailCard
                 detail={dd.personalDeductionDetail}
+                deathDate={deathDate}
                 triggerLabel="인적공제 합계 (§20)"
                 triggerValue={formatKRW(dd.personalDeductionTotal)}
               />

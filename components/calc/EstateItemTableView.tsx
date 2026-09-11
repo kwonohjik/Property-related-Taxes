@@ -54,17 +54,21 @@ interface EstateItemTableRowProps {
   onSelect: () => void;
   mode: "inheritance" | "gift";
   heirsCount: number;
+  /** 평가기준일(상속개시일·증여일) — 지상권·무체재산권·채권·전환사채·신탁수익권·정기금·적금은
+   *  잔존연수·할인일수·이자 계산에 이 날짜를 쓴다. 미전달 시 대개 0이 나온다.
+   *  형제 StockItemTableView:184가 「EstateItemTableView엔 없다」고 주석에 남긴 갭이었다. */
+  valuationDate?: string;
 }
 
-function EstateItemTableRow({ item, isSelected, onSelect, mode, heirsCount }: EstateItemTableRowProps) {
+function EstateItemTableRow({ item, isSelected, onSelect, mode, heirsCount, valuationDate }: EstateItemTableRowProps) {
   const cat = item.category as SupportedCategory;
   const nameDisplay = item.name?.trim() || CATEGORY_LABELS[cat];
-  const value = computeEffectiveValuation(item);
+  const value = computeEffectiveValuation(item, valuationDate);
 
   // resolveChips 단일 출처 — 읽기 전용 테이블은 실제 적용·설정된 비기본 옵션만 표시.
   //   isActiveData=false인 기본/미설정 안내 칩(평가액·일반·법정분할·영농/가업 미선택 등) 제외.
   //   실제 입력 여부 판정은 chip-config의 countNonDefaultOptions와 동일 술어 (단일 진실).
-  const optionChips = resolveChips({ item, mode, heirsCount }).filter(
+  const optionChips = resolveChips({ item, mode, heirsCount, valuationDate }).filter(
     (c) => c.isActiveData === true,
   );
   const optionCount = countNonDefaultOptions(item, mode);
@@ -150,6 +154,8 @@ export interface EstateItemTableViewProps {
   heirsCount: number;
   /** 테이블 aria-label — "상속재산 목록"/"증여재산 목록" */
   ariaLabel: string;
+  /** 평가기준일 — 행 평가액·칩 평가액이 엔진과 같은 인자 세트를 쓰게 한다 */
+  valuationDate?: string;
 }
 
 export function EstateItemTableView({
@@ -159,6 +165,7 @@ export function EstateItemTableView({
   mode,
   heirsCount,
   ariaLabel,
+  valuationDate,
 }: EstateItemTableViewProps) {
   if (items.length === 0) return null;
   const showOptionCol = mode === "inheritance";
@@ -186,6 +193,7 @@ export function EstateItemTableView({
               onSelect={() => onSelect(item.id)}
               mode={mode}
               heirsCount={heirsCount}
+              valuationDate={valuationDate}
             />
           ))}
         </tbody>

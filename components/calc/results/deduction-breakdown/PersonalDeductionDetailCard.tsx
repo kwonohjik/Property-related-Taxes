@@ -7,6 +7,7 @@
  * 이름 표시: detail.name?.trim() 우선, 없으면 관계 라벨 (id 직접 노출 금지).
  */
 
+import { resolveS20Params } from "@/lib/tax-engine/deductions/personal-deduction-calc";
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { PersonalDeductionDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
@@ -16,14 +17,23 @@ interface Props {
   detail?: PersonalDeductionDetail;
   triggerLabel: string;
   triggerValue: string;
+  /** 상속개시일 — §20 단가·상한연령 tier. 미전달 시 현행(2016-01-01 이후) 기준. */
+  deathDate?: string;
 }
 
 export function PersonalDeductionDetailCard({
   detail,
   triggerLabel,
   triggerValue,
+  deathDate,
 }: Props) {
   const [open, setOpen] = useState(false);
+  // §20 단가·상한연령은 상속개시일 tier에 따라 갈린다 — 2016-01-01 前은
+  // 자녀 3,000만 / 연 500만 / 미성년 상한 20세 / 연로자 60세 3,000만.
+  // 금액 칸(value)은 엔진 값이므로, 라벨만 현행으로 고정하면 라벨 ≠ 값이 된다.
+  // 엔진 헬퍼를 그대로 import한다(자체 재계산 금지).
+  const p20 = resolveS20Params(deathDate);
+  const manLabel = (won: number) => `${(won / 10_000).toLocaleString("ko-KR")}만원`;
 
   return (
     <>
@@ -42,7 +52,7 @@ export function PersonalDeductionDetailCard({
           {/* ① 자녀공제 (§20①1호) */}
           {detail.childCount > 0 && (
             <DetailRow
-              label={`자녀공제 ${detail.childCount}명 × 5,000만원`}
+              label={`자녀공제 ${detail.childCount}명 × ${manLabel(p20.childAmount)}`}
               value={formatKRW(detail.childDeduction)}
             />
           )}
@@ -58,7 +68,7 @@ export function PersonalDeductionDetailCard({
               <DetailRow
                 key={`minor-${i}`}
                 indent
-                label={`${who} (만 ${r.age}세): (19 − ${r.age})년 × 1,000만원`}
+                label={`${who} (만 ${r.age}세): (${p20.minorAgeLimit} − ${r.age})년 × ${manLabel(p20.perYearAmount)}`}
                 value={formatKRW(r.deduction)}
               />
             );
@@ -73,7 +83,7 @@ export function PersonalDeductionDetailCard({
           {/* ③ 연로자공제 (§20①3호) */}
           {detail.elderCount > 0 && (
             <DetailRow
-              label={`연로자공제 ${detail.elderCount}명 × 5,000만원 (65세 이상, 배우자·자녀 제외)`}
+              label={`연로자공제 ${detail.elderCount}명 × ${manLabel(p20.elderAmount)} (${p20.elderAgeThreshold}세 이상, 배우자·자녀 제외)`}
               value={formatKRW(detail.elderDeduction)}
             />
           )}
@@ -95,7 +105,7 @@ export function PersonalDeductionDetailCard({
               <DetailRow
                 key={`disabled-${i}`}
                 indent
-                label={`${who}: ${genderLabel} 만 ${r.age}세 기대여명 ${r.lifeExpectancy}년 × 1,000만원`}
+                label={`${who}: ${genderLabel} 만 ${r.age}세 기대여명 ${r.lifeExpectancy}년 × ${manLabel(p20.perYearAmount)}`}
                 value={formatKRW(r.deduction)}
               />
             );

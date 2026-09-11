@@ -191,6 +191,7 @@ export function PropertyValuationForm({
         mode={mode}
         heirsCount={heirs?.length ?? 0}
         ariaLabel={`${modeLabel}재산 목록`}
+        valuationDate={valuationDate}
       />
 
       {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈 */}
@@ -324,7 +325,7 @@ export function PropertyValuationForm({
       )}
 
       {/* 합계 */}
-      <TotalEstimatedValue items={items} />
+      <TotalEstimatedValue items={items} valuationDate={valuationDate} />
     </div>
   );
 }

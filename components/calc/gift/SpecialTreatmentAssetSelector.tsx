@@ -16,6 +16,12 @@
  * onChange → giftItems[i].isSpecialTreatmentAsset 직접 write.
  */
 
+// 평가액은 엔진 단일 소스에 위임한다. 종전 로컬 `getAssetValue`는
+// `marketValue ?? appraisedValue ?? similarSalesValue ?? standardPrice ?? 0`만 봐서
+// computeEffectiveValuation의 «마지막 cash·기타 분기»만 복제한 꼴이었고,
+// 비상장·상장주식(§63 보충평가)·부동산(§60 임대료환산·담보하한)·예금·정기금 경로를
+// 전부 건너뛰어 주식·부동산이 0원으로 표시됐다.
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -27,20 +33,6 @@ import {
   isSpecialTreatmentEligibleCategory,
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
-
-// ============================================================
-// 자산 표시값 계산 (평가액 우선순위)
-// ============================================================
-
-function getAssetValue(item: EstateItem): number {
-  return (
-    item.marketValue ??
-    item.appraisedValue ??
-    item.similarSalesValue ??
-    item.standardPrice ??
-    0
-  );
-}
 
 function getAssetLabel(item: EstateItem, index: number): string {
   const categoryLabel =
@@ -80,12 +72,15 @@ interface SpecialTreatmentAssetSelectorProps {
   allItems: EstateItem[];
   /** 개별 자산 isSpecialTreatmentAsset 변경 콜백 — 인덱스는 allItems 기준 */
   onItemChange: (index: number, isSpecial: boolean) => void;
+  /** 평가기준일(증여일) — 날짜 의존 자산(지상권·채권·전환사채·정기금 등)의 평가에 필요 */
+  valuationDate?: string;
 }
 
 export function SpecialTreatmentAssetSelector({
   specialTreatment,
   allItems,
   onItemChange,
+  valuationDate,
 }: SpecialTreatmentAssetSelectorProps) {
   const streamLabel =
     specialTreatment === "startup" ? "창업자금 §30의5" : "가업승계 §30의6";
@@ -102,7 +97,7 @@ export function SpecialTreatmentAssetSelector({
   // 자산 1개 — 자동 귀속 읽기전용 표시
   if (allItems.length === 1) {
     const item = allItems[0];
-    const val = getAssetValue(item);
+    const val = computeEffectiveValuation(item, valuationDate);
     const label = getAssetLabel(item, 0);
     // 재산 종류 부적격 — 자동 귀속 불가 경고 (validateStep ⑧·Zod ⑩이 차단)
     if (!isSpecialTreatmentEligibleCategory(item.category, specialTreatment)) {
@@ -155,7 +150,7 @@ export function SpecialTreatmentAssetSelector({
       <div className="space-y-1.5">
         {allItems.map((item, i) => {
           const isChecked = item.isSpecialTreatmentAsset === true;
-          const val = getAssetValue(item);
+          const val = computeEffectiveValuation(item, valuationDate);
           const label = getAssetLabel(item, i);
           // 재산 종류 부적격 자산은 특례 귀속 선택 비활성 (startup: 소법 §94① 재산 제외 / family: 주식만)
           const eligible = isSpecialTreatmentEligibleCategory(

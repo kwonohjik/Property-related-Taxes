@@ -15,7 +15,6 @@
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuation-stock";
-import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import { computeStockValuation, resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { StockItemTableView } from "@/components/calc/inheritance/stock/StockItemTableView";
@@ -38,21 +37,26 @@ import {
 
 interface StockTotal {
   items: EstateItem[];
+  /** 평가기준일 — V2 evaluationDate 미입력 시 fallback 주입·§53⑧ 게이트에 쓰인다 */
+  valuationDate?: string;
 }
 
-function TotalStockValue({ items }: StockTotal) {
+function TotalStockValue({ items, valuationDate }: StockTotal) {
   let total = 0;
   for (const item of items) {
     if (item.category === "listed_stock") {
-      // ★ C-B/D-8 재배선: computeStockValuation(item) — §63②3호 배당차액 차감 반영 (dual-truth 차단)
-      total += computeStockValuation(item);
+      // 단일 진실 위임 — §63②3호 배당차액 차감 + §53⑧ 할증배제 게이트(valuationDate 필수)
+      total += computeStockValuation(item, valuationDate);
     } else if (item.category === "unlisted_stock") {
       // 모드 판정 — 단일 진실 헬퍼 (D-4)
       const activeMode = resolveUnlistedDisplayMode(item);
       if (activeMode === "formal" && item.unlistedStockValuationV2) {
         try {
-          const result = evaluateUnlistedStockV2(item.unlistedStockValuationV2);
-          if (result.totalValuation > 0) total += result.totalValuation;
+          // `evaluateUnlistedStockV2`를 직접 부르면 V2의 `evaluationDate`가 비어 있을 때
+          // 평가기준일 fallback 주입(resolve-estate-item-value.ts:97-101)을 건너뛴다
+          // — 같은 목록의 테이블 행·V2 카드 미리보기와 값이 갈렸다.
+          const totalValuation = computeStockValuation(item, valuationDate);
+          if (totalValuation > 0) total += totalValuation;
         } catch {
           // 입력 미완성 — 무시
         }
@@ -304,7 +308,7 @@ export function StockValuationForm({
 
       {/* 추가 버튼 + 합계 — 한 행(좌: 추가, 우: 주식 합계 예상). 추가 버튼/합계 어느 한쪽만 있으면 전체폭. */}
       <div className="flex items-center gap-3">
-        <TotalStockValue items={items} />
+        <TotalStockValue items={items} valuationDate={valuationDate} />
         {/* 하단 추가 버튼 — uncontrolled(증여세 등)는 항상, controlled(상속 헤더 버튼)는
             목록이 있을 때만(빈 목록은 헤더 버튼 단독 → 추가 트리거 중복·E2E strict 위반 회피).
             컴팩트 알약 · 우측 끝 정렬(ml-auto). */}

@@ -18,6 +18,7 @@
  *   - 장례비 한도 자동 표시 (식대 1천만 / 봉안 5백만)
  */
 
+import { calcFuneralExpenseDeduction } from "@/lib/tax-engine/inheritance-gift-common";
 import { useState } from "react";
 import type {
   DebtItem,
@@ -112,9 +113,13 @@ export function DebtAllocationInput({
       else funeralMeal += it.amount;
     }
   }
-  const funeralAppliedMeal = Math.min(funeralMeal, 10_000_000);
-  const funeralAppliedBongan = Math.min(funeralBongan, 5_000_000);
-  const funeralApplied = funeralAppliedMeal + funeralAppliedBongan;
+  // 상증령 §9②는 1호 식대를 clamp[500만, 1천만]으로 «하한까지» 두는데 종전 로컬 재구현은
+  // 상한만 적용해 3백만 지출 시 엔진(500만)과 200만이 갈렸다. 엔진 단일 진실에 위임한다
+  // — 사이드바(lib/stores/inheritance-summary.ts:167)가 이미 같은 헬퍼를 쓴다.
+  const funeralCalc = calcFuneralExpenseDeduction(funeralMeal, funeralBongan);
+  const funeralAppliedMeal = funeralCalc.mealApplied;
+  const funeralAppliedBongan = funeralCalc.bonganApplied;
+  const funeralApplied = funeralCalc.deduction;
 
   return (
     <div className="space-y-3">

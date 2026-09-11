@@ -7,6 +7,7 @@
  * 담보채무 자체는 §14 부채로 별도 공제 (Phase 2 자동반영 전까지 부채 명세 수동 입력).
  */
 
+import { computeSecuredClaim } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { evaluateEstateItem, resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
@@ -41,8 +42,11 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
 
   const method: ValuationMethod =
     item.category === "deposit" ? "market_value" : resolveValuationMethod(item);
-  // §66·§63② — 담보채권액(저당+임대보증금). net은 이미 Max(평가, 담보채권) 반영(엔진).
-  const securedClaim = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);
+  // §66·§63② — 담보채권액. 엔진 단일 진실 `computeSecuredClaim`에 위임한다:
+  // max(0, mortgageAmount − creditGuaranteeAmount) + leaseDeposit.
+  // 종전의 로컬 재계산은 «신용보증기관 보증액 차감»을 빠뜨려, 보증액이 입력되면
+  // 같은 카드 안에서 하한 금액(:70-72)과 평가액(:82, 엔진값)이 서로 어긋났다.
+  const securedClaim = computeSecuredClaim(item);
   const isReal = item.category !== "deposit";
   const collateralRaised = isCollateralRaised(item);
 
@@ -89,9 +93,17 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
 // 총 예상 평가액 합산
 // ============================================================
 
-export function TotalEstimatedValue({ items }: { items: EstateItem[] }) {
+export function TotalEstimatedValue({
+  items,
+  valuationDate,
+}: {
+  items: EstateItem[];
+  /** 평가기준일 — 날짜 의존 자산(지상권·채권·전환사채·정기금 등)이 0원으로 떨어지는 것을 막는다.
+   *  같은 목록의 접기 헤더 합계는 이미 날짜를 넘긴다(Step1Estate.tsx:48). */
+  valuationDate?: string;
+}) {
   // 엔진 단일 진실 위임 — 자산별 computeEffectiveValuation 합산(임대료환산·미임대·담보하한 반영)
-  const total = items.reduce((sum, item) => sum + computeEffectiveValuation(item), 0);
+  const total = items.reduce((sum, item) => sum + computeEffectiveValuation(item, valuationDate), 0);
 
   if (total === 0 || items.length === 0) return null;
 
