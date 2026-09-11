@@ -7,6 +7,7 @@ import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation"
 import { runPropertyManualSave, formatPropertySaveMessage } from "@/components/calc/property-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
@@ -159,6 +160,13 @@ export function PropertyTaxForm() {
     setStep(0);
   }
 
+  // 결과 화면 → 첫 입력 단계 복귀 (폼 값 유지 — 초기화가 아니다)
+  function handleGoToFirst() {
+    setResult(null);
+    setError(null);
+    setStep(0);
+  }
+
   // 결과 화면 → 입력 마지막 단계(step 3) 복귀 (폼 값 유지, 결과만 닫음)
   function handleBackToInput() {
     setResult(null);
@@ -175,7 +183,13 @@ export function PropertyTaxForm() {
         <PropertyTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <NavButton direction="prev" label="뒤로 가기" onClick={handleBackToInput} />
-          <CtaButton onClick={handleReset}>다시 계산하기</CtaButton>
+          {/* 규약(components/calc/CLAUDE.md:13) — 「다시 계산」은 **값을 유지한 채** 입력
+              단계로 돌아가는 것이고, 전체 폐기는 확인 Dialog 를 거치는 공용 버튼 전용이다.
+              종전엔 「다시 계산하기」에 handleReset 이 달려 있어, 되돌릴 뜻으로 누른 사용자의
+              입력이 **확인 한 번 없이** 통째로 사라졌다(양도·상속·증여 결과뷰는 2026-09-05
+              Q25·IG-075 에서 이미 정정됐고 재산세만 남아 있었다). */}
+          <CtaButton tone="outline" onClick={handleGoToFirst}>다시 계산</CtaButton>
+          <RestartFromScratchButton onReset={handleReset} />
           <SaveButton variant="primary" onSave={handleManualSave} />
         </div>
         <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />

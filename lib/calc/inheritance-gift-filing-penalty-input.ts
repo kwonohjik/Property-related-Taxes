@@ -82,6 +82,46 @@ function latePaymentPart(fields: FilingPenaltyFormFields): Partial<InheritanceGi
 }
 
 /**
+ * ⑧ 납부지연 축 검증 — 상속·증여 **공용** (별건 정리 2026-09-11).
+ *
+ * ## 왜 「토글 ON」이 축인가
+ *
+ * `latePaymentPart`는 빈 칸이면 **키를 넣지 않고**(위 함수), 엔진은
+ * `unpaidTax <= 0 || !paymentDeadline`이면 `LATE_PAYMENT_ZERO`를 돌려준다
+ * (`inheritance-gift-penalty.ts`). 즉 토글을 켜고 칸을 비워 두면 **차단도 경고도 없이
+ * 가산세가 0원**이 된다 — 「켰는데 안 잡힌다」.
+ *
+ * 종전 게이트는 **금액**이 축이었다(`unpaidTax > 0 && !paymentDeadline`). 그래서 미납액
+ * 자체가 비면 아무 조건도 성립하지 않아 그대로 통과했다. 토글은 「계산하겠다」는 의사
+ * 표시이므로, ON이면 두 칸을 **모두** 요구하는 것이 라벨과 동작의 1:1이다.
+ *
+ * ## 왜 공용 leaf 인가
+ *
+ * 상속의 ⑧(`validateInheritanceTaxInput`)은 **엔진 input**을 보는데 토글은 폼에만 있어
+ * 그 층에서는 축이 보이지 않는다. 증여의 ⑧(`validateStep`)은 폼을 본다. 층이 서로 달라
+ * 각자 적으면 문구·조건이 드리프트한다 — 이 파일의 ④ 게이팅을 공용으로 둔 것과 같은 이유다.
+ *
+ * ⚠️ 주식(`stock-transfer-tax-validate.ts`)에는 **이 축이 없다** — 토글 없이 칸이 항상
+ *    떠 있고 hint 가 「0이면 납부지연가산세를 계산하지 않습니다」라고 명시한다(의도된 설계).
+ *    양도는 결정세액에서 미납액을 파생하고 route 가 0을 전액으로 채운다. ⇒ 모집단은 2다.
+ */
+export function validateLatePaymentFields(
+  fields: Pick<
+    FilingPenaltyFormFields,
+    "applyLatePaymentPenalty" | "unpaidTax" | "paymentDeadline"
+  >,
+): string | null {
+  if (!fields.applyLatePaymentPenalty) return null;
+  if (parseAmount(fields.unpaidTax) <= 0) {
+    return "미납·과소납부세액을 입력하세요. (국세기본법 §47의4①1호 「납부하지 아니한 세액」 — 비워 두면 가산세가 0원이 됩니다)";
+  }
+  if (!fields.paymentDeadline) {
+    return "법정납부기한을 입력하세요. (국세기본법 §47의4①1호 산정기간의 기산점)";
+  }
+  return null;
+}
+
+/**
  * @param status 폼 3-state (상속은 `isFiledOnTime`+`isUnfiled` 조합에서 호출부가 파생)
  * @param fields 하위 입력 4칸
  * @param statutoryDeadline 법정신고기한 `YYYY-MM-DD` — 상속 §67①·§67④ / 증여 §68①.

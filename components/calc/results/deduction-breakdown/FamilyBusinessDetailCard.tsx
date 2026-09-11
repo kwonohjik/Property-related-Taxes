@@ -13,7 +13,7 @@ import type {
   FamilyBusinessIneligibleReason,
 } from "@/lib/tax-engine/types/inheritance-family-business.types";
 import type { Heir, HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { formatBillion, DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { formatBillion, DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 /** 가업상속인명 resolve — id 직접노출 금지 (feedback_no_internal_id_in_result) */
 function resolveHeirName(heirId: string | undefined, heirs: Heir[] | undefined): string {
@@ -88,7 +88,8 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
         </span>
       </div>
 
-      {open && detail && (
+      {detail && (
+        <PrintExpandable open={open}>
         <>
           {/* 직접 입력 모드 */}
           {detail.usedDirectInput && (
@@ -274,6 +275,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
             </div>
           )}
         </>
+        </PrintExpandable>
       )}
     </>
   );

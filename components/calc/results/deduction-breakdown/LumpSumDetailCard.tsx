@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { LumpSumComparisonDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 interface Props {
   detail?: LumpSumComparisonDetail;
@@ -32,7 +32,8 @@ export function LumpSumDetailCard({ detail, triggerLabel, triggerValue }: Props)
       </div>
 
       {/* 펼침 영역 */}
-      {open && detail && (
+      {detail && (
+        <PrintExpandable open={open}>
         <DetailTable>
           <DetailRow
             label="기초공제 (§18①)"
@@ -70,6 +71,7 @@ export function LumpSumDetailCard({ detail, triggerLabel, triggerValue }: Props)
             </div>
           )}
         </DetailTable>
+        </PrintExpandable>
       )}
     </>
   );

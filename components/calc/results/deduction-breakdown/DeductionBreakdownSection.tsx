@@ -67,7 +67,19 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
 
       {/* 인쇄 시 자동 펼침 (print-only-css-toggle) — 언마운트하면 인쇄물에서 통째로 빠진다. (IG-148) */}
       <div className={showBreakdown ? "" : "hidden print:block"}>
-        <div className="divide-y divide-border text-xs">
+        {/*
+          🔑 `[&>*:nth-last-child(2):has(+.hidden)]:border-b-0` — 접힘 상태의 **마지막 1px 선**을 지운다.
+
+          카드는 「헤더 + 상세」 두 형제를 낸다. 상세를 언마운트하지 않고 CSS 로 접게 바꾸면서
+          (`PrintExpandable`) 접혔을 때도 상세 div 가 DOM 에 남는다 ⇒ **마지막 헤더가 더 이상
+          `:last-child`가 아니게 된다.** Tailwind v4 의 `divide-y`는
+          `:where(.divide-y > :not(:last-child))` 라 `display:none` 을 건너뛰지 않으므로,
+          그 헤더가 없던 border-bottom 을 얻어 박스 자체 테두리 바로 위에 **겹선**이 생긴다.
+
+          ⇒ 「마지막 바로 앞 자식인데 뒤따르는 형제가 숨겨져 있을 때」만 지운다. 펼치면
+            뒤 형제에 `.hidden` 이 없어 규칙이 안 걸리고 선이 그대로 남는다(헤더↔상세 구분선).
+        */}
+        <div className="divide-y divide-border text-xs [&>*:nth-last-child(2):has(+.hidden)]:border-b-0">
           {/* ① 일괄공제 또는 기초+인적 */}
           {dd.chosenMethod === "lump_sum" ? (
             <>

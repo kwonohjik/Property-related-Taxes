@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { SpouseDeductionDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 interface Props {
   detail?: SpouseDeductionDetail;
@@ -34,7 +34,8 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
         </span>
       </div>
 
-      {open && detail && (
+      {detail && (
+        <PrintExpandable open={open}>
         <DetailTable>
           {/* ㉮ 법정상속분 산정 (7행 — legalShareTable 있을 때만) */}
           {detail.legalShareTable && (
@@ -164,6 +165,7 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
             tone="blue"
           />
         </DetailTable>
+        </PrintExpandable>
       )}
     </>
   );

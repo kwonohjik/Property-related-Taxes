@@ -85,7 +85,11 @@ test("§21② 배우자 단독상속 → 일괄공제 배제 안내 노출", asy
   // 상속공제 상세 내역 펼침 → §21② 배제 안내 + 일괄공제 Row 없음
   // strict-mode-violation 방지: print-panel 숨김 복사본 제외, testid로 한정
   await page.getByTestId("deduction-breakdown-toggle").click();
-  await expect(page.getByText(/배우자 단독상속 — 일괄공제 배제/)).toBeVisible({
+  // ⚠️ exact 로 «Row» 를 집는다 (2026-09-11). 카드 상세가 접혀도 DOM 에 남게 바뀌면서
+  //    같은 문구가 상세 주석(「…, 기초+인적공제만 적용」)에도 있어 부분일치가 2건을 잡는다.
+  await expect(
+    page.getByText("ⓘ 배우자 단독상속 — 일괄공제 배제 (§21②)", { exact: true }),
+  ).toBeVisible({
     timeout: 5_000,
   });
   await expect(page.getByText("일괄공제 (§21)")).toHaveCount(0);

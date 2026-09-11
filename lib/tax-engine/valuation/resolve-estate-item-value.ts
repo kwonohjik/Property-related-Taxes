@@ -2,8 +2,17 @@
  * EstateItem 평가액 도출 — §60 평가 우선순위 단일 진실 (J-1)
  *
  * 상증법 §60②③: 시가 우선(매매·감정·수용·공매 포함), 시가 곤란 시 §61~§66 보충적평가(기준시가·§63 비상장 등).
- *   → resolveEstateItemValue 5단계: marketValue(시가) → appraisedValue(감정가) → standardPrice(기준시가)
- *     → 주식 computeStockValuation(상장 시세·비상장 §63) → 0.
+ *   → resolveEstateItemValue **6단계**: marketValue(시가) → appraisedValue(감정가)
+ *     → similarSalesValue(매매사례가액 §49④ — H-38에서 추가) → standardPrice(기준시가)
+ *     → 주식 computeStockValuation(상장 시세·비상장 §63) → 부수토지 addon(아래) 또는 0.
+ *
+ * ⚠️ 종전 주석은 「5단계」라 적고 매매사례가액을 빠뜨렸다 — H-38이 단계를 하나 끼워 넣었는데
+ *    주석이 따라오지 않았다. 개수를 바꿀 때 **이 파일 안의 다른 사본도 함께** 고칠 것
+ *    (함수 docstring이 같은 목록을 한 벌 더 갖고 있다).
+ *
+ * ⚠️ 기준시가·최종 단계에는 **부수토지 가산**이 붙는다 — `real_estate_building`이면서
+ *    매매사례가액이 없을 때 `appurtenantLandStandardPrice`(§61①1호)를 더한다. 「한 단계를
+ *    그대로 돌려준다」가 아니므로, 이 함수 결과를 다른 곳에서 재현하지 말 것.
  *
  * 이동 이력 (J-1, lib/calc/stock-valuation.ts → 여기):
  *   resolveUnlistedDisplayMode·computeStockValuation의 내부 의존이 전부 엔진(property-valuation-stock·
@@ -130,13 +139,22 @@ export function computeStockValuation(item: EstateItem, valuationDate?: string):
 }
 
 /**
- * EstateItem 평가액 — §60 평가 우선순위 (시가 → 감정가 → 기준시가 → 주식 보충평가 → 0).
+ * EstateItem 평가액 — §60 평가 우선순위
+ * (시가 → 감정가 → **매매사례가액(§49④)** → 기준시가 → 주식 보충평가 → 부수토지 가산·0).
  *
- * lib/calc/inheritance-deduction-suggest.ts getValuatedAmount와 동치(단일 진실).
+ * `inheritance-deduction-suggest.ts`의 `getValuatedAmount`와 동치다 — 그 함수는 이 함수를
+ * **그대로 위임 호출**한다(문언이 아니라 구현이 보증한다).
+ *
+ * ⚠️ `lib/calc/estate-item-valuation.ts`의 `computeEffectiveValuation`과는 **동치가 아니다.**
+ *    그쪽은 `valuationDate`를 받고 부동산에서 임대료환산(§61⑤)·미임대·담보하한(§66)까지
+ *    반영한다. 이 함수는 `valuationDate`를 **받지 않는다** — 시점에 종속되지 않는 §60 우선순위
+ *    선택만 한다. 표시·합계 경로는 `computeEffectiveValuation`을, 공제 산정 경로는 이 함수를
+ *    쓴다. 둘을 바꿔 끼우면 조용히 다른 값이 나온다.
+ *
  * 사업무관자산 차감(§15⑤2호)은 미포함 — gross 평가액 반환(호출처가 별도 적용).
  *
  * @param item EstateItem
- * @returns 평가액 (원, 정수). 도출 불가 시 0.
+ * @returns 평가액 (원, 정수). 도출 불가 시 0 또는 부수토지 가산액.
  */
 export function resolveEstateItemValue(item: EstateItem): number {
   if (typeof item.marketValue === "number" && item.marketValue > 0) {

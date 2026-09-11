@@ -51,7 +51,10 @@ import {
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectTrustBenefitRemainingYears, injectPeriodicRemainingYears, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
-import { buildFilingPenaltyInput } from "@/lib/calc/inheritance-gift-filing-penalty-input";
+import {
+  buildFilingPenaltyInput,
+  validateLatePaymentFields,
+} from "@/lib/calc/inheritance-gift-filing-penalty-input";
 import { getInheritanceFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
@@ -434,7 +437,12 @@ export function InheritanceTaxForm() {
     try {
       const input = buildInput();
       // 클라이언트 전체 검증 — API 왕복 전 1차 차단 (지점 ⑧)
-      const preErr = validateInheritanceTaxInput(input);
+      //
+      // 🔑 납부지연 축은 **폼**에서 먼저 본다 — 토글(`applyLatePaymentPenalty`)이 엔진
+      //    input 에 없어서 `validateInheritanceTaxInput`이 볼 수 없는 축이다. 켜 두고 칸을
+      //    비우면 ④가 키를 빼고 엔진이 `LATE_PAYMENT_ZERO`를 돌려줘 조용히 0원이 된다.
+      //    조건·문구는 증여와 공용 leaf (2026-09-11 별건 정리).
+      const preErr = validateLatePaymentFields(form) ?? validateInheritanceTaxInput(input);
       if (preErr) {
         setError(preErr);
         setLoading(false);

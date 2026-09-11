@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { DeductionLimitCeilingDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 interface Props {
   detail?: DeductionLimitCeilingDetail;
@@ -45,7 +45,9 @@ export function DeductionLimitDetailCard({ detail, rawTotalDeduction, standalone
         </span>
       </div>
 
-      {open && <DeductionLimitContent detail={detail} raw={raw} />}
+      <PrintExpandable open={open}>
+        <DeductionLimitContent detail={detail} raw={raw} />
+      </PrintExpandable>
     </>
   );
 }

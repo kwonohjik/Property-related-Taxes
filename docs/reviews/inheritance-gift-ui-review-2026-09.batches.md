@@ -684,3 +684,97 @@ G1 ③·G6 `IG-152`와 같은 층위다 — **틀린 값을 테스트가 붙잡�
 - **`Clause6Form`의 약한 센티널 가드** — `allowEmpty` 배선은 했으나 `canCalculate`의 판정 구조
   자체는 Clause2와 다르다. 공익법인 사후관리 전반은 이 리뷰 범위 밖이다.
 
+
+---
+
+## 별건 항목 정리 (2026-09-11 · 대장 종결 후)
+
+리뷰 9배치를 닫으면서 「별건」·「범위 밖」으로 남긴 8건을 **착수 전에 전수 재실측**했다.
+5건이 실재했고 3건은 닫혔거나 의도된 설계였다.
+
+| # | 항목 | 실측 결과 | 조치 |
+|---|---|---|---|
+| 1 | 납부지연 토글 ON + 미납액 공란 | **실재** — 단 모집단은 **3이 아니라 2**(아래) | ✅ 공용 leaf 로 상속·증여 동시 차단 |
+| 2 | `Clause6Form` 약한 센티널 | **닫힘** — G3 의 `allowEmpty` 배선으로 `canCalculate`가 `undefined`를 정확히 거른다 | 조치 없음 |
+| 3 | `PriorGiftHistoryModal` `mode` 린트 경고 | **실재** — 스타일이 아니라 **결과가 갈리는** 자리였다 | ✅ deps 에 추가 |
+| 4 | `FarmingEligibilitySection` 고아 | **실재** — import 하는 곳이 테스트 5파일뿐 | ❌ 보고만 (배선 여부는 제품 판단) |
+| 5 | 인쇄 언마운트 | **실재** — 8파일 **9곳** | ✅ `PrintExpandable` 공용 래퍼 |
+| 6 | `PropertyTaxForm` 「다시 계산하기」 | **실재 + 규약 위반**, 전 세목 중 **재산세만 남아 있었다** | ✅ 라벨↔동작 1:1 복원 |
+| 7 | native checkbox 3건 | 다중 선택 목록 — 의도된 것 | 조치 없음 |
+| 8 | `resolveEstateItemValue` 주석 드리프트 | **실재** — 「5단계」인데 실제로는 6단계 + 부수토지 가산 | ✅ 주석 정정 |
+
+### 🔴 「3세목 공유 갭」은 **내 오기(誤記)였다** — 모집단은 2였다
+
+IG-086 당시 「상속·증여·주식이 함께 겪는 갭」이라 적고 미뤘다. 실측하니 **주식에는 토글이
+없다** — `components/calc/stock-transfer/PenaltyDetailBlock.tsx`는 `SectionHeader` 아래 칸이
+항상 떠 있고 hint 가 「0이면 납부지연가산세를 계산하지 않습니다」라고 **명시**한다(의도된 설계).
+양도는 결정세액에서 미납액을 파생하고 route 가 0을 전액으로 채운다(`transfer/route.ts:619`).
+
+⇒ 이 축이 성립하는 곳은 상속·증여 **둘뿐**이었다. 「셋을 함께 봐야 한다」는 전제가 처리를
+미루게 했는데, 그 전제 자체가 틀렸다. **미결로 미룰 때 적어 둔 모집단도 미검증 자산이다**
+([[feedback_open_item_wording_is_also_unverified]]).
+
+### 왜 공용 leaf 인가 — 두 세목의 ⑧이 **다른 층**을 본다
+
+- 상속 `validateInheritanceTaxInput`은 **엔진 input** 을 본다 → 토글이 거기 없어 축이 안 보인다.
+- 증여 `validateStep`은 **폼**을 본다 → 토글이 보인다.
+
+층이 달라 각자 적으면 조건·문구가 드리프트한다. `validateLatePaymentFields`를 ④ 빌더 옆에
+두고 양쪽이 부른다. 상속 쪽 배선(`handleCalculate`)은 순수 함수로 잴 수 없어 **E2E**가 덮는다
+(leaf 직접 호출은 배선을 증명하지 않는다 — [[feedback_leaf_anchor_skips_zod_layer]]).
+
+### ⚠️ 미룬 판단이 **옳았던** 유일한 건 — `divide-y` 겹선
+
+별건 표의 「묶으면 `divide-y` 레이아웃이 바뀐다 — 별도 판단 필요」는 **맞았다**. 다른 항목들은
+미룬 이유가 틀렸는데 이것만 반대였다.
+
+Tailwind **v4** 의 `divide-y` 는 `:where(.divide-y > :not(:last-child))` 다(v4.3.3 생성 CSS
+실측). **`display:none` 을 건너뛰지 않는다** — v3 의 `> :not([hidden]) ~ :not([hidden])` 과
+다르다. 상세를 언마운트하지 않게 바꾸면:
+
+```
+종전(접힘): [h1, h2, … hN]           → hN 은 :last-child ⇒ 선 없음
+변경(접힘): [h1, w1*, h2, w2*, … hN, wN*]   (* = display:none)
+            → hN 이 :last-child 를 잃어 **border-bottom 획득** ⇒ 박스 테두리 위 겹선
+```
+
+실측으로 확인했다 — 픽스처 렌더 결과 `divide-y` 직계 자식 **15개**, 마지막이 숨겨진 래퍼였다.
+
+⇒ 컨테이너에 `[&>*:nth-last-child(2):has(+.hidden)]:border-b-0` 을 건다. 펼치면 뒤 형제에
+`.hidden` 이 없어 규칙이 걸리지 않아 헤더↔상세 구분선은 그대로 남는다.
+
+### 🔴 접힌 내용을 DOM 에 남기면 **모든 부분일치 셀렉터의 모집단이 넓어진다**
+
+전체 E2E 에서 **6건이 빨개졌다** — 단언이 틀린 게 아니라 전부 **strict mode violation** 이었다.
+
+| spec | 셀렉터 | 종전 1건 → 이제 |
+|---|---|---|
+| `inheritance-deduction-breakdown` | `getByText("공제 합계")` | **3건**(+「인적공제 합계 (§20①)」·「기초·인적공제 합계보다 …」) |
+| `inheritance-spouse-deduction-fix` | `getByText(/배우자 단독상속 — 일괄공제 배제/)` | **2건**(+상세 주석) |
+
+`exact: true` 로 좁히고 **왜 좁혔는지**를 spec 에 적었다(느슨하게 되돌리면 다시 깨진다).
+
+⚠️ 백그라운드 실행의 알림은 **「exit code 0」이었다** — `| tail` 파이프 끝단 값이다.
+출력의 `6 failed` 줄을 직접 읽어서 잡았다
+([[feedback_playwright_summary_last_passed_line_hides_failures]]).
+
+### 인쇄 언마운트 — 「어느 층을 고쳤다」 ≠ 「그 층이 소비된다」
+
+바깥 섹션(`DeductionBreakdownSection`)은 IG-148 에서 이미 CSS 토글로 바꿨다. 그런데 **그 안의
+카드 8개는 그대로였다** — 섹션이 인쇄에서 펼쳐져도 개별 카드가 접혀 있으면 종이에는 헤더 행만
+나왔다. 한 층을 고친 것이 아래 층까지 고친 것으로 읽힌 사례다
+([[feedback_fixed_layer_vs_consumed_layer]]).
+
+### 기존 테스트 2건의 **전제**가 바뀌었다
+
+`ig-ui-g3-validate.anchor.test.ts`의 F-1·F-2 는 `unpaidTax`를 비운 채 **기한 축만** 쟀다.
+그때는 미납액이 아무 조건에도 안 걸려 기한 메시지가 나왔지만, 이제 leaf 가 미납액을 **먼저**
+요구한다 ⇒ 미납액을 채우지 않으면 두 항목은 기한 축을 **더 이상 재지 못한다**. 픽스처를
+보강해 축을 되살렸다.
+
+### 새로 발견한 것 (이번에도 고치지 않고 남긴다)
+
+- **`ResetButton`이 `window.confirm`을 쓴다** (`components/calc/shared/ResetButton.tsx:32`).
+  `components/calc/CLAUDE.md:14`가 명시적으로 금지하는 것이다. 호출부가 5곳(종부세·주식·양도
+  multi·양도 단건·재산세 Step0)이고 **입력 단계** 버튼이라 이번 축(결과 화면 폐기)과 다르다.
+  규약 위반이 더 넓은 층에 있다 — [[feedback_rule_wider_than_its_guard]].

@@ -68,12 +68,20 @@ async function proceedToResult(page: Page) {
   await calcAndWaitResult(page);
 }
 
-/** "상속공제 상세 내역" 섹션 펼침 */
+/**
+ * "상속공제 상세 내역" 섹션 펼침.
+ *
+ * ⚠️ `exact: true` 는 필수다 (2026-09-11). 카드 상세가 접혀도 **DOM 에 남게** 바뀌면서
+ *    (`PrintExpandable` — 인쇄물에서 통째로 빠지던 것을 고쳤다) 부분일치가 3건을 잡는다:
+ *    「공제 합계」 행 · 「인적공제 합계 (§20①)」 · 「기초·인적공제 합계보다 …」.
+ *    ⇒ strict mode violation. 접힌 내용을 DOM 에 남기면 **모든 부분일치 셀렉터의 모집단이
+ *      넓어진다** — 느슨하게 되돌리지 말 것.
+ */
 async function openDeductionBreakdown(page: Page) {
   await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();
   // 공제 합계 행이 나타나야 함 — testid 스코프 내로 한정 (상단 요약 "상속공제 합계"와 구분)
   await expect(
-    page.getByTestId("deduction-breakdown-section").getByText("공제 합계"),
+    page.getByTestId("deduction-breakdown-section").getByText("공제 합계", { exact: true }),
   ).toBeVisible({ timeout: 5_000 });
 }
 
@@ -97,13 +105,13 @@ test.describe("상속공제 항목별 펼침 UI", () => {
       const section = page.getByTestId("deduction-breakdown-section");
 
       // 토글 전 — 섹션 내 "공제 합계" 미노출
-      await expect(section.getByText("공제 합계")).not.toBeVisible();
+      await expect(section.getByText("공제 합계", { exact: true })).not.toBeVisible();
 
       // 섹션 토글 클릭 → 공제 목록 노출
       await openDeductionBreakdown(page);
 
       // 공제 합계 Row 표시
-      await expect(section.getByText("공제 합계")).toBeVisible();
+      await expect(section.getByText("공제 합계", { exact: true })).toBeVisible();
     },
   );
 
@@ -157,11 +165,11 @@ test.describe("상속공제 항목별 펼침 UI", () => {
 
       // 펼침
       await openDeductionBreakdown(page);
-      await expect(section.getByText("공제 합계")).toBeVisible();
+      await expect(section.getByText("공제 합계", { exact: true })).toBeVisible();
 
       // 다시 클릭 → 접기
       await page.getByRole("button", { name: /상속공제 상세 내역/ }).click();
-      await expect(section.getByText("공제 합계")).not.toBeVisible({ timeout: 3_000 });
+      await expect(section.getByText("공제 합계", { exact: true })).not.toBeVisible({ timeout: 3_000 });
     },
   );
 

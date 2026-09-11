@@ -235,8 +235,20 @@ describe("[G3-F] 증여 폼 step3 — ⑧이 ⑫와 같은 조합을 막는다",
   const G = (patch: Partial<GiftFormState>): GiftFormState =>
     ({ ...GIFT_INITIAL_FORM, ...patch }) as GiftFormState;
 
+  /**
+   * ⚠️ 2026-09-11 전제 변경 — F-1·F-2 는 종전에 `unpaidTax` 를 비워 둔 채 **기한 축만**
+   *    쟀다. 그때는 미납액이 아무 조건에도 걸리지 않아 그래도 기한 메시지가 나왔지만,
+   *    지금은 공용 leaf 가 미납액을 **먼저** 요구한다(`validateLatePaymentFields`).
+   *    미납액을 채우지 않으면 이 두 항목은 기한 축을 **더 이상 재지 못한다** — 앞 조건에서
+   *    걸려 항상 미납액 메시지가 나오기 때문이다. ⇒ 미납액을 채워 축을 되살린다.
+   */
+  const PAID = { unpaidTax: "10000000" };
+
   it("F-1: 🔴 IG-086 — 납부지연가산세 ON + 법정납부기한 미입력은 차단된다", () => {
-    const err = validateStep(3, G({ applyLatePaymentPenalty: true, paymentDeadline: "" }));
+    const err = validateStep(
+      3,
+      G({ applyLatePaymentPenalty: true, ...PAID, paymentDeadline: "" }),
+    );
     expect(err).toContain("법정납부기한을 입력하세요");
     // 상속과 같은 근거 문구를 쓴다 (두 세목 동작 일치)
     expect(err).toContain("§47의4①1호");
@@ -245,7 +257,7 @@ describe("[G3-F] 증여 폼 step3 — ⑧이 ⑫와 같은 조합을 막는다",
   it("F-2: 양성 쌍둥이 — 기한을 채우면 이 축으로는 막지 않는다", () => {
     const err = validateStep(
       3,
-      G({ applyLatePaymentPenalty: true, paymentDeadline: "2026-01-31" }),
+      G({ applyLatePaymentPenalty: true, ...PAID, paymentDeadline: "2026-01-31" }),
     );
     expect(err ?? "").not.toContain("법정납부기한을 입력하세요");
   });

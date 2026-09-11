@@ -271,7 +271,10 @@ export function PriorGiftHistoryModal({
     return () => {
       alive = false;
     };
-  }, [open, currentGiftDate, currentClientId, excludeCalculationIds]);
+    // 🔑 `mode`가 deps 에 있어야 한다 — 상속/증여 모드가 **서로 다른 필터 함수**를 고르므로
+    //    (filterInheritancePriorGiftCandidates vs filterPriorGiftCandidates), 모달이 열린 채
+    //    모드가 바뀌면 이전 모드의 후보 목록이 그대로 남는다.
+  }, [open, mode, currentGiftDate, currentClientId, excludeCalculationIds]);
 
   // 필터 기준 문자열 (10년 전 일자)
   const tenYearsAgo = useMemo(() => {
