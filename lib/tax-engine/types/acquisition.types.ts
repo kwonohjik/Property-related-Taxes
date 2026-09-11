@@ -143,6 +143,23 @@ export type AcquisitionExemptionType =
 // ============================================================
 
 /**
+ * 과점주주 간주취득 — 법인 보유 물건 1건 (§15② 단서 판정 단위)
+ *
+ * 과세표준 근거는 §10의6④ — 「해당 법인의 **결산서와 그 밖의 장부 등**에 따른 그 부동산등의
+ * **총가액**」이다. 시가표준액이 아니다(조심 1998-0634도 「법인 장부가액」으로 과세했다).
+ */
+export interface DeemedAssetBucket {
+  /** 화면 표기용 이름 (예: "회원제 골프장 구분등록 토지") */
+  label?: string;
+  /** §10의6④ 장부상 가액 */
+  bookValue: number;
+  /** §15② 단서 구분 — "luxury"면 중과기준세율 × 500% */
+  proviso: "none" | "luxury";
+  /** 사치성 유형 (§13⑤ 2~5호) — proviso가 "luxury"일 때만 의미 */
+  luxuryType?: string;
+}
+
+/**
  * 간주취득 전용 입력
  */
 export interface DeemedAcquisitionInput {
@@ -157,6 +174,17 @@ export interface DeemedAcquisitionInput {
      * 법인설립 시에 발행하는 주식·지분을 취득함으로써 과점주주가 된 경우 비과세
      */
     isFoundingShare?: boolean;
+    /**
+     * 법인 보유 물건의 **§15② 단서 구분별 내역** (선택).
+     *
+     * §15② 단서는 「취득**물건이** … 제13조제5항에 해당하는 경우」라 **물건 단위 판정**이다.
+     * 법인이 골프장과 일반 토지를 함께 보유하면 전자만 10%, 후자는 2%다
+     * (조심 1998-0634 — 골프장 안 수영장만 중과, 테니스장·게이트볼장·골프연습장 제외).
+     *
+     * 제공하면 `corporateAssetValue` 대신 이 배열의 합계가 총가액이 되고,
+     * 세액은 버킷별로 산출해 합산한다. **미제공 시 현행 단일 경로와 완전히 동일하다.**
+     */
+    assetBuckets?: DeemedAssetBucket[];
   };
   // 지목변경 (지방세법 §7④)
   landCategory?: {
@@ -686,16 +714,23 @@ export interface AcquisitionTaxResult {
     newShareRatio?: number;
     /** 과세 지분율 (0~1) — 최초 과점주주: 취득 후 전체, 추가 취득: 증가분 */
     taxableRatio?: number;
-    /** 법인 보유 과세대상 자산 시가표준액 합계 (과점주주 전용 — 결과 카드 산식 표시용) */
+    /** 법인 보유 부동산등 장부상 총가액 (§10의6④ · 과점주주 전용 — 결과 카드 산식 표시용) */
     corporateAssetValue?: number;
+    /** §15② 단서 구분별 내역 (과점주주 버킷 입력 시) — 결과 카드가 행으로 표시 */
+    buckets?: DeemedBucketBreakdown[];
     // 지목변경·건물개수 전용 필드
     /** 변경/개수 전 시가표준액 */
     prevStandardValue?: number;
     /** 변경/개수 후 시가표준액 */
     newStandardValue?: number;
     // 공통 필드
-    /** 적용 법령 조문 */
+    /** 적용 법령 조문 (납세의무 근거 §7④⑤) */
     legalBasis: string;
+    /**
+     * **세율** 근거 조문 — 「지방세법」 §15② 본문 또는 단서.
+     * ⚠️ `legalBasis`(§7)는 「취득으로 본다」는 납세의무 근거일 뿐 세율 근거가 아니다.
+     */
+    rateLegalBasis?: string;
     /** 주의사항·안내 메시지 */
     warnings: string[];
   };
@@ -741,7 +776,23 @@ export interface DeemedMajorShareholderResult {
   prevShareRatio: number;
   newShareRatio: number;
   taxableRatio: number;          // 과세 대상 지분율 (증가분 or 신규)
-  corporateAssetValue?: number;  // 법인 보유 과세대상 자산 시가표준액 합계 (산식 표시용)
+  corporateAssetValue?: number;  // 법인 보유 부동산등 장부상 총가액 (§10의6④ — 산식 표시용)
+  /** §15② 단서 구분별 내역 (assetBuckets 제공 시) */
+  buckets?: DeemedBucketBreakdown[];
   legalBasis: string;
   warnings: string[];
+}
+
+/** 버킷별 과세표준 내역 — 세액은 acquisition-tax.ts가 세율을 곱해 채운다 */
+export interface DeemedBucketBreakdown {
+  label?: string;
+  bookValue: number;
+  proviso: "none" | "luxury";
+  luxuryType?: string;
+  /** 장부가액 × 과세 지분율 (§10의6④) */
+  taxBase: number;
+  /** §15② 본문·단서 세율 */
+  rate?: number;
+  /** floor(taxBase × rate) */
+  tax?: number;
 }

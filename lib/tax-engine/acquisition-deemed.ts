@@ -8,7 +8,12 @@
  */
 
 import { ACQUISITION } from "./legal-codes";
-import type { DeemedAcquisitionInput, DeemedMajorShareholderResult, LandCategory } from "./types/acquisition.types";
+import type {
+  DeemedAcquisitionInput,
+  DeemedBucketBreakdown,
+  DeemedMajorShareholderResult,
+  LandCategory,
+} from "./types/acquisition.types";
 
 // ============================================================
 // 간주취득 결과 타입
@@ -136,7 +141,52 @@ export function assessMajorShareholder(
     warnings.push("과점주주 지분율 증가: 증가분 지분율만 과세 기준으로 적용합니다.");
   }
 
-  // 간주취득 과세표준 = 법인 보유 과세대상 자산 시가표준액 × 과세 지분율
+  /**
+   * 간주취득 과세표준 = 법인 보유 부동산등 **장부상 총가액** × 과세 지분율 (§10의6④).
+   *
+   * 「해당 법인의 결산서와 그 밖의 장부 등에 따른 그 부동산등의 총가액을 그 법인의 주식 …
+   * 총수로 나눈 가액에 과점주주가 취득한 주식 … 수를 곱한 금액」 — 「총가액 × 지분율」과
+   * 같은 식이다(지분율 = 취득주식수 ÷ 총주식수).
+   *
+   * ## 버킷이 있으면 물건마다 따로 낸다
+   *
+   * §15② 단서는 「취득**물건이**」 기준이라 물건 단위로 갈린다. 그래서 버킷별로
+   * `floor(장부가액 × 지분율)`을 내고 합산한다 — 총액에 한 번 floor 하지 않는다.
+   * ⚠️ 잔액 흡수(`feedback_floor_residual_absorption`)를 **하지 않는다**. 버킷은 안분 조각이
+   *    아니라 **서로 다른 세율을 받는 별개 물건**이므로, 잔액을 옮기면 세율이 다른 칸으로
+   *    금액이 이동한다.
+   */
+  const inputBuckets = input.assetBuckets;
+  if (inputBuckets && inputBuckets.length > 0) {
+    const buckets: DeemedBucketBreakdown[] = inputBuckets.map((b) => ({
+      label: b.label,
+      bookValue: b.bookValue,
+      proviso: b.proviso,
+      luxuryType: b.luxuryType,
+      taxBase: Math.floor(b.bookValue * taxableRatio),
+    }));
+    const bucketTotalBookValue = buckets.reduce((a, b) => a + b.bookValue, 0);
+    const bucketTaxBase = buckets.reduce((a, b) => a + b.taxBase, 0);
+    if (buckets.some((b) => b.proviso === "luxury")) {
+      warnings.push(
+        `물건별 구분 입력: 사치성 재산(${ACQUISITION.LUXURY_SURCHARGE}) 해당 물건은 ` +
+        `중과기준세율의 100분의 500을 적용합니다 (${ACQUISITION.DEEMED_RATE_PROVISO}).`,
+      );
+    }
+    return {
+      isSubjectToTax: true,
+      deemedTaxBase: bucketTaxBase,
+      prevShareRatio,
+      newShareRatio,
+      taxableRatio,
+      // 총가액은 버킷 합계가 단일 진실이다 (호출부가 보낸 값으로 덮지 않는다)
+      corporateAssetValue: bucketTotalBookValue,
+      buckets,
+      legalBasis: ACQUISITION.DEEMED_ACQUISITION,
+      warnings,
+    };
+  }
+
   const deemedTaxBase = Math.floor(corporateAssetValue * taxableRatio);
 
   return {
@@ -145,7 +195,7 @@ export function assessMajorShareholder(
     prevShareRatio,
     newShareRatio,
     taxableRatio,
-    corporateAssetValue, // 결과 카드 시가표준액 행·산식 표시용
+    corporateAssetValue, // 결과 카드 장부가액 행·산식 표시용 (§10의6④)
     legalBasis: ACQUISITION.DEEMED_ACQUISITION,
     warnings,
   };

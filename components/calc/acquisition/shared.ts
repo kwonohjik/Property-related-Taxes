@@ -86,6 +86,24 @@ export const LAND_CATEGORY_OPTIONS: [string, string][] = [
 /**
  * 간주취득 원인 판별 헬퍼
  */
+/**
+ * 과점주주 §15② 단서 물건별 구분 행 (「지방세법」 §15② 단서)
+ *
+ * 과세표준 근거는 §10의6④ — 「결산서와 그 밖의 장부 등에 따른 … **총가액**」이다.
+ * 시가표준액이 아니다(조심 1998-0634도 「법인 장부가액」으로 과세했다).
+ */
+export interface DeemedAssetBucketRow {
+  id: string;
+  /** 물건 이름 (예: "회원제 골프장 구분등록 토지") */
+  label: string;
+  /** 장부상 가액 (CurrencyInput 문자열) */
+  bookValue: string;
+  /** §15② 단서 구분 */
+  proviso: "none" | "luxury";
+  /** 사치성 유형 (§13⑤ 2~5호) — proviso가 "luxury"일 때만 */
+  luxuryType: string;
+}
+
 export function isDeemedAcquisitionCause(cause: string): boolean {
   return ["deemed_major_shareholder", "deemed_land_category", "deemed_renovation"].includes(cause);
 }
@@ -317,6 +335,15 @@ export interface FormState {
   deemedMajorNewShareRatio?: string;
   /** 과점주주 도달일 (YYYY-MM-DD) */
   deemedMajorShareholderDate?: string;
+  /**
+   * §15② 단서 — **물건별 구분 입력** 모드.
+   *
+   * OFF: 단일 장부가액 + 단일 사치성 토글(`isLuxuryProperty`)
+   * ON : 행마다 `proviso`를 들고 있으므로 ④가 `isLuxuryProperty`를 strip 한다(이중 적용 방지)
+   */
+  deemedMajorUseBuckets?: boolean;
+  /** §15② 단서 물건별 내역 (구분 모드 ON일 때만 의미) */
+  deemedMajorAssetBuckets?: DeemedAssetBucketRow[];
 
   // ─── [간주취득] 지목변경 (지방세법 §7④) — 5개 필드 ───
   /** 변경 전 지목 (한국어 코드: "전", "답", "대" 등) */
@@ -472,6 +499,8 @@ export const INITIAL_FORM: FormState = {
   deemedMajorPrevShareRatio: undefined,
   deemedMajorNewShareRatio: undefined,
   deemedMajorShareholderDate: undefined,
+  deemedMajorUseBuckets: false,
+  deemedMajorAssetBuckets: [],
 
   // 간주취득 — 지목변경
   deemedLandPrevCategory: undefined,
@@ -544,9 +573,25 @@ export function validateStep(step: number, form: FormState): string | null {
     // 간주취득 유형별 유효성 검증
     if (form.acquisitionCause === "deemed_major_shareholder") {
       if (!form.deemedMajorIsListed && !form.deemedMajorIsFoundingShare) {
-        // 비상장법인: 자산·지분율 필수
-        if (!form.deemedMajorCorporateAssetValue)
-          return "법인 보유 자산 시가표준액을 입력하세요.";
+        const useBuckets = form.deemedMajorUseBuckets === true;
+        if (useBuckets) {
+          /**
+           * §15② 단서 물건별 구분 — **전수 입력 강제**.
+           * 일부만 넣으면 빠진 물건이 조용히 과세표준에서 사라진다(세액 과소).
+           */
+          const rows = form.deemedMajorAssetBuckets ?? [];
+          if (rows.length === 0) return "물건별 구분 입력: 물건을 1건 이상 추가하세요.";
+          for (let i = 0; i < rows.length; i++) {
+            const amt = parseInt(rows[i].bookValue.replace(/,/g, ""), 10);
+            if (isNaN(amt) || amt <= 0)
+              return `${i + 1}번 물건의 장부상 가액을 입력하세요.`;
+            if (rows[i].proviso === "luxury" && !rows[i].luxuryType)
+              return `${i + 1}번 물건의 사치성 유형(§13⑤)을 선택하세요.`;
+          }
+        } else if (!form.deemedMajorCorporateAssetValue) {
+          // 비상장법인 단일 입력: 장부상 총가액 필수 (§10의6④)
+          return "법인 보유 부동산등 장부상 총가액을 입력하세요.";
+        }
         const prev = parseFloat(form.deemedMajorPrevShareRatio ?? "");
         const next = parseFloat(form.deemedMajorNewShareRatio ?? "");
         if (isNaN(next)) return "취득 후 지분율을 입력하세요.";
@@ -556,6 +601,20 @@ export function validateStep(step: number, form: FormState): string | null {
           return "취득 후 지분율이 50% 이하이면 과점주주 요건 미충족입니다.";
       }
       // 상장법인·설립 시 취득(§7⑤)이면 검증 없이 통과 (비과세 처리)
+    }
+
+    /**
+     * §15② 단서 — 사치성을 켰으면 유형(§13⑤ 2~5호)을 반드시 고르게 한다.
+     * 유형 미선택이면 ④가 `luxuryType`을 안 실어 보내고, 엔진은 `luxuryType` 없이도
+     * §13⑤ 분기를 타므로 **화면 근거 없이 10%가 적용**된다 — 별장 폐지 판정도 못 한다.
+     */
+    if (isDeemedAcquisitionCause(form.acquisitionCause)) {
+      const bucketMode =
+        form.acquisitionCause === "deemed_major_shareholder" &&
+        form.deemedMajorUseBuckets === true;
+      if (!bucketMode && form.isLuxuryProperty && !form.luxuryType) {
+        return "사치성 재산(§13⑤) 유형을 선택하세요.";
+      }
     }
 
     if (form.acquisitionCause === "deemed_land_category") {

@@ -19,7 +19,18 @@
  */
 
 import { determineTaxableObject } from "./acquisition-object";
-import { assessDeemedAcquisition } from "./acquisition-deemed";
+import { computeDeemedBucketResult } from "./acquisition-deemed-bucket-tax";
+// 800줄 정책 분리(2026-09-12) — 간주취득 Step 2 + 결과 빌더 2종
+import {
+  runDeemedAcquisitionStep,
+  buildSurchargeDetail,
+  buildZeroResult,
+} from "./acquisition-tax-helpers";
+import {
+  deemedProvisoRate,
+  deemedRateLegalBasis,
+  type DeemedProviso,
+} from "./acquisition-deemed-proviso";
 import { determineAcquisitionTiming } from "./acquisition-timing";
 import { determineTaxBase } from "./acquisition-tax-base";
 import {
@@ -49,13 +60,7 @@ import type {
   AcquisitionTaxResult,
   AcquisitionCalculationStep,
   BurdenedGiftBreakdown,
-  DeemedMajorShareholderResult,
 } from "./types/acquisition.types";
-import type {
-  DeemedLandCategoryResult,
-  DeemedRenovationResult,
-} from "./acquisition-deemed";
-import type { ExtendedSurchargeDecision } from "./acquisition-surcharge/index";
 import type { HouseCountResult } from "./house-count/types";
 
 // ============================================================
@@ -115,62 +120,10 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     legalBasis.push("지방세법 §7④");
   }
 
-  const isDeemedCause = [
-    "deemed_major_shareholder",
-    "deemed_land_category",
-    "deemed_renovation",
-  ].includes(input.acquisitionCause);
-
-  // 간주취득 원인이지만 상세 입력(deemedInput)이 없는 경우 — 경고 후 0원 결과 반환
-  if (isDeemedCause && !input.deemedInput) {
-    return buildZeroResult(
-      input,
-      targetDate,
-      [`간주취득(${input.acquisitionCause}) 계산에 필요한 상세 입력이 없습니다. deemedInput을 제공해주세요.`],
-      undefined,
-    );
-  }
-
-  let deemedDetailResult: AcquisitionTaxResult["deemedDetail"] | undefined;
-
-  if (isDeemedCause && input.deemedInput) {
-    const deemedResult = assessDeemedAcquisition(input.deemedInput);
-    warnings.push(...deemedResult.warnings);
-    legalBasis.push(deemedResult.legalBasis);
-
-    // deemedDetail 구성 — 타입별로 필드 분기 매핑
-    if (deemedResult.type !== null) {
-      const base: AcquisitionTaxResult["deemedDetail"] = {
-        type: deemedResult.type,
-        isSubjectToTax: deemedResult.isSubjectToTax,
-        deemedTaxBase: deemedResult.deemedTaxBase,
-        legalBasis: deemedResult.legalBasis,
-        warnings: deemedResult.warnings,
-      };
-      if (deemedResult.type === "major_shareholder" && deemedResult.detail) {
-        const d = deemedResult.detail as DeemedMajorShareholderResult;
-        base.prevShareRatio = d.prevShareRatio;
-        base.newShareRatio = d.newShareRatio;
-        base.taxableRatio = d.taxableRatio;
-        base.corporateAssetValue = d.corporateAssetValue;
-      } else if (deemedResult.detail) {
-        const d = deemedResult.detail as DeemedLandCategoryResult | DeemedRenovationResult;
-        base.prevStandardValue = d.prevStandardValue;
-        base.newStandardValue = d.newStandardValue;
-      }
-      deemedDetailResult = base;
-    }
-
-    if (!deemedResult.isSubjectToTax) {
-      return {
-        ...buildZeroResult(input, targetDate, warnings, "간주취득 과세 요건 미충족"),
-        deemedDetail: deemedDetailResult,
-      };
-    }
-
-    // 간주취득 과세표준을 reportedPrice로 주입 (acquisition-tax-base.ts에서 사용)
-    effectiveInput = { ...input, reportedPrice: deemedResult.deemedTaxBase };
-  }
+  const deemedStep = runDeemedAcquisitionStep(input, effectiveInput, targetDate, warnings, legalBasis);
+  if (deemedStep.kind === "zero") return deemedStep.result;
+  effectiveInput = deemedStep.effectiveInput;
+  let deemedDetailResult = deemedStep.deemedDetail;
 
   // ── Step 3: 취득 시기 확정 ──
   const timingResult = determineAcquisitionTiming({
@@ -351,9 +304,27 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   let burdenedGiftBreakdown: BurdenedGiftBreakdown | undefined;
   // [M5] 부담부증여는 부가세도 유상/무상 분리 계산 → 여기에 담아 아래 additional 대체
   let burdenedAdditional: AdditionalTaxResult | undefined;
+  // 과점주주 §15② 단서 물건별 구분 — 부담부증여와 같은 「분리 계산 후 합산」 구조
+  let deemedBucketAdditional: AdditionalTaxResult | undefined;
+  const deemedBuckets = deemedDetailResult?.buckets;
 
   // P1-6 적용 시 effectiveInput.acquisitionCause === "gift"로 변환되어 분기 미진입.
-  if (effectiveInput.acquisitionCause === "burdened_gift" && taxBaseResult.breakdown) {
+  if (deemedBuckets && deemedBuckets.length > 0) {
+    /**
+     * 과점주주 물건별 구분 — §15② 단서가 「취득**물건이**」 기준이라 버킷마다 세율이 갈린다.
+     * 단일 세율(`finalRate`) 경로로는 「전부 10%」 or 「전부 2%」밖에 없어 둘 다 틀린다.
+     * ④(`acquisition-tax-api.ts`)가 버킷 모드에서 `isLuxuryProperty`를 strip 하므로
+     * 최상위 사치성 중과와 이중 적용되지 않는다.
+     */
+    const bucketResult = computeDeemedBucketResult(deemedBuckets, effectiveInput.propertyType, {
+      acquisitionCause: effectiveInput.acquisitionCause,
+      areaSqm: input.areaSqm,
+      isRuralRegion: input.isRuralRegion,
+    });
+    acquisitionTax = bucketResult.acquisitionTax;
+    deemedBucketAdditional = bucketResult.additional;
+    deemedDetailResult = { ...deemedDetailResult!, buckets: bucketResult.buckets };
+  } else if (effectiveInput.acquisitionCause === "burdened_gift" && taxBaseResult.breakdown) {
     // 부담부증여: 유상/무상 분리 계산 (§13의2 중과 + 부가세 분리는 헬퍼에 위임)
     const bgResult = computeBurdenedGiftResult(
       input,
@@ -375,6 +346,28 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   } else {
     // 일반 세액: 과세표준 × 세율 (원 미만 절사)
     acquisitionTax = Math.floor(taxBase * finalRate);
+  }
+
+  /**
+   * 간주취득 **세율 근거** 확정 — 「지방세법」 §15② 본문/단서.
+   *
+   * 결과 카드의 「적용 세율 (근거)」 칸이 종전에 `deemedDetail.legalBasis`(=§7)를 썼는데,
+   * §7④⑤는 「취득으로 본다」는 **납세의무** 근거일 뿐 세율 근거가 아니다.
+   *
+   * ⚠️ 플래그가 아니라 **실제 산출된 세율**에서 역으로 읽는다. `isLuxuryProperty`가 켜져
+   *    있어도 별장 폐지(2023-03-14~)처럼 중과가 죽는 경로가 있어, 플래그로 판정하면
+   *    세율 2%인데 근거만 「단서」로 뜨는 드리프트가 생긴다.
+   */
+  if (deemedDetailResult) {
+    const provisoApplied: DeemedProviso =
+      (deemedBuckets?.some((b) => b.proviso === "luxury") ?? false) ||
+      finalRate >= deemedProvisoRate("luxury")
+        ? "luxury"
+        : "none";
+    deemedDetailResult = {
+      ...deemedDetailResult,
+      rateLegalBasis: deemedRateLegalBasis(provisoApplied),
+    };
   }
 
   // ── 부가세 계산 ──
@@ -417,7 +410,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     acquisitionCause: effectiveInput.acquisitionCause,
   });
 
-  const additional = burdenedAdditional ?? calcTaxWithAdditional(
+  const additional = burdenedAdditional ?? deemedBucketAdditional ?? calcTaxWithAdditional(
     taxBase,
     finalRate,
     acquisitionTax,
@@ -674,115 +667,3 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
 // ============================================================
 // 중과 판정 상세 빌더
 // ============================================================
-
-/**
- * 중과 판정 상세 결과를 AcquisitionTaxResult.surchargeDetail 형식으로 변환
- *
- * ExtendedSurchargeDecision의 내부 필드를 결과 타입의 surchargeDetail로 매핑.
- * giftExclusionReason은 문자열 패턴으로 enum 값을 추론:
- *   - "1세대 1주택자" 포함 → "one_house_household"
- *   - "이혼 재산분할" 포함 → "divorce_division"
- */
-function buildSurchargeDetail(
-  surchargeDecision: ExtendedSurchargeDecision,
-  resolvedHouseCount: number,
-): AcquisitionTaxResult["surchargeDetail"] {
-  // 일시적 2주택 처분기한 연수: number를 1|2|3 union으로 변환
-  const deadlineYears = surchargeDecision.temporaryTwoHouseDeadlineYears;
-  const deadlineYearsTyped: 1 | 2 | 3 | undefined =
-    deadlineYears === 1 || deadlineYears === 2 || deadlineYears === 3
-      ? deadlineYears
-      : undefined;
-
-  // giftExclusionReason: 문자열 패턴 → enum 변환
-  const rawGiftExclusion = surchargeDecision.giftExclusionReason;
-  let giftExclusionReasonEnum: "one_house_household" | "divorce_division" | undefined;
-  if (rawGiftExclusion) {
-    if (rawGiftExclusion.includes("이혼 재산분할")) {
-      giftExclusionReasonEnum = "divorce_division";
-    } else if (rawGiftExclusion.includes("1세대 1주택자") || rawGiftExclusion.includes("1주택")) {
-      giftExclusionReasonEnum = "one_house_household";
-    }
-  }
-
-  // 모든 필드가 undefined이면 surchargeDetail 자체를 undefined로 반환
-  const exceptions = surchargeDecision.exceptions ?? [];
-  const hasAnyDetail =
-    surchargeDecision.temporaryTwoHouseDeadlineDate !== undefined ||
-    deadlineYearsTyped !== undefined ||
-    surchargeDecision.preRegulationContractApplied !== undefined ||
-    giftExclusionReasonEnum !== undefined ||
-    exceptions.length > 0 ||
-    resolvedHouseCount > 0;
-
-  if (!hasAnyDetail) return undefined;
-
-  return {
-    temporaryTwoHouseDeadlineDate: surchargeDecision.temporaryTwoHouseDeadlineDate,
-    temporaryTwoHouseDeadlineYears: deadlineYearsTyped,
-    preRegulationContractApplied: surchargeDecision.preRegulationContractApplied,
-    giftExclusionReason: giftExclusionReasonEnum,
-    surchargeExceptions: exceptions.length > 0 ? exceptions : undefined,
-    effectiveHouseCount: resolvedHouseCount > 0 ? resolvedHouseCount : undefined,
-  };
-}
-
-// ============================================================
-// 결과 빌더 (비과세·면제 시)
-// ============================================================
-
-function buildZeroResult(
-  input: AcquisitionTaxInput,
-  targetDate: string,
-  warnings: string[],
-  reason?: string,
-  exemptionType?: AcquisitionTaxResult["exemptionType"]
-): AcquisitionTaxResult {
-  const today = new Date().toISOString().slice(0, 10);
-  const addDays = (d: string, days: number) => {
-    const dt = new Date(d);
-    dt.setDate(dt.getDate() + days);
-    return dt.toISOString().slice(0, 10);
-  };
-
-  if (reason) {
-    warnings.push(reason);
-  }
-
-  // 취득일: 잔금지급일 > 등기일 > 계약일 > 오늘 순으로 사용
-  const acquisitionDate =
-    input.balancePaymentDate ?? input.registrationDate ?? input.contractDate ?? today;
-
-  return {
-    propertyType: input.propertyType,
-    acquisitionCause: input.acquisitionCause,
-    acquisitionValue: 0,
-
-    taxBase: 0,
-    taxBaseMethod: "standard_value",
-
-    appliedRate: 0,
-    rateType: "basic",
-    isSurcharged: false,
-
-    acquisitionTax: 0,
-    ruralSpecialTax: 0,
-    localEducationTax: 0,
-    totalTax: 0,
-
-    reductionAmount: 0,
-    totalTaxAfterReduction: 0,
-
-    acquisitionDate,
-    filingDeadline: addDays(acquisitionDate, 60),
-
-    isExempt: !!exemptionType,
-    exemptionType,
-
-    steps: [],
-
-    appliedLawDate: targetDate,
-    warnings,
-    legalBasis: [],
-  };
-}

@@ -118,16 +118,31 @@ export function getBasicRate(
   // ── 간주취득 ──
   if (acquisitionCause === "deemed_renovation") {
     // 개수(改修)로 인한 취득: 지방세법 §15②1호 — 중과기준세율(2%) 적용.
+    // §15② 단서(취득물건이 §13⑤ 해당 시 ×500%)는 지목변경·과점주주와 동일하게 적용된다.
     // (면적이 증가하는 개수는 §11③에 따라 그 증가분만 원시취득(2.8%)으로 보나,
     //  현행 UI는 면적 증가 여부를 입력받지 않으므로 개수 본칙 2%를 적용한다.)
     return { rate: 0.02, isLinearInterpolation: false, legalBasis: ACQUISITION.DEEMED_ACQUISITION }; // 2%
   }
   if (acquisitionCause === "deemed_land_category" || acquisitionCause === "deemed_major_shareholder") {
-    // 지목변경(§7④) 및 과점주주(§7⑤): 2% 적용
-    // 과점주주는 법인 보유 자산 종류별 표준세율 적용이 원칙이나,
-    // 현행 UI가 단일 자산가치를 입력받으므로 임시 2% 적용.
-    // (TODO: 자산 종류별 입력 구현 후 종류별 세율로 개선)
-    return { rate: 0.02, isLinearInterpolation: false, legalBasis: ACQUISITION.DEEMED_ACQUISITION }; // 2%
+    /**
+     * 지목변경(§7④) · 과점주주(§7⑤) — 「지방세법」 §15②2호·3호: **중과기준세율 2%**.
+     *
+     * 🔴 **종전 주석은 법령상 오기였다**(2026-09-12 정정). 「법인 보유 자산 종류별 표준세율
+     *    적용이 원칙이나 … 임시 2% 적용」이라 적혀 있었으나, §15② 본문이
+     *    「**중과기준세율을 적용**하여 계산한 금액을 그 세액으로 한다」이므로 §11·§12의
+     *    표준세율은 간주취득에 **등장하지 않는다**. 2%는 임시값이 아니라 정답이다.
+     *
+     * 물건 종류가 필요한 곳은 표준세율이 아니라 **§15② 단서**다 —
+     * 「취득**물건이** … §13⑤에 해당하는 경우에는 중과기준세율의 100분의 500」.
+     * 과점주주는 법인이 여러 물건을 보유하므로 물건마다 갈리고, 그 구분 입력은
+     * `acquisition-deemed.ts`의 `assetBuckets`가 받는다.
+     * 근거·기각안: `docs/00-pm/acquisition-deemed-15-2-proviso.plan.md`
+     */
+    return {
+      rate: ACQUISITION_CONST.HEAVY_TAX_BASE_RATE,
+      isLinearInterpolation: false,
+      legalBasis: ACQUISITION.DEEMED_RATE,
+    };
   }
 
   // ── 유상취득 (매매·공매경매·교환·현물출자·부담부증여 유상분) ──

@@ -8,7 +8,11 @@ import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import {
+  deemedProvisoRate,
+  provisoFromLuxuryFlag,
+} from "@/lib/tax-engine/acquisition-deemed-proviso";
+import { DeemedProvisoCard } from "./DeemedProvisoCard";
 import type { FormState } from "../shared";
 
 interface Props {
@@ -20,16 +24,22 @@ function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
 }
 
-// 건물 개수 간주취득 세율 — 엔진 단일 진실. 개수는 원시취득에 해당하여 2.8%
-// (§11①3호, anchor: deemed-renovation-rate.anchor.test.ts — 지목변경·과점주주 2%와 상이)
-const DEEMED_RATE = getBasicRate("building", "deemed_renovation", 0).rate;
-const DEEMED_RATE_LABEL = `${(DEEMED_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
-
 export function DeemedRenovationSection({ form, set }: Props) {
   const prevSv = parseAmount(form.deemedRenovationPrevStandardValue ?? "") ?? 0;
   const newSv  = parseAmount(form.deemedRenovationNewStandardValue  ?? "") ?? 0;
   const diff   = newSv - prevSv;
   const showPreview = prevSv > 0 || newSv > 0;
+
+  /**
+   * 세율 — 「지방세법」 §15②**1호**(개수): 본문 중과기준세율 2%, 단서(§13⑤ 해당) 10%.
+   *
+   * 🔴 종전 주석은 「개수는 원시취득에 해당하여 2.8%(§11①3호) — 지목변경·과점주주 2%와 상이」
+   *    라고 적었으나 **코드도 anchor도 2%였다**(`deemed-renovation-rate.anchor.test.ts`
+   *    [AT-DEEMED-R01]). 2.8%는 **면적이 증가하는** 개수의 증가분에만 §11③으로 붙는다.
+   */
+  const proviso = provisoFromLuxuryFlag(form.isLuxuryProperty);
+  const deemedRate = deemedProvisoRate(proviso);
+  const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
     <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
@@ -105,6 +115,9 @@ export function DeemedRenovationSection({ form, set }: Props) {
         />
       </div>
 
+      {/* §15② 단서 — 사치성 재산(§13⑤) 해당 여부 */}
+      <DeemedProvisoCard form={form} set={set} context="renovation" />
+
       {/* 과세 미리보기 */}
       {showPreview && (
         <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-sm space-y-1">
@@ -115,7 +128,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
                 과세표준 = 개수 후 {formatKRW(newSv)} - 개수 전 {formatKRW(prevSv)} = {formatKRW(diff)}
               </p>
               <p className="font-medium text-violet-800">
-                예상 취득세 = {formatKRW(diff)} × {DEEMED_RATE_LABEL} = {formatKRW(Math.floor(diff * DEEMED_RATE))}
+                예상 취득세 = {formatKRW(diff)} × {deemedRateLabel} = {formatKRW(Math.floor(diff * deemedRate))}
               </p>
             </>
           ) : (

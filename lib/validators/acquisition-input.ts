@@ -116,6 +116,22 @@ const installmentPaymentSchema = z.object({
 // 간주취득 입력 스키마
 // ============================================================
 
+/**
+ * 과점주주 §15② 단서 물건별 구분 (「지방세법」 §15② 단서 — 취득**물건이** §13⑤ 해당 시 ×500%)
+ *
+ * `proviso`는 `DeemedProviso`(`acquisition-deemed-proviso.ts`)와 **같은 값 집합**이어야 한다.
+ * 여기만 넓히면 엔진이 못 읽고, 엔진만 넓히면 Zod가 조용히 strip 한다(⑫).
+ */
+const deemedAssetBucketSchema = z.object({
+  label: z.string().max(60).optional(),
+  /** §10의6④ 장부상 가액 (시가표준액 아님) */
+  bookValue: z.number().nonnegative(),
+  proviso: z.enum(["none", "luxury"]),
+  luxuryType: z.enum([
+    "villa", "golf_course", "luxury_housing", "luxury_entertainment", "luxury_vessel",
+  ]).optional(),
+});
+
 const deemedAcquisitionInputSchema = z.object({
   majorShareholder: z.object({
     corporateAssetValue: z.number().nonnegative(),
@@ -124,6 +140,8 @@ const deemedAcquisitionInputSchema = z.object({
     isListed: z.boolean(),
     /** 법인 설립 시 주식 취득 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함) */
     isFoundingShare: z.boolean().optional(),
+    /** §15② 단서 물건별 내역 — 제공 시 corporateAssetValue 대신 합계가 총가액이 된다 */
+    assetBuckets: z.array(deemedAssetBucketSchema).max(30).optional(),
   }).optional(),
   landCategory: z.object({
     prevCategory: landCategorySchema,

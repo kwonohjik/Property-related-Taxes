@@ -83,6 +83,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
   if (!detail) return null;
 
   const typeLabel = DEEMED_TYPE_LABELS[detail.type] ?? detail.type;
+  const buckets = detail.buckets ?? [];
   const legalBasisLabel =
     detail.type === "major_shareholder" ? "지방세법 §7⑤" :
     detail.type === "land_category"     ? "지방세법 §7④" :
@@ -168,19 +169,67 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
             )}
             {detail.corporateAssetValue !== undefined && (
               <div className="flex justify-between text-muted-foreground">
-                <span>법인 보유 자산 시가표준액</span>
-                <span>{formatKRW(detail.corporateAssetValue ?? 0)}</span>
+                {/* §10의6④ — 「결산서와 그 밖의 장부 등에 따른 … 총가액」 (시가표준액 아님) */}
+                <span>법인 보유 부동산등 장부상 총가액</span>
+                <span className="text-right font-mono tabular-nums whitespace-nowrap">
+                  {formatKRW(detail.corporateAssetValue ?? 0)}
+                </span>
               </div>
             )}
             <div className="border-t border-violet-100 pt-1 flex justify-between font-medium">
               <span>간주취득 과세표준</span>
               <span>{formatKRW(detail.deemedTaxBase)}</span>
             </div>
-            {/* [L6] 과점주주 산식 = 법인 시가표준액 × 과세 지분율 (기존 prevStandardValue는 지목변경 전용이라 항상 누락됐음) */}
+            {/* [L6] 과점주주 산식 = 법인 장부가액 × 과세 지분율 (기존 prevStandardValue는 지목변경 전용이라 항상 누락됐음) */}
             {detail.corporateAssetValue !== undefined && detail.taxableRatio !== undefined && (
               <p className="text-xs text-muted-foreground">
                 {formatKRW(detail.corporateAssetValue ?? 0)} × {((detail.taxableRatio ?? 0) * 100).toFixed(2)}% = {formatKRW(detail.deemedTaxBase)}
               </p>
+            )}
+
+            {/*
+              §15② 단서 물건별 내역 — 단서 기준이 「취득**물건이**」라 물건마다 세율이 갈린다.
+              조심 1998-0634이 골프장 안 부동산을 그렇게 나눠 경정했다.
+            */}
+            {buckets.length > 0 && (
+              <div className="mt-2 overflow-x-auto" data-testid="deemed-bucket-breakdown">
+                <p className="text-xs font-medium text-violet-800 mb-1">
+                  물건별 내역 (지방세법 §15② 단서)
+                </p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-violet-200 text-muted-foreground">
+                      <th className="py-1 text-left font-medium">물건</th>
+                      <th className="py-1 text-right font-medium whitespace-nowrap">과세표준</th>
+                      <th className="py-1 text-right font-medium whitespace-nowrap">세율</th>
+                      <th className="py-1 text-right font-medium whitespace-nowrap">취득세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {buckets.map((b, i) => (
+                      <tr key={i} className="border-b border-violet-100 last:border-0">
+                        <td className="py-1 pr-2">
+                          {b.label || (b.proviso === "luxury" ? "사치성 재산" : "일반 물건")}
+                          {b.proviso === "luxury" && (
+                            <span className="ml-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-micro text-rose-700">
+                              §13⑤
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                          {formatKRW(b.taxBase)}
+                        </td>
+                        <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                          {b.rate !== undefined ? formatRate(b.rate) : "—"}
+                        </td>
+                        <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                          {formatKRW(b.tax ?? 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
@@ -245,8 +294,13 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
         <div className="flex justify-between text-sm text-muted-foreground py-1">
           <span>적용 세율</span>
           <span>
-            {formatRate(result.appliedRate)}{" "}
-            <span className="text-xs">({detail.legalBasis})</span>
+            {/*
+              🔴 근거는 `rateLegalBasis`(§15② 본문·단서)다. 종전에는 `legalBasis`(=§7)를 썼는데
+                 §7④⑤는 「취득으로 본다」는 **납세의무** 근거일 뿐 세율 근거가 아니다.
+              버킷 모드는 행마다 세율이 갈려 단일 세율을 적지 않는다(위 표 참조).
+            */}
+            {buckets.length > 0 ? "물건별 (아래 표)" : formatRate(result.appliedRate)}{" "}
+            <span className="text-xs">({detail.rateLegalBasis ?? detail.legalBasis})</span>
           </span>
         </div>
         <div className="border-t border-border mt-1 pt-1">
