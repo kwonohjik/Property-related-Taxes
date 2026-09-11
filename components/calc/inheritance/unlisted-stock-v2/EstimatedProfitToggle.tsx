@@ -114,8 +114,13 @@ export function EstimatedProfitToggle({
     if (next) {
       onChange({ ...DEFAULT_INPUT, agencyEstimates: [0, 0] });
     } else if (isOn) {
+      // 폐기 확인 게이트는 «사용자가 넣은 모든 입력»을 데이터로 세야 한다 (IG-131).
+      // 종전엔 금액과 절차 3요건 boolean만 봐서, 사유를 고르고 평가기관 유형·기관명을
+      // 입력했더라도 금액을 아직 안 넣었으면 확인 없이 전부 사라졌다.
       const hasData =
         (value?.agencyEstimates.some((v) => v > 0) ?? false) ||
+        (value?.agencies?.some((a) => a.name.trim() !== "") ?? false) ||
+        (value !== undefined && value.reasonCode !== DEFAULT_INPUT.reasonCode) ||
         !!(value && (value.filedWithinDeadline || value.baseDateAndReportWithinDeadline || value.sameYearAsInheritanceOrGift));
       if (hasData) setDiscardOpen(true);
       else onChange(undefined);

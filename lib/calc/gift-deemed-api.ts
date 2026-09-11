@@ -285,7 +285,13 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         relatedRatio: isHigh && !form.conParties
           ? { numer: Math.round(parseDecimal(form.conRelatedRatioPct) * 100), denom: 10_000 }
           : undefined,
-        smallShareholderImputation: !isHigh ? form.conSmallImputation : undefined,
+        // UI 게이트와 «같은 술어»로 전달한다 — contribution-form.tsx의 토글은
+        // `!isHigh && !hasRoster`(hasRoster = conParties)일 때만 렌더된다.
+        // 바로 위 형제 필드 relatedRatio는 이미 그 형태다. 종전에는 roster를 안 봐서,
+        // 토글을 켠 뒤 명부를 켜면 토글이 사라져 되돌릴 수 없는데도 결과 note에
+        // 「§39의3② 소액주주 1인 의제」가 계속 붙었다(적용되지 않은 조항의 표시).
+        smallShareholderImputation:
+          !isHigh && !form.conParties ? form.conSmallImputation : undefined,
         parties,
         isListed: form.conIsListed,
         listedMarketAvg: form.conIsListed ? parseAmount(form.conListedMarketAvg) : undefined,

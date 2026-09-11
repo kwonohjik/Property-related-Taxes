@@ -57,8 +57,29 @@ export function RelatedCorpFields({ form, set }: Props) {
   }, [form.rcTotalSalesStr, form.rcSalesPartners, form.rcShareholders]);
 
   // ── roster mutate 헬퍼 ──
+  /**
+   * 주주 roster를 바꿀 때 «그 주주를 참조하던 간접출자법인 행»을 같은 patch에서 정리한다.
+   *
+   * 엔진 `computeIndirectRatio`는 `corpShareholderId`를 전혀 보지 않고 `owners × stakeInBeneficiary`만
+   * 누적하므로, 법인주주를 개인으로 되돌리거나 삭제해도 «완성된» 행은 계속 간접보유비율에 더해졌다.
+   * 섹션 3은 그때 언마운트되므로(`corpOptions.length > 0` 게이트) 화면 어디에도 보이지 않는
+   * 경로가 §45의3 이익을 계속 바꾼다.
+   *
+   * 아직 법인주주를 고르지 않은 행(`corpShareholderId === ""`)은 «사용자가 방금 추가한 빈 행»이므로
+   * 남긴다 — 그 행이 유발하던 차단은 validate R-5를 렌더 게이트와 같은 술어에 태워 해소했다.
+   */
+  const setShareholders = (next: RcShareholderRow[]) => {
+    const corpIds = new Set(next.filter((s) => s.isCorporate).map((s) => s.id));
+    const kept = form.rcIntermediaryCorps.filter(
+      (r) => r.corpShareholderId === "" || corpIds.has(r.corpShareholderId),
+    );
+    set({
+      rcShareholders: next,
+      ...(kept.length === form.rcIntermediaryCorps.length ? {} : { rcIntermediaryCorps: kept }),
+    });
+  };
   const updShareholder = (idx: number, row: RcShareholderRow) =>
-    set({ rcShareholders: form.rcShareholders.map((r, i) => (i === idx ? row : r)) });
+    setShareholders(form.rcShareholders.map((r, i) => (i === idx ? row : r)));
   const updIntermediary = (idx: number, row: RcIntermediaryRow) =>
     set({ rcIntermediaryCorps: form.rcIntermediaryCorps.map((r, i) => (i === idx ? row : r)) });
   const updSales = (idx: number, row: RcSalesRow) =>
@@ -107,7 +128,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <span className="text-xs font-semibold text-emerald-700">주주 {idx + 1}</span>
               <button
                 type="button"
-                onClick={() => set({ rcShareholders: form.rcShareholders.filter((_, i) => i !== idx) })}
+                onClick={() => setShareholders(form.rcShareholders.filter((_, i) => i !== idx))}
                 className="text-xs text-rose-500 hover:text-rose-700"
                 aria-label={`주주 ${idx + 1} 삭제`}
               >

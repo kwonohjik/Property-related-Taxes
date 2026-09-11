@@ -385,15 +385,20 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       const totalDirectPct = form.rcShareholders.reduce((s, r) => s + parseDecimal(r.directRatioPctStr), 0);
       if (Math.abs(totalDirectPct - 100) > 0.01)
         return `주주 직접지분 합계가 100%가 아닙니다 (현재 ${totalDirectPct.toFixed(2)}%)`;
-      // R-5 간접출자법인 roster 빈행 차단
-      for (const [i, row] of form.rcIntermediaryCorps.entries()) {
-        const n = i + 1;
-        if (!row.corpShareholderId) return `${n}번째 간접출자법인의 법인주주를 선택하세요`;
-        if (parseDecimal(row.stakeInBeneficiaryPctStr) <= 0)
-          return `${n}번째 간접출자법인의 수혜법인 지분율을 입력하세요`;
-        for (const [j, owner] of row.owners.entries()) {
-          if (!owner.individualId) return `${n}번째 법인 ${j + 1}번 소유주를 선택하세요`;
-          if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
+      // R-5 간접출자법인 roster 빈행 차단 — 섹션 3의 «렌더 게이트와 같은 술어»에 태운다.
+      // related-corp-form.tsx:186이 `corpOptions.length > 0`(= 법인주주 존재)일 때만 섹션을 그리므로,
+      // 법인주주를 개인으로 되돌리면 빈 행이 남은 채 섹션이 사라져 «화면에 없는 칸»을 요구했다.
+      const hasCorpShareholder = form.rcShareholders.some((s) => s.isCorporate);
+      if (hasCorpShareholder) {
+        for (const [i, row] of form.rcIntermediaryCorps.entries()) {
+          const n = i + 1;
+          if (!row.corpShareholderId) return `${n}번째 간접출자법인의 법인주주를 선택하세요`;
+          if (parseDecimal(row.stakeInBeneficiaryPctStr) <= 0)
+            return `${n}번째 간접출자법인의 수혜법인 지분율을 입력하세요`;
+          for (const [j, owner] of row.owners.entries()) {
+            if (!owner.individualId) return `${n}번째 법인 ${j + 1}번 소유주를 선택하세요`;
+            if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
+          }
         }
       }
       // R-6 매출처 roster 빈행 차단 (자동 안분 fallback 금지)
@@ -402,10 +407,15 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         const n = i + 1;
         if (!row.name.trim()) return `${n}번째 매출처 이름을 입력하세요`;
         if (parseAmount(row.salesAmountStr) < 0) return `${n}번째 매출처의 매출액은 0 이상이어야 합니다`;
-        for (const [j, stake] of row.rulingStakes.entries()) {
-          if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
-          if (parseDecimal(stake.ratioPctStr) <= 0)
-            return `${n}번째 매출처 §⑭ ${j + 1}번 주주의 보유비율을 입력하세요`;
+        // §⑭3호 보유비율 블록의 렌더 게이트와 같은 술어(related-corp-form.tsx:346).
+        // 특수관계를 끄거나 과세제외유형을 고르면 블록이 언마운트되는데 종전엔 무조건 순회해
+        // «화면에 없는 칸»으로 차단했다. 엔진도 같은 술어로 건너뛴다(lib/tax-engine/gift-deemed/related-corp.ts:145).
+        if (row.isRelated && !row.exclusionType) {
+          for (const [j, stake] of row.rulingStakes.entries()) {
+            if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
+            if (parseDecimal(stake.ratioPctStr) <= 0)
+              return `${n}번째 매출처 §⑭ ${j + 1}번 주주의 보유비율을 입력하세요`;
+          }
         }
       }
       // R-7 매출처 합계 = 총매출액 (정수 원 → 톨러런스 0)

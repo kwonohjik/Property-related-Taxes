@@ -29,6 +29,13 @@ export function isNonHeirRelation(relation: HeirRelation): boolean {
  * Heir.isHeir prop 명시 우선, 없으면 relation으로 추론.
  */
 export function deriveIsHeirFromHeir(h: Heir): boolean {
+  // 대습상속인(민법 §1001)은 상속인이다 — 엔진 `isRealHeir`(inheritance-legal-share.ts)와
+  // 같은 술어를 쓴다. 「기타」로 추가된 며느리·사위는 isHeir:false가 자동으로 붙는데
+  // (HeirComposition·HeirEditor), 대습 토글을 켜면 「상속인 여부」 토글이 언마운트돼
+  // 되돌릴 UI가 사라진다. 엔진은 법정상속분·인적공제에서 대습 예외로 구제하지만
+  // 사전증여 경로엔 그 예외가 없어 합산기간이 10년이 아니라 5년으로 잡혔다
+  // (inheritance-gift-common.ts `gift.isHeir ? 10 : 5`). 두 층의 술어를 일치시킨다.
+  if (h.substituteGroupId != null) return true;
   if (h.isHeir !== undefined) return h.isHeir;
   return !isNonHeirRelation(h.relation);
 }

@@ -567,7 +567,12 @@ export const convertibleBondItemSchema = baseItemSchema
         need((item.cbIssueRate ?? 0) > 0, "cbIssueRate", "유효이자율(R)을 입력하세요.");
       }
     }
-    if (item.cbConvertible) {
+    // 전환 토글과 그 하위 2칸은 UI에서 `{!traded && …}` 블록 안에만 있다
+    // (EstateBodyConvertibleBond). 위 조기반환은 `cbSecurityType !== "preemptive_right"`
+    // 조건이 붙어 있어, 신주인수권증서 + 거래소 ON이면 여기까지 내려와 «화면에 없는 칸»을
+    // 요구했다. 엔진은 그 조합에서 종가평균만 쓰고 cbConvertible을 아예 읽지 않는다
+    // (property-valuation-convertible-bond.ts 라목1) — 차단만이 문제였다. (IG-119)
+    if (item.cbConvertible && !item.cbTradedOnExchange) {
       if (isPreemptive) {
         need((item.cbExRightsPriorPrice ?? 0) > 0, "cbExRightsPriorPrice", "권리락 전 주식가액을 입력하세요.");
         need((item.cbSubscriptionPrice ?? 0) > 0, "cbSubscriptionPrice", "신주인수가액을 입력하세요.");

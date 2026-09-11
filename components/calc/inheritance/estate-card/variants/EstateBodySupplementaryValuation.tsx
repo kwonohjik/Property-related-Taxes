@@ -191,9 +191,19 @@ export function EstateBodySupplementaryValuation({
             onChange={(v) => {
               const sep = v === "separate";
               setSeparateLandMode(sep);
-              // 경로 A(일괄고시) 전환 시 부수토지 값 제거 — 잔존 합산(이중계상) 방지
-              if (!sep && item.appurtenantLandStandardPrice != null) {
-                set({ appurtenantLandStandardPrice: undefined });
+              // 경로 A(일괄고시) 전환 시 «경로 B에서만 입력·표시되는» 5필드를 함께 제거한다.
+              // 경로 A는 토지·건물 일괄고시 1개 값이라 이 필드들이 의미를 갖지 않고,
+              // 입력·표시 UI가 전부 `separateLandMode` 게이트 안에 있어 사용자가 볼 방법도 없다.
+              // 종전에는 부수토지 기준시가만 지워, 미임대분 «건물» 기준시가가 §61⑤ 특례액에
+              // 계속 더해져 평가액이 과대 산정됐다(validate도 통과 — 경고조차 없다).
+              if (!sep) {
+                set({
+                  appurtenantLandStandardPrice: undefined,
+                  appurtenantLandArea: undefined,
+                  totalBuildingArea: undefined,
+                  vacantBuildingArea: undefined,
+                  vacantBuildingStandardPrice: undefined,
+                });
               }
             }}
             options={CB_ROUTE_OPTIONS(item.id)}

@@ -112,37 +112,50 @@ interface CandidateRowProps {
 function CandidateRow({ candidate, isSelected, onToggle }: CandidateRowProps) {
   const { trade, areaDiffRatePct, daysFromValuationDate, isRecommended, isWithinPeriod } = candidate;
   const isDirectTrade = trade.dealingType === "직거래";
+  // 평가기간 외 거래는 «참고용»이다(목록 헤더도 「시가 불인정 가능」이라 적는다).
+  // `selectedCandidates`는 기간 내 배열(`candidates`)만 필터하므로 기간 외를 켜도 선택 건수·평균·
+  // 「이 금액으로 채우기」 어디에도 반영되지 않았다 — 체크는 켜지는데 침묵 제외됐다.
+  // ⇒ 선택 자체를 막아 화면과 집계를 일치시킨다.
+  const selectable = isWithinPeriod;
 
   return (
     <div
-      role="checkbox"
-      aria-checked={isSelected}
-      tabIndex={0}
-      onClick={onToggle}
-      onKeyDown={(e) => {
-        if (e.key === " " || e.key === "Enter") {
-          e.preventDefault();
-          onToggle();
-        }
-      }}
+      role={selectable ? "checkbox" : "note"}
+      aria-checked={selectable ? isSelected : undefined}
+      aria-disabled={selectable ? undefined : true}
+      tabIndex={selectable ? 0 : -1}
+      onClick={selectable ? onToggle : undefined}
+      onKeyDown={
+        selectable
+          ? (e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                onToggle();
+              }
+            }
+          : undefined
+      }
       className={[
-        "rounded-lg border p-3 cursor-pointer transition-colors",
+        "rounded-lg border p-3 transition-colors",
+        selectable ? "cursor-pointer" : "cursor-not-allowed",
         isSelected
           ? "border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-900/20"
-          : "border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800/60",
-        !isWithinPeriod ? "opacity-60" : "",
+          : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900",
+        selectable ? "hover:bg-gray-50 dark:hover:bg-gray-800/60" : "opacity-60",
       ].join(" ")}
     >
       {/* 상단: 체크 + 추천배지 + 층·면적·거래일 */}
       <div className="flex items-start gap-2">
-        {/* 체크박스 */}
+        {/* 체크박스 — 평가기간 외는 선택 대상이 아니므로 빗금 처리 */}
         <div className={[
           "mt-0.5 shrink-0 h-4 w-4 rounded border-2 flex items-center justify-center",
-          isSelected
-            ? "bg-emerald-500 border-emerald-500"
-            : "border-gray-300 dark:border-gray-600",
+          !selectable
+            ? "border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
+            : isSelected
+              ? "bg-emerald-500 border-emerald-500"
+              : "border-gray-300 dark:border-gray-600",
         ].join(" ")}>
-          {isSelected && (
+          {selectable && isSelected && (
             <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 12 12">
               <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -160,7 +173,7 @@ function CandidateRow({ candidate, isSelected, onToggle }: CandidateRowProps) {
             {/* 평가기간 외 배지 */}
             {!isWithinPeriod && (
               <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-micro font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">
-                평가기간 외
+                평가기간 외 · 선택 불가
               </span>
             )}
             {/* 직거래 경고 배지 (P9 — §49①1호가목 특수관계 개연성) */}

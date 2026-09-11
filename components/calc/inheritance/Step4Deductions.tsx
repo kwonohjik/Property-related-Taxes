@@ -454,9 +454,14 @@ export function Step4({
               />
             )}
 
-            {/* §23 재해손실공제 — CasualtyLossSection 자체에 ToggleCard. casualtyLossEnabled가 단일 진실. */}
-            {/* 체크리스트 칩 = casualtyLossEnabled 직접 토글 → 이중 토글 없음 */}
-            {manualActive.casualtyLoss && <CasualtyLossSection form={form} set={set} />}
+            {/* §23 재해손실공제 — 계산 축은 casualtyLossEnabled(단일 진실), 표시 축은 칩 override.
+                두 축을 같은 boolean에 묶어두면 카드 안 스위치를 OFF로 내리는 순간 카드가 스스로
+                언마운트돼 ToggleCard의 OFF 상태가 구조적으로 렌더될 수 없었다 — 되돌리려면
+                상단 칩을 찾아야 했다. 카드를 닫는 것은 칩이다. (IG-112) */}
+            {(manualActive.casualtyLoss ||
+              form.deductionChecklistOverrides.casualtyLoss === true) && (
+              <CasualtyLossSection form={form} set={set} />
+            )}
 
             {/* 감정평가수수료 §25 */}
             {manualActive.appraisalFee && (

@@ -281,7 +281,12 @@ export function EstateItemEditor({
         )}
       </div>
 
-      {/* 카테고리 변경 Dialog (편집 모달 내 중첩 Dialog — ui.design §5.4) */}
+      {/* 카테고리 변경 Dialog (편집 모달 내 중첩 Dialog — ui.design §5.4)
+          조건부 렌더로 «열 때마다 마운트»시킨다. 항상 마운트해 두면 다이얼로그의
+          `useState(currentCategory)`가 최초 1회만 초기화되어, 다른 카테고리를 고른 뒤
+          취소하고 다시 열면 그 선택이 남는다 — 「현재 카테고리」 표시와 라디오가 어긋난 채
+          삭제 경고·확인 버튼이 이미 활성화된 상태로 뜬다. (IG-115) */}
+      {categoryDialogOpen && (
       <CategoryChangeDialog
         open={categoryDialogOpen}
         item={item}
@@ -292,6 +297,7 @@ export function EstateItemEditor({
         }}
         onCancel={() => setCategoryDialogOpen(false)}
       />
+      )}
     </>
   );
 }

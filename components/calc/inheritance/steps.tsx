@@ -179,6 +179,12 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
       debtItems: [],
       funeralExpense: "",
       funeralIncludesBongan: false,
+      // 봉안비도 나머지 legacy 장례비 필드와 같은 층에서 정리한다.
+      // 협의분할 모드는 isAllocationMode 게이트로 봉안비 입력칸을 언마운트하는데, 엔진은
+      // `debtItems.length > 0`일 때만 신규 경로를 타므로 항목을 아직 추가하지 않은
+      // 상태(debtItems=[])에서는 legacy 분기로 내려가 stale 봉안비를 §9②2호 공제에
+      // 계속 썼다 — 화면에 입력·수정 경로가 없는 최대 500만원 차감.
+      funeralBonganExpense: "",
       debts: "",
     });
   };
