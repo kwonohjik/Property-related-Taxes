@@ -132,3 +132,45 @@ describe("F-44 · F-46 문구 — §4·§5 (수정 전 실패)", () => {
     expect(FORM_SRC).toMatch(/고시 §6①/);
   });
 });
+
+/**
+ * F-16 Pre-Do anchor — **§164⑧ 연도교차 토글의 끄기 경로**.
+ *
+ * 토글의 렌더 조건이 `crossYearWindow`(취득 < 양도 ≤ 취득+1) 하나뿐이라, 켠 뒤 연도를
+ * 바꿔 **창을 벗어나면 토글 자체가 사라진다** — 플래그는 폼 상태에 켜진 채 남는데
+ * 끌 위젯이 없다. `changeYearWithGuard` 도 구조·용도·`acqLandPrice` 만 초기화하고
+ * 이 플래그는 이월한다(정리 지점 0곳).
+ *
+ * 선례: `AssetSectionTransfer:221` 이 같은 이유로 **「켜져 있으면 항상 렌더」** 를 쓴다.
+ *
+ * ⇒ `(crossYearWindow || f.crossYearSameAdjust)` 로 넓혀 끄기 경로를 남긴다.
+ *   ⚠️ 창 **안**에서의 동작은 종전과 완전히 같다 — 넓힌 쪽은 「이미 켜진 경우」뿐이다.
+ */
+describe("F-16 §164⑧ 연도교차 토글 — §6 (수정 전 실패)", () => {
+  const TOGGLE_TITLE = "동일조정기간 환산 적용 (§164⑧)";
+
+  it("★ 창을 벗어나도 켜져 있으면 토글이 남는다 (끄기 경로 보존)", () => {
+    // 취득 2010 · 양도 2020 = 창 밖. 플래그는 켜진 상태로 이월됐다.
+    renderWith({
+      acquisitionYear: "2010",
+      transferYear: "2020",
+      crossYearSameAdjust: true,
+    });
+    expect(screen.queryByText(TOGGLE_TITLE)).not.toBeNull();
+  });
+
+  it("역방향 가드 — 창 안에서는 종전 그대로 렌더된다", () => {
+    renderWith({ acquisitionYear: "2010", transferYear: "2011", crossYearSameAdjust: false });
+    expect(screen.queryByText(TOGGLE_TITLE)).not.toBeNull();
+  });
+
+  it("역방향 가드 — 창 밖 + OFF 이면 렌더되지 않는다 (넓힌 것은 「이미 켜진 경우」뿐)", () => {
+    renderWith({ acquisitionYear: "2010", transferYear: "2020", crossYearSameAdjust: false });
+    expect(screen.queryByText(TOGGLE_TITLE)).toBeNull();
+  });
+
+  it("역방향 가드 — 동일연도는 §164⑧ 이 자동이라 토글이 없다", () => {
+    renderWith({ acquisitionYear: "2010", transferYear: "2010", crossYearSameAdjust: true });
+    expect(screen.queryByText(TOGGLE_TITLE)).toBeNull();
+  });
+});
