@@ -20,6 +20,7 @@
  *   />
  */
 
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { ReactNode } from "react";
 import type {
   Heir,
@@ -241,20 +242,17 @@ export function HeirAllocationInput({
                 </div>
               )}
               {selected && showAreaInput && (
-                <input
-                  type="text"
-                  inputMode="decimal"
+                // 🔴 native input + parseFloat은 소수 입력이 불가능하다 — "12."을 치는 순간
+                // parseFloat이 12를 돌려줘 제어값이 즉시 정수로 되돌아간다. 형제 구현과 같이
+                // DecimalInput(문자열 제어)을 쓴다 (ExemptionChecklist의 면적 입력과 동형).
+                <DecimalInput
                   placeholder="면적(㎡)"
-                  value={alloc.areaM2 ?? ""}
-                  onChange={(e) =>
-                    updateArea(
-                      heir.id,
-                      e.target.value === ""
-                        ? undefined
-                        : parseFloat(e.target.value),
-                    )
+                  unit="㎡"
+                  value={alloc.areaM2 != null ? String(alloc.areaM2) : ""}
+                  onChange={(v) =>
+                    updateArea(heir.id, v === "" ? undefined : parseDecimal(v))
                   }
-                  className="w-full px-2 py-1 text-xs rounded border border-border bg-background"
+                  data-testid={`heir-alloc-area-${heir.id}`}
                 />
               )}
             </div>

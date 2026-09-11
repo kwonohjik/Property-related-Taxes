@@ -121,6 +121,26 @@ function AutoChip({
   const meta = AUTO_META[chipKey];
   const hasVal = autoItemHasValue(form, chipKey);
 
+  /**
+   * 🔴 IG-113: 배우자 §19 입력 칸은 Step4Deductions에서 `hasSpouse` 게이트 안에 있다.
+   * (`autoDetected.spouse`가 곧 `hasSpouse`다 — Step4Deductions의 autoDetected memo.)
+   * 형제 3개(금융·동거·영농) 칸은 항상 노출이라 칩과 칸이 1:1인데 배우자만 어긋난다.
+   * 게이트가 닫혀 있는데 「직접 입력 가능」·「클릭하여 직접 입력란 열기」로 안내하면
+   * 사용자는 열리지 않는 칸을 찾아 헤맨다 ⇒ 사유와 함께 비활성 칩으로 표시한다.
+   */
+  if (chipKey === "spouse" && !autoDetected) {
+    return (
+      <span
+        className={cn(AUTO_CHIP_UNDETECTED, "cursor-not-allowed opacity-60")}
+        title="배우자 상속인이 없어 §19 배우자 상속공제 입력란이 열리지 않습니다"
+        data-testid="auto-chip-spouse-unavailable"
+      >
+        <span>{meta.label}</span>
+        <span className="text-emerald-500 dark:text-emerald-500 text-micro">배우자 상속인 없음</span>
+      </span>
+    );
+  }
+
   if (autoDetected || hasVal) {
     // 자동 도출됨 or 값 입력됨 → 진한 emerald 배지 (클릭 시 그룹 펼침)
     return (

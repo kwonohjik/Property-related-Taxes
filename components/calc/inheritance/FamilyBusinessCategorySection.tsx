@@ -116,6 +116,9 @@ export function FamilyBusinessCategorySection({
             : "사업용 부동산·기계·재고·법인 주식 등 가업상속재산인 경우 체크"
         }
         checked={isActive}
+        // 🔴 IG-107 — FarmingCategorySection과 대칭. 상세 근거는 그쪽 주석 참조.
+        disabled={!isActive && item.farmingCategory != null}
+        disabledReason="영농상속 재산으로 분류돼 있습니다 — 영농·가업 분류는 동시 선택할 수 없습니다 (상증령 §15⑤·§16⑤)."
         onCheckedChange={(v) => {
           if (v) {
             onUpdate({

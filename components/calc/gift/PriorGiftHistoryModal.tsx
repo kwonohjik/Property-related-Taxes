@@ -104,6 +104,7 @@ function CandidateCard({
   onSelect,
   onSelectAsCorporate,
   showCorporateOption = false,
+  isInheritanceMode = false,
 }: {
   candidate: PriorGiftCandidate;
   onSelect: (c: PriorGiftCandidate) => void;
@@ -111,6 +112,8 @@ function CandidateCard({
   onSelectAsCorporate?: (c: PriorGiftCandidate) => void;
   /** PR-E: 영리법인 버튼 노출 — 상속세 모드 + heirs 존재 시 */
   showCorporateOption?: boolean;
+  /** 상속세 모드 — 수증자·증여자 필터가 적용되지 않는다 (IG-026) */
+  isInheritanceMode?: boolean;
 }) {
   const [expandInnerInfo, setExpandInnerInfo] = useState(false);
 
@@ -171,10 +174,12 @@ function CandidateCard({
         </span>
       </div>
 
-      {/* 동일 수증자 일치 배지 */}
-      <p className="text-caption text-violet-700">
-        ✓ 동일 수증자(=의뢰인) 이력
-      </p>
+      {/* 동일 수증자 일치 배지 — 상속세 모드에는 그 필터가 없다 (IG-026) */}
+      {!isInheritanceMode && (
+        <p className="text-caption text-violet-700">
+          ✓ 동일 수증자(=의뢰인) 이력
+        </p>
+      )}
 
       {/* 버튼 */}
       <div className="flex gap-2 pt-1">
@@ -216,6 +221,9 @@ export function PriorGiftHistoryModal({
   enableCorporateOption = false,
   mode = "gift",
 }: PriorGiftHistoryModalProps) {
+  /** 상속세 모드 — 수증자·증여자 필터가 적용되지 않는 전수 조회다 (IG-026). */
+  const isInheritanceMode = mode === "inheritance";
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<PriorGiftCandidate[]>([]);
@@ -302,23 +310,38 @@ export function PriorGiftHistoryModal({
         </DialogHeader>
 
         {/* 필터 요약 */}
-        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800">
+        {/* 🔴 IG-026: 요약을 mode로 분기한다. 상속세 모드 호출부(`PriorGiftInput`)는
+            `currentDonor`에 필러 `"other"`, `currentClientId`에 `null`을 넘기며,
+            `filterInheritancePriorGiftCandidates`에는 donor 매칭도 clientId 격리도 **없다**.
+            그런데도 종전 요약은 「증여자 관계: 기타」·「동일 수증자(=의뢰인)」를 적용된
+            필터인 양 출력했다 — 다른 의뢰인의 이력이 섞여 나오는데 걸렀다고 단언한 것이다. */}
+        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800" data-testid="prior-gift-filter-summary">
           <div>
-            <span className="text-sky-600">현재 증여일:</span> {currentGiftDate}
+            <span className="text-sky-600">{isInheritanceMode ? "상속개시일:" : "현재 증여일:"}</span>{" "}
+            {currentGiftDate}
           </div>
-          <div>
-            <span className="text-sky-600">수증자:</span>{" "}
-            {currentClientId
-              ? "현재 의뢰인의 사전증여 이력"
-              : "본인(일반 납세자)의 사전증여 이력"}
-          </div>
-          <div>
-            <span className="text-sky-600">증여자 관계:</span>{" "}
-            {DONOR_LABEL[currentDonor]}
-          </div>
-          <div className="text-sky-600">
-            필터: 10년 이내 ({tenYearsAgo} 이후) + 동일 수증자(=의뢰인)
-          </div>
+          {isInheritanceMode ? (
+            <div className="text-sky-600">
+              필터: 상속개시일 기준 10년 이내 ({tenYearsAgo} 이후) 전수 조회 — 수증자·증여자
+              필터는 적용되지 않습니다. 목록에서 피상속인의 증여분인지 직접 확인하세요.
+            </div>
+          ) : (
+            <>
+              <div>
+                <span className="text-sky-600">수증자:</span>{" "}
+                {currentClientId
+                  ? "현재 의뢰인의 사전증여 이력"
+                  : "본인(일반 납세자)의 사전증여 이력"}
+              </div>
+              <div>
+                <span className="text-sky-600">증여자 관계:</span>{" "}
+                {DONOR_LABEL[currentDonor]}
+              </div>
+              <div className="text-sky-600">
+                필터: 10년 이내 ({tenYearsAgo} 이후) + 동일 수증자(=의뢰인)
+              </div>
+            </>
+          )}
         </div>
 
         {/* 본문 — 상태별 분기 */}
@@ -352,6 +375,7 @@ export function PriorGiftHistoryModal({
                         onSelect={handleSelect}
                         onSelectAsCorporate={handleSelectAsCorporate}
                         showCorporateOption={enableCorporateOption}
+                        isInheritanceMode={isInheritanceMode}
                       />
                     ))}
                   </div>

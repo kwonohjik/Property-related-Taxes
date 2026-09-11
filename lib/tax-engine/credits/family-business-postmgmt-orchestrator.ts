@@ -191,6 +191,17 @@ export function calcFamilyBusinessPostMgmt(
 }
 
 /**
+ * 신고·납부 기한 (§18의2⑨) = 위반일이 속하는 달의 말일부터 6개월.
+ *
+ * 🔑 **기한은 사건마다 따로 진행된다** — 법문이 「상속인이 제5항 각 호의 어느 하나에
+ * **해당하는 날**이 속하는 달의 말일 … 부터 6개월 이내」이므로, 위반이 여러 건이면
+ * 건별로 기한이 생긴다. 호출부가 배열 첫 원소만 넘기면 더 이른 기한이 화면에서 사라진다.
+ */
+export function familyBusinessAmendmentDeadline(violationDate: string): string {
+  return format(addMonths(endOfMonth(parseISO(violationDate)), 6), "yyyy-MM-dd");
+}
+
+/**
  * 상속세 수정신고 데이터 매핑 (별지 제9호서식, 계획 §4-4 L13).
  * 수정신고 기한 = 위반일이 속하는 달 말일 + 6개월 (§18의2⑨).
  */
@@ -203,7 +214,7 @@ export function buildAmendmentReturnData(
     interestPenalty: postMgmtResult.totalInterest,
     cgtCreditReceived: postMgmtResult.cgtCreditApplied,
     netPayable: postMgmtResult.netRecapture + postMgmtResult.totalInterest,
-    amendmentDeadline: format(addMonths(endOfMonth(parseISO(violationDate)), 6), "yyyy-MM-dd"),
+    amendmentDeadline: familyBusinessAmendmentDeadline(violationDate),
   };
 }
 
