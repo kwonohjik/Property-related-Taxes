@@ -5,7 +5,8 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
+import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
@@ -47,6 +48,32 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
 
   // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)
   const nblRaw = primary ? buildNonBusinessLandRaw(primary, form.transferDate) : undefined;
+
+  /**
+   * ④⑬ 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) — 단건과 **같은 두 leaf**.
+   *
+   * 🔴 종전 다건 ⑬은 `nonHousingToHousingConversion` 키를 **아예 만들지 않았다**. Zod 는 받고
+   *    (`transfer-tax-schema-refines.ts:36`) 엔진은 장특공제(`transfer-tax-lthd.ts:291`)와
+   *    1세대1주택 보유·거주 기산(`transfer-tax-exemption-requirements.ts:272·350·419`)에 쓰는데,
+   *    **아무도 보내지 않아 조용히 무시**됐다 — 같은 자산이 단건과 다건에서 다른 세액이 된다.
+   *    입력 위젯은 자산 카드(`AssetSectionBasic`·`AssetSectionAcquisition`)에 있어 다건 화면에도
+   *    **뜬다**. 분양권·입주권(P1-02)이 같은 이유로 이미 한 번 고쳐진 자리다
+   *    ([[feedback_sibling_path_already_implements_rule]]).
+   *
+   * 🔑 **키만 넣으면 더 나빠진다** — §95⑤2호는 「주택으로 보유한 기간 중의 거주기간」만 산입하는데
+   *    다건은 클램프 없이 전 구간을 합산하고 있었다. 용도변경을 켜면서 미클램프 거주기간을 함께
+   *    보내면 비과세 요건이 과다 충족된다. 그래서 거주기간도 단건과 같은 leaf 로 바꾼다.
+   *    (`deriveResidencePeriodMonths` 는 종전 인라인 식과 **동일**하므로 OFF 일 때 동작 변화 0.)
+   */
+  const usageConversionOn = primary ? isUsageConversionActive(primary) : false;
+  const residence = primary
+    ? clampResidenceToHousingPeriod(
+        primary,
+        form.transferDate,
+        form.residencePeriodMonths,
+        usageConversionOn ? primary.residentialUseStartDate : undefined,
+      )
+    : { months: parseInt(form.residencePeriodMonths) || 0, trimmed: 0 };
 
   // ⑬ 세대 보유 분양권·입주권 — 단건과 **같은 leaf**(P1-02).
   //    다건 마법사는 단건 Step4를 그대로 임베드해 화면에는 이 위젯이 뜨는데, 종전 ⑬은 이 키를
@@ -215,11 +242,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
-    // 거주기간 — interval 모드면 자산 구간 합산 (단건과 동일 규칙)
-    residencePeriodMonths:
-      primary?.residenceInputMode === "interval" && (primary?.residencePeriods?.length ?? 0) > 0
-        ? sumResidenceMonths(primary.residencePeriods, form.transferDate)
-        : parseInt(primary?.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
+    // 거주기간 — 단건과 **같은 leaf**(§95⑤2호 주택 보유기간 클램프 포함, 위 주석 참조)
+    residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
@@ -274,6 +298,15 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 단건(`transfer-tax-api.ts:463`)과 같은 형태.
+    //    미정의 시 침묵 stripping 방지를 위해 **명시 선언**한다.
+    nonHousingToHousingConversion:
+      usageConversionOn && primary
+        ? {
+            residentialUseStartDate: primary.residentialUseStartDate,
+            residenceMonthsTrimmed: residence.trimmed,
+          }
+        : undefined,
     /**
      * ⑬ §89② 3년 초과 예외 — 단건과 **같은 leaf**를 쓴다.
      * 이 키가 다건에만 빠지면 「화면에는 선언했는데 엔진엔 없다」가 된다 —
