@@ -13,7 +13,7 @@ import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { CohabitDeductionDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
 import type { CohabitReasonType } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 // ============================================================
 // 사유 유형 한국어 라벨 (결과 카드 전용 — CohabitReasonList와 동일 정의)
@@ -107,7 +107,8 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
       </div>
 
       {/* 미적용 상세 — isExcluded=true 시 산식 대신 사유 행만 표시 */}
-      {open && detail && isExcluded && (
+      {detail && isExcluded && (
+        <PrintExpandable open={open}>
         <DetailTable>
           <DetailRow
             label={`선택 자산 종류(${exclusionReason ? EXCLUSION_REASON_LABEL[exclusionReason] : "미적용"})는 §23의2 동거주택 상속공제 대상이 아닙니다.`}
@@ -115,9 +116,11 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             muted
           />
         </DetailTable>
+        </PrintExpandable>
       )}
 
-      {open && detail && !isExcluded && (
+      {detail && !isExcluded && (
+        <PrintExpandable open={open}>
         <DetailTable>
           {/* Phase 2: G3 동거연수 echo */}
           {cy && (
@@ -272,6 +275,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             tone="blue"
           />
         </DetailTable>
+        </PrintExpandable>
       )}
     </>
   );

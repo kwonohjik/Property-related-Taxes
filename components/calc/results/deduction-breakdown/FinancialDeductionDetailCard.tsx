@@ -16,7 +16,7 @@ import {
   resolveFinancialEligibility,
 } from "@/lib/calc/financial-deduction-resolver";
 import { getValuatedAmount } from "@/lib/calc/inheritance-deduction-suggest";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 const TIER_LABELS: Record<string, string> = {
   tier1: "2천만 이하 — 전액 공제",
@@ -67,7 +67,7 @@ export function FinancialDeductionDetailCard({
         </span>
       </div>
 
-      {open && (
+      <PrintExpandable open={open}>
         <>
           {/* §22 대상 자산/채무 카운트 안내 */}
           {hasCountInfo && (
@@ -166,7 +166,7 @@ export function FinancialDeductionDetailCard({
             </DetailTable>
           )}
         </>
-      )}
+      </PrintExpandable>
     </>
   );
 }

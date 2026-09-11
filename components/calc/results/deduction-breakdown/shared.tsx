@@ -104,6 +104,32 @@ export function DetailTable({ children }: { children: React.ReactNode }) {
 }
 
 // ============================================================
+// PrintExpandable — 펼침 영역을 «언마운트하지 않고» CSS 로만 접는다
+// ============================================================
+
+/**
+ * 접힌 펼침 영역은 **인쇄물에서 통째로 빠진다** — 조건부 렌더(`{open && …}`)는 DOM 자체를
+ * 만들지 않으므로 `print:` 유틸리티가 붙을 대상이 없다. 상속공제 상세는 인쇄해서 보관하는
+ * 화면인데, 사용자가 펼치지 않은 카드는 종이에서 사라졌다.
+ *
+ * 바깥 섹션(`DeductionBreakdownSection`)은 IG-148 에서 이미 같은 이유로 CSS 토글로 바꿨다.
+ * 그때는 섹션 하나만 고쳤고 **카드 8개(9곳)는 남아 있었다** — 그래서 섹션을 펼쳐도 그 안의
+ * 개별 카드가 접혀 있으면 인쇄물에는 헤더만 나왔다. (별건 정리 2026-09-11)
+ *
+ * ⚠️ `hidden` 은 `display:none` 이라 접힌 동안 화면에서 완전히 빠진다 — 종전 조건부 렌더와
+ *    보이는 동작이 같다. 다른 점은 DOM 이 남아 `print:block` 이 되살릴 수 있다는 것뿐이다.
+ */
+export function PrintExpandable({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  return <div className={open ? "" : "hidden print:block"}>{children}</div>;
+}
+
+// ============================================================
 // DetailRow — 표 한 행 (label + value)
 // ============================================================
 

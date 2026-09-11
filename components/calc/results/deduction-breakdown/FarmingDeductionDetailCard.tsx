@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
-import { ExpandButton } from "./shared";
+import { ExpandButton, PrintExpandable } from "./shared";
 
 function labelMatchKind(
   kind: "same_district" | "adjacent_district" | "within_30km" | "forest_manageable_area" | "fail" | null,
@@ -126,7 +126,11 @@ export function FarmingDeductionDetailCard({ detail, triggerLabel, triggerValue 
         </span>
       </div>
 
-      {open && detail && <FarmingDetailContent detail={detail} />}
+      {detail && (
+        <PrintExpandable open={open}>
+          <FarmingDetailContent detail={detail} />
+        </PrintExpandable>
+      )}
     </>
   );
 }

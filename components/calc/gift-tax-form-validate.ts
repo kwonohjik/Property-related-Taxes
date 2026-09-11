@@ -12,6 +12,7 @@
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { DONOR_LABELS } from "@/components/calc/gift-tax-form-shared";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { validateLatePaymentFields } from "@/lib/calc/inheritance-gift-filing-penalty-input";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
@@ -349,18 +350,17 @@ export function validateStep(step: number, form: FormState): string | null {
     }
 
     /**
-     * 🔴 IG-086: 납부지연가산세(국세기본법 §47의4) 토글 ON인데 법정납부기한이 비어 있으면,
+     * 🔴 IG-086: 납부지연가산세(국세기본법 §47의4) 토글 ON인데 하위 칸이 비어 있으면,
      * ④가 키를 payload에서 빼고 엔진이 `LATE_PAYMENT_ZERO`를 돌려줘 **차단도 경고도 없이
      * 0원**이 된다. 증여 폼의 유일한 클라이언트 게이트는 이 validateStep이다(상속의
      * `validateInheritanceTaxInput` 같은 제출 전 전체 검증이 없다).
      *
-     * 형제는 이미 차단한다 — `inheritance-validate.ts`·`stock-transfer-tax-validate.ts`.
-     * 문구·근거를 상속과 맞춘다. (「토글 ON인데 미납액이 비었다」 축은 상속·주식도 차단하지
-     * 않는 **공유 갭**이라 여기서 단독으로 더하면 새 불일치가 생긴다 — 별건으로 남긴다.)
+     * 미납액 축은 IG-086 당시 「상속도 막지 않는 공유 갭」이라 미뤄 두었다 — 2026-09-11에
+     * 공용 leaf 로 상속과 **함께** 열었다(`validateLatePaymentFields`). 조건·문구를
+     * 세목마다 적으면 드리프트하므로 여기서는 leaf 를 부르기만 한다.
      */
-    if (form.applyLatePaymentPenalty && !form.paymentDeadline) {
-      return "법정납부기한을 입력하세요. (국세기본법 §47의4①1호 산정기간의 기산점)";
-    }
+    const lateErr = validateLatePaymentFields(form);
+    if (lateErr) return lateErr;
 
     // §53의2③ 기공제액 — 엔진이 min(입력값, 1억) 가드를 처리하므로 UI 단계에서는 차단하지 않음.
     // 단, 음수 입력은 의미 없으므로 차단.

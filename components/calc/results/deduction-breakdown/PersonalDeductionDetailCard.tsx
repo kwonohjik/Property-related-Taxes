@@ -11,7 +11,7 @@ import { resolveS20Params } from "@/lib/tax-engine/deductions/personal-deduction
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { PersonalDeductionDetail } from "@/lib/tax-engine/types/inheritance-deduction-detail.types";
-import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "./shared";
+import { DetailTable, DetailRow, SubTotalRow, ExpandButton, PrintExpandable } from "./shared";
 
 interface Props {
   detail?: PersonalDeductionDetail;
@@ -47,7 +47,8 @@ export function PersonalDeductionDetailCard({
         </span>
       </div>
 
-      {open && detail && (
+      {detail && (
+        <PrintExpandable open={open}>
         <DetailTable>
           {/* ① 자녀공제 (§20①1호) */}
           {detail.childCount > 0 && (
@@ -129,6 +130,7 @@ export function PersonalDeductionDetailCard({
             ※ 미성년자·장애인 연수는 1년 미만을 1년으로 올림 (상증법 §20③)
           </div>
         </DetailTable>
+        </PrintExpandable>
       )}
     </>
   );
