@@ -25,6 +25,8 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-exempt-result";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
+import { isOtherAssetGroup } from "@/lib/calc/stock-other-asset-scope";
+import { isClause9Applicable } from "@/lib/calc/stock-other-asset-scope";
 import {
   PenaltyDetailBlock,
   LatePaymentPenaltyBlock,
@@ -104,6 +106,14 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
    *   전용 안내가 정확한 조문을 가리킨다. 가산세 축 배선은 별건이다.
    */
   const isExitTax = form.marketType === "exit_tax";
+
+  /**
+   * §103①1호(부동산·기타자산) 그룹인가 — ② 기본공제 섹션의 두 칸을 여는 축.
+   * ④(`buildStockTransferApiBody`)와 **같은 leaf**를 쓴다(단일 소스).
+   */
+  const otherAssetGroup = isOtherAssetGroup(form);
+  /** §104①9호(비사업용토지 과다소유법인) 해당 — §104⑤ 후단 크로스 조정 칸의 축. */
+  const clause9Applicable = isClause9Applicable(form);
 
   // 증권거래세 미리보기 — 엔진 단일 진실 (dual-truth 해소 — feedback_ui_engine_dual_truth_avoidance)
   // total/per_share/exchange 모드 모두 지원 (폼 default "total"에서 미리보기 안 뜨던 기존 갭 해소)
@@ -236,34 +246,61 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
 
       {/* ② 기본공제 그룹 */}
       <section>
-        <SectionTitle n={2} title="기본공제 (§103②)" />
+        <SectionTitle n={2} title="기본공제 (§103①)" />
         <div className="space-y-3">
           <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700">
-            <p className="font-medium mb-1">주식 등 그룹 기본공제 250만원</p>
-            <p className="text-xs">
-              §94② 발동(기타자산 우선) 시에는 부동산 그룹과 합산.
-              같은 연도 부동산 양도에서 이미 사용한 금액을 입력하면 잔여 한도를 자동 반영합니다.
-            </p>
+            {otherAssetGroup ? (
+              <>
+                <p className="font-medium mb-1">부동산·기타자산 그룹 기본공제 250만원 (§103①1호)</p>
+                <p className="text-xs">
+                  기타자산(§94①4호)은 <strong>부동산과 한 그룹</strong>이라 250만원을 합쳐서 연 1회
+                  공제합니다. 같은 연도 부동산 양도에서 이미 사용한 금액을 입력하면 잔여 한도를
+                  자동 반영합니다.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium mb-1">주식 등 그룹 기본공제 250만원 (§103①2호)</p>
+                <p className="text-xs">
+                  주식(§94①3호)은 부동산·기타자산과 <strong>별개 그룹</strong>이라 250만원이 따로
+                  적용됩니다. 부동산 양도분과 합산하지 않으므로 추가 입력이 없습니다.
+                </p>
+              </>
+            )}
           </div>
-          <CurrencyInput
-            label="같은 해 부동산 그룹에서 이미 사용한 기본공제"
-            hint="§94② 발동 시 부동산 그룹 합산 — 없으면 0 (원)"
-            value={form.realEstateGroupBasicDeductionUsed}
-            onChange={(v) => onChange({ realEstateGroupBasicDeductionUsed: v })}
-            placeholder="0"
-          />
+
+          {/*
+            🔒 §103①1호 그룹에서만 엔진이 소비한다 — 주식 그룹(2호)에서는 값을 넣어도
+            `calcBasicDeduction`(`stock-transfer-helpers.ts:118`)이 보지 않아 세액이 불변이다.
+            술어는 ④(API 변환)와 **같은 leaf**를 쓴다.
+          */}
+          {otherAssetGroup && (
+            <CurrencyInput
+              label="같은 해 부동산 그룹에서 이미 사용한 기본공제"
+              hint="§103①1호 — 부동산·기타자산 공동 그룹. 없으면 0 (원)"
+              value={form.realEstateGroupBasicDeductionUsed}
+              onChange={(v) => onChange({ realEstateGroupBasicDeductionUsed: v })}
+              placeholder="0"
+            />
+          )}
 
           {/*
             §104⑤ 본문 후단 — 8호·9호 동일 자산 의제.
             부동산 엔진과 주식 엔진이 분리돼 자동 연동이 불가능하므로 위 기본공제와 **같은 층위**로
             사용자가 옮겨 적는다. 세액에는 반영하지 않고 결과에서 조정액을 **안내**한다.
+
+            🔒 **9호에 해당할 때만** 연다 — 영 §167의7이 「§94①4호 다목·라목 중 비사업용토지
+            비율 50% 이상」으로 좁히고, 엔진도 `NBL_HEAVY_CORP_CATEGORIES`가 아니면 조정액을
+            아예 만들지 않는다(`stock-transfer-tax.ts:464`).
           */}
-          <CurrencyInput
-            label="같은 해 양도한 부동산 중 비사업용 토지 과세표준"
-            hint="소득세법 §104⑤ 본문 후단이 비사업용 토지(§104①8호)와 과다소유법인 주식(§104①9호)을 「동일한 자산으로 보아」 합산하도록 정합니다. 입력하면 합산 시 늘어나는 세액을 안내합니다 — 모르면 비워두세요."
-            value={form.crossClause8TaxBase}
-            onChange={(v) => onChange({ crossClause8TaxBase: v })}
-          />
+          {clause9Applicable && (
+            <CurrencyInput
+              label="같은 해 양도한 부동산 중 비사업용 토지 과세표준"
+              hint="소득세법 §104⑤ 본문 후단이 비사업용 토지(§104①8호)와 과다소유법인 주식(§104①9호)을 「동일한 자산으로 보아」 합산하도록 정합니다. 입력하면 합산 시 늘어나는 세액을 안내합니다 — 모르면 비워두세요."
+              value={form.crossClause8TaxBase}
+              onChange={(v) => onChange({ crossClause8TaxBase: v })}
+            />
+          )}
         </div>
       </section>
 

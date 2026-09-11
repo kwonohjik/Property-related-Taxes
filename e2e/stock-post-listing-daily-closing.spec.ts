@@ -133,7 +133,7 @@ test.describe("§165⑤ ② 상장일 이후 1개월 종가 — 일자별 입력
 
     // 🔑 두 겹을 지나 실제로 넘어간다
     await page.getByRole("button", { name: /^다음/ }).click();
-    await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("기본공제 (§103①)")).toBeVisible({ timeout: 15_000 });
   });
 
   /**
@@ -155,7 +155,7 @@ test.describe("§165⑤ ② 상장일 이후 1개월 종가 — 일자별 입력
     for (const i of [0, 1, 2]) await cells.nth(i).fill("10000");
 
     await page.getByRole("button", { name: /^다음/ }).click();
-    await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("기본공제 (§103①)")).toBeVisible({ timeout: 15_000 });
     // Step3 필수 — 신고일(§105①). 안 채우면 「신고일을 입력하세요」로 막힌다.
     const filingCard = page
       .locator('[data-slot="field-card"]')
@@ -191,6 +191,6 @@ test.describe("§165⑤ ② 상장일 이후 1개월 종가 — 일자별 입력
     await expect(page.getByText(/상장일 이후 1개월 거래일 종가를 1셀 이상/)).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText("기본공제 (§103②)")).toHaveCount(0);
+    await expect(page.getByText("기본공제 (§103①)")).toHaveCount(0);
   });
 });
