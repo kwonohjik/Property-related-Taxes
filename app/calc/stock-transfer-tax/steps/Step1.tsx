@@ -26,6 +26,7 @@ import {
 import { suggestPriorYearEndDate } from "@/lib/tax-engine/stock-transfer/major-shareholder-judgment-date";
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
+import { isOtherAssetGroup } from "@/lib/calc/stock-other-asset-scope";
 import {
   TradingVenueBlock,
   isTradingVenueApplicable,
@@ -343,11 +344,12 @@ export function Step1({ form, onChange }: Step1Props) {
     }
 
     // 6. 기타자산 §94①4 — 조건부
-    if (
-      form.marketType === "other_asset" ||
-      form.isQualifyingBlockShareholder ||
-      form.isHeavyRealEstateForRate
-    ) {
+    //
+    // 술어는 Step3 ② 기본공제·④ API 변환과 **같은 leaf**를 쓴다(단일 소스).
+    // 종전 인라인 조건은 `other_asset || 플래그`라 **marketType을 보지 않았다**. 지금은
+    // 해외주식·국외전출세가 위에서 조기 반환하므로(`:175`·`:186`) 실동작 차이가 없지만,
+    // 같은 판정을 두 벌 유지하면 조기 반환이 바뀌는 순간 조용히 어긋난다.
+    if (isOtherAssetGroup(form)) {
       items.push({
         key: "other",
         title: "기타자산 해당 여부 (§94①4)",
