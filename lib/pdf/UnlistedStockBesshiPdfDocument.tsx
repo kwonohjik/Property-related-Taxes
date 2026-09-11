@@ -92,7 +92,7 @@ const reasonCheck = {
   width: 36, padding: 3, fontSize: 8, textAlign: "center" as const,
 };
 
-function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; result?: UnlistedStockValuationResult }) {
+function Page1Cover({ input, result, taxKind }: { input: UnlistedStockValuationInput; result?: UnlistedStockValuationResult; taxKind?: "inheritance" | "gift" }) {
   const evalDate = toOptionalDate(input.evaluationDate);
   const evalDateStr =
     evalDate instanceof Date && !isNaN(evalDate.getTime()) ? evalDate.toISOString().slice(0, 10) : "-";
@@ -182,7 +182,7 @@ function Page1Cover({ input, result }: { input: UnlistedStockValuationInput; res
               <ResultRow cellNum="⑦" label={BESSHI_P1_SECTION3.nonMaxShareholder} value={result.perShareValueNonMaxShareholder} />
             )}
             <ResultRow cellNum="⑨" label={BESSHI_P1_SECTION3.reportingValue} value={result.finalPerShareForReporting} emphasized />
-            <ResultRow cellNum="총" label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares))} value={result.totalValuation} emphasized />
+            <ResultRow cellNum="총" label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares), taxKind)} value={result.totalValuation} emphasized />
           </View>
         </>
       )}
@@ -249,7 +249,7 @@ function Page2NetAsset({
           <P2Row key={`${r.cellNum}-${r.field}`} cellNum={r.cellNum} label={r.label} amount={amount} refText={r.ref} />
         );
       })}
-      <P2Row cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} variant="emphasized" />
+      <P2Row cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula(eff)} amount={liabilitySubtotal} variant="emphasized" />
 
       {/* 다·라·마 */}
       <P2Row cellNum="다" label={BESSHI_P2_SECTION4.preGoodwillLabel} amount={preGoodwill} variant="top" />
@@ -631,10 +631,12 @@ function Page6NetIncomeBreakdown({ result }: { result: UnlistedStockValuationRes
 
 export interface UnlistedStockBesshiPdfDocumentProps {
   input: UnlistedStockValuationInput;
+  /** 제1쪽 총계 행 라벨(상속/증여재산가액) 분기. 미지정 시 상속 — 화면과 같은 계약. */
+  taxKind?: "inheritance" | "gift";
 }
 
 /** 비상장주식 별지4 부표3 Page 배열 — 통합 결과 PDF에서 재사용 (법인 1건) */
-export function UnlistedStockBesshiPages({ input }: UnlistedStockBesshiPdfDocumentProps) {
+export function UnlistedStockBesshiPages({ input, taxKind }: UnlistedStockBesshiPdfDocumentProps) {
   let result: UnlistedStockValuationResult | undefined;
   try {
     if (input.totalShares > 0 && input.ownedShares > 0) {
@@ -646,7 +648,7 @@ export function UnlistedStockBesshiPages({ input }: UnlistedStockBesshiPdfDocume
 
   return (
     <>
-      <Page1Cover input={input} result={result} />
+      <Page1Cover input={input} result={result} taxKind={taxKind} />
       {result && (
         <Page2NetAsset
           raw={input.netAssetValueRaw}
@@ -669,10 +671,10 @@ export function UnlistedStockBesshiPages({ input }: UnlistedStockBesshiPdfDocume
   );
 }
 
-export function UnlistedStockBesshiPdfDocument({ input }: UnlistedStockBesshiPdfDocumentProps) {
+export function UnlistedStockBesshiPdfDocument({ input, taxKind }: UnlistedStockBesshiPdfDocumentProps) {
   return (
     <Document>
-      <UnlistedStockBesshiPages input={input} />
+      <UnlistedStockBesshiPages input={input} taxKind={taxKind} />
     </Document>
   );
 }

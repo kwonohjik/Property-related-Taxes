@@ -540,6 +540,7 @@ export function GiftTaxResultView({
           taxBeforeCredit={taxBeforeCredit}
           priorGiftCreditDetail={result.priorGiftCreditDetail}
           computedTax={result.computedTax}
+          farmlandReduction={result.farmlandReductionDetail?.reductionAmount ?? 0}
         />
         </PrintSection>
       )}
@@ -652,7 +653,7 @@ export function GiftTaxResultView({
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}
       <PrintSection id="unlisted-stock-besshi" selectedIds={selectedPrintIds}>
-        <UnlistedStockBesshiResultSection estateItems={estateItems} />
+        <UnlistedStockBesshiResultSection estateItems={estateItems} taxKind="gift" />
       </PrintSection>
 
       {/* 비상장주식 평가조서 (간편평가 — 보충적 평가 자산) */}

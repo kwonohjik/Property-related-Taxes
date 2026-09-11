@@ -354,13 +354,15 @@ export function UnlistedStockV2Card({
       <CrossHoldingResultCard input={effectiveInput} sectionNum={7} />
 
       {/* 7. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <GoodwillPanel input={effectiveInput} sectionNum={11} />
+      {/* 번호는 «렌더 순서»를 따른다 — ToneCard가 sectionNum을 그대로 배지로 찍기 때문에
+          (ToneCard.tsx:52-58) 순서와 어긋나면 화면에 11 → 8 → 9 → 10으로 나온다. */}
+      <GoodwillPanel input={effectiveInput} sectionNum={8} />
 
       {/* 8. §22② 최대주주 해당 여부 토글 — 금융재산공제 배제 */}
       <MajorShareholderStockToggle
         checked={isSection22Major}
         onCheckedChange={handleSection22Change}
-        sectionNum={8}
+        sectionNum={9}
       />
 
       {/* 9. PR-L: §63②1호 기업공개 준비 중 평가 옵션 (§54 결과 → MAX override → §63③ 할증) */}
@@ -369,7 +371,7 @@ export function UnlistedStockV2Card({
         onChange={(next) => wrappedOnChange({ ...input, preIpoListing: next })}
         taxKind={taxKind}
         evaluationDate={effectiveInput.evaluationDate}
-        sectionNum={9}
+        sectionNum={10}
       />
 
       {/* 10. PR-K: §54⑥ 평가심의위원회 신청 옵션 */}
@@ -378,7 +380,7 @@ export function UnlistedStockV2Card({
         onChange={(next: EvaluationCommitteeInput | undefined) =>
           wrappedOnChange({ ...input, evaluationCommittee: next })
         }
-        sectionNum={10}
+        sectionNum={11}
       />
       <EvaluationCommitteeResultPanel input={effectiveInput} taxKind={taxKind} />
       {input.evaluationCommittee && (
@@ -389,7 +391,7 @@ export function UnlistedStockV2Card({
       <PerShareValuationResultCard input={effectiveInput} sectionNum={12} />
 
       {/* 7. 별지 양식 PDF 출력 미리보기 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <BesshiForm4Buppyo3PrintView input={effectiveInput} />
+      <BesshiForm4Buppyo3PrintView input={effectiveInput} taxKind={taxKind} />
     </div>
   );
 }

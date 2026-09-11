@@ -5,7 +5,7 @@
  *
  * 표시:
  *  ① 카테고리별 입력 합계 (financial·tax·personal·funeral) — §5.2
- *  ② 장례비 한도 적용 결과 (§14①3호) — §5.3
+ *  ② 장례비 한도 적용 결과 (§14①2호 · 한도는 §14③ 위임을 받은 상증령 §9②) — §5.3
  *  ③ 상속인별 채무·공과·장례비 분담 표 — §5.4
  *
  * 진입 조건: `result.heirAllocationResult !== undefined` AND `debtItems !== undefined`.
@@ -146,7 +146,7 @@ export function DebtAllocationResultCard({
       {totals.funeral > 0 && (
         <div className="rounded-md border border-emerald-200 dark:border-emerald-900 bg-white dark:bg-emerald-950/10 p-3 space-y-1.5">
           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            ② 장례비 한도 적용 (§14①3호)
+            ② 장례비 한도 적용 (§14①2호 · 상증령 §9②)
           </p>
           <dl className="text-xs space-y-1 text-gray-800 dark:text-gray-200">
             <div className="flex justify-between">

@@ -134,8 +134,16 @@ export interface HeirAllocationResult {
   perHeir: Record<string, HeirTaxBreakdown>;
   /** T3(a) 자산 단위 정합 가드 — 비면 정합. 검증 우회 방어용 echo. */
   allocationMismatch?: AllocationMismatch[];
-  /** 배부대상 산출세액 = 산출세액 − 영리법인 면제 (할증 미포함) */
+  /**
+   * 배부대상 산출세액 = 산출세액 − 영리법인 면제 − 상속인 외 자 §28②본문 증여세액공제 (할증 미포함).
+   * ⚠️ 종전 주석은 영리법인 면제만 적었으나 실제 산식은 세 항이다(inheritance-allocation.ts:452).
+   */
   distributableTax: number;
+  /**
+   * 상속인·수유자 외 자연인의 §28② 본문 증여세액공제 합 — `distributableTax`의 두 번째 차감항 echo.
+   * 결과 카드가 산식을 그대로 적을 수 있도록 노출한다(역산으로는 복구 불가). 0이면 생략 가능.
+   */
+  nonPayerNaturalGiftCredit: number;
   /** 간접배부 분모 = grossEstateWithGifts − Σ(상속인·수유자 외 자 사전증여 가액) */
   indirectDistributionBase: number;
   /** 간접배부 분자 = taxBase − Σ직접배부 − corporateGiftTaxBase */

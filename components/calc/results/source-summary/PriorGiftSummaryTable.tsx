@@ -58,6 +58,9 @@ function resolveDetailLabel(gift: PriorGift): string {
   return parts.join(" ") || "-";
 }
 
+/** auto 모드(§53 자동 도출) 셀 표기 — 형제 InheritanceFilingFormTable과 동일 문구. */
+const AUTO_DERIVED = "자동 도출(§53)";
+
 export function PriorGiftSummaryTable({ priorGifts }: Props) {
   if (!priorGifts || priorGifts.length === 0) return null;
 
@@ -75,6 +78,8 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
     (acc, g) => acc + (g.computedTax ?? 0),
     0,
   );
+  /** 전 회차가 auto(과세표준 미입력)면 공제·과세표준 소계는 의미가 없다. */
+  const allAutoDerived = priorGifts.every((g) => g.giftTaxBase == null);
 
   return (
     <div className="overflow-x-auto rounded-md border border-slate-200">
@@ -123,11 +128,15 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {gift.giftAmount.toLocaleString()}
                 </td>
+                {/* 상속세 마법사의 기본은 auto 모드이고, 그때 giftTaxBase는 undefined다
+                    — 엔진이 derivePriorGiftTaxBase로 내부 도출한다(inheritance-tax.ts:94-96).
+                    두 열을 「-」로만 두면 값이 없는 것처럼 읽히므로 형제 표
+                    (InheritanceFilingFormTable.tsx:265)와 같은 라벨을 쓴다. */}
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {formatCellOrDash(deduction)}
+                  {gift.giftTaxBase == null ? AUTO_DERIVED : formatCellOrDash(deduction)}
                 </td>
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {formatCellOrDash(gift.giftTaxBase)}
+                  {gift.giftTaxBase == null ? AUTO_DERIVED : formatCellOrDash(gift.giftTaxBase)}
                 </td>
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatCellOrDash(gift.computedTax)}
@@ -148,11 +157,13 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
             <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalAmount.toLocaleString()}
             </td>
+            {/* 소계는 «직접 입력한 회차»만 더한 부분합이다. auto 회차뿐이면 0이 되는데,
+                종전에는 formatCellOrDash를 거치지 않아 그 0이 그대로 찍혔다. */}
             <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-              {totalDeduction.toLocaleString()}
+              {allAutoDerived ? AUTO_DERIVED : formatCellOrDash(totalDeduction)}
             </td>
             <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-              {totalBase.toLocaleString()}
+              {allAutoDerived ? AUTO_DERIVED : formatCellOrDash(totalBase)}
             </td>
             <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
               {totalComputed.toLocaleString()}

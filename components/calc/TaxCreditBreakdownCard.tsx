@@ -10,6 +10,7 @@
  *   - 상속세·증여세 모두 echo 반환 (PR1, 2026-05-26) → §69 펼침 활성. 상속세는 §30 단기재상속공제 항목 추가 표시.
  */
 
+import { ratePercent } from "@/lib/tax-engine/tax-utils";
 import { useState } from "react";
 import type {
   TaxCreditResult,
@@ -259,11 +260,12 @@ function buildSection30Formula(
 function buildSection69Formula(
   credit: TaxCreditResult,
   corporateExemption: number,
+  farmlandReduction: number,
 ): React.ReactNode {
   const base = credit.filingCreditBase ?? 0;
   const totalWithSurcharge = credit.totalComputedTaxWithSurcharge ?? 0;
   // §69 신고세액공제율 (연도별 echo, 미전달 이력 호환 fallback 3%).
-  const filingRatePct = (credit.filingCreditRate ?? 0.03) * 100;
+  const filingRatePct = ratePercent(credit.filingCreditRate ?? 0.03);
   const giftCredit = credit.giftTaxCredit;
   const foreign = credit.foreignTaxCredit;
   const special = credit.specialTreatmentCredit;
@@ -298,6 +300,7 @@ function buildSection69Formula(
         {foreign > 0 && <> − 외국납부세액공제</>}
         {shortTerm > 0 && <> − 단기재상속세액공제</>}
         {special > 0 && <> − 조특 특례공제</>}
+        {farmlandReduction > 0 && <> − 농지 감면세액</>}
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
         = <Amt val={totalWithSurcharge} /> − <Amt val={giftCredit} />
@@ -305,10 +308,11 @@ function buildSection69Formula(
         {foreign > 0 && <> − <Amt val={foreign} /></>}
         {shortTerm > 0 && <> − <Amt val={shortTerm} /></>}
         {special > 0 && <> − <Amt val={special} /></>}
+        {farmlandReduction > 0 && <> − <Amt val={farmlandReduction} /></>}
         {" "}= <Amt val={base} />
       </div>
       <div className="text-micro text-gray-400 dark:text-gray-500">
-        ※ 상속인별 신고분 세액에 각각 3% 적용 후 합산 (원 미만 반올림)
+        ※ 상속인별 신고분 세액에 각각 {filingRatePct}% 적용 후 합산 (원 미만 반올림)
       </div>
       {allOthersZero && corp === 0 && (
         <div className="text-micro text-gray-400 dark:text-gray-500">
@@ -317,7 +321,7 @@ function buildSection69Formula(
       )}
       {special > 0 && (
         <div className="text-micro text-amber-600 dark:text-amber-400">
-          ※ 조특 특례 절감 분 차감 후 3% 적용
+          ※ 조특 특례 절감 분 차감 후 {filingRatePct}% 적용
         </div>
       )}
     </>
@@ -411,6 +415,13 @@ export interface TaxCreditBreakdownCardProps {
    * 상속세 전용. 미전달(0) 시 면제 항 미표시 (증여세는 항상 0).
    */
   corporateExemption?: number;
+  /**
+   * 조특법 §71 영농자녀 농지 감면세액 — §69 신고분 세액 산식의 차감 항.
+   * 엔진이 remainingTax에서 이 값을 뺀 뒤 filingCreditBase로 echo하므로
+   * (inheritance-gift-tax-credit.ts:523-528·:600), 항을 적지 않으면 등식이 안 맞는다.
+   * 증여세 전용. 미전달(0) 시 항 미표시.
+   */
+  farmlandReduction?: number;
 }
 
 export function TaxCreditBreakdownCard({
@@ -419,6 +430,7 @@ export function TaxCreditBreakdownCard({
   priorGiftCreditDetail,
   computedTax,
   corporateExemption = 0,
+  farmlandReduction = 0,
 }: TaxCreditBreakdownCardProps) {
   if (credit.totalCredit === 0) return null;
 
@@ -448,7 +460,7 @@ export function TaxCreditBreakdownCard({
   const section69Formula =
     credit.filingCreditBase !== undefined &&
     credit.totalComputedTaxWithSurcharge !== undefined
-      ? buildSection69Formula(credit, corporateExemption)
+      ? buildSection69Formula(credit, corporateExemption, farmlandReduction)
       : undefined;
 
   return (
@@ -489,7 +501,7 @@ export function TaxCreditBreakdownCard({
           formula={section30Formula}
         />
         <CreditRow
-          label={`신고세액공제 (${(credit.filingCreditRate ?? 0.03) * 100}%)`}
+          label={`신고세액공제 (${ratePercent(credit.filingCreditRate ?? 0.03)}%)`}
           amount={credit.filingCredit}
           lawRef="§69"
           formula={section69Formula}

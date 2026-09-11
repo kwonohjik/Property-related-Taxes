@@ -34,14 +34,14 @@ function ClosingCell({
   if (!row) {
     return (
       <td
-        className="border border-slate-400 px-1 py-0.5 text-right text-xs tabular-nums"
+        className="border border-slate-400 px-1 py-0.5 text-right text-xs font-mono tabular-nums whitespace-nowrap"
         data-testid={testId}
       />
     );
   }
   return (
     <td
-      className="border border-slate-400 px-1 py-0.5 text-right text-xs tabular-nums"
+      className="border border-slate-400 px-1 py-0.5 text-right text-xs font-mono tabular-nums whitespace-nowrap"
       data-testid={testId}
     >
       {row.closing != null ? fmt(row.closing) : stripTradingExclusionSuffix(row.label)}
@@ -159,7 +159,7 @@ export function Page2DailyClosingTable({ page2 }: Props) {
               </td>
               <td
                 colSpan={2}
-                className="border border-slate-500 bg-slate-100 px-2 py-1 text-right tabular-nums"
+                className="border border-slate-500 bg-slate-100 px-2 py-1 text-right font-mono tabular-nums whitespace-nowrap"
                 data-testid="ls-besshi-p2-subtotal-before"
               >
                 {fmt(page2.beforeSubtotal)}
@@ -172,7 +172,7 @@ export function Page2DailyClosingTable({ page2 }: Props) {
               </td>
               <td
                 colSpan={2}
-                className="border border-slate-500 bg-slate-100 px-2 py-1 text-right tabular-nums"
+                className="border border-slate-500 bg-slate-100 px-2 py-1 text-right font-mono tabular-nums whitespace-nowrap"
                 data-testid="ls-besshi-p2-subtotal-after"
               >
                 {fmt(page2.afterSubtotal)}
@@ -204,7 +204,7 @@ export function Page2DailyClosingTable({ page2 }: Props) {
               </td>
               <td
                 colSpan={8}
-                className="border border-slate-500 px-2 py-1 text-right tabular-nums"
+                className="border border-slate-500 px-2 py-1 text-right font-mono tabular-nums whitespace-nowrap"
                 data-testid="ls-besshi-p2-sum"
               >
                 {fmt(page2.closingSum)}
@@ -220,7 +220,7 @@ export function Page2DailyClosingTable({ page2 }: Props) {
               </td>
               <td
                 colSpan={8}
-                className="border border-slate-500 px-2 py-1 text-right tabular-nums font-semibold"
+                className="border border-slate-500 px-2 py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold"
                 data-testid="ls-besshi-p2-avg"
               >
                 {fmt(page2.closingAverage)}

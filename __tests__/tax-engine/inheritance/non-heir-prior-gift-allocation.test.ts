@@ -102,6 +102,27 @@ describe("비상속인 사전증여 수증자 배부·공제 (§3의2①·§28�
     expect(sumComputed).toBe(har.distributableTax);
   });
 
+  // 대장 IG-146 — 결과 카드가 「배부대상 산출세액 = ⑦ − 영리법인 면제」라고만 적어 등식이
+  // 안 맞았다. 두 번째 차감항을 역산으로 복구할 수 없어 엔진이 echo하도록 필드를 추가했다.
+  it("RN-8 (IG-146): nonPayerNaturalGiftCredit echo == 상속인 외 자 ⑩ 공제 합", () => {
+    const r = calcInheritanceTax(base(HEIRS_WITH_DAUGHTER_IN_LAW, INLAW_GIFT));
+    const har = r.heirAllocationResult!;
+    const inlaw = har.perHeir["h-inlaw"];
+    expect(har.nonPayerNaturalGiftCredit).toBe(inlaw.nonHeirGiftCredit);
+    expect(har.nonPayerNaturalGiftCredit).toBeGreaterThan(0); // 구별력 — 0이면 무엇이든 통과한다
+  });
+
+  it("RN-9 (IG-146): distributableTax 등식이 «세 항»으로 닫힌다", () => {
+    const r = calcInheritanceTax(base(HEIRS_WITH_DAUGHTER_IN_LAW, INLAW_GIFT));
+    const har = r.heirAllocationResult!;
+    const corporateExemption = r.corporateExemption?.amount ?? 0;
+    expect(har.distributableTax).toBe(
+      r.computedTax - corporateExemption - har.nonPayerNaturalGiftCredit,
+    );
+    // 종전 화면 산식(두 항)은 이 케이스에서 성립하지 않는다 — 그것이 이 지적의 근거였다
+    expect(har.distributableTax).not.toBe(r.computedTax - corporateExemption);
+  });
+
   it("RN-6 (C-3 회귀): 4촌 방계(other) 단독상속 — shares 멤버 → ⑪·⑫ 정상 포함", () => {
     // 1~3순위·배우자 부재, other만 → 민법 §1000 4순위 단독상속
     const heirs: Heir[] = [

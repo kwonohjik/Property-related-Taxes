@@ -123,6 +123,17 @@ export function coerceOptionalDate(value: string | Date | undefined | null): Dat
 // ============================================================
 
 /** 천원 미만 절사 — 양도세·재산세·취득세·상속세·증여세 과세표준 */
+/**
+ * 비율(0.07)을 화면 표기용 퍼센트 숫자(7)로 정규화한다.
+ *
+ * `rate * 100`을 그대로 쓰면 2진 부동소수 때문에 0.07 → **7.000000000000001**이 나온다
+ * (0.03·0.05·0.10은 정확히 떨어져 2017년 케이스에서만 드러났다). §69 신고세액공제율은
+ * 기준일별로 2016 이전 10% / 2017 7% / 2018 5% / 2019~ 3%라 0.07이 실제로 도달한다.
+ */
+export function ratePercent(rate: number): number {
+  return +(rate * 100).toFixed(2);
+}
+
 export function truncateToThousand(amount: number): number {
   return Math.floor(amount / 1000) * 1000;
 }

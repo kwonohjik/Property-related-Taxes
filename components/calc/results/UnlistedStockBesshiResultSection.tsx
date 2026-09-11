@@ -18,10 +18,13 @@ import { BesshiForm4Buppyo3PrintView } from "@/components/calc/inheritance/unlis
 
 export interface UnlistedStockBesshiResultSectionProps {
   estateItems: EstateItem[];
+  /** 제1쪽 총계 행 라벨(상속/증여재산가액) 분기. 미지정 시 상속. */
+  taxKind?: "inheritance" | "gift";
 }
 
 export function UnlistedStockBesshiResultSection({
   estateItems,
+  taxKind,
 }: UnlistedStockBesshiResultSectionProps) {
   // R-7/F-5: 정식평가 V2 자산만 별지 대상 (간편평가 unlistedStockData는 자동 제외)
   const unlistedItems = estateItems.filter((it) => it.unlistedStockValuationV2);
@@ -46,7 +49,7 @@ export function UnlistedStockBesshiResultSection({
             </p>
           )}
           {/* Date 정규화·방어는 BesshiForm 내부에서 단일 수행 (R-3/F-8) */}
-          <BesshiForm4Buppyo3PrintView input={it.unlistedStockValuationV2!} />
+          <BesshiForm4Buppyo3PrintView input={it.unlistedStockValuationV2!} taxKind={taxKind} />
         </div>
       ))}
     </section>

@@ -107,7 +107,7 @@ function PublicInterestPostMgmtInner() {
           <HomeButton />
         </div>
         <p className="text-sm text-muted-foreground">
-          상증법 §48② — 출연받은 재산(1호)·매각대금(4호)의 3년 사후관리 위반 시 추징 증여세 계산.
+          상증법 §48② 증여세 추징 사유(1·2·3·4·6·8호) 계산. 5호·7호는 §78⑨ 가산세로 별도 계산기.
         </p>
       </header>
 

@@ -49,7 +49,7 @@ const FB_CATEGORY_OPTIONS: Array<{
   { value: "business_equipment", label: "가업용 기계·설비", description: "기계장치·설비 (§15⑤1호)" },
   { value: "intangible_asset", label: "가업 무형자산", description: "영업권·특허·의장권 등 (§15⑤1호)" },
   { value: "inventory", label: "재고자산", description: "상품·제품·원재료 (§15⑤1호)" },
-  { value: "corporate_stock", label: "가업 법인 주식", description: "§15⑤2호 — businessType=corporate 한정. 사업무관자산 차감 후 가액 입력 권장" },
+  { value: "corporate_stock", label: "가업 법인 주식", description: "§15⑤2호 — 가업 유형이 「법인」일 때만 선택 가능. 사업무관자산 차감 후 가액 입력 권장" },
   { value: "other", label: "기타 가업용 자산", description: "임차보증금 등 §15⑤1호 기타" },
 ];
 
@@ -92,7 +92,7 @@ export function FamilyBusinessCategorySection({
     if (isStock) {
       if (nonStockOptions.includes(opt.value)) {
         disabled = true;
-        hint = "주식 자산은 corporate_stock 분류만 가능";
+        hint = "주식 자산은 「가업 법인 주식」 분류만 선택할 수 있습니다";
       }
     } else {
       if (opt.value === "corporate_stock") {

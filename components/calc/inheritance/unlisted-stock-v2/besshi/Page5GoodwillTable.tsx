@@ -14,6 +14,7 @@
  * 법령: 상증령 §59② + §55③ + 상증규 §19①
  */
 
+import { GOODWILL_EXCLUSION_LABELS } from "@/lib/tax-engine/data/goodwill-exclusion-labels";
 import type {
   UnlistedGoodwillResult,
   FiscalYearBreakdown,
@@ -28,13 +29,6 @@ export interface Page5GoodwillTableProps {
   estimatedProfitApplied?: boolean;
   estimatedProfitAverage?: number;
 }
-
-const excludedReasonLabel: Record<NonNullable<UnlistedGoodwillResult["excludedByLaw"]>, string> = {
-  liquidation: "§55③ 1호 — 청산절차 진행 → 영업권 가산 없음",
-  real_estate_80: "§55③ 1호 — 부동산 80%(§54④3호) → 영업권 가산 없음",
-  lt3y: "§55③ 2호 — 사업개시 3년 미만·휴·폐업(§54④2호)",
-  continuous_loss_3y: "§55③ 3호 — 직전 3년 계속 결손 → 영업권 자동 0",
-};
 
 const TD = "border border-black p-1";
 
@@ -128,7 +122,7 @@ export function Page5GoodwillTable({
           data-testid="p5-excluded-badge"
           data-besshi-cell="p5-excluded-badge"
         >
-          ⚠ {excludedReasonLabel[goodwill.excludedByLaw]}
+          ⚠ {GOODWILL_EXCLUSION_LABELS[goodwill.excludedByLaw]}
         </p>
       )}
 

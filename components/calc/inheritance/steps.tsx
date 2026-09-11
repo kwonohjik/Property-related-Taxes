@@ -230,7 +230,7 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
           <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-950/20 p-3 space-y-3">
             <div className="flex flex-wrap items-baseline gap-x-2">
               <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
-                장례비 (§14①3호)
+                장례비 (§14①2호)
               </h3>
               <span className="text-caption text-violet-600 dark:text-violet-400">
                 — 아래 두 항목을 합산해 공제합니다 (각 한도 별도)

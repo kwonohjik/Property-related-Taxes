@@ -138,8 +138,10 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
         </p>
       </div>
 
+      {/* 종전에는 특정 교재 사례(수혜법인 A, 2023 귀속)의 anchor 금액 두 개를 조건 없이
+          「본 시스템 산출」로 찍어, 사용자가 어떤 값을 넣든 같은 숫자가 나왔다. 수치를 뺀다. */}
       <p className="text-caption text-muted-foreground">
-        ※ 교재는 거래비율차감후 8.33% 반올림 적용 시 갑 직접이익을 20,510,000원대로 표시. 본 시스템은 정확분수(1/12) 정수연산으로 20,520,000원 산출.
+        ※ 교재의 거래비율 반올림 표기와 달리 본 시스템은 정확분수 정수연산을 적용합니다.
       </p>
     </div>
   );

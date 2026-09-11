@@ -88,7 +88,7 @@ export function FarmingCategorySection({
     if (isStock) {
       if (stockOnly.includes(opt.value)) {
         disabled = true;
-        hint = "법인 주식은 corporate_stock 분류만 가능";
+        hint = "주식 자산은 「법인 영농 주식」 분류만 선택할 수 있습니다";
       }
     } else {
       if (opt.value === "corporate_stock") {

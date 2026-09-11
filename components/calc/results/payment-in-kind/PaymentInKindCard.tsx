@@ -3,7 +3,11 @@
 /**
  * 물납 안내 결과 카드 (상속세, 상증법 §73)
  *
- * 요건 충족(§73①) → 허용한도 min 산식 → 충당순서 6단계(§74②). 결정세액 미영향 투영.
+ * 요건 충족(법 §73① 1~3호) → 허용한도 min 산식(상증령 §73①) → 충당순서 6단계(상증령 §74②).
+ * 결정세액 미영향 투영.
+ *
+ * ⚠️ 층위 표기는 반드시 「상증법/상증령」을 붙인다 — 법 §73은 ①②까지뿐이라 §73④는 령에만 있고,
+ *    법 §74②는 «문화유산 징수유예분 즉시징수»로 뜻이 전혀 다르다(KoreanLaw 재검증 2026-09-11).
  * 순수 엔진 derivePaymentInKindAssets + calcPaymentInKindAssessment 호출(단일 진실).
  * 설계: docs/02-design/features/inheritance-payment-in-kind.ui.design.md §3
  */
@@ -124,7 +128,7 @@ export function PaymentInKindCard({
             {/* 허용한도 */}
             <div className={`space-y-1 ${divider}`}>
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                물납 허용한도 (§73①, 적은 금액)
+                물납 허용한도 (상증령 §73①, 적은 금액)
               </p>
               <div className="flex justify-between text-xs">
                 <span>① 부동산·유가증권 안분세액</span>
@@ -139,7 +143,7 @@ export function PaymentInKindCard({
                 <span className={amountCell}>{formatKRW(data.allowedLimit)}</span>
               </div>
               <div className="flex justify-between text-caption text-gray-500">
-                <span>· 비상장주식 별도한도(§73④, 기준=과세가액)</span>
+                <span>· 비상장주식 별도한도(상증령 §73④, 기준=과세가액)</span>
                 <span className={amountCell}>{formatKRW(data.unlistedStockCap)}</span>
               </div>
               {data.acceptedRequest != null && (
@@ -155,7 +159,7 @@ export function PaymentInKindCard({
             {/* 충당순서 */}
             <div className={`space-y-1 ${divider}`}>
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                충당순서 (§74②, 정당사유 없는 한)
+                충당순서 (상증령 §74②, 정당사유 없는 한)
               </p>
               {data.fillOrder.map((s) => (
                 <div key={s.order} className="flex justify-between text-xs">

@@ -29,7 +29,8 @@ async function openListedStockCard(page: Page) {
 async function fillBaseAndMajorShareholder(page: Page, avg: number, shares: number) {
   // 주식수·평균가는 라벨 기반(numeric 인덱스는 순서 의존 — 종목섹션이 먼저라 어긋남)
   await page.getByPlaceholder("주식 수 입력").fill(String(shares));
-  await page.getByPlaceholder("주당 순손익 입력 (원)").fill(String(avg));
+  // 평균가는 testid 축 — 종전 placeholder 셀렉터의 문구가 틀려서 IG-129로 제거됐다.
+  await page.getByTestId("ls-avg-price").fill(String(avg));
   // §63③ 최대주주 할증 토글 ON (ToggleCard = role=switch)
   await page.getByRole("switch", { name: /§63③ 최대주주/ }).click();
   // 기업 규모: 대기업 (할증 20% 적용 가능)

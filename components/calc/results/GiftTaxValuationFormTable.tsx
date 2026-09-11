@@ -122,7 +122,7 @@ function describePriorGift(pg: PriorGift): React.ReactNode {
 const ROWS_FIXED = 10; // 부표 1 본문 빈 행 포함 고정 행 수
 const CELL_BASE = "border border-black p-1 align-middle text-caption";
 const CELL_CENTER = `${CELL_BASE} text-center`;
-const CELL_AMOUNT = `${CELL_BASE} text-right tabular-nums`;
+const CELL_AMOUNT = `${CELL_BASE} text-right font-mono tabular-nums whitespace-nowrap`;
 const CELL_NAME = `${CELL_BASE} text-left`;
 
 export function GiftTaxValuationFormTable({

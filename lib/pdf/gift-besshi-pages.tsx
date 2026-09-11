@@ -122,7 +122,7 @@ export function GiftSelectedBesshiPages({
         <ListedStockBesshiPages key={`ls-${i}`} besshi={besshi} />
       ))}
       {unlisted.map((input, i) => (
-        <UnlistedStockBesshiPages key={`us-${i}`} input={input} />
+        <UnlistedStockBesshiPages key={`us-${i}`} input={input} taxKind="gift" />
       ))}
     </>
   );

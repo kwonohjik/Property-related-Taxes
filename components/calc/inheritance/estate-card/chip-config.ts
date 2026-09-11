@@ -311,6 +311,11 @@ export function countNonDefaultOptions(
   if (item.farmingCategory !== undefined) n++;
   if (item.familyBusinessCategory !== undefined) n++;
   if (item.deductSecuredClaimAsDebt === true) n++;
+  // major-shareholder 칩의 isActiveData 술어(:286 `item.isSection22MajorShareholder === true`)와
+  // 같은 기준. ChipState.isActiveData 주석이 「판정 술어는 countNonDefaultOptions와 동일한
+  // item 필드 기준(단일 진실)」이라고 규정하는데 이 한 줄만 빠져 있어, StockItemTableView의
+  // «같은 행»에서 칩은 켜져 보이고 ⚙️ 배지 숫자는 그 항목을 세지 않았다.
+  if (item.isSection22MajorShareholder === true) n++;
   return n;
 }
 

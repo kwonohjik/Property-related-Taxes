@@ -22,16 +22,21 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
         <div className="border rounded-xl overflow-hidden">
           <div className="bg-muted/30 px-4 py-2.5">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-              일반 증여 스트림 (§47·§53·§56)
+              일반 증여 스트림 (§47·§53·§56·§58·§69)
             </h3>
             <div className="flex flex-wrap gap-1 mt-1">
               <LawArticleModal legalBasis="상증법 §47" label="§47 과세가액" />
               <LawArticleModal legalBasis="상증법 §53" label="§53 증여재산공제" />
               <LawArticleModal legalBasis="상증법 §56" label="§56 세율" />
+              <LawArticleModal legalBasis="상증법 §58" label="§58 기납부세액공제" />
+              <LawArticleModal legalBasis="상증법 §69" label="§69 신고세액공제" />
             </div>
           </div>
           <div className="divide-y divide-border">
-            <Row label="일반 증여 산출세액" value={formatKRW(result.ordinaryStreamTax)} highlight />
+            {/* 「산출세액」이 아니다 — ordinaryStreamTax는 §58·§69·§29 등 세액공제를 모두 차감한
+                결정세액이다(gift-tax-two-stream.ts:335-338·:501). 엔진 자신의 breakdown 라벨도
+                :347 「일반 스트림 납부세액」이다. */}
+            <Row label="일반 증여 결정세액" value={formatKRW(result.ordinaryStreamTax)} highlight />
           </div>
         </div>
       )}
@@ -85,11 +90,20 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
       {(result.ordinaryStreamTax ?? 0) > 0 && (
         <div className="border border-gray-300 rounded-xl overflow-hidden">
           <div className="bg-muted/50 px-4 py-2.5">
-            <h3 className="text-sm font-semibold">최종 납부세액 (일반 + 특례)</h3>
+            <h3 className="text-sm font-semibold">
+              최종 납부세액 (일반 + 특례{result.aggregationExcludedDetail ? " + 합산배제" : ""})
+            </h3>
           </div>
           <div className="divide-y divide-border">
+            {/* finalTax는 합산배제 스트림(§41의3·§41의5)까지 더한 값이다
+                (gift-tax-two-stream.ts:339). 두 항만 적으면 합산배제 자산이 함께 있을 때
+                라벨의 합 ≠ 표시 금액이 된다 — 엔진 breakdown(:356-358)과 같은 조건으로 분기한다. */}
             <Row
-              label={`= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)}`}
+              label={
+                result.aggregationExcludedDetail
+                  ? `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)} + 합산배제 ${formatKRW(result.aggregationExcludedDetail.finalTax)}`
+                  : `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)}`
+              }
               value={formatKRW(result.finalTax)}
               highlight
             />

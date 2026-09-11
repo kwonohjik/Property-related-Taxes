@@ -23,9 +23,11 @@ import {
 export interface Page1CoverSectionProps {
   input: UnlistedStockValuationInput;
   result?: UnlistedStockValuationResult;
+  /** 총계 행 라벨(상속/증여재산가액) 분기. 미지정 시 상속. */
+  taxKind?: "inheritance" | "gift";
 }
 
-export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
+export function Page1CoverSection({ input, result, taxKind }: Page1CoverSectionProps) {
   const reason = input.netAssetOnlyReason;
   const capitalDisplay = resolveCapitalDisplay(input.capital, input.faceValuePerShare, input.totalShares);
   return (
@@ -133,7 +135,7 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
               <ResultTableRow
                 testid="p1-총"
                 cellNum="총"
-                label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares))}
+                label={BESSHI_P1_SECTION3.total(fmt(input.ownedShares), taxKind)}
                 value={fmt(result.totalValuation)}
                 emphasized
               />

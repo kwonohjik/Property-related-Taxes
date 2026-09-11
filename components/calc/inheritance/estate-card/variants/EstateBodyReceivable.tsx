@@ -202,7 +202,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
               />
             </FieldCard>
             {(item.receivableUncollectible ?? 0) > 0 && (
-              <FieldCard label="회수불가능 사유" hint="채무자 파산·부도 등 근거 (별지 표기)">
+              <FieldCard label="회수불가능 사유" hint="채무자 파산·부도 등 근거 — 보관용 메모 (별지 서식에는 출력되지 않습니다)">
                 <input
                   type="text"
                   value={item.receivableUncollectibleReason ?? ""}
