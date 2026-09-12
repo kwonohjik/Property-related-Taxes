@@ -176,7 +176,12 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
   if (isDeemedLand) {
     const prevSv = parseAmount(form.deemedLandPrevStandardValue ?? "") ?? 0;
     const newSv  = parseAmount(form.deemedLandNewStandardValue  ?? "") ?? 0;
-    const deemedBase = newSv > prevSv ? newSv - prevSv : null;
+    // §10의6①1호 본칙(사실상취득가격)이 켜져 있으면 그 값이 과세표준이다 — 차액이 아니다.
+    const actualPrice = parseAmount(form.deemedLandActualPrice ?? "") ?? 0;
+    const deemedBase =
+      form.deemedLandActualPriceKnown === true
+        ? (actualPrice > 0 ? actualPrice : null)
+        : (newSv > prevSv ? newSv - prevSv : null);
     const rate = deemedBasicRate(form);
     return {
       acquisitionValue: null, standardValue: null, houseCountAfter: null,
@@ -313,6 +318,9 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     form.deemedMajorNewShareRatio,
     form.deemedLandPrevStandardValue,
     form.deemedLandNewStandardValue,
+    // §10의6①1호 본칙 — 빠뜨리면 토글을 켜도 사이드바가 차액으로 stale 된다
+    form.deemedLandActualPriceKnown,
+    form.deemedLandActualPrice,
     form.deemedRenovationPrevStandardValue,
     form.deemedRenovationNewStandardValue,
     // §15② 단서 — 사치성 여부·물건별 구분이 세율·합계를 바꾼다. 빠뜨리면 사이드바가 stale 된다.

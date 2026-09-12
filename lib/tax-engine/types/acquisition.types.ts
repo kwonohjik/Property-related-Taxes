@@ -22,6 +22,15 @@
  * 지방세법 §7④ 지목변경 간주취득 판정에 사용.
  * 28개 지목 전부를 열거하여 문자열 오타를 컴파일 타임에 차단.
  */
+/**
+ * 지목변경 간주취득 과세표준의 산정 근거 (「지방세법」 §10의6)
+ *
+ * - `actual_price`  — **본칙** §10의6①1호: 변경으로 증가한 가액에 해당하는 사실상취득가격
+ * - `standard_value` — **보충** §10의6②1호 + 시행령 §18의6 1호:
+ *   사실상취득가격을 **확인할 수 없는 경우**에만, 변경 이후 시가표준액 − 변경 전 시가표준액
+ */
+export type LandTaxBaseBasis = "actual_price" | "standard_value";
+
 export type LandCategory =
   | "전"          // 전(田) — 물을 상시 이용하지 않고 재배하는 토지
   | "답"          // 답(沓) — 물을 상시 이용하여 재배하는 토지
@@ -190,8 +199,17 @@ export interface DeemedAcquisitionInput {
   landCategory?: {
     prevCategory: LandCategory;     // 변경 전 지목 (법정 28종)
     newCategory: LandCategory;      // 변경 후 지목 (법정 28종)
-    prevStandardValue: number;      // 변경 전 시가표준액
-    newStandardValue: number;       // 변경 후 시가표준액
+    /**
+     * **본칙** (§10의6①1호) — 「그 변경으로 증가한 가액에 해당하는 사실상취득가격」.
+     * 제공되면 이 값이 곧 과세표준이고 아래 시가표준액은 보지 않는다.
+     * §10의6②이 「①에도 불구하고 … **확인할 수 없는** 경우」이므로, 확인된 값이 있으면
+     * 보충법의 요건 자체가 성립하지 않는다.
+     */
+    actualPrice?: number;
+    /** **보충** (§10의6②1호·시행령 §18의6 1호 나목) — 변경 전 시가표준액 */
+    prevStandardValue?: number;
+    /** **보충** (§10의6②1호·시행령 §18의6 1호 가목) — 변경 이후 시가표준액 */
+    newStandardValue?: number;
     /**
      * 사실상 지목변경 완료일 (YYYY-MM-DD)
      * 취득 시기 = actualChangeDate vs registrationDate 중 빠른 날 (지방세법 §20)
@@ -723,6 +741,10 @@ export interface AcquisitionTaxResult {
     prevStandardValue?: number;
     /** 변경/개수 후 시가표준액 */
     newStandardValue?: number;
+    /** 지목변경 전용 — 과세표준 산정 근거가 본칙(§10의6①1호)인지 보충(§10의6②1호)인지 */
+    taxBaseBasis?: LandTaxBaseBasis;
+    /** 지목변경 전용 — 본칙 적용 시의 사실상취득가격 (결과 카드 산식 표시용) */
+    actualPrice?: number;
     // 공통 필드
     /** 적용 법령 조문 (납세의무 근거 §7④⑤) */
     legalBasis: string;

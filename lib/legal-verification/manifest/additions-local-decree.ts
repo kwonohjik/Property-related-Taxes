@@ -40,6 +40,22 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    /**
+     * acquisition.ts `DEEMED_LAND_BASE_STANDARD` — 지목변경 과세표준의 **보충법** 계산방법.
+     * 법 §10의6②이 「대통령령으로 정하는 방법」으로 위임한 곳이다.
+     * 키워드는 KoreanLaw 실측 본문(MST 287223, 시행 2026-07-01).
+     */
+    id: "LOCAL_DECREE.DEEMED_TAX_BASE_SUPPLEMENT",
+    citation: "지방세법 시행령 §18의6",
+    keywords: [
+      "사실상취득가격을 확인할 수 없는 경우",
+      "토지의 지목이 사실상 변경된 때",
+      "가목의 가액에서 나목의 가액을 뺀 가액",
+      "토지가격비준표",
+    ],
+    keywordMode: "ALL",
+  },
 
   // ── 취득세 주택 중과 (법 §13의2 위임) ───────────────────────────────
   {
