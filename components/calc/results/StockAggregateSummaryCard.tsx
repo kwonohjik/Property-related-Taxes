@@ -92,7 +92,8 @@ export function StockAggregateSummaryCard({
             <tbody>
               {aggregate.items.map((r, i) => (
                 <tr key={i} className="border-b last:border-0">
-                  <td className="py-1.5 pr-2">
+                  {/* 차손 통산 행이 붙으면 셀 높이가 달라진다 — 전 셀 `align-top`으로 첫 줄을 맞춘다. */}
+                  <td className="py-1.5 pr-2 align-top">
                     {r.foreignDetail && (
                       <span className="mr-1.5 rounded bg-sky-100 px-1.5 py-0.5 text-micro font-semibold text-sky-700">
                         해외
@@ -102,17 +103,34 @@ export function StockAggregateSummaryCard({
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {won(r.transferIncome)}
+                    {/*
+                      🔑 **통산 후** 값이라 그 자체로는 왜 줄었는지 말하지 못한다.
+                      흡수한 차손을 영 §167의2① 호별로 바로 아래에 붙인다
+                      (부동산 정본 `MultiTransferPropertyBreakdown` 「동일그룹」·「타군안분」과 같은 라벨).
+                      값이 0이면 행을 만들지 않는다 — `undefined`(통산 없음)와 구분할 필요가 없는
+                      「0원 흡수」 행은 표만 늘린다.
+                    */}
+                    {(r.lossOffsetFromSameGroup ?? 0) > 0 && (
+                      <div className="text-caption text-amber-700">
+                        동일그룹 {won(-r.lossOffsetFromSameGroup!)}
+                      </div>
+                    )}
+                    {(r.lossOffsetFromOtherGroup ?? 0) > 0 && (
+                      <div className="text-caption text-amber-700">
+                        타군안분 {won(-r.lossOffsetFromOtherGroup!)}
+                      </div>
+                    )}
                   </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap align-top">
                     {won(r.basicDeduction)}
                   </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap align-top">
                     {won(r.taxBase)}
                   </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap align-top">
                     {(r.appliedRate * 100).toFixed(r.appliedRate * 100 % 1 === 0 ? 0 : 1)}%
                   </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap align-top">
                     {won(r.calculatedTax)}
                   </td>
                 </tr>

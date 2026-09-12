@@ -121,6 +121,66 @@ describe("FF-1 다종목 열 — aggregate를 넘기면 종목별 열이 생긴�
   });
 });
 
+describe("FF-4 18-1 양도차손 통산 행 — 종목 열이 «그 종목이 흡수한» 차손이다", () => {
+  // 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-4 · §5 B-4
+  //
+  // 종전에는 종목 열이 `null` 이라 합계 열에만 숫자가 있었다 — 서식만 봐서는 「어느 종목이
+  // 얼마를 흡수했는지」 알 수 없었다. 흡수한 쪽만 값을 갖고, 차손을 **준** 종목은 비운다.
+  const absorbed = res({
+    lossOffsetFromSameGroup: 3_000_000,
+    lossOffsetFromOtherGroup: 2_000_000,
+  });
+  const giver = res({
+    transferIncome: 0,
+    taxBase: 0,
+    calculatedTax: 0,
+    lossOffsetFromSameGroup: 0,
+    lossOffsetFromOtherGroup: 0,
+  });
+
+  function metaWithOffset(items: StockTransferResult[]): StockAggregateMeta {
+    const m = meta(items);
+    return {
+      ...m,
+      aggregated: {
+        ...m.aggregated,
+        lossOffset: {
+          stock: { totalOffset: 5_000_000, unusedLoss: 0 },
+          real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+        },
+      } as unknown as StockTransferAggregateResult,
+    };
+  }
+
+  const row18_1 = (m: StockAggregateMeta) => {
+    const { columns } = deriveColumns(res(), m);
+    return {
+      columns,
+      row: buildRows(res(), columns, m).find((r) => r.label.startsWith("18-1.")),
+    };
+  };
+
+  it("FF-4-1 흡수한 종목은 «1호+2호 합»을 음수로 싣는다", () => {
+    const { columns, row } = row18_1(metaWithOffset([absorbed, giver]));
+    expect(row).toBeTruthy();
+    // columns[0] 은 합계 열 — 종목 열은 그 뒤다.
+    expect(row!.values[columns[1].key]).toBe(-5_000_000);
+  });
+
+  it("FF-4-2 🔑 차손을 «준» 종목(흡수 0)은 비운다 — 0원을 찍지 않는다", () => {
+    const { columns, row } = row18_1(metaWithOffset([absorbed, giver]));
+    expect(row!.values[columns[2].key]).toBeNull();
+  });
+
+  it("FF-4-3 합계 열은 호별 합이다", () => {
+    expect(row18_1(metaWithOffset([absorbed, giver])).row!.values["total"]).toBe(-5_000_000);
+  });
+
+  it("FF-4-4 🟢 대조군: `lossOffset` 이 없으면 18-1 행 자체가 없다", () => {
+    expect(row18_1(meta([res(), res()])).row).toBeUndefined();
+  });
+});
+
 describe("FF-2 ⑫ 외국납부세액공제 행 (§118의6①1호)", () => {
   it("FF-2-1 국외 종목이 있으면 행이 생긴다", () => {
     const m = meta([res(), foreignRes()]);

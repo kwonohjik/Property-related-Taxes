@@ -174,6 +174,84 @@ describe("M-5 양성 대조군: 같은 세율 이익 2건 — 통산 대상 없�
   it("lossOffset 없음", () => expect(r.lossOffset).toBeUndefined());
 });
 
+// ============================================================================
+// M-11 — 종목별 «흡수한 차손» echo (`lossOffsetFromSameGroup` / `…FromOtherGroup`)
+// ============================================================================
+//
+// 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-4 · §5 Phase B(B-2)
+//
+// 🔴 코어(`loss-offset-core.ts`)는 자산별 흡수 내역을 늘 계산하는데 주식 aggregate 는
+//    **총액만 쓰고 버렸다**(`fromSame`·`fromOther` 사용처 0건 — 전수 grep). 그래서 결과 화면도
+//    신고서도 「내 3번 종목이 얼마를 흡수했는가」를 말하지 못했다. 부동산 정본은 자산별로
+//    보여준다(`MultiTransferPropertyBreakdown.tsx` 「차손 통산 (동일그룹)」·「(타군안분)」).
+//
+// 규약(부동산과 동일): 둘 다 **양수**(차감액의 절댓값) · **다자산 경로에서만** 실린다.
+//   「0원 흡수」와 「통산 자체가 없음」을 구분해야 결과 화면이 0원 행을 만들지 않는다.
+
+describe("M-11 🔒 종목별 흡수 차손 echo", () => {
+  it("M-11-1: 같은 세율군 통산 — 이익 자산이 `FromSameGroup` 으로 흡수한다", () => {
+    const r = calculateStockTransferTaxAggregate([GAIN, LOSS]);
+    expect(r.items[0].lossOffsetFromSameGroup).toBe(5_000_000);
+    expect(r.items[0].lossOffsetFromOtherGroup).toBe(0);
+    // 차손 자산 자신은 흡수한 것이 없다(주는 쪽이다).
+    expect(r.items[1].lossOffsetFromSameGroup).toBe(0);
+  });
+
+  it("M-11-2: 자산별 흡수액 합계 = `lossOffset.stock.totalOffset`", () => {
+    // 표시값이 요약값과 어긋나면 화면이 자기모순이 된다.
+    const r = calculateStockTransferTaxAggregate([GAIN, LOSS]);
+    const sum = r.items.reduce(
+      (s, x) => s + (x.lossOffsetFromSameGroup ?? 0) + (x.lossOffsetFromOtherGroup ?? 0),
+      0,
+    );
+    expect(sum).toBe(r.lossOffset!.stock.totalOffset);
+  });
+
+  it("M-11-3: 기타자산 그룹도 실린다 (§102①1호)", () => {
+    const r = calculateStockTransferTaxAggregate([
+      stockInput({ marketType: "unlisted", isQualifyingBlockShareholder: true }),
+      stockInput({
+        marketType: "unlisted",
+        isQualifyingBlockShareholder: true,
+        perShareTransferPrice: 30_000,
+        perShareAcquisitionPrice: 35_000,
+      }),
+    ]);
+    expect(r.items[0].lossOffsetFromSameGroup).toBe(5_000_000);
+    expect(r.items[1].lossOffsetFromSameGroup).toBe(0);
+  });
+
+  it("M-11-4 🟢 통산이 없으면 **필드 자체가 없다** (0이 아니다)", () => {
+    // 0을 채우면 결과 화면이 「0원 흡수」 행을 만들어 「통산 없음」과 구분되지 않는다.
+    const r = calculateStockTransferTaxAggregate([GAIN, stockInput()]);
+    expect(r.items[0].lossOffsetFromSameGroup).toBeUndefined();
+    expect(r.items[0].lossOffsetFromOtherGroup).toBeUndefined();
+  });
+
+  it("M-11-5 🟢 단건 계산에는 실리지 않는다", () => {
+    const r = calculateStockTransferTaxAggregate([GAIN]);
+    expect(r.items[0].lossOffsetFromSameGroup).toBeUndefined();
+  });
+
+  it("M-11-6: 다른 세율군 안분은 `FromOtherGroup` 으로 갈린다 (영 §167의2①2호)", () => {
+    // M-7-2 와 같은 구성 — 30% 군에서 소진하고 남은 차손이 20% 군 이익에 안분된다.
+    const SHORT = { acquisitionDate: new Date("2024-01-02"), transferDate: new Date("2024-06-01") };
+    const shortGain = stockInput(SHORT);
+    const shortLoss = stockInput({
+      ...SHORT,
+      perShareTransferPrice: 30_000,
+      perShareAcquisitionPrice: 35_000,
+    });
+    const r = calculateStockTransferTaxAggregate([shortGain, shortLoss, shortLoss, shortLoss, GAIN]);
+    // 30% 군 이익: 같은 군에서 1천만 전액 흡수 → FromSame 1천만 · FromOther 0
+    expect(r.items[0].lossOffsetFromSameGroup).toBe(10_000_000);
+    expect(r.items[0].lossOffsetFromOtherGroup).toBe(0);
+    // 20% 군 이익: 같은 군 차손이 없으므로 FromSame 0 · 잔여 5백만을 FromOther 로 안분받는다
+    expect(r.items[4].lossOffsetFromSameGroup).toBe(0);
+    expect(r.items[4].lossOffsetFromOtherGroup).toBe(5_000_000);
+  });
+});
+
 describe("M-7 🔴 영 §167의2①: 같은 세율 먼저 → 다른 세율 pro-rata", () => {
   // 30% 군(대주주·비중소·1년미만) 이익 1천만 + 차손 5백만  → 1호로 같은 군 내 통산
   // 20% 군 이익 1천만                                      → 영향 없음
