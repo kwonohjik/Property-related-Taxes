@@ -449,8 +449,14 @@ export function buildRows(
   //   부동산 정본이 `calculationSteps`에 한 행으로 노출하는 것과 대칭이다
   //   (`transfer-tax-aggregate.ts` 「양도차손 통산 (§102② · 시행령 §167의2)」).
   //   잔여 차손은 **소멸**한다(양도소득에 결손금 이월 없음) — 그 사실을 라벨에 남긴다.
+  //   ⚠️ 엔진 `lossOffset` 은 **§102① 호별**(주식 2호 / 기타자산 1호)로 나뉜다. 별지 제84호서식은
+  //      이 자리에 행이 **하나**뿐이므로 두 호를 더해 싣는다 — 호별 분해는 결과 화면
+  //      (`StockAggregateSummaryCard`)이 보여준다. 합산해도 「호를 넘어 통산했다」는 뜻이
+  //      **아니다**(통산 자체는 엔진이 호별로만 했다).
   if (aggregate?.aggregated.lossOffset) {
-    const { totalOffset, unusedLoss } = aggregate.aggregated.lossOffset;
+    const lo = aggregate.aggregated.lossOffset;
+    const totalOffset = lo.stock.totalOffset + lo.real_estate_and_other_asset.totalOffset;
+    const unusedLoss = lo.stock.unusedLoss + lo.real_estate_and_other_asset.unusedLoss;
     rows.push({
       label:
         unusedLoss > 0

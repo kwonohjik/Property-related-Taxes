@@ -108,8 +108,11 @@ describe("M-2 🔴 D-A: 이익 1천만 + 차손 5백만 → 통산", () => {
     expect(r.items.map((i) => i.calculatedTax)).toEqual([500_000, 0]);
   });
 
-  it("M-2-5: lossOffset 요약", () => {
-    expect(r.lossOffset).toEqual({ totalOffset: 5_000_000, unusedLoss: 0 });
+  it("M-2-5: lossOffset 요약 (§102① 호별)", () => {
+    expect(r.lossOffset).toEqual({
+      stock: { totalOffset: 5_000_000, unusedLoss: 0 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    });
   });
 
   it("M-2-6: 표시 항등식 — taxBase = transferIncome − basicDeduction", () => {
@@ -147,7 +150,10 @@ describe("M-4 🔴 D-A+D-C: 차손이 이익을 초과 — 잔여 소멸 · 기�
   });
 
   it("M-4-2: 잔여 차손 5,000,000은 소멸 (이월 불인정)", () => {
-    expect(r.lossOffset).toEqual({ totalOffset: 10_000_000, unusedLoss: 5_000_000 });
+    expect(r.lossOffset).toEqual({
+      stock: { totalOffset: 10_000_000, unusedLoss: 5_000_000 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    });
   });
 
   it("M-4-3: D-C 해소 — 표시 기본공제와 실제 적용이 일치한다", () => {
@@ -189,7 +195,10 @@ describe("M-7 🔴 영 §167의2①: 같은 세율 먼저 → 다른 세율 pro-
     // 기본공제는 §103② 「먼저 양도한 자산부터」인데 셋 다 같은 양도일이라 입력 순서(D-D Q-2).
     expect(r.totalTransferIncome).toBe(15_000_000);
     expect(r.totalTaxBase).toBe(12_500_000);
-    expect(r.lossOffset).toEqual({ totalOffset: 5_000_000, unusedLoss: 0 });
+    expect(r.lossOffset).toEqual({
+      stock: { totalOffset: 5_000_000, unusedLoss: 0 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    });
   });
 
   it("M-7-2: 차손이 같은 군 이익을 넘으면 잔여가 다른 군으로 안분된다", () => {
@@ -203,7 +212,10 @@ describe("M-7 🔴 영 §167의2①: 같은 세율 먼저 → 다른 세율 pro-
       GAIN,
     ]);
     expect(r.totalTransferIncome).toBe(5_000_000); // 20% 군 1천만 − 안분 5백만
-    expect(r.lossOffset).toEqual({ totalOffset: 15_000_000, unusedLoss: 0 });
+    expect(r.lossOffset).toEqual({
+      stock: { totalOffset: 15_000_000, unusedLoss: 0 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    });
   });
 });
 
@@ -279,7 +291,14 @@ describe("M-8 🔒 §102①후단: 호가 다르면 통산하지 못한다", () 
 
   it("M-8-3: 주식 차손은 소멸한다 (기타자산으로 넘어가지 않는다)", () => {
     const r = calculateStockTransferTaxAggregate([OTHER_ASSET_GAIN, LOSS]);
-    expect(r.lossOffset).toEqual({ totalOffset: 0, unusedLoss: 5_000_000 });
+    // 🔑 **두 호를 모두 단언한다.** 주식 차손 5,000,000 은 기타자산으로 넘어가지 못하고
+    //    소멸하며(§102① 후단), 기타자산 호는 차손이 없어 통산도 소멸도 0 이다.
+    //    한쪽만 단언하면 반전이 형제 안전망을 지운다
+    //    ([[feedback_shared_assertion_reversal_erases_sibling_net]]).
+    expect(r.lossOffset).toEqual({
+      stock: { totalOffset: 0, unusedLoss: 5_000_000 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    });
   });
 });
 
@@ -314,5 +333,150 @@ describe("M-9 🔒 비과세 종목은 통산에서 제외 (상속증여세과-2
   it("M-9-2: 비과세 차손은 unusedLoss에도 잡히지 않는다", () => {
     const r = calculateStockTransferTaxAggregate([GAIN, EXEMPT_LOSS]);
     expect(r.lossOffset).toBeUndefined();
+  });
+});
+
+// ============================================================================
+// M-10 — 기타자산 그룹(§102①1호) 통산   [Pre-Do anchor · PR-2 Phase 0]
+// ============================================================================
+//
+// 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-2 · §5 Phase 0
+//
+// 🔴 **착수 시점에 M-10-1·2·3·5 는 RED 다.** 기타자산 그룹은 통산을 타지 않는다 —
+//    `stock-transfer-aggregate.ts` STEP 1.5 가 `basicDeductionGroup === "stock"` 만 코어에
+//    넣고(`:328`), 기타자산 분기는 `offsetIncome` 을 **읽지도 않는다**(`:500-510` — 입력에서
+//    엔진을 통째로 다시 돌린다). 두 겹을 함께 고쳐야 움직인다.
+//
+// 기대값은 **법령 정합값**이다(현행값이 아니다 — [[feedback_anchor_correction_legal_priority]]):
+//   법 §102①1호   「제94조제1항제1호ㆍ제2호 및 **제4호**에 따른 소득」 ⇒ 기타자산은 1호 그룹
+//   법 §102②      「제1항 **각 호별로** … 그 양도차손을 공제한다」 ⇒ 조건 없음. 같은 호면 통산
+//   영 §167의2①   1호 같은 세율 먼저 → 2호 다른 세율 pro-rata. 잔여는 소멸(이월 없음)
+//
+// 📌 **현행 실측(구현 전, 2026-09-12)** — 무엇이 바뀌는지 남긴다:
+//   · M-10-1 계열: totalTaxBase **7,500,000** · totalCalculatedTax **450,000**
+//     (= 차손 종목을 함께 신고해도 이익 단독과 **1원도 다르지 않다**)
+//   · M-10-5 계열: 같은 450,000 · `clause1BucketTaxBase` 7,500,000
+//
+// ⚠️ `lossOffset` **그룹별 형태**(Q-1(b) — `Record<basicDeductionGroup, …>`)는 타입이 아직
+//    없어 여기서 단언하지 않는다. Phase A 의 A-5 와 함께 들어온다(계획서 §6.1).
+
+/** 기타자산(§94①4호 다목) — 과점주주 비상장. `stockInput` 기본값에 두 축만 얹는다. */
+function otherAssetInput(o: Partial<StockTransferInput> = {}): StockTransferInput {
+  return stockInput({
+    marketType: "unlisted",
+    isQualifyingBlockShareholder: true,
+    ...o,
+  });
+}
+
+/** §104①1호 버킷(§55① 누진) 이익 +10,000,000 */
+const OA1_GAIN = otherAssetInput();
+/** §104①1호 버킷 차손 −5,000,000 */
+const OA1_LOSS = otherAssetInput({
+  perShareTransferPrice: 30_000,
+  perShareAcquisitionPrice: 35_000,
+});
+/** §104①9호 버킷(기본세율 +10%p) 차손 −5,000,000 — 영 §167의7 「100분의 50 이상」 */
+const OA9_LOSS = otherAssetInput({
+  nblRatioOfCorpAssets: 0.6,
+  perShareTransferPrice: 30_000,
+  perShareAcquisitionPrice: 35_000,
+});
+/** §104①9호 버킷 이익 +10,000,000 */
+const OA9_GAIN = otherAssetInput({ nblRatioOfCorpAssets: 0.6 });
+
+describe("M-10 🔒 기타자산 그룹(§102①1호)도 §102② 통산 대상이다", () => {
+  it("M-10-0 픽스처 가드: 두 종목이 **실제로** 기타자산 그룹이고 소득이 +1천만/−5백만인가", () => {
+    // 이 단언이 없으면 「통산이 됐다/안 됐다」가 아니라 **픽스처가 주식 그룹**이어도
+    // 아래가 통과·실패한다(M-9-0과 같은 규약 — [[feedback_fixture_default_masks_gate_defect]]).
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA1_LOSS]);
+    expect(r.items.map((x) => x.basicDeductionGroup)).toEqual([
+      "real_estate_and_other_asset",
+      "real_estate_and_other_asset",
+    ]);
+    expect(r.items.map((x) => x.taxCategory)).toEqual([
+      "other_asset_block_shareholder",
+      "other_asset_block_shareholder",
+    ]);
+    expect(r.items.map((x) => x.isExempt)).toEqual([false, false]);
+  });
+
+  it("M-10-1: 같은 세율군 통산 (영 §167의2①1호) — 과세표준 2,500,000 · 세액 150,000", () => {
+    // 통산 5,000,000 → 소득 5,000,000 − 기본공제 2,500,000 = 2,500,000 × §55① 6% = 150,000
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA1_LOSS]);
+    expect(r.totalTransferIncome).toBe(5_000_000);
+    expect(r.basicDeductionByGroup.real_estate_and_other_asset).toBe(2_500_000);
+    expect(r.totalTaxBase).toBe(2_500_000);
+    expect(r.totalCalculatedTax).toBe(150_000);
+  });
+
+  it("M-10-2: 차손 자산은 과세표준·세액 0, 이익 자산이 통산을 흡수한다", () => {
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA1_LOSS]);
+    expect(r.items[0].transferIncome).toBe(5_000_000);
+    expect(r.items[0].basicDeduction).toBe(2_500_000);
+    expect(r.items[0].taxBase).toBe(2_500_000);
+    expect(r.items[0].calculatedTax).toBe(150_000);
+    expect(r.items[1].taxBase).toBe(0);
+    expect(r.items[1].calculatedTax).toBe(0);
+  });
+
+  it("M-10-3: 합계행 항등식 — totalTaxBase = totalTransferIncome − Σ기본공제 (G-3)", () => {
+    // 🔴 현행은 `totalTransferIncome` 5,000,000 · 기본공제 2,500,000 인데 `totalTaxBase` 가
+    //    7,500,000 이다. `StockAggregateSummaryCard` 합계행만 보면
+    //    「5,000,000 − 2,500,000 = 7,500,000」이라 화면이 **자기모순**이다(계획서 G-3).
+    //
+    // ⚠️ **초판 정정 (Phase 0 실행 중, 2026-09-12)** — 처음에는 우변을
+    //    `Σ max(0, item.transferIncome)` 로 썼다. 그러면 현행(10,000,000 − 2,500,000 = 7,500,000)도
+    //    구현 후(5,000,000 − 2,500,000 = 2,500,000)도 **양쪽 다 성립**해 구별력이 0이다.
+    //    실제로 GREEN 이 나왔다. 화면이 실제로 쓰는 값은 **`totalTransferIncome`**(차손을 이미
+    //    net 한 값)이므로 그것으로 단언해야 모순이 드러난다
+    //    ([[feedback_mutation_zero_discrimination_is_not_proof]]).
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA1_LOSS]);
+    const dedSum = r.items.reduce((s, x) => s + x.basicDeduction, 0);
+    expect(r.totalTaxBase).toBe(Math.max(0, r.totalTransferIncome) - dedSum);
+  });
+
+  it("M-10-4 🟢 대조군: 차손이 없으면 **아무것도 달라지지 않는다** (이익 2건)", () => {
+    // 이 anchor 가 없으면 「통산이 돌기 시작했다」와 「통산 아닌 것이 망가졌다」를 가르지 못한다.
+    // 값은 구현 전 실측(2026-09-12)이며 **구현 후에도 같아야 한다**.
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, otherAssetInput()]);
+    expect(r.totalTransferIncome).toBe(20_000_000);
+    expect(r.totalTaxBase).toBe(17_500_000);
+    expect(r.totalCalculatedTax).toBe(1_365_000);
+    expect(r.items.map((x) => x.taxBase)).toEqual([7_500_000, 10_000_000]);
+    expect(r.lossOffset).toBeUndefined();
+  });
+
+  it("M-10-5: §104⑤ 버킷 echo 가 **통산 후 값**을 따른다 (1호 이익 + 9호 차손)", () => {
+    // 🔑 계획서 §4.3 — 패치 방식으로 바꾸면 `clause1BucketTaxBase`·`clause9TaxBase`·
+    //    `cross1045Adjustment` 가 **옛 값으로 남을 수 있다**. 그 드리프트는 주식 신고서에
+    //    아무 흔적도 남기지 않고 **부동산 크로스 합산만 조용히 틀린다**.
+    //
+    // 세율군이 다르므로 영 §167의2①**2호**(pro-rata)로 공제된다. 이익이 1호 하나뿐이라
+    // 5,000,000 전액이 거기로 간다 ⇒ 1호 소득 5,000,000 → 과표 2,500,000 → 150,000.
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA9_LOSS]);
+    expect(r.totalCalculatedTax).toBe(150_000);
+    expect(r.items[0].clause1BucketTaxBase).toBe(2_500_000);
+    expect(r.items[0].clause1BucketTax).toBe(150_000);
+    // 차손 종목이므로 9호 버킷은 0 (구현 전후 동일)
+    expect(r.items[1].clause9TaxBase).toBe(0);
+    expect(r.otherAssetComparativeTax?.clause1BucketTaxBase).toBe(2_500_000);
+    expect(r.otherAssetComparativeTax?.aggregatedTax).toBe(150_000);
+  });
+
+  it("M-10-6 🟢 대조군: 1호 이익 + 9호 이익 — §104⑤ MAX 거동이 그대로다", () => {
+    // 구현 전 실측(2026-09-12). 차손이 없으니 통산이 개입할 자리가 없다.
+    const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA9_GAIN]);
+    expect(r.totalTaxBase).toBe(17_500_000);
+    expect(r.totalCalculatedTax).toBe(2_050_000);
+    expect(r.otherAssetComparativeTax).toMatchObject({
+      clause1Tax: 1_365_000,
+      clause2Tax: 2_050_000,
+      clause9TaxBase: 10_000_000,
+      clause9Tax: 1_600_000,
+      clause1BucketTaxBase: 7_500_000,
+      applied: "clause2",
+      aggregatedTax: 2_050_000,
+    });
   });
 });

@@ -20,6 +20,21 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 
+/**
+ * §102① 호별 통산 그룹 — 표시 순서·라벨 단일 소스.
+ *
+ * 키는 엔진 `lossOffset`(= `basicDeductionGroup` union 유도)과 같다. 그룹이 늘면
+ * 엔진 타입이 먼저 빨개지고, 여기 라벨을 안 추가하면 그 호가 **조용히 화면에서 빠진다** —
+ * 그래서 `satisfies`로 키 커버리지를 컴파일러에 맡긴다.
+ */
+const LOSS_OFFSET_GROUPS = [
+  { key: "stock", label: "주식 (§102①2호)" },
+  { key: "real_estate_and_other_asset", label: "기타자산 (§102①1호)" },
+] as const satisfies ReadonlyArray<{
+  key: keyof NonNullable<StockTransferAggregateResult["lossOffset"]>;
+  label: string;
+}>;
+
 export function StockAggregateSummaryCard({
   aggregate,
   names,
@@ -134,23 +149,31 @@ export function StockAggregateSummaryCard({
 
       {aggregate.lossOffset && (
         <ToneCard tone="amber" title="양도차손 통산 (소득세법 §102②)">
-          <p className="text-sm">
-            통산액{" "}
-            <span className="font-mono tabular-nums font-semibold">
-              {won(aggregate.lossOffset.totalOffset)}
-            </span>
-            {aggregate.lossOffset.unusedLoss > 0 && (
-              <>
-                {" · "}공제되지 못하고 소멸한 차손{" "}
-                <span className="font-mono tabular-nums font-semibold">
-                  {won(aggregate.lossOffset.unusedLoss)}
-                </span>
-              </>
-            )}
-          </p>
+          {/*
+            §102②는 「제1항 **각 호별로**」 공제한다 — 호가 다르면 통산하지 못한다(§102① 후단).
+            그래서 합계 한 줄이 아니라 **호별로** 보여준다. 통산도 소멸도 없는 호는 생략한다.
+          */}
+          {LOSS_OFFSET_GROUPS.map(({ key, label }) => {
+            const g = aggregate.lossOffset![key];
+            if (g.totalOffset <= 0 && g.unusedLoss <= 0) return null;
+            return (
+              <p key={key} className="text-sm">
+                <span className="text-muted-foreground">{label}</span>{" "}
+                통산액{" "}
+                <span className="font-mono tabular-nums font-semibold">{won(g.totalOffset)}</span>
+                {g.unusedLoss > 0 && (
+                  <>
+                    {" · "}공제되지 못하고 소멸한 차손{" "}
+                    <span className="font-mono tabular-nums font-semibold">{won(g.unusedLoss)}</span>
+                  </>
+                )}
+              </p>
+            );
+          })}
           <p className="text-caption text-muted-foreground">
             양도차손은 같은 호의 다른 자산 양도소득금액에서 공제하며(§102②), 남은 차손은 다음 과세기간으로
-            이월되지 않습니다(§102① 후단).
+            이월되지 않습니다(§102① 후단). 주식(§94①3호)과 기타자산(§94①4호)은 서로 다른 호라 통산하지
+            못합니다.
           </p>
         </ToneCard>
       )}
