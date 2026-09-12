@@ -12,6 +12,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { STX_CUTOFF_DATE } from "@/lib/tax-engine/data/securities-transaction-tax-rates";
 
 export function fmt(n: number): string {
   return n.toLocaleString();
@@ -335,26 +336,30 @@ export function Warnings({ warnings }: { warnings: string[] }) {
  *
  * · 항목은 **실측 근거가 있는 것만** 적는다(「아마 안 될 것」 금지).
  * · 항목이 해소되면 **같은 PR 에서 이 문구를 지운다** — 안 그러면 이 카드가 다음 stale 표시가 된다.
+ *
+ * 🔴 **그 규율이 한 번 깨졌다** (2026-09-12 실측 재판정). 이 카드가 대체한 `PrRoadmapCard` 와
+ *    **같은 방식으로** stale 해져 있었다 — 4항목 중 3항목이 거짓 고지였다:
+ *    ① 증권거래세 커버 시작일이 `2021-01-01` 로 적혀 있었으나 매트릭스는 **2020-04-01** 부터
+ *       연다(`STX_CUTOFF_DATE`). 2020-04-01~12-31 양도는 당시 세율(1만분의 10)로 정확히
+ *       계산되고 경고도 뜨지 않는데 「미지원」이라 말하고 있었다.
+ *    ② 「보유현황 신고서 미생성」 — `ExitTaxHoldingReportForm`(별지 제104호서식)이 구현돼
+ *       Step 4 에 마운트돼 있다. **삭제**.
+ *    ③ 「국외 종목만이면 가산세 미계산」 — `pickFilingAxisInput` 이 국내·국외를 가르지 않아
+ *       전부 국외인 신고도 신고 단위 1회로 산정된다(anchor FP-2-2). **삭제**.
+ *    ⇒ 항목을 **추가**할 때만이 아니라 기능을 **구현**할 때도 이 목록을 역방향으로 훑을 것.
  */
 export function UnsupportedItemsCard() {
   const items: { title: string; detail: string }[] = [
     {
-      title: "증권거래세 — 2021-01-01 이전 양도",
+      // 🔑 날짜를 손으로 적지 않는다 — 매트릭스가 커버를 넓히면 이 문구가 **자동으로** 따라간다.
+      //    종전에는 리터럴이라 커버가 2021-01-01 → 2020-04-01 로 확대된 뒤에도 옛 날짜가 남았다.
+      title: `증권거래세 — ${STX_CUTOFF_DATE} 이전 양도`,
       detail:
         "당시 세율표를 지원하지 않아 현행 세율로 표시합니다. 양도소득세 계산에는 영향이 없습니다(증권거래세는 정보성 표시입니다).",
     },
     {
       title: "국외전출세 — 기준환율",
       detail: "한국은행 고시 기준환율을 자동으로 가져오지 않습니다. 직접 입력해야 합니다.",
-    },
-    {
-      title: "국외전출자 보유현황 신고서",
-      detail: "세액 계산만 제공하며 신고서 서식은 자동 생성되지 않습니다.",
-    },
-    {
-      title: "가산세 — 국외 종목만으로 이루어진 신고",
-      detail:
-        "국내 종목이 하나도 없는 신고에서는 가산세가 계산되지 않습니다. 국내 종목이 하나라도 있으면 국외 소득분까지 함께 산정됩니다.",
     },
   ];
 

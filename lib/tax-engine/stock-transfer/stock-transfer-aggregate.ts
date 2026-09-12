@@ -528,10 +528,19 @@ function aggregateCore(
           );
       const newCalculatedTax = floorTen(rateResult.calculatedTax);
 
-      // 🔑 **국외주식은 `finalizeStockTax`를 타지 않는다.** 그 함수는 국내 신고 축
-      //   (`filingType`·`filingDate`·`filingViolation`·`isFraudulent`…)을 읽는데
-      //   `ForeignStockInput`에는 그 필드가 없다. 국외주식 단건 엔진도 가산세를 계산하지
-      //   않으므로(기존 갭) 여기서도 0을 유지해 **단건과 다종목의 세액을 일치**시킨다.
+      // 🔑 **국외주식은 여기서 `finalizeStockTax`를 타지 않는다.** 다만 이유가 종전 주석과
+      //   다르다 — 「국외는 가산세가 없어서」가 **아니다**.
+      //
+      //   ⚠️ 종전 주석은 「`ForeignStockInput`에 신고축 필드가 없고 단건 엔진도 가산세를
+      //      계산하지 않으므로 0을 유지해 단건과 일치시킨다」였다. **둘 다 지금은 거짓이다**:
+      //      `ForeignStockInput`은 `filingViolation`·`isFraudulent` 등을 갖고,
+      //      `calculateForeignStockTax`(`foreign-stock.ts` STEP 11.5)는 가산세를 계산한다.
+      //
+      //   지금 0인 진짜 이유는 **가산세가 신고 1건 단위 1회**이기 때문이다(국세기본법
+      //   §47조의2~4는 「과세표준 신고」 단위로 걸린다). 종목별로 매기면 신고 단위 base 를
+      //   만들 수 없으므로, 국내 종목도 마지막에 `stripItemPenalties`가 0으로 걷어낸다.
+      //   실제 가산세는 `computeFilingUnitPenalty(determinedTotal, …)`가 합계에 1회 매기며,
+      //   그 base 에는 **국외 소득분도 들어간다**(anchor PU-1·FP-2-2).
       //   외국납부세액공제는 C를 알아야 하므로 STEP 3.5에서 일괄 반영한다.
       if (isForeignStockItem(input)) {
         return {
