@@ -44,7 +44,10 @@ const GENERAL_RADIO = /취득일 이전 1개월 종가평균/;
 function listedEstimatedForm(o: Partial<StockTransferFormData> = {}): StockTransferFormData {
   return {
     ...createInitialStockFormData(),
-    marketType: "kospi",
+    // 거래정지 방식 전환을 클릭하는 픽스처 — 코스닥이어야 한다(영 §165③ 우회는
+    // 코스닥·코넥스 전용이라 코스피에서는 그 옵션이 disabled 다).
+    // 시장 게이트 자체는 __tests__/calc/stock-kospi-halt-scope.anchor.test.ts 가 지킨다.
+    marketType: "kosdaq",
     securityCode: "005930",
     securityName: "삼성전자",
     acquisitionDate: "2015-04-20",

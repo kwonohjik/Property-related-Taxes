@@ -27,10 +27,18 @@ async function gotoStockTransferTax(page: Page) {
   await page.getByPlaceholder("종목명을 입력하세요").waitFor({ state: "visible", timeout: 30_000 });
 }
 
-/** Step1 — kospi 1,000주 (취득 2018-01-01 / 양도 2024-06-01) */
+/**
+ * Step1 — **코스닥** 1,000주 (취득 2018-01-01 / 양도 2024-06-01)
+ *
+ * 🔑 종전에는 코스피였다. 이 spec 이 재는 축은 「취득일 거래정지 UI」이고 시장은 우연한
+ *    선택이었는데, 영 §165③의 거래정지 우회는 **코스닥·코넥스 전용**이라 코스피에서는
+ *    그 옵션이 `disabled` 다(법 §99①3 종가평균 그대로). 코스피로 두면 클릭할 수 없는
+ *    옵션을 누르려다 타임아웃한다 — **축이 사라진 것이지 결함이 아니다**.
+ *    시장 게이트 자체는 `e2e/stock-kospi-halt-market-scope.spec.ts` 가 지킨다.
+ */
 async function fillStep1(page: Page) {
   await page.getByPlaceholder("종목명을 입력하세요").fill("예제취득정지주식");
-  await page.getByRole("radio", { name: "코스피" }).first().click();
+  await page.getByRole("radio", { name: "코스닥" }).first().click();
 
   const yearInputs = page.locator('input[type="text"][aria-label="연도"]');
   const monthInputs = page.locator('input[type="text"][aria-label="월"]');

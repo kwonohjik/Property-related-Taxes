@@ -14,6 +14,10 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import {
+  isTradingHaltMarketScopeViolation,
+  TRADING_HALT_MARKET_SCOPE_MESSAGE,
+} from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 // ② 종가평균 파생 단일 진실 — 미리보기·API 변환과 **같은 함수**를 쓴다.
 // 여기서 다시 구현하면 「화면은 통과, 서버는 0」 같은 갈림이 생긴다.
 import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
@@ -295,6 +299,24 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     if (isListed) {
       // G-6: 양도일 거래정지 시 분모(1개월 종가평균)는 법령상 무효·엔진 미사용 → 검증 면제
       const stdMode = form.acquisitionStdMode;
+      /**
+       * 거래정지 우회(영 §165③)는 **코스닥·코넥스 전용**이다 — 단일 정본 술어에 위임한다.
+       * 코스피는 거래정지 중이어도 법 §99①3(1개월 종가평균) 그대로다.
+       *
+       * ⑤가 코스피에서 두 옵션을 `disabled` 로 막지만, 시장을 코스닥→코스피로 바꾸면
+       * `acquisitionStdMode` 가 stale 로 남아 화면상 선택이 유지된다. ⑧이 그것을 차단한다
+       * (④도 같은 술어로 플래그를 끊는다 — 3중 패턴).
+       */
+      if (
+        (stdMode === "halt_transfer" || stdMode === "halt_acquisition") &&
+        isTradingHaltMarketScopeViolation(form.marketType)
+      ) {
+        errors.push({
+          field: "acquisitionStdMode",
+          message: TRADING_HALT_MARKET_SCOPE_MESSAGE,
+          severity: "error",
+        });
+      }
       if (stdMode !== "halt_transfer") {
         const transferAvg = parseI(form.transferDatePriceAvg1Month);
         // S3: `transferStdInputMode`는 **더 이상 축 전용이 아니다** — 「양도 당시 기준시가」

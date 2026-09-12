@@ -118,7 +118,10 @@ const ALL_MODES: readonly AcquisitionStdMode[] = [
 function listedEstimatedForm(mode: AcquisitionStdMode): StockTransferFormData {
   return {
     ...createInitialStockFormData(),
-    marketType: "kospi",
+    // 거래정지 축을 재는 픽스처 — 코스닥이어야 한다(영 §165③ 우회는 코스닥·코넥스 전용).
+    // 종전 "kospi"는 우연한 선택이었고 법령상 불가능한 상태를 재고 있었다.
+    // 시장 게이트 자체는 __tests__/calc/stock-kospi-halt-scope.anchor.test.ts 가 지킨다.
+    marketType: "kosdaq",
     acquisitionMode: "estimated",
     acquisitionStdMode: mode,
     shareCount: "1000",

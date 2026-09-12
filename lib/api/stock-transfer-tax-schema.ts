@@ -11,6 +11,10 @@
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
 import { toOptionalDate } from "./date-coerce";
+import {
+  isTradingHaltMarketScopeViolation,
+  TRADING_HALT_MARKET_SCOPE_MESSAGE,
+} from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 
 
 /**
@@ -421,6 +425,29 @@ export function addStockRefines(
         code: z.ZodIssueCode.custom,
         path: ["tradingHaltAtTransfer"],
         message: "양도일 거래정지·관리종목 주식은 §3항 주식이 아니어서(상증령 §52의2③ 제외) 취득 후 상장(§165⑤) 환산 대상이 아닙니다. 거래정지 또는 취득 후 상장 중 하나만 선택하세요.",
+      });
+    }
+
+    /**
+     * 거래정지 우회(영 §165③)는 **코스닥·코넥스 전용**이다.
+     *
+     * ⚠️ 위 주석이 「서버 가드를 시장까지 좁히면 비상장 stale 조합의 차단이 사라진다」며
+     *    시장 축을 걸지 않았는데, 그것은 **비상장을 배제하는 방향**(좁히기)을 경계한 것이다.
+     *    여기는 반대로 **코스피만 배제**한다 — 기존 차단을 하나도 풀지 않고 규칙을 더한다.
+     *
+     * ⑤·⑧·④가 모두 막지만 ⑫도 건다. 이 조합은 **세액이 갈리기** 때문이다
+     * (실측 5억 양도: 취득가액 200,000,000 → 204,166,666 / 196,000,000).
+     * 「UI 가 못 만들 뿐 API 직접 호출은 만들 수 있다」를 허용할 사안이 아니다.
+     */
+    if (
+      haltGateApplies &&
+      isTradingHaltMarketScopeViolation(data.marketType) &&
+      (data.tradingHaltAtTransfer || data.tradingHaltAtAcquisition)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [data.tradingHaltAtTransfer ? "tradingHaltAtTransfer" : "tradingHaltAtAcquisition"],
+        message: TRADING_HALT_MARKET_SCOPE_MESSAGE,
       });
     }
 
