@@ -462,7 +462,18 @@ export function buildRows(
         unusedLoss > 0
           ? `18-1. 양도차손 통산 (§102②·영 §167의2) — 잔여 ${unusedLoss.toLocaleString()} 소멸(이월 불가)`
           : "18-1. 양도차손 통산 (§102②·영 §167의2)",
-      values: val(0, () => -totalOffset, () => null),
+      //   종목 열은 **그 종목이 흡수한** 차손이다(영 §167의2① 1호+2호 합). 종전에는 `null`이라
+      //   합계 열만 숫자가 있었고 「어느 종목이 얼마를 흡수했는지」가 서식에서 사라졌다.
+      //   차손을 **준** 종목은 0이다 — 흡수한 쪽만 값을 갖는다.
+      values: val(
+        0,
+        () => -totalOffset,
+        (item) => {
+          const absorbed =
+            (item.lossOffsetFromSameGroup ?? 0) + (item.lossOffsetFromOtherGroup ?? 0);
+          return absorbed > 0 ? -absorbed : null;
+        },
+      ),
     });
   }
 
