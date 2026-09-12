@@ -305,18 +305,28 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         </div>
       </section>
 
-      {/* ③ 이월결손금 placeholder */}
-      <section>
-        <SectionTitle n={3} title="이월결손금 통산 (PR-3 예정)" />
-        <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-600">
-          다른 주식 자산 양도손실 통산은 PR-3 다자산 합산신고에서 지원 예정입니다.
-        </div>
-      </section>
+      {/*
+        🔴 종전 ③ 「이월결손금 통산 (PR-3 예정)」 안내 카드를 제거했다 (2026-09-12).
+
+        세 가지가 전부 사실과 달랐다:
+          · 「다자산 합산신고 예정」 — 이미 구현돼 있다. 종목을 2건 이상 확정하면
+            `callStockTransferTaxAggregateAPI` 가 `deductionMode: "aggregate"` 로 합산 경로를 탄다.
+          · 「양도손실 통산 예정」 — §102②·영 §167의2① 은 주식 그룹에 **이미 적용**된다
+            (`stock-transfer-aggregate.ts` STEP 1.5 · anchor `loss-offset-102-2.anchor.test.ts` 28건).
+          · 「**이월**결손금」 — 양도소득에는 **결손금 이월 제도가 없다**(법 §102① 후단).
+            통산되지 못한 차손은 소멸한다.
+
+        구현된 기능을 「미지원」이라 고지하면 사용자가 차손 종목 입력을 포기한다.
+        통산 내역은 입력이 아니라 **결과**에서 보여준다 — `StockAggregateSummaryCard` 의
+        「양도차손 통산 (소득세법 §102②)」 카드와 별지 제84호서식 18-1행.
+
+        계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-1
+      */}
 
       {/* 🔴 G-24: 국외전출세 전용 신고 안내 — §105①/§110① 축이 아니다 */}
       {isExitTax && (
         <section>
-          <SectionTitle n={4} title="신고·납부 (소득세법 §118의15)" />
+          <SectionTitle n={3} title="신고·납부 (소득세법 §118의15)" />
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-700 space-y-2">
             <p className="font-medium">국외전출세는 신고 축이 다릅니다</p>
             <ul className="list-disc pl-4 space-y-1 text-xs leading-relaxed">
@@ -339,10 +349,10 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         </section>
       )}
 
-      {/* ④ 신고 유형 + 기한 helper */}
+      {/* ③ 신고 유형 + 기한 helper */}
       {!isExitTax && (
       <section>
-        <SectionTitle n={4} title="신고 유형 (§105① · §110①)" />
+        <SectionTitle n={3} title="신고 유형 (§105① · §110①)" />
         <div className="space-y-4">
           {/*
             §105① 본문 괄호가 §94①3호다목(국외주식)을 예정신고 대상에서 **제외**한다.
@@ -458,10 +468,10 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
       </section>
       )}
 
-      {/* ⑤ 가산세 분기 — 🔴 G-24: 국외전출세는 배선이 없으므로 렌더하지 않는다 */}
+      {/* ④ 가산세 분기 — 🔴 G-24: 국외전출세는 배선이 없으므로 렌더하지 않는다 */}
       {!isExitTax && (
       <section>
-        <SectionTitle n={5} title="가산세 (국세기본법 §47조의2·§47조의3·§47조의4)" />
+        <SectionTitle n={4} title="가산세 (국세기본법 §47조의2·§47조의3·§47조의4)" />
         <div className="space-y-3">
           {/* PR-3-c 신규 — 신고-단위 안내 카드 */}
           <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs text-sky-800">

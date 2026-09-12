@@ -29,6 +29,12 @@ components/calc/results/StockTransferTaxResultViewHelpers.tsx:312-319
 | 후속 「국외전출세」 | ✅ `exit-tax.ts` + 전용 Zod·route 분기 + `ExitTaxBlock` | `lib/tax-engine/stock-transfer/exit-tax.ts` · `components/calc/stock-transfer/ExitTaxBlock.tsx` |
 | 후속 「해외주식」 | ✅ `foreign-stock.ts` + §118의6 A×B/C 한도 + 다종목 편입 | `lib/tax-engine/stock-transfer/foreign-stock.ts` · `foreign-tax-credit-limit.ts` (PR #1221~#1225) |
 
+> 🔗 **후속 (2026-09-12)**: 같은 stale 표기가 **한 곳 더** 남아 있었다 — Step3 섹션 ③
+> 「이월결손금 통산 (PR-3 예정)」. 그 자리를 실측하다 **기타자산 그룹(§102①1호)이 §102②
+> 통산을 타지 않아 세액이 과대 산출**되는 것을 찾았다(실측 3배).
+> ⇒ `docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md`
+> (본 계획서 §0 의 「PR-3 다자산 ✅ 구현」 판정은 **유효**하다 — 빠진 것은 기타자산 축 하나였다.)
+
 ⇒ **본 계획서는 「PR-3 신규 구현」이 아니라 「PR-3·후속 잔여 갭 종결 + 로드맵 표시 정정」이다.**
 구 계획서 `docs/00-pm/stock-transfer-pr3.plan.md`(2026-05-19)의 R-1~R-12 중 **미종결분만** 아래로 승계한다.
 
