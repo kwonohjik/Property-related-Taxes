@@ -25,6 +25,7 @@ import {
   createEmptyAcquisitionLot,
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
+import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -357,10 +358,22 @@ export function Step2({ form, onChange }: Step2Props) {
                 순서: ① 분모(항상) → ② 방식 선택 → ③ 방식별 전용 입력.
                 산식이 소비하는 순서이자, 스위치와 그 지배 대상이 인접하는 순서다.
               */}
+              {/*
+                거래정지가 감지돼도 **코스피는 고를 것이 없다** — 영 §165③의 우회는 코스닥·코넥스
+                전용이라 유가증권시장은 §99①3 종가평균 그대로다. 종전 문구는 그 경우에도
+                「거래정지를 고르세요」라고 안내해 이제는 disabled 인 옵션을 가리켰다.
+              */}
               {form.kiwoomTradingHalt && form.acquisitionStdMode !== "halt_transfer" && (
                 <div className="rounded-lg border border-amber-300 bg-amber-50/70 px-4 py-2 text-xs text-amber-800">
-                  ⚠ 키움 조회에서 거래정지·관리종목이 감지되었습니다 — 해당 시 아래에서
-                  「양도일 거래정지」 또는 「취득일 거래정지」를 고르세요.
+                  {isTradingHaltMarketScopeViolation(form.marketType) ? (
+                    <>⚠ 키움 조회에서 거래정지·관리종목이 감지되었습니다 — 다만 유가증권시장
+                      상장주식은 거래정지 중이어도 「소득세법」 제99조 제1항 제3호에 따라 양도일·취득일
+                      이전 1개월 종가평균으로 평가합니다(소령 §165③의 보충 평가 우회는 코스닥·코넥스
+                      전용). 아래 방식을 바꿀 필요가 없습니다.</>
+                  ) : (
+                    <>⚠ 키움 조회에서 거래정지·관리종목이 감지되었습니다 — 해당 시 아래에서
+                      「양도일 거래정지」 또는 「취득일 거래정지」를 고르세요.</>
+                  )}
                 </div>
               )}
 
@@ -369,6 +382,7 @@ export function Step2({ form, onChange }: Step2Props) {
 
               {/* ② 산정 방식 — 배타적 4상태 */}
               <AcquisitionStdModeRadio
+                marketType={form.marketType}
                 value={form.acquisitionStdMode}
                 onChange={(mode) =>
                   /*

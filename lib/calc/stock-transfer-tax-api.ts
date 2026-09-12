@@ -21,6 +21,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
+import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 
 import {
   parseIntOrUndef,
@@ -374,9 +375,18 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
        UI가 못 만들 뿐 API 직접 호출은 여전히 만들 수 있다.
   */
   const stdMode = form.acquisitionStdMode;
+  /**
+   * 거래정지 우회(영 §165③)는 **코스닥·코넥스 전용**이다 — 단일 정본 술어에 위임한다.
+   *
+   * 코스피에서 이 플래그가 서면 엔진이 §165④ 보충평가를 타 **세액이 갈린다**
+   * (실측 5억 양도: 취득가액 200,000,000 → 204,166,666 / 196,000,000).
+   * ⑤·⑧이 코스피에서 옵션을 막지만, **코스닥에서 halt 를 고른 뒤 코스피로 바꾸면
+   * `acquisitionStdMode` 가 그대로 남는다** — 그 stale 값을 여기서 끊는다.
+   */
+  const haltAllowed = !isTradingHaltMarketScopeViolation(form.marketType);
   body.acquiredBeforeListing = stdMode === "post_listing";
-  body.tradingHaltAtTransfer = stdMode === "halt_transfer";
-  body.tradingHaltAtAcquisition = stdMode === "halt_acquisition";
+  body.tradingHaltAtTransfer = haltAllowed && stdMode === "halt_transfer";
+  body.tradingHaltAtAcquisition = haltAllowed && stdMode === "halt_acquisition";
 
   // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
   // 활성 조건: (marketType==="unlisted" || 거래정지) + estimated + acqFaceValueOnly===true

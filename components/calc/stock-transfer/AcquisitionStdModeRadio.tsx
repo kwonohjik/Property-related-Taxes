@@ -26,13 +26,29 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { AcquisitionStdMode } from "@/lib/stores/calc-wizard-stock-store";
+import {
+  isTradingHaltMarketScopeViolation,
+  TRADING_HALT_MARKET_SCOPE_MESSAGE,
+} from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 
 interface AcquisitionStdModeRadioProps {
   value: AcquisitionStdMode;
   onChange: (mode: AcquisitionStdMode) => void;
+  /** 시장 구분 — 거래정지 우회(영 §165③) 가능 여부를 가른다 */
+  marketType: string;
 }
 
-export function AcquisitionStdModeRadio({ value, onChange }: AcquisitionStdModeRadioProps) {
+export function AcquisitionStdModeRadio({
+  value,
+  onChange,
+  marketType,
+}: AcquisitionStdModeRadioProps) {
+  /**
+   * 거래정지 우회(영 §165③)는 **코스닥·코넥스 전용**이다 — 단일 정본 술어에 위임한다.
+   * 코스피는 거래정지 중이어도 법 §99①3(양도일·취득일 이전 1개월 종가평균) 그대로다.
+   * ⑧·④·⑫가 같은 술어로 함께 막는다(4중 정합).
+   */
+  const haltBlocked = isTradingHaltMarketScopeViolation(marketType);
   return (
     <FieldCard
       label="기준시가 산정 방식"
@@ -54,6 +70,8 @@ export function AcquisitionStdModeRadio({ value, onChange }: AcquisitionStdModeR
             value: "halt_acquisition",
             label: "취득일 거래정지·관리종목 → 보충 평가",
             description: "취득일 이전 1개월에 거래정지 구간이 있어 종가평균이 무효인 경우 (소령 §165③)",
+            disabled: haltBlocked,
+            hint: haltBlocked ? TRADING_HALT_MARKET_SCOPE_MESSAGE : undefined,
           },
           {
             value: "post_listing",
@@ -64,6 +82,8 @@ export function AcquisitionStdModeRadio({ value, onChange }: AcquisitionStdModeR
             value: "halt_transfer",
             label: "양도일 거래정지·관리종목 → 양·취 모두 보충 평가",
             description: "이 방식만 «양도 당시 기준시가(분모)»까지 보충 평가로 대체합니다 (소령 §165③)",
+            disabled: haltBlocked,
+            hint: haltBlocked ? TRADING_HALT_MARKET_SCOPE_MESSAGE : undefined,
           },
         ]}
       />

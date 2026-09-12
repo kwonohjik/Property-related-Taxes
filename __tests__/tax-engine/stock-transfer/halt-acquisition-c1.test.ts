@@ -31,7 +31,9 @@ import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-store
 
 function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
-    marketType: "kospi",
+    // 취득일 거래정지(§165③) 축 — 코스닥이어야 한다. 코스피는 거래정지 중이어도
+    // 법 §99①3(1개월 종가평균) 그대로다(시장 게이트: stock-kospi-halt-scope.anchor.test.ts).
+    marketType: "kosdaq",
     isMajorShareholder: false,
     selfShareRatio: 0,
     selfMarketCap: 0,
@@ -178,7 +180,7 @@ describe("C-1: validate · Zod", () => {
   it("C1-VALIDATE-1: 취득정지 ON → 분자 면제·취득연도 NI/NA 필수", () => {
     const form = {
       ...createInitialStockFormData(),
-      marketType: "kospi" as const,
+      marketType: "kosdaq" as const,
       acquisitionMode: "estimated" as const,
       shareCount: "1000",
       perShareTransferPrice: "10000",
@@ -206,7 +208,7 @@ describe("C-1: validate · Zod", () => {
   it("C1-VALIDATE-2: 취득정지 방식이면 §165⑤ 요구가 붙지 않는다 (배타 증명)", () => {
     const form = {
       ...createInitialStockFormData(),
-      marketType: "kospi" as const,
+      marketType: "kosdaq" as const,
       acquisitionMode: "estimated" as const,
       shareCount: "1000",
       perShareTransferPrice: "10000",
