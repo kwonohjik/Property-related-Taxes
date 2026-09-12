@@ -76,6 +76,22 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /**
+     * acquisition.ts `RATE_APPLICATION_HIGHEST` — §13① 중과와 §15① 세율특례가 함께 해당할 때
+     * 높은 세율이 채택되는 근거. 종전에는 이 동작을 「§15 단서」로 잘못 인용해 §16이 인용
+     * 모수에 아예 없었다(2026-09-12 등록). 키워드는 KoreanLaw 실측(MST 282559).
+     */
+    id: "ACQUISITION.RATE_APPLICATION_HIGHEST",
+    citation: "지방세법 §16",
+    keywords: [
+      "둘 이상의 세율이 해당되는 경우에는 그중 높은 세율을 적용한다",
+      "본점이나 주사무소의 사업용 부동산",
+      "공장의 신설용 또는 증설용 부동산",
+      "고급주택, 골프장 또는 고급오락장",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "ACQUISITION.FILING_PAYMENT",
     citation: "지방세법 §20",
     keywords: ["60일", "신고하고 납부", "상속개시일이 속하는 달의 말일", "3개월"],

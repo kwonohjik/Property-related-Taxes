@@ -54,7 +54,7 @@ export interface SpecialRateResult {
   /** 세율 결정 방식 */
   rateMode:
     | "no_special_rate"          // 세율특례 미적용 (특례 사유 없음)
-    | "hq_surcharge_excluded"    // §13① 본점·공장 중과 대상 → §15 배제
+    | "hq_surcharge_excluded"    // §13① 본점·공장 중과 대상 → §15① 특례 배제, §16⑤로 높은 세율
     | "special_rate_solo"        // §15 단독 적용: basicRate - 2%
     | "special_rate_with_metro"; // §15 + §13② 동시: (basicRate - 2%) × 3
   /** 법적 근거 */
@@ -165,8 +165,18 @@ export function applySpecialRate(
   const label = SPECIAL_RATE_LABEL[specialType];
   const legalBasis = SPECIAL_RATE_LEGAL_BASIS[specialType];
 
-  // 2. §13①(본점·공장 중과) 대상 → §15 적용 배제
-  // 지방세법 §15 본문 단서: "§13① 중과세율이 적용되는 경우에는 그 중과세율 적용"
+  /**
+   * 2. §13①(본점·공장 중과) 대상 → §15① 세율특례 배제
+   *
+   * 🔴 **종전 주석은 법령상 오기였다**(2026-09-12 정정). 「§15 본문 단서: §13① 중과세율이
+   *    적용되는 경우에는 그 중과세율 적용」이라 적혀 있었으나, **§15① 단서에 §13①은 없다** —
+   *    §13②뿐이다(§13①·§13⑤가 나오는 단서는 §15②, 즉 **간주취득** 조항이다).
+   *
+   * 실제 근거는 **§16⑤** 「같은 취득물건에 대하여 둘 이상의 세율이 해당되는 경우에는
+   * 그중 **높은 세율**을 적용한다」이다. 여기서 특례를 미적용으로 되돌리면 하류
+   * `acquisition-tax.ts`가 법인 중과와 `max`로 경합시켜 높은 쪽이 남는다 —
+   * **동작은 맞았고 인용만 틀렸다**(실측: 합병특례 2% · 표준 4% · §13① 8% → 8%).
+   */
   if (context.isHeadquarterOrFactorySurcharge) {
     return {
       isApplied: false,
@@ -174,7 +184,7 @@ export function applySpecialRate(
       basicRate,
       rateMode: "hq_surcharge_excluded",
       legalBasis: ACQUISITION.HEADQUARTERS_SURCHARGE,
-      message: `${label} — §13①(본점·공장 중과) 적용 대상이므로 §15 세율특례 배제 (지방세법 §15 단서)`,
+      message: `${label} — §13①(본점·공장 중과) 적용 대상이므로 §15① 세율특례 배제, 둘 중 높은 세율 적용 (${ACQUISITION.RATE_APPLICATION_HIGHEST})`,
     };
   }
 
