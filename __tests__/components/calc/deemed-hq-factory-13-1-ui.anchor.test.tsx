@@ -9,6 +9,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, within } from "@testing-library/react";
 import { DeemedMajorAssetBuckets } from "@/components/calc/acquisition/deemed/DeemedMajorAssetBuckets";
 import type { DeemedAssetBucketRow } from "@/components/calc/acquisition/shared";
+import { radioValues, checkedRadioValue } from "../_helpers/radio-values";
 
 afterEach(cleanup);
 
@@ -23,30 +24,35 @@ function renderBuckets(rows: DeemedAssetBucketRow[], taxableRatio = 1) {
 }
 
 /**
- * 라디오의 **`value`** 를 본다.
+ * 라디오의 **`value`** 를 본다 — 공용 헬퍼 `radioValues`.
  *
- * 🔴 라벨 텍스트만 단언하면 구별력이 0이다 — 뮤테이션으로 실측했다. 옵션의 `value`를
- *    엉뚱한 문자열로 바꿔도 **라벨은 그대로 렌더되므로** 전건 통과한다. 화면에 글자가
- *    보인다는 것과 그 칸을 고르면 `hq_factory`가 들어간다는 것은 다른 명제다.
+ * 🔴 라벨 텍스트만 단언하면 구별력이 0이다(뮤테이션 실측). 옵션의 `value`를 엉뚱한
+ *    문자열로 바꿔도 **라벨은 그대로 렌더되므로** 전건 통과한다. 화면에 글자가 보인다는
+ *    것과 그 칸을 고르면 `hq_factory`가 들어간다는 것은 다른 명제다.
+ *    배경·근거는 `__tests__/components/_helpers/radio-values.ts` 헤더.
  */
-function provisoValues(container: HTMLElement): string[] {
-  return Array.from(
-    container.querySelectorAll<HTMLInputElement>('input[type="radio"][name^="deemedBucketProviso-"]'),
-  ).map((el) => el.value);
-}
+const PROVISO_NAME = "deemedBucketProviso-";
 
 describe("[AT-HQ-UI] ⑤ §13① 선택지가 화면에 있다", () => {
   it("[AT-HQ-UI-01] 구분 라디오가 hq_factory 값을 **실제로** 제공한다", () => {
     const { container } = renderBuckets(ROWS);
-    expect(provisoValues(container)).toContain("hq_factory");
+    expect(radioValues(container, PROVISO_NAME)).toContain("hq_factory");
     expect(screen.getByText(/본점·공장\(§13①\) — 6%/)).toBeTruthy();
   });
 
   it("[AT-HQ-UI-02] 〔역방향〕 기존 두 값도 그대로다", () => {
     const { container } = renderBuckets(ROWS);
-    expect(provisoValues(container)).toEqual(["none", "hq_factory", "luxury"]);
+    expect(radioValues(container, PROVISO_NAME)).toEqual(["none", "hq_factory", "luxury"]);
     expect(screen.getByText(/일반 — 2%/)).toBeTruthy();
     expect(screen.getByText(/사치성\(§13⑤\) — 10%/)).toBeTruthy();
+  });
+
+  it("[AT-HQ-UI-05] 행의 선택 상태도 값으로 확인한다 (클래스·배경색이 아니라)", () => {
+    expect(checkedRadioValue(renderBuckets(ROWS).container, PROVISO_NAME)).toBe("hq_factory");
+    cleanup();
+    expect(
+      checkedRadioValue(renderBuckets([{ ...ROWS[0], proviso: "none" }]).container, PROVISO_NAME),
+    ).toBe("none");
   });
 
   it("[AT-HQ-UI-03] §13① 행에는 사치성 유형 라디오가 뜨지 않는다", () => {
