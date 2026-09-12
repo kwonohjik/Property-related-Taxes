@@ -5,7 +5,7 @@
  * 실제 납부 방식(원천징수/자진신고)은 시장·계좌 유형에 따라 다름.
  *
  * Phase 2 (2026-06-11):
- *   양도일(거래일) 기준 연도별 탄력세율 자동 적용 — 2021-01-01 이후 전 구간.
+ *   양도일(거래일) 기준 연도별 탄력세율 자동 적용 — STX_CUTOFF_DATE(2020-04-01) 이후 전 구간.
  *   세율 매트릭스 단일 진실: lib/tax-engine/data/securities-transaction-tax-rates.ts
  *   (전 구간 KoreanLaw applicable_law 축자 검증 — 상세 출처는 data 파일 헤더)
  *
@@ -97,7 +97,7 @@ export interface SecuritiesTransactionTaxResult {
   /**
    * 경고 문자열:
    *   C-06: "주권 양도 해당 시 증권거래세 별도 발생 — 시장 구분 확인 필요"
-   *   A-30: 매트릭스 커버(2021-01-01) 미만 양도 — 당시 세율 미지원 안내
+   *   A-30: 매트릭스 커버(STX_CUTOFF_DATE) 미만 양도 — 당시 세율 미지원 안내
    */
   warning?: string;
   /** 항상 true — 납세의무 별도 확인 안내 */
@@ -113,7 +113,7 @@ export interface SecuritiesTransactionTaxResult {
  *
  * 계산 흐름:
  *   1. other_asset → 0 + C-06 경고 (단정 금지 — §2 본문 기타자산에도 과세 가능)
- *   2. 양도일 기준 세율 구간 resolve (2021-01-01 미만 → 현행 fallback + 미지원 경고)
+ *   2. 양도일 기준 세율 구간 resolve (STX_CUTOFF_DATE 미만 → 현행 fallback + 미지원 경고)
  *   3. 시장 분기: KOTC(unlisted+isKOTCTrading) → kospi → kosdaq → konex → unlisted
  *   4. 분수 정수연산: Math.floor(price × num / den)
  *
@@ -223,7 +223,7 @@ export function calcSecuritiesTransactionTax(
  * 양도일 → 세율 구간 매칭.
  *
  *   1. transferDate 미제공 → 현행 구간 + 경고 없음 (Step3 inline 양도일 미입력 호환 — A-31)
- *   2. < STX_CUTOFF_DATE(2021-01-01) → 현행 구간 fallback + 미지원 경고 (A-30)
+ *   2. < STX_CUTOFF_DATE(2020-04-01) → 현행 구간 fallback + 미지원 경고 (A-30)
  *   3. 구간 매칭 [from, to] 경계 포함 (anchor A-26~29로 고정)
  *
  * Date 비교는 new Date("YYYY-MM-DD") UTC ISO 자정 파싱끼리만 — data 파일 헤더 규칙.

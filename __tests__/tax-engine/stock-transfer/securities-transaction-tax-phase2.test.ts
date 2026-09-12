@@ -18,6 +18,7 @@ import { describe, it, expect } from "vitest";
 import { calcSecuritiesTransactionTax } from "../../../lib/tax-engine/stock-transfer/securities-transaction-tax";
 import { calculateStockTransferTaxAggregate } from "../../../lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "../../../lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { STX_CUTOFF_DATE } from "../../../lib/tax-engine/data/securities-transaction-tax-rates";
 
 const P = 100_000_000; // 공통 양도가액 1억
 
@@ -223,6 +224,18 @@ describe("A-30~33: cutoff·미제공·기타자산", () => {
     expect(r.securitiesTransactionTax).toBe(50_000);
     expect(r.warning).toBeDefined();
     expect(r.warning).toContain("미지원");
+  });
+  /**
+   * 🔴 STX-CUTOFF-SYNC — 경고 **문구의 날짜**가 실제 커버 시작일과 같은가.
+   *
+   * A-30c 는 「미지원」이라는 낱말만 봤다. 그래서 2026-08-27 커버가 2021-01-01 → 2020-04-01 로
+   * 확대됐을 때 `WARNING_UNSUPPORTED_PERIOD` 의 날짜가 갱신되지 않은 것을 **아무도 못 잡았고**,
+   * 지원되는 2020-04-01~12-31 구간을 「미지원」이라 고지하는 상태가 남았다(2026-09-12 발견).
+   * 문구는 legal-codes 리터럴이라 컴파일러가 못 잡는다 — 이 anchor 가 유일한 게이트다.
+   */
+  it("STX-CUTOFF-SYNC: 경고 문구의 날짜 = STX_CUTOFF_DATE", () => {
+    const r = calc(KOSPI, "2020-03-31");
+    expect(r.warning).toContain(STX_CUTOFF_DATE);
   });
   it("A-30d 2020년 비상장: 법 §8① 1만분의 45", () => {
     // 1억 × 45/10000 = 450,000 (코스피 외 시장은 농특세 없음)
