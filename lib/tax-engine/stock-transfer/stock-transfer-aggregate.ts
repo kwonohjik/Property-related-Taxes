@@ -38,6 +38,8 @@ import {
 } from "./stock-transfer-aggregate-deduction";
 import { calculateForeignStockTax } from "./foreign-stock";
 import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
+// [800줄 정책] 기타자산 그룹(§103①1호) 종목 1건 처리 → stock-transfer-aggregate-other-asset.ts
+import { processOtherAssetItem } from "./stock-transfer-aggregate-other-asset";
 import {
   isForeignStockItem,
   smeFlag,
@@ -89,12 +91,27 @@ export interface StockTransferAggregateResult {
   totalCalculatedTax: number;
 
   /**
-   * §102②·시행령 §167의2① 양도차손 통산 요약 — **주식 그룹**(§102①2호)만.
-   * 통산도 소멸도 없으면 undefined.
+   * §102②·시행령 §167의2① 양도차손 통산 요약 — **§102① 호별로 나눈다.**
+   *
+   * 두 호는 서로 통산하지 못하므로(§102① 후단 「결손금은 다른 호의 소득금액과 합산하지
+   * 아니한다」) 합계 1줄로 뭉개면 결과 카드가 법령 구조를 거스른다.
+   *
+   * 🔑 키를 `basicDeductionGroup` union에서 **유도**한다 — 그룹이 하나 늘면 이 타입과 모든
+   *   조립부가 함께 빨개진다. 손으로 두 키를 적으면 union이 늘어도 침묵한다
+   *   ([[feedback_satisfies_preserves_keys_annotation_kills_guard]]).
+   *   `stock` = §102①2호(주식 §94①3호, 국외주식 포함) · `real_estate_and_other_asset` =
+   *   §102①1호(기타자산 §94①4호).
+   *
    *   `totalOffset` 이익 자산에 배분된 차손 총액
    *   `unusedLoss` 통산하지 못하고 소멸한 차손 (양도소득에 결손금 이월 없음)
+   *
+   * **어느 그룹도** 통산·소멸이 없으면 필드 자체가 `undefined`(종전 계약 유지).
+   * 한쪽만 없으면 그 키는 `{ totalOffset: 0, unusedLoss: 0 }`이다 — 소비자는 `> 0`으로 게이팅한다.
    */
-  lossOffset?: { totalOffset: number; unusedLoss: number };
+  lossOffset?: Record<
+    StockTransferResult["basicDeductionGroup"],
+    { totalOffset: number; unusedLoss: number }
+  >;
   /**
    * §104⑤ 비교과세(기타자산 그룹) echo — 대상이 2건 미만이면 `undefined`.
    * `"aggregate"` 모드에서만 만들어진다(§103①·② 기본공제가 정상 배분되는 실제 신고 경로).
@@ -318,40 +335,68 @@ function aggregateCore(
   //    코어를 **그룹마다 따로** 돌린다. 하나로 합쳐 돌리면 영 §167의2①2호의 「다른 세율 pro-rata」가
   //    호 경계를 넘어버린다(§102①후단 「다른 호의 소득금액과 합산하지 아니한다」 위반).
   //
-  // ⚠️ **기타자산 그룹은 이번 범위 밖이다.** 그 분기는 `calculateStockTransferTaxInternal`을
-  //    입력에서 다시 돌려 결과를 통째로 갈아끼우는 구조라 통산 소득을 주입할 자리가 없고,
-  //    §104⑤ 비교과세(`computeOtherAssetComparativeTax`)와도 얽힌다. 기타자산은 부동산과 같은
-  //    §102①1호 그룹이므로 본래 부동산 aggregate와 함께 통산되어야 하는데 그 경로도 아직 없다.
-  //    ⇒ 현재는 **주식 그룹만** 통산한다. 기타자산 그룹 통산은 별건으로 남긴다(anchor로 고정).
-  const stockIdx = rawItems
-    .map((r, i) => ({ r, i }))
-    .filter((x) => x.r.basicDeductionGroup === "stock")
-    .map((x) => x.i);
+  // 🔑 **두 그룹을 각각 돌린다** (2026-09-12 — 종전에는 주식 그룹만 돌렸다).
+  //    기타자산(§94①4호)은 §102①**1호** 그룹이고 주식(§94①3호)은 **2호** 그룹이다.
+  //    §102②의 경계는 「각 호별로」 **하나뿐**이고 건수·자산종류에 관한 추가 조건이 없으므로,
+  //    같은 호 안의 기타자산끼리도 통산은 **명문상 강제**다.
+  //
+  //    종전에 기타자산이 빠져 있던 것은 아래 `processItem`의 기타자산 분기가
+  //    `calculateStockTransferTaxInternal`을 입력에서 다시 돌리는 구조라 통산 소득을 주입할
+  //    자리가 없었기 때문이다. 그 분기를 주식과 **같은 패치 규약**으로 바꿔 함께 해소했다.
+  //    ⚠️ **둘 중 하나만 고치면 아무것도 바뀌지 않는다** — 실측으로 확인했다(계획서 §3 M1).
+  //
+  //    범위 밖으로 남는 것: **부동산 ↔ 기타자산 크로스 통산**. 둘 다 §102①1호지만 엔진이
+  //    분리돼 경로가 없다(`cross-engine-104-5-real-estate-other-asset.plan.md` §8).
+  //
+  // 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-2 · §4.2
+  const groupIdx = (g: StockTransferResult["basicDeductionGroup"]): number[] =>
+    rawItems.map((r, i) => ({ r, i })).filter((x) => x.r.basicDeductionGroup === g).map((x) => x.i);
 
-  const stockOffset = offsetLossesCore(
-    stockIdx.map((i) => ({
-      income: rawItems[i].transferIncome,
-      rateKey: resolveStockRateKey(
-        rawItems[i].taxCategory,
-        smeFlag(inputs[i]),
-        rawItems[i].isShortTermHolding,
-      ),
-      exempt: rawItems[i].isExempt,
-    })),
-  );
+  /**
+   * 「같은 세율을 적용받는 자산」(영 §167의2①1호) 축은 **호출자가 정한다**.
+   * `resolveStockRateKey`가 주식 4축 + 기타자산 2축(§104①1호 `other_asset_progressive` /
+   * §104①9호 `other_asset_progressive_nbl`)을 모두 준다 — 기타자산 2축은 §104⑤ 버킷
+   * (`"104-1-1"` / `"104-1-9"`)과 **1:1**이다.
+   *
+   * 🔑 「같은 세율」은 **세율 «표»** 축이지 과세표준별 marginal rate가 아니다 — 부동산 정본
+   * `RateGroup`이 `"progressive"`(6~45% 누진)를 한 그룹으로 두는 것과 같은 규약이다.
+   */
+  const runOffset = (idx: number[]) =>
+    offsetLossesCore(
+      idx.map((i) => ({
+        income: rawItems[i].transferIncome,
+        rateKey: resolveStockRateKey(
+          rawItems[i].taxCategory,
+          smeFlag(inputs[i]),
+          rawItems[i].isShortTermHolding,
+        ),
+        exempt: rawItems[i].isExempt,
+      })),
+    );
 
-  /** 통산 후 양도소득금액 — 주식 그룹만 갈아끼우고 기타자산은 원값 유지. */
+  const stockIdx = groupIdx("stock");
+  const otherAssetIdx = groupIdx("real_estate_and_other_asset");
+  const stockOffset = runOffset(stockIdx);
+  const otherAssetOffset = runOffset(otherAssetIdx);
+
+  /** 통산 후 양도소득금액 — 그룹별 코어 결과로 갈아끼운다. */
   const offsetIncome: number[] = rawItems.map((r) => r.transferIncome);
   stockIdx.forEach((globalIdx, localIdx) => {
     offsetIncome[globalIdx] = stockOffset.incomeAfterOffset[localIdx];
   });
-  const totalLossOffset = stockOffset.rows.reduce((s, row) => s + row.amount, 0);
+  otherAssetIdx.forEach((globalIdx, localIdx) => {
+    offsetIncome[globalIdx] = otherAssetOffset.incomeAfterOffset[localIdx];
+  });
+
+  const sumOffset = (o: ReturnType<typeof offsetLossesCore>) =>
+    o.rows.reduce((s, row) => s + row.amount, 0);
 
   // STEP 2: 그룹별 소득금액 합산 — **통산 후** 기준(§92② 순서)
   const stockGroupIncome = stockIdx.reduce((s, i) => s + offsetIncome[i], 0);
 
-  // 주식 그룹은 `offsetLossesCore`가 비과세 행의 소득을 0으로 돌려주지만(`incomeAfterOffset`),
-  // 기타자산 그룹은 통산을 타지 않아 원값이 그대로 온다 → 여기서 명시 배제한다(리뷰 #1).
+  // `offsetLossesCore`가 비과세 행의 소득을 0으로 돌려주지만(`incomeAfterOffset`), 그것이
+  // 「비과세 자산이 그룹 합계에 기여하지 않는다」를 보장하지는 않으므로 여기서도 명시 배제한다
+  // (리뷰 #1). 2026-09-12부터 기타자산도 통산을 타므로 `offsetIncome`은 양쪽 다 통산 후 값이다.
   const otherAssetGroupIncome = rawItems
     .map((r, i) => ({ r, i }))
     .filter((x) => x.r.basicDeductionGroup === "real_estate_and_other_asset" && !x.r.isExempt)
@@ -406,7 +451,7 @@ function aggregateCore(
     const r = rawItems[i];
     if (r.isExempt) return r;
 
-    // 통산 후 양도소득금액. 기타자산 그룹은 통산 미적용이라 원값이 그대로 온다(STEP 1.5 주석).
+    // 통산 후 양도소득금액 — **두 그룹 모두** STEP 1.5의 그룹별 코어를 거친 값이다.
     const income = offsetIncome[i];
 
     if (r.basicDeductionGroup === "stock") {
@@ -497,17 +542,18 @@ function aggregateCore(
         localIncomeTax: newFinalize.localIncomeTax,
       };
     } else {
-      // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어.
+      // 기타자산 그룹(§103①1호).
       // 국외주식은 `basicDeductionGroup`이 항상 "stock"이라 이 갈래에 오지 않는다 — 도달하면
       // 어댑터가 그룹을 잘못 준 것이므로 조용히 국내 엔진으로 넘기지 않고 그대로 돌려준다.
       if (isForeignStockItem(input)) return r;
-      const adjustedInput: StockTransferInput = {
-        ...input,
-        realEstateGroupBasicDeductionUsed: otherAssetUsed,
-      };
-      const recalc = calculateStockTransferTaxInternal(adjustedInput);
-      otherAssetUsed += recalc.basicDeduction;
-      return recalc;
+
+      // 🔴 2026-09-12 — **패치 규약으로 전환**(주식 분기와 대칭).
+      //    종전에는 입력에서 엔진을 통째로 다시 돌려 §102② 통산 후 소득을 주입할 자리가
+      //    없었고, 그래서 기타자산 그룹은 차손이 있어도 세액이 한 푼도 줄지 않았다.
+      //    산식·§104⑤ echo 재계산의 **이유와 위험**은 분리 파일 헤더에 있다(800줄 정책).
+      const outcome = processOtherAssetItem(input, r, income, otherAssetUsed);
+      otherAssetUsed += outcome.deducted;
+      return outcome.result;
     }
   };
 
@@ -582,8 +628,11 @@ function aggregateCore(
     });
   }
 
-  // 통산 후 합계. 기타자산 그룹은 통산 미적용이라 음수가 남을 수 있어 clamp를 유지한다
-  // (주식 그룹은 `incomeAfterOffset`이 이미 0 이상이다).
+  // 통산 후 합계.
+  //
+  // ⚠️ **clamp는 유지한다** — 2026-09-12부터 두 그룹 모두 `incomeAfterOffset`(항상 0 이상)을
+  //    거치므로 통산 경로로는 음수가 오지 않지만, `taxableField`가 읽는 값이 그 경로만은 아니다
+  //    (비과세 조기 반환 등). 방어선을 지우는 것은 이 작업의 범위가 아니다.
   const totalTransferIncome = Math.max(
     0,
     processedItems.reduce((s, r) => s + taxableField(r, "transferIncome"), 0),
@@ -641,8 +690,23 @@ function aggregateCore(
     },
     totalTaxBase: processedItems.reduce((s, r) => s + taxableField(r, "taxBase"), 0),
     totalCalculatedTax,
-    ...(totalLossOffset > 0 || stockOffset.unusedLoss > 0
-      ? { lossOffset: { totalOffset: totalLossOffset, unusedLoss: stockOffset.unusedLoss } }
+    // §102② 통산 요약 — **호별**. 어느 그룹도 통산·소멸이 없으면 필드 자체를 싣지 않는다.
+    ...(sumOffset(stockOffset) > 0 ||
+    stockOffset.unusedLoss > 0 ||
+    sumOffset(otherAssetOffset) > 0 ||
+    otherAssetOffset.unusedLoss > 0
+      ? {
+          lossOffset: {
+            stock: {
+              totalOffset: sumOffset(stockOffset),
+              unusedLoss: stockOffset.unusedLoss,
+            },
+            real_estate_and_other_asset: {
+              totalOffset: sumOffset(otherAssetOffset),
+              unusedLoss: otherAssetOffset.unusedLoss,
+            },
+          },
+        }
       : {}),
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
     totalUnderReportPenalty,
