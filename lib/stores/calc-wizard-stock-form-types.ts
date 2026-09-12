@@ -144,7 +144,16 @@ export interface StockTransferFormData {
   exchangeCash: string;              // 교환: 현금
 
   // ── 취득가액 ──
-  acquisitionMode: "actual" | "sale_case" | "estimated" | "face_value";  // 3중 패턴 default: "actual" (appraisal 제거 — §176의2③2호 단서 주식 적용 불가)
+  /**
+   * 3중 패턴 default: "actual".
+   * - `appraisal` 제거 — 영 §176의2③2호 단서(주식등 적용 불가)
+   * - `face_value` 제거 — 장부분실 액면가(법 §99①4 후단)는 §165④ 보충평가 **안에서**
+   *   분자(취득 기준시가)를 대체하는 단서이지 독립된 산정 «방식»이 아니다.
+   *   입력 경로는 `acqFaceValueOnly` 토글(환산취득가 모드) 하나로 일원화했다.
+   *   엔진 `StockTransferInput`·⑫ Zod에는 `face_value`가 남아 있다 — UI가 못 만들 뿐
+   *   API 직접 호출은 여전히 만들 수 있다(`stock-transfer-tax-api.ts:388` 주석과 같은 판단).
+   */
+  acquisitionMode: "actual" | "sale_case" | "estimated";
 
   // ── R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장 (2026-05-19) ──
   acquisitionMarketSamplePrice: string;       // 원
@@ -244,9 +253,6 @@ export interface StockTransferFormData {
   // [B-4 §165⑨ 본체] 비상장 환산 양도·취득 기준시가 동일 동일사업연도 토글 (3중 패턴 default: false)
   unlistedSameBizYearToggle: boolean;
 
-  // ── 장부분실 §99①4 ──
-  // `bookLost`는 폼 필드가 아니다 — ④가 `acquisitionMode === "face_value"`에서 파생한다.
-  faceValuePerShare: string;             // 원
 
   // ── 순자산 단독 평가 사유 §165④3 ──
   netAssetOnlyReason: "liquidation_or_owner_death" | "no_business_or_short_or_closed" | "stock_holding_company" | "remaining_term_under_3y" | "";

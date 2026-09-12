@@ -18,7 +18,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferStdPriceSection } from "@/components/calc/stock-transfer/TransferStdPriceSection";
 import { Pre1MonthClosingPriceTable } from "@/components/calc/stock-transfer/Pre1MonthClosingPriceTable";
 import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/AcquisitionStdModeRadio";
-import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
 import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
@@ -243,36 +242,17 @@ export function Step2({ form, onChange }: Step2Props) {
             }
             tone="amber"
             layout="stack"
-            // 4개를 세로로 쌓으면 4행을 먹는다 — 2열 2행으로 접는다(모바일은 항상 1열).
-            // description이 조문·적용 범위를 담고 있어 inline(설명 미렌더) 대신 columns를 쓴다.
-            columns={2}
+            // 3개를 한 행에 둔다(모바일은 항상 1열). 모드를 고른 «뒤»에 그 모드 전용 블록이
+            // 바로 아래 펼쳐지고 거기에 조문·산식이 다시 나오므로, 라벨만으로 충분하다 —
+            // description 을 붙이면 같은 조문을 두 번 읽히면서 세로만 먹는다.
+            columns={3}
             options={[
-              {
-                value: "actual",
-                label: "실가",
-                description: "실제 취득가액 (1주당)",
-              },
-              {
-                value: "estimated",
-                label: "환산취득가",
-                description: isListed
-                  ? "1개월 종가평균 기반 환산 (소령 §165⑤ / §163⑥4)"
-                  : "보충적 평가 — 순손익·순자산 가중평균 (소령 §165④)",
-                disabled: isSplitMode,
-              },
-              {
-                value: "sale_case",
-                label: "매매사례가액",
-                description: "비상장·기타자산 전용 (영§176의2③1호 — 주권상장법인 주식등 제외)",
-                disabled: isSplitMode,
-              },
+              { value: "actual", label: "실가" },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
-              {
-                value: "face_value",
-                label: "액면가 (장부분실)",
-                description: "§99①4 — 장부가 분실·멸실된 경우",
-                disabled: isSplitMode,
-              },
+              // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
+              //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
             ]}
           />
 
@@ -518,10 +498,6 @@ export function Step2({ form, onChange }: Step2Props) {
 
           {/* 감정가액 모드 제거 — 영§176의2③2호 단서: 주식등 적용 불가 (2026-05-19) */}
 
-          {/* 액면가 (장부분실) — PR-2 실구현 */}
-          {acquisitionMode === "face_value" && (
-            <FaceValueBlock form={form} onChange={onChange} />
-          )}
 
           {/* R-2 자본조정 (무상증자·감자) — 모든 모드 공통 (영§17② 단서) */}
           <CapitalAdjustmentsBlock form={form} onChange={onChange} />

@@ -55,25 +55,26 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 // 취득가액 방식 → 필요경비 방식 자동 결정 (소령 §163⑥4)
 //   actual → expenseMode "actual" 허용 (사용자 자유 선택)
-//   estimated/sale_case/face_value → expenseMode "estimated" 강제 (개산공제 1% 자동)
+//   estimated/sale_case → expenseMode "estimated" 강제 (개산공제 1% 자동)
+//   장부분실 액면가(§99①4 후단)는 estimated 하위 토글(`acqFaceValueOnly`)이라 여기 포함된다.
 function isEstimatedAcquisition(mode: StockTransferFormData["acquisitionMode"] | undefined): boolean {
-  return mode === "estimated" || mode === "sale_case" || mode === "face_value";
+  return mode === "estimated" || mode === "sale_case";
 }
 
 const ACQUISITION_MODE_LABEL: Record<string, string> = {
   actual: "실가",
   estimated: "환산취득가",
   sale_case: "매매사례가액",
-  face_value: "액면가 (장부분실)",
 };
 
 export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
   const acquisitionMode = form.acquisitionMode || "actual";
   // 필요경비 방식은 acquisitionMode에서 자동 도출 (소령 §163⑥4) — 사용자 선택 없음.
-  // 실가 → 실제 경비 입력 / 비실가(환산·매매사례·액면가) → 개산공제 1% 자동.
+  // 실가 → 실제 경비 입력 / 비실가(환산·매매사례) → 개산공제 1% 자동.
   const expenseLocked = isEstimatedAcquisition(acquisitionMode);
-  // [B-2] §97②2호 단서 — 환산·액면가 모드는 실비를 비교용으로 선택 입력 (sale_case 제외 — 구조적 배제)
-  const swapEligibleMode = acquisitionMode === "estimated" || acquisitionMode === "face_value";
+  // [B-2] §97②2호 단서 — 환산 모드는 실비를 비교용으로 선택 입력 (sale_case 제외 — 구조적 배제).
+  //   장부분실 액면가도 estimated 하위 토글이라 이 조건에 포함된다.
+  const swapEligibleMode = acquisitionMode === "estimated";
   /**
    * §105① 본문 괄호가 **§94①3호다목(국외주식)을 예정신고 대상에서 제외**한다.
    * 신고 1건에 국내 종목이 하나라도 있으면 그 종목은 대상이므로 예정신고가 성립한다.

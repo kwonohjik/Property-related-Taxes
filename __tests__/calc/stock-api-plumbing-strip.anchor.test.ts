@@ -90,15 +90,25 @@ function baseForm(overrides: Partial<StockTransferFormData> = {}): StockTransfer
 }
 
 // ============================================================
-// #3 — 액면가 모드 NI/NA strip
+// #3 — 장부분실 액면가(§99①4 후단) NI/NA strip
 // ============================================================
 
-describe("AP-FV (#3): 액면가 모드도 양도기준시가 입력을 엔진까지 보낸다", () => {
+/**
+ * 이 블록은 원래 취득가액 라디오 「액면가 (장부분실)」(`acquisitionMode: "face_value"`)를
+ * 대상으로 했다. 그 라디오를 제거하고 장부분실 입력을 `acqFaceValueOnly` 토글
+ * (환산취득가 모드 하위)로 일원화하면서 **같은 축을 토글 경로에서 잰다**.
+ *
+ * 옮겨도 기대값이 한 원도 바뀌지 않는다 — 두 경로는 같은 규율(§165④1 가중평균 + 80% 하한 +
+ * §165④3 순자산 단독)을 적용한다. 제거 전 13케이스(끝수·부동산과다 반전·결손·연혁 1999/2007
+ * 경계 포함) 실측에서 취득가액·개산공제 기준이 전건 일치했다.
+ */
+describe("AP-FV (#3): 장부분실 액면가도 양도기준시가 입력을 엔진까지 보낸다", () => {
   /** 액면가 5,000 · 양도기준시가 = max(10,000×3/5 + 10,000×2/5, 10,000×80%) = 10,000 */
   const faceValueForm = (o: Partial<StockTransferFormData> = {}) =>
     baseForm({
-      acquisitionMode: "face_value",
-      faceValuePerShare: "5000",
+      acquisitionMode: "estimated",
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: "5000",
       transferYearNetIncomePerShare: "10000",
       transferYearNetAssetPerShare: "10000",
       ...o,
@@ -139,7 +149,7 @@ describe("AP-FV (#3): 액면가 모드도 양도기준시가 입력을 엔진까
     expect(run.result.acquisitionPrice).toBe(250_000_000); // 500,000,000 × 5,000 ÷ 10,000
   });
 
-  it("AP-FV-5: ⑧ — 액면가 모드에서 순자산가치 미입력은 차단한다", () => {
+  it("AP-FV-5: ⑧ — 장부분실 액면가에서 순자산가치 미입력은 차단한다", () => {
     const errors = validateStep2Domestic(
       faceValueForm({ transferYearNetAssetPerShare: "" }),
     ).filter((e) => e.severity === "error");
@@ -152,24 +162,23 @@ describe("AP-FV (#3): 액면가 모드도 양도기준시가 입력을 엔진까
   });
 
   /**
-   * AP-FV-6: `bookLost`는 폼 토글이 아니라 **취득가액 모드에서 파생**된다.
+   * AP-FV-6: 엔진의 `bookLost` 분기(양측 경로 `calcUnlistedValuation` 안 액면가 분기)는
+   * **폼이 만들 수 없다**. 취득가액 라디오 「액면가」를 제거해 입력 경로가 하나
+   * (`acqFaceValueOnly`)로 남았고, 그 토글은 `body.acqFaceValueOnly`로 따로 실린다.
    *
-   * 종전에는 `FaceValueBlock`의 별도 ToggleCard가 `form.bookLost`를 썼고, ⑧이 face_value
-   * 모드에서 그 토글 ON을 «필수»로 강제했다 — 정보량 0인 중복 입력이었다. 파생값이 된 뒤로는
-   * 두 상태가 어긋날 수 없다. 이 anchor가 그 파생을 고정한다.
+   * 부정 단언(「false 다」)만 두면 구별력이 0이므로 긍정 짝을 같은 항목에 건다 —
+   * 같은 폼이 장부분실을 **실제로 켜서** 보낸다는 것까지 함께 고정한다.
    */
-  it("AP-FV-6: ④가 acquisitionMode 에서 bookLost 를 파생한다 (양방향)", () => {
-    expect(buildStockTransferApiBody(faceValueForm()).bookLost).toBe(true);
-    // 다른 모드에서는 true 가 될 수 없다 — 액면가 분기(§99①4)가 조용히 켜지지 않는다
-    expect(
-      buildStockTransferApiBody(
-        baseForm({
-          acquisitionMode: "actual",
-          acquisitionActualInputMode: "per_share",
-          perShareAcquisitionPrice: "40000",
-        }),
-      ).bookLost,
-    ).toBe(false);
+  it("AP-FV-6: ④는 bookLost 를 만들지 않고 acqFaceValueOnly 로 싣는다", () => {
+    const body = buildStockTransferApiBody(faceValueForm());
+    expect(body.acqFaceValueOnly).toBe(true);
+    expect(body.acqFaceValuePerShare).toBe(5_000);
+    expect(body.bookLost).toBe(false);
+    // 토글이 꺼진 환산취득가 모드에서는 액면가 자체가 실리지 않는다
+    const plain = buildStockTransferApiBody(faceValueForm({ acqFaceValueOnly: false }));
+    expect(plain.acqFaceValueOnly).toBeUndefined();
+    expect(plain.acqFaceValuePerShare).toBeUndefined();
+    expect(plain.bookLost).toBe(false);
   });
 });
 
