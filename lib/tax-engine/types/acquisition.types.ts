@@ -22,6 +22,8 @@
  * 지방세법 §7④ 지목변경 간주취득 판정에 사용.
  * 28개 지목 전부를 열거하여 문자열 오타를 컴파일 타임에 차단.
  */
+import type { DeemedProviso } from "../acquisition-deemed-proviso";
+
 /**
  * 지목변경 간주취득 과세표준의 산정 근거 (「지방세법」 §10의6)
  *
@@ -162,8 +164,8 @@ export interface DeemedAssetBucket {
   label?: string;
   /** §10의6④ 장부상 가액 */
   bookValue: number;
-  /** §15② 단서 구분 — "luxury"면 중과기준세율 × 500% */
-  proviso: "none" | "luxury";
+  /** §15② 본문·단서 구분 — `hq_factory`=×300%(§13①) · `luxury`=×500%(§13⑤) */
+  proviso: DeemedProviso;
   /** 사치성 유형 (§13⑤ 2~5호) — proviso가 "luxury"일 때만 의미 */
   luxuryType?: string;
 }
@@ -809,7 +811,7 @@ export interface DeemedMajorShareholderResult {
 export interface DeemedBucketBreakdown {
   label?: string;
   bookValue: number;
-  proviso: "none" | "luxury";
+  proviso: DeemedProviso;
   luxuryType?: string;
   /** 장부가액 × 과세 지분율 (§10의6④) */
   taxBase: number;

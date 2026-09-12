@@ -12,6 +12,7 @@
  */
 
 import { z } from "zod";
+import { DEEMED_PROVISO_VALUES } from "@/lib/tax-engine/acquisition-deemed-proviso";
 import type { AcquisitionTaxInput } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -117,16 +118,18 @@ const installmentPaymentSchema = z.object({
 // ============================================================
 
 /**
- * 과점주주 §15② 단서 물건별 구분 (「지방세법」 §15② 단서 — 취득**물건이** §13⑤ 해당 시 ×500%)
+ * 과점주주 §15② 단서 물건별 구분
+ * (취득**물건이** §13① 해당 시 ×300% · §13⑤ 해당 시 ×500%)
  *
- * `proviso`는 `DeemedProviso`(`acquisition-deemed-proviso.ts`)와 **같은 값 집합**이어야 한다.
- * 여기만 넓히면 엔진이 못 읽고, 엔진만 넓히면 Zod가 조용히 strip 한다(⑫).
+ * ✅ `proviso`는 엔진 leaf의 `DEEMED_PROVISO_VALUES`를 **그대로 쓴다**(2026-09-12).
+ *    종전에는 리터럴을 손으로 맞춰 적어 두고 「같은 값 집합이어야 한다」는 주석으로만
+ *    묶어 뒀는데, 그러면 한쪽만 넓힐 때 Zod가 새 값을 **조용히 strip** 한다(⑫).
  */
 const deemedAssetBucketSchema = z.object({
   label: z.string().max(60).optional(),
   /** §10의6④ 장부상 가액 (시가표준액 아님) */
   bookValue: z.number().nonnegative(),
-  proviso: z.enum(["none", "luxury"]),
+  proviso: z.enum(DEEMED_PROVISO_VALUES),
   luxuryType: z.enum([
     "villa", "golf_course", "luxury_housing", "luxury_entertainment", "luxury_vessel",
   ]).optional(),

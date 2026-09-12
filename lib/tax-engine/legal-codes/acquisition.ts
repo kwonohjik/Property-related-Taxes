@@ -260,6 +260,8 @@ export const ACQUISITION_CONST = {
   HEAVY_TAX_BASE_RATE: 0.02,
   /** §15② 단서 — 취득물건이 §13⑤(사치성)에 해당할 때의 배수 (중과기준세율의 100분의 500) */
   DEEMED_PROVISO_LUXURY_MULTIPLIER: 5,
+  /** §15② 단서 — 취득물건이 §13①(본점·주사무소/공장)에 해당할 때의 배수 (중과기준세율의 100분의 300) */
+  DEEMED_PROVISO_HQ_MULTIPLIER: 3,
   /** 농특세 세율 */
   RURAL_SURCHARGE_RATE: 0.10,
   /** 농특세 면적 면제 기준 — 일반 (85㎡) */

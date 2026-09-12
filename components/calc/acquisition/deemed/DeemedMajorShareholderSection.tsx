@@ -192,7 +192,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         <ToggleCard
           tone="amber"
           title="물건별로 구분해 입력 (§15② 단서)"
-          description="법인이 사치성 재산(골프장·고급오락장 등)과 일반 물건을 함께 보유하면 물건마다 세율이 갈립니다. 전부 10% 또는 전부 2%로는 둘 다 틀립니다."
+          description="법인이 본점·공장용 부동산(§13① 6%)이나 사치성 재산(§13⑤ 10%)을 일반 물건과 함께 보유하면 물건마다 세율이 갈립니다. 전부 한 세율로는 틀립니다."
           checked={useBuckets}
           onCheckedChange={(v) => {
             set("deemedMajorUseBuckets", v);

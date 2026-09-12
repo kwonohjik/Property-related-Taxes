@@ -8,6 +8,7 @@
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { landTaxBaseLegalBasis } from "@/lib/tax-engine/acquisition-deemed";
+import type { DeemedProviso } from "@/lib/tax-engine/acquisition-deemed-proviso";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -17,6 +18,13 @@ import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.ty
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
 }
+
+/** 버킷 행에 이름을 안 넣었을 때의 표기 — §15② 구분별 */
+const BUCKET_FALLBACK_LABEL: Record<DeemedProviso, string> = {
+  none: "일반 물건",
+  hq_factory: "본점·공장 사업용",
+  luxury: "사치성 재산",
+};
 
 function formatRate(rate: number): string {
   return (rate * 100).toFixed(5).replace(/\.?0+$/, "") + "%";
@@ -210,10 +218,15 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
                     {buckets.map((b, i) => (
                       <tr key={i} className="border-b border-violet-100 last:border-0">
                         <td className="py-1 pr-2">
-                          {b.label || (b.proviso === "luxury" ? "사치성 재산" : "일반 물건")}
+                          {b.label || BUCKET_FALLBACK_LABEL[b.proviso]}
                           {b.proviso === "luxury" && (
                             <span className="ml-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-micro text-rose-700">
                               §13⑤
+                            </span>
+                          )}
+                          {b.proviso === "hq_factory" && (
+                            <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-micro text-amber-800">
+                              §13①
                             </span>
                           )}
                         </td>

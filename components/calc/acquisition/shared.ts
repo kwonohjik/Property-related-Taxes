@@ -8,6 +8,7 @@
  */
 
 import { validateAcquisitionCrossFields } from "@/lib/calc/acquisition-tax-validate";
+import type { DeemedProviso } from "@/lib/tax-engine/acquisition-deemed-proviso";
 
 // ============================================================
 // 상수 레이블
@@ -98,8 +99,8 @@ export interface DeemedAssetBucketRow {
   label: string;
   /** 장부상 가액 (CurrencyInput 문자열) */
   bookValue: string;
-  /** §15② 단서 구분 */
-  proviso: "none" | "luxury";
+  /** §15② 본문·단서 구분 — 엔진 leaf `DeemedProviso` 단일 소스 */
+  proviso: DeemedProviso;
   /** 사치성 유형 (§13⑤ 2~5호) — proviso가 "luxury"일 때만 */
   luxuryType: string;
 }
