@@ -920,6 +920,26 @@ export type StockTransferResult = {
   clause9TaxBase: number;
   clause9Tax: number;
 
+  /**
+   * §102② 양도차손 통산에서 **이 종목이 흡수한** 차손 — 영 §167의2① 호별로 나눈다.
+   *
+   *   `lossOffsetFromSameGroup`  1호 — 차손 자산과 **같은 세율**을 적용받는 자산에서 먼저 공제
+   *   `lossOffsetFromOtherGroup` 2호 — **다른 세율**군 잔여 차손을 소득 비율로 **안분** 공제
+   *
+   * 둘 다 **양수**다(차감액의 절댓값). 부동산 정본 `PerPropertyBreakdown`과 **같은 이름·같은
+   * 부호 규약**이다 — 두 세목이 `loss-offset-core.ts`라는 한 코어를 공유하므로 표시 규약도
+   * 갈라 두지 않는다.
+   *
+   * ⚠️ **다자산 합산 경로에서만 실린다**(`calculateStockTransferTaxAggregate`).
+   *   단건 계산에는 통산 상대가 없어 `undefined`다 — 「0원 흡수」와 「통산 자체가 없음」을
+   *   구분해야 결과 화면이 0원 행을 만들지 않는다(echo-field-pattern 규약).
+   *
+   * 📌 엔진은 이 값을 **읽지 않는다** — 표시 전용 echo다. 세액은 이미 `transferIncome`이
+   *   통산 후 값으로 패치되면서 반영됐다.
+   */
+  lossOffsetFromSameGroup?: number;
+  lossOffsetFromOtherGroup?: number;
+
   // 필요경비
   expenses: number;
   expenseMode: "actual" | "estimated";

@@ -244,3 +244,77 @@ describe("AS-4 쓰이지 않는 한도 안내", () => {
     expect(screen.queryByText(/공제에 쓰이지 않습니다/)).toBeNull();
   });
 });
+
+// ============================================================================
+// AS-5 / AS-6 — §102② 양도차손 통산 표시
+// ============================================================================
+//
+// 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-4 · §5 Phase B
+//
+// 엔진은 자산별 흡수 내역(`fromSame`·`fromOther`)을 늘 계산하는데 종전에는 **총액만** 화면에
+// 나왔다. 그래서 사용자는 「내 2번 종목이 얼마를 흡수했는가」를 알 수 없었다.
+// 부동산 정본은 자산별로 보여준다(`MultiTransferPropertyBreakdown` 「동일그룹」·「타군안분」).
+
+describe("AS-5 §102② 통산 — 호별 요약", () => {
+  const withOffset = agg({
+    lossOffset: {
+      stock: { totalOffset: 5_000_000, unusedLoss: 1_000_000 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    },
+  } as Partial<StockTransferAggregateResult>);
+
+  it("AS-5-1: 통산이 일어난 호만 보인다 — 「주식 (§102①2호)」", () => {
+    render(<StockAggregateSummaryCard aggregate={withOffset} names={["가", "나"]} />);
+    expect(screen.getByText(/주식 \(§102①2호\)/)).toBeTruthy();
+    expect(screen.getByText("5,000,000원")).toBeTruthy();
+  });
+
+  it("AS-5-2: 🔑 통산도 소멸도 없는 호는 **행을 만들지 않는다**", () => {
+    // 0원 행을 만들면 「이 호도 통산했다」로 읽힌다 — §102①은 호를 넘지 못한다.
+    render(<StockAggregateSummaryCard aggregate={withOffset} names={["가", "나"]} />);
+    expect(screen.queryByText(/기타자산 \(§102①1호\)/)).toBeNull();
+  });
+
+  it("AS-5-3: 소멸한 차손은 「이월되지 않는다」와 함께 말한다 (§102① 후단)", () => {
+    render(<StockAggregateSummaryCard aggregate={withOffset} names={["가", "나"]} />);
+    expect(screen.getByText("1,000,000원")).toBeTruthy();
+    expect(screen.getByText(/이월되지 않습니다/)).toBeTruthy();
+  });
+
+  it("AS-5-4 🟢 대조군: `lossOffset` 이 없으면 카드 자체가 없다", () => {
+    render(<StockAggregateSummaryCard aggregate={agg()} names={["가", "나"]} />);
+    expect(screen.queryByText(/양도차손 통산/)).toBeNull();
+  });
+});
+
+describe("AS-6 §102② 통산 — 종목별 흡수액 (G-4)", () => {
+  const perItem = agg({
+    items: [
+      itemRes({ lossOffsetFromSameGroup: 3_000_000, lossOffsetFromOtherGroup: 2_000_000 }),
+      itemRes({ lossOffsetFromSameGroup: 0, lossOffsetFromOtherGroup: 0 }),
+    ],
+    lossOffset: {
+      stock: { totalOffset: 5_000_000, unusedLoss: 0 },
+      real_estate_and_other_asset: { totalOffset: 0, unusedLoss: 0 },
+    },
+  } as Partial<StockTransferAggregateResult>);
+
+  it("AS-6-1: 흡수한 종목에 영 §167의2① **호별** 내역이 붙는다", () => {
+    render(<StockAggregateSummaryCard aggregate={perItem} names={["가", "나"]} />);
+    expect(screen.getByText(/동일그룹 -3,000,000원/)).toBeTruthy();
+    expect(screen.getByText(/타군안분 -2,000,000원/)).toBeTruthy();
+  });
+
+  it("AS-6-2: 🔑 흡수액이 0인 종목에는 행을 만들지 않는다", () => {
+    // 차손을 **준** 종목까지 「0원 흡수」로 찍으면 표만 늘어난다.
+    render(<StockAggregateSummaryCard aggregate={perItem} names={["가", "나"]} />);
+    expect(screen.queryByText(/동일그룹 -0원/)).toBeNull();
+    expect(screen.queryByText(/타군안분 -0원/)).toBeNull();
+  });
+
+  it("AS-6-3 🟢 대조군: echo 가 `undefined` 면(단건·통산 없음) 아무 행도 없다", () => {
+    render(<StockAggregateSummaryCard aggregate={agg()} names={["가", "나"]} />);
+    expect(screen.queryByText(/동일그룹/)).toBeNull();
+    expect(screen.queryByText(/타군안분/)).toBeNull();
+  });
+});

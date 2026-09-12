@@ -381,12 +381,39 @@ function aggregateCore(
 
   /** 통산 후 양도소득금액 — 그룹별 코어 결과로 갈아끼운다. */
   const offsetIncome: number[] = rawItems.map((r) => r.transferIncome);
-  stockIdx.forEach((globalIdx, localIdx) => {
-    offsetIncome[globalIdx] = stockOffset.incomeAfterOffset[localIdx];
-  });
-  otherAssetIdx.forEach((globalIdx, localIdx) => {
-    offsetIncome[globalIdx] = otherAssetOffset.incomeAfterOffset[localIdx];
-  });
+  /**
+   * 종목별 **흡수한 차손** — 영 §167의2①1호(같은 세율군) / 2호(다른 세율군 안분).
+   *
+   * 코어는 이 둘을 늘 계산하는데 종전에는 **총액만 쓰고 버렸다**. 그러면 결과 화면이
+   * 「내 3번 종목이 얼마를 흡수했는가」를 설명하지 못한다 — 부동산 정본은 자산별로 보여준다
+   * (`PerPropertyBreakdown.lossOffsetFromSameGroup` / `…FromOtherGroup`).
+   *
+   * ⚠️ **통산이 실제로 일어난 종목에만 싣는다**(`undefined` 유지). 0을 채우면 결과 화면이
+   *   「0원 흡수」 행을 만들어 「통산 자체가 없음」과 구분되지 않는다.
+   */
+  const offsetFromSame: (number | undefined)[] = rawItems.map(() => undefined);
+  const offsetFromOther: (number | undefined)[] = rawItems.map(() => undefined);
+
+  const applyOffset = (idx: number[], core: ReturnType<typeof offsetLossesCore>) => {
+    const touched = core.rows.length > 0;
+    idx.forEach((globalIdx, localIdx) => {
+      offsetIncome[globalIdx] = core.incomeAfterOffset[localIdx];
+      if (!touched) return;
+      offsetFromSame[globalIdx] = core.fromSame[localIdx];
+      offsetFromOther[globalIdx] = core.fromOther[localIdx];
+    });
+  };
+  applyOffset(stockIdx, stockOffset);
+  applyOffset(otherAssetIdx, otherAssetOffset);
+
+  /** 종목별 흡수액 echo — 통산이 없던 그룹이면 아무것도 싣지 않는다. */
+  const lossOffsetEcho = (i: number) =>
+    offsetFromSame[i] === undefined
+      ? {}
+      : {
+          lossOffsetFromSameGroup: offsetFromSame[i],
+          lossOffsetFromOtherGroup: offsetFromOther[i],
+        };
 
   const sumOffset = (o: ReturnType<typeof offsetLossesCore>) =>
     o.rows.reduce((s, row) => s + row.amount, 0);
@@ -521,6 +548,7 @@ function aggregateCore(
           // STEP 3.5에서 외국납부세액공제를 반영해 다시 쓴다.
           finalTax: newCalculatedTax,
           localIncomeTax: floorTen(newCalculatedTax * 0.1),
+          ...lossOffsetEcho(i),
         };
       }
 
@@ -540,6 +568,7 @@ function aggregateCore(
         electronicFilingCredit: newFinalize.electronicFilingCredit,
         finalTax: newFinalize.finalTax,
         localIncomeTax: newFinalize.localIncomeTax,
+        ...lossOffsetEcho(i),
       };
     } else {
       // 기타자산 그룹(§103①1호).
@@ -553,7 +582,7 @@ function aggregateCore(
       //    산식·§104⑤ echo 재계산의 **이유와 위험**은 분리 파일 헤더에 있다(800줄 정책).
       const outcome = processOtherAssetItem(input, r, income, otherAssetUsed);
       otherAssetUsed += outcome.deducted;
-      return outcome.result;
+      return { ...outcome.result, ...lossOffsetEcho(i) };
     }
   };
 
