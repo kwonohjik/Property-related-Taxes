@@ -88,7 +88,9 @@ Step 3 — 필요경비·공제·신고
   │     └── EstimatedDeductionBlock (취득기준시가 × 1% — §163⑥4호)
   ├── BasicDeductionGroupBlock (★ §103② 그룹 — §94② 발동 시 부동산 그룹 합산 입력)
   │     └── realEstateGroupBasicDeductionUsed (같은 해 부동산 양도 시 사용 기본공제, 잔여 250만 한도)
-  ├── LossCarryoverBlock      (★ PR-3 disabled placeholder — 다른 주식 자산 양도손실 통산)
+  │   ⚠️ 종전 `LossCarryoverBlock`(PR-3 disabled placeholder)은 **실재한 적이 없고**
+  │      Step3 인라인 섹션이었다. 2026-09-12 제거 — §102② 통산은 이미 구현됐고
+  │      통산 내역은 입력이 아니라 **결과**(StockAggregateSummaryCard)에서 보인다.
   ├── FilingTypeBlock         (예정 / 확정 / 수정 라디오)
   │     └── ★ §105①2호 helper — 양도일 → 반기 말일 + 2개월 자동 (KoreanLaw 9차 확정)
   ├── PenaltyBlock            (★ 가산세 분기 — `isFraudulent`·`isInternationalTransaction` 토글, 10/40/60% 분기)
@@ -201,9 +203,11 @@ Step 4 — 결과
 - `acquisitionMode = "appraisal"`: PR-2까지 UI 비활성 placeholder
 - 두 모드 모두 외부 가격 직접 입력 + 산출 근거 메모 필드(자유 텍스트, 결과 PDF에 출력)
 
-### Step 4 결과 화면 — 신고서 양식 자리표시
-- PR-3 다자산 신고서 양식 출력 자리에 sky tone placeholder "PR-3에서 신고서 양식 출력 추가 예정" 카드
-- 단건 결과는 부동산 패턴 차용한 `StockFilingFormTable` (`aggregate` prop 단건 모드)
+### Step 4 결과 화면 — 신고서 양식
+- ~~PR-3 다자산 신고서 양식 출력 자리에 sky tone placeholder 카드~~ → ✅ **구현 완료**.
+  `StockFilingFormTable` 이 `aggregate` prop 으로 **종목별 열 + 합계 열**을 렌더한다
+  (`StockFilingFormTableHelpers.ts` — 18-1행 「양도차손 통산」 포함). placeholder 없음.
+- 단건 결과는 같은 컴포넌트의 단건 모드
 
 ### 모바일 반응형
 - Step별 input grid: `grid-cols-1 md:grid-cols-2` (부동산 마법사 동일)
@@ -235,10 +239,14 @@ Step 4 — 결과
 - "필요경비 가산 후보" 안내 (실가 모드 시 actualExpenses에 합산 권장)
 - useMemo 순수 계산 — store 미러링 금지
 
-### #2 — 이월결손금 입력 placeholder (Step 3)
-- `LossCarryoverBlock` 신설 (PR-3까지 disabled)
-- "다른 주식 자산 양도손실 통산은 PR-3 다자산 합산신고에서 지원 예정" sky tone 카드
-- 단건 마법사에서는 입력 자리만 확보 (UI 비활성)
+### ~~#2 — 이월결손금 입력 placeholder (Step 3)~~ → 🔴 **폐기 (2026-09-12)**
+- 이 항목은 **세 가지가 전부 사실과 달랐다**:
+  · 「다자산 합산신고 예정」 — 이미 구현됨(`savedItems` + `deductionMode: "aggregate"`)
+  · 「양도손실 통산 예정」 — §102②·영 §167의2① 주식 그룹에 **이미 적용**(anchor 28건)
+  · 「**이월**결손금」 — 양도소득에 **결손금 이월 제도가 없다**(법 §102① 후단). 잔여 차손은 소멸
+- `LossCarryoverBlock` 컴포넌트는 **실제로 만들어진 적이 없다**(Step3 인라인 섹션이었다)
+- ⇒ Step3 섹션 ③ 삭제 + 번호 재배치(④→③·⑤→④). 통산 내역은 **결과 화면**에서 보인다
+- 계획서: `docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md` §2 G-1
 
 ### #3 — 외화·해외주식 분기 진입로 (Step 1)
 - `MarketTypeBlock` 라디오에 "외국법인 발행/해외상장 주식" 5번째 옵션 (disabled)
