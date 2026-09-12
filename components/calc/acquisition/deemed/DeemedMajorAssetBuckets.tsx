@@ -38,6 +38,12 @@ const PROVISO_OPTIONS = [
     description: "§15② 본문 (중과기준세율)",
   },
   {
+    value: "hq_factory",
+    label: `본점·공장(§13①) — ${(deemedProvisoRate("hq_factory") * 100).toFixed(0)}%`,
+    description:
+      "과밀억제권역의 본점·주사무소 사업용 신축·증축 건축물과 부속토지, 또는 공장 신설·증설용 물건 (§15② 단서 — 중과기준세율의 100분의 300)",
+  },
+  {
     value: "luxury",
     label: `사치성(§13⑤) — ${(deemedProvisoRate("luxury") * 100).toFixed(0)}%`,
     description: "§15② 단서 (중과기준세율의 100분의 500)",
@@ -103,8 +109,11 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
       }
     >
       <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        법인이 보유한 부동산등을 <span className="font-medium">사치성(§13⑤) 해당 여부로 나누어</span>{" "}
+        법인이 보유한 부동산등을{" "}
+        <span className="font-medium">§15② 단서 해당 여부(§13① 본점·공장 / §13⑤ 사치성)로 나누어</span>{" "}
         전부 입력하세요. 금액은 <span className="font-medium">결산서·장부상 가액</span>입니다 (§10의6④ — 시가표준액 아님).
+        본점 사업용 부동산은 <span className="font-medium">사실상 본점으로서 기능을 수행하는 장소로 사용되는지</span>를
+        기준으로 판단하며, 해당 부분만 골라 구분합니다 (조심2011지0312 · 조심 1998-0145).
       </div>
 
       <div className="space-y-2" data-testid="deemed-bucket-rows">
@@ -151,7 +160,8 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
                 onChange={(v) =>
                   update(row.id, {
                     proviso: v as DeemedAssetBucketRow["proviso"],
-                    ...(v === "none" ? { luxuryType: "" } : {}),
+                    // 사치성이 아니면 하위 유형은 비운다 — §13①로 바꾼 뒤 남으면 ④가 실어 보낸다
+                    ...(v === "luxury" ? {} : { luxuryType: "" }),
                   })
                 }
                 options={PROVISO_OPTIONS}

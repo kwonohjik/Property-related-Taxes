@@ -21,14 +21,33 @@
  * 골프연습장을 제외해 처분을 경정했다(5,118,929,000 → 5,065,179,000). 그래서
  * `assessMajorShareholder`가 `assetBuckets`를 받는다.
  *
- * ## §13①(6%)은 넣지 않는다
+ * ## §13①(6%)은 **과점주주 물건별 버킷에서만** 연다 (2026-09-12, U-1 해소)
  *
  * §13①은 「**신축하거나 증축하는**」·「공장을 **신설하거나 증설하기 위하여**」라는 **행위**
- * 요건이다. 간주취득에 이 요건이 어떻게 대응되는지는 문언만으로 결정되지 않는다.
- * 6%는 2%의 3배라 근거 없이 적용하면 **법 근거 없는 불리 적용**이 된다
- * (계획서 U-1 — `docs/00-pm/acquisition-deemed-15-2-proviso.plan.md`).
- * 반면 §13⑤는 골프장·고급주택·고급오락장·고급선박이라는 **물건의 상태**만 정의하므로
- * 「취득물건이 해당하는가」가 그대로 성립한다.
+ * 요건이라, 간주취득에 어떻게 대응되는지가 문언만으로는 결정되지 않았다(계획서 U-1).
+ * **조세심판원 재결례가 그 답을 준다** — 과점주주 축에 한해 직접 사례가 있다:
+ *
+ * - **조심 1998-0145**(1998.03.25, **기각 = 중과 적법**): 법인이 **1993.11.2. 이미 중과세율로
+ *   취득세를 신고납부한** 본점 사업용 부동산을, 1995.8.2. 과점주주가 된 자가 「취득한 것으로
+ *   보아야 할 것」으로서 **과점주주에게 중과세한 처분은 적법**하다. 전체 부동산
+ *   (토지 334.8㎡·건물 609.89㎡) 중 **본점 사업용 부분만**(토지 206.2㎡·건물 375.69㎡)을
+ *   골라 **법인장부가액 × 소유주식비율**로 과세했다 — 즉 **물건별 판정**이다.
+ * - **조심 1999-0026**(1999.01.27, 기각) 같은 취지.
+ * - **조심2011지0312**(2012.06.04): 「본점의 사업용 부동산에 해당하는지는 **사실상의 법인의
+ *   본점으로서 기능을 수행하는 장소로 사용되는지** 여부를 기준으로 판단」 — **현재 사용 실태**
+ *   기준이므로 「신축 당시 용도인가」라는 시점 문제도 생기지 않는다.
+ *
+ * ⚠️ **1998·1999년 재결은 구 지방세법**(§105⑥ 과점주주 + §112③ 본점 사업용 중과) 기준이라
+ *    세율 산식이 현행과 다르다. 다만 현행 §15② 단서는 「취득물건이 제13조제1항에 해당하는
+ *    경우에는 중과기준세율의 100분의 300」이라고 **명문**으로 적으므로 근거는 더 강하다.
+ *
+ * 🛑 **지목변경·개수는 열지 않는다.** 그 두 유형에는 직접 자료가 없다
+ *    (조세심판원 전수 검색 — 지목변경×중과 14건은 **전부 §13⑤**, 개수×중과세율 0건).
+ *    그래서 §13①은 **과점주주 버킷 행**으로만 도달할 수 있고, 단일 물건 경로
+ *    (`provisoFromLuxuryFlag`)는 여전히 `none`/`luxury` 2값이다.
+ *
+ * §13⑤는 골프장·고급주택·고급오락장·고급선박이라는 **물건의 상태**만 정의하므로
+ * 「취득물건이 해당하는가」가 처음부터 그대로 성립했다.
  *
  * ## ⚠️ 이 세율은 §13⑤ 경로와 **대수적으로 같은 수**에 착지한다 — 우연이 아니다
  *
@@ -42,30 +61,54 @@
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 
 /**
- * §15② 단서 구분 — 취득물건이 §13⑤(사치성)에 해당하는가.
+ * §15② 본문·단서 구분 — **단일 소스**.
  *
- * `"none"`  → 본문: 중과기준세율 2%
- * `"luxury"` → 단서: 중과기준세율 × 500% = 10%
+ * | 값 | 세율 | 근거 |
+ * |---|---|---|
+ * | `none` | 중과기준세율 2% | §15② 본문 |
+ * | `hq_factory` | × 300% = 6% | §15② 단서 (취득물건이 **§13①**에 해당) |
+ * | `luxury` | × 500% = 10% | §15② 단서 (취득물건이 **§13⑤**에 해당) |
+ *
+ * ⚠️ ⑫ Zod(`acquisition-input.ts`)가 이 배열을 **그대로 `z.enum`에 넣는다.** 값을 더하거나
+ *    빼면 스키마가 함께 움직이므로 손으로 동기화할 자리가 없다.
  */
-export type DeemedProviso = "none" | "luxury";
+export const DEEMED_PROVISO_VALUES = ["none", "hq_factory", "luxury"] as const;
+
+export type DeemedProviso = (typeof DEEMED_PROVISO_VALUES)[number];
 
 /** §15② 본문·단서 세율 */
 export function deemedProvisoRate(proviso: DeemedProviso | undefined): number {
-  return proviso === "luxury"
-    ? ACQUISITION_CONST.HEAVY_TAX_BASE_RATE * ACQUISITION_CONST.DEEMED_PROVISO_LUXURY_MULTIPLIER
-    : ACQUISITION_CONST.HEAVY_TAX_BASE_RATE;
+  const base = ACQUISITION_CONST.HEAVY_TAX_BASE_RATE;
+  switch (proviso) {
+    case "luxury":
+      return base * ACQUISITION_CONST.DEEMED_PROVISO_LUXURY_MULTIPLIER;
+    case "hq_factory":
+      return base * ACQUISITION_CONST.DEEMED_PROVISO_HQ_MULTIPLIER;
+    default:
+      return base;
+  }
 }
 
-/** 세율 근거 조문 — 본문/단서 구분 */
+/**
+ * 세율 근거 조문 — 본문/단서 구분.
+ * §13①·§13⑤ **둘 다 §15② 단서**다(배수만 300%·500%로 다르다).
+ */
 export function deemedRateLegalBasis(proviso: DeemedProviso | undefined): string {
-  return proviso === "luxury" ? ACQUISITION.DEEMED_RATE_PROVISO : ACQUISITION.DEEMED_RATE;
+  return proviso === undefined || proviso === "none"
+    ? ACQUISITION.DEEMED_RATE
+    : ACQUISITION.DEEMED_RATE_PROVISO;
 }
 
 /** 화면 표기용 라벨 */
 export function deemedProvisoLabel(proviso: DeemedProviso | undefined): string {
-  return proviso === "luxury"
-    ? "사치성 재산 (§13⑤) — 중과기준세율 × 500%"
-    : "일반 — 중과기준세율";
+  switch (proviso) {
+    case "luxury":
+      return "사치성 재산 (§13⑤) — 중과기준세율 × 500%";
+    case "hq_factory":
+      return "본점·주사무소 사업용 / 공장 신설·증설 (§13①) — 중과기준세율 × 300%";
+    default:
+      return "일반 — 중과기준세율";
+  }
 }
 
 /**
@@ -73,6 +116,10 @@ export function deemedProvisoLabel(proviso: DeemedProviso | undefined): string {
  *
  * 단일 물건(지목변경·개수)과 버킷 미사용 과점주주가 쓴다. 버킷을 쓰면 행마다 자기
  * `proviso`를 들고 있으므로 이 함수를 거치지 않는다(이중 적용 방지 — ④가 strip 한다).
+ *
+ * 🛑 **여기서는 `hq_factory`가 나오지 않는다.** §13①은 근거(조심 1998-0145 등)가 과점주주
+ *    축에만 있고, 재결례가 「본점 사업용 **부분만**」 골라 과세했으므로 물건별 버킷이
+ *    법리에 맞는 표현이다. 단일 총가액에 §13①을 통째로 씌우는 경로는 만들지 않는다.
  */
 export function provisoFromLuxuryFlag(isLuxuryProperty: boolean | undefined): DeemedProviso {
   return isLuxuryProperty === true ? "luxury" : "none";

@@ -73,8 +73,16 @@ export function computeDeemedBucketResult(
       options.areaSqm,
       {
         acquisitionCause: options.acquisitionCause,
-        // 사치성 버킷만 중과분(8%p)을 농특세 기준율에 얹는다 (농특세법 §5①6호).
-        isSurcharged: b.proviso === "luxury",
+        /**
+         * 단서 버킷(§13① 6% · §13⑤ 10%)은 중과분을 농특세 기준율에 얹는다.
+         *
+         * 농특세법 **§5⑤** — 「§15②에 해당하는 경우에는 같은 항에 따라 계산한 취득세액을
+         * §5①6호의 과세표준으로 본다」 ⇒ 농특세 = 그 버킷 취득세액 × 10%.
+         * `basicRate`가 중과기준세율 2%이므로 `2% + (적용세율 − 2%) = 적용세율`로 항등이다
+         * (`[AT-RST]`가 고정). **`!== "none"`이어야 §13① 버킷도 6%→0.6%가 된다** —
+         * `=== "luxury"`로 좁히면 §13① 버킷이 0.2%로 조용히 과소 계산된다.
+         */
+        isSurcharged: b.proviso !== "none",
         surchargeType: b.proviso === "luxury" ? "luxury_solo" : undefined,
         isRuralRegion: options.isRuralRegion,
         // 간주취득의 '표준세율' 성분은 중과기준세율 2%다 (§15② 본문).
