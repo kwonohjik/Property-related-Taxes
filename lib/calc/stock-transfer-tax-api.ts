@@ -451,8 +451,11 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (adapted.acquisitionYearNetAssetPerShare !== undefined) body.acquisitionYearNetAssetPerShare = adapted.acquisitionYearNetAssetPerShare;
   }
 
-  // ── 장부분실 ──
-  body.bookLost = form.bookLost;                               // default: false
+  // ── 장부분실 (§99①4) ──
+  // 취득가액 모드 「액면가」에서 **파생**한다. 종전에는 `form.bookLost`(별도 ToggleCard)를
+  // 그대로 실었고, 그 토글은 face_value 모드에서 ON이 «필수»(validate error)라 정보량이 0이면서
+  // 두 상태가 어긋날 여지만 남겼다. 파생값이면 모순 자체가 성립하지 않는다.
+  body.bookLost = acquisitionMode === "face_value";
 
   // ── 순자산 단독 평가 사유 ──
   if (form.netAssetOnlyReason) {

@@ -12,7 +12,6 @@
  */
 
 import { useMemo } from "react";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
@@ -111,15 +110,6 @@ export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
           환산취득가 = 양도가액 × <Frac top="액면가" bottom="양도기준시가" /> (§165④1 가중평균 + 80% 하한)
         </p>
       </div>
-
-      {/* 장부분실 확인 */}
-      <ToggleCard
-        checked={form.bookLost}
-        onCheckedChange={(v) => onChange({ bookLost: v })}
-        title="장부 분실·멸실 확인 (§99①4)"
-        description="장부가 분실·멸실된 경우에만 액면가 적용 가능. 납세자가 직접 증명해야 합니다."
-        tone="rose"
-      />
 
       {/* 액면가 입력 */}
       <CurrencyInput

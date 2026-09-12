@@ -17,7 +17,6 @@
  *   isVentureCompany: false
  *   isKOTCTrading: false
  *   isLargestShareholderGroup: false
- *   bookLost: false
  *   isElectronicFiling: false
  *   isFraudulent: false
  *   isInternationalTransaction: false

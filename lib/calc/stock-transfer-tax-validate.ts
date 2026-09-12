@@ -14,7 +14,6 @@
  *   - isVentureCompany ?? false
  *   - isKOTCTrading ?? false
  *   - isLargestShareholderGroup ?? false
- *   - bookLost ?? false
  *   - isElectronicFiling ?? false
  *   - filingViolation || "none"
  *   - isFraudulent ?? false

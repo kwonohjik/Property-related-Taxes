@@ -245,7 +245,7 @@ export interface StockTransferFormData {
   unlistedSameBizYearToggle: boolean;
 
   // ── 장부분실 §99①4 ──
-  bookLost: boolean;                     // 3중 패턴 default: false
+  // `bookLost`는 폼 필드가 아니다 — ④가 `acquisitionMode === "face_value"`에서 파생한다.
   faceValuePerShare: string;             // 원
 
   // ── 순자산 단독 평가 사유 §165④3 ──

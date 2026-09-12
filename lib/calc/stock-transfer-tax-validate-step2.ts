@@ -528,9 +528,6 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         severity: "error",
       });
     }
-    if (!form.bookLost) {
-      errors.push({ field: "bookLost", message: "액면가 모드는 장부분실(§99①4) 확인이 필수입니다", severity: "error" });
-    }
     if (isEmpty(form.faceValuePerShare) || parseI(form.faceValuePerShare) <= 0) {
       errors.push({ field: "faceValuePerShare", message: "1주당 액면가를 입력하세요", severity: "error" });
     }
@@ -561,15 +558,6 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     if (isEmpty(form.perShareAcquisitionPrice)) {
       errors.push({ field: "perShareAcquisitionPrice", message: "1주당 매매사례가액을 입력하세요", severity: "error" });
     }
-  }
-
-  // 장부분실 단독 선언 금지
-  if (form.bookLost && acquisitionMode !== "face_value") {
-    errors.push({
-      field: "bookLost",
-      message: "장부분실은 취득가액 모드 '액면가'와 함께 사용해야 합니다 (§99①4)",
-      severity: "warning",
-    });
   }
 
   // ── R-1' 매매사례가액 (영§176의2③1호) ──
