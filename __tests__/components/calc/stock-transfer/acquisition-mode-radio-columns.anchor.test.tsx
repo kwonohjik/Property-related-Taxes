@@ -1,18 +1,21 @@
 /**
  * @vitest-environment jsdom
  *
- * Step2 「② 취득가액」 모드 라디오 — **4개를 2열 2행으로 접는다**.
+ * Step2 「② 취득가액」 모드 라디오 — **3개를 한 행에** 두고 **description 을 붙이지 않는다**.
  *
- * 제보(2026-09-02): 선택지 4개가 세로로 쌓여 4행을 먹었다.
+ * 이력:
+ *   2026-09-02 제보 — 선택지 4개가 세로로 쌓여 4행을 먹었다 ⇒ `columns={2}`(2열 2행).
+ *   2026-09-12 제보 — 옵션 하단 힌트를 지우고 한 행에 ⇒ description 제거 + `columns={3}`.
+ *     선택지도 3개가 됐다(「액면가 (장부분실)」 제거 — 법 §99①4 후단은 영 §165④ 보충평가
+ *     «안에서» 분자를 대체하는 단서라 환산취득가 하위 토글 `acqFaceValueOnly` 로 일원화).
  *
- * ⚠️ `layout="inline"`이 아니라 `columns={2}`다 — 이 그룹의 description은
- *    **조문과 적용 범위**를 담고 있어(영§176의2③1호 주권상장법인 제외 · §99①4 등)
- *    지우면 판단 근거가 사라진다. inline은 description을 렌더하지 않는다.
- *    ⇒ 카드 모양(stack)을 유지한 채 열만 2로 접는다. 모바일은 항상 1열.
+ * ⚠️ description 제거는 판단 근거를 지우는 것이 **아니다** — 모드를 고르면 그 모드 전용
+ *    블록이 바로 아래 펼쳐지고 조문·산식이 거기 다시 나온다. 같은 조문을 두 번 읽히면서
+ *    세로만 먹던 것을 없앴다.
  *
- * 🔑 **`RadioCardGroup`을 직접 렌더해서는 안 된다.** 그러면 Step2에서 `columns={2}`를
+ * 🔑 **`RadioCardGroup`을 직접 렌더해서는 안 된다.** 그러면 Step2에서 `columns={3}`을
  *    떼어내도 앵커가 초록으로 남는다 — 관측 단계가 어긋난다.
- *    ⇒ Step2를 통째로 렌더해 «실제 화면이 2열인가»를 본다.
+ *    ⇒ Step2를 통째로 렌더해 «실제 화면이 한 행인가»를 본다.
  *    [[feedback_anchor_observes_wrong_stage]]
  */
 
@@ -48,32 +51,37 @@ function acqModeGroup(): HTMLElement {
   return group as HTMLElement;
 }
 
-describe("AM — 취득가액 모드 라디오는 2열 2행이다", () => {
-  it("AM-1 sm↑에서 2열 그리드다 (모바일은 1열, 세로 쌓기 아님)", () => {
+describe("AM — 취득가액 모드 라디오는 3개가 한 행이고 힌트가 없다", () => {
+  it("AM-1 sm↑에서 3열 그리드다 (모바일은 1열, 세로 쌓기 아님)", () => {
     renderStep2();
     const cls = acqModeGroup().className;
-    expect(cls).toContain("sm:grid-cols-2");
+    expect(cls).toContain("sm:grid-cols-3");
     expect(cls).toContain("grid-cols-1");
     expect(cls).not.toContain("space-y-2"); // 세로 쌓기(columns 미지정) 회귀 차단
-    // ⚠️ `sm:grid-cols-2` 포함만 보면 **columns={4}도 통과한다** —
-    //    columns 4는 `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`라 sm 단계가 겹친다(뮤테이션 M-10 실측).
-    //    넓은 화면에서 4열(=1행)이 되는 것은 이 변경의 의도가 아니므로 lg 분기 부재까지 본다.
+    // ⚠️ 「grid 이고 sm 분기가 있다」만 보면 columns 2·4도 통과한다 —
+    //    columns 2 = `sm:grid-cols-2`, columns 4 = `sm:grid-cols-2 lg:grid-cols-4`.
+    //    3열(=3개가 한 행)만 통과시키려면 두 이웃의 부재까지 봐야 한다.
+    expect(cls).not.toContain("sm:grid-cols-2");
     expect(cls).not.toContain("lg:grid-cols-4");
-    expect(cls).not.toContain("sm:grid-cols-3");
   });
 
-  it("AM-2 선택지는 4개 그대로다 (2열 × 2행)", () => {
+  it("AM-2 선택지는 3개다 — 「액면가」는 토글로 일원화돼 여기 없다", () => {
     renderStep2();
     const values = Array.from(
       acqModeGroup().querySelectorAll<HTMLInputElement>('input[name="acquisitionMode"]')
     ).map((i) => i.value);
-    expect(values).toEqual(["actual", "estimated", "sale_case", "face_value"]);
+    expect(values).toEqual(["actual", "estimated", "sale_case"]);
   });
 
-  it("AM-3 stack 레이아웃이라 description이 남는다 (조문·적용범위 근거)", () => {
+  it("AM-3 stack 레이아웃이되 description 은 없다 (옵션 하단 힌트 제거)", () => {
     renderStep2();
+    // layout 은 stack 그대로다 — inline 으로 바꾸면 카드 모양이 칩으로 변한다
     expect(acqModeGroup().getAttribute("data-layout")).toBe("stack");
-    expect(screen.getByText(/주권상장법인 주식등 제외/)).toBeTruthy();
-    expect(screen.getByText(/장부가 분실·멸실된 경우/)).toBeTruthy();
+    // 종전 description 문구가 되살아나지 않았다
+    expect(screen.queryByText(/주권상장법인 주식등 제외/)).toBeNull();
+    expect(screen.queryByText(/실제 취득가액 \(1주당\)/)).toBeNull();
+    expect(screen.queryByText(/장부가 분실·멸실된 경우/)).toBeNull();
+    // 라벨은 남는다 — description 만 지운 것이지 옵션을 지운 게 아니다
+    expect(screen.getByText("매매사례가액")).toBeTruthy();
   });
 });

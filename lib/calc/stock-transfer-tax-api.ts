@@ -321,21 +321,6 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (pbm !== undefined) body.priorBizYearMonths = pbm; // 미입력 시 엔진 ?? 12 fallback
     // [B-4 §165⑨ 본체] 비상장 환산 양도·취득 기준시가 동일 동일사업연도 토글 (top-level bool)
     body.unlistedSameBizYearToggle = form.unlistedSameBizYearToggle === true;
-  } else if (acquisitionMode === "face_value") {
-    const faceVal = parseIntOrUndef(form.faceValuePerShare);
-    if (faceVal !== undefined) body.faceValuePerShare = faceVal;
-    /**
-     * §99①4호 후단 환산의 **분모**(양도기준시가)도 함께 보낸다.
-     *
-     * `calcTransferStdPriceForFaceValue`가 이 두 필드로 분모를 만들고, 분모가 0이면
-     * `calcFaceValueTransferEstimated`가 **취득가액 0**을 반환한다. 종전에는 액면가만
-     * 실어 보내 화면(`FaceValueBlock`의 환산 미리보기)과 엔진이 갈려 있었다.
-     * 근거: 소득세법 시행령 §165④1호(순손익×3 + 순자산×2 ÷ 5, 단서 80% 하한).
-     */
-    const fvTyNI = parseFloatOrUndef(form.transferYearNetIncomePerShare);
-    const fvTyNA = parseFloatOrUndef(form.transferYearNetAssetPerShare);
-    if (fvTyNI !== undefined) body.transferYearNetIncomePerShare = fvTyNI;
-    if (fvTyNA !== undefined) body.transferYearNetAssetPerShare = fvTyNA;
   } else if (acquisitionMode === "sale_case") {
     const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);
     if (perAcq !== undefined) body.perShareAcquisitionPrice = perAcq;
@@ -451,11 +436,13 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (adapted.acquisitionYearNetAssetPerShare !== undefined) body.acquisitionYearNetAssetPerShare = adapted.acquisitionYearNetAssetPerShare;
   }
 
-  // ── 장부분실 (§99①4) ──
-  // 취득가액 모드 「액면가」에서 **파생**한다. 종전에는 `form.bookLost`(별도 ToggleCard)를
-  // 그대로 실었고, 그 토글은 face_value 모드에서 ON이 «필수»(validate error)라 정보량이 0이면서
-  // 두 상태가 어긋날 여지만 남겼다. 파생값이면 모순 자체가 성립하지 않는다.
-  body.bookLost = acquisitionMode === "face_value";
+  // ── 장부분실 (§99①4 후단) ──
+  // 엔진의 `bookLost`(양측 경로 `calcUnlistedValuation` 안 액면가 분기)는 **폼이 만들 수 없다**.
+  // 장부분실 입력 경로는 `acqFaceValueOnly` 토글(§99①4 후단 — 취득기준시가만 액면가) 하나로
+  // 일원화했고, 그 토글은 `body.acqFaceValueOnly`로 따로 실린다(:397).
+  // 두 분기는 같은 규율을 같은 값으로 계산한다(실측 13/13 동일) — 남은 것은 엔진·⑫ Zod 뿐이라
+  // API 직접 호출만 만들 수 있다.
+  body.bookLost = false;
 
   // ── 순자산 단독 평가 사유 ──
   if (form.netAssetOnlyReason) {
@@ -465,11 +452,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 필요경비 ──
   // 소령 §163⑥4 — expenseMode는 acquisitionMode에서 100% 자동 도출 (사용자 선택 폐지).
   //   실가(actual)   → "actual"  (실제 경비 입력)
-  //   추계(estimated/sale_case/face_value) → "estimated" (개산공제 1% 자동)
+  //   추계(estimated/sale_case) → "estimated" (개산공제 1% 자동)
+  //   장부분실 액면가(§99①4 후단)는 estimated 하위 토글이라 이미 포함된다.
   const isEstimatedAcq =
-    form.acquisitionMode === "estimated" ||
-    form.acquisitionMode === "sale_case" ||
-    form.acquisitionMode === "face_value";
+    form.acquisitionMode === "estimated" || form.acquisitionMode === "sale_case";
   const resolvedExpenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
   body.expenseMode = resolvedExpenseMode;
   // [B-2] actualExpenses는 expenseMode 무관 항상 전송 — 환산 모드에서도 §97②2호 단서 비교 입력

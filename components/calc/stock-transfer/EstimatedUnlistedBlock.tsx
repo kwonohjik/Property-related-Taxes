@@ -307,16 +307,23 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           onChange={(v) => onChange({ acqFaceValuePerShare: v })}
         />
       </ToggleCard>
-      {form.acqFaceValueOnly && (
-        <p className="ml-4 text-xs text-amber-600">
-          ⚠️ 양/취 모두 액면가 적용은 acquisitionMode = &quot;액면가&quot; 모드(별도)를 사용하세요. 본 토글은 취득시점만 액면가를 적용하는 사례 49 전용입니다.
-        </p>
-      )}
+      {/*
+        「양/취 모두 액면가 적용은 acquisitionMode = "액면가" 모드(별도)를 사용하세요」 안내를
+        제거했다. **그런 모드는 법령상 존재할 수 없다** — 법 §99①4 후단은 「장부 분실 등으로
+        **취득 당시의** 기준시가를 확인할 수 없는 경우에는 액면가액을 **취득 당시의** 기준시가로
+        한다」고 정해 액면가를 취득측에만 건다. 양도 당시 기준시가는 영 §165④ 보충평가 그대로다.
+        안내가 가리키던 라디오 모드도 같은 이유로 제거됐다(이 토글과 13/13 동일 값이었다).
+      */}
       </>
       )}
 
       {/* 순자산 단독 사유 선택 */}
+      {/*
+        라벨을 자체 행으로 올리고(stacked) 5개 옵션을 2열로 접는다 — 좌-라벨 + 1열이면
+        옵션이 5행을 먹어 화면 절반을 차지한다. 모바일은 RadioCardGroup 이 항상 1열이다.
+      */}
       <FieldCard
+        stacked
         label="순자산 단독 평가 사유 (§165④3)"
         hint="해당 사유가 있는 경우만 선택. 없으면 '해당 없음'으로 둡니다."
       >
@@ -330,6 +337,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           }
           tone="amber"
           layout="stack"
+          columns={2}
           options={NET_ASSET_ONLY_REASON_OPTIONS}
         />
       </FieldCard>

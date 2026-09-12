@@ -18,7 +18,6 @@ import React from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
-import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
 import { NetAssetStatementTable } from "@/components/calc/stock-transfer/PostListingNetAssetStatement";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
@@ -70,7 +69,6 @@ function cellInput(testId: string): HTMLInputElement {
 }
 
 const EUB_STD = /양도기준시가 \(1주당\)/;
-const FVB_STD = /^양도기준시가 = /;
 
 // ============================================================
 // O-6 — 미리보기 위임
@@ -105,7 +103,16 @@ describe("PV-1~6: §165④ 미리보기가 엔진 정본과 같은 값을 낸다
     expect(shownStdPrice(EUB_STD)).toBe(16_000);
   });
 
-  it("PV-3: FaceValueBlock 순손익 미입력 → 16,000 (재구현은 20,000 — `ni>0 ? … : na`)", () => {
+  /**
+   * PV-3 은 원래 `FaceValueBlock`(취득가액 라디오 「액면가」 전용 블록)을 렌더했다.
+   * 그 라디오를 제거하고 장부분실 입력을 `acqFaceValueOnly` 토글 하나로 일원화하면서
+   * 블록이 사라졌으므로 **같은 축을 `EstimatedUnlistedBlock` 에서 잰다**.
+   *
+   * 이 항목이 지키는 축은 PV-2(음수 «입력»)와 다르다 — 순손익이 **미입력**(빈 문자열)일 때다.
+   * 종전 재구현은 `ni > 0 ? 가중평균 : na` 라 미입력에서 순자산 20,000 을 그대로 내놓아
+   * 정본(하한 16,000)보다 25% 과대였다.
+   */
+  it("PV-3: 순손익 미입력 → 16,000 (재구현은 20,000 — `ni>0 ? … : na`)", () => {
     render(
       <Stateful
         initial={{
@@ -113,10 +120,10 @@ describe("PV-1~6: §165④ 미리보기가 엔진 정본과 같은 값을 낸다
           transferYearNetIncomePerShare: "",
           transferYearNetAssetPerShare: "20000",
         }}
-        render={(f, o) => <FaceValueBlock form={f} onChange={o} />}
+        render={(f, o) => <EstimatedUnlistedBlock form={f} onChange={o} />}
       />,
     );
-    expect(shownStdPrice(FVB_STD)).toBe(16_000);
+    expect(shownStdPrice(EUB_STD)).toBe(16_000);
   });
 
   it("PV-4: 양도일 미입력 → 미리보기 미표시 (임의 기준일 fallback 금지)", () => {

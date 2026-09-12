@@ -146,8 +146,6 @@ export function createInitialStockFormData(): StockTransferFormData {
     priorBizYearMonths: "12", // §81④ 직전사업연도 월수 default
     unlistedSameBizYearToggle: false, // [B-4 §165⑨ 본체] 3중 패턴 default
 
-    faceValuePerShare: "",
-
     netAssetOnlyReason: "",
 
     expenseMode: "actual",

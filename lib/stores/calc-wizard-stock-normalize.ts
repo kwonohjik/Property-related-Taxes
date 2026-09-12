@@ -170,7 +170,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     exchangePropertyValue: strField("exchangePropertyValue"),
     exchangeDebtRelief: strField("exchangeDebtRelief"),
     exchangeCash: strField("exchangeCash"),
-    acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated", "face_value"], defaults.acquisitionMode),
+    // "face_value"는 목록에서 빠졌다 — stale sessionStorage 가 그 값을 들고 있으면
+    // enumField 가 default("actual")로 떨어뜨린다(모르는 키를 통과시키지 않는다).
+    acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode),
     acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots"], defaults.acquisitionActualInputMode),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     // R-1' 매매사례가액
@@ -235,7 +237,6 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     prePriorYearNetIncomePerShare: strField("prePriorYearNetIncomePerShare"),
     prePriorYearNetAssetPerShare: strField("prePriorYearNetAssetPerShare"),
     priorBizYearMonths: strField("priorBizYearMonths") || defaults.priorBizYearMonths,
-    faceValuePerShare: strField("faceValuePerShare"),
     netAssetOnlyReason: enumField("netAssetOnlyReason", ["liquidation_or_owner_death", "no_business_or_short_or_closed", "stock_holding_company", "remaining_term_under_3y", ""], ""),
     expenseMode: enumField("expenseMode", ["actual", "estimated"], "actual"),
     actualExpenses: strField("actualExpenses"),
