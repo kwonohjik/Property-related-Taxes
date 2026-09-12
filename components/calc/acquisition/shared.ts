@@ -355,6 +355,13 @@ export interface FormState {
   /** 공부(公簿) 지목 변경 등록일 (YYYY-MM-DD) — 사실상 변경일과 빠른 날이 취득시기 (시행령 §20⑩) */
   deemedLandRegistrationDate?: string;
   /** 변경 전 시가표준액 (CurrencyInput 문자열) */
+  /**
+   * 지목변경 과세표준 — 사실상취득가격을 **확인할 수 있는가** (「지방세법」 §10의6①1호 본칙).
+   * OFF(기본값)면 §10의6②1호·시행령 §18의6 1호의 보충법(시가표준액 차액)을 쓴다.
+   */
+  deemedLandActualPriceKnown?: boolean;
+  /** §10의6①1호 — 지목변경으로 증가한 가액에 해당하는 사실상취득가격 */
+  deemedLandActualPrice?: string;
   deemedLandPrevStandardValue?: string;
   /** 변경 후 시가표준액 (CurrencyInput 문자열) */
   deemedLandNewStandardValue?: string;
@@ -507,6 +514,8 @@ export const INITIAL_FORM: FormState = {
   deemedLandNewCategory: undefined,
   deemedLandChangeDate: undefined,
   deemedLandRegistrationDate: undefined,
+  deemedLandActualPriceKnown: false,
+  deemedLandActualPrice: undefined,
   deemedLandPrevStandardValue: undefined,
   deemedLandNewStandardValue: undefined,
 
@@ -622,8 +631,18 @@ export function validateStep(step: number, form: FormState): string | null {
       if (!form.deemedLandNewCategory)  return "변경 후 지목을 선택하세요.";
       if (form.deemedLandPrevCategory === form.deemedLandNewCategory)
         return "변경 전·후 지목이 동일합니다.";
-      if (!form.deemedLandPrevStandardValue) return "변경 전 시가표준액을 입력하세요.";
-      if (!form.deemedLandNewStandardValue)  return "변경 후 시가표준액을 입력하세요.";
+      /**
+       * 과세표준 축 — 본칙(§10의6①1호)과 보충(§10의6②1호)은 **상호배타**다.
+       * 본칙을 켜면 시가표준액은 요구하지 않는다. ④가 보내지 않으므로 요구하면 모순이 된다
+       * (`feedback_validation_sync_8th_point`).
+       */
+      if (form.deemedLandActualPriceKnown === true) {
+        if (!form.deemedLandActualPrice)
+          return "지목변경으로 증가한 가액에 해당하는 사실상취득가격을 입력하세요.";
+      } else {
+        if (!form.deemedLandPrevStandardValue) return "변경 전 시가표준액을 입력하세요.";
+        if (!form.deemedLandNewStandardValue)  return "변경 후 시가표준액을 입력하세요.";
+      }
     }
 
     if (form.acquisitionCause === "deemed_renovation") {

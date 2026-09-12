@@ -7,6 +7,7 @@
  */
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { landTaxBaseLegalBasis } from "@/lib/tax-engine/acquisition-deemed";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -234,8 +235,26 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
           </div>
         )}
 
-        {/* 지목변경 전용 산식 */}
-        {detail.type === "land_category" && (
+        {/* 지목변경 전용 산식 — §10의6①1호 본칙 */}
+        {detail.type === "land_category" && detail.taxBaseBasis === "actual_price" && (
+          <div className="px-3 py-2 space-y-1 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>사실상취득가격 (증가한 가액)</span>
+              <span>{formatKRW(detail.actualPrice ?? 0)}</span>
+            </div>
+            <div className="border-t border-violet-100 pt-1 flex justify-between font-medium">
+              <span>간주취득 과세표준</span>
+              <span>{formatKRW(detail.deemedTaxBase)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              지목변경으로 증가한 가액에 해당하는 사실상취득가격
+              ({landTaxBaseLegalBasis("actual_price")})
+            </p>
+          </div>
+        )}
+
+        {/* 지목변경 전용 산식 — §10의6②1호·시행령 §18의6 1호 보충 */}
+        {detail.type === "land_category" && detail.taxBaseBasis !== "actual_price" && (
           <div className="px-3 py-2 space-y-1 text-sm">
             {detail.prevStandardValue !== undefined && (
               <div className="flex justify-between text-muted-foreground">
@@ -256,6 +275,8 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
             {detail.prevStandardValue !== undefined && detail.newStandardValue !== undefined && (
               <p className="text-xs text-muted-foreground">
                 변경 후 {formatKRW(detail.newStandardValue ?? 0)} - 변경 전 {formatKRW(detail.prevStandardValue ?? 0)} = {formatKRW(detail.deemedTaxBase)}
+                {" — "}사실상취득가격을 확인할 수 없는 경우의 보충법
+                ({landTaxBaseLegalBasis("standard_value")})
               </p>
             )}
           </div>

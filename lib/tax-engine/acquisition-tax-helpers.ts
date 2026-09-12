@@ -106,6 +106,12 @@ export function runDeemedAcquisitionStep(
         const d = deemedResult.detail as DeemedLandCategoryResult | DeemedRenovationResult;
         base.prevStandardValue = d.prevStandardValue;
         base.newStandardValue = d.newStandardValue;
+        // 지목변경 전용 — 과세표준 근거(§10의6①1호 본칙 / ②1호 보충)를 결과 카드까지 전달
+        if (deemedResult.type === "land_category") {
+          const lc = deemedResult.detail as DeemedLandCategoryResult;
+          base.taxBaseBasis = lc.basis;
+          base.actualPrice = lc.actualPrice;
+        }
       }
       deemedDetailResult = base;
     }

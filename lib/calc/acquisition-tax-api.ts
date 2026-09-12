@@ -491,12 +491,24 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     const lcd = strOrUndef(form.deemedLandChangeDate ?? "");        // 사실상 변경 완료일
     const lrd = strOrUndef(form.deemedLandRegistrationDate ?? "");  // 공부 등록일
 
+    /**
+     * 과세표준 축 — 본칙(§10의6①1호)과 보충(§10의6②1호·시행령 §18의6 1호)은 **상호배타**.
+     *
+     * 🔴 **꺼진 쪽은 보내지 않는다.** 두 칸이 한 화면에 있었던 적이 있으므로 토글을 바꾸면
+     *    반대편 값이 폼에 남는다. 함께 보내면 엔진이 본칙을 택해도 결과 카드가 남은
+     *    시가표준액을 그려 「무엇으로 계산했는가」가 흐려진다
+     *    (`feedback_plan_exclusion_decision_needs_a_code_gate` — 막는 자리는 입력 경로다).
+     */
+    const actualKnown = form.deemedLandActualPriceKnown === true;
+    const actualPrice = parseAmount(form.deemedLandActualPrice ?? "");
+
     body.deemedInput = {
       landCategory: {
         prevCategory:      (form.deemedLandPrevCategory ?? "대") as import("@/lib/tax-engine/types/acquisition.types").LandCategory,
         newCategory:       (form.deemedLandNewCategory ?? "대") as import("@/lib/tax-engine/types/acquisition.types").LandCategory,
-        prevStandardValue: prevSv ?? 0,
-        newStandardValue:  newSv  ?? 0,
+        ...(actualKnown
+          ? { actualPrice: actualPrice ?? 0 }
+          : { prevStandardValue: prevSv ?? 0, newStandardValue: newSv ?? 0 }),
         // 엔진 취득시기 안내 경고 생성용 (acquisition-deemed.ts)
         ...(lcd ? { actualChangeDate: lcd } : {}),
         ...(lrd ? { registrationDate: lrd } : {}),

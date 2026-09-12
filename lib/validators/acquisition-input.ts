@@ -146,13 +146,30 @@ const deemedAcquisitionInputSchema = z.object({
   landCategory: z.object({
     prevCategory: landCategorySchema,
     newCategory: landCategorySchema,
-    prevStandardValue: z.number().nonnegative(),
-    newStandardValue: z.number().nonnegative(),
+    /** §10의6①1호 **본칙** — 변경으로 증가한 가액에 해당하는 사실상취득가격 */
+    actualPrice: z.number().nonnegative().optional(),
+    /** §10의6②1호·시행령 §18의6 1호 **보충** — 확인할 수 없는 경우에만 */
+    prevStandardValue: z.number().nonnegative().optional(),
+    newStandardValue: z.number().nonnegative().optional(),
     /** 사실상 지목변경 완료일 — 공부 등록일과 빠른 날이 취득시기 (시행령 §20⑩) */
     actualChangeDate: dateStr.optional(),
     /** 공부(公簿) 지목 변경 등록일 */
     registrationDate: dateStr.optional(),
-  }).optional(),
+  })
+    /**
+     * 본칙·보충 중 **한쪽은 반드시** 와야 한다. 둘 다 없으면 과세표준이 조용히 0이 되어
+     * 「과세 대상 아님」이라는 틀린 사유가 뜬다(`feedback_silent_omission_full_input_enforcement`).
+     */
+    .refine(
+      (v) =>
+        v.actualPrice !== undefined ||
+        (v.prevStandardValue !== undefined && v.newStandardValue !== undefined),
+      {
+        message:
+          "지목변경 과세표준: 사실상취득가격(§10의6①1호) 또는 변경 전·후 시가표준액(§10의6②1호) 중 하나를 입력하세요.",
+      },
+    )
+    .optional(),
   renovation: z.object({
     renovationType: z.enum(["structural_change", "use_change", "major_repair"]),
     prevStandardValue: z.number().nonnegative(),

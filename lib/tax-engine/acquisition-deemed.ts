@@ -13,6 +13,7 @@ import type {
   DeemedBucketBreakdown,
   DeemedMajorShareholderResult,
   LandCategory,
+  LandTaxBaseBasis,
 } from "./types/acquisition.types";
 
 // ============================================================
@@ -21,11 +22,28 @@ import type {
 
 export interface DeemedLandCategoryResult {
   isSubjectToTax: boolean;
-  deemedTaxBase: number;   // 변경 후 시가표준액 - 변경 전 시가표준액
-  prevStandardValue: number;
-  newStandardValue: number;
+  /** 본칙이면 사실상취득가격, 보충이면 「변경 이후 − 변경 전」 시가표준액 차액 */
+  deemedTaxBase: number;
+  /** 어느 조문으로 산정했는가 — 근거 문자열은 `landTaxBaseLegalBasis()` 단일 소스 */
+  basis: LandTaxBaseBasis;
+  /** 본칙(§10의6①1호) 적용 시의 사실상취득가격 */
+  actualPrice?: number;
+  prevStandardValue?: number;
+  newStandardValue?: number;
   legalBasis: string;
   warnings: string[];
+}
+
+/**
+ * 지목변경 과세표준의 **조문 근거** — 엔진·UI 단일 소스.
+ *
+ * UI가 이 판정을 손으로 다시 쓰면 조문이 두 곳에서 갈린다
+ * (`feedback_ui_engine_dual_truth_avoidance`).
+ */
+export function landTaxBaseLegalBasis(basis: LandTaxBaseBasis): string {
+  return basis === "actual_price"
+    ? ACQUISITION.DEEMED_LAND_BASE_ACTUAL
+    : ACQUISITION.DEEMED_LAND_BASE_STANDARD;
 }
 
 export interface DeemedRenovationResult {
@@ -38,7 +56,7 @@ export interface DeemedRenovationResult {
 }
 
 // LandCategory 타입 재수출 (외부에서 이 파일을 통해 접근할 수 있도록)
-export type { LandCategory };
+export type { LandCategory, LandTaxBaseBasis };
 
 // ============================================================
 // 1. 과점주주 간주취득 (지방세법 §7⑤)
@@ -208,26 +226,42 @@ export function assessMajorShareholder(
 /**
  * 토지 지목변경 간주취득 판정
  *
- * 지목변경으로 시가표준액이 증가한 경우:
- *   간주취득 과세표준 = 변경 후 시가표준액 - 변경 전 시가표준액
+ * 과세표준은 **두 조문이 순위를 이룬다** (「지방세법」 §10의6):
  *
- * 시가표준액이 감소하거나 동일한 경우: 과세 없음
+ * 1. **본칙 §10의6①1호** — 「토지의 지목을 사실상 변경한 경우 … 그 변경으로 증가한 가액에
+ *    해당하는 **사실상취득가격**」. `actualPrice`가 오면 그 값이 곧 과세표준이다.
+ * 2. **보충 §10의6②1호 + 시행령 §18의6 1호** — ②는 「①에도 **불구하고** … 사실상취득가격을
+ *    **확인할 수 없는 경우**」에만 열린다. 계산방법은 시행령이 정한다:
+ *    「가목(지목변경 **이후** 시가표준액) − 나목(지목변경 **전** 시가표준액)」.
+ *
+ * ⚠️ 종전에는 2번**만** 있었다 — 보충법을 본칙처럼 썼다. 확인된 사실상취득가격이 있으면
+ *    ②의 요건 자체가 성립하지 않으므로 **본칙이 이긴다**(anchor AT-LC-04).
+ *
+ * 어느 경로든 「증가한 가액」이 아니면(0 이하) 과세 없음.
  */
 export function assessLandCategoryChange(
   input: NonNullable<DeemedAcquisitionInput["landCategory"]>
 ): DeemedLandCategoryResult {
   const warnings: string[] = [];
-  const { prevCategory, newCategory, prevStandardValue, newStandardValue } = input;
+  const { prevCategory, newCategory, actualPrice, prevStandardValue, newStandardValue } = input;
 
-  const diff = newStandardValue - prevStandardValue;
+  const basis: LandTaxBaseBasis = actualPrice !== undefined ? "actual_price" : "standard_value";
+  const diff =
+    basis === "actual_price"
+      ? (actualPrice ?? 0)
+      : (newStandardValue ?? 0) - (prevStandardValue ?? 0);
 
   if (diff <= 0) {
     warnings.push(
-      `지목변경 후 시가표준액(${newStandardValue.toLocaleString()}이 변경 전(${prevStandardValue.toLocaleString()} 이하 — 간주취득 과세 없음.`
+      basis === "actual_price"
+        ? `지목변경으로 증가한 가액에 해당하는 사실상취득가격이 0 이하 — 간주취득 과세 없음 (${ACQUISITION.DEEMED_LAND_BASE_ACTUAL}).`
+        : `지목변경 후 시가표준액(${(newStandardValue ?? 0).toLocaleString()})이 변경 전(${(prevStandardValue ?? 0).toLocaleString()}) 이하 — 간주취득 과세 없음.`
     );
     return {
       isSubjectToTax: false,
       deemedTaxBase: 0,
+      basis,
+      actualPrice,
       prevStandardValue,
       newStandardValue,
       legalBasis: ACQUISITION.DEEMED_ACQUISITION,
@@ -235,7 +269,11 @@ export function assessLandCategoryChange(
     };
   }
 
-  warnings.push(`지목변경: ${prevCategory} → ${newCategory} (시가표준액 증가분 ${diff.toLocaleString()} 과세)`);
+  warnings.push(
+    basis === "actual_price"
+      ? `지목변경: ${prevCategory} → ${newCategory} (사실상취득가격 ${diff.toLocaleString()} 과세 — ${ACQUISITION.DEEMED_LAND_BASE_ACTUAL})`
+      : `지목변경: ${prevCategory} → ${newCategory} (시가표준액 증가분 ${diff.toLocaleString()} 과세 — 사실상취득가격을 확인할 수 없는 경우의 보충법, ${ACQUISITION.DEEMED_LAND_BASE_STANDARD})`
+  );
 
   // 취득 시기 안내: 두 날짜 중 빠른 날 기준 (지방세법 §20)
   if (input.actualChangeDate && input.registrationDate) {
@@ -258,6 +296,8 @@ export function assessLandCategoryChange(
   return {
     isSubjectToTax: true,
     deemedTaxBase: diff,
+    basis,
+    actualPrice,
     prevStandardValue,
     newStandardValue,
     legalBasis: ACQUISITION.DEEMED_ACQUISITION,
