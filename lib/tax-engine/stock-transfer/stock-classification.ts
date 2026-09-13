@@ -11,6 +11,10 @@
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import { getMajorShareholderThreshold } from "./stock-rate-tables";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import {
+  judgeBlockShareholderGate,
+  BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
+} from "./block-shareholder-gate";
 
 // ============================================================
 // 분류 결과 타입
@@ -42,6 +46,11 @@ export interface ClassificationResult {
   judgmentBasis?: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
   /** F-24 (2026-05-19) — 본인 미보유 시 자동 강제 합산 적용 여부 */
   forcedCombinedJudgment?: boolean;
+  /**
+   * §94①4 다목 게이트 판정 echo (2026-09-13) — 다목 토글이 켜졌을 때만 실린다.
+   * 통과/실패와 **어느 요건이 미달인지**를 결과 카드·UI 배지가 복원한다.
+   */
+  blockShareholderGate?: StockTransferResult["blockShareholderGate"];
 }
 
 // ============================================================
@@ -305,8 +314,35 @@ function classifySection94(
   appliedSection94: StockTransferResult["appliedSection94"];
   section94_2Applied: boolean;
   basicDeductionGroup: StockTransferResult["basicDeductionGroup"];
+  blockShareholderGate?: StockTransferResult["blockShareholderGate"];
+  /** `other_asset` 인데 4호가 어느 목으로도 성립하지 않는 상태 — ⑧⑫ 가 막아야 할 입력 */
+  otherAssetWithoutAnyClause?: boolean;
 } {
-  const { marketType, isQualifyingBlockShareholder, isHeavyRealEstateForRate, isKOTCTrading } = input;
+  const { marketType, isHeavyRealEstateForRate, isKOTCTrading } = input;
+
+  /**
+   * §94①4 **다목**은 요건 3종(영 §158①②)을 **전부** 통과해야 성립한다.
+   *
+   * 🔴 2026-09-13 신설 — 종전에는 토글 `isQualifyingBlockShareholder` **하나**가 분류를
+   *    결정했고, `cumulativeTransferRatio` 는 폼·④·⑫·⑭ 다섯 층을 통과하는데도
+   *    **엔진 소비처가 0건**이었다. 누적 30% 든 70% 든 undefined 든 똑같이 §55① 누진 45%
+   *    였다(실측 403,860,000 동일). 누적 30% 케이스는 국세+지방 **173,646,000 과다**.
+   *
+   * ⚠️ **라목은 게이트 대상이 아니다** — 법 §94①4 라목은 「자산총액 80% 이상 + 영 §158⑧
+   *    사업」이라 **양도비율을 요건으로 하지 않는다**. 다목이 게이트에서 떨어져도 라목이
+   *    켜져 있으면 4호는 그대로 성립한다(`①4라`).
+   */
+  const blockShareholderGate = input.isQualifyingBlockShareholder
+    ? judgeBlockShareholderGate({
+        realEstateRatio: input.blockShareholderRealEstateRatio,
+        ownershipRatio: input.blockShareholderOwnershipRatio,
+        cumulativeTransferRatio: input.cumulativeTransferRatio,
+        firstTransferDate: input.aggregationFirstTransferDate,
+        transferDate: input.transferDate,
+      })
+    : undefined;
+  /** 다목이 **실제로** 성립하는가 — 토글 AND 게이트. 하류는 이 값만 본다. */
+  const isQualifyingBlockShareholder = blockShareholderGate?.passed ?? false;
 
   // §94①4 해당 여부 (상장·비상장 모두 적용 가능)
   const hasSection94_4 = isQualifyingBlockShareholder || isHeavyRealEstateForRate;
@@ -355,6 +391,7 @@ function classifySection94(
       section94_2Applied: true,
       // §94② 발동 시 기본공제 1호 그룹 (부동산 합산)
       basicDeductionGroup: "real_estate_and_other_asset",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
     };
   }
 
@@ -365,6 +402,13 @@ function classifySection94(
       appliedSection94: isQualifyingBlockShareholder ? "①4다" : "①4라",
       section94_2Applied: false,
       basicDeductionGroup: "real_estate_and_other_asset",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
+      // 🔴 다목이 게이트에서 떨어졌는데 라목도 꺼져 있으면 **4호가 어느 목으로도 성립하지
+      //    않는다**. 그런데 이 분기는 `marketType` 만 보므로 그대로 두면 «조용히 라목»이 된다.
+      //    ⑧ validate·⑫ Zod 가 막는 입력이지만(계획서 PA-3 분기표 4행 = 차단), 엔진이 그
+      //    사실을 **말하지 않으면** 다른 경로(API 직접 호출)에서 침묵한다.
+      //    ⇒ 플래그로 올려 `classifyStockTransfer` 가 경고를 남긴다.
+      ...(!hasSection94_4 ? { otherAssetWithoutAnyClause: true } : {}),
     };
   }
 
@@ -376,6 +420,7 @@ function classifySection94(
         appliedSection94: "①3가1)",
         section94_2Applied: false,
         basicDeductionGroup: "stock",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
       };
     }
     // 비대주주 — **증권시장 밖 거래**면 과세, 장내면 비과세.
@@ -398,6 +443,7 @@ function classifySection94(
         appliedSection94: "①3가2)",
         section94_2Applied: false,
         basicDeductionGroup: "stock",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
       };
     }
     // 장내 비대주주 → 비과세 (exemption에서 처리되지만 분류는 여기서)
@@ -410,6 +456,7 @@ function classifySection94(
       appliedSection94: "해당없음",
       section94_2Applied: false,
       basicDeductionGroup: "stock",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
     };
   }
 
@@ -420,6 +467,7 @@ function classifySection94(
       appliedSection94: "①3나_본문",
       section94_2Applied: false,
       basicDeductionGroup: "stock",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
     };
   }
 
@@ -429,6 +477,7 @@ function classifySection94(
     appliedSection94: "①3나_본문",
     section94_2Applied: false,
     basicDeductionGroup: "stock",
+      ...(blockShareholderGate ? { blockShareholderGate } : {}),
   };
 }
 
@@ -539,6 +588,27 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
   // §94① 분류
   const classResult = classifySection94(input, isMajor);
 
+  // §94①4 다목 게이트 — 실패 시 **경고 + 규칙 표기**. 세액은 §94①3호(폴백)로 간다.
+  if (classResult.blockShareholderGate && !classResult.blockShareholderGate.passed) {
+    const labels = classResult.blockShareholderGate.failed
+      .map((r) => BLOCK_SHAREHOLDER_REQUIREMENT_LABEL[r])
+      .join(" · ");
+    warnings.push(
+      `§94①4 다목(과점주주) 요건 미충족 — 미달 항목: ${labels}. ` +
+        `기타자산이 아니라 §94①3호(주식) 세율로 계산합니다.`,
+    );
+    appliedRules.push("다목요건미충족폴백");
+  } else if (classResult.blockShareholderGate?.passed) {
+    appliedRules.push("다목요건충족");
+  }
+  // 🔴 `other_asset` 인데 다목·라목 어느 쪽도 성립하지 않는 입력 — ⑧⑫ 가 막아야 한다.
+  if (classResult.otherAssetWithoutAnyClause) {
+    warnings.push(
+      "기타자산(§94①4)으로 선택됐으나 다목·라목 어느 요건도 충족하지 않습니다 — " +
+        "시장 유형(상장·비상장)을 선택해 §94①3호로 계산하세요.",
+    );
+  }
+
   // §94② 우선 적용 시 appliedRules에 추가
   if (classResult.section94_2Applied) {
     appliedRules.push("§94②우선");
@@ -577,5 +647,8 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     augmentedShares,
     judgmentBasis,
     forcedCombinedJudgment,
+    ...(classResult.blockShareholderGate
+      ? { blockShareholderGate: classResult.blockShareholderGate }
+      : {}),
   };
 }

@@ -17,6 +17,7 @@ import { describe, it, expect } from "vitest";
 import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 // ============================================================
 // 공통 입력 팩토리
 // ============================================================
@@ -345,7 +346,7 @@ describe("AT-9 other_asset — appliedThreshold undefined", () => {
   it("other_asset + isQualifyingBlockShareholder → appliedThreshold undefined", () => {
     const input = makeInput({
       marketType: "other_asset",
-      isQualifyingBlockShareholder: true,
+      ...passingBlockShareholderGate(new Date("2024-06-01")),
       selfShareRatio: 0.6,
       selfMarketCap: 0,
       acquisitionMode: "actual",

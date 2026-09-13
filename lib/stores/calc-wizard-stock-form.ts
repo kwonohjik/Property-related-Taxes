@@ -89,6 +89,11 @@ export function createInitialStockFormData(): StockTransferFormData {
     giftTaxableValue: "",
     preMergerAcquisitionDate: "",
 
+    blockShareholderRealEstateRatio: "",
+    blockShareholderOwnershipRatio: "",
+    aggregationFirstTransferDate: "",
+    priorMajorShareholderTax: "",
+    blockShareholderSourceIds: [],
     cumulativeTransferRatio: "",
     nblRatioOfCorpAssets: "",
 

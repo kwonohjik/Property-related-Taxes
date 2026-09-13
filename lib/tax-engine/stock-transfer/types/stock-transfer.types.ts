@@ -17,6 +17,28 @@ export type { PostListingValuationResult };
 // Input
 // ============================================================
 
+/** §94①4 다목 요건 식별자 — 영 §158②은 「소급 3년」과 「50% 이상」을 **한 문장**에 두므로 둘 다 요건③의 구성요소다. */
+export type BlockShareholderRequirement =
+  | "real_estate_ratio"
+  | "ownership_ratio"
+  | "transfer_ratio"
+  | "transfer_window";
+
+/** §94①4 다목 게이트 판정 결과 — 엔진 leaf `block-shareholder-gate.ts` 의 출력이자 result echo. */
+export interface BlockShareholderGateEcho {
+  passed: boolean;
+  failed: BlockShareholderRequirement[];
+  measured: {
+    realEstateRatio?: number;
+    ownershipRatio?: number;
+    cumulativeTransferRatio?: number;
+    /** 합산기간 최초 양도일 ~ 최종 양도일 (일) — 3년 창 판정 근거 echo */
+    windowDays?: number;
+  };
+  /** 요건② 임계 — 양도일 종속(`>= 0.5` ↔ `> 0.5`). UI 문구가 어느 쪽인지 표시한다. */
+  ownershipThresholdIsExclusive: boolean;
+}
+
 export type StockTransferInput = {
   // §94①3 — 시장 분류
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "other_asset";
@@ -245,8 +267,57 @@ export type StockTransferInput = {
   /** 🔒 엔진 내부 전용 — 위와 짝. 증여자 취득 당시 1주당 가액(①1호 가목). */
   carryoverDonorPricePerShare?: number;
 
-  /** §94①4 다목 — 3년 누적 양도 비율 */
+  // ── §94①4 다목 요건 3종 + 합산창 (2026-09-13 신설) ──────────────────
+  //
+  // 법 §94①4다 + 영 §158①② — 요건은 **셋이고 모두 AND** 다. 종전에는 토글
+  // `isQualifyingBlockShareholder` 하나로 분류가 결정됐고 아래 비율은 **엔진 소비처가 0건**이었다.
+  //
+  // ⚠️ 단위는 전부 **0~1 소수**다(UI 는 %, ④ API 가 ×0.01).
+
+  /**
+   * 요건① — 법인 자산총액 중 **부동산등** 가액 비율. 임계 **`>= 0.5`**(시기 불변).
+   * 영 §158④: 자산총액은 **장부가액**(§94①1호 자산은 기준시가가 크면 기준시가) 기준이고,
+   * 양도일 소급 1년 내 차입·증자로 늘어난 현금·대여금·금융재산은 **제외**한다.
+   * 판정 기준일 = 합산기간 중 **최초 양도일** 현재(영 §158② 후단).
+   */
+  blockShareholderRealEstateRatio?: number;
+  /**
+   * 요건② — 주주 1인 + **기타주주**의 소유주식 비율 합계. 임계는 **양도일 종속**이다:
+   *   · 양도일 `< 2020-02-11` → **`>= 0.5`** (「100분의 50 **이상**」)
+   *   · 양도일 `>= 2020-02-11` → **`> 0.5`**  (「100분의 50을 **초과**」)
+   * 근거: 대통령령 제30395호 부칙 §2②·**§41(과점주주의 범위 등에 관한 경과조치)**.
+   *
+   * 🔑 「기타주주」는 §157①1호·③이 정의한 **대주주 판정과 같은 주주 집합**이나
+   *    **기준일이 다르다**(대주주 = 직전 사업연도 종료일 / 여기 = 최초 양도일)
+   *    ⇒ `combinedShareRatio` 를 재사용할 수 없다. 판정은 「**각 주주별로**」 한다
+   *    (국세청 서면-2023-법규재산-0816, 2026.06.17.) — 신고인 1인 기준 값 하나면 된다.
+   */
+  blockShareholderOwnershipRatio?: number;
+  /**
+   * 요건③ — 소급 3년 누적 양도 비율(과점주주 **전원**이 양도한 것을 합산). 임계 **`>= 0.5`**.
+   * 분모는 「**해당 법인의 주식등 합계액**」이다(법 §94①4다 · 영 §158② 후단 · 위 해석례).
+   *
+   * ⚠️ 「과점주주 **외의 자**에게」 양도한 분만 분자다 — 양도인이 **실질지배하는 법인**에
+   *    양도한 분은 「과점주주 외의 자」가 아니다(국세청 서면-2024-자본거래-2702, 2025.07.07.).
+   */
   cumulativeTransferRatio?: number;
+  /**
+   * 영 §158② — **합산기간 중 최초로 양도하는 날**. 요건③의 기간 한정(`소급 3년`) 판정과
+   * 요건①② 수치의 기준일을 **동시에** 정한다.
+   *
+   * 🔑 요건③은 「소급해 3년 내」와 「50% 이상」이 **한 문장**이라 둘이 한 요건이다 —
+   *    비율만 보고 기간을 안 보면 요건을 절반만 검증하는 것이다.
+   */
+  aggregationFirstTransferDate?: Date;
+  /**
+   * 영 §168② — 「**대주주로서** 납부하였거나 납부할 세액」(원).
+   *
+   * 재계산 산출세액에 포함된 **§94①3호 과세분의 산출세액**이다.
+   * ⚠️ 가산세·전자신고세액공제는 산출세액이 아니므로 포함하지 않는다.
+   * ⚠️ 이름이 비슷한 `priorPaidTax` 와 **다른 필드**다 — 그쪽은 **가산세 기준금액** 전용이라
+   *    납부할 세액을 1원도 줄이지 않는다.
+   */
+  priorMajorShareholderTax?: number;
 
   // 양도가액 모드
   transferPriceMode: "actual" | "exchange";
@@ -952,7 +1023,30 @@ export type StockTransferResult = {
   // 세율·세액
   appliedRate: number;
   progressiveDeduction?: number;
+  /**
+   * 양도소득 산출세액. **영 §168② 차감 «후»** 값이다 — 그 조항이
+   * 「차감하여 계산한 금액을 **양도소득산출세액으로 한다**」로 산출세액 자체를 정의하기 때문이다.
+   * 차감 전 값과 차감액은 `clause168_2Credit` 에 echo 한다.
+   */
   calculatedTax: number;
+  /**
+   * §94①4 다목 **요건 판정 결과** echo — 결과 카드·UI 배지가 「무엇이 미달인지」를 복원한다.
+   * 다목 토글이 켜졌을 때만 싣는다.
+   */
+  blockShareholderGate?: BlockShareholderGateEcho;
+  /**
+   * 영 §168② **차감 내역** echo — 차감이 실제로 일어났을 때만 싣는다.
+   *
+   * ⚠️ `localDeducted` 의 근거는 §168② 이 **아니다**. 그 조항은 소득세법이고 「지방세법」에는
+   *    거울 조항이 없다(§100 전문 확인). 지방세가 맞는 수로 떨어지는 것은 §92① 표가 §55① 의
+   *    **정확히 1/10** 이라는 대수적 항등 덕이다 ⇒ 화면 문구는 「개인지방소득세 신고서
+   *    「기신고·결정·경정세액」 정산」으로 적고 **조문을 인용하지 않는다**.
+   */
+  clause168_2Credit?: {
+    grossCalculatedTax: number;
+    deducted: number;
+    localDeducted: number;
+  };
 
   // 가산세·공제
   underReportPenalty: number;
@@ -1056,6 +1150,11 @@ export type StockTransferResult = {
     | "장부분실액면가"
     | "기타자산우선§55누진"
     | "기본공제부동산그룹합산"
+    // §94①4 다목 요건 게이트 (2026-09-13)
+    | "다목요건충족"
+    | "다목요건미충족폴백"
+    // 영 §168② 대주주 기납부세액 차감
+    | "§168②대주주기납부차감"
     | "로트개별법"
     | "로트선입선출"
     | "로트이동평균"

@@ -12,6 +12,7 @@
  *    (실측: `unpaidTax` 매핑을 지워도 그런 테스트는 전건 통과했다).
  */
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { toOptionalDate } from "./date-coerce";
 
 export function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput {
   return {
@@ -64,6 +65,12 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     transferredAssetValue: coerced.transferredAssetValue as number | undefined,
     giftTaxableValue: coerced.giftTaxableValue as number | undefined,
     cumulativeTransferRatio: coerced.cumulativeTransferRatio as number | undefined,
+    blockShareholderRealEstateRatio: coerced.blockShareholderRealEstateRatio as number | undefined,
+    blockShareholderOwnershipRatio: coerced.blockShareholderOwnershipRatio as number | undefined,
+    // 🔴 **Date 변환 필수** — JSON 경유 후 string 이 도달하면 `Date < string` 이 silent false 가
+    //    되어 영 §158② 3년 창이 **항상 통과**한다(계획서 검토 F-13).
+    aggregationFirstTransferDate: toOptionalDate(coerced.aggregationFirstTransferDate),
+    priorMajorShareholderTax: coerced.priorMajorShareholderTax as number | undefined,
     nblRatioOfCorpAssets: coerced.nblRatioOfCorpAssets as number | undefined,
     crossClause8TaxBase: coerced.crossClause8TaxBase as number | undefined,
     transferPriceMode: coerced.transferPriceMode as StockTransferInput["transferPriceMode"],

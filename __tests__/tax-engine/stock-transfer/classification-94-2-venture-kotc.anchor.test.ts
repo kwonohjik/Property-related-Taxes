@@ -29,6 +29,7 @@ import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock
 import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 function base(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
     marketType: "kospi",
@@ -136,7 +137,7 @@ describe("CL-94-2 (#7): §94② 4호 적용 소득에는 §94①3호 비과세�
   it("CL-94-2-4: 과점주주(§94①4 다목) 축에서도 같다", () => {
     const r = calculateStockTransferTax(
       base({
-        isQualifyingBlockShareholder: true,
+        ...passingBlockShareholderGate(new Date("2024-06-01")),
         isOnMarketTransaction: true,
         perShareTransferPrice: 500_000,
         perShareAcquisitionPrice: 100_000,
@@ -163,9 +164,9 @@ describe("CL-94-2 (#7): §94② 4호 적용 소득에는 §94①3호 비과세�
   it("CL-94-2-6: 항등식 — appliedRules 에 §94②우선이 있으면 isExempt 는 항상 false", () => {
     const combos: Array<Partial<StockTransferInput>> = [
       { isHeavyRealEstateForRate: true, isOnMarketTransaction: true },
-      { isQualifyingBlockShareholder: true, isOnMarketTransaction: true },
+      { ...passingBlockShareholderGate(new Date("2024-06-01")), isOnMarketTransaction: true },
       { marketType: "unlisted", isHeavyRealEstateForRate: true, isKOTCTrading: true, isVentureCompany: true },
-      { marketType: "unlisted", isQualifyingBlockShareholder: true, isKOTCTrading: true, isSmallMediumEnterprise: true, isListedSmallShareholder: true },
+      { marketType: "unlisted", ...passingBlockShareholderGate(new Date("2024-06-01")), isKOTCTrading: true, isSmallMediumEnterprise: true, isListedSmallShareholder: true },
     ];
     for (const c of combos) {
       const r = calculateStockTransferTax(base(c));

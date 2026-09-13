@@ -25,6 +25,10 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import {
+  judgeBlockShareholderGate,
+  BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
+} from "@/lib/tax-engine/stock-transfer/block-shareholder-gate";
+import {
   validateStep1Foreign,
   validateStep2Foreign,
   validateStep3Foreign,
@@ -512,6 +516,82 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       message: "3년 누적 양도 비율은 100%를 초과할 수 없습니다",
       severity: "error",
     });
+  }
+
+  // ── §94①4 다목 요건 4칸 (영 §158①②) — ⑫ Zod 와 3중 패턴 ──────────────
+  //
+  // 🔑 **미입력은 차단한다.** 다목 토글 ON 은 적극적 선언이므로 요건 수치를 요구한다.
+  //    (형제 `nblRatioOfCorpAssets` 는 «미입력 = 미해당» — 그쪽은 적용이 **불리**해서다.)
+  if (form.isQualifyingBlockShareholder) {
+    const ratioFields: Array<[keyof StockTransferFormData, string]> = [
+      ["blockShareholderRealEstateRatio", "법인 자산총액 중 부동산등 비율"],
+      ["blockShareholderOwnershipRatio", "과점주주 소유비율"],
+      ["cumulativeTransferRatio", "소급 3년 누적 양도비율"],
+    ];
+    for (const [key, label] of ratioFields) {
+      const raw = form[key];
+      if (isEmpty(typeof raw === "string" ? raw : "")) {
+        errors.push({
+          field: key as string,
+          message: `§94①4 다목(과점주주)을 선택하면 «${label}»을 입력하세요 (영 §158①②)`,
+          severity: "error",
+        });
+      } else if (parseF(typeof raw === "string" ? raw : "") > 100) {
+        errors.push({
+          field: key as string,
+          message: `«${label}»은 100%를 초과할 수 없습니다`,
+          severity: "error",
+        });
+      }
+    }
+    if (isEmpty(form.aggregationFirstTransferDate)) {
+      errors.push({
+        field: "aggregationFirstTransferDate",
+        message:
+          "§94①4 다목(과점주주)을 선택하면 «합산기간 최초 양도일»을 입력하세요 " +
+          "(영 §158② — 소급 3년 창 판정 + 요건①② 기준일)",
+        severity: "error",
+      });
+    }
+
+    // 요건 판정은 **엔진 leaf 단일 소스**에 위임한다 — 임계(양도일 종속 「초과/이상」)를
+    // 여기서 다시 쓰면 판정이 두 벌이 된다.
+    const transferDate = form.transferDate ? new Date(form.transferDate) : undefined;
+    const firstDate = form.aggregationFirstTransferDate
+      ? new Date(form.aggregationFirstTransferDate)
+      : undefined;
+    if (transferDate && !Number.isNaN(transferDate.getTime()) && firstDate) {
+      const gate = judgeBlockShareholderGate({
+        realEstateRatio: parseF(form.blockShareholderRealEstateRatio) * 0.01,
+        ownershipRatio: parseF(form.blockShareholderOwnershipRatio) * 0.01,
+        cumulativeTransferRatio: parseF(form.cumulativeTransferRatio) * 0.01,
+        firstTransferDate: firstDate,
+        transferDate,
+      });
+      if (!gate.passed) {
+        const labels = gate.failed
+          .map((r) => BLOCK_SHAREHOLDER_REQUIREMENT_LABEL[r])
+          .join(" · ");
+        if (form.marketType === "other_asset" && !form.isHeavyRealEstateForRate) {
+          // 돌아갈 곳이 없다 — 시장·대주주 정보가 애초에 입력되지 않는다(Step1 이 숨긴다).
+          errors.push({
+            field: "marketType",
+            message:
+              `§94①4 다목 요건 미충족(${labels}) — ` +
+              "시장 유형에서 상장·비상장을 선택해 §94①3호(주식) 세율로 계산하세요.",
+            severity: "error",
+          });
+        } else {
+          // §94①3호 시장이면 **폴백 가능**하다 — 차단하지 않고 안내만 한다.
+          errors.push({
+            field: "isQualifyingBlockShareholder",
+            message:
+              `§94①4 다목 요건 미충족(${labels}) — 기타자산이 아니라 §94①3호(주식) 세율로 계산됩니다.`,
+            severity: "warning",
+          });
+        }
+      }
+    }
   }
 
   // §104①9호 비사업용토지 가액 비율 > 100 금지 (Zod가 0~1 소수로 max(1)을 걸므로 UI에서도 동일 상한)

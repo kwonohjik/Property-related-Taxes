@@ -23,6 +23,7 @@ import { describe, it, expect } from "vitest";
 import { calculateStockTransferTaxAggregate } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 /** kospi 대주주·비중소·2022-01-01 취득·2024-06-01 양도(비단기) ⇒ §104①11호가목2) 20% */
 function stockInput(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
@@ -209,10 +210,13 @@ describe("M-11 🔒 종목별 흡수 차손 echo", () => {
 
   it("M-11-3: 기타자산 그룹도 실린다 (§102①1호)", () => {
     const r = calculateStockTransferTaxAggregate([
-      stockInput({ marketType: "unlisted", isQualifyingBlockShareholder: true }),
       stockInput({
         marketType: "unlisted",
-        isQualifyingBlockShareholder: true,
+        ...passingBlockShareholderGate(new Date("2024-06-01")),
+      }),
+      stockInput({
+        marketType: "unlisted",
+        ...passingBlockShareholderGate(new Date("2024-06-01")),
         perShareTransferPrice: 30_000,
         perShareAcquisitionPrice: 35_000,
       }),
@@ -347,7 +351,7 @@ describe("M-8 🔒 §102①후단: 호가 다르면 통산하지 못한다", () 
   // 기타자산(§94①4호 = §102①1호) 이익 + 주식(§102①2호) 차손
   const OTHER_ASSET_GAIN = stockInput({
     marketType: "unlisted",
-    isQualifyingBlockShareholder: true, // 과점주주 → 기타자산
+    ...passingBlockShareholderGate(new Date("2024-06-01")), // 과점주주 → 기타자산
     perShareTransferPrice: 50_000,
     perShareAcquisitionPrice: 40_000,
   });
@@ -442,7 +446,7 @@ describe("M-9 🔒 비과세 종목은 통산에서 제외 (상속증여세과-2
 function otherAssetInput(o: Partial<StockTransferInput> = {}): StockTransferInput {
   return stockInput({
     marketType: "unlisted",
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     ...o,
   });
 }

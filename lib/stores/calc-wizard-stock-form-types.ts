@@ -130,6 +130,18 @@ export interface StockTransferFormData {
   preMergerAcquisitionDate: string;    // 합병·분할
 
   // ── §94①4 다목 누적 ──
+  // ── §94①4 다목 요건 3종 + 합산창 (2026-09-13) ──────────────────
+  // 전부 **% 문자열**이다(④ API 가 ×0.01 로 0~1 소수 변환). 단위 혼동 주의.
+  /** 요건① 자산총액 중 부동산등 비율 (법 §94①4 다목 · 영 §158④) */
+  blockShareholderRealEstateRatio: string;
+  /** 요건② 주주1인+기타주주 소유비율 (영 §158① — 임계는 양도일 종속) */
+  blockShareholderOwnershipRatio: string;
+  /** 영 §158② 합산기간 **최초 양도일** (ISO YYYY-MM-DD) */
+  aggregationFirstTransferDate: string;
+  /** 영 §168② 「대주주로서 납부하였거나 납부할 세액」 (원 — 정수 문자열) */
+  priorMajorShareholderTax: string;
+  /** Phase C — 합산에 쓴 기신고 이력 id 배열. **엔진에 보내지 않는다**(출처 배지 전용) */
+  blockShareholderSourceIds: string[];
   cumulativeTransferRatio: string;   // % 단위 "30" = 30% (API에서 ×0.01 → 엔진 decimal)
   /** §104①9호 — 법인 자산총액 중 비사업용토지 가액 비율. % 단위 "50" (API에서 ×0.01 → 엔진 decimal) */
   nblRatioOfCorpAssets: string;

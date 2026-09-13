@@ -22,6 +22,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 /** 기타자산 1건. `gain` = 양도차익(원) */
 function otherAsset(gain: number, o: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
@@ -33,7 +34,7 @@ function otherAsset(gain: number, o: Partial<StockTransferInput> = {}): StockTra
     combinedShareRatio: 0,
     combinedMarketCap: 0,
     priorYearEndDate: new Date("2023-12-31"),
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     isHeavyRealEstateForRate: false,
     isHeavyRealEstateForValuation: false,
     isSmallMediumEnterprise: false,

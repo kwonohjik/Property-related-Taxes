@@ -161,6 +161,19 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferredAssetValue: strField("transferredAssetValue"),
     giftTaxableValue: strField("giftTaxableValue"),
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
+    blockShareholderRealEstateRatio: strField("blockShareholderRealEstateRatio"),
+    blockShareholderOwnershipRatio: strField("blockShareholderOwnershipRatio"),
+    aggregationFirstTransferDate: strField("aggregationFirstTransferDate"),
+    priorMajorShareholderTax: strField("priorMajorShareholderTax"),
+    // Phase C 출처 메타 — 배열이라 `strField` 를 쓸 수 없다. 형태가 아니면 빈 배열로 떨어뜨린다
+    // (레거시 sessionStorage 에는 이 키가 아예 없다).
+    blockShareholderSourceIds: Array.isArray(
+      d.blockShareholderSourceIds,
+    )
+      ? (d.blockShareholderSourceIds as unknown[]).filter(
+          (v): v is string => typeof v === "string",
+        )
+      : [],
     cumulativeTransferRatio: strField("cumulativeTransferRatio"),
     nblRatioOfCorpAssets: strField("nblRatioOfCorpAssets"),
     transferPriceMode: enumField("transferPriceMode", ["actual", "exchange"], defaults.transferPriceMode),

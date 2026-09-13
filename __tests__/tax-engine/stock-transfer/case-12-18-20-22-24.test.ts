@@ -13,6 +13,7 @@ import { describe, it, expect } from "vitest";
 import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 // ============================================================
 // 공용 기본 입력 팩토리
 // ============================================================
@@ -79,7 +80,7 @@ describe("케이스 12 — §94② 우선순위 (§94①3 + §94①4 동시)", (
     // 비상장이면서 동시에 과점주주 요건 충족 → §94② → 기타자산(4호) 우선
     const input = baseInput({
       marketType: "unlisted",
-      isQualifyingBlockShareholder: true,  // 다목
+      ...passingBlockShareholderGate(new Date("2024-06-01")),  // 다목
       isHeavyRealEstateForRate: false,
       perShareTransferPrice: 100_000,
       perShareAcquisitionPrice: 20_000,
@@ -129,7 +130,7 @@ describe("케이스 12 — §94② 우선순위 (§94①3 + §94①4 동시)", (
     // 같은 해 부동산 양도로 기본공제 이미 사용 → 잔여 0원
     const input = baseInput({
       marketType: "unlisted",
-      isQualifyingBlockShareholder: true,
+      ...passingBlockShareholderGate(new Date("2024-06-01")),
       realEstateGroupBasicDeductionUsed: 2_500_000,  // 이미 250만 사용
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,

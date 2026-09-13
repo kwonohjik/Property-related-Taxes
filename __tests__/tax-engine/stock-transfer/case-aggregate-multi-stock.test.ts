@@ -17,6 +17,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 // ============================================================
 // 공용 팩토리
 // ============================================================
@@ -80,7 +81,7 @@ function otherAssetInput(overrides: Partial<StockTransferInput> = {}): StockTran
   return {
     ...stockInput(),
     marketType: "other_asset",
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     isHeavyRealEstateForRate: false,
     isHeavyRealEstateForValuation: false,
 
