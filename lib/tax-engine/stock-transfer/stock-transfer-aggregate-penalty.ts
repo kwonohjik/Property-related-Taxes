@@ -122,3 +122,25 @@ export function computeFilingUnitPenalty(
     ...(filing.fraudSplit ? { fraudSplit: filing.fraudSplit } : {}),
   };
 }
+
+/**
+ * 🔴 G-46: 신고 단위 가산세의 **표시용 echo**만 뽑는다.
+ *
+ * 가산세가 0이면 아무것도 싣지 않는다 — 「가산세 0인데 기준금액·조문 배지」가 남으면
+ * `stripItemPenalties`가 warnings에서 조문을 걷어내는 것과 반대 방향의 드리프트가 된다
+ * (메모리 `feedback_engine_result_display_drift`).
+ */
+export function penaltyEcho(u: ReturnType<typeof computeFilingUnitPenalty>): {
+  penaltyBase?: number;
+  penaltyRuleRef?: string;
+  fraudSplit?: FraudPortionSplit;
+} {
+  if (u.filing <= 0) return {};
+  return {
+    penaltyBase: u.penaltyBase,
+    ...(u.ruleRef ? { penaltyRuleRef: u.ruleRef } : {}),
+    ...(u.fraudSplit ? { fraudSplit: u.fraudSplit } : {}),
+  };
+}
+
+/** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
