@@ -219,8 +219,19 @@ describe("A-30~33: cutoff·미제공·기타자산", () => {
   it("A-30b 2020-04-01 경계(포함): 당시 세율 적용", () => {
     expect(calc(KOSPI, "2020-04-01").securitiesTransactionTax).toBe(100_000);
   });
-  it("A-30c 2020-03-31: **커버 밖** — 현행 세율 fallback + 미지원 경고", () => {
+  /**
+   * 2026-09-14 재산정 — 커버가 **2017-04-01 까지 확대**됐다(영 제29788호 2019.6.3 시행 확정).
+   * 2020-03-31 은 이제 fallback 이 아니라 **당시 세율**(영 §5 1호 가목 1천분의 1)이 적용된다.
+   * 커버 밖 판정은 A-30g(2017-03-31)로 옮겼다.
+   */
+  it("A-30c 2020-03-31: 당시 세율 10/10000 적용 + 경고 없음 (영 29788호 구간 말일)", () => {
     const r = calc(KOSPI, "2020-03-31");
+    expect(r.securitiesTransactionTax).toBe(100_000);
+    expect(r.agriculturalTax).toBe(150_000);
+    expect(r.warning).toBeUndefined();
+  });
+  it("A-30g 2017-03-31: **커버 밖** — 현행 세율 fallback + 미지원 경고", () => {
+    const r = calc(KOSPI, "2017-03-31");
     expect(r.securitiesTransactionTax).toBe(50_000);
     expect(r.warning).toBeDefined();
     expect(r.warning).toContain("미지원");
@@ -234,7 +245,7 @@ describe("A-30~33: cutoff·미제공·기타자산", () => {
    * 문구는 legal-codes 리터럴이라 컴파일러가 못 잡는다 — 이 anchor 가 유일한 게이트다.
    */
   it("STX-CUTOFF-SYNC: 경고 문구의 날짜 = STX_CUTOFF_DATE", () => {
-    const r = calc(KOSPI, "2020-03-31");
+    const r = calc(KOSPI, "2017-03-31");
     expect(r.warning).toContain(STX_CUTOFF_DATE);
   });
   it("A-30d 2020년 비상장: 법 §8① 1만분의 45", () => {
@@ -352,5 +363,98 @@ describe("B-02: 다자산 합산 echo — K-OTC 중소 비과세 1천만 + 코�
     expect(result.totalSecuritiesTransactionTax.securitiesTransactionTax).toBe(70_000);
     expect(result.totalSecuritiesTransactionTax.agriculturalTax).toBe(150_000);
     expect(result.totalSecuritiesTransactionTax.totalTax).toBe(220_000);
+  });
+});
+
+// ============================================================
+// A-34 ~ A-40: 2017.4.1~2020.3.31 확대 구간 (2026-09-14)
+//
+// 법령 근거 (KoreanLaw 축자 검증 2026-09-14):
+//   영 제27843호 (2017.2.7 공포, 2017.4.1 시행) §5
+//     1호 1천분의 1.5 = 유가증권시장
+//     2호 1천분의 3   = 가목 코스닥 · 나목 코넥스 · 다목 K-OTC(협회 경유)
+//   영 제29788호 (2019.5.28 공포, **2019.6.3 시행**) §5
+//     1호 1천분의 1   = 가목 유가증권시장 · 나목 코넥스
+//     2호 1천분의 2.5 = 가목 코스닥 · 나목 K-OTC
+//     부칙 §2 적용례: "제5조의 개정규정은 이 영 시행 이후 주권을 양도하는 분부터 적용한다"
+//     ⇒ 경계는 **양도일** 기준 2019.6.3 (A-36·A-37 이 고정)
+//   법 §8① 1천분의 5 — [전문개정 2015.12.29] 제13628호. 2020.3.31까지 불변
+//     (2015.12.29·2018.1.1·2019.9.16 세 버전 본문 축자 대조)
+//
+// 기대값은 법령 축자 숫자로만 계산한다 — 매트릭스 상수 재사용 금지(dual-오염 방지).
+// ============================================================
+describe("A-34~40: 2017.4.1~2020.3.31 구간", () => {
+  it("A-34 2018-05-01 코스피: 1천분의 1.5 = 150,000 + 농특 150,000", () => {
+    const r = calc(KOSPI, "2018-05-01");
+    expect(r.securitiesTransactionTax).toBe(150_000);
+    expect(r.agriculturalTax).toBe(150_000);
+    expect(r.totalTax).toBe(300_000);
+    expect(r.warning).toBeUndefined();
+  });
+  it("A-35 2018-05-01 코스닥·코넥스·K-OTC: 전부 1천분의 3 = 300,000", () => {
+    expect(calc(KOSDAQ, "2018-05-01").securitiesTransactionTax).toBe(300_000);
+    expect(calc(KONEX, "2018-05-01").securitiesTransactionTax).toBe(300_000);
+    expect(calc(KOTC, "2018-05-01").securitiesTransactionTax).toBe(300_000);
+  });
+  it("A-35b 2018-05-01 비상장 장외: 법 §8① 1천분의 5 = 500,000, 농특 0", () => {
+    const r = calc(UNLISTED, "2018-05-01");
+    expect(r.securitiesTransactionTax).toBe(500_000);
+    expect(r.agriculturalTax).toBe(0);
+  });
+  it("A-36 2019-06-02 경계(구 세율 말일): 코스피 150,000 · 코넥스 300,000", () => {
+    expect(calc(KOSPI, "2019-06-02").securitiesTransactionTax).toBe(150_000);
+    expect(calc(KONEX, "2019-06-02").securitiesTransactionTax).toBe(300_000);
+  });
+  it("A-37 2019-06-03 경계(영 29788호 시행 첫날): 코스피 100,000 · 코넥스 100,000", () => {
+    expect(calc(KOSPI, "2019-06-03").securitiesTransactionTax).toBe(100_000);
+    expect(calc(KONEX, "2019-06-03").securitiesTransactionTax).toBe(100_000);
+  });
+  it("A-38 2019-06-03 코스닥·K-OTC: 1천분의 2.5 = 250,000", () => {
+    expect(calc(KOSDAQ, "2019-06-03").securitiesTransactionTax).toBe(250_000);
+    expect(calc(KOTC, "2019-06-03").securitiesTransactionTax).toBe(250_000);
+  });
+  /**
+   * 🔑 본법과 시행령의 경계가 **다른 날**이다 — 시행령 §5 는 2019.6.3, 법 §8① 은 2020.4.1.
+   *    그래서 2019.6.3~2020.3.31 은 「신 탄력세율 + 구 본칙(1천분의 5)」 조합 구간이다.
+   *    구간을 하나로 합치면 이 조합이 사라진다.
+   */
+  it("A-39 2020-03-31 비상장: 법 §8① 구 본칙 1천분의 5 = 500,000", () => {
+    expect(calc(UNLISTED, "2020-03-31").securitiesTransactionTax).toBe(500_000);
+  });
+  it("A-40 2020-04-01 비상장: 법 §8① 신 본칙 1만분의 45 = 450,000", () => {
+    expect(calc(UNLISTED, "2020-04-01").securitiesTransactionTax).toBe(450_000);
+  });
+  it("A-34b 2017-04-01 경계(커버 첫날): 코스피 150,000, 경고 없음", () => {
+    const r = calc(KOSPI, "2017-04-01");
+    expect(r.securitiesTransactionTax).toBe(150_000);
+    expect(r.warning).toBeUndefined();
+  });
+});
+
+// ============================================================
+// A-41: 인용 호·목이 **그 구간에 실재한** 것인가
+//
+// 세율 값이 맞아도 인용이 틀리면 사용자에게 없는 조문을 보여준다 —
+// 2018년 §5 에는 **3호가 없다**(2호 가·나·다목뿐). 현행 구조 상수를 그대로 붙이면
+// 「§5 3호 가목」이 되는데, 값 anchor(A-35)는 그것을 보지 못한다.
+// ============================================================
+describe("A-41: 구간별 시행령 §5 호·목 인용", () => {
+  it("A-41a 2018 코스닥 = §5 2호 가목 (3호 아님)", () => {
+    const ref = calc(KOSDAQ, "2018-05-01").rateReference;
+    expect(ref).toContain("§5 2호 가목");
+    // ⚠️ 부분일치 함정 — refSuffix 의 「영 제2784**3호**」가 "3호"에 걸린다. §5 를 붙여 좁힌다.
+    expect(ref).not.toContain("§5 3호");
+  });
+  it("A-41b 2018 코넥스 = §5 2호 나목 / K-OTC = §5 2호 다목", () => {
+    expect(calc(KONEX, "2018-05-01").rateReference).toContain("§5 2호 나목");
+    expect(calc(KOTC, "2018-05-01").rateReference).toContain("§5 2호 다목");
+  });
+  it("A-41c 2019-06-03 코스피 = §5 1호 가목 / 코넥스 = §5 1호 나목", () => {
+    expect(calc(KOSPI, "2019-06-03").rateReference).toContain("§5 1호 가목");
+    expect(calc(KONEX, "2019-06-03").rateReference).toContain("§5 1호 나목");
+  });
+  it("A-41d 현행(2026) 구간은 override 없이 현행 구조 인용 — 코스닥 §5 3호 가목", () => {
+    expect(calc(KOSDAQ, "2026-03-01").rateReference).toContain("§5 3호 가목");
+    expect(calc(KONEX, "2026-03-01").rateReference).toContain("§5 2호");
   });
 });
