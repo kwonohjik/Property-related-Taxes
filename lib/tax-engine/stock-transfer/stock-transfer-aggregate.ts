@@ -22,14 +22,13 @@ import {
   pickFilingAxisInput,
   stripItemPenalties,
   computeFilingUnitPenalty,
+  penaltyEcho,
 } from "./stock-transfer-aggregate-penalty";
 import {
   sumSecuritiesTransactionTax,
   type SecuritiesTransactionTaxTotal,
 } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
-import { offsetLossesCore } from "@/lib/tax-engine/loss-offset-core";
-import { resolveStockRateKey } from "./stock-transfer-rate-calc";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
 import {
   BASIC_DEDUCTION_LIMIT,
@@ -49,6 +48,10 @@ import {
 
 // [D-2] §104⑤ 비교과세(기타자산 그룹) → stock-transfer-aggregate-104-5.ts로 분리 (800줄 정책).
 //       외부 import 경로 보존을 위해 타입은 여기서 **re-export**한다(consumer 무변경).
+// [800줄 정책 2차] 단건·each_item 단축 경로 → -each-item.ts · §102② 통산 → -loss-offset.ts
+import { aggregateEachItem, type CalcOneFn } from "./stock-transfer-aggregate-each-item";
+import { runStockLossOffset, sumOffset } from "./stock-transfer-aggregate-loss-offset";
+
 import {
   computeOtherAssetComparativeTax,
   sumClause168_2Deductions,
@@ -211,26 +214,6 @@ export function calculateStockTransferTaxAggregate(
   return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode);
 }
 
-/**
- * 🔴 G-46: 신고 단위 가산세의 **표시용 echo**만 뽑는다.
- *
- * 가산세가 0이면 아무것도 싣지 않는다 — 「가산세 0인데 기준금액·조문 배지」가 남으면
- * `stripItemPenalties`가 warnings에서 조문을 걷어내는 것과 반대 방향의 드리프트가 된다
- * (메모리 `feedback_engine_result_display_drift`).
- */
-function penaltyEcho(u: ReturnType<typeof computeFilingUnitPenalty>): {
-  penaltyBase?: number;
-  penaltyRuleRef?: string;
-  fraudSplit?: FraudPortionSplit;
-} {
-  if (u.filing <= 0) return {};
-  return {
-    penaltyBase: u.penaltyBase,
-    ...(u.ruleRef ? { penaltyRuleRef: u.ruleRef } : {}),
-    ...(u.fraudSplit ? { fraudSplit: u.fraudSplit } : {}),
-  };
-}
-
 /** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
 function aggregateCore(
   inputs: AggregateStockItemInput[],
@@ -240,7 +223,7 @@ function aggregateCore(
   const realEstateGroupUsedSeed = resolveRealEstateGroupUsedSeed(inputs);
 
   /** 종목 1건 단건 계산 — 국내·국외 엔진을 갈라 부르고 결과 타입을 하나로 맞춘다. */
-  const calcOne = (
+  const calcOne: CalcOneFn = (
     input: AggregateStockItemInput,
     over: Partial<StockTransferInput> = {},
   ): StockTransferResult =>
@@ -248,181 +231,20 @@ function aggregateCore(
       ? toStockTransferResult(input, calculateForeignStockTax(input))
       : calculateStockTransferTaxInternal({ ...input, ...over });
 
+  // 단건·each_item 단축 경로 — 손익통산·기본공제 배분·§104⑤ 를 모두 건너뛴다.
   if (deductionMode === "each_item" || inputs.length === 1) {
-    // 단건 또는 each_item 모드 — 개별 계산 합산
-    //
-    // §104⑤ 비교과세를 여기서는 적용하지 않는다:
-    //   · `inputs.length === 1` — 법문 요건이 「자산을 **둘 이상** 양도하는 경우」다.
-    //   · `each_item` — §103① 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
-    //     아니다(위 함수 주석). 실제 신고 경로는 `"aggregate"`이며 Zod 기본값도 그쪽이다
-    //     (`lib/api/stock-transfer-tax-schema.ts:548`).
-    // 가산세는 신고 단위 1회라 종목별 값은 버린다(`stripItemPenalties` 주석 참조).
-    const items = stripItemPenalties(inputs.map((input) => calcOne(input)));
-    // 합계가 음수면 과세 소득은 0이다 — 양도소득에 결손금 이월이 없다(§102①후단·§102②).
-    // 부동산 정본과 대칭(`multi-parcel-transfer.ts:478`). 종전에는 clamp가 없어 신고서식에
-    // **음수 양도소득금액**이 그대로 흘렀다.
-    // 비과세 종목의 echo 는 총계에 산입하지 않는다(리뷰 #1 — `taxableField` 주석 참조).
-    const totalTransferIncome = Math.max(
-      0,
-      items.reduce((s, r) => s + taxableField(r, "transferIncome"), 0),
-    );
-    const totalCalculatedTax = items.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0);
-    /**
-     * 🔴 G-45: **입력값**으로 판정한다 — 긴 분기(`anyElectronic`)와 같은 소스다.
-     *
-     * 종전에는 종목 **결과값**(`r.electronicFilingCredit > 0`)을 봤는데, 국외 종목은 어댑터가
-     * 그 필드를 항상 0으로 눌러 놓아 영영 잡히지 않았다. 그래서 같은 「전자신고」 선언인데
-     * **종목 수만으로** 공제 적용 여부가 갈리고, 그 20,000원이 곧바로 가산세 base 를 움직였다
-     * (실측: 국외 1건 → 가산세 7,800,000 / 국외 2건 → 7,872,000).
-     *
-     * 조특법 §104의8①의 공제는 「전자신고의 방법으로 … 신고를 하는 경우」이므로 **신고 단위**
-     * 1회다 — 종목이 국내인지 국외인지와 무관하다.
-     */
-    const electronicFilingCredit = inputs.some((inp) => inp.isElectronicFiling) ? 20_000 : 0;
-    // §118의6①1호 외국납부세액공제는 **산출세액에서 차감**된다. 이 단축 분기(단건·each_item)도
-    // 반드시 빼야 한다 — 국외 종목의 `finalTax`에는 이미 반영돼 있는데 총계에서 빠지면
-    // 종목 세액과 결정세액이 어긋난다(anchor FA-2-2가 이 누락을 잡았다).
-    const totalForeignTaxCreditShort = items.reduce(
-      (s, r) => s + (r.foreignDetail?.foreignTaxCreditApplied ?? 0),
-      0,
-    );
-    // 신고 단위 결정세액 = 산출세액 − 세액공제. 가산세 base 가 바로 이 금액이다.
-    const determinedTotal = Math.max(
-      0,
-      totalCalculatedTax - totalForeignTaxCreditShort - electronicFilingCredit,
-    );
-    const unitPenalty = computeFilingUnitPenalty(determinedTotal, pickFilingAxisInput(inputs));
-    const totalUnderReportPenalty = unitPenalty.filing;
-    const totalLatePaymentPenalty = unitPenalty.late;
-    // 결정세액 10원 미만 절사 — 단건 finalizeStockTax·aggregate 분기와 대칭
-    // (구성요소가 모두 10배수라 현재 실수치 불변이나, 향후 변경 대비 정합 유지)
-    const totalFinalTax = Math.max(
-      0,
-      floorTen(determinedTotal + totalUnderReportPenalty + totalLatePaymentPenalty),
-    );
-    const totalLocalIncomeTax =
-      Math.floor(((totalCalculatedTax - totalForeignTaxCreditShort) * 0.10) / 10) * 10;
-
-    return {
-      items,
-      totalTransferIncome,
-      basicDeductionByGroup: {
-        stock: items
-          .filter((r) => r.basicDeductionGroup === "stock")
-          .reduce((s, r) => s + taxableField(r, "basicDeduction"), 0),
-        real_estate_and_other_asset: items
-          .filter((r) => r.basicDeductionGroup === "real_estate_and_other_asset")
-          .reduce((s, r) => s + taxableField(r, "basicDeduction"), 0),
-      },
-      totalTaxBase: items.reduce((s, r) => s + taxableField(r, "taxBase"), 0),
-      totalCalculatedTax,
-      totalUnderReportPenalty,
-      totalLatePaymentPenalty,
-      // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.
-      ...penaltyEcho(unitPenalty),
-      electronicFilingCredit,
-      totalFinalTax,
-      totalLocalIncomeTax,
-      totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(items),
-    };
+    return aggregateEachItem(inputs, calcOne);
   }
 
   // "aggregate" 모드 — §103① 그룹별 기본공제 1회 **한도** + §103② 배분 **순서**
-  // STEP 1: 각 종목 기본공제 최대 소진으로 단건 계산 (순수 소득금액 파악)
-  const rawItems = inputs.map((input) =>
-    // 부동산 그룹은 이미 소진됨으로 처리 → 실질적 기본공제 0 (국외주식엔 해당 축이 없다)
-    calcOne(input, { realEstateGroupBasicDeductionUsed: BASIC_DEDUCTION_LIMIT }),
-  );
-
-  // STEP 1.5: §102② 양도차손 통산 (영 §167의2①) — **§92②2호 「양도소득금액」 단계**라
-  //           기본공제(§103)보다 **먼저** 온다.
-  //
-  // 🔑 통산은 **§102① 각 호별로만** 한다. 주식(2호)과 기타자산(1호)은 서로 통산하지 못하므로
-  //    코어를 **그룹마다 따로** 돌린다. 하나로 합쳐 돌리면 영 §167의2①2호의 「다른 세율 pro-rata」가
-  //    호 경계를 넘어버린다(§102①후단 「다른 호의 소득금액과 합산하지 아니한다」 위반).
-  //
-  // 🔑 **두 그룹을 각각 돌린다** (2026-09-12 — 종전에는 주식 그룹만 돌렸다).
-  //    기타자산(§94①4호)은 §102①**1호** 그룹이고 주식(§94①3호)은 **2호** 그룹이다.
-  //    §102②의 경계는 「각 호별로」 **하나뿐**이고 건수·자산종류에 관한 추가 조건이 없으므로,
-  //    같은 호 안의 기타자산끼리도 통산은 **명문상 강제**다.
-  //
-  //    종전에 기타자산이 빠져 있던 것은 아래 `processItem`의 기타자산 분기가
-  //    `calculateStockTransferTaxInternal`을 입력에서 다시 돌리는 구조라 통산 소득을 주입할
-  //    자리가 없었기 때문이다. 그 분기를 주식과 **같은 패치 규약**으로 바꿔 함께 해소했다.
-  //    ⚠️ **둘 중 하나만 고치면 아무것도 바뀌지 않는다** — 실측으로 확인했다(계획서 §3 M1).
-  //
-  //    범위 밖으로 남는 것: **부동산 ↔ 기타자산 크로스 통산**. 둘 다 §102①1호지만 엔진이
-  //    분리돼 경로가 없다(`cross-engine-104-5-real-estate-other-asset.plan.md` §8).
-  //
-  // 계획서: docs/00-pm/stock-multi-asset-filing-loss-offset.plan.md §2 G-2 · §4.2
-  const groupIdx = (g: StockTransferResult["basicDeductionGroup"]): number[] =>
-    rawItems.map((r, i) => ({ r, i })).filter((x) => x.r.basicDeductionGroup === g).map((x) => x.i);
-
-  /**
-   * 「같은 세율을 적용받는 자산」(영 §167의2①1호) 축은 **호출자가 정한다**.
-   * `resolveStockRateKey`가 주식 4축 + 기타자산 2축(§104①1호 `other_asset_progressive` /
-   * §104①9호 `other_asset_progressive_nbl`)을 모두 준다 — 기타자산 2축은 §104⑤ 버킷
-   * (`"104-1-1"` / `"104-1-9"`)과 **1:1**이다.
-   *
-   * 🔑 「같은 세율」은 **세율 «표»** 축이지 과세표준별 marginal rate가 아니다 — 부동산 정본
-   * `RateGroup`이 `"progressive"`(6~45% 누진)를 한 그룹으로 두는 것과 같은 규약이다.
-   */
-  const runOffset = (idx: number[]) =>
-    offsetLossesCore(
-      idx.map((i) => ({
-        income: rawItems[i].transferIncome,
-        rateKey: resolveStockRateKey(
-          rawItems[i].taxCategory,
-          smeFlag(inputs[i]),
-          rawItems[i].isShortTermHolding,
-        ),
-        exempt: rawItems[i].isExempt,
-      })),
-    );
-
-  const stockIdx = groupIdx("stock");
-  const otherAssetIdx = groupIdx("real_estate_and_other_asset");
-  const stockOffset = runOffset(stockIdx);
-  const otherAssetOffset = runOffset(otherAssetIdx);
-
-  /** 통산 후 양도소득금액 — 그룹별 코어 결과로 갈아끼운다. */
-  const offsetIncome: number[] = rawItems.map((r) => r.transferIncome);
-  /**
-   * 종목별 **흡수한 차손** — 영 §167의2①1호(같은 세율군) / 2호(다른 세율군 안분).
-   *
-   * 코어는 이 둘을 늘 계산하는데 종전에는 **총액만 쓰고 버렸다**. 그러면 결과 화면이
-   * 「내 3번 종목이 얼마를 흡수했는가」를 설명하지 못한다 — 부동산 정본은 자산별로 보여준다
-   * (`PerPropertyBreakdown.lossOffsetFromSameGroup` / `…FromOtherGroup`).
-   *
-   * ⚠️ **통산이 실제로 일어난 종목에만 싣는다**(`undefined` 유지). 0을 채우면 결과 화면이
-   *   「0원 흡수」 행을 만들어 「통산 자체가 없음」과 구분되지 않는다.
-   */
-  const offsetFromSame: (number | undefined)[] = rawItems.map(() => undefined);
-  const offsetFromOther: (number | undefined)[] = rawItems.map(() => undefined);
-
-  const applyOffset = (idx: number[], core: ReturnType<typeof offsetLossesCore>) => {
-    const touched = core.rows.length > 0;
-    idx.forEach((globalIdx, localIdx) => {
-      offsetIncome[globalIdx] = core.incomeAfterOffset[localIdx];
-      if (!touched) return;
-      offsetFromSame[globalIdx] = core.fromSame[localIdx];
-      offsetFromOther[globalIdx] = core.fromOther[localIdx];
-    });
-  };
-  applyOffset(stockIdx, stockOffset);
-  applyOffset(otherAssetIdx, otherAssetOffset);
-
-  /** 종목별 흡수액 echo — 통산이 없던 그룹이면 아무것도 싣지 않는다. */
-  const lossOffsetEcho = (i: number) =>
-    offsetFromSame[i] === undefined
-      ? {}
-      : {
-          lossOffsetFromSameGroup: offsetFromSame[i],
-          lossOffsetFromOtherGroup: offsetFromOther[i],
-        };
-
-  const sumOffset = (o: ReturnType<typeof offsetLossesCore>) =>
-    o.rows.reduce((s, row) => s + row.amount, 0);
+  const {
+    rawItems,
+    stockIdx,
+    stockOffset,
+    otherAssetOffset,
+    offsetIncome,
+    lossOffsetEcho,
+  } = runStockLossOffset(inputs, calcOne);
 
   // STEP 2: 그룹별 소득금액 합산 — **통산 후** 기준(§92② 순서)
   const stockGroupIncome = stockIdx.reduce((s, i) => s + offsetIncome[i], 0);
