@@ -94,6 +94,8 @@ export function toStockTransferResult(
     // 5년 미충족은 「비과세」가 아니라 **납세의무 자체가 없는** 것이라 isExempt로 표현하지 않는다.
     isExempt: false,
 
+    // 이력 복원용 echo
+    shareCount: input.shareCount,
     transferPrice: r.transferPriceKrw,
     acquisitionPrice: r.acquisitionPriceKrw,
     // §118의4 — 환산취득가액 제도가 없다(§97② 경로가 오지 않는다).

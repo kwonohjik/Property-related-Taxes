@@ -101,6 +101,8 @@ export function buildExemptResult(
     clause9TaxBase: 0,
     clause9Tax: 0,
 
+    // 이력 복원용 echo — 비과세라도 「몇 주를 팔았는가」는 그대로 남긴다
+    shareCount: input.shareCount,
     transferPrice,
     transferPriceBreakdown: undefined,
 

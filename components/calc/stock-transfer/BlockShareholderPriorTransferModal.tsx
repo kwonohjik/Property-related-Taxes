@@ -61,7 +61,20 @@ export function BlockShareholderPriorTransferModal({
 }: Props) {
   /** `null` = **아직 안 읽음**(로딩). 빈 배열과 구분해야 「이력 없음」 문구가 깜빡이지 않는다. */
   const [candidates, setCandidates] = useState<PriorStockTransferCandidate[] | null>(null);
-  const [excludedCount, setExcludedCount] = useState(0);
+  /**
+   * 제외 사유별 건수 — **사유를 합쳐 말하지 않는다**.
+   *
+   * 종전 문구는 「3년 창 밖**이거나** 계산 결과가 없어 제외됐습니다」였다. 두 사유는 처방이
+   * 정반대다(전자는 합산 대상이 아예 아니고, 후자는 값이 복원되지 않은 것) — 합쳐 말하면
+   * 사용자가 어느 쪽인지 알 수 없다. 실제로 그 문구 때문에 결함 제보가 3년 창 문제로 오인됐다.
+   *
+   * `different_client`·`future_date`는 화면에서 다루지 않는다(사용자가 의도한 격리·입력 오류라
+   * 안내 가치가 낮다) — 계획서 Q-2 결정.
+   */
+  const [excluded, setExcluded] = useState<{ exceed3y: number; resultMissing: number }>({
+    exceed3y: 0,
+    resultMissing: 0,
+  });
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -75,7 +88,7 @@ export function BlockShareholderPriorTransferModal({
       const d = transferDate ? new Date(transferDate) : undefined;
       if (!d || Number.isNaN(d.getTime())) {
         setCandidates([]);
-        setExcludedCount(0);
+        setExcluded({ exceed3y: 0, resultMissing: 0 });
         return;
       }
       const { candidates: found, warnings } = filterPriorStockTransferCandidates(records, {
@@ -86,7 +99,10 @@ export function BlockShareholderPriorTransferModal({
       });
       setCandidates(found);
       // 「다른 법인」은 사용자가 이해할 이유가 없다 — 같은 법인인데 제외된 것만 센다.
-      setExcludedCount(warnings.filter((w) => w.reason !== "different_security").length);
+      setExcluded({
+        exceed3y: warnings.filter((w) => w.reason === "exceed_3y").length,
+        resultMissing: warnings.filter((w) => w.reason === "result_missing").length,
+      });
       setChecked(new Set(selectedIds.filter((id) => found.some((c) => c.calculationId === id))));
     })();
     return () => {
@@ -129,9 +145,17 @@ export function BlockShareholderPriorTransferModal({
               1차 신고를 다른 프로그램으로 했거나 이 기기에 이력이 없으면 후보가 나오지 않습니다.
               그럴 때는 <strong>각 칸을 직접 입력</strong>하면 됩니다 — 합산값(1·2차 합계)을 넣으세요.
             </p>
-            {excludedCount > 0 && (
+            {excluded.exceed3y > 0 && (
               <p className="text-xs text-amber-700">
-                같은 법인 이력 {excludedCount}건이 3년 창 밖이거나 계산 결과가 없어 제외됐습니다.
+                같은 법인 이력 {excluded.exceed3y}건은 <strong>양도일이 소급 3년을 넘어</strong>{" "}
+                합산 대상이 아닙니다 (영 §158②).
+              </p>
+            )}
+            {excluded.resultMissing > 0 && (
+              <p className="text-xs text-amber-700">
+                같은 법인 이력 {excluded.resultMissing}건은{" "}
+                <strong>계산 결과(양도가액·주식수)가 저장돼 있지 않아</strong> 합산할 수 없습니다.
+                해당 이력을 다시 계산해 저장하면 후보로 뜹니다.
               </p>
             )}
           </div>
@@ -154,8 +178,9 @@ export function BlockShareholderPriorTransferModal({
                     <span className="text-sm font-medium">{c.transferDate}</span>
                     <span className="text-xs text-slate-500">{c.title}</span>
                     {c.wasAlreadyBlockShareholder && (
-                      <Badge variant="outline" className="border-amber-300 text-amber-700">
-                        이미 기타자산(§94①4다) — 기납부 합산 제외
+                      // 정보 배지다 — 합산에서 빼지 않는다. 뺄지는 사용자가 선택 해제로 정한다.
+                      <Badge variant="outline" className="border-slate-300 text-slate-600">
+                        기타자산(§94①4다)으로 신고된 건
                       </Badge>
                     )}
                   </div>
@@ -184,10 +209,11 @@ export function BlockShareholderPriorTransferModal({
               </span>
               <span>최초 양도일 {preview.aggregationFirstTransferDate}</span>
             </div>
-            {preview.excludedFromPriorTaxIds.length > 0 && (
-              <p className="mt-1 text-amber-700">
-                {preview.excludedFromPriorTaxIds.length}건은 이미 기타자산(§94①4 다목)으로 신고돼
-                「대주주로서 납부한 세액」이 아니므로 기납부 합산에서 제외했습니다(영 §168②).
+            {preview.alreadyBlockShareholderIds.length > 0 && (
+              <p className="mt-1 text-slate-600">
+                이 중 {preview.alreadyBlockShareholderIds.length}건은 기타자산(§94①4 다목)으로
+                신고된 건입니다 — 기납부세액에 <strong>그대로 합산</strong>했습니다. 빼려면 위에서
+                선택을 해제하세요.
               </p>
             )}
           </div>

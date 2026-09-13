@@ -816,6 +816,20 @@ export type StockTransferResult = {
   isExempt: boolean;
   exemptReason?: "kotc_sme_mid" | "kotc_venture" | "non_major_in_market";
 
+  /**
+   * 그 회차에 **양도한** 주식수 echo — `input.shareCount` 그대로. 산식에는 쓰이지 않는다.
+   *
+   * 🔴 **필수 필드다.** 종전에는 결과에 수량이 아예 없어서, 이력에서 복원해야 하는 소비자가
+   *    값을 얻지 못했다 — 과점주주 §158② 「기신고 이력에서 합산」이 그 때문에
+   *    후보를 한 건도 못 내고 있었다(`lib/calc/stock-prior-transfer-lookup.ts`).
+   *    optional 로 두면 조립 지점 누락을 컴파일러가 잡지 못하므로 필수로 둔다.
+   *
+   * ⚠️ **자본조정 환산 후 수량이 아니다**(`capitalAdjustmentsDetail.baseShareCount`와 구분).
+   *    영 §158② 누적 양도비율의 분자는 「양도한 주식등의 수」이므로 입력 수량이 정본이다 —
+   *    둘이 어긋나면 엔진이 경고를 낸다(`stock-transfer-pr2-detail.ts:91-93`).
+   */
+  shareCount: number;
+
   // 양도가액
   transferPrice: number;
   transferPriceBreakdown?: { property: number; debt: number; cash: number };
