@@ -189,3 +189,25 @@ export function computeOtherAssetComparativeTax(
     aggregatedTax,
   };
 }
+
+/**
+ * 영 §168② — **§104⑤ MAX 「이후」** 차감액 합계. 신고 단위 총계 보정에 쓴다.
+ *
+ * 단건 경로는 STEP 9 에서 이미 뺐지만 **다건에서는 그 차감이 통째로 소실된다**:
+ *   · 위 `computeOtherAssetComparativeTax` 는 종목의 `calculatedTax` 를 **쓰지 않는다** —
+ *     버킷별로 `taxBase` 에서 세율을 **재적용**한다.
+ *   · 총계 식이 `itemSumTax`(= Σ 종목 `calculatedTax`)로 **상쇄**하므로, 기타자산이 2건
+ *     이상이면 총계는 `aggregatedTax` 그 자체가 되고 차감의 흔적이 사라진다.
+ *
+ * 순서가 「§104⑤ → §168②」인 근거:
+ *   ① §168② 은 「산출세액에 … **포함되어 있는 경우**」라 **산출세액 확정 후**를 전제한다.
+ *   ② 법 §104⑤**1호**는 「양도소득과세표준 **합계액**에 §55①」이라 세액에서 뺄 자리가
+ *      구조적으로 **없다** ⇒ §168② 을 먼저 적용하는 것은 불가능하다.
+ *   ③ 이중과세 방지 취지는 어느 호가 이기든 **한 번만** 빼면 달성된다.
+ *
+ * ⚠️ `"independent"` 모드는 이 보정이 **필요 없다** — 거기서는 §104⑤ 비교를 하지 않아
+ *    종목 `calculatedTax`(차감 후)가 그대로 합산된다.
+ */
+export function sumClause168_2Deductions(items: readonly StockTransferResult[]): number {
+  return items.reduce((sum, r) => sum + (r.clause168_2Credit?.deducted ?? 0), 0);
+}

@@ -16,6 +16,7 @@ import { adjustShareCountAndCost } from "@/lib/tax-engine/stock-transfer/stock-c
 import { evaluateMarketSample } from "@/lib/tax-engine/stock-transfer/stock-valuation-market-sample";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
     marketType: "unlisted",
@@ -236,7 +237,7 @@ describe("MS-5: 특수관계인 counterparty warning", () => {
 describe("MS-6: 기타자산(other_asset)도 매매사례 적용 가능", () => {
   const result = calculateStockTransferTax(baseInput({
     marketType: "other_asset",
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     acquisitionMode: "sale_case",
     acquisitionMarketSamplePrice: 100_000,
   }));

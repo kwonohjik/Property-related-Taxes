@@ -38,6 +38,7 @@ import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/Security
 import { ForeignStockBlock } from "@/components/calc/stock-transfer/ForeignStockBlock";
 import { ExitTaxBlock } from "@/components/calc/stock-transfer/ExitTaxBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type {
   StockTransferFormData,
   AcquisitionLotForm,
@@ -61,6 +62,8 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 }
 
 export function Step1({ form, onChange }: Step1Props) {
+  // 세무사 모드 의뢰인 격리 — 기신고 이력 후보 필터 축(영 §158② 합산 모달).
+  const { activeClientId } = useProfessionalStore();
   const syncedChange = withAutoSyncMajor(form, onChange);
   /** 분할 → 단일 전환 확인 — 확정 전까지 토글·데이터 불변 */
   const [pendingSingle, setPendingSingle] = useState(false);
@@ -368,7 +371,9 @@ export function Step1({ form, onChange }: Step1Props) {
       items.push({
         key: "other",
         title: "기타자산 해당 여부 (§94①4)",
-        render: () => <OtherAssetBlock form={form} onChange={onChange} />,
+        render: () => (
+          <OtherAssetBlock form={form} onChange={onChange} activeClientId={activeClientId} />
+        ),
       });
     }
 

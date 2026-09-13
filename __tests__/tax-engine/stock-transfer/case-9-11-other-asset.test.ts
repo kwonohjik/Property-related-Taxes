@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
   return {
     marketType: "kospi",
@@ -197,7 +198,7 @@ describe("케이스 10 — §94①4 다목 과점주주 기타자산 (§55 누�
   // 코스피 상장 + 과점주주 → §94② 우선 → 기타자산(다목) 분류
   const blockShareholderInput = baseInput({
     marketType: "kospi",
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     isHeavyRealEstateForRate: false,
     isMajorShareholder: true,
     selfShareRatio: 0.60,
@@ -247,7 +248,7 @@ describe("케이스 10 — §94①4 다목 과점주주 기타자산 (§55 누�
   it("C10-07: other_asset 직접 선택 + 과점주주 → §55 누진", () => {
     const result = calculateStockTransferTax(baseInput({
       marketType: "other_asset",
-      isQualifyingBlockShareholder: true,
+      ...passingBlockShareholderGate(new Date("2024-06-01")),
       perShareTransferPrice: 100_000,
       perShareAcquisitionPrice: 50_000,
       shareCount: 1_000,
@@ -291,7 +292,7 @@ describe("케이스 11 — §94①4 라목 부동산과다보유법인 기타자
   it("C11-04: 과점주주 + 부동산과다보유 동시 → 과점주주 우선 (다목 우선)", () => {
     const result = calculateStockTransferTax({
       ...heavyREInput,
-      isQualifyingBlockShareholder: true,
+      ...passingBlockShareholderGate(new Date("2024-06-01")),
       isHeavyRealEstateForRate: true,
     });
     // classifySection94에서 isQualifyingBlockShareholder 우선

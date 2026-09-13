@@ -47,7 +47,7 @@ function otherAsset(gain: number, o: Partial<StockTransferInput> = {}): StockTra
     combinedShareRatio: 0,
     combinedMarketCap: 0,
     priorYearEndDate: new Date("2023-12-31"),
-    isQualifyingBlockShareholder: true,
+    ...passingBlockShareholderGate(new Date("2024-06-01")),
     isHeavyRealEstateForRate: false,
     isHeavyRealEstateForValuation: false,
     isSmallMediumEnterprise: false,
@@ -216,6 +216,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 import { applyStockTaxRate } from "@/lib/tax-engine/stock-transfer/stock-transfer-rate-calc";
 
+import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
 describe("SS §104①9호 집합 단일 소스", () => {
   it("SS-1: 집합은 다목·라목 두 카테고리다", () => {
     expect([...NBL_HEAVY_CORP_CATEGORIES].sort()).toEqual([

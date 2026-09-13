@@ -436,7 +436,44 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // ──────────────────────────────────────────────────────────
   // STEP 9: 산출세액 (10원 미만 절사 §47①)
   // ──────────────────────────────────────────────────────────
-  const calculatedTax = floorTen(rateResult.calculatedTax);
+  const grossCalculatedTax = floorTen(rateResult.calculatedTax);
+
+  /**
+   * 영 §168② — 「법 §104①**1호**를 적용할 때 법 §94①4**다목**에 따른 주식등의 양도소득
+   * 산출세액에 **대주주로서 납부하였거나 납부할 세액**이 포함되어 있는 경우에는 이를
+   * **차감하여 계산한 금액을 양도소득산출세액으로 한다**」
+   *
+   * 🔑 **세액공제가 아니라 「산출세액」의 정의다.** 그래서 STEP 9 에서 반영해야 하류가
+   *    전부 따라온다 — 결정세액(`finalize:227`) · 가산세 기준금액(국기법 §47조의3① 「과소신고한
+   *    **납부세액**」) · 지방소득세(`finalize:245` `calculatedTax × 10%`).
+   *
+   * ✅ **Q-1 확정(사용자, 2026-09-12) — §104①9호에도 적용한다.** 조문 문언은 「제104조제1항
+   *    **제1호**를 적용할 때」로 1호를 가리키지만, 「대주주로서 이미 낸 세액」은 9호(비사업용토지
+   *    과다, 기본세율+10%p) 산출세액에도 **똑같이 포함**돼 있다. 빼지 않으면 그 부분을 두 번
+   *    과세하게 되어 납세자에게 불리하다. ⚠️ **법문을 넘는 확장**이라 결과 카드에도 명시한다.
+   *
+   * 🔴 술어는 **분류 결과**다 — 원시 토글이 아니다. `isQualifyingBlockShareholder` 를 쓰면
+   *    「게이트 실패 + 라목 ON」에서 적용 조문이 `①4라` 인데도 차감이 붙는다. 라목 단독도
+   *    `basicDeductionGroup` 이 `real_estate_and_other_asset` 이고 `isExempt` 가 false 라
+   *    그 둘로는 **막지 못한다**. 영 §168② 이 열거하는 것은 「§94①4호 **다목**」뿐이다
+   *    (§104①9호가 다목·라목 둘 다인 것과 대비 — 혼동 주의).
+   */
+  const isClause168_2Applicable =
+    classification.appliedSection94 === "①4다" && !classification.isExempt;
+  const clause168_2Deducted = isClause168_2Applicable
+    ? Math.min(grossCalculatedTax, Math.max(0, input.priorMajorShareholderTax ?? 0))
+    : 0;
+  /**
+   * 🔑 **`floorTen` 재적용** — 차감액은 사용자 입력이라 10의 배수가 아닐 수 있다.
+   *    빼기만 하면 「산출세액 10원 미만 절사」(국고금 관리법 §47①)가 깨진다.
+   */
+  const calculatedTax = floorTen(grossCalculatedTax - clause168_2Deducted);
+  if (clause168_2Deducted > 0) {
+    // 규칙 마커는 `appliedRules`(결과 배지) · 조문 문자열은 `warnings`(산식 각주) —
+    // 두 축이 다르다. 마커만 넣으면 화면이 조문을 못 찾고, 조문만 넣으면 배지가 안 뜬다.
+    appliedRules.push("§168②대주주기납부차감");
+    warnings.push(STOCK.CLAUSE_168_2_PRIOR_MAJOR_CREDIT);
+  }
 
   // ──────────────────────────────────────────────────────────
   // STEP 10~12: Finalize (가산세·공제·지방세)
@@ -489,6 +526,20 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // ──────────────────────────────────────────────────────────
   const fullResult: StockTransferResult = {
     ...(cross1045Adjustment ? { cross1045Adjustment } : {}),
+    ...(clause168_2Deducted > 0
+      ? {
+          clause168_2Credit: {
+            grossCalculatedTax,
+            deducted: clause168_2Deducted,
+            // 지방 대응분 — §168② 이 아니라 **지방소득세 신고서 정산란**이 근거다(§92① 표가
+            // §55① 의 정확히 1/10 이라 같은 수가 된다). 화면은 조문을 인용하지 않는다.
+            localDeducted: floorTen(Math.floor(clause168_2Deducted * 0.1)),
+          },
+        }
+      : {}),
+    ...(classification.blockShareholderGate
+      ? { blockShareholderGate: classification.blockShareholderGate }
+      : {}),
     clause1BucketTaxBase: isClause1 ? taxBase : 0,
     clause1BucketTax: isClause1 ? calculatedTax : 0,
     clause9TaxBase: isClause9 ? taxBase : 0,

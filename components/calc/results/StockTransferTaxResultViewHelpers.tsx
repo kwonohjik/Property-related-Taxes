@@ -239,6 +239,9 @@ export function ProgressiveTaxBreakdown({ result }: { result: StockTransferResul
 const RULE_BADGE: Record<string, string> = {
   "국외주식§118②준용": "bg-sky-100 text-sky-700 border-sky-200",
   "§94②우선": "bg-rose-100 text-rose-700 border-rose-200",
+  "다목요건충족": "bg-rose-100 text-rose-700 border-rose-200",
+  "다목요건미충족폴백": "bg-amber-100 text-amber-700 border-amber-200",
+  "§168②대주주기납부차감": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "80%하한": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
   "80%하한미적용": "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200",
   "단기30%": "bg-rose-100 text-rose-700 border-rose-200",
@@ -266,6 +269,10 @@ const RULE_BADGE_LAW_MAP: Record<
 > = {
   "국외주식§118②준용": "소득세법 §118②1호",
   "§94②우선": "소득세법 §94②",
+  // §94①4 다목 요건 게이트 (2026-09-13) — 요건은 법 본문 + 영 §158①②
+  "다목요건충족": "소득세법 시행령 §158",
+  "다목요건미충족폴백": "소득세법 시행령 §158",
+  "§168②대주주기납부차감": "소득세법 시행령 §168②",
   "80%하한": "소득세법 시행령 §165④1",
   "80%하한미적용": "소득세법 시행령 §165④1",
   "단기30%": "소득세법 §104①11",

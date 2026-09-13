@@ -570,9 +570,34 @@ export function buildRows(
     indent: true,
   });
 
+  // 24-1·24-2. 영 §168② — 대주주로서 납부하였거나 납부할 세액 차감
+  //
+  // 🔑 이 차감은 **세액공제가 아니라 「산출세액」의 정의**다(영 §168②: 「차감하여 계산한 금액을
+  //    양도소득산출세액으로 한다」). 그래서 25행 «앞»에 놓고, 25행은 **차감 후** 값이다.
+  if (result.clause168_2Credit) {
+    rows.push({
+      label: "24-1. 산출세액 (차감 전)",
+      values: val(
+        result.clause168_2Credit.grossCalculatedTax,
+        (agg) => agg.totalCalculatedTax + (agg.totalClause168_2Deducted ?? 0),
+        (item) => item.clause168_2Credit?.grossCalculatedTax ?? item.calculatedTax,
+      ),
+    });
+    rows.push({
+      label: "24-2. △ 대주주로서 납부하였거나 납부할 세액 (소득세법 시행령 §168②)",
+      values: val(
+        -result.clause168_2Credit.deducted,
+        (agg) => -(agg.totalClause168_2Deducted ?? 0),
+        (item) => -(item.clause168_2Credit?.deducted ?? 0),
+      ),
+    });
+  }
+
   // 25. 산출세액
   rows.push({
-    label: "25. 산출세액 (§47① 10원 미만 절사)",
+    label: result.clause168_2Credit
+      ? "25. 산출세액 (영 §168② 차감 후 · §47① 10원 미만 절사)"
+      : "25. 산출세액 (§47① 10원 미만 절사)",
     values: val(
       result.calculatedTax,
       (agg) => agg.totalCalculatedTax,
@@ -668,7 +693,9 @@ export function buildRows(
 
   // 30. 지방소득세 §103의3
   rows.push({
-    label: "30. 지방소득세 §103의3 (산출세액 × 10%, 10원 절사)",
+    label: result.clause168_2Credit
+      ? "30. 지방소득세 §103의3 (영 §168② 차감 «후» 산출세액 × 10%, 10원 절사)"
+      : "30. 지방소득세 §103의3 (산출세액 × 10%, 10원 절사)",
     values: val(
       result.localIncomeTax,
       (agg) => agg.totalLocalIncomeTax,

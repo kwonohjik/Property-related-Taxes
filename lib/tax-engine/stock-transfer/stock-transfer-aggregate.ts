@@ -51,6 +51,7 @@ import {
 //       외부 import 경로 보존을 위해 타입은 여기서 **re-export**한다(consumer 무변경).
 import {
   computeOtherAssetComparativeTax,
+  sumClause168_2Deductions,
   type OtherAssetComparativeTax,
 } from "./stock-transfer-aggregate-104-5";
 
@@ -117,6 +118,11 @@ export interface StockTransferAggregateResult {
    * `"aggregate"` 모드에서만 만들어진다(§103①·② 기본공제가 정상 배분되는 실제 신고 경로).
    */
   otherAssetComparativeTax?: OtherAssetComparativeTax;
+  /**
+   * 영 §168② — **신고 단위** 대주주 기납부세액 차감액 합계(원). 차감이 있을 때만 실린다.
+   * 종목별 내역은 `items[].clause168_2Credit` 에 있다.
+   */
+  totalClause168_2Deducted?: number;
   /**
    * 신고불성실가산세 — **신고 1건 단위 1회** 산정 (국세기본법 §47조의2·§47조의3).
    * 종목별 값의 합이 아니다. 종목 결과의 `underReportPenalty` 는 전부 0 이다.
@@ -679,11 +685,21 @@ function aggregateCore(
   // §104⑤ 비교과세 — 기타자산 그룹만 호별 합산으로 다시 낸다(위 함수 주석 참조).
   // 주식 그룹은 §104⑤ 대상이 아니라 종전대로 단건 합계다.
   const otherAssetComparativeTax = computeOtherAssetComparativeTax(processedItems, inputs);
-  const totalCalculatedTax =
-    processedItems.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0) +
-    (otherAssetComparativeTax
-      ? otherAssetComparativeTax.aggregatedTax - otherAssetComparativeTax.itemSumTax
-      : 0);
+
+  // 영 §168② — **§104⑤ MAX 「이후」** 차감(근거·소실 메커니즘은 헬퍼 주석 참조).
+  const clause168_2Total = sumClause168_2Deductions(processedItems);
+  const totalCalculatedTax = Math.max(
+    0,
+    floorTen(
+      processedItems.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0) +
+        (otherAssetComparativeTax
+          ? otherAssetComparativeTax.aggregatedTax -
+            otherAssetComparativeTax.itemSumTax -
+            // 비교과세가 상쇄해 버린 차감을 **여기서 한 번** 되돌린다.
+            clause168_2Total
+          : 0),
+    ),
+  );
 
   // 전자신고 공제는 합산 1회
   const anyElectronic = inputs.some((inp) => inp.isElectronicFiling);
@@ -747,6 +763,8 @@ function aggregateCore(
         }
       : {}),
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
+    // 영 §168② 신고 단위 차감액 합계 — 결과 화면이 「무엇을 뺐는지」를 복원한다.
+    ...(clause168_2Total > 0 ? { totalClause168_2Deducted: clause168_2Total } : {}),
     totalUnderReportPenalty,
     totalLatePaymentPenalty,
     // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.

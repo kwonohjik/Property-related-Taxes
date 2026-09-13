@@ -441,8 +441,27 @@ export function StockTransferTaxResultView({
           <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
           <ResultRow label="기본공제" value={result.basicDeduction} />
           <ResultRow label="과세표준" value={result.taxBase} highlight />
+          {result.clause168_2Credit ? (
+            <>
+              <ResultRow
+                label="산출세액 (차감 전)"
+                value={result.clause168_2Credit.grossCalculatedTax}
+              />
+              <ResultRow
+                label="△ 대주주로서 납부한 세액 (영 §168②)"
+                value={-result.clause168_2Credit.deducted}
+              />
+            </>
+          ) : null}
           <ResultRow label="산출세액" value={result.calculatedTax} highlight />
           <ResultRow label="지방소득세 (10%)" value={result.localIncomeTax} />
+          {result.clause168_2Credit ? (
+            <p className="px-4 pb-2 text-caption text-slate-500">
+              지방소득세는 차감 후 산출세액 기준입니다 — 개인지방소득세 신고서
+              「기신고·결정·경정세액」 {fmt(result.clause168_2Credit.localDeducted)} 정산과 같은
+              금액입니다(「지방세법」 §92① 표가 소득세법 §55①의 1/10).
+            </p>
+          ) : null}
         </div>
         <div className="bg-sky-50 px-4 py-3 border-t border-sky-200">
           <div className="flex justify-between items-center">

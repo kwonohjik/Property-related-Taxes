@@ -102,6 +102,12 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
           items.push({ label: "기본공제", value: totalBasicDeduction });
         if (a.totalTaxBase > 0)
           items.push({ label: "과세표준", value: a.totalTaxBase, highlight: true });
+        // 영 §168② 차감액 — 「0원 제외」 규칙에 따라 차감이 있을 때만 싣는다.
+        if ((a.totalClause168_2Deducted ?? 0) > 0)
+          items.push({
+            label: "△ 대주주 기납부세액 (영 §168②)",
+            value: -(a.totalClause168_2Deducted ?? 0),
+          });
         if (a.totalCalculatedTax > 0)
           items.push({ label: "산출세액", value: a.totalCalculatedTax, highlight: true });
         if (penalty > 0) items.push({ label: "가산세", value: penalty });
@@ -211,6 +217,12 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
       }
       if (result.taxBase > 0) {
         items.push({ label: "과세표준", value: result.taxBase, highlight: true });
+      }
+      if ((result.clause168_2Credit?.deducted ?? 0) > 0) {
+        items.push({
+          label: "△ 대주주 기납부세액 (영 §168②)",
+          value: -(result.clause168_2Credit?.deducted ?? 0),
+        });
       }
       if (result.calculatedTax > 0) {
         items.push({ label: "산출세액", value: result.calculatedTax, highlight: true });

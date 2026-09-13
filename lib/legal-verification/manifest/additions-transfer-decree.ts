@@ -45,6 +45,20 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  {
+    // 조문 제목은 「미등기양도제외 자산의 범위 등」이라 제목으로는 찾기 어렵다.
+    // 이 저장소가 쓰는 것은 **②항** — 과점주주 특정주식(§94①4다) 재계산 시
+    // 「대주주로서」 이미 낸 세액을 산출세액에서 차감하는 규정이다(2026-09-13 신설 인용).
+    id: "TRANSFER_DECREE.UNREGISTERED_EXCLUSION_AND_PRIOR_MAJOR_CREDIT",
+    citation: "소득세법 시행령 §168",
+    keywords: [
+      "장기할부조건으로 취득한 자산",
+      "대주주로서 납부하였거나 납부할 세액",
+      "차감하여 계산한 금액을 양도소득산출세액으로 한다",
+    ],
+    keywordMode: "ALL",
+  },
+
   // ── 1세대 1주택 비과세·특례 ────────────────────────────────────────
   {
     id: "TRANSFER_DECREE.ONE_HOUSE_SCOPE",

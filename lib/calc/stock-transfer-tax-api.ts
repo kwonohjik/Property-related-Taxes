@@ -176,9 +176,25 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     body.preMergerAcquisitionDate = form.preMergerAcquisitionDate;
   }
 
-  // §94①4 다목 누적 비율 — UI는 % 단위 입력, 엔진은 decimal(0.0~1.0) 수신 → ×0.01 변환
+  // §94①4 다목 요건 3종 + 합산창 — UI는 % 단위 입력, 엔진은 decimal(0.0~1.0) 수신 → ×0.01 변환
+  //
+  // 🔑 셋을 **한 곳에서** 변환한다. 흩어 두면 하나만 빠져도 tsc 가 못 잡고, 그 요건만
+  //    조용히 미입력(=게이트 실패)이 된다.
   const cumRatioPercent = parseFloatOrUndef(form.cumulativeTransferRatio);
   if (cumRatioPercent !== undefined) body.cumulativeTransferRatio = cumRatioPercent * 0.01;
+  const reRatioPercent = parseFloatOrUndef(form.blockShareholderRealEstateRatio);
+  if (reRatioPercent !== undefined) body.blockShareholderRealEstateRatio = reRatioPercent * 0.01;
+  const ownRatioPercent = parseFloatOrUndef(form.blockShareholderOwnershipRatio);
+  if (ownRatioPercent !== undefined) body.blockShareholderOwnershipRatio = ownRatioPercent * 0.01;
+  // 영 §158② 합산기간 최초 양도일 — ⑭ Route 가 `toOptionalDate` 로 Date 화한다.
+  //   ⚠️ 여기서 string 그대로 보내고 Route 가 변환하지 않으면 `Date < string` 이 **silent false**
+  //     가 되어 3년 창이 **항상 통과**한다(계획서 검토 F-13).
+  if (form.aggregationFirstTransferDate) {
+    body.aggregationFirstTransferDate = form.aggregationFirstTransferDate;
+  }
+  // 영 §168② 대주주 기납부세액 (원). 0 은 보내지 않는다(차감 없음과 같다).
+  const priorMajorTax = parseIntOrZero(form.priorMajorShareholderTax);
+  if (priorMajorTax > 0) body.priorMajorShareholderTax = priorMajorTax;
   // §104①9호 — UI는 %, 엔진은 0~1 소수(형제 필드와 같은 규약). 미입력이면 body에 넣지 않는다
   // = 9호 미해당(법 근거 없이 불리 적용 금지).
   const nblRatioPercent = parseFloatOrUndef(form.nblRatioOfCorpAssets);
