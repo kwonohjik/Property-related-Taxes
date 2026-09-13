@@ -22,6 +22,8 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
+import { fillBlockShareholderRequirements } from "./_helpers/block-shareholder-gate-fill";
+
 const FIELD_1 = "같은 해 부동산 그룹에서 이미 사용한 기본공제";
 const FIELD_2 = "같은 해 양도한 부동산 중 비사업용 토지 과세표준";
 
@@ -63,7 +65,13 @@ async function fillStep1Basics(page: Page, name: string) {
     .fill("100000");
 }
 
-/** 과점주주(§94①4 다목) 토글 ON — ToggleCard는 card-level locator로 잡는다. */
+/**
+ * 과점주주(§94①4 다목) 토글 ON — ToggleCard는 card-level locator로 잡는다.
+ *
+ * 🔴 토글만 켜면 **Step1을 못 벗어난다**. 다목 요건 4칸(영 §158①②)이 필수라
+ *    `validate`가 차단한다. 이 spec이 보려는 것은 **기본공제 그룹**이므로 요건은
+ *    통과 값으로 채운다 — 완화하면 §94①3호를 검증하는 테스트로 의미가 바뀐다.
+ */
 async function turnOnBlockShareholder(page: Page) {
   const sw = page
     .locator('[data-slot="toggle-card"]')
@@ -72,6 +80,8 @@ async function turnOnBlockShareholder(page: Page) {
     .first();
   await sw.waitFor({ state: "visible", timeout: 10_000 });
   await sw.click();
+  // 양도일 2026-03-10 기준 소급 3년(2023-03-10) 안쪽
+  await fillBlockShareholderRequirements(page, { firstTransferDate: "2023-06-20" });
 }
 
 /**
@@ -94,7 +104,13 @@ async function fillNblRatio(page: Page, percent: string) {
 /** Step1 → Step2 → Step3. Step2는 금액만 채운다. */
 async function goToStep3(page: Page) {
   await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
+  // ⚠️ `getByText("양도·취득가액")`은 **StepIndicator 라벨**이라 1단계에서도 보인다 —
+  //    단계 이동 단언으로 쓰면 «막혀 있어도» 초록이다. `aria-current`로 본다.
+  await expect(page.getByRole("button", { name: /^양도·취득가액 단계로 이동/ })).toHaveAttribute(
+    "aria-current",
+    "step",
+    { timeout: 10_000 },
+  );
 
   await page
     .locator("div:has(> label:has-text('양도가액 합계')) input")
@@ -106,7 +122,11 @@ async function goToStep3(page: Page) {
     .fill("100000");
 
   await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: /^필요경비·신고 단계로 이동/ })).toHaveAttribute(
+    "aria-current",
+    "step",
+    { timeout: 10_000 },
+  );
 }
 
 test.describe("Step3 ② 기본공제 — 기타자산 그룹 게이트", () => {

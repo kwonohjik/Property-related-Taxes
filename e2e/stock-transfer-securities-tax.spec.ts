@@ -24,6 +24,8 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
+import { fillBlockShareholderRequirements } from "./_helpers/block-shareholder-gate-fill";
+
 // ─────────────────────────────────────────────────────────────────
 // 공통 헬퍼
 // ─────────────────────────────────────────────────────────────────
@@ -359,6 +361,10 @@ test("E-4: 기타자산(과점주주) → STX 카드 양도소득세 별도 납�
     .locator("input")
     .first();
   await totalSharesInput4.fill("2000");
+
+  // §94①4 다목 요건 4칸 — 토글만으로는 Step1을 못 벗어난다(영 §158①② 필수 입력).
+  // 양도일 2026-06-01 기준 소급 3년(2023-06-01) 안쪽.
+  await fillBlockShareholderRequirements(page, { firstTransferDate: "2023-06-20" });
 
   // Step2: 양도가액 + 취득가액 + Step3 이동
   await fillStep2AndGoToStep3(page, {

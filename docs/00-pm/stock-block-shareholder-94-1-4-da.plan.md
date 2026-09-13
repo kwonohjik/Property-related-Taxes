@@ -1125,3 +1125,55 @@ hard cap(800) 미달이라 이번에는 더 쪼개지 않았다 — **다음에 
 - `npx tsc --noEmit` **0건**
 - `npm run lint` **error 0**(warning 339 — 전부 기존 파일)
 - `npx vitest run` **21,263건 전건 통과**(2,028 파일)
+
+---
+
+## 12. 브라우저 확인 (2026-09-13 · Playwright)
+
+§11.5 까지는 **엔진·타입 층**만 실증했다. 이번 변경의 절반은 그 앞 배선이므로
+`e2e/stock-block-shareholder-94-1-4-da.spec.ts` **4건**으로 브라우저를 실제로 걸었다
+([[feedback_browser_verify_with_playwright]]).
+
+| ID | 무엇을 걸었나 | 결과 |
+|---|---|---|
+| **B-1** | ⑤ 4칸 수동 입력 → 계산 → ⑦ | 교재 **A-3 정본** 재현 — 차감 전 403,185,000 · △29,200,000 · **373,985,000** · 지방 37,398,500 · 총 411,383,500 + 신고서 **24-1·24-2·25·30행** |
+| **B-2** | 누적 30% → ⑤ 미리보기 + ⑧ 차단 | 「미충족」 카드 + 배너 「시장 유형에서 상장·비상장을 선택해…」 · **1단계에 머문다** |
+| **B-3** | 요건② **양도일 종속** 임계 | 50.0% 가 2026 양도에선 **미달**(초과), 2019 양도에선 **충족**(이상) + 안내 문구 전환 |
+| **B-4** | Phase C 이력 선택 합산 | 후보 1건 선택 → 다섯 칸 자동 채움(70% · 70,000주 · 29,200,000 · 2023-06-20 · 2,100,000,000/15,000/5,000,000) → **B-1과 같은 세액** |
+
+### 12.1 뮤테이션 — 이 spec 이 실제로 무엇을 지키는가
+
+**⑫⑬⑭ 는 TypeScript 가 못 본다.** 그 축을 실측했다:
+
+| ID | 무력화 | tsc | 엔진 anchor | E2E |
+|---|---|---|---|---|
+| **E-M1** | ⑭ Route 엔진 input 매핑에서 `priorMajorShareholderTax` **삭제** | **0건** | **39/39 통과** | 🔴 **B-1·B-4 만 실패** |
+| E-M2 | ⑧ validate 의 `other_asset` 차단 분기 무력화 | — | — | 🔴 **B-2 만 실패** |
+| E-M3 | `applyAggregation` 에서 기납부세액 채움 제거 | — | — | 🔴 **B-4 만 실패** |
+| E-M4 | ⑤ 가 시기 leaf 대신 상수를 쓰도록 변경 | — | **20/20 통과** | 🔴 **B-3 만 실패** |
+
+> 🔑 **E-M1 이 이 spec 의 존재 이유다.** 엔진 anchor 39건과 `tsc` 가 **전부 초록인 채로**
+> 세액이 403,185,000 으로 돌아간다 — 침묵 strip 을 잡는 것은 E2E 뿐이다
+> ([[feedback_leaf_anchor_skips_zod_layer]]).
+
+### 12.2 🔴 형제 spec 회귀 4건 — vitest 만으로는 안 보였다
+
+E2E 를 돌리자 **기존 4건이 빨개졌다**. 전부 「기타자산 + 다목 토글만 켜고 다음 단계로」 가던
+spec 이다 — 신설된 요건 4칸 필수 입력이 Step1 에서 막는다.
+
+- `stock-basic-deduction-gate.spec.ts` E-2·E-3·E-4
+- `stock-transfer-securities-tax.spec.ts` E-4
+
+§11.3 ③ 의 **vitest 픽스처 17건과 같은 계열**인데, 구현 중에는 E2E 를 돌리지 않아 놓쳤다.
+공용 헬퍼 `e2e/_helpers/block-shareholder-gate-fill.ts`(vitest 쪽 `_block-shareholder-fixture.ts`
+의 짝)로 **게이트를 통과하는 값**을 채워 해소했다 — 단언을 완화하면 그 spec 들이
+§94①3호를 검증하는 것으로 **조용히 의미가 바뀐다**([[feedback_fixture_default_masks_gate_defect]]).
+
+**부수 발견**: `goToStep3` 의 단계 이동 단언 `getByText("양도·취득가액")` 은 **StepIndicator
+라벨**이라 1단계에서도 보인다 — **막혀 있어도 초록**이었다. `aria-current="step"` 으로 교체했다.
+
+### 12.3 실측
+
+- `npx playwright test` **전건 1,171 통과 / 1 skipped / 0 실패**(exit 0, 6.9분)
+  — 마지막 요약 줄이 아니라 **exit code** 로 판정했다([[feedback_playwright_summary_last_passed_line_hides_failures]])
+- `npx tsc --noEmit` **0건** · `npx eslint` 신규·변경 4파일 **0건**
