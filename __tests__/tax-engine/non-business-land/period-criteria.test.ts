@@ -102,26 +102,28 @@ describe("meetsPeriodCriteria §168조의6 버킷별 가·나·다 판정", () =
   // 경계는 개정 시행일 **2015.02.03**이다 (대통령령 제26067호 — §168의6 각 호 다목이
   // 「소유기간의 100분의 20」에서 「100분의 40」으로. 2014.03.11. 시행본 본문 실측 확인).
   // 종전 테스트는 2015-02-02를 신법 쪽으로 고정해 **구법이 적용될 하루를 놓쳤다**.
-  it("농지·임야·목장 2015.2.3. 전 양도 → threshold 0.8 (구법 「100분의 20」)", () => {
-    const threshold = getThresholdRatio(d("2015-02-01"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+  it("2015.2.3. 전 양도 → threshold 0.8 (구법 「100분의 20」)", () => {
+    const threshold = getThresholdRatio(d("2015-02-01"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.8);
   });
 
   it("경계 — 시행일 직전일(2015-02-02) 양도까지 구법 0.8", () => {
-    const threshold = getThresholdRatio(d("2015-02-02"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-02"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.8);
   });
 
   it("경계 — 시행일(2015-02-03) 양도부터 현행 0.6", () => {
-    const threshold = getThresholdRatio(d("2015-02-03"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-03"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.6);
   });
 
-  // ⚠️ 지목 한정(농·임·목만 레거시)은 두 시행본 본문에 근거가 없다 — 제26067호 부칙 경과조치
-  //    확인 전까지 현행 동작을 그대로 고정한다(기타토지 0.6 = 납세자에게 유리한 쪽).
-  it("기타 지목은 2015.2.3. 전이어도 0.6 (현행 구현 — 지목 한정 근거는 미확인)", () => {
-    const threshold = getThresholdRatio(d("2014-01-01"), "other_land", DEFAULT_NON_BUSINESS_LAND_RULES);
-    expect(threshold).toBe(0.6);
+  // ✅ 지목 한정은 **근거 없음**으로 확정돼 2026-09-14에 제거했다. §168의6은 법 §104의3①
+  //    각 호 외의 부분의 기간 정의라 지목 분기가 없고, 제26067호 부칙 전문(제1조~제23조)에도
+  //    개별 경과조치가 없어 부칙 제2조②(시행 이후 최초 양도분)만 적용된다.
+  //    종전 테스트는 기타토지 0.6을 고정해 **근거 없는 분기를 지키고 있었다**.
+  it("2015.2.3. 전 양도분은 지목을 가리지 않고 0.8 (구법 「100분의 20」)", () => {
+    const threshold = getThresholdRatio(d("2014-01-01"), DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(threshold).toBe(0.8);
   });
 
   it("사업용 비율 0% → 3기준 모두 FAIL", () => {

@@ -45,19 +45,19 @@ describe("[COV-1] DB/시드 경로의 NBL 판정 규칙 온전성", () => {
   });
 
   it("🔴 2015.2.3. 전 양도 농지 → 레거시 임계 0.8이 실제로 적용된다", () => {
-    expect(getThresholdRatio(d("2015-02-01"), "farmland", productionRules("2015-02-01"))).toBe(0.8);
+    expect(getThresholdRatio(d("2015-02-01"), productionRules("2015-02-01"))).toBe(0.8);
   });
 
   it("🔴 경계 — 개정 시행일 직전일(2015-02-02) 양도까지 구법", () => {
-    expect(getThresholdRatio(d("2015-02-02"), "farmland", productionRules("2015-02-02"))).toBe(0.8);
+    expect(getThresholdRatio(d("2015-02-02"), productionRules("2015-02-02"))).toBe(0.8);
   });
 
   it("경계 — 시행일(2015-02-03) 양도부터 현행 0.6", () => {
-    expect(getThresholdRatio(d("2015-02-03"), "farmland", productionRules("2015-02-03"))).toBe(0.6);
+    expect(getThresholdRatio(d("2015-02-03"), productionRules("2015-02-03"))).toBe(0.6);
   });
 
   it("현행 양도분은 0.6 (과대적용 방지)", () => {
-    expect(getThresholdRatio(d("2024-06-01"), "farmland", productionRules("2024-06-01"))).toBe(0.6);
+    expect(getThresholdRatio(d("2024-06-01"), productionRules("2024-06-01"))).toBe(0.6);
   });
 
   it("나머지 optional 그룹도 떨어지지 않는다", () => {

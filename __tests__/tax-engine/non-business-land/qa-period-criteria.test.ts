@@ -165,7 +165,7 @@ describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () =>
    * QA-005: 2015.2.1. 양도 농지 + 사업용 70% → 비사업용 (80% 레거시 미달)
    */
   it("QA-005: 2015.2.1. 양도 농지 + 사업용 70% → 비사업용 (레거시 80% 적용)", () => {
-    const threshold = getThresholdRatio(d("2015-02-01"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-01"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.8);
 
     // 직전 5년 창(2010-02-01~2015-02-01) 밖에 사업용 기간 배치
@@ -190,12 +190,12 @@ describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () =>
    * QA-005b: 레거시 80% 임계값 — 70% 사업용은 비사업용임을 직접 확인
    */
   it("QA-006b: 시행일 직전일(2015-02-02) 양도는 구법 0.8 → 70% 사업용은 비사업용", () => {
-    const threshold = getThresholdRatio(d("2015-02-02"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-02"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.8);
   });
 
   it("QA-005b: 레거시 80% 적용 시 70% 사업용은 비사업용 (threshold 함수 단위 검증)", () => {
-    const threshold = getThresholdRatio(d("2015-02-01"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-01"), DEFAULT_NON_BUSINESS_LAND_RULES);
     const ratio = 0.70;
     expect(threshold).toBe(0.8);
     expect(ratio >= threshold).toBe(false); // 70% < 80% → 비사업용
@@ -208,7 +208,7 @@ describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () =>
    * 종전 케이스는 2015-02-02를 신법 쪽으로 잡아 **구법이 적용될 하루**를 신법으로 고정했다.
    */
   it("QA-006: 2015.2.3. 양도 농지 + 사업용 70% → 사업용 (현행 60% 기준)", () => {
-    const threshold = getThresholdRatio(d("2015-02-03"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    const threshold = getThresholdRatio(d("2015-02-03"), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.6);
 
     const r = meetsPeriodCriteria(
