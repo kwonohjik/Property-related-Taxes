@@ -285,6 +285,11 @@ export function StockTransferTaxResultView({
           onChange={setSelectedPrintIds}
         />
 
+        {/* ── 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) ── */}
+        <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+        <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+        </PrintSection>
+
         {/* ── 핵심 결과 (헤더·분류·산식·비과세 안내·정보용표) ── */}
         <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
         {/* 양도인 + 종목 헤더 카드 */}
@@ -376,11 +381,6 @@ export function StockTransferTaxResultView({
           </PrintSection>
         )}
 
-        {/* ── 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) ── */}
-        <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-        <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
-        </PrintSection>
-
         {/* appliedRules 배지 (항상 인쇄) */}
         <RuleBadges appliedRules={result.appliedRules} />
 
@@ -399,6 +399,11 @@ export function StockTransferTaxResultView({
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
       />
+
+      {/* ── 신고서 양식 표 (32행 고정) ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+      </PrintSection>
 
       {/* ── 핵심 결과 (헤더·키움배지·분류·결과표·양도가액 산식) ── */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
@@ -629,11 +634,6 @@ export function StockTransferTaxResultView({
           />
         </PrintSection>
       )}
-
-      {/* ── 신고서 양식 표 (32행 고정) ── */}
-      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-      <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
-      </PrintSection>
 
       {/* 현재 미지원 항목 고지 — 종전 개발용 PR 로드맵 카드를 대체한다 */}
       <UnsupportedItemsCard />
