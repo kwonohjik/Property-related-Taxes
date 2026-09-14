@@ -230,8 +230,18 @@ describe("A-30~33: cutoff·미제공·기타자산", () => {
     expect(r.agriculturalTax).toBe(150_000);
     expect(r.warning).toBeUndefined();
   });
-  it("A-30g 2017-03-31: **커버 밖** — 현행 세율 fallback + 미지원 경고", () => {
+  /**
+   * 2026-09-14(2차) 재산정 — 커버가 **2013-01-01 까지** 확대됐다(`kotcNum` 분리로 해소).
+   * 2017-03-31 은 이제 당시 세율(영 §5 1호 1천분의 1.5)이 적용된다.
+   * 커버 밖 판정은 A-30h(2012-12-31)로 옮겼다.
+   */
+  it("A-30g 2017-03-31: 당시 세율 15/10000 적용 + 경고 없음 (영 24697호 구간 말일)", () => {
     const r = calc(KOSPI, "2017-03-31");
+    expect(r.securitiesTransactionTax).toBe(150_000);
+    expect(r.warning).toBeUndefined();
+  });
+  it("A-30h 2012-12-31: **커버 밖** — 현행 세율 fallback + 미지원 경고", () => {
+    const r = calc(KOSPI, "2012-12-31");
     expect(r.securitiesTransactionTax).toBe(50_000);
     expect(r.warning).toBeDefined();
     expect(r.warning).toContain("미지원");
@@ -245,7 +255,7 @@ describe("A-30~33: cutoff·미제공·기타자산", () => {
    * 문구는 legal-codes 리터럴이라 컴파일러가 못 잡는다 — 이 anchor 가 유일한 게이트다.
    */
   it("STX-CUTOFF-SYNC: 경고 문구의 날짜 = STX_CUTOFF_DATE", () => {
-    const r = calc(KOSPI, "2017-03-31");
+    const r = calc(KOSPI, "2012-12-31");
     expect(r.warning).toContain(STX_CUTOFF_DATE);
   });
   it("A-30d 2020년 비상장: 법 §8① 1만분의 45", () => {
@@ -456,5 +466,97 @@ describe("A-41: 구간별 시행령 §5 호·목 인용", () => {
   it("A-41d 현행(2026) 구간은 override 없이 현행 구조 인용 — 코스닥 §5 3호 가목", () => {
     expect(calc(KOSDAQ, "2026-03-01").rateReference).toContain("§5 3호 가목");
     expect(calc(KONEX, "2026-03-01").rateReference).toContain("§5 2호");
+  });
+});
+
+// ============================================================
+// A-50 ~ A-57: 2013.1.1~2017.3.31 확대 구간 (2026-09-14, kotcNum 분리)
+//
+// 법령 근거 (KoreanLaw 축자 검증 2026-09-14):
+//   영 제21286호(2009.2.4 시행) = 영 제24364호(2013.2.15 시행) §5①
+//     3호 유가증권시장 1천분의 1.5 · 4호 코스닥시장 1천분의 3 (1·2호 삭제)
+//   영 제24641호(2013.6.28 시행) §5 — 항(①) 삭제, 1호 유가증권 1.5 / 2호 코스닥 3
+//   영 제24697호(2013.8.29 시행) §5 — 2호에 **코넥스 신설**(코스닥과 같은 호, 3)
+//   영 제27843호(2017.4.1 시행) §5 — 2호 **다목 K-OTC 신설**
+//     부칙 §2: "제5조제2호다목의 개정규정은 이 영 시행 이후 주권을 양도하는 분부터 적용"
+//     ⇒ 다목만 새로 들어온 것이 부칙에 명시 — 나머지 세율은 그 전부터 동일
+//   법 §8① 1천분의 5 — 2013.1.1·2013.7.1·2013.8.29·2015.12.29 네 버전 본문 축자 대조
+//   농특세법 §5①5호 1만분의 15 — 2013.7.1 시행본(제11127호) §5① 표 축자 확인
+//
+// 🔑 이 구간이 존재할 수 있는 이유가 **`kosdaqNum`/`kotcNum` 분리**다.
+//    한 칸이던 시절에는 「코스닥 3 / K-OTC 본칙 5」를 표현할 수 없었다.
+// ============================================================
+describe("A-50~57: 2013.1.1~2017.3.31 구간", () => {
+  it("A-50 2013-03-01 코스피: §5①3호 1천분의 1.5 = 150,000 + 농특 150,000", () => {
+    const r = calc(KOSPI, "2013-03-01");
+    expect(r.securitiesTransactionTax).toBe(150_000);
+    expect(r.agriculturalTax).toBe(150_000);
+    expect(r.warning).toBeUndefined();
+  });
+  it("A-51 2013-03-01 코스닥: §5①4호 1천분의 3 = 300,000", () => {
+    expect(calc(KOSDAQ, "2013-03-01").securitiesTransactionTax).toBe(300_000);
+  });
+  /**
+   * 🔑 필드 분리의 핵심 — 이 구간 K-OTC 는 §5 에 목이 **없어** 탄력세율 대상이 아니다.
+   *    코스닥(300,000)과 **다른 값**이어야 한다. 한 칸이던 종전 구조로는 못 낸다.
+   */
+  it("A-52 2013-03-01 K-OTC: §5 목 없음 → 법 §8① 본칙 1천분의 5 = 500,000", () => {
+    const r = calc(KOTC, "2013-03-01");
+    expect(r.securitiesTransactionTax).toBe(500_000);
+    expect(r.securitiesTransactionTax).not.toBe(calc(KOSDAQ, "2013-03-01").securitiesTransactionTax);
+    expect(r.agriculturalTax).toBe(0);
+  });
+  it("A-53 2013-03-01 코넥스: §5 목 없음 → 법 §8① 본칙 = 500,000 (코넥스시장 2013.7.1 개장 전)", () => {
+    expect(calc(KONEX, "2013-03-01").securitiesTransactionTax).toBe(500_000);
+  });
+  it("A-54 2013-01-01 경계(커버 첫날): 코스피 150,000, 경고 없음", () => {
+    const r = calc(KOSPI, "2013-01-01");
+    expect(r.securitiesTransactionTax).toBe(150_000);
+    expect(r.warning).toBeUndefined();
+  });
+  /**
+   * 코넥스 신설 경계 — 값이 갈리는 유일한 축이다(코스피·코스닥은 양쪽 같다).
+   */
+  it("A-55 2013-08-28 → 08-29 코넥스: 500,000(본칙) → 300,000(§5 2호 신설)", () => {
+    expect(calc(KONEX, "2013-08-28").securitiesTransactionTax).toBe(500_000);
+    expect(calc(KONEX, "2013-08-29").securitiesTransactionTax).toBe(300_000);
+  });
+  /**
+   * K-OTC 신설 경계(영 27843호 부칙 §2 적용례 — 양도일 기준).
+   */
+  it("A-56 2017-03-31 → 04-01 K-OTC: 500,000(본칙) → 300,000(§5 2호 다목 신설)", () => {
+    expect(calc(KOTC, "2017-03-31").securitiesTransactionTax).toBe(500_000);
+    expect(calc(KOTC, "2017-04-01").securitiesTransactionTax).toBe(300_000);
+  });
+  it("A-57 2013~2017 구간 비상장·코스피 불변: 500,000 / 150,000", () => {
+    for (const d of ["2013-06-27", "2013-06-28", "2013-08-29", "2015-05-01", "2017-03-31"]) {
+      expect(calc(UNLISTED, d).securitiesTransactionTax).toBe(500_000);
+      expect(calc(KOSPI, d).securitiesTransactionTax).toBe(150_000);
+    }
+  });
+});
+
+// ============================================================
+// A-58: 2013 구간 인용 — 항(①)·호 구조가 세 번 바뀐다
+// ============================================================
+describe("A-58: 2013 구간 시행령 §5 항·호 인용", () => {
+  it("A-58a 2013-03-01 코스피 = §5①3호 / 코스닥 = §5①4호", () => {
+    expect(calc(KOSPI, "2013-03-01").rateReference).toContain("§5①3호");
+    expect(calc(KOSDAQ, "2013-03-01").rateReference).toContain("§5①4호");
+  });
+  it("A-58b 2013-07-01 코스피 = §5 1호 (항 ① 없음)", () => {
+    const ref = calc(KOSPI, "2013-07-01").rateReference;
+    expect(ref).toContain("§5 1호");
+    // ⚠️ 부분일치 함정 — 같은 문자열에 붙는 **농어촌특별세법 §5①5호**가 "§5①"에 걸린다.
+    //    「시행령」을 붙여 증권거래세법 시행령 쪽으로 좁힌다.
+    expect(ref).not.toContain("시행령 §5①");
+  });
+  it("A-58c 2013-03-01 K-OTC·코넥스 인용 = 법 §8① 본칙 (시행령 호 아님)", () => {
+    expect(calc(KOTC, "2013-03-01").rateReference).toContain("§8① 본칙");
+    expect(calc(KONEX, "2013-03-01").rateReference).toContain("§8① 본칙");
+  });
+  it("A-58d 2015-05-01 코넥스 = §5 2호 (코스닥과 같은 호) / K-OTC 는 여전히 본칙", () => {
+    expect(calc(KONEX, "2015-05-01").rateReference).toContain("§5 2호");
+    expect(calc(KOTC, "2015-05-01").rateReference).toContain("§8① 본칙");
   });
 });
