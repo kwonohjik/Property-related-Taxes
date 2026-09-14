@@ -45,11 +45,21 @@
  * ⇒ **pre-2002 편입 농지에도 ①은 적용된다.** 종전에는 pre-2002 분기가 ①까지 건너뛰어
  *   전액 감면으로 조기반환했다(과다감면).
  *
- * ⚠️ 단서의 **목 구성은 시대에 따라 다르다** — 제정본은 가·나 2목(대규모개발사업 단계적
- *   시행·보상지연 / 사업시행면적 기준)이고 다목은 뒤에 붙었다. 엔진은
- *   `hasIncorporationProvisoException` **불리언 하나**로 받아 판단을 사용자에게 맡기므로
- *   계산에는 영향이 없다. 다만 breakdown 문구가 「가·나·다목」으로 **현행 기준**이라
- *   구 사안에서는 목 이름이 어긋난다(표시 한정 · 양도일별 목 구성 게이팅은 미구현).
+ * ✅ **단서의 목 구성은 시대에 따라 다르다 — 2026-09-14 원문으로 경계 확정** (D7-08 잔여 해소).
+ *   엔진은 `hasIncorporationProvisoException` **불리언 하나**로 받아 판단을 사용자에게 맡기므로
+ *   **계산에는 영향이 없다**. 갈리는 것은 **문구**다.
+ *
+ *   · **~2008.2.21** (예: 2005-02-19 시행본 mst 66868): 「다만, 다음 각목의 1에 해당하는
+ *     **대규모 개발사업지역**(사업인정고시일이 동일한 하나의 사업시행지역) 안에서 … 단계적
+ *     사업시행 또는 보상지연으로 … 3년이 지난 농지를 **제외한다**. 가. 토지소유자 1천명 이상인
+ *     지역 나. 사업시행면적이 재정경제부령이 정하는 규모 이상인 지역」
+ *     ⇒ **가·나는 «대규모개발사업지역의 규모 기준»**이지 예외 유형이 아니다. 예외 사유는 **1종**.
+ *   · **2008.2.22~** (대통령령 제20620호 · 시행본 mst 83146): 「다음 각 목의 어느 하나에 해당하는
+ *     **경우**는 제외한다. 가.(대규모개발사업 단계적 시행·보상지연) 나.(국가·지자체·공공기관
+ *     시행 개발사업의 부득이한 사유) 다.(편입 후 3년 내 대규모개발사업 시행)」 ⇒ **예외 3종**.
+ *
+ *   ⇒ 구 사안에 「가·나·다목」이라 쓰면 있지도 않은 목을 인용하는 것이므로, 양도일로 갈라
+ *     `selfFarmingProvisoLabel()`이 문구를 고른다(⑤ UI 토글도 같은 함수를 쓴다).
  *
  * 🔑 과거 시행령 조회법: `lawSearch.do?target=eflaw` **목록**은 조특령을 2005-02-19부터만
  *   주지만, `lawService.do?target=eflaw&**LM**=조세특례제한법 시행령&efYd=YYYYMMDD`는
@@ -72,6 +82,36 @@
 import { addYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
 import { safeMultiplyThenDivide } from "./tax-utils";
+
+/**
+ * 조특령 §66④1호 **단서의 목 구성이 바뀐 시행일** — 대통령령 제20620호(시행 2008-02-22).
+ *
+ * 그 전 문언은 「다음 각목의 1에 해당하는 **대규모 개발사업지역** … 안에서 … 3년이 지난 농지를
+ * 제외한다. 가.(토지소유자 1천명 이상) 나.(사업시행면적 규모 이상)」 — 가·나는 **지역의 규모
+ * 기준**이고 예외 사유는 1종이다. 2008-02-22본부터 「다음 각 목의 어느 하나에 해당하는 **경우**」
+ * 로 바뀌며 가·나·다 **3종 예외**가 된다.
+ */
+export const SELF_FARMING_PROVISO_3MOK_FROM = new Date("2008-02-22");
+
+/**
+ * 단서 인용 문구 — 양도일 기준으로 목 구성을 고른다.
+ *
+ * 판정(불리언 `hasIncorporationProvisoException`)에는 영향이 없다. 구 사안에 「가·나·다목」이라
+ * 쓰면 **있지도 않은 목을 인용**하게 되므로 문구만 갈라 준다. ⑤ UI 토글도 같은 함수를 쓴다
+ * (문구가 두 층에서 갈라지지 않게).
+ */
+export function selfFarmingProvisoLabel(transferDate: Date | string | undefined): string {
+  const d =
+    transferDate instanceof Date
+      ? transferDate
+      : typeof transferDate === "string" && transferDate !== ""
+        ? new Date(transferDate)
+        : undefined;
+  const isCurrent = d === undefined || d.getTime() >= SELF_FARMING_PROVISO_3MOK_FROM.getTime();
+  return isCurrent
+    ? "단서(가·나·다목 — 대규모개발사업 단계적 시행·보상지연, 공공기관 개발사업 부득이한 사유, 편입 후 3년 내 대규모개발사업 시행)"
+    : "단서(대규모개발사업지역 안에서 사업시행자의 단계적 사업시행·보상지연 — 2008.2.21. 이전 양도분은 목 구분이 없다)";
+}
 
 export interface SelfFarmingReductionInput {
   /**
@@ -124,8 +164,9 @@ export interface SelfFarmingReductionInput {
    */
   incorporationLocationType?: "metro_or_city" | "gun_or_eup_myeon";
   /**
-   * 조특령 §66④1호 **단서 가·나·다목** 해당 여부 — true면 3년 배제에서 제외된다.
+   * 조특령 §66④1호 **단서** 해당 여부 — true면 3년 배제에서 제외된다.
    * (대규모개발사업 단계적 시행·보상지연 / 국가·지자체·공공기관 시행 부득이한 사유 등)
+   * ⚠️ 목 구성(가·나·다)은 **2008.2.22.부터**다 — 인용 문구는 `selfFarmingProvisoLabel()`이 고른다.
    */
   hasIncorporationProvisoException?: boolean;
   /** 편입 지역 유형 — 현재 판정은 하지 않고 표시만. (시행령상 주거/상업/공업 3종) */
@@ -266,7 +307,7 @@ export function calculateSelfFarmingReduction(
       );
     } else if (input.hasIncorporationProvisoException === true) {
       breakdown.push(
-        "조특령 §66④1호 단서(가·나·다목 — 대규모개발사업 단계적 시행·보상지연, 공공기관 개발사업 부득이한 사유 등)에 해당하여 3년 배제에서 제외됩니다.",
+        `조특령 §66④1호 ${selfFarmingProvisoLabel(input.transferDate)}에 해당하여 3년 배제에서 제외됩니다.`,
       );
     } else {
       breakdown.push(
