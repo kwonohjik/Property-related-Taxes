@@ -75,6 +75,24 @@ describe("[E2-01] 지역 열거 leaf", () => {
     expect(isUrbanCriteriaRegion("41830", undefined)).toBe(false); // 경기 양평군
   });
 
+  // 2026-09-14 확정. 문언만 보면 「특별자치도」에 걸려 열거 **안**으로 읽힐 여지가 있었으나,
+  // 그 괄호(제주법 §10②의 「행정시의 읍·면지역」)는 **군의 존재를 상정한 적이 없다** —
+  // 제주법 §10①이 「제주자치도는 … 지방자치단체인 시와 군을 두지 아니한다」로 못박기 때문이다.
+  // 강원법 §7②·전북법 §8②은 관할구역을 「종전의 강원도/전라북도의 관할구역」으로 승계하므로
+  // 그 안의 군은 종전 「도의 군」 그대로다. 명칭 변경만으로 불리하게 볼 근거가 없다.
+  it("🔴 강원·전북특별자치도의 군도 「도의 군」과 같다 — 시도로 갈리지 않는다", () => {
+    expect(isUrbanCriteriaRegion("51720", undefined)).toBe(false); // 강원특별자치도 홍천군
+    expect(isUrbanCriteriaRegion("52710", undefined)).toBe(false); // 전북특별자치도 완주군
+    // 읍·면 구분을 줘도 결과가 바뀌지 않는다(군은 구분 입력과 무관하게 대상 밖).
+    expect(isUrbanCriteriaRegion("51720", "dong")).toBe(false);
+    expect(isUrbanCriteriaRegion("52710", "dong")).toBe(false);
+  });
+
+  it("같은 특별자치도라도 **시**는 종전대로 읍·면/동으로 갈린다 (구별력 확인)", () => {
+    expect(isUrbanCriteriaRegion("51110", "dong")).toBe(true); // 강원특별자치도 춘천시
+    expect(isUrbanCriteriaRegion("51110", "eup_myeon")).toBe(false);
+  });
+
   it("특별시 자치구 → 대상 (읍·면이 없어 구분 입력 불요)", () => {
     expect(isUrbanCriteriaRegion("11680", undefined)).toBe(true); // 서울 강남구
   });
@@ -123,6 +141,16 @@ describe("[E2-01] 농지 — 지역 열거 밖이면 도시지역 판정을 건�
   it("서울 자치구는 종전대로 도시지역 판정 (과소적용 방지)", () => {
     const r = judgeFarmland(farm("11680"), RULES);
     expect(r.isBusiness).toBe(false);
+  });
+
+  it("🔴 강원특별자치도 홍천군 일반주거 농지 + 재촌·자경 → 사업용 (judge까지 도달)", () => {
+    const r = judgeFarmland(farm("51720", { landDivision: "dong" }), RULES);
+    expect(r.isBusiness).toBe(true);
+  });
+
+  it("🔴 전북특별자치도 완주군도 같다", () => {
+    const r = judgeFarmland(farm("52710", { landDivision: "dong" }), RULES);
+    expect(r.isBusiness).toBe(true);
   });
 });
 
