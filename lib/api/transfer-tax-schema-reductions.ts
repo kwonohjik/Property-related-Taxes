@@ -78,11 +78,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtTransfer: z.number().int().nonnegative().optional(),
   }),
   z.object({
-    type: z.literal("long_term_rental"),
-    rentalYears: z.number().int().nonnegative(),
-    rentIncreaseRate: z.number().min(0).max(1),
-  }),
-  z.object({
     type: z.literal("new_housing"),
     region: z.enum(["metropolitan", "non_metropolitan"]),
   }),

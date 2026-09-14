@@ -84,13 +84,6 @@ export function toEngineReductions(
         ...(incorpStdTransfer > 0 ? { standardPriceAtTransfer: incorpStdTransfer } : {}),
       };
     }
-    if (r.type === "long_term_rental") {
-      return {
-        type: "long_term_rental" as const,
-        rentalYears: parseInt(r.rentalYears) || 0,
-        rentIncreaseRate: parseFloat(r.rentIncreaseRate) / 100,
-      };
-    }
     if (r.type === "new_housing") {
       const region =
         r.reductionRegion === "outside_overconcentration"

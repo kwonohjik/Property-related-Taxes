@@ -11,6 +11,7 @@ import {
   migrateAsset,
 } from "./calc-wizard-store";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { legacyLongTermRentalToRental973 } from "./legacy-rental-reduction";
 
 /**
  * gracePeriod(다주택 중과 한시 유예) 구 필드 마이그레이션 — §167의3①12의2 나·다목 확장(2026-07-24).
@@ -163,14 +164,25 @@ export function migrateLegacyForm(
         selfFarmingStandardPriceAtIncorporation: String(legacy.selfFarmingStandardPriceAtIncorporation ?? ""),
       }];
     } else if (legacyReductionType === "long_term_rental") {
-      // ⚠️ R-1·R-4: 레거시 8년 50% 경과규정(§97의3 구법). 신규 입력은 rental_97_* 사용.
-      // 구버전 데이터 호환 보존 — 부칙 확정 전 rental_97_3(10년 70%)로 단순 치환 금지(율 상이).
-      // 후속: docs/00-pm/transfer-rental-followup.plan.md §R-1·R-4.
-      primaryAsset.reductions = [{
-        type: "long_term_rental",
-        rentalYears: String(legacy.rentalYears ?? "0"),
-        rentIncreaseRate: String(legacy.rentIncreaseRate ?? "0"),
-      }];
+      /**
+       * R-4 — 레거시 `long_term_rental` → **`rental_97_3`로 이관** (2026-09-14).
+       *
+       * 종전에는 「부칙 확정 전 단순 치환 금지(율 상이)」로 레거시 타입을 그대로 실었고, 엔진은
+       * 그 타입을 **시한·등록일·기준시가·규모 게이트 없이** 8년 50%로 계산했다. R-1 확정으로
+       * 그 보류 사유가 사라졌다 — 8년 50%는 **등록 ~2022.12.31**(법률 제19199호 부칙 §38 →
+       * 종전 규정)에만 있고, 매입임대는 등록 시한이 **2020.12.31**에서 끝난다.
+       *
+       * ⚠️ 구 폼에는 **등록일·임대개시일이 없다**(`rentalYears` 연수뿐). 연수로 날짜를 만들면
+       *    없는 사실을 지어내는 것이라 **비워 둔다** — ⑧이 「등록일·임대개시일을 입력하세요」로
+       *    물어본다. 조용히 감면을 주지도, 조용히 없애지도 않는다.
+       *
+       * 승계 가능한 사실은 하나뿐이다 — 구 폼이 직접 물었던 **임대료 5% 증액 요건**.
+       * 이력(IndexedDB) 마이그레이션은 이미 같은 방향으로 치환한다
+       * (`lib/storage/migrations/reduction-reclassification.ts:67`).
+       */
+      primaryAsset.reductions = [
+        legacyLongTermRentalToRental973(legacy.rentIncreaseRate) as AssetReductionForm,
+      ];
     } else if (legacyReductionType === "new_housing") {
       primaryAsset.reductions = [{
         type: "new_housing",

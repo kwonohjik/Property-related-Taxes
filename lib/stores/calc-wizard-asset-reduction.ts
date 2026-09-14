@@ -41,13 +41,6 @@ export type AssetReductionForm =
       selfFarmingStandardPriceAtTransfer?: string;
     }
   | {
-      type: "long_term_rental";
-      /** 임대기간(년) */
-      rentalYears: string;
-      /** 임대료 인상률(%) — 5% 이하 요건 */
-      rentIncreaseRate: string;
-    }
-  | {
       type: "new_housing";
       /** 소재지 유형 — 감면율 결정 */
       reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";

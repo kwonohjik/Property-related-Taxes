@@ -8,6 +8,8 @@
  *    구 sessionStorage 복원 시 신규 필드가 `undefined`로 남으면 controlled→uncontrolled로
  *    뒤집히고, validate의 `opt()`도 빈 문자열과 다르게 다룬다(신규 자산 필드 stale 가드).
  */
+import { legacyLongTermRentalToRental973 } from "./legacy-rental-reduction";
+
 export function hasPositiveAmount(v: unknown): boolean {
   if (typeof v === "number") return v > 0;
   if (typeof v !== "string") return false;
@@ -24,6 +26,11 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
   // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 필드 누락 보정 (구 세션 복원 방어)
   if (Array.isArray(a.reductions)) {
     a.reductions = (a.reductions as Record<string, unknown>[]).map((r) => {
+      // R-4 — 레거시 `long_term_rental`은 폼 union·④·⑫에서 제거됐다. 이미 세션에 들어 있는
+      // 값을 그대로 두면 감면이 **조용히 사라진다** ⇒ 여기서 `rental_97_3`로 이관한다.
+      if (r && r.type === "long_term_rental") {
+        return legacyLongTermRentalToRental973(r.rentIncreaseRate);
+      }
       if (r && typeof r.type === "string" && (r.type as string).startsWith("rental_97") && r.type !== "rental_97_3_legacy") {
         return {
           registrationDate: "",
@@ -67,8 +74,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_2" && r.isUnoccupiedAtAcquisition === undefined
             ? { isUnoccupiedAtAcquisition: null }
             : {}),
-          // D2-07 — §97의3 건설임대 확인. 구 세션은 미확인(false)으로 둔다 —
-          // 2023.1.1 전 등록분은 경과조치로 이 값과 무관하다.
+          // D2-07 — §97의3 건설임대 확인. 구 세션은 미확인(false)으로 둔다.
+          // ⚠️ 「2023.1.1 전 등록분은 경과조치로 이 값과 무관하다」는 종전 주석은 **틀렸다**
+          //    (2026-09-14): 종전 규정에도 등록 시한이 있어 **매입임대는 2020.12.31**에서 끝난다.
+          //    2021~2022년 등록분에서는 이 값이 적격을 가르므로, ⑤가 토글을 보여 주고 ⑧이 묻는다.
           ...(r.type === "rental_97_3" && r.isPrivateConstructionRental === undefined
             ? { isPrivateConstructionRental: false }
             : {}),
