@@ -248,7 +248,9 @@ export function judgeForest(
   }
 
   // 도시지역 內 시업중 임야 — 편입 3년 경과시 §168-9 ①2호 단서로 제외
-  // 임야 전용 래퍼 — 기간 계산은 공용이나 **미상일 때의 기본값이 의도된 선택**임을 명시한다(V5-d).
+  // 임야 전용 래퍼 — 기간 계산은 공용이나 **미상일 때의 기본값이 확정된 선택**임을 명시한다(V5-d).
+  // 편입일 미상 → 유예 미적용(비사업용). 법 §104의3①2호 **본문**이 원칙이고 가목이 예외이므로
+  // 사업용을 주장하는 쪽이 요건사실을 뒷받침한다 (2026-09-14 확정 — 래퍼 docblock 참조).
   const grace = checkForestIncorporationGrace(input.urbanIncorporationDate, input.transferDate, rules);
   if (grace.isApplied) {
     steps.push({
