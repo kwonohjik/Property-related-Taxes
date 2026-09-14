@@ -31,7 +31,7 @@ export type AssetReductionForm =
        * `""`(미선택)은 판정 불가 — ⑧이 차단한다(자동 fallback 금지).
        */
       selfFarmingIncorporationLocation?: "metro_or_city" | "gun_or_eup_myeon" | "";
-      /** 조특령 §66④1호 단서 가·나·다목 해당 — true면 3년 배제 제외 */
+      /** 조특령 §66④1호 단서 해당 — true면 3년 배제 제외. 목 구성(가·나·다)은 2008.2.22.~ */
       selfFarmingIncorporationProvisoException?: boolean;
       /** 편입일 당시 기준시가 (원) */
       selfFarmingStandardPriceAtIncorporation?: string;

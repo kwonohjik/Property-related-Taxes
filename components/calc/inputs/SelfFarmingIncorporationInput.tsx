@@ -17,6 +17,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { SELF_FARMING_PROVISO_3MOK_FROM } from "@/lib/tax-engine/self-farming-reduction";
 
 /** 조특령 §66④1호 본문 — 3년 배제가 걸리는 소재지 범위 */
 const LOCATION_OPTIONS = [
@@ -91,6 +92,10 @@ export function SelfFarmingIncorporationInput({
   // 의제취득(≤1985.1.1): 개별공시지가 부재 → 취득시 기준시가는 조회 불가.
   // 자산-수준 값을 읽기전용 자동 표시하고 연도 드롭다운·조회 UI를 숨긴다(엔진은 이미 자산값 fallback).
   const isDeemedAcq = !!acquisitionDate && acquisitionDate <= DEEMED_ACQUISITION_DATE;
+  // §66④1호 단서의 목 구성은 2008.2.22.(대통령령 제20620호)부터 3종이다. 양도일 미입력은
+  // 현행으로 본다(엔진 `selfFarmingProvisoLabel`과 같은 기준 — 문구가 두 층에서 갈라지지 않게).
+  const isCurrentProvisoEra =
+    !transferDate || new Date(transferDate).getTime() >= SELF_FARMING_PROVISO_3MOK_FROM.getTime();
   // 표시값은 엔진 fallback 식(`reduction ?? asset`)과 동일하게 미러 — 표시≠엔진 drift 방지.
   const effectiveAcqPrice =
     parseAmount(selfFarmingStandardPriceAtAcquisition) > 0
@@ -177,10 +182,20 @@ export function SelfFarmingIncorporationInput({
               배제되지 않습니다(부분감면은 별개로 적용).
             </p>
           </div>
+          {/* 단서의 목 구성은 2008.2.22.(대통령령 제20620호)부터 3종이다 — 그 전 양도분에
+              「가·나·다목」이라 쓰면 없는 목을 인용하게 된다. 엔진과 같은 함수로 문구를 고른다. */}
           <ToggleCard
             tone="amber"
-            title="§66④1호 단서(가·나·다목) 해당"
-            description="대규모개발사업지역 안에서 사업시행자의 단계적 사업시행·보상지연으로 3년이 지난 경우, 국가·지방자치단체·공공기관이 시행하는 개발사업지역 안에서 부득이한 사유에 해당하는 경우 등 — 해당하면 3년 배제에서 제외됩니다."
+            title={
+              isCurrentProvisoEra
+                ? "§66④1호 단서(가·나·다목) 해당"
+                : "§66④1호 단서 해당"
+            }
+            description={
+              isCurrentProvisoEra
+                ? "대규모개발사업지역 안에서 사업시행자의 단계적 사업시행·보상지연으로 3년이 지난 경우, 국가·지방자치단체·공공기관이 시행하는 개발사업지역 안에서 부득이한 사유에 해당하는 경우, 편입 후 3년 이내에 대규모개발사업이 시행된 경우 — 해당하면 3년 배제에서 제외됩니다."
+                : "2008.2.21. 이전 양도분은 단서에 목 구분이 없습니다 — 대규모개발사업지역(토지소유자 1천명 이상 또는 사업시행면적 규모 이상) 안에서 사업시행자의 단계적 사업시행·보상지연으로 3년이 지난 경우가 유일한 예외입니다."
+            }
             checked={selfFarmingIncorporationProvisoException}
             onCheckedChange={(v) => onChange({ selfFarmingIncorporationProvisoException: v })}
           />

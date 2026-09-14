@@ -37,7 +37,7 @@ export type TransferReduction =
       /** 조특령 §66⑭ — 피상속인(배우자 포함)의 결격 과세기간 수(년) */
       disqualifiedTaxPeriodsDecedent?: number;
       incorporationLocationType?: "metro_or_city" | "gun_or_eup_myeon";
-      /** 조특령 §66④1호 단서 가·나·다목 해당 */
+      /** 조특령 §66④1호 단서 해당 (목 구성 가·나·다는 2008.2.22.~ — `selfFarmingProvisoLabel`) */
       hasIncorporationProvisoException?: boolean;
       /**
        * 편입일 당시 기준시가 (원, 총액 또는 ㎡당 단가).
