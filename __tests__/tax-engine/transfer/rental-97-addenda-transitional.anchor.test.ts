@@ -27,7 +27,13 @@
  * 문언 이력(실측): ~2022년의 「민간건설임대주택」은 **등록 시한 연장 괄호**
  * (「2020.12.31(민간건설임대주택은 2022.12.31)까지」)였고, **범위 한정**이 된 것은
  * 2023-01-01 시행분부터다.
- * ⇒ 2023.1.1 **전 등록분은 매입임대라도 적용**된다. 무조건 걸면 법 근거 없는 불리 적용.
+ * ⇒ 2023.1.1 전 등록분에는 **범위 한정이 적용되지 않는다**. 무조건 걸면 법 근거 없는 불리 적용.
+ *
+ * 🔴 **2026-09-14 정정 — 「매입임대라도 적용된다」는 시한을 빠뜨린 말이었다.** 그 괄호는 시한이고,
+ *    매입임대의 시한은 **2020.12.31**에서 끝난다. 따라서 2021.1.1~2022.12.31 등록 매입임대는
+ *    (범위 한정이 아니라) **시한** 축에서 배제된다 — 별건 축의 anchor
+ *    `rental-97-3-purchase-reg-deadline.anchor.test.ts`가 그 경계·세액을 지킨다.
+ *    아래 D2-07 그룹은 그래서 **건설임대 / 2020년 등록**으로 축을 분리해 잰다.
  *
  * ═══════════════════════════════════════════════════════════════════════
  * ## D2-04 잔여 — 소령 §167의3①2호 단서(2018.3.31)의 시행일
@@ -95,16 +101,26 @@ describe("D2-07 — §97의3 건설한정은 2023.1.1 이후 등록분만", () =
   const codesOf = (r: ReturnType<typeof evaluateRental973>) =>
     r.isEligible ? [] : (r.ineligibleReasons ?? []).map((x) => x.code);
 
-  it("🔴 2022년 등록 매입임대 → 경과조치로 적용된다 (부칙 §38)", () => {
+  it("🔴 2020년 등록 매입임대 → 경과조치로 **적격**이다 (부칙 §38 + 시한 내)", () => {
+    const r = evaluateRental973({
+      ...BASE,
+      registrationDate: D("2020-06-01"),
+      rentalStartDate: D("2020-06-01"),
+    } as Any);
+    // ⚠️ 「특정 코드가 없다」만 보면 **다른 코드로 배제돼도 통과**한다(2026-09-14 실측 — 새 시한
+    //    게이트가 이 anchor의 구별력을 흡수했다). 적격 자체를 단언한다.
+    expect(r.isEligible, `부칙 §38은 시행 전 등록분에 종전 규정을 적용한다 / codes=${codesOf(r)}`).toBe(true);
+  });
+
+  it("🔴 2022년 등록 매입임대 → **범위 한정**으로는 안 걸린다 (걸리는 것은 시한 축)", () => {
     const r = evaluateRental973({
       ...BASE,
       registrationDate: D("2022-06-01"),
       rentalStartDate: D("2022-06-01"),
     } as Any);
-    expect(
-      codesOf(r),
-      "부칙 §38은 시행 전 등록분에 종전 규정을 적용한다",
-    ).not.toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL");
+    expect(codesOf(r)).not.toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL");
+    // 시한 축은 살아 있어야 한다 — 매입임대 등록 시한은 2020.12.31이다.
+    expect(codesOf(r)).toContain("PURCHASE_RENTAL_REG_DEADLINE");
   });
 
   it("🔴 2023년 등록 + 건설임대 미확인 → 배제", () => {
@@ -123,14 +139,26 @@ describe("D2-07 — §97의3 건설한정은 2023.1.1 이후 등록분만", () =
       rentalStartDate: D("2023-06-01"),
       isPrivateConstructionRental: true,
     } as Any);
-    expect(codesOf(r)).not.toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL");
+    expect(r.isEligible, `codes=${codesOf(r)}`).toBe(true);
   });
 
-  it("경계 — 2022.12.31 등록은 경과조치 대상, 2023.1.1은 아니다", () => {
-    const before = evaluateRental973({ ...BASE, registrationDate: D("2022-12-31"), rentalStartDate: D("2022-12-31") } as Any);
-    const after = evaluateRental973({ ...BASE, registrationDate: D("2023-01-01"), rentalStartDate: D("2023-01-01") } as Any);
+  it("경계 — 2022.12.31 등록은 경과조치 대상(≠ 한정 축), 2023.1.1은 한정 축", () => {
+    // 같은 매입임대 픽스처에서 **배제 사유가 갈리는지**로 잰다 — 「특정 코드가 없다」만 보면
+    // 다른 코드로 배제돼도 통과하므로(구별력 0) 양쪽 코드를 서로 배타적으로 단언한다.
+    const before = evaluateRental973({
+      ...BASE,
+      registrationDate: D("2022-12-31"),
+      rentalStartDate: D("2022-12-31"),
+    } as Any);
+    const after = evaluateRental973({
+      ...BASE,
+      registrationDate: D("2023-01-01"),
+      rentalStartDate: D("2023-01-01"),
+    } as Any);
     expect(codesOf(before)).not.toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL");
-    expect(codesOf(after)).toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL");
+    expect(codesOf(before)).toContain("PURCHASE_RENTAL_REG_DEADLINE"); // 시한 축
+    expect(codesOf(after)).toContain("NOT_PRIVATE_CONSTRUCTION_RENTAL"); // 한정 축
+    expect(codesOf(after)).not.toContain("PURCHASE_RENTAL_REG_DEADLINE");
   });
 });
 

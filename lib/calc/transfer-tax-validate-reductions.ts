@@ -300,14 +300,19 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             );
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
+          // ⚠️ 종전 규정에도 **등록 시한**이 있다 — 매입임대는 2020.12.31, 건설임대는 2022.12.31
+          //    (법률 제17759호로 신설된 괄호). 그래서 2021.1.1~2022.12.31 등록 매입임대는
+          //    「한정」이 아니라 **시한** 축에서 배제된다. 엔진 `rental-97-3.ts`의 두 분기와 동형.
           if (
             r.type === "rental_97_3" &&
             (r as { registrationDate?: string }).registrationDate &&
-            (r as { registrationDate: string }).registrationDate >= "2023-01-01" &&
+            (r as { registrationDate: string }).registrationDate > "2020-12-31" &&
             (r as { isPrivateConstructionRental?: boolean }).isPrivateConstructionRental !== true
           )
             return fail(
-              `${label} 적용: 2023.1.1 이후 등록분은 민간건설임대주택(민특법 §2 2호)에 한정합니다 — 해당 여부를 확인하세요 (조특법 §97의3①).`,
+              (r as { registrationDate: string }).registrationDate >= "2023-01-01"
+                ? `${label} 적용: 2023.1.1 이후 등록분은 민간건설임대주택(민특법 §2 2호)에 한정합니다 — 해당 여부를 확인하세요 (조특법 §97의3①).`
+                : `${label} 적용: 민간건설임대주택이 아닌 임대주택(민간매입임대)의 등록 시한은 2020.12.31입니다 — 2021.1.1 이후 등록분은 적용되지 않습니다. 민간건설임대주택이면 해당 여부를 확인하세요 (조특법 §97의3① 종전 규정).`,
             );
           // CA-01 — §97의5①3호가 조특령 §97의3③2호를 준용한다. §97의3과 같은 규칙.
           if (

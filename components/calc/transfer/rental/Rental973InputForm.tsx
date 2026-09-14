@@ -119,15 +119,21 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           tone="amber"
         />
 
-        {/* D2-07 — §97의3① 「민간건설임대주택」 한정. 2023.1.1 이후 등록분에만 요구된다
-            (법률 제19199호 부칙 §38 경과조치 — 그 전 등록분은 종전 규정). */}
-        {value.registrationDate >= "2023-01-01" && (
+        {/* D2-07 — §97의3① 「민간건설임대주택」 한정은 2023.1.1 이후 등록분(법률 제19199호 부칙 §38
+            경과조치 — 그 전 등록분은 종전 규정). 다만 **종전 규정에도 등록 시한**이 있어 매입임대는
+            2020.12.31에서 끝나므로(건설임대만 2022.12.31), 2021.1.1 이후 등록분이면 시대와 무관하게
+            건설임대 여부를 물어야 한다 — 엔진·⑧과 같은 경계(2020.12.31). */}
+        {value.registrationDate > "2020-12-31" && (
           <ToggleCard
             variant="chip"
             checked={value.isPrivateConstructionRental}
             onCheckedChange={(v) => onChange({ isPrivateConstructionRental: v })}
             title="민간건설임대주택"
-            description="민특법 §2 2호 — 2023.1.1 이후 등록분은 건설임대에 한정 (§97의3①)"
+            description={
+              value.registrationDate >= "2023-01-01"
+                ? "민특법 §2 2호 — 2023.1.1 이후 등록분은 건설임대에 한정 (§97의3①)"
+                : "민특법 §2 2호 — 매입임대 등록 시한은 2020.12.31, 건설임대는 2022.12.31 (§97의3① 종전 규정)"
+            }
             tone="amber"
           />
         )}

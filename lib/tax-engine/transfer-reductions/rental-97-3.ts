@@ -64,6 +64,28 @@ export const RENTAL_97_3_MANDATORY_YEARS_8YEAR = 8;
 /** R-1: 8년 50% 경과규정 적용 등록일 상한 — 이 날짜 미만(=~2022.12.31) 등록만. 2023.1.1~ 등록은 10년 70%만 */
 export const RENTAL_97_3_PRE_2023_REG_CUTOFF = new Date("2023-01-01");
 
+/**
+ * 매입임대(= 민간건설임대주택이 **아닌** 장기일반·공공지원민간임대)의 **등록 시한** — 2020.12.31.
+ *
+ * 종전 문언(2022-12-08 시행본 mst 237393 §97의3①)은 「**2020년 12월 31일**(「민간임대주택에 관한
+ * 특별법」 §2 2호에 따른 **민간건설임대주택의 경우에는 2022년 12월 31일**)**까지** … 등록」이다.
+ * 괄호는 건설임대에만 시한을 2년 더 준 것이라, **2021.1.1 이후 등록한 매입임대는 종전 규정으로도
+ * 대상이 아니다**.
+ *
+ * 🔑 **D2-07의 축(범위 한정)과 이 축(등록 시한)은 다르다** — D2-07은 「건설임대 **한정**은
+ * 2023.1.1부터」를 맞게 잡았지만 그 앞 구간의 **시한**을 보지 않아 2021~2022년 등록 매입임대가
+ * 통과했다(실측 과소과세: 10년 임대 96,875,000원 · 8년 임대 66,950,000원).
+ *
+ * 근거 3층 (2026-09-14 법제처 원문 조회):
+ *   1. 매입 시한 신설 = **법률 제17759호**(2020.12.29 공포, 2021.1.1 시행) — 2021-01-01 시행본
+ *      (mst 224851) §97의3①에 위 괄호가 처음 등장한다(2020-01-01 시행본은 「2022.12.31까지」 단일).
+ *   2. 같은 법 부칙에 **§97의3 전용 적용례·경과조치가 없다**(부칙 전문 7,182자 전수 확인) ⇒ 일반
+ *      적용례 **부칙 §2③**(「양도소득세에 관한 개정규정은 이 법 시행 이후 양도하는 경우부터 적용」).
+ *   3. 2023년 개정은 **법률 제19199호 부칙 §38**로 시행 전 등록분을 **종전 규정**에 남기므로,
+ *      2021~2022년 등록분에 적용되는 문언이 곧 1.의 시한 문언이다.
+ */
+export const RENTAL_97_3_PURCHASE_REG_DEADLINE = new Date("2020-12-31");
+
 export function evaluateRental973(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3;
   const reasons: Rental97IneligibleReason[] = [];
@@ -117,18 +139,28 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
    *   2023.1.1~: 「민간건설임대주택**으로서**…」 — 여기서 비로소 **범위 한정**이 된다.
    *   (2023-12-21 등 이후 버전은 타법개정으로 문언만 이어받았고 §97의3 적용례가 없다.)
    */
-  if (
-    input.registrationDate !== undefined &&
-    input.registrationDate.getTime() >= RENTAL_97_3_CONSTRUCTION_ONLY_FROM.getTime() &&
-    input.isPrivateConstructionRental !== true
-  ) {
-    reasons.push({
-      code: "NOT_PRIVATE_CONSTRUCTION_RENTAL",
-      message:
-        "2023.1.1 이후 등록분은 「민간임대주택에 관한 특별법」 §2 2호의 **민간건설임대주택**에 " +
-        "한합니다 (조특법 §97의3① — 법률 제19199호 부칙 §38에 따라 2023.1.1 전 등록분은 종전 규정).",
-      legalBasis,
-    });
+  if (input.registrationDate !== undefined && input.isPrivateConstructionRental !== true) {
+    if (input.registrationDate.getTime() >= RENTAL_97_3_CONSTRUCTION_ONLY_FROM.getTime()) {
+      reasons.push({
+        code: "NOT_PRIVATE_CONSTRUCTION_RENTAL",
+        message:
+          "2023.1.1 이후 등록분은 「민간임대주택에 관한 특별법」 §2 2호의 **민간건설임대주택**에 " +
+          "한합니다 (조특법 §97의3① — 법률 제19199호 부칙 §38에 따라 2023.1.1 전 등록분은 종전 규정).",
+        legalBasis,
+      });
+    } else if (input.registrationDate.getTime() > RENTAL_97_3_PURCHASE_REG_DEADLINE.getTime()) {
+      /**
+       * 2021.1.1~2022.12.31 등록 + 매입임대 — **범위 한정이 아니라 등록 시한** 초과다.
+       * 종전 문언의 시한이 매입임대는 2020.12.31에서 끝난다(`RENTAL_97_3_PURCHASE_REG_DEADLINE`).
+       */
+      reasons.push({
+        code: "PURCHASE_RENTAL_REG_DEADLINE",
+        message:
+          "민간건설임대주택이 아닌 임대주택(민간매입임대)의 등록 시한은 2020.12.31입니다 — " +
+          "2021.1.1 이후 등록분은 적용되지 않습니다 (조특법 §97의3① 종전 규정 · 민간건설임대주택은 시한이 2022.12.31).",
+        legalBasis,
+      });
+    }
   }
 
   // 3·4) 령 §97의3③2호(국민주택규모)·4호(기준시가 6억/3억) — §97의5와 공용 (CA-01)
