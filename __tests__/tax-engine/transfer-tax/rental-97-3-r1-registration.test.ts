@@ -1,8 +1,13 @@
 // §97의3 R-1 — 등록일별 공제율 경과규정 (8년 50% / 10년 70%)
 //
 // 법령: 등록 ~2022.12.31 → 8년↑ 50% / 10년↑ 70% · 등록 2023.1.1~ → 10년↑ 70%만 (8년 유형 폐지)
-// 출처: 사용자(세무 전문가) 제공 + 2022 세법개정 부칙. KoreanLaw 연혁 본문·부칙 직접조회 도구
-//       미지원(efYd·연혁 MST NOT_FOUND) — 부칙 조항 직접 인용은 추후 보강.
+// 출처(2026-09-14 법제처 원문 확보 — 종전의 「도구 미지원으로 추후 보강」은 오진이었다):
+//   · 경과조치 = 법률 제19199호 부칙 §38 (이 법 시행 전 등록분은 종전의 규정)
+//   · 종전 문언 = 2022-12-08 시행본(mst 237393) §97의3① (본문 100분의 50 · 단서 10년↑ 100분의 70 · ①1호 8년↑)
+//   · 조회 = 저장소 `fetchLawVersions`/`fetchEflawArticle` (법제처 target=eflaw)
+// ⚠️ 같은 종전 문언에 **등록 시한**(매입 2020.12.31 / 건설 2022.12.31)이 있다 —
+//    그 축은 `__tests__/tax-engine/transfer/rental-97-3-purchase-reg-deadline.anchor.test.ts`가 지킨다.
+//    아래 픽스처는 `isPrivateConstructionRental: true`라 시한 축과 무관하다.
 // cutoff = 2023-01-01 (registrationDate < cutoff 이면 구법 8년 50% 적용 가능).
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
