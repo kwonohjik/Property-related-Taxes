@@ -41,9 +41,17 @@ function rec(o: {
       securityName: o.securityName ?? "㈜현조경",
       securityCode: o.securityCode ?? "",
       transferDate: o.transferDate,
+      /**
+       * 🔴 주식수는 **폼(inputData)의 문자열**이다 — `calc-wizard-stock-form-types.ts:99`.
+       *    종전 이 픽스처는 `resultData.shareCount`에 number 를 심었는데, 엔진 결과 타입에는
+       *    2026-09-14 이전까지 그 키가 **없었다**. 실제 이력과 다른 형태라 19건이 전부 초록인 채
+       *    기능이 죽어 있었다([[feedback_fixture_default_masks_gate_defect]]).
+       *    ⇒ 여기서는 **echo 이전에 저장된 구 이력**(= 현존 레코드)을 재현하고,
+       *      echo 경로는 `stock-prior-transfer-lookup-real-shape.anchor.test.ts`(PA-1)가 지킨다.
+       */
+      shareCount: String(o.shareCount ?? 30_000),
     },
     resultData: {
-      shareCount: o.shareCount ?? 30_000,
       transferPrice: o.transferPrice ?? 600_000_000,
       acquisitionPrice: o.acquisitionPrice ?? 450_000_000,
       expenses: o.expenses ?? 1_500_000,
@@ -194,7 +202,7 @@ describe("A-22·A-23 — 합산", () => {
     expect(ratio).toBe(70);
   });
 
-  it("A-23 🔴 이미 `①4다` 인 이력 — 양도가액은 «합산»하되 기납부에서는 «제외»", () => {
+  it("A-23 🔴 이미 `①4다` 인 이력도 «전부» 합산한다 — 조문으로 자동 배제하지 않는다", () => {
     const sel = pick([
       rec({ id: "r1", transferDate: "2023-06-20" }),
       rec({
@@ -210,9 +218,15 @@ describe("A-22·A-23 — 합산", () => {
     // 양도가액·주식수는 둘 다 들어간다
     expect(agg.priorTransferPrice).toBe(700_000_000);
     expect(agg.priorShareCount).toBe(40_000);
-    // 기납부는 3호 건(29,200,000)만 — 「대주주로서」 낸 세액이 아니다
-    expect(agg.priorMajorShareholderTax).toBe(29_200_000);
-    expect(agg.excludedFromPriorTaxIds).toEqual(["r2"]);
+    /**
+     * 🔴 **기납부세액도 둘 다** 들어간다(2026-09-14 결정 — 종전에는 `①4다` 건을 뺐다).
+     *    §94①4 다목 요건 판정이 사용자 입력 축인 이상, 기신고를 어떤 조문으로 했는지를
+     *    근거로 프로그램이 차감을 깎으면 **납세자에게 불리한 방향으로** 되돌릴 수 없다.
+     *    빼는 것은 사용자가 **선택 해제**로 한다.
+     */
+    expect(agg.priorMajorShareholderTax).toBe(29_200_000 + 40_000_000);
+    // 플래그는 남지만 «표시 전용» 이다 — 합산에는 영향이 없다.
+    expect(agg.alreadyBlockShareholderIds).toEqual(["r2"]);
   });
 
   it("최초 양도일은 선택 건 중 «가장 이른» 날", () => {

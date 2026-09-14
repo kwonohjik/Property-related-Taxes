@@ -550,6 +550,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     isExempt: false,
     exemptReason: undefined,
 
+    // 이력 복원용 echo — 산식 미사용(영 §158② 기신고 합산이 이 값을 읽는다)
+    shareCount,
     transferPrice,
     transferPriceBreakdown,
 

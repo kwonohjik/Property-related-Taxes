@@ -17,6 +17,8 @@
  * | B-2 | 게이트 미충족(누적 30%) → 미리보기 「미충족」 + `other_asset` **차단**(폴백 불가) |
  * | B-3 | 요건② **양도일 종속** 임계 — 50.0%가 2026년엔 미달, 2019년엔 충족 |
  * | B-4 | Phase C 이력 선택 합산 → 다섯 칸 자동 채움 → **B-1과 같은 세액** |
+ * | B-5 | 제외 사유를 **합쳐 말하지 않는다** — 3년 창 밖 ↔ 결과 미저장이 다른 문장 |
+ * | B-6 | 기신고가 **`①4다`여도** 기납부세액에 그대로 합산된다(조문 자동 배제 없음) |
  *
  * 정책: [[feedback_browser_verify_with_playwright]]
  * 로케이터: FieldCard label은 htmlFor 미연결 → `[data-slot="field-card"]` + `.last()` 패턴
@@ -300,9 +302,20 @@ test("B-4: 기신고 1건 선택 → 다섯 칸 자동 채움 → 373,985,000 (B
     userId: LOCAL_USER_ID,
     taxType: "stock_transfer",
     title: `${CORP} 1차 양도 2023-06-20`,
-    inputData: { securityName: CORP, securityCode: "", transferDate: "2023-06-20" },
+    /**
+     * ⚠️ **실제 저장 형태를 지킨다** — 주식수는 폼(inputData)의 **문자열**이고,
+     *    `resultData`에는 2026-09-14 echo 추가 이전까지 수량 키가 **없었다**.
+     *    종전 이 픽스처는 `resultData.shareCount: 30_000`을 손으로 심어, 후보가 한 건도
+     *    안 잡히는 결함을 가린 채 초록이었다([[feedback_fixture_default_masks_gate_defect]]).
+     *    여기서는 **구 이력**(echo 없음)을 재현해 fallback 경로까지 함께 지킨다.
+     */
+    inputData: {
+      securityName: CORP,
+      securityCode: "",
+      transferDate: "2023-06-20",
+      shareCount: "30000",
+    },
     resultData: {
-      shareCount: 30_000,
       transferPrice: 600_000_000,
       acquisitionPrice: 450_000_000,
       expenses: 1_500_000,
@@ -368,4 +381,133 @@ test("B-4: 기신고 1건 선택 → 다섯 칸 자동 채움 → 373,985,000 (B
 
   await clickResult(page);
   await expectCaseFiftyResult(page);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// B-5 — 제외 사유를 «구분해서» 말한다
+// ─────────────────────────────────────────────────────────────────
+//
+// 종전 문구는 「3년 창 밖«이거나» 계산 결과가 없어 제외됐습니다」 한 문장이었다.
+// 두 사유는 처방이 정반대인데(전자는 합산 대상 자체가 아니고, 후자는 값이 복원되지 않은 것)
+// 합쳐 말해서, 실제 제보에서 「결과 미저장」 결함이 「3년 창」 문제로 오인됐다.
+
+test("B-5: 3년 창 밖 이력 → 「소급 3년을 넘어」 문구만 뜬다 (사유를 합치지 않는다)", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await gotoStockTransferTax(page);
+
+  // 이번 양도일(2026-02-26) 기준 소급 3년 **밖**인 이력 — 경계는 2023-02-26이다.
+  const now = new Date().toISOString();
+  await putCalculationRecord(page, {
+    id: "e2e-block-prior-old",
+    userId: LOCAL_USER_ID,
+    taxType: "stock_transfer",
+    title: `${CORP} 구 양도 2022-01-10`,
+    inputData: {
+      securityName: CORP,
+      securityCode: "",
+      transferDate: "2022-01-10",
+      shareCount: "30000",
+    },
+    resultData: {
+      transferPrice: 600_000_000,
+      acquisitionPrice: 450_000_000,
+      expenses: 1_500_000,
+      calculatedTax: 29_200_000,
+      appliedSection94: "①3나_본문",
+    },
+    taxLawVersion: "2022-01-10",
+    linkedCalculationId: null,
+    clientId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await page.getByRole("radio", { name: "기타자산" }).first().click();
+  await fillStep1Basics(page, {
+    name: CORP,
+    acquisitionDate: "2003-02-17",
+    transferDate: "2026-02-26",
+    shareCount: "40000",
+  });
+  await turnOnBlockShareholder(page);
+
+  await page.getByTestId("block-shareholder-prior-lookup").click();
+  await expect(
+    page.getByRole("heading", { name: "기신고 이력에서 합산 (영 §158②)" }),
+  ).toBeVisible({ timeout: 10_000 });
+
+  // 3년 창 사유만 뜬다 — 「계산 결과가 저장돼 있지 않아」는 뜨지 않는다.
+  await expect(page.getByText(/양도일이 소급 3년을 넘어/)).toBeVisible();
+  await expect(page.getByText(/계산 결과\(양도가액·주식수\)가 저장돼 있지 않아/)).toHaveCount(0);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// B-6 — 기신고 조문으로 «자동 배제»하지 않는다
+// ─────────────────────────────────────────────────────────────────
+//
+// 종전에는 이미 `①4다`(기타자산)로 신고된 회차의 세액을 영 §168② 「**대주주로서** 납부하였거나
+// 납부할 세액」 문언에 닿지 않는다고 보아 **기납부 합산에서 뺐다**. 2026-09-14에 그 자동 배제를
+// 걷어냈다 — §94①4 다목 요건 판정 자체가 **사용자 입력 축**이고, 과거 신고 성격을 근거로
+// 프로그램이 차감을 깎으면 방향이 **납세자에게 불리**한데 되돌릴 수단이 없다.
+// 뺄지 말지는 사용자가 «선택 해제»로 정한다.
+
+test("B-6: `①4다`로 신고된 이력도 기납부세액에 합산된다 (배지는 정보 표시)", async ({ page }) => {
+  test.setTimeout(150_000);
+  await gotoStockTransferTax(page);
+
+  const now = new Date().toISOString();
+  await putCalculationRecord(page, {
+    id: "e2e-block-prior-4da",
+    userId: LOCAL_USER_ID,
+    taxType: "stock_transfer",
+    title: `${CORP} 1차 양도 2023-06-20 (기타자산 신고)`,
+    inputData: {
+      securityName: CORP,
+      securityCode: "",
+      transferDate: "2023-06-20",
+      shareCount: "30000",
+    },
+    resultData: {
+      transferPrice: 600_000_000,
+      acquisitionPrice: 450_000_000,
+      expenses: 1_500_000,
+      calculatedTax: 29_200_000,
+      // 🔑 B-4와 **이 한 값만** 다르다 — 그때 이미 기타자산으로 신고한 건이다.
+      appliedSection94: "①4다",
+    },
+    taxLawVersion: "2023-06-20",
+    linkedCalculationId: null,
+    clientId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await page.getByRole("radio", { name: "기타자산" }).first().click();
+  await fillStep1Basics(page, {
+    name: CORP,
+    acquisitionDate: "2003-02-17",
+    transferDate: "2026-02-26",
+    shareCount: "40000",
+  });
+  await turnOnBlockShareholder(page);
+
+  await page.getByTestId("block-shareholder-prior-lookup").click();
+  await expect(
+    page.getByRole("heading", { name: "기신고 이력에서 합산 (영 §158②)" }),
+  ).toBeVisible({ timeout: 10_000 });
+
+  // 배지는 뜨되 「제외」가 아니라 «신고된 건»이라는 정보다
+  await expect(page.getByText("기타자산(§94①4다)으로 신고된 건")).toBeVisible();
+
+  await page.getByTestId("prior-transfer-e2e-block-prior-4da").check();
+  // 합계 미리보기에 기납부가 «그대로» 들어간다
+  await expect(page.getByText(/기납부\(영 §168②\) 29,200,000/)).toBeVisible();
+  await expect(page.getByText(/그대로 합산/)).toBeVisible();
+
+  await page.getByRole("button", { name: /선택 1건 합산/ }).click();
+
+  // 폼 칸에도 그대로 채워진다 — B-4(①3나)와 같은 값이다
+  await expect(page.getByLabel("대주주로서 납부하였거나 납부할 세액")).toHaveValue("29,200,000");
 });

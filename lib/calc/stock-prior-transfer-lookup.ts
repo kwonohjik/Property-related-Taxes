@@ -33,6 +33,7 @@
 
 import type { CalculationRecord } from "@/lib/storage/types";
 import { isWithinAggregationWindow } from "@/lib/tax-engine/stock-transfer/block-shareholder-gate";
+import { parseIntOrUndef } from "./stock-transfer-tax-api-parse";
 
 // ============================================================
 // 공개 타입
@@ -57,11 +58,15 @@ export interface PriorStockTransferCandidate {
   calculatedTax: number;
   appliedSection94: string;
   /**
-   * 이미 `①4다`(기타자산·과점주주)로 신고된 건인가.
+   * 이미 `①4다`(기타자산·과점주주)로 신고된 건인가 — **표시 전용 플래그**다.
    *
-   * 🔴 그런 회차의 세액은 「**대주주로서**」 낸 것이 아니라 **기타자산으로** 낸 것이라
-   *    영 §168② 문언에 닿지 않는다 ⇒ **기납부 합산에서 제외**한다.
-   *    다만 양도가액·주식수 합산에는 필요할 수 있으므로 **선택 자체는 막지 않는다**(배지로 경고).
+   * 🔴 **합산에서 빼지 않는다**(2026-09-14 결정). 종전에는 이 값이 참이면 기납부세액을
+   *    합산에서 제외했다 — 영 §168② 「**대주주로서** 납부하였거나 납부할 세액」 문언에
+   *    닿지 않는다는 해석이었다. 그러나 §94①4 다목 **요건 판정 자체가 사용자 입력 축**이고,
+   *    기신고를 어떤 조문으로 했는지는 **사용자가 알고 고르는 것**이다. 프로그램이 과거 신고의
+   *    성격을 근거로 차감을 **자동으로 깎으면** 사용자가 되돌릴 방법이 없고, 방향이
+   *    **납세자에게 불리**하다([[feedback_no_unfavorable_application_without_legal_basis]]).
+   *    ⇒ 전액 합산하고, 어떤 조문으로 신고된 건인지는 **배지로 알리기만** 한다.
    */
   wasAlreadyBlockShareholder: boolean;
   createdAt: string;
@@ -108,6 +113,30 @@ function num(v: unknown): number {
 
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
+}
+
+/**
+ * 양도 주식수 — **2단 소스**로 읽는다.
+ *
+ * | 순위 | 소스 | 형태 |
+ * |---|---|---|
+ * | 1 | `resultData.shareCount` | number (엔진 echo) |
+ * | 2 | `inputData.shareCount` | **문자열** (폼 — `calc-wizard-stock-form-types.ts:99`) |
+ *
+ * 🔴 2순위가 없으면 **이미 저장된 이력은 영원히 후보가 되지 못한다**. 결과 echo는
+ *    2026-09-14에 추가됐고(`stock-transfer.types.ts` `shareCount`), 그 이전 이력에는
+ *    `resultData`에 수량이 **아예 없다** — 그 때문에 이 기능이 후보를 한 건도 내지 못했다.
+ *
+ * 파서는 ④ API 변환과 **같은 것**을 쓴다(`stock-transfer-tax-api.ts:145`가 쓰는
+ * `parseIntOrUndef`) — 폼 문자열 해석이 두 곳에서 갈리지 않게 한다.
+ */
+function resolveShareCount(
+  result: Record<string, unknown>,
+  input: Record<string, unknown>,
+): number {
+  const fromResult = num(result.shareCount);
+  if (fromResult > 0) return fromResult;
+  return parseIntOrUndef(str(input.shareCount)) ?? 0;
 }
 
 /** ISO(YYYY-MM-DD) 앞 10자만 취한다 — 저장 형태가 Date 직렬화일 수 있다. */
@@ -219,7 +248,7 @@ export function filterPriorStockTransferCandidates(
 
     // 결과가 비었으면 합산에 쓸 값이 없다 — 조용히 건너뛰지 않고 사유를 남긴다.
     const transferPrice = num(result.transferPrice);
-    const shareCount = num(result.shareCount);
+    const shareCount = resolveShareCount(result, input);
     if (transferPrice <= 0 || shareCount <= 0) {
       warnings.push({
         calculationId: rec.id,
@@ -268,26 +297,30 @@ export interface BlockShareholderAggregation {
   priorAcquisitionPrice: number;
   priorExpenses: number;
   priorShareCount: number;
-  /** 영 §168② — **§94①3호로 과세된 건만** 합산 */
+  /**
+   * 영 §168② 기납부세액 — **선택한 건 전부**를 더한다(조문 구분 없이).
+   * 어떤 조문으로 신고된 건을 넣을지는 사용자가 모달에서 고른다.
+   */
   priorMajorShareholderTax: number;
   /** 영 §158② 합산기간 최초 양도일 (ISO) — 선택 건 중 가장 이른 날 */
   aggregationFirstTransferDate: string;
-  /** 기납부 합산에서 **제외된** 건 (이미 `①4다`) — 모달이 배지로 알린다 */
-  excludedFromPriorTaxIds: string[];
+  /** 이미 `①4다` 로 신고된 건 — **합산은 됐고**, 모달이 배지로 알리기만 한다 */
+  alreadyBlockShareholderIds: string[];
   sourceIds: string[];
 }
 
 /**
  * 선택된 후보를 합산한다. **당회차는 포함하지 않는다** — 호출부가 자기 입력과 더한다.
  *
- * 🔴 `priorMajorShareholderTax` 는 **「3호로 과세된 건」만** 더한다(영 §168② 「**대주주로서**
- *    납부하였거나 납부할 세액」). 이미 `①4다` 로 신고된 회차는 기타자산으로 낸 것이라
- *    그 문언에 닿지 않는다.
+ * 🔴 `priorMajorShareholderTax` 는 **선택된 건을 전부** 더한다 — 기신고가 `①3`이든 `①4다`든
+ *    가리지 않는다(2026-09-14 결정). 조문별 자동 배제를 두면 사용자가 고른 건이 조용히
+ *    빠지고, 그 방향이 **납세자에게 불리**하다. 무엇을 넣을지는 **사용자가 고른다** —
+ *    모달이 각 건의 신고 조문을 배지로 보여 주므로 빼고 싶으면 **선택을 해제**하면 된다.
  */
 export function aggregatePriorStockTransfers(
   selected: readonly PriorStockTransferCandidate[],
 ): BlockShareholderAggregation {
-  const excludedFromPriorTaxIds: string[] = [];
+  const alreadyBlockShareholderIds: string[] = [];
   let priorMajorShareholderTax = 0;
   let priorTransferPrice = 0;
   let priorAcquisitionPrice = 0;
@@ -300,10 +333,10 @@ export function aggregatePriorStockTransfers(
     priorAcquisitionPrice += c.acquisitionPrice;
     priorExpenses += c.expenses;
     priorShareCount += c.shareCount;
+    priorMajorShareholderTax += c.calculatedTax;
     if (c.wasAlreadyBlockShareholder) {
-      excludedFromPriorTaxIds.push(c.calculationId);
-    } else {
-      priorMajorShareholderTax += c.calculatedTax;
+      // 표시용으로만 모은다 — 합산에서 빼지 않는다.
+      alreadyBlockShareholderIds.push(c.calculationId);
     }
     if (!first || c.transferDate < first) first = c.transferDate;
   }
@@ -315,7 +348,7 @@ export function aggregatePriorStockTransfers(
     priorShareCount,
     priorMajorShareholderTax,
     aggregationFirstTransferDate: first,
-    excludedFromPriorTaxIds,
+    alreadyBlockShareholderIds,
     sourceIds: selected.map((c) => c.calculationId),
   };
 }
