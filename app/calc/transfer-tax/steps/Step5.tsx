@@ -23,7 +23,6 @@ import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-red
 // 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
 const REDUCTION_LABELS = {
   self_farming: { label: "자경농지 감면", desc: "8년 이상 자경 (§69, 한도 1억)" },
-  long_term_rental: { label: "장기임대주택 감면", desc: "공공지원/장기일반민간임대 10년+ → 장특공제율 70% (§97의3)" },
   new_housing: { label: "신축주택 감면", desc: "신축주택 취득자 양도세 감면 (§99, 1998~1999 IMF 1차)" },
   unsold_housing: { label: "미분양주택 감면", desc: "서울 외 미분양 5년 100% (수도권과밀 60%) — §98의3, 2009.2.12~2010.2.11" },
   public_expropriation: { label: "공익사업 수용 감면", desc: "현금 15%/채권 20~45% (§77, 2025+ · 연간 2억)" },
@@ -36,8 +35,6 @@ function getDefaultReduction(type: ReductionUiType): AssetReductionForm {
   switch (type) {
     case "self_farming":
       return { type: "self_farming", farmingYears: "0" };
-    case "long_term_rental":
-      return { type: "long_term_rental", rentalYears: "0", rentIncreaseRate: "5" };
     case "new_housing":
       return { type: "new_housing", reductionRegion: "metropolitan" };
     case "unsold_housing":
@@ -85,7 +82,6 @@ function AssetReductionBlock({
   }
 
   const selfFarming = reductions.find((r) => r.type === "self_farming");
-  const longTermRental = reductions.find((r) => r.type === "long_term_rental");
   const newHousing = reductions.find((r) => r.type === "new_housing");
   const unsoldHousing = reductions.find((r) => r.type === "unsold_housing");
   const expropriation = reductions.find((r) => r.type === "public_expropriation");
@@ -269,43 +265,6 @@ function AssetReductionBlock({
             transferDate={transferDate || undefined}
             assetStandardPriceAtAcq={asset.standardPriceAtAcq || undefined}
           />
-        </div>
-      )}
-
-      {/* 장기임대주택 서브패널 — deprecated 안내 + 기존 입력 보존 */}
-      {longTermRental && longTermRental.type === "long_term_rental" && (
-        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
-          {/* C: deprecated 배너 */}
-          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-              ⚠ 구 방식 입력입니다
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-              §97의3 정밀 계산은 <strong>감면 그룹 패널의 「§97의3」 항목</strong>을 이용하세요.
-              기존 입력 값은 하위 호환을 위해 유지되지만 이후 계산에서는 정밀 입력 방식이 우선됩니다.
-            </p>
-          </div>
-          <p className="text-xs font-medium text-primary">임대 조건 입력 (구 방식 — 보존)</p>
-          <div className="flex items-center gap-2">
-            <DecimalInput
-              className="w-20"
-              value={longTermRental.rentalYears}
-              onChange={(v) =>
-                updateReduction("long_term_rental", { rentalYears: v } as Partial<AssetReductionForm>)
-              }
-            />
-            <span className="text-xs text-muted-foreground">년 임대</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DecimalInput
-              className="w-20"
-              value={longTermRental.rentIncreaseRate}
-              onChange={(v) =>
-                updateReduction("long_term_rental", { rentIncreaseRate: v } as Partial<AssetReductionForm>)
-              }
-            />
-            <span className="text-xs text-muted-foreground">% 임대료 인상률 (5% 이하여야 감면)</span>
-          </div>
         </div>
       )}
 

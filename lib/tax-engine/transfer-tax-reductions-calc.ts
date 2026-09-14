@@ -494,22 +494,6 @@ export function calcReductions(
           }
         }
       }
-    } else if (reduction.type === "long_term_rental") {
-      // ⚠️ R-1 (장기임대 §97의3 8년 50% 경과규정) — 레거시 단순 경로.
-      // 신규 UI(UnifiedReductionPanel)는 rental_97_* ID만 생성하므로 이 type은 신규
-      // 입력에서 도달 불가(dead). 2026-04-25 이전 폼-전역 구버전 sessionStorage
-      // 마이그레이션(calc-wizard-migration.ts:165)으로만 폼에 존재한다.
-      // 시한·등록일 게이트 없이 8년 50%를 적용 — §97의3 현행은 10년 70% 단일이고
-      // 8년 50%는 과거 경과규정이다.
-      // 🔴 보류 사유가 **해제됐다** (2026-09-14): 「부칙 존속 여부 미확정(KoreanLaw 확보 불가,
-      //    외부 원문 필요)」이 종전 사유였으나 부칙·종전 문언을 원문으로 확보했다
-      //    (법률 제19199호 부칙 §38 + 2022-12-08 시행본 mst 237393 — `rental-97-3.ts` 헤더).
-      //    ⇒ 제거·게이트추가 판단은 더 이상 근거 부족이 아니다. 후속: followup.plan.md §R-4.
-      // D1-11 — 이 분기는 주석(:409-410)이 스스로 밝히듯 **§97의3 8년 50% 경과규정**이다.
-      //          §97로 인쇄되면 UI 설명(Step5)과 어긋난 조문 모달이 열린다.
-      if (reduction.rentalYears >= 8 && reduction.rentIncreaseRate <= 0.05) {
-        amount = applyRate(calculatedTax, 0.5);
-      }
     } else if (reduction.type === "new_housing") {
       const rate = reduction.region === "metropolitan" ? 0.5 : 1.0;
       amount = applyRate(calculatedTax, rate);
