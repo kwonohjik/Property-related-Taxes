@@ -18,9 +18,9 @@
  *   가. 소유기간에서 2년을 차감한 기간을 초과하는 비사업용
  *   나. 소유기간 100분의 40에 상당하는 기간을 초과하는 비사업용
  *
- * 비사업용 비율 임계(다목/3호 나목)는 100분의 40. 단, 2015.2.2 이전 양도분의
- * 농·임·목은 비사업용 100분의 20(=사업용 80%) 레거시 — getThresholdRatio의
- * 사업용 비율 임계(0.6/0.8)를 `1 − ratio`로 환산해 적용한다.
+ * 비사업용 비율 임계(다목/3호 나목)는 100분의 40. 단, 2015.2.3. **전** 양도분은
+ * 지목을 가리지 않고 비사업용 100분의 20(=사업용 80%) 레거시 — getThresholdRatio의
+ * 사업용 비율 임계(0.6/0.8)를 정수 백분율로 환산해 적용한다.
  *
  * 레거시 호환: 결과 타입 `criteria`의 3 boolean은 "사업용으로 인정하는 lens"
  * (De Morgan: 사업용 = 각 목 미충족의 OR)로 재정의하되 필드명·개수는 불변.
@@ -105,25 +105,28 @@ export function getPeriodJudgmentDate(
 
 /**
  * 기준 ③ 임계비율 결정.
- * 현행법은 0.6. 단, 2015.2.3. **전** 양도분의 농·임·목은 0.8 레거시(구법 「100분의 20」).
+ * 현행법은 0.6. 2015.2.3. **전** 양도분은 0.8 레거시(구법 「100분의 20」).
  *
- * ⚠️ 지목 한정(농·임·목만)은 두 시행본 본문에 근거가 없다 — `types.ts`의 주석 참조.
+ * 🔴 **지목으로 나누지 않는다** — 종전의 「농·임·목 한정」을 2026-09-14에 정정했다.
+ *    §168의6은 법 §104의3① **각 호 외의 부분**의 「대통령령으로 정하는 기간」을 정의하는
+ *    조문이라 지목별 분기 자체가 없다. 개정 전후 본문 실측(법제처 `target=eflaw`):
+ *    - [시행 2015.01.01. 대통령령 제24356호] 각 호 다목(3호는 나목) 「소유기간의 100분의 **20**」
+ *    - [시행 2015.02.03. 대통령령 제26067호] 같은 자리 「소유기간의 100분의 **40**」
+ *    둘 다 지목을 구분하지 않는다. 제26067호 **부칙 전문(제1조~제23조)** 실측에도 §168의6
+ *    개별 적용례·경과조치가 없어 **제2조②**(「이 영 중 양도소득에 관한 개정규정은 이 영 시행
+ *    이후 최초로 양도하는 분부터 적용한다」)가 지배한다 ⇒ 경계는 시행일 **2015-02-03** 하나뿐.
+ *
+ *    종전 구현은 기타토지·별장의 2015.2.3. 전 양도분에 0.6을 적용해 사업용 인정 문턱을
+ *    낮췄다 — **비사업용 과소판정**(+10%p 중과 누락) 방향이었다.
  */
 export function getThresholdRatio(
   transferDate: Date,
-  categoryGroup: LandCategoryGroup,
   rules: NonBusinessLandJudgmentRules,
 ): number {
   const t = rules.periodCriteriaThresholds;
   if (!t) return 0.6;
 
-  const oldDate = new Date(t.oldThresholdDate);
-  const isFarmForestPasture =
-    categoryGroup === "farmland" ||
-    categoryGroup === "forest" ||
-    categoryGroup === "pasture";
-
-  if (transferDate < oldDate && isFarmForestPasture) {
+  if (transferDate < new Date(t.oldThresholdDate)) {
     return t.oldThresholdRatio;
   }
   return t.currentThresholdRatio;
@@ -193,7 +196,7 @@ export function meetsPeriodCriteria(
 
   const ratio = totalOwnershipDays > 0 ? effectiveBusinessDays / totalOwnershipDays : 0;
 
-  const thresholdRatio = getThresholdRatio(transferDate, categoryGroup, rules);
+  const thresholdRatio = getThresholdRatio(transferDate, rules);
 
   // ── §168조의6 비사업용 기간 판정 (버킷별 가·나·다 AND) ──────────────
   // 각 창의 비사업용 일수 = 창 길이 − 사업용 일수. 창 길이는 clip 반영(짧은 보유 시

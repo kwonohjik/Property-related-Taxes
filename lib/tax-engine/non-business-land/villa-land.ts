@@ -61,8 +61,8 @@ export function judgeVillaLand(
     end: p.endDate,
   }));
   const nonVilla = invertPeriods(villaUse, ownershipStart, pjDate);
-  // categoryGroup "villa"는 §168-6 ③ 80% 레거시 대상이 아니므로
-  // `getThresholdRatio()` 는 항상 현행 60%를 반환한다 (Bug-06 정리).
+  // ⚠️ 별장도 2015.2.3. **전** 양도분이면 레거시 임계 0.8이 적용된다 — §168의6에 지목
+  //    분기가 없기 때문이다(2026-09-14 정정. 종전 주석은 「항상 60%」라 적었고 틀렸다).
   const r1 = meetsPeriodCriteria(nonVilla, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
 
   if (r1.meets) {
