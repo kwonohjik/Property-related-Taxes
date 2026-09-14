@@ -5,7 +5,7 @@
  * 실제 납부 방식(원천징수/자진신고)은 시장·계좌 유형에 따라 다름.
  *
  * Phase 2 (2026-06-11):
- *   양도일(거래일) 기준 연도별 탄력세율 자동 적용 — STX_CUTOFF_DATE(2017-04-01) 이후 전 구간.
+ *   양도일(거래일) 기준 연도별 탄력세율 자동 적용 — STX_CUTOFF_DATE(2013-01-01) 이후 전 구간.
  *   세율 매트릭스 단일 진실: lib/tax-engine/data/securities-transaction-tax-rates.ts
  *   (전 구간 KoreanLaw applicable_law 축자 검증 — 상세 출처는 data 파일 헤더)
  *
@@ -153,11 +153,14 @@ export function calcSecuritiesTransactionTax(
   let rateReference: string;
 
   if (isKOTCTrading && marketType === "unlisted") {
-    // K-OTC(금융투자협회) — 시행령 §5 3호 나목 (코스닥과 동률)
+    // K-OTC(금융투자협회) — 현행은 시행령 §5 3호 나목 (코스닥과 동률)
+    //
+    // ⚠️ **항상 코스닥과 동률인 것은 아니다** — 2017.3.31 이전 §5 에는 협회 경유 목이 아예
+    //    없어 법 §8① 본칙(1천분의 5)이었다. 그래서 `kotcNum` 이 `kosdaqNum` 과 별도 칸이다.
     //
     // ⚠️ K-OTC는 증권시장 **밖**이지만 시행령 §5 3호 나목이 **별도로** 세율을 준다 —
     //    아래 장외 분기를 타지 않는다. 그래서 이 분기가 장외 게이트보다 앞에 있다.
-    num = period.kosdaqKotcNum;
+    num = period.kotcNum;
     rateReference = `${period.kotcRef ?? STOCK_STX.STX_DECREE_5_3_NA_KOTC} ${period.refSuffix}`;
   } else if (!isOnMarket) {
     /**
@@ -181,7 +184,7 @@ export function calcSecuritiesTransactionTax(
     ].join(" + ");
   } else if (marketType === "kosdaq") {
     // 코스닥 — 시행령 §5 3호 가목
-    num = period.kosdaqKotcNum;
+    num = period.kosdaqNum;
     rateReference = `${period.kosdaqRef ?? STOCK_STX.STX_DECREE_5_3_GA_KOSDAQ} ${period.refSuffix}`;
   } else if (marketType === "konex") {
     // 코넥스 — 현행은 시행령 §5 2호 10/10000.
@@ -226,7 +229,7 @@ export function calcSecuritiesTransactionTax(
  * 양도일 → 세율 구간 매칭.
  *
  *   1. transferDate 미제공 → 현행 구간 + 경고 없음 (Step3 inline 양도일 미입력 호환 — A-31)
- *   2. < STX_CUTOFF_DATE(2017-04-01) → 현행 구간 fallback + 미지원 경고 (A-30)
+ *   2. < STX_CUTOFF_DATE(2013-01-01) → 현행 구간 fallback + 미지원 경고 (A-30)
  *   3. 구간 매칭 [from, to] 경계 포함 (anchor A-26~29로 고정)
  *
  * Date 비교는 new Date("YYYY-MM-DD") UTC ISO 자정 파싱끼리만 — data 파일 헤더 규칙.
