@@ -5,6 +5,7 @@
  * 부동산 FilingFormTableHelpers.ts 패턴 차용.
  */
 
+import { pushAssetAndCostRows } from "./StockFilingFormAssetCostRows";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
@@ -206,230 +207,15 @@ export function buildRows(
 
   const rows: RowDef[] = [];
 
-  // ── [A] 자산 정보 (01~06) ──────────────────────────────────────
-
-  // 01. 적용 조문
-  rows.push({
-    label: "01. 적용 조문 (§94)",
-    values: val(
-      sectionLabel(result.appliedSection94),
-      () => "— (종목별 상이)",
-      (item) => sectionLabel(item.appliedSection94),
-    ),
-    separatorAfter: false,
-  });
-
-  // 02. 분류 (대주주·비대주주 등)
-  rows.push({
-    label: "02. 과세 분류",
-    values: val(
-      taxCategoryLabel(result.taxCategory),
-      () => "— (종목별 상이)",
-      (item) => taxCategoryLabel(item.taxCategory),
-    ),
-  });
-
-  // 03. 기본공제 그룹
-  rows.push({
-    label: "03. 기본공제 그룹",
-    values: val(
-      basicDeductGroupLabel(result),
-      () => "— (종목별 상이)",
-      (item) => basicDeductGroupLabel(item),
-    ),
-  });
-
-  // 04. 취득가액 산정 방식
-  rows.push({
-    label: "04. 취득가액 산정 방식",
-    values: val(
-      acquisitionModeLabel(result.acquisitionMode),
-      () => "— (종목별 상이)",
-      (item) => acquisitionModeLabel(item.acquisitionMode),
-    ),
-  });
-
-  // 05. 보유기간
-  rows.push({
-    label: "05. 보유기간",
-    values: val(
-      holdingMonthsStr(result),
-      () => "— (종목별 상이)",
-      (item) => holdingMonthsStr(item),
-    ),
-  });
-
-  // 06. 단기보유 여부
-  rows.push({
-    label: "06. 단기보유 (1년 미만)",
-    values: val(
-      result.isShortTermHolding ? "해당 (30% 적용)" : "해당없음",
-      () => "— (종목별 상이)",
-      (item) => (item.isShortTermHolding ? "해당" : "해당없음"),
-    ),
-    separatorAfter: true,
-  });
-
-  // ── [B] 양도가액 (07~10) ──────────────────────────────────────
-
-  // 07. 양도가액
-  rows.push({
-    label: "07. 양도가액 (①)",
-    values: val(
-      result.transferPrice,
-      (agg) => agg.items.reduce((s, r) => s + r.transferPrice, 0),
-      (item) => item.transferPrice,
-    ),
-    highlight: false,
-  });
-
-  // 08. 교환 - 부동산 정상가액 (조건부)
-  const hasExchange = result.transferPriceBreakdown !== undefined;
-  rows.push({
-    label: "08.   교환 — 부동산 정상가액",
-    values: val(
-      hasExchange ? (result.transferPriceBreakdown?.property ?? null) : null,
-      () => null,
-      (item) => item.transferPriceBreakdown?.property ?? null,
-    ),
-    indent: true,
-  });
-
-  // 09. 교환 - 채무면제액 (조건부)
-  rows.push({
-    label: "09.   교환 — 채무면제액",
-    values: val(
-      hasExchange ? (result.transferPriceBreakdown?.debt ?? null) : null,
-      () => null,
-      (item) => item.transferPriceBreakdown?.debt ?? null,
-    ),
-    indent: true,
-  });
-
-  // 10. 교환 - 현금 (조건부)
-  rows.push({
-    label: "10.   교환 — 현금",
-    values: val(
-      hasExchange ? (result.transferPriceBreakdown?.cash ?? null) : null,
-      () => null,
-      (item) => item.transferPriceBreakdown?.cash ?? null,
-    ),
-    indent: true,
-    separatorAfter: true,
-  });
-
-  // ── [C] 취득가액 (11~13) ──────────────────────────────────────
-
-  // 11. 취득가액
-  rows.push({
-    // 환산 모드에서는 이 값이 곧 §163⑨ 환산취득가액이다 — 12-1·12-2가 그 분자·분모다.
-    label: result.usedEstimatedAcquisition ? "11. 취득가액 (② = 환산취득가액)" : "11. 취득가액 (②)",
-    values: val(
-      result.acquisitionPrice,
-      (agg) => agg.items.reduce((s, r) => s + r.acquisitionPrice, 0),
-      (item) => item.acquisitionPrice,
-    ),
-  });
-
-  // 12~13. §163⑨ 환산취득가액 산식 — 분자·분모 (모두 **1주당**)
-  //
-  // 종전에는 「12. 환산 base (취득기준시가)」 한 줄에 **총액**을 보여줬다. 라벨이 「환산…」으로
-  // 시작하는데 값은 환산의 base라, 정작 환산취득가액(11행)이 어떻게 나왔는지는 화면 어디에도
-  // 드러나지 않았다. 산식을 분자·분모로 펼쳐 11행과 이어지게 한다.
-  //
-  // ⚠️ 12·13은 **1주당**, `estimatedBase`는 **총액**이다. 섞으면 항등식이 깨진다 —
-  //    총액 base는 17행(개산공제 §163⑥4)이 이미 그 역할로 쓰고 있다.
-  rows.push({
-    label: "12-1.  환산 분자 — 취득 당시 1주당 기준시가",
-    values: val(
-      result.valuationDetail?.conversionAcqStdPerShare ?? null,
-      () => null,
-      (item) => item.valuationDetail?.conversionAcqStdPerShare ?? null,
-    ),
-    indent: true,
-  });
-
-  /**
-   * 분모 라벨은 **무조건**이다 — 종전에는 「미입력 · 1주당 양도가액으로 대체」를 병기했는데,
-   * 그 자동 대체 자체를 없앴다(Q-1 차단 정본, 2026-09-10). 분모가 비면 이제 12-2도 0이다.
-   */
-  const TRANSFER_STD_LABEL = "12-2.  환산 분모 — 양도 당시 1주당 기준시가";
-
-  rows.push({
-    label: TRANSFER_STD_LABEL,
-    values: val(
-      result.valuationDetail?.conversionTransferStd ?? null,
-      () => null,
-      (item) => item.valuationDetail?.conversionTransferStd ?? null,
-    ),
-    indent: true,
-  });
-
-  // 13. 액면가 합계 (face_value 모드)
-  rows.push({
-    label: "13.   액면가 합계 (장부분실 §99①4)",
-    values: val(
-      result.acquisitionMode === "face_value" ? result.acquisitionPrice : null,
-      () => null,
-      (item) => (item.acquisitionMode === "face_value" ? item.acquisitionPrice : null),
-    ),
-    indent: true,
-    separatorAfter: true,
-  });
-
-  // ── [D] 필요경비 (14~17) ──────────────────────────────────────
-
-  // 14. 필요경비 합계
-  rows.push({
-    label: "14. 필요경비 합계 (③)",
-    values: val(
-      result.expenses,
-      (agg) => agg.items.reduce((s, r) => s + r.expenses, 0),
-      (item) => item.expenses,
-    ),
-  });
-
-  // 15. 증권거래세
-  //   소득세법상 필요경비(§163①6호)이지만 사용자가 actualExpenses에 포함해 입력.
-  //   echo 채우기 시 필요경비 이중 차감 왜곡 → null 유지.
-  //   정보용 STX 계산·표시는 SecuritiesTransactionTaxCard(결과뷰·Step3 인라인) 참조.
-  //   설계: docs/02-design/features/stock-transfer-tax.ui.design.md §2-5
-  rows.push({
-    label: "15.   증권거래세",
-    values: val(
-      null,
-      () => null,
-      () => null,
-    ),
-    indent: true,
-  });
-
-  // 16. 매매수수료·기타 양도비용
-  const otherExpenses = (r: StockTransferResult) =>
-    r.expenseMode === "actual"
-      ? r.expenses - (r.estimatedDeduction ?? 0)
-      : null;
-
-  rows.push({
-    label: "16.   매매수수료·기타 양도비용 (actual 모드)",
-    values: val(
-      otherExpenses(result),
-      () => null,
-      (item) => otherExpenses(item),
-    ),
-    indent: true,
-  });
-
-  // 17. 개산공제 §163⑥4
-  rows.push({
-    label: "17.   개산공제 §163⑥4 (취득기준시가 × 1%)",
-    values: val(
-      result.estimatedDeduction ?? null,
-      () => aggregate?.items.reduce((s, r) => s + (r.estimatedDeduction ?? 0), 0) ?? null,
-      (item) => item.estimatedDeduction ?? null,
-    ),
-    indent: true,
-    separatorAfter: true,
+  // ── [A]~[D] 자산·양도가액·취득가액·필요경비 (01~17) ──────────────
+  //    800줄 정책 분리 — 구간 빌더에 위임한다(`StockFilingFormAssetCostRows.ts`).
+  //    `hasPriorAggregation` 은 그 안에서 판정해 돌려받는다 — 행 수 가드가 쓴다.
+  const { hasPriorAggregation } = pushAssetAndCostRows(rows, {
+    result,
+    aggregate,
+    val,
+    holdingMonthsStr,
+    basicDeductGroupLabel,
   });
 
   // ── [E] 양도차익·소득금액 (18~19) ─────────────────────────────
@@ -738,11 +524,17 @@ export function buildRows(
   // ⚠️ 2026-08-27 정정 — 기대값이 **32에 멈춰 있어 상시 발화**하고 있었다. `40d6cc55`(PR #1327)가
   //    무조건 행을 하나 늘리며(32→33) 여기를 안 올렸고, 조건부 목록에도 `lossOffset` 이 빠져
   //    있었다. 파일 자신이 경고한 「신호가 죽는」 상태가 실제로 벌어져 있었다.
+  // ⚠️ 2026-09-14 정정 — **또 발화하고 있었다**(기대 33 / 실제 35). `clause168_2Credit`
+  //    블록이 24-1·24-2 **두 행**을 조건부로 넣는데 이 식에 항이 없었다. 위 경고가 말한
+  //    「신호가 죽는」 상태가 두 번째로 벌어져 있었다 — 조건부 행을 추가하면 **반드시**
+  //    여기에 항을 더한다.
   const expectedRows =
     33 +
     (aggregate?.aggregated.lossOffset ? 1 : 0) +
     (isMulti ? 1 : 0) +
-    (hasForeignCredit ? 1 : 0);
+    (hasForeignCredit ? 1 : 0) +
+    (result.clause168_2Credit ? 2 : 0) +
+    (hasPriorAggregation ? 6 : 0);
   if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과
     if (typeof console !== "undefined") {

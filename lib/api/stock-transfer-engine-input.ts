@@ -71,6 +71,12 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     //    되어 영 §158② 3년 창이 **항상 통과**한다(계획서 검토 F-13).
     aggregationFirstTransferDate: toOptionalDate(coerced.aggregationFirstTransferDate),
     priorMajorShareholderTax: coerced.priorMajorShareholderTax as number | undefined,
+    // 영 §158② 기신고분 합산 축 — 전부 number 라 Date 변환은 필요 없다.
+    priorTransferPrice: coerced.priorTransferPrice as number | undefined,
+    priorAcquisitionPrice: coerced.priorAcquisitionPrice as number | undefined,
+    priorExpenses: coerced.priorExpenses as number | undefined,
+    priorShareCount: coerced.priorShareCount as number | undefined,
+    priorAggregationSourceCount: coerced.priorAggregationSourceCount as number | undefined,
     nblRatioOfCorpAssets: coerced.nblRatioOfCorpAssets as number | undefined,
     crossClause8TaxBase: coerced.crossClause8TaxBase as number | undefined,
     transferPriceMode: coerced.transferPriceMode as StockTransferInput["transferPriceMode"],

@@ -94,6 +94,10 @@ export function createInitialStockFormData(): StockTransferFormData {
     aggregationFirstTransferDate: "",
     priorMajorShareholderTax: "",
     blockShareholderSourceIds: [],
+    priorTransferPrice: "",
+    priorAcquisitionPrice: "",
+    priorExpenses: "",
+    priorShareCount: "",
     cumulativeTransferRatio: "",
     nblRatioOfCorpAssets: "",
 

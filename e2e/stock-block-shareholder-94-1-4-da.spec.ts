@@ -16,9 +16,20 @@
  * | B-1 | 4칸 수동 입력 → **A-3 정본 373,985,000** · §168② 차감행 · 지방 37,398,500 |
  * | B-2 | 게이트 미충족(누적 30%) → 미리보기 「미충족」 + `other_asset` **차단**(폴백 불가) |
  * | B-3 | 요건② **양도일 종속** 임계 — 50.0%가 2026년엔 미달, 2019년엔 충족 |
- * | B-4 | Phase C 이력 선택 합산 → 다섯 칸 자동 채움 → **B-1과 같은 세액** |
+ * | B-4 | 이력 선택 합산 → **자연 순서**(Step1 모달 → Step2·3 당회차) → B-1과 같은 세액 |
  * | B-5 | 제외 사유를 **합쳐 말하지 않는다** — 3년 창 밖 ↔ 결과 미저장이 다른 문장 |
  * | B-6 | 기신고가 **`①4다`여도** 기납부세액에 그대로 합산된다(조문 자동 배제 없음) |
+ * | B-7 | 모달 **재확인이 멱등**이다 (종전: 2,100,000,000 → 2,700,000,000 이중합산) |
+ * | B-8 | 당회차 금액을 **나중에 고쳐도** 기신고분이 살아 있다 (제보 본체) |
+ * | B-9 | 저장된 이력이 **당회차분**으로 다시 잡힌다 (다음 회차 이중합산 차단) |
+ * | B-10 | 배지는 **기신고분 칸에만** 반응한다 (당회차 편집에는 남는다) |
+ *
+ * ## 🔴 B-4 는 «자연 순서»여야 한다
+ *
+ * 2026-09-14 이전 B-4 는 `jumpToStep` 으로 Step2·Step3 를 **먼저** 채운 뒤 Step1 로 돌아와
+ * 모달을 열었다. 그 우회 없이는 통과하지 못했기 때문이다 — 당시 합산은 당회차 칸을 덮어쓰는
+ * 방식이라 이후 입력이 합산분을 지웠다. **테스트가 제보된 결함(70,009,500 과소)을 가리고
+ * 있었다.** 순서를 되돌리지 말 것.
  *
  * 정책: [[feedback_browser_verify_with_playwright]]
  * 로케이터: FieldCard label은 htmlFor 미연결 → `[data-slot="field-card"]` + `.last()` 패턴
@@ -120,6 +131,33 @@ async function fillStep2(page: Page, o: { transferTotal: string; perShareAcq: st
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await page.locator("div:has(> label:has-text('양도가액 합계')) input").first().fill(o.transferTotal);
   await page.locator("div:has(> label:has-text('1주당 취득가액')) input").first().fill(o.perShareAcq);
+}
+
+/**
+ * 이미 값이 든 Step2 금액칸을 **사용자처럼** 고쳐 넣는다 — 클릭 → 전체선택 → 타이핑.
+ *
+ * ⚠️ `locator.fill()` 을 그대로 다시 부르면 **이어 붙는다**(실측: "999,999,999" 에 fill
+ *    "1500000000" → `9,999,999,991,500,000,000`). `CurrencyInput` 은 focus 시 `setLocalRaw`
+ *    로 리렌더하는데, 그 리렌더가 Playwright 이 잡아 둔 선택 영역을 **끝으로 접어** 버려
+ *    삽입이 되기 때문이다. 실제 사용자는 `SelectOnFocusProvider` 가 RAF 로 걸어 주는
+ *    전체선택이 리렌더 «뒤»에 실행돼 덮어쓰기가 된다 — 그래서 이 경로가 «실사용자» 재현이다.
+ */
+async function retypeStep2(page: Page, o: { transferTotal: string; perShareAcq: string }) {
+  const tt = page.locator("div:has(> label:has-text('양도가액 합계')) input").first();
+  const pa = page.locator("div:has(> label:has-text('1주당 취득가액')) input").first();
+  for (const [loc, v] of [
+    [tt, o.transferTotal],
+    [pa, o.perShareAcq],
+  ] as const) {
+    await loc.click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await loc.pressSequentially(v);
+  }
+  // ⚠️ `CurrencyInput` 은 **포커스 중에는 콤마를 빼고** raw 숫자를 보여 준다 — blur 해야
+  //    표시값이 확정된다. 이걸 빼먹으면 마지막 칸만 "15000" 으로 읽혀 단언이 어긋난다.
+  await page.keyboard.press("Tab");
+  await expect(tt).toHaveValue(Number(o.transferTotal).toLocaleString());
+  await expect(pa).toHaveValue(Number(o.perShareAcq).toLocaleString());
 }
 
 async function fillStep3(page: Page, o: { expenses: string; filingDate: string }) {
@@ -340,47 +378,192 @@ test("B-4: 기신고 1건 선택 → 다섯 칸 자동 채움 → 373,985,000 (B
   await turnOnBlockShareholder(page);
   await fillGateFields(page, { realEstate: "65", ownership: "70" });
 
-  // 당회차 금액을 먼저 채운다 — 합산은 «기신고 + 당회차»다.
-  // (요건 4칸이 아직 비어 있어 `다음`은 막히므로 인디케이터로 이동한다)
-  await jumpToStep(page, 1);
-  await fillStep2(page, { transferTotal: "1500000000", perShareAcq: "15000" });
-  await jumpToStep(page, 2);
-  await fillStep3(page, { expenses: "3500000", filingDate: "2026-04-30" });
-  await jumpToStep(page, 0);
-
-  // 모달 — 후보 1건을 골라 합산
+  /**
+   * 🔴 **자연 순서다** — Step1 에서 바로 모달을 연다.
+   *
+   * 2026-09-14 이전 이 테스트는 `jumpToStep` 으로 **Step2·Step3 를 먼저 채운 뒤** Step1 로
+   * 되돌아와 모달을 열었다. 그래야만 통과했기 때문이다 — 당시 합산은 당회차 칸에 총액을
+   * 되쓰는 방식이라, 자연 순서로 하면 이후 Step2·Step3 입력이 합산분을 **덮어써서 지웠다**.
+   * 그 우회 때문에 제보된 결함(총 납부세액 70,009,500 과소)이 **초록 뒤에 숨어 있었다**.
+   * ⇒ 우회를 걷어내고 사용자가 실제로 걷는 순서로 고정한다.
+   */
   await page.getByTestId("block-shareholder-prior-lookup").click();
   await expect(
     page.getByRole("heading", { name: "기신고 이력에서 합산 (영 §158②)" }),
   ).toBeVisible({ timeout: 10_000 });
   await page.getByTestId("prior-transfer-e2e-block-prior-1").check();
-  await expect(page.getByText("선택 1건 합계")).toBeVisible();
+  await expect(page.getByText(/선택 1건 합계/)).toBeVisible();
   await page.getByRole("button", { name: /선택 1건 합산/ }).click();
 
-  // 다섯 값이 «한 소스»에서 파생됐다
+  // 모달이 채우는 것은 «기신고분 전용 칸»이다 — 당회차 칸이 아니다
   await expect(page.getByText(/기신고 1건 반영됨/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByLabel("기신고분 양도가액 합계")).toHaveValue("600,000,000");
+  await expect(page.getByLabel("기신고분 취득가액 합계")).toHaveValue("450,000,000");
+  await expect(page.getByLabel("기신고분 필요경비 합계")).toHaveValue("1,500,000");
+  await expect(fieldInput(page, "기신고분 주식수 합계")).toHaveValue("30000");
   await expect(fieldInput(page, "소급 3년 누적 양도비율")).toHaveValue("70");
-  await expect(fieldInput(page, "양도 주식수")).toHaveValue("70,000");
   await expect(page.getByLabel("대주주로서 납부하였거나 납부할 세액")).toHaveValue("29,200,000");
   await expect(page.locator('input[type="text"][aria-label="연도"]').nth(2)).toHaveValue("2023");
+
+  // 🔑 **당회차 주식수는 그대로 40,000 이다** — 종전에는 70,000 으로 덮어써져
+  //    「1주당 취득가액 × 주식수」가 오염됐다.
+  await expect(fieldInput(page, "양도 주식수")).toHaveValue("40,000");
 
   await expect(
     page.getByText("§94①4 다목 요건 충족 — 기타자산(§55① 누진)으로 계산됩니다"),
   ).toBeVisible();
 
-  // 금액 3칸도 합산됐다 — 손으로 더하지 않았는데 B-1의 입력과 같아진다
+  // 이제 «당회차» 금액을 평소대로 입력한다 — 합산분을 덮어쓰지 않는다
   await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(
-    page.locator("div:has(> label:has-text('양도가액 합계')) input").first(),
-  ).toHaveValue("2,100,000,000");
-  await expect(
-    page.locator("div:has(> label:has-text('1주당 취득가액')) input").first(),
-  ).toHaveValue("15,000");
+  await fillStep2(page, { transferTotal: "1500000000", perShareAcq: "15000" });
   await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(page.getByLabel("필요경비 합계", { exact: true })).toHaveValue("5,000,000");
+  await fillStep3(page, { expenses: "3500000", filingDate: "2026-04-30" });
 
   await clickResult(page);
   await expectCaseFiftyResult(page);
+
+  // 결과 표에 합산 내역이 펼쳐진다 — 합계 = 기신고분 + 당회차분
+  await expect(page.getByText("2,100,000,000").first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "07-1.  기신고분 합산 (영 §158②)" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "07-2.  당회차분" })).toBeVisible();
+});
+
+// ─────────────────────────────────────────────────────────────────
+// B-7 ~ B-10 — 「같은 칸 공유」가 만들던 세 증상의 회귀 방어
+// ─────────────────────────────────────────────────────────────────
+
+/** B-7~B-10 공통 — 당회차 + 기신고 1건 픽스처를 깔고 Step1 요건까지 채운다 */
+async function seedCaseFifty(page: Page) {
+  await gotoStockTransferTax(page);
+  const now = new Date().toISOString();
+  await putCalculationRecord(page, {
+    id: "e2e-block-prior-1",
+    userId: LOCAL_USER_ID,
+    taxType: "stock_transfer",
+    title: `${CORP} 1차 양도 2023-06-20`,
+    inputData: {
+      securityName: CORP,
+      securityCode: "",
+      transferDate: "2023-06-20",
+      shareCount: "30000",
+    },
+    resultData: {
+      transferPrice: 600_000_000,
+      acquisitionPrice: 450_000_000,
+      expenses: 1_500_000,
+      calculatedTax: 29_200_000,
+      appliedSection94: "①3나_본문",
+    },
+    taxLawVersion: "2023-06-20",
+    linkedCalculationId: null,
+    clientId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await page.getByRole("radio", { name: "기타자산" }).first().click();
+  await fillStep1Basics(page, {
+    name: CORP,
+    acquisitionDate: "2003-02-17",
+    transferDate: "2026-02-26",
+    shareCount: "40000",
+  });
+  await turnOnBlockShareholder(page);
+  await fillGateFields(page, { realEstate: "65", ownership: "70" });
+}
+
+async function applyPriorOnce(page: Page) {
+  await page.getByTestId("block-shareholder-prior-lookup").click();
+  await expect(
+    page.getByRole("heading", { name: "기신고 이력에서 합산 (영 §158②)" }),
+  ).toBeVisible({ timeout: 10_000 });
+  const cb = page.getByTestId("prior-transfer-e2e-block-prior-1");
+  if (!(await cb.isChecked())) await cb.check();
+  await page.getByRole("button", { name: /선택 1건 합산/ }).click();
+  await expect(page.getByText(/기신고 1건 반영됨/)).toBeVisible({ timeout: 10_000 });
+}
+
+test("B-7: 모달을 두 번 확인해도 값이 변하지 않는다 (재적용 멱등)", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedCaseFifty(page);
+
+  await applyPriorOnce(page);
+  await expect(page.getByLabel("기신고분 양도가액 합계")).toHaveValue("600,000,000");
+
+  // 🔴 종전에는 여기서 2,700,000,000 이 됐다(누적 합산 — 실측).
+  await applyPriorOnce(page);
+  await expect(page.getByLabel("기신고분 양도가액 합계")).toHaveValue("600,000,000");
+  await expect(page.getByLabel("기신고분 취득가액 합계")).toHaveValue("450,000,000");
+  await expect(page.getByLabel("기신고분 필요경비 합계")).toHaveValue("1,500,000");
+  await expect(fieldInput(page, "기신고분 주식수 합계")).toHaveValue("30000");
+  await expect(fieldInput(page, "소급 3년 누적 양도비율")).toHaveValue("70");
+});
+
+test("B-8: 당회차 금액을 나중에 고쳐도 기신고분이 살아 있다", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedCaseFifty(page);
+  await applyPriorOnce(page);
+
+  // 당회차를 한 번 잘못 넣었다가 고친다 — 사용자가 실제로 하는 행동
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await fillStep2(page, { transferTotal: "999999999", perShareAcq: "9999" });
+  await retypeStep2(page, { transferTotal: "1500000000", perShareAcq: "15000" });
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await fillStep3(page, { expenses: "3500000", filingDate: "2026-04-30" });
+
+  await clickResult(page);
+  await expectCaseFiftyResult(page);
+});
+
+test("B-9: 합산 결과를 저장한 이력은 «당회차분»으로 다시 잡힌다 (이중합산 차단)", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await seedCaseFifty(page);
+  await applyPriorOnce(page);
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await fillStep2(page, { transferTotal: "1500000000", perShareAcq: "15000" });
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await fillStep3(page, { expenses: "3500000", filingDate: "2026-04-30" });
+  await clickResult(page);
+  await expectCaseFiftyResult(page);
+
+  // 이력이 저장되기를 기다린 뒤 3차 양도를 새로 연다
+  await page.waitForTimeout(2_000);
+  await gotoStockTransferTax(page);
+  await page.getByRole("radio", { name: "기타자산" }).first().click();
+  await fillStep1Basics(page, {
+    name: CORP,
+    acquisitionDate: "2003-02-17",
+    transferDate: "2026-06-30",
+    shareCount: "10000",
+  });
+  await turnOnBlockShareholder(page);
+  await fillGateFields(page, { realEstate: "65", ownership: "70" });
+  await page.getByTestId("block-shareholder-prior-lookup").click();
+
+  /**
+   * 🔑 2차 건이 후보로 뜰 때 보이는 양도가액은 **1,500,000,000(당회차분)** 이어야 한다.
+   *    종전에는 결과에 총액(2,100,000,000)만 있어 그것이 후보 값이 됐고, 1차분이 **두 번**
+   *    들어갔다. 엔진이 `ownTransferPrice` 를 따로 echo 하면서 해소됐다.
+   */
+  await expect(page.getByText("2,100,000,000")).toHaveCount(0);
+  await expect(page.getByText(/양도 1,500,000,000/).first()).toBeVisible({ timeout: 10_000 });
+});
+
+test("B-10: 배지는 기신고분 칸에만 반응한다 (당회차 편집에는 남는다)", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedCaseFifty(page);
+  await applyPriorOnce(page);
+
+  // 당회차 칸을 고쳐도 배지는 «남는다» — 출처가 여전히 이력이기 때문이다
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await fillStep2(page, { transferTotal: "1500000000", perShareAcq: "15000" });
+  await page.getByTestId("step-circle-0").click();
+  await expect(page.getByText(/기신고 1건 반영됨/)).toBeVisible();
+
+  // 기신고분 칸을 고치면 «사라진다»
+  await page.getByLabel("기신고분 양도가액 합계").fill("700000000");
+  await expect(page.getByText(/기신고 1건 반영됨/)).toHaveCount(0);
 });
 
 // ─────────────────────────────────────────────────────────────────

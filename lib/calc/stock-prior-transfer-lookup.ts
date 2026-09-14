@@ -139,6 +139,33 @@ function resolveShareCount(
   return parseIntOrUndef(str(input.shareCount)) ?? 0;
 }
 
+/**
+ * 금액 3종을 **당회차분 우선**으로 읽는다 — 2단 소스.
+ *
+ * | 순위 | 키 | 의미 |
+ * |---|---|---|
+ * | 1 | `ownTransferPrice`·`ownAcquisitionPrice`·`ownExpenses` | 그 회차 **자기 몫** |
+ * | 2 | `transferPrice`·`acquisitionPrice`·`expenses` | 합산 **후** 총액 |
+ *
+ * 🔴 **1순위가 핵심이다.** 그 회차가 이미 앞선 회차를 합산해 신고한 건이면 총액에는
+ *    **앞 회차분이 들어 있다**. 그것을 그대로 후보 값으로 쓰면 3차 양도에서 1차분이
+ *    **두 번** 더해진다(계획서 D-5 — 실측으로 확인된 결함).
+ *
+ * 2순위는 **구 이력 호환**이다. `own*` echo 는 2026-09-14에 생겼고, 그 이전 이력에는 없다.
+ * 그때는 합산 자체가 폼 레벨이었으므로 저장된 총액이 사실상 그 회차분인 경우가 많지만,
+ * **합산해 신고한 건이라면 총액이다** — 그래서 모달이 값을 그대로 보여 주고 사용자가
+ * 확인·수정할 수 있게 남긴다.
+ */
+function ownAmount(
+  result: Record<string, unknown>,
+  ownKey: string,
+  totalKey: string,
+): number {
+  const own = num(result[ownKey]);
+  if (own > 0) return own;
+  return num(result[totalKey]);
+}
+
 /** ISO(YYYY-MM-DD) 앞 10자만 취한다 — 저장 형태가 Date 직렬화일 수 있다. */
 function isoDate(v: unknown): string {
   const s = str(v);
@@ -247,7 +274,7 @@ export function filterPriorStockTransferCandidates(
     }
 
     // 결과가 비었으면 합산에 쓸 값이 없다 — 조용히 건너뛰지 않고 사유를 남긴다.
-    const transferPrice = num(result.transferPrice);
+    const transferPrice = ownAmount(result, "ownTransferPrice", "transferPrice");
     const shareCount = resolveShareCount(result, input);
     if (transferPrice <= 0 || shareCount <= 0) {
       warnings.push({
@@ -267,8 +294,8 @@ export function filterPriorStockTransferCandidates(
       ...(securityCode ? { securityCode } : {}),
       shareCount,
       transferPrice,
-      acquisitionPrice: num(result.acquisitionPrice),
-      expenses: num(result.expenses),
+      acquisitionPrice: ownAmount(result, "ownAcquisitionPrice", "acquisitionPrice"),
+      expenses: ownAmount(result, "ownExpenses", "expenses"),
       calculatedTax: num(result.calculatedTax),
       appliedSection94,
       wasAlreadyBlockShareholder: appliedSection94 === "①4다",

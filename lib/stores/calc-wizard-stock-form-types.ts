@@ -142,6 +142,22 @@ export interface StockTransferFormData {
   priorMajorShareholderTax: string;
   /** Phase C — 합산에 쓴 기신고 이력 id 배열. **엔진에 보내지 않는다**(출처 배지 전용) */
   blockShareholderSourceIds: string[];
+  /**
+   * 영 §158②·§168② — **기신고분 합산액**(원 · 정수 문자열 · 당회차 **제외**).
+   *
+   * 🔴 **당회차 칸(`transferTotalPrice`·`perShareAcquisitionPrice`·`actualExpenses`)과
+   *    별개 축이다.** 2026-09-14 이전에는 모달이 당회차 칸에 합산 총액을 되썼는데,
+   *    두 값이 한 칸을 공유하니 마법사 단계 순서·재적용·이력 저장 세 축에서 전부
+   *    조용히 틀렸다(계획서 `docs/00-pm/stock-prior-aggregation-overwrite.plan.md`).
+   *    합산은 **엔진이** 한다 — 여기는 기신고분만 담는다.
+   */
+  priorTransferPrice: string;
+  /** 영 §158② 기신고분 취득가액 합계 (원 — 정수 문자열) */
+  priorAcquisitionPrice: string;
+  /** 영 §158② 기신고분 필요경비 합계 (원 — 정수 문자열) */
+  priorExpenses: string;
+  /** 영 §158② 기신고분 주식수 합계 (주 — 정수 문자열). 누적 양도비율 분자·표시 전용 */
+  priorShareCount: string;
   cumulativeTransferRatio: string;   // % 단위 "30" = 30% (API에서 ×0.01 → 엔진 decimal)
   /** §104①9호 — 법인 자산총액 중 비사업용토지 가액 비율. % 단위 "50" (API에서 ×0.01 → 엔진 decimal) */
   nblRatioOfCorpAssets: string;

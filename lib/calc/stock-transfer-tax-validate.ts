@@ -554,6 +554,34 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       });
     }
 
+    /**
+     * 영 §158② 기신고분 합산 축 — **음수·비수치 차단**.
+     *
+     * 🔑 **미입력은 오류가 아니다** — 여러 번에 걸쳐 양도한 경우에만 값이 생긴다.
+     *    (다목 토글 ON 이어도 1회 양도만으로 요건③을 채울 수 있다.)
+     *    ④ API 는 `> 0` 일 때만 body 에 싣고 엔진은 `Math.max(0, …)` 로 받는다 —
+     *    **세 층이 같은 규약**이다([[feedback_mirror_pattern]]).
+     */
+    const priorAmountFields: Array<[keyof StockTransferFormData, string]> = [
+      ["priorTransferPrice", "기신고분 양도가액"],
+      ["priorAcquisitionPrice", "기신고분 취득가액"],
+      ["priorExpenses", "기신고분 필요경비"],
+      ["priorShareCount", "기신고분 주식수"],
+    ];
+    for (const [key, label] of priorAmountFields) {
+      const raw = form[key];
+      const str = typeof raw === "string" ? raw : "";
+      if (isEmpty(str)) continue;
+      const n = parseF(str);
+      if (!Number.isFinite(n) || n < 0) {
+        errors.push({
+          field: key as string,
+          message: `«${label}»은 0 이상의 숫자여야 합니다 (영 §158②)`,
+          severity: "error",
+        });
+      }
+    }
+
     // 요건 판정은 **엔진 leaf 단일 소스**에 위임한다 — 임계(양도일 종속 「초과/이상」)를
     // 여기서 다시 쓰면 판정이 두 벌이 된다.
     const transferDate = form.transferDate ? new Date(form.transferDate) : undefined;

@@ -131,8 +131,9 @@ export function BlockShareholderPriorTransferModal({
           <DialogTitle>기신고 이력에서 합산 (영 §158②)</DialogTitle>
           <DialogDescription>
             같은 법인({securityName || "종목명 미입력"}) 주식을 이번 양도일부터 <strong>소급 3년</strong>{" "}
-            내에 양도한 기신고 건입니다. 선택하면 양도가액·취득가액·필요경비·누적 양도비율·
-            기납부세액이 함께 채워집니다.
+            내에 양도한 기신고 건입니다. 선택하면 <strong>기신고분</strong> 양도가액·취득가액·
+            필요경비·주식수와 누적 양도비율·기납부세액이 채워집니다. 당회차 금액은 다음 단계에서
+            평소대로 입력하세요 — 합계는 계산할 때 자동으로 더해집니다.
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +144,8 @@ export function BlockShareholderPriorTransferModal({
             <p className="font-medium">합산할 수 있는 기신고 이력이 없습니다.</p>
             <p className="text-xs">
               1차 신고를 다른 프로그램으로 했거나 이 기기에 이력이 없으면 후보가 나오지 않습니다.
-              그럴 때는 <strong>각 칸을 직접 입력</strong>하면 됩니다 — 합산값(1·2차 합계)을 넣으세요.
+              그럴 때는 이 창을 닫고 <strong>「기신고분 …」 칸에 직접 입력</strong>하면 됩니다 —
+              <strong>기신고분만</strong> 넣으세요(당회차분을 더하지 않습니다).
             </p>
             {excluded.exceed3y > 0 && (
               <p className="text-xs text-amber-700">
@@ -198,7 +200,9 @@ export function BlockShareholderPriorTransferModal({
 
         {preview && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-xs">
-            <p className="font-semibold text-emerald-800">선택 {selected.length}건 합계</p>
+            <p className="font-semibold text-emerald-800">
+              선택 {selected.length}건 합계 — <strong>기신고분만</strong> (당회차 제외)
+            </p>
             <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
               <span className="font-mono tabular-nums">양도가액 {formatKRW(preview.priorTransferPrice)}</span>
               <span className="font-mono tabular-nums">취득가액 {formatKRW(preview.priorAcquisitionPrice)}</span>
@@ -222,6 +226,10 @@ export function BlockShareholderPriorTransferModal({
         <p className="text-caption text-slate-500">
           ⚠️ 여러 종목을 함께 신고한 건은 <strong>마지막 종목만</strong> 이력에 남습니다. 이 법인이
           그 대표가 아니었다면 후보로 뜨지 않으니 직접 입력하세요.
+        </p>
+        <p className="text-caption text-amber-700">
+          ⚠️ 합산기간 중 앞선 회차는 <strong>빠짐없이</strong> 고르세요. 일부만 고르면 고르지 않은
+          회차의 <strong>기납부세액(영 §168②)이 차감되지 않아</strong> 그 부분을 두 번 내게 됩니다.
         </p>
 
         <DialogFooter>

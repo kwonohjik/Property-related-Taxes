@@ -195,6 +195,25 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 영 §168② 대주주 기납부세액 (원). 0 은 보내지 않는다(차감 없음과 같다).
   const priorMajorTax = parseIntOrZero(form.priorMajorShareholderTax);
   if (priorMajorTax > 0) body.priorMajorShareholderTax = priorMajorTax;
+  /**
+   * 영 §158② 기신고분 합산액 — **당회차 칸과 별개 축**이다. 엔진이 STEP 4.5 에서 더한다.
+   *
+   * 🔴 여기서 당회차 값과 **합치지 않는다**. 합쳐 보내면 결과 echo 의 `own*` 이 총액이 되어
+   *    이력 재선택 때 이중합산이 되살아난다(계획서 D-5).
+   * 0 은 보내지 않는다 — 형제 `priorMajorShareholderTax` 와 같은 규약.
+   */
+  const priorTransfer = parseIntOrZero(form.priorTransferPrice);
+  if (priorTransfer > 0) body.priorTransferPrice = priorTransfer;
+  const priorAcq = parseIntOrZero(form.priorAcquisitionPrice);
+  if (priorAcq > 0) body.priorAcquisitionPrice = priorAcq;
+  const priorExp = parseIntOrZero(form.priorExpenses);
+  if (priorExp > 0) body.priorExpenses = priorExp;
+  const priorShares = parseIntOrZero(form.priorShareCount);
+  if (priorShares > 0) body.priorShareCount = priorShares;
+  // 건수는 표시 전용이지만 **합산이 있을 때만** 의미가 있다 — 금액이 하나라도 있을 때 보낸다.
+  if (priorTransfer + priorAcq + priorExp + priorShares > 0) {
+    body.priorAggregationSourceCount = form.blockShareholderSourceIds.length;
+  }
   // §104①9호 — UI는 %, 엔진은 0~1 소수(형제 필드와 같은 규약). 미입력이면 body에 넣지 않는다
   // = 9호 미해당(법 근거 없이 불리 적용 금지).
   const nblRatioPercent = parseFloatOrUndef(form.nblRatioOfCorpAssets);

@@ -104,9 +104,13 @@ export function buildExemptResult(
     // 이력 복원용 echo — 비과세라도 「몇 주를 팔았는가」는 그대로 남긴다
     shareCount: input.shareCount,
     transferPrice,
+    // 비과세는 영 §158② 합산 대상이 **아니다**(합산 술어가 `!isExempt`를 요구한다) —
+    // own* 은 합산 전후가 같다.
+    ownTransferPrice: transferPrice,
     transferPriceBreakdown: undefined,
 
     acquisitionPrice: info.acquisitionPrice,
+    ownAcquisitionPrice: info.acquisitionPrice,
     acquisitionMode: input.acquisitionMode,
     usedEstimatedAcquisition: info.usedEstimatedAcquisition,
     estimatedBase: info.estimatedBase,
@@ -121,6 +125,7 @@ export function buildExemptResult(
     basicDeductionGroup: classification.basicDeductionGroup,
 
     expenses: 0,
+    ownExpenses: 0,
     expenseMode: input.expenseMode,
 
     transferIncome: 0,

@@ -195,7 +195,16 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
       return items;
     }
 
-    const effectiveTransferPrice = computeFormTransferPrice(formData);
+    /**
+     * 🔑 **결과가 있으면 «엔진 값»을 쓴다.** 영 §158② 기신고 합산은 엔진(STEP 4.5)에서
+     *    일어나므로 폼 파생값(당회차)과 결과값(합산 총액)이 갈린다. 형제 항목인
+     *    취득가액·필요경비는 이미 `result`를 읽으므로, 여기만 폼을 읽으면
+     *    **「양도가액만 당회차」인 표**가 되어 사이드바가 스스로 모순된다.
+     */
+    const effectiveTransferPrice =
+      result && result.transferPrice > 0
+        ? result.transferPrice
+        : computeFormTransferPrice(formData);
 
     if (effectiveTransferPrice && effectiveTransferPrice > 0) {
       items.push({ label: "양도가액", value: effectiveTransferPrice });
@@ -203,6 +212,13 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
 
     // 결과가 있으면 결과 값 우선 사용
     if (result) {
+      // 영 §158② 기신고분 — 합산이 실제로 일어났을 때만 (0원 행 방지)
+      if ((result.priorAggregation?.transferPrice ?? 0) > 0) {
+        items.push({
+          label: "└ 기신고분 (영 §158②)",
+          value: result.priorAggregation!.transferPrice,
+        });
+      }
       if (result.acquisitionPrice > 0) {
         items.push({ label: "취득가액", value: result.acquisitionPrice });
       }

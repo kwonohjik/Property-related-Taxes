@@ -258,6 +258,16 @@ export const stockTransferInputSchema = z.object({
   aggregationFirstTransferDate: z.union([z.string(), z.date()]).optional(),
   /** 영 §168② 「대주주로서 납부하였거나 납부할 세액」(원) */
   priorMajorShareholderTax: z.number().min(0).optional(),
+  /**
+   * 영 §158② 기신고분 합산액(원 · 당회차 **제외**). 엔진이 STEP 4.5 에서 더한다.
+   * ⚠️ 여기가 빠지면 ⑫ Zod 가 **침묵 strip** 해 합산이 엔진에 닿지 않는다.
+   */
+  priorTransferPrice: z.number().min(0).optional(),
+  priorAcquisitionPrice: z.number().min(0).optional(),
+  priorExpenses: z.number().min(0).optional(),
+  priorShareCount: z.number().min(0).optional(),
+  /** 합산에 들어간 기신고 건수 — 결과 표시 전용(합산 여부를 가르지 않는다) */
+  priorAggregationSourceCount: z.number().min(0).optional(),
   /** §104①9호 판정 — 법인 자산총액 중 비사업용토지 가액 비율(0~1 소수). 시행령 §167의7 임계 0.5 */
   nblRatioOfCorpAssets: z.number().min(0).max(1).optional(),
   /** §104⑤ 크로스 조정 — 같은 과세기간 부동산 §104①8호 과세표준(원). 미입력이면 조정 미적용 */
