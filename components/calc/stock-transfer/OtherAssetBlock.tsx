@@ -47,16 +47,17 @@ interface OtherAssetBlockProps {
     | "transferDate"
     | "marketType"
     | "priorMajorShareholderTax"
-    // ── Phase C — 기신고 이력 합산이 «채워 넣는» 칸 (읽기: 당회차 값과 더하기 위해) ──
+    // ── Phase C — 기신고분 합산 «전용» 칸 (당회차 칸은 읽지도 쓰지도 않는다) ──
     | "blockShareholderSourceIds"
     | "securityName"
     | "securityCode"
+    | "priorTransferPrice"
+    | "priorAcquisitionPrice"
+    | "priorExpenses"
+    | "priorShareCount"
+    // 누적 양도비율(요건③) 분자·분모 — 표시 계산 전용
     | "shareCount"
     | "totalIssuedShares"
-    | "transferTotalPrice"
-    | "perShareTransferPrice"
-    | "perShareAcquisitionPrice"
-    | "actualExpenses"
   >;
   /** 세무사 모드 의뢰인 격리 — 이력 후보 필터 축 */
   activeClientId?: string | null;
@@ -79,6 +80,11 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
    * 다음에 이력을 다시 불러올 때 무엇이 반영됐는지 판단할 근거가 사라진다.
    *
    * 🔑 **합산이 채운 칸만** 대상이다. 그 밖의 토글(라목·§104①9호)은 출처와 무관하다.
+   *
+   * 🔴 **일곱 칸 전부 들어 있어야 한다.** 종전에는 아래 3칸만 있었는데, 합산은 금액 4칸도
+   *    채우고 있었다 — 그 칸을 고쳐도 배지가 남아 화면이 「기신고 N건 반영됨」이라고
+   *    **거짓 보증**했다(실측). 지금은 금액 4칸이 `prior*` 전용 칸이라 **전부 이 블록 안**에
+   *    있고, 그래서 배지 리셋 경로가 성립한다(종전에는 Step2·Step3 라 경로 자체가 없었다).
    */
   const AGGREGATION_FILLED_KEYS = useMemo(
     () =>
@@ -86,6 +92,10 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
         "cumulativeTransferRatio",
         "aggregationFirstTransferDate",
         "priorMajorShareholderTax",
+        "priorTransferPrice",
+        "priorAcquisitionPrice",
+        "priorExpenses",
+        "priorShareCount",
       ]),
     [],
   );
@@ -117,14 +127,24 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
   }, [form.transferDate]);
 
   /**
-   * 기신고 합산 적용 — **다섯 값이 한 소스에서 파생**된다(영 §158② · §168②).
+   * 기신고 합산 적용 — 다섯 값이 **한 소스에서 파생**된다(영 §158② · §168②).
    *
    * 🔑 이것은 `useEffect → store` 미러링이 **아니다** — 사용자의 명시적 액션(모달 확인)에
    *    한 번 반응해 `onChange` 를 부르고 끝난다([[feedback_mirror_pattern]]).
    *
-   * ⚠️ **양도가액은 «총액 모드»로 넣는다** — 주당 단가로 되돌리면 나누어떨어지지 않을 때
-   *    반올림 오차가 세액에 실린다. 취득가액은 엔진에 총액 모드가 없어 주당 가중평균을
-   *    쓰고(교재 p.626 과 같은 방식), 나누어떨어지지 않으면 잔액을 안내한다.
+   * 🔴 **당회차 칸을 건드리지 않는다**(2026-09-14 전환). 종전에는 기신고분 + 당회차분을
+   *    더해 `transferTotalPrice`·`perShareAcquisitionPrice`·`actualExpenses`·`shareCount`
+   *    **당회차 칸에 되썼다**. 두 값이 한 칸을 공유하니
+   *    ⓐ 모달은 Step1 인데 금액칸은 Step2·Step3 라 **이후 입력이 합산분을 덮어썼고**
+   *       (제보 — 총 납부세액 70,009,500 과소)
+   *    ⓑ 모달을 다시 확인하면 **이중합산**됐으며(2,100,000,000 → 2,700,000,000 실측)
+   *    ⓒ 결과가 총액으로 이력에 저장돼 **다음 회차가 또 더했고**
+   *    ⓓ 로트·환산 모드에서는 엔진이 `perShareAcquisitionPrice` 를 읽지 않아
+   *       **취득가액 합산이 통째로 무시**됐다(실측 PA-0).
+   *
+   * ⇒ 기신고분은 `prior*` **전용 칸**에 담고 합산은 **엔진이** 한다(STEP 4.5).
+   *    전부 **치환**이므로 몇 번을 눌러도 값이 같다 — 멱등이다.
+   *    계획서 `docs/00-pm/stock-prior-aggregation-overwrite.plan.md`.
    */
   const applyAggregation = useCallback(
     (agg: BlockShareholderAggregation) => {
@@ -132,33 +152,19 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
         const n = Number.parseInt((v ?? "").replace(/,/g, ""), 10);
         return Number.isFinite(n) ? n : 0;
       };
-      const curShares = cur(form.shareCount);
-      const totalShares = agg.priorShareCount + curShares;
-
-      // 당회차 양도가액 — 총액 모드면 그 값, 주당 모드면 단가 × 주식수.
-      const curTransfer =
-        cur(form.transferTotalPrice) || cur(form.perShareTransferPrice) * curShares;
-      const curAcq = cur(form.perShareAcquisitionPrice) * curShares;
-
-      const totalTransfer = agg.priorTransferPrice + curTransfer;
-      const totalAcq = agg.priorAcquisitionPrice + curAcq;
-      const totalExpenses = agg.priorExpenses + cur(form.actualExpenses);
 
       const ratioPct = computeCumulativeTransferRatioPercent(
         agg.priorShareCount,
-        curShares,
+        cur(form.shareCount),
         cur(form.totalIssuedShares),
       );
 
       onChange({
-        shareCount: String(totalShares),
-        // 양도가액 — 총액 모드(정확)
-        transferPriceMode: "actual",
-        transferActualInputMode: "total",
-        transferTotalPrice: String(totalTransfer),
-        // 취득가액 — 주당 가중평균(엔진에 총액 모드 없음)
-        perShareAcquisitionPrice: totalShares > 0 ? String(Math.round(totalAcq / totalShares)) : "",
-        actualExpenses: String(totalExpenses),
+        // ── 기신고분 «전용» 칸 — 전부 치환이다(누적 아님) ──
+        priorTransferPrice: String(agg.priorTransferPrice),
+        priorAcquisitionPrice: String(agg.priorAcquisitionPrice),
+        priorExpenses: String(agg.priorExpenses),
+        priorShareCount: String(agg.priorShareCount),
         aggregationFirstTransferDate: agg.aggregationFirstTransferDate,
         priorMajorShareholderTax: String(agg.priorMajorShareholderTax),
         blockShareholderSourceIds: agg.sourceIds,
@@ -167,15 +173,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
           : {}),
       });
     },
-    [
-      form.shareCount,
-      form.transferTotalPrice,
-      form.perShareTransferPrice,
-      form.perShareAcquisitionPrice,
-      form.actualExpenses,
-      form.totalIssuedShares,
-      onChange,
-    ],
+    [form.shareCount, form.totalIssuedShares, onChange],
   );
 
   /** 게이트 미리보기 — 4칸이 다 차야 의미가 있다. 한쪽만으로 추정하지 않는다. */
@@ -301,12 +299,12 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
             />
           </FieldCard>
 
-          {/* Phase C — 기신고 이력에서 합산 */}
-          <ToneCard tone="sky" title="기신고 이력에서 합산 (영 §158②)">
+          {/* Phase C — 기신고 이력에서 합산 (영 §158②) */}
+          <ToneCard tone="sky" title="기신고분 합산 (영 §158②)">
             <p className="text-xs text-slate-600">
-              같은 법인 주식을 여러 번에 걸쳐 양도했다면, 소급 3년 내 기신고 건을 골라
-              양도가액·취득가액·필요경비·누적 양도비율·기납부세액을 한 번에 채웁니다.
-              이력이 없으면 각 칸을 직접 입력하세요.
+              같은 법인 주식을 여러 번에 걸쳐 양도했다면, 소급 3년 내 기신고분을 아래 칸에
+              넣습니다. <strong>당회차 양도가액·취득가액·필요경비는 다음 단계에서 평소대로</strong>{" "}
+              입력하세요 — 여기에 더해 넣지 않습니다. 합계는 계산할 때 자동으로 더해집니다.
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Button
@@ -325,10 +323,64 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
               </Button>
               {form.blockShareholderSourceIds.length > 0 && (
                 <span className="text-caption text-emerald-700">
-                  기신고 {form.blockShareholderSourceIds.length}건 반영됨 — 값을 직접 고치면 이 표시가
-                  사라집니다
+                  기신고 {form.blockShareholderSourceIds.length}건 반영됨 — 아래 값을 직접 고치면 이
+                  표시가 사라집니다
                 </span>
               )}
+            </div>
+
+            {/*
+              🔑 **직접 입력 경로를 반드시 남긴다** — 1차 신고를 다른 프로그램으로 했거나
+                 이 기기에 이력이 없으면 모달이 후보를 내지 못한다. 모달만 두면
+                 그 사용자에게는 입력 경로가 사라진다([[feedback_ui_gate_removes_sole_input_path]]).
+            */}
+            <div className="mt-3 space-y-3">
+              <FieldCard
+                label="기신고분 양도가액 합계"
+                hint="소급 3년 내 이미 신고한 회차의 양도가액 합계. 당회차분은 넣지 않는다."
+              >
+                <CurrencyInput
+                  label="기신고분 양도가액 합계"
+                  hideLabel
+                  hideUnit
+                  value={form.priorTransferPrice}
+                  onChange={(v) => onChangeResettingBadge({ priorTransferPrice: v })}
+                />
+              </FieldCard>
+              <FieldCard
+                label="기신고분 취득가액 합계"
+                hint="그 회차들의 취득가액 합계. 각 회차에서 확정된 금액을 그대로 더한다."
+              >
+                <CurrencyInput
+                  label="기신고분 취득가액 합계"
+                  hideLabel
+                  hideUnit
+                  value={form.priorAcquisitionPrice}
+                  onChange={(v) => onChangeResettingBadge({ priorAcquisitionPrice: v })}
+                />
+              </FieldCard>
+              <FieldCard
+                label="기신고분 필요경비 합계"
+                hint="그 회차들의 필요경비 합계(증권거래세·매매수수료 등)."
+              >
+                <CurrencyInput
+                  label="기신고분 필요경비 합계"
+                  hideLabel
+                  hideUnit
+                  value={form.priorExpenses}
+                  onChange={(v) => onChangeResettingBadge({ priorExpenses: v })}
+                />
+              </FieldCard>
+              <FieldCard
+                label="기신고분 주식수 합계"
+                unit="주"
+                hint="요건③ 누적 양도비율의 분자에 쓰인다. 과세표준 산식에는 쓰이지 않는다 — 금액은 위 세 칸이 정본이다."
+              >
+                <DecimalInput
+                  value={form.priorShareCount}
+                  onChange={(v) => onChangeResettingBadge({ priorShareCount: v })}
+                />
+              </FieldCard>
             </div>
           </ToneCard>
 

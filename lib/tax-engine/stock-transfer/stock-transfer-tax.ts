@@ -47,6 +47,37 @@ import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 // split 모드 판정 헬퍼
 // ============================================================
 
+/**
+ * 영 §158②·§168② 기신고분 합산액을 입력에서 꺼낸다.
+ *
+ * - `applicable` 이 false 면 **undefined** — `①4다` 가 아닌데 합산하면 조문 근거가 없다.
+ * - 네 값이 전부 0이면 **undefined** — 결과 echo 가 「합산 없음」을 0원 행으로 만들지 않는다
+ *   (`clause168_2Credit` 와 같은 규약).
+ * - 음수·소수는 방어적으로 잘라낸다. 금액은 원(정수)이다.
+ *
+ * `sourceCount` 는 사용자가 모달에서 고른 건수다. 값이 없으면(수동 입력 경로) 0으로 둔다 —
+ * **0이어도 합산은 유효하다**. 건수는 표시 전용이지 합산 여부를 가르는 축이 아니다.
+ */
+function buildPriorAggregation(
+  input: StockTransferInput,
+  applicable: boolean,
+): NonNullable<StockTransferResult["priorAggregation"]> | undefined {
+  if (!applicable) return undefined;
+  const clamp = (v: number | undefined) => Math.max(0, Math.floor(v ?? 0));
+  const transferPrice = clamp(input.priorTransferPrice);
+  const acquisitionPrice = clamp(input.priorAcquisitionPrice);
+  const expenses = clamp(input.priorExpenses);
+  const shareCount = clamp(input.priorShareCount);
+  if (transferPrice + acquisitionPrice + expenses + shareCount === 0) return undefined;
+  return {
+    transferPrice,
+    acquisitionPrice,
+    expenses,
+    shareCount,
+    sourceCount: clamp(input.priorAggregationSourceCount),
+  };
+}
+
 function isSplitMode(input: StockTransferInput): boolean {
   return !!(
     input.acquisitionLots &&
@@ -357,13 +388,67 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     );
   }
 
+  /**
+   * 영 §168② · §158② **공통 술어** — 「§94①4 **다목**으로 분류되고 비과세가 아닐 것」.
+   *
+   * 🔑 **STEP 4.5 합산과 STEP 9 차감이 «같은 변수»를 쓴다.** 손으로 두 번 적으면 한쪽만
+   *    고쳐졌을 때 「합산은 했는데 차감은 안 한다」(또는 그 반대)가 되어 조용히 틀린다
+   *    ([[feedback_shared_predicate_argument_parity]]).
+   *
+   * 🔴 술어는 **분류 결과**다 — 원시 토글이 아니다. `isQualifyingBlockShareholder` 를 쓰면
+   *    「게이트 실패 + 라목 ON」에서 적용 조문이 `①4라` 인데도 붙는다. 라목 단독도
+   *    `basicDeductionGroup` 이 `real_estate_and_other_asset` 이고 `isExempt` 가 false 라
+   *    그 둘로는 **막지 못한다**. 영 §168② 이 열거하는 것은 「§94①4호 **다목**」뿐이다
+   *    (§104①9호가 다목·라목 둘 다인 것과 대비 — 혼동 주의).
+   */
+  const isClause168_2Applicable =
+    classification.appliedSection94 === "①4다" && !classification.isExempt;
+
+  // ──────────────────────────────────────────────────────────
+  // STEP 4.5: 영 §158②·§168② — 기신고분 합산
+  //
+  //   과점주주가 소급 3년 내에 여러 번에 걸쳐 양도하면 그 회차들을 **하나의 양도소득**으로
+  //   묶어 산출세액을 낸다. 근거는 §158②(요건) + §168②의 전제 — 「다목 산출세액에
+  //   대주주로서 납부한 세액이 **포함되어 있는**」 상태는 회차를 묶었을 때만 성립한다.
+  //
+  //   🔑 **여기가 seam인 이유**: 앞(STEP 2·3·4)은 전부 «당회차» 산정이다. 환산취득가액은
+  //     당회차 양도가액 × (취득기준시가/양도기준시가)이고 개산공제도 당회차 취득기준시가
+  //     기준이다. 기신고분은 그 회차에서 이미 자기 방식으로 확정된 값이므로 **뒤에서** 더해야
+  //     한다. 앞에 두면 기신고분까지 환산·개산공제에 말려든다(anchor A-3).
+  //
+  //   🔑 §97의2①3호 증여세 한도(바로 위)도 **당회차 잔액** 기준이라 seam 앞에 둔다.
+  // ──────────────────────────────────────────────────────────
+  const ownTransferPrice = transferPrice;
+  const ownAcquisitionPrice = acquisitionPrice;
+  const ownExpenses = expenses;
+
+  const priorAggregation = buildPriorAggregation(input, isClause168_2Applicable);
+  if (priorAggregation) {
+    appliedRules.push("§158②기신고합산");
+    warnings.push(
+      `${STOCK.ENFORCEMENT_DECREE_158_2_PRIOR_AGGREGATION} — 소급 3년 내 기신고 ` +
+        `${priorAggregation.sourceCount}건을 합산했습니다. 양도가액·취득가액·필요경비는 ` +
+        `기신고분과 당회차분의 합계입니다.`,
+    );
+  }
+
+  const aggregatedTransferPrice = ownTransferPrice + (priorAggregation?.transferPrice ?? 0);
+  const aggregatedAcquisitionPrice =
+    ownAcquisitionPrice + (priorAggregation?.acquisitionPrice ?? 0);
+  const aggregatedExpenses = ownExpenses + (priorAggregation?.expenses ?? 0);
+
   // ──────────────────────────────────────────────────────────
   // STEP 5: 양도소득금액
   //   [B-2] swap 시 가목(환산취득가+개산공제) 전체가 나목으로 대체 → 취득가액 차감 제외
   // ──────────────────────────────────────────────────────────
+  /**
+   * ⚠️ swap(§97②2호 단서)이 지우는 것은 **당회차 가목**이다 — 기신고분 취득가액까지 지우면
+   *    이미 확정된 앞 회차의 필요경비가 사라진다. 그래서 swap 분기에서도 기신고분
+   *    취득가액은 **남긴다**.
+   */
   const transferIncome = swapApplied
-    ? transferPrice - expenses
-    : transferPrice - acquisitionPrice - expenses;
+    ? aggregatedTransferPrice - (priorAggregation?.acquisitionPrice ?? 0) - aggregatedExpenses
+    : aggregatedTransferPrice - aggregatedAcquisitionPrice - aggregatedExpenses;
 
   // ──────────────────────────────────────────────────────────
   // STEP 6: 기본공제 §103①
@@ -452,14 +537,9 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
    *    과다, 기본세율+10%p) 산출세액에도 **똑같이 포함**돼 있다. 빼지 않으면 그 부분을 두 번
    *    과세하게 되어 납세자에게 불리하다. ⚠️ **법문을 넘는 확장**이라 결과 카드에도 명시한다.
    *
-   * 🔴 술어는 **분류 결과**다 — 원시 토글이 아니다. `isQualifyingBlockShareholder` 를 쓰면
-   *    「게이트 실패 + 라목 ON」에서 적용 조문이 `①4라` 인데도 차감이 붙는다. 라목 단독도
-   *    `basicDeductionGroup` 이 `real_estate_and_other_asset` 이고 `isExempt` 가 false 라
-   *    그 둘로는 **막지 못한다**. 영 §168② 이 열거하는 것은 「§94①4호 **다목**」뿐이다
-   *    (§104①9호가 다목·라목 둘 다인 것과 대비 — 혼동 주의).
+   * 🔴 술어(`isClause168_2Applicable`)는 **STEP 4.5 에서 한 번 정의해 공유한다** — 합산과
+   *    차감이 갈리지 않게 하기 위해서다. 술어를 왜 분류 결과로 잡는지는 그 정의부 주석 참조.
    */
-  const isClause168_2Applicable =
-    classification.appliedSection94 === "①4다" && !classification.isExempt;
   const clause168_2Deducted = isClause168_2Applicable
     ? Math.min(grossCalculatedTax, Math.max(0, input.priorMajorShareholderTax ?? 0))
     : 0;
@@ -486,7 +566,9 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // 양도세와 별도 납부 의무 — 합산 금지 (정보성 echo)
   // applyExemptZeroing은 spread이므로 본 필드 자동 보존 (실측 확인)
   // ──────────────────────────────────────────────────────────
-  const stxResult = calcSecuritiesTransactionTax(input, transferPrice);
+  // 🔴 **`ownTransferPrice`다** — 증권거래세는 「이번 거래」에만 부과된다(증권거래세법 §7).
+  //   기신고분을 더한 총액을 넣으면 앞 회차에서 이미 낸 거래세를 다시 물린다.
+  const stxResult = calcSecuritiesTransactionTax(input, ownTransferPrice);
 
   // ──────────────────────────────────────────────────────────
   // §104⑤ 본문 후단 — 8호·9호 **동일 자산 의제** 조정액 (안내 전용)
@@ -552,10 +634,13 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 
     // 이력 복원용 echo — 산식 미사용(영 §158② 기신고 합산이 이 값을 읽는다)
     shareCount,
-    transferPrice,
+    ...(priorAggregation ? { priorAggregation } : {}),
+    transferPrice: aggregatedTransferPrice,
+    ownTransferPrice,
     transferPriceBreakdown,
 
-    acquisitionPrice,
+    acquisitionPrice: aggregatedAcquisitionPrice,
+    ownAcquisitionPrice,
     acquisitionMode: input.acquisitionMode,
     usedEstimatedAcquisition,
     estimatedBase,
@@ -569,7 +654,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 
     basicDeductionGroup: classification.basicDeductionGroup,
 
-    expenses,
+    expenses: aggregatedExpenses,
+    ownExpenses,
     expenseMode: input.expenseMode,
 
     transferIncome,

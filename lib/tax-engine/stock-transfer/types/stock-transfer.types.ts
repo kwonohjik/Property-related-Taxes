@@ -319,6 +319,42 @@ export type StockTransferInput = {
    */
   priorMajorShareholderTax?: number;
 
+  /**
+   * 영 §158②·§168② — **기신고분 합산액**(원 · 당회차 **제외**).
+   *
+   * 소급 3년 내에 이미 신고한 회차의 양도가액·취득가액·필요경비를 **당회차와 별도 축으로**
+   * 받는다. 엔진이 STEP 4.5 에서 더한다.
+   *
+   * 🔴 **당회차 입력칸에 합산해 넣지 말 것.** 2026-09-14 이전 구현이 그렇게 했다가
+   *    ⓐ 마법사 단계 순서에 따라 합산분이 덮어써지고(제보 — 세액 70,009,500 과소)
+   *    ⓑ 모달을 두 번 확인하면 이중합산되고
+   *    ⓒ 결과가 총액으로 이력에 저장돼 다음 회차가 또 더하고
+   *    ⓓ 로트·환산 모드에서는 `perShareAcquisitionPrice` 를 엔진이 읽지 않아 **통째로 무시**됐다
+   *    (네 증상 전부 「같은 칸 공유」라는 한 뿌리에서 나왔다).
+   *    계획서 `docs/00-pm/stock-prior-aggregation-overwrite.plan.md`.
+   *
+   * ⚠️ **`①4다` 로 분류되고 비과세가 아닐 때만** 적용된다 — §168② 차감과 **같은 술어**를 쓴다.
+   */
+  priorTransferPrice?: number;
+  /** 영 §158②·§168② — 기신고분 취득가액 합계(원). `priorTransferPrice` 주석 참조. */
+  priorAcquisitionPrice?: number;
+  /** 영 §158②·§168② — 기신고분 필요경비 합계(원). `priorTransferPrice` 주석 참조. */
+  priorExpenses?: number;
+  /**
+   * 영 §158② — 기신고분 **주식수** 합계(주).
+   *
+   * 🔑 **과세표준 산식에는 쓰지 않는다.** 당회차 「단가 × 주식수」는 STEP 2 에서 이미 끝났고,
+   *    기신고분은 **금액으로** 들어온다. 이 값은 요건③ 누적 양도비율의 분자·결과 표시 전용이다.
+   *    여기에 더해 `shareCount` 를 부풀리면 당회차 단가 계산이 오염된다.
+   */
+  priorShareCount?: number;
+  /**
+   * 합산에 들어간 기신고 **건수** — 결과 표시 전용.
+   *
+   * ⚠️ **합산 여부를 가르는 축이 아니다.** 수동 입력 경로(이력이 없는 사용자)는 0으로 온다.
+   */
+  priorAggregationSourceCount?: number;
+
   // 양도가액 모드
   transferPriceMode: "actual" | "exchange";
   /**
@@ -830,12 +866,43 @@ export type StockTransferResult = {
    */
   shareCount: number;
 
+  /**
+   * 영 §158②·§168② — 기신고분 합산 내역 echo. **합산이 실제로 일어났을 때만** 실린다
+   * (`clause168_2Credit` 와 같은 규약).
+   *
+   * 결과 화면·신고서 부기행이 「합계 = 기신고분 + 당회차분」을 보여주는 근거다.
+   * 🔴 화면이 **총액에서 빼서 만들지 말 것** — 엔진이 더한 값을 그대로 읽는다.
+   */
+  priorAggregation?: {
+    transferPrice: number;
+    acquisitionPrice: number;
+    expenses: number;
+    shareCount: number;
+    /** 합산에 들어간 기신고 건수(사용자가 모달에서 고른 수) */
+    sourceCount: number;
+  };
+
   // 양도가액
+  /** 🔑 **기신고분 합산 «후» 총액**이다(신고서 07행 · 과세표준 산식 근거). */
   transferPrice: number;
+  /**
+   * 그 회차 **자기 몫**의 양도가액 — 기신고 합산 «전».
+   *
+   * 🔴 **필수 필드다.** 이력에서 이 건을 다시 기신고로 고를 때 읽는 값이 바로 이것이다.
+   *    `transferPrice`(총액)를 읽으면 그 안에 든 앞 회차분이 **또** 더해진다.
+   *    optional 로 두면 조립 지점 누락을 컴파일러가 잡지 못하므로 필수로 둔다
+   *    (`shareCount` 를 필수로 둔 것과 같은 판단).
+   *
+   * 합산이 없으면 `transferPrice` 와 같은 값이다.
+   */
+  ownTransferPrice: number;
   transferPriceBreakdown?: { property: number; debt: number; cash: number };
 
   // 취득가액
+  /** 🔑 **기신고분 합산 «후» 총액**이다(신고서 11행). */
   acquisitionPrice: number;
+  /** 그 회차 자기 몫의 취득가액 — 합산 «전». **필수**. `ownTransferPrice` 주석 참조. */
+  ownAcquisitionPrice: number;
   acquisitionMode: StockTransferInput["acquisitionMode"];
   usedEstimatedAcquisition: boolean;
   /** 환산 base (취득기준시가) */
@@ -1026,7 +1093,10 @@ export type StockTransferResult = {
   lossOffsetFromOtherGroup?: number;
 
   // 필요경비
+  /** 🔑 **기신고분 합산 «후» 총액**이다(신고서 14행). */
   expenses: number;
+  /** 그 회차 자기 몫의 필요경비 — 합산 «전». **필수**. `ownTransferPrice` 주석 참조. */
+  ownExpenses: number;
   expenseMode: "actual" | "estimated";
 
   // 소득금액·과세표준
@@ -1169,6 +1239,8 @@ export type StockTransferResult = {
     | "다목요건미충족폴백"
     // 영 §168② 대주주 기납부세액 차감
     | "§168②대주주기납부차감"
+    // 영 §158② 기신고분 합산 (양도가액·취득가액·필요경비)
+    | "§158②기신고합산"
     | "로트개별법"
     | "로트선입선출"
     | "로트이동평균"

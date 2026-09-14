@@ -97,13 +97,18 @@ export function toStockTransferResult(
     // 이력 복원용 echo
     shareCount: input.shareCount,
     transferPrice: r.transferPriceKrw,
+    // 국외주식(`①3다`)은 §94①4 다목이 아니라 영 §158② 합산 대상이 **아니다** —
+    // own* 은 합산 전후가 같다.
+    ownTransferPrice: r.transferPriceKrw,
     acquisitionPrice: r.acquisitionPriceKrw,
+    ownAcquisitionPrice: r.acquisitionPriceKrw,
     // §118의4 — 환산취득가액 제도가 없다(§97② 경로가 오지 않는다).
     acquisitionMode: "actual",
     usedEstimatedAcquisition: false,
 
     basicDeductionGroup: "stock",
     expenses: r.necessaryExpensesKrw,
+    ownExpenses: r.necessaryExpensesKrw,
     expenseMode: "actual",
 
     transferIncome: r.transferGain,

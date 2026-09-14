@@ -149,17 +149,26 @@ function TransferPriceFormulaCard({
 }) {
   // 교환·분할 모드는 별도 표시 — 본 카드 미렌더
   if (result.transferPriceBreakdown) return null;
+  /**
+   * 🔴 **`ownTransferPrice`(당회차분)로 등식을 맺는다.** `transferPrice` 는 영 §158②
+   *    기신고분 합산 «후» 총액이라, 그것을 쓰면 「1주당 단가 × 주식수 = 총액」이
+   *    **눈에 보이게 거짓**이 된다(당회차 40,000주 × 37,500 인데 2,100,000,000 이라 적힌다).
+   *    합산분은 아래에 «더하는 줄»로 따로 보여 준다
+   *    ([[feedback_aggregate_display_rederives_engine_value]]).
+   */
+  const own = result.ownTransferPrice;
+  const prior = result.priorAggregation?.transferPrice ?? 0;
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm">
       <p className="font-semibold text-emerald-800 mb-1">양도가액 산식 (§96① 실지거래가액)</p>
       {transferActualInputMode === "total" ? (
         <>
           <p className="text-emerald-900">
-            양도가액 합계 직접 입력 = <strong>{fmt(result.transferPrice)}</strong>
+            양도가액 합계 직접 입력 = <strong>{fmt(own)}</strong>
           </p>
           {shareCount > 0 && (() => {
-            const exact = result.transferPrice % shareCount === 0;
-            const reverse = result.transferPrice / shareCount;
+            const exact = own % shareCount === 0;
+            const reverse = own / shareCount;
             return (
               <p className="text-xs text-emerald-700 mt-1">
                 참고: 역산 1주당 단가 = {exact ? reverse.toLocaleString() : reverse.toFixed(4)}
@@ -171,7 +180,13 @@ function TransferPriceFormulaCard({
       ) : (
         <p className="text-emerald-900">
           1주당 양도가액 {perShareTransferPrice.toLocaleString()} × {shareCount.toLocaleString()}주
-          = <strong>{fmt(result.transferPrice)}</strong>
+          = <strong>{fmt(own)}</strong>
+        </p>
+      )}
+      {prior > 0 && (
+        <p className="text-emerald-900 mt-1 border-t border-emerald-200 pt-1">
+          + 기신고분 합산 <strong>{fmt(prior)}</strong> (소득세법 시행령 §158②) ={" "}
+          <strong>{fmt(result.transferPrice)}</strong>
         </p>
       )}
     </div>
@@ -436,8 +451,40 @@ export function StockTransferTaxResultView({
         <div className="bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">계산 결과</div>
         <div className="divide-y divide-slate-100">
           <ResultRow label="양도가액" value={result.transferPrice} />
+          {/*
+            영 §158② 기신고분 합산 내역 — 합산이 있을 때만 렌더한다(0원 행 방지).
+            값은 **엔진 echo** 를 그대로 읽는다 — 총액에서 빼서 만들지 않는다
+            ([[feedback_aggregate_display_rederives_engine_value]]).
+          */}
+          {result.priorAggregation && (
+            <>
+              <ResultRow
+                label="　└ 기신고분 합산 (영 §158②)"
+                value={result.priorAggregation.transferPrice}
+              />
+              <ResultRow label="　└ 당회차분" value={result.ownTransferPrice} />
+            </>
+          )}
           <ResultRow label={result.swapApplied ? "취득가액 (환산 — 차감 제외)" : "취득가액"} value={result.acquisitionPrice} />
+          {result.priorAggregation && (
+            <>
+              <ResultRow
+                label="　└ 기신고분 합산 (영 §158②)"
+                value={result.priorAggregation.acquisitionPrice}
+              />
+              <ResultRow label="　└ 당회차분" value={result.ownAcquisitionPrice} />
+            </>
+          )}
           <ResultRow label="필요경비" value={result.expenses} />
+          {result.priorAggregation && (
+            <>
+              <ResultRow
+                label="　└ 기신고분 합산 (영 §158②)"
+                value={result.priorAggregation.expenses}
+              />
+              <ResultRow label="　└ 당회차분" value={result.ownExpenses} />
+            </>
+          )}
           <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
           <ResultRow label="기본공제" value={result.basicDeduction} />
           <ResultRow label="과세표준" value={result.taxBase} highlight />

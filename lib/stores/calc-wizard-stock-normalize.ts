@@ -174,6 +174,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
           (v): v is string => typeof v === "string",
         )
       : [],
+    // 영 §158② 기신고분 합산 축 — 레거시 sessionStorage 에는 없다(빈 문자열로 떨어진다).
+    priorTransferPrice: strField("priorTransferPrice"),
+    priorAcquisitionPrice: strField("priorAcquisitionPrice"),
+    priorExpenses: strField("priorExpenses"),
+    priorShareCount: strField("priorShareCount"),
     cumulativeTransferRatio: strField("cumulativeTransferRatio"),
     nblRatioOfCorpAssets: strField("nblRatioOfCorpAssets"),
     transferPriceMode: enumField("transferPriceMode", ["actual", "exchange"], defaults.transferPriceMode),
