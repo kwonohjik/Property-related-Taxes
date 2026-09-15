@@ -324,7 +324,9 @@ function ItemRow({ item }: { item: StatementItem }) {
 
   return (
     // PDF 인쇄: 항목 행이 페이지 사이에 잘리지 않도록 회피.
-    <div className="px-3 py-2.5 print:break-inside-avoid">
+    // `data-statement-row`는 E2E가 「사용자가 본 금액」을 라벨로 집어내기 위한 앵커다
+    // (명세서는 표가 아니라 div 목록이라 role=row/cell로 잡히지 않는다).
+    <div className="px-3 py-2.5 print:break-inside-avoid" data-statement-row={item.label}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -358,7 +360,10 @@ function ItemRow({ item }: { item: StatementItem }) {
             </div>
           )}
         </div>
-        <p className="font-mono text-sm shrink-0 font-medium text-right tabular-nums">
+        <p
+          className="font-mono text-sm shrink-0 font-medium text-right tabular-nums"
+          data-statement-value
+        >
           {valueDisplay}
         </p>
       </div>

@@ -670,6 +670,22 @@ export function buildExemptEarlyResult(p: {
      */
     expenses: grossForEcho.expenses,
     capitalExpenditureForDisplay: p.input.capitalExpenditure ?? 0,
+    /**
+     * [echo] §97②2호 **단서** 채택 여부와 비교 실적 — 표시 전용, 세액 불변(비과세는 0).
+     *
+     * 🔴 종전에는 이 둘을 싣지 않아 **비과세 + 환산 + 단서**에서 표시가 두 번 틀렸다
+     *   (실측 2026-09-15 · 양도 400,000,000 · 환산 200,000,000 · 개산공제 4,500,000 ·
+     *    자본적지출 230,000,000):
+     *   · 신고서가 환산 분기로 떨어져 취득가액 200,000,000 · 필요경비 4,500,000
+     *     ⇒ 400,000,000 − 200,000,000 − 4,500,000 = 195,500,000 ≠ gross 170,000,000
+     *   · 결과뷰의 §97②2호 안내 카드(`TransferTaxResultView.tsx:468`)가 **뜨지 않아**
+     *     비과세 사용자에게는 단서 적용 사실 자체가 화면에서 사라졌다.
+     *
+     * 바로 위 `expenses`·`exemptGrossGain`이 같은 경로에서 같은 이유로 이미 두 번 추가됐다
+     * (memory `feedback_early_return_branch_skips_pipeline_stages`).
+     */
+    swapApplied: grossForEcho.swapApplied,
+    swapComparison: grossForEcho.swapComparison,
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
     ...(grossForEcho.usedEstimated

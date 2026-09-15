@@ -277,11 +277,24 @@ export function buildStatementItems(
    */
   const estimatedNoSwap =
     result.usedEstimatedAcquisition === true && result.swapApplied !== true;
-  const singleAcq = result.usedEstimatedAcquisition
+  const singleAcq = estimatedNoSwap
     ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
       //   「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨졌다(결과탭 코드리뷰 #069).
-      (result.estimatedBase ?? 0) + (estimatedNoSwap ? 0 : capEx)
-    : inverseAcquisitionForDisplay({
+      (result.estimatedBase ?? 0)
+    : /**
+       * 🔴 §97②2호 **단서**(swap)는 환산 축이 아니라 **실가 축**으로 내린다.
+       *
+       * 종전에는 `usedEstimatedAcquisition`이면 swap에서도 `estimatedBase + capEx`를 실었다.
+       * 환산취득가액은 차감되지 않는 값인데(`transfer-tax-helpers.ts:396`) 그 위에 자본적지출까지
+       * 얹어 **제3의 수**를 만들었다 — 실측 2026-09-15(양도 400,000,000 · 환산 200,000,000 ·
+       * 개산공제 4,500,000 · 자본적지출 230,000,000): 취득가액 **430,000,000**,
+       * 400,000,000 − 430,000,000 − 0 = −30,000,000 ≠ 양도차익 170,000,000.
+       * 같은 화면의 신고서 양식은 230,000,000을 내고 있어 두 카드가 200,000,000 어긋났다.
+       *
+       * 신고서 양식은 이미 swap을 실가 역산 분기로 보낸다(`FilingFormTableHelpers.ts:372`
+       * `estimatedDisplay = swapApplied ? null`) — **같은 게이트·같은 경로**로 맞춘다.
+       */
+      inverseAcquisitionForDisplay({
         transferPrice: totalTransferPrice,
         grossGain: singleGrossGain,
         expenses: result.expenses ?? 0,

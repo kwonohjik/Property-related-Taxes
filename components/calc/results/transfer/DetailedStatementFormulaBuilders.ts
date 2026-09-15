@@ -462,20 +462,45 @@ export function buildAcquisitionPriceFormula(
     }
     return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
+  /**
+   * §97②2호 **단서**(swap) — 취득가액 칸은 **나목(자본적지출 + 양도비)** 이다.
+   *
+   * ## 🔴 2026-08-23 판단(N-5)을 뒤집는다
+   *
+   * 그때는 「환산 산식은 그대로 두고 **차감 제외 고지만** 덧붙인다」였다(근거: 환산취득가액은
+   * 실재하는 값이고 §97②2호 **가목의 구성요소**다). 그 판단은 **`capEx = 0` fixture로만**
+   * 검증됐다 — N5 전건이 `capEx` 인자에 0을 넘긴다.
+   *
+   * `capEx > 0`이면 행의 **값 자체**가 `estimatedBase + capEx`로 부풀어(`DetailedStatementHelpers`
+   * 종전 :284) 고지 문구로 설명되지 않는 **제3의 수**가 된다 — 실측 2026-09-15(양도 400,000,000 ·
+   * 환산 200,000,000 · 개산공제 4,500,000 · 자본적지출 230,000,000): 취득가액 **430,000,000**.
+   * 산식이 그 수를 그대로 그려 **거짓 등식이 완성**됐고, 같은 화면 신고서(230,000,000)와
+   * 200,000,000 어긋났다. 「이 금액은 차감되지 않습니다」가 가리키는 대상도 모호했다 —
+   * 자본적지출 230,000,000은 **차감된다**(그것이 단서의 전부다).
+   *
+   * ⇒ 값과 산식을 **나목 축**으로 함께 내리고, 가목(환산취득가액 + 개산공제)은 **비교 근거**로만
+   *   남긴다. 비교 수치는 전부 엔진 echo다(`swapComparison` · `estimatedBase` ·
+   *   `estimatedDeduction`) — 표시층이 산식을 다시 계산하지 않는다.
+   */
+  if (result.swapApplied && result.usedEstimatedAcquisition) {
+    const direct = capEx + Math.max(0, (result.expenses ?? 0) - capEx);
+    const parts = [`자본적지출 ${capEx.toLocaleString()}`];
+    const transferExp = Math.max(0, (result.expenses ?? 0) - capEx);
+    if (transferExp > 0) parts.push(`양도비 ${transferExp.toLocaleString()}`);
+    const head = `${parts.join(" + ")} = ${direct.toLocaleString()} — 「소득세법」 §97②2호 단서 적용`;
+    const cmp = result.swapComparison;
+    // `swapComparison`이 없는 경로(분리 입력이 아닌 legacy)에서는 비교 괄호를 생략한다 —
+    // 없는 수를 지어내지 않는다.
+    const basis =
+      cmp != null
+        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
+        : " (가목보다 커 나목을 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)";
+    return head + basis;
+  }
   if (result.usedEstimatedAcquisition) {
     const estBase = (result.estimatedBase ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;
     const stdTransfer = result.estimatedStdPriceAtTransfer;
-    /**
-     * §97② 2호 단서 swap 채택 시 **이 금액은 양도차익에서 차감되지 않는다**
-     * (필요경비 전체가 나목 = 자본적지출 + 양도비. `transfer-tax-helpers.ts` `swap_to_direct`).
-     * 고지가 없으면 취득가액·필요경비·양도차익 세 행이 나란히 놓였을 때 산술이 안 맞아 보인다
-     * (실측: 10억 − 1억 − 4억 = 5억인데 양도차익은 6억). 양도차익 산식 자체는 엔진 step이
-     * 「양도가 − 필요경비」로 정확히 적고 있으므로, 여기서는 **차감 제외 사실만** 덧붙인다.
-     */
-    const swapNote = result.swapApplied
-      ? " ※ §97②2호 단서 적용 — 이 금액은 차감되지 않습니다(필요경비 전체가 자본적지출+양도비)"
-      : "";
     /**
      * ⑦ §164⑧ 동일조정기간 환산 고지.
      *
@@ -497,9 +522,9 @@ export function buildAcquisitionPriceFormula(
           `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
           stdAcq,
           stdTransfer,
-          `${capExStr} — 시행령 §163·§176의2②${swapNote}${sapNote}`,
+          `${capExStr} — 시행령 §163·§176의2②${sapNote}`,
         )
-      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2${swapNote}`;
+      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
   return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
 }
@@ -573,7 +598,10 @@ export function buildNecessaryExpenseFormula(
   }
   if (result.usedEstimatedAcquisition) {
     if (result.swapApplied) {
-      return `양도비 ${singleExp.toLocaleString()} (§97② 단서 적용 — 자본적지출은 취득가액에 합산 표시)`;
+      // 취득가액 칸이 **나목**(자본적지출 + 양도비)이므로 이 칸은 양도비만 남는다.
+      // 종전 문구(「자본적지출은 취득가액에 합산 표시」)는 취득가액 칸에 환산취득가액까지
+      // 섞여 있던 동안 **사실이 아니었다** — 그 칸이 나목 축으로 내려와 이제 성립한다.
+      return `양도비 ${singleExp.toLocaleString()} (「소득세법」 §97②2호 단서 적용 — 자본적지출은 취득가액 칸에 합산 표시)`;
     }
     const ded = (result.estimatedDeduction ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;

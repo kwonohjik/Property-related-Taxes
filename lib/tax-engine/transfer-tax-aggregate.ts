@@ -480,14 +480,34 @@ function computeAggregateOnce(
      *    두 축이 갈릴 수 있다. 그 경우 종전 표시를 유지한다(회귀 0).
      */
     const tsfStd = r.singleInput.standardPriceAtTransfer ?? 0;
+    /**
+     * 🔴 §97②2호 **단서**(swap)이면 취득가액은 **0**이다 — 환산취득가액이 양도차익에서
+     *    차감되지 않기 때문이다(`transfer-tax-helpers.ts:396` `acqCostForGain = swap ? 0 : …`).
+     *
+     *    종전에는 `usedEstimatedAcquisition`만 보고 `estimatedBase`(차감되지 않는 값)를 실었다.
+     *    필요경비는 바로 아래에서 이 값으로부터 **역산**되므로 두 수가 함께 어긋났고,
+     *    신고서·명세서의 자산 열이 표시 관행(`+ capitalExpenditureForDisplay`)을 태우면서
+     *    항등식이 깨졌다 — 실측 2026-09-15(양도 400,000,000 · 환산 200,000,000 ·
+     *    개산공제 4,500,000 · 자본적지출 230,000,000):
+     *      취득가액 430,000,000 · 필요경비 0
+     *      ⇒ 400,000,000 − 430,000,000 − 0 = **−30,000,000** ≠ 양도차익 170,000,000
+     *
+     *    swap에서 취득가액 0은 이 저장소 엔진의 **확립된 축**이다 —
+     *    `multi-parcel-transfer.ts:449` · `transfer-tax-mixed-use-commercial.ts:231` ·
+     *    `transfer-tax-mixed-use-housing.ts:289`. 여기만 예외였다.
+     *
+     *    ⚠️ **표시 전용 echo다** — 세액은 `r.result`·`taxBaseShare` 축이 낸다(불변).
+     */
     const effectiveAcquisitionPrice =
       adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail) ??
-      (r.result.usedEstimatedAcquisition
-        ? (r.result.estimatedBase ??
-            (tsfStd > 0
-              ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
-              : 0))
-        : r.singleInput.acquisitionPrice);
+      (r.result.swapApplied
+        ? 0
+        : r.result.usedEstimatedAcquisition
+          ? (r.result.estimatedBase ??
+              (tsfStd > 0
+                ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+                : 0))
+          : r.singleInput.acquisitionPrice);
     // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
     //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
     // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
