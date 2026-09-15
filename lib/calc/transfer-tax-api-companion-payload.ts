@@ -254,9 +254,15 @@ export function buildAssetPayload(
     standardPriceAtTransferForApportion: stdAtTransferForApportion,
     // ④ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(asset),
+    // 🔴 **감정가액도 개산공제(§163⑥) base로 이 값을 쓴다** (2026-09-15 — 세액 변경).
+    //    매매사례는 여기에 넣지 않는다 — 컴패니언 salesCase는 ⑧이 이미 명시 차단하므로
+    //    (`companion-sales-case-single-only-review-2026-08-f41`) ④에 도달하지 않는다(실측).
+    //    도달하지 않는 조건을 적으면 「지원된다」는 거짓 신호가 된다.
     standardPriceAtAcquisition:
-      asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
-        ? parseAmount(asset.standardPriceAtAcq)
+      asset.acquisitionCause === "purchase" &&
+      (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition) &&
+      asset.standardPriceAtAcq
+        ? parseAmount(asset.standardPriceAtAcq) || undefined
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
     ownershipRatio: fractional ? ratio : undefined,

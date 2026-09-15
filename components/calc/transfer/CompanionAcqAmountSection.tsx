@@ -159,12 +159,15 @@ export function CompanionAcqAmountSection({
           hint="위 일괄 취득가액에 대응하는 부대비용(중개수수료·취득세·인지대 등). 증축분 관련 비용은 제외합니다. 엔진이 취득시 기준시가 비율로 토지·원건물에 자동 안분합니다. 없으면 비워두세요."
         />
       )}
+      {/* 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(`SalesCaseSection`)와 같은 규칙.
+          필수·hint 근거는 그쪽 주석 참조. */}
       {props.isAppraisalAcquisition && (
         <CurrencyInput
           label="취득시 기준시가 (원) — 개산공제 기준액"
+          required
           value={props.standardPriceAtAcq}
           onChange={props.onStandardPriceAtAcqChange}
-          hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."
+          hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."
         />
       )}
     </>

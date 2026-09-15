@@ -47,6 +47,7 @@ function parseRaw(v: string | undefined): number {
 export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -360,16 +361,25 @@ export function computeTransferSummary(
     const ratio = fractional ? n / d : 1;
 
     let baseExp: number;
-    if (a.useEstimatedAcquisition || a.isAppraisalAcquisition) {
-      // 환산·감정 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥ = 취득 당시 기준시가 × 3%,
-      // 미등기 0.3%)를 즉시 산출 — result 도착 전에도 표시 가능.
+    if (a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition) {
+      // 환산·감정·매매사례 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥)를 즉시 산출 —
+      // result 도착 전에도 표시 가능.
+      //
+      // 🔴 **매매사례가 빠져 있었다**(2026-09-15). 「소득세법」 제97조 제2항 제2호 본문은
+      //    제1항제1호 **나목**(= 매매사례가액·감정가액·환산취득가액)을 한 묶음으로 다루는데
+      //    이 분기만 매매사례를 빼, 사이드바가 개산공제 대신 **실경비 fallback**(자본적지출+양도비)을
+      //    필요경비 합계로 표시했다(실측 7,000,000 vs 법정 3,000,000).
       //
       // ⚠️ 산출을 **엔진 헬퍼에 위임**한다. 지분 모드에서 절사 순서가 갈리면
       //    사이드바 미리보기와 엔진 결과가 1원 어긋난다(실측 0.96%). 종전 이 자리는
       //    `floor(std × rate)` 후 아래에서 `floor(× 지분)`으로 **율을 먼저** 적용했으나,
       //    엔진 정본은 순서 A(`floor(floor(std × 지분) × rate)`)다.
       //    → 여기서 지분까지 적용하고 하단 공통 지분 적용은 건너뛴다.
-      const rate = formData.isUnregistered ? 0.003 : 0.03;
+      //
+      // 🔴 **율도 엔진 leaf를 쓴다**. 손으로 적은 `isUnregistered ? 0.003 : 0.03`은 §163⑥**4호**
+      //    (조합원입주권·분양권 1%)를 보지 못해 그 자산에서 3배로 표시됐다. `assetKind`는 ④가
+      //    엔진 `propertyType`으로 **그대로 보내는** 값이라(`transfer-tax-api.ts:251`) 같은 인자다.
+      const rate = estimatedDeductionRate(formData.isUnregistered, a.assetKind);
       return acc + computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
     } else if (a.assetKind === "housing" && a.isMixedUseHouse) {
       // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —

@@ -20,7 +20,7 @@ import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-comm
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
-import { phdToggleReachable } from "./phd-toggle-scope";
+import { lumpSumBaseRequired, usesPhdGate } from "./transfer-lump-sum-base-gate";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
@@ -86,6 +86,7 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
   }
   return null;
 }
+
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 export function validateAssetAcquisition(
@@ -370,8 +371,9 @@ export function validateAssetAcquisition(
   if (isSalesCase) {
     if (!asset.similarSalesValue || parseAmount(asset.similarSalesValue) <= 0)
       return `${label}: 매매사례가액을 입력하세요.`;
-    // 개산공제 base: 취득시 기준시가(standardPriceAtAcq) 필수 — 0 허용(입력 없으면 개산공제 0)
-    // 단, 아예 검증 차단보다는 사용자 확인 유도 힌트만 제공 (추계는 기준시가 불확실 케이스가 많음)
+    // 개산공제 base(§163⑥) 필수 — 근거·경계는 `lumpSumBaseRequired` JSDoc.
+    if (lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
+      return `${label}: 취득 당시 기준시가를 입력하세요.`;
     return null;
   }
 
@@ -497,8 +499,7 @@ export function validateAssetAcquisition(
   // 🔴 **자산 종류 축도 본다**(2026-09-07). 취득일 < 2005-04-29 주택이면 ⑤가 이 플래그를
   //    **자동으로 켜는데**, 종류를 토지·상가로 바꾸면 토글이 사라진 채 플래그만 남아
   //    화면에 없는 11칸을 요구했다. 술어는 ⑤ 렌더 조건과 같은 것(`phdToggleReachable`).
-  const usesPhd =
-    asset.usePreHousingDisclosure === true && !isNonPrimaryAsset && phdToggleReachable(asset);
+  const usesPhd = usesPhdGate(asset, isNonPrimaryAsset);
 
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
@@ -648,6 +649,9 @@ export function validateAssetAcquisition(
         if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
           return `${label}: ${isAppraisal ? "감정가액" : "취득가액"}을 입력하세요.`;
       }
+      // 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(위 0번 분기)와 같은 규칙.
+      if (isAppraisal && lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
+        return `${label}: 취득 당시 기준시가를 입력하세요.`;
     } else if (asset.acquisitionCause === "gift") {
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
         return `${label}: 증여 신고가액을 입력하세요.`;

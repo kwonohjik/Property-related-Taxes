@@ -206,7 +206,13 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     capitalExpenditure: (capEx || effectiveTransferExpense) ? capEx : undefined,
     transferExpense: (capEx || effectiveTransferExpense) ? (effectiveTransferExpense || undefined) : undefined,
     useEstimatedAcquisition: isSalesCase ? false : isEstimated,
-    standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
+    // 🔴 감정·매매사례도 개산공제(§163⑥) base로 쓴다 — 단건 ④(`transfer-tax-api.ts`)와 **같은 규칙**.
+    //    ⚠️ `|| undefined`가 **필수**다. 종전 형태는 미입력 시 `0`을 보내는데 ⑫ 스키마가
+    //       `.positive()`라 400이 된다. 환산은 ⑧이 기준시가를 먼저 막아 도달하지 않았을 뿐이다.
+    standardPriceAtAcquisition:
+      isEstimated || isAppraisal || isSalesCase
+        ? parseAmount(primary?.standardPriceAtAcq ?? "") || undefined
+        : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
     // ⑬ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
     // 🔴 ⑬ 법정동코드 10자리 — 단건 ④(`transfer-tax-api.ts:421`)에만 있었다.

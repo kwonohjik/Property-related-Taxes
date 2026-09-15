@@ -17,6 +17,7 @@ import {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   fmtDate,
@@ -324,7 +325,11 @@ export function buildStatementItems(
   const singleExp = estimatedNoSwap
     ? (result.expenses ?? 0)
     : Math.max(0, (result.expenses ?? 0) - capEx);
-  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp);
+  // 개산공제율은 **엔진 leaf**가 정한다(§163⑥ 1·2호 3% / 미등기 단서 0.3% / 4호 1%).
+  // `assetKind`는 ④가 엔진 `propertyType`으로 그대로 보내는 값이라 같은 인자다
+  // (`transfer-tax-api.ts:251`) — 사이드바 합계(`calc-wizard-store.ts`)와도 같은 호출이다.
+  const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
+  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate);
 
   items.set("expenses", {
     label: "필요경비",
