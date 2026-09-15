@@ -10,7 +10,11 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
-import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
+import {
+  useMultiTransferStore,
+  generatePropertyId,
+  setAutoBackupPropertyId,
+} from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -40,6 +44,9 @@ export function backupSingleToMulti(formData: TransferFormData): string {
   multiStore.addProperty(newItem);
   const year = taxYearOf(formData.transferDate);
   if (year !== undefined) multiStore.setForm({ taxYear: year });
+  // 호출부 ref와 **같은 값**을 세션에도 남긴다 — 다른 화면(이력)도 이 백업을
+  // 「사용자 입력이 아니다」로 판정할 수 있어야 한다(multi-transfer-tax-store.ts).
+  setAutoBackupPropertyId(newItem.propertyId);
   return newItem.propertyId;
 }
 
