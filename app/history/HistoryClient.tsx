@@ -8,6 +8,8 @@ import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
+import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
@@ -195,6 +197,8 @@ export function HistoryClient() {
   const [confirmAction, setConfirmAction] = useState<
     { type: "clearAll" } | { type: "delete"; id: string } | null
   >(null);
+  /** 「합산」을 누른 기준 이력 — 다건 합산 선택 모달의 기준 record */
+  const [aggregateBase, setAggregateBase] = useState<CalculationRecord | null>(null);
 
   // 세무사 모드: 의뢰인 목록 로드
   useEffect(() => {
@@ -585,6 +589,20 @@ export function HistoryClient() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+                {/* 다건 합산 — 단건 양도세 이력만(다건은 이미 합산 결과라 §107② 이중 계상 위험) */}
+                {canAggregateFromHistory(record) && (
+                  <button
+                    type="button"
+                    data-testid={`aggregate-${record.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAggregateBase(record);
+                    }}
+                    className="rounded-md border border-emerald-400 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition-colors dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                  >
+                    합산
+                  </button>
+                )}
                 {classifyAmendableTransfer(record) !== null && (
                     <>
                       <button
@@ -635,6 +653,18 @@ export function HistoryClient() {
             </div>
           </div>
         ))}
+
+      {/* 다건 합산 선택 모달 — 기준 이력이 정해졌을 때만 마운트 */}
+      {aggregateBase && (
+        <HistoryAggregateSelectModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setAggregateBase(null);
+          }}
+          base={aggregateBase}
+          clientName={aggregateBase.clientId ? clientMap[aggregateBase.clientId] : null}
+        />
+      )}
 
       {/* 상세 드로어 */}
       {selectedRecord && (

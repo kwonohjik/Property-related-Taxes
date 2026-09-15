@@ -37,6 +37,8 @@ const DOM_TS = [
   "__tests__/components/calc/detailed-statement-993-income-deduction.anchor.test.ts",
   "__tests__/lib/stores/wizard-step-reset-on-reentry.test.ts",
   "__tests__/tax-engine/transfer-tax/estimated-acquisition-formula-display.anchor.test.ts",
+  // sessionStorage를 실제로 읽고 쓴다(자동 백업 id 세션 공유)
+  "__tests__/lib/stores/multi-auto-backup-session-id.anchor.test.ts",
 ];
 
 const shared = {

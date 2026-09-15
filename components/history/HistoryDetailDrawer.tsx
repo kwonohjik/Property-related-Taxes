@@ -8,6 +8,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { buildBackup } from "@/lib/storage/backup-export";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
+import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -117,6 +119,8 @@ export function HistoryDetailDrawer({
   const [editOpen, setEditOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  /** 다건 합산 선택 모달 열림 — 이 드로어의 record가 기준이 된다 */
+  const [aggregateOpen, setAggregateOpen] = useState(false);
 
   const route = TAX_TYPE_ROUTES[record.taxType];
 
@@ -294,6 +298,16 @@ export function HistoryDetailDrawer({
               이 조건으로 재계산
             </button>
           )}
+          {canAggregateFromHistory(record) && (
+            <button
+              type="button"
+              onClick={() => setAggregateOpen(true)}
+              data-testid="drawer-aggregate"
+              className="w-full rounded-lg border border-emerald-400 bg-emerald-50 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 transition-colors dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+            >
+              다건 합산으로 재계산
+            </button>
+          )}
           {route &&
             classifyAmendableTransfer(record) !== null && (
               <button
@@ -353,6 +367,15 @@ export function HistoryDetailDrawer({
             setEditOpen(false);
           }}
           onClose={() => setEditOpen(false)}
+        />
+      )}
+
+      {/* 다건 합산 선택 모달 — 이 드로어의 record가 기준 */}
+      {aggregateOpen && (
+        <HistoryAggregateSelectModal
+          open
+          onOpenChange={setAggregateOpen}
+          base={record}
         />
       )}
 

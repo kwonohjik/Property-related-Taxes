@@ -235,6 +235,9 @@ export const useMultiTransferStore = create<MultiTransferState>()(
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("multi-transfer-tax-wizard");
         }
+        // 세션이 비워지면 자동 백업 신호도 함께 무효다 — 남겨 두면 다음 세션의
+        // 사용자 실입력이 「백업」으로 오판돼 경고 없이 덮어써진다.
+        setAutoBackupPropertyId(null);
         set({ form: defaultFormData, result: null, isCalculating: false });
       },
     }),
@@ -250,6 +253,35 @@ export const useMultiTransferStore = create<MultiTransferState>()(
 );
 
 export { generatePropertyId };
+
+/**
+ * 「단건 자동 백업」의 propertyId를 담는 세션 키.
+ *
+ * 🔴 **왜 store의 폼 필드가 아니라 sessionStorage인가.**
+ *    `MultiTransferFormData`에 넣으면 다건 자동저장(`inputData`)을 타고 **이력 record에
+ *    저장**되고, 나중에 복원된 세션에서 의미 없는 id가 되살아난다. 이 값은 폼이 아니라
+ *    **세션의 사실**이다.
+ *
+ * 🔴 **왜 컴포넌트 ref로는 부족한가.** 종전에는 단건 계산기의 `useRef`가 유일한 신호였다
+ *    (`TransferTaxCalculator.tsx`). 그 ref는 **그 컴포넌트에만** 있으므로, 이력 화면처럼
+ *    다른 화면에서 「덮어써도 되는가」를 물으면 `multiStoreHasUserWork(props, null)`이
+ *    **항상 true**가 된다 — 지울 사용자 입력이 없는데도 폐기 확인 다이얼로그가 뜬다
+ *    (「단건 계산 → 이력 → 합산」이 가장 흔한 경로다).
+ */
+const AUTO_BACKUP_ID_KEY = "multi-transfer-auto-backup-id";
+
+/** 자동 백업 propertyId 기록. null이면 지운다. SSR·비브라우저에서는 무동작. */
+export function setAutoBackupPropertyId(id: string | null): void {
+  if (typeof window === "undefined") return;
+  if (id === null) sessionStorage.removeItem(AUTO_BACKUP_ID_KEY);
+  else sessionStorage.setItem(AUTO_BACKUP_ID_KEY, id);
+}
+
+/** 직전 단건 계산이 남긴 자동 백업 propertyId. 없으면 null(= 안전측: 보존). */
+export function readAutoBackupPropertyId(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(AUTO_BACKUP_ID_KEY);
+}
 
 /**
  * 다건 store에 **사용자 실입력**이 들어 있는가 — 덮어쓰면 데이터 손실이 나는가 (Q28).
