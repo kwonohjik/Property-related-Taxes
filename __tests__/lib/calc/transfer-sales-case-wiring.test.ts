@@ -82,6 +82,9 @@ describe("[SC-WIRE] salesCase 결선 — ④⑬ API 변환 + ⑧ validate", () =
       acquisitionDate: "2020-01-01",
       isSalesCaseAcquisition: true,
       similarSalesValue: "900,000,000",
+      // ⑧ 개산공제 base 필수(2026-09-15) — 이 테스트가 보는 축은 매매사례가액 배관이므로
+      //    기준시가를 채워 그 축만 남긴다(`lump-sum-deduction-required-stdprice.anchor`가 필수화를 잠근다).
+      standardPriceAtAcq: "700,000,000",
     } as AssetForm;
     const err = validateAssetAcquisition(asset, "자산1", "2026-03-01");
     expect(err).toBeNull();

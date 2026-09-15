@@ -119,12 +119,18 @@ export function SalesCaseSection({
         )}
       </div>
 
-      {/* 취득시 기준시가 — 개산공제 3% base */}
+      {/* 취득시 기준시가 — 개산공제(§163⑥) base.
+          🔴 **필수다**(2026-09-15 사용자 확정). 「소득세법」 제97조 제2항 제2호 본문이 제1항제1호
+             나목(매매사례가액·감정가액·환산취득가액)의 금액에 개산공제를 **더하도록 정하므로**,
+             미입력을 0으로 두면 납세자에게 불리한 방향으로 과대과세된다. ⑧이 같은 범위로 막는다
+             (`transfer-tax-validate-acquisition.ts` `lumpSumBaseRequired`).
+          ⚠️ hint에 「이 금액의 3%」를 단정하지 않는다 — 미등기 0.3%·§163⑥4호 1%에서 거짓이 된다. */}
       <CurrencyInput
         label="취득시 기준시가 (원) — 개산공제 기준액"
+        required
         value={standardPriceAtAcq}
         onChange={onStandardPriceAtAcqChange}
-        hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."
+        hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."
       />
 
       {/* RTMS 자동조회 모달 */}

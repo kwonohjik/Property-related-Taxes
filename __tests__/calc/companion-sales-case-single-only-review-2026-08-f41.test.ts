@@ -120,6 +120,9 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
         fixedAcquisitionPrice: "",
         isSalesCaseAcquisition: true,
         similarSalesValue: "400,000,000",
+        // ⑧ 개산공제 base 필수(2026-09-15) — 이 테스트가 보는 축은 매매사례가액 배관이므로
+        //    기준시가를 채워 그 축만 남긴다(`lump-sum-deduction-required-stdprice.anchor`가 필수화를 잠근다).
+        standardPriceAtAcq: "300,000,000",
       },
     });
     expect(collectStepIssues(0, form)).toEqual([]);
@@ -145,6 +148,9 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
       isSalesCaseAcquisition: true,
       similarSalesValue: "400,000,000",
       actualSalePrice: "1,000,000,000",
+      // ⑧ 개산공제 base 필수(2026-09-15) — 이 테스트가 보는 축은 매매사례가액 배관이므로
+      //    기준시가를 채워 그 축만 남긴다(`lump-sum-deduction-required-stdprice.anchor`가 필수화를 잠근다).
+      standardPriceAtAcq: "300,000,000",
     };
     expect(collectStepIssues(0, form)).toEqual([]);
   });
