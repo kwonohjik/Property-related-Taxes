@@ -538,7 +538,18 @@ export function computeTransferPerAssetSummary(
           singleResult?.inheritedAcquisitionDetail?.acquisitionPrice ||
           parseRaw(a.publishedValueAtInheritance);
       } else if (singleResult?.usedEstimatedAcquisition) {
-        acqPrice = singleResult.estimatedBase ?? 0;
+        /**
+         * §97②2호 **단서**(swap)이면 환산취득가액은 차감되지 않는다 — 취득가액은 **0**이고
+         * 필요경비가 자본적지출 + 양도비 전액이다(`transfer-tax-helpers.ts:396`).
+         *
+         * 🔴 종전에는 swap에서도 `estimatedBase`를 실어 사이드바가 「취득가액 200,000,000 +
+         *   필요경비 230,000,000」을 나란히 보여줬다(실측 2026-09-15). 합이 430,000,000이라
+         *   실제 차감액 230,000,000과 어긋나고, 같은 화면 결과 탭(취득가액 230,000,000 ·
+         *   필요경비 –)과도 축이 달랐다. 0이면 사이드바 정책상 그 행이 표시되지 않는다.
+         *
+         * 바로 아래 상가(§164⑧) 분기는 같은 교리를 이미 적용하고 있었다 — 환산 분기만 빠졌다.
+         */
+        acqPrice = singleResult.swapApplied ? 0 : (singleResult.estimatedBase ?? 0);
       } else if (
         singleResult?.commercialBuildingValuationDetail &&
         !singleResult.swapApplied
