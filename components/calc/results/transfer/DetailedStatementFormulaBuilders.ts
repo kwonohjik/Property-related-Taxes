@@ -505,6 +505,19 @@ export function buildAcquisitionPriceFormula(
 }
 
 /**
+ * 개산공제율 표기 — `0.03 → "3%"` · `0.003 → "0.3%"` · `0.01 → "1%"`.
+ *
+ * 🔴 율을 문자열로 **박지 않는다**. 종전에는 `× 3%`가 하드코딩돼 있어 미등기(시행령 §163⑥1호·2호
+ *    단서 3/1000)·§163⑥4호(조합원입주권·분양권 1/100)에서 **등식이 거짓**이었다 —
+ *    「개산공제 300,000 = 취득시 기준시가 100,000,000 × 3%」(실측). 환산 모드 + 미등기에서
+ *    이미 도달 가능한 활성 결함이었다.
+ */
+function formatLumpRate(rate: number | undefined): string {
+  if (rate === undefined || !Number.isFinite(rate) || rate <= 0) return "개산공제율";
+  return `${Number((rate * 100).toFixed(4))}%`;
+}
+
+/**
  * 필요경비 산식 — 단건은 실제 변수값. 환산모드 본문은 개산공제(취득시 기준시가 × 3%),
  * §97② 단서 swap 시 직접경비(양도비), 실거래는 양도비 합계.
  */
@@ -512,6 +525,12 @@ export function buildNecessaryExpenseFormula(
   result: TransferTaxResult,
   isAggregate: boolean,
   singleExp: number,
+  /**
+   * 엔진이 실제 적용한 개산공제율(시행령 §163⑥). 호출부가 **엔진 leaf**
+   * (`estimatedDeductionRate`)로 산출해 넘긴다 — 표시층이 율을 다시 적으면 조문 분기가 갈린다.
+   * 미지정이면 율 대신 「개산공제율」이라고만 적는다(거짓 등식을 만들지 않는다).
+   */
+  lumpRate?: number,
 ): string {
   if (isAggregate) {
     return result.usedEstimatedAcquisition
@@ -537,7 +556,7 @@ export function buildNecessaryExpenseFormula(
     const lumpBase = a.lumpDeductionBase ?? stdAcq;
     const isLumpDeduction = a.necessaryExpenseIsLumpDeduction === true && lumpBase != null;
     const baseLabel = isLumpDeduction
-      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × 3% — 시행령 §163⑥`
+      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × ${formatLumpRate(lumpRate)} — 시행령 §163⑥`
       : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
     const parts: string[] = [baseLabel];
     if (gift > 0) {
@@ -558,9 +577,10 @@ export function buildNecessaryExpenseFormula(
     }
     const ded = (result.estimatedDeduction ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;
+    const rateLabel = formatLumpRate(lumpRate);
     return stdAcq != null
-      ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × 3% — 소득세법 §97① 나목·시행령 §163⑥`
-      : `개산공제 ${ded} (취득시 기준시가 × 3%) — §97① 나목·시행령 §163⑥`;
+      ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × ${rateLabel} — 소득세법 §97① 나목·시행령 §163⑥`
+      : `개산공제 ${ded} (취득시 기준시가 × ${rateLabel}) — §97① 나목·시행령 §163⑥`;
   }
   return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
 }
