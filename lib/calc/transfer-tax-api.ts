@@ -328,11 +328,20 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         // 추계 3종 모두 개산공제(§163⑥4호 1%) base로 취득당시 기준시가를 쓴다.
         : isSuccessorRight && (isEstimated || isAppraisal || isSalesCase)
           ? successorRightStdPriceAtAcq(primary) || undefined
-        : isEstimated || isSplitActive
+        : isEstimated || isSplitActive || isAppraisal || isSalesCase
           // 분리 모드(토지·건물 취득일/소유자 상이) 추가 전송 — §166⑥ 안분 비율(calcApportionRatio,
           // split-gain.ts:26-36)이 취득시 기준시가 3요소를 요구한다. 종전에는 isEstimated에서만
           // 전송돼, 실거래가·감정·매매사례 분리 모드에서 ratio=null → calcSplitGain 전체가 null →
           // 토지·건물 분리 계산이 **오류 없이 조용히 비활성**됐다(계획서 §3.1, probe 실측).
+          //
+          // 🔴 **감정·매매사례도 개산공제(§163⑥) base로 이 값을 쓴다** (2026-09-15 — 세액 변경).
+          //    「소득세법」 제97조 제2항 제2호 **본문**은 제1항제1호 **나목**(= 매매사례가액·감정가액·
+          //    환산취득가액)의 금액에 「자산별로 대통령령으로 정하는 금액」을 더하라고 정한다. 셋을
+          //    가를 근거가 본문에 없는데 ④만 환산에서만 보내, ⑤에 입력칸이 있고 값이 저장되는데도
+          //    엔진에는 base 0이 도달해 **개산공제가 0**이었다(등기 665,280 · 미등기 231,000 과대,
+          //    실측). 엔진(`transfer-tax-helpers.ts:364·375`)은 이미 셋 다 개산공제를 적용한다.
+          //    바로 윗줄 승계입주권 갈래가 이미 세 방식을 모두 보내고 있었다 — 일반 자산 갈래만
+          //    규칙 밖이었다. 분리 축도 `requiresAcqStdPricePart`가 `mode !== "actual"`로 이미 같다.
           ? parseAmount(primary.standardPriceAtAcq) || undefined
           : undefined,
     // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
