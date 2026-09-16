@@ -29,7 +29,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function assetOf(assetKind: string, acquisitionDate: string, acqPrice: string) {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind,
     acquisitionDate,
     acquisitionArea: "1000",

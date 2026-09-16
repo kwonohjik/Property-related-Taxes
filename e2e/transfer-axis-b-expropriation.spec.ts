@@ -41,8 +41,8 @@ function seedForm() {
     state: {
       formData: {
         assets: [
-          { ...makeDefaultAsset(1), ...common, ownershipNumerator: "60", ownershipDenominator: "100" },
-          { ...makeDefaultAsset(2), ...common, ownershipNumerator: "40", ownershipDenominator: "100" },
+          { ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...common, ownershipNumerator: "60", ownershipDenominator: "100" },
+          { ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1", ...common, ownershipNumerator: "40", ownershipDenominator: "100" },
         ],
         transferDate: "2024-06-01",
         filingDate: "2024-08-31",

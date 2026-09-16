@@ -11,6 +11,7 @@
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** FieldCard/CurrencyInput 라벨 → 내부 input (scope 한정 가능) */
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
@@ -33,6 +34,7 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
 
     // 점진적 노출 — 기본정보(①)·양도정보(②)·취득정보(③) 펼침
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await expandAssetSection(page, 2);
     await expandAssetSection(page, 3);
 

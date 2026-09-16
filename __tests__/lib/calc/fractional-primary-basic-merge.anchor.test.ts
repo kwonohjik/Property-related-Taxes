@@ -41,7 +41,7 @@ function fractionalLandForm(companionOwnershipFilled: boolean) {
   form.bundledSaleMode = "apportioned";
   // primary = 토지(60% 상속) — basic 입력
   form.assets[0] = {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "land",
     acquisitionArea: "300",
     transferArea: "300",
@@ -54,7 +54,7 @@ function fractionalLandForm(companionOwnershipFilled: boolean) {
   };
   // companion = 40% 매매 — ① 숨김 모사: basic 공란 + assetKind 기본값(housing).
   form.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     // assetKind 미설정 → 기본값 "housing" (병합 대상)
     acquisitionCause: "purchase",
     acquisitionDate: "2015-03-03",

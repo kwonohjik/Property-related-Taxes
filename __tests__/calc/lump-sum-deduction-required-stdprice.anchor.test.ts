@@ -49,7 +49,7 @@ function bundledForm(companionOver: Partial<AssetForm>): TransferFormData {
     actualSalePrice: "1,000,000,000",
   };
   form.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-05-05",

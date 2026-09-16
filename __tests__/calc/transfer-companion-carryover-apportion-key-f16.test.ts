@@ -27,6 +27,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
 import { buildAssetPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -73,7 +74,7 @@ const USER_APPORTION_KEY = 400_000_000;
 const DONOR_STD_AT_TRANSFER = 222_222_222;
 
 function bundledForm(carryover: CarryoverTaxationForm): TransferFormData {
-  const f = createDefaultTransferFormData();
+  const f = withTestAddress(createDefaultTransferFormData());
   f.transferDate = "2024-03-01";
   f.contractTotalPrice = "1,800,000,000";
   f.bundledSaleMode = "apportioned";
@@ -87,7 +88,7 @@ function bundledForm(carryover: CarryoverTaxationForm): TransferFormData {
     standardPriceAtTransfer: "1,000,000,000",
   } as AssetForm;
   f.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "carryover_gift",
     acquisitionDate: "2021-06-01",
@@ -119,7 +120,7 @@ async function companionPayload(form: TransferFormData) {
 describe("F16 A-8 — §166⑥ 안분 키 ↔ §97①1호나목 환산 분모 역할 분리", () => {
   it("④ payload가 두 역할을 **동시에** 싣는다 (한쪽이 다른 쪽을 덮지 않는다)", () => {
     const asset = {
-      ...makeDefaultAsset(2),
+      ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
       assetKind: "housing" as const,
       acquisitionCause: "carryover_gift" as const,
       acquisitionDate: "2021-06-01",
@@ -142,7 +143,7 @@ describe("F16 A-8 — §166⑥ 안분 키 ↔ §97①1호나목 환산 분모 �
 
   it("④ 비-이월과세 자산은 두 키가 같은 값이다 (역할 분리가 기존 동작을 바꾸지 않는다)", () => {
     const asset = {
-      ...makeDefaultAsset(2),
+      ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
       assetKind: "housing" as const,
       acquisitionCause: "gift" as const,
       acquisitionDate: "2021-06-01",

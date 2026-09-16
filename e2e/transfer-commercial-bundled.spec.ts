@@ -47,9 +47,9 @@ function seedForm(assets: Record<string, unknown>[]) {
 
 /** 축 B — 컴패니언 카드는 ① 기본정보를 숨기므로 자산종류·cb*가 primary에만 있다. */
 const AXIS_B = [
-  { ...makeDefaultAsset(1), ...CB, ownershipNumerator: "60", ownershipDenominator: "100" },
+  { ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...CB, ownershipNumerator: "60", ownershipDenominator: "100" },
   {
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     acquisitionCause: "purchase",
     acquisitionDate: "2014-06-01",
     fixedAcquisitionPrice: "600000000",
@@ -62,7 +62,7 @@ const AXIS_B = [
 /** 컴패니언 — 서로 다른 물건(주택 + 상가). */
 const COMPANION = [
   {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2014-06-01",
@@ -74,7 +74,7 @@ const COMPANION = [
     ownershipDenominator: "100",
   },
   {
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     ...CB,
     standardPriceAtTransfer: "800000000",
     actualSalePrice: "700000000",

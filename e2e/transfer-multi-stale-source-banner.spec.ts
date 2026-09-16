@@ -32,6 +32,7 @@ function form(price: string, acqPrice: string, unregistered: boolean) {
     assets: [
       {
         ...makeDefaultAsset(1),
+        addressJibun: "서울 강남구 테스트동 1-1", // ⑧ 소재지 필수
         assetKind: "land",
         acquisitionDate: "2020-04-01",
         acquisitionArea: "1000",

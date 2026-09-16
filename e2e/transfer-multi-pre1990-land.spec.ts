@@ -19,6 +19,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -38,6 +39,7 @@ test.describe("다건 양도 — 1990.8.30. 이전 취득 토지 환산 지원",
 
     // 점진적 노출 — ① 기본 / ② 양도 / ③ 취득 펼침
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await expandAssetSection(page, 2);
     await expandAssetSection(page, 3);
 

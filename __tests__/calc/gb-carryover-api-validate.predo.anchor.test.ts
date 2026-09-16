@@ -46,7 +46,7 @@ const carryoverForm = (over: object = {}) => ({
 /** 일반건물 자산 — 환산 모드 기준선. */
 function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: "purchase",
     gbBuildingAcquisitionCause: "purchase",

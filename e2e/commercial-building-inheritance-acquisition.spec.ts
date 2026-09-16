@@ -19,7 +19,7 @@ function seedForm() {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "commercial_building",
           acquisitionCause: "inheritance",
           acquisitionDate: "2017-09-15", // 상속개시일 (≥1985 → post-deemed)

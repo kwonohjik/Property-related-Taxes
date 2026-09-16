@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
   return scope
@@ -32,6 +33,7 @@ async function fillOriginalLandReturn(page: Page) {
   await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
   await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
 

@@ -9,6 +9,7 @@
  * worktree 실행: E2E_PORT=3101 npx playwright test e2e/transfer-multi-prepaid-load.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
 import { openHistoryModal } from "./_helpers/navigation";
@@ -20,9 +21,11 @@ const SINGLE_RECORD = {
   taxType: "transfer",
   title: "단건 양도 A (E2E)",
   inputData: {
-    assets: [{ assetKind: "land", addressJibun: "서울 강남구 대치동 2-2" }],
+    assets: [{ ...makeDefaultAsset(1), assetKind: "land", addressJibun: "서울 강남구 대치동 2-2", acquisitionDate: "2015-03-02", fixedAcquisitionPrice: "500000000" }],
     transferDate: "2026-01-10",
     filingDate: "2026-03-31",
+    contractTotalPrice: "1500000000", // ⑧ 총 양도가액 필수 — 실제 저장 record와 맞춘다
+    householdHousingCount: "1", // ⑧ 세대 보유 주택 수 필수
   },
   resultData: { mode: "single", result: { determinedTax: 12340000, localIncomeTax: 1234000 } },
   taxLawVersion: "2026",
@@ -39,9 +42,11 @@ const SINGLE_RECORD_LATE = {
   taxType: "transfer",
   title: "단건 양도 C (E2E)",
   inputData: {
-    assets: [{ assetKind: "land", addressJibun: "서울 서초구 방배동 5-5" }],
+    assets: [{ ...makeDefaultAsset(1), assetKind: "land", addressJibun: "서울 서초구 방배동 5-5", acquisitionDate: "2015-03-02", fixedAcquisitionPrice: "500000000" }],
     transferDate: "2026-04-20",
     filingDate: "2026-06-30",
+    contractTotalPrice: "1500000000", // ⑧ 총 양도가액 필수 — 실제 저장 record와 맞춘다
+    householdHousingCount: "1", // ⑧ 세대 보유 주택 수 필수
   },
   resultData: { mode: "single", result: { determinedTax: 9990000, localIncomeTax: 999000 } },
   taxLawVersion: "2026",
@@ -66,7 +71,7 @@ const MULTI_RECORD = {
         propertyLabel: "건1",
         completionPercent: 100,
         form: {
-          assets: [{ assetKind: "land", addressJibun: "서울 서초구 서초동 3-3" }],
+          assets: [{ ...makeDefaultAsset(1), assetKind: "land", addressJibun: "서울 서초구 서초동 3-3", acquisitionDate: "2015-03-02", fixedAcquisitionPrice: "500000000" }],
           transferDate: "2026-04-20",
         },
       },

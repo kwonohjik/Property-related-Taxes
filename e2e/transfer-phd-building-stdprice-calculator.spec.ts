@@ -15,6 +15,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 
 async function gotoPhdWidget(page: Page) {
@@ -22,6 +23,7 @@ async function gotoPhdWidget(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
   await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
   await expandAssetSection(page, 3);
@@ -153,6 +155,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
@@ -237,6 +240,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
@@ -319,6 +323,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
@@ -414,6 +419,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     // 겸용주택 분리계산 ON (자산 카드 상단 — section 1 열린 상태)
@@ -462,6 +468,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       scope: page.getByTestId("transfer-date"),
     });
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
     await expandAssetSection(page, 3);
@@ -528,6 +535,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       scope: page.getByTestId("transfer-date"),
     });
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
     // 보유 중 일부 용도변경 ON (겸용 ON 후 활성) — direction 기본 house_to_commercial
@@ -578,6 +586,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       scope: page.getByTestId("transfer-date"),
     });
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
     await page.getByRole("switch", { name: "보유 중 일부 용도변경" }).click();
@@ -650,6 +659,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
@@ -715,6 +725,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);

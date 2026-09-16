@@ -77,7 +77,7 @@ const MIXED = {
 function form(assetOver: Record<string, unknown> = {}): TransferFormData {
   return {
     ...createDefaultTransferFormData(),
-    assets: [{ ...makeDefaultAsset(1), ...MIXED, ...assetOver }],
+    assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...MIXED, ...assetOver }],
     transferDate: "2024-06-01",
     filingDate: "2024-08-31",
     contractTotalPrice: "2000000000",

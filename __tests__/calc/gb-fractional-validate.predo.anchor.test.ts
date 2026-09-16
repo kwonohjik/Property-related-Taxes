@@ -32,7 +32,7 @@ const TRANSFER_DATE = "2024-03-01";
 /** 일반건물 지분 1건 — 환산 모드 기준선(필수값 충족) */
 function gbShare(over: Partial<AssetForm> = {}): AssetForm {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: "purchase",
     gbBuildingAcquisitionCause: "purchase",
@@ -283,7 +283,7 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
      * ⇒ 일반건물 지분은 ④ API 변환과 **같은 함수**(`mergeGbPropertyLevel`)로 병합한다.
      */
     const BARE_SHARE = {
-      ...makeDefaultAsset(2),
+      ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
       // 지분 카드가 실제로 갖는 상태 — 물건-수준 GB 필드가 **비어 있다**(UI에서 안 받으니까).
       acquisitionCause: "purchase",
       gbBuildingAcquisitionCause: "purchase",

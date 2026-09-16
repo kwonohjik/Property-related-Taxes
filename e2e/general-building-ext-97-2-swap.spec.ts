@@ -16,7 +16,7 @@ function seedForm(capitalExpenditure: string) {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "general_building",
           acquisitionCause: "purchase",
           acquisitionDate: "1999-05-24",

@@ -30,6 +30,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -50,7 +51,7 @@ function captureBody(form: TransferFormData) {
 
 /** 함께 양도(서로 다른 물건) — 주택 2건, actual 모드 */
 function bundledForm(over: { primary?: Partial<AssetForm>; companion?: Partial<AssetForm> } = {}) {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-06-01";
   form.contractTotalPrice = "1,800,000,000";
   form.bundledSaleMode = "actual";
@@ -64,7 +65,7 @@ function bundledForm(over: { primary?: Partial<AssetForm>; companion?: Partial<A
     ...over.primary,
   };
   form.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-05-05",
@@ -78,7 +79,7 @@ function bundledForm(over: { primary?: Partial<AssetForm>; companion?: Partial<A
 /** 일반건물 지분 1건 — `generalBuildingShares` 경로가 성립하는 최소 입력 */
 function gbShare(over: Partial<AssetForm> = {}): AssetForm {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: "purchase",
     gbBuildingAcquisitionCause: "purchase",
@@ -137,7 +138,7 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
   });
 
   it("SC-3: 단건(자산 1건) salesCase는 차단 대상이 아니다", () => {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.transferDate = "2024-06-01";
     form.contractTotalPrice = "1,000,000,000";
     form.assets[0] = {
@@ -156,7 +157,7 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
   });
 
   it("SC-4: 일반건물 지분 분할은 제외 — companionAssets를 만들지 않으므로 400이 나지 않는다", async () => {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.transferDate = "2024-03-01";
     form.contractTotalPrice = "1,000,000,000";
     form.householdHousingCount = "2";
@@ -193,7 +194,7 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
     });
     form.contractTotalPrice = "2,300,000,000";
     form.assets.push({
-      ...makeDefaultAsset(3),
+      ...makeDefaultAsset(3), addressJibun: "서울 강남구 테스트동 1-1",
       assetKind: "housing",
       acquisitionCause: "purchase",
       acquisitionDate: "2011-05-05",

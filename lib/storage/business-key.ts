@@ -8,6 +8,12 @@
  *
  * 키 도출 불가(증여·종부세, 또는 식별 미입력)이면 null → 호출처가 content dedup으로 폴백.
  *
+ * 🔑 **「식별 미입력」의 기준은 «물건·사람 식별자»다 — 날짜가 아니다.**
+ *   종전에는 `주소 || 양도일`이면 키를 만들어 `addr:|2026.06.03`이 나왔고, 주소를 안 적은
+ *   서로 다른 물건이 **같은 키로 서로를 덮어썼다**(계획서 §1-1 실측 — 이력 1건).
+ *   양도일만으로는 물건이 식별되지 않으므로 **식별자가 없으면 키를 만들지 않는다.**
+ *   (재산세가 처음부터 `addr ? … : null`이었던 것이 이 규약의 선례다.)
+ *
  * Design: docs/02-design/features/calc-history-business-key-dedup.engine.design.md
  */
 
@@ -31,13 +37,16 @@ export function extractBusinessKey(
       const rrn = String(inputData.decedentResidentNumber ?? "").replace(/\D/g, "");
       if (rrn.length === 13) return `rrn:${rrn}`;
       const name = String(inputData.decedentName ?? "").trim();
+      // 피상속인이 식별자다 — 상속개시일만으로는 피상속인이 갈리지 않는다
+      if (!name) return null;
       const death = formatDate(inputData.deathDate as string | undefined) ?? "";
-      return name || death ? `nd:${name}|${death}` : null;
+      return `nd:${name}|${death}`;
     }
     case "transfer": {
       const addr = extractAddress(inputData);
       const date = extractTransferDate(inputData);
-      if (!addr && !date) return null;
+      // 주소가 물건 식별자다 — 양도일만으로는 물건이 갈리지 않는다
+      if (!addr) return null;
       // 다건(multi)은 첫 자산 주소·양도일이 동일 물건 단건과 겹침 → |multi 접미로 단건 record 덮어쓰기 방지
       const multiSuffix = inputData.__multiTransfer === true ? "|multi" : "";
       // 수정신고·경정청구는 주소·양도일이 당초와 동일 → 접미로 당초 record 덮어쓰기 방지
@@ -48,13 +57,14 @@ export function extractBusinessKey(
             ? "|refund"
             : "|amend"
           : "";
-      return `addr:${addr ?? ""}|${date ?? ""}${multiSuffix}${amendSuffix}`;
+      return `addr:${addr}|${date ?? ""}${multiSuffix}${amendSuffix}`;
     }
     case "acquisition": {
       // jibun/road는 acquisition FormState top-level → extractAddress 동작
       const addr = extractAddress(inputData);
+      if (!addr) return null;
       const date = formatDate(inputData.acquisitionDate as string | undefined);
-      return addr || date ? `addr:${addr ?? ""}|${date ?? ""}` : null;
+      return `addr:${addr}|${date ?? ""}`;
     }
     case "property": {
       // 과세연도 입력 필드 없음(과세기준일 6/1 고정) → 주소만으로 물건 식별
@@ -63,13 +73,17 @@ export function extractBusinessKey(
     }
     case "stock_transfer": {
       const sec = extractStockSecurityName(inputData);
+      // 종목이 식별자다. ⑧이 종목명을 차단하지만 **[저장하기]는 validate를 우회**하므로
+      // (계획서 §4-3) 여기서도 같은 규약을 건다.
+      if (!sec) return null;
       const date = extractStockTransferDate(inputData);
-      return sec || date ? `sec:${sec ?? ""}|${date ?? ""}` : null;
+      return `sec:${sec}|${date ?? ""}`;
     }
     case "stock_valuation": {
       const sec = extractStockValuationName(inputData);
+      if (!sec) return null;
       const date = formatDate(inputData.valuationDate as string | undefined);
-      return sec || date ? `sec-val:${sec ?? ""}|${date ?? ""}` : null;
+      return `sec-val:${sec}|${date ?? ""}`;
     }
     default:
       // gift·comprehensive_property — 인적 식별 필드 부재(실측 확정) → content 폴백

@@ -15,6 +15,7 @@
  * worktree 실행: E2E_PORT=3101 npx playwright test e2e/transfer-history-aggregate-entry.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
 
@@ -35,9 +36,14 @@ function singleRecord(o: {
     inputData: {
       assets: [
         {
+          // 🔑 팩토리를 거친다 — 실제 저장 record는 마법사 폼이라 지분율 등 기본값이 모두 있다.
+          //    손으로 최소 필드만 적으면 ⑧이 「공유 지분율을 입력하세요」로 막는다.
+          ...makeDefaultAsset(1),
           assetKind: "land",
           addressJibun: "서울 강남구 대치동 2-2",
           acquisitionDate: "2015-03-02",
+          // ⑧ 필수 — 실제 저장 record는 계산을 마친 폼이라 취득가액이 있다(시드를 실제와 맞춘다)
+          fixedAcquisitionPrice: "500000000",
         },
       ],
       transferDate: o.transferDate,

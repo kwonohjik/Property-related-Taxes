@@ -15,7 +15,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 // 일반 겸용주택(§97 직접 환산, PHD 미적용 — 취득 2010 > 개별주택가격 공시 시작).
 function mixedUseAsset() {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-03-15",

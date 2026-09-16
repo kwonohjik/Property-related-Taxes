@@ -30,11 +30,12 @@
 import { describe, it, expect } from "vitest";
 import { validateAssetAcquisition, validateAssetEntry } from "@/lib/calc/transfer-tax-validate-asset";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 자산 2건(일괄양도) 폼 — index 0 = primary, index 1 = 컴패니언. */
 function bundledForm(assetOver: Partial<AssetForm>) {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-06-01";
   form.contractTotalPrice = "1,000,000,000";
   form.householdHousingCount = "1";

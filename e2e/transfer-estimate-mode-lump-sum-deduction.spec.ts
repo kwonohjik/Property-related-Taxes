@@ -26,7 +26,7 @@ function seedForm(mode: "appraisal" | "salesCase", isUnregistered: boolean) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2017-03-09",

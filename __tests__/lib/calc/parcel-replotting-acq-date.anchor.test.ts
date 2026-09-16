@@ -22,6 +22,7 @@ import { parcelEffectiveAcquisitionDate } from "@/lib/calc/transfer-tax-api-parc
 import { representativeParcelAcquisitionDate } from "@/lib/calc/transfer-tax-api-parcels";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -70,7 +71,7 @@ const replotted = (over = {}) =>
   parcel({ acquisitionDate: "", useDayAfterReplotting: true, replottingConfirmDate: "2003-01-01", ...over });
 
 function parcelForm(parcels: Record<string, unknown>[]) {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = TRANSFER_DATE;
   form.contractTotalPrice = "900,000,000";
   form.householdHousingCount = "1";

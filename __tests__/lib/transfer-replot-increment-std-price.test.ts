@@ -78,14 +78,14 @@ describe("⑥ 안분 프리뷰가 증환지 파생값을 본다 (L-8)", () => {
         bundledSaleMode: "apportioned" as const,
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "land" as const,
             acquisitionDate: "2005-03-01",
             standardPricePerSqmAtTransfer: "1000000",
             standardPriceAtTransfer: "100000000",
           },
           {
-            ...makeDefaultAsset(2),
+            ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "land" as const,
             isReplotIncrement: true,
             acquisitionDate: "2005-03-01",
@@ -124,8 +124,8 @@ describe("⑧ 검증도 같은 leaf로 파생 가능성을 본다", () => {
     transferDate: "2005-11-01",
     bundledSaleMode: "apportioned" as const,
     assets: [
-      { ...makeDefaultAsset(1), standardPricePerSqmAtTransfer: "1000000" },
-      { ...makeDefaultAsset(2), isReplotIncrement: true, transferArea: "50", standardPriceAtTransfer: "" },
+      { ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", standardPricePerSqmAtTransfer: "1000000" },
+      { ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1", isReplotIncrement: true, transferArea: "50", standardPriceAtTransfer: "" },
     ],
   };
 

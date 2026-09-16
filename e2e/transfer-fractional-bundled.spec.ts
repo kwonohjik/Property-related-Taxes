@@ -20,7 +20,7 @@ function seedForm() {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "inheritance",
             ownershipNumerator: "60",
@@ -35,7 +35,7 @@ function seedForm() {
             residencePeriodMonths: "177",
           },
           {
-            ...makeDefaultAsset(2),
+            ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             ownershipNumerator: "40",

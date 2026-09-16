@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -26,6 +27,8 @@ const day = (p: Page, i: number) => p.getByRole("textbox", { name: "일", exact:
 async function fillBaseAsset(page: Page, acq: [string, string, string]) {
   // 자산: 주택(기본) · 양도가액 · 취득원인 매매 · 실지 취득가액 · 취득일
   // 점진적 노출 — 양도정보(②)·취득정보(③) 펼침
+  await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
   await getInputByLabel(page, "양도가액 (원)").first().fill("1500000000");

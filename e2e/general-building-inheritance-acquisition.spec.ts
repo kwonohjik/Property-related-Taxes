@@ -20,7 +20,7 @@ function seedForm() {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "general_building",
           // 토지(primary) 상속
           acquisitionCause: "inheritance",

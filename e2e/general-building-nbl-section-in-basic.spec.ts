@@ -60,7 +60,7 @@ function seedForm(assets: Record<string, unknown>[]) {
 function singleAssetSeed() {
   return seedForm([
     {
-      ...makeDefaultAsset(1),
+      ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
       ...GB_BASE,
       /**
        * ⚠️ 단건 모드에서 **자산 필드를 하나라도 바꾸면** `Step1.tsx`의 `updateAssets`가
@@ -85,7 +85,7 @@ function singleAssetSeed() {
 function fractionalSeed() {
   return seedForm([
     {
-      ...makeDefaultAsset(1),
+      ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
       ...GB_BASE,
       gbZoneType: "general_residential",
       acquisitionCause: "purchase",
@@ -100,7 +100,7 @@ function fractionalSeed() {
       gbAcqBuildingValue: "100000000",
     },
     {
-      ...makeDefaultAsset(2),
+      ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
       acquisitionCause: "purchase",
       gbBuildingAcquisitionCause: "purchase",
       ownershipNumerator: "40",

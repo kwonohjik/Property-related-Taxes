@@ -16,7 +16,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 /** 계산까지 도달하는 GB 부담부증여 최소 입력(사례 34 축약) */
 const SEED_ASSET = {
-  ...makeDefaultAsset(1),
+  ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "general_building" as const,
   transferType: "burdened_gift" as const,
   bgValuationMode: "sangjeungbeop_standard" as const,

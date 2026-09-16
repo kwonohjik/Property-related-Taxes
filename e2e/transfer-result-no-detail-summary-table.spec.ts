@@ -8,6 +8,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -32,6 +33,8 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   await page.getByTestId("filing-date").getByLabel("일").fill("31");
 
   // 점진적 노출 — 양도정보(②)·취득정보(③) 펼침
+  await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
 

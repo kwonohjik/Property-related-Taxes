@@ -100,6 +100,31 @@ export function validateAssetEntry(
 
   if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
 
+  /**
+   * ⑧ 소재지 — **물건 식별자**다. 엔진 계산에는 쓰이지 않지만 계산 이력의 dedup 키가
+   * 이것으로 물건을 가른다. 비어 있으면 서로 다른 물건이 같은 키(`addr:|양도일`)를 갖고
+   * **앞의 신고서를 덮어쓴다**(계획서 §1-1 — 실측 이력 1건).
+   *
+   * 지분 모드 컴패니언은 primary에서 승계된다(`mergePrimaryBasic`) — 호출부가 병합 후 넘긴다.
+   */
+  if (!a.addressRoad?.trim() && !a.addressJibun?.trim()) {
+    return `${label}: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.`;
+  }
+  /**
+   * ⑧ 집합건물 세대 — 「고를 수 있었는데 안 골랐으면」 차단한다. 같은 지번의 두 세대는
+   * 동·호가 없으면 **같은 키**가 된다(계획서 §1-2 실측).
+   *
+   * 집합건물 판별 축을 새로 만들지 않는다 — `assetKind`의 `"housing"`이 아파트와 단독주택을
+   * 함께 담아 못 가른다. `AddressSearch`가 이미 세대 목록을 조회하므로 그 결과를 쓴다.
+   *
+   * ⚠️ `?? false` — stale sessionStorage에는 이 필드가 **없다**(undefined).
+   *    없으면 「집합건물 아님」으로 본다(안전측: 동·호 미요구).
+   *    memory `feedback_new_asset_field_stale_sessionstorage_guard`
+   */
+  if ((a.hasAddressUnits ?? false) && !a.addressDong?.trim() && !a.addressHo?.trim()) {
+    return `${label}: 동·호를 선택하세요. 같은 지번의 다른 세대와 구분되지 않습니다.`;
+  }
+
   // ── 양도일·취득일 정합 검증 (모든 자산 공통, 분기 진입 전) ──
   // YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. 빈 값이면 skip(존재성은 분기별 검증). strict > → 당일(==) 통과.
   const today = todayLocalISO();

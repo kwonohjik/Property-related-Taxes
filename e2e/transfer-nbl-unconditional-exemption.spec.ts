@@ -12,6 +12,7 @@
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** FieldCard/CurrencyInput 라벨 → 내부 input (scope 한정 가능) */
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
@@ -34,6 +35,7 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
 
     // 점진적 노출 — 기본정보(①)·양도정보(②)·취득정보(③)
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await expandAssetSection(page, 2);
     await expandAssetSection(page, 3);
 
@@ -103,6 +105,7 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await expandAssetSection(page, 2);
     await expandAssetSection(page, 3);
 

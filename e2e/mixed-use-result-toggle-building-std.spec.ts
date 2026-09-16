@@ -23,7 +23,7 @@ const ASSET_ID = "mx-e2e-1";
 // 일반 겸용주택(§97 직접 환산). 계산서 시나리오는 스냅샷을 별도 시드하므로 asset 자체는 PHD 불요.
 function mixedUseAsset() {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetId: ASSET_ID,
     assetKind: "housing",
     acquisitionCause: "purchase",
