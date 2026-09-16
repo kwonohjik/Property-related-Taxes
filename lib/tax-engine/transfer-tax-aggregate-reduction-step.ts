@@ -360,7 +360,11 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     formula:
       reducibleByType.size > 0
         ? `유형별 재계산: ${[...reducibleByType.keys()].map(reductionTypeLabelOf).join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
-        : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
+        : legacyReductionAmount === 0
+          ? // 🔴 종전에는 이 경우에도 「유형 미지정 감면만 존재」라고 적었다 — 감면이 **하나도
+            //    없는데** 있다고 말하는 거짓 서술이었다(사용자 제보 2026-09-16 화면).
+            "감면 없음 (합산 재계산 대상·건별 감면세액 모두 0)"
+          : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
     amount: reductionAmount,
     legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,
   });
