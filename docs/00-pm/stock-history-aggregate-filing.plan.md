@@ -389,7 +389,7 @@ M-2가 **안전망 0건**을 실측했으므로 anchor는 선택이 아니다. �
 |---|---|---|---|
 | **V-1** | 국외주식의 `basicDeductionGroup` | ✅ `"stock"` — §103①2호 정합 | `foreign-stock-aggregate-adapter.ts:109` · `-aggregate-104-5.ts:123` 주석이 같은 사실을 명시 |
 | **V-2** | §105① 법정기한 계산 | ✅ **이미 있다 — 신설 불요** | `stock-filing-type.ts:65` `resolvePreliminaryClause`(1호/2호 분기) + `:89` `calcPreliminaryDeadline`. **재사용한다** |
-| **V-3** | 부동산 합산 모달 재사용 | ⚠️ **일반화 필요** | `HistoryAggregateSelectModal.tsx`(246줄)가 `selectAggregateCandidates`·`enterMultiAggregate`·`.list({taxType:"transfer"})` **3곳을 하드코딩**. ⇒ props 주입으로 세목 중립화(복제 금지) |
+| **V-3** | 부동산 합산 모달 재사용 | ⚠️ **일반화 필요** · 🔴 **착수 중 정정: 3곳 → 7곳** | 초판은 grep 한 문자열 3개만 셌다. 실제 결합 축은 **7개**(라벨·금액 래핑·폐기 판정·문구 4종이 더 있었다) — §10.3 참조. 결론(복제 금지·props 주입)은 유지 |
 | **V-4** | 다종목 record의 `taxLawVersion` | ✅ **자동 해소** | `StockTransferTaxCalculator.tsx:90`이 `extractStockTransferDate(formData)`를 쓴다 — §4.1에서 그 추출기가 `__multiStock`을 인식하면 대표 종목 날짜가 자동으로 들어간다 |
 | **V-5** | `mergeDomestic`의 혼합 처리 | ✅ Q-2 범위가 엔진에서 성립 | `stock-transfer-aggregate.ts:200-206` — 국내 인덱스만 교체하고 **전체 리스트를 유지**해 국내·국외·기타자산이 섞인 채 `aggregateCore`에 들어간다 |
 
@@ -592,6 +592,77 @@ PR #1646 P-8 · PR-1 P-7 에 이어 같은 구조가 또 나왔다. route 한 �
 단건 경로(종목 1건)의 §111③ 정산. 법 §110④ 본문이 「예정신고를 한 자는 확정신고를 하지
 아니할 수 있다」이고, 확정신고 의무를 만드는 영 §173⑤3호의 요건이 「**2회 이상** 양도」라
 단건에서는 이 정산이 성립하는 경우가 사실상 없다.
+
+---
+
+## 10.3 PR-3 완료 기록 (2026-09-17) — 세액 불변 · **제보 기능 본체**
+
+### 🔴 초판 판정 정정 — V-3의 「하드코딩 3곳」은 **7곳**이었다
+
+착수 전 V-3 은 모달의 세목 결합을 **3곳**으로 적었다(`selectAggregateCandidates` ·
+`enterMultiAggregate` · `.list({taxType:"transfer"})`). **불완전했다** — 특정 문자열을
+grep 한 결과였고, 실제로 갈라야 하는 축은 **7개**였다:
+
+| # | 축 |
+|---|---|
+| 1~3 | 후보 선별 · 진입 · `taxType` 필터 (초판이 센 것) |
+| 4 | `transferDateLabel` — 주식은 「종목명 (양도일)」이 먼저다 |
+| 5 | `determinedTaxOf` — 부동산 `resultData.result.determinedTax` / 주식 `resultData.finalTax` (래핑이 다르다) |
+| 6 | 폐기 확인 판정 — 부동산 `multiStoreHasUserWork` / 주식 `savedItems.length > 0` |
+| 7 | 제목·설명·하단 안내·빈 목록 문구 |
+
+⇒ **「형태를 열거해 세면 빠뜨린다」**(`feedback_enumerate_forms_vs_conservative_superset`).
+결론(복제 금지·props 주입)은 유지됐지만 어댑터 인터페이스가 3 멤버가 아니라 11 멤버가 됐다.
+
+### 추출은 「바꾸기 전에 안전망을 잰」 뒤에 했다
+
+`HistoryAggregateSelectModal`(246줄)은 **동작하는 부동산 경로**다. 건드리기 전에
+`e2e/transfer-history-aggregate-entry.spec.ts` 를 돌려 **기준선 2/2**를 확보하고, 추출 후
+같은 spec 으로 **2/2 무변경**을 실측했다.
+
+- `components/calc/shared/HistoryAggregateSelectShell.tsx` — 세목 중립 껍데기(신설)
+- `components/calc/transfer/HistoryAggregateSelectModal.tsx` — **부동산 어댑터**로 축소
+- `components/calc/stock-transfer/StockHistoryAggregateModal.tsx` — 주식 어댑터(신설)
+
+⚠️ **폐기 확인 제목을 어댑터로 뺐다** — 껍데기에 공통 문구를 두면 부동산의
+「입력 중인 다건 작업이 있습니다」가 바뀐다. 표시 문자열 변경은 그 자체로 회귀 표면이라
+(`feedback_display_string_change_needs_reverse_grep`) **세목별로 그대로 보존**했다.
+
+### 편입 순서가 세액을 가른다
+
+`buildStockAggregateSession` 은 **양도일 오름차순**으로 편입한다. §103②가 「해당 과세기간에
+**먼저 양도한 자산의 양도소득금액에서부터 순서대로** 공제한다」이므로 이 순서가 곧 법정
+배분 순서다 — 뒤집으면 어느 종목이 기본공제 250만원을 가져가는지가 달라져 **세액이 바뀐다**
+(뮤테이션 R-2 가 2건으로 잡는다).
+
+### 뮤테이션
+
+| ID | 무력화 | vitest | E2E |
+|---|---|---|---|
+| **R-1** | **이력 카드 버튼 게이트** | **11건 전부 초록** 🔴 | **4건 실패** |
+| R-2 | 편입 순서 내림차순(§103② 위반) | **2건 실패** | — |
+| R-3 | 다종목 이력 제외 가드(이중 계상) | **1건 실패** | — |
+| R-4 | `normalizeStockFormData` 제거 | **1건 실패** | — |
+
+### 🔴 R-1 — 「vitest는 배선을 못 본다」가 **네 번째**다
+
+PR #1646 P-8 · PR-1 P-7 · PR-2 Q-7 에 이어 같은 구조다. 이력 카드의 버튼 술어에서
+`canStockAggregateFromHistory` 를 빼 **기능이 통째로 사라졌는데** anchor 11건이 전부 초록이었다.
+
+⇒ 이 저장소에서 **컴포넌트 경계를 넘는 배선은 E2E 외에 안전망이 없다**. 네 번 연속 실측됐다.
+
+### E2E 픽스처 — 제품이 아니라 시드가 틀렸다
+
+SA-4 가 처음에 실패했는데 원인은 시드에 `selfShareRatio`가 없었던 것이다. 화면은
+「1번째 종목 「SK하이닉스」: 대주주인 경우 지분율 또는 시가총액을 1개 이상 입력하세요
+(시행령 §157)」로 **어느 종목이 문제인지 지목해** 차단했다 — ⑧이 정상 동작한 것이다.
+픽스처를 고쳤고, 그 사유를 spec 주석에 남겼다.
+
+### 범위 밖
+
+기납부세액 **자동 파생**(이력의 결정세액에서 §111③ 금액을 추정). 부동산은
+`computeAutoPriorPaid`가 하지만, 주식은 예정신고 산출세액(§107②)과 이력의 결정세액이
+같다는 보장이 없다 — 합산 모달 하단에 **3단계에서 직접 적으라고 안내**한다.
 
 ---
 

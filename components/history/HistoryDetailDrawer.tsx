@@ -9,8 +9,10 @@ import { buildBackup } from "@/lib/storage/backup-export";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
 import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
+import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -297,14 +299,14 @@ export function HistoryDetailDrawer({
               {resumeBlocked}
             </p>
           )}
-          {canAggregateFromHistory(record) && (
+          {(canAggregateFromHistory(record) || canStockAggregateFromHistory(record)) && (
             <button
               type="button"
               onClick={() => setAggregateOpen(true)}
               data-testid="drawer-aggregate"
               className="w-full rounded-lg border border-emerald-400 bg-emerald-50 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 transition-colors dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
             >
-              다건 합산으로 재계산
+              {record.taxType === "stock_transfer" ? "합산신고로 재계산" : "다건 합산으로 재계산"}
             </button>
           )}
           {route &&
@@ -369,8 +371,11 @@ export function HistoryDetailDrawer({
         />
       )}
 
-      {/* 다건 합산 선택 모달 — 이 드로어의 record가 기준 */}
-      {aggregateOpen && (
+      {/* 합산 선택 모달 — 이 드로어의 record가 기준. 세목으로 갈라 띄운다. */}
+      {aggregateOpen && record.taxType === "stock_transfer" && (
+        <StockHistoryAggregateModal open onOpenChange={setAggregateOpen} base={record} />
+      )}
+      {aggregateOpen && record.taxType !== "stock_transfer" && (
         <HistoryAggregateSelectModal
           open
           onOpenChange={setAggregateOpen}
