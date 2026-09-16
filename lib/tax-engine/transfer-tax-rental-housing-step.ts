@@ -33,7 +33,7 @@ import {
   resolveLandStatutoryAcquisitionDate,
   buildLandRateInput,
 } from "./transfer-tax-appurtenant-land";
-import { allocateBasicDeduction } from "./transfer-tax-aggregate-helpers";
+import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
@@ -237,13 +237,12 @@ function resolveClause5Tax(args: {
   // 배분 이득은 한계세율이 결정하고 그 값은 `calcTax`의 `appliedRate`가 담고 있다.
   const preHousing = calcTax(housingIncome, parsedRates, housingRateInput, multiHouseSurchargeResult);
   const preNbl = calcTax(nbl.income, parsedRates, nbl.rateInput, multiHouseSurchargeResult);
-  const allocation = allocateBasicDeduction(
+  const allocation = allocateBasicDeductionAcrossParts(
     [
-      { idx: 0, rateGroup: PRHP_PART_RATE_GROUP, income: housingIncome, transferDate: input.transferDate, rate: preHousing.appliedRate },
-      { idx: 1, rateGroup: PRHP_PART_RATE_GROUP, income: nbl.income, transferDate: input.transferDate, rate: preNbl.appliedRate },
+      { idx: 0, income: housingIncome, rate: preHousing.appliedRate },
+      { idx: 1, income: nbl.income, rate: preNbl.appliedRate },
     ],
     basicDeduction,
-    "MAX_BENEFIT",
   );
   const allocated = (idx: number) => allocation.find((a) => a.idx === idx)?.amount ?? 0;
   const housingBase = Math.max(0, housingIncome - allocated(0));

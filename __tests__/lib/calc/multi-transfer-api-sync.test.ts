@@ -47,7 +47,7 @@ function makeMultiForm(props: PropertyItem[]): MultiTransferFormData {
     activePropertyIndex: 0,
     activeStep: "settings",
     annualBasicDeductionUsed: "0",
-    basicDeductionAllocation: "MAX_BENEFIT",
+    basicDeductionAllocation: "EARLIEST_TRANSFER",
     priorPaidTax: "0",
     priorPaidLocalTax: "0",
     priorPaidTaxEdited: false,

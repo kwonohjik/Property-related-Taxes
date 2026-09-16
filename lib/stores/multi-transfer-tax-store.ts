@@ -54,7 +54,14 @@ export interface MultiTransferFormData {
   activeStep: MultiStep;
   // 공통 설정 (Step C)
   annualBasicDeductionUsed: string;
-  basicDeductionAllocation: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
+  /**
+   * §103② 기본공제 배분 순서. 기본값은 **법정 순서**(양도일 순)다.
+   *
+   * ⛔ 종전의 `"MAX_BENEFIT"`(높은 세율 우선)은 **폐지됐다** — 법정 순서가 아니었다
+   *   (2026-09-16 사용자 결정 「법문대로」). 구 세션·구 이력에 남은 그 값은
+   *   `allocateBasicDeduction`이 양도일 순으로 흡수하므로 별도 마이그레이션이 없다.
+   */
+  basicDeductionAllocation: "FIRST" | "EARLIEST_TRANSFER";
   /** 예정신고 기납부세액 (국세, 원 문자열). 확정신고 정산 §111③. 미입력 "0" */
   priorPaidTax: string;
   /** 예정신고 기납부 지방소득세 (원 문자열). 미입력 "0" */
@@ -99,7 +106,7 @@ const defaultFormData: MultiTransferFormData = {
   activePropertyIndex: 0,
   activeStep: "list",
   annualBasicDeductionUsed: "0",
-  basicDeductionAllocation: "MAX_BENEFIT",
+  basicDeductionAllocation: "EARLIEST_TRANSFER",
   priorPaidTax: "0",
   priorPaidLocalTax: "0",
   priorPaidTaxEdited: false,
@@ -262,6 +269,22 @@ export const useMultiTransferStore = create<MultiTransferState>()(
         form: state.form,
         // result 제외 (민감정보 + 직렬화 복잡도)
       }),
+      /**
+       * 🔴 **폐지된 `"MAX_BENEFIT"`를 되살려 오면 라디오가 「아무것도 선택 안 됨」으로 보인다.**
+       *
+       * 그 값은 세션에 persist돼 있고(위 `partialize`) 이력 record의 `inputData`에도 들어 있다.
+       * 서버 Zod가 접어 주므로 **세액은 맞지만**, 화면은 어느 옵션도 `checked`가 아니어서
+       * 사용자가 설정을 잃은 것처럼 본다. ⇒ 리하이드레이션에서 법정 기본값으로 정규화한다.
+       *
+       * (2026-09-16 — 「높은 세율 우선」 폐지. §103②은 「먼저 양도한 자산부터」다.)
+       */
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const v = state.form.basicDeductionAllocation as string;
+        if (v !== "FIRST" && v !== "EARLIEST_TRANSFER") {
+          state.form = { ...state.form, basicDeductionAllocation: "EARLIEST_TRANSFER" };
+        }
+      },
     },
   ),
 );

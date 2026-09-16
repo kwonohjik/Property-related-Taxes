@@ -20,21 +20,14 @@ type BasicDeductionAllocation = MultiTransferFormData["basicDeductionAllocation"
 
 const BASIC_DEDUCTION_ALLOCATION_OPTIONS: RadioCardOption<BasicDeductionAllocation>[] = [
   {
-    value: "MAX_BENEFIT",
-    // 🔴 「납세자 유리」·「절세 효과 최대」는 루트 CLAUDE.md의 **유리/불리·절감 표현 금지**에 걸린다
-    //    (2026-09-07 대장 재대조 · #34). 배분 규칙 자체를 사실대로 적는다.
-    label: "높은 세율 소득 우선 배분 (기본값)",
-    description: "적용 세율이 높은 자산의 소득에 먼저 배분",
+    value: "EARLIEST_TRANSFER",
+    label: "양도일 빠른 순 배분 (기본값 · 법정 순서)",
+    description: "감면소득금액 외의 양도소득금액에서 먼저, 그 안에서 양도일이 이른 자산부터 (소득세법 §103②)",
   },
   {
     value: "FIRST",
     label: "입력 순서 우선 배분",
-    description: "목록 첫 번째 자산에 우선 배분",
-  },
-  {
-    value: "EARLIEST_TRANSFER",
-    label: "양도일 빠른 순 배분",
-    description: "양도일이 이른 자산에 우선 배분",
+    description: "감면소득금액 외에서 먼저 공제하되, 목록 첫 번째 자산부터",
   },
 ];
 

@@ -47,6 +47,18 @@ function sumBucketIncome(buckets: ReducibleIncomeBucket[]): number {
 }
 
 /**
+ * §90①의 **B — 감면대상 양도소득금액**(세액감면형, 자산 1건).
+ *
+ * §103② 1단계(「감면소득금액 **외**의 양도소득금액에서 먼저 공제」)를 **자산별 배분**에서도
+ * 적용하려면 같은 B가 필요하다. 이 모듈이 이미 `nonReducibleIncome` 총액으로 쓰고 있던 값이라
+ * **여기서 내보내 단일 소스로 삼는다** — 배분 쪽에서 따로 유도하면 표시와 감면액이 갈린다.
+ */
+export function reducibleIncomeOf(result: TransferTaxResult): number {
+  if (result.isExempt) return 0;
+  return sumBucketIncome(bucketsOf(result));
+}
+
+/**
  * §90①의 `(B − C) × E` — 기본공제 C를 **감면율이 낮은 버킷부터** 흡수시키고 율을 곱한다.
  *
  * 「소득세법」 §103②은 감면소득 **내부의** 흡수 순서를 정하지 않는다. 낮은 율부터 태우는 것은

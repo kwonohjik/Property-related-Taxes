@@ -303,8 +303,13 @@ export const multiInputSchema = z
     priorReductionUsage: priorReductionUsageSchema,
     specialHouseExclusions: specialHouseExclusionSchema,
     basicDeductionAllocation: z
+      // ⛔ `"MAX_BENEFIT"`은 폐지됐다 — §103② 법정 순서가 아니었다(2026-09-16).
+      //    구 세션·구 이력이 그 값을 보내면 **legacy로 받아 기본값으로 접는다**
+      //    (엄격히 거절하면 예전 신고서를 다시 못 연다). `PARTS_HIGHEST_RATE`는
+      //    일반건물 내부 경로 전용이라 **외부 입력으로 받지 않는다**.
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
-      .default("MAX_BENEFIT"),
+      .default("EARLIEST_TRANSFER")
+      .transform((v) => (v === "MAX_BENEFIT" ? ("EARLIEST_TRANSFER" as const) : v)),
     // 확정신고 기납부세액 정산 (§111③) — filing-level. 음수 차단.
     priorPaidTax: z.number().int().nonnegative().default(0),
     priorPaidLocalTax: z.number().int().nonnegative().default(0),

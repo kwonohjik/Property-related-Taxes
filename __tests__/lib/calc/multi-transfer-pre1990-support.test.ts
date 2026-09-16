@@ -122,7 +122,7 @@ describe("다건 pre1990 토지 end-to-end (aggregate == 단건)", () => {
     const aggInput: AggregateTransferInput = {
       taxYear: 2026,
       annualBasicDeductionUsed: 0,
-      basicDeductionAllocation: "MAX_BENEFIT",
+      basicDeductionAllocation: "EARLIEST_TRANSFER",
       properties: [
         { ...(singleEngineInput() as unknown as TransferTaxItemInput), propertyId: "p1", propertyLabel: "토지" },
       ],
@@ -140,7 +140,7 @@ describe("다건 pre1990 토지 end-to-end (aggregate == 단건)", () => {
     const aggInput: AggregateTransferInput = {
       taxYear: 2026,
       annualBasicDeductionUsed: 0,
-      basicDeductionAllocation: "MAX_BENEFIT",
+      basicDeductionAllocation: "EARLIEST_TRANSFER",
       properties: [
         { ...(singleEngineInput() as unknown as TransferTaxItemInput), propertyId: "p1", propertyLabel: "토지" },
       ],

@@ -61,7 +61,20 @@ export interface AggregateTransferInput {
   /** 당해 연도에 이미 사용한 기본공제액 (타 계산 건 포함) */
   annualBasicDeductionUsed: number;
   /** 기본공제 배분 전략 (기본 MAX_BENEFIT) */
-  basicDeductionAllocation?: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
+  /**
+   * 기본공제 배분 축.
+   *
+   * · `EARLIEST_TRANSFER`(기본) — **§103② 법정 순서**: 감면소득금액 «외»에서 먼저,
+   *   그 안에서 먼저 양도한 자산부터. 다건 화면의 정본이다.
+   * · `FIRST` — 목록 첫 번째 자산 우선(§103② 1단계는 동일 적용). 사용자 선택지.
+   * · `PARTS_HIGHEST_RATE` — **한 물건을 파트로 쪼개 이 엔진에 태우는 경로 전용**
+   *   (일반건물 토지/건물 카드). 파트는 **양도일이 같아** §103②의 자산 순서가 성립하지 않아
+   *   한계세율 순으로 간다. ⛔ **UI에 노출하지 않는다** — 다건 화면의 선택지가 아니다.
+   *
+   * ⛔ 종전 `"MAX_BENEFIT"`(다건 기본값)은 **폐지**됐다 — 법정 순서가 아니었다
+   *   (2026-09-16 사용자 결정 「법문대로」).
+   */
+  basicDeductionAllocation?: "FIRST" | "EARLIEST_TRANSFER" | "PARTS_HIGHEST_RATE";
   /** 과거 4개 과세연도 감면 이력 (§133 5년 누적 한도 계산용, 사용자 직접 입력) */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
   /**

@@ -39,6 +39,8 @@ const DOM_TS = [
   "__tests__/tax-engine/transfer-tax/estimated-acquisition-formula-display.anchor.test.ts",
   // sessionStorage를 실제로 읽고 쓴다(자동 백업 id 세션 공유)
   "__tests__/lib/stores/multi-auto-backup-session-id.anchor.test.ts",
+  // persist 리하이드레이션을 sessionStorage로 흉내낸다(폐지된 배분 전략 정규화)
+  "__tests__/lib/stores/multi-basic-deduction-legacy-rehydrate.test.ts",
 ];
 
 const shared = {

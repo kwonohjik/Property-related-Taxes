@@ -41,6 +41,7 @@ import {
   classifyRateGroup,
   offsetLosses,
   allocateBasicDeduction,
+  allocateBasicDeductionAcrossParts,
 } from "./transfer-tax-aggregate-helpers";
 // picker 6종 + 세율군 1-pass 집계 — 800줄 정책 분리(Phase A-0)
 import {
@@ -50,6 +51,7 @@ import {
   ruralSurtaxExemptReducibleOf,
   computeGroupsAndComparison,
 } from "./transfer-tax-aggregate-pickers";
+import { reducibleIncomeOf } from "./transfer-tax-aggregate-reduction-step";
 
 export { classifyRateGroup };
 
@@ -82,12 +84,12 @@ import type {
  * (memory `feedback_no_internal_id_in_result`). 표시 전용 — 세액 불변.
  */
 const BASIC_DEDUCTION_ALLOCATION_LABEL: Record<
-  "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER",
+  "FIRST" | "EARLIEST_TRANSFER" | "PARTS_HIGHEST_RATE",
   string
 > = {
-  MAX_BENEFIT: "세액이 가장 크게 줄어드는 자산 우선",
   FIRST: "첫 번째 자산",
-  EARLIEST_TRANSFER: "양도일이 빠른 자산",
+  EARLIEST_TRANSFER: "감면 외 소득 → 양도일이 빠른 자산 (소득세법 §103②)",
+  PARTS_HIGHEST_RATE: "세율이 높은 파트",
 };
 
 export type {
@@ -238,21 +240,43 @@ function computeAggregateOnce(
   const availableThisCalc = Math.max(0, annualLimit - input.annualBasicDeductionUsed);
 
   const eligibleForBasic = assetRecords
-    .map((r, idx) => ({ idx, rateGroup: r.rateGroup, income: taxableAfterReduction[idx], isExempt: r.result.isExempt, transferDate: r.item.transferDate, rate: r.result.appliedRate }))
+    .map((r, idx) => ({
+      idx,
+      rateGroup: r.rateGroup,
+      income: taxableAfterReduction[idx],
+      isExempt: r.result.isExempt,
+      transferDate: r.item.transferDate,
+      /**
+       * §90①의 **B — 감면대상 양도소득금액**(세액감면형). §103② 1단계가 이 부분을
+       * **뒤로 미룬다**(감면 외에서 먼저 공제). 감면액 산식 쪽과 **같은 leaf**를 쓴다 —
+       * 두 곳이 B를 따로 유도하면 표시와 세액이 갈린다.
+       * 소득공제형(§90②)은 이미 `taxableAfterReduction`에서 빠져 있다.
+       */
+      reducibleIncome: reducibleIncomeOf(r.result),
+      /** 한계세율 — `PARTS_HIGHEST_RATE` 축과 §103② 동순위 tie-break에 쓴다. */
+      rate: r.result.appliedRate,
+    }))
     .filter((r) => !r.isExempt && r.rateGroup !== "unregistered" && r.income > 0);
 
-  const allocation = allocateBasicDeduction(
-    eligibleForBasic,
-    availableThisCalc,
-    input.basicDeductionAllocation ?? "MAX_BENEFIT",
-  );
+  /**
+   * 배분 축은 **둘**이고 함수도 둘이다 — 한 함수가 겸용하면 다건 기본값이 법정 순서가 아닌 채로
+   * 굳는다(2026-09-16 실측: 「높은 세율 우선」이 `rateGroup` 우선순위로 정렬해 40% 자산이
+   * 72% 자산보다 앞섰다 — 880,000원 과대).
+   *   · 자산 간 → §103② 법정 순서 (기본값)
+   *   · 한 물건의 파트 간 → 한계세율 (일반건물 카드 — 양도일이 같아 §103②가 성립하지 않는다)
+   */
+  const allocationAxis = input.basicDeductionAllocation ?? "EARLIEST_TRANSFER";
+  const allocation =
+    allocationAxis === "PARTS_HIGHEST_RATE"
+      ? allocateBasicDeductionAcrossParts(eligibleForBasic, availableThisCalc)
+      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis);
   const allocatedBasic: number[] = assetRecords.map(() => 0);
   for (const a of allocation) allocatedBasic[a.idx] = a.amount;
   const totalBasicDeduction = allocatedBasic.reduce((s, v) => s + v, 0);
 
   steps.push({
     label: "기본공제",
-    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${BASIC_DEDUCTION_ALLOCATION_LABEL[input.basicDeductionAllocation ?? "MAX_BENEFIT"]} 배분)`,
+    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${BASIC_DEDUCTION_ALLOCATION_LABEL[allocationAxis]} 배분)`,
     amount: totalBasicDeduction,
     legalBasis: TRANSFER.BASIC_DEDUCTION,
   });

@@ -67,7 +67,7 @@ describe("다건 합산 — 정밀판정 사업용인데 원시 플래그로 비
   const input: AggregateTransferInput = {
     taxYear: 2022,
     annualBasicDeductionUsed: 0,
-    basicDeductionAllocation: "MAX_BENEFIT",
+    basicDeductionAllocation: "EARLIEST_TRANSFER",
     properties: [
       landItem("토지1", 826_000_000, 100_000_000, "2015-01-01", "2022-01-01", 5000),
       landItem("토지2", 325_000_000, 50_000_000, "2015-01-01", "2022-01-01", 3000),

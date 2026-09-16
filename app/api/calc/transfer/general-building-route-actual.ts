@@ -659,7 +659,9 @@ export function runActualGeneralBuildingOnce(
       taxYear,
       properties,
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
-      basicDeductionAllocation: "MAX_BENEFIT",
+      // 카드는 **한 물건의 파트**(토지/건물)라 양도일이 같다 — §103②의 자산 순서가
+      // 성립하지 않아 한계세율 축을 쓴다(종전 `"MAX_BENEFIT"`과 **같은 거동**).
+      basicDeductionAllocation: "PARTS_HIGHEST_RATE",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
       // 신고서 단위 가산세 — 카드별 입력이 아니다(같은 신고가 카드 수만큼 배가되는 것을 막는다).
       filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
