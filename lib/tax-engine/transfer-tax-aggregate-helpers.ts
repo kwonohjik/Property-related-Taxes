@@ -567,15 +567,42 @@ export function aggregateByGroup(
         clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), p]);
       });
       groupCalculatedTax = 0;
+      /**
+       * 버킷이 **하나뿐이면** 그 버킷을 만든 계산이 곧 그룹의 세율·누진공제다 — 표시 메타로 승계한다.
+       *
+       * 🔴 종전에는 `calcTax`의 `.calculatedTax`만 취하고 `appliedRate`·`progressiveDeduction`을
+       *    **버렸다**. 그 자리에 파트별 **standalone 최고세율**과 리터럴 `0`을 실어, 같은 호
+       *    두 자산을 합산한 화면이 「적용 호가 둘 이상 · 최고세율 38%」로 표시됐다 —
+       *    실제로는 호가 **하나**고 합산 과세표준에 **40%**가 적용됐다(제보 2026-09-16:
+       *    399,400,000 × 40% − 25,940,000 = 133,820,000).
+       *    `GroupTaxResult.progressiveDeduction`은 그때까지 **값이 실린 적이 없었다**.
+       */
+      let onlyBucketMeta: { appliedRate: number; progressiveDeduction: number } | undefined;
       for (const [bucketKey, bucket] of clauseGroups) {
         const bucketBase = bucket.reduce((sum, p) => sum + p.taxBase, 0);
         let bucketTax: number;
         if (bucket.length === 1) {
           bucketTax = bucket[0].calculatedTax;
+          if (clauseGroups.size === 1) {
+            // 파트 타입(`SplitRatePart`)에는 누진공제가 없다 — 같은 입력으로 한 번 더 계산해
+            // **메타만** 얻는다. 세액은 건드리지 않고, 아래 항등식 검산이 어긋나면 버린다.
+            const tr = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
+            onlyBucketMeta = {
+              appliedRate: tr.appliedRate,
+              progressiveDeduction: tr.progressiveDeduction,
+            };
+          }
         } else {
           // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
           // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
-          bucketTax = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult).calculatedTax;
+            const tr = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
+          bucketTax = tr.calculatedTax;
+          if (clauseGroups.size === 1) {
+            onlyBucketMeta = {
+              appliedRate: tr.appliedRate,
+              progressiveDeduction: tr.progressiveDeduction,
+            };
+          }
         }
         groupCalculatedTax += bucketTax;
 
@@ -601,10 +628,22 @@ export function aggregateByGroup(
           clause1BucketTax += bucketTax;
         }
       }
-      appliedRate = Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
+      /**
+       * 승계한 메타로 **그룹 산출세액을 재현할 수 있을 때만** 채택한다.
+       * 재현하지 못하면 표시가 거짓 등식이 되므로 종전 규약(최고세율 · 0)으로 남긴다 —
+       * 그때는 소비부가 「단일 산식으로 표시할 수 없다」로 분기한다(PR #1640).
+       */
+      const metaReproducesTax =
+        onlyBucketMeta !== undefined &&
+        Math.floor(groupTaxBase * onlyBucketMeta.appliedRate) -
+          onlyBucketMeta.progressiveDeduction ===
+          groupCalculatedTax;
+      // 버킷이 둘 이상이면 호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다 — 0을 유지한다.
+      appliedRate = metaReproducesTax
+        ? onlyBucketMeta!.appliedRate
+        : Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
       surchargeRate = Math.max(...clauseParts.map((p) => p.surchargeRate ?? 0));
-      // 호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다(묶음이 하나일 때도 규약 통일).
-      progressiveDeduction = 0;
+      progressiveDeduction = metaReproducesTax ? onlyBucketMeta!.progressiveDeduction : 0;
     }
 
     out.push({
