@@ -41,7 +41,8 @@ function stockRecord(id: string, name: string, transferDate: string, finalTax: n
       perShareAcquisitionPrice: "500000",
       expenseMode: "actual",
       filingType: "preliminary",
-      filingDate: "2025-02-28",
+      // 예정신고 기한은 §105①2호로 **반기 말일 + 2개월** — 상·하반기가 다른 신고서다.
+      filingDate: transferDate < `${transferDate.slice(0, 4)}-07-01` ? `${transferDate.slice(0, 4)}-08-31` : `${Number(transferDate.slice(0, 4)) + 1}-02-28`,
     },
     resultData: { finalTax, localIncomeTax: Math.floor(finalTax / 10) },
     taxLawVersion: transferDate,
@@ -125,5 +126,50 @@ test.describe("주식 이력 합산 진입점", () => {
     expect(Array.isArray(body.items)).toBe(true);
     expect(body.items).toHaveLength(2);
     expect(body.deductionMode).toBe("aggregate");
+  });
+  test("SA-5: 🔴 기납부세액이 **마지막 예정신고서를 제외한** 나머지로 자동 채워진다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedAll(page);
+    await page.getByTestId("aggregate-s-late").click();
+    await expect(page.getByTestId("history-aggregate-modal")).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("aggregate-record-s-early").click();
+    await page.getByTestId("aggregate-confirm").click();
+    await expect(page.getByText(/양도 종목 \(2건\)/)).toBeVisible({ timeout: 30_000 });
+
+    // 3단계로 이동 — 확정신고로 전환돼 있어야 입력란이 보인다
+    await page.getByRole("button", { name: "필요경비·신고 단계로 이동" }).click();
+    await expect(page.getByText("예정신고 기납부세액 (§111③)")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("radio", { name: "확정신고" }).first()).toBeChecked();
+
+    // 🔴 SK하이닉스(2024-02 양도 → 신고 2024-08-31)만 기신고분.
+    //    삼성전자(2024-09 양도 → 신고 2025-02-28)는 마지막 신고서라 제외된다.
+    await expect(
+      page.locator('div:has(> label:has-text("기납부 양도소득세 (국세)")) input[type="text"]').first(),
+    ).toHaveValue("5,000,000");
+    await expect(
+      page.locator('div:has(> label:has-text("기납부 지방소득세")) input[type="text"]').first(),
+    ).toHaveValue("500,000");
+  });
+
+  test("SA-6: 자동값이 ⑬body를 타고 ⑦결과 정산 행으로 돌아온다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedAll(page);
+    await page.getByTestId("aggregate-s-late").click();
+    await expect(page.getByTestId("history-aggregate-modal")).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("aggregate-record-s-early").click();
+    await page.getByTestId("aggregate-confirm").click();
+    await expect(page.getByText(/양도 종목 \(2건\)/)).toBeVisible({ timeout: 30_000 });
+
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/stock-transfer") && r.request().method() === "POST",
+      { timeout: 60_000 },
+    );
+    await page.getByRole("button", { name: "결과 단계로 이동" }).click();
+    const resp = await calcResponse;
+    const body = JSON.parse(resp.request().postData() ?? "{}");
+    expect(body.preliminaryPaidTax).toBe(5_000_000);
+    expect(body.preliminaryPaidLocalTax).toBe(500_000);
+
+    await expect(page.getByTestId("stock-aggregate-settlement")).toBeVisible({ timeout: 30_000 });
   });
 });

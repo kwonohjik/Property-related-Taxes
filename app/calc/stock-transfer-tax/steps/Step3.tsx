@@ -469,6 +469,13 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
                 이미 예정신고로 납부한 세액을 적으면 이번 확정신고에서 <strong>공제하고</strong>{" "}
                 납부할 금액을 계산합니다. 기납부액이 결정세액보다 크면 환급으로 표시됩니다.
               </p>
+              {/* 자동값은 **참고 추정**이다 — 이력의 결정세액이지 §107 예정신고 산출세액의
+                  재현이 아니고, 마지막 신고서는 「이번 신고분」으로 보아 제외한다. */}
+              <p className="text-caption text-muted-foreground mb-3 leading-relaxed">
+                ⓘ 이력에서 합산으로 들어오면 <strong>마지막 예정신고서를 제외한</strong> 나머지
+                신고분의 결정세액이 자동으로 채워집니다. <strong>참고값</strong>이므로 실제 예정신고
+                납부액과 다르면 직접 고치세요.
+              </p>
               <div className="space-y-2">
                 <CurrencyInput
                   label="기납부 양도소득세 (국세)"

@@ -18,6 +18,8 @@ import {
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
 import { extractStockTransferDate } from "@/lib/storage/title-generator";
+import { calcPreliminaryDeadline } from "./stock-filing-type";
+import { computeStockAutoPriorPaid } from "./stock-prior-filed";
 import { extractTaxYear } from "./cross-104-5-history";
 import type { AggregateCandidate } from "./aggregate-candidate";
 
@@ -88,6 +90,26 @@ export interface StockAggregateSession {
   formData: StockTransferFormData;
 }
 
+/** 이력 record 의 신고일 — 없으면 §105① **법정 예정신고 기한**으로 대체한다. */
+function filingDateOf(record: CalculationRecord): string {
+  const input = (record.inputData ?? {}) as Record<string, unknown>;
+  const declared = (input.filingDate as string | undefined)?.trim();
+  if (declared) return declared;
+  // 비워 두면 그 종목이 신고일 필터에서 통째로 빠져 기납부가 **과소 집계**된다.
+  return (
+    calcPreliminaryDeadline(
+      (input.transferDate as string | undefined) ?? undefined,
+      input.marketType as string | undefined,
+    ) ?? ""
+  );
+}
+
+/** 이력 record 의 결정세액·지방소득세 — 주식은 결과가 최상위에 저장된다. */
+function paidTaxOf(record: CalculationRecord): { national: number; local: number } {
+  const rd = (record.resultData ?? {}) as { finalTax?: number; localIncomeTax?: number };
+  return { national: rd.finalTax ?? 0, local: rd.localIncomeTax ?? 0 };
+}
+
 /**
  * 선택한 단건 이력들을 **다종목 세션**으로 편입한다 — 순수 함수(테스트가 닿는 자리).
  *
@@ -111,7 +133,37 @@ export function buildStockAggregateSession(
   if (forms.length === 0) {
     return { savedItems: [], formData: normalizeStockFormData({}) };
   }
-  return { savedItems: forms.slice(0, -1), formData: forms[forms.length - 1] };
+
+  /**
+   * §111③ 기납부세액 자동 채움 — **마지막 예정신고서를 제외한** 나머지 산출세액 합계.
+   * 묶는 단위는 종목이 아니라 **신고일**이다(§105①2호 반기 → 같은 반기는 한 신고서).
+   */
+  const auto = computeStockAutoPriorPaid(
+    sorted.map((r) => ({ filingDate: filingDateOf(r), ...paidTaxOf(r) })),
+  );
+
+  /**
+   * 🔴 **확정신고로 둔다.** 그러지 않으면 자동값이 **no-op** 이다 —
+   *    ⑤ 입력란과 ④ 전송이 모두 `filingType === "final"`을 요구하므로 이력의
+   *    `"preliminary"`가 남으면 화면에도 안 뜨고 엔진에도 안 간다
+   *    ([[feedback_api_trigger_without_input_path_is_noop]]).
+   *
+   * 법적으로도 그 상태다 — 영 §173⑤3호: 주식등을 **2회 이상** 양도하고 §103②를 적용해
+   * 산출세액이 달라지면 **확정신고 의무**가 생긴다(법 §110④ 단서). 합산 진입 자체가 그 상황이다.
+   * 종목이 1건이면 요건을 못 채우므로 이력 값을 그대로 둔다.
+   */
+  const isAggregate = forms.length >= 2;
+  const filingPatch: Partial<StockTransferFormData> = isAggregate
+    ? {
+        filingType: "final",
+        preliminaryPaidTax: String(auto.national),
+        preliminaryPaidLocalTax: String(auto.local),
+      }
+    : {};
+  // 신고 단위 필드라 **전 종목에 같은 값**을 싣는다(`carryFilingFields`와 같은 규약).
+  const patched = forms.map((f) => ({ ...f, ...filingPatch }));
+
+  return { savedItems: patched.slice(0, -1), formData: patched[patched.length - 1] };
 }
 
 /** 편입 + 마법사로 이동. 부수효과는 여기만 — 판정·조립은 위 순수 함수들이 한다. */
