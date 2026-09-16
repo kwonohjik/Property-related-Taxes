@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus } from "lucide-react";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
+import { StaleSourceBanner } from "@/components/calc/transfer/StaleSourceBanner";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
 import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
@@ -45,6 +46,8 @@ import {
   buildPropertiesFromMultiRecord,
   isBlankProperty,
   backfillPriorPaid,
+  reloadPropertyFromSource,
+  adoptSourceBaseline,
 } from "@/lib/calc/transfer-multi-load-entry";
 import type { CalculationRecord } from "@/lib/storage/types";
 import {
@@ -472,6 +475,31 @@ export default function MultiTransferTaxCalculator() {
     [form.activePropertyIndex, form.properties, updateProperty, setActiveProperty, syncToWizardStore],
   );
 
+  /**
+   * 「다시 불러오기」 — 편입 자산을 원본 record의 **현재 입력**으로 되불러온다.
+   *
+   * ⚠️ 합산 화면의 로컬 편집을 덮는다. 배너가 그 사실을 미리 알린다(⛔ 자동 갱신 금지 —
+   *    조용히 덮으면 사용자가 여기서 고친 값이 사라진다).
+   */
+  const handleReloadSource = useCallback(
+    async (propertyId: string) => {
+      const idx = form.properties.findIndex((p) => p.propertyId === propertyId);
+      if (idx < 0) return;
+      updateProperty(idx, await reloadPropertyFromSource(form.properties[idx]));
+    },
+    [form.properties, updateProperty],
+  );
+
+  /** 「그대로 두기」 — 폼은 건드리지 않고 기준선만 확정해 배너를 닫는다. */
+  const handleAdoptSource = useCallback(
+    async (propertyId: string) => {
+      const idx = form.properties.findIndex((p) => p.propertyId === propertyId);
+      if (idx < 0) return;
+      updateProperty(idx, await adoptSourceBaseline(form.properties[idx]));
+    },
+    [form.properties, updateProperty],
+  );
+
   // 계산 실행
   const handleCalculate = async () => {
     setError(null);
@@ -562,7 +590,13 @@ export default function MultiTransferTaxCalculator() {
           <CardHeader>
             <CardTitle>양도 자산 목록</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <StaleSourceBanner
+              properties={form.properties}
+              taxYear={form.taxYear}
+              onReload={handleReloadSource}
+              onAdopt={handleAdoptSource}
+            />
             <StepList
               properties={form.properties}
               onAdd={handleAddProperty}
@@ -623,6 +657,13 @@ export default function MultiTransferTaxCalculator() {
             <CardTitle>공통 설정</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* 「세액 계산」 버튼이 있는 화면이라 여기에도 둔다 — 목록 단계에서 지나쳤어도 보인다 */}
+            <StaleSourceBanner
+              properties={form.properties}
+              taxYear={form.taxYear}
+              onReload={handleReloadSource}
+              onAdopt={handleAdoptSource}
+            />
             <AggregateSettingsPanel form={form} onChange={setForm} />
 
             {/* [B2] 신고서 단위 수정신고·경정청구 — 이력에서 진입 시(amendmentMode) 노출.

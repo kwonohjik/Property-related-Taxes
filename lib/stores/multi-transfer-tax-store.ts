@@ -18,6 +18,20 @@ export interface PropertyItem {
   /** 이력에서 불러온 경우 원본 계산 id (provenance, 중복 로드 경고용) */
   sourceCalculationId?: string;
   /**
+   * **편입 시점** 원본 record의 `inputHash` — 원본 변경 감지의 **유일한** 기준선.
+   *
+   * 「다시 불러오기」·「그대로 두기」가 갱신하고, 합산 화면의 **로컬 편집으로는 바꾸지 않는다**
+   * (현재 상태가 아니라 provenance 기록이다).
+   *
+   * ⛔ `computeInputHash(form)`과 비교하지 말 것 — 저장 시 `inputData`에 키가 덧붙고
+   *   (`use-auto-save-calculation.ts:103`) 편집 왕복이 기본값 키를 덧붙여
+   *   (`calc-wizard-store.ts:280`) **사용자가 아무것도 안 고쳐도 해시가 바뀐다**.
+   *   상세: `detectStaleSources`(`lib/calc/transfer-multi-load-entry.ts`).
+   *
+   * 구 세션·구 record는 `undefined` — 그때는 「판정 불가」로 다룬다.
+   */
+  sourceInputHash?: string;
+  /**
    * 이력 불러오기 시 포착한 예정신고 납부세액(standalone, 국세·지방).
    * 신고일 필터 기납부세액(§111③) 산정용 — computeAutoPriorPaid.
    * 수동 추가 자산은 미보유(undefined → 0 기여).
