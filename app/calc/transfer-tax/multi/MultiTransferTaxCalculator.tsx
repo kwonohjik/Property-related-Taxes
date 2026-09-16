@@ -23,6 +23,7 @@ import {
   type PropertyItem,
   type MultiStep,
 } from "@/lib/stores/multi-transfer-tax-store";
+import { decideMultiMountAction } from "@/lib/calc/multi-mount-decision";
 import {
   useCalcWizardStore,
   createDefaultTransferFormData,
@@ -337,6 +338,13 @@ export default function MultiTransferTaxCalculator() {
   const activeStepIndex = STEPS.indexOf(form.activeStep);
 
   // 자산 추가 및 편집 모드 진입
+  /**
+   * ⚠️ 라벨·인덱스를 `useMultiTransferStore.getState()`로 바꾸려다 **되돌렸다**(2026-09-16).
+   *    「live가 더 옳다」고 보였지만, 이 함수가 마운트 경로에서 불리는 것은
+   *    `add-first`(= `properties.length === 0`)일 때뿐이라 **closure와 live가 항상 같다**.
+   *    뮤테이션으로 실측했다 — 두 구현의 E2E 결과가 동일(구별력 0)하다. 아무것도 바꾸지 않는
+   *    변경은 넣지 않는다.
+   */
   const handleAddProperty = useCallback(() => {
     const newId = generatePropertyId();
     const newItem: PropertyItem = {
@@ -415,19 +423,31 @@ export default function MultiTransferTaxCalculator() {
   // 단, activeStep="edit"으로 진입했는데 wizard store가 아직 해당 자산 form과 동기화되지 않았을 수 있어
   // 활성 자산의 form을 wizard로 한 번 끌어온다.
   useEffect(() => {
-    if (form.activeStep === "result" && !result) {
-      setStep(form.properties.length > 0 ? "settings" : "list");
+    /**
+     * 🔴 **closure(`form`·`result`)를 쓰지 말 것.** 첫 렌더는 zustand persist 리하이드레이션
+     *    **전**이라 새로고침 시 항상 기본값이다. 실측(2026-09-16):
+     *      최초 진입 `closure {0,"list"}` · `live {0,"list"}`
+     *      새로고침   `closure {0,"list"}` · `live {1,"edit"}`  ← 어긋난다
+     *    그래서 「자산이 없다」로 오판해 **새로고침마다 빈 자산이 1건씩 늘었고**(1→2→3),
+     *    나머지 두 분기는 closure의 `activeStep`이 `"result"`·`"edit"`가 될 수 없어
+     *    **영영 실행되지 않았다**(편집 중 새로고침 시 활성 자산 폼 대신 빈 폼이 실렸다).
+     */
+    const store = useMultiTransferStore.getState();
+    const live = store.form;
+    const action = decideMultiMountAction(live, store.result !== null);
+    if (action.kind === "restore-step") {
+      setStep(action.step);
       return;
     }
-    if (form.activeStep === "edit" && form.properties[form.activePropertyIndex]) {
+    if (action.kind === "sync-edit") {
       const wizardForm = useCalcWizardStore.getState().formData;
-      const targetForm = form.properties[form.activePropertyIndex].form;
+      const targetForm = live.properties[action.propertyIndex].form;
       if (wizardForm !== targetForm) {
         syncToWizardStore(targetForm);
       }
       return;
     }
-    if (form.properties.length === 0 && form.activeStep === "list") {
+    if (action.kind === "add-first") {
       handleAddProperty();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
