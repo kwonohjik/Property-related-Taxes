@@ -297,7 +297,9 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   const splitResult = calcSplitGain(input);
   if (splitResult) {
     const totalGain = splitResult.land.gain + splitResult.building.gain;
-    const flooredGain = input.skipLossFloor ? totalGain : Math.max(0, totalGain);
+    // 차손(음수)을 그대로 싣는다 — 0 바닥은 양도소득금액·과세표준 단계 담당.
+    // 근거·경위는 `transfer-tax.ts` STEP 2a 주석.
+    const flooredGain = totalGain;
     const totalDeduction = splitResult.land.appraisalDeduction + splitResult.building.appraisalDeduction;
     const totalExpenses = splitResult.land.directExpenses + splitResult.building.directExpenses;
     const usedEstimated =
@@ -395,7 +397,15 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   // 환산취득가액(acquisitionCostBase)은 차감하지 않는다(양도차익 = 양도가액 − 나목).
   const acqCostForGain = necessary.mode === "swap_to_direct" ? 0 : acquisitionCostBase;
   const gain = input.transferPrice - acqCostForGain - necessary.expensesApplied;
-  const flooredGain = input.skipLossFloor ? gain : Math.max(0, gain);
+  /**
+   * 🔑 **제보된 결함의 진짜 발원지가 여기였다** (2026-09-16).
+   *
+   * `transfer-tax.ts` STEP 2a에도 같은 바닥이 있고 그쪽에만 「§102② 통산용」 주석이 붙어 있어
+   * 정본처럼 보이지만, 저쪽은 `splitDetail`(소유자 분리) 경로에서만 실효가 있다.
+   * **일반 단건은 여기서 이미 0으로 지워져** 저쪽 바닥은 no-op이었다 — 저 한 줄만 고치면
+   * 화면은 그대로다(실측). 근거·경위는 `transfer-tax.ts` STEP 2a 주석.
+   */
+  const flooredGain = gain;
   return {
     gain: flooredGain,
     usedEstimated,

@@ -387,8 +387,29 @@ export function calculateTransferTax(
     ? (selfOwns === "building_only" ? splitDetail.building.gain : splitDetail.land.gain)
     : rawGain;
 
-  // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
-  const transferGain = input.skipLossFloor ? ownerRawGain : Math.max(0, ownerRawGain);
+  /**
+   * STEP 2a: 양도차익은 **차손(음수)을 그대로 싣는다** (2026-09-16).
+   *
+   * 🔴 종전에는 `Math.max(0, ownerRawGain)`으로 바닥 처리했다(집계만 `skipLossFloor`로 면제).
+   *   그 결과 신고서 양식이 취득가액을 「양도가액 − 양도차익 − 필요경비」로 **역산**해
+   *   **취득가액 = 양도가액**이라는 값을 만들어냈다 — 사용자가 입력한 금액과 무관하다
+   *   (실측: 양도 100,000,000 / 취득 120,000,000 → 취득가액 행이 100,000,000).
+   *   같은 자리에서 산식은 「100,000,000 − 120,000,000」이라 적고 금액은 0이라
+   *   **산식과 금액이 어긋나** 있었다.
+   *
+   * 「소득세법」 §102②는 「**양도차손이 발생한 자산이 있는 경우**에는 ... 그 양도차손을
+   * 공제한다」로 차손의 존재를 전제한다. §95①(양도소득금액 = 양도차익 − 장특공제)도
+   * 차익 단계에 바닥을 두지 않는다.
+   *
+   * ⚠️ **0 바닥은 사라진 것이 아니라 제자리로 갔다** — 과세표준·양도소득금액 단계
+   *   (`:567` `transferIncomeBefore993`, §92)가 담당한다. 아래 `transferGain <= 0`
+   *   조기반환이 음수를 흡수해 `taxBase: 0` · `calculatedTax: 0`을 내므로 **세액은 불변**이다
+   *   (vitest 전건 21,482건에서 세액 단언 실패 0건).
+   *
+   * 계획서: `docs/00-pm/transfer-single-loss-gain-preservation.plan.md`
+   * anchor: `single-loss-gain-preservation.predo.anchor.test.ts`
+   */
+  const transferGain = ownerRawGain;
   // 양도차익 산출근거 — 파생 입력(effectiveInput) 기준 통일. 경비는 실제 적용 필요경비(appliedExpenses).
   // (원본 input 기준 시 CB 환산은 취득가·개산공제가 0, §97② swap은 개산공제가 실제 경비와 어긋나 산식 불일치.)
   const gainFormula = buildGainFormula({

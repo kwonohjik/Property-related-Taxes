@@ -20,6 +20,18 @@ const rates = makeMockRates();
 
 /** 교재 사례1 — 공동주택. §164③ 결과 취득·양도 기준시가가 동일(161,000,000)한 상태 */
 const STD = 161_000_000;
+/**
+ * 환산 분자=분모일 때의 양도차익 — **0이 아니라 «−필요경비개산공제»다** (2026-09-16 정정).
+ *
+ * 환산취득가액 = 양도가액 × (161,000,000 ÷ 161,000,000) = 양도가액이므로
+ * 양도차익 = 양도가액 − 양도가액 − 개산공제 = −4,830,000 (= STD × 3%, 소득세법 시행령 §163⑥).
+ *
+ * 🔴 종전 네 단언은 `toBe(0)`이었고 주석도 「분자=분모 → 차익 0」이라 적혀 있었다.
+ *   **주석의 산술이 개산공제를 빠뜨렸고**, 엔진의 0 바닥이 그 오차를 가려 왔다.
+ *   바닥을 걷어내자 참값이 드러났다 — 이 조문(§164⑧)이 존재하는 이유는 그대로다.
+ *   계획서: `docs/00-pm/transfer-single-loss-gain-preservation.plan.md`
+ */
+const GAIN_WHEN_NUMERATOR_EQUALS_DENOMINATOR = -4_830_000;
 const PRIOR = 149_000_000;
 const SALE = 1_000_000_000;
 
@@ -50,8 +62,9 @@ describe("STEP 0.47 — §164⑧ 엔진 배선", () => {
   it("미제공이면 no-op — §164⑧ 없이는 환산 분자=분모라 양도차익이 0이 된다", () => {
     const r = calculateTransferTax(caseOne(), rates);
     // 🔑 이 조문이 존재하는 이유가 여기 보인다 — 취득·양도 기준시가가 같으면
-    //    환산취득가액 = 양도가액 × (161,000,000 ÷ 161,000,000) = 양도가액 → 차익 0.
-    expect(r.transferGain).toBe(0);
+    //    환산취득가액 = 양도가액 × (161,000,000 ÷ 161,000,000) = 양도가액 → 차익은
+    //    개산공제만큼 **음수**가 된다(상수 주석 참조).
+    expect(r.transferGain).toBe(GAIN_WHEN_NUMERATOR_EQUALS_DENOMINATOR);
     expect(r.totalTax).toBe(0);
     expect(r.steps.find((s) => s.label.includes("동일조정기간"))).toBeUndefined();
   });
@@ -123,7 +136,8 @@ describe("STEP 0.47 — §164⑧ 엔진 배선", () => {
       }),
       rates,
     );
-    expect(r.transferGain).toBe(0); // 취득당시 기준시가 그대로 → 분자=분모 → 차익 0
+    // 취득당시 기준시가 그대로 → 분자=분모 → 차익 = −개산공제
+    expect(r.transferGain).toBe(GAIN_WHEN_NUMERATOR_EQUALS_DENOMINATOR);
     const step = r.steps.find((s) => s.label.includes("환산 미적용"));
     expect(step).toBeDefined();
     expect(step!.legalBasis).toContain("§80 ① 2호");
@@ -134,7 +148,8 @@ describe("STEP 0.47 — §164⑧ 엔진 배선", () => {
       caseOne({ sameAdjustmentPeriod: { formula: "prev", priorStandardPrice: 170_000_000 } }),
       rates,
     );
-    expect(r.transferGain).toBe(0); // 하한으로 취득당시 유지 → 분자=분모 → 차익 0
+    // 하한으로 취득당시 유지 → 분자=분모 → 차익 = −개산공제
+    expect(r.transferGain).toBe(GAIN_WHEN_NUMERATOR_EQUALS_DENOMINATOR);
     const step = r.steps.find((s) => s.label.includes("동일조정기간"));
     expect(step!.amount).toBe(STD);
     expect(step!.formula).toContain("§80①1호 단서");
@@ -145,7 +160,7 @@ describe("STEP 0.47 — §164⑧ 엔진 배선", () => {
       caseOne({ sameAdjustmentPeriod: { formula: "prev" } }),
       rates,
     );
-    expect(r.transferGain).toBe(0);
+    expect(r.transferGain).toBe(GAIN_WHEN_NUMERATOR_EQUALS_DENOMINATOR);
     expect(r.steps.find((s) => s.label.includes("동일조정기간"))).toBeUndefined();
   });
 });
