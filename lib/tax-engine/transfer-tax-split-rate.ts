@@ -41,7 +41,7 @@ import type { RateClause } from "./transfer-tax-rate-calc";
 import { resolveAppurtenantLandRateBasisDate } from "./transfer-tax-appurtenant-land";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
 import { buildLandRateInput } from "./transfer-tax-appurtenant-land";
-import { allocateBasicDeduction } from "./transfer-tax-aggregate-helpers";
+import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { RateGroup } from "./types/transfer-aggregate.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
@@ -269,16 +269,9 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   if (uniform) return null;
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
-  const allocation = allocateBasicDeduction(
-    seeds.map((_, i) => ({
-      idx: i,
-      rateGroup: PART_RATE_GROUP,
-      income: incomes[i],
-      transferDate: input.transferDate,
-      rate: preRates[i].appliedRate,
-    })),
+  const allocation = allocateBasicDeductionAcrossParts(
+    seeds.map((_, i) => ({ idx: i, income: incomes[i], rate: preRates[i].appliedRate })),
     basicDeduction,
-    "MAX_BENEFIT",
   );
   const allocated = seeds.map((_, i) => allocation.find((a) => a.idx === i)?.amount ?? 0);
   const taxBases = seeds.map((_, i) => Math.max(0, incomes[i] - allocated[i]));

@@ -236,38 +236,26 @@ export function offsetLosses(records: AssetRecord[]): LossOffsetOutput {
 // M-4: 기본공제 배분
 // ============================================================
 
-export function allocateBasicDeduction(
-  eligible: { idx: number; rateGroup: RateGroup; income: number; transferDate: Date; rate: number }[],
+/**
+ * **한 자산 «내부» 파트 사이의 기본공제 배분** — 세율이 높은 파트부터.
+ *
+ * ⚠️ **§103②의 자산 간 순서 규칙과는 다른 축이다.** 그 조문은 「해당 과세기간에 **먼저 양도한
+ *   자산**의 양도소득금액에서부터」라고 정하는데, 파트들은 **같은 자산이라 양도일이 동일**해
+ *   그 규칙으로는 순서가 서지 않는다. ⇒ 배분 이득을 결정하는 **한계세율** 순으로 간다
+ *   (memory `feedback_basic_deduction_highest_rate_allocation` — 2026-07-21 확정).
+ *
+ * 소비자는 둘뿐이다 — 토지·건물 분리취득 파트(`transfer-tax-split-rate.ts`)와
+ * 주택·비사업용 파트(`transfer-tax-rental-housing-step.ts`). **단건 엔진 전용**이다.
+ *
+ * ⛔ 다건(자산 간)에 쓰지 말 것 — 아래 `allocateBasicDeduction`이 §103② 축을 담당한다.
+ *   종전에는 한 함수가 두 축을 겸용해, 다건 기본값이 법정 순서가 아닌 채로 굳어 있었다.
+ */
+export function allocateBasicDeductionAcrossParts(
+  parts: { idx: number; income: number; rate: number }[],
   available: number,
-  strategy: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER",
 ): { idx: number; amount: number }[] {
-  if (available <= 0 || eligible.length === 0) return [];
-
-  let sorted: typeof eligible;
-  if (strategy === "FIRST") {
-    // 입력 순서 우선 — 목록 첫 번째 자산(idx 오름차순). 양도일 순(EARLIEST_TRANSFER)과 구분.
-    sorted = [...eligible].sort((a, b) => a.idx - b.idx);
-  } else if (strategy === "EARLIEST_TRANSFER") {
-    sorted = [...eligible].sort((a, b) => a.transferDate.getTime() - b.transferDate.getTime());
-  } else {
-    const groupPriority: Record<RateGroup, number> = {
-      unregistered: 5,
-      short_term: 4,
-      multi_house_surcharge: 3,
-      non_business_land: 2,
-      progressive: 1,
-    };
-    sorted = [...eligible].sort((a, b) => {
-      const dg = (groupPriority[b.rateGroup] ?? 0) - (groupPriority[a.rateGroup] ?? 0);
-      if (dg !== 0) return dg;
-      // 동일 그룹 내: 적용세율 높은 자산에 기본공제 우선 배분 (세액 절감 최대 = MAX_BENEFIT).
-      // short_term 그룹에 1년 미만 50% + 1~2년 40%가 섞인 경우 등 순서 의존 제거.
-      const dr = b.rate - a.rate;
-      if (dr !== 0) return dr;
-      return b.income - a.income;
-    });
-  }
-
+  if (available <= 0 || parts.length === 0) return [];
+  const sorted = [...parts].sort((a, b) => b.rate - a.rate || b.income - a.income);
   const result: { idx: number; amount: number }[] = [];
   let remaining = available;
   for (const e of sorted) {
@@ -279,6 +267,95 @@ export function allocateBasicDeduction(
     }
   }
   return result;
+}
+
+/**
+ * §103② **법정 배분 순서** — 감면소득금액 「외」에서 먼저, 그 안에서 「먼저 양도한 자산」부터.
+ *
+ * 「소득세법」 §103② (법제처 실독, 시행 2026-01-01):
+ *   「… 양도소득금액에 … **감면소득금액이 있는 경우에는 그 감면소득금액 외의 양도소득금액에서
+ *    먼저 공제**하고, 감면소득금액 외의 양도소득금액 중에서는 해당 과세기간에 **먼저 양도한
+ *    자산의 양도소득금액에서부터 순서대로 공제**한다.」
+ *
+ * 🔑 **왜 감면 외가 먼저인가** — §90①의 감면액 산식이 `A × (B − C) / D × E`이고 **`C`가 바로 이
+ *   기본공제**다. 공제가 감면대상 양도소득금액(B)에 붙으면 **감면액이 그만큼 줄어든다.**
+ *
+ * ⛔ **`MAX_BENEFIT`(높은 세율 우선)은 폐지됐다** (2026-09-16 사용자 결정 — 「법문대로」).
+ *   법정 순서가 아니었고, 게다가 **자기 이름도 지키지 않았다**: `rateGroup` 우선순위로 먼저
+ *   정렬했는데 그 순위가 실효세율과 어긋났다(`short_term` 40%가 `multi_house_surcharge` 72%보다
+ *   앞). 실측 880,000·330,000원 과대. 구 세션·구 이력의 `"MAX_BENEFIT"` 값은 아래 `order`가
+ *   **양도일 순으로 흡수**한다(별도 마이그레이션 불요).
+ *
+ * ⚠️ **조문은 감면분 «내부» 순서를 정하지 않는다.** 여기서는 1단계와 같은 순서를 쓴다 —
+ *   같은 신고에서 두 단계가 다른 축을 쓰면 설명할 수 없다. (감면액 산식 쪽에서 감면 버킷 간
+ *   흡수 순서는 `absorbBasicDeduction`이 「감면율 낮은 것부터」로 따로 정한다 — 그쪽은 §77 계열
+ *   단건 산식의 기존 해석이다.)
+ */
+export function allocateBasicDeduction(
+  eligible: {
+    idx: number;
+    income: number;
+    transferDate: Date;
+    /**
+     * §90①의 **B — 감면대상 양도소득금액**(세액감면형). 없으면 0.
+     * 소득공제형(§90②)은 이미 `income`에서 빠져 있다(`taxableAfterReduction`).
+     */
+    reducibleIncome?: number;
+    /**
+     * 한계세율 — **동순위 tie-break 전용**(§103②이 침묵하는 자리. 아래 `order` 참조).
+     * 배분 «순서»를 정할 뿐 금액 계산에는 쓰이지 않는다.
+     */
+    rate?: number;
+  }[],
+  available: number,
+  strategy: "FIRST" | "EARLIEST_TRANSFER",
+): { idx: number; amount: number }[] {
+  if (available <= 0 || eligible.length === 0) return [];
+
+  /**
+   * 🔑 **§103②은 「같은 날 양도한 자산」 사이의 순서를 정하지 않는다.**
+   *
+   * 그대로 두면 stable sort가 **입력 순서**로 떨어져 같은 사안의 세액이 목록 순서에 따라
+   * 갈린다 — 이 저장소가 반복해서 고쳐 온 결함이다(§104⑤ 그룹 대표 순서 의존 등).
+   * ⇒ 조문이 비워 둔 자리에 **결정적 기준**을 둔다: 한계세율 내림차순 → idx.
+   *   단건의 파트 축(`allocateBasicDeductionAcrossParts`)과 **같은 기준**이라 경로 간
+   *   같은 사안이 같은 값을 낸다. 실측 고정: T-M17「입력 순서 무관 — [50,40] === [40,50]」.
+   */
+  const order =
+    strategy === "FIRST"
+      ? [...eligible].sort((a, b) => a.idx - b.idx)
+      : [...eligible].sort(
+          (a, b) =>
+            a.transferDate.getTime() - b.transferDate.getTime() ||
+            (b.rate ?? 0) - (a.rate ?? 0) ||
+            a.idx - b.idx,
+        );
+
+  /** 감면분은 income을 넘을 수 없다 — 차손 통산으로 income이 줄어든 자산이 있다. */
+  const reducibleOf = (e: (typeof eligible)[number]) =>
+    Math.min(e.income, Math.max(0, e.reducibleIncome ?? 0));
+
+  const byIdx = new Map<number, number>();
+  /** **흡수 순서**를 그대로 보존한다 — 1단계(감면 외)가 먼저 나와야 조문 순서로 읽힌다. */
+  const absorbOrder: number[] = [];
+  let remaining = available;
+  /** 한 단계를 소진 순서대로 훑는다 — `sliceOf`가 그 단계에서 흡수 가능한 몫을 준다. */
+  const sweep = (sliceOf: (e: (typeof eligible)[number]) => number) => {
+    for (const e of order) {
+      if (remaining <= 0) return;
+      const take = Math.min(remaining, sliceOf(e));
+      if (take > 0) {
+        if (!byIdx.has(e.idx)) absorbOrder.push(e.idx);
+        byIdx.set(e.idx, (byIdx.get(e.idx) ?? 0) + take);
+        remaining -= take;
+      }
+    }
+  };
+
+  sweep((e) => e.income - reducibleOf(e)); // 1단계 — 감면소득금액 «외»
+  sweep((e) => reducibleOf(e));            // 2단계 — 감면소득금액
+
+  return absorbOrder.map((idx) => ({ idx, amount: byIdx.get(idx)! }));
 }
 
 // ============================================================

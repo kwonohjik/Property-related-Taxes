@@ -217,7 +217,9 @@ export function calculateGeneralBuildingFractional(
       taxYear,
       properties: allProperties,
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
-      basicDeductionAllocation: "MAX_BENEFIT",
+      // 카드는 **한 물건의 파트**(토지/건물)라 양도일이 같다 — §103②의 자산 순서가
+      // 성립하지 않아 한계세율 축을 쓴다(종전 `"MAX_BENEFIT"`과 **같은 거동**).
+      basicDeductionAllocation: "PARTS_HIGHEST_RATE",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
       // 신고서 단위 정정 — aggregate가 1회만 소비한다(자산별 누수는 `:163`이 strip).
       amendment,

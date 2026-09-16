@@ -93,7 +93,10 @@ function buildAggregateInput(): AggregateTransferInput {
     taxYear: 2023,
     annualBasicDeductionUsed: 0,
     properties,
-    basicDeductionAllocation: "MAX_BENEFIT",
+    // 일반건물 카드는 **한 물건의 파트**(토지/건물)라 양도일이 같다 — §103②의 자산 순서가
+    // 성립하지 않아 한계세율 축을 쓴다. 제품 경로(`general-building-route-*.ts`)와 같은 값이고
+    // 종전 `"MAX_BENEFIT"`과 **거동이 같다**(파트는 rateGroup이 상수라 그룹 우선순위가 무의미했다).
+    basicDeductionAllocation: "PARTS_HIGHEST_RATE",
   };
 }
 

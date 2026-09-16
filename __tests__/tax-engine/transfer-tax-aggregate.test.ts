@@ -248,15 +248,54 @@ describe("T-M05: 단기 + 누진 혼합", () => {
 });
 
 // ============================================================
-// T-M06: 기본공제 MAX_BENEFIT 배분
+// T-M06: 기본공제 배분 — §103② 법정 순서
+//
+// ⛔ 종전에는 `"MAX_BENEFIT"`(높은 세율 우선)을 고정했다. 그 전략은 **폐지**됐다 —
+//    §103②이 「감면소득금액 외의 양도소득금액에서 먼저 공제하고, … **먼저 양도한 자산의
+//    양도소득금액에서부터 순서대로** 공제한다」로 순서를 명시하기 때문이다
+//    (2026-09-16 사용자 결정 「법문대로」).
+// ⚠️ 양도일이 **서로 달라야** 이 단언이 의미가 있다 — 같으면 stable sort가 입력 순서로 떨어져
+//    무엇을 검증하는지 알 수 없다(종전 픽스처가 그랬다).
 // ============================================================
 
 describe("T-M06: 기본공제 배분", () => {
-  it("MAX_BENEFIT: 중과 포함 자산에 우선 배분", () => {
+  it("§103②: **전략을 지정하지 않아도** 법정 순서가 기본값이다", () => {
+    // 🔑 기본값이 곧 법문이어야 한다 — 종전 기본값 `"MAX_BENEFIT"`은 법정 순서가 아니었다.
+    const noStrategy: AggregateTransferInput = {
+      taxYear: 2024,
+      annualBasicDeductionUsed: 0,
+      // basicDeductionAllocation 미지정
+      properties: [
+        makeItem("A", "늦게 양도", {
+          propertyType: "land",
+          transferPrice: 300_000_000,
+          acquisitionPrice: 200_000_000,
+          acquisitionDate: new Date("2018-06-01"),
+          transferDate: new Date("2024-09-01"),
+          isOneHousehold: false,
+          householdHousingCount: 0,
+        }),
+        makeItem("B", "먼저 양도", {
+          propertyType: "land",
+          transferPrice: 300_000_000,
+          acquisitionPrice: 200_000_000,
+          acquisitionDate: new Date("2018-06-01"),
+          transferDate: new Date("2024-03-01"),
+          isOneHousehold: false,
+          householdHousingCount: 0,
+        }),
+      ],
+    };
+    const r = calculateTransferTaxAggregate(noStrategy, mockRates);
+    expect(r.properties.find((p) => p.propertyId === "B")!.allocatedBasicDeduction).toBe(2_500_000);
+    expect(r.properties.find((p) => p.propertyId === "A")!.allocatedBasicDeduction).toBe(0);
+  });
+
+  it("§103②: 양도일이 이른 자산에 우선 배분", () => {
     const input: AggregateTransferInput = {
       taxYear: 2024,
       annualBasicDeductionUsed: 0,
-      basicDeductionAllocation: "MAX_BENEFIT",
+      basicDeductionAllocation: "EARLIEST_TRANSFER",
       properties: [
         makeItem("A", "일반 토지 (저구간)", {
           propertyType: "land",
@@ -272,7 +311,8 @@ describe("T-M06: 기본공제 배분", () => {
           transferPrice: 300_000_000,
           acquisitionPrice: 200_000_000,
           acquisitionDate: new Date("2023-06-01"),
-          transferDate: new Date("2024-06-01"),
+          // A(2024-06-01)보다 **이르다** — 법정 순서상 B가 먼저 흡수한다(보유 9개월로 단기 유지)
+          transferDate: new Date("2024-03-01"),
           isOneHousehold: false,
           householdHousingCount: 0,
         }),
@@ -280,9 +320,11 @@ describe("T-M06: 기본공제 배분", () => {
     };
 
     const r = calculateTransferTaxAggregate(input, mockRates);
+    const A = r.properties.find((p) => p.propertyId === "A")!;
     const B = r.properties.find((p) => p.propertyId === "B")!;
-    expect(B.allocatedBasicDeduction).toBeGreaterThan(0);
-    expect(r.basicDeduction).toBeLessThanOrEqual(2_500_000);
+    expect(B.allocatedBasicDeduction, "양도일이 이른 B가 전액 흡수").toBe(2_500_000);
+    expect(A.allocatedBasicDeduction, "A는 남은 것이 없다").toBe(0);
+    expect(r.basicDeduction).toBe(2_500_000);
   });
 });
 
