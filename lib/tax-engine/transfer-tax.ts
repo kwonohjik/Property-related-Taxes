@@ -50,7 +50,8 @@ import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
-export { calcTax } from "./transfer-tax-rate-calc";
+import { calcTax } from "./transfer-tax-rate-calc";
+export { calcTax };
 
 export function calculateTransferTax(
   rawInput: TransferTaxInput,
@@ -463,6 +464,32 @@ export function calculateTransferTax(
       inheritedAcquisitionStep,
       cbStep,
       splitDetail,
+      /**
+       * 🔴 **차손 자산도 세율·호를 싣는다** — 그러지 않으면 미등기 적용 여부를 **눈으로 확인할 수 없다**.
+       *
+       * 미등기의 효과 넷이 차손 + 실거래가 자산에서는 **전부 관측 불가**다:
+       *   70% 단일세율(§104①10호) → 세액 0이라 세율 미표시 · 장특 배제(§95②) → 차손이라 어차피 0
+       *   기본공제 배제(§103①) → 합산 단계에서만 · 개산공제 0.3%(§163⑥4) → 환산취득가 모드 전용
+       * 그래서 신고서의 **「세율구분 코드」 열이 `-`** 가 되어, 토글이 켜져 있는지 화면에서
+       * 판별할 방법이 사라진다(사용자 제보 — 계획서 §10 결함 ③).
+       *
+       * 세액은 바뀌지 않는다 — `calculatedTax`·`taxBase`·`determinedTax`는 전부 0 그대로이고
+       * 실어 보내는 것은 **표시 축뿐**이다(vitest 21,490건 회귀 0).
+       *
+       * ⚠️ **정상 경로(STEP 7)와 같은 입력을 쓴다** — `selfOwns === "land_only"`면 세율 판정
+       *   기산일이 토지 취득일이다(소령 §166⑥). 여기만 `effectiveInput`을 그대로 쓰면 같은
+       *   자산이 차익일 때와 차손일 때 다른 호를 표시한다.
+       *   (STEP 7의 나머지 두 특칙 `forceFlatRate20`·`suppressShortTermRate`는 **소득공제형
+       *    감면**이 전제라 양도소득금액이 0 이하인 이 경로에서는 성립하지 않는다.)
+       */
+      rateEcho: (() => {
+        const lossRateInput =
+          selfOwns === "land_only" && effectiveInput.landAcquisitionDate
+            ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
+            : effectiveInput;
+        const tr = calcTax(0, parsedRates, lossRateInput, multiHouseSurchargeResult);
+        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause };
+      })(),
     });
   }
 

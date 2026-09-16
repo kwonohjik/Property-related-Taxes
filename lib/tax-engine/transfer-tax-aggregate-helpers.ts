@@ -167,7 +167,16 @@ export interface AssetRecord {
   correctedSingleInput: TransferTaxInput;
   singleInput: TransferTaxInput;
   result: TransferTaxResult;
+  /**
+   * §104⑤2호 **비교과세 합산 단위** — 축은 「**호**」다(예규가 확정).
+   * ⛔ §102② 통산에 쓰지 말 것 — 그쪽 축은 「**세율**」이라 아래 `lossOffsetRateKey`가 담당한다.
+   */
   rateGroup: RateGroup;
+  /**
+   * 영 §167의2①1호 **「같은 세율을 적용받는 자산」** 판정 키 — `loss-offset-rate-key.ts`.
+   * `rateGroup`과 **직교**한다(그 파일 헤더에 조문·실측 근거).
+   */
+  lossOffsetRateKey: string;
   taxableGain: number;
   lthd: number;
   income: number;
@@ -189,9 +198,12 @@ export interface LossOffsetOutput {
  * (계획서 `stock-102-2-loss-offset-and-103-deduction-order.plan.md` §6.1 설계 A).
  *
  * 여기가 하는 일은 **도메인 ↔ 코어 번역** 둘뿐이다:
- *   - `rateKey` = **`RateGroup`** — 부동산의 「같은 세율을 적용받는 자산」 축.
- *     ⚠️ 이건 §104⑤ 버킷 판정과 결합된 load-bearing 분류다(`classifyRateGroup` 주석 참조).
- *        **주식은 축이 다르다**(적용 세율 값) — 그래서 축 결정을 코어가 아니라 호출자에 둔다.
+ *   - `rateKey` = **`lossOffsetRateKey`** — 부동산의 「같은 세율을 적용받는 자산」 축
+ *     (`loss-offset-rate-key.ts`). **주식과 같은 성질**(적용 세율 값)이라 코어가 아니라 호출자가 정한다.
+ *     ⛔ **`rateGroup`을 쓰면 안 된다** — 그건 §104⑤2호(비교과세)의 「**호**」 축이라 §102②의
+ *        「**세율**」 축과 직교한다. 종전에는 그걸 그대로 써서 70%(미등기)와 70%(주택 1년미만)를
+ *        갈라놓고(1호 → 2호), 40·50·60·70%를 한 그룹에 몰아넣었다(2호 → 1호).
+ *        실측 세액 영향 각 **5,197,222원**(계획서 `loss-offset-same-rate-axis.plan.md` §5).
  *   - 코어가 돌려주는 **인덱스** 기반 `rows`를 `propertyId` 기반 `LossOffsetRow`로 환원.
  *
  * 거동 고정: `__tests__/tax-engine/transfer-tax-loss-offset-characterization.test.ts` (41건).
@@ -201,7 +213,7 @@ export function offsetLosses(records: AssetRecord[]): LossOffsetOutput {
   const core = offsetLossesCore(
     records.map((r) => ({
       income: r.income,
-      rateKey: r.rateGroup,
+      rateKey: r.lossOffsetRateKey,
       exempt: r.result.isExempt,
     })),
   );

@@ -19,9 +19,15 @@
  */
 
 import {
+  calcTax,
   calculateTransferTax,
+  parseRatesFromMap,
   type TransferTaxInput,
 } from "./transfer-tax";
+import { lossOffsetRateKey } from "./loss-offset-rate-key";
+import type { RateClause } from "./transfer-tax-rate-clause";
+import type { ParsedRates } from "./transfer-tax-helpers";
+import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import {
 } from "./transfer-tax-penalty";
 import {
@@ -54,6 +60,39 @@ import type {
   TransferTaxItemInput,
   AggregateTransferInput,
 } from "./types/transfer-aggregate.types";
+
+/**
+ * §102② 통산 키의 재료(적용 호 · 적용 세율) — **차손 자산만 재계산한다**.
+ *
+ * 🔴 **차손 자산은 세율 정보를 갖지 않는다.** 양도차익이 0 이하면 `calculateTransferTax`가
+ *   `buildLossTransferTaxResult`로 조기반환하는데, 그 결과는 `appliedRate: 0`을 싣고
+ *   `rateClause`를 **아예 넣지 않는다**(세율 단계에 도달하지 않는다). 그래서 결과값을 그대로
+ *   키로 쓰면 **모든 차손이 «자기만의 키»에 갇혀 §167의2①1호가 영구 공전한다** — 통산이
+ *   전부 2호 안분으로 떨어지고, 그것이 곧 제보된 결함이다.
+ *
+ * ⇒ 차손 자산에 한해 **같은 `calcTax`를 과세표준 0으로 한 번 더 태워** 적용 호·세율만 얻는다.
+ *   세액을 만들지 않으므로 결과에 영향이 없고, 「같은 판정을 손으로 다시 적는」 dual truth도
+ *   생기지 않는다(memory `feedback_ui_engine_dual_truth_avoidance`).
+ *
+ * ⚠️ **차익 자산은 결과값을 그대로 쓴다** — 재계산하면 안 된다. 조특법 특칙(§98①1호 20% 등)은
+ *   엔진 **내부 플래그**(`forceFlatRate20`)로 주입돼 밖에서 `calcTax`를 불러도 재현되지 않는다.
+ *   그런 자산의 `rateClause`는 애초에 undefined이고, 그때는 `solo:` 키로 묶지 않는 것이 안전측이다.
+ *
+ * ⚠️ 과세표준 0에서는 §104① 후단(「둘 이상의 호에 해당하면 **큰** 산출세액」) 비교가 전부 동률이라
+ *   **특례 호가 그대로 남는다**(`compareWithClause1`은 「큰 것」이라 동률에서 바뀌지 않는다).
+ *   차손 자산에는 산출세액이 없어 「어느 호가 이겼는가」라는 물음 자체가 성립하지 않으므로,
+ *   자산의 성격이 지목하는 호를 쓰는 것이 자연스럽다.
+ */
+function resolveRateFacts(
+  pa: { correctedSingleInput: TransferTaxInput; result: { transferGain: number; rateClause?: RateClause; appliedRate: number; multiHouseSurchargeEvaluation?: MultiHouseSurchargeResult } },
+  parsedRates: ParsedRates,
+): { rateClause: RateClause | undefined; appliedRate: number } {
+  if (pa.result.transferGain > 0) {
+    return { rateClause: pa.result.rateClause, appliedRate: pa.result.appliedRate };
+  }
+  const tr = calcTax(0, parsedRates, pa.correctedSingleInput, pa.result.multiHouseSurchargeEvaluation);
+  return { rateClause: tr.rateClause, appliedRate: tr.appliedRate };
+}
 
 export function buildAssetRecords(
   input: AggregateTransferInput,
@@ -177,9 +216,19 @@ export function buildAssetRecords(
   });
 
   // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)
+  //
+  // ⚠️ `rateGroup`은 **§104⑤2호(비교과세) 합산 단위**다 — 그 축은 예규가 확정한 「**호**」다.
+  //    §102② 차손 통산의 축은 영 §167의2①1호가 정한 「**세율**」이라 **다른 키**를 함께 만든다
+  //    (`loss-offset-rate-key.ts` — 두 축이 직교한다는 실측·조문 근거가 그 파일 헤더에 있다).
+  const parsedRatesForKey = parseRatesFromMap(rates);
   const classified = perAsset.map((pa) => ({
     ...pa,
     rateGroup: classifyRateGroup(pa.correctedItem, pa.result),
+    lossOffsetRateKey: lossOffsetRateKey({
+      ...resolveRateFacts(pa, parsedRatesForKey),
+      propertyType: pa.correctedItem.propertyType,
+      propertyId: pa.item.propertyId,
+    }),
   }));
 
   // 자산별 원시 income 및 세율군 정리
