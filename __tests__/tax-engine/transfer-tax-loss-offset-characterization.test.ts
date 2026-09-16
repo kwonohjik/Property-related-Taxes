@@ -18,8 +18,15 @@
  * ## 대상 함수가 실제로 읽는 것
  *
  * `offsetLosses`는 `AssetRecord`에서 **4개만** 읽는다 —
- * `result.isExempt` · `rateGroup` · `income` · `item.propertyId`.
+ * `result.isExempt` · **`lossOffsetRateKey`** · `income` · `item.propertyId`.
  * 그래서 엔진을 돌리지 않고 최소 레코드로 순수 검증할 수 있다(그게 이 파일이 빠른 이유다).
+ *
+ * ⚠️ **2026-09-16 — 축이 `rateGroup` → `lossOffsetRateKey`로 바뀌었다**(영 §167의2①1호의 「같은
+ *   **세율**」 vs §104⑤2호의 「**호**」 — 계획서 `loss-offset-same-rate-axis.plan.md`).
+ *   이 파일이 고정하는 것은 **코어의 배분 알고리즘**이지 축의 «도출»이 아니므로, 픽스처는
+ *   키를 `rateGroup`과 **같은 값**으로 채워 분할 구조를 그대로 유지한다 — 41건의 배분액이
+ *   한 원도 바뀌지 않는 것이 「코어 무변경」의 증명이다. 축 도출은 anchor
+ *   `transfer-tax/loss-offset-same-rate-axis.predo.anchor.test.ts`가 담당한다.
  *
  * ## 알고리즘 요약 (영 §167의2①)
  *
@@ -43,6 +50,8 @@ function rec(propertyId: string, rateGroup: RateGroup, income: number, isExempt 
     item: { propertyId },
     result: { isExempt },
     rateGroup,
+    // 축 이름만 바뀌었을 뿐 **분할은 동일**하다(위 ⚠️) — 41건의 기대값이 그대로 유효한 이유다.
+    lossOffsetRateKey: rateGroup,
     income,
   } as unknown as AssetRecord;
 }
