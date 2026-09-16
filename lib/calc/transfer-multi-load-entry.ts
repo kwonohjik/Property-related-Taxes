@@ -5,6 +5,7 @@ import { generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
+import { extractTaxYear } from "./cross-104-5-history";
 
 /**
  * 다건 양도세 "이력 불러오기" 진입 헬퍼 (Phase 2).
@@ -51,6 +52,15 @@ export function buildPropertyFromSingleRecord(record: CalculationRecord, label: 
     form,
     completionPercent: calcPropertyCompletion(form),
     sourceCalculationId: record.id,
+    /**
+     * 🔑 **원본 변경 감지의 기준선** — `record.inputHash`를 **그대로** 싣는다.
+     *
+     * ⚠️ `?? await computeInputHash(record.inputData)` 폴백을 넣지 말 것. 이 함수가 async가
+     *   되면 `enterMultiAggregate`(`transfer-aggregate-entry.ts:107`)가 **동기 함수**라
+     *   그 호출 사슬 전체가 async로 번진다. `inputHash`가 없는 구 record는 `undefined`로 두고
+     *   `detectStaleSources`가 「판정 불가」로 다룬다.
+     */
+    sourceInputHash: record.inputHash,
     priorPaidNational: pp.national,
     priorPaidLocal: pp.local,
   };
@@ -92,4 +102,134 @@ export async function backfillPriorPaid(properties: PropertyItem[]): Promise<Pro
       }
     }),
   );
+}
+
+// ============================================================
+// 원본 record 변경 감지 (계획서 `multi-aggregate-stale-source-snapshot.plan.md`)
+// ============================================================
+
+/**
+ * 판정 불가 사유 구분.
+ *   · `source_changed` — 원본 record가 편입 이후 **바뀌었다**(확정)
+ *   · `unknown`        — 기준선이나 현재 해시가 없어 **알 수 없다**(레거시 세션·구 record)
+ */
+export type StaleSourceReason = "source_changed" | "unknown";
+
+export interface StaleSourceInfo {
+  propertyId: string;
+  propertyLabel: string;
+  reason: StaleSourceReason;
+  /**
+   * 재편입하면 합산 과세기간을 벗어나는 경우의 **원본 양도연도**.
+   *
+   * 엔진 `validateInput`이 「양도일 연도(…)가 과세기간(…)과 다릅니다」로 **예외를 던지므로**
+   * (`transfer-tax-aggregate-helpers.ts:47~51`) 버튼을 눌러선 안 된다. UI가 사유를 표시하고 막는다.
+   */
+  blockedByTaxYear?: number;
+}
+
+/**
+ * 합산에 편입된 자산 중 **원본 record가 바뀐 것**을 찾는다.
+ *
+ * 🔑 **비교 축은 하나뿐이다** — `record.inputHash` ↔ `property.sourceInputHash`.
+ *   둘 다 저장소가 **같은 대상(`record.inputData`)에 대해 계산한 값**이라 잡음이 없다.
+ *
+ * ⛔ **`computeInputHash(property.form)`과 비교하지 말 것.** 두 실측 사실이 그 축을 죽인다:
+ *   · 저장 시 `inputData`에 키가 덧붙는다 — `use-auto-save-calculation.ts:103`
+ *     (`{ ...inputData, buildingStdSnapshots }`) ⇒ `record.inputData ≠ formData`
+ *   · 편집 왕복이 **기본값 키를 덧붙인다** — `syncToWizardStore`가 `resetWizard()` 후
+ *     `updateFormData`를 부르고 그 구현이 `{ ...state.formData, ...data }`
+ *     (`calc-wizard-store.ts:280`) ⇒ **사용자가 아무것도 안 고쳐도 해시가 바뀐다**
+ *   ⇒ 「로컬 편집함」과 「폼이 정규화됨」을 구분할 수 없어 정상 편집마다 오탐이 난다.
+ *
+ * 규약은 `backfillPriorPaid`와 같다 — `sourceCalculationId`가 없으면 건너뛰고,
+ * record 조회 실패·삭제·단건 아님도 **조용히 통과**한다(throw 금지).
+ *
+ * ⚠️ 결과는 **파생값이라 store에 넣지 않는다.** `MultiTransferFormData`에 넣으면
+ *   `partialize`가 sessionStorage에 persist하고 다건 자동저장 `inputData`를 타고
+ *   **이력 record에까지 저장**된다(`multi-transfer-tax-store.ts`의 `setAutoBackupPropertyId`
+ *   주석이 경고하는 함정). 호출부의 지역 state로 둘 것.
+ */
+export async function detectStaleSources(
+  properties: PropertyItem[],
+  taxYear: number,
+): Promise<StaleSourceInfo[]> {
+  const found = await Promise.all(
+    properties.map(async (p): Promise<StaleSourceInfo | null> => {
+      if (!p.sourceCalculationId) return null; // 수동 추가 자산 — 원본이 없다
+      let rec;
+      try {
+        rec = await calculationRepository.get(p.sourceCalculationId);
+      } catch {
+        return null;
+      }
+      if (!rec || classifyLoadableTransfer(rec) !== "single") return null;
+
+      const reason: StaleSourceReason | null =
+        !p.sourceInputHash || !rec.inputHash
+          ? "unknown"
+          : rec.inputHash !== p.sourceInputHash
+            ? "source_changed"
+            : null;
+      if (reason === null) return null;
+
+      const srcYear = extractTaxYear(rec);
+      return {
+        propertyId: p.propertyId,
+        propertyLabel: p.propertyLabel,
+        reason,
+        ...(srcYear !== null && srcYear !== taxYear ? { blockedByTaxYear: srcYear } : {}),
+      };
+    }),
+  );
+  return found.filter((x): x is StaleSourceInfo => x !== null);
+}
+
+/** 원본 record를 되살린다 — 없거나 단건이 아니면 `null`(호출부가 무변경을 택한다). */
+async function loadSourceRecord(property: PropertyItem): Promise<CalculationRecord | null> {
+  if (!property.sourceCalculationId) return null;
+  try {
+    const rec = await calculationRepository.get(property.sourceCalculationId);
+    return rec && classifyLoadableTransfer(rec) === "single" ? rec : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * **다시 불러오기** — 원본 record의 현재 입력으로 자산을 갱신한다.
+ *
+ * 🔒 `propertyId`·`propertyLabel`·`sourceCalculationId`는 **보존**한다 — 합산 화면의 순번과
+ *   provenance가 바뀌면 사용자가 어느 자산인지 잃는다.
+ * 🔒 `priorPaidNational/Local`은 **덮지 않는다** — 사용자가 수동 확정했을 수 있다
+ *   (`backfillPriorPaid`와 같은 「값이 있으면 그대로」 규약).
+ * ⚠️ 이 함수는 **로컬 편집을 덮는다.** 호출부가 그 사실을 먼저 알려야 한다
+ *   (「합산 화면에서 고친 내용이 있으면 사라집니다」).
+ */
+export async function reloadPropertyFromSource(property: PropertyItem): Promise<PropertyItem> {
+  const rec = await loadSourceRecord(property);
+  if (!rec) return property;
+  const form = rec.inputData as unknown as TransferFormData;
+  const pp = extractLoadPriorPaid(rec, "single");
+  return {
+    ...property,
+    form,
+    completionPercent: calcPropertyCompletion(form),
+    sourceInputHash: rec.inputHash,
+    priorPaidNational: property.priorPaidNational ?? pp.national,
+    priorPaidLocal: property.priorPaidLocal ?? pp.local,
+  };
+}
+
+/**
+ * **그대로 두기** — 폼은 건드리지 않고 기준선만 현재 원본에 맞춘다.
+ *
+ * 「판정 불가(레거시)」 배너를 닫는 수단이다. 별도 dismiss 플래그가 필요 없는 이유 —
+ * 이 함수와 `reloadPropertyFromSource`가 **둘 다 `sourceInputHash`를 확정**하므로
+ * 어느 쪽을 골라도 배너가 다시 뜨지 않는다.
+ */
+export async function adoptSourceBaseline(property: PropertyItem): Promise<PropertyItem> {
+  const rec = await loadSourceRecord(property);
+  if (!rec?.inputHash) return property;
+  return { ...property, sourceInputHash: rec.inputHash };
 }

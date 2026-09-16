@@ -23,12 +23,34 @@
  *   호출부도 단순해진다.
  */
 import type { Page } from "@playwright/test";
+import { computeInputHash } from "../../lib/storage/content-hash";
 
 /**
  * Dexie `calculations` 스토어에 이력 record 1건을 넣는다.
  * 스토어가 아직 없으면 준비될 때까지 재시도한다 — 호출 전 별도 대기가 필요 없다.
  */
 export async function putCalculationRecord(page: Page, record: unknown): Promise<void> {
+  /**
+   * 🔑 **`inputHash`를 실제 저장 경로와 똑같이 붙인다.**
+   *
+   * `calculationRepository`의 저장 경로는 **항상** `computeInputHash(inputData)`를 부여한다
+   * (`calculation-repository.ts` — create·update 양쪽). 시드에만 없으면 그 필드를 읽는 기능이
+   * **테스트에서만 다르게 동작**한다 — 실제로 다건 합산의 「원본 변경 감지」가 모든 시드 자산을
+   * 「판정 불가」로 보고 배너를 띄워, 그 배너 DOM이 기존 spec의 `getByText("양도 1번")`을
+   * **strict mode 위반**으로 만들었다(2026-09-16 실측 2건).
+   *
+   * 값을 손으로 적지 않고 **같은 leaf**를 쓴다(dual truth 방지). 이미 들고 있으면 존중한다 —
+   * 레거시(해시 없는 구 record) 경로를 일부러 태우는 spec이 있을 수 있다.
+   */
+  const withHash =
+    record && typeof record === "object" && "inputData" in record && !("inputHash" in record)
+      ? {
+          ...(record as Record<string, unknown>),
+          inputHash: await computeInputHash(
+            (record as { inputData: Record<string, unknown> }).inputData ?? {},
+          ),
+        }
+      : record;
   await page.evaluate(async (rec) => {
     const DB_NAME = "KoreanTaxCalcLocal";
     const STORE = "calculations";
@@ -86,5 +108,5 @@ export async function putCalculationRecord(page: Page, record: unknown): Promise
       }
       await new Promise((r) => setTimeout(r, 100));
     }
-  }, record);
+  }, withHash);
 }
