@@ -18,6 +18,8 @@ import { calculateStockTransferTaxInternal } from "./stock-transfer-tax";
 import { floorTen } from "./stock-transfer-helpers";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
+// §111③ 정산은 **세목 중립 leaf**다 — 부동산 다건과 같은 산식을 쓴다(dual truth 방지).
+import { computeSettlement } from "@/lib/tax-engine/transfer-tax-settlement";
 import {
   pickFilingAxisInput,
   stripItemPenalties,
@@ -158,6 +160,33 @@ export interface StockTransferAggregateResult {
    * ⚠️ 현재 aggregate UI 소비자 없음(다자산 UI 미연결) — 향후 연결 시 14지점 재점검 대상.
    */
   totalSecuritiesTransactionTax: SecuritiesTransactionTaxTotal;
+  /**
+   * §111③ 확정신고 기납부세액 정산 — **차감이 있을 때만** 실린다.
+   *
+   * 결정세액(`totalFinalTax`)은 바뀌지 않는다. 이 축은 「이번에 얼마를 더 내는가/돌려받는가」다.
+   * 필드를 조건부로 싣는 것은 결과 카드가 **빈 정산 행을 그리지 않게** 하기 위함이다
+   * (`lossOffset`·`otherAssetComparativeTax`와 같은 규약).
+   */
+  settlement?: StockAggregateSettlement;
+}
+
+/** §111③ 정산 echo — 국세·지방 모두 납부/환급 양방향을 싣는다. */
+export interface StockAggregateSettlement {
+  preliminaryPaidTax: number;
+  preliminaryPaidLocalTax: number;
+  settlementAdditionalPayable: number;
+  settlementRefund: number;
+  settlementLocalPayable: number;
+  settlementLocalRefund: number;
+  settlementTotalDue: number;
+}
+
+/** 신고 단위 옵션 — 종목 배열에 실을 수 없는 「그 신고」의 속성. */
+export interface StockAggregateFilingOptions {
+  /** §107 예정신고 산출세액(국세). 확정신고에서만 호출부가 싣는다 */
+  preliminaryPaidTax?: number;
+  /** 예정신고분 지방소득세 */
+  preliminaryPaidLocalTax?: number;
 }
 
 /**
@@ -174,6 +203,7 @@ export interface StockTransferAggregateResult {
 export function calculateStockTransferTaxAggregate(
   inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate" = "aggregate",
+  filing: StockAggregateFilingOptions = {},
 ): StockTransferAggregateResult {
   /**
    * §97의2① 이월과세 — **여기가 ②3호 비교의 기준점**이다.
@@ -207,17 +237,20 @@ export function calculateStockTransferTaxAggregate(
 
   const resolvedDomestic = resolveStockCarryover(
     domesticIdx.map((i) => inputs[i] as StockTransferInput),
+    // ⚠️ 이월과세 ②3호 비교용 재계산에는 정산을 넣지 않는다 — 비교 대상은 「결정세액」이고
+    //    §111③ 정산은 그 뒤 「납부할 세액」 축이다. 넣으면 비교 기준이 기납부액에 흔들린다.
     (list) => aggregateCore(mergeDomestic(list), deductionMode).totalFinalTax,
     (i) => calculateStockTransferTaxInternal(i).transferIncome,
   );
 
-  return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode);
+  return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode, filing);
 }
 
 /** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
 function aggregateCore(
   inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate",
+  filing: StockAggregateFilingOptions = {},
 ): StockTransferAggregateResult {
   /** §103①1호 기소진액 — 신고 단위 선언값(leaf 주석 참조, 리뷰 #16). */
   const realEstateGroupUsedSeed = resolveRealEstateGroupUsedSeed(inputs);
@@ -557,6 +590,38 @@ function aggregateCore(
   const totalLocalIncomeTax =
     Math.floor(((totalCalculatedTax - totalForeignTaxCredit) * 0.10) / 10) * 10;
 
+  /**
+   * §111③ 확정신고 기납부세액 정산 — 세목 중립 leaf(`computeSettlement`)를 그대로 쓴다.
+   *
+   * 🔑 국세 base 에 **`totalFinalTax`(가산세 포함·10원 절사 완료)** 를 통째로 넘기고
+   *    `penaltyTax: 0`을 준다. 화면·신고서가 그 값을 「납부할 세액」으로 보여 주므로 정산도
+   *    **같은 수에서** 빼야 자기일관이다.
+   *
+   * ⚠️ **실측 정정(2026-09-16)** — 처음에는 「절사 전 값을 쓰면 최대 9원 어긋난다」고 적었다.
+   *    **추정이었고 반증됐다.** 뮤테이션(base 를 `determinedTotal + 가산세`로 교체)에서
+   *    anchor 6건이 전부 통과했고, 조합 4종(기본·가산세 동반·홀수 단가·전자신고)을 재 보니
+   *    `floorTen` 차이가 **전부 0**이었다 — 상류(`applyStockTaxRate`·`finalizeStockTax`·
+   *    가산세)가 이미 10원 단위로 내려놓아 이 절사가 현재는 no-op 이다.
+   *    ⇒ 두 형식은 지금 **같은 값**이다. `totalFinalTax` 를 쓰는 이유는 「어긋나기 때문」이
+   *    아니라 **화면과 같은 축을 단일 소스로 두기 위함**이다. 상류가 바뀌어 절사가 물기
+   *    시작하면 그때 차이가 생긴다.
+   *
+   * 부동산 정본과 같이 **엔진은 방어적으로 항상 처리**한다 — 확정신고 여부 게이트는
+   * ④ 전송 판정(`buildStockAggregateFilingPayload`)과 ⑧ validate 가 든다.
+   */
+  const preliminaryPaidTax = filing.preliminaryPaidTax ?? 0;
+  const preliminaryPaidLocalTax = filing.preliminaryPaidLocalTax ?? 0;
+  const settlementRaw =
+    preliminaryPaidTax > 0 || preliminaryPaidLocalTax > 0
+      ? computeSettlement({
+          determinedTax: totalFinalTax,
+          penaltyTax: 0,
+          localIncomeTax: totalLocalIncomeTax,
+          priorPaidTax: preliminaryPaidTax,
+          priorPaidLocalTax: preliminaryPaidLocalTax,
+        })
+      : null;
+
   return {
     items: stripItemPenalties(processedItems),
     totalTransferIncome,
@@ -595,5 +660,18 @@ function aggregateCore(
     totalFinalTax,
     totalLocalIncomeTax,
     totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(processedItems),
+    ...(settlementRaw
+      ? {
+          settlement: {
+            preliminaryPaidTax,
+            preliminaryPaidLocalTax,
+            settlementAdditionalPayable: settlementRaw.settlementAdditionalPayable,
+            settlementRefund: settlementRaw.settlementRefund,
+            settlementLocalPayable: settlementRaw.settlementLocalPayable,
+            settlementLocalRefund: settlementRaw.settlementLocalRefund,
+            settlementTotalDue: settlementRaw.settlementTotalDue,
+          },
+        }
+      : {}),
   };
 }

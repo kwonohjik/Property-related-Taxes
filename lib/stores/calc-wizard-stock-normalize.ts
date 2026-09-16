@@ -264,6 +264,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     filingViolation: enumField("filingViolation", ["none", "under_report", "non_report"], defaults.filingViolation),
     isFraudulent: boolField("isFraudulent", defaults.isFraudulent),
     isInternationalTransaction: boolField("isInternationalTransaction", defaults.isInternationalTransaction),
+    // §111③ 확정신고 기납부세액 — 구 세션에는 없던 필드라 default 로 채운다
+    preliminaryPaidTax: strField("preliminaryPaidTax") || defaults.preliminaryPaidTax,
+    preliminaryPaidLocalTax:
+      strField("preliminaryPaidLocalTax") || defaults.preliminaryPaidLocalTax,
     // 가산세 상세 — 구 세션에는 없던 필드라 default 로 채운다(신규 필드 stale sessionStorage 가드)
     originalFiledTax: strField("originalFiledTax") || defaults.originalFiledTax,
     priorPaidTax: strField("priorPaidTax") || defaults.priorPaidTax,

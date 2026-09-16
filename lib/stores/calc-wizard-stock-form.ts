@@ -166,6 +166,8 @@ export function createInitialStockFormData(): StockTransferFormData {
     filingViolation: "none",             // 3중 패턴 default — 가산세 게이트 OFF
     isFraudulent: false,                 // 3중 패턴 default
     isInternationalTransaction: false,   // 3중 패턴 default
+    preliminaryPaidTax: "0",             // 3중 패턴 default — §111③ 신고 단위
+    preliminaryPaidLocalTax: "0",        // 3중 패턴 default — §111③ 신고 단위
     originalFiledTax: "0",               // 3중 패턴 default
     priorPaidTax: "0",                   // 3중 패턴 default
     interestSurcharge: "0",              // 3중 패턴 default

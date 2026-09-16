@@ -501,6 +501,36 @@ export function buildRows(
     separatorAfter: true,
   });
 
+  // 31-1~31-3. §111③ 확정신고 기납부세액 정산 — **합산신고 확정신고**에서만 실린다.
+  //
+  // 🔑 이 세 행은 31행 «뒤»다 — §111③은 「확정신고납부를 **하는 경우** … 공제하여 납부한다」라
+  //    결정세액(29)·총 납부세액(31)을 바꾸지 않고 그 뒤의 **납부 단계**에서 작동한다.
+  //    앞에 놓으면 결정세액이 기납부액만큼 줄어든 것처럼 읽힌다.
+  //
+  // ⚠️ 단건 열은 값이 없다 — 정산은 **신고 단위**라 종목에 귀속되지 않는다(가산세와 같은 축).
+  const settlement = aggregate?.aggregated.settlement;
+  if (settlement) {
+    rows.push({
+      label: "31-1. △ 예정신고 기납부세액 (소득세법 §111③)",
+      values: val(null, () => -settlement.preliminaryPaidTax, () => null),
+    });
+    rows.push({
+      label: "31-2. △ 예정신고 기납부 지방소득세",
+      values: val(null, () => -settlement.preliminaryPaidLocalTax || null, () => null),
+    });
+    rows.push({
+      label:
+        settlement.settlementRefund > 0 || settlement.settlementLocalRefund > 0
+          ? `31-3. 이번에 납부할 세액 (환급 ${(
+              settlement.settlementRefund + settlement.settlementLocalRefund
+            ).toLocaleString()})`
+          : "31-3. 이번에 납부할 세액",
+      values: val(null, () => settlement.settlementTotalDue, () => null),
+      highlight: true,
+      separatorAfter: true,
+    });
+  }
+
   // ── [J] 신고 (32) ─────────────────────────────────────────────
 
   // 32. 신고기한 §105①2호 (양도일 속한 반기 말일 + 2개월)
@@ -534,6 +564,9 @@ export function buildRows(
     (isMulti ? 1 : 0) +
     (hasForeignCredit ? 1 : 0) +
     (result.clause168_2Credit ? 2 : 0) +
+    // §111③ 정산 3행 — 조건부 행을 추가할 때 여기에 항을 더하지 않으면 경고가 상시 발화해
+    // 「진짜 행 누락」 신호가 죽는다(위 정정 2건이 그 실례다).
+    (settlement ? 3 : 0) +
     (hasPriorAggregation ? 6 : 0);
   if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과

@@ -297,6 +297,16 @@ export interface StockTransferFormData {
   isFraudulent: boolean;                 // 3중 패턴 default: false
   isInternationalTransaction: boolean;   // 3중 패턴 default: false
 
+  // ── 확정신고 기납부세액 정산 (소득세법 §111③) — **신고 단위** ──
+  //
+  // 🔴 아래 가산세 상세의 `priorPaidTax`와 **다른 축**이다. 그쪽은 국세기본법 §47조의3①
+  //    「과소신고납부세액등」 base 에서 빼는 값이라 **납부할 세액을 1원도 줄이지 않는다**.
+  //    이 둘은 `preliminary*` / `prior*` 접두로 가른다([[feedback_rename_same_name_two_axes]]).
+  /** §107 예정신고 산출세액(국세) — 확정신고 시 결정세액에서 공제. 3중 패턴 default: "0" */
+  preliminaryPaidTax: string;
+  /** 예정신고분 지방소득세 — 지방 결정세액에서 공제. 3중 패턴 default: "0" */
+  preliminaryPaidLocalTax: string;
+
   // ── 가산세 상세 (선택) — 국세기본법 §47조의3①「과소신고납부세액등」·§47조의4 ──
   /** 당초 신고한 납부세액 — 과소신고 가산세 base 에서 차감. 3중 패턴 default: "0" */
   originalFiledTax: string;

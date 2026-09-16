@@ -308,7 +308,68 @@ export function StockAggregateSummaryCard({
               {won(aggregate.totalFinalTax + aggregate.totalLocalIncomeTax)}
             </dd>
           </div>
+
+          {/**
+            * §111③ 확정신고 기납부세액 정산.
+            *
+            * 결정세액은 바뀌지 않는다 — 이 블록이 답하는 것은 「**이번에** 얼마를 내는가」다.
+            * 국세·지방을 각각 보이고 환급이면 환급으로 적는다(한쪽만 보이면 지방 환급액이
+            * 화면에서 사라진다 — 부동산 정본이 같은 이유로 `settlementLocalRefund`를 싣는다).
+            */}
+          {aggregate.settlement && (
+            <div
+              data-testid="stock-aggregate-settlement"
+              className="mt-2 space-y-1 border-t pt-2"
+            >
+              <div className="flex justify-between">
+                <dt>예정신고 기납부세액 (국세)</dt>
+                <dd className="font-mono tabular-nums">
+                  −{won(aggregate.settlement.preliminaryPaidTax)}
+                </dd>
+              </div>
+              {aggregate.settlement.preliminaryPaidLocalTax > 0 && (
+                <div className="flex justify-between">
+                  <dt>예정신고 기납부 지방소득세</dt>
+                  <dd className="font-mono tabular-nums">
+                    −{won(aggregate.settlement.preliminaryPaidLocalTax)}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-semibold">
+                <dt>
+                  {aggregate.settlement.settlementRefund > 0 ||
+                  aggregate.settlement.settlementLocalRefund > 0
+                    ? "이번에 납부할 세액 / 환급"
+                    : "이번에 납부할 세액"}
+                </dt>
+                <dd
+                  data-testid="stock-aggregate-settlement-due"
+                  className="font-mono tabular-nums"
+                >
+                  {won(aggregate.settlement.settlementTotalDue)}
+                </dd>
+              </div>
+              {(aggregate.settlement.settlementRefund > 0 ||
+                aggregate.settlement.settlementLocalRefund > 0) && (
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                  <dt>환급 예상액</dt>
+                  <dd className="font-mono tabular-nums">
+                    {won(
+                      aggregate.settlement.settlementRefund +
+                        aggregate.settlement.settlementLocalRefund,
+                    )}
+                  </dd>
+                </div>
+              )}
+            </div>
+          )}
         </dl>
+        {aggregate.settlement && (
+          <p className="text-caption text-muted-foreground">
+            확정신고납부 시 예정신고 산출세액을 <strong>공제하여 납부</strong>합니다
+            (소득세법 §111③). 결정세액 자체는 달라지지 않습니다.
+          </p>
+        )}
         {(aggregate.totalUnderReportPenalty > 0 || aggregate.totalLatePaymentPenalty > 0) && (
           <p className="text-caption text-muted-foreground">
             가산세는 종목마다 매기지 않고 <strong>신고 1건 단위</strong>로 한 번 산정합니다
