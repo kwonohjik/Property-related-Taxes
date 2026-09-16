@@ -43,7 +43,7 @@ function seedForm(overrides: Record<string, unknown> = {}) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "land",
             landNature: "standalone",
             assetLabel: "증여 토지",

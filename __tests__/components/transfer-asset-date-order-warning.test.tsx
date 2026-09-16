@@ -26,12 +26,14 @@ import {
 } from "@/lib/calc/transfer-tax-validate-asset";
 import { CompanionAssetCard } from "@/components/calc/transfer/CompanionAssetCard";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress, TEST_JIBUN } from "@/__tests__/fixtures/transfer-test-address";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
 function housingAsset(overrides: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
   const a = makeDefaultAsset(1);
+  a.addressJibun = TEST_JIBUN; // ⑧ 소재지 필수 — 픽스처를 실제 입력과 맞춘다
   a.assetKind = "housing";
   a.acquisitionDate = "2020-01-01";
   a.fixedAcquisitionPrice = "50000000";
@@ -83,7 +85,7 @@ describe("getAssetDateOrderError — 순수 규칙", () => {
   });
 
   it("T-09: validateAssetEntry 차단 메시지 = `자산: ` + 실시간 경고 (단일 진실)", () => {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.transferDate = "2024-06-01";
     form.contractTotalPrice = "100000000";
     form.assets[0] = housingAsset({ acquisitionDate: "2024-06-01" });

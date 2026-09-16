@@ -9,9 +9,10 @@
 import { describe, it, expect } from "vitest";
 import { collectStepIssues, collectStepWarnings } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 
 function baseForm() {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-06-01";
   form.contractTotalPrice = "100000000";
   form.assets[0].assetKind = "housing";

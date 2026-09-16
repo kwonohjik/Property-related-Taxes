@@ -37,6 +37,7 @@ interface StepListProps {
 }
 
 export function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onReset }: StepListProps) {
+  const allReady = areAllPropertiesReady(properties);
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -134,10 +135,17 @@ export function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, 
         </div>
       )}
 
-      {properties.length > 0 && !areAllPropertiesReady(properties) && (
+      {/**
+        * 🔴 **경고가 아니라 «차단»이다 (2026-09-16).** 종전에는 이 Alert만 띄우고 「공통 설정으로」를
+        *    그대로 열어 둬서, 필수 미입력 자산이 섞인 채로 합산이 계산됐다. 단건은 `handleSubmit`이
+        *    전 단계 `collectStepIssues`로 막는데 다건만 뚫려 있었다.
+        *    계획서 `business-key-property-identity.plan.md` §4-4 · Q-3 (가).
+        */}
+      {properties.length > 0 && !allReady && (
         <Alert>
           <AlertDescription className="text-sm">
-            일부 자산의 필수 정보가 입력되지 않았습니다. 모든 자산을 편집하여 필수 항목을 완성해 주세요.
+            일부 자산의 필수 정보가 입력되지 않았습니다. 모든 자산을 편집하여 필수 항목을 완성해야
+            다음 단계로 넘어갈 수 있습니다.
           </AlertDescription>
         </Alert>
       )}
@@ -149,7 +157,7 @@ export function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, 
         <NavButton
           direction="next"
           label="공통 설정으로"
-          disabled={properties.length === 0}
+          disabled={properties.length === 0 || !allReady}
           onClick={onNext}
         />
       </div>

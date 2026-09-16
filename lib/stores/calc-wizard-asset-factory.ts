@@ -132,6 +132,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     addressDetail: "",
     addressDong: "",
     addressHo: "",
+    hasAddressUnits: false,
     buildingName: "",
     longitude: "",
     latitude: "",

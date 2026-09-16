@@ -216,10 +216,13 @@ export function AssetSectionBasic({
         </>
       )}
 
-      {/* 소재지 검색 */}
+      {/* 소재지 검색 — 물건 식별자라 필수다(이력 dedup 키). 계획서 §4-1 */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium">소재지</label>
+        <label className="block text-sm font-medium">
+          소재지 <span className="text-destructive">*</span>
+        </label>
         <AddressSearch
+          onUnitsResolved={(hasUnits) => onChange({ hasAddressUnits: hasUnits })}
           value={
             {
               road: asset.addressRoad,

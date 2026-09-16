@@ -35,7 +35,7 @@ import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** 단건 부담부증여 — 엔진 anchor B3와 동일 수치(판별력). */
 const burdenedGift = {
-  ...makeDefaultAsset(1),
+  ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "housing",
   transferType: "burdened_gift",
   acquisitionDate: "2009-03-01",

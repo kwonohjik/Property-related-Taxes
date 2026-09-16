@@ -35,7 +35,7 @@ const GB = {
 /** primary 주택 + companion 일반건물. 양도시 기준시가를 같게 두어 안분이 50:50이 된다. */
 const ASSETS = [
   {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2015-03-01",
@@ -46,7 +46,7 @@ const ASSETS = [
     standardPriceAtAcq: "250000000",
   },
   {
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     ...GB,
     standardPriceAtTransfer: "500000000",
     actualSalePrice: "600000000",

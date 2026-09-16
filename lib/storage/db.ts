@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import type { UserProfile, CalculationRecord, Client } from "./types";
 import { migrateReductionReclassification } from "./migrations/reduction-reclassification";
 import { migrateNblSigunguCodeRecovery } from "./migrations/nbl-sigungu-code-recovery";
+import { migrateBusinessKeyRecompute } from "./migrations/business-key-recompute";
 import type { RtmsTradeRecord } from "@/lib/calc/rtms-similar-sales-filter";
 
 /**
@@ -168,6 +169,23 @@ class LocalTaxDB extends Dexie {
       })
       .upgrade(async (tx) => {
         await migrateNblSigunguCodeRecovery(tx);
+      });
+
+    // v8 — businessKey 재계산. 키 규칙이 둘 다 바뀌었다(동·호 포함 · 식별자 없으면 키 없음)
+    //   ⇒ 기존 record가 새 키에 매칭되지 않아 다음 저장 때 **이력 중복**이 생긴다.
+    //   기존 5 테이블 schema 변경 없음 — 데이터 정정만(v7과 같은 층위).
+    //   계획서: docs/00-pm/business-key-property-identity.plan.md §6
+    this.version(8)
+      .stores({
+        userProfile: "id, updatedAt",
+        calculations:
+          "id, userId, taxType, createdAt, [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]",
+        clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
+        reverseGeocodeCache: "id, expiresAt",
+        rtmsSalesCache: "id, expiresAt",
+      })
+      .upgrade(async (tx) => {
+        await migrateBusinessKeyRecompute(tx);
       });
   }
 }

@@ -69,9 +69,20 @@ interface AddressSearchProps {
    * 시·군·구·좌표만 필요한 용도(예: NBL 재촌 거주지)에서 불필요한 공시가격 API 호출을 막는다.
    */
   disableUnits?: boolean;
+  /**
+   * 세대 목록 조회가 끝나면 **세대가 있었는지**를 알린다 (조회 시작 시 `undefined`는 보내지 않는다).
+   *
+   * 집합건물을 가르는 축이 따로 없어서 필요하다 — `assetKind`의 `"housing"`은 아파트와
+   * 단독주택을 함께 담는다. 호출부가 이 값을 폼에 남겨야 ⑧이 「고를 수 있었는데 안 골랐는가」를
+   * 판정할 수 있다 (계획서 §4-2).
+   *
+   * ⚠️ **API 실패와 「세대 없음」은 구분되지 않는다**(`catch`가 빈 배열로 흡수) — 실패 시
+   *    `false`가 간다. 안전측(동·호 미요구)이며 그것이 확정된 한계다(계획서 §8-2).
+   */
+  onUnitsResolved?: (hasUnits: boolean) => void;
 }
 
-export function AddressSearch({ value, onChange, className, disabled, disableUnits }: AddressSearchProps) {
+export function AddressSearch({ value, onChange, className, disabled, disableUnits, onUnitsResolved }: AddressSearchProps) {
   const [query, setQuery] = useState(value.road || value.jibun || "");
   const [results, setResults] = useState<AddressResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -154,6 +165,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
   async function fetchUnits(pnu: string, jibun: string) {
     setUnitsLoading(true);
     setUnits([]);
+    let found = false;
     try {
       const base = new URLSearchParams({ propertyType: "housing" });
       // jibun 기반 PNU 구성이 Vworld 검색 item.id보다 정확
@@ -175,6 +187,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
         const data = await res.json();
         if ((data.units ?? []).length > 0) {
           setUnits(data.units);
+          found = true;
           return;
         }
       }
@@ -182,6 +195,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
       // API 실패 시 텍스트 input fallback (units 빈 배열 유지)
     } finally {
       setUnitsLoading(false);
+      onUnitsResolved?.(found);
     }
   }
 
@@ -191,6 +205,9 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
     setSelectedDong("");
     setSelectedHo("");
     setUnits([]);
+    // 새 주소를 고른 순간 직전 판정은 무효다. 조회 실패로 fetchUnits가 안 돌 수도 있으므로
+    // 여기서 먼저 false로 내리고, 세대를 찾으면 finally가 true로 덮는다.
+    onUnitsResolved?.(false);
     onChange({
       road: r.road,
       jibun: r.jibun,
@@ -201,6 +218,22 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
       pnu: r.pnu,
     });
     if (!disableUnits && (r.pnu || r.jibun)) void fetchUnits(r.pnu, r.jibun);
+  }
+
+  /**
+   * 🔑 **입력한 주소를 그대로 채택한다 — 검색이 유일한 입력 경로여서는 안 된다.**
+   *
+   * 소재지는 2026-09-16부터 ⑧ 필수다(물건 식별자 — 계산 이력 dedup 키). 그런데 폼에 값을
+   * 넣는 경로가 **검색 결과 선택뿐**이라, 검색이 안 되면(Vworld 장애 · 신규 분양 · 미등기 토지)
+   * **계산 자체가 막힌다.** 필수로 만든 이상 대체 경로를 함께 연다.
+   *
+   * ⚠️ pnu가 없으므로 `regionCode` 자동 파생(조정대상지역 정밀 판정)은 되지 않는다 —
+   *    호출부가 수동 선택으로 폴백한다(주소에 pnu가 없던 종전 경로와 동일).
+   */
+  function handleUseTypedAddress() {
+    const typed = query.trim();
+    if (!typed) return;
+    handleSelect({ pnu: "", title: typed, road: "", jibun: typed, building: "", zipcode: "", lng: "", lat: "" });
   }
 
   function handleDetailChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -259,7 +292,12 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
         </button>
       </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && (
+        <div className="space-y-1">
+          <p className="text-xs text-destructive">{error}</p>
+          {query.trim() && <UseTypedAddressButton onClick={handleUseTypedAddress} text={query.trim()} />}
+        </div>
+      )}
 
       {/* 검색 결과 드롭다운 */}
       {isOpen && (
@@ -293,8 +331,11 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
             ) : (
               searched &&
               !isLoading && (
-                <div className="px-3 py-3 text-sm text-muted-foreground">
-                  검색 결과가 없습니다. 도로명 또는 지번 주소를 정확히 입력해 주세요.
+                <div className="space-y-2 px-3 py-3">
+                  <p className="text-sm text-muted-foreground">
+                    검색 결과가 없습니다. 도로명 또는 지번 주소를 정확히 입력해 주세요.
+                  </p>
+                  {query.trim() && <UseTypedAddressButton onClick={handleUseTypedAddress} text={query.trim()} />}
                 </div>
               )
             )}
@@ -413,6 +454,22 @@ function sortNaturalKo(a: string, b: string): number {
 }
 
 // 호수에서 층 번호 추출 (1804→"18층", 305→"3층", 기타→"")
+/**
+ * 「입력한 주소 그대로 사용」 — 검색 실패·무결과 양쪽에서 같은 문구를 쓴다.
+ * 소재지가 ⑧ 필수가 된 뒤 **검색이 막히면 계산도 막히는** 것을 푸는 경로다.
+ */
+function UseTypedAddressButton({ onClick, text }: { onClick: () => void; text: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-md border border-dashed border-border px-3 py-2 text-left text-sm hover:bg-muted"
+    >
+      입력한 주소 <span className="font-medium">「{text}」</span>를 그대로 사용
+    </button>
+  );
+}
+
 function extractFloor(ho: string): string {
   const num = ho.replace(/[^0-9]/g, "");
   if (num.length >= 4) return `${parseInt(num.slice(0, num.length - 2), 10)}층`;

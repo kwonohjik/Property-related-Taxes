@@ -25,7 +25,7 @@ const SEED = {
     formData: {
       assets: [
         {
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
           acquisitionDate: "2019-09-10",

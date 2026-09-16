@@ -20,7 +20,7 @@ import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/ca
 
 const asset = (over: Record<string, unknown>) =>
   ({
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     transferType: "burdened_gift",
     bgValuationMode: "sangjeungbeop_market",
@@ -88,7 +88,7 @@ describe("⑧ 부담부증여 지분 — B/C 검사 스케일 정합", () => {
  */
 describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
   const bg = {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     transferType: "burdened_gift",
     acquisitionDate: "2009-03-01",
@@ -102,7 +102,7 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
     actualSalePrice: "500,000,000",
   };
   const other = {
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionDate: "2010-01-01",
     fixedAcquisitionPrice: "111,000,000",

@@ -27,6 +27,7 @@ import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-agg
 import { calcOneHouseProration } from "@/lib/tax-engine/transfer-tax-helpers";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData, computeTransferSummary } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { AggregateTransferInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -225,7 +226,7 @@ describe("사례 27 합산 anchor — actual 모드 (F6)", () => {
 
 describe("computeTransferSummary — 지분 모드 양도가액 합계 (S2)", () => {
   it("R-10 지분 모드 자산이 있으면 양도가액 합계는 contractTotalPrice 그대로 사용", () => {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.contractTotalPrice = "1700000000";
     form.assets[0].ownershipNumerator = "60";
     form.assets[0].ownershipDenominator = "100";
@@ -240,7 +241,7 @@ describe("computeTransferSummary — 지분 모드 양도가액 합계 (S2)", ()
   });
 
   it("R-10b 단독 소유(100/100)는 기존 동작 — actualSalePrice 합산", () => {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.contractTotalPrice = "500000000";
     form.assets[0].actualSalePrice = "500000000";
     form.assets[0].ownershipNumerator = "100";
@@ -259,7 +260,7 @@ describe("computeTransferSummary — 지분 모드 양도가액 합계 (S2)", ()
 
 describe("validateStep — 자산 1건 + 지분 모드 차단 (F4-1)", () => {
   function makeFormSingleAsset(numerator: string, denominator: string) {
-    const form = createDefaultTransferFormData();
+    const form = withTestAddress(createDefaultTransferFormData());
     form.transferDate = "2023-02-16";
     form.contractTotalPrice = "1700000000";
     form.assets[0].assetKind = "housing";

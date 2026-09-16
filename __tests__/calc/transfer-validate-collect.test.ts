@@ -9,10 +9,11 @@ import {
   validateStepDetailed,
 } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress, TEST_JIBUN } from "@/__tests__/fixtures/transfer-test-address";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
 
 function baseForm() {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-06-01";
   form.contractTotalPrice = "100000000";
   return form;
@@ -39,6 +40,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets[0].assetKind = "housing";
     form.assets[0].acquisitionDate = ""; // 자산 1: 취득일 누락
     const second = makeDefaultAsset(2);
+    second.addressJibun = TEST_JIBUN; // ⑧ 소재지 필수
     second.assetKind = "housing";
     second.acquisitionDate = "2020-01-01";
     second.fixedAcquisitionPrice = ""; // 자산 2: 취득가액 누락
@@ -136,6 +138,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets[0].fixedAcquisitionPrice = "30000000";
     form.assets[0].actualSalePrice = "60000000";
     const second = makeDefaultAsset(2);
+    second.addressJibun = TEST_JIBUN; // ⑧ 소재지 필수
     second.assetKind = "housing";
     second.acquisitionDate = "2020-01-01";
     second.fixedAcquisitionPrice = "20000000";
@@ -157,6 +160,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets[0].ownershipNumerator = "60";
     form.assets[0].ownershipDenominator = "100";
     const second = makeDefaultAsset(2);
+    second.addressJibun = TEST_JIBUN; // ⑧ 소재지 필수
     second.assetKind = "housing";
     second.acquisitionDate = "2021-01-01";
     second.fixedAcquisitionPrice = "300000000";
@@ -181,6 +185,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets[0].ownershipNumerator = ""; // 토글 B ON 직후 빈칸
     form.assets[0].ownershipDenominator = "";
     const second = makeDefaultAsset(2);
+    second.addressJibun = TEST_JIBUN; // ⑧ 소재지 필수
     second.assetKind = "housing";
     second.acquisitionDate = "2021-01-01";
     second.fixedAcquisitionPrice = "300000000";

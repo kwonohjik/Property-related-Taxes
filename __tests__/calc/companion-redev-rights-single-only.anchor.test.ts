@@ -100,6 +100,7 @@ import { NextRequest } from "next/server";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 
@@ -137,7 +138,7 @@ const REDEV_166_REQUIRED: Partial<AssetForm> = {
  * 바이트 대조에서 이 값이 유일한 잡음원이었다).
  */
 function bundledForm(companion: Partial<AssetForm>): TransferFormData {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-06-01";
   form.contractTotalPrice = "1,800,000,000";
   form.bundledSaleMode = "actual";
@@ -153,7 +154,7 @@ function bundledForm(companion: Partial<AssetForm>): TransferFormData {
     standardPriceAtTransfer: "600,000,000",
   };
   form.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetId: "companion-fixed",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-05-05",

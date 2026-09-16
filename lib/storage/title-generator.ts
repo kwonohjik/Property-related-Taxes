@@ -25,14 +25,36 @@ export function formatDate(dateStr: string | undefined | null): string | null {
   }
 }
 
+/**
+ * 집합건물 세대(동·호)를 주소에 접미한다 — **같은 지번의 두 세대를 가르는 유일한 축**이다.
+ *
+ * 이것이 없으면 `101동 501호`와 `102동 1201호`가 같은 `businessKey`를 갖고 서로를 덮어썼다
+ * (계획서 §1-2 실측). 동·호가 없으면(토지·단독건물) 주소를 그대로 돌려준다.
+ *
+ * 필드명이 세목별로 다르다 — 양도 `addressDong/addressHo` · 취득·재산 `dong/ho`.
+ * 기존 `road ?? addressRoad` 패턴과 같은 방식으로 흡수한다.
+ */
+function withUnit(addr: string, src: Record<string, unknown>): string {
+  const dong = ((src.addressDong ?? src.dong) as string | undefined)?.trim();
+  const rawHo = ((src.addressHo ?? src.ho) as string | undefined)?.trim();
+  // AddressSearch의 동은 "201동"처럼 접미가 붙어 오고 호는 "3204"로 온다 — 제목 가독성만 맞춘다
+  const ho = rawHo ? (rawHo.endsWith("호") ? rawHo : `${rawHo}호`) : "";
+  return [addr, dong, ho].filter(Boolean).join(" ");
+}
+
+/** 한 소스(자산 또는 top-level 폼)에서 주소 + 세대를 뽑는다. 주소가 없으면 null. */
+function pickAddress(src: Record<string, unknown>): string | null {
+  const road = (src.road ?? src.addressRoad) as string | undefined;
+  const jibun = (src.jibun ?? src.addressJibun) as string | undefined;
+  const addr = road?.trim() || jibun?.trim();
+  return addr ? withUnit(addr, src) : null;
+}
+
 export function extractAddress(input: Record<string, unknown>): string | null {
   // 양도세: input.assets[0].addressRoad or addressJibun
   const assets = input.assets as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(assets) && assets.length > 0) {
-    const first = assets[0];
-    const road = first.addressRoad as string | undefined;
-    const jibun = first.addressJibun as string | undefined;
-    const addr = road?.trim() || jibun?.trim();
+    const addr = pickAddress(assets[0]);
     if (addr) return addr;
   }
   // [S3] 다건 직접입력(MultiTransferFormData): properties[0].form.assets[0]
@@ -41,15 +63,13 @@ export function extractAddress(input: Record<string, unknown>): string | null {
     | undefined;
   if (Array.isArray(properties) && properties.length > 0) {
     const firstAsset = properties[0]?.form?.assets?.[0];
-    const road = firstAsset?.addressRoad as string | undefined;
-    const jibun = firstAsset?.addressJibun as string | undefined;
-    const addr = road?.trim() || jibun?.trim();
-    if (addr) return addr;
+    if (firstAsset) {
+      const addr = pickAddress(firstAsset);
+      if (addr) return addr;
+    }
   }
-  // 취득세 등 단일 구조 — road/jibun 또는 addressRoad/addressJibun 모두 인식
-  const road = (input.road ?? input.addressRoad) as string | undefined;
-  const jibun = (input.jibun ?? input.addressJibun) as string | undefined;
-  return road?.trim() || jibun?.trim() || null;
+  // 취득세·재산세 등 단일 구조 — road/jibun 또는 addressRoad/addressJibun 모두 인식
+  return pickAddress(input);
 }
 
 export function extractTransferDate(input: Record<string, unknown>): string | null {

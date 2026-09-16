@@ -52,6 +52,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (typeof a.assetId !== "string" || a.assetId === "") {
     a.assetId = `asset-restored-${Date.now()}-${++restoredAssetSeq}`;
   }
+  // 세대 목록 유무 플래그 — 레거시 자산엔 없다. 없으면 「집합건물 아님」(안전측: 동·호 미요구).
+  if (typeof a.hasAddressUnits !== "boolean") {
+    a.hasAddressUnits = Boolean(String(a.addressDong ?? "").trim() || String(a.addressHo ?? "").trim());
+  }
   if (a.landAreaM2 && !a.acquisitionArea) {
     a.acquisitionArea = a.landAreaM2;
     a.transferArea = a.landAreaM2;

@@ -57,7 +57,7 @@ const BG = {
 
 const asset = (id: number, numerator: string, over: Record<string, unknown> = {}): AssetForm =>
   ({
-    ...makeDefaultAsset(id),
+    ...makeDefaultAsset(id), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2009-03-01",

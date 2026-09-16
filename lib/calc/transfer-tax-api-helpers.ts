@@ -110,7 +110,9 @@ export { isHousingLike } from "./housing-like-asset";
  *
  * 병합 필드 = 같은 물건·같은 양도 사건이라 전 지분 공통인 값:
  *  - 기본정보(①): assetKind·acquisitionArea·transferArea·areaScenario·landNature
- *    (buildAssetPayload emit + validate basic 검사의 합집합. 소재지·좌표는 미emit·미검사 → 제외)
+ *    (buildAssetPayload emit + validate basic 검사의 합집합)
+ *    ⚠️ **소재지·세대는 2026-09-16에 들어왔다** — 종전엔 「미emit·미검사」라 제외였으나
+ *    ⑧이 필수로 막기 시작해 «검사» 쪽 근거가 뒤집혔다. 좌표(위경도)는 여전히 제외다
  *  - 양도정보(②): transferType·transferCause (양도 형태 드라이버 — companion ② UI 숨김 대응.
  *    ✅ **2026-09-03 정정**: 지분 분할도 **부담부증여를 지원**한다 — 아래 bg* 필드를 함께
  *    병합한다. **공익수용만** 여전히 validate가 차단한다)
@@ -128,6 +130,23 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     transferArea: primary.transferArea,
     areaScenario: primary.areaScenario,
     landNature: primary.landNature,
+    /**
+     * 🔴 **소재지·세대 — 2026-09-16 추가.** 종전 주석은 「소재지·좌표는 미emit·미검사 → 제외」
+     *    였는데, 그 근거의 절반(**미검사**)이 사라졌다 — ⑧이 소재지를 필수로 막기 시작했다
+     *    (계획서 §4-1). 이 목록의 규약이 「⑬ emit + ⑧ 검사의 **합집합**」이므로 함께 승계한다.
+     *
+     *    지분 모드는 **같은 물건**을 지분으로 나눈 것이라 소재지가 전 지분 공통이다.
+     *    승계하지 않으면 컴패니언 카드에 ① 기본정보가 없는데 「소재지를 입력하세요」가 떠
+     *    **UI 통과 ↔ validate 차단 모순**이 된다(CLAUDE.md ⑧).
+     *
+     *    ⚠️ **함께양도(bundled)는 대상이 아니다** — 서로 «다른 물건»이고 컴패니언 카드가
+     *    ① 기본정보를 노출하므로 각자 입력한다. 호출부가 `fullFractional`로 이미 가른다.
+     */
+    addressRoad: primary.addressRoad,
+    addressJibun: primary.addressJibun,
+    addressDong: primary.addressDong,
+    addressHo: primary.addressHo,
+    hasAddressUnits: primary.hasAddressUnits,
     transferType: primary.transferType,
     transferCause: primary.transferCause,
     /**

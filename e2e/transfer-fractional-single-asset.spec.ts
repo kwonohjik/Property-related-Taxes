@@ -16,6 +16,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** 24억 물건의 40% 지분 · 1세대1주택 — 12억 문턱을 가로지르는 픽스처(anchor H1과 같은 축). */
 function seedForm(declared: boolean) {
@@ -24,7 +25,7 @@ function seedForm(declared: boolean) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2009-01-01",
@@ -70,6 +71,7 @@ test.describe("단건 공유지분 — 선언 토글 (R4)", () => {
     await seedAndOpen(page, false);
     // 자산 카드는 진입 시 전부 접힘 — ① 기본정보를 펼쳐야 지분율·선언이 보인다.
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
 
     const asset1 = page.locator('[data-asset-card-index="0"]');
     // 단건은 「공유 지분율」 라벨 — 지분 분할 모드의 「취득 지분율」이 아니다.
@@ -146,7 +148,7 @@ test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)
         formData: {
           assets: [
             {
-              ...makeDefaultAsset(1),
+              ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
               assetKind: "redevelopment_apt",
               acquisitionCause: "purchase",
               acquisitionDate: "2010-01-01",

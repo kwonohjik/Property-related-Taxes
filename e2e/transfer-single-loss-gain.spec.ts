@@ -20,6 +20,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** CurrencyInput(htmlFor 연결 없음) → label 부모 div 탐색 후 input 반환 */
 function getInputByLabel(page: Page, labelText: string) {
@@ -48,6 +49,7 @@ test.describe("단건 양도차손 — 신고서 취득가액·양도차익", ()
     await page.getByTestId("filing-date").getByLabel("일").fill("31");
 
     await expandAssetSection(page, 1);
+    await setupAddress(page); // ⑧ 소재지 필수
     await expandAssetSection(page, 2);
     await expandAssetSection(page, 3);
 

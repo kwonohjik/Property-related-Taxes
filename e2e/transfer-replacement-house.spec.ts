@@ -12,6 +12,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** CurrencyInput(htmlFor 미연결) → label 부모 div 탐색 후 input */
 function getInputByLabel(page: Page, labelText: string) {
@@ -29,6 +30,7 @@ async function fillStep1Housing(page: Page) {
   await page.getByTestId("filing-date").getByLabel("월").fill("04");
   await page.getByTestId("filing-date").getByLabel("일").fill("30");
   await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
   await page.getByRole("button", { name: "주택", exact: true }).first().click();

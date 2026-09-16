@@ -22,6 +22,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { setupAddress } from "./_helpers/fill-address";
 
 /** 결과 표의 라벨 행에서 두 번째 셀(값) 읽기 */
 async function getRowValue(page: Page, labelText: string): Promise<string> {
@@ -50,6 +51,7 @@ async function calcOnce(page: Page, nonBusiness: boolean) {
   await page.getByTestId("transfer-date").getByLabel("일").fill("18");
 
   await expandAssetSection(page, 1);
+  await setupAddress(page); // ⑧ 소재지 필수
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
 

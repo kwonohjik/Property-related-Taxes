@@ -32,7 +32,7 @@ const BLOCK = /단독으로 계산할 수 없습니다/;
 
 const asset = (over: Record<string, unknown>): AssetForm =>
   ({
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-03-01",

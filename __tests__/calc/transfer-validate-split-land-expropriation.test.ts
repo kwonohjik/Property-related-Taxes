@@ -15,7 +15,7 @@ const TD = "2023-06-01"; // ≥ 2009.02.04
 
 function asset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     hasSeperateLandAcquisitionDate: true,
     useEstimatedAcquisition: true,
     transferCause: "public_expropriation" as const,
@@ -88,7 +88,7 @@ function splitForm(assetOver: Partial<ReturnType<typeof makeDefaultAsset>> = {})
   form.transferDate = TD;
   form.contractTotalPrice = "1000000000";
   const a = {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "building" as const,
     hasSeperateLandAcquisitionDate: true,
     acquisitionDate: "2015-06-01",

@@ -19,6 +19,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -36,7 +37,7 @@ function captureBody(form: ReturnType<typeof createDefaultTransferFormData>) {
 
 /** 가업상속공제 4필드가 채워진 상속 토지. 취득원인·자산종류만 케이스별로 갈아끼운다. */
 function fbForm(over: Record<string, unknown> = {}) {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2024-05-01";
   form.contractTotalPrice = "500,000,000";
   form.householdHousingCount = "1";

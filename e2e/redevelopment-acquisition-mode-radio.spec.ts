@@ -20,7 +20,7 @@ function seedForm() {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           // ⚠️ assetKind="right_to_move_in"이면 RedevelopmentBlock이 렌더되지 않는다
           //    (AssetSectionAcquisition.tsx의 게이트가 redevelopment_apt 한정 — 별건 미결).
           //    입주권 양도는 redevelopment_apt + redevSubject="right"로 진입한다.

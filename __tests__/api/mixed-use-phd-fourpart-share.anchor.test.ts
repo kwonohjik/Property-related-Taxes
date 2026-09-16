@@ -89,7 +89,7 @@ function form(assets: Record<string, unknown>[]): TransferFormData {
     householdHousingCount: "2",
   } as unknown as TransferFormData;
 }
-const A = (i: number, o: Record<string, unknown> = {}) => ({ ...makeDefaultAsset(i), ...CASE_A, ...o });
+const A = (i: number, o: Record<string, unknown> = {}) => ({ ...makeDefaultAsset(i), addressJibun: "서울 강남구 테스트동 1-1", ...CASE_A, ...o });
 
 type Body = { mixedUse?: { preHousingDisclosure?: { totalTransferPriceForFourPart?: number } } };
 async function run(f: TransferFormData) {
@@ -201,7 +201,7 @@ describe("겸용 PHD 4부분 안분 × 공유지분", () => {
   it("P4-4 🔴 겸용 × 환산 컴패니언이 **400이 아니다** (⑧ 통과 ↔ ⑩ 400 해소)", async () => {
     const bundled = form([
       {
-        ...makeDefaultAsset(1),
+        ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
         assetKind: "housing",
         acquisitionCause: "purchase",
         useEstimatedAcquisition: false,

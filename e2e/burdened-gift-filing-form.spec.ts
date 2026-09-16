@@ -18,7 +18,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
  */
 function seedAsset(stdPrice: string) {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "commercial_building" as const,
     transferType: "burdened_gift" as const,
     bgValuationMode: "sangjeungbeop_standard" as const,
@@ -143,7 +143,7 @@ test.describe("부담부증여 결과탭 — 일반건물(bundled) 경로", () =
     // ⚠️ 채무 B가 평가액 C를 넘으면 EXCESS_BURDENED_GIFT로 계산이 차단된다(상증법 §47③).
     //    C = 토지 7,500,000×100 + 건물 631,846,500 ≈ 13.8억 → 채무는 3억으로 둬 무상이전분을 남긴다.
     const asset = {
-      ...makeDefaultAsset(1),
+      ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
       assetKind: "general_building" as const,
       transferType: "burdened_gift" as const,
       bgValuationMode: "sangjeungbeop_standard" as const,

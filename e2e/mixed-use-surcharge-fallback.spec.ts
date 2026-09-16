@@ -20,7 +20,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function mixedUseAsset() {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     // ⚠️ 2009-03-16 ~ 2012-12-31 **밖** — 그 구간 취득은 부칙 §9270호 §14①로 세율만 배제된다.

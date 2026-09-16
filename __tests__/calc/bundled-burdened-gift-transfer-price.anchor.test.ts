@@ -37,7 +37,7 @@ import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store
  */
 function ready(over: Partial<AssetForm> = {}): AssetForm {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     bgValuationMode: "sangjeungbeop_standard",
     bgMortgageDebtAmount: "300000000",

@@ -28,6 +28,7 @@ import {
 } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { validateAssetEntry } from "@/lib/calc/transfer-tax-validate-asset";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
   OwnershipRatioInput,
@@ -37,7 +38,7 @@ import {
 const OVER_100 = "지분율은 100%를 초과할 수 없습니다 (입력값 150%).";
 
 function formWith(num: string, den: string): TransferFormData {
-  const f = createDefaultTransferFormData();
+  const f = withTestAddress(createDefaultTransferFormData());
   f.transferDate = "2026-02-18";
   f.assets[0] = {
     ...f.assets[0],

@@ -269,6 +269,17 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   addressDong: string;
   /** 선택한 호(예: "3204") — 공동주택 기준시가 조회 세대 식별 (UI 전용, 엔진 미전송) */
   addressHo: string;
+  /**
+   * 소재지 검색 결과에 **공동주택 세대 목록이 있었는가** (UI 전용, 엔진 미전송).
+   *
+   * 집합건물을 가르는 축이 따로 없어서 필요하다 — `assetKind`의 `"housing"`은 아파트와
+   * 단독주택을 함께 담는다(계획서 §4-2). `AddressSearch`가 주소 선택 시 이미 세대 목록을
+   * 조회하므로, 그 결과를 남겨 ⑧이 「고를 수 있었는데 안 골랐는가」를 판정한다.
+   *
+   * ⚠️ stale sessionStorage에서는 `undefined`로 온다 — **접근부에서 `?? false`로 방어**할 것
+   * (memory `feedback_new_asset_field_stale_sessionstorage_guard`).
+   */
+  hasAddressUnits: boolean;
   /** 건물명 */
   buildingName: string;
   /** 경도 */

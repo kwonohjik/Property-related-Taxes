@@ -26,7 +26,7 @@ function seedForm(landTransferPrice: string, buildingTransferPrice: string) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             // 토지·건물 취득일 분리 — 분리 축(§166⑥)이 활성화되는 조건

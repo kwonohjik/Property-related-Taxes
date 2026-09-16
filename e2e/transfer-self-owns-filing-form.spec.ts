@@ -18,7 +18,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 // 건물만 본인 소유 + 환산취득가 + 토지/건물 분리 (calcSplitGain 활성 std 필드 포함)
 function buildingOnlyAsset() {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "building", // 건물(토지 제외) — housing 환산의 PHD 자동요구 우회, split 경로는 동일
     acquisitionCause: "purchase",
     acquisitionDate: "1999-05-20",

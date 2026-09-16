@@ -14,7 +14,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 /** primary 주택(2015 취득) + companion 분양권(2022 취득) — 각 6억, 총액 12억. */
 const ASSETS = [
   {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2015-03-01",
@@ -25,7 +25,7 @@ const ASSETS = [
     standardPriceAtAcq: "200000000",
   },
   {
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "presale_right",
     acquisitionCause: "purchase",
     acquisitionDate: "2022-03-01",

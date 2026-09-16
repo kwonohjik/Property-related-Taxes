@@ -18,7 +18,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 const primary = {
-  ...makeDefaultAsset(1),
+  ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "land",
   acquisitionDate: "2010-03-01",
   fixedAcquisitionPrice: "400000000",
@@ -27,7 +27,7 @@ const primary = {
 };
 
 const companion = {
-  ...makeDefaultAsset(2),
+  ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "building",
   assetLabel: "창고동",
   acquisitionDate: "2010-03-01",

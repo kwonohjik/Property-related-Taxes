@@ -46,7 +46,7 @@ function seedForm() {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             ...PROPERTY_LEVEL,
             acquisitionCause: "purchase",
             gbBuildingAcquisitionCause: "purchase",
@@ -62,7 +62,7 @@ function seedForm() {
           {
             // 🔑 `makeDefaultAsset`이라 `assetKind`가 "housing"이다 — 실제 앱과 **같은 상태**.
             //    ③이 primary의 자산종류를 주입받아야 GB 블록이 뜬다(그것이 이 spec의 핵심).
-            ...makeDefaultAsset(2),
+            ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
             acquisitionCause: "purchase",
             gbBuildingAcquisitionCause: "purchase",
             ownershipNumerator: "40",

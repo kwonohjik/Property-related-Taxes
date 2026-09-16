@@ -31,6 +31,7 @@
 import { describe, it, expect } from "vitest";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 
 const PROVISO = /§164⑧을 준용/;
 
@@ -39,7 +40,7 @@ const PROVISO = /§164⑧을 준용/;
  * 기본값은 **Sum_A ≠ Sum_F**(취득 토지단가만 낮춤) — 단서 미해당.
  */
 function phdForm(over: Record<string, unknown> = {}) {
-  const form = createDefaultTransferFormData();
+  const form = withTestAddress(createDefaultTransferFormData());
   form.transferDate = "2023-06-30";
   form.contractTotalPrice = "1,500,000,000";
   form.householdHousingCount = "1";
