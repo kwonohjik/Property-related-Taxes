@@ -74,14 +74,33 @@ export function appendLateStageItems(
   });
 
   const calcStep = findStepByLabel(result.steps, "산출세액");
+  /**
+   * 🔴 **닫힌 산식이 표시된 값을 재현하는지 먼저 확인한다.**
+   *
+   * 종전 가드는 `appliedRate === 0`(= 세율군 2개 이상)만 봤다. 그것은 「단일 세율이 없다」의
+   * **대리 지표**였고, **세율군이 하나여도 그 안에서 적용 호가 갈리면**(§104⑤2호 본문)
+   * 산출세액은 버킷별 합계라 대리가 성립하지 않는다. 그때 어댑터가 싣는 값은
+   *   `appliedRate` = 표시용 **최고**세율 · `progressiveDeduction` = **0**
+   *     (「호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다」 — 집계 엔진의 의도된 규약)
+   * 이라 `과세표준 × 최고세율 − 0`은 **구조적으로 거짓**이다.
+   *
+   * 실측(사용자 제보 2026-09-16): 과세표준 399,400,000 · 산출세액 133,820,000인데 산식은
+   * 「과세표준 × 세율(38%) − 누진공제 0」(= 151,772,000)로 찍혔다 — **17,952,000 어긋난 등식**.
+   *
+   * ⇒ 대리 지표 대신 **주장하는 항등식 자체**를 검산한다. 재현하지 못하면 그 산식을 쓰지 않는다.
+   */
+  const closedFormTax = Math.max(
+    0,
+    Math.floor(result.taxBase * result.appliedRate) - result.progressiveDeduction,
+  );
+  const closedFormHolds = closedFormTax === result.calculatedTax;
   items.set("calculatedTax", {
     label: "산출세액",
     value: result.calculatedTax,
     formula:
       calcStep?.formula ??
-      // 집계에 세율군이 둘 이상이면 단일 세율이 없다 — 「0%」로 찍지 말고 그 사실을 적는다(#071).
-      (isAggregate && result.appliedRate === 0
-        ? "자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — 아래 자산별 값을 참조하세요"
+      (isAggregate && !closedFormHolds
+        ? describeAggregateCalculatedTax(result, aggregate)
         : `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
@@ -228,4 +247,29 @@ export function appendLateStageItems(
 function formatRatePct(rate: number): string {
   if (rate === 0) return "0%";
   return `${(rate * 100).toFixed(1).replace(/\.0$/, "")}%`;
+}
+
+/**
+ * 닫힌 산식을 쓸 수 없을 때, **왜 그런지를 엔진 echo에서 읽어** 설명한다.
+ *
+ * ⚠️ **원인을 추측해 적지 말 것.** 「적용 호가 둘 이상이라」로 단정하면 비교과세가
+ *    전체 누진(§104⑤ 방법 A)으로 결정된 경우에 **거짓 설명**이 된다. 집계 결과는
+ *    `comparedTaxApplied`로 어느 쪽이 채택됐는지 이미 알려 준다 — 그걸 읽는다
+ *    (memory `feedback_aggregate_display_rederives_engine_value`).
+ */
+function describeAggregateCalculatedTax(
+  result: TransferTaxResult,
+  aggregate: AggregateMeta | undefined,
+): string {
+  const applied = aggregate?.aggregated.comparedTaxApplied;
+  const tail = "아래 자산별 값과 「세율군별 분리 산출」을 참조하세요";
+  if (applied === "general") {
+    return `전체 과세표준에 누진세율을 적용한 금액입니다 — 세율군별 합계보다 커서 이 값이 채택됐습니다(§104⑤ 비교과세). ${tail}`;
+  }
+  if (result.appliedRate === 0) {
+    // 세율군이 둘 이상 — 단일 세율이 존재하지 않는다. 「0%」로 찍지 않는다(#071).
+    return `자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — ${tail}`;
+  }
+  // 세율군은 하나지만 그 안에서 적용 호가 갈린다 — 호별 산출세액의 합계다.
+  return `적용 호가 둘 이상이라 단일 산식으로 표시할 수 없습니다(최고세율 ${formatRatePct(result.appliedRate)}) — 호별 산출세액의 합계입니다. ${tail}`;
 }
