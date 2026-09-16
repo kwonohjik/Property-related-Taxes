@@ -77,7 +77,10 @@ export function extractBusinessKey(
       // (계획서 §4-3) 여기서도 같은 규약을 건다.
       if (!sec) return null;
       const date = extractStockTransferDate(inputData);
-      return `sec:${sec}|${date ?? ""}`;
+      // 다종목 합산은 **별개의 신고서**다. 표지가 없으면 대표 종목·양도일이 같은 단건 이력과
+      // 키가 겹쳐 서로를 덮어썼다(계획서 §2 G-C). 부동산 다건 `|multi`(:51)와 같은 층위.
+      const multiSuffix = inputData.__multiStock === true ? "|multi" : "";
+      return `sec:${sec}|${date ?? ""}${multiSuffix}`;
     }
     case "stock_valuation": {
       const sec = extractStockValuationName(inputData);

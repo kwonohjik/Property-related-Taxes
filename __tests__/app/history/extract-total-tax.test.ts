@@ -43,4 +43,18 @@ describe("extractTotalTax 세목별 추출", () => {
   it("추출 불가 = '-'", () => {
     expect(extractTotalTax({ foo: 1 })).toBe("-");
   });
+  /**
+   * S-7 — 주식 다종목 합산 이력.
+   *
+   * 계획서 `stock-history-aggregate-filing.plan.md` §2 G-B. 종전에는 합산 계산의 이력이
+   * **마지막 종목 per-item 결과**로 저장돼(`StockTransferTaxCalculator.tsx:88`) 차손 종목이
+   * 마지막이면 이력 카드가 **「납부세액 0」**을 보여줬다. 합산 총액을 읽는다.
+   */
+  it("S-7 주식 다종목 = top-level totalFinalTax", () => {
+    expect(extractTotalTax({ totalFinalTax: 3_500_000 })).toBe((3_500_000).toLocaleString());
+  });
+
+  it("S-7a 단건 주식(top-level finalTax)은 그대로다 (회귀 방지)", () => {
+    expect(extractTotalTax({ finalTax: 5_500_000 })).toBe((5_500_000).toLocaleString());
+  });
 });

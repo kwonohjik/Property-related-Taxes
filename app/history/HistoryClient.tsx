@@ -9,6 +9,7 @@ import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { isLegacyStockAggregateSuspect } from "@/lib/calc/stock-legacy-aggregate-suspect";
 import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
@@ -176,6 +177,11 @@ export function extractTotalTax(resultData: Record<string, unknown>): string {
   if (inner && typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
   if (resultData?.isExempt) return "비과세";
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
+  // 주식 다종목 합산 — StockTransferAggregateResult는 최상위에 totalFinalTax를 싣는다.
+  // finalTax보다 **먼저** 본다: 종전에는 합산 이력이 마지막 종목 per-item 결과로 저장돼
+  // 차손 종목이 마지막이면 「납부세액 0」이 떴다(계획서 §2 G-B).
+  if (typeof resultData?.totalFinalTax === "number")
+    return resultData.totalFinalTax.toLocaleString();
   // 증여세·상속세 finalTax (top-level)
   if (typeof resultData?.finalTax === "number") return resultData.finalTax.toLocaleString();
   // 재산세(totalPayable) · 종부세(grandTotal) — 결과 객체를 최상위에 직접 저장(래핑 없음)
@@ -301,12 +307,23 @@ export function HistoryClient() {
       // 주식 양도세 — 이력 inputData를 store에 hydrate (디자인 C-5 수정 모드)
       Promise.all([
         import("@/lib/stores/calc-wizard-stock-store"),
-      ]).then(([{ useStockTransferStore, normalizeStockFormData }]) => {
-        const hydrated = normalizeStockFormData(record.inputData);
+        import("@/lib/calc/stock-resume-entry"),
+      ]).then(([{ useStockTransferStore }, { buildStockResumeState }]) => {
+        /**
+         * 🔴 `savedItems`를 **반드시 함께** 쓴다 — 그 목록은 sessionStorage에 영속되므로
+         * (`calc-wizard-stock-store.ts:232`) 비우지 않으면 직전 다종목 작업의 종목들이 이
+         * 편집에 섞여 합산된다(계획서 §2 G-E). 다종목 record면 `items`가 목록+편집기로
+         * 되돌아온다(§4.1 G-B). 두 갈래 모두 leaf가 판정한다.
+         */
+        const { formData, savedItems } = buildStockResumeState(
+          record.inputData as Record<string, unknown> | null,
+        );
         useStockTransferStore.setState({
           currentStep: 0,
-          formData: hydrated,
+          formData,
+          savedItems,
           result: null,
+          aggregateResult: null,
           error: null,
         });
         router.push(route);
@@ -551,6 +568,15 @@ export function HistoryClient() {
                   </span>
                 </div>
                 <p className="text-sm font-medium truncate">{stripTaxLabel(record.title, record.taxType)}</p>
+                {/* 합산 결과가 저장되지 않은 레거시 이력 — 복구는 불가하고 재계산만 안내한다(계획서 §4.5) */}
+                {isLegacyStockAggregateSuspect(record) && (
+                  <p
+                    data-testid={`legacy-aggregate-warning-${record.id}`}
+                    className="mt-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                  >
+                    합산 결과가 저장되지 않은 이력입니다 — 다시 계산하세요.
+                  </p>
+                )}
                 {(() => {
                   const { address, dateLabel } = extractCardSummary(record.taxType, record.inputData);
                   const strippedTitle = stripTaxLabel(record.title, record.taxType);

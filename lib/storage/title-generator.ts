@@ -85,11 +85,37 @@ export function extractTransferDate(input: Record<string, unknown>): string | nu
 }
 
 /**
+ * 주식 양도세 — 이력 1건의 **대표 종목**.
+ *
+ * 다종목 합산 이력은 `{ __multiStock: true, items: [...] }`로 저장된다(계획서 §4.1). 종목명·
+ * 양도일·businessKey·제목이 **모두 이 한 곳을 거쳐** 대표를 고르므로, 축이 하나로 유지된다.
+ *
+ * 대표는 **items[0]**이다 — 이력 합산으로 편입되면 양도일 오름차순의 첫 종목이고(§103②의
+ * 「먼저 양도한 자산부터」와 같은 순서), 마법사에서 직접 확정했다면 첫 확정 종목이다.
+ * 종목을 뒤에 추가해도 대표가 바뀌지 않아 **같은 신고서가 같은 record를 갱신**한다.
+ */
+function stockRepresentative(inputData: Record<string, unknown>): Record<string, unknown> {
+  if (inputData.__multiStock !== true) return inputData;
+  const items = inputData.items as Array<Record<string, unknown>> | undefined;
+  return Array.isArray(items) && items.length > 0 ? items[0] : inputData;
+}
+
+/**
+ * 주식 양도세 — 다종목 합산 이력의 **종목 수**. 단건이면 null.
+ * 제목의 「외 N건」이 이 값을 쓴다 — 단건과 다종목을 라벨만으로 가르기 위함이다.
+ */
+export function extractStockItemCount(inputData: Record<string, unknown>): number | null {
+  if (inputData.__multiStock !== true) return null;
+  const items = inputData.items as unknown[] | undefined;
+  return Array.isArray(items) && items.length > 0 ? items.length : null;
+}
+
+/**
  * 주식 양도세 — 종목명 추출.
  * securityName (StockTransferFormData 메타 필드) 사용.
  */
 export function extractStockSecurityName(inputData: Record<string, unknown>): string | null {
-  const name = inputData.securityName as string | undefined;
+  const name = stockRepresentative(inputData).securityName as string | undefined;
   return name?.trim() || null;
 }
 
@@ -99,12 +125,13 @@ export function extractStockSecurityName(inputData: Record<string, unknown>): st
  *       아니면 top-level transferDate.
  */
 export function extractStockTransferDate(inputData: Record<string, unknown>): string | null {
-  const lots = inputData.transferLots as Array<Record<string, unknown>> | undefined;
+  const src = stockRepresentative(inputData);
+  const lots = src.transferLots as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(lots) && lots.length > 0) {
     const last = lots[lots.length - 1];
     return formatDate(last.transferDate as string | undefined);
   }
-  return formatDate(inputData.transferDate as string | undefined);
+  return formatDate(src.transferDate as string | undefined);
 }
 
 /**
@@ -157,9 +184,17 @@ export function generateTitle(
   if (taxType === "stock_transfer") {
     const securityName = extractStockSecurityName(inputData);
     const date = extractStockTransferDate(inputData);
-    if (securityName && date) return `${label} — ${securityName} (양도 ${date})`;
-    if (securityName) return `${label} — ${securityName}`;
-    if (date) return `${label} — 양도 ${date}`;
+    // 다종목 합산은 저장 taxType이 같아 라벨만으로는 단건과 구분 불가 → "(다종목)" 병기
+    // (부동산 다건의 "(다건)"과 같은 층위 — :141).
+    const itemCount = extractStockItemCount(inputData);
+    const label2 = itemCount !== null ? `${label} (다종목)` : label;
+    const name =
+      securityName && itemCount !== null && itemCount > 1
+        ? `${securityName} 외 ${itemCount - 1}건`
+        : securityName;
+    if (name && date) return `${label2} — ${name} (양도 ${date})`;
+    if (name) return `${label2} — ${name}`;
+    if (date) return `${label2} — 양도 ${date}`;
   }
 
   if (taxType === "stock_valuation") {

@@ -82,12 +82,36 @@ export default function StockTransferTaxCalculator() {
 
   // 로컬 이력 자동 저장 — 결과 화면(step 3) 진입 + result 있을 때 1회
   const isResult = currentStep === 3 && result !== null;
+  /**
+   * 🔴 **다종목은 신고서 전체를 싣는다** (계획서 §4.1 G-B).
+   *
+   * 종전에는 `inputData: formData` · `resultData: result`였다. 그런데 합산 경로에서 `result`는
+   * `agg.items.at(-1)`(마지막 종목 per-item)이고 `formData`도 편집 중이던 **한 종목**이라,
+   * 2종목을 합산 계산하면 **앞 종목이 이력에서 통째로 사라지고** 납부세액에는 마지막 종목의
+   * per-item 세액(차손 종목이면 **0**)이 저장됐다.
+   *
+   * 규약은 부동산 다건(`MultiTransferTaxCalculator.tsx:151`)과 같은 층위다 —
+   * 표지 플래그 + 전체 입력. 복원은 `buildStockResumeState`가 대칭으로 되돌린다.
+   *
+   * ⚠️ 착수 전 실측(계획서 §3 M-2)에서 이 객체를 오염시키고 전건 21,549건을 돌렸을 때
+   *    **실패가 0이었다** — 안전망이 없었다. 지금은 `stock-multi-record-identity` anchor가 본다.
+   */
+  const isMultiFiling = savedItems.length > 0;
+  const historyInput = useMemo(
+    () =>
+      isMultiFiling
+        ? ({ __multiStock: true, items: [...savedItems, formData] } as unknown as Record<string, unknown>)
+        : (formData as unknown as Record<string, unknown>),
+    [isMultiFiling, savedItems, formData],
+  );
   // v2: pendingEditId·saveAsUpdate·saveAsNew API 폐기 — saveOrUpdateByContent 자동 dedup
   useAutoSaveCalculation({
     taxType: "stock_transfer",
-    inputData: formData as unknown as Record<string, unknown>,
-    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
-    taxLawVersion: extractStockTransferDate(formData as unknown as Record<string, unknown>) ?? new Date().toISOString().split("T")[0],
+    inputData: historyInput,
+    resultData: isResult
+      ? ((isMultiFiling ? aggregateResult : result) as unknown as Record<string, unknown> | null)
+      : null,
+    taxLawVersion: extractStockTransferDate(historyInput) ?? new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
 
@@ -97,9 +121,11 @@ export default function StockTransferTaxCalculator() {
   const handleManualSave = async () => {
     setSaveMessage(null);
     try {
+      // 자동저장과 **같은 규약**으로 싣는다 — 여기만 단건 폼을 보내면 [저장하기]가 다종목
+      // 신고서를 마지막 종목 한 건으로 쪼개 저장한다(계획서 §4.1 G-B).
       const outcome = await runStockManualSave({
-        form: formData as unknown as Record<string, unknown>,
-        result,
+        form: historyInput,
+        result: isMultiFiling ? aggregateResult : result,
         clientId: activeClientId ?? null,
       });
       setSaveMessage(formatStockSaveMessage(outcome, recordCount));
