@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
   // string → Date 변환 (건별)
   const properties: TransferTaxItemInput[] = data.properties.map((p) => {
-    const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "skipBasicDeduction" | "skipLossFloor"> = {
+    const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "skipBasicDeduction"> = {
       propertyType: p.propertyType,
       transferPrice: p.transferPrice,
       // ⑭ 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용(⑬이 지분 모드에서만 전송).

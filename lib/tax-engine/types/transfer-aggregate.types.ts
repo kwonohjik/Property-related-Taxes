@@ -46,7 +46,6 @@ export type TransferTaxItemInput = Omit<
   TransferTaxInput,
   | "annualBasicDeductionUsed"
   | "skipBasicDeduction"
-  | "skipLossFloor"
   | "priorReductionUsage"
 > & {
   propertyId: string;
@@ -150,7 +149,7 @@ export interface PerPropertyBreakdown
   capitalExpenditureForDisplay: number;
   /** 건별 결정세액 (단건 엔진 결과) */
   determinedTax: number;
-  /** 양도차익 (skipLossFloor=true → 음수 가능) */
+  /** 양도차익 — 차손이면 음수 (§102② 통산 대상) */
   transferGain: number;
   /** [echo] 전액 비과세 자산 gross 양도차익 (표시 전용). result.exemptGrossGain 패스스루. */
   exemptGrossGain?: number;

@@ -270,7 +270,7 @@ describe("A-8: 다건 합산의 §102② 통산은 이 수정으로 바뀌지 �
   it("A-8 ✅ 차손이 같은 세율군 안에서 통산되고 과세표준이 그만큼 줄어든다", () => {
     const r = calculateTransferTaxAggregate(aggInput, rates);
 
-    // 차손 자산은 합산 경로에서 이미 음수를 유지한다(skipLossFloor)
+    // 차손 자산은 합산 경로에서도 음수를 유지한다
     const loss = r.properties.find((p) => p.propertyId === "LOSS")!;
     expect(loss.transferGain).toBe(REPORTED_LOSS);
 

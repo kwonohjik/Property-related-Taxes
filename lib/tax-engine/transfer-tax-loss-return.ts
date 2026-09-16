@@ -166,7 +166,7 @@ export function buildLossTransferTaxResult({
      * 한도까지 채우면 양도차익이 정확히 0이 되므로 이 경로를 **정상적으로** 탄다.
      */
     transferBurdenedGiftBreakdown,
-    // 다건 집계는 `skipLossFloor=true`로 차손 자산도 이 경로를 태운 뒤 세율을 다시 구한다 —
+    // 다건 집계도 차손 자산을 이 경로에 태운 뒤 세율을 다시 구한다 —
     // 정상 경로와 같은 정밀 판정을 쓰도록 여기서도 echo한다 (F01).
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     ...buildTransferResultDetails({

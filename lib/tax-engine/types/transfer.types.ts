@@ -671,12 +671,6 @@ export interface TransferTaxInput {
   delayedPaymentDetails?: DelayedPaymentInput;
   /** 기본공제 스킵 (§103). aggregate 엔진에서 호출 시 true. default false. */
   skipBasicDeduction?: boolean;
-  /**
-   * 양도차익 음수 바닥 처리 생략 (§102② 차손 통산용).
-   * aggregate 엔진에서 호출 시 true로 세팅하여 음수 `gain` 반환.
-   * default false → 기존 `Math.max(0, gain)` 동작 유지.
-   */
-  skipLossFloor?: boolean;
   /** P3 특칙 — §98의3④·§98의5③·§98의6③ 단기세율(§104①2·3호) 배제. 엔진 내부 주입 (STEP 7). */
   suppressShortTermRate?: boolean;
   /** P5 특례 — §98①1호 세율 20% 단일 (§104① 불구). 엔진 내부 주입 (STEP 7). */

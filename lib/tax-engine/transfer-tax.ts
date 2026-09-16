@@ -390,7 +390,7 @@ export function calculateTransferTax(
   /**
    * STEP 2a: 양도차익은 **차손(음수)을 그대로 싣는다** (2026-09-16).
    *
-   * 🔴 종전에는 `Math.max(0, ownerRawGain)`으로 바닥 처리했다(집계만 `skipLossFloor`로 면제).
+   * 🔴 종전에는 `Math.max(0, ownerRawGain)`으로 바닥 처리했다(집계만 플래그로 면제).
    *   그 결과 신고서 양식이 취득가액을 「양도가액 − 양도차익 − 필요경비」로 **역산**해
    *   **취득가액 = 양도가액**이라는 값을 만들어냈다 — 사용자가 입력한 금액과 무관하다
    *   (실측: 양도 100,000,000 / 취득 120,000,000 → 취득가액 행이 100,000,000).
@@ -437,7 +437,7 @@ export function calculateTransferTax(
   });
 
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과.
-  // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수된다.
+  // 차손(음수)도 이 분기가 흡수한다 — 단건·집계 동일.
   // 결과 조립은 `transfer-tax-loss-return.ts` (파일 크기 정책 분리 — 동작 무변경).
   if (transferGain <= 0) {
     return buildLossTransferTaxResult({
