@@ -20,6 +20,7 @@ import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { buildTransferResultDetails } from "./transfer-tax-finalize";
 import { TRANSFER } from "./legal-codes/transfer";
+import type { RateClause } from "./transfer-tax-rate-clause";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 export interface LossReturnArgs {
@@ -48,6 +49,12 @@ export interface LossReturnArgs {
   inheritedAcquisitionStep: Parameters<typeof buildTransferResultDetails>[0]["inheritedAcquisitionStep"];
   cbStep: Parameters<typeof buildTransferResultDetails>[0]["cbStep"];
   splitDetail: Parameters<typeof buildTransferResultDetails>[0]["splitDetail"];
+  /**
+   * 차손 자산의 **표시용** 세율·§104 호 (계획서 §10 결함 ③).
+   * 세액은 전부 0이고 이 둘만 신고서 「세율」·「세율구분 코드」 열로 흘러간다.
+   * 호출부(`transfer-tax.ts`)가 STEP 7과 같은 입력으로 `calcTax(0, …)`를 태워 만든다.
+   */
+  rateEcho?: { appliedRate: number; rateClause?: RateClause };
 }
 
 export function buildLossTransferTaxResult({
@@ -70,6 +77,7 @@ export function buildLossTransferTaxResult({
   new994Detail,
   unsold989Detail,
   specialHouseExclusionDetail,
+  rateEcho,
 }: LossReturnArgs): TransferTaxResult {
   // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
   // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
@@ -145,7 +153,10 @@ export function buildLossTransferTaxResult({
     longTermHoldingRate: 0,
     basicDeduction: 0,
     taxBase: 0,
-    appliedRate: 0,
+    // 세액은 0이지만 **적용 세율·호는 존재한다** — 신고서 「세율구분 코드」 열의 유일한 소스다.
+    // 빠뜨리면 미등기 차손 자산이 `-`로 표시돼 적용 여부를 화면에서 판별할 수 없다(위 `rateEcho`).
+    appliedRate: rateEcho?.appliedRate ?? 0,
+    ...(rateEcho?.rateClause ? { rateClause: rateEcho.rateClause } : {}),
     progressiveDeduction: 0,
     calculatedTax: 0,
     isSurchargeSuspended: false,
