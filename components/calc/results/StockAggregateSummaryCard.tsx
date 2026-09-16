@@ -295,7 +295,8 @@ export function StockAggregateSummaryCard({
           )}
           <div className="flex justify-between">
             <dt>양도소득세 결정세액</dt>
-            <dd className="font-mono tabular-nums font-semibold">{won(aggregate.totalFinalTax)}</dd>
+            {/* 이력에 저장되는 값과 대조하는 E2E 셀렉터 — stock-multi-history-record.spec.ts */}
+            <dd data-testid="stock-aggregate-total-final-tax" className="font-mono tabular-nums font-semibold">{won(aggregate.totalFinalTax)}</dd>
           </div>
           <div className="flex justify-between">
             <dt>지방소득세</dt>

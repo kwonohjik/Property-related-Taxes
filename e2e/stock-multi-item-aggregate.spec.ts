@@ -16,68 +16,9 @@
  * 정책: [[feedback_browser_verify_with_playwright]] · [[feedback_worktree_e2e_port_isolation]]
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-async function gotoStockTransferTax(page: Page) {
-  await page.goto("/calc/stock-transfer-tax");
-  await page.waitForLoadState("networkidle");
-  await page.evaluate(() => sessionStorage.clear());
-  await page.goto("/calc/stock-transfer-tax");
-  await page.waitForLoadState("networkidle");
-  await page.getByPlaceholder("종목명을 입력하세요").waitFor({ state: "visible", timeout: 30_000 });
-}
-
-async function fillByLabel(page: Page, label: string, value: string) {
-  await page.locator(`div:has(> label:has-text('${label}')) input[type="text"]`).first().fill(value);
-}
-
-/** 1단계 — 비상장 종목 (취득 2021-01-02 / 양도 지정일 · 100주) */
-async function fillStep1(page: Page, name: string, t: { y: string; m: string; d: string }) {
-  await page.getByPlaceholder("종목명을 입력하세요").fill(name);
-  await page.getByRole("radio", { name: "비상장" }).first().click();
-
-  const y = page.locator('input[type="text"][aria-label="연도"]');
-  const m = page.locator('input[type="text"][aria-label="월"]');
-  const d = page.locator('input[type="text"][aria-label="일"]');
-  await y.nth(0).fill("2021");
-  await m.nth(0).fill("01");
-  await d.nth(0).fill("02");
-  await y.nth(1).fill(t.y);
-  await m.nth(1).fill(t.m);
-  await d.nth(1).fill(t.d);
-
-  await page
-    .locator('[data-slot="field-card"]')
-    .filter({ hasText: "양도 주식수" })
-    .locator("input")
-    .first()
-    .fill("100");
-  await page
-    .locator('[data-slot="field-card"]')
-    .filter({ hasText: "발행주식 총수" })
-    .locator("input")
-    .first()
-    .fill("1000000");
-}
-
-/** 1 → 2 → 3단계 완주. 양도소득 50,000,000이 나오게 채운다. */
-async function fillItemThroughStep3(page: Page, name: string, t: { y: string; m: string; d: string }) {
-  await fillStep1(page, name, t);
-
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
-  await fillByLabel(page, "양도가액 합계", "100000000");
-  await fillByLabel(page, "1주당 취득가액", "500000");
-
-  await page.getByRole("button", { name: /^다음/ }).click();
-  await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
-
-  // 신고일 — validate가 요구한다. 신고 단위 필드라 종목 확정 시 승계되지만,
-  // 첫 종목에서는 직접 채워야 한다(anchor MI-1-2가 승계를 별도로 고정한다).
-  await page.locator('input[type="text"][aria-label="연도"]').nth(0).fill("2025");
-  await page.locator('input[type="text"][aria-label="월"]').nth(0).fill("02");
-  await page.locator('input[type="text"][aria-label="일"]').nth(0).fill("28");
-}
+import { gotoStockTransferTax, fillItemThroughStep3 } from "./_helpers/stock-item-fill";
 
 test.describe("주식 다종목 합산신고", () => {
   test("MI-E2E-1: 1단계 목록 카드는 **확정 버튼 없이** 현황만 보인다", async ({ page }) => {
