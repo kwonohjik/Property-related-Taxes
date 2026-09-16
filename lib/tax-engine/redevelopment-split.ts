@@ -439,7 +439,7 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
    *    팔아도 세액이 움직이지 않았다**(양도 3.0억·3.5억이 둘 다 64,801,000원).
    *
    *    음수의 최종 처리는 이미 하류가 담당한다 — 단건은 `transfer-tax.ts`의
-   *    `Math.max(0, ownerRawGain)`, 집계는 `skipLossFloor: true`로 §102② 통산에 실어 보낸다.
+   *    차손을 그대로 보존하고, §102② 통산은 집계 엔진이 그 음수를 받아 수행한다.
    *    **분기 단계에서 자르면 그 통산이 볼 것이 없어진다.**
    *
    * ⭐ 같은 조 **1호(납부)** 분기 `splitAptPay`는 2026-08-25 E1-03(`96ed87b4`)에서 같은 이유로

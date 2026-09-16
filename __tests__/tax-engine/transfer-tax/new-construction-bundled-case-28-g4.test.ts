@@ -97,7 +97,6 @@ function makeLandInputG4Actual(overrides?: Partial<TransferTaxInput>): TransferT
     annualBasicDeductionUsed: 0,
     acquisitionArea: LAND_AREA,
     landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언 (landNature 정책)
-    skipLossFloor: true,
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6,
@@ -136,7 +135,6 @@ function makeLandInputG4Estimated(
     annualBasicDeductionUsed: 0,
     acquisitionArea: LAND_AREA,
     landNature: "appurtenant_to_housing",  // ← 명시적 부수토지 선언 (landNature 정책)
-    skipLossFloor: true,
     primaryContextForCompanionRate: {
       propertyType: "housing",
       holdingMonths: 6,

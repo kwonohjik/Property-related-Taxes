@@ -127,9 +127,17 @@ describe("Case 12-A: 갑 (건물주) selfOwns=building_only", () => {
 
   it("calculateTransferTax: 건물 분 손실 시 세액 = 0 (건물 비중 극소, 낡은 건물)", () => {
     // 1966년 낡은 시멘트블록 1층 단독주택: 건물 기준시가가 토지보다 압도적으로 작아
-    // building.gain < 0 → selfOwns=building_only 시 ownerRawGain < 0 → transferGain = 0
+    // building.gain < 0 → selfOwns=building_only 시 ownerRawGain < 0.
+    //
+    // 🔄 2026-09-16 — `transferGain` 단언을 **0 → 실제 차손액**으로 정정했다.
+    //    종전 바닥(`Math.max(0, ownerRawGain)`)은 「소득세법」 §102②가 전제하는
+    //    「양도차손이 발생한 자산」을 지워 버렸고, 신고서 취득가액 역산을 오염시켰다.
+    //    **이 테스트의 이름이 말하는 「세액 = 0」은 그대로다.**
+    //    계획서: `docs/00-pm/transfer-single-loss-gain-preservation.plan.md`
     const result = calculateTransferTax(input, mockRates);
-    expect(result.transferGain).toBe(0);
+    expect(result.transferGain).toBe(-11_215_066);
+    // 0 바닥은 과세표준 단계가 담당한다 (§92)
+    expect(result.taxBase).toBe(0);
     expect(result.totalTax).toBe(0);
   });
 
@@ -145,7 +153,7 @@ describe("Case 12-A: 갑 (건물주) selfOwns=building_only", () => {
     const result = calculateTransferTax(input, mockRates);
     // 1966년 낡은 건물 + 토지 공시지가 압도 → 건물 분 손실 → 세액 0
     expect(result.totalTax).toBe(0);
-    expect(result.transferGain).toBe(0);
+    expect(result.transferGain).toBe(-11_215_066); // 차손 보존 (2026-09-16 정정)
     expect(result.splitDetail).toBeDefined();
     expect(result.splitDetail!.selfOwns).toBe("building_only");
     expect(result.splitDetail!.building.gain).toBeLessThan(0); // 손실 확인
@@ -201,10 +209,17 @@ describe("Case 12-B: 부인 (토지주) selfOwns=land_only", () => {
 
     // both: 건물 손실이 토지 이익과 상계 → 합산 이익 < 토지만 이익
     expect(land.transferGain).toBeGreaterThan(both.transferGain);
-    // building: 손실 → 세액 0
-    expect(building.transferGain).toBe(0);
-    // 분리 신고 합산 = 토지 이익 (건물 손실은 소멸)
-    expect(building.transferGain + land.transferGain).toBeGreaterThan(both.transferGain);
+    // building: 본인 신고분이 차손 (2026-09-16 — 종전에는 0으로 지워졌다)
+    expect(building.transferGain).toBe(-11_215_066);
+    expect(building.totalTax).toBe(0);
+    /*
+     * 🔑 이제 테스트 **이름 그대로 등식이 성립한다** — 종전에는 건물분이 0으로 지워져
+     *    부등호(`toBeGreaterThan`)로밖에 쓸 수 없었다.
+     *      land_only 이익 = both 이익 + 건물 차손 절댓값
+     *    소득령 §166⑥·§168② 인별 과세 — 각자 신고하면 건물주의 차손은 토지주의 이익과
+     *    상계되지 않는다(§102②는 **같은 사람의** 다른 자산에만 적용된다).
+     */
+    expect(land.transferGain).toBe(both.transferGain + Math.abs(building.transferGain));
   });
 });
 

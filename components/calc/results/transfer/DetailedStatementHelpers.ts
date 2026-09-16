@@ -521,10 +521,17 @@ export function buildStatementItems(
    *   (소령 §161①)」 행이 별도로 보여 준다 — 신고서와 같은 구조다).
    *
    * ⚠️ 이 값은 ⑲ 세액감면대상금액 산정에도 그대로 흘러간다(:515).
+   *
+   * 🔴 **`Math.max(0, …)`를 걷어냈다** (2026-09-16 · 양도차손 보존).
+   *   엔진이 차손을 보존하게 되자 이 바닥이 **같은 화면의 두 카드를 갈랐다** —
+   *   신고서(`FilingFormTableHelpers.ts:619~621`)는 바닥이 없어 **−20,000,000**,
+   *   여기는 **0**을 찍었다. 위 주석이 「같은 식을 쓴다」고 적어 둔 바로 그 정합이 깨진다.
+   *   §95①(양도소득금액 = 양도차익 − 장특공제)에는 차익 단계 바닥이 없고, 0 바닥은
+   *   과세표준(§92)·「감면후 소득금액」(:623)이 각자 담당하므로 정보 손실도 없다.
    */
   const singleIncome = isRentalHousingException
     ? result.transferGain - result.longTermHoldingDeduction
-    : Math.max(0, result.taxableGain - result.longTermHoldingDeduction);
+    : result.taxableGain - result.longTermHoldingDeduction;
   items.set("incomeAmount", {
     label: "양도소득금액",
     value: isAggregate ? sumIncome : singleIncome,

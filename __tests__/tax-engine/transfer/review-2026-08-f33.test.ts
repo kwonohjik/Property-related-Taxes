@@ -56,7 +56,10 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     const r = calculateTransferTax(lossLand(PENALTY_INPUTS), mockRates);
 
     // 조기반환 경로임을 고정 (본세는 0)
-    expect(r.transferGain).toBe(0);
+    // 🔄 2026-09-16 — `transferGain`은 이제 **차손액 그대로**다(종전 0 바닥 제거).
+    //    조기반환 진입 조건(`transferGain <= 0`)은 음수도 흡수하므로 경로는 불변이고,
+    //    이 테스트가 지키는 「국기법 가산세가 실린다」도 그대로다.
+    expect(r.transferGain).toBe(-100_000_000);
     expect(r.determinedTax).toBe(0);
     expect(r.calculatedTax).toBe(0);
 

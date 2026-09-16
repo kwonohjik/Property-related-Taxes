@@ -607,7 +607,19 @@ describe("T-18: 지방소득세 = 결정세액 × 10% (원 미만 절사)", () =
 // ============================================================
 
 describe("T-19: 양도 손실 → 세액 0", () => {
-  it("transferGain=0, totalTax=0", () => {
+  /**
+   * 🔄 2026-09-16 — `transferGain` 단언을 **0 → 실제 차손액**으로 정정했다.
+   *
+   * 종전 단언 `expect(result.transferGain).toBe(0)`은 엔진의 0 바닥을 고정하고 있었다.
+   * 그 바닥 때문에 신고서 양식이 취득가액을 「양도가액 − 양도차익 − 필요경비」로 역산해
+   * **취득가액 = 양도가액**을 표시했다(사용자 제보). 「소득세법」 §102②는 「양도차손이
+   * 발생한 자산이 있는 경우」를 전제하므로 차익 단계에 바닥을 두지 않는 것이 정합이다.
+   *
+   * 🔑 **이 테스트의 이름이 말하는 것은 「세액 0」이고 그것은 그대로 유지된다** —
+   *    바뀐 것은 곁다리 단언뿐이다.
+   * 계획서: `docs/00-pm/transfer-single-loss-gain-preservation.plan.md`
+   */
+  it("transferGain=−100,000,000(차손 보존), totalTax=0", () => {
     const input = baseInput({
       transferPrice: 300_000_000,
       acquisitionPrice: 400_000_000, // 취득가 > 양도가 → 손실
@@ -616,7 +628,9 @@ describe("T-19: 양도 손실 → 세액 0", () => {
       isOneHousehold: false,
     });
     const result = calculateTransferTax(input, mockRates);
-    expect(result.transferGain).toBe(0);
+    expect(result.transferGain).toBe(-100_000_000);
+    // 0 바닥은 과세표준 단계가 담당한다 (§92)
+    expect(result.taxBase).toBe(0);
     expect(result.totalTax).toBe(0);
   });
 });

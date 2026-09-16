@@ -184,7 +184,7 @@ export function splitReceive(
    *    (`computeAptReceive`)와 쌍으로 같은 규칙을 쓴다** — 한쪽만 고치면 같은 사실이
    *    자산 종류에 따라 다른 양도차익을 낸다.
    *
-   *    음수 처리는 하류 담당(단건 `transfer-tax.ts` 0 바닥 · 집계 `skipLossFloor`로 §102② 통산).
+   *    음수 처리는 하류 담당(`transfer-tax.ts`가 차손을 보존 · 집계가 §102② 통산).
    *    선례: 1호(납부) `splitAptPay` — E1-03 `96ed87b4`(2026-08-25).
    */
   const settlementGain = transferPrice - salePriceTotal - postApprovalExpenses;

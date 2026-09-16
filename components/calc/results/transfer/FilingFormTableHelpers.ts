@@ -546,6 +546,21 @@ export function buildRows(
     setNum("transferGain", "total", effGain);
     setNum("exemptGain", "total", isRH ? 0 : Math.max(0, effGain - result.taxableGain));
     setNum("taxableGain", "total", isRH ? effGain : result.taxableGain);
+    /**
+     * 양도차손 고지 — 「소득세법」 §102②.
+     *
+     * 🔑 **`buildRows`의 aggregate 조기반환(:272) 뒤이므로 다건에는 닿지 않는다.**
+     *   다건은 이미 합산 중이라 「합산하세요」가 모순이 된다. 단건·일반건물 일괄·겸용주택
+     *   세 경로만 이 문구를 받는다(양도세 결과뷰는 4개 —
+     *   memory `feedback_transfer_result_view_is_not_one`).
+     */
+    if (effGain < 0) {
+      setRoseNote(
+        "transferGain",
+        "total",
+        `양도차손 ${Math.abs(effGain).toLocaleString()}이 발생했습니다. 같은 과세연도에 양도한 다른 자산이 있으면 연간 합산에서 통산할 수 있습니다 (소득세법 §102②).`,
+      );
+    }
   }
   setNum("ltDeduction", "total", result.longTermHoldingDeduction);
 

@@ -67,7 +67,6 @@ export function buildAssetRecords(
       ...(item as unknown as TransferTaxInput),
       annualBasicDeductionUsed: 0,
       skipBasicDeduction: true,
-      skipLossFloor: true,
       // [E4] 신고서 단위 amendment가 route에서 primary item에 spread돼도 자산별 계산에
       // 누수되지 않도록 strip. 정정은 아래 집계 결정세액에 대해 1회만 계산한다(§3.3 누수 버그 수정).
       amendment: undefined,

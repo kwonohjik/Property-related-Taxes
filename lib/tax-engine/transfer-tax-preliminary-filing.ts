@@ -81,7 +81,6 @@ export function computePreliminaryFilingTaxes(
       ...asset,
       annualBasicDeductionUsed: used,
       skipBasicDeduction: false,
-      skipLossFloor: false,
       // 신고서 단위 정정은 예정신고 세액과 무관하다(집계 결정세액에 1회만 적용된다).
       amendment: undefined,
       // 가산세 재귀 방지 — 여기서 구하는 것이 그 가산세의 base다.

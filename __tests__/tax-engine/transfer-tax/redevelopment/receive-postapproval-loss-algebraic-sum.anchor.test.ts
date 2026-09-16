@@ -31,8 +31,8 @@
  *
  * | 지점 | 역할 |
  * |---|---|
- * | `transfer-tax.ts` `skipLossFloor ? raw : Math.max(0, raw)` | **단건**은 0 바닥 |
- * | `transfer-tax-aggregate.ts` `skipLossFloor: true` | **집계**는 음수를 §102② 통산에 실어보냄 |
+ * | `transfer-tax.ts` `transferGain = ownerRawGain` | 단건·집계 **모두** 차손을 보존 |
+ * | `transfer-tax.ts` `transferGain <= 0` 조기반환 | 세액 0 (§92 과세표준 바닥) |
  * | `redevelopment.ts` `splitLthdAmount` `gainAmt <= 0` | 음수 분기 LTHD 0 |
  *
  * 종전에는 분기 clamp가 차손을 파괴해 **§102② 통산이 이 자산에 대해서만 공전**했다.
@@ -77,7 +77,7 @@ function redevInfo(subject: "apt" | "right"): RedevelopmentInfo {
   } as RedevelopmentInfo;
 }
 
-function run(subject: "apt" | "right", transferPrice: number, skipLossFloor = false) {
+function run(subject: "apt" | "right", transferPrice: number) {
   const input: TransferTaxInput = baseTransferInput({
     propertyType: subject === "apt" ? "redevelopment_apt" : "right_to_move_in",
     transferPrice,
@@ -90,7 +90,6 @@ function run(subject: "apt" | "right", transferPrice: number, skipLossFloor = fa
     householdHousingCount: 2,
     residencePeriodMonths: 0,
     redevelopment: redevInfo(subject),
-    skipLossFloor,
   });
   const result = calculateTransferTax(input, mockRates);
   return { result, detail: result.redevelopmentDetail! };
@@ -221,24 +220,18 @@ describe("🔑 음수의 최종 처리는 하류가 담당한다 — 분기가 �
     }
   });
 
-  it("🔑 `skipLossFloor`는 재개발 경로에서 **no-op**이다 — 차손은 항상 흐른다", () => {
-    // 종전에는 clamp가 게이트였고 이 플래그가 아니었다. 플래그만 보고
-    // 「집계에서만 차손이 산다」고 읽으면 오진한다(구별력 0인 축).
-    for (const s of ["apt", "right"] as const) {
-      for (const p of [BELOW_A, DEEP_LOSS]) {
-        expect(run(s, p, true).result.transferGain, `${s} ${p}`).toBe(
-          run(s, p, false).result.transferGain,
-        );
-      }
-    }
-  });
-
-  it("★ 집계(§102②): skipLossFloor=true면 차손이 살아서 통산에 도달한다", () => {
+  /**
+   * 🔄 2026-09-16 — 종전에는 `skipLossFloor` 플래그를 켜고 끄며 두 갈래를 봤다.
+   *    단건 0 바닥이 제거되면서 **플래그 자체가 없어졌고**, 차손은 단건·집계 어디서나
+   *    똑같이 흐른다. 「집계에서만 차손이 산다」는 독법은 이제 성립하지 않는다.
+   *    계획서: `docs/00-pm/transfer-single-loss-gain-preservation.plan.md`
+   */
+  it("★ §102②: 차손이 살아서 통산에 도달한다 (단건·집계 동일)", () => {
     // 종전에는 clamp가 차손을 파괴해 이 값이 300,000,000 / 240,000,000으로 고정됐다.
-    expect(run("apt", BELOW_A, true).result.transferGain).toBe(250_000_000);
-    expect(run("right", BELOW_A, true).result.transferGain).toBe(190_000_000);
-    expect(run("apt", DEEP_LOSS, true).result.transferGain).toBe(-50_000_000);
-    expect(run("right", DEEP_LOSS, true).result.transferGain).toBe(-110_000_000);
+    expect(run("apt", BELOW_A).result.transferGain).toBe(250_000_000);
+    expect(run("right", BELOW_A).result.transferGain).toBe(190_000_000);
+    expect(run("apt", DEEP_LOSS).result.transferGain).toBe(-50_000_000);
+    expect(run("right", DEEP_LOSS).result.transferGain).toBe(-110_000_000);
   });
 
   it("🔑 음수 분기의 LTHD는 0이다 (§95② — 공제 대상 양도차익이 없다)", () => {
