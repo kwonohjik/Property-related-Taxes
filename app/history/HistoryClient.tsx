@@ -10,8 +10,10 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
 import { isLegacyStockAggregateSuspect } from "@/lib/calc/stock-legacy-aggregate-suspect";
+import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
 import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
+import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
@@ -603,8 +605,9 @@ export function HistoryClient() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
-                {/* 다건 합산 — 단건 양도세 이력만(다건은 이미 합산 결과라 §107② 이중 계상 위험) */}
-                {canAggregateFromHistory(record) && (
+                {/* 합산 — 단건 이력만(다건·다종목은 이미 합산 결과라 이중 계상 위험).
+                    양도소득세는 다건 마법사로, 주식은 다종목 마법사로 간다. */}
+                {(canAggregateFromHistory(record) || canStockAggregateFromHistory(record)) && (
                   <button
                     type="button"
                     data-testid={`aggregate-${record.id}`}
@@ -669,8 +672,18 @@ export function HistoryClient() {
           </div>
         ))}
 
-      {/* 다건 합산 선택 모달 — 기준 이력이 정해졌을 때만 마운트 */}
-      {aggregateBase && (
+      {/* 합산 선택 모달 — 기준 이력이 정해졌을 때만 마운트. 세목으로 갈라 띄운다. */}
+      {aggregateBase && aggregateBase.taxType === "stock_transfer" && (
+        <StockHistoryAggregateModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setAggregateBase(null);
+          }}
+          base={aggregateBase}
+          clientName={aggregateBase.clientId ? clientMap[aggregateBase.clientId] : null}
+        />
+      )}
+      {aggregateBase && aggregateBase.taxType !== "stock_transfer" && (
         <HistoryAggregateSelectModal
           open
           onOpenChange={(open) => {
