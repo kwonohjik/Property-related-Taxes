@@ -9,6 +9,7 @@ import { buildBackup } from "@/lib/storage/backup-export";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
@@ -121,34 +122,24 @@ export function HistoryDetailDrawer({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   /** 다건 합산 선택 모달 열림 — 이 드로어의 record가 기준이 된다 */
   const [aggregateOpen, setAggregateOpen] = useState(false);
+  /** 재계산 진입이 차단된 사유 (구 stub 다건 등) */
+  const [resumeBlocked, setResumeBlocked] = useState<string | null>(null);
 
   const route = TAX_TYPE_ROUTES[record.taxType];
 
   function handleResume() {
     if (!route) return;
-    // 양도세 전용: zustand store에 inputData hydrate
+    /**
+     * 양도세는 **공유 진입점**이 맡는다 — 단건/다건 라우팅과 공통 부수효과(의뢰인 자동선택·
+     * 건물 기준시가 스냅샷 복원)를 카드와 **같은 코드**로 처리한다. 종전에는 이 드로어 사본에
+     * 그 부수효과가 없었고, 다건 record를 단건 마법사로 보냈다.
+     */
     if (record.taxType === "transfer") {
-      // dynamic import로 store 순환 참조 방지
-      Promise.all([
-        import("@/lib/stores/calc-wizard-store"),
-        import("@/lib/stores/calc-wizard-asset"),
-      ]).then(([{ useCalcWizardStore }, { migrateAsset }]) => {
-        const { updateFormData, setStep } = useCalcWizardStore.getState();
-        // Date 필드는 string으로 저장되어 있으므로 그대로 복원 (zustand store는 string 허용)
-        const input = record.inputData as Parameters<typeof updateFormData>[0];
-        // ⚠️ 이력 assets는 **migrate를 통과시켜야 한다** — `updateFormData`는 단순 merge라
-        //    assets 배열이 통째로 교체된다. sessionStorage 복원(calc-wizard-store.ts:399)은
-        //    migrateAsset을 거치는데 이 경로만 우회하면, 옛 이력의 신규 필드 디폴트 누락과
-        //    파생 면적의 부동소수점 잔재(구 산식 `round2(T)−r`)가 그대로 엔진에 도달한다
-        //    (잔재는 floor(단가 × 면적)을 1원 깎는다 — 표시만의 문제가 아니다).
-        const migrated = Array.isArray(input?.assets)
-          ? { ...input, assets: input.assets.map((a) => migrateAsset({ ...a })) }
-          : input;
-        updateFormData(migrated);
-        setStep(0);
-        router.push(route);
-      });
-    } else if (record.taxType === "gift") {
+      setResumeBlocked(null);
+      void resumeTransferRecord(record, router).then(setResumeBlocked);
+      return;
+    }
+    if (record.taxType === "gift") {
       // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
       sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
       router.push(route);
@@ -297,6 +288,14 @@ export function HistoryDetailDrawer({
             >
               이 조건으로 재계산
             </button>
+          )}
+          {resumeBlocked && (
+            <p
+              data-testid="drawer-resume-blocked"
+              className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+              {resumeBlocked}
+            </p>
           )}
           {canAggregateFromHistory(record) && (
             <button

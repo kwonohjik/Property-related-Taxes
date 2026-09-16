@@ -9,6 +9,7 @@ import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
+import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
@@ -257,6 +258,17 @@ export function HistoryClient() {
   function handleResume(record: CalculationRecord) {
     const route = TAX_TYPE_ROUTES[record.taxType];
     if (!route) return;
+    /**
+     * 양도세는 **공유 진입점**이 맡는다(단건/다건 라우팅 + 공통 부수효과).
+     * 드로어(`HistoryDetailDrawer`)와 이 카드가 갈라져 두 번 결함을 냈다 — 2026-09-07
+     * `migrateAsset` 누락, 2026-09-16 다건 record 오라우팅.
+     */
+    if (record.taxType === "transfer") {
+      void resumeTransferRecord(record, router).then((reason) => {
+        if (reason) setError(reason);
+      });
+      return;
+    }
     // v2 (contentHash dedup): editingCalculationId 플래그 폐기.
     // 동일 입력+결과면 saveOrUpdateByContent가 자동으로 원본 record를 update.
     sessionStorage.removeItem("editingCalculationId");
@@ -277,31 +289,7 @@ export function HistoryClient() {
         snapshots: { ...prev, ...(bspSnaps as typeof prev) },
       });
     }
-    if (record.taxType === "transfer") {
-      Promise.all([
-        import("@/lib/stores/calc-wizard-store"),
-        import("@/lib/stores/calc-wizard-asset"),
-      ]).then(([{ useCalcWizardStore }, { migrateAsset }]) => {
-        const { updateFormData, setStep } = useCalcWizardStore.getState();
-        /**
-         * ⚠️ 이력 assets는 **migrate를 통과시켜야 한다** — `updateFormData`는 단순 merge라
-         *    assets 배열이 통째로 교체된다. sessionStorage 복원은 `migrateAsset`을 거치는데
-         *    이 경로만 우회하면 옛 이력의 신규 필드 디폴트 누락과 파생 면적의 부동소수점
-         *    잔재가 그대로 엔진에 도달한다(잔재는 `floor(단가 × 면적)`을 1원 깎는다 —
-         *    표시만의 문제가 아니다).
-         *
-         * 🔴 **같은 기능의 상세 드로어(`HistoryDetailDrawer.tsx:128~146`)는 이미 통과시키고
-         *    있었다** — 목록의 「편집」 버튼만 빠져 있었다(2026-09-07 UI 리뷰).
-         */
-        const input = record.inputData as Parameters<typeof updateFormData>[0];
-        const migrated = Array.isArray(input?.assets)
-          ? { ...input, assets: input.assets.map((a) => migrateAsset({ ...a })) }
-          : input;
-        updateFormData(migrated);
-        setStep(0);
-        router.push(route);
-      });
-    } else if (record.taxType === "gift") {
+    if (record.taxType === "gift") {
       // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
       sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
       router.push(route);
@@ -630,6 +618,7 @@ export function HistoryClient() {
                 {TAX_TYPE_ROUTES[record.taxType] && (
                   <button
                     type="button"
+                    data-testid={`resume-${record.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleResume(record);
