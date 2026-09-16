@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
@@ -84,6 +85,9 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
     [savedItems, form.marketType],
   );
   const filingType = resolveStockFilingType(form.filingType, foreignOnlyFiling, "preliminary");
+
+  /** 확정 종목이 있으면 합산신고다 — §111③ 정산은 합산 경로에만 실린다(④와 같은 술어). */
+  const isMultiFiling = savedItems.length > 0;
 
   /** 이 종목의 예정신고 기한 — 국외주식이면 `undefined`(대상 아님) */
   const filingDeadline = useMemo(
@@ -446,6 +450,43 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               onChange={(v) => onChange({ filingDate: v })}
             />
           </FieldCard>
+
+          {/**
+            * §111③ 확정신고 기납부세액 정산 — **확정신고 + 2종목 이상 + 국내 종목 존재**에서만.
+            *
+            * 세 조건 모두 법문에서 나온다:
+            *  · 확정신고 — §111③은 「확정신고납부를 하는 경우」의 규정이다.
+            *  · 2종목 이상 — 시행령 §173⑤3호의 확정신고 의무 요건이 「2회 이상 양도」다.
+            *  · 국내 종목 — §105① 본문 괄호가 국외주식을 예정신고 대상에서 제외해,
+            *    국외만이면 예정신고 산출세액이 **존재할 수 없다**.
+            *
+            * 🔑 화면 게이트만으로는 부족하다 — 숨겨도 폼 값은 남는다. 전송 판정
+            *   (`buildStockAggregateFilingPayload`)이 같은 세 조건을 다시 든다.
+            */}
+          {isMultiFiling && filingType === "final" && !foreignOnlyFiling && (
+            <ToneCard tone="emerald" title="예정신고 기납부세액 (§111③)">
+              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                이미 예정신고로 납부한 세액을 적으면 이번 확정신고에서 <strong>공제하고</strong>{" "}
+                납부할 금액을 계산합니다. 기납부액이 결정세액보다 크면 환급으로 표시됩니다.
+              </p>
+              <div className="space-y-2">
+                <CurrencyInput
+                  label="기납부 양도소득세 (국세)"
+                  hint="예정신고로 이미 납부한 양도소득세 합계. 없으면 0 (원)"
+                  value={form.preliminaryPaidTax}
+                  onChange={(v) => onChange({ preliminaryPaidTax: v })}
+                  placeholder="0"
+                />
+                <CurrencyInput
+                  label="기납부 지방소득세"
+                  hint="예정신고분 지방소득세 합계. 없으면 0 (원)"
+                  value={form.preliminaryPaidLocalTax}
+                  onChange={(v) => onChange({ preliminaryPaidLocalTax: v })}
+                  placeholder="0"
+                />
+              </div>
+            </ToneCard>
+          )}
 
           {/**
            * 🔴 G-45: 전자신고 세액공제 입력 위젯.

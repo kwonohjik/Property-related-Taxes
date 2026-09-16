@@ -11,6 +11,7 @@
  */
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { buildStockAggregateFilingPayload } from "./stock-preliminary-paid";
 import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-types";
 import { SYNTH_SINGLE_TRANSFER_ID } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
@@ -650,6 +651,9 @@ export async function callStockTransferTaxAggregateAPI(
   const body = {
     items: forms.map((f) => buildStockTransferApiBody(f)),
     deductionMode: "aggregate" as const,
+    // ⑬ §111③ 확정신고 기납부세액 — **신고 단위**라 items 밖에 싣는다.
+    //    켜도 되는지의 판정(확정신고·2건 이상·국내 종목 존재)은 leaf가 든다.
+    ...buildStockAggregateFilingPayload(forms),
   };
 
   const res = await fetch("/api/calc/stock-transfer", {

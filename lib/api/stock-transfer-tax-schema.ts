@@ -450,6 +450,15 @@ export const stockTransferAggregateInputSchema = z.object({
    * - "aggregate": 합산 후 그룹별 1회 공제 (법령 정합)
    */
   deductionMode: z.enum(["each_item", "aggregate"]).default("aggregate"),
+  /**
+   * §111③ 확정신고 기납부세액 — **신고 단위**(종목별이 아니다).
+   *
+   * ⚠️ 종목 스키마의 `priorPaidTax`(국세기본법 §47조의3① 가산세 base)와 **다른 축**이다.
+   *    이름이 섞이면 한쪽을 고칠 때 다른 쪽이 조용히 따라온다.
+   * ⚠️ 이 필드가 스키마에 없으면 Zod가 **침묵 strip**해 엔진에 도달하지 않는다(⑫).
+   */
+  preliminaryPaidTax: z.number().int().nonnegative().optional(),
+  preliminaryPaidLocalTax: z.number().int().nonnegative().optional(),
 });
 
 // ============================================================

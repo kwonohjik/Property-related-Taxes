@@ -125,7 +125,8 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
     );
   }
 
-  const { items: rawItems, deductionMode } = parsed.data;
+  const { items: rawItems, deductionMode, preliminaryPaidTax, preliminaryPaidLocalTax } =
+    parsed.data;
 
   // ⑭ 각 종목 Date 변환 — 국내/국외를 **종목마다** 갈라 매핑한다.
   //    `marketType`이 종목 축이라 한 배열에 국내주식과 국외주식이 섞일 수 있다
@@ -137,7 +138,12 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
   });
 
   try {
-    const result = calculateStockTransferTaxAggregate(engineInputs, deductionMode);
+    // ⑭ §111③ 신고 단위 기납부세액 — 종목 배열이 아니라 **신고 옵션**으로 넘긴다.
+    //    여기서 빠뜨리면 Zod를 통과한 값이 엔진에 도달하지 못해 정산이 조용히 사라진다.
+    const result = calculateStockTransferTaxAggregate(engineInputs, deductionMode, {
+      preliminaryPaidTax,
+      preliminaryPaidLocalTax,
+    });
     return NextResponse.json({ result, mode: "aggregate" }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";

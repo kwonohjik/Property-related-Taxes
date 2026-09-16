@@ -75,6 +75,8 @@ export { normalizeStockFormData };
  * · `filingType`·`filingDate` — 예정/확정/수정 신고와 그 날짜
  * · `isElectronicFiling` — 조특법 §104의8 전자신고 세액공제(합산 1회)
  * · `filingViolation`·`isFraudulent`·`isInternationalTransaction` — 국세기본법 §47의2~4 가산세 게이트
+ * · `preliminaryPaidTax`·`preliminaryPaidLocalTax` — §111③ 확정신고 기납부세액 정산.
+ *   신고 1건에서 한 번 빼는 값이라 종목마다 다른 값을 갖는 것이 성립하지 않는다.
  * · `realEstateGroupBasicDeductionUsed` — §103①1호(부동산 그룹) 기소진액
  * · `foreignTaxMethod` — §118의6① 세액공제(1호)/필요경비 산입(2호) **택일**. 2026-09-01 추가:
  *   법문이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고 1호 산식의 A·C가
@@ -91,6 +93,8 @@ function carryFilingFields(prev: StockTransferFormData): StockTransferFormData {
     filingViolation: prev.filingViolation,
     isFraudulent: prev.isFraudulent,
     isInternationalTransaction: prev.isInternationalTransaction,
+    preliminaryPaidTax: prev.preliminaryPaidTax,
+    preliminaryPaidLocalTax: prev.preliminaryPaidLocalTax,
     realEstateGroupBasicDeductionUsed: prev.realEstateGroupBasicDeductionUsed,
     foreignTaxMethod: prev.foreignTaxMethod,
   };

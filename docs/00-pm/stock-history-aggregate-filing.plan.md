@@ -515,6 +515,86 @@ anchor는 record 형태를 **직접 주입해** leaf를 검증하므로 「컴�
 
 ---
 
+## 10.2 PR-2 완료 기록 (2026-09-16) — 🔴 세액 변경
+
+### 구현 — 14 동기화 지점
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ① 타입 | `calc-wizard-stock-form-types.ts` | `preliminaryPaidTax`·`preliminaryPaidLocalTax` |
+| ② 기본값 | `calc-wizard-stock-form.ts` | `"0"` |
+| ③ normalize | `calc-wizard-stock-normalize.ts` | 구 세션 가드 |
+| 신고 단위 승계 | `calc-wizard-stock-store.ts` `carryFilingFields` | 종목마다 다른 값을 갖는 것이 성립하지 않는다 |
+| ④⑬ 전송 | `lib/calc/stock-preliminary-paid.ts` (신설) + `stock-transfer-tax-api.ts` | 세 조건 게이트 |
+| ⑤ UI | `steps/Step3.tsx` | 확정신고 + 2종목 + 국내 종목 존재일 때만 |
+| ⑦ 결과 | `StockAggregateSummaryCard.tsx` + `StockFilingFormTableHelpers.ts` | 정산 블록 + 별지84호 31-1~31-3 |
+| ⑫ Zod | `stock-transfer-tax-schema.ts` | `optional().nonnegative()` |
+| ⑭ route | `app/api/calc/stock-transfer/route.ts` | 신고 옵션으로 전달 |
+| 엔진 | `stock-transfer-aggregate.ts` | `computeSettlement` 재사용 + `settlement` 조건부 echo |
+
+**⑧ validate는 해당 없음**이다 — 추가할 차단이 실질적으로 없다. 음수는 `CurrencyInput`이
+막고, 잘못된 신고유형은 ⑤가 숨기고 ④가 안 보낸다. 보이지 않는 필드를 validate가 차단하면
+사용자가 고칠 수 없는 모순이 된다. 없는 검증을 만들지 않았다.
+
+### 이름 축을 갈랐다
+
+기존 `priorPaidTax`는 **가산세 base 차감 전용**이다(`types:316-318`이 「납부할 세액을 1원도
+줄이지 않는다」고 명시). 신고 단위 축은 `preliminary*` 접두로 분리했다
+(`feedback_rename_same_name_two_axes`).
+
+### 게이트가 «셋»이고, 세 곳에서 같은 술어를 쓴다
+
+계획서가 「확정신고에서만」이라고 적는 것으로는 부족하다 — 제외를 강제하는 가드가 코드에
+없으면 stale 폼 값이 축을 조용히 켠다(`feedback_plan_exclusion_decision_needs_a_code_gate`).
+
+| 조건 | 근거 |
+|---|---|
+| 확정신고 | §111③ 「**확정신고납부를 하는 경우**」 |
+| 종목 2건 이상 | 영 §173⑤3호 「주식등을 **2회 이상** 양도한 경우」 |
+| 국내 종목 존재 | 법 §105① 본문 괄호 — 국외만이면 예정신고 산출세액이 **존재할 수 없다** |
+
+⑤(화면)와 ④(전송)가 **같은 세 술어**를 쓴다(`feedback_ui_gate_two_conditions_downstream_one`).
+
+### 🔴 실측이 내 주석을 반증했다 — Q-2 구별력 0
+
+정산 base 로 `totalFinalTax`(절사 완료)를 쓰면서 「절사 **전** 값을 쓰면 최대 9원 어긋난다」고
+적었다. **추정이었고 틀렸다.**
+
+- 뮤테이션 Q-2(base 를 `determinedTotal + 가산세`로 교체) → anchor **6건 전부 통과**
+- 조합 4종(기본·가산세 동반·홀수 단가·전자신고) 실측 → `floorTen` 차이 **전부 0**
+
+상류(`applyStockTaxRate`·`finalizeStockTax`·가산세)가 이미 10원 단위로 내려놓아 이 절사가
+**현재는 no-op** 이다. ⇒ 주석을 정정했고, anchor D-5 에 **「현재 구별력 0」을 명시**했다.
+`totalFinalTax`를 쓰는 이유는 「어긋나기 때문」이 아니라 화면과 같은 축을 단일 소스로 두기
+위함이다(`feedback_mutation_zero_discrimination_is_not_proof`).
+
+### 뮤테이션
+
+| ID | 무력화 | vitest | E2E |
+|---|---|---|---|
+| Q-1 | 엔진 기납부 차감 | **3건 실패** | — |
+| Q-2 | 정산 base 를 절사 전 값으로 | **0건** 🔴 구별력 없음(위 참조) | — |
+| Q-3 | 확정신고 게이트 | **2건 실패** | — |
+| Q-4 | 단건 게이트 | **1건 실패** | — |
+| Q-5 | 국외전용 게이트 | **1건 실패** | — |
+| Q-6 | ⑫ Zod 필드(침묵 strip) | **1건 실패** | — |
+| **Q-7** | **⑭ route 전달** | **16건 전부 초록** 🔴 | **1건 실패** |
+| **Q-8** | **⑤ UI 입력란** | — | **3건 실패** |
+
+### 🔴 Q-7 — 「vitest는 배선을 못 본다」가 **세 번째** 재현이다
+
+PR #1646 P-8 · PR-1 P-7 에 이어 같은 구조가 또 나왔다. route 한 줄을 끊어 정산이 **조용히
+사라지는데** anchor 16건이 전부 초록이었다. ⑫⑬⑭는 TypeScript 도 못 잡는 구간이라
+`e2e/stock-preliminary-paid-settlement.spec.ts` 의 `postData` 단언이 유일한 안전망이다.
+
+### 범위 밖
+
+단건 경로(종목 1건)의 §111③ 정산. 법 §110④ 본문이 「예정신고를 한 자는 확정신고를 하지
+아니할 수 있다」이고, 확정신고 의무를 만드는 영 §173⑤3호의 요건이 「**2회 이상** 양도」라
+단건에서는 이 정산이 성립하는 경우가 사실상 없다.
+
+---
+
 ## 부록 A — 재현 커맨드
 
 ```bash
