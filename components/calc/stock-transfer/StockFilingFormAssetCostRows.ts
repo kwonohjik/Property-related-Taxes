@@ -15,6 +15,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import type { RowDef, StockAggregateMeta } from "./StockFilingFormTableHelpers";
 import {
+  isExitTaxCategory,
   sectionLabel,
   acquisitionModeLabel,
   taxCategoryLabel,
@@ -48,7 +49,8 @@ export function pushAssetAndCostRows(
 
   // 01. 적용 조문
   rows.push({
-    label: "01. 적용 조문 (§94)",
+    // 국외전출세는 §94 각 호의 「양도」가 아니라 §118의9 간주양도다 — 괄호를 붙이면 틀리다.
+    label: isExitTaxCategory(result) ? "01. 적용 조문" : "01. 적용 조문 (§94)",
     values: val(
       sectionLabel(result.appliedSection94),
       () => "— (종목별 상이)",
@@ -101,7 +103,12 @@ export function pushAssetAndCostRows(
   rows.push({
     label: "06. 단기보유 (1년 미만)",
     values: val(
-      result.isShortTermHolding ? "해당 (30% 적용)" : "해당없음",
+      // §118의11은 §104①11**가목2)**만 준용한다 — 단기 30%(가목1))가 오지 않는다.
+      isExitTaxCategory(result)
+        ? "-"
+        : result.isShortTermHolding
+          ? "해당 (30% 적용)"
+          : "해당없음",
       () => "— (종목별 상이)",
       (item) => (item.isShortTermHolding ? "해당" : "해당없음"),
     ),

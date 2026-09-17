@@ -21,6 +21,7 @@ import {
   taxCategoryLabel,
   rateLabel,
   isForeignStockCategory,
+  isExitTaxCategory,
 } from "./StockFilingFormLabels";
 
 // ── Props ──────────────────────────────────────────────────────
@@ -206,15 +207,31 @@ export function buildRows(
     ? (aggregate?.items.every((i) => isForeignStockCategory(i)) ?? false)
     : isForeignStockCategory(result);
 
+  /**
+   * 국외전출세인가 — **다종목이 될 수 없다**(§118의10④ 별도 그룹이라 합산 배열에서 차단된다).
+   * 그래서 `isMulti` 분기가 필요 없고 단건 `result`만 보면 된다.
+   */
+  const isExit = isExitTaxCategory(result);
+
   // 보유기간 문자열
+  //
+  // 🔑 국외전출세는 **간주양도**(§118의9)라 보유기간이 세율을 가르지 않고(§118의11은
+  //   §104①11가목2)만 준용), 종목마다 취득일이 달라 합계 열 하나로 대표시킬 수도 없다.
+  //   어댑터가 0을 싣는 것을 그대로 찍으면 「0개월 보유」라는 **틀린 사실**이 인쇄된다.
   const holdingMonthsStr = (r: StockTransferResult) =>
-    `${r.holdingPeriodMonths}개월`;
+    isExitTaxCategory(r) ? "-" : `${r.holdingPeriodMonths}개월`;
 
   // 기본공제 그룹 라벨
+  //
+  // ⚠️ 국외전출세는 `basicDeductionGroup`이 union 상 `stock`이지만 **실제 그룹은 §118의10④**로
+  //   주식 그룹(§103①2호)과 **별개**다. 그래서 합산 배열에도 넣지 않는다(`assertNoExitTaxItem`).
+  //   union 값만 보고 §103①2호를 인쇄하면 「같은 250만원을 두 번 받는다」는 오해를 부른다.
   const basicDeductGroupLabel = (r: StockTransferResult) =>
-    r.basicDeductionGroup === "stock"
-      ? "§103①2호 (주식 그룹)"
-      : "§103①1호 (부동산·기타자산 그룹)";
+    isExitTaxCategory(r)
+      ? "§118의10④ (국외전출세 별도 그룹)"
+      : r.basicDeductionGroup === "stock"
+        ? "§103①2호 (주식 그룹)"
+        : "§103①1호 (부동산·기타자산 그룹)";
 
   const rows: RowDef[] = [];
 
@@ -337,7 +354,10 @@ export function buildRows(
 
   // 20. 기본공제 (§103① 그룹)
   rows.push({
-    label: "20. 기본공제 (§103① 그룹별 250만 한도)",
+    // 국외전출세의 250만원은 §103①이 아니라 **§118의10④**다 — 03행과 같은 축이다.
+    label: isExit
+      ? "20. 기본공제 (§118의10④ 250만 한도)"
+      : "20. 기본공제 (§103① 그룹별 250만 한도)",
     values: val(
       result.basicDeduction,
       (agg) => sumBasicDeductionByGroup(agg.basicDeductionByGroup),
@@ -406,9 +426,11 @@ export function buildRows(
   // 24. 누진공제 (조건부)
   rows.push({
     // 국외주식 §104①12호에는 누진 구간 자체가 없다 — §55·§104①11 가목2)를 근거로 달면 틀리다.
-    label: allForeign
-      ? "24.   누진공제 (§104①12 — 누진 구간 없음)"
-      : "24.   누진공제 (§55 / §104①11 가목2)",
+    label: isExit
+      ? "24.   누진공제 (§118의11 → §104①11 가목2) 준용)"
+      : allForeign
+        ? "24.   누진공제 (§104①12 — 누진 구간 없음)"
+        : "24.   누진공제 (§55 / §104①11 가목2)",
     values: val(
       result.progressiveDeduction ?? null,
       () => null,
@@ -486,6 +508,41 @@ export function buildRows(
       indent: true,
     });
   }
+
+  /**
+   * ── 국외전출세 전용 공제·가산세 (25-E1~25-E4 · 조건부) ─────────────
+   *
+   * 국내 양도에 **대응 항목이 없어** 본행에 실을 수 없는 것들이다. 이 행들이 없으면
+   * 25행 산출세액과 29행 결정세액이 어긋나 **서식이 자기모순**이 된다
+   * (엔진: 결정세액 = 산출세액 − 조정공제 − §118의13 − §118의14 + §118의15④ 가산세).
+   *
+   * ⚠️ 값이 있을 때만 행을 만든다 — 0을 채우면 「공제 0원」과 「공제 자체가 없음」이
+   *   구분되지 않는다(18-1·18-2 행의 기존 규약과 같다).
+   */
+  const exitRowCount = (() => {
+    if (!isExit || !result.exitDetail) return 0;
+    const d = result.exitDetail;
+    let n = 0;
+
+    const pushExitRow = (label: string, v: number | undefined) => {
+      if (v === undefined || v <= 0) return;
+      rows.push({ label, values: val(v), indent: true });
+      n += 1;
+    };
+
+    // §118의12① 조정공제 — 실양도가가 출국일 시가보다 낮을 때 그 차액분 세액을 뺀다.
+    pushExitRow("25-E1. 조정공제 (§118의12①)", d.adjustmentDeduction);
+    // §118의13① 외국납부세액공제 — 실제 양도국에 낸 세액.
+    pushExitRow("25-E2. 외국납부세액공제 (§118의13①)", d.foreignTaxCreditApplied);
+    // §118의14① 비거주자의 국내원천소득 세액공제.
+    pushExitRow("25-E3. 비거주자 국내원천소득 세액공제 (§118의14①)", d.domesticTaxCreditApplied);
+    // §118의15④ — 「… 100분의 2에 상당하는 금액을 **산출세액에 더한다**」. 공제가 아니라 가산이다.
+    pushExitRow(
+      "25-E4. 보유현황 미신고 가산세 (§118의15④ — 액면금액 2%)",
+      d.holdingsReportPenalty,
+    );
+    return n;
+  })();
 
   // ── [H] 가산세·공제 (26~28) ───────────────────────────────────
 
@@ -600,13 +657,21 @@ export function buildRows(
   //   「같은 항 제3호다목 … 은 제외한다」로 빼고, 2호도 「제3호**가목 및 나목**」만 든다.
   //   남는 것은 §110①의 확정신고뿐이다. 종전에는 전부 국외인 신고서에도 「예정신고: 반기 말일
   //   + 2개월」이 인쇄돼 **없는 의무를 안내**했다.
-  const filingDeadlineText = allForeign
-    ? "확정신고: 다음연도 5월 31일 (§110①) — 예정신고 의무 없음 (§105① 본문 괄호)"
-    : "예정신고: 반기 말일 + 2개월 / 확정신고: 다음연도 5월 31일";
+  //
+  // 🔑 국외전출세는 **§118의15②** — 「출국일이 속하는 달의 말일부터 3개월 이내(납세관리인을
+  //   신고한 경우에는 §110①에 따른 확정신고 기간 내)」다. §105①2호(반기 말일 + 2개월)는
+  //   국외전출세에 **존재하지 않는 기한**이다.
+  const filingDeadlineText = isExit
+    ? "출국일이 속하는 달의 말일 + 3개월 (납세관리인 신고 시 §110① 확정신고 기간 내)"
+    : allForeign
+      ? "확정신고: 다음연도 5월 31일 (§110①) — 예정신고 의무 없음 (§105① 본문 괄호)"
+      : "예정신고: 반기 말일 + 2개월 / 확정신고: 다음연도 5월 31일";
   rows.push({
-    label: allForeign
-      ? "32. 신고기한 §110① (확정신고)"
-      : "32. 신고기한 §105①2호 (양도일 반기 말일 + 2개월)",
+    label: isExit
+      ? "32. 신고기한 §118의15②"
+      : allForeign
+        ? "32. 신고기한 §110① (확정신고)"
+        : "32. 신고기한 §105①2호 (양도일 반기 말일 + 2개월)",
     values: val(filingDeadlineText, () => filingDeadlineText, () => null),
   });
 
@@ -634,6 +699,9 @@ export function buildRows(
     // §111③ 정산 3행 — 조건부 행을 추가할 때 여기에 항을 더하지 않으면 경고가 상시 발화해
     // 「진짜 행 누락」 신호가 죽는다(위 정정 2건이 그 실례다).
     (settlement ? 3 : 0) +
+    // 국외전출세 전용 공제·가산세 25-E1~25-E4 — 실제로 push 된 개수를 그대로 쓴다
+    // (값이 있을 때만 만들어지므로 조건식을 다시 쓰면 두 곳이 어긋난다).
+    exitRowCount +
     (hasPriorAggregation ? 6 : 0);
   if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과
