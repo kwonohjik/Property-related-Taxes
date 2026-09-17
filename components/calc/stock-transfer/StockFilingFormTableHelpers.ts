@@ -220,13 +220,29 @@ export function buildRows(
 
   // ── [E] 양도차익·소득금액 (18~19) ─────────────────────────────
 
-  // 18. 양도차익
+  // 18. 양도차익 — **통산 «전»**.
+  //
+  // 🔑 `item.transferIncome`을 쓰면 안 된다. 다자산 경로에서 그 값은
+  //    `stock-transfer-aggregate.ts:429-431`이 **통산 후로 갈아끼운** 것이라, 이 행이
+  //    자기 라벨의 산식(①−②−③)과 어긋나고 바로 아래 18-1행이 **이중 차감처럼** 읽힌다
+  //    (`18행 + 18-1행 ≠ 19행`). 통산 «전» 값은 엔진이 `transferIncomeBeforeOffset`으로
+  //    이미 내보낸다(`aggregate.ts:473-477` — 5개 return 을 한 자리에서 덮어 **조건 없이** 실린다).
+  //
+  // ⚠️ 합계 열도 **같은 축**이어야 한다. `agg.totalTransferIncome`은 통산 후 합계라
+  //    차손이 전액 흡수되는 케이스에서만 우연히 일치하고, **잔여 차손이 소멸하는 케이스**
+  //    (`unusedLoss > 0`)에서는 갈린다 — anchor V-1b 실측: 라벨 산식 −20,000,000 vs 현행 0.
+  //
+  // ⚠️ optional 필드라 `??` fallback 을 둔다 — 단건 경로(`aggregate` 없음)는 애초에 통산이
+  //    없어 `transferIncome`이 곧 통산 전 값이다(anchor A-3 이 고정).
+  const incomeBeforeOffset = (r: StockTransferResult) =>
+    r.transferIncomeBeforeOffset ?? r.transferIncome;
+
   rows.push({
     label: "18. 양도차익 (①−②−③)",
     values: val(
       result.transferIncome,
-      (agg) => agg.totalTransferIncome,
-      (item) => item.transferIncome,
+      (agg) => agg.items.reduce((s, r) => s + incomeBeforeOffset(r), 0),
+      (item) => incomeBeforeOffset(item),
     ),
     highlight: true,
   });

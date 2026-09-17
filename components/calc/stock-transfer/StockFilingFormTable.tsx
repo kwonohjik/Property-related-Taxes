@@ -19,6 +19,16 @@ import {
 
 export type { StockFilingFormTableProps };
 
+// ── 열 폭 (px) — 근거는 컴포넌트 본문 `dataColPx` 주석 · 계획서 §5.3(b) ──
+/** 항목 열 — 최장 라벨(418px)을 2행에 담는다. 제보 「2.5배」(실측 88px × 2.5) */
+const ITEM_COL_PX = 220;
+/** 합계 열(다자산) — 금액 전용. 제보 「2/5」(실측 355px × 0.4 = 142 → 여유 포함 150) */
+const TOTAL_COL_PX = 150;
+/** 합계 열(단건) — 데이터 열이 하나뿐이라 설명 문자열을 담을 여유를 준다 */
+const SINGLE_TOTAL_COL_PX = 340;
+/** 종목 열 — 헤더 `종목 2 (비상장 대주주)` 실측 173px 수용 (242px → −21%) */
+const STOCK_COL_PX = 190;
+
 export function StockFilingFormTable({
   result,
   aggregate,
@@ -35,6 +45,26 @@ export function StockFilingFormTable({
   const { columns } = deriveColumns(result, aggregate);
   const rows = buildRows(result, columns, aggregate);
   const isMulti = Boolean(aggregate && aggregate.items.length > 1);
+
+  /**
+   * 열 폭 — **실측 기반**이다(계획서 §5.3(b), Playwright 3종목 · viewport 1280).
+   *
+   * | 열 | 종전 실측 | 목표 | 근거 |
+   * |---|---:|---:|---|
+   * | 항목 | 88px | 220px | 제보 「2.5배」. 최장 라벨도 2행에 든다(1행은 418px 필요) |
+   * | 합계 | 355px | 150px | 제보 「2/5」. 금액 최장 `149,000,000` ≈ 119px(padding 포함) |
+   * | 종목 | 242px | 190px | 헤더 `종목 2 (비상장 대주주)` 실측 173px 수용 |
+   *
+   * 🔑 종전 합계 열을 355px 로 밀어낸 것은 **금액이 아니라 설명 문자열**이었다
+   *   (`예정신고: 반기 말일 + 2개월 / …` max-content 441px). 그래서 폭을 조이는 것만으로는
+   *   부족하고 아래 `isTextCell` 의 줄바꿈 허용이 **같이** 가야 한다.
+   *
+   * ⚠️ 단건 모드는 데이터 열이 합계 하나뿐이라 종목 열 예산이 통째로 남는다 — 좁히면 설명
+   *   문자열이 불필요하게 접힌다. 그래서 단건에서만 합계 열을 넓게 준다.
+   */
+  const dataColPx = (key: string) =>
+    key === "total" ? (isMulti ? TOTAL_COL_PX : SINGLE_TOTAL_COL_PX) : STOCK_COL_PX;
+  const dataColsPx = columns.reduce((s, c) => s + dataColPx(c.key), 0);
 
   return (
     <div
@@ -105,14 +135,18 @@ export function StockFilingFormTable({
           {/* 표 */}
           <table
             className="text-xs border-collapse"
-            style={{ width: "auto", tableLayout: "fixed" }}
+            // 🔴 `width: "auto"` 였다. 테이블 폭이 auto 면 브라우저가 fixed 알고리즘을 적용할
+            //    기준이 없어 **내용 기반(shrink-to-fit)으로 폴백**하고, `<col>` 폭은 강제값이
+            //    아니라 선호 힌트로 격하된다 — 지정 220/130 이 실측 88/355 로 무너졌다
+            //    (계획서 §5.1 · Playwright 실측). 총폭을 명시해야 지정이 지켜진다.
+            style={{ width: `${ITEM_COL_PX + dataColsPx}px`, tableLayout: "fixed" }}
           >
             <colgroup>
               {/* 항목 열 */}
-              <col style={{ width: "220px" }} />
-              {/* 데이터 열 */}
+              <col style={{ width: `${ITEM_COL_PX}px` }} />
+              {/* 데이터 열 — 합계는 금액만 담아 좁게, 종목은 헤더 라벨을 담을 만큼 */}
               {columns.map((c) => (
-                <col key={c.key} style={{ width: "130px" }} />
+                <col key={c.key} style={{ width: `${dataColPx(c.key)}px` }} />
               ))}
             </colgroup>
 
@@ -125,7 +159,9 @@ export function StockFilingFormTable({
                   <th
                     key={c.key}
                     className={cn(
-                      "text-right px-3 py-2 border-b border-r border-slate-200 font-semibold whitespace-nowrap",
+                      // 헤더 라벨은 텍스트다 — 좁힌 폭을 넘기면 접히게 둔다(종전 nowrap 은
+                      // `종목 2 (비상장 대주주)` 173px 를 강제해 열 폭의 하한이 됐다).
+                      "text-right px-3 py-2 border-b border-r border-slate-200 font-semibold",
                       c.key === "total" && "bg-slate-100 dark:bg-slate-800",
                     )}
                   >
@@ -160,11 +196,22 @@ export function StockFilingFormTable({
                   {columns.map((c) => {
                     const note = row.notes?.[c.key];
                     const roseNote = row.roseNotes?.[c.key];
+                    /**
+                     * 🔑 nowrap 을 **열 단위가 아니라 «값 종류» 단위**로 건다.
+                     *
+                     * `RowDef.values` 는 `number | string | null` 이고 타입 주석이 축을 이미
+                     * 말한다 — 「number=금액, string=날짜·기간 등 텍스트」.
+                     *   · 금액  → nowrap 유지. 천단위 콤마가 끊기면 안 된다(`amount-column-align`).
+                     *   · 문자열 → 줄바꿈 허용. 종전에는 이것까지 nowrap 이라 441px 짜리 설명이
+                     *     열을 밀어냈고, 폭을 조이면 **셀 밖으로 넘친다**(anchor A-7).
+                     */
+                    const isTextCell = typeof row.values[c.key] === "string";
                     return (
                       <td
                         key={c.key}
                         className={cn(
-                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono tabular-nums whitespace-nowrap",
+                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono tabular-nums",
+                          isTextCell ? "whitespace-normal break-words" : "whitespace-nowrap",
                           c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
                           (note || roseNote) && "align-top",
                         )}

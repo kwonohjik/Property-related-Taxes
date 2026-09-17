@@ -329,7 +329,13 @@ export function pushAssetAndCostRows(
     label: "16.   매매수수료·기타 양도비용 (actual 모드)",
     values: val(
       otherExpenses(result),
-      () => null,
+      // 🔑 바로 아래 17행(개산공제)과 **같은 모양**으로 집계한다. 종전에는 이 자리만
+      //    `() => null` 이라 합계 열이 「–」였고, 14행 합계(③)의 **출처를 표가 설명하지 못했다**
+      //    — 종목 열에는 값이 찍히는데 합계만 비어 있는 비대칭이었다.
+      // ⚠️ `otherExpenses` 는 estimated 모드 종목에 null 을 준다(그 종목은 0으로 집계된다).
+      //    라벨의 「(actual 모드)」가 그 범위를 이미 말한다 — 혼재 시 14행과 갈리는 것은
+      //    **의도된 범위 차이**다(계획서 §4.3 V-2).
+      () => aggregate?.items.reduce((s, r) => s + (otherExpenses(r) ?? 0), 0) ?? null,
       (item) => otherExpenses(item),
     ),
     indent: true,
