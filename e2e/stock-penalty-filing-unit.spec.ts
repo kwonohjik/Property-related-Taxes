@@ -14,6 +14,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -59,6 +60,7 @@ async function fillThroughStep3(page: Page) {
   await page.getByRole("button", { name: /^다음/ }).click();
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await fillByLabel(page, "양도가액 합계", "100000000");
+  await chooseAcqPerShare(page);
   await fillByLabel(page, "1주당 취득가액", "500000");
 
   await page.getByRole("button", { name: /^다음/ }).click();

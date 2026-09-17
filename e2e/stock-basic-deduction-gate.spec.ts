@@ -23,6 +23,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { fillBlockShareholderRequirements } from "./_helpers/block-shareholder-gate-fill";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 const FIELD_1 = "같은 해 부동산 그룹에서 이미 사용한 기본공제";
 const FIELD_2 = "같은 해 양도한 부동산 중 비사업용 토지 과세표준";
@@ -116,6 +117,7 @@ async function goToStep3(page: Page) {
     .locator("div:has(> label:has-text('양도가액 합계')) input")
     .first()
     .fill("500000000");
+  await chooseAcqPerShare(page);
   await page
     .locator("div:has(> label:has-text('1주당 취득가액')) input")
     .first()

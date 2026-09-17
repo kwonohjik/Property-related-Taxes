@@ -18,6 +18,7 @@
  *   ⚠️ stale 서버 주의 — lsof -ti :3104 | xargs kill 후 실행.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 // ─────────────────────────────────────────────────────────────────
 // 공통 헬퍼 (stock-transfer-securities-tax.spec.ts와 동일 플로우)
@@ -87,6 +88,7 @@ async function fillStep2AndGoToStep3(
     .first();
   await transferPriceInput.fill(opts.transferTotalPrice);
 
+  await chooseAcqPerShare(page);
   const acqPriceInput = page
     .locator("div:has(> label:has-text('1주당 취득가액')) input")
     .first();

@@ -39,6 +39,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 const LOCAL_USER_ID = "local-user";
 const CORP = "㈜현조경";
@@ -130,6 +131,7 @@ async function jumpToStep(page: Page, i: number) {
 async function fillStep2(page: Page, o: { transferTotal: string; perShareAcq: string }) {
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await page.locator("div:has(> label:has-text('양도가액 합계')) input").first().fill(o.transferTotal);
+  await chooseAcqPerShare(page);
   await page.locator("div:has(> label:has-text('1주당 취득가액')) input").first().fill(o.perShareAcq);
 }
 

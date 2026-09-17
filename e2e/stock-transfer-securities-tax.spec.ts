@@ -25,6 +25,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { fillBlockShareholderRequirements } from "./_helpers/block-shareholder-gate-fill";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 // ─────────────────────────────────────────────────────────────────
 // 공통 헬퍼
@@ -145,7 +146,8 @@ async function fillStep2AndGoToStep3(
     .first();
   await transferPriceInput.fill(opts.transferTotalPrice);
 
-  // 1주당 취득가액 — 동일 패턴
+  // 1주당 취득가액 — 동일 패턴 (기본값이 「합계 직접 입력」이라 단가 축을 먼저 고른다)
+  await chooseAcqPerShare(page);
   const acqPriceInput = page
     .locator("div:has(> label:has-text('1주당 취득가액')) input")
     .first();

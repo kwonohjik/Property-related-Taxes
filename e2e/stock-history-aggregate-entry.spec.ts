@@ -38,6 +38,8 @@ function stockRecord(id: string, name: string, transferDate: string, finalTax: n
       transferActualInputMode: "total",
       transferTotalPrice: "100000000",
       acquisitionMode: "actual",
+      // 입력 방식 기본값은 「합계 직접 입력」이다 — 단가 축 seed 는 명시해야 한다(안 하면 취득가액 0)
+      acquisitionActualInputMode: "per_share",
       perShareAcquisitionPrice: "500000",
       expenseMode: "actual",
       filingType: "preliminary",
