@@ -103,6 +103,19 @@ export function runStockLossOffset(inputs: AggregateStockItemInput[], calcOne: C
    */
   const offsetFromSame: (number | undefined)[] = rawItems.map(() => undefined);
   const offsetFromOther: (number | undefined)[] = rawItems.map(() => undefined);
+  /**
+   * 차손을 **내보낸** 쪽 — 흡수의 반대편이다.
+   *
+   * 🔑 종전에는 흡수(`fromSame`/`fromOther`)만 echo 했다. 그러면 신고서 18-1행이 흡수한
+   *   종목에만 값을 싣고 차손 종목은 비어, **가로 합계가 맞지 않는다**
+   *   (`18행 62,000,000 + 18-1행 −20,000,000 ≠ 19행 62,000,000` — 제보).
+   *
+   * ⚠️ 화면에서 역산하지 못한다 — 소멸분의 **종목별 귀속**을 코어만 알기 때문이다
+   *   ([[feedback_aggregate_display_rederives_engine_value]]). 그래서 엔진이 내보낸다.
+   */
+  const offsetGivenAway: (number | undefined)[] = rawItems.map(() => undefined);
+  /** 통산되지 못하고 **소멸**한 차손 (양도소득에 결손금 이월 없음) */
+  const offsetExpired: (number | undefined)[] = rawItems.map(() => undefined);
 
   const applyOffset = (idx: number[], core: ReturnType<typeof offsetLossesCore>) => {
     const touched = core.rows.length > 0;
@@ -111,6 +124,17 @@ export function runStockLossOffset(inputs: AggregateStockItemInput[], calcOne: C
       if (!touched) return;
       offsetFromSame[globalIdx] = core.fromSame[localIdx];
       offsetFromOther[globalIdx] = core.fromOther[localIdx];
+
+      // ⚠️ `core.rows` 의 from/to 는 **그룹 내 로컬 인덱스**다 — 코어를 그룹마다 따로
+      //    돌리기 때문이다. 전역 인덱스로 바꿔 싣는다.
+      const income = rawItems[globalIdx].transferIncome;
+      if (income >= 0) return;               // 차손 종목에만 싣는다
+      const given = core.rows
+        .filter((r) => r.from === localIdx)
+        .reduce((s, r) => s + r.amount, 0);
+      offsetGivenAway[globalIdx] = given;
+      const expired = Math.abs(income) - given;
+      if (expired > 0) offsetExpired[globalIdx] = expired;
     });
   };
   applyOffset(stockIdx, stockOffset);
@@ -123,6 +147,9 @@ export function runStockLossOffset(inputs: AggregateStockItemInput[], calcOne: C
       : {
           lossOffsetFromSameGroup: offsetFromSame[i],
           lossOffsetFromOtherGroup: offsetFromOther[i],
+          // 차손 종목에만 실린다(이익 종목은 `undefined` 유지 — 「0원 유출」 행을 만들지 않는다)
+          lossOffsetGivenAway: offsetGivenAway[i],
+          lossOffsetExpired: offsetExpired[i],
         };
 
 
