@@ -1,5 +1,5 @@
 /**
- * E2E: 국외주식 결과 화면 — **신고서 양식 표가 맨 앞**이다
+ * E2E: 국외주식 결과 화면 — ② 출력 항목 선택 → ③ 신고서 양식 → ④ 결과 카드
  *
  * 제보 —「해외주식 양도소득세 결과탭 첫번째 출력물을 신고서 양식이 출력되도록 수정해줘」
  *
@@ -74,17 +74,20 @@ async function topOf(page: Page, sel: string) {
   return box!.y;
 }
 
-test.describe("국외주식 결과 화면 — 신고서 양식이 맨 앞", () => {
-  test("FF-1: 신고서 표가 렌더되고 해외주식 결과 카드보다 위에 있다", async ({ page }) => {
+test.describe("국외주식 결과 화면 — 섹션 순서", () => {
+  test("FF-1: 신고서 표가 렌더되고 출력 패널 뒤·결과 카드 앞에 있다", async ({ page }) => {
     test.setTimeout(180_000);
     await reachStep3(page);
 
     await page.getByRole("button", { name: "결과 보기" }).click();
     await expect(page.getByText(/해외주식 양도소득세 결과/)).toBeVisible({ timeout: 60_000 });
 
+    const panelY = await topOf(page, 'text=출력 항목 선택');
     const filingY = await topOf(page, '[data-print-section="stock-form-table"]');
     const cardY = await topOf(page, 'text=/해외주식 양도소득세 결과/');
 
+    // 국외 트랙에는 의뢰인 카드(①)가 없다 — 국내 결과뷰 전용 컴포넌트다.
+    expect(panelY, `출력 패널 ${panelY} vs 신고서 ${filingY}`).toBeLessThan(filingY);
     expect(filingY, `신고서 ${filingY} vs 결과 카드 ${cardY}`).toBeLessThan(cardY);
   });
 

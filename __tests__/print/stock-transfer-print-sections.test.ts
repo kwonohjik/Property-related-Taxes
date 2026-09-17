@@ -21,13 +21,15 @@ import {
   type StockTransferPrintSectionId,
 } from "@/lib/print/stock-transfer-print-sections";
 
-// 설계 §2.7 기준 leaf 5종
+// 설계 §2.7 기준 leaf 6종
 //   · securities-transaction-tax — 증권거래세 UI 통합
 //   · exit-holding-report — 국외전출자 보유현황 신고서(별지 제104호서식)
+//   · taxpayer-header — 의뢰인·종목 헤더 카드(화면 최상단으로 분리)
 //
 // ⚠️ 이 배열은 union 에서 파생되지 않는다 — leaf 를 늘리면 **여기도** 늘려야 가드가 따라온다.
 //   아래 PD-st-5 가 레지스트리와의 일치를 강제한다.
 const ALL_LEAVES: StockTransferPrintSectionId[] = [
+  "taxpayer-header",
   "calculation",
   "detail-cards",
   "securities-transaction-tax",

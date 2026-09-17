@@ -233,7 +233,12 @@ export function StockTransferTaxResultView({
   const hasStx = stx !== undefined && (stx.totalTax > 0 || Boolean(stx.warning));
   const availablePrintIds = useMemo<Set<StockTransferPrintSectionId>>(
     () => {
-      const ids: StockTransferPrintSectionId[] = ["calculation", "detail-cards", "filing-form"];
+      const ids: StockTransferPrintSectionId[] = [
+        "taxpayer-header",
+        "calculation",
+        "detail-cards",
+        "filing-form",
+      ];
       if (hasStx) ids.push("securities-transaction-tax");
       return new Set(ids);
     },
@@ -253,14 +258,21 @@ export function StockTransferTaxResultView({
 
     return (
       <div className="space-y-6">
-        {/* ── 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) ── */}
-        <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-        <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+        {/*
+          화면 순서는 ① 의뢰인 카드 → ② 출력 항목 선택 → ③ 신고서 양식 → ④ 나머지 명세서다(제보).
+          ⚠️ 카드는 종전에 `calculation` **안**에 있었다 — 그대로 두면 계산 내역 전체가 패널보다
+             앞으로 나오므로 떼어내 자기 leaf(`taxpayer-header`)를 줬다.
+        */}
+        <PrintSection id="taxpayer-header" selectedIds={selectedPrintIds}>
+          <StockTaxpayerHeaderCard
+          securityName={securityName}
+          securityCode={securityCode}
+          brokerage={brokerage}
+          transferDate={transferDate}
+        />
         </PrintSection>
 
-        {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장).
-            🔑 **신고서 뒤**다 — 결과 화면의 첫 화면은 신고서여야 한다(제보). 패널은 인쇄
-            제어용 컨트롤이라 결과를 본 뒤 고르는 순서가 자연스럽다. */}
+        {/* ② 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
         <PrintSelectionPanel
           allGroups={STOCK_TRANSFER_PRINT_SECTIONS}
           selectedIds={selectedPrintIds}
@@ -268,16 +280,13 @@ export function StockTransferTaxResultView({
           onChange={setSelectedPrintIds}
         />
 
-        {/* ── 핵심 결과 (헤더·분류·산식·비과세 안내·정보용표) ── */}
-        <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
-        {/* 양도인 + 종목 헤더 카드 */}
-        <StockTaxpayerHeaderCard
-          securityName={securityName}
-          securityCode={securityCode}
-          brokerage={brokerage}
-          transferDate={transferDate}
-        />
+        {/* ③ 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) */}
+        <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+        <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+        </PrintSection>
 
+        {/* ④ ── 핵심 결과 (분류·산식·비과세 안내·정보용표) ── */}
+        <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
         {/* 분류 배지 */}
         <div className="flex flex-wrap gap-2">
           {categoryLegalBasis ? (
@@ -370,13 +379,17 @@ export function StockTransferTaxResultView({
 
   return (
     <div className="space-y-6">
-      {/* ── 신고서 양식 표 (32행 고정) ── */}
-      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-      <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+      {/* ① 의뢰인·종목 헤더 카드 — 위 비과세 분기와 **같은 순서**다(제보). */}
+      <PrintSection id="taxpayer-header" selectedIds={selectedPrintIds}>
+        <StockTaxpayerHeaderCard
+          securityName={securityName}
+          securityCode={securityCode}
+          brokerage={brokerage}
+          transferDate={transferDate}
+        />
       </PrintSection>
 
-      {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장).
-          🔑 **신고서 뒤**다 — 위 비과세 분기와 같은 이유(제보). */}
+      {/* ② 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
       <PrintSelectionPanel
         allGroups={STOCK_TRANSFER_PRINT_SECTIONS}
         selectedIds={selectedPrintIds}
@@ -384,16 +397,13 @@ export function StockTransferTaxResultView({
         onChange={setSelectedPrintIds}
       />
 
-      {/* ── 핵심 결과 (헤더·키움배지·분류·결과표·양도가액 산식) ── */}
-      <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
-      {/* 양도인 + 종목 헤더 카드 */}
-      <StockTaxpayerHeaderCard
-        securityName={securityName}
-        securityCode={securityCode}
-        brokerage={brokerage}
-        transferDate={transferDate}
-      />
+      {/* ③ ── 신고서 양식 표 (32행 고정) ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
+      </PrintSection>
 
+      {/* ④ ── 핵심 결과 (키움배지·분류·결과표·양도가액 산식) ── */}
+      <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
       {/* F-12 키움 자동조회 출처 라벨 */}
       <KiwoomFetchSourceBadge fetchedAt={kiwoomLastFetchedAt} />
 

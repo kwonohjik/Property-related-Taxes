@@ -32,13 +32,21 @@ import {
 export type { PrintChannel, GroupCheckState };
 
 /**
- * 선택 가능 leaf 5종 (exact 매칭)
+ * 선택 가능 leaf 6종 (exact 매칭)
  *
  * ⚠️ leaf 를 늘리면 `__tests__/print/stock-transfer-print-sections.test.ts` 의 `ALL_LEAVES`
  *   배열도 함께 늘린다 — 그 배열은 union 에서 파생되지 않아 **타입으로 강제되지 않는다**
  *   (memory `feedback_print_leaf_add_unit_test_sync`). 빠뜨리면 새 leaf 만 가드 밖에 남는다.
  */
 export type StockTransferPrintSectionId =
+  /**
+   * 의뢰인·종목 헤더 카드(`StockTaxpayerHeaderCard`).
+   *
+   * 종전에는 `calculation` **안**에 있었다. 화면 최상단으로 올리려면 그 섹션에서 떼어내야 하고
+   * (계산 내역 전체가 패널보다 앞으로 나올 수는 없다), 떼어낸 조각을 선택 대상 밖에 두면
+   * 「선택 항목만 인쇄」 원칙이 그 카드에만 깨진다 ⇒ 자기 leaf 를 준다.
+   */
+  | "taxpayer-header"
   | "calculation"
   | "detail-cards"
   | "filing-form"
@@ -62,6 +70,7 @@ export const STOCK_TRANSFER_PRINT_SECTIONS: StockTransferPrintSectionGroup[] = [
     id: "group:calc",
     label: "계산 내역",
     children: [
+      { id: "taxpayer-header", label: "의뢰인·종목 정보 (양도인·증권사·양도일)", channel: SCREEN },
       { id: "calculation", label: "핵심 결과 (분류·결과표·양도가액 산식)", channel: SCREEN },
       { id: "detail-cards", label: "상세 분해·판정 (환산·누진·평가·가산세·대주주)", channel: SCREEN },
       { id: "securities-transaction-tax", label: "증권거래세 (정보용)", channel: SCREEN },
