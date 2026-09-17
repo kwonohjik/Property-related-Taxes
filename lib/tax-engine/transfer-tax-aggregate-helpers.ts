@@ -18,6 +18,7 @@ import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { offsetLossesCore } from "./loss-offset-core";
+import { crossLossOffsetRateKey } from "./cross-loss-offset-rate-key";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -25,6 +26,7 @@ import type {
   AggregateTransferInput,
   GroupTaxResult,
   LossOffsetRow,
+  CrossLossExternalAsset,
 } from "./types/transfer-aggregate.types";
 
 // ============================================================
@@ -209,25 +211,47 @@ export interface LossOffsetOutput {
  * 거동 고정: `__tests__/tax-engine/transfer-tax-loss-offset-characterization.test.ts` (41건).
  * 추출 전후로 이 파일이 통째로 통과해야 한다.
  */
-export function offsetLosses(records: AssetRecord[]): LossOffsetOutput {
-  const core = offsetLossesCore(
-    records.map((r) => ({
+export function offsetLosses(
+  records: AssetRecord[],
+  external?: CrossLossExternalAsset[],
+): LossOffsetOutput {
+  /**
+   * 🔴 **크로스 통산(§102① 1호 = 부동산 + 기타자산)** — 외부 행이 있으면 자기 키도 **크로스
+   * 축으로 번역**해 한 배열로 돌린다. 번역을 빼면 `prog:104-1-1` ≠ `x:prog-basic`이라
+   * 영 §167의2①**1호(같은 세율 먼저)가 죽고 2호(안분)로 떨어진다** — 금액이 달라진다.
+   *
+   * 외부 행이 **없으면 한 글자도 바뀌지 않는다**(축 번역도 하지 않는다) — 기존 41건의
+   * characterization이 그 무영향을 고정한다.
+   */
+  const cross = external && external.length > 0 ? external : null;
+  const ownKey = (r: AssetRecord) =>
+    cross ? crossLossOffsetRateKey("real_estate", r.lossOffsetRateKey) ?? r.lossOffsetRateKey
+          : r.lossOffsetRateKey;
+
+  const core = offsetLossesCore([
+    ...records.map((r) => ({
       income: r.income,
-      rateKey: r.lossOffsetRateKey,
+      rateKey: ownKey(r),
       exempt: r.result.isExempt,
     })),
-  );
+    ...(cross ?? []).map((e) => ({ income: e.income, rateKey: e.rateKey, exempt: e.exempt })),
+  ]);
+
+  /** 코어 인덱스 → 표시용 id. 자기 자산 뒤에 외부 행이 붙는 **고정 순서**다. */
+  const idAt = (i: number) =>
+    i < records.length ? records[i].item.propertyId : (cross ?? [])[i - records.length].id;
 
   return {
     lossOffsetTable: core.rows.map((row) => ({
-      fromPropertyId: records[row.from].item.propertyId,
-      toPropertyId: records[row.to].item.propertyId,
+      fromPropertyId: idAt(row.from),
+      toPropertyId: idAt(row.to),
       amount: row.amount,
       scope: row.scope,
     })),
-    lossOffsetFromSame: core.fromSame,
-    lossOffsetFromOther: core.fromOther,
-    incomeAfterOffset: core.incomeAfterOffset,
+    // 🔑 외부 행 몫은 **잘라낸다** — 이 신고서의 자산이 아니다.
+    lossOffsetFromSame: core.fromSame.slice(0, records.length),
+    lossOffsetFromOther: core.fromOther.slice(0, records.length),
+    incomeAfterOffset: core.incomeAfterOffset.slice(0, records.length),
     unusedLoss: core.unusedLoss,
   };
 }

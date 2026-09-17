@@ -376,6 +376,9 @@ export async function POST(request: NextRequest) {
     // ⑭ §133 5년 누적 한도 — aggregate M-8(applyFiveYearLimits)에서 소비.
     // optional 필드라 TypeScript가 누락을 감지하지 못함 — 누락 시 5년 capping 상시 비활성.
     priorReductionUsage: data.priorReductionUsage ?? [],
+    // ⑭ 크로스 §102② 외부 행 — optional 이라 TypeScript 가 누락을 감지하지 못한다.
+    //    빠지면 통산이 **조용히 사라진다**(엔진은 자기 자산만으로 돌고 아무도 실패하지 않는다).
+    crossLossOffsetExternal: data.crossLossOffsetExternal,
     // [B5] 신고서 단위 수정신고·경정청구 — 단건 route(:308~)와 동형 Date 변환.
     // amendment ⊥ 자산별 가산세라 2-pass에서 무해(§7.4). finalInput 스프레드로 2차 pass에 반영.
     amendment: data.amendment

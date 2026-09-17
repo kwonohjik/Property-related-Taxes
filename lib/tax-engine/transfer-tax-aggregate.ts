@@ -206,7 +206,7 @@ function computeAggregateOnce(
     lossOffsetFromOther,
     incomeAfterOffset,
     unusedLoss,
-  } = offsetLosses(assetRecords);
+  } = offsetLosses(assetRecords, input.crossLossOffsetExternal);
 
   // income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후) — 세액 계산용 "감면후 income" 분리.
   // incomeAfterOffset(pre-감면)는 양도소득금액 표시·차손통산·농특세 감면前 기준으로 보존.

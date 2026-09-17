@@ -26,6 +26,8 @@ import { BASIC_DEDUCTION_LIMIT } from "./cross-104-5-history";
 import type { CalculationRecord } from "@/lib/storage/types";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { buildCrossInjection, type CrossLossInjection } from "./cross-102-2-apply";
+import type { CrossLossOutcome } from "./cross-102-2-loss-offset";
 
 /** 기본공제를 어느 쪽에 전액 몰아줄 것인가 */
 export type AllocationSide = "real_estate" | "other_asset";
@@ -44,6 +46,13 @@ export interface AllocationOutcome {
   candidates: AllocationCandidate[];
   /** 실패한 후보의 사유 — 하나가 실패해도 나머지로 진행한다(계획서 X-6) */
   failures: { side: AllocationSide; reason: string }[];
+  /**
+   * 🔴 **크로스 §102② 통산 내역** — 다른 엔진의 차손을 실제로 흡수했을 때만 채운다.
+   * `null`이면 통산이 일어나지 않은 것이고, 그때 세액은 종전과 같다.
+   */
+  crossLoss: CrossLossOutcome | null;
+  /** 통산을 «건너뛴» 사유(자산별 내역 부재 등). 흡수가 있었으면 undefined. */
+  crossLossSkipped?: string;
 }
 
 /** 후보별 두 엔진에 주입할 「이미 쓴 기본공제」 */
@@ -59,14 +68,22 @@ async function runCandidate(args: {
   realEstateRecord: CalculationRecord;
   otherAssetRecord: CalculationRecord;
   taxYear: number;
+  /** 🔴 크로스 §102② 통산 주입 — 없으면 종전 거동 그대로다 */
+  injection?: CrossLossInjection | null;
 }): Promise<AllocationCandidate> {
-  const { side, realEstateRecord, otherAssetRecord, taxYear } = args;
+  const { side, realEstateRecord, otherAssetRecord, taxYear, injection } = args;
   const used = usedFor(side);
 
   // 두 엔진은 서로 독립이라 **병렬**로 부른다(계획서 R-2 — 지연 완화).
   const [realEstate, otherAsset] = await Promise.all([
-    recalcRealEstate(realEstateRecord, { annualBasicDeductionUsed: used.realEstate }),
-    recalcOtherAsset(otherAssetRecord, { realEstateGroupBasicDeductionUsed: used.otherAsset }),
+    recalcRealEstate(realEstateRecord, {
+      annualBasicDeductionUsed: used.realEstate,
+      crossLossOffsetExternal: injection?.realEstateExternalRows,
+    }),
+    recalcOtherAsset(otherAssetRecord, {
+      realEstateGroupBasicDeductionUsed: used.otherAsset,
+      crossLossOffsetIncome: injection?.otherAssetIncome,
+    }),
   ]);
 
   const reSide = extractRealEstateSide(realEstate as unknown as Record<string, unknown>);
@@ -98,9 +115,11 @@ export async function pickBestAllocation(args: {
   otherAssetRecord: CalculationRecord;
   taxYear: number;
 }): Promise<AllocationOutcome> {
+  const probe = await probeCrossLoss(args);
+
   const sides: AllocationSide[] = ["real_estate", "other_asset"];
   const settled = await Promise.allSettled(
-    sides.map((side) => runCandidate({ ...args, side })),
+    sides.map((side) => runCandidate({ ...args, side, injection: probe.injection })),
   );
 
   const candidates: AllocationCandidate[] = [];
@@ -127,5 +146,43 @@ export async function pickBestAllocation(args: {
     b.cross.calculatedTax < a.cross.calculatedTax ? b : a,
   );
 
-  return { best, candidates, failures };
+  return {
+    best,
+    candidates,
+    failures,
+    crossLoss: probe.injection ? probe.injection.outcome : null,
+    ...(probe.skipped ? { crossLossSkipped: probe.skipped } : {}),
+  };
+}
+
+/**
+ * **패스 1** — 통산 «전» 자산별 양도소득금액·세율축을 얻어 주입 인자를 만든다.
+ *
+ * 🔑 **기본공제 배분과 무관하다.** §102②(통산)은 §103①②(기본공제)보다 **앞 단계**라
+ *   (`transfer-tax-aggregate.ts` M-3 → M-4 순서) 어느 배분안으로 돌리든 `income`이 같다.
+ *   그래서 배분 후보 2개를 돌리기 **전에 한 번만** 재면 된다.
+ *
+ * 🔒 **실패해도 던지지 않는다.** 크로스 통산은 기존 §104⑤ 합산 위에 얹는 것이고, 통산이
+ *   불가능한 조합(자산별 내역 부재·주식 그룹)에서 화면 전체가 죽으면 안 된다
+ *   ([[feedback_early_return_branch_skips_pipeline_stages]] 의 반대 방향 — 여기서는
+ *   **건너뛰고 사유를 들고 간다**).
+ */
+async function probeCrossLoss(args: {
+  realEstateRecord: CalculationRecord;
+  otherAssetRecord: CalculationRecord;
+}): Promise<{ injection: CrossLossInjection | null; skipped?: string }> {
+  try {
+    const [realEstate, otherAsset] = await Promise.all([
+      recalcRealEstate(args.realEstateRecord),
+      recalcOtherAsset(args.otherAssetRecord),
+    ]);
+    const built = buildCrossInjection(realEstate, otherAsset);
+    if (!built.ok) return { injection: null, skipped: built.reason };
+    // 🔑 **엔진을 넘나든 흡수가 없으면 주입하지 않는다** — 각 엔진이 이미 자기 안에서
+    //   하던 통산을 다시 태울 이유가 없고, 주입 자체가 오탐 표시가 된다.
+    if (!built.injection.outcome.appliedAcrossEngines) return { injection: null };
+    return { injection: built.injection };
+  } catch (e) {
+    return { injection: null, skipped: e instanceof Error ? e.message : String(e) };
+  }
 }

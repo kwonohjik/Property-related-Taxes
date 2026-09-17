@@ -365,6 +365,13 @@ export const stockTransferInputSchema = z.object({
   // §103① 기본공제 그룹
   realEstateGroupBasicDeductionUsed: z.number().min(0),
 
+  /**
+   * ⑫ 🔴 **크로스 §102② 통산 후 양도소득금액** — 부동산 ↔ 기타자산 합산 화면 전용.
+   * 여기에 없으면 body에 실어도 **조용히 strip**되어 통산이 세액에 반영되지 않는다.
+   * 음수도 허용한다(전액 흡수되지 못한 차손이 그대로 올 수 있다 — 엔진이 과세표준에서 0으로 클램프).
+   */
+  crossLossOffsetIncome: z.number().optional(),
+
   // 분할 매수·분할 양도 (Plan v2.2 — optional, lotsMode='split' 시 필수)
   // .max() — 요청당 계산 비용 상한 (DoS 표면 차단; 실무상 lot 수는 수백 미만)
   acquisitionLots: z.array(acquisitionLotSchema).max(500).optional(),

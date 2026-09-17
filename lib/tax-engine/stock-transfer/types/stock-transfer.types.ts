@@ -541,6 +541,23 @@ export type StockTransferInput = {
   /** §103①1호 — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
   realEstateGroupBasicDeductionUsed: number;
 
+  /**
+   * 🔴 **크로스 §102② 통산 후 양도소득금액** — 부동산 ↔ 기타자산 합산 화면 전용.
+   *
+   * 법 §102①1호는 §94①1·2호(부동산)와 **4호**(기타자산)를 한 호에 담는데 엔진이 갈려 있어
+   * 서로의 차손에 닿지 못한다. 크로스 화면이 **두 엔진의 자산을 한 배열로** 통산한 뒤
+   * (`lib/calc/cross-102-2-loss-offset.ts`) 이 종목 몫의 **통산 후** 값을 여기로 돌려준다.
+   *
+   * 🔑 **증분이 아니라 «통산 후 값» 자체**다 — 엔진은 자기 STEP 5 산출을 이 값으로 갈아끼우기만
+   *   하면 되고, 순서 의존이 생기지 않는다(계획서 §5.2).
+   *
+   * 🔒 크로스 경로는 **단건**이라 배분할 자산이 하나뿐이다. 다종목 합산은 자기 내부 통산
+   *   (`stock-transfer-aggregate-loss-offset.ts`)이 따로 처리하므로 이 필드를 쓰지 않는다.
+   *
+   * 미지정이면 **현행 그대로**다(anchor W-4b).
+   */
+  crossLossOffsetIncome?: number;
+
   // ── 분할 매수·분할 양도 (선택) — split 모드 활성 시 사용 ──
   // 미입력 시 단건 모드로 호환 (acquisitionDate·shareCount·perShareAcquisitionPrice 단일 필드 사용)
   /** 분할 매수 lot 배열 */
