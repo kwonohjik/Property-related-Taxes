@@ -1,41 +1,25 @@
 "use client";
 
 /**
- * ExitTaxBlock — 국외전출세 입력 블록 (PR-4B, ⑤ 동기화 지점)
+ * ExitTaxSettlementBlock — 국외전출세 **3단계**: 실양도 · 납부유예 · 외국납부세액 · 보유현황 신고
  *
- * 법령: 소득세법 §118의9~§118의16 (2026.4.21. 시행)
- * 시행령: §178의8, §178의9, §178의10, §167의8
+ * 계획서: `docs/00-pm/exit-tax-wizard-step-realign.plan.md` §3
+ * 검증 짝: `validateStep3ExitTax`(실양도 단가 · 외국납부세액 · 원천징수액 · 액면금액 합계)
  *
- * 입력 순서 = 엔진 계산 로직 순서 (feedback_ui_order_follows_logic):
- *   거주자 요건(§118의9①) → 출국일 → 대주주 요건(§178의8) →
- *   보유 종목(§178의9) → 실양도(경정청구용) →
- *   납부유예(§118의16) → 외국납부세액(§118의13) → 보유현황 신고(§118의15)
- *
- * 3중 패턴 강제 (feedback_store_default_vs_ui_display_fallback):
- *   value={form.etField} — display fallback 단독 금지, factory default 사용
- *
- * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
- *   미입력 → validate 차단
- *
- * useEffect → store 미러링 금지 (feedback_useeffect_store_mirror_forbidden)
- * "원" 단위 표기 금지 (feedback_no_won_suffix)
- * SelectOnFocusProvider 전역 적용 — 개별 onFocus 불필요
+ * ⚠️ 국내 Step3 의 ①필요경비는 국외전출세에서 **렌더되지 않는다** — 필요경비는 §118의10②가
+ *   §97 을 준용해 **종목별 취득가액**으로 잡히고, 국내 `expenseMode`·`actualExpenses` 는
+ *   exit body 에 실리지도 않는다(계획서 §1.3 실측).
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CURRENCY_OPTIONS } from "./currency-options";
-import { ToneCard } from "@/components/calc/shared/ToneCard";
-import type { Tone } from "@/components/calc/shared/tones";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
-import { ExitTaxHoldingsMatrix } from "@/components/calc/stock-transfer/ExitTaxHoldingsMatrix";
-import type {
-  StockTransferFormData,
-  ExitTaxHoldingForm,
-} from "@/lib/stores/calc-wizard-stock-store";
+import { SectionBox, type StockStepBlockProps } from "./stock-section-box";
+
 
 // ── 납부유예 사유 옵션 (§118의16) ──
 const DEFERRAL_REASON_OPTIONS = [
@@ -75,130 +59,15 @@ const FOREIGN_TAX_EXCLUSION_OPTIONS = [
   },
 ];
 
-// ── 섹션 박스 래퍼 ──
-function SectionBox({
-  n,
-  label,
-  tone,
-  children,
-}: {
-  n: number;
-  label: string;
-  tone: Tone;
-  children: React.ReactNode;
-}) {
-  // 톤은 <ToneCard>(tones.ts 정적 소스) — 기존 동적 `${tone}` 제거(JIT purge 위험).
-  // p-4·space-y-3는 기존 레이아웃 보존. noDark: 이 폼은 원래 dark 미대응(light 전용)이라
-  // dark 변형을 새로 입히지 않아 양 모드 모두 회귀 0.
-  return (
-    <ToneCard tone={tone} sectionNum={n} title={label} className="p-4" bodyClassName="space-y-3" noDark>
-      {children}
-    </ToneCard>
-  );
-}
-
-interface ExitTaxBlockProps {
-  form: StockTransferFormData;
-  onChange: (patch: Partial<StockTransferFormData>) => void;
-}
-
-export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
+export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) {
   // 3중 패턴 default (factory default와 동일값)
   const deferralReason = form.etDeferralReason;         // factory: "none"
   const foreignTaxExclusionReason = form.etForeignTaxExclusionReason; // factory: "none"
 
-  // 5년 미만 거주 경고 조건
-  const residencyYears = parseDecimal(form.etYearsResidentLast10);
-  const isResidencyShort = form.etYearsResidentLast10 !== "" && residencyYears < 5;
-
   return (
     <div className="space-y-5">
-      {/* ── 섹션 1: 거주자 요건 (§118의9①1호) ── */}
-      <SectionBox n={1} label="거주자 요건 (§118의9①1호)" tone="rose">
-        <FieldCard
-          label="출국일 전 10년 중 국내 거주 연수"
-          hint="출국일 전 10년 중 국내에 주소 또는 거소를 둔 기간의 합계 (만 년). 5년 이상이어야 과세됩니다."
-          required
-          trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
-              §118의9①1호
-            </span>
-          }
-        >
-          <div className="flex items-center gap-2">
-            <DecimalInput
-              value={form.etYearsResidentLast10}
-              onChange={(v) => onChange({ etYearsResidentLast10: v })}
-              placeholder="국내 거주 연수 (만 년)"
-              className="w-40"
-            />
-            <span className="text-sm text-slate-500">년</span>
-          </div>
-        </FieldCard>
-
-        {isResidencyShort && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
-            거주 기간이 5년 미만입니다. §118의9①에 따라 납세의무가 없어 세액은 0으로 산출됩니다.
-          </div>
-        )}
-      </SectionBox>
-
-      {/* ── 섹션 2: 출국일 ── */}
-      <SectionBox n={2} label="출국일" tone="sky">
-        <FieldCard
-          label="출국일"
-          hint="비거주자가 된 날 (YYYY-MM-DD). 보유 주식의 간주양도 시점이 됩니다."
-          required
-          trailing={
-            <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
-              §118의9①
-            </span>
-          }
-        >
-          <DateInput
-            value={form.etDepartureDate}
-            onChange={(v) => onChange({ etDepartureDate: v })}
-          />
-        </FieldCard>
-      </SectionBox>
-
-      {/* ── 섹션 3: 대주주 요건 (§178의8) ── */}
-      <SectionBox n={3} label="대주주 요건 (§178의8 → §167의8 준용)" tone="violet">
-        <ToggleCard
-          title="직전 연도말 대주주 해당"
-          description="§178의8 → §167의8 준용 — 출국일이 속하는 연도 직전 연도말 기준으로 대주주 요건에 해당하는 경우 과세됩니다. 자기 판정하여 입력하세요."
-          checked={form.etIsMajorShareholder}
-          onCheckedChange={(v) => onChange({ etIsMajorShareholder: v })}
-          tone="violet"
-          trailing={
-            <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
-              §178의8
-            </span>
-          }
-        />
-
-        {!form.etIsMajorShareholder && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
-            대주주에 해당하지 않는 경우 §118의9①2호 요건 미충족으로 납세의무가 없습니다.
-          </div>
-        )}
-      </SectionBox>
-
-      {/* ── 섹션 4: 보유 종목 (§178의9) ── */}
-      <SectionBox n={4} label="보유 종목 — 간주양도 대상 (§178의9)" tone="amber">
-        <p className="text-xs text-amber-700 leading-relaxed">
-          §118의9①: §94①3호 가·나목(상장·비상장 주식) <strong>및 §94①4호 다·라목(기타자산: 비상장 과점주주·부동산과다보유법인)</strong> 보유 종목별로 입력하세요.
-          기타자산 다·라목도 §94①4 주식이므로 ‘비상장’으로 입력하면 동일 흐름(출국일 시가 × 주수 − 취득가 + §118의11 세율)으로 계산됩니다.
-          각 종목의 출국일 시가(간주양도가액 = 시가 × 주수)가 양도차익 계산에 사용됩니다.
-        </p>
-        <ExitTaxHoldingsMatrix
-          holdings={form.etHoldings}
-          onChange={(holdings: ExitTaxHoldingForm[]) => onChange({ etHoldings: holdings })}
-        />
-      </SectionBox>
-
       {/* ── 섹션 5: 실양도 정보 (경정청구 §118의12~§118의15⑤) ── */}
-      <SectionBox n={5} label="실양도 정보 — 경정청구용 (§118의12, 선택)" tone="emerald">
+      <SectionBox label="실양도 정보 — 경정청구용 (§118의12, 선택)" tone="emerald">
         <p className="text-xs text-emerald-700 leading-relaxed">
           납부유예 후 해외에서 실제로 양도한 경우, 실양도가액이 출국일 시가보다 낮으면
           §118의12 조정공제를 통해 환급청구할 수 있습니다.
@@ -387,7 +256,7 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
       </ToggleCard>
 
       {/* ── 섹션 8: 보유현황 신고 (§118의15) ── */}
-      <SectionBox n={6} label="보유현황 신고 (§118의15)" tone="rose">
+      <SectionBox label="보유현황 신고 (§118의15)" tone="rose">
         <ToggleCard
           title="출국일 전날까지 보유현황 신고 완료"
           description="§118의15 — 출국일 전날까지 보유 주식 현황을 신고한 경우 미신고 가산세를 면제받습니다."

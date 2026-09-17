@@ -66,6 +66,16 @@ describe("[SS] Step3 섹션 번호 — 삭제 후에도 빈 번호가 없다", (
     expect(sectionNumbers(container)).toEqual(["1", "2", "3"]);
   });
 
+  it("SS-6: 🔴 해외주식도 1·2·3·4 순차 — ①이 전용 블록으로 바뀌어도 번호가 비지 않는다", () => {
+    // 2026-09-17 실측: 전용 블록을 «번호 없는» 자리에 끼우자 화면이 ②③④가 됐다.
+    //   SS-2(국외전출세)가 그 회귀를 잡았는데, 해외주식은 케이스가 없어 **머지된 뒤에야** 드러났다.
+    //   ⇒ 트랙마다 케이스를 둔다.
+    const { container } = render(
+      <Step3 form={form({ marketType: "foreign_stock" })} onChange={() => {}} />,
+    );
+    expect(sectionNumbers(container)).toEqual(["1", "2", "3", "4"]);
+  });
+
   it("SS-3: 기타자산(과점주주)에서도 1·2·3·4 순차 — ② 필드 게이트가 번호를 바꾸지 않는다", () => {
     const { container } = render(
       <Step3

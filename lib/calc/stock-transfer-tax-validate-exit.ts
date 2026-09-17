@@ -95,14 +95,12 @@ export function validateStep1ExitTax(form: StockTransferFormData): StockValidati
     });
   }
 
-  // 보유 종목 최소 1건
-  if (!form.etHoldings || form.etHoldings.length === 0) {
-    errors.push({
-      field: "etHoldings",
-      message: "보유 종목을 최소 1건 입력하세요",
-      severity: "error",
-    });
-  }
+  /**
+   * 🔑 **「보유 종목 최소 1건」은 Step2 로 갔다**(2026-09-17 단계 재배치).
+   *   매트릭스가 2단계 화면에 있으므로 1단계에서 막으면 **「+ 종목 추가」가 없는 화면에서**
+   *   사용자가 풀 수 없다 ([[feedback_required_field_needs_an_input_path]]).
+   *   계획서: `docs/00-pm/exit-tax-wizard-step-realign.plan.md` §2 · Q-1 · anchor EX-5.
+   */
 
   return errors;
 }
@@ -121,7 +119,15 @@ export function validateStep2ExitTax(form: StockTransferFormData): StockValidati
   if (form.marketType !== "exit_tax") return [];
   const errors: StockValidationError[] = [];
 
-  if (!form.etHoldings || form.etHoldings.length === 0) return errors;
+  // 🔑 게이트가 **매트릭스와 같은 단계**에 있다 — 이 화면에 「+ 종목 추가」가 있다(Q-1).
+  if (!form.etHoldings || form.etHoldings.length === 0) {
+    errors.push({
+      field: "etHoldings",
+      message: "보유 종목을 최소 1건 입력하세요",
+      severity: "error",
+    });
+    return errors;
+  }
 
   form.etHoldings.forEach((h, i) => {
     const prefix = `종목 ${i + 1}`;

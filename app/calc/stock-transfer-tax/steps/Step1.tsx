@@ -36,7 +36,7 @@ import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/Acquisiti
 import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
 import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/SecurityMetadataBlock";
 import { ForeignStockIdentityBlock } from "@/components/calc/stock-transfer/ForeignStockIdentityBlock";
-import { ExitTaxBlock } from "@/components/calc/stock-transfer/ExitTaxBlock";
+import { ExitTaxIdentityBlock } from "@/components/calc/stock-transfer/ExitTaxIdentityBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type {
@@ -206,7 +206,7 @@ export function Step1({ form, onChange }: Step1Props) {
       items.push({
         key: "exit_tax",
         title: "국외전출세 입력 (§118의9)",
-        render: () => <ExitTaxBlock form={form} onChange={onChange} />,
+        render: () => <ExitTaxIdentityBlock form={form} onChange={onChange} />,
       });
       return items;  // 대주주·기타자산 섹션 스킵
     }

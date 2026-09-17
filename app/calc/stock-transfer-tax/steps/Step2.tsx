@@ -22,6 +22,7 @@ import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSample
 import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
 import { ForeignStockPriceBlock } from "@/components/calc/stock-transfer/ForeignStockPriceBlock";
+import { ExitTaxHoldingsBlock } from "@/components/calc/stock-transfer/ExitTaxHoldingsBlock";
 import {
   createEmptyAcquisitionLot,
   type StockTransferFormData,
@@ -90,6 +91,14 @@ export function Step2({ form, onChange }: Step2Props) {
    */
   if (form.marketType === "foreign_stock") {
     return <ForeignStockPriceBlock form={form} onChange={onChange} />;
+  }
+
+  /**
+   * 🔑 **국외전출세도 이 단계가 다른 화면이다** — 「양도가액」은 출국일 시가로 «간주»되므로
+   *   종목별 보유 현황(§178의9)이 곧 이 단계의 입력이다. 국내 ①② 는 exit body 에 실리지 않는다.
+   */
+  if (form.marketType === "exit_tax") {
+    return <ExitTaxHoldingsBlock form={form} onChange={onChange} />;
   }
 
   return (
