@@ -18,7 +18,9 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
-import { ForeignStockBlock } from "@/components/calc/stock-transfer/ForeignStockBlock";
+// 2026-09-17 단계 재배치 — 중소기업 토글은 §2「기본 양도 정보」 소속이라 1단계 블록으로 옮겨졌다
+// (계획서 `docs/00-pm/foreign-stock-wizard-step-realign.plan.md` §4).
+import { ForeignStockIdentityBlock } from "@/components/calc/stock-transfer/ForeignStockIdentityBlock";
 import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-form";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
@@ -30,7 +32,7 @@ function block(patch: Partial<StockTransferFormData>, onChange = () => {}) {
     marketType: "foreign_stock",
     ...patch,
   } as StockTransferFormData;
-  return render(<ForeignStockBlock form={form} onChange={onChange} />);
+  return render(<ForeignStockIdentityBlock form={form} onChange={onChange} />);
 }
 
 const smeToggle = () => screen.queryByText(/중소기업 \(§104①12호가목/);

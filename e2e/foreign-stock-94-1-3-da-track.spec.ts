@@ -41,7 +41,13 @@ async function fillByLabel(page: Page, label: string, value: string) {
     .fill(value);
 }
 
-/** 해외주식 Step 1 공통 입력 — 양도일만 케이스별로 바뀐다 */
+/**
+ * 해외주식 **Step 1** — 납세의무 요건 · 기본 양도 정보. 양도일만 케이스별로 바뀐다.
+ *
+ * 🔑 2026-09-17 단계 재배치 — 금액(양도가액·취득가액)은 **Step 2** 로 갔다
+ *   (계획서 `docs/00-pm/foreign-stock-wizard-step-realign.plan.md`).
+ *   종전에는 이 헬퍼가 섹션 3·4 까지 채우고 **빈 Step 2 를 「다음」으로 지나쳤다**.
+ */
 async function fillForeignStep1(page: Page, transferDate: [string, string, string]) {
   await page.getByPlaceholder("종목명을 입력하세요").fill("Anchor Corp");
   await page.getByRole("radio", { name: "해외주식" }).first().click();
@@ -61,12 +67,18 @@ async function fillForeignStep1(page: Page, transferDate: [string, string, strin
   await d.nth(1).fill(transferDate[2]);
 
   await fillByLabel(page, "양도 주식수", "1000");
+}
 
-  // ── 섹션 3: 양도가액 ──
+/** 해외주식 **Step 2** — 양도가액·취득가액 (원화 환산 §178의5) */
+async function fillForeignStep2(page: Page) {
+  // 국외는 이 단계 전체가 외화 화면이다 — 국내 「양도가액 합계」 칸은 없다
+  await expect(page.getByText("양도가액 — 원화 환산 (§178의5)")).toBeVisible({ timeout: 10_000 });
+
+  // ── ① 양도가액 ──
   await fillByLabel(page, "양도일 기준환율", "1000");
   await fillByLabel(page, "1주당 양도가액 (외화)", "200");
 
-  // ── 섹션 4: 취득가액 ──
+  // ── ② 취득가액 ──
   await fillByLabel(page, "취득일 기준환율", "1000");
   await fillByLabel(page, "1주당 취득가액 (외화)", "100");
 }
@@ -77,8 +89,11 @@ test.describe("국외주식 §94①3호다목 — 세율 20% · 2020 이전 차�
     await gotoStockTransferTax(page);
     await fillForeignStep1(page, ["2025", "09", "30"]);
 
-    // ── Step 2 → Step 3 (해외주식은 입력이 Step 1에 모여 있다) ──
+    // ── Step 2: 양도·취득가액(외화) ──
     await page.getByRole("button", { name: /^다음/ }).click();
+    await fillForeignStep2(page);
+
+    // ── Step 3 ──
     await page.getByRole("button", { name: /^다음/ }).click();
     await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
     await page.locator('input[type="text"][aria-label="연도"]').nth(0).fill("2025");

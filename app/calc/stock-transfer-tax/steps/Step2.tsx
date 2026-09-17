@@ -21,6 +21,7 @@ import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/Acquis
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
 import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
+import { ForeignStockPriceBlock } from "@/components/calc/stock-transfer/ForeignStockPriceBlock";
 import {
   createEmptyAcquisitionLot,
   type StockTransferFormData,
@@ -80,6 +81,16 @@ export function Step2({ form, onChange }: Step2Props) {
     const cash = parseAmount(form.exchangeCash);
     return prop + debt + cash;
   }, [form.exchangePropertyValue, form.exchangeDebtRelief, form.exchangeCash]);
+
+  /**
+   * 🔑 **국외주식은 이 단계 전체가 다른 화면이다** — 양도·취득가액을 **외화 + 기준환율**로 받는다
+   *   (영 §178의5). 종전에는 국내 전용 ①② 를 그대로 내밀었는데, 그 칸들은 국외 body 에 실리지
+   *   않아 **계산에 1원도 가지 않는 유령 입력**이었다(계획서 §2.3 실측).
+   *   검증(`validateStep2Foreign`)은 처음부터 이 단계의 필드를 보고 있었다.
+   */
+  if (form.marketType === "foreign_stock") {
+    return <ForeignStockPriceBlock form={form} onChange={onChange} />;
+  }
 
   return (
     <div className="space-y-8">
