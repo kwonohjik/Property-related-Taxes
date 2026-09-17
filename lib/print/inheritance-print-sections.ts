@@ -57,6 +57,24 @@ const SCREEN_PDF: PrintChannel[] = ["screen", "pdf"];
 
 /** §2 계층 트리 — 큰 섹션(그룹) → 개별 서식(leaf) */
 export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
+  // 🔑 **신고서 서식이 목록 첫 행**이다(제보). 패널은 이 배열을 선언 순서 그대로 펼치므로
+  //    그룹 순서가 곧 「출력 항목 선택」의 행 순서다. anchor: `filing-form-first-row.anchor.test.ts`.
+  //    ⚠️ 서버 PDF 출력 순서는 바뀌지 않는다 — `ResultPdfDocument`는 `includes()`로 포함 여부만
+  //       보고 배치는 자기 JSX 순서로 고정한다.
+  {
+    id: "group:forms",
+    label: "공식 신고서식",
+    children: [
+      // PR-3a/3b: 별지 react-pdf를 ResultPdfDocument에 통합 완료 → pdf 승격
+      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN_PDF },
+      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN_PDF },
+      {
+        id: "deduction-besshi",
+        label: "부표3·별지5호·별지1호 (채무·공과·장례·영농·가업)",
+        channel: SCREEN_PDF,
+      },
+    ],
+  },
   {
     id: "group:summary",
     label: "계산 요약",
@@ -80,20 +98,6 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
       { id: "prior-gift-filing", label: "사전증여재산 명세", channel: SCREEN },
       { id: "corporate-exemption", label: "영리법인 상속세 면제", channel: SCREEN },
       { id: "debt-allocation", label: "채무·공과·장례비 협의분할", channel: SCREEN },
-    ],
-  },
-  {
-    id: "group:forms",
-    label: "공식 신고서식",
-    children: [
-      // PR-3a/3b: 별지 react-pdf를 ResultPdfDocument에 통합 완료 → pdf 승격
-      { id: "filing-form-9", label: "별지 제9호서식 (앞쪽)", channel: SCREEN_PDF },
-      { id: "besshi-buppyo-2", label: "별지 제9호서식 부표2 (상속인별)", channel: SCREEN_PDF },
-      {
-        id: "deduction-besshi",
-        label: "부표3·별지5호·별지1호 (채무·공과·장례·영농·가업)",
-        channel: SCREEN_PDF,
-      },
     ],
   },
   {

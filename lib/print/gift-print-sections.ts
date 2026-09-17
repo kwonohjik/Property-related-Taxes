@@ -60,6 +60,21 @@ const PDF: PrintChannel[] = ["pdf"];
 
 /** §2.1 계층 트리 — 큰 섹션(그룹) → 개별 서식(leaf) */
 export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
+  // 🔑 **신고서 서식이 목록 첫 행**이다(제보). 패널은 이 배열을 선언 순서 그대로 펼치므로
+  //    그룹 순서가 곧 「출력 항목 선택」의 행 순서다. anchor: `filing-form-first-row.anchor.test.ts`.
+  //    ⚠️ 서버 PDF 출력 순서는 바뀌지 않는다 — `ResultPdfDocument`는 `includes()`로 포함 여부만
+  //       보고 배치는 자기 JSX 순서로 고정한다.
+  {
+    id: "group:forms",
+    label: "공식 신고서식",
+    children: [
+      // PR-B2: GiftFilingForm10PdfDocument react-pdf 포팅 완료 → pdf 승격
+      { id: "filing-form-10", label: "별지 제10호서식 (건 0)", channel: SCREEN_PDF },
+      { id: "simultaneous-filing-10", label: "동시증여 별지 제10호서식 (건 1..N)", channel: SCREEN },
+      // PR-B2: GiftValuationFormPdfDocument 신규 완료 → pdf 승격
+      { id: "valuation-form", label: "증여재산 및 평가명세서 (부표1)", channel: SCREEN_PDF },
+    ],
+  },
   {
     id: "group:summary",
     label: "계산 요약",
@@ -79,17 +94,6 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     label: "증여 자료",
     children: [
       { id: "prior-gift", label: "사전증여 합산 내역 (§47)", channel: SCREEN },
-    ],
-  },
-  {
-    id: "group:forms",
-    label: "공식 신고서식",
-    children: [
-      // PR-B2: GiftFilingForm10PdfDocument react-pdf 포팅 완료 → pdf 승격
-      { id: "filing-form-10", label: "별지 제10호서식 (건 0)", channel: SCREEN_PDF },
-      { id: "simultaneous-filing-10", label: "동시증여 별지 제10호서식 (건 1..N)", channel: SCREEN },
-      // PR-B2: GiftValuationFormPdfDocument 신규 완료 → pdf 승격
-      { id: "valuation-form", label: "증여재산 및 평가명세서 (부표1)", channel: SCREEN_PDF },
     ],
   },
   {
