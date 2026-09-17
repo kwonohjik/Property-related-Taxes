@@ -19,6 +19,7 @@
  */
 import { test, expect } from "@playwright/test";
 
+import { waitForCalculationSaved } from "./_helpers/history-seed";
 import { gotoStockTransferTax, fillItemThroughStep3 } from "./_helpers/stock-item-fill";
 
 /** 2종목을 확정·계산하고 결과 화면의 **합계 결정세액** 텍스트를 돌려준다. */
@@ -42,6 +43,8 @@ async function calcTwoItems(page: import("@playwright/test").Page): Promise<stri
   // 비교 축을 **숫자**로 통일한다 — 표기 차이로 깨지면 결함이 아니라 셀렉터 문제가 된다.
   const text = ((await total.textContent()) ?? "").replace(/[^0-9,]/g, "");
   expect(text).not.toBe("");
+  // 결과가 보인다고 IndexedDB write가 끝난 것은 아니다 — 이력을 읽기 전에 저장을 관측한다.
+  await waitForCalculationSaved(page, "첫째종목");
   return text;
 }
 
@@ -96,6 +99,8 @@ test.describe("주식 다종목 — 이력 저장·복원", () => {
     );
     await page.getByRole("button", { name: "결과 보기" }).click();
     await calcResponse;
+    // 🔴 여기서 곧바로 이동하면 저장(결과 화면 마운트 effect)이 선점된다 — CI 실측으로 확인됐다.
+    await waitForCalculationSaved(page, "단건종목");
 
     // 다시 다종목 상태로 오염시킨다
     await page.goto("/calc/stock-transfer-tax");
