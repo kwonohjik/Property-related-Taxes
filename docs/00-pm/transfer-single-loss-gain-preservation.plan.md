@@ -294,7 +294,13 @@ grep으로 찾은 `Math.max(0, ...)` 중 **다음은 법령상 정당하므로 �
 
 ## 10. 범위 밖 (발견했으나 고치지 않음)
 
-- **합산 후보 선택 모달**(`HistoryAggregateSelectModal.tsx:57`)은 「결정세액」만 표시한다. 차손 자산과 비과세 자산이 **둘 다 0**으로 보여 구별되지 않는다. 결함은 아니나 합산 대상을 고를 때 판단 근거가 부족하다 — 별도 항목.
+- ~~**합산 후보 선택 모달**(`HistoryAggregateSelectModal.tsx:57`)은 「결정세액」만 표시한다. 차손 자산과 비과세 자산이 **둘 다 0**으로 보여 구별되지 않는다. 결함은 아니나 합산 대상을 고를 때 판단 근거가 부족하다 — 별도 항목.~~
+
+  ⛔ **기각 — 재제안 금지 (2026-09-17, 사용자 결정).** 「비과세 자산은 입력을 안 할 것이니
+  양도차손과 구별하지 않아도 된다」. 전제가 성립하면 0으로 보이는 항목은 **차손 자산뿐**이라
+  모호성 자체가 생기지 않는다. ⇒ 미결 목록에서 제외한다.
+  현재 위치는 `components/calc/transfer/HistoryAggregateSelectModal.tsx:76`
+  (`itemAmount: determinedTaxOf` — PR #1649에서 세목 중립 shell로 분리되며 이동).
 - `transfer-tax-preliminary-filing.ts:84`의 `skipLossFloor: false` 명시는 Q1 (A) 선택 시 함께 정리된다.
 
 ---
