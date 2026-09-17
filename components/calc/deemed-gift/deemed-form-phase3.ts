@@ -1,0 +1,203 @@
+/**
+ * 증여로 보는 경우 — **Phase 3 추정·의제** 폼 필드(§45 재산취득자금 · §45의2 명의신탁 ·
+ * §41의2 초과배당 · §41의3 상장이익 · §42 재산사용 · §42의2 조직변경 · §42의3 가치증가 ·
+ * §45의3 일감몰아주기 · §45의5 특정법인).
+ *
+ * deemed-form-state.ts에서 분리(800줄 정책 선제 대응) — 신규 필드는 이 파일에 추가한다.
+ * 타입·초기값을 **한 파일에 짝으로** 두어 한쪽만 추가하는 누락을 막는다.
+ */
+import type { ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
+import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScShareholderRow } from "./deemed-form-rows";
+
+export interface DeemedPhase3Fields {
+  // ── Phase 3 추정·의제 ──
+  // 재산취득자금 증여추정 §45
+  afSubType: "acquisition" | "debt_repayment";
+  afAcquisitionValue: string;
+  afProvenAmount: string;
+  // 명의신탁 증여의제 §45의2
+  ntPropertyValue: string;
+  ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
+  ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  ntValuationMode: "total" | "per_share"; // total=재산가액 직접 / per_share=유상증자 신주(명의개서일 §63 평가×신주수)
+  ntPerSharePrice: string; // per_share: 명의개서일 §63 평가 1주당 가액
+  ntNewShares: string; // per_share: 명의신탁 신주 수
+  ntSubscriptionPrice: string; // echo: 신주인수가액(발행가액)
+  ntTheoreticalExRights: string; // echo: 이론적 권리락 증자후 1주당 가액
+  ntPreIncreasePerShare: string; // echo: 증자 전 1주당 평가액
+  ntActualOwner: string; // prefill: 실제소유자(증여자) 성명
+  ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
+  // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
+  edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
+  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
+  edSeparateTaxAmount: string; // 분리과세 세액 직접입력
+  edComprehensiveTaxBase: string; // 종합과세 과세표준 (ⓐ기준)
+  edSettlementMode: boolean; // 정산 활성화 ToggleCard
+  edActualIncomeTax: string; // 정산 실제 소득세납부세액
+  edDonorRelationship:
+    | "spouse"
+    | "lineal_ascendant_adult"
+    | "lineal_ascendant_minor"
+    | "lineal_descendant"
+    | "other_relative"
+    | undefined;
+  edPriorDeductionApplied: string; // 10년 내 기적용 공제 누계
+  edIsGenerationSkip: boolean; // 세대생략 여부
+  edIsMinorGenerationSkip: boolean; // 미성년 세대생략 할증 (§57①)
+  edIsWithinFilingDeadline: boolean; // 기한내신고 예정 (신고세액공제 3%)
+  edComprehensiveTaxBaseExcluding: string; // 종합과세 ⓑ기준(초과배당 제외) — 미입력 시 자동 추정
+  edIncomeTaxYear: string; // 소득 귀속연도 override — 미입력 시 증여일 연도
+  // 상장이익 §41의3 / 합병상장 §41의5
+  lgEventType: "listing" | "merger";
+  lgSettlementPrice: string;
+  lgAcqValue: string;
+  lgCorpGrowth: string;
+  lgShares: string;
+  // 령§31의3⑤ 기업가치 자동계산 (direct=직접입력 / auto=월수산식)
+  lgCorpGrowthMode: "direct" | "auto";
+  lgTotalNetIncome: string; // 사업연도별 1주당 순손익 합계
+  lgMonthsBusinessStart: string; // 분모 월수 (사업연도개시일~상장전일)
+  lgMonthsAcqToSettlement: string; // 곱수 월수 (증여·취득일~정산기준일)
+  lgMajorShareholder: boolean; // §63③ 최대주주 20% 할증
+  lgSurchargeExempt: boolean; // §63③ 단서 배제(중소·중견·결손)
+  lgStockCode: string; // 키움 §63①1 자동조회용 종목코드 (조회 보조 — 엔진 미전달)
+  lgSettlementDate: string; // 키움 §63①1 자동조회용 정산기준일 (상장일+3개월)
+  // 재산사용·용역 §42
+  psuSubType: "free_use" | "low_price" | "high_price";
+  psuMarketValue: string;
+  psuConsideration: string;
+  // 조직변경 §42의2
+  ocSubType: "share_change" | "value_change";
+  ocBaseValue: string;
+  ocPreShares: string;
+  ocPostShares: string;
+  ocPostPerShare: string;
+  ocPreValue: string;
+  ocPostValue: string;
+  // 재산가치증가 §42의3
+  viCurrentValue: string;
+  viAcqCost: string;
+  viNormalIncrease: string;
+  viContribution: string;
+  viAcqCause: ValueIncreaseAcquisitionCause | ""; // 취득사유 ①1·2·3호 (미선택="")
+  viReason: ValueIncreaseReason; // 가치증가사유 영①호 (기본 form_change=1호)
+  viAcqDate: string; // 취득일 (5년 echo)
+  viEventDate: string; // 사유발생일
+  // 특정법인 §45의5
+  scTransactionBenefit: string;
+  scCorporateTax: string;
+  scRatioPct: string;
+  // §45의3 일감몰아주기
+  rcEnterpriseSize: "small" | "medium" | "large" | "";
+  rcTotalSalesStr: string;
+  rcPreTaxAdjOperatingIncomeStr: string;
+  rcTaxableIncomeStr: string;
+  rcCorporateTaxNetStr: string;
+  rcShareholders: RcShareholderRow[];
+  rcIntermediaryCorps: RcIntermediaryRow[];
+  rcSalesPartners: RcSalesRow[];
+  // §45의5 확장 — 모드 토글 + 다주주 roster
+  /** 입력 방식: "single"=지분율 직접 / "roster"=주주 명단 */
+  scMode: "single" | "roster";
+  /** 법인세 상당액 모드: "direct"=직접 입력 / "auto"=산출세액+소득금액 자동안분 */
+  scCorporateTaxMode: "direct" | "auto";
+  /** auto: 법인세 산출세액 */
+  scCorpTaxAssessed: string;
+  /** auto: 법인세 공제·감면 */
+  scCorpTaxDeduction: string;
+  /** auto: 각사업연도소득금액 (안분 분모) */
+  scCorpIncome: string;
+  /** roster: 발행주식 총수 (분모) */
+  scTotalShares: string;
+  /**
+   * roster: 주주 명단 — 3-state (undefined=OFF / []=ON빈(validate 차단) / [...]=데이터).
+   * feedback_three_state_optional_mode_toggle 준수.
+   */
+  scShareholders?: ScShareholderRow[];
+  /** 결과 수증자 선택 인덱스 (한도표 표시용) */
+  scSelectedDoneeIndex: number;
+  /** §45의5② 한도 ㉮㉠ 증여재산공제 */
+  scGiftDeduction: string;
+}
+
+export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
+  afSubType: "acquisition",
+  afAcquisitionValue: "",
+  afProvenAmount: "",
+  ntPropertyValue: "",
+  ntTaxAvoidance: true,
+  ntExcluded: false,
+  ntValuationMode: "total",
+  ntPerSharePrice: "",
+  ntNewShares: "",
+  ntSubscriptionPrice: "",
+  ntTheoreticalExRights: "",
+  ntPreIncreasePerShare: "",
+  ntActualOwner: "",
+  ntNominee: "",
+  edShareholders: undefined,
+  edIncomeTaxMode: "undetermined",
+  edSeparateTaxAmount: "",
+  edComprehensiveTaxBase: "",
+  edSettlementMode: false,
+  edActualIncomeTax: "",
+  edDonorRelationship: undefined,
+  edPriorDeductionApplied: "",
+  edIsGenerationSkip: false,
+  edIsMinorGenerationSkip: false,
+  edIsWithinFilingDeadline: true,
+  edComprehensiveTaxBaseExcluding: "",
+  edIncomeTaxYear: "",
+  lgEventType: "listing",
+  lgSettlementPrice: "",
+  lgAcqValue: "",
+  lgCorpGrowth: "",
+  lgShares: "",
+  lgCorpGrowthMode: "direct",
+  lgTotalNetIncome: "",
+  lgMonthsBusinessStart: "",
+  lgMonthsAcqToSettlement: "",
+  lgMajorShareholder: false,
+  lgSurchargeExempt: false,
+  lgStockCode: "",
+  lgSettlementDate: "",
+  psuSubType: "free_use",
+  psuMarketValue: "",
+  psuConsideration: "",
+  ocSubType: "share_change",
+  ocBaseValue: "",
+  ocPreShares: "",
+  ocPostShares: "",
+  ocPostPerShare: "",
+  ocPreValue: "",
+  ocPostValue: "",
+  viCurrentValue: "",
+  viAcqCost: "",
+  viNormalIncrease: "",
+  viContribution: "",
+  viAcqCause: "",
+  viReason: "form_change",
+  viAcqDate: "",
+  viEventDate: "",
+  scTransactionBenefit: "",
+  scCorporateTax: "",
+  scRatioPct: "",
+  // §45의3 일감몰아주기
+  rcEnterpriseSize: "",
+  rcTotalSalesStr: "",
+  rcPreTaxAdjOperatingIncomeStr: "",
+  rcTaxableIncomeStr: "",
+  rcCorporateTaxNetStr: "",
+  rcShareholders: [],
+  rcIntermediaryCorps: [],
+  rcSalesPartners: [],
+  scMode: "single",
+  scCorporateTaxMode: "direct",
+  scCorpTaxAssessed: "",
+  scCorpTaxDeduction: "",
+  scCorpIncome: "",
+  scTotalShares: "",
+  scShareholders: undefined,
+  scSelectedDoneeIndex: 0,
+  scGiftDeduction: "",
+};
