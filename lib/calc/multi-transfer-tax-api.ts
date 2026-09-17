@@ -9,6 +9,7 @@ import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-re
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { CrossLossExternalAsset } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
@@ -413,6 +414,11 @@ export function mergePriorReductionUsage(
 export async function callMultiTransferTaxAPI(
   multiForm: MultiTransferFormData,
   properties: PropertyItem[],
+  /**
+   * 🔴 **크로스 §102② 통산 주입** — 부동산 ↔ 기타자산 합산 화면 전용(계획서 §5.2 축 3).
+   * 폼에 두지 않는 이유는 주식 쪽과 같다 — 사용자 입력이 아니라 **상대 엔진의 계산 결과**다.
+   */
+  opts: { crossLossOffsetExternal?: CrossLossExternalAsset[] } = {},
 ): Promise<AggregateTransferResult> {
   const propertiesPayload = properties.map((p) => ({
     propertyId: p.propertyId,
@@ -440,6 +446,10 @@ export async function callMultiTransferTaxAPI(
     priorPaidLocalTax,
     // ⑬ §133 5년 누적 한도 — 인별 이력 (TypeScript 미감지 영역, 누락 시 침묵 stripping)
     priorReductionUsage: mergePriorReductionUsage(properties),
+    // ⑬ 크로스 §102② 외부 행 — 같은 미감지 영역. 누락 시 통산이 **세액에 닿지 않는다**.
+    ...(opts.crossLossOffsetExternal && opts.crossLossOffsetExternal.length > 0
+      ? { crossLossOffsetExternal: opts.crossLossOffsetExternal }
+      : {}),
     // [B3] 신고서 단위 수정신고·경정청구 — 단건 payload(transfer-tax-api.ts:528)와 동형.
     ...(multiForm.amendmentMode
       ? {

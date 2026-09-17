@@ -446,9 +446,16 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
    *    이미 확정된 앞 회차의 필요경비가 사라진다. 그래서 swap 분기에서도 기신고분
    *    취득가액은 **남긴다**.
    */
-  const transferIncome = swapApplied
+  const rawTransferIncome = swapApplied
     ? aggregatedTransferPrice - (priorAggregation?.acquisitionPrice ?? 0) - aggregatedExpenses
     : aggregatedTransferPrice - aggregatedAcquisitionPrice - aggregatedExpenses;
+
+  /**
+   * 🔴 **크로스 §102② 통산 후 값 주입** — 부동산 ↔ 기타자산 합산 화면 전용(§5.2 축 3).
+   * 주입되면 STEP 6 이후가 전부 그 값을 기준으로 돈다(기본공제·과세표준·세율·§104⑤ 버킷).
+   * 미지정이면 위 산출값 그대로다.
+   */
+  const transferIncome = input.crossLossOffsetIncome ?? rawTransferIncome;
 
   // ──────────────────────────────────────────────────────────
   // STEP 6: 기본공제 §103①

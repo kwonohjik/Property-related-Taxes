@@ -603,9 +603,19 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
 // ============================================================
 
 export async function callStockTransferTaxAPI(
-  form: StockTransferFormData
+  form: StockTransferFormData,
+  /**
+   * 🔴 **크로스 §102② 통산 주입** — 부동산 ↔ 기타자산 합산 화면 전용(계획서 §5.2 축 3).
+   * 폼에 두지 않는 이유: 사용자가 입력하는 값이 아니라 **다른 엔진의 계산 결과**다.
+   * 폼 타입에 넣으면 저장·복원·validate 전 경로에 유령 필드가 생긴다.
+   */
+  opts: { crossLossOffsetIncome?: number } = {},
 ): Promise<StockTransferResult> {
   const body = buildStockTransferApiBody(form);
+  // ⑬ body spread — TypeScript 미감지 구간. 누락 시 침묵 strip 된다.
+  if (opts.crossLossOffsetIncome !== undefined) {
+    body.crossLossOffsetIncome = opts.crossLossOffsetIncome;
+  }
 
   const res = await fetch("/api/calc/stock-transfer", {
     method: "POST",

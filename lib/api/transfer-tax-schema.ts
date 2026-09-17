@@ -302,6 +302,21 @@ export const multiInputSchema = z
     annualBasicDeductionUsed: z.number().int().nonnegative().default(0),
     priorReductionUsage: priorReductionUsageSchema,
     specialHouseExclusions: specialHouseExclusionSchema,
+    /**
+     * ⑫ 🔴 **크로스 §102② 외부 행** (부동산 ↔ 기타자산 합산 화면 전용).
+     * 여기에 없으면 body에 실어도 **조용히 strip**되어 통산이 세액에 반영되지 않는다.
+     * `income`은 음수(양도차손) 허용 — 그것이 이 배열의 존재 이유다.
+     */
+    crossLossOffsetExternal: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          income: z.number(),
+          rateKey: z.string().min(1),
+          exempt: z.boolean(),
+        }),
+      )
+      .optional(),
     basicDeductionAllocation: z
       // ⛔ `"MAX_BENEFIT"`은 폐지됐다 — §103② 법정 순서가 아니었다(2026-09-16).
       //    구 세션·구 이력이 그 값을 보내면 **legacy로 받아 기본값으로 접는다**

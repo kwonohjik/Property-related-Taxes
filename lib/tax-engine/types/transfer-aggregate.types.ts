@@ -53,6 +53,32 @@ export type TransferTaxItemInput = Omit<
 };
 
 /** 다건 입력 (건별 + 공통) */
+/**
+ * 크로스(§102② 부동산 ↔ 기타자산) 통산 — 이 신고서 **밖**의 자산 1건.
+ *
+ * 법 §102①**1호**가 §94①1·2호(부동산)와 **4호**(기타자산)를 한 호에 담는데 엔진이 둘로
+ * 갈려 있어 서로의 차손에 닿지 못한다. 크로스 화면이 상대 엔진의 행을 **통산 «전»** 값으로
+ * 실어 보내면, 이 엔진이 자기 자산과 **한 배열**로 코어를 돌려 영 §167의2①의 1호·2호를
+ * 정확히 적용한다.
+ *
+ * 🔑 **`rateKey`는 이미 크로스 축**이다(`cross-loss-offset-rate-key.ts`). 이 배열이 있으면
+ *   엔진은 **자기 키도 같은 축으로 번역**한다 — 안 하면 `prog:104-1-1` ≠ `x:prog-basic`이라
+ *   1호(같은 세율)가 죽고 2호(다른 세율 안분)로 떨어진다.
+ *
+ * ⚠️ 이 배열의 자산은 **결과에 나타나지 않는다** — 차손을 주고받을 뿐 이 신고서의 과세표준·
+ *   세액에는 들어가지 않는다(그쪽 엔진이 자기 신고서에서 계산한다).
+ */
+export interface CrossLossExternalAsset {
+  /** 표시용 식별자 — `lossOffsetTable`의 from/to에 그대로 실린다 */
+  id: string;
+  /** 통산 «전» 양도소득금액 (음수 = 양도차손) */
+  income: number;
+  /** **크로스 축** 세율 키 */
+  rateKey: string;
+  /** 비과세면 통산에서 빠진다(코어 계약) */
+  exempt: boolean;
+}
+
 export interface AggregateTransferInput {
   /** 과세기간 (YYYY) */
   taxYear: number;
@@ -91,6 +117,12 @@ export interface AggregateTransferInput {
   priorPaidTax?: number;
   /** 예정신고 기납부 지방소득세 (원). 미지정 0. */
   priorPaidLocalTax?: number;
+  /**
+   * 🔴 **크로스 §102② 통산** — 기타자산(§94①4호) 쪽 자산을 통산 배열에 함께 넣는다.
+   * 미지정·빈 배열이면 **현행과 한 원도 다르지 않다**(anchor W-3).
+   * 계획서: `docs/00-pm/cross-engine-102-2-loss-offset.plan.md` §5.2 축 3.
+   */
+  crossLossOffsetExternal?: CrossLossExternalAsset[];
   /**
    * 🔴 축 B(지분 분할 취득) × 부담부증여 — **물건 전체(100%) §159 정보**. 표시 전용.
    *

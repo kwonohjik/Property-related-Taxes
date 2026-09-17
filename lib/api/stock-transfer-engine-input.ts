@@ -16,6 +16,9 @@ import { toOptionalDate } from "./date-coerce";
 
 export function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput {
   return {
+    // ⑭ 크로스 §102② 통산 후 양도소득금액 — 누락 시 통산이 세액에 **반영되지 않는다**
+    //    (엔진은 자기 산출값을 그대로 쓰고 아무도 실패하지 않는다). anchor W-5.
+    crossLossOffsetIncome: coerced.crossLossOffsetIncome as number | undefined,
     marketType: coerced.marketType as StockTransferInput["marketType"],
     isMajorShareholder: coerced.isMajorShareholder as boolean,
     selfShareRatio: coerced.selfShareRatio as number,

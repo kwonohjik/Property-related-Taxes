@@ -37,6 +37,7 @@ import {
 } from "@/lib/calc/cross-104-5-adapter";
 import { checkRealEstateRecalc, recalcRealEstate, recalcOtherAsset } from "@/lib/calc/cross-104-5-recalc";
 import { pickBestAllocation, type AllocationOutcome } from "@/lib/calc/cross-104-5-allocation";
+import { buildCrossLossRows } from "@/lib/calc/cross-102-2-loss-offset";
 
 const won = (n: number) => n.toLocaleString();
 
@@ -222,6 +223,36 @@ export default function Cross1045Client() {
       realEstateBasicDeduction: pick(re as Record<string, unknown>),
       otherAssetBasicDeduction: pick(oa as Record<string, unknown>),
     });
+  }, [rePick, oaPick, recalcedRe, recalcedOa, reId, oaId]);
+
+  /**
+   * 🔴 **크로스 §102② 차손 감지** — 「통산할 것이 있는가」를 계산 «전에» 알린다.
+   *
+   * 법 §102①**1호**가 §94①1·2호(부동산)와 **4호**(기타자산)를 한 호에 담는데 마법사가 갈려
+   * 있어 서로의 차손에 닿지 못한다. 저장된 결과만으로는 세액을 바꿀 수 없으므로
+   * (과세표준·산출세액을 다시 뽑아야 한다 — 계획서 §5.2) **버튼을 띄우는 것**이 이 memo의 일이다.
+   *
+   * ⚠️ 여기서 쓰는 `income`은 **통산 전** 값이다 — 한쪽이 음수(차손)이고 다른 쪽이 양수여야
+   *   통산할 거리가 있다.
+   */
+  const crossLossHint = useMemo(() => {
+    if (!rePick || !oaPick) return null;
+    const re = (recalcedRe?.recordId === reId ? recalcedRe.raw : rePick.record.resultData) ?? {};
+    const oa = (recalcedOa?.recordId === oaId ? recalcedOa.raw : oaPick.record.resultData) ?? {};
+    const inner = (re as Record<string, unknown>).aggregated ?? re;
+    const rows = buildCrossLossRows(
+      inner as Parameters<typeof buildCrossLossRows>[0],
+      oa as Parameters<typeof buildCrossLossRows>[1],
+    );
+    if (!rows.ok) return null;
+    const live = rows.rows.filter((r) => !r.exempt);
+    const hasLoss = live.some((r) => r.income < 0);
+    const hasGain = live.some((r) => r.income > 0);
+    // 🔑 **출처가 갈려야** 크로스다 — 부동산끼리의 차손은 이미 그 엔진이 통산한다.
+    const crossesEngines =
+      new Set(live.filter((r) => r.income < 0).map((r) => r.source)).size > 0 &&
+      live.some((r) => r.income > 0 && live.some((l) => l.income < 0 && l.source !== r.source));
+    return hasLoss && hasGain && crossesEngines ? { rows: live } : null;
   }, [rePick, oaPick, recalcedRe, recalcedOa, reId, oaId]);
 
   /**
@@ -437,6 +468,77 @@ export default function Cross1045Client() {
                 canRecalc={() => ({ ok: true })}
               />
             </>
+          )}
+
+          {crossLossHint && !allocation && (
+            <ToneCard tone="amber" title="한쪽에 양도차손이 있습니다 — 통산하지 않은 상태입니다">
+              <p className="text-sm">
+                부동산과 기타자산은{" "}
+                <LawArticleModal legalBasis="소득세법 §102 ①" label="§102①1호" /> 상{" "}
+                <strong>같은 호</strong>라, 한쪽의 양도차손은 다른 쪽의 양도소득금액에서{" "}
+                <strong>공제됩니다</strong>(
+                <LawArticleModal legalBasis="소득세법 §102 ②" label="§102②" />). 그런데 두 계산이
+                각각 저장돼 있어 <strong>서로의 차손에 닿지 못한 상태</strong>입니다.
+              </p>
+              <p className="text-caption text-muted-foreground">
+                아래 「합산 계산」은 저장된 값을 그대로 쓰므로 통산이 반영되지 않습니다. 통산까지
+                반영하려면 두 계산을 다시 돌려야 합니다 — 과세표준과 산출세액이 함께 바뀌기
+                때문입니다.
+              </p>
+              <div className="pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  data-testid="cross-loss-offset-run"
+                  onClick={runAllocation}
+                >
+                  {loading ? "계산 중…" : "차손 통산하여 계산"}
+                </Button>
+              </div>
+            </ToneCard>
+          )}
+
+          {allocation?.crossLoss && (
+            <ToneCard tone="emerald" title="양도차손을 통산했습니다">
+              <p className="text-sm">
+                <LawArticleModal legalBasis="소득세법 시행령 §167의2" label="시행령 §167의2①" />에
+                따라 <strong>같은 세율을 적용받는 자산</strong>에서 먼저 공제하고, 남으면 다른
+                세율 자산에 <strong>안분</strong>했습니다.
+              </p>
+              <dl
+                className="rounded-lg bg-emerald-100/60 px-3 py-2 text-sm dark:bg-emerald-950/40"
+                data-testid="cross-loss-offset-table"
+              >
+                {allocation.crossLoss.assets.map((a) => (
+                  <Row
+                    key={`${a.source}:${a.id}`}
+                    label={`${a.source === "real_estate" ? "부동산" : "기타자산"} · ${a.label}`}
+                    value={
+                      a.absorbed > 0
+                        ? `${won(a.income)} → ${won(a.incomeAfterOffset)} (차손 ${won(a.absorbed)} 공제)`
+                        : won(a.income)
+                    }
+                    strong={a.absorbed > 0}
+                  />
+                ))}
+              </dl>
+              {allocation.crossLoss.unusedLoss > 0 && (
+                <p className="text-caption text-muted-foreground">
+                  공제하지 못한 양도차손 <strong>{won(allocation.crossLoss.unusedLoss)}원</strong>은{" "}
+                  <strong>소멸합니다</strong> — 양도소득에는 결손금 이월이 없습니다.
+                </p>
+              )}
+              <p className="text-caption text-muted-foreground">
+                원래 이력은 그대로 두었습니다. 각 계산기에 저장된 값과 다른 이유가 이것입니다.
+              </p>
+            </ToneCard>
+          )}
+
+          {allocation?.crossLossSkipped && (
+            <ToneCard tone="amber" title="양도차손 통산을 건너뛰었습니다">
+              <p className="text-sm">{allocation.crossLossSkipped}</p>
+            </ToneCard>
           )}
 
           {overlap?.exceeded && (

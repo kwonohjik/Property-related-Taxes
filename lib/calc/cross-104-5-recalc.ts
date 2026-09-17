@@ -32,6 +32,7 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { CalculationRecord } from "@/lib/storage/types";
+import type { CrossLossExternalAsset } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { extractTaxYear } from "./cross-104-5-history";
 
 /** 재계산 가능 여부 — 불가하면 사유를 그대로 화면에 쓴다 */
@@ -80,7 +81,14 @@ export function checkRealEstateRecalc(record: CalculationRecord): RecalcEligibil
  */
 export async function recalcRealEstate(
   record: CalculationRecord,
-  opts: { annualBasicDeductionUsed?: number } = {},
+  opts: {
+    annualBasicDeductionUsed?: number;
+    /**
+     * 🔴 크로스 §102② — **기타자산 쪽 자산을 통산 배열에 함께** 넣는다(계획서 §5.2 축 3).
+     * 통산 «전» 값이라 엔진이 자기 자산과 처음부터 다시 배분한다.
+     */
+    crossLossOffsetExternal?: CrossLossExternalAsset[];
+  } = {},
 ): Promise<AggregateTransferResult> {
   const eligibility = checkRealEstateRecalc(record);
   if (!eligibility.ok) throw new Error(eligibility.reason);
@@ -91,7 +99,9 @@ export async function recalcRealEstate(
   if (eligibility.kind === "multi") {
     const form = input as unknown as MultiTransferFormData;
     const properties = form.properties;
-    return callMultiTransferTaxAPI({ ...form, annualBasicDeductionUsed: used }, properties);
+    return callMultiTransferTaxAPI({ ...form, annualBasicDeductionUsed: used }, properties, {
+      crossLossOffsetExternal: opts.crossLossOffsetExternal,
+    });
   }
 
   // 단건 폼 → PropertyItem 하나. 나머지 필드는 **기본값 상수**에서 가져온다(복제 금지 — W-4).
@@ -112,7 +122,9 @@ export async function recalcRealEstate(
       sourceCalculationId: record.id,
     },
   ];
-  return callMultiTransferTaxAPI(multiForm, properties);
+  return callMultiTransferTaxAPI(multiForm, properties, {
+    crossLossOffsetExternal: opts.crossLossOffsetExternal,
+  });
 }
 
 /**
@@ -125,7 +137,11 @@ export async function recalcRealEstate(
  */
 export async function recalcOtherAsset(
   record: CalculationRecord,
-  opts: { realEstateGroupBasicDeductionUsed?: number } = {},
+  opts: {
+    realEstateGroupBasicDeductionUsed?: number;
+    /** 🔴 크로스 §102② — 이 자산 몫의 **통산 후** 양도소득금액(계획서 §5.2 축 3) */
+    crossLossOffsetIncome?: number;
+  } = {},
 ): Promise<StockTransferResult> {
   const input = record.inputData;
   if (!input || typeof input !== "object") {
@@ -135,5 +151,5 @@ export async function recalcOtherAsset(
     ...(input as unknown as StockTransferFormData),
     realEstateGroupBasicDeductionUsed: String(opts.realEstateGroupBasicDeductionUsed ?? 0),
   };
-  return callStockTransferTaxAPI(form);
+  return callStockTransferTaxAPI(form, { crossLossOffsetIncome: opts.crossLossOffsetIncome });
 }
