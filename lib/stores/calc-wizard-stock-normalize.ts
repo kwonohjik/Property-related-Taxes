@@ -471,7 +471,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     })(),
     acquisitionExchangeRate: strField("acquisitionExchangeRate"),
     capitalExpenditureForeign: strField("capitalExpenditureForeign"),
+    capitalExpenditureExchangeRate: strField("capitalExpenditureExchangeRate"),
     transferCostForeign: strField("transferCostForeign"),
+    transferCostExchangeRate: strField("transferCostExchangeRate"),
     hasForeignTax: boolField("hasForeignTax", defaults.hasForeignTax),
     foreignTaxPaidForeign: strField("foreignTaxPaidForeign"),
     foreignTaxCurrencyCode: ((): string => {

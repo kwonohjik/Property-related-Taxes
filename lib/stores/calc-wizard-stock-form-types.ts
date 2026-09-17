@@ -481,8 +481,12 @@ export interface StockTransferFormData {
   acquisitionExchangeRate: string;      // 빈문자 → validate 차단
   /** 자본적지출액 (외화) — DecimalInput */
   capitalExpenditureForeign: string;
+  /** 자본적지출 **지출일** 기준환율 (영 §178의5①). 빈문자 → 양도일 환율로 떨어진다 */
+  capitalExpenditureExchangeRate: string;
   /** 양도비 (외화) — DecimalInput */
   transferCostForeign: string;
+  /** 양도비 **지출일** 기준환율 (영 §178의5①). 빈문자 → 양도일 환율로 떨어진다 */
+  transferCostExchangeRate: string;
   /** 외국납부세액 유무 (§118의6) */
   hasForeignTax: boolean;               // 3중 패턴 default: false
   /** 외국납부세액 (외화) — DecimalInput */

@@ -262,7 +262,9 @@ export function createInitialStockFormData(): StockTransferFormData {
     acquisitionCurrencyCode: "USD",      // 3중 패턴 default
     acquisitionExchangeRate: "",
     capitalExpenditureForeign: "",
+    capitalExpenditureExchangeRate: "",
     transferCostForeign: "",
+    transferCostExchangeRate: "",
     hasForeignTax: false,                // 3중 패턴 default
     foreignTaxPaidForeign: "",
     foreignTaxCurrencyCode: "USD",       // 3중 패턴 default

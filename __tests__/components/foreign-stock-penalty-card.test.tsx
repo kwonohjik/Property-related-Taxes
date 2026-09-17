@@ -35,9 +35,16 @@ function res(over: Partial<ForeignStockResult> = {}): ForeignStockResult {
     totalTax: 21_450_000,
     transferExchangeRate: 1,
     acquisitionExchangeRate: 1,
+    // 필요경비 적용 환율 echo (영 §178의5①) — 결과 카드가 필요경비 행에서 읽는다.
+    capitalExpenditureExchangeRateApplied: 1,
+    transferCostExchangeRateApplied: 1,
     warnings: [],
     appliedRules: [],
     ...over,
+    // ⚠️ `as unknown as` 는 **키 커버리지 가드를 죽인다** — 엔진 result 에 필수 필드가
+    //   늘어도 컴파일러가 여기를 지적하지 않아, 런타임에 `undefined.toLocaleString()` 으로
+    //   터진 뒤에야 안다(2026-09-17 실제로 4건이 그렇게 깨졌다).
+    //   필수 필드를 전부 채우면 `satisfies ForeignStockResult` 로 바꿀 수 있다.
   } as unknown as ForeignStockResult;
 }
 

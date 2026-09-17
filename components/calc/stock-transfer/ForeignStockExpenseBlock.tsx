@@ -27,6 +27,18 @@ import {
 export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSectionProps) {
   const foreignTaxMethod = form.foreignTaxMethod;                // factory: "credit"
 
+  /**
+   * 지출일 기준환율 칸은 **금액을 넣었을 때만** 보인다 — 0원 항목의 환율은 물어볼 이유가 없다.
+   * 금액을 지우면 칸도 사라지지만 **값은 남는다**(store 는 건드리지 않는다) — 다시 넣으면
+   * 그대로 복원된다. `useEffect → store` 미러링으로 지우면 무한 루프 위험이 있다
+   * ([[feedback_useeffect_store_mirror_forbidden]]).
+   */
+  const hasAmount = (v: string) => (parseFloat(v) || 0) > 0;
+  // ⚠️ FieldCard 의 hint 는 `<p>{hint}</p>` 평문 렌더다 — 마크다운이 그대로 보인다.
+  const rateHint = (label: string) =>
+    `${label}을 지출한 날의 기준환율 (원/외화) — 영 §178의5①. ` +
+    "비워두면 양도일 기준환율로 환산합니다.";
+
   return (
     <div className="space-y-5">
       {/* ── 섹션 5: 필요경비 (§118의4) ── */}
@@ -43,6 +55,26 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
           />
         </FieldCard>
 
+        {hasAmount(form.capitalExpenditureForeign) && (
+          <FieldCard
+            label="자본적지출 지출일 기준환율"
+            hint={rateHint("자본적지출액")}
+            // ⚠️ `unit` 은 주지 않는다 — FieldCard 는 `trailing ? trailing : unit` 이라
+            //   조문 배지가 있으면 단위가 렌더되지 않는다. 단위는 hint 가 말한다.
+            trailing={
+              <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+                §178의5①
+              </span>
+            }
+          >
+            <DecimalInput
+              value={form.capitalExpenditureExchangeRate}
+              onChange={(v) => onChange({ capitalExpenditureExchangeRate: v })}
+              placeholder="비우면 양도일 기준환율 적용"
+            />
+          </FieldCard>
+        )}
+
         <FieldCard
           label="양도비 (외화)"
           hint="거래 수수료·세금·기타 양도 비용 (외화). 없으면 비워두세요."
@@ -54,6 +86,24 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
             placeholder="없으면 비워두세요"
           />
         </FieldCard>
+
+        {hasAmount(form.transferCostForeign) && (
+          <FieldCard
+            label="양도비 지출일 기준환율"
+            hint={rateHint("양도비")}
+            trailing={
+              <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+                §178의5①
+              </span>
+            }
+          >
+            <DecimalInput
+              value={form.transferCostExchangeRate}
+              onChange={(v) => onChange({ transferCostExchangeRate: v })}
+              placeholder="비우면 양도일 기준환율 적용"
+            />
+          </FieldCard>
+        )}
       </SectionBox>
 
       {/* ── 섹션 6: 외국납부세액 (§118의6) ── */}

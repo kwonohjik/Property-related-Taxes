@@ -243,7 +243,9 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     acquisitionExchangeRate: coerced.acquisitionExchangeRate as number,
 
     capitalExpenditureForeign: coerced.capitalExpenditureForeign as number,
+    capitalExpenditureExchangeRate: coerced.capitalExpenditureExchangeRate as number | undefined,
     transferCostForeign: coerced.transferCostForeign as number,
+    transferCostExchangeRate: coerced.transferCostExchangeRate as number | undefined,
 
     // 신고축(가산세) — 국외주식도 같은 양도소득세 신고다(§110① **직접** 적용 · §118의8 아님)
     filingViolation: coerced.filingViolation as ForeignStockInput["filingViolation"],
