@@ -313,15 +313,6 @@ export default function StockTransferTaxCalculator() {
             )}
             {currentStep === 3 && (
               <>
-                {/* 다종목 합산 시 — 종목별 요약·통산·외국납부세액 한도를 먼저 보인다. */}
-                {aggregateResult && (
-                  <div className="mb-8">
-                    <StockAggregateSummaryCard
-                      aggregate={aggregateResult}
-                      names={[...savedItems, formData].map((f) => f.securityName)}
-                    />
-                  </div>
-                )}
                 <Step4
                   result={result}
                   form={formData}
@@ -334,6 +325,21 @@ export default function StockTransferTaxCalculator() {
                       : undefined
                   }
                 />
+                {/*
+                  다종목 합산 요약 — 종목별 소득금액·통산·외국납부세액 한도.
+                  🔑 **결과뷰 뒤**다. 종전에는 Step4 앞이라 신고서 양식 표가 화면 아래로
+                  밀렸다(제보 —「신고서 양식이 맨 첫번째 위치하도록」). 신고서가 이 화면의
+                  주된 산출물이므로 먼저 오고, 종목별 분해는 그 뒤를 받친다.
+                  순서 고정: `e2e/stock-result-section-order.spec.ts` SO-1.
+                */}
+                {aggregateResult && (
+                  <div className="mt-8">
+                    <StockAggregateSummaryCard
+                      aggregate={aggregateResult}
+                      names={[...savedItems, formData].map((f) => f.securityName)}
+                    />
+                  </div>
+                )}
               </>
             )}
 
