@@ -14,15 +14,10 @@
  * 🔑 **섹션 번호는 각 단계 안에서 1부터**다(계획서 Q-1). 단계가 갈렸으므로 종전 1~6 연번은 의미가 없다.
  */
 
-import { ToneCard } from "@/components/calc/shared/ToneCard";
-import type { Tone } from "@/components/calc/shared/tones";
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+// SectionBox·props 타입은 국외전출세와 **공용**이다 — 복제 금지(계획서 Q-2)
+export { SectionBox } from "./stock-section-box";
+export type { StockStepBlockProps as ForeignStockSectionProps } from "./stock-section-box";
 
-/** 해외주식 단계 블록 공통 props */
-export interface ForeignStockSectionProps {
-  form: StockTransferFormData;
-  onChange: (patch: Partial<StockTransferFormData>) => void;
-}
 
 // ── 지원 국가 목록 ──
 export const COUNTRY_OPTIONS = [
@@ -86,24 +81,3 @@ export const FOREIGN_TAX_METHOD_OPTIONS = [
     description: "양도차익 계산 시 필요경비로 처리",
   },
 ];
-
-export function SectionBox({
-  n,
-  label,
-  tone,
-  children,
-}: {
-  n: number;
-  label: string;
-  tone: Tone;
-  children: React.ReactNode;
-}) {
-  // 톤은 <ToneCard>(tones.ts 정적 소스) — 기존 동적 `${tone}` 제거(JIT purge 위험).
-  // p-4·space-y-3는 기존 레이아웃 보존. noDark: 이 폼은 원래 dark 미대응(light 전용)이라
-  // dark 변형을 새로 입히지 않아 양 모드 모두 회귀 0.
-  return (
-    <ToneCard tone={tone} sectionNum={n} title={label} className="p-4" bodyClassName="space-y-3" noDark>
-      {children}
-    </ToneCard>
-  );
-}

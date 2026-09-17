@@ -29,6 +29,7 @@ import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/S
 import { isOtherAssetGroup } from "@/lib/calc/stock-other-asset-scope";
 import { isClause9Applicable } from "@/lib/calc/stock-other-asset-scope";
 import { ForeignStockExpenseBlock } from "@/components/calc/stock-transfer/ForeignStockExpenseBlock";
+import { ExitTaxSettlementBlock } from "@/components/calc/stock-transfer/ExitTaxSettlementBlock";
 import {
   PenaltyDetailBlock,
   LatePaymentPenaltyBlock,
@@ -195,11 +196,26 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
 
   return (
     <div className="space-y-8">
-      {/* ① 필요경비 — 국외주식은 외화 필요경비 + 외국납부세액(§118의6) 전용 블록 */}
-      {isForeignStock && <ForeignStockExpenseBlock form={form} onChange={onChange} />}
+      {/*
+        ① 필요경비 — 트랙마다 «이 자리»의 내용이 다르다. 번호는 **바깥에서** 매긴다:
+        안쪽 블록까지 번호를 달면 화면에 번호 체계가 둘이 되고, 이 자리를 비우면
+        ①이 빠진 ②③ 화면이 된다(anchor SS-2·SS-6 가 그것을 막는다).
+      */}
+      {isForeignStock && (
+        <section>
+          <SectionTitle n={1} title="필요경비 · 외국납부세액 (§118의4 · §118의6)" />
+          <ForeignStockExpenseBlock form={form} onChange={onChange} />
+        </section>
+      )}
+      {isExitTax && (
+        <section>
+          <SectionTitle n={1} title="정산·신고 항목 (§118의12~§118의17)" />
+          <ExitTaxSettlementBlock form={form} onChange={onChange} />
+        </section>
+      )}
 
       {/* ① 필요경비 — 취득가액 방식에 따라 자동 결정 (소령 §163⑥4) */}
-      {!isForeignStock && (
+      {!isForeignStock && !isExitTax && (
       <section>
         <SectionTitle n={1} title="필요경비" />
         <div className="space-y-4">
@@ -265,7 +281,22 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         <SectionTitle n={2} title="기본공제 (§103①)" />
         <div className="space-y-3">
           <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700">
-            {otherAssetGroup ? (
+            {isExitTax ? (
+              <>
+                {/*
+                  🔴 국외전출세는 §103① 그룹이 **아니다** — 법 §118의10④가 「양도소득과세표준은
+                  제3항에 따른 양도소득금액에서 **연 250만원을 공제**한 금액으로 한다」고 따로 두고,
+                  같은 조 ⑤가 「…제92조제2항에 따른 양도소득과세표준과 **구분하여 계산**한다」고 못박는다.
+                  종전 문구(§103①2호 그룹)는 국내주식 양도분과 250만원을 나눠 쓴다는 **반대 사실**을 말했다.
+                */}
+                <p className="font-medium mb-1">국외전출세 기본공제 250만원 (§118의10④)</p>
+                <p className="text-xs">
+                  출국일 간주양도 소득금액에서 연 250만원을 공제합니다. 이 과세표준은 §92②의
+                  양도소득과세표준과 <strong>구분하여 계산</strong>하므로(§118의10⑤), 같은 해 주식
+                  양도분과 250만원을 나눠 쓰지 않습니다. 추가 입력이 없습니다.
+                </p>
+              </>
+            ) : otherAssetGroup ? (
               <>
                 <p className="font-medium mb-1">부동산·기타자산 그룹 기본공제 250만원 (§103①1호)</p>
                 <p className="text-xs">

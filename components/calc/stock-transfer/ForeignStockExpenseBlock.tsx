@@ -30,7 +30,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
   return (
     <div className="space-y-5">
       {/* ── 섹션 5: 필요경비 (§118의4) ── */}
-      <SectionBox n={1} label="필요경비 (§118의4)" tone="sky">
+      <SectionBox label="필요경비 (§118의4)" tone="sky">
         <FieldCard
           label="자본적지출액 (외화)"
           hint="주식 가치를 높이기 위한 자본적 지출 (외화). 없으면 비워두세요."
