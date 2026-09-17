@@ -538,6 +538,21 @@ export type StockTransferInput = {
   /** 실제 납부일 — 미입력 시 계산 기준일(오늘) */
   actualPaymentDate?: Date;
 
+  /**
+   * 취득가액 **실가** 모드의 입력 방식 — 양도측 `transferActualInputMode`와 대구.
+   *
+   * · `per_share`(기본) — `perShareAcquisitionPrice × shareCount`
+   * · `total`           — **`acquisitionTotalPrice`를 나눗셈 없이 그대로** 쓴다
+   * · `lots`            — 일자별 다건. 실제 분기는 `lotMatchingDetail` 존재 여부가 **먼저**
+   *                       가로채므로 이 값이 STEP 3에 도달하지 않는다(API가 lot을 합성한다).
+   *
+   * ⚠️ `acquisitionMode === "actual"`일 때만 의미가 있다. 환산·매매사례 모드에서 이 값이
+   *   남아 있어도 무시해야 한다 — `stock-actual-acquisition.ts`가 그 게이트를 들고 있다.
+   */
+  acquisitionActualInputMode?: "per_share" | "lots" | "total";
+  /** 취득가액 합계 직접 입력 (`acquisitionActualInputMode === "total"` 시 필수, 원) */
+  acquisitionTotalPrice?: number;
+
   /** §103①1호 — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
   realEstateGroupBasicDeductionUsed: number;
 

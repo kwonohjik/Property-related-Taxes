@@ -62,13 +62,16 @@ export function Step2({ form, onChange }: Step2Props) {
   }, [form.perShareTransferPrice, form.shareCount]);
 
   // 역산 1주당 단가 미리보기 (total 모드, 표시 전용 — store 미러링 금지)
-  const reversedPerShare = useMemo(() => {
-    const total = parseAmount(form.transferTotalPrice);
-    const count = parseInt(form.shareCount || "0", 10);
-    if (total <= 0 || count <= 0) return null;
-    const isExact = total % count === 0; // 잔돈 0일 때만 "정확"
-    return { perShare: total / count, isExact, total, count };
-  }, [form.transferTotalPrice, form.shareCount]);
+  const reversedPerShare = useMemo(
+    () => reversePerShare(form.transferTotalPrice, form.shareCount),
+    [form.transferTotalPrice, form.shareCount],
+  );
+
+  // 취득가액 total 모드의 같은 미리보기 — **같은 헬퍼**를 쓴다(산식 복제 금지)
+  const reversedAcqPerShare = useMemo(
+    () => reversePerShare(form.acquisitionTotalPrice, form.shareCount),
+    [form.acquisitionTotalPrice, form.shareCount],
+  );
 
   // 교환 양도가 합계 미리보기
   const exchangeTotal = useMemo(() => {
@@ -173,18 +176,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     onChange={(v) => onChange({ transferTotalPrice: v })}
                   />
                   {reversedPerShare && (
-                    reversedPerShare.isExact ? (
-                      <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
-                        참고: 1주당 단가 = <strong>{reversedPerShare.perShare.toLocaleString()}</strong>
-                        {" "}({reversedPerShare.total.toLocaleString()} ÷ {reversedPerShare.count.toLocaleString()}주)
-                      </div>
-                    ) : (
-                      <div className="rounded border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-600">
-                        참고: 1주당 단가 = <strong>{reversedPerShare.perShare.toFixed(4)}</strong>
-                        {" "}({reversedPerShare.total.toLocaleString()} ÷ {reversedPerShare.count.toLocaleString()}주)
-                        {" "}— 정확히 떨어지지 않음. 총액 그대로 사용합니다.
-                      </div>
-                    )
+                    <ReversePerShareNote info={reversedPerShare} tone="emerald" />
                   )}
                 </>
               )}
@@ -296,6 +288,11 @@ export function Step2({ form, onChange }: Step2Props) {
                       description: "1주당 취득가액 × 양도 주식수",
                     },
                     {
+                      value: "total",
+                      label: "합계 직접 입력",
+                      description: "취득가액 총액을 원 단위로 직접 입력 (§97① 실지거래가액)",
+                    },
+                    {
                       value: "lots",
                       label: "일자별 다건",
                       description: "여러 시점 분할 매수 건별 입력 (§97① 실지거래가액)",
@@ -312,6 +309,21 @@ export function Step2({ form, onChange }: Step2Props) {
                   value={form.perShareAcquisitionPrice}
                   onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
                 />
+              )}
+
+              {acquisitionActualInputMode === "total" && (
+                <>
+                  <CurrencyInput
+                    label="취득가액 합계"
+                    required
+                    hint="계약서·거래내역 등에 기재된 총 취득대금 (원)"
+                    value={form.acquisitionTotalPrice}
+                    onChange={(v) => onChange({ acquisitionTotalPrice: v })}
+                  />
+                  {reversedAcqPerShare && (
+                    <ReversePerShareNote info={reversedAcqPerShare} tone="amber" />
+                  )}
+                </>
               )}
 
               {acquisitionActualInputMode === "lots" && (
@@ -517,6 +529,48 @@ export function Step2({ form, onChange }: Step2Props) {
           <CapitalAdjustmentsBlock form={form} onChange={onChange} />
         </div>
       </section>
+    </div>
+  );
+}
+
+
+/**
+ * 합계 ÷ 주식수 **역산 미리보기** (표시 전용 — store 미러링 금지).
+ *
+ * 양도가액·취득가액 두 축이 **같은 산식**을 쓴다. 복제하면 한쪽만 고쳐져 조용히 어긋난다.
+ * `isExact`는 잔돈이 0일 때만 참이고, 떨어지지 않아도 **총액이 정본**이라 계산에는 영향이 없다.
+ */
+function reversePerShare(
+  totalStr: string,
+  countStr: string,
+): { perShare: number; isExact: boolean; total: number; count: number } | null {
+  const total = parseAmount(totalStr);
+  const count = parseInt(countStr || "0", 10);
+  if (total <= 0 || count <= 0) return null;
+  return { perShare: total / count, isExact: total % count === 0, total, count };
+}
+
+function ReversePerShareNote({
+  info,
+  tone,
+}: {
+  info: NonNullable<ReturnType<typeof reversePerShare>>;
+  tone: "emerald" | "amber";
+}) {
+  const ok =
+    tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50/60 text-emerald-700"
+      : "border-amber-200 bg-amber-50/60 text-amber-700";
+  return info.isExact ? (
+    <div className={`rounded border px-3 py-2 text-sm ${ok}`}>
+      참고: 1주당 단가 = <strong>{info.perShare.toLocaleString()}</strong>{" "}
+      ({info.total.toLocaleString()} ÷ {info.count.toLocaleString()}주)
+    </div>
+  ) : (
+    <div className="rounded border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-600">
+      참고: 1주당 단가 = <strong>{info.perShare.toFixed(4)}</strong>{" "}
+      ({info.total.toLocaleString()} ÷ {info.count.toLocaleString()}주) — 정확히 떨어지지 않음.
+      총액 그대로 사용합니다.
     </div>
   );
 }

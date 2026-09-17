@@ -111,6 +111,7 @@ export function createInitialStockFormData(): StockTransferFormData {
 
     acquisitionMode: "actual",           // 3중 패턴 default
     acquisitionActualInputMode: "per_share", // 3중 패턴 default
+    acquisitionTotalPrice: "",
     perShareAcquisitionPrice: "",
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: "",

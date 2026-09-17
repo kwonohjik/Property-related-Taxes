@@ -193,7 +193,8 @@ export interface StockTransferFormData {
 
   // ── R-2 자본조정 (법§17② 단서 + 집행기준 97-163-12) — 2026-05-19 ──
   capitalAdjustments: CapitalAdjustmentForm[];
-  acquisitionActualInputMode: "per_share" | "lots";  // 3중 패턴 default: "per_share" — 실가 입력 방식 (lots-only 모드)
+  acquisitionActualInputMode: "per_share" | "lots" | "total";  // 3중 패턴 default: "per_share" — 실가 입력 방식
+  acquisitionTotalPrice: string;     // 원 — total 모드 시 취득가액 합계 직접 입력 (양도측 transferTotalPrice와 대구)
   perShareAcquisitionPrice: string;  // 실가 취득가
 
   // ── 환산 — 상장 (1개월 종가평균) ──

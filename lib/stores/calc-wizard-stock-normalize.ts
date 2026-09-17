@@ -191,7 +191,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // "face_value"는 목록에서 빠졌다 — stale sessionStorage 가 그 값을 들고 있으면
     // enumField 가 default("actual")로 떨어뜨린다(모르는 키를 통과시키지 않는다).
     acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode),
-    acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots"], defaults.acquisitionActualInputMode),
+    acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots", "total"], defaults.acquisitionActualInputMode),
+    acquisitionTotalPrice: strField("acquisitionTotalPrice"),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),

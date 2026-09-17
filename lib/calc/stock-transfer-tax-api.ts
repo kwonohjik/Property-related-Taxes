@@ -295,6 +295,14 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       if (oldestLotDate && !body.acquisitionDate) {
         body.acquisitionDate = oldestLotDate;
       }
+    } else if (acqInputMode === "total") {
+      /**
+       * ⑬ 취득가액 **합계 직접 입력** — 양도측 `transferTotalPrice`와 같은 규약으로
+       * **역산 없이** 총액을 그대로 보낸다. `round(합계 ÷ 주식수)`로 1주당 단가를 만들어
+       * 기존 필드에 태우면 ±(주식수−1)원 잔돈 오차가 새로 생긴다(lots 합성 경로가 그 예다).
+       */
+      const totalAcq = parseIntOrUndef(form.acquisitionTotalPrice);
+      if (totalAcq !== undefined) body.acquisitionTotalPrice = totalAcq;
     } else {
       // per_share 모드 (기존)
       const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);

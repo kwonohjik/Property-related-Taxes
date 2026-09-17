@@ -53,7 +53,7 @@ export const transferPriceModeSchema = z.enum(["actual", "exchange"]);
 
 export const transferActualInputModeSchema = z.enum(["per_share", "total"]);
 
-export const acquisitionActualInputModeSchema = z.enum(["per_share", "lots"]);
+export const acquisitionActualInputModeSchema = z.enum(["per_share", "lots", "total"]);
 
 export const netAssetOnlyReasonSchema = z.enum([
   "liquidation_or_owner_death",
@@ -286,6 +286,12 @@ export const stockTransferInputSchema = z.object({
   acquisitionMode: acquisitionModeSchema,
   acquisitionActualInputMode: acquisitionActualInputModeSchema.optional(),  // default "per_share" (lots-only 모드)
   perShareAcquisitionPrice: z.number().min(0).optional(),
+  /**
+   * ⑫ 취득가액 **합계 직접 입력** (`acquisitionActualInputMode === "total"`).
+   * 여기에 없으면 body에 실어도 **조용히 strip**되어 1주당 단가 경로로 되돌아간다.
+   * 양도측 `transferTotalPrice`(:280)와 같은 규약 — 정수·0 이상.
+   */
+  acquisitionTotalPrice: z.number().int().min(0).optional(),
 
   // R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장
   acquisitionMarketSamplePrice: z.number().min(0).optional(),

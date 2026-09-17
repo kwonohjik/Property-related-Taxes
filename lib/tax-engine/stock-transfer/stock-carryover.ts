@@ -27,6 +27,7 @@
  * Layer 2 (Pure Engine): DB 직접 호출 없음. 세액 계산 함수는 매개변수로 주입받는다.
  */
 
+import { actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
 import type { StockTransferInput, AcquisitionLot } from "./types/stock-transfer.types";
@@ -200,7 +201,7 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
     // 배제됐다는 **사실**을 남긴다 — 아래에서 `acquisitionCause`를 되돌리므로 흔적이 사라진다.
     carryoverOutcome: "excluded",
     // A/B 비교 표시용 echo — 아래에서 승계 입력을 전부 지우므로 여기서 떠 둔다.
-    carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
+    carryoverGiftDateValuationPerShare: actualAcquisitionPerShare(input),
     carryoverDonorPricePerShare: input.donorAcquisitionPrice,
     /**
      * split 모드 — **lot도 함께** 되돌린다. 종목 축만 바꾸면 `allocateLots`가 lot의
@@ -260,6 +261,14 @@ function buildStockScenarioABase(
       ...input,
       acquisitionMode: "actual",
       perShareAcquisitionPrice: input.donorAcquisitionPrice,
+      /**
+       * 🔴 **입력 «방식»도 함께 되돌린다.** 수증자가 「합계 직접 입력」으로 자기 취득가를
+       * 넣어 뒀다면 `acquisitionActualInputMode: "total"`이 남고, STEP 3이 그 합계를 우선해
+       * **위에서 덮어쓴 증여자 실가를 무시**한다 — 이월과세가 조용히 무력화된다.
+       * anchor AT-5가 이 자리를 지킨다.
+       */
+      acquisitionActualInputMode: "per_share",
+      acquisitionTotalPrice: undefined,
       expenseMode: "actual",
       // ①2호 — 증여자 자본적지출
       actualExpenses: (input.actualExpenses ?? 0) + donorCapex,
@@ -268,7 +277,7 @@ function buildStockScenarioABase(
       carryoverOutcome: "applied",
       // 표시 전용 echo — 위에서 `perShareAcquisitionPrice`를 덮어쓰므로 여기서 남겨 둔다.
       carryoverDonorCapexApplied: donorCapex,
-      carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
+      carryoverGiftDateValuationPerShare: actualAcquisitionPerShare(input),
       carryoverDonorPricePerShare: input.donorAcquisitionPrice,
     };
   }
@@ -301,7 +310,7 @@ function buildStockScenarioABase(
     carryoverGiftTaxExpense: giftTaxIncluded,
     carryoverOutcome: "applied",
     carryoverDonorCapexApplied: donorCapex,
-    carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
+    carryoverGiftDateValuationPerShare: actualAcquisitionPerShare(input),
   };
 }
 

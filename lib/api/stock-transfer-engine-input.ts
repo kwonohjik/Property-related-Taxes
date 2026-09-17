@@ -91,6 +91,11 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     exchangeCash: coerced.exchangeCash as number | undefined,
     acquisitionMode: coerced.acquisitionMode as StockTransferInput["acquisitionMode"],
     perShareAcquisitionPrice: coerced.perShareAcquisitionPrice as number | undefined,
+    // ⑭ 취득가액 실가 입력 방식 + 합계. 누락 시 total 모드가 **조용히 1주당 단가로** 떨어진다
+    //    (엔진은 자기 기본값으로 돌고 아무도 실패하지 않는다). anchor AT-W3.
+    acquisitionActualInputMode:
+      coerced.acquisitionActualInputMode as StockTransferInput["acquisitionActualInputMode"],
+    acquisitionTotalPrice: coerced.acquisitionTotalPrice as number | undefined,
     transferDatePriceAvg1Month: coerced.transferDatePriceAvg1Month as number | undefined,
     acquisitionDatePriceAvg1Month: coerced.acquisitionDatePriceAvg1Month as number | undefined,
     transferStdInputMode: coerced.transferStdInputMode as "direct" | "daily" | undefined,
