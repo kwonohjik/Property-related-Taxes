@@ -21,6 +21,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -94,6 +95,7 @@ test.describe("주식 이월과세 §97의2① — 필요경비 본체", () => {
     await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
     await fillByLabel(page, "양도가액 합계", "1000000000");
     // 증여 당시 평가액 (수증자 취득가액) — B 시나리오의 취득가액이 된다
+    await chooseAcqPerShare(page);
     await fillByLabel(page, "1주당 취득가액", "80000");
 
     // ── Step 3 — 필요경비·신고 ──

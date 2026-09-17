@@ -8,6 +8,7 @@
  *    3단계라 1단계에서 확정하면 금액이 빈 종목이 목록에 들어간다.
  */
 import { expect, type Page } from "@playwright/test";
+import { chooseAcqPerShare } from "./stock-acq-input-mode";
 
 export async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -62,6 +63,7 @@ export async function fillItemThroughStep3(
   await page.getByRole("button", { name: /^다음/ }).click();
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await fillByLabel(page, "양도가액 합계", "100000000");
+  await chooseAcqPerShare(page);
   await fillByLabel(page, "1주당 취득가액", "500000");
 
   await page.getByRole("button", { name: /^다음/ }).click();

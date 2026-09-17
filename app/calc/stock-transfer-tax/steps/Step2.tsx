@@ -268,7 +268,7 @@ export function Step2({ form, onChange }: Step2Props) {
                   name="acquisitionActualInputMode"
                   value={acquisitionActualInputMode}
                   onChange={(v) => {
-                    const mode = v as "per_share" | "lots";
+                    const mode = v as "per_share" | "lots" | "total";
                     if (mode === "lots" && form.acquisitionLots.length === 0) {
                       // 자동 1행 추가 — useEffect 미러링 금지, onChange 내 cross-field
                       onChange({
@@ -283,14 +283,14 @@ export function Step2({ form, onChange }: Step2Props) {
                   layout="inline"
                   options={[
                     {
-                      value: "per_share",
-                      label: "1주당 단가",
-                      description: "1주당 취득가액 × 양도 주식수",
-                    },
-                    {
                       value: "total",
                       label: "합계 직접 입력",
                       description: "취득가액 총액을 원 단위로 직접 입력 (§97① 실지거래가액)",
+                    },
+                    {
+                      value: "per_share",
+                      label: "1주당 단가",
+                      description: "1주당 취득가액 × 양도 주식수",
                     },
                     {
                       value: "lots",

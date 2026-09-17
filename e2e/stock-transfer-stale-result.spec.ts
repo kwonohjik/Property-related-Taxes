@@ -16,6 +16,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { chooseAcqPerShare } from "./_helpers/stock-acq-input-mode";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -82,6 +83,7 @@ test.describe("A-2 — 입력 변경 시 결과 재계산", () => {
     await page.getByRole("button", { name: /^다음/ }).click();
     await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
     await fillByLabel(page, "양도가액 합계", "44750000");  // 총액 모드 기본
+    await chooseAcqPerShare(page);
     await fillByLabel(page, "1주당 취득가액", "3000");
 
     // Step3 — 신고일 필수 (미입력 시 「결과 보기」가 validate에 막힌다)

@@ -191,7 +191,19 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // "face_value"는 목록에서 빠졌다 — stale sessionStorage 가 그 값을 들고 있으면
     // enumField 가 default("actual")로 떨어뜨린다(모르는 키를 통과시키지 않는다).
     acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode),
-    acquisitionActualInputMode: enumField("acquisitionActualInputMode", ["per_share", "lots", "total"], defaults.acquisitionActualInputMode),
+    // 🔴 **구 이력 보호** — 신규 폼 default 는 "total"(합계 직접 입력)이지만, 이 키가 «없는»
+    //    record 는 모드 축이 생기기 전에 1주당 단가로 저장된 것이다. 그대로 default 를 먹이면
+    //    저장해 둔 단가가 빈 「취득가액 합계」로 뒤바뀐다(=취득가액 0). ⇒ 단가만 들고 있으면 남긴다.
+    //    저장된 모드가 «있으면» 그것이 우선이라 이 규칙은 그때 개입하지 않는다.
+    acquisitionActualInputMode: enumField(
+      "acquisitionActualInputMode",
+      ["per_share", "lots", "total"],
+      d.acquisitionActualInputMode === undefined &&
+        typeof d.perShareAcquisitionPrice === "string" &&
+        d.perShareAcquisitionPrice !== ""
+        ? "per_share"
+        : defaults.acquisitionActualInputMode,
+    ),
     acquisitionTotalPrice: strField("acquisitionTotalPrice"),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
     // R-1' 매매사례가액
