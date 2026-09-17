@@ -1,140 +1,24 @@
 /**
  * 증여로 보는 경우 — 폼 상태 타입 + 초기값.
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
+ *
+ * 800줄 선제 대응으로 다시 3분할했다 — 이 파일은 **Phase 1·2 필드 + 조립 + re-export**만 갖는다.
+ *   · roster 행 타입·팩토리 → deemed-form-rows.ts
+ *   · Phase 3 추정·의제 필드 → deemed-form-phase3.ts  ← **신규 필드는 여기에 추가**
+ * 기존 import 경로(`from ".../deemed-form-state"`)는 아래 re-export로 그대로 동작한다.
  */
-import type { ConvertibleBondClause } from "@/lib/tax-engine/gift-deemed/types";
-import type { DeemedGiftType, ScRelation, ShareAllocationMethod, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
+import type { ConvertibleBondClause, DeemedGiftType, ShareAllocationMethod } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { CapTableRow, CdShareholderRow, LoanLoanItem } from "./deemed-form-rows";
+import type { DeemedPhase3Fields } from "./deemed-form-phase3";
+import { INITIAL_DEEMED_PHASE3 } from "./deemed-form-phase3";
+import { makeCapTableRow } from "./deemed-form-rows";
 
-/** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
-export interface CdShareholderRow {
-  id: string;
-  name: string;
-  preShares: string;
-  redeemedShares: string;
-  redemptionPrice: string;
-  relationGroup: string;
-}
+export * from "./deemed-form-rows";
+export type { DeemedPhase3Fields } from "./deemed-form-phase3";
+export { INITIAL_DEEMED_PHASE3 } from "./deemed-form-phase3";
 
-/** 증자 cap-table 1행 (폼 — string 필드). API 변환에서 CapShareholder(number)로 변환 */
-export interface CapTableRow {
-  id: string;
-  name: string;
-  preShares: string; // 증자 전 보유
-  entitledShares: string; // 당초(균등) 배정 신주수
-  subscribedShares: string; // 실제 인수 신주수
-  reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
-  relatedTo: string[]; // 특수관계인 주주 id 목록
-  allocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외 판정 (행별)
-}
-
-export function makeCapTableRow(id: string): CapTableRow {
-  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal" };
-}
-
-/**
- * §45의5 특정법인 다주주 명단 행 (전부 string — parseAmount 변환은 API 변환 시).
- * relation은 ScRelation 열거값. isDonor=증여자 본인 여부(과세제외 donor_self).
- */
-export interface ScShareholderRow {
-  id: string;
-  name: string;
-  relation: ScRelation;
-  shares: string; // 주식수 (CurrencyInput)
-  isDonor: boolean; // 증여자 본인 → donor_self 제외
-}
-
-export function makeScShareholderRow(id: string): ScShareholderRow {
-  return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false };
-}
-
-/** §43² 합산 — 개별 대출 건 (전부 string. API 변환에서 number). */
-export interface LoanLoanItem {
-  id: string;
-  loanDate: string; // YYYY-MM-DD (DateInput)
-  amount: string; // 대출금액 (CurrencyInput)
-  interest: string; // 실제 지급이자 (무이자=빈 문자열)
-}
-
-export function makeLoanItem(id: string): LoanLoanItem {
-  return { id, loanDate: "", amount: "", interest: "" };
-}
-
-/** 초과배당 §41의2 주주 행 (전부 string — parseAmount/parseDecimal 변환은 API 변환 시) */
-export interface EdShareholderRow {
-  /** 행 고유 ID (클라이언트 UUID) */
-  id: string;
-  /** 표시용 이름 */
-  name: string;
-  /**
-   * 주주 역할
-   * - major_shareholder: 최대주주등 (배당 포기·과소배당 주체)
-   * - related_party: 특수관계인 (초과배당 수령자)
-   * - other: 기타 주주
-   */
-  role: "major_shareholder" | "related_party" | "other";
-  /** 지분율 (소수점 포함 %) — DecimalInput 입력값 */
-  ownershipRatioPctStr: string;
-  /** 실제 수령 배당금 — CurrencyInput 입력값 */
-  actualDividendStr: string;
-}
-
-/** §45의3 일감몰아주기 — 주주 roster 1행 (전부 string) */
-export interface RcShareholderRow {
-  id: string;
-  name: string;
-  /** "self" | "relative" | "other" */
-  relation: string;
-  /** 직접지분 % — DecimalInput */
-  directRatioPctStr: string;
-  isCorporate: boolean;
-}
-
-/** §45의3 — 간접출자법인 개인소유주 1행 */
-export interface RcIntermediaryOwnerRow {
-  individualId: string;
-  ratioPctStr: string;
-}
-
-/** §45의3 — 간접출자법인 roster 1행 */
-export interface RcIntermediaryRow {
-  id: string;
-  corpShareholderId: string;
-  stakeInBeneficiaryPctStr: string;
-  owners: RcIntermediaryOwnerRow[];
-}
-
-/** §34의3⑩ 과세제외유형 코드 (string — select) */
-export type RcExclusionTypeStr =
-  | "sec10_1"
-  | "sec10_2"
-  | "sec10_3"
-  | "sec10_4"
-  | "sec10_5"
-  | "sec10_5_2"
-  | "sec10_5_3"
-  | "sec10_6"
-  | "sec10_7"
-  | "sec10_8"
-  | "";
-
-/** §45의3 — 매출처 §⑭3호 지배주주등 보유비율 1행 */
-export interface RcRulingStakeRow {
-  shareholderId: string;
-  ratioPctStr: string;
-}
-
-/** §45의3 — 매출처 roster 1행 */
-export interface RcSalesRow {
-  id: string;
-  name: string;
-  salesAmountStr: string;
-  isRelated: boolean;
-  exclusionType: RcExclusionTypeStr;
-  rulingStakes: RcRulingStakeRow[];
-}
-
-export interface DeemedFormState {
+export interface DeemedFormState extends DeemedPhase3Fields {
   giftDate: string;
   type: DeemedGiftType | "";
   // 신탁이익 §33
@@ -332,114 +216,6 @@ export interface DeemedFormState {
   csConvAllocationMethod: ShareAllocationMethod; // 전환 시점 §39① 공모 제외
   csIssueAllocationMethod: ShareAllocationMethod; // 발행 시점 §39① 공모 제외
   csIssuanceDate: string; // 발행 시점 평가기준일 — 전환주식 **발행 당시**(§29②6나). 전환 시점은 증여일(§29①2호)
-  // ── Phase 3 추정·의제 ──
-  // 재산취득자금 증여추정 §45
-  afSubType: "acquisition" | "debt_repayment";
-  afAcquisitionValue: string;
-  afProvenAmount: string;
-  // 명의신탁 증여의제 §45의2
-  ntPropertyValue: string;
-  ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
-  ntExcluded: boolean; // §45의2①1·3·4 배제사유
-  ntValuationMode: "total" | "per_share"; // total=재산가액 직접 / per_share=유상증자 신주(명의개서일 §63 평가×신주수)
-  ntPerSharePrice: string; // per_share: 명의개서일 §63 평가 1주당 가액
-  ntNewShares: string; // per_share: 명의신탁 신주 수
-  ntSubscriptionPrice: string; // echo: 신주인수가액(발행가액)
-  ntTheoreticalExRights: string; // echo: 이론적 권리락 증자후 1주당 가액
-  ntPreIncreasePerShare: string; // echo: 증자 전 1주당 평가액
-  ntActualOwner: string; // prefill: 실제소유자(증여자) 성명
-  ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
-  // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
-  edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
-  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
-  edSeparateTaxAmount: string; // 분리과세 세액 직접입력
-  edComprehensiveTaxBase: string; // 종합과세 과세표준 (ⓐ기준)
-  edSettlementMode: boolean; // 정산 활성화 ToggleCard
-  edActualIncomeTax: string; // 정산 실제 소득세납부세액
-  edDonorRelationship:
-    | "spouse"
-    | "lineal_ascendant_adult"
-    | "lineal_ascendant_minor"
-    | "lineal_descendant"
-    | "other_relative"
-    | undefined;
-  edPriorDeductionApplied: string; // 10년 내 기적용 공제 누계
-  edIsGenerationSkip: boolean; // 세대생략 여부
-  edIsMinorGenerationSkip: boolean; // 미성년 세대생략 할증 (§57①)
-  edIsWithinFilingDeadline: boolean; // 기한내신고 예정 (신고세액공제 3%)
-  edComprehensiveTaxBaseExcluding: string; // 종합과세 ⓑ기준(초과배당 제외) — 미입력 시 자동 추정
-  edIncomeTaxYear: string; // 소득 귀속연도 override — 미입력 시 증여일 연도
-  // 상장이익 §41의3 / 합병상장 §41의5
-  lgEventType: "listing" | "merger";
-  lgSettlementPrice: string;
-  lgAcqValue: string;
-  lgCorpGrowth: string;
-  lgShares: string;
-  // 령§31의3⑤ 기업가치 자동계산 (direct=직접입력 / auto=월수산식)
-  lgCorpGrowthMode: "direct" | "auto";
-  lgTotalNetIncome: string; // 사업연도별 1주당 순손익 합계
-  lgMonthsBusinessStart: string; // 분모 월수 (사업연도개시일~상장전일)
-  lgMonthsAcqToSettlement: string; // 곱수 월수 (증여·취득일~정산기준일)
-  lgMajorShareholder: boolean; // §63③ 최대주주 20% 할증
-  lgSurchargeExempt: boolean; // §63③ 단서 배제(중소·중견·결손)
-  lgStockCode: string; // 키움 §63①1 자동조회용 종목코드 (조회 보조 — 엔진 미전달)
-  lgSettlementDate: string; // 키움 §63①1 자동조회용 정산기준일 (상장일+3개월)
-  // 재산사용·용역 §42
-  psuSubType: "free_use" | "low_price" | "high_price";
-  psuMarketValue: string;
-  psuConsideration: string;
-  // 조직변경 §42의2
-  ocSubType: "share_change" | "value_change";
-  ocBaseValue: string;
-  ocPreShares: string;
-  ocPostShares: string;
-  ocPostPerShare: string;
-  ocPreValue: string;
-  ocPostValue: string;
-  // 재산가치증가 §42의3
-  viCurrentValue: string;
-  viAcqCost: string;
-  viNormalIncrease: string;
-  viContribution: string;
-  viAcqCause: ValueIncreaseAcquisitionCause | ""; // 취득사유 ①1·2·3호 (미선택="")
-  viReason: ValueIncreaseReason; // 가치증가사유 영①호 (기본 form_change=1호)
-  viAcqDate: string; // 취득일 (5년 echo)
-  viEventDate: string; // 사유발생일
-  // 특정법인 §45의5
-  scTransactionBenefit: string;
-  scCorporateTax: string;
-  scRatioPct: string;
-  // §45의3 일감몰아주기
-  rcEnterpriseSize: "small" | "medium" | "large" | "";
-  rcTotalSalesStr: string;
-  rcPreTaxAdjOperatingIncomeStr: string;
-  rcTaxableIncomeStr: string;
-  rcCorporateTaxNetStr: string;
-  rcShareholders: RcShareholderRow[];
-  rcIntermediaryCorps: RcIntermediaryRow[];
-  rcSalesPartners: RcSalesRow[];
-  // §45의5 확장 — 모드 토글 + 다주주 roster
-  /** 입력 방식: "single"=지분율 직접 / "roster"=주주 명단 */
-  scMode: "single" | "roster";
-  /** 법인세 상당액 모드: "direct"=직접 입력 / "auto"=산출세액+소득금액 자동안분 */
-  scCorporateTaxMode: "direct" | "auto";
-  /** auto: 법인세 산출세액 */
-  scCorpTaxAssessed: string;
-  /** auto: 법인세 공제·감면 */
-  scCorpTaxDeduction: string;
-  /** auto: 각사업연도소득금액 (안분 분모) */
-  scCorpIncome: string;
-  /** roster: 발행주식 총수 (분모) */
-  scTotalShares: string;
-  /**
-   * roster: 주주 명단 — 3-state (undefined=OFF / []=ON빈(validate 차단) / [...]=데이터).
-   * feedback_three_state_optional_mode_toggle 준수.
-   */
-  scShareholders?: ScShareholderRow[];
-  /** 결과 수증자 선택 인덱스 (한도표 표시용) */
-  scSelectedDoneeIndex: number;
-  /** §45의5② 한도 ㉮㉠ 증여재산공제 */
-  scGiftDeduction: string;
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -612,96 +388,5 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csConvAllocationMethod: "normal",
   csIssueAllocationMethod: "normal",
   csIssuanceDate: "",
-  afSubType: "acquisition",
-  afAcquisitionValue: "",
-  afProvenAmount: "",
-  ntPropertyValue: "",
-  ntTaxAvoidance: true,
-  ntExcluded: false,
-  ntValuationMode: "total",
-  ntPerSharePrice: "",
-  ntNewShares: "",
-  ntSubscriptionPrice: "",
-  ntTheoreticalExRights: "",
-  ntPreIncreasePerShare: "",
-  ntActualOwner: "",
-  ntNominee: "",
-  edShareholders: undefined,
-  edIncomeTaxMode: "undetermined",
-  edSeparateTaxAmount: "",
-  edComprehensiveTaxBase: "",
-  edSettlementMode: false,
-  edActualIncomeTax: "",
-  edDonorRelationship: undefined,
-  edPriorDeductionApplied: "",
-  edIsGenerationSkip: false,
-  edIsMinorGenerationSkip: false,
-  edIsWithinFilingDeadline: true,
-  edComprehensiveTaxBaseExcluding: "",
-  edIncomeTaxYear: "",
-  lgEventType: "listing",
-  lgSettlementPrice: "",
-  lgAcqValue: "",
-  lgCorpGrowth: "",
-  lgShares: "",
-  lgCorpGrowthMode: "direct",
-  lgTotalNetIncome: "",
-  lgMonthsBusinessStart: "",
-  lgMonthsAcqToSettlement: "",
-  lgMajorShareholder: false,
-  lgSurchargeExempt: false,
-  lgStockCode: "",
-  lgSettlementDate: "",
-  psuSubType: "free_use",
-  psuMarketValue: "",
-  psuConsideration: "",
-  ocSubType: "share_change",
-  ocBaseValue: "",
-  ocPreShares: "",
-  ocPostShares: "",
-  ocPostPerShare: "",
-  ocPreValue: "",
-  ocPostValue: "",
-  viCurrentValue: "",
-  viAcqCost: "",
-  viNormalIncrease: "",
-  viContribution: "",
-  viAcqCause: "",
-  viReason: "form_change",
-  viAcqDate: "",
-  viEventDate: "",
-  scTransactionBenefit: "",
-  scCorporateTax: "",
-  scRatioPct: "",
-  // §45의3 일감몰아주기
-  rcEnterpriseSize: "",
-  rcTotalSalesStr: "",
-  rcPreTaxAdjOperatingIncomeStr: "",
-  rcTaxableIncomeStr: "",
-  rcCorporateTaxNetStr: "",
-  rcShareholders: [],
-  rcIntermediaryCorps: [],
-  rcSalesPartners: [],
-  scMode: "single",
-  scCorporateTaxMode: "direct",
-  scCorpTaxAssessed: "",
-  scCorpTaxDeduction: "",
-  scCorpIncome: "",
-  scTotalShares: "",
-  scShareholders: undefined,
-  scSelectedDoneeIndex: 0,
-  scGiftDeduction: "",
+  ...INITIAL_DEEMED_PHASE3,
 };
-
-// ── §45의3 일감몰아주기 roster 행 팩토리 ──
-export function makeRcShareholderRow(id: string): RcShareholderRow {
-  return { id, name: "", relation: "other", directRatioPctStr: "", isCorporate: false };
-}
-
-export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
-  return { id, corpShareholderId: "", stakeInBeneficiaryPctStr: "", owners: [] };
-}
-
-export function makeRcSalesRow(id: string): RcSalesRow {
-  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", rulingStakes: [] };
-}
