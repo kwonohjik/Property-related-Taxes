@@ -188,8 +188,24 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           shares: parseAmount(sh.shares),
           totalShares,
           isDonor: sh.isDonor,
-          isRelated: sh.relation !== "other", // "other"=타인 → 비특수관계인
+          // 법인주주는 「지배주주와 그 친족」(법 §45의4①)이 아니다 — relation과 무관하게 지배주주등에서 뺀다
+          isRelated: !sh.isCorporate && sh.relation !== "other", // "other"=타인 → 비특수관계인
+          isCorporate: sh.isCorporate,
         }));
+        // 간접출자관계 — 경유 법인의 특정법인 지분은 그 법인 «행»의 주식수다(중복 입력 금지, RC-L 회피)
+        const sharesById = new Map(form.scShareholders.map((sh) => [sh.id, parseAmount(sh.shares)]));
+        const intermediaryCorps = (form.scIntermediaryCorps ?? [])
+          .filter((c) => c.corpShareholderId && sharesById.has(c.corpShareholderId))
+          .map((c) => ({
+            corpShareholderId: c.corpShareholderId,
+            stakeInBeneficiary: { numer: sharesById.get(c.corpShareholderId) ?? 0, denom: totalShares },
+            owners: c.owners
+              .filter((o) => o.individualId)
+              .map((o) => ({
+                individualId: o.individualId,
+                ratio: { numer: Math.round(parseDecimal(o.ratioPctStr) * 100), denom: 10_000 },
+              })),
+          }));
         if (isAuto) {
           // auto: 엔진이 안분. raw 4필드 전달. UI 재계산 금지.
           return {
@@ -201,6 +217,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
             giftDeduction,
             controllingGroupRatio,
+            intermediaryCorps,
           };
         } else {
           // direct: corporateTax = 직접 입력 (이월결손금 0 허용 → 0 전달)
@@ -211,6 +228,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             shareholders,
             giftDeduction,
             controllingGroupRatio,
+            intermediaryCorps,
           };
         }
       }

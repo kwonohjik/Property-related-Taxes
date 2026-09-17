@@ -578,6 +578,11 @@ export interface SpecificCorpShareholder {
   totalShares: number; // 발행주식 총수 (분모)
   isDonor: boolean; // 증여자 본인 → donor_self 제외
   isRelated: boolean; // 지배주주 친족 여부, false → non_related 제외
+  /**
+   * 법인주주 — `intermediaryCorps`의 경유 법인이 된다. 지배주주등은 「지배주주와 그 친족」(법 §45의4①)
+   * 이라 **개인**만이므로, 법인 행은 ⓐ 해당성 합계와 수증자 판정 양쪽에서 빠진다(간접 귀속으로만 반영).
+   */
+  isCorporate?: boolean;
 }
 
 /** §45의5 특정법인과의 거래 */
@@ -592,6 +597,17 @@ export interface SpecificCorpInput {
    * roster에서는 주주 명부의 직접지분 합계를 보정(간접분 가산)하는 신고값으로 쓴다.
    */
   controllingGroupRatio?: { numer: number; denom: number };
+  /**
+   * 간접출자법인 — 개인이 법인을 통해 특정법인 주식을 보유하는 관계.
+   * 「주식보유비율」은 법 §45의3①이 §45의5까지 확장한 정의어라 **직접 또는 간접**을 모두 산입한다.
+   * 산식은 상증령 §34의3②(각 단계 직접보유비율의 곱, 경로가 둘 이상이면 합) — §45의3과 공용
+   * 헬퍼(`computeIndirectRatioBig`)를 쓴다.
+   *
+   * ⚠️ `stakeInBeneficiary`는 UI가 따로 받지 않는다 — 경유 법인이 roster의 한 행이므로
+   * 그 행의 `shares/totalShares`가 곧 이 값이다. §45의3은 두 곳에서 따로 받아 교차검증이
+   * 없는데(RC-L), 같은 결함을 새로 만들지 않기 위해 단일 소스로 둔다.
+   */
+  intermediaryCorps?: RcIntermediaryCorpItem[];
   // ── roster 모드 (shareholders 존재 시 dispatch) ──
   shareholders?: SpecificCorpShareholder[];
   annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)

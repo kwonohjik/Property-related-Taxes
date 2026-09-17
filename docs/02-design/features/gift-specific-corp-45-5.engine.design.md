@@ -13,14 +13,15 @@
 |---|---|---|
 | §45의5① ⓐ (280353) | 「**지배주주등의 주식보유비율이 100분의 30 이상인 법인**(…"특정법인")」 — 과세 **대상 법인**을 정하는 선결 요건 | `evaluateSpecificCorpEligibility()` — 지배주주등 행 직접지분 합계 + 신고된 간접분 |
 | §45의5① ⓑ (280353) | 특정법인이익 × **지배주주등의 주식보유비율** → 지배주주등이 증여받은 것으로 봄 | `corpProfit × shares/totalShares` |
-| §45의3① (280353) | 「**직접 또는 간접으로** 보유하는 주식보유비율(이하 이 조, 제45조의4 및 **제45조의5**에서 "주식보유비율"이라 한다)」 | ⓐ의 비율 정의 — 앱의 직접지분 합계는 **하한**이다 |
+| §45의3① (280353) | 「**직접 또는 간접으로** 보유하는 주식보유비율(이하 이 조, 제45조의4 및 **제45조의5**에서 "주식보유비율"이라 한다)」 | ⓐ·ⓑ 공통 비율 정의 — `combinedRatio()` = 직접 + 간접 |
+| 상증령 §34의3② (288887) | 간접보유비율 = 「각 단계의 직접보유비율을 **모두 곱하여**」, 경로가 둘 이상이면 「각각의 비율을 **모두 합하여**」 | `computeIndirectRatioBig()` (§45의3과 공용) |
 | §45의4① (280353) | 「지배주주와 그 친족(이하 이 조 및 **제45조의5**에서 "지배주주등"이라 한다)」 | ⓐ는 **집합**의 합계 비율 (증여자 본인 행 포함) |
 | §45의5② | ①증여세액 > (직접증여 증여세 − 법인세상당액) → 초과액 없음 | `finalTax = min(㉮, ㉯)`, ㉯=㉠−㉡ |
 | §34의5④ (283637) | 특정법인이익 = 1호(거래이익) − 2호(법인세 산출세액−공제감면) × min(거래이익/소득금액, 1) | `corpTaxApportioned` 안분 |
 | §34의5⑤ | 증여의제이익 **1억원 이상** 한정 | 주주별 `gain ≥ 100,000,000` 게이트 |
 | §34의5⑨ | 한도: ㉠=1호금액×지분율 직접증여 증여세 / ㉡=2호금액×지분율 | `calcSpecificCorpLimit` |
 
-**과세제외 4종**: ⓪**특정법인 아님**(§45의5① ⓐ — 지배주주등 합계 주식보유비율 30% 미만, 법인 단위 선결 요건) ①증여자 본인(특수관계인=증여자 → 자기 지분분 수증 아님) ②지배주주등 아님(친족 아닌 타인) ③§34의5⑤ 1억 미만.
+**과세제외 5종**: ⓪**특정법인 아님**(§45의5① ⓐ — 지배주주등 합계 주식보유비율 30% 미만, 법인 단위 선결 요건) ⓪′**법인주주**(지배주주등은 「지배주주와 그 친족」= 개인이다 — 그 지분은 개인에게 간접 귀속되므로 법인 행을 과세하면 이중계상) ①증여자 본인(특수관계인=증여자 → 자기 지분분 수증 아님) ②지배주주등 아님(친족 아닌 타인) ③§34의5⑤ 1억 미만.
 
 > ⚠️ **ⓐ와 ⓑ는 이름이 같은 다른 비율이다.** ⓐ는 그룹 합계(법인 단위), ⓑ는 상증령 §34의5⑨
 > 「**해당** 지배주주등의 주식보유비율을 곱한 금액을 … **각각**」에 따라 인별이다.
@@ -131,7 +132,7 @@ interface SpecificCorpMultiResult {
 
 ```
 0. eligibility = ⓐ §45의5① 특정법인 해당성 (선결)
-     directRatio = Σ(shareholders.filter(isRelated).shares) / totalShares   // isDonor 행 **포함**
+     directRatio = Σ_{isRelated && !isCorporate} combinedRatio(sh)          // isDonor 행 **포함** · 간접분 산입
      effective   = max(directRatio, controllingGroupRatio ?? 0)             // 직접분은 증명된 하한
      met = effective ≥ 30/100 ? "yes"
          : (controllingGroupRatio 있음 ? "no" : (roster ? "no" : "unknown"))
@@ -145,7 +146,9 @@ interface SpecificCorpMultiResult {
        : (corporateTax ?? 0)                         // 이월결손금 0 또는 single 직접값
 2. corpProfit = max(0, transactionBenefit − corpTaxApportioned)
 3. donees = shareholders.map(sh => {
-     gain = safeMultiplyThenDivide(corpProfit, sh.shares, sh.totalShares)   // 독립 floor, 잔액 흡수 안 함
+     ratio = 직접(sh.shares/totalShares) + 간접(computeIndirectRatioBig, mode="ruling")  // BigInt 분수
+     gain  = floor(corpProfit × ratio)                                      // floor 1회 · 잔액 흡수 안 함
+     if (sh.isCorporate)    → taxable=false, reason=corporate_shareholder, gain=0
      if (sh.isDonor)        → taxable=false, reason=donor_self
      else if (!sh.isRelated)→ taxable=false, reason=non_related
      else if (gain < 1억)   → taxable=false, reason=below_threshold
@@ -198,12 +201,13 @@ __tests__/tax-engine/gift-deemed/specific-corp-multi.test.ts — [SC-CASE1]·[SC
 ```
 
 ## 8. 엔진 → UI 동기화 (입력·결과 경계)
-- **엔진 입력**: shareholders[]·annualIncome·corporateTaxComputed·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
-- **엔진 결과**: `specificCorpMulti.{corpProfit, corpTaxApportioned, donees[]}` + `specificCorpEligibility.{directPct, declaredPct, effectivePct, met}`. UI 결과뷰가 주주별 표 + 한도 표를 이 echo로 렌더 (UI 재계산 금지 — dual-truth 회피).
+- **엔진 입력**: shareholders[](+`isCorporate`)·**intermediaryCorps[]**(간접출자관계)·annualIncome·corporateTaxComputed·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
+- **엔진 결과**: `specificCorpMulti.{corpProfit, corpTaxApportioned, donees[]}` + `specificCorpEligibility.{directPct, declaredPct, effectivePct, met}`. donee는 `directRatioPct`·`indirectRatioPct`를 분리해 echo한다. UI 결과뷰가 주주별 표 + 한도 표를 이 echo로 렌더 (UI 재계산 금지 — dual-truth 회피).
 - 14 동기화 지점 상세는 `gift-specific-corp-45-5.ui.design.md`.
 
 ## 9. defer (v2)
 - §34의5⑦ 현저대가(시가30%/3억) 저가·고가(2·3호) — 현 사례는 무상증여(1호).
 - §45의5①3호의2 자본거래 준용(§38·§39·§39의2·§39의3).
 - 관계별 증여재산공제(배우자 6억 등)·기존증여 10년 합산 — MVP는 giftDeduction input.
-- **간접보유비율 «자동» 산정**(§45의3의 간접출자 구조 재사용) — 현재는 ⓐ 판정용 합계를 사용자가 신고하는 단일 입력(`controllingGroupRatio`)으로 대체했다. 자동 산정은 §45의3 쪽 간접출자 입력축이 정리된 뒤에 얹는다.
+- **3단계 이상 간접출자**(개인 → 법인 → 법인 → 특정법인) — 현재 입력 구조는 경유 법인이 특정법인 주주 명부의 한 행이어야 해 2단계만 표현된다. 산식(`computeIndirectRatioBig`)은 다단계를 이미 지원하므로 입력축만 확장하면 된다.
+- **간접출자법인이 주주 명부에 없는 경우** — 경유 법인의 특정법인 지분을 그 «행»에서 가져오는 설계라(중복 입력·교차검증 부재 회피) 명부에 없으면 표현할 수 없다. 그때는 `controllingGroupRatio`(ⓐ)와 single 모드 합산비율(ⓑ)로 신고한다.

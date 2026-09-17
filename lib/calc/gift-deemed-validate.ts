@@ -364,6 +364,26 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
         }
         if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        // 간접출자관계 — 고아 참조를 여기서 막는다(새 입력축이라 §45의3의 RC-H 결함을 물려받지 않는다)
+        const shIds = new Set(form.scShareholders.map((sh) => sh.id));
+        for (let i = 0; i < (form.scIntermediaryCorps ?? []).length; i++) {
+          const c = form.scIntermediaryCorps![i];
+          if (!c.corpShareholderId) return `간접출자관계 ${i + 1}의 경유 법인을 선택하세요`;
+          if (!shIds.has(c.corpShareholderId))
+            return `간접출자관계 ${i + 1}의 경유 법인이 주주 명단에 없습니다`;
+          if (!form.scShareholders.find((sh) => sh.id === c.corpShareholderId)?.isCorporate)
+            return `간접출자관계 ${i + 1}의 경유 법인은 주주 명단에서 「법인」으로 표시해야 합니다`;
+          if (c.owners.length === 0) return `간접출자관계 ${i + 1}의 개인 소유주를 추가하세요`;
+          for (let j = 0; j < c.owners.length; j++) {
+            const o = c.owners[j];
+            if (!o.individualId) return `간접출자관계 ${i + 1}의 소유주 ${j + 1}을 선택하세요`;
+            if (!shIds.has(o.individualId))
+              return `간접출자관계 ${i + 1}의 소유주 ${j + 1}이 주주 명단에 없습니다`;
+            const pct = parseDecimal(o.ratioPctStr);
+            if (pct <= 0 || pct > 100)
+              return `간접출자관계 ${i + 1}의 소유주 ${j + 1} 지분율은 0 초과 100 이하로 입력하세요`;
+          }
+        }
         if (isAuto) {
           // roster+auto: 산출세액·소득금액 필수 (자동안분 fallback 금지, 0 차단)
           if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";

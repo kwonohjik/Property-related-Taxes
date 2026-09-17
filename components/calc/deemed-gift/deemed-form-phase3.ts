@@ -7,7 +7,7 @@
  * 타입·초기값을 **한 파일에 짝으로** 두어 한쪽만 추가하는 누락을 막는다.
  */
 import type { ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
-import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScShareholderRow } from "./deemed-form-rows";
+import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScIntermediaryRow, ScShareholderRow } from "./deemed-form-rows";
 
 export interface DeemedPhase3Fields {
   // ── Phase 3 추정·의제 ──
@@ -129,6 +129,8 @@ export interface DeemedPhase3Fields {
    * feedback_three_state_optional_mode_toggle 준수.
    */
   scShareholders?: ScShareholderRow[];
+  /** §45의5 간접출자관계 (개인 → 법인 → 특정법인). 「주식보유비율」은 직접+간접이다(법 §45의3①) */
+  scIntermediaryCorps?: ScIntermediaryRow[];
   /**
    * 과세 수증자 선택 인덱스 — **한도표 표시 + 증여세 마법사 이관** 양쪽에 쓴다.
    * (종전 JSDoc은 「한도표 표시용」이라고만 적어 prefill이 이 값을 무시하는 상태와
@@ -219,6 +221,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   scCorpIncome: "",
   scTotalShares: "",
   scShareholders: undefined,
+  scIntermediaryCorps: undefined,
   scSelectedDoneeIndex: 0,
   scGiftDeduction: "",
 };

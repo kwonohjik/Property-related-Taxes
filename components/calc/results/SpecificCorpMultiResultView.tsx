@@ -22,6 +22,7 @@ const RELATION_LABEL: Record<ScRelation, string> = {
 const TAXABLE_BADGE_CLS = {
   taxable: "bg-emerald-100 text-emerald-800",
   not_specific_corp: "bg-rose-100 text-rose-700",
+  corporate_shareholder: "bg-violet-100 text-violet-700",
   donor_self: "bg-slate-100 text-slate-600",
   non_related: "bg-sky-100 text-sky-700",
   below_threshold: "bg-amber-100 text-amber-700",
@@ -31,6 +32,7 @@ function taxabilityBadge(donee: SpecificCorpDonee): { cls: string; label: string
   if (donee.isTaxable) return { cls: TAXABLE_BADGE_CLS.taxable, label: "과세" };
   switch (donee.nonTaxableReason) {
     case "not_specific_corp": return { cls: TAXABLE_BADGE_CLS.not_specific_corp, label: "특정법인 아님" };
+    case "corporate_shareholder": return { cls: TAXABLE_BADGE_CLS.corporate_shareholder, label: "법인주주 — 개인에 간접 귀속" };
     case "donor_self":      return { cls: TAXABLE_BADGE_CLS.donor_self,      label: "본인증여 제외" };
     case "non_related":     return { cls: TAXABLE_BADGE_CLS.non_related,     label: "비특수관계인 제외" };
     case "below_threshold": return { cls: TAXABLE_BADGE_CLS.below_threshold, label: "1억 미만 제외" };
@@ -110,6 +112,14 @@ export function SpecificCorpMultiResultView({
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
                     {d.ownershipRatioPct.toFixed(1)}%
+                    {d.indirectRatioPct > 0 && (
+                      <span
+                        className="block text-caption text-violet-700"
+                        data-testid={`sc-multi-ratio-split-${i}`}
+                      >
+                        직접 {d.directRatioPct.toFixed(1)} + 간접 {d.indirectRatioPct.toFixed(1)}
+                      </span>
+                    )}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">
                     {formatKRW(multi.corpProfit)}×{d.ownershipRatioPct.toFixed(1)}%

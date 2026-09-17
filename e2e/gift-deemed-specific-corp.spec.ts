@@ -200,6 +200,65 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("deemed-exclusion")).toContainText("간접보유");
   });
 
+  /**
+   * §45의5 「주식보유비율」의 간접분 — 법인 경유 지배지분.
+   * 갑 직접 20% + 갑이 100% 소유한 A법인 40% ⇒ 갑의 주식보유비율 60%.
+   * 종전에는 A법인 행이 「비특수관계인 제외」로 통째 탈락해 갑이 400,000,000만 잡혔다.
+   */
+  test("법인 경유 간접보유 40%가 개인에게 귀속된다 — 400,000,000 → 1,200,000,000", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    await dialog.getByTestId("sc-mode-roster").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("2000000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-total-shares").fill("100000");
+
+    // 행 0: 갑(직계비속, 직접 20,000주)
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-0").fill("갑");
+    await dialog.getByTestId("sc-sh-relation-0").selectOption("lineal_descendant");
+    await dialog.getByTestId("sc-sh-shares-0").fill("20000");
+
+    // 행 1: A법인(법인주주, 40,000주)
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-1").fill("A법인");
+    await dialog.getByTestId("sc-sh-relation-1").selectOption("other");
+    await dialog.getByTestId("sc-sh-shares-1").fill("40000");
+    await dialog.getByTestId("sc-sh-is-corporate-1").getByRole("switch").click();
+
+    // 행 2: 타인(40,000주)
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-2").fill("타인");
+    await dialog.getByTestId("sc-sh-relation-2").selectOption("other");
+    await dialog.getByTestId("sc-sh-shares-2").fill("40000");
+
+    // 간접출자관계: A법인을 갑이 100% 소유
+    await dialog.getByTestId("sc-im-add").click();
+    await dialog.getByTestId("sc-im-corp-0").selectOption({ label: "A법인" });
+    await dialog.getByTestId("sc-im-owner-add-0").click();
+    await dialog.getByTestId("sc-im-owner-who-0-0").selectOption({ label: "갑" });
+    await dialog.getByTestId("sc-im-owner-ratio-0-0").fill("100");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    const matrix = page.getByTestId("sc-multi-matrix");
+    await expect(matrix).toBeVisible({ timeout: 15000 });
+    // 갑 = 특정법인이익 20억 × 60%
+    await expect(page.getByTestId("sc-multi-gain-0")).toContainText("1,200,000,000");
+    // 직접/간접 분해가 화면에 보인다
+    await expect(page.getByTestId("sc-multi-ratio-split-0")).toContainText("직접 20.0 + 간접 40.0");
+    // 법인주주 행은 과세되지 않고 0원 — 이중계상 방지
+    await expect(matrix).toContainText("법인주주 — 개인에 간접 귀속");
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

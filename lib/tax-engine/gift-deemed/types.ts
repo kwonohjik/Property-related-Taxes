@@ -225,10 +225,12 @@ export interface SpecificCorpDonee {
   relation: import("./gift-deemed-input-types").ScRelation;
   shares: number;
   totalShares: number;
-  ownershipRatioPct: number; // 표시용 백분율
-  gain: number; // 증여의제이익 = corpProfit × shares/totalShares
+  ownershipRatioPct: number; // 표시용 백분율 = 직접 + 간접 (법 §45의3① 「직접 또는 간접으로 보유하는」)
+  directRatioPct: number; // 직접보유분
+  indirectRatioPct: number; // 간접출자법인 경유분 (상증령 §34의3② 각 단계 곱)
+  gain: number; // 증여의제이익 = corpProfit × (직접+간접) — 합산비율로 한 번 곱한다(§45의5엔 §45의3②이 없다)
   isTaxable: boolean;
-  nonTaxableReason?: "not_specific_corp" | "donor_self" | "non_related" | "below_threshold";
+  nonTaxableReason?: "not_specific_corp" | "corporate_shareholder" | "donor_self" | "non_related" | "below_threshold";
   limitCalc?: SpecificCorpLimitCalc; // 과세 주주만
 }
 

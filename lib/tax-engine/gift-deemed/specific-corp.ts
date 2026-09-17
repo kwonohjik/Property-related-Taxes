@@ -1,10 +1,12 @@
 /** (Phase 3) 특정법인과의 거래를 통한 이익의 증여 의제 (§45의5 · 시행령 §34의5) */
 import { GIFT } from "../legal-codes";
 import { safeMultiplyThenDivide, truncateToThousand } from "../tax-utils";
+import { computeIndirectRatioBig } from "./related-corp-helpers";
 import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type {
   DeemedGiftResult,
+  RcIntermediaryCorpItem,
   SpecificCorpInput,
   SpecificCorpDonee,
   SpecificCorpEligibility,
@@ -73,6 +75,58 @@ export function evaluateSpecificCorpEligibility(
     };
   }
   return { directPct, declaredPct, effectivePct, met: mode === "roster" ? "no" : "unknown" };
+}
+
+/**
+ * 수증자 1인의 **주식보유비율 = 직접 + 간접** (법 §45의3①이 §45의5까지 확장한 정의어).
+ * 간접분 산식은 상증령 §34의3②(각 단계 직접보유비율의 곱 · 경로 둘 이상이면 합) — §45의3과 공용 헬퍼.
+ *
+ * ⚠️ **§45의5는 「각각 계산한 금액을 합산」하지 않는다.** 그 방식은 법 §45의3**②**의 명문
+ * (「직접적으로 출자하는 동시에 … 간접적으로 출자하는 경우에는 제1항의 계산식에 따라 각각
+ * 계산한 금액을 합산하여 계산한다」)이고, §45의5에는 대응 조항이 없다(①②③이 전부).
+ * ⇒ 합산 «비율»로 **한 번** 곱하고 floor도 1회다. 직접·간접을 따로 floor하면 최대 1원씩 더 깎인다.
+ *
+ * ⚠️ §45의3의 §⑱ 간접출자법인 요건(영 §34의3⑱)은 여기에 걸리지 않는다 — 그 필터는 법
+ * §45의3②의 「대통령령으로 정하는 법인」에 대한 것이고, 영 §34의3⑧이 「이하 **이 조**에서
+ * 같다」로 범위를 닫는다. 영 §34의5①은 §34의3 **제1항 각 호**만 준용한다. ⇒ mode "ruling".
+ */
+function combinedRatio(
+  sh: { id: string; shares: number; totalShares: number },
+  intermediaryCorps: RcIntermediaryCorpItem[],
+): { numer: bigint; denom: bigint } {
+  return addDirect(sh, computeIndirectRatioBig(sh.id, intermediaryCorps, "ruling"));
+}
+
+/** 직접보유분(shares/totalShares)과 이미 구한 간접분을 더한다. */
+function addDirect(
+  sh: { shares: number; totalShares: number },
+  ind: { numer: bigint; denom: bigint },
+): { numer: bigint; denom: bigint } {
+  const dNumer = BigInt(sh.shares);
+  const dDenom = BigInt(sh.totalShares);
+  if (dDenom === 0n) return ind;
+  return { numer: dNumer * ind.denom + ind.numer * dDenom, denom: dDenom * ind.denom };
+}
+
+/** 표시용 백분율 — 소수 넷째 자리까지 유지(1e6 배 후 1e4로 나눔). */
+function fracToPct(f: { numer: bigint; denom: bigint }): number {
+  return f.denom === 0n ? 0 : Number((f.numer * 1_000_000n) / f.denom) / 10_000;
+}
+
+/**
+ * BigInt 분수를 `evaluateSpecificCorpEligibility`가 쓰는 number 분수로 좁힌다.
+ * 분모가 2^53을 넘으면 그대로는 못 쓰므로 «원 분모(발행주식 총수)» 기준 분자로 환산한다
+ * — 판정은 30%와의 대소 비교뿐이라 이 환산으로 충분하고, 표시 비율도 여기서 나온다.
+ */
+function fracToNumbers(numer: bigint, denom: bigint, baseDenom: number): { numer: number; denom: number } {
+  if (denom === 0n || baseDenom <= 0) return { numer: 0, denom: 1 };
+  return { numer: Number((numer * BigInt(baseDenom)) / denom), denom: baseDenom };
+}
+
+/** profit × (numer/denom) — 전 구간 BigInt, floor 1회. */
+function applyFrac(profit: number, f: { numer: bigint; denom: bigint }): number {
+  if (f.denom === 0n) return 0;
+  return Number((BigInt(profit) * f.numer) / f.denom);
 }
 
 /** ⓐ 미충족 사유 — 간접보유를 0%로 본 전제를 함께 적어 사용자가 되돌릴 수 있게 한다. */
@@ -169,38 +223,52 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
   // ── ⓐ §45의5① 특정법인 해당성 — 지배주주등(친족 행) 직접지분 합계 + 신고된 간접분 ──
   // 증여자 본인(isDonor) 행도 지배주주등이므로 합계에 **포함**한다. donor_self 제외는
   // 「누가 수증자인가」(ⓑ) 축이지 「이 법인이 특정법인인가」(ⓐ) 축이 아니다 — 두 축을 섞지 말 것.
-  const relatedShares = shareholders.reduce((a, sh) => (sh.isRelated ? a + sh.shares : a), 0);
+  // ⓐ도 「직접 또는 간접」이다 — 간접출자법인 경유분을 산입한 개인별 합산비율의 합으로 판정한다.
+  const intermediaryCorps = input.intermediaryCorps ?? [];
   const gateDenom = shareholders.find((sh) => sh.totalShares > 0)?.totalShares ?? 0;
+  let gateNumer = 0n;
+  let gateDenomBig = 1n;
+  for (const sh of shareholders) {
+    if (!sh.isRelated || sh.isCorporate) continue; // 지배주주등은 개인(법 §45의4①)
+    const f = combinedRatio(sh, intermediaryCorps);
+    gateNumer = gateNumer * f.denom + f.numer * gateDenomBig;
+    gateDenomBig = gateDenomBig * f.denom;
+  }
   const eligibility = evaluateSpecificCorpEligibility(
-    { numer: relatedShares, denom: gateDenom },
+    fracToNumbers(gateNumer, gateDenomBig, gateDenom),
     input.controllingGroupRatio,
     "roster",
   );
   const notSpecificCorp = eligibility.met === "no";
 
-  // ── 주주별 증여의제이익 + 과세제외 3종 + §45의5② 한도 ──
+  // ── 주주별 증여의제이익 + 과세제외 5종 + §45의5② 한도 ──
   const donees: SpecificCorpDonee[] = shareholders.map((sh) => {
-    const gain = sh.totalShares > 0 ? safeMultiplyThenDivide(corpProfit, sh.shares, sh.totalShares) : 0;
-    const ownershipRatioPct = sh.totalShares > 0 ? (sh.shares / sh.totalShares) * 100 : 0;
+    const indirect = computeIndirectRatioBig(sh.id, intermediaryCorps, "ruling");
+    const ratio = addDirect(sh, indirect);
+    const gain = applyFrac(corpProfit, ratio);
+    const directPct = sh.totalShares > 0 ? (sh.shares * 100) / sh.totalShares : 0;
+    const indirectRatioPct = fracToPct(indirect);
     const base: SpecificCorpDonee = {
       name: sh.name,
       relation: sh.relation,
       shares: sh.shares,
       totalShares: sh.totalShares,
-      ownershipRatioPct,
+      ownershipRatioPct: directPct + indirectRatioPct, // 표시용 = 직접 + 간접
+      directRatioPct: directPct,
+      indirectRatioPct,
       gain,
       isTaxable: false,
     };
     if (notSpecificCorp) return { ...base, nonTaxableReason: "not_specific_corp" }; // ⓐ 법인 단위 선결 요건
+    if (sh.isCorporate) return { ...base, gain: 0, nonTaxableReason: "corporate_shareholder" }; // 법인 → 개인에 간접 귀속
     if (sh.isDonor) return { ...base, gain: 0, nonTaxableReason: "donor_self" }; // 증여자 본인(특수관계인)
     if (!sh.isRelated) return { ...base, nonTaxableReason: "non_related" }; // 지배주주 친족 아님(타인)
     if (gain < ABSOLUTE_THRESHOLD) return { ...base, nonTaxableReason: "below_threshold" }; // §34의5⑤ 1억 미만
-    // 과세 — §45의5② 한도 계산
+    // 과세 — §45의5② 한도 계산 (한도의 ㉠㉡도 같은 합산비율을 쓴다)
     const limitCalc = calcSpecificCorpLimit({
       gain,
       transactionBenefit,
-      shares: sh.shares,
-      totalShares: sh.totalShares,
+      ratio,
       corpTaxApportioned,
       giftDeduction,
     });
@@ -247,15 +315,15 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
 function calcSpecificCorpLimit(p: {
   gain: number;
   transactionBenefit: number;
-  shares: number;
-  totalShares: number;
+  /** 합산 주식보유비율(직접+간접) — ㉠㉡ 모두 같은 비율을 쓴다 (상증령 §34의5⑨) */
+  ratio: { numer: bigint; denom: bigint };
   corpTaxApportioned: number;
   giftDeduction: number;
 }): SpecificCorpLimitCalc {
   const computedTax = calcInheritanceGiftTax(truncateToThousand(Math.max(0, p.gain - p.giftDeduction)));
-  const directGiftBase = safeMultiplyThenDivide(p.transactionBenefit, p.shares, p.totalShares); // 거래이익(차감 前)×지분
+  const directGiftBase = applyFrac(p.transactionBenefit, p.ratio); // 거래이익(차감 前)×보유비율
   const directGiftTax = calcInheritanceGiftTax(truncateToThousand(Math.max(0, directGiftBase - p.giftDeduction)));
-  const corpTaxShare = safeMultiplyThenDivide(p.corpTaxApportioned, p.shares, p.totalShares);
+  const corpTaxShare = applyFrac(p.corpTaxApportioned, p.ratio);
   const limitAmount = Math.max(0, directGiftTax - corpTaxShare);
   const finalTax = Math.min(computedTax, limitAmount);
   const filingCredit = Math.floor((finalTax * FILING_CREDIT_NUMER) / FILING_CREDIT_DENOM);

@@ -79,11 +79,77 @@ describe("§45의5① ⓐ — single은 미입력 시 판정을 보류한다", (
   });
 });
 
+/** 갑 직접 20% · A법인 40%(갑 100% 소유) · 을 15% · 타인 25% */
+const WITH_CORP: DeemedFormState = {
+  ...ROSTER,
+  scTotalShares: "100000",
+  scShareholders: [
+    { id: "gap", name: "갑", relation: "lineal_descendant", shares: "20000", isDonor: false, isCorporate: false },
+    { id: "acorp", name: "A법인", relation: "other", shares: "40000", isDonor: false, isCorporate: true },
+    { id: "eul", name: "을", relation: "lineal_descendant", shares: "15000", isDonor: false, isCorporate: false },
+    { id: "tain", name: "타인", relation: "other", shares: "25000", isDonor: false, isCorporate: false },
+  ],
+  scIntermediaryCorps: [
+    { id: "im1", corpShareholderId: "acorp", owners: [{ individualId: "gap", ratioPctStr: "100" }] },
+  ],
+} as unknown as DeemedFormState;
+
+describe("간접출자관계 — ④⑫ 관통", () => {
+  it("[PL-6] 경유 법인의 특정법인 지분은 그 «행»의 주식수에서 나온다 (중복 입력 없음)", () => {
+    const input = buildDeemedGiftInput(WITH_CORP) as unknown as {
+      intermediaryCorps: { stakeInBeneficiary: { numer: number; denom: number } }[];
+    };
+    // UI는 법인의 특정법인 지분을 따로 받지 않는다 — ④가 roster 행에서 채운다(RC-L 회피)
+    expect(input.intermediaryCorps[0].stakeInBeneficiary).toEqual({ numer: 40_000, denom: 100_000 });
+  });
+
+  it("[PL-7] ⑫를 통과해 엔진에 도달한다 — 갑 1,200,000,000 / 합계 1,500,000,000", () => {
+    const { reachedEngine, result } = throughPipeline(WITH_CORP);
+    expect(reachedEngine).toBe(false); // controllingGroupRatio는 미입력
+    const donees = result.specificCorpMulti!.donees;
+    expect(donees.find((d) => d.name === "갑")!.gain).toBe(1_200_000_000);
+    expect(donees.find((d) => d.name === "A법인")!.nonTaxableReason).toBe("corporate_shareholder");
+    expect(result.deemedGiftValue).toBe(1_500_000_000);
+  });
+
+  it("[PL-8] 법인주주는 relation과 무관하게 지배주주등에서 빠진다 (④ isRelated)", () => {
+    const asRelative = {
+      ...WITH_CORP,
+      scShareholders: WITH_CORP.scShareholders!.map((sh) =>
+        sh.id === "acorp" ? { ...sh, relation: "lineal_descendant" as const } : sh,
+      ),
+    } as unknown as DeemedFormState;
+    const input = buildDeemedGiftInput(asRelative) as unknown as {
+      shareholders: { id: string; isRelated: boolean }[];
+    };
+    expect(input.shareholders.find((sh) => sh.id === "acorp")!.isRelated).toBe(false);
+  });
+});
+
 describe("⑧ validate — 비율 범위", () => {
   it("[PL-5] 0 초과 100 이하를 벗어나면 차단하고, 미입력·정상값은 통과시킨다", () => {
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "150" })).toContain("0 초과 100 이하");
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "0" })).toContain("0 초과 100 이하");
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "" })).toBeNull();
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "35" })).toBeNull();
+  });
+
+  it("[PL-9] 간접출자관계의 고아 참조를 차단한다 (§45의3의 RC-H 결함을 물려받지 않는다)", () => {
+    expect(validateDeemedInput(WITH_CORP)).toBeNull();
+
+    const orphanCorp = { ...WITH_CORP, scIntermediaryCorps: [{ id: "im1", corpShareholderId: "gone", owners: [{ individualId: "gap", ratioPctStr: "100" }] }] } as unknown as DeemedFormState;
+    expect(validateDeemedInput(orphanCorp)).toContain("주주 명단에 없습니다");
+
+    const notCorp = { ...WITH_CORP, scIntermediaryCorps: [{ id: "im1", corpShareholderId: "gap", owners: [{ individualId: "eul", ratioPctStr: "100" }] }] } as unknown as DeemedFormState;
+    expect(validateDeemedInput(notCorp)).toContain("「법인」으로 표시");
+
+    const orphanOwner = { ...WITH_CORP, scIntermediaryCorps: [{ id: "im1", corpShareholderId: "acorp", owners: [{ individualId: "gone", ratioPctStr: "100" }] }] } as unknown as DeemedFormState;
+    expect(validateDeemedInput(orphanOwner)).toContain("주주 명단에 없습니다");
+
+    const badPct = { ...WITH_CORP, scIntermediaryCorps: [{ id: "im1", corpShareholderId: "acorp", owners: [{ individualId: "gap", ratioPctStr: "150" }] }] } as unknown as DeemedFormState;
+    expect(validateDeemedInput(badPct)).toContain("0 초과 100 이하");
+
+    const noOwner = { ...WITH_CORP, scIntermediaryCorps: [{ id: "im1", corpShareholderId: "acorp", owners: [] }] } as unknown as DeemedFormState;
+    expect(validateDeemedInput(noOwner)).toContain("개인 소유주를 추가하세요");
   });
 });

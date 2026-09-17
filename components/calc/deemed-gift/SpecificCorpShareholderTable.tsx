@@ -21,6 +21,7 @@ function newRow(): ScShareholderRow {
     relation: "lineal_descendant",
     shares: "",
     isDonor: false,
+    isCorporate: false,
   };
 }
 
@@ -107,24 +108,37 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
               </select>
             </div>
 
-            {/* 주식수 */}
+            {/* 주식수 — 직접보유분. 간접분은 아래 「간접출자관계」에서 표현한다 */}
             <CurrencyInput
-              label="주식수"
+              label="직접보유 주식수"
               value={row.shares}
               onChange={(v) => update(i, { shares: v })}
-              placeholder="보유 주식수"
+              placeholder="직접 보유한 주식수"
+              hint="법인 경유 간접보유는 아래 「간접출자관계」에"
               data-testid={`sc-sh-shares-${i}`}
             />
 
-            {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
+            {/* 법인주주 — 지배주주등은 「지배주주와 그 친족」(법 §45의4①)이라 개인뿐이다 */}
             <ToggleCard
               variant="chip"
               tone="sky"
-              title="증여자 본인 (과세 제외)"
-              checked={row.isDonor}
-              onCheckedChange={(v) => update(i, { isDonor: v })}
-              data-testid={`sc-sh-is-donor-${i}`}
+              title="법인주주 (간접출자 경유 법인)"
+              checked={row.isCorporate}
+              onCheckedChange={(v) => update(i, { isCorporate: v, isDonor: v ? false : row.isDonor })}
+              data-testid={`sc-sh-is-corporate-${i}`}
             />
+
+            {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
+            {!row.isCorporate && (
+              <ToggleCard
+                variant="chip"
+                tone="sky"
+                title="증여자 본인 (과세 제외)"
+                checked={row.isDonor}
+                onCheckedChange={(v) => update(i, { isDonor: v })}
+                data-testid={`sc-sh-is-donor-${i}`}
+              />
+            )}
           </div>
         ))}
       </div>

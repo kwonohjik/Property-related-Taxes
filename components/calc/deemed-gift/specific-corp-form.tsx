@@ -10,6 +10,8 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { SpecificCorpIntermediaryTable } from "./SpecificCorpIntermediaryTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
 import type { DeemedFormState } from "./shared";
 
@@ -133,7 +135,7 @@ export function SpecificCorpFields({ form, set }: Props) {
         {!isRoster && (
           <FieldCard
             label="해당 지배주주등(수증자)의 주식보유비율"
-            hint="증여의제이익 = 특정법인의 이익 × 이 비율. 상증령 §34의5⑨는 「해당 지배주주등이 각각」 증여받은 것으로 보므로 «그룹 합계»가 아니라 수증자 1인분입니다 (1억원 이상이면 과세 — §34의5⑤)"
+            hint="수증자 1인분입니다 (그룹 합계 아님). 간접보유가 있으면 합산해 입력하세요"
             unit="%"
           >
             <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} data-testid="sc-shareholder-ratio" />
@@ -152,6 +154,11 @@ export function SpecificCorpFields({ form, set }: Props) {
               rows={form.scShareholders ?? []}
               onChange={(rows) => set({ scShareholders: rows })}
             />
+            <SpecificCorpIntermediaryTable
+              rows={form.scIntermediaryCorps ?? []}
+              shareholders={form.scShareholders ?? []}
+              onChange={(rows) => set({ scIntermediaryCorps: rows })}
+            />
           </>
         )}
         {/* ── ⓐ §45의5① 특정법인 해당성 — 위 ⓑ 승수와 다른 축 ── */}
@@ -159,8 +166,8 @@ export function SpecificCorpFields({ form, set }: Props) {
           label="지배주주등 합계 주식보유비율 (직접+간접)"
           hint={
             isRoster
-              ? "§45의5①은 「지배주주등의 주식보유비율이 100분의 30 이상인 법인」만 특정법인으로 봅니다. 미입력 시 위 주주 명단의 직접지분 합계로 판정합니다(간접보유 0%). 간접보유가 있으면 직접+간접 합계를 입력하십시오"
-              : "§45의5①은 「지배주주등의 주식보유비율이 100분의 30 이상인 법인」만 특정법인으로 봅니다. 지배주주와 그 친족 «전원»의 합계(직접+간접)입니다 — 미입력 시 이 요건을 판정하지 않습니다"
+              ? "미입력 시 주주 명단·간접출자관계로 판정합니다 (그 밖의 간접보유는 0%)"
+              : "지배주주와 그 친족 «전원»의 합계 — 미입력 시 요건을 판정하지 않습니다"
           }
           unit="%"
         >
@@ -171,6 +178,31 @@ export function SpecificCorpFields({ form, set }: Props) {
           />
         </FieldCard>
       </ToneCard>
+
+      {/* 「주식보유비율」의 두 축 — 평문 hint로 깔면 검증 오류 메시지를 밀어낸다(hint 150자 정책) */}
+      <CollapsibleHintCard tone="violet" summary="「주식보유비율」의 두 축 — 특정법인 해당성(ⓐ)과 인별 승수(ⓑ)">
+        <ul className="list-disc space-y-1 pl-4">
+          <li>
+            <b>ⓐ 특정법인 해당성 (법 §45의5①)</b>: 「지배주주등의 주식보유비율이 100분의 30 이상인
+            <b> 법인</b>」만 특정법인입니다. 「지배주주등」은 법 §45의4①의 「지배주주와 그 친족」이라
+            <b> 전원의 합계</b>이고, 미달이면 증여의제가 성립하지 않습니다.
+          </li>
+          <li>
+            <b>ⓑ 인별 승수 (상증령 §34의5⑨)</b>: 증여의제이익은 「<b>해당</b> 지배주주등의 주식보유비율을
+            곱한 금액을 해당 지배주주등이 <b>각각</b>」 증여받은 것으로 봅니다. 그룹이 30% 이상인
+            특정법인이라면 개인 보유분이 30% 미만이어도 그 개인 비율로 곱하는 것이 맞습니다.
+          </li>
+          <li>
+            <b>직접 + 간접 (법 §45의3①)</b>: 「직접 또는 간접으로 보유하는 주식보유비율(이하 이 조,
+            제45조의4 및 <b>제45조의5</b>에서 &quot;주식보유비율&quot;이라 한다)」. 간접보유비율은 각 단계
+            직접보유비율의 곱이고, 경로가 둘 이상이면 합합니다(상증령 §34의3②).
+          </li>
+          <li>
+            <b>미입력의 의미</b>: 주주 명단 모드는 명단·간접출자관계에 없는 간접보유를 0%로 보고 ⓐ를
+            판정합니다. 지분율 직접 입력 모드는 그룹 합계를 알 수 없어 ⓐ를 <b>판정하지 않습니다</b>.
+          </li>
+        </ul>
+      </CollapsibleHintCard>
 
       {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
       <ToneCard tone="emerald" sectionNum="4" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>

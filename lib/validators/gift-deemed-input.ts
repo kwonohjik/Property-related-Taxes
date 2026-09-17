@@ -441,6 +441,18 @@ const specificCorpShareholderSchema = z.object({
   totalShares: z.number().int().nonnegative(),
   isDonor: z.boolean(),
   isRelated: z.boolean(),
+  isCorporate: z.boolean().optional(),
+});
+/** §45의5 간접출자관계 — 개인 → 법인 → 특정법인 (상증령 §34의3② 각 단계 곱) */
+const specificCorpIntermediarySchema = z.object({
+  corpShareholderId: z.string(),
+  stakeInBeneficiary: ratioSchema,
+  owners: z.array(
+    z.object({
+      individualId: z.string(),
+      ratio: ratioSchema,
+    }),
+  ),
 });
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
@@ -451,6 +463,7 @@ const specificCorpSchema = z.object({
   controllingGroupRatio: ratioSchema.optional(), // ⓐ §45의5① 특정법인 해당성 — 지배주주등 합계(직접+간접)
   // roster 모드 신규 필드 (⑫ Zod 입력 객체 정의 — TS 미감지 지점)
   shareholders: z.array(specificCorpShareholderSchema).optional(),
+  intermediaryCorps: z.array(specificCorpIntermediarySchema).optional(),
   annualIncome: z.number().nonnegative().optional(),
   corporateTaxComputed: z.number().nonnegative().optional(),
   corporateTaxCredit: z.number().nonnegative().optional(),

@@ -67,20 +67,41 @@ export function computeIndirectRatio(
   mode: "ruling" | "recipient",
   rulingGroupIds: string[] = [],
 ): Frac {
+  const { numer, denom } = computeIndirectRatioBig(shareholderId, intermediaryCorps, mode, rulingGroupIds);
+  return { numer: Number(numer), denom: Number(denom) };
+}
+
+/**
+ * 위와 같은 산식의 **BigInt 원본**. 분수를 그대로 곱셈에 쓰는 호출자(§45의5)는 이쪽을 쓴다.
+ *
+ * 근거는 **분모의 크기**다 — 경유 경로가 2개면 분모 곱이 실측 1e18로 `MAX_SAFE_INTEGER`(≈9.0e15)를
+ * 넘는다. 그 구간의 `Number`는 정수 간격이 1보다 커서 왕복이 **보장되지 않는다**.
+ *
+ * ⚠️ 다만 「지금 값이 틀린다」는 뜻은 아니다 — 2·3경유 × 지분·주식수를 바꿔 **6,534건을 돌려
+ * BigInt와 Number 경로의 증여의제이익 차이는 0건**이었다(분자·분모가 같은 배율로 반올림돼
+ * 몫이 살아남는다). 즉 이 함수는 **측정된 오차의 수정이 아니라, 안전범위 밖에서 추론하지 않기
+ * 위한 예방**이다. `computeIndirectRatio`의 narrowing은 §45의3 기존 동작이라 그대로 둔다(W10 범위).
+ */
+export function computeIndirectRatioBig(
+  shareholderId: string,
+  intermediaryCorps: RcIntermediaryCorpItem[],
+  mode: "ruling" | "recipient",
+  rulingGroupIds: string[] = [],
+): { numer: bigint; denom: bigint } {
   let accNumer = 0n;
   let accDenom = 1n;
   for (const corp of intermediaryCorps) {
     if (mode === "recipient" && !isIntermediarySec18(corp, rulingGroupIds)) continue;
     const owner = corp.owners.find((o) => o.individualId === shareholderId);
     if (!owner) continue;
-    // 이 경유 간접 = owner.ratio × corp.stakeInBeneficiary
+    // 이 경유 간접 = owner.ratio × corp.stakeInBeneficiary  (상증령 §34의3② 「각 단계의 직접보유비율을 모두 곱하여」)
     const pathNumer = BigInt(owner.ratio.numer) * BigInt(corp.stakeInBeneficiary.numer);
     const pathDenom = BigInt(owner.ratio.denom) * BigInt(corp.stakeInBeneficiary.denom);
-    // acc += path (분수 합)
+    // acc += path (분수 합 — 동 ② 후단 「둘 이상의 간접출자관계 … 모두 합하여」)
     accNumer = accNumer * pathDenom + pathNumer * accDenom;
     accDenom = accDenom * pathDenom;
   }
-  return { numer: Number(accNumer), denom: Number(accDenom === 0n ? 1n : accDenom) };
+  return { numer: accNumer, denom: accDenom === 0n ? 1n : accDenom };
 }
 
 /**

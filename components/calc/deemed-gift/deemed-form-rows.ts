@@ -39,12 +39,37 @@ export interface ScShareholderRow {
   id: string;
   name: string;
   relation: ScRelation;
-  shares: string; // 주식수 (CurrencyInput)
+  shares: string; // 직접보유 주식수 (CurrencyInput) — 간접분은 ScIntermediaryRow로 표현한다
   isDonor: boolean; // 증여자 본인 → donor_self 제외
+  /** 법인주주 → 간접출자법인 후보. 지배주주등은 개인뿐이라(법 §45의4①) 이 행은 과세 대상이 아니다 */
+  isCorporate: boolean;
 }
 
 export function makeScShareholderRow(id: string): ScShareholderRow {
-  return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false };
+  return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false, isCorporate: false };
+}
+
+/** §45의5 — 간접출자법인의 개인소유주 1행 */
+export interface ScIntermediaryOwnerRow {
+  individualId: string; // ScShareholderRow.id
+  ratioPctStr: string; // 그 법인에 대한 직접보유비율 %
+}
+
+/**
+ * §45의5 — 간접출자관계 1건 (개인 → 법인 → 특정법인).
+ *
+ * §45의3의 `RcIntermediaryRow`와 달리 **법인의 특정법인 지분을 따로 받지 않는다** —
+ * 경유 법인이 roster의 한 행이므로 그 행의 주식수가 곧 그 값이다. §45의3은 두 곳에서
+ * 따로 받아 교차검증이 없다(RC-L). 같은 결함을 새로 만들지 않는다.
+ */
+export interface ScIntermediaryRow {
+  id: string;
+  corpShareholderId: string; // ScShareholderRow.id (isCorporate인 행)
+  owners: ScIntermediaryOwnerRow[];
+}
+
+export function makeScIntermediaryRow(id: string): ScIntermediaryRow {
+  return { id, corpShareholderId: "", owners: [] };
 }
 
 /** §43² 합산 — 개별 대출 건 (전부 string. API 변환에서 number). */
