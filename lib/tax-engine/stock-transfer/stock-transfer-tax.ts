@@ -42,6 +42,7 @@ import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
 import { resolveAcquisitionBasis } from "./stock-acquisition-basis";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { stockLossOffsetNotice } from "./loss-offset-notice";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -456,6 +457,23 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
    * 미지정이면 위 산출값 그대로다.
    */
   const transferIncome = input.crossLossOffsetIncome ?? rawTransferIncome;
+
+  /**
+   * 🔑 **§102② 차손 안내** — 국외주식 축과 **같은 문장**을 쓴다(leaf 단일 소스).
+   *
+   * ⛔ **주식 그룹(§102①2호)에만** 붙인다. 기타자산(§94①4호)은 §102①**1호**라 통산 상대가
+   *   부동산·기타자산이고, 이 문장을 그대로 쓰면 틀린 안내가 된다(anchor FN-7).
+   *
+   * 통산 «전» 값으로 판정한다 — 크로스 주입(`crossLossOffsetIncome`)은 이미 통산이
+   * 끝난 값이라 그것으로 보면 「손실이 사라진 것」처럼 읽힌다.
+   */
+  if (rawTransferIncome < 0 && classification.basicDeductionGroup === "stock") {
+    // ⚠️ 국내 `appliedRules`는 **마커 union**이라 조문 문자열이 들어가지 않는다 —
+    //    이 엔진의 규약은 「마커는 appliedRules · 조문은 warnings」다(같은 파일 STEP 9 주석).
+    //    국외(`foreign-stock.ts`)는 `appliedRules`가 자유 문자열이라 거기에 근거를 싣는다.
+    //    문장 안에 §94①3호·§102②가 이미 들어 있어 근거는 화면에 그대로 보인다.
+    warnings.push(stockLossOffsetNotice(rawTransferIncome));
+  }
 
   // ──────────────────────────────────────────────────────────
   // STEP 6: 기본공제 §103①
