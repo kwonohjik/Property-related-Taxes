@@ -286,6 +286,25 @@ export function validateStep3Foreign(form: StockTransferFormData): StockValidati
   if (form.marketType !== "foreign_stock") return [];
   const errors: StockValidationError[] = [];
 
+  /**
+   * ⑧ 필요경비 **지출일 기준환율** (영 §178의5①) — 비우는 것은 **허용**한다.
+   *
+   * 미입력은 엔진에서 양도일 환율로 떨어지므로(근사치) 차단할 이유가 없다. 다만 **넣었는데
+   * 0 이하**면 막는다 — 0 은 Zod(`positive()`)에서도 걸리지만, 여기서 막지 않으면 사용자가
+   * 「다음」을 통과한 뒤 API 단계에서야 튕긴다(UI 통과 ↔ 검증 차단 모순).
+   *
+   * ⚠️ 금액이 0인데 환율만 넣은 경우는 오류가 아니다 — 곱해도 0이고, UI 는 금액이 있을 때만
+   *   칸을 보여주므로 입력 경로 자체가 없다(값이 남아 있을 뿐이다).
+   */
+  const checkExpenseRate = (field: "capitalExpenditureExchangeRate" | "transferCostExchangeRate", label: string) => {
+    if (isEmpty(form[field])) return;
+    if (parseF(form[field]) <= 0) {
+      errors.push({ field, message: `${label}은 0보다 커야 합니다`, severity: "error" });
+    }
+  };
+  checkExpenseRate("capitalExpenditureExchangeRate", "자본적지출 지출일 기준환율");
+  checkExpenseRate("transferCostExchangeRate", "양도비 지출일 기준환율");
+
   if (form.hasForeignTax) {
     // 납부세액 필수
     if (isEmpty(form.foreignTaxPaidForeign)) {

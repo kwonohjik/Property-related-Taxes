@@ -129,8 +129,18 @@ export type ForeignStockInput = {
   // ── 필요경비 (외화) §118의4 ──
   /** 자본적지출액 (외화) */
   capitalExpenditureForeign: number;
+  /**
+   * 자본적지출 **지출일** 기준환율 (영 §178의5① 「필요경비를 … 지출한 날 현재」).
+   *
+   * 미입력이면 양도일 환율(`transferExchangeRate`)로 떨어진다 — 종전 거동이며, 지출일
+   * 환율을 모르는 사용자를 차단하지 않기 위한 근사치다. 자본적지출은 **보유 중** 지출이라
+   * 양도일과 시점이 멀 수 있어, 양도비와 **별도 축**으로 받는다.
+   */
+  capitalExpenditureExchangeRate?: number;
   /** 양도비 (외화, 수수료 포함) */
   transferCostForeign: number;
+  /** 양도비 **지출일** 기준환율 (영 §178의5①). 미입력 시 양도일 환율. */
+  transferCostExchangeRate?: number;
 
   // ── 외국납부세액 §118의6 ──
   hasForeignTax: boolean;
@@ -262,6 +272,15 @@ export type ForeignStockResult = {
   // ── 산식 echo (결과 카드 표시용) ──
   transferExchangeRate: number;
   acquisitionExchangeRate: number;
+  /**
+   * 필요경비에 **실제로 적용된** 환율 echo (영 §178의5①).
+   *
+   * 입력값이 아니라 **fallback 이 반영된 값**이다 — 지출일 환율을 비우면 양도일 환율이
+   * 실린다. 결과 화면이 「무슨 환율로 환산됐는가」를 그대로 보여줄 수 있어야 한다
+   * (양도가액·취득가액·외국납부세액은 이미 그렇게 하고 있고 필요경비만 빠져 있었다).
+   */
+  capitalExpenditureExchangeRateApplied: number;
+  transferCostExchangeRateApplied: number;
   foreignTaxExchangeRate?: number;
   shareCount: number;
 

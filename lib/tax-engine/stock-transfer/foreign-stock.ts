@@ -145,6 +145,12 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
       totalTax: 0,
       transferExchangeRate: input.transferExchangeRate,
       acquisitionExchangeRate: input.acquisitionExchangeRate,
+      // 납세의무 미충족이라 환산 자체가 없다 — 그래도 **입력된 축을 그대로** 싣는다
+      // (조기반환 분기가 하류 단계를 건너뛰어 필드가 비는 것을 막는다).
+      capitalExpenditureExchangeRateApplied:
+        input.capitalExpenditureExchangeRate ?? input.transferExchangeRate,
+      transferCostExchangeRateApplied:
+        input.transferCostExchangeRate ?? input.transferExchangeRate,
       shareCount: input.shareCount,
       transferReceiptDetail: undefined,
       warnings: ["§118의2 납세의무 미충족 — 거주기간 5년 미만"],
@@ -218,15 +224,23 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   }
 
   // ──────────────────────────────────────────────────────────
-  // STEP 4: 필요경비 원화 환산 (§118의4 — 지출일 환율, 근사치로 양도일 환율 사용)
+  // STEP 4: 필요경비 원화 환산 — **지출일 기준환율** (영 §178의5①)
   // ──────────────────────────────────────────────────────────
-  // v1: 자본적지출·양도비는 양도일 기준환율로 환산 (지출일 환율 미입력 시 근사치)
-  const capitalExpKrw = Math.floor(
-    input.capitalExpenditureForeign * input.transferExchangeRate,
-  );
-  const transferCostKrw = Math.floor(
-    input.transferCostForeign * input.transferExchangeRate,
-  );
+  // 「양도가액 및 **필요경비**를 **수령하거나 지출한 날** 현재 「외국환거래법」에 의한
+  //  기준환율 또는 재정환율에 의하여 계산한다」 (KoreanLaw MCP 검증 — 현행 MST 286211)
+  //
+  // 🔑 종전에는 둘 다 **양도일 환율**로 환산했다(주석이 「근사치」라고 인정하고 있었다).
+  //   양도가액은 양도일·취득가액은 취득일 환율을 각각 받는데 **필요경비만 전용 축이 없었고**,
+  //   UI 에도 입력 칸이 없어 사용자가 어떤 환율이 곱해지는지 알 수 없었다(제보).
+  //
+  // ⚠️ 자본적지출과 양도비는 **지출 시점이 다르다**(전자는 보유 중, 후자는 양도 무렵).
+  //   하나로 묶으면 한쪽이 조용히 틀리므로 **각각** 받는다.
+  // ⚠️ 미입력이면 양도일 환율로 떨어진다 — 기존 계산 불변(anchor FX-3).
+  // ⚠️ **항목별로 floor** 한다. 합산 후 floor 하면 1원이 달라진다(anchor FX-4).
+  const capExRate = input.capitalExpenditureExchangeRate ?? input.transferExchangeRate;
+  const costRate = input.transferCostExchangeRate ?? input.transferExchangeRate;
+  const capitalExpKrw = Math.floor(input.capitalExpenditureForeign * capExRate);
+  const transferCostKrw = Math.floor(input.transferCostForeign * costRate);
 
   // ──────────────────────────────────────────────────────────
   // STEP 5: 외국납부세액 처리 (§118의6)
@@ -404,6 +418,8 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     transferPriceKrw,
     acquisitionPriceKrw,
     necessaryExpensesKrw,
+    capitalExpenditureExchangeRateApplied: capExRate,
+    transferCostExchangeRateApplied: costRate,
     transferGain,
 
     basicDeduction,

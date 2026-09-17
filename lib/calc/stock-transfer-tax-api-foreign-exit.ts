@@ -64,7 +64,11 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 
     // ── 필요경비 (외화) §118의4 ──
     capitalExpenditureForeign: parseFloatOrUndef(form.capitalExpenditureForeign) ?? 0,
+    // 영 §178의5① 지출일 환율 — 미입력이면 **키를 싣지 않는다**. 0 을 실으면 엔진의
+    // `?? transferExchangeRate` fallback 이 발동하지 않아 필요경비가 조용히 0원이 된다.
+    capitalExpenditureExchangeRate: parseFloatOrUndef(form.capitalExpenditureExchangeRate),
     transferCostForeign: parseFloatOrUndef(form.transferCostForeign) ?? 0,
+    transferCostExchangeRate: parseFloatOrUndef(form.transferCostExchangeRate),
 
     // ── 외국납부세액 §118의6 ──
     hasForeignTax: form.hasForeignTax,               // 3중 패턴 default: false

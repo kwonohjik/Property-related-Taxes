@@ -93,7 +93,11 @@ export const foreignStockInputSchema = z.object({
 
   // ── 필요경비 §118의4 ──
   capitalExpenditureForeign: z.number().min(0),
+  // 영 §178의5① 지출일 환율 — optional. **positive** 라야 한다: 0 이 통과하면 엔진의
+  // `?? transferExchangeRate` 가 0 을 유효값으로 받아 필요경비가 0원으로 죽는다.
+  capitalExpenditureExchangeRate: z.number().positive().optional(),
   transferCostForeign: z.number().min(0),
+  transferCostExchangeRate: z.number().positive().optional(),
 
   // ── 외국납부세액 §118의6 ──
   hasForeignTax: z.boolean(),

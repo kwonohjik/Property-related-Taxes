@@ -171,7 +171,24 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         <Row
           label="필요경비 (자본적지출 + 양도비)"
           value={result.necessaryExpensesKrw}
-          sub={hasForeignTaxExpense ? "외국납부세액 필요경비 산입 포함" : undefined}
+          /**
+           * 🔑 **어떤 환율로 환산됐는지 밝힌다.** 양도가액·취득가액·외국납부세액은 이미
+           *   환율을 보여주는데 필요경비만 빠져 있어, 사용자가 외화로 넣은 금액이 어떻게
+           *   원화가 됐는지 알 수 없었다(제보).
+           *
+           * 두 항목의 지출일이 다르면 환율도 다르다 — 그때만 나눠 적는다.
+           */
+          sub={[
+            result.capitalExpenditureExchangeRateApplied ===
+            result.transferCostExchangeRateApplied
+              ? `지출일 기준환율 ${fmt(result.capitalExpenditureExchangeRateApplied)} (영 §178의5①)`
+              : `자본적지출 ${fmt(result.capitalExpenditureExchangeRateApplied)} · 양도비 ${fmt(
+                  result.transferCostExchangeRateApplied,
+                )} (지출일 기준환율, 영 §178의5①)`,
+            hasForeignTaxExpense ? "외국납부세액 필요경비 산입 포함" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           indent
         />
         <Divider />
