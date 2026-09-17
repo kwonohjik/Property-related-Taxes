@@ -55,7 +55,14 @@ export async function verifyRule(rule: VerificationRule): Promise<VerificationRe
   }
 
   // 조문 전문 조회
-  const article = await fetchArticle(lawInfo.mst, lawInfo.lawName, parsed.articleNo).catch(() => null);
+  // basis 기본값은 "enforced" — 현행 시행본(lawId 경로)으로 검증한다.
+  // "announced"인 규칙만 공포본(MST 경로)을 본다(verifier-types.ts의 basis 주석 참조).
+  const article = await fetchArticle(
+    lawInfo.mst,
+    lawInfo.lawName,
+    parsed.articleNo,
+    rule.basis === "announced" ? undefined : lawInfo.lawId,
+  ).catch(() => null);
   if (!article || !article.fullText) {
     return {
       rule,

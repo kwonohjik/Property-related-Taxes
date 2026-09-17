@@ -145,6 +145,34 @@ describe("safeMultiplyThenDivide", () => {
     expect(safeMultiplyThenDivide(a, b, c)).toBe(100_000_000_000_000_000);
   });
 
+  // ── 비정수 피연산자 + overflow — BigInt 경로가 조용히 틀리던 구간 ──
+  //
+  // BigInt 경로는 `Math.floor`로 피연산자를 절사한다. 그래서 소수가 섞이면 두 가지로
+  // 어긋났다(2026-09-18 실측):
+  //   · 0 < |c| < 1 → `BigInt(Math.floor(c))`가 `0n` → **RangeError: Division by zero**
+  //     (`c === 0` 가드는 엄격 동등 비교라 이 구간을 못 막는다)
+  //   · |c| ≥ 1 인 소수 → 분모를 절사해 조용히 과대 산출
+  // ⇒ 세 피연산자가 모두 정수일 때만 BigInt 경로를 타게 했다.
+  //
+  // 이 두 단언은 증여의제 API가 HTTP 500으로 죽던 경로의 회귀 방지다
+  // (⑫ `ratioSchema`가 소수 분모를 허용했었다 — `lib/validators/gift-deemed-input.ts`).
+
+  it("overflow + 0<분모<1: RangeError 없이 정확값을 낸다", () => {
+    const a = 10_000_000_000; // 1e10
+    const b = 1_000_000;      // 1e6
+    expect(a * b).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+    expect(() => safeMultiplyThenDivide(a, b, 0.5)).not.toThrow();
+    expect(safeMultiplyThenDivide(a, b, 0.5)).toBe(20_000_000_000_000_000);
+  });
+
+  it("overflow + 소수 분모(|c|≥1): 분모를 절사하지 않는다", () => {
+    const a = 10_000_000_000;
+    const b = 1_000_000;
+    // 종전 BigInt 경로는 분모를 100으로 절사해 100_000_000_000_000(약 0.25% 과대)였다.
+    expect(safeMultiplyThenDivide(a, b, 100.25)).toBe(99_750_623_441_396);
+    expect(safeMultiplyThenDivide(a, b, 100.25)).toBe(Math.floor((a * b) / 100.25));
+  });
+
   it("BigInt fallback: 종합부동산세 재산세 비율안분공제 시나리오", () => {
     // 공시가 합계 300억, 재산세 산출세액 1억 5천만, 분모 200억
     // (150_000_000 × 30_000_000_000) ÷ 20_000_000_000

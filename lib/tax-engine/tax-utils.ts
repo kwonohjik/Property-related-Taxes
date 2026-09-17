@@ -171,15 +171,31 @@ export function safeMultiply(a: number, b: number): number {
  * (a × b) ÷ c — 곱셈 먼저 수행하여 정밀도 유지.
  * Number.MAX_SAFE_INTEGER 초과 시 BigInt fallback.
  * c === 0 이면 0 반환 (division by zero 방어).
+ *
+ * 🔴 **BigInt 경로는 세 피연산자가 모두 정수일 때만 탄다.** 이 경로는 `Math.floor`로
+ * 피연산자를 절사하는데, 소수가 섞이면 두 가지로 조용히 잘못된다(둘 다 2026-09-18 실측):
+ *
+ * | 입력 | 종전 | 올바른 값 |
+ * |---|---|---|
+ * | `(1e10, 1e6, 0.5)` | **`RangeError: Division by zero`** (`BigInt(Math.floor(0.5))` = `0n`) | 20000000000000000 |
+ * | `(1e10, 1e6, 100.25)` | 100000000000000 (분모를 100으로 절사 — 0.25% 과대) | 99750623441396 |
+ *
+ * `c === 0` 가드는 **엄격 동등 비교**라 0 < |c| < 1 구간을 못 막는다. 증여의제 API는
+ * ⑫ Zod가 소수 분모를 허용해 그 예외가 그대로 `/api/calc/gift-deemed` **HTTP 500**으로
+ * 떨어졌다(`route.ts`의 catch는 `TaxCalculationError`가 아니면 500).
+ * ⇒ 소수가 섞이면 부동소수 경로(`Math.floor(product / c)`)로 되돌린다 — 아주 큰 곱에서
+ *   정밀도는 떨어지지만 예외로 죽지 않고 절사 오차도 없다.
+ *   분모를 정수로 강제하는 진짜 방어는 ⑫(`lib/validators/gift-deemed-input.ts`의 `ratioSchema`)다.
+ *
+ * ⚠️ 같은 절사가 아래 `safeMultiply`의 `BigInt(Math.floor(a))·BigInt(Math.floor(b))`에도
+ *    있다. 그쪽은 나눗셈이 없어 예외로는 죽지 않아 이번 범위에서 건드리지 않았다.
  */
 export function safeMultiplyThenDivide(a: number, b: number, c: number): number {
   if (c === 0) return 0;
   const product = a * b;
-  if (Math.abs(product) > Number.MAX_SAFE_INTEGER) {
-    // Math.floor로 정수화: 피연산자를 정수로 변환 후 연산 (중간 반올림 금지)
-    return Number(
-      BigInt(Math.floor(a)) * BigInt(Math.floor(b)) / BigInt(Math.floor(c)),
-    );
+  const allIntegers = Number.isInteger(a) && Number.isInteger(b) && Number.isInteger(c);
+  if (Math.abs(product) > Number.MAX_SAFE_INTEGER && allIntegers) {
+    return Number(BigInt(a) * BigInt(b) / BigInt(c));
   }
   return Math.floor(product / c);
 }

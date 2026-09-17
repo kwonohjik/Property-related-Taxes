@@ -113,7 +113,15 @@ const freeLoanAggregatedSchema = z.object({
 });
 
 // ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
-const ratioSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
+// 🔴 `.int()`는 장식이 아니다 — 소수 분모가 통과하면 엔진의 `safeMultiplyThenDivide`가
+//    BigInt 경로에서 `RangeError: Division by zero`를 던져 API가 500으로 죽는다
+//    (leaf 쪽 가드는 `lib/tax-engine/tax-utils.ts`에 함께 넣었다).
+//    생산 측(`lib/calc/gift-deemed-api.ts`의 `parseRatio`)은 `{Math.round(pct*100), 10_000}`
+//    으로 언제나 정수를 만들므로, 정수 강제가 정상 입력을 막지 않는다.
+const ratioSchema = z.object({
+  numer: z.number().int().nonnegative(),
+  denom: z.number().int().positive(),
+});
 const mergerShareholderSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -428,8 +436,9 @@ const specificCorpShareholderSchema = z.object({
   id: z.string(),
   name: z.string(),
   relation: scRelationSchema,
-  shares: z.number().nonnegative(),
-  totalShares: z.number().nonnegative(),
+  // 주식수도 같은 이유로 정수다 — roster 경로의 `shares/totalShares`가 곧 비율 분자·분모다.
+  shares: z.number().int().nonnegative(),
+  totalShares: z.number().int().nonnegative(),
   isDonor: z.boolean(),
   isRelated: z.boolean(),
 });
