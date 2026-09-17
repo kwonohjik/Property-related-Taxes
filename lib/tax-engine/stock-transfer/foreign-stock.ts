@@ -32,6 +32,7 @@
  * 계획서: docs/02-design/features/foreign-stock-94-1-3-da-statute-track.plan.md
  */
 
+import { stockLossOffsetNotice, LOSS_OFFSET_NOTICE_RULE } from "./loss-offset-notice";
 import type {
   ForeignStockInput,
   ForeignStockResult,
@@ -260,7 +261,9 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   appliedRules.push(STOCK_FOREIGN.SECTION_95_2_NO_LTHD);
 
   if (transferGain < 0) {
-    warnings.push(`양도손실 발생 (${transferGain.toLocaleString()}원) — 동일 과세기간 다른 해외주식 양도차익과 통산 가능`);
+    // §102①2호 — 국외주식(§94①3다목)은 국내주식(가·나목)과 **같은 호**다. 문구·근거는 leaf 단일 소스.
+    warnings.push(stockLossOffsetNotice(transferGain));
+    appliedRules.push(LOSS_OFFSET_NOTICE_RULE);
   }
 
   // ──────────────────────────────────────────────────────────
