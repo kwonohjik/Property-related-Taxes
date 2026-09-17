@@ -25,9 +25,10 @@
  * ## ⚠️ 변환에서 「없는 것」은 만들어내지 않는다
  *
  * 국내 전용 필드는 **의미 없는 값을 지어내지 않고** 중립값으로 둔다(대주주 판정·상장 관련 등).
- * 특히 **가산세·전자신고세액공제는 0**이다 — `calculateForeignStockTax`가 애초에 계산하지 않기
- * 때문이며, 이 어댑터가 임의로 채우면 단건 경로와 다종목 경로의 세액이 갈린다.
- * (국외주식 가산세 미구현은 이 작업과 **별개의 기존 갭**이다.)
+ * ⚠️ **가산세는 쓰임에 따라 갈린다** — 다종목 편입은 0(신고 단위로 1회 매겨진다), 단건 서식은
+ * 엔진 값 그대로다(`ToStockTransferResultOptions`). 종전 주석은 「엔진이 애초에 계산하지
+ * 않는다」였으나 **stale** 이었다 — `foreign-stock.ts:405·438-439`가 둘 다 계산한다.
+ * 전자신고 세액공제는 국외주식 엔진에 개념이 없어 여전히 0이다.
  */
 
 import type {
@@ -76,6 +77,25 @@ export function smeFlag(input: AggregateStockItemInput): boolean {
  *   그래서 변환이 읽는 5개로 좁힌다. 엔진 호출부는 `ForeignStockInput` 을 그대로 넘기면 된다
  *   (구조적 타이핑 — 호출부 무변경).
  */
+/**
+ * 이 결과가 **신고 1건 전체**인가.
+ *
+ * 🔑 가산세는 국세기본법 §47조의2·§47조의3·§47조의4상 **신고 1건 단위 1회**다.
+ *
+ * | 쓰임 | `filingUnitIsThisItem` | 가산세 |
+ * |---|---|---|
+ * | 다종목 aggregate 편입 | `false`(기본) | **0** — `stock-transfer-aggregate.ts`가 신고 단위로 1회 매기고 `stripItemPenalties`가 종목별을 0으로 만든다. 여기서 실으면 **이중 계산**이다. |
+ * | 단건 결과 화면·서식 | `true` | 엔진 값 그대로 — 그 종목이 곧 신고 1건이다. |
+ *
+ * 🔴 종전에는 옵션이 없어 **무조건 0**이었고, 그 근거 주석(「엔진이 애초에 계산하지 않는다」)은
+ *   **stale** 이었다 — `foreign-stock.ts:405·438-439`가 둘 다 계산한다. 그 결과 단건 서식이
+ *   `25행 19,500,000 / 26·27행 0 / 29행 21,950,000`으로 **자기모순**이었다(차액 2,450,000이
+ *   어느 행에도 없었다).
+ */
+export interface ToStockTransferResultOptions {
+  filingUnitIsThisItem?: boolean;
+}
+
 export type ForeignStockFilingMeta = Pick<
   ForeignStockInput,
   "transferDate" | "acquisitionDate" | "shareCount" | "stockName" | "countryCode"
@@ -90,10 +110,12 @@ export type ForeignStockFilingMeta = Pick<
  *
  * 다종목 aggregate 편입 외에 **결과 화면의 별지 제84호서식**도 이 변환을 쓴다 — 서식은
  * `StockTransferResult` 한 타입만 읽으므로, 국외주식이 서식에 실리는 길은 여기뿐이다.
+ * 두 쓰임은 **가산세 축에서 갈린다** — `opts.filingUnitIsThisItem` 참조.
  */
 export function toStockTransferResult(
   input: ForeignStockFilingMeta,
   r: ForeignStockResult,
+  opts: ToStockTransferResultOptions = {},
 ): StockTransferResult {
   const holdingDays = Math.max(
     0,
@@ -135,9 +157,11 @@ export function toStockTransferResult(
     progressiveDeduction: r.progressiveDeduction,
     calculatedTax: r.incomeTax,
 
-    // ⚠️ 국외주식 엔진은 가산세·전자신고세액공제를 계산하지 않는다(기존 갭). 0으로 옮긴다.
-    underReportPenalty: 0,
-    latePaymentPenalty: 0,
+    // 가산세는 **신고 1건 단위 1회**라 쓰임에 따라 갈린다(`ToStockTransferResultOptions`).
+    underReportPenalty: opts.filingUnitIsThisItem ? (r.underReportPenalty ?? 0) : 0,
+    latePaymentPenalty: opts.filingUnitIsThisItem ? (r.latePaymentPenalty ?? 0) : 0,
+    // ⚠️ 전자신고 세액공제는 **국외주식 엔진에 개념 자체가 없다**(`foreign-stock.ts` grep 0건) —
+    //    가산세와 달리 옵션으로 가를 것이 없어 0 그대로다.
     electronicFilingCredit: 0,
     finalTax: r.finalTax,
     localIncomeTax: r.localIncomeTax,

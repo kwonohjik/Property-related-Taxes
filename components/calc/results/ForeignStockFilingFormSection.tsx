@@ -75,6 +75,10 @@ export function ForeignStockFilingFormSection({
           countryCode: countryCode ?? "",
         },
         result,
+        // 🔑 단건 화면이다 — **이 종목이 곧 신고 1건**이라 가산세가 서식 26·27행에 실려야
+        //   25 − 25-1 + 26 + 27 = 29 가 선다. 다종목 편입 경로는 기본값(0)을 그대로 쓴다
+        //   (가산세는 신고 단위 1회 — `stock-transfer-aggregate.ts`가 매긴다).
+        { filingUnitIsThisItem: true },
       ),
     [result, stockName, countryCode, transferDate, acquisitionDate],
   );

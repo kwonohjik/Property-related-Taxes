@@ -129,4 +129,28 @@ test.describe("국외주식 결과 화면 — 신고서 양식이 맨 앞", () =
     await expect(table).toContainText("§110①");
     await expect(table).not.toContainText("예정신고: 반기 말일");
   });
+
+  /**
+   * FF-4: 가산세가 서식 26행에 **도달한다** — 25 + 26 = 29.
+   *
+   * 🔴 종전에는 어댑터가 가산세를 0으로 버려 `25행 19,500,000 / 26행 0 / 29행 21,450,000`으로
+   *   **차액이 어느 행에도 없었다**. 단위 anchor(`foreign-stock-filing-penalty.anchor.test.ts`)는
+   *   어댑터에서 출발하므로 「사용자가 그 값을 넣을 수 있는가」를 증명하지 못한다 — 이 spec 이
+   *   폼(과소신고 라디오) → 엔진 → 서식까지 **실제 경로**를 따라간다.
+   */
+  test("FF-4: 과소신고를 고르면 가산세가 서식 26행에 실린다 (25 + 26 = 29)", async ({ page }) => {
+    test.setTimeout(180_000);
+    await reachStep3(page);
+
+    await page.getByRole("radio", { name: /과소신고/ }).first().click();
+    await page.getByRole("button", { name: "결과 보기" }).click();
+
+    const table = page.locator('[data-print-section="stock-form-table"]');
+    await expect(table).toBeVisible({ timeout: 60_000 });
+
+    // 과세표준 97,500,000 × 20% = 19,500,000 → 과소신고 10% = 1,950,000
+    await expect(table).toContainText("1,950,000");
+    // 29행 결정세액 = 19,500,000 + 1,950,000
+    await expect(table).toContainText("21,450,000");
+  });
 });
