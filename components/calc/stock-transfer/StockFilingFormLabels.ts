@@ -113,9 +113,29 @@ export function taxCategoryLabel(cat: StockTransferResult["taxCategory"]): strin
   return map[cat] ?? cat;
 }
 
+/**
+ * 국외주식(§94①3호**다목**)인가 — 세율 조문이 **11호가 아니라 12호**다.
+ *
+ * 🔑 세율 값만으로 조문을 붙이면 안 된다. 20%는 §104①11호나목2)(국내 비대주주)에도,
+ *   §104①12호나목(국외 그 밖의 주식등)에도 있어 **같은 숫자가 서로 다른 호**다.
+ *   종전에는 값만 보고 11호를 찍어 국외주식 신고서에 **틀린 근거 조문이 인쇄**됐다.
+ */
+export function isForeignStockCategory(result: StockTransferResult): boolean {
+  return (
+    result.taxCategory === "foreign_stock" ||
+    result.taxCategory === "out_of_scope_foreign"
+  );
+}
+
 export function rateLabel(result: StockTransferResult): string {
   if (result.isExempt) return "비과세";
   const pct = (result.appliedRate * 100).toFixed(1);
+  // 국외주식 §104①12호 — 가목 중소기업 10% / 나목 그 밖 20%. 보유기간 구분·누진 없음.
+  if (isForeignStockCategory(result)) {
+    if (result.appliedRate === 0.20) return "20% (§104①12 나목)";
+    if (result.appliedRate === 0.10) return "10% (§104①12 가목 중소)";
+    return `${pct}% (§104①12)`;
+  }
   if (result.appliedRate === 0.30) return "30% (§104①11 가목1) 단기)";
   if (result.appliedRate === 0.20) return "20% (§104①11 가목2) / 나목2))";
   if (result.appliedRate === 0.10) return "10% (§104①11 나목1) 중소)";

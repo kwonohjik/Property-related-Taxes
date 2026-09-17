@@ -20,6 +20,7 @@ import {
   acquisitionModeLabel,
   taxCategoryLabel,
   rateLabel,
+  isForeignStockCategory,
 } from "./StockFilingFormLabels";
 
 // ── Props ──────────────────────────────────────────────────────
@@ -194,6 +195,16 @@ export function buildRows(
   const allExempt = isMulti
     ? (aggregate?.items.every((i) => i.isExempt) ?? false)
     : result.isExempt;
+
+  /**
+   * **전부** 국외주식인가 — 열이 하나뿐인 행(24·32)의 조문을 가른다.
+   *
+   * ⚠️ 「하나라도 국외」가 아니라 **전부**다. 국내가 섞이면 그 행의 국내 근거(§104①11·§105①2호)가
+   *   여전히 맞으므로, 국외 기준으로 갈아끼우면 이번엔 국내 종목 쪽이 틀린 안내를 받는다.
+   */
+  const allForeign = isMulti
+    ? (aggregate?.items.every((i) => isForeignStockCategory(i)) ?? false)
+    : isForeignStockCategory(result);
 
   // 보유기간 문자열
   const holdingMonthsStr = (r: StockTransferResult) =>
@@ -394,7 +405,10 @@ export function buildRows(
 
   // 24. 누진공제 (조건부)
   rows.push({
-    label: "24.   누진공제 (§55 / §104①11 가목2)",
+    // 국외주식 §104①12호에는 누진 구간 자체가 없다 — §55·§104①11 가목2)를 근거로 달면 틀리다.
+    label: allForeign
+      ? "24.   누진공제 (§104①12 — 누진 구간 없음)"
+      : "24.   누진공제 (§55 / §104①11 가목2)",
     values: val(
       result.progressiveDeduction ?? null,
       () => null,
@@ -580,14 +594,20 @@ export function buildRows(
 
   // ── [J] 신고 (32) ─────────────────────────────────────────────
 
-  // 32. 신고기한 §105①2호 (양도일 속한 반기 말일 + 2개월)
+  // 32. 신고기한
+  //
+  // 🔑 국외주식(§94①3호**다목**)에는 **예정신고 의무가 없다** — §105① 본문 괄호가
+  //   「같은 항 제3호다목 … 은 제외한다」로 빼고, 2호도 「제3호**가목 및 나목**」만 든다.
+  //   남는 것은 §110①의 확정신고뿐이다. 종전에는 전부 국외인 신고서에도 「예정신고: 반기 말일
+  //   + 2개월」이 인쇄돼 **없는 의무를 안내**했다.
+  const filingDeadlineText = allForeign
+    ? "확정신고: 다음연도 5월 31일 (§110①) — 예정신고 의무 없음 (§105① 본문 괄호)"
+    : "예정신고: 반기 말일 + 2개월 / 확정신고: 다음연도 5월 31일";
   rows.push({
-    label: "32. 신고기한 §105①2호 (양도일 반기 말일 + 2개월)",
-    values: val(
-      "예정신고: 반기 말일 + 2개월 / 확정신고: 다음연도 5월 31일",
-      () => "예정신고: 반기 말일 + 2개월 / 확정신고: 다음연도 5월 31일",
-      () => null,
-    ),
+    label: allForeign
+      ? "32. 신고기한 §110① (확정신고)"
+      : "32. 신고기한 §105①2호 (양도일 반기 말일 + 2개월)",
+    values: val(filingDeadlineText, () => filingDeadlineText, () => null),
   });
 
   // 행 수 검증 — 무조건 33행 + **조건부 행 3종**

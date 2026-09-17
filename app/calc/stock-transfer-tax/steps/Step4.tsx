@@ -10,6 +10,7 @@
 import { useEffect, useRef } from "react";
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
 import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockResultCard";
+import { ForeignStockFilingFormSection } from "@/components/calc/results/ForeignStockFilingFormSection";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
 import { ExitTaxHoldingReportSection } from "@/components/calc/results/ExitTaxHoldingReportSection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -141,10 +142,27 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
             </>
           ) : /* PR-4A 해외주식 — 별도 결과 카드 (ForeignStockResult 타입) */
           form.marketType === "foreign_stock" ? (
-            <ForeignStockResultCard
-              result={result as unknown as ForeignStockResult}
-              stockName={form.securityName}
-            />
+            <>
+              {/*
+                🔑 **신고서 양식이 맨 앞**이다 — 이 화면의 주된 산출물은 별지 제84호서식이고
+                결과 카드(환율 환산·산식)는 그 뒤를 받친다. 국내 경로(`StockTransferTaxResultView`)와
+                같은 순서다. 종전에는 국외주식 단건에 서식이 **아예 없었다**.
+              */}
+              <ForeignStockFilingFormSection
+                result={result as unknown as ForeignStockResult}
+                stockName={form.securityName}
+                stockCode={form.securityCode}
+                brokerage={form.brokerage}
+                accountNumberMasked={form.accountNumberMasked}
+                transferDate={form.transferDate}
+                acquisitionDate={form.acquisitionDate}
+                countryCode={form.fgCountryCode}
+              />
+              <ForeignStockResultCard
+                result={result as unknown as ForeignStockResult}
+                stockName={form.securityName}
+              />
+            </>
           ) : (
             <StockTransferTaxResultView {...resultViewProps} aggregate={aggregate} />
           )}
