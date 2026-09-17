@@ -110,3 +110,89 @@ export async function putCalculationRecord(page: Page, record: unknown): Promise
     }
   }, withHash);
 }
+
+/**
+ * 이력 record가 **IndexedDB에 실제로 들어갈 때까지** 기다린다.
+ *
+ * ## 왜 필요한가 — 「계산 응답」은 「저장 완료」가 아니다
+ *
+ * 이력 저장은 **결과 화면 마운트 시 `useEffect`**가 시작하는 비동기 write다
+ * (`lib/storage/use-auto-save-calculation.ts`의 `saveOrUpdateByBusinessKey`).
+ * 즉 `POST /api/calc/*` 응답 → React 렌더 → effect 발화 → IndexedDB write 순서라,
+ * **응답만 기다리고 곧바로 `page.goto()` 하면 셋 다 선점된다**.
+ *
+ * 실측(2026-09-17 · PR #1660 CI 샤드 5): `stock-multi-history-record.spec.ts` SH-3이
+ * 계산 응답 직후 다른 페이지로 이동했고, 뒤이어 연 `/history`는 **「전체 0건 — 저장된 계산
+ * 이력이 없습니다」**였다. 같은 테스트가 직전 PR 런에서는 10.0초에 통과했으므로
+ * **부하에 따라 갈리는 경합**이지 제품 결함이 아니다(로컬 11.5초 3건 통과).
+ *
+ * ⇒ 저장을 관측하는 UI 앵커가 없는 화면(주식 결과 화면은 저장 상태 토스트를 렌더하지 않는다)
+ *   에서는 **저장소를 직접 본다**.
+ *
+ * @param needle record 전체를 JSON 직렬화했을 때 포함돼야 할 문자열(예: 종목명).
+ */
+export async function waitForCalculationSaved(
+  page: Page,
+  needle: string,
+  timeoutMs = 30_000,
+): Promise<void> {
+  await page.evaluate(
+    async ({ needle, timeoutMs }) => {
+      const DB_NAME = "KoreanTaxCalcLocal";
+      const STORE = "calculations";
+
+      /** 스토어까지 준비된 연결만 돌려준다. 준비 전이면 닫고 null. */
+      const openIfReady = () =>
+        new Promise<IDBDatabase | null>((resolve) => {
+          const req = indexedDB.open(DB_NAME);
+          req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE)) {
+              db.close();
+              resolve(null);
+              return;
+            }
+            resolve(db);
+          };
+          req.onerror = () => resolve(null);
+          req.onblocked = () => resolve(null);
+        });
+
+      const hasMatch = (db: IDBDatabase) =>
+        new Promise<boolean>((resolve) => {
+          let tx: IDBTransaction;
+          try {
+            // ⚠️ 시드 경로와 같은 이유로 NotFoundError가 **동기적으로** 던져질 수 있다.
+            tx = db.transaction(STORE, "readonly");
+          } catch {
+            db.close();
+            resolve(false);
+            return;
+          }
+          const req = tx.objectStore(STORE).getAll();
+          req.onsuccess = () => {
+            const found = (req.result ?? []).some((r) => JSON.stringify(r).includes(needle));
+            db.close();
+            resolve(found);
+          };
+          req.onerror = () => {
+            db.close();
+            resolve(false);
+          };
+        });
+
+      const deadline = Date.now() + timeoutMs;
+      for (;;) {
+        const db = await openIfReady();
+        if (db && (await hasMatch(db))) return;
+        if (Date.now() > deadline) {
+          throw new Error(
+            `이력 저장 대기 실패 — «${needle}»를 담은 record가 ${timeoutMs}ms 안에 저장되지 않았다`,
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    },
+    { needle, timeoutMs },
+  );
+}
