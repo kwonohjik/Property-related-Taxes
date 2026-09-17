@@ -372,24 +372,26 @@ function buildArticleFromUnits(
   return { title, fullText, lawName, articleNo };
 }
 
-export async function fetchArticle(
-  mst: string,
+/**
+ * 한 경로(공포본 `target=law&MST=` 또는 시행본 `target=eflaw&ID=`)로 조문을 가져온다.
+ * `cacheScope`는 캐시 키를 경로별로 가르기 위한 접두사다(두 경로의 본문이 다를 수 있다).
+ */
+async function fetchArticleVia(
+  params: Record<string, string>,
+  cacheScope: string,
   lawName: string,
   articleNo: string
 ): Promise<LawArticle | null> {
-  const cacheKey = `article_${mst}_${safeCacheKey(articleNo)}_v${ARTICLE_CACHE_VERSION}`;
+  const cacheKey = `article_${cacheScope}_${safeCacheKey(articleNo)}_v${ARTICLE_CACHE_VERSION}`;
   const cached = await readCache<LawArticle>(cacheKey);
   if (cached) return cached;
 
-  const lawCacheKey = `law_units_${mst}`;
+  const lawCacheKey = `law_units_${cacheScope}`;
   try {
     // 법령 전체 조문단위 캐시
     let units = await readCache<LawServiceUnit[]>(lawCacheKey);
     if (!units) {
-      const data = await fetchLawApi("lawService.do", {
-        target: "law",
-        MST: mst,
-      }) as LawServiceResponse;
+      const data = await fetchLawApi("lawService.do", params) as LawServiceResponse;
       // 단일 객체·배열·undefined 를 모두 배열로 정규화
       units = normalizeArray(data?.법령?.조문?.조문단위);
       if (units.length === 0) return null;
@@ -412,6 +414,39 @@ export async function fetchArticle(
     }
     throw err;
   }
+}
+
+/**
+ * MST + 조문 번호로 조문 전문 조회.
+ *
+ * 🔴 `lawId`를 넘길 것 — `target=law&MST=`는 **그 법령본이 공포된 시점의 본문**을 준다.
+ * 뒤에 공포된 개정이 **먼저 시행**되면 그 개정이 반영되지 않은 조문이 돌아온다.
+ * 실측(2026-09-18): 상증법 §45의5가 2026.1.1. 개정(거래상대방을 「지배주주 및 그
+ * 특수관계인」으로 확대) **전** 문언으로 왔다 — `lawSearch.do`가 현행으로 돌려준
+ * MST 276123이 공포 2025.10.1.자 법령본이기 때문이다. 매니페스트 31개 법령 중
+ * **9개**가 두 경로의 시행일자가 달랐다(소득세법 20260101→20260701, 지방세법 동일,
+ * 부가가치세법 시행령 20260227→20260401 등). 개정 감시가 조용히 낡은 본문을 보는 경로다.
+ *
+ * ⇒ `lawId`가 있으면 **시행일자별 법령**(`target=eflaw&ID=`)으로 현행 시행본을 받는다.
+ * 같은 실측에서 eflaw가 미래(시행예정) 본문을 준 경우는 **0건**이었다.
+ * eflaw가 실패하거나 비면 공포본 경로로 되돌아간다(신호 없음보다 낡은 신호가 낫다).
+ */
+export async function fetchArticle(
+  mst: string,
+  lawName: string,
+  articleNo: string,
+  lawId?: string
+): Promise<LawArticle | null> {
+  if (lawId) {
+    const enforced = await fetchArticleVia(
+      { target: "eflaw", ID: lawId },
+      `ef_${lawId}`,
+      lawName,
+      articleNo
+    ).catch(() => null);
+    if (enforced) return enforced;
+  }
+  return fetchArticleVia({ target: "law", MST: mst }, mst, lawName, articleNo);
 }
 
 /** MST 캐시 무효화 (법령 개정 후 강제 재조회 시) */

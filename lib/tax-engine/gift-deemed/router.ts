@@ -73,4 +73,7 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcRelatedCorpGift(input);
   }
 }
-// §43① 중복배제·§43② 합산은 Phase 3 router 후처리(여기선 단일 의제만)
+// 🔴 「router 후처리」는 **없다** — 이 파일은 `switch` 하나가 전부다.
+//    §43① 중복배제 구현체(`dup-exclusion.ts`의 `selectPrimaryDeemedGift`)는 프로덕션
+//    호출처가 0건이고(테스트만 참조), UI가 한 번에 한 유형만 계산하므로 도달 경로가 없다.
+//    §43② 1년 합산도 미배선이다(특정법인 1억원 문턱 판정에 필요).

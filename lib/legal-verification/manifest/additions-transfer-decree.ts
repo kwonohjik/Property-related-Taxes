@@ -374,12 +374,22 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.EXPATRIATE_MAJOR_SHAREHOLDER",
     citation: "소득세법 시행령 §178의8",
+    // ⚠️ **시행예정 조문을 선반영한 규칙**이라 `basis: "announced"`다.
+    //    현행 시행본(2026.7.1.) §178의8은 제목이 「대주주의 범위」이고 본문이 한 문장뿐이다 —
+    //    아래 세 키워드(국외주식등 제외 사유)는 2026.2.27. 공포 제36129호가 신설한 ②항의
+    //    문언이고 **아직 시행 전**이다. 코드는 이미 그 ②항을 전제로 화면을 만들었다
+    //    (`components/calc/results/ExitTaxHoldingReportForm.tsx:186`이 「제178조의8제2항」을 인용).
+    //    ⇒ 시행되면 basis를 "enforced"로 되돌릴 것.
+    basis: "announced",
     keywords: ["국외전출자 주식등", "양도가액의 합계가 5억원 이하", "외국인근로자"],
     keywordMode: "ALL",
   },
   {
     id: "TRANSFER_DECREE.EXPATRIATE_DEPARTURE_VALUE",
     citation: "소득세법 시행령 §178의9",
+    // ⚠️ 위 §178의8과 같은 이유로 공포본 기준이다 — 「국외주식등」을 시가 산정 대상에
+    //    넣는 ②3호가 2026.2.27. 공포분의 신설이고 현행 시행본에는 없다.
+    basis: "announced",
     keywords: [
       "출국일 당시의 해당 주식등의 거래가액",
       "출국일 전후 각 3개월 이내에 해당 주식등의 매매사례",

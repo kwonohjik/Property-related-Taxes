@@ -10,6 +10,27 @@ import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
 /**
+ * §47① 합산배제증여재산 플래그 — **모든 분기가 이 헬퍼를 통과해야 한다.**
+ *
+ * 🔴 종전에는 파일 맨 끝 일반 분기에서만 이 플래그를 붙였다. 그래서 그 앞에서 조기반환하는
+ * 분기(§45의3 일감몰아주기 등)는 플래그를 통째로 잃었고, 엔진이 `aggregationExcluded: true`·
+ * `aggExclClass: "deemed_profit"`를 올바로 내보내도 **소비되는 층에 도달하지 못했다**.
+ * 증여세 본체가 §55①2호(증여의제이익 그대로) 대신 §55①4호 일반스트림으로 계산해
+ * §53 증여재산공제를 붙이고 §47② 10년 합산 격리도 깨졌다.
+ *
+ * 지금은 §45의3만 이 플래그를 갖지만(§47① 열거는 §31①3호·§40①2·3호·§41의3·§41의5·
+ * §42의3·§45·§45의2~§45의4 — **§45의5는 없다**), 나머지 분기도 같은 헬퍼를 통과시켜
+ * 새 유형이 합산배제가 될 때 같은 누락이 재발하지 않게 한다(오늘은 전부 no-op).
+ */
+function aggregationExclusionFlags(result: DeemedGiftAnyResult) {
+  if (!("aggregationExcluded" in result) || !result.aggregationExcluded) return {};
+  return {
+    isAggregationExcludedGift: true as const,
+    ...(result.aggExclClass ? { aggregationExcludedClass: result.aggExclClass } : {}),
+  };
+}
+
+/**
  * 증여이익 → 증여세 마법사 prefill payload (sessionStorage "giftTaxResumeInput").
  * 산정된 증여재산가액을 category:"other" 단일 항목(이미 평가된 금액)으로 주입.
  */
@@ -29,6 +50,7 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `${(nameById.get(b.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
           marketValue: b.total,
+          ...aggregationExclusionFlags(result),
         })),
     };
   }
@@ -66,6 +88,7 @@ export function buildGiftWizardPrefill(
             category: "other" as const,
             name: `현물출자에 따른 이익 — ${mainBreakdown.party} 증여분`,
             marketValue: mainBreakdown.value,
+            ...aggregationExclusionFlags(result),
           },
         ],
         simultaneousGifts,
@@ -91,32 +114,72 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `현물출자에 따른 이익 — ${selectedDonee.party} 수증자분`,
           marketValue: selectedDonee.value,
+          ...aggregationExclusionFlags(result),
         },
       ],
     };
   }
 
-  // §45의3 일감몰아주기: 수증자별 다건 prefill (존재 가드 — Critical-1, contribution 게이트와 별도)
+  // §45의3 일감몰아주기: 지배주주등은 **각자 독립 납세의무자**다 — §45의3①은 지배주주와
+  // 그 친족이 이익을 「각각 증여받은 것으로 본다」고 한다. 마법사 세션 1개 = 신고 1건이므로
+  // 선택된 1명만 이관한다(현물출자 고가 :75·감자 §39의2와 같은 취급).
+  //
+  // 🔴 종전에는 2번째 이후 수증자를 `simultaneousGifts`에 밀어 넣었다. 그 필드는
+  //    §46①2호 「같은 공제그룹 **동시증여** 시 증여재산공제 한도 안분」 전용이고
+  //    «동일 수증자 · 복수 증여자»를 전제한다(`deductions/gift-deductions.ts`).
+  //    서로 다른 수증자를 넣으면 첫 수증자의 §53 공제가 잘못 안분되고, 나머지 수증자의
+  //    증여세는 어차피 산출되지도 않는다. 같은 파일 :75~77이 이 함정을 주석으로 적고
+  //    회피했는데 §45의3 분기만 그대로였다.
   if (result.type === "related_corp" && result.recipientBreakdown && result.recipientBreakdown.length > 0) {
     const taxable = result.recipientBreakdown.filter((r) => r.subtotal > 0);
-    const [main, ...rest] = taxable;
-    if (!main) return { giftDate: form.giftDate };
-    const simultaneousGifts =
-      rest.length > 0
-        ? rest.map((r) => ({ donorRelation: "other_relative" as const, taxableValue: String(r.subtotal) }))
-        : undefined;
+    const selected = taxable[form.rcSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate };
     return {
       giftDate: form.giftDate,
+      // §45의3의 증여자는 특수관계「법인」이라 §53 어느 호에도 해당하지 않는다.
+      // §55①2호 스트림이라 증여재산공제가 적용되지 않으므로 이 값은 세액에 영향이 없다 —
+      // 폼이 값을 요구하므로 종전 기본값을 유지한다.
       donorRelation: "other_relative" as const,
       giftItems: [
         {
-          id: `deemed-rc-${main.recipientName.trim() || "recipient"}`,
+          id: `deemed-rc-${selected.recipientName.trim() || "recipient"}`,
           category: "other" as const,
-          name: `일감몰아주기 이익 — ${main.recipientName.trim() || "지배주주등"}`,
-          marketValue: main.subtotal,
+          name: `일감몰아주기 이익 — ${selected.recipientName.trim() || "지배주주등"}`,
+          marketValue: selected.subtotal,
+          ...aggregationExclusionFlags(result),
         },
       ],
-      simultaneousGifts,
+    };
+  }
+
+  // §45의5 특정법인과의 거래 — roster 모드. 지배주주등은 각자 독립 납세의무자다
+  // (상증령 §34의5⑨ 「해당 지배주주등이 **각각** 직접 증여받은 것으로 볼 때의 증여세」).
+  //
+  // 🔴 종전에는 이 분기 자체가 없어 맨 끝 일반 분기로 떨어졌고, 그 값은
+  //    `specific-corp.ts`의 `taxable.reduce((a, d) => a + d.gain, 0)` — **과세 수증자
+  //    전원의 합계**였다. 증여세는 누진세율이라 합산 이관은 언제나 과다 산출된다.
+  //    결과뷰는 `scSelectedDoneeIndex` 드롭다운으로 수증자를 고르게 해 놓고 prefill이
+  //    그 선택을 무시하고 있었다.
+  //
+  // ※ §45의5는 §47① 합산배제 열거(§45의2~§45의4)에 **없다** → §55①4호 일반스트림이 맞다.
+  // ※ `donorRelation`은 넣지 않는다 — roster의 `relation`이 «누구 기준» 관계인지 화면에
+  //    명시돼 있지 않아(라벨이 그냥 「관계」다) §53 공제 관계를 여기서 단정할 수 없다.
+  //    마법사에서 사용자가 고르게 둔다(자동 파생 금지 — 틀린 공제가 조용히 붙는 것보다 낫다).
+  if (result.type === "specific_corp" && result.specificCorpMulti) {
+    const taxable = result.specificCorpMulti.donees.filter((d) => d.isTaxable);
+    const selected = taxable[form.scSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate, giftItems: [] };
+    return {
+      giftDate: form.giftDate,
+      giftItems: [
+        {
+          id: `deemed-sc-${selected.name.trim() || "donee"}`,
+          category: "other" as const,
+          name: `특정법인과의 거래 이익 — ${selected.name.trim() || "지배주주등"}`,
+          marketValue: selected.gain,
+          ...aggregationExclusionFlags(result),
+        },
+      ],
     };
   }
 
@@ -133,6 +196,7 @@ export function buildGiftWizardPrefill(
           category: "other",
           name: `감자에 따른 이익 증여이익 (${selected.name})`,
           marketValue: selected.total,
+          ...aggregationExclusionFlags(result),
         },
       ],
     };
@@ -149,6 +213,7 @@ export function buildGiftWizardPrefill(
         category: "other" as const,
         name: `신탁이익(${RIGHT_LABEL[sg.right]}) 증여이익`,
         marketValue: sg.value,
+        ...aggregationExclusionFlags(result),
       })),
     };
   }
@@ -163,12 +228,7 @@ export function buildGiftWizardPrefill(
         marketValue: result.deemedGiftValue,
         // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55① 호별 스트림. 비합산배제 deemed는 undefined.
         //   aggExclClass: 명의신탁(1호)·일감몰아주기(2호)는 3천만 공제 없음, 그 외(3호)는 3천만 공제. (H-40·G-4)
-        ...(result.aggregationExcluded
-          ? {
-              isAggregationExcludedGift: true,
-              ...(result.aggExclClass ? { aggregationExcludedClass: result.aggExclClass } : {}),
-            }
-          : {}),
+        ...aggregationExclusionFlags(result),
       },
     ],
   };

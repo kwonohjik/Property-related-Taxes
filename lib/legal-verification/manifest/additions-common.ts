@@ -200,7 +200,16 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     // stock.ts STX_DECREE_5_* — 증권거래세 탄력세율 (시장별)
     id: "STX_DECREE.FLEXIBLE_RATE",
     citation: "증권거래세법 시행령 §5",
-    keywords: ["탄력세율", "유가증권시장", "코넥스시장", "1만분의 15"],
+    // 🔴 「1만분의 15」는 **2025년까지의 코스닥·K-OTC 세율**이고 현행 본문에 없다
+    //    (영 제36001호, 2025.12.31. 공포·2026.1.1. 시행 → 코스피 5 / 코넥스 10 / 코스닥·K-OTC 20).
+    //    엔진 매트릭스(`data/securities-transaction-tax-rates.ts`)는 이미 개정을 반영하고 있었는데,
+    //    검증이 **공포본**을 보느라 낡은 키워드가 계속 통과하고 있었다 — 세율 3종을 전부 건다.
+    keywords: [
+      "탄력세율",
+      "주권: 1만분의 5",
+      "주권: 1만분의 10",
+      "주권의 경우: 1만분의 20",
+    ],
     keywordMode: "ALL",
   },
 

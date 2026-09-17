@@ -6,9 +6,23 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
-export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult }) {
+export function RelatedCorpResultSection({
+  result,
+  selectedDoneeIndex = 0,
+  onSelectDonee,
+}: {
+  result: DeemedGiftResult;
+  /** 과세 수증자(소계 > 0) 중 몇 번째를 증여세 마법사로 이관할지 */
+  selectedDoneeIndex?: number;
+  onSelectDonee?: (i: number) => void;
+}) {
   const breakdown = result.recipientBreakdown;
   if (!breakdown) return null;
+
+  // 지배주주등은 §45의3①상 이익을 「각각」 증여받은 것으로 보는 **독립 납세의무자**다.
+  // 마법사 세션 1개 = 신고 1건이므로 선택된 1명만 이관한다(prefill과 같은 술어).
+  const taxableRecipients = breakdown.filter((r) => r.subtotal > 0);
+  const selectedRecipient = taxableRecipients[selectedDoneeIndex] ?? taxableRecipients[0];
 
   const tradeRatio = result.tradeRatio ?? { numer: 0, denom: 1 };
   const normalTradeRatio = result.normalTradeRatio ?? { numer: 0, denom: 1 };
@@ -67,7 +81,29 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
 
       {/* 수증자별 직접/간접 표 */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="rc-recipient-breakdown">
-        <p className="text-sm font-semibold text-emerald-800">수증자별 증여의제이익 내역</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-emerald-800">수증자별 증여의제이익 내역</p>
+          {taxableRecipients.length > 0 && onSelectDonee && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-emerald-800" htmlFor="rc-donee-selector">
+                증여세로 이관할 수증자
+              </label>
+              <select
+                id="rc-donee-selector"
+                value={selectedDoneeIndex}
+                onChange={(e) => onSelectDonee(Number(e.target.value))}
+                data-testid="rc-donee-selector"
+                className="rounded-md border border-emerald-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-emerald-900 focus:border-emerald-400 focus:outline-none"
+              >
+                {taxableRecipients.map((r, i) => (
+                  <option key={i} value={i}>
+                    {r.recipientName.trim() || "지배주주등"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -96,12 +132,20 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
                 </tr>
               ))}
               <tr className="border-t-2 border-emerald-200 font-semibold">
-                <td colSpan={6} className="py-1.5 pr-2">합계</td>
+                <td colSpan={6} className="py-1.5 pr-2">합계 (인별 신고 별도)</td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(result.deemedGiftValue)}</td>
               </tr>
             </tbody>
           </table>
         </div>
+        {taxableRecipients.length > 0 && (
+          <p className="mt-2 text-caption text-muted-foreground" data-testid="rc-per-donee-notice">
+            지배주주와 그 친족은 이익을 «각각» 증여받은 것으로 봅니다(상증법 §45의3①) — 수증자별로
+            <b> 별도 신고</b>가 필요합니다. 「이 금액으로 증여세 계산하기」는 위에서 선택한{" "}
+            <b>{selectedRecipient?.recipientName.trim() || "지배주주등"}</b>의{" "}
+            <b className="font-mono tabular-nums">{formatKRW(selectedRecipient?.subtotal ?? 0)}</b> 1건만 이관합니다.
+          </p>
+        )}
       </div>
 
       {/* 보유비율 raw — 직접·간접 대칭 echo (RC-INDIRECT-ECHO) */}

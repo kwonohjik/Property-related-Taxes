@@ -128,6 +128,14 @@ export function SpecificCorpMultiResultView({
             })}
           </tbody>
         </table>
+        {taxableDonees.length > 0 && (
+          <p className="mt-2 text-caption text-muted-foreground" data-testid="sc-per-donee-notice">
+            지배주주등은 이익을 «각각» 증여받은 것으로 보므로(상증령 §34의5⑨) 수증자별로
+            <b> 별도 신고</b>가 필요합니다. 「이 금액으로 증여세 계산하기」는 아래에서 선택한{" "}
+            <b>{selectedDonee ? selectedDonee.name.trim() || RELATION_LABEL[selectedDonee.relation] : "수증자"}</b>의{" "}
+            <b className="font-mono tabular-nums">{formatKRW(selectedDonee?.gain ?? 0)}</b> 1건만 이관합니다.
+          </p>
+        )}
       </div>
 
       {/* ── 카드2: §45의5② 한도 표 (과세 수증자가 있을 때만) ── */}
