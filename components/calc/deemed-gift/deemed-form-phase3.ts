@@ -96,6 +96,15 @@ export interface DeemedPhase3Fields {
   rcShareholders: RcShareholderRow[];
   rcIntermediaryCorps: RcIntermediaryRow[];
   rcSalesPartners: RcSalesRow[];
+  /**
+   * 과세 수증자 선택 인덱스 (증여세 마법사 이관용).
+   *
+   * §45의3①은 지배주주와 그 친족이 이익을 「**각각** 증여받은 것으로 본다」고 하므로
+   * 지배주주등은 각자 독립 납세의무자다. 마법사 세션 1개 = 신고 1건이라 선택된 1명만
+   * 이관한다 — 현물출자 고가(`conSelectedDoneeIndex`)·감자 §39의2(`cdSelectedDoneeIndex`)·
+   * 특정법인 §45의5(`scSelectedDoneeIndex`)와 같은 축.
+   */
+  rcSelectedDoneeIndex: number;
   // §45의5 확장 — 모드 토글 + 다주주 roster
   /** 입력 방식: "single"=지분율 직접 / "roster"=주주 명단 */
   scMode: "single" | "roster";
@@ -114,7 +123,11 @@ export interface DeemedPhase3Fields {
    * feedback_three_state_optional_mode_toggle 준수.
    */
   scShareholders?: ScShareholderRow[];
-  /** 결과 수증자 선택 인덱스 (한도표 표시용) */
+  /**
+   * 과세 수증자 선택 인덱스 — **한도표 표시 + 증여세 마법사 이관** 양쪽에 쓴다.
+   * (종전 JSDoc은 「한도표 표시용」이라고만 적어 prefill이 이 값을 무시하는 상태와
+   *  `gift-deemed-prefill.ts`가 이 필드를 선례로 인용하는 주석이 서로 모순됐다.)
+   */
   scSelectedDoneeIndex: number;
   /** §45의5② 한도 ㉮㉠ 증여재산공제 */
   scGiftDeduction: string;
@@ -191,6 +204,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   rcShareholders: [],
   rcIntermediaryCorps: [],
   rcSalesPartners: [],
+  rcSelectedDoneeIndex: 0,
   scMode: "single",
   scCorporateTaxMode: "direct",
   scCorpTaxAssessed: "",

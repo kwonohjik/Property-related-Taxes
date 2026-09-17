@@ -102,7 +102,11 @@ export function DeemedGiftResultView({
       </div>
 
       {result.type === "related_corp" && result.recipientBreakdown && (
-        <RelatedCorpResultSection result={result} />
+        <RelatedCorpResultSection
+          result={result}
+          selectedDoneeIndex={selectedDoneeIndex}
+          onSelectDonee={onSelectDonee}
+        />
       )}
 
       {result.nomineeCapitalIncrease && (

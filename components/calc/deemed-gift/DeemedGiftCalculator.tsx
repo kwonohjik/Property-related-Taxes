@@ -81,7 +81,9 @@ export function DeemedGiftCalculator() {
         ? { scSelectedDoneeIndex: i }
         : result?.type === "contribution"
           ? { conSelectedDoneeIndex: i }
-          : { cdSelectedDoneeIndex: i }),
+          : result?.type === "related_corp"
+            ? { rcSelectedDoneeIndex: i }
+            : { cdSelectedDoneeIndex: i }),
     }));
 
   return (
@@ -153,7 +155,9 @@ export function DeemedGiftCalculator() {
               ? form.scSelectedDoneeIndex
               : result.type === "contribution"
                 ? form.conSelectedDoneeIndex
-                : form.cdSelectedDoneeIndex
+                : result.type === "related_corp"
+                  ? form.rcSelectedDoneeIndex
+                  : form.cdSelectedDoneeIndex
           }
           onSelectDonee={selectDonee}
         />

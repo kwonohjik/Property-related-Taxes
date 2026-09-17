@@ -87,4 +87,29 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
   await expect(page.getByTestId("deemed-result-value")).toContainText("36,720,000");
   await expect(page.getByTestId("rc-recipient-row-0")).toContainText("20,520,000");
   await expect(page.getByTestId("rc-recipient-row-1")).toContainText("16,200,000");
+
+  // ── 이관 단위: 수증자 1인 (§45의3① 「각각 증여받은 것으로 본다」) ──────────
+  //  종전에는 갑만 이관하고 을을 `simultaneousGifts`(§46①2호 동시증여)에 넣었다.
+  //  동시증여는 «동일 수증자» 전제라 갑의 §53 공제가 잘못 안분됐고, §55①2호 합산배제
+  //  플래그도 조기반환 분기에서 통째로 소실됐다. 이 축은 E2E에서만 확인 가능하다
+  //  (드롭다운 → sessionStorage payload).
+  const notice = page.getByTestId("rc-per-donee-notice");
+  await expect(notice).toContainText("별도 신고");
+  await expect(notice).toContainText("20,520,000");
+
+  const selector = page.getByTestId("rc-donee-selector");
+  await expect(selector.locator("option")).toHaveCount(2);
+  await selector.selectOption("1");
+  await expect(notice).toContainText("16,200,000");
+
+  await page.getByTestId("deemed-to-wizard").click();
+  await page.waitForURL(/\/calc\/gift-tax/);
+  const payload = JSON.parse(
+    (await page.evaluate(() => sessionStorage.getItem("giftTaxResumeInput")))!,
+  );
+  expect(payload.giftItems).toHaveLength(1);
+  expect(payload.giftItems[0].marketValue).toBe(16_200_000);
+  expect(payload.giftItems[0].isAggregationExcludedGift).toBe(true);
+  expect(payload.giftItems[0].aggregationExcludedClass).toBe("deemed_profit");
+  expect(payload.simultaneousGifts).toBeUndefined();
 });
