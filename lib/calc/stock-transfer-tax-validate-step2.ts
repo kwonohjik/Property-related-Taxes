@@ -289,6 +289,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           });
         }
       }
+    } else if (acqInputMode === "total") {
+      // ⑧ 합계 직접 입력 — 양도측(`transferTotalPrice`)과 같은 강도로 본다.
+      if (isEmpty(form.acquisitionTotalPrice) || parseI(form.acquisitionTotalPrice) <= 0) {
+        errors.push({ field: "acquisitionTotalPrice", message: "취득가액 합계를 입력하세요", severity: "error" });
+      }
     } else {
       if (isEmpty(form.perShareAcquisitionPrice) || parseI(form.perShareAcquisitionPrice) < 0) {
         errors.push({ field: "perShareAcquisitionPrice", message: "1주당 취득가액을 입력하세요", severity: "error" });

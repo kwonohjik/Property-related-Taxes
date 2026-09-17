@@ -328,6 +328,15 @@ export function addStockRefines(
       // 분할 모드에서 total 직접 입력 차단 (UI disabled의 Zod 방어선)
       // 단, lots-only 모드(acquisitionActualInputMode === "lots")는 허용 — 2026-05-18 제약 해제.
       // lots-only는 API에서 합성 transferLot 1건만 생성 → 정확한 분할 양도 아님.
+      // 취득가액 합계 직접 입력도 분할 모드에서는 성립하지 않는다 — lot별 단가가 정본이다.
+      // (UI 는 분할 모드에서 이 라디오 자체를 마운트하지 않는다. 여기는 그 Zod 방어선이다.)
+      if (data.acquisitionActualInputMode === "total") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionActualInputMode"],
+          message: "분할 모드에서는 취득가액 합계 직접 입력을 지원하지 않습니다 (lot별 단가 사용)",
+        });
+      }
       if (
         data.transferActualInputMode === "total" &&
         (data.acquisitionActualInputMode ?? "per_share") !== "lots"

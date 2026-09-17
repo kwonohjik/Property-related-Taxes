@@ -16,6 +16,7 @@
  * Layer 2 (Pure Engine): DB 직접 호출 없음.
  */
 
+import { actualAcquisitionTotal, actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import type { StockTransferInput, StockTransferResult, LotMatchingDetail } from "./types/stock-transfer.types";
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
 import type { PostListingValuationResult } from "./stock-valuation-post-listing";
@@ -81,12 +82,12 @@ export function resolveAcquisitionBasis(
         (lotMatchingDetail.matched[0]?.perShareBuyPrice ?? 0),
     };
   } else if (acquisitionMode === "actual") {
-    // 실거래가
-    acquisitionPrice = (input.perShareAcquisitionPrice ?? 0) * shareCount;
+    // 실거래가 — 1주당 단가 × 주식수 또는 **합계 직접 입력**(양도측 total 규약과 대구)
+    acquisitionPrice = actualAcquisitionTotal(input);
     valuationDetail = {
       method: "actual_acquisition",
       netAssetFloorApplied: false,
-      finalPerShareValue: input.perShareAcquisitionPrice ?? 0,
+      finalPerShareValue: actualAcquisitionPerShare(input),
     };
 
   } else if (acquisitionMode === "face_value") {

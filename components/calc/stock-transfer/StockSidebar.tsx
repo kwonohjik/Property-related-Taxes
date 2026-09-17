@@ -257,7 +257,7 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
         );
         acqPrice = lotSum > 0 ? lotSum : null;
       } else {
-        // single 모드 — acquisitionActualInputMode 분기 (per_share / lots)
+        // single 모드 — acquisitionActualInputMode 분기 (per_share / lots / total)
         const acqInputMode = formData.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
         if (acqInputMode === "lots" && formData.acquisitionLots.length > 0) {
           // 가중평균 단가 × 양도 주식수 (근사치 — FIFO는 차이 가능, 정확값은 result 우선)
@@ -273,6 +273,10 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
           const weightedAvg = totalShares > 0 ? Math.floor(totalCost / totalShares) : 0;
           const transferCount = parseInt(formData.shareCount || "0", 10);
           acqPrice = weightedAvg > 0 && transferCount > 0 ? weightedAvg * transferCount : null;
+        } else if (acqInputMode === "total") {
+          // 합계 직접 입력 — 나눗셈 없이 그대로다(양도측 total 과 같은 규약).
+          const total = parseAmount(formData.acquisitionTotalPrice);
+          acqPrice = total > 0 ? total : null;
         } else {
           const perShareAcq = parseAmount(formData.perShareAcquisitionPrice);
           const count = parseInt(formData.shareCount || "0", 10);

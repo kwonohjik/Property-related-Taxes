@@ -8,6 +8,7 @@
  * 800줄 정책 회피로 stock-transfer-tax.ts에서 분리.
  */
 
+import { actualAcquisitionTotal, actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import type {
   StockTransferInput,
   StockTransferResult,
@@ -68,9 +69,10 @@ export function computeInformationalAcquisition(
       acquisitionMode === "actual" ||
       acquisitionMode === "sale_case"
     ) {
-      const per = input.perShareAcquisitionPrice ?? 0;
+      // 실가 «합계 직접 입력」도 여기로 온다 — 단일 소스 leaf가 두 방식을 갈라 준다.
+      const per = actualAcquisitionPerShare(input);
       return {
-        acquisitionPrice: per * shareCount,
+        acquisitionPrice: actualAcquisitionTotal(input),
         usedEstimatedAcquisition: false,
         estimatedBase: undefined,
         postListingDetail: undefined,
