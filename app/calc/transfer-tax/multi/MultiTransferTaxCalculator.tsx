@@ -40,6 +40,7 @@ import { MultiTransferHistoryLoadModal } from "@/components/calc/transfer/MultiT
 import {
   buildPropertyFromSingleRecord,
   buildPropertiesFromMultiRecord,
+  buildExistingSourceIds,
   isBlankProperty,
   backfillPriorPaid,
   reloadPropertyFromSource,
@@ -102,10 +103,13 @@ export default function MultiTransferTaxCalculator() {
 
   const { activeClientId } = useProfessionalStore();
 
-  // 이력 불러오기 (Phase 2) — 이미 로드한 record id 집합(중복 경고)
+  // 이력 불러오기 (Phase 2) — 이미 로드한 record id 집합(중복 경고).
+  // 자산 출처(sourceCalculationId) ∪ **세션 출처**(loadedFromRecordId). 후자가 없으면
+  // 다건을 replace 로드한 뒤 그 record에 배지가 안 붙는다 — 종전에는 자산 수준 폴백이
+  // 그 일을 대신했고, 그 부작용이 수동 추가 자산의 가짜 provenance였다.
   const existingSourceIds = useMemo(
-    () => new Set(form.properties.map((p) => p.sourceCalculationId).filter(Boolean) as string[]),
-    [form.properties],
+    () => buildExistingSourceIds(form),
+    [form],
   );
 
   // 단건 이력 → 자산 1건 append. 빈(미입력) 자산은 정리.
@@ -125,6 +129,8 @@ export default function MultiTransferTaxCalculator() {
     (record: CalculationRecord) => {
       setForm({
         properties: buildPropertiesFromMultiRecord(record),
+        // 세션 출처 — 「이미 로드함」 배지가 이 값을 본다(자산 수준에 실으면 범주 오류다).
+        loadedFromRecordId: record.id,
         activeStep: "settings",
         activePropertyIndex: 0,
       });

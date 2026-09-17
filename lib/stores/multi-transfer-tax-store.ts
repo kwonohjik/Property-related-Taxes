@@ -98,6 +98,21 @@ export interface MultiTransferFormData {
   posteriorEventDate: string;
   /** 당초 납부일(환급가산금 기산 안내용, form-only) — AmendmentBlock refund 분기에서 사용 */
   originalPaymentDate: string;
+  /**
+   * 이 **세션을 만든 다건 record**의 id — 「이미 로드함」 배지 전용(form-only, 엔진 미전달).
+   *
+   * 🔑 **`PropertyItem.sourceCalculationId`와 다른 축이다.** 그쪽은 「그 자산의 **원본 단건
+   *   record**」로, staleness 대조(`detectStaleSources`)와 「다시 불러오기」의 대상이다.
+   *   세션을 만든 record는 자산마다 다를 수 없으므로 **자산 수준에 둘 수 없다**.
+   *
+   * 🔴 종전에는 `buildPropertiesFromMultiRecord`가 `?? record.id` 폴백으로 **자산 수준에**
+   *   이 사실을 실었다. 그러면 원본이 없는 **수동 추가 자산**이 「원본 있음」으로 위장하고,
+   *   재저장으로 그 표지가 굳는다. 계획서 `multi-replace-source-provenance.plan.md` §2.
+   *
+   * `defaultFormData`에는 **키를 넣지 않는다** — optional이라 `undefined`가 기본이고,
+   * `reset`이 `form: defaultFormData`로 통째 교체하므로 세션이 바뀌면 자동으로 사라진다.
+   */
+  loadedFromRecordId?: string;
 }
 
 const defaultFormData: MultiTransferFormData = {
