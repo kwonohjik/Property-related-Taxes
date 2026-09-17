@@ -447,7 +447,8 @@ const specificCorpSchema = z.object({
   transactionBenefit: z.number().nonnegative(),
   // single 하위호환
   corporateTax: z.number().nonnegative().optional(),
-  ownershipRatio: ratioSchema.optional(),
+  ownershipRatio: ratioSchema.optional(), // ⓑ 승수(인별)
+  controllingGroupRatio: ratioSchema.optional(), // ⓐ §45의5① 특정법인 해당성 — 지배주주등 합계(직접+간접)
   // roster 모드 신규 필드 (⑫ Zod 입력 객체 정의 — TS 미감지 지점)
   shareholders: z.array(specificCorpShareholderSchema).optional(),
   annualIncome: z.number().nonnegative().optional(),

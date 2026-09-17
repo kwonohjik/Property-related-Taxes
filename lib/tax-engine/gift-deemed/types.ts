@@ -228,8 +228,26 @@ export interface SpecificCorpDonee {
   ownershipRatioPct: number; // 표시용 백분율
   gain: number; // 증여의제이익 = corpProfit × shares/totalShares
   isTaxable: boolean;
-  nonTaxableReason?: "donor_self" | "non_related" | "below_threshold";
+  nonTaxableReason?: "not_specific_corp" | "donor_self" | "non_related" | "below_threshold";
   limitCalc?: SpecificCorpLimitCalc; // 과세 주주만
+}
+
+/**
+ * §45의5① ⓐ 「특정법인」 해당성 판정 echo — 지배주주등의 주식보유비율이 100분의 30 이상인가.
+ *
+ * 「주식보유비율」의 정의는 법 §45의3①이 외부화한다 —
+ * 「직접 또는 간접으로 보유하는 주식보유비율(이하 이 조, 제45조의4 및 **제45조의5**에서
+ * "주식보유비율"이라 한다)」. 앱은 간접보유를 수집하지 않으므로 `directPct`는 **하한**이다.
+ */
+export interface SpecificCorpEligibility {
+  /** 앱이 아는 직접보유분 (single=해당 지배주주등 1인 / roster=지배주주등 행 합계) — 진짜 비율의 하한 */
+  directPct: number;
+  /** 사용자가 신고한 지배주주등 합계 보유비율(직접+간접). 미신고면 undefined */
+  declaredPct?: number;
+  /** 판정에 실제로 쓴 비율 = max(directPct, declaredPct) */
+  effectivePct: number;
+  /** "yes"=충족 · "no"=미충족(차단) · "unknown"=판정 불가(single·미신고) */
+  met: "yes" | "no" | "unknown";
 }
 
 /** §45의5 다주주 모드 결과 (Map 금지 — plain 배열) */
@@ -358,6 +376,8 @@ export interface DeemedGiftResult {
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;
+  /** §45의5① ⓐ 특정법인 해당성 판정 echo (승수 ⓑ와 다른 축 — specific-corp.ts JSDoc 참조) */
+  specificCorpEligibility?: SpecificCorpEligibility;
   /**
    * §43² 1년 이내 동일거래(§41의4) 합산 — 건별 echo. plain 배열(Map 금지, feedback_engine_result_map_json_loss).
    * deemedGiftValue=합산 총액. 증여시기=isThresholdCrossing 건의 loanDate.

@@ -127,11 +127,15 @@ export function SpecificCorpFields({ form, set }: Props) {
       <ToneCard
         tone="violet"
         sectionNum="3"
-        title={isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
+        title={isRoster ? "발행주식 총수 + 주주 명단" : "해당 지배주주등의 주식보유비율"}
         noDark
       >
         {!isRoster && (
-          <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세 (§34의5⑤)" unit="%">
+          <FieldCard
+            label="해당 지배주주등(수증자)의 주식보유비율"
+            hint="증여의제이익 = 특정법인의 이익 × 이 비율. 상증령 §34의5⑨는 「해당 지배주주등이 각각」 증여받은 것으로 보므로 «그룹 합계»가 아니라 수증자 1인분입니다 (1억원 이상이면 과세 — §34의5⑤)"
+            unit="%"
+          >
             <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} data-testid="sc-shareholder-ratio" />
           </FieldCard>
         )}
@@ -150,6 +154,22 @@ export function SpecificCorpFields({ form, set }: Props) {
             />
           </>
         )}
+        {/* ── ⓐ §45의5① 특정법인 해당성 — 위 ⓑ 승수와 다른 축 ── */}
+        <FieldCard
+          label="지배주주등 합계 주식보유비율 (직접+간접)"
+          hint={
+            isRoster
+              ? "§45의5①은 「지배주주등의 주식보유비율이 100분의 30 이상인 법인」만 특정법인으로 봅니다. 미입력 시 위 주주 명단의 직접지분 합계로 판정합니다(간접보유 0%). 간접보유가 있으면 직접+간접 합계를 입력하십시오"
+              : "§45의5①은 「지배주주등의 주식보유비율이 100분의 30 이상인 법인」만 특정법인으로 봅니다. 지배주주와 그 친족 «전원»의 합계(직접+간접)입니다 — 미입력 시 이 요건을 판정하지 않습니다"
+          }
+          unit="%"
+        >
+          <DecimalInput
+            value={form.scGroupRatioPct}
+            onChange={(v) => set({ scGroupRatioPct: v })}
+            data-testid="sc-group-ratio"
+          />
+        </FieldCard>
       </ToneCard>
 
       {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}

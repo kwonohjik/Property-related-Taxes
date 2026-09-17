@@ -154,6 +154,35 @@ export function DeemedGiftResultView({
         />
       )}
 
+      {/* ── §45의5① ⓐ 특정법인 해당성 판정 고지 (승수 ⓑ와 다른 축) ── */}
+      {result.specificCorpEligibility && result.specificCorpEligibility.met !== "yes" && (
+        <div
+          className={
+            result.specificCorpEligibility.met === "no"
+              ? "rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+              : "rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+          }
+          data-testid="sc-eligibility-notice"
+        >
+          {result.specificCorpEligibility.met === "no" ? (
+            <>
+              <b>특정법인 아님</b> — 지배주주등 주식보유비율{" "}
+              <span className="font-mono tabular-nums">
+                {result.specificCorpEligibility.effectivePct.toFixed(1)}%
+              </span>
+              가 §45의5①의 <b>100분의 30</b>에 미달합니다. 증여의제가 성립하지 않아 0원입니다.
+            </>
+          ) : (
+            <>
+              <b>§45의5① 특정법인 요건은 판정하지 않았습니다.</b> 이 요건은 지배주주와 그 친족{" "}
+              «전원»의 주식보유비율(직접+간접) 합계가 100분의 30 이상일 것을 요구합니다. 입력된 비율은
+              수증자 1인분(승수)이라 합계를 알 수 없습니다 — 「지배주주등 합계 주식보유비율」을 입력하면
+              판정합니다.
+            </>
+          )}
+        </div>
+      )}
+
       {result.specificCorpMulti && (
         <SpecificCorpMultiResultView
           multi={result.specificCorpMulti}

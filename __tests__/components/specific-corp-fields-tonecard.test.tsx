@@ -38,10 +38,18 @@ describe("SpecificCorpFields — 섹션카드 <ToneCard> 전환 (회귀 0)", () 
     expect(card.className).not.toContain("dark:");
   });
 
-  it("③ 동적 title: single=지배주주등 비율 / roster=발행주식 총수+주주 명단", () => {
+  it("③ 동적 title: single=해당 지배주주등 비율 / roster=발행주식 총수+주주 명단", () => {
     // 카드 title은 FieldCard 라벨과 텍스트 중복 → getAllByText
-    expect(renderBlock({ scMode: "single" }).getAllByText("지배주주등 주식보유비율").length).toBeGreaterThan(0);
+    // ⚠️ 「해당 …(수증자)의」가 붙은 것은 ⓑ 승수(상증령 §34의5⑨ 인별)임을 ⓐ 해당성(§45의5① 그룹
+    //    합계)과 갈라 두기 위해서다 — 라벨이 같으면 사용자가 그룹비율을 승수 칸에 넣는다.
+    expect(renderBlock({ scMode: "single" }).getAllByText(/해당 지배주주등/).length).toBeGreaterThan(0);
     cleanup();
     expect(renderBlock({ scMode: "roster" }).getAllByText(/발행주식 총수/).length).toBeGreaterThan(0);
+  });
+
+  it("④ ⓐ 특정법인 해당성 입력은 두 모드 공통 — §45의5① 30% 요건 판정축", () => {
+    expect(renderBlock({ scMode: "single" }).getAllByText(/지배주주등 합계 주식보유비율/).length).toBeGreaterThan(0);
+    cleanup();
+    expect(renderBlock({ scMode: "roster" }).getAllByText(/지배주주등 합계 주식보유비율/).length).toBeGreaterThan(0);
   });
 });

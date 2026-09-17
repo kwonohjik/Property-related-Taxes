@@ -345,6 +345,13 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       break;
     case "specific_corp": {
       if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      // ⓐ §45의5① 특정법인 해당성 신고값 — 선택 입력이지만 넣었다면 비율 범위를 지킨다.
+      // (미입력은 fallback이 아니라 «간접 0% / 판정 보류»라는 의미가 있는 상태다 — 엔진 JSDoc 참조)
+      if (form.scGroupRatioPct.trim() !== "") {
+        const groupPct = parseDecimal(form.scGroupRatioPct);
+        if (groupPct <= 0 || groupPct > 100)
+          return "지배주주등 합계 주식보유비율은 0 초과 100 이하로 입력하세요";
+      }
       const isRoster = form.scMode === "roster";
       const isAuto = form.scCorporateTaxMode === "auto";
       if (isRoster) {

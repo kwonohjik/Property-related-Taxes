@@ -144,4 +144,67 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     // "본인증여 제외" 배지 노출
     await expect(matrix).toContainText("본인증여 제외");
   });
+
+  /**
+   * §45의5① ⓐ 특정법인 성립요건 — 지배주주등의 주식보유비율 100분의 30 이상.
+   * 지배주주등 직접지분 합계 29%에서는 증여의제가 성립하지 않는다(종전 580,000,000 산출).
+   * 「주식보유비율」은 법 §45의3①에 따라 **직접 또는 간접**이므로, 간접분을 신고하면 되살아난다.
+   *
+   * ⚠️ 계산 후에는 상세 dialog를 다시 열 수 없어(실측) 두 축을 각각 독립 플로우로 돌린다.
+   */
+  async function fillTwentyNinePercentRoster(page: Page, groupRatioPct?: string) {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    await dialog.getByTestId("sc-mode-roster").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("2000000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-total-shares").fill("100000");
+
+    // 갑(직계비속, 29,000주 = 29%) — 지배주주등은 이 1인뿐이다
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-0").fill("갑");
+    await dialog.getByTestId("sc-sh-relation-0").selectOption("lineal_descendant");
+    await dialog.getByTestId("sc-sh-shares-0").fill("29000");
+
+    // 타인(71,000주)
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-1").fill("타인");
+    await dialog.getByTestId("sc-sh-relation-1").selectOption("other");
+    await dialog.getByTestId("sc-sh-shares-1").fill("71000");
+
+    if (groupRatioPct !== undefined) {
+      await dialog.getByTestId("sc-group-ratio").fill(groupRatioPct);
+    }
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+  }
+
+  test("지배주주등 29% · 간접 미신고 → 특정법인 아님 고지 + 0원", async ({ page }) => {
+    await fillTwentyNinePercentRoster(page);
+
+    const notice = page.getByTestId("sc-eligibility-notice");
+    await expect(notice).toBeVisible({ timeout: 15000 });
+    await expect(notice).toContainText("특정법인 아님");
+    await expect(notice).toContainText("29.0%");
+    // 표의 과세여부 배지도 갱신된다 — 「과세」가 남으면 합계 0과 어긋난다
+    await expect(page.getByTestId("sc-multi-matrix")).toContainText("특정법인 아님");
+    // 미적용 사유 카드 — 간접보유를 0%로 본 전제를 함께 고지해 되돌릴 수 있게 한다
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("간접보유");
+  });
+
+  test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
+    await fillTwentyNinePercentRoster(page, "35");
+
+    await expect(page.getByTestId("sc-multi-gain-0")).toContainText("580,000,000", { timeout: 15000 });
+    await expect(page.getByTestId("sc-eligibility-notice")).toHaveCount(0);
+    await expect(page.getByTestId("sc-multi-matrix")).not.toContainText("특정법인 아님");
+  });
 });

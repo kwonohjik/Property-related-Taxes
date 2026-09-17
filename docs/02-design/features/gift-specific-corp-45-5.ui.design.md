@@ -51,7 +51,7 @@ interface ScShareholderRow {
 │ │  · auto   → 산출세액 [ ] 공제·감면 [ ] 소득금액 [ ] │
 │ │            ↳ 안분액 = 산출세액×min(거래이익/소득,1) (useMemo echo, 표시전용) │
 │ └──────────────────────────────────────────┘    │
-│ [single] 지배주주등 지분율 [ 25 ] %                 │ ← scRatioPct (single만)
+│ [single] 해당 지배주주등(수증자)의 보유비율 [ 25 ] % │ ← scRatioPct (single만·ⓑ 승수)
 │ [roster] 발행주식 총수 [   50,000 ]                 │ ← scTotalShares
 │   ┌ 주주 명단 ──────────────────[+ 행 추가]┐       │ ← SpecificCorpShareholderTable
 │   │ 성명[부]   관계[직계존속▾] 주식수[20,000] ☑증여자 │  data-testid="sc-sh-row-0"
@@ -59,9 +59,15 @@ interface ScShareholderRow {
 │   │ 성명[장남] 관계[직계비속▾] 주식수[12,500] ☐증여자 │
 │   │ 성명[차남] 관계[직계비속▾] 주식수[ 2,500] ☐증여자 │
 │   └────────────────────────────────────────┘       │
+│ 지배주주등 합계 보유비율(직접+간접) [ 35 ] %        │ ← scGroupRatioPct (ⓐ 해당성·공통)
 │ 증여재산공제(한도용) [ 50,000,000 ] 원              │ ← scGiftDeduction
 └────────────────────────────────────────────────┘
 ```
+- **ⓐ/ⓑ 두 비율을 라벨로 갈라 둔다.** `scRatioPct`는 상증령 §34의5⑨의 **인별 승수**,
+  `scGroupRatioPct`는 법 §45의5①의 **법인 해당성**(지배주주와 그 친족 전원 합계, 직접+간접)이다.
+  종전 라벨이 둘 다 「지배주주등 주식보유비율」이라 사용자가 그룹비율을 넣으면 승수로 곱해졌다.
+- `scGroupRatioPct` 미입력의 의미가 모드별로 다르다 — roster는 「간접보유 0%」, single은 「판정 보류」.
+  hint가 그 차이를 각각 적는다(엔진 `specific-corp.ts` JSDoc이 근거).
 - 관계 드롭다운: native `<select>` 허용(행 다수) — `SelectValue` 라벨 명시. native radio/checkbox 신규 금지이나 `<select>`는 허용. 증여자 체크박스는 `ToggleCard chip` 또는 행-내 Switch.
 - 색상 카드 + 섹션 번호(sky/amber) 패턴.
 

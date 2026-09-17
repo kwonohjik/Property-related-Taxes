@@ -171,6 +171,13 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       const isAuto = form.scCorporateTaxMode === "auto";
       const transactionBenefit = parseAmount(form.scTransactionBenefit);
       const giftDeduction = parseAmount(form.scGiftDeduction) || undefined; // 0이면 undefined(엔진 default 0)
+      // ⓐ §45의5① 특정법인 해당성 신고값(직접+간접 합계). 미입력이면 «전달하지 않는다» —
+      // 0을 보내면 single 모드에서 "판정 보류(unknown)"가 "미충족(no)"으로 뒤집혀 정상 계산이 죽는다.
+      const groupRatioPct = parseDecimal(form.scGroupRatioPct);
+      const controllingGroupRatio =
+        form.scGroupRatioPct.trim() === ""
+          ? undefined
+          : { numer: Math.round(groupRatioPct * 100), denom: 10_000 };
 
       if (isRoster && form.scShareholders && form.scShareholders.length > 0) {
         const totalShares = parseAmount(form.scTotalShares);
@@ -193,6 +200,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
             corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
             giftDeduction,
+            controllingGroupRatio,
           };
         } else {
           // direct: corporateTax = 직접 입력 (이월결손금 0 허용 → 0 전달)
@@ -202,6 +210,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTax: parseAmount(form.scCorporateTax),
             shareholders,
             giftDeduction,
+            controllingGroupRatio,
           };
         }
       }
@@ -222,6 +231,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
           corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
           giftDeduction,
+          controllingGroupRatio,
         };
       }
       return {
@@ -230,6 +240,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         corporateTax: parseAmount(form.scCorporateTax),
         ownershipRatio: singleRatio,
         giftDeduction,
+        controllingGroupRatio,
       };
     }
     case "related_corp": {

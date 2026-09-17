@@ -585,7 +585,13 @@ export interface SpecificCorpInput {
   transactionBenefit: number; // §34의5④1호 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
   // ── single(하위호환) 모드: 법인세 안분·지분율을 호출자가 사전 계산 ──
   corporateTax?: number; // 법인세 상당액(이미 안분된 최종값)
-  ownershipRatio?: { numer: number; denom: number }; // 지배주주등 주식보유비율
+  ownershipRatio?: { numer: number; denom: number }; // ⓑ 승수 — **해당** 지배주주등 1인의 주식보유비율(상증령 §34의5⑨)
+  /**
+   * ⓐ 「특정법인」 해당성 판정용 — 지배주주등(지배주주와 그 친족) **전원**의 주식보유비율
+   * 합계(직접+간접). 승수 `ownershipRatio`(ⓑ 인별)와 **다른 축**이다 — 섞지 말 것.
+   * roster에서는 주주 명부의 직접지분 합계를 보정(간접분 가산)하는 신고값으로 쓴다.
+   */
+  controllingGroupRatio?: { numer: number; denom: number };
   // ── roster 모드 (shareholders 존재 시 dispatch) ──
   shareholders?: SpecificCorpShareholder[];
   annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)

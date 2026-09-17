@@ -87,6 +87,12 @@ export interface DeemedPhase3Fields {
   scTransactionBenefit: string;
   scCorporateTax: string;
   scRatioPct: string;
+  /**
+   * §45의5① ⓐ 특정법인 해당성 판정용 — 지배주주등(지배주주와 그 친족) **전원**의
+   * 주식보유비율 합계(직접+간접, %). 승수 `scRatioPct`(ⓑ 인별)와 다른 축이다.
+   * roster에서는 주주 명부의 직접지분 합계를 간접분만큼 보정하는 신고값으로 쓴다(미입력 = 간접 0%).
+   */
+  scGroupRatioPct: string;
   // §45의3 일감몰아주기
   rcEnterpriseSize: "small" | "medium" | "large" | "";
   rcTotalSalesStr: string;
@@ -195,6 +201,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   scTransactionBenefit: "",
   scCorporateTax: "",
   scRatioPct: "",
+  scGroupRatioPct: "",
   // §45의3 일감몰아주기
   rcEnterpriseSize: "",
   rcTotalSalesStr: "",
