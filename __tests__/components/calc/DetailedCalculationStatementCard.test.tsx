@@ -89,6 +89,8 @@ function makeProperty(
     longTermHoldingDeduction: 0,
     income: 40_000_000,
     rateGroup: "default" as PerPropertyBreakdown["rateGroup"],
+    // §102② 세율축 — `rateGroup`(§104⑤ 호 축)과 **다른 축**이다. 엔진이 항상 싣는다.
+    lossOffsetRateKey: "prog:104-1-1",
     lossOffsetFromSameGroup: 0,
     lossOffsetFromOtherGroup: 0,
     incomeAfterOffset: 40_000_000,

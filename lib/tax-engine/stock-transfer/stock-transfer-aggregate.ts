@@ -277,6 +277,7 @@ function aggregateCore(
     otherAssetOffset,
     offsetIncome,
     lossOffsetEcho,
+    rateKeys,
   } = runStockLossOffset(inputs, calcOne);
 
   // STEP 2: 그룹별 소득금액 합산 — **통산 후** 기준(§92② 순서)
@@ -456,9 +457,24 @@ function aggregateCore(
     }
   };
 
+  /**
+   * 크로스 통산이 읽을 두 값을 싣는다 — **배정 지점 한 곳**에서만 한다.
+   *
+   * 🔑 `processItem`에는 return 이 **5곳**이다(비과세 조기반환 · 주식 국외 · 주식 국내 ·
+   *   기타자산 국외 스킵 · 기타자산). 각 return 에 흩으면 분기가 하나 늘 때 **조용히 빠진다**
+   *   (`feedback_enumerate_all_write_sites_before_fixing`). 여기서 한 번 덮는다.
+   *
+   * ⚠️ `transferIncome`은 이 시점에 이미 **통산 후**로 갈아끼워져 있다 — 통산 «전» 값은
+   *   `rawItems[i].transferIncome`이 유일한 출처다.
+   *   계획서 `docs/00-pm/cross-engine-102-2-loss-offset.plan.md` §4.3 축 1-a·1-b.
+   */
   // §103② 순서로 **순회**하되, 결과는 **입력 순서**로 되돌린다.
   for (const i of allocationOrder) {
-    processedByIndex[i] = processItem(i);
+    processedByIndex[i] = {
+      ...processItem(i),
+      transferIncomeBeforeOffset: rawItems[i].transferIncome,
+      lossOffsetRateKey: rateKeys[i],
+    };
   }
   const processedItems = processedByIndex;
 

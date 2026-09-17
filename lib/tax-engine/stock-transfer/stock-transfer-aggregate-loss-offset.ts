@@ -63,15 +63,23 @@ export function runStockLossOffset(inputs: AggregateStockItemInput[], calcOne: C
    * 🔑 「같은 세율」은 **세율 «표»** 축이지 과세표준별 marginal rate가 아니다 — 부동산 정본
    * `RateGroup`이 `"progressive"`(6~45% 누진)를 한 그룹으로 두는 것과 같은 규약이다.
    */
+  /**
+   * 종목별 세율축 — **여기가 단일 소스**다.
+   *
+   * 🔑 크로스 통산(부동산 ↔ 기타자산)도 이 값을 읽는다. 호출부가 `resolveStockRateKey`를
+   *   다시 부르면 인자 셋(taxCategory·중소기업·단기보유)이 어긋날 때 **조용히 다른 축**이
+   *   된다 — 그래서 배열로 한 번만 만들어 내보낸다.
+   *   계획서 `docs/00-pm/cross-engine-102-2-loss-offset.plan.md` §4.3 축 1-b.
+   */
+  const rateKeys: string[] = rawItems.map((r, i) =>
+    resolveStockRateKey(r.taxCategory, smeFlag(inputs[i]), r.isShortTermHolding),
+  );
+
   const runOffset = (idx: number[]) =>
     offsetLossesCore(
       idx.map((i) => ({
         income: rawItems[i].transferIncome,
-        rateKey: resolveStockRateKey(
-          rawItems[i].taxCategory,
-          smeFlag(inputs[i]),
-          rawItems[i].isShortTermHolding,
-        ),
+        rateKey: rateKeys[i],
         exempt: rawItems[i].isExempt,
       })),
     );
@@ -125,5 +133,6 @@ export function runStockLossOffset(inputs: AggregateStockItemInput[], calcOne: C
     otherAssetOffset,
     offsetIncome,
     lossOffsetEcho,
+    rateKeys,
   };
 }

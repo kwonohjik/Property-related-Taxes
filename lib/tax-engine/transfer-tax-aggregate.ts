@@ -578,6 +578,8 @@ function computeAggregateOnce(
       longTermHoldingDeduction: r.lthd,
       income: r.income,
       rateGroup: r.rateGroup,
+      // §102② 세율축 — `AssetRecord`가 이미 들고 있다(`-asset-records.ts:227`). 재유도 금지.
+      lossOffsetRateKey: r.lossOffsetRateKey,
       lossOffsetFromSameGroup: lossOffsetFromSame[idx],
       lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
       incomeAfterOffset: incomeAfterOffset[idx],

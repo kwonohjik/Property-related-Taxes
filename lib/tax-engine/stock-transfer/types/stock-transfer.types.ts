@@ -1090,6 +1090,22 @@ export type StockTransferResult = {
    *   통산 후 값으로 패치되면서 반영됐다.
    */
   lossOffsetFromSameGroup?: number;
+  /**
+   * **통산 «전»** 양도소득금액 — 다종목 합산에서만 실린다.
+   *
+   * 🔴 `transferIncome`은 통산 «후» 값으로 갈아끼워진다(`stock-transfer-aggregate.ts` —
+   *   `taxBase = transferIncome − basicDeduction` 항등식을 지키기 위해서다). 그래서 통산 전
+   *   값이 결과에 남지 않았고, **크로스 통산이 읽을 것이 없었다**.
+   *
+   * 🔑 부동산은 `income`(전) / `incomeAfterOffset`(후)를 **이미 둘 다** 준다 — 이 필드가
+   *   그 쌍의 주식 쪽 짝이다. 계획서 §4.3 축 1-a.
+   */
+  transferIncomeBeforeOffset?: number;
+  /**
+   * §102② 통산의 **세율축**(영 §167의2①1호) — `resolveStockRateKey`의 값.
+   * 크로스 통산이 `cross-loss-offset-rate-key.ts`로 번역해 부동산 축과 맞춘다. §4.3 축 1-b.
+   */
+  lossOffsetRateKey?: string;
   lossOffsetFromOtherGroup?: number;
 
   // 필요경비
