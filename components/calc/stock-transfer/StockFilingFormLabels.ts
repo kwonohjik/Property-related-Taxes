@@ -38,6 +38,8 @@ export function sectionLabel(appliedSection94: StockTransferResult["appliedSecti
     "①3다": "§94①3 다목 — 국외주식",
     "①4다": "§94①4 다목 — 과점주주",
     "①4라": "§94①4 라목 — 부동산과다보유",
+    // §94 각 호의 「양도」가 아니라 §118의9 **간주양도**다.
+    "118의9": "§118의9 — 국외전출 간주양도 (§94①3 가·나목 및 §94①4 다·라목 주식)",
   };
   return map[appliedSection94] ?? `§94 ${appliedSection94}`;
 }
@@ -127,9 +129,26 @@ export function isForeignStockCategory(result: StockTransferResult): boolean {
   );
 }
 
+/**
+ * 국외전출세(§118의9 간주양도)인가 — 국내 「양도」 전용 근거가 통째로 빗나가는 축이다.
+ *
+ * 세율은 §118의11(§104①11가목2) **준용**), 기본공제는 §118의10④ **별도 그룹**,
+ * 신고기한은 §118의15②다. §105①2호(예정신고)는 **존재하지 않는 기한**이다.
+ */
+export function isExitTaxCategory(result: StockTransferResult): boolean {
+  return result.taxCategory === "exit_tax";
+}
+
 export function rateLabel(result: StockTransferResult): string {
   if (result.isExempt) return "비과세";
   const pct = (result.appliedRate * 100).toFixed(1);
+  // 국외전출세 §118의11 — §104①11가목2) 세율을 **준용**한다(3억 이하 20% / 초과 25%).
+  // 세율 숫자는 같아도 근거 조문이 다르므로 값만 보고 §104①11을 직접 인용하면 틀리다.
+  if (isExitTaxCategory(result)) {
+    if (result.appliedRate === 0.20) return "20% (§118의11 → §104①11 가목2) 준용)";
+    if (result.appliedRate === 0.25) return "25% (§118의11 → §104①11 가목2) 준용)";
+    return `${pct}% (§118의11)`;
+  }
   // 국외주식 §104①12호 — 가목 중소기업 10% / 나목 그 밖 20%. 보유기간 구분·누진 없음.
   if (isForeignStockCategory(result)) {
     if (result.appliedRate === 0.20) return "20% (§104①12 나목)";

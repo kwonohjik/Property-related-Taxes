@@ -329,6 +329,9 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
       basicDeduction: 0,
       taxBase: 0,
       incomeTax: 0,
+      // 과세 자체가 없으므로 세율도 없다 — 서식 23·24행은 0을 그대로 보여준다.
+      appliedRate: 0,
+      progressiveDeduction: 0,
       localIncomeTax: 0,
       finalTax: 0,
       totalTax: 0,
@@ -373,7 +376,13 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // ──────────────────────────────────────────────────────────
   // STEP 5: §118의11 산출세액 (§104①11가목2) 20%/25%)
   // ──────────────────────────────────────────────────────────
-  const { tax: incomeTax } = applyExitTaxRate(taxBase);
+  // rate·progressiveDeduction 은 종전에도 계산되고 있었다 — 버리지 않고 결과에 echo 한다
+  // (별지 제84호서식 23·24행. 산식은 그대로다).
+  const {
+    tax: incomeTax,
+    rate: appliedRate,
+    progressiveDeduction,
+  } = applyExitTaxRate(taxBase);
   appliedRules.push(STOCK_EXIT_TAX.SECTION_118_11_TAX_RATE);
 
   // ──────────────────────────────────────────────────────────
@@ -607,6 +616,8 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     taxBase,
 
     incomeTax,
+    appliedRate,
+    progressiveDeduction,
     localIncomeTax,
 
     deferralYears,

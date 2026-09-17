@@ -13,6 +13,7 @@ import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockRe
 import { ForeignStockFilingFormSection } from "@/components/calc/results/ForeignStockFilingFormSection";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
 import { ExitTaxHoldingReportSection } from "@/components/calc/results/ExitTaxHoldingReportSection";
+import { ExitTaxFilingFormSection } from "@/components/calc/results/ExitTaxFilingFormSection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
@@ -130,9 +131,23 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
           ) : /* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */
           form.marketType === "exit_tax" ? (
             <>
+              {/*
+                🔑 **신고서 양식이 맨 앞**이다 — 국외주식·국내주식 경로와 같은 순서다.
+                아래 별지 제104호서식은 §118의15**①** **보유현황** 신고서로 성격이 다르다
+                (세액을 신고하는 서식이 아니다). 과세표준 신고서는 **§118의15②**가 따로
+                요구하고, 서식은 별지 제84호서식이 국외전출자 버전을 겸한다(시행규칙 별지 008400).
+              */}
+              <ExitTaxFilingFormSection
+                result={result as unknown as ExitTaxResult}
+                caseName={form.securityName}
+                brokerage={form.brokerage}
+                accountNumberMasked={form.accountNumberMasked}
+                departureDate={form.etDepartureDate}
+                holdings={form.etHoldings}
+              />
               <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
               {/*
-                별지 제104호서식 — §118의15 보유현황 신고서.
+                별지 제104호서식 — §118의15① 보유현황 신고서.
                 토글은 CSS-only 로 인쇄 시 자동 펼침(useEffect·isPrinting 추적 금지).
               */}
               <ExitTaxHoldingReportSection

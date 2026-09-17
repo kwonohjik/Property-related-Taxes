@@ -878,7 +878,16 @@ export type StockTransferResult = {
      */
     | "①3다"
     | "①4다"
-    | "①4라";
+    | "①4라"
+    /**
+     * §118의9 — 국외전출 **간주양도**. §94 각 호의 「양도」가 아니다.
+     *
+     * 별지 제84호서식(시행규칙 별지 008400)이 「양도소득(**국외전출자**)과세표준 신고 및
+     * 납부계산서」로 같은 서식을 쓰므로, 국외전출세 결과가 이 타입에 실릴 수 있어야 한다.
+     * 값이 없던 종전에는 `해당없음`(= 상장 비대주주 장내, 과세대상 아님)밖에 없어
+     * **뜻이 정반대인 라벨**을 붙여야 했다.
+     */
+    | "118의9";
 
   section94_2Applied: boolean;
   isExempt: boolean;
@@ -1308,6 +1317,12 @@ export type StockTransferResult = {
      * 이 union은 국내 분기 태그 집합이라 자유 문자열을 섞지 않는다.
      */
     | "국외주식§118②준용"
+    /**
+     * 국외전출세(§118의9) — **간주양도** 트랙. 서식 표시를 위해 결과를 이 타입으로 옮길 때 붙는다
+     * (`exit-tax-filing-adapter.ts`). 국외전출 엔진의 조문 문자열 목록은 그 엔진 결과
+     * (`ExitTaxResult.appliedRules`)에 그대로 남아 있고, 이 union에 섞지 않는다.
+     */
+    | "국외전출세§118의9"
   >;
 
   /**
@@ -1410,6 +1425,33 @@ export type StockTransferResult = {
     ineligibleReason?: string;
     /** 국외 엔진이 남긴 조문 근거 문자열 (상위 `appliedRules` union에 섞지 않는다) */
     appliedRules: string[];
+  };
+
+  /**
+   * 국외전출세(§118의9~§118의16) 전용 값 — `taxCategory`가 `"exit_tax"`일 때만 정의된다.
+   *
+   * 별지 제84호서식이 국외전출자 버전을 겸하므로(시행규칙 별지 008400) 서식 표시를 위해
+   * `exit-tax-filing-adapter.ts`가 채운다. **합산(aggregate) 경로에는 오지 않는다** —
+   * 국외전출세는 §118의10④ 별도 그룹이라 `assertNoExitTaxItem`이 막는다.
+   *
+   * 여기 모인 값들은 국내 양도에 대응 항목이 **없어서** 서식 본행에 실을 수 없는 것들이다
+   * (조정공제·비거주자 세액공제·보유현황 미신고 가산세·납부유예). 서식의 **조건부 행**이 읽는다.
+   */
+  exitDetail?: {
+    /** 출국일 = 간주양도일 (§118의9①) */
+    departureDate: Date;
+    /** §118의12① 조정공제 — 실양도가 < 출국일 시가일 때만 */
+    adjustmentDeduction?: number;
+    /** §118의13① 외국납부세액공제 */
+    foreignTaxCreditApplied?: number;
+    /** §118의14① 비거주자의 국내원천소득 세액공제 */
+    domesticTaxCreditApplied?: number;
+    /** §118의15④ 보유현황 미신고·누락 가산세 (액면금액 2%) */
+    holdingsReportPenalty?: number;
+    /** §118의16 납부유예 세액 */
+    deferredTaxAmount: number;
+    /** 납부유예 연수 (5년 또는 10년) */
+    deferralYears: number;
   };
 };
 

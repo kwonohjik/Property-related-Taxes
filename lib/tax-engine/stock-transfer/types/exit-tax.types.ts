@@ -211,6 +211,19 @@ export type ExitTaxResult = {
   // ── §118의11 → §104①11가목2) 산출세액 ──
   /** 산출세액 (3억 이하 20% / 초과 25% 누진공제 15,000,000) */
   incomeTax: number;
+  /**
+   * 적용 세율·누진공제 **echo** (산식 무영향 — 별지 제84호서식 23·24행 표시용).
+   *
+   * 🔑 엔진은 이미 `applyExitTaxRate`에서 둘을 계산하고 **버리고 있었다**(`{ tax }`만 구조분해).
+   *   서식이 이 값을 얻지 못하면 `incomeTax / taxBase`로 역산해야 하는데, 그것은 엔진 산식을
+   *   표시 계층에서 다시 쓰는 일이라 누진공제가 있는 구간에서 조용히 갈린다
+   *   (memory `feedback_aggregate_display_rederives_engine_value`).
+   *
+   * 과세표준 0이면 `applyExitTaxRate`가 rate 0을 돌려주므로 0이 실린다.
+   */
+  appliedRate: number;
+  /** 누진공제액 (3억 초과 구간 15,000,000 / 그 외 0) */
+  progressiveDeduction: number;
   /** 지방소득세 (10원 미만 절사) */
   localIncomeTax: number;
 
