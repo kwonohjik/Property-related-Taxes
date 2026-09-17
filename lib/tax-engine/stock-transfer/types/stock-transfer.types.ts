@@ -1134,6 +1134,13 @@ export type StockTransferResult = {
    */
   transferIncomeBeforeOffset?: number;
   /**
+   * §102② 통산에서 이 종목이 **내보낸** 차손 (흡수의 반대편). 차손 종목에만 실린다.
+   * 신고서 18-1행이 가로 합계를 맞추려면 유출 쪽도 있어야 한다.
+   */
+  lossOffsetGivenAway?: number;
+  /** 통산되지 못하고 **소멸**한 차손 (이월 불인정). 소멸이 있을 때만 실린다. */
+  lossOffsetExpired?: number;
+  /**
    * §102② 통산의 **세율축**(영 §167의2①1호) — `resolveStockRateKey`의 값.
    * 크로스 통산이 `cross-loss-offset-rate-key.ts`로 번역해 부동산 축과 맞춘다. §4.3 축 1-b.
    */

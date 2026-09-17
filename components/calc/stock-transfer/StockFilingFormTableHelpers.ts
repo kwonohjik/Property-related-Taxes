@@ -257,26 +257,57 @@ export function buildRows(
   //      **아니다**(통산 자체는 엔진이 호별로만 했다).
   if (aggregate?.aggregated.lossOffset) {
     const lo = aggregate.aggregated.lossOffset;
-    const totalOffset = lo.stock.totalOffset + lo.real_estate_and_other_asset.totalOffset;
+    // 18-1 합계는 이제 **종목 열의 합**으로 낸다(흡수와 유출이 상쇄돼야 하므로) —
+    // `lo.*.totalOffset`(흡수분만)은 더 이상 쓰이지 않는다.
     const unusedLoss = lo.stock.unusedLoss + lo.real_estate_and_other_asset.unusedLoss;
+    /**
+     * 종목 열 = 흡수는 **음수**(소득이 줄었다), 유출은 **양수**(차손이 나갔다).
+     *
+     * 🔴 종전에는 유출 쪽을 `null`로 비웠다. 그래서 열 방향은 맞는데
+     *   (`24,600,000 − 6,000,000 = 18,600,000`) **가로 합계가 어긋났다**:
+     *   `18행 62,000,000 + 18-1행 −20,000,000 = 42,000,000 ≠ 19행 62,000,000` (제보).
+     *   유출을 양수로 실으면 합계 열이 0이 되어 `18 + 18-1 = 19`가 성립한다.
+     *
+     * ⚠️ 합계 열도 **종목 열의 합**으로 바꾼다. `-totalOffset`은 흡수분만 세므로 유출과
+     *   상쇄되지 않는다.
+     */
+    const offsetCell = (item: StockTransferResult): number | null => {
+      const absorbed =
+        (item.lossOffsetFromSameGroup ?? 0) + (item.lossOffsetFromOtherGroup ?? 0);
+      if (absorbed > 0) return -absorbed;
+      const given = item.lossOffsetGivenAway ?? 0;
+      return given > 0 ? given : null;
+    };
+
     rows.push({
-      label:
-        unusedLoss > 0
-          ? `18-1. 양도차손 통산 (§102②·영 §167의2) — 잔여 ${unusedLoss.toLocaleString()} 소멸(이월 불가)`
-          : "18-1. 양도차손 통산 (§102②·영 §167의2)",
-      //   종목 열은 **그 종목이 흡수한** 차손이다(영 §167의2① 1호+2호 합). 종전에는 `null`이라
-      //   합계 열만 숫자가 있었고 「어느 종목이 얼마를 흡수했는지」가 서식에서 사라졌다.
-      //   차손을 **준** 종목은 0이다 — 흡수한 쪽만 값을 갖는다.
+      label: "18-1. 양도차손 통산 (§102②·영 §167의2)",
       values: val(
         0,
-        () => -totalOffset,
-        (item) => {
-          const absorbed =
-            (item.lossOffsetFromSameGroup ?? 0) + (item.lossOffsetFromOtherGroup ?? 0);
-          return absorbed > 0 ? -absorbed : null;
-        },
+        (agg) => agg.items.reduce((s, r) => s + (offsetCell(r) ?? 0), 0),
+        offsetCell,
       ),
     });
+
+    /**
+     * 18-2. 통산되지 못한 차손 **소멸** — 「통산」이 아니므로 18-1과 가른다.
+     *
+     * 양도소득에는 결손금 이월이 없다. 소멸분까지 더해야 차손 종목의 19행이 0이 된다
+     * (`−30,000,000 + 10,000,000 + 20,000,000 = 0`).
+     *
+     * ⚠️ **소멸이 없으면 행 자체를 만들지 않는다** — 0을 채우면 「소멸 0원」과 「소멸 자체가
+     *   없음」이 구분되지 않는다(18-1의 기존 규약과 같다). 종전에는 이 사실이 18-1 라벨의
+     *   문구로만 있었다.
+     */
+    if (unusedLoss > 0) {
+      rows.push({
+        label: "18-2. 통산되지 못한 차손 소멸 (이월 불가)",
+        values: val(
+          0,
+          (agg) => agg.items.reduce((s, r) => s + (r.lossOffsetExpired ?? 0), 0),
+          (item) => item.lossOffsetExpired ?? null,
+        ),
+      });
+    }
   }
 
   // 19. 양도소득금액 (LTHD 미적용 — 주식은 동일)
