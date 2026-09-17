@@ -52,6 +52,36 @@ const SCREEN_PDF: PrintChannel[] = ["screen", "pdf"];
 
 /** §2.4 계층 트리 — 큰 섹션(그룹) → 개별 서식(leaf) */
 export const COMPREHENSIVE_PRINT_SECTIONS: ComprehensivePrintSectionGroup[] = [
+  // 🔑 **신고서 서식이 목록 첫 행**이다(제보). 패널은 이 배열을 선언 순서 그대로 펼치므로
+  //    그룹 순서가 곧 「출력 항목 선택」의 행 순서다. anchor: `filing-form-first-row.anchor.test.ts`.
+  //    ⚠️ 서버 PDF 출력 순서는 바뀌지 않는다 — `ResultPdfDocument`는 `includes()`로 포함 여부만
+  //       보고 배치는 자기 JSX 순서로 고정한다.
+  {
+    id: "group:filing-forms",
+    label: "신고서 서식 (2022년판)",
+    children: [
+      {
+        id: "filing-form-main",
+        label: "종합부동산세 신고서",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo3",
+        label: "과세표준 계산명세서 (별지 3호서식 부표)",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo5",
+        label: "세부담상한초과세액 계산명세서 (별지 5호서식)",
+        channel: SCREEN,
+      },
+      {
+        id: "filing-form-buppyo5sub",
+        label: "직전연도 종합부동산세상당액 계산서 (부표)",
+        channel: SCREEN,
+      },
+    ],
+  },
   {
     id: "group:exclusion",
     label: "합산배제 자료",
@@ -88,32 +118,6 @@ export const COMPREHENSIVE_PRINT_SECTIONS: ComprehensivePrintSectionGroup[] = [
     label: "기타",
     children: [
       { id: "warnings", label: "경고", channel: SCREEN },
-    ],
-  },
-  {
-    id: "group:filing-forms",
-    label: "신고서 서식 (2022년판)",
-    children: [
-      {
-        id: "filing-form-main",
-        label: "종합부동산세 신고서",
-        channel: SCREEN,
-      },
-      {
-        id: "filing-form-buppyo3",
-        label: "과세표준 계산명세서 (별지 3호서식 부표)",
-        channel: SCREEN,
-      },
-      {
-        id: "filing-form-buppyo5",
-        label: "세부담상한초과세액 계산명세서 (별지 5호서식)",
-        channel: SCREEN,
-      },
-      {
-        id: "filing-form-buppyo5sub",
-        label: "직전연도 종합부동산세상당액 계산서 (부표)",
-        channel: SCREEN,
-      },
     ],
   },
   {

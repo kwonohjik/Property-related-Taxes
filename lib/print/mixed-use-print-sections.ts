@@ -46,13 +46,10 @@ const SCREEN: PrintChannel[] = ["screen"];
 
 /** §2.8 계층 트리 — 큰 섹션(그룹) → 개별 서식(leaf). 전부 SCREEN(서버 PDF 섹션 부재). */
 export const MIXED_USE_PRINT_SECTIONS: MixedUsePrintSectionGroup[] = [
-  {
-    id: "group:calc",
-    label: "계산 내역",
-    children: [
-      { id: "calculation", label: "분리계산 (안분·주택·상가·비사업용·합산세액)", channel: SCREEN },
-    ],
-  },
+  // 🔑 **신고서 서식이 목록 첫 행**이다(제보). 패널은 이 배열을 선언 순서 그대로 펼치므로
+  //    그룹 순서가 곧 「출력 항목 선택」의 행 순서다. anchor: `filing-form-first-row.anchor.test.ts`.
+  //    ⚠️ 서버 PDF 출력 순서는 바뀌지 않는다 — `ResultPdfDocument`는 `includes()`로 포함 여부만
+  //       보고 배치는 자기 JSX 순서로 고정한다.
   {
     id: "group:forms",
     label: "신고서식",
@@ -63,6 +60,13 @@ export const MIXED_USE_PRINT_SECTIONS: MixedUsePrintSectionGroup[] = [
       { id: "form-table", label: "신고서 양식 표 (32행)", channel: SCREEN },
       { id: "detailed-statement", label: "계산결과 상세명세서", channel: SCREEN },
       { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN },
+    ],
+  },
+  {
+    id: "group:calc",
+    label: "계산 내역",
+    children: [
+      { id: "calculation", label: "분리계산 (안분·주택·상가·비사업용·합산세액)", channel: SCREEN },
     ],
   },
 ];
