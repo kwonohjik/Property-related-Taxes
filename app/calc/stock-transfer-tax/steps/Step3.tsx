@@ -28,6 +28,7 @@ import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/s
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
 import { isOtherAssetGroup } from "@/lib/calc/stock-other-asset-scope";
 import { isClause9Applicable } from "@/lib/calc/stock-other-asset-scope";
+import { ForeignStockExpenseBlock } from "@/components/calc/stock-transfer/ForeignStockExpenseBlock";
 import {
   PenaltyDetailBlock,
   LatePaymentPenaltyBlock,
@@ -111,6 +112,11 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
    *   전용 안내가 정확한 조문을 가리킨다. 가산세 축 배선은 별건이다.
    */
   const isExitTax = form.marketType === "exit_tax";
+  /**
+   * 🔑 국외주식은 필요경비를 **외화**로 받는다(§118의4 준용) — 국내 `expenseMode`·`actualExpenses`
+   *   는 국외 body 에 실리지 않는다(계획서 §3 실측). 화면도 그에 맞춰 갈라야 «두 번 입력»이 없어진다.
+   */
+  const isForeignStock = form.marketType === "foreign_stock";
 
   /**
    * §103①1호(부동산·기타자산) 그룹인가 — ② 기본공제 섹션의 두 칸을 여는 축.
@@ -189,7 +195,11 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
 
   return (
     <div className="space-y-8">
+      {/* ① 필요경비 — 국외주식은 외화 필요경비 + 외국납부세액(§118의6) 전용 블록 */}
+      {isForeignStock && <ForeignStockExpenseBlock form={form} onChange={onChange} />}
+
       {/* ① 필요경비 — 취득가액 방식에 따라 자동 결정 (소령 §163⑥4) */}
+      {!isForeignStock && (
       <section>
         <SectionTitle n={1} title="필요경비" />
         <div className="space-y-4">
@@ -248,6 +258,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
           )}
         </div>
       </section>
+      )}
 
       {/* ② 기본공제 그룹 */}
       <section>
