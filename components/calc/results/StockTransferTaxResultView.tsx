@@ -22,10 +22,8 @@ import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFili
 import type { StockAggregateMeta } from "@/components/calc/stock-transfer/StockFilingFormTableHelpers";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useUserProfile } from "@/lib/storage/use-user-profile";
-import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { clientRepository } from "@/lib/storage";
+import { useState, useMemo } from "react";
+import { useStockFilingHeaderMeta } from "@/components/calc/results/useStockFilingHeaderMeta";
 import { StockTransferPenaltySection } from "@/components/calc/results/StockTransferPenaltySection";
 import { MarketSampleDetailCard } from "@/components/calc/results/MarketSampleDetailCard";
 import { CapitalAdjustmentsTimelineCard } from "@/components/calc/results/CapitalAdjustmentsTimelineCard";
@@ -215,37 +213,15 @@ export function StockTransferTaxResultView({
   const categoryLegalBasis = CATEGORY_LAW_MAP[result.taxCategory] ?? "";
 
   // 신고서 양식 헤더용 양도인·과세연도 메타 (디자인 §4.2)
-  // — StockTaxpayerHeaderCard와 동일한 데이터 소스를 사용하되 PDF 인쇄용 표 헤더에도 전달
-  const { profile, mode } = useUserProfile();
-  const { activeClientId } = useProfessionalStore();
-  const [loadedClientName, setLoadedClientName] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    if (mode === "professional" && activeClientId) {
-      clientRepository.get(activeClientId).then((c) => {
-        if (mountedRef.current) setLoadedClientName(c?.name ?? null);
-      });
-    }
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [mode, activeClientId]);
-  const clientNameResolved = (mode === "professional" && activeClientId) ? loadedClientName : null;
-  const taxpayerName = clientNameResolved ?? profile?.displayName ?? "";
-  const filingYear = (() => {
-    if (!transferDate) return undefined;
-    const d = new Date(transferDate);
-    return isNaN(d.getTime()) ? undefined : d.getFullYear();
-  })();
-  const filingHeaderProps = {
-    taxpayerName,
-    stockName: securityName,
-    stockCode: securityCode,
-    brokerName: brokerage,
-    accountNumber: accountNumberMasked,
-    filingYear,
-  };
+  // — 국외주식 결과 화면과 **같은 훅**을 쓴다. 양도인 분기(전문가 모드 의뢰인 ↔ 내 프로필)를
+  //   화면마다 따로 구현하면 신고서의 양도인이 화면마다 달라진다.
+  const filingHeaderProps = useStockFilingHeaderMeta({
+    securityName,
+    securityCode,
+    brokerage,
+    accountNumberMasked,
+    transferDate,
+  });
 
   // 출력 항목 선택 (PR-F3) — 기존 printScoped("full"/"form-table") → PrintSelectionPanel 통일.
   // ⚠️ pdf 채널 0(ResultPdfDocument에 stock 섹션 부재) → onPrintPdf 미전달.

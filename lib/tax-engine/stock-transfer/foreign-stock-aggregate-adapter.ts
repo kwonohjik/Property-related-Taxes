@@ -68,14 +68,31 @@ export function smeFlag(input: AggregateStockItemInput): boolean {
 }
 
 /**
+ * 변환이 **실제로 읽는** 입력 필드만 추린 타입.
+ *
+ * 🔑 `ForeignStockInput` 전체를 요구하면 **UI 단건 경로가 이 어댑터를 못 쓴다** — 결과 화면이
+ *   들고 있는 것은 폼 문자열이지 Zod 를 통과한 엔진 input 이 아니고, 쓰이지도 않는 환율·통화·
+ *   가산세 20여 개를 결과 화면에서 다시 지어내는 것은 **두 번째 진실**을 만드는 일이다.
+ *   그래서 변환이 읽는 5개로 좁힌다. 엔진 호출부는 `ForeignStockInput` 을 그대로 넘기면 된다
+ *   (구조적 타이핑 — 호출부 무변경).
+ */
+export type ForeignStockFilingMeta = Pick<
+  ForeignStockInput,
+  "transferDate" | "acquisitionDate" | "shareCount" | "stockName" | "countryCode"
+>;
+
+/**
  * `ForeignStockResult` → `StockTransferResult`.
  *
  * 세액 관련 값은 **그대로 옮긴다**. 단건 경로와 값이 갈리면 안 된다.
  * 기본공제 재배분(§103②)과 외국납부세액 한도 안분(§118의6①1호 B/C)은
  * `stock-transfer-aggregate.ts`가 이 결과를 받아 **뒤에서** 패치한다.
+ *
+ * 다종목 aggregate 편입 외에 **결과 화면의 별지 제84호서식**도 이 변환을 쓴다 — 서식은
+ * `StockTransferResult` 한 타입만 읽으므로, 국외주식이 서식에 실리는 길은 여기뿐이다.
  */
 export function toStockTransferResult(
-  input: ForeignStockInput,
+  input: ForeignStockFilingMeta,
   r: ForeignStockResult,
 ): StockTransferResult {
   const holdingDays = Math.max(
