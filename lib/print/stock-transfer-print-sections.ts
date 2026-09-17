@@ -31,12 +31,24 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 4종 (exact 매칭) */
+/**
+ * 선택 가능 leaf 5종 (exact 매칭)
+ *
+ * ⚠️ leaf 를 늘리면 `__tests__/print/stock-transfer-print-sections.test.ts` 의 `ALL_LEAVES`
+ *   배열도 함께 늘린다 — 그 배열은 union 에서 파생되지 않아 **타입으로 강제되지 않는다**
+ *   (memory `feedback_print_leaf_add_unit_test_sync`). 빠뜨리면 새 leaf 만 가드 밖에 남는다.
+ */
 export type StockTransferPrintSectionId =
   | "calculation"
   | "detail-cards"
   | "filing-form"
-  | "securities-transaction-tax";
+  | "securities-transaction-tax"
+  /**
+   * 별지 제104호서식 — 국외전출자 주식등 **보유현황** 신고서(§118의15①).
+   * `filing-form`(별지 제84호 과세표준 신고서)과 **다른 서식**이라 별도 leaf 다 —
+   * 하나는 세액 신고, 하나는 출국 전 현황 신고이므로 따로 고를 수 있어야 한다.
+   */
+  | "exit-holding-report";
 
 /** 주식 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type StockTransferPrintSectionNode = GenericNode<StockTransferPrintSectionId>;
@@ -60,6 +72,11 @@ export const STOCK_TRANSFER_PRINT_SECTIONS: StockTransferPrintSectionGroup[] = [
     label: "신고서식",
     children: [
       { id: "filing-form", label: "주식 신고서 양식 표 (32행)", channel: SCREEN },
+      {
+        id: "exit-holding-report",
+        label: "국외전출자 보유현황 신고서 (별지 제104호서식)",
+        channel: SCREEN,
+      },
     ],
   },
 ];

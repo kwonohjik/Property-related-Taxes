@@ -7,13 +7,19 @@
  * 진입 시 결과가 없으면 자동으로 계산 실행 ("계산하기" 별도 클릭 불필요).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
 import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockResultCard";
 import { ForeignStockFilingFormSection } from "@/components/calc/results/ForeignStockFilingFormSection";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
 import { ExitTaxHoldingReportSection } from "@/components/calc/results/ExitTaxHoldingReportSection";
 import { ExitTaxFilingFormSection } from "@/components/calc/results/ExitTaxFilingFormSection";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  STOCK_TRANSFER_PRINT_SECTIONS,
+  type StockTransferPrintSectionId,
+} from "@/lib/print/stock-transfer-print-sections";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
@@ -69,6 +75,32 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
     accountNumberMasked: form.accountNumberMasked,
     kiwoomLastFetchedAt: form.kiwoomLastFetchedAt,
   };
+
+  /**
+   * 출력 항목 선택 — **국외 트랙 전용** state.
+   *
+   * 국내·다종목은 `StockTransferTaxResultView`가 자기 패널을 들고 있다. 종전에는 국외주식·
+   * 국외전출세 경로에만 패널이 없어 **인쇄하면 화면 전체가 그대로 나갔다**(선택 불가).
+   *
+   * ⚠️ 훅은 조건부로 부를 수 없어 국내 분기에서도 만들어지지만, 그 분기는 이 값을 쓰지 않는다.
+   */
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
+  const availablePrintIds = useMemo<Set<StockTransferPrintSectionId>>(() => {
+    // 가용 leaf 는 **그 화면에 실제로 렌더되는 것**만이다 — 데이터 없는 서식을 고르게 두면
+    // 「선택했는데 아무것도 안 나오는」 거짓 선택이 된다(패널 설계 원칙).
+    const ids: StockTransferPrintSectionId[] = ["filing-form", "calculation"];
+    if (form.marketType === "exit_tax") ids.push("exit-holding-report");
+    return new Set(ids);
+  }, [form.marketType]);
+
+  const printPanel = (
+    <PrintSelectionPanel
+      allGroups={STOCK_TRANSFER_PRINT_SECTIONS}
+      selectedIds={selectedPrintIds}
+      availableIds={availablePrintIds}
+      onChange={setSelectedPrintIds}
+    />
+  );
 
   const autoTriggerredRef = useRef(false);
   useEffect(() => {
@@ -137,23 +169,33 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
                 (세액을 신고하는 서식이 아니다). 과세표준 신고서는 **§118의15②**가 따로
                 요구하고, 서식은 별지 제84호서식이 국외전출자 버전을 겸한다(시행규칙 별지 008400).
               */}
-              <ExitTaxFilingFormSection
-                result={result as unknown as ExitTaxResult}
-                caseName={form.securityName}
-                brokerage={form.brokerage}
-                accountNumberMasked={form.accountNumberMasked}
-                departureDate={form.etDepartureDate}
-                holdings={form.etHoldings}
-              />
-              <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
+              <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+                <ExitTaxFilingFormSection
+                  result={result as unknown as ExitTaxResult}
+                  caseName={form.securityName}
+                  brokerage={form.brokerage}
+                  accountNumberMasked={form.accountNumberMasked}
+                  departureDate={form.etDepartureDate}
+                  holdings={form.etHoldings}
+                />
+              </PrintSection>
+
+              {/* 패널은 **신고서 뒤**다 — 국내 결과뷰와 같은 규약(인쇄 제어용 컨트롤). */}
+              {printPanel}
+
+              <PrintSection id="calculation" selectedIds={selectedPrintIds}>
+                <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
+              </PrintSection>
               {/*
                 별지 제104호서식 — §118의15① 보유현황 신고서.
                 토글은 CSS-only 로 인쇄 시 자동 펼침(useEffect·isPrinting 추적 금지).
               */}
-              <ExitTaxHoldingReportSection
-                holdings={form.etHoldings}
-                departureDate={form.etDepartureDate}
-              />
+              <PrintSection id="exit-holding-report" selectedIds={selectedPrintIds}>
+                <ExitTaxHoldingReportSection
+                  holdings={form.etHoldings}
+                  departureDate={form.etDepartureDate}
+                />
+              </PrintSection>
             </>
           ) : /* PR-4A 해외주식 — 별도 결과 카드 (ForeignStockResult 타입) */
           form.marketType === "foreign_stock" ? (
@@ -163,20 +205,28 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
                 결과 카드(환율 환산·산식)는 그 뒤를 받친다. 국내 경로(`StockTransferTaxResultView`)와
                 같은 순서다. 종전에는 국외주식 단건에 서식이 **아예 없었다**.
               */}
-              <ForeignStockFilingFormSection
-                result={result as unknown as ForeignStockResult}
-                stockName={form.securityName}
-                stockCode={form.securityCode}
-                brokerage={form.brokerage}
-                accountNumberMasked={form.accountNumberMasked}
-                transferDate={form.transferDate}
-                acquisitionDate={form.acquisitionDate}
-                countryCode={form.fgCountryCode}
-              />
-              <ForeignStockResultCard
-                result={result as unknown as ForeignStockResult}
-                stockName={form.securityName}
-              />
+              <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+                <ForeignStockFilingFormSection
+                  result={result as unknown as ForeignStockResult}
+                  stockName={form.securityName}
+                  stockCode={form.securityCode}
+                  brokerage={form.brokerage}
+                  accountNumberMasked={form.accountNumberMasked}
+                  transferDate={form.transferDate}
+                  acquisitionDate={form.acquisitionDate}
+                  countryCode={form.fgCountryCode}
+                />
+              </PrintSection>
+
+              {/* 패널은 **신고서 뒤**다 — 국내 결과뷰와 같은 규약. */}
+              {printPanel}
+
+              <PrintSection id="calculation" selectedIds={selectedPrintIds}>
+                <ForeignStockResultCard
+                  result={result as unknown as ForeignStockResult}
+                  stockName={form.securityName}
+                />
+              </PrintSection>
             </>
           ) : (
             <StockTransferTaxResultView {...resultViewProps} aggregate={aggregate} />
