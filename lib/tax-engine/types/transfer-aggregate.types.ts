@@ -175,6 +175,19 @@ export interface PerPropertyBreakdown
   income: number;
   /** 세율군 */
   rateGroup: RateGroup;
+  /**
+   * §102② 통산의 **「같은 세율을 적용받는 자산」 축**(영 §167의2①1호) — `lossOffsetRateKey`.
+   *
+   * ⛔ **`rateGroup`과 혼동하지 말 것.** 그쪽은 §104⑤2호의 「**호**」 축이고 이쪽은
+   *   「**세율**」 축이다 — 두 축은 **직교**한다(`loss-offset-rate-key.ts` 헤더의 대조표).
+   *   섞으면 미등기 70%와 주택 1년미만 70%가 갈리고(거짓 분리), 40·50·60·70%가 뭉친다
+   *   (거짓 병합). PR #1643이 그 두 방향을 실측으로 고쳤다.
+   *
+   * 🔑 **크로스 통산(부동산 ↔ 기타자산)이 이 값을 읽는다** — 두 엔진의 키 규약이 달라
+   *   `cross-loss-offset-rate-key.ts`가 번역한다.
+   *   계획서 `docs/00-pm/cross-engine-102-2-loss-offset.plan.md` §4.3 축 1-b.
+   */
+  lossOffsetRateKey: string;
   /** 같은 그룹에서 받은 차손 공제 (양수) */
   lossOffsetFromSameGroup: number;
   /** 타군에서 안분 받은 차손 공제 (양수) */
