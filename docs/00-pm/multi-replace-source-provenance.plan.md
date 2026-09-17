@@ -1,6 +1,6 @@
 # 다건 record **전체 replace** 편입분의 provenance — 가짜 원본 id (수정 계획서)
 
-> 상태: **Plan** — 착수 조건 충족(Q-1 결정 완료 2026-09-17). 구현 대기.
+> 상태: ✅ **Done** — 구현·검증 완료(2026-09-17). 실행 기록은 §13.
 > 세목: 양도소득세 / 연간 합산 과세(`/calc/transfer-tax/multi`)
 > 작성일: 2026-09-17 · 기준 커밋: `f750be70`
 > 선행: `multi-aggregate-stale-source-snapshot.plan.md` §7 표 3행 — 거기서 「1차 범위 밖」으로 남긴 항목.
@@ -293,6 +293,61 @@ replace 로드하면 이번엔 `p.sourceCalculationId`가 이미 차 있어 **�
 - [ ] E2E RP-1~RP-3 + `transfer-multi-*` 계열 회귀
 
 ---
+
+---
+
+## 13. 실행 기록 (2026-09-17)
+
+### 구현 — 계획대로 4지점
+
+| # | 파일 | 실제 |
+|---|---|---|
+| ① | `lib/stores/multi-transfer-tax-store.ts` | `MultiTransferFormData.loadedFromRecordId?: string` + 두 축을 가르는 주석. `defaultFormData`에는 **키를 넣지 않았다** |
+| ② | `lib/calc/transfer-multi-load-entry.ts` | `?? record.id` 폴백 제거 + **신규 leaf `buildExistingSourceIds`** |
+| ③ | `MultiTransferTaxCalculator.tsx` `doLoadMulti` | `loadedFromRecordId: record.id` |
+| ④ | 같은 파일 `:106` | `useMemo`를 `buildExistingSourceIds(form)`로 교체 |
+
+**신규 leaf를 만든 이유**는 계획에 없던 판단이다 — 합집합 로직이 컴포넌트 `useMemo` 안에만
+있으면 **R-5가 닿을 수 없다**. 순수 함수로 꺼내야 anchor가 과녁을 가진다
+(`feedback_library_anchor_does_not_prove_component_uses_it`의 역방향 대비).
+
+### 🔴 초판 판정 정정 — R-4는 🔴가 아니라 🟢였다
+
+계획서 §5는 R-4를 「replace가 `loadedFromRecordId`를 남긴다 — 실패(필드 없음)」로 적었다.
+**틀렸다.** 그 단언은 객체 리터럴을 만들어 확인하는 꼴이라 **런타임 구별력이 0**이다 —
+필드가 타입에 없어도 통과한다. 타입 존재를 지키는 것은 anchor가 아니라 `tsc`다.
+
+⇒ 실제로 깨질 수 있는 것으로 바꿨다: **초기값에 키가 없고 `reset`이 세션 출처를 지운다**(V-1).
+`reset`이 부분 merge로 바뀌면 빨개진다. 착수 전 실패는 계획의 🔴 3건이 아니라 **R-1·R-5·R-8**이었다.
+
+### 뮤테이션 — 🔴 **두 층이 서로 다른 자리를 떠받친다**
+
+| ID | 무력화 | vitest | E2E |
+|---|---|---|---|
+| P-1 | 폴백 복원(`?? record.id`) | **R-1 실패** ✅ | **3 passed — 구별력 0** |
+| P-2 | `doLoadMulti`에서 세션 출처 세팅 제거 | **0건 — 구별력 0** | **RP-3 실패** ✅ |
+| P-3 | 합집합에서 `loadedFromRecordId` 제거 | R-5 실패 ✅ | — |
+| P-4 | ④ 변환에 `loadedFromRecordId` 추가 | R-7 실패 ✅ | — |
+
+> 🔴 **P-2가 「vitest는 배선을 못 본다」의 여섯 번째 재현**이다(#1646 P-8 · #1647 P-7 ·
+> #1648 Q-7 · #1649 R-1 · #1650 S-2). 컴포넌트가 `setForm`에 한 줄을 싣는 일은 순수 함수
+> 테스트가 닿지 않는다.
+>
+> 🔑 **그런데 P-1은 반대다** — 폴백을 되살려도 E2E 3건이 전부 초록이다. RP-1이 보는 것은
+> 「배너가 안 뜬다」인데, 폴백이 있어도 하류 가드(`classifyLoadableTransfer !== "single"`)가
+> 걸러 배너는 어차피 안 뜨기 때문이다. **그 무해함이 바로 이 결함의 성질**이라(§2 G-3)
+> 화면으로는 잡을 수가 없다. ⇒ **어느 한 층으로도 충분하지 않다.** 계획서 §6이
+> 「E2E가 유일한 안전망이 될 수 있다」고만 적은 것은 절반이었다.
+
+### 검증
+
+- anchor R-1~R-8 (8건) · E2E RP-1~RP-3 (3건) 전건 통과
+- `tsc --noEmit` 0건 · `lint` 0 error · 전건 vitest **세액 회귀 0**
+- 착수 전 실측 M-1(5,656건 무반응) · M-2(참조 0건)가 보인 **무방비 상태가 해소**됐다
+
+### 범위 밖 (유지)
+
+구 record에 이미 굳은 가짜 id의 마이그레이션(Q-1 → A) · 다건 record를 원본으로 삼는 재편입(§10-1).
 
 ## 부록 A — 재현 커맨드
 

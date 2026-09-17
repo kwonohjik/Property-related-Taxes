@@ -66,13 +66,40 @@ export function buildPropertyFromSingleRecord(record: CalculationRecord, label: 
   };
 }
 
-/** multi record → properties[] (전체 replace용). 각 자산에 sourceCalculationId 표기. */
+/**
+ * multi record → properties[] (전체 replace용).
+ *
+ * 🔴 **`?? record.id` 폴백을 되살리지 말 것.** 다건 record는 그 안의 자산에 대해 **원본이
+ *   아니다** — 담고 있던 용기다. 폴백이 있으면 원본이 없는 **수동 추가 자산**이
+ *   「원본 있음」으로 위장하고, 재저장될 때마다 그 표지가 굳는다
+ *   (계획서 `multi-replace-source-provenance.plan.md` §2 G-1·G-2).
+ *
+ *   지금은 하류 3곳이 전부 `classifyLoadableTransfer(rec) !== "single"`로 걸러 내 **우연히**
+ *   무해했다. 그 가드가 넓어지는 순간 활성화된다 — `reloadPropertyFromSource`가 다건을
+ *   허용하면 수동 자산의 `form`(= `TransferFormData`)에 `MultiTransferFormData`가 덮인다.
+ *
+ * 🔑 「이 세션이 어느 다건에서 왔는가」는 **폼 수준** `loadedFromRecordId`가 들고,
+ *   「이미 로드함」 배지는 `buildExistingSourceIds`가 둘을 합쳐 만든다.
+ */
 export function buildPropertiesFromMultiRecord(record: CalculationRecord): PropertyItem[] {
   const input = record.inputData as unknown as MultiTransferFormData;
-  return (input.properties ?? []).map((p) => ({
-    ...p,
-    sourceCalculationId: p.sourceCalculationId ?? record.id,
-  }));
+  return (input.properties ?? []).map((p) => ({ ...p }));
+}
+
+/**
+ * 「이미 로드함」 배지가 쓰는 id 집합 — **자산 출처 ∪ 세션 출처**.
+ *
+ * `MultiTransferHistoryLoadModal`이 `has(r.id)`로 배지를 띄운다. 두 축을 합치는 자리가
+ * 여기뿐이라 순수 함수로 꺼내 둔다(컴포넌트 안 `useMemo`에 있으면 테스트가 닿지 않는다).
+ */
+export function buildExistingSourceIds(
+  form: Pick<MultiTransferFormData, "properties"> & { loadedFromRecordId?: string },
+): Set<string> {
+  const ids = new Set<string>(
+    (form.properties ?? []).map((p) => p.sourceCalculationId).filter(Boolean) as string[],
+  );
+  if (form.loadedFromRecordId) ids.add(form.loadedFromRecordId);
+  return ids;
 }
 
 /** 미입력(빈) 자산 여부 — 마운트 auto-add된 blank property 정리용 */
