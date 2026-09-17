@@ -1,5 +1,5 @@
 /**
- * E2E: 국외전출세 결과 화면 — **신고서 양식(별지 제84호서식)이 맨 앞**이다
+ * E2E: 국외전출세 결과 화면 — ② 출력 항목 선택 → ③ 신고서(별지 제84호서식) → ④ 나머지
  *
  * 제보 —「국외전출세 결과탭에 신고서 양식이 있는지 체크해봐」→「일반 주식양도신고서와 동일해
  * 주식 신고서 양식으로 만들면 돼」
@@ -67,18 +67,21 @@ async function topOf(page: Page, sel: string) {
   return box!.y;
 }
 
-test.describe("국외전출세 결과 화면 — 신고서 양식이 맨 앞", () => {
-  test("ETF-1: 신고서 표가 렌더되고 결과 카드·보유현황 서식보다 위에 있다", async ({ page }) => {
+test.describe("국외전출세 결과 화면 — 섹션 순서", () => {
+  test("ETF-1: 출력 패널 → 신고서 → 결과 카드 → 보유현황 서식 순이다", async ({ page }) => {
     test.setTimeout(180_000);
     await reachResult(page);
 
     const table = page.locator('[data-print-section="stock-form-table"]');
     await expect(table).toBeVisible({ timeout: 60_000 });
 
+    const panelY = await topOf(page, 'text=출력 항목 선택');
     const filingY = await topOf(page, '[data-print-section="stock-form-table"]');
     const cardY = await topOf(page, 'text=/산출세액 계산 \\(§118의10~§118의11\\)/');
     const holdingY = await topOf(page, '[data-testid="exit-tax-holding-report-toggle"]');
 
+    // 국외 트랙에는 의뢰인 카드(①)가 없다 — 국내 결과뷰 전용 컴포넌트다.
+    expect(panelY, `출력 패널 ${panelY} vs 신고서 ${filingY}`).toBeLessThan(filingY);
     expect(filingY, `신고서 ${filingY} vs 결과 카드 ${cardY}`).toBeLessThan(cardY);
     expect(filingY, `신고서 ${filingY} vs 보유현황 서식 ${holdingY}`).toBeLessThan(holdingY);
   });

@@ -164,11 +164,13 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
           form.marketType === "exit_tax" ? (
             <>
               {/*
-                🔑 **신고서 양식이 맨 앞**이다 — 국외주식·국내주식 경로와 같은 순서다.
                 아래 별지 제104호서식은 §118의15**①** **보유현황** 신고서로 성격이 다르다
                 (세액을 신고하는 서식이 아니다). 과세표준 신고서는 **§118의15②**가 따로
                 요구하고, 서식은 별지 제84호서식이 국외전출자 버전을 겸한다(시행규칙 별지 008400).
               */}
+              {/* ② 패널이 **신고서 앞**이다 — 국내 결과뷰와 같은 순서(제보). */}
+              {printPanel}
+
               <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
                 <ExitTaxFilingFormSection
                   result={result as unknown as ExitTaxResult}
@@ -179,9 +181,6 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
                   holdings={form.etHoldings}
                 />
               </PrintSection>
-
-              {/* 패널은 **신고서 뒤**다 — 국내 결과뷰와 같은 규약(인쇄 제어용 컨트롤). */}
-              {printPanel}
 
               <PrintSection id="calculation" selectedIds={selectedPrintIds}>
                 <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
@@ -201,10 +200,12 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
           form.marketType === "foreign_stock" ? (
             <>
               {/*
-                🔑 **신고서 양식이 맨 앞**이다 — 이 화면의 주된 산출물은 별지 제84호서식이고
-                결과 카드(환율 환산·산식)는 그 뒤를 받친다. 국내 경로(`StockTransferTaxResultView`)와
-                같은 순서다. 종전에는 국외주식 단건에 서식이 **아예 없었다**.
+                화면 순서는 ② 출력 항목 선택 → ③ 신고서 양식 → ④ 나머지다(제보).
+                국외 트랙에는 의뢰인 카드(①)가 없다 — 국내 결과뷰 전용 컴포넌트다.
               */}
+              {/* ② 패널이 **신고서 앞**이다 — 국내 결과뷰와 같은 순서(제보). */}
+              {printPanel}
+
               <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
                 <ForeignStockFilingFormSection
                   result={result as unknown as ForeignStockResult}
@@ -217,9 +218,6 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
                   countryCode={form.fgCountryCode}
                 />
               </PrintSection>
-
-              {/* 패널은 **신고서 뒤**다 — 국내 결과뷰와 같은 규약. */}
-              {printPanel}
 
               <PrintSection id="calculation" selectedIds={selectedPrintIds}>
                 <ForeignStockResultCard
