@@ -18,15 +18,46 @@ export function fracMin(a: Frac, b: Frac): Frac {
   return a.numer * b.denom <= b.numer * a.denom ? a : b;
 }
 
+/** BigInt 최대공약수 (유클리드). 0 입력 시 1을 돌려 약분을 무해하게 만든다. */
+function bigGcd(a: bigint, b: bigint): bigint {
+  let x = a < 0n ? -a : a;
+  let y = b < 0n ? -b : b;
+  while (y > 0n) {
+    const t = x % y;
+    x = y;
+    y = t;
+  }
+  return x === 0n ? 1n : x;
+}
+
+/**
+ * BigInt 분수 → `Frac`(number) — **약분 후** 내린다.
+ *
+ * 🔴 이 파일 헤더는 「분수 곱은 BigInt(2^53 초과 방지)」라고 선언하는데, 종전에는 **복원 지점이
+ *    곧 손실 지점**이었다. ④ 변환이 비율을 분모 10,000으로 만들어 경유 1개마다 분모가 1e8배씩
+ *    커지므로, 경유 3개면 분모 1e24·분자 1.2e23으로 둘 다 안전정수 범위를 벗어난다.
+ *    상대오차는 1e-16 수준이지만 최종 floor 경계를 넘겨 **증여의제이익이 1원 과소**가 됐다
+ *    (실측: 경유 3개 414,719,999 / 경유 5개 64,799,999).
+ *
+ * 약분하면 1e24/1e24 같은 분수가 곧바로 작은 정수 쌍으로 줄어 안전범위 안에 들어온다.
+ * ⚠️ 「약분하면 언제나 안전하다」는 보증은 아니다 — 서로소 분모가 여럿 겹치면 다시 커질 수
+ *    있다. 그래서 `applyTwoFractions`·`computeIndirectRatioBig`처럼 **정확성이 직결되는
+ *    연산은 BigInt 경로를 그대로 유지**하고, 이 함수는 경계에서만 쓴다.
+ */
+export function reduceFracBig(numer: bigint, denom: bigint): Frac {
+  const g = bigGcd(numer, denom);
+  return { numer: Number(numer / g), denom: Number(denom / g) };
+}
+
 /**
  * 분수 max(0, a − b) — 공통분모 정수 뺄셈 (음수 방지, Math.round 없음).
- * 교차곱 분자가 2^53을 넘을 수 있으므로 BigInt로 계산 후 Number 복원.
+ * 교차곱 분자가 2^53을 넘을 수 있으므로 BigInt로 계산하고, 복원 시 **약분**한다.
  */
 export function fracMaxZeroSub(a: Frac, b: Frac): Frac {
   const diff = BigInt(a.numer) * BigInt(b.denom) - BigInt(b.numer) * BigInt(a.denom);
   const commonDenom = BigInt(a.denom) * BigInt(b.denom);
   const numer = diff > 0n ? diff : 0n;
-  return { numer: Number(numer), denom: Number(commonDenom) };
+  return reduceFracBig(numer, commonDenom);
 }
 
 /**
@@ -84,7 +115,7 @@ export function computeIndirectRatio(
   rulingGroupIds: string[] = [],
 ): Frac {
   const { numer, denom } = computeIndirectRatioBig(shareholderId, intermediaryCorps, mode, rulingGroupIds);
-  return { numer: Number(numer), denom: Number(denom) };
+  return reduceFracBig(numer, denom);
 }
 
 /**
