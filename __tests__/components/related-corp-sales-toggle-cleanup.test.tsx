@@ -18,6 +18,7 @@ const ROW = {
   salesAmountStr: "14000000000",
   isRelated: true,
   exclusionType: "sec10_5",
+  beneficiaryStakePctStr: "",
   rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
 };
 
@@ -38,6 +39,22 @@ describe("매출처 특수관계 토글 되돌리기", () => {
       exclusionType: "",
       rulingStakes: [],
     });
+  });
+
+  it("[UX-1] §⑩3호를 고른 행에서만 「수혜법인 보유비율」 칸이 렌더된다", () => {
+    const set = vi.fn();
+    const base = { ...INITIAL_DEEMED } as unknown as DeemedFormState;
+    const withType = (t: string) =>
+      render(
+        <RelatedCorpFields
+          form={{ ...base, rcSalesPartners: [{ ...ROW, exclusionType: t, beneficiaryStakePctStr: "" }] } as unknown as DeemedFormState}
+          set={set}
+        />,
+      );
+    expect(withType("sec10_3").queryByTestId("rc-sales-benef-stake-0")).not.toBeNull();
+    cleanup();
+    // 2호는 전액 제외라 곱할 비율이 없다 — 칸이 있으면 «쓰이지 않는 값»을 받게 된다
+    expect(withType("sec10_2").queryByTestId("rc-sales-benef-stake-0")).toBeNull();
   });
 
   it("[UX-0b] 긍정 짝 — 특수관계로 켤 때는 기존 값을 지우지 않는다", () => {

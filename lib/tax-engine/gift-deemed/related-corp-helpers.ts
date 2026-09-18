@@ -3,6 +3,7 @@
  * 분수 정수연산 유틸 + 2모드 간접보유 + §⑩ 과세제외매출.
  * 정책: Math.round 금지(CLAUDE.md 정수연산) · 분수 곱은 BigInt(2^53 초과 방지).
  */
+import { safeMultiplyThenDivide } from "../tax-utils";
 import type { RcIntermediaryCorpItem, RcSalesPartner } from "./types";
 
 export type Frac = { numer: number; denom: number };
@@ -105,6 +106,27 @@ export function computeIndirectRatioBig(
 }
 
 /**
+ * §⑩ 각 호의 과세제외 **금액**.
+ *
+ * 10개 호 중 **3호만** 축소 산식이다 — 「…100분의 50 **미만**인 특수관계법인과 거래한 매출액에
+ * **그 특수관계법인에 대한 수혜법인의 주식보유비율을 곱한 금액**」. 바로 위 2호가
+ * 「…100분의 50 **이상**인 특수관계법인과 거래한 매출액」(전액)이라 두 호는 명시적으로 대비된다.
+ *
+ * 종전에는 호를 가리지 않고 전액을 뺐다 — 3호를 고르면 2호와 **한 원도 다르지 않았고**,
+ * 곱할 보유비율의 입력칸 자체가 어느 층에도 없었다. 과세제외 과대 → 거래비율·세후영업이익
+ * 동시 과소 → 세액 과소.
+ *
+ * ⚠️ 비율 미입력 시 0을 돌려준다(전액 제외가 아니다). 「자동 안분 fallback 금지」 정책상
+ *    실제 관문은 ⑧validate이며, 여기서 전액으로 되돌리면 그 정책이 무력해진다.
+ */
+function exclusionAmount(p: RcSalesPartner): number {
+  if (p.exclusionType !== "sec10_3") return p.salesAmount;
+  const r = p.beneficiaryStakeInPartner;
+  if (!r || r.denom <= 0) return 0;
+  return safeMultiplyThenDivide(p.salesAmount, r.numer, r.denom);
+}
+
+/**
  * §⑩ 공통 과세제외매출액.
  * 규칙1: 동일 법인이 ⑩호 복수 동시해당 → max 금액만 (§⑩ 후단).
  * 규칙2: 서로 다른 법인 간 합산.
@@ -126,7 +148,9 @@ export function computeCommonExclusion(salesPartners: RcSalesPartner[]): number 
   const byPartner = new Map<string, number>();
   for (const p of salesPartners) {
     if (!p.isRelated || p.exclusionType == null) continue;
-    byPartner.set(p.id, Math.max(byPartner.get(p.id) ?? 0, p.salesAmount));
+    // ⚠️ 「더 큰 금액」 비교는 **축소한 뒤**의 금액으로 해야 한다 — 3호를 전액으로 넣으면
+    //    max 비교 자체가 틀린다(3호가 2호를 이기는 일이 생긴다).
+    byPartner.set(p.id, Math.max(byPartner.get(p.id) ?? 0, exclusionAmount(p)));
   }
   let total = 0;
   for (const amount of byPartner.values()) total += amount;

@@ -172,6 +172,8 @@ export interface RcSalesRow {
   salesAmountStr: string;
   isRelated: boolean;
   exclusionType: RcExclusionTypeStr;
+  /** §⑩3호 전용 — 수혜법인의 «이 매출처»에 대한 주식보유비율(%) */
+  beneficiaryStakePctStr: string;
   rulingStakes: RcRulingStakeRow[];
 }
 
@@ -185,7 +187,7 @@ export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
 }
 
 export function makeRcSalesRow(id: string): RcSalesRow {
-  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", rulingStakes: [] };
+  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", beneficiaryStakePctStr: "", rulingStakes: [] };
 }
 
 /**

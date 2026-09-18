@@ -195,7 +195,7 @@ export interface RcIntermediaryCorpItem {
 export type RcExclusionType =
   | "sec10_1"   // ⑩1호: 중소-중소
   | "sec10_2"   // ⑩2호: 수혜법인 50%↑ 출자 특수관계법인
-  | "sec10_3"   // ⑩3호: 수혜법인 50%미만 출자 × 주식보유비율 (본 사례 미적용)
+  | "sec10_3"   // ⑩3호: 수혜법인 50%미만 출자 × 주식보유비율 (W8 이후 구현 — `beneficiaryStakeInPartner` 필수)
   | "sec10_4"   // ⑩4호: 지주회사-자회사·손자회사
   | "sec10_5"   // ⑩5호: 수출목적
   | "sec10_5_2" // ⑩5의2호: 국외용역

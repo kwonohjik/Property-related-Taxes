@@ -326,6 +326,11 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         // 종전에는 게이트 없이 그대로 보내, 특수관계를 껐다 켜며 남은 **화면에 없는 값**이
         // 엔진까지 도달했다(⑧validate도 같은 술어로 건너뛰어 차단되지 않았다).
         exclusionType: row.isRelated ? row.exclusionType || undefined : undefined,
+        // §⑩3호를 고른 행에서만 의미가 있다(다른 호는 전액 제외라 곱할 비율이 없다).
+        beneficiaryStakeInPartner:
+          row.isRelated && row.exclusionType === "sec10_3"
+            ? parseRatio(row.beneficiaryStakePctStr)
+            : undefined,
         rulingShareholderStakes:
           row.isRelated && !row.exclusionType && row.rulingStakes.length > 0
             ? row.rulingStakes.map((s) => ({

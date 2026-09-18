@@ -535,6 +535,16 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         // §⑭3호 보유비율 블록의 렌더 게이트와 같은 술어(related-corp-form.tsx:346).
         // 특수관계를 끄거나 과세제외유형을 고르면 블록이 언마운트되는데 종전엔 무조건 순회해
         // «화면에 없는 칸»으로 차단했다. 엔진도 같은 술어로 건너뛴다(lib/tax-engine/gift-deemed/related-corp.ts:145).
+        // §⑩3호만 「× 수혜법인의 주식보유비율」로 축소된다 — 비율 미입력은 차단한다.
+        // (자동 안분 fallback 금지: 엔진은 미입력 시 제외액 0을 돌려주므로 여기가 실제 관문이다)
+        if (row.isRelated && row.exclusionType === "sec10_3") {
+          const pct = parseDecimal(row.beneficiaryStakePctStr);
+          if (pct <= 0)
+            return `${n}번째 매출처의 「수혜법인의 이 매출처 주식보유비율」을 입력하세요 (상증령 §34의3⑩3호)`;
+          // 3호는 「100분의 50 미만」, 2호는 「100분의 50 이상」 — 비율로 호가 갈린다.
+          if (pct >= 50)
+            return `${n}번째 매출처는 보유비율이 50% 이상입니다 — 상증령 §34의3⑩3호는 「100분의 50 미만」인 경우이므로 ⑩2호(전액 제외)를 선택하세요`;
+        }
         if (row.isRelated && !row.exclusionType) {
           for (const [j, stake] of row.rulingStakes.entries()) {
             if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;

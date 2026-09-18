@@ -368,7 +368,7 @@ export interface RcIntermediaryCorpItem {
 export type RcExclusionType =
   | "sec10_1" // 중소-중소
   | "sec10_2" // 수혜법인 50%↑ 출자 특수관계법인
-  | "sec10_3" // 수혜법인 50%미만 출자 × 보유비율 (본 사례 미적용)
+  | "sec10_3" // 수혜법인 50%미만 출자 × 보유비율 → `beneficiaryStakeInPartner` 필수
   | "sec10_4" // 지주회사-자회사·손자회사
   | "sec10_5" // 수출목적
   | "sec10_5_2" // 국외용역
@@ -387,6 +387,15 @@ export interface RcSalesPartner {
   isRelated: boolean;
   /** §⑩ 과세제외유형. 없으면 undefined */
   exclusionType?: RcExclusionType;
+  /**
+   * §⑩**3호 전용** — 「수혜법인이 본인의 주식보유비율이 100분의 50 **미만**인 특수관계법인과
+   * 거래한 매출액에 **그 특수관계법인에 대한 수혜법인의 주식보유비율을 곱한 금액**」.
+   *
+   * 즉 «수혜법인 → 이 매출처» 방향의 지분율이다. 아래 `rulingShareholderStakes`(§⑭3호의
+   * «지배주주등 → 이 매출처» 보유비율)와 **방향도 조문도 다르다** — 돌려쓰면 조용히 틀린다.
+   * 3호 이외의 호는 매출액 전액이 제외되므로 이 필드를 쓰지 않는다(2호와 대비되는 지점).
+   */
+  beneficiaryStakeInPartner?: { numer: number; denom: number };
   /** §⑭3호: 수증자별 이 법인에 대한 보유비율 (⑩ 미해당 시 적용). 없으면 미적용 */
   rulingShareholderStakes?: {
     shareholderId: string; // RcShareholder.id 매칭 키

@@ -353,6 +353,19 @@ export function RelatedCorpFields({ form, set }: Props) {
                 </select>
               </FieldCard>
             )}
+            {row.isRelated && row.exclusionType === "sec10_3" && (
+              <FieldCard
+                label="수혜법인의 이 매출처 주식보유비율 (%)"
+                hint="§34의3⑩3호 — 이 매출처와 거래한 매출액에 그 비율을 곱한 금액만 과세제외됩니다 (50% 이상이면 ⑩2호)"
+              >
+                <DecimalInput
+                  value={row.beneficiaryStakePctStr}
+                  onChange={(v) => updSales(idx, { ...row, beneficiaryStakePctStr: v })}
+                  placeholder="수혜법인 보유비율"
+                  data-testid={`rc-sales-benef-stake-${idx}`}
+                />
+              </FieldCard>
+            )}
             {row.isRelated && row.exclusionType === "" && (
               <div className="rounded border border-violet-100 bg-violet-50/60 p-2">
                 <p className="text-caption font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>

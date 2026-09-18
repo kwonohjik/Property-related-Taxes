@@ -38,7 +38,8 @@ function partners(f: DeemedFormState) {
 }
 
 const D: SalesRow = {
-  id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true, exclusionType: "", rulingStakes: [],
+  id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true,
+  exclusionType: "", beneficiaryStakePctStr: "", rulingStakes: [],
 } as SalesRow;
 
 describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
@@ -82,5 +83,45 @@ describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
     expect(validateDeemedInput(f)).toBeNull();
     const parsed = deemedGiftInputSchema.safeParse(JSON.parse(JSON.stringify(buildDeemedGiftInput(f))));
     expect(parsed.success).toBe(true);
+  });
+});
+
+describe("§⑩3호 보유비율 — ⑤ 게이트 ↔ ⑧ 차단 ↔ ④ 전송 ↔ ⑭ 엔진", () => {
+  const sec3 = (pct: string): SalesRow =>
+    ({ ...D, id: "A", name: "A법인", salesAmountStr: "6000000000", isRelated: true,
+       exclusionType: "sec10_3", beneficiaryStakePctStr: pct } as SalesRow);
+
+  it("[PB-0] ⑩3호를 고르고 비율을 비우면 ⑧가 차단한다 (자동 안분 fallback 금지)", () => {
+    const msg = validateDeemedInput(form([D, sec3("")]));
+    expect(msg).toContain("수혜법인의 이 매출처 주식보유비율");
+    expect(msg).toContain("§34의3⑩3호");
+  });
+
+  it("[PB-0b] 긍정 짝 — 비율을 넣으면 통과한다", () => {
+    expect(validateDeemedInput(form([D, sec3("30")]))).toBeNull();
+  });
+
+  it("[PB-1] 50% 이상이면 ⑩3호가 아니라 ⑩2호다 — 차단하고 호를 안내한다", () => {
+    const msg = validateDeemedInput(form([D, sec3("50")]));
+    expect(msg).toContain("100분의 50 미만");
+    expect(msg).toContain("⑩2호");
+  });
+
+  it("[PB-1b] 경계 — 49.99%는 「50 미만」이라 통과한다", () => {
+    expect(validateDeemedInput(form([D, sec3("49.99")]))).toBeNull();
+  });
+
+  it("[PB-2] ④는 ⑩3호 행에서만 보유비율을 보낸다", () => {
+    const other = { ...sec3("30"), exclusionType: "sec10_2" } as SalesRow;
+    const out = partners(form([D, other]));
+    expect(out[1]!.beneficiaryStakeInPartner).toBeUndefined();
+  });
+
+  it("[PB-3] ④→⑫→⑭ 전 경로 도달 — 폼의 30%가 엔진 과세제외액에 반영된다", () => {
+    const f = form([D, sec3("30")]);
+    const parsed = deemedGiftInputSchema.safeParse(JSON.parse(JSON.stringify(buildDeemedGiftInput(f))));
+    expect(parsed.success).toBe(true);
+    const sent = partners(f)[1]!.beneficiaryStakeInPartner as { numer: number; denom: number };
+    expect(sent).toEqual({ numer: 3000, denom: 10_000 });
   });
 });
