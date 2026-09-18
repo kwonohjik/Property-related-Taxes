@@ -172,10 +172,20 @@ export function DeemedGiftResultView({
               )
             </span>
           </p>
-          <p className="mt-1 text-caption text-muted-foreground">
-            비율·한도 상수는 <b>현행 법령</b> 기준으로 계산했습니다. 기준일이 과거이면 당시
-            규정이 달랐을 수 있으므로 시행 당시 조문을 확인하십시오.
-          </p>
+          {/* ⚠️ 유형별로 갈라 적는다 — §45의5는 시점 분기가 «있고» §45의3은 아직 «없다».
+                 한 문장으로 뭉뚱그리면 둘 중 하나는 반드시 틀린 고지가 된다. */}
+          {result.type === "specific_corp" ? (
+            <p className="mt-1 text-caption text-muted-foreground">
+              이 기준일에 시행 중이던 상증령 §34의5⑨에 따라 §45의5② 한도를 계산했습니다
+              (2022-02-15 전 거래는 증여의제이익 기준, 이후는 거래이익 기준). 2020-02-11 전 거래는
+              구 체계라 이 화면이 계산하지 않습니다.
+            </p>
+          ) : (
+            <p className="mt-1 text-caption text-muted-foreground">
+              비율 상수는 <b>현행 법령</b> 기준으로 계산했습니다. 기준일이 과거이면 당시 규정이
+              달랐을 수 있으므로 시행 당시 조문을 확인하십시오.
+            </p>
+          )}
         </div>
       )}
 

@@ -219,6 +219,27 @@ interface SpecificCorpMultiResult {
 
 > **법인세 안분 분자 상한**: §34의5④2호나목 "min(거래이익/소득금액, 1)" → `min(transactionBenefit, annualIncome)`를 분자로 사용해 비율 1 초과 차단. 사례2: min(30억,40억)=30억 → 780백만×30억/40억=585백만 ✓.
 
+### 행위시법 (specific-corp-era.ts) — 거래일 시점의 법령으로 계산한다
+
+§45의5①이 「**거래한 날**을 증여일로 하여」로 증여시기를 고정하므로 그 날 시행 중이던 법령이 적용된다.
+전건 KoreanLaw MCP 원문 확인:
+
+| 거래일(증여일) | 법 §45의5 | 영 §34의5⑨ ㉠ base | 앱 |
+|---|---|---|---|
+| ~2019-12-31 | 구 체계(결손·휴폐업·지배주주등 50%↑ 3분류) · **②에 한도 없음** | (⑨ 자체가 없다) | **차단** |
+| 2020-01-01~02-10 | 현행 ①② 시행(법률 제16846호) | 위임 시행령 **미시행** | **차단** |
+| 2020-02-11~2022-02-14 | 현행 ①② | **net** — 「같은 항에 따른 **증여의제이익을** 해당 주주가 직접 증여받은 것으로 볼 때의 증여세」 | 분기 |
+| 2022-02-15~ | 현행 ①② | **gross** — 「**제4항제1호의 금액에** … 주식보유비율을 곱한 금액을 …」(대통령령 제32414호) | 현행 |
+
+- **차단이 정본인 이유**: 구 체계 구간은 과세요건(3분류)부터 달라, 현행 30% 요건으로 계산하면
+  구법상 비대상 법인에 **없는 세금을 만든다**(예: 지배주주 40% · 결손 없음 · 정상영업).
+  「법 근거 없이 불리하게 적용하지 않는다」 ⇒ 계산하지 않는다. 위임 시행령 부재 구간도 산식이
+  법정돼 있지 않아 같다. ⑧validate가 먼저 막고 엔진 게이트가 같은 술어로 이중 방어한다.
+- **net 구간의 성질**: ㉠의 base가 ㉮와 같아지므로 ㉠ = ㉮가 되고 ㉯ = ㉮ − ㉡ ⇒
+  **법인세 상당액이 0이 아니면 항상 한도가 걸린다**. gross로 계산해 두면 그만큼 과대(납세자 불리).
+  실측(거래이익 30억·소득 50억·산출세액 5억·갑 30%·을 20%): 45,000,000원 과대였다.
+- 거래일 미전달은 현행(gross)·차단 없음 — 무회귀 안전판. anchor `[R-0]~[R-13]`.
+
 ### §45의5② 한도 (calcSpecificCorpLimit — 과세 주주별)
 
 > **single·roster 공용 leaf다.** 조문(법 §45의5② · 영 §34의5⑨)에는 입력 모드 축이 없다. 종전에는
@@ -242,8 +263,9 @@ interface SpecificCorpMultiResult {
 ```
 taxBase(x)     = x < 500,000 ? 0 : x                // §55② 과세최저한 — 천원절사는 §55에 없다(종전 truncateToThousand 제거)
 ㉮ computedTax  = calcInheritanceGiftTax(taxBase(max(0, gain − giftDeduction)))
-㉠ directGiftTax= calcInheritanceGiftTax(taxBase(max(0,
-                    거래이익(차감 前) × 주식보유비율 − giftDeduction)))
+㉠ directGiftTax= calcInheritanceGiftTax(taxBase(max(0, ㉠base − giftDeduction)))
+   ㉠base       = limitBasis === "net" ? gain(=증여의제이익)        // ~2022-02-14
+                                       : 거래이익(차감 前) × 주식보유비율  // 2022-02-15~
 ㉡ corpTaxShare = safeMultiplyThenDivide(corpTaxApportioned, shares, totalShares)
 ㉯ limitAmount  = max(0, ㉠ − ㉡)
 finalTax       = min(㉮, ㉯)
@@ -263,7 +285,8 @@ selfPayTax     = finalTax − filingCredit
 
 ## 7. 파일 구조 / 함수
 ```
-lib/tax-engine/gift-deemed/specific-corp.ts   (38 → ~400줄, <800)
+lib/tax-engine/gift-deemed/specific-corp-era.ts — 행위시법 경계 상수·판정(차단 사유·limitBasis)
+lib/tax-engine/gift-deemed/specific-corp.ts   (38 → ~650줄, <800)
   · calcSpecificCorpGift(input)        — 기존 single, 하위호환 유지
   · calcSpecificCorpGiftMulti(input)   — 신규 roster
   · calcSpecificCorpLimit(...)         — §45의5② 내부 헬퍼

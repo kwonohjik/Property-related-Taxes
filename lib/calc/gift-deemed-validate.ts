@@ -4,6 +4,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
+import { resolveScEraExclusion } from "@/lib/tax-engine/gift-deemed/specific-corp-era";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
 
 /**
@@ -378,6 +379,10 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
     case "specific_corp": {
+      // 행위시법 — 이 화면이 계산할 수 없는 시점이면 여기서 막는다(엔진도 같은 술어로 막지만,
+      //   ⑧이 먼저 잡아야 사용자가 「계산은 됐는데 0원」이 아니라 이유를 바로 본다).
+      const eraErr = resolveScEraExclusion(form.giftDate || undefined);
+      if (eraErr) return eraErr;
       // 법 §45의5①은 거래상대방을 과세요건으로 못박는다 — 미선택을 통과시키면 제3자와의 거래도 과세된다
       if (form.scCounterparty === "") return "거래상대방을 선택하세요 (§45의5①)";
       const priorErr = validateScPriorTransactions(form);

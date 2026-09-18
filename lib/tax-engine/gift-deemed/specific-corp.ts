@@ -3,6 +3,11 @@ import { GIFT } from "../legal-codes";
 import { addYears, format, parseISO } from "date-fns";
 import { applyRate, applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import { resolveFilingCreditRate } from "../credits/filing-credit";
+import {
+  resolveScEraExclusion,
+  resolveScLimitBasis,
+  type ScLimitBasis,
+} from "./specific-corp-era";
 import { TAX_BASE_MIN } from "../gift-tax-helpers";
 import { computeIndirectRatioBig } from "./related-corp-helpers";
 import { calcGenerationSkipSurcharge, calcInheritanceGiftTax } from "../inheritance-gift-common";
@@ -121,6 +126,14 @@ function aggregatePriorTransactions(
 export function evaluateScTransaction(input: SpecificCorpInput): ScTransactionGate {
   const transactionType: ScTransactionType = input.transactionType ?? "gratuitous";
   const isCapital = transactionType === "capital_transaction";
+
+  // ── 행위시법 — 이 화면이 계산할 수 있는 시점인지 먼저 본다 (specific-corp-era.ts) ──
+  // 구 체계 구간은 과세요건(결손·휴폐업·50%)부터 다르므로 «요건 판정보다 앞》이어야 한다.
+  // 현행 30% 요건으로 계산하면 구법상 비대상 법인에 없는 세금을 만든다(납세자 불리).
+  const eraExclusion = resolveScEraExclusion(input.transactionDate);
+  if (eraExclusion) {
+    return { benefit: 0, counterpartyMet: "unknown", transactionType, exclusionReason: eraExclusion };
+  }
 
   // ── 거래상대방 ──
   const allowed: ScCounterparty[] = isCapital
@@ -389,6 +402,7 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
         corpTaxApportioned: corporateTax,
         giftDeduction: input.giftDeduction ?? 0,
         referenceDate: input.transactionDate,
+        limitBasis: resolveScLimitBasis(input.transactionDate),
       })
     : undefined;
 
@@ -498,6 +512,7 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       isGenerationSkip: sh.isGenerationSkip ?? false,
       isMinorDonee: sh.donorRelation === "lineal_ascendant_minor",
       referenceDate: input.transactionDate,
+      limitBasis: resolveScLimitBasis(input.transactionDate),
     });
     return { ...base, isTaxable: true, limitCalc };
   });
@@ -571,6 +586,12 @@ function calcSpecificCorpLimit(p: {
   isMinorDonee?: boolean;
   /** §69 공제율 기준일 = 거래한 날(§45의5① 증여일). 미전달이면 현행 3%(무회귀 안전판) */
   referenceDate?: string;
+  /**
+   * 영 §34의5⑨ 증여세 상당액(㉠)의 base — 거래일 시점 문언에 따른다(`specific-corp-era.ts`).
+   * `"gross"`(2022-02-15~): ④1호 금액(법인세 차감 前) × 보유비율
+   * `"net"`(~2022-02-14): 증여의제이익(법인세 차감 後) — ㉠가 ㉮와 같아진다
+   */
+  limitBasis?: ScLimitBasis;
 }): SpecificCorpLimitCalc {
   // §57 할증은 ㉮(일반 산출세액)와 ㉠(직접증여 가정 증여세) **양쪽**에 붙는다 —
   // 영 §34의5⑨이 ㉠를 「직접 증여받은 것으로 볼 때의 **증여세**」로 정의하므로 §57이 포함된다.
@@ -593,7 +614,12 @@ function calcSpecificCorpLimit(p: {
   };
   const computed = taxed(p.gain - p.giftDeduction);
   const computedTax = computed.total;
-  const directGiftBase = applyFrac(p.transactionBenefit, p.ratio); // 거래이익(차감 前)×보유비율
+  // 영 §34의5⑨ — 「증여세 상당액」의 base가 거래일 시점에 따라 다르다(specific-corp-era.ts).
+  //   gross(2022-02-15~): 「제4항제1호의 금액에 … 주식보유비율을 곱한 금액」 = 법인세 차감 前
+  //   net (~2022-02-14) : 「같은 항에 따른 증여의제이익」                     = 법인세 차감 後
+  const limitBasis: ScLimitBasis = p.limitBasis ?? "gross";
+  const directGiftBase =
+    limitBasis === "net" ? p.gain : applyFrac(p.transactionBenefit, p.ratio);
   const directGiftTax = taxed(directGiftBase - p.giftDeduction).total;
   const corpTaxShare = applyFrac(p.corpTaxApportioned, p.ratio);
   const limitAmount = Math.max(0, directGiftTax - corpTaxShare);
@@ -616,6 +642,7 @@ function calcSpecificCorpLimit(p: {
     finalTax,
     filingCredit,
     filingCreditRate,
+    limitBasis,
     selfPayTax,
     giftDeductionApplied: p.giftDeduction,
     generationSkipSurcharge: computed.surcharge,

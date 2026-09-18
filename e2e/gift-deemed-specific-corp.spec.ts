@@ -526,6 +526,39 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(banner).toContainText("상증법 §45의5①");
   });
 
+  test("행위시법 — 2021년 거래는 net 기준(93,000,000), 2019년 거래는 차단", async ({ page }) => {
+    const fill = async (y: string, m: string, d: string) => {
+      await page.goto("/calc/gift-deemed");
+      await openDetail(page);
+      const dialog = page.getByTestId("deemed-detail-dialog");
+      await dialog.getByLabel("연도").fill(y);
+      await dialog.getByLabel("월").fill(m);
+      await dialog.getByLabel("일", { exact: true }).fill(d);
+      await dialog.getByTestId("sc-cp-ruling").click();
+      await dialog.getByTestId("sc-transaction-benefit").fill("3000000000");
+      await dialog.getByTestId("sc-corp-tax-auto").click();
+      await dialog.getByTestId("sc-corp-tax-assessed").fill("500000000");
+      await dialog.getByTestId("sc-corp-tax-deduction").fill("0");
+      await dialog.getByTestId("sc-corp-income").fill("5000000000");
+      await dialog.getByTestId("sc-shareholder-ratio").fill("30");
+      await dialog.getByTestId("sc-group-ratio").fill("50");
+      await closeDetail(page);
+    };
+
+    // 2021-06-01 — 영 §34의5⑨ net 본(대통령령 제32414호 시행 前)
+    await fill("2021", "6", "1");
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("sc-limit-final-tax")).toContainText("93,000,000", { timeout: 15000 });
+    await expect(page.getByTestId("sc-single-limit")).toContainText("증여의제이익을 직접 증여한 것으로 가정");
+
+    // 2019-06-30 — 구 체계(3분류·한도 없음)는 미구현이므로 ⑧이 차단한다.
+    //   ⑧은 「계산」에서 돌고, 실패하면 모달이 다시 열리며 사유를 보여준다(detail-modal spec와 같은 흐름).
+    await fill("2019", "6", "30");
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
+    await expect(page.getByTestId("deemed-detail-error")).toContainText("구 §45의5");
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

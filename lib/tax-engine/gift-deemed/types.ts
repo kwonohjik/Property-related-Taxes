@@ -225,6 +225,11 @@ export interface SpecificCorpLimitCalc {
    * 이 화면은 3%인데 이관된 증여세 마법사는 5%를 쓰는 어긋남이 났다.
    */
   filingCreditRate: number;
+  /**
+   * 영 §34의5⑨ ㉠ base 기준 — 거래일 시점 문언(`specific-corp-era.ts`).
+   * "net"(~2022-02-14) = 증여의제이익 / "gross"(2022-02-15~) = 거래이익 × 보유비율.
+   */
+  limitBasis: import("./specific-corp-era").ScLimitBasis;
   selfPayTax: number; // finalTax − filingCredit
   /** 이 수증자에게 실제 적용한 §53 증여재산공제액 (행 단위 donorRelation → 한도, 없으면 단일 입력값) */
   giftDeductionApplied: number;

@@ -52,7 +52,10 @@ export function ScLimitTable({ limitCalc }: { limitCalc: SpecificCorpLimitCalc |
             </tr>
             <tr className="border-t border-violet-100">
               <td className="py-1.5 pr-2 text-muted-foreground">
-                ㉠ 직접증여 가정 산출세액 (법인세 차감 전 거래이익을 직접 증여한 것으로 가정)
+                {/* 영 §34의5⑨의 base가 거래일 시점에 따라 다르다 — 라벨에 박으면 stale해진다 */}
+                {limitCalc.limitBasis === "net"
+                  ? "㉠ 직접증여 가정 산출세액 (증여의제이익을 직접 증여한 것으로 가정 — 2022-02-15 전 거래)"
+                  : "㉠ 직접증여 가정 산출세액 (법인세 차감 전 거래이익을 직접 증여한 것으로 가정)"}
               </td>
               <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(limitCalc.directGiftTax)}

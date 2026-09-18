@@ -193,12 +193,18 @@ describe("§69 신고세액공제율 — 연도별 단일 소스 (상수 하드�
     expect(l?.filingCredit).toBe(Math.floor((l!.finalTax * 3) / 100));
   });
 
-  it("[A-8] 2018년 거래는 5%, 2017년은 7% — 종전에는 전부 3%였다", () => {
-    expect(rate("2018-06-01")?.filingCreditRate).toBe(0.05);
-    expect(rate("2017-06-01")?.filingCreditRate).toBe(0.07);
-    expect(rate("2016-12-31")?.filingCreditRate).toBe(0.1);
-    // 5%면 공제액도 달라진다(구별력)
-    expect(rate("2018-06-01")!.filingCredit).toBeGreaterThan(rate("2026-03-02")!.filingCredit);
+  it("[A-8] 도달 가능한 거래일 구간은 전부 3%다 — 이 축의 «현재» 구별력은 0이다", () => {
+    // ⚠️ 정직하게 적는다: §45의5는 2020-02-11 전 거래를 «차단»하므로(specific-corp-era.ts),
+    //    3% 외의 공제율(5%·7%·10%)에 도달하는 거래일이 이 조문에는 없다.
+    //    ⇒ `resolveFilingCreditRate` 연결은 지금 세액을 바꾸지 않는다. 그래도 되돌리지 않는 이유:
+    //      ① 연도별 표가 개정되면 자동 추종한다(상수 복제 금지)
+    //      ② 결과뷰 라벨이 이 echo를 쓰므로 「엔진 3% ↔ 라벨 3%」 stale 쌍이 애초에 생기지 않는다
+    //      ③ 구 체계를 구현하면 그때 바로 동작한다
+    //    「구별력 0」을 「분기가 맞다」로 읽지 않기 위해 이 사실 자체를 anchor로 고정한다.
+    expect(rate("2020-02-11")?.filingCreditRate).toBe(0.03); // 계산 가능한 가장 이른 거래일
+    for (const d of ["2018-06-01", "2017-06-01", "2016-12-31"]) {
+      expect(rate(d)).toBeUndefined(); // 차단되어 한도 자체가 산출되지 않는다
+    }
   });
 
   it("[A-9] 거래일 미전달은 현행 3% — 무회귀 안전판", () => {
