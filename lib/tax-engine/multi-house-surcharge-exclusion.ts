@@ -30,7 +30,8 @@ import type {
 } from "./types/multi-house-surcharge.types";
 import {
   calcRentalPeriodYears,
-  isLongTermRentalHousingExempt,
+  isSurchargeExemptRental,
+  isSurchargeExemptInherited,
   getRentalTypeLabel,
   isTaxIncentiveRentalHousingExempt,
   isSmallNewHouseSpecial,
@@ -45,14 +46,13 @@ export function isGroupExcludable(house: HouseInfo, transferDate: Date): boolean
     const price = house.transferOfficialPrice ?? house.officialPrice;
     if (price <= 300_000_000) return true;
   }
-  if (isLongTermRentalHousingExempt(house, transferDate)) return true;
+  // ②·⑦은 D16부터 주택 수에서 빠지지 않고 여기에 도달한다 — 양도 주택 자체 배제와 같은 술어.
+  if (isSurchargeExemptRental(house, transferDate)) return true;
   if (isTaxIncentiveRentalHousingExempt(house)) return true;
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return true;
   if (house.isTaxSpecialExemption) return true;
   if (house.isCulturalHeritage) return true;
-  if (house.isInherited && house.inheritedDate) {
-    if (differenceInYears(transferDate, house.inheritedDate) < 5) return true;
-  }
+  if (isSurchargeExemptInherited(house, transferDate)) return true;
   if (house.isMortgageExecution) {
     if (differenceInYears(transferDate, house.acquisitionDate) < 3) return true;
   }
@@ -65,16 +65,16 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
     const price = house.transferOfficialPrice ?? house.officialPrice;
     if (price <= 300_000_000) return "① 지방 저가주택 (3억 이하)";
   }
-  if (isLongTermRentalHousingExempt(house, transferDate)) {
-    return `② 장기임대주택 (${getRentalTypeLabel(house.rentalType)})`;
+  if (isSurchargeExemptRental(house, transferDate)) {
+    return house.rentalType
+      ? `② 장기임대주택 (${getRentalTypeLabel(house.rentalType)})`
+      : "② 장기임대 등록주택 (말소 전)";
   }
   if (isTaxIncentiveRentalHousingExempt(house)) return "③ 조특법 감면 임대주택";
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return "④ 사원용 주택 (10년 이상)";
   if (house.isTaxSpecialExemption) return "⑤ 조특법 특례";
   if (house.isCulturalHeritage) return "⑥ 문화재";
-  if (house.isInherited && house.inheritedDate) {
-    if (differenceInYears(transferDate, house.inheritedDate) < 5) return "⑦ 상속주택 (5년 이내)";
-  }
+  if (isSurchargeExemptInherited(house, transferDate)) return "⑦ 상속주택 (5년 이내 · §155②)";
   if (house.isMortgageExecution) {
     if (differenceInYears(transferDate, house.acquisitionDate) < 3) return "⑧ 저당권 실행 (3년 이내)";
   }
@@ -325,8 +325,28 @@ export function determineSurchargeExclusion(
   //                어느 하나에 해당하는 주택」 — **준용**
   // ⚠️ 2026-07-31 정정(계획서 F-7): 종전에는 `>= 3` 게이트라 **2주택에서 하나도 적용되지 않았다.**
   //    3주택이면 배제되는데 2주택이면 중과되는 역전이었고 과다과세 방향이었다.
-  //    (2호 장기임대·7호 상속 5년은 `countEffectiveHouses`가 주택 수에서 빼므로 여기 없다.)
+  //    2호 장기임대·7호 상속 5년도 D16(2026-09-18)부터 여기서 판정한다 — 종전에는 주택 수에서
+  //    빼는 바람에 양도 주택 자체가 상속 5년이면 그 주택을 뺀 나머지로 중과했다(과다).
   if (effectiveHouseCount >= 2 && sellingHouse) {
+    const selfBasis = (threeHouse: string) =>
+      effectiveHouseCount >= 3 ? threeHouse : MULTI_HOUSE.TWO_HOUSE_167_3_REFERENCE_BASIS;
+
+    if (isSurchargeExemptInherited(sellingHouse, input.transferDate)) {
+      exclusionReasons.push({
+        type: "inherited_house_5years",
+        detail: `§155②에 해당하는 상속주택 — 상속개시일(${sellingHouse.inheritedDate!.toISOString().slice(0, 10)})부터 5년 이내 양도 (${selfBasis(MULTI_HOUSE.INHERITED_5Y_EXCLUSION_BASIS)})`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
+
+    if (isSurchargeExemptRental(sellingHouse, input.transferDate)) {
+      exclusionReasons.push({
+        type: "long_term_rental_house",
+        detail: `장기임대주택 양도 (${selfBasis(MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS)})`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
+
     if (sellingHouse.isMortgageExecution) {
       const yearsHeld = differenceInYears(input.transferDate, sellingHouse.acquisitionDate);
       if (yearsHeld < 3) {
@@ -433,6 +453,21 @@ export function determineSurchargeExclusion(
         ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`
         : `소송 진행 중인 주택 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`;
       exclusionReasons.push({ type: "litigation_housing_two_house", detail });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
+
+    // §167의10①10호 — 「제1호부터 제7호까지의 규정에 해당하는 주택을 제외하고 1개의 주택만을
+    //   소유하고 있는 경우 그 해당 주택」. 「제1호부터 제7호」는 §167의10① **자신의** 호다(V-1) —
+    //   2호가 §167의3①2호~8호·8호의2(장기임대·감면임대·사원용·조특법·국가유산·상속 5년·저당권·
+    //   어린이집)를 준용한다. 3호(부득이)·4호(§155⑧)·7호(소송)는 위에서 따로 본다.
+    //   종전에는 7호·2호를 주택 수에서 빼 1주택으로 만들었고, 사원용 등 나머지 2호 주택은 이 호가
+    //   없어 +20%p 중과였다(D16).
+    const otherIsExcludable = otherEffectiveHouses.find((h) => isGroupExcludable(h, input.transferDate));
+    if (otherEffectiveHouses.length === 1 && otherIsExcludable) {
+      exclusionReasons.push({
+        type: "only_general_two_house",
+        detail: `다른 주택이 ${getGroupExcludeReason(otherIsExcludable, input.transferDate)}에 해당 — 그 주택을 제외하고 1주택만 소유 (${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL})`,
+      });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 

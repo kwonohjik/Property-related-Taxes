@@ -2,7 +2,12 @@
  * 장기임대 9유형(가~자목) 매트릭스 — 대표 유형 anchor + 필드 누락 회귀
  *
  * rentalType 설정 시 엔진(isLongTermRentalHousingExempt)이 유형별 정밀검사 수행.
- * 요건 충족 → long_term_rental 배제 / 필수 필드 누락 → 미배제(주택 수 산입) 검증.
+ * 요건 충족 → 중과 배제 / 필수 필드 누락 → 중과 검증.
+ *
+ * ⚠️ D16(2026-09-18): 장기임대(§167의3①2호)는 **주택 수에 산입**되고 중과 대상에서만 빠진다.
+ *    이 2주택 구성(양도 h1 + 임대 h2)에서 요건을 충족하면 §167의10①10호(다른 주택이 2호 주택)로
+ *    양도 주택이 배제된다 — 관측점을 `excludedHouses`(주택 수)에서 `only_general_two_house`로 옮겼다.
+ *    미충족 쪽도 같은 관측점으로 바꾼다(주택 수 단언은 이제 항상 참이라 구별력이 없다).
  */
 
 import { describe, it, expect } from "vitest";
@@ -18,7 +23,7 @@ import {
 
 const SELLING = "11680";
 
-/** 양도주택(h1) + 임대주택(h2) 입력 — h2가 배제되면 effectiveHouseCount=1 */
+/** 양도주택(h1) + 임대주택(h2) 입력 — h2가 2호 주택이면 §167의10①10호로 h1 중과 배제 */
 function inputWith(h2Overrides: Parameters<typeof makeHouse>[1], transferDate = new Date("2024-06-01")) {
   const h1 = makeHouse("h1", { regionCode: SELLING });
   const h2 = makeHouse("h2", { isLongTermRental: true, ...h2Overrides });
@@ -28,6 +33,10 @@ function inputWith(h2Overrides: Parameters<typeof makeHouse>[1], transferDate = 
 function run(input: ReturnType<typeof inputWith>) {
   return determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
 }
+
+/** h2(임대)가 §167의3①2호 주택으로 인정돼 10호 배제가 섰는가 */
+const rentalExcluded = (r: ReturnType<typeof run>) =>
+  r.exclusionReasons.some((e) => e.type === "only_general_two_house") && !r.surchargeApplicable;
 
 describe("RT-E 마목: 장기일반 매입임대 10년(2020.8.18 이전 등록 8년)", () => {
   const qualifying = {
@@ -40,15 +49,15 @@ describe("RT-E 마목: 장기일반 매입임대 10년(2020.8.18 이전 등록 8
     rentIncreaseUnder5Pct: true,
   };
 
-  it("요건 충족 → long_term_rental 배제 (effectiveHouseCount 1)", () => {
+  it("요건 충족 → 산입(2) + §167의10①10호 중과 배제", () => {
     const r = run(inputWith(qualifying));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
-    expect(r.effectiveHouseCount).toBe(1);
+    expect(rentalExcluded(r)).toBe(true);
+    expect(r.effectiveHouseCount).toBe(2); // D16 — 산입
   });
 
   it("5%룰 미충족(rentIncreaseUnder5Pct 누락) → 미배제 (effectiveHouseCount 2)", () => {
     const r = run(inputWith({ ...qualifying, rentIncreaseUnder5Pct: false }));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(r)).toBe(false);
     expect(r.effectiveHouseCount).toBe(2);
   });
 });
@@ -72,22 +81,22 @@ describe("RT-G 사목: 말소 게이트 + base 목 '해당 목의 다른 요건'
 
   it("말소 게이트 + base 마목 요건 충족 → 배제", () => {
     const r = run(inputWith(qualifying));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+    expect(rentalExcluded(r)).toBe(true);
   });
 
   it("의무기간 1/2 미충족 → 미배제", () => {
     const r = run(inputWith({ ...qualifying, hasHalfDutyPeriodMet: false }));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(r)).toBe(false);
   });
 
   it("base 마목 기준시가 초과(7억) → 미배제 (해당 목의 다른 요건 미충족)", () => {
     const r = run(inputWith({ ...qualifying, rentalStartOfficialPrice: 700_000_000 }));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(r)).toBe(false);
   });
 
   it("base 목 미선택 → 미배제 (SAMOK_BASE_REQUIRED)", () => {
     const r = run(inputWith({ ...qualifying, saMokBaseArticle: undefined }));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(r)).toBe(false);
   });
 
   it("F-S6: base=가 reg 2017 요건충족 → 배제 / reg 2019(2018.4.2 등록상한 초과) → 미배제", () => {
@@ -97,13 +106,13 @@ describe("RT-G 사목: 말소 게이트 + base 목 '해당 목의 다른 요건'
       businessRegistrationDate: new Date("2017-01-01"),
       rentalRegistrationDate: new Date("2017-01-01"),
     };
-    expect(run(inputWith(baseGa)).excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+    expect(rentalExcluded(run(inputWith(baseGa)))).toBe(true);
     const late = run(inputWith({
       ...baseGa,
       businessRegistrationDate: new Date("2019-01-01"),
       rentalRegistrationDate: new Date("2019-01-01"),
     }));
-    expect(late.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(late)).toBe(false);
   });
 });
 
@@ -122,12 +131,12 @@ describe("RT-H 아목: 단기 매입임대 6년(2025.6.4~, 아파트 제외)", (
 
   it("요건 충족 → 배제", () => {
     const r = run(inputWith(qualifying, td));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+    expect(rentalExcluded(r)).toBe(true);
   });
 
   it("아파트(isApartment=true)면 아목 미해당 → 미배제", () => {
     const r = run(inputWith({ ...qualifying, isApartment: true }, td));
-    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(rentalExcluded(r)).toBe(false);
   });
 });
 

@@ -60,6 +60,9 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   unavoidable_outside_capital: "수도권 밖 부득이한 사유 주택 (§155⑧)",
   low_price_two_house: "2주택 기준시가 1억 이하 소형",
   litigation_housing_two_house: "2주택 소송 취득·진행 중 주택",
+  inherited_house_5years: "상속주택 5년 이내 양도 (§155②)",
+  long_term_rental_house: "장기임대주택 양도",
+  only_general_two_house: "2주택 — 다른 주택이 중과배제 주택 (유일한 일반주택)",
 };
 
 export function MultiHouseSurchargeDetailCard({ detail }: Props) {

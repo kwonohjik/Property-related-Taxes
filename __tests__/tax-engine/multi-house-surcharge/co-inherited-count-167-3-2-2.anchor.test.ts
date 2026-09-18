@@ -78,14 +78,16 @@ describe("D-3 — 공동상속주택 중과 주택 수 (§167의3②2호)", () =
     expect(r.surchargeType).toBe("multi_house_2");
   });
 
-  it("상속 5년 이내면 종전 사유(inherited_5years)가 먼저 적용된다 (우선순위 회귀)", () => {
+  // D16(2026-09-18): 7호(상속 5년)는 더 이상 주택 수에서 빼지 않는다 — 소수지분(§167의3②2호)은
+  //   기간과 무관한 **주택 수** 규칙이라 5년 이내여도 이 사유로 빠진다(종전 「7호 우선」 계약 폐기).
+  it("상속 5년 이내 소수지분도 §167의3②2호로 주택 수에서 빠진다 (7호는 주택 수 규칙이 아니다)", () => {
     const r = judge({
       isInherited: true,
       inheritedDate: new Date("2024-01-01"), // 2026-06-01 기준 5년 미경과
       isCoInherited: true,
       isLargestCoInheritedShareholder: false,
     });
-    expect(r.excludedHouses[0].reason).toBe("inherited_5years");
+    expect(r.excludedHouses[0].reason).toBe("co_inherited_minor_share");
   });
 
   it("상속이 아닌 주택에 isCoInherited가 잘못 실려도 산입된다 (게이트 오작동 방지)", () => {

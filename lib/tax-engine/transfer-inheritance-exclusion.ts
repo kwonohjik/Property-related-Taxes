@@ -33,13 +33,16 @@ export interface InheritedHouseExclusionResult {
   rankingDisqualifiedCount: number;
 }
 
-/** 동거봉양 단서(§155② 단서) 게이트 — 별도세대이거나 동거봉양 합가 전 보유분이면 통과. */
-function passesHouseholdGate(h: HouseInfo): boolean {
+/**
+ * 동거봉양 단서(§155② 단서) 게이트 — 별도세대이거나 동거봉양 합가 전 보유분이면 통과.
+ * 중과 7호(「제155조제2항에 해당하는 상속받은 주택」)도 이 게이트를 쓴다 — 단일 소스(D16).
+ */
+export function passesHouseholdGate(h: HouseInfo): boolean {
   return h.decedentSameHouseholdAtInheritance !== true || h.parentalCareMergeInheritedHouse === true;
 }
 
-/** 순위(§155②1~4호) 게이트 — 순위 부적격 선언이 없으면 통과. */
-function passesRankingGate(h: HouseInfo): boolean {
+/** 순위(§155②1~4호) 게이트 — 순위 부적격 선언이 없으면 통과. 중과 7호도 공용(D16). */
+export function passesRankingGate(h: HouseInfo): boolean {
   return h.isRankingDisqualifiedInheritedHouse !== true;
 }
 

@@ -484,7 +484,10 @@ export interface ExclusionReason {
     | "unavoidable_outside_capital" // ④ §155⑧ 수도권 밖 부득이 주택 (소령 §167-10 ① 4호)
     | "rural_house"                 // §155⑦ 농어촌주택 의제 (소령 §167-10 ① 15호)
     | "low_price_two_house"        // ⑩ 2주택 기준시가 1억 이하 소형 (소령 §167-10 ⑩)
-    | "litigation_housing_two_house"; // ⑧ 2주택 소송 취득/진행 중 주택 (소령 §167-10 ① 8호)
+    | "litigation_housing_two_house" // ⑧ 2주택 소송 취득/진행 중 주택 (소령 §167-10 ① 8호)
+    | "inherited_house_5years"      // 양도 주택 자체가 §155② 상속주택 5년 이내 (§167의3①7호 · 2주택 §167의10①2호) — D16
+    | "long_term_rental_house"      // 양도 주택 자체가 장기임대주택 (§167의3①2호 · 2주택 §167의10①2호) — D16
+    | "only_general_two_house";     // 2주택 — 다른 주택이 1~7호라 1주택만 소유 (§167의10①10호) — D16
   detail: string;
 }
 

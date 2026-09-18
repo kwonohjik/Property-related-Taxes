@@ -16,12 +16,12 @@
 | # | 시나리오 | 법령 근거 | anchor 출처 | 테스트 파일 | 상태 |
 |---|---------|----------|-------------|-----------|------|
 | 1 | isInherited=true·inheritedDate 없음 → 상속5년 배제 **미발동**, 주택수 유지 | 소령 §167의3①7호 (helpers:383 `&&inheritedDate` 게이트) | 엔진 계약 실증 | `multi-house-surcharge/predo-anchor.test.ts` A1 | ✅ |
-| 2 | inheritedDate 5년 이내 → `inherited_5years` 배제 | 소령 §167의3①7호 | 엔진 계약 | predo-anchor A2 | ✅ |
+| 2 | inheritedDate 5년 이내 → ~~`inherited_5years` 배제~~ **주택 수 산입 + 2주택 §167의10①10호 배제**(D16 정정 2026-09-18 — 7호는 주택 수 규칙이 아니다) | 소령 §167의3①7호 · §167의10①10호 | 엔진 계약 | predo-anchor A2 | ✅ |
 | 3 | gracePeriod 조건 미충족(계약>2026.5.9·토지허가X) + 유예활성 → suspended=false | 소령 §167의3 한시배제 (helpers:783·557) | 엔진 계약 | predo-anchor A3a | ✅ |
 | 4 | gracePeriod 충족(토지허가+임차인) → suspended=true | 동 | 엔진 계약 | predo-anchor A3b | ✅ |
 | 5 | gracePeriod 미제공+유예윈도우 내 → blanket suspended=true | 동 | 엔진 계약 | predo-anchor A3c | ✅ |
 | 5b | gracePeriod 계약일 < 2022.5.10 → 조건C 충족이어도 미배제(하한) | 소령 §167의3 한시배제 시행일 2022.5.10 | 적대적 리뷰 적발 | predo-anchor A3d | ✅ |
-| 6 | houses[]에 inheritedDate(Date) → calculateTransferTax → `multiHouseSurchargeDetail.excludedHouses[inherited_5years]` | 통합 | end-to-end | `transfer-tax/multi-house-grace-period.test.ts` MHG-01 | ✅ |
+| 6 | houses[]에 inheritedDate(Date) → calculateTransferTax → ~~`excludedHouses[inherited_5years]`~~ `exclusionReasons[only_general_two_house]`(D16) | 통합 | end-to-end | `transfer-tax/multi-house-grace-period.test.ts` MHG-01 | ✅ |
 | 7 | gracePeriod 미제공+유예활성 → `isSurchargeSuspended`=true (blanket) | 통합 | wiring | MHG-02-a | ✅ |
 | 8 | gracePeriod 조건 미충족 → `isSurchargeSuspended`=false (정밀, wiring 증명) | 통합 | wiring | MHG-02-b | ✅ |
 | 9 | gracePeriod 충족 → `isSurchargeSuspended`=true | 통합 | wiring | MHG-02-c | ✅ |
@@ -34,8 +34,10 @@
 ## 법령 근거
 
 ```
-소령 §167의3①7호: 상속주택 — 상속개시일로부터 5년 이내 주택 수 산정 제외 (helpers:383-393)
-소령 §167의3①2호: 장기임대 등록주택 배제. legacy 분기 — 등록사업자+등록일2종+임대기간≥5년 (helpers:270-282)
+소령 §167의3①7호: 상속주택 — 상속개시일로부터 5년 이내면 **중과 대상에서** 제외(주택 수에는 산입 — 본문 괄호의
+  불산입은 1호·12호뿐). ⚠️ 2026-09-18 D16 정정: 종전 「주택 수 산정 제외」는 오독이었다
+  (`docs/00-pm/transfer-review-4-defects.plan.md` §4).
+소령 §167의3①2호: 장기임대 등록주택 — 중과 대상에서 제외(주택 수에는 산입, D16). legacy 분기 — 등록사업자+등록일2종+임대기간≥5년
 소령 §167의3 한시 배제(2022.5.10~2026.5.9): 계약일(조건A: 2022.5.10 ≤ contractDate ≤ 2026.5.9 — 하한·상한 모두)·
   잔금기한(조건B 4/6개월)·토지거래허가+임차인(조건C 무기한). checkGracePeriodExemption (helpers:557-577),
   소비 (helpers:785-791). [13단계 검토] 하한(SURCHARGE_EXCLUSION_WINDOW.start=2022-05-10) 추가 — 누락 시 시행 전 계약 오배제.

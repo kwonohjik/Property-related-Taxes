@@ -31,7 +31,7 @@ const twoRegulatedHouses = () => [
 ];
 
 describe("MHG-01: inheritedDate end-to-end (houses[] → calculateTransferTax)", () => {
-  it("상속개시일 5년 이내 주택은 multiHouseSurchargeDetail에서 inherited_5years 로 배제", () => {
+  it("상속개시일 5년 이내 주택 → 산입 + 2주택 §167의10①10호 배제 (inheritedDate 도달)", () => {
     const input = baseInput({
       transferPrice: 500_000_000,
       acquisitionPrice: 300_000_000,
@@ -50,8 +50,10 @@ describe("MHG-01: inheritedDate end-to-end (houses[] → calculateTransferTax)",
     const r = calculateTransferTax(input, makeMockRatesWithHouseEngine());
 
     expect(r.multiHouseSurchargeDetail).toBeDefined();
-    const ex = r.multiHouseSurchargeDetail!.excludedHouses.find((e) => e.houseId === "h2");
-    expect(ex?.reason).toBe("inherited_5years");
+    // D16 — 7호(상속 5년)는 주택 수에 산입되고 중과 대상에서만 빠진다. inheritedDate가 end-to-end로
+    //   도달했는지는 2주택 §167의10①10호 배제(다른 주택이 7호)로 관측한다.
+    expect(r.multiHouseSurchargeDetail!.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(r.multiHouseSurchargeDetail!.exclusionReasons.map((e) => e.type)).toContain("only_general_two_house");
   });
 });
 

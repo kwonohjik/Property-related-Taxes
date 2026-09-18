@@ -22,6 +22,8 @@ import {
   type HouseCountExclusionRules,
   type RegulatedAreaHistory,
 } from "@/lib/tax-engine/multi-house-surcharge";
+import { isSurchargeExemptInherited } from "@/lib/tax-engine/multi-house-surcharge-count";
+import { isSurchargeExemptRental } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { SurchargeSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import {
   defaultRules,
@@ -72,86 +74,85 @@ describe("MH-01: 비수도권 1억 이하 주택 산정 제외", () => {
 });
 
 // ============================================================
-// MH-02: 상속주택 5년 이내 → 산정 제외
+// MH-02: 상속주택 5년 이내 → **주택 수에 산입** · 중과 대상에서만 제외 (D16)
 // ============================================================
+//
+// ⚠️ D16(2026-09-18): 종전 계약 「5년 이내 상속주택은 주택 수에서 제외」는 결함이었다.
+//    §167의3① 본문 괄호가 주택 수 불산입으로 정한 것은 1호(현행 1·12호)뿐 — 7호(상속 5년)는
+//    중과 **대상에서** 빠질 뿐 주택 수에는 산입된다. 구별력은 7호 술어와 2주택 §167의10①10호로 옮긴다.
 
-describe("MH-02: 상속주택 5년 이내 산정 제외", () => {
-  it("상속개시 4년 경과 → 제외", () => {
+const run2 = (houses: HouseInfo[], transferDate: Date) =>
+  determineMultiHouseSurcharge(
+    makeInput(houses, { sellingHouseId: "h1", transferDate }),
+    defaultRules,
+    mockRegulatedHistory,
+    suspensionNone,
+    true,
+  );
+const tenHo = (r: ReturnType<typeof run2>) =>
+  r.exclusionReasons.some((e) => e.type === "only_general_two_house") && !r.surchargeApplicable;
+
+describe("MH-02: 상속주택 5년 이내 — 산입 + 중과 대상 제외", () => {
+  it("상속개시 4년 경과 → 주택 수 산입(2) · 7호 해당 → 2주택 §167의10①10호 배제", () => {
     const h1 = makeHouse("h1"); // 일반 주택
     const h2 = makeHouse("h2", {
       isInherited: true,
       inheritedDate: new Date("2020-01-01"), // 4년 전 상속
     });
+    const td = new Date("2024-01-01");
 
-    const { count, excluded } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2024-01-01"),
-      [],
-      defaultRules,
-    );
-
-    expect(count).toBe(1);
-    expect(excluded[0].reason).toBe("inherited_5years");
+    const { count, excluded } = countEffectiveHouses([h1, h2], td, [], defaultRules);
+    expect(count).toBe(2);
+    expect(excluded).toHaveLength(0);
+    expect(isSurchargeExemptInherited(h2, td)).toBe(true);
+    expect(tenHo(run2([h1, h2], td))).toBe(true);
   });
 
-  it("상속개시 5년 초과 → 포함 (배제 해제)", () => {
+  it("상속개시 5년 초과 → 7호 불해당 → 2주택 중과", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isInherited: true,
       inheritedDate: new Date("2019-01-01"), // 5년 이상 경과
     });
+    const td = new Date("2024-06-01");
 
-    const { count } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2024-06-01"),
-      [],
-      defaultRules,
-    );
-
-    expect(count).toBe(2); // 두 채 모두 포함
+    expect(isSurchargeExemptInherited(h2, td)).toBe(false);
+    expect(tenHo(run2([h1, h2], td))).toBe(false);
   });
 });
 
 // ============================================================
-// MH-03: 장기임대 등록주택 산정 제외 / 말소 시 포함
+// MH-03: 장기임대 등록주택 — 산입 + 중과 대상 제외 / 말소 시 해당 없음 (D16)
 // ============================================================
 
-describe("MH-03: 장기임대 등록주택 산정 제외 (말소 시 포함)", () => {
-  it("임대 등록 유효 중 → 산정 제외", () => {
+describe("MH-03: 장기임대 등록주택 (말소 시 해당 없음)", () => {
+  it("임대 등록 유효 중 → 주택 수 산입(2) · 2호 해당 → §167의10①10호 배제", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
       rentalRegistrationDate: new Date("2020-01-01"),
       rentalCancelledDate: undefined, // 말소 없음
     });
+    const td = new Date("2024-06-01");
 
-    const { count, excluded } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2024-06-01"),
-      [],
-      defaultRules,
-    );
-
-    expect(count).toBe(1);
-    expect(excluded[0].reason).toBe("long_term_rental");
+    const { count, excluded } = countEffectiveHouses([h1, h2], td, [], defaultRules);
+    expect(count).toBe(2);
+    expect(excluded).toHaveLength(0);
+    expect(isSurchargeExemptRental(h2, td)).toBe(true);
+    expect(tenHo(run2([h1, h2], td))).toBe(true);
   });
 
-  it("임대 등록 말소 후 → 포함", () => {
+  it("임대 등록 말소 후 → 2호 불해당 → 2주택 중과", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
       rentalRegistrationDate: new Date("2020-01-01"),
       rentalCancelledDate: new Date("2023-01-01"), // 양도일 이전 말소
     });
+    const td = new Date("2024-06-01");
 
-    const { count } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2024-06-01"),
-      [],
-      defaultRules,
-    );
-
-    expect(count).toBe(2); // 말소 후 재산입
+    expect(isSurchargeExemptRental(h2, td)).toBe(false);
+    expect(tenHo(run2([h1, h2], td))).toBe(false);
   });
 });
 

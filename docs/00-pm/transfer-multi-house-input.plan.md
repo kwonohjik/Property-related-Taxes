@@ -44,7 +44,7 @@ helpers.ts:275-282: 등록사업자+등록일2종+임대기간≥5년)만 노출
 
 | 필드 | 타입 | 용도 | 우선순위 |
 |---|---|---|---|
-| `inheritedDate` | string | 상속 5년 배제 기산 (소령 §167의3①7호, helpers:383) | P0 |
+| `inheritedDate` | string | 상속 5년 기산 (소령 §167의3①7호 — 중과 대상 제외, 주택 수에는 산입 · D16 정정) | P0 |
 | `isRegisteredRental` | boolean | 임대사업자 정식 등록 여부 (legacy 분기 게이트) | P1 |
 | `rentalRegistrationDate` | string | 임대사업자 등록일 | P1 |
 | `businessRegistrationDate` | string | 사업자 등록일 | P1 |
