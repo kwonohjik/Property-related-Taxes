@@ -549,6 +549,14 @@ case "related_corp": {
     }
   }
 
+  // R-5b: 간접출자법인 — **법인주주별 수혜법인 지분율 합계** = 섹션2 그 법인주주의 직접지분
+  //      (RC-3-f) 행 단위 동치 검사만으로는 같은 법인주주를 가리키는 행이 2개일 때
+  //      둘 다 통과한다(각 행 30% = 섹션2의 30%). 엔진 `computeIndirectPaths`가 **행마다**
+  //      출자관계를 만들어 간접보유비율이 행 수에 선형으로 배가된다
+  //      (probe 실측 1행 421,200,000 / 2행 842,400,000 / 3행 1,263,600,000).
+  //      ⚠️ uniqueness가 아니라 **합계 대조**다 — 중복과 부풀리기를 한 가드로 잡는다.
+  //      ⚠️ ⑧(클라이언트)만이 아니라 ⑫ superRefine에도 **같은 술어**를 둔다(서버측 관문).
+
   // R-6: 매출처 roster — 최소 1개 + 빈행 차단 (자동 안분 fallback 금지)
   if (form.rcSalesPartners.length === 0) return "매출처를 1개 이상 입력하세요";
   for (const [i, row] of form.rcSalesPartners.entries()) {
