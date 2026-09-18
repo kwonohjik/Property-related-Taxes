@@ -457,6 +457,14 @@ const specificCorpIntermediarySchema = z.object({
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
   transactionBenefit: z.number().nonnegative(),
+  // 법 §45의5① 거래상대방·각 호 거래유형 (영 §34의5②④⑥⑦) — ⑫ 미등록이면 조용히 stripping된다
+  counterparty: z.enum(["ruling_shareholder", "ruling_related", "other"]).optional(),
+  transactionType: z
+    .enum(["gratuitous", "low_price", "high_price", "capital_transaction", "debt_relief"])
+    .optional(),
+  marketValue: z.number().nonnegative().optional(),
+  consideration: z.number().nonnegative().optional(),
+  isDissolvingWithoutResidual: z.boolean().optional(),
   // single 하위호환
   corporateTax: z.number().nonnegative().optional(),
   ownershipRatio: ratioSchema.optional(), // ⓑ 승수(인별)

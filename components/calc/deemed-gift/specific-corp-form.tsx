@@ -9,6 +9,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { SpecificCorpIntermediaryTable } from "./SpecificCorpIntermediaryTable";
@@ -22,6 +23,20 @@ type Props = { form: DeemedFormState; set: SetFn };
 export function SpecificCorpFields({ form, set }: Props) {
   const isRoster = form.scMode === "roster";
   const isAuto = form.scCorporateTaxMode === "auto";
+  const isCapital = form.scTransactionType === "capital_transaction";
+  const isPriceType =
+    form.scTransactionType === "low_price" || form.scTransactionType === "high_price";
+
+  // 영 §34의5⑦ 현저성 echo — useMemo 표시전용. store 역기록 금지.
+  const significanceEcho = useMemo(() => {
+    if (!isPriceType) return null;
+    const mv = parseAmount(form.scMarketValue);
+    const cons = parseAmount(form.scConsideration);
+    if (mv <= 0 || cons <= 0) return null;
+    const diff = Math.max(0, form.scTransactionType === "low_price" ? mv - cons : cons - mv);
+    const rateThreshold = Math.floor(mv * 0.3);
+    return { diff, rateThreshold, met: diff > 0 && (diff >= rateThreshold || diff >= 300_000_000) };
+  }, [isPriceType, form.scTransactionType, form.scMarketValue, form.scConsideration]);
 
   // 법인세 안분 echo — useMemo 표시전용. store 역기록 금지 (feedback_useeffect_store_mirror_forbidden).
   const corpTaxEcho = useMemo(() => {
@@ -29,18 +44,23 @@ export function SpecificCorpFields({ form, set }: Props) {
     const assessed = parseAmount(form.scCorpTaxAssessed);
     const deduction = parseAmount(form.scCorpTaxDeduction);
     const income = parseAmount(form.scCorpIncome);
-    const benefit = parseAmount(form.scTransactionBenefit);
+    // 2·3호는 거래이익이 시가−대가로 «도출»된다 — 입력칸 값을 쓰면 안분 echo가 어긋난다
+    const benefit = significanceEcho
+      ? significanceEcho.met
+        ? significanceEcho.diff
+        : 0
+      : parseAmount(form.scTransactionBenefit);
     if (income <= 0 || assessed <= 0) return null;
     const net = Math.max(0, assessed - deduction);
     const minNumer = Math.min(benefit, income);
     // BigInt 안전 안분(overflow 방지 — safeMultiplyThenDivide와 동일 로직)
     const result = Number(BigInt(net) * BigInt(minNumer) / BigInt(income));
     return result;
-  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit]);
+  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
 
   return (
     <div className="space-y-3">
-      {/* ── 섹션 1: 입력 방식 + 거래이익 ── */}
+      {/* ── 섹션 1: 입력 방식 ── */}
       <ToneCard tone="sky" sectionNum="1" title="입력 방식 선택" noDark>
         <RadioCardGroup
           name="sc-mode"
@@ -60,17 +80,150 @@ export function SpecificCorpFields({ form, set }: Props) {
             { value: "roster", label: "주주 명단 입력", testId: "sc-mode-roster" },
           ]}
         />
-        <CurrencyInput
-          label="거래이익"
-          value={form.scTransactionBenefit}
-          onChange={(v) => set({ scTransactionBenefit: v })}
-          hint="증여재산가액·채무면제이익·시가−대가 차액 (시행령 §34의5④1호)"
-          data-testid="sc-transaction-benefit"
-        />
       </ToneCard>
 
-      {/* ── 섹션 2: 법인세 상당액 ── */}
-      <ToneCard tone="amber" sectionNum="2" title="법인세 상당액 (시행령 §34의5④2호)" noDark>
+      {/* ── 섹션 2: 거래상대방 + 거래유형 (법 §45의5① · 영 §34의5②④⑥⑦) ── */}
+      <ToneCard tone="rose" sectionNum="2" title="거래상대방 · 거래유형 (§45의5①)" noDark>
+        <FieldCard
+          label="거래상대방"
+          hint={
+            isCapital
+              ? "자본거래는 지배주주의 특수관계인과의 거래로 한정됩니다 (상증령 §34의5②)"
+              : "특정법인이 «지배주주 및 그 특수관계인»과 거래한 경우에만 적용됩니다"
+          }
+        >
+          <RadioCardGroup
+            name="sc-counterparty"
+            tone="rose"
+            value={form.scCounterparty}
+            onChange={(v) => set({ scCounterparty: v as DeemedFormState["scCounterparty"] })}
+            options={[
+              // 3의2호는 영 §34의5②이 「지배주주의 특수관계인」으로 한정한다 — 본인을 후보에서 뺀다
+              ...(isCapital
+                ? []
+                : [{ value: "ruling_shareholder", label: "지배주주 본인", testId: "sc-cp-ruling" }]),
+              { value: "ruling_related", label: "지배주주의 특수관계인", testId: "sc-cp-related" },
+              { value: "other", label: "그 밖의 자", testId: "sc-cp-other" },
+            ]}
+          />
+        </FieldCard>
+
+        <FieldCard label="거래유형 (법 §45의5① 각 호)">
+          <RadioCardGroup
+            name="sc-transaction-type"
+            tone="rose"
+            value={form.scTransactionType}
+            onChange={(v) => {
+              const next = v as DeemedFormState["scTransactionType"];
+              set({
+                scTransactionType: next,
+                // 3의2호에서 「지배주주 본인」은 후보가 아니다 — 선택돼 있었다면 비운다(영 §34의5②)
+                ...(next === "capital_transaction" && form.scCounterparty === "ruling_shareholder"
+                  ? { scCounterparty: "" as const }
+                  : {}),
+              });
+            }}
+            options={[
+              { value: "gratuitous", label: "1호 무상 제공받음", testId: "sc-tt-gratuitous" },
+              { value: "low_price", label: "2호 현저히 낮은 대가로 양수", testId: "sc-tt-low" },
+              { value: "high_price", label: "3호 현저히 높은 대가로 양도", testId: "sc-tt-high" },
+              { value: "capital_transaction", label: "3의2호 자본거래", testId: "sc-tt-capital" },
+              { value: "debt_relief", label: "4호 채무면제·인수·변제", testId: "sc-tt-debt" },
+            ]}
+          />
+        </FieldCard>
+
+        {isPriceType && (
+          <>
+            <CurrencyInput
+              label="시가"
+              value={form.scMarketValue}
+              onChange={(v) => set({ scMarketValue: v })}
+              hint="「법인세법 시행령」 §89에 따른 시가 (상증령 §34의5⑧)"
+              data-testid="sc-market-value"
+            />
+            <CurrencyInput
+              label="대가"
+              value={form.scConsideration}
+              onChange={(v) => set({ scConsideration: v })}
+              hint="실제 주고받은 대가"
+              data-testid="sc-consideration"
+            />
+            {significanceEcho && (
+              <div
+                className={
+                  significanceEcho.met
+                    ? "rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2 text-xs text-emerald-800"
+                    : "rounded-md border border-rose-200 bg-rose-100/60 px-3 py-2 text-xs text-rose-800"
+                }
+                data-testid="sc-significance-echo"
+              >
+                차액{" "}
+                <span className="font-mono font-bold tabular-nums">
+                  {significanceEcho.diff.toLocaleString()}
+                </span>
+                원 · 시가의 100분의 30 ={" "}
+                <span className="font-mono tabular-nums">
+                  {significanceEcho.rateThreshold.toLocaleString()}
+                </span>
+                원 · 3억원 → {significanceEcho.met ? "현저성 충족" : "현저성 미달 (이익 0원)"}
+                <span className="ml-1 opacity-70">(실계산은 엔진)</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {!isPriceType && (
+          <CurrencyInput
+            label="거래이익"
+            value={form.scTransactionBenefit}
+            onChange={(v) => set({ scTransactionBenefit: v })}
+            hint={
+              isCapital
+                ? "자본거래 이익은 이 화면이 계산하지 않습니다 — 아래 안내 참조"
+                : "증여재산가액·채무면제이익 (상증령 §34의5④1호가목)"
+            }
+            data-testid="sc-transaction-benefit"
+          />
+        )}
+
+        {form.scTransactionType === "debt_relief" && (
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            title="해산 중이고 주주등에게 분배할 잔여재산이 없음 (상증령 §34의5⑥ 단서 — 제외)"
+            checked={form.scIsDissolvingNoResidual}
+            onCheckedChange={(v) => set({ scIsDissolvingNoResidual: v })}
+            data-testid="sc-dissolving-no-residual"
+          />
+        )}
+
+        {isCapital && (
+          <CollapsibleHintCard
+            tone="rose"
+            summary="3의2호 자본거래 — 이익은 §38·§39·§39의2·§39의3·§40·§41의2·§42의2 준용 계산액입니다"
+          >
+            <p>
+              상증령 §34의5④1호<b>나목</b>은 자본거래 이익을 「제2항 각 호의 거래 유형에 따라 법
+              제38조, 제39조, 제39조의2, 제39조의3, 제40조, 제41조의2, 제42조의2 … 를 <b>준용</b>하여
+              계산한 이익」으로 정합니다. <b>「시가 − 대가」가 아닙니다.</b>
+            </p>
+            <p className="mt-1">
+              이 화면은 그 준용계산을 수행하지 않습니다. 같은 마법사의 해당 유형(합병에 따른 이익 ·
+              증자 · 감자 · 현물출자 · 전환사채 · 초과배당 · 법인 조직변경)에서 이익을 산출한 뒤 그
+              금액을 「거래이익」에 넣으십시오.
+            </p>
+            <p className="mt-1">
+              상대방 범위도 다릅니다 — 영 §34의5②은 「특정법인과 <b>지배주주의 특수관계인</b> 사이에
+              이루어지거나 지배주주의 특수관계인 사이에 이루어지는」 자본거래로 한정하므로,
+              <b> 지배주주 본인</b>과의 자본거래는 대상이 아닙니다.
+            </p>
+          </CollapsibleHintCard>
+        )}
+      </ToneCard>
+
+      {/* ── 섹션 3: 법인세 상당액 ── */}
+      <ToneCard tone="amber" sectionNum="3" title="법인세 상당액 (시행령 §34의5④2호)" noDark>
         <RadioCardGroup
           name="sc-corp-tax-mode"
           tone="amber"
@@ -125,10 +278,10 @@ export function SpecificCorpFields({ form, set }: Props) {
         )}
       </ToneCard>
 
-      {/* ── 섹션 3: 지분율 or 주주 명단 ── */}
+      {/* ── 섹션 4: 지분율 or 주주 명단 ── */}
       <ToneCard
         tone="violet"
-        sectionNum="3"
+        sectionNum="4"
         title={isRoster ? "발행주식 총수 + 주주 명단" : "해당 지배주주등의 주식보유비율"}
         noDark
       >
@@ -204,8 +357,8 @@ export function SpecificCorpFields({ form, set }: Props) {
         </ul>
       </CollapsibleHintCard>
 
-      {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
-      <ToneCard tone="emerald" sectionNum="4" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>
+      {/* ── 섹션 5: §45의5② 한도 — 증여재산공제 ── */}
+      <ToneCard tone="emerald" sectionNum="5" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>
         <CurrencyInput
           label="증여재산공제"
           value={form.scGiftDeduction}

@@ -18,6 +18,7 @@ const ROSTER: DeemedFormState = {
   giftDate: "2026-03-02",
   scMode: "roster",
   scCorporateTaxMode: "direct",
+  scCounterparty: "ruling_shareholder", // §45의5① 거래상대방 — ⑧이 필수로 막는다(W4)
   scTransactionBenefit: "2000000000",
   scCorporateTax: "0",
   scTotalShares: "100000",
@@ -126,12 +127,88 @@ describe("간접출자관계 — ④⑫ 관통", () => {
   });
 });
 
+describe("§45의5① 거래상대방·거래유형 — ④⑧⑫ 관통", () => {
+  it("[PL-10] ⑫가 counterparty·transactionType을 통과시킨다 (미등록이면 조용히 stripping된다)", () => {
+    const { result } = throughPipeline({ ...ROSTER, scCounterparty: "other" } as DeemedFormState);
+    expect(result.specificCorpTransaction!.counterpartyMet).toBe("no");
+    expect(result.deemedGiftValue).toBe(0);
+
+    const low = throughPipeline({
+      ...ROSTER,
+      scTransactionType: "low_price",
+      scMarketValue: "1000000000",
+      scConsideration: "800000000",
+    } as DeemedFormState);
+    // 유형이 ⑫에서 잘리면 1호로 떨어져 거래이익 2,000,000,000이 그대로 산다
+    expect(low.result.specificCorpTransaction!.transactionType).toBe("low_price");
+    expect(low.result.deemedGiftValue).toBe(0); // 차액 20% & 3억 미만
+  });
+
+  it("[PL-11] ④는 미선택을 «보내지 않는다» — 'other'로 지어내면 정상 계산이 0원이 된다", () => {
+    const input = buildDeemedGiftInput({ ...ROSTER, scCounterparty: "" } as DeemedFormState) as unknown as
+      Record<string, unknown>;
+    expect(input.counterparty).toBeUndefined();
+    expect("counterparty" in input).toBe(true); // 키는 있고 값이 undefined — JSON에서 사라진다
+    // ⓐ(29% 미달)와 섞이지 않게 그룹비율 35%를 신고해 ⓐ를 통과시킨 뒤 상대방 축만 본다
+    const { result } = throughPipeline({
+      ...ROSTER,
+      scCounterparty: "",
+      scGroupRatioPct: "35",
+    } as DeemedFormState);
+    expect(result.specificCorpTransaction!.counterpartyMet).toBe("unknown");
+    expect(result.deemedGiftValue).toBe(580_000_000); // 판정 보류 = 값 유지(조용히 0원으로 막지 않는다)
+  });
+
+  it("[PL-12] ④는 2·3호일 때만 시가·대가를, 4호일 때만 해산 플래그를 보낸다", () => {
+    const low = buildDeemedGiftInput({
+      ...ROSTER,
+      scTransactionType: "low_price",
+      scMarketValue: "1000000000",
+      scConsideration: "800000000",
+      scIsDissolvingNoResidual: true,
+    } as DeemedFormState) as unknown as Record<string, unknown>;
+    expect(low.marketValue).toBe(1_000_000_000);
+    expect(low.consideration).toBe(800_000_000);
+    expect(low.isDissolvingWithoutResidual).toBeUndefined(); // 4호 전용 축이 새면 2호가 조용히 죽는다
+
+    const debt = buildDeemedGiftInput({
+      ...ROSTER,
+      scTransactionType: "debt_relief",
+      scMarketValue: "1000000000",
+      scIsDissolvingNoResidual: true,
+    } as DeemedFormState) as unknown as Record<string, unknown>;
+    expect(debt.isDissolvingWithoutResidual).toBe(true);
+    expect(debt.marketValue).toBeUndefined();
+  });
+});
+
 describe("⑧ validate — 비율 범위", () => {
   it("[PL-5] 0 초과 100 이하를 벗어나면 차단하고, 미입력·정상값은 통과시킨다", () => {
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "150" })).toContain("0 초과 100 이하");
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "0" })).toContain("0 초과 100 이하");
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "" })).toBeNull();
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "35" })).toBeNull();
+  });
+
+  it("[PL-13] 거래상대방 미선택과 2·3호 시가·대가 미입력을 차단한다 (§45의5① · 영 §34의5⑧)", () => {
+    expect(validateDeemedInput({ ...ROSTER, scCounterparty: "" } as DeemedFormState)).toContain(
+      "거래상대방을 선택하세요",
+    );
+    const low = { ...ROSTER, scTransactionType: "low_price" } as DeemedFormState;
+    expect(validateDeemedInput(low)).toContain("시가를 입력하세요");
+    expect(validateDeemedInput({ ...low, scMarketValue: "1000000000" })).toContain("대가를 입력하세요");
+    expect(
+      validateDeemedInput({ ...low, scMarketValue: "1000000000", scConsideration: "800000000" }),
+    ).toBeNull();
+    // 2·3호는 거래이익 칸을 쓰지 않으므로 비어 있어도 통과해야 한다
+    expect(
+      validateDeemedInput({
+        ...low,
+        scTransactionBenefit: "",
+        scMarketValue: "1000000000",
+        scConsideration: "800000000",
+      }),
+    ).toBeNull();
   });
 
   it("[PL-9] 간접출자관계의 고아 참조를 차단한다 (§45의3의 RC-H 결함을 물려받지 않는다)", () => {

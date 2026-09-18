@@ -21,6 +21,7 @@ const RELATION_LABEL: Record<ScRelation, string> = {
 // ── 과세여부 배지 — static Record (feedback_tailwind_static_tone_mapping 준수) ──
 const TAXABLE_BADGE_CLS = {
   taxable: "bg-emerald-100 text-emerald-800",
+  transaction_not_covered: "bg-rose-100 text-rose-700",
   not_specific_corp: "bg-rose-100 text-rose-700",
   corporate_shareholder: "bg-violet-100 text-violet-700",
   donor_self: "bg-slate-100 text-slate-600",
@@ -31,6 +32,7 @@ const TAXABLE_BADGE_CLS = {
 function taxabilityBadge(donee: SpecificCorpDonee): { cls: string; label: string } {
   if (donee.isTaxable) return { cls: TAXABLE_BADGE_CLS.taxable, label: "과세" };
   switch (donee.nonTaxableReason) {
+    case "transaction_not_covered": return { cls: TAXABLE_BADGE_CLS.transaction_not_covered, label: "§45의5① 거래 아님" };
     case "not_specific_corp": return { cls: TAXABLE_BADGE_CLS.not_specific_corp, label: "특정법인 아님" };
     case "corporate_shareholder": return { cls: TAXABLE_BADGE_CLS.corporate_shareholder, label: "법인주주 — 개인에 간접 귀속" };
     case "donor_self":      return { cls: TAXABLE_BADGE_CLS.donor_self,      label: "본인증여 제외" };

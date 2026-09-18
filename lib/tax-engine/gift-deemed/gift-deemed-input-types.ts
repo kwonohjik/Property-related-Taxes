@@ -585,9 +585,42 @@ export interface SpecificCorpShareholder {
   isCorporate?: boolean;
 }
 
+/** 법 §45의5① 각 호 거래유형 */
+export type ScTransactionType =
+  | "gratuitous" // 1호 재산·용역을 무상으로 제공받는 것
+  | "low_price" // 2호 현저히 낮은 대가로 양도·제공**받는** 것 → 이익 = 시가 − 대가
+  | "high_price" // 3호 현저히 높은 대가로 양도·제공**하는** 것 → 이익 = 대가 − 시가
+  | "capital_transaction" // 3의2호 불균등 감자 등 자본거래 (영 §34의5② 8유형)
+  | "debt_relief"; // 4호 채무면제·인수·변제 (영 §34의5⑥)
+
+/**
+ * 법 §45의5① 거래상대방 — 「특정법인이 **지배주주 및 그 특수관계인**과 … 거래를 하는 경우」.
+ *
+ * ⚠️ 3의2호(자본거래)만 상대방 집합이 좁다 — 영 §34의5②은 「특정법인과 **지배주주의 특수관계인**
+ * 사이에 이루어지거나 지배주주의 특수관계인 사이에 이루어지는」이라 **지배주주 본인이 빠진다**
+ * (법 ①은 2026.1.1에 「지배주주 및 그」로 넓혀졌으나 영 ②은 개정되지 않았다).
+ */
+export type ScCounterparty =
+  | "ruling_shareholder" // 지배주주 본인
+  | "ruling_related" // 지배주주의 특수관계인
+  | "other"; // 그 밖의 자 → §45의5① 부적용
+
 /** §45의5 특정법인과의 거래 */
 export interface SpecificCorpInput {
   transactionBenefit: number; // §34의5④1호 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  /** 거래상대방 — 미전달이면 **판정하지 않는다**(결과뷰가 고지). ⑧ validate가 제품 경로에서 강제한다 */
+  counterparty?: ScCounterparty;
+  /**
+   * 거래유형. 미전달이면 1호(무상)로 본다 — `transactionBenefit`가 곧 이익인 유일한 호라
+   * 종전 코드의 암묵 전제를 이름 붙인 것이다(값을 지어내는 fallback이 아니다).
+   */
+  transactionType?: ScTransactionType;
+  /** 2·3호 — 영 §34의5⑧ 시가(「법인세법 시행령」 §89에 따른다) */
+  marketValue?: number;
+  /** 2·3호 — 대가 */
+  consideration?: number;
+  /** 4호 — 영 §34의5⑥ 단서: 해산(합병·분할에 의한 해산 제외) 중 + 주주등에게 분배할 잔여재산 없음 → 제외 */
+  isDissolvingWithoutResidual?: boolean;
   // ── single(하위호환) 모드: 법인세 안분·지분율을 호출자가 사전 계산 ──
   corporateTax?: number; // 법인세 상당액(이미 안분된 최종값)
   ownershipRatio?: { numer: number; denom: number }; // ⓑ 승수 — **해당** 지배주주등 1인의 주식보유비율(상증령 §34의5⑨)

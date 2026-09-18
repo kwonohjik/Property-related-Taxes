@@ -31,6 +31,8 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
 
     // 입력 방식: 주주 명단
     await dialog.getByTestId("sc-mode-roster").click();
+    // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
+    await dialog.getByTestId("sc-cp-ruling").click();
 
     // 거래이익 30억
     await dialog.getByTestId("sc-transaction-benefit").fill("3000000000");
@@ -98,6 +100,8 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
 
     // 주주 명단 모드, 거래이익 10억
     await dialog.getByTestId("sc-mode-roster").click();
+    // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
+    await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-transaction-benefit").fill("1000000000");
 
     // 법인세: 직접 입력(이월결손금으로 0)
@@ -162,6 +166,8 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
+    // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
+    await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-transaction-benefit").fill("2000000000");
     await dialog.getByTestId("sc-corp-tax-direct").click();
     await dialog.getByTestId("sc-corporate-tax").fill("0");
@@ -215,6 +221,8 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
+    // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
+    await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-transaction-benefit").fill("2000000000");
     await dialog.getByTestId("sc-corp-tax-direct").click();
     await dialog.getByTestId("sc-corporate-tax").fill("0");
@@ -257,6 +265,75 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("sc-multi-ratio-split-0")).toContainText("직접 20.0 + 간접 40.0");
     // 법인주주 행은 과세되지 않고 0원 — 이중계상 방지
     await expect(matrix).toContainText("법인주주 — 개인에 간접 귀속");
+  });
+
+  /**
+   * §45의5① 거래상대방 · 영 §34의5⑦ 현저성 — 두 요건이 없어 요건 미충족 거래도 전액 과세됐다.
+   * single 모드로 두 축을 한 화면에서 누른다.
+   */
+  test("제3자와의 거래 → 0원 / 2호 현저성 미달 → 0원 (§45의5① · 영 §34의5⑦)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    // 지분율 직접 입력 · 상대방 = 그 밖의 자
+    await dialog.getByTestId("sc-cp-other").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("2000000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-shareholder-ratio").fill("100");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("지배주주 및 그 특수관계인이 아닙니다", {
+      timeout: 15000,
+    });
+  });
+
+  // 긍정 짝(35% → 350,000,000)은 unit [T-5]가 고정한다 — 계산 후 dialog 재오픈이 안 돼 여기선 음성만 본다
+  test("2호 현저성 미달 — 시가 10억·대가 8억(20% & 3억 미만) → 이익 0원", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-tt-low").click();
+    // 거래이익 칸이 사라지고 시가·대가를 받는다 (영 §34의5④1호다목 — 이익이 도출값이다)
+    await expect(dialog.getByTestId("sc-transaction-benefit")).toHaveCount(0);
+    await dialog.getByTestId("sc-market-value").fill("1000000000");
+    await dialog.getByTestId("sc-consideration").fill("800000000");
+    await expect(dialog.getByTestId("sc-significance-echo")).toContainText("현저성 미달");
+
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-shareholder-ratio").fill("100");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("상증령 §34의5⑦", { timeout: 15000 });
+  });
+
+  test("3의2호 자본거래 — 지배주주 본인이 상대방 후보에서 빠진다 (영 §34의5②)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await expect(dialog.getByTestId("sc-cp-ruling")).toHaveCount(1);
+    await dialog.getByTestId("sc-tt-capital").click();
+    // 영 §34의5②은 「지배주주의 특수관계인」으로 한정한다 — 본인 선택지가 사라진다
+    await expect(dialog.getByTestId("sc-cp-ruling")).toHaveCount(0);
+    await expect(dialog.getByTestId("sc-cp-related")).toHaveCount(1);
+    // 준용 계산 안내가 뜬다 (나목 — 「시가 − 대가」가 아니다)
+    await expect(dialog).toContainText("준용");
   });
 
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {

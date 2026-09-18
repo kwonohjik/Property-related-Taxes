@@ -173,6 +173,21 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       const giftDeduction = parseAmount(form.scGiftDeduction) || undefined; // 0이면 undefined(엔진 default 0)
       // ⓐ §45의5① 특정법인 해당성 신고값(직접+간접 합계). 미입력이면 «전달하지 않는다» —
       // 0을 보내면 single 모드에서 "판정 보류(unknown)"가 "미충족(no)"으로 뒤집혀 정상 계산이 죽는다.
+      // 법 §45의5① 거래상대방·거래유형 (영 §34의5②④⑥⑦). 미선택이면 «보내지 않는다» —
+      // 엔진이 "unknown"으로 판정을 보류하고 결과뷰가 고지한다(⑧이 제품 경로에서 강제한다).
+      const counterparty = form.scCounterparty === "" ? undefined : form.scCounterparty;
+      const transactionType = form.scTransactionType;
+      const isPriceType = transactionType === "low_price" || transactionType === "high_price";
+      const txFields = {
+        counterparty,
+        transactionType,
+        ...(isPriceType
+          ? { marketValue: parseAmount(form.scMarketValue), consideration: parseAmount(form.scConsideration) }
+          : {}),
+        ...(transactionType === "debt_relief"
+          ? { isDissolvingWithoutResidual: form.scIsDissolvingNoResidual }
+          : {}),
+      };
       const groupRatioPct = parseDecimal(form.scGroupRatioPct);
       const controllingGroupRatio =
         form.scGroupRatioPct.trim() === ""
@@ -217,6 +232,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
             giftDeduction,
             controllingGroupRatio,
+            ...txFields,
             intermediaryCorps,
           };
         } else {
@@ -228,6 +244,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             shareholders,
             giftDeduction,
             controllingGroupRatio,
+            ...txFields,
             intermediaryCorps,
           };
         }
@@ -250,6 +267,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
           giftDeduction,
           controllingGroupRatio,
+          ...txFields,
         };
       }
       return {
@@ -259,6 +277,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         ownershipRatio: singleRatio,
         giftDeduction,
         controllingGroupRatio,
+        ...txFields,
       };
     }
     case "related_corp": {

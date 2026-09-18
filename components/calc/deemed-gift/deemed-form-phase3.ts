@@ -8,6 +8,7 @@
  */
 import type { ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
 import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScIntermediaryRow, ScShareholderRow } from "./deemed-form-rows";
+import type { ScCounterparty, ScTransactionType } from "@/lib/tax-engine/gift-deemed/types";
 
 export interface DeemedPhase3Fields {
   // ── Phase 3 추정·의제 ──
@@ -86,6 +87,16 @@ export interface DeemedPhase3Fields {
   // 특정법인 §45의5
   scTransactionBenefit: string;
   scCorporateTax: string;
+  /** 법 §45의5① 거래상대방 — ""=미선택(⑧이 차단). 3의2호는 「지배주주 본인」이 빠진다(영 §34의5②) */
+  scCounterparty: "" | ScCounterparty;
+  /** 법 §45의5① 각 호 거래유형. 기본 1호(무상) — `scTransactionBenefit`가 곧 이익인 유일한 호다 */
+  scTransactionType: ScTransactionType;
+  /** 2·3호 — 영 §34의5⑧ 시가(「법인세법 시행령」 §89) */
+  scMarketValue: string;
+  /** 2·3호 — 대가 */
+  scConsideration: string;
+  /** 4호 — 영 §34의5⑥ 단서: 해산 중 + 잔여재산 없음 → 제외 */
+  scIsDissolvingNoResidual: boolean;
   scRatioPct: string;
   /**
    * §45의5① ⓐ 특정법인 해당성 판정용 — 지배주주등(지배주주와 그 친족) **전원**의
@@ -202,6 +213,11 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   viEventDate: "",
   scTransactionBenefit: "",
   scCorporateTax: "",
+  scCounterparty: "",
+  scTransactionType: "gratuitous",
+  scMarketValue: "",
+  scConsideration: "",
+  scIsDissolvingNoResidual: false,
   scRatioPct: "",
   scGroupRatioPct: "",
   // §45의3 일감몰아주기

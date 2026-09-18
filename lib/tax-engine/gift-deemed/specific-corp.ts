@@ -1,12 +1,14 @@
 /** (Phase 3) 특정법인과의 거래를 통한 이익의 증여 의제 (§45의5 · 시행령 §34의5) */
 import { GIFT } from "../legal-codes";
-import { safeMultiplyThenDivide, truncateToThousand } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide, truncateToThousand } from "../tax-utils";
 import { computeIndirectRatioBig } from "./related-corp-helpers";
 import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type {
   DeemedGiftResult,
   RcIntermediaryCorpItem,
+  ScCounterparty,
+  ScTransactionType,
   SpecificCorpInput,
   SpecificCorpDonee,
   SpecificCorpEligibility,
@@ -18,6 +20,101 @@ const FILING_CREDIT_NUMER = 3; // §69 신고세액공제 3%
 const FILING_CREDIT_DENOM = 100;
 const CONTROLLING_RATIO_NUMER = 30; // §45의5① 100분의 30
 const CONTROLLING_RATIO_DENOM = 100;
+const SIGNIFICANT_RATE = 0.3; // 영 §34의5⑦ 시가의 100분의 30
+const SIGNIFICANT_ABSOLUTE = 300_000_000; // 영 §34의5⑦ 3억원
+
+/**
+ * 법 §45의5① 각 호 거래유형별 「특정법인의 이익」 + 거래상대방·현저성 요건.
+ *
+ * ── 거래상대방 (법 §45의5①) ──────────────────────────────────────────
+ * 「특정법인이 **지배주주 및 그 특수관계인**과 다음 각 호에 따른 거래를 하는 경우」.
+ * 종전에는 이 축이 어느 층에도 없어 증여자가 완전한 제3자여도 그대로 과세됐다.
+ * ⚠️ 3의2호만 집합이 좁다 — 영 §34의5②은 「특정법인과 **지배주주의 특수관계인** 사이에
+ * 이루어지거나 지배주주의 특수관계인 사이에 이루어지는」이라 지배주주 «본인»이 빠진다.
+ *
+ * ── 이익 (영 §34의5④1호) ─────────────────────────────────────────────
+ * - 가목(1호·4호): 증여재산가액 또는 채무 면제·인수·변제로 법인이 얻는 이익 → 입력값 그대로.
+ * - 나목(3의2호): 「제2항 각 호의 거래 유형에 따라 법 제38조, 제39조, 제39조의2, 제39조의3,
+ *   제40조, 제41조의2, 제42조의2 … 를 **준용**하여 계산한 이익」. 이 화면은 그 준용계산을
+ *   **하지 않는다** — 준용 대상 7개 조문이 같은 마법사의 다른 유형으로 전부 노출돼 있으므로
+ *   거기서 산출한 이익을 넣도록 고지한다(결과뷰·UI).
+ * - 다목(2호·3호): 「가목 및 나목 외의 경우: **제7항에 따른** 시가와 대가와의 차액에 상당하는 금액」.
+ *   ⑦은 「차액이 시가의 100분의 30 이상이거나 그 차액이 3억원 이상인 경우의 **해당 가액**」을
+ *   「현저히 낮은/높은 대가」로 정의한다. ⇒ 미달이면 그 대가는 2·3호의 대가가 아니고,
+ *   ④1호다목이 참조할 차액도 없다. 두 독법(요건 미충족 / 이익 0) 모두 결과는 0원으로 같다.
+ *
+ * ── 4호 단서 (영 §34의5⑥) ────────────────────────────────────────────
+ * 「다만, 해당 법인이 해산(합병 또는 분할에 의한 해산은 제외한다) 중인 경우로서 주주등에게
+ * 분배할 잔여재산이 없는 경우는 제외한다.」
+ */
+export type ScTransactionGate = {
+  /** 산정된 거래이익(영 §34의5④1호). 요건 미충족이면 0 */
+  benefit: number;
+  /** 미충족 사유 — undefined면 요건 충족 */
+  exclusionReason?: string;
+  /** 거래상대방 판정 — "unknown"은 입력 미전달(⑧이 제품 경로에서 강제한다) */
+  counterpartyMet: "yes" | "no" | "unknown";
+  /** 2·3호 현저성 echo (영 §34의5⑦) */
+  significance?: { diff: number; rateThreshold: number; absoluteThreshold: number; met: boolean };
+  transactionType: ScTransactionType;
+};
+
+export function evaluateScTransaction(input: SpecificCorpInput): ScTransactionGate {
+  const transactionType: ScTransactionType = input.transactionType ?? "gratuitous";
+  const isCapital = transactionType === "capital_transaction";
+
+  // ── 거래상대방 ──
+  const allowed: ScCounterparty[] = isCapital
+    ? ["ruling_related"] // 영 §34의5② — 지배주주 본인 제외
+    : ["ruling_shareholder", "ruling_related"];
+  const counterpartyMet: "yes" | "no" | "unknown" =
+    input.counterparty === undefined ? "unknown" : allowed.includes(input.counterparty) ? "yes" : "no";
+  if (counterpartyMet === "no") {
+    return {
+      benefit: 0,
+      counterpartyMet,
+      transactionType,
+      exclusionReason: isCapital
+        ? "자본거래의 상대방이 지배주주의 특수관계인이 아닙니다 (상증령 §34의5② — 지배주주 본인과의 자본거래는 제외)"
+        : "거래상대방이 지배주주 및 그 특수관계인이 아닙니다 (§45의5①)",
+    };
+  }
+
+  // ── 4호 단서 (영 §34의5⑥) ──
+  if (transactionType === "debt_relief" && input.isDissolvingWithoutResidual) {
+    return {
+      benefit: 0,
+      counterpartyMet,
+      transactionType,
+      exclusionReason: "해산 중인 법인으로서 주주등에게 분배할 잔여재산이 없습니다 (상증령 §34의5⑥ 단서)",
+    };
+  }
+
+  // ── 2·3호 — 영 §34의5④1호다목 + ⑦ ──
+  if (transactionType === "low_price" || transactionType === "high_price") {
+    const marketValue = input.marketValue ?? 0;
+    const consideration = input.consideration ?? 0;
+    // 2호는 법인이 싸게 «사온» 것, 3호는 비싸게 «팔아온» 것 — 부호가 반대다
+    const raw = transactionType === "low_price" ? marketValue - consideration : consideration - marketValue;
+    const diff = Math.max(0, raw);
+    const rateThreshold = applyRate(marketValue, SIGNIFICANT_RATE);
+    const met = diff > 0 && (diff >= rateThreshold || diff >= SIGNIFICANT_ABSOLUTE);
+    const significance = { diff, rateThreshold, absoluteThreshold: SIGNIFICANT_ABSOLUTE, met };
+    if (!met) {
+      return {
+        benefit: 0,
+        counterpartyMet,
+        transactionType,
+        significance,
+        exclusionReason: `시가와 대가의 차액 ${diff.toLocaleString()}원이 시가의 100분의 30(${rateThreshold.toLocaleString()}원)과 3억원에 모두 미달합니다 — 「현저히 ${transactionType === "low_price" ? "낮은" : "높은"} 대가」가 아닙니다 (상증령 §34의5⑦)`,
+      };
+    }
+    return { benefit: diff, counterpartyMet, transactionType, significance };
+  }
+
+  // 1호·4호(가목) · 3의2호(나목 — 준용계산은 이 화면 밖) → 입력값 그대로
+  return { benefit: input.transactionBenefit, counterpartyMet, transactionType };
+}
 
 /**
  * §45의5① ⓐ 「특정법인」 해당성 — 「지배주주등의 주식보유비율이 100분의 30 이상인 법인」.
@@ -129,6 +226,26 @@ function applyFrac(profit: number, f: { numer: bigint; denom: bigint }): number 
   return Number((BigInt(profit) * f.numer) / f.denom);
 }
 
+/**
+ * 거래유형별 이익 산정 근거 라벨 (영 §34의5④1호 가·나·다목).
+ * 종전 라벨은 「증여재산·채무면제·시가−대가」로 **가목과 다목만** 열거해 3의2호(나목)를
+ * 「시가−대가 차액」으로 오유도했다 — 자본거래 이익은 §38 등 준용 계산액이라 전혀 다른 축이다.
+ */
+function txLabel(t: ScTransactionType): string {
+  switch (t) {
+    case "gratuitous":
+      return "무상 제공받은 재산·용역 (영 §34의5④1호가목)";
+    case "low_price":
+      return "시가 − 대가 (영 §34의5④1호다목·⑦)";
+    case "high_price":
+      return "대가 − 시가 (영 §34의5④1호다목·⑦)";
+    case "capital_transaction":
+      return "자본거래 준용 계산액 (영 §34의5④1호나목 — §38·§39·§39의2·§39의3·§40·§41의2·§42의2)";
+    case "debt_relief":
+      return "채무 면제·인수·변제 이익 (영 §34의5④1호가목·⑥)";
+  }
+}
+
 /** ⓐ 미충족 사유 — 간접보유를 0%로 본 전제를 함께 적어 사용자가 되돌릴 수 있게 한다. */
 function notSpecificCorpReason(e: SpecificCorpEligibility): string {
   const base = `지배주주등 주식보유비율 ${e.effectivePct.toFixed(1)}% — 100분의 30 미만이라 특정법인이 아닙니다 (§45의5①)`;
@@ -168,18 +285,20 @@ export function apportionCorporateTax(input: SpecificCorpInput): number {
  * 종전에는 안분이 roster 전용이라 UI의 「지분율 직접 + 법인세 자동안분」 조합이 항상 0원이었다.
  */
 export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult {
-  const { transactionBenefit } = input;
-  const corporateTax = input.corporateTax ?? apportionCorporateTax(input);
+  // 거래유형·상대방·현저성이 먼저다 — 이익 자체가 여기서 정해진다(영 §34의5④1호)
+  const tx = evaluateScTransaction(input);
+  const transactionBenefit = tx.benefit;
+  const corporateTax = tx.exclusionReason ? 0 : (input.corporateTax ?? apportionCorporateTax(input));
   const ratio = input.ownershipRatio ?? { numer: 0, denom: 1 };
   const corpProfit = transactionBenefit - corporateTax;
   const gain = corpProfit > 0 ? safeMultiplyThenDivide(corpProfit, ratio.numer, ratio.denom) : 0;
   // ⓐ 특정법인 해당성 — single은 그룹 명부가 없어 미신고면 "unknown"(판정 보류)이다.
   const eligibility = evaluateSpecificCorpEligibility(ratio, input.controllingGroupRatio, "single");
-  const applied = eligibility.met !== "no" && gain >= ABSOLUTE_THRESHOLD;
+  const applied = !tx.exclusionReason && eligibility.met !== "no" && gain >= ABSOLUTE_THRESHOLD;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
-    { label: "거래이익 (증여재산·채무면제·시가−대가)", amount: transactionBenefit, lawRef: GIFT.SPECIFIC_CORP },
+    { label: `거래이익 — ${txLabel(tx.transactionType)}`, amount: transactionBenefit, lawRef: GIFT.SPECIFIC_CORP },
     { label: "법인세 상당액", amount: corporateTax },
     { label: "특정법인의 이익 (거래이익 − 법인세 상당액)", amount: corpProfit > 0 ? corpProfit : 0 },
     { label: "증여의제이익 (특정법인의 이익 × 지배주주등 지분율)", amount: value, lawRef: GIFT.SPECIFIC_CORP, note: "§45의5 특정법인 (1억원 이상 한정·한도 §45의5② 별도)" },
@@ -190,14 +309,17 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
     deemedGiftValue: value,
     breakdown,
     // ⓐ는 §45의5 성립 자체의 선결 요건이라 ⓑ 임계(1억)보다 먼저 보고한다.
+    // 요건 순서 = 조문 순서: 거래(§45의5①·영 ④⑥⑦) → 법인 해당성(ⓐ) → 인별 임계(영 ⑤)
     exclusionReason: applied
       ? undefined
-      : eligibility.met === "no"
-        ? notSpecificCorpReason(eligibility)
-        : "증여의제이익이 1억원 미만 (§34의5⑤)",
+      : (tx.exclusionReason ??
+        (eligibility.met === "no"
+          ? notSpecificCorpReason(eligibility)
+          : "증여의제이익이 1억원 미만 (§34의5⑤)")),
     legalBasis: GIFT.SPECIFIC_CORP,
     thresholdEcho: { gain },
     specificCorpEligibility: eligibility,
+    specificCorpTransaction: tx,
   };
 }
 
@@ -210,12 +332,14 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
  * - 과세제외 3종: ①증여자 본인(donor_self) ②지배주주 친족 아님(non_related) ③1억 미만(below_threshold, §34의5⑤).
  */
 export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftResult {
-  const { transactionBenefit } = input;
+  const tx = evaluateScTransaction(input);
+  const transactionBenefit = tx.benefit;
   const shareholders = input.shareholders ?? [];
   const giftDeduction = input.giftDeduction ?? 0;
 
   // ── §34의5④2호 법인세 안분 (single과 공용 leaf) ──
-  const corpTaxApportioned = apportionCorporateTax(input);
+  // 거래요건 미충족이면 이익이 0이므로 안분 분자(min(거래이익, 소득금액))도 0이다.
+  const corpTaxApportioned = tx.exclusionReason ? 0 : apportionCorporateTax({ ...input, transactionBenefit });
 
   // ── §34의5④ 특정법인의 이익 = 거래이익 − 법인세 안분 ──
   const corpProfit = Math.max(0, transactionBenefit - corpTaxApportioned);
@@ -240,6 +364,7 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
     "roster",
   );
   const notSpecificCorp = eligibility.met === "no";
+  const txExcluded = tx.exclusionReason !== undefined;
 
   // ── 주주별 증여의제이익 + 과세제외 5종 + §45의5② 한도 ──
   const donees: SpecificCorpDonee[] = shareholders.map((sh) => {
@@ -259,6 +384,7 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       gain,
       isTaxable: false,
     };
+    if (txExcluded) return { ...base, nonTaxableReason: "transaction_not_covered" }; // 거래 자체가 §45의5① 밖
     if (notSpecificCorp) return { ...base, nonTaxableReason: "not_specific_corp" }; // ⓐ 법인 단위 선결 요건
     if (sh.isCorporate) return { ...base, gain: 0, nonTaxableReason: "corporate_shareholder" }; // 법인 → 개인에 간접 귀속
     if (sh.isDonor) return { ...base, gain: 0, nonTaxableReason: "donor_self" }; // 증여자 본인(특수관계인)
@@ -296,12 +422,14 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
     breakdown,
     exclusionReason: applied
       ? undefined
-      : notSpecificCorp
-        ? notSpecificCorpReason(eligibility)
-        : "과세 지배주주등 없음 (본인증여분·비특수관계인·1억 미만 제외)",
+      : (tx.exclusionReason ??
+        (notSpecificCorp
+          ? notSpecificCorpReason(eligibility)
+          : "과세 지배주주등 없음 (본인증여분·비특수관계인·1억 미만 제외)")),
     legalBasis: GIFT.SPECIFIC_CORP,
     specificCorpMulti: { corpProfit, corpTaxApportioned, donees },
     specificCorpEligibility: eligibility,
+    specificCorpTransaction: tx,
   };
 }
 

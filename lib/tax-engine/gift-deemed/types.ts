@@ -44,6 +44,8 @@ export type {
   ValueIncreaseReason,
   ValueIncreaseInput,
   ScRelation,
+  ScCounterparty,
+  ScTransactionType,
   SpecificCorpShareholder,
   SpecificCorpInput,
   RcShareholder,
@@ -230,7 +232,13 @@ export interface SpecificCorpDonee {
   indirectRatioPct: number; // 간접출자법인 경유분 (상증령 §34의3② 각 단계 곱)
   gain: number; // 증여의제이익 = corpProfit × (직접+간접) — 합산비율로 한 번 곱한다(§45의5엔 §45의3②이 없다)
   isTaxable: boolean;
-  nonTaxableReason?: "not_specific_corp" | "corporate_shareholder" | "donor_self" | "non_related" | "below_threshold";
+  nonTaxableReason?:
+    | "transaction_not_covered"
+    | "not_specific_corp"
+    | "corporate_shareholder"
+    | "donor_self"
+    | "non_related"
+    | "below_threshold";
   limitCalc?: SpecificCorpLimitCalc; // 과세 주주만
 }
 
@@ -380,6 +388,8 @@ export interface DeemedGiftResult {
   specificCorpMulti?: SpecificCorpMultiResult;
   /** §45의5① ⓐ 특정법인 해당성 판정 echo (승수 ⓑ와 다른 축 — specific-corp.ts JSDoc 참조) */
   specificCorpEligibility?: SpecificCorpEligibility;
+  /** §45의5① 각 호 거래유형·상대방·현저성 판정 echo (영 §34의5②④⑥⑦) */
+  specificCorpTransaction?: import("./specific-corp").ScTransactionGate;
   /**
    * §43² 1년 이내 동일거래(§41의4) 합산 — 건별 echo. plain 배열(Map 금지, feedback_engine_result_map_json_loss).
    * deemedGiftValue=합산 총액. 증여시기=isThresholdCrossing 건의 loanDate.

@@ -344,7 +344,17 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
     case "specific_corp": {
-      if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      // 법 §45의5①은 거래상대방을 과세요건으로 못박는다 — 미선택을 통과시키면 제3자와의 거래도 과세된다
+      if (form.scCounterparty === "") return "거래상대방을 선택하세요 (§45의5①)";
+      const isPriceType =
+        form.scTransactionType === "low_price" || form.scTransactionType === "high_price";
+      if (isPriceType) {
+        // 2·3호는 이익이 시가−대가로 «도출»된다(영 §34의5④1호다목) — 거래이익 칸을 쓰지 않는다
+        if (parseAmount(form.scMarketValue) <= 0) return "시가를 입력하세요 (상증령 §34의5⑧)";
+        if (parseAmount(form.scConsideration) <= 0) return "대가를 입력하세요";
+      } else if (parseAmount(form.scTransactionBenefit) <= 0) {
+        return "거래이익을 입력하세요";
+      }
       // ⓐ §45의5① 특정법인 해당성 신고값 — 선택 입력이지만 넣었다면 비율 범위를 지킨다.
       // (미입력은 fallback이 아니라 «간접 0% / 판정 보류»라는 의미가 있는 상태다 — 엔진 JSDoc 참조)
       if (form.scGroupRatioPct.trim() !== "") {

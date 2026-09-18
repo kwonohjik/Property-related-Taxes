@@ -154,6 +154,18 @@ export function DeemedGiftResultView({
         />
       )}
 
+      {/* ── §45의5① 거래상대방 판정 보류 고지 ── */}
+      {result.specificCorpTransaction?.counterpartyMet === "unknown" && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+          data-testid="sc-counterparty-notice"
+        >
+          <b>§45의5① 거래상대방 요건은 판정하지 않았습니다.</b> 이 조문은 특정법인이 «지배주주 및 그
+          특수관계인»과 거래한 경우에만 적용됩니다(자본거래는 지배주주의 특수관계인으로 한정 —
+          상증령 §34의5②). 상대방이 그 밖의 자라면 증여의제가 성립하지 않습니다.
+        </div>
+      )}
+
       {/* ── §45의5① ⓐ 특정법인 해당성 판정 고지 (승수 ⓑ와 다른 축) ── */}
       {result.specificCorpEligibility && result.specificCorpEligibility.met !== "yes" && (
         <div
