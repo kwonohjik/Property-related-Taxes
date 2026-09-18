@@ -22,6 +22,7 @@ export {
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
 import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
 import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
+import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
 // 정의는 `./transfer-tax-building-schemas.ts` 참조.
@@ -295,7 +296,22 @@ export const propertyItemSchema = z
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
   })
-  .superRefine((data, ctx) => addPropertyRefines(data, ctx));
+  .superRefine((data, ctx) => {
+    addPropertyRefines(data, ctx);
+    /**
+     * F-5 — 다건 route(⑭)는 `carryoverTaxation`을 매핑하지 않는다. 받아 두면 **200 + 취득가액 0**으로
+     * 조용히 계산된다(이월과세 자산의 취득가액은 그 서브객체에만 있다). 화면은 ⑧이 막으므로 API 직접
+     * 호출만 여기 걸린다. 취득원인만 있어도, 다른 원인에 서브객체만 stale하게 실려도 거부한다 —
+     * 어느 쪽도 조용히 버리지 않는다.
+     */
+    if (data.acquisitionCause === "carryover_gift" || data.carryoverTaxation) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["carryoverTaxation"],
+        message: MULTI_CARRYOVER_UNSUPPORTED_MESSAGE,
+      });
+    }
+  });
 
 // ─── 다건 입력 스키마 ────────────────────────────────────────────
 
