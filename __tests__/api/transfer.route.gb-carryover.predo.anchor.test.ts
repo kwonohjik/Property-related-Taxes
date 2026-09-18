@@ -220,10 +220,10 @@ describe("GB × 이월과세 — anchor (route)", () => {
       expect(d?.adoptedScenario).toBe("B");
     });
 
-    it("K-04 적용배제 선언(1세대1주택)이 파트까지 도달한다", async () => {
+    it("K-04 레거시 ②2호 선언(옛 이력)이 파트까지 도달한다", async () => {
       const off = await call(landCarry(engineShaped()));
       const on = await call(
-        landCarry(engineShaped({ exclusionDeclared: { oneHouseExemptionApplies: true } })),
+        landCarry(engineShaped({ exclusionDeclared: { legacyOneHouseExemptionDeclared: true } })),
       );
       expect(prop(off, "land")?.carryoverTaxationDetail?.isEligible).toBe(true);
       expect(prop(on, "land")?.carryoverTaxationDetail?.isEligible).toBe(false);

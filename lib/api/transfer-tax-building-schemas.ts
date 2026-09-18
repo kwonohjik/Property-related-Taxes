@@ -13,7 +13,8 @@ import { z } from "zod";
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물 공통. */
 const carryoverExclusionShape = z.object({
   expropriationWithin2Years: z.boolean().optional(),
-  oneHouseExemptionApplies: z.boolean().optional(),
+  /** D45 · Q-3 — 옛 이력의 「② 2호 선언」(레거시). 옛 키 `oneHouseExemptionApplies`는 strip된다. */
+  legacyOneHouseExemptionDeclared: z.boolean().optional(),
   isFamilyBusinessInheritedAsset: z.boolean().optional(),
 });
 
@@ -39,6 +40,8 @@ export const carryoverTaxationEngineShape = z.object({
   /** §97의2① 관계요건 — 증여 **사건** 정보라 토지·건물 두 파트에 같은 값이 실린다. */
   donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
   donorDeceased: z.boolean().optional(),
+  /** D45 배우자 예외 사실 — 단건 인라인 shape과 parity(컴패니언이 이 shape을 쓴다) */
+  spouseGiftOneHouseAtGiftDate: z.boolean().optional(),
   /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 파트의 기준시가 (설계 D9-8).
    *

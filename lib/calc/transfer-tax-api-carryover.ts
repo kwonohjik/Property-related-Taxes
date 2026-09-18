@@ -113,9 +113,14 @@ export function buildCarryoverPayload(
     // §97의2① 관계요건 — 미선택("")·미사망(false)은 전송하지 않는다(엔진 기본값과 동치).
     donorRelation: c.donorRelation || undefined,
     donorDeceased: c.donorDeceased || undefined,
+    // D45 배우자 예외 사실 — ⑤가 배우자일 때만 묻는다. 관계가 바뀐 stale 값은 싣지 않는다(엔진도 관계를 본다).
+    spouseGiftOneHouseAtGiftDate:
+      c.donorRelation === "spouse" && c.spouseGiftOneHouseAtGiftDate ? true : undefined,
     exclusionDeclared: {
       expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
-      oneHouseExemptionApplies: c.exclusionDeclared.oneHouseExemptionApplies || undefined,
+      // D45 · Q-3 — 옛 이력의 선언만(③이 옮긴 값). 새 폼에는 세우는 UI가 없다.
+      legacyOneHouseExemptionDeclared:
+        c.exclusionDeclared.legacyOneHouseExemptionDeclared || undefined,
       isFamilyBusinessInheritedAsset:
         c.exclusionDeclared.isFamilyBusinessInheritedAsset || undefined,
     },

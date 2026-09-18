@@ -7,8 +7,13 @@
 export interface CarryoverExclusionDeclared {
   /** §97조의2 ② 1호 — 사업인정고시일 2년 이전 증여 토지·건물의 협의매수·수용 */
   expropriationWithin2Years: boolean;
-  /** §97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당 (고가주택 포함) */
-  oneHouseExemptionApplies: boolean;
+  /**
+   * **레거시** — 저장 당시 직접 선언한 §97조의2 ② 2호 (D45 · Q-3).
+   * ② 2호는 자동 판정으로 옮겼고 선언 토글은 없다. 옛 record의 `oneHouseExemptionApplies: true`를
+   * ③ `migrateCarryoverFields`가 이 값으로 옮긴다 — **이 값을 세우는 UI는 없다**(새 계산에 붙을 수 없다).
+   * 화면의 「자동 판정으로 전환」이 false로 지운다.
+   */
+  legacyOneHouseExemptionDeclared: boolean;
   /** §97조의2 ④ — 가업상속공제 적용 자산 (v1 미지원) */
   isFamilyBusinessInheritedAsset: boolean;
 }
@@ -94,6 +99,11 @@ export interface CarryoverTaxationForm {
    * spouse=「사망으로 혼인관계 소멸」(이혼은 false) · lineal=「양도 당시 사망」.
    */
   donorDeceased: boolean;
+  /**
+   * 배우자 예외 사실 (D45) — 「증여일 현재 1세대1주택(소득세법 §89①3호)이던 주택을 배우자로부터
+   * 증여받았다」. `donorRelation === "spouse"`일 때만 묻고(⑤) 보낸다(④).
+   */
+  spouseGiftOneHouseAtGiftDate: boolean;
   /** 이월과세 적용배제 선언 */
   exclusionDeclared: CarryoverExclusionDeclared;
 }
@@ -115,9 +125,10 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   giftDateValuation: "",
   donorRelation: "",
   donorDeceased: false,
+  spouseGiftOneHouseAtGiftDate: false,
   exclusionDeclared: {
     expropriationWithin2Years: false,
-    oneHouseExemptionApplies: false,
+    legacyOneHouseExemptionDeclared: false,
     isFamilyBusinessInheritedAsset: false,
   },
 };
@@ -177,9 +188,16 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
         ? raw.donorRelation
         : "",
     donorDeceased: raw.donorDeceased === true,
+    spouseGiftOneHouseAtGiftDate: raw.spouseGiftOneHouseAtGiftDate === true,
     exclusionDeclared: {
       expropriationWithin2Years: !!excl.expropriationWithin2Years,
-      oneHouseExemptionApplies: !!excl.oneHouseExemptionApplies,
+      /**
+       * D45 · Q-3 — 옛 record는 **옛 필드의 존재**(`oneHouseExemptionApplies: true`)로만 판별한다.
+       * 값 비교 판별자는 새 계산에도 상시 붙는다(문서 리뷰 critical #8). 새 폼에는 옛 필드가 없으므로
+       * 한 번 전환(false)하고 저장하면 다시 붙지 않는다.
+       */
+      legacyOneHouseExemptionDeclared:
+        excl.legacyOneHouseExemptionDeclared === true || excl.oneHouseExemptionApplies === true,
       isFamilyBusinessInheritedAsset: !!excl.isFamilyBusinessInheritedAsset,
     },
   } satisfies CarryoverTaxationForm;

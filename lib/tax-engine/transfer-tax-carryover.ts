@@ -130,6 +130,9 @@ export function calcCarryoverScenarios(
         isEligible: false,
         applicablePeriodYears,
         exclusionReason: eligibility.exclusionReason!,
+        ...(eligibility.exclusionReason === "one_house_exemption"
+          ? { oneHouseExclusionSource: "legacy_declaration" as const }
+          : {}),
         scenarioA: makeEmptyScenarioA(),
         scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
         adoptedScenario: "B",
@@ -466,15 +469,15 @@ function finishScenarios(args: {
    * > 2. 제1항을 적용할 경우 제89조제1항제3호 각 목의 주택[…**고가주택**(이에 딸린 토지를
    * >    포함한다)을 포함한다]의 양도에 **해당하게 되는 경우**
    *
-   * ## 🔑 「해당하게 **되는**」은 **상태 변화**를 요구한다 — 예규 2건이 일치한다
+   * ## 🔑 「해당하게 **되는**」은 **상태 변화**를 요구한다
    *
    * · **사전-2016-법령해석재산-0374**(법령해석과-3693, 2016.11.15.):
    *   「같은 조 제1항 규정을 **적용하지 아니하는 경우에도** … 1세대1주택 고가주택의 양도에
    *     해당하게 되는 경우 **제97조의2제2항제2호를 적용하지 않는 것**이며, 취득가액은 그
    *     배우자의 취득 당시 금액으로 하고, 그 배우자의 보유기간을 통산하는 것입니다.」
-   * · **서면-2022-부동산-0068**(부동산납세과-3383, 2022.11.02. · 기재부 재산세제과-333 인용):
-   *   「§89①3호 각 목 외의 부분에 따른 **1세대 1주택에 해당하는 주택**을 배우자로부터
-   *     증여받아 양도하는 경우에는 … **§97의2②2호를 적용하지 않는 것**입니다.」
+   *
+   * ⚠️ 종전 주석은 **서면-2022-부동산-0068**도 이 근거로 읽었으나 오독이다(D45 정정). 0068 질의1은
+   *    「**증여일 현재** 1세대1주택」을 배우자에게서 받은 경우의 **배우자 예외**다 — 아래 별도 분기.
    *
    * ⇒ **이월과세를 적용하지 않아도 이미 1세대1주택이면 ②2호는 발동하지 않는다**
    *   (= 이월과세를 그대로 **적용**한다). ②2호는 **이월과세를 적용해야 비로소** 1세대1주택이
@@ -490,9 +493,25 @@ function finishScenarios(args: {
    * ②3호가 ②2호를 덮어 주는 것은 「A가 비과세로 **싸지기**」 때문이다. **A가 비싼 채로**
    * 비과세에 해당하면(양도인 취득가액이 높아 B의 차익이 작은 경우) ②3호는 걸리지 않는다.
    */
-  const oneHouseExclusion =
+  const becomesOneHouseOnlyWithCarryover =
     args.scenarioAIsOneHouse &&
     !(resultB.isExempt === true || resultB.isPartialExempt === true);
+  /**
+   * ## 배우자 예외 (D45) — ②2호의 「해당하게 되는 경우」 밖에 있는 또 하나의 조합
+   *
+   * 서면-2022-부동산-0068(부동산납세과-3383 · 기재부 재산세제과-333 인용) 질의1 ·
+   * 서면-2016-법령해석재산-3313 · 서면-2016-부동산-4434 · 서면-2016-부동산-3753:
+   * 「**증여일 현재** §89①3호에 따른 1세대1주택에 해당하는 주택을 **배우자**로부터 증여받아
+   *  (이혼 후) 양도하는 경우 §97의2②2호를 적용하지 않는 것」.
+   * ⇒ B가 1세대1주택 비과세에 **해당하지 않아도**(위 조합) 배우자 증여 + 증여일 현재 1세대1주택이면
+   *   ②2호를 적용하지 않는다. 판정 기준일이 **증여일**이라 엔진이 가진 사실(양도일 기준)로는
+   *   도출할 수 없다 — 사실 입력(`spouseGiftOneHouseAtGiftDate`)으로 받는다.
+   * ⚠️ ②2호는 걸릴수록 세액이 내려가기만 하므로(②3호가 max를 대신하므로) 이 예외는 **세액을 올린다**.
+   */
+  const spouseException =
+    ct.donorRelation === "spouse" && ct.spouseGiftOneHouseAtGiftDate === true;
+  const oneHouseExclusion = becomesOneHouseOnlyWithCarryover && !spouseException;
+  const spouseOneHouseExceptionApplied = becomesOneHouseOnlyWithCarryover && spouseException;
 
   if (oneHouseExclusion) {
     return {
@@ -500,6 +519,7 @@ function finishScenarios(args: {
         isEligible: false,
         applicablePeriodYears,
         exclusionReason: "one_house_exemption",
+        oneHouseExclusionSource: "auto",
         scenarioA,
         scenarioB,
         adoptedScenario: "B",
@@ -541,6 +561,7 @@ function finishScenarios(args: {
     scenarioB,
     adoptedScenario,
     comparisonExclusion,
+    ...(spouseOneHouseExceptionApplied ? { spouseOneHouseExceptionApplied: true } : {}),
   };
 
   return {

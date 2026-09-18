@@ -7,6 +7,7 @@
  * 결정세액이 큰 시나리오에 "✓ 채택" 배지 (emerald).
  */
 
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { cn } from "@/lib/utils";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -205,15 +206,14 @@ const EXCLUSION_REASON_LABELS: Record<string, string> = {
  * | `relation_invalid` | 엔진 자동 | `isCarryoverRelationExcluded(관계·사망·증여일)` (:76) |
  * | `period_exceeded` | 엔진 자동 | `transferDate > 증여일 + 적용기간` (:79) |
  * | `expropriation` | **사용자 선언** | `exclusionDeclared.expropriationWithin2Years` (:82) |
- * | `one_house_exemption` | **둘 다** | 선언(:85) **또는** 엔진 자동(`transfer-tax-carryover.ts:502`) |
+ * | `one_house_exemption` | **echo로 구분** | `oneHouseExclusionSource` — 저장 당시 선언(레거시) / 엔진 자동(D-8) |
  * | `tax_comparison` | 엔진 자동 | §97의2②3호 비교 (`:539`) — 배너 대상이 아니다 |
  *
  * ⚠️ **리뷰의 사실 오류를 정정한다** — 리뷰는 `family_business`를 「엔진 자동」이라 했으나
  *    실제로는 **사용자 플래그**다(위 :73). 표를 코드로 확인하지 않고 고쳤다면 반대로 틀렸을 것이다.
  *
- * 🟠 `one_house_exemption`만 출처를 **가릴 수 없다** — 두 경로가 같은 값 하나를 공유하고,
- *    `CarryoverTaxationDetail`에는 선언 여부 echo가 없다. 지어내지 않고 둘 다 적는다.
- *    가르려면 엔진이 echo 필드를 실어야 한다(별건).
+ * ✅ `one_house_exemption`의 출처는 D45(2026-09-18)부터 엔진 echo `oneHouseExclusionSource`로 가른다 —
+ *    선언 토글은 없어졌고, 선언은 옛 이력의 레거시 플래그로만 남는다. echo가 없으면(옛 결과) 둘 다 적는다.
  */
 const EXCLUSION_REASON_SOURCE: Record<string, string> = {
   expropriation: "사용자 선언",
@@ -228,6 +228,15 @@ const EXCLUSION_REASON_SOURCE: Record<string, string> = {
 
 interface Props {
   detail: CarryoverTaxationDetail;
+}
+
+/** `one_house_exemption` 출처 — echo가 있으면 그것으로, 없으면(옛 결과) 둘 다 적는다. */
+function exclusionSourceLabel(detail: CarryoverTaxationDetail): string {
+  if (detail.exclusionReason === "one_house_exemption") {
+    if (detail.oneHouseExclusionSource === "legacy_declaration") return "저장 당시 사용자 선언";
+    if (detail.oneHouseExclusionSource === "auto") return "엔진 자동 판정";
+  }
+  return (detail.exclusionReason && EXCLUSION_REASON_SOURCE[detail.exclusionReason]) ?? "판정 결과";
 }
 
 export function CarryoverComparisonCard({ detail }: Props) {
@@ -267,11 +276,26 @@ export function CarryoverComparisonCard({ detail }: Props) {
       {!detail.isEligible && detail.exclusionReason && detail.exclusionReason !== "tax_comparison" && (
         <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs">
           <p className="font-semibold text-amber-800 mb-0.5">
-            이월과세 적용배제 — {EXCLUSION_REASON_SOURCE[detail.exclusionReason] ?? "판정 결과"}
+            이월과세 적용배제 — {exclusionSourceLabel(detail)}
           </p>
           <p className="text-amber-700">{EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
+          {detail.oneHouseExclusionSource === "legacy_declaration" && (
+            <p className="text-amber-700 mt-0.5">
+              저장 당시 선언 기준으로 계산했습니다 — 입력 화면에서 「자동 판정으로 전환」하면 입력한 사실로 다시 판정합니다.
+            </p>
+          )}
           <p className="text-amber-600 mt-1">→ 일반 양도소득세 계산 적용</p>
         </div>
+      )}
+
+      {/* D45 — 배우자 예외로 ②2호가 풀린 경우 (D-8이 걸릴 조합이었다) */}
+      {detail.spouseOneHouseExceptionApplied && (
+        <ToneCard tone="sky" title="§97조의2 ② 2호 불적용 — 배우자 예외">
+          <p className="text-xs">
+            증여일 현재 1세대1주택이던 주택을 배우자로부터 증여받은 경우(국세청 서면-2022-부동산-0068 등)
+            — 이월과세를 적용해 비교했습니다.
+          </p>
+        </ToneCard>
       )}
 
       {/* A·B 두 시나리오 나란히 */}

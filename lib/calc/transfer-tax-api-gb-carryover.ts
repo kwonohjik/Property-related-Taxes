@@ -52,7 +52,7 @@ export interface GbCarryoverEngineShapedPayload {
   donorStandardPriceAtAcquisition: number | undefined;
   exclusionDeclared?: {
     expropriationWithin2Years: boolean | undefined;
-    oneHouseExemptionApplies: boolean | undefined;
+    legacyOneHouseExemptionDeclared: boolean | undefined;
     isFamilyBusinessInheritedAsset: boolean | undefined;
   };
 }
@@ -121,7 +121,8 @@ function buildEngineShaped(
       ? {
           exclusionDeclared: {
             expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
-            oneHouseExemptionApplies: c.exclusionDeclared.oneHouseExemptionApplies || undefined,
+            legacyOneHouseExemptionDeclared:
+              c.exclusionDeclared.legacyOneHouseExemptionDeclared || undefined,
             isFamilyBusinessInheritedAsset:
               c.exclusionDeclared.isFamilyBusinessInheritedAsset || undefined,
           },
@@ -332,7 +333,8 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
         ? {
             exclusionDeclared: {
               expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
-              oneHouseExemptionApplies: c.exclusionDeclared.oneHouseExemptionApplies || undefined,
+              legacyOneHouseExemptionDeclared:
+                c.exclusionDeclared.legacyOneHouseExemptionDeclared || undefined,
               isFamilyBusinessInheritedAsset:
                 c.exclusionDeclared.isFamilyBusinessInheritedAsset || undefined,
             },

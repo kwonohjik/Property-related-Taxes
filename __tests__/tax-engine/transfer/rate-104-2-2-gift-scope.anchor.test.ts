@@ -176,7 +176,7 @@ describe("D-2 §97의2② 배제 — 증여일 기산 유지 (계획서 §2 ⑧ 
   });
 
   it("C-2 ②2호 1세대1주택 배제 — 단기 50% 유지", () => {
-    const r = excluded({ exclusionDeclared: { oneHouseExemptionApplies: true } });
+    const r = excluded({ exclusionDeclared: { legacyOneHouseExemptionDeclared: true } });
     expect(r.appliedRate).toBe(0.5);
     expect(r.calculatedTax).toBe(248_750_000);
   });

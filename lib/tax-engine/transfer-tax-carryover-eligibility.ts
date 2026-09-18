@@ -82,7 +82,8 @@ export function judgeCarryoverEligibility(
   if (ct.exclusionDeclared?.expropriationWithin2Years) {
     return { isEligible: false, applicablePeriodYears, exclusionReason: "expropriation" };
   }
-  if (ct.exclusionDeclared?.oneHouseExemptionApplies) {
+  // D45 · Q-3 — 옛 이력의 「② 2호 선언」만 이 경로를 탄다(새 폼에는 선언 UI가 없다). 판정은 D-8.
+  if (ct.exclusionDeclared?.legacyOneHouseExemptionDeclared) {
     return { isEligible: false, applicablePeriodYears, exclusionReason: "one_house_exemption" };
   }
   return { isEligible: true, applicablePeriodYears };
