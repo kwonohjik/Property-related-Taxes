@@ -344,7 +344,24 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
     case "specific_corp": {
-      if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      // 법 §45의5①은 거래상대방을 과세요건으로 못박는다 — 미선택을 통과시키면 제3자와의 거래도 과세된다
+      if (form.scCounterparty === "") return "거래상대방을 선택하세요 (§45의5①)";
+      const isPriceType =
+        form.scTransactionType === "low_price" || form.scTransactionType === "high_price";
+      if (isPriceType) {
+        // 2·3호는 이익이 시가−대가로 «도출»된다(영 §34의5④1호다목) — 거래이익 칸을 쓰지 않는다
+        if (parseAmount(form.scMarketValue) <= 0) return "시가를 입력하세요 (상증령 §34의5⑧)";
+        if (parseAmount(form.scConsideration) <= 0) return "대가를 입력하세요";
+      } else if (parseAmount(form.scTransactionBenefit) <= 0) {
+        return "거래이익을 입력하세요";
+      }
+      // ⓐ §45의5① 특정법인 해당성 신고값 — 선택 입력이지만 넣었다면 비율 범위를 지킨다.
+      // (미입력은 fallback이 아니라 «간접 0% / 판정 보류»라는 의미가 있는 상태다 — 엔진 JSDoc 참조)
+      if (form.scGroupRatioPct.trim() !== "") {
+        const groupPct = parseDecimal(form.scGroupRatioPct);
+        if (groupPct <= 0 || groupPct > 100)
+          return "지배주주등 합계 주식보유비율은 0 초과 100 이하로 입력하세요";
+      }
       const isRoster = form.scMode === "roster";
       const isAuto = form.scCorporateTaxMode === "auto";
       if (isRoster) {
@@ -357,6 +374,30 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
         }
         if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        // 법 §45의5①은 「거래한 날을 증여일로 하여」라고 거래 단위로 증여를 본다 ⇒ 증여자가 2인이면
+        // 그것은 **별개의 두 거래**다. 합산해 한 번에 넣으면 두 행이 서로 donor_self로 상쇄돼 0원이 된다.
+        if (form.scShareholders.filter((sh) => sh.isDonor).length > 1)
+          return "증여자 본인은 1명만 지정할 수 있습니다 — 증여자가 2인 이상이면 거래별로 나누어 계산하세요 (§45의5①)";
+        // 간접출자관계 — 고아 참조를 여기서 막는다(새 입력축이라 §45의3의 RC-H 결함을 물려받지 않는다)
+        const shIds = new Set(form.scShareholders.map((sh) => sh.id));
+        for (let i = 0; i < (form.scIntermediaryCorps ?? []).length; i++) {
+          const c = form.scIntermediaryCorps![i];
+          if (!c.corpShareholderId) return `간접출자관계 ${i + 1}의 경유 법인을 선택하세요`;
+          if (!shIds.has(c.corpShareholderId))
+            return `간접출자관계 ${i + 1}의 경유 법인이 주주 명단에 없습니다`;
+          if (!form.scShareholders.find((sh) => sh.id === c.corpShareholderId)?.isCorporate)
+            return `간접출자관계 ${i + 1}의 경유 법인은 주주 명단에서 「법인」으로 표시해야 합니다`;
+          if (c.owners.length === 0) return `간접출자관계 ${i + 1}의 개인 소유주를 추가하세요`;
+          for (let j = 0; j < c.owners.length; j++) {
+            const o = c.owners[j];
+            if (!o.individualId) return `간접출자관계 ${i + 1}의 소유주 ${j + 1}을 선택하세요`;
+            if (!shIds.has(o.individualId))
+              return `간접출자관계 ${i + 1}의 소유주 ${j + 1}이 주주 명단에 없습니다`;
+            const pct = parseDecimal(o.ratioPctStr);
+            if (pct <= 0 || pct > 100)
+              return `간접출자관계 ${i + 1}의 소유주 ${j + 1} 지분율은 0 초과 100 이하로 입력하세요`;
+          }
+        }
         if (isAuto) {
           // roster+auto: 산출세액·소득금액 필수 (자동안분 fallback 금지, 0 차단)
           if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";

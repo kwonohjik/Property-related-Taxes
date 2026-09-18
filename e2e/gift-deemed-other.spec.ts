@@ -39,6 +39,8 @@ test.describe("증여로 보는 경우 — 기타이익·법인", () => {
   test("§45의5 특정법인 (거래10억−법인세2억)×50% → 4억 + 증여세 연결", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "specific_corp");
+    // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
+    await page.getByTestId("sc-cp-ruling").click();
     await page.getByTestId("sc-transaction-benefit").fill("1000000000");
     await page.getByTestId("sc-corporate-tax").fill("200000000");
     await page.getByTestId("sc-shareholder-ratio").fill("50");

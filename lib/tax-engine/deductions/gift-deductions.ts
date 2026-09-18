@@ -32,7 +32,11 @@ import type {
 // 관계별 공제 한도 (10년 통산)
 // ============================================================
 
-const GIFT_DEDUCTION_LIMIT: Record<DonorRelation, number> = {
+/**
+ * §53 관계별 공제 한도(10년 통산). §45의5② 한도 패널(`specific-corp.ts`)도 이 맵을 쓴다 —
+ * 수증자별 §53 구분이 갈릴 때 값을 따로 정의하면 두 개의 진실이 생긴다.
+ */
+export const GIFT_DEDUCTION_LIMIT: Record<DonorRelation, number> = {
   spouse:                   600_000_000,
   lineal_ascendant_adult:    50_000_000,
   lineal_ascendant_minor:    20_000_000,

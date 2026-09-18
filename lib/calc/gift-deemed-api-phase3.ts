@@ -171,6 +171,28 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       const isAuto = form.scCorporateTaxMode === "auto";
       const transactionBenefit = parseAmount(form.scTransactionBenefit);
       const giftDeduction = parseAmount(form.scGiftDeduction) || undefined; // 0이면 undefined(엔진 default 0)
+      // ⓐ §45의5① 특정법인 해당성 신고값(직접+간접 합계). 미입력이면 «전달하지 않는다» —
+      // 0을 보내면 single 모드에서 "판정 보류(unknown)"가 "미충족(no)"으로 뒤집혀 정상 계산이 죽는다.
+      // 법 §45의5① 거래상대방·거래유형 (영 §34의5②④⑥⑦). 미선택이면 «보내지 않는다» —
+      // 엔진이 "unknown"으로 판정을 보류하고 결과뷰가 고지한다(⑧이 제품 경로에서 강제한다).
+      const counterparty = form.scCounterparty === "" ? undefined : form.scCounterparty;
+      const transactionType = form.scTransactionType;
+      const isPriceType = transactionType === "low_price" || transactionType === "high_price";
+      const txFields = {
+        counterparty,
+        transactionType,
+        ...(isPriceType
+          ? { marketValue: parseAmount(form.scMarketValue), consideration: parseAmount(form.scConsideration) }
+          : {}),
+        ...(transactionType === "debt_relief"
+          ? { isDissolvingWithoutResidual: form.scIsDissolvingNoResidual }
+          : {}),
+      };
+      const groupRatioPct = parseDecimal(form.scGroupRatioPct);
+      const controllingGroupRatio =
+        form.scGroupRatioPct.trim() === ""
+          ? undefined
+          : { numer: Math.round(groupRatioPct * 100), denom: 10_000 };
 
       if (isRoster && form.scShareholders && form.scShareholders.length > 0) {
         const totalShares = parseAmount(form.scTotalShares);
@@ -181,8 +203,27 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           shares: parseAmount(sh.shares),
           totalShares,
           isDonor: sh.isDonor,
-          isRelated: sh.relation !== "other", // "other"=타인 → 비특수관계인
+          // 법인주주는 「지배주주와 그 친족」(법 §45의4①)이 아니다 — relation과 무관하게 지배주주등에서 뺀다
+          isRelated: !sh.isCorporate && sh.relation !== "other", // "other"=타인 → 비특수관계인
+          isCorporate: sh.isCorporate,
+          // §53 공제 구분 — ""(미지정)이면 «보내지 않는다». 엔진이 단일 giftDeduction으로 떨어진다
+          ...(sh.donorRelation ? { donorRelation: sh.donorRelation } : {}),
+          isGenerationSkip: sh.isGenerationSkip,
         }));
+        // 간접출자관계 — 경유 법인의 특정법인 지분은 그 법인 «행»의 주식수다(중복 입력 금지, RC-L 회피)
+        const sharesById = new Map(form.scShareholders.map((sh) => [sh.id, parseAmount(sh.shares)]));
+        const intermediaryCorps = (form.scIntermediaryCorps ?? [])
+          .filter((c) => c.corpShareholderId && sharesById.has(c.corpShareholderId))
+          .map((c) => ({
+            corpShareholderId: c.corpShareholderId,
+            stakeInBeneficiary: { numer: sharesById.get(c.corpShareholderId) ?? 0, denom: totalShares },
+            owners: c.owners
+              .filter((o) => o.individualId)
+              .map((o) => ({
+                individualId: o.individualId,
+                ratio: { numer: Math.round(parseDecimal(o.ratioPctStr) * 100), denom: 10_000 },
+              })),
+          }));
         if (isAuto) {
           // auto: 엔진이 안분. raw 4필드 전달. UI 재계산 금지.
           return {
@@ -193,6 +234,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
             corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
             giftDeduction,
+            controllingGroupRatio,
+            ...txFields,
+            intermediaryCorps,
           };
         } else {
           // direct: corporateTax = 직접 입력 (이월결손금 0 허용 → 0 전달)
@@ -202,6 +246,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             corporateTax: parseAmount(form.scCorporateTax),
             shareholders,
             giftDeduction,
+            controllingGroupRatio,
+            ...txFields,
+            intermediaryCorps,
           };
         }
       }
@@ -222,6 +269,8 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
           corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
           giftDeduction,
+          controllingGroupRatio,
+          ...txFields,
         };
       }
       return {
@@ -230,6 +279,8 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         corporateTax: parseAmount(form.scCorporateTax),
         ownershipRatio: singleRatio,
         giftDeduction,
+        controllingGroupRatio,
+        ...txFields,
       };
     }
     case "related_corp": {

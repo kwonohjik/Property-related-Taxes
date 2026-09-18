@@ -21,8 +21,21 @@ function newRow(): ScShareholderRow {
     relation: "lineal_descendant",
     shares: "",
     isDonor: false,
+    isCorporate: false,
+    donorRelation: "",
+    isGenerationSkip: false,
   };
 }
+
+/** §53 증여재산공제 구분 — ""는 입력 단의 단일 「증여재산공제」로 떨어진다(기사용 공제 경로) */
+const SC_DONOR_RELATION_OPTIONS: { value: ScShareholderRow["donorRelation"]; label: string }[] = [
+  { value: "", label: "미지정 (아래 증여재산공제 사용)" },
+  { value: "spouse", label: "배우자 (6억)" },
+  { value: "lineal_ascendant_adult", label: "직계존속 → 성년 (5천만)" },
+  { value: "lineal_ascendant_minor", label: "직계존속 → 미성년 (2천만)" },
+  { value: "lineal_descendant", label: "직계비속 (5천만)" },
+  { value: "other_relative", label: "기타친족 (1천만)" },
+];
 
 const SC_RELATION_OPTIONS: { value: ScRelation; label: string }[] = [
   { value: "lineal_ascendant", label: "직계존속" },
@@ -107,24 +120,76 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
               </select>
             </div>
 
-            {/* 주식수 */}
+            {/* 주식수 — 직접보유분. 간접분은 아래 「간접출자관계」에서 표현한다 */}
             <CurrencyInput
-              label="주식수"
+              label="직접보유 주식수"
               value={row.shares}
               onChange={(v) => update(i, { shares: v })}
-              placeholder="보유 주식수"
+              placeholder="직접 보유한 주식수"
+              hint="법인 경유 간접보유는 아래 「간접출자관계」에"
               data-testid={`sc-sh-shares-${i}`}
             />
 
-            {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
+            {/* 법인주주 — 지배주주등은 「지배주주와 그 친족」(법 §45의4①)이라 개인뿐이다 */}
             <ToggleCard
               variant="chip"
               tone="sky"
-              title="증여자 본인 (과세 제외)"
-              checked={row.isDonor}
-              onCheckedChange={(v) => update(i, { isDonor: v })}
-              data-testid={`sc-sh-is-donor-${i}`}
+              title="법인주주 (간접출자 경유 법인)"
+              checked={row.isCorporate}
+              onCheckedChange={(v) => update(i, { isCorporate: v, isDonor: v ? false : row.isDonor })}
+              data-testid={`sc-sh-is-corporate-${i}`}
             />
+
+            {/* §53 증여재산공제 구분 — 「증여자와의」 관계 (위 「관계」는 지배주주와의 관계라 다른 축) */}
+            {!row.isCorporate && !row.isDonor && (
+              <>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">증여자와의 관계</label>
+                  <select
+                    value={row.donorRelation}
+                    onChange={(e) =>
+                      update(i, { donorRelation: e.target.value as ScShareholderRow["donorRelation"] })
+                    }
+                    data-testid={`sc-sh-donor-relation-${i}`}
+                    className="flex-1 rounded-md border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none"
+                  >
+                    {SC_DONOR_RELATION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <ToggleCard
+                  variant="chip"
+                  tone="sky"
+                  title="세대생략 (증여자의 손자녀 등 — §57 할증)"
+                  checked={row.isGenerationSkip}
+                  onCheckedChange={(v) => update(i, { isGenerationSkip: v })}
+                  data-testid={`sc-sh-generation-skip-${i}`}
+                />
+              </>
+            )}
+
+            {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
+            {!row.isCorporate && (
+              <ToggleCard
+                variant="chip"
+                tone="sky"
+                title="증여자 본인 (과세 제외)"
+                checked={row.isDonor}
+                // §45의5①은 「거래한 날을 증여일로 하여」 — 증여자가 2인이면 별개 거래다.
+                // 켜면 나머지를 끈다(⑧·⑫와 같은 규칙 — 3중 패턴).
+                onCheckedChange={(v) =>
+                  onChange(
+                    rows.map((r, idx) =>
+                      idx === i ? { ...r, isDonor: v } : v ? { ...r, isDonor: false } : r,
+                    ),
+                  )
+                }
+                data-testid={`sc-sh-is-donor-${i}`}
+              />
+            )}
           </div>
         ))}
       </div>

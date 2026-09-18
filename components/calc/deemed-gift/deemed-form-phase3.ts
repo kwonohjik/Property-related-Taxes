@@ -7,7 +7,8 @@
  * 타입·초기값을 **한 파일에 짝으로** 두어 한쪽만 추가하는 누락을 막는다.
  */
 import type { ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
-import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScShareholderRow } from "./deemed-form-rows";
+import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScIntermediaryRow, ScShareholderRow } from "./deemed-form-rows";
+import type { ScCounterparty, ScTransactionType } from "@/lib/tax-engine/gift-deemed/types";
 
 export interface DeemedPhase3Fields {
   // ── Phase 3 추정·의제 ──
@@ -86,7 +87,23 @@ export interface DeemedPhase3Fields {
   // 특정법인 §45의5
   scTransactionBenefit: string;
   scCorporateTax: string;
+  /** 법 §45의5① 거래상대방 — ""=미선택(⑧이 차단). 3의2호는 「지배주주 본인」이 빠진다(영 §34의5②) */
+  scCounterparty: "" | ScCounterparty;
+  /** 법 §45의5① 각 호 거래유형. 기본 1호(무상) — `scTransactionBenefit`가 곧 이익인 유일한 호다 */
+  scTransactionType: ScTransactionType;
+  /** 2·3호 — 영 §34의5⑧ 시가(「법인세법 시행령」 §89) */
+  scMarketValue: string;
+  /** 2·3호 — 대가 */
+  scConsideration: string;
+  /** 4호 — 영 §34의5⑥ 단서: 해산 중 + 잔여재산 없음 → 제외 */
+  scIsDissolvingNoResidual: boolean;
   scRatioPct: string;
+  /**
+   * §45의5① ⓐ 특정법인 해당성 판정용 — 지배주주등(지배주주와 그 친족) **전원**의
+   * 주식보유비율 합계(직접+간접, %). 승수 `scRatioPct`(ⓑ 인별)와 다른 축이다.
+   * roster에서는 주주 명부의 직접지분 합계를 간접분만큼 보정하는 신고값으로 쓴다(미입력 = 간접 0%).
+   */
+  scGroupRatioPct: string;
   // §45의3 일감몰아주기
   rcEnterpriseSize: "small" | "medium" | "large" | "";
   rcTotalSalesStr: string;
@@ -123,6 +140,8 @@ export interface DeemedPhase3Fields {
    * feedback_three_state_optional_mode_toggle 준수.
    */
   scShareholders?: ScShareholderRow[];
+  /** §45의5 간접출자관계 (개인 → 법인 → 특정법인). 「주식보유비율」은 직접+간접이다(법 §45의3①) */
+  scIntermediaryCorps?: ScIntermediaryRow[];
   /**
    * 과세 수증자 선택 인덱스 — **한도표 표시 + 증여세 마법사 이관** 양쪽에 쓴다.
    * (종전 JSDoc은 「한도표 표시용」이라고만 적어 prefill이 이 값을 무시하는 상태와
@@ -194,7 +213,13 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   viEventDate: "",
   scTransactionBenefit: "",
   scCorporateTax: "",
+  scCounterparty: "",
+  scTransactionType: "gratuitous",
+  scMarketValue: "",
+  scConsideration: "",
+  scIsDissolvingNoResidual: false,
   scRatioPct: "",
+  scGroupRatioPct: "",
   // §45의3 일감몰아주기
   rcEnterpriseSize: "",
   rcTotalSalesStr: "",
@@ -212,6 +237,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   scCorpIncome: "",
   scTotalShares: "",
   scShareholders: undefined,
+  scIntermediaryCorps: undefined,
   scSelectedDoneeIndex: 0,
   scGiftDeduction: "",
 };

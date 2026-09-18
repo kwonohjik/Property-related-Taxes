@@ -120,7 +120,7 @@ describe("IG-096 — 증여자 본인 토글이 공용 ToggleCard다", () => {
   it("T-8: native checkbox가 아니라 role=switch이고, testid가 DOM에 있다", () => {
     render(
       <SpecificCorpShareholderTable
-        rows={[{ id: "r0", name: "부", relation: "lineal_ascendant", shares: "20000", isDonor: false }]}
+        rows={[{ id: "r0", name: "부", relation: "lineal_ascendant", shares: "20000", isDonor: false, isCorporate: false, donorRelation: "", isGenerationSkip: false }]}
         onChange={() => {}}
       />,
     );

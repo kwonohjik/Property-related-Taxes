@@ -441,20 +441,51 @@ const specificCorpShareholderSchema = z.object({
   totalShares: z.number().int().nonnegative(),
   isDonor: z.boolean(),
   isRelated: z.boolean(),
+  isCorporate: z.boolean().optional(),
+  donorRelation: z
+    .enum(["spouse", "lineal_ascendant_adult", "lineal_ascendant_minor", "lineal_descendant", "other_relative"])
+    .optional(),
+  isGenerationSkip: z.boolean().optional(),
+});
+/** §45의5 간접출자관계 — 개인 → 법인 → 특정법인 (상증령 §34의3② 각 단계 곱) */
+const specificCorpIntermediarySchema = z.object({
+  corpShareholderId: z.string(),
+  stakeInBeneficiary: ratioSchema,
+  owners: z.array(
+    z.object({
+      individualId: z.string(),
+      ratio: ratioSchema,
+    }),
+  ),
 });
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
   transactionBenefit: z.number().nonnegative(),
+  // 법 §45의5① 거래상대방·각 호 거래유형 (영 §34의5②④⑥⑦) — ⑫ 미등록이면 조용히 stripping된다
+  counterparty: z.enum(["ruling_shareholder", "ruling_related", "other"]).optional(),
+  transactionType: z
+    .enum(["gratuitous", "low_price", "high_price", "capital_transaction", "debt_relief"])
+    .optional(),
+  marketValue: z.number().nonnegative().optional(),
+  consideration: z.number().nonnegative().optional(),
+  isDissolvingWithoutResidual: z.boolean().optional(),
+  // §53·§57 — 수증자별 축 (roster 행이 담는다)
   // single 하위호환
   corporateTax: z.number().nonnegative().optional(),
-  ownershipRatio: ratioSchema.optional(),
+  ownershipRatio: ratioSchema.optional(), // ⓑ 승수(인별)
+  controllingGroupRatio: ratioSchema.optional(), // ⓐ §45의5① 특정법인 해당성 — 지배주주등 합계(직접+간접)
   // roster 모드 신규 필드 (⑫ Zod 입력 객체 정의 — TS 미감지 지점)
   shareholders: z.array(specificCorpShareholderSchema).optional(),
+  intermediaryCorps: z.array(specificCorpIntermediarySchema).optional(),
+  // 증여자 2인 이상은 §45의5①상 별개 거래다 — ⑧과 같은 규칙을 ⑫에도 건다(3중 패턴)
   annualIncome: z.number().nonnegative().optional(),
   corporateTaxComputed: z.number().nonnegative().optional(),
   corporateTaxCredit: z.number().nonnegative().optional(),
   giftDeduction: z.number().nonnegative().optional(),
-});
+}).refine(
+  (v) => (v.shareholders ?? []).filter((sh) => sh.isDonor).length <= 1,
+  { message: "증여자 본인은 1명만 지정할 수 있습니다 (§45의5① — 거래별로 나누어 계산)", path: ["shareholders"] },
+);
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
   caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
