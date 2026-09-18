@@ -147,6 +147,11 @@ export interface RcRecipientBreakdown {
   additionalExclusion: number;
   totalExclusion: number;
   dividendDeduction: number;
+  /**
+   * §34의3⑬ — 「간접보유비율이 1천분의 1 미만」이라 증여의제이익 계산에서 제외된 출자관계 수.
+   * 0이면 필드 자체가 없다(제외가 일어났을 때만 화면에 사유를 남긴다).
+   */
+  sec13ExcludedCount?: number;
 }
 
 /** Phase B 결과 매트릭스 (Record — NextResponse.json 직렬화 안전, Map 금지) */

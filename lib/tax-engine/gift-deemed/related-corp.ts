@@ -13,6 +13,10 @@ import { safeMultiplyThenDivide } from "../tax-utils";
 import type { RelatedCorpInput, DeemedGiftResult, RcRecipientBreakdown } from "./types";
 import {
   computeIndirectRatio,
+  computeIndirectPaths,
+  partitionSec13Paths,
+  sumIndirectPaths,
+  reduceFracBig,
   computeCommonExclusion,
   isSec18SalesPartner,
   fracMin,
@@ -235,8 +239,21 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
       denom: recTradeDenom * RATIO_DENOM,
     };
 
-    // 단계7: 보유비율 − 보유비율차감 (한계 간접 우선차감, 음수 방지)
-    const ind = computeIndirectRatio(r.id, intermediaryCorps, "recipient", rulingGroupIds);
+    // ── 단계7: 보유비율 − 보유비율차감 (한계 간접 우선차감, 음수 방지) ──────────
+    //  §⑬ 전단 — 증여의제이익은 「출자관계(**간접보유비율이 1천분의 1 미만인 경우의 해당
+    //  출자관계는 제외**)별로 각각 구분하여 계산한 금액을 모두 합하여」 계산한다.
+    //
+    //  ⚠️ 이 제외는 **이익 계산에만** 건다. 위 `recipients` 필터(§⑧ 수증자 판정 —
+    //     직접+간접이 한계보유비율 초과)에는 같은 카브아웃이 없으므로 그쪽은 합산값을
+    //     그대로 쓴다. 두 축을 섞으면 법령상 수증자인 사람이 대상에서 빠진다.
+    //
+    //  ⚠️ 미소 관계를 살려 두면 «세액이 두 방향으로» 틀렸다 —
+    //     일반기업은 `OWNERSHIP_RATIO_DEDUCTION.large = 0`이라 그 간접분이 곧바로 이익이 되고,
+    //     중소·중견은 미소 관계가 한계보유비율 차감분 일부를 «흡수»해 직접초과가 커진다.
+    const allPaths = computeIndirectPaths(r.id, intermediaryCorps, "recipient", rulingGroupIds);
+    const { kept: sec13Kept, excluded: sec13Excluded } = partitionSec13Paths(allPaths);
+    const indBig = sumIndirectPaths(sec13Kept);
+    const ind = reduceFracBig(indBig.numer, indBig.denom);
     const ownershipDeduction: Frac = { numer: OWNERSHIP_RATIO_DEDUCTION[enterpriseSize], denom: RATIO_DENOM };
     const indirectDeduct = fracMin(ind, ownershipDeduction); // 간접에서 먼저 차감
     const remaining = fracMaxZeroSub(ownershipDeduction, indirectDeduct); // 잔여 차감분
@@ -265,6 +282,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
       additionalExclusion,
       totalExclusion,
       dividendDeduction,
+      ...(sec13Excluded.length > 0 ? { sec13ExcludedCount: sec13Excluded.length } : {}),
     });
   }
 

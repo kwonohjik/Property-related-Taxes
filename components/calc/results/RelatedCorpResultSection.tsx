@@ -140,6 +140,15 @@ export function RelatedCorpResultSection({
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.directGain)}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {r.indirectGain > 0 ? formatKRW(r.indirectGain) : "—"}
+                    {r.sec13ExcludedCount ? (
+                      <span
+                        className="ml-1 text-caption font-normal text-muted-foreground"
+                        data-testid={`rc-sec13-excluded-${i}`}
+                        title="상증령 §34의3⑬ — 간접보유비율이 1천분의 1 미만인 출자관계는 증여의제이익 계산에서 제외합니다"
+                      >
+                        §⑬ 제외 {r.sec13ExcludedCount}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(r.subtotal)}</td>
                 </tr>

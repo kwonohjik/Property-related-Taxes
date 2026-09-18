@@ -135,20 +135,76 @@ export function computeIndirectRatioBig(
   mode: "ruling" | "recipient",
   rulingGroupIds: string[] = [],
 ): { numer: bigint; denom: bigint } {
-  let accNumer = 0n;
-  let accDenom = 1n;
+  return sumIndirectPaths(computeIndirectPaths(shareholderId, intermediaryCorps, mode, rulingGroupIds));
+}
+
+/** 한 «출자관계»(경유 법인 1개)의 간접보유비율 */
+export type IndirectPath = {
+  /** 경유 법인인 법인주주의 id */
+  corpShareholderId: string;
+  numer: bigint;
+  denom: bigint;
+};
+
+/**
+ * 간접보유비율을 **출자관계별로** 분해한다 (합산 前).
+ *
+ * 상증령 §34의3⑬은 증여의제이익을 「**출자관계별로** 각각 구분하여 계산한 금액을 모두 합하여」
+ * 계산하라면서 괄호로 「간접보유비율이 1천분의 1 미만인 경우의 해당 출자관계는 제외한다」고
+ * 정한다 — 즉 **관계별 값이 남아 있어야** 그 판정을 할 수 있다.
+ * 종전 구조는 경유들을 곧바로 한 분수로 합산해 버려 판정 자체가 불가능했다.
+ */
+export function computeIndirectPaths(
+  shareholderId: string,
+  intermediaryCorps: RcIntermediaryCorpItem[],
+  mode: "ruling" | "recipient",
+  rulingGroupIds: string[] = [],
+): IndirectPath[] {
+  const paths: IndirectPath[] = [];
   for (const corp of intermediaryCorps) {
     if (mode === "recipient" && !isIntermediarySec18(corp, rulingGroupIds)) continue;
     const owner = corp.owners.find((o) => o.individualId === shareholderId);
     if (!owner) continue;
     // 이 경유 간접 = owner.ratio × corp.stakeInBeneficiary  (상증령 §34의3② 「각 단계의 직접보유비율을 모두 곱하여」)
-    const pathNumer = BigInt(owner.ratio.numer) * BigInt(corp.stakeInBeneficiary.numer);
-    const pathDenom = BigInt(owner.ratio.denom) * BigInt(corp.stakeInBeneficiary.denom);
-    // acc += path (분수 합 — 동 ② 후단 「둘 이상의 간접출자관계 … 모두 합하여」)
-    accNumer = accNumer * pathDenom + pathNumer * accDenom;
-    accDenom = accDenom * pathDenom;
+    paths.push({
+      corpShareholderId: corp.corpShareholderId,
+      numer: BigInt(owner.ratio.numer) * BigInt(corp.stakeInBeneficiary.numer),
+      denom: BigInt(owner.ratio.denom) * BigInt(corp.stakeInBeneficiary.denom),
+    });
+  }
+  return paths;
+}
+
+/** 출자관계들의 분수 합 (상증령 §34의3② 후단 「둘 이상의 간접출자관계 … 모두 합하여」) */
+export function sumIndirectPaths(paths: IndirectPath[]): { numer: bigint; denom: bigint } {
+  let accNumer = 0n;
+  let accDenom = 1n;
+  for (const p of paths) {
+    accNumer = accNumer * p.denom + p.numer * accDenom;
+    accDenom = accDenom * p.denom;
   }
   return { numer: accNumer, denom: accDenom === 0n ? 1n : accDenom };
+}
+
+/**
+ * §34의3⑬ — 「간접보유비율이 **1천분의 1 미만**인 경우의 해당 출자관계는 제외한다」.
+ *
+ * 조문이 「미만」이므로 정확히 1천분의 1(0.1%)인 관계는 **제외되지 않는다**.
+ * 이 제외는 **증여의제이익 계산**에만 걸린다 — §⑧의 수증자 판정(직접+간접 합계가 한계보유비율
+ * 초과)에는 같은 카브아웃이 없으므로 그쪽은 합산값을 그대로 써야 한다. 두 축을 섞지 말 것.
+ */
+export function partitionSec13Paths(paths: IndirectPath[]): {
+  kept: IndirectPath[];
+  excluded: IndirectPath[];
+} {
+  const kept: IndirectPath[] = [];
+  const excluded: IndirectPath[] = [];
+  for (const p of paths) {
+    // numer/denom < 1/1000  ↔  numer × 1000 < denom
+    if (p.numer * 1000n < p.denom) excluded.push(p);
+    else kept.push(p);
+  }
+  return { kept, excluded };
 }
 
 /**
