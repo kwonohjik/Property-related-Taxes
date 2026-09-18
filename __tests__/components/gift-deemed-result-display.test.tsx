@@ -200,3 +200,77 @@ describe("SC-O — 「계산식」 열이 엔진 값을 재계산하지 않는�
     expect(text).not.toContain("%"); // 간접분이 없으면 퍼센트를 쓰지 않는다
   });
 });
+
+/**
+ * 감사 C군 — 표시층 잔여 4축.
+ *
+ *   SC-2-g  「계산식」 칸이 간접분을 `toFixed(4)%`로 적어 옆 칸 금액과 등식이 깨졌다(실측 890원).
+ *   SC-5-g  roster 요약줄이 「거래이익 − 안분」 두 항만 적고 거래이익 자체를 안 보였다.
+ *   SC-5-h  과세제외 배지가 수증자 요건을 **증여자 요건 용어**로 표시했다.
+ *   RC-5-e  과세요건 미충족이면 `recipientBreakdown: []`인데 빈 배열이 truthy라 빈 표 2개가 그려졌다.
+ */
+describe("감사 C군 — 표시층", () => {
+  const SC_IND: SpecificCorpInput = {
+    transactionDate: "2025-12-31",
+    counterparty: "ruling_shareholder",
+    transactionType: "gratuitous",
+    transactionBenefit: 1_000_000_000,
+    corporateTax: 0,
+    totalShares: 3,
+    shareholders: [
+      { id: "1", name: "갑", relation: "lineal_descendant", shares: 1, totalShares: 3, isDonor: false, isRelated: true },
+      { id: "2", name: "타인", relation: "other", shares: 2, totalShares: 3, isDonor: false, isRelated: false },
+    ],
+  } as unknown as SpecificCorpInput;
+
+  it("[C-0] SC-5-g — 요약줄이 거래이익·안분·이익 **세 항**을 전부 보인다", () => {
+    const r = calcSpecificCorpGiftMulti(SC_IND);
+    const multi = r.specificCorpMulti!;
+    render(<SpecificCorpMultiResultView multi={multi} selectedDoneeIndex={0} onSelectDonee={() => {}} />);
+    // 종전에는 거래이익이 roster 결과 어디에도 없었다(single breakdown에만 있었다).
+    expect(screen.getByTestId("sc-multi-benefit").textContent).toBe(formatKRW(1_000_000_000));
+    expect(screen.getByTestId("sc-multi-corp-tax").textContent).toBe(formatKRW(multi.corpTaxApportioned));
+    expect(screen.getByTestId("sc-multi-corp-profit").textContent).toBe(formatKRW(multi.corpProfit));
+  });
+
+  it("[C-1] SC-5-h — 배지가 「지배주주등 아님」이다 (증여자 요건 용어를 쓰지 않는다)", () => {
+    cleanup();
+    const multi = calcSpecificCorpGiftMulti(SC_IND).specificCorpMulti!;
+    render(<SpecificCorpMultiResultView multi={multi} selectedDoneeIndex={0} onSelectDonee={() => {}} />);
+    const matrix = screen.getByTestId("sc-multi-matrix");
+    expect(matrix.textContent).toContain("지배주주등 아님 제외");
+    // 🔴 §45의5①에서 「특수관계인」은 **거래상대방(증여자) 쪽** 요건의 말이다 — 수증자 배지에 쓰면 두 축이 섞인다.
+    expect(matrix.textContent).not.toContain("비특수관계인 제외");
+  });
+
+  it("[C-2] SC-2-g — **간접분이 섞인** 행은 계산식이 분수로 나오고 옆 칸과 등식이 성립한다", () => {
+    cleanup();
+    // ⚠️ 이 픽스처는 **반드시 간접분을 가져야** 한다. 간접이 0이면 `ratioFrac`가 붙지 않아
+    //    직접분 `shares/totalShares` 경로를 타고, 그러면 이 anchor는 자기 축을 재지 못한다(구별력 0).
+    //    갑: 직접 1/3 + 경유법인(지분 1/3)을 1/2 소유 → 간접 1/6 ⇒ 합 1/2.
+    const withIndirect = {
+      ...SC_IND,
+      totalShares: 3,
+      shareholders: [
+        { id: "1", name: "갑", relation: "lineal_descendant", shares: 1, totalShares: 3, isDonor: false, isRelated: true },
+        { id: "co", name: "B법인", relation: "other", shares: 1, totalShares: 3, isDonor: false, isRelated: true, isCorporate: true },
+        { id: "2", name: "타인", relation: "other", shares: 1, totalShares: 3, isDonor: false, isRelated: false },
+      ],
+      intermediaryCorps: [
+        { corpShareholderId: "co", stakeInBeneficiary: { numer: 1, denom: 3 }, owners: [{ individualId: "1", ratio: { numer: 1, denom: 2 } }] },
+      ],
+    } as unknown as SpecificCorpInput;
+    const multi = calcSpecificCorpGiftMulti(withIndirect).specificCorpMulti!;
+    render(<SpecificCorpMultiResultView multi={multi} selectedDoneeIndex={0} onSelectDonee={() => {}} />);
+    // 전제 — 간접분이 실제로 붙었는지 먼저 확인한다(픽스처가 무너지면 아래 단언이 공허해진다)
+    expect(multi.donees[0].indirectRatioPct).toBeGreaterThan(0);
+    expect(multi.donees[0].ratioFrac).toBeDefined();
+    const formula = screen.getByTestId("sc-multi-formula-0").textContent ?? "";
+    expect(formula).not.toContain("%"); // 반올림한 퍼센트를 산식의 인수로 쓰지 않는다
+    expect(formula).toContain("/"); // 약분한 분수
+    // 등식: 표시된 분수로 계산한 값 = 표시된 증여재산가액
+    const { numer, denom } = multi.donees[0].ratioFrac!;
+    expect(Math.floor((multi.corpProfit * numer) / denom)).toBe(multi.donees[0].gain);
+    expect(screen.getByTestId("sc-multi-gain-0").textContent).toBe(formatKRW(multi.donees[0].gain));
+  });
+});

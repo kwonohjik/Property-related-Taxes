@@ -322,7 +322,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       <ToneCard
         tone="violet"
         sectionNum="4"
-        title={isRoster ? "발행주식 총수 + 주주 명단" : "해당 지배주주등의 주식보유비율"}
+        title={isRoster ? "발행주식 총수 + 지배주주등 주주 명단" : "해당 지배주주등의 주식보유비율"}
         noDark
       >
         {!isRoster && (
@@ -341,6 +341,11 @@ export function SpecificCorpFields({ form, set }: Props) {
               value={form.scTotalShares}
               onChange={(v) => set({ scTotalShares: v })}
               hint="법인 발행주식 총수 (지분율 분모)"
+              // 🔴 SC-4-f: placeholder를 안 주면 CurrencyInput 기본값 「금액 입력」이 뜨는데
+              //    이 칸은 「금액」이 아니라 「수」다.
+              //    ⚠️ 라벨을 그대로 되풀이하지 않는다 — `placeholder-policy` 래칧(19건)은
+              //       「이 수를 올려 통과시키지 말 것」이다. 단위종류만 밝힌다.
+              placeholder="주식 수"
               data-testid="sc-total-shares"
             />
             <SpecificCorpShareholderTable

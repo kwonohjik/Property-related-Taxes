@@ -251,6 +251,14 @@ export interface SpecificCorpDonee {
   ownershipRatioPct: number; // 표시용 백분율 = 직접 + 간접 (법 §45의3① 「직접 또는 간접으로 보유하는」)
   directRatioPct: number; // 직접보유분
   indirectRatioPct: number; // 간접출자법인 경유분 (상증령 §34의3② 각 단계 곱)
+  /**
+   * 직접+간접 **총 주식보유비율**을 약분한 분수 (표시 전용).
+   * 🔴 SC-2-g: 결과뷰의 「계산식」 칸이 간접분을 `toFixed(4)%`로 **반올림한 인수**로
+   *    적어, 그 식을 그대로 계산해도 옆 칸의 증여재산가액이 나오지 않았다(실측 890원 차).
+   *    엔진은 `safeMultiplyThenDivide(corpProfit, numer, denom)`으로 정확분수 계산하므로,
+   *    표시도 **같은 분수**를 보이면 등식이 성립한다(직접분이 `shares/totalShares`를 보이는 것과 같은 원칙).
+   */
+  ratioFrac?: { numer: number; denom: number };
   gain: number; // 증여의제이익 = corpProfit × (직접+간접) — 합산비율로 한 번 곱한다(§45의5엔 §45의3②이 없다)
   isTaxable: boolean;
   nonTaxableReason?:
@@ -285,6 +293,13 @@ export interface SpecificCorpEligibility {
 export interface SpecificCorpMultiResult {
   corpProfit: number; // 특정법인의 이익 (거래이익 − 법인세 안분)
   corpTaxApportioned: number; // 법인세 안분액
+  /**
+   * 거래이익(영 §34의5④1호) — 표시 전용.
+   * 🔴 SC-5-g: 종전 roster 결과는 이 값을 **한 번도 보이지 않았다**(single breakdown에는 「거래이익」 행이 있다).
+   *    요약줄은 「이익 = 거래이익 − 안분」이라 적어 두 항만 보였고, `corpProfit`이 0으로
+   *    clamp되면 사용자가 역산하는 거래이익이 거짓이 됐다. 세 항을 전부 드러낸다.
+   */
+  transactionBenefit: number;
   donees: SpecificCorpDonee[];
 }
 

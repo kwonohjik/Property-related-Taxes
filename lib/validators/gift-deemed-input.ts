@@ -433,6 +433,7 @@ const valueIncreaseSchema = z.object({
 });
 // §45의5 주주 행 Zod (엔진 SpecificCorpShareholder에 대응)
 const scRelationSchema = z.enum([
+  "self", // 지배주주 본인 (SC-4-e)
   "lineal_ascendant",
   "lineal_descendant",
   "spouse",
@@ -743,7 +744,7 @@ export const deemedGiftInputSchema = z
             path: ["intermediaryCorps"],
             message:
               `「${corpRow.name.trim() || "법인주주"}」의 간접출자법인 수혜법인 지분율 합계(${sum.toFixed(2)}%)가 ` +
-              `주주현황의 직접지분(${direct.toFixed(2)}%)과 다릅니다 (상증령 §34직3⑬)`,
+              `주주현황의 직접지분(${direct.toFixed(2)}%)과 다릅니다 (상증령 §34의3⑬)`,
           });
         }
       }

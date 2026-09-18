@@ -132,7 +132,11 @@ export function RelatedCorpResultSection({
         </table>
       </div>
 
-      {/* 수증자별 직접/간접 표 */}
+      {/* 수증자별 직접/간접 표 — 🔴 RC-5-e: 과세요건 미충족 조기반환은 `recipientBreakdown: []`를
+          내는데 빈 배열은 truthy라 상위 게이트를 그대로 통과했고, 이 표가 **데이터 행 0개 +
+          합계 0원 행**만으로 렌더됐다. ⚠️ 상위 게이트(:104)를 좀히면 안 된다 — 그러면 미충족
+          케이스에서 **가장 정보량이 큰** 과세요건 공통부 카드까지 함께 사라진다. 표만 감춘다. */}
+      {breakdown.length > 0 && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="rc-recipient-breakdown">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold text-emerald-800">수증자별 증여의제이익 내역</p>
@@ -232,8 +236,10 @@ export function RelatedCorpResultSection({
           </p>
         )}
       </div>
+      )}
 
-      {/* 보유비율 raw — 직접·간접 대칭 echo (RC-INDIRECT-ECHO) */}
+      {/* 보유비율 raw — 직접·간접 대칭 echo (RC-INDIRECT-ECHO). 헤더만 남는 빈 표를 막는다 (RC-5-e) */}
+      {breakdown.length > 0 && (
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3">
         <p className="text-xs font-semibold text-amber-800">보유비율 산출 내역 (직접·간접 raw)</p>
         <table className="mt-1 w-full text-xs">
@@ -278,6 +284,7 @@ export function RelatedCorpResultSection({
           </p>
         )}
       </div>
+      )}
 
       {/* 종전에는 특정 교재 사례(수혜법인 A, 2023 귀속)의 anchor 금액 두 개를 조건 없이
           「본 시스템 산출」로 찍어, 사용자가 어떤 값을 넣든 같은 숫자가 나왔다. 수치를 뺀다. */}

@@ -611,6 +611,21 @@ export function DeemedGiftResultView({
           data-testid="deemed-exclusion"
         >
           증여세 미적용: {result.exclusionReason}
+          {/* 🔴 SC-5-e: single §45의5 경로는 1억 미만이면 breakdown 마지막 행을 0으로 채워
+              화면이 「8억 × 10% = 0」으로 읽혔고, 실제 산출값은 `thresholdEcho.gain`에만 있는데
+              그것을 소비하는 화면이 0건이었다 — 사용자는 1억에 얼마가 모자랐는지 알 수 없었다.
+              조문상 「증여의제이익」은 **존재**하고(법 §45의5①), 영 §34의5⑤는 그 적용만 1억 이상으로
+              「한정」할 뿐이다. roster는 주주별 표에 gain을 그대로 보이므로 문구를 그쪽에 맞춘다. */}
+          {(() => {
+            const echoGain = result.thresholdEcho?.gain;
+            if (result.type !== "specific_corp" || result.specificCorpMulti) return null;
+            if (typeof echoGain !== "number" || echoGain <= 0) return null;
+            return (
+              <p className="mt-1 text-xs" data-testid="sc-threshold-echo">
+                산출된 증여의제이익 {formatKRW(echoGain)} — 1억원 미만으로 과세 제외(상증령 §34의5⑤)
+              </p>
+            );
+          })()}
           {result.excessDividendDetail?.isAggregationExcluded && (
             <p className="mt-1 text-xs">
               ※ 이 초과배당 증여재산은 §47② 동일인 재차증여 합산 적용에서 배제됩니다.
