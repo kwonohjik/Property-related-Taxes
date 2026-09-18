@@ -128,6 +128,11 @@ export const TRANSFER = {
    * 소득세법 §91①은 비과세만 배제한다 — 감면 배제의 근거는 이 조문이다.
    */
   REDUCTION_UNREGISTERED_EXCLUSION: "조특법 §129②",
+  /**
+   * 소득세법 §91① — 「제104조제3항에서 규정하는 미등기양도자산에 대하여는 이 법 또는 이 법 외의
+   * 법률 중 양도소득에 대한 소득세의 비과세에 관한 규정을 적용하지 아니한다.」 (KoreanLaw MST 280405)
+   */
+  EXEMPTION_UNREGISTERED_EXCLUSION: "소득세법 §91①",
   /** 조특법 §77 — 공익사업용 토지 등에 대한 양도소득세 감면 */
   REDUCTION_PUBLIC_EXPROPRIATION: "조특법 §77",
   /**

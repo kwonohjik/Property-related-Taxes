@@ -81,7 +81,8 @@ export function calculateTransferTax(
   // 막고, 결과 안내는 여기서 한 번만 싣는다.
   const unregisteredNotice = unregisteredReductionNotice(input);
   if (unregisteredNotice) warnings.push(unregisteredNotice);
-  // 조기반환 경로(다필지·§155⑳)는 이 `warnings`를 싣지 않는다 — 그 두 곳에는 안내만 덧붙인다.
+  // 조기반환 경로(다필지)는 이 `warnings`를 싣지 않는다 — 안내만 덧붙인다.
+  // (§155⑳ 경로는 미등기면 특례 자체가 적용 불가라(§91① — F-8) 일반 경로로 온다.)
   const withUnregisteredNotice = (r: TransferTaxResult): TransferTaxResult =>
     unregisteredNotice ? { ...r, warnings: [...(r.warnings ?? []), unregisteredNotice] } : r;
 
@@ -519,7 +520,7 @@ export function calculateTransferTax(
       steps,
       inheritedAcquisitionStep,
     });
-    if (rheResult) return withUnregisteredNotice(rheResult);
+    if (rheResult) return rheResult;
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
     if (isPrhpScenarioB(effectiveInput) && exemptionResult.isExempt) {
       warnings.push("장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. 일반 과세 경로로 계산되었습니다.");

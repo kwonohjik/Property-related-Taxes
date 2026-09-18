@@ -399,6 +399,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["중복지원의 배제", "하나만을 선택하여 적용받을 수 있다", "거주자가 토지등을 양도하여 둘 이상의 양도소득세의 감면규정"],
     keywordMode: "ALL",
   },
+  // KoreanLaw 실측 본문(MST 280405) — 미등기양도자산 비과세 배제(F-8 · §155⑳ 경로).
+  {
+    id: "TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION",
+    citation: "소득세법 §91",
+    keywords: ["양도소득세 비과세 또는 감면의 배제 등", "미등기양도자산에 대하여는 이 법 또는 이 법 외의 법률 중 양도소득에 대한 소득세의 비과세에 관한 규정을 적용하지 아니한다"],
+    keywordMode: "ALL",
+  },
   // KoreanLaw 실측 본문(MST 284389, 시행 2026-09-18) — 미등기양도자산 감면 배제(D15).
   {
     id: "TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION",
