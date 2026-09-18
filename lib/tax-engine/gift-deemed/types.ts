@@ -46,6 +46,7 @@ export type {
   ScRelation,
   ScCounterparty,
   ScTransactionType,
+  ScPriorTransaction,
   SpecificCorpShareholder,
   SpecificCorpInput,
   RcShareholder,
@@ -217,7 +218,18 @@ export interface SpecificCorpLimitCalc {
   corpTaxShare: number; // ㉡ 법인세 상당액 × 지분율
   limitAmount: number; // ㉯ = max(0, ㉠ − ㉡)
   finalTax: number; // min(㉮, ㉯)
-  filingCredit: number; // §69 floor(finalTax × 3/100)
+  filingCredit: number; // §69 floor(finalTax × filingCreditRate)
+  /**
+   * §69 신고세액공제율 — 거래일(=증여일) 기준 연도별 단일 소스(`resolveFilingCreditRate`).
+   * 종전에는 3%가 엔진 상수 + 결과뷰 라벨 문자열 두 곳에 박혀 있어, 거래일이 2018년이면
+   * 이 화면은 3%인데 이관된 증여세 마법사는 5%를 쓰는 어긋남이 났다.
+   */
+  filingCreditRate: number;
+  /**
+   * 영 §34의5⑨ ㉠ base 기준 — 거래일 시점 문언(`specific-corp-era.ts`).
+   * "net"(~2022-02-14) = 증여의제이익 / "gross"(2022-02-15~) = 거래이익 × 보유비율.
+   */
+  limitBasis: import("./specific-corp-era").ScLimitBasis;
   selfPayTax: number; // finalTax − filingCredit
   /** 이 수증자에게 실제 적용한 §53 증여재산공제액 (행 단위 donorRelation → 한도, 없으면 단일 입력값) */
   giftDeductionApplied: number;
@@ -284,6 +296,18 @@ export interface DeemedGiftResult {
   exclusionReason?: string;
   /** 근거 조문 (GIFT.* 상수) */
   legalBasis: string;
+  /**
+   * 적용 법령 기준일 = **그 조문이 정한 증여시기**. 저장소의 4개 엔진(양도·취득·종부·증여 본세)이
+   * 이미 쓰는 관례를 증여의제에도 맞춘다 — 종전에는 증여의제 두 조문만 이 축이 없어
+   * 「어느 시점의 거래인가」가 결과에 드러나지도, 엔진에 도달하지도 않았다.
+   *
+   * - §45의5① 「**거래한 날**을 증여일로 하여」 → `transactionDate`
+   * - §45의3③ 「수혜법인의 해당 **사업연도 종료일**을 증여시기로 본다」 → `fiscalYearEndDate`
+   *
+   * ⚠️ 이 값이 있다고 해서 **행위시법 분기가 구현됐다는 뜻은 아니다** — 구간별 비율·산식은
+   *    아직 현행 고정이다(§45의3 비율 상수 4종 · §45의5② 한도 규정). 결과뷰가 그 사실을 고지한다.
+   */
+  appliedLawDate?: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
   /** §41의3 정산 방향 — taxation(과세)/refund(평가손실 환급)/none(기준미달). 미설정 시 일반 의제 */
@@ -390,6 +414,12 @@ export interface DeemedGiftResult {
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;
+  /**
+   * §45의5② 한도 — **single(지분율 직접) 모드**의 수증자 1인분.
+   * roster는 수증자별로 `specificCorpMulti.donees[].limitCalc`에 담긴다. 조문은 입력 모드를
+   * 구분하지 않으므로(§45의5②·영 §34의5⑨) 두 경로가 같은 leaf를 쓴다 — parity anchor가 고정한다.
+   */
+  specificCorpLimit?: SpecificCorpLimitCalc;
   /** §45의5① ⓐ 특정법인 해당성 판정 echo (승수 ⓑ와 다른 축 — specific-corp.ts JSDoc 참조) */
   specificCorpEligibility?: SpecificCorpEligibility;
   /** §45의5① 각 호 거래유형·상대방·현저성 판정 echo (영 §34의5②④⑥⑦) */

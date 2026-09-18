@@ -253,9 +253,42 @@ export type ScCounterparty =
   | "ruling_related" // 지배주주의 특수관계인
   | "other"; // 그 밖의 자 → §45의5① 부적용
 
+/**
+ * §43②·영 §32의4 11호 — 증여일부터 소급 1년 이내의 **같은 호** 거래 1건.
+ * 「이익」은 그 거래의 영 §34의5④1호 이익(가목 증여재산가액·채무면제이익 / 나목 준용계산액 /
+ * 다목 시가−대가 차액)이다. 요건(현저성 등)을 충족한 거래의 이익만 넣는다.
+ */
+export interface ScPriorTransaction {
+  /** 거래한 날 (YYYY-MM-DD) */
+  date: string;
+  /** 그 거래의 §34의5④1호 이익 */
+  benefit: number;
+  /** 표시용 라벨 */
+  label?: string;
+}
+
 /** §45의5 특정법인과의 거래 */
 export interface SpecificCorpInput {
   transactionBenefit: number; // §34의5④1호 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  /**
+   * §45의5① 「**거래한 날**을 증여일로 하여」 — 이 신고의 증여일.
+   * §43② 1년 소급 윈도의 기준일이자 §69 신고세액공제율의 기준일이다.
+   */
+  transactionDate?: string;
+  /**
+   * §43②·영 §32의4 11호 — 「그 증여일부터 소급하여 1년 이내에 동일한 거래 등이 있는 경우에는
+   * 각각의 거래 등에 따른 이익을 해당 이익별로 합산하여 계산한다」.
+   *
+   * 11호 괄호가 「같은 항 **각 호의 거래에 따른 이익별로 구분된 이익**」이라 **호별**로 합산한다
+   * — 이 배열은 `transactionType`이 가리키는 호와 같은 호의 거래만 담는다(UI가 그렇게 안내한다).
+   *
+   * ⚠️ 법 §43② 본문 괄호 「(시가와 대가의 차액을 말한다)」를 «다목 거래에만 합산한다»로 읽으면
+   *    안 된다 — 같은 항이 §37(부동산 무상사용)·§41의2(초과배당)·§41의4(금전무상대출)도 열거하는데
+   *    그것들은 시가−대가 차액이 아니다. §45의5의 이익 범위는 위임을 받은 영 §32의4 11호가 정한다.
+   *
+   * 합산하지 않으면 쪼갠 거래가 각각 영 §34의5⑤ 1억원 미만이 되어 전부 비과세로 빠진다.
+   */
+  priorTransactions?: ScPriorTransaction[];
   /** 거래상대방 — 미전달이면 **판정하지 않는다**(결과뷰가 고지). ⑧ validate가 제품 경로에서 강제한다 */
   counterparty?: ScCounterparty;
   /**
@@ -292,7 +325,16 @@ export interface SpecificCorpInput {
   // ── roster 모드 (shareholders 존재 시 dispatch) ──
   shareholders?: SpecificCorpShareholder[];
   annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)
-  corporateTaxComputed?: number; // 법인세 산출세액(안분 前)
+  corporateTaxComputed?: number; // 법인세 산출세액(안분 前) — 「법인세법」 §55① 정의상 §55의2분을 «포함»한 값
+  /**
+   * 「법인세법」 §55의2 토지등 양도소득에 대한 법인세액 — 상증령 §34의5④2호가목이
+   * 「산출세액(같은 법 제55조의2에 따른 토지등 양도소득에 대한 법인세액은 제외한다)」로
+   * 명시 차감하는 항목. §55① 본문이 산출세액을 「…이를 **합한 금액으로 한다**」로 정의하므로
+   * 이 괄호는 확인적 문구가 아니라 실질 차감이다.
+   * ⚠️ 조특법 §100의32(투자·상생협력 촉진) 특례세액은 §55①이 같이 합산하지만 상증령 괄호는
+   *    열거하지 않는다 — **빼면 안 된다**(확대 적용 금지).
+   */
+  corporateTaxOnLandTransfer?: number;
   corporateTaxCredit?: number; // 법인세 공제·감면액
   giftDeduction?: number; // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
 }
@@ -354,6 +396,15 @@ export interface RcSalesPartner {
 
 /** §45의3 일감몰아주기 — 엔진 입력 (nested, 순수함수) */
 export interface RelatedCorpInput {
+  /**
+   * §45의3③ 「증여의제이익의 계산은 수혜법인의 **사업연도 단위**로 하고, 수혜법인의 **해당
+   * 사업연도 종료일을 증여시기**로 본다」 — 이 조문의 증여시기는 거래일도 신고일도 아니다.
+   *
+   * 종전에는 `RelatedCorpInput`에 날짜 필드가 하나도 없어 「어느 시점의 사업연도인가」가
+   * 엔진에 도달하지 않았다. 행위시법 분기(W12)를 만들 자리 자체가 없었고, 결과에
+   * `appliedLawDate`(저장소 4개 엔진의 확립된 관례)도 내보내지 못했다.
+   */
+  fiscalYearEndDate?: string;
   /** 기업규모 — 비율 3종 분기 단일 분기점 */
   enterpriseSize: "small" | "medium" | "large";
   /** 총 매출액(원) = §⑫ 분모 */

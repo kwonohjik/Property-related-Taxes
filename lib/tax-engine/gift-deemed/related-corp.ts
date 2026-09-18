@@ -87,6 +87,9 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const taxRequirementMet = tradeRatioNumer * RATIO_DENOM > tradeRatioDenom * normalTrade;
 
   const echo = {
+    // §45의3③ — 증여시기는 「수혜법인의 해당 사업연도 종료일」이다(거래일·신고일이 아니다).
+    //   저장소 4개 엔진이 쓰는 `appliedLawDate` 관례를 증여의제에도 맞춘다.
+    ...(input.fiscalYearEndDate ? { appliedLawDate: input.fiscalYearEndDate } : {}),
     rulingShareholder,
     tradeRatio: { numer: tradeRatioNumer, denom: tradeRatioDenom },
     relatedSales,

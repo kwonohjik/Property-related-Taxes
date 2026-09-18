@@ -56,6 +56,16 @@ const baseItemSchema = z.object({
   isAggregationExcludedGift: z.boolean().optional(),
   // §55① 호분기 — 명의신탁(1호)·일감몰아주기(2호)=3천만 공제 없음, 그 외(3호)=3천만 공제. ⑫ strip 방지 (G-4)
   aggregationExcludedClass: z.enum(["nominee_trust", "deemed_profit", "general"]).optional(),
+  // §45의5② 증여세 한도 + staleness 근거 — ⑫ strip 방지(빠지면 마법사가 한도를 모른 채 계산한다)
+  deemedGiftTaxCap: z
+    .object({
+      limitAmount: z.number().nonnegative(),
+      basis: z.object({
+        deemedGiftValue: z.number().nonnegative(),
+        giftDeduction: z.number().nonnegative(),
+      }),
+    })
+    .optional(),
   monthlyRent: z.number().nonnegative().optional(), // §61⑤ 임대료환산
   // §61⑤ 미임대(공실) 부분 — 1동 건물 일부 임대 시 미임대분 기준시가 합산용. 누락 시 silent strip.
   totalBuildingArea: z.number().nonnegative().optional(), // 전체 건물 연면적(㎡) — 토지 안분 분모

@@ -4,7 +4,42 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
+import { resolveScEraExclusion } from "@/lib/tax-engine/gift-deemed/specific-corp-era";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
+
+/**
+ * 영 §34의5④2호가목 — 「산출세액(「법인세법」 §55의2에 따른 토지등 양도소득에 대한 법인세액은
+ * 제외한다)」. §55의2분은 §55① 정의상 산출세액에 **포함**돼 들어오므로 그보다 클 수 없다.
+ * 자동 보정(clamp)은 하지 않는다 — 어느 쪽 칸이 틀렸는지 앱이 알 수 없다(자동 fallback 금지).
+ */
+function validateScLandTransferTax(form: DeemedFormState): string | null {
+  const assessed = parseAmount(form.scCorpTaxAssessed);
+  const land = parseAmount(form.scCorpTaxLandTransfer);
+  if (land < 0) return "토지등 양도소득에 대한 법인세액은 0 이상으로 입력하세요";
+  if (land > assessed)
+    return "토지등 양도소득에 대한 법인세액이 법인세 산출세액보다 큽니다 — 산출세액은 그 세액을 포함한 금액입니다 (「법인세법」 §55①)";
+  return null;
+}
+
+/**
+ * §43②·영 §32의4 11호 — 소급 1년 이내 같은 호 선행거래 행 검증.
+ *
+ * 증여일(=거래한 날)이 없으면 엔진은 1년 윈도를 정할 수 없어 합산을 건너뛴다. 그 상태는
+ * 이미 :46의 공통 가드(「증여일을 입력하세요」)가 **이 함수보다 앞에서** 막으므로 여기서
+ * 다시 검사하지 않는다 — 도달 불가 분기를 두면 안전망이 있다고 착각하게 된다.
+ */
+function validateScPriorTransactions(form: DeemedFormState): string | null {
+  const rows = form.scPriorTransactions ?? [];
+  if (rows.length === 0 || !form.giftDate) return null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r.date.trim()) return `선행거래 ${i + 1}의 거래일을 입력하세요`;
+    if (r.date > form.giftDate)
+      return `선행거래 ${i + 1}의 거래일이 증여일보다 뒤입니다 — 합산 대상은 «소급» 1년 이내입니다 (§43²)`;
+    if (parseAmount(r.benefit) <= 0) return `선행거래 ${i + 1}의 이익을 입력하세요`;
+  }
+  return null;
+}
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
   // 신탁이익(§33)은 공통 증여일 대신 원본·수익 증여시기를 분리 입력(§25①) → 공통 giftDate 검사 skip
@@ -344,8 +379,14 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
     case "specific_corp": {
+      // 행위시법 — 이 화면이 계산할 수 없는 시점이면 여기서 막는다(엔진도 같은 술어로 막지만,
+      //   ⑧이 먼저 잡아야 사용자가 「계산은 됐는데 0원」이 아니라 이유를 바로 본다).
+      const eraErr = resolveScEraExclusion(form.giftDate || undefined);
+      if (eraErr) return eraErr;
       // 법 §45의5①은 거래상대방을 과세요건으로 못박는다 — 미선택을 통과시키면 제3자와의 거래도 과세된다
       if (form.scCounterparty === "") return "거래상대방을 선택하세요 (§45의5①)";
+      const priorErr = validateScPriorTransactions(form);
+      if (priorErr) return priorErr;
       const isPriceType =
         form.scTransactionType === "low_price" || form.scTransactionType === "high_price";
       if (isPriceType) {
@@ -402,6 +443,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           // roster+auto: 산출세액·소득금액 필수 (자동안분 fallback 금지, 0 차단)
           if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
           if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+          const landErr = validateScLandTransferTax(form);
+          if (landErr) return landErr;
         }
         // roster+direct: corporateTax 0 허용 (이월결손금 0)
       } else {
@@ -409,6 +452,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (isAuto) {
           if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
           if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+          const landErr = validateScLandTransferTax(form);
+          if (landErr) return landErr;
         }
         // single+direct: corporateTax·ratio 기존(0 허용)
       }

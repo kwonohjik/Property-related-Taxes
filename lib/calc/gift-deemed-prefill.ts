@@ -3,7 +3,7 @@
  * `gift-deemed-api.ts`가 800줄 정책을 넘어 분리(트리거 800 · 착지 ≤700).
  * import 경로 보존을 위해 `gift-deemed-api.ts`에서 re-export한다.
  */
-import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftAnyResult, SpecificCorpLimitCalc } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DEEMED_TYPE_META, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
@@ -22,6 +22,21 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
  * §42의3·§45·§45의2~§45의4 — **§45의5는 없다**), 나머지 분기도 같은 헬퍼를 통과시켜
  * 새 유형이 합산배제가 될 때 같은 누락이 재발하지 않게 한다(오늘은 전부 no-op).
  */
+/**
+ * §45의5② 한도를 마법사로 이관한다 — 종전에는 결과뷰에만 남아, 같은 사안에 두 개의 세액이 나왔다.
+ * 「그 초과액은 없는 것으로 본다」는 세액 상한이므로 산출세액 단계에서 적용된다.
+ * `basis`는 staleness 가드다 — 마법사에서 공제·가액이 달라지면 한도(㉠−㉡)가 낡은 값이 된다.
+ */
+function scTaxCap(gain: number, limitCalc: SpecificCorpLimitCalc | undefined) {
+  if (!limitCalc) return {};
+  return {
+    deemedGiftTaxCap: {
+      limitAmount: limitCalc.limitAmount,
+      basis: { deemedGiftValue: gain, giftDeduction: limitCalc.giftDeductionApplied },
+    },
+  } as const;
+}
+
 function aggregationExclusionFlags(result: DeemedGiftAnyResult) {
   if (!("aggregationExcluded" in result) || !result.aggregationExcluded) return {};
   return {
@@ -177,6 +192,24 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `특정법인과의 거래 이익 — ${selected.name.trim() || "지배주주등"}`,
           marketValue: selected.gain,
+          ...scTaxCap(selected.gain, selected.limitCalc),
+          ...aggregationExclusionFlags(result),
+        },
+      ],
+    };
+  }
+
+  // §45의5 single(지분율 직접) 모드 — roster와 같은 한도를 싣는다(모드 parity).
+  if (result.type === "specific_corp" && result.specificCorpLimit) {
+    return {
+      giftDate: form.giftDate,
+      giftItems: [
+        {
+          id: "deemed-specific_corp",
+          category: "other" as const,
+          name: "특정법인과의 거래 이익 증여이익",
+          marketValue: result.deemedGiftValue,
+          ...scTaxCap(result.deemedGiftValue, result.specificCorpLimit),
           ...aggregationExclusionFlags(result),
         },
       ],

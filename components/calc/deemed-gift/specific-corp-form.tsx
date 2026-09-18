@@ -11,6 +11,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { SpecificCorpPriorTxTable } from "./SpecificCorpPriorTxTable";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { SpecificCorpIntermediaryTable } from "./SpecificCorpIntermediaryTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
@@ -42,6 +43,7 @@ export function SpecificCorpFields({ form, set }: Props) {
   const corpTaxEcho = useMemo(() => {
     if (!isAuto) return null;
     const assessed = parseAmount(form.scCorpTaxAssessed);
+    const landTransfer = parseAmount(form.scCorpTaxLandTransfer);
     const deduction = parseAmount(form.scCorpTaxDeduction);
     const income = parseAmount(form.scCorpIncome);
     // 2·3호는 거래이익이 시가−대가로 «도출»된다 — 입력칸 값을 쓰면 안분 echo가 어긋난다
@@ -51,12 +53,12 @@ export function SpecificCorpFields({ form, set }: Props) {
         : 0
       : parseAmount(form.scTransactionBenefit);
     if (income <= 0 || assessed <= 0) return null;
-    const net = Math.max(0, assessed - deduction);
+    const net = Math.max(0, assessed - landTransfer - deduction); // 영 §34의5④2호가목 — §55의2분 제외
     const minNumer = Math.min(benefit, income);
     // BigInt 안전 안분(overflow 방지 — safeMultiplyThenDivide와 동일 로직)
     const result = Number(BigInt(net) * BigInt(minNumer) / BigInt(income));
     return result;
-  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
+  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxLandTransfer, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
 
   return (
     <div className="space-y-3">
@@ -220,6 +222,30 @@ export function SpecificCorpFields({ form, set }: Props) {
             </p>
           </CollapsibleHintCard>
         )}
+        {/* §43²·영 §32의4 11호 — 소급 1년 이내 같은 호 거래 합산 */}
+        <SpecificCorpPriorTxTable
+          rows={form.scPriorTransactions ?? []}
+          onChange={(rows) => set({ scPriorTransactions: rows })}
+        />
+        <CollapsibleHintCard
+          tone="amber"
+          summary="1년 이내에 같은 호의 거래가 더 있으면 합산해서 1억원 기준을 판정합니다 (§43²)"
+        >
+          <p>
+            법 §43②은 「제31조제1항제2호 … 및 <b>제45조의5</b>에 따른 이익을 계산할 때 그 증여일부터
+            소급하여 1년 이내에 동일한 거래 등이 있는 경우에는 각각의 거래 등에 따른 이익을 해당
+            이익별로 <b>합산하여 계산</b>한다」고 정합니다.
+          </p>
+          <p className="mt-1">
+            영 §32의4 <b>11호</b>는 그 이익을 「법 제45조의5제1항의 특정법인과의 거래를 통한 이익(같은
+            항 <b>각 호의 거래에 따른 이익별로 구분된 이익</b>을 말한다)」으로 특정합니다 — 호가 다른
+            거래는 합산 대상이 아닙니다.
+          </p>
+          <p className="mt-1">
+            합산하지 않으면 거래를 나눌수록 각 건이 영 §34의5⑤의 <b>1억원</b>에 미달해 전부 과세에서
+            빠집니다. 윈도 기준일은 위 <b>증여일(거래한 날)</b>입니다.
+          </p>
+        </CollapsibleHintCard>
       </ToneCard>
 
       {/* ── 섹션 3: 법인세 상당액 ── */}
@@ -240,7 +266,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             label="법인세 상당액"
             value={form.scCorporateTax}
             onChange={(v) => set({ scCorporateTax: v })}
-            hint="(산출세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값. 이월결손금 0이면 0 입력"
+            hint="(산출세액 − 토지등 양도소득 법인세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값"
             data-testid="sc-corporate-tax"
           />
         )}
@@ -250,8 +276,15 @@ export function SpecificCorpFields({ form, set }: Props) {
               label="법인세 산출세액"
               value={form.scCorpTaxAssessed}
               onChange={(v) => set({ scCorpTaxAssessed: v })}
-              hint="법인세 산출세액 (공제·감면 차감 전)"
+              hint="「법인세법」 §55① 산출세액 — 공제·감면 차감 전 금액을 그대로 입력"
               data-testid="sc-corp-tax-assessed"
+            />
+            <CurrencyInput
+              label="토지등 양도소득에 대한 법인세액"
+              value={form.scCorpTaxLandTransfer}
+              onChange={(v) => set({ scCorpTaxLandTransfer: v })}
+              hint="「법인세법」 §55의2분 — 위 산출세액에 포함돼 있으면 그 금액 (없으면 0)"
+              data-testid="sc-corp-tax-land-transfer"
             />
             <CurrencyInput
               label="법인세 공제·감면액"

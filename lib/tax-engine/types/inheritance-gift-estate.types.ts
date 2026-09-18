@@ -717,6 +717,12 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    *   "general"/undef  → §55①3호 그 밖의 합산배제(§41의3·§41의5·§40①2·3호·§42의3·§45): 증여재산가액 − 3천만 (현행 보존)
    */
   aggregationExcludedClass?: "nominee_trust" | "deemed_profit" | "general";
+  /**
+   * 상증법 §45의5② 증여세 한도 — 특정법인과의 거래 이익 증여의제 화면이 이관한다.
+   * 「그 초과액은 없는 것으로 본다」는 세액 상한이므로 산출세액(§56+§57) 단계에서 잘린다.
+   * 적용 조건·staleness 가드는 `lib/tax-engine/deemed-gift-tax-cap.ts` 참조.
+   */
+  deemedGiftTaxCap?: import("../deemed-gift-tax-cap").DeemedGiftTaxCap;
 
   // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
   /**

@@ -187,3 +187,23 @@ export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
 export function makeRcSalesRow(id: string): RcSalesRow {
   return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", rulingStakes: [] };
 }
+
+/**
+ * §43②·영 §32의4 11호 — 증여일부터 소급 1년 이내의 **같은 호** 선행거래 1건.
+ *
+ * 합산하지 않으면 쪼갠 거래가 각각 영 §34의5⑤ 1억원 미만이 되어 전부 비과세로 빠진다.
+ * 호가 다른 거래는 합산 대상이 아니다 — 11호 괄호가 「같은 항 각 호의 거래에 따른 이익별로
+ * 구분된 이익」이라고 못박는다.
+ */
+export interface ScPriorTxRow {
+  id: string;
+  /** 거래한 날 (YYYY-MM-DD) */
+  date: string;
+  /** 그 거래의 영 §34의5④1호 이익 */
+  benefit: string;
+  label: string;
+}
+
+export function makeScPriorTxRow(id: string): ScPriorTxRow {
+  return { id, date: "", benefit: "", label: "" };
+}

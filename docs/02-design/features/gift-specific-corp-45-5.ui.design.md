@@ -29,7 +29,9 @@ interface ScShareholderRow {
 |---|---|---|
 | `scMode` | `"single"` | RadioCardGroup sky |
 | `scCorporateTaxMode` | `"direct"` | RadioCardGroup amber |
-| `scCorpTaxAssessed` | `""` | auto: 법인세 산출세액 |
+| `scPriorTransactions` | `undefined` | §43²·영 §32의4 11호 — 소급 1년 이내 **같은 호** 선행거래 행(거래일·이익·라벨). 윈도 판정·합산은 엔진(UI 재계산 금지) |
+| `scCorpTaxAssessed` | `""` | auto: 법인세 산출세액 (「법인세법」 §55① — §55의2분 포함 금액) |
+| `scCorpTaxLandTransfer` | `""` | auto: 토지등 양도소득 법인세액(§55의2) — 영 §34의5④2호가목 제외항목. ⑧이 산출세액 초과를 차단(자동 clamp 금지) |
 | `scCorpTaxDeduction` | `""` | auto: 공제·감면 |
 | `scCorpIncome` | `""` | auto: 각사업연도소득금액(분모) |
 | `scTotalShares` | `""` | 발행주식 총수(분모) |
@@ -57,7 +59,8 @@ interface ScShareholderRow {
 │ ┌ 법인세 상당액 ──────────────────────────────┐    │
 │ │ (•) 직접 입력   ( ) 산출세액+소득금액 자동안분 │    │ ← scCorporateTaxMode(amber)
 │ │  · direct → 법인세 상당액 [   0 ] 원(이월결손금 0) │
-│ │  · auto   → 산출세액 [ ] 공제·감면 [ ] 소득금액 [ ] │
+│ │  · auto   → 산출세액 [ ] 토지등(§55의2) [ ]         │
+│ │            공제·감면 [ ] 소득금액 [ ]                │
 │ │            ↳ 안분액 = 산출세액×min(거래이익/소득,1) (useMemo echo, 표시전용) │
 │ └──────────────────────────────────────────┘    │
 │ [single] 해당 지배주주등(수증자)의 보유비율 [ 25 ] % │ ← scRatioPct (single만·ⓑ 승수)
@@ -111,7 +114,15 @@ interface ScShareholderRow {
 - 성명 셀: `name.trim() || RELATION_LABEL[relation]` (내부 id 노출 금지). 금액 셀 `text-right font-mono tabular-nums`(amount-column-align).
 - 과세여부 배지: 과세=emerald / donor_self="본인증여 제외" / non_related="비특수관계인 제외" / below_threshold="1억 미만 제외"(static tone Record).
 
-### 5-2. §45의5② 한도 표 (과세 주주 `scSelectedDoneeIndex` 선택 → `donee.limitCalc`)
+### 5-2. §45의5② 한도 표 — **두 모드 공용** (`ScLimitTable`)
+
+- roster: `sc-multi-limit` 카드 안 · 수증자 드롭다운(`scSelectedDoneeIndex` → `donee.limitCalc`)
+- single: `sc-single-limit` 카드 안 · `result.specificCorpLimit` (수증자 1인이라 드롭다운 없음)
+
+종전에는 이 표가 roster 전용이라, 기본 모드(single) 사용자는 한도를 볼 수 없었고 섹션 5의
+증여재산공제 입력이 엔진까지 도달한 뒤 버려지는 «죽은 칸»이었다. 조문에 입력 모드 축이 없으므로
+정본은 「single에서 칸을 숨긴다」가 아니라 「single에도 한도를 계산한다」다.
+
 ```
 증여세 한도 (§45의5②) — 수증자: 갑 ▾
  ㉮ 일반 산출세액                                   399,600,000
@@ -123,6 +134,13 @@ interface ScShareholderRow {
  신고세액공제 (3%)                                   −5,670,000
  자진납부세액                                       183,330,000
 ```
+> **㉠ 라벨은 거래일 시점에 따라 갈린다** — 2022-02-15 전 거래는 「증여의제이익을 직접 증여한 것으로
+> 가정」(net), 이후는 「법인세 차감 전 거래이익을…」(gross). 엔진 echo `limitBasis`를 쓰고 문자열을
+> 박지 않는다. 2020-02-11 전 거래는 ⑧이 차단하므로 이 표 자체가 뜨지 않는다.
+> **이 값이 마법사까지 간다.** 「이 금액으로 증여세 계산하기 →」가 `EstateItem.deemedGiftTaxCap`으로
+> ㉯를 실어 보내고 증여세 본엔진이 산출세액을 자른다. 종전에는 한도 前 가액만 넘어가 같은 사안에
+> 두 개의 세액(183,330,000 ↔ 387,612,000)이 나왔다. 다른 증여재산·사전증여가 섞이거나 공제·가액이
+> 달라지면 적용하지 않고 **결과 경고**로 알린다(§45의5에 안분 규정이 없다).
 - 펼침 토글(`ExpandToggleButton`)·print 자동펼침(print-only-css-toggle). 산식 한국어 풀어쓰기(floor 미표시).
 
 ## 6. 14 동기화 지점 (신규 필드 도달 경로)
@@ -159,7 +177,10 @@ interface ScShareholderRow {
 components/calc/deemed-gift/other-forms.tsx           — SpecificCorpFields(모드 토글·법인세·single) 확장 (<800 유지)
 components/calc/deemed-gift/SpecificCorpShareholderTable.tsx — 신규(행 카드+추가/삭제, CapitalDecreaseShareholderTable 패턴)
 components/calc/deemed-gift/deemed-form-state.ts      — 9필드+ScShareholderRow+initial+normalize
-components/calc/results/DeemedGiftResultView.tsx      — specific_corp 분기(주주별 표+한도 표)
+components/calc/results/DeemedGiftResultView.tsx      — specific_corp 분기(주주별 표 + single 한도 카드)
+components/calc/deemed-gift/SpecificCorpPriorTxTable.tsx — §43² 소급 1년 선행거래 입력 테이블
+components/calc/results/ScLimitTable.tsx              — §45의5② 한도 표 (single·roster 공용)
+lib/tax-engine/deemed-gift-tax-cap.ts                 — 마법사 산출세액 상한 적용 판정(staleness 가드)
 lib/calc/gift-deemed-api.ts / -validate.ts            — ④⑧⑬
 lib/validators/gift-deemed-input.ts                   — ⑨⑫
 app/api/calc/gift-deemed/route.ts                     — ⑭

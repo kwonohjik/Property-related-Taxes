@@ -53,6 +53,7 @@ import {
   type GiftTaxEngineOptions,
 } from "./gift-tax-helpers";
 import { calcGiftTaxTwoStream } from "./gift-tax-two-stream";
+import { resolveDeemedGiftTaxCap, deemedGiftTaxCapWarning } from "./deemed-gift-tax-cap";
 
 // 대납 gross-up 엔진 re-export (분리 파일 — 800줄 정책)
 export { calcGiftTaxWithDonorPaidTax } from "./gift-tax-grossup";
@@ -279,8 +280,44 @@ export function calcGiftTax(
     }
   }
 
+  // ─────────────────────────────────────────────
+  // STEP 7.4: §45의5② 특정법인 증여세 한도 — 「그 초과액은 없는 것으로 본다」
+  //   감면이 아니라 세액 자체의 상한이라 산출세액(§56)+세대생략 할증(§57) 합계를 자른다.
+  //   적용 조건·staleness 판정은 deemed-gift-tax-cap.ts (이 신고가 그 증여의제이익 하나일 때만).
+  // ─────────────────────────────────────────────
+  const capDecision = resolveDeemedGiftTaxCap({
+    items: input.giftItems,
+    priorGiftCount: input.priorGiftsWithin10Years?.length ?? 0,
+    aggregatedGiftValue,
+    totalDeduction,
+  });
+  const rawComputedTaxWithSurcharge = computedTax + surchargeResult.additionalSurcharge;
+  const capBinds =
+    capDecision.status === "applies" && rawComputedTaxWithSurcharge > capDecision.limitAmount;
+  // 상한이 걸리면 할증분부터 줄인다 — §45의5②은 「증여세액」 총액의 상한이고 내부 구성비는
+  // 정하지 않는다. 이 조건에서는 사전증여가 없어 §58 안분(⑮)이 돌지 않으므로 분해 방식이
+  // 결정세액을 바꾸지 않는다(§69 공제 base는 합계 기준 — anchor가 고정한다).
+  const cappedComputedTax = capBinds
+    ? Math.min(computedTax, capDecision.limitAmount)
+    : computedTax;
+  const cappedSurcharge = capBinds
+    ? Math.max(0, capDecision.limitAmount - cappedComputedTax)
+    : surchargeResult.additionalSurcharge;
+  if (capBinds) {
+    allLaws.add("상증법 §45의5②");
+    allBreakdown.push({
+      label: "§45의5② 특정법인 증여세 한도 — 초과액 제외",
+      amount: -(rawComputedTaxWithSurcharge - capDecision.limitAmount),
+      lawRef: "상증법 §45의5②",
+      note: `직접증여 가정 증여세 − 법인세 상당액 = ${capDecision.limitAmount.toLocaleString()}`,
+    });
+  }
+  if (capDecision.status === "skipped") {
+    allWarnings.push(deemedGiftTaxCapWarning(capDecision.reason));
+  }
+
   const totalComputedTaxWithSurcharge =
-    computedTax + surchargeResult.additionalSurcharge;
+    cappedComputedTax + cappedSurcharge;
 
   // ─────────────────────────────────────────────
   // STEP 7.5: 조특법 §71 영농자녀 농지 증여세 감면 (gift-farmland-reduction-71)
@@ -314,8 +351,8 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   const creditResult = calcGiftTaxCredits({
     creditInput: input.creditInput,
-    computedTax,
-    generationSkipSurcharge: surchargeResult.additionalSurcharge,
+    computedTax: cappedComputedTax, // §45의5② 한도 적용 후 — §69 공제는 잘린 세액 기준이다
+    generationSkipSurcharge: cappedSurcharge,
     giftDate: input.giftDate,
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: netCurrentGiftValue,
@@ -397,7 +434,10 @@ export function calcGiftTax(
     totalDeduction,
     taxBase,
     bracketRateLabel: bracketLabel,
-    computedTax,
+    // §45의5② 한도 적용 후 — 「그 초과액은 **없는 것으로 본다**」이므로 서식상 산출세액도 잘린 값이다.
+    //   자르지 않으면 「⑦ − 세액공제 = 결정세액」 등식이 한도액만큼 깨진다.
+    //   잘린 크기는 allBreakdown의 「§45의5② 특정법인 증여세 한도 — 초과액 제외」 행이 보여준다.
+    computedTax: cappedComputedTax,
     generationSkipDetail: surchargeResult.detail,
     priorGiftCreditDetail,
     reportingCredit: creditResult.filingCredit,
@@ -446,9 +486,9 @@ export function calcGiftTax(
     aggregatedGiftValue,
     totalDeduction,
     taxBase: taxBase + (aggExcl?.taxBase ?? 0),
-    computedTax: computedTax + (aggExcl?.computedTax ?? 0),
-    generationSkipSurcharge:
-      surchargeResult.additionalSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
+    // §45의5② 한도 적용 후 값 — 결과카드·서식·요약이 모두 이 값을 쓴다(잘린 값이 정본이다).
+    computedTax: cappedComputedTax + (aggExcl?.computedTax ?? 0),
+    generationSkipSurcharge: cappedSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
     totalTaxCredit: totalTaxCredit + (aggExcl?.totalCredit ?? 0),
     finalTax: combinedFinalTax,
     deductionDetail: deductionResult,
@@ -461,7 +501,7 @@ export function calcGiftTax(
     // Phase A 신규
     donorGroup,
     additionalGenerationSkipSurcharge:
-      surchargeResult.additionalSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
+      cappedSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
     generationSkipSurchargeDetail: surchargeResult.detail,
     // §57① 단서 적용 여부 echo (단서로 할증이 배제된 경우에만 true)
     generationSkipProvisoApplied: input.isSubstituteGift === true ? true : undefined,

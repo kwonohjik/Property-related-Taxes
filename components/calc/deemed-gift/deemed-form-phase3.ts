@@ -7,7 +7,7 @@
  * 타입·초기값을 **한 파일에 짝으로** 두어 한쪽만 추가하는 누락을 막는다.
  */
 import type { ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
-import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScIntermediaryRow, ScShareholderRow } from "./deemed-form-rows";
+import type { EdShareholderRow, RcIntermediaryRow, RcSalesRow, RcShareholderRow, ScIntermediaryRow, ScPriorTxRow, ScShareholderRow } from "./deemed-form-rows";
 import type { ScCounterparty, ScTransactionType } from "@/lib/tax-engine/gift-deemed/types";
 
 export interface DeemedPhase3Fields {
@@ -127,8 +127,12 @@ export interface DeemedPhase3Fields {
   scMode: "single" | "roster";
   /** 법인세 상당액 모드: "direct"=직접 입력 / "auto"=산출세액+소득금액 자동안분 */
   scCorporateTaxMode: "direct" | "auto";
+  /** §43②·영 §32의4 11호 — 소급 1년 이내 같은 호 선행거래 (미사용 시 undefined) */
+  scPriorTransactions?: ScPriorTxRow[];
   /** auto: 법인세 산출세액 */
   scCorpTaxAssessed: string;
+  /** auto: 「법인세법」 §55의2 토지등 양도소득에 대한 법인세액 (영 §34의5④2호가목 — 산출세액에서 제외) */
+  scCorpTaxLandTransfer: string;
   /** auto: 법인세 공제·감면 */
   scCorpTaxDeduction: string;
   /** auto: 각사업연도소득금액 (안분 분모) */
@@ -232,7 +236,9 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   rcSelectedDoneeIndex: 0,
   scMode: "single",
   scCorporateTaxMode: "direct",
+  scPriorTransactions: undefined,
   scCorpTaxAssessed: "",
+  scCorpTaxLandTransfer: "",
   scCorpTaxDeduction: "",
   scCorpIncome: "",
   scTotalShares: "",

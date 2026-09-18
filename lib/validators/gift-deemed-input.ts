@@ -480,8 +480,22 @@ const specificCorpSchema = z.object({
   // 증여자 2인 이상은 §45의5①상 별개 거래다 — ⑧과 같은 규칙을 ⑫에도 건다(3중 패턴)
   annualIncome: z.number().nonnegative().optional(),
   corporateTaxComputed: z.number().nonnegative().optional(),
+  // 영 §34의5④2호가목 — 법인세법 §55의2 토지등 양도소득에 대한 법인세액(산출세액에서 제외)
+  corporateTaxOnLandTransfer: z.number().nonnegative().optional(),
   corporateTaxCredit: z.number().nonnegative().optional(),
   giftDeduction: z.number().nonnegative().optional(),
+  // §45의5① 「거래한 날을 증여일로 하여」 — §43② 1년 윈도·§69 공제율의 기준일 (⑫ strip 방지)
+  transactionDate: z.string().optional(),
+  // §43②·영 §32의4 11호 — 소급 1년 이내 같은 호 선행거래 (⑫ strip 방지)
+  priorTransactions: z
+    .array(
+      z.object({
+        date: z.string().min(1),
+        benefit: z.number().nonnegative(),
+        label: z.string().optional(),
+      }),
+    )
+    .optional(),
 }).refine(
   (v) => (v.shareholders ?? []).filter((sh) => sh.isDonor).length <= 1,
   { message: "증여자 본인은 1명만 지정할 수 있습니다 (§45의5① — 거래별로 나누어 계산)", path: ["shareholders"] },
@@ -511,6 +525,8 @@ const convertibleBondSchema = z.object({
 // §45의3 일감몰아주기 — 순수 z.object (cross-field 지분합·매출합은 validate ⑧에 위임: discriminatedUnion superRefine 제약)
 const relatedCorpSchema = z.object({
   type: z.literal("related_corp"),
+  // §45의3③ 「수혜법인의 해당 사업연도 종료일을 증여시기로 본다」 (⑫ strip 방지 — 빠지면 엔진 미도달)
+  fiscalYearEndDate: z.string().optional(),
   enterpriseSize: z.enum(["small", "medium", "large"]),
   totalSales: z.number().int().min(1),
   preTaxAdjOperatingIncome: z.number().int(),

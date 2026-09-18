@@ -178,9 +178,18 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       const counterparty = form.scCounterparty === "" ? undefined : form.scCounterparty;
       const transactionType = form.scTransactionType;
       const isPriceType = transactionType === "low_price" || transactionType === "high_price";
+      // §43②·영 §32의4 11호 — 소급 1년 이내 «같은 호» 선행거래. 윈도 판정은 엔진이 한다
+      // (UI 재계산 금지). 날짜·이익이 비면 그 행은 보내지 않는다.
+      const priorTransactions = (form.scPriorTransactions ?? [])
+        .filter((t) => t.date.trim() !== "" && parseAmount(t.benefit) > 0)
+        .map((t) => ({ date: t.date, benefit: parseAmount(t.benefit), label: t.label.trim() || undefined }));
       const txFields = {
         counterparty,
         transactionType,
+        // §45의5① 「거래한 날을 증여일로 하여」 — 폼의 공통 증여일이 곧 거래일이다.
+        // §43② 1년 윈도 기준일 + §69 신고세액공제율 기준일 두 곳에 쓰인다.
+        ...(form.giftDate ? { transactionDate: form.giftDate } : {}),
+        ...(priorTransactions.length > 0 ? { priorTransactions } : {}),
         ...(isPriceType
           ? { marketValue: parseAmount(form.scMarketValue), consideration: parseAmount(form.scConsideration) }
           : {}),
@@ -232,6 +241,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             shareholders,
             annualIncome: parseAmount(form.scCorpIncome),
             corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
+            corporateTaxOnLandTransfer: parseAmount(form.scCorpTaxLandTransfer) || undefined,
             corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
             giftDeduction,
             controllingGroupRatio,
@@ -267,6 +277,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           ownershipRatio: singleRatio,
           annualIncome: parseAmount(form.scCorpIncome),
           corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
+          corporateTaxOnLandTransfer: parseAmount(form.scCorpTaxLandTransfer) || undefined,
           corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
           giftDeduction,
           controllingGroupRatio,
@@ -320,6 +331,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       }));
       return {
         type: "related_corp",
+        // §45의3③ 「수혜법인의 해당 사업연도 종료일을 증여시기로 본다」 — 폼의 공통 날짜가
+        //   이 조문에서는 «거래일»이 아니라 «사업연도 종료일»이다(⑤ 라벨이 그렇게 안내한다).
+        ...(form.giftDate ? { fiscalYearEndDate: form.giftDate } : {}),
         enterpriseSize: (form.rcEnterpriseSize || "small") as "small" | "medium" | "large",
         totalSales: parseAmount(form.rcTotalSalesStr),
         preTaxAdjOperatingIncome: parseAmount(form.rcPreTaxAdjOperatingIncomeStr),

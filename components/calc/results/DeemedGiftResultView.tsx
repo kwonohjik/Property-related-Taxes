@@ -10,6 +10,7 @@ import {
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
 import { SpecificCorpMultiResultView } from "./SpecificCorpMultiResultView";
+import { ScLimitTable } from "./ScLimitTable";
 import { ExcessDividendDetailSection } from "./ExcessDividendDetailSection";
 import { AllocationResultView } from "./AllocationResultView";
 import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
@@ -152,6 +153,107 @@ export function DeemedGiftResultView({
           selectedDoneeIndex={selectedDoneeIndex}
           onSelectDonee={onSelectDonee ?? (() => {})}
         />
+      )}
+
+      {/* ── 적용 법령 기준일 — 조문이 증여시기를 명문으로 정하는 두 유형만 ── */}
+      {result.appliedLawDate && (
+        <div
+          className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm"
+          data-testid="deemed-applied-law-date"
+        >
+          <p className="text-slate-800">
+            <b>적용 법령 기준일</b>{" "}
+            <span className="font-mono tabular-nums">{result.appliedLawDate}</span>{" "}
+            <span className="text-muted-foreground">
+              (
+              {result.type === "related_corp"
+                ? "수혜법인의 사업연도 종료일 — 상증법 §45의3③"
+                : "거래한 날 — 상증법 §45의5①"}
+              )
+            </span>
+          </p>
+          {/* ⚠️ 유형별로 갈라 적는다 — §45의5는 시점 분기가 «있고» §45의3은 아직 «없다».
+                 한 문장으로 뭉뚱그리면 둘 중 하나는 반드시 틀린 고지가 된다. */}
+          {result.type === "specific_corp" ? (
+            <p className="mt-1 text-caption text-muted-foreground">
+              이 기준일에 시행 중이던 상증령 §34의5⑨에 따라 §45의5② 한도를 계산했습니다
+              (2022-02-15 전 거래는 증여의제이익 기준, 이후는 거래이익 기준). 2020-02-11 전 거래는
+              구 체계라 이 화면이 계산하지 않습니다.
+            </p>
+          ) : (
+            <p className="mt-1 text-caption text-muted-foreground">
+              비율 상수는 <b>현행 법령</b> 기준으로 계산했습니다. 기준일이 과거이면 당시 규정이
+              달랐을 수 있으므로 시행 당시 조문을 확인하십시오.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── §43²·영 §32의4 11호 1년 합산 내역 — 합산은 조용히 일어나면 안 된다 ── */}
+      {result.specificCorpTransaction?.aggregation && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm"
+          data-testid="sc-aggregation"
+        >
+          <p className="font-semibold text-amber-900">
+            §43² 소급 1년 합산 (영 §32의4 11호 — 같은 호 거래)
+          </p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {result.specificCorpTransaction.aggregation.items.map((t, i) => (
+                <tr key={i} className="border-t border-amber-100">
+                  <td className="py-1 pr-2 text-muted-foreground">
+                    {t.label} ({t.date})
+                  </td>
+                  <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                    {formatKRW(t.benefit)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t border-amber-100">
+                <td className="py-1 pr-2 text-muted-foreground">이번 거래</td>
+                <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                  {formatKRW(result.specificCorpTransaction.aggregation.currentBenefit)}
+                </td>
+              </tr>
+              <tr className="border-t border-amber-200 bg-amber-100/50">
+                <td className="py-1.5 pr-2 font-semibold text-amber-900">합산 거래이익</td>
+                <td
+                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900"
+                  data-testid="sc-aggregation-total"
+                >
+                  {formatKRW(result.specificCorpTransaction.benefit)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-caption text-muted-foreground">
+            합산 대상은 {result.specificCorpTransaction.aggregation.windowFrom} 이후의 같은 호 거래입니다.
+            {result.specificCorpTransaction.aggregation.excludedCount > 0 && (
+              <>
+                {" "}
+                입력한 선행거래 중 {result.specificCorpTransaction.aggregation.excludedCount}건은 1년
+                윈도를 벗어나 합산하지 않았습니다.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* ── §45의5② 한도 (single 모드) — roster는 SpecificCorpMultiResultView가 같은 표를 쓴다 ── */}
+      {result.specificCorpLimit && (
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          data-testid="sc-single-limit"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-violet-800">증여세 한도 (§45의5②)</p>
+            <LawArticleModal legalBasis="상증법 §45의5②" />
+          </div>
+          <div className="mt-3">
+            <ScLimitTable limitCalc={result.specificCorpLimit} />
+          </div>
+        </div>
       )}
 
       {/* ── §45의5① 거래상대방 판정 보류 고지 ── */}
