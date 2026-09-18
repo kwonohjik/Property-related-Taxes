@@ -375,6 +375,8 @@ export const propertyBaseShape = {
     /** §97의2① 관계요건 — 증여자 사망 배제 판정축 */
     donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
     donorDeceased: z.boolean().optional(),
+    /** D45 배우자 예외 사실 — 증여일 현재 1세대1주택을 배우자로부터 증여받음 */
+    spouseGiftOneHouseAtGiftDate: z.boolean().optional(),
     /**
      * 환산 모드 분자 — 증여자 취득 당시 기준시가 (설계 D9-8).
      * `carryoverTaxationEngineShape`와 **필드·타입 11개 전부 일치**를 유지해야 한다(V-5).
@@ -388,7 +390,11 @@ export const propertyBaseShape = {
     donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
     exclusionDeclared: z.object({
       expropriationWithin2Years: z.boolean().optional(),
-      oneHouseExemptionApplies: z.boolean().optional(),
+      /**
+       * D45 · Q-3 — 옛 이력의 「② 2호 선언」(레거시). 옛 클라이언트가 보내는 `oneHouseExemptionApplies`는
+       * 이 객체에 키가 없어 **strip**되고 자동 판정(D-8)으로 계산된다.
+       */
+      legacyOneHouseExemptionDeclared: z.boolean().optional(),
       isFamilyBusinessInheritedAsset: z.boolean().optional(),
     }).optional(),
   }).optional(),

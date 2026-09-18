@@ -40,13 +40,14 @@ function makeOneHouseExclusionInput(transferPrice: number) {
       giftTaxAmount: 10_000_000,
       giftDateValuation: 500_000_000,
       exclusionDeclared: {
-        oneHouseExemptionApplies: true, // ②2호 사용자 선언
+        // D45 · Q-3 — 선언 토글은 없어졌고 옛 이력의 레거시 플래그로만 남는다(종전 동작 재현).
+        legacyOneHouseExemptionDeclared: true,
       },
     },
   });
 }
 
-describe("C-06: 1세대1주택 비과세 사용자 체크 → 이월과세 적용배제 (§97조의2 ② 2호)", () => {
+describe("C-06: 옛 이력의 ②2호 선언(레거시 플래그) → 이월과세 적용배제 (§97조의2 ② 2호)", () => {
   it("C-06-1: isEligible=false, exclusionReason=one_house_exemption", () => {
     const result = calculateTransferTax(makeOneHouseExclusionInput(1_000_000_000), MOCK_RATES);
     expect(result.carryoverTaxationDetail?.isEligible).toBe(false);
@@ -64,8 +65,8 @@ describe("C-06: 1세대1주택 비과세 사용자 체크 → 이월과세 적�
   });
 });
 
-describe("C-06b: 12억 초과 고가주택 사용자 체크 → 이월과세 적용배제 (§97조의2 ② 2호 괄호)", () => {
-  it("C-06b-1: 양도가 12억 초과 + oneHouseExemptionApplies=true → isEligible=false", () => {
+describe("C-06b: 12억 초과 고가주택 + 레거시 선언 → 이월과세 적용배제 (§97조의2 ② 2호 괄호)", () => {
+  it("C-06b-1: 양도가 12억 초과 + legacyOneHouseExemptionDeclared=true → isEligible=false", () => {
     const result = calculateTransferTax(makeOneHouseExclusionInput(1_500_000_000), MOCK_RATES);
     expect(result.carryoverTaxationDetail?.isEligible).toBe(false);
     expect(result.carryoverTaxationDetail?.exclusionReason).toBe("one_house_exemption");

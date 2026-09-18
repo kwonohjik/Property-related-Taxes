@@ -51,9 +51,10 @@ const CARRYOVER_FULL: CarryoverTaxationForm = {
   giftDateValuation: "300,000,000",
   donorRelation: "spouse" as const,
   donorDeceased: false,
+  spouseGiftOneHouseAtGiftDate: false,
   exclusionDeclared: {
     expropriationWithin2Years: false,
-    oneHouseExemptionApplies: false,
+    legacyOneHouseExemptionDeclared: false,
     isFamilyBusinessInheritedAsset: false,
   },
 };

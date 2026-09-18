@@ -9,6 +9,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Button } from "@/components/ui/button";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
 /** 직계존비속 「양도 당시 사망」 제외 신설 — 2025.1.1. 이후 증여받는 자산부터. */
@@ -20,6 +21,13 @@ interface Props {
   /** §97조의2 ① 관계요건 */
   donorRelation: CarryoverTaxationForm["donorRelation"];
   donorDeceased: boolean;
+  /** D45 배우자 예외 사실 — 증여일 현재 1세대1주택을 배우자로부터 증여받음 */
+  spouseGiftOneHouseAtGiftDate: boolean;
+  /**
+   * 배우자 예외 문항을 보일지 — §97조의2②2호는 **주택** 조항이다. 일반건물은 ④가 이 사실을
+   * 전송하지 않으므로(엔진 카드도 1세대1주택이 성립하지 않는다) 문항을 숨긴다.
+   */
+  showSpouseOneHouseFact: boolean;
   /** 증여 등기접수일 — 직계존비속 게이트 안내용 (YYYY-MM-DD) */
   giftRegistryDate: string;
   /** 자산 id — 라디오 name 고유화(자산이 여럿이면 name이 겹쳐 하나만 선택된다) */
@@ -32,6 +40,8 @@ export function CarryoverGiftExclusionSection({
   onChange,
   donorRelation,
   donorDeceased,
+  spouseGiftOneHouseAtGiftDate,
+  showSpouseOneHouseFact,
   giftRegistryDate,
   assetId,
   onRelationChange,
@@ -79,7 +89,8 @@ export function CarryoverGiftExclusionSection({
           value={donorRelation}
           onChange={(v) =>
             // 관계가 바뀌면 사망 문항의 **의미가 바뀐다** — 함께 초기화한다(단일 배치 update).
-            onRelationChange({ donorRelation: v, donorDeceased: false })
+            // 배우자 예외 사실도 배우자에게만 묻는 문항이라 함께 지운다.
+            onRelationChange({ donorRelation: v, donorDeceased: false, spouseGiftOneHouseAtGiftDate: false })
           }
         />
 
@@ -103,6 +114,20 @@ export function CarryoverGiftExclusionSection({
           checked={donorDeceased}
           onCheckedChange={(v) => onRelationChange({ donorDeceased: v })}
         />
+
+        {/*
+          D45 — 배우자 예외는 **사실**을 묻는다(결론 「②2호 해당」을 묻지 않는다).
+          판정 기준일이 **증여일**이라 엔진이 가진 양도일 기준 사실로는 도출할 수 없다.
+        */}
+        {donorRelation === "spouse" && showSpouseOneHouseFact && (
+          <ToggleCard
+            tone="violet"
+            title="증여일 현재 1세대1주택이던 주택을 배우자로부터 증여받았습니다"
+            description="증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유해 소득세법 §89①3호의 1세대1주택에 해당했다면 체크하세요. 이월과세를 적용해야 비로소 1세대1주택 비과세가 되는 경우에도 §97조의2②2호를 적용하지 않습니다(국세청 서면-2022-부동산-0068 등)."
+            checked={spouseGiftOneHouseAtGiftDate}
+            onCheckedChange={(v) => onRelationChange({ spouseGiftOneHouseAtGiftDate: v })}
+          />
+        )}
       </ToneCard>
 
       <div className="space-y-2">
@@ -119,13 +144,31 @@ export function CarryoverGiftExclusionSection({
           onCheckedChange={(v) => onChange({ expropriationWithin2Years: v })}
         />
 
-        <ToggleCard
-          tone="rose"
-          title="§97조의2 ② 2호 — 1세대1주택 비과세 해당 (고가주택 포함)"
-          description="이월과세를 적용할 경우 1세대1주택 비과세에 해당하는 경우 (12억 초과 고가주택 포함)"
-          checked={exclusionDeclared.oneHouseExemptionApplies}
-          onCheckedChange={(v) => onChange({ oneHouseExemptionApplies: v })}
-        />
+        {/*
+          D45 — ② 2호(1세대1주택 비과세)는 선언이 아니라 **자동 판정**한다(엔진 Step 5.5 D-8).
+          종전 선언 토글은 B 조건을 묻지 않아 판정을 건너뛰었다. 옛 이력에서 선언이 남아 있으면
+          저장 당시 세액을 유지하고(Q-3), 사용자가 전환하면 레거시 플래그를 지운다.
+        */}
+        {exclusionDeclared.legacyOneHouseExemptionDeclared ? (
+          <ToneCard tone="amber" title="§97조의2 ② 2호 — 저장 당시 직접 선언으로 계산 중">
+            <p className="text-caption">
+              저장 당시 직접 선언한 「②2호 해당」으로 계산했습니다. 현재는 입력한 사실로 자동 판정합니다
+              (세액이 달라질 수 있습니다).
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onChange({ legacyOneHouseExemptionDeclared: false })}
+            >
+              자동 판정으로 전환
+            </Button>
+          </ToneCard>
+        ) : (
+          <p className="text-caption text-muted-foreground">
+            §97조의2 ② 2호(이월과세를 적용하면 1세대1주택 비과세에 해당하게 되는 경우)는 입력한 사실로 자동 판정합니다.
+          </p>
+        )}
 
         <ToggleCard
           tone="rose"

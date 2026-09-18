@@ -233,7 +233,7 @@ describe("R-2: 배제경로(§97의2②1호 수용) — 음수 양도차익·허
   const expropriated: Partial<CarryoverTaxationForm> = {
     exclusionDeclared: {
       expropriationWithin2Years: true,
-      oneHouseExemptionApplies: false,
+      legacyOneHouseExemptionDeclared: false,
       isFamilyBusinessInheritedAsset: false,
     },
   };

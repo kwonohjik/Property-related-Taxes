@@ -338,6 +338,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           }
           donorRelation={c.donorRelation}
           donorDeceased={c.donorDeceased}
+          spouseGiftOneHouseAtGiftDate={c.spouseGiftOneHouseAtGiftDate}
+          showSpouseOneHouseFact={asset.assetKind !== "general_building"}
           giftRegistryDate={c.giftRegistryDate}
           assetId={asset.assetId}
           onRelationChange={updateCarryover}

@@ -1,10 +1,10 @@
-# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.5)
+# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.6)
 
 > 작성 2026-09-18 · 브랜치 `fix/transfer-review-4-defects`(origin/master `2a68b08c` 기준) · 검증 깊이 **L3**(세액이 바뀐다)
 > 출처: 「1세대1주택 판정 자동화」 문서 3종 리뷰(2026-09-18)가 **문서 밖 현행 코드 결함**으로 보고한 4건.
 > 재현: 결함별 재현 에이전트 1 + 반박 검증 2(법령 관점·코드/도달성 관점)로 **4건 모두 재현**. 수치는 전부 probe 실측이다.
 > 결정: **Q-1~Q-5 전건 확정**(2026-09-18) — §5. 미검증 **V-1~V-8 전건 해소**(2026-09-18) — §6. 후속 작업 F-1·F-3~F-9(F-2는 PR-1 흡수) — §10.
-> 진행: **PR-1(D9) 머지**(#1689) · **PR-2(D15) 구현**(§12).
+> 진행: **PR-1(D9) 머지**(#1689) · **PR-2(D15)** #1691(CI 통과) · **PR-3(D45) 구현**(§13).
 
 ---
 
@@ -292,7 +292,7 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 |---|---|---|---|
 | 1 | **PR-1 D9** | 합가 의제 공용 술어 추출(E-3.5 ↔ 중과) · `deemedOneHouseBy155` 확장 · 배제 2·3 → 15호 · 시점 상수 · F-2 · 토글 설명 · 겸용 배선 · 문서 정정 | ✅ **구현 완료**(§11) |
 | 2 | **PR-2 D15** | `calcReductions` §129② 게이트(5개 호출부) + **차감형 2곳** + 겸용 플래그 전달 + validate·Zod + 결과 안내 + 주석 정정 | ✅ **구현 완료**(§12) |
-| 3 | **PR-3 D45** | 토글 제거 + 배우자 예외 + 레거시 플래그·전환 버튼 + D-8 주석 정정 | V-8 |
+| 3 | **PR-3 D45** | 토글 제거 + 배우자 예외 + 레거시 플래그·전환 버튼 + D-8 주석 정정 | ✅ **구현 완료**(§13) |
 | 4 | **PR-4 D16** | 주택 수 산정·§167의10①10호·양도 주택 자체 배제·§155② 게이트 + 문구·문서 정정 | V-1·V-2·V-3 |
 
 각 PR은 세액이 **늘어나는** 방향이 있으므로 PR 본문에 명시한다. 구현 후 anchor마다 대응 mutation을 넣어 **그 anchor만** 실패하는지 확인한다(플레이북 `plan-design-self-review-loop`).
@@ -415,6 +415,40 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 **세액이 오르는 방향(PR 본문 명시)**: 미등기 + 조특법 감면(세액감면형·차감형 전부) — 감면·농특세가 0이 된다.
 **바뀌는 입력 계약**: 미등기 + 자경농지 감면은 화면(⑧)과 API(⑫) 모두 거부된다(종전: §69 감면이 과다 적용).
 
+## 13. PR-3 (D45) 구현 기록 — 2026-09-18
+
+**구현**
+- 엔진: `exclusionDeclared.oneHouseExemptionApplies` → **`legacyOneHouseExemptionDeclared`**(Step 2 분기는 이 플래그로만 남는다).
+  D-8(`transfer-tax-carryover.ts` Step 5.5)에 배우자 예외 — `donorRelation === "spouse" && spouseGiftOneHouseAtGiftDate`이면 ②2호 불적용.
+  echo 2개: `oneHouseExclusionSource`(`legacy_declaration` / `auto`) · `spouseOneHouseExceptionApplied`.
+- ③ `migrateCarryoverFields`: 옛 record의 `oneHouseExemptionApplies === true`(옛 필드 존재·참)만 레거시 플래그로 옮긴다. 새 폼에는 옛 필드도 플래그를 세우는 UI도 없다.
+- ④ `buildCarryoverPayload`: 배우자 사실은 **관계가 배우자일 때만** 싣는다(관계 stale 가드) · 레거시 플래그. GB ④는 레거시 플래그 개명만(배우자 사실 미전송).
+- ⑫ 단건 인라인 shape · `carryoverTaxationEngineShape`(컴패니언·GB 파트) 양쪽에 두 필드 — parity 유지. 옛 키는 strip(D45-A1).
+- ⑤ `CarryoverGiftExclusionSection`: ②2호 토글 삭제 → 자동 판정 안내 1줄. 배우자 예외 **사실** 문항은 배우자 + 비-GB에서만(§97의2②2호는 주택 조항이고 GB ④는 싣지 않는다).
+  관계 변경 시 함께 초기화. 레거시면 amber `ToneCard` + 「자동 판정으로 전환」(`Button`) → 플래그 false.
+- ⑦ `CarryoverComparisonCard`: ②2호 출처를 echo로 구분(종전 「사용자 선언 또는 엔진 자동」 고정 문구) · 「저장 당시 선언 기준」 줄 · 배우자 예외 `ToneCard`.
+- 정정: 0068 오독(「상태 변화」 근거로 인용) — `transfer-tax-carryover.ts` 주석 · `carryover-exclusion-one-house-auto.test.ts`·`burdened-gift-carryover-d5.anchor.test.ts` 머리 주석 ·
+  `burdened-gift-carryover-159-97-2.plan.md` §5.10.0. (`transfer-104-2-2-gift-carryover-scope.plan.md:379`는 질의3 인용이라 정확 — 유지.)
+
+**기존 테스트 계약 변경 (의도 유지)** — 선언 경로를 쓰던 5파일(`carryover-exclusion-one-house` · `rate-104-2-2-gift-scope` C-2 · `gb-carryover.predo` K-04 ·
+`transfer-carryover-fractional-ratio` · `transfer-companion-carryover-apportion-key-f16`)은 레거시 플래그로 개명 — 레거시 경로가 종전 동작을 그대로 재현한다.
+`e2e/general-building-carryover.spec.ts`는 옛 모양 sessionStorage를 시드하므로 **그대로 둔다**(③ 마이그레이션 경로를 태운다).
+
+**anchor** (mock 세율 · OH 픽스처)
+- 엔진 `carryover-spouse-exception-d45.anchor.test.ts`(5): A2 배우자 true → A 58,378,000 · A2+ false → 0(auto) · A3 직계 true 무시 → 0 · A4 B도 해당이면 echo 없음 · L0 레거시 → 0(legacy_declaration)
+- route `transfer.route.carryover-d45.anchor.test.ts`(4): A1 옛 키 strip → 58,378,000 · R1 배우자 사실 도달 · R2 레거시 도달 · R3 컴패니언 shape parity
+- ③④ `transfer-carryover-legacy-declaration-d45.test.ts`(4): L1·L2(전환 후 재저장·재로드에도 false)·L3(음성 짝)·S1(관계 stale 가드)
+- ⑤⑦ `transfer-carryover-exclusion-section-d45.test.tsx`(6) · E2E `carryover-d45-spouse-legacy.spec.ts`(3 — UI → store)
+
+**mutation 18건 전건 KILLED** — D-8 배우자 예외 · 관계 무시 · 레거시 분기 · ③ 옛 필드 매핑 / 존재-아닌-값 판별 · ④ 관계 가드 / 레거시 · ⑫ 단건 2필드 / 파트 shape ·
+⑤ 배우자 게이트 / GB 게이트 / 관계 초기화 / 전환 버튼 · ⑦ 출처 라벨 · echo 3종.
+
+**게이트**: `tsc` 0건 · `__tests__/{tax-engine,api,calc,lib,components}` 2,046파일 21,354건 · E2E(워크트리 `E2E_PORT`) carryover 관련 11건 통과.
+브라우저 확인은 E2E(Playwright)로 UI → store 구간을 확인했다 — 계산 결과 화면까지 한 번에 태우지는 않았다(store → 세액은 route·엔진 anchor).
+
+**세액이 오르는 방향(PR 본문 명시)**: ① 자기선언 토글을 켜서 ②2호로 B를 받던 **새 계산**(OH-2 0 → 58,378,000) ② 배우자 예외 사실을 체크한 D-8 조합(0 → A).
+**그대로**: 토글을 켜고 저장한 **옛 이력**은 레거시 플래그로 저장 당시 세액을 재현 — 사용자가 전환해야 바뀐다(Q-3).
+
 ## 부록. 변경 이력
 
 | 버전 | 날짜 | 내용 |
@@ -424,4 +458,5 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | v0.3 | 2026-09-18 | **V-4·V-5 해소** — §1.4 설계 정정(배제 3에 게이트 덧붙이기 → E-3.5 합가 판정을 공용 술어로 꺼내 `deemedOneHouseBy155`에 채움), F-2를 PR-1에 흡수, Q-5(먼저 양도 요건) 신설 |
 | v0.3′ | 2026-09-18 | **Q-5 확정 — 토글 필수**(기존 미체크 혼인 중과배제는 세액 증가 · PR 본문 명시) · anchor D9-A8 |
 | v0.4 | 2026-09-18 | **PR-1(D9) 구현** — §11 구현 기록·mutation 9건·세액 방향 |
+| v0.6 | 2026-09-18 | **PR-3(D45) 구현**(§13) · 0068 오독 정정 3곳 |
 | v0.5 | 2026-09-18 | PR-1 머지(#1689) · **V-1~V-3·V-6~V-8 해소**(§6) · **PR-2(D15) 구현**(§12 — 차감형 2곳·겸용 경로를 설계에 추가) · 후속 F-5~F-9 신설 |

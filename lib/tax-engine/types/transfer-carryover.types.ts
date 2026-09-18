@@ -68,6 +68,13 @@ export interface CarryoverTaxationInput {
    */
   donorDeceased?: boolean;
   /**
+   * **배우자 예외 사실** (D45) — 「증여일 현재 §89①3호의 1세대1주택이던 주택을 배우자로부터
+   * 증여받았다」. 참이면 §97의2②2호를 적용하지 않는다(자동 판정 D-8이 걸릴 조합이라도).
+   * 근거: 서면-2022-부동산-0068(질의1) · 서면-2016-법령해석재산-3313 · 서면-2016-부동산-4434 ·
+   * 서면-2016-부동산-3753. `donorRelation === "spouse"`일 때만 의미가 있다(엔진도 함께 본다).
+   */
+  spouseGiftOneHouseAtGiftDate?: boolean;
+  /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 자산(파트)의 기준시가.
    * `useEstimatedAcquisition === true`일 때만 의미가 있다.
    * 분모(양도 당시 기준시가)는 받지 않는다 — 엔진이 아는 값을 쓴다(설계 D9-8).
@@ -85,10 +92,15 @@ export interface CarryoverTaxationInput {
      */
     expropriationWithin2Years?: boolean;
     /**
-     * ② 2호 — 이월과세 적용 시 §89①3호 각 목 주택 비과세 해당 (12억 초과 고가주택 포함).
-     * UI 라벨에 "고가주택 포함" 명시.
+     * **레거시 — 저장 당시 사용자가 직접 선언한 ② 2호** (D45 · Q-3).
+     *
+     * ② 2호는 자동 판정(Step 5.5 D-8)으로 옮겼고 선언 토글은 없앴다. 이 플래그는 **옛 이력**
+     * (`oneHouseExemptionApplies: true`로 저장된 record)을 ③ normalize가 옮겨 싣는 것뿐이다 —
+     * 새 폼에는 이 값을 세우는 UI가 없다. 참이면 종전처럼 Step 2에서 ② 2호로 배제해 저장 당시
+     * 세액을 재현하고, 화면의 「자동 판정으로 전환」이 이 값을 지운다.
+     * ⚠️ API 스키마에는 남으므로 API 직접 호출로는 종전 경로가 열린다(화면에서는 새로 만들 수 없다).
      */
-    oneHouseExemptionApplies?: boolean;
+    legacyOneHouseExemptionDeclared?: boolean;
     /**
      * ④항 — 가업상속공제 적용 자산 (v1 미지원, validation에서 진행 차단).
      * true 입력 시 엔진 진입 전 validation 오류로 차단됨.
@@ -245,6 +257,16 @@ export interface CarryoverTaxationDetail {
    *   「엔진 자동」이 아니다 — validation 차단 후의 방어코드 경로이지만 값의 출처는 사용자다.
    */
   exclusionReason?: "expropriation" | "one_house_exemption" | "tax_comparison" | "period_exceeded" | "relation_invalid" | "family_business";
+  /**
+   * [echo] `one_house_exemption`의 **출처** (D45) — 저장 당시 선언(레거시)인가, 엔진 자동 판정(D-8)인가.
+   * `exclusionReason === "one_house_exemption"`일 때만 채워진다.
+   */
+  oneHouseExclusionSource?: "legacy_declaration" | "auto";
+  /**
+   * [echo] **배우자 예외로 ② 2호를 적용하지 않았다** (D45) — D-8이 걸릴 조합(A 1세대1주택 · B 불해당)
+   * 이었는데 `spouseGiftOneHouseAtGiftDate`로 풀린 경우에만 true.
+   */
+  spouseOneHouseExceptionApplied?: boolean;
   /** Scenario A — 이월과세 적용 시나리오 */
   scenarioA: CarryoverScenarioADetail;
   /** Scenario B — 미적용 시나리오 (비교용) */
