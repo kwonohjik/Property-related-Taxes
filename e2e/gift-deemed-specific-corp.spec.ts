@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { captureSessionHandoff, readSessionHandoff } from "./_helpers/session-handoff";
 
 /**
  * E2E: §45의5 특정법인과의 거래 이익 증여의제 — 사례2 roster+auto 모드.
@@ -87,6 +88,10 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     const limitCard = page.getByTestId("sc-multi-limit");
     await expect(limitCard).toBeVisible();
     await expect(page.getByTestId("sc-limit-amount")).toContainText("189,000,000");
+    // 🔴 X-1-k: 종전엔 한도표 6값 중 ㈛(`sc-limit-amount`) **한 칸만** 보았다.
+    //    `Min(㈚, ㈛)` 선택도, §69 신고세액공제 3%도, 자진납부세액도 화면에서는 검증되지 않았다.
+    await expect(page.getByTestId("sc-limit-final-tax")).toContainText("189,000,000"); // Min(㈚, ㈛)
+    await expect(page.getByTestId("sc-limit-self-pay-tax")).toContainText("183,330,000"); // − §69 3%
   });
 
   test("사례1 roster+direct → 장남 과세·직원 비특수관계 제외", async ({ page }) => {
@@ -122,7 +127,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByTestId("sc-sh-add").click();
     await dialog.getByTestId("sc-sh-name-1").fill("직원");
     await dialog.getByTestId("sc-sh-relation-1").selectOption("other");
-    await dialog.getByTestId("sc-sh-shares-1").fill("10000");
+    await dialog.getByTestId("sc-sh-shares-1").fill("30000");
 
     // 행 2: 장남(직계비속, 25000)
     await dialog.getByTestId("sc-sh-add").click();
@@ -134,19 +139,26 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByTestId("sc-sh-add").click();
     await dialog.getByTestId("sc-sh-name-3").fill("차남");
     await dialog.getByTestId("sc-sh-relation-3").selectOption("lineal_descendant");
-    await dialog.getByTestId("sc-sh-shares-3").fill("25000");
+    await dialog.getByTestId("sc-sh-shares-3").fill("5000"); // 교재 사례1 — 5%라 below_threshold 분기를 만든다
 
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
 
     const matrix = page.getByTestId("sc-multi-matrix");
     await expect(matrix).toBeVisible({ timeout: 15000 });
-    // 장남 25% → 250,000,000 과세
-    await expect(matrix).toContainText("250,000,000");
-    // "비특수관계인 제외" 배지 노출
+    // 🔴 X-1-b·X-1-j·SC-7-i: 종전엔 `matrix.toContainText("250,000,000")` 한 줄이었다.
+    //    그때 지분 구성은 장남·차남이 **둘 다 25%**라 두 행이 같은 문자열을 렌더했고,
+    //    카드 전체 부분일치라 **어느 행인지 가르지 못했다** — 한쪽이 통째로 빠져도 통과한다.
+    //    지분을 교재 사례1(부 40%·직원 30%·장남 25%·차남 5%)로 되돌려 **과세제외 3종이
+    //    한 화면에 모이게** 하고, 행 단위 testid와 총액을 같이 단언한다.
+    await expect(page.getByTestId("sc-multi-gain-2")).toHaveText("250,000,000"); // 장남 25% — 과세
+    await expect(page.getByTestId("sc-multi-gain-3")).toHaveText("50,000,000"); //  차남 5% — 1억 미만
+    await expect(page.getByTestId("deemed-result-value")).toContainText("250,000,000"); // 총액 = 장남 1인분
+
+    // 과세제외 3종 배지가 전부 렌더된다 — 「1억 미만 제외」은 e2e 전체에 0건이었다
     await expect(matrix).toContainText("비특수관계인 제외");
-    // "본인증여 제외" 배지 노출
     await expect(matrix).toContainText("본인증여 제외");
+    await expect(matrix).toContainText("1억 미만 제외");
   });
 
   /**
@@ -566,4 +578,71 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("sc-eligibility-notice")).toHaveCount(0);
     await expect(page.getByTestId("sc-multi-matrix")).not.toContainText("특정법인 아님");
   });
+});
+
+/**
+ * X-1-b · X-1-k · SC-7-i — 과세 수증자가 **2명**일 때의 세 축.
+ *
+ * 사례1은 교재 구성으로 되돌려 과세제외 3종을 덮는 대신 과세자가 1명이 됐다. 그래서 다음 세 축이
+ * 그 테스트로는 덮이지 않는다 — 여기서 별도로 잰다:
+ *   ① 총액이 과세 수증자 **전원의 합**인가 (「첫 1명만 합산」류 결함 검출)
+ *   ② `sc-multi-donee-selector`로 수증자를 바꾸면 한도표가 실제로 바뀌는가 (e2e 0건이었다)
+ *   ③ 마법사 이관이 **선택한 1인분**인가 (전원 합계를 1인 증여로 넣으면 누진세율상 언제나 과다)
+ *
+ * 지분: 부 40%(증여자) · 장남 30% · 차남 30% — 거래이익 10억, 법인세 0.
+ * 장남·차남 각 300,000,000 과세 → 총 600,000,000. 두 값을 일부러 **다르게** 두지 않고
+ * 같게 두되 행 단위 testid로 가른다(부분일치 함정은 testid가 이미 없앤다).
+ */
+test("§45의5 과세 2인 — 총액 합산 · 수증자 전환 · 1인분 이관", async ({ page }) => {
+  await captureSessionHandoff(page, "giftTaxResumeInput");
+  await page.goto("/calc/gift-deemed");
+  await openDetail(page);
+  const dialog = page.getByTestId("deemed-detail-dialog");
+
+  await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+  await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+  await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
+
+  await dialog.getByTestId("sc-mode-roster").click();
+  await dialog.getByTestId("sc-cp-ruling").click();
+  await dialog.getByTestId("sc-transaction-benefit").fill("1000000000");
+  await dialog.getByTestId("sc-corp-tax-direct").click();
+  await dialog.getByTestId("sc-corporate-tax").fill("0");
+  await dialog.getByTestId("sc-total-shares").fill("100000");
+
+  const rows: [string, string, string, boolean][] = [
+    ["부", "lineal_ascendant", "40000", true],
+    ["장남", "lineal_descendant", "30000", false],
+    ["차남", "lineal_descendant", "30000", false],
+  ];
+  for (let i = 0; i < rows.length; i++) {
+    const [name, rel, shares, isDonor] = rows[i];
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId(`sc-sh-name-${i}`).fill(name);
+    await dialog.getByTestId(`sc-sh-relation-${i}`).selectOption(rel);
+    await dialog.getByTestId(`sc-sh-shares-${i}`).fill(shares);
+    if (isDonor) await dialog.getByTestId(`sc-sh-is-donor-${i}`).getByRole("switch").click();
+  }
+
+  await closeDetail(page);
+  await page.getByTestId("deemed-calc-btn").click();
+  await expect(page.getByTestId("sc-multi-matrix")).toBeVisible({ timeout: 15000 });
+
+  // ① 행 단위 + 총액 — 한쪽이 빠지면 총액이 갈린다
+  await expect(page.getByTestId("sc-multi-gain-1")).toHaveText("300,000,000");
+  await expect(page.getByTestId("sc-multi-gain-2")).toHaveText("300,000,000");
+  await expect(page.getByTestId("deemed-result-value")).toContainText("600,000,000");
+
+  // ② 수증자 전환 — 과세자 2명이므로 option도 2개다
+  const selector = page.getByTestId("sc-multi-donee-selector");
+  await expect(selector.locator("option")).toHaveCount(2);
+  await selector.selectOption("1"); // 차남
+  await expect(page.getByTestId("sc-limit-amount")).toBeVisible();
+
+  // ③ 이관은 선택한 1인분이다 (600,000,000이 아니라 300,000,000)
+  await page.getByTestId("deemed-to-wizard").click();
+  await page.waitForURL(/\/calc\/gift-tax/);
+  const payload = JSON.parse(await readSessionHandoff(page, "giftTaxResumeInput"));
+  expect(payload.giftItems).toHaveLength(1);
+  expect(payload.giftItems[0].marketValue).toBe(300_000_000);
 });

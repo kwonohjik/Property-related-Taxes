@@ -246,3 +246,65 @@ test("§34의3⑮1호 배당공제 — 1,200,000,000 → 1,080,000,000", async (
   await expect(page.getByTestId("deemed-result-value")).toContainText("1,080,000,000");
   await expect(page.getByTestId("rc-dividend-deduction-0")).toContainText("120,000,000");
 });
+
+/**
+ * X-1-e · RC-6-g — 과세요건 **미충족** 조기반환.
+ *
+ * `related-corp.ts`의 조기반환 블록은 `applied:false` · `deemedGiftValue:0` ·
+ * `aggregationExcluded:true` · `recipientBreakdown:[]`을 독자적으로 구성하고 UI는
+ * 「증여세 미적용」 배너를 띄운다. 그런데 이 분기를 밟는 테스트가 **E2E에도 vitest에도 0건**이었다 —
+ * §45의3 E2E 3건이 전부 요건을 «충족»하는 입력이었다. 조기반환은 하류 단계를 통째로
+ * 건너뛰므로 한 필드만 어긋나도 마법사 이관·합산배제까지 조용히 틀린다.
+ *
+ * 중소기업 정상거래비율은 50%다 — 특수관계법인 매출 400억 / 총매출 1,000억 = 40% ≤ 50%.
+ */
+test("§45의3 과세요건 미충족(거래비율 40% ≤ 정상거래비율 50%) → 0원 + 미적용 배너", async ({ page }) => {
+  await page.goto("/calc/gift-deemed");
+  await page.getByTestId("deemed-type-related_corp").click();
+  const dialog = page.getByTestId("deemed-detail-dialog");
+  await dialog.getByLabel("연도", { exact: true }).fill("2025");
+  await dialog.getByLabel("월", { exact: true }).fill("12");
+  await dialog.getByLabel("일", { exact: true }).fill("31");
+
+  await dialog.getByTestId("rc-size-small").click();
+  await dialog.getByLabel("총 매출액", { exact: true }).fill("100000000000");
+  await dialog.getByPlaceholder(/영업손실 시 음수/).fill("10000000000");
+  await dialog.getByLabel("각 사업연도 소득금액", { exact: true }).fill("10000000000");
+  await dialog.getByPlaceholder("산출세액 − 공제·감면액 (원)").fill("2000000000");
+
+  const shareholders: [string, string, string][] = [
+    ["갑", "self", "60"],
+    ["기타", "other", "40"],
+  ];
+  for (let i = 0; i < shareholders.length; i++) await dialog.getByTestId("rc-add-shareholder").click();
+  for (let i = 0; i < shareholders.length; i++) {
+    const [name, rel, pct] = shareholders[i];
+    const row = dialog.getByTestId(`rc-sh-row-${i}`);
+    await row.getByPlaceholder("주주 이름").fill(name);
+    await row.getByLabel(`주주 ${i + 1} 관계`).selectOption(rel);
+    await row.getByPlaceholder("지분율").fill(pct);
+  }
+
+  const sales: [string, string, "y" | "n"][] = [
+    ["특수법인", "40000000000", "y"], // 40% — 정상거래비율 50% «이하»
+    ["기타매출", "60000000000", "n"],
+  ];
+  for (let i = 0; i < sales.length; i++) await dialog.getByTestId("rc-add-sales").click();
+  for (let i = 0; i < sales.length; i++) {
+    const [name, amount, related] = sales[i];
+    const row = dialog.getByTestId(`rc-sales-row-${i}`);
+    await row.getByPlaceholder("매출처 이름").fill(name);
+    await row.getByLabel("매출액", { exact: true }).fill(amount);
+    await row.getByLabel(`매출처 ${i + 1} 특수관계`).selectOption(related);
+    if (related === "y") await row.getByLabel(`매출처 ${i + 1} 과세제외유형`).selectOption("");
+  }
+
+  await page.getByTestId("deemed-detail-confirm").click();
+  await page.getByTestId("deemed-calc-btn").click();
+
+  await expect(page.getByTestId("deemed-result-value")).toContainText("0");
+  const banner = page.getByTestId("deemed-exclusion");
+  await expect(banner).toBeVisible();
+  await expect(banner).toContainText("정상거래비율 이하");
+  await expect(banner).toContainText("§45의3①1호가목");
+});

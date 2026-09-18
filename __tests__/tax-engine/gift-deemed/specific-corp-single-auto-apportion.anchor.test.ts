@@ -14,7 +14,7 @@ import {
   calcSpecificCorpGiftMulti,
   apportionCorporateTax,
 } from "@/lib/tax-engine/gift-deemed/specific-corp";
-import type { SpecificCorpInput } from "@/lib/tax-engine/gift-deemed/gift-deemed-input-types";
+import type { SpecificCorpInput, SpecificCorpShareholder } from "@/lib/tax-engine/gift-deemed/gift-deemed-input-types";
 
 /** 거래이익 5억 · 산출세액 2억 · 공제감면 0 · 소득금액 10억 → 안분 1억 */
 const AUTO_BASE = {
@@ -117,10 +117,14 @@ describe("roster 모드 회귀 — 공용 leaf 치환 후에도 동일", () => {
   it("R-1 · 주주 2인 균등 50%씩 — 안분 1억 반영", () => {
     const res = calcSpecificCorpGiftMulti({
       ...AUTO_BASE,
+      // 🔴 X2B-6: 종전엔 `relation: "child"`였다 — `ScRelation`에 없는 값이다.
+      //    객체 전체에 걸린 `as SpecificCorpInput`이 그 불일치를 tsc에서 지워 버렸다.
+      //    배열에만 `satisfies`를 붙여 enum 가드를 되살린다
+      //    (memory `feedback_satisfies_preserves_keys_annotation_kills_guard`).
       shareholders: [
         { id: "a", name: "갑", relation: "spouse", shares: 50, totalShares: 100, isRelated: true, isDonor: false },
-        { id: "b", name: "을", relation: "child", shares: 50, totalShares: 100, isRelated: true, isDonor: false },
-      ],
+        { id: "b", name: "을", relation: "lineal_descendant", shares: 50, totalShares: 100, isRelated: true, isDonor: false },
+      ] satisfies SpecificCorpShareholder[],
     } as SpecificCorpInput);
 
     // roster breakdown은 「법인세 상당액」 행을 따로 두지 않고 차감 후 이익만 싣는다.
