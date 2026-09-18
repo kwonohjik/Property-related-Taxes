@@ -314,16 +314,23 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           ? { dividendFromBeneficiary: parseAmount(row.dividendFromBeneficiaryStr) }
           : {}),
       }));
-      const intermediaryCorps = form.rcIntermediaryCorps.map((row) => ({
-        corpShareholderId: row.corpShareholderId,
-        stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
-        ...(dividendOn ? { distributableProfit: parseAmount(row.distributableProfitStr) } : {}),
-        owners: row.owners.map((o) => ({
-          individualId: o.individualId,
-          ratio: parseRatio(o.ratioPctStr),
-          ...(dividendOn ? { dividendIncome: parseAmount(o.dividendIncomeStr) } : {}),
-        })),
-      }));
+      // 🔴 RC-G: 섹션3의 렌더 게이트(`corpOptions.length > 0`)가 닫히면 빈 행이 화면에서
+      //    사라지는데, 폼은 그 행을 **의도적으로 보존**한다(주주 유형을 되돌리면 복구된다 —
+      //    렌더 anchor R-2가 그 동작을 고정한다). 문제는 ④가 그 행을 그대로 보냈다는 것이다:
+      //    ⑧은 `hasCorpShareholder`가 false라 건너뛰고, ⑫는 `corpShareholderId: min(1)`이라
+      //    **400으로 계산 자체가 막혔다**. 폼의 보존 설계는 그대로 두고 ④에서 거른다.
+      const intermediaryCorps = form.rcIntermediaryCorps
+        .filter((row) => row.corpShareholderId !== "")
+        .map((row) => ({
+          corpShareholderId: row.corpShareholderId,
+          stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
+          ...(dividendOn ? { distributableProfit: parseAmount(row.distributableProfitStr) } : {}),
+          owners: row.owners.map((o) => ({
+            individualId: o.individualId,
+            ratio: parseRatio(o.ratioPctStr),
+            ...(dividendOn ? { dividendIncome: parseAmount(o.dividendIncomeStr) } : {}),
+          })),
+        }));
       const salesPartners = form.rcSalesPartners.map((row) => ({
         id: row.id,
         name: row.name,

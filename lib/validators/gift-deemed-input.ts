@@ -632,6 +632,32 @@ export const deemedGiftInputSchema = z
         });
       }
     }
+    // 🔴 SC-H: 법 §45의5①은 「… **주식보유비율을 곱하여** 계산한 금액」이다. 보유주식수가
+    //    발행주식총수를 넘는 것은 법이 상정하지 않는 사실관계이고, 그대로 계산하면 증여재산가액이
+    //    **특정법인의 이익을 넘는다**(실측 지분율 120% / Σ 160%).
+    //    ⑧validate도 같은 술어로 막지만 그쪽은 클라이언트다 — **서버측 관문**을 여기 둔다.
+    //    자동 클램프는 하지 않는다(「자동 안분 fallback 금지」와 같은 층위: 잘못된 입력은 차단이 정본).
+    if (data.type === "specific_corp" && Array.isArray(data.shareholders)) {
+      let sum = 0;
+      data.shareholders.forEach((sh, i) => {
+        sum += sh.shares;
+        if (sh.totalShares > 0 && sh.shares > sh.totalShares) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["shareholders", i, "shares"],
+            message: `주주 ${i + 1}의 주식수가 발행주식 총수를 초과합니다 (§45의5①)`,
+          });
+        }
+      });
+      const total = data.shareholders[0]?.totalShares ?? 0;
+      if (total > 0 && sum > total) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["shareholders"],
+          message: "주주 주식수 합계가 발행주식 총수를 초과합니다 (§45의5①)",
+        });
+      }
+    }
     if (data.type === "free_realestate") {
       // 다기간 모드(periods 정의됨) — 빈 배열 차단(자동 fallback 금지)
       if (data.periods !== undefined) {

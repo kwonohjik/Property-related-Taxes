@@ -416,6 +416,19 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
         }
         if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        // 🔴 SC-H: 법 §45의5①은 「… **주식보유비율을 곱하여** 계산한 금액」이다. 보유주식수가
+        //    발행주식총수를 넘는 것은 법이 상정하지 않는 사실관계이고, 계산기가 그것을 조용히
+        //    계산하면 증여재산가액이 **특정법인의 이익을 넘는다**(실측: 총수 50,000·갑 60,000
+        //    → 1,200,000,000 = 지분율 120% / 갑 40,000+을 40,000 → Σ 1,600,000,000 = 이익의 160%).
+        //    §45의3이 R-4(지분합 100%)·R-7(매출합=총매출)로 이미 하는 교차검증과 비대칭이었다.
+        const scTotal = parseAmount(form.scTotalShares);
+        for (let i = 0; i < form.scShareholders.length; i++) {
+          if (parseAmount(form.scShareholders[i].shares) > scTotal)
+            return `주주 ${i + 1}의 주식수가 발행주식 총수(${scTotal.toLocaleString()}주)를 초과합니다`;
+        }
+        const scSum = form.scShareholders.reduce((a, sh) => a + parseAmount(sh.shares), 0);
+        if (scSum > scTotal)
+          return `주주 주식수 합계(${scSum.toLocaleString()}주)가 발행주식 총수(${scTotal.toLocaleString()}주)를 초과합니다`;
         // 법 §45의5①은 「거래한 날을 증여일로 하여」라고 거래 단위로 증여를 본다 ⇒ 증여자가 2인이면
         // 그것은 **별개의 두 거래**다. 합산해 한 번에 넣으면 두 행이 서로 donor_self로 상쇄돼 0원이 된다.
         if (form.scShareholders.filter((sh) => sh.isDonor).length > 1)
@@ -449,14 +462,22 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         }
         // roster+direct: corporateTax 0 허용 (이월결손금 0)
       } else {
-        // single 경로 — 기존 validate 유지
+        // single 경로
         if (isAuto) {
           if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
           if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
           const landErr = validateScLandTransferTax(form);
           if (landErr) return landErr;
         }
-        // single+direct: corporateTax·ratio 기존(0 허용)
+        // 🔴 SC-N: 종전 주석은 「ratio 기존(0 허용)」이었다. 그런데 §45의5①의 증여의제이익은
+        //    「… 주식보유비율을 **곱하여** 계산한 금액」이라 비율 0이면 결과가 항상 0원이다.
+        //    그 0원에 엔진이 붙이는 사유는 「증여의제이익이 1억원 미만 (§34의5⑤)」 — 산술적으로는
+        //    참이지만 **진짜 원인(지분율 미입력)을 가린다**. 사용자는 비과세로 오인한다.
+        //    ⑫는 `numer` nonnegative라 0을 통과시키므로 여기가 유일한 관문이다.
+        if (parseDecimal(form.scRatioPct) <= 0)
+          return "지배주주등의 주식보유비율을 입력하세요 (§45의5① — 비율이 0이면 증여의제이익도 0입니다)";
+        if (parseDecimal(form.scRatioPct) > 100)
+          return "지배주주등의 주식보유비율은 100% 이하로 입력하세요";
       }
       break;
     }
@@ -503,6 +524,17 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // R-2 재무
       if (parseAmount(form.rcTotalSalesStr) <= 0) return "총 매출액을 입력하세요";
       if (parseAmount(form.rcTaxableIncomeStr) <= 0) return "각 사업연도 소득금액을 입력하세요";
+      // 🔴 RC-F: 이 두 필드는 **0·음수가 적법한 값**이라 `<= 0` 형태로는 막을 수 없고,
+      //    `parseAmount("") === 0`이라 종전 검사는 **공란을 그대로 통과**시켰다.
+      //    ④는 0을 보내고 ⑫는 `z.number().int()`라 「명시 0」과 「미입력」이 wire 상
+      //    구분되지 않는다 — **원문자열을 보는 ⑧만이 구분 가능한 지점**이다.
+      //    같은 파일 `bargain_transfer`의 `if (!form.bargPrice?.trim())`가 선례다.
+      //    실측: 세무조정후영업손익 공란 → 증여의제이익 0원(사유 없음) /
+      //         법인세 순세액 공란 → 43,200,000이 나올 자리에 50,000,000(+6,800,000 과다).
+      if (form.rcPreTaxAdjOperatingIncomeStr.trim() === "")
+        return "세무조정 후 영업손익을 입력하세요 (영업손실이면 음수, 0이면 0)";
+      if (form.rcCorporateTaxNetStr.trim() === "")
+        return "법인세 순세액을 입력하세요 (이월결손금 등으로 없으면 0)";
       if (parseAmount(form.rcCorporateTaxNetStr) < 0) return "법인세 순세액은 0 이상이어야 합니다";
       // R-3 주주 roster 빈행 차단
       if (form.rcShareholders.length < 2) return "주주를 2명 이상 입력하세요";
@@ -520,14 +552,36 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // related-corp-form.tsx:186이 `corpOptions.length > 0`(= 법인주주 존재)일 때만 섹션을 그리므로,
       // 법인주주를 개인으로 되돌리면 빈 행이 남은 채 섹션이 사라져 «화면에 없는 칸»을 요구했다.
       const hasCorpShareholder = form.rcShareholders.some((s) => s.isCorporate);
+      // 🔴 RC-H: 종전에는 참조 필드를 «비어있지 않음»으로만 봤다. 주주 행을 지우거나 개인↔법인을
+      //    뒤집으면 그 id를 가리키던 참조가 **고아**로 남는데, 화면의 select는 매칭되는 option이
+      //    없어 「-- 주주 선택 --」으로 보이면서도 차단되지 않았다. 사용자가 입력한 비율이
+      //    조용히 무시된다(엔진은 고아를 건너뛴다). 술어를 ⑤의 option 목록과 같은 집합
+      //    — «현재 비법인 주주 id» — 으로 맞춘다.
+      const individualIds = new Set(form.rcShareholders.filter((s) => !s.isCorporate).map((s) => s.id));
       if (hasCorpShareholder) {
         for (const [i, row] of form.rcIntermediaryCorps.entries()) {
           const n = i + 1;
           if (!row.corpShareholderId) return `${n}번째 간접출자법인의 법인주주를 선택하세요`;
+          const corpRow = form.rcShareholders.find((s) => s.id === row.corpShareholderId);
+          if (!corpRow || !corpRow.isCorporate)
+            return `${n}번째 간접출자법인이 가리키는 법인주주가 주주현황에 없습니다 — 다시 선택하세요`;
           if (parseDecimal(row.stakeInBeneficiaryPctStr) <= 0)
             return `${n}번째 간접출자법인의 수혜법인 지분율을 입력하세요`;
+          // 🔴 RC-L: 같은 값을 두 곳에서 받는다 — 주주현황의 「직접지분」과 여기의 「수혜법인
+          //    직접지분」. 엔진은 **이쪽만** 쓰고(법인주주의 directRatio는 전달된 뒤 폐기된다),
+          //    화면의 「지분합계 100%」 배지는 **저쪽만** 본다. 어긋나면 조용히 계산됐다.
+          //    ⚠️ 칸을 없애 한쪽에서 파생하는 수정은 하지 않는다 — 상증령 §34의3⑱3호의
+          //       다단계 간접출자(경유 법인이 수혜법인 직접주주가 아닌 경우)를 영구히 막는다.
+          if (Math.abs(parseDecimal(row.stakeInBeneficiaryPctStr) - parseDecimal(corpRow.directRatioPctStr)) > 0.01)
+            return (
+              `${n}번째 간접출자법인의 수혜법인 지분율(${row.stakeInBeneficiaryPctStr}%)이 ` +
+              `주주현황의 「${corpRow.name.trim() || "법인주주"}」 직접지분(${corpRow.directRatioPctStr}%)과 다릅니다 — 같은 값이어야 합니다`
+            );
+          if (row.owners.length === 0) return `${n}번째 간접출자법인의 개인 소유주를 추가하세요`;
           for (const [j, owner] of row.owners.entries()) {
             if (!owner.individualId) return `${n}번째 법인 ${j + 1}번 소유주를 선택하세요`;
+            if (!individualIds.has(owner.individualId))
+              return `${n}번째 법인 ${j + 1}번 소유주가 주주현황의 개인 주주가 아닙니다 — 다시 선택하세요`;
             if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
           }
         }
@@ -554,6 +608,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (row.isRelated && !row.exclusionType) {
           for (const [j, stake] of row.rulingStakes.entries()) {
             if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
+            if (!individualIds.has(stake.shareholderId))
+              return `${n}번째 매출처 §⑭ ${j + 1}번 주주가 주주현황의 개인 주주가 아닙니다 — 다시 선택하세요`;
             if (parseDecimal(stake.ratioPctStr) <= 0)
               return `${n}번째 매출처 §⑭ ${j + 1}번 주주의 보유비율을 입력하세요`;
           }
