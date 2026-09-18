@@ -165,6 +165,14 @@ interface ScShareholderRow {
 
 ## 7. 정책 준수 체크
 - **3-state**(`feedback_three_state_optional_mode_toggle`): scShareholders undefined/[]/[...]; scMode가 명시 모드 진실, length로 derive 금지.
+- **지분율은 ⑧·⑫ 양쪽이 막는다** (SC-6-h·SC-7-g). single 모드의 `ownershipRatio`는
+  ⑫ superRefine이 **존재 + `numer > 0`**을 요구한다 — ⑧만 두면 클라이언트 밖 호출이
+  그대로 통과해 엔진이 0%로 계산하고 「증여의제이익이 1억원 미만」이라는 **틀린 사유**가 난다.
+  「존재」만 보면 no-op이다 — ④는 미입력 칸도 `{numer:0, denom:10000}`을 명시 전송한다.
+  공유 `ratioSchema`에는 `numer <= denom` 상한이 걸려 200% 지분율이 서버를 통과하지 못한다.
+- **과세제외 행도 안분액을 보존한다** (SC-5-c). `donor_self`·`non_related`·`below_threshold`
+  세 가지가 같은 형태다 — 과세 여부는 `isTaxable`과 배지가 말하고, 증여재산가액은
+  `taxable` 행만 합산하므로 세액은 불변이다. `corporate_shareholder`만 0이다(개인에게 재귀속).
 - **자동안분 fallback 금지**(`feedback_no_silent_apportion_fallback`): auto 모드 scCorpIncome 미입력 0 채움 금지(÷0) → validate `>0` 차단.
 - **useEffect 미러링 금지**(`feedback_useeffect_store_mirror_forbidden`): 법인세 안분 echo는 useMemo 표시전용, store 역기록 금지. 실계산은 엔진(④에서 raw 전달).
 - **내부 id 노출 금지**(`feedback_no_internal_id_in_result`): 표시셀 name||RELATION_LABEL.

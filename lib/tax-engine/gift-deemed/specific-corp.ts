@@ -381,6 +381,10 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
   const tx = evaluateScTransaction(input);
   const transactionBenefit = tx.benefit;
   const corporateTax = tx.exclusionReason ? 0 : (input.corporateTax ?? apportionCorporateTax(input));
+  // 🔴 SC-6-h: 미전달을 조용한 0으로 바꾸면 결과가 「증여의제이익이 1억원 미만 (§34의5⑤)」이라는
+  //    **틀린 사유**로 나온다 — 그 조문은 이 사안에 대해 아무 말도 하지 않았다. ⑫가 서버측에서
+  //    차단하지만, 엔진이 leaf로 직접 호출될 때를 대비해 사유를 정직하게 남긴다.
+  const ratioMissing = !input.ownershipRatio || input.ownershipRatio.numer <= 0;
   const ratio = input.ownershipRatio ?? { numer: 0, denom: 1 };
   const corpProfit = transactionBenefit - corporateTax;
   const gain = corpProfit > 0 ? safeMultiplyThenDivide(corpProfit, ratio.numer, ratio.denom) : 0;
@@ -424,7 +428,9 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
       : (tx.exclusionReason ??
         (eligibility.met === "no"
           ? notSpecificCorpReason(eligibility)
-          : "증여의제이익이 1억원 미만 (§34의5⑤)")),
+          : ratioMissing
+            ? "지배주주등 지분율이 입력되지 않았거나 0%입니다 — 지분율 없이는 §45의5 증여의제이익을 산출할 수 없습니다"
+            : "증여의제이익이 1억원 미만 (§34의5⑤)")),
     legalBasis: GIFT.SPECIFIC_CORP,
     // §45의5① 「거래한 날을 증여일로 하여」 — 저장소 4개 엔진의 `appliedLawDate` 관례와 같은 축
     ...(input.transactionDate ? { appliedLawDate: input.transactionDate } : {}),
@@ -499,7 +505,14 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
     if (txExcluded) return { ...base, nonTaxableReason: "transaction_not_covered" }; // 거래 자체가 §45의5① 밖
     if (notSpecificCorp) return { ...base, nonTaxableReason: "not_specific_corp" }; // ⓐ 법인 단위 선결 요건
     if (sh.isCorporate) return { ...base, gain: 0, nonTaxableReason: "corporate_shareholder" }; // 법인 → 개인에 간접 귀속
-    if (sh.isDonor) return { ...base, gain: 0, nonTaxableReason: "donor_self" }; // 증여자 본인(특수관계인)
+    // 🔴 SC-5-c: 증여자 본인 행의 `gain`을 0으로 **덮어쓰지 않는다**. 지분 안분액 자체는 실재하는
+    //    수량이고, 과세에서 빠지는 것은 `isTaxable`이 말한다(`deemedGiftValue`는 `taxable` 행만
+    //    합산하므로 세액은 불변이다). 형제 제외 2종(`non_related`·`below_threshold`)도 gain을
+    //    보존하는데 여기만 0으로 덮어 **단일 이상치**였고, 설계 정본
+    //    (`gift-specific-corp-45-5.ui.design.md` 주주별 표 mock)도 부(증여자) 행에 안분액을 적는다.
+    //    ⚠️ 바로 위 `corporate_shareholder`는 계속 0이다 — 그쪽은 법인 지분이 개인에게 간접으로
+    //       **다시 귀속**되므로 보존하면 같은 이익이 화면에서 두 번 보인다(사유가 다르다).
+    if (sh.isDonor) return { ...base, nonTaxableReason: "donor_self" }; // 증여자 본인(특수관계인)
     if (!sh.isRelated) return { ...base, nonTaxableReason: "non_related" }; // 지배주주 친족 아님(타인)
     if (gain < ABSOLUTE_THRESHOLD) return { ...base, nonTaxableReason: "below_threshold" }; // §34의5⑤ 1억 미만
     // 과세 — §45의5② 한도 계산 (한도의 ㉠㉡도 같은 합산비율을 쓴다)

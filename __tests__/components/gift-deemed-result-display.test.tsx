@@ -127,6 +127,7 @@ describe("RC-5-e — 맥락 없는 잔여 안내가 사라진다", () => {
 import { SpecificCorpMultiResultView } from "@/components/calc/results/SpecificCorpMultiResultView";
 import { calcSpecificCorpGiftMulti } from "@/lib/tax-engine/gift-deemed/specific-corp";
 import type { SpecificCorpInput } from "@/lib/tax-engine/gift-deemed/types";
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
 describe("SC-O — 「계산식」 열이 엔진 값을 재계산하지 않는다", () => {
   const SC: SpecificCorpInput = {
@@ -152,12 +153,42 @@ describe("SC-O — 「계산식」 열이 엔진 값을 재계산하지 않는�
     return multi;
   }
 
-  it("[D-5] 증여자 본인 행은 곱셈을 그리지 않는다 — 「…×20.0%」 옆에 「0」이 찍히는 거짓 등식이었다", () => {
+  it("[D-5] 증여자 본인 행 — 곱셈식을 그리면 그 값이 옆 칸 증여재산가액과 **일치**한다 (거짓 등식 금지)", () => {
+    // 🔴 SC-5-c로 정본이 바뀌었다. 종전 단언은 「곱셈을 그리지 않는다」였는데, 그것은 엔진이
+    //    `gain: 0`으로 영점처리하던 시절의 **구현 서술**이었다. 이 anchor가 실제로 지키던 것은
+    //    「…×20.0%」 옆에 「0」이 찍히는 **거짓 등식의 부재**다. 엔진이 gain을 보존하게 된 지금은
+    //    「그리지 않는다」가 아니라 **「그리면 일치한다」**가 같은 보호를 더 강하게 준다.
+    //    (설계 정본 `gift-specific-corp-45-5.ui.design.md` 주주별 표 mock이 부(증여자) 행에
+    //     안분액을 적는다. 과세에서 빠지는 사실은 「과세여부」 배지가 말한다.)
     const multi = renderSc();
     const donor = multi.donees.findIndex((d) => d.nonTaxableReason === "donor_self");
     expect(donor).toBeGreaterThanOrEqual(0);
-    expect(multi.donees[donor].gain).toBe(0); // 엔진이 영점처리한다
-    expect(screen.getByTestId(`sc-multi-formula-${donor}`).textContent).toBe("산입 제외");
+    expect(multi.donees[donor].isTaxable).toBe(false); // 과세에서는 빠진다
+    expect(multi.donees[donor].gain).toBeGreaterThan(0); // 안분액 자체는 보존된다
+    const formula = screen.getByTestId(`sc-multi-formula-${donor}`).textContent ?? "";
+    expect(formula).toContain("20,000/50,000"); // 원천 주식수 분수 — 반올림 재계산이 아니다
+    // 등식 일치 — 곱셈식을 그린 행은 옆 칸이 엔진 값과 같아야 한다
+    expect(screen.getByTestId(`sc-multi-gain-${donor}`).textContent).toBe(formatKRW(multi.donees[donor].gain));
+  });
+
+  it("[D-5b] 형제 짝 — **여전히 영점처리되는** 법인주주 행은 곱셈을 그리지 않는다", () => {
+    // D-5의 술어를 바꾸면서 「영점처리된 행은 곱셈을 그리지 않는다」 보호가 사라지지 않도록
+    // 그 축을 전담하는 짝을 남긴다. `corporate_shareholder`는 법인 지분이 개인에게 간접으로
+    // **다시 귀속**되므로 계속 0이다(SC-5-c는 `donor_self`만 바꿨다).
+    const r = calcSpecificCorpGiftMulti({
+      ...SC,
+      shareholders: [
+        { id: "1", name: "갑", relation: "lineal_descendant", shares: 20_000, totalShares: 50_000, isDonor: true, isRelated: true },
+        { id: "2", name: "을", relation: "lineal_descendant", shares: 20_000, totalShares: 50_000, isDonor: false, isRelated: true },
+        { id: "3", name: "B법인", relation: "other", shares: 10_000, totalShares: 50_000, isDonor: false, isRelated: true, isCorporate: true },
+      ],
+    } as unknown as SpecificCorpInput);
+    const multi = r.specificCorpMulti!;
+    render(<SpecificCorpMultiResultView multi={multi} selectedDoneeIndex={0} onSelectDonee={() => {}} />);
+    const corp = multi.donees.findIndex((d) => d.nonTaxableReason === "corporate_shareholder");
+    expect(corp).toBeGreaterThanOrEqual(0);
+    expect(multi.donees[corp].gain).toBe(0);
+    expect(screen.getByTestId(`sc-multi-formula-${corp}`).textContent).toBe("산입 제외");
   });
 
   it("[D-6] 과세 행은 반올림한 퍼센트가 아니라 **원천 주식수 분수**로 보인다 (반올림 재계산 금지)", () => {

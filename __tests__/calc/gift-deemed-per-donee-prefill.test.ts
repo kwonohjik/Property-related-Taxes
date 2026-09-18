@@ -150,7 +150,7 @@ describe("§45의5 특정법인 — roster 이관은 수증자 1인분", () => {
   it("[S-0] 전제: 증여자 제외 · 과세 수증자 2인이 각 966,000,000", () => {
     expect(result.specificCorpMulti?.corpProfit).toBe(2_415_000_000);
     expect(result.specificCorpMulti?.donees.map((d) => [d.name, d.gain, d.isTaxable])).toEqual([
-      ["부", 0, false],
+      ["부", 483_000_000, false], // SC-5-c: 안분액 보존 · 과세는 isTaxable=false가 막는다
       ["갑", 966_000_000, true],
       ["을", 966_000_000, true],
     ]);

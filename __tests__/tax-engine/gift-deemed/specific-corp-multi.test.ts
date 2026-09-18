@@ -80,7 +80,10 @@ describe("§45의5 특정법인과의 거래 — 계산사례 2 [SC-CASE2]", () 
     expect(byName("갑").gain).toBe(1_449_000_000);
     expect(byName("갑").isTaxable).toBe(true);
 
-    expect(byName("부").gain).toBe(0); // 증여자 본인 → 0
+    // 🔴 SC-5-c: 증여자 본인 행도 **안분액은 보존**한다(형제 제외 2종과 같은 형태).
+    //    과세에서 빠지는 것은 `isTaxable`과 `nonTaxableReason`이 말하고, 세액은
+    //    `deemedGiftValue`가 `taxable` 행만 합산해 **불변**이다(아래 짝 단언이 고정한다).
+    expect(byName("부").gain).toBe(483_000_000); // 2,415백만 × 20%
     expect(byName("부").isTaxable).toBe(false);
     expect(byName("부").nonTaxableReason).toBe("donor_self");
 
@@ -91,6 +94,9 @@ describe("§45의5 특정법인과의 거래 — 계산사례 2 [SC-CASE2]", () 
     expect(byName("병").gain).toBe(410_550_000);
     expect(byName("병").isTaxable).toBe(false);
     expect(byName("병").nonTaxableReason).toBe("non_related"); // 타인
+
+    // 짝 — 제외 3종의 gain이 보존되어도 증여재산가액은 **과세 행만** 합산한다.
+    expect(m.donees.filter((d) => d.isTaxable).map((d) => d.name)).toEqual(["갑"]);
   });
 
   it("deemedGiftValue = 과세 지배주주등(갑) 합 = 1,449백만", () => {

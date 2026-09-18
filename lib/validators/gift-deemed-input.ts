@@ -118,10 +118,18 @@ const freeLoanAggregatedSchema = z.object({
 //    (leaf 쪽 가드는 `lib/tax-engine/tax-utils.ts`에 함께 넣었다).
 //    생산 측(`lib/calc/gift-deemed-api.ts`의 `parseRatio`)은 `{Math.round(pct*100), 10_000}`
 //    으로 언제나 정수를 만들므로, 정수 강제가 정상 입력을 막지 않는다.
-const ratioSchema = z.object({
-  numer: z.number().int().nonnegative(),
-  denom: z.number().int().positive(),
-});
+const ratioSchema = z
+  .object({
+    numer: z.number().int().nonnegative(),
+    denom: z.number().int().positive(),
+  })
+  // 🔴 SC-7-g: 상한이 없어 200%(`{20000, 10000}`)가 그대로 통과했다 — 실측 2,000,000,000원.
+  //    이 스키마의 사용처 14곳은 **전부 지분율 축**이다(이자율 같은 1을 넘는 rate는 없다)
+  //    — `appropriateRate`는 별도 스키마다. ⑧validate가 막는 것은 클라이언트라 **서버측 관문**을 여기 둔다.
+  //    roster의 「주식수 > 발행주식총수」 가드(같은 파일 superRefine)와 같은 층위고, single 경로만 비어 있었다.
+  .refine((r) => r.numer <= r.denom, {
+    message: "지분율은 100%를 초과할 수 없습니다",
+  });
 const mergerShareholderSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -698,6 +706,47 @@ export const deemedGiftInputSchema = z
           });
         }
       });
+    }
+    // 🔴 SC-6-h: single(=roster 미사용) 모드에서 지배주주등 지분율이 없으면 엔진이 조용히 0%로
+    //    계산해 「증여의제이익이 1억원 미만 (§34의5⑤)」이라는 **틀린 사유**를 돌려줬다.
+    //    ⑧validate(`:477-480`)가 같은 술어로 막지만 그쪽은 클라이언트다 — 서버측 관문을 여기 둔다.
+    //    ⚠️ 「존재」만 보면 no-op이다 — ④는 미입력 칸도 `{numer:0, denom:10000}`을 **명시 전송**한다.
+    //       그래서 `numer > 0`까지 본다(자동 fallback 금지: 미입력은 차단이 정본).
+    if (data.type === "specific_corp" && !(Array.isArray(data.shareholders) && data.shareholders.length > 0)) {
+      if (!data.ownershipRatio || data.ownershipRatio.numer <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ownershipRatio"],
+          message: "지배주주등 지분율을 입력하세요 — 0%로는 §45의5 증여의제이익을 산출할 수 없습니다",
+        });
+      }
+    }
+    // 🔴 RC-3-f: 간접출자법인 행은 법인주주별로 **합계가 그 법인주주의 수혜법인 직접지분과
+    //    같아야** 한다. 행 단위 동치만 보면 같은 법인주주를 가리키는 행이 2개일 때 둘 다 통과하고
+    //    (각 행 30% = 섹션2의 30%), 엔진 `computeIndirectPaths`가 **행마다** path를 만들어
+    //    간접보유비율이 행 수에 선형으로 배가된다(probe 실측 421,200,000 → 842,400,000 → 1,263,600,000).
+    //    ⑧validate도 같은 술어로 막지만 그쪽은 클라이언트다 — **서버측 관문**을 여기 둔다.
+    if (data.type === "related_corp" && Array.isArray(data.intermediaryCorps) && Array.isArray(data.shareholders)) {
+      const sumByCorp = new Map<string, number>();
+      for (const row of data.intermediaryCorps) {
+        const st = row.stakeInBeneficiary;
+        sumByCorp.set(row.corpShareholderId, (sumByCorp.get(row.corpShareholderId) ?? 0) + (st.denom > 0 ? (st.numer * 100) / st.denom : 0));
+      }
+      for (const [corpId, sum] of sumByCorp) {
+        const corpRow = data.shareholders.find((s) => s.id === corpId);
+        if (!corpRow) continue; // 고아 참조는 ⑧이 차단한다(⑫은 화면의 id 집합을 모른다)
+        const dr = corpRow.directRatio;
+        const direct = dr.denom > 0 ? (dr.numer * 100) / dr.denom : 0;
+        if (Math.abs(sum - direct) > 0.01) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["intermediaryCorps"],
+            message:
+              `「${corpRow.name.trim() || "법인주주"}」의 간접출자법인 수혜법인 지분율 합계(${sum.toFixed(2)}%)가 ` +
+              `주주현황의 직접지분(${direct.toFixed(2)}%)과 다릅니다 (상증령 §34직3⑬)`,
+          });
+        }
+      }
     }
     if (data.type === "free_realestate") {
       // 다기간 모드(periods 정의됨) — 빈 배열 차단(자동 fallback 금지)

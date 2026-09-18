@@ -585,6 +585,33 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
             if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
           }
         }
+        // 🔴 RC-3-f: 위의 행 단위 동치 검사만으로는 **같은 법인주주를 가리키는 행이 2개**일 때
+        //    둘 다 통과한다(각 행 30% = 섹션2의 30%). 엔진 `computeIndirectPaths`는
+        //    `for (const corp of intermediaryCorps)`로 **행마다** path를 push하고
+        //    `sumIndirectPaths`가 그대로 더하므로, 간접보유비율이 행 수에 **선형으로 배가**된다
+        //    (probe 실측: 1행 421,200,000 / 2행 842,400,000 / 3행 1,263,600,000).
+        //    ⚠️ 가드를 `corpShareholderId` uniqueness로 두지 않는 이유 — 그것은 중복만 잡고
+        //       「한 행에 지분을 부풀리는」 형제 경로를 놓친다. **법인주주별 합계 대조**는 둘 다
+        //       잡는다(30+30=60 ≠ 30, 그리고 60 ≠ 30). 행 단위 검사는 그대로 둔다.
+        const stakeSumByCorp = new Map<string, number>();
+        for (const row of form.rcIntermediaryCorps)
+          stakeSumByCorp.set(
+            row.corpShareholderId,
+            (stakeSumByCorp.get(row.corpShareholderId) ?? 0) + parseDecimal(row.stakeInBeneficiaryPctStr),
+          );
+        for (const [corpId, sum] of stakeSumByCorp) {
+          const corpRow = form.rcShareholders.find((s) => s.id === corpId);
+          if (!corpRow) continue; // 고아 참조는 위 루프가 이미 차단한다
+          const direct = parseDecimal(corpRow.directRatioPctStr);
+          if (Math.abs(sum - direct) > 0.01) {
+            const rowCount = form.rcIntermediaryCorps.filter((r) => r.corpShareholderId === corpId).length;
+            return (
+              `「${corpRow.name.trim() || "법인주주"}」의 간접출자법인 수혜법인 지분율 합계` +
+              `(${sum.toFixed(2)}%${rowCount > 1 ? ` — ${rowCount}개 행` : ""})가 ` +
+              `주주현황의 직접지분(${direct.toFixed(2)}%)과 다릅니다 — 같아야 합니다`
+            );
+          }
+        }
       }
       // R-6 매출처 roster 빈행 차단 (자동 안분 fallback 금지)
       if (form.rcSalesPartners.length === 0) return "매출처를 1개 이상 입력하세요";
