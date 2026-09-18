@@ -37,7 +37,7 @@ describe("RC-E — 비특수관계 매출처의 stale 과세제외유형", () =>
   it("[EX-0] 비특수관계 행의 exclusionType은 과세제외매출액에 산입되지 않는다", () => {
     const partners: RcSalesPartner[] = [
       D_RELATED,
-      { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionType: "sec10_5" },
+      { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionTypes: ["sec10_5"] },
     ];
     expect(computeCommonExclusion(partners)).toBe(0);
   });
@@ -45,7 +45,7 @@ describe("RC-E — 비특수관계 매출처의 stale 과세제외유형", () =>
   it("[EX-0b] 긍정 짝 — 같은 행을 특수관계로 켜면 산입된다 (가드가 유형이 아니라 isRelated를 본다)", () => {
     const partners: RcSalesPartner[] = [
       D_RELATED,
-      { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: true, exclusionType: "sec10_5" },
+      { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: true, exclusionTypes: ["sec10_5"] },
     ];
     expect(computeCommonExclusion(partners)).toBe(6_000_000_000);
   });
@@ -57,7 +57,7 @@ describe("RC-E — 비특수관계 매출처의 stale 과세제외유형", () =>
     const stale = calcRelatedCorpGift(
       inp([
         D_RELATED,
-        { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionType: "sec10_5" },
+        { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionTypes: ["sec10_5"] },
       ]),
     );
     expect(clean.deemedGiftValue).toBe(43_200_000);
@@ -68,7 +68,7 @@ describe("RC-E — 비특수관계 매출처의 stale 과세제외유형", () =>
     const stale = calcRelatedCorpGift(
       inp([
         D_RELATED,
-        { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionType: "sec10_5" },
+        { id: "etc", name: "기타", salesAmount: 6_000_000_000, isRelated: false, exclusionTypes: ["sec10_5"] },
       ]),
     );
     // 종전: 8,000,000,000 / 14,000,000,000 (57.14%)
@@ -99,7 +99,7 @@ const THIRD: RcSalesPartner = { id: "T", name: "제3자", salesAmount: 20_000_00
 /** 수혜법인의 A법인 지분 30% (§⑩3호 — 50% 미만) */
 const A_SEC3: RcSalesPartner = {
   id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true,
-  exclusionType: "sec10_3", beneficiaryStakeInPartner: { numer: 3000, denom: 10_000 },
+  exclusionTypes: ["sec10_3"], beneficiaryStakeInPartner: { numer: 3000, denom: 10_000 },
 };
 
 describe("RC-B — §⑩3호 「× 수혜법인의 주식보유비율」", () => {
@@ -113,7 +113,7 @@ describe("RC-B — §⑩3호 「× 수혜법인의 주식보유비율」", () =>
 
   it("[B3-1] ⑩2호(전액)와 ⑩3호(× 보유비율)가 더 이상 같은 값이 아니다", () => {
     const two = calcRelatedCorpGift(
-      inpB([{ id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionType: "sec10_2" }, B_CORP, THIRD]),
+      inpB([{ id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionTypes: ["sec10_2"] }, B_CORP, THIRD]),
     );
     const three = calcRelatedCorpGift(inpB([A_SEC3, B_CORP, THIRD]));
     // 종전에는 둘 다 800,000,000원으로 «한 원도 다르지 않았다» — 분기 부존재의 직접 증거였다
@@ -125,7 +125,7 @@ describe("RC-B — §⑩3호 「× 수혜법인의 주식보유비율」", () =>
   it("[B3-2] 3호 이외의 호는 전액 제외를 유지한다 (긍정 짝 — 3호만 축소된다)", () => {
     for (const t of ["sec10_1", "sec10_2", "sec10_5", "sec10_8"] as const) {
       const excl = computeCommonExclusion([
-        { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionType: t,
+        { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionTypes: [t],
           beneficiaryStakeInPartner: { numer: 3000, denom: 10_000 } },
       ]);
       expect(excl).toBe(20_000_000_000); // 비율이 붙어 있어도 3호가 아니면 무시한다
@@ -133,27 +133,49 @@ describe("RC-B — §⑩3호 「× 수혜법인의 주식보유비율」", () =>
     expect(computeCommonExclusion([A_SEC3])).toBe(6_000_000_000);
   });
 
-  it("[B3-3] §⑩ 후단 「더 큰 금액」 비교는 **축소한 뒤** 금액으로 한다", () => {
-    // 같은 법인(id="A")이 3호(200억×30%=60억)와 2호(100억 전액)에 동시 해당 → 더 큰 100억
+  // 🔴 RC-3-i: 종전 [B3-3]은 **같은 id를 가진 두 행**(200억·100억)을 만들어 max를 재고 있었다.
+  //    그 상태는 ⑤가 만들 수 없을 뿐 아니라(행 id는 `crypto.randomUUID()`), 영 §34의3⑪이
+  //    「특수관계법인이 둘 이상인 경우에는 **각각의 매출액을 모두 합하여** 계산한다」고 명령하므로
+  //    서로 다른 매출액을 max로 묶는 것은 **법령에 어긋난다**. 후단의 단위는 «호»이지 «행»이 아니다.
+  it("[B3-3] §⑩ 후단 — 한 매출액이 두 호에 동시 해당하면 더 큰 금액으로 한다", () => {
+    // 200억 거래가 3호(×30% = 60억)와 5호(수출목적 전액 200억)에 동시 해당 → 200억
     const excl = computeCommonExclusion([
-      A_SEC3,
-      { id: "A", name: "A법인", salesAmount: 10_000_000_000, isRelated: true, exclusionType: "sec10_2" },
+      { ...A_SEC3, exclusionTypes: ["sec10_3", "sec10_5"] },
     ]);
-    // 종전처럼 3호를 전액(200억)으로 넣으면 200억이 되어 max 비교 자체가 틀린다
-    expect(excl).toBe(10_000_000_000);
+    expect(excl).toBe(20_000_000_000);
+  });
+
+  it("[B3-3b] 호의 «순서»가 결과를 바꾸지 않는다", () => {
+    const excl = computeCommonExclusion([
+      { ...A_SEC3, exclusionTypes: ["sec10_5", "sec10_3"] },
+    ]);
+    expect(excl).toBe(20_000_000_000);
+  });
+
+  it("[B3-3c] 비교는 **축소한 뒤** 금액으로 한다 — 3호 단독이면 비례액이 남는다", () => {
+    // 종전처럼 3호를 전액으로 놓고 비교하면 3호가 전액 호를 이기는 일이 생긴다.
+    expect(computeCommonExclusion([A_SEC3])).toBe(6_000_000_000);
+  });
+
+  it("[B3-3d] 매출처 «사이»는 언제나 합산이다 (영 §34의3⑪) — max로 묶지 않는다", () => {
+    const excl = computeCommonExclusion([
+      A_SEC3, // 200억 × 30% = 60억
+      { id: "B", name: "B법인", salesAmount: 10_000_000_000, isRelated: true, exclusionTypes: ["sec10_2"] },
+    ]);
+    expect(excl).toBe(16_000_000_000); // 60억 + 100억 — 더 큰 쪽만 남기면 ⑪에 어긋난다
   });
 
   it("[B3-4] 보유비율 미입력이면 제외액 0 — 전액 제외로 되돌아가지 않는다", () => {
     // 「자동 안분 fallback 금지」. 실제 관문은 ⑧validate이고, 엔진이 전액으로 되메우면 그 정책이 무력해진다.
     const excl = computeCommonExclusion([
-      { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionType: "sec10_3" },
+      { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionTypes: ["sec10_3"] },
     ]);
     expect(excl).toBe(0);
   });
 
   it("[B3-5] 보유비율은 §⑭3호의 지배주주등 보유비율과 다른 축이다 — 돌려쓰지 않는다", () => {
     const excl = computeCommonExclusion([
-      { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionType: "sec10_3",
+      { id: "A", name: "A법인", salesAmount: 20_000_000_000, isRelated: true, exclusionTypes: ["sec10_3"],
         rulingShareholderStakes: [{ shareholderId: "gap", ratio: { numer: 3000, denom: 10_000 } }] },
     ]);
     expect(excl).toBe(0); // ⑭3호 값이 있어도 ⑩3호의 곱셈에는 쓰이지 않는다
@@ -242,7 +264,7 @@ describe("RC-J — §⑭1호 간접출자법인 매출 전액 과세제외", () 
 
   it("[J1-3] ⑩ 해당 매출처는 ⑭ 대상이 아니다 — ⑭ 본문 「제10항 … 해당하지 아니하는 경우로서」", () => {
     const withSec10 = calcRelatedCorpGift(
-      inpJ([b({ intermediaryCorpShareholderId: "Bcorp", exclusionType: "sec10_5" }), D_12B, ETC_5B]),
+      inpJ([b({ intermediaryCorpShareholderId: "Bcorp", exclusionTypes: ["sec10_5"] }), D_12B, ETC_5B]),
     );
     // ⑩5호로 이미 전액 제외되므로 ⑭1호가 «추가로» 더하지 않는다 (이중 차감 금지)
     expect(withSec10.taxableExcludedSales).toBe(3_000_000_000);
@@ -288,7 +310,7 @@ describe("RC-J — §⑭2호·4호 미구현 고지", () => {
     const r = calcRelatedCorpGift(
       inpJ([
         b({ intermediaryCorpShareholderId: "Bcorp" }),
-        { ...D_12B, exclusionType: "sec10_5" },
+        { ...D_12B, exclusionTypes: ["sec10_5"] },
         ETC_5B,
       ]),
     );
@@ -299,7 +321,7 @@ describe("RC-J — §⑭2호·4호 미구현 고지", () => {
     const r = calcRelatedCorpGift(
       inpJ([
         b({ intermediaryCorpShareholderId: "Bcorp" }),
-        { ...D_12B, exclusionType: "sec10_5" },
+        { ...D_12B, exclusionTypes: ["sec10_5"] },
         { ...ETC_5B, isRelated: false },
       ]),
     );

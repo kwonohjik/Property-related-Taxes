@@ -43,6 +43,16 @@ const EXCLUSION_TYPE_OPTIONS: { value: RcExclusionTypeStr; label: string }[] = [
   { value: "sec10_8", label: "⑩8호 — 공공기관" },
 ];
 
+/**
+ * 슬롯 n의 호를 바꾼다 — «없음»(`""`)은 그 슬롯을 비우는 것이므로 배열에서 빼고,
+ * 앞 슬롯을 비우면 뒤 슬롯이 당겨온다(빈 구멍을 남기지 않는다).
+ */
+function setSlot(types: RcExclusionTypeStr[], n: number, v: RcExclusionTypeStr): RcExclusionTypeStr[] {
+  const next = [...types];
+  next[n] = v;
+  return next.filter((t) => t !== "");
+}
+
 const newId = () => crypto.randomUUID();
 const selectClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white";
 const textClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm";
@@ -336,7 +346,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                       : {
                           ...row,
                           isRelated: false,
-                          exclusionType: "",
+                          exclusionTypes: [],
                           beneficiaryStakePctStr: "",
                           intermediaryCorpShareholderId: "",
                           rulingStakes: [],
@@ -354,14 +364,14 @@ export function RelatedCorpFields({ form, set }: Props) {
                 label="과세제외유형"
                 hint={
                   sec10_1Allowed
-                    ? "§34의3⑩ 해당 시 선택"
+                    ? "§34의3⑩ 해당 시 선택 — 같은 거래가 두 호에 동시 해당하면 둘 다 고르세요 (더 큰 금액이 적용됩니다)"
                     : "§34의3⑩ 해당 시 선택 — ⑩1호는 수혜법인이 중소기업인 경우에만 고를 수 있습니다"
                 }
               >
                 <select
                   className={selectClass}
-                  value={row.exclusionType}
-                  onChange={(e) => updSales(idx, { ...row, exclusionType: e.target.value as RcExclusionTypeStr })}
+                  value={row.exclusionTypes[0] ?? ""}
+                  onChange={(e) => updSales(idx, { ...row, exclusionTypes: setSlot(row.exclusionTypes, 0, e.target.value as RcExclusionTypeStr) })}
                   aria-label={`매출처 ${idx + 1} 과세제외유형`}
                 >
                   {EXCLUSION_TYPE_OPTIONS.map((o) => (
@@ -381,7 +391,33 @@ export function RelatedCorpFields({ form, set }: Props) {
                 </select>
               </FieldCard>
             )}
-            {row.isRelated && row.exclusionType === "sec10_3" && (
+            {/* 🔴 RC-3-i: 영 §34의3⑩ 후단 「이 경우 다음 각 호에 동시에 해당하는 경우에는 더 큰
+                금액으로 한다」 — 종전에는 호가 스칼라라 「동시 해당」을 표현할 입력 경로가 아예
+                없었고, 엔진의 `Math.max`는 비교 대상이 영원히 하나였다(구별력 0).
+                ⚠️ 슬롯을 **2개까지만** 연다. 10개 호 중 «비례»는 ⑩3호 하나뿐이고 나머지 9개는
+                   전액이므로, 전액 호가 하나라도 걸리면 그 순간 max가 확정된다 — 세 번째 호를
+                   더 받아도 금액이 달라질 수 없다. 엔진·⑫는 N개를 받으므로 모델이 좁아진 것은
+                   아니고, 화면만 실익이 있는 데까지 연다. */}
+            {row.isRelated && (row.exclusionTypes[0] ?? "") !== "" && (
+              <FieldCard
+                label="동시 해당하는 다른 호 (선택)"
+                hint="상증령 §34의3⑩ 후단 — 같은 거래가 두 호에 동시 해당하면 «더 큰 금액»이 적용됩니다"
+              >
+                <select
+                  className={selectClass}
+                  value={row.exclusionTypes[1] ?? ""}
+                  onChange={(e) => updSales(idx, { ...row, exclusionTypes: setSlot(row.exclusionTypes, 1, e.target.value as RcExclusionTypeStr) })}
+                  aria-label={`매출처 ${idx + 1} 동시 해당 과세제외유형`}
+                >
+                  {EXCLUSION_TYPE_OPTIONS.filter((o) => o.value !== row.exclusionTypes[0]).map((o) => (
+                    <option key={o.value} value={o.value} disabled={o.value === "sec10_1" && !sec10_1Allowed}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </FieldCard>
+            )}
+            {row.isRelated && row.exclusionTypes.includes("sec10_3") && (
               <FieldCard
                 label="수혜법인의 이 매출처 주식보유비율 (%)"
                 hint="§34의3⑩3호 — 이 매출처와 거래한 매출액에 그 비율을 곱한 금액만 과세제외됩니다 (50% 이상이면 ⑩2호)"
@@ -394,7 +430,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                 />
               </FieldCard>
             )}
-            {row.isRelated && row.exclusionType === "" && (
+            {row.isRelated && row.exclusionTypes.filter((t) => t !== "").length === 0 && (
               <div className="rounded border border-violet-100 bg-violet-50/60 p-2">
                 <p className="text-caption font-medium text-violet-700">§⑭1호 — 이 매출처가 간접출자법인인가</p>
                 <select

@@ -105,7 +105,7 @@ describe("G4 — 게이트 OFF 값 정리 (순수 축)", () => {
           //    넣으면 이 픽스처의 `rcEnterpriseSize: "large"`와 충돌한다.
           //    **단언을 풀지 않는다** — 이 케이스의 축은 §⑭ 빈행 게이트이지 ⑩호 종류가 아니다.
           //    규모와 무관한 호(⑩5호 수출목적)로 갈아끼워 원래 축을 그대로 유지한다.
-          exclusionType: "sec10_5",
+          exclusionTypes: ["sec10_5"],
           rulingStakes: [{ shareholderId: "", ratioPctStr: "" }],
         },
       ],
@@ -121,7 +121,7 @@ describe("G4 — 게이트 OFF 값 정리 (순수 축)", () => {
           name: "매출처1",
           salesAmountStr: "1000000000",
           isRelated: true,
-          exclusionType: "",
+          exclusionTypes: [],
           rulingStakes: [{ shareholderId: "", ratioPctStr: "" }],
         },
       ],

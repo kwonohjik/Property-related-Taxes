@@ -35,9 +35,9 @@ function rcForm(patch: Partial<DeemedFormState> = {}): DeemedFormState {
     ],
     rcSalesPartners: [
       { id: "sD", name: "D법인", salesAmountStr: "80000000000", isRelated: true,
-        exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] },
+        exclusionTypes: [], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] },
       { id: "sE", name: "기타", salesAmountStr: "20000000000", isRelated: false,
-        exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] },
+        exclusionTypes: [], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] },
     ],
     ...patch,
   } as unknown as DeemedFormState;

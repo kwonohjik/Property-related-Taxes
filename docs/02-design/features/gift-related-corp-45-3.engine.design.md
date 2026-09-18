@@ -22,7 +22,7 @@
 | 3 | 수증자별 과세제외매출 상이 — 갑(§⑭3호 D매출×30%=3,000 추가 → 8,000) vs 을(5,000) → 세후영업이익·거래비율 분기 | §34의3⑭3호 | 계획서 §4 단계5·6 | (케이스1 내) | ☐ TODO |
 | 4 | 한계보유비율 간접 우선차감 음수 방지 — 갑 간접9, 한계10: indirectDeduct=9, 잔여=1, 직접초과=19 / 을 간접6, 한계10: indirectDeduct=6, 잔여=4, 직접초과=6 | §34의3⑬ 후단 | 계획서 §4 단계7, RC-LIMIT-NONNEG | (케이스1 내) | ☐ TODO |
 | 5 | 한계보유비율 캡 — min(영업이익/소득,1) = 갑 min(2500/1800,1)=1 → 법인세 전액(340M) 적용 | §34의3⑫2호나목 | 계획서 §4 단계5, RC-MINCAP | (케이스1 내) | ☐ TODO |
-| 6 | 과세제외매출 ⑩1호 (중소-중소) vs ⑩5호 (수출) 동시 해당 → 큰 금액 선택 | §34의3⑩ 단서 | 계획서 §3.2 (B=3000 vs E=2000 → 별개 특수관계법인이므로 합산, 단서는 동일법인 동시해당) | (케이스1 내) | ☐ TODO |
+| 6 | 과세제외매출 — **같은 매출액**이 ⑩3호(비례)와 ⑩5호(전액)에 동시 해당 → 더 큰 금액 | §34의3⑩ 후단 | 「동시 해당」의 단위는 «호»다. 서로 다른 매출처는 §34의3⑪이 합산을 명령하므로 max로 묶지 않는다 | `gift-deemed-rc-sec10-concurrent.test.tsx` `[CC-0]` · `related-corp-exclusion-sales.test.ts` `[B3-3]`~`[B3-3d]` | ✅ 완료 (RC-3-i) |
 | 7 | §⑱ 간접출자법인 자동판정 — B(지배주주등 갑30+을20=50%→⑱1호 충족) 포함 / C(지배주주등 갑10%→30%미만 미충족) 제외 | §34의3⑱1호 | 계획서 §4 단계4 | (케이스1 내) | ☐ TODO |
 | 8 | 과세요건 미충족 — 거래비율 ≤ 정상거래비율(중소 50%) 시 applied=false | §45의3①1호가목 | 경계값 — anchor별도 | `related-corp.test.ts` | ☐ TODO |
 | 9 | 중견·일반 기업규모 — 거래비율차감 나목=정상거래비율×50%(20%)·다목=고정5%, 보유차감 나목=한계×50%(5%)·다목=0. **legal_research 박스 verbatim 검증 ✅** | §45의3①2호 나·다목 | RC-MEDIUM 486,000,000 · RC-LARGE 702,000,000 | `related-corp.test.ts` | ☑ 검증완료 |
@@ -193,7 +193,9 @@ export interface RcIntermediaryCorpItem {
 
 /** §34의3⑩ 과세제외유형 enum */
 export type RcExclusionType =
-  | "sec10_1"   // ⑩1호: 중소-중소
+  // ⚠️ `RcSalesPartner.exclusionTypes`는 **배열**이다 — §⑩ 후단이 「동시에 해당하는 경우」를
+  //    상정하므로 한 매출액이 여러 호를 가질 수 있다(RC-3-i).
+  | "sec10_1"   // ⑩1호: 중소-중소 — 수혜법인이 «중소기업»일 때만 (⑤·⑧·⑫ 게이트, RC-3-h)
   | "sec10_2"   // ⑩2호: 수혜법인 50%↑ 출자 특수관계법인
   | "sec10_3"   // ⑩3호: 수혜법인 50%미만 출자 × 주식보유비율 (W8 이후 구현 — `beneficiaryStakeInPartner` 필수)
   | "sec10_4"   // ⑩4호: 지주회사-자회사·손자회사
@@ -421,17 +423,36 @@ const rulingShareholderId = rulingTotals.sort((a,b) => b.total - a.total)[0]?.id
 ```typescript
 /**
  * §⑩ 공통 과세제외매출액 계산.
- * 규칙 1: 동일 법인이 ⑩호 복수 동시해당 → max 금액만 포함 (§⑩ 후단).
- * 규칙 2: 서로 다른 법인 간 합산.
+ * 규칙 1: **같은 매출액**이 ⑩호 복수 동시해당 → max 금액만 (§⑩ 후단) — `exclusionAmount`가 진다.
+ * 규칙 2: 서로 다른 매출처 간 합산 (§⑪ 「각각의 매출액을 모두 합하여 계산한다」).
  * 사례: B(⑩1호, 3,000M) + E(⑩5호, 2,000M) = 5,000M ✓
+ *
+ * 🔴 **초안은 max를 «행 id»로 키잉했다(RC-3-i).** 행 id는 `crypto.randomUUID()`라 두 행이 같은
+ *    키를 가질 수 없고, `exclusionType`이 스칼라라 한 행이 여러 호에 동시 해당할 수도 없어
+ *    비교 대상이 영원히 하나였다 — 「§⑩ 후단 구현」이라는 주석과 달리 구별력이 0이었다.
+ *    후단의 단위는 «호»이므로 max는 **행 안**으로 옮기고, 행 사이는 §⑪대로 단순 합산이다.
+ *    ⚠️ 키를 법인명·법인 식별자로 바꾸는 수정은 **금지**다 — 서로 다른 거래를 max로 묶어
+ *       §⑪ 합산 명령에 정면으로 어긋난다.
  */
+function clauseAmount(p: RcSalesPartner, t: RcExclusionType): number {
+  if (t !== "sec10_3") return p.salesAmount;       // 3호 외 9개 호는 전액
+  const r = p.beneficiaryStakeInPartner;
+  if (!r || r.denom <= 0) return 0;                 // 자동 fallback 금지 — 실제 관문은 ⑧
+  return safeMultiplyThenDivide(p.salesAmount, r.numer, r.denom);
+}
+
+function exclusionAmount(p: RcSalesPartner): number {
+  let best = 0;
+  for (const t of p.exclusionTypes ?? []) best = Math.max(best, clauseAmount(p, t));
+  return best;                                      // §⑩ 후단 — «축소한 뒤» 금액으로 비교한다
+}
+
 function computeCommonExclusion(salesPartners: RcSalesPartner[]): number {
-  const byPartner = new Map<string, number>();
-  for (const p of salesPartners.filter(p => p.exclusionType != null)) {
-    byPartner.set(p.id, Math.max(byPartner.get(p.id) ?? 0, p.salesAmount));
-  }
   let total = 0;
-  for (const amount of byPartner.values()) { total += amount; }
+  for (const p of salesPartners) {
+    if (!p.isRelated) continue;                     // 비특수관계는 분자에 없어 제외할 대상이 없다
+    total += exclusionAmount(p);
+  }
   return total;
 }
 ```

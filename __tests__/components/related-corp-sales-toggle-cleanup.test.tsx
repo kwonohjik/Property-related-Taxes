@@ -17,7 +17,7 @@ const ROW = {
   name: "D법인",
   salesAmountStr: "14000000000",
   isRelated: true,
-  exclusionType: "sec10_5",
+  exclusionTypes: ["sec10_5"],
   beneficiaryStakePctStr: "",
   intermediaryCorpShareholderId: "",
   rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
@@ -37,7 +37,7 @@ describe("매출처 특수관계 토글 되돌리기", () => {
     const patch = set.mock.calls.at(-1)![0] as { rcSalesPartners: (typeof ROW)[] };
     expect(patch.rcSalesPartners[0]).toMatchObject({
       isRelated: false,
-      exclusionType: "",
+      exclusionTypes: [],
       rulingStakes: [],
     });
   });
@@ -48,7 +48,7 @@ describe("매출처 특수관계 토글 되돌리기", () => {
     const withType = (t: string) =>
       render(
         <RelatedCorpFields
-          form={{ ...base, rcSalesPartners: [{ ...ROW, exclusionType: t, beneficiaryStakePctStr: "" }] } as unknown as DeemedFormState}
+          form={{ ...base, rcSalesPartners: [{ ...ROW, exclusionTypes: [t], beneficiaryStakePctStr: "" }] } as unknown as DeemedFormState}
           set={set}
         />,
       );
@@ -64,7 +64,7 @@ describe("매출처 특수관계 토글 되돌리기", () => {
     const patch = set.mock.calls.at(-1)![0] as { rcSalesPartners: (typeof ROW)[] };
     expect(patch.rcSalesPartners[0]).toMatchObject({
       isRelated: true,
-      exclusionType: "sec10_5",
+      exclusionTypes: ["sec10_5"],
     });
     expect(patch.rcSalesPartners[0]!.rulingStakes).toHaveLength(1);
   });

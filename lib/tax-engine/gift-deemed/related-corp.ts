@@ -282,7 +282,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     //  (⑩ 쪽 `computeCommonExclusion`이 같은 구조를 쓴다).
     let additionalExclusion = 0;
     for (const p of salesPartners) {
-      if (!p.isRelated || p.exclusionType) continue;
+      if (!p.isRelated || (p.exclusionTypes?.length ?? 0) > 0) continue;
       // ⑭1호 — 「수혜법인이 제18항에 따른 간접출자법인인 특수관계법인과 거래한 매출액」 «전액»
       const sec14n1 = isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds) ? p.salesAmount : 0;
       // ⑭3호 — 「… 매출액에 지배주주등의 그 특수관계법인에 대한 주식보유비율을 곱한 금액」
@@ -430,7 +430,10 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
    * 때만(=2호·4호가 «더 큰 금액»이 될 여지가 있을 때만) 고지한다. 여지가 없으면 사라진다.
    */
   const sec14Unmodeled = salesPartners.filter(
-    (p) => p.isRelated && !p.exclusionType && !isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds),
+    (p) =>
+      p.isRelated &&
+      (p.exclusionTypes?.length ?? 0) === 0 &&
+      !isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds),
   );
   /**
    * §⑱**2호·3호 미구현 고지**.
