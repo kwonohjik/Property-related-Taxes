@@ -597,6 +597,21 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         // «화면에 없는 칸»으로 차단했다. 엔진도 같은 술어로 건너뛴다(lib/tax-engine/gift-deemed/related-corp.ts:145).
         // §⑩3호만 「× 수혜법인의 주식보유비율」로 축소된다 — 비율 미입력은 차단한다.
         // (자동 안분 fallback 금지: 엔진은 미입력 시 제외액 0을 돌려주므로 여기가 실제 관문이다)
+        // 🔴 RC-3-h: ⑩1호는 「**중소기업인 수혜법인이** 중소기업인 특수관계법인과 거래한
+        //    매출액」(상증령 §34의3⑩1호)이라 수혜법인 측 요건이 이미 입력돼 있는데도
+        //    어느 층도 보지 않았다. 실측: 일반기업 421,200,000원 → 0원, 중견기업
+        //    162,000,000원 → 0원이 «오류 없이» 계산됐다.
+        //    ⑤의 option `disabled` 술어와 같다(related-corp-form.tsx `sec10_1Allowed`) —
+        //    기업규모를 나중에 바꿔 남은 stale 값이 여기로 온다.
+        //    ⚠️ **필요조건 검사**다. ⑥이 중소기업을 「조특법 §6① 중소기업 **으로서**
+        //       공시대상기업집단에 소속되지 아니하는 기업」으로 정의하므로 `small`이라고
+        //       ⑩1호 요건이 충족되는 것은 아니고, 특수관계법인 측 규모는 입력 자체가 없다.
+        //       확실히 틀린 쪽만 막고, 나머지는 사용자 단언으로 둔다.
+        if (row.isRelated && row.exclusionType === "sec10_1" && form.rcEnterpriseSize !== "small")
+          return (
+            `${n}번째 매출처: ⑩1호는 수혜법인이 중소기업인 경우에만 적용됩니다 ` +
+            `(현재 ${form.rcEnterpriseSize === "medium" ? "중견기업" : "일반기업"} — 상증령 §34의3⑩1호) — 다시 선택하세요`
+          );
         if (row.isRelated && row.exclusionType === "sec10_3") {
           const pct = parseDecimal(row.beneficiaryStakePctStr);
           if (pct <= 0)

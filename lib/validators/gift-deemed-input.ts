@@ -658,6 +658,23 @@ export const deemedGiftInputSchema = z
         });
       }
     }
+    // 🔴 RC-3-h: 상증령 §34의3⑩1호는 「**중소기업인 수혜법인이** 중소기업인 특수관계법인과
+    //    거래한 매출액」이다. 수혜법인 측 규모는 `enterpriseSize`로 이미 들어와 있는데
+    //    ⑤·⑧·⑫·엔진 어디도 교차검사를 하지 않아, 일반기업이 ⑩1호를 골라도 전액 과세제외됐다
+    //    (실측 421,200,000원 → 0원). ⑧과 같은 술어를 쓰되 **서버측 관문**을 여기 둔다.
+    //    ⚠️ 필요조건 검사다 — `small`이 ⑥의 「공시대상기업집단 미소속」까지 보증하지는 않고,
+    //       특수관계법인 측 규모는 입력이 없다. 확실히 틀린 쪽만 막는다.
+    if (data.type === "related_corp" && data.enterpriseSize !== "small" && Array.isArray(data.salesPartners)) {
+      data.salesPartners.forEach((p, i) => {
+        if (p.exclusionType === "sec10_1") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["salesPartners", i, "exclusionType"],
+            message: `매출처 ${i + 1}: ⑩1호는 수혜법인이 중소기업인 경우에만 적용됩니다 (상증령 §34의3⑩1호)`,
+          });
+        }
+      });
+    }
     if (data.type === "free_realestate") {
       // 다기간 모드(periods 정의됨) — 빈 배열 차단(자동 fallback 금지)
       if (data.periods !== undefined) {

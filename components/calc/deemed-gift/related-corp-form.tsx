@@ -51,6 +51,8 @@ export function RelatedCorpFields({ form, set }: Props) {
   const corpOptions = form.rcShareholders.filter((s) => s.isCorporate);
   // §⑮는 「지배주주등」 = 지배주주와 그 친족(개인)만 대상이다 — 법인주주는 제외한다.
   const individualShareholders = form.rcShareholders.filter((s) => !s.isCorporate);
+  // §⑩1호의 수혜법인 측 요건. ⑧·⑫가 **같은 술어**를 쓴다(3중 패턴).
+  const sec10_1Allowed = form.rcEnterpriseSize === "small";
 
   const summary = useMemo(() => {
     const totalSales = parseAmount(form.rcTotalSalesStr);
@@ -348,7 +350,14 @@ export function RelatedCorpFields({ form, set }: Props) {
               </select>
             </FieldCard>
             {row.isRelated && (
-              <FieldCard label="과세제외유형" hint="§34의3⑩ 해당 시 선택">
+              <FieldCard
+                label="과세제외유형"
+                hint={
+                  sec10_1Allowed
+                    ? "§34의3⑩ 해당 시 선택"
+                    : "§34의3⑩ 해당 시 선택 — ⑩1호는 수혜법인이 중소기업인 경우에만 고를 수 있습니다"
+                }
+              >
                 <select
                   className={selectClass}
                   value={row.exclusionType}
@@ -356,7 +365,16 @@ export function RelatedCorpFields({ form, set }: Props) {
                   aria-label={`매출처 ${idx + 1} 과세제외유형`}
                 >
                   {EXCLUSION_TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
+                    // 🔴 RC-3-h: 상증령 §34의3⑩1호는 「**중소기업인 수혜법인이** 중소기업인
+                    //    특수관계법인과 거래한 매출액」이라 수혜법인 측 요건이 명문이고, 그 값은
+                    //    이미 §1에 `rcEnterpriseSize`로 들어와 있다. 종전에는 일반·중견기업이
+                    //    골라도 ⑤·⑧·⑫·엔진 어디도 막지 않아 매출액이 전액 과세제외됐다
+                    //    (실측: 일반기업 421,200,000원 → 0원).
+                    //    ⚠️ 목록에서 **지우지 않고 비활성화**한다 — 기업규모를 나중에 바꾸면
+                    //       stale 값이 남는데, 지워 버리면 select가 「없음」을 그리면서 상태는
+                    //       sec10_1인 «화면과 상태의 불일치»가 된다. ⑧은 화면에 있는 값만
+                    //       차단해야 하므로 보이게 두고 ⑧이 다시 고르라고 말한다.
+                    <option key={o.value} value={o.value} disabled={o.value === "sec10_1" && !sec10_1Allowed}>
                       {o.label}
                     </option>
                   ))}
