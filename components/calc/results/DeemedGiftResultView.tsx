@@ -155,6 +155,30 @@ export function DeemedGiftResultView({
         />
       )}
 
+      {/* ── 적용 법령 기준일 — 조문이 증여시기를 명문으로 정하는 두 유형만 ── */}
+      {result.appliedLawDate && (
+        <div
+          className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm"
+          data-testid="deemed-applied-law-date"
+        >
+          <p className="text-slate-800">
+            <b>적용 법령 기준일</b>{" "}
+            <span className="font-mono tabular-nums">{result.appliedLawDate}</span>{" "}
+            <span className="text-muted-foreground">
+              (
+              {result.type === "related_corp"
+                ? "수혜법인의 사업연도 종료일 — 상증법 §45의3③"
+                : "거래한 날 — 상증법 §45의5①"}
+              )
+            </span>
+          </p>
+          <p className="mt-1 text-caption text-muted-foreground">
+            비율·한도 상수는 <b>현행 법령</b> 기준으로 계산했습니다. 기준일이 과거이면 당시
+            규정이 달랐을 수 있으므로 시행 당시 조문을 확인하십시오.
+          </p>
+        </div>
+      )}
+
       {/* ── §43²·영 §32의4 11호 1년 합산 내역 — 합산은 조용히 일어나면 안 된다 ── */}
       {result.specificCorpTransaction?.aggregation && (
         <div

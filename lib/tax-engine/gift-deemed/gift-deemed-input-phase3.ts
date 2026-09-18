@@ -396,6 +396,15 @@ export interface RcSalesPartner {
 
 /** §45의3 일감몰아주기 — 엔진 입력 (nested, 순수함수) */
 export interface RelatedCorpInput {
+  /**
+   * §45의3③ 「증여의제이익의 계산은 수혜법인의 **사업연도 단위**로 하고, 수혜법인의 **해당
+   * 사업연도 종료일을 증여시기**로 본다」 — 이 조문의 증여시기는 거래일도 신고일도 아니다.
+   *
+   * 종전에는 `RelatedCorpInput`에 날짜 필드가 하나도 없어 「어느 시점의 사업연도인가」가
+   * 엔진에 도달하지 않았다. 행위시법 분기(W12)를 만들 자리 자체가 없었고, 결과에
+   * `appliedLawDate`(저장소 4개 엔진의 확립된 관례)도 내보내지 못했다.
+   */
+  fiscalYearEndDate?: string;
   /** 기업규모 — 비율 3종 분기 단일 분기점 */
   enterpriseSize: "small" | "medium" | "large";
   /** 총 매출액(원) = §⑫ 분모 */

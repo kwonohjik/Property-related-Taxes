@@ -19,6 +19,21 @@ import {
   type DeemedFormState,
 } from "@/components/calc/deemed-gift/shared";
 
+/**
+ * 조문이 증여시기를 명문으로 정하는 유형의 날짜 라벨·안내.
+ * 나머지 유형은 「증여일」 기본값을 쓴다 — 여기에 없는 유형을 지어내지 않는다.
+ */
+const GIFT_DATE_LABEL = {
+  related_corp: {
+    label: "증여시기 — 수혜법인의 사업연도 종료일",
+    hint: "상증법 §45의3③ — 증여의제이익은 사업연도 단위로 계산하고 그 종료일이 증여시기입니다 (거래일·신고일 아님)",
+  },
+  specific_corp: {
+    label: "증여시기 — 거래한 날",
+    hint: "상증법 §45의5① 「거래한 날을 증여일로 하여」. §43² 소급 1년 합산의 기준일이기도 합니다",
+  },
+} as const;
+
 export function DeemedDetailModal({
   open,
   onOpenChange,
@@ -51,14 +66,18 @@ export function DeemedDetailModal({
           data-testid="deemed-detail-dialog"
         >
           {/* 증여일 — 신탁이익은 원본·수익 증여시기를 폼 내부에서 분리 입력하므로 공통 증여일 숨김(§33·§25①) */}
+          {/* ⚠️ 조문이 증여시기를 명문으로 정하는 유형은 라벨을 그 문언으로 바꾼다 —
+                 §45의3③은 「사업연도 종료일」, §45의5①은 「거래한 날」이다. 종전에는 두 유형 모두
+                 「증여일」로만 물어 사용자가 거래일·신고일을 넣어도 막히지 않았다. */}
           {form.type !== "trust_benefit" && (
             <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 mb-4">
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                증여일
+                {GIFT_DATE_LABEL[form.type as keyof typeof GIFT_DATE_LABEL]?.label ?? "증여일"}
               </label>
               <DateInput value={form.giftDate} onChange={(v) => set({ giftDate: v })} />
               <p className="mt-1 text-xs text-muted-foreground">
-                증여시기·적정이자율 연도 기준
+                {GIFT_DATE_LABEL[form.type as keyof typeof GIFT_DATE_LABEL]?.hint ??
+                  "증여시기·적정이자율 연도 기준"}
               </p>
             </div>
           )}

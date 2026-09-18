@@ -499,6 +499,33 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("sc-single-limit")).toBeVisible();
   });
 
+  test("증여시기 라벨이 조문 문언이고 결과에 적용 법령 기준일이 뜬다 (§45의5① 거래한 날)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    // 종전에는 두 조문 모두 「증여일」로만 물어 사용자가 신고일을 넣어도 막히지 않았다
+    await expect(dialog.getByText("증여시기 — 거래한 날")).toBeVisible();
+
+    await dialog.getByLabel("연도").fill("2026");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("2");
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("1000000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-shareholder-ratio").fill("100");
+    await dialog.getByTestId("sc-group-ratio").fill("100");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    const banner = page.getByTestId("deemed-applied-law-date");
+    await expect(banner).toBeVisible({ timeout: 15000 });
+    await expect(banner).toContainText("2026-03-02");
+    await expect(banner).toContainText("상증법 §45의5①");
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

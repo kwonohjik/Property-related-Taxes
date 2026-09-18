@@ -229,6 +229,13 @@ export interface RcSalesPartner {
 
 /** §45의3 일감몰아주기 — 엔진 입력 (nested, 순수함수) */
 export interface RelatedCorpInput {
+  /**
+   * 상증법 §45의3③ 「증여의제이익의 계산은 수혜법인의 사업연도 단위로 하고, 수혜법인의
+   * 해당 사업연도 종료일을 **증여시기**로 본다」 — 거래일도 신고일도 아니다.
+   * 엔진은 이를 `appliedLawDate`로 되돌려준다(양도·취득·종부·증여 본세 4개 엔진과 같은 축).
+   * ⚠️ 축이 있다고 행위시법 분기가 구현된 것은 아니다 — 비율 상수 4종은 아직 현행 고정(W12).
+   */
+  fiscalYearEndDate?: string;
   /** 기업규모 — 비율 3종 분기의 단일 분기점 */
   enterpriseSize: "small" | "medium" | "large";
 

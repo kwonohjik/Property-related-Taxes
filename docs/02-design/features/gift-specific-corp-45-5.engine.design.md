@@ -112,6 +112,7 @@ interface SpecificCorpInput {
   corporateTaxCredit?: number;           // 법인세 공제·감면액
   giftDeduction?: number;                // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
   transactionDate?: string;              // §45의5① 「거래한 날」=증여일 — §43² 윈도 + §69 공제율 기준일
+                                         //   엔진이 `appliedLawDate`로 되돌려준다(4개 엔진 공통 축)
   priorTransactions?: { date; benefit; label? }[];  // §43²·영 §32의4 11호 — 소급 1년 이내 같은 호 거래
 }
 

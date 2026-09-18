@@ -331,6 +331,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       }));
       return {
         type: "related_corp",
+        // §45의3③ 「수혜법인의 해당 사업연도 종료일을 증여시기로 본다」 — 폼의 공통 날짜가
+        //   이 조문에서는 «거래일»이 아니라 «사업연도 종료일»이다(⑤ 라벨이 그렇게 안내한다).
+        ...(form.giftDate ? { fiscalYearEndDate: form.giftDate } : {}),
         enterpriseSize: (form.rcEnterpriseSize || "small") as "small" | "medium" | "large",
         totalSales: parseAmount(form.rcTotalSalesStr),
         preTaxAdjOperatingIncome: parseAmount(form.rcPreTaxAdjOperatingIncomeStr),

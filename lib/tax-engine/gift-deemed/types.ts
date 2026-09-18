@@ -291,6 +291,18 @@ export interface DeemedGiftResult {
   exclusionReason?: string;
   /** 근거 조문 (GIFT.* 상수) */
   legalBasis: string;
+  /**
+   * 적용 법령 기준일 = **그 조문이 정한 증여시기**. 저장소의 4개 엔진(양도·취득·종부·증여 본세)이
+   * 이미 쓰는 관례를 증여의제에도 맞춘다 — 종전에는 증여의제 두 조문만 이 축이 없어
+   * 「어느 시점의 거래인가」가 결과에 드러나지도, 엔진에 도달하지도 않았다.
+   *
+   * - §45의5① 「**거래한 날**을 증여일로 하여」 → `transactionDate`
+   * - §45의3③ 「수혜법인의 해당 **사업연도 종료일**을 증여시기로 본다」 → `fiscalYearEndDate`
+   *
+   * ⚠️ 이 값이 있다고 해서 **행위시법 분기가 구현됐다는 뜻은 아니다** — 구간별 비율·산식은
+   *    아직 현행 고정이다(§45의3 비율 상수 4종 · §45의5② 한도 규정). 결과뷰가 그 사실을 고지한다.
+   */
+  appliedLawDate?: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
   /** §41의3 정산 방향 — taxation(과세)/refund(평가손실 환급)/none(기준미달). 미설정 시 일반 의제 */

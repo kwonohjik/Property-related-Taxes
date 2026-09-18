@@ -412,6 +412,8 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
           ? notSpecificCorpReason(eligibility)
           : "증여의제이익이 1억원 미만 (§34의5⑤)")),
     legalBasis: GIFT.SPECIFIC_CORP,
+    // §45의5① 「거래한 날을 증여일로 하여」 — 저장소 4개 엔진의 `appliedLawDate` 관례와 같은 축
+    ...(input.transactionDate ? { appliedLawDate: input.transactionDate } : {}),
     thresholdEcho: { gain },
     specificCorpLimit,
     specificCorpEligibility: eligibility,
@@ -526,6 +528,7 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
           ? notSpecificCorpReason(eligibility)
           : "과세 지배주주등 없음 (본인증여분·비특수관계인·1억 미만 제외)")),
     legalBasis: GIFT.SPECIFIC_CORP,
+    ...(input.transactionDate ? { appliedLawDate: input.transactionDate } : {}),
     specificCorpMulti: { corpProfit, corpTaxApportioned, donees },
     specificCorpEligibility: eligibility,
     specificCorpTransaction: tx,

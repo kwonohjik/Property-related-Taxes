@@ -525,6 +525,8 @@ const convertibleBondSchema = z.object({
 // §45의3 일감몰아주기 — 순수 z.object (cross-field 지분합·매출합은 validate ⑧에 위임: discriminatedUnion superRefine 제약)
 const relatedCorpSchema = z.object({
   type: z.literal("related_corp"),
+  // §45의3③ 「수혜법인의 해당 사업연도 종료일을 증여시기로 본다」 (⑫ strip 방지 — 빠지면 엔진 미도달)
+  fiscalYearEndDate: z.string().optional(),
   enterpriseSize: z.enum(["small", "medium", "large"]),
   totalSales: z.number().int().min(1),
   preTaxAdjOperatingIncome: z.number().int(),
