@@ -320,9 +320,14 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         name: row.name,
         salesAmount: parseAmount(row.salesAmountStr),
         isRelated: row.isRelated,
-        exclusionType: row.exclusionType || undefined,
+        // ⑤ 렌더 게이트를 그대로 미러링한다(3중 패턴) —
+        //   과세제외유형 select: `row.isRelated &&`
+        //   §⑭3호 보유비율 블록: `row.isRelated && row.exclusionType === ""`
+        // 종전에는 게이트 없이 그대로 보내, 특수관계를 껐다 켜며 남은 **화면에 없는 값**이
+        // 엔진까지 도달했다(⑧validate도 같은 술어로 건너뛰어 차단되지 않았다).
+        exclusionType: row.isRelated ? row.exclusionType || undefined : undefined,
         rulingShareholderStakes:
-          row.rulingStakes.length > 0
+          row.isRelated && !row.exclusionType && row.rulingStakes.length > 0
             ? row.rulingStakes.map((s) => ({
                 shareholderId: s.shareholderId,
                 ratio: parseRatio(s.ratioPctStr),

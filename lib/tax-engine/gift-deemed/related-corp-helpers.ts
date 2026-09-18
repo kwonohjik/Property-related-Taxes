@@ -109,11 +109,23 @@ export function computeIndirectRatioBig(
  * 규칙1: 동일 법인이 ⑩호 복수 동시해당 → max 금액만 (§⑩ 후단).
  * 규칙2: 서로 다른 법인 간 합산.
  * 사례: B(⑩1호 3,000M) + E(⑩5호 2,000M) = 5,000M (다른 법인 → 합산).
+ *
+ * ⚠️ **비특수관계 매출처는 과세제외매출액이 될 수 없다.**
+ *    법 §45의3④의 제외는 「**제1항에 따른 매출액**에서 … 제외한다」이고, ①1호가목의 분자는
+ *    「특수관계법인에 대한 매출액」이다. 영 §34의3⑩ 10개 호 중 8개(1·2·3·5·5의2·5의3·6·7호)는
+ *    문언이 「특수관계법인과 거래한 매출액」이고, 4호는 「자회사·손자회사」, 8호는 「해당 법인」으로
+ *    거래상대방을 **구조로** 지칭한다 — 어느 호도 비특수관계 매출처를 대상으로 삼지 않는다.
+ *    비특수관계 매출액은 애초에 분자에 없으므로 「제외」할 대상 자체가 없다.
+ *
+ *    종전에는 `isRelated`를 보지 않아, UI에서 「특수관계법인 → 비특수관계」로 되돌릴 때 행에
+ *    남은 stale `exclusionType`이 분자·분모를 동시에 깎았다(화면 어디에도 보이지 않는 값이다).
+ *    같은 배열을 도는 형제 두 곳(`related-corp.ts`의 `relatedSales` 필터·§⑭3호 루프)은 전부
+ *    `isRelated`를 보는데 이 함수만 빠져 있었다.
  */
 export function computeCommonExclusion(salesPartners: RcSalesPartner[]): number {
   const byPartner = new Map<string, number>();
   for (const p of salesPartners) {
-    if (p.exclusionType == null) continue;
+    if (!p.isRelated || p.exclusionType == null) continue;
     byPartner.set(p.id, Math.max(byPartner.get(p.id) ?? 0, p.salesAmount));
   }
   let total = 0;

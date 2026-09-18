@@ -321,7 +321,16 @@ export function RelatedCorpFields({ form, set }: Props) {
               <select
                 className={selectClass}
                 value={row.isRelated ? "y" : "n"}
-                onChange={(e) => updSales(idx, { ...row, isRelated: e.target.value === "y" })}
+                onChange={(e) =>
+                  // 비특수관계로 되돌리면 하위 두 블록이 **언마운트**된다 — 그 값을 남기면
+                  // 화면에 없는 값이 계산에 들어간다. 같은 patch에서 함께 정리한다.
+                  updSales(
+                    idx,
+                    e.target.value === "y"
+                      ? { ...row, isRelated: true }
+                      : { ...row, isRelated: false, exclusionType: "", rulingStakes: [] },
+                  )
+                }
                 aria-label={`매출처 ${idx + 1} 특수관계`}
               >
                 <option value="n">비특수관계</option>
