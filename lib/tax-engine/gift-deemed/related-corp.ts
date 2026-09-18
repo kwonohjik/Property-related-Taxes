@@ -344,9 +344,21 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     //  단서 「공제 후의 금액이 음수인 경우에는 영으로 본다」 — 초과분은 **버려지지** 다른
     //  출자관계로 넘어가지 않는다. 기록값도 실제 차감액으로 맞춘다(표시↔차감 일관성):
     //  산식값 그대로 두면 화면에 「−200억 / 소계 0」처럼 서로 맞지 않는 두 수가 나란히 찍힌다.
+    //  🔴 **영업손실(세후영업이익 < 0) 경로** — 여기서 0으로 먼저 자른다.
+    //     §45의3①2호의 계산식은 「세후영업이익 × 초과거래비율 × 초과보유비율」이라 세후영업이익이
+    //     음수면 곱도 음수가 되는데, **증여재산가액이 음수일 수는 없다**.
+    //     ⚠️ W11에서 바깥 `max(0, …)`을 「죽은 코드」라며 뺐는데, 그 증명(`directGain − sec15n1 ≥ 0`)은
+    //        **`directGain ≥ 0`일 때만** 성립했다. 영업손실이면 `computeSec15Clause1`이 0을 돌려주고
+    //        `Math.min(0, 음수)`가 **음수를 고른다** — 실측: 배당공제 열에 −1,500,000,000,
+    //        간접보유가 있으면 증여의제이익 합계가 **−900,000,000**이 됐다(RC-6-i가 경고한 지점).
+    //     ⇒ 클램프를 「공제 후」가 아니라 **「공제 전 base」**에 둔다. 그러면 아래 두 `Math.min`의
+    //        전제(base ≥ 0)가 실제로 성립해, 관문이 하나라는 성질도 유지된다.
+    const directBase = Math.max(0, directGain);
+    const indirectBase = Math.max(0, indirectGain);
+
     const sec15n1 = Math.min(
-      computeSec15Clause1(r.dividendFromBeneficiary ?? 0, directGain, distributableProfit, r.directRatio),
-      directGain,
+      computeSec15Clause1(r.dividendFromBeneficiary ?? 0, directBase, distributableProfit, r.directRatio),
+      directBase,
     );
 
     //  2호는 경유 법인마다 분모가 다르므로 출자관계별로 계산하고, 음수 방지 클램프도
@@ -360,7 +372,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
         if (!corp) continue;
         const owner = corp.owners.find((o) => o.individualId === r.id);
         if (!owner?.dividendIncome) continue;
-        const pathGain = applyTwoFractions(pretaxProfit, tradeOver, over);
+        const pathGain = Math.max(0, applyTwoFractions(pretaxProfit, tradeOver, over));
         const deduction = computeSec15Clause2(
           owner.dividendIncome,
           pathGain,
@@ -374,17 +386,17 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     }
 
     const dividendDeduction = sec15n1 + sec15n2;
-    //  단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다(위 두 곳의
-    //  `Math.min`). 잘라 둔 뒤에 바깥에서 `max(0, …)`을 또 걸면 관문이 둘이 되어, 한쪽을
-    //  지워도 테스트가 빨개지지 않는다 — 실제로 뮤테이션에서 안팎 두 클램프가 **모두** 죽은
-    //  코드로 드러났다. 관문은 출자관계별 `Math.min` 하나로 둔다.
+    //  §⑮ 단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다(위 두 곳의
+    //  `Math.min`). 그 위에 또 `max(0, …)`을 걸면 관문이 둘이 되어 한쪽을 지워도 테스트가
+    //  빨개지지 않는다 — 공제 축의 관문은 `Math.min` 하나다.
+    //  **영업손실 축의 관문은 별개**로 위의 `directBase`·`indirectBase`가 진다(두 축을 섞지 말 것).
     //
     //  간접 쪽이 안전한 이유(처음에 반대로 적었다가 뮤테이션에서 잡혔다):
     //    `sec15n2`는 관계별 `floor`의 **합**이고 `indirectGain`은 합산 후 **1회** floor인데,
     //    `floor(a) + floor(b) ≤ floor(a + b)` 이므로 합이 총액을 **넘을 수 없다**.
     //    (「최대 (관계수−1)원 더 클 수 있다」는 방향이 뒤집힌 서술이었다. 부등호는 반대다.)
     //  이 부등식은 anchor [S15-10]이 2경유 과다공제 사안으로 고정한다.
-    const subtotal = (directGain - sec15n1) + (indirectGain - sec15n2);
+    const subtotal = (directBase - sec15n1) + (indirectBase - sec15n2);
 
     rows.push({
       recipientName: r.name.trim() || "지배주주등",
@@ -477,9 +489,14 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
           exclusionReason:
             rows.length === 0
               ? "지배주주와 그 친족 중 직접·간접보유비율 합계가 한계보유비율을 초과하는 사람이 없습니다 — 증여의제이익 0 (상증령 §34의3⑧⑨)"
-              : "과세요건은 충족하나, 출자관계별 과세제외매출·차감비율" +
-                (rows.some((r) => r.dividendDeduction > 0) ? "·배당공제(§34의3⑮)" : "") +
-                "를 반영한 결과 증여의제이익이 0입니다 (상증법 §45의3①2호) — 수증자별 내역에서 각 항목을 확인하세요",
+              : // 영업손실은 원인이 전혀 다르다 — 「과세제외매출·차감비율 때문」이라고 적으면
+                //   진짜 원인을 가린다(SC-N에서 고친 「1억원 미만」과 같은 실패 형태다).
+                baseAfterTax <= 0
+                ? `수혜법인의 세후영업이익이 ${baseAfterTax.toLocaleString("ko-KR")}원(영업손실)입니다 — ` +
+                  "상증법 §45의3①2호의 계산식은 세후영업이익에 비율을 곱하므로 증여의제이익이 0입니다"
+                : "과세요건은 충족하나, 출자관계별 과세제외매출·차감비율" +
+                  (rows.some((r) => r.dividendDeduction > 0) ? "·배당공제(§34의3⑮)" : "") +
+                  "을 반영한 결과 증여의제이익이 0입니다 (상증법 §45의3①2호) — 수증자별 내역에서 각 항목을 확인하세요",
         }
       : {}),
     legalBasis: GIFT.RELATED_CORP,
