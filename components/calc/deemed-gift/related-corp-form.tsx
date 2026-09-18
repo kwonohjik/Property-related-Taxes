@@ -8,6 +8,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { DeemedFormState } from "./shared";
 import {
   makeRcShareholderRow,
@@ -48,6 +49,8 @@ const textClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm";
 
 export function RelatedCorpFields({ form, set }: Props) {
   const corpOptions = form.rcShareholders.filter((s) => s.isCorporate);
+  // §⑮는 「지배주주등」 = 지배주주와 그 친족(개인)만 대상이다 — 법인주주는 제외한다.
+  const individualShareholders = form.rcShareholders.filter((s) => !s.isCorporate);
 
   const summary = useMemo(() => {
     const totalSales = parseAmount(form.rcTotalSalesStr);
@@ -262,7 +265,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               ))}
               <button
                 type="button"
-                onClick={() => updIntermediary(idx, { ...row, owners: [...row.owners, { individualId: "", ratioPctStr: "" }] })}
+                onClick={() => updIntermediary(idx, { ...row, owners: [...row.owners, { individualId: "", ratioPctStr: "", dividendIncomeStr: "" }] })}
                 className="text-xs font-medium text-amber-700 hover:underline"
               >
                 + 개인소유주 추가
@@ -458,6 +461,108 @@ export function RelatedCorpFields({ form, set }: Props) {
           + 매출처 추가
         </button>
       </ToneCard>
+
+      {/* ── 섹션 5: §⑮ 배당소득공제 (고급 토글, 기본 OFF) ──
+          상증령 §34의3⑮는 「… 배당받은 소득이 있는 경우에는 … 해당 출자관계의 증여의제이익에서
+          공제한다」는 **강행 규정**이다. 배당이 없는 통상 사안에서는 칸을 띄우지 않되,
+          있는 사안에서 반영할 경로는 열어 둔다. */}
+      <ToggleCard
+        tone="sky"
+        title="§34의3⑮ 배당소득 공제"
+        description="직전 사업연도 신고기한 다음날 ~ 해당 사업연도 신고기한 중 수혜법인·간접출자법인으로부터 받은 배당이 있으면 켜세요"
+        checked={form.rcShowDividendDeduction}
+        onCheckedChange={(v) => set({ rcShowDividendDeduction: v })}
+        data-testid="rc-dividend-toggle"
+      >
+        <div className="space-y-3">
+          <CurrencyInput
+            label="수혜법인의 배당가능이익 (사업연도 말일)"
+            value={form.rcDistributableProfitStr}
+            onChange={(v) => set({ rcDistributableProfitStr: v })}
+            hint="§34의3⑮1호 계산식의 분모입니다 (법인세법 시행령 §86의3①의 배당가능이익)"
+            data-testid="rc-distributable-profit"
+          />
+
+          <div>
+            <p className="text-caption font-medium text-sky-700">
+              ⑮1호 — 수혜법인으로부터 받은 배당소득 (주주별)
+            </p>
+            {individualShareholders.length === 0 ? (
+              <p className="mt-1 text-caption text-muted-foreground">개인 주주를 먼저 입력하세요.</p>
+            ) : (
+              individualShareholders.map((sh, sIdx) => (
+                <div key={sh.id} className="mt-1 flex items-center gap-2">
+                  <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                    {sh.name.trim() || "(이름 없음)"}
+                  </span>
+                  <div className="flex-1">
+                    <CurrencyInput
+                      hideLabel
+                      label={`${sh.name.trim() || "주주"} 수혜법인 배당소득`}
+                      value={sh.dividendFromBeneficiaryStr}
+                      onChange={(v) =>
+                        set({
+                          rcShareholders: form.rcShareholders.map((r) =>
+                            r.id === sh.id ? { ...r, dividendFromBeneficiaryStr: v } : r,
+                          ),
+                        })
+                      }
+                      data-testid={`rc-div-benef-${sIdx}`}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {form.rcIntermediaryCorps.length > 0 && (
+            <div>
+              <p className="text-caption font-medium text-sky-700">
+                ⑮2호 — 간접출자법인으로부터 받은 배당소득
+              </p>
+              <p className="text-caption text-muted-foreground">
+                2호는 분모가 1호와 다릅니다 — 「간접출자법인 배당가능이익 + (수혜법인 배당가능이익 ×
+                그 법인의 수혜법인 지분율)」에 소유주 지분율을 곱한 값입니다.
+              </p>
+              {form.rcIntermediaryCorps.map((row, idx) => (
+                <div key={row.id} className="mt-2 rounded border border-sky-200 p-2">
+                  <span className="text-xs font-semibold text-sky-700">간접출자법인 {idx + 1}</span>
+                  <CurrencyInput
+                    label="이 법인의 배당가능이익 (사업연도 말일)"
+                    value={row.distributableProfitStr}
+                    onChange={(v) => updIntermediary(idx, { ...row, distributableProfitStr: v })}
+                    data-testid={`rc-corp-distributable-${idx}`}
+                  />
+                  {row.owners.map((owner, oIdx) => (
+                    <div key={oIdx} className="mt-1 flex items-center gap-2">
+                      <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                        {form.rcShareholders.find((s) => s.id === owner.individualId)?.name.trim() ||
+                          "(소유주 미선택)"}
+                      </span>
+                      <div className="flex-1">
+                        <CurrencyInput
+                          hideLabel
+                          label={`간접출자법인 ${idx + 1} 소유주 ${oIdx + 1} 배당소득`}
+                          value={owner.dividendIncomeStr}
+                          onChange={(v) =>
+                            updIntermediary(idx, {
+                              ...row,
+                              owners: row.owners.map((o, i) =>
+                                i === oIdx ? { ...o, dividendIncomeStr: v } : o,
+                              ),
+                            })
+                          }
+                          data-testid={`rc-div-corp-${idx}-${oIdx}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </ToggleCard>
 
     </div>
   );

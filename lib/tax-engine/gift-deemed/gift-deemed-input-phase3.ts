@@ -349,6 +349,14 @@ export interface RcShareholder {
   directRatio: { numer: number; denom: number };
   /** true면 법인주주 → intermediaryCorps에 대응 항목 */
   isCorporate: boolean;
+  /**
+   * §34의3⑮1호 분자 — 이 지배주주등이 **수혜법인으로부터** 받은 배당소득(원).
+   * 기간은 「직전 사업연도 §68① **단서** 신고기한 다음날 ~ 해당 사업연도 같은 단서 신고기한」.
+   *
+   * ⚠️ 간접출자법인으로부터 받은 배당은 ⑮**2호**이고 분모가 전혀 다르다
+   *    (`RcIntermediaryCorpItem.owners[].dividendIncome`). 돌려쓰면 조용히 틀린다.
+   */
+  dividendFromBeneficiary?: number;
 }
 
 /** §45의3 일감몰아주기 — 간접출자법인 1개 (2단계 간접: 개인→법인→수혜법인) */
@@ -357,10 +365,14 @@ export interface RcIntermediaryCorpItem {
   corpShareholderId: string;
   /** 이 법인의 수혜법인 직접보유비율 분수 */
   stakeInBeneficiary: { numer: number; denom: number };
+  /** §34의3⑮2호 분모 — 이 간접출자법인의 **사업연도 말일 배당가능이익**(원) */
+  distributableProfit?: number;
   /** 이 법인의 개인 소유주 (§⑱ 자동판정용: 지배주주등 합산≥30% → §⑱1호) */
   owners: {
     individualId: string; // RcShareholder.id
     ratio: { numer: number; denom: number }; // 이 법인에 대한 직접보유비율
+    /** §34의3⑮2호 분자 — 이 개인이 **이 간접출자법인으로부터** 받은 배당소득(원) */
+    dividendIncome?: number;
   }[];
 }
 
@@ -430,6 +442,15 @@ export interface RelatedCorpInput {
   taxableIncome: number;
   /** 법인세 순세액(원) = 산출세액 − 공제감면 = §⑫2호가목 */
   corporateTaxNet: number;
+  /**
+   * §34의3⑮1호 — 「수혜법인의 **사업연도 말일 배당가능이익**」(법인세법 시행령 §86의3①).
+   * ⑮1호 계산식의 **분모**이고, ⑮2호 분모에도 「수혜법인 배당가능이익 × 간접출자법인의
+   * 수혜법인에 대한 주식보유비율」로 다시 등장한다.
+   *
+   * ⚠️ 설계서(:260-263)는 배당소득 2필드만 명세했는데 **분모가 빠져 있어 그대로는 계산이
+   *    불가능**했다. 조문 계산식대로 분모를 받는다.
+   */
+  distributableProfit?: number;
   shareholders: RcShareholder[];
   intermediaryCorps: RcIntermediaryCorpItem[];
   salesPartners: RcSalesPartner[];

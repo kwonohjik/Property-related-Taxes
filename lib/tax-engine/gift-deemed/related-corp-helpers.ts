@@ -264,3 +264,113 @@ export function computeCommonExclusion(salesPartners: RcSalesPartner[]): number 
   for (const amount of byPartner.values()) total += amount;
   return total;
 }
+
+/**
+ * §34의3⑮1호 — 수혜법인으로부터 받은 배당소득의 공제액.
+ *
+ * 조문 계산식 verbatim:
+ *   배당소득 × 제13항에 따라 계산한 **직접** 출자관계의 증여의제이익
+ *   ÷ (수혜법인의 사업연도 말일 배당가능이익 × 지배주주등의 수혜법인에 대한 **직접보유비율**)
+ *
+ * ⚠️ 분모가 0이면(배당가능이익 미입력·직접보유비율 0) 조문의 산식이 정의되지 않는다.
+ *    여기서는 0을 돌려주고, 실제 관문은 ⑧validate가 진다 — 「자동 안분 fallback 금지」 정책상
+ *    배당소득이 있는데 배당가능이익이 없는 입력은 **차단**되어야지 조용히 0으로 넘어가면 안 된다.
+ */
+export function computeSec15Clause1(
+  dividendIncome: number,
+  directGain: number,
+  distributableProfit: number,
+  directRatio: Frac,
+): number {
+  if (dividendIncome <= 0 || directGain <= 0) return 0;
+  if (distributableProfit <= 0 || directRatio.numer <= 0 || directRatio.denom <= 0) return 0;
+  // floor( 배당소득 × 직접이익 × r.denom / (배당가능이익 × r.numer) )
+  const numer = BigInt(dividendIncome) * BigInt(directGain) * BigInt(directRatio.denom);
+  const denom = BigInt(distributableProfit) * BigInt(directRatio.numer);
+  return Number(numer / denom);
+}
+
+/**
+ * §34의3⑮2호 — 간접출자법인으로부터 받은 배당소득의 공제액.
+ *
+ * 조문 계산식 verbatim:
+ *   배당소득 × 제13항에 따라 계산한 **간접** 출자관계의 증여의제이익
+ *   ÷ ([간접출자법인의 사업연도 말일 배당가능이익
+ *        + (수혜법인의 사업연도 말일 배당가능이익 × 간접출자법인의 수혜법인에 대한 주식보유비율)]
+ *      × 지배주주등의 간접출자법인에 대한 **직접보유비율**)
+ *
+ * 1호와 **분모가 완전히 다르다** — 간접출자법인 자신의 배당가능이익에 수혜법인 몫을 더한 뒤
+ * 그 법인에 대한 직접보유비율을 곱한다. 1호 헬퍼를 돌려쓰면 조용히 틀린다.
+ */
+export function computeSec15Clause2(
+  dividendIncome: number,
+  indirectPathGain: number,
+  corpDistributableProfit: number,
+  beneficiaryDistributableProfit: number,
+  corpStakeInBeneficiary: Frac,
+  ownerStakeInCorp: Frac,
+): number {
+  if (dividendIncome <= 0 || indirectPathGain <= 0) return 0;
+  if (ownerStakeInCorp.numer <= 0 || ownerStakeInCorp.denom <= 0) return 0;
+  const s = corpStakeInBeneficiary;
+  if (s.denom <= 0) return 0;
+  // 대괄호 안 = (D_corp × s.denom + D_ben × s.numer) / s.denom
+  const bracketNumer =
+    BigInt(corpDistributableProfit) * BigInt(s.denom) +
+    BigInt(beneficiaryDistributableProfit) * BigInt(s.numer);
+  if (bracketNumer <= 0n) return 0;
+  // 분모 = bracketNumer / s.denom × p.numer / p.denom
+  // 값 = 배당소득 × 간접이익 × s.denom × p.denom / (bracketNumer × p.numer)
+  const numer =
+    BigInt(dividendIncome) *
+    BigInt(indirectPathGain) *
+    BigInt(s.denom) *
+    BigInt(ownerStakeInCorp.denom);
+  const denom = bracketNumer * BigInt(ownerStakeInCorp.numer);
+  return Number(numer / denom);
+}
+
+/**
+ * 한계보유비율 차감분을 **출자관계별로** 배분한다 — §34의3⑬ 후단 verbatim:
+ * 「… 간접보유비율이 있는 경우에는 해당 간접보유비율에서 각 한계보유비율 … 을 먼저 빼고
+ *   **간접출자관계가 두 개 이상인 경우에는 각각의 간접보유비율 중 작은 것에서부터 뺀다**」.
+ *
+ * ⚠️ 이 분해는 **§⑮2호 전용**이다. 호출부(단계7)의 `indirectOver`·`remaining`은 종전
+ *    합산 경로를 그대로 둔다 — 관계별 이익을 각각 floor한 뒤 더하면 합산 후 1회 floor와
+ *    최대 (관계수−1)원 어긋나므로, 배당이 없을 때의 결과를 바꾸지 않기 위해서다.
+ *    두 경로가 **같은 분수**임은 anchor [S15-SPLIT]이 고정한다(드리프트 방지).
+ */
+export function splitIndirectOverByPath(
+  paths: IndirectPath[],
+  ownershipDeduction: Frac,
+): { overs: { corpShareholderId: string; over: Frac }[]; remaining: Frac } {
+  // 작은 것부터 (교차곱 비교 — 부동소수 불사용)
+  const sorted = [...paths].sort((a, b) => {
+    const l = a.numer * b.denom;
+    const r = b.numer * a.denom;
+    return l < r ? -1 : l > r ? 1 : 0;
+  });
+  let remNumer = BigInt(ownershipDeduction.numer);
+  let remDenom = BigInt(ownershipDeduction.denom);
+  const overs: { corpShareholderId: string; over: Frac }[] = [];
+  for (const p of sorted) {
+    if (remNumer <= 0n) {
+      overs.push({ corpShareholderId: p.corpShareholderId, over: reduceFracBig(p.numer, p.denom) });
+      continue;
+    }
+    // p − rem (공통분모 교차곱)
+    const diff = p.numer * remDenom - remNumer * p.denom;
+    const common = p.denom * remDenom;
+    if (diff <= 0n) {
+      // 이 관계는 전부 차감에 쓰인다 → over 0, 잔여 = rem − p
+      overs.push({ corpShareholderId: p.corpShareholderId, over: { numer: 0, denom: 1 } });
+      remNumer = remNumer * p.denom - p.numer * remDenom;
+      remDenom = common;
+    } else {
+      overs.push({ corpShareholderId: p.corpShareholderId, over: reduceFracBig(diff, common) });
+      remNumer = 0n;
+      remDenom = 1n;
+    }
+  }
+  return { overs, remaining: reduceFracBig(remNumer > 0n ? remNumer : 0n, remDenom) };
+}

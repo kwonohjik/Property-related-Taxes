@@ -15,6 +15,9 @@ import {
   computeIndirectRatio,
   computeIndirectPaths,
   partitionSec13Paths,
+  splitIndirectOverByPath,
+  computeSec15Clause1,
+  computeSec15Clause2,
   sumIndirectPaths,
   reduceFracBig,
   computeCommonExclusion,
@@ -88,6 +91,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     preTaxAdjOperatingIncome,
     taxableIncome,
     corporateTaxNet,
+    distributableProfit = 0,
     shareholders,
     intermediaryCorps,
     salesPartners,
@@ -265,9 +269,55 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     const directGain = applyTwoFractions(pretaxProfit, tradeOver, directOver);
     const indirectGain = indirectOver.numer > 0 ? applyTwoFractions(pretaxProfit, tradeOver, indirectOver) : 0;
 
-    // 단계9: §⑮ 배당공제 — 사례 0 (정밀 산식 SCOPE_OUT, 배당가능이익 입력 미수령)
-    const dividendDeduction = 0;
-    const subtotal = Math.max(0, directGain - dividendDeduction) + Math.max(0, indirectGain);
+    // ── 단계9: §⑮ 배당공제 ────────────────────────────────────────────────
+    //  「… 수혜법인 또는 간접출자법인으로부터 배당받은 소득이 있는 경우에는 다음 각 호의
+    //    구분에 따른 금액을 **해당 출자관계의** 증여의제이익에서 공제한다. 다만, 공제 후의
+    //    금액이 음수인 경우에는 영으로 본다.」
+    //
+    //  ⚠️ 「해당 출자관계의」가 이 조문의 핵심이다 — 1호는 **직접** 출자관계의 이익에서,
+    //     2호는 **그 간접출자법인을 경유한** 출자관계의 이익에서만 뺀다. 종전 코드는
+    //     `Math.max(0, directGain - dividendDeduction) + Math.max(0, indirectGain)`으로
+    //     공제 슬롯이 **직접 쪽에 하나뿐**이었다 — 2호는 값이 0인 게 아니라 **자리가 없었다**.
+    //  단서 「공제 후의 금액이 음수인 경우에는 영으로 본다」 — 초과분은 **버려지지** 다른
+    //  출자관계로 넘어가지 않는다. 기록값도 실제 차감액으로 맞춘다(표시↔차감 일관성):
+    //  산식값 그대로 두면 화면에 「−200억 / 소계 0」처럼 서로 맞지 않는 두 수가 나란히 찍힌다.
+    const sec15n1 = Math.min(
+      computeSec15Clause1(r.dividendFromBeneficiary ?? 0, directGain, distributableProfit, r.directRatio),
+      directGain,
+    );
+
+    //  2호는 경유 법인마다 분모가 다르므로 출자관계별로 계산하고, 음수 방지 클램프도
+    //  **관계별로** 건다(조문 단서가 「해당 출자관계의 증여의제이익」을 대상으로 한다).
+    let sec15n2 = 0;
+    if (sec13Kept.length > 0) {
+      const { overs } = splitIndirectOverByPath(sec13Kept, ownershipDeduction);
+      for (const { corpShareholderId, over } of overs) {
+        if (over.numer <= 0) continue;
+        const corp = intermediaryCorps.find((c) => c.corpShareholderId === corpShareholderId);
+        if (!corp) continue;
+        const owner = corp.owners.find((o) => o.individualId === r.id);
+        if (!owner?.dividendIncome) continue;
+        const pathGain = applyTwoFractions(pretaxProfit, tradeOver, over);
+        const deduction = computeSec15Clause2(
+          owner.dividendIncome,
+          pathGain,
+          corp.distributableProfit ?? 0,
+          distributableProfit,
+          corp.stakeInBeneficiary,
+          owner.ratio,
+        );
+        sec15n2 += Math.min(deduction, pathGain);
+      }
+    }
+
+    const dividendDeduction = sec15n1 + sec15n2;
+    //  단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다. 잘라 둔
+    //  뒤에 바깥에서 max(0,…)을 또 걸면 관문이 둘이 되어, 한쪽을 지워도 테스트가 빨개지지
+    //  않는다(뮤테이션 실측 — 직접 쪽 바깥 클램프가 죽은 코드였다). 관문은 하나로 둔다.
+    //
+    //  ⚠️ 간접 쪽만 예외다 — `sec15n2`는 **관계별 floor의 합**이고 `indirectGain`은 **합산 후
+    //     1회 floor**라, 공제가 각 관계의 이익을 꽉 채우면 합이 최대 (관계수−1)원 더 클 수 있다.
+    const subtotal = (directGain - sec15n1) + Math.max(0, indirectGain - sec15n2);
 
     rows.push({
       recipientName: r.name.trim() || "지배주주등",

@@ -28,7 +28,7 @@
 | 9 | 중견·일반 기업규모 — 거래비율차감 나목=정상거래비율×50%(20%)·다목=고정5%, 보유차감 나목=한계×50%(5%)·다목=0. **legal_research 박스 verbatim 검증 ✅** | §45의3①2호 나·다목 | RC-MEDIUM 486,000,000 · RC-LARGE 702,000,000 | `related-corp.test.ts` | ☑ 검증완료 |
 | 10 | §⑲ 단일법인 의제 확인 — B·D·E 복수 특수관계법인이어도 하나로 계산 | §34의3⑲ | 케이스1 결과 = 단일 deemedGiftValue | (케이스1 내) | ☐ TODO |
 | 11 | 수증자 없음 (모든 주주 한계보유비율 이하) → applied=false, recipientBreakdown=[] | §45의3①, §34의3⑧⑨ | 경계값 | `related-corp.test.ts` | ☐ TODO |
-| 12 | §⑮ 배당공제 — 사례 0, UI 기본 미노출·고급 토글. 음수 방지: max(0, …) | §34의3⑮ | 사례 0 확인 (RC-TOTAL 불변) | (케이스1 내) | ☐ TODO |
+| 12 | §⑮ 배당공제 — ⑮1호(수혜법인 배당)·⑮2호(간접출자법인 배당) 각각의 분모, 출자관계별 음수 클램프 | §34의3⑮ | 1호 120,000,000 공제 / 2호 80,000,000 공제 (실측) | `related-corp-sec15-dividend.test.ts` | ☑ 구현완료 (W11) |
 
 **규칙**: 행≥1 있음. "SCOPE_OUT 중견·일반"은 계획서 §10-4 YAGNI 확정. 중소(케이스1)만 anchor 확정, 중견·일반은 거래비율차감 본문 미확보 상태에서 미구현 명시.
 
@@ -257,11 +257,21 @@ export interface RelatedCorpInput {
   intermediaryCorps: RcIntermediaryCorpItem[];
   salesPartners: RcSalesPartner[];
 
-  // ─── §⑮ 배당공제 (기본 0) ───
-  /** 수혜법인으로부터 받은 배당소득(원). 기본 0 */
-  directDividendIncome?: number;
-  /** 간접출자법인으로부터 받은 배당소득(원). 기본 0 */
-  indirectDividendIncome?: number;
+  // ─── §⑮ 배당공제 ───
+  /**
+   * 🔴 **정정 (W11 구현 시)** — 위 2필드 명세는 **그대로는 계산이 불가능했다**.
+   *    §34의3⑮ 1·2호 계산식의 **분모가 배당가능이익**인데 그 입력이 빠져 있었고,
+   *    배당소득을 법인 단위 스칼라로 잡아 「**해당 출자관계의** 증여의제이익에서 공제한다」는
+   *    조문의 귀속 축도 표현할 수 없었다(수증자가 둘 이상이면 어느 쪽 공제인지 알 수 없다).
+   *
+   * 구현된 형태(`gift-deemed-input-phase3.ts`):
+   *   RelatedCorpInput.distributableProfit          — 수혜법인 배당가능이익 (⑮1호·2호 분모)
+   *   RcShareholder.dividendFromBeneficiary         — ⑮1호 분자 (지배주주등별)
+   *   RcIntermediaryCorpItem.distributableProfit    — ⑮2호 분모
+   *   RcIntermediaryCorpItem.owners[].dividendIncome — ⑮2호 분자 (주주 × 경유법인)
+   *
+   * `owners[]`가 이미 「주주 × 경유법인」 행렬이라 2호 분자를 받을 자리가 구조적으로 있었다.
+   */
 }
 
 // ※ RcIntermediaryCorpItem 은 위에서 interface로 직접 정의됨.
@@ -627,7 +637,11 @@ const indirectGain = indirectOver.numer > 0
   : 0;  // 갑: 0 ✓
 
 // §34의3⑮ 배당공제 — 음수 방지 max(0, …). 사례: 0 → RC-TOTAL 불변
-const directAfterDeduction = Math.max(0, directGain - computeDividendDeduction(...));
+// 🔴 정정 (W11) — 공제 슬롯이 **직접 쪽 하나뿐**이면 ⑮2호는 「값이 0」이 아니라 **자리가 없다**.
+//    두 호는 분모가 완전히 다르므로 헬퍼도 둘이어야 한다.
+const sec15n1 = Math.min(computeSec15Clause1(...), directGain);       // 단서: 음수면 0
+let sec15n2 = 0;                                                       // 출자관계별로 각각 클램프
+const subtotal = (directGain - sec15n1) + Math.max(0, indirectGain - sec15n2);
 ```
 
 ---

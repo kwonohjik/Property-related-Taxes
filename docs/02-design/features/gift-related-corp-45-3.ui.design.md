@@ -159,9 +159,13 @@ export interface RcSalesRow {
 // rcShareholders: RcShareholderRow[]
 // rcIntermediaryCorps: RcIntermediaryRow[]
 // rcSalesPartners: RcSalesRow[]
-// rcDirectDividendIncomeStr: string          (§⑮, 기본 "0")
-// rcIndirectDividendIncomeStr: string        (§⑮, 기본 "0")
 // rcShowDividendDeduction: boolean           (고급 토글, 기본 false)
+// rcDistributableProfitStr: string           (§⑮1호·2호 분모 — 수혜법인 배당가능이익)
+// 🔴 정정 (W11) — 배당소득은 **법인 단위 스칼라가 아니라 행 단위**다.
+//    RcShareholderRow.dividendFromBeneficiaryStr        (⑮1호 분자)
+//    RcIntermediaryRow.distributableProfitStr           (⑮2호 분모)
+//    RcIntermediaryOwnerRow.dividendIncomeStr           (⑮2호 분자)
+//    §⑮는 「**해당 출자관계의** 증여의제이익에서 공제한다」이므로 귀속 축이 필요하다.
 ```
 
 ### ② 초기값 (`INITIAL_DEEMED` 에 추가)
@@ -402,10 +406,12 @@ const EXCLUSION_TYPE_OPTIONS = [
 
 #### 고급 섹션 — §⑮ 배당소득공제 (ToggleCard sky, 기본 OFF)
 
-ON 시 노출:
-- 수혜법인 배당소득 (직접): `CurrencyInput`, 기본 "0"
-- 간접출자법인 배당소득 (간접): `CurrencyInput`, 기본 "0"
-- hint: §34의3⑮ — 사업연도 중 수령 배당소득 공제. 음수 발생 시 0으로 처리.
+ON 시 노출 (🔴 W11 구현 형태 — 위 2필드안은 분모가 빠져 계산 불가였다):
+- 수혜법인의 배당가능이익 (사업연도 말일): `CurrencyInput` — ⑮1호·2호 **분모**
+- ⑮1호: 개인 주주별 「수혜법인으로부터 받은 배당소득」 — roster에서 파생 렌더
+- ⑮2호: 간접출자법인별 「배당가능이익」 + 그 법인 소유주별 「배당소득」
+- hint: §34의3⑮ — 직전 사업연도 신고기한 다음날 ~ 해당 사업연도 신고기한 구간의 배당.
+  공제는 **해당 출자관계의** 이익에서만 하고, 공제 후 음수는 0.
 
 ### ⑥ 폼 내 실시간 합계 배지 (High-2 정정 — 사이드바 N/A)
 
@@ -548,12 +554,12 @@ case "related_corp": {
   if (totalSales > 0 && salesSum !== totalSales)
     return `매출처 합계(${salesSum.toLocaleString()}원)가 총매출액(${totalSales.toLocaleString()}원)과 다릅니다`;
 
-  // R-8: 배당공제 모드 ON 시 음수 차단
+  // R-8 (🔴 W11 정정): 음수는 CurrencyInput(allowNegative=false)이 이미 막는다 —
+  //   실제 관문은 **분모 미입력 차단**이다. 배당소득만 받고 배당가능이익을 0으로 두면
+  //   엔진이 조용히 공제 0을 돌려준다(자동 안분 fallback 금지 정책상 차단해야 한다).
   if (form.rcShowDividendDeduction) {
-    if (parseAmount(form.rcDirectDividendIncomeStr) < 0)
-      return "직접 배당소득은 0 이상이어야 합니다";
-    if (parseAmount(form.rcIndirectDividendIncomeStr) < 0)
-      return "간접 배당소득은 0 이상이어야 합니다";
+    // 개인 주주별: 배당소득 > 0 인데 수혜법인 배당가능이익 0 → 차단 (⑮1호 분모)
+    // 간접출자법인별: 소유주 배당소득 > 0 인데 그 법인 배당가능이익 0 → 차단 (⑮2호 분모)
   }
 
   break;

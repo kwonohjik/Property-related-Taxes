@@ -558,6 +558,31 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       const totalSales = parseAmount(form.rcTotalSalesStr);
       if (totalSales > 0 && salesSum !== totalSales)
         return `매출처 합계(${salesSum.toLocaleString()})가 총매출액(${totalSales.toLocaleString()})과 다릅니다`;
+      // R-8 §⑮ 배당공제 — ⑤ 고급 토글과 «같은 술어»로 태운다(3중 패턴).
+      //   조문 계산식의 **분모가 배당가능이익**이다. 배당소득만 받고 배당가능이익을 0으로
+      //   두면 산식이 정의되지 않는데, 엔진은 0을 돌려주므로(공제 소멸) 여기가 실제 관문이다.
+      //   ⚠️ 반대로 분모를 임의로 채우면 공제가 과대해진다 — 「자동 안분 fallback 금지」.
+      if (form.rcShowDividendDeduction) {
+        const benefProfit = parseAmount(form.rcDistributableProfitStr);
+        for (const [i, row] of form.rcShareholders.entries()) {
+          if (row.isCorporate) continue;
+          const div = parseAmount(row.dividendFromBeneficiaryStr);
+          if (div > 0 && benefProfit <= 0)
+            return "수혜법인의 배당가능이익을 입력하세요 — 상증령 §34의3⑮1호 계산식의 분모입니다";
+          if (div > 0 && parseDecimal(row.directRatioPctStr) <= 0)
+            return `${i + 1}번째 주주는 수혜법인 직접지분이 0이어서 §34의3⑮1호 공제가 성립하지 않습니다 (분모 = 배당가능이익 × 직접보유비율)`;
+        }
+        if (hasCorpShareholder) {
+          for (const [i, row] of form.rcIntermediaryCorps.entries()) {
+            const corpProfit = parseAmount(row.distributableProfitStr);
+            for (const owner of row.owners) {
+              const d = parseAmount(owner.dividendIncomeStr);
+              if (d > 0 && corpProfit <= 0)
+                return `${i + 1}번째 간접출자법인의 배당가능이익을 입력하세요 — 상증령 §34의3⑮2호 계산식의 분모입니다`;
+            }
+          }
+        }
+      }
       break;
     }
   }

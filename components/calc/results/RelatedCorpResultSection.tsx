@@ -24,6 +24,10 @@ export function RelatedCorpResultSection({
   const taxableRecipients = breakdown.filter((r) => r.subtotal > 0);
   const selectedRecipient = taxableRecipients[selectedDoneeIndex] ?? taxableRecipients[0];
 
+  // §⑮ 배당공제 열은 **실제로 공제가 발생한 경우에만** 띄운다.
+  //   배당이 없는 통상 사안(대다수)에서 열을 하나 더 늘리면 A4 인쇄에서 금액이 잘린다.
+  const hasDividendDeduction = breakdown.some((r) => r.dividendDeduction > 0);
+
   const tradeRatio = result.tradeRatio ?? { numer: 0, denom: 1 };
   const normalTradeRatio = result.normalTradeRatio ?? { numer: 0, denom: 1 };
 
@@ -135,6 +139,7 @@ export function RelatedCorpResultSection({
                 <th className="text-right">보유비율차감후</th>
                 <th className="text-right">직접이익</th>
                 <th className="text-right">간접이익</th>
+                {hasDividendDeduction && <th className="text-right">§⑮ 배당공제</th>}
                 <th className="text-right">소계</th>
               </tr>
             </thead>
@@ -158,11 +163,19 @@ export function RelatedCorpResultSection({
                       </span>
                     ) : null}
                   </td>
+                  {hasDividendDeduction && (
+                    <td
+                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700"
+                      data-testid={`rc-dividend-deduction-${i}`}
+                    >
+                      {r.dividendDeduction > 0 ? `−${formatKRW(r.dividendDeduction)}` : "—"}
+                    </td>
+                  )}
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(r.subtotal)}</td>
                 </tr>
               ))}
               <tr className="border-t-2 border-emerald-200 font-semibold">
-                <td colSpan={6} className="py-1.5 pr-2">합계 (인별 신고 별도)</td>
+                <td colSpan={hasDividendDeduction ? 7 : 6} className="py-1.5 pr-2">합계 (인별 신고 별도)</td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(result.deemedGiftValue)}</td>
               </tr>
             </tbody>
@@ -214,6 +227,13 @@ export function RelatedCorpResultSection({
 
       {/* 종전에는 특정 교재 사례(수혜법인 A, 2023 귀속)의 anchor 금액 두 개를 조건 없이
           「본 시스템 산출」로 찍어, 사용자가 어떤 값을 넣든 같은 숫자가 나왔다. 수치를 뺀다. */}
+      {hasDividendDeduction && (
+        <p className="text-caption text-muted-foreground" data-testid="rc-sec15-note">
+          §34의3⑮ 배당공제는 <b>해당 출자관계의</b> 증여의제이익에서만 뺍니다 — 수혜법인 배당은
+          직접 출자관계(⑮1호), 간접출자법인 배당은 그 법인을 경유한 출자관계(⑮2호)에서 차감하며,
+          공제 후 음수는 0으로 봅니다.
+        </p>
+      )}
       <p className="text-caption text-muted-foreground">
         ※ 교재의 거래비율 반올림 표기와 달리 본 시스템은 정확분수 정수연산을 적용합니다.
       </p>

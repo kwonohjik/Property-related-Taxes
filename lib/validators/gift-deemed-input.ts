@@ -532,6 +532,8 @@ const relatedCorpSchema = z.object({
   preTaxAdjOperatingIncome: z.number().int(),
   taxableIncome: z.number().int().min(1),
   corporateTaxNet: z.number().int().min(0),
+  /** §⑮1호·2호 분모 — 수혜법인의 사업연도 말일 배당가능이익 (⑫ strip 방지) */
+  distributableProfit: z.number().int().min(0).optional(),
   shareholders: z
     .array(
       z.object({
@@ -540,6 +542,8 @@ const relatedCorpSchema = z.object({
         relation: z.enum(["self", "relative", "other"]),
         directRatio: ratioSchema,
         isCorporate: z.boolean(),
+        /** §⑮1호 분자 — 수혜법인으로부터 받은 배당소득 */
+        dividendFromBeneficiary: z.number().int().min(0).optional(),
       }),
     )
     .min(1),
@@ -547,7 +551,16 @@ const relatedCorpSchema = z.object({
     z.object({
       corpShareholderId: z.string().min(1),
       stakeInBeneficiary: ratioSchema,
-      owners: z.array(z.object({ individualId: z.string().min(1), ratio: ratioSchema })),
+      /** §⑮2호 분모 — 간접출자법인의 사업연도 말일 배당가능이익 */
+      distributableProfit: z.number().int().min(0).optional(),
+      owners: z.array(
+        z.object({
+          individualId: z.string().min(1),
+          ratio: ratioSchema,
+          /** §⑮2호 분자 — 이 간접출자법인으로부터 받은 배당소득 */
+          dividendIncome: z.number().int().min(0).optional(),
+        }),
+      ),
     }),
   ),
   salesPartners: z

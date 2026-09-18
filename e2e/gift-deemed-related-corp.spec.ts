@@ -172,3 +172,61 @@ test("§45의3①1호나목2) 일반기업 거래비율 25%·특수관계매출 
   // 어느 갈래로 충족했는지까지 화면에 밝힌다 (종전엔 「충족/미충족」 두 글자뿐)
   await expect(page.getByTestId("rc-tax-requirement")).toContainText("상증법 §45의3①1호나목2)");
 });
+
+/**
+ * §34의3⑮1호 배당공제 — 고급 토글이 실제로 세액을 바꾸는지.
+ * 종전에는 엔진이 `dividendDeduction = 0` 상수였고 **입력 경로가 아예 없었다**.
+ */
+test("§34의3⑮1호 배당공제 — 1,200,000,000 → 1,080,000,000", async ({ page }) => {
+  await page.goto("/calc/gift-deemed");
+  await page.getByTestId("deemed-type-related_corp").click();
+  const dialog = page.getByTestId("deemed-detail-dialog");
+  await dialog.getByLabel("연도", { exact: true }).fill("2025");
+  await dialog.getByLabel("월", { exact: true }).fill("12");
+  await dialog.getByLabel("일", { exact: true }).fill("31");
+
+  await dialog.getByTestId("rc-size-small").click();
+  await dialog.getByLabel("총 매출액", { exact: true }).fill("100000000000");
+  await dialog.getByPlaceholder(/영업손실 시 음수/).fill("10000000000");
+  await dialog.getByLabel("각 사업연도 소득금액", { exact: true }).fill("10000000000");
+  await dialog.getByPlaceholder("산출세액 − 공제·감면액 (원)").fill("2000000000");
+
+  const shareholders: [string, string, string][] = [
+    ["갑", "self", "60"],
+    ["기타", "other", "40"],
+  ];
+  for (let i = 0; i < shareholders.length; i++) await dialog.getByTestId("rc-add-shareholder").click();
+  for (let i = 0; i < shareholders.length; i++) {
+    const [name, rel, pct] = shareholders[i];
+    const row = dialog.getByTestId(`rc-sh-row-${i}`);
+    await row.getByPlaceholder("주주 이름").fill(name);
+    await row.getByLabel(`주주 ${i + 1} 관계`).selectOption(rel);
+    await row.getByPlaceholder("지분율").fill(pct);
+  }
+
+  const sales: [string, string, "y" | "n"][] = [
+    ["특수법인", "80000000000", "y"],
+    ["기타매출", "20000000000", "n"],
+  ];
+  for (let i = 0; i < sales.length; i++) await dialog.getByTestId("rc-add-sales").click();
+  for (let i = 0; i < sales.length; i++) {
+    const [name, amount, related] = sales[i];
+    const row = dialog.getByTestId(`rc-sales-row-${i}`);
+    await row.getByPlaceholder("매출처 이름").fill(name);
+    await row.getByLabel("매출액", { exact: true }).fill(amount);
+    await row.getByLabel(`매출처 ${i + 1} 특수관계`).selectOption(related);
+    if (related === "y") await row.getByLabel(`매출처 ${i + 1} 과세제외유형`).selectOption("");
+  }
+
+  // §⑮ 고급 토글 ON → 분모(배당가능이익) + 주주별 배당소득
+  await dialog.getByTestId("rc-dividend-toggle").click();
+  await dialog.getByTestId("rc-distributable-profit").fill("5000000000");
+  await dialog.getByTestId("rc-div-benef-0").fill("300000000");
+
+  await page.getByTestId("deemed-detail-confirm").click();
+  await page.getByTestId("deemed-calc-btn").click();
+
+  // 300,000,000 × 1,200,000,000 ÷ (5,000,000,000 × 60%) = 120,000,000 공제
+  await expect(page.getByTestId("deemed-result-value")).toContainText("1,080,000,000");
+  await expect(page.getByTestId("rc-dividend-deduction-0")).toContainText("120,000,000");
+});
