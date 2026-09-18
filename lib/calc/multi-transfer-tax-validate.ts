@@ -7,6 +7,7 @@ import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-tra
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
+import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -131,7 +132,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     return "일반건물·상업용건물(토지·건물 일괄/환산취득가)은 단건 계산기에서만 지원됩니다.";
   }
   if (a.acquisitionCause === "carryover_gift") {
-    return "배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+    return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
   }
   if (
     a.acquisitionCause === "inheritance" &&
