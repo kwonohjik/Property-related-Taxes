@@ -90,6 +90,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
       }
 
       for (const r of asset.reductions ?? []) {
+        /**
+         * Q-1(D15): 조특법 §129②는 미등기양도자산의 감면을 끄지만, 자경농지(조특법 §69①) 토지는
+         * 애초에 미등기양도자산이 아니다(소득세법 시행령 §168①3호). 둘이 함께 오면 모순 입력이라
+         * 엔진이 조용히 해석하지 않도록 여기서 막는다 — ⑫ `addPropertyRefines`도 같은 조건으로 거부한다.
+         * 미등기 축은 ④와 같다: 주 자산은 폼-전역 `form.isUnregistered`, 컴패니언은 자산 값.
+         */
+        if (r.type === "self_farming" && (ai === 0 ? form.isUnregistered : asset.isUnregistered)) {
+          return fail(
+            "자경농지 감면 대상 토지는 미등기양도자산이 아닙니다(소득세법 시행령 §168①3호). 미등기 체크를 해제하세요.",
+          );
+        }
         // 주택 게이트 (2026-06-29): 비주택 자산에 stale 선택된 주택 감면(§97·§99·§98 시리즈) 차단.
         // UI disabled와 동일 판정 (단일 소스 isReductionAllowedForAssetKind). field별 검증보다 먼저.
         if (!isReductionAllowedForAssetKind(r.type, asset.assetKind)) {

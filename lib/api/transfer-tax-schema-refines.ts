@@ -8,6 +8,28 @@ import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 /**
+ * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
+ *
+ * 조특법 §129②는 미등기양도자산의 감면을 끄지만, 자경농지 토지는 애초에 미등기양도자산이
+ * 아니다(소득세법 시행령 §168①3호) — 모순 입력이다. ⑧ `validateStep2Reductions`와 같은 조건.
+ * 주 자산(`addPropertyRefines`)과 컴패니언(`transfer-tax-schema.ts` 일괄양도 루프)이 공용한다.
+ */
+export function refineUnregisteredSelfFarming(
+  isUnregistered: boolean | undefined,
+  reductions: ReadonlyArray<{ type: string }> | undefined,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  if (isUnregistered !== true) return;
+  if (!(reductions ?? []).some((r) => r.type === "self_farming")) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path,
+    message: "자경농지 감면 대상 토지는 미등기양도자산이 아닙니다(소득세법 시행령 §168①3호) — 미등기와 자경농지 감면을 함께 보낼 수 없습니다",
+  });
+}
+
+/**
  * propertySchema.superRefine 에 주입되는 공통 검증 로직.
  * 단건·다건 스키마 모두 재사용.
  */
@@ -46,9 +68,13 @@ export function addPropertyRefines(
     redevelopment?: Record<string, unknown> | null;
     /** 축 B 파트별 독립(§99①1호 나목) — 제공 시 결합 총액 검증 우회 */
     buildingStandardPriceAtAcquisition?: number;
+    /** Q-1(D15) — 미등기 + 자경농지 감면 교차 검증 */
+    isUnregistered?: boolean;
+    reductions?: ReadonlyArray<{ type: string }>;
   },
   ctx: z.RefinementCtx,
 ) {
+  refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
   // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
   // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
   const hasPhd =

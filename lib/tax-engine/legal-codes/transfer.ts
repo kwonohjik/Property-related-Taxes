@@ -122,6 +122,12 @@ export const TRANSFER = {
   REDUCTION_UNSOLD_HOUSING:      "조특법 §98의3",
   /** 조특법 §127⑦ — 양도소득세 감면 중복배제 (둘 이상 감면 동시 적용 시 거주자 선택 1건. law.go.kr 2026-06-11 확인. 종전 "§127②" 표기는 오기) */
   REDUCTION_OVERLAP_EXCLUSION:   "조특법 §127⑦",
+  /**
+   * 조특법 §129② — 「「소득세법」 제104조제3항에 따른 미등기양도자산에 대해서는 양도소득세의
+   * 비과세 및 감면에 관한 규정을 적용하지 아니한다.」 (KoreanLaw MST 284389, 2026-09-18 확인)
+   * 소득세법 §91①은 비과세만 배제한다 — 감면 배제의 근거는 이 조문이다.
+   */
+  REDUCTION_UNREGISTERED_EXCLUSION: "조특법 §129②",
   /** 조특법 §77 — 공익사업용 토지 등에 대한 양도소득세 감면 */
   REDUCTION_PUBLIC_EXPROPRIATION: "조특법 §77",
   /**

@@ -216,7 +216,8 @@ export function calculateRedevelopmentTax(
    * 정상 도달한 뒤 여기서 사라졌다.
    */
   let transferIncome = transferIncomeBefore993;
-  const incomeDeduction = resolveIncomeDeduction(input.reductions, {
+  // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
+  const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
     transferDate: input.transferDate,
     acquisitionDate: input.acquisitionDate,
     assetContractDate: input.assetContractDate,
@@ -400,6 +401,7 @@ export function calculateRedevelopmentTax(
     input.standardPriceAtAcquisition,
     input.standardPriceAtTransfer,
     input.assetContractDate,
+    input.isUnregistered,
   );
   steps.push({
     label: "감면세액",

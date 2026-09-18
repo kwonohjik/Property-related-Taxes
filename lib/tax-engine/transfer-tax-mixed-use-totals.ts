@@ -5,6 +5,7 @@
 
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { calcReductions } from "./transfer-tax-reductions-calc";
+import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import {
@@ -228,7 +229,9 @@ export function buildTotalTax(
   const transferTax = unregisteredTax ?? (usesClause2 ? clause2.tax : clause1);
 
   // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
-  const post = computeMixedUsePostTax(transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax);
+  const post = computeMixedUsePostTax(
+    transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax && { ...postTax, isUnregistered },
+  );
   const determinedTax = Math.max(0, transferTax - post.reductionAmount);
   // 지방소득세 base는 **결정세액**이다(지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면).
   // 국세기본법 §47의2~§47의4 가산세는 §103의2 3호 열거에 없어 대상이 아니다.
@@ -300,6 +303,8 @@ export interface MixedUsePostTaxInput {
   isSelfCultivatedExpropriatedLand?: boolean;
   /** 부수효과 — 차감형 감면을 계산하지 않았다는 사실을 여기 담는다(침묵 금지). */
   warnings?: string[];
+  /** 조특법 §129② — 미등기양도자산이면 감면 전부 미적용 (D15). `buildTotalTax`가 채운다. */
+  isUnregistered?: boolean;
 }
 
 interface MixedUsePostTaxResult {
@@ -357,7 +362,10 @@ function computeMixedUsePostTax(
 ): MixedUsePostTaxResult {
   if (!input) return EMPTY_POST;
 
-  const all = input.reductions ?? [];
+  // 조특법 §129② — 미등기면 세액감면형·차감형 모두 적용하지 않는다(D15). 가산세는 감면과 무관해 계속 계산한다.
+  const unregisteredNotice = unregisteredReductionNotice(input);
+  if (unregisteredNotice) input.warnings?.push(unregisteredNotice);
+  const all = input.isUnregistered ? [] : (input.reductions ?? []);
   const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
   /**
    * 🔑 **차감형은 계산하지 않고 고지한다** — §155⑳ 경로(F08)와 **같은 판단**이다.
