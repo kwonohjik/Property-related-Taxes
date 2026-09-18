@@ -120,6 +120,18 @@ export function RelatedCorpFields({ form, set }: Props) {
         <CurrencyInput label="세무조정 후 영업손익" allowNegative value={form.rcPreTaxAdjOperatingIncomeStr} onChange={(v) => set({ rcPreTaxAdjOperatingIncomeStr: v })} placeholder="영업손실 시 음수" />
         <CurrencyInput label="각 사업연도 소득금액" value={form.rcTaxableIncomeStr} onChange={(v) => set({ rcTaxableIncomeStr: v })} />
         <CurrencyInput label="법인세 순세액" value={form.rcCorporateTaxNetStr} onChange={(v) => set({ rcCorporateTaxNetStr: v })} placeholder="산출세액 − 공제·감면액 (원)" />
+        {/* 🔴 RC-P: §68① 단서 — 증여세 신고기한이 「수혜법인의 「법인세법」 제60조제1항에 따른
+            과세표준의 신고기한이 속하는 달의 말일부터 3개월」이다. §45의3은 증여시기 자체가
+            사업연도 종료일이라(§45의3③) 위 「증여일」이 곧 사업연도 종료일이고, 남는 축은
+            §60① 괄호의 3개월/4개월 분기뿐이다. */}
+        <ToggleCard
+          tone="sky"
+          title="성실신고확인서를 제출하는 법인"
+          checked={form.corpHonestFilingConfirm}
+          onCheckedChange={(v) => set({ corpHonestFilingConfirm: v })}
+          description="법인세법 §60① 괄호 — 제출 법인은 법인세 신고기한이 3개월이 아니라 4개월입니다 (증여세 신고기한 §68① 단서가 여기서 파생됩니다)"
+          data-testid="rc-honest-filing"
+        />
       </ToneCard>
 
       {/* ── 섹션 2: 주주현황 roster [emerald] ── */}

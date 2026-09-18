@@ -41,7 +41,7 @@ import {
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
+import { buildDueDatesFrom, getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { formatGiftSaveMessage, useRecordCount } from "@/components/calc/gift-tax-save-handler";
@@ -82,6 +82,11 @@ interface Props {
   estateItems?: EstateItem[];
   /** 증여일 — 상장주식 평가조서(갑) ④ 평가기준일 표시용 */
   giftDate?: string;
+  /**
+   * 법정신고기한 `YYYY-MM-DD` — §68① **단서** 건(§45의3·§45의5)에서만 채워진다.
+   * 증여일에서 파생되지 않는 기한이므로 표시도 이 값을 우선한다(SC-K·RC-P).
+   */
+  statutoryDeadline?: string;
   /** 사전증여 입력 원본 — 출처(📋 이력 기반) 배지 + 부표 1 ②/③ 컬럼 표시 */
   priorGifts?: Array<{
     giftDate: string;
@@ -149,6 +154,7 @@ export function GiftTaxResultView({
   estateItems = [],
   priorGifts = [],
   giftDate,
+  statutoryDeadline,
   splitPaymentEnabled = false,
   splitPaymentAmount = "",
   transferTaxResults = [],
@@ -263,7 +269,15 @@ export function GiftTaxResultView({
   }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, stockTransferTaxResults, simpleGiftResult, simultaneousResults]);
 
   // 신고기한 §68①(증여일 속하는 달의 말일 + 3개월) · 분납기한 §70②(+2개월). giftDate 없으면 undefined.
-  const giftDueDates = useMemo(() => getGiftFilingDueDates(giftDate), [giftDate]);
+  // 🔴 SC-K·RC-P: §68①에는 **단서**가 있다 — §45의3·§45의5는 「수혜법인 또는 특정법인의
+  //    법인세법 §60①에 따른 과세표준의 신고기한이 속하는 달의 말일부터 3개월」이라
+  //    증여일에서 파생되지 않는다(3개월 어긋난다). 의제 계산기가 파생해 실어 보낸 값을
+  //    **우선**하고, 분납기한(§70② +2개월)도 그 기한에서 다시 센다.
+  const giftDueDates = useMemo(() => {
+    const provided = statutoryDeadline?.trim();
+    if (provided) return buildDueDatesFrom(provided);
+    return getGiftFilingDueDates(giftDate);
+  }, [giftDate, statutoryDeadline]);
 
   return (
     <div className="space-y-5">

@@ -148,13 +148,22 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
  *
  * 게이팅 규칙 자체는 **상속과 공용**이다(`buildFilingPenaltyInput`). 이 함수가 하는 일은
  * **증여 고유의 법정신고기한 파생**뿐 — §68① 「증여받은 날이 속하는 달의 말일부터 3개월」.
+ *
+ * 🔴 SC-K·RC-P: §68①은 **단서**를 가진다 — §45의3·§45의5는 「수혜법인 또는 특정법인의
+ *    「법인세법」 제60조제1항에 따른 과세표준의 신고기한이 속하는 달의 말일부터 3개월」이다.
+ *    종전에는 이 함수가 본문만 파생했고, 엔진 주석(`inheritance-gift-penalty.ts:76`)과
+ *    이 파일 :127이 둘 다 「④가 파생한다 — 단서 케이스 때문」이라 적어 두었는데
+ *    **그 책임층이 단서를 몰랐다**. 3개월 이른 기한이 §48②2호 감면 «구간»을 갈라
+ *    실측 20,000,000원이 과다 산출됐다.
+ *    ⇒ 단서 건은 의제 계산기가 파생해 `statutoryDeadline`으로 실어 보낸다. 여기서는
+ *      그 값을 **우선**하고, 없을 때만 본문을 파생한다(⑧이 단서 건의 공란을 막는다).
  */
+export function resolveGiftStatutoryDeadline(form: FormState): string | undefined {
+  return form.statutoryDeadline?.trim() || getGiftFilingDueDates(form.giftDate)?.filing;
+}
+
 function buildFilingPenalty(form: FormState): { filingPenalty?: InheritanceGiftPenaltyInput } {
-  return buildFilingPenaltyInput(
-    form.filingStatus,
-    form,
-    getGiftFilingDueDates(form.giftDate)?.filing,
-  );
+  return buildFilingPenaltyInput(form.filingStatus, form, resolveGiftStatutoryDeadline(form));
 }
 
 /**

@@ -7,6 +7,7 @@ import type { DeemedGiftAnyResult, SpecificCorpLimitCalc } from "@/lib/tax-engin
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DEEMED_TYPE_META, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
+import { getSec68ProvisoGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
 /**
@@ -49,6 +50,29 @@ function aggregationExclusionFlags(result: DeemedGiftAnyResult) {
  * 증여이익 → 증여세 마법사 prefill payload (sessionStorage "giftTaxResumeInput").
  * 산정된 증여재산가액을 category:"other" 단일 항목(이미 평가된 금액)으로 주입.
  */
+/**
+ * §68① 단서 기한을 이관 payload에 싣는다 (SC-K·RC-P).
+ *
+ * §45의3은 증여시기 자체가 「수혜법인의 해당 사업연도 종료일」이므로(§45의3③) `giftDate`가
+ * 곧 사업연도 종료일이다 — 추가 입력 없이 파생된다.
+ * §45의5의 증여일은 「거래한 날」(§45의5①)이라 사업연도와 무관하다 — 별도 입력을 쓴다.
+ *
+ * ⚠️ 파생하지 못하면 **`statutoryDeadline`을 넣지 않는다**. 본문 기한으로 되메우면
+ *    3개월 이른 값이 조용히 §48②2호 감면 구간을 가른다(자동 fallback 금지).
+ *    `filingDeadlineBasis`는 그래도 실어 보낸다 — 마법사 ⑧이 「이 건은 단서다」를 알아야
+ *    공란을 막을 수 있다.
+ */
+function sec68ProvisoFields(
+  form: DeemedFormState,
+): Pick<GiftFormState, "statutoryDeadline" | "filingDeadlineBasis"> {
+  const fye = form.type === "related_corp" ? form.giftDate : form.scCorpFiscalYearEndDate;
+  const due = getSec68ProvisoGiftFilingDueDates(fye, form.corpHonestFilingConfirm);
+  return {
+    filingDeadlineBasis: "sec68_1_proviso",
+    ...(due ? { statutoryDeadline: due.filing } : {}),
+  };
+}
+
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
   result: DeemedGiftAnyResult,
@@ -151,6 +175,7 @@ export function buildGiftWizardPrefill(
     if (!selected) return { giftDate: form.giftDate };
     return {
       giftDate: form.giftDate,
+      ...sec68ProvisoFields(form),
       // §45의3의 증여자는 특수관계「법인」이라 §53 어느 호에도 해당하지 않는다.
       // §55①2호 스트림이라 증여재산공제가 적용되지 않으므로 이 값은 세액에 영향이 없다 —
       // 폼이 값을 요구하므로 종전 기본값을 유지한다.
@@ -186,6 +211,7 @@ export function buildGiftWizardPrefill(
     if (!selected) return { giftDate: form.giftDate, giftItems: [] };
     return {
       giftDate: form.giftDate,
+      ...sec68ProvisoFields(form),
       giftItems: [
         {
           id: `deemed-sc-${selected.name.trim() || "donee"}`,
@@ -203,6 +229,7 @@ export function buildGiftWizardPrefill(
   if (result.type === "specific_corp" && result.specificCorpLimit) {
     return {
       giftDate: form.giftDate,
+      ...sec68ProvisoFields(form),
       giftItems: [
         {
           id: "deemed-specific_corp",
@@ -253,6 +280,11 @@ export function buildGiftWizardPrefill(
 
   return {
     giftDate: form.giftDate,
+    // §45의3·§45의5가 위 분기를 타지 못한 경우(결과 형태가 달라 조기 반환이 안 된 경우)에도
+    // 단서 표지는 반드시 실어 보낸다 — 표지가 빠지면 마법사가 본문 기한으로 조용히 넘어간다.
+    ...(result.type === "related_corp" || result.type === "specific_corp"
+      ? sec68ProvisoFields(form)
+      : {}),
     giftItems: [
       {
         id: `deemed-${result.type}`,

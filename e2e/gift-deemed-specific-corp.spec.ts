@@ -25,9 +25,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     const dialog = page.getByTestId("deemed-detail-dialog");
 
     // 증여일 입력
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     // 입력 방식: 주주 명단
     await dialog.getByTestId("sc-mode-roster").click();
@@ -94,9 +94,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     // 주주 명단 모드, 거래이익 10억
     await dialog.getByTestId("sc-mode-roster").click();
@@ -161,9 +161,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
     // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
@@ -216,9 +216,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
     // §45의5① 거래상대방 — W4에서 필수가 됐다(미선택이면 ⑧이 차단한다)
@@ -276,9 +276,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     // 지분율 직접 입력 · 상대방 = 그 밖의 자
     await dialog.getByTestId("sc-cp-other").click();
@@ -301,9 +301,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-tt-low").click();
@@ -345,9 +345,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
     await dialog.getByTestId("sc-cp-ruling").click();
@@ -396,9 +396,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     await dialog.getByTestId("sc-mode-roster").click();
     await dialog.getByTestId("sc-cp-ruling").click();
@@ -438,9 +438,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2025");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("15");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2025");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("15");
 
     // 기본 모드(single) 그대로 — 지분율 직접 입력
     await dialog.getByTestId("sc-cp-ruling").click();
@@ -470,9 +470,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await openDetail(page);
     const dialog = page.getByTestId("deemed-detail-dialog");
 
-    await dialog.getByLabel("연도").fill("2026");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("2");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2026");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("2");
 
     await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-transaction-benefit").fill("70000000");
@@ -507,9 +507,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     // 종전에는 두 조문 모두 「증여일」로만 물어 사용자가 신고일을 넣어도 막히지 않았다
     await expect(dialog.getByText("증여시기 — 거래한 날")).toBeVisible();
 
-    await dialog.getByLabel("연도").fill("2026");
-    await dialog.getByLabel("월").fill("3");
-    await dialog.getByLabel("일", { exact: true }).fill("2");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill("2026");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill("3");
+    await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill("2");
     await dialog.getByTestId("sc-cp-ruling").click();
     await dialog.getByTestId("sc-transaction-benefit").fill("1000000000");
     await dialog.getByTestId("sc-corp-tax-direct").click();
@@ -531,9 +531,9 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
       await page.goto("/calc/gift-deemed");
       await openDetail(page);
       const dialog = page.getByTestId("deemed-detail-dialog");
-      await dialog.getByLabel("연도").fill(y);
-      await dialog.getByLabel("월").fill(m);
-      await dialog.getByLabel("일", { exact: true }).fill(d);
+      await dialog.getByTestId("deemed-gift-date").getByLabel("연도").fill(y);
+      await dialog.getByTestId("deemed-gift-date").getByLabel("월").fill(m);
+      await dialog.getByTestId("deemed-gift-date").getByLabel("일", { exact: true }).fill(d);
       await dialog.getByTestId("sc-cp-ruling").click();
       await dialog.getByTestId("sc-transaction-benefit").fill("3000000000");
       await dialog.getByTestId("sc-corp-tax-auto").click();
