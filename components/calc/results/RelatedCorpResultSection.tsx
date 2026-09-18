@@ -65,7 +65,12 @@ export function RelatedCorpResultSection({
             </tr>
             <tr>
               <td className="text-muted-foreground">과세요건</td>
-              <td className="text-right">{result.taxRequirementMet ? "충족" : "미충족"}</td>
+              <td className="text-right" data-testid="rc-tax-requirement">
+                {result.taxRequirementMet ? "충족" : "미충족"}
+                {result.taxRequirementClause && (
+                  <span className="ml-1 text-caption text-muted-foreground">{result.taxRequirementClause}</span>
+                )}
+              </td>
             </tr>
             {result.taxableExcludedSales != null && (
               <tr>

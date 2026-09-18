@@ -407,6 +407,11 @@ export interface DeemedGiftResult {
   tradeRatioDenom?: number;
   /** §45의3 과세요건 충족 여부 */
   taxRequirementMet?: boolean;
+  /**
+   * §45의3①1호 — 충족된 과세요건 **갈래**의 조문 표시(미충족이면 undefined).
+   * 중소·중견은 가목 하나뿐이고, 일반기업은 나목1)(=가목 사유)·나목2)(3분의 2 + 1천억)의 택일이다.
+   */
+  taxRequirementClause?: string;
   /** §45의3 정상거래비율 분수 */
   normalTradeRatio?: { numer: number; denom: number };
   /** §45의3 한계보유비율 분수 */

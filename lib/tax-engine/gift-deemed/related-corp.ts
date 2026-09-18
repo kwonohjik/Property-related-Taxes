@@ -41,7 +41,39 @@ const TRADE_RATIO_DEDUCTION: Record<Size, number> = { small: 50, medium: 20, lar
  */
 const OWNERSHIP_RATIO_DEDUCTION: Record<Size, number> = { small: 10, medium: 5, large: 0 };
 
+/**
+ * §45의3①1호나목2) — 중소·중견이 **아닌** 법인의 추가 과세요건 임계.
+ * 상증령 §34의3(1천억원 규정 항) 본문 verbatim:
+ *   「법 제45조의3제1항제1호나목2)에서 "대통령령으로 정하는 금액"이란 1천억원을 말한다.」
+ *
+ * ⚠️ 같은 항 **단서**(사업부문별로 회계를 구분한 경우 「1천억원 × 사업부문별 매출액 ÷ 전체
+ *    매출액」으로 안분)는 법 §45의3① 각 호 외 부분 **후단**(사업부문별 계산)에 걸리는데,
+ *    그 축이 이 엔진에 없다 — 단서를 흉내 내면 근거 없이 임계를 낮추게 되므로 본문만 쓴다.
+ */
+const LARGE_RELATED_SALES_THRESHOLD = 100_000_000_000;
+
 const RATIO_DENOM = 100;
+
+/**
+ * 과세요건 미충족 사유 — **어느 갈래가 왜 막혔는지**까지 적는다.
+ *
+ * 종전에는 규모와 무관하게 「특수관계법인거래비율이 정상거래비율 이하」 하나였다.
+ * 일반기업은 나목2)라는 **두 번째 갈래**가 있으므로, 그 문구는 25%처럼 나목2) 밴드에
+ * 들어간 사안에도 「요건 미충족」을 단정해 **거짓 안전 신호**가 된다.
+ */
+function buildExclusionReason(size: Size, twoThirdsMet: boolean, relatedNet: number): string {
+  if (size !== "large") {
+    return "특수관계법인거래비율이 정상거래비율 이하 — 과세요건 미충족 (상증법 §45의3①1호가목)";
+  }
+  if (!twoThirdsMet) {
+    return "특수관계법인거래비율이 정상거래비율의 3분의 2 이하 — 나목1)·2) 모두 미해당 (상증법 §45의3①1호나목)";
+  }
+  return (
+    "특수관계법인거래비율은 정상거래비율의 3분의 2를 초과하나, 특수관계법인에 대한 매출액" +
+    `(과세제외매출 차감 후 ${relatedNet.toLocaleString("ko-KR")}원)이 1천억원 이하 — ` +
+    "과세요건 미충족 (상증법 §45의3①1호나목2) · 상증령 §34의3)"
+  );
+}
 
 export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const {
@@ -83,8 +115,33 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const normalTrade = NORMAL_TRADE_RATIO[enterpriseSize];
   const marginal = MARGINAL_OWNERSHIP_RATIO[enterpriseSize];
   const marginalFrac: Frac = { numer: marginal, denom: RATIO_DENOM };
-  // 거래비율 > 정상거래비율: numer/denom > threshold/100 → numer×100 > denom×threshold
-  const taxRequirementMet = tradeRatioNumer * RATIO_DENOM > tradeRatioDenom * normalTrade;
+  // §45의3①1호**가목**(중소·중견) = 같은 호 **나목1)**「가목에 따른 사유」(일반) — 전 규모 공통.
+  //   거래비율 > 정상거래비율: numer/denom > threshold/100 → numer×100 > denom×threshold
+  const clauseAMet = tradeRatioNumer * RATIO_DENOM > tradeRatioDenom * normalTrade;
+
+  // §45의3①1호**나목2)** — 중소·중견이 아닌 법인에만 있는 **택일** 요건.
+  //   「특수관계법인거래비율이 정상거래비율의 3분의 2를 초과하는 경우로서 특수관계법인에 대한
+  //    매출액이 … 대통령령으로 정하는 금액을 초과하는 경우」.
+  //   둘 다 조문상 «초과»라 경계값(정확히 3분의 2 · 정확히 1천억원)은 **미해당**이다.
+  //
+  //   ⚠️ 1천억원과 견줄 「특수관계법인에 대한 매출액」은 법 §45의3④가 「제1항에 따른 매출액에서
+  //      … 대통령령으로 정하는 매출액은 제외한다」고 정한 뒤의 금액이다 — 거래비율 분자와
+  //      **같은 기준선**(`tradeRatioNumer` = 특수관계매출 − 과세제외매출)을 쓴다.
+  //   ⚠️ BigInt — 대기업 매출 규모에서 `denom × normalTrade × 2`가 2^53을 넘는다
+  //      (실측: 총매출 300조·비특수관계 225조 → 225e12 × 30 × 2 = 1.35e16 > 9.0e15).
+  const twoThirdsMet =
+    BigInt(tradeRatioNumer) * 300n > BigInt(tradeRatioDenom) * BigInt(normalTrade) * 2n;
+  const clauseB2Met =
+    enterpriseSize === "large" && twoThirdsMet && tradeRatioNumer > LARGE_RELATED_SALES_THRESHOLD;
+
+  const taxRequirementMet = clauseAMet || clauseB2Met;
+  const taxRequirementClause = clauseAMet
+    ? enterpriseSize === "large"
+      ? "상증법 §45의3①1호나목1)"
+      : "상증법 §45의3①1호가목"
+    : clauseB2Met
+      ? "상증법 §45의3①1호나목2)"
+      : undefined;
 
   const echo = {
     // §45의3③ — 증여시기는 「수혜법인의 해당 사업연도 종료일」이다(거래일·신고일이 아니다).
@@ -97,6 +154,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     tradeRatioNumer,
     tradeRatioDenom,
     taxRequirementMet,
+    ...(taxRequirementClause ? { taxRequirementClause } : {}),
     normalTradeRatio: { numer: normalTrade, denom: RATIO_DENOM } as Frac,
     marginalOwnershipRatio: marginalFrac,
   };
@@ -110,7 +168,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
         { label: "특수관계법인 매출 합계", amount: relatedSales, lawRef: GIFT.RELATED_CORP },
         { label: "과세제외매출액(§⑩)", amount: commonExclusion },
       ],
-      exclusionReason: "특수관계법인거래비율이 정상거래비율 이하 — 과세요건 미충족 (§45의3①1호)",
+      exclusionReason: buildExclusionReason(enterpriseSize, twoThirdsMet, tradeRatioNumer),
       legalBasis: GIFT.RELATED_CORP,
       // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
       aggregationExcluded: true,

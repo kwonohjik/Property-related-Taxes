@@ -190,7 +190,9 @@
 
 ## 6. 입력 데이터 모델 골격 (옵션 A — Design에서 정밀화)
 
-> 정확 shape는 `gift-related-corp-45-3.engine.design.md`. **Simplicity First**: 사례 범위(2단계 간접: 개인→법인→수혜법인)로 한정. 다단계·나목 1천억·다목은 SCOPE_OUT(YAGNI).
+> 정확 shape는 `gift-related-corp-45-3.engine.design.md`. **Simplicity First**: 사례 범위(2단계 간접: 개인→법인→수혜법인)로 한정. 다단계는 SCOPE_OUT(YAGNI).
+>
+> ⚠️ **정정(2026-09-18 · W8)** — 이 줄의 종전 기재 「다단계·**나목 1천억**·**다목**은 SCOPE_OUT」은 stale이었다. **다목(일반기업 계산식)은 애초에 구현돼 있었고**(`related-corp.ts` TRADE_RATIO_DEDUCTION.large=5 · OWNERSHIP_RATIO_DEDUCTION.large=0), **나목2) 1천억원은 W8에서 구현**했다(§45의3①1호나목2) · 상증령 §34의3). 남은 SCOPE_OUT은 다단계 간접출자뿐이다.
 
 ### 6.1 3층 구조 (memory `feedback_flat_vs_nested_form_field_decision` — 코드검토 #8)
 - **폼(UI) = string flat row** (`RcShareholderRow`·`RcIntermediaryRow`·`RcSalesRow`) — 기존 cap-table·cd-multi 패턴.
@@ -290,7 +292,7 @@ RelatedCorpResult (DeemedGiftResult 확장)
 1. **§2의2①3~8호** 본문 — Design KoreanLaw 인용 후 `isRelated` hint·legalBasis 정정 (F-7).
 2. **계산식 거래비율차감 본문(5/50/20)** — 법 박스 미렌더. Design에서 법령집/유권해석 확보(추정 금지). 중소(50%)는 사례로 확정.
 3. ~~수증자 N명 집계 모델~~ → **확정**: `recipientBreakdown[]` 배열 + 수증자별 다건 prefill(`simultaneousGifts` 패턴, `gift-deemed-api.ts:511-563`). `deemedGiftValue`=합계(코드검토 #2·#3).
-4. **나목(일반) 1천억·다목·다단계 간접** — SCOPE_OUT(YAGNI), Design 미구현 명시.
+4. ~~**나목(일반) 1천억·다목·다단계 간접** — SCOPE_OUT(YAGNI), Design 미구현 명시.~~ → **정정(W8)**: 다목은 이미 구현돼 있었고, 나목2) 1천억원은 W8에서 구현했다(anchor `related-corp-45-3-clause-b2.test.ts` 15건). 남은 SCOPE_OUT은 **다단계 간접출자**뿐이다.
 5. **§⑮ 배당공제** — 사례 0. 입력 노출 여부 Design(기본 미노출·고급 토글).
 6. **간접 2경로 정렬**(작은 것부터, §⑬) — 사례 1경로라 무영향. YAGNI면 주석(F-12).
 
