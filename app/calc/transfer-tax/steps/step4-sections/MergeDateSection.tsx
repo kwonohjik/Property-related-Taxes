@@ -51,7 +51,7 @@ export function MergeDateSection({
             variant="card"
             tone="violet"
             title="세대 내 먼저 양도하는 주택"
-            description="§155④⑤ 비과세는 합가·혼인 후 세대 내 먼저 양도하는 주택에만 적용됩니다. 이 양도가 합가 후 첫 양도이면 체크하세요. (양도 주택은 합가 전 취득분)"
+            description="§155④⑤ 비과세와 2주택 중과배제(소득세법 시행령 §167의10①15호)는 합가·혼인 후 세대 내 먼저 양도하는 주택에만 적용됩니다. 이 양도가 합가 후 첫 양도이면 체크하세요. (양도 주택은 합가일 이전 또는 당일 취득분)"
             checked={form.isFirstTransferredInMerge}
             onCheckedChange={(v) => onChange({ isFirstTransferredInMerge: v })}
           />

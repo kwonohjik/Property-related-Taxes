@@ -196,6 +196,14 @@ export function determineMultiHouseSurcharge(
     }
   }
 
+  // Q-4(D9): 3주택 이상에서 §155①(일시적 2주택)과 겹쳐 합가 특례가 성립하는 경우의 중과 배제
+  //   (영 §167의3①13호)는 엔진이 모델링하지 않는다 — 합가 의제는 「2주택」일 때만 선다.
+  if (effectiveHouseCount >= 3 && (input.marriageMerge || input.parentalCareMerge)) {
+    warnings.push(
+      `3주택 이상 세대의 혼인·동거봉양 합가 — 일시적 2주택과 겹쳐 합가 특례가 성립하는 경우의 중과 배제(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})는 반영하지 않았습니다`,
+    );
+  }
+
   // Step 2: 조정대상지역 판단 (양도일 기준)
   // regionCode(법정동코드) 제공 시: isRegulatedByBjdCode로 정밀 판정 (정적 data 사용, DB 불필요).
   // regionCode 미제공 시: isRegulatedFallback(boolean) 유지 (회귀 0 보장).

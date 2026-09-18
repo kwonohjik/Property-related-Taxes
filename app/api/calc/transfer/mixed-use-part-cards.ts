@@ -334,6 +334,7 @@ export function buildMixedUseCompanionItems(
     presaleRights: ctx.primaryEngineInput.presaleRights,
     marriageMerge: g.marriageMerge,
     parentalCareMerge: g.parentalCareMerge,
+    isFirstTransferredInMerge: g.isFirstTransferredInMerge,
     gracePeriod: g.gracePeriod,
     unavoidableOutsideCapitalHouse: g.unavoidableOutsideCapitalHouse,
   });

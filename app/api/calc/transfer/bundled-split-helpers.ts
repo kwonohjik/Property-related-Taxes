@@ -290,6 +290,7 @@ export interface MixedUseCompanionContext {
     | "sellingHouseId"
     | "marriageMerge"
     | "parentalCareMerge"
+    | "isFirstTransferredInMerge"
     | "gracePeriod"
     | "unavoidableOutsideCapitalHouse"
   >;

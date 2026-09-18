@@ -22,7 +22,6 @@ import {
   DISPOSAL_DELAY_REASON_LABEL,
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
-  MERGE_EXEMPTION_YEARS,
   PROVISO_LABEL,
   qualifiesRuralHouse,
   qualifiesUnavoidableOutsideCapital,
@@ -30,6 +29,7 @@ import {
   REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW,
   REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD,
   resolveExemptionHoldingStartDate,
+  resolveMergeDeeming,
   RURAL_HOUSE_LABEL,
   UNAVOIDABLE_REASON_LABEL,
 } from "./transfer-tax-exemption-requirements";
@@ -250,20 +250,12 @@ function checkExemptionCore(
   }
 
   // E-3.5: 합가 비과세 (§155④⑤ 혼인·동거봉양) — 합가일부터 10년 내 "먼저 양도" 주택 1세대1주택 의제.
-  // 요건: 2주택 + (marriageMerge | parentalCareMerge) + 선양도 + 양도주택 합가 전 취득 + §154① 보유·거주.
-  if (
-    input.householdHousingCount === 2 &&
-    (input.marriageMerge || input.parentalCareMerge) &&
-    input.isFirstTransferredInMerge === true
-  ) {
-    const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
-    if (
-      mergeDate &&
-      input.acquisitionDate < mergeDate && // 합가·혼인 전 취득
-      input.transferDate <= addYears(mergeDate, MERGE_EXEMPTION_YEARS) && // 합가일부터 10년 내
-      meetsOneHouseHoldingResidence(input, rule) // §154① 보유·거주 요건
-    ) {
-      const mergeLabel = input.marriageMerge ? "혼인 합가 (§155⑤)" : "동거봉양 합가 (§155④)";
+  // 의제 성립(①)은 중과 배제(영 §167의10①15호)와 **같은 정본** `resolveMergeDeeming`이 판정하고,
+  // 여기서는 §154① 보유·거주(②)만 더 본다.
+  {
+    const mergeBasis = resolveMergeDeeming(input);
+    if (mergeBasis && meetsOneHouseHoldingResidence(input, rule)) {
+      const mergeLabel = mergeBasis === "marriage_merge" ? "혼인 합가 (§155⑤)" : "동거봉양 합가 (§155④)";
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= rule.maxExemptPrice) {

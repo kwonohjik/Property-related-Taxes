@@ -290,6 +290,7 @@ export async function POST(request: NextRequest) {
           sellingHouseId: data.sellingHouseId,
           marriageMerge: engineInput.marriageMerge,
           parentalCareMerge: engineInput.parentalCareMerge,
+          isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
           gracePeriod: engineInput.gracePeriod,
           unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
         },
@@ -478,6 +479,7 @@ export async function POST(request: NextRequest) {
         presaleRights: engineInput.presaleRights,
         marriageMerge: engineInput.marriageMerge,
         parentalCareMerge: engineInput.parentalCareMerge,
+        isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
         gracePeriod: engineInput.gracePeriod,
         unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
       });

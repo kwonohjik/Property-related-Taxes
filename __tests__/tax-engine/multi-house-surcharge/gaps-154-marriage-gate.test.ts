@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import { determineMultiHouseSurcharge } from "@/lib/tax-engine/multi-house-surcharge";
+import { resolveMergeDeeming } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import {
   defaultRules,
   mockRegulatedHistory,
@@ -30,6 +31,14 @@ function base() {
   return makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
     sellingHouseId: "h1",
     marriageMerge: { marriageDate: new Date("2021-06-01") }, // 혼인 3년전 (10년 이내)
+    // 15호 ① 요소는 caller가 비과세 정본으로 선판정해 넘긴다 — 이 파일은 ② 게이트만 본다.
+    deemedOneHouseBy155: resolveMergeDeeming({
+      householdHousingCount: 2,
+      marriageMerge: { marriageDate: new Date("2021-06-01") },
+      isFirstTransferredInMerge: true,
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2024-06-01"),
+    }),
   });
 }
 

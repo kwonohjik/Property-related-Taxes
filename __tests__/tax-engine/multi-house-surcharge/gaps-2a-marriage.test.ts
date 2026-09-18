@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { resolveMergeDeeming } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { determineMultiHouseSurcharge } from "@/lib/tax-engine/multi-house-surcharge";
 import {
   defaultRules,
@@ -135,12 +136,26 @@ describe("#2a-A: §167의3⑨ 3주택 혼인 5년내 배우자 주택수 차감"
 // 2주택 §155⑤ — 1세대1주택 의제 전면배제 (10년)
 // ============================================================
 
+/**
+ * 혼인 합가 의제(§155⑤) — 중과 엔진은 재판정하지 않고 caller가 비과세 정본으로 선판정해 넘긴다
+ * (영 §167의10①15호 ① 요소). 날짜 조건(10년·합가 전 취득)은 `resolveMergeDeeming`이 본다.
+ */
+const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
+  resolveMergeDeeming({
+    householdHousingCount: 2,
+    marriageMerge: { marriageDate: new Date(marriageDate) },
+    isFirstTransferredInMerge: true,
+    acquisitionDate: new Date("2010-01-01"),
+    transferDate: new Date(transferDate),
+  });
+
 describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", () => {
   it("A-155-7y: 1+1=2, 혼인 7년전 → 10년 이내 전면배제", () => {
     const r = run(
       makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
         sellingHouseId: "h1",
         marriageMerge: { marriageDate: new Date("2017-06-01") },
+        deemedOneHouseBy155: deemMarriage("2017-06-01"),
       }),
     );
     expect(r.surchargeApplicable).toBe(false);
@@ -152,6 +167,7 @@ describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", (
       makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
         sellingHouseId: "h1",
         marriageMerge: { marriageDate: new Date("2014-06-01") }, // +10년 = 2024-06-01 = transferDate
+        deemedOneHouseBy155: deemMarriage("2014-06-01"),
       }),
     );
     expect(r.surchargeApplicable).toBe(false);

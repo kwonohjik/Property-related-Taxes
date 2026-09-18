@@ -289,7 +289,7 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 
 | 순서 | PR | 범위 | 선결 |
 |---|---|---|---|
-| 1 | **PR-1 D9** | 합가 의제 공용 술어 추출(E-3.5 ↔ 중과) · `deemedOneHouseBy155` 확장 · 배제 2·3 → 15호 · 시점 상수 · F-2 · 토글 설명 · manifest · 문서 정정 | ✅ 착수 가능 |
+| 1 | **PR-1 D9** | 합가 의제 공용 술어 추출(E-3.5 ↔ 중과) · `deemedOneHouseBy155` 확장 · 배제 2·3 → 15호 · 시점 상수 · F-2 · 토글 설명 · 겸용 배선 · 문서 정정 | ✅ **구현 완료**(§11) |
 | 2 | **PR-2 D15** | `calcReductions` §129② 게이트(5개 호출부) + validate·Zod + 결과 표시 + 주석 정정 | V-6·V-7 |
 | 3 | **PR-3 D45** | 토글 제거 + 배우자 예외 + 레거시 플래그·전환 버튼 + D-8 주석 정정 | V-8 |
 | 4 | **PR-4 D16** | 주택 수 산정·§167의10①10호·양도 주택 자체 배제·§155② 게이트 + 문구·문서 정정 | V-1·V-2·V-3 |
@@ -307,6 +307,50 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | **F-3** | `legal-codes/transfer-house.ts:38`(「§167의3 ① 2호 나목 10호」, 실제 ①10호)·`:48`(「§167의10 ⑩」, 실제 ①9호 — 9호는 양도 주택 자체 요건인데 코드는 다른 주택을 본다) 인용·적용 대상 드리프트 의심 | D16 법령 검증 잔여 의심 | 원문 대조 후 결함이면 G-n 등록 |
 | **F-4** | 일반건물 부담부증여 경로(`general-building-route-carryover.ts`)에 D-8 자동 판정이 없다 — 카드가 `isOneHousehold: false` 하드코딩이라 현재 세액 영향 없음 | D45 재현 | 일반건물 카드에서 1세대1주택이 성립할 수 있게 되는 변경이 생길 때 |
 
+## 11. PR-1 (D9) 구현 기록 — 2026-09-18
+
+**구현**
+- `resolveMergeDeeming`(`transfer-tax-exemption-requirements.ts`) 신설 — §155④⑤ 의제 성립(①)의 **단일 정본**.
+  2주택 · 먼저 양도(선언 필수) · 합가 전 **또는 당일** 취득 · 합가일 이후 양도 · 10년 이내(경계 포함).
+  비과세 E-3.5(`transfer-tax-exemption.ts`)와 `resolveDeemedOneHouseBy155`가 함께 부른다.
+- `DeemedOneHouseBasis`에 `marriage_merge`·`parental_care_merge` 추가. 중과 배제 2·3을 지우고 배제 1(15호) 한 갈래로 합쳤다
+  (`multi-house-surcharge-exclusion.ts`) — ⑨ 차감(3→2) 제외, **2023-02-28 전 양도분은 구 5·6호라 §154① 게이트 없음**.
+- 겸용주택 경로: `isFirstTransferredInMerge`를 route → `buildMixedUseAssetInput` → `MixedUseAssetInput` → 엔진까지 이었다.
+  종전 겸용은 `householdHousingCount: 0`을 넘겨 합가 의제가 설 수 없었다(주석 근거 「2를 넣으면 §155⑦ 오판정」은 `ruralHouse` 미주입이라 해당 없음).
+- Q-4 안내: 3주택 이상 + 합가 입력이면 중과 결과 `warnings`에 한계 문구(`MultiHouseSurchargeDetailCard`가 표시).
+- Q-5: 토글 설명(`MergeDateSection.tsx`)에 「2주택 중과배제(§167의10①15호)」와 「합가일 이전 또는 당일 취득」 명시.
+- 법령 상수: `MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS` · `*_BASIS_OLD`(구 5·6호) · `MERGE_3HOUSE_OVERLAP_BASIS` · `MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE`.
+
+**기존 테스트 계약 변경 (단언 의도는 유지)**
+- 직접 호출 5건(`basic-exclusion` MH-07 · `gaps-2a-marriage` A-155-7y·10y경계 · `gaps-154-marriage-gate` C-154-met·undefined):
+  중과 엔진이 의제를 재판정하지 않으므로 `deemedOneHouseBy155: resolveMergeDeeming(...)`을 넘긴다 — 날짜 조건은 그 함수가 계속 검증한다.
+- `multi-house-marriage-154`: 공통 입력에 먼저 양도 선언 추가. 「보유<2년」·「단서(수용)」 두 케이스는 취득일이 **혼인 뒤**였다 —
+  새 규칙에서는 합가 후 취득만으로 배제가 불성립해 §154① 게이트 구별력이 사라지므로(`feedback_new_guard_absorbs_sibling_anchor_discriminance`)
+  혼인일을 취득일 뒤(2023-02-01)로 옮겨 **§154①만** 가르게 했다.
+
+**anchor** — `__tests__/tax-engine/transfer/merge-deeming-surcharge-d9.anchor.test.ts`(파이프라인 9 + 단위 7) ·
+`__tests__/api/transfer.route.mixed-use-merge-deeming-d9.anchor.test.ts`(겸용 route 4). 수정 전 결함 8건 RED · 긍정 짝 1건 GREEN 확인.
+
+**구현 후 mutation (원본은 백업 복원 — git checkout 미사용)**
+
+| P | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-1 | 2주택 조건 제거 | D9-A1 · 단위 「주택 수 ≠ 2」 |
+| P-2 | 먼저 양도 조건 제거 | D9-A8 · MUM-2·4 · 단위 · 기존 `merge-155-4-5` 선양도 OFF |
+| P-3 | 당일 취득 불인정(`>=`) | D9-A6 · 단위 |
+| P-4 | 합가 전 취득 조건 제거 | D9-A3 · 단위 · 기존 `merge-155-4-5` 합가 후 취득 |
+| P-5 | 10년 경계 제외(`>=`) | D9-A4 · 단위 · A-155-10y경계 |
+| P-6 | §154① 게이트 제거 | D9-A2·A5·A7 · C-154-notmet · MH154 2건 · basic-exclusion 1건 |
+| P-7 | 구 5·6호 분기 제거 | D9-A5 |
+| P-8 | 겸용 먼저 양도 배선 제거 | MUM-1·3·4 |
+| P-9 | Q-4 안내 제거 | D9-A1 |
+
+**게이트**: `tsc` 0건 · 전체 vitest 2,110파일 22,069건 중 실패 1건(`legal-codes-namespace-export` NS-META-2 — 새 export를 표에 등록해 해소) ·
+법령 검증 커버리지 통과. **브라우저 확인은 하지 않았다** — UI 변경은 토글 설명 문구 1건이다.
+
+**세액이 오르는 방향(PR 본문 명시)**: ① 3주택 이상 동거봉양 ② §154① 미충족 동거봉양 ③ 합가(혼인) 후 취득 주택 ④ 먼저 양도 **미선언** 혼인·동거봉양(Q-5).
+**내리는 방향**: 합가일로부터 정확히 10년 되는 날(동거봉양) · 취득일 = 합가일(비과세 E-3.5, F-2) · 2023-02-28 전 §154① 미충족 혼인(구 6호).
+
 ## 부록. 변경 이력
 
 | 버전 | 날짜 | 내용 |
@@ -315,3 +359,4 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | v0.2 | 2026-09-18 | **Q-3 대안 채택**(저장 당시 세액 유지 + 전환 버튼 — 판별은 옛 필드 존재로만, anchor L1~L3) · **Q-4 권장안 채택**(범위 밖 + 결과 안내) · §10 후속 작업 F-1~F-4 신설 |
 | v0.3 | 2026-09-18 | **V-4·V-5 해소** — §1.4 설계 정정(배제 3에 게이트 덧붙이기 → E-3.5 합가 판정을 공용 술어로 꺼내 `deemedOneHouseBy155`에 채움), F-2를 PR-1에 흡수, Q-5(먼저 양도 요건) 신설 |
 | v0.3′ | 2026-09-18 | **Q-5 확정 — 토글 필수**(기존 미체크 혼인 중과배제는 세액 증가 · PR 본문 명시) · anchor D9-A8 |
+| v0.4 | 2026-09-18 | **PR-1(D9) 구현** — §11 구현 기록·mutation 9건·세액 방향 |
