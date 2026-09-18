@@ -500,6 +500,7 @@ export function runRentalHousingExceptionStep(
     effectiveInput.standardPriceAtAcquisition,
     effectiveInput.standardPriceAtTransfer,
     effectiveInput.assetContractDate,
+    effectiveInput.isUnregistered,
   );
 
   const cap = applyReductionStatutoryCap({

@@ -8,6 +8,7 @@
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
 import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
+import { TRANSFER } from "./legal-codes/transfer";
 import type { RentalHousingType } from "./rental-housing-reduction";
 
 /**
@@ -115,6 +116,27 @@ export interface ReductionsResult {
   reductionLegalBasisOverride?: string;
 }
 
+/**
+ * 조특법 §129② — 「미등기양도자산에 대해서는 양도소득세의 비과세 및 **감면**에 관한 규정을
+ * 적용하지 아니한다」(D15). 비과세 배제(소득세법 §91①)는 `checkExemption`이 맡는다.
+ *
+ * 감면은 두 트랙에 걸쳐 있다 — 세액감면형(`calcReductions`, 마지막 인자)과 차감형
+ * (`resolveIncomeDeduction` 호출부 — `transfer-tax.ts` STEP 4.6·`transfer-tax-redevelopment.ts`).
+ * 한쪽만 막으면 다른 트랙으로 새므로 둘 다 막고, 감면을 선택했을 때만 이 안내를 결과에 싣는다.
+ */
+export function unregisteredReductionNotice(input: {
+  isUnregistered?: boolean;
+  reductions?: ReadonlyArray<unknown>;
+  rentalReductionDetails?: unknown;
+  newHousingDetails?: unknown;
+}): string | undefined {
+  if (!input.isUnregistered) return undefined;
+  if (!((input.reductions?.length ?? 0) > 0 || input.rentalReductionDetails || input.newHousingDetails)) {
+    return undefined;
+  }
+  return `미등기양도자산에는 양도소득세 감면을 적용하지 않습니다(${TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION}) — 선택한 감면을 계산에서 제외했습니다.`;
+}
+
 export function calcReductions(
   calculatedTax: number,
   reductions: TransferReduction[],
@@ -133,6 +155,8 @@ export function calcReductions(
   standardPriceAtTransfer?: number,
   // Phase 2 (2026-06-11): §97의2·§97의5 시한 판정용 매매계약일 (자산-수준 assetContractDate)
   assetContractDate?: Date,
+  /** 조특법 §129② — 미등기양도자산이면 감면 전부 미적용 (D15) */
+  isUnregistered?: boolean,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
@@ -143,6 +167,8 @@ export function calcReductions(
   rental97TaxDetail?: Rental97Result;
   hybridTaxDetail?: UnsoldHybridResult;
 } {
+  // 조특법 §129② — 레거시 `rentalReductionDetails`·`newHousingDetails`도 이 함수 안에서 소비되므로 함께 닫힌다.
+  if (isUnregistered) return { reductionAmount: 0 };
   if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
     return { reductionAmount: 0 };
   }

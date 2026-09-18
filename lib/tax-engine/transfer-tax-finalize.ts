@@ -325,6 +325,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     input.standardPriceAtTransfer,
     // Phase 2 (2026-06-11): §97의2·§97의5 시한 — 매매계약일 우선
     input.assetContractDate,
+    input.isUnregistered,
   );
   steps.push({
     label: "감면세액",

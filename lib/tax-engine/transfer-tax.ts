@@ -51,6 +51,7 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
+import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 export { calcTax };
 
 export function calculateTransferTax(
@@ -75,6 +76,14 @@ export function calculateTransferTax(
     hceGeneralHouseAcquisitionDate,
   } = pre;
   const workingInput = pre.workingInput;
+
+  // 조특법 §129② — 미등기면 감면 전부 미적용(D15). 계산은 감면 진입점(`calcReductions`·STEP 4.6)이
+  // 막고, 결과 안내는 여기서 한 번만 싣는다.
+  const unregisteredNotice = unregisteredReductionNotice(input);
+  if (unregisteredNotice) warnings.push(unregisteredNotice);
+  // 조기반환 경로(다필지·§155⑳)는 이 `warnings`를 싣지 않는다 — 그 두 곳에는 안내만 덧붙인다.
+  const withUnregisteredNotice = (r: TransferTaxResult): TransferTaxResult =>
+    unregisteredNotice ? { ...r, warnings: [...(r.warnings ?? []), unregisteredNotice] } : r;
 
 
   // STEP 0.45~0.62: 중과·비사업용 판정 전처리 — 별도 파일로 분리 (800줄 정책, CB-08)
@@ -371,7 +380,7 @@ export function calculateTransferTax(
     { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, pre1990LandResult, carryoverDetail, options },
     steps,
   );
-  if (mpBranchResult) return mpBranchResult;
+  if (mpBranchResult) return withUnregisteredNotice(mpBranchResult);
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
   // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
@@ -510,7 +519,7 @@ export function calculateTransferTax(
       steps,
       inheritedAcquisitionStep,
     });
-    if (rheResult) return rheResult;
+    if (rheResult) return withUnregisteredNotice(rheResult);
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
     if (isPrhpScenarioB(effectiveInput) && exemptionResult.isExempt) {
       warnings.push("장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. 일반 과세 경로로 계산되었습니다.");
@@ -623,7 +632,8 @@ export function calculateTransferTax(
   // STEP 4.6: 차감형 감면(§99의3·§99·§98의8) — 양도소득금액 차감 방식 (income-deduction-router)
   // 5년 내 = 발생분 전액(§98의8은 50%) / 5년 후 = 기준시가 안분. 농특세는 finalize 2-pass.
   let transferIncome = transferIncomeBefore993;
-  const incomeDeduction = resolveIncomeDeduction(input.reductions, {
+  // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
+  const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
     transferDate: input.transferDate,
     acquisitionDate: input.acquisitionDate,
     assetContractDate: input.assetContractDate,

@@ -1,9 +1,10 @@
-# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.3)
+# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.5)
 
 > 작성 2026-09-18 · 브랜치 `fix/transfer-review-4-defects`(origin/master `2a68b08c` 기준) · 검증 깊이 **L3**(세액이 바뀐다)
 > 출처: 「1세대1주택 판정 자동화」 문서 3종 리뷰(2026-09-18)가 **문서 밖 현행 코드 결함**으로 보고한 4건.
 > 재현: 결함별 재현 에이전트 1 + 반박 검증 2(법령 관점·코드/도달성 관점)로 **4건 모두 재현**. 수치는 전부 probe 실측이다.
-> 결정: **Q-1~Q-5 전건 확정**(2026-09-18) — §5. 미검증 V-1~V-8(V-4·V-5 ✅) — §6. 후속 작업 F-1·F-3·F-4(F-2는 PR-1 흡수) — §10.
+> 결정: **Q-1~Q-5 전건 확정**(2026-09-18) — §5. 미검증 **V-1~V-8 전건 해소**(2026-09-18) — §6. 후속 작업 F-1·F-3~F-9(F-2는 PR-1 흡수) — §10.
+> 진행: **PR-1(D9) 머지**(#1689) · **PR-2(D15) 구현**(§12).
 
 ---
 
@@ -239,14 +240,14 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 
 | ID | 항목 | 방법 | 막는 PR |
 |---|---|---|---|
-| **V-1** | §167의10① 2주택 배제 각 호 원문 — 10호 「1~7호 주택을 제외하고 1개의 주택만」의 1~7호가 §167의3①의 어느 호를 준용하는지 | KoreanLaw MCP 현행 + DRF 2022-01-01판 | PR-4 |
-| **V-2** | 7호 「제155조제2항에 해당하는」이 상속주택 적격(동일세대·순위)만인지, 일반주택 쪽 요건(상속개시 당시 보유)까지인지 | 원문 + 국세청 해석(taxlaw.nts) | PR-4 |
-| **V-3** | Supabase `tax_rates`의 `house_count_exclusion` effective_date(fallback seed는 2022-01-01) | `mcp__supabase-db__execute_sql` 조회 | PR-4 시점 anchor |
+| **V-1** ✅ | §167의10① 2주택 배제 각 호 원문 | **해소** — 10호의 「제1호부터 제7호까지」는 **§167의10① 자신의** 1~7호다. §167의3①을 끌어오는 호는 **2호**(「제167조의3제1항제2호부터 제8호까지 및 제8호의2」 — 장기임대 2·3호, **상속 5년 7호** 포함)와 12호뿐. ⇒ 2주택(일반 + 5년 내 상속)에서 일반주택 양도 → 10호 배제, 상속주택 양도 → 2호 배제. 서면4팀-588(3주택 10호 동형). 🔴 **시점 분기 필요**: 2022-01-01판(MST 236737)은 §167의3① 본문 괄호가 「제1호」만(「또는 제12호」는 2024-02-29판부터), §167의10①5·6호(합가·혼인)·8·12·13·14호가 살아 있었다(2023-02-28 제33267호에서 삭제·15호 신설). §167의3④(의무임대기간 충족 전 양도도 10호 적용)은 §167의10②로 준용 | PR-4 |
+| **V-2** ✅ | 7호 「제155조제2항에 해당하는」의 범위 | **해소(일부)** — (i) 상속주택 적격(동일세대 단서·순위)은 **7호에 적용**: 서면4팀-2898 · 서면4팀-2403 · 조심-2022-부-5548 · 서울행정법원 2025구단9898(동일세대) · 서면4팀-4227(선순위 1채). **다른 주택 수는 요건 아님**: 부동산거래관리과-362(「기존 주택과 관계없이」). (ii) 일반주택 쪽 요건(상속개시 당시 보유 등)은 **해석 미확보** ⇒ 7호에 **붙이지 않는다**(세액이 오르는 방향인데 법 근거가 확인되지 않음 — `feedback_no_unfavorable_application_without_legal_basis`). 동거봉양 합가 예외의 7호 직접 적용 해석도 미확보(문언상 단서 전체 준용으로 읽힘) | PR-4 |
+| **V-3** ✅ | Supabase `house_count_exclusion` effective_date | **해소** — `transfer:special:house_count_exclusion` effective_date **2022-01-01**(is_active) — fallback seed와 같다 | PR-4 시점 anchor |
 | **V-4** ✅ | 「먼저 양도」 입력 경로 | **해소**: 토글 `MergeDateSection.tsx:48-57`(합가일 입력 시 노출) → `transfer-tax-api.ts:523`·`multi-transfer-tax-api.ts:294` → Zod `transfer-tax-schema-base-shape.ts:139` → `engine-input.ts:198`·`multi/route.ts:202` → 엔진. **비과세 E-3.5만 소비**하고 중과 `mhInput`에는 없다(`transfer-tax-judgment-steps.ts:43-70`). ⇒ §1.4 설계 정정 + Q-5 | PR-1 |
 | **V-5** ✅ | 합가 전 보유 비교 | **해소 — `<=`**. 서면-2023-부동산-0231(부동산납세과-396, 2023.02.09.) 원문: 「주택을 취득한 날과 동거봉양하기 위하여 세대를 합친 날이 같은 날인 경우에는 … 제155조제4항을 적용할 수 있는 것」. 혼인도 부동산거래관리과-410(2012.08.01.): 같은 날이면 납세자가 선택한 순서. ⇒ E-3.5의 `<`도 결함(F-2 → PR-1 흡수) | PR-1 |
-| **V-6** | 부분 미등기(일반건물 토지/건물)·컴패니언 자산에서 감면이 어느 단위로 배분되는지 → §129② 게이트 단위 | 코드 정독 + probe | PR-2 |
-| **V-7** | 다건 합산 경로의 §133 5년 합산 한도(`priorReductionUsage`)에 미등기 감면이 섞이는 경로 | 코드 정독 + probe | PR-2 |
-| **V-8** | 다건 신고단위 이월과세(`transfer-tax-aggregate-carryover-scope.ts`)가 토글 제거·배우자 예외를 그대로 물려받는지 | probe | PR-3 |
+| **V-6** ✅ | 부분 미등기·컴패니언의 감면 배분 단위 | **해소** — 감면은 **엔진 카드 단위**(GB 토지/건물 축은 카드별 `isUnregistered` — `general-building-route-cards.ts:208`; 컴패니언·겸용 파트도 카드별 `finalize` 호출)라 카드의 `isUnregistered`를 넘기면 축별로 닫힌다. ⚠️ 차감형(`resolveIncomeDeduction`)은 `calcReductions` **밖** — 호출부 2곳(`transfer-tax.ts` STEP 4.6 · `transfer-tax-redevelopment.ts` Step C.5)에도 게이트 필요(미게이트 시 §99 미등기 94,500,000 과소). 겸용은 `computeMixedUsePostTax`에 플래그 전달 경로가 없었다 | PR-2 |
+| **V-7** ✅ | 다건 §133 5년 합산 한도 | **해소** — M-8(`transfer-tax-aggregate-reduction-step.ts`)은 `calcReductions` 반환값만 소비한다(다른 생산자 0건). 게이트가 0을 내면 한도 계산도 0을 받는다. `priorReductionUsage`는 사용자 입력 이력이라 되먹임 없음 | PR-2 |
+| **V-8** ✅ | 다건 신고단위 이월과세 상속 | **해소** — 신고단위 이월과세는 `/multi`가 아니라 **단건 route의 함께양도·일반건물 경로**에서 돈다(`calculateTransferTaxAggregate`). 자산마다 단건 `calculateTransferTax` → Step 2·Step 5.5(D-8)를 그대로 통과하고, `aggregate-carryover-scope`는 ②3호 A/B 비교만 한다(override는 Step 6에서만 쓰여 D-8을 덮지 못함). ⇒ **엔진은 단건 2곳만 고치면 물려받는다**. 배관은 ⑫(`transfer-tax-schema-base-shape.ts` · `transfer-tax-building-schemas.ts`)·④(`transfer-tax-api-carryover.ts` · `transfer-tax-api-gb-carryover.ts`) 명시 필요, ⑭는 spread라 불요. probe: OH-2 함께양도 토글 on 344,622,000 → 257,010,000(과소 폭이 단건보다 크다) | PR-3 |
 
 ---
 
@@ -290,7 +291,7 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | 순서 | PR | 범위 | 선결 |
 |---|---|---|---|
 | 1 | **PR-1 D9** | 합가 의제 공용 술어 추출(E-3.5 ↔ 중과) · `deemedOneHouseBy155` 확장 · 배제 2·3 → 15호 · 시점 상수 · F-2 · 토글 설명 · 겸용 배선 · 문서 정정 | ✅ **구현 완료**(§11) |
-| 2 | **PR-2 D15** | `calcReductions` §129② 게이트(5개 호출부) + validate·Zod + 결과 표시 + 주석 정정 | V-6·V-7 |
+| 2 | **PR-2 D15** | `calcReductions` §129② 게이트(5개 호출부) + **차감형 2곳** + 겸용 플래그 전달 + validate·Zod + 결과 안내 + 주석 정정 | ✅ **구현 완료**(§12) |
 | 3 | **PR-3 D45** | 토글 제거 + 배우자 예외 + 레거시 플래그·전환 버튼 + D-8 주석 정정 | V-8 |
 | 4 | **PR-4 D16** | 주택 수 산정·§167의10①10호·양도 주택 자체 배제·§155② 게이트 + 문구·문서 정정 | V-1·V-2·V-3 |
 
@@ -305,6 +306,11 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | **F-1** | 3주택 이상에서 §155①(일시적 2주택)과 §155④·⑤가 겹쳐 합가 특례가 성립하는 경우의 중과 배제(소득세법 시행령 §167의3①13호) — 엔진 모델링 + anchor | Q-4 | 13호 중과 배제를 직접 다룬 국세청 해석·심판례 확보(taxlaw.nts) — 비과세 쪽 부동산거래관리과-48은 유추 근거일 뿐 |
 | ~~**F-2**~~ → PR-1 | 비과세 경로 E-3.5의 합가 전 보유 비교 `acquisitionDate < mergeDate` | V-5 ✅ 결함 확정 | **PR-1에 흡수** — 공용 술어로 꺼내면 같은 함수라 따로 둘 수 없다. anchor: 취득일 = 합가일 → 비과세 성립 |
 | **F-3** | `legal-codes/transfer-house.ts:38`(「§167의3 ① 2호 나목 10호」, 실제 ①10호)·`:48`(「§167의10 ⑩」, 실제 ①9호 — 9호는 양도 주택 자체 요건인데 코드는 다른 주택을 본다) 인용·적용 대상 드리프트 의심 | D16 법령 검증 잔여 의심 | 원문 대조 후 결함이면 G-n 등록 |
+| **F-5** | `/api/calc/transfer/multi`를 API로 직접 호출하면 `carryoverTaxation`이 route 매핑(⑭)에서 조용히 빠진다 — 200 · 취득가액 0 · 양도차익 15억(probe). 화면은 ⑧(`multi-transfer-tax-validate.ts:133-135`)이 막는다 | V-8 조사 | 다건 route에 이월과세 지원을 붙이거나 ⑫에서 거부 |
+| **F-6** | 부수토지 한도 초과로 카드가 둘로 나뉘면(`bundled-companion-split.ts:214`) D-8(②2호)을 **카드마다** 판정 — 초과분 토지 카드는 A가 1세대1주택이 아니라 이월과세 비교에 남는다. ②2호 「고가주택(이에 딸린 토지를 포함한다)」에 초과분 토지가 들어가는지 법령 판단 필요. 겸용 파트 카드도 같은 구조 | V-8 조사 | 해석 확보 |
+| **F-7** | 컴패니언 일반건물은 GB 분기가 `c.isUnregistered`를 쓰지 않고 `gbv` 축만 쓰는데(`bundled-split-helpers.ts:625-628`) 컴패니언용 `gbLandUnregistered`·`gbBuildingUnregistered` 입력 UI가 없다 — 화면의 「미등기 양도」 토글이 엔진에서 무시되는 것으로 보인다(70% 미적용 의심 · UI 실측 안 함) | V-6 조사 | UI 실측으로 재현 확인 |
+| **F-8** | §155⑳(장기임대주택 보유자 거주주택) 특례 경로에 **§91① 미등기 비과세 배제가 없다** — 미등기여도 특례가 적용된다(probe: `rentalHousingExceptionDetail.applied: true`, 15억/11억 · 세액 25,179,000). 소득세법 §91①·조특법 §129②상 비과세 불가 → 과소 방향 | PR-2 probe | 별건 PR — 법령상 기대값 probe 후 |
+| **F-9** | GB 부분 미등기(토지만)에서 게이트 후 M-8이 건물 감면을 「합산 산출세액(토지 70% 포함) × 건물 감면대상소득 / 합산 과세표준」으로 재계산 — 건물 단독 7,582,000 → 13,445,744. §90① 「산출세액」 문언 그대로이나 미등기 70%분이 건물 감면으로 번지는 것이 맞는지 해석 확인 | V-6 조사 | 해석 확보 |
 | **F-4** | 일반건물 부담부증여 경로(`general-building-route-carryover.ts`)에 D-8 자동 판정이 없다 — 카드가 `isOneHousehold: false` 하드코딩이라 현재 세액 영향 없음 | D45 재현 | 일반건물 카드에서 1세대1주택이 성립할 수 있게 되는 변경이 생길 때 |
 
 ## 11. PR-1 (D9) 구현 기록 — 2026-09-18
@@ -351,6 +357,64 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 **세액이 오르는 방향(PR 본문 명시)**: ① 3주택 이상 동거봉양 ② §154① 미충족 동거봉양 ③ 합가(혼인) 후 취득 주택 ④ 먼저 양도 **미선언** 혼인·동거봉양(Q-5).
 **내리는 방향**: 합가일로부터 정확히 10년 되는 날(동거봉양) · 취득일 = 합가일(비과세 E-3.5, F-2) · 2023-02-28 전 §154① 미충족 혼인(구 6호).
 
+## 12. PR-2 (D15) 구현 기록 — 2026-09-18
+
+**법령**: 조세특례제한법 §129② 현행 원문 직접 조회(KoreanLaw MST 284389, 시행 2026-09-18) —
+「「소득세법」 제104조제3항에 따른 미등기양도자산에 대해서는 양도소득세의 비과세 및 감면에 관한 규정을 적용하지 아니한다.」
+상수 `TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION` · manifest `additions-transfer.ts`(키워드 verbatim).
+
+**구현 — 게이트 7곳 + 겸용 1곳 (V-6)**
+- 세액감면형: `calcReductions`에 마지막 인자 `isUnregistered` — 참이면 후보·레거시 인자(`rentalReductionDetails`·`newHousingDetails`)와 무관하게 `{ reductionAmount: 0 }`.
+  호출부 5곳: `transfer-tax-finalize.ts`(단건·모든 집계 카드) · `-multi-parcel-branch.ts` · `-redevelopment.ts` · `-rental-housing-step.ts` · 겸용은 아래.
+- 차감형: `resolveIncomeDeduction` 호출부 2곳(`transfer-tax.ts` STEP 4.6 · `transfer-tax-redevelopment.ts` Step C.5)에 미등기면 `undefined`.
+- 겸용: `MixedUsePostTaxInput.isUnregistered`(`buildTotalTax`가 채움) → 미등기면 감면 목록 전체를 비운다(차감형 고지·LTHD 특례 고지도 함께 사라짐).
+- 결과 안내: `unregisteredReductionNotice` — 미등기 + 감면 선택일 때만 `warnings`에 1줄. `calculateTransferTax`가 한 번 싣고,
+  조기반환 두 경로(다필지·§155⑳)는 본 경로 `warnings`를 싣지 않으므로 반환 직전에 덧붙인다. 겸용은 자체 `warnings`.
+  결과뷰는 기존 `result.warnings` 렌더러(`CalculationWarningsCard` — 단건·다건, `BurdenedTransferTaxResultCard`)를 그대로 탄다. 다건 집계는 자산 라벨(`[L] …`)을 붙인다.
+- Q-1: ⑧ `validateStep2Reductions` — 자경농지(`self_farming`) + 미등기면 차단(주 자산 = 폼-전역 `form.isUnregistered`, 컴패니언 = 자산 값 — ④와 같은 축).
+  ⑫ `refineUnregisteredSelfFarming` — 주 자산(`addPropertyRefines`)·컴패니언(`transfer-tax-schema.ts` 일괄양도 루프) 거부.
+- 정정: `transfer-tax-exemption.ts` §91① 주석(§129②를 놓친 서술) · `transfer-unregistered-asset-kind-coverage.plan.md`(「범위 밖」 → §129② 근거).
+
+**anchor** — `__tests__/tax-engine/transfer/unregistered-reduction-129-2-d15.anchor.test.ts`(9) ·
+`__tests__/api/transfer.route.unregistered-reduction-d15.anchor.test.ts`(겸용 1 · Zod 2) · `__tests__/calc/transfer-validate-unregistered-self-farming-d15.test.ts`(3).
+경로마다 「미등기 + 감면 = 미등기 + 감면 없음」 동등성 + 등기 긍정 짝(감면이 실제로 붙는 입력). mock 세율 실측:
+
+| 경로 | 미등기 + 감면 | 등기 + 감면(긍정 짝) |
+|---|---|---|
+| 단건 §77(토지 6억/2억) | 감면 0 · 308,000,000 | 감면 8,855,000 · 89,435,500 |
+| 단건 §77의3 | 감면 0 | 34,204,000 |
+| STEP 4.6 §99(차감형) | 462,000,000 = 감면 없음 | 134,166,000(감면 없음 176,286,000) |
+| 다필지 §77 | 감면 0 · 안내 | 16,506,000 |
+| 재개발 §77 / §99의3(차감형) | 감면 0 · 같은 세액 | 8,375,491 / 산출세액 26,086,550 |
+| §155⑳ §77 | 감면 0 · 안내 | 364,500 |
+| 다건 집계(토지 카드만 미등기) | 토지 카드 0 · 건물 카드 7,582,000 | 둘 다 7,582,000 |
+| 겸용 route §77 | 감면 0 · 농특세 0 | 5,532,128 |
+
+**mutation 16건 전건 KILLED** (원본 백업 복원 — git checkout 미사용)
+
+| M | 무력화 | 실패한 anchor |
+|---|---|---|
+| M1 | finalize 인자 | A1·A2·A7 |
+| M2 | 다필지 인자 | A4 |
+| M3 | 재개발 세액감면 인자 | A5 |
+| M4 | 재개발 차감형 게이트 | A5(최초 SURVIVED → §99의3 케이스 추가 후 KILLED) |
+| M5 | STEP 4.6 차감형 게이트 | A3 |
+| M6 | §155⑳ 인자 | A6 |
+| M7 | 겸용 목록 비우기 | MU1 |
+| M8 | `calcReductions` 조기 0 | A1·A2·A4~A8 |
+| M9 | 본 경로 안내 | A1·A3·A5·A7 |
+| M10·M11 | 조기반환 안내(다필지·§155⑳) | A4 / A6 |
+| M12 | validate 차단 | V-1·V-2 |
+| M13·M14 | Zod 주 자산 / 컴패니언 | V1 / V2 |
+| M15 | 겸용 안내 | MU1 |
+| M16 | validate 컴패니언 축(폼-전역으로 대체) | V-2 |
+
+**게이트**: `tsc` 0건 · `__tests__/{tax-engine,api,calc,lib}` 1,649파일 18,211건 통과(법령 검증 커버리지 포함).
+**브라우저 확인은 하지 않았다** — 화면 변경은 validate 차단 문구와 기존 경고 카드에 실리는 안내 1줄이다.
+
+**세액이 오르는 방향(PR 본문 명시)**: 미등기 + 조특법 감면(세액감면형·차감형 전부) — 감면·농특세가 0이 된다.
+**바뀌는 입력 계약**: 미등기 + 자경농지 감면은 화면(⑧)과 API(⑫) 모두 거부된다(종전: §69 감면이 과다 적용).
+
 ## 부록. 변경 이력
 
 | 버전 | 날짜 | 내용 |
@@ -360,3 +424,4 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | v0.3 | 2026-09-18 | **V-4·V-5 해소** — §1.4 설계 정정(배제 3에 게이트 덧붙이기 → E-3.5 합가 판정을 공용 술어로 꺼내 `deemedOneHouseBy155`에 채움), F-2를 PR-1에 흡수, Q-5(먼저 양도 요건) 신설 |
 | v0.3′ | 2026-09-18 | **Q-5 확정 — 토글 필수**(기존 미체크 혼인 중과배제는 세액 증가 · PR 본문 명시) · anchor D9-A8 |
 | v0.4 | 2026-09-18 | **PR-1(D9) 구현** — §11 구현 기록·mutation 9건·세액 방향 |
+| v0.5 | 2026-09-18 | PR-1 머지(#1689) · **V-1~V-3·V-6~V-8 해소**(§6) · **PR-2(D15) 구현**(§12 — 차감형 2곳·겸용 경로를 설계에 추가) · 후속 F-5~F-9 신설 |

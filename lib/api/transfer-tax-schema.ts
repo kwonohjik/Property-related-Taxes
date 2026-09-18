@@ -21,6 +21,7 @@ export {
 } from "./transfer-tax-building-schemas";
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
 import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
+import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
 // 정의는 `./transfer-tax-building-schemas.ts` 참조.
@@ -137,6 +138,9 @@ export const propertySchema = z
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
     const companions = data.companionAssets ?? [];
+    companions.forEach((c, i) =>
+      refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]),
+    );
     if (companions.length > 0) {
       // 총 양도가액 필수
       if (data.totalSalePrice === undefined || data.totalSalePrice <= 0) {
