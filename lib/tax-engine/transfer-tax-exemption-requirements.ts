@@ -156,10 +156,22 @@ export type ExemptionReqInput = ResidenceReqInput &
  * **타입 전용 narrowing이며 동작은 불변**이다.
  */
 export type DeemedOneHouseReqInput = ExemptionReqInput &
+  MergeDeemingReqInput &
   Pick<
     TransferTaxInput,
     "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse" | "householdHousingCount" | "ruralHouse"
   >;
+
+/** §155④⑤ 합가 의제 성립 판정 입력 — `resolveMergeDeeming` 전용 narrowing. */
+export type MergeDeemingReqInput = Pick<
+  TransferTaxInput,
+  | "householdHousingCount"
+  | "marriageMerge"
+  | "parentalCareMerge"
+  | "isFirstTransferredInMerge"
+  | "acquisitionDate"
+  | "transferDate"
+>;
 
 export interface ExemptionResult {
   isExempt: boolean;
@@ -578,7 +590,7 @@ export function evaluateTemporaryTwoHouseTiming(
  * 없다. 그래서 §155① 타이밍만 **선판정**해 `MultiHouseSurchargeInput.deemedOneHouseBy155`로 넘긴다.
  *
  * ② 요소(§154① 요건 모두 충족)는 중과 엔진이 `sellingHouseMeetsOneHouseRequirements`로 AND한다.
- * 현재 채우는 항은 ①(일시적 2주택)뿐 — 나머지 §155 각 항은 계획서 Phase C·D.
+ * 채우는 항: ⑦(농어촌) · ①(일시적 2주택) · ④⑤(합가 — `resolveMergeDeeming`). 나머지 §155 각 항은 후속.
  */
 export function resolveDeemedOneHouseBy155(
   input: DeemedOneHouseReqInput,
@@ -588,9 +600,44 @@ export function resolveDeemedOneHouseBy155(
   // §155⑦ 농어촌주택 — ①(일시적 2주택)과 양립하지 않으므로 먼저 본다.
   if (qualifiesRuralHouse(input)) return "rural_house";
   const twoHouseRule = oneHouseRules?.temporary_two_house;
-  if (!input.temporaryTwoHouse || !twoHouseRule) return undefined;
-  return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
-    ? "temporary_two_house"
-    : undefined;
+  if (
+    input.temporaryTwoHouse &&
+    twoHouseRule &&
+    evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
+  ) {
+    return "temporary_two_house";
+  }
+  // §155④⑤ 합가 — 비과세 E-3.5와 **같은 술어**다(중과가 따로 판정하면 두 경로가 갈린다).
+  return resolveMergeDeeming(input);
+}
+
+/**
+ * §155④(동거봉양)·⑤(혼인) 1세대1주택 **의제 성립** 여부 — §154① 충족은 **보지 않는다**.
+ *
+ * 비과세 E-3.5(`checkExemption`)와 중과 배제(영 §167의10①15호 ① 요소)가 함께 쓰는 정본이다.
+ * ② 요소(§154① 요건)는 각 호출부가 따로 AND한다 — 비과세는 `meetsOneHouseHoldingResidence`,
+ * 중과는 `sellingHouseMeetsOneHouseRequirements`.
+ *
+ * 요건(§155④·⑤ 문언):
+ * - 합침(혼인)으로써 **1세대가 2주택**을 보유하게 된 경우
+ * - 합친 날(혼인한 날)부터 10년 이내에 **먼저 양도하는 주택** — 사용자 선언(`isFirstTransferredInMerge`)
+ * - 양도 주택이 합가(혼인) **전 또는 당일** 취득분 — 서면-2023-부동산-0231(동거봉양 합가일 = 취득일이면
+ *   §155④ 적용 가능) · 부동산거래관리과-410(혼인일 = 취득일이면 납세자가 선택한 순서)
+ *
+ * 혼인·동거봉양 입력이 둘 다 있으면 혼인을 먼저 본다(종전 E-3.5 순서 유지).
+ * ⚠️ 연수는 현행 10년 상수다 — 혼인 5년→10년 시점 분기는 「1세대1주택 판정 자동화」 계획서 G-7.
+ */
+export function resolveMergeDeeming(
+  input: MergeDeemingReqInput,
+): "marriage_merge" | "parental_care_merge" | undefined {
+  if (input.householdHousingCount !== 2) return undefined;
+  if (input.isFirstTransferredInMerge !== true) return undefined;
+  const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
+  if (!mergeDate) return undefined;
+  // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
+  if (input.transferDate < mergeDate) return undefined;
+  if (input.acquisitionDate > mergeDate) return undefined;
+  if (input.transferDate > addYears(mergeDate, MERGE_EXEMPTION_YEARS)) return undefined;
+  return input.marriageMerge ? "marriage_merge" : "parental_care_merge";
 }
 

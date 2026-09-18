@@ -78,6 +78,8 @@ export interface MixedUseAssetInputSources {
   presaleRights: TransferTaxInput["presaleRights"];
   marriageMerge: TransferTaxInput["marriageMerge"];
   parentalCareMerge: TransferTaxInput["parentalCareMerge"];
+  /** §155④⑤ 「먼저 양도」 선언 — 합가 의제(영 §167의10①15호 ① 요소) 판정용. */
+  isFirstTransferredInMerge: TransferTaxInput["isFirstTransferredInMerge"];
   /** ⚠️ `mapGracePeriodToEngine` 변환본. */
   gracePeriod: TransferTaxInput["gracePeriod"];
   /**
@@ -163,6 +165,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     temporaryTwoHouse: s.temporaryTwoHouse,
     // ⑭ §89①3호 주택수 제외 축 (D4-02).
     householdHousingCountForExclusion: s.householdHousingCount,
+    // ⑭ §155④⑤ 합가 「먼저 양도」 — 중과 15호 ① 요소(D9).
+    isFirstTransferredInMerge: s.isFirstTransferredInMerge,
     // ⑭ §97 시리즈 시한 기준일 (CB-05).
     assetContractDate: s.assetContractDate,
     specialHouseExclusions: s.specialHouseExclusions,

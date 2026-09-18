@@ -29,6 +29,7 @@ function marriageInput(overrides: Partial<TransferTaxInput>): TransferTaxInput {
     sellingHouseId: "h1",
     houses: marriageHouses(),
     marriageMerge: { marriageDate: new Date("2022-06-01") }, // 혼인 2년전 (10년 이내)
+    isFirstTransferredInMerge: true, // §155⑤ 「먼저 양도」 — 선언 필수(D9 Q-5)
     ...overrides,
   });
 }
@@ -40,6 +41,8 @@ describe("MH154: §154① 요건 게이트 end-to-end (혼인 2주택 §155⑤ �
   it("보유<2년 → §154① 미충족 → 혼인 전면배제 부적용", () => {
     const r = calculateTransferTax(
       marriageInput({
+        // 혼인 **전** 취득이어야 §155⑤가 성립한다 — 그래야 이 케이스가 §154① 게이트만 가른다.
+        marriageMerge: { marriageDate: new Date("2023-02-01") },
         acquisitionDate: new Date("2023-01-01"),
         transferDate: new Date("2024-06-01"), // 1.4년 보유
       }),
@@ -78,6 +81,7 @@ describe("MH154: §154① 요건 게이트 end-to-end (혼인 2주택 §155⑤ �
   it("보유<2년 + §154① 단서(수용) → 요건 충족 의제 → 혼인 전면배제 적용", () => {
     const r = calculateTransferTax(
       marriageInput({
+        marriageMerge: { marriageDate: new Date("2023-02-01") }, // 혼인 전 취득(§155⑤ 성립)
         acquisitionDate: new Date("2023-01-01"),
         transferDate: new Date("2024-06-01"), // 1.4년 보유
         oneHouseExemptionProviso: {

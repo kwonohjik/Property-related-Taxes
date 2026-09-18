@@ -386,7 +386,13 @@ export interface MultiHouseGracePeriodInput {
  * §167의10①15호(·§167의3①13호) ① 요소로 인정되는 §155 의제 근거.
  * 값이 곧 표시 라벨의 키다 — 어느 항으로 의제가 성립했는지 결과에 남긴다.
  */
-export type DeemedOneHouseBasis = "temporary_two_house" | "rural_house";
+export type DeemedOneHouseBasis =
+  | "temporary_two_house"
+  | "rural_house"
+  /** §155⑤ 혼인 합가 — `resolveMergeDeeming` */
+  | "marriage_merge"
+  /** §155④ 동거봉양 합가 — `resolveMergeDeeming` */
+  | "parental_care_merge";
 
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */
@@ -409,7 +415,7 @@ export interface MultiHouseSurchargeInput {
    * 「비과세 O / 중과배제 X」 모순을 만들었다(계획서 F-2). caller가 §155① 정본
    * (`judgeTemporaryTwoHouseTiming` + `resolveTemporaryTwoHouseDeadlineYears`) 결과를 주입한다.
    *
-   * 값은 의제 근거 항이다. 현재는 ①(일시적 2주택)만 채운다 — 나머지 항은 계획서 Phase C·D.
+   * 값은 의제 근거 항이다. ⑦(농어촌)·①(일시적 2주택)·④⑤(합가)를 채운다 — 나머지 항은 후속.
    */
   deemedOneHouseBy155?: DeemedOneHouseBasis;
   /**

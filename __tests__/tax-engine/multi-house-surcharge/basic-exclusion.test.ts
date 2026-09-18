@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { resolveMergeDeeming } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import {
   countEffectiveHouses,
   isRegulatedAreaAtDate,
@@ -287,6 +288,19 @@ describe("MH-06: §154① 미충족 → 의제 성립해도 배제 부적용 (15
 // MH-07: 혼인합가 1세대1주택 의제(2주택) → 중과 배제 (§155⑤ 10년)
 // ============================================================
 
+/**
+ * 혼인 합가 의제(§155⑤) — 중과 엔진은 재판정하지 않고 caller가 비과세 정본으로 선판정해 넘긴다
+ * (영 §167의10①15호 ① 요소). 날짜 조건(10년·합가 전 취득)은 `resolveMergeDeeming`이 본다.
+ */
+const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
+  resolveMergeDeeming({
+    householdHousingCount: 2,
+    marriageMerge: { marriageDate: new Date(marriageDate) },
+    isFirstTransferredInMerge: true,
+    acquisitionDate: new Date("2010-01-01"),
+    transferDate: new Date(transferDate),
+  });
+
 describe("MH-07: 혼인합가 2주택 중과 배제 (§155⑤ 10년)", () => {
   it("혼인 3년 후 양도 → 배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
@@ -296,6 +310,7 @@ describe("MH-07: 혼인합가 2주택 중과 배제 (§155⑤ 10년)", () => {
       sellingHouseId: "h1",
       transferDate: new Date("2024-06-01"),
       marriageMerge: { marriageDate: new Date("2021-06-01") }, // 3년 전 혼인
+      deemedOneHouseBy155: deemMarriage("2021-06-01"),
     });
 
     const result = determineMultiHouseSurcharge(
@@ -318,6 +333,7 @@ describe("MH-07: 혼인합가 2주택 중과 배제 (§155⑤ 10년)", () => {
       sellingHouseId: "h1",
       transferDate: new Date("2024-06-01"),
       marriageMerge: { marriageDate: new Date("2013-01-01") }, // 11년+ 전 혼인 (§155⑤ 10년 초과)
+      deemedOneHouseBy155: deemMarriage("2013-01-01"), // → undefined (의제 불성립)
     });
 
     const result = determineMultiHouseSurcharge(

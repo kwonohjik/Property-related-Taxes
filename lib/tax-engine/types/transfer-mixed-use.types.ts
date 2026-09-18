@@ -145,6 +145,14 @@ export interface MixedUseAssetInput {
    * 미전달이면 종전 동작(호출부의 `isOneHouseExempt`를 그대로 신뢰)을 유지한다.
    */
   householdHousingCountForExclusion?: number;
+  /**
+   * §155④⑤ 합가 「먼저 양도하는 주택」 사용자 선언 — **폼-전역** 값이라 route가 주입한다.
+   *
+   * 겸용 서브엔진이 이것과 `multiHouse.marriageMerge`·`parentalCareMerge`로 합가 의제를
+   * 선판정해(`resolveDeemedOneHouseBy155` → `resolveMergeDeeming`) 중과 배제(영 §167의10①15호)에
+   * 넘긴다. 미주입이면 합가 의제 불성립 — 단건과 같은 규칙(먼저 양도는 선언 필수).
+   */
+  isFirstTransferredInMerge?: boolean;
   /** P5 모드 2 — 보유 감면주택 주택수 제외 (⑭가 폼-전역 값을 전달) */
   specialHouseExclusions?: import("./transfer.types").TransferTaxInput["specialHouseExclusions"];
   /**
