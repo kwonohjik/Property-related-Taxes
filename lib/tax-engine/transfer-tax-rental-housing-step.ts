@@ -11,6 +11,7 @@
 
 import { applyRate, calculateHoldingPeriod, truncateToWon, calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
+import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
 import { checkEligibility } from "./transfer-tax/rental-housing-exception/eligibility";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
@@ -320,6 +321,24 @@ export function runRentalHousingExceptionStep(
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
     inheritedAcquisitionStep,
   } = args;
+
+  /**
+   * 소득세법 §91① — 미등기양도자산에는 「이 법 또는 이 법 외의 법률 중 양도소득에 대한 소득세의
+   * **비과세**에 관한 규정」을 적용하지 않는다. §155⑳(거주주택 비과세 특례)도 비과세 규정이다.
+   *
+   * 🔴 F-8(2026-09-19): 일반 경로의 §91① 게이트는 `checkExemption` 진입부에만 있어, 이 특례 경로는
+   *    미등기여도 그대로 적용됐다(15억 거주주택 25,179,000 vs 법령 308,000,000 · 10억은 전액 비과세 0 — mock 세율).
+   *    적용 불가로 돌려 일반 과세 경로(미등기 70%·장특·기본공제 배제)로 넘긴다.
+   */
+  if (effectiveInput.isUnregistered) {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
+      formula: "미등기양도자산에는 비과세 규정을 적용하지 않습니다",
+      amount: 0,
+      legalBasis: TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION,
+    });
+    return null;
+  }
 
   const holdPeriod = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate);
   const holdYears = holdPeriod.years;
