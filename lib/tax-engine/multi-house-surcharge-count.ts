@@ -15,6 +15,8 @@ import { MULTI_HOUSE } from "./legal-codes";
 import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
 import { RA_CUT } from "./rental-article/rules";
+import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
+import { passesRankingGate } from "./transfer-inheritance-exclusion";
 import type { SharedRentalArticle } from "./rental-article/types";
 import type {
   RentalHousingType,
@@ -363,6 +365,40 @@ export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Dat
   return true;
 }
 
+/**
+ * §167의3①2호 장기임대주택 — 중과 **대상에서** 빠지는 주택(주택 수에는 산입 · D16).
+ *
+ * 판정 기준은 종전 주택 수 제외 규칙을 그대로 옮겼다 — 임대 유형(`rentalType`) 입력이 있으면
+ * 9유형 정밀 판정(`isLongTermRentalHousingExempt`), 없으면 등록주택(말소 전) 선언으로 인정한다.
+ * 화면이 유형 없이도 장기임대를 받으므로(`HouseEntryEditor`) 기준을 바꾸면 기존 입력의 결과가
+ * 조용히 달라진다. 3주택 「유일한 일반주택」 판정이 종전에 쓰던 `isLongTermRentalHousingExempt`와는
+ * 유형 없는 입력에서만 갈리는데, 그 입력은 종전에 주택 수에서 먼저 빠져 그 판정에 닿지 않았다.
+ * (§167의3④ — 의무임대기간 충족 전 일반주택 양도도 10호를 적용 — 과도 부합한다.)
+ */
+/** §167의3①7호 「상속받은 날부터 5년이 경과하지 아니한 경우」 */
+const INHERITED_HOUSE_SURCHARGE_YEARS = 5;
+
+export function isSurchargeExemptRental(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.isLongTermRental) return false;
+  if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
+  return house.rentalType ? isLongTermRentalHousingExempt(house, transferDate) : true;
+}
+
+/**
+ * §167의3①7호 — 「제155조제2항에 해당하는 상속받은 주택(상속받은 날부터 5년이 경과하지 아니한
+ * 경우에 한정한다)」 — 중과 **대상에서** 빠지는 주택(주택 수에는 산입 · D16).
+ *
+ * 「제155조제2항에 해당하는」 — 동일세대 단서·순위(1~4호)를 비과세 경로와 **같은 함수**로 본다
+ * (서면4팀-2898 · 서면4팀-2403 · 조심-2022-부-5548 · 서울행정법원 2025구단9898 — 동일세대 상속은 7호
+ * 불해당 / 서면4팀-4227 — 선순위 1채). 다른 주택 수는 요건이 아니다(부동산거래관리과-362).
+ * 일반주택 쪽 요건(상속개시 당시 보유)은 해석을 확보하지 못해 **붙이지 않는다**(세액이 오르는 방향).
+ */
+export function isSurchargeExemptInherited(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.isInherited || !house.inheritedDate) return false;
+  if (differenceInYears(transferDate, house.inheritedDate) >= INHERITED_HOUSE_SURCHARGE_YEARS) return false;
+  return passesHouseholdGate(house) && passesRankingGate(house);
+}
+
 export function countEffectiveHouses(
   houses: HouseInfo[],
   transferDate: Date,
@@ -377,18 +413,17 @@ export function countEffectiveHouses(
   const officetelStartDate = new Date(rules.officetelStartDate);
 
   for (const house of houses) {
-    // 배제 1: 상속주택 N년 이내
-    if (house.isInherited && house.inheritedDate) {
-      const yearsFromInheritance = differenceInYears(transferDate, house.inheritedDate);
-      if (yearsFromInheritance < rules.inheritedHouseYears) {
-        excluded.push({
-          houseId: house.id,
-          reason: "inherited_5years",
-          detail: `상속개시일(${house.inheritedDate.toISOString().slice(0, 10)})로부터 ${yearsFromInheritance}년 (${rules.inheritedHouseYears}년 미경과)`,
-        });
-        continue;
-      }
-    }
+    /**
+     * 🔴 D16(2026-09-18): §167의3①7호(상속 5년)·2호(장기임대)는 **주택 수에서 빼지 않는다**.
+     *
+     * 본문 괄호가 주택 수 불산입으로 정한 것은 「제1호 또는 제12호」뿐이다(2022-01-01판은 제1호만).
+     * 7호·2호는 「다음 각 호의 어느 하나에 해당하지 않는 주택」, 즉 **중과 대상에서만** 빠진다 —
+     * 주택 수에는 산입된다. 종전에는 여기서 빼 3주택이 2주택으로(과소), 양도 주택 자체가 상속
+     * 5년이면 그 주택이 빠진 채 나머지로 중과했다(과다).
+     * ⇒ 판정은 `isSurchargeExemptInherited`·`isSurchargeExemptRental`로 옮겼다 —
+     *   양도 주택 자체(`determineSurchargeExclusion`)·3주택 「유일한 일반주택」(`isGroupExcludable`)·
+     *   2주택 §167의10①10호가 쓴다.
+     */
 
     // 배제 1.5: 공동상속주택 소수지분 — §167의3②2호 (2주택은 §167의10②로 준용).
     //   「공동상속주택: 상속지분이 가장 큰 상속인의 소유로 하여 주택수를 계산」이므로
@@ -404,27 +439,6 @@ export function countEffectiveHouses(
         detail: `공동상속주택 소수지분 — 최대지분 상속인의 소유로 계산 (${MULTI_HOUSE.CO_INHERITED_COUNT_BASIS})`,
       });
       continue;
-    }
-
-    // 배제 2: 장기임대 등록주택 (말소 전)
-    if (house.isLongTermRental && rules.rentalHousingExempt) {
-      const isActive = !house.rentalCancelledDate || house.rentalCancelledDate > transferDate;
-      if (isActive) {
-        const qualifiesForExclusion = house.rentalType
-          ? isLongTermRentalHousingExempt(house, transferDate)
-          : true;
-        if (qualifiesForExclusion) {
-          const typeLabel = getRentalTypeLabel(house.rentalType);
-          excluded.push({
-            houseId: house.id,
-            reason: "long_term_rental",
-            detail: house.rentalType
-              ? `장기임대사업자 등록주택 — ${typeLabel}`
-              : "장기임대사업자 등록주택 (말소 전)",
-          });
-          continue;
-        }
-      }
     }
 
     // 배제 3: 지역기준/가액기준 이분법 (소령 §167-3)

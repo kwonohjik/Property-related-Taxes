@@ -162,12 +162,12 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
     expect(r.effectiveHouseCount).toBe(2);
   });
 
-  it("C8: 동일 시군구 보유주택이 산정제외(임대주택)여도 비교대상 → 산입", () => {
+  it("C8: 동일 시군구 보유주택이 임대주택(중과 대상 제외)이어도 비교대상 → 산입", () => {
     const selling = makeHouse("h0", { regionCode: CAPITAL_OTHER, region: "capital" });
     const rental = makeHouse("h1", {
       regionCode: DECLINE_SGG_OTHER, // 동일 시군구
       region: "non_capital",
-      isLongTermRental: true, // 임대주택 → 자체는 산정제외
+      isLongTermRental: true, // 임대주택 → 중과 대상에서만 제외(주택 수 산입 · D16)
       acquisitionDate: new Date("2024-01-01"), // 후보 취득 전
     });
     const second = makeHouse("h2", {
@@ -182,10 +182,11 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       transferDate: new Date("2026-06-01"),
     });
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
-    expect(r.excludedHouses.find((e) => e.houseId === "h1")?.reason).toBe("long_term_rental");
+    // D16 — 임대주택(§167의3①2호)은 주택 수에 산입된다(중과 대상에서만 빠진다).
+    expect(r.excludedHouses.find((e) => e.houseId === "h1")).toBeUndefined();
     // h2: 임대주택 h1과 동일 시군구(취득 전 보유) → 특례 미적용 → 산입
     expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBeUndefined();
-    expect(r.effectiveHouseCount).toBe(2); // h0 + h2 (h1 임대 배제)
+    expect(r.effectiveHouseCount).toBe(3); // h0 + h1 + h2
   });
 });
 

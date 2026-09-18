@@ -243,7 +243,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
           });
         }}
         title="상속주택"
-        description="피상속인으로부터 상속받은 주택 (소령 §167의3①7호 — 상속개시일로부터 5년 이내 주택 수 배제)"
+        description="피상속인으로부터 상속받은 주택 (소령 §167의3①7호 — 상속개시일부터 5년 이내면 중과 대상에서 제외 · 주택 수에는 산입)"
       >
         {/* ON 시만 상속개시일 노출 */}
         <div className="space-y-1 pt-1">
@@ -370,7 +370,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
           });
         }}
         title="장기임대 등록주택"
-        description="임대사업자 등록 장기임대주택 — 의무임대기간(5년↑) 충족 시 주택 수 배제 대상"
+        description="임대사업자 등록 장기임대주택 — 요건 충족 시 중과 대상에서 제외 (소령 §167의3①2호 · 주택 수에는 산입)"
       >
         {/* ON 시 세부 입력 노출 */}
         <div className="space-y-3 pt-1">
@@ -415,7 +415,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
               onChange={(v) => onUpdate({ rentalPeriodYears: v || undefined })}
               placeholder="임대기간 입력"
             />
-            <p className="text-caption text-muted-foreground/70">5년 이상 시 주택 수 배제 대상</p>
+            <p className="text-caption text-muted-foreground/70">5년 이상 시 중과 대상에서 제외 (주택 수에는 산입)</p>
           </div>
 
           {/* 임대사업자 말소일 (optional) */}

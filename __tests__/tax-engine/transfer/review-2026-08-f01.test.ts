@@ -25,7 +25,11 @@ import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggre
 
 const rates = makeMockRatesWithHouseEngine();
 
-/** 3채 중 2채가 2023-03-01 상속 → 영 §167의3 상속 5년 배제로 유효 주택수 1 */
+/**
+ * 3채 중 2채가 2023-03-01 상속 → 중과 배제. D16(2026-09-18)부터 상속 5년(영 §167의3①7호)은 주택 수에
+ * **산입**되고(3주택), 나머지 두 채가 모두 7호라 양도 주택이 §167의3①10호 「유일한 일반주택」으로 배제된다.
+ * 종전(주택 수에서 빼 1주택)과 세액 결론은 같다 — 이 파일의 관심사(정밀 판정 승계)는 그대로다.
+ */
 const houses = [
   makeHouseInfo("h1", { acquisitionDate: new Date("2015-01-01") }),
   makeHouseInfo("h2", {
@@ -75,8 +79,9 @@ describe("F01 — 다건 집계가 houses[] 정밀 다주택 판정을 승계한
       rates,
     );
 
-    // 단건 — 정밀 판정이 상속 2채를 빼 유효 1주택 → 중과 없음(누진 40%)·표1 장특 적용
-    expect(single.multiHouseSurchargeDetail?.effectiveHouseCount).toBe(1);
+    // 단건 — 정밀 판정: 3주택이나 다른 2채가 7호 → 유일한 일반주택 → 중과 없음(누진 40%)·표1 장특 적용
+    expect(single.multiHouseSurchargeDetail?.effectiveHouseCount).toBe(3);
+    expect(single.multiHouseSurchargeDetail?.exclusionReasons.map((e) => e.type)).toContain("only_one_remaining");
     expect(single.longTermHoldingDeduction).toBe(90_000_000);
     expect(single.taxBase).toBe(407_500_000);
     expect(single.appliedRate).toBe(0.4);

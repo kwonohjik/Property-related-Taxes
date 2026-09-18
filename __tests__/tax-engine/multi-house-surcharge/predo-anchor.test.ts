@@ -44,8 +44,10 @@ describe("Pre-Do A1: inheritedDate 없으면 상속5년 배제 미발동 (P0 inh
   });
 });
 
-describe("Pre-Do A2: inheritedDate 5년 이내 → inherited_5years 배제", () => {
-  it("inheritedDate=2022-01-01 (양도 2024-06-01, 5년 미경과) → 상속주택 제외", () => {
+// D16(2026-09-18): 종전 「주택 수에서 제외(inherited_5years)」는 결함 — 7호는 주택 수에 산입되고
+//   중과 대상에서만 빠진다. 2주택에서 다른 주택이 7호면 §167의10①10호로 양도 주택이 배제된다.
+describe("Pre-Do A2: inheritedDate 5년 이내 → 산입 + §167의10①10호 배제", () => {
+  it("inheritedDate=2022-01-01 (양도 2024-06-01, 5년 미경과) → 2주택 산입 · 10호 배제", () => {
     const selling = makeHouse("h1", { regionCode: SELLING });
     const inherited = makeHouse("h2", {
       isInherited: true,
@@ -55,8 +57,10 @@ describe("Pre-Do A2: inheritedDate 5년 이내 → inherited_5years 배제", () 
 
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionActive, true);
 
-    const ex = r.excludedHouses.find((e) => e.houseId === "h2");
-    expect(ex?.reason).toBe("inherited_5years");
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(r.effectiveHouseCount).toBe(2);
+    expect(r.exclusionReasons.map((e) => e.type)).toContain("only_general_two_house");
+    expect(r.surchargeApplicable).toBe(false);
   });
 });
 

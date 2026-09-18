@@ -98,11 +98,11 @@ describe("T-24: houses[] + 일시적 2주택 배제 → 일반세율", () => {
 });
 
 // ============================================================
-// T-25: 장기임대 등록주택 보유 2주택자 → 유효 1주택 → 중과 미적용
+// T-25: 장기임대 등록주택 보유 2주택자 → 2주택 산입 · §167의10①10호 → 중과 미적용 (D16)
 // ============================================================
 
-describe("T-25: 장기임대 등록주택 → 유효 1주택, 중과 미적용", () => {
-  it("임대 등록 유효 주택 1채 → effectiveCount=1, surchargeType 없음", () => {
+describe("T-25: 장기임대 등록주택 → 10호 배제, 중과 미적용", () => {
+  it("임대 등록 유효 주택 1채 → effectiveCount=2 · 10호 · surchargeType 없음", () => {
     const h1 = makeHouseInfo("h1", { regionCode: "11680" }); // 강남구 (조정, 양도주택)
     const h2 = makeHouseInfo("h2", {
       isLongTermRental: true,
@@ -124,8 +124,9 @@ describe("T-25: 장기임대 등록주택 → 유효 1주택, 중과 미적용",
 
     const result = calculateTransferTax(input, mockRatesWithHouseEngine);
 
-    // 유효 주택 1채 → 중과 미적용
-    expect(result.multiHouseSurchargeDetail!.effectiveHouseCount).toBe(1);
+    // D16 — 임대주택은 주택 수에 산입(2) · 다른 주택이 2호라 §167의10①10호 → 중과 미적용
+    expect(result.multiHouseSurchargeDetail!.effectiveHouseCount).toBe(2);
+    expect(result.multiHouseSurchargeDetail!.exclusionReasons.map((e) => e.type)).toContain("only_general_two_house");
     expect(result.surchargeType).toBeUndefined();
     expect(result.surchargeRate).toBeUndefined();
   });

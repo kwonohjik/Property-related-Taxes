@@ -21,6 +21,8 @@ import {
   type HouseCountExclusionRules,
   type RegulatedAreaHistory,
 } from "@/lib/tax-engine/multi-house-surcharge";
+import { isSurchargeExemptRental } from "@/lib/tax-engine/multi-house-surcharge-count";
+import { getGroupExcludeReason } from "@/lib/tax-engine/multi-house-surcharge-exclusion";
 import type { SurchargeSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import {
   defaultRules,
@@ -60,13 +62,13 @@ describe("통합: regionCode 미제공 → isRegulatedFallback 사용", () => {
 // MH-16: 장기임대 유형별 판정 (A~I 세분화)
 // ============================================================
 
-describe("MH-16: 장기임대 마목(E형) 요건 충족 → 산정 제외", () => {
+describe("MH-16: 장기임대 마목(E형) 요건 충족 → 2호 해당", () => {
   const rulesWithLocal: HouseCountExclusionRules = {
     ...defaultRules,
     lowPriceThreshold: { capital: null, non_capital: 100_000_000, local: 300_000_000 },
   };
 
-  it("마목(E) 요건 충족 주택 → 산정 제외 (long_term_rental)", () => {
+  it("마목(E) 요건 충족 주택 → 산입 + 2호 해당 (D16)", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
@@ -91,12 +93,14 @@ describe("MH-16: 장기임대 마목(E형) 요건 충족 → 산정 제외", () 
       rulesWithLocal,
     );
 
-    expect(count).toBe(1);
-    expect(excluded[0].reason).toBe("long_term_rental");
-    expect(excluded[0].detail).toContain("마. 장기일반 매입임대");
+    // D16 — 장기임대(§167의3①2호)는 주택 수에 산입되고 중과 대상에서만 빠진다.
+    expect(count).toBe(2);
+    expect(excluded).toHaveLength(0);
+    expect(isSurchargeExemptRental(h2, new Date("2024-06-01"))).toBe(true);
+    expect(getGroupExcludeReason(h2, new Date("2024-06-01"))).toContain("마. 장기일반 매입임대");
   });
 
-  it("마목(E) 임대기간 미달 (8년 미만) → 산정 포함", () => {
+  it("마목(E) 임대기간 미달 (8년 미만) → 2호 불해당", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
@@ -110,14 +114,9 @@ describe("MH-16: 장기임대 마목(E형) 요건 충족 → 산정 제외", () 
       rentIncreaseUnder5Pct: true,
     });
 
-    const { count } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2024-06-01"),
-      [],
-      rulesWithLocal,
-    );
-
-    expect(count).toBe(2); // 요건 미달 → 포함
+    // D16 — 주택 수는 요건과 무관하게 산입된다. 구별력은 2호 술어로 옮긴다.
+    //   ⚠️ §167의3④(의무임대기간 충족 전 일반주택 양도도 10호 적용)는 미반영 — 계획서 F-10.
+    expect(isSurchargeExemptRental(h2, new Date("2024-06-01"))).toBe(false); // 요건 미달 → 2호 불해당
   });
 
   it("isLongTermRentalHousingExempt: 아목(H) 2025.6.4 이후 등록, 6년, 4억 이하 → true", () => {
