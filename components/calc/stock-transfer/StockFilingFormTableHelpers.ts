@@ -651,6 +651,49 @@ export function buildRows(
 
   // ── [J] 신고 (32) ─────────────────────────────────────────────
 
+  /**
+   * ── §118의16 납부유예 (31-E1~E3 · 조건부) ─────────────────────
+   *
+   * 🔑 납부유예는 **세액을 줄이지 않는다** — 출국일부터 실제 양도까지 납부 **시기**를 미루는
+   *   것이다(§118의16①). 그래서 31행 총 납부세액 **뒤**에 오고 그 값을 건드리지 않는다.
+   *   위 25-E1~E4(공제·가산세)와 성격이 다르므로 자리도 가른다.
+   *
+   * ⚠️ 값이 있을 때만 행을 만든다 — 0을 채우면 「유예 0원」과 「유예 신청 자체가 없음」이
+   *   구분되지 않는다(25-E 계열과 같은 규약).
+   */
+  const deferralRowCount = (() => {
+    if (!isExit || !result.exitDetail) return 0;
+    const d = result.exitDetail;
+    if (d.deferredTaxAmount <= 0) return 0;
+    let n = 0;
+
+    rows.push({
+      label: "31-E1. 납부유예 신청 세액 (§118의16① — 세액 감면이 아니라 납부 시기 유예)",
+      values: val(d.deferredTaxAmount),
+      indent: true,
+    });
+    n += 1;
+
+    // §118의16② 「5년(국외유학 등 대통령령으로 정하는 사유 … 10년)」
+    rows.push({
+      label: "31-E2. 납부유예 기간 (§118의16② — 실제 양도 시 §118의16③)",
+      values: val(`${d.deferralYears}년`),
+      indent: true,
+    });
+    n += 1;
+
+    // §118의16④ 「… 납부유예를 받은 기간에 대한 이자상당액을 가산하여 납부하여야 한다」
+    if (d.deferralInterest !== undefined && d.deferralInterest > 0) {
+      rows.push({
+        label: "31-E3. 납부유예 이자상당액 (§118의16④ — 납부 시 가산)",
+        values: val(d.deferralInterest),
+        indent: true,
+      });
+      n += 1;
+    }
+    return n;
+  })();
+
   // 32. 신고기한
   //
   // 🔑 국외주식(§94①3호**다목**)에는 **예정신고 의무가 없다** — §105① 본문 괄호가
@@ -702,6 +745,8 @@ export function buildRows(
     // 국외전출세 전용 공제·가산세 25-E1~25-E4 — 실제로 push 된 개수를 그대로 쓴다
     // (값이 있을 때만 만들어지므로 조건식을 다시 쓰면 두 곳이 어긋난다).
     exitRowCount +
+    // §118의16 납부유예 31-E1~E3 — 실제 push 된 개수를 그대로 쓴다(25-E 계열과 같은 이유).
+    deferralRowCount +
     (hasPriorAggregation ? 6 : 0);
   if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과

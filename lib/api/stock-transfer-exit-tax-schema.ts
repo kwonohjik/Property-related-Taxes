@@ -132,14 +132,15 @@ export const exitTaxInputSchema = z.object({
   deferralInterestDays: z.number().int().min(0).optional(),
   deferralInterestDailyRate: z.number().min(0).optional(),
 }).superRefine((d, ctx) => {
-  // 납부유예 신청 시 사유 필수
-  if (d.deferralRequested && d.deferralReason === "none") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["deferralReason"],
-      message: "납부유예 신청 시 유예 사유를 선택하세요",
-    });
-  }
+  // 🔴 「납부유예 신청 시 사유 필수」 refine 을 **제거했다** (anchor: `exit-tax-deferral-reason-zod`).
+  //
+  // §118의16②는 「출국일부터 **5년**(국외전출자의 국외유학 등 대통령령으로 정하는 사유에
+  // 해당하는 경우에는 10년으로 한다) 이내에 …」로 **5년이 원칙**이고 10년이 예외다. 사유를
+  // 고르지 않은 상태(`"none"`)가 곧 기본 5년이라 막을 근거가 없다.
+  //
+  // 종전에는 이 refine 만 `"none"`을 거부해 **토글을 켜면 계산 자체가 실패**했다
+  // (화면엔 「계산 오류 / Validation failed」만 떴다). UI 는 「일반 사유 (5년 유예)」를 정당한
+  // 선택지로 제시하고, 클라이언트 validate 도 허용하고, 엔진도 5년으로 처리하는데 Zod 만 막았다.
 
   // 외국납부세액공제 배제가 아닌데 세액이 있으면 OK — 배제 사유 외 추가 검증 없음
   // (자동 안분 fallback 금지 — 엔진에서 0 처리 금지, validate에서 차단)

@@ -121,6 +121,44 @@ describe("국외전출세 별지 제84호서식 편입", () => {
     expect(labels).not.toContain("(§55 / §104①11 가목2)");
   });
 
+  /**
+   * ETA-5~7: §118의16 납부유예.
+   *
+   * 🔑 납부유예는 **세액을 줄이지 않는다** — 납부 **시기**만 미룬다(§118의16①). 그래서 이 행들은
+   *   31행 총 납부세액 **뒤**에 오고, 31행 값을 건드리지 않는다. 라벨이 그 사실을 말하지 않으면
+   *   「유예액만큼 덜 낸다」로 읽힌다.
+   */
+  it("ETA-5: 유예 신청이 없으면 납부유예 행을 만들지 않는다 (0 ≠ 부재)", () => {
+    const rows = rowsOf(makeExitResult());
+    expect(rows.filter((r) => r.label.includes("납부유예"))).toHaveLength(0);
+  });
+
+  it("ETA-6: 유예 신청 시 세액·기간·이자상당액이 각자 행으로 나온다", () => {
+    const rows = rowsOf(
+      makeExitResult({
+        deferralYears: 10,
+        deferredTaxAmount: 5_500_000,
+        deferralInterest: 120_000,
+      }),
+    );
+
+    expect(cell(rows, "31-E1")).toBe(5_500_000);
+    expect(cell(rows, "31-E2")).toBe("10년");
+    expect(cell(rows, "31-E3")).toBe(120_000);
+
+    // ⚠️ 유예는 세액을 줄이지 않는다 — 31행은 그대로다.
+    expect(cell(rows, "31.")).toBe(6_050_000);
+  });
+
+  it("ETA-7: 이자상당액 미산출이면 그 행만 없다 (일수·이자율 미입력)", () => {
+    const rows = rowsOf(
+      makeExitResult({ deferralYears: 5, deferredTaxAmount: 5_500_000 }),
+    );
+    expect(cell(rows, "31-E1")).toBe(5_500_000);
+    expect(cell(rows, "31-E2")).toBe("5년");
+    expect(rows.filter((r) => r.label.startsWith("31-E3"))).toHaveLength(0);
+  });
+
   it("ETA-4: 보유기간·단기보유는 비운다 (간주양도 — 0개월로 찍으면 틀린 사실)", () => {
     const rows = rowsOf(makeExitResult());
     expect(cell(rows, "05.")).toBe("-");
