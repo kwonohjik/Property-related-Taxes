@@ -15,6 +15,9 @@ import {
   computeIndirectRatio,
   computeIndirectPaths,
   partitionSec13Paths,
+  splitIndirectOverByPath,
+  computeSec15Clause1,
+  computeSec15Clause2,
   sumIndirectPaths,
   reduceFracBig,
   computeCommonExclusion,
@@ -26,6 +29,7 @@ import {
   toDecimal,
   type Frac,
 } from "./related-corp-helpers";
+import { resolveRcEraExclusion, resolveRcEraNotice } from "./related-corp-era";
 
 type Size = "small" | "medium" | "large";
 
@@ -88,14 +92,57 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     preTaxAdjOperatingIncome,
     taxableIncome,
     corporateTaxNet,
+    distributableProfit = 0,
     shareholders,
     intermediaryCorps,
     salesPartners,
   } = input;
 
+  // ── 단계0: 행위시법 — 증여시기(§45의3③ 「사업연도 종료일」)에 시행 중이던 법령 ──
+  //  구법(~2017-12-31)은 계산식이 **단일식**이고 중견의 정상거래비율도 달랐다. 현행 3분기
+  //  산식으로 계산하면 과세요건조차 미충족인 건에 세금이 생긴다(실측 37,500,000원) —
+  //  「법 근거 없이 불리하게 적용하지 않는다」는 정책상 계산하지 않고 차단한다.
+  const eraExclusion = resolveRcEraExclusion(input.fiscalYearEndDate);
+  if (eraExclusion) {
+    return {
+      type: "related_corp",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown: [],
+      exclusionReason: eraExclusion,
+      legalBasis: GIFT.RELATED_CORP,
+      aggregationExcluded: true,
+      aggExclClass: "deemed_profit",
+      recipientBreakdown: [],
+      baseAfterTaxProfit: 0,
+      // 결과뷰가 「과세요건 미충족」 표를 그리지 않도록 **명시**한다 — 이 차단은 요건 판정이
+      // 아니라 적용 법령의 문제다. `taxRequirementMet === undefined` 같은 대리 지표로
+      // 추론하면 다른 이유로 그 필드가 비는 날 조용히 어긋난다.
+      eraBlocked: true,
+      ...(input.fiscalYearEndDate ? { appliedLawDate: input.fiscalYearEndDate } : {}),
+    };
+  }
+  const eraNotice = resolveRcEraNotice(input.fiscalYearEndDate);
+
   const individuals = shareholders.filter((s) => !s.isCorporate);
 
-  // ── 단계1: 지배주주 판정 (ruling 모드 — 전 경유 합산) ──
+  // ── 단계1: 지배주주 판정 (상증령 §34의3①) ──
+  //
+  //  조문은 **1호와 2호를 분기**한다. 종전 코드는 2호의 알고리즘(직접+간접 최대)을 규모·유형과
+  //  무관하게 **무조건** 적용해, 최고 직접보유자가 개인인 사안에서 엉뚱한 사람을 지목했다.
+  //    1호 「… 최대주주등 중에서 그 법인에 대한 **직접보유비율이 가장 높은 자가 개인**인 경우에는
+  //         **그 개인**」
+  //    2호 「… 직접보유비율이 가장 높은 자가 **법인**인 경우에는 그 법인에 대한 직접보유비율과
+  //         간접보유비율을 모두 합하여 계산한 비율이 가장 높은 개인」
+  //  실측 반례: 갑(직접 40%) / 을(직접 20% + B법인 경유 간접 30% = 50%) / 소액주주 10%.
+  //    1호 ⇒ 최고 직접보유자가 개인 「갑」이므로 **갑**. 종전 엔진 ⇒ 합계가 큰 **「을」**.
+  //
+  //  ⚠️ 모집단은 「해당 법인의 **최대주주등**」(법 §19② 그룹)이다 — 지배주주와의 관계가
+  //     `other`인 개인도 포함될 수 있으므로 relation으로 걸러서는 안 된다.
+  //  ⚠️ 이 값은 **표시 전용**이다(세액 경로인 `rulingGroupIds`는 relation으로 정한다).
+  const topDirect = [...shareholders].sort(
+    (a, b) => toDecimal(b.directRatio) - toDecimal(a.directRatio),
+  )[0];
   const rulingRanked = individuals
     .map((s) => ({
       id: s.id,
@@ -105,7 +152,26 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
         toDecimal(computeIndirectRatio(s.id, intermediaryCorps, "ruling")),
     }))
     .sort((a, b) => b.decimal - a.decimal);
-  const rulingShareholder = rulingRanked[0]?.name?.trim() || "지배주주";
+  //  동점이면 조문은 「경영에 관한 사실상의 영향력이 더 큰 자로서 **재정경제부령으로 정하는
+  //  자**」(상증칙 §10의7의 순서)로 넘긴다 — 그 축이 이 엔진에 없으므로 **임의로 1순위를
+  //  고르지 않고** 판정 불가를 표시한다. 조용히 한 명을 고르면 근거 없는 단정이 된다.
+  const rulingShareholder = ((): string => {
+    if (!topDirect) return "지배주주";
+    if (!topDirect.isCorporate) {
+      // 1호 — 최고 직접보유자가 개인이면 그 개인이다.
+      const tiedTop = shareholders.filter(
+        (s) => toDecimal(s.directRatio) === toDecimal(topDirect.directRatio),
+      );
+      if (tiedTop.length > 1) return "동점 — 판정 불가 (상증칙 §10의7 순서 필요)";
+      return topDirect.name.trim() || "지배주주";
+    }
+    // 2호 — 최고 직접보유자가 법인이면 직접+간접 합계가 가장 높은 «개인»이다.
+    const top = rulingRanked[0];
+    if (!top) return "지배주주";
+    if (rulingRanked.filter((r) => r.decimal === top.decimal).length > 1)
+      return "동점 — 판정 불가 (상증칙 §10의7 순서 필요)";
+    return top.name.trim() || "지배주주";
+  })();
   // 지배주주등 = 지배주주 후보(self) + 친족(relative)
   const rulingGroupIds = individuals
     .filter((s) => s.relation === "self" || s.relation === "relative")
@@ -163,6 +229,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     ...(taxRequirementClause ? { taxRequirementClause } : {}),
     normalTradeRatio: { numer: normalTrade, denom: RATIO_DENOM } as Frac,
     marginalOwnershipRatio: marginalFrac,
+    ...(eraNotice ? { eraNotice } : {}),
   };
 
   if (!taxRequirementMet) {
@@ -265,9 +332,59 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     const directGain = applyTwoFractions(pretaxProfit, tradeOver, directOver);
     const indirectGain = indirectOver.numer > 0 ? applyTwoFractions(pretaxProfit, tradeOver, indirectOver) : 0;
 
-    // 단계9: §⑮ 배당공제 — 사례 0 (정밀 산식 SCOPE_OUT, 배당가능이익 입력 미수령)
-    const dividendDeduction = 0;
-    const subtotal = Math.max(0, directGain - dividendDeduction) + Math.max(0, indirectGain);
+    // ── 단계9: §⑮ 배당공제 ────────────────────────────────────────────────
+    //  「… 수혜법인 또는 간접출자법인으로부터 배당받은 소득이 있는 경우에는 다음 각 호의
+    //    구분에 따른 금액을 **해당 출자관계의** 증여의제이익에서 공제한다. 다만, 공제 후의
+    //    금액이 음수인 경우에는 영으로 본다.」
+    //
+    //  ⚠️ 「해당 출자관계의」가 이 조문의 핵심이다 — 1호는 **직접** 출자관계의 이익에서,
+    //     2호는 **그 간접출자법인을 경유한** 출자관계의 이익에서만 뺀다. 종전 코드는
+    //     `Math.max(0, directGain - dividendDeduction) + Math.max(0, indirectGain)`으로
+    //     공제 슬롯이 **직접 쪽에 하나뿐**이었다 — 2호는 값이 0인 게 아니라 **자리가 없었다**.
+    //  단서 「공제 후의 금액이 음수인 경우에는 영으로 본다」 — 초과분은 **버려지지** 다른
+    //  출자관계로 넘어가지 않는다. 기록값도 실제 차감액으로 맞춘다(표시↔차감 일관성):
+    //  산식값 그대로 두면 화면에 「−200억 / 소계 0」처럼 서로 맞지 않는 두 수가 나란히 찍힌다.
+    const sec15n1 = Math.min(
+      computeSec15Clause1(r.dividendFromBeneficiary ?? 0, directGain, distributableProfit, r.directRatio),
+      directGain,
+    );
+
+    //  2호는 경유 법인마다 분모가 다르므로 출자관계별로 계산하고, 음수 방지 클램프도
+    //  **관계별로** 건다(조문 단서가 「해당 출자관계의 증여의제이익」을 대상으로 한다).
+    let sec15n2 = 0;
+    if (sec13Kept.length > 0) {
+      const { overs } = splitIndirectOverByPath(sec13Kept, ownershipDeduction);
+      for (const { corpShareholderId, over } of overs) {
+        if (over.numer <= 0) continue;
+        const corp = intermediaryCorps.find((c) => c.corpShareholderId === corpShareholderId);
+        if (!corp) continue;
+        const owner = corp.owners.find((o) => o.individualId === r.id);
+        if (!owner?.dividendIncome) continue;
+        const pathGain = applyTwoFractions(pretaxProfit, tradeOver, over);
+        const deduction = computeSec15Clause2(
+          owner.dividendIncome,
+          pathGain,
+          corp.distributableProfit ?? 0,
+          distributableProfit,
+          corp.stakeInBeneficiary,
+          owner.ratio,
+        );
+        sec15n2 += Math.min(deduction, pathGain);
+      }
+    }
+
+    const dividendDeduction = sec15n1 + sec15n2;
+    //  단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다(위 두 곳의
+    //  `Math.min`). 잘라 둔 뒤에 바깥에서 `max(0, …)`을 또 걸면 관문이 둘이 되어, 한쪽을
+    //  지워도 테스트가 빨개지지 않는다 — 실제로 뮤테이션에서 안팎 두 클램프가 **모두** 죽은
+    //  코드로 드러났다. 관문은 출자관계별 `Math.min` 하나로 둔다.
+    //
+    //  간접 쪽이 안전한 이유(처음에 반대로 적었다가 뮤테이션에서 잡혔다):
+    //    `sec15n2`는 관계별 `floor`의 **합**이고 `indirectGain`은 합산 후 **1회** floor인데,
+    //    `floor(a) + floor(b) ≤ floor(a + b)` 이므로 합이 총액을 **넘을 수 없다**.
+    //    (「최대 (관계수−1)원 더 클 수 있다」는 방향이 뒤집힌 서술이었다. 부등호는 반대다.)
+    //  이 부등식은 anchor [S15-10]이 2경유 과다공제 사안으로 고정한다.
+    const subtotal = (directGain - sec15n1) + (indirectGain - sec15n2);
 
     rows.push({
       recipientName: r.name.trim() || "지배주주등",
@@ -351,6 +468,20 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     applied: deemedGiftValue > 0,
     deemedGiftValue,
     breakdown,
+    // 🔴 RC-5-d: 과세요건은 **충족**인데 증여의제이익이 0이 되는 경로가 있다(출자관계별
+    //    과세제외·차감비율·§⑮ 공제). 종전에는 이 분기에 `exclusionReason`이 없어
+    //    `!applied && exclusionReason` 가드가 배너를 띄우지 못했고, `applied` 전용 CTA도
+    //    함께 사라져 **왜 0인지 설명하는 문구가 화면에 한 줄도 없었다**.
+    ...(deemedGiftValue === 0
+      ? {
+          exclusionReason:
+            rows.length === 0
+              ? "지배주주와 그 친족 중 직접·간접보유비율 합계가 한계보유비율을 초과하는 사람이 없습니다 — 증여의제이익 0 (상증령 §34의3⑧⑨)"
+              : "과세요건은 충족하나, 출자관계별 과세제외매출·차감비율" +
+                (rows.some((r) => r.dividendDeduction > 0) ? "·배당공제(§34의3⑮)" : "") +
+                "를 반영한 결과 증여의제이익이 0입니다 (상증법 §45의3①2호) — 수증자별 내역에서 각 항목을 확인하세요",
+        }
+      : {}),
     legalBasis: GIFT.RELATED_CORP,
     // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
     aggregationExcluded: true,

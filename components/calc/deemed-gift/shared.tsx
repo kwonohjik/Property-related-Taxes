@@ -111,7 +111,7 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "property_service_use", label: "재산사용·용역제공 이익", description: "상증법 §42 — 무상·저가·고가 사용/용역", testId: "deemed-type-property_service_use" },
   { value: "org_change", label: "법인 조직변경 이익", description: "상증법 §42의2 — 소유지분·평가액 변동", testId: "deemed-type-org_change" },
   { value: "value_increase", label: "재산취득 후 가치증가 이익", description: "상증법 §42의3 — 개발·상장 등 가치증가", testId: "deemed-type-value_increase" },
-  { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주 특수관계법인 거래", testId: "deemed-type-specific_corp" },
+  { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주등 지분 30% 이상 법인이 지배주주 및 그 특수관계인과 한 거래", testId: "deemed-type-specific_corp" },
   { value: "related_corp", label: "일감몰아주기 증여의제", description: "상증법 §45의3 — 수혜법인 특수관계법인 거래이익 → 지배주주 증여의제", testId: "deemed-type-related_corp" },
 ];
 

@@ -431,6 +431,15 @@ export interface DeemedGiftResult {
    * 미구현 방향은 **과소과세**(간접분이 통째로 0이 된다).
    */
   sec18ScopeNotice?: string;
+
+  /**
+   * §45의3 행위시법 — 사업연도 종료일이 개정 경계에 걸쳐 **부칙 적용례 확인이 필요한** 경우의 고지.
+   * 여지가 있을 때만 채워진다(상시 고지는 노이즈가 되어 곧 무시된다).
+   */
+  eraNotice?: string;
+
+  /** 행위시법 차단(구법 구간)임을 결과뷰에 명시한다 — 과세요건 판정과 구별된다. */
+  eraBlocked?: boolean;
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;

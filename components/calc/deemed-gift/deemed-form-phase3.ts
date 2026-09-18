@@ -110,6 +110,10 @@ export interface DeemedPhase3Fields {
   rcPreTaxAdjOperatingIncomeStr: string;
   rcTaxableIncomeStr: string;
   rcCorporateTaxNetStr: string;
+  /** §⑮ 배당소득공제 고급 토글 (기본 OFF) — ④·⑧의 렌더 게이트 원본 */
+  rcShowDividendDeduction: boolean;
+  /** §⑮1호·2호 분모 — 수혜법인의 사업연도 말일 배당가능이익 */
+  rcDistributableProfitStr: string;
   rcShareholders: RcShareholderRow[];
   rcIntermediaryCorps: RcIntermediaryRow[];
   rcSalesPartners: RcSalesRow[];
@@ -230,6 +234,8 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   rcPreTaxAdjOperatingIncomeStr: "",
   rcTaxableIncomeStr: "",
   rcCorporateTaxNetStr: "",
+  rcShowDividendDeduction: false,
+  rcDistributableProfitStr: "",
   rcShareholders: [],
   rcIntermediaryCorps: [],
   rcSalesPartners: [],

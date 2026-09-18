@@ -101,7 +101,7 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     //    각각 `related-corp.ts`의 NORMAL_TRADE_RATIO·MARGINAL_OWNERSHIP_RATIO·
     //    `related-corp-helpers.ts`의 간접출자 판정에 1:1로 대응한다.
     //    ⑰ 1천억원은 W8에서 구현됐다(`related-corp.ts` LARGE_RELATED_SALES_THRESHOLD).
-    //    ⑩3호·⑬은 아직 미구현인 요건이라 **개정 추적이 더 중요하다**.
+    //    ⑩3호(W9)·⑬(W10)·⑮(W11)도 구현 완료 — 각 키워드가 해당 산식에 1:1로 대응한다.
     id: "INH_DECREE.RELATED_CORP_GAIN",
     citation: "상증령 §34의3",
     keywords: [
@@ -112,6 +112,8 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
       "간접보유비율이 1천분의 1 미만인 경우의 해당 출자관계는 제외한다",
       "발행주식총수등의 100분의 30 이상을 출자하고 있는 법인",
       "1천억원",
+      // ⑮ 배당공제 단서 — `related-corp.ts` 단계9의 클램프가 이 문언 그대로다.
+      "공제 후의 금액이 음수(陰數)인 경우에는 영으로 본다",
     ],
     keywordMode: "ALL",
   },

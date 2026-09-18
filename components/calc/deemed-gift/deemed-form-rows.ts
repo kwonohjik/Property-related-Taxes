@@ -129,12 +129,16 @@ export interface RcShareholderRow {
   /** 직접지분 % — DecimalInput */
   directRatioPctStr: string;
   isCorporate: boolean;
+  /** §⑮1호 — 이 주주가 **수혜법인으로부터** 받은 배당소득 (CurrencyInput) */
+  dividendFromBeneficiaryStr: string;
 }
 
 /** §45의3 — 간접출자법인 개인소유주 1행 */
 export interface RcIntermediaryOwnerRow {
   individualId: string;
   ratioPctStr: string;
+  /** §⑮2호 — 이 개인이 **이 간접출자법인으로부터** 받은 배당소득 (CurrencyInput) */
+  dividendIncomeStr: string;
 }
 
 /** §45의3 — 간접출자법인 roster 1행 */
@@ -142,6 +146,8 @@ export interface RcIntermediaryRow {
   id: string;
   corpShareholderId: string;
   stakeInBeneficiaryPctStr: string;
+  /** §⑮2호 분모 — 이 간접출자법인의 사업연도 말일 배당가능이익 (CurrencyInput) */
+  distributableProfitStr: string;
   owners: RcIntermediaryOwnerRow[];
 }
 
@@ -181,11 +187,11 @@ export interface RcSalesRow {
 
 // ── §45의3 일감몰아주기 roster 행 팩토리 ──
 export function makeRcShareholderRow(id: string): RcShareholderRow {
-  return { id, name: "", relation: "other", directRatioPctStr: "", isCorporate: false };
+  return { id, name: "", relation: "other", directRatioPctStr: "", isCorporate: false, dividendFromBeneficiaryStr: "" };
 }
 
 export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
-  return { id, corpShareholderId: "", stakeInBeneficiaryPctStr: "", owners: [] };
+  return { id, corpShareholderId: "", stakeInBeneficiaryPctStr: "", distributableProfitStr: "", owners: [] };
 }
 
 export function makeRcSalesRow(id: string): RcSalesRow {

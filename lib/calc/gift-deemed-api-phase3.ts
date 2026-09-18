@@ -300,21 +300,37 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         numer: Math.round(parseDecimal(pctStr) * 100),
         denom: 10_000,
       });
+      // §⑮ 배당공제는 고급 토글(⑤) 뒤에 있다 — 토글이 꺼져 있으면 **화면에 없는 값**이
+      //   엔진에 도달하지 않도록 ④에서도 같은 술어로 막는다(3중 패턴).
+      //   종전 W9 RC-E에서 매출처 행이 정확히 이 방식으로 새어 나갔다.
+      const dividendOn = form.rcShowDividendDeduction;
       const shareholders = form.rcShareholders.map((row) => ({
         id: row.id,
         name: row.name,
         relation: (row.relation as "self" | "relative" | "other") || "other",
         directRatio: parseRatio(row.directRatioPctStr),
         isCorporate: row.isCorporate,
+        ...(dividendOn && !row.isCorporate
+          ? { dividendFromBeneficiary: parseAmount(row.dividendFromBeneficiaryStr) }
+          : {}),
       }));
-      const intermediaryCorps = form.rcIntermediaryCorps.map((row) => ({
-        corpShareholderId: row.corpShareholderId,
-        stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
-        owners: row.owners.map((o) => ({
-          individualId: o.individualId,
-          ratio: parseRatio(o.ratioPctStr),
-        })),
-      }));
+      // 🔴 RC-G: 섹션3의 렌더 게이트(`corpOptions.length > 0`)가 닫히면 빈 행이 화면에서
+      //    사라지는데, 폼은 그 행을 **의도적으로 보존**한다(주주 유형을 되돌리면 복구된다 —
+      //    렌더 anchor R-2가 그 동작을 고정한다). 문제는 ④가 그 행을 그대로 보냈다는 것이다:
+      //    ⑧은 `hasCorpShareholder`가 false라 건너뛰고, ⑫는 `corpShareholderId: min(1)`이라
+      //    **400으로 계산 자체가 막혔다**. 폼의 보존 설계는 그대로 두고 ④에서 거른다.
+      const intermediaryCorps = form.rcIntermediaryCorps
+        .filter((row) => row.corpShareholderId !== "")
+        .map((row) => ({
+          corpShareholderId: row.corpShareholderId,
+          stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
+          ...(dividendOn ? { distributableProfit: parseAmount(row.distributableProfitStr) } : {}),
+          owners: row.owners.map((o) => ({
+            individualId: o.individualId,
+            ratio: parseRatio(o.ratioPctStr),
+            ...(dividendOn ? { dividendIncome: parseAmount(o.dividendIncomeStr) } : {}),
+          })),
+        }));
       const salesPartners = form.rcSalesPartners.map((row) => ({
         id: row.id,
         name: row.name,
@@ -352,6 +368,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         preTaxAdjOperatingIncome: parseAmount(form.rcPreTaxAdjOperatingIncomeStr),
         taxableIncome: parseAmount(form.rcTaxableIncomeStr),
         corporateTaxNet: parseAmount(form.rcCorporateTaxNetStr),
+        ...(dividendOn ? { distributableProfit: parseAmount(form.rcDistributableProfitStr) } : {}),
         shareholders,
         intermediaryCorps,
         salesPartners,

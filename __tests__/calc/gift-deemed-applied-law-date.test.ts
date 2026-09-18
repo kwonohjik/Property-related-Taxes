@@ -17,13 +17,15 @@
  * 법 §45의5①: 「… 거래를 하는 경우에는 **거래한 날을 증여일로 하여** …」
  * ⇒ 두 조문의 증여시기는 «서로 다른 것»이다. 종전 UI는 둘 다 「증여일」로만 물었다(ERA-5).
  *
- * ⚠️ 이 축이 생겼다고 해서 **행위시법 분기가 구현된 것은 아니다** — 비율·한도 상수는 아직
- *    현행 고정이다(W7·W12). 결과뷰가 그 사실을 고지한다. 이 anchor는 «축의 도달»만 고정한다.
+ * ⚠️ W12에서 §45의3에도 구간 분기가 들어왔다 — 구법(~2017-12-31) 사업연도는 **차단**된다.
+ *    그 전까지 [E-4]는 「날짜가 달라도 값이 같다」를 명시적으로 고정해 두었고, 예정대로
+ *    W12에서 먼저 빨개져 갱신됐다. §45의5는 W7에서 이미 구간 분기가 있다.
  */
 import { describe, it, expect } from "vitest";
 import { buildDeemedGiftInput } from "@/lib/calc/gift-deemed-api";
 import { deemedGiftInputSchema } from "@/lib/validators/gift-deemed-input";
 import { calcDeemedGift } from "@/lib/tax-engine/gift-deemed";
+import { validateDeemedInput } from "@/lib/calc/gift-deemed-validate";
 import { INITIAL_DEEMED, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
 
 const RC_FORM = {
@@ -87,12 +89,19 @@ describe("§45의3 — 증여시기는 「수혜법인의 사업연도 종료일
     expect("fiscalYearEndDate" in input).toBe(false);
   });
 
-  it("[E-4] 축이 세액을 바꾸지는 않는다 — 구간 분기는 아직 현행 고정이다 (W12)", () => {
-    // 「축이 생겼다」와 「행위시법이 구현됐다」를 혼동하지 않기 위한 명시 anchor.
+  it("[E-4] 축이 이제 세액을 바꾼다 — 구법 사업연도는 차단된다 (W12에서 갱신)", () => {
+    // 종전 이 anchor는 「giftDate가 달라도 값이 같다」를 **명시적으로** 고정해 두었다
+    // (「축이 생겼다」 ≠ 「행위시법이 구현됐다」). W12에서 구간 분기가 들어오면 여기가
+    // 먼저 빨개지도록 의도된 것이고, 실제로 그렇게 됐다.
     const a = throughPipeline(RC_FORM).result;
-    const b = throughPipeline({ ...RC_FORM, giftDate: "2016-12-31" } as DeemedFormState).result;
-    expect(b.deemedGiftValue).toBe(a.deemedGiftValue);
-    expect(b.appliedLawDate).toBe("2016-12-31"); // 날짜는 다르게 도달한다(구별력)
+    expect(a.applied).toBe(true);
+    expect(a.deemedGiftValue).toBeGreaterThan(0);
+
+    const old = throughPipeline({ ...RC_FORM, giftDate: "2016-12-31" } as DeemedFormState).result;
+    expect(old.applied).toBe(false);
+    expect(old.deemedGiftValue).toBe(0);
+    expect(old.exclusionReason).toContain("법률 제15224호");
+    expect(old.appliedLawDate).toBe("2016-12-31"); // 날짜는 여전히 그대로 도달한다
   });
 });
 
@@ -119,5 +128,21 @@ describe("§45의5 — 증여시기는 「거래한 날」이다 (§45의5①)",
     expect("fiscalYearEndDate" in sc).toBe(false);
     expect(rc.fiscalYearEndDate).toBe("2025-12-31");
     expect("transactionDate" in rc).toBe(false);
+  });
+});
+
+describe("⑧ validate가 구법 사업연도를 계산 전에 막는다 (엔진 가드와 같은 술어)", () => {
+  it("[E-7] 2017-12-31 종료 사업연도는 차단 — 사유에 조문·시행일이 있다", () => {
+    const msg = validateDeemedInput({ ...RC_FORM, giftDate: "2017-12-31" } as DeemedFormState);
+    expect(msg).toContain("법률 제15224호");
+    expect(msg).toContain("2018-01-01");
+  });
+
+  it("[E-8] 긍정 짝 — 2018-01-01은 R-0을 통과해 다음 검증으로 넘어간다 (경계 ±1 동등성)", () => {
+    // RC_FORM은 주주 roster가 비어 있어 뒤쪽 검증에 걸린다 — 「걸리는 지점이 달라진 것」이
+    // R-0을 지났다는 증거다. null 단언은 여기서 성립하지 않는다.
+    const msg = validateDeemedInput({ ...RC_FORM, giftDate: "2018-01-01" } as DeemedFormState);
+    expect(msg).not.toContain("법률 제15224호");
+    expect(msg).toBe("주주를 2명 이상 입력하세요");
   });
 });

@@ -55,7 +55,15 @@ export function DeemedGiftCalculator() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error || "계산 중 오류가 발생했습니다.");
+        // 🔴 RC-G: route는 `issues`에 **어느 필드가 왜 거부됐는지**를 실어 보내는데 종전에는
+        //    그것을 버리고 「입력값이 올바르지 않습니다.」만 띄웠다. ⑧을 통과한 입력이 ⑫에서
+        //    막히면 사용자는 어디를 고쳐야 할지 알 수 없다 — 그 조합이 실제로 존재한다.
+        const issues = Array.isArray(json.issues) ? (json.issues as { path?: string[]; message?: string }[]) : [];
+        const detail = issues
+          .slice(0, 3)
+          .map((i) => `${(i.path ?? []).join(".") || "입력"}: ${i.message ?? ""}`)
+          .join(" / ");
+        setError(detail ? `${json.error ?? "입력값이 올바르지 않습니다."} (${detail})` : json.error || "계산 중 오류가 발생했습니다.");
         return;
       }
       setResult(json.result as DeemedGiftAnyResult);
