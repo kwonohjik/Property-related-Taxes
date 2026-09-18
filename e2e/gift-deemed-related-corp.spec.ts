@@ -1,8 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { captureSessionHandoff, readSessionHandoff } from "./_helpers/session-handoff";
 
 /** E2E: §45의3 일감몰아주기 증여의제 — 교재 사례4 종합. 갑 20,520,000 + 을 16,200,000 = 36,720,000. */
 
 test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async ({ page }) => {
+  // handoff payload는 목적지 마운트가 곧바로 소비한다 — 읽기 경합을 없애려면 goto 전에 건다.
+  await captureSessionHandoff(page, "giftTaxResumeInput");
   await page.goto("/calc/gift-deemed");
   await page.getByTestId("deemed-type-related_corp").click();
   const dialog = page.getByTestId("deemed-detail-dialog");
@@ -109,9 +112,7 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
 
   await page.getByTestId("deemed-to-wizard").click();
   await page.waitForURL(/\/calc\/gift-tax/);
-  const payload = JSON.parse(
-    (await page.evaluate(() => sessionStorage.getItem("giftTaxResumeInput")))!,
-  );
+  const payload = JSON.parse(await readSessionHandoff(page, "giftTaxResumeInput"));
   expect(payload.giftItems).toHaveLength(1);
   expect(payload.giftItems[0].marketValue).toBe(16_200_000);
   expect(payload.giftItems[0].isAggregationExcludedGift).toBe(true);
