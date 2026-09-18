@@ -343,6 +343,7 @@ export function GiftTaxForm() {
         savedId={autoSave.savedId ?? undefined}
         estateItems={[...form.giftItems, ...form.stockItems]}
         giftDate={form.giftDate}
+        statutoryDeadline={form.statutoryDeadline}
         transferTaxResults={transferTaxResults}
         transferTaxError={transferTaxError ?? undefined}
         stockTransferTaxResults={stockTransferTaxResults}

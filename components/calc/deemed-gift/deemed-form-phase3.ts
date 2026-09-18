@@ -158,6 +158,17 @@ export interface DeemedPhase3Fields {
   scSelectedDoneeIndex: number;
   /** §45의5② 한도 ㉮㉠ 증여재산공제 */
   scGiftDeduction: string;
+  /**
+   * §68① 단서 — 특정법인의 **사업연도 종료일**. 증여일(거래한 날)과 다른 축이다.
+   * §45의3은 증여시기 자체가 사업연도 종료일이라(§45의3③) `giftDate`가 그 역할을 하지만,
+   * §45의5의 증여일은 「거래한 날」(§45의5①)이라 사업연도를 별도로 받아야 신고기한이 선다.
+   */
+  scCorpFiscalYearEndDate: string;
+  /**
+   * 법인세법 §60① 괄호 — 성실신고확인서를 제출하는 법인은 신고기한이 **4개월**이다.
+   * §45의3·§45의5 공통(한 번에 한 유형만 활성이다).
+   */
+  corpHonestFilingConfirm: boolean;
 }
 
 export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
@@ -252,4 +263,6 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   scIntermediaryCorps: undefined,
   scSelectedDoneeIndex: 0,
   scGiftDeduction: "",
+  scCorpFiscalYearEndDate: "",
+  corpHonestFilingConfirm: false,
 };

@@ -74,7 +74,15 @@ export function DeemedDetailModal({
               <label className="mb-1 block text-sm font-semibold text-slate-700">
                 {GIFT_DATE_LABEL[form.type as keyof typeof GIFT_DATE_LABEL]?.label ?? "증여일"}
               </label>
-              <DateInput value={form.giftDate} onChange={(v) => set({ giftDate: v })} />
+              <DateInput
+                value={form.giftDate}
+                onChange={(v) => set({ giftDate: v })}
+                /* 🔴 종전에는 testid가 없어 E2E가 `dialog.getByLabel("연도")`의 «유일성»에
+                   기대고 있었다. 다이얼로그에 날짜 입력이 하나 더 생기는 순간(§45의5
+                   사업연도 종료일) 13건이 strict mode violation으로 깨졌다.
+                   `DateInput`의 `data-testid`는 문서 주석이 바로 이 용도로 둔 것이다. */
+                data-testid="deemed-gift-date"
+              />
               <p className="mt-1 text-xs text-muted-foreground">
                 {GIFT_DATE_LABEL[form.type as keyof typeof GIFT_DATE_LABEL]?.hint ??
                   "증여시기·적정이자율 연도 기준"}

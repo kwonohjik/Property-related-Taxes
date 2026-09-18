@@ -5,6 +5,7 @@
  *  other-forms.tsx가 re-export하여 기존 import 경로를 보존한다. */
 
 import { useMemo } from "react";
+import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -398,6 +399,31 @@ export function SpecificCorpFields({ form, set }: Props) {
           onChange={(v) => set({ scGiftDeduction: v })}
           hint="§45의5② 한도 ㉮㉠ 계산 시 적용할 증여재산공제액 (미입력 시 0)"
           data-testid="sc-gift-deduction"
+        />
+      </ToneCard>
+
+      {/* 🔴 SC-K: §68① 단서 — 「특정법인의 「법인세법」 제60조제1항에 따른 과세표준의 신고기한이
+          속하는 달의 말일부터 3개월이 되는 날」. §45의5의 증여일은 「거래한 날」(§45의5①)이라
+          사업연도와 무관하므로 여기서 따로 받아야 신고기한이 선다(§45의3은 증여시기 자체가
+          사업연도 종료일이라 추가 입력이 없다). 값은 증여세 마법사로 이관된다. */}
+      <ToneCard tone="slate" sectionNum="6" title="신고기한 (§68① 단서)" noDark>
+        <FieldCard
+          label="특정법인의 사업연도 종료일"
+          hint="이 거래가 속한 사업연도의 종료일 — 증여일(거래한 날)과 다른 축입니다. 법인세 신고기한이 여기서 파생됩니다"
+        >
+          <DateInput
+            value={form.scCorpFiscalYearEndDate}
+            onChange={(v) => set({ scCorpFiscalYearEndDate: v })}
+            data-testid="sc-corp-fye"
+          />
+        </FieldCard>
+        <ToggleCard
+          tone="sky"
+          title="성실신고확인서를 제출하는 법인"
+          checked={form.corpHonestFilingConfirm}
+          onCheckedChange={(v) => set({ corpHonestFilingConfirm: v })}
+          description="법인세법 §60① 괄호 — 제출 법인은 법인세 신고기한이 3개월이 아니라 4개월입니다"
+          data-testid="sc-honest-filing"
         />
       </ToneCard>
     </div>

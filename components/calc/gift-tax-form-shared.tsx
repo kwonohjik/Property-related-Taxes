@@ -89,6 +89,20 @@ export interface FormState extends AppraisalFeeFormFields {
    * 무신고가산세 대상이다(§48②2호 감면은 `late`에만). ④가 이 하나에서 두 축을 파생한다.
    */
   filingStatus: "on_time" | "late" | "none";
+  /**
+   * 법정신고기한 `YYYY-MM-DD` — **§68① 단서 건에서만** 채워진다.
+   *
+   * 기본은 §68① 본문(증여일 말일 + 3개월)이라 `giftDate`에서 파생하면 되지만,
+   * §45의3·§45의5는 「수혜법인 또는 특정법인의 법인세법 §60①에 따른 과세표준의 신고기한이
+   * 속하는 달의 말일부터 3개월」이라 **증여일에서 파생되지 않는다**(3개월 어긋난다).
+   * 의제 계산기에서 이관될 때 그 값이 실려 온다.
+   *
+   * ⚠️ 이 값이 닿는 곳은 §48②2호 기한후신고 감면 «구간 판정»이다(`filingStatus === "late"`).
+   *    비어 있으면 감면율이 0으로 떨어지므로, 단서 건에서는 ⑧이 입력을 요구한다.
+   */
+  statutoryDeadline?: string;
+  /** 위 값의 근거 — 이관 payload가 실어 보내고, ⑧·결과뷰가 「본문이 아니다」를 아는 유일한 표지 */
+  filingDeadlineBasis?: "sec68_1_proviso";
   /** 기한후신고일 `YYYY-MM-DD` — §48②2호 감면 구간 판정 (`late` 전용) */
   lateFilingDate: string;
   /** 「결정할 것을 미리 알고」 기한후신고서를 제출했는가 — §48②2호 괄호 배제 */

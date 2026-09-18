@@ -340,6 +340,21 @@ export function validateStep(step: number, form: FormState): string | null {
     if (form.filingStatus === "late" && !form.lateFilingDate) {
       return "기한후신고일을 입력하세요. (국세기본법 §48②2호 감면 구간 판정에 필요)";
     }
+    // 🔴 SC-K·RC-P: §68① 단서 건(§45의3·§45의5 이관)은 법정신고기한이 «증여일에서 파생되지
+    //    않는다» — 「수혜법인 또는 특정법인의 법인세법 §60①에 따른 과세표준의 신고기한이
+    //    속하는 달의 말일부터 3개월」이다. 이관 시 파생하지 못했으면(특정법인 사업연도
+    //    종료일 미입력) 여기서 막는다. 본문 기한으로 되메우면 3개월 이른 값이 조용히
+    //    §48②2호 감면 «구간»을 가른다(실측 20,000,000원 과다).
+    if (
+      form.filingStatus === "late" &&
+      form.filingDeadlineBasis === "sec68_1_proviso" &&
+      !form.statutoryDeadline?.trim()
+    ) {
+      return (
+        "법정신고기한을 파생하지 못했습니다 — 의제 계산기로 돌아가 「특정법인의 사업연도 종료일」을 " +
+        "입력하세요. (상증법 §68① 단서 — §45의3·§45의5는 법인세 신고기한이 속하는 달의 말일부터 3개월)"
+      );
+    }
     if (form.filingStatus === "on_time" && form.isUnderReported) {
       if (!form.originalFiledTax.trim()) {
         return "당초 신고세액을 입력하세요. (국세기본법 §47의3① 「과소신고한 납부세액」 산정에 필요)";
