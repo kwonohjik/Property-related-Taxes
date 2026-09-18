@@ -571,6 +571,10 @@ const relatedCorpSchema = z.object({
             "sec10_8",
           ])
           .optional(),
+        /** §⑩3호 전용 — 수혜법인의 그 특수관계법인에 대한 주식보유비율 */
+        beneficiaryStakeInPartner: ratioSchema.optional(),
+        /** §⑭1호 — 이 매출처가 §⑱ 간접출자법인이면 그 법인주주 id */
+        intermediaryCorpShareholderId: z.string().optional(),
         rulingShareholderStakes: z
           .array(z.object({ shareholderId: z.string().min(1), ratio: ratioSchema }))
           .optional(),

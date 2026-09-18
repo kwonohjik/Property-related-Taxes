@@ -29,6 +29,22 @@ export function RelatedCorpResultSection({
 
   return (
     <div className="space-y-4">
+      {result.sec18ScopeNotice && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          data-testid="rc-sec18-scope-notice"
+        >
+          {result.sec18ScopeNotice}
+        </div>
+      )}
+      {result.sec14ScopeNotice && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          data-testid="rc-sec14-scope-notice"
+        >
+          {result.sec14ScopeNotice}
+        </div>
+      )}
       {/* 과세요건 공통부 카드 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
         <p className="text-sm font-semibold text-sky-800">수혜법인 단위 과세요건</p>
@@ -65,7 +81,12 @@ export function RelatedCorpResultSection({
             </tr>
             <tr>
               <td className="text-muted-foreground">과세요건</td>
-              <td className="text-right">{result.taxRequirementMet ? "충족" : "미충족"}</td>
+              <td className="text-right" data-testid="rc-tax-requirement">
+                {result.taxRequirementMet ? "충족" : "미충족"}
+                {result.taxRequirementClause && (
+                  <span className="ml-1 text-caption text-muted-foreground">{result.taxRequirementClause}</span>
+                )}
+              </td>
             </tr>
             {result.taxableExcludedSales != null && (
               <tr>
@@ -127,6 +148,15 @@ export function RelatedCorpResultSection({
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.directGain)}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {r.indirectGain > 0 ? formatKRW(r.indirectGain) : "—"}
+                    {r.sec13ExcludedCount ? (
+                      <span
+                        className="ml-1 text-caption font-normal text-muted-foreground"
+                        data-testid={`rc-sec13-excluded-${i}`}
+                        title="상증령 §34의3⑬ — 간접보유비율이 1천분의 1 미만인 출자관계는 증여의제이익 계산에서 제외합니다"
+                      >
+                        §⑬ 제외 {r.sec13ExcludedCount}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(r.subtotal)}</td>
                 </tr>

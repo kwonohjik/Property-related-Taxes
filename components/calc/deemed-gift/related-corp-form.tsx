@@ -321,7 +321,23 @@ export function RelatedCorpFields({ form, set }: Props) {
               <select
                 className={selectClass}
                 value={row.isRelated ? "y" : "n"}
-                onChange={(e) => updSales(idx, { ...row, isRelated: e.target.value === "y" })}
+                onChange={(e) =>
+                  // 비특수관계로 되돌리면 하위 두 블록이 **언마운트**된다 — 그 값을 남기면
+                  // 화면에 없는 값이 계산에 들어간다. 같은 patch에서 함께 정리한다.
+                  updSales(
+                    idx,
+                    e.target.value === "y"
+                      ? { ...row, isRelated: true }
+                      : {
+                          ...row,
+                          isRelated: false,
+                          exclusionType: "",
+                          beneficiaryStakePctStr: "",
+                          intermediaryCorpShareholderId: "",
+                          rulingStakes: [],
+                        },
+                  )
+                }
                 aria-label={`매출처 ${idx + 1} 특수관계`}
               >
                 <option value="n">비특수관계</option>
@@ -344,9 +360,42 @@ export function RelatedCorpFields({ form, set }: Props) {
                 </select>
               </FieldCard>
             )}
+            {row.isRelated && row.exclusionType === "sec10_3" && (
+              <FieldCard
+                label="수혜법인의 이 매출처 주식보유비율 (%)"
+                hint="§34의3⑩3호 — 이 매출처와 거래한 매출액에 그 비율을 곱한 금액만 과세제외됩니다 (50% 이상이면 ⑩2호)"
+              >
+                <DecimalInput
+                  value={row.beneficiaryStakePctStr}
+                  onChange={(v) => updSales(idx, { ...row, beneficiaryStakePctStr: v })}
+                  placeholder="수혜법인 보유비율"
+                  data-testid={`rc-sales-benef-stake-${idx}`}
+                />
+              </FieldCard>
+            )}
             {row.isRelated && row.exclusionType === "" && (
               <div className="rounded border border-violet-100 bg-violet-50/60 p-2">
-                <p className="text-caption font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
+                <p className="text-caption font-medium text-violet-700">§⑭1호 — 이 매출처가 간접출자법인인가</p>
+                <select
+                  className={`${selectClass} mt-1`}
+                  value={row.intermediaryCorpShareholderId}
+                  onChange={(e) => updSales(idx, { ...row, intermediaryCorpShareholderId: e.target.value })}
+                  aria-label={`매출처 ${idx + 1} 간접출자법인`}
+                >
+                  <option value="">-- 해당 없음 --</option>
+                  {form.rcIntermediaryCorps.map((c) => {
+                    const corp = form.rcShareholders.find((s2) => s2.id === c.corpShareholderId);
+                    return (
+                      <option key={c.id} value={c.corpShareholderId}>
+                        {corp?.name.trim() || "(이름 없음)"}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="mt-1 text-caption text-violet-600">
+                  간접출자법인이면 이 매출처 매출액 전액이 과세제외됩니다 (§⑱ 지배주주등 합산 30% 이상일 때만 성립).
+                </p>
+                <p className="mt-2 text-caption font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
                 {row.rulingStakes.map((stake, sIdx) => (
                   <div key={sIdx} className="mt-1 flex items-center gap-2">
                     <select

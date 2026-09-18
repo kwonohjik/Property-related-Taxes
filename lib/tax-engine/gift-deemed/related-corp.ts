@@ -13,7 +13,13 @@ import { safeMultiplyThenDivide } from "../tax-utils";
 import type { RelatedCorpInput, DeemedGiftResult, RcRecipientBreakdown } from "./types";
 import {
   computeIndirectRatio,
+  computeIndirectPaths,
+  partitionSec13Paths,
+  sumIndirectPaths,
+  reduceFracBig,
   computeCommonExclusion,
+  isSec18SalesPartner,
+  isIntermediarySec18,
   fracMin,
   fracMaxZeroSub,
   applyTwoFractions,
@@ -41,7 +47,39 @@ const TRADE_RATIO_DEDUCTION: Record<Size, number> = { small: 50, medium: 20, lar
  */
 const OWNERSHIP_RATIO_DEDUCTION: Record<Size, number> = { small: 10, medium: 5, large: 0 };
 
+/**
+ * §45의3①1호나목2) — 중소·중견이 **아닌** 법인의 추가 과세요건 임계.
+ * 상증령 §34의3(1천억원 규정 항) 본문 verbatim:
+ *   「법 제45조의3제1항제1호나목2)에서 "대통령령으로 정하는 금액"이란 1천억원을 말한다.」
+ *
+ * ⚠️ 같은 항 **단서**(사업부문별로 회계를 구분한 경우 「1천억원 × 사업부문별 매출액 ÷ 전체
+ *    매출액」으로 안분)는 법 §45의3① 각 호 외 부분 **후단**(사업부문별 계산)에 걸리는데,
+ *    그 축이 이 엔진에 없다 — 단서를 흉내 내면 근거 없이 임계를 낮추게 되므로 본문만 쓴다.
+ */
+const LARGE_RELATED_SALES_THRESHOLD = 100_000_000_000;
+
 const RATIO_DENOM = 100;
+
+/**
+ * 과세요건 미충족 사유 — **어느 갈래가 왜 막혔는지**까지 적는다.
+ *
+ * 종전에는 규모와 무관하게 「특수관계법인거래비율이 정상거래비율 이하」 하나였다.
+ * 일반기업은 나목2)라는 **두 번째 갈래**가 있으므로, 그 문구는 25%처럼 나목2) 밴드에
+ * 들어간 사안에도 「요건 미충족」을 단정해 **거짓 안전 신호**가 된다.
+ */
+function buildExclusionReason(size: Size, twoThirdsMet: boolean, relatedNet: number): string {
+  if (size !== "large") {
+    return "특수관계법인거래비율이 정상거래비율 이하 — 과세요건 미충족 (상증법 §45의3①1호가목)";
+  }
+  if (!twoThirdsMet) {
+    return "특수관계법인거래비율이 정상거래비율의 3분의 2 이하 — 나목1)·2) 모두 미해당 (상증법 §45의3①1호나목)";
+  }
+  return (
+    "특수관계법인거래비율은 정상거래비율의 3분의 2를 초과하나, 특수관계법인에 대한 매출액" +
+    `(과세제외매출 차감 후 ${relatedNet.toLocaleString("ko-KR")}원)이 1천억원 이하 — ` +
+    "과세요건 미충족 (상증법 §45의3①1호나목2) · 상증령 §34의3)"
+  );
+}
 
 export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const {
@@ -83,8 +121,33 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const normalTrade = NORMAL_TRADE_RATIO[enterpriseSize];
   const marginal = MARGINAL_OWNERSHIP_RATIO[enterpriseSize];
   const marginalFrac: Frac = { numer: marginal, denom: RATIO_DENOM };
-  // 거래비율 > 정상거래비율: numer/denom > threshold/100 → numer×100 > denom×threshold
-  const taxRequirementMet = tradeRatioNumer * RATIO_DENOM > tradeRatioDenom * normalTrade;
+  // §45의3①1호**가목**(중소·중견) = 같은 호 **나목1)**「가목에 따른 사유」(일반) — 전 규모 공통.
+  //   거래비율 > 정상거래비율: numer/denom > threshold/100 → numer×100 > denom×threshold
+  const clauseAMet = tradeRatioNumer * RATIO_DENOM > tradeRatioDenom * normalTrade;
+
+  // §45의3①1호**나목2)** — 중소·중견이 아닌 법인에만 있는 **택일** 요건.
+  //   「특수관계법인거래비율이 정상거래비율의 3분의 2를 초과하는 경우로서 특수관계법인에 대한
+  //    매출액이 … 대통령령으로 정하는 금액을 초과하는 경우」.
+  //   둘 다 조문상 «초과»라 경계값(정확히 3분의 2 · 정확히 1천억원)은 **미해당**이다.
+  //
+  //   ⚠️ 1천억원과 견줄 「특수관계법인에 대한 매출액」은 법 §45의3④가 「제1항에 따른 매출액에서
+  //      … 대통령령으로 정하는 매출액은 제외한다」고 정한 뒤의 금액이다 — 거래비율 분자와
+  //      **같은 기준선**(`tradeRatioNumer` = 특수관계매출 − 과세제외매출)을 쓴다.
+  //   ⚠️ BigInt — 대기업 매출 규모에서 `denom × normalTrade × 2`가 2^53을 넘는다
+  //      (실측: 총매출 300조·비특수관계 225조 → 225e12 × 30 × 2 = 1.35e16 > 9.0e15).
+  const twoThirdsMet =
+    BigInt(tradeRatioNumer) * 300n > BigInt(tradeRatioDenom) * BigInt(normalTrade) * 2n;
+  const clauseB2Met =
+    enterpriseSize === "large" && twoThirdsMet && tradeRatioNumer > LARGE_RELATED_SALES_THRESHOLD;
+
+  const taxRequirementMet = clauseAMet || clauseB2Met;
+  const taxRequirementClause = clauseAMet
+    ? enterpriseSize === "large"
+      ? "상증법 §45의3①1호나목1)"
+      : "상증법 §45의3①1호가목"
+    : clauseB2Met
+      ? "상증법 §45의3①1호나목2)"
+      : undefined;
 
   const echo = {
     // §45의3③ — 증여시기는 「수혜법인의 해당 사업연도 종료일」이다(거래일·신고일이 아니다).
@@ -97,6 +160,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     tradeRatioNumer,
     tradeRatioDenom,
     taxRequirementMet,
+    ...(taxRequirementClause ? { taxRequirementClause } : {}),
     normalTradeRatio: { numer: normalTrade, denom: RATIO_DENOM } as Frac,
     marginalOwnershipRatio: marginalFrac,
   };
@@ -110,7 +174,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
         { label: "특수관계법인 매출 합계", amount: relatedSales, lawRef: GIFT.RELATED_CORP },
         { label: "과세제외매출액(§⑩)", amount: commonExclusion },
       ],
-      exclusionReason: "특수관계법인거래비율이 정상거래비율 이하 — 과세요건 미충족 (§45의3①1호)",
+      exclusionReason: buildExclusionReason(enterpriseSize, twoThirdsMet, tradeRatioNumer),
       legalBasis: GIFT.RELATED_CORP,
       // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
       aggregationExcluded: true,
@@ -144,13 +208,22 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const rows: RcRecipientBreakdown[] = [];
 
   for (const r of recipients) {
-    // §⑭3호 수증자별 추가 과세제외 (⑩ 미해당 특수관계법인 × 이 수증자 보유비율)
+    // ── §⑭ 출자관계별 추가 과세제외 ──────────────────────────────────────────
+    //  대상은 「제10항 각 호의 어느 하나에 해당하지 **아니하는**」 매출처뿐이다(⑭ 본문).
+    //  ⑭ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」는 **같은 거래가 여러 호에
+    //  동시 해당할 때**의 규칙이므로 매출처 단위 `Math.max`, 매출처 사이는 합산이다
+    //  (⑩ 쪽 `computeCommonExclusion`이 같은 구조를 쓴다).
     let additionalExclusion = 0;
     for (const p of salesPartners) {
       if (!p.isRelated || p.exclusionType) continue;
+      // ⑭1호 — 「수혜법인이 제18항에 따른 간접출자법인인 특수관계법인과 거래한 매출액」 «전액»
+      const sec14n1 = isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds) ? p.salesAmount : 0;
+      // ⑭3호 — 「… 매출액에 지배주주등의 그 특수관계법인에 대한 주식보유비율을 곱한 금액」
       const stake = p.rulingShareholderStakes?.find((x) => x.shareholderId === r.id);
-      if (!stake) continue;
-      additionalExclusion += safeMultiplyThenDivide(p.salesAmount, stake.ratio.numer, stake.ratio.denom);
+      const sec14n3 = stake
+        ? safeMultiplyThenDivide(p.salesAmount, stake.ratio.numer, stake.ratio.denom)
+        : 0;
+      additionalExclusion += Math.max(sec14n1, sec14n3);
     }
     const totalExclusion = commonExclusion + additionalExclusion;
 
@@ -167,8 +240,21 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
       denom: recTradeDenom * RATIO_DENOM,
     };
 
-    // 단계7: 보유비율 − 보유비율차감 (한계 간접 우선차감, 음수 방지)
-    const ind = computeIndirectRatio(r.id, intermediaryCorps, "recipient", rulingGroupIds);
+    // ── 단계7: 보유비율 − 보유비율차감 (한계 간접 우선차감, 음수 방지) ──────────
+    //  §⑬ 전단 — 증여의제이익은 「출자관계(**간접보유비율이 1천분의 1 미만인 경우의 해당
+    //  출자관계는 제외**)별로 각각 구분하여 계산한 금액을 모두 합하여」 계산한다.
+    //
+    //  ⚠️ 이 제외는 **이익 계산에만** 건다. 위 `recipients` 필터(§⑧ 수증자 판정 —
+    //     직접+간접이 한계보유비율 초과)에는 같은 카브아웃이 없으므로 그쪽은 합산값을
+    //     그대로 쓴다. 두 축을 섞으면 법령상 수증자인 사람이 대상에서 빠진다.
+    //
+    //  ⚠️ 미소 관계를 살려 두면 «세액이 두 방향으로» 틀렸다 —
+    //     일반기업은 `OWNERSHIP_RATIO_DEDUCTION.large = 0`이라 그 간접분이 곧바로 이익이 되고,
+    //     중소·중견은 미소 관계가 한계보유비율 차감분 일부를 «흡수»해 직접초과가 커진다.
+    const allPaths = computeIndirectPaths(r.id, intermediaryCorps, "recipient", rulingGroupIds);
+    const { kept: sec13Kept, excluded: sec13Excluded } = partitionSec13Paths(allPaths);
+    const indBig = sumIndirectPaths(sec13Kept);
+    const ind = reduceFracBig(indBig.numer, indBig.denom);
     const ownershipDeduction: Frac = { numer: OWNERSHIP_RATIO_DEDUCTION[enterpriseSize], denom: RATIO_DENOM };
     const indirectDeduct = fracMin(ind, ownershipDeduction); // 간접에서 먼저 차감
     const remaining = fracMaxZeroSub(ownershipDeduction, indirectDeduct); // 잔여 차감분
@@ -197,10 +283,51 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
       additionalExclusion,
       totalExclusion,
       dividendDeduction,
+      ...(sec13Excluded.length > 0 ? { sec13ExcludedCount: sec13Excluded.length } : {}),
     });
   }
 
   const deemedGiftValue = rows.reduce((a, b) => a + b.subtotal, 0);
+
+  /**
+   * §⑭**2호·4호 미구현 고지**.
+   *
+   * 2호(지주회사의 다른 자회사·손자회사와 거래 × 지주회사의 그 법인 보유비율)와
+   * 4호(간접출자법인의 다른 자법인과 거래 × 그 간접출자법인의 보유비율, 가·나·다목 3요건)는
+   * **지주회사 관계·자법인 관계**를 입력 모델이 표현하지 못해 구현하지 않았다.
+   *
+   * 미구현의 방향은 **과세제외 과소 = 과대과세**라 「법 근거 없이 불리 적용 금지」와 부딪힌다.
+   * 그래서 침묵하지 않는다 — ⑭1호(전액)가 걸리지 않은 ⑩ 미해당 특수관계 매출처가 남아 있을
+   * 때만(=2호·4호가 «더 큰 금액»이 될 여지가 있을 때만) 고지한다. 여지가 없으면 사라진다.
+   */
+  const sec14Unmodeled = salesPartners.filter(
+    (p) => p.isRelated && !p.exclusionType && !isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds),
+  );
+  /**
+   * §⑱**2호·3호 미구현 고지**.
+   *
+   * ⑱1호를 충족하지 못한 간접출자법인은 간접보유비율에서 **통째로 빠진다**(recipient 모드).
+   * 그 법인이 2호(지배주주등 및 1호 법인이 합산 50% 이상)나 3호(개재법인)에 해당한다면
+   * 간접분이 살아나 증여의제이익이 **늘어야** 한다 — 즉 미구현 방향은 **과소과세**다.
+   * 2·3호는 「법인이 법인을 보유하는」 구조라 `owners`(개인만)로 표현할 수 없다.
+   *
+   * ⇒ 1호 미충족 법인이 실제로 있을 때만 고지한다(없으면 빠진 것이 없으므로 고지도 없다).
+   */
+  const sec18Dropped = intermediaryCorps.filter((c) => !isIntermediarySec18(c, rulingGroupIds));
+  const sec18ScopeNotice =
+    sec18Dropped.length > 0
+      ? `간접출자법인 ${sec18Dropped.length}곳이 상증령 §34의3⑱1호(지배주주등 30% 이상 출자)를 ` +
+        `충족하지 않아 간접보유비율에서 제외됐습니다. 같은 항 2호(지배주주등 및 1호 법인이 합산 ` +
+        `50% 이상 출자)·3호(개재법인)는 법인이 법인을 보유하는 구조를 입력받지 않아 판정하지 ` +
+        `않습니다 — 해당하면 간접분이 살아나 증여의제이익이 늘 수 있으므로 별도 검토가 필요합니다.`
+      : undefined;
+
+  const sec14ScopeNotice =
+    sec14Unmodeled.length > 0
+      ? `상증령 §34의3⑭ 2호(지주회사의 다른 자회사·손자회사)·4호(간접출자법인의 다른 자법인)는 ` +
+        `지주회사·자법인 관계를 입력받지 않아 계산하지 않습니다. 해당하면 과세제외매출액이 ` +
+        `늘어 증여의제이익이 줄 수 있으므로 별도 검토가 필요합니다 (대상 매출처 ${sec14Unmodeled.length}곳).`
+      : undefined;
 
   const breakdown: CalculationStep[] = [
     { label: "특수관계법인 매출 합계", amount: relatedSales, lawRef: GIFT.RELATED_CORP },
@@ -228,6 +355,8 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
     aggregationExcluded: true,
     aggExclClass: "deemed_profit",
+    ...(sec14ScopeNotice ? { sec14ScopeNotice } : {}),
+    ...(sec18ScopeNotice ? { sec18ScopeNotice } : {}),
     recipientBreakdown: rows,
     baseAfterTaxProfit: baseAfterTax,
     ...echo,

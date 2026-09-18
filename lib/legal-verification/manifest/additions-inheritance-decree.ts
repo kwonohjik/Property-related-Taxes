@@ -100,7 +100,8 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     //    ⑦ 정상거래비율 30/50/40 · ⑨ 한계보유비율 3/10 · ⑱1호 간접출자법인 30%는
     //    각각 `related-corp.ts`의 NORMAL_TRADE_RATIO·MARGINAL_OWNERSHIP_RATIO·
     //    `related-corp-helpers.ts`의 간접출자 판정에 1:1로 대응한다.
-    //    ⑩3호·⑬·⑰은 아직 미구현인 요건이라 **개정 추적이 더 중요하다**.
+    //    ⑰ 1천억원은 W8에서 구현됐다(`related-corp.ts` LARGE_RELATED_SALES_THRESHOLD).
+    //    ⑩3호·⑬은 아직 미구현인 요건이라 **개정 추적이 더 중요하다**.
     id: "INH_DECREE.RELATED_CORP_GAIN",
     citation: "상증령 §34의3",
     keywords: [

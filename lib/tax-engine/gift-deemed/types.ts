@@ -147,6 +147,11 @@ export interface RcRecipientBreakdown {
   additionalExclusion: number;
   totalExclusion: number;
   dividendDeduction: number;
+  /**
+   * §34의3⑬ — 「간접보유비율이 1천분의 1 미만」이라 증여의제이익 계산에서 제외된 출자관계 수.
+   * 0이면 필드 자체가 없다(제외가 일어났을 때만 화면에 사유를 남긴다).
+   */
+  sec13ExcludedCount?: number;
 }
 
 /** Phase B 결과 매트릭스 (Record — NextResponse.json 직렬화 안전, Map 금지) */
@@ -407,10 +412,25 @@ export interface DeemedGiftResult {
   tradeRatioDenom?: number;
   /** §45의3 과세요건 충족 여부 */
   taxRequirementMet?: boolean;
+  /**
+   * §45의3①1호 — 충족된 과세요건 **갈래**의 조문 표시(미충족이면 undefined).
+   * 중소·중견은 가목 하나뿐이고, 일반기업은 나목1)(=가목 사유)·나목2)(3분의 2 + 1천억)의 택일이다.
+   */
+  taxRequirementClause?: string;
   /** §45의3 정상거래비율 분수 */
   normalTradeRatio?: { numer: number; denom: number };
   /** §45의3 한계보유비율 분수 */
   marginalOwnershipRatio?: { numer: number; denom: number };
+  /**
+   * §34의3⑭ 2호·4호 미구현 고지 — 그 두 호가 「더 큰 금액」이 될 여지가 있을 때만 붙는다.
+   * 미구현 방향이 **과대과세**라 침묵하면 「법 근거 없이 불리 적용」이 된다.
+   */
+  sec14ScopeNotice?: string;
+  /**
+   * §34의3⑱ 2호·3호 미구현 고지 — 1호 미충족으로 «빠진» 간접출자법인이 있을 때만 붙는다.
+   * 미구현 방향은 **과소과세**(간접분이 통째로 0이 된다).
+   */
+  sec18ScopeNotice?: string;
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;

@@ -1,8 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { captureSessionHandoff, readSessionHandoff } from "./_helpers/session-handoff";
 
 /** E2E: §45의3 일감몰아주기 증여의제 — 교재 사례4 종합. 갑 20,520,000 + 을 16,200,000 = 36,720,000. */
 
 test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async ({ page }) => {
+  // handoff payload는 목적지 마운트가 곧바로 소비한다 — 읽기 경합을 없애려면 goto 전에 건다.
+  await captureSessionHandoff(page, "giftTaxResumeInput");
   await page.goto("/calc/gift-deemed");
   await page.getByTestId("deemed-type-related_corp").click();
   const dialog = page.getByTestId("deemed-detail-dialog");
@@ -86,6 +89,11 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
 
   await expect(page.getByTestId("deemed-result-value")).toContainText("36,720,000");
   await expect(page.getByTestId("rc-recipient-row-0")).toContainText("20,520,000");
+
+  // §⑭2호·4호는 지주회사·자법인 관계를 입력받지 않아 미구현이다. 방향이 «과대과세»라
+  // 침묵하지 않는다 — ⑭1호가 걸리지 않은 ⑩ 미해당 특수관계 매출처(D법인)가 남아 있으므로 고지된다.
+  await expect(page.getByTestId("rc-sec14-scope-notice")).toContainText("§34의3⑭");
+  await expect(page.getByTestId("rc-sec14-scope-notice")).toContainText("1곳");
   await expect(page.getByTestId("rc-recipient-row-1")).toContainText("16,200,000");
 
   // ── 이관 단위: 수증자 1인 (§45의3① 「각각 증여받은 것으로 본다」) ──────────
@@ -104,12 +112,63 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
 
   await page.getByTestId("deemed-to-wizard").click();
   await page.waitForURL(/\/calc\/gift-tax/);
-  const payload = JSON.parse(
-    (await page.evaluate(() => sessionStorage.getItem("giftTaxResumeInput")))!,
-  );
+  const payload = JSON.parse(await readSessionHandoff(page, "giftTaxResumeInput"));
   expect(payload.giftItems).toHaveLength(1);
   expect(payload.giftItems[0].marketValue).toBe(16_200_000);
   expect(payload.giftItems[0].isAggregationExcludedGift).toBe(true);
   expect(payload.giftItems[0].aggregationExcludedClass).toBe("deemed_profit");
   expect(payload.simultaneousGifts).toBeUndefined();
+});
+
+/**
+ * §45의3①1호나목2) — 일반기업 「정상거래비율의 3분의 2 초과 + 특수관계법인 매출 1천억원 초과」.
+ * 종전에는 거래비율 25%가 정상거래비율 30% 이하라는 이유로 **0원**이 나왔다(과세요건 한 갈래만 판정).
+ */
+test("§45의3①1호나목2) 일반기업 거래비율 25%·특수관계매출 2,500억 → 3,400,000,000", async ({ page }) => {
+  await page.goto("/calc/gift-deemed");
+  await page.getByTestId("deemed-type-related_corp").click();
+  const dialog = page.getByTestId("deemed-detail-dialog");
+  await dialog.getByLabel("연도", { exact: true }).fill("2024");
+  await dialog.getByLabel("월", { exact: true }).fill("12");
+  await dialog.getByLabel("일", { exact: true }).fill("31");
+
+  await dialog.getByTestId("rc-size-large").click();
+  await dialog.getByLabel("총 매출액", { exact: true }).fill("1000000000000");
+  await dialog.getByPlaceholder(/영업손실 시 음수/).fill("100000000000");
+  await dialog.getByLabel("각 사업연도 소득금액", { exact: true }).fill("80000000000");
+  await dialog.getByPlaceholder("산출세액 − 공제·감면액 (원)").fill("15000000000");
+
+  const shareholders: [string, string, string][] = [
+    ["갑", "self", "20"],
+    ["기타", "other", "80"],
+  ];
+  for (let i = 0; i < shareholders.length; i++) await dialog.getByTestId("rc-add-shareholder").click();
+  for (let i = 0; i < shareholders.length; i++) {
+    const [name, rel, pct] = shareholders[i];
+    const row = dialog.getByTestId(`rc-sh-row-${i}`);
+    await row.getByPlaceholder("주주 이름").fill(name);
+    await row.getByLabel(`주주 ${i + 1} 관계`).selectOption(rel);
+    await row.getByPlaceholder("지분율").fill(pct);
+  }
+
+  const sales: [string, string, "y" | "n"][] = [
+    ["특수법인", "250000000000", "y"],
+    ["기타매출", "750000000000", "n"],
+  ];
+  for (let i = 0; i < sales.length; i++) await dialog.getByTestId("rc-add-sales").click();
+  for (let i = 0; i < sales.length; i++) {
+    const [name, amount, related] = sales[i];
+    const row = dialog.getByTestId(`rc-sales-row-${i}`);
+    await row.getByPlaceholder("매출처 이름").fill(name);
+    await row.getByLabel("매출액", { exact: true }).fill(amount);
+    await row.getByLabel(`매출처 ${i + 1} 특수관계`).selectOption(related);
+    if (related === "y") await row.getByLabel(`매출처 ${i + 1} 과세제외유형`).selectOption("");
+  }
+
+  await page.getByTestId("deemed-detail-confirm").click();
+  await page.getByTestId("deemed-calc-btn").click();
+
+  await expect(page.getByTestId("deemed-result-value")).toContainText("3,400,000,000");
+  // 어느 갈래로 충족했는지까지 화면에 밝힌다 (종전엔 「충족/미충족」 두 글자뿐)
+  await expect(page.getByTestId("rc-tax-requirement")).toContainText("상증법 §45의3①1호나목2)");
 });
