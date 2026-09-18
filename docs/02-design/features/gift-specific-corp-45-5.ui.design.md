@@ -29,7 +29,8 @@ interface ScShareholderRow {
 |---|---|---|
 | `scMode` | `"single"` | RadioCardGroup sky |
 | `scCorporateTaxMode` | `"direct"` | RadioCardGroup amber |
-| `scCorpTaxAssessed` | `""` | auto: 법인세 산출세액 |
+| `scCorpTaxAssessed` | `""` | auto: 법인세 산출세액 (「법인세법」 §55① — §55의2분 포함 금액) |
+| `scCorpTaxLandTransfer` | `""` | auto: 토지등 양도소득 법인세액(§55의2) — 영 §34의5④2호가목 제외항목. ⑧이 산출세액 초과를 차단(자동 clamp 금지) |
 | `scCorpTaxDeduction` | `""` | auto: 공제·감면 |
 | `scCorpIncome` | `""` | auto: 각사업연도소득금액(분모) |
 | `scTotalShares` | `""` | 발행주식 총수(분모) |
@@ -57,7 +58,8 @@ interface ScShareholderRow {
 │ ┌ 법인세 상당액 ──────────────────────────────┐    │
 │ │ (•) 직접 입력   ( ) 산출세액+소득금액 자동안분 │    │ ← scCorporateTaxMode(amber)
 │ │  · direct → 법인세 상당액 [   0 ] 원(이월결손금 0) │
-│ │  · auto   → 산출세액 [ ] 공제·감면 [ ] 소득금액 [ ] │
+│ │  · auto   → 산출세액 [ ] 토지등(§55의2) [ ]         │
+│ │            공제·감면 [ ] 소득금액 [ ]                │
 │ │            ↳ 안분액 = 산출세액×min(거래이익/소득,1) (useMemo echo, 표시전용) │
 │ └──────────────────────────────────────────┘    │
 │ [single] 해당 지배주주등(수증자)의 보유비율 [ 25 ] % │ ← scRatioPct (single만·ⓑ 승수)

@@ -292,7 +292,16 @@ export interface SpecificCorpInput {
   // ── roster 모드 (shareholders 존재 시 dispatch) ──
   shareholders?: SpecificCorpShareholder[];
   annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)
-  corporateTaxComputed?: number; // 법인세 산출세액(안분 前)
+  corporateTaxComputed?: number; // 법인세 산출세액(안분 前) — 「법인세법」 §55① 정의상 §55의2분을 «포함»한 값
+  /**
+   * 「법인세법」 §55의2 토지등 양도소득에 대한 법인세액 — 상증령 §34의5④2호가목이
+   * 「산출세액(같은 법 제55조의2에 따른 토지등 양도소득에 대한 법인세액은 제외한다)」로
+   * 명시 차감하는 항목. §55① 본문이 산출세액을 「…이를 **합한 금액으로 한다**」로 정의하므로
+   * 이 괄호는 확인적 문구가 아니라 실질 차감이다.
+   * ⚠️ 조특법 §100의32(투자·상생협력 촉진) 특례세액은 §55①이 같이 합산하지만 상증령 괄호는
+   *    열거하지 않는다 — **빼면 안 된다**(확대 적용 금지).
+   */
+  corporateTaxOnLandTransfer?: number;
   corporateTaxCredit?: number; // 법인세 공제·감면액
   giftDeduction?: number; // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
 }

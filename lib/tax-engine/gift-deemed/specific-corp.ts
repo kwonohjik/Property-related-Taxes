@@ -257,7 +257,19 @@ function notSpecificCorpReason(e: SpecificCorpEligibility): string {
 }
 
 /**
- * 상증령 §34의5④2호 — 법인세 안분 = (산출세액 − 공제감면) × min(거래이익, 소득금액) ÷ 소득금액.
+ * 상증령 §34의5④2호 — 법인세 안분 = 가목 × min(거래이익, 소득금액) ÷ 소득금액.
+ *
+ * ── 가목의 세액 (verbatim) ────────────────────────────────────────────
+ * 「특정법인의 「법인세법」 제55조제1항에 따른 산출세액(같은 법 **제55조의2에 따른 토지등
+ * 양도소득에 대한 법인세액은 제외**한다)에서 법인세액의 공제ㆍ감면액을 뺀 금액」
+ *
+ * 종전 구현은 `산출세액 − 공제감면`만 계산해 §55의2분을 빼지 않았다. 법인세법 §55① 본문이
+ * 「…제55조의2에 따른 토지등 양도소득에 대한 법인세액 … 이 있으면 이를 **합한 금액으로 한다**.
+ * 이하 "산출세액"이라 한다」로 정의하므로, **법문 용어를 그대로 따른 입력이 곧 과대 입력**이었다
+ * (법인세 상당액 과대 → 특정법인의 이익 과소 → 증여의제이익 과소 = 과소과세).
+ *
+ * ⚠️ §55① 괄호는 조특법 §100의32 특례세액도 함께 합산하지만, 상증령 §34의5④2호가목 괄호는
+ *    **§55의2만** 열거한다 ⇒ §100의32분은 빼지 않는다(확대 적용 금지).
  *
  * **법인 단위 계산이라 주주 명부와 무관하다** — single(지분율 직접)·roster(주주명부) 양쪽이 공유한다.
  * `annualIncome`이 0이면 안분 불가 → 호출자가 직접 넣은 `corporateTax` fallback.
@@ -266,7 +278,9 @@ export function apportionCorporateTax(input: SpecificCorpInput): number {
   const annualIncome = input.annualIncome ?? 0;
   const corpTaxNet = Math.max(
     0,
-    (input.corporateTaxComputed ?? 0) - (input.corporateTaxCredit ?? 0),
+    (input.corporateTaxComputed ?? 0) -
+      (input.corporateTaxOnLandTransfer ?? 0) - // §55의2 토지등 양도소득 법인세액
+      (input.corporateTaxCredit ?? 0),
   );
   return annualIncome > 0
     ? safeMultiplyThenDivide(

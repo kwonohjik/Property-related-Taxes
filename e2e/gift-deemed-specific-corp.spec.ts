@@ -391,6 +391,48 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(dialog.getByTestId("sc-sh-is-donor-0").getByRole("switch")).not.toBeChecked();
   });
 
+  test("토지등 양도소득 법인세액 1억 제외 → 갑 1,449,000,000 → 1,494,000,000 (영 §34의5④2호가목)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    await dialog.getByTestId("sc-mode-roster").click();
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("3000000000");
+
+    await dialog.getByTestId("sc-corp-tax-auto").click();
+    await dialog.getByTestId("sc-corp-tax-assessed").fill("780000000");
+    // 「법인세법」 §55① 산출세액은 §55의2 토지등 양도소득 법인세액을 «포함»한 값이다
+    await dialog.getByTestId("sc-corp-tax-land-transfer").fill("100000000");
+    await dialog.getByTestId("sc-corp-tax-deduction").fill("0");
+    await dialog.getByTestId("sc-corp-income").fill("4000000000");
+
+    await dialog.getByTestId("sc-total-shares").fill("100000");
+    for (const [i, name, rel, shares] of [
+      ["0", "갑", "lineal_descendant", "60000"],
+      ["1", "부", "lineal_ascendant", "20000"],
+      ["2", "병", "other", "20000"],
+    ] as const) {
+      await dialog.getByTestId("sc-sh-add").click();
+      await dialog.getByTestId(`sc-sh-name-${i}`).fill(name);
+      await dialog.getByTestId(`sc-sh-relation-${i}`).selectOption(rel);
+      await dialog.getByTestId(`sc-sh-shares-${i}`).fill(shares);
+    }
+    await dialog.getByTestId("sc-sh-is-donor-1").getByRole("switch").click();
+    await dialog.getByTestId("sc-gift-deduction").fill("50000000");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // 안분 585,000,000 → 510,000,000 ⇒ 갑 60% 증여재산가액이 45,000,000원 늘어난다
+    await expect(page.getByTestId("sc-multi-gain-0")).toContainText("1,494,000,000", { timeout: 15000 });
+    await expect(page.getByTestId("sc-limit-amount")).toContainText("234,000,000");
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

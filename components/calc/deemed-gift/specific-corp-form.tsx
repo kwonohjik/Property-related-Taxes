@@ -42,6 +42,7 @@ export function SpecificCorpFields({ form, set }: Props) {
   const corpTaxEcho = useMemo(() => {
     if (!isAuto) return null;
     const assessed = parseAmount(form.scCorpTaxAssessed);
+    const landTransfer = parseAmount(form.scCorpTaxLandTransfer);
     const deduction = parseAmount(form.scCorpTaxDeduction);
     const income = parseAmount(form.scCorpIncome);
     // 2·3호는 거래이익이 시가−대가로 «도출»된다 — 입력칸 값을 쓰면 안분 echo가 어긋난다
@@ -51,12 +52,12 @@ export function SpecificCorpFields({ form, set }: Props) {
         : 0
       : parseAmount(form.scTransactionBenefit);
     if (income <= 0 || assessed <= 0) return null;
-    const net = Math.max(0, assessed - deduction);
+    const net = Math.max(0, assessed - landTransfer - deduction); // 영 §34의5④2호가목 — §55의2분 제외
     const minNumer = Math.min(benefit, income);
     // BigInt 안전 안분(overflow 방지 — safeMultiplyThenDivide와 동일 로직)
     const result = Number(BigInt(net) * BigInt(minNumer) / BigInt(income));
     return result;
-  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
+  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxLandTransfer, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
 
   return (
     <div className="space-y-3">
@@ -240,7 +241,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             label="법인세 상당액"
             value={form.scCorporateTax}
             onChange={(v) => set({ scCorporateTax: v })}
-            hint="(산출세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값. 이월결손금 0이면 0 입력"
+            hint="(산출세액 − 토지등 양도소득 법인세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값"
             data-testid="sc-corporate-tax"
           />
         )}
@@ -250,8 +251,15 @@ export function SpecificCorpFields({ form, set }: Props) {
               label="법인세 산출세액"
               value={form.scCorpTaxAssessed}
               onChange={(v) => set({ scCorpTaxAssessed: v })}
-              hint="법인세 산출세액 (공제·감면 차감 전)"
+              hint="「법인세법」 §55① 산출세액 — 공제·감면 차감 전 금액을 그대로 입력"
               data-testid="sc-corp-tax-assessed"
+            />
+            <CurrencyInput
+              label="토지등 양도소득에 대한 법인세액"
+              value={form.scCorpTaxLandTransfer}
+              onChange={(v) => set({ scCorpTaxLandTransfer: v })}
+              hint="「법인세법」 §55의2분 — 위 산출세액에 포함돼 있으면 그 금액 (없으면 0)"
+              data-testid="sc-corp-tax-land-transfer"
             />
             <CurrencyInput
               label="법인세 공제·감면액"

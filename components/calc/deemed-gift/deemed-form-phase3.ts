@@ -129,6 +129,8 @@ export interface DeemedPhase3Fields {
   scCorporateTaxMode: "direct" | "auto";
   /** auto: 법인세 산출세액 */
   scCorpTaxAssessed: string;
+  /** auto: 「법인세법」 §55의2 토지등 양도소득에 대한 법인세액 (영 §34의5④2호가목 — 산출세액에서 제외) */
+  scCorpTaxLandTransfer: string;
   /** auto: 법인세 공제·감면 */
   scCorpTaxDeduction: string;
   /** auto: 각사업연도소득금액 (안분 분모) */
@@ -233,6 +235,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   scMode: "single",
   scCorporateTaxMode: "direct",
   scCorpTaxAssessed: "",
+  scCorpTaxLandTransfer: "",
   scCorpTaxDeduction: "",
   scCorpIncome: "",
   scTotalShares: "",

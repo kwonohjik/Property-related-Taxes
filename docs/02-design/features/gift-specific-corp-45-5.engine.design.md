@@ -25,7 +25,7 @@
 | 상증령 §34의3② (288887) | 간접보유비율 = 「각 단계의 직접보유비율을 **모두 곱하여**」, 경로가 둘 이상이면 「각각의 비율을 **모두 합하여**」 | `computeIndirectRatioBig()` (§45의3과 공용) |
 | §45의4① (280353) | 「지배주주와 그 친족(이하 이 조 및 **제45조의5**에서 "지배주주등"이라 한다)」 | ⓐ는 **집합**의 합계 비율 (증여자 본인 행 포함) |
 | §45의5② | ①증여세액 > (직접증여 증여세 − 법인세상당액) → 초과액 없음 | `finalTax = min(㉮, ㉯)`, ㉯=㉠−㉡ |
-| §34의5④ (283637) | 특정법인이익 = 1호(거래이익) − 2호(법인세 산출세액−공제감면) × min(거래이익/소득금액, 1) | `corpTaxApportioned` 안분 |
+| §34의5④ (283637) | 특정법인이익 = 1호(거래이익) − 2호(산출세액 − **토지등 양도소득 법인세액(§55의2)** − 공제감면) × min(거래이익/소득금액, 1) | `corpTaxApportioned` 안분 |
 | §34의5⑤ | 증여의제이익 **1억원 이상** 한정 | 주주별 `gain ≥ 100,000,000` 게이트 |
 | §34의5⑨ | 한도: ㉠=1호금액×지분율 직접증여 증여세 / ㉡=2호금액×지분율 | `calcSpecificCorpLimit` |
 
@@ -106,7 +106,8 @@ interface SpecificCorpInput {
   // ↓ roster 모드
   shareholders?: SpecificCorpShareholder[];
   annualIncome?: number;                 // §34의5④2호나목 각사업연도소득금액 (분모)
-  corporateTaxComputed?: number;         // 법인세 산출세액 (안분 前)
+  corporateTaxComputed?: number;         // 법인세 산출세액 (안분 前 — §55① 정의상 §55의2분 «포함»)
+  corporateTaxOnLandTransfer?: number;   // 법인세법 §55의2 토지등 양도소득 법인세액 (§34의5④2호가목 제외항목)
   corporateTaxCredit?: number;           // 법인세 공제·감면액
   giftDeduction?: number;                // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
 }
@@ -160,12 +161,20 @@ interface SpecificCorpMultiResult {
          : (controllingGroupRatio 있음 ? "no" : (roster ? "no" : "unknown"))
      met === "no" → 전 주주 reason=not_specific_corp, deemedGiftValue=0
 1. corpTaxApportioned =
-     (annualIncome > 0 && corporateTaxComputed != null)
-       ? safeMultiplyThenDivide(
-           max(0, corporateTaxComputed − (corporateTaxCredit ?? 0)),
+     (annualIncome > 0)                              // ⚠️ 구현은 annualIncome만 본다 — 종전 문서의
+       ? safeMultiplyThenDivide(                     //    `&& corporateTaxComputed != null`은 최초
+           max(0, corporateTaxComputed              //    커밋부터 코드에 없던 문서 드리프트였다.
+               − (corporateTaxOnLandTransfer ?? 0)   // §34의5④2호가목 — 법인세법 §55의2 토지등 양도소득 법인세액
+               − (corporateTaxCredit ?? 0)),
            min(transactionBenefit, annualIncome),   // 거래이익/소득금액, 1 초과 시 1 → min으로 분자 상한
            annualIncome)
        : (corporateTax ?? 0)                         // 이월결손금 0 또는 single 직접값
+
+   > **§55의2 제외는 확인적 문구가 아니다.** 법인세법 §55①이 산출세액을 「…제55조의2에 따른
+   > 토지등 양도소득에 대한 법인세액 … 이 있으면 이를 **합한 금액으로 한다**」로 정의하므로,
+   > 법문 용어를 그대로 따른 입력이 곧 과대 입력이 된다(안분 과대 → 증여의제이익 과소).
+   > ⚠️ §55① 괄호는 조특법 §100의32 특례세액도 합산하지만 §34의5④2호가목 괄호는 §55의2만
+   > 열거한다 — **§100의32분은 빼지 않는다**(확대 적용 금지). anchor `[LT-0]~[LT-8]`.
 2. corpProfit = max(0, transactionBenefit − corpTaxApportioned)
 3. donees = shareholders.map(sh => {
      ratio = 직접(sh.shares/totalShares) + 간접(computeIndirectRatioBig, mode="ruling")  // BigInt 분수
@@ -230,7 +239,7 @@ __tests__/tax-engine/gift-deemed/specific-corp-multi.test.ts — [SC-CASE1]·[SC
 ```
 
 ## 8. 엔진 → UI 동기화 (입력·결과 경계)
-- **엔진 입력**: 행 단위 **donorRelation**(§53)·**isGenerationSkip**(§57)·**counterparty**·**transactionType**·**marketValue**·**consideration**·**isDissolvingWithoutResidual**·shareholders[](+`isCorporate`)·**intermediaryCorps[]**(간접출자관계)·annualIncome·corporateTaxComputed·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
+- **엔진 입력**: 행 단위 **donorRelation**(§53)·**isGenerationSkip**(§57)·**counterparty**·**transactionType**·**marketValue**·**consideration**·**isDissolvingWithoutResidual**·shareholders[](+`isCorporate`)·**intermediaryCorps[]**(간접출자관계)·annualIncome·corporateTaxComputed·**corporateTaxOnLandTransfer**·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
 - **엔진 결과**: `specificCorpMulti.{corpProfit, corpTaxApportioned, donees[]}` + `specificCorpEligibility.{directPct, declaredPct, effectivePct, met}`. donee는 `directRatioPct`·`indirectRatioPct`를 분리해 echo한다. 거래 판정은 `specificCorpTransaction.{benefit, exclusionReason, counterpartyMet, significance, transactionType}`. UI 결과뷰가 주주별 표 + 한도 표를 이 echo로 렌더 (UI 재계산 금지 — dual-truth 회피).
 - 14 동기화 지점 상세는 `gift-specific-corp-45-5.ui.design.md`.
 

@@ -480,6 +480,8 @@ const specificCorpSchema = z.object({
   // 증여자 2인 이상은 §45의5①상 별개 거래다 — ⑧과 같은 규칙을 ⑫에도 건다(3중 패턴)
   annualIncome: z.number().nonnegative().optional(),
   corporateTaxComputed: z.number().nonnegative().optional(),
+  // 영 §34의5④2호가목 — 법인세법 §55의2 토지등 양도소득에 대한 법인세액(산출세액에서 제외)
+  corporateTaxOnLandTransfer: z.number().nonnegative().optional(),
   corporateTaxCredit: z.number().nonnegative().optional(),
   giftDeduction: z.number().nonnegative().optional(),
 }).refine(
