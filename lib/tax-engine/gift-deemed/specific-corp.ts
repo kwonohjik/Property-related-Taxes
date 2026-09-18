@@ -1,6 +1,7 @@
 /** (Phase 3) 특정법인과의 거래를 통한 이익의 증여 의제 (§45의5 · 시행령 §34의5) */
 import { GIFT } from "../legal-codes";
-import { applyRate, safeMultiplyThenDivide, truncateToThousand } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
+import { TAX_BASE_MIN } from "../gift-tax-helpers";
 import { computeIndirectRatioBig } from "./related-corp-helpers";
 import { calcGenerationSkipSurcharge, calcInheritanceGiftTax } from "../inheritance-gift-common";
 import { GIFT_DEDUCTION_LIMIT } from "../deductions/gift-deductions";
@@ -313,6 +314,21 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
   const applied = !tx.exclusionReason && eligibility.met !== "no" && gain >= ABSOLUTE_THRESHOLD;
   const value = applied ? gain : 0;
 
+  // ── §45의5② 한도 — roster와 **같은 leaf**를 탄다 ──
+  // 종전에는 이 경로에 한도 계산이 아예 없어, 조문이 구분하지 않는 두 입력 모드가 갈렸다:
+  // roster는 한도표를 보여주는데 single은 그 안내가 없었고, 한도 전용 입력(`giftDeduction`)은
+  // ④⑫⑭를 모두 통과해 엔진까지 도달한 뒤 **참조되지 않고 버려지는 유령 필드**였다.
+  // 조문에는 입력 모드 축이 없다(법 §45의5② · 영 §34의5⑨) ⇒ 정본은 「고지」가 아니라 「구현」이다.
+  const specificCorpLimit = applied
+    ? calcSpecificCorpLimit({
+        gain,
+        transactionBenefit,
+        ratio: { numer: BigInt(ratio.numer), denom: BigInt(ratio.denom) },
+        corpTaxApportioned: corporateTax,
+        giftDeduction: input.giftDeduction ?? 0,
+      })
+    : undefined;
+
   const breakdown: CalculationStep[] = [
     { label: `거래이익 — ${txLabel(tx.transactionType)}`, amount: transactionBenefit, lawRef: GIFT.SPECIFIC_CORP },
     { label: "법인세 상당액", amount: corporateTax },
@@ -334,6 +350,7 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
           : "증여의제이익이 1억원 미만 (§34의5⑤)")),
     legalBasis: GIFT.SPECIFIC_CORP,
     thresholdEcho: { gain },
+    specificCorpLimit,
     specificCorpEligibility: eligibility,
     specificCorpTransaction: tx,
   };
@@ -472,7 +489,7 @@ function doneeDeduction(sh: SpecificCorpShareholder, fallback: number): number {
  * ㉮ 일반 산출세액 = 증여세(증여의제이익[법인세 차감 後] − 공제)
  * ㉠ 직접증여 가정 = 증여세(거래이익[법인세 차감 前]×지분율 − 공제)
  * ㉡ 법인세 상당액 × 지분율
- * finalTax = min(㉮, max(0, ㉠ − ㉡)). 과세표준은 천원절사 후 누진세율(§56) 적용.
+ * finalTax = min(㉮, max(0, ㉠ − ㉡)). 과세표준은 §55② 과세최저한(50만원) 적용 후 누진세율(§56).
  */
 function calcSpecificCorpLimit(p: {
   gain: number;
@@ -489,7 +506,12 @@ function calcSpecificCorpLimit(p: {
   // §57 할증은 ㉮(일반 산출세액)와 ㉠(직접증여 가정 증여세) **양쪽**에 붙는다 —
   // 영 §34의5⑨이 ㉠를 「직접 증여받은 것으로 볼 때의 **증여세**」로 정의하므로 §57이 포함된다.
   const taxed = (base: number) => {
-    const taxBase = truncateToThousand(Math.max(0, base));
+    // §55② 「과세표준이 50만원 미만이면 증여세를 부과하지 아니한다」.
+    // 종전에는 `truncateToThousand`로 천원절사를 했는데 §55 어디에도 절사 규정이 없고,
+    // 저장소의 다른 증여세 스트림 4곳(gift-tax·two-stream·special·aggregation-excluded)과
+    // 공익법인 `applyMinimumTaxBase`는 모두 절사 없이 이 최저한만 적용한다. 여기만 예외였다.
+    const rawBase = Math.max(0, base);
+    const taxBase = rawBase < TAX_BASE_MIN ? 0 : rawBase;
     const raw = calcInheritanceGiftTax(taxBase);
     const { surchargeAmount } = calcGenerationSkipSurcharge(
       raw,

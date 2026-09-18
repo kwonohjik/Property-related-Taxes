@@ -433,6 +433,38 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("sc-limit-amount")).toContainText("234,000,000");
   });
 
+  test("single 모드에도 §45의5② 한도표가 뜬다 — 증여재산공제가 결과를 바꾼다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    // 기본 모드(single) 그대로 — 지분율 직접 입력
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("3000000000");
+    await dialog.getByTestId("sc-corp-tax-auto").click();
+    await dialog.getByTestId("sc-corp-tax-assessed").fill("780000000");
+    await dialog.getByTestId("sc-corp-tax-deduction").fill("0");
+    await dialog.getByTestId("sc-corp-income").fill("4000000000");
+    await dialog.getByTestId("sc-shareholder-ratio").fill("60");
+    await dialog.getByTestId("sc-gift-deduction").fill("50000000");
+    await dialog.getByTestId("sc-group-ratio").fill("60");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // 종전에는 이 표가 roster 전용이라 기본 모드 사용자는 한도를 볼 수 없었다
+    await expect(page.getByTestId("sc-single-limit")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("sc-limit-computed-tax")).toContainText("399,600,000");
+    await expect(page.getByTestId("sc-limit-amount")).toContainText("189,000,000");
+    await expect(page.getByTestId("sc-limit-self-pay-tax")).toContainText("183,330,000");
+    // 증여재산공제가 ㉮에 반영된다 — 종전에는 값을 넣어도 결과가 1원도 바뀌지 않았다
+    await expect(page.getByTestId("sc-limit-deduction")).toContainText("50,000,000");
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

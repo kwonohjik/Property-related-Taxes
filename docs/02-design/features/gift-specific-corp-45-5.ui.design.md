@@ -113,7 +113,15 @@ interface ScShareholderRow {
 - 성명 셀: `name.trim() || RELATION_LABEL[relation]` (내부 id 노출 금지). 금액 셀 `text-right font-mono tabular-nums`(amount-column-align).
 - 과세여부 배지: 과세=emerald / donor_self="본인증여 제외" / non_related="비특수관계인 제외" / below_threshold="1억 미만 제외"(static tone Record).
 
-### 5-2. §45의5② 한도 표 (과세 주주 `scSelectedDoneeIndex` 선택 → `donee.limitCalc`)
+### 5-2. §45의5② 한도 표 — **두 모드 공용** (`ScLimitTable`)
+
+- roster: `sc-multi-limit` 카드 안 · 수증자 드롭다운(`scSelectedDoneeIndex` → `donee.limitCalc`)
+- single: `sc-single-limit` 카드 안 · `result.specificCorpLimit` (수증자 1인이라 드롭다운 없음)
+
+종전에는 이 표가 roster 전용이라, 기본 모드(single) 사용자는 한도를 볼 수 없었고 섹션 5의
+증여재산공제 입력이 엔진까지 도달한 뒤 버려지는 «죽은 칸»이었다. 조문에 입력 모드 축이 없으므로
+정본은 「single에서 칸을 숨긴다」가 아니라 「single에도 한도를 계산한다」다.
+
 ```
 증여세 한도 (§45의5②) — 수증자: 갑 ▾
  ㉮ 일반 산출세액                                   399,600,000
@@ -125,6 +133,10 @@ interface ScShareholderRow {
  신고세액공제 (3%)                                   −5,670,000
  자진납부세액                                       183,330,000
 ```
+> **이 값이 마법사까지 간다.** 「이 금액으로 증여세 계산하기 →」가 `EstateItem.deemedGiftTaxCap`으로
+> ㉯를 실어 보내고 증여세 본엔진이 산출세액을 자른다. 종전에는 한도 前 가액만 넘어가 같은 사안에
+> 두 개의 세액(183,330,000 ↔ 387,612,000)이 나왔다. 다른 증여재산·사전증여가 섞이거나 공제·가액이
+> 달라지면 적용하지 않고 **결과 경고**로 알린다(§45의5에 안분 규정이 없다).
 - 펼침 토글(`ExpandToggleButton`)·print 자동펼침(print-only-css-toggle). 산식 한국어 풀어쓰기(floor 미표시).
 
 ## 6. 14 동기화 지점 (신규 필드 도달 경로)
@@ -161,7 +173,9 @@ interface ScShareholderRow {
 components/calc/deemed-gift/other-forms.tsx           — SpecificCorpFields(모드 토글·법인세·single) 확장 (<800 유지)
 components/calc/deemed-gift/SpecificCorpShareholderTable.tsx — 신규(행 카드+추가/삭제, CapitalDecreaseShareholderTable 패턴)
 components/calc/deemed-gift/deemed-form-state.ts      — 9필드+ScShareholderRow+initial+normalize
-components/calc/results/DeemedGiftResultView.tsx      — specific_corp 분기(주주별 표+한도 표)
+components/calc/results/DeemedGiftResultView.tsx      — specific_corp 분기(주주별 표 + single 한도 카드)
+components/calc/results/ScLimitTable.tsx              — §45의5② 한도 표 (single·roster 공용)
+lib/tax-engine/deemed-gift-tax-cap.ts                 — 마법사 산출세액 상한 적용 판정(staleness 가드)
 lib/calc/gift-deemed-api.ts / -validate.ts            — ④⑧⑬
 lib/validators/gift-deemed-input.ts                   — ⑨⑫
 app/api/calc/gift-deemed/route.ts                     — ⑭

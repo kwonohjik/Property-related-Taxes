@@ -390,6 +390,12 @@ export interface DeemedGiftResult {
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;
+  /**
+   * §45의5② 한도 — **single(지분율 직접) 모드**의 수증자 1인분.
+   * roster는 수증자별로 `specificCorpMulti.donees[].limitCalc`에 담긴다. 조문은 입력 모드를
+   * 구분하지 않으므로(§45의5②·영 §34의5⑨) 두 경로가 같은 leaf를 쓴다 — parity anchor가 고정한다.
+   */
+  specificCorpLimit?: SpecificCorpLimitCalc;
   /** §45의5① ⓐ 특정법인 해당성 판정 echo (승수 ⓑ와 다른 축 — specific-corp.ts JSDoc 참조) */
   specificCorpEligibility?: SpecificCorpEligibility;
   /** §45의5① 각 호 거래유형·상대방·현저성 판정 echo (영 §34의5②④⑥⑦) */

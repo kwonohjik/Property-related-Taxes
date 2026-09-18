@@ -202,6 +202,18 @@ interface SpecificCorpMultiResult {
 
 ### §45의5② 한도 (calcSpecificCorpLimit — 과세 주주별)
 
+> **single·roster 공용 leaf다.** 조문(법 §45의5② · 영 §34의5⑨)에는 입력 모드 축이 없다. 종전에는
+> single(`calcSpecificCorpGift`)이 한도를 계산하지 않아, 한도 전용 입력(증여재산공제)이 엔진까지
+> 도달한 뒤 버려지는 유령 필드였다. single은 `result.specificCorpLimit`, roster는
+> `donees[].limitCalc`에 담고 같은 사실관계면 **완전히 같다**(anchor [L-0]).
+>
+> **세액 경로 도달** — 한도는 결과뷰 표시로 끝나지 않는다. prefill이 `EstateItem.deemedGiftTaxCap`
+> (`limitAmount` = ㉯ + staleness 근거 `basis`)을 싣고, 증여세 본엔진(`gift-tax.ts` STEP 7.4 ·
+> `deemed-gift-tax-cap.ts`)이 산출세액(§56+§57)을 ㉯로 자른다. 적용 조건은 **그 신고의 과세가액이
+> 이 증여의제이익 하나이고 공제가 이관 당시와 같을 때**뿐이다 — 상한 대상은 「제1항에 따른 증여세액」
+> 인데 다른 재산이 섞이면 §45의5에 안분 규정이 없어서다. 적용하지 않으면 경고를 남긴다
+> (anchor [L-6]~[L-15]; 교재 사례2 두 화면 모두 산출 189,000,000 · 자진납부 183,330,000).
+
 > **§53 공제와 §57 할증은 수증자별이다.** 공제는 행 단위 `donorRelation`에서(미지정이면 입력 단의
 > 단일 `giftDeduction`으로 폴백 — 10년 기사용분이 있을 때 쓰는 경로), 할증은 행 단위
 > `isGenerationSkip`에서 온다. 할증은 ㉮·㉠ **양쪽**에 붙는다 — 영 §34의5⑨이 ㉠를 「직접 증여받은
@@ -209,9 +221,10 @@ interface SpecificCorpMultiResult {
 > 할증 전 값으로 되돌아간다(anchor [D-7]).
 > 표시층이 사유 없이 큰 값을 보이지 않도록 `giftDeductionApplied`·`generationSkipSurcharge`를 echo한다.
 ```
-㉮ computedTax  = calcInheritanceGiftTax(truncateToThousand(gain − giftDeduction))
-㉠ directGiftTax= calcInheritanceGiftTax(truncateToThousand(
-                    safeMultiplyThenDivide(transactionBenefit, shares, totalShares) − giftDeduction))  // 거래이익(차감 前)×지분
+taxBase(x)     = x < 500,000 ? 0 : x                // §55② 과세최저한 — 천원절사는 §55에 없다(종전 truncateToThousand 제거)
+㉮ computedTax  = calcInheritanceGiftTax(taxBase(max(0, gain − giftDeduction)))
+㉠ directGiftTax= calcInheritanceGiftTax(taxBase(max(0,
+                    거래이익(차감 前) × 주식보유비율 − giftDeduction)))
 ㉡ corpTaxShare = safeMultiplyThenDivide(corpTaxApportioned, shares, totalShares)
 ㉯ limitAmount  = max(0, ㉠ − ㉡)
 finalTax       = min(㉮, ㉯)
@@ -223,7 +236,8 @@ selfPayTax     = finalTax − filingCredit
 ## 6. 정밀도 / 정수연산
 - 모든 안분: `safeMultiplyThenDivide(a,b,c)` (BigInt fallback, floor).
 - 주주별 gain: **각자 독립 floor — 잔액 흡수 안 함** (§45의5 개별 산정, 합산 일치 불요).
-- 한도 taxBase: `truncateToThousand` 천원절사 후 `calcInheritanceGiftTax` 전달.
+- 한도 taxBase: **§55② 과세최저한(50만원 미만 → 0)** 후 `calcInheritanceGiftTax` 전달. 종전 `truncateToThousand`
+  천원절사는 §55 어디에도 근거가 없고 저장소의 다른 증여세 스트림 4곳과도 어긋났다(anchor [L-3]~[L-5]).
 - filingCredit: floor(×3/100). `Math.round` 금지.
 
 ## 7. 파일 구조 / 함수

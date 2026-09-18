@@ -10,6 +10,7 @@ import {
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
 import { SpecificCorpMultiResultView } from "./SpecificCorpMultiResultView";
+import { ScLimitTable } from "./ScLimitTable";
 import { ExcessDividendDetailSection } from "./ExcessDividendDetailSection";
 import { AllocationResultView } from "./AllocationResultView";
 import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
@@ -152,6 +153,22 @@ export function DeemedGiftResultView({
           selectedDoneeIndex={selectedDoneeIndex}
           onSelectDonee={onSelectDonee ?? (() => {})}
         />
+      )}
+
+      {/* ── §45의5② 한도 (single 모드) — roster는 SpecificCorpMultiResultView가 같은 표를 쓴다 ── */}
+      {result.specificCorpLimit && (
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          data-testid="sc-single-limit"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-violet-800">증여세 한도 (§45의5②)</p>
+            <LawArticleModal legalBasis="상증법 §45의5②" />
+          </div>
+          <div className="mt-3">
+            <ScLimitTable limitCalc={result.specificCorpLimit} />
+          </div>
+        </div>
       )}
 
       {/* ── §45의5① 거래상대방 판정 보류 고지 ── */}
