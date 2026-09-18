@@ -76,4 +76,15 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
 // 🔴 「router 후처리」는 **없다** — 이 파일은 `switch` 하나가 전부다.
 //    §43① 중복배제 구현체(`dup-exclusion.ts`의 `selectPrimaryDeemedGift`)는 프로덕션
 //    호출처가 0건이고(테스트만 참조), UI가 한 번에 한 유형만 계산하므로 도달 경로가 없다.
-//    §43② 1년 합산도 미배선이다(특정법인 1억원 문턱 판정에 필요).
+//
+//    §43②(1년 합산)는 **후처리가 아니라 `switch` 안의 축별 구현**으로 살아 있다.
+//    법 §43② 열거 verbatim: 「제31조제1항제2호, 제35조, 제37조부터 제39조까지, 제39조의2,
+//    제39조의3, 제40조, 제41조의2, 제41조의4, 제42조 및 제45조의5」 — **11개 축**이다.
+//    그중 배선된 것은 **2개뿐**이다:
+//      · §41의4 — `case "free_loan_aggregated"` → `free-loan-aggregated.ts`
+//      · §45의5 — `specific-corp.ts`의 소급 1년 윈도(1억원 문턱 판정)
+//    나머지 9개(§31①2호·§35·§37~§39·§39의2·§39의3·§40·§41의2·§42)는 미배선이다.
+//    ⚠️ 종전 주석은 「§43② 1년 합산도 미배선이다(특정법인 1억원 문턱 판정에 필요)」였는데,
+//       괄호가 지목한 바로 그 축이 구현된 뒤에도 문장이 남아 **미구현을 선언하는 stale**이
+//       됐다(XX-B). 축을 새로 배선하면 위 목록도 함께 고칠 것 —
+//       `__tests__/tax-engine/gift-deemed/router-dup-aggregation-claims.test.ts`가 고정한다.
