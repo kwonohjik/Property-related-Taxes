@@ -22,8 +22,20 @@ function newRow(): ScShareholderRow {
     shares: "",
     isDonor: false,
     isCorporate: false,
+    donorRelation: "",
+    isGenerationSkip: false,
   };
 }
+
+/** §53 증여재산공제 구분 — ""는 입력 단의 단일 「증여재산공제」로 떨어진다(기사용 공제 경로) */
+const SC_DONOR_RELATION_OPTIONS: { value: ScShareholderRow["donorRelation"]; label: string }[] = [
+  { value: "", label: "미지정 (아래 증여재산공제 사용)" },
+  { value: "spouse", label: "배우자 (6억)" },
+  { value: "lineal_ascendant_adult", label: "직계존속 → 성년 (5천만)" },
+  { value: "lineal_ascendant_minor", label: "직계존속 → 미성년 (2천만)" },
+  { value: "lineal_descendant", label: "직계비속 (5천만)" },
+  { value: "other_relative", label: "기타친족 (1천만)" },
+];
 
 const SC_RELATION_OPTIONS: { value: ScRelation; label: string }[] = [
   { value: "lineal_ascendant", label: "직계존속" },
@@ -128,6 +140,37 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
               data-testid={`sc-sh-is-corporate-${i}`}
             />
 
+            {/* §53 증여재산공제 구분 — 「증여자와의」 관계 (위 「관계」는 지배주주와의 관계라 다른 축) */}
+            {!row.isCorporate && !row.isDonor && (
+              <>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">증여자와의 관계</label>
+                  <select
+                    value={row.donorRelation}
+                    onChange={(e) =>
+                      update(i, { donorRelation: e.target.value as ScShareholderRow["donorRelation"] })
+                    }
+                    data-testid={`sc-sh-donor-relation-${i}`}
+                    className="flex-1 rounded-md border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none"
+                  >
+                    {SC_DONOR_RELATION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <ToggleCard
+                  variant="chip"
+                  tone="sky"
+                  title="세대생략 (증여자의 손자녀 등 — §57 할증)"
+                  checked={row.isGenerationSkip}
+                  onCheckedChange={(v) => update(i, { isGenerationSkip: v })}
+                  data-testid={`sc-sh-generation-skip-${i}`}
+                />
+              </>
+            )}
+
             {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
             {!row.isCorporate && (
               <ToggleCard
@@ -135,7 +178,15 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
                 tone="sky"
                 title="증여자 본인 (과세 제외)"
                 checked={row.isDonor}
-                onCheckedChange={(v) => update(i, { isDonor: v })}
+                // §45의5①은 「거래한 날을 증여일로 하여」 — 증여자가 2인이면 별개 거래다.
+                // 켜면 나머지를 끈다(⑧·⑫와 같은 규칙 — 3중 패턴).
+                onCheckedChange={(v) =>
+                  onChange(
+                    rows.map((r, idx) =>
+                      idx === i ? { ...r, isDonor: v } : v ? { ...r, isDonor: false } : r,
+                    ),
+                  )
+                }
                 data-testid={`sc-sh-is-donor-${i}`}
               />
             )}

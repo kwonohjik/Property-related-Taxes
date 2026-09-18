@@ -19,6 +19,8 @@
 | 상증령 §34의5⑥ 단서 (288887) | 「해산(합병·분할에 의한 해산 제외) 중인 경우로서 주주등에게 분배할 **잔여재산이 없는 경우는 제외**」 | `isDissolvingWithoutResidual` |
 | 상증령 §34의5⑦ (288887) | 「차액이 시가의 100분의 30 이상**이거나** 그 차액이 3억원 이상」 ⇒ **OR** | `diff >= applyRate(mv, 0.3) \|\| diff >= 300,000,000` |
 | 상증령 §34의5⑧ (288887) | 「제7항을 적용할 때 재산 또는 용역의 시가는 「법인세법 시행령」 제89조에 따른다」 | 시가 입력 hint |
+| 법 §53 | 관계별 증여재산공제 — **수증자별**로 갈린다 | 행 단위 `donorRelation` → `GIFT_DEDUCTION_LIMIT`(단일 소스 재사용) |
+| 법 §57①② | 세대생략 할증 30%(미성년 + 세대생략 재산 20억 초과 시 40%) | 행 단위 `isGenerationSkip` → `calcGenerationSkipSurcharge`(공용 leaf) |
 | §45의3① (280353) | 「**직접 또는 간접으로** 보유하는 주식보유비율(이하 이 조, 제45조의4 및 **제45조의5**에서 "주식보유비율"이라 한다)」 | ⓐ·ⓑ 공통 비율 정의 — `combinedRatio()` = 직접 + 간접 |
 | 상증령 §34의3② (288887) | 간접보유비율 = 「각 단계의 직접보유비율을 **모두 곱하여**」, 경로가 둘 이상이면 「각각의 비율을 **모두 합하여**」 | `computeIndirectRatioBig()` (§45의3과 공용) |
 | §45의4① (280353) | 「지배주주와 그 친족(이하 이 조 및 **제45조의5**에서 "지배주주등"이라 한다)」 | ⓐ는 **집합**의 합계 비율 (증여자 본인 행 포함) |
@@ -26,6 +28,12 @@
 | §34의5④ (283637) | 특정법인이익 = 1호(거래이익) − 2호(법인세 산출세액−공제감면) × min(거래이익/소득금액, 1) | `corpTaxApportioned` 안분 |
 | §34의5⑤ | 증여의제이익 **1억원 이상** 한정 | 주주별 `gain ≥ 100,000,000` 게이트 |
 | §34의5⑨ | 한도: ㉠=1호금액×지분율 직접증여 증여세 / ㉡=2호금액×지분율 | `calcSpecificCorpLimit` |
+
+> ⚠️ **증여자는 1명까지만 지정한다.** 법 §45의5①은 「… 거래를 하는 경우에는 **거래한 날을 증여일로
+> 하여**」라고 **거래 단위**로 증여를 본다 ⇒ 증여자가 2인이면 별개 거래 2건이다. 합산 입력하면 두 행이
+> 서로 `donor_self`로 상쇄돼 **0원**이 된다(실측). ⑤·⑧·⑫ 세 층에서 막는다(3중 패턴).
+> 엔진에 「자기증여분 차감」 분해를 넣는 쪽은 납세자에게 **불리한 방향**인데 그 분해를 지시하는
+> 법령·해석 근거를 확인하지 못했다 — 근거 없이 불리하게 적용하지 않는다.
 
 **과세제외 6종**: ⓧ**§45의5① 거래 아님**(거래상대방 미해당 · 영 ⑥ 단서 · 영 ⑦ 현저성 미달) ⓪**특정법인 아님**(§45의5① ⓐ — 지배주주등 합계 주식보유비율 30% 미만, 법인 단위 선결 요건) ⓪′**법인주주**(지배주주등은 「지배주주와 그 친족」= 개인이다 — 그 지분은 개인에게 간접 귀속되므로 법인 행을 과세하면 이중계상) ①증여자 본인(특수관계인=증여자 → 자기 지분분 수증 아님) ②지배주주등 아님(친족 아닌 타인) ③§34의5⑤ 1억 미만.
 
@@ -184,6 +192,13 @@ interface SpecificCorpMultiResult {
 > **법인세 안분 분자 상한**: §34의5④2호나목 "min(거래이익/소득금액, 1)" → `min(transactionBenefit, annualIncome)`를 분자로 사용해 비율 1 초과 차단. 사례2: min(30억,40억)=30억 → 780백만×30억/40억=585백만 ✓.
 
 ### §45의5② 한도 (calcSpecificCorpLimit — 과세 주주별)
+
+> **§53 공제와 §57 할증은 수증자별이다.** 공제는 행 단위 `donorRelation`에서(미지정이면 입력 단의
+> 단일 `giftDeduction`으로 폴백 — 10년 기사용분이 있을 때 쓰는 경로), 할증은 행 단위
+> `isGenerationSkip`에서 온다. 할증은 ㉮·㉠ **양쪽**에 붙는다 — 영 §34의5⑨이 ㉠를 「직접 증여받은
+> 것으로 볼 때의 **증여세**」로 정의하므로 §57이 포함된다. ㉠에만 빠뜨리면 ㉯가 작아져 finalTax가
+> 할증 전 값으로 되돌아간다(anchor [D-7]).
+> 표시층이 사유 없이 큰 값을 보이지 않도록 `giftDeductionApplied`·`generationSkipSurcharge`를 echo한다.
 ```
 ㉮ computedTax  = calcInheritanceGiftTax(truncateToThousand(gain − giftDeduction))
 ㉠ directGiftTax= calcInheritanceGiftTax(truncateToThousand(
@@ -215,7 +230,7 @@ __tests__/tax-engine/gift-deemed/specific-corp-multi.test.ts — [SC-CASE1]·[SC
 ```
 
 ## 8. 엔진 → UI 동기화 (입력·결과 경계)
-- **엔진 입력**: **counterparty**·**transactionType**·**marketValue**·**consideration**·**isDissolvingWithoutResidual**·shareholders[](+`isCorporate`)·**intermediaryCorps[]**(간접출자관계)·annualIncome·corporateTaxComputed·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
+- **엔진 입력**: 행 단위 **donorRelation**(§53)·**isGenerationSkip**(§57)·**counterparty**·**transactionType**·**marketValue**·**consideration**·**isDissolvingWithoutResidual**·shareholders[](+`isCorporate`)·**intermediaryCorps[]**(간접출자관계)·annualIncome·corporateTaxComputed·corporateTaxCredit·giftDeduction·**controllingGroupRatio**(ⓐ 판정용 지배주주등 합계 비율, 직접+간접) (UI가 `safeMultiplyThenDivide` 호출 없이 raw 전달, **안분은 엔진**).
 - **엔진 결과**: `specificCorpMulti.{corpProfit, corpTaxApportioned, donees[]}` + `specificCorpEligibility.{directPct, declaredPct, effectivePct, met}`. donee는 `directRatioPct`·`indirectRatioPct`를 분리해 echo한다. 거래 판정은 `specificCorpTransaction.{benefit, exclusionReason, counterpartyMet, significance, transactionType}`. UI 결과뷰가 주주별 표 + 한도 표를 이 echo로 렌더 (UI 재계산 금지 — dual-truth 회피).
 - 14 동기화 지점 상세는 `gift-specific-corp-45-5.ui.design.md`.
 

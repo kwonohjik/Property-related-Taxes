@@ -1,3 +1,5 @@
+import type { DonorRelation } from "../types/inheritance-gift-deduction.types";
+
 /**
  * 증여로 보는 경우 — **Phase 3(추정·의제)** Input 타입.
  *
@@ -221,6 +223,14 @@ export interface SpecificCorpShareholder {
    * 이라 **개인**만이므로, 법인 행은 ⓐ 해당성 합계와 수증자 판정 양쪽에서 빠진다(간접 귀속으로만 반영).
    */
   isCorporate?: boolean;
+  /**
+   * §53 증여재산공제 구분 — 「**증여자와의** 관계」다. 위 `relation`(지배주주와의 관계)과 **다른 축**이라
+   * 재사용할 수 없다: `relation`은 `isRelated` 판정에만 쓰이는 passthrough다.
+   * 미전달이면 입력 단의 단일 `giftDeduction`으로 떨어진다(하위호환).
+   */
+  donorRelation?: DonorRelation;
+  /** §57① 세대생략 — 증여자의 자녀가 아닌 직계비속(손자녀 등). 미성년 40% 판정은 `donorRelation`이 담는다 */
+  isGenerationSkip?: boolean;
 }
 
 /** 법 §45의5① 각 호 거래유형 */

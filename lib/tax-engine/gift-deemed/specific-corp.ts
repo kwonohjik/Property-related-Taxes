@@ -2,7 +2,8 @@
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiplyThenDivide, truncateToThousand } from "../tax-utils";
 import { computeIndirectRatioBig } from "./related-corp-helpers";
-import { calcInheritanceGiftTax } from "../inheritance-gift-common";
+import { calcGenerationSkipSurcharge, calcInheritanceGiftTax } from "../inheritance-gift-common";
+import { GIFT_DEDUCTION_LIMIT } from "../deductions/gift-deductions";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type {
   DeemedGiftResult,
@@ -13,6 +14,7 @@ import type {
   SpecificCorpDonee,
   SpecificCorpEligibility,
   SpecificCorpLimitCalc,
+  SpecificCorpShareholder,
 } from "./types";
 
 const ABSOLUTE_THRESHOLD = 100_000_000; // §34의5⑤ 증여의제이익 1억원 이상
@@ -396,7 +398,9 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       transactionBenefit,
       ratio,
       corpTaxApportioned,
-      giftDeduction,
+      giftDeduction: doneeDeduction(sh, giftDeduction),
+      isGenerationSkip: sh.isGenerationSkip ?? false,
+      isMinorDonee: sh.donorRelation === "lineal_ascendant_minor",
     });
     return { ...base, isTaxable: true, limitCalc };
   });
@@ -434,6 +438,22 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
 }
 
 /**
+ * 수증자 1인의 §53 증여재산공제액.
+ *
+ * roster의 `relation`은 **지배주주와의** 관계라 §53에 쓸 수 없다(엔진은 `isRelated` 판정에만 쓴다).
+ * §53이 요구하는 것은 **증여자와의** 관계이므로 행 단위 `donorRelation`을 별도 축으로 받는다.
+ * 한도값은 `gift-deductions.ts`의 `GIFT_DEDUCTION_LIMIT`를 그대로 쓴다 — 여기서 다시 정의하면
+ * 같은 §53에 두 개의 진실이 생긴다.
+ *
+ * 미전달이면 입력 단의 단일 `giftDeduction`으로 떨어진다(single 모드·하위호환).
+ * ⚠️ 10년 내 기사용 공제는 이 경로가 모른다 — 한도 전액을 쓴다. 기사용분이 있으면
+ * 행 단위 `donorRelation`을 비우고 단일 `giftDeduction`에 잔여액을 넣는 것이 정확하다.
+ */
+function doneeDeduction(sh: SpecificCorpShareholder, fallback: number): number {
+  return sh.donorRelation ? GIFT_DEDUCTION_LIMIT[sh.donorRelation] : fallback;
+}
+
+/**
  * §45의5②·시행령 §34의5⑨ — 증여세 한도.
  * ㉮ 일반 산출세액 = 증여세(증여의제이익[법인세 차감 後] − 공제)
  * ㉠ 직접증여 가정 = 증여세(거래이익[법인세 차감 前]×지분율 − 공제)
@@ -447,14 +467,43 @@ function calcSpecificCorpLimit(p: {
   ratio: { numer: bigint; denom: bigint };
   corpTaxApportioned: number;
   giftDeduction: number;
+  /** §57① 세대생략 할증 — ㉮㉠ 양쪽에 붙는다(둘 다 「증여세」이므로) */
+  isGenerationSkip?: boolean;
+  /** §57② 40% 판정 (미성년 수증자 + 세대생략 재산 20억 초과) */
+  isMinorDonee?: boolean;
 }): SpecificCorpLimitCalc {
-  const computedTax = calcInheritanceGiftTax(truncateToThousand(Math.max(0, p.gain - p.giftDeduction)));
+  // §57 할증은 ㉮(일반 산출세액)와 ㉠(직접증여 가정 증여세) **양쪽**에 붙는다 —
+  // 영 §34의5⑨이 ㉠를 「직접 증여받은 것으로 볼 때의 **증여세**」로 정의하므로 §57이 포함된다.
+  const taxed = (base: number) => {
+    const taxBase = truncateToThousand(Math.max(0, base));
+    const raw = calcInheritanceGiftTax(taxBase);
+    const { surchargeAmount } = calcGenerationSkipSurcharge(
+      raw,
+      p.isGenerationSkip ?? false,
+      p.isMinorDonee ?? false,
+      taxBase,
+      "gift",
+    );
+    return { total: raw + surchargeAmount, surcharge: surchargeAmount };
+  };
+  const computed = taxed(p.gain - p.giftDeduction);
+  const computedTax = computed.total;
   const directGiftBase = applyFrac(p.transactionBenefit, p.ratio); // 거래이익(차감 前)×보유비율
-  const directGiftTax = calcInheritanceGiftTax(truncateToThousand(Math.max(0, directGiftBase - p.giftDeduction)));
+  const directGiftTax = taxed(directGiftBase - p.giftDeduction).total;
   const corpTaxShare = applyFrac(p.corpTaxApportioned, p.ratio);
   const limitAmount = Math.max(0, directGiftTax - corpTaxShare);
   const finalTax = Math.min(computedTax, limitAmount);
   const filingCredit = Math.floor((finalTax * FILING_CREDIT_NUMER) / FILING_CREDIT_DENOM);
   const selfPayTax = finalTax - filingCredit;
-  return { computedTax, directGiftTax, corpTaxShare, limitAmount, finalTax, filingCredit, selfPayTax };
+  return {
+    computedTax,
+    directGiftTax,
+    corpTaxShare,
+    limitAmount,
+    finalTax,
+    filingCredit,
+    selfPayTax,
+    giftDeductionApplied: p.giftDeduction,
+    generationSkipSurcharge: computed.surcharge,
+  };
 }

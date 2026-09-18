@@ -336,6 +336,61 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(dialog).toContainText("준용");
   });
 
+  /**
+   * §53 수증자별 공제 · §57 세대생략 할증 — 한도 패널이 둘 다 반영한다.
+   * 손자(미성년) 100% · 거래이익 50억 ⇒ 공제 2천만 · 할증 40%(세대생략 재산 20억 초과).
+   */
+  test("§53 수증자별 공제 + §57 세대생략 할증이 한도표에 반영된다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2025");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("15");
+
+    await dialog.getByTestId("sc-mode-roster").click();
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("5000000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-total-shares").fill("100000");
+
+    await dialog.getByTestId("sc-sh-add").click();
+    await dialog.getByTestId("sc-sh-name-0").fill("손자");
+    await dialog.getByTestId("sc-sh-relation-0").selectOption("lineal_descendant");
+    await dialog.getByTestId("sc-sh-shares-0").fill("100000");
+    await dialog.getByTestId("sc-sh-donor-relation-0").selectOption("lineal_ascendant_minor");
+    await dialog.getByTestId("sc-sh-generation-skip-0").getByRole("switch").click();
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    await expect(page.getByTestId("sc-limit-deduction")).toContainText("20,000,000", { timeout: 15000 });
+    await expect(page.getByTestId("sc-limit-generation-skip")).toContainText("812,000,000");
+    await expect(page.getByTestId("sc-limit-computed-tax")).toContainText("2,842,000,000");
+  });
+
+  test("증여자 본인 chip은 1명만 켜진다 (§45의5① — 증여자 2인은 별개 거래)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByTestId("sc-mode-roster").click();
+    await dialog.getByTestId("sc-total-shares").fill("100000");
+    for (const [i, name] of [["0", "갑"], ["1", "을"]] as const) {
+      await dialog.getByTestId("sc-sh-add").click();
+      await dialog.getByTestId(`sc-sh-name-${i}`).fill(name);
+      await dialog.getByTestId(`sc-sh-shares-${i}`).fill("50000");
+    }
+    await dialog.getByTestId("sc-sh-is-donor-0").getByRole("switch").click();
+    await expect(dialog.getByTestId("sc-sh-is-donor-0").getByRole("switch")).toBeChecked();
+    // 두 번째를 켜면 첫 번째가 꺼진다
+    await dialog.getByTestId("sc-sh-is-donor-1").getByRole("switch").click();
+    await expect(dialog.getByTestId("sc-sh-is-donor-1").getByRole("switch")).toBeChecked();
+    await expect(dialog.getByTestId("sc-sh-is-donor-0").getByRole("switch")).not.toBeChecked();
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

@@ -374,6 +374,10 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
         }
         if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        // 법 §45의5①은 「거래한 날을 증여일로 하여」라고 거래 단위로 증여를 본다 ⇒ 증여자가 2인이면
+        // 그것은 **별개의 두 거래**다. 합산해 한 번에 넣으면 두 행이 서로 donor_self로 상쇄돼 0원이 된다.
+        if (form.scShareholders.filter((sh) => sh.isDonor).length > 1)
+          return "증여자 본인은 1명만 지정할 수 있습니다 — 증여자가 2인 이상이면 거래별로 나누어 계산하세요 (§45의5①)";
         // 간접출자관계 — 고아 참조를 여기서 막는다(새 입력축이라 §45의3의 RC-H 결함을 물려받지 않는다)
         const shIds = new Set(form.scShareholders.map((sh) => sh.id));
         for (let i = 0; i < (form.scIntermediaryCorps ?? []).length; i++) {

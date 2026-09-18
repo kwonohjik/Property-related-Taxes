@@ -182,6 +182,26 @@ describe("§45의5① 거래상대방·거래유형 — ④⑧⑫ 관통", () =>
   });
 });
 
+describe("§53·§57 수증자별 축 — ④ 관통", () => {
+  it("[PL-14] ④가 donorRelation·isGenerationSkip을 행별로 전달한다", () => {
+    const form = {
+      ...ROSTER,
+      scShareholders: [
+        { id: "a", name: "손자", relation: "lineal_descendant", shares: "29000", isDonor: false, isCorporate: false, donorRelation: "lineal_ascendant_minor", isGenerationSkip: true },
+        { id: "b", name: "타인", relation: "other", shares: "71000", isDonor: false, isCorporate: false, donorRelation: "", isGenerationSkip: false },
+      ],
+    } as unknown as DeemedFormState;
+    const input = buildDeemedGiftInput(form) as unknown as {
+      shareholders: { donorRelation?: string; isGenerationSkip?: boolean }[];
+    };
+    expect(input.shareholders[0].donorRelation).toBe("lineal_ascendant_minor");
+    expect(input.shareholders[0].isGenerationSkip).toBe(true);
+    // 미지정("")은 «보내지 않는다» — 엔진이 단일 giftDeduction으로 떨어지게
+    expect(input.shareholders[1].donorRelation).toBeUndefined();
+    expect(input.shareholders[1].isGenerationSkip).toBe(false);
+  });
+});
+
 describe("⑧ validate — 비율 범위", () => {
   it("[PL-5] 0 초과 100 이하를 벗어나면 차단하고, 미입력·정상값은 통과시킨다", () => {
     expect(validateDeemedInput({ ...ROSTER, scGroupRatioPct: "150" })).toContain("0 초과 100 이하");

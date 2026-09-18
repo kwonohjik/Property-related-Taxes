@@ -192,6 +192,30 @@ export function SpecificCorpMultiResultView({
               <table className="w-full text-sm">
                 <tbody>
                   <tr className="border-t border-violet-100">
+                    <td className="py-1.5 pr-2 text-muted-foreground">
+                      적용 증여재산공제 (§53)
+                    </td>
+                    <td
+                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
+                      data-testid="sc-limit-deduction"
+                    >
+                      {formatKRW(limitCalc.giftDeductionApplied)}
+                    </td>
+                  </tr>
+                  {limitCalc.generationSkipSurcharge > 0 && (
+                    <tr className="border-t border-violet-100">
+                      <td className="py-1.5 pr-2 text-muted-foreground">
+                        세대생략 할증 (§57) — ㉮·㉠에 포함
+                      </td>
+                      <td
+                        className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700"
+                        data-testid="sc-limit-generation-skip"
+                      >
+                        {formatKRW(limitCalc.generationSkipSurcharge)}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-t border-violet-100">
                     <td className="py-1.5 pr-2 text-muted-foreground">㉮ 일반 산출세액</td>
                     <td
                       className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap"

@@ -3,6 +3,7 @@
  * deemed-form-state.ts에서 분리(800줄 정책 선제 대응).
  * deemed-form-state.ts가 re-export하여 하위호환 유지 — 기존 import 경로는 그대로 쓴다.
  */
+import type { DonorRelation } from "@/lib/tax-engine/types/inheritance-gift-deduction.types";
 import type { ScRelation, ShareAllocationMethod } from "@/lib/tax-engine/gift-deemed/types";
 
 /** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
@@ -43,10 +44,26 @@ export interface ScShareholderRow {
   isDonor: boolean; // 증여자 본인 → donor_self 제외
   /** 법인주주 → 간접출자법인 후보. 지배주주등은 개인뿐이라(법 §45의4①) 이 행은 과세 대상이 아니다 */
   isCorporate: boolean;
+  /**
+   * §53 증여재산공제 구분 — 「**증여자와의** 관계」. 위 `relation`(지배주주와의 관계)과 다른 축이다.
+   * ""=미지정 → 입력 단의 단일 「증여재산공제」로 떨어진다(기사용 공제가 있을 때 쓰는 경로).
+   */
+  donorRelation: "" | DonorRelation;
+  /** §57① 세대생략 — 증여자의 자녀가 아닌 직계비속(손자녀 등) */
+  isGenerationSkip: boolean;
 }
 
 export function makeScShareholderRow(id: string): ScShareholderRow {
-  return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false, isCorporate: false };
+  return {
+    id,
+    name: "",
+    relation: "lineal_descendant",
+    shares: "",
+    isDonor: false,
+    isCorporate: false,
+    donorRelation: "",
+    isGenerationSkip: false,
+  };
 }
 
 /** §45의5 — 간접출자법인의 개인소유주 1행 */

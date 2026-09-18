@@ -219,6 +219,10 @@ export interface SpecificCorpLimitCalc {
   finalTax: number; // min(㉮, ㉯)
   filingCredit: number; // §69 floor(finalTax × 3/100)
   selfPayTax: number; // finalTax − filingCredit
+  /** 이 수증자에게 실제 적용한 §53 증여재산공제액 (행 단위 donorRelation → 한도, 없으면 단일 입력값) */
+  giftDeductionApplied: number;
+  /** ㉮에 포함된 §57 세대생략 할증액. 0이면 비세대생략 — 표시층이 사유 없이 큰 값을 보이지 않게 한다 */
+  generationSkipSurcharge: number;
 }
 
 /** §45의5 수증자별 명세 (Map 금지 — plain 배열) */

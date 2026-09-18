@@ -206,6 +206,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           // 법인주주는 「지배주주와 그 친족」(법 §45의4①)이 아니다 — relation과 무관하게 지배주주등에서 뺀다
           isRelated: !sh.isCorporate && sh.relation !== "other", // "other"=타인 → 비특수관계인
           isCorporate: sh.isCorporate,
+          // §53 공제 구분 — ""(미지정)이면 «보내지 않는다». 엔진이 단일 giftDeduction으로 떨어진다
+          ...(sh.donorRelation ? { donorRelation: sh.donorRelation } : {}),
+          isGenerationSkip: sh.isGenerationSkip,
         }));
         // 간접출자관계 — 경유 법인의 특정법인 지분은 그 법인 «행»의 주식수다(중복 입력 금지, RC-L 회피)
         const sharesById = new Map(form.scShareholders.map((sh) => [sh.id, parseAmount(sh.shares)]));
