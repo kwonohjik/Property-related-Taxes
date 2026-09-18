@@ -30,6 +30,28 @@ const TAXABLE_BADGE_CLS = {
   below_threshold: "bg-amber-100 text-amber-700",
 } as const;
 
+/**
+ * 「계산식」 열 — 🔴 SC-O: 종전에는 `corpProfit × ownershipRatioPct.toFixed(1)%` 로 **UI가 엔진 값을
+ * 다시 곱했다**. 두 가지가 동시에 깨졌다.
+ *
+ *  ① **반올림한 지분율로 재계산**하니 옆 칸의 증여재산가액과 맞지 않았다. 엔진은 정확분수로
+ *     계산하는데 소수 1자리로 접은 비율을 곱하면 수백만원이 어긋난다.
+ *  ② **`gain`이 0으로 영점처리된 행**(증여자 본인 `donor_self` · 법인주주 `corporate_shareholder`)
+ *     에서도 곱셈을 그대로 그려, 「2,415,000,000×20.0%」 옆에 「0」이 찍히는 **거짓 등식**이 됐다.
+ *
+ * ⇒ 재계산하지 않고 **엔진이 쓴 원천 수량**을 그대로 보인다. 직접분은 주식수 분수라 반올림이
+ *   없고(법 §45의5① 「주식보유비율을 곱하여」), 간접분이 섞일 때만 비율로 적되 자릿수를 늘린다.
+ *   영점처리된 행은 곱셈을 그리지 않는다 — 제외 사유는 「과세여부」 배지가 이미 말한다.
+ */
+function formulaText(corpProfit: number, d: SpecificCorpDonee): string {
+  if (d.gain === 0 && !d.isTaxable) return "산입 제외";
+  const direct = d.totalShares > 0 ? `${d.shares.toLocaleString()}/${d.totalShares.toLocaleString()}` : "0";
+  const base = formatKRW(corpProfit);
+  return d.indirectRatioPct > 0
+    ? `${base} × (직접 ${direct} + 간접 ${d.indirectRatioPct.toFixed(4)}%)`
+    : `${base} × ${direct}`;
+}
+
 function taxabilityBadge(donee: SpecificCorpDonee): { cls: string; label: string } {
   if (donee.isTaxable) return { cls: TAXABLE_BADGE_CLS.taxable, label: "과세" };
   switch (donee.nonTaxableReason) {
@@ -124,8 +146,11 @@ export function SpecificCorpMultiResultView({
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">
-                    {formatKRW(multi.corpProfit)}×{d.ownershipRatioPct.toFixed(1)}%
+                  <td
+                    className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground"
+                    data-testid={`sc-multi-formula-${i}`}
+                  >
+                    {formulaText(multi.corpProfit, d)}
                   </td>
                   <td
                     className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold"

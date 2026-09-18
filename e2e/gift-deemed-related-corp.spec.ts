@@ -96,6 +96,22 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
   await expect(page.getByTestId("rc-sec14-scope-notice")).toContainText("1곳");
   await expect(page.getByTestId("rc-recipient-row-1")).toContainText("16,200,000");
 
+  // ── BFM-1: A4 인쇄물에서 결과 3열이 잘리지 않는다 ─────────────────────────
+  //  종전 실측: 컨테이너 scrollWidth 761 / clientWidth 606 → 직접이익·간접이익·소계가
+  //  잘려 PDF에 「20,」·「16,」로 찍혔다. 원인은 「거래비율차감후」 칸의 14자리 원시 분수였다.
+  await page.emulateMedia({ media: "print" });
+  const overflow = await page.getByTestId("rc-recipient-breakdown").evaluate((el) => {
+    const box = el.querySelector("div.overflow-x-auto, div.print\\:overflow-visible") as HTMLElement | null;
+    const t = (box ?? el).querySelector("table") as HTMLElement | null;
+    return { scrollW: t?.scrollWidth ?? 0, clientW: (box ?? el).clientWidth };
+  });
+  expect(overflow.clientW).toBeGreaterThan(0);
+  expect(overflow.scrollW).toBeLessThanOrEqual(overflow.clientW);
+  // 퍼센트 표기가 실제로 적용됐는지 (원시 분수가 폭의 원인이었다)
+  await expect(page.getByTestId("rc-trade-over-0")).toContainText("%");
+  await expect(page.getByTestId("rc-trade-over-0")).not.toContainText("/");
+  await page.emulateMedia({ media: "screen" });
+
   // ── 이관 단위: 수증자 1인 (§45의3① 「각각 증여받은 것으로 본다」) ──────────
   //  종전에는 갑만 이관하고 을을 `simultaneousGifts`(§46①2호 동시증여)에 넣었다.
   //  동시증여는 «동일 수증자» 전제라 갑의 §53 공제가 잘못 안분됐고, §55①2호 합산배제
