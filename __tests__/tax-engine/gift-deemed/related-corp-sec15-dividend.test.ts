@@ -195,6 +195,43 @@ describe("§⑮2호 — 간접출자법인으로부터 받은 배당", () => {
   });
 });
 
+describe("출자관계별 공제의 합이 간접이익을 넘지 않는다", () => {
+  it("[S15-10] 2경유 전액 과다공제 — 간접분이 정확히 0이 되고 음수로 새지 않는다", () => {
+    // `sec15n2`는 관계별 floor의 **합**, `indirectGain`은 합산 후 **1회** floor다.
+    // `floor(a) + floor(b) ≤ floor(a + b)` 이므로 합이 총액을 넘을 수 없다 — 이 부등호가
+    // 뒤집힌다고 적었다가 뮤테이션에서 잡혔다. 방향을 여기서 고정한다.
+    const TWO_PATHS: RelatedCorpInput = {
+      enterpriseSize: "small",
+      totalSales: 100_000_000_000,
+      preTaxAdjOperatingIncome: 10_000_000_007, // 나누어떨어지지 않게 — floor가 실제로 일한다
+      taxableIncome: 10_000_000_007,
+      corporateTaxNet: 3,
+      shareholders: [
+        { id: "gap", name: "갑", relation: "self", directRatio: R(20), isCorporate: false },
+        { id: "A", name: "A법인", relation: "other", directRatio: R(30), isCorporate: true },
+        { id: "B", name: "B법인", relation: "other", directRatio: R(20), isCorporate: true },
+        { id: "x", name: "기타", relation: "other", directRatio: R(30), isCorporate: false },
+      ],
+      intermediaryCorps: [
+        { corpShareholderId: "A", stakeInBeneficiary: R(30), distributableProfit: 1_000_000_000,
+          owners: [{ individualId: "gap", ratio: R(70), dividendIncome: 99_000_000_000 }] },
+        { corpShareholderId: "B", stakeInBeneficiary: R(20), distributableProfit: 1_000_000_000,
+          owners: [{ individualId: "gap", ratio: R(90), dividendIncome: 99_000_000_000 }] },
+      ],
+      distributableProfit: 5_000_000_000,
+      salesPartners: [
+        { id: "D", name: "D", salesAmount: 80_000_000_000, isRelated: true },
+        { id: "E", name: "기타", salesAmount: 20_000_000_000, isRelated: false },
+      ],
+    };
+    const g = gapOf(TWO_PATHS);
+    expect(g?.indirectGain).toBeGreaterThan(0); // 두 경유 모두 살아 있다(구별력 확보)
+    // 배당이 각 관계의 이익을 통째로 넘어서므로 간접분은 정확히 0으로 소진된다.
+    expect(g?.subtotal).toBe(g?.directGain);
+    expect(g?.subtotal).toBeGreaterThanOrEqual(0);
+  });
+});
+
 describe("§⑬ 후단 — 한계보유비율의 출자관계별 배분", () => {
   const path = (id: string, numer: bigint, denom: bigint) => ({ corpShareholderId: id, numer, denom });
 

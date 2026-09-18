@@ -5,6 +5,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
 import { resolveScEraExclusion } from "@/lib/tax-engine/gift-deemed/specific-corp-era";
+import { resolveRcEraExclusion } from "@/lib/tax-engine/gift-deemed/related-corp-era";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
 
 /**
@@ -492,6 +493,11 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "related_corp": {
+      // R-0 행위시법 — §45의3③상 증여시기는 「수혜법인의 사업연도 종료일」이다.
+      //   구법(~2017-12-31)은 계산식이 단일식이라 현행 3분기 산식으로 계산하면 틀린다.
+      //   엔진도 같은 술어로 막지만(안전망), 사용자에게는 여기서 먼저 알린다.
+      const eraBlock = resolveRcEraExclusion(form.giftDate);
+      if (eraBlock) return eraBlock;
       // R-1 기업규모
       if (!form.rcEnterpriseSize) return "기업규모를 선택하세요";
       // R-2 재무

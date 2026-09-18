@@ -18,6 +18,9 @@ export function RelatedCorpResultSection({
 }) {
   const breakdown = result.recipientBreakdown;
   if (!breakdown) return null;
+  // 행위시법 차단은 「과세요건 미충족」이 아니다 — 0으로 채운 상세표를 그리면 사용자가
+  // 요건을 못 맞춘 것으로 오인한다. 사유는 DeemedGiftResultView의 「증여세 미적용」이 띄운다.
+  if (result.eraBlocked) return null;
 
   // 지배주주등은 §45의3①상 이익을 「각각」 증여받은 것으로 보는 **독립 납세의무자**다.
   // 마법사 세션 1개 = 신고 1건이므로 선택된 1명만 이관한다(prefill과 같은 술어).
@@ -33,6 +36,14 @@ export function RelatedCorpResultSection({
 
   return (
     <div className="space-y-4">
+      {result.eraNotice && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          data-testid="rc-era-notice"
+        >
+          {result.eraNotice}
+        </div>
+      )}
       {result.sec18ScopeNotice && (
         <div
           className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"

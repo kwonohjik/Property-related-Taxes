@@ -29,6 +29,7 @@ import {
   toDecimal,
   type Frac,
 } from "./related-corp-helpers";
+import { resolveRcEraExclusion, resolveRcEraNotice } from "./related-corp-era";
 
 type Size = "small" | "medium" | "large";
 
@@ -96,6 +97,32 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     intermediaryCorps,
     salesPartners,
   } = input;
+
+  // ── 단계0: 행위시법 — 증여시기(§45의3③ 「사업연도 종료일」)에 시행 중이던 법령 ──
+  //  구법(~2017-12-31)은 계산식이 **단일식**이고 중견의 정상거래비율도 달랐다. 현행 3분기
+  //  산식으로 계산하면 과세요건조차 미충족인 건에 세금이 생긴다(실측 37,500,000원) —
+  //  「법 근거 없이 불리하게 적용하지 않는다」는 정책상 계산하지 않고 차단한다.
+  const eraExclusion = resolveRcEraExclusion(input.fiscalYearEndDate);
+  if (eraExclusion) {
+    return {
+      type: "related_corp",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown: [],
+      exclusionReason: eraExclusion,
+      legalBasis: GIFT.RELATED_CORP,
+      aggregationExcluded: true,
+      aggExclClass: "deemed_profit",
+      recipientBreakdown: [],
+      baseAfterTaxProfit: 0,
+      // 결과뷰가 「과세요건 미충족」 표를 그리지 않도록 **명시**한다 — 이 차단은 요건 판정이
+      // 아니라 적용 법령의 문제다. `taxRequirementMet === undefined` 같은 대리 지표로
+      // 추론하면 다른 이유로 그 필드가 비는 날 조용히 어긋난다.
+      eraBlocked: true,
+      ...(input.fiscalYearEndDate ? { appliedLawDate: input.fiscalYearEndDate } : {}),
+    };
+  }
+  const eraNotice = resolveRcEraNotice(input.fiscalYearEndDate);
 
   const individuals = shareholders.filter((s) => !s.isCorporate);
 
@@ -167,6 +194,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     ...(taxRequirementClause ? { taxRequirementClause } : {}),
     normalTradeRatio: { numer: normalTrade, denom: RATIO_DENOM } as Frac,
     marginalOwnershipRatio: marginalFrac,
+    ...(eraNotice ? { eraNotice } : {}),
   };
 
   if (!taxRequirementMet) {
@@ -311,13 +339,17 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     }
 
     const dividendDeduction = sec15n1 + sec15n2;
-    //  단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다. 잘라 둔
-    //  뒤에 바깥에서 max(0,…)을 또 걸면 관문이 둘이 되어, 한쪽을 지워도 테스트가 빨개지지
-    //  않는다(뮤테이션 실측 — 직접 쪽 바깥 클램프가 죽은 코드였다). 관문은 하나로 둔다.
+    //  단서의 「음수면 0」은 **공제액을 그 출자관계의 이익까지로 자르는 것**과 같다(위 두 곳의
+    //  `Math.min`). 잘라 둔 뒤에 바깥에서 `max(0, …)`을 또 걸면 관문이 둘이 되어, 한쪽을
+    //  지워도 테스트가 빨개지지 않는다 — 실제로 뮤테이션에서 안팎 두 클램프가 **모두** 죽은
+    //  코드로 드러났다. 관문은 출자관계별 `Math.min` 하나로 둔다.
     //
-    //  ⚠️ 간접 쪽만 예외다 — `sec15n2`는 **관계별 floor의 합**이고 `indirectGain`은 **합산 후
-    //     1회 floor**라, 공제가 각 관계의 이익을 꽉 채우면 합이 최대 (관계수−1)원 더 클 수 있다.
-    const subtotal = (directGain - sec15n1) + Math.max(0, indirectGain - sec15n2);
+    //  간접 쪽이 안전한 이유(처음에 반대로 적었다가 뮤테이션에서 잡혔다):
+    //    `sec15n2`는 관계별 `floor`의 **합**이고 `indirectGain`은 합산 후 **1회** floor인데,
+    //    `floor(a) + floor(b) ≤ floor(a + b)` 이므로 합이 총액을 **넘을 수 없다**.
+    //    (「최대 (관계수−1)원 더 클 수 있다」는 방향이 뒤집힌 서술이었다. 부등호는 반대다.)
+    //  이 부등식은 anchor [S15-10]이 2경유 과다공제 사안으로 고정한다.
+    const subtotal = (directGain - sec15n1) + (indirectGain - sec15n2);
 
     rows.push({
       recipientName: r.name.trim() || "지배주주등",
