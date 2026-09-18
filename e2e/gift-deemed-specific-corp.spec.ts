@@ -156,7 +156,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("deemed-result-value")).toContainText("250,000,000"); // 총액 = 장남 1인분
 
     // 과세제외 3종 배지가 전부 렌더된다 — 「1억 미만 제외」은 e2e 전체에 0건이었다
-    await expect(matrix).toContainText("비특수관계인 제외");
+    await expect(matrix).toContainText("지배주주등 아님 제외");
     await expect(matrix).toContainText("본인증여 제외");
     await expect(matrix).toContainText("1억 미만 제외");
   });
@@ -221,7 +221,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
   /**
    * §45의5 「주식보유비율」의 간접분 — 법인 경유 지배지분.
    * 갑 직접 20% + 갑이 100% 소유한 A법인 40% ⇒ 갑의 주식보유비율 60%.
-   * 종전에는 A법인 행이 「비특수관계인 제외」로 통째 탈락해 갑이 400,000,000만 잡혔다.
+   * 종전에는 A법인 행이 「지배주주등 아님 제외」로 통째 탈락해 갑이 400,000,000만 잡혔다.
    */
   test("법인 경유 간접보유 40%가 개인에게 귀속된다 — 400,000,000 → 1,200,000,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");

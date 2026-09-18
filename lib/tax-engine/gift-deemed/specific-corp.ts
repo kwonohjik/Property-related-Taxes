@@ -9,7 +9,7 @@ import {
   type ScLimitBasis,
 } from "./specific-corp-era";
 import { TAX_BASE_MIN } from "../gift-tax-helpers";
-import { computeIndirectRatioBig } from "./related-corp-helpers";
+import { computeIndirectRatioBig, reduceFracBig } from "./related-corp-helpers";
 import { calcGenerationSkipSurcharge, calcInheritanceGiftTax } from "../inheritance-gift-common";
 import { GIFT_DEDUCTION_LIMIT } from "../deductions/gift-deductions";
 import type { CalculationStep } from "../types/inheritance-gift.types";
@@ -499,6 +499,9 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       ownershipRatioPct: directPct + indirectRatioPct, // 표시용 = 직접 + 간접
       directRatioPct: directPct,
       indirectRatioPct,
+      // 🔴 SC-2-g: 표시층이 반올림한 %로 재계산하지 않도록 **엔진이 쓴 분수 그대로** 내보난다.
+      //    간접분이 없으면 직접분 `shares/totalShares`가 이미 정확하므로 붙이지 않는다.
+      ...(indirect.numer > 0n ? { ratioFrac: reduceFracBig(ratio.numer, ratio.denom) } : {}),
       gain,
       isTaxable: false,
     };
@@ -554,10 +557,10 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       : (tx.exclusionReason ??
         (notSpecificCorp
           ? notSpecificCorpReason(eligibility)
-          : "과세 지배주주등 없음 (본인증여분·비특수관계인·1억 미만 제외)")),
+          : "과세 지배주주등 없음 (본인증여분·지배주주등 아님·1억 미만 제외)")),
     legalBasis: GIFT.SPECIFIC_CORP,
     ...(input.transactionDate ? { appliedLawDate: input.transactionDate } : {}),
-    specificCorpMulti: { corpProfit, corpTaxApportioned, donees },
+    specificCorpMulti: { corpProfit, corpTaxApportioned, transactionBenefit, donees },
     specificCorpEligibility: eligibility,
     specificCorpTransaction: tx,
   };

@@ -38,6 +38,7 @@ const SC_DONOR_RELATION_OPTIONS: { value: ScShareholderRow["donorRelation"]; lab
 ];
 
 const SC_RELATION_OPTIONS: { value: ScRelation; label: string }[] = [
+  { value: "self", label: "본인(지배주주)" },
   { value: "lineal_ascendant", label: "직계존속" },
   { value: "lineal_descendant", label: "직계비속" },
   { value: "spouse", label: "배우자" },
@@ -58,7 +59,7 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
   return (
     <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3" data-testid="sc-shareholder-table">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-sky-700">주주 명단</p>
+        <p className="text-xs font-semibold text-sky-700">지배주주등 주주 명단</p>
         <button
           type="button"
           onClick={add}
@@ -68,6 +69,13 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
           + 행 추가
         </button>
       </div>
+      {/* 🔴 SC-4-e: 관계 드롭다운의 **기준점**이 화면에 없었다. 같은 행에 `isDonor`(증여자 본인)
+          체크가 함께 있어 「증여자와의 관계」로 읽히기 쉬운데, §45의5①의 「지배주주등」은
+          **지배주주**와 그 친족이다. 기준을 잘못 읽으면 그 주주분이 통째로 과세에서 빠진다. */}
+      <p className="text-caption text-muted-foreground" data-testid="sc-sh-relation-basis">
+        관계는 <b>지배주주 기준</b>입니다(증여자 기준이 아닙니다). 지배주주의 친족이 아니면
+        「타인」을 고르세요 — 그 주주는 지배주주등이 아니므로 과세에서 제외됩니다(법 §45의5①).
+      </p>
 
       {rows.length === 0 && (
         <p className="text-xs text-muted-foreground py-2 text-center">
@@ -105,7 +113,7 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
 
             {/* 관계 드롭다운 */}
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">관계</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">지배주주와의 관계</label>
               <select
                 value={row.relation}
                 onChange={(e) => update(i, { relation: e.target.value as ScRelation })}

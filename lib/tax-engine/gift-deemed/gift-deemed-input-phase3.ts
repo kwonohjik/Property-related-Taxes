@@ -200,8 +200,13 @@ export interface ValueIncreaseInput {
   eventDate?: string; // ISO. 재산가치증가사유 발생일(§42의3② 전단: 사유발생 전 양도 시 양도일)
 }
 
-/** §45의5 관계 — "other"=비친족(타인). 증여자 본인은 isDonor 플래그로 분리 */
+/**
+ * §45의5 관계 — **지배주주 기준**이다("other"=비친족(타인)). 증여자 본인은 isDonor 플래그로 분리.
+ * 🔴 SC-4-e: 「지배주주등」(법 §45의4① 「지배주주와 그 친족」을 §45의5가 준용)에는 **지배주주 본인**이
+ *    포함되는데 그 행을 표현할 값이 없어 「기타친족」 등으로 우회 입력해야 했다(세액은 같으나 표기가 틀린다).
+ */
 export type ScRelation =
+  | "self"
   | "lineal_ascendant"
   | "lineal_descendant"
   | "spouse"

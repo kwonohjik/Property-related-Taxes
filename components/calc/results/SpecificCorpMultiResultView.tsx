@@ -11,6 +11,7 @@ import type { SpecificCorpMultiResult, SpecificCorpDonee, ScRelation } from "@/l
 
 // ── 관계 라벨 (feedback_no_internal_id_in_result 준수) ──
 const RELATION_LABEL: Record<ScRelation, string> = {
+  self: "본인(지배주주)",
   lineal_ascendant: "직계존속",
   lineal_descendant: "직계비속",
   spouse: "배우자",
@@ -48,8 +49,11 @@ function formulaText(corpProfit: number, d: SpecificCorpDonee): string {
   if (d.gain === 0 && !d.isTaxable) return "산입 제외";
   const direct = d.totalShares > 0 ? `${d.shares.toLocaleString()}/${d.totalShares.toLocaleString()}` : "0";
   const base = formatKRW(corpProfit);
-  return d.indirectRatioPct > 0
-    ? `${base} × (직접 ${direct} + 간접 ${d.indirectRatioPct.toFixed(4)}%)`
+  // 🔴 SC-2-g: 간접분을 `toFixed(4)%`로 적으면 **반올림한 수를 산식의 인수로** 쓰는 것이라
+  //    그 식을 그대로 계산해도 옆 칸 금액이 나오지 않는다(실측 890원 차).
+  //    엔진이 쓴 **약분 분수**를 그대로 보이면 등식이 성립한다. 백분율은 title로 남긴다.
+  return d.ratioFrac
+    ? `${base} × ${d.ratioFrac.numer.toLocaleString()}/${d.ratioFrac.denom.toLocaleString()}`
     : `${base} × ${direct}`;
 }
 
@@ -60,7 +64,11 @@ function taxabilityBadge(donee: SpecificCorpDonee): { cls: string; label: string
     case "not_specific_corp": return { cls: TAXABLE_BADGE_CLS.not_specific_corp, label: "특정법인 아님" };
     case "corporate_shareholder": return { cls: TAXABLE_BADGE_CLS.corporate_shareholder, label: "법인주주 — 개인에 간접 귀속" };
     case "donor_self":      return { cls: TAXABLE_BADGE_CLS.donor_self,      label: "본인증여 제외" };
-    case "non_related":     return { cls: TAXABLE_BADGE_CLS.non_related,     label: "비특수관계인 제외" };
+    // 🔴 SC-5-h: 「비특수관계인」은 §45의5①에서 **거래상대방(증여자) 쪽** 요건의 말이다
+    //    (「지배주주 및 그 특수관계인과 … 거래를 하는 경우」). 수증자 쪽 요건은
+    //    「그 특정법인의 **지배주주등**」이고, 그 정의는 §45의4①「지배주주와 그 친족」이
+    //    §45의5로 준용된다. 두 축을 섮어 표시하면 사용자가 「증여자와 남」으로 읽는다.
+    case "non_related":     return { cls: TAXABLE_BADGE_CLS.non_related,     label: "지배주주등 아님 제외" };
     case "below_threshold": return { cls: TAXABLE_BADGE_CLS.below_threshold, label: "1억 미만 제외" };
     default:                return { cls: TAXABLE_BADGE_CLS.donor_self,      label: "제외" };
   }
@@ -98,12 +106,20 @@ export function SpecificCorpMultiResultView({
 
         {/* 특정법인의 이익 요약 */}
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span>특정법인의 이익</span>
-          <span className="font-mono font-semibold tabular-nums text-emerald-800">
-            {formatKRW(multi.corpProfit)}
+          {/* 🔴 SC-5-g: 종전엔 「거래이익 − 법인세 안분 N」으로 **두 항만** 적어
+              거래이익 자체가 roster 결과 어디에도 없었다. `corpProfit`이 0으로 clamp되면
+              그 등식은 성립하지 않는다(예: 10억 − 15억 → 표시는 0). 세 항을 전부 드러낸다. */}
+          <span>거래이익</span>
+          <span className="font-mono tabular-nums text-emerald-700" data-testid="sc-multi-benefit">
+            {formatKRW(multi.transactionBenefit)}
           </span>
-          <span className="text-emerald-600">
-            (거래이익 − 법인세 안분 {formatKRW(multi.corpTaxApportioned)})
+          <span className="text-emerald-600">− 법인세 안분</span>
+          <span className="font-mono tabular-nums text-emerald-700" data-testid="sc-multi-corp-tax">
+            {formatKRW(multi.corpTaxApportioned)}
+          </span>
+          <span className="text-emerald-600">→ 특정법인의 이익</span>
+          <span className="font-mono font-semibold tabular-nums text-emerald-800" data-testid="sc-multi-corp-profit">
+            {formatKRW(multi.corpProfit)}
           </span>
         </div>
 
@@ -150,6 +166,7 @@ export function SpecificCorpMultiResultView({
                   <td
                     className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground"
                     data-testid={`sc-multi-formula-${i}`}
+                    title={d.ratioFrac ? `총 주식보유비율 ${d.ownershipRatioPct.toFixed(4)}% (직접 ${d.directRatioPct.toFixed(4)}% + 간접 ${d.indirectRatioPct.toFixed(4)}%)` : undefined}
                   >
                     {formulaText(multi.corpProfit, d)}
                   </td>
