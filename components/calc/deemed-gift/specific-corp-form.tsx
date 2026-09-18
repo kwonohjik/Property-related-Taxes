@@ -16,6 +16,8 @@ import { SpecificCorpPriorTxTable } from "./SpecificCorpPriorTxTable";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { SpecificCorpIntermediaryTable } from "./SpecificCorpIntermediaryTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
+import { apportionCorporateTax } from "@/lib/tax-engine/gift-deemed/specific-corp";
+import type { SpecificCorpInput } from "@/lib/tax-engine/gift-deemed/types";
 import type { DeemedFormState } from "./shared";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -41,24 +43,28 @@ export function SpecificCorpFields({ form, set }: Props) {
   }, [isPriceType, form.scTransactionType, form.scMarketValue, form.scConsideration]);
 
   // 법인세 안분 echo — useMemo 표시전용. store 역기록 금지 (feedback_useeffect_store_mirror_forbidden).
+  // 🔴 SC-6-d: 종전에는 영 §34의5④2호가목 산식(공제·감면 차감 → min(거래이익, 소득금액) → 나눗셈)을
+  //    **손으로 다시 적었다**. 현재 두 구현의 차액은 0원이지만(곱 ≤ 2^53 분기까지 브루트포스 실측),
+  //    엔진이 바뀌면 이 칸만 옛 산식으로 남고 **아무 게이트도 빨개지지 않는다**(테스트·testid 0건).
+  //    ⇒ 엔진 leaf를 그대로 부른다. 순수함수 import는 이 저장소의 확립된 패턴이다.
   const corpTaxEcho = useMemo(() => {
     if (!isAuto) return null;
     const assessed = parseAmount(form.scCorpTaxAssessed);
-    const landTransfer = parseAmount(form.scCorpTaxLandTransfer);
-    const deduction = parseAmount(form.scCorpTaxDeduction);
     const income = parseAmount(form.scCorpIncome);
+    if (income <= 0 || assessed <= 0) return null;
     // 2·3호는 거래이익이 시가−대가로 «도출»된다 — 입력칸 값을 쓰면 안분 echo가 어긋난다
     const benefit = significanceEcho
       ? significanceEcho.met
         ? significanceEcho.diff
         : 0
       : parseAmount(form.scTransactionBenefit);
-    if (income <= 0 || assessed <= 0) return null;
-    const net = Math.max(0, assessed - landTransfer - deduction); // 영 §34의5④2호가목 — §55의2분 제외
-    const minNumer = Math.min(benefit, income);
-    // BigInt 안전 안분(overflow 방지 — safeMultiplyThenDivide와 동일 로직)
-    const result = Number(BigInt(net) * BigInt(minNumer) / BigInt(income));
-    return result;
+    return apportionCorporateTax({
+      transactionBenefit: benefit,
+      annualIncome: income,
+      corporateTaxComputed: assessed,
+      corporateTaxOnLandTransfer: parseAmount(form.scCorpTaxLandTransfer),
+      corporateTaxCredit: parseAmount(form.scCorpTaxDeduction),
+    } as SpecificCorpInput);
   }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxLandTransfer, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit, significanceEcho]);
 
   return (
@@ -304,7 +310,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             {corpTaxEcho !== null && (
               <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
                 안분 법인세 상당액 (표시용) ≈{" "}
-                <span className="font-mono tabular-nums font-bold">{corpTaxEcho.toLocaleString()}</span>원
+                <span className="font-mono tabular-nums font-bold" data-testid="sc-corp-tax-echo">{corpTaxEcho.toLocaleString()}</span>원
                 <span className="ml-1 text-amber-600">(실계산은 엔진)</span>
               </div>
             )}
