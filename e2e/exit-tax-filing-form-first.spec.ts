@@ -27,8 +27,14 @@ async function fillByLabel(page: Page, label: string, value: string) {
     .fill(value);
 }
 
-/** 결과 화면까지 — 헬퍼는 `exit-tax-wizard-steps.spec.ts` 의 fillStep1/Step2 와 같은 구현이다. */
-async function reachResult(page: Page) {
+/**
+ * 결과 화면까지 — 헬퍼는 `exit-tax-wizard-steps.spec.ts` 의 fillStep1/Step2 와 같은 구현이다.
+ *
+ * `deferral: true` 면 3단계에서 §118의16 납부유예를 켜고 결과로 간다. 결과 화면에서 「이전」으로
+ * 되돌아가는 왕복은 쓰지 않는다 — 헤더의 「이전 단계로 이동」과 마법사 「이전」이 같은 이름이라
+ * 어느 쪽이 잡히는지가 화면 상태에 의존한다.
+ */
+async function reachResult(page: Page, opts: { deferral?: boolean } = {}) {
   await page.goto("/calc/stock-transfer-tax");
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => sessionStorage.clear());
@@ -57,6 +63,9 @@ async function reachResult(page: Page) {
 
   await page.getByRole("button", { name: /^다음/ }).click();
   await expect(page.getByText("실양도 정보 — 경정청구용")).toBeVisible({ timeout: 10_000 });
+  if (opts.deferral) {
+    await page.getByText("납부유예 신청 (§118의16)").first().click();
+  }
   await page.getByRole("button", { name: "결과 보기" }).click();
 }
 
@@ -124,5 +133,28 @@ test.describe("국외전출세 결과 화면 — 섹션 순서", () => {
     // 국내 양도 전용 근거가 섞이면 안 된다
     await expect(table).not.toContainText("§103①2호");
     await expect(table).not.toContainText("예정신고: 반기 말일");
+  });
+
+  /**
+   * ETF-4: §118의16 납부유예가 서식에 **도달한다**.
+   *
+   * 단위 anchor(`exit-tax-filing-form-rows.anchor.test.ts` ETA-6)는 **어댑터에서 출발**하므로
+   * 「사용자가 유예를 신청할 수 있는가」를 증명하지 못한다 — 토글 → 엔진 → 서식까지 실제
+   * 경로를 따라간다(FF-4 와 같은 이유).
+   *
+   * 🔑 유예는 **세액을 줄이지 않는다** — 31행 총 납부세액이 그대로인지도 함께 본다.
+   */
+  test("ETF-4: 납부유예를 신청하면 31-E 행이 실리고 총 납부세액은 그대로다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await reachResult(page, { deferral: true });
+
+    const table = page.locator('[data-print-section="stock-form-table"]');
+    await expect(table).toBeVisible({ timeout: 60_000 });
+
+    await expect(table).toContainText("31-E1. 납부유예 신청 세액");
+    await expect(table).toContainText("31-E2. 납부유예 기간");
+    // ⚠️ 유예는 납부 **시기**만 미룬다 — 31행은 ETF-2 의 미신청 케이스와 **같은** 6,050,000 이다
+    //   (신청 전후 대조는 단위 anchor ETA-5·ETA-6 이 든다).
+    await expect(table).toContainText("6,050,000");
   });
 });

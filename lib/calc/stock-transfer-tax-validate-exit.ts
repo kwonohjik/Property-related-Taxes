@@ -204,7 +204,12 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
   if (form.etDeferralRequested) {
     const reason = form.etDeferralReason || "none";
     // deferralReason은 사유 분류용 — 기본 5년("none") 포함 모든 값 허용
-    // → 사유 선택 없어도 기본 5년으로 유예 가능. Zod도 동일 허용.
+    // → 사유 선택 없어도 기본 5년으로 유예 가능(§118의16② 「5년(… 10년)」).
+    //
+    // ⚠️ 종전 주석은 「Zod도 동일 허용」이라고 **단언**했는데 **틀렸다** — Zod 는 `"none"`을
+    //    거부해 토글을 켜면 계산이 실패했다. 확인되지 않은 단언이 주석으로 굳으면 그 갭을
+    //    아무도 다시 보지 않는다. 지금은 양쪽 다 허용하고 anchor 가 고정한다
+    //    (`__tests__/api/exit-tax-deferral-reason-zod.anchor.test.ts`).
 
     // 경정청구: 실양도일 입력 시 실양도 단가 필수
     if (form.etActualTransferDate && !isEmpty(form.etActualTransferDate)) {

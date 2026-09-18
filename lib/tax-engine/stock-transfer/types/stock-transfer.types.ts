@@ -1448,10 +1448,12 @@ export type StockTransferResult = {
     domesticTaxCreditApplied?: number;
     /** §118의15④ 보유현황 미신고·누락 가산세 (액면금액 2%) */
     holdingsReportPenalty?: number;
-    /** §118의16 납부유예 세액 */
+    /** §118의16① 납부유예 세액 */
     deferredTaxAmount: number;
-    /** 납부유예 연수 (5년 또는 10년) */
+    /** 납부유예 연수 — §118의16② 「5년(국외유학 등 … 10년)」 */
     deferralYears: number;
+    /** §118의16④ 납부유예 기간에 대한 이자상당액. 일수·이자율 미입력 시 undefined */
+    deferralInterest?: number;
   };
 };
 
