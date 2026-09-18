@@ -29,6 +29,14 @@ export function RelatedCorpResultSection({
 
   return (
     <div className="space-y-4">
+      {result.sec18ScopeNotice && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          data-testid="rc-sec18-scope-notice"
+        >
+          {result.sec18ScopeNotice}
+        </div>
+      )}
       {result.sec14ScopeNotice && (
         <div
           className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"

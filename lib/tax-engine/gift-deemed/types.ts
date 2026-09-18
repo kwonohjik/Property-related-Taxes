@@ -426,6 +426,11 @@ export interface DeemedGiftResult {
    * 미구현 방향이 **과대과세**라 침묵하면 「법 근거 없이 불리 적용」이 된다.
    */
   sec14ScopeNotice?: string;
+  /**
+   * §34의3⑱ 2호·3호 미구현 고지 — 1호 미충족으로 «빠진» 간접출자법인이 있을 때만 붙는다.
+   * 미구현 방향은 **과소과세**(간접분이 통째로 0이 된다).
+   */
+  sec18ScopeNotice?: string;
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;

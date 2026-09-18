@@ -19,6 +19,7 @@ import {
   reduceFracBig,
   computeCommonExclusion,
   isSec18SalesPartner,
+  isIntermediarySec18,
   fracMin,
   fracMaxZeroSub,
   applyTwoFractions,
@@ -302,6 +303,25 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const sec14Unmodeled = salesPartners.filter(
     (p) => p.isRelated && !p.exclusionType && !isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds),
   );
+  /**
+   * §⑱**2호·3호 미구현 고지**.
+   *
+   * ⑱1호를 충족하지 못한 간접출자법인은 간접보유비율에서 **통째로 빠진다**(recipient 모드).
+   * 그 법인이 2호(지배주주등 및 1호 법인이 합산 50% 이상)나 3호(개재법인)에 해당한다면
+   * 간접분이 살아나 증여의제이익이 **늘어야** 한다 — 즉 미구현 방향은 **과소과세**다.
+   * 2·3호는 「법인이 법인을 보유하는」 구조라 `owners`(개인만)로 표현할 수 없다.
+   *
+   * ⇒ 1호 미충족 법인이 실제로 있을 때만 고지한다(없으면 빠진 것이 없으므로 고지도 없다).
+   */
+  const sec18Dropped = intermediaryCorps.filter((c) => !isIntermediarySec18(c, rulingGroupIds));
+  const sec18ScopeNotice =
+    sec18Dropped.length > 0
+      ? `간접출자법인 ${sec18Dropped.length}곳이 상증령 §34의3⑱1호(지배주주등 30% 이상 출자)를 ` +
+        `충족하지 않아 간접보유비율에서 제외됐습니다. 같은 항 2호(지배주주등 및 1호 법인이 합산 ` +
+        `50% 이상 출자)·3호(개재법인)는 법인이 법인을 보유하는 구조를 입력받지 않아 판정하지 ` +
+        `않습니다 — 해당하면 간접분이 살아나 증여의제이익이 늘 수 있으므로 별도 검토가 필요합니다.`
+      : undefined;
+
   const sec14ScopeNotice =
     sec14Unmodeled.length > 0
       ? `상증령 §34의3⑭ 2호(지주회사의 다른 자회사·손자회사)·4호(간접출자법인의 다른 자법인)는 ` +
@@ -336,6 +356,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     aggregationExcluded: true,
     aggExclClass: "deemed_profit",
     ...(sec14ScopeNotice ? { sec14ScopeNotice } : {}),
+    ...(sec18ScopeNotice ? { sec18ScopeNotice } : {}),
     recipientBreakdown: rows,
     baseAfterTaxProfit: baseAfterTax,
     ...echo,

@@ -72,10 +72,16 @@ export function applyTwoFractions(profit: number, f1: Frac, f2: Frac): number {
 }
 
 /**
- * §⑱1호 간접출자법인 판정: owners 중 지배주주등(rulingGroupIds) 합산 보유비율 ≥ 30%.
+ * §⑱**1호** 간접출자법인 판정: owners 중 지배주주등(rulingGroupIds) 합산 보유비율 ≥ 30%.
  * 사례: B(갑30+을20=50%≥30 ✓) 포함 / C(갑10%<30 ✗) 제외.
+ *
+ * ⚠️ 같은 항 **2호**(지배주주등 «및 1호에 해당하는 법인»이 합산 50% 이상 출자)와
+ *    **3호**(1·2호 법인과 수혜법인 사이에 하나 이상의 법인이 개재된 경우 그 법인)는
+ *    「법인이 법인을 보유하는」 3단 이상 구조라 `RcIntermediaryCorpItem.owners`(개인만)로는
+ *    표현할 수 없다 — 계획서의 「다단계 SCOPE_OUT」에 포섭된다.
+ *    침묵하지 않도록 `related-corp.ts`가 `sec18ScopeNotice`로 고지한다.
  */
-function isIntermediarySec18(corp: RcIntermediaryCorpItem, rulingGroupIds: string[]): boolean {
+export function isIntermediarySec18(corp: RcIntermediaryCorpItem, rulingGroupIds: string[]): boolean {
   // 지배주주등 보유비율 분수 누적 (BigInt — 분모 곱 누적 안전)
   let accNumer = 0n;
   let accDenom = 1n;

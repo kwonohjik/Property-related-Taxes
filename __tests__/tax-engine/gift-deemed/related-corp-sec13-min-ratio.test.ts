@@ -117,3 +117,45 @@ describe("§⑬ 제외가 세액에 도달한다", () => {
     expect(gap!.sec13ExcludedCount).toBe(1);
   });
 });
+
+describe("§⑱2호·3호 미구현 고지 (RC-I)", () => {
+  /** A법인: 지배주주등 지분 `pct`% (30% 이상이면 §⑱1호 충족) */
+  const withCorp = (pct: number): RelatedCorpInput => ({
+    enterpriseSize: "large", totalSales: 100_000_000_000,
+    preTaxAdjOperatingIncome: 10_000_000_000, taxableIncome: 10_000_000_000, corporateTaxNet: 2_000_000_000,
+    shareholders: [
+      { id: "gap", name: "갑", relation: "self", directRatio: R(40), isCorporate: false },
+      { id: "A", name: "A법인", relation: "other", directRatio: R(30), isCorporate: true },
+      { id: "x", name: "기타", relation: "other", directRatio: R(30), isCorporate: false },
+    ],
+    intermediaryCorps: [
+      { corpShareholderId: "A", stakeInBeneficiary: R(30), owners: [{ individualId: "gap", ratio: R(pct) }] },
+    ],
+    salesPartners: [
+      { id: "D", name: "D", salesAmount: 70_000_000_000, isRelated: true },
+      { id: "E", name: "기타", salesAmount: 30_000_000_000, isRelated: false },
+    ],
+  });
+
+  it("[S18-0] §⑱1호 미충족 법인이 있으면 고지한다 — 그 간접분이 통째로 빠졌기 때문", () => {
+    const r = calcRelatedCorpGift(withCorp(25)); // 25% < 30%
+    expect(r.sec18ScopeNotice).toContain("§34의3⑱1호");
+    expect(r.sec18ScopeNotice).toContain("2호");
+    expect(r.sec18ScopeNotice).toContain("3호");
+    expect(r.sec18ScopeNotice).toContain("1곳");
+    // 방향 확인 — 미구현은 «과소과세»다(간접분이 0이 되므로)
+    expect(r.recipientBreakdown?.[0]?.indirectGain).toBe(0);
+  });
+
+  it("[S18-1] 전부 §⑱1호를 충족하면 빠진 것이 없으므로 고지가 사라진다", () => {
+    const r = calcRelatedCorpGift(withCorp(30)); // 정확히 30% → 「이상」이라 충족
+    expect(r.sec18ScopeNotice).toBeUndefined();
+    expect(r.recipientBreakdown?.[0]?.indirectGain).toBeGreaterThan(0);
+  });
+
+  it("[S18-2] 간접출자법인이 없으면 고지하지 않는다 — 상시 노출 금지", () => {
+    const base = withCorp(25);
+    base.intermediaryCorps = [];
+    expect(calcRelatedCorpGift(base).sec18ScopeNotice).toBeUndefined();
+  });
+});
