@@ -4,7 +4,7 @@
  * 정책: Math.round 금지(CLAUDE.md 정수연산) · 분수 곱은 BigInt(2^53 초과 방지).
  */
 import { safeMultiplyThenDivide } from "../tax-utils";
-import type { RcIntermediaryCorpItem, RcSalesPartner } from "./types";
+import type { RcExclusionType, RcIntermediaryCorpItem, RcSalesPartner } from "./types";
 
 export type Frac = { numer: number; denom: number };
 
@@ -227,18 +227,40 @@ export function partitionSec13Paths(paths: IndirectPath[]): {
  * ⚠️ 비율 미입력 시 0을 돌려준다(전액 제외가 아니다). 「자동 안분 fallback 금지」 정책상
  *    실제 관문은 ⑧validate이며, 여기서 전액으로 되돌리면 그 정책이 무력해진다.
  */
-function exclusionAmount(p: RcSalesPartner): number {
-  if (p.exclusionType !== "sec10_3") return p.salesAmount;
+function clauseAmount(p: RcSalesPartner, t: RcExclusionType): number {
+  // 3호만 「× 수혜법인의 주식보유비율」로 축소된다. 나머지 9개 호는 매출액 전액이다.
+  if (t !== "sec10_3") return p.salesAmount;
   const r = p.beneficiaryStakeInPartner;
   if (!r || r.denom <= 0) return 0;
   return safeMultiplyThenDivide(p.salesAmount, r.numer, r.denom);
 }
 
 /**
+ * 한 매출액의 과세제외금액 — 영 §34의3⑩ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」.
+ *
+ * ⚠️ 비교는 **축소한 뒤**의 금액으로 한다. 3호를 전액으로 놓고 비교하면 3호가 전액 호를 이기는
+ *    일이 생긴다. 실제로 3호의 비율은 §⑩3호 문언상 100분의 50 «미만»이므로, 전액 호가 하나라도
+ *    함께 해당하면 언제나 그쪽이 크다 — 그래도 max를 일반형으로 두는 이유는 호별 산정식이
+ *    바뀌었을 때 이 함수가 조용히 틀리지 않게 하기 위해서다.
+ */
+export function exclusionAmount(p: RcSalesPartner): number {
+  const types = p.exclusionTypes ?? [];
+  let best = 0;
+  for (const t of types) best = Math.max(best, clauseAmount(p, t));
+  return best;
+}
+
+/**
  * §⑩ 공통 과세제외매출액.
- * 규칙1: 동일 법인이 ⑩호 복수 동시해당 → max 금액만 (§⑩ 후단).
- * 규칙2: 서로 다른 법인 간 합산.
+ * 규칙1: 같은 매출액이 ⑩호 복수 동시해당 → max 금액만 (§⑩ 후단) — `exclusionAmount`가 진다.
+ * 규칙2: 서로 다른 매출처 간 합산 (§⑪ 「각각의 매출액을 모두 합하여 계산한다」).
  * 사례: B(⑩1호 3,000M) + E(⑩5호 2,000M) = 5,000M (다른 법인 → 합산).
+ *
+ * 🔴 종전에는 여기서 행 id를 키로 한 `Map`에 `Math.max`를 걸어 두고 주석이 「§⑩ 후단 구현」을
+ *    단언했다. 그러나 행 id는 `crypto.randomUUID()`라 두 행이 같은 키를 가질 수 없고,
+ *    `exclusionType`이 스칼라라 한 행이 여러 호에 동시 해당할 수도 없었다 — max의 비교 대상이
+ *    **영원히 하나**였다(RC-3-i, 구별력 0). 후단의 단위는 «호»이므로 max는 행 안으로 옮겼고,
+ *    행 사이는 §⑪이 명령하는 대로 단순 합산이다.
  *
  * ⚠️ **비특수관계 매출처는 과세제외매출액이 될 수 없다.**
  *    법 §45의3④의 제외는 「**제1항에 따른 매출액**에서 … 제외한다」이고, ①1호가목의 분자는
@@ -253,15 +275,11 @@ function exclusionAmount(p: RcSalesPartner): number {
  *    `isRelated`를 보는데 이 함수만 빠져 있었다.
  */
 export function computeCommonExclusion(salesPartners: RcSalesPartner[]): number {
-  const byPartner = new Map<string, number>();
-  for (const p of salesPartners) {
-    if (!p.isRelated || p.exclusionType == null) continue;
-    // ⚠️ 「더 큰 금액」 비교는 **축소한 뒤**의 금액으로 해야 한다 — 3호를 전액으로 넣으면
-    //    max 비교 자체가 틀린다(3호가 2호를 이기는 일이 생긴다).
-    byPartner.set(p.id, Math.max(byPartner.get(p.id) ?? 0, exclusionAmount(p)));
-  }
   let total = 0;
-  for (const amount of byPartner.values()) total += amount;
+  for (const p of salesPartners) {
+    if (!p.isRelated) continue;
+    total += exclusionAmount(p);
+  }
   return total;
 }
 

@@ -39,7 +39,7 @@ const CASE4_INPUT: RelatedCorpInput = {
     },
   ],
   salesPartners: [
-    { id: "sB", name: "B법인", salesAmount: 3_000_000_000, isRelated: true, exclusionType: "sec10_1" }, // 중소-중소
+    { id: "sB", name: "B법인", salesAmount: 3_000_000_000, isRelated: true, exclusionTypes: ["sec10_1"] }, // 중소-중소
     { id: "sC", name: "C법인", salesAmount: 4_000_000_000, isRelated: false },
     {
       id: "sD",
@@ -48,7 +48,7 @@ const CASE4_INPUT: RelatedCorpInput = {
       isRelated: true, // 대기업·비수출 → ⑩ 미해당. §⑭3호로 수증자별 추가
       rulingShareholderStakes: [{ shareholderId: "gap", ratio: { numer: 30, denom: 100 } }], // 갑만 D 30% 출자
     },
-    { id: "sE", name: "E법인", salesAmount: 2_000_000_000, isRelated: true, exclusionType: "sec10_5" }, // 수출
+    { id: "sE", name: "E법인", salesAmount: 2_000_000_000, isRelated: true, exclusionTypes: ["sec10_5"] }, // 수출
     { id: "sEtc", name: "기타", salesAmount: 1_000_000_000, isRelated: false },
   ],
 };

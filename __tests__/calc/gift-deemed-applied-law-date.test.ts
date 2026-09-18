@@ -42,7 +42,7 @@ const RC_FORM = {
   ],
   rcIntermediaryCorps: [],
   rcSalesPartners: [
-    { id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true, exclusionType: "", rulingStakes: [] },
+    { id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true, exclusionTypes: [], rulingStakes: [] },
   ],
 } as unknown as DeemedFormState;
 

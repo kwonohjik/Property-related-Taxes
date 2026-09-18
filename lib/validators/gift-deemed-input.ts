@@ -570,19 +570,22 @@ const relatedCorpSchema = z.object({
         name: z.string(),
         salesAmount: z.number().int().min(0),
         isRelated: z.boolean(),
-        exclusionType: z
-          .enum([
-            "sec10_1",
-            "sec10_2",
-            "sec10_3",
-            "sec10_4",
-            "sec10_5",
-            "sec10_5_2",
-            "sec10_5_3",
-            "sec10_6",
-            "sec10_7",
-            "sec10_8",
-          ])
+        /** §⑩ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」 — 한 매출액이 여러 호를 가질 수 있다 */
+        exclusionTypes: z
+          .array(
+            z.enum([
+              "sec10_1",
+              "sec10_2",
+              "sec10_3",
+              "sec10_4",
+              "sec10_5",
+              "sec10_5_2",
+              "sec10_5_3",
+              "sec10_6",
+              "sec10_7",
+              "sec10_8",
+            ]),
+          )
           .optional(),
         /** §⑩3호 전용 — 수혜법인의 그 특수관계법인에 대한 주식보유비율 */
         beneficiaryStakeInPartner: ratioSchema.optional(),
@@ -666,11 +669,32 @@ export const deemedGiftInputSchema = z
     //       특수관계법인 측 규모는 입력이 없다. 확실히 틀린 쪽만 막는다.
     if (data.type === "related_corp" && data.enterpriseSize !== "small" && Array.isArray(data.salesPartners)) {
       data.salesPartners.forEach((p, i) => {
-        if (p.exclusionType === "sec10_1") {
+        if (p.exclusionTypes?.includes("sec10_1")) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["salesPartners", i, "exclusionType"],
+            path: ["salesPartners", i, "exclusionTypes"],
             message: `매출처 ${i + 1}: ⑩1호는 수혜법인이 중소기업인 경우에만 적용됩니다 (상증령 §34의3⑩1호)`,
+          });
+        }
+      });
+    }
+    // 🔴 RC-3-i: ⑩2호(50% 이상)와 ⑩3호(50% 미만)는 같은 보유비율을 50% 기준으로 가르므로
+    //    동시 해당이 논리적으로 불가능하다. ⑧과 같은 술어를 서버측에도 둔다.
+    if (data.type === "related_corp" && Array.isArray(data.salesPartners)) {
+      data.salesPartners.forEach((p, i) => {
+        const t = p.exclusionTypes ?? [];
+        if (t.includes("sec10_2") && t.includes("sec10_3")) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["salesPartners", i, "exclusionTypes"],
+            message: `매출처 ${i + 1}: ⑩2호와 ⑩3호는 동시에 해당할 수 없습니다 (상증령 §34의3⑩2호·3호)`,
+          });
+        }
+        if (t.length !== new Set(t).size) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["salesPartners", i, "exclusionTypes"],
+            message: `매출처 ${i + 1}: 과세제외유형이 중복 선택됐습니다`,
           });
         }
       });

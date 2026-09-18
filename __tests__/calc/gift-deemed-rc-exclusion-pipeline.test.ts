@@ -39,26 +39,26 @@ function partners(f: DeemedFormState) {
 
 const D: SalesRow = {
   id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true,
-  exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
+  exclusionTypes: [], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
 } as SalesRow;
 
 describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
   it("[PX-0] 비특수관계 행의 stale exclusionType은 전송되지 않는다", () => {
-    const stale = { ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: false, exclusionType: "sec10_5" } as SalesRow;
+    const stale = { ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: false, exclusionTypes: ["sec10_5"] } as SalesRow;
     const out = partners(form([D, stale]));
-    expect(out[1]!.exclusionType).toBeUndefined();
+    expect(out[1]!.exclusionTypes).toBeUndefined();
   });
 
   it("[PX-0b] 긍정 짝 — 특수관계 행의 exclusionType은 그대로 전송된다", () => {
-    const live = { ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: true, exclusionType: "sec10_5" } as SalesRow;
+    const live = { ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: true, exclusionTypes: ["sec10_5"] } as SalesRow;
     const out = partners(form([D, live]));
-    expect(out[1]!.exclusionType).toBe("sec10_5");
+    expect(out[1]!.exclusionTypes).toEqual(["sec10_5"]);
   });
 
   it("[PX-1] 과세제외유형을 고르면 §⑭3호 보유비율 블록이 언마운트된다 — 그 값도 전송되지 않는다", () => {
     const row = {
       ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: true,
-      exclusionType: "sec10_5", rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
+      exclusionTypes: ["sec10_5"], rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
     } as SalesRow;
     const out = partners(form([D, row]));
     expect(out[1]!.rulingShareholderStakes).toBeUndefined();
@@ -67,7 +67,7 @@ describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
   it("[PX-1b] 긍정 짝 — 과세제외유형이 없으면 §⑭3호 값이 전송된다", () => {
     const row = {
       ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: true,
-      exclusionType: "", rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
+      exclusionTypes: [], rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
     } as SalesRow;
     const out = partners(form([D, row]));
     expect(out[1]!.rulingShareholderStakes).toHaveLength(1);
@@ -77,7 +77,7 @@ describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
     // RC-G 함정: ⑧가 렌더 게이트와 같은 술어로 건너뛰므로 ④도 같은 술어로 걸러야 한다.
     const row = {
       ...D, id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: false,
-      exclusionType: "sec10_5", rulingStakes: [{ shareholderId: "", ratioPctStr: "" }],
+      exclusionTypes: ["sec10_5"], rulingStakes: [{ shareholderId: "", ratioPctStr: "" }],
     } as SalesRow;
     const f = form([D, row]);
     expect(validateDeemedInput(f)).toBeNull();
@@ -89,7 +89,7 @@ describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
 describe("§⑩3호 보유비율 — ⑤ 게이트 ↔ ⑧ 차단 ↔ ④ 전송 ↔ ⑭ 엔진", () => {
   const sec3 = (pct: string): SalesRow =>
     ({ ...D, id: "A", name: "A법인", salesAmountStr: "6000000000", isRelated: true,
-       exclusionType: "sec10_3", beneficiaryStakePctStr: pct } as SalesRow);
+       exclusionTypes: ["sec10_3"], beneficiaryStakePctStr: pct } as SalesRow);
 
   it("[PB-0] ⑩3호를 고르고 비율을 비우면 ⑧가 차단한다 (자동 안분 fallback 금지)", () => {
     const msg = validateDeemedInput(form([D, sec3("")]));
@@ -112,7 +112,7 @@ describe("§⑩3호 보유비율 — ⑤ 게이트 ↔ ⑧ 차단 ↔ ④ 전송
   });
 
   it("[PB-2] ④는 ⑩3호 행에서만 보유비율을 보낸다", () => {
-    const other = { ...sec3("30"), exclusionType: "sec10_2" } as SalesRow;
+    const other = { ...sec3("30"), exclusionTypes: ["sec10_2"] } as SalesRow;
     const out = partners(form([D, other]));
     expect(out[1]!.beneficiaryStakeInPartner).toBeUndefined();
   });
@@ -129,11 +129,11 @@ describe("§⑩3호 보유비율 — ⑤ 게이트 ↔ ⑧ 차단 ↔ ④ 전송
 describe("§⑭1호 간접출자법인 링크 — ④ 게이트", () => {
   const linked = (over: Partial<SalesRow> = {}): SalesRow =>
     ({ ...D, id: "A", name: "A법인", salesAmountStr: "6000000000", isRelated: true,
-       exclusionType: "", intermediaryCorpShareholderId: "Bcorp", ...over } as SalesRow);
+       exclusionTypes: [], intermediaryCorpShareholderId: "Bcorp", ...over } as SalesRow);
 
   it("[PJ-0] ⑩ 미해당 특수관계 행에서만 전송된다 (⑭ 본문 「제10항 … 해당하지 아니하는 경우」)", () => {
     expect(partners(form([D, linked()]))[1]!.intermediaryCorpShareholderId).toBe("Bcorp");
-    expect(partners(form([D, linked({ exclusionType: "sec10_5" })]))[1]!.intermediaryCorpShareholderId).toBeUndefined();
+    expect(partners(form([D, linked({ exclusionTypes: ["sec10_5"] })]))[1]!.intermediaryCorpShareholderId).toBeUndefined();
     expect(partners(form([D, linked({ isRelated: false })]))[1]!.intermediaryCorpShareholderId).toBeUndefined();
   });
 

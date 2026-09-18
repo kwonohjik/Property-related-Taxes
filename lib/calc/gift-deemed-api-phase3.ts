@@ -6,7 +6,7 @@
  * gift-deemed-api.ts에서 분리(800줄 정책 선제 대응) — 신규 필드 변환은 이 파일에 추가한다.
  * 해당 유형이 아니면 null을 돌려주고 호출자가 Phase 1·2 switch로 넘어간다.
  */
-import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput, RcExclusionType } from "@/lib/tax-engine/gift-deemed/types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -331,33 +331,41 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
             ...(dividendOn ? { dividendIncome: parseAmount(o.dividendIncomeStr) } : {}),
           })),
         }));
-      const salesPartners = form.rcSalesPartners.map((row) => ({
+      const salesPartners = form.rcSalesPartners.map((row) => {
+        // 빈 슬롯(«없음»)만 걷어낸 «실제로 고른 호» — ⑤·⑧이 같은 집합을 본다.
+        // ⚠️ 중복은 여기서 **정규화하지 않는다**. 조용히 지우면 ⑧·⑫의 중복 가드가 UI 경로에서
+        //    영원히 발화하지 못하는 「구별력 0」 코드가 된다(RC-3-i가 바로 그 형태였다).
+        const rowTypes = row.exclusionTypes.filter((t) => t !== "") as RcExclusionType[];
+        return {
         id: row.id,
         name: row.name,
         salesAmount: parseAmount(row.salesAmountStr),
         isRelated: row.isRelated,
         // ⑤ 렌더 게이트를 그대로 미러링한다(3중 패턴) —
         //   과세제외유형 select: `row.isRelated &&`
-        //   §⑭3호 보유비율 블록: `row.isRelated && row.exclusionType === ""`
+        //   §⑭3호 보유비율 블록: `row.isRelated && row.exclusionTypes.length === 0`
         // 종전에는 게이트 없이 그대로 보내, 특수관계를 껐다 켜며 남은 **화면에 없는 값**이
         // 엔진까지 도달했다(⑧validate도 같은 술어로 건너뛰어 차단되지 않았다).
-        exclusionType: row.isRelated ? row.exclusionType || undefined : undefined,
-        // §⑩3호를 고른 행에서만 의미가 있다(다른 호는 전액 제외라 곱할 비율이 없다).
+        // 🔴 RC-3-i: 영 §34의3⑩ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」 —
+        //    한 매출액이 여러 호에 동시 해당할 수 있으므로 배열로 보낸다.
+        exclusionTypes: row.isRelated && rowTypes.length > 0 ? rowTypes : undefined,
+        // §⑩3호가 «선택된 호 중에 있으면» 의미가 있다(다른 호는 전액 제외라 곱할 비율이 없다).
         beneficiaryStakeInPartner:
-          row.isRelated && row.exclusionType === "sec10_3"
+          row.isRelated && rowTypes.includes("sec10_3")
             ? parseRatio(row.beneficiaryStakePctStr)
             : undefined,
         // §⑭1호 — ⑭는 ⑩ 미해당 매출처만 대상이므로 ⑭3호 블록과 같은 렌더 게이트를 쓴다.
         intermediaryCorpShareholderId:
-          row.isRelated && !row.exclusionType ? row.intermediaryCorpShareholderId || undefined : undefined,
+          row.isRelated && rowTypes.length === 0 ? row.intermediaryCorpShareholderId || undefined : undefined,
         rulingShareholderStakes:
-          row.isRelated && !row.exclusionType && row.rulingStakes.length > 0
+          row.isRelated && rowTypes.length === 0 && row.rulingStakes.length > 0
             ? row.rulingStakes.map((s) => ({
                 shareholderId: s.shareholderId,
                 ratio: parseRatio(s.ratioPctStr),
               }))
             : undefined,
-      }));
+        };
+      });
       return {
         type: "related_corp",
         // §45의3③ 「수혜법인의 해당 사업연도 종료일을 증여시기로 본다」 — 폼의 공통 날짜가

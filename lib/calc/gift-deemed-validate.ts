@@ -607,12 +607,23 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         //       공시대상기업집단에 소속되지 아니하는 기업」으로 정의하므로 `small`이라고
         //       ⑩1호 요건이 충족되는 것은 아니고, 특수관계법인 측 규모는 입력 자체가 없다.
         //       확실히 틀린 쪽만 막고, 나머지는 사용자 단언으로 둔다.
-        if (row.isRelated && row.exclusionType === "sec10_1" && form.rcEnterpriseSize !== "small")
+        // 🔴 RC-3-i: 영 §34의3⑩ 후단이 「동시에 해당하는 경우」를 상정하므로 호는 **배열**이다.
+        //    ⑤가 슬롯마다 «없음»을 허용하니 빈 값을 걷어낸 뒤, 호별 요건을 각각 검사한다.
+        const rowTypes = row.isRelated ? row.exclusionTypes.filter((t) => t !== "") : [];
+        if (rowTypes.length !== new Set(rowTypes).size)
+          return `${n}번째 매출처: 같은 과세제외유형을 두 번 선택했습니다 — 다른 호를 고르거나 「없음」으로 두세요`;
+        if (rowTypes.includes("sec10_1") && form.rcEnterpriseSize !== "small")
           return (
             `${n}번째 매출처: ⑩1호는 수혜법인이 중소기업인 경우에만 적용됩니다 ` +
             `(현재 ${form.rcEnterpriseSize === "medium" ? "중견기업" : "일반기업"} — 상증령 §34의3⑩1호) — 다시 선택하세요`
           );
-        if (row.isRelated && row.exclusionType === "sec10_3") {
+        // ⑩2호와 ⑩3호는 같은 「수혜법인의 보유비율」을 50% 기준으로 가르므로 **동시 해당할 수 없다**.
+        if (rowTypes.includes("sec10_2") && rowTypes.includes("sec10_3"))
+          return (
+            `${n}번째 매출처: ⑩2호(50% 이상)와 ⑩3호(50% 미만)는 같은 보유비율을 기준으로 ` +
+            "갈리므로 동시에 해당할 수 없습니다 — 하나만 선택하세요"
+          );
+        if (rowTypes.includes("sec10_3")) {
           const pct = parseDecimal(row.beneficiaryStakePctStr);
           if (pct <= 0)
             return `${n}번째 매출처의 「수혜법인의 이 매출처 주식보유비율」을 입력하세요 (상증령 §34의3⑩3호)`;
@@ -620,7 +631,7 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (pct >= 50)
             return `${n}번째 매출처는 보유비율이 50% 이상입니다 — 상증령 §34의3⑩3호는 「100분의 50 미만」인 경우이므로 ⑩2호(전액 제외)를 선택하세요`;
         }
-        if (row.isRelated && !row.exclusionType) {
+        if (row.isRelated && rowTypes.length === 0) {
           for (const [j, stake] of row.rulingStakes.entries()) {
             if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
             if (!individualIds.has(stake.shareholderId))

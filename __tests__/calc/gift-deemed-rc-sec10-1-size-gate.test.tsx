@@ -41,11 +41,11 @@ function form(size: Size, excl: string): DeemedFormState {
     rcSalesPartners: [
       {
         id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true,
-        exclusionType: excl, beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
+        exclusionTypes: [excl], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
       },
       {
         id: "etc", name: "기타", salesAmountStr: "6000000000", isRelated: false,
-        exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
+        exclusionTypes: [], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
       },
     ],
   } as unknown as DeemedFormState;
@@ -82,7 +82,7 @@ describe("⑫ — 서버측 관문도 같은 술어", () => {
     const r = deemedGiftInputSchema.safeParse(buildDeemedGiftInput(form("large", "sec10_1")));
     expect(r.success).toBe(false);
     const issue = r.success ? undefined : r.error.issues.find((i) => i.message.includes("⑩1호"));
-    expect(issue?.path).toEqual(["salesPartners", 0, "exclusionType"]);
+    expect(issue?.path).toEqual(["salesPartners", 0, "exclusionTypes"]);
   });
 
   it("[S1-3b] 긍정 짝 — 중소기업이면 Zod를 통과한다", () => {

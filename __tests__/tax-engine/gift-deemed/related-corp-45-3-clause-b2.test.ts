@@ -37,9 +37,9 @@ function inp(size: Size, partners: RcSalesPartner[], totalSales = 1_000_000_000_
 }
 
 /** 특수관계 `rel`원 + 비특수관계 나머지 */
-function split(rel: number, total = 1_000_000_000_000, exclusionType?: RcSalesPartner["exclusionType"]): RcSalesPartner[] {
+function split(rel: number, total = 1_000_000_000_000, exclusionType?: NonNullable<RcSalesPartner["exclusionTypes"]>[number]): RcSalesPartner[] {
   return [
-    { id: "s1", name: "특수법인", salesAmount: rel, isRelated: true, ...(exclusionType ? { exclusionType } : {}) },
+    { id: "s1", name: "특수법인", salesAmount: rel, isRelated: true, ...(exclusionType ? { exclusionTypes: [exclusionType] } : {}) },
     { id: "s2", name: "기타", salesAmount: total - rel, isRelated: false },
   ];
 }
@@ -103,7 +103,7 @@ describe("§45의3①1호나목2) 대기업 추가 과세요건", () => {
     // 총매출 4,000억 · 특수관계 1,050억(그중 수출목적 §⑩5호로 전액 과세제외)
     const partners: RcSalesPartner[] = [
       { id: "s1", name: "특수법인A", salesAmount: 95_000_000_000, isRelated: true },
-      { id: "s2", name: "특수법인B(수출)", salesAmount: 10_000_000_000, isRelated: true, exclusionType: "sec10_5" },
+      { id: "s2", name: "특수법인B(수출)", salesAmount: 10_000_000_000, isRelated: true, exclusionTypes: ["sec10_5"] },
       { id: "s3", name: "기타", salesAmount: 295_000_000_000, isRelated: false },
     ];
     const r = calcRelatedCorpGift(inp("large", partners, 400_000_000_000));

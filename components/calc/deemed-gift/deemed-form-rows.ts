@@ -177,7 +177,13 @@ export interface RcSalesRow {
   name: string;
   salesAmountStr: string;
   isRelated: boolean;
-  exclusionType: RcExclusionTypeStr;
+  /**
+   * §⑩ 과세제외유형 — 영 §34의3⑩ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」이므로
+   * 한 매출액이 여러 호를 가질 수 있다. 빈 배열 = 과세대상.
+   * ⑤는 슬롯마다 select를 그리고 «없음»을 `""`로 받으므로 원소에 `""`가 섞일 수 있다 —
+   * ④가 걸러낸다(`rowTypes`).
+   */
+  exclusionTypes: RcExclusionTypeStr[];
   /** §⑩3호 전용 — 수혜법인의 «이 매출처»에 대한 주식보유비율(%) */
   beneficiaryStakePctStr: string;
   /** §⑭1호 — 이 매출처가 §⑱ 간접출자법인이면 그 법인주주 id (`RcIntermediaryRow.corpShareholderId`) */
@@ -195,7 +201,7 @@ export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
 }
 
 export function makeRcSalesRow(id: string): RcSalesRow {
-  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] };
+  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionTypes: [], beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [] };
 }
 
 /**
