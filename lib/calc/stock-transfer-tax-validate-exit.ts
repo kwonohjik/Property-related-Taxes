@@ -221,6 +221,37 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
         });
       }
     }
+    /**
+     * §118의16④ 이자상당액 — **일수·이자율은 짝이다**.
+     *
+     * 엔진은 `days > 0 && rate > 0`일 때만 산출한다(`exit-tax.ts:414`). 한쪽만 넣으면 그 값이
+     * body 까지 실려 가서 **조용히 무시**됐다 — 사용자는 입력했는데 서식에도 결과 카드에도
+     * 흔적이 없다(실측: `[일수만] body days=365 rate=undefined → 31-E3 행 없음`).
+     *
+     * ⚠️ 비어 있는 쪽을 가리켜야 고칠 곳이 보인다 — 입력한 쪽을 탓하면 지우라는 뜻으로 읽힌다.
+     * ⚠️ Zod(⑫)에는 넣지 않는다 — 종전 저장 이력에 한쪽만 있는 레코드가 있을 수 있고, 거기서
+     *    막으면 「이력 복원 → 계산 실패」로 화면에서 고칠 기회를 잃는다.
+     */
+    const hasDays = !isEmpty(form.etDeferralInterestDays);
+    const hasRate = !isEmpty(form.etDeferralInterestDailyRate);
+    if (hasDays !== hasRate) {
+      errors.push(
+        hasDays
+          ? {
+              field: "etDeferralInterestDailyRate",
+              message:
+                "1일당 이자율을 입력하세요 — 일수만으로는 이자상당액이 산출되지 않습니다 (§118의16④·영 §178의12③)",
+              severity: "error",
+            }
+          : {
+              field: "etDeferralInterestDays",
+              message:
+                "납부유예 일수를 입력하세요 — 이자율만으로는 이자상당액이 산출되지 않습니다 (§118의16④·영 §178의12③)",
+              severity: "error",
+            },
+      );
+    }
+
     // 미사용 변수 경고 방지
     void reason;
   }

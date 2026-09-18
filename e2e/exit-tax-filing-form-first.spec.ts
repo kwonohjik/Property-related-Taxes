@@ -34,7 +34,10 @@ async function fillByLabel(page: Page, label: string, value: string) {
  * 되돌아가는 왕복은 쓰지 않는다 — 헤더의 「이전 단계로 이동」과 마법사 「이전」이 같은 이름이라
  * 어느 쪽이 잡히는지가 화면 상태에 의존한다.
  */
-async function reachResult(page: Page, opts: { deferral?: boolean } = {}) {
+async function reachResult(
+  page: Page,
+  opts: { deferral?: boolean; interestDays?: string; interestRate?: string } = {},
+) {
   await page.goto("/calc/stock-transfer-tax");
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => sessionStorage.clear());
@@ -65,6 +68,8 @@ async function reachResult(page: Page, opts: { deferral?: boolean } = {}) {
   await expect(page.getByText("실양도 정보 — 경정청구용")).toBeVisible({ timeout: 10_000 });
   if (opts.deferral) {
     await page.getByText("납부유예 신청 (§118의16)").first().click();
+    if (opts.interestDays) await fillByLabel(page, "납부유예 일수", opts.interestDays);
+    if (opts.interestRate) await fillByLabel(page, "1일당 이자율", opts.interestRate);
   }
   await page.getByRole("button", { name: "결과 보기" }).click();
 }
@@ -156,5 +161,50 @@ test.describe("국외전출세 결과 화면 — 섹션 순서", () => {
     // ⚠️ 유예는 납부 **시기**만 미룬다 — 31행은 ETF-2 의 미신청 케이스와 **같은** 6,050,000 이다
     //   (신청 전후 대조는 단위 anchor ETA-5·ETA-6 이 든다).
     await expect(table).toContainText("6,050,000");
+  });
+
+  /**
+   * ETF-5: §118의16④ 이자상당액 — **일수·이자율은 짝이다**.
+   *
+   * 단위 anchor(`exit-tax-deferral-interest-pair.anchor.test.ts`)는 validate **함수**만 보므로
+   * 「그 결과가 실제로 계산을 막는가」를 증명하지 못한다 — 호출만 하고 경고로 흘리는 코드가
+   * 있으면 함수는 초록인데 화면은 그냥 통과한다
+   * (memory `feedback_validation_called_but_used_as_warning`).
+   *
+   * 🔑 그래서 **API 요청이 나가지 않는 것**까지 본다. 오류 문구만 확인하면 「문구는 뜨는데
+   *   계산도 되는」 상태를 놓친다.
+   */
+  test("ETF-5: 일수만 넣으면 계산이 차단된다 (API 미호출 + 이자율 필드 오류)", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+
+    let apiCalled = false;
+    page.on("request", (r) => {
+      if (r.url().includes("/api/calc/stock-transfer")) apiCalled = true;
+    });
+
+    await reachResult(page, { deferral: true, interestDays: "365" });
+
+    await expect(
+      page.getByText(/1일당 이자율을 입력하세요 — 일수만으로는/).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    expect(apiCalled, "차단돼야 하는데 API 가 호출됐다").toBe(false);
+    await expect(page.locator('[data-print-section="stock-form-table"]')).toHaveCount(0);
+  });
+
+  test("ETF-6: 둘 다 넣으면 통과하고 31-E3 에 이자상당액이 실린다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await reachResult(page, {
+      deferral: true,
+      interestDays: "365",
+      interestRate: "0.000022",
+    });
+
+    const table = page.locator('[data-print-section="stock-form-table"]');
+    await expect(table).toBeVisible({ timeout: 60_000 });
+    // floor(5,500,000 × 365 × 0.000022) = 44,165
+    await expect(table).toContainText("31-E3. 납부유예 이자상당액");
+    await expect(table).toContainText("44,165");
   });
 });
