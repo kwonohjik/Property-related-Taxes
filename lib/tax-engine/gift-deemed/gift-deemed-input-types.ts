@@ -391,6 +391,7 @@ export type {
   SpecificCorpShareholder,
   ScTransactionType,
   ScCounterparty,
+  ScPriorTransaction,
   SpecificCorpInput,
   RcShareholder,
   RcIntermediaryCorpItem,

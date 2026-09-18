@@ -24,7 +24,8 @@
 | §45의3① (280353) | 「**직접 또는 간접으로** 보유하는 주식보유비율(이하 이 조, 제45조의4 및 **제45조의5**에서 "주식보유비율"이라 한다)」 | ⓐ·ⓑ 공통 비율 정의 — `combinedRatio()` = 직접 + 간접 |
 | 상증령 §34의3② (288887) | 간접보유비율 = 「각 단계의 직접보유비율을 **모두 곱하여**」, 경로가 둘 이상이면 「각각의 비율을 **모두 합하여**」 | `computeIndirectRatioBig()` (§45의3과 공용) |
 | §45의4① (280353) | 「지배주주와 그 친족(이하 이 조 및 **제45조의5**에서 "지배주주등"이라 한다)」 | ⓐ는 **집합**의 합계 비율 (증여자 본인 행 포함) |
-| §45의5② | ①증여세액 > (직접증여 증여세 − 법인세상당액) → 초과액 없음 | `finalTax = min(㉮, ㉯)`, ㉯=㉠−㉡ |
+| §45의5② | ①증여세액 > (직접증여 증여세 − 법인세상당액) → 초과액 없음 | `finalTax = min(㉮, ㉯)`, ㉯=㉠−㉡ + 마법사 산출세액 clamp |
+| 법 §43② · 영 §32의4 11호 | 증여일부터 소급 1년 이내 **같은 호** 거래의 이익을 합산해 금액기준 판정 | `aggregatePriorTransactions` (`priorTransactions`) |
 | §34의5④ (283637) | 특정법인이익 = 1호(거래이익) − 2호(산출세액 − **토지등 양도소득 법인세액(§55의2)** − 공제감면) × min(거래이익/소득금액, 1) | `corpTaxApportioned` 안분 |
 | §34의5⑤ | 증여의제이익 **1억원 이상** 한정 | 주주별 `gain ≥ 100,000,000` 게이트 |
 | §34의5⑨ | 한도: ㉠=1호금액×지분율 직접증여 증여세 / ㉡=2호금액×지분율 | `calcSpecificCorpLimit` |
@@ -110,7 +111,24 @@ interface SpecificCorpInput {
   corporateTaxOnLandTransfer?: number;   // 법인세법 §55의2 토지등 양도소득 법인세액 (§34의5④2호가목 제외항목)
   corporateTaxCredit?: number;           // 법인세 공제·감면액
   giftDeduction?: number;                // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
+  transactionDate?: string;              // §45의5① 「거래한 날」=증여일 — §43² 윈도 + §69 공제율 기준일
+  priorTransactions?: { date; benefit; label? }[];  // §43²·영 §32의4 11호 — 소급 1년 이내 같은 호 거래
 }
+
+### §43² 1년 합산 (영 §32의4 11호)
+```
+windowFrom = transactionDate − 1년            // 폐구간(당일 포함)
+inWindow   = priorTransactions.filter(t => windowFrom ≤ t.date ≤ transactionDate)
+benefit    = 이번 거래의 이익 + Σ inWindow.benefit     // ⇒ 이후 파이프라인(법인세 안분·1억 판정) 전부가 합산값 기준
+```
+- **호별**이다 — 11호 괄호 「같은 항 **각 호의 거래에 따른 이익별로 구분된 이익**」. UI가 같은 호만 받게 안내한다.
+- 2·3호의 **현저성(영 §34의5⑦)은 건별 요건**이다 — ⑦이 「현저히 낮은/높은 대가」를 그렇게 «정의»하므로
+  요건을 넘은 거래의 이익만 합산 대상이 된다(anchor [A-4]).
+- `transactionDate`가 없으면 윈도를 정할 수 없어 합산하지 않는다 — 그 상태는 ⑧ 공통 가드가 앞에서 막는다.
+- ⚠️ 법 §43② 본문 괄호 「(시가와 대가의 차액을 말한다)」를 «다목만 합산»으로 읽지 말 것 — 같은 항이
+  §37·§41의2·§41의4도 열거하는데 그것들은 시가−대가 차액이 아니다. 범위는 영 §32의4 11호가 정한다.
+- 형제 §41의4(9호, `free-loan-aggregated.ts`)와 달리 **증여시기 탐색이 없다** — §45의5①이
+  「거래한 날을 증여일로 하여」로 이미 고정한다.
 
 interface SpecificCorpDonee {
   name: string;
@@ -228,7 +246,9 @@ taxBase(x)     = x < 500,000 ? 0 : x                // §55② 과세최저한 �
 ㉡ corpTaxShare = safeMultiplyThenDivide(corpTaxApportioned, shares, totalShares)
 ㉯ limitAmount  = max(0, ㉠ − ㉡)
 finalTax       = min(㉮, ㉯)
-filingCredit   = Math.floor(finalTax × 3 / 100)   // §69 (finalTax×3 < 2^53 → BigInt 불요)
+filingCredit   = applyRateFraction(finalTax, round(rate×100), 100)  // §69 — rate = resolveFilingCreditRate(거래일)
+                                                   //   연도별 단일 소스(10%→7%→5%→3%). 3% 하드코딩 금지.
+                                                   //   결과뷰 라벨도 `filingCreditRate` echo를 쓴다(문자열 3% 금지).
 selfPayTax     = finalTax − filingCredit
 ```
 - `calcInheritanceGiftTax`(`inheritance-gift-common.ts:100`) 직접 호출 → `gift-tax.ts` 순환 회피. 세율표 `DEFAULT_INHERITANCE_GIFT_BRACKETS`(common.ts:86), echo는 `findApplicableBracket`(common.ts:119).

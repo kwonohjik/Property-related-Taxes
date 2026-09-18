@@ -20,6 +20,26 @@ function validateScLandTransferTax(form: DeemedFormState): string | null {
   return null;
 }
 
+/**
+ * §43②·영 §32의4 11호 — 소급 1년 이내 같은 호 선행거래 행 검증.
+ *
+ * 증여일(=거래한 날)이 없으면 엔진은 1년 윈도를 정할 수 없어 합산을 건너뛴다. 그 상태는
+ * 이미 :46의 공통 가드(「증여일을 입력하세요」)가 **이 함수보다 앞에서** 막으므로 여기서
+ * 다시 검사하지 않는다 — 도달 불가 분기를 두면 안전망이 있다고 착각하게 된다.
+ */
+function validateScPriorTransactions(form: DeemedFormState): string | null {
+  const rows = form.scPriorTransactions ?? [];
+  if (rows.length === 0 || !form.giftDate) return null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r.date.trim()) return `선행거래 ${i + 1}의 거래일을 입력하세요`;
+    if (r.date > form.giftDate)
+      return `선행거래 ${i + 1}의 거래일이 증여일보다 뒤입니다 — 합산 대상은 «소급» 1년 이내입니다 (§43²)`;
+    if (parseAmount(r.benefit) <= 0) return `선행거래 ${i + 1}의 이익을 입력하세요`;
+  }
+  return null;
+}
+
 export function validateDeemedInput(form: DeemedFormState): string | null {
   // 신탁이익(§33)은 공통 증여일 대신 원본·수익 증여시기를 분리 입력(§25①) → 공통 giftDate 검사 skip
   if (form.type !== "trust_benefit" && !form.giftDate) return "증여일을 입력하세요";
@@ -360,6 +380,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "specific_corp": {
       // 법 §45의5①은 거래상대방을 과세요건으로 못박는다 — 미선택을 통과시키면 제3자와의 거래도 과세된다
       if (form.scCounterparty === "") return "거래상대방을 선택하세요 (§45의5①)";
+      const priorErr = validateScPriorTransactions(form);
+      if (priorErr) return priorErr;
       const isPriceType =
         form.scTransactionType === "low_price" || form.scTransactionType === "high_price";
       if (isPriceType) {

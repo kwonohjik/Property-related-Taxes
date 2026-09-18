@@ -484,6 +484,18 @@ const specificCorpSchema = z.object({
   corporateTaxOnLandTransfer: z.number().nonnegative().optional(),
   corporateTaxCredit: z.number().nonnegative().optional(),
   giftDeduction: z.number().nonnegative().optional(),
+  // §45의5① 「거래한 날을 증여일로 하여」 — §43② 1년 윈도·§69 공제율의 기준일 (⑫ strip 방지)
+  transactionDate: z.string().optional(),
+  // §43②·영 §32의4 11호 — 소급 1년 이내 같은 호 선행거래 (⑫ strip 방지)
+  priorTransactions: z
+    .array(
+      z.object({
+        date: z.string().min(1),
+        benefit: z.number().nonnegative(),
+        label: z.string().optional(),
+      }),
+    )
+    .optional(),
 }).refine(
   (v) => (v.shareholders ?? []).filter((sh) => sh.isDonor).length <= 1,
   { message: "증여자 본인은 1명만 지정할 수 있습니다 (§45의5① — 거래별로 나누어 계산)", path: ["shareholders"] },

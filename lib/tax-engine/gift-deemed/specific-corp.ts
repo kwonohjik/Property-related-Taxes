@@ -1,6 +1,8 @@
 /** (Phase 3) 특정법인과의 거래를 통한 이익의 증여 의제 (§45의5 · 시행령 §34의5) */
 import { GIFT } from "../legal-codes";
-import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
+import { addYears, format, parseISO } from "date-fns";
+import { applyRate, applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
+import { resolveFilingCreditRate } from "../credits/filing-credit";
 import { TAX_BASE_MIN } from "../gift-tax-helpers";
 import { computeIndirectRatioBig } from "./related-corp-helpers";
 import { calcGenerationSkipSurcharge, calcInheritanceGiftTax } from "../inheritance-gift-common";
@@ -19,7 +21,6 @@ import type {
 } from "./types";
 
 const ABSOLUTE_THRESHOLD = 100_000_000; // §34의5⑤ 증여의제이익 1억원 이상
-const FILING_CREDIT_NUMER = 3; // §69 신고세액공제 3%
 const FILING_CREDIT_DENOM = 100;
 const CONTROLLING_RATIO_NUMER = 30; // §45의5① 100분의 30
 const CONTROLLING_RATIO_DENOM = 100;
@@ -60,7 +61,62 @@ export type ScTransactionGate = {
   /** 2·3호 현저성 echo (영 §34의5⑦) */
   significance?: { diff: number; rateThreshold: number; absoluteThreshold: number; met: boolean };
   transactionType: ScTransactionType;
+  /** §43②·영 §32의4 11호 1년 합산 echo — 합산 대상이 있을 때만 */
+  aggregation?: ScAggregationEcho;
 };
+
+/** §43② 1년 합산 내역 — 표시용 echo(plain 배열, Map 금지) */
+export type ScAggregationEcho = {
+  /** 이번 거래의 이익(합산 전) */
+  currentBenefit: number;
+  /** 소급 1년 윈도 안의 동일 호 선행거래 이익 합계 */
+  priorTotal: number;
+  /** 윈도 시작일 = 증여일 − 1년 (당일 포함) */
+  windowFrom: string;
+  /** 윈도에 든 선행거래 (윈도 밖은 제외돼 여기 없다) */
+  items: { date: string; benefit: number; label: string }[];
+  /** 윈도 밖이라 합산하지 않은 건수 */
+  excludedCount: number;
+};
+
+/**
+ * 법 §43②·영 §32의4 11호 — 「그 증여일부터 소급하여 1년 이내에 동일한 거래 등이 있는 경우에는
+ * 각각의 거래 등에 따른 이익을 해당 이익별로 합산하여 계산한다」.
+ *
+ * §45의5①은 「**거래한 날**을 증여일로 하여」이므로 기준일은 이번 거래일이다 — 형제 §41의4
+ * (영 §32의4 9호, `free-loan-aggregated.ts`)의 「임계 돌파일이 증여시기」와 달리 여기서는
+ * 증여일이 법문으로 이미 고정돼 있어 돌파일 탐색이 필요 없다.
+ *
+ * 윈도는 폐구간(당일 포함)으로 본다 — 형제 구현과 같은 해석이다.
+ * `transactionDate`가 없으면 윈도를 정할 수 없으므로 **합산하지 않는다**(⑧이 입력을 강제한다).
+ */
+function aggregatePriorTransactions(
+  input: SpecificCorpInput,
+  currentBenefit: number,
+): { benefit: number; aggregation?: ScAggregationEcho } {
+  const priors = input.priorTransactions ?? [];
+  if (priors.length === 0 || !input.transactionDate) return { benefit: currentBenefit };
+  const ref = input.transactionDate.slice(0, 10);
+  const windowFrom = format(addYears(parseISO(ref), -1), "yyyy-MM-dd");
+  const inWindow = priors.filter((t) => {
+    const d = t.date.slice(0, 10);
+    return d >= windowFrom && d <= ref;
+  });
+  const items = [...inWindow]
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((t, i) => ({ date: t.date.slice(0, 10), benefit: t.benefit, label: t.label?.trim() || `선행거래 ${i + 1}` }));
+  const priorTotal = items.reduce((a, t) => a + t.benefit, 0);
+  return {
+    benefit: currentBenefit + priorTotal,
+    aggregation: {
+      currentBenefit,
+      priorTotal,
+      windowFrom,
+      items,
+      excludedCount: priors.length - inWindow.length,
+    },
+  };
+}
 
 export function evaluateScTransaction(input: SpecificCorpInput): ScTransactionGate {
   const transactionType: ScTransactionType = input.transactionType ?? "gratuitous";
@@ -112,11 +168,17 @@ export function evaluateScTransaction(input: SpecificCorpInput): ScTransactionGa
         exclusionReason: `시가와 대가의 차액 ${diff.toLocaleString()}원이 시가의 100분의 30(${rateThreshold.toLocaleString()}원)과 3억원에 모두 미달합니다 — 「현저히 ${transactionType === "low_price" ? "낮은" : "높은"} 대가」가 아닙니다 (상증령 §34의5⑦)`,
       };
     }
-    return { benefit: diff, counterpartyMet, transactionType, significance };
+    // §43② 합산 — 현저성은 «그 거래가 2·3호 거래인지»를 가르는 **요건**이라 건별로 판정하고
+    // (영 §34의5⑦이 「현저히 낮은/높은 대가」를 그렇게 정의한다), 요건을 충족한 거래의 이익을 합산한다.
+    return { ...aggregatePriorTransactions(input, diff), counterpartyMet, transactionType, significance };
   }
 
   // 1호·4호(가목) · 3의2호(나목 — 준용계산은 이 화면 밖) → 입력값 그대로
-  return { benefit: input.transactionBenefit, counterpartyMet, transactionType };
+  return {
+    ...aggregatePriorTransactions(input, input.transactionBenefit),
+    counterpartyMet,
+    transactionType,
+  };
 }
 
 /**
@@ -326,6 +388,7 @@ export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult
         ratio: { numer: BigInt(ratio.numer), denom: BigInt(ratio.denom) },
         corpTaxApportioned: corporateTax,
         giftDeduction: input.giftDeduction ?? 0,
+        referenceDate: input.transactionDate,
       })
     : undefined;
 
@@ -432,6 +495,7 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
       giftDeduction: doneeDeduction(sh, giftDeduction),
       isGenerationSkip: sh.isGenerationSkip ?? false,
       isMinorDonee: sh.donorRelation === "lineal_ascendant_minor",
+      referenceDate: input.transactionDate,
     });
     return { ...base, isTaxable: true, limitCalc };
   });
@@ -502,6 +566,8 @@ function calcSpecificCorpLimit(p: {
   isGenerationSkip?: boolean;
   /** §57② 40% 판정 (미성년 수증자 + 세대생략 재산 20억 초과) */
   isMinorDonee?: boolean;
+  /** §69 공제율 기준일 = 거래한 날(§45의5① 증여일). 미전달이면 현행 3%(무회귀 안전판) */
+  referenceDate?: string;
 }): SpecificCorpLimitCalc {
   // §57 할증은 ㉮(일반 산출세액)와 ㉠(직접증여 가정 증여세) **양쪽**에 붙는다 —
   // 영 §34의5⑨이 ㉠를 「직접 증여받은 것으로 볼 때의 **증여세**」로 정의하므로 §57이 포함된다.
@@ -529,7 +595,15 @@ function calcSpecificCorpLimit(p: {
   const corpTaxShare = applyFrac(p.corpTaxApportioned, p.ratio);
   const limitAmount = Math.max(0, directGiftTax - corpTaxShare);
   const finalTax = Math.min(computedTax, limitAmount);
-  const filingCredit = Math.floor((finalTax * FILING_CREDIT_NUMER) / FILING_CREDIT_DENOM);
+  // §69 — 연도별 단일 소스(`resolveFilingCreditRate`). 종전에는 3%가 상수로 박혀 있어
+  // 2019-01-01 이전 거래일에서 이 화면(3%)과 증여세 마법사(5%·7%·10%)가 어긋났다.
+  // 정수 분수로 곱한다 — 0.03 같은 소수 rate는 applyRate에서 1원이 덜 나온다(알려진 함정).
+  const filingCreditRate = resolveFilingCreditRate(p.referenceDate);
+  const filingCredit = applyRateFraction(
+    finalTax,
+    Math.round(filingCreditRate * FILING_CREDIT_DENOM),
+    FILING_CREDIT_DENOM,
+  );
   const selfPayTax = finalTax - filingCredit;
   return {
     computedTax,
@@ -538,6 +612,7 @@ function calcSpecificCorpLimit(p: {
     limitAmount,
     finalTax,
     filingCredit,
+    filingCreditRate,
     selfPayTax,
     giftDeductionApplied: p.giftDeduction,
     generationSkipSurcharge: computed.surcharge,

@@ -11,6 +11,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { SpecificCorpPriorTxTable } from "./SpecificCorpPriorTxTable";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { SpecificCorpIntermediaryTable } from "./SpecificCorpIntermediaryTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
@@ -221,6 +222,30 @@ export function SpecificCorpFields({ form, set }: Props) {
             </p>
           </CollapsibleHintCard>
         )}
+        {/* §43²·영 §32의4 11호 — 소급 1년 이내 같은 호 거래 합산 */}
+        <SpecificCorpPriorTxTable
+          rows={form.scPriorTransactions ?? []}
+          onChange={(rows) => set({ scPriorTransactions: rows })}
+        />
+        <CollapsibleHintCard
+          tone="amber"
+          summary="1년 이내에 같은 호의 거래가 더 있으면 합산해서 1억원 기준을 판정합니다 (§43²)"
+        >
+          <p>
+            법 §43②은 「제31조제1항제2호 … 및 <b>제45조의5</b>에 따른 이익을 계산할 때 그 증여일부터
+            소급하여 1년 이내에 동일한 거래 등이 있는 경우에는 각각의 거래 등에 따른 이익을 해당
+            이익별로 <b>합산하여 계산</b>한다」고 정합니다.
+          </p>
+          <p className="mt-1">
+            영 §32의4 <b>11호</b>는 그 이익을 「법 제45조의5제1항의 특정법인과의 거래를 통한 이익(같은
+            항 <b>각 호의 거래에 따른 이익별로 구분된 이익</b>을 말한다)」으로 특정합니다 — 호가 다른
+            거래는 합산 대상이 아닙니다.
+          </p>
+          <p className="mt-1">
+            합산하지 않으면 거래를 나눌수록 각 건이 영 §34의5⑤의 <b>1억원</b>에 미달해 전부 과세에서
+            빠집니다. 윈도 기준일은 위 <b>증여일(거래한 날)</b>입니다.
+          </p>
+        </CollapsibleHintCard>
       </ToneCard>
 
       {/* ── 섹션 3: 법인세 상당액 ── */}

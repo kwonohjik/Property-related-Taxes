@@ -90,7 +90,8 @@ export function ScLimitTable({ limitCalc }: { limitCalc: SpecificCorpLimitCalc |
             </tr>
             <tr className="border-t border-violet-100">
               <td className="py-1.5 pr-2 text-muted-foreground">
-                신고세액공제 (3%)
+                {/* 엔진 echo — 라벨에 3%를 박으면 거래일이 2019-01-01 이전일 때 stale해진다 */}
+                신고세액공제 ({Math.round(limitCalc.filingCreditRate * 100)}%)
               </td>
               <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-violet-700">
                 −{formatKRW(limitCalc.filingCredit)}

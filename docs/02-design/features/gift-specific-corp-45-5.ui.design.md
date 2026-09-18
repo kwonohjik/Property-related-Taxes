@@ -29,6 +29,7 @@ interface ScShareholderRow {
 |---|---|---|
 | `scMode` | `"single"` | RadioCardGroup sky |
 | `scCorporateTaxMode` | `"direct"` | RadioCardGroup amber |
+| `scPriorTransactions` | `undefined` | §43²·영 §32의4 11호 — 소급 1년 이내 **같은 호** 선행거래 행(거래일·이익·라벨). 윈도 판정·합산은 엔진(UI 재계산 금지) |
 | `scCorpTaxAssessed` | `""` | auto: 법인세 산출세액 (「법인세법」 §55① — §55의2분 포함 금액) |
 | `scCorpTaxLandTransfer` | `""` | auto: 토지등 양도소득 법인세액(§55의2) — 영 §34의5④2호가목 제외항목. ⑧이 산출세액 초과를 차단(자동 clamp 금지) |
 | `scCorpTaxDeduction` | `""` | auto: 공제·감면 |
@@ -174,6 +175,7 @@ components/calc/deemed-gift/other-forms.tsx           — SpecificCorpFields(모
 components/calc/deemed-gift/SpecificCorpShareholderTable.tsx — 신규(행 카드+추가/삭제, CapitalDecreaseShareholderTable 패턴)
 components/calc/deemed-gift/deemed-form-state.ts      — 9필드+ScShareholderRow+initial+normalize
 components/calc/results/DeemedGiftResultView.tsx      — specific_corp 분기(주주별 표 + single 한도 카드)
+components/calc/deemed-gift/SpecificCorpPriorTxTable.tsx — §43² 소급 1년 선행거래 입력 테이블
 components/calc/results/ScLimitTable.tsx              — §45의5② 한도 표 (single·roster 공용)
 lib/tax-engine/deemed-gift-tax-cap.ts                 — 마법사 산출세액 상한 적용 판정(staleness 가드)
 lib/calc/gift-deemed-api.ts / -validate.ts            — ④⑧⑬

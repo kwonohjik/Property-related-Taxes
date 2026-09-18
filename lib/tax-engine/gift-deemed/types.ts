@@ -46,6 +46,7 @@ export type {
   ScRelation,
   ScCounterparty,
   ScTransactionType,
+  ScPriorTransaction,
   SpecificCorpShareholder,
   SpecificCorpInput,
   RcShareholder,
@@ -217,7 +218,13 @@ export interface SpecificCorpLimitCalc {
   corpTaxShare: number; // ㉡ 법인세 상당액 × 지분율
   limitAmount: number; // ㉯ = max(0, ㉠ − ㉡)
   finalTax: number; // min(㉮, ㉯)
-  filingCredit: number; // §69 floor(finalTax × 3/100)
+  filingCredit: number; // §69 floor(finalTax × filingCreditRate)
+  /**
+   * §69 신고세액공제율 — 거래일(=증여일) 기준 연도별 단일 소스(`resolveFilingCreditRate`).
+   * 종전에는 3%가 엔진 상수 + 결과뷰 라벨 문자열 두 곳에 박혀 있어, 거래일이 2018년이면
+   * 이 화면은 3%인데 이관된 증여세 마법사는 5%를 쓰는 어긋남이 났다.
+   */
+  filingCreditRate: number;
   selfPayTax: number; // finalTax − filingCredit
   /** 이 수증자에게 실제 적용한 §53 증여재산공제액 (행 단위 donorRelation → 한도, 없으면 단일 입력값) */
   giftDeductionApplied: number;

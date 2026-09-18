@@ -465,6 +465,40 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await expect(page.getByTestId("sc-limit-deduction")).toContainText("50,000,000");
   });
 
+  test("§43² 1년 합산 — 5천만 + 7천만이 각각은 비과세, 합산하면 120,000,000", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+    const dialog = page.getByTestId("deemed-detail-dialog");
+
+    await dialog.getByLabel("연도").fill("2026");
+    await dialog.getByLabel("월").fill("3");
+    await dialog.getByLabel("일", { exact: true }).fill("2");
+
+    await dialog.getByTestId("sc-cp-ruling").click();
+    await dialog.getByTestId("sc-transaction-benefit").fill("70000000");
+    await dialog.getByTestId("sc-corp-tax-direct").click();
+    await dialog.getByTestId("sc-corporate-tax").fill("0");
+    await dialog.getByTestId("sc-shareholder-ratio").fill("100");
+    await dialog.getByTestId("sc-group-ratio").fill("100");
+
+    // 소급 1년 이내 같은 호(1호 무상) 선행거래 5천만
+    await dialog.getByTestId("sc-pt-add").click();
+    const ptDate = dialog.getByTestId("sc-pt-date-0");
+    await ptDate.getByLabel("연도").fill("2025");
+    await ptDate.getByLabel("월").fill("9");
+    await ptDate.getByLabel("일", { exact: true }).fill("2");
+    await dialog.getByTestId("sc-pt-benefit-0").fill("50000000");
+
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // 합산 내역이 화면에 드러난다 — 합산은 조용히 일어나면 안 된다
+    await expect(page.getByTestId("sc-aggregation")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("sc-aggregation-total")).toContainText("120,000,000");
+    // 영 §34의5⑤ 1억원 문턱을 넘어 과세된다
+    await expect(page.getByTestId("sc-single-limit")).toBeVisible();
+  });
+
   test("같은 입력 + 간접 포함 35% 신고 → 특정법인 성립, 580,000,000", async ({ page }) => {
     await fillTwentyNinePercentRoster(page, "35");
 

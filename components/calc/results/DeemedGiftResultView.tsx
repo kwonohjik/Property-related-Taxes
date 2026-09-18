@@ -155,6 +155,57 @@ export function DeemedGiftResultView({
         />
       )}
 
+      {/* ── §43²·영 §32의4 11호 1년 합산 내역 — 합산은 조용히 일어나면 안 된다 ── */}
+      {result.specificCorpTransaction?.aggregation && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm"
+          data-testid="sc-aggregation"
+        >
+          <p className="font-semibold text-amber-900">
+            §43² 소급 1년 합산 (영 §32의4 11호 — 같은 호 거래)
+          </p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {result.specificCorpTransaction.aggregation.items.map((t, i) => (
+                <tr key={i} className="border-t border-amber-100">
+                  <td className="py-1 pr-2 text-muted-foreground">
+                    {t.label} ({t.date})
+                  </td>
+                  <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                    {formatKRW(t.benefit)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t border-amber-100">
+                <td className="py-1 pr-2 text-muted-foreground">이번 거래</td>
+                <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
+                  {formatKRW(result.specificCorpTransaction.aggregation.currentBenefit)}
+                </td>
+              </tr>
+              <tr className="border-t border-amber-200 bg-amber-100/50">
+                <td className="py-1.5 pr-2 font-semibold text-amber-900">합산 거래이익</td>
+                <td
+                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900"
+                  data-testid="sc-aggregation-total"
+                >
+                  {formatKRW(result.specificCorpTransaction.benefit)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-caption text-muted-foreground">
+            합산 대상은 {result.specificCorpTransaction.aggregation.windowFrom} 이후의 같은 호 거래입니다.
+            {result.specificCorpTransaction.aggregation.excludedCount > 0 && (
+              <>
+                {" "}
+                입력한 선행거래 중 {result.specificCorpTransaction.aggregation.excludedCount}건은 1년
+                윈도를 벗어나 합산하지 않았습니다.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* ── §45의5② 한도 (single 모드) — roster는 SpecificCorpMultiResultView가 같은 표를 쓴다 ── */}
       {result.specificCorpLimit && (
         <div
