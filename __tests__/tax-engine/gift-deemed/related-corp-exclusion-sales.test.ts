@@ -159,3 +159,150 @@ describe("RC-B — §⑩3호 「× 수혜법인의 주식보유비율」", () =>
     expect(excl).toBe(0); // ⑭3호 값이 있어도 ⑩3호의 곱셈에는 쓰이지 않는다
   });
 });
+
+/**
+ * 일반기업 · 총매출 200억 · 세후영업이익 2,160,000,000
+ * 주주 갑(본인 20%) · 을(친족 10%) · 병(기타 40%) · B법인(30%)
+ * B법인은 §⑱1호 간접출자법인(갑 30% + 을 20% = 50% ≥ 30%)이자 특수관계 매출처다.
+ */
+function inpJ(partners: RcSalesPartner[]): RelatedCorpInput {
+  return {
+    enterpriseSize: "large",
+    totalSales: 20_000_000_000,
+    preTaxAdjOperatingIncome: 2_500_000_000,
+    taxableIncome: 1_800_000_000,
+    corporateTaxNet: 340_000_000,
+    shareholders: [
+      { id: "gap", name: "갑", relation: "self", directRatio: { numer: 20, denom: 100 }, isCorporate: false },
+      { id: "eul", name: "을", relation: "relative", directRatio: { numer: 10, denom: 100 }, isCorporate: false },
+      { id: "byung", name: "병", relation: "other", directRatio: { numer: 40, denom: 100 }, isCorporate: false },
+      { id: "Bcorp", name: "B법인", relation: "other", directRatio: { numer: 30, denom: 100 }, isCorporate: true },
+    ],
+    intermediaryCorps: [
+      {
+        corpShareholderId: "Bcorp",
+        stakeInBeneficiary: { numer: 30, denom: 100 },
+        owners: [
+          { individualId: "gap", ratio: { numer: 30, denom: 100 } },
+          { individualId: "eul", ratio: { numer: 20, denom: 100 } },
+        ],
+      },
+    ],
+    salesPartners: partners,
+  };
+}
+const D_12B: RcSalesPartner = { id: "D", name: "D법인", salesAmount: 12_000_000_000, isRelated: true };
+const ETC_5B: RcSalesPartner = { id: "E", name: "기타", salesAmount: 5_000_000_000, isRelated: false };
+const b = (over: Partial<RcSalesPartner> = {}): RcSalesPartner => ({
+  id: "B", name: "B법인", salesAmount: 3_000_000_000, isRelated: true, ...over,
+});
+
+describe("RC-J — §⑭1호 간접출자법인 매출 전액 과세제외", () => {
+  it("[J1-0] B법인을 §⑱ 간접출자법인으로 지정하면 30억 전액이 제외된다 → 541,890,000원", () => {
+    const off = calcRelatedCorpGift(inpJ([b(), D_12B, ETC_5B]));
+    const on = calcRelatedCorpGift(inpJ([b({ intermediaryCorpShareholderId: "Bcorp" }), D_12B, ETC_5B]));
+    expect(off.deemedGiftValue).toBe(680_400_000); // 종전 — 138,510,000원 과대
+    expect(on.deemedGiftValue).toBe(541_890_000);
+    expect(on.recipientBreakdown?.map((r) => r.subtotal)).toEqual([349_218_000, 192_672_000]);
+  });
+
+  it("[J1-1] §⑱ 요건 미충족이면 지정해도 성립하지 않는다 (선택만으로 만들지 않는다)", () => {
+    // 지배주주등 합산 = 갑 25% < 30% → §⑱1호 미충족.
+    // ⚠️ 소유주를 바꾸면 «간접보유비율»도 함께 움직여 기준선이 달라진다 —
+    //    그래서 **같은 weak 입력에서 지정 여부만** 가른다(다른 축 혼입 차단).
+    const weakCorps = [
+      {
+        corpShareholderId: "Bcorp",
+        stakeInBeneficiary: { numer: 30, denom: 100 },
+        owners: [{ individualId: "gap", ratio: { numer: 25, denom: 100 } }],
+      },
+    ];
+    const off = inpJ([b(), D_12B, ETC_5B]);
+    off.intermediaryCorps = weakCorps;
+    const on = inpJ([b({ intermediaryCorpShareholderId: "Bcorp" }), D_12B, ETC_5B]);
+    on.intermediaryCorps = weakCorps;
+    expect(calcRelatedCorpGift(on).deemedGiftValue).toBe(calcRelatedCorpGift(off).deemedGiftValue);
+
+    // 긍정 짝 — 같은 자리에서 §⑱을 충족시키면(갑 30%) 값이 «달라진다»
+    const strong = inpJ([b({ intermediaryCorpShareholderId: "Bcorp" }), D_12B, ETC_5B]);
+    strong.intermediaryCorps = [
+      { ...weakCorps[0]!, owners: [{ individualId: "gap", ratio: { numer: 30, denom: 100 } }] },
+    ];
+    const strongOff = inpJ([b(), D_12B, ETC_5B]);
+    strongOff.intermediaryCorps = strong.intermediaryCorps;
+    expect(calcRelatedCorpGift(strong).deemedGiftValue).not.toBe(
+      calcRelatedCorpGift(strongOff).deemedGiftValue,
+    );
+  });
+
+  it("[J1-2] 없는 법인주주 id를 가리키면 무시된다 (고아 참조)", () => {
+    const orphan = calcRelatedCorpGift(inpJ([b({ intermediaryCorpShareholderId: "NOPE" }), D_12B, ETC_5B]));
+    expect(orphan.deemedGiftValue).toBe(680_400_000);
+  });
+
+  it("[J1-3] ⑩ 해당 매출처는 ⑭ 대상이 아니다 — ⑭ 본문 「제10항 … 해당하지 아니하는 경우로서」", () => {
+    const withSec10 = calcRelatedCorpGift(
+      inpJ([b({ intermediaryCorpShareholderId: "Bcorp", exclusionType: "sec10_5" }), D_12B, ETC_5B]),
+    );
+    // ⑩5호로 이미 전액 제외되므로 ⑭1호가 «추가로» 더하지 않는다 (이중 차감 금지)
+    expect(withSec10.taxableExcludedSales).toBe(3_000_000_000);
+    expect(withSec10.recipientBreakdown?.every((r) => r.additionalExclusion === 0)).toBe(true);
+  });
+
+  it("[J1-4] ⑭ 후단 「더 큰 금액」 — 같은 매출처에서 1호(전액)와 3호(× 보유비율) 중 큰 쪽", () => {
+    const both = calcRelatedCorpGift(
+      inpJ([
+        b({
+          intermediaryCorpShareholderId: "Bcorp",
+          rulingShareholderStakes: [{ shareholderId: "gap", ratio: { numer: 1000, denom: 10_000 } }],
+        }),
+        D_12B, ETC_5B,
+      ]),
+    );
+    // 갑: 1호 30억 vs 3호 3억 → 30억. 합산(33억)이 아니다.
+    expect(both.recipientBreakdown?.[0]?.additionalExclusion).toBe(3_000_000_000);
+  });
+
+  it("[J1-5] ⑭3호만 있는 경우는 종전대로 × 보유비율", () => {
+    const only3 = calcRelatedCorpGift(
+      inpJ([
+        b({ rulingShareholderStakes: [{ shareholderId: "gap", ratio: { numer: 1000, denom: 10_000 } }] }),
+        D_12B, ETC_5B,
+      ]),
+    );
+    expect(only3.recipientBreakdown?.[0]?.additionalExclusion).toBe(300_000_000);
+  });
+});
+
+describe("RC-J — §⑭2호·4호 미구현 고지", () => {
+  it("[J2-0] ⑭1호가 걸리지 않은 ⑩ 미해당 특수관계 매출처가 있으면 고지한다", () => {
+    const r = calcRelatedCorpGift(inpJ([b({ intermediaryCorpShareholderId: "Bcorp" }), D_12B, ETC_5B]));
+    expect(r.sec14ScopeNotice).toContain("§34의3⑭");
+    expect(r.sec14ScopeNotice).toContain("2호");
+    expect(r.sec14ScopeNotice).toContain("4호");
+    expect(r.sec14ScopeNotice).toContain("1곳"); // D법인만 남는다 (B는 ⑭1호로 전액)
+  });
+
+  it("[J2-1] 여지가 없으면 고지가 사라진다 — 상시 노출 금지", () => {
+    // D법인까지 ⑩5호로 전액 제외 → ⑭ 대상 매출처 0곳
+    const r = calcRelatedCorpGift(
+      inpJ([
+        b({ intermediaryCorpShareholderId: "Bcorp" }),
+        { ...D_12B, exclusionType: "sec10_5" },
+        ETC_5B,
+      ]),
+    );
+    expect(r.sec14ScopeNotice).toBeUndefined();
+  });
+
+  it("[J2-2] 비특수관계 매출처는 고지 모수에 넣지 않는다", () => {
+    const r = calcRelatedCorpGift(
+      inpJ([
+        b({ intermediaryCorpShareholderId: "Bcorp" }),
+        { ...D_12B, exclusionType: "sec10_5" },
+        { ...ETC_5B, isRelated: false },
+      ]),
+    );
+    expect(r.sec14ScopeNotice).toBeUndefined();
+  });
+});

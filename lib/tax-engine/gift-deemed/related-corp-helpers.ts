@@ -58,6 +58,21 @@ function isIntermediarySec18(corp: RcIntermediaryCorpItem, rulingGroupIds: strin
 }
 
 /**
+ * §⑭1호 — 이 매출처가 「제18항에 따른 간접출자법인인 특수관계법인」인가.
+ * 폼이 고른 법인주주 id로 간접출자법인 roster를 찾고, §⑱1호 요건을 다시 판정한다
+ * (선택만으로 성립시키지 않는다 — 지배주주등 합산 30% 미만이면 §⑱ 간접출자법인이 아니다).
+ */
+export function isSec18SalesPartner(
+  partner: RcSalesPartner,
+  intermediaryCorps: RcIntermediaryCorpItem[],
+  rulingGroupIds: string[],
+): boolean {
+  if (!partner.isRelated || !partner.intermediaryCorpShareholderId) return false;
+  const corp = intermediaryCorps.find((c) => c.corpShareholderId === partner.intermediaryCorpShareholderId);
+  return corp ? isIntermediarySec18(corp, rulingGroupIds) : false;
+}
+
+/**
  * 간접보유비율 2모드.
  * - ruling: 모든 간접출자법인 경유 합산 (§⑱ 제한 없음) — 지배주주 판정용.
  * - recipient: §⑱1호 충족 법인 경유만 — 수증자 판정·증여이익용.

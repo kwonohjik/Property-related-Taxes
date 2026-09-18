@@ -29,6 +29,14 @@ export function RelatedCorpResultSection({
 
   return (
     <div className="space-y-4">
+      {result.sec14ScopeNotice && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          data-testid="rc-sec14-scope-notice"
+        >
+          {result.sec14ScopeNotice}
+        </div>
+      )}
       {/* 과세요건 공통부 카드 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
         <p className="text-sm font-semibold text-sky-800">수혜법인 단위 과세요건</p>

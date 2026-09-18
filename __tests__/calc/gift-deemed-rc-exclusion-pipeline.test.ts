@@ -39,7 +39,7 @@ function partners(f: DeemedFormState) {
 
 const D: SalesRow = {
   id: "sD", name: "D법인", salesAmountStr: "14000000000", isRelated: true,
-  exclusionType: "", beneficiaryStakePctStr: "", rulingStakes: [],
+  exclusionType: "", beneficiaryStakePctStr: "", intermediaryCorpShareholderId: "", rulingStakes: [],
 } as SalesRow;
 
 describe("④ 변환이 ⑤ 렌더 게이트를 미러링한다", () => {
@@ -123,5 +123,26 @@ describe("§⑩3호 보유비율 — ⑤ 게이트 ↔ ⑧ 차단 ↔ ④ 전송
     expect(parsed.success).toBe(true);
     const sent = partners(f)[1]!.beneficiaryStakeInPartner as { numer: number; denom: number };
     expect(sent).toEqual({ numer: 3000, denom: 10_000 });
+  });
+});
+
+describe("§⑭1호 간접출자법인 링크 — ④ 게이트", () => {
+  const linked = (over: Partial<SalesRow> = {}): SalesRow =>
+    ({ ...D, id: "A", name: "A법인", salesAmountStr: "6000000000", isRelated: true,
+       exclusionType: "", intermediaryCorpShareholderId: "Bcorp", ...over } as SalesRow);
+
+  it("[PJ-0] ⑩ 미해당 특수관계 행에서만 전송된다 (⑭ 본문 「제10항 … 해당하지 아니하는 경우」)", () => {
+    expect(partners(form([D, linked()]))[1]!.intermediaryCorpShareholderId).toBe("Bcorp");
+    expect(partners(form([D, linked({ exclusionType: "sec10_5" })]))[1]!.intermediaryCorpShareholderId).toBeUndefined();
+    expect(partners(form([D, linked({ isRelated: false })]))[1]!.intermediaryCorpShareholderId).toBeUndefined();
+  });
+
+  it("[PJ-1] ⑫Zod가 받아들인다 (신규 필드 침묵 stripping 방지)", () => {
+    const parsed = deemedGiftInputSchema.safeParse(
+      JSON.parse(JSON.stringify(buildDeemedGiftInput(form([D, linked()])))),
+    );
+    expect(parsed.success).toBe(true);
+    const sp = (parsed.success ? parsed.data : null) as unknown as { salesPartners: Record<string, unknown>[] };
+    expect(sp.salesPartners[1]!.intermediaryCorpShareholderId).toBe("Bcorp");
   });
 });

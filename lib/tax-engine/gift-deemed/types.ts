@@ -416,6 +416,11 @@ export interface DeemedGiftResult {
   normalTradeRatio?: { numer: number; denom: number };
   /** §45의3 한계보유비율 분수 */
   marginalOwnershipRatio?: { numer: number; denom: number };
+  /**
+   * §34의3⑭ 2호·4호 미구현 고지 — 그 두 호가 「더 큰 금액」이 될 여지가 있을 때만 붙는다.
+   * 미구현 방향이 **과대과세**라 침묵하면 「법 근거 없이 불리 적용」이 된다.
+   */
+  sec14ScopeNotice?: string;
   // ── §45의5 특정법인 멀티 · §43²합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;

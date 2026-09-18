@@ -331,6 +331,9 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           row.isRelated && row.exclusionType === "sec10_3"
             ? parseRatio(row.beneficiaryStakePctStr)
             : undefined,
+        // §⑭1호 — ⑭는 ⑩ 미해당 매출처만 대상이므로 ⑭3호 블록과 같은 렌더 게이트를 쓴다.
+        intermediaryCorpShareholderId:
+          row.isRelated && !row.exclusionType ? row.intermediaryCorpShareholderId || undefined : undefined,
         rulingShareholderStakes:
           row.isRelated && !row.exclusionType && row.rulingStakes.length > 0
             ? row.rulingStakes.map((s) => ({

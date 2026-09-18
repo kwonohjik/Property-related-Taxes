@@ -14,6 +14,7 @@ import type { RelatedCorpInput, DeemedGiftResult, RcRecipientBreakdown } from ".
 import {
   computeIndirectRatio,
   computeCommonExclusion,
+  isSec18SalesPartner,
   fracMin,
   fracMaxZeroSub,
   applyTwoFractions,
@@ -202,13 +203,22 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
   const rows: RcRecipientBreakdown[] = [];
 
   for (const r of recipients) {
-    // §⑭3호 수증자별 추가 과세제외 (⑩ 미해당 특수관계법인 × 이 수증자 보유비율)
+    // ── §⑭ 출자관계별 추가 과세제외 ──────────────────────────────────────────
+    //  대상은 「제10항 각 호의 어느 하나에 해당하지 **아니하는**」 매출처뿐이다(⑭ 본문).
+    //  ⑭ 후단 「동시에 해당하는 경우에는 더 큰 금액으로 한다」는 **같은 거래가 여러 호에
+    //  동시 해당할 때**의 규칙이므로 매출처 단위 `Math.max`, 매출처 사이는 합산이다
+    //  (⑩ 쪽 `computeCommonExclusion`이 같은 구조를 쓴다).
     let additionalExclusion = 0;
     for (const p of salesPartners) {
       if (!p.isRelated || p.exclusionType) continue;
+      // ⑭1호 — 「수혜법인이 제18항에 따른 간접출자법인인 특수관계법인과 거래한 매출액」 «전액»
+      const sec14n1 = isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds) ? p.salesAmount : 0;
+      // ⑭3호 — 「… 매출액에 지배주주등의 그 특수관계법인에 대한 주식보유비율을 곱한 금액」
       const stake = p.rulingShareholderStakes?.find((x) => x.shareholderId === r.id);
-      if (!stake) continue;
-      additionalExclusion += safeMultiplyThenDivide(p.salesAmount, stake.ratio.numer, stake.ratio.denom);
+      const sec14n3 = stake
+        ? safeMultiplyThenDivide(p.salesAmount, stake.ratio.numer, stake.ratio.denom)
+        : 0;
+      additionalExclusion += Math.max(sec14n1, sec14n3);
     }
     const totalExclusion = commonExclusion + additionalExclusion;
 
@@ -260,6 +270,27 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
 
   const deemedGiftValue = rows.reduce((a, b) => a + b.subtotal, 0);
 
+  /**
+   * §⑭**2호·4호 미구현 고지**.
+   *
+   * 2호(지주회사의 다른 자회사·손자회사와 거래 × 지주회사의 그 법인 보유비율)와
+   * 4호(간접출자법인의 다른 자법인과 거래 × 그 간접출자법인의 보유비율, 가·나·다목 3요건)는
+   * **지주회사 관계·자법인 관계**를 입력 모델이 표현하지 못해 구현하지 않았다.
+   *
+   * 미구현의 방향은 **과세제외 과소 = 과대과세**라 「법 근거 없이 불리 적용 금지」와 부딪힌다.
+   * 그래서 침묵하지 않는다 — ⑭1호(전액)가 걸리지 않은 ⑩ 미해당 특수관계 매출처가 남아 있을
+   * 때만(=2호·4호가 «더 큰 금액»이 될 여지가 있을 때만) 고지한다. 여지가 없으면 사라진다.
+   */
+  const sec14Unmodeled = salesPartners.filter(
+    (p) => p.isRelated && !p.exclusionType && !isSec18SalesPartner(p, intermediaryCorps, rulingGroupIds),
+  );
+  const sec14ScopeNotice =
+    sec14Unmodeled.length > 0
+      ? `상증령 §34의3⑭ 2호(지주회사의 다른 자회사·손자회사)·4호(간접출자법인의 다른 자법인)는 ` +
+        `지주회사·자법인 관계를 입력받지 않아 계산하지 않습니다. 해당하면 과세제외매출액이 ` +
+        `늘어 증여의제이익이 줄 수 있으므로 별도 검토가 필요합니다 (대상 매출처 ${sec14Unmodeled.length}곳).`
+      : undefined;
+
   const breakdown: CalculationStep[] = [
     { label: "특수관계법인 매출 합계", amount: relatedSales, lawRef: GIFT.RELATED_CORP },
     { label: "과세제외매출액(§⑩)", amount: commonExclusion },
@@ -286,6 +317,7 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
     aggregationExcluded: true,
     aggExclClass: "deemed_profit",
+    ...(sec14ScopeNotice ? { sec14ScopeNotice } : {}),
     recipientBreakdown: rows,
     baseAfterTaxProfit: baseAfterTax,
     ...echo,

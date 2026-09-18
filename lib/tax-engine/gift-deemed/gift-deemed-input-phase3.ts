@@ -396,6 +396,12 @@ export interface RcSalesPartner {
    * 3호 이외의 호는 매출액 전액이 제외되므로 이 필드를 쓰지 않는다(2호와 대비되는 지점).
    */
   beneficiaryStakeInPartner?: { numer: number; denom: number };
+  /**
+   * §⑭**1호** — 「수혜법인이 제18항에 따른 간접출자법인인 특수관계법인과 거래한 매출액」.
+   * 이 매출처가 §⑱ 간접출자법인이면 그 법인주주의 id(`RcIntermediaryCorpItem.corpShareholderId`).
+   * §⑱ 요건(지배주주등 합산 30% 이상) 충족 여부는 엔진이 `intermediaryCorps`로 판정한다.
+   */
+  intermediaryCorpShareholderId?: string;
   /** §⑭3호: 수증자별 이 법인에 대한 보유비율 (⑩ 미해당 시 적용). 없으면 미적용 */
   rulingShareholderStakes?: {
     shareholderId: string; // RcShareholder.id 매칭 키

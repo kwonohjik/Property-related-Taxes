@@ -86,6 +86,11 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
 
   await expect(page.getByTestId("deemed-result-value")).toContainText("36,720,000");
   await expect(page.getByTestId("rc-recipient-row-0")).toContainText("20,520,000");
+
+  // §⑭2호·4호는 지주회사·자법인 관계를 입력받지 않아 미구현이다. 방향이 «과대과세»라
+  // 침묵하지 않는다 — ⑭1호가 걸리지 않은 ⑩ 미해당 특수관계 매출처(D법인)가 남아 있으므로 고지된다.
+  await expect(page.getByTestId("rc-sec14-scope-notice")).toContainText("§34의3⑭");
+  await expect(page.getByTestId("rc-sec14-scope-notice")).toContainText("1곳");
   await expect(page.getByTestId("rc-recipient-row-1")).toContainText("16,200,000");
 
   // ── 이관 단위: 수증자 1인 (§45의3① 「각각 증여받은 것으로 본다」) ──────────

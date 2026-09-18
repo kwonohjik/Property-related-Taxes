@@ -19,6 +19,7 @@ const ROW = {
   isRelated: true,
   exclusionType: "sec10_5",
   beneficiaryStakePctStr: "",
+  intermediaryCorpShareholderId: "",
   rulingStakes: [{ shareholderId: "gap", ratioPctStr: "30" }],
 };
 
