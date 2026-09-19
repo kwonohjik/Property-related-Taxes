@@ -290,11 +290,11 @@ describe("MH-NEW-02: classifyPopulationDeclineArea — 시군구코드 자동 �
       region: "non_capital",
       regionCode: "51820",           // 강원 고성군 (인구감소지역, 정확 코드)
       isPopulationDeclineArea: undefined, // 명시 안 함
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
     });
 
     const { count, excluded } = countEffectiveHouses(
-      [hGosong], new Date("2024-06-01"), [], defaultRules,
+      [hGosong], new Date("2026-03-10"), [], defaultRules, // F-11 — 12호 다·라목 시행(2026.2.27) 후
     );
     expect(count).toBe(0); // 세컨드홈 특례 + 인구감소 자동 판정 → 배제
     expect(excluded[0].reason).toBe("population_decline_second_home");
@@ -306,8 +306,9 @@ describe("MH-NEW-02: classifyPopulationDeclineArea — 시군구코드 자동 �
       regionCode: "51820",
       isPopulationDeclineArea: undefined,
       isSecondHomeRegistered: false, // 미등록
+      acquisitionDate: new Date("2026-01-15"), // F-11 — 날짜 게이트가 아니라 등록 축으로 판정되게
     });
-    const { count } = countEffectiveHouses([h], new Date("2024-06-01"), [], defaultRules);
+    const { count } = countEffectiveHouses([h], new Date("2026-03-10"), [], defaultRules);
     expect(count).toBe(1); // 배제 안 됨
   });
 });

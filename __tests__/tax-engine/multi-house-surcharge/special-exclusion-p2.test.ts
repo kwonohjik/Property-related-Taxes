@@ -83,8 +83,9 @@ describe("P2 2주택 전용 배제 (다른 보유 주택)", () => {
 
 describe("P2 인구감소지역 세컨드홈 (주택 수 산정 제외)", () => {
   it("인구감소지역 + 세컨드홈 등록 → 주택 수 제외 (effectiveHouseCount 1)", () => {
-    const other = makeHouse("h2", { isPopulationDeclineArea: true, isSecondHomeRegistered: true });
-    const input = makeInput([makeHouse("h1", { regionCode: SELLING }), other], { sellingHouseId: "h1", transferDate: TD });
+    // F-11 — 12호 다·라목은 2026.2.27 시행 · 2026.1.1 이후 취득분
+    const other = makeHouse("h2", { isPopulationDeclineArea: true, isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15") });
+    const input = makeInput([makeHouse("h1", { regionCode: SELLING }), other], { sellingHouseId: "h1", transferDate: new Date("2026-03-10") });
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
     expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("population_decline_second_home");
     expect(r.effectiveHouseCount).toBe(1);

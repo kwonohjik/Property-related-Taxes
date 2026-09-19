@@ -275,7 +275,7 @@ describe("MH-18: ⑬ 소형 신축/미분양 특례", () => {
       isUnsoldNewHouse: true,
     });
 
-    expect(isSmallNewHouseSpecial(house)).toBe(true);
+    expect(isSmallNewHouseSpecial(house, new Date("2026-06-01"))).toBe(true);
   });
 
   it("isSmallNewHouseSpecial: acquisitionPrice 미제공 → false", () => {
@@ -286,7 +286,7 @@ describe("MH-18: ⑬ 소형 신축/미분양 특례", () => {
       // acquisitionPrice 없음
     });
 
-    expect(isSmallNewHouseSpecial(house)).toBe(false);
+    expect(isSmallNewHouseSpecial(house, new Date("2026-06-01"))).toBe(false);
   });
 });
 
@@ -739,12 +739,12 @@ describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배�
     const h2 = makeHouse("h2", {
       region: "non_capital",
       isPopulationDeclineArea: true,
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
     });
 
     const { count, excluded } = countEffectiveHouses(
       [h1, h2],
-      new Date("2025-06-01"),
+      new Date("2026-03-10"), // F-11 — 12호 다·라목 시행(2026.2.27) 후
       [],
       defaultRules,
     );
@@ -760,11 +760,12 @@ describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배�
     const h2 = makeHouse("h2", {
       isPopulationDeclineArea: true,
       isSecondHomeRegistered: false, // 미등록
+      acquisitionDate: new Date("2026-01-15"), // F-11 — 날짜 게이트가 아니라 등록 축으로 판정되게
     });
 
     const { count } = countEffectiveHouses(
       [h1, h2],
-      new Date("2025-06-01"),
+      new Date("2026-03-10"),
       [],
       defaultRules,
     );
@@ -776,12 +777,12 @@ describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배�
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isPopulationDeclineArea: false, // 인구감소지역 아님
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
     });
 
     const { count } = countEffectiveHouses(
       [h1, h2],
-      new Date("2025-06-01"),
+      new Date("2026-03-10"), // F-11 — 날짜 게이트가 아니라 지역 축으로 판정되게
       [],
       defaultRules,
     );

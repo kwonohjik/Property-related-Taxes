@@ -25,7 +25,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { excluded } = run({
       region: "non_capital",
       regionCode: "51820",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 800_000_000,
     });
     expect(excluded.find((e) => e.houseId === "h")?.reason).toBe("population_decline_second_home");
@@ -35,7 +35,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "non_capital",
       regionCode: "51820",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 1_000_000_000,
     });
     expect(count).toBe(1);
@@ -45,7 +45,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { excluded } = run({
       region: "capital",
       regionCode: "28710",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 300_000_000,
     });
     expect(excluded.find((e) => e.houseId === "h")?.reason).toBe("population_decline_second_home");
@@ -55,7 +55,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "capital",
       regionCode: "28710",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 500_000_000,
     });
     expect(count).toBe(1);
@@ -65,7 +65,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "non_capital",
       regionCode: "26350",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 300_000_000,
     });
     expect(count).toBe(1);
@@ -76,7 +76,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
       region: "non_capital",
       regionCode: "52190",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 800_000_000,
     });
     expect(excluded.find((e) => e.houseId === "h")?.reason).toBe("population_decline_second_home");
@@ -86,7 +86,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "non_capital",
       regionCode: "42800",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 300_000_000,
     });
     expect(count).toBe(1);
@@ -97,7 +97,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { excluded } = run({
       region: "non_capital",
       regionCode: "51150",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 300_000_000,
     });
     expect(excluded.find((e) => e.houseId === "h")?.reason).toBe("population_decline_second_home");
@@ -108,7 +108,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "non_capital",
       regionCode: "51150",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 500_000_000,
     });
     expect(count).toBe(1);
@@ -118,7 +118,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { excluded } = run({
       region: "non_capital",
       regionCode: "27720",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 800_000_000,
     });
     expect(excluded.find((e) => e.houseId === "h")?.reason).toBe("population_decline_second_home");
@@ -129,7 +129,7 @@ describe("§167의3①12 다·라목 — 인구감소지역 데이터·판정 �
     const { count } = run({
       region: "non_capital",
       regionCode: "46840",
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       officialPrice: 300_000_000,
     });
     expect(count).toBe(1);

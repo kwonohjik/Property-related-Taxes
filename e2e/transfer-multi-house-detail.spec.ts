@@ -54,8 +54,8 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     // 지역: 지방 선택 (RadioCardGroup label 텍스트 클릭)
     await dialog.getByText("지방", { exact: true }).click();
 
-    // 미분양주택 chip 토글 → ON
-    await toggleCardByTitle(dialog, "미분양주택");
+    // 조특법 감면주택 chip 토글 → ON (F-11 — 종전 「미분양주택」)
+    await toggleCardByTitle(dialog, "조특법 감면주택");
 
     // ② 상속 토글 ON → 상속개시일 라벨(children) 노출 (exact: 설명문 substring 충돌 회피)
     await toggleCardByTitle(dialog, "상속주택");
@@ -83,7 +83,7 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     // 테이블에 신규 행(편집 버튼) + 특례 배지 표시 — 테이블 스코프로 한정
     const housesTable = page.getByRole("table").first();
     await expect(housesTable.getByRole("button", { name: /편집/ })).toBeVisible();
-    await expect(housesTable.getByText("미분양", { exact: true })).toBeVisible();
+    await expect(housesTable.getByText("조특법 감면", { exact: true })).toBeVisible();
     await expect(housesTable.getByText("상속", { exact: true })).toBeVisible();
     await expect(housesTable.getByText("장기임대", { exact: true })).toBeVisible();
   });

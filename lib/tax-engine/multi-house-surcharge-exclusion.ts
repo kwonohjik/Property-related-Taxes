@@ -52,6 +52,8 @@ export function isGroupExcludable(house: HouseInfo, transferDate: Date): boolean
   if (isTaxIncentiveRentalHousingExempt(house)) return true;
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return true;
   if (house.isTaxSpecialExemption) return true;
+  // §167의3①5호 — 조특법 감면 미분양·신축주택은 주택 수에 산입하되 중과 대상에서 뺀다(F-11).
+  if (house.isUnsoldHousing) return true;
   if (house.isCulturalHeritage) return true;
   if (isSurchargeExemptInherited(house, transferDate)) return true;
   if (house.isMortgageExecution) {
@@ -74,6 +76,7 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
   if (isTaxIncentiveRentalHousingExempt(house)) return "③ 조특법 감면 임대주택";
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return "④ 사원용 주택 (10년 이상)";
   if (house.isTaxSpecialExemption) return "⑤ 조특법 특례";
+  if (house.isUnsoldHousing) return `⑤ 조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`;
   if (house.isCulturalHeritage) return "⑥ 문화재";
   if (isSurchargeExemptInherited(house, transferDate)) return "⑦ 상속주택 (5년 이내 · §155②)";
   if (house.isMortgageExecution) {
@@ -410,8 +413,13 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
-    if (sellingHouse.isTaxSpecialExemption) {
-      exclusionReasons.push({ type: "tax_special_exemption", detail: "조세특례제한법 특례 적용 주택" });
+    if (sellingHouse.isTaxSpecialExemption || sellingHouse.isUnsoldHousing) {
+      exclusionReasons.push({
+        type: "tax_special_exemption",
+        detail: sellingHouse.isUnsoldHousing && !sellingHouse.isTaxSpecialExemption
+          ? `조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`
+          : "조세특례제한법 특례 적용 주택",
+      });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
@@ -439,7 +447,7 @@ export function determineSurchargeExclusion(
     // 소형 신축·미분양(§167의3①12호)은 위 준용 범위(2~8·8의2) 밖이지만 §167의10①**12호**가
     // 별도로 준용하므로 2주택에서도 성립한다. 통상은 `countEffectiveHouses`가 주택 수에서
     // 먼저 빼므로 여기까지 오지 않는 backstop이다.
-    if (isSmallNewHouseSpecial(sellingHouse)) {
+    if (isSmallNewHouseSpecial(sellingHouse, input.transferDate)) {
       exclusionReasons.push({
         type: "small_new_house",
         detail: `소형 신축/미분양 특례 (전용 ${sellingHouse.exclusiveArea ?? "?"}㎡)`,
