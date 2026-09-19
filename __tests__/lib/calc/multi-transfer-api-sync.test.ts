@@ -5,7 +5,8 @@
  *   M-2 — buildPropertyPayload가 deprecated 폼-전역 form.acquisitionMethod/appraisalValue에
  *         의존하던 결함 → 자산-수준 isAppraisalAcquisition/useEstimatedAcquisition으로 전환.
  *   H-2 — 합산 경로가 구조적으로 처리 못 하는 sub-object 모드(부담부증여·재개발·겸용·이월과세·
- *         PHD·일반/상업건물·다필지·가업상속·토지건물분리·companion)를 명시 차단.
+ *         PHD·일반/상업건물·다필지·가업상속·companion)를 명시 차단.
+ *         (토지·건물 분리는 2026-09-19 F-12로 지원 전환 — ⑬·⑭ 배선)
  *         (1990 환산은 2026-07-06 route ⑭·엔진 지원으로 차단 해제 — multi-transfer-pre1990-support.test.ts)
  *         per-asset 단건 엔진이 honor하는 단순 스칼라(assetContractDate·capitalExpenditure·
  *         transferExpense·householdRightCount)는 build에서 전송.
@@ -211,7 +212,7 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["PHD", (f) => { f.assets[0] = { ...f.assets[0], usePreHousingDisclosure: true }; }],
     // "1990토지"는 2026-07-06 지원 전환 — 아래 별도 통과 테스트로 이동.
     ["다필지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", parcelMode: true }; }],
-    ["토지건물분리", (f) => { f.assets[0] = { ...f.assets[0], hasSeperateLandAcquisitionDate: true }; }],
+    // "토지건물분리"는 2026-09-19 지원 전환(F-12) — 아래 별도 통과 테스트로 이동.
     // [리뷰 H-1] 차감형·세액감면형·세율특칙 감면 — 다건 합산 미지원
     ["§98의7 미분양(차감/세액감면)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_98_7" } as never] }; }],
     ["§99의2 신축등(하이브리드)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_99_2" } as never] }; }],
@@ -229,6 +230,15 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     const form = baseForm();
     form.assets = [form.assets[0], { ...form.assets[0] }];
     expect(validateMultiSupportedMode(form)).not.toBeNull();
+  });
+
+  it("F-12: 토지·건물 취득일 분리·소유자 분리는 통과 — ⑬·⑭가 단건과 같은 leaf로 옮긴다", () => {
+    const separate = baseForm();
+    separate.assets[0] = { ...separate.assets[0], hasSeperateLandAcquisitionDate: true };
+    expect(validateMultiSupportedMode(separate)).toBeNull();
+    const owner = baseForm();
+    owner.assets[0] = { ...owner.assets[0], selfOwns: "land_only" };
+    expect(validateMultiSupportedMode(owner)).toBeNull();
   });
 
   it("일반 매매 단일 주택은 통과(null)", () => {

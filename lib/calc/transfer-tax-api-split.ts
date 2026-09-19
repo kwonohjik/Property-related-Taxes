@@ -7,6 +7,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "./transfer-tax-api-helpers";
+import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -216,6 +217,37 @@ export function buildSplitPayload(
           landStandardPriceAtTransfer: resolveLandStdAtTransfer(primary),
           buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
         }
+      : {}),
+  };
+}
+
+/**
+ * ④⑬ 토지분 취득당시 기준시가 입력 — ㎡ 단가 × 면적(`transfer-tax-split-gain.ts` 토지분 기준시가,
+ * `transfer-tax-rate-calc.ts` §154⑦ 한도 비교). 면적이 양도분이어야 하는 이유는
+ * `resolveAcqAreaForStdPrice` 주석 참조. 단건·다건이 **같은 leaf**를 쓴다(F-12).
+ */
+export function buildLandStdAtAcquisitionPayload(primary: AssetForm) {
+  return {
+    standardPricePerSqmAtAcquisition: primary.standardPricePerSqmAtAcq
+      ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
+      : undefined,
+    acquisitionArea: resolveAcqAreaForStdPrice(primary),
+  };
+}
+
+/**
+ * ④⑬ §104②1·2호를 **토지 파트**에 적용 (G-4) — 건물과 취득원인이 다른 경우.
+ * 원인이 비면 전송하지 않는다: 엔진이 자산 단위 원인을 그대로 쓰도록(회귀 0). 단건·다건 공용(F-12).
+ */
+export function buildLandPartCausePayload(primary: AssetForm) {
+  if (!primary.landAcquisitionCause) return {};
+  return {
+    landAcquisitionCause: primary.landAcquisitionCause,
+    ...(primary.landAcquisitionCause === "inheritance" && primary.landDecedentAcquisitionDate
+      ? { landDecedentAcquisitionDate: primary.landDecedentAcquisitionDate }
+      : {}),
+    ...(primary.landAcquisitionCause === "gift" && primary.landDonorAcquisitionDate
+      ? { landDonorAcquisitionDate: primary.landDonorAcquisitionDate }
       : {}),
   };
 }

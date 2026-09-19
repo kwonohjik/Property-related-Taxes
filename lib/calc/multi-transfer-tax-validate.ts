@@ -8,6 +8,14 @@ import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/i
 import { validateStep } from "./transfer-tax-validate";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -108,10 +116,10 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (!a) return null;
 
   if (a.transferType === "burdened_gift" || a.acquisitionCause === "burdened_gift") {
-    return "부담부증여(소령 §159)는 단건 계산기에서만 지원됩니다.";
+    return MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE;
   }
   if (a.assetKind === "redevelopment_apt") {
-    return "재개발·재건축(시행령 §166)은 단건 계산기에서만 지원됩니다.";
+    return MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE;
   }
   /**
    * 조합원입주권 — `redevelopment_apt`와 **같은 이유**로 차단한다 (2026-08-23).
@@ -126,10 +134,10 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     return "조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.";
   }
   if (a.assetKind === "housing" && a.isMixedUseHouse) {
-    return "겸용주택 분리계산은 단건 계산기에서만 지원됩니다.";
+    return MULTI_MIXED_USE_UNSUPPORTED_MESSAGE;
   }
   if (a.assetKind === "general_building" || a.assetKind === "commercial_building") {
-    return "일반건물·상업용건물(토지·건물 일괄/환산취득가)은 단건 계산기에서만 지원됩니다.";
+    return MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE;
   }
   if (a.acquisitionCause === "carryover_gift") {
     return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
@@ -157,33 +165,29 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     return "비주택→주택 용도변경(소득세법 §95⑤·⑥·영 §154⑤ 단서)은 단건 계산기에서만 지원됩니다.";
   }
   if (a.usePreHousingDisclosure) {
-    return "개별주택가격 미공시 환산취득가(영 §164⑦)는 단건 계산기에서만 지원됩니다.";
+    return MULTI_PHD_UNSUPPORTED_MESSAGE;
   }
   if (a.parcelMode && a.assetKind === "land") {
     return "다필지 토지는 단건 계산기에서만 지원됩니다.";
   }
   if (a.familyBusinessInheritance !== undefined) {
-    return "가업상속공제(§97의2④) 의제 취득가액은 단건 계산기에서만 지원됩니다.";
+    return MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE;
   }
-  if (a.hasSeperateLandAcquisitionDate) {
-    return "토지·건물 취득일 분리(§166⑥)는 단건 계산기에서만 지원됩니다.";
-  }
+  // 토지·건물 취득일 분리·소유자 분리(§166⑥·§168②)는 차단하지 않는다 — ⑬·⑭가 단건과 같은 leaf로
+  // 분리 축을 옮기고, 합산 엔진은 파트 단위로 §104⑤를 판정한다(F-12, 2026-09-19).
   // 차감형·세액감면형·세율특칙 감면 (§98~§99의2 미분양·신축 시리즈) — 다건 합산 미지원 (H-1)
   const blockedReduction = (a.reductions ?? []).find((r) =>
     MULTI_UNSUPPORTED_REDUCTION_TYPES.has(r.type),
   );
   if (blockedReduction) {
-    return (
-      "미분양·신축주택 감면(조특법 §98·§98의2~§98의8·§99·§99의2·§99의3)은 단건 계산기에서만 지원됩니다. " +
-      "합산 계산은 세율군을 다시 계산하는 과정에서 세율 특칙(§98① 20% 단일세율·§98의3계 단기세율 배제)을 반영하지 못합니다."
-    );
+    return MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE;
   }
   // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)도 단건 전용
   if ((form.specialHouseExclusions?.length ?? 0) > 0) {
     return "보유 감면주택 주택수 제외(§89①3호 의제)는 단건 계산기에서만 지원됩니다.";
   }
   if ((form.assets?.length ?? 0) > 1) {
-    return "한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.";
+    return MULTI_COMPANION_UNSUPPORTED_MESSAGE;
   }
   return null;
 }

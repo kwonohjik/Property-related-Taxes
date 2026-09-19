@@ -15,6 +15,11 @@ import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
+import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
+import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
+import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
+import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
+import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
@@ -133,6 +138,14 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   const primaryFractional = primaryRatio < 1.0;
   // 추계 가액(감정가·매매사례가액) 전용 스케일 적용기 — 단건과 동일(`transfer-tax-api.ts:201`).
   const ratioed = makeRatioed(primaryRatio, primaryFractional);
+  /**
+   * ④⑬ 토지·건물 분리 축(소령 §166⑥·§168②) — 단건 ④와 **같은 게이트·같은 빌더**(F-12).
+   * 부담부증여·PHD는 ⑧이 막으므로 도달하지 않지만, 게이트 값은 단건과 같은 식으로 둔다.
+   */
+  const isBurdenedGift =
+    primary?.transferType === "burdened_gift" || primary?.acquisitionCause === "burdened_gift";
+  const usesPhd = primary?.usePreHousingDisclosure === true;
+  const isSplitActive = primary ? isSplitPayloadActive(primary, isBurdenedGift) : false;
 
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
   const capEx = primaryFractional
@@ -168,9 +181,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   );
 
   // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(영 §164⑦)·
-  // 다필지·토지/건물 분리·가업상속(§97의2④)·용도변경(§95⑤·⑥)·건별 다자산(companion)은 다건 합산 route(⑭)가
-  // 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedMode에서 명시 차단.
-  // (1990 환산은 route ⑭·엔진이 지원 — 아래 pre1990Land spread로 전송.)
+  // 다필지·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가 매핑하지 않으므로 여기서
+  // 전송하지 않는다 — ⑧(validateMultiSupportedMode)이 화면에서, ⑫(transfer-tax-schema-multi-refines)가
+  // API에서 막는다. (1990 환산·토지/건물 분리·§164⑨는 단건과 같은 leaf로 전송 — F-12.)
   return {
     propertyType: primaryKind,
     // ⑬ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf**를 쓴다 (D11-01).
@@ -210,8 +223,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     // 🔴 감정·매매사례도 개산공제(§163⑥) base로 쓴다 — 단건 ④(`transfer-tax-api.ts`)와 **같은 규칙**.
     //    ⚠️ `|| undefined`가 **필수**다. 종전 형태는 미입력 시 `0`을 보내는데 ⑫ 스키마가
     //       `.positive()`라 400이 된다. 환산은 ⑧이 기준시가를 먼저 막아 도달하지 않았을 뿐이다.
+    //    분리 축도 §166⑥ 안분 3요소로 이 값을 쓴다 — 단건 ④와 같은 조건(F-12).
     standardPriceAtAcquisition:
-      isEstimated || isAppraisal || isSalesCase
+      isEstimated || isSplitActive || isAppraisal || isSalesCase
         ? parseAmount(primary?.standardPriceAtAcq ?? "") || undefined
         : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
@@ -222,6 +236,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     //    이미 싣고 있었는데(`:65`) 최상위만 빠져, 같은 값이 층마다 다르게 쓰였다.
     regionCode: primary?.regionCode || form.regionCode || undefined,
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
+    // ⑬ §164⑨ 1호(공익수용)·2호(공매·경락) 양도당시 기준시가 특례 — 단건 ④와 같은 leaf(F-12).
+    //    종전에는 화면에 입력칸이 뜨는데 ⑬·⑭ 모두 빠져 환산이 특례 없이 계산됐다(49,293,200 → 85,868,200).
+    ...(primary ? buildExpropriationInput(primary) : {}),
     acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
     // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고
     // 엔진이 개산공제 지점에서만 적용한다(단건 정본 `transfer-tax-api.ts:205-207`).
@@ -246,6 +263,14 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       primary?.buildingType === "extension" && primary?.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
         : undefined,
+    // ⑬ 토지·건물 분리 축 — 반드시 `standardPriceAtAcquisition` **뒤**에 둔다(별개 취득이면 빌더가
+    //    그 값을 undefined로 덮는다 — 단건 ④와 같은 순서). 종전에는 소유자 분리(`selfOwns`)가 화면에
+    //    뜨는데 전송되지 않아 비소유 파트까지 과세됐다(29,216,000 → 35,953,500).
+    ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed }) : {}),
+    ...(primary ? buildLandStdAtAcquisitionPayload(primary) : {}),
+    ...(primary ? buildLandPartCausePayload(primary) : {}),
+    // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.
+    ...(primary ? buildNewConstructionPayload(primary) : {}),
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
