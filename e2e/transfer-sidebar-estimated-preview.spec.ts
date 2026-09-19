@@ -91,6 +91,39 @@ function cbSeed() {
   };
 }
 
+/**
+ * 토지 환산 · **미등기** + 자본적지출 입력 (F-14). 개산공제는 1억 × 0.3%(§163⑥1호 단서) = 300,000.
+ * 종전 사이드바는 계산 전 `0.03` 하드코딩(3,000,000)·계산 후 폼 자본적지출(5,000,000)을 보였다.
+ */
+function unregisteredLandSeed() {
+  return {
+    state: {
+      formData: {
+        assets: [{
+          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+          assetKind: "land",
+          acquisitionCause: "purchase",
+          acquisitionDate: "2015-01-01",
+          useEstimatedAcquisition: true,
+          actualSalePrice: "300000000",
+          standardPriceAtAcq: "100000000",
+          standardPriceAtTransfer: "200000000",
+          capitalExpenditure: "5000000",
+        }],
+        transferDate: "2023-02-19",
+        filingDate: "2023-04-30",
+        contractTotalPrice: "300000000",
+        householdHousingCount: "0",
+        isRegulatedArea: false,
+        wasRegulatedAtAcquisition: false,
+        isUnregistered: true,
+      },
+      pendingMigration: false,
+    },
+    version: 0,
+  };
+}
+
 async function seed(page: Page, s: unknown) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -134,6 +167,13 @@ test.describe("환산 프리뷰 = 계산 결과", () => {
     await calcAndReturn(page);
     expect(await sidebarAmount(page, "취득가액")).toBe(acqBefore);
     expect(await sidebarAmount(page, "필요경비")).toBe(expBefore);
+  });
+
+  test("F-14 토지 환산 · 미등기 — 개산공제 0.3%가 계산 전후 같다(자본적지출 입력과 무관)", async ({ page }) => {
+    await seed(page, unregisteredLandSeed());
+    expect(await sidebarAmount(page, "필요경비")).toBe("300,000");
+    await calcAndReturn(page);
+    expect(await sidebarAmount(page, "필요경비")).toBe("300,000");
   });
 
   test("상가 환산 — 계산 전 표시값이 계산 후와 같다", async ({ page }) => {

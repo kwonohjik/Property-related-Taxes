@@ -7,7 +7,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { deriveRightValuationTotal } from "@/lib/calc/burdened-gift-right-valuation";
-import { calculateEstimatedAcquisitionPrice, computeEstimatedDeduction, applyRatio } from "@/lib/tax-engine/tax-utils";
+import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { computeTransferPerAssetSummary } from "./transfer-per-asset-summary";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
@@ -47,7 +48,6 @@ function parseRaw(v: string | undefined): number {
 export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
-import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -353,53 +353,16 @@ export function computeTransferSummary(
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
     return acc + (fractional ? Math.floor(raw * (n / d)) : raw);
   }, 0);
-  // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
-  const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
-    const n = parseFloat(a.ownershipNumerator || "100");
-    const d = parseFloat(a.ownershipDenominator || "100");
-    const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
-    const ratio = fractional ? n / d : 1;
-
-    let baseExp: number;
-    if (a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition) {
-      // 환산·감정·매매사례 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥)를 즉시 산출 —
-      // result 도착 전에도 표시 가능.
-      //
-      // 🔴 **매매사례가 빠져 있었다**(2026-09-15). 「소득세법」 제97조 제2항 제2호 본문은
-      //    제1항제1호 **나목**(= 매매사례가액·감정가액·환산취득가액)을 한 묶음으로 다루는데
-      //    이 분기만 매매사례를 빼, 사이드바가 개산공제 대신 **실경비 fallback**(자본적지출+양도비)을
-      //    필요경비 합계로 표시했다(실측 7,000,000 vs 법정 3,000,000).
-      //
-      // ⚠️ 산출을 **엔진 헬퍼에 위임**한다. 지분 모드에서 절사 순서가 갈리면
-      //    사이드바 미리보기와 엔진 결과가 1원 어긋난다(실측 0.96%). 종전 이 자리는
-      //    `floor(std × rate)` 후 아래에서 `floor(× 지분)`으로 **율을 먼저** 적용했으나,
-      //    엔진 정본은 순서 A(`floor(floor(std × 지분) × rate)`)다.
-      //    → 여기서 지분까지 적용하고 하단 공통 지분 적용은 건너뛴다.
-      //
-      // 🔴 **율도 엔진 leaf를 쓴다**. 손으로 적은 `isUnregistered ? 0.003 : 0.03`은 §163⑥**4호**
-      //    (조합원입주권·분양권 1%)를 보지 못해 그 자산에서 3배로 표시됐다. `assetKind`는 ④가
-      //    엔진 `propertyType`으로 **그대로 보내는** 값이라(`transfer-tax-api.ts:251`) 같은 인자다.
-      const rate = estimatedDeductionRate(formData.isUnregistered, a.assetKind);
-      return acc + computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
-    } else if (a.assetKind === "housing" && a.isMixedUseHouse) {
-      // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —
-      // 주택/상가 섹션별 실제 필요경비(상속·증여·매매실가 중 활성 1세트만 채워짐)를 합산.
-      baseExp =
-        parseRaw(a.mixedHousingInheritedExpense) +
-        parseRaw(a.mixedCommercialInheritedExpense) +
-        parseRaw(a.mixedHousingGiftExpense) +
-        parseRaw(a.mixedCommercialGiftExpense) +
-        parseRaw(a.mixedHousingActualExpense) +
-        parseRaw(a.mixedCommercialActualExpense);
-    } else {
-      const capExp = parseRaw(a.capitalExpenditure);
-      const trExp = parseRaw(a.transferExpense);
-      const splitTotal = capExp + trExp;
-      baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
-    }
-    // 실경비(자본적지출·양도비)는 금액 자체가 지분분이므로 단순 스케일 — 순서 문제 없음.
-    return acc + (fractional ? applyRatio(baseExp, ratio) : baseExp);
-  }, 0);
+  /**
+   * 필요경비 합계 = **사이드바 자산별 행의 합**(F-14). 화면이 렌더하는 값은 자산별 행
+   * (`computeTransferPerAssetSummary`)이고, 이 합계가 따로 산식을 두면 두 값이 갈린다 —
+   * 실제로 갈렸다(개산공제율을 폼-전역 미등기 값 하나로 고르고, 일반건물은 0). 계산 전 개산공제와
+   * 계산 후 엔진 확정값의 선택은 모두 자산별 행이 한다.
+   */
+  const totalNecessaryExpense = computeTransferPerAssetSummary(formData, result).rows.reduce(
+    (acc, r) => acc + r.expense,
+    0,
+  );
   const estimatedTax =
     result?.mode === "single"
       ? (result.result.totalTax ?? null)
@@ -514,12 +477,9 @@ export function computeTransferSummary(
     };
   }
 
-  // result 도착 후 권위값 override — 단건 모드는 엔진이 실제 차감한 필요경비(result.expenses =
-  // expensesApplied)로 확정. 환산 본문은 expenses=개산공제, swap은 expenses=자본·양도비(개산공제는 미차감
-  // echo), 실지는 expenses=실경비. estimatedDeduction과 합산 금지(본문 모드 이중계산 — 실측 확인).
-  const resultNecessaryExpense =
-    result?.mode === "single" ? (result.result.expenses ?? 0) : null;
-  const finalNecessaryExpense = resultNecessaryExpense ?? totalNecessaryExpense;
+  // 계산 후 필요경비는 위 합계가 이미 엔진 확정값(`result.expenses` = expensesApplied)을 쓴다 —
+  // 환산 본문은 개산공제, swap은 자본·양도비(개산공제는 미차감 echo)이므로 estimatedDeduction과 합산 금지.
+  const finalNecessaryExpense = totalNecessaryExpense;
 
   // 취득가액도 단건 result 도착 시 엔진 확정값으로 override. estimatedBase = 환산취득가 base(개산공제 제외,
   // 환산/감정/매매사례 모드에서만 설정) — 실지취득 모드는 undefined라 입력 기반 totalAcqPrice 유지.
