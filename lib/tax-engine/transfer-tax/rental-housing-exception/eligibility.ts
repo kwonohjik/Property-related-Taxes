@@ -10,11 +10,12 @@
  *    (d) 아파트 등록 제한 / 단기 조정대상지역 / 건설 규모·호수
  *    (e) 기타 요건 자기확인
  * 3. 1호라도 통과하면 PASS
+ *    (의무임대기간만 못 채운 호는 §155㉑로 통과 — ㉒ 사후 추징 안내용으로 호 번호를 남긴다)
  *
  * 파생 함수(deriveEffectiveRegDate·deriveRentalArticle·deriveRequiredYears·deriveStdPriceCap)는
  * UI(⑤)·validate(⑧)가 그대로 import 재사용 — 판정 규칙 단일 소스(dual-truth 회피).
  *
- * 법령 근거: 소득세법 시행령 §155⑳ + §167조의3①2호
+ * 법령 근거: 소득세법 시행령 §155⑳·㉑·㉓ + §167조의3①2호
  */
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
@@ -234,6 +235,7 @@ export function checkEligibility(
   const unitFailReasons: RentalUnitFailReason[] = [];
   const perUnitVerdict: RentalUnitVerdict[] = [];
   let anyUnitPassed = false;
+  const periodPendingUnitIndexes: number[] = [];
 
   for (let i = 0; i < rentalUnits.length; i++) {
     const unit = rentalUnits[i];
@@ -269,10 +271,15 @@ export function checkEligibility(
       unit.rentalAutoTermination &&
       (article === "가" || article === "다" || article === "라" || article === "마") &&
       unit.rentalMonths >= result.requiredYears * 6;
-    if (terminationRelief && result.failCodes.includes("RENTAL_PERIOD_SHORT")) {
+    // §155㉑ — 임대기간요건을 **충족하기 전에** 거주주택을 양도해도 장기임대주택으로 보아 ⑳을 적용한다.
+    // 면제되는 것은 기간 요건뿐이다(다른 실패 코드는 그대로). 말소된 주택은 양도일 현재 임대 중이
+    // 아니므로(⑳2호) ㉓으로만 풀린다. ㉑로 통과한 호는 ㉒ 사후 추징 대상이라 따로 남긴다.
+    const periodPending = !unit.rentalAutoTermination && result.failCodes.includes("RENTAL_PERIOD_SHORT");
+    if ((terminationRelief || periodPending) && result.failCodes.includes("RENTAL_PERIOD_SHORT")) {
       result.failCodes = result.failCodes.filter((c) => c !== "RENTAL_PERIOD_SHORT");
       result.passed = result.failCodes.length === 0;
     }
+    if (periodPending && result.passed) periodPendingUnitIndexes.push(i);
 
     perUnitVerdict.push({
       unitIndex: i,
@@ -304,5 +311,6 @@ export function checkEligibility(
     residenceFailReasons,
     laws: [TRANSFER_RENTAL_HOUSING.PIT_RD_155_20],
     perUnitVerdict,
+    periodPendingUnitIndexes,
   };
 }

@@ -527,7 +527,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           }
         />
         <p className="text-xs text-muted-foreground px-1">
-          의무임대기간 {reqYears}년({reqYears * 12}개월) 이상이어야 특례 적용
+          의무임대기간 {reqYears}년({reqYears * 12}개월) — 채우기 전에 거주주택을 양도해도 특례를 적용하며,
+          이후 채우지 못하면 특례가 없었을 경우의 세액과의 차액을 신고·납부합니다(소령 §155㉑·㉒).
         </p>
       </div>
 

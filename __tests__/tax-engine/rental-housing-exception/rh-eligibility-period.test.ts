@@ -476,7 +476,25 @@ describe("checkEligibility — Phase3 라목·말소 특례", () => {
 // ============================================================
 
 describe("calculateRentalHousingException — 미충족 시 applied=false", () => {
-  it("의무임대기간 미충족 → applied=false", () => {
+  it("말소됐고 ㉓(자진말소 의무기간 1/2)을 못 채움 → applied=false", () => {
+    const input: RentalHousingExceptionInput = {
+      applyException: true,
+      scenario: "A",
+      rentalUnits: [
+        makeUnit({
+          businessRegistrationDate: new Date("2020-08-18"),
+          rentalRegistrationDate: new Date("2020-08-18"),
+          rentalMonths: 48, // 4년 — 10년 × 1/2 미충족
+          rentalAutoTermination: true,
+        }),
+      ],
+    };
+    const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5);
+    expect(result.applied).toBe(false);
+    expect(result.eligibility.passed).toBe(false);
+  });
+
+  it("F-15: 말소되지 않고 의무임대기간만 미충족 → §155㉑로 applied=true (㉒ 대상 호 기록)", () => {
     const input: RentalHousingExceptionInput = {
       applyException: true,
       scenario: "A",
@@ -489,7 +507,7 @@ describe("calculateRentalHousingException — 미충족 시 applied=false", () =
       ],
     };
     const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5);
-    expect(result.applied).toBe(false);
-    expect(result.eligibility.passed).toBe(false);
+    expect(result.applied).toBe(true);
+    expect(result.eligibility.periodPendingUnitIndexes).toEqual([0]);
   });
 });
