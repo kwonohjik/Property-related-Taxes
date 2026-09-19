@@ -26,6 +26,8 @@ import {
 import { MixedUseToggleRow } from "../MixedUseSection";
 import { NonHousingConversionToggleRow } from "../NonHousingConversionSection";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Button } from "@/components/ui/button";
 import {
   AssetAreaSection,
   areaResetPatchForAssetKind,
@@ -191,8 +193,8 @@ export function AssetSectionBasic({
       {/* 미등기 양도(§104③) — **컴패니언 자산 전용**.
           주 자산은 폼-전역 값을 「보유 상황 ⑤ 특수 상황」에서 받으므로 여기 두면 dual-truth가 된다.
           일괄양도는 물건마다 등기 여부가 다를 수 있어 자산-수준 입력이 필요하다.
-          컴패니언 `assetKind` enum은 housing·land·building 3종뿐이라(§94①1호 자산) 종류 게이트가 없다. */}
-      {!isFirst && (
+          ⚠️ 일반건물은 아래 토지·건물 2축을 쓴다 — 단일 토글은 엔진 GB 분기가 읽지 않는다(F-7). */}
+      {!isFirst && asset.assetKind !== "general_building" && (
         <ToggleCard
           variant="chip"
           tone="rose"
@@ -201,6 +203,64 @@ export function AssetSectionBasic({
           checked={asset.isUnregistered}
           onCheckedChange={(v) => onChange({ isUnregistered: v })}
         />
+      )}
+
+      {/* F-7 — 컴패니언 일반건물의 미등기(§104③)는 **토지·건물 각각**이다. 주 자산 GB와 같은 2축
+          (`SpecialSituationSection.tsx`). 토지·건물은 별개 부동산이고 등기부도 따로라, 한쪽만
+          미등기이면 그 파트 카드만 70%가 된다(`general-building-route-cards.ts` buildProperties). */}
+      {!isFirst && asset.assetKind === "general_building" && (
+        <>
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            title="토지 미등기 양도"
+            description="토지분에 70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
+            checked={asset.gbLandUnregistered}
+            onCheckedChange={(v) => onChange({ gbLandUnregistered: v })}
+          />
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            title="건물 미등기 양도"
+            description="건물분(증축분 포함)에 70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
+            checked={asset.gbBuildingUnregistered}
+            onCheckedChange={(v) => onChange({ gbBuildingUnregistered: v })}
+          />
+          {/* 종전 단일 토글로 저장된 값 — 계산에 반영된 적이 없다. 어느 파트인지 알 수 없어
+              자동으로 옮기지 않고 사용자가 고르게 한다(⑧이 해소 전까지 계산을 막는다). */}
+          {asset.isUnregistered && (
+            <ToneCard tone="amber" title="이전에 저장된 「미등기 양도」 값이 계산에 반영되지 않았습니다">
+              <p className="text-caption">
+                일반건물은 토지·건물의 미등기를 따로 판정합니다. 종전 「미등기 양도」 값은 계산에
+                쓰이지 않았으니, 위에서 미등기인 파트를 다시 고르세요.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    onChange({
+                      isUnregistered: false,
+                      gbLandUnregistered: true,
+                      gbBuildingUnregistered: true,
+                    })
+                  }
+                >
+                  토지·건물 모두 미등기로 옮기기
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onChange({ isUnregistered: false })}
+                >
+                  이전 값 지우기
+                </Button>
+              </div>
+            </ToneCard>
+          )}
+        </>
       )}
 
       {/* 겸용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
