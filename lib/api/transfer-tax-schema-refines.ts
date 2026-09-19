@@ -30,6 +30,26 @@ export function refineUnregisteredSelfFarming(
 }
 
 /**
+ * F-7 — 컴패니언 일반건물은 자산 단일 `isUnregistered`를 쓰지 않는다.
+ *
+ * GB 분기(`bundled-split-helpers.ts`)는 `generalBuildingValuation.unregisteredLand`·
+ * `unregisteredBuilding` 2축만 읽는다. 단일 값을 받아 주면 70%가 **조용히 빠진다** — 거부한다.
+ * ⑧ `validateAssetEntry`와 같은 조건(축 B는 이 배열을 쓰지 않는다).
+ */
+export function refineCompanionGbUnregisteredAxis(
+  c: { assetKind?: string; isUnregistered?: boolean },
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  if (c.assetKind !== "general_building" || c.isUnregistered !== true) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path,
+    message: "일반건물 컴패니언의 미등기는 generalBuildingValuation.unregisteredLand·unregisteredBuilding으로 보내야 합니다 — isUnregistered는 계산에 쓰이지 않습니다",
+  });
+}
+
+/**
  * propertySchema.superRefine 에 주입되는 공통 검증 로직.
  * 단건·다건 스키마 모두 재사용.
  */

@@ -101,6 +101,26 @@ export function validateAssetEntry(
   if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
 
   /**
+   * ⑧ F-7 — 컴패니언 일반건물에 남은 **단일** 「미등기 양도」 값.
+   *
+   * 일반건물의 미등기(§104③)는 토지·건물 2축(`gbLandUnregistered`·`gbBuildingUnregistered`)이고,
+   * route GB 분기는 그 2축만 읽는다(`bundled-split-helpers.ts` buildProperties 인자). 이 값이
+   * 켜진 채 통과시키면 70%가 **조용히 빠진다**(실측 184,140,000 — 끈 것과 같다).
+   * ⑤는 이 값을 켤 수 없고, 옛 기록에서만 남는다 — 안내 카드(`AssetSectionBasic.tsx`)가 해소 경로다.
+   * 주 자산(index 0)은 폼-전역 값을 쓰므로 자산 값은 보지 않는다. 지분 분할(축 B)도 보지 않는다 —
+   * 그 컴패니언은 ① 기본정보가 숨겨져(`CompanionAssetCard.tsx` hideInheritedSections) 안내 카드가
+   * 없고, GB 축 B는 `companionAssets`를 만들지 않아(`generalBuildingShares`) 이 값이 가지도 않는다.
+   */
+  if (
+    index > 0 &&
+    a.assetKind === "general_building" &&
+    a.isUnregistered &&
+    !isFullFractionalBundle(form.assets)
+  ) {
+    return `${label}: 일반건물은 토지·건물의 미등기를 따로 고릅니다. 이전에 저장된 「미등기 양도」 값은 계산에 반영되지 않았으니 안내 카드에서 옮기거나 지우세요.`;
+  }
+
+  /**
    * ⑧ 소재지 — **물건 식별자**다. 엔진 계산에는 쓰이지 않지만 계산 이력의 dedup 키가
    * 이것으로 물건을 가른다. 비어 있으면 서로 다른 물건이 같은 키(`addr:|양도일`)를 갖고
    * **앞의 신고서를 덮어쓴다**(계획서 §1-1 — 실측 이력 1건).

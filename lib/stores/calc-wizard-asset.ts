@@ -127,8 +127,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 자산마다 등기 여부가 다를 수 있어(한 물건은 등기·다른 물건은 미등기) 자산-수준 필드가 필요하다.
    *
    * ⚠️ 일반건물은 이 필드를 쓰지 않는다 — 토지·건물이 별개 등기부라 `gbLandUnregistered`·
-   *    `gbBuildingUnregistered` 2축이다. 컴패니언 `assetKind` enum에도 `general_building`이
-   *    없다(지분 분할 GB는 companion 경로를 쓰지 않는다 — `transfer-tax-schema-sub.ts:289`).
+   *    `gbBuildingUnregistered` 2축이다. 컴패니언 `general_building`은 2026-09-03에 열렸고
+   *    (⑩ enum), ⑤도 그 2축을 받는다(F-7). 옛 기록에 남은 이 값은 ⑧·⑩이 막는다.
    */
   isUnregistered: boolean;
   /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
