@@ -116,10 +116,18 @@ export function isRegulatedAreaAtDate(
 import {
   countEffectiveHouses,
   isPresaleRightCounted,
+  isExcludableForGeneralHouse,
+  getGeneralHouseExcludeReason,
   isGroupExcludable,
-  getGroupExcludeReason,
+  dutyPeriodPendingReason,
+  DUTY_PERIOD_PENDING_WARNING,
   determineSurchargeExclusion,
 } from "./multi-house-surcharge-helpers";
+
+/** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
+function usesDutyPeriodPending(house: Parameters<typeof isGroupExcludable>[0], transferDate: Date): boolean {
+  return !isGroupExcludable(house, transferDate) && dutyPeriodPendingReason(house, transferDate) !== null;
+}
 
 /**
  * 다주택 중과세 판정 메인 함수.
@@ -257,16 +265,20 @@ export function determineMultiHouseSurcharge(
       (h) => h.id !== input.sellingHouseId && !excludedHouseIds.has(h.id),
     );
 
+    // §167의3④ — 의무기간만 모자란 임대주택등도 10호 판정에서는 장기임대주택등으로 본다(F-10).
     const perHouseExclusion = otherEffectiveHouses.map((h) => ({
       houseId: h.id,
-      reason: isGroupExcludable(h, input.transferDate)
-        ? getGroupExcludeReason(h, input.transferDate)
+      reason: isExcludableForGeneralHouse(h, input.transferDate)
+        ? getGeneralHouseExcludeReason(h, input.transferDate)
         : null,
     }));
 
     const remainingGeneralCount = perHouseExclusion.filter((e) => e.reason === null).length;
 
     if (remainingGeneralCount === 0 && otherEffectiveHouses.length > 0) {
+      if (otherEffectiveHouses.some((h) => usesDutyPeriodPending(h, input.transferDate))) {
+        warnings.push(DUTY_PERIOD_PENDING_WARNING);
+      }
       const exclusionReasons: ExclusionReason[] = [
         {
           type: "only_one_remaining",
@@ -306,6 +318,15 @@ export function determineMultiHouseSurcharge(
   );
 
   if (isExcluded) {
+    // §167의3⑤ 안내 — 10호(2주택)가 ④ 의제로 성립했을 때만.
+    if (
+      exclusionReasons.some((r) => r.type === "only_general_two_house") &&
+      input.houses.some(
+        (h) => h.id !== input.sellingHouseId && usesDutyPeriodPending(h, input.transferDate),
+      )
+    ) {
+      warnings.push(DUTY_PERIOD_PENDING_WARNING);
+    }
     return {
       effectiveHouseCount,
       rawHouseCount,
