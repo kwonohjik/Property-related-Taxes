@@ -510,7 +510,17 @@ function finishScenarios(args: {
    */
   const spouseException =
     ct.donorRelation === "spouse" && ct.spouseGiftOneHouseAtGiftDate === true;
-  const oneHouseExclusion = becomesOneHouseOnlyWithCarryover && !spouseException;
+  /**
+   * F-13 Q-4 — 주택부수토지 카드는 짝 주택의 ②2호 결과를 따른다. ②2호의 「주택」은 「고가주택(이에 딸린
+   * 토지를 포함한다)」이고 §89①3호의 비과세 객체는 주택과 주택부수토지다 — 주택이 이월과세로 비로소
+   * 1세대1주택이 되면 그 부수토지도 같다(2026-09-19 사용자 결정). 이 카드 자신의 A/B 비과세는 주택 판정을
+   * 그대로 받으므로 위 조합만으로는 발동하지 않는다.
+   */
+  const followsHouseExclusion =
+    rawInput.oneHouseUnitRole === "appurtenant_land" &&
+    rawInput.appurtenantHouseVerdict?.carryoverOneHouseExcluded === true;
+  const oneHouseExclusion =
+    (becomesOneHouseOnlyWithCarryover && !spouseException) || followsHouseExclusion;
   const spouseOneHouseExceptionApplied = becomesOneHouseOnlyWithCarryover && spouseException;
 
   if (oneHouseExclusion) {

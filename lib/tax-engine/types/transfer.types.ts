@@ -976,7 +976,7 @@ export interface TransferTaxInput {
    * 미제공 시 부수토지 일체과세 자동 분기 비활성화.
    */
   primaryContextForCompanionRate?: {
-    /** primary 자산 종류 */
+    /** primary 자산 종류 — (F-13 역할 표시는 `oneHouseUnitRole`) */
     propertyType: TransferTaxInput["propertyType"];
     /** primary 보유기간 (월, 취득일~양도일 사전 계산) */
     holdingMonths: number;
@@ -988,6 +988,32 @@ export interface TransferTaxInput {
     appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
     /** 일괄양도 모드 */
     bundledSaleMode?: "actual" | "apportioned";
+  };
+
+  /**
+   * **F-13 — 일괄양도의 「1세대1주택 단위」 역할** (route가 표시 · 합산 엔진이 소비).
+   *
+   * 「소득세법」 §89①3호: 비과세 대상은 「각 목의 주택」과 「주택부수토지(배율 이내)」이고, 12억 고가주택
+   * 판정은 「**주택 및 이에 딸린 토지**의 양도 당시 실지거래가액의 합계액」이다. 주택과 부수토지를 카드 둘로
+   * 나눠 받으면 합산 엔진이 이 표시로 단위를 묶어 ① 12억 판정·안분 분모를 합계액으로 ② 부수토지 카드는
+   * 짝 주택의 판정을 따르게 한다(`appurtenantHouseVerdict`).
+   * - "house": 일괄양도의 주 자산 주택(`propertyType === "housing"`)
+   * - "appurtenant_land": 배율 **이내**로 확인된 주택부수토지 카드(분리 후 한도 내 카드 또는 초과 없음 확인)
+   * 배율 초과 카드는 단위 밖이다(비사업용 토지 — §104의3①5호).
+   */
+  oneHouseUnitRole?: "house" | "appurtenant_land";
+
+  /**
+   * **F-13 — 짝 주택의 1세대1주택 판정** (`oneHouseUnitRole === "appurtenant_land"` 카드에 합산 엔진이 주입).
+   * 주택 카드를 먼저 계산한 결과다 — 부수토지 카드는 `checkExemption`에서 이 판정을 따른다.
+   */
+  appurtenantHouseVerdict?: {
+    isExempt: boolean;
+    isPartialExempt: boolean;
+    /** 짝 주택의 취득일 — 부수토지로서의 보유기간 기산(주택·토지 중 늦은 날) */
+    houseAcquisitionDate: Date;
+    /** 짝 주택이 이월과세 §97의2②2호로 배제됐는가 — 부수토지도 따른다(F-13 Q-4) */
+    carryoverOneHouseExcluded: boolean;
   };
 
   /**

@@ -43,8 +43,12 @@ export interface PrimarySplitContext {
   bundledSaleMode?: "actual" | "apportioned";
 }
 
-/** split 불필요 */
-export type CompanionSplitNotApplied = { applied: false };
+/**
+ * split 불필요.
+ * `withinLimit: true` — 배율 판정이 **가능했고** 초과분이 없다(카드 전체가 주택부수토지).
+ * 판정 자체가 불가능했으면(면적·정착면적 없음 등) undefined — F-13 단위에 넣지 않는다.
+ */
+export type CompanionSplitNotApplied = { applied: false; withinLimit?: true };
 
 /** split 필요 — 비율 포함 */
 export type CompanionSplitApplied = {
@@ -107,9 +111,8 @@ export function resolveCompanionSplit(
     transferDate,
   );
 
-  if (!resolution.applied || !resolution.excessArea || resolution.excessArea <= 0) {
-    return { applied: false };
-  }
+  if (!resolution.applied) return { applied: false };
+  if (!resolution.excessArea || resolution.excessArea <= 0) return { applied: false, withinLimit: true };
 
   const limitArea = resolution.limitArea!;
   const excessArea = resolution.excessArea;
@@ -228,15 +231,18 @@ export function splitCompanionIntoTwo(
     auctionPrice: base.auctionPrice === undefined ? undefined : auctionSplit.appurtenant,
     carryoverTaxation: ctSplit.appurtenant,
     acquisitionArea: limitArea,
+    // F-13 — 배율 이내 카드는 짝 주택과 「1세대1주택 단위」를 이룬다(§89①3호 주택부수토지).
+    oneHouseUnitRole: "appurtenant_land",
     // 부수토지 → 주택 세율(70%) 자동 적용을 위해 primaryCtx 그대로 유지
     primaryContextForCompanionRate: primaryCtx,
   };
 
   // 자산 B: 한도 초과 — primaryContextForCompanionRate 제거 (토지 본래 보유기간 적용)
   //   영 §167의5 한도 초과분은 주택부수토지가 아니다 → 토지 본래 보유기간 기준 §104① 적용.
-  //   ⚠️ 초과분은 「소득세법」 §104의3①5호(위임 영 §168의12)에 따라 **비사업용 토지**에도
-  //      해당할 수 있으나(정의요건) 기간요건(영 §168의6)은 별도이며, 현재 이 분기는
-  //      isNonBusinessLand를 사용자 입력값 그대로 상속한다 — 자동 적용하지 않는다.
+  //   초과분은 「소득세법」 §104의3①5호(위임 영 §168의12 — 「주택부속토지 중 … 배율을 곱하여 산정한
+  //   면적을 초과하는 토지」)로 **비사업용 토지**다. 초과 상태는 보유기간 내내 같으므로 기간요건(영 §168의6)도
+  //   충족된다고 본다(F-13 Q-2, 2026-09-19 사용자 결정 — 종전에는 사용자 입력값을 그대로 상속했다).
+  //   1세대1주택 단위(`oneHouseUnitRole`)에도 넣지 않는다 — 비과세 대상 밖이다(§89①3호).
   const excess: TransferTaxItemInput = {
     ...base,
     propertyId: `${base.propertyId}__excess`,
@@ -252,6 +258,8 @@ export function splitCompanionIntoTwo(
     acquisitionArea: split.excessArea,
     // 한도 초과분은 주택 일체과세 배제 → primaryContext 없음
     primaryContextForCompanionRate: undefined,
+    isNonBusinessLand: true,
+    oneHouseUnitRole: undefined,
     // 수동 오버라이드도 없음 (본래 보유기간 기준 세율 자동 적용)
     manualHoldingPeriodOverride: undefined,
   };

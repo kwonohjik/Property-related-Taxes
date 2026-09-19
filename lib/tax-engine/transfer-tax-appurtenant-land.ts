@@ -98,13 +98,29 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   if (input.isSeparateAcquisition !== true) return false;
   const land = input.landAcquisitionDate;
   if (!land) return false;
-  if (land.getTime() <= input.acquisitionDate.getTime()) return false;
+  if (!isLaterAcquiredLandHeldTooShort(land, input.acquisitionDate, input.transferDate)) return false;
   // 지분(총양도가) · 부담부증여(§159)는 12억 안분 분모가 자산 단위와 달라 파트별 안분 기준이
   // 확정돼 있지 않다 — 대상에서 제외한다(계획서 §5.4 선결 과제).
   if (input.totalPropertyTransferPrice !== undefined) return false;
   if (input.burdenedGiftDenominator !== undefined) return false;
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return false;
-  const held = calculateHoldingPeriod(land, input.transferDate);
+  return true;
+}
+
+/**
+ * 부수토지로서의 보유기간 요건(영 §154① 2년) — **주택보다 나중에 취득한 토지**만 걸린다.
+ *
+ * 부수토지는 주택이 있어야 성립하므로 「부수토지로서의 보유기간」은 주택·토지 취득일 중 **늦은 날**부터다
+ * (토지를 먼저 취득했으면 주택 취득일 — 주택의 보유요건이 곧 이 요건이다). 단일 주택 입력(G-3)과
+ * 컴패니언 부수토지 카드(F-13 — `checkExemption`)가 **이 한 함수**를 쓴다.
+ */
+export function isLaterAcquiredLandHeldTooShort(
+  landAcquisitionDate: Date,
+  houseAcquisitionDate: Date,
+  transferDate: Date,
+): boolean {
+  if (landAcquisitionDate.getTime() <= houseAcquisitionDate.getTime()) return false;
+  const held = calculateHoldingPeriod(landAcquisitionDate, transferDate);
   return held.years * 12 + held.months < ONE_HOUSE_HOLDING_MONTHS;
 }
 

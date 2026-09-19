@@ -37,6 +37,12 @@ import {
 } from "./transfer-tax-aggregate-carryover-scope";
 import { TaxCalculationError } from "./tax-errors";
 import {
+  applyOneHouseUnitPrice,
+  oneHouseUnitOrder,
+  resolveOneHouseUnit,
+  toHouseVerdict,
+} from "./transfer-tax-one-house-unit";
+import {
   classifyRateGroup,
 } from "./transfer-tax-aggregate-helpers";
 // picker 6종 + 세율군 1-pass 집계 — 800줄 정책 분리(Phase A-0)
@@ -101,7 +107,7 @@ export function buildAssetRecords(
   warnings: string[],
 ) {
   // M-1: 건별 단건 엔진 호출 (기본공제 스킵, 차손 허용)
-  const perAsset = input.properties.map((item, assetIdx) => {
+  const computeOne = (item: TransferTaxItemInput, assetIdx: number) => {
     const singleInput: TransferTaxInput = {
       ...(item as unknown as TransferTaxInput),
       annualBasicDeductionUsed: 0,
@@ -213,7 +219,26 @@ export function buildAssetRecords(
       ? { ...singleInput, ...nblOverride, ...rateBasisOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result };
-  });
+  };
+
+  /**
+   * F-13 — 「1세대1주택 단위」(주택 + 배율 이내 부수토지 카드)가 있으면 12억 분모를 합계액으로 두고
+   * 주택 카드를 **먼저** 계산해 그 판정을 부수토지 카드에 넘긴다(`transfer-tax-one-house-unit.ts`).
+   * 단위가 없으면 종전과 같은 순서·입력이다.
+   */
+  const unit = resolveOneHouseUnit(input.properties, warnings);
+  const unitItems = applyOneHouseUnitPrice(input.properties, unit);
+  const perAsset: ReturnType<typeof computeOne>[] = new Array(unitItems.length);
+  for (const assetIdx of oneHouseUnitOrder(unitItems.length, unit)) {
+    const item =
+      unit && unit.landIdxs.includes(assetIdx)
+        ? {
+            ...unitItems[assetIdx],
+            appurtenantHouseVerdict: toHouseVerdict(unitItems[unit.houseIdx], perAsset[unit.houseIdx].result),
+          }
+        : unitItems[assetIdx];
+    perAsset[assetIdx] = computeOne(item, assetIdx);
+  }
 
   // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)
   //
