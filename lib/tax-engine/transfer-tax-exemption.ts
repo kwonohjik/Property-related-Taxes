@@ -12,6 +12,7 @@
  *   E-1: 전액 비과세 (양도가 12억 이하) / E-2: 고가주택 부분과세
  */
 
+import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
 import { addYears } from "date-fns";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
@@ -88,6 +89,27 @@ function checkExemptionCore(
    */
   if (input.isUnregistered) {
     return { isExempt: false, isPartialExempt: false };
+  }
+
+  /**
+   * F-13 — 일괄양도에서 따로 입력된 **주택부수토지(배율 이내) 카드**는 짝 주택의 판정을 따른다.
+   *
+   * 「소득세법」 §89①3호: 비과세 대상은 「각 목의 주택」과 「주택부수토지」이고, 12억 판정은 「주택 및 이에 딸린
+   * 토지의 양도 당시 실지거래가액의 합계액」이다. 합산 엔진이 주택 카드를 먼저 계산해 그 판정(합계액 기준)을
+   * `appurtenantHouseVerdict`로 주입한다. 이 카드의 12억 안분 분모도 합계액(`totalPropertyTransferPrice`)이다.
+   * 다만 주택보다 **나중에** 취득해 부수토지로서 2년을 못 채웠으면 비과세가 아니다(단일 입력 G-3과 같은 함수).
+   */
+  if (input.oneHouseUnitRole === "appurtenant_land") {
+    const v = input.appurtenantHouseVerdict;
+    if (!v || !(v.isExempt || v.isPartialExempt)) return { isExempt: false, isPartialExempt: false };
+    if (isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate)) {
+      return { isExempt: false, isPartialExempt: false };
+    }
+    return {
+      isExempt: v.isExempt,
+      isPartialExempt: v.isPartialExempt,
+      exemptReason: v.isExempt ? "주택부수토지 — 1세대1주택 비과세" : "주택부수토지 — 1세대1주택 고가주택",
+    };
   }
 
   if (!input.isOneHousehold || input.propertyType !== "housing") {

@@ -658,6 +658,11 @@ export function buildCompanionEngineInputs(
     if (splitResult.applied) {
       return splitCompanionIntoTwo(companionEngine, splitResult, ctx.primaryCtxForSplit);
     }
+    // F-13 — 배율 이내로 **확인된** 부수토지는 짝 주택과 「1세대1주택 단위」를 이룬다.
+    //   판정이 불가능했던 카드(면적·정착면적 없음)는 넣지 않는다 — 초과분이 비과세로 새지 않게.
+    if (splitResult.withinLimit) {
+      return [{ ...companionEngine, oneHouseUnitRole: "appurtenant_land" as const }];
+    }
   }
 
   return [companionEngine];

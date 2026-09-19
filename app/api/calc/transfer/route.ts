@@ -307,6 +307,8 @@ export async function POST(request: NextRequest) {
             expenses: a.allocatedExpenses,
             propertyId: "primary",
             propertyLabel: a.assetLabel,
+            // F-13 — 주 자산 주택은 배율 이내 부수토지 카드와 「1세대1주택 단위」를 이룬다(합산 엔진이 묶는다).
+            oneHouseUnitRole: engineInput.propertyType === "housing" ? ("house" as const) : undefined,
             /**
              * 가산세는 **신고서 단위**로만 부과한다 — 아래 (6)에서 aggregate에 직접 넘긴다.
              * `...engineInput` 스프레드로 자산-수준에도 실리면 `transfer-tax-aggregate.ts:458`이
