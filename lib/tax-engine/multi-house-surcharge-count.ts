@@ -293,8 +293,24 @@ export function getRentalTypeLabel(rentalType?: RentalHousingType): string {
  * ⑬ 소형 신축주택 또는 비수도권 준공 후 미분양 특례 해당 여부.
  * 해당 시 주택 수 산정 배제 AND 중과세 배제 동시 적용.
  */
-export function isSmallNewHouseSpecial(house: HouseInfo): boolean {
+/**
+ * §167의3①12호 가·나목의 **양도일** 경계 — 2024.2.29 개정(대통령령 제34265호) 부칙 §11①
+ * 「제167조의3제1항 각 호 외의 부분 및 같은 항 제12호의 개정규정은 이 영 시행 이후 주택을 양도하는
+ * 경우부터 적용한다」. 그 전 시행본의 12호는 「삭제<2023.2.28>」이고 괄호도 「제1호」뿐이다(F-11).
+ */
+const SMALL_NEW_HOUSE_TRANSFER_FROM = new Date("2024-02-29");
+/** §167의3①12호 다·라목(인구감소지역·관심지역 세컨드홈) — 2026.2.27 시행본 신설 · 2026.1.1 이후 취득분 */
+const SECOND_HOME_TRANSFER_FROM = new Date("2026-02-27");
+const SECOND_HOME_ACQ_FROM = new Date("2026-01-01");
+/**
+ * §167의3①12호 나목2) 취득가액 6억 → 7억 — 2026.2.27 개정 부칙 §11 「이 영 시행 이후 준공 후
+ * 미분양주택을 **취득**하는 경우부터 적용」. 그 전 취득분은 6억이다(F-11).
+ */
+const UNSOLD_NEW_HOUSE_7EOK_ACQ_FROM = new Date("2026-02-27");
+
+export function isSmallNewHouseSpecial(house: HouseInfo, transferDate: Date): boolean {
   if (!house.acquisitionDate || !house.acquisitionPrice) return false;
+  if (transferDate < SMALL_NEW_HOUSE_TRANSFER_FROM) return false;
 
   const acqDate = house.acquisitionDate;
   const isCapital = house.isCapitalArea ?? house.region === "capital";
@@ -314,13 +330,15 @@ export function isSmallNewHouseSpecial(house: HouseInfo): boolean {
     return true;
   }
 
-  // 비수도권 준공 후 미분양 (소령 §167의3①12나목: 2024.1.10 ~ 2026.12.31, 전용 85㎡ 이하, 취득가 7억 이하)
+  // 비수도권 준공 후 미분양 (소령 §167의3①12나목: 2024.1.10 ~ 2026.12.31, 전용 85㎡ 이하,
+  // 취득가 6억 이하 — 2026.2.27 이후 취득분은 7억 이하)
+  const unsoldNewPriceCap = acqDate >= UNSOLD_NEW_HOUSE_7EOK_ACQ_FROM ? 700_000_000 : 600_000_000;
   if (
     acqDate >= new Date("2024-01-10") &&
     acqDate <= new Date("2026-12-31") &&
     !isCapital &&
     (house.exclusiveArea ?? 0) <= 85 &&
-    house.acquisitionPrice <= 700_000_000 &&
+    house.acquisitionPrice <= unsoldNewPriceCap &&
     house.isUnsoldNewHouse
   ) {
     return true;
@@ -437,7 +455,6 @@ export function countEffectiveHouses(
   let count = 0;
 
   const presaleStartDate = new Date(rules.presaleRightStartDate);
-  const officetelStartDate = new Date(rules.officetelStartDate);
 
   for (const house of houses) {
     /**
@@ -494,28 +511,17 @@ export function countEffectiveHouses(
       }
     }
 
-    // 배제 4: 미분양주택 (조특법 §99-3)
-    if (house.isUnsoldHousing) {
-      excluded.push({
-        houseId: house.id,
-        reason: "unsold_housing",
-        detail: `미분양주택 (${MULTI_HOUSE.UNSOLD_HOUSING_EXEMPTION})`,
-      });
-      continue;
-    }
+    /**
+     * 🔴 F-11(2026-09-19) — 두 불산입을 없앴다. 근거가 없었다:
+     *   · 조특법 감면 미분양·신축주택(`isUnsoldHousing`) — 조특법 §98의2·98의3·98의5~98의8·99·99의2·99의3은
+     *     「소득세법 제89조제1항제3호를 적용할 때」만 소유주택으로 보지 않는다(비과세 판정). 중과는 영
+     *     §167의3①5호가 **중과 대상에서만** 뺀다 → 주택 수에는 산입(`isGroupExcludable`·양도 주택 5호).
+     *   · 주거용 오피스텔 「2022.1.1 전 취득분」 — 양도세에 그런 경과규정이 없다. 사실상 주거용이면
+     *     주택이다(심사-양도-2020-0038 · 조심-2023-서-10142 모두 3주택 판정에 산입).
+     */
 
-    // 배제 5: 주거용 오피스텔 경과규정 이전 취득분
-    if (house.isOfficetel && house.acquisitionDate < officetelStartDate) {
-      excluded.push({
-        houseId: house.id,
-        reason: "officetel_pre2022",
-        detail: `주거용 오피스텔 ${officetelStartDate.toISOString().slice(0, 10)} 이전 취득 — 경과규정 적용`,
-      });
-      continue;
-    }
-
-    // 배제 6: ⑬ 소형 신축/미분양 특례
-    if (isSmallNewHouseSpecial(house)) {
+    // 배제 6: ⑬ 소형 신축/미분양 특례 — 2024.2.29 이후 양도분부터(부칙 §11①)
+    if (isSmallNewHouseSpecial(house, transferDate)) {
       excluded.push({
         houseId: house.id,
         reason: "small_new_house",
@@ -529,7 +535,10 @@ export function countEffectiveHouses(
       ? classifyPopulationDeclineArea(house.regionCode).kind
       : null;
     const isPopDecline = house.isPopulationDeclineArea ?? (autoKind !== null);
-    if (isPopDecline && house.isSecondHomeRegistered) {
+    // 12호 다·라목은 2026.2.27 시행본에서 신설됐고, 호 본문이 「2026년 1월 1일 이후 취득하는 주택」이다(F-11).
+    const secondHomeInForce =
+      transferDate >= SECOND_HOME_TRANSFER_FROM && house.acquisitionDate >= SECOND_HOME_ACQ_FROM;
+    if (isPopDecline && house.isSecondHomeRegistered && secondHomeInForce) {
       // 가액 한도: 다목(수도권 밖 인구감소지역) 9억 / 라목(관심지역)·수도권 접경·그 외 4억.
       // populationAreaType 미입력 시 regionCode 자동판정(autoKind)으로 다·라목 구분 도출 (N-6).
       const effectiveAreaType = house.populationAreaType ?? autoKind ?? undefined;

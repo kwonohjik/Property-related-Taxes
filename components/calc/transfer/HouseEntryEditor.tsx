@@ -172,7 +172,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate }: Pr
             tone="sky"
             checked={house.isUnsoldHousing}
             onCheckedChange={(v) => onUpdate({ isUnsoldHousing: v })}
-            title="미분양주택"
+            // F-11 — 조특법 감면 미분양·신축주택(소령 §167의3①5호). 주택 수에는 산입하고 중과 대상에서만 뺀다.
+            title="조특법 감면주택(미분양·신축)"
           />
           <ToggleCard
             variant="chip"

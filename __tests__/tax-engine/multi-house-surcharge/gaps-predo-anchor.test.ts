@@ -141,11 +141,11 @@ describe("Pre-Do #3: 인구감소 세컨드홈 가액한도 (§167의3①12 다�
     const second = makeHouse("h2", {
       region: "non_capital",
       isPopulationDeclineArea: true,
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       populationAreaType: "interest",
       officialPrice: 500_000_000, // > 4억 한도
     });
-    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const input = makeInput([selling, second], { sellingHouseId: "h1", transferDate: new Date("2026-03-10") }) // F-11 — 12호 다·라목 시행(2026.2.27) 후;
     const r = determineMultiHouseSurcharge(
       input,
       defaultRules,
@@ -162,11 +162,11 @@ describe("Pre-Do #3: 인구감소 세컨드홈 가액한도 (§167의3①12 다�
     const second = makeHouse("h2", {
       region: "non_capital",
       isPopulationDeclineArea: true,
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       populationAreaType: "decline",
       officialPrice: 800_000_000, // ≤ 9억
     });
-    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const input = makeInput([selling, second], { sellingHouseId: "h1", transferDate: new Date("2026-03-10") }) // F-11 — 12호 다·라목 시행(2026.2.27) 후;
     const r = determineMultiHouseSurcharge(
       input,
       defaultRules,
@@ -183,11 +183,11 @@ describe("Pre-Do #3: 인구감소 세컨드홈 가액한도 (§167의3①12 다�
     const second = makeHouse("h2", {
       region: "non_capital",
       isPopulationDeclineArea: true,
-      isSecondHomeRegistered: true,
+      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
       populationAreaType: "decline",
       officialPrice: 1_000_000_000, // > 9억
     });
-    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const input = makeInput([selling, second], { sellingHouseId: "h1", transferDate: new Date("2026-03-10") }) // F-11 — 12호 다·라목 시행(2026.2.27) 후;
     const r = determineMultiHouseSurcharge(
       input,
       defaultRules,

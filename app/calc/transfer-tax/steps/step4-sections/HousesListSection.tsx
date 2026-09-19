@@ -71,7 +71,7 @@ function resolveHouseBadges(h: HouseEntry): HouseBadge[] {
   if (h.isLongTermRental) badges.push({ key: "rental", label: "장기임대", cls: CHIP_VIOLET });
   if (h.isApartment) badges.push({ key: "apt", label: "아파트", cls: CHIP_SKY });
   if (h.isOfficetel) badges.push({ key: "ofc", label: "오피스텔", cls: CHIP_SKY });
-  if (h.isUnsoldHousing) badges.push({ key: "unsold", label: "미분양", cls: CHIP_SKY });
+  if (h.isUnsoldHousing) badges.push({ key: "unsold", label: "조특법 감면", cls: CHIP_SKY });
   return badges;
 }
 
