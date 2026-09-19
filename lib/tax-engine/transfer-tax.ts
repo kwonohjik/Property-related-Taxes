@@ -23,6 +23,7 @@ import type {
 } from "./types/transfer.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep, isPrhpScenarioB, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
+import { rentalPeriodPendingNoticeForEarlyReturn } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
   resolveIncomeDeduction,
@@ -352,6 +353,8 @@ export function calculateTransferTax(
       amount: 0,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
+    const periodPendingNotice = rentalPeriodPendingNoticeForEarlyReturn(effectiveInput); // §155㉑·㉒
+    if (periodPendingNotice) warnings.push(periodPendingNotice);
     return buildExemptEarlyResult({
       input,
       effectiveInput,

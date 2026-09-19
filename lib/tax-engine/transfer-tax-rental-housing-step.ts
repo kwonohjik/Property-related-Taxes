@@ -73,6 +73,36 @@ export function isPrhpScenarioAIneligible(effectiveInput: TransferTaxInput): boo
 }
 
 /**
+ * §155㉒ 사후 추징 안내 — ㉑(임대기간요건 충족 전 양도)로 특례를 받은 호가 있을 때만.
+ * 계산은 ㉑대로 비과세하고, 이후 요건을 못 채우면 차액을 신고·납부해야 한다는 사실을 알린다.
+ */
+export function buildRentalPeriodPendingNotice(unitIndexes: number[] | undefined): string | undefined {
+  if (!unitIndexes || unitIndexes.length === 0) return undefined;
+  const units = unitIndexes.map((i) => `${i + 1}호`).join("·");
+  return (
+    `장기임대주택 ${units}가 임대기간요건을 채우기 전에 거주주택을 양도해 특례를 적용했습니다` +
+    `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_21}). 이후 임대기간요건을 충족하지 못하게 되면(임대의무호수를 ` +
+    `임대하지 않은 기간이 6개월을 지난 경우 포함) 그 사유가 발생한 날이 속하는 달의 말일부터 2개월 이내에 ` +
+    `특례가 없었다면 납부했을 세액과의 차액을 신고·납부해야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_22}).`
+  );
+}
+
+/**
+ * STEP 1a(1세대1주택 전액 비과세 조기반환)에 실을 ㉒ 안내 — 시나리오 A가 ㉑로 통과한 경우.
+ * 조기반환은 STEP 2.5를 건너뛰므로 특례 경로의 안내가 닿지 않는다.
+ * 호출 지점(STEP 1a)은 `canEarlyReturnPrhp` — 시나리오 A면 판정 통과가 이미 전제다.
+ */
+export function rentalPeriodPendingNoticeForEarlyReturn(effectiveInput: TransferTaxInput): string | undefined {
+  const rhe = effectiveInput.rentalHousingException;
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return undefined;
+  const holdYears = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate).years;
+  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
+  return buildRentalPeriodPendingNotice(
+    checkEligibility(rhe.rentalUnits, holdYears, liveYears).periodPendingUnitIndexes,
+  );
+}
+
+/**
  * STEP 1a 전액 비과세 조기반환 허용 여부 — §155⑳ 두 억제 게이트를 결합(orchestrator 800줄 정책).
  * B 시나리오(§161 안분 필요)·A 시나리오 eligibility 미충족(over-exemption 차단) 시 false → STEP 2.5 위임.
  */
@@ -376,6 +406,7 @@ export function runRentalHousingExceptionStep(
   }
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
+  const periodPendingNotice = buildRentalPeriodPendingNotice(rhe.eligibility.periodPendingUnitIndexes);
   steps.push({
     label: "장기임대주택 보유자 거주주택 비과세 특례",
     formula: `§155⑳ + §161 — ${rhe.scenarioId} 시나리오 적용`,
@@ -626,8 +657,12 @@ export function runRentalHousingExceptionStep(
       ? { inheritedHouseValuationDetail: inheritedAcquisitionStep.houseValuationResult }
       : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice
-      ? { warnings: [reductionNotice, lthdNotice].filter((x): x is string => x !== undefined) }
+    ...(reductionNotice || lthdNotice || periodPendingNotice
+      ? {
+          warnings: [reductionNotice, lthdNotice, periodPendingNotice].filter(
+            (x): x is string => x !== undefined,
+          ),
+        }
       : {}),
     // 배율 초과분이 남아 있으면 자산 전체가 비과세된 것이 아니다(그 부분은 전액 과세된다).
     isExempt: totalTaxableIncome === 0,
