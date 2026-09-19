@@ -25,7 +25,6 @@ import {
 import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
-import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { buildPrimaryContext } from "./transfer-tax-api-primary-context";
 import { successorRightAcquisitionTotal } from "./transfer-successor-right";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
@@ -34,6 +33,8 @@ import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
+import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
+import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -389,10 +390,6 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
     ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed }),
-    standardPricePerSqmAtAcquisition:
-      primary.standardPricePerSqmAtAcq
-        ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
-        : undefined,
     /**
      * 엔진 `acquisitionArea` — **취득 당시 단가에 곱할 면적**이며, 일부양도(`partial`)에서는
      * 취득 전체 면적이 아니라 **양도한 부분의 면적**이다.
@@ -415,7 +412,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
      *
      * 계획: docs/01-plan/features/transfer-partial-area-apportionment.plan.md §0 C-6 · §3.3 L-4
      */
-    acquisitionArea: resolveAcqAreaForStdPrice(primary),
+    ...buildLandStdAtAcquisitionPayload(primary),
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
@@ -454,19 +451,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "inheritance" && primary.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
-    // §104②1·2호를 **토지 파트**에 적용 (G-4) — 건물과 취득원인이 다른 경우.
-    // 원인이 비면 전송하지 않는다: 엔진이 자산 단위 원인을 그대로 쓰도록(회귀 0).
-    ...(primary.landAcquisitionCause
-      ? {
-          landAcquisitionCause: primary.landAcquisitionCause,
-          ...(primary.landAcquisitionCause === "inheritance" && primary.landDecedentAcquisitionDate
-            ? { landDecedentAcquisitionDate: primary.landDecedentAcquisitionDate }
-            : {}),
-          ...(primary.landAcquisitionCause === "gift" && primary.landDonorAcquisitionDate
-            ? { landDonorAcquisitionDate: primary.landDonorAcquisitionDate }
-            : {}),
-        }
-      : {}),
+    // §104②1·2호를 **토지 파트**에 적용 (G-4) — 다건과 같은 leaf.
+    ...buildLandPartCausePayload(primary),
     // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 미정의 시 침묵 stripping 방지를 위해 명시 선언.
     // `residenceMonthsTrimmed`는 결과 화면 절사 안내 전용이며 계산에는 쓰이지 않는다.
     nonHousingToHousingConversion: usageConversionOn
