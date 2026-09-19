@@ -150,7 +150,6 @@ describe("감면세액 근거 — 없는 것을 있다고 말하지 않는다", 
       totalBasicDeduction: 2_500_000,
       taxYear: 2026,
       priorReductionUsage: [],
-      comparedByGroups: false,
       steps,
       warnings: [],
     });

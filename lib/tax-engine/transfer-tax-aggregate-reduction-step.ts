@@ -25,8 +25,10 @@ import type { CalculationStep, TransferTaxResult } from "./transfer-tax";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import type {
   ReductionBreakdownEntry,
+  ReductionClauseRow,
   TransferTaxItemInput,
 } from "./types/transfer-aggregate.types";
+import type { ClauseTaxEcho } from "./transfer-tax-aggregate-group-tax";
 
 /**
  * 자산 결과에서 §90①의 감면대상소득 버킷을 꺼낸다 — 없으면 단일 버킷으로 합성한다.
@@ -78,6 +80,82 @@ function absorbBasicDeduction(buckets: ReducibleIncomeBucket[], basicDeduction: 
   return rated;
 }
 
+/**
+ * F-9 — 호별 산정 입력. `aggregateByGroup`의 호 버킷 echo + 자산별 기본공제 배분.
+ * §104⑤에서 「전체 누진」이 채택되면 호출측이 넘기지 않는다(Q-2 — 합산 유지).
+ */
+export interface PerClauseContext {
+  clauseTaxes: Map<string, ClauseTaxEcho>;
+  assetClauseKeys: string[][];
+  allocatedBasic: number[];
+}
+
+/** `104-1-10|0.7` → 「§104①10호 (70%)」. 호 불명(`solo-*`)은 「호 미상」. */
+function clauseLabelOf(echo: ClauseTaxEcho): string {
+  const [candidates, rate] = echo.key.split("|");
+  if (candidates.startsWith("solo-")) return "호 미상";
+  const label = candidates
+    .split("+")
+    .map((c) => {
+      const m = /^104-1-(\d+)$/.exec(c);
+      return m ? `§104①${m[1]}호` : c;
+    })
+    .join("·");
+  return rate ? `${label} (${+(Number(rate) * 100).toFixed(2)}%)` : label;
+}
+
+/**
+ * 한 감면 유형의 **호별** §90① — 재산세과-3820 · 서면5팀-57(「각호별로 산출세액과 감면세액을 산정」).
+ *
+ * A·D는 감면 자산이 속한 **호 버킷**의 산출세액·과세표준이다. C는 자산마다
+ * `max(0, 배분 기본공제 − 비감면소득)` — §103② 1단계(감면 외 소득에서 먼저 공제)는
+ * `allocateBasicDeduction`이 신고서 전체에서 이미 수행했으므로 그 결과의 **감면소득 몫**만 읽는다.
+ * 미등기 자산은 기본공제를 받지 못하므로(§103①) 여기서 C를 흡수하지 않는다 —
+ * 종전 합산 산식의 `C = 총 기본공제 − 비감면소득 합`은 미등기 소득까지 더해 C를 0으로 만들었다.
+ */
+function perClauseRowsOf(
+  idxList: number[],
+  assetRecords: AggregateAssetRecord[],
+  taxableAfterReduction: number[],
+  ctx: PerClauseContext,
+): { rows: ReductionClauseRow[]; weights: number[] } {
+  const byClause = new Map<string, number[]>();
+  for (const i of idxList) {
+    const k = ctx.assetClauseKeys[i][0];
+    byClause.set(k, [...(byClause.get(k) ?? []), i]);
+  }
+  const rows: ReductionClauseRow[] = [];
+  const weights = idxList.map(() => 0);
+  for (const [key, members] of byClause) {
+    const echo = ctx.clauseTaxes.get(key)!;
+    const ratio = (numerator: number) =>
+      echo.taxBase > 0 ? safeMultiplyThenDivide(echo.tax, numerator, echo.taxBase) : 0;
+    let gross = 0;
+    let basic = 0;
+    const buckets: ReducibleIncomeBucket[] = [];
+    for (const i of members) {
+      const own = bucketsOf(assetRecords[i].result);
+      const b = sumBucketIncome(own);
+      const c = Math.max(0, ctx.allocatedBasic[i] - Math.max(0, taxableAfterReduction[i] - b));
+      gross += b;
+      basic += c;
+      buckets.push(...own);
+      weights[idxList.indexOf(i)] = ratio(absorbBasicDeduction(own, c));
+    }
+    const numerator = absorbBasicDeduction(buckets, basic);
+    rows.push({
+      clauseLabel: clauseLabelOf(echo),
+      calculatedTax: echo.tax,
+      taxBase: echo.taxBase,
+      eligibleIncomeBeforeRate: gross,
+      basicDeductionApplied: Math.min(basic, gross),
+      numerator,
+      raw: ratio(numerator),
+    });
+  }
+  return { rows, weights };
+}
+
 /** 집계가 자산별로 들고 있는 최소 정보 — 본 모듈이 읽는 부분만 좁혀 받는다. */
 export interface AggregateAssetRecord {
   item: TransferTaxItemInput;
@@ -94,8 +172,8 @@ export interface AggregateReductionArgs {
   totalBasicDeduction: number;
   taxYear: number;
   priorReductionUsage: { year: number; type: string; amount: number }[];
-  /** 비교과세가 세율군별로 적용됐는가 — 경고 문구 분기 */
-  comparedByGroups: boolean;
+  /** F-9 호별 산정 입력 — 없으면 합산 산식(§104⑤ 전체 누진 채택 · Q-2). */
+  perClause?: PerClauseContext;
   /** 부수효과 대상 — 호출측 배열을 그대로 변경한다(기존 동작 보존). */
   steps: CalculationStep[];
   warnings: string[];
@@ -110,10 +188,9 @@ export interface AggregateReductionResult {
 export function aggregateReductions(args: AggregateReductionArgs): AggregateReductionResult {
   const {
     assetRecords, calculatedTax, taxableAfterReduction, totalBasicDeduction,
-    comparedByGroups, steps, warnings,
+    perClause, steps, warnings,
   } = args;
   const input = { taxYear: args.taxYear, priorReductionUsage: args.priorReductionUsage };
-  const comparedTaxApplied = comparedByGroups ? "groups" : "total";
   // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127⑦ + §133)
   //      ⚠️ 중복배제는 §127**⑦**이다. 종전에는 「의2」가 붙은 조문을 적었는데 조특법에
   //         그런 조문은 **존재하지 않는다**(KoreanLaw 실측 NOT_FOUND).
@@ -170,6 +247,8 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       income: number;
       ratedIncome: number;
       assetIds: string[];
+      /** `assetRecords` 인덱스 — 호별 산정(F-9)이 자산의 호·기본공제를 찾는 데 쓴다. */
+      idx: number[];
       rates: Set<number>;
       buckets: ReducibleIncomeBucket[];
     }
@@ -184,14 +263,14 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   /** §90①의 C — 비감면소득이 흡수하지 못한 기본공제 잔여. */
   const basicDeductionOnReducible = Math.max(0, totalBasicDeduction - nonReducibleIncome);
 
-  for (const r of assetRecords) {
-    if (r.result.isExempt) continue;
+  assetRecords.forEach((r, idx) => {
+    if (r.result.isExempt) return;
     const type = r.result.reductionTypeApplied;
     const income = r.result.reducibleIncome ?? 0;
-    if (!type || income <= 0) continue;
+    if (!type || income <= 0) return;
     const existing =
       reducibleByType.get(type) ??
-      { income: 0, ratedIncome: 0, assetIds: [], rates: new Set<number>(), buckets: [] };
+      { income: 0, ratedIncome: 0, assetIds: [], idx: [], rates: new Set<number>(), buckets: [] };
     // ⚠️ **감면율은 유형 단위로 균일하지 않다.** `long_term_rental`(0.7·0.5 tier)·
     //    `new_housing`(가격·시기 matrix)은 같은 type 문자열 아래 자산마다 감면율이 다를 수 있다.
     //    그래서 그룹의 rate 하나를 last-write-wins로 덮으면 한쪽 자산에 틀린 율이 곱해진다.
@@ -202,9 +281,24 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     existing.ratedIncome += rate === 1 ? income : applyRate(income, rate);
     existing.buckets.push(...bucketsOf(r.result));
     existing.assetIds.push(r.item.propertyId);
+    existing.idx.push(idx);
     existing.rates.add(rate);
     reducibleByType.set(type, existing);
-  }
+  });
+
+  /**
+   * F-9 — 호별 산정 발동 조건. 호 버킷이 **하나뿐이면** 호별 = 합산이라 종전 경로를 그대로 탄다
+   * (값이 같다 — F9-3이 고정). 감면 자산의 파트가 **둘 이상의 호에 걸치면**(토지·건물 분리취득 ·
+   * 한 필지 중 일부만 비사업용) 감면소득을 호에 나눌 근거가 없어 합산으로 두고 안내한다.
+   */
+  const reducibleIdx = [...reducibleByType.values()].flatMap((e) => e.idx);
+  const spansClauses =
+    perClause !== undefined &&
+    perClause.clauseTaxes.size > 1 &&
+    reducibleIdx.some((i) => perClause.assetClauseKeys[i].length !== 1);
+  const clauseCtx =
+    perClause && perClause.clauseTaxes.size > 1 && !spansClauses ? perClause : undefined;
+  const clauseByType = new Map<string, { rows: ReductionClauseRow[]; weights: number[] }>();
 
   /** C 안분 분모 — 유형별 감면대상소득(B) 합계. */
   const totalGrossReducible = [...reducibleByType.values()].reduce(
@@ -231,6 +325,17 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
      * 조문은 유형 간 배분을 정하지 않지만 감면 유형이 하나뿐인 통상 사안에서는 전액이 실려
      * 단건과 정확히 일치한다.
      */
+    if (clauseCtx) {
+      const pc = perClauseRowsOf(entry.idx, assetRecords, taxableAfterReduction, clauseCtx);
+      clauseByType.set(type, pc);
+      displayByType.set(type, {
+        eligibleIncomeBeforeRate: pc.rows.reduce((t, row) => t + row.eligibleIncomeBeforeRate, 0),
+        basicDeductionApplied: pc.rows.reduce((t, row) => t + row.basicDeductionApplied, 0),
+        numerator: pc.rows.reduce((t, row) => t + row.numerator, 0),
+      });
+      rawByType.set(type, pc.rows.reduce((t, row) => t + row.raw, 0));
+      continue;
+    }
     const entryGross = sumBucketIncome(entry.buckets);
     const cShare =
       totalGrossReducible > 0 && entryGross > 0
@@ -266,6 +371,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   const reductionBreakdown: ReductionBreakdownEntry[] = [];
   let totalAggregatedReduction = 0;
   for (const [type, entry] of reducibleByType.entries()) {
+    const clause = clauseByType.get(type);
     const raw = rawByType.get(type) ?? 0;
     const capped = cappedByType.get(type) ?? 0;
     const info = capInfoByType.get(type);
@@ -303,8 +409,13 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       eligibleIncomeBeforeRate: displayByType.get(type)?.eligibleIncomeBeforeRate ?? 0,
       basicDeductionApplied: displayByType.get(type)?.basicDeductionApplied ?? 0,
       reducibleIncomeAfterBasicDeduction: displayByType.get(type)?.numerator ?? 0,
-      aggregateTaxBase,
-      aggregateCalculatedTax: calculatedTax,
+      // 호별 산정이면 A·D는 **그 호의** 값(호가 둘 이상이면 합 — 표시는 `clauseRows`).
+      aggregateTaxBase: clause
+        ? clause.rows.reduce((t, row) => t + row.taxBase, 0)
+        : aggregateTaxBase,
+      aggregateCalculatedTax: clause
+        ? clause.rows.reduce((t, row) => t + row.calculatedTax, 0)
+        : calculatedTax,
       rawAggregateReduction: raw,
       annualLimit,
       annuallyCappedReduction,
@@ -315,6 +426,9 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       fiveYearRemaining: fiveInfo && Number.isFinite(fiveInfo.remaining) ? fiveInfo.remaining : 0,
       cappedByFiveYearLimit: fiveInfo?.cappedByFiveYear ?? false,
       assetIds: entry.assetIds,
+      ...(clause
+        ? { clauseBasis: "per_clause" as const, clauseRows: clause.rows, assetWeights: clause.weights }
+        : {}),
     });
     totalAggregatedReduction += capped;
   }
@@ -360,10 +474,15 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     );
   }
 
-  // 세율군 혼재 시 경고 (PDF 사례 범위 외)
-  if (comparedTaxApplied === "groups" && reducibleByType.size > 0) {
+  /**
+   * F-9 — 호별 산정을 적용하지 못한 경우만 알린다. 종전에는 세율군별 채택이면 무조건
+   * 「전체 산출세액 기준 · 별도 로직 필요」를 띄웠는데, 그 별도 로직이 `perClauseRowsOf`다.
+   */
+  if (spansClauses) {
     warnings.push(
-      "비교과세가 세율군별로 적용된 상황에서 감면 재계산은 전체 산출세액 기준으로 이루어졌습니다. 세율군 혼재 시 정확한 안분은 별도 로직이 필요합니다.",
+      "감면 자산의 일부(토지·건물 또는 사업용·비사업용 부분)가 서로 다른 세율의 호에 걸쳐 있어, " +
+        "감면세액을 호별이 아니라 합산 산출세액 기준으로 계산했습니다. 국세청은 호가 섞이면 호별로 " +
+        "산출세액과 감면세액을 산정한다고 보므로(재산세과-3820) 신고 전 확인이 필요합니다.",
     );
   }
 
@@ -382,6 +501,86 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   });
 
   return { reductionBreakdown, reductionAmount };
+}
+
+/**
+ * §104⑤ 괄호 — 「감면액이 있는 경우에는 해당 감면세액을 **차감한 세액이 더 큰 경우의 산출세액**」.
+ *
+ * 감면이 두 경로에서 같은 비율(합산 산식)이면 감면 전 MAX와 답이 같다 — 그래서 종전에는
+ * 감면 전에 골랐다(계획서 `transfer-104-5-proviso-mixed-use-rate-gaps.plan.md` D-6 증명).
+ * 호별 산정(F-9)은 세율군별 경로의 감면만 호의 세액으로 잡으므로 **그 전제가 깨진다**
+ * (감면율 100% 자산이 높은 세율 호에 있으면 세율군별 순세액이 전체 누진보다 항상 작다).
+ * ⇒ 호 버킷이 둘 이상일 때만 두 경로의 감면 후 세액을 비교해 고른다. 호가 하나면 D-6 그대로다.
+ * 전체 누진 경로의 감면은 합산 산식이다(Q-2).
+ */
+export function choose104_5AfterReduction(args: {
+  base: Omit<AggregateReductionArgs, "calculatedTax" | "perClause" | "steps" | "warnings">;
+  calculatedTaxByGroups: number;
+  calculatedTaxByGeneral: number;
+  calculatedTax: number;
+  comparedTaxApplied: "groups" | "general" | "none";
+  perClause: PerClauseContext;
+}): {
+  calculatedTax: number;
+  comparedTaxApplied: "groups" | "general" | "none";
+  perClause?: PerClauseContext;
+  /** 감면 차감 후 비교로 감면 전 MAX와 **다른** 경로를 골랐는가 */
+  decidedAfterReduction: boolean;
+} {
+  const pre = { calculatedTax: args.calculatedTax, comparedTaxApplied: args.comparedTaxApplied };
+  const keepPre = {
+    ...pre,
+    perClause: pre.comparedTaxApplied === "general" ? undefined : args.perClause,
+    decidedAfterReduction: false,
+  };
+  if (args.perClause.clauseTaxes.size <= 1) return keepPre;
+  const reductionOf = (calculatedTax: number, perClause?: PerClauseContext) =>
+    aggregateReductions({ ...args.base, calculatedTax, perClause, steps: [], warnings: [] })
+      .reductionAmount;
+  const netGroups = args.calculatedTaxByGroups - reductionOf(args.calculatedTaxByGroups, args.perClause);
+  const netGeneral = args.calculatedTaxByGeneral - reductionOf(args.calculatedTaxByGeneral);
+  if (pre.comparedTaxApplied !== "general" && netGeneral > netGroups) {
+    return {
+      calculatedTax: args.calculatedTaxByGeneral,
+      comparedTaxApplied: "general",
+      perClause: undefined,
+      decidedAfterReduction: true,
+    };
+  }
+  if (pre.comparedTaxApplied === "general" && netGroups > netGeneral) {
+    return {
+      calculatedTax: args.calculatedTaxByGroups,
+      comparedTaxApplied: "groups",
+      perClause: args.perClause,
+      decidedAfterReduction: true,
+    };
+  }
+  return keepPre;
+}
+
+/**
+ * 자산별 배분 가중치 — 호별 산정(F-9)이면 그 자산의 **호별 원시 감면**, 아니면 감면율 반영 소득.
+ *
+ * 호가 다른 자산을 소득 비율로 나누면 높은 세율 호의 감면이 낮은 호 자산으로 옮겨 간다
+ * (F9-5: 16,485,000 / 12,570,000이 14,527,500씩으로 뭉개졌다). 자산별 표시와 농특세 판정이
+ * 이 배분을 쓰므로 합계만 맞아서는 안 된다.
+ */
+export function allocationWeightOf(
+  entry: ReductionBreakdownEntry,
+  assetRecords: AggregateAssetRecord[],
+): (idx: number) => { own: number; total: number } {
+  const weights = entry.assetWeights;
+  if (weights && weights.length === entry.assetIds.length) {
+    const total = weights.reduce((t, w) => t + w, 0);
+    return (idx) => {
+      const k = entry.assetIds.indexOf(assetRecords[idx].item.propertyId);
+      return { own: k >= 0 ? weights[k] : 0, total };
+    };
+  }
+  return (idx) => ({
+    own: assetRecords[idx].result.reducibleIncome ?? 0,
+    total: entry.totalReducibleIncome,
+  });
 }
 
 /**
@@ -418,6 +617,7 @@ export function allocateAggregateReductions(
 
     for (const [type, idxList] of groupIdx) {
       const entry = reductionBreakdown.find((b) => b.type === type)!;
+      const weightOf = allocationWeightOf(entry, assetRecords);
       let allocated = 0;
       idxList.forEach((idx, i) => {
         const isLast = i === idxList.length - 1;
@@ -426,10 +626,10 @@ export function allocateAggregateReductions(
           reductionAllocations.set(idx, entry.cappedAggregateReduction - allocated);
           return;
         }
-        const reducible = assetRecords[idx].result.reducibleIncome ?? 0;
-        const share = Math.floor(
-          entry.cappedAggregateReduction * (reducible / entry.totalReducibleIncome),
-        );
+        const w = weightOf(idx);
+        const share = w.total > 0
+          ? Math.floor(entry.cappedAggregateReduction * (w.own / w.total))
+          : 0;
         reductionAllocations.set(idx, share);
         allocated += share;
       });

@@ -406,6 +406,39 @@ export interface ReductionBreakdownEntry {
   cappedByFiveYearLimit: boolean;
   /** 이 유형에 속한 자산 식별자 목록 */
   assetIds: string[];
+  /**
+   * F-9 — §90①을 **감면 자산이 속한 호별로** 산정했으면 `"per_clause"`(재산세과-3820).
+   * 없으면 합산 산출세액·과세표준으로 산정한 것이다(호가 하나뿐이거나 §104⑤ 전체 누진 채택).
+   *
+   * `"per_clause"`이고 호가 하나면 `aggregateCalculatedTax`·`aggregateTaxBase`가 **그 호의** A·D다.
+   * 호가 둘 이상이면 두 필드는 호별 값의 합이라 산식이 성립하지 않는다 — `clauseRows`로 표시한다.
+   */
+  clauseBasis?: "per_clause";
+  /** 호별 산정 행 — `clauseBasis === "per_clause"`일 때만 있다. */
+  clauseRows?: ReductionClauseRow[];
+  /**
+   * 자산별 배분 가중치(`assetIds`와 같은 순서) — 호별 산정의 **자산 몫**.
+   * 호가 다른 자산은 소득 비율로 나누면 틀리므로 `allocateAggregateReductions`가 이 값을 쓴다.
+   */
+  assetWeights?: number[];
+}
+
+/** 호별 감면 산정 1행 — `A × (B − C) × E / D`. */
+export interface ReductionClauseRow {
+  /** 예: 「§104①1호」 · 「§104①10호 (70%)」 */
+  clauseLabel: string;
+  /** A — 그 호의 산출세액 */
+  calculatedTax: number;
+  /** D — 그 호의 과세표준 */
+  taxBase: number;
+  /** B — 감면대상 양도소득금액(감면율 前) */
+  eligibleIncomeBeforeRate: number;
+  /** C — 그 호의 감면소득에 닿은 기본공제 */
+  basicDeductionApplied: number;
+  /** (B − C) × E */
+  numerator: number;
+  /** 원시 감면 = A × 분자 / D */
+  raw: number;
 }
 
 /** 세율군별 집계 */

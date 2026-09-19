@@ -12,7 +12,8 @@ import type { calculateTransferTax } from "./transfer-tax";
 import { TRANSFER } from "./legal-codes";
 import { REDUCTION_METADATA } from "./transfer-reductions/metadata";
 import type { TransferReductionId } from "./transfer-reductions/types";
-import { aggregateByGroup, applyGeneralProgressive } from "./transfer-tax-aggregate-helpers";
+import { applyGeneralProgressive } from "./transfer-tax-aggregate-helpers";
+import { aggregateByGroup } from "./transfer-tax-aggregate-group-tax";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
@@ -131,8 +132,10 @@ export function computeGroupsAndComparison(
   allocatedBasic: number[],
   rates: TaxRatesMap,
 ) {
-  const { groupTaxes, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax } =
-    aggregateByGroup(records, incomeArray, allocatedBasic, rates);
+  const {
+    groupTaxes, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax,
+    clauseTaxes, assetClauseKeys,
+  } = aggregateByGroup(records, incomeArray, allocatedBasic, rates);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
   const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
   const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
@@ -201,7 +204,7 @@ export function computeGroupsAndComparison(
       : hasSurchargeGroup
         ? "groups"
         : "none";
-  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax };
+  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax, clauseTaxes, assetClauseKeys };
 }
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */

@@ -26,6 +26,8 @@ import {
 import {
   aggregateReductions,
   allocateAggregateReductions,
+  allocationWeightOf,
+  choose104_5AfterReduction,
   computeAggregateTaxCreditRuralSurtax,
 } from "./transfer-tax-aggregate-reduction-step";
 import {
@@ -289,18 +291,38 @@ function computeAggregateOnce(
     groupTaxes,
     calculatedTaxByGroups,
     calculatedTaxByGeneral,
-    calculatedTax,
-    comparedTaxApplied,
+    calculatedTax: calculatedTaxBeforeReduction,
+    comparedTaxApplied: comparedBeforeReduction,
     assetPartTax,
     clause8TaxBase,
     clause8Tax,
     clause1BucketTaxBase,
     clause1BucketTax,
+    clauseTaxes,
+    assetClauseKeys,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates);
+
+  // §104⑤ 괄호 — 호별 감면(F-9)이 두 경로에서 달라지면 **감면 차감 후** 세액으로 고른다.
+  const m8Base = {
+    assetRecords,
+    taxableAfterReduction,
+    totalBasicDeduction,
+    taxYear: input.taxYear,
+    priorReductionUsage: input.priorReductionUsage ?? [],
+  };
+  const { calculatedTax, comparedTaxApplied, perClause, decidedAfterReduction } =
+    choose104_5AfterReduction({
+      base: m8Base,
+      calculatedTaxByGroups,
+      calculatedTaxByGeneral,
+      calculatedTax: calculatedTaxBeforeReduction,
+      comparedTaxApplied: comparedBeforeReduction,
+      perClause: { clauseTaxes, assetClauseKeys, allocatedBasic },
+    });
 
   steps.push({
     label: "비교과세 (§104⑤)",
-    formula: `세율군별 ${calculatedTaxByGroups.toLocaleString()} vs 전체누진 ${calculatedTaxByGeneral.toLocaleString()} → ${comparedTaxApplied === "none" ? "비교 불필요 (중과·단기 없음)" : `MAX = ${calculatedTax.toLocaleString()} (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})`}`,
+    formula: `세율군별 ${calculatedTaxByGroups.toLocaleString()} vs 전체누진 ${calculatedTaxByGeneral.toLocaleString()} → ${comparedTaxApplied === "none" ? "비교 불필요 (중과·단기 없음)" : decidedAfterReduction ? `감면세액 차감 후 큰 쪽 = ${calculatedTax.toLocaleString()} (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})` : `MAX = ${calculatedTax.toLocaleString()} (${comparedTaxApplied === "groups" ? "세율군별" : "전체누진"})`}`,
     amount: calculatedTax,
     legalBasis: TRANSFER.COMPARATIVE_TAXATION,
   });
@@ -327,14 +349,11 @@ function computeAggregateOnce(
   }
 
   // M-8: 감면 합산 — 유형별 비율 재계산 + 조특법 §133 한도. 상세는 reduction-step ① 참조.
+  // F-9 · Q-2 — 「전체 누진」이 채택되면 산출세액이 한 덩어리라 호별로 나눌 A가 없다(합산 유지).
   const { reductionBreakdown, reductionAmount } = aggregateReductions({
-    assetRecords,
+    ...m8Base,
     calculatedTax,
-    taxableAfterReduction,
-    totalBasicDeduction,
-    taxYear: input.taxYear,
-    priorReductionUsage: input.priorReductionUsage ?? [],
-    comparedByGroups: comparedTaxApplied === "groups",
+    perClause,
     steps,
     warnings,
   });
@@ -476,7 +495,8 @@ function computeAggregateOnce(
     if (reductionType && reducibleIncome > 0) {
       const entry = reductionBreakdown.find((b) => b.type === reductionType);
       if (entry && entry.totalReducibleIncome > 0) {
-        reductionAllocationRatio = reducibleIncome / entry.totalReducibleIncome;
+        const w = allocationWeightOf(entry, assetRecords)(idx);
+        reductionAllocationRatio = w.total > 0 ? w.own / w.total : 0;
         // 배분액은 위 선계산(말단 잔액 흡수)에서 가져온다 — 여기서 재-floor하면 드리프트가 되살아난다.
         reductionAggregated = reductionAllocations.get(idx) ?? reductionAggregated;
       }
