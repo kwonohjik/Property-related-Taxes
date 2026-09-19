@@ -28,7 +28,10 @@ import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
-import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
+import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { computeEstimatedDeduction } from "@/lib/tax-engine/tax-utils";
+import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes/transfer-nbl";
+import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
 import { previewCommercialBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 import { previewGeneralBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
@@ -100,6 +103,37 @@ function isParcelMode(a: AssetForm): boolean {
 /** 재개발·입주권(§166) 경로 판정 — API `transfer-tax-api.ts:175-176`(`isRedevelopment`)과 동일 조건. */
 function isRedevelopmentPath(a: AssetForm): boolean {
   return a.assetKind === "redevelopment_apt" || a.assetKind === "right_to_move_in";
+}
+
+/**
+ * 필요경비가 개산공제(§163⑥)인 추계 3종 — 환산·감정·매매사례(「소득세법」 §97②2호 본문이
+ * 제1항제1호 **나목** 셋을 한 묶음으로 다룬다). ④의 `acquisitionMethod` 분기와 같은 세 플래그다.
+ */
+function isLumpSumMode(a: AssetForm): boolean {
+  return a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition;
+}
+
+/**
+ * 공통 개산공제(**취득당시 기준시가 × 율**)로 계산 전에 미리 볼 수 있는 자산인가 (F-14).
+ *
+ * 개산공제는 양도가액 안분과 무관하므로 일괄양도의 각 자산도 미리 볼 수 있다. 다만 기준시가를
+ * 전용 경로가 따로 만드는 자산은 뺀다 — 공통 식으로 보이면 엔진과 다른 값이 된다:
+ *   일반건물·상가(전용 프리뷰) · 재개발·입주권(§166·§165①) · 겸용 · 다필지 · 토지/건물 분리(파트별) ·
+ *   부담부증여(§159 안분) · 1990.8.30. 전 토지(서브엔진) · 이월과세(증여자 기준시가).
+ */
+function isPlainLumpSumAsset(a: AssetForm): boolean {
+  return (
+    a.assetKind !== "general_building" &&
+    a.assetKind !== "commercial_building" &&
+    !isRedevelopmentPath(a) &&
+    !a.isMixedUseHouse &&
+    !isParcelMode(a) &&
+    !a.hasSeperateLandAcquisitionDate &&
+    (a.selfOwns ?? "both") === "both" &&
+    a.transferType !== "burdened_gift" &&
+    a.acquisitionCause !== "carryover_gift" &&
+    !hasPre1990LandEstimation(a)
+  );
 }
 
 /**
@@ -590,7 +624,11 @@ export function computeTransferPerAssetSummary(
       expense =
         h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
     } else if (bundledMatch) {
-      expense = bundledMatch.allocatedExpenses;
+      // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
+      // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
+      expense =
+        bundledResult?.aggregated?.properties?.find((p) => p.propertyId === bundledAssetId)
+          ?.necessaryExpense ?? bundledMatch.allocatedExpenses;
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;
@@ -607,33 +645,25 @@ export function computeTransferPerAssetSummary(
       // 발동한 경우에만 실제 경비가 채택되며, 그 판정도 프리뷰 함수 안에서 끝난다.
       expense = dedicatedPreview.expense;
       expensePending = false;
-    } else if (expense === 0 && isSingle) {
-      if (singleResult) {
-        expense = singleResult.expenses ?? 0;
-      } else if (canPreviewEstimated) {
-        const stdAcq = parseRaw(a.standardPriceAtAcq);
-        const stdTransfer = parseRaw(a.standardPriceAtTransfer);
-        const sale = parseRaw(a.actualSalePrice);
-        const est =
-          stdAcq > 0 && stdTransfer > 0 && sale > 0
-            ? calculateEstimatedAcquisitionPrice(sale, stdAcq, stdTransfer)
-            : 0;
-        expense = est > 0 ? applyRate(stdAcq, 0.03) : 0;
-      }
-      if (
-        expense === 0 &&
-        !result &&
-        (a.useEstimatedAcquisition || a.isAppraisalAcquisition)
-      ) {
-        expensePending = true;
-      }
-    } else if (
-      expense === 0 &&
-      !result &&
-      (a.useEstimatedAcquisition || a.isAppraisalAcquisition)
-    ) {
-      expensePending = true;
+    } else if (isSingle && singleResult) {
+      // 계산 후 — 엔진이 **실제 차감한** 필요경비(`expensesApplied`). 환산 본문은 개산공제,
+      // §97②2호 단서(swap)는 자본적지출·양도비다. 종전에는 폼에 자본적지출이 남아 있으면 그 합을
+      // 보여 엔진과 어긋났다(F-14 실측 7,000,000 ↔ 3,000,000).
+      expense = singleResult.expenses ?? 0;
+    } else if (!result && isLumpSumMode(a) && isPlainLumpSumAsset(a)) {
+      /**
+       * 계산 전 개산공제 — 율·절사 모두 **엔진 leaf**(F-14). 종전 `applyRate(stdAcq, 0.03)`은
+       * 미등기 0.3%(§163⑥1호 단서)도 §163⑥4호 1%(분양권·입주권)도 보지 못했다.
+       *
+       * 미등기 축은 엔진이 받는 값과 같아야 한다 — 주 자산은 폼-전역 값(`transfer-tax-api.ts`),
+       * 컴패니언은 자산 값(`transfer-tax-api-companion-payload.ts`). 주 자산에 남은 자산 값은 쓰지 않는다.
+       * §97②2호 단서(swap)는 환산취득가액이 있어야 판정되므로 계산 후에 확정된다.
+       */
+      const unregistered = i === 0 ? formData.isUnregistered : a.isUnregistered;
+      const rate = estimatedDeductionRate(unregistered, a.assetKind);
+      expense = computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
     }
+    if (expense === 0 && !result && isLumpSumMode(a)) expensePending = true;
 
     return {
       assetId: a.assetId,

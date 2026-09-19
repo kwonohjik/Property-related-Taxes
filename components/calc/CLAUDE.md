@@ -106,18 +106,20 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 - `pendingMigration` 플래그로 마이그레이션 1회성 보장.
 - **legacy 폼 마이그레이션은 `lib/stores/calc-wizard-migration.ts`로 분리** (800줄 정책 준수). `migrateLegacyForm(legacy, defaultFormData)`로 호출.
 
-### useTransferSummary — 사이드바 합계 selector
+### 사이드바 요약 — 자산별 행이 정본
+
+사이드바가 렌더하는 것은 **자산별 행**이다 — `computeTransferPerAssetSummary(formData, result)`
+(`lib/stores/transfer-per-asset-summary.ts`, 렌더러 `app/calc/transfer-tax/TransferSidebarSummary.tsx`).
+계산 전에는 엔진 leaf로 미리 산출하고(개산공제율 `estimatedDeductionRate` · 일반건물·상가 전용 프리뷰),
+계산 후에는 엔진이 실제 차감한 값을 읽는다.
 
 ```typescript
-// hook으로 직접 호출 금지 — useSyncExternalStore 무한 루프 발생.
-// TransferTaxCalculator 에서 useMemo로 래핑해 사용:
-const transferSummary = useMemo(
-  () => computeTransferSummary(formData, result),
-  [formData.assets, formData.contractTotalPrice, result]
-);
+// hook으로 직접 호출 금지 — useSyncExternalStore 무한 루프 발생. useMemo로 래핑:
+const perAssetSummary = useMemo(() => computeTransferPerAssetSummary(formData, result), [formData, result]);
 ```
 
-`computeTransferSummary(formData, result)`은 순수 함수 (`lib/stores/calc-wizard-store.ts`). 양도가액·취득가액·필요경비·양도소득금액·납부세액 5필드 반환.
+`computeTransferSummary(formData, result)`(`lib/stores/calc-wizard-store.ts`)는 #487 이후 **화면 소비처가 없다**.
+필요경비 합계는 자산별 행의 합으로만 계산한다(F-14) — 합계에 따로 산식을 두면 표시값과 갈린다.
 
 ## UI 시니어 분리 (2026-04-30)
 
