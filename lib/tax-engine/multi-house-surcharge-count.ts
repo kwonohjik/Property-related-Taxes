@@ -229,18 +229,45 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
   if (!hasBasicRegistration(house)) return false;
 
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
+  if (!passesRegistrationCap(house, article)) return false;
 
-  // 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
-  // (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
-  // 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
+  return checkRentalArticle(article, toNormalizedFromHouse(house)).passed;
+}
+
+/**
+ * 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
+ * (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
+ * 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
+ */
+function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): boolean {
   const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
   if (regBoundArticle === "가" || regBoundArticle === "다") {
     const bizTs = house.businessRegistrationDate!.getTime();
     const rentTs = house.rentalRegistrationDate!.getTime();
     if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;
   }
+  return true;
+}
 
-  return checkRentalArticle(article, toNormalizedFromHouse(house)).passed;
+/**
+ * §167의3④ — 장기임대주택(①2호)이 **의무임대기간만** 채우지 못했는가.
+ *
+ * 「의무임대기간등의 요건을 충족하기 전에 일반주택을 양도하는 경우에도 해당 임대주택등을 …
+ *  장기임대주택등으로 보아 제1항제10호를 적용한다」 — 면제되는 것은 **기간 요건뿐**이다.
+ * 등록·등록상한·기준시가·임대료 5% 등 다른 요건은 그대로 갖춰야 한다 ⇒ 판정기의 실패 코드가
+ * `RENTAL_PERIOD_SHORT` **하나뿐**일 때만 참이다. 사목(말소 후 양도)은 기간이 아니라 말소 게이트라 대상이 아니다.
+ *
+ * ⚠️ 10호 판정(일반주택 양도) 전용이다 — 양도 주택 **자신**의 2호 판정에 쓰면 안 된다.
+ */
+export function isLongTermRentalDutyPeriodPending(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.isLongTermRental || !house.rentalType) return false;
+  if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
+  if (!hasBasicRegistration(house)) return false;
+  const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
+  if (article === "사") return false;
+  if (!passesRegistrationCap(house, article)) return false;
+  const r = checkRentalArticle(article, toNormalizedFromHouse(house));
+  return !r.passed && r.failCodes.every((c) => c === "RENTAL_PERIOD_SHORT");
 }
 
 export function getRentalTypeLabel(rentalType?: RentalHousingType): string {

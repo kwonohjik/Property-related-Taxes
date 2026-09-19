@@ -35,6 +35,7 @@ import {
   getRentalTypeLabel,
   isTaxIncentiveRentalHousingExempt,
   isSmallNewHouseSpecial,
+  isLongTermRentalDutyPeriodPending,
 } from "./multi-house-surcharge-count";
 
 // ============================================================
@@ -81,6 +82,49 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
   if (house.isDayCareCenter && (house.dayCareOperationYears ?? 0) >= 5) return "⑨ 어린이집 (5년 이상)";
   return "일반주택 (배제 불가)";
 }
+
+// ============================================================
+// §167의3④ — 의무임대기간등 충족 전에 일반주택을 양도하는 경우 (10호 전용 · F-10)
+// ============================================================
+
+/**
+ * 「제1항제2호부터 제4호까지 또는 제8호의2」 주택이 **의무 기간만** 모자라면 사유 문구, 아니면 null.
+ * 기간 외 요건은 각 호의 판정 그대로 요구한다(임대는 `isLongTermRentalDutyPeriodPending`).
+ * 2주택은 §167의10②가 §167의3④를 준용한다.
+ */
+export function dutyPeriodPendingReason(house: HouseInfo, transferDate: Date): string | null {
+  const basis = `의무기간 충족 전 — ${MULTI_HOUSE.DUTY_PERIOD_PENDING_BASIS}`;
+  if (isLongTermRentalDutyPeriodPending(house, transferDate)) {
+    return `② 장기임대주택 (${getRentalTypeLabel(house.rentalType)} · ${basis})`;
+  }
+  if (house.isTaxIncentiveRental && house.isNationalSizeHousing && calcRentalPeriodYears(house) < 5) {
+    return `③ 조특법 감면 임대주택 (${basis})`;
+  }
+  if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) < 10) {
+    return `④ 사원용 주택 (${basis})`;
+  }
+  if (house.isDayCareCenter && (house.dayCareOperationYears ?? 0) < 5) {
+    return `⑨ 어린이집 (${basis})`;
+  }
+  return null;
+}
+
+/** 10호(「그 주택을 제외하고 1개의 주택만」) 판정용 — ①~⑨ 배제 + §167의3④ 의제. */
+export function isExcludableForGeneralHouse(house: HouseInfo, transferDate: Date): boolean {
+  return isGroupExcludable(house, transferDate) || dutyPeriodPendingReason(house, transferDate) !== null;
+}
+
+export function getGeneralHouseExcludeReason(house: HouseInfo, transferDate: Date): string {
+  return isGroupExcludable(house, transferDate)
+    ? getGroupExcludeReason(house, transferDate)
+    : (dutyPeriodPendingReason(house, transferDate) ?? "일반주택 (배제 불가)");
+}
+
+/** §167의3⑤ — ④를 적용받은 뒤 의무기간등을 채우지 못하면 차액을 신고·납부해야 한다. */
+export const DUTY_PERIOD_PENDING_WARNING =
+  "의무임대기간(의무무상·의무사용기간)을 채우기 전인 임대주택등을 장기임대주택등으로 보아 중과를 배제했습니다" +
+  `(${MULTI_HOUSE.DUTY_PERIOD_PENDING_BASIS}). 이후 그 요건을 채우지 못하게 되면 사유 발생일이 속하는 달의 말일부터 ` +
+  `2개월 이내에 중과했을 세액과의 차액을 신고·납부해야 합니다(${MULTI_HOUSE.DUTY_PERIOD_PENDING_CLAWBACK_BASIS}).`;
 
 // ============================================================
 // 한시 유예 조건부 판정 (2022.5.10 ~ 2026.5.9)
@@ -462,11 +506,12 @@ export function determineSurchargeExclusion(
     //   어린이집)를 준용한다. 3호(부득이)·4호(§155⑧)·7호(소송)는 위에서 따로 본다.
     //   종전에는 7호·2호를 주택 수에서 빼 1주택으로 만들었고, 사원용 등 나머지 2호 주택은 이 호가
     //   없어 +20%p 중과였다(D16).
-    const otherIsExcludable = otherEffectiveHouses.find((h) => isGroupExcludable(h, input.transferDate));
+    //   §167의3④(②로 준용) — 의무기간만 모자란 임대주택등도 여기서는 장기임대주택등으로 본다(F-10).
+    const otherIsExcludable = otherEffectiveHouses.find((h) => isExcludableForGeneralHouse(h, input.transferDate));
     if (otherEffectiveHouses.length === 1 && otherIsExcludable) {
       exclusionReasons.push({
         type: "only_general_two_house",
-        detail: `다른 주택이 ${getGroupExcludeReason(otherIsExcludable, input.transferDate)}에 해당 — 그 주택을 제외하고 1주택만 소유 (${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL})`,
+        detail: `다른 주택이 ${getGeneralHouseExcludeReason(otherIsExcludable, input.transferDate)}에 해당 — 그 주택을 제외하고 1주택만 소유 (${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
