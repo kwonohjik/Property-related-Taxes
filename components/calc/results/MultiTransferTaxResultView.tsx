@@ -93,12 +93,22 @@ function ReductionRecalculationSection({
         </div>
         <p className="text-xs text-muted-foreground">
           산출세액 × (감면대상 양도소득금액 / 과세표준)으로 재계산한 뒤 유형별 연간 한도를 적용합니다.
+          세율이 다른 호의 자산이 섞이면 감면 자산이 속한 호의 산출세액·과세표준으로 계산합니다.
         </p>
         <div className="space-y-3">
           {result.reductionBreakdown.map((entry) => {
             const perAsset = result.properties.filter(
               (p) => p.reductionType === entry.type,
             );
+            /**
+             * F-9 — 호별 산정(재산세과-3820)이면 A·D는 **감면 자산이 속한 호**의 값이다.
+             * 호가 둘 이상이면 A·D 한 쌍으로 산식이 성립하지 않으므로 호별 행으로 보여 준다.
+             */
+            const clauseRows = entry.clauseBasis === "per_clause" ? entry.clauseRows ?? [] : [];
+            const multiClause = clauseRows.length > 1;
+            const clauseSuffix = clauseRows.length === 1 ? ` (${clauseRows[0].clauseLabel})` : "";
+            const taxLabel = clauseRows.length > 0 ? `해당 호 산출세액${clauseSuffix}` : "합산 산출세액";
+            const baseLabel = clauseRows.length > 0 ? `해당 호 과세표준${clauseSuffix}` : "합산 과세표준";
             return (
               <div key={entry.type} className="rounded border border-amber-200/60 bg-amber-50/30 p-3">
                 <p className="text-sm font-medium">
@@ -112,10 +122,14 @@ function ReductionRecalculationSection({
                 <p className="text-xs text-muted-foreground mt-1">{entry.legalBasis}</p>
 
                 <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">합산 산출세액</span>
-                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
-                    {entry.aggregateCalculatedTax.toLocaleString()}
-                  </span>
+                  {!multiClause && (
+                    <>
+                      <span className="text-muted-foreground">{taxLabel}</span>
+                      <span className="text-right font-mono tabular-nums whitespace-nowrap">
+                        {entry.aggregateCalculatedTax.toLocaleString()}
+                      </span>
+                    </>
+                  )}
                   {/*
                     🔴 「합산 감면대상소득」은 `totalReducibleIncome`이 **아니다** (2026-09-03).
                     그 필드는 유형마다 단위가 갈린다 — §97 계열은 감면율 前 소득이지만
@@ -176,10 +190,14 @@ function ReductionRecalculationSection({
                         </span>
                       </>
                     )}
-                  <span className="text-muted-foreground">합산 과세표준</span>
-                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
-                    {entry.aggregateTaxBase.toLocaleString()}
-                  </span>
+                  {!multiClause && (
+                    <>
+                      <span className="text-muted-foreground">{baseLabel}</span>
+                      <span className="text-right font-mono tabular-nums whitespace-nowrap">
+                        {entry.aggregateTaxBase.toLocaleString()}
+                      </span>
+                    </>
+                  )}
                   <span className="text-muted-foreground">재계산 원시 감면</span>
                   <span className="text-right font-mono tabular-nums whitespace-nowrap">
                     {entry.rawAggregateReduction.toLocaleString()}
@@ -189,6 +207,36 @@ function ReductionRecalculationSection({
                     {entry.cappedAggregateReduction.toLocaleString()}
                   </span>
                 </div>
+
+                {multiClause && (
+                  <div className="mt-2 pt-2 border-t border-amber-200/60" data-testid="reduction-clause-rows">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      호별 산정 — 감면 자산이 속한 호의 산출세액·과세표준으로 계산합니다
+                    </p>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-muted-foreground">
+                          <th className="text-left font-normal">호</th>
+                          <th className="text-right font-normal">산출세액</th>
+                          <th className="text-right font-normal">{RATED_REDUCIBLE_INCOME_LABEL}</th>
+                          <th className="text-right font-normal">과세표준</th>
+                          <th className="text-right font-normal">원시 감면</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clauseRows.map((row) => (
+                          <tr key={row.clauseLabel}>
+                            <td>{row.clauseLabel}</td>
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">{row.calculatedTax.toLocaleString()}</td>
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">{row.numerator.toLocaleString()}</td>
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">{row.taxBase.toLocaleString()}</td>
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">{row.raw.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {perAsset.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-amber-200/60">

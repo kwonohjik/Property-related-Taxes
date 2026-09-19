@@ -172,6 +172,15 @@ export function MultiTransferTaxSummaryCard({
               <span>방법 B (세율군별 분리)</span>
               <span>{formatKRW(result.calculatedTaxByGroups)}</span>
             </div>
+            {/* §104⑤ 괄호 — 감면이 있으면 「감면세액을 차감한 세액이 더 큰 경우」를 고른다.
+                감면 전 금액만 보면 작은 쪽이 채택된 것처럼 보이므로 그때만 이유를 적는다(F-9). */}
+            {(result.comparedTaxApplied === "general"
+              ? result.calculatedTaxByGroups > result.calculatedTaxByGeneral
+              : result.calculatedTaxByGeneral > result.calculatedTaxByGroups) && (
+              <p className="text-muted-foreground" data-testid="comparative-after-reduction-note">
+                감면세액을 뺀 세액이 더 큰 방법을 적용했습니다(소득세법 §104⑤ 괄호).
+              </p>
+            )}
           </div>
         )}
 

@@ -54,7 +54,6 @@ function runM8(
     totalBasicDeduction: 0,
     taxYear: 2025,
     priorReductionUsage: [],
-    comparedByGroups: false,
     steps: [] as CalculationStep[],
     warnings: [],
   });
