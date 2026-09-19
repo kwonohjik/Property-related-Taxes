@@ -158,6 +158,11 @@ export type EligibilityResult = {
   laws: string[];
   /** 호별 판정기준 echo (결과카드 표시용) */
   perUnitVerdict?: RentalUnitVerdict[];
+  /**
+   * 의무임대기간을 채우기 전이라 §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 안내 대상.
+   * 기간을 채웠거나 ㉓ 말소 특례로 간주 충족한 호는 들어가지 않는다.
+   */
+  periodPendingUnitIndexes?: number[];
 };
 
 /** §161 안분 산식 추적 데이터 (결과 카드 표기용) */

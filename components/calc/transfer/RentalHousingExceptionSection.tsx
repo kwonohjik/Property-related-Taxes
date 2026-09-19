@@ -421,7 +421,7 @@ export function RentalHousingExceptionSection({
 
             {/* 추가 안내 */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 text-xs text-violet-800 space-y-1">
-              <p>• 임대주택: 의무임대기간 충족 + 기준시가 상한 준수</p>
+              <p>• 임대주택: 기준시가 상한 준수 + 의무임대기간 충족(충족 전 양도도 적용 — 미충족 시 사후 추징, 소령 §155㉑·㉒)</p>
               <p>• 아파트는 2020.7.11 이전 등록분만 적용 가능</p>
               <p className="flex items-center gap-1">
                 <span>• 세부 요건은</span>

@@ -94,7 +94,8 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
         rentalHousingException: {
           applyException: true,
           scenario: "B",
-          rentalUnits: [{ ...rentalUnitOk, rentalMonths: 12 }], // 의무임대기간 미충족
+          // 기준시가 상한(수도권 6억) 초과 — F-15 이후 기간 미충족만으로는 ㉑이 통과시킨다(§155㉑)
+          rentalUnits: [{ ...rentalUnitOk, standardPriceAtRentalStart: 700_000_000 }],
           priorResidenceTransferDate: new Date("2016-08-25"),
           standardPriceAtAcquisition: 300_000_000,
           standardPriceAtPriorTransfer: 450_000_000,
@@ -117,7 +118,8 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
         rentalHousingException: {
           applyException: true,
           scenario: "A",
-          rentalUnits: [{ ...rentalUnitOk, rentalMonths: 12 }], // 의무임대기간 미충족 → eligibility 실패
+          // 기준시가 상한 초과 → eligibility 실패 (F-15 이후 기간 미충족만으로는 §155㉑가 통과시킨다)
+          rentalUnits: [{ ...rentalUnitOk, standardPriceAtRentalStart: 700_000_000 }],
         },
       }),
       rates,

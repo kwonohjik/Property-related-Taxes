@@ -4,12 +4,12 @@
  * 검증 케이스:
  *   - 거주주택 보유 2년 미만
  *   - 거주주택 거주 2년 미만
- *   - 임대주택 의무임대기간 미충족 (5년 미만)
+ *   - 말소 후 의무임대기간 미충족 (㉓ 1/2 미달 — 말소 없는 기간 미충족은 §155㉑로 통과)
  *   - 임대개시 기준시가 상한 초과 (수도권 6억 초과)
  *   - 2020.7.11 이후 등록 아파트 장기일반 (제외 대상)
  *   - 기타 요건 자기확인 미체크
  *
- * 모든 케이스에서 applied = false, eligibility.passed = false
+ * F-15 대조 케이스(㉑ 통과)를 제외한 모든 케이스에서 applied = false, eligibility.passed = false
  */
 
 import { describe, it, expect } from "vitest";
@@ -70,10 +70,16 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
     expect(result.applied).toBe(false);
   });
 
-  it("임대 60개월 미만 (5년 미만) → unit RENTAL_PERIOD_SHORT", () => {
-    const result = run({ rentalMonths: 36 });
+  it("말소 후 임대 60개월 미만(㉓ 1/2 미충족) → unit RENTAL_PERIOD_SHORT", () => {
+    const result = run({ rentalMonths: 24, rentalAutoTermination: true });
     expect(result.eligibility.passed).toBe(false);
     expect(result.eligibility.failReasons.some(r => r.code === "RENTAL_PERIOD_SHORT")).toBe(true);
+  });
+
+  it("F-15: 말소 없이 임대 60개월 미만 → §155㉑로 통과 (기간 요건만 면제)", () => {
+    const result = run({ rentalMonths: 36 });
+    expect(result.eligibility.passed).toBe(true);
+    expect(result.eligibility.periodPendingUnitIndexes).toEqual([0]);
   });
 
   it("수도권 임대개시 기준시가 6억 초과 → STANDARD_PRICE_EXCEEDED", () => {
