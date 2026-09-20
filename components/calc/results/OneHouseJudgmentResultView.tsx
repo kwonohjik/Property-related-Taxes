@@ -33,7 +33,7 @@ function formatDate(v: string): string {
 }
 
 export function OneHouseJudgmentResultView({ result }: { result: OneHouseExemptionResponse }) {
-  const { judgment, houseCount } = result;
+  const { judgment, houseCount, rentalHousingException: rental } = result;
   /**
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
    *    이력 목록은 「과세」인 상태가 조용히 생긴다.
@@ -81,6 +81,57 @@ export function OneHouseJudgmentResultView({ result }: { result: OneHouseExempti
           </ul>
         )}
       </ToneCard>
+
+      {/*
+        ── §155⑳ 장기임대주택 특례 (P4-3a) ──
+        🔑 **선언한 경우에만** 렌더한다. 선언하지 않은 특례를 「해당 없음」으로 나열하면
+           화면이 안 쓰는 조문으로 길어지고, 읽는 사람은 그것이 판정에 영향을 줬다고 읽는다.
+      */}
+      {rental && (
+        <ToneCard
+          tone={rental.passed ? "emerald" : "rose"}
+          sectionNum={nextNo()}
+          title="장기임대주택 보유자 거주주택 특례"
+        >
+          <p className="text-sm font-semibold" data-testid="one-house-rental-verdict">
+            {rental.passed ? "요건 충족" : "요건 미충족 — 특례가 적용되지 않습니다"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {rental.scenario === "A"
+              ? "거주주택을 양도하고 임대주택은 계속 보유하는 경우입니다."
+              : "임대주택을 거주주택으로 전환한 뒤 양도하는 경우입니다."}
+          </p>
+          {!rental.passed && (
+            <ul className="ml-4 list-disc space-y-1 text-sm">
+              {rental.residenceFailReasons.map((r, i) => (
+                <li key={`res-${i}`}>{r}</li>
+              ))}
+              {rental.unitFailReasons.map((u, i) => (
+                <li key={`unit-${i}`}>
+                  임대주택 {u.unitIndex + 1}호 — {u.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* §155㉑로 통과한 호 — ㉒ 사후 추징 대상임을 반드시 알린다(충족이라고 끝이 아니다). */}
+          {rental.periodPendingUnitIndexes.length > 0 && (
+            <p className="text-sm" data-testid="one-house-rental-period-pending">
+              임대주택{" "}
+              <b>
+                {rental.periodPendingUnitIndexes.map((i) => `${i + 1}호`).join("·")}
+              </b>
+              는 의무임대기간을 채우기 전이라 <b>소득세법 시행령 §155㉑</b>로 통과했습니다. 이후
+              요건을 충족하지 못하면 <b>§155㉒</b>에 따라 차액을 신고·납부해야 합니다.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <LawArticleModal legalBasis={rental.legalBasis} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            B 시나리오의 §161① 안분(과세 범위)은 <b>세액 계산</b>에서 다룹니다.
+          </p>
+        </ToneCard>
+      )}
 
       {/* ── 적용된 특례 ── */}
       {judgment.appliedExceptions.length > 0 && (

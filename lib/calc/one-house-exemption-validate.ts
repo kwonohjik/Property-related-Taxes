@@ -18,6 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import {
   deriveJudgmentHouseCount,
   type OneHouseJudgmentFormData,
@@ -103,6 +104,43 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
     if (!form.longTermMortgageContractYears) {
       errors.push(err("longTermMortgageContractYears", "장기저당담보주택: 계약기간(년)을 입력하세요."));
+    }
+  }
+
+  /**
+   * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.
+   *
+   * 🔑 `mode: "facts"`가 §161① 안분 입력(직전거주주택 양도일·3시점 기준시가)을 요구하지
+   *    않게 한다. 그 칸들은 ⑤가 판정 메뉴에서 감추므로, 여기서 막으면 화면에 없는 값 때문에
+   *    판정이 영구 차단된다(3중 패턴 — ⑤/④/⑧).
+   */
+  const primary = form.assets[0];
+  if (primary) {
+    const rentalError = validateRentalHousingException(
+      primary.rentalHousingException,
+      primary,
+      "장기임대주택 특례",
+      form.transferDate,
+      "facts",
+    );
+    if (rentalError) errors.push(err("rentalHousingException", rentalError));
+
+    /**
+     * 이중 입력 경고 — 특례로 주택 수에서 빼는 임대주택을 **명부에도** 넣으면 주택 수가
+     * 부풀려져 판정이 과세로 뒤집힌다. 차단하지는 않는다(둘이 정말 다른 주택일 수 있다).
+     */
+    if (
+      primary.rentalHousingException?.applyException &&
+      (primary.rentalHousingException.rentalUnits?.length ?? 0) > 0 &&
+      (form.houses?.length ?? 0) > 0
+    ) {
+      errors.push(
+        warn(
+          "houses",
+          "장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. " +
+            "특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다.",
+        ),
+      );
     }
   }
 

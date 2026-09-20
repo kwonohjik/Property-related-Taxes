@@ -14,6 +14,7 @@ import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
 import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
 import { checkEligibility } from "./transfer-tax/rental-housing-exception/eligibility";
+import type { EligibilityResult } from "./transfer-tax/rental-housing-exception/types";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type {
@@ -55,6 +56,40 @@ export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
 }
 
 /**
+ * §155⑳ **요건 판정만** — 세액 산식과 무관한 순수 판정 (P4-3a).
+ *
+ * ## 왜 따로 뺐는가
+ *
+ * 이 파일 안에서 같은 네 인자 도출(`holdYears`·`liveYears`·`winWin`)이 **이미 두 벌**이었고
+ * (`isPrhpScenarioAIneligible` · `rentalPeriodPendingNoticeForEarlyReturn`), 판정 메뉴
+ * (`/api/calc/one-house-exemption`)가 **세 번째 사본**을 만들 참이었다. 인자 하나가 어긋나면
+ * 계산기와 판정 메뉴가 같은 입력에 다른 답을 낸다(D-1 「엔진은 하나」).
+ *
+ * 🔑 **§161 안분 입력(`priorResidenceTransferDate`·`standardPriceAt*`)을 보지 않는다.**
+ *    그것이 Q-7의 분할선이다 — 판정 사실은 판정 메뉴, 세액 산식 입력은 계산기.
+ *
+ * @returns 특례를 선언하지 않았으면 `null`(「판정할 것이 없다」 — 미충족과 구별된다).
+ */
+export function judgeRentalHousingEligibility(
+  effectiveInput: TransferTaxInput,
+): EligibilityResult | null {
+  const rhe = effectiveInput.rentalHousingException;
+  if (rhe?.applyException !== true) return null;
+  const holdYears = calculateHoldingPeriod(
+    effectiveInput.acquisitionDate,
+    effectiveInput.transferDate,
+  ).years;
+  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
+  // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep와 동일 인자 관례)
+  return checkEligibility(
+    rhe.rentalUnits,
+    holdYears,
+    liveYears,
+    qualifiesWinWinRental(effectiveInput),
+  );
+}
+
+/**
  * §155⑳ 시나리오 A(거주주택 양도) + 임대주택 eligibility 미충족 여부 — STEP 1a 조기반환 억제 게이트.
  * A는 사용자가 householdHousingCount=1(임대주택 제외 전제)을 입력하면 checkExemption이 isExempt=true를
  * 내주는데, STEP 1a가 그대로 조기반환하면 STEP 2.5의 checkEligibility가 우회되어 임대 요건 미충족인데도
@@ -62,15 +97,11 @@ export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
  * 정상 과세 경로에 넘긴다. eligible 케이스는 false 반환 → 현행 조기반환 유지(무변경).
  */
 export function isPrhpScenarioAIneligible(effectiveInput: TransferTaxInput): boolean {
-  const rhe = effectiveInput.rentalHousingException;
-  if (rhe?.applyException !== true || rhe.scenario !== "A") return false;
-  const holdYears = calculateHoldingPeriod(
-    effectiveInput.acquisitionDate,
-    effectiveInput.transferDate,
-  ).years;
-  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
-  // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep와 동일 인자 관례)
-  return !checkEligibility(rhe.rentalUnits, holdYears, liveYears, qualifiesWinWinRental(effectiveInput)).passed;
+  if (effectiveInput.rentalHousingException?.scenario !== "A") return false;
+  const eligibility = judgeRentalHousingEligibility(effectiveInput);
+  // 특례 미선언(null)은 억제 대상이 아니다 — 종전 `applyException !== true → false`와 같다.
+  if (!eligibility) return false;
+  return !eligibility.passed;
 }
 
 /**
@@ -94,14 +125,10 @@ export function buildRentalPeriodPendingNotice(unitIndexes: number[] | undefined
  * 호출 지점(STEP 1a)은 `canEarlyReturnPrhp` — 시나리오 A면 판정 통과가 이미 전제다.
  */
 export function rentalPeriodPendingNoticeForEarlyReturn(effectiveInput: TransferTaxInput): string | undefined {
-  const rhe = effectiveInput.rentalHousingException;
-  if (rhe?.applyException !== true || rhe.scenario !== "A") return undefined;
-  const holdYears = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate).years;
-  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
-  return buildRentalPeriodPendingNotice(
-    checkEligibility(rhe.rentalUnits, holdYears, liveYears, qualifiesWinWinRental(effectiveInput))
-      .periodPendingUnitIndexes,
-  );
+  if (effectiveInput.rentalHousingException?.scenario !== "A") return undefined;
+  const eligibility = judgeRentalHousingEligibility(effectiveInput);
+  if (!eligibility) return undefined;
+  return buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes);
 }
 
 /**
