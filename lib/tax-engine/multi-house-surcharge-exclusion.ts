@@ -137,6 +137,9 @@ export const DUTY_PERIOD_PENDING_WARNING =
 // 단일 출처: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end (가목 기한, 드리프트 방지)
 const GRACE_PERIOD_A_DEADLINE = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end);
 
+/** §167의10①9호 — 양도 당시 기준시가 상한(1억원). */
+const LOW_PRICE_SMALL_HOUSE_CAP = 100_000_000;
+
 /**
  * 나목4) 표 지역 판정 — 계약일부터 양도 기한 개월수(4 또는 6).
  * 강남4구(서초·송파·용산 포함)는 4개월. 그 외 2025-10-16 지정 조정대상지역(서울 나머지 21구 +
@@ -554,14 +557,19 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
-    // ⑩ 기준시가 1억 이하 소형 주택 (정비구역 제외)
-    const hasLowPriceSmallHouse = otherEffectiveHouses.some(
-      (h) => h.officialPrice <= 100_000_000 && !h.isRedevelopmentZone,
-    );
-    if (hasLowPriceSmallHouse) {
+    /**
+     * 9호 「**주택의 양도 당시** 기준시가가 1억원 이하인 주택」 — 배제되는 것은 **양도하는 주택 자신**이다
+     * (① 본문이 「각 호의 어느 하나에 해당하지 **않는** 주택」을 중과 대상으로 한다). 단서로 정비구역·
+     * 사업시행구역 소재 주택은 빠진다. 10호(유일 일반주택)는 **1호~7호**만 인용하므로 **다른 주택**이
+     * 1억 이하인 것은 배제 근거가 되지 않는다(F-3 — 종전에는 다른 주택의 취득 시 공시가격을 봤다).
+     */
+    const sellingTransferPrice = sellingHouse.transferOfficialPrice ?? sellingHouse.officialPrice;
+    if (sellingTransferPrice <= LOW_PRICE_SMALL_HOUSE_CAP && !sellingHouse.isRedevelopmentZone) {
       exclusionReasons.push({
         type: "low_price_two_house",
-        detail: `기준시가 1억 이하 소형 주택 보유로 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_SMALL_HOUSE})`,
+        detail:
+          `양도 당시 기준시가 ${sellingTransferPrice.toLocaleString()}원(1억 이하) — ` +
+          `2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_SMALL_HOUSE})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

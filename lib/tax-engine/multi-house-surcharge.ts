@@ -285,7 +285,7 @@ export function determineMultiHouseSurcharge(
       const exclusionReasons: ExclusionReason[] = [
         {
           type: "only_one_remaining",
-          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 ①~⑨ 배제 항목에 해당하여 유일한 일반주택 (${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})`,
+          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 1호부터 8호까지 및 8호의2에 해당하여 유일한 일반주택 (${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})`,
         },
       ];
       return {
