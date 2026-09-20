@@ -702,7 +702,8 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P2** | ✅ **완료(2026-09-20 · §15)** — `one-house/{types,judge}.ts` 신설. 계산기가 `TransferTaxInput → OneHouseFacts → 판정입력` **왕복**을 거쳐 판정한다(사실 충분성을 매 테스트가 증명). 판정 로직 **무변경** · 세액 변동 **0**(2,089 케이스) · anchor 26건 · 뮤테이션 **34/34 KILLED** | P0·P1 | 중 |
 | **P3** | ✅ **완료(2026-09-20 · §16)** — §155의2①②③ · §155의3① 판정 + 거주요건 면제 **3조문 전부**(§154①·§155⑳1호·§159의4) 연동 · manifest 2건 등록(라이브 PASS) · anchor 25건 · 뮤테이션 **20/21 KILLED**(1건은 설계상 무효과). 🛑 **겸용 경로 표2 게이트 1곳은 P4로 이월**(별도 입력 타입 — §16.5) | P2 | 중 |
 | **P4-1** | ✅ **완료(2026-09-20 · §17)** — 판정 결과 확장(`pending[]`·`undetermined[]`·`appliedExceptions[]`·`legalBasis[]`) + `ExemptionResult`↔`OneHouseJudgment` **타입 이중선언 해소**. 세액 변동 **0**(3,059 케이스) · anchor 31건 · 뮤테이션 **16/17 KILLED** | P3 | 중 |
-| **P4-2** | **판정 메뉴 화면 신설** — 4단계 마법사 · store · route · validate · 이력 등록 13지점 · `houseCount` 도출. 폼 타입은 **`TransferFormData` 슈퍼셋**(2026-09-20 사용자 결정 — §11.1 Q-8) | P4-1 | **대** |
+| **P4-2a** | ✅ **완료(2026-09-20 · §18)** — 판정 route 신설 + 명부→주택 수 **도출 정본화**(G-1) + 주택 수 산정 명세. 계산기의 Zod·엔진 input 조립·주택수 제외를 **그대로 재사용**(별도 배관 0). anchor 14건 · 뮤테이션 **8/8 KILLED** | P4-1 | 중 |
+| **P4-2b** | **판정 메뉴 화면** — 4단계 마법사 · store/폼 타입 · validate · 사이드바 · 결과뷰 · 이력 등록 13지점 · E2E. 폼 타입은 **`TransferFormData` 슈퍼셋**(Q-8) | P4-2a | **대** |
 | **P4-3** | **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드) | P4-2 | 중 |
 | **P5** | **계산기 연결** — 「이 결과로 세액 계산」 · 「판정 불러오기」 · 재판정 · 출처 표시·staleness | P4 | 중 |
 | **P6** | **계산기 정리** — ③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격(OH-21) · E2E 이관(§3.4 spec) | P5 · V-11 | 중~대 |
@@ -1253,3 +1254,66 @@ vitest는 통과했고 `tsc`로만 드러났다. 필드명을 고치고 구별�
 - 14 동기화 지점은 그대로다 — 새 결과 필드는 **엔진 안에만** 있고 화면에 도달하지 않는다(의도된 상태).
 - 설계서 드리프트 22건(UI 설계 file:line 오차·`StepWizard` 부재·`HistoryDetailDrawer` 누락 등)은
   P4-2 착수 시 설계서를 갱신하며 함께 정리한다.
+
+---
+
+## 18. P4-2a 실행 기록 (2026-09-20)
+
+판정 메뉴의 **배관**을 깔았다. 화면은 P4-2b다.
+
+### 18.1 실측이 앞선 추정을 두 번 뒤집었다
+
+| 앞선 기재 | 실측 | 영향 |
+|---|---|---|
+| 「명부→주택 수 도출 함수가 저장소에 **없다**」(§17.7) | **있다** — `house-count-divergence.ts:53` `structuralCount`가 이미 `1 + 명부 행 수`를 계산한다(표시 전용). 없던 것은 **제외 사유 명세**뿐 | 엔진 작업 축소 |
+| API 파이프라인 신규 ~900~1,500줄 | **~200줄** — 폼이 `TransferFormData` 슈퍼셋이라(Q-8) Zod(`propertySchema`)·엔진 input 조립(`buildTransferEngineInput`)·본문 빌더(`buildTransferApiBody`)를 **그대로 쓴다** | P4-2 규모 대폭 축소 |
+
+🔑 **명부에는 양도 대상이 없다.** UI 명부(`HouseEntry[]`)는 「**다른** 보유 주택」이고, 양도 대상은
+API 변환 층이 `id: "selling"` 행으로 앞에 붙인다(`transfer-tax-api-houses.ts:29` 실측).
+⇒ 세대 주택 수 = **`1 + 명부 행 수`**, 엔진 형태로는 `engineHouses.length`.
+
+### 18.2 route는 계산기와 **세 가지만** 다르다
+
+```
+POST /api/calc/one-house-exemption
+  rate limit → Zod(propertySchema, 계산기와 동일) → date-coerce
+  → buildTransferEngineInput(계산기와 동일)
+  → 🔴 householdHousingCount를 명부에서 도출해 덮어씀
+  → preloadTaxRates → runHouseCountExclusionStep(계산기와 동일)
+  → judgeOneHouseExemptionFromInput(계산기와 동일)
+  → { judgment, houseCount }
+```
+
+🔴 **본문의 `householdHousingCount`를 믿지 않는다.** 판정 메뉴에는 그 위젯이 없고(G-1 「명부가
+정본」), 믿으면 조작된 본문으로 판정이 흔들린다. anchor R-3가 그 자리를 고정한다 —
+본문이 「1주택」이라 해도 명부가 2채면 **과세**가 나와야 한다.
+
+### 18.3 `houseCount`는 `OneHouseJudgment`에 담지 않았다
+
+제외를 계산하는 `runHouseCountExclusionStep`이 판정 **바깥**(`transfer-tax.ts` STEP 0.9)에서 돈다.
+판정 안으로 옮기려면 호출 순서를 바꿔야 하고 그건 **세액 회귀 위험**이다.
+⇒ route가 조립해 **응답에** 싣는다(`OneHouseExemptionResponse`). 계산기(P5)는 이 값이 필요 없다.
+
+제외 3축 중 **행을 특정할 수 있는 것은 상속(§155②③)뿐**이다 — §99의4·§98의9·보유 감면주택은
+조문 단위 제외라 어느 명부 행인지 정보 자체가 없다. `houseId`를 optional로 두고 그 사실을 드러낸다.
+
+### 18.4 검증
+
+| 항목 | 결과 |
+|---|---|
+| anchor | 신규 **14건** — 도출식 · 제외 명세 · route end-to-end |
+| 뮤테이션 | **8/8 KILLED** |
+| 세액 영향 | 없음 — `InheritedHouseExclusionResult.excludedHouses`와 `runHouseCountExclusionStep`의 추가 반환 2건은 **계산 경로가 읽지 않는다**(전 테스트 통과로 확인) |
+
+🔴 **뮤테이션 N6이 anchor 구멍을 잡았다** — 「최대지분자는 제외 안 함」을 두 시료로만 보면
+`coExcludedCount === 1` 가드가 먼저 걸러 행 특정 로직에 **도달하지 못한다**. 최대지분 1채 +
+소수지분 1채를 **함께** 둔 HC-5b를 추가해 KILLED.
+
+### 18.5 남은 것 (P4-2a 범위 밖)
+
+- **화면이 없다** — route는 anchor로만 도달한다. P4-2b가 마법사·store·validate·이력·E2E를 붙인다.
+  브라우저 수동 확인도 그때 한다(지금은 확인할 화면이 없다).
+- `app/page.tsx` 메뉴 등록·`LocalTaxType` 13지점은 **건드리지 않았다** — 화면 없이 메뉴만 걸면
+  빈 페이지로 간다.
+- 겸용 표2 게이트(`transfer-tax-mixed-use-helpers.ts:576`)는 여전히 **P5**다 — `MixedUseAsset`
+  전달 경로가 생기는 시점이다.

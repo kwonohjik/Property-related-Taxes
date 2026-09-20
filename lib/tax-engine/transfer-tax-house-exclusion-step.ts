@@ -91,5 +91,17 @@ export function runHouseCountExclusionStep(
     ),
   );
 
-  return { exemptionJudgeInput, new994Detail, unsold989Detail, specialHouseExclusionDetail };
+  return {
+    exemptionJudgeInput,
+    new994Detail,
+    unsold989Detail,
+    specialHouseExclusionDetail,
+    /**
+     * 판정 메뉴(P4-2)의 「주택 수 산정」 명세용 — `buildOneHouseCountBreakdown`이 읽는다.
+     * 종전에는 `steps`에 문자열로만 남고 구조화 결과가 밖으로 나오지 않았다.
+     * **추가 반환일 뿐** 계산에는 쓰이지 않는다(세액 불변).
+     */
+    houseCountExclusion: { appliedList: hceApplied, new994Detail, unsold989Detail },
+    inheritedExclusion,
+  };
 }

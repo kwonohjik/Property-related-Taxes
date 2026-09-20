@@ -31,6 +31,14 @@ export interface InheritedHouseExclusionResult {
   sameHouseholdDisqualifiedCount: number;
   /** §155②1~4호 순위 부적격으로 제외 배제된 상속주택 수 — 표시용 */
   rankingDisqualifiedCount: number;
+  /**
+   * **어느 주택이** 제외됐는지 — 판정 메뉴(P4-2) 「주택 수 산정」 명세용.
+   *
+   * 종전에는 개수만 냈다. 개수만으로는 화면이 「3채 중 1채 제외」까지만 말할 수 있고
+   * 「어느 행이 왜 빠졌는지」를 못 보여준다. **세액과 무관한 표시 축**이며,
+   * `excludedCount`는 여기 길이와 항상 같다(아래에서 함께 만든다).
+   */
+  excludedHouses: Array<{ houseId: string; basis: "sole" | "co_inherited" }>;
 }
 
 /**
@@ -57,6 +65,7 @@ export function resolveInheritedHouseExclusion(
     excludedCount: 0,
     sameHouseholdDisqualifiedCount: 0,
     rankingDisqualifiedCount: 0,
+    excludedHouses: [],
   };
   if (generalHouseGiftedFromDecedentWithin2yr || !houses) return empty;
 
@@ -79,12 +88,24 @@ export function resolveInheritedHouseExclusion(
   ).length;
   const soleExcludedCount = soleCount === 1 ? 1 : 0;
   const coExcludedCount = coMinorityCount === 1 ? 1 : 0;
+  // 🔑 제외 판정은 「적격이 **정확히 1채**일 때만」이므로, 그 1채가 곧 제외 대상이다
+  //    (2채 이상이면 선순위를 특정할 수 없어 제외 0 — 위 주석). 같은 필터를 다시 쓴다.
+  const excludedHouses: InheritedHouseExclusionResult["excludedHouses"] = [];
+  if (soleExcludedCount === 1) {
+    const h = eligible.find((x) => !x.isCoInherited);
+    if (h) excludedHouses.push({ houseId: h.id, basis: "sole" });
+  }
+  if (coExcludedCount === 1) {
+    const h = eligible.find((x) => x.isCoInherited && x.isLargestCoInheritedShareholder !== true);
+    if (h) excludedHouses.push({ houseId: h.id, basis: "co_inherited" });
+  }
   return {
     soleExcludedCount,
     coExcludedCount,
     excludedCount: soleExcludedCount + coExcludedCount,
     sameHouseholdDisqualifiedCount,
     rankingDisqualifiedCount,
+    excludedHouses,
   };
 }
 
