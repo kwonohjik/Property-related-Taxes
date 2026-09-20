@@ -177,6 +177,9 @@ export function isUnavoidableReasonUndecidable(house: HouseInfo | undefined): bo
 /**
  * 7호 — 「주택의 소유권에 관한 소송이 진행 중이거나 해당 소송결과로 취득한 주택(소송으로 인한
  * 확정판결일부터 3년이 경과하지 아니한 경우에 한정한다)」. 날짜 미입력은 소송 진행 중으로 본다.
+ *
+ * 기산점은 **확정판결일**이지 등기 취득일이 아니다(F-17). `litigationAcquisitionDate`라는
+ * 필드명은 legacy이고, 담기는 값은 확정판결일이다 — 화면 라벨이 그것을 요구한다.
  */
 function matchesLitigationHousing(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLitigationHousing) return false;
@@ -582,7 +585,7 @@ export function determineSurchargeExclusion(
     if (litigationHouse) {
       const basis = basisFor(litigationHouse, MULTI_HOUSE.TWO_HOUSE_LITIGATION);
       const detail = litigationHouse.litigationAcquisitionDate
-        ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — ${subjectOf(litigationHouse)} · 2주택 중과배제 (${basis})`
+        ? `소송 확정판결(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})부터 3년 이내 — ${subjectOf(litigationHouse)} · 2주택 중과배제 (${basis})`
         : `소송 진행 중인 주택 — ${subjectOf(litigationHouse)} · 2주택 중과배제 (${basis})`;
       exclusionReasons.push({ type: "litigation_housing_two_house", detail });
       return { isExcluded: true, exclusionReasons, isSuspended: false };

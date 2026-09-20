@@ -250,6 +250,7 @@ export interface TransferFormData {
     acquisitionOfficialPrice?: string;
     /** 소송 진행 중이거나 소송 결과로 취득한 주택 (§167의10①7호) */
     isLitigationHousing?: boolean;
+    /** 소송 **확정판결일** — 취득일이 아니다. 필드명은 legacy(F-17) */
     litigationAcquisitionDate?: string;
   };
 

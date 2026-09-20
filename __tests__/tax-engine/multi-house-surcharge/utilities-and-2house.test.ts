@@ -430,7 +430,7 @@ describe("MH-NEW-04: 소송 취득 주택 ⑧ — 2주택 중과배제", () => {
     expect(result.surchargeApplicable).toBe(false);
   });
 
-  it("법원 결정 취득 후 3년 이내 → 2주택 배제", () => {
+  it("소송 확정판결 후 3년 이내 → 2주택 배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2", {
       isLitigationHousing: true,
@@ -448,7 +448,7 @@ describe("MH-NEW-04: 소송 취득 주택 ⑧ — 2주택 중과배제", () => {
     expect(result.surchargeApplicable).toBe(false);
   });
 
-  it("법원 결정 취득 후 3년 초과 → 배제 미적용", () => {
+  it("소송 확정판결 후 3년 초과 → 배제 미적용", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2", {
       isLitigationHousing: true,

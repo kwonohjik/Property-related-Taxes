@@ -166,6 +166,30 @@ describe("F-16 §167의10①3호 — 부득이한 사유 취득도 양도하는 
   });
 });
 
+describe("F-17 7호의 3년 기산점은 「확정판결일」이다", () => {
+  it("F17-5 결과 사유가 「소송 확정판결(날짜)부터 3년 이내」라고 말한다 — 「법원 결정 취득」이 아니다", () => {
+    const detail = (
+      calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2024-06-01") }))
+        .multiHouseSurchargeEvaluation?.exclusionReasons ?? []
+    )
+      .map((e) => e.detail)
+      .join(" ");
+    expect(detail).toContain("소송 확정판결(2024-06-01)부터 3년 이내");
+    expect(detail).not.toContain("법원 결정 취득");
+  });
+
+  it("F17-6 값이 담는 것은 확정판결일이다 — 등기 취득일을 넣으면 창이 늦게 시작한다", () => {
+    // 확정판결 2023-01-01 · 등기 취득 2024-06-01 · 양도 2026-08-01인 사건.
+    // 법대로 확정판결일을 넣으면 3.5년 경과라 배제가 없고, 등기일을 넣으면 2.2년이라 배제된다.
+    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2023-01-01") })).totalTax).toBe(
+      SURCHARGED,
+    );
+    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2024-06-01") })).totalTax).toBe(
+      EXCLUDED,
+    );
+  });
+});
+
 describe("F-16 인용 정정 — 소송 취득은 7호다(8호는 2023.2.28 삭제)", () => {
   it("F16-12 §167의10①7호 · §167의10①3호", () => {
     expect(MULTI_HOUSE.TWO_HOUSE_LITIGATION).toBe("소득세법 시행령 §167의10①7호");

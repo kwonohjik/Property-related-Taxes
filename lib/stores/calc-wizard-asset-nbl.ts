@@ -172,7 +172,7 @@ export interface HouseEntry {
   unavoidableReasonResolvedDate?: string;
   /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①7호 */
   isLitigationHousing?: boolean;
-  /** 소송 취득일 (YYYY-MM-DD) — 3년 이내면 배제 (미입력=소송 진행 중) */
+  /** 소송 **확정판결일** (YYYY-MM-DD) — 3년 이내면 배제 (미입력=소송 진행 중). 필드명은 legacy(F-17) */
   litigationAcquisitionDate?: string;
   /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
   isRedevelopmentZone?: boolean;
