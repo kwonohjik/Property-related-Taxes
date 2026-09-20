@@ -241,6 +241,16 @@ export interface TransferFormData {
     /** 어린이집 운영 주택 (5년 이상) */
     isDayCareCenter?: boolean;
     dayCareOperationYears?: string;
+    // ── 2주택 전용 (§167의10①3호·7호) — 양도 주택 자신이 그 호에 해당하는 경우 (F-16) ──
+    /** 취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (§167의10①3호) */
+    isUnavoidableReason?: boolean;
+    unavoidableResidenceYears?: string;
+    unavoidableReasonResolvedDate?: string;
+    /** 3호의 취득 당시 기준시가 (3억 이하 요건) — `officialPrice`(양도 당시)와 다른 칸이다 */
+    acquisitionOfficialPrice?: string;
+    /** 소송 진행 중이거나 소송 결과로 취득한 주택 (§167의10①7호) */
+    isLitigationHousing?: boolean;
+    litigationAcquisitionDate?: string;
   };
 
   // ── Step 4 (구 Step5): 감면·공제 ──

@@ -170,7 +170,7 @@ export interface HouseEntry {
   unavoidableResidenceYears?: string;
   /** 부득이한 사유 해소일 (YYYY-MM-DD) — 해소 후 3년 이내 양도 시 배제 유지 */
   unavoidableReasonResolvedDate?: string;
-  /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①8호 */
+  /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①7호 */
   isLitigationHousing?: boolean;
   /** 소송 취득일 (YYYY-MM-DD) — 3년 이내면 배제 (미입력=소송 진행 중) */
   litigationAcquisitionDate?: string;

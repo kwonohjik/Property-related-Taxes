@@ -61,3 +61,16 @@ export function sellingHouseExclusionVisible(form: TransferFormData): boolean {
   if (se?.isEmployeeHousing || se?.isDayCareCenter) return true;
   return parseInt(form.householdHousingCount || "1", 10) >= 3;
 }
+
+/**
+ * 「양도 주택 2주택 전용 배제 특례」 섹션(§167의10①3호·7호)을 렌더하는가.
+ *
+ * 그 두 호는 2주택에서만 성립하므로 기본 조건은 주택수 2다. 위 3주택+ 게이트와 같은 이유로
+ * 토글이 켜져 있으면 주택수와 무관하게 남긴다 — 끌 화면이 사라지면 ⑧의 부속값 요구가
+ * 막다른 길이 된다.
+ */
+export function sellingHouseTwoHouseExclusionVisible(form: TransferFormData): boolean {
+  const se = form.sellingHouseExclusion;
+  if (se?.isUnavoidableReason || se?.isLitigationHousing) return true;
+  return parseInt(form.householdHousingCount || "1", 10) === 2;
+}

@@ -50,6 +50,25 @@ export function buildHousesPayload(
     isDayCareCenter: se?.isDayCareCenter,
     dayCareOperationYears:
       se?.isDayCareCenter && se.dayCareOperationYears ? parseFloat(se.dayCareOperationYears) : undefined,
+    // P2 양도 주택 2주택 전용 배제 — §167의10①3호(부득이)·7호(소송)는 **양도하는 주택 자신**에도
+    // 적용된다(F-16). 종전에는 이 두 호가 다른 주택 행에만 실려 입력 경로가 아예 없었다.
+    isUnavoidableReason: se?.isUnavoidableReason,
+    unavoidableResidenceYears:
+      se?.isUnavoidableReason && se.unavoidableResidenceYears
+        ? parseFloat(se.unavoidableResidenceYears)
+        : undefined,
+    unavoidableReasonResolvedDate: se?.isUnavoidableReason
+      ? se.unavoidableReasonResolvedDate || undefined
+      : undefined,
+    // 3호의 기준시가는 「취득 당시」다 — 양도 주택의 `officialPrice`에는 양도 당시 값이 실린다.
+    acquisitionOfficialPrice:
+      se?.isUnavoidableReason && se.acquisitionOfficialPrice
+        ? parseAmount(se.acquisitionOfficialPrice)
+        : undefined,
+    isLitigationHousing: se?.isLitigationHousing,
+    litigationAcquisitionDate: se?.isLitigationHousing
+      ? se.litigationAcquisitionDate || undefined
+      : undefined,
   };
 
   const otherHouses = houses
@@ -100,6 +119,9 @@ export function buildHousesPayload(
       rentalCancelledDate: h.isLongTermRental ? h.rentalCancelledDate || undefined : undefined,
       // P2 특수 배제 (2주택 전용·인구감소) — 독립 플래그, 토글 ON 시 부속값 전달
       isUnavoidableReason: h.isUnavoidableReason,
+      // §167의10①3호는 「**취득 당시** 기준시가 3억 이하」다 — `officialPrice`(양도일 연도 조회값)로
+      // 갈음하지 않는다(F-16). 장기임대 9유형(라목)도 같은 칸을 쓰므로 그 게이트 밖에서 전달한다.
+      acquisitionOfficialPrice: h.acquisitionOfficialPrice ? parseInt(h.acquisitionOfficialPrice) : undefined,
       unavoidableResidenceYears:
         h.isUnavoidableReason && h.unavoidableResidenceYears
           ? parseFloat(h.unavoidableResidenceYears)
@@ -127,9 +149,6 @@ export function buildHousesPayload(
             rentalTotalFloorArea: h.rentalTotalFloorArea ? parseFloat(h.rentalTotalFloorArea) : undefined,
             isConvertedToSale: h.isConvertedToSale,
             firstSaleContractDate: h.firstSaleContractDate || undefined,
-            acquisitionOfficialPrice: h.acquisitionOfficialPrice
-              ? parseInt(h.acquisitionOfficialPrice)
-              : undefined,
             rentalStartOfficialPrice: h.rentalStartOfficialPrice
               ? parseInt(h.rentalStartOfficialPrice)
               : undefined,

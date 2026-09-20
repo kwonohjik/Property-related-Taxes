@@ -39,6 +39,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,   // 취학·근무 등
       unavoidableResidenceYears: 2, // 1년 이상 거주
+      acquisitionOfficialPrice: 250_000_000, // 3호는 **취득 당시** 기준시가 3억 이하 (F-16)
     });
 
     const input = makeInput([h1, h2], {
@@ -64,6 +65,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 0, // 1년 미만
+      acquisitionOfficialPrice: 250_000_000, // 기준시가는 충족 — 거주기간만 실패 사유 (F-16)
     });
 
     const input = makeInput([h1, h2], {
@@ -161,6 +163,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
+      acquisitionOfficialPrice: 250_000_000, // 요건은 충족 — 3주택이라 미적용임을 본다 (F-16)
     });
     const h3 = makeHouse("h3", {
       officialPrice: 50_000_000,
@@ -326,7 +329,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
-      officialPrice: 250_000_000, // 2.5억 → 3억 이하
+      acquisitionOfficialPrice: 250_000_000, // 취득 당시 2.5억 → 3억 이하 (F-16)
     });
 
     const input = makeInput([h1, h2], {
@@ -345,7 +348,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
-      officialPrice: 350_000_000, // 3.5억 → 3억 초과 → 배제 안 됨
+      acquisitionOfficialPrice: 350_000_000, // 취득 당시 3.5억 → 3억 초과 → 배제 안 됨 (F-16)
     });
 
     const input = makeInput([h1, h2], {
@@ -367,7 +370,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
-      officialPrice: 250_000_000,
+      acquisitionOfficialPrice: 250_000_000,
       unavoidableReasonResolvedDate: new Date("2022-01-01"), // 사유 해소 (3년 이상 전)
     });
 
@@ -389,7 +392,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
     const h2 = makeHouse("h2", {
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
-      officialPrice: 250_000_000,
+      acquisitionOfficialPrice: 250_000_000,
       unavoidableReasonResolvedDate: new Date("2025-01-01"), // 1년 전 해소
     });
 
@@ -405,7 +408,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
 });
 
 // ============================================================
-// MH-NEW-04: 소송 취득 주택 배제 (소령 §167-10 ① 8호)
+// MH-NEW-04: 소송 취득 주택 배제 (소령 §167의10①7호)
 // ============================================================
 
 describe("MH-NEW-04: 소송 취득 주택 ⑧ — 2주택 중과배제", () => {

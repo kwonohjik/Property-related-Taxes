@@ -123,6 +123,7 @@ import {
   DUTY_PERIOD_PENDING_WARNING,
   determineSurchargeExclusion,
   isLowPriceSmallHouseUndecidable,
+  isUnavoidableReasonUndecidable,
 } from "./multi-house-surcharge-helpers";
 
 /** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
@@ -330,6 +331,18 @@ export function determineMultiHouseSurcharge(
     warnings.push(
       `양도 주택의 양도 당시 기준시가가 입력되지 않아 1억원 이하 중과배제(${MULTI_HOUSE.TWO_HOUSE_SMALL_HOUSE}) 해당 여부를 판정하지 못했습니다`,
     );
+  }
+
+  // 3호(부득이한 사유 취득)는 **취득 당시** 기준시가 3억 이하를 요건으로 한다 — 그 값이 없으면
+  // 양도 당시 공시가격으로 갈음하지 않고(F-16) 중과를 그대로 적용하되 그 사실을 알린다.
+  if (!isExcluded && effectiveHouseCount === 2) {
+    const undecidable = input.houses.filter(isUnavoidableReasonUndecidable);
+    if (undecidable.length > 0) {
+      warnings.push(
+        `부득이한 사유로 취득한 주택의 **취득 당시 기준시가**가 입력되지 않아 3억원 이하 중과배제` +
+          `(${MULTI_HOUSE.TWO_HOUSE_UNAVOIDABLE}) 해당 여부를 판정하지 못했습니다`,
+      );
+    }
   }
 
   if (isExcluded) {
