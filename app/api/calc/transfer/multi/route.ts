@@ -271,6 +271,39 @@ export async function POST(request: NextRequest) {
             : p.rightThreeYearException,
       mergedHouseholdFirstHouse: p.mergedHouseholdFirstHouse,
       culturalHeritageHouse: p.culturalHeritageHouse,
+      /**
+       * ⑭ §155의2 장기저당담보주택 · §155의3 상생임대주택 — **단건과 같은 규칙을 다건에도 싣는다**.
+       *
+       * 🔴 형제 특례 키(§155⑦⑧·§156의2⑤·문화유산)가 전부 여기 매핑돼 있는데 이 둘만 빼면
+       *    「단건 빌더는 싣는데 다건 빌더만 빠뜨린」 결함(리뷰 G-11)의 재발이다
+       *    — 같은 규칙을 두 번 쓰지 않는다는 규약이 `transfer-tax-api-body-blocks.ts:30`에 남아 있다.
+       *    Date 변환 대상은 단건(`engine-input.ts`)과 **동일**하다.
+       */
+      longTermMortgageHouse: p.longTermMortgageHouse
+        ? {
+            contractDate: toDate(
+              p.longTermMortgageHouse.contractDate,
+              "longTermMortgageHouse.contractDate",
+            ),
+            borrowerAgeAtContract: p.longTermMortgageHouse.borrowerAgeAtContract,
+            contractYears: p.longTermMortgageHouse.contractYears,
+            maturityLumpSumRepayment: p.longTermMortgageHouse.maturityLumpSumRepayment,
+            transferredBeforeMaturity: p.longTermMortgageHouse.transferredBeforeMaturity,
+            isTransferredHouseMortgaged: p.longTermMortgageHouse.isTransferredHouseMortgaged,
+            parentalCareMerge: p.longTermMortgageHouse.parentalCareMerge,
+          }
+        : undefined,
+      winWinRentalHouse: p.winWinRentalHouse
+        ? {
+            winWinContractDate: toDate(
+              p.winWinRentalHouse.winWinContractDate,
+              "winWinRentalHouse.winWinContractDate",
+            ),
+            increaseRatePct: p.winWinRentalHouse.increaseRatePct,
+            priorLeaseMonths: p.winWinRentalHouse.priorLeaseMonths,
+            winWinLeaseMonths: p.winWinRentalHouse.winWinLeaseMonths,
+          }
+        : undefined,
       generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,
       inheritedRightChoiceWhenBothHeld: p.inheritedRightChoiceWhenBothHeld,
       generalHouseGiftedFromDecedentWithin2yr: p.generalHouseGiftedFromDecedentWithin2yr,

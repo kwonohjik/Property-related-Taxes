@@ -65,6 +65,40 @@ export const ruralHouseSchema = z.object({
   wholeHouseholdMoved: z.boolean().optional(),
 });
 
+/**
+ * ⑫ §155의2 장기저당담보주택 — 거주요건 면제 + ② 동거봉양 합가 1주택 의제.
+ *
+ * 🔑 요건 판정은 **전부 엔진**이 한다(`meetsLongTermMortgageHouse`) — Zod는 형상만 본다.
+ *    ①1호 60세·②2호 계약기간 10년 같은 임계값을 여기에 적으면 법령 상수가 두 벌이 된다.
+ * 🔑 ③ 「계약기간 만료 이전 양도」는 **배제 사유**라 값이 `true`여도 정상 입력이다 —
+ *    Zod가 막으면 사용자가 사실대로 적을 길이 없어진다.
+ */
+export const longTermMortgageHouseSchema = z.object({
+  contractDate: z.string().date(),
+  borrowerAgeAtContract: z.number().int().nonnegative(),
+  contractYears: z.number().int().nonnegative(),
+  maturityLumpSumRepayment: z.boolean(),
+  transferredBeforeMaturity: z.boolean(),
+  isTransferredHouseMortgaged: z.boolean(),
+  /** ② 담보주택 보유 직계존속과 동거봉양 합가로 2주택이 된 경우 */
+  parentalCareMerge: z.boolean().optional(),
+});
+
+/**
+ * ⑫ §155의3 상생임대주택 — §154①·§155⑳1호·§159의4의 **거주기간 제한 면제**.
+ *
+ * 🔑 의제가 아니라 거주요건 면제다 — 중과 배제(§167의10①15호)는 붙지 않는다.
+ * ⚠️ 임대기간은 **개월 수**로 받는다. ③ 월력 계산·1개월 미만 절상과 ④ 임차인 사정 합산은
+ *    엔진이 하지 않으므로 **입력 화면이 이미 반영한 값**이어야 한다(엔진 타입 주석과 동일 규약).
+ */
+export const winWinRentalHouseSchema = z.object({
+  winWinContractDate: z.string().date(),
+  /** ①1호 증가율(%) — 인하 계약도 성립하므로 음수를 막지 않는다 */
+  increaseRatePct: z.number(),
+  priorLeaseMonths: z.number().int().nonnegative(),
+  winWinLeaseMonths: z.number().int().nonnegative(),
+});
+
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
 export const replacementHouseSchema = z.object({
   businessApprovalDate: z.string().date(),

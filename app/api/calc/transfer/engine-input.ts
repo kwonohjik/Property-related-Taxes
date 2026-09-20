@@ -170,6 +170,40 @@ export function buildTransferEngineInput(
     mergedHouseholdFirstHouse: data.mergedHouseholdFirstHouse,
     // ⑭ §155⑥1호 문화유산 주택 — boolean이라 그대로 통과.
     culturalHeritageHouse: data.culturalHeritageHouse,
+    /**
+     * ⑭ §155의2 장기저당담보주택 — `contractDate`만 string → Date 변환 대상.
+     *
+     * 🔴 통째로 spread하면 `contractDate`가 **string인 채로** 엔진에 들어간다. 엔진은
+     *    `contractDate.getFullYear()`를 부르지 않고 **날짜 비교만** 하므로 조용히 틀린 답이
+     *    나온다(`Date < string` silent false — `lib/api/date-coerce.ts` 규약).
+     *    ⇒ 명시 변환 후 나머지 필드를 **하나씩** 옮긴다.
+     */
+    longTermMortgageHouse: data.longTermMortgageHouse
+      ? {
+          contractDate: toDate(
+            data.longTermMortgageHouse.contractDate,
+            "longTermMortgageHouse.contractDate",
+          ),
+          borrowerAgeAtContract: data.longTermMortgageHouse.borrowerAgeAtContract,
+          contractYears: data.longTermMortgageHouse.contractYears,
+          maturityLumpSumRepayment: data.longTermMortgageHouse.maturityLumpSumRepayment,
+          transferredBeforeMaturity: data.longTermMortgageHouse.transferredBeforeMaturity,
+          isTransferredHouseMortgaged: data.longTermMortgageHouse.isTransferredHouseMortgaged,
+          parentalCareMerge: data.longTermMortgageHouse.parentalCareMerge,
+        }
+      : undefined,
+    // ⑭ §155의3 상생임대주택 — `winWinContractDate`만 Date 변환(2021-12-20~2026-12-31 창 판정에 쓰인다).
+    winWinRentalHouse: data.winWinRentalHouse
+      ? {
+          winWinContractDate: toDate(
+            data.winWinRentalHouse.winWinContractDate,
+            "winWinRentalHouse.winWinContractDate",
+          ),
+          increaseRatePct: data.winWinRentalHouse.increaseRatePct,
+          priorLeaseMonths: data.winWinRentalHouse.priorLeaseMonths,
+          winWinLeaseMonths: data.winWinRentalHouse.winWinLeaseMonths,
+        }
+      : undefined,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
