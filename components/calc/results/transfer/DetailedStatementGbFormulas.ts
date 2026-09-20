@@ -16,6 +16,7 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
+import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -334,7 +335,16 @@ export function buildGbAcquisitionFormula(
 // ── 필요경비 산식 (개산공제 §163⑥) ─────────────────────────────────
 
 /**
- * 필요경비 자산별 산식 — 개산공제 = 취득시 기준시가 × 3%.
+ * 개산공제율 표시 — **엔진 echo를 읽는다**(§163⑥ 3/100 · 1호 단서 미등기 3/1000).
+ * 종전에는 「3%」를 박아 미등기 자산에서 적힌 산식이 적힌 값을 만들지 못했다(10배 어긋남).
+ * echo가 없는 옛 결과(이력)는 등기 3%로 떨어진다 — 종전과 같은 표시다.
+ */
+function dedRatePct(rate: number | undefined): string {
+  return `${((rate ?? ESTIMATED_DEDUCTION_RATE.LAND_BUILDING) * 100).toFixed(1).replace(/\.0$/, "")}%`;
+}
+
+/**
+ * 필요경비 자산별 산식 — 개산공제 = 취득시 기준시가 × 개산공제율(§163⑥ 3% · 미등기 0.3%).
  * 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 흡수되어 본 행에는 양도비만 남음.
  */
 export function buildGbExpenseFormula(
@@ -342,7 +352,7 @@ export function buildGbExpenseFormula(
   gb: GeneralBuildingOutput | undefined,
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
-  // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 3%
+  // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 개산공제율
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
       ? burdenedGift.perAsset.land
@@ -350,7 +360,8 @@ export function buildGbExpenseFormula(
         ? burdenedGift.perAsset.building
         : undefined;
     if (bgAsset) {
-      return `필요경비 = 안분 취득가액 × 3% (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × 0.03\n        = ${fmt(bgAsset.estimatedDeduction)}`;
+      const bgPct = dedRatePct(bgAsset.estimatedDeductionRate);
+      return `필요경비 = 안분 취득가액 × ${bgPct} (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × ${bgAsset.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE.LAND_BUILDING}\n        = ${fmt(bgAsset.estimatedDeduction)}`;
     }
   }
 
@@ -392,17 +403,17 @@ export function buildGbExpenseFormula(
   if (isLandProp(p.propertyId)) {
     if (!gb.acqLandStdTotal) return undefined;
     // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
-    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
+    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.landRate)} = ${fmt(displayExp)}`;
   }
   if (isBuildingProp(p.propertyId)) {
     if (!gb.acqBuilding1StdTotal) return undefined;
-    return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
+    return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
   }
   if (isBuilding2Prop(p.propertyId)) {
     if (!gb.acqExtensionStdTotal) {
       return `사용자 직접 입력 (증축 실제 필요경비) = ${fmt(displayExp)}`;
     }
-    return `취득시 증축건물기준시가 ${fmt(gb.acqExtensionStdTotal)} × 3% = ${fmt(displayExp)}`;
+    return `취득시 증축건물기준시가 ${fmt(gb.acqExtensionStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
   }
   return undefined;
 }

@@ -522,6 +522,12 @@ export interface TransferBurdenedGiftBreakdown {
       acquisitionPrice: number;
       /** 자산별 개산공제 = acquisitionPrice × 3% (소령 §163 ⑥). K-4(actual)는 안분 실비(자본적지출·양도비). */
       estimatedDeduction: number;
+      /**
+       * 개산공제율로 **실제 사용된 값**(§163⑥ 3/100 · 1호 단서 미등기 3/1000) — 표시 산식 echo.
+       * 표시 층이 「× 3%」를 다시 적으면 미등기에서 적힌 산식이 적힌 값을 못 만든다.
+       * **K-4(실비 안분)·§97②2호 swap 경로에서는 undefined** — 율이라는 개념이 없다.
+       */
+      estimatedDeductionRate?: number;
       /** 취득가액 산정 경로 (결과카드 산식 분기): standard_price·actual·converted. */
       acquisitionMethod: "standard_price" | "actual" | "converted";
       /** 환산(K-5) 산식 분모 — 양도시 자산 기준시가. sangjeungbeopValue(시가 안분값)와 구분. */
@@ -535,6 +541,8 @@ export interface TransferBurdenedGiftBreakdown {
       transferPrice: number;
       acquisitionPrice: number;
       estimatedDeduction: number;
+      /** 개산공제율 echo — land와 같다(§163⑥). 실비 안분 경로에서는 undefined. */
+      estimatedDeductionRate?: number;
       acquisitionMethod: "standard_price" | "actual" | "converted";
       stdPriceAtTransfer: number;
       actualAcquisition?: number;

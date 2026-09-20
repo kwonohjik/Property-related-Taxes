@@ -11,7 +11,7 @@
  *  - 숫자 옆 변수명 라벨 표시 (양도가액 xxx - 환산취득가 yyy)
  *  - "원" 단위 표기 금지 (feedback_no_won_suffix.md)
  *  - floor() / Math.floor() 표기 금지 — 묵시 처리
- *  - 개산공제 = 취득시 기준시가 × 3% (취득가액 합산 금지)
+ *  - 개산공제 = 취득시 기준시가 × 개산공제율(§163⑥ 3% · 미등기 0.3%) — 취득가액 합산 금지
  *  - 건물 차손 → 장특 0 명시
  *  - §102② 통산 표 (차손 → 토지 흡수)
  *
@@ -49,6 +49,7 @@
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
 
@@ -146,6 +147,16 @@ export function GeneralBuildingValuationDetailCard({
   totalIncome,
 }: Props) {
   const { allocation, acquisition, estimatedDeduction } = detail;
+  /**
+   * 개산공제율 라벨 — **엔진 echo를 읽는다**(§163⑥ 3/100 · 1호 단서 미등기 3/1000).
+   * 종전에는 「3%」를 박아 미등기 자산에서 적힌 산식이 적힌 값을 만들지 못했다(10배 어긋남).
+   * echo가 없는 옛 결과(이력)는 등기 3%로 떨어진다 — 종전과 같은 표시다.
+   */
+  const pct = (rate: number | undefined) =>
+    `${((rate ?? ESTIMATED_DEDUCTION_RATE.LAND_BUILDING) * 100).toFixed(1).replace(/\.0$/, "")}%`;
+  const landDedPct = pct(estimatedDeduction.landRate);
+  const buildingDedPct = pct(estimatedDeduction.buildingRate);
+  const sameDedPct = landDedPct === buildingDedPct;
   // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1 토지·건물 모두 상속) — 라벨·산식 분기.
   const isInherited =
     !!detail.acquisitionByInheritance && !!detail.buildingAcquisitionByInheritance;
@@ -312,7 +323,7 @@ export function GeneralBuildingValuationDetailCard({
           text={
             isInherited
               ? "기타필요경비 — 개산공제 미적용 (소령 §163⑨ 실지거래가액 의제)"
-              : "기타필요경비 — 개산공제 (시행령 §163⑥, 등기 자산 3%)"
+              : `기타필요경비 — 개산공제 (시행령 §163⑥${sameDedPct ? `, ${landDedPct}` : ""})`
           }
           tone="sky"
         />
@@ -342,9 +353,9 @@ export function GeneralBuildingValuationDetailCard({
             <p>상속개시일 평가액을 취득당시 실지거래가액으로 보므로(소령 §163⑨), 환산취득가 전용 개산공제(§163⑥)는 적용하지 않습니다.</p>
           ) : (
             <>
-              <p className="font-medium">산식 (취득시 기준시가 × 3%)</p>
-              <p>토지 개산공제 = INT(취득시 토지 기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.land)}</span></p>
-              <p>건물 개산공제 = INT(취득시 건물기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.building)}</span></p>
+              <p className="font-medium">산식 (취득시 기준시가 × 개산공제율)</p>
+              <p>토지 개산공제 = INT(취득시 토지 기준시가 × {landDedPct}) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.land)}</span></p>
+              <p>건물 개산공제 = INT(취득시 건물기준시가 × {buildingDedPct}) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.building)}</span></p>
             </>
           )}
         </div>
