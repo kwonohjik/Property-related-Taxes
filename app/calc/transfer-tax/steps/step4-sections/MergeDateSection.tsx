@@ -35,7 +35,7 @@ export function MergeDateSection({
               value={form.marriageDate}
               onChange={(v) => onChange({ marriageDate: v })}
             />
-            <p className="text-xs text-muted-foreground">혼인합가 후 10년 내 먼저 양도 시 1세대1주택 비과세(§155⑤). 중과는 2주택 10년·3주택↑ 5년(배우자 주택수 차감) 내 경감</p>
+            <p className="text-xs text-muted-foreground">혼인합가 후 10년 내 먼저 양도 시 1세대1주택 비과세(§155⑤). 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분). 중과는 그 밖에 2주택 10년·3주택↑ 5년(배우자 주택수 차감) 내 경감</p>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">동거봉양 합가일</label>
@@ -43,7 +43,7 @@ export function MergeDateSection({
               value={form.parentalCareMergeDate}
               onChange={(v) => onChange({ parentalCareMergeDate: v })}
             />
-            <p className="text-xs text-muted-foreground">동거봉양 합가 후 10년 내 먼저 양도 시 1세대1주택 비과세(§155④)·중과 배제</p>
+            <p className="text-xs text-muted-foreground">동거봉양 합가 후 10년 내 먼저 양도 시 1세대1주택 비과세(§155④)·중과 배제. 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분)</p>
           </div>
         </div>
         {hasAnyMerge && (

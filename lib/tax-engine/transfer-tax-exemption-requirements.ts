@@ -600,6 +600,9 @@ export function resolveDeemedOneHouseBy155(
   // §155⑦ 농어촌주택 — ①(일시적 2주택)과 양립하지 않으므로 먼저 본다.
   if (qualifiesRuralHouse(input)) return "rural_house";
   const twoHouseRule = oneHouseRules?.temporary_two_house;
+  // F-1 — ①과 ④⑤가 겹친 3주택. ① 단독 분기보다 먼저 본다(합가 근거를 잃지 않게).
+  const overlap = resolveMergeOverlapDeeming(input, twoHouseRule);
+  if (overlap) return overlap;
   if (
     input.temporaryTwoHouse &&
     twoHouseRule &&
@@ -631,6 +634,13 @@ export function resolveMergeDeeming(
   input: MergeDeemingReqInput,
 ): "marriage_merge" | "parental_care_merge" | undefined {
   if (input.householdHousingCount !== 2) return undefined;
+  return matchMergeWindow(input);
+}
+
+/** 합가 창(窓) — 「먼저 양도」·합가 전(또는 당일) 취득·합친 날부터 10년 이내. **주택 수는 보지 않는다.** */
+function matchMergeWindow(
+  input: MergeDeemingReqInput,
+): "marriage_merge" | "parental_care_merge" | undefined {
   if (input.isFirstTransferredInMerge !== true) return undefined;
   const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
   if (!mergeDate) return undefined;
@@ -639,5 +649,31 @@ export function resolveMergeDeeming(
   if (input.acquisitionDate > mergeDate) return undefined;
   if (input.transferDate > addYears(mergeDate, MERGE_EXEMPTION_YEARS)) return undefined;
   return input.marriageMerge ? "marriage_merge" : "parental_care_merge";
+}
+
+/**
+ * F-1 — §155①(일시적 2주택)과 §155④·⑤(합가)가 **겹쳐 3주택**이 된 경우의 1세대1주택 의제.
+ *
+ * 국세청은 두 특례의 중첩으로 §154①이 적용된다고 반복 회신했다(본문 직독):
+ * - 사전-2025-법규재산-1240(2026.3.16) — 「…제155조제1항 및 제4항에 따라 이를 1세대1주택으로 보아
+ *   … 제154조제1항을 적용하는 것입니다」(일시적 2주택 상태에서 동거봉양 합가)
+ * - 서면-2022-법규재산-5124(2025.6.18) — 「…제155조제1항 및 제5항의 규정에 의하여 1세대1주택
+ *   비과세를 적용받을 수 있는 것」(혼인 합가 후 신규주택 취득)
+ * - 기본통칙 89-155…2① — 일시 2주택 중 상속·혼인·동거봉양으로 3주택이 된 경우 3년 내 종전주택 양도
+ *
+ * **3주택까지만** 인정한다 — 4주택 이상을 인정한 자료가 없고, 국세청은 4주택이 되면 비과세를
+ * 부인했다(서면-2021-부동산-0263). 중과 배제(13호)의 시행일 게이트는 중과 엔진이 따로 건다.
+ */
+export function resolveMergeOverlapDeeming(
+  input: DeemedOneHouseReqInput,
+  twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
+): "marriage_merge_overlap" | "parental_care_merge_overlap" | undefined {
+  if (input.householdHousingCount !== 3) return undefined;
+  if (!input.temporaryTwoHouse || !twoHouseRule) return undefined;
+  if (!evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall) return undefined;
+  const merge = matchMergeWindow(input);
+  if (merge === "marriage_merge") return "marriage_merge_overlap";
+  if (merge === "parental_care_merge") return "parental_care_merge_overlap";
+  return undefined;
 }
 

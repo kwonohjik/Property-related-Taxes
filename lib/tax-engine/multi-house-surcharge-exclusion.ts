@@ -13,6 +13,7 @@ import { addMonths, addDays, subDays, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import {
   MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE,
+  CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE,
   MULTI_HOUSE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   SURCHARGE_TRANSITION,
@@ -276,6 +277,19 @@ function deemedOneHouseExclusionReason(
         type: "rural_house",
         detail: `농어촌주택 보유 1세대1주택 의제 (${MULTI_HOUSE.RURAL_HOUSE_2HOUSE_BASIS})`,
       };
+    case "marriage_merge_overlap":
+    case "parental_care_merge_overlap": {
+      const marriage = input.deemedOneHouseBy155 === "marriage_merge_overlap";
+      const d = (marriage ? input.marriageMerge!.marriageDate : input.parentalCareMerge!.mergeDate)
+        .toISOString()
+        .slice(0, 10);
+      return {
+        type: marriage ? "marriage_merge" : "parental_care_merge",
+        detail:
+          `${marriage ? "혼인일" : "동거봉양 합가일"}(${d}) 10년 내 먼저 양도 + 일시적 2주택(§155①) 중첩 — ` +
+          `1세대1주택 의제 중과 배제 (${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})`,
+      };
+    }
     case "marriage_merge": {
       const d = input.marriageMerge!.marriageDate.toISOString().slice(0, 10);
       const basis = mergeUnderOldRule
@@ -334,17 +348,33 @@ export function determineSurchargeExclusion(
   // ② §154① 요건 모두 충족 — 미제공(?? true)은 충족 간주(직접 호출 하위호환).
   //   합가(④⑤)는 2023.2.28. 전 양도분이면 구 5호(동거봉양)·6호(혼인)라 ② 요건이 없다.
   const deemed = input.deemedOneHouseBy155;
-  const isMergeDeemed = deemed === "marriage_merge" || deemed === "parental_care_merge";
-  const mergeUnderOldRule = isMergeDeemed && input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE;
-  if (
+  const isOverlapDeemed =
+    deemed === "marriage_merge_overlap" || deemed === "parental_care_merge_overlap";
+  const isMergeDeemed =
+    deemed === "marriage_merge" || deemed === "parental_care_merge" || isOverlapDeemed;
+  const mergeUnderOldRule =
+    isMergeDeemed &&
     effectiveHouseCount === 2 &&
-    deemed &&
-    // ⑨ 차감으로 3→2가 된 경우는 §155⑤ 비해당 → 본인 2주택 중과
-    !(deemed === "marriage_merge" && marriageSubtractionApplied) &&
-    (mergeUnderOldRule || (input.sellingHouseMeetsOneHouseRequirements ?? true))
-  ) {
-    exclusionReasons.push(deemedOneHouseExclusionReason(input, mergeUnderOldRule));
-    return { isExcluded: true, exclusionReasons, isSuspended: false };
+    input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE;
+  // ⑨ 차감으로 3→2가 된 경우는 §155⑤ 비해당 → 본인 2주택 중과
+  const marriageBlocked =
+    (deemed === "marriage_merge" || deemed === "marriage_merge_overlap") && marriageSubtractionApplied;
+  const meets154 = mergeUnderOldRule || (input.sellingHouseMeetsOneHouseRequirements ?? true);
+  /**
+   * F-1 — ①과 ④⑤가 겹쳐 **3주택**이 된 경우는 13호가 통로다. 13호는 2021.2.17. 신설이고,
+   * 그 전 양도분은 중첩으로 비과세가 되어도 중과세율이 적용됐다(사전-2019-법령해석재산-0368).
+   * 세대 주택 수가 제외 규정으로 2가 되면 종전 15호 경로(위 조건)가 그대로 맡는다.
+   */
+  const overlapExcluded =
+    isOverlapDeemed &&
+    effectiveHouseCount === 3 &&
+    input.transferDate >= CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE &&
+    (input.sellingHouseMeetsOneHouseRequirements ?? true);
+  if ((effectiveHouseCount === 2 && deemed && meets154) || overlapExcluded) {
+    if (!marriageBlocked) {
+      exclusionReasons.push(deemedOneHouseExclusionReason(input, mergeUnderOldRule));
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
   }
 
   // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 지급 증빙
