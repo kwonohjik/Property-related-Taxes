@@ -266,3 +266,130 @@ describe("POST /api/calc/one-house-exemption", () => {
     expect(Object.keys(json.error.fieldErrors ?? {}).length).toBeGreaterThan(0);
   });
 });
+
+// ── 4. §155의2 · §155의3 입력 경로 (P4-2b-0) ──────────────────────────
+/**
+ * 🔴 **P3는 엔진만 만들었고 입력 경로가 없었다** — 판정은 구현돼 있는데 Zod 스키마에 필드가
+ *    없어 본문에 실어도 **침묵 strip**됐고, `engine-input.ts`에도 매핑이 없어 엔진에 도달할
+ *    길이 아예 없었다(`transfer.types.ts:607` 「UI 입력 경로는 P4에서 만든다」).
+ *    ⇒ 여기 anchor는 **⑫ Zod → ⑭ Route 매핑 → 엔진**의 관통을 고정한다.
+ *    leaf 직접 호출 테스트(`one-house-155-2-155-3-special.anchor.test.ts`)는 이 층을 건너뛰므로
+ *    같은 것을 증명하지 못한다(`feedback_leaf_anchor_skips_zod_layer`).
+ *
+ * 🔑 관측 지점은 **비과세 여부** 하나로 고정한다 — 둘 다 「거주요건 **면제**」라 거주요건이
+ *    실제로 걸리는 시료가 아니면 필드를 통째로 빼도 결과가 같다(구별력 0).
+ *    ⇒ `RESIDENCE_BINDS`(취득 당시 조정지역 + 거주 0개월)에서만 갈린다. 각 테스트에 **음성 짝**을 붙인다.
+ */
+const RESIDENCE_BINDS = { wasRegulatedAtAcquisition: true, residencePeriodMonths: 0 };
+
+/** §155의2 요건을 모두 갖춘 본문 조각 — leaf anchor의 `MORTGAGE_OK`와 같은 값(ISO 문자열 형태). */
+const MORTGAGE_OK_BODY = {
+  contractDate: "2016-01-01",
+  borrowerAgeAtContract: 60,
+  contractYears: 10,
+  maturityLumpSumRepayment: true,
+  transferredBeforeMaturity: false,
+  isTransferredHouseMortgaged: true,
+};
+
+/** §155의3 요건을 모두 갖춘 본문 조각. */
+const WIN_WIN_OK_BODY = {
+  winWinContractDate: "2022-03-01",
+  increaseRatePct: 5,
+  priorLeaseMonths: 18,
+  winWinLeaseMonths: 24,
+};
+
+describe("P4-2b-0 — §155의2 장기저당담보주택 입력 경로", () => {
+  it("[LM-1] 음성 짝 — 필드가 없으면 조정지역 취득·거주 0년은 **과세**다", async () => {
+    const { json } = await post(RESIDENCE_BINDS);
+    expect(json.data.judgment.isExempt).toBe(false);
+  });
+
+  it("[LM-2] 같은 시료에 §155의2 사실을 실으면 거주요건이 면제돼 **비과세**", async () => {
+    const { json } = await post({ ...RESIDENCE_BINDS, longTermMortgageHouse: MORTGAGE_OK_BODY });
+    expect(json.data.judgment.isExempt).toBe(true);
+  });
+
+  it("[LM-3] ③ 계약기간 만료 **이전** 양도면 ①② 부적용 — boolean이 그대로 관통한다", async () => {
+    const { json } = await post({
+      ...RESIDENCE_BINDS,
+      longTermMortgageHouse: { ...MORTGAGE_OK_BODY, transferredBeforeMaturity: true },
+    });
+    expect(json.data.judgment.isExempt).toBe(false);
+  });
+
+  it("[LM-4] ①1호 60세 — 59세 불성립 / 60세 성립 (number가 관통한다 · 지정값 ±1 동등성)", async () => {
+    const at = async (borrowerAgeAtContract: number) =>
+      (
+        await post({
+          ...RESIDENCE_BINDS,
+          longTermMortgageHouse: { ...MORTGAGE_OK_BODY, borrowerAgeAtContract },
+        })
+      ).json.data.judgment.isExempt;
+    expect(await at(59)).toBe(false);
+    expect(await at(60)).toBe(true);
+  });
+
+  /**
+   * ⚠️ `contractDate`의 Date 변환은 **관측할 수 없다** — 엔진이 이 필드를 읽지 않기 때문이다
+   *    (60세 판정은 `borrowerAgeAtContract` 숫자로 받는다. `lib/tax-engine/` 전수 grep 0건).
+   *    변환을 지우는 뮤테이션은 **살아남는다**. 단언을 만들어 죽은 것처럼 보이게 하지 않는다
+   *    (`feedback_mutation_zero_discrimination_is_not_proof`). 변환은 엔진 타입이 `Date`를
+   *    요구하므로 유지하되, 안전망은 **타입체커**이지 이 테스트가 아니다.
+   */
+  it("[LM-5] Zod 형상 위반은 400 — 요건 판정은 엔진 몫이지만 형상은 route가 막는다", async () => {
+    const { status, json } = await post({
+      longTermMortgageHouse: { ...MORTGAGE_OK_BODY, contractDate: "not-a-date" },
+    });
+    expect(status).toBe(400);
+    expect(json.error.fieldErrors["longTermMortgageHouse.contractDate"]).toBeDefined();
+  });
+});
+
+describe("P4-2b-0 — §155의3 상생임대주택 입력 경로", () => {
+  it("[WW-1] 요건 충족 사실을 실으면 거주요건이 면제돼 **비과세** (음성 짝은 LM-1)", async () => {
+    const { json } = await post({ ...RESIDENCE_BINDS, winWinRentalHouse: WIN_WIN_OK_BODY });
+    expect(json.data.judgment.isExempt).toBe(true);
+  });
+
+  it("[WW-2] ①2호 직전임대차 1년 6개월 — 17개월 불성립 / 18개월 성립", async () => {
+    const at = async (priorLeaseMonths: number) =>
+      (
+        await post({
+          ...RESIDENCE_BINDS,
+          winWinRentalHouse: { ...WIN_WIN_OK_BODY, priorLeaseMonths },
+        })
+      ).json.data.judgment.isExempt;
+    expect(await at(17)).toBe(false);
+    expect(await at(18)).toBe(true);
+  });
+
+  /**
+   * 🔑 **이것이 Date 변환의 관측 지점이다.** `qualifiesWinWinRental`은
+   *    `winWinContractDate >= WIN_WIN_CONTRACT_START`로 **Date끼리 비교**한다
+   *    (`transfer-tax-exemption-requirements.ts:189`). 변환이 빠져 string이 들어오면
+   *    관계 연산자가 양쪽을 number로 강제해 `NaN >= number` → **항상 false**가 되므로
+   *    WW-1·WW-2·WW-3이 **동시에** 깨진다. 경계 ±1일은 그 위에 창(window) 판정까지 고정한다.
+   */
+  it("[WW-3] ①1호 체결일 창 — 2021-12-19 불성립 / 2021-12-20 성립", async () => {
+    const at = async (winWinContractDate: string) =>
+      (
+        await post({
+          ...RESIDENCE_BINDS,
+          winWinRentalHouse: { ...WIN_WIN_OK_BODY, winWinContractDate },
+        })
+      ).json.data.judgment.isExempt;
+    expect(await at("2021-12-19")).toBe(false);
+    expect(await at("2021-12-20")).toBe(true);
+  });
+
+  it("[WW-4] ①1호 증가율 5% 초과는 불성립 — 인하(음수) 계약은 Zod가 막지 않는다", async () => {
+    const at = async (increaseRatePct: number) =>
+      await post({ ...RESIDENCE_BINDS, winWinRentalHouse: { ...WIN_WIN_OK_BODY, increaseRatePct } });
+    expect((await at(5.1)).json.data.judgment.isExempt).toBe(false);
+    const cut = await at(-3);
+    expect(cut.status).toBe(200);
+    expect(cut.json.data.judgment.isExempt).toBe(true);
+  });
+});

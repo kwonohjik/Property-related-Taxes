@@ -703,7 +703,10 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P3** | ✅ **완료(2026-09-20 · §16)** — §155의2①②③ · §155의3① 판정 + 거주요건 면제 **3조문 전부**(§154①·§155⑳1호·§159의4) 연동 · manifest 2건 등록(라이브 PASS) · anchor 25건 · 뮤테이션 **20/21 KILLED**(1건은 설계상 무효과). 🛑 **겸용 경로 표2 게이트 1곳은 P4로 이월**(별도 입력 타입 — §16.5) | P2 | 중 |
 | **P4-1** | ✅ **완료(2026-09-20 · §17)** — 판정 결과 확장(`pending[]`·`undetermined[]`·`appliedExceptions[]`·`legalBasis[]`) + `ExemptionResult`↔`OneHouseJudgment` **타입 이중선언 해소**. 세액 변동 **0**(3,059 케이스) · anchor 31건 · 뮤테이션 **16/17 KILLED** | P3 | 중 |
 | **P4-2a** | ✅ **완료(2026-09-20 · §18)** — 판정 route 신설 + 명부→주택 수 **도출 정본화**(G-1) + 주택 수 산정 명세. 계산기의 Zod·엔진 input 조립·주택수 제외를 **그대로 재사용**(별도 배관 0). anchor 14건 · 뮤테이션 **8/8 KILLED** | P4-1 | 중 |
-| **P4-2b** | **판정 메뉴 화면** — 4단계 마법사 · store/폼 타입 · validate · 사이드바 · 결과뷰 · 이력 등록 13지점 · E2E. 폼 타입은 **`TransferFormData` 슈퍼셋**(Q-8) | P4-2a | **대** |
+| **P4-2b-0** | ✅ **완료(2026-09-20 · §19)** — §155의2·§155의3 **입력 경로 개통**(⑫ Zod 2블록 + ⑭ 단건·다건 매핑). P3가 만든 판정이 **도달 불가**였음을 실측으로 확인하고 닫았다. anchor 9건 · 뮤테이션 **8/9 KILLED**(1건은 엔진 미소비로 관측 불가 — 예고) | P4-2a | 소 |
+| **P4-2b-1** | **배관** — 폼 타입(`TransferFormData` 슈퍼셋 · Q-8) · store · validate · API 변환(`one-house-exemption-api.ts`) · 사이드바 요약. 화면 없음, vitest로 고정 | P4-2b-0 | 중 |
+| **P4-2b-2** | **화면** — 4단계 마법사 · 결과뷰 · `app/page.tsx` 메뉴 등록 · 브라우저 수동 확인 | P4-2b-1 | 대 |
+| **P4-2b-3** | **이력·E2E** — `LocalTaxType` 등록(TS 미감지 지점 다수 — §20) · E2E spec | P4-2b-2 | 중 |
 | **P4-3** | **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드) | P4-2 | 중 |
 | **P5** | **계산기 연결** — 「이 결과로 세액 계산」 · 「판정 불러오기」 · 재판정 · 출처 표시·staleness | P4 | 중 |
 | **P6** | **계산기 정리** — ③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격(OH-21) · E2E 이관(§3.4 spec) | P5 · V-11 | 중~대 |
@@ -1133,6 +1136,220 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
   **엔진이 계산하지 않는다** — 개월 수를 이미 그 규칙을 반영한 값으로 받는다. P4 입력 화면이
   날짜에서 개월을 도출한다면 그 화면이 ③④를 적용해야 한다. 타입 JSDoc에 명시했다.
 - §155의2④(특례적용신고서 제출)는 절차 요건이라 판정에 넣지 않았다.
+
+---
+
+## 19. P4-2b-0 실행 기록 (2026-09-20) — §155의2·§155의3 **입력 경로 개통**
+
+### 19.1 왜 이것이 P4-2b의 첫 조각인가 — 계획에 없던 것을 실측이 끌어냈다
+
+P4-2b 로드맵 행은 「마법사·store·validate·사이드바·결과뷰·이력·E2E」만 열거한다. 그런데 화면을
+만들기 전에 **엔진에 도달할 길이 없다**는 것이 먼저 드러났다.
+
+**실측** — `longTermMortgageHouse`·`winWinRentalHouse` 전수 grep(2026-09-20):
+
+| 층 | 상태 |
+|---|---|
+| 엔진 타입·판정 (P3) | ✅ `transfer.types.ts:608·647` · `transfer-tax-exemption-requirements.ts:139·184` |
+| leaf anchor (P3) | ✅ `one-house-155-2-155-3-special.anchor.test.ts` 25건 |
+| **⑫ Zod 스키마** | ❌ **0건** |
+| **⑭ Route → 엔진 매핑** | ❌ **0건** (`engine-input.ts`·`multi/route.ts` 둘 다) |
+| ①④⑤ 폼·변환·위젯 | ❌ 0건 |
+
+⇒ 본문에 실어도 Zod가 **침묵 strip**하고, 통과시켜도 매핑이 없어 엔진에 닿지 않는다.
+P3가 스스로 예고해 둔 것이다(`transfer.types.ts:607` 「UI 입력 경로는 P4에서 만든다」).
+**leaf anchor 25건은 이 층을 건너뛰므로 같은 것을 증명하지 못한다**
+(`feedback_leaf_anchor_skips_zod_layer`).
+
+### 19.2 한 것 — 5파일 +206/−0
+
+| 파일 | 내용 |
+|---|---|
+| `lib/api/transfer-tax-schema-sub.ts` | `longTermMortgageHouseSchema`·`winWinRentalHouseSchema` 신설. **요건 임계값은 넣지 않는다** — 60세·10년·5%·18개월은 엔진 상수이고, Zod에 적으면 법령 상수가 두 벌이 된다. Zod는 형상만 본다 |
+| `lib/api/transfer-tax-schema-base-shape.ts` | ⑨⑩⑫ optional 2필드 추가 (단건·다건 공용 shape) |
+| `app/api/calc/transfer/engine-input.ts` | ⑭ 단건 매핑 — `winWinContractDate`·`contractDate` **명시 Date 변환** 후 나머지를 하나씩 |
+| `app/api/calc/transfer/multi/route.ts` | ⑭ **다건 매핑** — 아래 19.3 |
+| `__tests__/api/one-house-exemption.route.anchor.test.ts` | anchor 9건(LM-1~5 · WW-1~4) 추가 → 파일 23건 |
+
+**입력 화면은 판정 메뉴에만 둔다**(D-4) — 계산기 화면에는 추가하지 않는다. 다만 ⑫⑭는
+**단건·다건 route가 공유**하므로 두 계산기 route도 이 능력을 함께 얻는다(가산적, 기존 동작 불변).
+
+### 19.3 🔴 다건 route를 함께 고친 이유 — 가드가 잡았다
+
+단건만 매핑하고 전체 테스트를 돌리자 **F-12 키 커버리지 가드**가 실패했다:
+
+```
+__tests__/api/transfer.route.multi-key-coverage-f12.test.ts
+  expected [ 'longTermMortgageHouse', 'winWinRentalHouse' ] to deeply equal []
+```
+
+형제 특례 키를 조사하니 **§155⑦⑧·§156의2⑤·문화유산이 전부 다건에도 매핑**돼 있었다
+(`multi/route.ts:236·243·273·278`). 내 것만 「무효과」로 분류했으면
+「단건 빌더는 싣는데 다건 빌더만 빠뜨린」 결함의 재발이었다 — 그 전례가
+`transfer-tax-api-body-blocks.ts:30`에 리뷰 G-11로 남아 있다.
+⇒ **무효과 등록이 아니라 매핑**을 택했다.
+
+### 19.4 anchor — 관측 지점을 먼저 정했다
+
+둘 다 「거주요건 **면제**」라 시료를 잘못 잡으면 필드를 통째로 빼도 결과가 같다(구별력 0 — P2에서
+§89② 축이 같은 이유로 그랬다). ⇒ 거주요건이 **실제로 걸리는** 시료
+(`wasRegulatedAtAcquisition: true` + `residencePeriodMonths: 0`)에서만 관측하고, **음성 짝**을 붙였다.
+
+| ID | 고정하는 것 |
+|---|---|
+| LM-1 | 음성 짝 — 필드 없으면 과세 |
+| LM-2 | 필드 실으면 비과세 (nested object 관통) |
+| LM-3 | ③ `transferredBeforeMaturity` — **boolean** 관통 |
+| LM-4 | ①1호 59/60세 — **number** 관통 · 지정값 ±1 동등성 |
+| LM-5 | Zod 형상 위반 400 + `fieldErrors["longTermMortgageHouse.contractDate"]` |
+| WW-1 | §155의3 성립 → 비과세 |
+| WW-2 | ①2호 17/18개월 — number 관통 |
+| **WW-3** | ①1호 체결일 창 2021-12-19/20 — **Date 변환의 관측 지점** |
+| WW-4 | ①1호 5% 초과 불성립 · 인하(음수) 계약은 막지 않는다 |
+
+🔑 **WW-3이 Date 변환을 증명하는 방식**: `qualifiesWinWinRental`은
+`winWinContractDate >= WIN_WIN_CONTRACT_START`로 **Date끼리 비교**한다. 변환이 빠져 string이
+오면 관계 연산자가 양변을 number로 강제해 `NaN >= number` → **항상 false**가 되므로
+WW-1·2·3이 동시에 깨진다.
+
+### 19.5 뮤테이션 — 8/9 KILLED, 살아남은 1건은 **예고한 것**
+
+`git checkout` 없이 Python 백업·복원으로 실행(복원 후 `git diff --stat` 대조 · 잔여 흔적 grep 0건).
+
+| # | 뮤테이션 | 결과 |
+|---|---|---|
+| M1 | Zod `longTermMortgageHouse` 필드 제거 | KILLED |
+| M2 | Zod `winWinRentalHouse` 필드 제거 | KILLED |
+| M3 | engine-input winWin 매핑 제거 | KILLED |
+| M4 | `winWinContractDate` Date 변환 제거(string 통과) | KILLED |
+| M5 | engine-input longTermMortgage 매핑 제거 | KILLED |
+| M6 | `transferredBeforeMaturity` 미전달 | KILLED |
+| M7 | `borrowerAgeAtContract` 미전달 | KILLED |
+| M8 | `priorLeaseMonths` 미전달 | KILLED |
+| **M9** | `longTermMortgageHouse.contractDate` 변환 제거 | 🟡 **SURVIVED (예고됨)** |
+
+**M9는 단언을 만들어 죽이지 않았다.** 엔진이 이 필드를 **읽지 않기** 때문이다 — 60세 판정은
+`borrowerAgeAtContract`(숫자)로 받고, `lib/tax-engine/` 전수 grep에 소비처가 0건이다.
+관측할 수 없는 것에 단언을 붙이면 「구별력 0인데 죽은 것처럼 보이는」 계측이 된다
+(`feedback_mutation_zero_discrimination_is_not_proof`). 변환은 엔진 타입이 `Date`를 요구하므로
+유지하되, **안전망은 타입체커이지 이 테스트가 아니라는 것**을 코드 주석에 남겼다.
+
+### 19.6 검증
+
+- `npx tsc --noEmit` **0건** · `npm run lint` **0 error**(경고 345는 기존치)
+- 전체 vitest **2,157파일 22,545 통과**(skip 13 · todo 4), 실패 0
+- 세액 영향: **없음** — 기존 본문에는 이 두 필드가 실리지 않으므로 전 경로에서 `undefined`다(가산적 변경)
+
+### 19.7 남은 것 (P4-2b-0 범위 밖)
+
+- 화면은 아직 없다 — 이 필드를 채울 위젯은 **P4-2b-2**(② 단계 §155의2·§155의3 카드)다.
+- 다건 route 매핑은 **F-12 정적 가드**가 존재를 지킨다. 동작 anchor는 없다 — 다건 화면에
+  입력 경로가 생기는 시점(현재 계획 없음)에 붙인다.
+- 계산기 화면에는 입력을 만들지 않는다(D-4). ② 섹션에 「판정 메뉴에서 확인하세요」 안내만
+  두는 것은 **P6**이다.
+
+---
+
+## 20. P4-2b 착수 실측 대장 (2026-09-20) — 설계서 정정분
+
+P4-2b 착수 전 저장소를 전수 실측했다. **설계서·계획서 기재와 어긋나는 것**만 남긴다.
+
+### 20.1 정본 템플릿은 `stock-transfer-tax`다
+
+`app/calc/` 전수(파일 수·줄 수 실측): `transfer-tax` 21파일 5,585줄(6단계 + multi 임베드 — **부적합**) ·
+**`stock-transfer-tax` 7파일 2,317줄(4단계)** · `comprehensive-tax` 3파일(page.tsx가 `"use client"` 608줄 단일) ·
+`inheritance`·`gift`·`acquisition`·`property`는 **마법사가 아니다**(page.tsx 30줄이 `{Tax}Form.tsx` 하나를 감쌀 뿐).
+
+⇒ 4단계 · 오케스트레이터 387줄 · `steps/Step1~4` 분리 · `StepIndicator`+`WizardSidebar`+`WizardNav` 전부 사용 ·
+`useAutoSaveCalculation`·`useResetOnNewParam` 배선 — **요구사항과 형태가 일치**한다.
+
+- page.tsx = `metadata` + `<ProfessionalClientGate><Calculator /></ProfessionalClientGate>` 3줄. **layout.tsx 불필요**
+  (stock의 것은 no-op dead).
+- 계산 트리거는 **컨테이너가 아니라 결과 스텝**이 한다(`Step4.tsx:106` `useEffect` + 1회 가드).
+- 이력 자동저장은 **컨테이너**에서 `useAutoSaveCalculation({ resultData: isResult ? … : null })` — `null`이면 skip.
+
+### 20.2 🔴 응답 envelope가 stock과 다르다
+
+| route | 성공 | 실패 |
+|---|---|---|
+| `/api/calc/stock-transfer` | `{ result }` → `data.result` | `{ error: "문자열" }` |
+| **`/api/calc/one-house-exemption`** | **`{ data: payload }`** (`route.ts:161`) | **`{ error: { code, message, fieldErrors? } }`** |
+
+⇒ `one-house-exemption-api.ts`는 `data.data`를 읽고 에러는 `err.error.message`로 풀어야 한다.
+stock을 그대로 복사하면 **`[object Object]`** 가 화면에 뜬다.
+
+### 20.3 🔴 UI 설계서 §10 「신설 route Zod 스키마」는 **stale**
+
+P4-2a가 `propertySchema`를 **재사용**하도록 구현했다(`route.ts:30`). 신설하지 않는다.
+
+### 20.4 🔴 `saleTargetHouseId`(Q-8)는 성립하지 않는다 — 명부에 양도 대상이 없다
+
+UI 설계 §3.3은 「양도 대상 주택 선택 — ② 명부 중 선택」이라 적었으나, 명부(`HousesListSection`)는
+**「다른 보유 주택」**이다(`:503` 제목 · `:529` 「현재 양도하는 주택 **외** 세대 구성원이 보유한 주택을 입력하세요」).
+양도 대상은 `assets[0]`이고 API 변환 층이 `id:"selling"` 행으로 **앞에 붙인다**
+(`transfer-tax-api-houses.ts:29-41` — `acquisitionDate`·`officialPrice`·`region`을 전부 `primary`에서 읽는다).
+P4-2a의 `deriveHouseholdHousingCount = engineHouses.length`가 그 전제 위에 서 있다.
+
+⇒ 명부에 양도 대상을 **포함시키면** 그 문구를 고쳐야 하고 = 「무수정 재사용」(Q-8의 전제)이 깨진다.
+**채택**: 명부는 계산기와 같은 의미(다른 보유 주택)를 유지하고, 양도 대상은 ③에서 `assets[0]`에 직접 입력한다.
+`saleTargetHouseId`는 **만들지 않는다**. `saleExpectedDate`·`saleExpectedPrice`도 만들지 않는다 —
+`form.transferDate`·`assets[0].transferPrice`가 이미 그 자리이고, 재사용 leaf들이 **그 필드를 읽는다**.
+별도 필드를 두면 dual truth다.
+
+⚠️ 남는 문제: `HousesListSection` 머리글이 「정밀 중과세 판정용, **선택**」인데 판정 메뉴에서는
+**주택 수의 정본**이다. 문구 교체용 prop이 필요하다(P4-2b-2에서 판단).
+
+### 20.5 Q-8 슈퍼셋은 **타입 레벨에서 실측 통과**했다
+
+throwaway probe로 11개 컴포넌트 전부에 슈퍼셋 `form`·`onChange`를 넘겨 `tsc --noEmit` **0 error**.
+구별력도 확인했다(일부러 3건을 망가뜨려 TS2322·TS2322·TS2741 정확히 3건 검출).
+근거: `form`은 단순 upcast, `onChange`는 `strictFunctionTypes` 반변성상
+`Partial<Base>` → `Partial<Super>`가 성립한다(추가 3필드가 전부 optional이고 excess property check는
+객체 리터럴에만 걸리므로).
+
+### 20.6 🔴 타입이 잡아주지 않는 재사용 함정 4건
+
+| # | 함정 | 근거 |
+|---|---|---|
+| F-1 | **`SellingHouseExclusionSection`을 숨길 prop이 없다** — `HousesListSection`이 제공하는 숨김 prop은 `hideGracePeriod` 하나뿐이고, 이 섹션은 `sellingHouseExclusionVisible(form)`(주택수 ≥3)로 **자동 노출**된다. 형제 `SellingHouseTwoHouseExclusionSection`(주택수 =2)도 같다. §3.2-C의 「prop 하나 추가」는 **수정이 필요하다는 뜻**임을 명시할 것 | `HousesListSection.tsx:429·604·614` · `house-count-inputs-scope.ts:59` |
+| F-2 | **`HouseCountExemptionInputs`와 `HousesListSection`을 동시에 렌더하면 안 된다** — 같은 배열(`houses`·`presaleRights`·`specialHouseExclusions`)을 둘이 각각 patch해 **last-write-wins**. 파일 헤더가 호출측 계약으로 명시 | `HouseCountExemptionInputs.tsx:28-30` |
+| F-3 | **합가일 입력 소유권이 배타 규약이다** — 주택수 <2면 `MergedHouseholdRightSection`이 `marriageDate`·`parentalCareMergeDate`·`isFirstTransferredInMerge`를 **직접 소유**하고, ≥2면 `MergeDateSection`이 소유한다. 깨면 합가일 칸이 **두 벌** 뜬다 | `MergedHouseholdRightSection.tsx:14-16·80-82` |
+| F-4 | **`TemporaryTwoHouseSection` 파생 props는 4개가 아니라 5개**이고, 그중 `relocationRegionVerdict`는 **재사용 가능한 export 함수가 없다** — `Step4.tsx:292-317`에 인라인으로 있어 복제해야 한다. `ruralLocation`은 순수 파생이 아니라 **`useState` + `fetch` + effect 2개**에 얹혀 있다(`Step4.tsx:79·249·282`) | `Step4.tsx:91·154·166·269·292` |
+
+추가: `judgeTempTwoHouseFromForm`은 **폼-전역 `residencePeriodMonths`**를 쓰고
+`ResidencePeriodSection`은 **자산-수준 `residencePeriodMonthsAsset`**를 쓴다 — **다른 필드**다.
+
+### 20.7 🔴 `LocalTaxType` 등록 — TS가 잡아주는 곳은 **단 1곳**
+
+union은 현재 **8멤버**(`lib/storage/types.ts:7-15`). 컴파일 타임 그물은
+`title-generator.ts:3`의 `Record<LocalTaxType, string>` **하나뿐**이고, 나머지는 전부 침묵한다
+(`Partial<Record<…>>` · `Record<string, …>` · `default` 있는 switch · 별도 리터럴 배열).
+
+**그 그물이 이미 새고 있다는 증거** — `components/history/HistoryDetailDrawer.tsx:17-24`의
+`TAX_TYPE_ROUTES`는 **6개뿐**으로 `stock_transfer`·`stock_valuation`이 빠져 있다.
+그 결과 주식 2세목은 **「편집」 버튼이 렌더되지 않고**(`:285` `{route && …}`),
+`:152-161`의 `stock_valuation` resume 분기는 **도달 불가 dead code**다(`:133` early return).
+⇒ **P4-2b-3에서 이 기존 결함도 함께 고친다.**
+
+최소 손댈 곳(TS 미감지): `backup-validate.ts:22`(별도 배열 — 누락 시 **백업 import가 그 세목을 거부**) ·
+`business-key.ts` switch · `HistoryClient.tsx` 4곳(routes·labels·filter·cardSummary) + resume 분기 ·
+`HistoryDetailDrawer.tsx` 3곳. `lib/pdf/HistoryPdfDocument.tsx`는 **임포터 0건(dead)** 이라 건드리지 않는다.
+Supabase `calculations` CHECK는 **런타임 영향 0**(그 테이블을 읽고 쓰는 코드가 없다 — 이력은 IndexedDB 일원화)이나
+선례상 마이그레이션 1건을 남긴다.
+
+### 20.8 🔴 계산기 API 변환에 `buildTransferApiBody`라는 함수는 **없다**
+
+P4-2a route 주석(`route.ts:12`)의 기재가 틀렸다. 실제 변환 층은 `callTransferTaxAPI(form)` 하나이고
+**22파일 6,517줄**이며 본문 조립과 fetch가 붙어 있다. 판정 메뉴가 통째로 부를 수 있는 것이 아니다.
+
+⇒ `one-house-exemption-api.ts`는 **이미 분리된 leaf들을 조립**한다(필드 매핑을 두 벌로 쓰지 않는다):
+`buildHousesPayload`(`transfer-tax-api-houses.ts:20`) · `buildHouseholdSpecialPayload`(`…-body-blocks.ts:48`) ·
+`buildReplacementHousePayload`·`buildRightThreeYearExceptionPayload`·`buildMergedHouseholdFirstHousePayload`
+(`…-helpers.ts:356·379·428`) · `provisoGate`+`effectiveProvisoReason`(`…-helpers.ts:48·66`).
+
+⚠️ `provisoGate`는 **`householdHousingCount` 스칼라를 인자로 받는다**. 판정 메뉴는 그 값을 store에 두지
+않으므로(G-1) **명부에서 파생한 수**를 넘겨야 한다 — 빈 문자열을 넘기면 `parseInt("")=NaN`으로
+`visible:false`가 되어 §154① 단서가 **조용히 사라진다**.
 
 ---
 

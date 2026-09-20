@@ -18,6 +18,8 @@ import {
   replacementHouseSchema,
   rightThreeYearExceptionSchema,
   mergedHouseholdFirstHouseSchema,
+  longTermMortgageHouseSchema,
+  winWinRentalHouseSchema,
   nonBusinessLandRawSchema,
   rentalReductionDetailsSchema,
   newHousingDetailsSchema,
@@ -125,6 +127,15 @@ export const propertyBaseShape = {
   ruralHouse: ruralHouseSchema.optional(),
   /** ⑫ §155⑥1호 문화유산 주택 — §156의2⑩·§156의3⑦의 특수주택 판정에도 쓰인다. */
   culturalHeritageHouse: z.boolean().optional(),
+  /**
+   * ⑨⑩⑫ §155의2 장기저당담보주택 · §155의3 상생임대주택 — **거주요건 면제 축**.
+   *
+   * 🔴 P3(`7c9c9df8`)가 엔진 판정을 구현했으나 **입력 경로가 없어 도달 불가**였다
+   *    (`transfer.types.ts:607` 「UI 입력 경로는 P4에서 만든다」). 여기서 ⑫를 연다.
+   *    입력 화면은 판정 메뉴(P4-2b)에만 둔다 — 계산기 화면에는 추가하지 않는다(D-4).
+   */
+  longTermMortgageHouse: longTermMortgageHouseSchema.optional(),
+  winWinRentalHouse: winWinRentalHouseSchema.optional(),
   // ⑨⑩⑫ §156의2⑤ 대체주택 비과세 특례
   replacementHouse: replacementHouseSchema.optional(),
   // ⑫ §89② 3년 초과 예외 (§156의2④ · §156의3③ · 시행규칙 §75①) — 엔진이 게이트, strip 방지
