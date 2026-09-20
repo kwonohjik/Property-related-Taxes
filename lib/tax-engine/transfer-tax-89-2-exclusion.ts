@@ -81,6 +81,7 @@ import type {
 } from "./types/transfer.types";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { addYears } from "date-fns";
+import { TRANSFER } from "./legal-codes";
 
 /** §156의2③·§156의3②의 처분기한 — 조문 문언 그대로 3년(단축·연장 규정 없음). */
 export const ARTICLE_156_2_3_DEADLINE_YEARS = 3;
@@ -201,7 +202,7 @@ export function resolveArticle89Clause2(
 
   // §156의2⑤ 대체주택 — `checkExemption` E-5가 요건을 판정한다. 선언돼 있으면 그 판정에 맡긴다.
   if (input.replacementHouse) {
-    return { status: "exception_met", exception: "소득세법 시행령 §156의2 ⑤" };
+    return { status: "exception_met", exception: TRANSFER.REPLACEMENT_HOUSE_156_2_5 };
   }
 
   const open: string[] = [];
@@ -358,8 +359,8 @@ export function resolveArticle89Clause2(
      */
     const fourthClause =
       right.type === "redevelopment_right"
-        ? "소득세법 시행령 §156의2 ④"
-        : "소득세법 시행령 §156의3 ③";
+        ? TRANSFER.RIGHT_3YR_EXCEPTION_156_2_4
+        : TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3;
     const declared = input.rightThreeYearException;
     if (declared === undefined) {
       return { status: "undetermined", openArticles: [fourthClause, "소득세법 시행규칙 §75 ①"] };

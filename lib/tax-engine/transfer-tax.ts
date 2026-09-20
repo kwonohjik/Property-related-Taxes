@@ -305,9 +305,9 @@ export function calculateTransferTax(
     // 🔑 추징 리스크는 **특례가 실제로 적용돼 비과세를 받은 경우**에만 있다.
     //    ⑤는 선언만으로 `exception_met`이 되고 요건 판정은 E-5가 하므로 그 결과를 함께 본다.
     (exemptionResult.isExempt || exemptionResult.isPartialExempt) &&
-    (clause2Exception === "소득세법 시행령 §156의2 ④" ||
-      clause2Exception === "소득세법 시행령 §156의3 ③" ||
-      clause2Exception === "소득세법 시행령 §156의2 ⑤")
+    (clause2Exception === TRANSFER.RIGHT_3YR_EXCEPTION_156_2_4 ||
+      clause2Exception === TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3 ||
+      clause2Exception === TRANSFER.REPLACEMENT_HOUSE_156_2_5)
   ) {
     /**
      * §156의2⑬은 「**제7항·제10항 또는 제11항의 규정에 따라** 제4항 또는 제5항을 적용받은

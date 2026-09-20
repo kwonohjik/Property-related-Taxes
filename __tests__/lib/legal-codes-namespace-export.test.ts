@@ -67,6 +67,8 @@ const MODULES: ReadonlyArray<{
       "TRANSFER", "EXEMPTION_PROVISO_CONST", "TEMP_TWO_HOUSE_PROVISO_REASONS",
       "ONE_HOUSE_RESIDENCE", "SURCHARGE_EXCLUSION_WINDOW",
       "SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW", "isWithinSurchargeSuspensionWindow",
+      // P0(2026-09-20) — 라벨이 조문 번호를 리터럴로 다시 적지 않게 상수에서 파생시킨다.
+      "shortArticle",
       // transfer-nbl.ts (재수출)
       "NBL", "NBL_REVENUE_THRESHOLDS", "getNblRevenueThreshold",
       "ESTIMATED_DEDUCTION_RATE", "estimatedDeductionRate", "isSec163_6Clause4Asset",
@@ -74,6 +76,8 @@ const MODULES: ReadonlyArray<{
       "MULTI_HOUSE", "INHERITED_HOUSE", "MIXED_USE", "TRANSFER_RENTAL_HOUSING",
       "TRANSFER_REDUCTION_ARTICLE", "REDEVELOPMENT", "LTHD_EXCLUSION_LABEL",
       "MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE", "CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE",
+      // P0(2026-09-20) — 1세대 범위 인용을 중과 축·비과세 축이 함께 쓰는 단일 소스.
+      "ONE_HOUSEHOLD_DEF_CITATION",
     ],
   },
   {
