@@ -16,6 +16,7 @@ import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land
 import { addYears } from "date-fns";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -69,6 +70,19 @@ function checkExemptionCore(
   oneHouseRules: OneHouseSpecialRulesData,
 ): ExemptionResult {
   const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;
+
+  /**
+   * 고가주택 기준금액 — **양도일** 기준 시점 함수 (G-5).
+   *
+   * 종전에는 세율 seed의 `one_house_exemption.maxExemptPrice`(12억 단일값)를 읽었다.
+   * 그 값은 시점을 표현하지 못해 2021-12-07·2008-10-06 양도를 **전액 비과세**로 만들었다.
+   * 다건 route는 과세기간 말일로 세율 행을 고르므로 규칙 행으로는 애초에 자산별 양도일을
+   * 표현할 수 없다 — 그래서 기준금액의 단일 소스를 규칙 행에서 이 함수로 옮겼다.
+   *
+   * ⚠️ 이 값을 쓰는 **판정**과, 그 판정을 소비하는 **안분**은 반드시 같은 값을 봐야 한다.
+   *    (`calcOneHouseProration` · `transfer-tax-lthd` 분리 안분 · 겸용 · 재개발 안분)
+   */
+  const highValueThreshold = resolveHighValueHouseThreshold(input.transferDate);
 
   /**
    * §91① — 미등기양도자산에는 **비과세** 규정을 적용하지 아니한다.
@@ -143,7 +157,7 @@ function checkExemptionCore(
         input.burdenedGiftDenominator ??
         input.totalPropertyTransferPrice ??
         input.transferPrice;
-      if (priceCheck <= rule.maxExemptPrice) {
+      if (priceCheck <= highValueThreshold) {
         return {
           isExempt: true,
           isPartialExempt: false,
@@ -211,7 +225,7 @@ function checkExemptionCore(
       // 안분(§95③·§160)도 동일 적용. E-1/E-3.5/E-5와 같은 priceCheck 패턴.
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-      if (priceCheck <= rule.maxExemptPrice) {
+      if (priceCheck <= highValueThreshold) {
         return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}`, deemedOneHouseBy155: true };
       }
       return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}`, deemedOneHouseBy155: true };
@@ -229,7 +243,7 @@ function checkExemptionCore(
       const basis = ` (§155⑧ ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-      if (priceCheck <= rule.maxExemptPrice) {
+      if (priceCheck <= highValueThreshold) {
         return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}`, deemedOneHouseBy155: true };
       }
       return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}`, deemedOneHouseBy155: true };
@@ -256,7 +270,7 @@ function checkExemptionCore(
     const basis = " (§155⑥1호)";
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-    if (priceCheck <= rule.maxExemptPrice) {
+    if (priceCheck <= highValueThreshold) {
       return { isExempt: true, isPartialExempt: false, exemptReason: `문화유산 주택 비과세${basis}`, deemedOneHouseBy155: true };
     }
     return { isExempt: false, isPartialExempt: true, exemptReason: `문화유산 주택 고가주택${basis}`, deemedOneHouseBy155: true };
@@ -267,7 +281,7 @@ function checkExemptionCore(
     const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-    if (priceCheck <= rule.maxExemptPrice) {
+    if (priceCheck <= highValueThreshold) {
       return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}`, deemedOneHouseBy155: true };
     }
     return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}`, deemedOneHouseBy155: true };
@@ -288,7 +302,7 @@ function checkExemptionCore(
           : "동거봉양 합가 (§155④)";
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-      if (priceCheck <= rule.maxExemptPrice) {
+      if (priceCheck <= highValueThreshold) {
         return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세`, deemedOneHouseBy155: true };
       }
       return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택`, deemedOneHouseBy155: true };
@@ -314,7 +328,7 @@ function checkExemptionCore(
   // §154① 단서 각호 적용 시 비과세 사유에 호 라벨 부가 (result detail·PDF·step formula 자동 노출)
   const provisoReason = input.oneHouseExemptionProviso?.reason;
   const provisoLabel = provisoReason ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason]})` : "";
-  if (exemptionPriceCheck <= rule.maxExemptPrice) {
+  if (exemptionPriceCheck <= highValueThreshold) {
     return { isExempt: true, isPartialExempt: false, exemptReason: `1세대1주택 비과세${provisoLabel}` };
   }
 

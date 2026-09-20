@@ -14,13 +14,24 @@ import type {
   RedevelopmentResult,
   RedevelopmentBranchDetail,
 } from "./types/transfer.types";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 
 /**
- * §95③·영 §160 고가주택 기준 — 오케스트레이터와 **같은 값을 쓴다**(양쪽 하드코딩 금지).
+ * §95③·영 §160 고가주택 기준 — **현행(2021-12-08 이후 양도)** 값.
  *
  * 🔑 이 상수는 분리된 두 파일이 **함께 쓴다**. 원본에 두면 「원본 → 이 파일 → 원본」 순환이
  *    되므로 **아래쪽(이 파일)에 둔다** — 원본이 여기서 import 하면 방향이 하나로 유지된다
  *    ([[feedback_800line_split_playbook]] 「순환은 재export 탓」).
+ *
+ * ⚠️ **G-5(P1) 이후 남은 사용처는 둘뿐이다** — 둘 다 시점 축이 미확정이라 전환하지 않았다:
+ *  - `applySettlementExemption` — 비교 대상이 양도가액이 아니라 **관리처분계획인가일 현재
+ *    권리가액**(서면2016-법령해석재산-2705)이다. 기준일이 양도일인지 인가일인지 미확정.
+ *  - `applyOneRightExemption` — 조합원입주권(§89①4호 단서). 2021-12-07까지 금액은 법률이 아니라
+ *    시행령에 위임돼 있었는데 **그 위임 조항의 번호·연혁을 아직 실독하지 않았다**.
+ *    근거 없이 낮은 기준을 소급하면 납세자에게 불리한 방향으로 틀린다.
+ *  ⇒ 계획서 P3에서 다룬다(`one-house-exemption-automation.plan.md` §4 G-5 M-1 축).
+ *
+ * 주택(§89①3호) 축은 `one-house/threshold.ts` `resolveHighValueHouseThreshold(양도일)`가 정본이다.
  */
 export const HIGH_VALUE_THRESHOLD = 1_200_000_000;
 
@@ -175,9 +186,18 @@ export function applyHighValueAllocation(
   redevRaw: RedevelopmentResult,
   transferPrice: number,
   redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  /**
+   * 양도일 — G-5 고가주택 기준금액(6억/9억/12억)의 시점 축.
+   *
+   * 🔴 **호출부의 「고가 판정」과 반드시 같은 값이어야 한다.** 판정이 시점 기준(예 6억)으로
+   *    「초과」라 해 놓고 여기서 12억으로 나누면 `taxableRatio`가 **음수**가 된다
+   *    (7억 양도 → (7억 − 12억)/7억 = −0.71).
+   */
+  transferDate: Date,
 ): RedevelopmentResult {
-  const taxableRatio = (transferPrice - HIGH_VALUE_THRESHOLD) / transferPrice;
-  const nontaxableThreshold = HIGH_VALUE_THRESHOLD;
+  const threshold = resolveHighValueHouseThreshold(transferDate);
+  const taxableRatio = (transferPrice - threshold) / transferPrice;
+  const nontaxableThreshold = threshold;
 
   // 분기별 과세대상 양도차익·LTHD 산정 (정수연산 — 분기별 floor)
   const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {

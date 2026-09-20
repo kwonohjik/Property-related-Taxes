@@ -22,6 +22,7 @@ import {
   calculateProration,
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { TRANSFER } from "./legal-codes";
 // 로컬 변수명 `estimatedDeductionRate`와 충돌하므로 별칭. 신규 import는 한 줄 한 named(ESLint --fix 함정).
 import { estimatedDeductionRate as resolveEstimatedDeductionRate } from "./legal-codes";
@@ -422,11 +423,14 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
 }
 
 // ============================================================
-// H-4: calcOneHouseProration — 12억 초과분 안분
+// H-4: calcOneHouseProration — 고가주택 기준 초과분 안분 (양도일 기준 6억/9억/12억)
 // ============================================================
 
 /**
- * 1세대1주택 12억 초과분 과세 양도차익 안분.
+ * 1세대1주택 고가주택 기준 초과분 과세 양도차익 안분.
+ *
+ * 기준금액은 **양도일**에 시행 중이던 값이다 — 6억(~2008-10-06) / 9억(~2021-12-07) / 12억(2021-12-08~).
+ * `one-house/threshold.ts` `resolveHighValueHouseThreshold`가 단일 소스다(G-5).
  *
  * @param gain 전체 양도차익 (지분 모드 시 이 자산 지분 / 부담부증여 시 채무 양도 단위 ×B/C 적용 후)
  * @param transferPrice 양도가액 (지분 모드 시 이 자산 지분 / 부담부증여 시 채무 양도가)
@@ -435,7 +439,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
  *   D-0-2 해석 B: 분모 = 증여가액 C (= max(보충적·담보·임대) 평가값).
  *   국세청 해석례 5건 (ntstDcmId=010000000000028078 등) 인용.
  *
- * 산식: 과세 양도차익 = floor(gain × (분모 - 12억) / 분모)
+ * 산식: 과세 양도차익 = floor(gain × (분모 - 기준금액) / 분모)
  *   - 부담부증여: 분모 = burdenedGiftDenominator (giftValuation C). gain은 ×B/C 적용 후 채무 양도 단위.
  *     결과 = gain_burdened × (C-12억)/C = (C-A-est)×B/C × (C-12억)/C
  *   - 지분: 분모 = totalPropertyTransferPrice (총 물건가)
@@ -444,12 +448,16 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
  * 우선순위: burdenedGiftDenominator > totalPropertyTransferPrice > transferPrice
  */
 export function calcOneHouseProration(
+  transferDate: Date,
   gain: number,
   transferPrice: number,
   totalPropertyTransferPrice?: number,
   burdenedGiftDenominator?: number,
 ): number {
-  const threshold = 1_200_000_000;
+  // G-5: 기준금액은 **양도일**에 시행 중이던 값이다(6억/9억/12억). 판정(`checkExemptionCore`)과
+  //      반드시 같은 함수를 봐야 한다 — 다르면 「기준 초과」로 판정해 놓고 안분이 걸리지 않아
+  //      양도차익 **전액**이 과세된다.
+  const threshold = resolveHighValueHouseThreshold(transferDate);
   const denominator = burdenedGiftDenominator ?? totalPropertyTransferPrice ?? transferPrice;
   if (denominator <= threshold) return gain;
   return calculateProration(gain, denominator - threshold, denominator);

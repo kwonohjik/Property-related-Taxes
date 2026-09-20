@@ -501,6 +501,19 @@ export function buildHousingPart(
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
   const housingAcq = housingAcqResult.estimatedAcq;
+  /**
+   * G-5: 주택(§89①3호) 축의 고가주택 기준금액 정본은 양도일 시점 함수
+   * (`one-house/threshold.ts` `resolveHighValueHouseThreshold` — 6억/9억/12억)다.
+   *
+   * 겸용 경로만 리터럴을 남긴 이유: `calcMixedUseTransferTax`가 **2022-01-01 이전 양도를
+   * 거부한다**(`transfer-tax-mixed-use.ts` `MIXED_USE_EFFECTIVE_DATE`). 12억 시행일이
+   * 2021-12-08이므로 이 경로에 도달하는 양도일은 **항상 12억 시대**다 — 시점 함수로 바꿔도
+   * 값이 달라지는 입력이 없다(뮤테이션 실측: 구별력 0).
+   *
+   * ⚠️ 그 게이트를 완화해 2022-01-01 이전 양도를 계산하게 되면 **이 상수를 시점 함수로
+   *    바꿔야 한다** — 판정(`checkExemptionCore`)은 이미 시점 함수를 쓰므로, 그대로 두면
+   *    「9억 초과로 판정해 놓고 12억으로 안분」이 되어 안분이 통째로 빠진다.
+   */
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;
   // ─── 🚨 Critical (이슈 8-A): 다주택자 1세대1주택 비과세 미적용 분기 ───
   // - isOneHouseExempt === false: 다주택자·요건 미충족 → 12억 비과세 미적용 (전액 과세)

@@ -298,30 +298,34 @@ describe("validateStep — 자산 1건 + 지분 모드 차단 (F4-1)", () => {
 });
 
 describe("calcOneHouseProration — totalPropertyTransferPrice 분모 동작", () => {
+  // G-5: 기준금액이 양도일 시점 함수가 됐다(6억/9억/12억). 이 블록의 기대값은 전부 12억 기준이므로
+  //      12억 시대(2021-12-08 이후) 양도일을 명시한다.
+  const NOW = new Date("2026-02-16");
+
   it("R-02 totalPropertyTransferPrice 미설정 시 transferPrice를 분모로 사용 (기존 호환)", () => {
     // 단독 양도 14억 → 5/14 안분
     const gain = 1_000_000_000;
-    const result = calcOneHouseProration(gain, 1_400_000_000);
+    const result = calcOneHouseProration(NOW, gain, 1_400_000_000);
     expect(result).toBe(Math.floor(gain * (1_400_000_000 - 1_200_000_000) / 1_400_000_000));
   });
 
   it("totalPropertyTransferPrice 설정 시 분모 교체 — 사례 27 1차", () => {
     // gain=514,800,000, fractionPrice=1.02B (<12억), totalPrice=1.7B (>12억)
     // 분모 = 1.7B → 과세대상 = floor(514,800,000 × 5/17) = 151,411,764
-    const result = calcOneHouseProration(514_800_000, 1_020_000_000, 1_700_000_000);
+    const result = calcOneHouseProration(NOW, 514_800_000, 1_020_000_000, 1_700_000_000);
     expect(result).toBe(151_411_764);
   });
 
   it("R-01 단독 소유 회귀 — 분모 미설정 = 분모 = transferPrice", () => {
     // 단독 양도 1.5B → 분모 1.5B
     const gain = 600_000_000;
-    const r1 = calcOneHouseProration(gain, 1_500_000_000);
-    const r2 = calcOneHouseProration(gain, 1_500_000_000, undefined);
+    const r1 = calcOneHouseProration(NOW, gain, 1_500_000_000);
+    const r2 = calcOneHouseProration(NOW, gain, 1_500_000_000, undefined);
     expect(r1).toBe(r2);
   });
 
   it("분모 ≤ 12억 → 안분 미적용 (gain 전액 반환)", () => {
-    expect(calcOneHouseProration(500_000_000, 1_000_000_000)).toBe(500_000_000);
-    expect(calcOneHouseProration(500_000_000, 1_020_000_000, 1_000_000_000)).toBe(500_000_000);
+    expect(calcOneHouseProration(NOW, 500_000_000, 1_000_000_000)).toBe(500_000_000);
+    expect(calcOneHouseProration(NOW, 500_000_000, 1_020_000_000, 1_000_000_000)).toBe(500_000_000);
   });
 });
