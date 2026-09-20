@@ -66,15 +66,25 @@ describe("P2 2주택 전용 배제 (다른 보유 주택)", () => {
     expect(r.exclusionReasons.some((e) => e.type === "litigation_housing_two_house")).toBe(true);
   });
 
-  it("기준시가 1억↓ 소형 주택(정비구역 아님) → low_price_two_house 배제", () => {
-    const other = makeHouse("h2", { officialPrice: 90_000_000, isRedevelopmentZone: false });
-    const input = makeInput([makeHouse("h1", { regionCode: SELLING }), other], { sellingHouseId: "h1", transferDate: TD });
+  // F-3 — 9호는 「**주택의 양도 당시** 기준시가 1억원 이하인 주택」이고, 배제되는 것은
+  //   **양도하는 주택 자신**이다. 10호(유일 일반주택)는 1호~7호만 인용하므로 다른 주택이
+  //   1억 이하인 것은 배제 근거가 아니다.
+  it("양도 주택이 기준시가 1억↓(정비구역 아님) → low_price_two_house 배제", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING, officialPrice: 90_000_000, isRedevelopmentZone: false });
+    const input = makeInput([selling, makeHouse("h2")], { sellingHouseId: "h1", transferDate: TD });
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
     expect(r.exclusionReasons.some((e) => e.type === "low_price_two_house")).toBe(true);
   });
 
-  it("기준시가 1억↓ 이나 정비구역 → 배제 안 됨(산입)", () => {
-    const other = makeHouse("h2", { officialPrice: 90_000_000, isRedevelopmentZone: true });
+  it("양도 주택이 1억↓ 이나 정비구역 → 배제 안 됨(산입)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING, officialPrice: 90_000_000, isRedevelopmentZone: true });
+    const input = makeInput([selling, makeHouse("h2")], { sellingHouseId: "h1", transferDate: TD });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.exclusionReasons.some((e) => e.type === "low_price_two_house")).toBe(false);
+  });
+
+  it("F-3: 다른 주택만 1억↓ 이면 배제 근거가 아니다", () => {
+    const other = makeHouse("h2", { officialPrice: 90_000_000, isRedevelopmentZone: false });
     const input = makeInput([makeHouse("h1", { regionCode: SELLING }), other], { sellingHouseId: "h1", transferDate: TD });
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
     expect(r.exclusionReasons.some((e) => e.type === "low_price_two_house")).toBe(false);

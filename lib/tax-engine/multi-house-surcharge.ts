@@ -122,6 +122,7 @@ import {
   dutyPeriodPendingReason,
   DUTY_PERIOD_PENDING_WARNING,
   determineSurchargeExclusion,
+  isLowPriceSmallHouseUndecidable,
 } from "./multi-house-surcharge-helpers";
 
 /** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
@@ -285,7 +286,7 @@ export function determineMultiHouseSurcharge(
       const exclusionReasons: ExclusionReason[] = [
         {
           type: "only_one_remaining",
-          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 ①~⑨ 배제 항목에 해당하여 유일한 일반주택 (${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})`,
+          detail: `양도 주택 외 다른 주택(${otherEffectiveHouses.length}채)이 모두 1호부터 8호까지 및 8호의2에 해당하여 유일한 일반주택 (${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})`,
         },
       ];
       return {
@@ -319,6 +320,17 @@ export function determineMultiHouseSurcharge(
     new Set(excludedHouses.map((e) => e.houseId)),
     marriageSubtractionApplied,
   );
+
+  // 9호(양도 당시 기준시가 1억 이하)를 판정할 값이 없으면 중과를 그대로 적용하되 그 사실을 알린다.
+  if (
+    !isExcluded &&
+    effectiveHouseCount === 2 &&
+    isLowPriceSmallHouseUndecidable(input.houses.find((h) => h.id === input.sellingHouseId))
+  ) {
+    warnings.push(
+      `양도 주택의 양도 당시 기준시가가 입력되지 않아 1억원 이하 중과배제(${MULTI_HOUSE.TWO_HOUSE_SMALL_HOUSE}) 해당 여부를 판정하지 못했습니다`,
+    );
+  }
 
   if (isExcluded) {
     // §167의3⑤ 안내 — 10호(2주택)가 ④ 의제로 성립했을 때만.

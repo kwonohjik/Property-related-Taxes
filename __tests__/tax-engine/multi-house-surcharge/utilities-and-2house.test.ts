@@ -83,12 +83,14 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
     expect(result.surchargeType).toBe("multi_house_2");
   });
 
-  it("⑩ 다른 주택 기준시가 1억 이하 (정비구역 아님) → 2주택 중과배제", () => {
-    const h1 = makeHouse("h1", { regionCode: "11680" }); // 양도 주택
-    const h2 = makeHouse("h2", {
+  // F-3 — 9호의 대상은 **양도하는 주택 자신**의 양도 당시 기준시가다(종전엔 다른 주택을 봤다).
+  it("9호 양도 주택 기준시가 1억 이하 (정비구역 아님) → 2주택 중과배제", () => {
+    const h1 = makeHouse("h1", {
+      regionCode: "11680",
       officialPrice: 80_000_000, // 1억 이하
       isRedevelopmentZone: false,
-    });
+    }); // 양도 주택
+    const h2 = makeHouse("h2");
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
@@ -108,12 +110,13 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
     expect(result.exclusionReasons[0].detail).toContain("1억 이하");
   });
 
-  it("⑩ 다른 주택 기준시가 1억 이하이지만 정비구역 → 배제 안 됨", () => {
-    const h1 = makeHouse("h1", { regionCode: "11680" });
-    const h2 = makeHouse("h2", {
+  it("9호 양도 주택이 1억 이하이지만 정비구역 → 배제 안 됨", () => {
+    const h1 = makeHouse("h1", {
+      regionCode: "11680",
       officialPrice: 80_000_000,  // 1억 이하
       isRedevelopmentZone: true,  // 정비구역 → 제외
     });
+    const h2 = makeHouse("h2");
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
