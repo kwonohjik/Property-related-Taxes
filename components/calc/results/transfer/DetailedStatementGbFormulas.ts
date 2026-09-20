@@ -360,8 +360,16 @@ export function buildGbExpenseFormula(
         ? burdenedGift.perAsset.building
         : undefined;
     if (bgAsset) {
+      /**
+       * 율 echo가 없으면 **개산공제 경로가 아니다** — K-4(실지취득가)와 §97②2호 swap은
+       * 실비(자본적지출·양도비)를 채무비율로 안분한 값이 이 슬롯에 들어간다. 종전에는 그
+       * 경우에도 「안분 취득가액 × 3% (개산공제)」라고 적어, **없는 근거를 댔다**(F-19).
+       */
+      if (bgAsset.estimatedDeductionRate === undefined) {
+        return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(bgAsset.estimatedDeduction)}\n        ※ 실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다.`;
+      }
       const bgPct = dedRatePct(bgAsset.estimatedDeductionRate);
-      return `필요경비 = 안분 취득가액 × ${bgPct} (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × ${bgAsset.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE.LAND_BUILDING}\n        = ${fmt(bgAsset.estimatedDeduction)}`;
+      return `필요경비 = 안분 취득가액 × ${bgPct} (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × ${bgAsset.estimatedDeductionRate}\n        = ${fmt(bgAsset.estimatedDeduction)}`;
     }
   }
 
@@ -410,10 +418,14 @@ export function buildGbExpenseFormula(
     return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
   }
   if (isBuilding2Prop(p.propertyId)) {
-    if (!gb.acqExtensionStdTotal) {
+    // base echo가 없으면 개산공제 경로가 아니다(증축분 실가 직접 입력) — 율도 base도 없다.
+    // 100% 기준시가(`acqExtensionStdTotal`)를 base로 적으면 **지분 자산에서 산식이 자기 값을
+    // 만들지 못한다**(실측 지분 0.5: 「1,000,000 × 3% = 15,000」). F-20.
+    const extBase = gb.estimatedDeduction?.extensionBase;
+    if (extBase === undefined || !gb.acqExtensionStdTotal) {
       return `사용자 직접 입력 (증축 실제 필요경비) = ${fmt(displayExp)}`;
     }
-    return `취득시 증축건물기준시가 ${fmt(gb.acqExtensionStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
+    return `취득시 증축건물기준시가 ${fmt(extBase)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
   }
   return undefined;
 }
