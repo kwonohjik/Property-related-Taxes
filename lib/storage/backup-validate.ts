@@ -10,17 +10,9 @@
 import { z } from "zod";
 import { db } from "./db";
 import { BACKUP_FORMAT, BACKUP_VERSION, type BackupFile } from "./backup-export";
-
-const LOCAL_TAX_TYPES = [
-  "transfer",
-  "inheritance",
-  "gift",
-  "acquisition",
-  "property",
-  "comprehensive_property",
-  "stock_transfer",
-  "stock_valuation",
-] as const;
+// 🔴 세목 목록을 여기서 다시 적지 않는다 — `types.ts`가 정본이다.
+//    사본이던 시절에는 한쪽에만 세목을 더하면 **그 세목의 백업 import가 조용히 거부**됐다.
+import { LOCAL_TAX_TYPES } from "./types";
 
 const MAX_RECORDS = 10_000;
 const MAX_FIELD_BYTES = 1_000_000; // 레코드당 inputData/resultData JSON 1MB

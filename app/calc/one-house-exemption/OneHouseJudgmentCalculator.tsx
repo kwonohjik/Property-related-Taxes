@@ -8,7 +8,7 @@
  * 패턴은 `StockTransferTaxCalculator`(4단계 마법사 정본). 다른 점은 셋이다:
  *   1. **세액을 계산하지 않는다** — 판정까지다.
  *   2. 주택 수 위젯이 없다 — 명부에서 파생한다(G-1).
- *   3. 이력 자동저장은 **P4-2b-3**에서 붙인다(`LocalTaxType` 등록이 선행돼야 한다).
+ *   3. 이력에 남는 것은 **세액이 아니라 판정**이다(P4-2b-3).
  */
 import { useCallback, useMemo } from "react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
@@ -22,6 +22,8 @@ import { Step3 } from "./steps/Step3";
 import { Step4 } from "./steps/Step4";
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { callOneHouseExemptionAPI } from "@/lib/calc/one-house-exemption-api";
 import {
   validateStep1,
@@ -42,6 +44,8 @@ export default function OneHouseJudgmentCalculator() {
 
   const { setStep, updateFormData, setResult, setError, setLoading, reset } =
     useOneHouseJudgmentStore();
+
+  const activeClientId = useProfessionalStore((s) => s.activeClientId);
 
   useResetOnNewParam(reset);
 
@@ -93,6 +97,22 @@ export default function OneHouseJudgmentCalculator() {
 
   const isResult = currentStep === RESULT_STEP && result !== null;
   const onStepClick = useMemo(() => (i: number) => setStep(i), [setStep]);
+
+  /**
+   * 이력 자동저장 (P4-2b-3).
+   *
+   * 🔑 `resultData`는 **판정이 나온 뒤에만** 싣는다 — 훅은 빈 객체·null이면 저장을 건너뛰므로
+   *    입력 중에는 아무것도 남지 않는다(세액 계산기들과 같은 규약).
+   * 🔑 `taxLawVersion`은 **양도 예정일**이다 — route가 그 날짜로 세율·법령을 로드하므로
+   *    「이 판정이 어느 시점 기준인가」를 되짚는 값이 그것이다(주식 평가가 평가기준일을 쓰는 것과 같다).
+   */
+  useAutoSaveCalculation({
+    taxType: "one_house_exemption",
+    inputData: formData as unknown as Record<string, unknown>,
+    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   return (
     <div className="min-h-screen bg-background">

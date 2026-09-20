@@ -14,6 +14,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import {
   createInitialOneHouseJudgmentForm,
+  normalizeOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
 } from "./one-house-judgment-form.types";
 
@@ -87,7 +88,10 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
         if (!state) return;
         state.currentStep = 0;
         state.result = null;
-        state.formData = { ...createInitialOneHouseJudgmentForm(), ...state.formData };
+        // 이력 재개(`HistoryClient`·`HistoryDetailDrawer`)와 **같은 leaf**를 쓴다.
+        state.formData = normalizeOneHouseJudgmentForm(
+          state.formData as unknown as Record<string, unknown>,
+        );
       },
     },
   ),
