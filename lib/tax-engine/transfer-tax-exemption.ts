@@ -18,7 +18,7 @@ import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { TRANSFER, shortArticle } from "./legal-codes";
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { OneHouseJudgeInput } from "./one-house/types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 import {
@@ -62,7 +62,7 @@ const MARRIAGE_CLAUSE = shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT).replace("§
 const PARENTAL_CARE_CLAUSE = shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT).replace("§155", "");
 
 export function checkExemption(
-  input: TransferTaxInput,
+  input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   presaleRightStartDate?: Date,
 ): ExemptionResult {
@@ -74,7 +74,7 @@ export function checkExemption(
 }
 
 function checkExemptionCore(
-  input: TransferTaxInput,
+  input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
 ): ExemptionResult {
   const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;

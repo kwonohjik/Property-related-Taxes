@@ -699,7 +699,7 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 |---|---|---|---|
 | **P0** | ✅ **완료(2026-09-20 · §14)** — 상수 9개 신설 + `ONE_HOUSEHOLD_DEF` §152→**§152의3** 단일 소스화 · manifest 3건 등록(커버리지 100%) · §89② 항 문언 동결 · 근거 anchor 12건(뮤테이션 12/12 KILLED — **P-1이 뚫던 2건 포함**) | — | 소 |
 | **P1** | ✅ **완료(2026-09-20 · §13)** — `resolveHighValueHouseThreshold(양도일)` 신설 + 판정·안분·LTHD·재개발 안분·표시 문구 전환, seed `maxExemptPrice` 제거. 🛑 **입주권 경로·UI 3곳은 이월**(§13.3 — 근거 미확보·prop drilling) | — | 소~중 |
-| **P2** | **판정 엔진 추출** `lib/tax-engine/one-house/` — 계산기 route가 `judgeOneHouseExemption`을 호출. **세액 불변**(§8.1 0번 · P-4) | P0·P1 | 중 |
+| **P2** | ✅ **완료(2026-09-20 · §15)** — `one-house/{types,judge}.ts` 신설. 계산기가 `TransferTaxInput → OneHouseFacts → 판정입력` **왕복**을 거쳐 판정한다(사실 충분성을 매 테스트가 증명). 판정 로직 **무변경** · 세액 변동 **0**(2,089 케이스) · anchor 26건 · 뮤테이션 **34/34 KILLED** | P0·P1 | 중 |
 | **P3** | **§155의2 · §155의3** — `OneHouseFacts` 입력 + 판정 + §159의4 표2 게이트 연동. 엔진·anchor만(화면은 P4) | P2 | 중 |
 | **P4** | **판정 메뉴 신설** — ⓐ 기본(아래) ⓑ **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드, 한 PR로 분리 권장) — 4단계 마법사 · route · 이력 타입 · 조건부·기한(**날짜 표시**, Q-4) 출력(G-3) · 명부 정본(G-1) · 1세대 **사용자 선언** + 정의 안내(Q-3′) · §155의2·§155의3 입력 | P3 · 설계 문서 2종 | **대** |
 | **P5** | **계산기 연결** — 「이 결과로 세액 계산」 · 「판정 불러오기」 · 재판정 · 출처 표시·staleness | P4 | 중 |
@@ -942,6 +942,112 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 - UI `LawArticleModal`의 `legalBasis` prop 값이 **조문 조회 키**다(4곳) — 문자열 형식을
   바꾸면 모달 조회가 깨진다. 이번 상수화는 형식을 **보존**했다.
 - 커버리지 테스트 주석의 모수 숫자가 드리프트해 있었다(323→**336**, 112→**119**) — 실측값으로 갱신.
+
+---
+
+## 15. P2 실행 기록 (2026-09-20)
+
+**PR**: 판정 엔진 추출 — `lib/tax-engine/one-house/`. **세액 불변 리팩터**(판정 로직 무변경).
+
+### 15.1 무엇을 만들었나
+
+| 파일 | 역할 |
+|---|---|
+| `one-house/types.ts` | `OneHouseJudgeInput`(판정 서브트리가 읽는 필드 **전수**) · `OneHouseFacts` · `OneHouseSale` · `OneHouseJudgment` |
+| `one-house/judge.ts` | `judgeOneHouseExemption` (판정 메뉴·계산기 **공통 진입점**) · `toOneHouseJudgeInput` · `extractOneHouseFacts` · `extractOneHouseSale` |
+| `transfer-tax.ts` | 호출부 **2곳**(일반 STEP 1 · 재개발 apt 분기)이 어댑터 경유로 전환 |
+| `transfer-tax-exemption.ts` | `checkExemption`·`checkExemptionCore` 매개변수를 `OneHouseJudgeInput`으로 **narrowing**(타입 전용) |
+
+### 15.2 read-set은 추측이 아니라 **컴파일러**가 열거했다
+
+설계서는 `OneHouseFacts` 목록을 손으로 적어 두었다. 그 목록이 맞는지 확인하는 방법으로
+`checkExemption`의 매개변수를 `Pick<TransferTaxInput, …>`으로 좁히고 `tsc`가 조용해질 때까지
+채웠다(기존 `ExemptionReqInput`·`Article89Clause2Input`과 같은 패턴).
+
+🔴 **결과: 설계 초안 목록은 판정에 필요한 필드를 10개 빠뜨리고 있었다.**
+
+`acquisitionDate` · `acquisitionCause` · `isRegulatedArea` · `regionCode` ·
+`decedentSameHouseholdBeforeInheritance` · `decedentCohabitationResidenceMonths` ·
+`decedentCohabitationHoldingStartDate` · `nonHousingToHousingConversion` ·
+`oneHouseUnitRole` · `appurtenantHouseVerdict`.
+
+그대로 P4 판정 메뉴를 만들었다면 **보유기간·거주요건·§155① 조정지역 기한·부수토지 판정이
+입력 없이** 돌아 계산기와 다른 답을 냈을 것이다. 세액이 아니라 **판정 자체**가 갈리는 축이다.
+
+또한 `isUnregistered`·`householdHousingCount`·`isRegulatedArea`·`wasRegulatedAtAcquisition`은
+엔진에서 **필수**라 사실 타입에서도 필수로 두었다 — optional로 두면 어댑터가 `?? false`·`?? 0`으로
+채우게 되고, 그것은 CLAUDE.md가 금지한 **묵시 폴백**이다(판정이 조용히 달라진다).
+⇒ P4 판정 메뉴는 주택 수를 **명부에서 직접 도출해** 채워야 한다(G-1 「명부가 정본」의 구체화).
+
+### 15.3 계산기도 **왕복**시켰다 — 이 PR의 핵심 결정
+
+계산기는 이미 `TransferTaxInput`을 들고 있어 `checkExemption`을 그냥 부르면 된다. 그러지 않고
+`TransferTaxInput → OneHouseFacts → 판정입력`으로 **분해했다 다시 조립**하게 했다.
+
+그렇게 하지 않으면 「판정 메뉴가 넘기는 **사실만으로** 계산기와 같은 판정이 나오는가」가
+**P4에서 처음** 검증된다. 왕복시키면 사실 타입이 무엇을 빠뜨리든 **기존 anchor 8,141건 앞에서**
+즉시 깨진다. 비용은 객체 2개, 얻는 것은 D-1(엔진은 하나)의 **상시 증명**이다.
+
+### 15.4 불변 증명
+
+| 계측 | 결과 |
+|---|---|
+| 조합 스윕 스냅샷(판정·세액·경고) | **2,089 케이스 · 차이 0** — 추출 전(HEAD) ↔ 추출 후 |
+| 양도세 관련 테스트 | 806 파일 8,141건 통과 |
+| 신규 anchor `one-house-judge-extraction.anchor.test.ts` | **26건** |
+| 뮤테이션 | **34/34 KILLED · 생존 0** (신규 anchor **단독**으로 전건 검출) |
+| 세액 변동 | **0** |
+
+스냅샷 probe는 **일회용**이라 커밋하지 않았다(2,089건 고정은 유지 비용만 크다). 대신 그것이
+잡던 축을 전부 anchor로 옮기고, **anchor 단독으로** 같은 34건을 다시 죽이는지 확인했다.
+
+### 15.5 구별력 0이었던 계측 — 세 번 고쳤다
+
+「차이 0」은 **안전하다는 뜻이 아니라 계측이 죽었다는 뜻일 수 있다**
+(`feedback_mutation_zero_discrimination_is_not_proof`). 실제로 세 번 겪었다.
+
+| 생존 | 원인 | 조치 |
+|---|---|---|
+| 혼인↔동거봉양 뒤바꿈 | 합가 의제는 「2주택 + 합가일 + **선양도**」 조건 **셋**인데 스윕이 2축까지만 교차 | 3축 스윕 + 합가 명시 시나리오 |
+| `residenceTransitionAcquisitionDate` · `acquisitionCause` | 「취득시 조정지역 + 거주 부족」이라는 **전제 두 축**이 서야 판정을 가른다 | 거주요건 전용 시나리오 + 음성 짝 |
+| §89② 예외 4종 | 예외 사실을 버리면 `excluded`가 아니라 **`undetermined`(종전 동작 유지)** 로 가서 **세액이 안 변한다** | 관측 지점을 세액 → **고지가 가리키는 조문**으로 |
+
+⇒ 마지막 것은 일반화해 둘 만하다: **「종전 동작 유지」로 처리하는 축은 세액으로 관측되지 않는다.**
+그 축의 anchor는 반드시 경고·고지 문자열을 봐야 한다.
+
+### 15.6 설계서와 달리 한 것 — `highValueThreshold`를 내보내지 않는다
+
+설계서는 `OneHouseJudgment.highValueThreshold`를 두라고 적었다. 넣어 두고 뮤테이션을 돌리니
+**12억으로 고정해도 2,089 케이스 전건이 통과**했다 — 읽는 곳이 없다는 뜻이다. 실제 소비자
+(안분·장특 분리안분·재개발)는 전부 P1이 만든 단일 소스 `resolveHighValueHouseThreshold(양도일)`를
+**직접** 부른다. 판정 결과로 다시 내보내면 같은 값의 **두 번째 경로**가 생기고, 그 둘이 어긋나도
+아무 테스트가 울지 않는다 — P1이 없앤 바로 그 구조다. ⇒ **필드를 제거**했다.
+
+같은 이유로 `pending[]`·`undetermined[]`·`appliedExceptions[]`·`houseCount`도 지금은 두지 않는다.
+빈 배열로 내보내면 「없음」과 「아직 안 만듦」이 구별되지 않는다 — P4에서 채운다.
+
+### 15.7 재발 방지 — 컴파일러가 지킨다
+
+| 가드 | 무엇을 막나 |
+|---|---|
+| `checkExemption(input: OneHouseJudgeInput)` | 판정 서브트리가 **목록에 없는 필드**를 읽으면 `tsc` 실패 |
+| `judge.ts` 키 커버리지 (`satisfies` + `Exclude<…> extends never`) | 목록에 필드가 늘었는데 **어댑터가 안 채우면** `tsc` 실패 |
+| 같은 가드의 **중첩 전용 항** | `household` 안의 필드 누락(상위 가드는 중첩을 못 본다) |
+| anchor의 `JUDGE_INPUT_KEYS` 동결 + 양방향 타입 가드 | 목록이 **늘거나 줄면** 테스트 파일에서 컴파일 실패 — P4 화면까지 함께 손보라는 신호 |
+
+전부 optional 필드라 **타입 주석으로는 못 잡는다** — `satisfies`여야 한다
+(`feedback_satisfies_preserves_keys_annotation_kills_guard`). 가드가 실제로 무는지
+**필드 3개를 지워 확인**했고, 셋 다 **가드 줄에서** 잡혔다.
+
+### 15.8 남은 것 (P2 범위 밖)
+
+- **판정 로직은 아직 `transfer-tax-exemption.ts`에 있다.** `judge.ts`는 어댑터다 —
+  방향 전환(그 파일이 정본이 되고 `checkExemption`이 얇은 래퍼가 되는 것)은 설계서대로 **P4 착수 시점**이다.
+- **P-4의 「양쪽 경로에서 모두 실패」는 절반만 실행했다** — 판정 메뉴 경로가 아직 없다.
+  §155① 분기 무력화(M10)가 계산기 경로에서 죽는 것은 확인했고, 두 번째 경로는 P4에서 같은 뮤테이션을 다시 돌린다.
+- `transfer-tax.ts` **777줄**(+7). 분리 트리거 800 미만이라 손대지 않았다 —
+  이 PR은 「세액 불변」이 전부라 diff에 구조 변경을 섞지 않는 편이 검토에 낫다. P3에서 다시 열 때 판단할 것.
+- 다건(`multi/route.ts`)·겸용 경로는 단건 엔진을 그대로 호출하므로 자동으로 새 경로를 탄다(전건 통과로 확인).
 
 ---
 
