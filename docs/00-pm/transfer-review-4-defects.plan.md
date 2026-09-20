@@ -1,4 +1,4 @@
-# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.24)
+# 양도세 리뷰 발견 결함 4건 — 수정 계획서 (v0.25)
 
 > 작성 2026-09-18 · 브랜치 `fix/transfer-review-4-defects`(origin/master `2a68b08c` 기준) · 검증 깊이 **L3**(세액이 바뀐다)
 > 출처: 「1세대1주택 판정 자동화」 문서 3종 리뷰(2026-09-18)가 **문서 밖 현행 코드 결함**으로 보고한 4건.
@@ -323,7 +323,7 @@ OH-1 행의 A·B 값은 재현 probe(mock 세율)의 시나리오 값이다. 배
 | ~~**F-19**~~ ✅ | 부담부증여 GB 상세명세서가 K-4(실지취득가) 경로에서도 「안분 취득가액 × N% (개산공제, §163⑥)」라 적는다 — 그 경로의 필요경비는 개산공제가 아니라 **안분 실비**(자본적지출·양도비)다. §97②2호 swap 경로도 같다. 표시 축(세액 무관) | F-18 조사 | **해소** §29 |
 | ~~**F-20**~~ ✅ | GB 상세명세서 **증축(건물2)** 산식의 base가 `acqExtensionStdTotal`(100% 값)이라 **지분 자산에서 산식이 자기 값을 못 만든다** — 토지·건물1은 `landBase`·`buildingBase` echo로 이미 해결된 축인데 증축분만 빠졌다. 표시 축(세액 무관) · **수치 probe 미수행** | F-18 조사 | **해소** §29 — **실측 결과 토지·건물1 base echo도 증축 경로에선 빠져 있었다** |
 | ~~**F-21**~~ ✅ | GB 상세명세서가 **토지·건물1의 실가 파트**(§163⑨ 상속·증여 평가액·파트별 실지거래가액)에서도 「취득시 기준시가 × N%」라 적을 수 있다 — 그 파트는 개산공제가 아니다(엔진 `landUsedEstimated`·`building1UsedEstimated`가 신호). F-19와 같은 축인데 증축·부담부증여만 닫았다. 표시 축(세액 무관) · **수치 probe 미수행** | F-19 구현 | **해소** §30 — 신호는 카드의 `usedEstimatedAcquisition`(새 echo 불필요) |
-| **F-4** | 일반건물 부담부증여 경로(`general-building-route-carryover.ts`)에 D-8 자동 판정이 없다 — 카드가 `isOneHousehold: false` 하드코딩이라 현재 세액 영향 없음 | D45 재현 | 일반건물 카드에서 1세대1주택이 성립할 수 있게 되는 변경이 생길 때 |
+| **F-4** | 일반건물 **부담부증여** 경로(`general-building-route-carryover.ts`)가 §97의2**②3호(세액 비교)만** 처리하고 **②2호(D-8)는 판정하지 않는다**. GB 카드는 세대 축이 `false`라(`general-building-route-cards.ts:193`) 1세대1주택이 성립할 수 없어 **현재 세액 영향 없음** | D45 재현 | **GB 카드에 주택 파트가 생기는 변경**이 있을 때 — §30′ 참조 |
 
 ## 11. PR-1 (D9) 구현 기록 — 2026-09-18
 
@@ -950,6 +950,51 @@ F-19(부담부증여 실비)·F-20(증축 실가)과 같은 축인데 **토지·
   **「구별력 0」이 「그 분기가 맞다」는 증명은 아니다**(`feedback_mutation_zero_discrimination_is_not_proof`).
 - **세액 방향**: 없음.
 
+## 30′. F-4 착수 조건 재확인 — 2026-09-20 (미도래)
+
+계획서 기재에 **사실 오류 2건**이 있어 바로잡는다. 착수 조건 자체는 **미도래**다.
+
+### 정정 1 — 파일이 둘이다
+
+- **D-8 부재**는 `general-building-route-carryover.ts`가 맞다(파일 전문 확인 — `judgeCarryoverEligibility` ·
+  `applyCarryoverDonorBasis` · ②3호 세액 비교만 있고 ②2호 판정이 없다).
+- **세대 축 `false`** 는 그 파일이 아니라 **`general-building-route-cards.ts:193`** 이다.
+  종전 기재는 둘을 한 파일로 적었다(그 파일에는 `isOneHousehold`가 **아예 없다**).
+
+### 정정 2 — 「하드코딩」이 아니라 규약이다
+
+`mixed-use-part-cards.ts:161`이 같은 값을 두면서 「**주택이 아닌 파트 — 세대 축을 지운다(GB
+`buildProperties`와 같은 규약)**」이라고 명시한다. 임시 조치가 아니라 의도된 설계다.
+⇒ 착수 조건은 「하드코딩을 푸는 변경」이 아니라 **「GB 카드에 주택 파트가 생기는 변경」**이다.
+
+### 미도래 근거 (실측 2026-09-20)
+
+1. GB 카드의 `propertyType`은 **`"land"` · `"general_building_unit"` 2종뿐**이다
+   (`general-building-valuation.ts` · `general-building-extension.ts`) — 주택 타입이 없다.
+2. **실측**: GB 결과의 모든 카드가 `isExempt=false`.
+3. D-8 발동 조건은 `scenarioAIsOneHouse = resultA.isExempt || isPartialExempt`
+   (`transfer-tax-carryover.ts:497·356`) ⇒ GB에서는 **영원히 false**.
+4. 겸용주택은 **별도 경로**에서 주택 파트에 세대 축을 싣는다(`mixed-use-part-cards.ts:326`) —
+   GB와 섞이지 않는다. 최근 `c079929f`(컴패니언 × 겸용 개방)도 겸용 경로다.
+
+### 착수 시 — 경로마다 할 일이 다르다
+
+| 경로 | D-8 도달 | 착수 시 |
+|---|---|---|
+| 비-부담부증여 GB | **도달한다** — 카드에 `landCarryoverTaxation`·`buildingCarryoverTaxation`을 실어 단건 엔진 STEP 0.475를 탄다(`general-building-route-cards.ts:244·252`) | 세대 축이 열리면 D-8이 **따라온다** |
+| 부담부증여 GB | **안 탄다** — ④ `buildGbCarryoverPayload`가 부담부증여에서 `{}`를 반환해 카드 경로를 끄고, asset-level `carryoverTaxation`을 위 carryover 파일이 ②3호로만 쓴다 | ②2호를 **별도 배선**해야 한다 |
+
+### ⚠️ 조사 중 겪은 함정 (다음 사람을 위해)
+
+GB 실가 경로에 `landCarryoverTaxation`만 주고 세액을 재면 **Δ 0**이 나온다 — 결함이 아니다.
+엔진 게이트가 **두 조건**이다: `acquisitionCause === "carryover_gift"` **그리고** `carryoverTaxation`
+(`transfer-tax-precalc.ts:155`). 취득원인을 빼면 조용히 skip된다.
+또 `giftDateValuation`은 **필수 필드**라 빠뜨리고 `as never`로 캐스팅하면 `buildInputB`(`:597`)에서
+`undefined.toLocaleString()`으로 **터진다**. 실사용은 타입 필수 + ⑧(`transfer-tax-validate-acquisition.ts:263`
+`<= 0` 차단) + ④(`transfer-tax-api-gb-carryover.ts:115` 항상 실음)로 삼중으로 막혀 있다.
+올바른 픽스처로는 정상 작동한다 — 기본 165,060,000 / donor 2억 **124,260,000** / donor 1천만
+**233,490,000** / 토지만 134,660,000 / 건물만 154,660,000(파트별 독립 반영).
+
 ## 부록. 변경 이력
 
 | 버전 | 날짜 | 내용 |
@@ -959,6 +1004,7 @@ F-19(부담부증여 실비)·F-20(증축 실가)과 같은 축인데 **토지·
 | v0.3 | 2026-09-18 | **V-4·V-5 해소** — §1.4 설계 정정(배제 3에 게이트 덧붙이기 → E-3.5 합가 판정을 공용 술어로 꺼내 `deemedOneHouseBy155`에 채움), F-2를 PR-1에 흡수, Q-5(먼저 양도 요건) 신설 |
 | v0.3′ | 2026-09-18 | **Q-5 확정 — 토글 필수**(기존 미체크 혼인 중과배제는 세액 증가 · PR 본문 명시) · anchor D9-A8 |
 | v0.4 | 2026-09-18 | **PR-1(D9) 구현** — §11 구현 기록·mutation 9건·세액 방향 |
+| v0.25 | 2026-09-20 | **F-4 기재 정정**(§30′ — 파일 2개 분리 · 「하드코딩」→규약 · 미도래 근거 실측 · 경로별 착수 방법 · Δ0 함정 기록). 착수 조건은 **미도래 유지** |
 | v0.24 | 2026-09-20 | **F-21 해소**(§30 — 실가 파트에 §163⑥ 근거를 대지 않는다 · 신호는 기존 `usedEstimatedAcquisition`, 엔진 변경 0) |
 | v0.23 | 2026-09-20 | **F-19·F-20 해소**(§29 — 실비 경로 문구 · 증축 base echo · **증축 경로 토지·건물1 base echo 누락도 함께**) · 후속 **F-21** 등록(실가 파트 문구) |
 | v0.22 | 2026-09-20 | **F-18 해소**(§28 — GB 개산공제율 echo · 표시 6곳의 「3%」 하드코딩 정정) · 후속 **F-19**(부담부증여 K-4 실비 문구) · **F-20**(증축 base echo) 등록 |
