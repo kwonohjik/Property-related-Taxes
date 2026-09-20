@@ -408,12 +408,38 @@ export function buildGbExpenseFormula(
     return `자산별 양도비 = ${fmt(displayExp)}`;
   }
 
+  /**
+   * 그 파트가 **개산공제 경로인가** — 엔진 카드의 `usedEstimatedAcquisition`이 정본이다(F-21).
+   *
+   * 「소득세법」 제97조 제2항은 제1호(취득가액을 **실지거래가액**에 의하는 경우)와 제2호(그 밖의
+   * 경우)를 나누고 §163⑥ 개산공제는 **제2호에만** 붙는다. §163⑨ 상속·증여 평가액은 「취득당시의
+   * 실지거래가액으로 **본다**」이므로 1호다 ⇒ 개산공제 없음.
+   *
+   * 종전에는 그 파트에도 「취득시 기준시가 × 3%」라 적었다 — **실측 「238,000,000 × 3% = 0」**.
+   * 산식이 자기 값을 못 만드는 것은 물론, **없는 근거를 댄 것**이다.
+   *
+   * ⚠️ `estimatedDeduction.landBase`(F-18·F-20의 base echo)를 이 신호로 겸용하지 않는다 —
+   *    base가 없는 것이 「실가 파트」인지 「echo 이전에 저장된 옛 이력」인지 구별되지 않는다
+   *    (`feedback_one_field_serving_two_legal_axes`). 카드 필드가 없는 옛 결과는 `undefined`라
+   *    종전대로 개산공제 산식으로 떨어진다(표시 회귀 없음).
+   */
+  const partCard = gb.assetCards.find(
+    (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
+  ) as { usedEstimatedAcquisition?: boolean } | undefined;
+  const isActualPart = partCard?.usedEstimatedAcquisition === false;
+  const actualPartFormula = () =>
+    displayExp > 0
+      ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
+      : `필요경비 없음 — 실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다.`;
+
   if (isLandProp(p.propertyId)) {
+    if (isActualPart) return actualPartFormula();
     if (!gb.acqLandStdTotal) return undefined;
     // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
     return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.landRate)} = ${fmt(displayExp)}`;
   }
   if (isBuildingProp(p.propertyId)) {
+    if (isActualPart) return actualPartFormula();
     if (!gb.acqBuilding1StdTotal) return undefined;
     return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × ${dedRatePct(gb.estimatedDeduction?.buildingRate)} = ${fmt(displayExp)}`;
   }
