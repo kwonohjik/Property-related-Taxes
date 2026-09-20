@@ -216,6 +216,12 @@ export function checkEligibility(
   rentalUnits: RentalUnitInput[],
   residenceHoldYears: number,
   residenceLiveYears: number,
+  /**
+   * §155의3① — 상생임대주택은 「**제155조제20항제1호** … 를 적용할 때 거주기간의 제한을 받지
+   * 않는다」. 거주주택이 상생임대 요건을 갖춘 경우 호출부가 true를 넘긴다.
+   * ⚠️ **보유 2년은 면제되지 않는다** — 법문이 면제하는 것은 거주기간뿐이다.
+   */
+  winWinResidenceExempt = false,
 ): EligibilityResult {
   const residenceFailReasons: string[] = [];
 
@@ -225,7 +231,7 @@ export function checkEligibility(
       `거주주택 보유기간 2년 미충족 (현재: ${residenceHoldYears}년)`,
     );
   }
-  if (residenceLiveYears < 2) {
+  if (residenceLiveYears < 2 && !winWinResidenceExempt) {
     residenceFailReasons.push(
       `거주주택 거주기간 2년 미충족 (현재: ${residenceLiveYears}년)`,
     );

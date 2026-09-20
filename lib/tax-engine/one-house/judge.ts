@@ -75,6 +75,9 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     ruralHouse: facts.ruralHouse,
     unavoidableOutsideCapitalHouse: facts.unavoidableOutsideCapitalHouse,
     culturalHeritageHouse: facts.culturalHeritageHouse,
+    // ── §155의2 · §155의3 ──
+    longTermMortgageHouse: facts.longTermMortgageHouse,
+    winWinRentalHouse: facts.winWinRentalHouse,
     // ── §89② · §156의2 · §156의3 ──
     houses: facts.houses,
     presaleRights: facts.presaleRights,
@@ -137,6 +140,8 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     ruralHouse: input.ruralHouse,
     unavoidableOutsideCapitalHouse: input.unavoidableOutsideCapitalHouse,
     culturalHeritageHouse: input.culturalHeritageHouse,
+    longTermMortgageHouse: input.longTermMortgageHouse,
+    winWinRentalHouse: input.winWinRentalHouse,
     houses: input.houses,
     presaleRights: input.presaleRights,
     sellingHouseId: input.sellingHouseId,

@@ -32,6 +32,8 @@ import {
   REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW,
   REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD,
   resolveExemptionHoldingStartDate,
+  qualifiesLongTermMortgageContract,
+  qualifiesLongTermMortgageResidenceExemption,
   resolveMergeDeeming,
   resolveMergeOverlapDeeming,
   RURAL_HOUSE_LABEL,
@@ -317,12 +319,58 @@ function checkExemptionCore(
     }
   }
 
+  /**
+   * E-3.9: §155의2② — 담보주택 보유 **직계존속 동거봉양 합가**로 2주택이 된 경우,
+   * 「먼저 양도하는 주택에 대하여는 국내에 1개의 주택을 소유하고 있는 것으로 보아 §154①을 적용」.
+   *
+   * ⚠️ E-3.5(§155④⑤ 합가) **뒤**에 둔다 — 둘 다 성립하면 §155④가 먼저 잡히고(결과 동일),
+   *    §155④의 10년 기한이 지난 세대는 여기로 떨어진다. §155의2②에는 기한이 없다.
+   * ⚠️ 거주기간 면제는 **양도하는 주택이 담보주택일 때만** 붙는다(「장기저당담보주택은」).
+   *    담보주택이 아닌 쪽을 먼저 양도하면 의제만 서고 §154① 거주요건은 그대로 본다.
+   * ⚠️ `deemedOneHouseBy155`는 **§159의4 표2 대상 축**이고, 같은 조가 §155의2를 명시 포함한다.
+   *    중과 배제(§167의10①15호)는 「제155조 또는 조세특례제한법」만 열거하므로 **켜지 않는다** —
+   *    그 축은 `resolveDeemedOneHouseBy155`가 따로 판정하며 여기서 건드리지 않는다.
+   */
+  {
+    const mortgage = input.longTermMortgageHouse;
+    if (
+      mortgage?.parentalCareMerge === true &&
+      input.householdHousingCount === 2 &&
+      input.isFirstTransferredInMerge === true &&
+      qualifiesLongTermMortgageContract(input) &&
+      meetsOneHouseHoldingResidence(input, rule, qualifiesLongTermMortgageResidenceExemption(input))
+    ) {
+      const basis = ` (${shortArticle(TRANSFER.LONG_TERM_MORTGAGE_MERGE)})`;
+      const priceCheck =
+        input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      if (priceCheck <= highValueThreshold) {
+        return {
+          isExempt: true,
+          isPartialExempt: false,
+          exemptReason: `장기저당담보주택 동거봉양 합가 1세대1주택 비과세${basis}`,
+          // 📌 전액 비과세는 상위가 조기 반환해 장특을 계산하지 않으므로 이 echo는 **무효과**다
+          //    (뮤테이션으로 확인 — 끄고 돌려도 전건 통과). 형제 분기(E-3·E-3.5)와 모양을 맞춰
+          //    남긴다. 실제로 표2를 여는 것은 아래 부분과세 분기의 같은 필드다.
+          deemedOneHouseBy155: true,
+        };
+      }
+      return {
+        isExempt: false,
+        isPartialExempt: true,
+        exemptReason: `장기저당담보주택 동거봉양 합가 고가주택${basis}`,
+        deemedOneHouseBy155: true,
+      };
+    }
+  }
+
   if (input.householdHousingCount !== 1) {
     return { isExempt: false, isPartialExempt: false };
   }
 
   // E-4: §154① 보유·거주 요건 (2017.8.3 이전 경과규정 포함) — meetsOneHouseHoldingResidence로 단일화
-  if (!meetsOneHouseHoldingResidence(input, rule)) {
+  //   §155의2① 장기저당담보주택(1주택 세대)은 **거주기간 제한 면제**를 여기서 주입한다.
+  //   보유 2년은 면제되지 않는다 — 면제 대상이 거주기간뿐이라 `meetsHolding`은 그대로 판정된다.
+  if (!meetsOneHouseHoldingResidence(input, rule, qualifiesLongTermMortgageResidenceExemption(input))) {
     return { isExempt: false, isPartialExempt: false };
   }
 

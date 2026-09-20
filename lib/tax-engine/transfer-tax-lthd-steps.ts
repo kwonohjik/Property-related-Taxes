@@ -35,6 +35,12 @@ export interface LthdStepArgs {
   residenceYearsForStep: number;
   /** §154⑧3호 통산 거주연수 — 표2 **대상 판정**용 */
   table2ResidenceYearsForStep: number;
+  /**
+   * §159의4 표2의 **거주 2년 요건** 충족 여부 — 계산 축(`transfer-tax.ts`)이 쓴 것과 **같은 술어**의
+   * 결과를 그대로 받는다. 여기서 `table2ResidenceYearsForStep >= 2`로 다시 판정하면 §155의3
+   * 상생임대주택 면제가 표시 축에만 빠져 「공제율은 표2인데 문구는 표1」이 된다.
+   */
+  meetsTable2Residence: boolean;
   isOneHousehold: boolean;
   householdHousingCount: number;
   lthd982Applied: boolean;
@@ -70,6 +76,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     usageConversionDetail: conv,
     fbLthdFormula,
     appurtenantTable1Applied,
+    meetsTable2Residence,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -78,7 +85,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   const isOneHouseSpecial =
     isOneHousehold &&
     householdHousingCount === 1 &&
-    table2ResidenceYearsForStep >= 2 &&
+    meetsTable2Residence &&
     longTermHoldingDeduction > 0 &&
     // 부수토지에서 표1이 이겼으면 공제율의 출처가 표2가 아니다 — 표2 형식으로 쓰면
     // 「보유 20년×4%=40% + 거주 3년×4%=12% = 30%」처럼 분해가 합과 어긋난다.
