@@ -34,7 +34,6 @@ import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step"
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 
 import {
-  checkExemption,
   resolveExemptionResidenceMonths,
   calcTransferGain,
   calcLongTermHoldingDeduction,
@@ -42,6 +41,7 @@ import {
   applyCommercialBuildingStep,
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
+import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
@@ -230,7 +230,7 @@ export function calculateTransferTax(
               redevInput.redevelopment.completionDate
                 ? redevInput.redevelopment.completionDate
                 : exemptionJudgeInput.acquisitionDate;
-            return checkExemption(
+            return judgeOneHouseExemptionFromInput(
               {
                 ...exemptionJudgeInput,
                 propertyType: "housing",
@@ -277,7 +277,14 @@ export function calculateTransferTax(
   const { exemptionJudgeInput, new994Detail, unsold989Detail, specialHouseExclusionDetail } =
     runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
 
-  const exemptionResult = checkExemption(
+  /**
+   * STEP 1: 1세대1주택 비과세 판정 — **공유 판정 엔진**을 거친다(P2 · D-1).
+   *
+   * 판정 메뉴(P4)와 같은 진입점이다. 계산기는 이미 `TransferTaxInput`을 들고 있지만 일부러
+   * `OneHouseFacts`로 분해했다가 다시 조립한다 — 「사실만으로 같은 판정이 나오는가」를 매
+   * 테스트마다 증명시키기 위해서다(`one-house/judge.ts` 머리 주석).
+   */
+  const exemptionResult = judgeOneHouseExemptionFromInput(
     exemptionJudgeInput,
     parsedRates.oneHouseSpecialRules,
     presaleRightStartDate(parsedRates),
