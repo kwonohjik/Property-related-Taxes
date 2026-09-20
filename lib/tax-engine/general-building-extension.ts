@@ -596,7 +596,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     // §100③ 판정 — 구분 기재가 있을 때만 채워진다(Q-4 · 2-way 토지↔건물 합계 비교).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     acquisition: { land: landAcq, building: building1Acq },
-    estimatedDeduction: { land: landExp, building: building1Exp },
+    // 율 echo — 표시 층이 「× 3%」를 다시 적으면 미등기에서 산식이 값을 못 만든다(§163⑥1호 단서).
+    // 증축분(건물2)은 건물1과 같은 축이므로 `buildingRate` 하나로 족하다.
+    estimatedDeduction: { land: landExp, building: building1Exp, landRate, buildingRate },
     buildingFootprintArea: input.buildingFootprintArea,
     appliedMultiplier,
     multiplierDetail,

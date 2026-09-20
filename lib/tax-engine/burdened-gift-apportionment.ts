@@ -352,6 +352,8 @@ export function buildBurdenedGiftBreakdown(params: {
   //   K-1~K-3·K-5·legacy: 개산공제 (취득가액 × 3%, §163⑥).
   //   K-4 (실지취득가): 개산공제 미적용 — 실비를 채무비율 안분 후 **성질별 시점 비율**로 자산 분배.
   let landEstimatedDeduction: number;
+  /** §163⑥ 개산공제율 echo — 실비 안분 경로에서는 undefined (율 개념 없음). */
+  let appliedEstimatedDeductionRate: number | undefined;
   let buildingEstimatedDeduction: number;
   if (acquisitionMethodUsed === "actual") {
     /**
@@ -383,6 +385,12 @@ export function buildBurdenedGiftBreakdown(params: {
     const buildingStdApportioned = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     landEstimatedDeduction = estimatedDeductionForBurdenedGift(landStdApportioned, isUnregistered);
     buildingEstimatedDeduction = estimatedDeductionForBurdenedGift(buildingStdApportioned, isUnregistered);
+    // 율 echo — 표시 층이 「× 3%」를 다시 적으면 미등기(§163⑥1호 단서 3/1000)에서 적힌 산식이
+    // 적힌 값을 만들지 못한다. **개산공제 경로에서만** 채운다 — 위 split 분기는 실비 안분이라
+    // 율이라는 개념 자체가 없다.
+    appliedEstimatedDeductionRate = isUnregistered
+      ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
+      : REGISTERED_ESTIMATED_DEDUCTION_RATE;
   }
 
   /**
@@ -621,6 +629,7 @@ export function buildBurdenedGiftBreakdown(params: {
         transferPrice: landTransferPrice,
         acquisitionPrice: landAcquisitionPrice,
         estimatedDeduction: landEstimatedDeduction,
+        estimatedDeductionRate: appliedEstimatedDeductionRate,
         acquisitionMethod: acquisitionMethodUsed,
         stdPriceAtTransfer: landStdPriceAtTransfer,
         actualAcquisition: landActualAcquisition,
@@ -631,6 +640,7 @@ export function buildBurdenedGiftBreakdown(params: {
         transferPrice: buildingTransferPrice,
         acquisitionPrice: buildingAcquisitionPrice,
         estimatedDeduction: buildingEstimatedDeduction,
+        estimatedDeductionRate: appliedEstimatedDeductionRate,
         acquisitionMethod: acquisitionMethodUsed,
         stdPriceAtTransfer: buildingStdPriceAtTransfer,
         actualAcquisition: buildingActualAcquisition,

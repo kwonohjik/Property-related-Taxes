@@ -252,6 +252,8 @@ function calculateEstimatedDeduction(
       input.acquisitionBuildingStdPrice,
       input.ownershipRatio,
     ),
+    landRate,
+    buildingRate,
   };
 }
 
