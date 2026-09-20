@@ -100,7 +100,6 @@ function makeMockRates(): TaxRatesMap {
       deductionRules: null,
       specialRules: {
         one_house_exemption: {
-          maxExemptPrice: 1_200_000_000,
           minHoldingYears: 2,
           regulatedAreaMinResidenceYears: 2,
           prePolicyDate: "2017-08-03",

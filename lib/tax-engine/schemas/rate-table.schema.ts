@@ -170,7 +170,6 @@ export const surchargeSpecialRulesSchema = z.object({
 
 export const oneHouseSpecialRulesSchema = z.object({
   one_house_exemption: z.object({
-    maxExemptPrice: z.number().int().positive(),
     minHoldingYears: z.number().int().positive(),
     regulatedAreaMinResidenceYears: z.number().int().positive(),
     prePolicyDate: z.string(), // ISO date string

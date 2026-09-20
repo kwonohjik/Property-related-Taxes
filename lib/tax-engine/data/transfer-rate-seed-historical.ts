@@ -223,7 +223,7 @@ export const historicalSeeds = [
     deduction_rules: null,
     special_rules: {
       one_house_exemption: {
-        maxExemptPrice: 1200000000,
+        // G-5: 기준금액은 `resolveHighValueHouseThreshold(양도일)`가 정한다(seed 주석 참조).
         minHoldingYears: 2,
         regulatedAreaMinResidenceYears: 2,
         prePolicyDate: "2017-08-03",

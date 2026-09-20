@@ -8,9 +8,12 @@
  * ⚠️ `steps`는 **호출부 배열을 그대로 받아 push**한다(반환하지 않는다) — 종전 순서를 지키기 위함이다.
  */
 import { runRedevelopment } from "./redevelopment";
+import {
+  resolveHighValueHouseThreshold,
+  formatHighValueThresholdLabel,
+} from "./one-house/threshold";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import {
-  HIGH_VALUE_THRESHOLD,
   applyLthdExclusion,
   applyHighValueAllocation,
   applySettlementExemption,
@@ -126,23 +129,33 @@ export function runRedevelopmentGainSteps(
     (input.burdenedGiftDenominator ?? 0) > 0
       ? input.burdenedGiftDenominator!
       : input.transferPrice;
+  // G-5: 기준금액은 **양도일** 시점 값이다(6억/9억/12억). 판정과 안분이 같은 값을 봐야 한다 —
+  //      `aptExemption` 경로는 메인 판정(`checkExemptionCore`)이 이미 시점 함수를 쓰므로,
+  //      안분(`applyHighValueAllocation`)도 같은 양도일로 풀지 않으면 과거 양도분에서
+  //      `taxableRatio`가 음수가 된다.
+  const highValueThreshold = resolveHighValueHouseThreshold(input.transferDate);
   const isHighValue = aptExemption
     ? aptExemption.isPartialExempt === true
     : input.redevelopment!.subject !== "right" &&
       isOneHouseSingle &&
-      highValueBase > HIGH_VALUE_THRESHOLD;
+      highValueBase > highValueThreshold;
   const allocated: RedevelopmentResult = isHighValue
-    ? applyHighValueAllocation(redevAfterExemption, highValueBase, input.redevelopment!)
+    ? applyHighValueAllocation(
+        redevAfterExemption,
+        highValueBase,
+        input.redevelopment!,
+        input.transferDate,
+      )
     : redevAfterExemption;
 
   if (isHighValue && allocated.highValueAllocation) {
     const ha = allocated.highValueAllocation;
     steps.push({
-      label: "1세대1주택 12억 초과 과세대상 양도차익 안분",
+      label: `1세대1주택 ${formatHighValueThresholdLabel(highValueThreshold)} 초과 과세대상 양도차익 안분`,
       formula: (() => {
         const baseLabel =
           highValueBase === input.transferPrice ? "양도가액" : "증여가액";
-        return `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (${baseLabel} ${highValueBase.toLocaleString()} - 12억) / (${baseLabel} ${highValueBase.toLocaleString()}) = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`;
+        return `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (${baseLabel} ${highValueBase.toLocaleString()} - ${formatHighValueThresholdLabel(highValueThreshold)}) / (${baseLabel} ${highValueBase.toLocaleString()}) = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`;
       })(),
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,

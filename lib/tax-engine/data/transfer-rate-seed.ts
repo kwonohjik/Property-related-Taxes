@@ -137,7 +137,10 @@ export const transferTaxSeeds = [
     deduction_rules: null,
     special_rules: {
       one_house_exemption: {
-        maxExemptPrice: 1200000000, // 12억원 초과분 과세
+        // G-5: 고가주택 기준금액은 여기가 아니라 `one-house/threshold.ts`
+        //      `resolveHighValueHouseThreshold(양도일)`가 정한다 — 6억/9억/12억 시대가 있어
+        //      단일값으로 표현할 수 없고, 다건 route는 과세기간 말일로 행을 골라 자산별
+        //      양도일을 표현하지 못한다. 종전의 12억 고정 필드는 제거했다.
         minHoldingYears: 2,
         ...ONE_HOUSE_RESIDENCE, // 거주요건 3값 단일 소스 (legal-codes/transfer)
       },

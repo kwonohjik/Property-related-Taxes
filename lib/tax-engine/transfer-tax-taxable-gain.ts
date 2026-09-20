@@ -1,14 +1,19 @@
 /**
- * STEP 3 — 과세 양도차익 결정 (1세대1주택 12억 초과분 안분 + 부수토지 비과세 제외).
+ * STEP 3 — 과세 양도차익 결정 (1세대1주택 고가주택 기준 초과분 안분 + 부수토지 비과세 제외).
  *
  * [법령 근거]
  * - 「소득세법」 제89조 제1항 제3호 단서 · 같은 법 시행령 제160조 제1항 — 고가주택(양도 당시
- *   실지거래가액 12억원 초과)은 양도차익 × (양도가액 − 12억) ÷ 양도가액 만큼만 과세한다.
+ *   실지거래가액이 기준금액 초과)은 양도차익 × (양도가액 − 기준금액) ÷ 양도가액 만큼만 과세한다.
+ *   기준금액은 **양도일** 기준이다 — 6억 / 9억(2008-10-07~) / 12억(2021-12-08~). G-5.
  * - 「소득세법」 시행령 제154조 제1항 — 1세대1주택 비과세의 보유요건(2년).
  *
  * `transfer-tax.ts` 800줄 정책으로 분리했다. 분기 순서·산식 문자열은 종전 그대로다.
  */
 import { calcOneHouseProration } from "./transfer-tax-helpers";
+import {
+  resolveHighValueHouseThreshold,
+  formatHighValueThresholdLabel,
+} from "./one-house/threshold";
 import {
   applyHousingLandExclusions,
   hasHousingLandExemptExclusion,
@@ -30,6 +35,7 @@ export function resolveTaxableGain(args: {
   // 우선순위: burdenedGiftDenominator (부담부증여 — 해석 B) > totalPropertyTransferPrice (지분) > transferPrice (단독)
   const prorate = (g: number) =>
     calcOneHouseProration(
+      effectiveInput.transferDate,
       g,
       effectiveInput.transferPrice,
       effectiveInput.totalPropertyTransferPrice,
@@ -69,9 +75,14 @@ export function resolveTaxableGain(args: {
     effectiveInput.totalPropertyTransferPrice !== undefined &&
     effectiveInput.totalPropertyTransferPrice !== effectiveInput.transferPrice;
   const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
+  // G-5: 적힌 기준금액이 실제로 쓰인 값이어야 한다 — 「12억」을 리터럴로 적으면 과거 양도분에서
+  //      산식이 자기 값을 만들지 못한다(2008-10-06 7억 양도: 적힌 대로면 음수).
+  const thresholdLabel = formatHighValueThresholdLabel(
+    resolveHighValueHouseThreshold(effectiveInput.transferDate),
+  );
   steps.push({
-    label: "과세 양도차익 (12억 초과분)",
-    formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / (${denomLabel} ${denom.toLocaleString()})`,
+    label: `과세 양도차익 (${thresholdLabel} 초과분)`,
+    formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - ${thresholdLabel}) / (${denomLabel} ${denom.toLocaleString()})`,
     amount: taxableGain,
     legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
   });

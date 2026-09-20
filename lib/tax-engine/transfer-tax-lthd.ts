@@ -15,6 +15,7 @@
  *   L-3  1세대1주택 표2 / L-4 일반 표1
  */
 import { format } from "date-fns";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import {
   applyRate,
   applyFairMarketRatio,
@@ -367,7 +368,8 @@ export function calcLongTermHoldingDeduction(
     const ownsBuilding = selfOwns !== "land_only";
 
     // 1세대1주택 12억 초과 안분: 본인 소유 파트 양도가액 기준
-    const THRESHOLD = 1_200_000_000;
+    // G-5: 양도일 시점 기준금액(6억/9억/12억) — 판정(`checkExemptionCore`)과 같은 단일 소스.
+    const THRESHOLD = resolveHighValueHouseThreshold(input.transferDate);
     const selfTransferPrice = selfOwns === "building_only"
       ? splitDetail.building.transferPrice
       : selfOwns === "land_only"
