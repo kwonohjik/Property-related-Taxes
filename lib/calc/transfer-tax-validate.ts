@@ -520,6 +520,9 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
         if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
           return `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`;
+        // 3호의 기준시가는 「취득 당시」다 — 미입력이면 엔진이 판정 불가로 두고 배제하지 않는다(F-16).
+        if (h.isUnavoidableReason && !h.acquisitionOfficialPrice)
+          return `${label}: 부득이한 사유 주택의 취득 당시 기준시가를 입력하세요.`;
         return null;
       })();
       if (firstError) issues.push({ step, message: firstError });
@@ -531,6 +534,15 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       issues.push({ step, message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
     if (se?.isDayCareCenter && (!se.dayCareOperationYears || parseFloat(se.dayCareOperationYears) <= 0))
       issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
+
+    // ⑧ 양도 주택 2주택 전용 배제 — §167의10①3호(F-16). 「다른 보유 주택」 행과 같은 요구다.
+    //    7호(소송)는 날짜 미입력이 「진행 중」이라는 뜻이므로 요구하지 않는다.
+    if (se?.isUnavoidableReason) {
+      if (!se.unavoidableResidenceYears || parseFloat(se.unavoidableResidenceYears) <= 0)
+        issues.push({ step, message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
+      if (!se.acquisitionOfficialPrice)
+        issues.push({ step, message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
+    }
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
     // 위 houses와 같은 이유로 한시배제 skip을 두지 않는다 — §89②는 비과세 축이고 ⑤도 열려 있다.

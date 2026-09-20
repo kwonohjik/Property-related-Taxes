@@ -46,7 +46,7 @@ describe("P2 3주택+ 전용 배제 (양도 주택 자체)", () => {
 describe("P2 2주택 전용 배제 (다른 보유 주택)", () => {
   it("부득이한 사유 주택(3억↓·거주 2년) → unavoidable_reason_two_house 배제", () => {
     const other = makeHouse("h2", {
-      officialPrice: 250_000_000,
+      acquisitionOfficialPrice: 250_000_000, // 3호는 **취득 당시** 기준시가로 본다 (F-16)
       isUnavoidableReason: true,
       unavoidableResidenceYears: 2,
     });

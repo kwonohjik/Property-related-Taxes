@@ -146,6 +146,44 @@ export function isLowPriceSmallHouseUndecidable(house: HouseInfo | undefined): b
   return (house.transferOfficialPrice ?? house.officialPrice) <= 0;
 }
 
+/** §167의10①3호 — 취득 당시 기준시가 상한(3억원). */
+const UNAVOIDABLE_ACQ_PRICE_CAP = 300_000_000;
+
+/**
+ * 3호 — 「취학, 근무상의 형편, 질병의 요양, 그 밖에 부득이한 사유」로 취득해 2주택이 된 주택.
+ * 「취득 후 1년 이상 거주하고 해당 사유가 해소된 날부터 3년이 경과하지 아니한 경우에 한정」한다.
+ *
+ * 기준시가는 법문이 **취득 당시**로 못박는다. `officialPrice`는 ④가 **양도일 연도** 공시가격을
+ * 싣는 칸이라(§167의3①1호 주택 수 산정의 기준시가는 양도 당시다 — `HousePriceYearLookup`)
+ * 이 호에 쓸 수 없다. 미입력(0)은 「3억 이하」가 아니라 **판정 불가**다(9호와 같은 독법).
+ */
+function matchesUnavoidableReason(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.isUnavoidableReason) return false;
+  if ((house.unavoidableResidenceYears ?? 0) < 1) return false;
+  const acquisitionPrice = house.acquisitionOfficialPrice ?? 0;
+  if (acquisitionPrice <= 0 || acquisitionPrice > UNAVOIDABLE_ACQ_PRICE_CAP) return false;
+  if (house.unavoidableReasonResolvedDate) {
+    if (differenceInYears(transferDate, house.unavoidableReasonResolvedDate) >= 3) return false;
+  }
+  return true;
+}
+
+/** 3호를 판정할 수 없는 상태 — 부득이한 사유 주택인데 취득 당시 기준시가가 미입력(0)이다. */
+export function isUnavoidableReasonUndecidable(house: HouseInfo | undefined): boolean {
+  if (!house?.isUnavoidableReason) return false;
+  return (house.acquisitionOfficialPrice ?? 0) <= 0;
+}
+
+/**
+ * 7호 — 「주택의 소유권에 관한 소송이 진행 중이거나 해당 소송결과로 취득한 주택(소송으로 인한
+ * 확정판결일부터 3년이 경과하지 아니한 경우에 한정한다)」. 날짜 미입력은 소송 진행 중으로 본다.
+ */
+function matchesLitigationHousing(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.isLitigationHousing) return false;
+  if (!house.litigationAcquisitionDate) return true;
+  return differenceInYears(transferDate, house.litigationAcquisitionDate) < 3;
+}
+
 /**
  * 나목4) 표 지역 판정 — 계약일부터 양도 기한 개월수(4 또는 6).
  * 강남4구(서초·송파·용산 포함)는 4개월. 그 외 2025-10-16 지정 조정대상지역(서울 나머지 21구 +
@@ -511,38 +549,41 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
+    /**
+     * 3호·7호는 **양도하는 주택 자신**에도 적용된다 — ① 본문이 「각 호의 어느 하나에 해당하지
+     * **않는** 주택」을 중과 대상으로 한다(F-3에서 9호에 대해 확인한 것과 같은 독법). 종전에는
+     * 다른 주택만 봐서 양도 주택이 소송 취득·부득이 취득이어도 중과했다(F-16).
+     * 다른 주택이 해당하는 경로의 근거는 10호(「1호부터 7호까지…를 제외하고 1개의 주택만」)다 —
+     * 3호·7호는 9호와 달리 그 인용 범위 **안**이라 결론이 같다. 근거 인용만 나누어 적는다.
+     */
+    const basisFor = (h: HouseInfo, clause: string) =>
+      h === sellingHouse ? clause : `${clause}·${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL}`;
+    const subjectOf = (h: HouseInfo) => (h === sellingHouse ? "양도하는 주택이 해당" : "해당 주택 보유");
+
     // ③ 취학·근무상 형편·질병 등 부득이한 사유
-    const hasUnavoidableHouse = otherEffectiveHouses.some((h) => {
-      if (!h.isUnavoidableReason) return false;
-      if ((h.unavoidableResidenceYears ?? 0) < 1) return false;
-      if (h.officialPrice > 300_000_000) return false;
-      if (h.unavoidableReasonResolvedDate) {
-        const yearsFromResolved = differenceInYears(input.transferDate, h.unavoidableReasonResolvedDate);
-        if (yearsFromResolved >= 3) return false;
-      }
-      return true;
-    });
-    if (hasUnavoidableHouse) {
+    const unavoidableHouse = matchesUnavoidableReason(sellingHouse, input.transferDate)
+      ? sellingHouse
+      : otherEffectiveHouses.find((h) => matchesUnavoidableReason(h, input.transferDate));
+    if (unavoidableHouse) {
       exclusionReasons.push({
         type: "unavoidable_reason_two_house",
-        detail: `취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (기준시가 3억 이하·1년 이상 거주) 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_UNAVOIDABLE})`,
+        detail:
+          `취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (취득 당시 기준시가 3억 이하·` +
+          `1년 이상 거주) — ${subjectOf(unavoidableHouse)} · 2주택 중과배제 ` +
+          `(${basisFor(unavoidableHouse, MULTI_HOUSE.TWO_HOUSE_UNAVOIDABLE)})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
-    // ⑧ 소송 취득/진행 중 주택
-    const hasLitigationHouse = otherEffectiveHouses.some((h) => {
-      if (!h.isLitigationHousing) return false;
-      if (h.litigationAcquisitionDate) {
-        return differenceInYears(input.transferDate, h.litigationAcquisitionDate) < 3;
-      }
-      return true;
-    });
-    if (hasLitigationHouse) {
-      const litigationHouse = otherEffectiveHouses.find((h) => h.isLitigationHousing)!;
+    // ⑦ 소송 취득/진행 중 주택
+    const litigationHouse = matchesLitigationHousing(sellingHouse, input.transferDate)
+      ? sellingHouse
+      : otherEffectiveHouses.find((h) => matchesLitigationHousing(h, input.transferDate));
+    if (litigationHouse) {
+      const basis = basisFor(litigationHouse, MULTI_HOUSE.TWO_HOUSE_LITIGATION);
       const detail = litigationHouse.litigationAcquisitionDate
-        ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`
-        : `소송 진행 중인 주택 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_LITIGATION})`;
+        ? `법원 결정 취득(${litigationHouse.litigationAcquisitionDate.toISOString().slice(0, 10)})로부터 3년 이내 — ${subjectOf(litigationHouse)} · 2주택 중과배제 (${basis})`
+        : `소송 진행 중인 주택 — ${subjectOf(litigationHouse)} · 2주택 중과배제 (${basis})`;
       exclusionReasons.push({ type: "litigation_housing_two_house", detail });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

@@ -3,12 +3,13 @@
 /**
  * HouseEntrySpecialExclusionSection — 다른 보유 주택의 P2 특수 배제 사유 (2주택 전용·인구감소)
  *
- * 소령 §167의10① 3호(부득이)·8호(소송)·⑩(기준시가 1억↓ 정비구역 제외) + §167의3①2호의2(인구감소 세컨드홈).
+ * 소령 §167의10① 3호(부득이)·7호(소송)·9호(기준시가 1억↓ 정비구역 제외) + §167의3①2호의2(인구감소 세컨드홈).
  * 엔진은 effectiveHouseCount===2(부득이·소송·저가) / countEffectiveHouses(인구감소)에서 평가.
  *
  * 정책: ToggleCard/DateInput/DecimalInput 전용 · OFF 시 onUpdate 직접 undefined(useEffect 미러링 금지).
  */
 
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -44,12 +45,24 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
             isUnavoidableReason: v,
             unavoidableResidenceYears: v ? house.unavoidableResidenceYears : undefined,
             unavoidableReasonResolvedDate: v ? house.unavoidableReasonResolvedDate : undefined,
+            // `acquisitionOfficialPrice`는 장기임대 9유형(라목)과 **같은 칸**이라 여기서 지우지
+            // 않는다 — 3호 토글을 끄는 것이 임대 요건 입력을 지울 이유는 아니다.
           })
         }
         title="부득이한 사유 취득 주택"
-        description="취학·근무상 형편·질병 요양 등 (기준시가 3억 이하·1년 이상 거주 — 소령 §167의10①3호)"
+        description="취학·근무상 형편·질병 요양 등 (취득 당시 기준시가 3억 이하·1년 이상 거주 — 소령 §167의10①3호)"
       >
         <div className="space-y-2 pt-1">
+          <div className="space-y-1">
+            {/* 3호의 기준시가는 「취득 당시」다 — 위 「공시가격」 칸은 양도일 연도 조회값이라
+                §167의3①1호(주택 수 산정) 축이다. 같은 칸으로 갈음하지 않는다(F-16). */}
+            <CurrencyInput
+              label="취득 당시 기준시가"
+              value={house.acquisitionOfficialPrice ?? ""}
+              onChange={(v) => onUpdate({ acquisitionOfficialPrice: v || undefined })}
+            />
+            <p className="text-caption text-muted-foreground/70">3억원 이하여야 배제 적용</p>
+          </div>
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">거주기간 (년)</label>
             <DecimalInput
@@ -83,7 +96,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           })
         }
         title="소송 취득·진행 중 주택"
-        description="소송으로 취득하거나 소송 진행 중 (소령 §167의10①8호)"
+        description="소송으로 취득하거나 소송 진행 중 (소령 §167의10①7호)"
       >
         <div className="space-y-1 pt-1">
           <label className="block text-caption text-muted-foreground font-medium">

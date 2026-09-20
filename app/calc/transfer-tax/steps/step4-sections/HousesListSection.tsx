@@ -21,7 +21,7 @@ import { useMemo, useState } from "react";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
-import { sellingHouseExclusionVisible } from "@/lib/calc/house-count-inputs-scope";
+import { sellingHouseExclusionVisible, sellingHouseTwoHouseExclusionVisible } from "@/lib/calc/house-count-inputs-scope";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -36,6 +36,7 @@ import {
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
+import { SellingHouseTwoHouseExclusionSection } from "@/components/calc/transfer/SellingHouseTwoHouseExclusionSection";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
@@ -602,6 +603,16 @@ export function HousesListSection({
              계속 요구해, 그 토글을 끌 화면이 없는 dead-end가 됐다. 술어는 leaf 단일 소스. */}
       {sellingHouseExclusionVisible(form) && (
         <SellingHouseExclusionSection
+          value={form.sellingHouseExclusion}
+          onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
+        />
+      )}
+
+      {/* ── 양도 주택 2주택 전용 배제 특례 (§167의10①3호·7호) ──
+          두 호는 **양도하는 주택 자신**에도 적용된다(F-16). 종전에는 「다른 보유 주택」 행에만
+          입력이 있어 양도 주택에는 경로가 없었다. dead-end 회피는 위 3주택+ 섹션과 같은 규칙. */}
+      {sellingHouseTwoHouseExclusionVisible(form) && (
+        <SellingHouseTwoHouseExclusionSection
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
         />
