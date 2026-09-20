@@ -704,7 +704,7 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P4-1** | ✅ **완료(2026-09-20 · §17)** — 판정 결과 확장(`pending[]`·`undetermined[]`·`appliedExceptions[]`·`legalBasis[]`) + `ExemptionResult`↔`OneHouseJudgment` **타입 이중선언 해소**. 세액 변동 **0**(3,059 케이스) · anchor 31건 · 뮤테이션 **16/17 KILLED** | P3 | 중 |
 | **P4-2a** | ✅ **완료(2026-09-20 · §18)** — 판정 route 신설 + 명부→주택 수 **도출 정본화**(G-1) + 주택 수 산정 명세. 계산기의 Zod·엔진 input 조립·주택수 제외를 **그대로 재사용**(별도 배관 0). anchor 14건 · 뮤테이션 **8/8 KILLED** | P4-1 | 중 |
 | **P4-2b-0** | ✅ **완료(2026-09-20 · §19)** — §155의2·§155의3 **입력 경로 개통**(⑫ Zod 2블록 + ⑭ 단건·다건 매핑). P3가 만든 판정이 **도달 불가**였음을 실측으로 확인하고 닫았다. anchor 9건 · 뮤테이션 **8/9 KILLED**(1건은 엔진 미소비로 관측 불가 — 예고) | P4-2a | 소 |
-| **P4-2b-1** | **배관** — 폼 타입(`TransferFormData` 슈퍼셋 · Q-8) · store · validate · API 변환(`one-house-exemption-api.ts`) · 사이드바 요약. 화면 없음, vitest로 고정 | P4-2b-0 | 중 |
+| **P4-2b-1** | ✅ **완료(2026-09-20 · §21)** — 폼 타입·store·validate·API 어댑터·사이드바 요약. 계산기 leaf **7종 재사용**(매핑 두 벌 금지) · anchor 28건(대부분 route 관통) · 뮤테이션 **11/12 KILLED**(1건은 내 추측성 코드를 드러내 **삭제**) | P4-2b-0 | 중 |
 | **P4-2b-2** | **화면** — 4단계 마법사 · 결과뷰 · `app/page.tsx` 메뉴 등록 · 브라우저 수동 확인 | P4-2b-1 | 대 |
 | **P4-2b-3** | **이력·E2E** — `LocalTaxType` 등록(TS 미감지 지점 다수 — §20) · E2E spec | P4-2b-2 | 중 |
 | **P4-3** | **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드) | P4-2 | 중 |
@@ -1350,6 +1350,142 @@ P4-2a route 주석(`route.ts:12`)의 기재가 틀렸다. 실제 변환 층은 `
 ⚠️ `provisoGate`는 **`householdHousingCount` 스칼라를 인자로 받는다**. 판정 메뉴는 그 값을 store에 두지
 않으므로(G-1) **명부에서 파생한 수**를 넘겨야 한다 — 빈 문자열을 넘기면 `parseInt("")=NaN`으로
 `visible:false`가 되어 §154① 단서가 **조용히 사라진다**.
+
+---
+
+## 21. P4-2b-1 실행 기록 (2026-09-20) — 판정 메뉴 **배관**
+
+### 21.1 만든 것 — 5파일 +1,037줄
+
+| 파일 | 줄 | 역할 |
+|---|---|---|
+| `lib/stores/one-house-judgment-form.types.ts` | 146 | ① 폼 타입 · ② initial · 주택 수 파생 |
+| `lib/stores/one-house-judgment-store.ts` | 94 | zustand + persist(sessionStorage) · ③ normalize |
+| `lib/calc/one-house-exemption-api.ts` | 221 | ④ 어댑터 · ⑬ fetch |
+| `lib/calc/one-house-exemption-validate.ts` | 214 | ⑧ 단계 검증 + ⑥ 사이드바 요약 |
+| `__tests__/calc/one-house-exemption-api.anchor.test.ts` | 362 | anchor 28건 |
+
+전부 800줄 정책 안. **화면은 없다** — P4-2b-2다.
+
+### 21.2 🔴 Q-8의 세 필드 중 **둘을 만들지 않았다**
+
+Q-8 문언은 `saleTargetHouseId`·`saleExpectedDate`·`saleExpectedPrice`였다. 실측이 전제를 뒤집었다(§20.4):
+
+- 명부는 **「다른 보유 주택」**이고 양도 대상은 `assets[0]`이다. 「명부 중에서 고른다」가 성립하지 않는다.
+- 양도예정일·예상양도가는 `transferDate`·`contractTotalPrice`가 **이미 그 자리**이고
+  **재사용 leaf들이 그 필드를 읽는다**. 별도 필드를 두면 dual truth다.
+
+⇒ 슈퍼셋이 실제로 더하는 것은 **§155의2·§155의3 입력 13필드뿐**이다. Q-8의 *취지*
+(슈퍼셋 · 무수정 재사용 · `createInitialFormData` 재사용)는 그대로 지켰다.
+
+폼 필드는 **flat + boolean 게이트**다 — 형제 특례가 전부 그 모양이고
+(`temporaryTwoHouseSpecial`·`ruralHouseSpecial`·`replacementHouseSpecial`),
+nested를 섞으면 초기값·normalize·어댑터가 두 규약이 된다
+(`feedback_flat_vs_nested_form_field_decision` — 「기존 store가 flat이면 flat」).
+
+### 21.3 어댑터는 **계산기 leaf 7종을 재사용**한다
+
+계산기 변환 층은 통째로 부를 수 없다(22파일 6,517줄 · §20.8). 대신 이미 분리된 leaf를 호출한다:
+
+`buildHousesPayload` · `buildPresaleRightsPayload` · `buildHouseholdSpecialPayload` ·
+`buildReplacementHousePayload` · `buildRightThreeYearExceptionPayload` ·
+`buildMergedHouseholdFirstHousePayload` · `provisoGate`+`effectiveProvisoReason`
+
+새로 쓴 것은 **§155의2·§155의3 블록 둘뿐**이다(계산기 폼에 그 필드가 없다 — D-4).
+
+### 21.4 🔴 `provisoGate` 함정 — §154① 단서가 조용히 사라지는 자리
+
+`provisoGate`는 `householdHousingCount` **스칼라**를 받아 `parseInt`한다. 판정 메뉴는 그 값을
+store에 두지 않으므로(Q-8), 어댑터가 파생값을 넣지 않으면 `parseInt("") = NaN` →
+`visible:false` → **사유 미전송**이다. 그러면 해외이주로 거주요건이 면제되는 사람이
+「거주요건 미충족」 과세 판정을 받는다.
+
+anchor PV-1~4가 이것을 고정한다. 관측은 **거주요건이 실제로 걸리는 시료**
+(취득 당시 조정지역 + 거주 0개월)에서만 한다 — 아니면 단서가 사라져도 결과가 같다(구별력 0).
+PV-4는 **게이트가 살아 있음**도 함께 고정한다(3채면 카드가 닫히므로 미전송이 옳다).
+
+### 21.5 anchor 28건 — **대부분 route를 관통**시킨다
+
+「본문에 키가 있다」는 도달을 증명하지 않는다. Zod가 모르는 키는 침묵 strip되고 ⑭ 매핑이
+없으면 엔진에 닿지 않는다 — P4-2b-0이 발견한 것이 정확히 그 상태였다.
+⇒ `POST`를 직접 불러 **판정 결과로** 관측한다(`feedback_leaf_anchor_skips_zod_layer`).
+
+그 선택이 곧바로 값을 했다: 명부 픽스처를 손으로 줄여 썼더니 `region`·`isLongTermRental`
+누락으로 **400**이 났다. 본문만 단언했다면 **화면에서는 통과하지 못할 시료**를 고정했을 것이다.
+픽스처를 UI의 실제 팩토리(`HousesListSection.tsx:443-461`) 모양으로 정정했다.
+
+HC-4가 **P4-2a와 맞물리는 지점**이다 — 폼 파생값과 route가 독립 도출한 값이 0·1·2행 전건에서 같아야 한다.
+
+### 21.6 뮤테이션 11/12 KILLED — 살아남은 1건은 **내 코드를 지웠다**
+
+| 결과 | 뮤테이션 |
+|---|---|
+| KILLED ×11 | 파생 +1 제거 · provisoGate 빈 스칼라 · §155 leaf 미조립 · `sellingHouseId` 미전송 · envelope `data`→`result` · 에러 객체 노출 · 증가율 음수 절단 · §155의2 토글 게이트 제거 · validate 양도가액 검사 제거 · `transferPrice` 출처 변경 · 명부 미전송 |
+| **SURVIVED** | **N3** — leaf에 넘기던 `householdHousingCount` 합성 사본 제거 |
+
+🔑 **N3는 anchor 구멍이 아니었다.** leaf 4종 전수 grep 결과 **누구도 그 필드를 읽지 않는다**.
+내가 「언젠가 필요할 것」이라 만든 추측성 사본이었다 ⇒ **단언을 추가한 것이 아니라 그 코드를 삭제**했다.
+뮤테이션이 테스트가 아니라 **구현의 군더더기**를 드러낸 사례다.
+
+### 21.7 🔴 런타임 확인이 잡은 결함 — 근거 조문 배지가 죽어 있었다
+
+**화면이 없어 브라우저 확인은 못 했지만**, anchor가 한 번도 타지 않는 층이 있었다 —
+anchor 28건은 `POST()` **함수를 직접 부른다**. Next.js 라우팅·직렬화를 거치지 않는다.
+⇒ dev 서버를 띄워 실제 URL로 6개 축을 호출했다(§155의2·§155의3·음성 짝·경계·400·조건부 기한).
+
+전부 통과했으나 **응답 내용에서 결함이 보였다**:
+
+```
+"pending": [{ "id": "155-1-disposal-deadline", ..., "legalBasis": "§155" }]
+```
+
+`LawArticleModal`은 이 문자열을 `parseLawRef`로 푸는데(`law-article-modal.tsx:118`),
+**법령명이 없으면 「본법↔시행령 오인 위험」으로 `null`**을 반환하고(`law-url.ts:59-61`)
+모달은 **「조문 정보를 파싱할 수 없습니다」**만 띄운다. 실측:
+
+| 인용 | `parseLawRef` |
+|---|---|
+| `§155` | **null** |
+| `§155⑦3호` | **null** |
+| `소득세법 시행령 §155①` | `{lawName:"소득세법 시행령", articleNum:"155"}` |
+
+⇒ **가장 흔한 조건부 판정(G-3의 대표 사례)의 근거 조문 배지가 죽어 있었다.**
+
+**원인**: `shortArticle()`. 그 헬퍼는 `exemptReason` **문장 속 인라인 인용**(「일시적 2주택 (§155①)」)을
+줄이려고 만든 것이라 그 용도에서는 옳다. 그러나 `pending[].legalBasis`·
+`appliedExceptions[].legalBasis`는 화면이 **구조화 인용**으로 소비한다 — 두 용도가 같은 헬퍼를
+쓰면서 갈렸다.
+
+**고친 곳 5건**: `pending.ts` 2건(§155①·§155⑦3호) + `transfer-tax-exemption.ts` 3건(§155⑯·§155⑱·§155⑦).
+
+🔴 **뒤의 3건은 시료 기반 가드가 놓쳤다.** 내가 고른 CASES가 그 축을 안 건드려 조용히
+통과했다 — 「전건 통과」를 모집단 확인 없이 말할 뻔했다
+(`feedback_closure_claim_scoped_to_verified_subset`).
+⇒ 가드를 **두 겹**으로 만들었다:
+
+| ID | 형태 | 지키는 것 |
+|---|---|---|
+| LB-0~3 | 시료 8종 × 방출 인용 전건 `parseLawRef` | 실제 판정이 내는 값 |
+| **LB-4·5** | **소스 정적 스캔** — `legalBasis:` 줄에 `shortArticle(` 금지 | **새 축이 추가돼도 따라온다** |
+
+뮤테이션 6/6 KILLED(되돌리기 4 + 정적 가드 2). `shortArticle` 자체는 금지가 아니다 —
+문장·`label`용으로는 계속 쓴다.
+
+### 21.8 검증
+
+- `tsc --noEmit` 0건 · `lint` 0 error
+- 전체 vitest **2,158파일 22,573 통과**, 실패 0
+- **세액 영향 없음** — 계산기 경로를 한 줄도 건드리지 않았다(신규 파일 + 신규 테스트뿐)
+
+### 21.9 남은 것
+
+- `withDerivedHouseCount`는 **아직 소비자가 없다**. `HousesListSection`·`MergedHouseholdRightSection`이
+  렌더 게이트로 `form.householdHousingCount`를 읽는다는 것이 실측됐고(§20.6 F-4 인접),
+  P4-2b-2가 바로 쓴다. anchor HC-5가 「원본을 바꾸지 않는다」를 고정해 둔다.
+- 재사용 함정 4건(§20.6 F-1~F-4)은 **화면을 조립할 때** 닥친다 — 특히 F-1(`SellingHouseExclusionSection`
+  숨김 prop 부재)은 `HousesListSection` **수정**이 필요하다는 뜻이므로, P4-2b-2에서
+  「무수정 재사용」 범위를 명시적으로 좁혀 기록할 것.
+- 브라우저 수동 확인은 **P4-2b-2**다(지금은 확인할 화면이 없다).
 
 ---
 
