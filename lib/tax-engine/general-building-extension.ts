@@ -23,7 +23,7 @@
  *   ext.actualBundledAcquisitionPrice === undefined → 환산 모드 (§176의2②)
  */
 
-import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
@@ -373,6 +373,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
 
   let building2Acq: number;
   let building2EstDeduction: number;
+  /** 증축분 개산공제 base echo — 실가 직접 입력 경로에서는 undefined (개산공제가 아니다). */
+  let extensionLumpBase: number | undefined;
   let extensionUsedEstimated: boolean;
 
   if (extensionMode === "estimated") {
@@ -389,6 +391,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     // 개산공제: 취득시 건물2 기준시가 × 3% (§163⑥ — 취득시 기준시가 기준)
     // ★ 환산취득가(building2Acq) × 3% 아님 (설계 §5 확정)
     building2EstDeduction = computeEstimatedDeduction(acqExtStd, buildingRate, input.ownershipRatio);
+    // base echo — 표시 층이 100% 기준시가를 적으면 지분 자산에서 산식이 값을 못 만든다(F-20).
+    extensionLumpBase = computeLumpSumDeductionBase(acqExtStd, input.ownershipRatio);
     extensionUsedEstimated = true;
   } else {
     // 실가 직접 입력 — 개산공제 없음 (실가 취득비용은 별도 필요경비로 처리)
@@ -598,7 +602,18 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     acquisition: { land: landAcq, building: building1Acq },
     // 율 echo — 표시 층이 「× 3%」를 다시 적으면 미등기에서 산식이 값을 못 만든다(§163⑥1호 단서).
     // 증축분(건물2)은 건물1과 같은 축이므로 `buildingRate` 하나로 족하다.
-    estimatedDeduction: { land: landExp, building: building1Exp, landRate, buildingRate },
+    estimatedDeduction: {
+      land: landExp,
+      building: building1Exp,
+      landRate,
+      buildingRate,
+      // base echo — 2-way 경로(`calculateEstimatedDeduction`)와 동등하게 싣는다. 종전에는 증축
+      // 3-way만 빠져 있어, 표시 층이 100% 기준시가로 떨어지며 지분 자산에서 산식이 자기 값을
+      // 만들지 못했다(F-20).
+      landBase: computeLumpSumDeductionBase(acqLandStdTotal, input.ownershipRatio),
+      buildingBase: computeLumpSumDeductionBase(acqBuilding1StdTotal, input.ownershipRatio),
+      extensionBase: extensionLumpBase,
+    },
     buildingFootprintArea: input.buildingFootprintArea,
     appliedMultiplier,
     multiplierDetail,

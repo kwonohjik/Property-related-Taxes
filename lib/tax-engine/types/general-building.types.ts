@@ -418,6 +418,17 @@ export type GeneralBuildingEstimatedDeduction = {
   landRate?: number;
   /** 개산공제율로 실제 사용된 값 — 건물분(증축분 포함, 건물 1동 단위로 등기 여부를 본다). */
   buildingRate?: number;
+  /**
+   * 증축분(건물2) 개산공제 base로 **실제 사용된 값** = `floor(취득시 증축 기준시가 × 지분율)`.
+   *
+   * 🔴 토지·건물1은 base echo가 있었는데 증축분만 없어, 표시 층이 100% 값(`acqExtensionStdTotal`)을
+   * 적었다 — 지분 자산에서 **적힌 산식이 적힌 값을 만들어내지 못했다**(실측 지분 0.5:
+   * 「1,000,000 × 3% = 15,000」인데 1,000,000 × 3% = 30,000). F-20.
+   *
+   * **개산공제 경로에서만 채운다** — 증축분을 실가로 직접 입력하면 그 필요경비는 개산공제가
+   * 아니라 실비라 율도 base도 없다. `undefined`가 그 신호다(F-19와 같은 규율).
+   */
+  extensionBase?: number;
 };
 
 /**
