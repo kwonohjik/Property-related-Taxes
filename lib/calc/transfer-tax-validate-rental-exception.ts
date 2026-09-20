@@ -21,6 +21,13 @@ export function validateRentalHousingException(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
+  /**
+   * 🔴 **⑤와 같은 축이다** (P4-3a · 3중 패턴). 판정 메뉴는 §161 안분 입력을 화면에 띄우지
+   *    않으므로(`RentalHousingSectionMode`), 여기서 그 값을 필수로 막으면 **화면에 없는 칸**
+   *    때문에 판정이 영구 차단된다 — 이 파일이 `:26`에서 이미 한 번 겪은 dead-end다.
+   *    ⑤가 감추는 것은 ⑧도 요구하지 않는다.
+   */
+  mode: "full" | "facts" = "full",
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -116,8 +123,8 @@ export function validateRentalHousingException(
     }
   }
 
-  // B 시나리오 추가 검증
-  if (rh.scenario === 'B') {
+  // B 시나리오 추가 검증 — §161① 안분 입력. 판정에는 쓰이지 않으므로 facts 모드에서는 묻지 않는다.
+  if (rh.scenario === 'B' && mode === "full") {
     if (!rh.priorResidenceTransferDate) {
       return `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`;
     }
@@ -158,11 +165,26 @@ export function validateRentalHousingException(
   }
 
   // 거주주택 취득일 검증 (자산-수준)
+  /**
+   * ── 여기부터는 **거주주택 자신의 보유·거주 요건**이다 ────────────────────────────
+   *
+   * 🔴 **판정 메뉴(`facts`)에서는 막지 않는다.**
+   *
+   *   1. 이 요건들은 `checkEligibility`가 판정하는 바로 그 축이고, 판정 메뉴는 「요건 미달」을
+   *      **답으로 보여주는** 화면이다. 차단하면 사용자는 왜 비과세가 아닌지 끝내 알 수 없다
+   *      (`one-house-exemption-validate.ts` 헤더: 「막는 것은 판정이 **불가능한** 입력뿐」).
+   *   2. 🔴 취득일은 판정 메뉴에서 **③ 단계 필드**다. ② 단계에서 요구하면 그 화면에 **없는 칸**
+   *      때문에 「다음」이 영구 차단된다 — 이 파일이 `:26`에서 이미 한 번 겪은 dead-end다
+   *      (E2E OHR-4가 실제로 그 상태를 잡아냈다).
+   *
+   * 계산기(`full`)는 종전대로 전부 차단한다 — 세액을 내려면 특례 적용 여부가 확정돼야 한다.
+   */
+  if (mode === "facts") return null;
+
   if (!asset.acquisitionDate) {
     return `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`;
   }
 
-  // §155⑳ 거주주택 거주 2년 + 보유 2년 요건 — 침묵 실패 차단
   // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
   // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
   const liveMonthsVal = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");

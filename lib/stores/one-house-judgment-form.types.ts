@@ -29,6 +29,7 @@
  */
 import type { TransferFormData } from "./calc-wizard-form.types";
 import { createDefaultTransferFormData } from "./calc-wizard-store";
+import { migrateAsset } from "./calc-wizard-asset-migrate";
 
 /**
  * §155의2 장기저당담보주택 · §155의3 상생임대주택 — **판정 메뉴 전용 입력**.
@@ -131,7 +132,19 @@ export function normalizeOneHouseJudgmentForm(
 ): OneHouseJudgmentFormData {
   const base = createInitialOneHouseJudgmentForm();
   if (!raw || typeof raw !== "object") return base;
-  return { ...base, ...(raw as Partial<OneHouseJudgmentFormData>) };
+  const merged = { ...base, ...(raw as Partial<OneHouseJudgmentFormData>) };
+
+  /**
+   * 🔴 **자산도 마이그레이션한다** — 폼 최상위 병합만으로는 부족하다.
+   *
+   * `assets`는 배열이라 통째로 갈아끼워지므로, 저장 당시 없던 자산-수준 필드가 **그대로 빈
+   * 채로** 화면에 도달한다. §155⑳ 섹션이 `asset.rentalHousingException.applyException`을
+   * 읽는 순간 구 record는 예외로 화면이 죽는다(E2E OHH-3가 실제로 그렇게 깨졌다).
+   *
+   * 🔑 계산기의 `migrateAsset`을 **그대로** 쓴다 — 자산-수준 기본값의 정본이 그것이고,
+   *    이력 재개에서 그 leaf를 빠뜨려 결함을 낸 전례가 이미 있다(2026-09-07).
+   */
+  return { ...merged, assets: (merged.assets ?? []).map(migrateAsset) };
 }
 
 /**

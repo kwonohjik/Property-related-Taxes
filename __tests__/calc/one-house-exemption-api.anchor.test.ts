@@ -29,6 +29,7 @@ import {
   computeOneHouseJudgmentSummary,
 } from "@/lib/calc/one-house-exemption-validate";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 
 /** 판정이 실제로 나오는 최소 폼 — 각 테스트가 한 축씩만 바꾼다. */
 function baseForm(over: Partial<OneHouseJudgmentFormData> = {}): OneHouseJudgmentFormData {
@@ -408,5 +409,122 @@ describe("P4-2b-1 — fetch 래퍼는 판정 route의 envelope를 푼다", () =>
     } finally {
       globalThis.fetch = origFetch;
     }
+  });
+});
+
+/**
+ * P4-3a — §155⑳ 장기임대주택 특례가 ⑬ body를 타고 route까지 간다.
+ *
+ * 🔴 **leaf 단언만으로는 부족하다.** `toRentalHousingExceptionApi`가 무엇을 만드는지는
+ *    계산기 테스트가 이미 보지만, 판정 메뉴의 폼이 그 leaf에 **닿는지**는 별개다.
+ *    닿지 않으면 화면에서 특례를 켜도 판정이 그대로 비과세로 나온다(침묵 누락).
+ */
+describe("P4-3a — §155⑳ 판정 배선", () => {
+  /** UI 팩토리(`makeDefaultRentalUnit`)가 만드는 모양 위에 요건 충족값만 얹는다. */
+  function passingRentalForm(over: Record<string, unknown> = {}): OneHouseJudgmentFormData {
+    const f = baseForm();
+    const unit = {
+      ...makeDefaultRentalUnit(),
+      businessRegistrationDate: "2015-01-01",
+      rentalRegistrationDate: "2015-01-01",
+      standardPriceAtRentalStart: "500000000",
+      acquisitionOfficialPrice: "500000000",
+      isNationalSizeHousing: true,
+      hasContractDepositProof: true,
+      hasMinimum2Units: true,
+      hasMinimum5UnitsInCity: true,
+      rentalMonths: "120",
+      requirementsConfirmed: true,
+      ...over,
+    };
+    /**
+     * 🔴 거주기간은 **자산-수준**에 둔다. 폼-전역 `residencePeriodMonths`는 이 화면에서
+     *    **무효**다 — `residencePeriodMonthsAsset`의 기본값이 `""`가 아니라 `"0"`이라
+     *    `deriveResidencePeriodMonths`의 `||` 폴백이 절대 폼-전역에 닿지 않는다
+     *    (실측: 폼-전역 60을 넣어도 body는 0). RS-1~4가 쓰는 규약과 같다.
+     */
+    return {
+      ...f,
+      residencePeriodMonths: "",
+      assets: [
+        {
+          ...f.assets[0],
+          residenceInputMode: "direct" as const,
+          residencePeriodMonthsAsset: "60",
+          rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unit] },
+        },
+      ],
+    };
+  }
+
+  it("[RA-1] 토글 OFF면 body에 싣지 않는다", () => {
+    const body = buildOneHouseExemptionApiBody(baseForm()) as Record<string, unknown>;
+    expect(body.rentalHousingException).toBeUndefined();
+  });
+
+  it("[RA-2] 토글 ON이면 ⑬ body에 실린다", () => {
+    const body = buildOneHouseExemptionApiBody(passingRentalForm()) as Record<string, unknown>;
+    const rhe = body.rentalHousingException as Record<string, unknown> | undefined;
+    expect(rhe).toBeDefined();
+    expect(rhe?.applyException).toBe(true);
+    expect((rhe?.rentalUnits as unknown[]).length).toBe(1);
+  });
+
+  it("[RA-3] route까지 관통해 §155⑳ 결론이 돌아온다", async () => {
+    const { status, json } = await postForm(passingRentalForm());
+    expect(status).toBe(200);
+    expect(json.data.rentalHousingException?.passed).toBe(true);
+  });
+
+  /** 🔴 요건 미충족이면 비과세가 꺼져야 한다 — 화면 입력에서 route까지의 end-to-end. */
+  it("[RA-4] 거주 2년 미달이면 화면 입력 그대로 **과세**로 돌아온다", async () => {
+    const f = passingRentalForm();
+    const form = {
+      ...f,
+      assets: [{ ...f.assets[0], residencePeriodMonthsAsset: "12" }],
+    };
+    const { status, json } = await postForm(form);
+    expect(status).toBe(200);
+    expect(json.data.rentalHousingException?.passed).toBe(false);
+    expect(json.data.judgment.isExempt).toBe(false);
+  });
+
+  /** ⑧ — §161 안분 입력은 판정 메뉴에서 **묻지 않는다**(⑤가 감추므로). */
+  it("[RA-5] 시나리오 B를 안분 입력 없이 둬도 ⑧이 차단하지 않는다", () => {
+    const f = passingRentalForm();
+    const form = {
+      ...f,
+      assets: [
+        {
+          ...f.assets[0],
+          rentalHousingException: { ...f.assets[0].rentalHousingException, scenario: "B" as const },
+        },
+      ],
+    };
+    const blocking = validateStep2(form).filter((e) => e.severity === "error");
+    expect(blocking).toEqual([]);
+  });
+
+  /**
+   * 🔴 **뮤테이션이 찾아낸 앵커 구멍이다.** RA-5·RA-6은 「막지 않는다」만 보므로 ⑧ 배선을
+   *    통째로 지워도 전부 초록이었다. **판정이 불가능한 입력은 막는다**는 긍정 짝이 필요하다
+   *    (`feedback_negative_anchor_needs_positive_twin`).
+   *
+   * 🔑 여기서 막는 것은 「요건 미달」이 아니라 **판정 자체가 불가능한 입력**이다 —
+   *    등록일이 없으면 어느 목(가·나·다)인지조차 도출되지 않는다.
+   */
+  it("[RA-7] 등록일 미입력은 ⑧이 막는다 (요건 미달과 다르다)", () => {
+    const f = passingRentalForm({ businessRegistrationDate: "" });
+    const blocking = validateStep2(f).filter((e) => e.severity === "error");
+    expect(blocking.length).toBeGreaterThan(0);
+    expect(blocking[0].field).toBe("rentalHousingException");
+  });
+
+  /** 임대주택을 명부에도 넣으면 주택 수가 이중 계상된다 — 경고하되 막지는 않는다. */
+  it("[RA-6] 명부 이중 입력은 warning이지 error가 아니다", () => {
+    const form = { ...passingRentalForm(), houses: [house("h1")] };
+    const errors = validateStep2(form);
+    expect(errors.some((e) => e.severity === "warning" && e.field === "houses")).toBe(true);
+    expect(errors.filter((e) => e.severity === "error")).toEqual([]);
   });
 });

@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -54,6 +55,12 @@ export function Step2({ form, onChange }: Props) {
   const viewForm = useMemo(() => withDerivedHouseCount(form), [form]);
   const houseCount = deriveJudgmentHouseCount(form);
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
+
+  /** 양도 대상(= 거주주택) 자산. §155⑳ 특례는 이 자산에 매달린다. */
+  const primary = form.assets[0];
+  /** 자산-수준 patch — ③ 단계(`Step3.tsx:33`)와 같은 형태다. */
+  const patchPrimaryAsset = (patch: Record<string, unknown>) =>
+    onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) });
 
   // ── F-4 파생 props 5종 (계산기 Step4와 같은 leaf) ──────────────
   const tempTwoHouseVerdict = useMemo(
@@ -355,6 +362,28 @@ export function Step2({ form, onChange }: Props) {
           </FieldCard>
         </div>
       </ToggleCard>
+
+      {/*
+        §155⑳ 장기임대주택 보유자 거주주택 특례 (P4-3a · 계획서 Q-7).
+
+        🔑 계산기와 **같은 컴포넌트**를 `mode="facts"`로 쓴다 — 복제 금지가 Q-7의 조건이었다.
+           §161① 안분 3시점 기준시가·직전거주주택 양도일은 세액 산식 입력이라 계산기에 남는다.
+
+        🔴 `onChangeResidence`를 **넘기지 않는다**. 그 prop을 주면 섹션 안에 거주기간 편집기가
+           열리는데, 그것은 ③ 단계의 `ResidencePeriodSection`과 **같은 자산-수준 필드**를 쓴다.
+           둘 다 띄우면 같은 칸이 두 벌이 된다(F-3과 같은 층위). 실시간 충족 표시는 그대로 뜬다.
+
+        🔑 여기 선언한 임대주택은 위 **명부에 다시 넣지 않는다** — 특례가 주택 수에서 빼 주는
+           대상이다. 이중 입력은 ⑧이 경고한다.
+      */}
+      <RentalHousingExceptionSection
+        mode="facts"
+        rh={primary.rentalHousingException}
+        asset={primary}
+        acquisitionDate={primaryAcquisitionDate}
+        transferDate={form.transferDate}
+        onChange={(rentalHousingException) => patchPrimaryAsset({ rentalHousingException })}
+      />
     </div>
   );
 }

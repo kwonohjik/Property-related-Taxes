@@ -33,6 +33,11 @@ import { parseRatesFromMap, presaleRightStartDate } from "@/lib/tax-engine/trans
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import {
+  buildRentalHousingVerdict,
+  applyRentalHousingVerdict,
+  type OneHouseRentalHousingVerdict,
+} from "@/lib/tax-engine/one-house/rental-housing-verdict";
+import {
   buildOneHouseCountBreakdown,
   deriveHouseholdHousingCount,
   type OneHouseCountBreakdown,
@@ -44,6 +49,11 @@ import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/t
 export type OneHouseExemptionResponse = {
   judgment: OneHouseJudgment;
   houseCount: OneHouseCountBreakdown;
+  /**
+   * §155⑳ 장기임대주택 특례 결론 (P4-3a) — 특례를 **선언한 경우에만** 실린다.
+   * `undefined`는 「선언하지 않음」이고 `passed: false`는 「선언했으나 미충족」이다.
+   */
+  rentalHousingException?: OneHouseRentalHousingVerdict;
 };
 
 export async function POST(request: NextRequest) {
@@ -144,11 +154,21 @@ export async function POST(request: NextRequest) {
      */
     const steps: CalculationStep[] = [];
     const exclusion = runHouseCountExclusionStep(engineInput, steps);
-    const judgment = judgeOneHouseExemptionFromInput(
+    const coreJudgment = judgeOneHouseExemptionFromInput(
       exclusion.exemptionJudgeInput,
       parsedRates.oneHouseSpecialRules,
       presaleRightStartDate(parsedRates),
     );
+
+    /**
+     * 단계 6.5: §155⑳ 장기임대주택 특례 (P4-3a).
+     *
+     * 계산기는 이것을 **STEP 2.5**(`checkExemption` 이후)에서 본다. 판정 route는 거기까지
+     * 가지 않으므로 여기서 **같은 leaf**를 부른다. 부르지 않으면 임대 요건을 하나도 보지 않은 채
+     * 「1주택 → 비과세」가 나온다(over-exemption).
+     */
+    const rentalVerdict = buildRentalHousingVerdict(engineInput);
+    const judgment = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
 
     const houseCount = buildOneHouseCountBreakdown({
       total: engineInput.householdHousingCount,
@@ -157,7 +177,11 @@ export async function POST(request: NextRequest) {
       inheritedExclusion: exclusion.inheritedExclusion,
     });
 
-    const payload: OneHouseExemptionResponse = { judgment, houseCount };
+    const payload: OneHouseExemptionResponse = {
+      judgment,
+      houseCount,
+      ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),
+    };
     return NextResponse.json({ data: payload }, { status: 200 });
   } catch (err) {
     console.error("[/api/calc/one-house-exemption] engine error:", err);

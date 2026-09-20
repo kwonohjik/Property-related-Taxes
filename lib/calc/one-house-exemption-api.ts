@@ -27,6 +27,7 @@ import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-co
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
+import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
@@ -214,6 +215,18 @@ export function buildOneHouseExemptionApiBody(
     // ── 판정 메뉴 고유 (P4-2b-0이 ⑫⑭를 열어 둔 축) ──────────
     ...buildLongTermMortgagePayload(form),
     ...buildWinWinRentalPayload(form),
+
+    /**
+     * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기의 leaf를 **그대로** 쓴다.
+     *
+     * 🔑 §161 안분 3필드까지 함께 실린다. 판정 route는 그것을 **읽지 않지만**
+     *    (`checkEligibility` 인자에 없다), 여기서 골라 빼면 계산기와 다른 payload를 만드는
+     *    두 번째 변환이 된다. leaf 하나를 그대로 쓰고 무엇을 읽을지는 엔진이 정한다.
+     */
+    ...(() => {
+      const rhPayload = toRentalHousingExceptionApi(primary);
+      return rhPayload ? { rentalHousingException: rhPayload } : {};
+    })(),
   };
 }
 

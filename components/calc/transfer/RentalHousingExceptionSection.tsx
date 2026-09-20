@@ -27,6 +27,18 @@ import { cn } from "@/lib/utils";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
+/**
+ * 표시 모드 (P4-3a · 계획서 Q-7).
+ *
+ * - `"full"` — 계산기. 판정 사실 + §161 안분 산식 입력을 **모두** 보여준다(현행·기본값).
+ * - `"facts"` — 판정 메뉴. **판정 사실만**. §161 안분 3시점 기준시가·직전거주주택 양도일은
+ *   세액 산식 입력이라 계산기에 남는다(Q-7 분할선).
+ *
+ * 🔑 `"calc"`(산식 입력만) 모드는 **만들지 않았다**. 그 모드를 쓸 화면은 P6(계산기 정리)에서
+ *    생긴다 — 소비자가 없는 분기를 미리 두면 아무 테스트도 그것이 맞는지 말해 주지 않는다.
+ */
+export type RentalHousingSectionMode = "full" | "facts";
+
 interface RentalHousingExceptionSectionProps {
   rh: AssetForm["rentalHousingException"];
   /** 자산 전체 — B 시나리오 환산 기준시가 연동 판정(isPhrpStdPriceLinked) + 값 echo용 */
@@ -38,6 +50,8 @@ interface RentalHousingExceptionSectionProps {
   /** 거주 정보(입력모드·구간·개월) patch 콜백 — 자산-수준 residence 필드 갱신(보유 상황과 자동 동기화) */
   onChangeResidence?: (patch: Partial<AssetForm>) => void;
   onChange: (rh: AssetForm["rentalHousingException"]) => void;
+  /** 기본값 `"full"` — 넘기지 않으면 현행(계산기) 동작 그대로다. */
+  mode?: RentalHousingSectionMode;
 }
 
 export function RentalHousingExceptionSection({
@@ -47,7 +61,10 @@ export function RentalHousingExceptionSection({
   transferDate,
   onChangeResidence,
   onChange,
+  mode = "full",
 }: RentalHousingExceptionSectionProps) {
+  /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
+  const showAllocationInputs = mode === "full";
   function set<K extends keyof AssetForm["rentalHousingException"]>(
     key: K,
     val: AssetForm["rentalHousingException"][K],
@@ -158,8 +175,24 @@ export function RentalHousingExceptionSection({
         </button>
       </div>
 
-      {/* ② B 시나리오 전용: 직전거주주택 정보 + 3-시점 기준시가 */}
-      {rh.scenario === "B" && (
+      {/*
+        ② B 시나리오 전용: 직전거주주택 정보 + 3-시점 기준시가.
+        🔑 **판정에는 쓰이지 않는다** — `checkEligibility`는 이 네 값을 보지 않는다.
+           그래서 판정 메뉴(`mode="facts"`)에서는 통째로 접는다(Q-7 분할선).
+      */}
+      {rh.scenario === "B" && !showAllocationInputs && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/40 p-2.5 text-xs text-amber-800"
+          data-testid="rental-allocation-deferred-notice"
+        >
+          <p className="font-semibold">§161① 안분 입력은 세액 계산에서 받습니다</p>
+          <p className="mt-0.5">
+            직전거주주택 양도일과 3-시점 기준시가는 <strong>과세 범위를 나누는 값</strong>이라
+            비과세 판정에는 쓰이지 않습니다. 이 화면은 특례 <strong>요건 충족 여부</strong>까지 답합니다.
+          </p>
+        </div>
+      )}
+      {rh.scenario === "B" && showAllocationInputs && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
@@ -325,7 +358,8 @@ export function RentalHousingExceptionSection({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-                {rh.scenario === "B" ? 3 : 2}
+                {/* 번호는 **렌더된 블록만** 센다 — ②를 접은 채 3을 찍으면 화면이 「1 · 3」이 된다. */}
+                {rh.scenario === "B" && showAllocationInputs ? 3 : 2}
               </span>
               <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
             </div>
