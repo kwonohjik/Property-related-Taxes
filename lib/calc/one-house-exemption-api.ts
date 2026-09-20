@@ -22,6 +22,8 @@
  * 사용자에게 받는다(③ 예상 양도가액).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
@@ -125,7 +127,27 @@ export function buildOneHouseExemptionApiBody(
     isUnregistered: form.isUnregistered,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
-    residencePeriodMonths: parseInt(form.residencePeriodMonths || "0", 10),
+    /**
+     * 🔴 거주기간은 **폼-전역 값을 그대로 읽으면 안 된다**.
+     *
+     * `ResidencePeriodSection`(③에서 재사용)은 **자산-수준** `residencePeriods[]`(구간 입력)
+     * 또는 `residencePeriodMonthsAsset`(직접 입력)에 쓴다. 폼-전역 `residencePeriodMonths`는
+     * 그 위젯이 **건드리지 않는 옛 필드**다 — 그대로 읽으면 사용자가 「5년 거주」를 입력해도
+     * 판정에는 **0개월**이 들어가 비과세가 탈락한다.
+     *
+     * ⇒ 계산기와 **같은 leaf**(`clampResidenceToHousingPeriod` → `deriveResidencePeriodMonths`)를
+     *   쓴다. 폼-전역 값은 그 함수 안에서 **fallback**으로만 쓰인다
+     *   (`transfer-tax-api.ts:242-247`과 인자까지 동일).
+     *
+     * ⚠️ 이 결함은 anchor가 **픽스처로 가렸다** — 폼-전역 값을 직접 넣어 두면 위젯을 붙이기
+     *    전까지 드러나지 않는다(`feedback_fixture_default_masks_gate_defect`).
+     */
+    residencePeriodMonths: clampResidenceToHousingPeriod(
+      primary,
+      form.transferDate,
+      form.residencePeriodMonths,
+      isUsageConversionActive(primary) ? primary.residentialUseStartDate : undefined,
+    ).months,
     householdHousingCount: houseCount,
 
     /**

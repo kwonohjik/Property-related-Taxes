@@ -70,6 +70,14 @@ const MENU = [
     tone: "sky",
   },
   {
+    // 판정 전용 메뉴 — 세액이 아니라 비과세 여부를 답한다. 양도세 바로 옆에 둔다.
+    href: "/calc/one-house-exemption?new=1",
+    title: "1세대1주택 비과세 판정",
+    subtitle: "보유 주택으로 비과세·기한 판정",
+    icon: "🏡",
+    tone: "violet",
+  },
+  {
     href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",

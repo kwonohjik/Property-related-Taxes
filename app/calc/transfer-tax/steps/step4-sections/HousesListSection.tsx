@@ -411,6 +411,7 @@ export function HousesListSection({
   form,
   onChange,
   hideGracePeriod = false,
+  hideSellingHouseExclusion = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -427,6 +428,18 @@ export function HousesListSection({
    *    안 그러면 「보이지 않는 필드 차단」이 된다.
    */
   hideGracePeriod?: boolean;
+  /**
+   * 양도 주택 전용 **중과배제** 특례 2섹션(§167의10①3·7호 · 3주택+)을 숨긴다 —
+   * **1세대1주택 비과세 판정 메뉴 전용**(계획서 §3.2-C · F-1).
+   *
+   * 🔑 그 두 섹션은 파일 머리 주석이 밝히듯 **중과 축**(영 §167의10)이고 비과세 판정과 무관하다.
+   *    판정 메뉴는 `sellingHouseExclusion`을 API 본문에 **싣지도 않으므로**
+   *    (`one-house-exemption-api.ts`), 그대로 두면 **입력해도 아무 데도 가지 않는 칸**이 된다.
+   *
+   * ⚠️ 계산기는 이 prop을 넘기지 않는다 — 기본값 `false`로 **동작 불변**이다.
+   *    「수정 없이 재사용」 전제가 여기서 한 번 깨지며, 그 범위는 이 prop 하나로 한정된다.
+   */
+  hideSellingHouseExclusion?: boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -601,7 +614,7 @@ export function HousesListSection({
           🔴 「담긴 값이 있으면」도 연다 (2026-09-07 대장 재대조). 토글을 켠 뒤 주택수를 2채로
              낮추면 섹션이 사라지는데 ⑧(`transfer-tax-validate.ts`)은 켜진 토글의 기간(년)을
              계속 요구해, 그 토글을 끌 화면이 없는 dead-end가 됐다. 술어는 leaf 단일 소스. */}
-      {sellingHouseExclusionVisible(form) && (
+      {!hideSellingHouseExclusion && sellingHouseExclusionVisible(form) && (
         <SellingHouseExclusionSection
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
@@ -611,7 +624,7 @@ export function HousesListSection({
       {/* ── 양도 주택 2주택 전용 배제 특례 (§167의10①3호·7호) ──
           두 호는 **양도하는 주택 자신**에도 적용된다(F-16). 종전에는 「다른 보유 주택」 행에만
           입력이 있어 양도 주택에는 경로가 없었다. dead-end 회피는 위 3주택+ 섹션과 같은 규칙. */}
-      {sellingHouseTwoHouseExclusionVisible(form) && (
+      {!hideSellingHouseExclusion && sellingHouseTwoHouseExclusionVisible(form) && (
         <SellingHouseTwoHouseExclusionSection
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
