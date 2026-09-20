@@ -125,6 +125,17 @@ export interface Article89Clause2Result {
   viaArticle?: string;
   /** 판정 불가 사유 — 사용자에게 「이 항을 직접 확인하라」고 알릴 조문 표기 */
   openArticles?: string[];
+  /**
+   * §156의2③·§156의3② — **권리 취득일부터 3년** 처분기한 (P4-1).
+   *
+   * 종전에는 `:337` 지역변수로 만들어 비교에만 쓰고 버렸다. 판정 메뉴(P4)의 「조건부·기한」이
+   * 「이 날짜까지 종전주택을 양도했어야 한다」를 보여주려면 그 값이 결과에 올라와야 한다
+   * (UI가 날짜를 다시 계산하면 dual-truth — `feedback_aggregate_display_rederives_engine_value`).
+   *
+   * 🔑 **세액에는 영향이 없다** — 판정(`status`)은 이 필드 없이도 종전과 똑같이 난다.
+   *    3년 기한을 **판정한 경로**에서만 채워지므로, 값이 없다는 것은 「그 축을 보지 않았다」는 뜻이다.
+   */
+  deadline?: Date;
 }
 
 /** 이 술어가 읽는 입력만 — 겸용주택 등 부분 입력 경로도 그대로 재사용할 수 있게 좁힌다. */
@@ -363,7 +374,11 @@ export function resolveArticle89Clause2(
         : TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3;
     const declared = input.rightThreeYearException;
     if (declared === undefined) {
-      return { status: "undetermined", openArticles: [fourthClause, "소득세법 시행규칙 §75 ①"] };
+      return {
+        status: "undetermined",
+        openArticles: [fourthClause, "소득세법 시행규칙 §75 ①"],
+        deadline,
+      };
     }
     if (meetsThreeYearException(declared, input.transferDate)) {
       return {
@@ -376,7 +391,7 @@ export function resolveArticle89Clause2(
             : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
       };
     }
-    return { status: "excluded" };
+    return { status: "excluded", deadline };
   }
 
   /**

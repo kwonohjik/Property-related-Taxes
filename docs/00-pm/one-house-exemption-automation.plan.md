@@ -701,7 +701,9 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P1** | ✅ **완료(2026-09-20 · §13)** — `resolveHighValueHouseThreshold(양도일)` 신설 + 판정·안분·LTHD·재개발 안분·표시 문구 전환, seed `maxExemptPrice` 제거. 🛑 **입주권 경로·UI 3곳은 이월**(§13.3 — 근거 미확보·prop drilling) | — | 소~중 |
 | **P2** | ✅ **완료(2026-09-20 · §15)** — `one-house/{types,judge}.ts` 신설. 계산기가 `TransferTaxInput → OneHouseFacts → 판정입력` **왕복**을 거쳐 판정한다(사실 충분성을 매 테스트가 증명). 판정 로직 **무변경** · 세액 변동 **0**(2,089 케이스) · anchor 26건 · 뮤테이션 **34/34 KILLED** | P0·P1 | 중 |
 | **P3** | ✅ **완료(2026-09-20 · §16)** — §155의2①②③ · §155의3① 판정 + 거주요건 면제 **3조문 전부**(§154①·§155⑳1호·§159의4) 연동 · manifest 2건 등록(라이브 PASS) · anchor 25건 · 뮤테이션 **20/21 KILLED**(1건은 설계상 무효과). 🛑 **겸용 경로 표2 게이트 1곳은 P4로 이월**(별도 입력 타입 — §16.5) | P2 | 중 |
-| **P4** | **판정 메뉴 신설** — ⓐ 기본(아래) ⓑ **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드, 한 PR로 분리 권장) — 4단계 마법사 · route · 이력 타입 · 조건부·기한(**날짜 표시**, Q-4) 출력(G-3) · 명부 정본(G-1) · 1세대 **사용자 선언** + 정의 안내(Q-3′) · §155의2·§155의3 입력 | P3 · 설계 문서 2종 | **대** |
+| **P4-1** | ✅ **완료(2026-09-20 · §17)** — 판정 결과 확장(`pending[]`·`undetermined[]`·`appliedExceptions[]`·`legalBasis[]`) + `ExemptionResult`↔`OneHouseJudgment` **타입 이중선언 해소**. 세액 변동 **0**(3,059 케이스) · anchor 31건 · 뮤테이션 **16/17 KILLED** | P3 | 중 |
+| **P4-2** | **판정 메뉴 화면 신설** — 4단계 마법사 · store · route · validate · 이력 등록 13지점 · `houseCount` 도출. 폼 타입은 **`TransferFormData` 슈퍼셋**(2026-09-20 사용자 결정 — §11.1 Q-8) | P4-1 | **대** |
+| **P4-3** | **§155⑳·§89①4호 판정 이관**(Q-7 — 엔진의 판정/산식 분리 + 위젯 표시 모드) | P4-2 | 중 |
 | **P5** | **계산기 연결** — 「이 결과로 세액 계산」 · 「판정 불러오기」 · 재판정 · 출처 표시·staleness | P4 | 중 |
 | **P6** | **계산기 정리** — ③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격(OH-21) · E2E 이관(§3.4 spec) | P5 · V-11 | 중~대 |
 
@@ -745,6 +747,7 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **Q-4** | 기한 표시 | ✅ **날짜로 표시** — 잔여일(D-day)은 쓰지 않는다 | 2026-09-18 사용자 결정. 결과 화면·인쇄물이 날짜와 무관하게 같은 뜻을 유지한다 |
 | **Q-7** | §155⑳·§89①4호 판정을 판정 메뉴로 옮길 것인가 | ✅ **P4에서 함께 옮긴다** — **판정 사실만** 판정 메뉴로(§155⑳: `applyException`·`scenario`·`rentalUnits[]` / §89①4호: `redevExemptionEligibleAtApproval`·`redevPriorHouseHoldingMonths`·`redevPriorHouseResidenceMonths`·`redevOtherHouseAcquisitionDate`). **세액 산식 입력은 계산기에 남긴다**(§161 안분: `priorResidenceTransferDate`·`standardPriceAt*` 3필드 / §166 3분할) | 2026-09-18 사용자 결정(엔진 설계 분할안 채택). 판정 메뉴가 1세대1주택 비과세 판정 **전체**에 답한다(D-1 취지) |
 | **Q-5** | 원안 §4 2026 세제개편안 | ✅ **반영하지 않는다** — 현행 시행 법령만 구현 | 2026-09-18 사용자 결정. V-1 검증 불요로 종결 |
+| **Q-8** | 판정 메뉴 폼 타입 — UI 설계 §4의 `Pick<TransferFormData, …>` 전제가 **TS2740으로 성립하지 않는다**(실측) | ✅ **`TransferFormData` 슈퍼셋** — `type OneHouseJudgmentFormData = TransferFormData & { saleTargetHouseId; saleExpectedDate; saleExpectedPrice }`. 재사용 섹션 11종 **무수정**, `createInitialFormData()` 재사용. `householdHousingCount`는 store에 쓰지 않고 **명부에서 `useMemo` 파생 합성**해 G-1 「명부가 정본」을 지킨다 | 2026-09-20 사용자 결정. 대안 ㉡(컴포넌트 props를 Pick으로 수정)은 「수정 없이 재사용」 전제를 깨고 계산기 회귀 위험 11곳, ㉢(독립 타입+어댑터)은 타입 두 벌 → D-1이 경계하는 드리프트 |
 
 ### 11.2 잔여 결정 — **없음**
 
@@ -1143,3 +1146,110 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **신설** | 현황 실측 표(§3, file:line) · 기존 anchor·E2E 대장(§3.4) · 법령 인용 인프라 갭(§3.5) · 갭 **3계층** 재분류 5항(§4 — 확정 1 / 미검증 1 / 범위 확장 3) · 14 동기화 지점 매핑(§7) · anchor·mutation 계획(§8) · **V-1~V-10** 미검증 레지스터 · Q-1~Q-5 결정 |
 | **v2.1 구조 개편**(2026-09-18) | 판정 **별도 메뉴** + 공유 엔진 + 사실 전달·재판정 + 계산기 간이 입력(D-1~D-5) · 명부·분양권 위젯은 **중과 유일 입력 경로라 계산기에 잔류**(실측 제약) · 로드맵 P0~P6 재편(G-5를 P1로 앞당김) · Q-1·Q-2 종결 · **Q-3′ 사용자 판정**(자동 판정안 폐기) · Q-4 날짜 표시 · Q-5 개편안 미반영 · V-11~V-13 신설 · 산출물 게이트 충족 → 설계 문서 2종 필요 |
 | **저장소 결함 발견** | 인용 오기 1건(§2.4 §155⑦↔④) · legal-codes 상수 부재 6건 · manifest 구조적 제외 3건 · §155⑮ 인용 0건(M-10) · §155⑥ **전용** anchor 미발견(간접 커버 2건 존재) · **고가주택 기준 시점 분기 부재 — 확정**(V-6: 과거 양도분 0원 과소, 안분 12억 하드코딩 5곳) |
+
+---
+
+## 17. P4-1 실행 기록 (2026-09-20)
+
+**P4가 「대」인 이유를 실측으로 갈랐다.** 착수 전 조사에서 신규 ~4,200~6,500줄 · 기존 수정
+28~32파일 49~55지점이 나왔고, **한 PR로는 불가능**하다는 결론과 함께 착수를 막는 선행 조건 3개가
+드러났다. P4를 **P4-1(엔진) → P4-2(화면) → P4-3(이관)** 셋으로 쪼갰고, 이 PR은 그 첫 번째다.
+
+### 17.1 착수를 막고 있던 것 — 실측
+
+| # | 블로커 | 근거 | 이 PR에서 |
+|---|---|---|---|
+| **B1** | ④ 결과 화면이 읽을 필드가 엔진에 **없다** — `pending[]`·`undetermined[]`·`appliedExceptions[]`·`legalBasis[]` | `one-house/types.ts` P2 주석이 「P4에서 채운다」로 **일부러 비워 둠** | ✅ 채웠다 |
+| **B2** | 같은 shape 타입이 **두 개** — `ExemptionResult`(`requirements.ts:290`) ↔ `OneHouseJudgment`. 구조적 타이핑으로 통과 중이라 한쪽만 늘리면 필드가 **조용히 소실** | `judge.ts`가 전자를 반환하며 후자로 선언 | ✅ 하나로 합쳤다 |
+| **B3** | `transfer-tax-exemption-requirements.ts`가 **808줄**(P3이 800 트리거를 넘겼다) | `wc -l` | ✅ B2 삭제만으로 **779줄** — 분리 불요 |
+
+🔑 **B3은 분리 없이 풀렸다.** 중복 선언(27줄)을 지우는 것이 곧 트리거 해소였다 — 분리 PR을
+따로 잡을 뻔했다.
+
+### 17.2 설계서 전제가 깨졌다 — `Pick<TransferFormData, …>`
+
+UI 설계 §4 결론은 「폼 타입을 `Pick<TransferFormData, …>`로 두면 컴포넌트 **수정 없이 전 재사용**이
+성립하고, 누락 필드는 TypeScript가 잡는다」였다. **반대다.** throwaway probe 실측:
+
+```
+error TS2740: Type 'JudgePick' is missing the following properties from type
+'TransferFormData': assets, contractTotalPrice, totalTransferExpense,
+bundledSaleMode, and 101 more.
+```
+
+재사용 대상 11종 중 **7종이 `form: TransferFormData`를 통째로** 요구한다(필수 111필드).
+⇒ **Q-8**로 올려 사용자가 **슈퍼셋**을 채택했다(§11.1). P4-2가 그 결정을 쓴다.
+
+### 17.3 기한은 「새로 계산」이 아니라 **버려지던 값 줍기**였다
+
+`judgeTemporaryTwoHouseTiming`은 이미 `{oneYearThreshold, deadline}`을 반환하는데
+`exemption.ts`가 `timing.overall`만 읽고 버리고 있었다. §89②도 `89-2-exclusion.ts:337`에
+`const deadline`을 만들어 비교만 하고 버렸다 — 결과 필드로 올리기만 했다(**세액 무관**).
+
+구현한 기한 축 6개(전부 **정확값**으로 anchor 고정):
+
+| id | 조문 | 기산 |
+|---|---|---|
+| `155-1-disposal-deadline` | §155① | 신규취득일 + 처분기한(조정지역·§155⑯·부칙 반영분) |
+| `155-5-marriage-merge` / `155-4-parental-care-merge` | §155⑤ / §155④ | 혼인일·합친 날 + 10년 |
+| `155-7-3ho-return-to-farm` | §155⑦3호 | 귀농주택 취득일 + 5년 |
+| `155-8-unavoidable-resolved` | §155⑧ | 해소일 + 3년 |
+| `154-1-holding-years` | §154① | 정본 기산일(`resolveExemptionHoldingStartDate`) + 보유연수 |
+| `156-2-3-right-three-year` | §89②(§156의2③·§156의3②) | 권리 취득일 + 3년 |
+
+🔴 **거주 2년은 내지 않는다** — 입력이 `residencePeriodMonths`(개월 수)뿐이고 **거주 개시일
+필드가 없어** 역산이 구조적으로 불가능하다. 날짜를 지어내는 대신 `undetermined`에
+「거주 개시일이 아니라 개월 수를 입력받기 때문」이라고 밝힌다. 설계서 pending 목록에도 이 축은 없다.
+
+### 17.4 pending의 계약 — 「틀린 약속을 하지 않는다」
+
+「이 날짜까지 ~하면 비과세」는 **기한이 남은 그 요건 하나만 미충족일 때만** 참이다. 보유 2년도
+못 채운 세대에게 「기한 내 양도하면 비과세」라고 하면 거짓말이다. ⇒ 축마다 **부정 짝**을 함께 뒀다.
+
+그래서 `checkExemption`이 **§89② 배제일 때도 본체 판정을 계산**한다(종전에는 단락했다) —
+「§89②만 아니었다면 비과세였는가」(`coreWouldPass`)를 모르면 그 기한을 말해도 되는지 판단할 수 없다.
+⚠️ 반환하는 판정은 종전과 똑같이 `{false, false}`이고 `deemedOneHouseBy155`·`exemptReason`도 새지 않는다.
+
+### 17.5 🔴 뮤테이션이 실제 결함을 잡았다 — 게이트 3개 누락
+
+**M13(기한도과 조건 제거)이 SURVIVED**했다. 「도달 불가라 무효과」로 넘기려다 실제 경로를 찾아보니
+`pending.ts`가 판정 본체의 **선행 게이트를 복제하지 않았다**. probe 실측:
+
+```
+isOneHousehold=false → pending: ["155-1-disposal-deadline"]
+propertyType=land    → pending: ["155-1-disposal-deadline"]
+```
+
+1세대 **비해당 선언**에도, 토지에도 §155① 기한 안내가 떴다. 본체는 두 경우를 즉시 과세로
+반환하는데 기한 수집기만 그 게이트를 안 봤다. ⇒ 게이트 3개(미등기·부수토지·1세대/주택) 복제 +
+회귀 anchor 3건(PD-27·27b·27c). 그 뒤 M16·M17을 추가해 KILLED 확인.
+
+📌 M13 자체는 게이트를 닫은 뒤 **정말로 도달 불가**가 됐다(형제 조건과 모양을 맞춰 남기고 주석에 기록).
+
+### 17.6 검증
+
+| 항목 | 결과 |
+|---|---|
+| 세액 불변 | **3,059 케이스 차등 0** (HEAD vs P4-1). 축 6종 × 특례 17종 |
+| probe 구별력 | 고가주택 임계값 12억→9억 뮤테이션에 **358줄 반응** — 죽은 계측이 아님 |
+| anchor | 신규 **31건** 전건 GREEN |
+| 뮤테이션 | **16/17 KILLED**. 잔여 1건은 게이트 수정 후 도달 불가(주석에 기록) |
+| 전체 회귀 | `npm run test:transfer` 909파일 9,623 통과 |
+| 줄 수 | 전 파일 800 미만 — `requirements.ts` 808→**779**, `exemption.ts` 565, `pending.ts` 318 |
+
+⚠️ **probe의 죽은 컬럼을 한 번 만들었다** — 1차 스냅샷이 `transferIncome`·`longTermDeduction`을
+비교했는데 **`TransferTaxResult`에 없는 필드**였다(양쪽 `undefined`). esbuild가 타입을 지워
+vitest는 통과했고 `tsc`로만 드러났다. 필드명을 고치고 구별력까지 확인한 뒤 다시 떴다
+(`feedback_mutation_zero_discrimination_is_not_proof`).
+
+### 17.7 남은 것 (P4-1 범위 밖)
+
+- **`houseCount{total, countedForExemption, excluded[]}`는 담지 않았다** → **P4-2**.
+  명부→유효 주택 수 도출 함수가 저장소에 **없고**, 제외 사유를 만드는 `runHouseCountExclusionStep`은
+  판정 **바깥**(`transfer-tax.ts` STEP 0.6)에서 돌며 그 입력(`reductions`·`specialHouseExclusions`)이
+  `OneHouseJudgeInput`에 없다. 부분만 내보내면 「제외 0건」과 「제외를 아직 못 봄」이 구별되지 않는다.
+- `exemptReason` **문구는 건드리지 않았다** — `transfer-tax.ts:346·355`가 부분문자열로 경고를
+  만든다. `appliedExceptions`는 **추가**이지 대체가 아니다. 경고를 구조화 필드 기반으로 옮길지는 P4-2.
+- 14 동기화 지점은 그대로다 — 새 결과 필드는 **엔진 안에만** 있고 화면에 도달하지 않는다(의도된 상태).
+- 설계서 드리프트 22건(UI 설계 file:line 오차·`StepWizard` 부재·`HistoryDetailDrawer` 누락 등)은
+  P4-2 착수 시 설계서를 갱신하며 함께 정리한다.

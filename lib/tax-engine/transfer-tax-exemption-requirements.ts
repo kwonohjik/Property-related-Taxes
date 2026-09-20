@@ -13,7 +13,6 @@
  */
 
 import { addYears, format } from "date-fns";
-import type { Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -37,12 +36,12 @@ export const MERGE_EXEMPTION_YEARS = 10;
 // §155⑯ 공공기관·법인 지방이전 — §155① 본문의 "3년"을 "5년"으로 치환.
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 // §155⑧ — 부득이한 사유가 해소된 날부터 일반주택 양도 기한.
-const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
+export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
 
 // §155⑦1호·2호 — 거주 요건 연수.
 const RURAL_HOUSE_RESIDENCE_YEARS = 5;
 // §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
-const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
+export const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
 // §155⑩3호 — 귀농주택 대지면적 상한(㎡).
 const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
 
@@ -286,34 +285,6 @@ export type MergeDeemingReqInput = Pick<
   | "acquisitionDate"
   | "transferDate"
 >;
-
-export interface ExemptionResult {
-  isExempt: boolean;
-  isPartialExempt: boolean;
-  exemptReason?: string;
-  /**
-   * 「소득세법 시행령」 §159의4 표2 대상 판정용 echo — **§155 각 항에 따라 1세대1주택으로 본** 경우.
-   *
-   * 같은 조는 표2 대상을 「1주택(**제155조**ㆍ제155조의2ㆍ제156조의2ㆍ제156조의3 및 그 밖의 규정에
-   * 따라 1세대 1주택으로 보는 주택을 포함한다)을 보유하고 보유기간 중 거주기간이 2년 이상인 것」으로
-   * 정의한다. 즉 표2 「1주택」은 **실제 보유 주택 수가 아니라 의제를 포함한 개념**이다.
-   * 「따라 … 보는」이므로 사용자가 켠 플래그가 아니라 **각 항의 요건을 실제로 충족해 의제가 성립한
-   * 경우**만이며, 그 판정을 내리는 곳이 여기(`checkExemption`)뿐이라 결과로 echo한다.
-   *
-   * ⚠️ 이번 범위는 **§155①④⑤⑦⑧**뿐이다. §155의2(장기저당담보)·§156의2(주택+조합원입주권)·
-   *    §156의3(주택+분양권)은 괄호에 함께 열거돼 있으나 **손대지 않았다** — 별건 백로그다.
-   * ⚠️ 거주 2년 요건은 연언(AND)이므로 별개다. 표2 게이트의 `table2ResidenceYears >= 2`는 유지된다.
-   */
-  deemedOneHouseBy155?: boolean;
-  /**
-   * 「소득세법」 §89② 판정 echo — 세대가 주택과 조합원입주권·분양권을 함께 보유하는가.
-   *
-   * `"excluded"`면 이 함수가 §89①3호를 끄고 과세로 돌린다. `"undetermined"`면 **종전 동작을
-   * 유지**하고 상위(`transfer-tax.ts`)가 경고를 낸다 — 예외 16항 중 입력 경로가 없는 항이
-   * 남아 있어, 배제만 켜면 그 예외에 해당하는 세대가 법 근거 없이 불리해지기 때문이다.
-   */
-  article89Clause2?: Article89Clause2Result;
-}
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
 export const DISPOSAL_DELAY_REASON_LABEL: Record<TemporaryTwoHouseDelayReason, string> = {
