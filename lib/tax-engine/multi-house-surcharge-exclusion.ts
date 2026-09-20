@@ -140,6 +140,12 @@ const GRACE_PERIOD_A_DEADLINE = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WIND
 /** §167의10①9호 — 양도 당시 기준시가 상한(1억원). */
 const LOW_PRICE_SMALL_HOUSE_CAP = 100_000_000;
 
+/** 9호를 판정할 수 없는 상태 — 양도 주택의 양도 당시 기준시가가 미입력(0)이다. */
+export function isLowPriceSmallHouseUndecidable(house: HouseInfo | undefined): boolean {
+  if (!house || house.isRedevelopmentZone) return false;
+  return (house.transferOfficialPrice ?? house.officialPrice) <= 0;
+}
+
 /**
  * 나목4) 표 지역 판정 — 계약일부터 양도 기한 개월수(4 또는 6).
  * 강남4구(서초·송파·용산 포함)는 4개월. 그 외 2025-10-16 지정 조정대상지역(서울 나머지 21구 +
@@ -563,8 +569,14 @@ export function determineSurchargeExclusion(
      * 사업시행구역 소재 주택은 빠진다. 10호(유일 일반주택)는 **1호~7호**만 인용하므로 **다른 주택**이
      * 1억 이하인 것은 배제 근거가 되지 않는다(F-3 — 종전에는 다른 주택의 취득 시 공시가격을 봤다).
      */
+    // 0은 「1억 이하」가 아니라 **미입력**이다(④가 양도 당시 기준시가 공란을 0으로 보낸다).
+    // 미입력을 납세자 유리로 읽어 조용히 배제하지 않는다 — 판정 불가는 경고로 알린다(`multi-house-surcharge.ts`).
     const sellingTransferPrice = sellingHouse.transferOfficialPrice ?? sellingHouse.officialPrice;
-    if (sellingTransferPrice <= LOW_PRICE_SMALL_HOUSE_CAP && !sellingHouse.isRedevelopmentZone) {
+    if (
+      sellingTransferPrice > 0 &&
+      sellingTransferPrice <= LOW_PRICE_SMALL_HOUSE_CAP &&
+      !sellingHouse.isRedevelopmentZone
+    ) {
       exclusionReasons.push({
         type: "low_price_two_house",
         detail:

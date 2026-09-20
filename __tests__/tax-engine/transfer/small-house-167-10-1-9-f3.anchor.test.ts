@@ -95,6 +95,18 @@ describe("F-3 §167의10①9호 — 배제 대상은 양도하는 주택 자신"
     expect(calc(two({ officialPrice: 100_000_001 })).totalTax).toBe(SURCHARGED);
   });
 
+  it("F3-5b 기준시가 0은 「1억 이하」가 아니라 미입력 — 배제하지 않고 경고한다", () => {
+    const r = calc(two({ officialPrice: 0 }));
+    expect(r.totalTax).toBe(SURCHARGED);
+    expect(r.multiHouseSurchargeEvaluation?.warnings.some((w) => w.includes("판정하지 못했습니다"))).toBe(true);
+    // 값이 있으면 경고는 사라진다(긍정 짝)
+    expect(
+      (calc(two({ officialPrice: 90_000_000 })).multiHouseSurchargeEvaluation?.warnings ?? []).some((w) =>
+        w.includes("판정하지 못했습니다"),
+      ),
+    ).toBe(false);
+  });
+
   it("F3-6 (대조) 3주택에는 대응 호가 없다 — §167의3①에 9호는 삭제됐다", () => {
     const three = baseTransferInput({
       transferPrice: 800_000_000,

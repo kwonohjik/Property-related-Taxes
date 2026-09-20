@@ -731,10 +731,14 @@ API 직접 호출뿐 아니라 **⑧이 막지 않는 화면 입력**까지 엔�
   정비구역 단서도 양도 주택에 건다. 상한은 `LOW_PRICE_SMALL_HOUSE_CAP` 상수로 뺐다.
   3주택 사유 문구의 「①~⑨ 배제 항목」은 10호 문언(「1호부터 8호까지 및 8호의2」)으로 고쳤다.
   `HouseInfo.isRedevelopmentZone` 주석의 인용(「§167-10 ① 10호」)도 9호로 정정했다.
-- **anchor** `__tests__/tax-engine/transfer/small-house-167-10-1-9-f3.anchor.test.ts`(8): 수정 전 RED 6 · 대조 GREEN 2(정비구역 단서 · 3주택 무대응).
+- **미입력(0)은 「1억 이하」가 아니다**: ④가 양도 당시 기준시가 공란을 0으로 보낸다(`transfer-tax-api-houses.ts:37`).
+  그대로 두면 값을 안 넣은 모든 2주택이 조용히 중과 배제됐다 — 실제로 기존 anchor
+  `multi-presale-rights-plumbing`(P1-02-05, `officialPrice: 0`)이 pre-push에서 이 회귀를 잡았다.
+  ⇒ `> 0` 게이트 + 「판정하지 못했습니다」 경고(`isLowPriceSmallHouseUndecidable`).
+- **anchor** `__tests__/tax-engine/transfer/small-house-167-10-1-9-f3.anchor.test.ts`(9): 수정 전 RED 6 · 대조 GREEN 2(정비구역 단서 · 3주택 무대응) · 미입력 경계 1.
 - **기존 테스트 정정**: `special-exclusion-p2`·`utilities-and-2house`가 「다른 주택 1억 이하 → 배제」를 고정하고 있었다.
   법령대로 뒤집고, 정비구역 단서 테스트도 **대상을 양도 주택으로 옮겨** 공허해지지 않게 했다. 「다른 주택만 1억 이하 → 배제 아님」 케이스를 새로 넣었다.
-- **mutation 8/8 KILLED**.
+- **mutation 10/10 KILLED**.
 - **세액 방향**: 양방향(다른 주택이 싸서 잘못 빠지던 건은 증가 · 양도 주택이 싼 건은 감소).
 
 ## 부록. 변경 이력
