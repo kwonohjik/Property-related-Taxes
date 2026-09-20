@@ -563,6 +563,16 @@ export function buildHousingPart(
   // ── ③ 장기보유특별공제 (안분 후 과세대상 양도차익에 표율 적용) ──
   // 🚨 Critical: 다주택자는 거주 2년+ 이어도 표1 적용 (1세대1주택 거주공제 미적용)
   // 표2 게이트는 통산(table2ResidenceYears), 거주분 공제율은 실거주(residenceYears) — §154⑧3호 / 2021-202.
+  /**
+   * 🛑 **겸용 경로는 §155의3(상생임대) 거주요건 면제를 아직 반영하지 않는다** (P3 범위 밖).
+   *
+   * 단건 경로는 `meetsTable2ResidenceRequirement`(`transfer-tax-exemption-requirements.ts`)로
+   * 5곳을 묶었지만, 여기는 `MixedUseAsset`이라는 **별도 입력 타입**을 쓴다 — 사실을 넘기려면
+   * 그 타입과 API 어댑터(`transfer-tax-api-mixed-use.ts`)까지 함께 열어야 한다.
+   * P3에는 §155의3의 **입력 경로 자체가 없으므로**(화면은 P4) 지금 필드만 늘리면 도달하지 않는
+   * 배선이 하나 더 생긴다(`feedback_api_trigger_without_input_path_is_noop`).
+   * ⇒ **P4(판정 메뉴)에서 전달 경로를 만들 때 이 줄도 함께 닫는다.** 계획서 §16.5.
+   */
   const useTable2 = isOneHouseExempt && table2ResidenceYears >= 2;
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 

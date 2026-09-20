@@ -33,7 +33,7 @@ import { TRANSFER } from "./legal-codes";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
-import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
+import { meetsTable2ResidenceRequirement, resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
@@ -215,7 +215,8 @@ export function calcLongTermHoldingDeduction(
       input.isOneHousehold && (input.householdHousingCount === 1 || deemedOneHouseBy155 === true);
     const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
     const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
-    const useTable2ForCompanion = isOneHouseSingleForCompanion && table2ResidenceYears >= 2;
+    const useTable2ForCompanion =
+      isOneHouseSingleForCompanion && meetsTable2ResidenceRequirement(input, table2ResidenceYears);
     // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수 — 통칙의 「그 토지의 전체보유기간」.
     // 3년 진입요건도 같은 축이다 — `calcLongTermRate` 정본에 3년 가드가 내장돼 있어
     // 외곽 게이트를 따로 두지 않는다(종전 `ctx.holdingMonths < 36` 외곽 return은 축이 어긋나 있었다).
@@ -292,7 +293,7 @@ export function calcLongTermHoldingDeduction(
     input.nonHousingToHousingConversion &&
     input.transferDate >= LTHD_CONVERSION_95_5_CUTOFF &&
     isOneHouseSingle &&
-    table2ResidenceYears >= 2 &&
+    meetsTable2ResidenceRequirement(input, table2ResidenceYears) &&
     !splitDetail // 토지·건물 분리취득과는 병용하지 않는다 (validation과 이중 방어)
   ) {
     const conv = input.nonHousingToHousingConversion;
@@ -357,7 +358,8 @@ export function calcLongTermHoldingDeduction(
   //   3년 가드는 정본에 내장돼 있다.
   // §159의4는 「1주택(의제 포함)을 보유하**고** 거주 2년 이상」이라는 **연언(AND)**이다 —
   // 의제만으로 표2가 열리지 않으며 거주 2년 요건은 그대로 유지된다.
-  const useTable2 = isOneHouseForTable2 && table2ResidenceYears >= 2;
+  // §155의3 상생임대주택은 §159의4의 거주기간 제한을 받지 않는다(같은 조가 명시 열거).
+  const useTable2 = isOneHouseForTable2 && meetsTable2ResidenceRequirement(input, table2ResidenceYears);
   const rateForYears = (years: number): number =>
     calcLongTermRate(years, residenceYears, useTable2);
 

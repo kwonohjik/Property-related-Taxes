@@ -67,6 +67,9 @@ export type OneHouseJudgeInput = Pick<
   | "ruralHouse"
   | "unavoidableOutsideCapitalHouse"
   | "culturalHeritageHouse"
+  // ── §155의2 · §155의3 (P3) ──
+  | "longTermMortgageHouse"
+  | "winWinRentalHouse"
   // ── §89② · §156의2 · §156의3 ──
   | "houses"
   | "presaleRights"
@@ -146,6 +149,12 @@ export type OneHouseFacts = {
   ruralHouse?: TransferTaxInput["ruralHouse"];
   unavoidableOutsideCapitalHouse?: TransferTaxInput["unavoidableOutsideCapitalHouse"];
   culturalHeritageHouse?: boolean;
+
+  // ── §155의2 장기저당담보 · §155의3 상생임대 (P3) ──
+  /** §155의2 — 계약 요건 + ③ 만기 전 양도 + 양도 주택이 담보주택인지 */
+  longTermMortgageHouse?: TransferTaxInput["longTermMortgageHouse"];
+  /** §155의3 — 상생임대차 요건 3호. **의제가 아니라 거주기간 제한 면제**다 */
+  winWinRentalHouse?: TransferTaxInput["winWinRentalHouse"];
 
   // ── §89② · §156의2 · §156의3 ──
   houses?: HouseInfo[];

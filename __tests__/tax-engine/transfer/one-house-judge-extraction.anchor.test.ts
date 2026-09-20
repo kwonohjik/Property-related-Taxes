@@ -75,6 +75,8 @@ const JUDGE_INPUT_KEYS = [
   "ruralHouse",
   "unavoidableOutsideCapitalHouse",
   "culturalHeritageHouse",
+  "longTermMortgageHouse",
+  "winWinRentalHouse",
   "houses",
   "presaleRights",
   "sellingHouseId",

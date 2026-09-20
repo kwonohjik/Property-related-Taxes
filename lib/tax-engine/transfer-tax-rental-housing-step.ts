@@ -14,6 +14,7 @@ import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
 import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
 import { checkEligibility } from "./transfer-tax/rental-housing-exception/eligibility";
+import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type {
   TransferTaxInput,
@@ -69,7 +70,7 @@ export function isPrhpScenarioAIneligible(effectiveInput: TransferTaxInput): boo
   ).years;
   const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
   // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep와 동일 인자 관례)
-  return !checkEligibility(rhe.rentalUnits, holdYears, liveYears).passed;
+  return !checkEligibility(rhe.rentalUnits, holdYears, liveYears, qualifiesWinWinRental(effectiveInput)).passed;
 }
 
 /**
@@ -98,7 +99,8 @@ export function rentalPeriodPendingNoticeForEarlyReturn(effectiveInput: Transfer
   const holdYears = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate).years;
   const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
   return buildRentalPeriodPendingNotice(
-    checkEligibility(rhe.rentalUnits, holdYears, liveYears).periodPendingUnitIndexes,
+    checkEligibility(rhe.rentalUnits, holdYears, liveYears, qualifiesWinWinRental(effectiveInput))
+      .periodPendingUnitIndexes,
   );
 }
 
@@ -386,6 +388,8 @@ export function runRentalHousingExceptionStep(
     liveYears,
     holdYears,    // 거주주택 보유연수 (B 시나리오 시 PHRP 보유연수와 동일)
     liveYears,    // 거주주택 거주연수
+    // §155의3① — 상생임대주택이면 §155⑳1호 거주요건 면제(법문이 이 호를 명시 열거한다).
+    qualifiesWinWinRental(effectiveInput),
   );
 
   // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)

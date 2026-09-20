@@ -83,6 +83,8 @@ export function calculateRentalHousingException(
   liveYears: number,
   residenceHoldYears: number,
   residenceLiveYears: number,
+  /** §155의3① — 거주주택이 상생임대주택이면 §155⑳1호 거주요건이 면제된다. */
+  winWinResidenceExempt = false,
 ): RentalHousingExceptionResult {
   // ─── Step 0: 토글 OFF ─────────────────────────────────────
   if (!input.applyException) {
@@ -105,6 +107,7 @@ export function calculateRentalHousingException(
     input.rentalUnits,
     residenceHoldYears,
     residenceLiveYears,
+    winWinResidenceExempt,
   );
 
   if (!eligibility.passed) {

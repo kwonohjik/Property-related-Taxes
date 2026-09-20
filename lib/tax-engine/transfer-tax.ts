@@ -42,6 +42,7 @@ import {
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
+import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
@@ -612,7 +613,7 @@ export function calculateTransferTax(
     const isOneHouseSpecial982 =
       exemptionJudgeInput.isOneHousehold &&
       (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155) &&
-      table2ResidenceYearsForStep >= 2 &&
+      meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep) &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
       const rate982 = holdingPeriod.years >= 3 ? Math.min(holdingPeriod.years * 0.04, 0.4) : 0;
@@ -629,6 +630,12 @@ export function calculateTransferTax(
     longTermHoldingDeduction,
     residenceYearsForStep: Math.floor(effectiveInput.residencePeriodMonths / 12),
     table2ResidenceYearsForStep,
+    // 표시 축도 계산 축과 **같은 술어**를 쓴다 — §155의3 면제를 계산에만 반영하고 문구가 표1이면
+    // 「공제율은 표2인데 문구는 표1」 드리프트가 난다.
+    meetsTable2Residence: meetsTable2ResidenceRequirement(
+      exemptionJudgeInput,
+      table2ResidenceYearsForStep,
+    ),
     isOneHousehold: exemptionJudgeInput.isOneHousehold,
     // 표시 축도 계산 축과 맞춘다 — §159의4 의제 1세대1주택은 표2를 적용받으므로 산식 문구도
     // 표2(보유 4% + 거주 4%)여야 한다. 어긋나면 「공제율 64%인데 문구는 표1」 drift가 난다.
