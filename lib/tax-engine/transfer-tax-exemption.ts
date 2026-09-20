@@ -18,7 +18,17 @@ import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { TRANSFER, shortArticle } from "./legal-codes";
-import type { OneHouseJudgeInput } from "./one-house/types";
+import type {
+  OneHouseAppliedException,
+  OneHouseCoreVerdict,
+  OneHouseJudgeInput,
+  OneHouseJudgment,
+} from "./one-house/types";
+import {
+  collectPendingConditions,
+  collectUndetermined,
+  meetsTemporaryTwoHousePrevHolding,
+} from "./one-house/pending";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 import {
@@ -34,12 +44,12 @@ import {
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
   qualifiesLongTermMortgageResidenceExemption,
+  qualifiesWinWinRental,
   resolveMergeDeeming,
   resolveMergeOverlapDeeming,
   RURAL_HOUSE_LABEL,
   UNAVOIDABLE_REASON_LABEL,
 } from "./transfer-tax-exemption-requirements";
-import type { ExemptionResult } from "./transfer-tax-exemption-requirements";
 
 // ── 요건 술어부 재수출 (분리 전 import 경로 보존 — CB-08) ──
 export * from "./transfer-tax-exemption-requirements";
@@ -67,18 +77,56 @@ export function checkExemption(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   presaleRightStartDate?: Date,
-): ExemptionResult {
+): OneHouseJudgment {
   const article89Clause2 = resolveArticle89Clause2(input, presaleRightStartDate);
-  if (article89Clause2.status === "excluded") {
-    return { isExempt: false, isPartialExempt: false, article89Clause2 };
-  }
-  return { ...checkExemptionCore(input, oneHouseRules), article89Clause2 };
+
+  /**
+   * 🔑 §89② 배제가 확정이어도 **본체 판정을 계산한다**(P4-1).
+   *
+   * 종전에는 배제면 여기서 단락했다. 그러면 「§89②만 아니었다면 비과세였는가」를 알 수 없고,
+   * 판정 메뉴가 「권리 취득일부터 3년 내에 양도했어야 한다」를 **말해도 되는지** 판단할 수 없다
+   * (보유 2년도 못 채운 세대에게 그 안내를 하면 틀린 약속이다 — `pending.ts` 계약 주석).
+   *
+   * ⚠️ **세액은 불변**이다 — 배제면 반환하는 판정은 종전과 똑같이 `{false, false}`이고
+   *    `deemedOneHouseBy155`·`exemptReason`도 새지 않는다(아래 `verdict` 삼항). 순수 함수를
+   *    한 번 더 부르는 것뿐이다.
+   */
+  const core = checkExemptionCore(input, oneHouseRules);
+  const excluded = article89Clause2.status === "excluded";
+  const coreWouldPass = core.isExempt || core.isPartialExempt;
+  const verdict: OneHouseCoreVerdict = excluded
+    ? { isExempt: false, isPartialExempt: false }
+    : core;
+
+  const settled = verdict.isExempt || verdict.isPartialExempt;
+  const appliedExceptions = verdict.appliedExceptions ?? [];
+  // 이미 비과세·부분과세면 「무엇을 더 하면」이 없다 — pending은 과세를 뒤집는 조건만 담는다.
+  const pending = settled
+    ? []
+    : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
+
+  return {
+    ...verdict,
+    article89Clause2,
+    appliedExceptions,
+    pending,
+    undetermined: collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+    legalBasis: dedupeLegalBasis([
+      ...appliedExceptions.map((e) => e.legalBasis),
+      ...pending.map((p) => p.legalBasis),
+    ]),
+  };
+}
+
+/** 근거 조문 목록 — 입력 순서를 유지한 채 중복만 제거한다(표시 순서가 곧 판정 순서다). */
+function dedupeLegalBasis(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function checkExemptionCore(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
-): ExemptionResult {
+): OneHouseCoreVerdict {
   const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;
 
   /**
@@ -134,6 +182,15 @@ function checkExemptionCore(
       isExempt: v.isExempt,
       isPartialExempt: v.isPartialExempt,
       exemptReason: v.isExempt ? "주택부수토지 — 1세대1주택 비과세" : "주택부수토지 — 1세대1주택 고가주택",
+      // 짝 주택이 **어떤 특례로** 비과세가 됐는지는 `appurtenantHouseVerdict`에 담겨 오지 않는다
+      // (isExempt·isPartialExempt·houseAcquisitionDate뿐). 여기서는 부수토지 근거만 낸다.
+      appliedExceptions: [
+        {
+          id: "89-1-3-appurtenant-land",
+          label: "주택부수토지 — 짝 주택의 판정을 따름",
+          legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
+        },
+      ],
     };
   }
 
@@ -167,17 +224,26 @@ function checkExemptionCore(
         input.burdenedGiftDenominator ??
         input.totalPropertyTransferPrice ??
         input.transferPrice;
+      const exceptions: OneHouseAppliedException[] = [
+        {
+          id: "156-2-5-replacement-house",
+          label: "재개발·재건축 대체주택 특례",
+          legalBasis: TRANSFER.REPLACEMENT_HOUSE_156_2_5,
+        },
+      ];
       if (priceCheck <= highValueThreshold) {
         return {
           isExempt: true,
           isPartialExempt: false,
           exemptReason: `대체주택 특례 비과세 (${REPLACEMENT_HOUSE_SHORT})`,
+          appliedExceptions: exceptions,
         };
       }
       return {
         isExempt: false,
         isPartialExempt: true,
         exemptReason: `대체주택 특례 고가주택 (${REPLACEMENT_HOUSE_SHORT})`,
+        appliedExceptions: exceptions,
       };
     }
   }
@@ -205,12 +271,10 @@ function checkExemptionCore(
      *    국외거주)을 §155① 준용에서 뺀 것은 `TEMP_TWO_HOUSE_PROVISO_REASONS`의 명시적 설계다.
      *    이 조건을 함께 없애면 다자산 경로(정규화 없음)에서 과다 비과세가 난다.
      */
-    const prevHolding = calculateHoldingPeriod(
-      resolveExemptionHoldingStartDate(input),
-      input.transferDate,
-    );
-    const meetsPrevHolding =
-      provisoRelaxesHolding || prevHolding.years >= rule.minHoldingYears;
+    // 🔑 P4-1 — 인라인이던 이 2줄을 `one-house/pending.ts`의 `meetsTemporaryTwoHousePrevHolding`
+    //    으로 추출했다. 기한 수집기가 「처분기한만 미충족인가」를 판정할 때 **같은 술어**를 써야
+    //    §154⑤·§154⑧3호 기산일 보정이 한쪽에만 반영되는 일이 없다. 동작은 불변이다.
+    const meetsPrevHolding = meetsTemporaryTwoHousePrevHolding(input, rule, provisoRelaxesHolding);
 
     // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 타이밍(요건 A·B)만 보고
     //   비과세를 줬다. §155①은 "…국내에 1주택을 소유한 것으로 **보아 제154조제1항을 적용**한다"이므로
@@ -222,13 +286,40 @@ function checkExemptionCore(
     //   같은 조 구조에서 E-3만 빠져 있던 내부 불일치였다.
     if (meetsPrevHolding && timing.overall && meetsOneHouseHoldingResidence(input, rule)) {
       // 적용된 특례 근거를 결과에 남긴다 — 어느 조항으로 요건이 완화됐는지 납세자가 확인할 수 있어야 한다.
+      // 🔑 P4-1 — 같은 근거를 **구조화**해서도 낸다(`appliedExceptions`). 문자열 쪽은 그대로 둔다:
+      //    `transfer-tax.ts:346·355`가 `exemptReason`을 부분문자열로 읽어 경고를 만들기 때문이다.
       const basisParts: string[] = [];
-      if (provisoRelaxesHolding) basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
+      const exceptions: OneHouseAppliedException[] = [
+        {
+          id: "155-1-temporary-two-house",
+          label: "일시적 2주택",
+          legalBasis: TRANSFER.TEMPORARY_TWO_HOUSE,
+        },
+      ];
+      if (provisoRelaxesHolding) {
+        basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
+        exceptions.push({
+          id: `154-1-proviso:${provisoReason!}`,
+          label: `§154① 단서 ${PROVISO_LABEL[provisoReason!]}`,
+          legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
+        });
+      }
       if (input.temporaryTwoHouse.publicInstitutionRelocation) {
         basisParts.push("§155⑯ 지방이전 처분기한 5년·1년요건 면제");
+        exceptions.push({
+          id: "155-16-public-institution-relocation",
+          label: "§155⑯ 지방이전 처분기한 5년·1년요건 면제",
+          legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑯`,
+        });
       }
       if (input.temporaryTwoHouse.disposalDelayReason) {
-        basisParts.push(`§155⑱ ${DISPOSAL_DELAY_REASON_LABEL[input.temporaryTwoHouse.disposalDelayReason]}`);
+        const delayLabel = DISPOSAL_DELAY_REASON_LABEL[input.temporaryTwoHouse.disposalDelayReason];
+        basisParts.push(`§155⑱ ${delayLabel}`);
+        exceptions.push({
+          id: `155-18-disposal-delay:${input.temporaryTwoHouse.disposalDelayReason}`,
+          label: `§155⑱ ${delayLabel}`,
+          legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑱`,
+        });
       }
       const provisoLabel = basisParts.length > 0 ? ` (${basisParts.join(" · ")})` : "";
       // §155①은 "1세대1주택으로 보아 §154①을 적용" — 고가주택 배제(§89①3괄호)·12억 초과분
@@ -236,9 +327,9 @@ function checkExemptionCore(
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= highValueThreshold) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}`, deemedOneHouseBy155: true };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}`, deemedOneHouseBy155: true };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
   }
 
@@ -253,10 +344,17 @@ function checkExemptionCore(
       const basis = ` (${shortArticle(TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL)} ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      const exceptions: OneHouseAppliedException[] = [
+        {
+          id: `155-8-unavoidable:${u.reason}`,
+          label: `수도권 밖 부득이한 사유 주택 (${UNAVOIDABLE_REASON_LABEL[u.reason]})`,
+          legalBasis: TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL,
+        },
+      ];
       if (priceCheck <= highValueThreshold) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}`, deemedOneHouseBy155: true };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}`, deemedOneHouseBy155: true };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
   }
 
@@ -280,10 +378,17 @@ function checkExemptionCore(
     const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+    const exceptions: OneHouseAppliedException[] = [
+      {
+        id: "155-6-1ho-cultural-heritage",
+        label: "문화유산 주택",
+        legalBasis: TRANSFER.CULTURAL_HERITAGE_HOUSE,
+      },
+    ];
     if (priceCheck <= highValueThreshold) {
-      return { isExempt: true, isPartialExempt: false, exemptReason: `문화유산 주택 비과세${basis}`, deemedOneHouseBy155: true };
+      return { isExempt: true, isPartialExempt: false, exemptReason: `문화유산 주택 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
-    return { isExempt: false, isPartialExempt: true, exemptReason: `문화유산 주택 고가주택${basis}`, deemedOneHouseBy155: true };
+    return { isExempt: false, isPartialExempt: true, exemptReason: `문화유산 주택 고가주택${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
   }
 
   // E-3.8: §155⑦ 농어촌주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
@@ -291,10 +396,17 @@ function checkExemptionCore(
     const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+    const exceptions: OneHouseAppliedException[] = [
+      {
+        id: `155-7-rural:${input.ruralHouse!.kind}`,
+        label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
+        legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑦`,
+      },
+    ];
     if (priceCheck <= highValueThreshold) {
-      return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}`, deemedOneHouseBy155: true };
+      return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
-    return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}`, deemedOneHouseBy155: true };
+    return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
   }
 
   // E-3.5: 합가 비과세 (§155④⑤ 혼인·동거봉양) — 합가일부터 10년 내 "먼저 양도" 주택 1세대1주택 의제.
@@ -312,10 +424,27 @@ function checkExemptionCore(
           : `동거봉양 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      // 중첩(§155①·④⑤)이면 두 조문이 함께 근거다 — 한 줄로 합치지 않고 행을 나눈다.
+      const exceptions: OneHouseAppliedException[] = mergeBasis.endsWith("_overlap")
+        ? [
+            { id: "155-1-temporary-two-house", label: "일시적 2주택", legalBasis: TRANSFER.TEMPORARY_TWO_HOUSE },
+            {
+              id: isMarriage ? "155-5-marriage-merge" : "155-4-parental-care-merge",
+              label: isMarriage ? "혼인 합가" : "동거봉양 합가",
+              legalBasis: isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
+            },
+          ]
+        : [
+            {
+              id: isMarriage ? "155-5-marriage-merge" : "155-4-parental-care-merge",
+              label: isMarriage ? "혼인 합가" : "동거봉양 합가",
+              legalBasis: isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
+            },
+          ];
       if (priceCheck <= highValueThreshold) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세`, deemedOneHouseBy155: true };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택`, deemedOneHouseBy155: true };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
   }
 
@@ -343,11 +472,27 @@ function checkExemptionCore(
       const basis = ` (${shortArticle(TRANSFER.LONG_TERM_MORTGAGE_MERGE)})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      const exceptions: OneHouseAppliedException[] = [
+        {
+          id: "155-2-2-long-term-mortgage-merge",
+          label: "장기저당담보주택 동거봉양 합가",
+          legalBasis: TRANSFER.LONG_TERM_MORTGAGE_MERGE,
+        },
+      ];
+      // ①의 거주기간 면제가 함께 붙은 경우(양도 주택이 담보주택)만 그 조항도 근거로 낸다.
+      if (qualifiesLongTermMortgageResidenceExemption(input)) {
+        exceptions.push({
+          id: "155-2-1-long-term-mortgage-residence",
+          label: "장기저당담보주택 거주기간 제한 면제",
+          legalBasis: TRANSFER.LONG_TERM_MORTGAGE_EXEMPT,
+        });
+      }
       if (priceCheck <= highValueThreshold) {
         return {
           isExempt: true,
           isPartialExempt: false,
           exemptReason: `장기저당담보주택 동거봉양 합가 1세대1주택 비과세${basis}`,
+          appliedExceptions: exceptions,
           // 📌 전액 비과세는 상위가 조기 반환해 장특을 계산하지 않으므로 이 echo는 **무효과**다
           //    (뮤테이션으로 확인 — 끄고 돌려도 전건 통과). 형제 분기(E-3·E-3.5)와 모양을 맞춰
           //    남긴다. 실제로 표2를 여는 것은 아래 부분과세 분기의 같은 필드다.
@@ -359,6 +504,7 @@ function checkExemptionCore(
         isPartialExempt: true,
         exemptReason: `장기저당담보주택 동거봉양 합가 고가주택${basis}`,
         deemedOneHouseBy155: true,
+        appliedExceptions: exceptions,
       };
     }
   }
@@ -384,10 +530,36 @@ function checkExemptionCore(
   // §154① 단서 각호 적용 시 비과세 사유에 호 라벨 부가 (result detail·PDF·step formula 자동 노출)
   const provisoReason = input.oneHouseExemptionProviso?.reason;
   const provisoLabel = provisoReason ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason]})` : "";
+  /**
+   * 본칙 1주택은 「특례」가 아니므로 기본 행을 만들지 않는다 — 판정 배지가 이미 말한다.
+   * 요건을 **완화한 것이 있을 때만** 행이 선다(§154① 단서 · §155의2① · §155의3①).
+   */
+  const exceptions: OneHouseAppliedException[] = [];
+  if (provisoReason) {
+    exceptions.push({
+      id: `154-1-proviso:${provisoReason}`,
+      label: `§154① 단서 ${PROVISO_LABEL[provisoReason]}`,
+      legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
+    });
+  }
+  if (qualifiesLongTermMortgageResidenceExemption(input)) {
+    exceptions.push({
+      id: "155-2-1-long-term-mortgage-residence",
+      label: "장기저당담보주택 거주기간 제한 면제",
+      legalBasis: TRANSFER.LONG_TERM_MORTGAGE_EXEMPT,
+    });
+  }
+  if (qualifiesWinWinRental(input)) {
+    exceptions.push({
+      id: "155-3-1-win-win-rental",
+      label: "상생임대주택 거주기간 제한 면제",
+      legalBasis: TRANSFER.WIN_WIN_RENTAL_EXEMPT,
+    });
+  }
   if (exemptionPriceCheck <= highValueThreshold) {
-    return { isExempt: true, isPartialExempt: false, exemptReason: `1세대1주택 비과세${provisoLabel}` };
+    return { isExempt: true, isPartialExempt: false, exemptReason: `1세대1주택 비과세${provisoLabel}`, appliedExceptions: exceptions };
   }
 
   // E-2: 부분과세 (양도가 12억 초과)
-  return { isExempt: false, isPartialExempt: true, exemptReason: `1세대1주택 고가주택${provisoLabel}` };
+  return { isExempt: false, isPartialExempt: true, exemptReason: `1세대1주택 고가주택${provisoLabel}`, appliedExceptions: exceptions };
 }
