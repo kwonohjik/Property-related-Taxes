@@ -11,41 +11,32 @@ import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/l
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
 import { isLegacyStockAggregateSuspect } from "@/lib/calc/stock-legacy-aggregate-suspect";
 import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
-import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
+import { resumeCalculationRecord } from "@/lib/calc/history-resume-entry";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
-import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
+import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
+import { TAX_LABEL } from "@/lib/storage/title-generator";
+import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
-  transfer: "/calc/transfer-tax",
-  acquisition: "/calc/acquisition-tax",
-  inheritance: "/calc/inheritance-tax",
-  gift: "/calc/gift-tax",
-  property: "/calc/property-tax",
-  comprehensive_property: "/calc/comprehensive-tax",
-  stock_transfer: "/calc/stock-transfer-tax",
-  stock_valuation: "/tools/stock-valuation",
-};
-
+/**
+ * 배지·필터 라벨 — **`TAX_LABEL`이 정본**이다(`title-generator.ts`). 제목 접두어를 만드는 것과
+ * 같은 문자열이어야 `stripTaxLabel`이 그 접두어를 실제로 떼어낸다. `transfer_multi`만 이
+ * 화면 전용 추가 키다(저장 taxType은 `transfer`이고 title에만 「(다건)」이 붙는다).
+ */
 const TAX_TYPE_LABELS: Record<string, string> = {
-  transfer: "양도소득세",
+  ...TAX_LABEL,
   transfer_multi: "양도소득세 (다건)",
-  inheritance: "상속세",
-  gift: "증여세",
-  acquisition: "취득세",
-  property: "재산세",
-  comprehensive_property: "종합부동산세",
-  stock_transfer: "주식 양도세",
-  stock_valuation: "주식 평가",
 };
 
-const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = [
+/** 순서는 화면 설계다 — 파생하지 않고 적되, 전 세목 포함은 가드 테스트가 지킨다. */
+export const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = [
   { label: "전체", value: "all" },
   { label: "양도소득세", value: "transfer" },
+  { label: "1세대1주택 판정", value: "one_house_exemption" },
   { label: "주식 양도세", value: "stock_transfer" },
   { label: "주식 평가", value: "stock_valuation" },
   { label: "취득세", value: "acquisition" },
@@ -99,6 +90,15 @@ function extractCardSummary(
     const address = first ? addr(first) : null;
     const dateLabel = fmt(inputData.transferDate as string | undefined, "양도일");
     return { address, dateLabel };
+  }
+  if (taxType === "one_house_exemption") {
+    // 판정 메뉴 폼은 양도세 폼의 슈퍼셋 — 같은 자리에서 읽는다. 날짜만 「예정」으로 갈라 적는다.
+    const assets = inputData.assets as Array<Record<string, unknown>> | undefined;
+    const first = Array.isArray(assets) && assets.length > 0 ? assets[0] : null;
+    return {
+      address: first ? addr(first) : null,
+      dateLabel: fmt(inputData.transferDate as string | undefined, "양도예정"),
+    };
   }
   if (taxType === "acquisition") {
     // 취득세 폼은 road/jibun 필드를 사용 — addressRoad/addressJibun fallback과 함께 인식
@@ -264,85 +264,14 @@ export function HistoryClient() {
   }
 
   function handleResume(record: CalculationRecord) {
-    const route = TAX_TYPE_ROUTES[record.taxType];
-    if (!route) return;
     /**
-     * 양도세는 **공유 진입점**이 맡는다(단건/다건 라우팅 + 공통 부수효과).
-     * 드로어(`HistoryDetailDrawer`)와 이 카드가 갈라져 두 번 결함을 냈다 — 2026-09-07
-     * `migrateAsset` 누락, 2026-09-16 다건 record 오라우팅.
+     * 🔑 분기·부수효과는 전부 **공유 진입점**이 갖는다(`history-resume-entry.ts`).
+     *    드로어와 이 카드가 각자 분기를 들고 있다가 세 번 갈라졌다 — 2026-09-07 `migrateAsset`
+     *    누락, 2026-09-16 다건 오라우팅, 그리고 드로어 라우트 맵 6/8(P4-2b-3에서 해소).
      */
-    if (record.taxType === "transfer") {
-      void resumeTransferRecord(record, router).then((reason) => {
-        if (reason) setError(reason);
-      });
-      return;
-    }
-    // v2 (contentHash dedup): editingCalculationId 플래그 폐기.
-    // 동일 입력+결과면 saveOrUpdateByContent가 자동으로 원본 record를 update.
-    sessionStorage.removeItem("editingCalculationId");
-    // 세무사 모드 — 이력에 기록된 의뢰인을 자동 활성화하여 ProfessionalClientGate 우회.
-    // record.clientId가 null(미지정)이면 게이트가 다시 의뢰인 선택을 강제하지 않도록
-    // null도 그대로 set (게이트가 activeClientId === null 시 게이트 표시 → 정합성 위해
-    // 미지정 이력은 일단 'manualPassed' 의도된 진입으로 간주하기 어려움 → 미지정 이력은 그대로 게이트 노출).
-    if (record.clientId) {
-      useProfessionalStore.getState().setActiveClientId(record.clientId);
-    }
-    // 건물 기준시가 모달 입력 스냅샷 복원 — 결과탭 「건물 기준시가 계산서」 서식 재유도용(세목 무관).
-    // input_data 안에 동반 저장된 스냅샷을 세션 스토어로 re-hydrate.
-    const bspSnaps = (record.inputData as { buildingStdSnapshots?: Record<string, unknown> })
-      ?.buildingStdSnapshots;
-    if (bspSnaps && typeof bspSnaps === "object") {
-      const prev = useBuildingStdSnapshotStore.getState().snapshots;
-      useBuildingStdSnapshotStore.setState({
-        snapshots: { ...prev, ...(bspSnaps as typeof prev) },
-      });
-    }
-    if (record.taxType === "gift") {
-      // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
-      sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
-      router.push(route);
-    } else if (record.taxType === "inheritance") {
-      // 상속세 — InheritanceTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
-      sessionStorage.setItem("inheritanceTaxResumeInput", JSON.stringify(record.inputData));
-      router.push(route);
-    } else if (record.taxType === "stock_transfer") {
-      // 주식 양도세 — 이력 inputData를 store에 hydrate (디자인 C-5 수정 모드)
-      Promise.all([
-        import("@/lib/stores/calc-wizard-stock-store"),
-        import("@/lib/calc/stock-resume-entry"),
-      ]).then(([{ useStockTransferStore }, { buildStockResumeState }]) => {
-        /**
-         * 🔴 `savedItems`를 **반드시 함께** 쓴다 — 그 목록은 sessionStorage에 영속되므로
-         * (`calc-wizard-stock-store.ts:232`) 비우지 않으면 직전 다종목 작업의 종목들이 이
-         * 편집에 섞여 합산된다(계획서 §2 G-E). 다종목 record면 `items`가 목록+편집기로
-         * 되돌아온다(§4.1 G-B). 두 갈래 모두 leaf가 판정한다.
-         */
-        const { formData, savedItems } = buildStockResumeState(
-          record.inputData as Record<string, unknown> | null,
-        );
-        useStockTransferStore.setState({
-          currentStep: 0,
-          formData,
-          savedItems,
-          result: null,
-          aggregateResult: null,
-          error: null,
-        });
-        router.push(route);
-      });
-    } else if (record.taxType === "stock_valuation") {
-      // 주식 평가 도구 — 이력 inputData를 평가 store에 hydrate
-      import("@/lib/stores/calc-stock-valuation-store").then(
-        ({ useStockValuationStore, normalizeStockValuationFormData }) => {
-          useStockValuationStore.setState({
-            formData: normalizeStockValuationFormData(record.inputData),
-          });
-          router.push(route);
-        },
-      );
-    } else {
-      router.push(route);
-    }
+    void resumeCalculationRecord(record, router).then((reason) => {
+      if (reason) setError(reason);
+    });
   }
 
   async function doClearAll() {
@@ -597,7 +526,10 @@ export function HistoryClient() {
                   ) : null;
                 })()}
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {record.taxType === "stock_valuation" ? (
+                  {record.taxType === "one_house_exemption" ? (
+                    /* 판정 메뉴는 **세액이 없다** — 그 자리에 판정 결론을 띄운다(술어는 공용 leaf). */
+                    <>판정: <span className="font-semibold text-foreground">{oneHouseVerdictLabel(record.resultData)}</span></>
+                  ) : record.taxType === "stock_valuation" ? (
                     <>평가액: <span className="font-semibold text-foreground">{extractStockValuationTotal(record.resultData)}</span></>
                   ) : (
                     <>납부세액: <span className="font-semibold text-foreground">{extractTotalTax(record.resultData)}</span></>

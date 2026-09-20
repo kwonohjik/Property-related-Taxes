@@ -1,18 +1,27 @@
 import type { UserId } from "./constants";
 
 /**
- * 로컬 저장 가능한 세목.
+ * 로컬 저장 가능한 세목 — **런타임 목록이 정본**이고 타입은 거기서 파생된다.
  * Supabase `calculations.tax_type` CHECK 제약과 동일.
+ *
+ * 🔴 **union을 따로 손으로 적지 않는다.** 종전에는 union과 `backup-validate.ts`의 리터럴
+ *    배열이 **두 벌**이었고, 한쪽에만 세목을 더하면 `tsc`가 침묵한 채 **백업 import가 그
+ *    세목을 거부**했다. 파생으로 바꿔 그 갈라짐을 타입 레벨에서 불가능하게 만든다.
  */
-export type LocalTaxType =
-  | "transfer"
-  | "inheritance"
-  | "gift"
-  | "acquisition"
-  | "property"
-  | "comprehensive_property"
-  | "stock_transfer"
-  | "stock_valuation";
+export const LOCAL_TAX_TYPES = [
+  "transfer",
+  "inheritance",
+  "gift",
+  "acquisition",
+  "property",
+  "comprehensive_property",
+  "stock_transfer",
+  "stock_valuation",
+  /** 1세대1주택 비과세 **판정**(세액 없음) — `/calc/one-house-exemption` (P4-2b-3) */
+  "one_house_exemption",
+] as const;
+
+export type LocalTaxType = (typeof LOCAL_TAX_TYPES)[number];
 
 /** 프로필 모드: 일반 납세자 | 세무사·대리인 */
 export type UserMode = "taxpayer" | "professional";

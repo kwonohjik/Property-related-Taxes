@@ -116,6 +116,25 @@ export function createInitialOneHouseJudgmentForm(): OneHouseJudgmentFormData {
 }
 
 /**
+ * 외부에서 온 폼(세션 리하이드레이션 · **이력 재개**)을 초기값 위에 덮는다 (P4-2b-3).
+ *
+ * 🔑 구 스키마 **판별을 하지 않는다**. 계산기 store가 키 화이트리스트로 판별했다가
+ *    「모든 신 스키마 폼이 구 스키마로 오분류돼 F5마다 자산 전부 소실」된 전례가
+ *    `calc-wizard-store.ts:221-247`에 남아 있다. 덮어쓰기만 하면 오분류가 성립하지 않는다.
+ *
+ * 🔑 이력 record에는 `buildingStdSnapshots`처럼 **저장 층이 끼워 넣은 키**가 섞여 있다.
+ *    폼 타입에 없는 키는 아래 화면들이 읽지 않으므로 그대로 흘려보낸다 — 걸러 내려다
+ *    화이트리스트를 만드는 순간 위 전례를 되풀이한다.
+ */
+export function normalizeOneHouseJudgmentForm(
+  raw: Record<string, unknown> | null | undefined,
+): OneHouseJudgmentFormData {
+  const base = createInitialOneHouseJudgmentForm();
+  if (!raw || typeof raw !== "object") return base;
+  return { ...base, ...(raw as Partial<OneHouseJudgmentFormData>) };
+}
+
+/**
  * 명부 → 세대 보유 주택 수 (**판정 메뉴의 정본** — G-1 · D-3).
  *
  * 🔴 계산기는 사용자가 「1 / 2 / 3+」로 선언한 스칼라를 쓰지만 판정 메뉴에는 그 위젯이 없다.

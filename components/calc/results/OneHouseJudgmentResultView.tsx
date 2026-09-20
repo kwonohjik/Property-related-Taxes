@@ -17,6 +17,7 @@
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
+import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
 type Serialized<T> = T extends Date ? string : T;
@@ -31,36 +32,13 @@ function formatDate(v: string): string {
   return String(v).slice(0, 10);
 }
 
-/** 판정 배지 — 네 갈래(전액 비과세 / 부분 비과세 / 과세 / 판정 보류). */
-function verdictOf(r: OneHouseExemptionResponse): {
-  label: string;
-  tone: "emerald" | "amber" | "rose" | "slate";
-  detail: string;
-} {
-  const j = r.judgment;
-  if (j.isExempt) {
-    return { label: "비과세", tone: "emerald", detail: "1세대1주택 비과세 요건을 충족합니다." };
-  }
-  if (j.isPartialExempt) {
-    return {
-      label: "부분 비과세",
-      tone: "amber",
-      detail: "고가주택이므로 12억 초과분에 해당하는 양도차익만 과세됩니다.",
-    };
-  }
-  if (j.pending.length > 0) {
-    return {
-      label: "조건부",
-      tone: "amber",
-      detail: "아래 조건을 기한 내에 갖추면 비과세로 판정됩니다.",
-    };
-  }
-  return { label: "과세", tone: "rose", detail: "현재 입력으로는 비과세 요건을 충족하지 않습니다." };
-}
-
 export function OneHouseJudgmentResultView({ result }: { result: OneHouseExemptionResponse }) {
   const { judgment, houseCount } = result;
-  const verdict = verdictOf(result);
+  /**
+   * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
+   *    이력 목록은 「과세」인 상태가 조용히 생긴다.
+   */
+  const verdict = oneHouseVerdictOf(judgment);
   const pending = judgment.pending as unknown as PendingItem[];
 
   /**

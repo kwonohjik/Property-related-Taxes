@@ -1,6 +1,11 @@
 import type { LocalTaxType } from "./types";
 
-const TAX_LABEL: Record<LocalTaxType, string> = {
+/**
+ * 세목 배지·제목 접두어 — **이력 화면과 같은 문자열을 쓴다**(`HistoryClient`가 이것을 편다).
+ * `Record<LocalTaxType, …>`이라 세목을 더하면 `tsc`가 여기서 막는다 — union 전체에서
+ * 컴파일 타임 그물이 걸리는 **유일한 지점**이다.
+ */
+export const TAX_LABEL: Record<LocalTaxType, string> = {
   transfer: "양도소득세",
   acquisition: "취득세",
   inheritance: "상속세",
@@ -9,6 +14,7 @@ const TAX_LABEL: Record<LocalTaxType, string> = {
   comprehensive_property: "종합부동산세",
   stock_transfer: "주식 양도세",
   stock_valuation: "주식 평가",
+  one_house_exemption: "1세대1주택 판정",
 };
 
 export function formatDate(dateStr: string | undefined | null): string | null {
@@ -179,6 +185,18 @@ export function generateTitle(
 
   if (taxType === "acquisition") {
     if (address) return `${label} — ${address}`;
+  }
+
+  /**
+   * 1세대1주택 판정 — 폼이 `TransferFormData`의 슈퍼셋이라 **양도세와 같은 추출기**가 그대로 돈다
+   * (주소는 `assets[0]`, 날짜는 top-level `transferDate`). 양도일은 「양도 예정일」이므로
+   * 문구만 「양도예정」으로 갈라 적는다 — 확정 양도와 섞이면 이력에서 구별되지 않는다.
+   */
+  if (taxType === "one_house_exemption") {
+    const date = extractTransferDate(inputData);
+    if (address && date) return `${label} — ${address} (양도예정 ${date})`;
+    if (address) return `${label} — ${address}`;
+    if (date) return `${label} — 양도예정 ${date}`;
   }
 
   if (taxType === "stock_transfer") {

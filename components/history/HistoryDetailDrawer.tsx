@@ -10,18 +10,19 @@ import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
 import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
 import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
-import { resumeTransferRecord } from "@/lib/calc/transfer-resume-entry";
+import { resumeCalculationRecord } from "@/lib/calc/history-resume-entry";
+import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
 
-const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
-  transfer: "/calc/transfer-tax",
-  acquisition: "/calc/acquisition-tax",
-  inheritance: "/calc/inheritance-tax",
-  gift: "/calc/gift-tax",
-  property: "/calc/property-tax",
-  comprehensive_property: "/calc/comprehensive-tax",
-};
+/**
+ * 🔴 **이 사본이 6/8이었다** — `stock_transfer`·`stock_valuation`이 빠져 있었다.
+ *    `route && …` 가드 때문에 주식 2세목은 드로어에서 「편집」 버튼이 **아예 뜨지 않았고**,
+ *    아래 `stock_valuation` 재개 분기는 `if (!route) return`에 막혀 **도달 불가**였다.
+ *    `Partial<Record<string, …>>`라 `tsc`는 끝까지 침묵했다.
+ *    ⇒ 정본(`lib/storage/tax-type-routes.ts`)을 import한다. 사본을 다시 만들지 말 것.
+ */
+import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 
 interface Props {
   record: CalculationRecord;
@@ -72,6 +73,36 @@ export function extractResultSummaryItems(
   function addNum(label: string, key: string) {
     const v = src[key];
     if (typeof v === "number") items.push({ label, value: v.toLocaleString() });
+  }
+
+  /**
+   * 1세대1주택 판정 — **세액이 없다**. 다른 세목 분기보다 먼저 가른다: `isExempt`가 true면
+   * 위의 공통 분기가 「과세 여부: 비과세」 한 줄로 끝내 버려 주택 수·특례가 사라진다.
+   */
+  if (taxType === "one_house_exemption") {
+    const judgment = resultData?.judgment as
+      | { appliedExceptions?: unknown[]; pending?: unknown[] }
+      | undefined;
+    const houseCount = resultData?.houseCount as
+      | { total?: number; countedForExemption?: number }
+      | undefined;
+    if (!judgment) return items;
+    items.push({ label: "판정", value: oneHouseVerdictLabel(resultData) });
+    if (typeof houseCount?.total === "number") {
+      items.push({ label: "세대 보유 주택 수", value: `${houseCount.total}채` });
+    }
+    // 제외 후 유효 주택 수 — `total`과 같으면 제외가 없었다는 뜻이라 굳이 두 줄로 적지 않는다.
+    if (
+      typeof houseCount?.countedForExemption === "number" &&
+      houseCount.countedForExemption !== houseCount.total
+    ) {
+      items.push({ label: "판정상 주택 수", value: `${houseCount.countedForExemption}채` });
+    }
+    const applied = judgment.appliedExceptions?.length ?? 0;
+    if (applied > 0) items.push({ label: "적용 특례", value: `${applied}건` });
+    const pending = judgment.pending?.length ?? 0;
+    if (pending > 0) items.push({ label: "남은 조건", value: `${pending}건` });
+    return items;
   }
 
   if (src.isExempt === true) {
@@ -130,38 +161,13 @@ export function HistoryDetailDrawer({
   const route = TAX_TYPE_ROUTES[record.taxType];
 
   function handleResume() {
-    if (!route) return;
     /**
-     * 양도세는 **공유 진입점**이 맡는다 — 단건/다건 라우팅과 공통 부수효과(의뢰인 자동선택·
-     * 건물 기준시가 스냅샷 복원)를 카드와 **같은 코드**로 처리한다. 종전에는 이 드로어 사본에
-     * 그 부수효과가 없었고, 다건 record를 단건 마법사로 보냈다.
+     * 🔑 분기·부수효과는 전부 **공유 진입점**이 갖는다(`history-resume-entry.ts`).
+     *    이 드로어 사본에는 의뢰인 자동선택도 건물 기준시가 스냅샷 복원도 없었고,
+     *    라우트 맵이 6/8이라 주식 2세목은 버튼조차 뜨지 않았다(P4-2b-3에서 해소).
      */
-    if (record.taxType === "transfer") {
-      setResumeBlocked(null);
-      void resumeTransferRecord(record, router).then(setResumeBlocked);
-      return;
-    }
-    if (record.taxType === "gift") {
-      // 증여세 — GiftTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
-      sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(record.inputData));
-      router.push(route);
-    } else if (record.taxType === "inheritance") {
-      // 상속세 — InheritanceTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
-      sessionStorage.setItem("inheritanceTaxResumeInput", JSON.stringify(record.inputData));
-      router.push(route);
-    } else if (record.taxType === "stock_valuation") {
-      // 주식 평가 도구 — 이력 inputData를 평가 store에 hydrate
-      import("@/lib/stores/calc-stock-valuation-store").then(
-        ({ useStockValuationStore, normalizeStockValuationFormData }) => {
-          useStockValuationStore.setState({
-            formData: normalizeStockValuationFormData(record.inputData),
-          });
-          router.push(route);
-        },
-      );
-    } else {
-      router.push(route);
-    }
+    setResumeBlocked(null);
+    void resumeCalculationRecord(record, router).then(setResumeBlocked);
   }
 
   function handleAmend() {
@@ -240,10 +246,16 @@ export function HistoryDetailDrawer({
             <p className="text-sm font-medium break-words">{record.title}</p>
           </div>
 
-          {/* 납부세액 */}
+          {/* 납부세액 — 판정 메뉴는 세액이 없으므로 그 자리에 판정 결론을 띄운다 */}
           <div className="rounded-lg bg-muted/40 px-4 py-3">
-            <p className="text-xs text-muted-foreground mb-0.5">납부세액</p>
-            <p className="text-xl font-bold">{extractTotalTax(record.resultData)}</p>
+            <p className="text-xs text-muted-foreground mb-0.5">
+              {record.taxType === "one_house_exemption" ? "판정" : "납부세액"}
+            </p>
+            <p className="text-xl font-bold" data-testid="drawer-headline-value">
+              {record.taxType === "one_house_exemption"
+                ? oneHouseVerdictLabel(record.resultData)
+                : extractTotalTax(record.resultData)}
+            </p>
           </div>
 
           {/* 주요 결과 항목 */}

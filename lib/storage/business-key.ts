@@ -82,6 +82,16 @@ export function extractBusinessKey(
       const multiSuffix = inputData.__multiStock === true ? "|multi" : "";
       return `sec:${sec}|${date ?? ""}${multiSuffix}`;
     }
+    case "one_house_exemption": {
+      // 판정 메뉴 폼은 `TransferFormData` 슈퍼셋 — 주소·양도일 추출기가 그대로 돈다.
+      // 양도세와 같은 `addr:` 접두어를 써도 겹치지 않는다: 후보 조회가
+      // `[userId+taxType+createdAt]`로 **세목별로 갈려** 있다(`calculation-repository.ts:208`).
+      const addr = extractAddress(inputData);
+      if (!addr) return null;
+      // 양도 «예정»일이 바뀌면 판정이 달라진다 — 같은 물건이라도 별개 record다.
+      const date = extractTransferDate(inputData);
+      return `addr:${addr}|${date ?? ""}`;
+    }
     case "stock_valuation": {
       const sec = extractStockValuationName(inputData);
       if (!sec) return null;
