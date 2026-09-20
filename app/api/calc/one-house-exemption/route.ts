@@ -40,8 +40,14 @@ import {
 import {
   buildOneHouseCountBreakdown,
   deriveHouseholdHousingCount,
+  deriveHouseholdRightCount,
   type OneHouseCountBreakdown,
 } from "@/lib/tax-engine/one-house/house-count";
+import {
+  buildOneRightVerdict,
+  applyOneRightVerdict,
+  type OneHouseOneRightVerdict,
+} from "@/lib/tax-engine/one-house/one-right-verdict";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
@@ -54,6 +60,11 @@ export type OneHouseExemptionResponse = {
    * `undefined`는 「선언하지 않음」이고 `passed: false`는 「선언했으나 미충족」이다.
    */
   rentalHousingException?: OneHouseRentalHousingVerdict;
+  /**
+   * §89①4호 1세대1입주권 결론 (P4-3b) — 양도 대상이 **조합원입주권일 때만** 실린다.
+   * `undefined`는 「주택 양도라 물을 일이 아님」이고 `clause: null`은 「물었으나 미성립」이다.
+   */
+  oneRightExemption?: OneHouseOneRightVerdict;
 };
 
 export async function POST(request: NextRequest) {
@@ -126,9 +137,19 @@ export async function POST(request: NextRequest) {
      * 계산기는 사용자가 선언한 스칼라를 쓰지만 판정 메뉴에는 그 위젯이 없다. 본문에 실려 온
      * 값을 그대로 쓰면 「명부가 정본」이 무너지고, 조작된 본문으로 판정을 흔들 수도 있다.
      */
+    /**
+     * 🔴 **양도 대상이 주택이 아니면 주택 수 축이 갈린다**(P4-3b).
+     *
+     * 조합원입주권 양도는 §89①**4호** 경로이고, 가목이 「다른 주택을 보유하지 **아니할** 것」
+     * = 0채를 요구한다. `buildHousesPayload`가 붙인 `selling` 행을 주택으로 세면 명부가 비어도
+     * 1채가 되어 가목이 **절대 성립하지 않는다**. 대신 그 양도 대상은 **입주권 수**에 들어간다.
+     */
+    const isRightSale = data.propertyType === "right_to_move_in";
+
     const engineInput: TransferTaxInput = {
       ...baseInput,
-      householdHousingCount: deriveHouseholdHousingCount(baseInput.houses),
+      householdHousingCount: deriveHouseholdHousingCount(baseInput.houses, !isRightSale),
+      householdRightCount: deriveHouseholdRightCount(baseInput.presaleRights, isRightSale),
     };
 
     // 단계 5: 세율 로드 — 계산기와 동일한 graceful fallback 정책
@@ -168,7 +189,17 @@ export async function POST(request: NextRequest) {
      * 「1주택 → 비과세」가 나온다(over-exemption).
      */
     const rentalVerdict = buildRentalHousingVerdict(engineInput);
-    const judgment = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
+    const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
+
+    /**
+     * 단계 6.6: §89①4호 1세대1입주권 (P4-3b).
+     *
+     * 🔴 §155⑳과 **방향이 반대다** — 여기는 비과세를 **켠다**. `checkExemption`의 자산 게이트
+     *    (`propertyType !== "housing"`)가 입주권을 항상 과세로 돌려보내기 때문에, 켜 주지 않으면
+     *    판정 메뉴가 §89①4호 비과세를 영원히 말하지 못한다.
+     */
+    const oneRightVerdict = buildOneRightVerdict(engineInput, isRightSale);
+    const judgment = applyOneRightVerdict(afterRental, oneRightVerdict);
 
     const houseCount = buildOneHouseCountBreakdown({
       total: engineInput.householdHousingCount,
@@ -181,6 +212,7 @@ export async function POST(request: NextRequest) {
       judgment,
       houseCount,
       ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),
+      ...(oneRightVerdict ? { oneRightExemption: oneRightVerdict } : {}),
     };
     return NextResponse.json({ data: payload }, { status: 200 });
   } catch (err) {

@@ -202,8 +202,50 @@ const CLAUSE_NA_YEARS = 3;
  * ⚠️ 호출부가 `subject === "right"` 가드를 이미 걸었다고 가정한다. 완공 신축주택(subject="apt")은
  *    §89①**3호**이고 `checkExemption`이 담당한다.
  */
+/**
+ * §89①4호 판정에 **실제로 필요한 두 사실** — 운반 상자와 무관한 최소 형상 (P4-3b).
+ *
+ * 🔑 `redevelopment` 블록(계산기)과 `oneRightExemptionFacts` 블록(판정 메뉴)이 **둘 다**
+ *    구조적으로 이 모양을 만족한다. 규칙은 아래 함수 하나뿐이고, 상자만 둘이다.
+ */
+export type OneRightExemptionFacts = {
+  exemptionEligibleAtApproval?: boolean;
+  otherHouseAcquisitionDate?: Date;
+};
+
+/**
+ * 두 운반 상자 중 실린 쪽에서 판정 사실을 꺼낸다 — 어느 화면에서 왔는지는 규칙이 알 필요가 없다.
+ *
+ * ⚠️ `redevelopment`가 있어도 **`subject === "right"`일 때만** 쓴다. 완공 APT(`"apt"`)는
+ *    §89①**3호** 경로이고 `checkExemption`이 담당한다.
+ */
+export function pickOneRightExemptionFacts(
+  input: TransferTaxInput,
+): OneRightExemptionFacts | null {
+  if (input.redevelopment?.subject === "right") return input.redevelopment;
+  const facts = input.oneRightExemptionFacts;
+  if (!facts) return null;
+  return {
+    exemptionEligibleAtApproval: facts.eligibleAtApproval,
+    otherHouseAcquisitionDate: facts.otherHouseAcquisitionDate,
+  };
+}
+
+/**
+ * §89①4호 고가 판정·안분의 **분모** — 이전방식 무관 전체가액 (P4-3b 추출).
+ *
+ * 🔑 비교와 안분이 **반드시 같은 값**이어야 한다(아래 `applyOneRightExemption` 주석 참조).
+ *    판정 메뉴가 이 식을 베껴 쓰면 그 불변식이 두 파일에 걸쳐 깨질 수 있어 leaf로 뺐다.
+ * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
+ */
+export function oneRightHighValueBase(input: TransferTaxInput): number {
+  return (input.burdenedGiftDenominator ?? 0) > 0
+    ? input.burdenedGiftDenominator!
+    : input.transferPrice;
+}
+
 export function resolveOneRightExemptionClause(
-  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  redevInfo: OneRightExemptionFacts,
   input: TransferTaxInput,
 ): "ga" | "na" | undefined {
   // ── 각 목 공통(본문) ──
@@ -330,10 +372,7 @@ export function applyOneRightExemption(
    *    양도차익이 음수가 된 실측이 있다(`transfer-tax-redevelopment-steps.ts`). 그래서 한 상수다.
    * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
    */
-  const highValueBase =
-    (input.burdenedGiftDenominator ?? 0) > 0
-      ? input.burdenedGiftDenominator!
-      : input.transferPrice;
+  const highValueBase = oneRightHighValueBase(input);
 
   if (highValueBase <= HIGH_VALUE_THRESHOLD) {
     // ── 전액 비과세 (12억 이하) ──

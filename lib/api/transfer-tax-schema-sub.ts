@@ -753,6 +753,34 @@ export const parcelSchema = z.object({
   }
 });
 
+/**
+ * ⑫ §89①4호 **1세대1입주권 비과세 — 판정 사실만** (P4-3b)
+ *
+ * ## 🔴 왜 `redevelopment` 블록을 쓰지 않는가
+ *
+ * `redevelopmentSchema`는 보내는 순간 `rightsValue`·`settlementDirection`·`settlementAmount`·
+ * `preApprovalExpenses`를 **필수**로 요구한다. 그 넷은 순수 §166 3분할 **세액 산식 입력**이고,
+ * Q-7이 「계산기에 남긴다」고 정한 바로 그것들이다. 판정 메뉴가 판정 하나를 받으려고
+ * **산식 입력을 지어내는 것**은 거짓 데이터를 보내는 일이라 하지 않는다.
+ *
+ * ⇒ 판정 사실만 담는 좁은 블록을 따로 둔다(§155의2·§155의3 선례와 같은 형태).
+ *
+ * 🔑 **규칙은 한 벌이다.** 판정은 `resolveOneRightExemptionClause` 하나가 하고, 계산기는
+ *    `redevelopment`에서, 판정 메뉴는 이 블록에서 **같은 두 사실**을 그 함수에 넘긴다.
+ *    운반 상자가 둘일 뿐 규칙이 둘이 아니다.
+ *
+ * 🔑 요건 판정은 전부 엔진이 한다 — 「3년 이내」 같은 임계값을 여기 적지 않는다.
+ */
+export const oneRightExemptionFactsSchema = z.object({
+  /** 인가일 현재 §89①3호가목 요건을 갖춘 기존주택 소유 — **사용자 자기선언**(기존 설계 승계) */
+  eligibleAtApproval: z.boolean(),
+  /**
+   * 나목 — 「1조합원입주권 외에 1주택을 보유한 경우」 그 1주택의 취득일.
+   * 가목(다른 주택 0채)이면 비운다. 미입력이면 엔진이 나목을 **적용하지 않는다**(판정 불가).
+   */
+  otherHouseAcquisitionDate: z.string().date().optional(),
+});
+
 // ─── 취득가액 의제·환산 스키마 — 별도 파일로 분리 (800줄 정책, CB-08) ──────
 // 실체: ./transfer-tax-schema-acq-deemed.ts
 export * from "./transfer-tax-schema-acq-deemed";

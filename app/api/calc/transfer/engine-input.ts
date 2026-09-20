@@ -192,6 +192,21 @@ export function buildTransferEngineInput(
           parentalCareMerge: data.longTermMortgageHouse.parentalCareMerge,
         }
       : undefined,
+    /**
+     * ⑭ §89①4호 1세대1입주권 **판정 사실** (P4-3b).
+     *
+     * 🔴 `otherHouseAcquisitionDate`는 **반드시 Date로** 바꾼다 — 엔진이
+     *    `input.transferDate <= deadline`으로 3년 요건을 잰다. string이 그대로 도달하면
+     *    `Date <= string` 비교가 **조용히 false**가 되어 나목이 통째로 사라진다.
+     */
+    oneRightExemptionFacts: data.oneRightExemptionFacts
+      ? {
+          eligibleAtApproval: data.oneRightExemptionFacts.eligibleAtApproval,
+          otherHouseAcquisitionDate: toOptionalDate(
+            data.oneRightExemptionFacts.otherHouseAcquisitionDate,
+          ),
+        }
+      : undefined,
     // ⑭ §155의3 상생임대주택 — `winWinContractDate`만 Date 변환(2021-12-20~2026-12-31 창 판정에 쓰인다).
     winWinRentalHouse: data.winWinRentalHouse
       ? {

@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
+import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
 import {
   temporaryTwoHouseSchema,
   unavoidableOutsideCapitalHouseSchema,
@@ -136,6 +137,12 @@ export const propertyBaseShape = {
    */
   longTermMortgageHouse: longTermMortgageHouseSchema.optional(),
   winWinRentalHouse: winWinRentalHouseSchema.optional(),
+  /**
+   * ⑫ §89①4호 1세대1입주권 — **판정 사실만** (P4-3b).
+   * 계산기는 같은 사실을 `redevelopment` 안에 실어 보낸다. 여기 블록은 §166 산식 입력을
+   * 지어내지 않고 판정만 받으려는 화면(판정 메뉴)의 운반 상자다 — 규칙은 엔진에 한 벌이다.
+   */
+  oneRightExemptionFacts: oneRightExemptionFactsSchema.optional(),
   // ⑨⑩⑫ §156의2⑤ 대체주택 비과세 특례
   replacementHouse: replacementHouseSchema.optional(),
   // ⑫ §89② 3년 초과 예외 (§156의2④ · §156의3③ · 시행규칙 §75①) — 엔진이 게이트, strip 방지

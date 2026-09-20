@@ -33,7 +33,7 @@ function formatDate(v: string): string {
 }
 
 export function OneHouseJudgmentResultView({ result }: { result: OneHouseExemptionResponse }) {
-  const { judgment, houseCount, rentalHousingException: rental } = result;
+  const { judgment, houseCount, rentalHousingException: rental, oneRightExemption: oneRight } = result;
   /**
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
    *    이력 목록은 「과세」인 상태가 조용히 생긴다.
@@ -130,6 +130,41 @@ export function OneHouseJudgmentResultView({ result }: { result: OneHouseExempti
           <p className="text-xs text-muted-foreground">
             B 시나리오의 §161① 안분(과세 범위)은 <b>세액 계산</b>에서 다룹니다.
           </p>
+        </ToneCard>
+      )}
+
+      {/*
+        ── §89①4호 1세대1입주권 (P4-3b) ──
+        🔑 **입주권을 양도할 때만** 렌더한다. 주택 양도에는 물을 일이 아닌 조문이다.
+      */}
+      {oneRight && (
+        <ToneCard
+          tone={oneRight.clause ? "emerald" : "rose"}
+          sectionNum={nextNo()}
+          title="1세대1입주권 비과세 (§89①4호)"
+        >
+          <p className="text-sm font-semibold" data-testid="one-house-one-right-verdict">
+            {oneRight.clause === "ga"
+              ? "가목 성립 — 다른 주택·분양권을 보유하지 않습니다"
+              : oneRight.clause === "na"
+                ? "나목 성립 — 1주택 취득일부터 3년 이내 양도입니다"
+                : "요건 미충족 — 비과세가 적용되지 않습니다"}
+          </p>
+          {oneRight.isPartialExempt && (
+            <p className="text-sm">
+              양도가액이 12억원을 초과하므로 <b>초과분만 과세</b>됩니다 (각 목 외의 부분 단서 · §95③).
+            </p>
+          )}
+          {oneRight.reasons.length > 0 && (
+            <ul className="ml-4 list-disc space-y-1 text-sm">
+              {oneRight.reasons.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <LawArticleModal legalBasis={oneRight.legalBasis} />
+          </div>
         </ToneCard>
       )}
 
