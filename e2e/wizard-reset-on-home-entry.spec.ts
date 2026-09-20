@@ -93,6 +93,14 @@ const FIXTURES = [
     state: { formData: { valuationDate: "2099-01-01" } },
     marker: "2099-01-01",
   },
+  {
+    // P4-2b-2 신설 — 홈 메뉴 href가 `?new=1`이므로 이 전수 목록에 들어와야 한다.
+    name: "F6 1세대1주택 판정",
+    key: "one-house-judgment-wizard",
+    path: "/calc/one-house-exemption",
+    state: { formData: { transferDate: "2099-01-01" } },
+    marker: "2099-01-01",
+  },
 ];
 
 test.describe("홈 진입(?new=1) 시 마법사 초기화 — 전수", () => {

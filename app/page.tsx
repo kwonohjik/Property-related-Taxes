@@ -171,11 +171,16 @@ export default function HomePage() {
             한국 부동산 세금 계산기
           </h1>
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-            8가지 부동산 세금과 법령 리서치를 한 곳에서
+            부동산 세금 계산과 비과세 판정, 법령 리서치를 한 곳에서
           </p>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        {/*
+          🔑 lg에서 **4열**이다. 3열이던 때 13번째 메뉴(1세대1주택 비과세 판정)를 더하자
+             그리드가 한 행 늘어 847px가 되어 「1280×720 한 화면에 들어간다」는 설계 제약이
+             깨졌다(`e2e/home-menu-layout.spec.ts`가 잡았다). 제약을 낮추는 대신 열을 늘린다.
+        */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-3 lg:grid-cols-4">
           {MENU.map((item) => {
             const tone = TONE_STYLE[item.tone];
             return (
