@@ -308,6 +308,56 @@ describe("P4-2b-1 — validate는 어댑터와 같은 자리에서 막는다", (
   });
 });
 
+// ── 5b. 🔴 거주기간은 **자산-수준**에서 온다 ─────────────────────────
+/**
+ * ③에서 재사용하는 `ResidencePeriodSection`은 **자산-수준** `residencePeriods[]`(구간) 또는
+ * `residencePeriodMonthsAsset`(직접)에 쓴다. 폼-전역 `residencePeriodMonths`는 그 위젯이
+ * **건드리지 않는 옛 필드**다.
+ *
+ * 🔴 어댑터가 폼-전역만 읽으면 사용자가 「5년 거주」를 입력해도 판정에는 **0개월**이 들어가
+ *    비과세가 탈락한다. 아래 anchor는 **거주요건이 실제로 걸리는 시료**
+ *    (취득 당시 조정지역)에서만 갈린다 — 비조정이면 거주요건 자체가 없어 구별력이 0이다.
+ *
+ * ⚠️ 이 결함은 다른 anchor들이 **픽스처로 가리고 있었다** — `baseForm`이 폼-전역 값을
+ *    직접 채워 두기 때문이다(`feedback_fixture_default_masks_gate_defect`).
+ */
+describe("P4-2b-1 — 거주기간은 위젯이 쓰는 자산-수준 필드에서 온다", () => {
+  const BINDS = { wasRegulatedAtAcquisition: true };
+  /** 폼-전역 거주기간을 **비운** 폼 — 위젯만 쓴 실제 상태를 재현한다. */
+  const noFormGlobal = (assetOver: Record<string, unknown>) => {
+    const f = baseForm({ ...BINDS, residencePeriodMonths: "" });
+    return { ...f, assets: [{ ...f.assets[0], ...assetOver }] } as OneHouseJudgmentFormData;
+  };
+
+  it("[RS-1] 음성 짝 — 어디에도 거주기간이 없으면 과세다", async () => {
+    const { json } = await postForm(noFormGlobal({}));
+    expect(json.data.judgment.isExempt).toBe(false);
+  });
+
+  it("[RS-2] 직접 입력(`residencePeriodMonthsAsset`)이 판정에 도달한다", async () => {
+    const form = noFormGlobal({ residenceInputMode: "direct", residencePeriodMonthsAsset: "30" });
+    expect(buildOneHouseExemptionApiBody(form).residencePeriodMonths).toBe(30);
+    expect((await postForm(form)).json.data.judgment.isExempt).toBe(true);
+  });
+
+  it("[RS-3] 구간 입력(`residencePeriods[]`)이 합산돼 판정에 도달한다", async () => {
+    const form = noFormGlobal({
+      residenceInputMode: "interval",
+      residencePeriods: [{ moveInDate: "2019-06-01", moveOutDate: "2022-06-01" }],
+    });
+    expect(buildOneHouseExemptionApiBody(form).residencePeriodMonths).toBe(36);
+    expect((await postForm(form)).json.data.judgment.isExempt).toBe(true);
+  });
+
+  it("[RS-4] 2년 경계 — 23개월 과세 / 24개월 비과세", async () => {
+    const at = async (m: string) =>
+      (await postForm(noFormGlobal({ residenceInputMode: "direct", residencePeriodMonthsAsset: m })))
+        .json.data.judgment.isExempt;
+    expect(await at("23")).toBe(false);
+    expect(await at("24")).toBe(true);
+  });
+});
+
 // ── 6. ⑥ 사이드바 요약 ──────────────────────────────────────────────
 describe("P4-2b-1 — 사이드바 요약", () => {
   it("[SB-1] 주택 수는 명부 파생 단일 소스를 쓴다", () => {

@@ -39,16 +39,24 @@ export function HouseCountExemptionInputs({
   form,
   onChange,
   hideGracePeriod = false,
+  hideSellingHouseExclusion = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
   /** 중과 경과조치 하위 섹션 숨김 — 한시배제 창에서 true (가목 우선 게이트로 no-op). */
   hideGracePeriod?: boolean;
+  /** 판정 메뉴 전용 — 중과배제 2섹션 숨김(F-1). 계산기는 넘기지 않아 동작 불변. */
+  hideSellingHouseExclusion?: boolean;
 }) {
   return (
     <>
       {/* 세대 보유 주택 목록 + 분양권 (§155②③ 상속주택 · §89② 권리 · 시행령 §167의3 주택 수) */}
-      <HousesListSection form={form} onChange={onChange} hideGracePeriod={hideGracePeriod} />
+      <HousesListSection
+        form={form}
+        onChange={onChange}
+        hideGracePeriod={hideGracePeriod}
+        hideSellingHouseExclusion={hideSellingHouseExclusion}
+      />
 
       {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) */}
       <SpecialHouseExclusionSection
