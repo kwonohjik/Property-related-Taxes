@@ -309,7 +309,7 @@ function checkExemptionCore(
         exceptions.push({
           id: "155-16-public-institution-relocation",
           label: "§155⑯ 지방이전 처분기한 5년·1년요건 면제",
-          legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑯`,
+          legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
         });
       }
       if (input.temporaryTwoHouse.disposalDelayReason) {
@@ -318,7 +318,7 @@ function checkExemptionCore(
         exceptions.push({
           id: `155-18-disposal-delay:${input.temporaryTwoHouse.disposalDelayReason}`,
           label: `§155⑱ ${delayLabel}`,
-          legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑱`,
+          legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑱`,
         });
       }
       const provisoLabel = basisParts.length > 0 ? ` (${basisParts.join(" · ")})` : "";
@@ -400,7 +400,7 @@ function checkExemptionCore(
       {
         id: `155-7-rural:${input.ruralHouse!.kind}`,
         label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
-        legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑦`,
+        legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
       },
     ];
     if (priceCheck <= highValueThreshold) {

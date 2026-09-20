@@ -159,7 +159,14 @@ export function collectPendingConditions(
         id: "155-1-disposal-deadline",
         description: "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세",
         deadline: timing.deadline,
-        legalBasis: shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE),
+        /**
+         * 🔴 **`shortArticle`을 쓰지 않는다.** 이 필드는 `exemptReason` 문장 속 인라인 인용이
+         *    아니라 화면이 `LawArticleModal legalBasis=`로 넘기는 **구조화 인용**이다.
+         *    법령명이 없으면 `parseLawRef`가 「본법↔시행령 오인 위험」으로 `null`을 반환하고
+         *    (`law-url.ts:59-61`), 배지를 눌러도 **「조문 정보를 파싱할 수 없습니다」**만 뜬다.
+         *    실제 서버 응답으로 재현했다(2026-09-20). 항(①)은 남겨야 본문 하이라이트가 걸린다.
+         */
+        legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
       });
     }
   }
@@ -232,7 +239,8 @@ export function collectPendingConditions(
         id: "155-7-3ho-return-to-farm",
         description: "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세",
         deadline,
-        legalBasis: `${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}⑦3호`,
+        // 위와 같은 이유로 법령명을 남긴다 — `§155⑦3호`만으로는 파싱되지 않는다.
+        legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
       });
     }
   }
