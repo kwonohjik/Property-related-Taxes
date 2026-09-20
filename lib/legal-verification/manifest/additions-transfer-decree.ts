@@ -61,6 +61,33 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
 
   // ── 1세대 1주택 비과세·특례 ────────────────────────────────────────
   {
+    // 🔴 legal-codes 상수가 종전에 **§152**(「환지등의 정의」)를 가리켜 이 조문이 모수에서
+    //    빠져 있었다. 1세대의 범위는 §152의3이다(P0 · 2026-09-20 법제처 실독).
+    id: "TRANSFER_DECREE.ONE_HOUSEHOLD_SCOPE",
+    citation: "소득세법 시행령 §152의3",
+    keywords: ["1세대의 범위", "법 제88조제6호 단서"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.RIGHT_ONE_HOUSE_SPECIAL",
+    citation: "소득세법 시행령 §156의2",
+    keywords: [
+      "주택과 조합원입주권을 소유한 경우 1세대1주택의 특례",
+      "1세대가 주택과 조합원입주권을 보유하다가 그 주택을 양도하는 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // ⚠️ 제목의 「1세대 1주택」은 §156의2와 달리 **띄어쓰기가 있다** — 법문 그대로다.
+    id: "TRANSFER_DECREE.PRESALE_ONE_HOUSE_SPECIAL",
+    citation: "소득세법 시행령 §156의3",
+    keywords: [
+      "주택과 분양권을 소유한 경우 1세대 1주택의 특례",
+      "1세대가 주택과 분양권을 보유하다가 그 주택을 양도하는 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.ONE_HOUSE_SCOPE",
     citation: "소득세법 시행령 §154",
     keywords: [

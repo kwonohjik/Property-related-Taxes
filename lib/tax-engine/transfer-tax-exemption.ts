@@ -17,6 +17,7 @@ import { addYears } from "date-fns";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { TRANSFER, shortArticle } from "./legal-codes";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -53,6 +54,13 @@ export * from "./transfer-tax-exemption-requirements";
  *   게이트**로 쓴다. 미제공 시 분양권은 판정하지 않는다(기산일을 모르는 채 불리하게 적용하지
  *   않는다 — §104⑦ 주택 수와 같은 값을 공유한다).
  */
+
+/** 「§156의2⑤」 — `exemptReason` 라벨은 공백 없는 축약을 쓴다(동치 비교용 `§156의2 ⑤`와 다르다). */
+const REPLACEMENT_HOUSE_SHORT = shortArticle(TRANSFER.REPLACEMENT_HOUSE_156_2_5).replace(" ", "");
+/** 합가 중첩 라벨이 쓰는 항 기호 — 조문 번호의 단일 소스에서 뽑는다. */
+const MARRIAGE_CLAUSE = shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT).replace("§155", "");
+const PARENTAL_CARE_CLAUSE = shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT).replace("§155", "");
+
 export function checkExemption(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
@@ -161,13 +169,13 @@ function checkExemptionCore(
         return {
           isExempt: true,
           isPartialExempt: false,
-          exemptReason: "대체주택 특례 비과세 (§156의2⑤)",
+          exemptReason: `대체주택 특례 비과세 (${REPLACEMENT_HOUSE_SHORT})`,
         };
       }
       return {
         isExempt: false,
         isPartialExempt: true,
-        exemptReason: "대체주택 특례 고가주택 (§156의2⑤)",
+        exemptReason: `대체주택 특례 고가주택 (${REPLACEMENT_HOUSE_SHORT})`,
       };
     }
   }
@@ -240,7 +248,7 @@ function checkExemptionCore(
     const u = input.unavoidableOutsideCapitalHouse!;
     if (meetsOneHouseHoldingResidence(input, rule)) {
       const label = `수도권 밖 부득이한 사유 주택`;
-      const basis = ` (§155⑧ ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
+      const basis = ` (${shortArticle(TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL)} ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= highValueThreshold) {
@@ -267,7 +275,7 @@ function checkExemptionCore(
     input.culturalHeritageHouse === true &&
     meetsOneHouseHoldingResidence(input, rule)
   ) {
-    const basis = " (§155⑥1호)";
+    const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
     if (priceCheck <= highValueThreshold) {
@@ -296,10 +304,10 @@ function checkExemptionCore(
     if (mergeBasis && meetsOneHouseHoldingResidence(input, rule)) {
       const isMarriage = mergeBasis.startsWith("marriage");
       const mergeLabel = mergeBasis.endsWith("_overlap")
-        ? `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (§155①·${isMarriage ? "⑤" : "④"})`
+        ? `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}①·${isMarriage ? MARRIAGE_CLAUSE : PARENTAL_CARE_CLAUSE})`
         : isMarriage
-          ? "혼인 합가 (§155⑤)"
-          : "동거봉양 합가 (§155④)";
+          ? `혼인 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)})`
+          : `동거봉양 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= highValueThreshold) {
