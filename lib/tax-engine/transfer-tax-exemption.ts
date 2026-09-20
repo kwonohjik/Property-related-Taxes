@@ -31,6 +31,7 @@ import {
   REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD,
   resolveExemptionHoldingStartDate,
   resolveMergeDeeming,
+  resolveMergeOverlapDeeming,
   RURAL_HOUSE_LABEL,
   UNAVOIDABLE_REASON_LABEL,
 } from "./transfer-tax-exemption-requirements";
@@ -276,9 +277,15 @@ function checkExemptionCore(
   // 의제 성립(①)은 중과 배제(영 §167의10①15호)와 **같은 정본** `resolveMergeDeeming`이 판정하고,
   // 여기서는 §154① 보유·거주(②)만 더 본다.
   {
-    const mergeBasis = resolveMergeDeeming(input);
+    // F-1 — ①(일시적 2주택)과 겹쳐 3주택이 된 경우도 국세청 해석상 §154①이 적용된다.
+    const mergeBasis = resolveMergeDeeming(input) ?? resolveMergeOverlapDeeming(input, twoHouseRule);
     if (mergeBasis && meetsOneHouseHoldingResidence(input, rule)) {
-      const mergeLabel = mergeBasis === "marriage_merge" ? "혼인 합가 (§155⑤)" : "동거봉양 합가 (§155④)";
+      const isMarriage = mergeBasis.startsWith("marriage");
+      const mergeLabel = mergeBasis.endsWith("_overlap")
+        ? `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (§155①·${isMarriage ? "⑤" : "④"})`
+        : isMarriage
+          ? "혼인 합가 (§155⑤)"
+          : "동거봉양 합가 (§155④)";
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= rule.maxExemptPrice) {

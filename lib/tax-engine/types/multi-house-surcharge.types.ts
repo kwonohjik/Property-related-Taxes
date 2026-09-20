@@ -396,7 +396,11 @@ export type DeemedOneHouseBasis =
   /** §155⑤ 혼인 합가 — `resolveMergeDeeming` */
   | "marriage_merge"
   /** §155④ 동거봉양 합가 — `resolveMergeDeeming` */
-  | "parental_care_merge";
+  | "parental_care_merge"
+  /** F-1 — §155①+⑤ 중첩(3주택) — `resolveMergeOverlapDeeming` */
+  | "marriage_merge_overlap"
+  /** F-1 — §155①+④ 중첩(3주택) — `resolveMergeOverlapDeeming` */
+  | "parental_care_merge_overlap";
 
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */

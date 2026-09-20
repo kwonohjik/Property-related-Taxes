@@ -204,11 +204,14 @@ export function determineMultiHouseSurcharge(
     }
   }
 
-  // Q-4(D9): 3주택 이상에서 §155①(일시적 2주택)과 겹쳐 합가 특례가 성립하는 경우의 중과 배제
-  //   (영 §167의3①13호)는 엔진이 모델링하지 않는다 — 합가 의제는 「2주택」일 때만 선다.
-  if (effectiveHouseCount >= 3 && (input.marriageMerge || input.parentalCareMerge)) {
+  // F-1: 3주택에서 §155①(일시적 2주택)과 ④⑤가 겹쳐 의제가 서면 13호로 배제한다(아래 배제 1).
+  //   중첩이 서지 않은 3주택 이상 합가는 종전대로 중과다 — 무엇이 빠졌는지 남긴다.
+  const overlapDeemed =
+    input.deemedOneHouseBy155 === "marriage_merge_overlap" ||
+    input.deemedOneHouseBy155 === "parental_care_merge_overlap";
+  if (effectiveHouseCount >= 3 && !overlapDeemed && (input.marriageMerge || input.parentalCareMerge)) {
     warnings.push(
-      `3주택 이상 세대의 혼인·동거봉양 합가 — 일시적 2주택과 겹쳐 합가 특례가 성립하는 경우의 중과 배제(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})는 반영하지 않았습니다`,
+      `3주택 이상 세대의 혼인·동거봉양 합가 특례 — 일시적 2주택(§155①)과 겹쳐 1세대1주택 의제가 성립하는 경우에만 중과가 배제됩니다(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS}). 이 계산에는 그 중첩이 성립하지 않았습니다`,
     );
   }
 
