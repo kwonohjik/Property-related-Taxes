@@ -96,11 +96,11 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           })
         }
         title="소송 취득·진행 중 주택"
-        description="소송으로 취득하거나 소송 진행 중 (소령 §167의10①7호)"
+        description="소유권에 관한 소송이 진행 중이거나 그 소송 결과로 취득 (소령 §167의10①7호)"
       >
         <div className="space-y-1 pt-1">
           <label className="block text-caption text-muted-foreground font-medium">
-            소송 취득일 <span className="text-muted-foreground/60 font-normal">(취득 완료 시 — 3년 이내 배제. 미입력=진행 중)</span>
+            소송 확정판결일 <span className="text-muted-foreground/60 font-normal">(판결 확정 시 — 그날부터 3년 이내 배제. 미입력=진행 중)</span>
           </label>
           <DateInput
             value={house.litigationAcquisitionDate ?? ""}

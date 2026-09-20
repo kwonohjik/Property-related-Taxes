@@ -253,6 +253,7 @@ export const houseSchema = z.object({
   unavoidableResidenceYears: z.number().nonnegative().optional(),
   unavoidableReasonResolvedDate: z.string().date().optional(),
   isLitigationHousing: z.boolean().optional(),
+  /** 소송 **확정판결일**(§167의10①7호 기산점) — 필드명은 legacy(F-17) */
   litigationAcquisitionDate: z.string().date().optional(),
   isRedevelopmentZone: z.boolean().optional(),
   isPopulationDeclineArea: z.boolean().optional(),

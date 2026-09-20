@@ -3,7 +3,7 @@
 /**
  * SellingHouseTwoHouseExclusionSection — 양도(selling) 주택 2주택 전용 중과배제 특례
  *
- * 소령 §167의10①3호(부득이한 사유 취득)·7호(소송 취득·진행 중). ① 본문이 「각 호의 어느 하나에
+ * 소령 §167의10①3호(부득이한 사유 취득)·7호(소송 진행 중·소송 결과 취득). ① 본문이 「각 호의 어느 하나에
  * 해당하지 **않는** 주택」을 중과 대상으로 하므로 이 두 호는 **양도하는 주택 자신**에도 적용된다.
  * 종전에는 두 호가 「다른 보유 주택」 행에만 있어 양도 주택에는 입력 경로가 없었다(F-16).
  * 엔진은 effectiveHouseCount===2 에서 sellingHouse.* 플래그로 평가.
@@ -102,13 +102,13 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
           })
         }
         title="소송 취득·진행 중 주택"
-        description="소유권에 관한 소송으로 취득하거나 소송 진행 중 (소령 §167의10①7호)"
+        description="소유권에 관한 소송이 진행 중이거나 그 소송 결과로 취득 (소령 §167의10①7호)"
       >
         <div className="space-y-1 pt-1">
           <label className="block text-caption text-muted-foreground font-medium">
-            소송 취득일{" "}
+            소송 확정판결일{" "}
             <span className="text-muted-foreground/60 font-normal">
-              (취득 완료 시 — 3년 이내 배제. 미입력=진행 중)
+              (판결 확정 시 — 그날부터 3년 이내 배제. 미입력=진행 중)
             </span>
           </label>
           <DateInput
