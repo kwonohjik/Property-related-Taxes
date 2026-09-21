@@ -777,7 +777,7 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 | 1 | **이 절 정정**(§155⑳ 제외 · Q-8 의존 명문화) | — | ✅ PR #1744 |
 | 2 | **Q-8 계산기 축**(§5.11) — 스칼라 → 명부 도출 | 없음 | ✅ PR #1745 |
 | 3a | **§155⑥ 문화유산 행 이관** — +1필드 | 없음 | ✅ P7-3 |
-| 3b | **§155⑦ 농어촌 행 이관** — +9필드 | 없음 | ⏳ 다음 |
+| 3b | **§155⑦ 농어촌 행 이관** — +9필드 | 없음 | ✅ P7-4 |
 | 4 | **§155⑧ 행 이관** — 3호/4호 **분리 유지** | 위 ⛔ 주의 | ⏳ |
 
 🔑 **3을 3a/3b로 쪼갰다**(2026-09-22). ⑥은 1필드, ⑦은 9필드 + 소재 자동판정 + 유형별 조건부 UI라
@@ -810,6 +810,26 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 **순수 이관**이라 비과세 축에만 연결했다 — 현행 `culturalHeritageHouseSpecial`도 비과세에만 연결돼
 있어 중과로 넓히면 **세액이 바뀐다**(배제가 늘어 감소 방향).
 🟠 **별건**: 중과 축 연결 — 수치 측정·anchor 선행 필요.
+
+**3b 구현 요약 (P7-4)**
+
+- `HouseEntry` +9필드 — `oneHouseRuralHouse` · `ruralHouseKind` · `ruralOutsideCapitalEupMyeon` ·
+  `ruralUrbanZone` · `rural{Decedent,Owner}ResidenceYears` · `ruralLandAreaSqm` ·
+  `rural{WholeHouseholdMoved,HighPriceAtAcquisition}`.
+- 📉 **칸 셋이 사라졌다** — 소재지는 행 주소(`addressJibun`·`regionCode`), 귀농 취득일은 행의
+  `acquisitionDate`(§155⑦ 단서의 「**그 주택**을 취득한 날」), `locationTouched`는
+  `ruralOutsideCapitalEupMyeon`이 **optional**이라 불필요(`undefined` = 자동 판정).
+- 🔴 **`useEffect → store` 미러링이 사라졌다.** 종전 판정 메뉴는 자동 판정 결과를
+  `onChange({ ruralHouseOutsideCapitalEupMyeon })`로 써 넣고 `touched` 플래그로 사용자 입력을
+  지켰다(`feedback_useeffect_store_mirror_forbidden` 위반 + eslint-disable). 행에서는
+  **조회 결과**(`ruralUrbanZone`)만 저장하고 판정은 `resolveRuralLocationQualified`가
+  **읽는 시점에** 한다.
+- ④ `toRuralPayload`가 **유형별로 무의미한 필드를 싣지 않는** 종전 규약을 이어받는다.
+- `TRANSFER.RURAL_HOUSE` 상수 신설(종전에는 엔진이 인라인 문자열을 썼다). 법령 커버리지 게이트 통과.
+- 같은 PR에서 판정 메뉴 농어촌 블록 + 자동판정 기계장치 제거(이중 입력 금지 · 고아 정리).
+
+⏳ **3b에서 남긴 것**: OH-30 「어느 주택인지 지정하세요」 카드는 아직 없다. 도출은
+`fromLegacyOnly`로 신호를 내보내고 있으나 **화면이 그것을 읽지 않는다** — 4단계와 함께 붙인다.
 
 ### 5.11 세대 주택 수 — 명부에서 센다 (Q-8 · P6)
 

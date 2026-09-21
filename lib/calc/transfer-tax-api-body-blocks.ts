@@ -93,37 +93,46 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
    * D-6: **정본은 명부 행**(`oneHouseCulturalHeritage`)이고 세대 단위 스칼라는 **레거시 폴백**이다.
    * 행 표시가 없는 옛 record는 스칼라를 그대로 써 **저장 당시와 같은 세액**을 낸다(OH-21).
    */
-  ...(deriveOneHouseFactsFromHouses(form.houses, {
-    culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
-  }).culturalHeritageHouse
-    ? { culturalHeritageHouse: true }
-    : {}),
-  // ④⑬ §155⑦ 농어촌주택 FLAT → nested. 유형별로 무의미한 필드는 보내지 않는다
-  //     (침묵 오판정 방지 — 예: 상속 유형에 귀농 대지면적을 실어 보내면 안 된다).
-  ...(form.ruralHouseSpecial
-    ? {
-        ruralHouse: {
-          kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
-          isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
-          ...(form.ruralHouseKind === "inherited"
-            ? { decedentResidenceYears: parseFloat(form.ruralHouseDecedentResidenceYears) || 0 }
-            : {}),
-          ...(form.ruralHouseKind === "farm_exit"
-            ? { ownerResidenceYears: parseFloat(form.ruralHouseOwnerResidenceYears) || 0 }
-            : {}),
-          ...(form.ruralHouseKind === "return_to_farm"
-            ? {
-                ...(form.ruralHouseAcquisitionDate
-                  ? { acquisitionDate: form.ruralHouseAcquisitionDate }
-                  : {}),
-                isHighPriceAtAcquisition: form.ruralHouseHighPriceAtAcquisition,
-                landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) || 0,
-                wholeHouseholdMoved: form.ruralHouseWholeHouseholdMoved,
-              }
-            : {}),
-        },
-      }
-    : {}),
+  ...(() => {
+    /**
+     * D-6 — §155⑥1호·§155⑦은 **정본이 명부 행**이고 세대 단위 스칼라는 **레거시 폴백**이다.
+     * 행 표시가 없는 옛 record는 스칼라를 그대로 써 **저장 당시와 같은 세액**을 낸다(OH-21).
+     *
+     * ⚠️ 유형별로 무의미한 필드를 싣지 않는 규약은 `toRuralPayload`가 이어받았다
+     *    (상속 유형에 귀농 대지면적을 실어 보내면 조용한 오판정이 된다).
+     */
+    const derived = deriveOneHouseFactsFromHouses(form.houses, {
+      culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
+      ...(form.ruralHouseSpecial && form.ruralHouseKind
+        ? {
+            ruralHouse: {
+              kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
+              isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
+              ...(form.ruralHouseKind === "inherited"
+                ? { decedentResidenceYears: parseFloat(form.ruralHouseDecedentResidenceYears) || 0 }
+                : {}),
+              ...(form.ruralHouseKind === "farm_exit"
+                ? { ownerResidenceYears: parseFloat(form.ruralHouseOwnerResidenceYears) || 0 }
+                : {}),
+              ...(form.ruralHouseKind === "return_to_farm"
+                ? {
+                    ...(form.ruralHouseAcquisitionDate
+                      ? { acquisitionDate: form.ruralHouseAcquisitionDate }
+                      : {}),
+                    isHighPriceAtAcquisition: form.ruralHouseHighPriceAtAcquisition,
+                    landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) || 0,
+                    wholeHouseholdMoved: form.ruralHouseWholeHouseholdMoved,
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    });
+    return {
+      ...(derived.culturalHeritageHouse ? { culturalHeritageHouse: true } : {}),
+      ...(derived.ruralHouse ? { ruralHouse: derived.ruralHouse } : {}),
+    };
+  })(),
   };
 }
 

@@ -124,6 +124,46 @@ export interface HouseEntry {
    *    중과로 넓히면 **세액이 바뀐다**(배제가 늘어 감소 방향). 별도 측정·anchor가 선행돼야 한다.
    */
   oneHouseCulturalHeritage?: boolean;
+
+  /**
+   * §155⑦ 농어촌주택 — 이 행의 주택이 상속·이농·귀농 농어촌주택인가.
+   *
+   * 법문 「… 수도권 밖의 지역 중 읍지역(도시지역안의 지역을 제외한다) 또는 면지역에 소재하는
+   * 주택(농어촌주택)과 그 밖의 주택(일반주택)을 국내에 **각각 1개씩** 소유」 ⇒ 명부 행이다.
+   */
+  oneHouseRuralHouse?: boolean;
+  /** §155⑦ 1호 상속 · 2호 이농 · 3호 귀농. */
+  ruralHouseKind?: "inherited" | "farm_exit" | "return_to_farm";
+  /**
+   * 소재 요건(수도권 밖 읍·면, 도시지역 읍 제외) **사용자 지정값**.
+   *
+   * 🔑 `undefined`면 **자동 판정을 쓴다**(행 주소에서 도출). 종전 세대 단위 필드는 비-optional
+   * boolean이라 `false`가 「자동이 아니라고 했다」인지 「사용자가 아니라고 했다」인지 구별되지
+   * 않았고, 그래서 `ruralHouseLocationTouched` 플래그가 따로 필요했다. optional로 두면
+   * **그 플래그가 사라진다**.
+   */
+  ruralOutsideCapitalEupMyeon?: boolean;
+  /**
+   * 읍지역 용도지역 조회 결과 — 「도시지역안의 지역을 제외한다」 판정용.
+   *
+   * 🔑 **조회 결과(데이터)를 저장하는 것**이지 파생 boolean을 미러링하는 것이 아니다.
+   * 종전 세대 단위 구현은 `useEffect`로 파생값을 store에 써 넣었는데(미러링 금지 위반),
+   * 여기서는 조회 응답만 남기고 **판정은 읽는 시점에** `judgeRuralHouseLocation`이 한다.
+   * 면·수도권·동은 조회 없이 순수 판정되므로 이 값은 **읍일 때만** 채워진다.
+   */
+  ruralUrbanZone?: "urban" | "non_urban" | "unknown";
+  /** 1호 — 피상속인이 취득 후 거주한 연수(5년 이상 요건). */
+  ruralDecedentResidenceYears?: string;
+  /** 2호 — 이농인이 취득일 후 거주한 연수(5년 이상 요건). */
+  ruralOwnerResidenceYears?: string;
+  /** 3호 §155⑩3호 — 대지면적(㎡). 660㎡ 이내. */
+  ruralLandAreaSqm?: string;
+  /** 3호 §155⑩5호 — 세대전원 이사·거주. */
+  ruralWholeHouseholdMoved?: boolean;
+  /** 3호 §155⑩2호 — 취득 당시 고가주택 해당(해당하면 귀농주택 요건 불충족). */
+  ruralHighPriceAtAcquisition?: boolean;
+  // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
+  //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.

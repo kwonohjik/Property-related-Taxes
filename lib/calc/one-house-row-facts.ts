@@ -22,19 +22,59 @@
  * 이 모듈은 그것들을 **읽지 않는다**.
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset";
+import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 
-/** 도출에 필요한 행 속성만 — 테스트가 전체 `HouseEntry`를 만들지 않아도 되게 좁힌다. */
-export type OneHouseFactRow = Pick<HouseEntry, "oneHouseCulturalHeritage">;
+/**
+ * 도출에 필요한 행 속성만 — 테스트가 전체 `HouseEntry`를 만들지 않아도 되게 좁힌다.
+ *
+ * 🔑 `acquisitionDate`·`addressJibun`·`regionCode`는 `HouseEntry`에서 필수이거나 optional이지만
+ *    여기서는 **전부 optional**로 둔다. 도출은 「있으면 쓴다」이지 「없으면 못 센다」가 아니다
+ *    (취득일 없는 행은 애초에 ④가 걸러 낸다 — `transfer-tax-api-houses.ts:75`).
+ */
+export type OneHouseFactRow = Partial<
+  Pick<
+    HouseEntry,
+    | "oneHouseCulturalHeritage"
+    | "oneHouseRuralHouse"
+    | "ruralHouseKind"
+    | "ruralOutsideCapitalEupMyeon"
+    | "ruralUrbanZone"
+    | "ruralDecedentResidenceYears"
+    | "ruralOwnerResidenceYears"
+    | "ruralLandAreaSqm"
+    | "ruralWholeHouseholdMoved"
+    | "ruralHighPriceAtAcquisition"
+    | "acquisitionDate"
+    | "addressJibun"
+    | "regionCode"
+  >
+>;
+
+/** ④가 만드는 §155⑦ nested payload — 엔진 `TransferTaxInput["ruralHouse"]`와 같은 모양. */
+export interface RuralHousePayload {
+  kind: "inherited" | "farm_exit" | "return_to_farm";
+  isOutsideCapitalEupMyeon: boolean;
+  decedentResidenceYears?: number;
+  ownerResidenceYears?: number;
+  acquisitionDate?: string;
+  isHighPriceAtAcquisition?: boolean;
+  landAreaSqm?: number;
+  wholeHouseholdMoved?: boolean;
+}
 
 /** 세대 단위 레거시 값(폼 스칼라) — 행에 표시가 없을 때만 쓴다. */
 export interface OneHouseLegacyFacts {
   /** §155⑥1호 — 종전 세대 단위 토글(`form.culturalHeritageHouseSpecial`). */
   culturalHeritageHouseSpecial?: boolean;
+  /** §155⑦ — 종전 세대 단위 블록 전체. 행 표시가 없을 때 그대로 쓴다. */
+  ruralHouse?: RuralHousePayload;
 }
 
 export interface DerivedOneHouseRowFacts {
   /** ④⑬ 엔진 입력 `culturalHeritageHouse` — true일 때만 전송한다(false는 미전송 규약 유지). */
   culturalHeritageHouse: boolean;
+  /** ④⑬ 엔진 입력 `ruralHouse` — 미해당이면 `undefined`(키 자체 미전송). */
+  ruralHouse?: RuralHousePayload;
   /**
    * 레거시 값만으로 성립했는가 — 화면이 「어느 주택인지 지정하세요」를 띄울 신호(OH-30).
    * 행 표시가 하나라도 있으면 false다.
@@ -49,6 +89,64 @@ export function hasCulturalHeritageRow(
   return (houses ?? []).some((h) => h.oneHouseCulturalHeritage === true);
 }
 
+/** 행 중 §155⑦ 농어촌주택으로 표시된 **첫 행**. 법문이 「각각 1개씩」이라 하나만 쓴다. */
+export function findRuralHouseRow(
+  houses: readonly OneHouseFactRow[] | undefined,
+): OneHouseFactRow | undefined {
+  return (houses ?? []).find((h) => h.oneHouseRuralHouse === true && !!h.ruralHouseKind);
+}
+
+/**
+ * 소재 요건(수도권 밖 읍·면 — 도시지역 읍 제외)을 **행 주소에서 판정**한다.
+ *
+ * 🔑 **읽는 시점에 판정한다.** 종전 세대 단위 구현은 `useEffect`로 파생 boolean을 store에
+ * 써 넣었는데(미러링 금지 위반 — `feedback_useeffect_store_mirror_forbidden`), 여기서는
+ * 행이 **조회 결과**(`ruralUrbanZone`)와 **사용자 지정값**(`ruralOutsideCapitalEupMyeon`)만
+ * 들고 있고 판정은 순수 함수가 한다.
+ *
+ * 우선순위: 사용자 지정(있으면) → 주소 자동 판정.
+ */
+export function resolveRuralLocationQualified(row: OneHouseFactRow): boolean {
+  if (row.ruralOutsideCapitalEupMyeon !== undefined) return row.ruralOutsideCapitalEupMyeon;
+  return (
+    judgeRuralHouseLocation({
+      regionCode: row.regionCode || undefined,
+      jibun: row.addressJibun ?? "",
+      urbanVerdict: row.ruralUrbanZone,
+    }).verdict === "qualified"
+  );
+}
+
+const num = (s: string | undefined) => parseFloat(s ?? "") || 0;
+
+/**
+ * 행 하나 → ④ `ruralHouse` payload.
+ *
+ * ⚠️ **유형별로 무의미한 필드는 싣지 않는다** — 종전 ④ 규약을 그대로 지킨다
+ * (상속 유형에 귀농 대지면적을 실어 보내면 조용한 오판정이 된다).
+ */
+function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
+  const kind = row.ruralHouseKind;
+  if (!kind) return undefined;
+  return {
+    kind,
+    isOutsideCapitalEupMyeon: resolveRuralLocationQualified(row),
+    ...(kind === "inherited"
+      ? { decedentResidenceYears: num(row.ruralDecedentResidenceYears) }
+      : {}),
+    ...(kind === "farm_exit" ? { ownerResidenceYears: num(row.ruralOwnerResidenceYears) } : {}),
+    ...(kind === "return_to_farm"
+      ? {
+          // §155⑦ 단서의 「**그 주택**을 취득한 날」 = 이 행의 취득일. 별도 칸이 없는 이유다.
+          ...(row.acquisitionDate ? { acquisitionDate: row.acquisitionDate } : {}),
+          isHighPriceAtAcquisition: row.ruralHighPriceAtAcquisition === true,
+          landAreaSqm: num(row.ruralLandAreaSqm),
+          wholeHouseholdMoved: row.ruralWholeHouseholdMoved === true,
+        }
+      : {}),
+  };
+}
+
 /**
  * 명부 행에서 세대 단위 §155 사실을 도출한다 — **행 우선, 레거시 폴백**.
  *
@@ -61,8 +159,16 @@ export function deriveOneHouseFactsFromHouses(
 ): DerivedOneHouseRowFacts {
   const rowHeritage = hasCulturalHeritageRow(houses);
   const legacyHeritage = legacy.culturalHeritageHouseSpecial === true;
+
+  const ruralRow = findRuralHouseRow(houses);
+  const rowRural = ruralRow ? toRuralPayload(ruralRow) : undefined;
+
+  const anyRow = rowHeritage || rowRural !== undefined;
+  const anyLegacy = legacyHeritage || legacy.ruralHouse !== undefined;
+
   return {
     culturalHeritageHouse: rowHeritage || legacyHeritage,
-    fromLegacyOnly: !rowHeritage && legacyHeritage,
+    ruralHouse: rowRural ?? legacy.ruralHouse,
+    fromLegacyOnly: !anyRow && anyLegacy,
   };
 }

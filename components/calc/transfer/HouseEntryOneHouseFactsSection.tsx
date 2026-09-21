@@ -27,6 +27,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { HouseEntryRuralHouseBlock } from "@/components/calc/transfer/HouseEntryRuralHouseBlock";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
@@ -66,6 +67,9 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate }: Props) {
           />
         </div>
       </ToggleCard>
+
+      {/* §155⑦ 농어촌주택 (3b) */}
+      <HouseEntryRuralHouseBlock house={house} onUpdate={onUpdate} />
     </ToneCard>
   );
 }
