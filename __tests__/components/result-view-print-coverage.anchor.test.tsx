@@ -63,8 +63,17 @@ const APPORTIONMENT = {
  * - 면책 고지: 선택과 무관하게 항상 인쇄되어야 한다.
  * - 하단 네비 버튼: `print:hidden`이라 인쇄에 애초에 안 나온다.
  * - 계산 경고 카드: 단건·일괄·다건 **세 뷰 모두** 패널 위 상시 노출로 통일돼 있다.
+ * - 출처(1세대1주택 판정): **고지**이지 사용자가 끄고 켤 서식이 아니다 — 면책 고지와 같은 층위다.
+ *   print leaf로 만들면 레지스트리 3 × 2 + 테스트 3 + `availablePrintIds` 4 = **10지점**을 함께
+ *   고쳐야 하고 그중 셋은 TypeScript가 못 잡는다(P5-b-1 실측).
  */
-const ALLOWED = [/출력 항목 선택/, /면책 고지/, /다시 계산하기|홈으로/, /확인이 필요한 사항/];
+const ALLOWED = [
+  /출력 항목 선택/,
+  /면책 고지/,
+  /다시 계산하기|홈으로/,
+  /확인이 필요한 사항/,
+  /출처 — /,
+];
 
 function looseChildren(root: Element): string[] {
   return [...root.children]
