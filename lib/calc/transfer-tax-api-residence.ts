@@ -10,6 +10,7 @@ import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-co
 import { toDate } from "@/lib/api/date-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -42,7 +43,11 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
     provisoGate({
       isOneHousehold: form.isOneHousehold,
       isHousing: primary?.assetKind === "housing",
-      householdHousingCount: form.householdHousingCount,
+      householdHousingCount: resolveHouseholdHousingCount({
+        primaryKind: primary?.assetKind,
+        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+        houses: form.houses,
+      }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode,
     form.provisoReason,

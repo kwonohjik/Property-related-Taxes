@@ -11,6 +11,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
@@ -414,7 +415,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
      * 계획: docs/01-plan/features/transfer-partial-area-apportionment.plan.md §0 C-6 · §3.3 L-4
      */
     ...buildLandStdAtAcquisitionPayload(primary),
-    householdHousingCount: parseInt(form.householdHousingCount) || 0,
+    /**
+     * Q-8 — **명부가 정본, 스칼라는 간이 입력**(계획서 §5.11).
+     * 파싱 기본값(`|| 0`)은 **그대로 둔다** — 이 호출부의 규약이다(`household-house-count.ts` 🔑).
+     */
+    householdHousingCount: resolveHouseholdHousingCount({
+      primaryKind: primary.assetKind,
+      declared: parseInt(form.householdHousingCount) || 0,
+      houses: form.houses,
+    }),
     // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
@@ -532,7 +541,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       const provisoMode = provisoGate({
         isOneHousehold: form.isOneHousehold,
         isHousing: primary.assetKind === "housing",
-        householdHousingCount: form.householdHousingCount,
+        householdHousingCount: resolveHouseholdHousingCount({
+        primaryKind: primary.assetKind,
+        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+        houses: form.houses,
+      }),
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }).mode;
       const reason = effectiveProvisoReason(provisoMode, form.provisoReason);

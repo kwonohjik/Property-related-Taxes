@@ -26,6 +26,7 @@ import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHa
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
+import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 
 /**
@@ -148,10 +149,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       provisoGate({
         isOneHousehold: form.isOneHousehold,
         isHousing: primaryKind === "housing",
-        householdHousingCount: form.householdHousingCount,
+        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴).
+        householdHousingCount: resolveHouseholdHousingCount({
+          primaryKind,
+          declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+          houses: form.houses,
+        }),
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }),
-    [form.isOneHousehold, primaryKind, form.householdHousingCount, form.temporaryTwoHouseSpecial],
+    // ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
+    [
+      form.isOneHousehold,
+      primaryKind,
+      form.householdHousingCount,
+      form.houses,
+      form.temporaryTwoHouseSpecial,
+    ],
   );
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별

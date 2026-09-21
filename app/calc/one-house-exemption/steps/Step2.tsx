@@ -174,7 +174,7 @@ export function Step2({ form, onChange }: Props) {
       provisoGate({
         isOneHousehold: form.isOneHousehold,
         isHousing: true,
-        householdHousingCount: String(houseCount),
+        householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }),
     [form.isOneHousehold, houseCount, form.temporaryTwoHouseSpecial],

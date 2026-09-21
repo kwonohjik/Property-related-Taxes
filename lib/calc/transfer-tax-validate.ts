@@ -25,6 +25,7 @@ import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
+import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -614,7 +615,11 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     const provisoMode = provisoGate({
       isOneHousehold: form.isOneHousehold,
       isHousing: form.assets?.[0]?.assetKind === "housing",
-      householdHousingCount: form.householdHousingCount,
+      householdHousingCount: resolveHouseholdHousingCount({
+        primaryKind: form.assets?.[0]?.assetKind,
+        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+        houses: form.houses,
+      }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode;
     /**

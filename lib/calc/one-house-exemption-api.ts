@@ -159,7 +159,7 @@ export function buildOneHouseExemptionApiBody(
       const mode = provisoGate({
         isOneHousehold: form.isOneHousehold,
         isHousing: primary.assetKind === "housing",
-        householdHousingCount: String(houseCount),
+        householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }).mode;
       const reason = effectiveProvisoReason(mode, form.provisoReason);

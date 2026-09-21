@@ -41,7 +41,7 @@ afterEach(cleanup);
 const form = (over: Partial<TransferFormData> = {}): TransferFormData => ({
   ...createDefaultTransferFormData(),
   isOneHousehold: true,
-  householdHousingCount: "2",
+  householdHousingCount: "2", // 폼 필드는 문자열 — `provisoGate` 인자(number)와 다른 축이다
   transferDate: "2024-03-01",
   ...over,
 });
@@ -74,7 +74,7 @@ const fullProps = (f: TransferFormData) => ({
   proviso: provisoGate({
     isOneHousehold: true,
     isHousing: true,
-    householdHousingCount: "2",
+    householdHousingCount: 2,
     temporaryTwoHouseSpecial: f.temporaryTwoHouseSpecial,
   }),
   primaryAcquisitionDate: "2019-03-01",
