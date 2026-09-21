@@ -71,6 +71,11 @@ interface Props {
   primaryAsset?: AssetForm;
   /** 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역, 사례 45). */
   isOneHouseSingle?: boolean;
+  /**
+   * 판정 메뉴에서 사실을 넘겨받은 적이 있는가 (`hasJudgmentProvenance`) — P6-c-5.
+   * 자산 카드 안의 두 안내 문구가 「가라」/「선언이 없다」를 가른다.
+   */
+  judgmentLoaded?: boolean;
   /** 폼-전역 조정대상지역 취득 여부 — 입주권 §⑥ 거주요건 경고 게이트 (U1-03) */
   /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조 + 전체 펼침. */
   errorMessage?: string;
@@ -109,6 +114,7 @@ export function CompanionAssetCard({
   totalTransferExpense,
   primaryAsset,
   isOneHouseSingle,
+  judgmentLoaded,
   errorMessage,
   splitMode,
   onFractionalToggle,
@@ -380,6 +386,7 @@ export function CompanionAssetCard({
           isNewConstruction={isNewConstruction}
           isPrimary={isPrimary}
           isOneHouseSingle={isOneHouseSingle}
+          judgmentLoaded={judgmentLoaded}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}
           isFirst={index === 0}
@@ -429,7 +436,7 @@ export function CompanionAssetCard({
           onToggle={() => toggleSection(5)}
           forceOpen={forceOpenAll}
         >
-          <AssetSectionExtras asset={asset} assetIndex={index} onChange={onChange} transferDate={transferDate} />
+          <AssetSectionExtras asset={asset} assetIndex={index} judgmentLoaded={judgmentLoaded} onChange={onChange} transferDate={transferDate} />
         </AssetSection>
       )}
 

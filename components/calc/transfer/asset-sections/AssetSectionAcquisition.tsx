@@ -42,6 +42,11 @@ interface Props {
   isNewConstruction: boolean;
   isPrimary: boolean;
   isOneHouseSingle?: boolean;
+  /**
+   * 판정 메뉴에서 사실을 넘겨받은 적이 있는가 (`hasJudgmentProvenance`) — P6-c-5.
+   * 자산 카드 안의 두 안내 문구가 「가라」/「선언이 없다」를 가른다.
+   */
+  judgmentLoaded?: boolean;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴 전용이
    *    되면서 이 체인의 소비처가 사라졌다. U1-03(배선 단절 → 경고 침묵) 감시는 판정 메뉴
@@ -64,6 +69,7 @@ export function AssetSectionAcquisition({
   isNewConstruction,
   isPrimary,
   isOneHouseSingle,
+  judgmentLoaded,
   splitMode,
   onFractionalToggle,
   isFirst,
@@ -325,6 +331,7 @@ export function AssetSectionAcquisition({
             asset={asset}
             onChange={onChange}
             isOneHouseSingle={isOneHouseSingle}
+            judgmentLoaded={judgmentLoaded}
           />
         )
       )}

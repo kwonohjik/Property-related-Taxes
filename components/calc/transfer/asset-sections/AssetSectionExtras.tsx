@@ -15,11 +15,16 @@ interface Props {
   asset: AssetForm;
   /** 자산 인덱스 — §155⑳ 위치 축 게이트(④는 primary만 보낸다). */
   assetIndex: number;
+  /**
+   * 판정 메뉴에서 사실을 넘겨받은 적이 있는가 (`hasJudgmentProvenance`) — P6-c-5.
+   * 안내 문구가 「판정하러 가세요」/「선언이 없습니다」를 가른다.
+   */
+  judgmentLoaded?: boolean;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
 }
 
-export function AssetSectionExtras({ asset, assetIndex, onChange, transferDate }: Props) {
+export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange, transferDate }: Props) {
   /**
    * 🔴 **컴패니언에는 §155⑳ 카드를 띄우지 않는다** (P6-c-4). ④는 단건·다건 모두 primary만
    *    보낸다 — 엔진 입력의 `rentalHousingException`이 top-level **단일 객체**이기 때문이다.
@@ -74,6 +79,7 @@ export function AssetSectionExtras({ asset, assetIndex, onChange, transferDate }
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate ?? ""}
           mode="calc"
+          judgmentLoaded={judgmentLoaded}
           onChangeResidence={(patch) => onChange(patch)}
           onChange={(rh) => onChange({ rentalHousingException: rh })}
         />
