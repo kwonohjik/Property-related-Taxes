@@ -2391,8 +2391,20 @@ RM-6은 소스에 `imported-right-exceptions` 문자열이 있는지만 봤고, 
 - 뮤테이션 **9/9 KILLED**(mode 게이트·core 블록·요약 블록·판정 ⑧ 게이트·안내 카드 게이트·
   §155⑧ 토글·`MergeDateSection`·others 노출). 첫 시도의 M6은 `<p>` 라벨만 바꿔 **SURVIVED**했는데,
   단언이 `ToggleCard` title을 보고 있었다 — **약한 뮤테이션이었지 구멍이 아니었다**.
-- E2E **3 spec 이관**(계획서의 「7 spec」은 과대였다 — 합가 3 spec은 잔류 결정으로 **무영향**).
-  이관 전 실측 7 failed / 8 passed → 이관 후 **18/18**.
+- E2E **5 spec 이관**. 합가 3 spec은 잔류 결정으로 **무영향**이었고, §155⑧ spec도 통과했다.
+
+  🔴 **역방향 grep을 한 번 잘못해 CI가 잡았다.** 처음에 **한국어 화면 문구**(「일시적 2주택」·
+  「대체주택」·「합가」 등)로 훑어 6 spec을 찾았고 그 6개만 돌려 18/18 초록을 받고 푸시했는데,
+  **CI E2E (5/6)이 빨개졌다** — `transfer-155-16-18-deadline-specials`(§155⑯⑱ 5건)와
+  `transfer-155-7-rural-location-auto`(§155⑦ 5건)가 목록에 없었다. 둘 다 그 문구를 쓰지 않고
+  **폼 필드명으로 `sessionStorage`를 시드**한 뒤 `data-testid`로 단언한다.
+
+  ⇒ 모집단은 **섹션이 편집하는 필드명**으로 센다(정의상 빠짐없다). 그리고 섹션 제거·이관처럼
+  모집단이 불확실한 변경은 마지막에 **E2E 전건**을 한 번 돌린다 — pre-push에 E2E가 없으므로
+  그 한 번이 CI 전 유일한 관문이다. memory `feedback_e2e_reverse_grep_by_field_not_phrase`.
+
+  실측: 문구 grep 6 spec → 이관 후 18/18 → **CI 10건 실패** → 필드명 grep 8 spec(3건은 무영향·
+  1건은 오탐) → 2 spec 추가 이관 → 전건 재측정.
 - 공허화 점검: `transfer-154-proviso-mode`의 부재 단언 2건은 계산기에서 항상 참이 되므로
   **함께** 판정 메뉴로 옮겼다(P6-a의 `two-house-axis-path` 전례).
 

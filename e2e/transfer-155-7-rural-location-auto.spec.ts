@@ -8,45 +8,34 @@
  *
  * ⚠️ `/api/address/land-use-zone`은 외부(Vworld) 의존이라 route를 mock한다 —
  *    외부 장애가 회귀로 둔갑하지 않도록.
+ *
+ * ## 🔄 화면이 **판정 메뉴로 옮겨졌다** (P6-b)
+ *
+ * §155⑦의 중과 배제는 영 §167의10①15호(「§154①의 요건을 모두 충족」 2요소)라 비과세 판정을
+ * 경유한다 ⇒ 계산기 ③에서 판정 메뉴로. 자동판정 `useEffect`도 판정 메뉴 쪽 사본
+ * (`one-house-exemption/steps/Step2.tsx`)이 소유한다. **같은 컴포넌트**라 단언은 바뀌지 않는다.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
 
-function seedForm(over: Record<string, unknown>) {
-  return {
-    state: {
-      formData: {
-        assets: [
-          {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
-            assetKind: "housing",
-            acquisitionCause: "purchase",
-            acquisitionDate: "2018-01-01",
-          },
-        ],
-        transferDate: "2026-06-01",
-        isOneHousehold: true,
-        householdHousingCount: "2",
-        ruralHouseSpecial: true,
-        ruralHouseKind: "inherited",
-        ...over,
+/** 판정 메뉴는 주택 수를 **명부**에서 센다 — `householdHousingCount`는 덮어써진다. */
+function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
+  return gotoJudgmentStep2(page, {
+    assets: [
+      {
+        ...makeDefaultAsset(1),
+        addressJibun: "서울 강남구 테스트동 1-1",
+        assetKind: "housing",
+        acquisitionCause: "purchase",
+        acquisitionDate: "2018-01-01",
       },
-      pendingMigration: false,
-    },
-    version: 0,
-  };
-}
-
-async function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
-  await page.goto("/calc/transfer-tax");
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate(
-    (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(over),
-  );
-  await page.reload();
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.getByRole("button", { name: "보유 상황" }).first().click();
+    ],
+    transferDate: "2026-06-01",
+    ruralHouseSpecial: true,
+    ruralHouseKind: "inherited",
+    ...over,
+  });
 }
 
 test.describe("§155⑦ 소재 요건 자동 판별", () => {
