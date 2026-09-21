@@ -29,6 +29,15 @@
  * 비과세(`qualifiesUnavoidableOutsideCapital`)와 중과 배제가 **같은 값**을 쓴다
  * (`transfer-tax-judgment-steps.ts:55`가 술어 결과를 중과 엔진에 주입). 그래서 §155⑧은
  * **비과세를 주장할 수 없는 세대**에도 입력 경로가 필요하다(P6-b 실측 −6.46억).
+ *
+ * ## ⚠️ 형제 위젯의 **이름을 인용하지 않는다**
+ *
+ * 처음에는 설명에 ④ 토글 제목(「부득이한 사유 취득 주택」)과 섹션 제목(「특수 배제 사유」)을
+ * 그대로 적었다. 그러자 **그 형제들의 텍스트·role 셀렉터가 전부 2건으로 늘어** CI E2E가
+ * 깨졌다(`transfer-multi-house-detail.spec.ts`) — ToggleCard는 accessible name이
+ * 제목+설명으로 합쳐지기까지 한다(e2e/CLAUDE.md §2).
+ * ⇒ 가리킬 때는 **위치(④ 카드) + 조문**으로만 쓴다
+ *   ([[feedback_new_widget_breaks_uniqueness_selectors]]).
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -84,7 +93,7 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
         <>
           취학·근무상 형편·질병 요양 등으로 취득한 수도권 밖 주택입니다. 이 주택을 보유한 채
           일반주택을 양도하면 1세대1주택으로 봅니다.{" "}
-          <b>④ 「부득이한 사유 취득 주택」(영 §167의10①3호)과는 다른 조문</b>입니다.
+          <b>이 모달 ④ 카드의 중과 배제(영 §167의10①3호)와는 다른 조문</b>입니다.
         </>
       }
     >
@@ -99,7 +108,7 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
         {/* ⛔ 3호와 혼동 방지 — 같은 「부득이한 사유」라는 말이 ④에도 있다 */}
         <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
           <p data-testid="house-row-uoc-vs-3ho" className="text-xs leading-relaxed">
-            ④ 「특수 배제 사유」의 <b>부득이한 사유</b>(영 §167의10①3호)와는 <b>다른 조문</b>입니다.
+이 모달 <b>④ 카드</b>의 중과 배제(영 §167의10①3호)와는 <b>다른 조문</b>입니다.
             3호는 <b>취득 당시 기준시가 3억 이하 · 1년 이상 거주</b>를 요구하지만, §155⑧(4호)은
             그 요건이 <b>없고</b> 대신 <b>수도권 밖 소재</b>를 요구합니다. 둘 다 해당하면 각각 켜세요.
           </p>
@@ -116,7 +125,7 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">부득이한 사유</label>
+            <label className="text-sm font-medium">§155⑧ 부득이한 사유</label>
             <RadioCardGroup
               name={`unavoidableOutsideCapitalReason-${house.id}`}
               value={house.unavoidableOutsideCapitalReason ?? "work"}
@@ -135,7 +144,7 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">사유 해소일</label>
+            <label className="text-sm font-medium">§155⑧ 사유 해소일</label>
             <DateInput
               value={house.unavoidableOutsideCapitalResolvedDate ?? ""}
               onChange={(v) => onUpdate({ unavoidableOutsideCapitalResolvedDate: v })}
