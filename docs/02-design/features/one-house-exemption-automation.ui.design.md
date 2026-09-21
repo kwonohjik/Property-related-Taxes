@@ -15,7 +15,12 @@
 > ⑤ 「신규 위젯 0개」 주장 오류(§155의2·§155의3 카드 신설) ⑥ 결과·사실 필드명을 엔진 설계와 통일 ⑦ 겸용 결과뷰 경로·E2E 경로 매핑·G-5 지점 수 정정
 >
 > 🧱 **D-6 반영(2026-09-18, 계획서 v2.3 §5.10)** — **주택별 사실의 정본은 명부 행**, 비과세·중과가 같은 행을 읽는다. **판정 메뉴와 계산기 모두.**
-> 이 문서에서 바뀐 것: ① §155⑥⑦⑧·⑳의 주택별 사실은 `TemporaryTwoHouseSection`(세대 단위)이 아니라 **`HouseEntryEditor` 행 속성**으로 받는다(§3.5 신설)
+> ⛔ **§155⑳ 정정(2026-09-21)** — 아래 「⑳」 기재는 **철회**됐다. §155⑳ 임대주택 목록은 명부 행으로 가지 **않는다**
+> (계획서 §5.10 결정 4 · P6-c-4가 엔진 구조를 근거로 확정). 이 문서 **§9.1(`:345`)이 이미 같은 결론**
+> (「§155⑳은 이번 범위에서 이관하지 않는다 — 명시적 축소 결정」)이었고, §3.5·§5.10과 **모순 상태였다**.
+> 이제 §9.1로 통일한다. D-6 범위는 **§155⑥⑦⑧ 3축**이다.
+>
+> 이 문서에서 바뀐 것: ① §155⑥⑦⑧의 주택별 사실은 `TemporaryTwoHouseSection`(세대 단위)이 아니라 **`HouseEntryEditor` 행 속성**으로 받는다(§3.5 신설)
 > ② 그래서 「기존 특례 입력은 신규 위젯 0개」가 아니다 — 명부 편집 모달에 영역이 추가된다 ③ 과도기 표시 모드(P4 판정 메뉴만 켬 → P6 계산기 켬 + Step4 토글 제거)
 > ④ 레거시 세대 단위 값 「행 미지정」 보존 ⑤ §4·§6·§10~§12·§14·필드 목록 갱신.
 >
@@ -27,7 +32,7 @@
 ## 0. 핵심 결정 5줄 요약
 
 1. ① 세대 입력은 **현행 계산기(`Step4.tsx:413-422`)와 완전히 같은 자기선언**이다 — 자동 판정·수동 수정·수정 사유·「사용자 수정」 출처 배지 전부 없다.
-2. ② 보유 주택·권리 명세는 **기존 섹션 7종을 재사용**한다(신설: §155의2·§155의3 입력 카드 2개 · ③ 양도 대상 선택 1개 · **D-6 명부 행 속성 영역**(§3.5) — §155⑥⑦⑧·⑳ 주택별 사실은 `TemporaryTwoHouseSection`이 아니라 명부 행에서 받는다) — `HousesListSection`(내부에 `PresaleRightsSection`·`SellingHouseExclusionSection` 포함)·`HouseCountExemptionInputs`(상속 2년 게이트 포함)·`TemporaryTwoHouseSection`·`RightThreeYearExceptionSection`·`InheritedRightExceptionSection`·`MergedHouseholdRightSection`·`ExemptionProvisoSection`. 전부 `{ form: TransferFormData 호환, onChange }` props라 결합 없이 재사용된다(실측, §4).
+2. ② 보유 주택·권리 명세는 **기존 섹션 7종을 재사용**한다(신설: §155의2·§155의3 입력 카드 2개 · ③ 양도 대상 선택 1개 · **D-6 명부 행 속성 영역**(§3.5) — §155⑥⑦⑧ 주택별 사실은 `TemporaryTwoHouseSection`이 아니라 명부 행에서 받는다(⑳ 제외 — 머리 ⛔)) — `HousesListSection`(내부에 `PresaleRightsSection`·`SellingHouseExclusionSection` 포함)·`HouseCountExemptionInputs`(상속 2년 게이트 포함)·`TemporaryTwoHouseSection`·`RightThreeYearExceptionSection`·`InheritedRightExceptionSection`·`MergedHouseholdRightSection`·`ExemptionProvisoSection`. 전부 `{ form: TransferFormData 호환, onChange }` props라 결합 없이 재사용된다(실측, §4).
 3. 판정 → 계산기 전달은 **`transfer-resume-entry.ts` 계열 단일 헬퍼**로 새로 만든다 — `router.push` 전에 `useCalcWizardStore`에 직접 쓰는 기존 패턴(SPA 네비게이션, sessionStorage 불필요)을 따른다.
 4. **다건 계산기는 별도 통합이 필요 없다** — `MultiTransferSteps.tsx:203`의 `StepEdit`이 자산 편집 시 **단건 `<TransferTaxCalculator />`를 그대로 마운트**하고 `useCalcWizardStore`와 `properties[i].form`을 양방향 동기화한다(V-12 완전 해소, §8).
 5. 계산기 결과뷰 출처 한 줄은 **컴포넌트 1개 + 공용 술어**로 4종에 붙인다. 문구는 「판정 메뉴 결과 기준(판정일)」·「판정 이후 명부 수정됨」·「원본 판정이 바뀌었습니다」 3종뿐 — 「사용자 수정」은 없다(§7).
@@ -126,7 +131,7 @@
 │   ├── HousesListSection (내부: 주택 목록 테이블 + PresaleRightsSection —
 │   │     gracePeriod·SellingHouseExclusionSection은 숨김, §3.2-C)
 │   │     └ HouseEntryEditor 행 속성 **D-6 영역 켬**(oneHouseFacts="shown") — §155⑥ 문화유산 · §155⑦ 농어촌 ·
-│   │       §155⑧ 부득이(사유 종류 추가) · §155⑳ 장기임대(③ 영역 확장) — §3.5
+│   │       §155⑧ 부득이(사유 종류 추가) — §3.5  [⑳ 제외]
 │   ├── SpecialHouseExclusionSection (조특법 감면주택 §89①3호 의제 제외)
 │   └── 상속 2년내 피상속인 증여분 게이트 (ToggleCard, houses[].isInherited 존재 시만)
 │
@@ -150,7 +155,7 @@
 
 **§3.2-B ExemptionProvisoSection 포함 여부 — 계획서 표에 없던 것을 추가한 이유**: 계획서 §5.2 단계표는 ②에 "특례 사실(§155 각 항·§155의2·§155의3·§89② 예외)"만 열거하고 §154① 단서는 §5.0 "유지" 목록(계산기 잔류)에만 있다. 그러나 판정 메뉴가 §89①3호 요건(보유·거주 2년)을 정확히 판정하려면 거주요건 면제 사유(해외이주·수용·부득이한 사유 등)를 **판정 메뉴도 알아야 한다** — 그렇지 않으면 정당한 면제 대상자에게 「거주요건 미충족」을 잘못 낸다. `ExemptionProvisoSection`은 이미 `{ form: 6개 flat 필드, onChange }`(props 실측, `ExemptionProvisoSection.tsx:32-49`) 형태라 **계산기·판정 메뉴 양쪽에 중복 없이 재사용 가능**하다(같은 컴포넌트, 각 화면의 로컬 폼 상태에 바인딩). `mode="one_house"` 고정(판정 메뉴는 항상 완전한 1주택 판정이 목적이므로 `temporary_two_house` 준용 모드는 TemporaryTwoHouseSection 내부에서 별도로 다룬다 — TemporaryTwoHouseSection이 proviso를 내부에서 렌더하는지는 §14 확인 필요 항목).
 
-**법조문 대응**: HousesListSection→§155②③(공동상속)·§89②(권리)·**§155⑥⑦⑧⑳(D-6 행 속성)**; TemporaryTwoHouseSection→§155①(일시적2주택)·§155⑯(공공기관 이전)·§155⑱(3년 초과 치유)·§156의2⑤(대체주택); Right/Inherited/MergedHousehold ExceptionSection→§156의2④⑥⑦⑧⑨·§156의3③④⑤⑥(§89② 예외 3종); ExemptionProvisoSection→§154① 단서 6종.
+**법조문 대응**: HousesListSection→§155②③(공동상속)·§89②(권리)·**§155⑥⑦⑧(D-6 행 속성 — ⑳ 제외)**; TemporaryTwoHouseSection→§155①(일시적2주택)·§155⑯(공공기관 이전)·§155⑱(3년 초과 치유)·§156의2⑤(대체주택); Right/Inherited/MergedHousehold ExceptionSection→§156의2④⑥⑦⑧⑨·§156의3③④⑤⑥(§89② 예외 3종); ExemptionProvisoSection→§154① 단서 6종.
 
 **§155의2·§155의3 신규 입력(P3 신설, 화면은 P4)**: 계획서 §5.6 필드 그대로 이 단계 안에 새 서브카드(색상 카드+번호 패턴, tone=amber "특례" 계열)로 추가한다 — `longTermMortgageHouse{contractDate, borrowerAgeAtContract, contractYears, maturityLumpSumRepayment, transferredBeforeMaturity, parentalCareMerge}`(DateInput+IntegerInput+ToggleCard 조합) · `winWinRentalHouse{winWinContractDate, increaseRatePct, priorLeaseMonths, winWinLeaseMonths}`(DateInput+DecimalInput). 계산기에는 **추가하지 않는다**(D-4) — ② 섹션에 "거주요건 면제 특례(장기저당담보·상생임대 등)는 판정 메뉴에서 확인하세요" 안내(ToneCard tone=sky)만 둔다.
 
@@ -196,7 +201,7 @@
 | §155⑥1호 | 문화유산·국가등록문화유산·천연기념물등 여부 | ❌ 없음(양도 주택만 `sellingHouseExclusion.isCulturalHeritage`) | 신설. 중과 `isGroupExcludable`에도 새로 도달(엔진 설계 D-6 절 ⚠️) |
 | §155⑦ | 농어촌 유형(상속·이농·귀농) · 피상속인/이농인 거주연수 · 귀농 대지면적·고가 여부·세대전원 이사 · **⑩4호 영농 목적(G-8)** | ❌ 없음 | 신설. 귀농주택 취득일 = **행의 취득일**(별도 칸 없음). 소재는 행 주소로 자동 판정 |
 | §155⑧ | 부득이 사유 **종류**(취학·근무·질병·기타) | 부분 — `isUnavoidableReason`·`unavoidableResidenceYears`·`unavoidableReasonResolvedDate`는 있음(`HouseEntrySpecialExclusionSection.tsx`) | 종류만 신설. 「수도권 밖」은 행 `regionCode`로 판정 — 🔴 행의 `region`(「수도권·광역시 등 / 지방」, `HouseEntryEditor.tsx:92`)은 §167의3 지역기준이라 **쓰면 안 된다** |
-| §155⑳ | 장기임대 판정 사실 | 부분 — ③ 영역 | `RentalUnitInput` 대응은 계획서 **V-18** 확정 후. 산식 입력(§161)은 계산기 잔류(Q-7) |
+| ~~§155⑳~~ | ⛔ **범위 제외**(2026-09-21) | — | 명부 행으로 가지 **않는다**. 자산 폼(`assets[0].rentalHousingException`)이 정본이고 `mode` 3종(§34)이 화면을 가른다. 엔진 입력이 top-level 단일 객체라 명부 N행과 N:1이 안 맞는다(P6-c-4). V-18 대응표는 **불필요** |
 
 **배치** — `HouseEntryEditor`(479줄)의 기존 ④ 「특수 배제 사유」를 **「④ 특례·배제 사유 (비과세·중과 공용)」** 로 넓혀 문화유산·농어촌을 넣고,
 부득이 항목에 사유 종류를 더한다. 800줄 여유는 있으나 영역이 커지므로 `HouseEntrySpecialExclusionSection.tsx`(159줄) 안에서
@@ -232,7 +237,7 @@
 
 | 컴포넌트 | 경로 | Props 시그니처(실측) | 대응 조문 | 렌더 게이트(계산기 원본) |
 |---|---|---|---|---|
-| `HousesListSection` | `app/calc/transfer-tax/steps/step4-sections/HousesListSection.tsx:409-429` | `{ form: TransferFormData, onChange, hideGracePeriod? }` + **D-6 `oneHouseFacts?` prop 추가**(§3.5 — 수정 필요, 「수정 없이 재사용」 아님) | §155②③·§89②(내부 PresaleRightsSection) · **§155⑥⑦⑧⑳(D-6)** | 상시(④ 안 또는 §3.2-A 대체) |
+| `HousesListSection` | `app/calc/transfer-tax/steps/step4-sections/HousesListSection.tsx:409-429` | `{ form: TransferFormData, onChange, hideGracePeriod? }` + **D-6 `oneHouseFacts?` prop 추가**(§3.5 — 수정 필요, 「수정 없이 재사용」 아님) | §155②③·§89②(내부 PresaleRightsSection) · **§155⑥⑦⑧(D-6 — ⑳ 제외)** | 상시(④ 안 또는 §3.2-A 대체) |
 | `PresaleRightsSection` | `components/calc/transfer/PresaleRightsSection.tsx:20-27` | `{ rights: PresaleRightEntry[], onChange, showSpouseOwned? }` — **완전 독립**(TransferFormData 미종속) | §89②·§167의11 | HousesListSection 내부 상시 |
 | `HouseCountExemptionInputs` | `app/calc/transfer-tax/steps/step4-sections/HouseCountExemptionInputs.tsx:38-47` | `{ form: TransferFormData, onChange, hideGracePeriod? }` | §155②③·§89②·조특법 §89①3호 의제 | 상시(HousesListSection + SpecialHouseExclusionSection + 상속2년게이트 묶음) |
 | 상속 2년 게이트 | `HouseCountExemptionInputs.tsx:60-69`(별도 파일 아님) | `generalHouseGiftedFromDecedentWithin2yr: boolean`, `houses.some(isInherited)`일 때만 렌더 | §155② 단서 | 동상 |
@@ -296,7 +301,12 @@ router.push(TRANSFER_ROUTE);
   불일치가 생길 수 없으므로 **파생값 안내**로 바꾼다. 스칼라 store 값은 건드리지 않는다(미러링 금지) — 읽는 쪽이 전부
   `resolveHouseholdHousingCount`를 부른다(계획서 V-20 전수 분류). 입주권·분양권 양도는 현행 유지(F1).
   레거시 불일치 record: 저장 당시 스칼라 유지 + 「명부 기준으로 전환」 카드(OH-34).
-- **P6 D-6 적용(한 PR)**: 계산기 명부의 `oneHouseFacts`를 `"shown"`으로 바꾸고 `TemporaryTwoHouseSection`의 §155⑥⑦⑧ 블록을 제거한다(§3.5).
+- **P6 D-6 적용** — ⚠️ **한 PR이 아니라 4단계로 쪼갠다**(2026-09-21 실측 후 재편 · 계획서 §5.10 「권장 순서」).
+  ① 계획서·설계 정정(§155⑳ 제외) → ② **Q-8 계산기 축 선행**(세 특례가 전부 스칼라 `householdHousingCount === 2`로
+  게이트하므로, 행만 켜면 특례가 조용히 불성립한다) → ③ §155⑥⑦ 행 이관 → ④ §155⑧ 행 이관(3호/4호 **분리 유지**).
+  🔴 **제거 대상 재실측**: 계산기에 남은 세대 단위 §155 토글은 **⑧ 하나뿐**이다 — ⑥⑦은 이미 `mode` prop의
+  `full` 가드로 계산기에서 렌더되지 않는다(`TemporaryTwoHouseSection.tsx:535·594`). 종전 기재 「§155⑥⑦⑧ 블록을
+  제거한다」는 **판정 메뉴 쪽** 작업이다. 계산기 명부의 `oneHouseFacts`를 `"shown"`으로 바꾸는 것은 그대로다(§3.5).
   제거되는 세대 단위 필드(`culturalHeritageHouseSpecial`·`ruralHouse*`·`unavoidableOutsideCapital*`)는 store에서 지우지 않고 **레거시 읽기 전용**으로 남긴다 —
   `deriveHouseholdFactsFromHouses`의 `legacy` 인자(엔진 설계 D-6 절)가 그 값을 쓴다. 명부 위에 「어느 주택인지 지정하세요」 카드(OH-30).
 - P6 이관 후 기존 이력 보존(OH-21): 저장 record 로드 시 `migrateAsset`과 같은 층위에서 `promoteLegacyOneHouseInputsToFacts(record)`(신규, `calc-wizard-migration.ts`에 추가) 실행 — ③·권리 섹션 값이 있으면 `oneHouseJudgmentSource` 없이도 그 값을 그대로 유지(이관 후에도 계산기가 §5.0 "이관" 목록 UI를 완전히 제거하지 않고 **읽기 전용 요약 + "판정 메뉴에서 수정"** 형태로 남긴다는 뜻 — 완전 삭제 시 재계산 세액이 바뀐다).
@@ -394,7 +404,7 @@ router.push(TRANSFER_ROUTE);
 
 | # | 지점 | 내용 |
 |---|---|---|
-| ① | `HouseEntry` | 문화유산 · 농어촌 속성 묶음 · 부득이 사유 종류 · (V-18 후) §155⑳ 판정 사실 · 소재 판정 touched |
+| ① | `HouseEntry` | 문화유산 · 농어촌 속성 묶음 · 부득이 사유 종류 · 소재 판정 touched  (§155⑳ 제외 — 머리 ⛔) |
 | ② | 새 행 기본값 | 신설 필드 전부 미설정(`undefined`/`false`) — 기존 행 record에 없는 필드가 **불리한 쪽으로 해석되지 않게**(`feedback_flipping_enum_default_rewrites_absent_records`) |
 | ③ | normalize | 레거시 세대 단위 값 → 「행 미지정」 보존(P6) |
 | ④ | 변환 | `deriveHouseholdFactsFromHouses` **한 함수** — 판정 메뉴·단건·다건 어댑터가 공유. 행 속성은 해당 토글이 켜졌을 때만 싣는다(현행 규칙 — 상속 필드는 `isInherited`일 때만, `transfer-tax-api-houses.ts:78-93`) |
@@ -414,7 +424,10 @@ router.push(TRANSFER_ROUTE);
   4. `one-house-simplified-input-unchanged.spec.ts` — 판정 미경유 계산기 사용자가 현행과 동일 플로우로 계산 가능함을 회귀 확인(OH-19·OH-20).
   5. `one-house-judgment-multi-transfer.spec.ts` — 다건 `StepEdit` 진입 중 「판정 불러오기」 동작 확인(§8 결론 검증).
   6. `house-row-facts-two-axes.spec.ts`(D-6, P6) — 계산기 명부에서 부득이 주택 행 1건 입력 → 비과세(§155⑧)와 중과 배제(§167의10①3호·4호)가
-     **둘 다** 반영됨(OH-29ⓑ) · Step4에 §155⑥⑦⑧ 토글이 **없음**. P4 시점 짝: 계산기 명부에 행 속성이 **보이지 않음**(OH-32).
+     **둘 다** 반영됨(OH-29ⓑ) · Step4에 §155**⑧** 토글이 **없음**(⑥⑦은 애초에 계산기에 없다 — 위 실측).
+     P4 시점 짝: 계산기 명부에 행 속성이 **보이지 않음**(OH-32).
+     🔑 **3호/4호가 갈리는 시료를 반드시 넣는다** — 기준시가 3억 **초과** + 수도권 밖이면 3호는 불성립·4호는 성립이다.
+     두 호가 항상 함께 참인 시료만 쓰면 **구별력이 0**이라 한 호를 지워도 초록이다(`feedback_mutation_zero_discrimination_is_not_proof`).
   7. `house-row-facts-legacy-record.spec.ts`(D-6, P6) — 세대 단위 농어촌 값만 가진 저장 이력 재계산 → 저장 당시 세액 + 「어느 주택인지 지정」 카드(OH-30).
   8. `transfer-house-count-divergence.spec.ts` **수정**(Q-8, P6) — 불일치 경고 대신 「명부 기준 N채」 표시 + 스칼라 버튼 비활성 · 명부를 모두 지우면 버튼 재활성(간이 입력 복귀) · 레거시 불일치 record는 전환 카드(OH-34).
 - `e2e/_helpers/tax-flow.ts` 공용 헬퍼 사용. 인쇄 spec은 「전체 선택」 먼저. 컴포넌트 렌더 테스트는 `.test.tsx`.
@@ -471,6 +484,6 @@ router.push(TRANSFER_ROUTE);
 
 ## 엔진 설계와 맞출 필드 목록 (요약 — 완료 보고 ④ 대응)
 
-**UI가 입력받는 `OneHouseFacts` 필드**(엔진 설계 문서와 통일 — 폼 필드명은 `TransferFormData` 그대로, 엔진 필드명은 어댑터 `one-house-exemption-api.ts`가 매핑): `propertyType` · `isUnregistered` · `household.isOneHousehold`(boolean, 자기선언) · `household.marriageDate` · `household.parentalCareMergeDate` · `household.isFirstTransferredInMerge` · `houses: HouseEntry[]`(기존 약 70필드·4개 영역 그대로 — 계획서 §3.3. 비과세가 읽는 것은 ② 상속 6항목뿐, ①③④는 중과 입력) · `presaleRights: PresaleRightEntry[]` · `specialHouseExclusions` · `generalHouseGiftedFromDecedentWithin2yr` · TemporaryTwoHouseSection 대응 세대 단위 필드(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`·`publicInstitutionRelocation`계열·`disposalDelayReason`·`replacementHouseSpecial`계열) · **D-6 명부 행 속성**(문화유산 · 농어촌 묶음 · 부득이 사유 종류 · §155⑳ 판정 사실 — §3.5; 엔진의 `culturalHeritageHouse`·`ruralHouse`·`unavoidableOutsideCapitalHouse`·`rentalHousingException.rentalUnits`는 `deriveHouseholdFactsFromHouses`가 행에서 도출. 종전 세대 단위 필드 `unavoidableOutsideCapitalSpecial`계열·`ruralHouseSpecial`계열·`culturalHeritageHouseSpecial`은 **레거시 읽기 전용**) · 3섹션 대응 전 필드(`rightThreeYearExceptionKind`계열·`mergedHouseholdFirstHouseKind`계열·`inheritedRightChoiceWhenBothHeld`·`generalHouseHeldAtInheritance` — 입력 위치 `InheritedRightExceptionSection`, 통합 대조에서 누락 보완) · `provisoReason`계열 6필드 · §155의2 신규(`longTermMortgageHouse`) · §155의3 신규(`winWinRentalHouse`) · 양도 대상(`saleTargetHouseId`)·양도예정일·예상양도가.
+**UI가 입력받는 `OneHouseFacts` 필드**(엔진 설계 문서와 통일 — 폼 필드명은 `TransferFormData` 그대로, 엔진 필드명은 어댑터 `one-house-exemption-api.ts`가 매핑): `propertyType` · `isUnregistered` · `household.isOneHousehold`(boolean, 자기선언) · `household.marriageDate` · `household.parentalCareMergeDate` · `household.isFirstTransferredInMerge` · `houses: HouseEntry[]`(기존 약 70필드·4개 영역 그대로 — 계획서 §3.3. 비과세가 읽는 것은 ② 상속 6항목뿐, ①③④는 중과 입력) · `presaleRights: PresaleRightEntry[]` · `specialHouseExclusions` · `generalHouseGiftedFromDecedentWithin2yr` · TemporaryTwoHouseSection 대응 세대 단위 필드(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`·`publicInstitutionRelocation`계열·`disposalDelayReason`·`replacementHouseSpecial`계열) · **D-6 명부 행 속성**(문화유산 · 농어촌 묶음 · 부득이 사유 종류 — §3.5; ⛔ §155⑳ **제외**. 엔진의 `culturalHeritageHouse`·`ruralHouse`·`unavoidableOutsideCapitalHouse`는 `deriveHouseholdFactsFromHouses`가 행에서 도출하고, `rentalHousingException.rentalUnits`는 **종전대로 자산 폼이 정본**이다. 종전 세대 단위 필드 `unavoidableOutsideCapitalSpecial`계열·`ruralHouseSpecial`계열·`culturalHeritageHouseSpecial`은 **레거시 읽기 전용**) · 3섹션 대응 전 필드(`rightThreeYearExceptionKind`계열·`mergedHouseholdFirstHouseKind`계열·`inheritedRightChoiceWhenBothHeld`·`generalHouseHeldAtInheritance` — 입력 위치 `InheritedRightExceptionSection`, 통합 대조에서 누락 보완) · `provisoReason`계열 6필드 · §155의2 신규(`longTermMortgageHouse`) · §155의3 신규(`winWinRentalHouse`) · 양도 대상(`saleTargetHouseId`)·양도예정일·예상양도가.
 
 **화면이 읽는 `OneHouseJudgment` 결과 필드**(엔진 설계 문서 확정본과 통일): `isExempt`·`isPartialExempt`·`exemptReason`·`houseCount{total,countedForExemption,excluded[]}`·`appliedExceptions[]`·`residenceExemptions[]`·`highValueThreshold`·`article89Clause2`·`pending[]{id,description,deadline: Date,legalBasis}`·`undetermined[]{id,reason}`·`legalBasis[]`·`warnings[]`. 판정 메뉴 화면은 `deemedForTable2`·`surchargeDeemedBasis`를 **표시하지 않는다**(계산기 소비 축 — 엔진 설계 「§5.5 네 축」).

@@ -226,7 +226,8 @@ export type OneHouseFacts = {
   // ── P4ⓑ 이관(Q-7) — 판정 사실만. 세액 산식 입력은 계산기 잔류 ──
   /** §155⑳ 판정 사실 — `RentalHousingExceptionInput`(rental-housing-exception/types.ts:106-126)의 요건 부분만.
    *  B시나리오 §161 안분 입력(`priorResidenceTransferDate`·`standardPriceAt*`)은 **포함하지 않는다**.
-   *  D-6: `rentalUnits`도 **명부 ③ 행에서 도출**한다 — `RentalUnitInput`↔`HouseEntry` ③ 대응은 계획서 V-18 */
+   *  ⛔ D-6 이관 **철회**(2026-09-21): `rentalUnits`는 명부 행이 아니라 **자산 폼이 정본**이다
+   *  (P6-c-4 — 엔진 입력이 top-level 단일 객체라 명부 N행과 N:1이 안 맞는다). 계획서 §5.10 결정 4 */
   rentalHousingException?: Pick<RentalHousingExceptionInput, "applyException" | "scenario" | "rentalUnits">;
   /** §89①4호 1세대1입주권 판정 사실 — AssetForm 동명 필드(RedevelopmentRightExemptionSection.tsx:156·168·179·191) */
   redevRightExemption?: {
@@ -527,9 +528,12 @@ UI 측 명세는 `one-house-exemption-automation.ui.design.md` 참조. 판정 �
    (`__tests__/calc/one-right-clause-na-plumbing.anchor.test.ts` · `__tests__/calc/one-house-exemption-asset-gate.anchor.test.ts` ·
    `__tests__/tax-engine/transfer/burdened-gift-one-right-exemption-denominator.anchor.test.ts` — grep 실측) 전건 동일값. 분리한 술어에 대응 mutation(P-5)을 넣어 **판정 메뉴·계산기 양쪽 호출부에서** 실패함을 확인한다.
 4. ⚠️ `propertyType`의 조합원입주권 값은 enum을 **grep으로 확인한 뒤** 매핑한다(`enum-verification-before-mapping`) — 추정 금지.
-5. **D-6**: `rentalUnits[]`의 출처가 §155⑳ 섹션 목록에서 **명부 ③ 행**으로 바뀐다. 판정 사실/산식 입력 분할(이 절 1)은 그대로다.
-   `RentalUnitInput`의 일부 필드(`rentalMonths`·`rentalAcquisitionType`·`requirementsConfirmed`·`rentalAutoTermination`)는
-   `HouseEntry`에 없고 enum 두 쌍이 다르다 — 대응표(계획서 **V-18**)가 확정되기 전에는 도출 함수를 쓰지 않는다.
+5. ⛔ **D-6 철회(2026-09-21)**: 종전 기재는 「`rentalUnits[]`의 출처가 §155⑳ 섹션 목록에서 **명부 ③ 행**으로 바뀐다」였다.
+   **P6-c-4(PR #1738)가 반대 방향을 확정했다** — `canDeclareRentalHousingException`은 `assetIndex === 0`(주 자산 전용)이고,
+   근거는 엔진 입력 `rentalHousingException`이 `TransferTaxInput` **top-level 단일 객체**(`transfer.types.ts:1027-1032`)라는
+   구조다. 명부는 N행이므로 N:1이 맞지 않는다. 판정 사실/산식 입력 분할(이 절 1)은 그대로다.
+   ⇒ **도출 함수를 만들지 않는다.** V-18 대응표는 보류가 아니라 **불필요**해졌다(되살리려면 엔진 입력을 자산별
+   배열로 바꾸는 별건 결정이 선행돼야 한다). 계획서 §5.10 결정 4.
 
 ## D-6 명부 행 → 세대 단위 사실 도출 계약 (계획서 §5.10)
 
