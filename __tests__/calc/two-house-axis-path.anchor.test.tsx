@@ -14,6 +14,12 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
+/**
+ * 🔄 §156의2⑦1호 갈래는 **판정 메뉴로 이관**됐다 (P6-a) — 그 describe만 이 화면을 쓴다.
+ *    나머지 축(③ 일시적 2주택·문화재주택)은 아직 계산기 `Step4`에 있다.
+ */
+import { Step2 as JudgmentStep2 } from "@/app/calc/one-house-exemption/steps/Step2";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 // ⚠️ barrel과 순환 import — 서브를 먼저 로드하면 TDZ로 터진다(Phase 1 전례).
 import "@/lib/api/transfer-tax-schema";
@@ -89,11 +95,14 @@ describe("⑤ §155⑥1호 문화유산 주택 — 선언 칸이 화면에 있�
   });
 });
 
+/** 판정 메뉴 폼으로 감싼다 — 슈퍼셋이라 계산기 폼을 그대로 얹을 수 있다(Q-8). */
+const judgmentForm = (f: TransferFormData) => ({ ...createInitialOneHouseJudgmentForm(), ...f });
+
 describe("⑤ §156의2⑦1호 후단 — 상속받은 **주택** 갈래도 선언 칸을 연다", () => {
   it("🔴 종전에는 상속받은 **권리**가 있을 때만 열렸다", () => {
     render(
-      <Step4
-        form={form({ houses: [houseEntry({ isInherited: true })], presaleRights: [rightEntry()] })}
+      <JudgmentStep2
+        form={judgmentForm(form({ houses: [houseEntry({ isInherited: true })], presaleRights: [rightEntry()] }))}
         onChange={() => {}}
       />,
     );
@@ -103,13 +112,16 @@ describe("⑤ §156의2⑦1호 후단 — 상속받은 **주택** 갈래도 선�
 
   it("🔑 권리가 없으면 §89② 자체가 적용되지 않으므로 열지 않는다", () => {
     render(
-      <Step4 form={form({ houses: [houseEntry({ isInherited: true })] })} onChange={() => {}} />,
+      <JudgmentStep2
+        form={judgmentForm(form({ houses: [houseEntry({ isInherited: true })] }))}
+        onChange={() => {}}
+      />,
     );
     expect(shows(INHERITED_SECTION)).toBe(false);
   });
 
   it("🔑 상속주택도 상속권리도 없으면 열지 않는다 (관계없는 세대에 강요 금지)", () => {
-    render(<Step4 form={form({ presaleRights: [rightEntry()] })} onChange={() => {}} />);
+    render(<JudgmentStep2 form={judgmentForm(form({ presaleRights: [rightEntry()] }))} onChange={() => {}} />);
     expect(shows(INHERITED_SECTION)).toBe(false);
   });
 });

@@ -13,11 +13,21 @@
  * ⇒ 2채 미만에서는 새 카드가 합가일·선양도 칸을 **직접 소유**하고, 2채 이상이면 ③ 섹션이
  *   소유한 값을 읽기만 한다. 이 anchor가 그 **상호 배타**를 고정한다 — 둘이 동시에 뜨면
  *   같은 값을 두 곳에서 편집하게 된다.
+ *
+ * ## 🔄 마운트 화면이 **판정 메뉴로 옮겨졌다** (P6-a)
+ *
+ * 이 섹션은 계산기 `Step4`에서 판정 메뉴 ②(`app/calc/one-house-exemption/steps/Step2.tsx`)로
+ * 이관됐다. **같은 컴포넌트**이므로 단언을 하나도 바꾸지 않고 마운트 화면만 옮긴다 —
+ * 지우면 「카드가 사라진 것」과 「자리를 옮긴 것」이 구별되지 않는다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
+import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import {
+  createInitialOneHouseJudgmentForm,
+  type OneHouseJudgmentFormData,
+} from "@/lib/stores/one-house-judgment-form.types";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 vi.mock("@/components/ui/address-search", () => ({
@@ -39,8 +49,8 @@ function rightEntry(over: Partial<PresaleRightEntry> = {}): PresaleRightEntry {
   };
 }
 
-function form(over: Partial<TransferFormData> = {}): TransferFormData {
-  const base = createDefaultTransferFormData();
+function form(over: Partial<TransferFormData> = {}): OneHouseJudgmentFormData {
+  const base = { ...createDefaultTransferFormData(), ...createInitialOneHouseJudgmentForm() };
   return {
     ...base,
     assets: base.assets.map((a, i) =>
@@ -58,37 +68,50 @@ const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 
 describe("가시성", () => {
   it("권리를 보유하지 않으면 뜨지 않는다 — §89②의 대상이 아니다", () => {
-    render(<Step4 form={form({ presaleRights: [] })} onChange={() => {}} />);
+    render(<Step2 form={form({ presaleRights: [] })} onChange={() => {}} />);
     expect(shows(SECTION)).toBe(false);
   });
 
   it("★ 1주택 + 권리 → 카드가 열리고 **합가일 칸을 직접 제공**한다", () => {
-    render(<Step4 form={form()} onChange={() => {}} />);
+    render(<Step2 form={form()} onChange={() => {}} />);
     expect(shows(SECTION)).toBe(true);
     expect(shows(/동거봉양 합가일/)).toBe(true);
     expect(shows(/혼인 합가일/)).toBe(true);
   });
 
   it("합가일이 없으면 보유 구성은 묻지 않는다 (원인 → 결과)", () => {
-    render(<Step4 form={form()} onChange={() => {}} />);
+    render(<Step2 form={form()} onChange={() => {}} />);
     expect(shows(KIND_LABEL)).toBe(false);
   });
 
   it("★ 합가일을 넣으면 보유 구성 선택지와 선양도 토글이 열린다", () => {
-    render(<Step4 form={form({ parentalCareMergeDate: "2020-03-01" })} onChange={() => {}} />);
+    render(<Step2 form={form({ parentalCareMergeDate: "2020-03-01" })} onChange={() => {}} />);
     expect(shows(KIND_LABEL)).toBe(true);
     expect(shows(/합가 후 세대 내에서 먼저 양도하는 주택이다/)).toBe(true);
   });
 });
 
 describe("🔑 ③ 섹션과 **상호 배타**로 합가일을 소유한다", () => {
+  /**
+   * 🔑 판정 메뉴는 주택 수를 **명부에서 파생**한다(`deriveJudgmentHouseCount` = 양도 대상 1 +
+   *    `houses.length`). `householdHousingCount`를 직접 적으면 `withDerivedHouseCount`가
+   *    덮어써 ③ 섹션이 열리지 않는다 — P6-a 이관 때 이 시료가 그렇게 한 번 빨개졌다.
+   */
   const twoHouse = {
-    householdHousingCount: "2",
+    houses: [
+      {
+        id: "h1",
+        region: "capital" as const,
+        acquisitionDate: "2018-01-01",
+        officialPrice: "300000000",
+        isInherited: false,
+      },
+    ] as TransferFormData["houses"],
     parentalCareMergeDate: "2020-03-01",
-  } as const;
+  } satisfies Partial<TransferFormData>;
 
   it("2채 이상이면 이 카드는 합가일 칸을 렌더하지 않는다 — ③ 섹션이 소유한다", () => {
-    render(<Step4 form={form(twoHouse)} onChange={() => {}} />);
+    render(<Step2 form={form(twoHouse)} onChange={() => {}} />);
     // ③ 섹션의 합가일 라벨은 그대로 있다(같은 값의 유일한 편집 지점).
     expect(shows(/동거봉양 합가일/)).toBe(true);
     // 그러나 이 카드가 제공하는 「먼저 양도」 토글 문구는 ③ 것과 구별된다.
@@ -97,7 +120,7 @@ describe("🔑 ③ 섹션과 **상호 배타**로 합가일을 소유한다", ()
   });
 
   it("★ 2채 이상에서도 보유 구성 선택지는 열린다 (⑧은 2주택 조합도 열거한다)", () => {
-    render(<Step4 form={form(twoHouse)} onChange={() => {}} />);
+    render(<Step2 form={form(twoHouse)} onChange={() => {}} />);
     expect(shows(SECTION)).toBe(true);
     expect(shows(KIND_LABEL)).toBe(true);
   });
@@ -108,7 +131,7 @@ describe("갈래별 하위 요건 — 가목만 요건이 둘이다", () => {
 
   it("⭐ 가목(인가 최초 취득)은 **두 요건**을 각각 묻는다", () => {
     render(
-      <Step4
+      <Step2
         form={form({ ...merged, mergedHouseholdFirstHouseKind: "initial_right" })}
         onChange={() => {}}
       />,
@@ -119,7 +142,7 @@ describe("갈래별 하위 요건 — 가목만 요건이 둘이다", () => {
 
   it("나목(승계취득)은 「권리 취득 전부터 소유」 하나만 묻는다", () => {
     render(
-      <Step4
+      <Step2
         form={form({ ...merged, mergedHouseholdFirstHouseKind: "succeeded_right" })}
         onChange={() => {}}
       />,
@@ -130,7 +153,7 @@ describe("갈래별 하위 요건 — 가목만 요건이 둘이다", () => {
 
   it("다목(분양권)도 같은 하나만 묻는다", () => {
     render(
-      <Step4
+      <Step2
         form={form({ ...merged, mergedHouseholdFirstHouseKind: "presale_right" })}
         onChange={() => {}}
       />,
@@ -141,7 +164,7 @@ describe("갈래별 하위 요건 — 가목만 요건이 둘이다", () => {
   it("3호·5호·해당없음은 하위 요건을 묻지 않는다", () => {
     for (const k of ["house_only", "right_only", "none"] as const) {
       render(
-        <Step4 form={form({ ...merged, mergedHouseholdFirstHouseKind: k })} onChange={() => {}} />,
+        <Step2 form={form({ ...merged, mergedHouseholdFirstHouseKind: k })} onChange={() => {}} />,
       );
       expect(shows(/그 권리를 취득하기 전부터 이 주택을 소유하고 있었다/), k).toBe(false);
       expect(shows(/취득 후 1년 이상 거주했다/), k).toBe(false);
