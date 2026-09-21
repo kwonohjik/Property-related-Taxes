@@ -44,7 +44,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
-import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
+import { ImportedRedevRightFactsCard } from "./ImportedRedevRightFactsCard";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
 import {
   RedevelopmentDeemedAcquisitionNotice,
@@ -77,14 +77,16 @@ interface Props {
    * undefined 시 fallback: true (legacy 호환 — 신규 호출 사이트는 명시 전달 권장).
    */
   isOneHouseSingle?: boolean;
-  /**
-   * 폼-전역 wasRegulatedAtAcquisition — 조정대상지역 취득 여부.
-   * C-1 (a) 거주요건 경고 가드 (§89①3호 가목 단서) — subject="right" 시 전달.
+  /*
+   * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
+   *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
+   *    사라졌다. 그 prop 배선이 끊겼을 때 경고가 **한 번도 뜨지 않은** 전례가 있으므로
+   *    (U1-03), 감시는 판정 메뉴 경로로 옮겼다 —
+   *    `__tests__/components/redev-right-exemption-prop-wiring.anchor.test.tsx`.
    */
-  wasRegulatedAtAcquisition?: boolean;
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegulatedAtAcquisition }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -124,14 +126,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
       {/* 상속·증여 종전자산 취득가액 안내 — §163⑨: 상속개시일/증여일 평가액을 취득가액(실가)으로 사용 */}
       <RedevelopmentDeemedAcquisitionNotice acquisitionCause={asset.acquisitionCause} />
 
-      {/* §⑥ 1세대1입주권 비과세 카드 (사례 36 — subject="right" 전용) */}
-      {isRightSubject && (
-        <RedevelopmentRightExemptionSection
-          asset={asset}
-          onChange={onChange}
-          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
-        />
-      )}
+      {/*
+        §⑥ 1세대1입주권 (사례 36 — subject="right" 전용).
+
+        🔄 **입력은 판정 메뉴로 갔다** (P6-c-1). 4필드가 전부 §89①4호 판정 사실이고 세액 산식
+           입력이 하나도 없어서다(§166 3분할은 이 블록이 갖는다). 여기 남는 것은 **세액 맥락
+           안내(§95② LTHD 구조)** 와 **읽기 전용 요약**이다 — 값은 flat이라 ④가 계속 보낸다.
+      */}
+      {isRightSubject && <ImportedRedevRightFactsCard asset={asset} />}
 
       {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — subject="apt" 시만 노출 */}
       {!isRightSubject && (

@@ -12,8 +12,18 @@
  *
  * 그런데 이 필드를 편집하는 위젯이 **두 개**이고 값 체계가 서로 다르다:
  *
- *   `ExemptionAtApprovalCard`(RedevelopmentBlock.tsx:598)  RadioCardGroup — 3-state 전부
- *   `RedevelopmentRightExemptionSection`(:123)             ToggleCard     — 2-state
+ *   `ExemptionAtApprovalCard`(RedevelopmentBlock.tsx)      RadioCardGroup — 3-state 전부
+ *   `RedevelopmentRightExemptionSection`                   ToggleCard     — 2-state
+ *
+ * ## 🔄 두 위젯이 **다른 화면으로 갈렸다** (P6-c-1)
+ *
+ * `RedevelopmentRightExemptionSection`은 판정 메뉴 전용이 됐고, `ExemptionAtApprovalCard`는
+ * 계산기에 남았다. **한 화면의 중복은 사라졌지만 계약은 그대로 살아 있다** — 같은 필드를
+ * 두 화면이 **다른 값 체계로** 쓰기 때문이다. OFF가 `"no"`를 기록하면 세액이 3,080만원
+ * 달라지는 것은 화면이 갈려도 변하지 않는다.
+ *
+ * ⚠️ 그래서 이 anchor는 토글을 **컴포넌트 단위로** 마운트한다. 프로덕션 경로 도달은
+ *    형제 anchor(`redev-right-exemption-prop-wiring`)가 판정 메뉴 `Step3`에서 지킨다.
  *
  * 종전 토글은 OFF에 `"no"`를 기록했다. `""`도 OFF로 **표시**되므로 **같은 시각 상태가
  * 두 저장값에 대응**했고, 그 둘은 세액이 다르다.
@@ -42,6 +52,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { RedevelopmentBlock } from "@/components/calc/transfer/RedevelopmentBlock";
+import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -84,15 +95,15 @@ function bothCardsAsset(over: Partial<AssetForm> = {}): AssetForm {
   };
 }
 
+/** 토글 계약은 **컴포넌트의 것**이다 — 판정 메뉴가 이 컴포넌트를 마운트한다. */
 function renderBlock(asset: AssetForm, onChange = vi.fn()) {
-  render(
-    <RedevelopmentBlock
-      asset={asset}
-      onChange={onChange}
-      isOneHouseSingle
-      wasRegulatedAtAcquisition={false}
-    />,
-  );
+  render(<RedevelopmentRightExemptionSection asset={asset} onChange={onChange} />);
+  return onChange;
+}
+
+/** 계산기 쪽(§⑥ 입력이 빠진 `RedevelopmentBlock`) — A8-04 전용. */
+function renderCalcBlock(asset: AssetForm, onChange = vi.fn()) {
+  render(<RedevelopmentBlock asset={asset} onChange={onChange} isOneHouseSingle />);
   return onChange;
 }
 
@@ -156,14 +167,26 @@ describe("A8 — 입주권 비과세 자기선언 토글의 3-state 계약", () 
     expect(screen.getByText(WARNING_HEADING)).toBeTruthy();
   });
 
-  it("[A8-04] 현행 중복 실재 — 같은 필드를 편집하는 카드 2개가 동시에 렌더된다", () => {
-    renderBlock(bothCardsAsset());
-
-    // 사례 36 카드 (ToggleCard)
-    expect(toggle()).toBeTruthy();
-    // 사례 46·47 카드 (RadioCardGroup — `<label>` + `<input type="radio">`).
-    // "선언 안 함" 옵션은 그 카드에만 있다 (2026-09-05 · Q16에서 "자동 판정"에서 개명 —
-    // 그 옵션은 자동값을 쓰는 것이 아니라 **아무것도 선언하지 않는** 상태다).
+  /**
+   * 🔄 **종전 A8-04은 「한 화면에 카드 2개가 동시에 뜬다」를 고정했다.** P6-c-1로 그 중복이
+   *    화면 단위로 갈렸으므로, 지금 고정할 것은 **갈렸다는 사실 자체**다. 지우면 두 위젯이
+   *    다시 한 화면에 모여도 아무도 모른다.
+   *
+   * 🟠 **계약은 끝나지 않았다.** `ExemptionAtApprovalCard`는 `redevExemptionEligibleAtApproval`
+   *    (판정 사실)을 여전히 **계산기에서** 편집한다 — 청산금 「수령」 + 1세대1주택 조합에서만
+   *    열리는 별개 맥락이다. 그 축까지 옮길지는 별건으로 판단한다.
+   */
+  it("[A8-04] P6-c-1 — 두 편집 위젯이 **다른 화면**에 있다", () => {
+    // 계산기: RadioCardGroup만. 사례 36 토글은 없다.
+    renderCalcBlock(bothCardsAsset());
     expect(screen.getByRole("radio", { name: /선언 안 함/ })).toBeTruthy();
+    expect(screen.queryByLabelText(TOGGLE_TITLE)).toBeNull();
+
+    cleanup();
+
+    // 판정 메뉴: ToggleCard만. 「선언 안 함」 라디오는 없다.
+    renderBlock(bothCardsAsset());
+    expect(toggle()).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /선언 안 함/ })).toBeNull();
   });
 });

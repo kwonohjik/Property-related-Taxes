@@ -3,6 +3,22 @@
 /**
  * RedevelopmentRightExemptionSection — 1세대1입주권 비과세 카드 (사례 36)
  *
+ * ## 🔄 **판정 메뉴 전용**이다 (P6-c-1)
+ *
+ * 편집하는 4필드(`redevExemptionEligibleAtApproval`·`redevOtherHouseAcquisitionDate`·
+ * `redevPriorHouseHoldingMonths`·`redevPriorHouseResidenceMonths`)는 **전부 §89①4호 판정
+ * 사실**이고 세액 산식 입력이 하나도 없다 — §166 3분할은 `RedevelopmentBlock`이 갖는다.
+ * 계산기 마운트(`RedevelopmentBlock.tsx`)를 없애고 그 자리에 읽기 전용 요약을 뒀다.
+ *
+ * ⚠️ 종전의 `mode="full"|"facts"` prop은 **지웠다**. `full`이 걷어내던 것은 §95② 장기보유
+ *    특별공제 구조 안내(세액 맥락)였는데, 그것은 **계산기가 말해야 할 것**이라 컴포넌트에서
+ *    꺼내 `ImportedRedevRightFactsCard`로 옮겼다. 소비자가 하나뿐인 분기를 남겨 두면
+ *    아무 테스트도 그것이 맞는지 말해 주지 않는다(계획서가 `calc` 모드를 미리 만들지 않은 이유와 같다).
+ *
+ * 🔴 **중과 축 없음(실측)**: 위 4필드 중 `multi-house-surcharge*`에 도달하는 것은 하나도 없다.
+ *    소비처는 ④ 변환 2곳(`transfer-tax-api-redev.ts`·`one-house-exemption-api.ts`)과
+ *    ⑧ 형식검증 1곳뿐이다 — P6-b의 §155⑧·합가와 달리 비과세 전용 축이다.
+ *
  * assetKind="right_to_move_in" && redevSubject="right" 시 진입.
  * §89①4호 **가목·나목** 비과세 요건 자기선언 + C-1 안전장치 3종.
  * (나목은 2026-08-25 신설 — C1-03. 「그 1주택 취득일부터 3년 이내」 판정용 DateInput 포함)
@@ -47,18 +63,6 @@ interface Props {
    *    anchor `redev-right-exemption-prop-wiring.anchor.test.tsx`가 프로덕션 경로에서 지킨다.
    */
   wasRegulatedAtAcquisition?: boolean;
-  /**
-   * 표시 모드 (P4-3b · 계획서 Q-7).
-   *
-   * - `"full"` — 계산기(현행·기본값).
-   * - `"facts"` — 판정 메뉴. **세액 맥락**을 걷어낸다: 장기보유특별공제 과세구조 안내와
-   *   「Step 2 보유 상황」 지시가 그것이다. 판정 메뉴는 세액을 말하지 않고, 주택 수도
-   *   위젯이 아니라 **명부에서 파생**하므로(G-1) 그 지시가 그대로면 **틀린 안내**가 된다.
-   *
-   * 🔑 입력 필드 4종은 **전부 판정 사실**이라 양쪽에서 똑같이 뜬다 — §166 3분할 산식 입력은
-   *    애초에 이 컴포넌트가 아니라 `RedevelopmentBlock`이 갖는다.
-   */
-  mode?: "full" | "facts";
 }
 
 const HIGH_VALUE_THRESHOLD = 1_200_000_000;
@@ -67,9 +71,7 @@ export function RedevelopmentRightExemptionSection({
   asset,
   onChange,
   wasRegulatedAtAcquisition = false,
-  mode = "full",
 }: Props) {
-  const isFactsOnly = mode === "facts";
   const isRightSubject =
     asset.assetKind === "right_to_move_in" && (asset.redevSubject === "right" || !asset.redevSubject);
 
@@ -128,24 +130,6 @@ export function RedevelopmentRightExemptionSection({
 
   return (
     <div className="space-y-3">
-      {/* §0-A sky 안내 카드 — 입주권 양도 LTHD 구조. **세액 맥락**이라 판정 메뉴에서는 접는다. */}
-      {!isFactsOnly && (
-      <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 leading-relaxed">
-        <p className="font-semibold mb-0.5">관리처분 인가 후 조합원입주권 양도 — 과세 구조 안내</p>
-        <p>
-          인가전 양도차익만 장기보유특별공제 대상입니다 (§95② 본문 괄호 + §94①2호). 인가후 분 및 청산금 분 양도차익에는 장기보유특별공제가 적용되지 않습니다.
-        </p>
-        <p className="mt-1">
-          1세대1입주권 비과세 요건(§89①4호 가목)은 아래 카드에서 확인하세요. 비과세 적용 시 전액 비과세이며, 양도가액이 12억을 초과하면 초과분만 과세됩니다.
-        </p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 본문 괄호" />
-          <LawArticleModal legalBasis="소득세법 §94 ① 2호" label="§94①2호" />
-          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
-        </div>
-      </div>
-      )}
-
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
       <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호 가목)" noDark>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -211,23 +195,19 @@ export function RedevelopmentRightExemptionSection({
             {/* Step3 보유 상황 안내 링크 */}
             <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">
               <p className="font-semibold">
-                {isFactsOnly ? "② 보유 주택·권리 입력 필요" : "Step 2 보유 상황 입력 필요"}
+                ② 보유 주택·권리 입력 필요
               </p>
               <p className="mt-0.5">
                 §89①4호는 <span className="font-semibold">가목·나목 중 하나</span>를 충족하면 비과세됩니다.
                 두 목 모두 <span className="font-semibold">세대 보유 분양권이 없을 것</span>을 요구합니다.
                 <br />
                 <span className="font-semibold">가목</span> — 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것
-                → {isFactsOnly ? "② 「보유 주택」 명부를 " : "\u201c보유 상황\u201d에서 "}
-                <span className="font-semibold">
-                  {isFactsOnly ? "비워 둘 것(0채)" : "세대 보유 주택 수 = 0채"}
-                </span>.
+                → ② 「보유 주택」 명부를{" "}
+                <span className="font-semibold">비워 둘 것(0채)</span>.
                 <br />
                 <span className="font-semibold">나목</span> — 1입주권 외에 1주택을 보유(분양권 미보유)하고, 그 1주택
                 취득일부터 <span className="font-semibold">3년 이내</span>에 입주권을 양도할 것
-                → <span className="font-semibold">
-                  {isFactsOnly ? "② 명부에 주택 1채" : "세대 보유 주택 수 = 1채"}
-                </span> + 위 취득일 입력.
+                → <span className="font-semibold">② 명부에 주택 1채</span> + 위 취득일 입력.
                 <br />
                 어느 목이든 <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>여야
                 하며, 양도하는 입주권 자체도 카운트에 <span className="font-semibold">포함</span>됩니다.

@@ -43,7 +43,6 @@ function renderBlock(a: AssetForm) {
       asset={a}
       onChange={vi.fn()}
       isOneHouseSingle
-      wasRegulatedAtAcquisition={false}
     />,
   );
 }

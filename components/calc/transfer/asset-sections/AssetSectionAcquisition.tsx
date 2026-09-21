@@ -42,13 +42,11 @@ interface Props {
   isNewConstruction: boolean;
   isPrimary: boolean;
   isOneHouseSingle?: boolean;
-  /**
-   * 폼-전역 `wasRegulatedAtAcquisition` — 조정대상지역 취득 여부.
-   *
-   * 입주권 §⑥ 카드의 거주요건 경고 게이트다. 종전에는 이 층이 넘기지 않아
-   * `RedevelopmentBlock`의 기본값 `false`가 그대로 굳었고 경고가 **한 번도 뜨지 않았다**(U1-03).
+  /*
+   * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴 전용이
+   *    되면서 이 체인의 소비처가 사라졌다. U1-03(배선 단절 → 경고 침묵) 감시는 판정 메뉴
+   *    경로로 옮겼다: `__tests__/components/redev-right-exemption-prop-wiring.anchor.test.tsx`.
    */
-  wasRegulatedAtAcquisition?: boolean;
   /** 자산 분할 모드 (Step1 단일 소스 — 토글 B checked·disabled·지분율 노출 도출) */
   splitMode: AssetSplitMode;
   /** 토글 B(지분분할) on/off — Step1에서 assets 조작·splitMode 전이 처리 */
@@ -66,7 +64,6 @@ export function AssetSectionAcquisition({
   isNewConstruction,
   isPrimary,
   isOneHouseSingle,
-  wasRegulatedAtAcquisition,
   splitMode,
   onFractionalToggle,
   isFirst,
@@ -328,7 +325,6 @@ export function AssetSectionAcquisition({
             asset={asset}
             onChange={onChange}
             isOneHouseSingle={isOneHouseSingle}
-            wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           />
         )
       )}
