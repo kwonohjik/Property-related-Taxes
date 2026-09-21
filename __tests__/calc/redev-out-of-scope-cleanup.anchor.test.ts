@@ -55,14 +55,37 @@ describe("clearOutOfScopeRedevPatch — ③-c 자기선언 축", () => {
     expect(patch.redevPostApprovalHousingUseEndDate).toBe("");
   });
 
-  it("입주권(subject=\"right\")은 항상 범위 안 — 방향을 바꿔도 지우지 않는다", () => {
-    // §89①4호 비과세 선언이 여기 실린다. 제한하면 그 경로가 통째로 사라진다.
+  /**
+   * 🔄 **종전 단언은 `toEqual({})`이었다 — 대리 지표였다** (P6-c-3 정밀화).
+   *
+   * 지키려던 것은 「§89①4호 **자기선언**이 지워지지 않는다」 하나인데, 같은 if 블록에 묶여
+   * 있던 ③-c 부속 2필드까지 싸잡아 「아무것도 안 지운다」로 적었다. 그래서 부속 필드의 축을
+   * 바로잡자 **의도와 무관하게** 빨개졌다.
+   *
+   * ⇒ 두 주장을 갈라서 각각 단언한다. 자기선언 보존은 그대로, 부속 2필드는 입주권에서
+   *   **지워지는 것이 맞다**(③-c 카드가 입주권에는 렌더되지 않으므로 — 남기면 ⑧이 종료일을
+   *   요구하는데 채울 칸이 없다).
+   */
+  it("입주권: §89①4호 자기선언은 **지우지 않는다** — 판정 메뉴에서 넘어온 값이다", () => {
     const right = inScopeAsset({
       assetKind: "right_to_move_in",
       redevSubject: "right",
       redevSettlementDirection: "pay",
     });
-    expect(clearOutOfScopeRedevPatch(right)).toEqual({});
+    // `undefined` = patch에 키 자체가 없다 = 건드리지 않았다.
+    expect(clearOutOfScopeRedevPatch(right).redevExemptionEligibleAtApproval).toBeUndefined();
+  });
+
+  it("입주권: ③-c 부속 2필드는 **지운다** — 그 카드가 입주권 화면에 없다 (P6-c-3)", () => {
+    const right = inScopeAsset({
+      assetKind: "right_to_move_in",
+      redevSubject: "right",
+    });
+    const patch = clearOutOfScopeRedevPatch(right);
+    expect(patch.redevPostApprovalHousingUse).toBe("");
+    expect(patch.redevPostApprovalHousingUseEndDate).toBe("");
+    // 🔑 같은 호출에서 자기선언은 살아 있어야 한다 — 한 술어로 묶으면 이게 깨진다.
+    expect(patch.redevExemptionEligibleAtApproval).toBeUndefined();
   });
 
   it("이미 비어 있으면 patch에 키를 넣지 않는다 (불필요한 store 쓰기 방지)", () => {

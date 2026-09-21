@@ -168,19 +168,25 @@ describe("A8 — 입주권 비과세 자기선언 토글의 3-state 계약", () 
   });
 
   /**
-   * 🔄 **종전 A8-04은 「한 화면에 카드 2개가 동시에 뜬다」를 고정했다.** P6-c-1로 그 중복이
-   *    화면 단위로 갈렸으므로, 지금 고정할 것은 **갈렸다는 사실 자체**다. 지우면 두 위젯이
-   *    다시 한 화면에 모여도 아무도 모른다.
+   * 🔄 **A8-04은 두 번 고쳐졌다.**
    *
-   * 🟠 **계약은 끝나지 않았다.** `ExemptionAtApprovalCard`는 `redevExemptionEligibleAtApproval`
-   *    (판정 사실)을 여전히 **계산기에서** 편집한다 — 청산금 「수령」 + 1세대1주택 조합에서만
-   *    열리는 별개 맥락이다. 그 축까지 옮길지는 별건으로 판단한다.
+   * | 시점 | 고정한 것 |
+   * |---|---|
+   * | 최초 | 「한 화면에 카드 2개가 동시에 뜬다」(당시 현실) |
+   * | P6-c-1 | 「두 편집 위젯이 다른 화면에 있다」 |
+   * | **P6-c-3** | 「**입주권**에서는 계산기에 편집기가 없다」 ← 지금 |
+   *
+   * 🔴 **P6-c-1의 기재가 부정확했다.** 「화면 단위로 갈렸다」고 적었지만 ③-c 카드의 렌더
+   *    게이트에 `!isRightSubject`가 없어, 입주권 + 청산금 **수령** + 1세대1주택이면
+   *    `ImportedRedevRightFactsCard`(읽기 전용 요약)와 이 라디오가 **한 화면에 그대로**
+   *    남아 있었다. 실측으로 확인해 P6-c-3에서 게이트를 채웠다.
    */
-  it("[A8-04] P6-c-1 — 두 편집 위젯이 **다른 화면**에 있다", () => {
-    // 계산기: RadioCardGroup만. 사례 36 토글은 없다.
+  it("[A8-04] 입주권 — 계산기에 편집 위젯이 없다 (판정 메뉴가 소유)", () => {
     renderCalcBlock(bothCardsAsset());
-    expect(screen.getByRole("radio", { name: /선언 안 함/ })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /선언 안 함/ })).toBeNull();
     expect(screen.queryByLabelText(TOGGLE_TITLE)).toBeNull();
+    // 🔑 대신 읽기 전용 요약이 그 자리를 지킨다 — 값은 살아서 세액을 바꾼다(OH-21).
+    expect(screen.getByTestId("redev-right-calc-card")).toBeTruthy();
 
     cleanup();
 
@@ -188,5 +194,21 @@ describe("A8 — 입주권 비과세 자기선언 토글의 3-state 계약", () 
     renderBlock(bothCardsAsset());
     expect(toggle()).toBeTruthy();
     expect(screen.queryByRole("radio", { name: /선언 안 함/ })).toBeNull();
+  });
+
+  /**
+   * 🔴 **A8-04의 긍정 짝** (A8-05·06은 경고 카드 축이라 번호를 이어 A8-07). A8-04는 부정형이라 「게이트가 과하게 좁아 완공APT에서도 사라졌다」와
+   *    구별되지 않는다. 완공APT는 판정 메뉴에 입력 경로가 **없으므로**
+   *    (④ `one-house-exemption-api.ts:208`이 `assetKind === "right_to_move_in"`만 보낸다)
+   *    계산기 라디오가 유일한 경로다 — 없어지면 §95② 표1 강등을 선언할 방법이 사라진다.
+   */
+  it("[A8-07] 완공APT — 계산기 라디오가 **남는다** (유일 입력 경로)", () => {
+    renderCalcBlock(
+      bothCardsAsset({ assetKind: "redevelopment_apt", redevSubject: "apt" }),
+    );
+    expect(screen.getByRole("radio", { name: /선언 안 함/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /미충족으로 선언/ })).toBeTruthy();
+    // 입주권 전용 읽기 전용 요약은 여기 없다.
+    expect(screen.queryByTestId("redev-right-calc-card")).toBeNull();
   });
 });
