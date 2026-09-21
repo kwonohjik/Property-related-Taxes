@@ -21,6 +21,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
+import { judgmentTemporaryTwoHouseVisible } from "./one-house-judgment-section-scope";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -193,6 +194,67 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(err("winWinRentalLeaseMonths", "상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."));
     }
   }
+
+  /**
+   * ③ 일시적 2주택(§155①) · 대체주택(§156의2⑤) · §154① 단서 — 필수 입력
+   * (P6-b에서 계산기 ⑧에서 **이관**).
+   *
+   * 🔴 입력이 옮겨오면 **그 검증도 따라와야 한다.** 계산기에는 이제 이 칸들이 없다
+   *    (`TemporaryTwoHouseSection mode="calc"`는 §155⑧·합가만 그린다). 여기서 막지 않으면
+   *    토글만 켜고 필수값을 비운 채 계산기로 넘어가고, ④는 두 날짜가 다 있어야
+   *    `temporaryTwoHouse` 키를 만들므로 §155① 특례가 **조용히 누락**된다.
+   *
+   * 🔑 게이트는 ⑤와 **같은 술어**(`judgmentTemporaryTwoHouseVisible`)다. 계산기가 이
+   *    짝을 잃었다가 「화면엔 칸이 없는데 ⑧이 요구」하는 영구 차단을 낸 전례가
+   *    `transfer-tax-validate.ts`의 같은 자리 주석에 남아 있다.
+   */
+  if (judgmentTemporaryTwoHouseVisible(form)) {
+    if (form.temporaryTwoHouseSpecial) {
+      if (!form.assets?.[0]?.acquisitionDate) {
+        errors.push(
+          err("assets.0.acquisitionDate", "일시적 2주택: 양도 자산의 취득일을 ③에서 입력하세요."),
+        );
+      }
+      if (!form.newHouseAcquisitionDate) {
+        errors.push(err("newHouseAcquisitionDate", "일시적 2주택: 신규 주택 취득일을 입력하세요."));
+      }
+    }
+
+    if (form.replacementHouseSpecial) {
+      if (!form.replBusinessApprovalDate) {
+        errors.push(err("replBusinessApprovalDate", "대체주택 특례: 사업시행계획인가일을 입력하세요."));
+      }
+      if (!form.replCompletionDate) {
+        errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요."));
+      }
+      if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0) {
+        errors.push(
+          err("replResidenceMonths", "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요."),
+        );
+      }
+      if (!form.replWillResideNewHouse) {
+        errors.push(
+          err(
+            "replWillResideNewHouse",
+            "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다.",
+          ),
+        );
+      }
+    }
+  }
+
+  /**
+   * 🔑 **§154① 단서는 옮길 것이 없다** — 실측으로 확인했다(P6-b).
+   *
+   * `effectiveProvisoReason`은 `temporary_two_house` 맥락에서 `TEMP_TWO_HOUSE_PROVISO_REASONS`
+   * (§154①**1호·2호가목·3호** = `rental_5yr_residence`·`expropriation`·`unavoidable`) 밖의
+   * 사유를 ""로 정규화한다. 그런데 계산기 ⑧의 단서 검증 2건이 요구하는 사유는
+   * `overseas_migration`·`overseas_residence`(2호나·다목)와 `pre_designation_contract`(5호)로
+   * **전부 그 화이트리스트 밖**이다 ⇒ 그 맥락에서는 애초에 한 건도 발동하지 않는다.
+   *
+   * ⇒ 여기에 짝을 만들면 **호출되지 않는 코드**가 된다. 검증이 사라진 것처럼 보이지 않도록
+   *    이유를 남긴다(`temp-two-house-sections-moved.anchor.test.ts` TM-7이 고정한다).
+   */
 
   return errors;
 }

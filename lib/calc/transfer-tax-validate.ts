@@ -17,7 +17,6 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
-import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -577,27 +576,17 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     }
 
     /**
-     * ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지).
+     * 🔄 §156의2⑤ 대체주택(4필드)·§155① 일시적 2주택(2필드) 검증은 **판정 메뉴로 이관**됐다
+     *    (P6-b · `one-house-exemption-validate.ts` `validateStep2`).
      *
-     * 🔴 **섹션 노출 게이트를 함께 본다**(2026-09-07). 종전에는 무게이트라, 주택수를 2채로
-     *    두고 토글을 켠 뒤 1채로 정정하거나 자산 종류를 주택 외로 바꾸면 ③ 섹션이 사라진 채
-     *    플래그만 남아 **화면에 없는 4필드를 요구**했다 — 값을 채우거나 토글을 끌 컨트롤이
-     *    어디에도 없어 세션 초기화 외에 탈출 수단이 없었다(실측: 차단 메시지 4건).
+     * 계산기 ③은 이제 `mode="calc"`로 **§155⑧ + 합가**만 그린다. 그 두 축은 중과 배제 근거가
+     * 영 §167의10①4호·§167의3⑨라 §154① 충족을 요구하지 않아, 비과세를 주장할 수 없는
+     * 세대도 입력이 필요하기 때문이다. 나머지 특례는 15호(§154① 2요소)를 거치므로 판정
+     * 메뉴가 소유한다.
+     *
+     * 🔑 **값은 그대로 계산에 쓰인다.** flat 필드라 ④가 계속 읽는다 — 빠진 것은 「계산기에서
+     *    편집·검증하는 것」뿐이고, 화면에는 읽기 전용 요약(`ImportedOneHouseFactsCard`)이 남는다.
      */
-    const t2hSectionVisible = temporaryTwoHouseSectionVisible({
-      primaryAssetKind: form.assets?.[0]?.assetKind,
-      householdHousingCount: form.householdHousingCount,
-    });
-    if (t2hSectionVisible && form.replacementHouseSpecial) {
-      if (!form.replBusinessApprovalDate)
-        issues.push({ step, message: "대체주택 특례: 사업시행계획인가일을 입력하세요." });
-      if (!form.replCompletionDate)
-        issues.push({ step, message: "대체주택 특례: 신축주택 준공일을 입력하세요." });
-      if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0)
-        issues.push({ step, message: "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요." });
-      if (!form.replWillResideNewHouse)
-        issues.push({ step, message: "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다." });
-    }
 
     /**
      * ⑧ §89② 3년 초과 예외 — 갈래를 고르면 그 갈래의 **필수값**이 있어야 한다.
@@ -638,13 +627,14 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      *    비워도 **경고가 0건**이었고, ④는 두 날짜가 다 있어야 `temporaryTwoHouse` 키를
      *    만들므로 §155① 특례가 **조용히 누락**됐다(실측: 메시지 0건).
      */
-    if (t2hSectionVisible && form.temporaryTwoHouseSpecial) {
-      if (!form.assets?.[0]?.acquisitionDate)
-        issues.push({ step, message: "일시적 2주택: 양도 자산의 취득일을 1단계에서 입력하세요." });
-      if (!form.newHouseAcquisitionDate)
-        issues.push({ step, message: "일시적 2주택: 신규 주택 취득일을 입력하세요." });
-    }
 
+    /**
+     * 🔑 P6-b — **좁히지 않았다.** `temporary_two_house` 맥락의 §154① 단서 카드는 판정
+     *    메뉴로 갔지만, `effectiveProvisoReason`이 그 맥락에서 화이트리스트
+     *    (§154①1호·2호가목·3호) 밖 사유를 이미 ""로 만든다. 아래 두 검증이 보는 사유
+     *    (2호나·다목·5호)는 전부 그 밖이라 **그 맥락에서는 원래 발동하지 않는다** —
+     *    여기에 게이트를 더하면 동작이 같은 코드만 늘어난다(무효과 확인: TM-7).
+     */
     const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
     if (
       (provisoReasonEff === "overseas_migration" || provisoReasonEff === "overseas_residence") &&

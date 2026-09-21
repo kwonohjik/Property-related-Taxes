@@ -6,52 +6,88 @@
  * 엔진 anchor(`__tests__/tax-engine/transfer/temporary-two-house-155-16-18.anchor.test.ts` 16건)가
  * 판정을 커버한다. 여기서 보는 것은 **배관과 표시**다:
  *   ①②③④⑫⑬⑭ 폼 토글·라디오 → API → 엔진 도달 (boolean·enum은 TS가 잡지 못하는 침묵 strip 구간)
- *   ⑤ Step4 판정 카드가 5년 기한·⑱ 치유를 반영하는가
+ *   ⑤ 판정 카드가 5년 기한·⑱ 치유를 반영하는가
+ *
+ * ## 🔄 화면이 **판정 메뉴로 옮겨졌다** (P6-b)
+ *
+ * §155⑯·⑱은 §155① 일시적 2주택의 **하위 요건**이고, 그 중과 배제는 영 §167의10①15호
+ * (「§154①의 요건을 모두 충족」 2요소)라 비과세 판정을 경유한다 ⇒ 계산기 ③에서 판정 메뉴로.
+ * **같은 컴포넌트**라 단언은 바뀌지 않는다 — 마운트 화면만 옮긴다.
  *
  * worktree 실행: E2E_PORT=3xxx npx playwright test e2e/transfer-155-16-18-deadline-specials.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
 
-function seedForm(over: Record<string, unknown>) {
-  return {
-    state: {
-      formData: {
-        assets: [
-          {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
-            assetKind: "housing",
-            acquisitionCause: "purchase",
-            acquisitionDate: "2018-01-01",
-            fixedAcquisitionPrice: "700000000",
-            transferPrice: "2000000000",
-            residencePeriodYears: "3",
-          },
-        ],
-        transferDate: "2026-06-01",
-        filingDate: "2026-08-31",
-        contractTotalPrice: "2000000000",
-        isOneHousehold: true,
-        householdHousingCount: "2",
-        isRegulatedArea: false,
-        isUnregistered: false,
-        temporaryTwoHouseSpecial: true,
-        // 신규취득 2020-01-01 → 양도 2026-06-01 = 6년 4개월. 3년·5년 기한 모두 초과.
-        newHouseAcquisitionDate: "2020-01-01",
-        ...over,
+/** 판정 메뉴는 주택 수를 **명부**에서 센다 — `householdHousingCount`는 덮어써진다. */
+function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
+  return gotoJudgmentStep2(page, {
+    assets: [
+      {
+        ...makeDefaultAsset(1),
+        addressJibun: "서울 강남구 테스트동 1-1",
+        assetKind: "housing",
+        acquisitionCause: "purchase",
+        acquisitionDate: "2018-01-01",
+        fixedAcquisitionPrice: "700000000",
+        transferPrice: "2000000000",
+        residencePeriodYears: "3",
       },
-      pendingMigration: false,
-    },
-    version: 0,
-  };
+    ],
+    transferDate: "2026-06-01",
+    filingDate: "2026-08-31",
+    contractTotalPrice: "2000000000",
+    isRegulatedArea: false,
+    isUnregistered: false,
+    temporaryTwoHouseSpecial: true,
+    // 신규취득 2020-01-01 → 양도 2026-06-01 = 6년 4개월. 3년·5년 기한 모두 초과.
+    newHouseAcquisitionDate: "2020-01-01",
+    ...over,
+  });
 }
 
-async function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
+/**
+ * ⑫⑬⑭ 배관 전용 — **계산기** 폼을 직접 시드한다.
+ *
+ * 🔑 입력 위젯은 판정 메뉴로 갔지만 **값은 flat 필드라 ④가 그대로 보낸다**. 그것이
+ *    P6-b가 지켜야 하는 것이고(OH-21), 그 주장은 계산기에서 계산해 봐야만 관측된다.
+ */
+async function gotoCalcHolding(page: Page, over: Record<string, unknown> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(over),
+    {
+      state: {
+        formData: {
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              addressJibun: "서울 강남구 테스트동 1-1",
+              assetKind: "housing",
+              acquisitionCause: "purchase",
+              acquisitionDate: "2018-01-01",
+              fixedAcquisitionPrice: "700000000",
+              transferPrice: "2000000000",
+              residencePeriodYears: "3",
+            },
+          ],
+          transferDate: "2026-06-01",
+          filingDate: "2026-08-31",
+          contractTotalPrice: "2000000000",
+          isOneHousehold: true,
+          householdHousingCount: "2",
+          isRegulatedArea: false,
+          isUnregistered: false,
+          temporaryTwoHouseSpecial: true,
+          newHouseAcquisitionDate: "2020-01-01",
+          ...over,
+        },
+        pendingMigration: false,
+      },
+      version: 0,
+    },
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -116,11 +152,13 @@ test.describe("§155⑯·⑱ 처분기한 특례", () => {
       }
     });
 
-    await gotoHolding(page, {
+    await gotoCalcHolding(page, {
       publicInstitutionRelocation: true,
       disposalDelayReason: "kamco",
       newHouseAcquisitionDate: "2022-06-01",
     });
+    // 편집 칸은 판정 메뉴로 갔다 — 대신 읽기 전용 요약이 그 값을 말한다.
+    await expect(page.getByTestId("imported-temp-two-house-specials")).toBeVisible();
     await page.getByRole("button", { name: "가산세", exact: true }).first().click();
     await page.getByRole("button", { name: "세금 계산하기" }).click();
     await page.getByText("산출세액").first().waitFor({ timeout: 20000 });

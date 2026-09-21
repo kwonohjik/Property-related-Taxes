@@ -41,27 +41,65 @@ export interface RelocationRegionVerdict {
   reason: string;
 }
 
-export function TemporaryTwoHouseSection({
-  form,
-  onChange,
-  tempTwoHouseVerdict,
-  relocationRegionVerdict,
-  ruralLocation,
-  proviso,
-  primaryAcquisitionDate,
-}: {
-  form: TransferFormData;
-  onChange: (d: Partial<TransferFormData>) => void;
+/**
+ * ## `mode` — 한 컴포넌트가 두 화면을 그린다 (P6-b)
+ *
+ * 이 섹션의 특례들은 **중과 배제의 근거 조문이 서로 다르다**. 그 차이가 어느 화면이
+ * 입력을 소유해야 하는지를 가른다:
+ *
+ * | 조문 | 중과 배제 경로 | §154① 요건 | 소유 화면 |
+ * |---|---|---|---|
+ * | §155①⑥⑦⑯ · §156의2⑤ | 영 §167의10①**15호** | **필요**(15호 ② 요소) | 판정 메뉴 |
+ * | **§155⑧** | 영 §167의10①**4호** | **불요** — 문언에 없다 | **계산기** |
+ * | **합가**(`MergeDateSection`) | 영 §167의3**⑨**(3주택 배우자 차감) | **불요** | **계산기** |
+ *
+ * 15호는 「§155 … 1세대1주택으로 보아 §154①이 적용되는 주택으로서 **같은 항의 요건을 모두
+ * 충족**하는 주택」이라 비과세 판정을 반드시 경유한다 ⇒ 판정 메뉴가 정합하다.
+ *
+ * 4호와 §167의3⑨는 §154①을 요구하지 않는다. 즉 **비과세를 주장할 수 없는 세대**가 이 두
+ * 입력을 필요로 한다 — 그 사용자를 「1세대1주택 비과세 판정」 메뉴로 보낼 수 없다.
+ * 라우트 실측(2026-09-21):
+ *
+ * - §167의3⑨ — 3주택(본인 양도 1 + 배우자 2) · 혼인일 유무: **907,185,000 → 377,970,000**
+ * - §167의10①4호 — 2주택 · 거주 0개월(비과세 불가) · §155⑧ 유무: **777,435,000 → 131,140,000**
+ *
+ * 양쪽 모두 `isExempt: false`다. 계획서가 명부·분양권 위젯을 「다주택 중과의 유일 입력
+ * 경로」라며 계산기에 남긴 것과 **같은 제약**이다.
+ *
+ * ⚠️ **복제하지 않는다** — 두 화면이 이 파일을 함께 쓴다(계획서 Q-7 규약).
+ */
+export type TemporaryTwoHouseSectionMode = "full" | "calc";
+
+type FullOnlyProps = {
   tempTwoHouseVerdict: ReturnType<typeof judgeTempTwoHouseFromForm>;
   relocationRegionVerdict: RelocationRegionVerdict | null;
   ruralLocation: ReturnType<typeof judgeRuralHouseLocation>;
   proviso: ReturnType<typeof provisoGate>;
   primaryAcquisitionDate: string;
-}) {
+};
+
+type BaseProps = {
+  form: TransferFormData;
+  onChange: (d: Partial<TransferFormData>) => void;
+};
+
+/**
+ * `mode="calc"`이면 판정값 props를 **받지 않는다** — 넘기지 않아도 타입이 통과해야
+ * 계산기 쪽에서 그 파생 계산(fetch·useMemo)까지 함께 지울 수 있다.
+ */
+export type TemporaryTwoHouseSectionProps = BaseProps &
+  ({ mode: "calc" } | ({ mode?: "full" } & FullOnlyProps));
+
+/** §155①⑯⑱ + 요건 자동판정 카드 — 판정 메뉴 전용. */
+function TempTwoHouseCoreBlocks({
+  form,
+  onChange,
+  tempTwoHouseVerdict,
+  relocationRegionVerdict,
+  primaryAcquisitionDate,
+}: BaseProps & Pick<FullOnlyProps, "tempTwoHouseVerdict" | "relocationRegionVerdict" | "primaryAcquisitionDate">) {
   return (
-    <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-      <SectionHeader title="③ 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
-      <div className="space-y-3">
+    <>
         <p className="text-sm font-medium">일시적 2주택 특례</p>
         <ToggleCard
           checked={form.temporaryTwoHouseSpecial}
@@ -240,52 +278,19 @@ export function TemporaryTwoHouseSection({
             </div>
           </ToneCard>
         )}
+    </>
+  );
+}
 
-        {/* §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 **일반주택**이다(특례 주택은 보유만) */}
-        <p className="text-sm font-medium mt-1">수도권 밖 부득이한 사유 주택 특례</p>
-        <ToggleCard
-          checked={form.unavoidableOutsideCapitalSpecial}
-          onCheckedChange={(v) =>
-            onChange({
-              unavoidableOutsideCapitalSpecial: v,
-              unavoidableOutsideCapitalResolvedDate: v
-                ? form.unavoidableOutsideCapitalResolvedDate
-                : "",
-            })
-          }
-          title="수도권 밖 부득이한 사유 주택 보유 (§155⑧)"
-          description="취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 수도권 밖 주택을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
-          tone="sky"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">부득이한 사유</label>
-              <RadioCardGroup
-                name="unavoidableOutsideCapitalReason"
-                value={form.unavoidableOutsideCapitalReason}
-                onChange={(v) => onChange({ unavoidableOutsideCapitalReason: v })}
-                options={[
-                  { value: "study", label: "취학" },
-                  { value: "work", label: "근무상 형편" },
-                  { value: "illness", label: "질병 요양" },
-                  { value: "other", label: "그 밖의 부득이한 사유" },
-                ]}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">사유 해소일</label>
-              <DateInput
-                value={form.unavoidableOutsideCapitalResolvedDate}
-                onChange={(v) => onChange({ unavoidableOutsideCapitalResolvedDate: v })}
-              />
-              <p className="text-xs text-muted-foreground">
-                해소일부터 <strong>3년 이내</strong>에 일반주택을 양도해야 합니다.
-                아직 해소되지 않았다면 비워 두세요 — 기한이 기산되지 않습니다.
-              </p>
-            </div>
-          </div>
-        </ToggleCard>
-
+/** §155⑥1호 문화유산 · §155⑦ 농어촌 · §154① 단서 · §156의2⑤ 대체주택 — 판정 메뉴 전용. */
+function TempTwoHouseOtherSpecials({
+  form,
+  onChange,
+  ruralLocation,
+  proviso,
+}: BaseProps & Pick<FullOnlyProps, "ruralLocation" | "proviso">) {
+  return (
+    <>
         {/*
           §155⑥1호 문화유산 주택 — 양도 대상은 **일반주택**이다(문화유산 주택은 보유만).
           2·3호가 삭제돼 요건은 boolean 하나다. 같은 선언이 §156의2⑩·§156의3⑦(주택 + 권리
@@ -521,6 +526,72 @@ export function TemporaryTwoHouseSection({
             </p>
           </div>
         </ToggleCard>
+    </>
+  );
+}
+
+export function TemporaryTwoHouseSection(props: TemporaryTwoHouseSectionProps) {
+  const { form, onChange } = props;
+  const full = props.mode !== "calc";
+  return (
+    <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+      <SectionHeader
+        title={full ? "③ 일시적 2주택·합가 특례" : "③ 수도권 밖 부득이·합가 특례"}
+        description={
+          full
+            ? "종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례"
+            : "중과 배제가 1세대1주택 비과세 판정을 거치지 않는 특례입니다 — 여기서 직접 입력하세요"
+        }
+      />
+      <div className="space-y-3">
+        {full && <TempTwoHouseCoreBlocks {...props} />}
+
+        {/* §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 **일반주택**이다(특례 주택은 보유만) */}
+        <p className="text-sm font-medium mt-1">수도권 밖 부득이한 사유 주택 특례</p>
+        <ToggleCard
+          checked={form.unavoidableOutsideCapitalSpecial}
+          onCheckedChange={(v) =>
+            onChange({
+              unavoidableOutsideCapitalSpecial: v,
+              unavoidableOutsideCapitalResolvedDate: v
+                ? form.unavoidableOutsideCapitalResolvedDate
+                : "",
+            })
+          }
+          title="수도권 밖 부득이한 사유 주택 보유 (§155⑧)"
+          description="취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 수도권 밖 주택을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
+          tone="sky"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">부득이한 사유</label>
+              <RadioCardGroup
+                name="unavoidableOutsideCapitalReason"
+                value={form.unavoidableOutsideCapitalReason}
+                onChange={(v) => onChange({ unavoidableOutsideCapitalReason: v })}
+                options={[
+                  { value: "study", label: "취학" },
+                  { value: "work", label: "근무상 형편" },
+                  { value: "illness", label: "질병 요양" },
+                  { value: "other", label: "그 밖의 부득이한 사유" },
+                ]}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">사유 해소일</label>
+              <DateInput
+                value={form.unavoidableOutsideCapitalResolvedDate}
+                onChange={(v) => onChange({ unavoidableOutsideCapitalResolvedDate: v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                해소일부터 <strong>3년 이내</strong>에 일반주택을 양도해야 합니다.
+                아직 해소되지 않았다면 비워 두세요 — 기한이 기산되지 않습니다.
+              </p>
+            </div>
+          </div>
+        </ToggleCard>
+
+        {full && <TempTwoHouseOtherSpecials {...props} />}
 
         <MergeDateSection form={form} onChange={onChange} />
       </div>

@@ -4,10 +4,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
-import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
-import { classifyEupMyeon, judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
-import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -22,6 +19,7 @@ import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeri
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
+import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHandoffNoticeCard";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -73,10 +71,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     acquisitionBasis: string | null;
     confidence: "high" | "medium" | "low";
   } | null>(null);
-  // §155⑦ 농어촌주택 소재 요건 자동 판별(W-3) — 읍지역만 용도지역(도시지역) 조회가 필요하다.
-  const [ruralUrbanVerdict, setRuralUrbanVerdict] = useState<
-    "urban" | "non_urban" | "unknown" | null
-  >(null);
   const [regulatedLoading, setRegulatedLoading] = useState(false);
   const [regulatedError, setRegulatedError] = useState<string | null>(null);
   // 수동 조작 플래그 최신값 미러 — fetch 완료 시점(비동기)에 stale closure 없이 참조
@@ -160,35 +154,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     [form.isOneHousehold, primaryKind, form.householdHousingCount, form.temporaryTwoHouseSpecial],
   );
 
-  // §155① 일시적 2주택 요건 자동판정 — 엔진 헬퍼 단일소스 재사용(store 미러링 금지, useMemo 파생)
-  const tempTwoHouseVerdict = useMemo(
-    () =>
-      judgeTempTwoHouseFromForm({
-        previousAcquisitionDate: primaryAcquisitionDate,
-        newHouseAcquisitionDate: form.newHouseAcquisitionDate,
-        transferDate: form.transferDate,
-        provisoReason: form.provisoReason,
-        provisoDepartureDate: form.provisoDepartureDate,
-        provisoExpropriationDate: form.provisoExpropriationDate,
-        provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
-        residencePeriodMonths: form.residencePeriodMonths,
-        publicInstitutionRelocation: form.publicInstitutionRelocation,
-        disposalDelayReason: form.disposalDelayReason,
-      }),
-    [
-      primaryAcquisitionDate,
-      form.newHouseAcquisitionDate,
-      form.transferDate,
-      form.provisoReason,
-      form.provisoDepartureDate,
-      form.provisoExpropriationDate,
-      form.provisoBusinessApprovalDate,
-      form.residencePeriodMonths,
-      form.publicInstitutionRelocation,
-      form.disposalDelayReason,
-    ],
-  );
-
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
     if ((!primaryAddress && !primaryRegionCode) || !form.transferDate || !isHousingLike(primaryKind)) {
@@ -241,78 +206,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primaryAddress, primaryRegionCode, form.transferDate, residenceJudgmentDate, primaryKind]);
-
-  // §155⑦ 소재 요건 — 읍지역일 때만 용도지역을 조회한다(면지역은 도시지역 여부를 따지지 않는다).
-  const ruralEupMyeon = classifyEupMyeon(form.ruralHouseJibun);
-  useEffect(() => {
-    if (!form.ruralHouseSpecial || ruralEupMyeon !== "eup" || !form.ruralHouseJibun) {
-      setRuralUrbanVerdict(null);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/address/land-use-zone?jibun=${encodeURIComponent(form.ruralHouseJibun)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { verdict?: "urban" | "non_urban" | "unknown" } | null) => {
-        if (!cancelled) setRuralUrbanVerdict(d?.verdict ?? "unknown");
-      })
-      .catch(() => {
-        if (!cancelled) setRuralUrbanVerdict("unknown");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.ruralHouseSpecial, form.ruralHouseJibun, ruralEupMyeon]);
-
-  // 판정 결과는 store에 미러링하지 않는다 — 파생값은 useMemo로만 만든다.
-  const ruralLocation = useMemo(
-    () =>
-      judgeRuralHouseLocation({
-        regionCode: form.ruralHouseRegionCode || undefined,
-        jibun: form.ruralHouseJibun,
-        urbanVerdict: ruralUrbanVerdict ?? undefined,
-      }),
-    [form.ruralHouseRegionCode, form.ruralHouseJibun, ruralUrbanVerdict],
-  );
-
-  // 자동 판정 결과를 토글에 반영 — **사용자가 직접 조작한 뒤에는 덮지 않는다**(touched 가드).
-  //   조정대상지역 자동판별(`isRegulatedAreaTouched`)과 동일한 패턴이다.
-  //   판정 불가(unknown)일 때는 아무것도 하지 않는다 — 미충족으로 단정하지 않는다.
-  useEffect(() => {
-    if (form.ruralHouseLocationTouched || ruralLocation.verdict === "unknown") return;
-    const auto = ruralLocation.verdict === "qualified";
-    if (form.ruralHouseOutsideCapitalEupMyeon !== auto) {
-      onChange({ ruralHouseOutsideCapitalEupMyeon: auto });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruralLocation.verdict, form.ruralHouseLocationTouched, form.ruralHouseOutsideCapitalEupMyeon]);
-
-  // §155⑯ 연접 판정 — 두 코드가 모두 있을 때만 결론을 낸다(판정 불가는 표시하지 않는다).
-  const relocationRegionVerdict = useMemo(() => {
-    if (!form.publicInstitutionRelocation) return null;
-    const from = form.relocatedSigunguCode;
-    const to = form.newHouseSigunguCode;
-    if (!from || !to) return null;
-    if (from === to) {
-      return { ok: true, reason: "이전한 시·군에 신규 주택이 소재합니다 — 지역 요건 충족." };
-    }
-    const adjacent = getAdjacentSigunguCodes(from);
-    if (adjacent.length === 0) {
-      return {
-        ok: true,
-        reason: "이전지의 연접 시·군 정보가 없어 자동 판정할 수 없습니다 — 입력하신 선택을 유지합니다.",
-      };
-    }
-    return adjacent.includes(to)
-      ? { ok: true, reason: "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족." }
-      : {
-          ok: false,
-          reason: "이전한 시·군과 연접하지 않습니다 — §155⑯ 지역 요건 미충족으로 처분기한 5년이 적용되지 않습니다.",
-        };
-  }, [
-    form.publicInstitutionRelocation,
-    form.relocatedSigunguCode,
-    form.newHouseSigunguCode,
-  ]);
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: §154① 판정 대상 자산(주택·재개발APT)에서만 표시 → 그 외 false
@@ -405,7 +298,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         아래 입력란이 이미 채워져 있는 이유를 먼저 말해 주지 않으면, 사용자는 자기가 넣지 않은
         값이 들어 있는 것을 보고 버그로 읽는다.
       */}
-      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} rights={form} />
+      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} rights={form} specials={form} />
 
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
       {primaryKind !== "housing" && regulatedAutoTip}
@@ -660,21 +553,21 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ③ 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중).
-          게이트는 ④ 전송·⑧ 검증과 **같은 술어**다 — 종전에는 세 층이 각자 달라 양방향으로 어긋났다. */}
+      {/* ③ 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중).
+          게이트는 ④ 전송·⑧ 검증과 **같은 술어**다 — 종전에는 세 층이 각자 달라 양방향으로 어긋났다.
+
+          🔑 P6-b — `mode="calc"`는 **§155⑧ + 합가**만 그린다. 나머지(§155①⑥⑦⑯·§156의2⑤·
+             §154① 단서)는 판정 메뉴가 소유한다. 가르는 기준은 **중과 배제의 근거 조문**이다 —
+             15호는 §154① 충족을 요구하므로 비과세 판정을 경유하고, 4호·§167의3⑨는 요구하지
+             않아 비과세를 주장할 수 없는 세대도 입력이 필요하다(`TemporaryTwoHouseSection` 상단 표). */}
       {temporaryTwoHouseSectionVisible({
         primaryAssetKind: primaryKind,
         householdHousingCount: form.householdHousingCount,
       }) && (
-        <TemporaryTwoHouseSection
-          form={form}
-          onChange={onChange}
-          tempTwoHouseVerdict={tempTwoHouseVerdict}
-          relocationRegionVerdict={relocationRegionVerdict}
-          ruralLocation={ruralLocation}
-          proviso={proviso}
-          primaryAcquisitionDate={primaryAcquisitionDate}
-        />
+        <>
+          <TemporaryTwoHouseSection form={form} onChange={onChange} mode="calc" />
+          <JudgmentHandoffNoticeCard form={form} />
+        </>
       )}
 
       {/* ④ 중과 한시배제 기간 → 중과 판정 섹션 대신 안내 카드 (침묵 숨김 금지) */}
