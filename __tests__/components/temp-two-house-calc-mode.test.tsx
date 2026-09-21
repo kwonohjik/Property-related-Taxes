@@ -51,7 +51,16 @@ const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 const UNAVOIDABLE = /수도권 밖 부득이한 사유 주택 보유/;
 const MARRIAGE = /혼인합가일/;
 const TEMP_TWO = /일시적 2주택 특례 해당/;
-const HERITAGE = /지정문화유산·국가등록문화유산·천연기념물등 주택 보유/;
+/**
+ * 🔄 **§155⑥1호은 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 · P7-3).
+ *    정본 `HouseEntry.oneHouseCulturalHeritage` · 입력 `HouseEntryOneHouseFactsSection`.
+ *
+ * ⚠️ CM-2에서 `shows(HERITAGE) === false`를 **지웠다**. 컴포넌트 어디에도 없으므로 그 단언은
+ *    이제 **공허하게 통과**한다 — 남겨 두면 「calc 모드 게이트가 ⑥을 막고 있다」로 오독된다
+ *    ([[feedback_mutation_zero_discrimination_is_not_proof]]).
+ *    새 위치의 안전망은 `__tests__/calc/two-house-axis-path.anchor.test.tsx`가 진다.
+ */
+const HERITAGE_MOVED_TO_ROW = true;
 const RURAL = /농어촌주택 보유/;
 const REPLACEMENT = /대체주택 비과세 특례 해당/;
 
@@ -89,7 +98,7 @@ describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
     expect(shows(/동거봉양 합가일/)).toBe(true);
   });
 
-  it("[CM-2] §155①⑥⑦·§156의2⑤는 그리지 않는다", () => {
+  it("[CM-2] §155①⑦·§156의2⑤는 그리지 않는다", () => {
     render(
       <TemporaryTwoHouseSection
         form={form({ temporaryTwoHouseSpecial: true })}
@@ -98,7 +107,6 @@ describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
       />,
     );
     expect(shows(TEMP_TWO)).toBe(false);
-    expect(shows(HERITAGE)).toBe(false);
     expect(shows(RURAL)).toBe(false);
     expect(shows(REPLACEMENT)).toBe(false);
   });
@@ -109,7 +117,6 @@ describe("CM-3 판정 메뉴(기본 모드)는 전부 그린다 — CM-2의 **�
     const f = form({ temporaryTwoHouseSpecial: true });
     render(<TemporaryTwoHouseSection form={f} onChange={() => {}} {...fullProps(f)} />);
     expect(shows(TEMP_TWO)).toBe(true);
-    expect(shows(HERITAGE)).toBe(true);
     expect(shows(RURAL)).toBe(true);
     expect(shows(REPLACEMENT)).toBe(true);
     // §155⑧·합가도 여전히 함께 있다(판정 메뉴에서는 둘 다 필요하다).

@@ -18,6 +18,7 @@ import { render, screen, cleanup } from "@testing-library/react";
  *    계산기 `Step4`를 마운트하지 않는다. ④⑫⑭ 배관 describe만 leaf를 직접 부른다.
  */
 import { Step2 as JudgmentStep2 } from "@/app/calc/one-house-exemption/steps/Step2";
+import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 // ⚠️ barrel과 순환 import — 서브를 먼저 로드하면 TDZ로 터진다(Phase 1 전례).
@@ -32,7 +33,12 @@ vi.mock("@/components/ui/address-search", () => ({
 
 afterEach(cleanup);
 
-const HERITAGE = /지정문화유산·국가등록문화유산·천연기념물등 주택 보유/;
+/**
+ * 🔑 **공통 어간으로 잡는다.** 종전 세대 단위 토글은 「…천연기념물등 주택 **보유**」였고
+ *    행 카드는 「…천연기념물등 주택 **(§155⑥1호)**」다. 어간으로 잡아야 「옮겼다」와
+ *    「지웠다」를 같은 정규식으로 구별할 수 있다.
+ */
+const HERITAGE = /지정문화유산·국가등록문화유산·천연기념물등 주택/;
 const INHERITED_SECTION = /상속 자산 — 1세대1주택 특례 요건/;
 
 function rightEntry(over: Partial<PresaleRightEntry> = {}): PresaleRightEntry {
@@ -84,33 +90,58 @@ const judgmentForm = (f: TransferFormData) => ({ ...createInitialOneHouseJudgmen
  *    항상 false). 그래서 세 건을 **함께** 옮긴다 — 부정형만 남기면 안전망이 아니다
  *    (`feedback_negative_anchor_needs_positive_twin`).
  */
-describe("⑤ §155⑥1호 문화유산 주택 — 판정 메뉴에 선언 칸이 있다", () => {
-  const twoHouse = (over: Partial<TransferFormData> = {}) =>
-    judgmentForm(form({ houses: [houseEntry()], ...over }));
-
-  it("★ 2주택 세대의 특례 섹션에 토글이 있다", () => {
-    render(<JudgmentStep2 form={twoHouse()} onChange={() => {}} />);
+/**
+ * 🔄 **선언 칸이 다시 옮겨갔다 — 이제 명부 행이다** (D-6 · P7-3).
+ *
+ * 종전에는 판정 메뉴 ③의 **세대 단위 토글**이었다. 법문이 「문화유산주택과 일반주택을
+ * **각각 1개씩** 소유」라 문화유산주택은 **보유 중인 다른 주택**이고, 「어느 주택인가」가
+ * 정본이다 ⇒ `HouseEntry.oneHouseCulturalHeritage`.
+ *
+ * ⚠️ 옛 단언을 **지우지 않고 옮긴다** — 「선언 칸이 존재한다」가 어디에도 고정되지 않으면
+ *    칸이 통째로 사라져도 초록이다([[feedback_shared_assertion_reversal_erases_sibling_net]]).
+ */
+describe("⑤ §155⑥1호 문화유산 주택 — **명부 행**에 선언 칸이 있다", () => {
+  it("★ 행 편집기에 토글이 있다", () => {
+    render(<HouseEntryOneHouseFactsSection house={houseEntry()} onUpdate={() => {}} />);
     expect(shows(HERITAGE)).toBe(true);
   });
 
-  it("★ 토글이 폼 값을 실제로 반영한다 — 라벨만 있고 배선이 없으면 안 된다", () => {
-    const label = "지정문화유산·국가등록문화유산·천연기념물등 주택 보유 (§155⑥1호)";
+  it("★ 토글이 행 값을 실제로 반영한다 — 라벨만 있고 배선이 없으면 안 된다", () => {
+    const label = "지정문화유산·국가등록문화유산·천연기념물등 주택 (§155⑥1호)";
     /** ToggleCard의 Switch는 `aria-label={title}`을 단다(`components/calc/inputs/ToggleCard.tsx`). */
     const sw = () => document.querySelector(`[data-slot="switch"][aria-label="${label}"]`)!;
-    const { rerender } = render(<JudgmentStep2 form={twoHouse()} onChange={() => {}} />);
+    const { rerender } = render(
+      <HouseEntryOneHouseFactsSection house={houseEntry()} onUpdate={() => {}} />,
+    );
     expect(sw()).toHaveAttribute("data-unchecked");
     rerender(
-      <JudgmentStep2
-        form={twoHouse({ culturalHeritageHouseSpecial: true })}
-        onChange={() => {}}
+      <HouseEntryOneHouseFactsSection
+        house={houseEntry({ oneHouseCulturalHeritage: true })}
+        onUpdate={() => {}}
       />,
     );
     expect(sw()).toHaveAttribute("data-checked");
   });
 
-  it("1주택 세대에는 뜨지 않는다 — 「각각 1개씩」이 성립하지 않는다", () => {
-    // 🔑 판정 메뉴는 **명부**에서 주택 수를 센다 — `houses`를 비우면 1주택이다.
-    render(<JudgmentStep2 form={judgmentForm(form({ houses: [] }))} onChange={() => {}} />);
+  /**
+   * 🔑 **「각각 1개씩」은 이제 화면이 아니라 엔진이 본다**(사실/규칙 분리 — 계획서 §5.10).
+   *    행은 「이 주택이 문화유산인가」라는 **사실**만 받고, 2주택 요건은
+   *    `transfer-tax-exemption.ts:374`의 `householdHousingCount === 2`가 지킨다.
+   *    그 게이트가 살아 있음을 여기서 고정한다 — 없어지면 1주택에도 특례가 붙는다.
+   */
+  it("★ 2주택 요건은 엔진 게이트가 지킨다 — 화면 게이트로 옮기지 않았다", () => {
+    const src = readFileSync("lib/tax-engine/transfer-tax-exemption.ts", "utf8");
+    expect(src).toMatch(/input\.householdHousingCount === 2\s*&&\s*\n?\s*input\.culturalHeritageHouse === true/);
+  });
+
+  /** 판정 메뉴 ③에는 **더 이상 없다** — 이중 입력 금지(같은 PR에서 뺐다). */
+  it("★ 판정 메뉴 세대 단위 토글은 제거됐다", () => {
+    render(
+      <JudgmentStep2
+        form={judgmentForm(form({ houses: [houseEntry()] }))}
+        onChange={() => {}}
+      />,
+    );
     expect(shows(HERITAGE)).toBe(false);
   });
 });

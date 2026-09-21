@@ -104,6 +104,26 @@ export interface HouseEntry {
   parentalCareMergeInheritedHouse?: boolean;
   /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
   isRankingDisqualifiedInheritedHouse?: boolean;
+
+  // ── 1세대1주택 비과세 특례 사실 (D-6 · 영 §155) ──
+  /**
+   * §155⑥**1호** 국가유산주택 — 이 행의 주택이 지정문화유산·국가등록문화유산·천연기념물등인가.
+   *
+   * 법문(실독 2026-09-21 · MST 286211): 「다음 각 호의 어느 하나에 해당하는 주택과 그밖의
+   * 주택(일반주택)을 국내에 **각각 1개씩** 소유하고 있는 1세대가 일반주택을 양도하는 경우에는
+   * 국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」
+   * ⇒ 문화유산주택은 **보유 중인 다른 주택**이므로 명부 행의 속성이다(양도 대상이 아니다).
+   *
+   * 🔴 **`HouseInfo.isCulturalHeritage`와 다른 필드다** — 그쪽은 영 §167의3①**6호** 중과 배제
+   *    축이고(`multi-house-surcharge-exclusion.ts:58·506`), 이 필드는 **비과세** 축이다.
+   *    이름을 `oneHouse` 접두로 가른 이유다([[feedback_rename_same_name_two_axes]]).
+   *
+   * 📌 **두 축은 법문상 같은 사실이다** — §167의3①6호가 「**제155조제6항제1호에 해당하는
+   *    국가유산주택**」이라고 §155⑥1호를 **직접 인용**한다(실독). 그래도 이 PR은 **순수 이관**이라
+   *    비과세 축에만 연결한다 — 현행 `culturalHeritageHouseSpecial`도 비과세에만 연결돼 있어
+   *    중과로 넓히면 **세액이 바뀐다**(배제가 늘어 감소 방향). 별도 측정·anchor가 선행돼야 한다.
+   */
+  oneHouseCulturalHeritage?: boolean;
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
