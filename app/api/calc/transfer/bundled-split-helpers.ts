@@ -293,6 +293,15 @@ export interface MixedUseCompanionContext {
     | "isFirstTransferredInMerge"
     | "gracePeriod"
     | "unavoidableOutsideCapitalHouse"
+    /**
+     * §155의3 상생임대 (P5-c) — 🔴 **`Pick` 목록은 손으로 나열돼 있어 컴파일러가 누락을
+     * 잡지 못한다.** leaf(`MixedUseAssetInputSources`)에 필드를 더해도 여기 안 적으면
+     * 컴패니언 겸용만 조용히 면제를 못 받는다(「primary는 표2인데 함께 양도한 겸용은 표1」).
+     *
+     * 폼-전역 값을 컴패니언이 상속하는 것은 이 축의 **기존 규약**이다 — 단건 경로도
+     * 컴패니언 주택부수토지 표2 판정에 같은 폼-전역 값을 쓴다(`transfer-tax-lthd.ts:219`).
+     */
+    | "winWinRentalHouse"
   >;
 }
 

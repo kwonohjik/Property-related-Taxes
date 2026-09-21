@@ -19,7 +19,12 @@ import {
   buildHousingLthdEcho,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
-import type { PreHousingDisclosureResult } from "./types/transfer.types";
+import type { PreHousingDisclosureResult, TransferTaxInput } from "./types/transfer.types";
+/**
+ * §159의4 표2 거주요건 — **단건과 같은 술어**. 겸용이 이것을 안 쓰던 것이 P5-c의 갭이었다.
+ * 재수출 경로(`transfer-tax-exemption`)를 쓴다 — 5개 호출부 전부가 그 경로를 쓴다.
+ */
+import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import type { CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 import type { HousingGainSplit } from "./transfer-tax-mixed-use-housing";
 import type {
@@ -497,6 +502,11 @@ export function buildHousingPart(
    * §104⑦의 대상이 「주택(이에 딸린 토지 포함)」이라 상가는 그 자산이 아니다.
    */
   surchargeLthdExcluded = false,
+  /**
+   * §155의3 상생임대주택 — 표2의 **거주 2년 요건 면제** 사실 (P5-c).
+   * 판정은 하지 않고 단건과 **같은 술어**(`meetsTable2ResidenceRequirement`)에 그대로 넘긴다.
+   */
+  winWinRentalHouse?: TransferTaxInput["winWinRentalHouse"],
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -564,16 +574,21 @@ export function buildHousingPart(
   // 🚨 Critical: 다주택자는 거주 2년+ 이어도 표1 적용 (1세대1주택 거주공제 미적용)
   // 표2 게이트는 통산(table2ResidenceYears), 거주분 공제율은 실거주(residenceYears) — §154⑧3호 / 2021-202.
   /**
-   * 🛑 **겸용 경로는 §155의3(상생임대) 거주요건 면제를 아직 반영하지 않는다** (P3 범위 밖).
+   * ✅ **§155의3(상생임대) 거주요건 면제 — P5-c에서 닫았다.**
    *
-   * 단건 경로는 `meetsTable2ResidenceRequirement`(`transfer-tax-exemption-requirements.ts`)로
-   * 5곳을 묶었지만, 여기는 `MixedUseAsset`이라는 **별도 입력 타입**을 쓴다 — 사실을 넘기려면
-   * 그 타입과 API 어댑터(`transfer-tax-api-mixed-use.ts`)까지 함께 열어야 한다.
-   * P3에는 §155의3의 **입력 경로 자체가 없으므로**(화면은 P4) 지금 필드만 늘리면 도달하지 않는
-   * 배선이 하나 더 생긴다(`feedback_api_trigger_without_input_path_is_noop`).
-   * ⇒ **P4(판정 메뉴)에서 전달 경로를 만들 때 이 줄도 함께 닫는다.** 계획서 §16.5.
+   * 종전에는 `table2ResidenceYears >= 2`를 **손으로** 비교해, 상생임대주택인데도 거주 2년이
+   * 안 되면 표1로 떨어뜨렸다(과다과세). P3가 이 줄을 미룬 이유는 「§155의3의 **입력 경로 자체가
+   * 없어** 필드만 늘리면 도달하지 않는 배선이 생긴다」였는데, P5-a(판정 메뉴 → 계산기 전달)와
+   * P5-b-2(판정 불러오기)가 그 경로를 만들어 **전제가 뒤집혔다**.
+   *
+   * 🔑 술어는 단건과 **같은 것 하나**다. 여기서 `qualifiesWinWinRental`을 다시 쓰면 요건 5개가
+   *    두 벌이 되어 한쪽만 개정 반영되는 상태가 생긴다.
+   * 🔑 **표시 문구도 같은 술어를 쓴다**(`transfer-tax-mixed-use-steps.ts`) — 게이트만 고치면
+   *    「공제율은 표2인데 문구는 표1」 드리프트가 난다
+   *    (`feedback_enumerate_all_write_sites_before_fixing`).
    */
-  const useTable2 = isOneHouseExempt && table2ResidenceYears >= 2;
+  const useTable2 =
+    isOneHouseExempt && meetsTable2ResidenceRequirement({ winWinRentalHouse }, table2ResidenceYears);
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   const landDedRate = calcLongTermRate(

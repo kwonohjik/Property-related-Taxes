@@ -321,6 +321,8 @@ export function buildMixedUseCompanionItems(
     regionCode: g.regionCode,
     oneHouseExemptionProviso: g.oneHouseExemptionProviso,
     temporaryTwoHouse: g.temporaryTwoHouse,
+    // §155의3 상생임대 (P5-c) — primary와 같은 폼-전역 값을 상속한다.
+    winWinRentalHouse: g.winWinRentalHouse,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     specialHouseExclusions: g.specialHouseExclusions,
     isOneHousehold: companionEngine.isOneHousehold ?? false,

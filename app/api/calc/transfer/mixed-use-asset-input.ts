@@ -65,6 +65,14 @@ export interface MixedUseAssetInputSources {
   householdHousingCount: number;
   specialHouseExclusions: TransferTaxInput["specialHouseExclusions"];
   isOneHousehold: boolean;
+  /**
+   * §155의3 상생임대주택 — 거주기간 제한 면제 (P5-c).
+   *
+   * ⚠️ **`engineInput.winWinRentalHouse`를 넘긴다** — raw `data.*`는 `winWinContractDate`가
+   *    아직 string이라 `qualifiesWinWinRental`의 날짜 비교가 **침묵 오작동**한다
+   *    (`Date < string`은 항상 false — 이 파일 헤더 경고와 같은 축).
+   */
+  winWinRentalHouse: TransferTaxInput["winWinRentalHouse"];
   isRegulatedArea: boolean;
   isSelfCultivatedExpropriatedLand: boolean | undefined;
   priorReductionUsage: MixedUseAssetInput["priorReductionUsage"];
@@ -193,6 +201,12 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
      * 1원도 안 움직였다(실측 `totalPayable` 60,853,408 → 60,853,408).
      */
     reductions: s.reductions,
+    /**
+     * §155의3 상생임대주택 (P5-c) — **한 필드가 겸용 경로의 두 지점을 연다**:
+     * §154① 비과세 거주요건(`exemptionReqInput`)과 §159의4 표2 게이트(`buildHousingPart`).
+     * 법문이 두 조문을 함께 열거하므로 한쪽만 배선하면 축이 어긋난다.
+     */
+    winWinRentalHouse: s.winWinRentalHouse,
     filingPenaltyDetails: s.filingPenaltyDetails,
     delayedPaymentDetails: s.delayedPaymentDetails,
     priorReductionUsage: s.priorReductionUsage ?? [],
