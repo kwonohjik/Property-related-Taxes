@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
+import { Button } from "@/components/ui/button";
+import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
+import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -66,6 +69,8 @@ export function Step1({
     return "none";
   });
   const [pendingCompanionOff, setPendingCompanionOff] = useState(false);
+  /** 「판정 불러오기」 모달 (P5-b-2) */
+  const [judgmentLoadOpen, setJudgmentLoadOpen] = useState(false);
 
   // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
   // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
@@ -147,6 +152,48 @@ export function Step1({
   return (
     <div className="space-y-6">
       <section>
+        {/*
+          「판정 불러오기」 (P5-b-2) — **자산 입력이 시작되기 전**에 둔다.
+          불러오기는 `assets`·`householdHousingCount`를 통째로 치환하므로
+          (`one-house-judgment-handoff.ts` `toTransferFormPatch`), 입력을 마친 뒤에 누르면
+          그 입력이 사라진다. 화면 최상단이 「먼저 고를 것」으로 읽히는 자리다.
+
+          🔑 라벨·testid를 다건의 「📂 이력에서 불러오기」(`multi-load-history-btn`)와
+             **구별한다** — 다건 편집 화면은 이 0단계를 그대로 마운트해 두 런처가 같은 화면에
+             뜬다(`feedback_new_widget_breaks_uniqueness_selectors`).
+        */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="modalLauncher"
+            size="xs"
+            onClick={() => setJudgmentLoadOpen(true)}
+            data-testid="open-one-house-judgment-load"
+            title="1세대1주택 비과세 판정 메뉴에서 저장한 판정의 사실을 가져옵니다"
+          >
+            📋 판정 불러오기
+          </Button>
+          {/*
+            🔑 불러온 직후 사용자가 보는 유일한 확인 신호다. 넘겨받은 사실 카드
+               (`ImportedOneHouseFactsCard`)는 **다음 단계**(「보유 상황」)에 있어서
+               이 화면에서는 보이지 않는다 — 판정 메뉴의 「이 결과로 세액 계산」 CTA도
+               같은 0단계에 떨구므로 그 경로의 침묵까지 함께 닫는다.
+            🔑 조건은 4종 결과뷰와 **같은 공용 술어**다 — 여기서 손으로 쓰면 술어가 두 벌이 된다.
+          */}
+          {hasJudgmentProvenance(form) && (
+            <span
+              data-testid="one-house-judgment-loaded"
+              className="text-caption text-emerald-700"
+            >
+              판정 불러옴 — 세대·주택 현황을 판정 메뉴 값으로 채웠습니다
+            </span>
+          )}
+        </div>
+        <OneHouseJudgmentLoadModal
+          open={judgmentLoadOpen}
+          onOpenChange={setJudgmentLoadOpen}
+        />
+
         {/* 토글 A — 함께 양도한 다른 자산 (목록 레벨). 지분 분할은 자산 카드 ③ 토글 B. */}
         <ToggleCard
           className="mb-3"

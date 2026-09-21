@@ -21,6 +21,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+/** 주석을 지운 소스 — 사본 금지(P5-b-2에서 같은 함정을 두 번째로 밟아 공용으로 올렸다). */
+import { stripComments } from "./_helpers/strip-comments";
 
 /** 양도세 결과뷰 **4종** — 이 목록이 정본이다. */
 const VIEWS = {
@@ -32,15 +34,6 @@ const VIEWS = {
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf-8");
 
-/**
- * 주석을 지운 소스.
- *
- * 🔴 이 저장소의 결과뷰 주석에는 `<PrintSection id="...">` 같은 **태그 문자열이 설명으로**
- *    들어 있다(단건 뷰의 「렌더 게이트」 주석). 원문 그대로 세면 열림 1 · 닫힘 0이 되어
- *    「열린 래퍼 안에 있다」는 오탐이 난다 — 실제로 이 가드가 그렇게 한 번 빨개졌다.
- */
-const stripComments = (src: string) =>
-  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 describe("출처 한 줄 — 결과뷰 4종 전건 배선", () => {
   it.each(Object.entries(VIEWS))(

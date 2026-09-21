@@ -48,11 +48,23 @@ export function oneHouseVerdictOf(judgment: JudgmentLike): OneHouseVerdict {
 }
 
 /**
- * 이력 목록·드로어용 — 저장된 `resultData`(= `OneHouseExemptionResponse` 직렬화)에서 라벨만.
- * 판정 전(draft)이나 구 스키마면 `"-"`.
+ * 저장된 `resultData`(= `OneHouseExemptionResponse` 직렬화)에서 배지 **전체**를 읽는다.
+ * 판정 전(draft)이나 구 스키마면 `null`.
+ *
+ * 🔑 라벨만 필요한 곳(`oneHouseVerdictLabel`)도 **이것을 거친다** — 「불러오기 모달은
+ *    emerald인데 이력 목록은 과세」처럼 라벨과 톤이 갈리는 상태를 불가능하게 만든다.
+ */
+export function oneHouseVerdictFromResult(
+  resultData: Record<string, unknown> | null | undefined,
+): OneHouseVerdict | null {
+  const judgment = resultData?.judgment as JudgmentLike | undefined;
+  if (!judgment || typeof judgment !== "object") return null;
+  return oneHouseVerdictOf(judgment);
+}
+
+/**
+ * 이력 목록·드로어용 — 라벨만. 판정 전(draft)이나 구 스키마면 `"-"`.
  */
 export function oneHouseVerdictLabel(resultData: Record<string, unknown> | null | undefined): string {
-  const judgment = resultData?.judgment as JudgmentLike | undefined;
-  if (!judgment || typeof judgment !== "object") return "-";
-  return oneHouseVerdictOf(judgment).label;
+  return oneHouseVerdictFromResult(resultData)?.label ?? "-";
 }
