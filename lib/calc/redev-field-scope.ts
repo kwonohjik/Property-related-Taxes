@@ -32,11 +32,16 @@ export function resolveRedevSubject(
  * ③-c 「인가일 기준 비과세 보유요건」 자기선언(`redevExemptionEligibleAtApproval`)이
  * 의미를 갖는 축인가 (U1-01).
  *
- * · **입주권**(`right`) — `RedevelopmentRightExemptionSection`의 §⑥ 토글이 `assetKind ===
- *   "right_to_move_in"`에서 **항상** 렌더된다. 정당한 입력 경로가 있으므로 축을 제한하지 않는다.
- *   (§89①4호 비과세 선언이 여기 실린다 — 제한하면 그 경로가 통째로 사라진다.)
+ * · **입주권**(`right`) — 축을 제한하지 않는다. ⚠️ **근거가 P6-c-1에서 바뀌었다.**
+ *   종전 근거는 「계산기 `RedevelopmentRightExemptionSection` §⑥ 토글이 항상 렌더되므로
+ *   정당한 입력 경로가 있다」였는데, 그 섹션은 **판정 메뉴 전용**이 됐다. 이제 근거는
+ *   반대쪽이다 — 값이 **판정 메뉴에서 넘어오므로 계산기가 지우면 안 된다**.
+ *   `false`로 바꾸면 `clearOutOfScopeRedevPatch`가 「판정 불러오기」로 가져온 §89①4호
+ *   선언을 조용히 비운다.
  * · **완공APT**(`apt`) — ③-c `ExemptionAtApprovalCard`의 렌더 게이트와 같아야 한다
- *   (`RedevelopmentBlock.tsx:210` — 승계조합원 아님 + 청산금 **수령**).
+ *   (승계조합원 아님 + 청산금 **수령**). 완공APT는 판정 메뉴에 입력 경로가 **없다** —
+ *   ④(`one-house-exemption-api.ts:208`)가 `assetKind === "right_to_move_in"`일 때만
+ *   `oneRightExemptionFacts`를 보낸다. 그래서 계산기가 소유한다.
  *   `isOneHouseSingle`은 폼-전역이라 자산-수준 술어에 넣지 않는다(엔진이 같은 값을 본다).
  *
  * 엔진은 `=== false`일 때 `isOneHouseSingle`을 강제 false로 내려 장기보유특별공제를
@@ -51,6 +56,45 @@ export function exemptionAtApprovalInScope(
   if (resolveRedevSubject(asset) === "right") return true;
   return (
     asset.redevSettlementDirection === "receive" && asset.redevIsSuccessorMember !== "yes"
+  );
+}
+
+/**
+ * ③-c 카드의 **부속 입력**(`redevPostApprovalHousingUse`·`…EndDate`)이 의미를 갖는 축인가
+ * (P6-c-3 신설).
+ *
+ * ## 🔴 왜 자기선언과 갈라야 했나
+ *
+ * 종전에는 둘 다 `exemptionAtApprovalInScope` 하나로 판정했다. P6-c-1 이후 그 술어가
+ * **입주권에서 `true`를 유지해야 하는 이유**(판정 메뉴 값 보존)와 **③-c 카드를 입주권에서
+ * 감춰야 하는 이유**(같은 필드를 `ImportedRedevRightFactsCard`가 이미 읽기 전용으로 보여 준다)가
+ * 서로 반대 방향이 됐다. 한 술어로는 둘 다 만족할 수 없다:
+ *
+ * - 술어를 `false`로 내리면 → 판정 메뉴에서 넘어온 자기선언이 지워진다.
+ * - 술어를 `true`로 둔 채 카드만 감추면 → ⑧이 종료일을 요구하는데 **채울 칸이 없다**
+ *   (memory `feedback_ui_gate_removes_sole_input_path`).
+ *
+ * ⇒ 자기선언(판정 사실, 두 화면이 나눠 갖는다)과 이 부속 입력(③-c 카드 전용, 완공APT에만
+ *   있다)을 **다른 술어로** 판정한다.
+ *
+ * 🔑 이 두 필드는 **세액에 영향이 없다** — ④ 변환(`transfer-tax-api-redev.ts`)이 보내지 않고,
+ *    ③-c 카드 안의 참고 문구(자동 제안 기간)만 늘린다. 그럼에도 ⑧이 차단하는 것은 「토글 ON +
+ *    종료일 공란」이라는 **모순된 입력**을 막기 위해서다(Q20).
+ *
+ * 입주권 경로의 같은 법리(사전-2019-법령해석재산-0739 — 인가일 이후 철거 전 사실상 주거용
+ * 사용 기간 합산)는 판정 메뉴가 이미 갖고 있다
+ * (`RedevelopmentRightExemptionSection.tsx:164·175` 보유·거주 월수 hint) — 감춰도 사라지지 않는다.
+ */
+export function postApprovalHousingUseInScope(
+  asset: Pick<
+    AssetForm,
+    "assetKind" | "redevSubject" | "redevSettlementDirection" | "redevIsSuccessorMember"
+  >,
+): boolean {
+  return (
+    resolveRedevSubject(asset) === "apt" &&
+    asset.redevSettlementDirection === "receive" &&
+    asset.redevIsSuccessorMember !== "yes"
   );
 }
 
@@ -91,8 +135,13 @@ export function clearOutOfScopeRedevPatch(next: AssetForm): Partial<AssetForm> {
 
   if (!exemptionAtApprovalInScope(next)) {
     if (next.redevExemptionEligibleAtApproval) patch.redevExemptionEligibleAtApproval = "";
-    // 같은 카드(③-c) 안의 부속 입력이다 — 축을 벗어나면 함께 지운다. 종전에는 자기선언만
-    // 비우고 이 둘을 남겨, 토글 ON + 종료일 공란이면 ⑧이 영구 차단했다.
+  }
+  /**
+   * 🔴 **자기선언과 다른 술어를 쓴다** (P6-c-3). 입주권에서는 자기선언이 범위 안이지만
+   *    (판정 메뉴 소유 — 지우면 안 된다) ③-c 카드는 렌더되지 않으므로 이 둘은 범위 밖이다.
+   *    한 술어로 묶으면 둘 중 하나가 반드시 깨진다 — `postApprovalHousingUseInScope` 주석 참조.
+   */
+  if (!postApprovalHousingUseInScope(next)) {
     if (next.redevPostApprovalHousingUse) patch.redevPostApprovalHousingUse = "";
     if (next.redevPostApprovalHousingUseEndDate) patch.redevPostApprovalHousingUseEndDate = "";
   }

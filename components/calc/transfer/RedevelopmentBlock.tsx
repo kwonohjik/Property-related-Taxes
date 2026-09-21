@@ -229,10 +229,21 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
         <SalePriceTotalPreviewCard asset={asset} />
       )}
 
-      {/* ③-c violet: 비과세 보유 요건 자동 산정
+      {/* ③-c violet: 비과세 보유 요건 자동 산정 — **완공 APT 양도 전용**.
           - 사례 46 (receiveOnly=yes): LTHD 표1 강등 가드용 노출
-          - 사례 47 (receiveOnly=no + receive direction): settlement 비과세 차감 자동 산정용 노출 */}
-      {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && isOneHouseSingle && (
+          - 사례 47 (receiveOnly=no + receive direction): settlement 비과세 차감 자동 산정용 노출
+
+          🔴 **`!isRightSubject`가 빠져 있었다** (P6-c-3에서 추가). 입주권 + 청산금 수령 +
+             1세대1주택이면 바로 위 `ImportedRedevRightFactsCard`(읽기 전용 요약)와 이 카드의
+             3-state 라디오가 **같은 필드 `redevExemptionEligibleAtApproval`을 한 화면에서**
+             각각 보여 주고 편집했다 — 한쪽은 「이 화면에서는 수정할 수 없습니다」라고 적힌 채로.
+             실측: 요약 렌더 true + 라디오 3개 동시.
+
+             입주권의 §89①4호 선언은 **판정 메뉴가 소유한다**(P6-c-1). 완공APT는 판정 메뉴에
+             입력 경로가 없으므로(④ `one-house-exemption-api.ts:208`이 `assetKind ===
+             "right_to_move_in"`일 때만 `oneRightExemptionFacts`를 보낸다) 계산기가 계속
+             소유한다 — 그래서 축으로 가른다. `redev-field-scope.ts` 참조. */}
+      {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && isOneHouseSingle && (
         <ExemptionAtApprovalCard asset={asset} onChange={onChange} />
       )}
 

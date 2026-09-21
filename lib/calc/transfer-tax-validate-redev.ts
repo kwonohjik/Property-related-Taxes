@@ -15,7 +15,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
-import { exemptionAtApprovalInScope } from "@/lib/calc/redev-field-scope";
+import { postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -93,7 +93,7 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   // 🟠 남는 좁은 케이스: 카드의 렌더 게이트에는 폼-전역 `isOneHouseSingle`도 걸려 있는데
   //    ⑧은 자산만 받아 그 값을 볼 수 없다. 1세대1주택 플래그를 끄면 카드가 사라진 채 이 가드가
   //    살아난다 — 새로고침 시 마이그레이션이 정리한다. 닫으려면 ⑧에 폼-전역 축을 넘겨야 한다.
-  if (exemptionAtApprovalInScope(asset) && asset.redevPostApprovalHousingUse === "yes") {
+  if (postApprovalHousingUseInScope(asset) && asset.redevPostApprovalHousingUse === "yes") {
     const end = asset.redevPostApprovalHousingUseEndDate;
     if (!end) {
       return `${label}: 인가일 이후 사실상 주거용 사용을 선택했으면 사용 종료일(철거일)을 입력하세요. (사전-2019-법령해석재산-0739)`;
