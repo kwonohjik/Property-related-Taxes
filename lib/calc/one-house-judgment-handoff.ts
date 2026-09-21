@@ -36,6 +36,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
+import { readJudgmentInputHash } from "./one-house-judgment-provenance";
 
 const TRANSFER_ROUTE = "/calc/transfer-tax";
 
@@ -79,6 +80,12 @@ export function pickOneHouseExtraFacts(
 export function toTransferFormPatch(
   form: OneHouseJudgmentFormData,
   judgmentId?: string,
+  /**
+   * 전달 시점 원본 record의 `inputHash` — staleness 판정의 **기준선**(P5-b-1).
+   * 없으면 나중 판정이 「확인 불가」가 된다. **폼 해시로 대체하지 말 것**
+   * (`one-house-judgment-provenance.ts` 머리 주석 ⛔).
+   */
+  judgmentInputHash?: string,
 ): Partial<TransferFormData> {
   const extras = new Set(Object.keys(oneHouseJudgmentExtraDefaults));
   const base = {} as Record<string, unknown>;
@@ -91,6 +98,7 @@ export function toTransferFormPatch(
     assets: withMirroredSalePrice(form),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
     ...(judgmentId ? { sourceJudgmentId: judgmentId } : {}),
+    ...(judgmentInputHash ? { sourceJudgmentInputHash: judgmentInputHash } : {}),
   };
 }
 
@@ -131,7 +139,8 @@ export async function applyOneHouseFactsToTransferForm(
   judgmentId?: string,
 ): Promise<void> {
   const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
-  useCalcWizardStore.getState().updateFormData(toTransferFormPatch(form, judgmentId));
+  const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
+  useCalcWizardStore.getState().updateFormData(toTransferFormPatch(form, judgmentId, hash));
 }
 
 /**
@@ -147,8 +156,13 @@ export async function openTransferWithOneHouseFacts(
   judgmentId?: string,
 ): Promise<void> {
   const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
+  /**
+   * 🔑 기준선을 **이동 전에** 읽는다 — 화면이 바뀐 뒤에 읽으면 그 사이 자동저장이 돌아
+   *    「전달 당시」가 아닌 해시를 기준선으로 잡을 수 있다.
+   */
+  const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
   const { updateFormData, setStep } = useCalcWizardStore.getState();
-  updateFormData(toTransferFormPatch(form, judgmentId));
+  updateFormData(toTransferFormPatch(form, judgmentId, hash));
   setStep(0);
   router.push(TRANSFER_ROUTE);
 }

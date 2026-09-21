@@ -289,6 +289,18 @@ export interface TransferFormData {
    *    record를 되찾는다(`feedback_snapshot_copy_without_staleness_detection`).
    */
   sourceJudgmentId?: string;
+  /**
+   * **전달 시점** 원본 판정 record의 `inputHash` — 원본 변경 감지의 **유일한** 기준선 (P5-b-1).
+   *
+   * ⛔ `computeInputHash(form)`과 비교하지 말 것. 저장 시 `inputData`에 키가 덧붙고
+   *   (`use-auto-save-calculation.ts`) 편집 왕복이 기본값 키를 덧붙여(`updateFormData`가
+   *   `{...state.formData, ...data}`) **사용자가 아무것도 안 고쳐도 폼 해시는 바뀐다**.
+   *   ⇒ 「로컬 편집함」과 「폼이 정규화됨」을 구분할 수 없어 정상 편집마다 오탐이 난다.
+   *   다건 합산이 같은 규약을 쓴다(`multi-transfer-tax-store.ts` `sourceInputHash`).
+   *
+   * 구 세션·구 record는 `undefined` — 그때는 **「판정 불가」로 다룬다**(추측 금지).
+   */
+  sourceJudgmentInputHash?: string;
 
   // appurtenantLandRateMode 필드 제거 (사례 28 landNature 명시 입력 정책으로 대체, 2026-05-07)
   // 자산-수준 landNature("appurtenant"|"standalone")가 폼-수준 모드 결정을 대체.

@@ -19,6 +19,8 @@ import { MultiTransferFilingFormSection } from "@/components/calc/results/transf
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
+import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
+import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import {
   PropertyBreakdownAccordion,
@@ -480,6 +482,24 @@ export function MultiTransferTaxResultView({
     <div className="space-y-4">
       {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5). */}
       <CalculationWarningsCard warnings={result.warnings} />
+
+      {/*
+        출처 (P5-b-1) — **건마다 따로** 띄운다.
+
+        🔴 `properties[0]`에서 한 줄을 뽑지 말 것. 건마다 출처가 다를 수 있고(1번은 판정에서
+           왔는데 2번은 직접 입력), 같은 자리에서 `firstProperty` 하나만 본 것이 이미
+           #054·#093 결함이었다(:530 주석). 단정형 한 줄은 그 실패의 재현이다.
+        🔑 `PrintSection` 밖 — 선택 출력과 무관하게 항상 인쇄되는 **고지**다.
+      */}
+      {properties
+        .filter((p) => hasJudgmentProvenance(p.form))
+        .map((p) => (
+          <OneHouseJudgmentProvenanceLine
+            key={p.propertyId}
+            form={p.form}
+            label={p.propertyLabel}
+          />
+        ))}
 
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel

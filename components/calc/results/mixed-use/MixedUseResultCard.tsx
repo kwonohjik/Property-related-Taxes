@@ -12,6 +12,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { useState, useMemo } from "react";
+import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -89,6 +90,14 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   return (
     <div className="space-y-4">
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄 — 브라우저 PDF 저장) */}
+      {/*
+        출처 한 줄 (P5-b-1) — 판정 메뉴에서 넘겨받았을 때만 뜬다.
+        🔑 `PrintSection` **밖**이다 — 「이 세액이 어떤 사실에 근거하는가」는 선택 출력과
+           무관하게 항상 인쇄돼야 한다(`DisclaimerBanner`와 같은 층위).
+        🔑 `formData`에서 읽는다 — 엔진 result에 실으면 어댑터 화이트리스트가 침묵 strip한다.
+      */}
+      <OneHouseJudgmentProvenanceLine form={formData} />
+
       <PrintSelectionPanel
         allGroups={MIXED_USE_PRINT_SECTIONS}
         selectedIds={selectedPrintIds}
