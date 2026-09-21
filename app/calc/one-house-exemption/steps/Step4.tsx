@@ -15,9 +15,11 @@ type Props = {
   error: string | null;
   isLoading: boolean;
   onJudge: () => void;
+  /** 「이 결과로 세액 계산」 (P5-a). 폼을 아는 것은 오케스트레이터라 그쪽이 내려준다. */
+  onCalculateTax: () => void;
 };
 
-export function Step4({ result, error, isLoading, onJudge }: Props) {
+export function Step4({ result, error, isLoading, onJudge, onCalculateTax }: Props) {
   const triggered = useRef(false);
 
   useEffect(() => {
@@ -56,5 +58,5 @@ export function Step4({ result, error, isLoading, onJudge }: Props) {
     return <p className="py-12 text-center text-sm text-muted-foreground">판정을 준비하고 있습니다…</p>;
   }
 
-  return <OneHouseJudgmentResultView result={result} />;
+  return <OneHouseJudgmentResultView result={result} onCalculateTax={onCalculateTax} />;
 }

@@ -11,6 +11,7 @@
  *   3. 이력에 남는 것은 **세액이 아니라 판정**이다(P4-2b-3).
  */
 import { useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -25,6 +26,7 @@ import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { callOneHouseExemptionAPI } from "@/lib/calc/one-house-exemption-api";
+import { openTransferWithOneHouseFacts } from "@/lib/calc/one-house-judgment-handoff";
 import {
   validateStep1,
   validateStep2,
@@ -46,6 +48,7 @@ export default function OneHouseJudgmentCalculator() {
     useOneHouseJudgmentStore();
 
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
+  const router = useRouter();
 
   useResetOnNewParam(reset);
 
@@ -95,6 +98,7 @@ export default function OneHouseJudgmentCalculator() {
    */
   const handleReset = useCallback(() => reset(), [reset]);
 
+
   const isResult = currentStep === RESULT_STEP && result !== null;
   const onStepClick = useMemo(() => (i: number) => setStep(i), [setStep]);
 
@@ -106,13 +110,29 @@ export default function OneHouseJudgmentCalculator() {
    * 🔑 `taxLawVersion`은 **양도 예정일**이다 — route가 그 날짜로 세율·법령을 로드하므로
    *    「이 판정이 어느 시점 기준인가」를 되짚는 값이 그것이다(주식 평가가 평가기준일을 쓰는 것과 같다).
    */
-  useAutoSaveCalculation({
+  /**
+   * 🔑 `savedId`는 **출처 판정 record의 id**다(P5-a). 계산기로 넘길 때 함께 실어 두면 나중에
+   *    「이 세액은 어느 판정에서 왔는가」를 되짚을 수 있다. 저장 전(입력 중)에는 `null`이고,
+   *    그때는 출처 없이 사실만 넘어간다 — 사실이 넘어가는 것 자체는 막지 않는다.
+   */
+  const { savedId } = useAutoSaveCalculation({
     taxType: "one_house_exemption",
     inputData: formData as unknown as Record<string, unknown>,
     resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
     taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+
+  /**
+   * 「이 결과로 세액 계산」 (P5-a).
+   *
+   * 🔑 넘기는 것은 **폼(사실)** 이지 `result`가 아니다 — 계산기는 같은 엔진으로 다시 판정한다(D-3).
+   * 🔑 진입은 단일 헬퍼를 거친다. 여기서 store를 직접 쓰고 `router.push`하면 이력 카드·드로어가
+   *    두 번 갈라졌던 전례를 그대로 되풀이한다(`transfer-resume-entry.ts` 머리 주석).
+   */
+  const handleCalculateTax = useCallback(() => {
+    void openTransferWithOneHouseFacts(formData, router, savedId ?? undefined);
+  }, [formData, router, savedId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,6 +188,7 @@ export default function OneHouseJudgmentCalculator() {
                 error={error}
                 isLoading={isLoading}
                 onJudge={handleJudge}
+                onCalculateTax={handleCalculateTax}
               />
             )}
 

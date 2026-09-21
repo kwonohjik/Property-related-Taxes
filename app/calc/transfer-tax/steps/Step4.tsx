@@ -24,6 +24,7 @@ import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSe
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
+import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -402,6 +403,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
   return (
     <div className="space-y-5">
+      {/*
+        판정 메뉴에서 넘겨받은 사실 (P5-a) — **최상단**에 둔다.
+        아래 입력란이 이미 채워져 있는 이유를 먼저 말해 주지 않으면, 사용자는 자기가 넣지 않은
+        값이 들어 있는 것을 보고 버그로 읽는다.
+      */}
+      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} />
+
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
       {primaryKind !== "housing" && regulatedAutoTip}
 

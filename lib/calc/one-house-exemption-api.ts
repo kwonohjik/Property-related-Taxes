@@ -12,7 +12,9 @@
  * ⇒ 이미 분리돼 있는 **leaf 빌더를 그대로 호출**한다. §155 특례·명부·권리·§154① 단서의
  *   FLAT→nested 규칙이 계산기와 **같은 함수**에서 나와야, 두 화면이 같은 사실에 같은 답을 낸다
  *   (D-1 「화면은 나누고 엔진은 하나」의 배관 판).
- *   여기서 새로 쓰는 것은 **§155의2·§155의3 블록 둘뿐**이다 — 계산기 폼에는 그 필드가 없다(D-4).
+ *   §155의2·§155의3 블록도 **여기서 쓰지 않는다** — `one-house-extra-facts-payload.ts`가 정본이고
+ *   계산기(`transfer-tax-api.ts`)가 넘겨받은 사실을 같은 함수로 편다(P5-a). 계산기 화면에 그
+ *   **입력 위젯**이 없다는 것(D-4)과, 계산기가 그 사실을 **운반하지 않는다**는 것은 다른 말이다.
  *
  * ## 판정에 필요 없는 값은 **중립 placeholder**로 보낸다
  *
@@ -28,6 +30,7 @@ import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
+import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
@@ -41,42 +44,6 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 
-/**
- * §155의2 FLAT → nested. 토글 OFF이거나 계약체결일 미입력이면 **아예 보내지 않는다**
- * (Zod optional 계약 — 형제 빌더 `buildReplacementHousePayload`와 같은 규약).
- */
-function buildLongTermMortgagePayload(form: OneHouseJudgmentFormData): object {
-  if (!form.longTermMortgageSpecial || !form.longTermMortgageContractDate) return {};
-  return {
-    longTermMortgageHouse: {
-      contractDate: form.longTermMortgageContractDate,
-      borrowerAgeAtContract: parseInt(form.longTermMortgageBorrowerAge || "0", 10),
-      contractYears: parseInt(form.longTermMortgageContractYears || "0", 10),
-      maturityLumpSumRepayment: form.longTermMortgageMaturityLumpSum,
-      transferredBeforeMaturity: form.longTermMortgageTransferredBeforeMaturity,
-      isTransferredHouseMortgaged: form.longTermMortgageIsTransferredHouseMortgaged,
-      ...(form.longTermMortgageParentalCareMerge ? { parentalCareMerge: true } : {}),
-    },
-  };
-}
-
-/**
- * §155의3 FLAT → nested.
- *
- * ⚠️ `increaseRatePct`는 **인하(음수)도 유효**하다 — 「5% 이하」 요건이라 인하는 당연히 충족이다.
- *    `parseAmount`류로 음수를 잘라내면 정당한 상생임대인이 탈락한다.
- */
-function buildWinWinRentalPayload(form: OneHouseJudgmentFormData): object {
-  if (!form.winWinRentalSpecial || !form.winWinRentalContractDate) return {};
-  return {
-    winWinRentalHouse: {
-      winWinContractDate: form.winWinRentalContractDate,
-      increaseRatePct: parseFloat(form.winWinRentalIncreaseRatePct || "0") || 0,
-      priorLeaseMonths: parseInt(form.winWinRentalPriorLeaseMonths || "0", 10),
-      winWinLeaseMonths: parseInt(form.winWinRentalLeaseMonths || "0", 10),
-    },
-  };
-}
 
 /** ④ 판정 메뉴 폼 → API 본문. */
 export function buildOneHouseExemptionApiBody(
@@ -213,8 +180,7 @@ export function buildOneHouseExemptionApiBody(
     })(),
 
     // ── 판정 메뉴 고유 (P4-2b-0이 ⑫⑭를 열어 둔 축) ──────────
-    ...buildLongTermMortgagePayload(form),
-    ...buildWinWinRentalPayload(form),
+    ...buildOneHouseExtraFactsPayload(form),
 
     /**
      * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기의 leaf를 **그대로** 쓴다.
