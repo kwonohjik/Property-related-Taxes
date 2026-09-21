@@ -21,9 +21,6 @@ import { SpecialSituationSection } from "./step4-sections/SpecialSituationSectio
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
-import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
-import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
-import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
@@ -408,7 +405,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         아래 입력란이 이미 채워져 있는 이유를 먼저 말해 주지 않으면, 사용자는 자기가 넣지 않은
         값이 들어 있는 것을 보고 버그로 읽는다.
       */}
-      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} />
+      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} rights={form} />
 
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
       {primaryKind !== "housing" && regulatedAutoTip}
@@ -568,23 +565,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             )}
 
             {/*
-              §89② 배제의 3년 초과 예외 — 시행령 §156의2④·§156의3③ / 시행규칙 §75①.
-              권리 취득일부터 3년을 넘겨 양도한 경우에만 스스로 열린다(엔진 술어 공용).
-            */}
-            <RightThreeYearExceptionSection form={form} onChange={onChange} />
+              §89② 배제의 세 예외(3년 초과 · 상속 권리 · 합가)는 **판정 메뉴로 이관**됐다 (P6-a).
+              `app/calc/one-house-exemption/steps/Step2.tsx:218-220`이 **같은 컴포넌트**를 렌더한다 —
+              복제가 아니라 마운트 지점만 옮긴 것이다.
 
-            {/*
-              §89② 배제의 상속 권리 예외 — 시행령 §156의2⑥·⑦ · §156의3④·⑤ · ⑮.
-              권리 목록에서 「상속받은 권리」를 체크한 경우에만 스스로 열린다.
+              🔑 **값은 폼에 그대로 남는다.** 13필드가 `TransferFormData` flat이고 ④가 계속
+                 읽으므로(`transfer-tax-api.ts:514·524·526·527` · `-helpers.ts:379·428`),
+                 P6 이전에 저장한 이력을 다시 열어도 **세액이 같다**(OH-21).
+                 넘겨받은 값은 아래 읽기 전용 요약이 보여 준다.
             */}
-            <InheritedRightExceptionSection form={form} onChange={onChange} />
-
-            {/*
-              §89② 배제의 합가 예외 — 시행령 §156의2⑧·⑨(§156의3⑥ 준용).
-              🔴 주택 2채 미만이면 ③ 섹션이 렌더되지 않아 합가일 입력 경로가 아예 없다 —
-                 그래서 이 카드가 그 구간에서 합가일 칸을 직접 소유한다(컴포넌트 주석 참조).
-            */}
-            <MergedHouseholdRightSection form={form} onChange={onChange} />
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (

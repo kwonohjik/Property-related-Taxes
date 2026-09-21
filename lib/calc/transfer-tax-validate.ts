@@ -18,7 +18,6 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
-import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -610,32 +609,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      *    여기서 차단하면 3년 초과 세대 전체가 계산 자체를 못 하게 된다.
      */
     /**
-     * 🔴 **카드 노출 조건을 함께 본다**(2026-09-07). 이 카드는 스스로 사라진다 —
-     *    양도일을 3년 이내로 고치거나, 세대 보유 권리 행을 지우거나, 자산 종류를 주택 외로
-     *    바꾸면 화면에서 없어진다. 그런데 ⑧은 `rightThreeYearExceptionKind`만 보고 필수값을
-     *    요구해, 채울 칸도 선택을 해제할 컨트롤도 없는 **영구 차단**이 됐다.
+     * §89② 3년 초과 예외의 필수 입력 검증은 **판정 메뉴로 이관됐다** (P6-a).
+     *
+     * 계산기는 그 섹션을 더 이상 렌더하지 않으므로(`Step4.tsx`에서 제거), 여기서 필수값을
+     * 요구하면 **채울 칸도 해제할 컨트롤도 없는 영구 차단**이 된다 — 2026-09-07에 같은
+     * 모양으로 한 번 났던 결함이고, 그때 만든 술어가 `rightThreeYearExceptionVisible`이다.
+     * 검증은 같은 술어를 게이트로 써서 `one-house-exemption-validate.ts`로 옮겼다.
+     *
+     * 🔑 **값은 그대로 계산에 쓰인다.** flat 필드라 ④가 계속 읽는다(`transfer-tax-api-helpers.ts`).
+     *    빠진 것은 「계산기에서 편집·검증하는 것」뿐이다.
      */
-    const r3ySectionVisible = rightThreeYearExceptionVisible(form);
-    if (
-      r3ySectionVisible &&
-      form.rightThreeYearExceptionKind === "new_house" &&
-      !form.rightNewHouseCompletionDate
-    ) {
-      issues.push({
-        step,
-        message: "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
-      });
-    }
-    if (
-      r3ySectionVisible &&
-      form.rightThreeYearExceptionKind === "delay" &&
-      !form.rightDisposalDelayReason
-    ) {
-      issues.push({
-        step,
-        message: "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",
-      });
-    }
 
     // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
     // (카드 숨김·temp-two-house 무효 reason(나·다목·5호)은 검증 skip — Part B/D mirror·데드락 차단)

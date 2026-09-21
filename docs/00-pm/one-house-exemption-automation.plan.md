@@ -410,7 +410,7 @@ seed 행 교체만으로 끝내지 않는다.
 - **신설**: 판정 메뉴 · 공유 엔진 진입 함수 · §155의2·§155의3 · 조건부·기한 출력 · 이력 타입.
 - **이관(Q-7 결정)**: 자산 카드 안의 §155⑳(`RentalHousingExceptionSection`)·1세대1입주권(`RedevelopmentRightExemptionSection`)의
   **판정 사실**도 판정 메뉴로 옮긴다. 한 위젯에 섞인 **세액 산식 입력(§161 안분 기준시가·기간 / §166 3분할)은 계산기에 남긴다**.
-  `RentalHousingExceptionSection`은 표시 모드 prop(`facts` / `calc` / `full`)으로 나눠 **한 컴포넌트를 두 화면이 쓴다** — 복제 금지.
+  `RentalHousingExceptionSection`은 표시 모드 prop으로 나눠(**구현은 `facts`/`full` 2종** — `calc`는 P6-c에서 신설) **한 컴포넌트를 두 화면이 쓴다** — 복제 금지.
 
 ### 5.1 공유 판정 엔진 — 추출(P2)
 
@@ -713,7 +713,9 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P5-b-1** | ✅ **완료(2026-09-21 · §27)** — 결과뷰 **4종** 출처 한 줄 · staleness 3상태 · anchor 13건 + 정적 가드 10건 · 뮤테이션 **10/10 KILLED** · E2E 2건 | P5-a | 중 |
 | **P5-b-2** | ✅ **완료(2026-09-21 · §28)** — 「판정 불러오기」 모달 · 계산기 0단계 런처 + 불러옴 표시 · `candidateTo*` 미신설(P5-a 헬퍼 재사용) · anchor 10건 + 모달 RTL·정적 가드 12건 · 뮤테이션 **7/7 KILLED** · E2E 2건 | P5-b-1 | 중 |
 | **P5-c** | ✅ **완료(2026-09-21 · §30)** — 겸용 × §155의3. 갭은 표2 **하나가 아니라 둘**이었다(§154① 비과세 **455,160,286원** · 표2 17,148,449원). 9지점 배선 · anchor 12+5+3건 · 뮤테이션 **6/6 KILLED** | P5-a | 소~중 |
-| **P6** | **계산기 정리** — ③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격(OH-21) · E2E 이관(§3.4 spec) | P5 · V-11 | 중~대 |
+| **P6-a** | ✅ **완료(2026-09-21 · §31)** — 권리 예외 3섹션 계산기에서 이관 · ⑧ 검증 **이관**(삭제 아님) · 읽기 전용 요약 확장 · RTL 12건 화면 이관 · 뮤테이션 **5/5 KILLED** | P5 · V-11 | 소~중 |
+| **P6-b** | ③ 일시적 2주택(529줄)·합가일 이관 + 간이 입력 안내(§5.4) + E2E 7 spec 이관 | P6-a | 중 |
+| **P6-c** | Q-7 — §155⑳ `calc` 모드 신설 · §89①4호 판정 사실 분리 | P6-b | 중 |
 
 
 🔴 **P6이 마지막이다.** 새 입력 경로(P4·P5)가 먼저 있어야 한다. 기존 1세대1주택 E2E(§3.4, 약 15 spec)가 ③ 섹션을
@@ -736,9 +738,9 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **V-8** | ✅ **종결 — 미구현 확인**(엔진 설계 실측): §154⑫ 인용·구현 0건. §154⑧3호 통산(`consolidateResidenceMonths`, `transfer-tax-exemption-requirements.ts:301`)은 피상속인-상속인 통산이라 **별개**다. `OneHouseFacts`에 상속인별 거주기간 표현이 없어 P3·P4 범위 밖 — **별건 계획서로 분리** | 엔진 설계 V-8 |
 | **V-9** | E-7의 **§155① 전입요건 폐지 시행일** — 「현행에 없음」은 실독 확인됐으나 **날짜는 미검증**. 저장소 `regulatedAreaRelaxDate`(2022-05-10)는 **처분기한 완화** 축이고(`transfer-tax-exemption-requirements.ts:525` 주석) 전입요건 폐지와 같은 개정인지 확인 안 됨. **과거 양도분 판정을 구현할 때만** 필요 | 해당 개정본 MST 부칙 조회 |
 | **V-10** | **§155⑯ 5년 vs 조정대상지역 단축 기한의 우선순위** — 저장소가 이미 「명문 없음(🔶 계획서 W-4)」으로 남기고 5년이 덮는 것으로 구현했다(`transfer-tax-exemption-requirements.ts:518-521`). 이 계획서가 그 미판정을 **승계**한다 — 새로 발견한 것이 아니다 | 해석례 확인. 미해소면 현행 구현 유지 |
-| **V-11** | 🟡 **부분 해소** — UI 설계 §4가 재사용 섹션 10개의 props·조문·렌더 게이트(컴포넌트 단위)와 이관 필드군을 확정했다. **남은 것**: 필드 **하나하나**의 ⓐ 판정 메뉴 입력 위치 ⓑ 전달 payload 포함 ⓒ 이력 승격 규칙(OH-21) 전수표. 컴포넌트 단위 표로는 「한 필드가 빠졌는지」를 못 잡는다 | P6 착수 전 필드 전수표 |
+| **V-11** | ✅ **종결(2026-09-21 · §31.1)** — 필드 전수표 완성: 이관 대상 **45필드 전부 `TransferFormData` flat**(`calc-wizard-form.types.ts:83-189`)이고 판정 메뉴가 **같은 컴포넌트를 재사용**해 입력 위치가 모두 있다. ④ 미탑재 5필드는 전부 주소·자동판정 보조(UI-only). ⓒ 이력 승격은 **새 운반 상자 불요** — flat이라 ④가 계속 읽는다 | — |
 | **V-12** | ✅ **종결**(UI 설계 §8 · 실측): 다건 편집(`MultiTransferSteps.tsx:203` `StepEdit`)이 단건 `<TransferTaxCalculator />`를 그대로 마운트하고, 다건 store의 자산 항목이 `form: TransferFormData`를 통째로 보유한다(`multi-transfer-tax-store.ts:15`). 다건 전용 통합 코드는 필요 없다 — **단 「판정 불러오기」는 이동하지 않는 함수를 불러야 한다**(§5.3) | — |
-| **V-13** | ✅ **종결 — Q-7로 분할안 채택**. §155⑳: 판정 사실 `applyException`·`scenario`·`rentalUnits[]` → 판정 메뉴 / §161 안분 입력(B시나리오 `priorResidenceTransferDate`·`standardPriceAtAcquisition`·`standardPriceAtPriorTransfer`·`standardPriceAtTransfer`) → 계산기 잔류(`lib/tax-engine/transfer-tax/rental-housing-exception/types.ts:106-126` 실측). §89①4호: 판정 사실 4필드(`RedevelopmentRightExemptionSection.tsx:156·168·179·191` onChange 실측) → 판정 메뉴 / §166 3분할 → 계산기 잔류. 두 위젯은 `AssetForm`에 묶여 있어(`Props`: `asset: AssetForm`) 판정 메뉴는 양도 대상을 `AssetForm` 호환 객체로 든다 | 설계 문서 2종 |
+| **V-13** | ✅ **종결 — Q-7로 분할안 채택**. §155⑳: 판정 사실 `applyException`·`scenario`·`rentalUnits[]` → 판정 메뉴 / §161 안분 입력(B시나리오 `priorResidenceTransferDate`·`standardPriceAtAcquisition`·`standardPriceAtPriorTransfer`·`standardPriceAtTransfer`) → 계산기 잔류(`lib/tax-engine/transfer-tax/rental-housing-exception/types.ts:106-126` 실측). §89①4호: 판정 사실 4필드(`RedevelopmentRightExemptionSection.tsx:171·184·195·207` onChange 실측(2026-09-21 재실측 — 종전 기재 `:156·168·179·191`은 머지 후 드리프트)) → 판정 메뉴 / §166 3분할 → 계산기 잔류. 두 위젯은 `AssetForm`에 묶여 있어(`Props`: `asset: AssetForm`) 판정 메뉴는 양도 대상을 `AssetForm` 호환 객체로 든다 | 설계 문서 2종 |
 | **V-14** | ✅ **종결(해당 없음)** — 영 §152의3 3호 「기준 중위소득」 적용 방식은 **1세대 자동 판정을 하지 않기로 해**(Q-3′) 엔진이 쓸 일이 없다. 참고로 남긴다: KoreanLaw MCP 해석례·심판례 검색 4회 0건(2026-09-18) — 조문은 가구원 수·고시 연도·소득 기간을 정하지 않는다 | — |
 | **V-15** | ✅ **종결(해당 없음)** — 영 §152의3 3호 단서의 미성년자 예외 사유 위임 규칙. Q-3′로 자동 판정을 하지 않아 불요 | — |
 
@@ -2276,3 +2278,58 @@ route raw data(Date 미변환) · 표시 문구 분기).
 
 - **P6**: 계산기 정리(③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격 OH-21 · E2E 이관).
 - 🟠 겸용 × §155의2 §154① 면제(§30.3).
+
+
+## 31. P6-a — 권리 예외 3섹션 이관 (2026-09-21 완료)
+
+### 31.1 V-11 종결 — 필드 전수표
+
+이관 대상 **45필드가 전부 `TransferFormData` flat**이다(`calc-wizard-form.types.ts:83-189`).
+`AssetForm` 필드 0개. 그리고 **판정 메뉴가 5섹션을 복제하지 않고 그대로 import해 렌더**한다
+(`one-house-exemption/steps/Step2.tsx:27-31` import · `:198·206·218·219·220` 마운트 ·
+`Step1.tsx:78` 합가일) ⇒ **계산기에만 있고 판정 메뉴에 없는 필드는 0건**.
+
+④ payload 미탑재 5필드(`relocatedInstitutionJibun`·`newHouseJibun`·`ruralHouseJibun`·
+`ruralHouseRegionCode`·`ruralHouseLocationTouched`)는 전부 주소 표시·자동판정 보조라 세액 무관.
+
+### 31.2 🔴 위험의 성격이 계획서 기재와 달랐다
+
+§5.4는 OH-21을 「③·권리 값을 **넘겨받은 사실로 승격**해 보존한다. 조용히 버리면 재계산 세액이
+바뀐다」로 적었다. 실측은 **버려지지 않는다**를 말한다 — flat이라 ④가 계속 읽고
+(`transfer-tax-api.ts:514·524·526·527` · `-helpers.ts:379·428`), 이력 복원은 `updateFormData`
+얕은 merge라 값이 그대로 살아난다. ⇒ **새 운반 상자·타입 확장 불요**(만들면 같은 45필드가
+flat과 상자에 두 벌이 된다 — `feedback_ui_engine_dual_truth_avoidance`).
+
+실제 위험은 둘이고 **둘 다 조용하다**:
+
+| # | 위험 | 방어 |
+|---|---|---|
+| ① | **영구 차단** — 화면엔 칸이 없는데 ⑧이 요구 | 검증을 **이관**(계산기 → 판정 메뉴). 2026-09-07에 같은 모양으로 4건이 났고 그때 만든 술어가 `rightThreeYearExceptionVisible`이다 |
+| ② | **보이지 않는 값이 세액을 바꾼다** | 읽기 전용 요약(`ImportedOneHouseFactsCard`)이 권리 값도 그린다. `facts`가 없어도 권리 값만으로 렌더한다 — P6 이전 record가 그 경우다 |
+
+### 31.3 검증이 사라진 것이 아니라 옮겨갔다
+
+`transfer-tax-validate.ts`에서 뺀 2건을 `one-house-exemption-validate.ts:110-127`에 넣었다.
+게이트는 ⑤와 **같은 술어**를 쓴다. RM-1(계산기가 막지 않는다)만 두면 「검증을 통째로 지웠다」와
+구별되지 않으므로 RM-2(판정 메뉴가 막는다)를 **긍정 짝**으로 둔다
+(`feedback_negative_anchor_needs_positive_twin`).
+
+### 31.4 소스 스캔 가드가 대리 지표를 봤다 (뮤테이션 실측)
+
+RM-6은 소스에 `imported-right-exceptions` 문자열이 있는지만 봤고, 렌더 조건을 `{false && (`로
+바꿔도 **초록이었다(SURVIVED)**. 주장은 「그린다」인데 본 것은 「코드에 있다」였다
+(`feedback_guard_uses_proxy_not_the_claim`). ⇒ RTL(`imported-one-house-facts-rights.test.tsx`)로
+실제 마운트해 보게 고쳐 **5/5 KILLED**.
+
+### 31.5 남은 것
+
+- **P6-b**: ③ 일시적 2주택(529줄)·`MergeDateSection`(62줄) 이관 + 간이 입력 안내(§5.4) +
+  E2E 7 spec 이관. ⑧ 게이트는 `temporary-two-house-section-scope.ts`를 같은 방식으로 다룬다.
+- **P6-c**: Q-7 — `RentalHousingExceptionSection`에 **`calc` 모드 신설**(판정 사실과 §161 안분
+  입력이 한 컴포넌트에 섞여 있어 현행 2모드로는 「사실은 감추고 안분만 보인다」를 표현할 수 없다) ·
+  `RedevelopmentBlock.tsx:129`의 렌더를 읽기 전용 요약으로 교체(이쪽은 §166 입력이 부모에 있어
+  제3 모드 불요).
+- 🟠 **판정 메뉴 ③-A 「양도 대상」이 2종뿐**이다(`Step3.tsx:58-69` — 주택·조합원입주권).
+  계산기 ③ 게이트는 `isHousingLike` **4종**(+ 분양권·재개발APT)이다. 판정 메뉴 ③ 섹션 자체는
+  자산 축이 없어 렌더되므로 **입력 차단은 아니지만**, 분양권·재개발APT 양도자가 화면에서
+  「주택」으로 표시된다. P6-b 착수 전 표시 충실도를 판단할 것.

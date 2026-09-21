@@ -18,11 +18,22 @@
  *
  * 미선택은 판정 불가로 남는다. 배제가 확정되려면 「어느 것에도 해당하지 않는다」를 **명시 선택**해야
  * 한다 — 그 선택지가 화면에 실제로 있는지 여기서 고정한다.
+ *
+ * ## 🔄 마운트 화면이 **판정 메뉴로 옮겨졌다** (P6-a)
+ *
+ * 이 카드는 종전에 계산기 `Step4`(보유 상황)에 있었고 이 파일이 그것을 마운트했다. P6-a가
+ * 그 섹션을 판정 메뉴 ②(`app/calc/one-house-exemption/steps/Step2.tsx:218`)로 이관했으므로
+ * **같은 단언을 새 화면에 대고 다시 건다** — 지우지 않는다. 카드가 사라진 것이 아니라
+ * 자리를 옮긴 것이고, 이 파일이 그 사실의 증거다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
+import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import {
+  createInitialOneHouseJudgmentForm,
+  type OneHouseJudgmentFormData,
+} from "@/lib/stores/one-house-judgment-form.types";
 
 vi.mock("@/components/ui/address-search", () => ({
   AddressSearch: () => null,
@@ -33,8 +44,11 @@ afterEach(cleanup);
 const CARD_TITLE = /권리 취득 후 3년이 지나 양도/;
 
 /** 주택 1채 양도 + 세대 보유 입주권 1개. 권리 취득일과 양도일로 3년 초과 여부를 만든다. */
-function form(rightAcquisitionDate: string, over: Partial<TransferFormData> = {}): TransferFormData {
-  const base = createDefaultTransferFormData();
+function form(
+  rightAcquisitionDate: string,
+  over: Partial<TransferFormData> = {},
+): OneHouseJudgmentFormData {
+  const base = { ...createDefaultTransferFormData(), ...createInitialOneHouseJudgmentForm() };
   return {
     ...base,
     assets: base.assets.map((a, i) =>
@@ -60,28 +74,28 @@ const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 describe("§89② 3년 초과 예외 ⑤ — 카드 가시성", () => {
   it("★ 3년을 넘겨 양도 → 카드가 열린다", () => {
     // 권리 2016-10-01 + 3년 = 2019-10-01 < 양도 2024-06-01
-    render(<Step4 form={form("2016-10-01")} onChange={() => {}} />);
+    render(<Step2 form={form("2016-10-01")} onChange={() => {}} />);
     expect(shows(CARD_TITLE)).toBe(true);
   });
 
   it("🔑 3년 이내 양도 → 열리지 않는다 (§156의2③이 먼저 충족하므로 물을 필요가 없다)", () => {
     // 권리 2022-01-01 + 3년 = 2025-01-01 > 양도 2024-06-01
-    render(<Step4 form={form("2022-01-01")} onChange={() => {}} />);
+    render(<Step2 form={form("2022-01-01")} onChange={() => {}} />);
     expect(shows(CARD_TITLE)).toBe(false);
   });
 
   it("경계: 권리 취득일 + 3년 **당일** 양도는 「3년 이내」라 열리지 않는다", () => {
-    render(<Step4 form={form("2021-06-01")} onChange={() => {}} />);
+    render(<Step2 form={form("2021-06-01")} onChange={() => {}} />);
     expect(shows(CARD_TITLE)).toBe(false);
   });
 
   it("세대 보유 권리가 없으면 열리지 않는다", () => {
-    render(<Step4 form={form("2016-10-01", { presaleRights: [] })} onChange={() => {}} />);
+    render(<Step2 form={form("2016-10-01", { presaleRights: [] })} onChange={() => {}} />);
     expect(shows(CARD_TITLE)).toBe(false);
   });
 
   it("권리 취득일이 비어 있으면(입력 중) 열리지 않는다", () => {
-    render(<Step4 form={form("")} onChange={() => {}} />);
+    render(<Step2 form={form("")} onChange={() => {}} />);
     expect(shows(CARD_TITLE)).toBe(false);
   });
 });
@@ -90,7 +104,7 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
   describe("R-3 — ④2호 전단(완성 전 양도)", () => {
     it("★ 「완성되기 전」을 고르면 **완성일 칸이 사라진다**", () => {
       render(
-        <Step4
+        <Step2
           form={{ ...form("2016-10-01"), rightThreeYearExceptionKind: "before_completion" }}
           onChange={() => {}}
         />,
@@ -103,7 +117,7 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
 
     it("🔑 「완성된 뒤」 갈래는 완성일을 그대로 요구한다", () => {
       render(
-        <Step4
+        <Step2
           form={{ ...form("2016-10-01"), rightThreeYearExceptionKind: "new_house" }}
           onChange={() => {}}
         />,
@@ -117,7 +131,7 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
 
   it("★ **네** 갈래가 모두 있다 — 「해당 없음」이 없으면 배제를 확정할 수 없다", () => {
     // 🔴 2026-08-27(R-3): ④2호가 전단·후단으로 갈려 신축주택 갈래가 둘이 됐다.
-    render(<Step4 form={form("2016-10-01")} onChange={() => {}} />);
+    render(<Step2 form={form("2016-10-01")} onChange={() => {}} />);
     expect(shows(/신축주택이 완성된 뒤 양도했다/)).toBe(true);
     expect(shows(/신축주택이 완성되기 전에 양도했다/)).toBe(true);
     expect(shows(/경매·공매 등으로 3년 내 양도하지 못했다/)).toBe(true);
@@ -125,13 +139,13 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
   });
 
   it("미선택 시 「종전대로 계산」 안내가 뜬다 — 침묵하지 않는다", () => {
-    render(<Step4 form={form("2016-10-01")} onChange={() => {}} />);
+    render(<Step2 form={form("2016-10-01")} onChange={() => {}} />);
     expect(shows(/종전대로 계산/)).toBe(true);
   });
 
   it("new_house 선택 → 완성일·이사·거주 입력이 나타난다", () => {
     render(
-      <Step4
+      <Step2
         form={form("2016-10-01", { rightThreeYearExceptionKind: "new_house" })}
         onChange={() => {}}
       />,
@@ -143,7 +157,7 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
 
   it("🔑 delay 선택 → §75①의 **둘째 요건**(그 방법으로 양도)까지 묻는다", () => {
     render(
-      <Step4
+      <Step2
         form={form("2016-10-01", { rightThreeYearExceptionKind: "delay" })}
         onChange={() => {}}
       />,
@@ -156,7 +170,7 @@ describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
 
   it("🔑 §155⑱의 4·5호(현금청산 소송·수용재결)는 선택지에 **없다**", () => {
     render(
-      <Step4
+      <Step2
         form={form("2016-10-01", { rightThreeYearExceptionKind: "delay" })}
         onChange={() => {}}
       />,
