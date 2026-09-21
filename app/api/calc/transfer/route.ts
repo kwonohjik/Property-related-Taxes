@@ -283,6 +283,8 @@ export async function POST(request: NextRequest) {
           regionCode: data.regionCode,
           oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
           temporaryTwoHouse: engineInput.temporaryTwoHouse,
+          // §155의3 상생임대 (P5-c) — ⚠️ Date 변환본(`engineInput`).
+          winWinRentalHouse: engineInput.winWinRentalHouse,
           specialHouseExclusions: engineInput.specialHouseExclusions,
           isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
           rawHouses: data.houses,
@@ -462,6 +464,8 @@ export async function POST(request: NextRequest) {
         isUnregistered: data.isUnregistered,
         totalPropertyTransferPrice: data.totalPropertyTransferPrice,
         reductions: engineInput.reductions,
+        // §155의3 상생임대 (P5-c) — ⚠️ `engineInput`(Date 변환본). raw `data.*`는 계약일이 string이다.
+        winWinRentalHouse: engineInput.winWinRentalHouse,
         filingPenaltyDetails: engineInput.filingPenaltyDetails,
         delayedPaymentDetails: engineInput.delayedPaymentDetails,
         assetContractDate: engineInput.assetContractDate,

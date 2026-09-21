@@ -7,7 +7,9 @@
  */
 
 import { calculateHoldingPeriod } from "./tax-utils";
-import { MIXED_USE } from "./legal-codes/transfer";
+import { MIXED_USE, TRANSFER } from "./legal-codes/transfer";
+// §159의4 표2 거주 하한 — 사유 문구가 게이트와 **같은 상수**를 본다(2를 손으로 적으면 갈린다).
+import { TABLE2_MIN_RESIDENCE_YEARS } from "./transfer-tax-exemption";
 import type {
   MixedUseAssetInput,
   MixedUseGainBreakdown,
@@ -65,10 +67,21 @@ export function buildCalculationRoute(
           ? ("phd_corrected" as const)
           : ("section97_direct" as const);
 
-  // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
+  /**
+   * 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
+   *
+   * 🔴 **상생임대는 연수로 설명할 수 없다** (P5-c). §155의3①이 거주기간 제한 자체를 면제하므로
+   *    거주 0년에도 표2가 열린다 — 그때 「거주(통산) 0년 ≥ 2년」이라고 적으면 화면이 **거짓말**을
+   *    한다. 표가 열렸는데 연수가 모자란 경우의 사유는 그 면제뿐이다(게이트의 OR 두 항 중
+   *    연수 항이 거짓이므로). 게이트를 여기서 **다시 판정하지 않고** 결과에서 사유만 읽는다.
+   */
+  const table2ByWinWinRental =
+    housingPart.longTermDeductionTable === 2 && table2ResidenceYears < TABLE2_MIN_RESIDENCE_YEARS;
   const housingDeductionTableReason =
     housingPart.longTermDeductionTable === 2
-      ? `거주(통산) ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
+      ? table2ByWinWinRental
+        ? `상생임대주택 — 거주기간 제한 면제(${TRANSFER.WIN_WIN_RENTAL_EXEMPT}) → 표2 (보유×4% + 거주×4%, 최대 80%)`
+        : `거주(통산) ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
       : `거주(통산) ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
 
   const zoneLabel = asset.zoneType ?? "residential";

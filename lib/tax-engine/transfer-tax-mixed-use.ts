@@ -130,6 +130,18 @@ export function calcMixedUseTransferTax(
     regionCode: asset.regionCode,
     // 미주입 시 false — 조정대상지역이 아니면 거주요건 자체가 없다(종전 동작 불변).
     wasRegulatedAtAcquisition: asset.wasRegulatedAtAcquisition ?? false,
+    /**
+     * §155의3① 상생임대주택 — **§154①의 거주기간 제한 면제** (P5-c).
+     *
+     * 🔴 `ResidenceReqInput`이 이 필드를 **포함**하는데(`transfer-tax-exemption-requirements.ts`)
+     *    겸용만 넘기지 않아, 상생임대주택인데도 거주 2년 미달이면 비과세가 **배제**됐다
+     *    (과다과세). 같은 필드가 아래 표2 게이트도 연다 — 법문이 §154①과 §159의4를 함께
+     *    열거하므로 **두 지점을 동시에** 배선해야 축이 어긋나지 않는다.
+     *
+     * 🔑 §155의2(장기저당담보)는 여기 오지 않는다 — 공용 술어에 일부러 넣지 않은 축이고
+     *    (다른 의제 경로로 면제가 샌다) 호출부 2곳에서만 주입한다. 겸용 × §155의2는 별개 축.
+     */
+    winWinRentalHouse: asset.winWinRentalHouse,
   };
   const meetsOneHouseRequirements = meetsOneHouseHoldingResidence(
     exemptionReqInput,
@@ -457,6 +469,8 @@ export function calcMixedUseTransferTax(
     isOneHouseExempt,
     isUnregistered,
     surchargeLthdExcluded,
+    // §155의3 상생임대 — 표2 거주요건 면제 (P5-c). 위 `exemptionReqInput`과 **같은 필드**다.
+    asset.winWinRentalHouse,
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
