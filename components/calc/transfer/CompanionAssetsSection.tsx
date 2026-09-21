@@ -32,6 +32,11 @@ interface Props {
    * 사례 45 — RedevelopmentBlock §⑤ 거주월수 분리 입력 카드 가시성 가드.
    */
   isOneHouseSingle?: boolean;
+  /**
+   * 판정 메뉴에서 사실을 넘겨받은 적이 있는가 (`hasJudgmentProvenance`) — P6-c-5.
+   * 자산 카드 안의 두 안내 문구가 「가라」/「선언이 없다」를 가른다.
+   */
+  judgmentLoaded?: boolean;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴
    *    전용이 되면서 이 체인의 소비처가 사라졌다. U1-03 감시는 판정 메뉴 경로로 옮겼다.
@@ -46,7 +51,7 @@ interface Props {
   onFractionalToggle: (yes: boolean) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -99,6 +104,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           hasIncrementAsset={assets.some((a) => a.isReplotIncrement)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
+          judgmentLoaded={judgmentLoaded}
           errorMessage={errorAssetIndex === idx ? errorMessage ?? undefined : undefined}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}

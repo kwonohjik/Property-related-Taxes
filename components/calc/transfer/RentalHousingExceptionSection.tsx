@@ -89,6 +89,11 @@ interface RentalHousingExceptionSectionProps {
   onChange: (rh: AssetForm["rentalHousingException"]) => void;
   /** 기본값 `"full"` — 넘기지 않으면 현행(계산기) 동작 그대로다. */
   mode?: RentalHousingSectionMode;
+  /**
+   * 판정 메뉴에서 사실을 **넘겨받은 적이 있는가**(`hasJudgmentProvenance`) — P6-c-5.
+   * `calc` 모드 안내 문구만 가른다. 자세한 것은 안내 블록 주석.
+   */
+  judgmentLoaded?: boolean;
 }
 
 export function RentalHousingExceptionSection({
@@ -99,6 +104,7 @@ export function RentalHousingExceptionSection({
   onChangeResidence,
   onChange,
   mode = "full",
+  judgmentLoaded = false,
 }: RentalHousingExceptionSectionProps) {
   /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
   const showAllocationInputs = mode !== "facts";
@@ -524,22 +530,53 @@ export function RentalHousingExceptionSection({
           className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm text-violet-900"
           data-testid="rental-housing-handoff-notice"
         >
-          <p>
-            장기임대주택 보유자 거주주택 비과세 특례(
-            <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
-            )는{" "}
-            <Link
-              href="/calc/one-house-exemption"
-              className="font-medium underline underline-offset-2"
-              data-testid="rental-housing-handoff-link"
-            >
-              1세대1주택 비과세 판정
-            </Link>
-            에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
-          </p>
-          <p className="mt-1 text-caption text-muted-foreground">
-            판정을 거치지 않으면 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
-          </p>
+          {/*
+            🔴 **이미 판정을 다녀온 사용자에게 「가라」고 하지 않는다** (P6-c-5).
+
+            종전에는 이 카드가 `asset`만 받아 폼-전역 provenance를 볼 수단이 없었다. 판정을
+            불러왔는데 이 특례가 **해당 없어** 선언하지 않은 사용자(대부분)에게도 「판정한 뒤
+            불러오세요」라고 말했다 — 다시 가도 할 것이 없다. `JudgmentHandoffNoticeCard`
+            (Step4)는 같은 축에서 provenance를 보는데 이 카드와 §89①4호만 못 봤다.
+          */}
+          {judgmentLoaded ? (
+            <>
+              <p>
+                넘겨받은 판정에 장기임대주택 거주주택 특례(
+                <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
+                ) 선언이 <strong>없습니다</strong> — 해당하지 않으면 그대로 두세요.
+              </p>
+              <p className="mt-1 text-caption text-muted-foreground">
+                선언하려면{" "}
+                <Link
+                  href="/calc/one-house-exemption"
+                  className="font-medium underline underline-offset-2"
+                  data-testid="rental-housing-handoff-link"
+                >
+                  판정 메뉴
+                </Link>
+                로 돌아가 다시 판정하세요. 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                장기임대주택 보유자 거주주택 비과세 특례(
+                <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
+                )는{" "}
+                <Link
+                  href="/calc/one-house-exemption"
+                  className="font-medium underline underline-offset-2"
+                  data-testid="rental-housing-handoff-link"
+                >
+                  1세대1주택 비과세 판정
+                </Link>
+                에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
+              </p>
+              <p className="mt-1 text-caption text-muted-foreground">
+                판정을 거치지 않으면 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
+              </p>
+            </>
+          )}
         </div>
       );
     }

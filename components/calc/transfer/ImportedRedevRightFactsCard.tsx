@@ -65,7 +65,22 @@ function factsRows(a: ImportedRedevRightSlice): Row[] {
   return rows;
 }
 
-export function ImportedRedevRightFactsCard({ asset }: { asset: ImportedRedevRightSlice }) {
+export function ImportedRedevRightFactsCard({
+  asset,
+  /**
+   * 판정 메뉴에서 사실을 **넘겨받은 적이 있는가**(`hasJudgmentProvenance`) — P6-c-5.
+   *
+   * 🔴 종전에는 이 카드가 `asset`만 받아 폼-전역 provenance를 **볼 수단이 없었다**. 그래서
+   *    판정을 이미 불러온 사용자에게도 「판정하러 가세요」라고 말했다 — 이미 다녀왔고, 이
+   *    특례가 해당 없으면 다시 가도 할 것이 없다. `JudgmentHandoffNoticeCard`(Step4)는
+   *    같은 축에서 provenance를 보고 카드를 통째로 감췄는데, 셋 중 이 카드와 §155⑳만
+   *    상태를 못 봤다.
+   */
+  judgmentLoaded = false,
+}: {
+  asset: ImportedRedevRightSlice;
+  judgmentLoaded?: boolean;
+}) {
   const rows = factsRows(asset);
 
   return (
@@ -112,20 +127,43 @@ export function ImportedRedevRightFactsCard({ asset }: { asset: ImportedRedevRig
           className="rounded-md border border-sky-200 bg-sky-50/60 p-3 text-sm text-sky-900"
           data-testid="redev-right-handoff-notice"
         >
-          <p>
-            1세대1입주권 비과세 요건(§89①4호)은{" "}
-            <Link
-              href="/calc/one-house-exemption"
-              className="font-medium underline underline-offset-2"
-              data-testid="redev-right-handoff-link"
-            >
-              1세대1주택 비과세 판정
-            </Link>
-            에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
-          </p>
-          <p className="mt-1 text-caption text-muted-foreground">
-            판정을 거치지 않으면 이 계산은 <strong>비과세 없음</strong>으로 산출됩니다.
-          </p>
+          {judgmentLoaded ? (
+            /* 이미 다녀왔다 — 「가라」가 아니라 **무엇이 선언되지 않았는지**를 말한다. */
+            <>
+              <p>
+                넘겨받은 판정에 1세대1입주권 비과세 요건(§89①4호) 선언이{" "}
+                <strong>없습니다</strong> — 해당하지 않으면 그대로 두세요.
+              </p>
+              <p className="mt-1 text-caption text-muted-foreground">
+                선언하려면{" "}
+                <Link
+                  href="/calc/one-house-exemption"
+                  className="font-medium underline underline-offset-2"
+                  data-testid="redev-right-handoff-link"
+                >
+                  판정 메뉴
+                </Link>
+                로 돌아가 다시 판정하세요. 이 계산은 <strong>비과세 없음</strong>으로 산출됩니다.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                1세대1입주권 비과세 요건(§89①4호)은{" "}
+                <Link
+                  href="/calc/one-house-exemption"
+                  className="font-medium underline underline-offset-2"
+                  data-testid="redev-right-handoff-link"
+                >
+                  1세대1주택 비과세 판정
+                </Link>
+                에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
+              </p>
+              <p className="mt-1 text-caption text-muted-foreground">
+                판정을 거치지 않으면 이 계산은 <strong>비과세 없음</strong>으로 산출됩니다.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

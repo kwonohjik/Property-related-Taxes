@@ -77,6 +77,11 @@ interface Props {
    * undefined 시 fallback: true (legacy 호환 — 신규 호출 사이트는 명시 전달 권장).
    */
   isOneHouseSingle?: boolean;
+  /**
+   * 판정 메뉴에서 사실을 넘겨받은 적이 있는가 (`hasJudgmentProvenance`) — P6-c-5.
+   * 안내 문구가 「판정하러 가세요」/「선언이 없습니다」를 가른다.
+   */
+  judgmentLoaded?: boolean;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
    *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
@@ -86,7 +91,7 @@ interface Props {
    */
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -133,7 +138,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle }: Props)
            입력이 하나도 없어서다(§166 3분할은 이 블록이 갖는다). 여기 남는 것은 **세액 맥락
            안내(§95② LTHD 구조)** 와 **읽기 전용 요약**이다 — 값은 flat이라 ④가 계속 보낸다.
       */}
-      {isRightSubject && <ImportedRedevRightFactsCard asset={asset} />}
+      {isRightSubject && <ImportedRedevRightFactsCard asset={asset} judgmentLoaded={judgmentLoaded} />}
 
       {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — subject="apt" 시만 노출 */}
       {!isRightSubject && (
