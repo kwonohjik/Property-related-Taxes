@@ -8,6 +8,7 @@
  * 시나리오 B: 임대주택→거주주택 전환 후 양도 (PHRP, §161① 안분)
  */
 
+import Link from "next/link";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -28,16 +29,52 @@ import { cn } from "@/lib/utils";
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
 /**
- * 표시 모드 (P4-3a · 계획서 Q-7).
+ * 표시 모드 (P4-3a 계획서 Q-7 · P6-c-2에서 `"calc"` 추가).
  *
- * - `"full"` — 계산기. 판정 사실 + §161 안분 산식 입력을 **모두** 보여준다(현행·기본값).
- * - `"facts"` — 판정 메뉴. **판정 사실만**. §161 안분 3시점 기준시가·직전거주주택 양도일은
- *   세액 산식 입력이라 계산기에 남는다(Q-7 분할선).
+ * - `"full"` — 판정 사실 + §161 안분 산식 입력을 **모두**. 이제 **아무도 쓰지 않는다**(기본값
+ *   으로만 남는다 — 기존 테스트 다수가 인자 없이 마운트한다).
+ * - `"facts"` — 판정 메뉴. 판정 사실만.
+ * - `"calc"` — 계산기. **세액 축만**. 아래 분할선 표를 보라.
  *
- * 🔑 `"calc"`(산식 입력만) 모드는 **만들지 않았다**. 그 모드를 쓸 화면은 P6(계산기 정리)에서
- *    생긴다 — 소비자가 없는 분기를 미리 두면 아무 테스트도 그것이 맞는지 말해 주지 않는다.
+ * ## 🔴 분할선 — 계획서(§5.0)와 달랐다. 세 번째다 (P6-c-2 실측)
+ *
+ * 계획서는 「§161① 안분 입력만 계산기에 남기고 판정 사실은 전부 감춘다」였다. ③ 거주기간을
+ * 감출 수 없어 **틀렸다**.
+ *
+ * | 블록 | 축 | 행선지 | 근거 |
+ * |---|---|---|---|
+ * | 토글 `applyException` | 판정 | 판정 메뉴 | 특례 적용 선언 그 자체 |
+ * | 시나리오 A/B | 판정 | 판정 메뉴 | `checkEligibility` 입력 |
+ * | ① 임대주택 정보(9유형 18필드) | 판정 | 판정 메뉴 | 〃 — 이관의 **본체** |
+ * | ② §161① 안분 4필드 | **세액** | **계산기** | 실측: 직전양도 기준시가 4.5억→4억 하나로 과세분 **172,605,000 → 115,070,000**(−57,535,000) |
+ * | ③ 거주기간 편집기 | 판정 **∩ 세액** | **계산기** | 🔴 아래 |
+ * | ③ 실시간 충족 표시 | 판정 표시 | **계산기** | ③ 입력 바로 아래 피드백 — 떼면 왜 채우는지 맥락이 사라진다 |
+ *
+ * ## 🔴 ③ 거주기간을 감출 수 없는 이유 — 유일 입력 경로
+ *
+ * ⑧(`transfer-tax-validate-rental-exception.ts:190`)은 `deriveResidencePeriodMonths(asset, …)`
+ * 을 **자산별로** 불러 24개월 미만이면 계산을 **차단**한다. 그런데 대체 입력 경로인 Step4
+ * `ResidencePeriodSection`은 게이트가 `form.isOneHousehold && isOneHouseExemptionAsset(…)`이고
+ * 패치도 `i === 0`만 한다(`Step4.tsx:498`). 반면 이 카드의 게이트는 자산종류뿐이다
+ * (`AssetSectionExtras.tsx:42`).
+ *
+ * ⇒ **컴패니언 주택 자산**(i>0)이나 **`isOneHousehold` OFF**에서는 이 ③이 거주기간의 유일한
+ *   입력 경로다. 감추면 「24개월 이상 입력하세요」라 막으면서 채울 칸이 없다 — 이 파일 ⑧의
+ *   `:26` 주석이 이미 한 번 겪었다고 기록한 dead-end와 **같은 종류**다.
+ *
+ * 거주기간이 세액 축이기도 하다는 점이 이 배치를 뒷받침한다 — §95② 표2는 거주 2년 이상일 때
+ * 거주분 4%/년을 얹는다(Step4가 계산기에서 그것을 안내하는 이유).
+ *
+ * ## 🔑 중과 축 없음 — 단, 헷갈리는 이웃이 있다
+ *
+ * `asset.rentalHousingException`은 `multi-house-surcharge*`에 **도달하지 않는다**. 소비처는
+ * ④ 변환 2곳·⑧ 1곳·엔진 §155⑳ 스텝뿐이다.
+ *
+ * 🔴 **`houses[].isLongTermRental`은 완전히 다른 필드다.** 그쪽은 명부(`HouseEntryEditor.tsx:361`,
+ *    계산기 Step4 `HousesListSection.tsx:36`)에 있고 `multi-house-surcharge-count.ts:214`가
+ *    소비하는 **중과 축**이다. 이름이 비슷하다고 같이 옮기지 말 것 — 계산기에 남는다.
  */
-export type RentalHousingSectionMode = "full" | "facts";
+export type RentalHousingSectionMode = "full" | "facts" | "calc";
 
 interface RentalHousingExceptionSectionProps {
   rh: AssetForm["rentalHousingException"];
@@ -64,13 +101,23 @@ export function RentalHousingExceptionSection({
   mode = "full",
 }: RentalHousingExceptionSectionProps) {
   /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
-  const showAllocationInputs = mode === "full";
+  const showAllocationInputs = mode !== "facts";
+  /** 판정 사실(토글·시나리오·① 임대주택 정보) — 계산기는 받지 않는다(P6-c-2). */
+  const showJudgmentFacts = mode !== "calc";
   function set<K extends keyof AssetForm["rentalHousingException"]>(
     key: K,
     val: AssetForm["rentalHousingException"][K],
   ) {
     onChange({ ...rh, [key]: val });
   }
+
+  /**
+   * 섹션 번호는 **렌더된 블록만** 센다 — 감춘 블록을 세면 화면이 「1 · 3」이 된다.
+   * 모드가 3종이 되면서 ①②가 각각 빠질 수 있어 하드코딩을 걷어냈다(P6-c-2).
+   */
+  const allocationVisible = rh.scenario === "B" && showAllocationInputs;
+  const allocationNum = showJudgmentFacts ? 2 : 1;
+  const residenceNum = (showJudgmentFacts ? 1 : 0) + (allocationVisible ? 1 : 0) + 1;
 
   function handleToggle(active: boolean) {
     if (active && rh.rentalUnits.length === 0) {
@@ -99,81 +146,73 @@ export function RentalHousingExceptionSection({
     set("rentalUnits", units);
   }
 
-  return (
-    <ToggleCard
-      checked={rh.applyException}
-      onCheckedChange={handleToggle}
-      title="장기임대주택 보유자 거주주택 비과세 특례 적용"
-      description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳)"
-      tone="violet"
-      trailing={
-        <LawArticleModal
-          legalBasis="소득세법 시행령 §155"
-          label="§155⑳"
-        />
-      }
-    >
-      {/* 시나리오 선택 */}
-      <RadioCardGroup
-        name={`rental-scenario-${asset.assetId ?? "primary"}`}
-        tone="violet"
-        layout="stack"
-        options={[
-          {
-            value: "A",
-            label: "거주주택 양도 (임대주택 주택수 제외)",
-            description: "임대주택 보유 중 거주주택 양도 — 임대주택은 주택수에서 제외하여 1세대1주택 비과세 적용",
-          },
-          {
-            value: "B",
-            label: "임대주택을 거주주택으로 전환 후 양도 (시행령 제161조 제1항 안분 적용)",
-            description: "직전거주주택 양도일 이후 양도소득금액만 비과세 — §161① 기준시가 안분 적용",
-          },
-        ]}
-        value={rh.scenario}
-        onChange={(v) => set("scenario", v as "A" | "B")}
-      />
-
-      {/* ① 임대주택 정보 */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-emerald-700">임대주택 정보</p>
-          <LawArticleModal
-            legalBasis="소득세법 시행령 §167조의3"
-            label="§167조의3"
+  const body = (
+    <>
+      {showJudgmentFacts && (
+        <>
+          {/* 시나리오 선택 */}
+          <RadioCardGroup
+            name={`rental-scenario-${asset.assetId ?? "primary"}`}
+            tone="violet"
+            layout="stack"
+            options={[
+              {
+                value: "A",
+                label: "거주주택 양도 (임대주택 주택수 제외)",
+                description: "임대주택 보유 중 거주주택 양도 — 임대주택은 주택수에서 제외하여 1세대1주택 비과세 적용",
+              },
+              {
+                value: "B",
+                label: "임대주택을 거주주택으로 전환 후 양도 (시행령 제161조 제1항 안분 적용)",
+                description: "직전거주주택 양도일 이후 양도소득금액만 비과세 — §161① 기준시가 안분 적용",
+              },
+            ]}
+            value={rh.scenario}
+            onChange={(v) => set("scenario", v as "A" | "B")}
           />
-        </div>
 
-        <div className="space-y-3">
-          {rh.rentalUnits.map((unit, i) => (
-            <RentalUnitCard
-              /**
-               * 🔴 **인덱스 key 금지** (2026-09-07 UI 리뷰). 중간 호를 삭제하면 뒤 카드가 삭제된
-               *    호의 인덱스를 물려받아 자식의 **로컬 state**(주소 검색어·기준시가 조회 연도·
-               *    수동 입력 여부·오류 메시지)가 그대로 남았다 — 그 state들은 마운트 시 1회만
-               *    초기화되기 때문이다. `unitId`는 ②·③이 보장한다.
-               */
-              key={unit.unitId}
-              unit={unit}
-              index={i}
-              onChange={(u) => updateUnit(i, u)}
-              onRemove={() => removeUnit(i)}
-              canRemove={rh.rentalUnits.length > 1}
-            />
-          ))}
-        </div>
+          {/* ① 임대주택 정보 */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
+                1
+              </span>
+              <p className="text-xs font-semibold text-emerald-700">임대주택 정보</p>
+              <LawArticleModal
+                legalBasis="소득세법 시행령 §167조의3"
+                label="§167조의3"
+              />
+            </div>
 
-        <button
-          type="button"
-          onClick={addUnit}
-          className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors"
-        >
-          + 임대주택 추가
-        </button>
-      </div>
+            <div className="space-y-3">
+              {rh.rentalUnits.map((unit, i) => (
+                <RentalUnitCard
+                  /**
+                   * 🔴 **인덱스 key 금지** (2026-09-07 UI 리뷰). 중간 호를 삭제하면 뒤 카드가 삭제된
+                   *    호의 인덱스를 물려받아 자식의 **로컬 state**(주소 검색어·기준시가 조회 연도·
+                   *    수동 입력 여부·오류 메시지)가 그대로 남았다 — 그 state들은 마운트 시 1회만
+                   *    초기화되기 때문이다. `unitId`는 ②·③이 보장한다.
+                   */
+                  key={unit.unitId}
+                  unit={unit}
+                  index={i}
+                  onChange={(u) => updateUnit(i, u)}
+                  onRemove={() => removeUnit(i)}
+                  canRemove={rh.rentalUnits.length > 1}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={addUnit}
+              className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors"
+            >
+              + 임대주택 추가
+            </button>
+          </div>
+        </>
+      )}
 
       {/*
         ② B 시나리오 전용: 직전거주주택 정보 + 3-시점 기준시가.
@@ -192,11 +231,11 @@ export function RentalHousingExceptionSection({
           </p>
         </div>
       )}
-      {rh.scenario === "B" && showAllocationInputs && (
+      {allocationVisible && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-              2
+              {allocationNum}
             </span>
             <p className="text-xs font-semibold text-amber-700">직전거주주택 + 3-시점 기준시가</p>
             <LawArticleModal
@@ -358,8 +397,7 @@ export function RentalHousingExceptionSection({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-                {/* 번호는 **렌더된 블록만** 센다 — ②를 접은 채 3을 찍으면 화면이 「1 · 3」이 된다. */}
-                {rh.scenario === "B" && showAllocationInputs ? 3 : 2}
+                {residenceNum}
               </span>
               <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
             </div>
@@ -469,6 +507,88 @@ export function RentalHousingExceptionSection({
           </div>
         );
       })()}
+    </>
+  );
+
+  /**
+   * 계산기 — 토글이 없다. 특례 선언은 판정 메뉴 몫이라 여기서 켤 수 없다(P6-c-2).
+   *
+   * 🔴 **선언이 없으면 안내를, 있으면 요약을 반드시 낸다.** 위젯만 없앴고 값은 살아서
+   *    세액을 바꾸기 때문이다 — P6-c-2 **이전**에 저장한 이력을 다시 열었을 때가 정확히
+   *    그 경우다. 화면이 말하지 않으면 그 상태를 알 수 없다(OH-20·OH-21과 같은 층위).
+   */
+  if (mode === "calc") {
+    if (!rh.applyException) {
+      return (
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm text-violet-900"
+          data-testid="rental-housing-handoff-notice"
+        >
+          <p>
+            장기임대주택 보유자 거주주택 비과세 특례(
+            <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
+            )는{" "}
+            <Link
+              href="/calc/one-house-exemption"
+              className="font-medium underline underline-offset-2"
+              data-testid="rental-housing-handoff-link"
+            >
+              1세대1주택 비과세 판정
+            </Link>
+            에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
+          </p>
+          <p className="mt-1 text-caption text-muted-foreground">
+            판정을 거치지 않으면 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-violet-300 bg-violet-50/70 p-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="text-sm font-semibold text-violet-900">
+            장기임대주택 보유자 거주주택 비과세 특례 — 적용
+          </p>
+          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
+        </div>
+        {/* 판정 메뉴에서 넘겨받은 사실 — 여기서는 고칠 수 없다. */}
+        <div
+          className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1 text-xs text-violet-900"
+          data-testid="imported-rental-housing-facts"
+        >
+          <p>
+            <strong>
+              {rh.scenario === "B"
+                ? "임대주택을 거주주택으로 전환 후 양도 (§161① 안분)"
+                : "거주주택 양도 (임대주택 주택수 제외)"}
+            </strong>{" "}
+            · 임대주택 {rh.rentalUnits.length}호
+          </p>
+          <p className="text-caption text-muted-foreground">
+            시나리오와 임대주택 정보는 이 화면에서 수정할 수 없습니다 — 고치려면 판정 메뉴로
+            돌아가 다시 판정하세요.
+          </p>
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <ToggleCard
+      checked={rh.applyException}
+      onCheckedChange={handleToggle}
+      title="장기임대주택 보유자 거주주택 비과세 특례 적용"
+      description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳)"
+      tone="violet"
+      trailing={
+        <LawArticleModal
+          legalBasis="소득세법 시행령 §155"
+          label="§155⑳"
+        />
+      }
+    >
+      {body}
     </ToggleCard>
   );
 }

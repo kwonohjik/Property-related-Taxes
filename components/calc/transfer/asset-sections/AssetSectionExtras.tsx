@@ -44,6 +44,7 @@ export function AssetSectionExtras({ asset, onChange, transferDate }: Props) {
           asset={asset}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate ?? ""}
+          mode="calc"
           onChangeResidence={(patch) => onChange(patch)}
           onChange={(rh) => onChange({ rentalHousingException: rh })}
         />
