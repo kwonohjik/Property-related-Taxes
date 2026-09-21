@@ -14,6 +14,8 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
+import { resolveRedevSubject } from "@/lib/calc/redev-field-scope";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -126,6 +128,37 @@ export function ReceiveOnlyToggleCard({
   );
 }
 
+/**
+ * ③-b 「평가액 − 지급받은 청산금」 자동 도출 미리보기 — **양도 대상에 따라 이름이 다르다**.
+ *
+ * ## 🔴 「분양가액」은 완공APT의 이름이다 (P6-c-6)
+ *
+ * 종전에는 두 축 모두에 「분양가액」이라 적었다. **입주권 양도자는 분양받은 것이 없다** —
+ * 조합원입주권을 판 것이고, 그 값은 「소득세법 시행령」 §166①2호 가목의 **공제액**이다.
+ * 법문에 「분양가액」이라는 말은 §166 어디에도 없다:
+ *
+ * > 가. [양도가액 − (기존건물과 그 부수토지의 평가액 − **지급받은 청산금**) − 법 §97①2호·3호에
+ * >    따른 필요경비]
+ *
+ * 완공APT(§166②2호)는 「제1항제2호에 따른 가액」으로 **같은 산식을 준용**하므로 값은 같다.
+ * 갈리는 것은 **이름과 근거 조문**뿐이다.
+ *
+ * ## ⚠️ 이 카드를 입주권에서 감추면 안 된다 — 실측
+ *
+ * 계획서는 이 카드에 `!isRightSubject` 게이트가 빠졌다고 🟠로 적어 두었으나(형제 카드 ③-a·③-c와
+ * 달리), **그대로 넣었다면 결함이 됐다**:
+ *
+ * | 축 | 세액 반영 | 결과 화면(⑦) |
+ * |---|---|---|
+ * | 입주권 | ✅ 청산금 1억→0.5억에 **11,733,334원** 차이 | ✗ **없음**(`transfer-tax-redevelopment-transforms.ts`가 `subject === "apt"`로 게이트) |
+ * | 완공APT | ✅ | ✅ 「분양가」 |
+ *
+ * 입주권에서는 이 카드가 그 값의 **유일한 표시 경로**다. 감추면 세액을 가르는 값이
+ * 화면 어디에도 없게 된다(memory `feedback_computation_meta_discarded`).
+ *
+ * 🔑 축 판정은 `resolveRedevSubject` — ④ `buildRedevelopmentPayload`·엔진 `redevInfo.subject`와
+ *    **같은 술어**다(3중 패턴). 손으로 `assetKind === "right_to_move_in"`을 다시 쓰면 갈린다.
+ */
 export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
   const preview = useMemo(() => {
     const rights = parseAmount(asset.redevRightsValue);
@@ -135,17 +168,35 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
     return { rights, settle, salePriceTotal };
   }, [asset.redevRightsValue, asset.redevSettlementAmount]);
 
+  const isRight = resolveRedevSubject(asset) === "right";
+
   if (!preview) return null;
 
+  /** 입주권은 법문 그대로, 완공APT는 실무 명칭(「분양가액」)을 쓴다. */
+  const title = isRight ? "§166①2호 가목 공제액 (자동 도출, 입력 불요)" : "분양가액 (자동 도출, 입력 불요)";
+  const term = isRight ? "평가액 − 지급받은 청산금" : "분양가액";
+
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1">
-      <p className="font-semibold text-sky-800">분양가액 (자동 도출, 입력 불요)</p>
+    <div
+      className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1"
+      data-testid="redev-sale-price-preview"
+    >
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="font-semibold text-sky-800">{title}</p>
+        <LawArticleModal
+          legalBasis={isRight ? REDEVELOPMENT.RIGHT_RECEIVE : REDEVELOPMENT.APT_RECEIVE}
+          label={isRight ? "§166①2호" : "§166②2호"}
+        />
+      </div>
       <p className="text-sky-700 font-mono tabular-nums">
-        분양가액 = 권리가액 {preview.rights.toLocaleString()} − 청산금 수령액 {preview.settle.toLocaleString()}
+        {term} = {isRight ? "기존건물·부수토지 평가액" : "권리가액"} {preview.rights.toLocaleString()} −{" "}
+        {isRight ? "지급받은 청산금" : "청산금 수령액"} {preview.settle.toLocaleString()}
       </p>
       <p className="text-sky-700 font-mono tabular-nums">= {preview.salePriceTotal.toLocaleString()}</p>
       <p className="text-caption text-sky-600">
-        ※ &ldquo;분양가액&rdquo;은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다.
+        {isRight
+          ? "※ 이 값은 양도가액에서 빼는 금액입니다 — 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."
+          : "※ \u201C분양가액\u201D은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."}
       </p>
     </div>
   );
