@@ -711,7 +711,7 @@ OH-11(불성립)에는 OH-12(성립)를 짝으로 둔다.
 | **P4-3b** | ✅ **완료(2026-09-21 · §25)** — §89①4호 판정 이관. ③ **양도 대상 축** 신설 · 주택 수/입주권 수 **2축 파생** · ⑫ 판정 사실 전용 블록(§166 산식 입력을 지어내지 않는다) · anchor 24건(뮤테이션 **12/12 KILLED**) · E2E 5건 | P4-3a | 중 |
 | **P5-a** | ✅ **완료(2026-09-21 · §26)** — 사실 전달 · §155의2·§155의3 운반 · 재판정(D-3, 배선 기존) · anchor 11건 · 뮤테이션 **8/8 KILLED** · E2E 5건 | P4 | 중 |
 | **P5-b-1** | ✅ **완료(2026-09-21 · §27)** — 결과뷰 **4종** 출처 한 줄 · staleness 3상태 · anchor 13건 + 정적 가드 10건 · 뮤테이션 **10/10 KILLED** · E2E 2건 | P5-a | 중 |
-| **P5-b-2** | 「판정 불러오기」 모달 — mediator는 `applyOneHouseFactsToTransferForm`(기존) 재사용 | P5-b-1 | 중 |
+| **P5-b-2** | ✅ **완료(2026-09-21 · §28)** — 「판정 불러오기」 모달 · 계산기 0단계 런처 + 불러옴 표시 · `candidateTo*` 미신설(P5-a 헬퍼 재사용) · anchor 10건 + 모달 RTL·정적 가드 12건 · 뮤테이션 **7/7 KILLED** · E2E 2건 | P5-b-1 | 중 |
 | **P5-c** | 겸용 표2 게이트(`MixedUseAsset` 전달 경로) | P5-a | 소~중 |
 | **P6** | **계산기 정리** — ③·권리 섹션 이관 · 간이 입력 안내 · 이력 승격(OH-21) · E2E 이관(§3.4 spec) | P5 · V-11 | 중~대 |
 
@@ -2157,12 +2157,59 @@ P5-a가 `sourceJudgmentId`를 심었는데 **읽는 곳이 0건**이었다(grep 
 
 ### 27.6 남은 것
 
-- **P5-b-2**: 「판정 불러오기」 모달. 가장 얇은 선례는
-  `UnlistedStockHistoryModal.tsx`(260줄, 단일 선택) · 가장 최근은
-  `BlockShareholderPriorTransferModal.tsx`(253줄). mediator는
-  `applyOneHouseFactsToTransferForm`(P5-a)이 **이미 있으므로 `candidateTo*`를 새로 만들지
-  않는다**. 후보 카드 배지는 `oneHouseVerdictLabel(resultData)` 재사용.
+- **P5-b-2**: ✅ 완료 — §28.
 - **P5-c**: 겸용 표2 게이트(`transfer-tax-mixed-use-helpers.ts:576`).
 - 🟠 **감지하지 못하는 경로**: 판정 메뉴에서 **저장되지 않은** 변경(판정을 다시 돌리지 않아
   자동저장이 안 돈 경우)은 원리상 감지 불가다. 그때 방어선은 화면에 값이 그대로 보이는
   `ImportedOneHouseFactsCard`다.
+
+
+## 28. P5-b-2 — 「판정 불러오기」 모달 (2026-09-21 완료)
+
+### 28.1 무엇을 닫았나
+
+P5-a가 만든 `applyOneHouseFactsToTransferForm`은 이 PR 전까지 **소비자가 0건**이었다.
+「이 결과로 세액 계산」(판정 → 계산기)의 **반대 방향**, 즉 계산기에서 저장된 판정을 끌어오는
+통로가 없었다.
+
+### 28.2 실측이 설계를 세 번 바꿨다
+
+1. **가장 가까운 선례는 스톡·상속이 아니라 같은 도메인에 있었다** —
+   `MultiTransferHistoryLoadModal.tsx`(175줄). 계획서가 지목한 `UnlistedStockHistoryModal`
+   (260줄)·`BlockShareholderPriorTransferModal`(253줄)보다 얇고, `list({taxType, clientId})`
+   호출 형태가 그대로 성립한다.
+2. **`warnings`를 만들지 않았다** — `use-auto-save-calculation.ts:85-87`이 `resultData`가
+   비면 저장을 **skip**하므로 `one_house_exemption` 이력은 **전부 판정을 마친 것**이다.
+   「판정 전 draft 제외」는 불가능한 시나리오에 대한 방어였다. 기간 창도, throw 경로도 없다.
+   ⇒ 없는 사유를 만들면 화면에 **영원히 0인 안내문**이 남는다.
+3. **⛔ `excludeIds`를 받지 않는다** — 이미 기각된 설계이고(`project_stock_prior_aggregation_overwrite`),
+   이 축에는 더 강한 이유가 있다: 「이미 불러온 판정을 다시 불러오기」가 P5-b-1의
+   `source_changed` 경고를 해소하는 **정규 경로**다. 빼면 경고를 없앨 방법이 사라진다.
+
+### 28.3 함께 닫은 잠복 갭
+
+`applyOneHouseFactsToTransferForm`이 `readJudgmentInputHash`로 **기준선 해시를 읽어 오는
+부분**은 안전망이 0이었다 — P5-b-1의 P-11은 `toTransferFormPatch`를 **직접** 불러 검증했기
+때문이다. 그 줄이 죽으면 불러온 판정이 **영원히 `unknown`**이 되고 화면은 멀쩡히 뜬다.
+LU-8·LU-9가 그 async 래퍼를 고정한다(뮤테이션 M5로 실증).
+
+### 28.4 「불러옴」 표시를 0단계에 둔 이유
+
+넘겨받은 사실 카드(`ImportedOneHouseFactsCard`)는 **다음 단계**(「보유 상황」 = 파일명
+`Step4.tsx`, UI 인덱스 1)에 있어 불러온 직후 화면에서는 보이지 않는다. 확인 신호가 없으면
+사용자는 동작 여부를 알 수 없다. 조건은 4종 결과뷰와 **같은 공용 술어**
+(`hasJudgmentProvenance`)를 쓴다 — 판정 메뉴 CTA로 온 경로의 같은 침묵도 함께 닫힌다.
+
+### 28.5 `stripComments`를 공용으로 올렸다
+
+정적 가드가 **자기 주석을 증거로 잡아** LM-6~LM-8이 빨개졌다 — 「`updateFormData`를 여기서
+부르면 안 된다」는 **금지를 설명하는 주석**이 곧 그 금지의 위반 증거가 됐다. P5-b-1이
+`<PrintSection>` 문자열로 같은 함정을 이미 한 번 밟았으므로, 사본을 하나 더 만들지 않고
+`__tests__/components/_helpers/strip-comments.ts`로 올려 두 가드가 공유한다.
+
+### 28.6 남은 것
+
+- **P5-c**: 겸용 표2 게이트(`transfer-tax-mixed-use-helpers.ts:576`).
+- **P6**: 계산기 정리(③·권리 섹션 이관 · 이력 승격 OH-21 · 기존 E2E 이관).
+- 🟠 **판정 메뉴에 소재지 입력이 없다** — 전달·불러오기 직후 계산기 0단계가 주소 미입력으로
+  막힌다(설계된 동작이나 화면이 「넘어온 값/더 받을 값」을 구분해 주지 않는다).
