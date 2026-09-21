@@ -125,3 +125,159 @@ describe("RF-6~8 ④ 배선 — 도출값이 실제로 payload에 실린다", ()
     expect(heritageOf(form())).toBeUndefined();
   });
 });
+
+// ── §155⑦ 농어촌주택 (3b) ──────────────────────────────────────────────
+
+/**
+ * ## RU-1~9 — 농어촌주택도 정본이 명부 행이다
+ *
+ * | # | 주장 |
+ * |---|---|
+ * | RU-1 | 행 표시 + 유형이 있으면 행에서 도출 |
+ * | RU-2 | 유형이 없으면 미해당 — 표시만으로는 성립하지 않는다 |
+ * | RU-3 | **유형별로 무의미한 필드를 싣지 않는다**(종전 ④ 규약 불변) |
+ * | RU-4 | 귀농 취득일 = **행의 취득일**(§155⑦ 단서의 「그 주택을 취득한 날」) |
+ * | RU-5 | 소재 요건 — 행 주소에서 자동 판정 |
+ * | RU-6 | 사용자 지정값이 있으면 자동 판정을 덮는다 |
+ * | RU-7 | 읍지역은 용도지역 조회 결과로 갈린다 |
+ * | RU-8 | 행이 없으면 **레거시 블록**을 그대로 쓴다(OH-21) |
+ * | RU-9 | ④ 배선 — 행만으로 payload `ruralHouse`가 실린다 |
+ */
+const RURAL_ROW = {
+  oneHouseRuralHouse: true as const,
+  ruralHouseKind: "inherited" as const,
+  ruralDecedentResidenceYears: "6",
+  // 비수도권(48) 면지역 — 조회 없이 순수 판정된다
+  regionCode: "4882025000",
+  addressJibun: "경상남도 거창군 가북면 용산리 1",
+};
+
+describe("RU-1~3 행 도출 · 유형별 필드", () => {
+  it("[RU-1] 행 표시 + 유형 → ruralHouse 도출", () => {
+    const r = deriveOneHouseFactsFromHouses([RURAL_ROW], {});
+    expect(r.ruralHouse?.kind).toBe("inherited");
+    expect(r.ruralHouse?.decedentResidenceYears).toBe(6);
+  });
+
+  /** 🔑 RU-1의 긍정 짝 — 「항상 도출한다」와 구별한다. */
+  it("[RU-2] 유형이 없으면 미해당", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [{ oneHouseRuralHouse: true, addressJibun: "경상남도 거창군 가북면 용산리 1" }],
+      {},
+    );
+    expect(r.ruralHouse).toBeUndefined();
+  });
+
+  /**
+   * 🔴 **종전 ④ 규약을 그대로 지킨다** — 상속 유형에 귀농 대지면적을 실어 보내면
+   *    조용한 오판정이 된다.
+   */
+  it("[RU-3] 상속 유형에 귀농 필드를 싣지 않는다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [{ ...RURAL_ROW, ruralLandAreaSqm: "500", ruralWholeHouseholdMoved: true }],
+      {},
+    );
+    expect(r.ruralHouse).not.toHaveProperty("landAreaSqm");
+    expect(r.ruralHouse).not.toHaveProperty("wholeHouseholdMoved");
+    expect(r.ruralHouse).not.toHaveProperty("ownerResidenceYears");
+  });
+});
+
+describe("RU-4 귀농 취득일 = 행의 취득일", () => {
+  /**
+   * 🔑 §155⑦ 단서 「제3호의 주택에 대해서는 **그 주택을 취득한 날**부터 5년 이내에
+   *    일반주택을 양도하는 경우에 한정」 — 「그 주택」이 이 행이므로 별도 칸이 없다.
+   */
+  it("[RU-4] 귀농 유형은 행 acquisitionDate를 싣는다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [
+        {
+          ...RURAL_ROW,
+          ruralHouseKind: "return_to_farm",
+          acquisitionDate: "2021-05-04",
+          ruralLandAreaSqm: "500",
+          ruralWholeHouseholdMoved: true,
+        },
+      ],
+      {},
+    );
+    expect(r.ruralHouse?.acquisitionDate).toBe("2021-05-04");
+    expect(r.ruralHouse?.landAreaSqm).toBe(500);
+    expect(r.ruralHouse?.wholeHouseholdMoved).toBe(true);
+  });
+});
+
+describe("RU-5~7 소재 요건 — 행 주소에서 판정", () => {
+  it("[RU-5] 비수도권 면지역 → 자동으로 충족", () => {
+    expect(deriveOneHouseFactsFromHouses([RURAL_ROW], {}).ruralHouse?.isOutsideCapitalEupMyeon)
+      .toBe(true);
+  });
+
+  /** 🔑 RU-5의 짝 — 수도권이면 자동으로 불충족이어야 한다. */
+  it("[RU-5b] 수도권이면 자동으로 불충족", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [{ ...RURAL_ROW, regionCode: "1168010100", addressJibun: "서울특별시 강남구 역삼동 1" }],
+      {},
+    );
+    expect(r.ruralHouse?.isOutsideCapitalEupMyeon).toBe(false);
+  });
+
+  /** 🔴 사용자 지정이 자동 판정을 이긴다 — `undefined`가 「자동을 쓴다」는 뜻이다. */
+  it("[RU-6] 사용자 지정값이 자동 판정을 덮는다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [{ ...RURAL_ROW, regionCode: "1168010100", ruralOutsideCapitalEupMyeon: true }],
+      {},
+    );
+    expect(r.ruralHouse?.isOutsideCapitalEupMyeon).toBe(true);
+  });
+
+  it("[RU-7] 읍지역 — 용도지역 조회 결과로 갈린다", () => {
+    const eup = { ...RURAL_ROW, addressJibun: "강원특별자치도 홍천군 홍천읍 희망리 1", regionCode: "5172025000" };
+    expect(
+      deriveOneHouseFactsFromHouses([{ ...eup, ruralUrbanZone: "non_urban" }], {}).ruralHouse
+        ?.isOutsideCapitalEupMyeon,
+    ).toBe(true);
+    expect(
+      deriveOneHouseFactsFromHouses([{ ...eup, ruralUrbanZone: "urban" }], {}).ruralHouse
+        ?.isOutsideCapitalEupMyeon,
+    ).toBe(false);
+  });
+});
+
+describe("RU-8 레거시 폴백 — 옛 record 세액 보존", () => {
+  const LEGACY = {
+    kind: "farm_exit" as const,
+    isOutsideCapitalEupMyeon: true,
+    ownerResidenceYears: 7,
+  };
+
+  it("[RU-8a] 행이 없으면 레거시를 그대로 쓴다", () => {
+    const r = deriveOneHouseFactsFromHouses([], { ruralHouse: LEGACY });
+    expect(r.ruralHouse).toEqual(LEGACY);
+    expect(r.fromLegacyOnly).toBe(true);
+  });
+
+  it("[RU-8b] 행이 있으면 행이 이긴다", () => {
+    const r = deriveOneHouseFactsFromHouses([RURAL_ROW], { ruralHouse: LEGACY });
+    expect(r.ruralHouse?.kind).toBe("inherited");
+    expect(r.fromLegacyOnly).toBe(false);
+  });
+});
+
+describe("RU-9 ④ 배선", () => {
+  /** 🔴 도출이 옳아도 ④가 부르지 않으면 엔진에는 옛 값이 간다. */
+  it("[RU-9] 행만으로 payload에 ruralHouse가 실린다", () => {
+    const f = form({ houses: [{ id: "h1", ...RURAL_ROW }] } as unknown as Partial<TransferFormData>);
+    const payload = buildHouseholdSpecialPayload(f, f.assets[0]) as {
+      ruralHouse?: { kind: string; decedentResidenceYears?: number };
+    };
+    expect(payload.ruralHouse?.kind).toBe("inherited");
+    expect(payload.ruralHouse?.decedentResidenceYears).toBe(6);
+  });
+
+  /** 🔑 미해당이면 키 자체가 없다(Zod optional 계약 불변). */
+  it("[RU-9b] 행도 레거시도 없으면 키가 없다", () => {
+    const f = form();
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).not.toHaveProperty("ruralHouse");
+  });
+});

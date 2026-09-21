@@ -22,7 +22,6 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
-import type { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import type { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -73,7 +72,6 @@ export type TemporaryTwoHouseSectionMode = "full" | "calc";
 type FullOnlyProps = {
   tempTwoHouseVerdict: ReturnType<typeof judgeTempTwoHouseFromForm>;
   relocationRegionVerdict: RelocationRegionVerdict | null;
-  ruralLocation: ReturnType<typeof judgeRuralHouseLocation>;
   proviso: ReturnType<typeof provisoGate>;
   primaryAcquisitionDate: string;
 };
@@ -282,13 +280,17 @@ function TempTwoHouseCoreBlocks({
   );
 }
 
-/** §155⑥1호 문화유산 · §155⑦ 농어촌 · §154① 단서 · §156의2⑤ 대체주택 — 판정 메뉴 전용. */
+/**
+ * §154① 단서 · §156의2⑤ 대체주택 — 판정 메뉴 전용.
+ *
+ * 🔴 §155⑥1호 문화유산·§155⑦ 농어촌은 **명부 행으로 갔다**(D-6 3a·3b). 그래서
+ *    `ruralLocation` prop도 함께 사라졌다 — 소재 판정은 행 주소로 한다.
+ */
 function TempTwoHouseOtherSpecials({
   form,
   onChange,
-  ruralLocation,
   proviso,
-}: BaseProps & Pick<FullOnlyProps, "ruralLocation" | "proviso">) {
+}: BaseProps & Pick<FullOnlyProps, "proviso">) {
   return (
     <>
         {/*
@@ -305,142 +307,19 @@ function TempTwoHouseOtherSpecials({
              `form.culturalHeritageHouseSpecial`은 **레거시 폴백**으로 살아 있다(옛 record 세액 보존).
         */}
 
-        {/* §155⑦ 농어촌주택 — 양도 대상은 **일반주택**이다(농어촌주택은 보유만) */}
-        <p className="text-sm font-medium mt-1">농어촌주택 특례</p>
-        <ToggleCard
-          checked={form.ruralHouseSpecial}
-          onCheckedChange={(v) => onChange({ ruralHouseSpecial: v })}
-          title="농어촌주택 보유 (§155⑦)"
-          description="수도권 밖 읍·면 소재 농어촌주택(상속·이농·귀농)을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
-          tone="emerald"
-        >
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">농어촌주택 유형</label>
-              <RadioCardGroup
-                name="ruralHouseKind"
-                value={form.ruralHouseKind}
-                onChange={(v) => onChange({ ruralHouseKind: v })}
-                options={[
-                  { value: "inherited", label: "1호 상속", description: "피상속인이 취득 후 5년 이상 거주" },
-                  { value: "farm_exit", label: "2호 이농", description: "이농인이 취득일 후 5년 이상 거주" },
-                  { value: "return_to_farm", label: "3호 귀농", description: "영농·영어 목적 취득 — 취득일부터 5년 이내 일반주택 양도 한정" },
-                ]}
-              />
-            </div>
+        {/*
+          🔴 §155⑦ 농어촌주택 블록도 **명부 행으로 옮겼다**(D-6 3b · P7-4).
+             정본: `HouseEntry.oneHouseRuralHouse`·`ruralHouseKind`·`rural*`
+             입력: `HouseEntryRuralHouseBlock`(명부 행 편집 모달 ⑤)
+             도출: `deriveOneHouseFactsFromHouses` → ④ `ruralHouse`
 
-            {/* 소재 요건 — 주소에서 수도권·읍면을 자동 판정하고, 읍이면 용도지역까지 조회한다(W-3) */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">농어촌주택 소재지</label>
-              <AddressSearch
-                value={
-                  {
-                    road: "",
-                    jibun: form.ruralHouseJibun,
-                    building: "",
-                    detail: "",
-                    lng: "",
-                    lat: "",
-                  } satisfies AddressValue
-                }
-                onChange={(v: AddressValue) =>
-                  onChange({
-                    ruralHouseJibun: v.jibun ?? "",
-                    ruralHouseRegionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "",
-                  })
-                }
-              />
-              {ruralLocation.verdict !== "unknown" || form.ruralHouseJibun ? (
-                <ToneCard
-                  tone={ruralLocation.verdict === "qualified" ? "emerald" : ruralLocation.verdict === "not_qualified" ? "amber" : "sky"}
-                  bodyClassName=""
-                  className="px-3 py-2"
-                >
-                  <p data-testid="rural-location-verdict" className="text-xs">
-                    {ruralLocation.reason}
-                  </p>
-                </ToneCard>
-              ) : null}
-            </div>
+          법문이 「농어촌주택과 일반주택을 **각각 1개씩** 소유」라 농어촌주택은 **보유 중인
+          다른 주택**이다. 행에서는 칸 셋이 사라졌다 — 소재지는 행 주소, 귀농 취득일은
+          §155⑦ 단서의 「**그 주택**을 취득한 날」이므로 행의 취득일, `locationTouched`는
+          `ruralOutsideCapitalEupMyeon`이 optional이라 불필요하다.
 
-            <ToggleCard
-              checked={form.ruralHouseOutsideCapitalEupMyeon}
-              onCheckedChange={(v) =>
-                onChange({
-                  ruralHouseOutsideCapitalEupMyeon: v,
-                  ruralHouseLocationTouched: true,
-                })
-              }
-              title="수도권 밖 읍·면 소재 (도시지역 읍 제외)"
-              description="소재지를 입력하면 자동 판정됩니다. 판정 결과와 다르면 직접 조정하세요"
-              tone="emerald"
-            />
-
-            {form.ruralHouseKind === "inherited" && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">피상속인 거주 연수</label>
-                <DecimalInput
-                  value={form.ruralHouseDecedentResidenceYears}
-                  onChange={(v) => onChange({ ruralHouseDecedentResidenceYears: v })}
-                  unit="년"
-                />
-                <p className="text-xs text-muted-foreground">취득 후 5년 이상이어야 합니다.</p>
-              </div>
-            )}
-
-            {form.ruralHouseKind === "farm_exit" && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">이농인 거주 연수</label>
-                <DecimalInput
-                  value={form.ruralHouseOwnerResidenceYears}
-                  onChange={(v) => onChange({ ruralHouseOwnerResidenceYears: v })}
-                  unit="년"
-                />
-                <p className="text-xs text-muted-foreground">취득일 후 5년 이상이어야 합니다.</p>
-              </div>
-            )}
-
-            {form.ruralHouseKind === "return_to_farm" && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">귀농주택 취득일</label>
-                    <DateInput
-                      value={form.ruralHouseAcquisitionDate}
-                      onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      취득일부터 5년 이내에 일반주택을 양도해야 합니다 (§155⑦ 단서).
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">대지면적</label>
-                    <DecimalInput
-                      value={form.ruralHouseLandAreaSqm}
-                      onChange={(v) => onChange({ ruralHouseLandAreaSqm: v })}
-                      unit="㎡"
-                    />
-                    <p className="text-xs text-muted-foreground">660㎡ 이내여야 합니다 (§155⑩3호).</p>
-                  </div>
-                </div>
-                <ToggleCard
-                  checked={form.ruralHouseWholeHouseholdMoved}
-                  onCheckedChange={(v) => onChange({ ruralHouseWholeHouseholdMoved: v })}
-                  title="세대전원 이사·거주 (§155⑩5호)"
-                  description="취학·근무·질병 등으로 세대원 일부가 이사하지 못한 경우도 포함합니다"
-                  tone="emerald"
-                />
-                <ToggleCard
-                  checked={form.ruralHouseHighPriceAtAcquisition}
-                  onCheckedChange={(v) => onChange({ ruralHouseHighPriceAtAcquisition: v })}
-                  title="취득 당시 고가주택에 해당 (§155⑩2호)"
-                  description="해당하면 귀농주택 요건을 충족하지 못합니다"
-                  tone="amber"
-                />
-              </div>
-            )}
-          </div>
-        </ToggleCard>
+          ⚠️ `form.ruralHouse*`는 **레거시 폴백**으로 살아 있다(옛 record 세액 보존 — OH-21).
+        */}
 
         {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154①1·2가·3호 준용 (판정 카드 아래 배치) */}
         {proviso.visible && proviso.mode === "temporary_two_house" && (

@@ -120,50 +120,17 @@ export function Step2({ form, onChange }: Props) {
         };
   }, [form.publicInstitutionRelocation, form.relocatedSigunguCode, form.newHouseSigunguCode]);
 
-  // §155⑦ 농어촌주택 소재지 — 읍지역은 도시지역 여부를 외부 조회로 가른다(계산기와 동일).
-  const [ruralUrbanVerdict, setRuralUrbanVerdict] = useState<
-    "urban" | "non_urban" | "unknown" | null
-  >(null);
-  const ruralEupMyeon = classifyEupMyeon(form.ruralHouseJibun);
-
-  useEffect(() => {
-    if (!form.ruralHouseSpecial || ruralEupMyeon !== "eup" || !form.ruralHouseJibun) {
-      setRuralUrbanVerdict(null);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/address/land-use-zone?jibun=${encodeURIComponent(form.ruralHouseJibun)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { verdict?: "urban" | "non_urban" | "unknown" } | null) => {
-        if (!cancelled) setRuralUrbanVerdict(d?.verdict ?? "unknown");
-      })
-      .catch(() => {
-        if (!cancelled) setRuralUrbanVerdict("unknown");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.ruralHouseSpecial, form.ruralHouseJibun, ruralEupMyeon]);
-
-  const ruralLocation = useMemo(
-    () =>
-      judgeRuralHouseLocation({
-        regionCode: form.ruralHouseRegionCode || undefined,
-        jibun: form.ruralHouseJibun,
-        urbanVerdict: ruralUrbanVerdict ?? undefined,
-      }),
-    [form.ruralHouseRegionCode, form.ruralHouseJibun, ruralUrbanVerdict],
-  );
-
-  // 자동 판정 → 토글 반영 (사용자가 손대면 touched 가드가 멈춘다 — 계산기와 동일)
-  useEffect(() => {
-    if (form.ruralHouseLocationTouched || ruralLocation.verdict === "unknown") return;
-    const auto = ruralLocation.verdict === "qualified";
-    if (form.ruralHouseOutsideCapitalEupMyeon !== auto) {
-      onChange({ ruralHouseOutsideCapitalEupMyeon: auto });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruralLocation.verdict, form.ruralHouseLocationTouched, form.ruralHouseOutsideCapitalEupMyeon]);
+  /**
+   * 🔴 §155⑦ 농어촌 소재 자동판정 기계장치를 **전부 제거했다**(D-6 3b · P7-4).
+   *
+   * 사실이 명부 행으로 갔으므로 여기서 세대 단위 값을 만들 이유가 없다. 부수 효과로
+   * **`useEffect → store` 미러링이 사라졌다** — 종전에는 자동 판정 결과를
+   * `onChange({ ruralHouseOutsideCapitalEupMyeon })`로 써 넣었고 `touched` 플래그로
+   * 사용자 입력을 지켰다(`feedback_useeffect_store_mirror_forbidden` 위반 + eslint-disable).
+   *
+   * 행에서는 **조회 결과**(`ruralUrbanZone`)만 저장하고 판정은 읽는 시점에
+   * `resolveRuralLocationQualified`가 한다.
+   */
 
   /**
    * §154① 단서 게이트 — **파생 주택 수**를 넘긴다.
@@ -208,7 +175,6 @@ export function Step2({ form, onChange }: Props) {
           onChange={onChange}
           tempTwoHouseVerdict={tempTwoHouseVerdict}
           relocationRegionVerdict={relocationRegionVerdict}
-          ruralLocation={ruralLocation}
           proviso={proviso}
           primaryAcquisitionDate={primaryAcquisitionDate}
         />

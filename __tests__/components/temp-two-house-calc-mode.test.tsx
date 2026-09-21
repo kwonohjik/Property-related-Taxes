@@ -61,7 +61,14 @@ const TEMP_TWO = /일시적 2주택 특례 해당/;
  *    새 위치의 안전망은 `__tests__/calc/two-house-axis-path.anchor.test.tsx`가 진다.
  */
 const HERITAGE_MOVED_TO_ROW = true;
-const RURAL = /농어촌주택 보유/;
+/**
+ * 🔄 **§155⑦도 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 3b · P7-4).
+ *    정본 `HouseEntry.oneHouseRuralHouse`·`ruralHouseKind` · 입력 `HouseEntryRuralHouseBlock`.
+ *    ⑥과 같은 이유로 CM-2의 `shows(RURAL) === false`도 **공허해져** 제거했다.
+ *    새 위치의 안전망은 `one-house-row-facts.anchor.test.ts`(RU-1~9)와
+ *    `e2e/transfer-house-row-one-house-facts.spec.ts`가 진다.
+ */
+const RURAL_MOVED_TO_ROW = true;
 const REPLACEMENT = /대체주택 비과세 특례 해당/;
 
 /** 판정 메뉴가 넘기는 파생 props — 계산기는 `mode="calc"`라 이것을 만들지 않는다. */
@@ -79,7 +86,6 @@ const fullProps = (f: TransferFormData) => ({
     disposalDelayReason: f.disposalDelayReason,
   }),
   relocationRegionVerdict: null,
-  ruralLocation: judgeRuralHouseLocation({ jibun: "", urbanVerdict: undefined }),
   proviso: provisoGate({
     isOneHousehold: true,
     isHousing: true,
@@ -98,7 +104,7 @@ describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
     expect(shows(/동거봉양 합가일/)).toBe(true);
   });
 
-  it("[CM-2] §155①⑦·§156의2⑤는 그리지 않는다", () => {
+  it("[CM-2] §155①·§156의2⑤는 그리지 않는다", () => {
     render(
       <TemporaryTwoHouseSection
         form={form({ temporaryTwoHouseSpecial: true })}
@@ -107,7 +113,6 @@ describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
       />,
     );
     expect(shows(TEMP_TWO)).toBe(false);
-    expect(shows(RURAL)).toBe(false);
     expect(shows(REPLACEMENT)).toBe(false);
   });
 });
@@ -117,7 +122,6 @@ describe("CM-3 판정 메뉴(기본 모드)는 전부 그린다 — CM-2의 **�
     const f = form({ temporaryTwoHouseSpecial: true });
     render(<TemporaryTwoHouseSection form={f} onChange={() => {}} {...fullProps(f)} />);
     expect(shows(TEMP_TWO)).toBe(true);
-    expect(shows(RURAL)).toBe(true);
     expect(shows(REPLACEMENT)).toBe(true);
     // §155⑧·합가도 여전히 함께 있다(판정 메뉴에서는 둘 다 필요하다).
     expect(shows(UNAVOIDABLE)).toBe(true);
