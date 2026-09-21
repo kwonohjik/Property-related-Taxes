@@ -587,7 +587,8 @@ export function HousesListSection({
         {divergence.showPrecedence && (
           <ToneCard tone="sky" bodyClassName="" className="px-3 py-2">
             <p className="text-xs leading-relaxed">
-              중과 <b>2주택·3주택 판정</b>은 이 <b>다른 보유 주택 목록</b>(배제규칙 반영) 기준으로 산정됩니다.
+              <b>세대 주택 수</b>는 이 <b>다른 보유 주택 목록</b> 기준으로 산정됩니다 — 중과
+              2주택·3주택 판정(배제규칙 반영)과 <b>1세대1주택 비과세 판정</b> 모두입니다.
               ① <b>세대 보유 주택 수</b>는 목록이 비어 있을 때만 사용됩니다.
             </p>
           </ToneCard>
@@ -596,7 +597,8 @@ export function HousesListSection({
           <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
             <p className="text-xs leading-relaxed" data-testid="house-count-mismatch">
               ① 세대 보유 주택 수(<b>{divergence.declared}채</b>)와 목록의 주택 수
-              (<b>{divergence.structuralCount}채</b>, 양도주택 포함)가 다릅니다. 누락된 주택을 추가하거나
+              (<b>{divergence.structuralCount}채</b>, 양도주택 포함)가 다릅니다 — 계산은{" "}
+              <b>목록의 {divergence.structuralCount}채</b>로 합니다. 누락된 주택을 추가하거나
               ①을 실제 세대 보유 주택 수에 맞게 조정하세요. <span className="text-muted-foreground">(분양권·입주권은 별도 집계)</span>
             </p>
           </ToneCard>

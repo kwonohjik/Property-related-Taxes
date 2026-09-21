@@ -118,7 +118,7 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
   const base = {
     isOneHousehold: true,
     isHousing: true,
-    householdHousingCount: "1",
+    householdHousingCount: 1,
     temporaryTwoHouseSpecial: false,
   };
   it("1주택 → visible·one_house", () => {
@@ -126,14 +126,14 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
   });
   it("2주택+일시적특례 → visible·temporary_two_house", () => {
     expect(
-      provisoGate({ ...base, householdHousingCount: "2", temporaryTwoHouseSpecial: true }),
+      provisoGate({ ...base, householdHousingCount: 2, temporaryTwoHouseSpecial: true }),
     ).toEqual({ visible: true, mode: "temporary_two_house" });
   });
   it("2주택 특례 OFF → 숨김", () => {
-    expect(provisoGate({ ...base, householdHousingCount: "2" })).toEqual({ visible: false, mode: null });
+    expect(provisoGate({ ...base, householdHousingCount: 2 })).toEqual({ visible: false, mode: null });
   });
   it("3주택 → 숨김", () => {
-    expect(provisoGate({ ...base, householdHousingCount: "3" })).toEqual({ visible: false, mode: null });
+    expect(provisoGate({ ...base, householdHousingCount: 3 })).toEqual({ visible: false, mode: null });
   });
   it("비1세대·비주택 → 숨김", () => {
     expect(provisoGate({ ...base, isOneHousehold: false })).toEqual({ visible: false, mode: null });

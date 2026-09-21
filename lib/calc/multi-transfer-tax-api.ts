@@ -14,6 +14,7 @@ import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingEx
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
+import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
@@ -174,7 +175,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     provisoGate({
       isOneHousehold: form.isOneHousehold,
       isHousing: primaryKind === "housing",
-      householdHousingCount: form.householdHousingCount,
+      householdHousingCount: resolveHouseholdHousingCount({
+        primaryKind: primaryKind,
+        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+        houses: form.houses,
+      }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode,
     form.provisoReason,
@@ -271,7 +276,12 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(primary ? buildLandPartCausePayload(primary) : {}),
     // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.
     ...(primary ? buildNewConstructionPayload(primary) : {}),
-    householdHousingCount: parseInt(form.householdHousingCount) || 0,
+    // Q-8 — 명부 정본. 단건(`transfer-tax-api.ts`)과 **같은 leaf**를 쓴다(3중 패턴).
+    householdHousingCount: resolveHouseholdHousingCount({
+      primaryKind,
+      declared: parseInt(form.householdHousingCount) || 0,
+      houses: form.houses,
+    }),
     // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
     // 거주기간 — 단건과 **같은 leaf**(§95⑤2호 주택 보유기간 클램프 포함, 위 주석 참조)

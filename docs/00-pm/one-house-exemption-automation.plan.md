@@ -812,6 +812,47 @@ Q-8 이후에는 2주택으로 판정된다. 현행이 명부와 모순된 스�
 - 화면에 `<ToneCard tone="amber">`「저장 당시 직접 입력한 주택 수(N채)와 명부(M채)가 다릅니다 — 명부를 보완하거나 명부 기준으로 전환하세요」
   + 「명부 기준으로 전환」 버튼. 전환하면 표식을 지우고 이후 명부로 센다. **새 계산에는 이 표식이 생기지 않는다.**
 
+**구현 상태 — P7-2(2026-09-21)에서 한 것과 남은 것**
+
+✅ **한 것 — 계산 축(엔진에 가는 값)**
+
+- `lib/calc/household-house-count.ts` 신설 — `resolveHouseholdHousingCount` · `countedHouseRows` ·
+  `houseRosterIsAuthoritative`. 산식은 `computeHouseCountDivergence`의 `structuralCount`를 승격한 것이다.
+- 🔑 **파싱은 호출부에 남겼다.** 계획서 원안의 `resolveHouseholdHousingCount(form)`은 스칼라 파싱까지
+  삼키는 형태인데, 실측하니 기본값이 갈린다 — ④는 `parseInt(x) || 0`, ⑤는 `parseInt(x || "1", 10)`.
+  한 함수가 삼키면 **조용한 동작 변경**이 된다. ⇒ `declared: number`를 인자로 받는다.
+- ④ 엔진 입력 — 단건(`transfer-tax-api.ts`) · 다건(`multi-transfer-tax-api.ts`) 둘 다.
+- ⑤④⑧ 공용 leaf `provisoGate`의 인자를 `string` → **`number`로 바꿔** 컴파일러가 호출부를 찾게 했다
+  (제품 7곳 + 테스트 2파일 검출). §154① 단서 카드가 이제 명부를 본다.
+- 안내 문구 2개 정정 — 종전 「**중과** 2주택·3주택 판정은 목록 기준」은 이제 **실제보다 좁다**
+  (비과세 판정도 목록을 쓴다). 불일치 경고에 **어느 값으로 계산하는지**를 명시했다.
+- 안전망: anchor 16(HC-1~7) + 배선 anchor 5(HW-1~4, `callTransferTaxAPI` body 가로채기) ·
+  뮤테이션 4종 전건 KILLED · 양도세 회귀 918파일 9,724테스트 · E2E divergence 2건 통과.
+
+⏳ **남은 것 — 화면 축(다음 PR)**
+
+- 🔴 **스칼라 버튼 비활성화 + 「명부 기준 N채」 표시**를 하지 않았다. 스칼라는 여전히 편집 가능하고,
+  불일치는 **경고 + 「목록 기준으로 계산합니다」 문구**로만 알린다. ⇒ 불일치가 **여전히 생길 수 있다**.
+- 🔴 **OH-34 레거시 표식 미구현**. 스칼라 ≠ 명부로 저장된 이력을 **재계산하면 세액이 달라질 수 있다**
+  (저장된 결과 자체는 불변). 종전에도 그 상태는 경고를 받고 있었으므로 침묵 변경은 아니지만,
+  위 「기존 이력(세액 보존)」 약속은 **아직 지켜지지 않았다**.
+- ⑤ 노출 게이트 다수가 아직 스칼라를 읽는다(`house-count-inputs-scope.ts` · `Step4.tsx` 주택수 버튼 ·
+  `SurchargeJudgmentSection` · `MergedHouseholdRightSection` 등). **중과 축은 엔진이 이미 명부 정본**이라
+  (`house-count-divergence.ts:3-5`) 이 PR이 새 불일치를 만든 것은 아니지만, V-20 전수 분류대로 정리해야 한다.
+  ⚠️ `house-count-inputs-scope.ts`는 **dead-end를 막으려 게이트를 넓힌 이력**이 있다 — 파생값으로 바꾸면
+  그 결함이 되살아날 수 있으므로 호출부마다 「넓히기인가 좁히기인가」를 먼저 판정할 것.
+
+**V-20 전수 분류 실측(2026-09-21)** — `householdHousingCount` 참조는 **1,402건 / 667파일**이다
+(계획서 종전 기재 「27파일」은 UI·변환 층만 센 것). 제품 코드만 축별로 가르면:
+
+| 축 | 건수 | 처리 |
+|---|---|---|
+| A 폼 스칼라 `form.householdHousingCount` | 33(주석 3 제외 30) | Q-8 대상 |
+| B 엔진/route 입력(`number`) | 33 | 유지 — ④가 넣는 값만 바뀐다 |
+| C 타입 선언 | 14 | 대부분 유지 |
+| D 객체 리터럴 쓰기 | 27 | 선별 |
+| ⛔ **상속·증여 `bgt.householdHousingCount`** | 6 | **전역 치환 금지** — 부담부증여 폼의 동명이축 |
+
 ---
 
 ## 6. 케이스 매트릭스 (Phase 착수 시 해당 범위로 확장)

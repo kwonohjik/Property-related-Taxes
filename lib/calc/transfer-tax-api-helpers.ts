@@ -48,11 +48,18 @@ export type ProvisoMode = "one_house" | "temporary_two_house" | null;
 export function provisoGate(args: {
   isOneHousehold: boolean;
   isHousing: boolean;
-  householdHousingCount: string;
+  /**
+   * 🔑 **이미 해석된 주택 수**(Q-8 · P7-2). 종전에는 `string` 스칼라를 받아 여기서 파싱했다.
+   *
+   * 이 leaf는 ⑤(Step4 렌더)·④(API 조립)·⑧(validate)이 **함께** 쓰는 3중 패턴 지점이라,
+   * 여기서 스칼라를 읽으면 셋이 동시에 명부를 못 본다. 타입을 `number`로 바꿔
+   * **컴파일러가 호출부를 전부 찾게** 했다 — 호출부는 `resolveHouseholdHousingCount`를 부른다.
+   */
+  householdHousingCount: number;
   temporaryTwoHouseSpecial: boolean;
 }): { visible: boolean; mode: ProvisoMode } {
   if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
-  const n = parseInt(args.householdHousingCount, 10);
+  const n = args.householdHousingCount;
   if (n === 1) return { visible: true, mode: "one_house" };
   if (n === 2 && args.temporaryTwoHouseSpecial) return { visible: true, mode: "temporary_two_house" };
   return { visible: false, mode: null };
