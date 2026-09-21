@@ -23,6 +23,15 @@
 > ⑥ 특례 if-chain 순서를 실제와 다르게 적음 → 실측 순서로 정정 ⑦ `propertyType` 누락(§89①4호 입주권 축 불가) → 추가
 > ⑧ OH-01~03·07·08 테스트 파일 오기 ⑨ `RedevelopmentRightExemptionSection.tsx:44` → 실제 `:52`
 > ⑩ (UI 설계와 교차 대조) 혼인·합가 사실 **이중 정의** 제거 · UI가 넘기는 `generalHouseGiftedFromDecedentWithin2yr`·`specialHouseExclusions` **누락** 추가
+>
+> 🧱 **D-6 반영(2026-09-18, 계획서 v2.3 §5.10)** — **주택별 사실의 정본은 명부 행**이고 비과세·중과가 같은 행을 읽는다(판정 메뉴·계산기 모두).
+> 이 문서에서 바뀐 것: ① `OneHouseFacts`의 §155⑥⑦⑧·⑳ 세대 단위 필드는 **도출 필드**가 된다 — 엔진 계약(필드 형태)은 **불변**이고,
+> 채우는 쪽이 명부 행에서 도출한다(신설 절 「D-6 명부 행 → 세대 단위 사실 도출 계약」) ② `HousesListSection`이 `HouseInfo`를 그대로 쓴다는
+> 종전 서술은 **오기** — UI는 `HouseEntry`(store 타입)를 쓰고 `buildHousesPayload`가 `HouseInfo`로 변환한다(실측, 아래 정정)
+> ③ 레거시 세대 단위 값과 행 속성의 충돌 규칙 ④ 케이스 OH-23~32 추가.
+>
+> 🔢 **Q-8 반영(2026-09-18, 계획서 §5.11)** — **계산기도 명부가 있으면 주택 수를 명부에서 센다**(주택 양도 한정). 엔진 계약은 불변 —
+> 어댑터가 `resolveHouseholdHousingCount(form)`로 얻은 값을 `householdHousingCount`에 싣는다. 아래 `householdHousingCount` 주석·4단계·fallback 절을 고쳤다.
 
 ## Context
 
@@ -43,6 +52,8 @@
 계획서 §6 OH-01~22를 옮긴다. OH-01~16은 **회귀 anchor**(현행이 이미 맞는지 고정), OH-11~13·17~22는
 **신규**다. 전건이 `judgeOneHouseExemption` 추출 전후 동일값 검증(P2)과 §155의2·§155의3 구현(P3)의
 테스트 약속이다.
+계획서 v2.2·v2.3에서 추가된 OH-23~32는 계획서 §6이 정본이다(여기에 다시 적지 않는다) — 엔진 관련: OH-23~25(G-6·G-7 결함 anchor, P1) ·
+OH-26~28(G-8, P3) / D-6 관련: OH-29~32(아래 「D-6 도출 계약」의 동치 anchor가 대응).
 
 | # | 시나리오 | 법령 근거 | 테스트 파일(안) | 상태 |
 |---|---------|----------|-----------|------|
@@ -184,9 +195,10 @@ export type OneHouseFacts = {
   presaleRights?: PresaleRight[];
   /** 양도 대상 주택 식별자 (houses[].id 참조) — houses가 있을 때 필수 */
   sellingHouseId?: string;
-  /** **계산기 간이 입력 전용**(D-4) — 명부가 없을 때만 쓰는 세대 보유 주택 수 스칼라.
+  /** **간이 입력 전용**(D-4) — 명부에 주택 행이 없을 때만 쓰는 세대 보유 주택 수 스칼라.
    *  현행 TransferTaxInput.householdHousingCount와 같은 의미. 판정 메뉴는 보내지 않는다.
-   *  🔴 명부와 동시에 오면 명부가 우선이다(판정 메뉴 정본) — 둘을 섞어 쓰지 않는다. */
+   *  🔴 명부와 동시에 오면 명부가 우선이다 — 판정 메뉴뿐 아니라 **계산기도**(Q-8). 둘을 섞어 쓰지 않는다.
+   *  계산기 어댑터는 명부가 있으면 사용자가 입력한 스칼라가 아니라 `resolveHouseholdHousingCount`의 도출값을 싣는다. */
   householdHousingCount?: number;
 
   // ── 아래는 TransferTaxInput과 동일 이름·의미(그대로 이식) ──
@@ -204,13 +216,17 @@ export type OneHouseFacts = {
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
   /** 조특법 감면주택 주택수 제외(TransferTaxInput 동명 필드 — UI `SpecialHouseExclusionSection`) */
   specialHouseExclusions?: TransferTaxInput["specialHouseExclusions"];
+  // ── D-6 도출 필드 — 정본은 houses[] 행 속성. 엔진은 형태를 바꾸지 않고 그대로 받는다 ──
+  //    채우는 쪽: 명부가 있으면 `deriveHouseholdFactsFromHouses`(아래 D-6 절)가 행에서 도출한다.
+  //    명부가 없는 간이 입력(D-4)·P6 이전 레거시 record(「행 미지정」)만 이 필드를 직접 채운다.
   unavoidableOutsideCapitalHouse?: TransferTaxInput["unavoidableOutsideCapitalHouse"];
   ruralHouse?: TransferTaxInput["ruralHouse"];
   culturalHeritageHouse?: boolean;
 
   // ── P4ⓑ 이관(Q-7) — 판정 사실만. 세액 산식 입력은 계산기 잔류 ──
   /** §155⑳ 판정 사실 — `RentalHousingExceptionInput`(rental-housing-exception/types.ts:106-126)의 요건 부분만.
-   *  B시나리오 §161 안분 입력(`priorResidenceTransferDate`·`standardPriceAt*`)은 **포함하지 않는다** */
+   *  B시나리오 §161 안분 입력(`priorResidenceTransferDate`·`standardPriceAt*`)은 **포함하지 않는다**.
+   *  D-6: `rentalUnits`도 **명부 ③ 행에서 도출**한다 — `RentalUnitInput`↔`HouseEntry` ③ 대응은 계획서 V-18 */
   rentalHousingException?: Pick<RentalHousingExceptionInput, "applyException" | "scenario" | "rentalUnits">;
   /** §89①4호 1세대1입주권 판정 사실 — AssetForm 동명 필드(RedevelopmentRightExemptionSection.tsx:156·168·179·191) */
   redevRightExemption?: {
@@ -261,8 +277,11 @@ export type OneHouseSale = {
 
 `OneHouseFacts.houses: HouseInfo[]`·`presaleRights?: PresaleRight[]`는 재정의하지 않고
 `lib/tax-engine/types/multi-house-surcharge.types.ts`의 `HouseInfo`·`PresaleRight`를 그대로 import한다
-— 판정 메뉴의 `HousesListSection`·`PresaleRightsSection` 재사용(D-1 제약, 계획서 §0)이 그 위에서
-성립하므로 타입이 갈리면 재사용이 깨진다.
+— 중과 엔진이 같은 타입을 소비하므로 타입이 갈리면 「한 명부, 두 축」(D-6)이 깨진다.
+⚠️ **정정(D-6 반영 시 실측)**: 종전 서술 「`HousesListSection`이 `HouseInfo`를 그대로 쓴다」는 **오기**다. UI는 store 타입
+`HouseEntry`(`lib/stores/calc-wizard-asset-nbl.ts:75-203` — 문자열 날짜·약 70필드)를 쓰고(`HousesListSection.tsx:42`),
+`buildHousesPayload`(`lib/calc/transfer-tax-api-houses.ts:20`)가 `HouseInfo`로 **변환**한다. 양도 주택은 명부 밖 자산에서
+`"selling"` 행으로 **합성**된다(`:30-53`). D-6 도출도 이 변환 층에서 일어난다.
 
 ## 엔진 result 타입
 
@@ -358,7 +377,8 @@ Date 필드(`OneHouseFacts`·`OneHouseSale`의 모든 `Date` 값)는 라우트 �
 4. **주택 수 산정** — `facts.houses`에서 현행 house-count 로직(`transfer-inheritance-exclusion.ts`
    §155②③ · `qualifiesRuralHouse` §155⑦ 등)을 그대로 호출해 `houseCount.countedForExemption`을 낸다.
    G-1 D-3: 판정 메뉴에서는 이 값이 **정본**이며 스칼라 `householdHousingCount`를 보내지 않는다.
-   계산기 간이 입력(D-4, 명부 없음)이면 `facts.householdHousingCount`를 **현행과 같은 의미로** 쓴다 —
+   **Q-8**: 계산기도 명부에 주택 행이 있으면 같은 정본을 쓴다(어댑터가 도출값을 싣는다 — 계획서 §5.11).
+   명부가 비어 있을 때만(간이 입력, D-4) `facts.householdHousingCount`를 **현행과 같은 의미로** 쓴다 —
    명부가 없으므로 §155②③ 등 명부 기반 제외도 현행처럼 적용되지 않는다(OH-19·OH-20이 현행 세액 불변을 지킨다).
 
 5. **특례 판정** — 기존 `checkExemptionCore`의 if-chain 순서를 **실측 그대로** 옮긴다(다시 쓰지 않는다 —
@@ -431,7 +451,12 @@ Date 필드(`OneHouseFacts`·`OneHouseSale`의 모든 `Date` 값)는 라우트 �
   미달을 구분해 `undetermined`(미입력) vs `false`(미달, 사유 명시) 로 분리한다.
 - **주택 수 이중 트랙(G-1) fallback 금지** — 판정 메뉴는 명부만 보낸다. 엔진은 「명부가 있으면 명부, 없으면
   스칼라」 중 **입력 경로가 정한 한쪽만** 쓴다 — 명부가 있는데 스칼라와 섞거나, 명부가 비었다고 판정 메뉴 결과를
-  스칼라로 보정하지 않는다. 계산기 간이 입력의 스칼라는 fallback이 아니라 **그 경로의 정본**이다(D-4).
+  스칼라로 보정하지 않는다. 명부가 빈 계산기 간이 입력의 스칼라는 fallback이 아니라 **그 경로의 정본**이다(D-4).
+  **Q-8 이전 저장 record**에서 스칼라 ≠ 명부이면 조용히 명부로 바꾸지 않는다 — 저장 당시 스칼라를 레거시 표식으로 유지해
+  세액을 보존하고, 사용자가 「명부 기준으로 전환」할 때만 명부로 센다(계획서 OH-34).
+- **행 속성 ↔ 레거시 세대 단위 값 충돌(D-6)** — 둘 다 있으면 **조용히 한쪽을 고르지 않는다**. 행 우선 + `warnings`에
+  「세대 단위 입력(이전 저장분)과 명부 행이 다릅니다」를 남긴다. 행이 없으면 레거시 값을 그대로 쓴다(OH-30 — 세액 보존).
+  레거시 값을 어느 행에 붙일지 **자동 추정하지 않는다**(주소·취득일로 추측하면 틀린 행에 붙는다).
 - **P6 이관 시 저장 record 승격(OH-21)** — ③·권리 섹션 값을 조용히 버리지 않고 `OneHouseFacts`로
   변환해 보존한다. 자동 안분이 아니라 **자동 승격**이지만 같은 이유로 명시 규칙이 필요하다: 필드가
   하나라도 매핑 규칙이 없으면 재계산 세액이 조용히 바뀐다(V-11 — P6 착수 전 전수표 필수).
@@ -466,8 +491,8 @@ UI 측 명세는 `one-house-exemption-automation.ui.design.md` 참조. 판정 �
 
 - `judgeOneHouseExemption` / `resolveHighValueHouseThreshold`의 **함수 시그니처와 필드명**을
   UI 설계 문서가 그대로 참조한다(재정의 금지).
-- `OneHouseFacts.houses`/`presaleRights`는 `HousesListSection`/`PresaleRightsSection`이 이미 쓰는
-  `HouseInfo`/`PresaleRight` 타입과 100% 동일하다 — UI가 어댑터 없이 재사용할 수 있어야 한다.
+- `OneHouseFacts.houses`/`presaleRights`는 중과 엔진과 같은 `HouseInfo`/`PresaleRight` 타입이다. UI의 `HouseEntry` →
+  `HouseInfo` 변환과 D-6 세대 단위 사실 도출은 **각각 함수 하나**에만 있다 — 판정 메뉴 어댑터와 계산기 어댑터가 **같은 함수를 부른다**.
 - `pending[].deadline`은 **Date**로만 낸다. UI가 이를 "D-100일" 등으로 가공하지 않는다(Q-4).
 - `OneHouseholdInput.isOneHousehold`는 **사용자 토글**로만 채운다. UI가 법 §88 6호·영 §152의3
   요건을 스스로 계산해 이 값을 자동으로 세팅하지 않는다 — 안내 문구는 보여주되 값은 사용자가 정한다.
@@ -502,6 +527,41 @@ UI 측 명세는 `one-house-exemption-automation.ui.design.md` 참조. 판정 �
    (`__tests__/calc/one-right-clause-na-plumbing.anchor.test.ts` · `__tests__/calc/one-house-exemption-asset-gate.anchor.test.ts` ·
    `__tests__/tax-engine/transfer/burdened-gift-one-right-exemption-denominator.anchor.test.ts` — grep 실측) 전건 동일값. 분리한 술어에 대응 mutation(P-5)을 넣어 **판정 메뉴·계산기 양쪽 호출부에서** 실패함을 확인한다.
 4. ⚠️ `propertyType`의 조합원입주권 값은 enum을 **grep으로 확인한 뒤** 매핑한다(`enum-verification-before-mapping`) — 추정 금지.
+5. **D-6**: `rentalUnits[]`의 출처가 §155⑳ 섹션 목록에서 **명부 ③ 행**으로 바뀐다. 판정 사실/산식 입력 분할(이 절 1)은 그대로다.
+   `RentalUnitInput`의 일부 필드(`rentalMonths`·`rentalAcquisitionType`·`requirementsConfirmed`·`rentalAutoTermination`)는
+   `HouseEntry`에 없고 enum 두 쌍이 다르다 — 대응표(계획서 **V-18**)가 확정되기 전에는 도출 함수를 쓰지 않는다.
+
+## D-6 명부 행 → 세대 단위 사실 도출 계약 (계획서 §5.10)
+
+**원칙**: 사실은 행에서 한 번, 판정 규칙은 조문별로, 주택 수는 축별로. 엔진(`checkExemption`·중과 엔진)의 **입력 형태는 바꾸지 않는다** —
+P2 세액 불변 증명을 흐리지 않기 위해서다.
+
+**단일 함수** — `deriveHouseholdFactsFromHouses(houses: HouseEntry[], sellingHouseId, legacy)`(신설 `lib/calc/one-house-row-facts.ts`, 순수 함수).
+판정 메뉴 어댑터(`one-house-exemption-api.ts`)·단건 계산기(`transfer-tax-api.ts`)·다건 계산기(`multi-transfer-tax-api.ts`)가 **같은 함수를 부른다**
+(단건·다건 빌더가 따로 구현했다 갈라진 전례 — `transfer-tax-api-body-blocks.ts` 머리 주석 G-11).
+
+| 행 속성(정본) | 도출되는 엔진 필드 | 도출 규칙 |
+|---|---|---|
+| 문화유산 여부(신설 — 현행 `HouseEntry`에 없음, 양도 주택만 `sellingHouseExclusion.isCulturalHeritage`) | `culturalHeritageHouse` | 양도 주택이 **아닌** 행 중 해당 행이 정확히 1개일 때 `true` |
+| 농어촌 유형·거주연수·귀농 요건(신설) + 행 소재지 | `ruralHouse` | 소재 판정은 행 주소로 `lib/geo/rural-house-location.ts`를 호출(현행 Step4 세대 단위 판정과 같은 함수). 귀농주택 **취득일은 행의 취득일** — 별도 칸을 두지 않는다 |
+| 부득이 사유(`isUnavoidableReason` 기존) + 사유 종류(신설) + 해소일(기존) + 행 소재지 | `unavoidableOutsideCapitalHouse` | 🔴 「수도권 밖」은 행의 `region`으로 판정하지 **않는다** — `region`은 「수도권·광역시 등 / 지방」(§167의3 지역기준, `HouseEntryEditor.tsx:92`)이라 광역시가 섞여 있다. 행 `regionCode`(법정동)로 수도권 여부를 따로 판정한다 |
+| 장기임대 ③ 행 | `rentalHousingException.rentalUnits` | V-18 확정 후 |
+
+- **양도 주택 행은 §155⑥⑦⑧의 특례 주택이 될 수 없다** — 세 항 모두 「일반주택을 양도하는 경우」다. 양도 행에 속성이 있으면 비과세 도출에서 제외하고
+  경고한다(중과 축은 그 행 속성을 그대로 쓴다).
+- 같은 속성의 행이 **2개 이상**이면 도출하지 않고 경고한다 — §155⑥⑦⑧은 「각각 1개씩」이고 엔진 필드는 1개만 표현한다
+  (그 경우 세대 주택 수가 3 이상이라 `householdHousingCount === 2` 게이트에서 어차피 불성립한다).
+- **레거시 값**(P6 이전 record의 세대 단위 입력)은 `legacy` 인자로 받는다. 행 속성이 있으면 행 우선 + 경고, 없으면 레거시 그대로(OH-30).
+- **중과 축은 기존 경로 그대로**다 — `buildHousesPayload`가 행 → `HouseInfo`로 옮긴다(부득이 3호 필드 `isUnavoidableReason` 등은 이미 전달).
+  ⚠️ **새로 도달하는 값 1건**: 양도 주택이 아닌 행의 문화유산 여부가 `HouseInfo.isCulturalHeritage`로 가면 `isGroupExcludable`
+  (`multi-house-surcharge-exclusion.ts:51`)이 그 행을 제외 대상으로 본다. 현행은 양도 주택에서만 이 값이 채워지므로(`transfer-tax-api-houses.ts:49`)
+  **중과 결과가 바뀔 수 있다** — P6에서 anchor로 고정하고 결과를 보고한다(`feedback_ui_gate_expansion_activates_latent_defect`).
+
+**테스트 약속(D-6)**
+- **동치 anchor(핵심)**: 같은 사실을 ⓐ 레거시 세대 단위 입력으로 ⓑ 명부 행으로 넣었을 때 **엔진 입력과 세액이 같다** — §155⑥·⑦(유형 3종)·⑧ 각각.
+  P6에서 입력 위치를 옮겨도 세액이 불변임을 이것으로 증명한다(OH-29·OH-30).
+- **mutation**: 도출 함수에서 필드 하나(예: `ruralHouse.kind`)를 떨어뜨리면 동치 anchor가 **실패**해야 한다 — 통과하면 안전망이 없는 것이다.
+- **경계**: 양도 행에 속성(도출 제외) · 같은 속성 2행(도출 없음 + 경고) · 행과 레거시 충돌(행 우선 + 경고) · 광역시 소재 부득이 주택(`region: "capital"`이지만 수도권 밖 → 도출됨).
 
 ## P2 추출 절차 요약 (세액 불변 리팩터)
 
