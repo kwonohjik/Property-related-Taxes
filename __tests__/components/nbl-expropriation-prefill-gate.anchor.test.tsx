@@ -51,7 +51,7 @@ describe("[c8] 공익수용 프리필 ↔ NBL 입력 렌더 게이트 (A2-01·U3
     const patch = selectExpropriation(landAsset());
     cleanup();
     const asset = landAsset(patch);
-    render(<AssetSectionExtras asset={asset} onChange={() => {}} transferDate={TRANSFER} />);
+    render(<AssetSectionExtras asset={asset} assetIndex={0} onChange={() => {}} transferDate={TRANSFER} />);
     // NblSectionContainer가 렌더되면 「토지 지목」 선택 필드가 존재한다.
     expect(screen.getByText("토지 지목")).toBeTruthy();
   });

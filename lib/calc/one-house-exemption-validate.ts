@@ -154,6 +154,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     const rentalError = validateRentalHousingException(
       primary.rentalHousingException,
       primary,
+      0, // 판정 메뉴는 `form.assets[0]`만 판정한다 — 컴패니언 개념이 없다.
       "장기임대주택 특례",
       form.transferDate,
       "facts",

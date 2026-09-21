@@ -9,15 +9,30 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NblSectionContainer } from "../nbl/NblSectionContainer";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
-import { isRentalHousingExceptionApplicable } from "@/lib/calc/rental-housing-exception-scope";
+import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
 
 interface Props {
   asset: AssetForm;
+  /** 자산 인덱스 — §155⑳ 위치 축 게이트(④는 primary만 보낸다). */
+  assetIndex: number;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
 }
 
-export function AssetSectionExtras({ asset, onChange, transferDate }: Props) {
+export function AssetSectionExtras({ asset, assetIndex, onChange, transferDate }: Props) {
+  /**
+   * 🔴 **컴패니언에는 §155⑳ 카드를 띄우지 않는다** (P6-c-4). ④는 단건·다건 모두 primary만
+   *    보낸다 — 엔진 입력의 `rentalHousingException`이 top-level **단일 객체**이기 때문이다.
+   *    종전에는 ⑤가 모든 주택 자산에 카드를 띄우고 ⑧도 모든 자산을 검증해서, 컴패니언에서
+   *    토글을 켜면 **계산이 차단되는데 다 채워도 세액이 한 푼도 안 달라졌다**(실측).
+   */
+  const canDeclareRental = canDeclareRentalHousingException(asset.assetKind, assetIndex);
+  /**
+   * 🔑 **stale 선언은 말로 밝힌다**(OH-20). 값을 지우지는 않는다 — 세액 영향이 0이라 남아도
+   *    무해하고, 첫 자산을 지우면 이 자산이 primary로 승격하므로 그때 선언이 살아 있어야 한다.
+   */
+  const hasOrphanRentalDeclaration =
+    !canDeclareRental && asset.rentalHousingException?.applyException === true;
   return (
     <>
       {/*
@@ -37,8 +52,22 @@ export function AssetSectionExtras({ asset, onChange, transferDate }: Props) {
         <NblSectionContainer asset={asset} onAssetChange={onChange} transferDate={transferDate} />
       )}
 
-      {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 자산에만 표시 (소령 §155⑳) */}
-      {isRentalHousingExceptionApplicable(asset.assetKind) && (
+      {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 **주 자산**에만 표시 (소령 §155⑳) */}
+      {hasOrphanRentalDeclaration && (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-900"
+          data-testid="rental-exception-companion-notice"
+        >
+          <p className="font-semibold">
+            장기임대주택 거주주택 특례(소령 §155⑳)는 이 자산에 적용되지 않습니다
+          </p>
+          <p className="mt-0.5 leading-relaxed">
+            이 특례는 <strong>양도 대상 거주주택 1건</strong>에 대한 것이라 <strong>자산 1</strong>에서만
+            선언합니다. 여기 남아 있는 선언은 세액에 반영되지 않습니다 — 자산 1로 옮겨 입력하세요.
+          </p>
+        </div>
+      )}
+      {canDeclareRental && (
         <RentalHousingExceptionSection
           rh={asset.rentalHousingException ?? { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS }}
           asset={asset}

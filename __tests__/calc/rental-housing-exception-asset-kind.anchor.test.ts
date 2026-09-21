@@ -46,6 +46,7 @@ describe("§155⑳ 자산 종류 술어", () => {
       validateRentalHousingException(
         withException("housing").rentalHousingException,
         withException("housing"),
+        0,
         "자산 1",
         "2024-06-01",
       ),
@@ -56,6 +57,7 @@ describe("§155⑳ 자산 종류 술어", () => {
       validateRentalHousingException(
         withException("land").rentalHousingException,
         withException("land"),
+        0,
         "자산 1",
         "2024-06-01",
       ),

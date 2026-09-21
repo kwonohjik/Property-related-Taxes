@@ -43,7 +43,7 @@ describe("§155⑳ 거주기간 interval validation (raw→derived 회귀)", () 
     a.residenceInputMode = "interval";
     a.residencePeriods = [{ moveInDate: "2019-01-01", moveOutDate: "2022-01-01" }]; // 36개월
     a.residencePeriodMonthsAsset = "0"; // interval 모드에서 sync 안 된 stale 값 — 버그 트리거
-    expect(validateRentalHousingException(a.rentalHousingException, a, "자산1", TRANSFER)).toBeNull();
+    expect(validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", TRANSFER)).toBeNull();
   });
 
   it("interval 24개월 미만 → 차단(거주 2년 요건)", () => {
@@ -51,7 +51,7 @@ describe("§155⑳ 거주기간 interval validation (raw→derived 회귀)", () 
     a.residenceInputMode = "interval";
     a.residencePeriods = [{ moveInDate: "2019-01-01", moveOutDate: "2020-06-01" }]; // 17개월
     a.residencePeriodMonthsAsset = "0";
-    const msg = validateRentalHousingException(a.rentalHousingException, a, "자산1", TRANSFER);
+    const msg = validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", TRANSFER);
     expect(msg).toContain("거주기간 2년");
   });
 
@@ -59,7 +59,7 @@ describe("§155⑳ 거주기간 interval validation (raw→derived 회귀)", () 
     const a = baseAsset();
     a.residenceInputMode = "direct";
     a.residencePeriodMonthsAsset = "30";
-    expect(validateRentalHousingException(a.rentalHousingException, a, "자산1", TRANSFER)).toBeNull();
+    expect(validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", TRANSFER)).toBeNull();
   });
 
   it("rental interval 구간 겹침 → 차단(이중계산 방지)", () => {
@@ -71,7 +71,7 @@ describe("§155⑳ 거주기간 interval validation (raw→derived 회귀)", () 
       { start: "2019-01-01", end: "2022-01-01" },
       { start: "2021-06-01", end: "2024-01-01" }, // 앞 구간과 겹침
     ];
-    const msg = validateRentalHousingException(a.rentalHousingException, a, "자산1", TRANSFER);
+    const msg = validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", TRANSFER);
     expect(msg).toContain("겹칩니다");
   });
 });
