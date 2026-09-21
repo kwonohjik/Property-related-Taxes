@@ -1,13 +1,24 @@
 /**
- * §155⑳ 임대주택 요건 능동형 UI — 조건부 노출 + 판정기준 배지 E2E.
+ * §155⑳ 임대주택 요건 능동형 UI — 조건부 노출 + 판정기준 배지 E2E (**판정 메뉴**).
  *
  * 등록일 2필드(세무서·지자체) + 임대구분/취득방법에 따라 소재지역·규모·조정 필드가
  * 능동적으로 노출/숨김되고, 판정 기준 배지(도출 목·의무기간·기준시가 상한)가 실시간 파생됨을 검증.
  * 계획서: docs/02-design/features/rental-housing-155-20-active-ui.plan.md
+ *
+ * ## 🔴 P6-c-2에서 계산기(`/calc/transfer-tax`)로부터 이관됐다
+ *
+ * ① 임대주택 정보(9유형 18필드)는 **판정 사실**이라 계산기 `mode="calc"`가 감춘다. 이 10건은
+ * 그때까지 계산기 경로에서 `RentalUnitCard` testid를 직접 잡고 있었다 — 경로만 바꿔 **그대로**
+ * 옮겼다. 지우면 §155⑳ 능동형 UI를 보는 spec이 저장소에서 사라진다(다른 곳에 없다).
+ *
+ * 계산기에 남은 ②§161① 안분·③거주기간은 `transfer-rental-155-20-calc-side.spec.ts`가 본다.
+ *
+ * ⚠️ **시드 방식이 바뀌었다** — store key가 `transfer-tax-wizard` → `one-house-judgment-wizard`,
+ *    진입이 자산카드 ⑤ 펼치기 → ① 다음 → ② 화면이다. 판정 메뉴도 `primary = form.assets[0]`를
+ *    읽으므로(`Step2.tsx:60·384`) 시드 **형태 자체는 같다**.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
-import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 
 function rentalUnit(over: Record<string, unknown> = {}) {
@@ -30,7 +41,7 @@ function rentalUnit(over: Record<string, unknown> = {}) {
   };
 }
 
-function seedForm() {
+function seedForm(unitOver: Record<string, unknown> = {}) {
   return {
     state: {
       formData: {
@@ -44,7 +55,7 @@ function seedForm() {
             rentalHousingException: {
               applyException: true,
               scenario: "A",
-              rentalUnits: [rentalUnit()],
+              rentalUnits: [rentalUnit(unitOver)],
             },
           },
         ],
@@ -58,16 +69,26 @@ function seedForm() {
   };
 }
 
-async function gotoRentalSection(page: Page) {
-  await page.goto("/calc/transfer-tax");
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+/**
+ * 판정 메뉴 ② 화면의 §155⑳ 섹션을 연다.
+ *
+ * 🔑 `unitOver`로 **한 곳에서** 시료를 갈아 끼운다 — 계산기 시절에는 변형 시드 4벌이 각 test에
+ *    복사돼 있었다. 경로·store key가 어차피 전부 바뀌므로 그때 한 벌로 합쳤다.
+ *
+ * ⚠️ **`?new=1`을 붙이지 않는다** — 홈 메뉴 진입 경로라 store를 리셋한다
+ *    (`e2e/wizard-reset-on-home-entry.spec.ts` F6).
+ */
+async function gotoRentalSection(page: Page, unitOver: Record<string, unknown> = {}) {
+  await page.goto("/calc/one-house-exemption");
+  await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.evaluate(
-    (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(),
+    (s) => sessionStorage.setItem("one-house-judgment-wizard", JSON.stringify(s)),
+    seedForm(unitOver),
   );
   await page.reload();
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await expandAssetSection(page, 5, 0);
+  await expect(page.getByTestId("one-house-household")).toBeVisible();
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
 }
 
 test.describe("§155⑳ 임대주택 능동형 UI", () => {
@@ -158,30 +179,7 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
   });
 
   test("두 등록일 중 하나 미입력 → 사업자등록등 미완비 경고", async ({ page }) => {
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
-      ...seedForm(),
-      state: {
-        ...seedForm().state,
-        formData: {
-          ...seedForm().state.formData,
-          assets: [
-            {
-              ...seedForm().state.formData.assets[0],
-              rentalHousingException: {
-                applyException: true,
-                scenario: "A",
-                rentalUnits: [rentalUnit({ businessRegistrationDate: "" })],
-              },
-            },
-          ],
-        },
-      },
-    });
-    await page.reload();
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await expandAssetSection(page, 5, 0);
+    await gotoRentalSection(page, { businessRegistrationDate: "" });
 
     await expect(page.getByTestId("rental-verdict-badge-0")).toContainText("사업자등록등");
   });
@@ -202,30 +200,8 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
   });
 
   test("mount-limbo 가드 — 이력 로드로 무효 선택(short_6y+2020) mount 시 회색 아님·checked 유지", async ({ page }) => {
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
-      ...seedForm(),
-      state: {
-        ...seedForm().state,
-        formData: {
-          ...seedForm().state.formData,
-          assets: [
-            {
-              ...seedForm().state.formData.assets[0],
-              rentalHousingException: {
-                applyException: true,
-                scenario: "A",
-                rentalUnits: [rentalUnit({ rentalCategory: "short_6y" })], // 2020 등록 + short_6y(무효 조합)
-              },
-            },
-          ],
-        },
-      },
-    });
-    await page.reload();
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await expandAssetSection(page, 5, 0);
+    // 2020 등록 + short_6y = 무효 조합을 이력에서 로드한 상황
+    await gotoRentalSection(page, { rentalCategory: "short_6y" });
 
     // 선택-제외 가드: 현재 선택(short_6y)은 무효여도 disabled 아님(limbo 방지) + checked 유지
     const short6y = page.getByTestId("rental-category-short_6y-0");
@@ -238,36 +214,11 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
   });
 
   test("auto-reset — 유효 short_6y 선택 후 등록일을 2020으로 낮추면 long_general로 복원", async ({ page }) => {
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
-      ...seedForm(),
-      state: {
-        ...seedForm().state,
-        formData: {
-          ...seedForm().state.formData,
-          assets: [
-            {
-              ...seedForm().state.formData.assets[0],
-              rentalHousingException: {
-                applyException: true,
-                scenario: "A",
-                rentalUnits: [
-                  rentalUnit({
-                    rentalCategory: "short_6y",
-                    businessRegistrationDate: "2025-06-04",
-                    rentalRegistrationDate: "2025-06-04",
-                  }),
-                ],
-              },
-            },
-          ],
-        },
-      },
+    await gotoRentalSection(page, {
+      rentalCategory: "short_6y",
+      businessRegistrationDate: "2025-06-04",
+      rentalRegistrationDate: "2025-06-04",
     });
-    await page.reload();
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await expandAssetSection(page, 5, 0);
 
     // 초기: 유효 short_6y 선택 → 아목
     await expect(page.getByTestId("rental-category-short_6y-0")).toBeChecked();
@@ -302,22 +253,6 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByTestId("rental-period-0-total")).toContainText("8년");
   });
 
-  test("거주기간 §155⑳ — 토글 없이 상시 표시, 입주·퇴거일 입력 → 총 개월 자동계산(36개월)", async ({ page }) => {
-    await gotoRentalSection(page);
-
-    // 토글 없음 — 에디터 상시 표시. 첫 거주 구간: 2019-01-01 ~ 2022-01-01 = 36개월
-    await expect(page.getByTestId("residence-period-editor")).toBeVisible();
-    await fillDateAndVerify(page, { year: "2019", month: "01", day: "01" }, {
-      scope: page.getByTestId("residence-period-start-0"),
-    });
-    await fillDateAndVerify(page, { year: "2022", month: "01", day: "01" }, {
-      scope: page.getByTestId("residence-period-end-0"),
-    });
-
-    await expect(page.getByTestId("residence-period-total")).toContainText("36개월");
-    // 거주주택 요건 충족 상태(2년 이상)도 도출값으로 충족 표시
-    await expect(page.getByText("현재 36개월", { exact: false })).toBeVisible();
-  });
 
   test("임대개시일 기준시가 Vworld 조회 → 총액 세팅 + 공동주택 배지 (주소 seed)", async ({ page }) => {
     // Vworld 공시가격 route mock — 공동주택 5.5억
@@ -334,31 +269,8 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
       }),
     );
 
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
-      ...seedForm(),
-      state: {
-        ...seedForm().state,
-        formData: {
-          ...seedForm().state.formData,
-          assets: [
-            {
-              ...seedForm().state.formData.assets[0],
-              rentalHousingException: {
-                applyException: true,
-                scenario: "A",
-                // 지번 seed → 조회 버튼 활성. long_general(임대개시일 분기) + 등록일 2020 → referenceDate
-                rentalUnits: [rentalUnit({ rentalAddressJibun: "서울특별시 강남구 역삼동 123" })],
-              },
-            },
-          ],
-        },
-      },
-    });
-    await page.reload();
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await expandAssetSection(page, 5, 0);
+    // 지번 seed → 조회 버튼 활성. long_general(임대개시일 분기) + 등록일 2020 → referenceDate
+    await gotoRentalSection(page, { rentalAddressJibun: "서울특별시 강남구 역삼동 123" });
 
     // 임대개시일 기준시가 조회
     await page.getByTestId("rental-stdprice-0-lookup-btn").click();
