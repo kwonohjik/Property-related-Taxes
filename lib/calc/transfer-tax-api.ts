@@ -51,6 +51,7 @@ import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
+import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -497,6 +498,19 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...buildHouseholdSpecialPayload(form, primary),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)
     ...buildReplacementHousePayload(form),
+    /**
+     * ④⑬ §155의2 장기저당담보 · §155의3 상생임대 — **판정 메뉴에서 넘겨받은 사실**(P5-a).
+     *
+     * 🔴 이 계산기에는 두 특례의 입력 위젯이 없다(D-4). 그래서 여기 실리는 값은 사용자 입력이
+     *    아니라 `openTransferWithOneHouseFacts`가 판정 메뉴 폼에서 실어 온 것이다.
+     *    ⑨~⑭(Zod·엔진 타입·route 매핑·다건 route)는 **P3이 이미 열어 뒀다** — 막혀 있던 것은
+     *    클라이언트 ①~⑧뿐이었다.
+     *
+     * 🔑 빌더는 판정 메뉴 어댑터와 **같은 함수**다. 베껴 쓰면 같은 사실에 두 본문이 나간다.
+     * 🔑 운반 상자(`importedOneHouseFacts`)·출처 id(`sourceJudgmentId`)는 **전송하지 않는다** —
+     *    UI 메타이고 엔진이 아는 이름은 nested 두 키뿐이다.
+     */
+    ...buildOneHouseExtraFactsPayload(form.importedOneHouseFacts),
     ...buildRightThreeYearExceptionPayload(form),
     ...buildMergedHouseholdFirstHousePayload(form),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),

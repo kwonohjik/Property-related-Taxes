@@ -15,6 +15,7 @@
  * dual truth가 된다(`feedback_aggregate_display_rederives_engine_value`).
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
@@ -32,7 +33,19 @@ function formatDate(v: string): string {
   return String(v).slice(0, 10);
 }
 
-export function OneHouseJudgmentResultView({ result }: { result: OneHouseExemptionResponse }) {
+type Props = {
+  result: OneHouseExemptionResponse;
+  /**
+   * 「이 결과로 세액 계산」 (P5-a). 없으면 그 카드를 **렌더하지 않는다** — 이력 상세처럼
+   * 마법사 폼이 살아 있지 않은 화면에서는 넘길 사실이 없다.
+   *
+   * 🔑 이 뷰는 `result`만 받는다 — 전달할 **사실**은 폼에 있고 그것을 아는 것은 오케스트레이터다.
+   *    여기서 store를 직접 읽으면 판정 화면이 폼 store에 묶여 이력 상세에서 재사용할 수 없다.
+   */
+  onCalculateTax?: () => void;
+};
+
+export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
   const { judgment, houseCount, rentalHousingException: rental, oneRightExemption: oneRight } = result;
   /**
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
@@ -226,6 +239,24 @@ export function OneHouseJudgmentResultView({ result }: { result: OneHouseExempti
               <LawArticleModal key={b} legalBasis={b} />
             ))}
           </div>
+        </ToneCard>
+      )}
+
+      {/* ── 세액 계산으로 넘기기 (P5-a) ── */}
+      {onCalculateTax && (
+        <ToneCard tone="emerald" sectionNum={nextNo()} title="이 결과로 세액 계산">
+          <p className="text-sm leading-relaxed">
+            여기서 입력한 <b>판정 사실</b>을 양도소득세 계산기로 그대로 넘깁니다. 계산기는 판정
+            결과를 복사하지 않고 <b>같은 엔진으로 다시 판정</b>하므로, 계산기에서 양도일·양도가액을
+            바꾸면 판정도 그에 맞게 바뀝니다.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            세액을 내려면 계산기에서 <b>취득가액·필요경비</b>를 추가로 입력해야 합니다 — 이 화면은
+            그 값을 묻지 않습니다.
+          </p>
+          <CtaButton data-testid="one-house-to-calculator" onClick={onCalculateTax}>
+            이 결과로 세액 계산
+          </CtaButton>
         </ToneCard>
       )}
 

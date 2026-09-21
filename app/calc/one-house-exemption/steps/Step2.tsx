@@ -348,6 +348,8 @@ export function Step2({ form, onChange }: Props) {
           </FieldCard>
           <FieldCard label="직전임대차 임대기간" hint="개월. 1개월 미만은 1개월로 봅니다">
             <IntegerInput
+              /* 🔑 `FieldCard` 라벨은 `htmlFor`로 묶여 있지 않다 — E2E가 집을 수 있도록 aria를 준다. */
+              ariaLabel="직전임대차 임대기간"
               allowEmpty
               value={form.winWinRentalPriorLeaseMonths === "" ? undefined : Number(form.winWinRentalPriorLeaseMonths)}
               onChange={(v) => onChange({ winWinRentalPriorLeaseMonths: v === undefined ? "" : String(v) })}
@@ -355,6 +357,7 @@ export function Step2({ form, onChange }: Props) {
           </FieldCard>
           <FieldCard label="상생임대차 임대기간" hint="개월">
             <IntegerInput
+              ariaLabel="상생임대차 임대기간"
               allowEmpty
               value={form.winWinRentalLeaseMonths === "" ? undefined : Number(form.winWinRentalLeaseMonths)}
               onChange={(v) => onChange({ winWinRentalLeaseMonths: v === undefined ? "" : String(v) })}

@@ -13,6 +13,7 @@ import type {
   PriorReductionUsageItem,
   SpecialHouseExclusionFormItem,
 } from "./calc-wizard-asset";
+import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
 
 export interface TransferFormData {
   // ── Step 1: 자산 목록 + 양도 기본 정보 ──
@@ -264,6 +265,30 @@ export interface TransferFormData {
   priorReductionUsage: PriorReductionUsageItem[];
   /** P5 모드 2 — 보유 감면주택 주택수 제외 (§89①3호 의제, 폼-전역) */
   specialHouseExclusions: SpecialHouseExclusionFormItem[];
+
+  // ── 판정 메뉴에서 넘겨받은 사실 (P5-a) ──
+  /**
+   * §155의2 장기저당담보주택 · §155의3 상생임대주택 — **판정 메뉴에서 넘겨받은 사실**.
+   *
+   * 🔴 이 계산기에는 두 특례의 **입력 위젯이 없다**(D-4 — 새 판정 입력은 계산기에 만들지
+   *    않는다). 그래서 이 필드는 사용자가 채우는 것이 아니라 `openTransferWithOneHouseFacts`가
+   *    **판정 메뉴 폼에서 실어 오는** 운반 상자다. 화면에는 읽기 전용 요약으로만 보인다.
+   *
+   * 🔑 `undefined`(미전달)와 「전달됐으나 두 토글이 OFF」는 **다르다** — 전자는 출처 표시가
+   *    아예 없고, 후자는 「판정 메뉴에서 왔지만 이 특례는 해당 없음」이다.
+   *
+   * 🔑 ④ 변환은 이것을 `longTermMortgageHouse`·`winWinRentalHouse` nested로 펴서 보낸다.
+   *    **운반 상자 자체는 전송하지 않는다** — 엔진·Zod가 아는 이름은 nested 쪽이다.
+   */
+  importedOneHouseFacts?: OneHouseJudgmentExtraFields;
+  /**
+   * 출처 판정 이력 `CalculationRecord.id` (P5-a).
+   *
+   * 🔑 `history-lookup-modal` 스킬의 `sourceCalculationId`와 **같은 층위의 UI 메타**다 —
+   *    엔진은 무시하고 ④ 변환에서 전송하지 않는다. staleness 비교(P5-b)가 이 id로 원본
+   *    record를 되찾는다(`feedback_snapshot_copy_without_staleness_detection`).
+   */
+  sourceJudgmentId?: string;
 
   // appurtenantLandRateMode 필드 제거 (사례 28 landNature 명시 입력 정책으로 대체, 2026-05-07)
   // 자산-수준 landNature("appurtenant"|"standalone")가 폼-수준 모드 결정을 대체.
