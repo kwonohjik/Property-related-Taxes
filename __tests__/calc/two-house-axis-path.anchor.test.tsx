@@ -13,10 +13,9 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
 /**
- * 🔄 §156의2⑦1호 갈래는 **판정 메뉴로 이관**됐다 (P6-a) — 그 describe만 이 화면을 쓴다.
- *    나머지 축(③ 일시적 2주택·문화재주택)은 아직 계산기 `Step4`에 있다.
+ * 🔄 §156의2⑦1호(P6-a)에 이어 **문화유산 축도 판정 메뉴로 갔다**(P6-b) — 이제 이 파일은
+ *    계산기 `Step4`를 마운트하지 않는다. ④⑫⑭ 배관 describe만 leaf를 직접 부른다.
  */
 import { Step2 as JudgmentStep2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
@@ -73,9 +72,24 @@ function form(over: Partial<TransferFormData> = {}): TransferFormData {
 
 const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 
-describe("⑤ §155⑥1호 문화유산 주택 — 선언 칸이 화면에 있다", () => {
+/** 판정 메뉴 폼으로 감싼다 — 슈퍼셋이라 계산기 폼을 그대로 얹을 수 있다(Q-8). */
+const judgmentForm = (f: TransferFormData) => ({ ...createInitialOneHouseJudgmentForm(), ...f });
+
+/**
+ * 🔄 **문화유산 축도 판정 메뉴로 갔다** (P6-b). 계산기 ③은 `mode="calc"`로 §155⑧·합가만
+ *    그린다 — 이 토글은 §155⑥1호이고 중과 배제가 §167의10①15호(§154① 2요소)라 비과세
+ *    판정을 경유한다.
+ *
+ * ⚠️ 「1주택 세대에는 뜨지 않는다」는 계산기에서 **공허하게 통과**한다(섹션 자체가 없으니
+ *    항상 false). 그래서 세 건을 **함께** 옮긴다 — 부정형만 남기면 안전망이 아니다
+ *    (`feedback_negative_anchor_needs_positive_twin`).
+ */
+describe("⑤ §155⑥1호 문화유산 주택 — 판정 메뉴에 선언 칸이 있다", () => {
+  const twoHouse = (over: Partial<TransferFormData> = {}) =>
+    judgmentForm(form({ houses: [houseEntry()], ...over }));
+
   it("★ 2주택 세대의 특례 섹션에 토글이 있다", () => {
-    render(<Step4 form={form()} onChange={() => {}} />);
+    render(<JudgmentStep2 form={twoHouse()} onChange={() => {}} />);
     expect(shows(HERITAGE)).toBe(true);
   });
 
@@ -83,20 +97,24 @@ describe("⑤ §155⑥1호 문화유산 주택 — 선언 칸이 화면에 있�
     const label = "지정문화유산·국가등록문화유산·천연기념물등 주택 보유 (§155⑥1호)";
     /** ToggleCard의 Switch는 `aria-label={title}`을 단다(`components/calc/inputs/ToggleCard.tsx`). */
     const sw = () => document.querySelector(`[data-slot="switch"][aria-label="${label}"]`)!;
-    const { rerender } = render(<Step4 form={form()} onChange={() => {}} />);
+    const { rerender } = render(<JudgmentStep2 form={twoHouse()} onChange={() => {}} />);
     expect(sw()).toHaveAttribute("data-unchecked");
-    rerender(<Step4 form={form({ culturalHeritageHouseSpecial: true })} onChange={() => {}} />);
+    rerender(
+      <JudgmentStep2
+        form={twoHouse({ culturalHeritageHouseSpecial: true })}
+        onChange={() => {}}
+      />,
+    );
     expect(sw()).toHaveAttribute("data-checked");
   });
 
   it("1주택 세대에는 뜨지 않는다 — 「각각 1개씩」이 성립하지 않는다", () => {
-    render(<Step4 form={form({ householdHousingCount: "1" })} onChange={() => {}} />);
+    // 🔑 판정 메뉴는 **명부**에서 주택 수를 센다 — `houses`를 비우면 1주택이다.
+    render(<JudgmentStep2 form={judgmentForm(form({ houses: [] }))} onChange={() => {}} />);
     expect(shows(HERITAGE)).toBe(false);
   });
 });
 
-/** 판정 메뉴 폼으로 감싼다 — 슈퍼셋이라 계산기 폼을 그대로 얹을 수 있다(Q-8). */
-const judgmentForm = (f: TransferFormData) => ({ ...createInitialOneHouseJudgmentForm(), ...f });
 
 describe("⑤ §156의2⑦1호 후단 — 상속받은 **주택** 갈래도 선언 칸을 연다", () => {
   it("🔴 종전에는 상속받은 **권리**가 있을 때만 열렸다", () => {
