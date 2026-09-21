@@ -15,11 +15,21 @@
  *
  * ⑮은 「피상속인이 주택 없이 **두 종류를 모두** 남긴 경우」의 규정이다. 그 사실이 선언되지
  * 않았는데 선택지를 띄우면 관계없는 결정을 강요하게 된다.
+ *
+ * ## 🔄 마운트 화면이 **판정 메뉴로 옮겨졌다** (P6-a)
+ *
+ * 이 섹션은 계산기 `Step4`에서 판정 메뉴 ②(`app/calc/one-house-exemption/steps/Step2.tsx`)로
+ * 이관됐다. **같은 컴포넌트**이므로 단언을 하나도 바꾸지 않고 마운트 화면만 옮긴다 —
+ * 지우면 「카드가 사라진 것」과 「자리를 옮긴 것」이 구별되지 않는다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
+import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import {
+  createInitialOneHouseJudgmentForm,
+  type OneHouseJudgmentFormData,
+} from "@/lib/stores/one-house-judgment-form.types";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 vi.mock("@/components/ui/address-search", () => ({
@@ -45,8 +55,11 @@ function rightEntry(over: Partial<PresaleRightEntry> = {}): PresaleRightEntry {
   };
 }
 
-function form(rights: PresaleRightEntry[], over: Partial<TransferFormData> = {}): TransferFormData {
-  const base = createDefaultTransferFormData();
+function form(
+  rights: PresaleRightEntry[],
+  over: Partial<TransferFormData> = {},
+): OneHouseJudgmentFormData {
+  const base = { ...createDefaultTransferFormData(), ...createInitialOneHouseJudgmentForm() };
   return {
     ...base,
     assets: base.assets.map((a, i) =>
@@ -64,20 +77,20 @@ const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 
 describe("상속 권리 요건 ⑤ — 가시성", () => {
   it("★ 「상속받은 권리」를 체크하면 권리 항목 안에 요건 블록이 열린다", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/상속 권리 인정 요건/)).toBe(true);
     expect(shows(/피상속인이 상속개시 당시 주택을 보유/)).toBe(true);
     expect(shows(/상속개시 당시 피상속인과 동일세대/)).toBe(true);
   });
 
   it("체크하지 않으면 열리지 않는다", () => {
-    render(<Step4 form={form([rightEntry()])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry()])} onChange={() => {}} />);
     expect(shows(/상속 권리 인정 요건/)).toBe(false);
     expect(shows(SECTION)).toBe(false);
   });
 
   it("★ 세대·일반주택 축 섹션도 함께 열린다", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(SECTION)).toBe(true);
     expect(shows(/양도하는 주택을 상속개시 당시 이미 보유하고 있었다/)).toBe(true);
   });
@@ -85,13 +98,13 @@ describe("상속 권리 요건 ⑤ — 가시성", () => {
 
 describe("🔑 순위 안내가 권리 종류에 따라 갈린다", () => {
   it("조합원입주권 — **3단계**(소유기간→거주기간→선택)", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/소유기간→거주기간→선택/)).toBe(true);
   });
 
   it("분양권 — **2단계**(소유기간→선택). 거주기간 단계가 없다", () => {
     render(
-      <Step4
+      <Step2
         form={form([rightEntry({ type: "presale_right", isInherited: true })])}
         onChange={() => {}}
       />,
@@ -101,11 +114,11 @@ describe("🔑 순위 안내가 권리 종류에 따라 갈린다", () => {
   });
 
   it("🔑 「다른 종류의 권리」 문구도 종류에 따라 갈린다", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/피상속인이 상속개시 당시 분양권을 보유/)).toBe(true);
     cleanup();
     render(
-      <Step4
+      <Step2
         form={form([rightEntry({ type: "presale_right", isInherited: true })])}
         onChange={() => {}}
       />,
@@ -116,11 +129,11 @@ describe("🔑 순위 안내가 권리 종류에 따라 갈린다", () => {
 
 describe("조건부 하위 입력", () => {
   it("공동상속을 체크해야 「최대지분」을 묻는다", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/상속지분이 가장 큰 상속인/)).toBe(false);
     cleanup();
     render(
-      <Step4
+      <Step2
         form={form([rightEntry({ isInherited: true, isCoInherited: true })])}
         onChange={() => {}}
       />,
@@ -130,7 +143,7 @@ describe("조건부 하위 입력", () => {
 
   it("동일세대를 체크해야 단서의 예외를 묻는다", () => {
     render(
-      <Step4
+      <Step2
         form={form([rightEntry({ isInherited: true, decedentSameHouseholdAtInheritance: true })])}
         onChange={() => {}}
       />,
@@ -139,11 +152,11 @@ describe("조건부 하위 입력", () => {
   });
 
   it("⭐ ⑮ 선택은 「피상속인이 다른 종류의 권리를 보유」했을 때만 뜬다", () => {
-    render(<Step4 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/피상속인이 남긴 권리 중 상속받은 것으로 선택/)).toBe(false);
     cleanup();
     render(
-      <Step4
+      <Step2
         form={form([
           rightEntry({ isInherited: true, decedentOwnedOtherRightTypeAtDeath: true }),
         ])}

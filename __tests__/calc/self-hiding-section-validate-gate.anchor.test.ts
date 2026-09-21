@@ -14,6 +14,13 @@ import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exce
 import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
 import { phdToggleReachable } from "@/lib/calc/phd-toggle-scope";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
+/**
+ * 🔄 §89② 3년 초과 예외의 **필수값 검증은 판정 메뉴로 이관**됐다 (P6-a) — 계산기에 그 칸이
+ *    없어졌으므로 거기서 요구하면 채울 방법이 없다. 「보이면 요구한다」(R-3·R-4)는 **옮겨간
+ *    화면에 대고** 단언한다. 지우면 「이관」과 「축을 죽였다」가 구별되지 않는다.
+ */
+import { validateStep2 as validateJudgmentStep2 } from "@/lib/calc/one-house-exemption-validate";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { validateAssetEntry } from "@/lib/calc/transfer-tax-validate-asset";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -46,6 +53,9 @@ const form = (over: Record<string, unknown> = {}): TransferFormData =>
   }) as unknown as TransferFormData;
 
 const msgs = (f: TransferFormData) => collectStepIssues(1, f).map((i) => i.message);
+/** 판정 메뉴 ⑧ — 폼이 슈퍼셋이라 계산기 픽스처를 그대로 얹는다(Q-8). */
+const judgeMsgs = (f: TransferFormData) =>
+  validateJudgmentStep2({ ...createInitialOneHouseJudgmentForm(), ...f }).map((e) => e.message);
 
 /** 3년을 넘긴 분양권 1건 — 카드가 열리는 최소 조건. */
 const RIGHT_OVER_3Y = [{ acquisitionDate: "2019-01-01", type: "presale_right" }];
@@ -83,7 +93,11 @@ describe("§89② 3년 초과 예외 — 카드가 사라지면 ⑧도 멈춘다
       rightThreeYearExceptionKind: "new_house",
       rightNewHouseCompletionDate: "",
     });
-    expect(msgs(visible)).toContain(
+    expect(judgeMsgs(visible)).toContain(
+      "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+    );
+    // 🔑 계산기는 더 이상 막지 않는다 — 그 화면에는 채울 칸이 없다.
+    expect(msgs(visible)).not.toContain(
       "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
     );
   });
@@ -94,7 +108,7 @@ describe("§89② 3년 초과 예외 — 카드가 사라지면 ⑧도 멈춘다
       rightThreeYearExceptionKind: "delay",
       rightDisposalDelayReason: "",
     });
-    expect(msgs(visible)).toContain(
+    expect(judgeMsgs(visible)).toContain(
       "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",
     );
     const gone = form({

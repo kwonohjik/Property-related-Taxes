@@ -19,6 +19,8 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
+// ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
+import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -93,6 +95,36 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       );
     }
   });
+
+  /**
+   * §89② 3년 초과 예외 — 필수 입력 (P6-a에서 계산기 ⑧에서 **이관**).
+   *
+   * 🔴 입력이 옮겨오면 **그 검증도 따라와야 한다.** 계산기에만 두면 판정 메뉴에서 종류만 고르고
+   *    필수값을 비운 채 계산기로 넘길 수 있고, 계산기에는 이제 채울 칸이 없다.
+   *
+   * 🔑 게이트는 ⑤와 **같은 술어**(`rightThreeYearExceptionVisible`)다. 그것이 이 검증을 만든
+   *    이유다 — 종전 계산기에서 술어 없이 `Kind`만 보고 막았다가, 권리를 지워 섹션이 사라진
+   *    상태에서 **채울 칸도 해제할 컨트롤도 없는 영구 차단**이 났다
+   *    (`transfer-tax-validate.ts`의 같은 블록 주석에 그 전례가 기록돼 있다).
+   */
+  if (rightThreeYearExceptionVisible(form)) {
+    if (form.rightThreeYearExceptionKind === "new_house" && !form.rightNewHouseCompletionDate) {
+      errors.push(
+        err(
+          "rightNewHouseCompletionDate",
+          "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+        ),
+      );
+    }
+    if (form.rightThreeYearExceptionKind === "delay" && !form.rightDisposalDelayReason) {
+      errors.push(
+        err(
+          "rightDisposalDelayReason",
+          "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",
+        ),
+      );
+    }
+  }
 
   // §155의2 — 어댑터가 전송을 포기하는 조건과 **같은 자리**에서 막는다.
   if (form.longTermMortgageSpecial) {
