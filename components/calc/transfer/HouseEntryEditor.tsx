@@ -27,6 +27,7 @@ import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surchar
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
+import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 // ============================================================
@@ -475,6 +476,8 @@ export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDat
       <InheritanceSection house={house} onUpdate={onUpdate} />
       <LongTermRentalSection house={house} onUpdate={onUpdate} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
+      {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
+      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} />
     </div>
   );
 }
