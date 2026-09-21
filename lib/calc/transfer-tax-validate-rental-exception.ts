@@ -7,7 +7,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
+import { canDeclareRentalHousingException } from "./rental-housing-exception-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -19,6 +19,11 @@ import {
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
   asset: AssetForm,
+  /**
+   * 자산 인덱스 — **필수다**. 기본값 0을 주면 컴패니언 호출부가 인자를 빠뜨렸을 때
+   * 조용히 통과해, 좁히려던 축이 그대로 열린다(P6-c-4).
+   */
+  assetIndex: number,
   label: string,
   formTransferDate?: string,
   /**
@@ -37,7 +42,12 @@ export function validateRentalHousingException(
    * 「임대주택 정보를 1호 이상 입력하세요」로 계산이 영구 차단됐다 — 그 입력 카드는
    * ⑤ 게이트(`AssetSectionExtras.tsx:28`) 밖이라 **화면에 없다**(dead-end).
    */
-  if (!isRentalHousingExceptionApplicable(asset.assetKind)) return null;
+  /**
+   * 🔴 **위치 축도 함께 본다** (P6-c-4). ④는 primary만 보내므로(엔진 입력이 top-level 단일
+   *    객체다) 컴패니언에서 검증하면 **효과 없는 입력 때문에 계산이 차단된다** — 실측으로
+   *    확인했다. ⑤가 같은 술어로 카드를 감춘다.
+   */
+  if (!canDeclareRentalHousingException(asset.assetKind, assetIndex)) return null;
 
   // 임대주택 1호 이상 필수
   if (!rh.rentalUnits || rh.rentalUnits.length === 0) {

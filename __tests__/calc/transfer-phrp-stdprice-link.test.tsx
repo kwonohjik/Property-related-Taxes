@@ -136,7 +136,7 @@ describe("A4 — ⑧ validate 소스 ternary (3중 패턴)", () => {
     const asset = makeLinkedAsset();
     asset.rentalHousingException = makeScenarioBRhe();
     expect(
-      validateRentalHousingException(asset.rentalHousingException, asset, "자산 1", TRANSFER_DATE),
+      validateRentalHousingException(asset.rentalHousingException, asset, 0, "자산 1", TRANSFER_DATE),
     ).toBeNull();
   });
 
@@ -146,6 +146,7 @@ describe("A4 — ⑧ validate 소스 ternary (3중 패턴)", () => {
     const msg = validateRentalHousingException(
       asset.rentalHousingException,
       asset,
+      0,
       "자산 1",
       TRANSFER_DATE,
     );
@@ -158,6 +159,7 @@ describe("A4 — ⑧ validate 소스 ternary (3중 패턴)", () => {
     const msg = validateRentalHousingException(
       asset.rentalHousingException,
       asset,
+      0,
       "자산 1",
       TRANSFER_DATE,
     );
@@ -170,6 +172,7 @@ describe("A4 — ⑧ validate 소스 ternary (3중 패턴)", () => {
     const msg = validateRentalHousingException(
       asset.rentalHousingException,
       asset,
+      0,
       "자산 1",
       TRANSFER_DATE,
     );

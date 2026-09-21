@@ -308,7 +308,7 @@ export function validateAssetEntry(
   }
 
   // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳)
-  const rhError = validateRentalHousingException(a.rentalHousingException, a, label, form.transferDate);
+  const rhError = validateRentalHousingException(a.rentalHousingException, a, index, label, form.transferDate);
   if (rhError) return rhError;
 
   // 날짜 순서 (취득-양도·상속·증여) — 실시간 인라인 경고와 단일 진실 공유

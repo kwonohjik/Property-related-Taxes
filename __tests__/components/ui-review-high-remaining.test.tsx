@@ -111,14 +111,14 @@ describe("H7 — 컴패니언 자산의 NBL 상세 판정은 되돌릴 수 있�
 
   it("🔑 H-1: 접힌 상태에서 「+ 상세 판정 시작」 복귀 버튼이 렌더된다", () => {
     render(
-      <AssetSectionExtras asset={nblLand(false)} onChange={() => {}} transferDate="2025-05-01" />,
+      <AssetSectionExtras asset={nblLand(false)} assetIndex={0} onChange={() => {}} transferDate="2025-05-01" />,
     );
     expect(screen.getByText("+ 상세 판정 시작")).toBeTruthy();
   });
 
   it("H-2: 펼친 상태는 종전대로 상세 판정 본문", () => {
     render(
-      <AssetSectionExtras asset={nblLand(true)} onChange={() => {}} transferDate="2025-05-01" />,
+      <AssetSectionExtras asset={nblLand(true)} assetIndex={0} onChange={() => {}} transferDate="2025-05-01" />,
     );
     expect(screen.getByText("비사업용 토지 정밀 판정")).toBeTruthy();
     expect(screen.queryByText("+ 상세 판정 시작")).toBeNull();
@@ -126,7 +126,7 @@ describe("H7 — 컴패니언 자산의 NBL 상세 판정은 되돌릴 수 있�
 
   it("H-3: 비사업용이 아니면 아무것도 렌더하지 않는다", () => {
     const asset = { ...nblLand(false), isNonBusinessLand: false } as AssetForm;
-    render(<AssetSectionExtras asset={asset} onChange={() => {}} transferDate="2025-05-01" />);
+    render(<AssetSectionExtras asset={asset} assetIndex={0} onChange={() => {}} transferDate="2025-05-01" />);
     expect(screen.queryByText("+ 상세 판정 시작")).toBeNull();
   });
 });

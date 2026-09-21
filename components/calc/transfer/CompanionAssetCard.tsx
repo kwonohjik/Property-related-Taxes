@@ -429,7 +429,7 @@ export function CompanionAssetCard({
           onToggle={() => toggleSection(5)}
           forceOpen={forceOpenAll}
         >
-          <AssetSectionExtras asset={asset} onChange={onChange} transferDate={transferDate} />
+          <AssetSectionExtras asset={asset} assetIndex={index} onChange={onChange} transferDate={transferDate} />
         </AssetSection>
       )}
 
