@@ -289,6 +289,18 @@ export interface TransferTaxInput {
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
   householdRightCount?: number;
+  /**
+   * §89①4호 1세대1입주권 **판정 사실** — 판정 메뉴 전용 운반 상자 (P4-3b).
+   *
+   * 🔑 계산기는 같은 두 사실을 `redevelopment.exemptionEligibleAtApproval`·
+   *    `redevelopment.otherHouseAcquisitionDate`로 보낸다. 판정 메뉴가 그 블록을 쓸 수 없는
+   *    이유는 그것이 §166 3분할 **산식 입력**을 필수로 끌고 오기 때문이다(Q-7 분할선).
+   *    ⇒ 상자는 둘, **규칙은 `resolveOneRightExemptionClause` 하나**다.
+   */
+  oneRightExemptionFacts?: {
+    eligibleAtApproval: boolean;
+    otherHouseAcquisitionDate?: Date;
+  };
   /** 거주기간 (월) */
   residencePeriodMonths: number;
   /** 양도일 기준 조정대상지역 여부 */

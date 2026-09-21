@@ -227,6 +227,27 @@ export function buildOneHouseExemptionApiBody(
       const rhPayload = toRentalHousingExceptionApi(primary);
       return rhPayload ? { rentalHousingException: rhPayload } : {};
     })(),
+
+    /**
+     * §89①4호 1세대1입주권 **판정 사실** (P4-3b).
+     *
+     * 🔴 계산기의 `buildRedevelopmentPayload`를 쓰지 않는다 — 그 payload는 §166 3분할
+     *    **산식 입력**(`rightsValue`·`settlementAmount`·`preApprovalExpenses` 등)을 Zod 필수로
+     *    끌고 온다. 판정 하나를 받으려고 그 값들을 0으로 지어내면 **거짓 데이터**를 보내는 것이다.
+     *    ⇒ 판정 사실만 담는 좁은 블록으로 보낸다(⑫ `oneRightExemptionFactsSchema`).
+     *
+     * 🔑 엔진 쪽 **규칙은 한 벌**이다 — `resolveOneRightExemptionClause`가 두 상자 어느 쪽에서
+     *    오든 같은 두 사실을 받아 같은 판정을 낸다.
+     */
+    ...(primary.assetKind === "right_to_move_in"
+      ? {
+          oneRightExemptionFacts: {
+            eligibleAtApproval: primary.redevExemptionEligibleAtApproval === "yes",
+            // 빈 문자열은 **미입력**이다 — 엔진이 나목을 「판정 불가」로 두게 한다.
+            otherHouseAcquisitionDate: primary.redevOtherHouseAcquisitionDate || undefined,
+          },
+        }
+      : {}),
   };
 }
 

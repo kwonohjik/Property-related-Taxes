@@ -19,6 +19,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 type Props = {
@@ -28,6 +30,8 @@ type Props = {
 
 export function Step3({ form, onChange }: Props) {
   const primary = form.assets[0];
+  /** 양도 대상이 조합원입주권인가 — §89①3호(주택)와 §89①4호(입주권)를 가르는 축이다. */
+  const isRightSale = primary.assetKind === "right_to_move_in";
 
   /** 자산-수준 patch — `assets[0]`만 갈아 끼운다(계산기 Step4:613-617과 같은 형태). */
   const patchAsset = (patch: Record<string, unknown>) =>
@@ -40,7 +44,41 @@ export function Step3({ form, onChange }: Props) {
         description="양도하려는 주택과 예정 조건을 입력하세요."
       />
 
-      <ToneCard tone="amber" sectionNum="3-A" title="양도 대상 주택">
+      {/*
+        🔴 **양도 대상 종류가 판정 조문을 가른다** (P4-3b).
+           주택 → §89①3호(보유·거주요건·§155 각 항) · 조합원입주권 → §89①4호(가목·나목).
+           엔진의 자산 게이트가 `propertyType !== "housing"`이라 이 선택이 곧 경로 선택이다.
+        🔑 `redevSubject`를 함께 세운다 — §89①4호 카드의 노출 게이트가 그 값을 읽는다.
+      */}
+      <ToneCard tone="violet" sectionNum="3-A" title="양도 대상">
+        <RadioCardGroup
+          name="one-house-sale-target"
+          tone="violet"
+          layout="stack"
+          options={[
+            {
+              value: "housing",
+              label: "주택",
+              description: "소득세법 §89①3호 — 보유 2년(조정대상지역 취득 시 거주 2년) 요건과 §155 각 항 특례로 판정합니다.",
+            },
+            {
+              value: "right_to_move_in",
+              label: "조합원입주권",
+              description: "소득세법 §89①4호 — 다른 주택·분양권 보유 여부와 인가일 기준 요건으로 판정합니다.",
+            },
+          ]}
+          value={primary.assetKind === "right_to_move_in" ? "right_to_move_in" : "housing"}
+          onChange={(v) =>
+            patchAsset(
+              v === "right_to_move_in"
+                ? { assetKind: "right_to_move_in", redevSubject: "right" }
+                : { assetKind: "housing" },
+            )
+          }
+        />
+      </ToneCard>
+
+      <ToneCard tone="amber" sectionNum="3-B" title={isRightSale ? "양도 대상 입주권" : "양도 대상 주택"}>
         <div className="grid gap-3 sm:grid-cols-2">
           <FieldCard label="취득일">
             <DateInput
@@ -72,7 +110,7 @@ export function Step3({ form, onChange }: Props) {
         </FieldCard>
       </ToneCard>
 
-      <ToneCard tone="rose" sectionNum="3-B" title="조정대상지역">
+      <ToneCard tone="rose" sectionNum="3-C" title="조정대상지역">
         <p className="text-sm leading-relaxed">
           <b>취득 당시</b> 조정대상지역이었다면 보유 2년에 더해 <b>거주 2년</b>이 필요합니다.
           양도 당시 지정 여부는 거주요건과 무관합니다.
@@ -96,9 +134,29 @@ export function Step3({ form, onChange }: Props) {
       </ToneCard>
 
       {/*
+        §89①4호 1세대1입주권 — 계산기와 **같은 컴포넌트**를 `mode="facts"`로 쓴다.
+        세액 맥락(장기보유특별공제 과세구조 안내)과 「Step 2 보유 상황」 지시만 걷어낸다.
+        🔑 입력 필드 4종은 전부 판정 사실이라 그대로 뜬다 — §166 3분할 산식 입력은
+           애초에 이 컴포넌트가 아니라 `RedevelopmentBlock`(계산기)이 갖는다.
+      */}
+      {isRightSale && (
+        <RedevelopmentRightExemptionSection
+          mode="facts"
+          asset={primary}
+          onChange={patchAsset}
+          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+        />
+      )}
+
+      {/*
         거주기간 — **자산-수준** 필드에 바인딩한다. 폼-전역 `residencePeriodMonths`는 이
         위젯이 건드리지 않는 옛 필드이고, 어댑터도 같은 leaf로 자산-수준을 읽는다.
+
+        🔑 입주권 양도에는 띄우지 않는다 — §89①4호의 거주 축은 **인가일 기준 종전주택** 거주이고
+           그 값은 위 카드의 `redevPriorHouseResidenceMonths`가 받는다. 둘 다 띄우면 사용자는
+           같은 질문을 두 번 받고, 판정에는 그중 하나만 쓰인다.
       */}
+      {!isRightSale && (
       <ResidencePeriodSection
         residenceInputMode={primary.residenceInputMode}
         residencePeriods={primary.residencePeriods}
@@ -106,6 +164,7 @@ export function Step3({ form, onChange }: Props) {
         transferDate={form.transferDate}
         onChange={patchAsset}
       />
+      )}
 
       <ToggleCard
         data-testid="one-house-unregistered"

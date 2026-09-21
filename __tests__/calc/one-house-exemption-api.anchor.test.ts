@@ -20,6 +20,7 @@ import {
 import {
   createInitialOneHouseJudgmentForm,
   deriveJudgmentHouseCount,
+  deriveJudgmentRightCount,
   withDerivedHouseCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
@@ -526,5 +527,85 @@ describe("P4-3a — §155⑳ 판정 배선", () => {
     const errors = validateStep2(form);
     expect(errors.some((e) => e.severity === "warning" && e.field === "houses")).toBe(true);
     expect(errors.filter((e) => e.severity === "error")).toEqual([]);
+  });
+});
+
+/**
+ * P4-3b — §89①4호 1세대1입주권이 화면 입력에서 route까지 관통한다.
+ *
+ * 🔴 계산기의 `buildRedevelopmentPayload`를 쓰지 않는 것이 이 축의 핵심이다 — 그 payload는
+ *    §166 3분할 **산식 입력**을 Zod 필수로 끌고 오고, 판정 하나를 받으려고 그것을 0으로
+ *    지어내면 거짓 데이터를 보내는 일이 된다(Q-7 분할선).
+ */
+describe("P4-3b — §89①4호 판정 배선", () => {
+  function rightForm(assetOver: Record<string, unknown> = {}, over: Partial<OneHouseJudgmentFormData> = {}) {
+    const f = baseForm();
+    return {
+      ...f,
+      assets: [
+        {
+          ...f.assets[0],
+          assetKind: "right_to_move_in" as const,
+          redevSubject: "right" as const,
+          redevExemptionEligibleAtApproval: "yes" as const,
+          ...assetOver,
+        },
+      ],
+      ...over,
+    } as OneHouseJudgmentFormData;
+  }
+
+  it("[RG-1] 주택 양도면 판정 사실 블록을 싣지 않는다", () => {
+    const body = buildOneHouseExemptionApiBody(baseForm()) as Record<string, unknown>;
+    expect(body.oneRightExemptionFacts).toBeUndefined();
+    expect(body.propertyType).toBe("housing");
+  });
+
+  it("[RG-2] 입주권 양도면 **판정 사실만** 싣는다 (§166 산식 입력 없음)", () => {
+    const body = buildOneHouseExemptionApiBody(rightForm()) as Record<string, unknown>;
+    expect(body.propertyType).toBe("right_to_move_in");
+    expect(body.oneRightExemptionFacts).toEqual({
+      eligibleAtApproval: true,
+      otherHouseAcquisitionDate: undefined,
+    });
+    // 🔴 §166 3분할 산식 블록을 지어내지 않는다 — 이것이 Q-7 분할선이다.
+    expect(body.redevelopment).toBeUndefined();
+  });
+
+  it("[RG-3] 화면 입력 그대로 route까지 가 가목이 성립한다", async () => {
+    const { status, json } = await postForm(rightForm());
+    expect(status).toBe(200);
+    expect(json.data.oneRightExemption.clause).toBe("ga");
+    expect(json.data.judgment.isExempt).toBe(true);
+    // 🔴 명부가 비었어도 **0채**여야 가목이 선다.
+    expect(json.data.houseCount.total).toBe(0);
+  });
+
+  it("[RG-4] 토글 OFF(빈 문자열)는 미선언으로 간다 — 「아니오」 선언이 아니다", () => {
+    const body = buildOneHouseExemptionApiBody(
+      rightForm({ redevExemptionEligibleAtApproval: "" }),
+    ) as Record<string, unknown>;
+    expect((body.oneRightExemptionFacts as Record<string, unknown>).eligibleAtApproval).toBe(false);
+  });
+
+  it("[RG-5] 나목 취득일이 body를 타고 3년 판정에 도달한다", async () => {
+    const form = rightForm(
+      { redevOtherHouseAcquisitionDate: "2023-01-01" },
+      { houses: [house("h1", { acquisitionDate: "2023-01-01" })] },
+    );
+    const body = buildOneHouseExemptionApiBody(form) as Record<string, unknown>;
+    expect((body.oneRightExemptionFacts as Record<string, unknown>).otherHouseAcquisitionDate).toBe(
+      "2023-01-01",
+    );
+    const { json } = await postForm(form);
+    expect(json.data.oneRightExemption.clause).toBe("na");
+  });
+
+  /** 파생 2축이 클라이언트에서도 갈린다 — 사이드바·섹션 게이트가 이 값을 읽는다. */
+  it("[RG-6] 클라이언트 파생도 같은 갈래를 쓴다", () => {
+    expect(deriveJudgmentHouseCount(baseForm())).toBe(1);
+    expect(deriveJudgmentHouseCount(rightForm())).toBe(0);
+    expect(deriveJudgmentRightCount(rightForm())).toBe(1);
+    expect(deriveJudgmentRightCount(baseForm())).toBe(0);
   });
 });

@@ -21,6 +21,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import {
   deriveJudgmentHouseCount,
+  deriveJudgmentRightCount,
+  judgmentSaleIsHousing,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 
@@ -224,7 +226,18 @@ export function computeOneHouseJudgmentSummary(
   const items: Array<{ label: string; value: string | number | null }> = [];
 
   items.push({ label: "1세대 해당", value: form.isOneHousehold ? "예" : "아니오" });
+  /**
+   * 양도 대상 종류는 **판정 조문을 가르는 축**이라(§89①3호 / §89①4호) 요약 맨 앞에 둔다.
+   * 주택일 때는 종전과 같이 적지 않는다 — 기본값이고, 줄이 늘면 정작 다른 값이 묻힌다.
+   */
+  if (!judgmentSaleIsHousing(form)) {
+    items.push({ label: "양도 대상", value: "조합원입주권" });
+  }
   items.push({ label: "세대 보유 주택 수", value: `${deriveJudgmentHouseCount(form)}채` });
+  if (!judgmentSaleIsHousing(form)) {
+    // §89①4호 본문이 「1개」를 요구하는 축 — 양도 대상 포함 수를 그대로 보여준다.
+    items.push({ label: "세대 보유 입주권 수", value: `${deriveJudgmentRightCount(form)}개` });
+  }
 
   if (form.presaleRights?.length) {
     items.push({ label: "분양권·입주권", value: `${form.presaleRights.length}건` });

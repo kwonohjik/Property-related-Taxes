@@ -68,10 +68,41 @@ export type OneHouseCountBreakdown = {
  *
  * 🔑 분양권·조합원입주권은 더하지 않는다 — §89①3호의 「주택 수」가 아니라 §89②의 별개 축이고,
  *    `house-count-divergence.ts:53`도 같은 이유로 주택 행만 센다(F7).
+ *
+ * 🔴 **양도 대상이 주택이 아니면 1을 더하지 않는다**(P4-3b). 조합원입주권을 양도하는 세대는
+ *    §89①4호 가목이 「다른 주택을 보유하지 아니할 것」 = **0채**를 요구하는데, `selling` 행을
+ *    주택으로 세면 명부가 비어도 1채가 되어 가목이 **절대 성립하지 않는다**.
+ *    `buildHousesPayload`는 입주권 양도에도 `selling` 행을 붙이므로(중과 축에서 필요하다)
+ *    여기서 그 행을 빼고 센다.
  */
-export function deriveHouseholdHousingCount(engineHouses: HouseInfo[] | undefined): number {
-  if (!engineHouses || engineHouses.length === 0) return 1;
-  return engineHouses.length;
+export function deriveHouseholdHousingCount(
+  engineHouses: HouseInfo[] | undefined,
+  /** 양도 대상이 §89①3호의 「주택」인가. 기본값 `true` — 넘기지 않으면 종전 동작 그대로다. */
+  sellingIsHousing = true,
+): number {
+  if (!engineHouses || engineHouses.length === 0) return sellingIsHousing ? 1 : 0;
+  if (sellingIsHousing) return engineHouses.length;
+  return engineHouses.filter((h) => h.id !== SELLING_HOUSE_ID).length;
+}
+
+/** `buildHousesPayload`가 양도 대상 행에 붙이는 고정 id. */
+export const SELLING_HOUSE_ID = "selling";
+
+/**
+ * 명부 → 세대 보유 **조합원입주권 수** (§89①4호 본문 「조합원입주권을 1개 보유한 1세대」).
+ *
+ * 🔑 **양도하는 입주권 자체를 포함**한다 — 계산기 위젯의 안내문과 같은 규약이다
+ *    (`Step4.tsx:470` 「양도하는 입주권 자체도 포함하여」).
+ * 🔑 분양권(`presale_right`)은 세지 않는다. 그 보유 여부는 가·나목이 **따로** 묻는 축이고
+ *    `householdHoldsPresaleRight`가 본다 — 여기 합치면 두 요건이 한 숫자로 뭉개진다.
+ */
+export function deriveHouseholdRightCount(
+  presaleRights: { type: "presale_right" | "redevelopment_right" }[] | undefined,
+  /** 양도 대상이 조합원입주권인가. */
+  sellingIsRedevelopmentRight: boolean,
+): number {
+  const listed = (presaleRights ?? []).filter((r) => r.type === "redevelopment_right").length;
+  return listed + (sellingIsRedevelopmentRight ? 1 : 0);
 }
 
 /**

@@ -158,8 +158,36 @@ export function normalizeOneHouseJudgmentForm(
  *
  * 🔑 분양권·조합원입주권은 더하지 않는다 — §89①3호의 「주택 수」가 아니라 §89②의 별개 축이다.
  */
-export function deriveJudgmentHouseCount(form: Pick<OneHouseJudgmentFormData, "houses">): number {
-  return 1 + (form.houses?.length ?? 0);
+export function deriveJudgmentHouseCount(
+  form: Pick<OneHouseJudgmentFormData, "houses" | "assets">,
+): number {
+  return (judgmentSaleIsHousing(form) ? 1 : 0) + (form.houses?.length ?? 0);
+}
+
+/**
+ * 양도 대상이 §89①3호의 「주택」인가 (P4-3b).
+ *
+ * 🔴 **조합원입주권을 양도하면 주택이 아니다.** §89①4호 가목이 「다른 주택을 보유하지
+ *    **아니할** 것」 = 0채를 요구하는데, 양도 대상을 주택으로 세면 명부가 비어도 1채가 되어
+ *    가목이 **절대 성립하지 않는다**. route도 같은 갈래를 둔다
+ *    (`deriveHouseholdHousingCount(houses, sellingIsHousing)`) — 두 값이 어긋나면
+ *    §154① 단서 게이트(클라이언트)와 판정(서버)이 다른 주택 수를 본다.
+ */
+export function judgmentSaleIsHousing(
+  form: Pick<OneHouseJudgmentFormData, "assets">,
+): boolean {
+  return form.assets?.[0]?.assetKind !== "right_to_move_in";
+}
+
+/**
+ * 명부 → 세대 보유 **조합원입주권 수** (§89①4호 본문). 양도 대상 입주권을 **포함**한다.
+ * 분양권은 세지 않는다 — 그 보유 여부는 가·나목이 따로 묻는 축이다.
+ */
+export function deriveJudgmentRightCount(
+  form: Pick<OneHouseJudgmentFormData, "presaleRights" | "assets">,
+): number {
+  const listed = (form.presaleRights ?? []).filter((r) => r.type === "redevelopment_right").length;
+  return listed + (judgmentSaleIsHousing(form) ? 0 : 1);
 }
 
 /**
