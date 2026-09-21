@@ -535,14 +535,47 @@ export function emitRedevelopmentSteps(
     });
   }
 
-  // 분양가 (subject="apt" 만 의미)
-  if (redev.salePriceTotal != null && redevInfo.subject === "apt") {
-    const sign = redevInfo.settlementDirection === "pay" ? "+" : "-";
+  /**
+   * 「평가액 ± 청산금」 도출 — **양도 대상에 따라 이름이 다르다** (P6-c-7).
+   *
+   * ## 🔴 종전에는 `subject === "apt"`에서만 찍었다
+   *
+   * 「분양가」는 완공APT의 실무 명칭이다. 입주권 양도자는 분양받은 것이 없다 — 그 값은
+   * 「소득세법 시행령」 §166①의 **공제액**이다(1호=납부: 평가액＋납부청산금 /
+   * 2호 가목=수령: 평가액－지급받은 청산금). 이름이 맞지 않아 게이트로 막아 두었던 것으로
+   * 보이나, 그 결과 **입주권 결과 화면에는 그 값의 도출이 아예 없었다**.
+   *
+   * 실측(청산금 수령 · 권리가액 3억 · 청산금 1억):
+   *
+   * | 축 | 200,000,000 등장 | 도출 step |
+   * |---|---|---|
+   * | 입주권 | 2회(나목·가목 **계산**) | ✗ |
+   * | 완공APT | 3회 | ✅ 「분양가」 |
+   *
+   * 나머지 2회는 중복이 아니라 **역할이 다르다** — 각각 §166①2호 나목·가목의 계산이고,
+   * 이 step만이 그 값이 **어디서 나왔는지**를 말한다. 그래서 게이트를 없애고 이름을
+   * 축으로 갈랐다(③-b `SalePriceTotalPreviewCard`와 같은 처방 · P6-c-6).
+   *
+   * 🔑 근거 조문도 함께 갈린다 — 완공APT는 §166④(평가액 정의)를 유지하고, 입주권은
+   *    그 값을 **공제항으로 쓰는** 호(§166①1호·2호)를 가리킨다.
+   */
+  if (redev.salePriceTotal != null) {
+    const isPay = redevInfo.settlementDirection === "pay";
+    const sign = isPay ? "+" : "-";
+    const isRight = redevInfo.subject === "right";
     steps.push({
-      label: "분양가",
-      formula: `권리가액 ${redevInfo.rightsValue.toLocaleString()} ${sign} 청산금 ${redevInfo.settlementAmount.toLocaleString()}`,
+      label: isRight ? "평가액 ± 청산금 (§166① 공제액)" : "분양가",
+      formula: isRight
+        ? `기존건물·부수토지 평가액 ${redevInfo.rightsValue.toLocaleString()} ${sign} ${
+            isPay ? "납부한" : "지급받은"
+          } 청산금 ${redevInfo.settlementAmount.toLocaleString()}`
+        : `권리가액 ${redevInfo.rightsValue.toLocaleString()} ${sign} 청산금 ${redevInfo.settlementAmount.toLocaleString()}`,
       amount: redev.salePriceTotal,
-      legalBasis: REDEVELOPMENT.EVALUATION,
+      legalBasis: isRight
+        ? isPay
+          ? REDEVELOPMENT.RIGHT_PAY
+          : REDEVELOPMENT.RIGHT_RECEIVE
+        : REDEVELOPMENT.EVALUATION,
     });
   }
 
