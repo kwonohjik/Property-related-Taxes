@@ -301,7 +301,6 @@ export function Step1({
            *    ④를 거친 뒤 되돌아오거나 이력에서 복원한 경우에 동작한다.
            *    그래도 **넘기지 않으면 영영 뜨지 않는다** — 종전이 그 상태였다.
            */
-          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
           errorAssetIndex={errorAssetIndex}
           errorMessage={errorMessage}
           splitMode={splitMode}

@@ -2410,5 +2410,62 @@ RM-6은 소스에 `imported-right-exceptions` 문자열이 있는지만 봤고, 
 
 ### 32.5 남은 것
 
-- **P6-c**: Q-7 — `RentalHousingExceptionSection`에 **`calc` 모드 신설** ·
-  `RedevelopmentBlock.tsx:129`의 렌더를 읽기 전용 요약으로 교체.
+- **P6-c**: Q-7 — **둘로 나눴다**(2026-09-21).
+  - **P6-c-1** ✅ `RedevelopmentRightExemptionSection` 계산기 제거 → 읽기 전용 요약(§33).
+  - **P6-c-2** `RentalHousingExceptionSection`에 **`calc` 모드 신설**(§161 안분만).
+
+## 33. P6-c-1 — 1세대1입주권 §89①4호 입력 이관 (2026-09-21 완료)
+
+### 33.1 착수 전 실측 — 중과 축이 없다
+
+P6-b에서 「비과세 축만 보면 틀린다」를 겪었으므로 먼저 쟀다. 4필드
+(`redevExemptionEligibleAtApproval`·`redevOtherHouseAcquisitionDate`·
+`redevPriorHouseHoldingMonths`·`redevPriorHouseResidenceMonths`) 중
+`multi-house-surcharge*`에 도달하는 것은 **하나도 없다**. 소비처는 ④ 변환 2곳
+(`transfer-tax-api-redev.ts`·`one-house-exemption-api.ts`)과 ⑧ 형식검증 1곳뿐이다.
+⇒ §155⑧·합가와 달리 **통째로 옮길 수 있다**.
+
+### 33.2 분할선이 하나 더 있었다 — 세액 맥락은 계산기 몫
+
+컴포넌트가 들고 있던 것은 두 종류였고 **행선지가 갈린다**:
+
+| 내용 | 성격 | 행선지 |
+|---|---|---|
+| 4필드 입력(§89①4호 가목 요건) | 판정 사실 | 판정 메뉴 |
+| **§95② 장기보유특별공제 구조 안내** | **세액 맥락** | **계산기** |
+
+세액 안내까지 옮기면 계산기가 「인가전 차익만 LTHD 대상」을 말할 곳을 잃는다.
+⇒ 안내를 컴포넌트에서 꺼내 `ImportedRedevRightFactsCard`(계산기)로 옮겼다.
+
+### 33.3 `mode` prop을 **지웠다**
+
+`full`이 걷어내던 것이 바로 그 세액 안내였는데 그것을 꺼냈으므로 `full`은 빈 분기가 된다.
+소비자가 하나뿐인 분기를 남기지 않는다 — 계획서가 `calc` 모드를 미리 만들지 않은 이유와 같다.
+
+### 33.4 딸려 나온 prop 체인
+
+`wasRegulatedAtAcquisition`은 `Step1 → CompanionAssetCard → AssetSectionAcquisition →
+RedevelopmentBlock → §⑥ 카드` 5계층을 타고 있었고, §⑥이 빠지면서 **전 구간이 고아**가 됐다.
+3계층에서 제거했다.
+
+🔴 그 체인이 끊겼을 때 거주 경고가 **한 번도 뜨지 않은** 전례(U1-03)가 있으므로
+`redev-right-exemption-prop-wiring.anchor.test.tsx`를 **지우지 않고 판정 메뉴 `Step3`로 옮겼다** —
+이제 그 한 줄(`wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}`)이 유일한 배선이고,
+뮤테이션 M5가 그것을 끊으면 red가 된다.
+
+### 33.5 검증
+
+- 뮤테이션 **6/6 KILLED** — 판정 마운트·요약 카드·요약 rows·LTHD 안내·prop 배선(U1-03 재발)·
+  토글 OFF가 `"no"`를 쓰게 되돌리기(세액 3,080만원).
+- E2E는 **필드명으로** 역방향 grep했다(P6-b 교훈) — 2 spec 모두 통과(무영향).
+- `one-house-judgment-one-right` ORR-2(「LTHD 안내가 안 뜬다」)가 이제 **구조적으로 참**이 되어
+  공허해지므로, 긍정 짝(RC-3 계산기는 그린다)을 새 anchor에 넣었다.
+
+### 33.6 남은 것
+
+- 🟠 **`ExemptionAtApprovalCard`는 계산기에 남아 있다** — 같은 필드
+  `redevExemptionEligibleAtApproval`(판정 사실)을 3-state 라디오로 편집한다. 청산금 「수령」 +
+  1세대1주택 조합에서만 열리는 별개 맥락이라 이번 범위에서 제외했다.
+  **한 화면의 중복은 사라졌지만 필드는 여전히 두 화면이 다른 값 체계로 쓴다** —
+  anchor A8-04가 그 배치를 고정한다. P6-c-2 이후 별건으로 판단할 것.
+- **P6-c-2**: `RentalHousingExceptionSection` `calc` 모드.

@@ -134,14 +134,14 @@ export function Step3({ form, onChange }: Props) {
       </ToneCard>
 
       {/*
-        §89①4호 1세대1입주권 — 계산기와 **같은 컴포넌트**를 `mode="facts"`로 쓴다.
-        세액 맥락(장기보유특별공제 과세구조 안내)과 「Step 2 보유 상황」 지시만 걷어낸다.
-        🔑 입력 필드 4종은 전부 판정 사실이라 그대로 뜬다 — §166 3분할 산식 입력은
-           애초에 이 컴포넌트가 아니라 `RedevelopmentBlock`(계산기)이 갖는다.
+        §89①4호 1세대1입주권 — **이 화면이 유일한 입력 경로**다 (P6-c-1).
+        종전에는 계산기 `RedevelopmentBlock`도 같은 컴포넌트를 `mode="full"`로 띄웠으나,
+        입력 4종이 전부 판정 사실이라 계산기 쪽을 읽기 전용 요약으로 바꿨다.
+        🔑 §166 3분할 산식 입력은 애초에 이 컴포넌트가 아니라 `RedevelopmentBlock`이 갖는다 —
+           세액 맥락(§95② 장기보유특별공제 구조 안내)도 그쪽으로 옮겼다.
       */}
       {isRightSale && (
         <RedevelopmentRightExemptionSection
-          mode="facts"
           asset={primary}
           onChange={patchAsset}
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}

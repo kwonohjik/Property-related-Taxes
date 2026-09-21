@@ -21,7 +21,17 @@
  * `RedevelopmentBlock`을 **직접 렌더하면서 두 prop을 모두 넘긴다**. 그래서 배선 단절을
  * 구조적으로 관측할 수 없었다 — 통과가 곧 도달을 뜻하지 않았다.
  *
- * ⇒ **이 anchor는 `Step1`에서 시작한다.** 중간 계층이 하나라도 prop을 떨어뜨리면 실패한다.
+ * ⇒ **이 anchor는 마법사 단계에서 시작한다.** 중간 계층이 하나라도 prop을 떨어뜨리면 실패한다.
+ *
+ * ## 🔄 마운트 화면이 **판정 메뉴로 옮겨졌다** (P6-c-1)
+ *
+ * 계산기 `Step1 → … → RedevelopmentBlock` 체인은 **없어졌다**. 4필드가 전부 §89①4호 판정
+ * 사실이라 계산기 쪽은 읽기 전용 요약(`ImportedRedevRightFactsCard`)으로 바뀌었고,
+ * `wasRegulatedAtAcquisition` 배선도 그 체인에서 제거됐다.
+ *
+ * 🔴 **그래서 이 anchor를 지우면 안 된다.** 감시 대상이 사라진 게 아니라 **옮겨갔다** —
+ *    판정 메뉴 `Step3`가 이제 `form.wasRegulatedAtAcquisition`을 넘기는 유일한 층이고,
+ *    그 한 줄이 빠지면 U1-03이 그대로 재발한다(경고가 조용히 사라진다).
  *
  * ## 2026-08-26 실측 (수정 전)
  *
@@ -48,7 +58,8 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
-import { Step1 } from "@/app/calc/transfer-tax/steps/Step1";
+import { Step3 as JudgmentStep3 } from "@/app/calc/one-house-exemption/steps/Step3";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -77,22 +88,20 @@ function rightAsset(over: Partial<AssetForm> = {}): AssetForm {
 }
 
 /**
- * **프로덕션 경로 그대로** 렌더한다 — 중간 계층이 prop을 떨어뜨리면 여기서 드러난다.
+ * **프로덕션 경로 그대로** 렌더한다 — 판정 메뉴 ③이 prop을 떨어뜨리면 여기서 드러난다.
  *
- * `errorMessage`를 주는 이유는 `CompanionAssetCard`의 `forceOpenAll = !!errorMessage`로
- * ③ 취득정보 섹션을 펼치기 위해서다(접혀 있으면 카드가 DOM에 없다).
+ * 🔑 판정 메뉴 폼은 `TransferFormData`의 슈퍼셋이라(Q-8) 계산기 시료를 그대로 얹는다.
  */
 function renderStep1(asset: AssetForm, form: Partial<TransferFormData> = {}): string {
-  const formData: TransferFormData = {
+  const formData = {
     ...createDefaultTransferFormData(),
+    ...createInitialOneHouseJudgmentForm(),
     transferDate: "2024-06-01",
     contractTotalPrice: asset.actualSalePrice,
     assets: [asset],
     ...form,
   };
-  render(
-    <Step1 form={formData} onChange={() => {}} errorAssetIndex={0} errorMessage="섹션 강제 펼침" />,
-  );
+  render(<JudgmentStep3 form={formData} onChange={() => {}} />);
   return document.body.textContent ?? "";
 }
 

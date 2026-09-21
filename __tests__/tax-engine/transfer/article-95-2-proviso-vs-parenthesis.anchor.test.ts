@@ -41,8 +41,14 @@ const PARENTHESIS_SITES: { file: string; needle: string }[] = [
   { file: "components/calc/results/transfer/RedevelopmentDetailCard.tsx", needle: "조합원입주권 양도 (§95② 본문 괄호 + §166①)" },
   { file: "components/calc/results/transfer/RedevelopmentDetailCard.tsx", needle: 'label="§95② 본문 괄호"' },
   { file: "components/calc/results/transfer/RedevelopmentDetailCard.tsx", needle: ">소득세법 §95② 본문 괄호<" },
-  // 입주권 비과세 섹션 — 근거 조문 배지
-  { file: "components/calc/transfer/RedevelopmentRightExemptionSection.tsx", needle: 'label="§95② 본문 괄호"' },
+  /*
+   * 🔄 **계산기 쪽 세액 안내로 옮겨졌다** (P6-c-1). 종전에는
+   * `RedevelopmentRightExemptionSection`이 §95② LTHD 구조 안내를 함께 들고 있었으나,
+   * 그 컴포넌트가 **판정 메뉴 전용**이 되면서 세액 맥락만 계산기로 꺼냈다.
+   * ⚠️ 파일이 바뀌었을 뿐 **감시 대상은 그대로다** — 여기서 지우면 인용이 「단서」로
+   *    드리프트해도 아무도 모른다.
+   */
+  { file: "components/calc/transfer/ImportedRedevRightFactsCard.tsx", needle: 'label="§95② 본문 괄호"' },
   // 계산명세서 legalBasis
   { file: "components/calc/results/transfer/DetailedStatementRedevOverrides.ts", needle: '"소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목"' },
   // 신고서 표 rose 주석
