@@ -173,7 +173,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
 
         {house.ruralHouseKind === "inherited" && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">피상속인 거주 연수</label>
+            <label className="text-sm font-medium">피상속인 거주 연수 (§155⑦1호)</label>
             <DecimalInput
               value={house.ruralDecedentResidenceYears ?? ""}
               onChange={(v) => onUpdate({ ruralDecedentResidenceYears: v })}
@@ -185,7 +185,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
 
         {house.ruralHouseKind === "farm_exit" && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">이농인 거주 연수</label>
+            <label className="text-sm font-medium">이농인 거주 연수 (§155⑦2호)</label>
             <DecimalInput
               value={house.ruralOwnerResidenceYears ?? ""}
               onChange={(v) => onUpdate({ ruralOwnerResidenceYears: v })}
@@ -206,7 +206,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               </p>
             </ToneCard>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">대지면적</label>
+              <label className="text-sm font-medium">귀농주택 대지면적</label>
               <DecimalInput
                 value={house.ruralLandAreaSqm ?? ""}
                 onChange={(v) => onUpdate({ ruralLandAreaSqm: v })}

@@ -132,7 +132,10 @@ describe("TM-1·5 계산기 ⑧ — 옮긴 것만 빠지고 남긴 것은 그대
       marriageDate: "2022-06-01",
       isFirstTransferredInMerge: true,
     });
-    // 계산기가 이 두 축을 차단하지 않는다(입력 칸이 화면에 그대로 있다).
+    // 계산기가 이 두 축을 차단하지 않는다.
+    // 🔄 **§155⑧ 입력 칸은 2026-09-22에 명부 행으로 갔다**(D-6 4) — 이 단언이 지키는 것은
+    //    「위젯이 화면에 있다」가 아니라 **「세대 단위 레거시 값이 payload에서 사라지지 않는다」**
+    //    (OH-21)다. 그 성질은 이관 뒤에도 그대로다. 합가는 여전히 계산기 ③에 있다.
     expect(calcMsgs(f).filter((m) => m.includes("수도권 밖"))).toHaveLength(0);
     const payload = buildHouseholdSpecialPayload(f, f.assets[0]) as Record<string, unknown>;
     expect(payload.unavoidableOutsideCapitalHouse).toBeTruthy();

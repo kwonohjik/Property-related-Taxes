@@ -44,6 +44,9 @@ export type OneHouseFactRow = Partial<
     | "ruralLandAreaSqm"
     | "ruralWholeHouseholdMoved"
     | "ruralHighPriceAtAcquisition"
+    | "oneHouseUnavoidableOutsideCapital"
+    | "unavoidableOutsideCapitalReason"
+    | "unavoidableOutsideCapitalResolvedDate"
     | "acquisitionDate"
     | "addressJibun"
     | "regionCode"
@@ -62,12 +65,20 @@ export interface RuralHousePayload {
   wholeHouseholdMoved?: boolean;
 }
 
+/** ④가 만드는 §155⑧ nested payload — 엔진 `TransferTaxInput["unavoidableOutsideCapitalHouse"]`. */
+export interface UnavoidableOutsideCapitalPayload {
+  reason: "study" | "work" | "illness" | "other";
+  resolvedDate?: string;
+}
+
 /** 세대 단위 레거시 값(폼 스칼라) — 행에 표시가 없을 때만 쓴다. */
 export interface OneHouseLegacyFacts {
   /** §155⑥1호 — 종전 세대 단위 토글(`form.culturalHeritageHouseSpecial`). */
   culturalHeritageHouseSpecial?: boolean;
   /** §155⑦ — 종전 세대 단위 블록 전체. 행 표시가 없을 때 그대로 쓴다. */
   ruralHouse?: RuralHousePayload;
+  /** §155⑧ — 종전 세대 단위 블록. 행 표시가 없을 때 그대로 쓴다. */
+  unavoidableOutsideCapitalHouse?: UnavoidableOutsideCapitalPayload;
 }
 
 export interface DerivedOneHouseRowFacts {
@@ -75,6 +86,14 @@ export interface DerivedOneHouseRowFacts {
   culturalHeritageHouse: boolean;
   /** ④⑬ 엔진 입력 `ruralHouse` — 미해당이면 `undefined`(키 자체 미전송). */
   ruralHouse?: RuralHousePayload;
+  /**
+   * ④⑬ 엔진 입력 `unavoidableOutsideCapitalHouse` (§155⑧ = 영 §167의10①4호).
+   *
+   * 🔑 이 값 하나가 **두 축**을 움직인다 — 비과세(`qualifiesUnavoidableOutsideCapital`)와
+   *    중과 배제(`transfer-tax-judgment-steps.ts:55`가 그 술어 결과를 중과 엔진에 주입).
+   *    그래서 §155⑧은 비과세를 주장할 수 없는 세대에도 입력 경로가 필요했다(P6-b 실측).
+   */
+  unavoidableOutsideCapitalHouse?: UnavoidableOutsideCapitalPayload;
   /**
    * 레거시 값만으로 성립했는가 — 화면이 「어느 주택인지 지정하세요」를 띄울 신호(OH-30).
    * 행 표시가 하나라도 있으면 false다.
@@ -115,6 +134,18 @@ export function resolveRuralLocationQualified(row: OneHouseFactRow): boolean {
       urbanVerdict: row.ruralUrbanZone,
     }).verdict === "qualified"
   );
+}
+
+/**
+ * 행 중 §155⑧ 주택으로 표시된 **첫 행**. 법문이 「각각 1개씩」이라 하나만 쓴다.
+ *
+ * ⛔ `isUnavoidableReason`(영 §167의10①3호)은 **보지 않는다** — 다른 호다. 합치면 3호의
+ *    기준시가 3억·1년 거주 요건이 4호에 조용히 붙는다.
+ */
+export function findUnavoidableOutsideCapitalRow(
+  houses: readonly OneHouseFactRow[] | undefined,
+): OneHouseFactRow | undefined {
+  return (houses ?? []).find((h) => h.oneHouseUnavoidableOutsideCapital === true);
 }
 
 const num = (s: string | undefined) => parseFloat(s ?? "") || 0;
@@ -163,12 +194,27 @@ export function deriveOneHouseFactsFromHouses(
   const ruralRow = findRuralHouseRow(houses);
   const rowRural = ruralRow ? toRuralPayload(ruralRow) : undefined;
 
-  const anyRow = rowHeritage || rowRural !== undefined;
-  const anyLegacy = legacyHeritage || legacy.ruralHouse !== undefined;
+  const uocRow = findUnavoidableOutsideCapitalRow(houses);
+  const rowUoc: UnavoidableOutsideCapitalPayload | undefined = uocRow
+    ? {
+        reason: uocRow.unavoidableOutsideCapitalReason ?? "work",
+        // 미입력 = **미해소**다. 빈 문자열을 그대로 보내면 엔진이 기한을 기산해 버린다(W-1).
+        ...(uocRow.unavoidableOutsideCapitalResolvedDate
+          ? { resolvedDate: uocRow.unavoidableOutsideCapitalResolvedDate }
+          : {}),
+      }
+    : undefined;
+
+  const anyRow = rowHeritage || rowRural !== undefined || rowUoc !== undefined;
+  const anyLegacy =
+    legacyHeritage ||
+    legacy.ruralHouse !== undefined ||
+    legacy.unavoidableOutsideCapitalHouse !== undefined;
 
   return {
     culturalHeritageHouse: rowHeritage || legacyHeritage,
     ruralHouse: rowRural ?? legacy.ruralHouse,
+    unavoidableOutsideCapitalHouse: rowUoc ?? legacy.unavoidableOutsideCapitalHouse,
     fromLegacyOnly: !anyRow && anyLegacy,
   };
 }

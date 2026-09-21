@@ -415,60 +415,33 @@ export function TemporaryTwoHouseSection(props: TemporaryTwoHouseSectionProps) {
   return (
     <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <SectionHeader
-        title={full ? "③ 일시적 2주택·합가 특례" : "③ 수도권 밖 부득이·합가 특례"}
+        title={full ? "③ 일시적 2주택·합가 특례" : "③ 합가 특례"}
         description={
           full
             ? "종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례"
-            : "중과 배제가 1세대1주택 비과세 판정을 거치지 않는 특례입니다 — 여기서 직접 입력하세요"
+            : // 🔴 §155⑧이 명부 행으로 간 뒤(D-6 4) calc 모드에 남는 것은 **합가뿐**이다.
+              //    종전 문구 「수도권 밖 부득이·합가」는 실제와 어긋난다.
+              "혼인·동거봉양 합가는 중과 배제 근거가 영 §167의3⑨라 1세대1주택 비과세 판정을 거치지 않습니다 — 여기서 직접 입력하세요"
         }
       />
       <div className="space-y-3">
         {full && <TempTwoHouseCoreBlocks {...props} />}
 
-        {/* §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 **일반주택**이다(특례 주택은 보유만) */}
-        <p className="text-sm font-medium mt-1">수도권 밖 부득이한 사유 주택 특례</p>
-        <ToggleCard
-          checked={form.unavoidableOutsideCapitalSpecial}
-          onCheckedChange={(v) =>
-            onChange({
-              unavoidableOutsideCapitalSpecial: v,
-              unavoidableOutsideCapitalResolvedDate: v
-                ? form.unavoidableOutsideCapitalResolvedDate
-                : "",
-            })
-          }
-          title="수도권 밖 부득이한 사유 주택 보유 (§155⑧)"
-          description="취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 수도권 밖 주택을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
-          tone="sky"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">부득이한 사유</label>
-              <RadioCardGroup
-                name="unavoidableOutsideCapitalReason"
-                value={form.unavoidableOutsideCapitalReason}
-                onChange={(v) => onChange({ unavoidableOutsideCapitalReason: v })}
-                options={[
-                  { value: "study", label: "취학" },
-                  { value: "work", label: "근무상 형편" },
-                  { value: "illness", label: "질병 요양" },
-                  { value: "other", label: "그 밖의 부득이한 사유" },
-                ]}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">사유 해소일</label>
-              <DateInput
-                value={form.unavoidableOutsideCapitalResolvedDate}
-                onChange={(v) => onChange({ unavoidableOutsideCapitalResolvedDate: v })}
-              />
-              <p className="text-xs text-muted-foreground">
-                해소일부터 <strong>3년 이내</strong>에 일반주택을 양도해야 합니다.
-                아직 해소되지 않았다면 비워 두세요 — 기한이 기산되지 않습니다.
-              </p>
-            </div>
-          </div>
-        </ToggleCard>
+        {/*
+          🔴 §155⑧ 블록도 **명부 행으로 옮겼다**(D-6 4 · P7-5).
+             정본: `HouseEntry.oneHouseUnavoidableOutsideCapital` + 사유·해소일
+             입력: `HouseEntryUnavoidableOutsideCapitalBlock`(명부 행 편집 모달 ⑤)
+             도출: `deriveOneHouseFactsFromHouses` → ④ `unavoidableOutsideCapitalHouse`
+
+          법문이 「수도권 밖에 소재하는 주택과 그 밖의 주택을 **각각 1개씩** 소유」라
+          §155⑧ 주택은 **보유 중인 다른 주택**이다.
+
+          ⚠️ 이 블록은 `full` 가드 **밖**이라 계산기·판정 메뉴 **양쪽**에 떴다 — 저장소가 달라
+             값이 두 벌 존재하는 **유일한 이중 입력**이었다. 행으로 옮기며 해소된다.
+             `ImportedOneHouseFactsCard`가 §155⑧만 의도적으로 뺐던 이유도 이것이다.
+
+          ⚠️ `form.unavoidableOutsideCapital*`는 **레거시 폴백**으로 살아 있다(OH-21).
+        */}
 
         {full && <TempTwoHouseOtherSpecials {...props} />}
 

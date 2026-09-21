@@ -24,6 +24,7 @@ import { describe, it, expect } from "vitest";
 import {
   deriveOneHouseFactsFromHouses,
   hasCulturalHeritageRow,
+  type OneHouseFactRow,
 } from "@/lib/calc/one-house-row-facts";
 import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -279,5 +280,170 @@ describe("RU-9 ④ 배선", () => {
   it("[RU-9b] 행도 레거시도 없으면 키가 없다", () => {
     const f = form();
     expect(buildHouseholdSpecialPayload(f, f.assets[0])).not.toHaveProperty("ruralHouse");
+  });
+});
+
+// ── §155⑧ 수도권 밖 부득이 (4) ────────────────────────────────────────
+
+/**
+ * ## UO-1~8 — §155⑧도 정본이 명부 행이다
+ *
+ * | # | 주장 |
+ * |---|---|
+ * | UO-1 | 행 표시가 있으면 행에서 도출 |
+ * | UO-2 | 해소일 미입력 = **미해소** ⇒ 키를 만들지 않는다(W-1) |
+ * | UO-3 | ⛔ **3호와 4호는 별개다** — 3호 필드만으로는 §155⑧이 서지 않는다 |
+ * | UO-4 | ⛔ **역방향** — 4호 표시가 3호 필드를 만들지 않는다 |
+ * | UO-5 | 🔑 **두 호가 갈리는 시료** — 기준시가 3억 초과 + 수도권 밖 |
+ * | UO-6 | 레거시 폴백(OH-21) |
+ * | UO-7 | ④ 배선 |
+ * | UO-8 | OH-30 신호 — 세 축 중 하나라도 행이 있으면 `fromLegacyOnly`는 false |
+ *
+ * ## 🔑 UO-5가 이 단계의 핵심이다
+ *
+ * 두 호가 **항상 함께 참인 시료**만 쓰면 구별력이 0이라 한 호를 지워도 초록이다
+ * ([[feedback_mutation_zero_discrimination_is_not_proof]]). 3호는 취득 당시 기준시가
+ * **3억 이하**를 요구하고 4호는 그 요건이 **없으므로**, 3억 초과 + 수도권 밖이면
+ * **3호는 불성립, 4호는 성립**이다 — 그 시료를 반드시 둔다.
+ */
+const UOC_ROW = {
+  oneHouseUnavoidableOutsideCapital: true as const,
+  unavoidableOutsideCapitalReason: "work" as const,
+  unavoidableOutsideCapitalResolvedDate: "2024-03-02",
+  regionCode: "4882025000", // 비수도권
+};
+
+describe("UO-1·2 행 도출 · 해소일 규약", () => {
+  it("[UO-1] 행 표시 → unavoidableOutsideCapitalHouse 도출", () => {
+    const r = deriveOneHouseFactsFromHouses([UOC_ROW], {});
+    expect(r.unavoidableOutsideCapitalHouse).toEqual({
+      reason: "work",
+      resolvedDate: "2024-03-02",
+    });
+  });
+
+  /** 🔴 빈 문자열을 그대로 보내면 엔진이 기한을 기산해 버린다(계획서 W-1). */
+  it("[UO-2] 해소일 미입력 → resolvedDate 키 자체가 없다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [{ ...UOC_ROW, unavoidableOutsideCapitalResolvedDate: "" }],
+      {},
+    );
+    expect(r.unavoidableOutsideCapitalHouse).toEqual({ reason: "work" });
+    expect(r.unavoidableOutsideCapitalHouse).not.toHaveProperty("resolvedDate");
+  });
+});
+
+describe("UO-3·4·5 ⛔ 3호와 4호는 별개 조문이다", () => {
+  /**
+   * 🔴 행에는 **이미** 3호 필드가 있다(`isUnavoidableReason` — 영 §167의10①3호).
+   *    그것만으로 §155⑧(4호)이 서면 기준시가 3억·1년 거주 요건이 조용히 사라진다.
+   */
+  it("[UO-3] 3호 필드만 있으면 §155⑧은 서지 않는다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [
+        {
+          isUnavoidableReason: true,
+          unavoidableResidenceYears: "2",
+          unavoidableReasonResolvedDate: "2024-03-02",
+          regionCode: "4882025000",
+        } as unknown as OneHouseFactRow,
+      ],
+      {},
+    );
+    expect(r.unavoidableOutsideCapitalHouse).toBeUndefined();
+  });
+
+  /**
+   * 🔑 역방향 짝 — 4호 표시가 3호 요건을 만들어 내지 않는다.
+   *
+   * 🔴 **타입이 이미 막고 있다**: `OneHouseFactRow`의 `Pick`에 3호 필드
+   *    (`unavoidableResidenceYears`·`unavoidableReasonResolvedDate`)가 **없다**.
+   *    그래서 도출 함수는 그것들을 **읽을 수조차 없다**. 아래 캐스트는 그 사실을
+   *    드러내려고 일부러 우회한 것이다 — 값이 들어와도 결과가 안 바뀐다.
+   */
+  it("[UO-4] 4호 표시는 3호 필드를 읽지 않는다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [
+        {
+          ...UOC_ROW,
+          unavoidableResidenceYears: "0",
+          unavoidableReasonResolvedDate: "1999-01-01",
+        } as unknown as OneHouseFactRow,
+      ],
+      {},
+    );
+    // 3호의 해소일(1999)이 아니라 **4호의 해소일**(2024)을 쓴다.
+    expect(r.unavoidableOutsideCapitalHouse?.resolvedDate).toBe("2024-03-02");
+  });
+
+  /**
+   * 🔑 **구별력 시료** — 취득 당시 기준시가 3억 **초과** + 수도권 밖.
+   *    3호는 `acquisitionOfficialPrice > 3억`이면 불성립이고, 4호는 그 요건이 없어 성립한다.
+   *    두 호를 한 필드로 합치면 이 조합에서 4호가 조용히 죽는다.
+   */
+  it("[UO-5] 기준시가 3억 초과 + 수도권 밖 → 4호는 성립한다", () => {
+    const r = deriveOneHouseFactsFromHouses(
+      [
+        {
+          ...UOC_ROW,
+          // 3호라면 불성립시킬 값 — 4호 도출은 이것을 보지 않는다.
+          isUnavoidableReason: true,
+          acquisitionOfficialPrice: "500000000",
+          unavoidableResidenceYears: "0",
+        } as unknown as OneHouseFactRow,
+      ],
+      {},
+    );
+    expect(r.unavoidableOutsideCapitalHouse?.reason).toBe("work");
+  });
+});
+
+describe("UO-6·7 레거시 폴백 · ④ 배선", () => {
+  const LEGACY = { reason: "illness" as const, resolvedDate: "2023-01-01" };
+
+  it("[UO-6a] 행이 없으면 레거시를 쓴다", () => {
+    const r = deriveOneHouseFactsFromHouses([], { unavoidableOutsideCapitalHouse: LEGACY });
+    expect(r.unavoidableOutsideCapitalHouse).toEqual(LEGACY);
+    expect(r.fromLegacyOnly).toBe(true);
+  });
+
+  it("[UO-6b] 행이 있으면 행이 이긴다", () => {
+    const r = deriveOneHouseFactsFromHouses([UOC_ROW], { unavoidableOutsideCapitalHouse: LEGACY });
+    expect(r.unavoidableOutsideCapitalHouse?.reason).toBe("work");
+    expect(r.fromLegacyOnly).toBe(false);
+  });
+
+  it("[UO-7] ④ 배선 — 행만으로 payload에 실린다", () => {
+    const f = form({ houses: [{ id: "h1", ...UOC_ROW }] } as unknown as Partial<TransferFormData>);
+    const payload = buildHouseholdSpecialPayload(f, f.assets[0]) as {
+      unavoidableOutsideCapitalHouse?: { reason: string };
+    };
+    expect(payload.unavoidableOutsideCapitalHouse?.reason).toBe("work");
+  });
+});
+
+describe("UO-8 OH-30 신호 — 세 축 공통", () => {
+  it("[UO-8a] 레거시만 있으면 true", () => {
+    expect(
+      deriveOneHouseFactsFromHouses([], { culturalHeritageHouseSpecial: true }).fromLegacyOnly,
+    ).toBe(true);
+    expect(
+      deriveOneHouseFactsFromHouses([], {
+        unavoidableOutsideCapitalHouse: { reason: "study" },
+      }).fromLegacyOnly,
+    ).toBe(true);
+  });
+
+  /** 🔑 한 축이라도 행에 지정돼 있으면 「미지정」이 아니다. */
+  it("[UO-8b] 행이 하나라도 있으면 false", () => {
+    expect(
+      deriveOneHouseFactsFromHouses([{ oneHouseCulturalHeritage: true }], {
+        unavoidableOutsideCapitalHouse: { reason: "study" },
+      }).fromLegacyOnly,
+    ).toBe(false);
+  });
+
+  it("[UO-8c] 둘 다 없으면 false — 띄울 것이 없다", () => {
+    expect(deriveOneHouseFactsFromHouses([], {}).fromLegacyOnly).toBe(false);
   });
 });

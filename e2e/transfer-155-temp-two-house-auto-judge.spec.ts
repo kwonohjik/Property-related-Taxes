@@ -107,10 +107,15 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await expect(page.getByTestId("judgment-handoff-notice")).toBeVisible();
     await expect(page.getByText("일시적 2주택 특례 해당", { exact: true })).toHaveCount(0);
-    // §155⑧·합가는 **그대로 있다** — 함께 사라지면 중과 입력 경로가 끊긴다.
+    // 합가는 **그대로 있다** — 사라지면 중과 입력 경로가 끊긴다(영 §167의3⑨).
     await expect(page.getByText("혼인합가일", { exact: true })).toBeVisible();
+    /**
+     * 🔄 **§155⑧은 명부 행으로 갔다**(D-6 4 · 2026-09-22) — 계산기 ③에도 없다.
+     *    입력 경로 자체는 여전히 필요하고(비과세를 주장할 수 없는 세대의 중과 배제),
+     *    그 안전망은 `e2e/transfer-house-row-one-house-facts.spec.ts`가 진다.
+     */
     await expect(
       page.getByText("수도권 밖 부득이한 사유 주택 보유 (§155⑧)", { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
   });
 });
