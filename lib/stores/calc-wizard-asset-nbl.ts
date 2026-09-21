@@ -164,6 +164,39 @@ export interface HouseEntry {
   ruralHighPriceAtAcquisition?: boolean;
   // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
   //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
+
+  /**
+   * §155⑧ — 부득이한 사유로 취득한 **수도권 밖** 주택.
+   *
+   * 법문 「재정경제부령으로 정하는 취학, 근무상의 형편, 질병의 요양, 그 밖에 부득이한 사유로
+   * 취득한 **수도권 밖에 소재하는 주택**과 그 밖의 주택(일반주택)을 국내에 **각각 1개씩**
+   * 소유하고 있는 1세대가 부득이한 사유가 **해소된 날부터 3년 이내**에 일반주택을 양도하는
+   * 경우에는 …」(실독 2026-09-21 · MST 286211)
+   *
+   * ⛔ **`isUnavoidableReason`과 다른 호다 — 한 토글로 합치지 말 것.**
+   *
+   * | | `isUnavoidableReason` | 이 필드 |
+   * |---|---|---|
+   * | 조문 | 영 §167의10①**3호** | §155⑧ = 영 §167의10①**4호** |
+   * | 축 | 중과 배제 전용 | **비과세 + 중과 배제** |
+   * | 기준시가 | 취득 당시 **3억 이하** | 요건 **없음** |
+   * | 거주 | **1년 이상** | 요건 **없음** |
+   * | 소재 | 제한 없음 | **수도권 밖** |
+   *
+   * 엔진에서 **4호가 3호보다 먼저 early-return** 한다
+   * (`multi-house-surcharge-exclusion.ts:547` vs `:567`) — 합치면 3호 요건이 4호에 붙어
+   * 조용히 좁아진다([[feedback_one_field_serving_two_legal_axes]]).
+   */
+  oneHouseUnavoidableOutsideCapital?: boolean;
+  /** §155⑧ 부득이한 사유 종류 — 소칙이 정하는 4종. */
+  unavoidableOutsideCapitalReason?: "study" | "work" | "illness" | "other";
+  /**
+   * §155⑧ 사유 **해소일**. 미입력 = 미해소 ⇒ 기한이 기산되지 않는다(계획서 W-1).
+   * ⚠️ 3호의 `unavoidableReasonResolvedDate`와 **다른 칸**이다 — 요건이 다르므로 공유하지 않는다.
+   */
+  unavoidableOutsideCapitalResolvedDate?: string;
+  // ⚠️ 「수도권 밖」 요건에 별도 칸을 두지 않는다 — 행의 `regionCode`로 판정한다.
+  //    다만 이 PR은 **순수 이관**이라 엔진 게이트를 새로 넣지 않고 화면 경고로만 알린다.
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.

@@ -48,7 +48,13 @@ const form = (over: Partial<TransferFormData> = {}): TransferFormData => ({
 
 const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 
-const UNAVOIDABLE = /수도권 밖 부득이한 사유 주택 보유/;
+/**
+ * 🔄 **§155⑧도 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 4 · P7-5).
+ *    `HouseEntry.oneHouseUnavoidableOutsideCapital` · `HouseEntryUnavoidableOutsideCapitalBlock`.
+ *    ⑥⑦과 달리 §155⑧은 `full` 가드 **밖**이라 두 화면 모두에 떴다 — 저장소가 달라
+ *    값이 두 벌 존재하던 **유일한 이중 입력**이었고, 이관으로 해소됐다.
+ */
+const UNAVOIDABLE_MOVED_TO_ROW = true;
 const MARRIAGE = /혼인합가일/;
 const TEMP_TWO = /일시적 2주택 특례 해당/;
 /**
@@ -96,10 +102,16 @@ const fullProps = (f: TransferFormData) => ({
 });
 
 describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
-  /** 🔴 이 둘이 사라지면 비과세를 주장할 수 없는 세대의 중과 입력 경로가 끊긴다. */
-  it("[CM-1] §155⑧·합가는 그린다", () => {
+  /**
+   * 🔴 합가가 사라지면 비과세를 주장할 수 없는 세대의 중과 입력 경로가 끊긴다
+   *    (영 §167의3⑨는 §154①을 요구하지 않는다 — 실측 −5.29억).
+   *
+   * 🔄 **§155⑧은 명부 행으로 갔다**(D-6 4 · 2026-09-22). 같은 이유로 입력 경로는 여전히
+   *    필요하고, 그 안전망은 `one-house-row-facts.anchor.test.ts`(UO-1~8)와
+   *    `e2e/transfer-house-row-one-house-facts.spec.ts`가 진다.
+   */
+  it("[CM-1] 합가는 그린다", () => {
     render(<TemporaryTwoHouseSection form={form()} onChange={() => {}} mode="calc" />);
-    expect(shows(UNAVOIDABLE)).toBe(true);
     expect(shows(MARRIAGE)).toBe(true);
     expect(shows(/동거봉양 합가일/)).toBe(true);
   });
@@ -123,8 +135,7 @@ describe("CM-3 판정 메뉴(기본 모드)는 전부 그린다 — CM-2의 **�
     render(<TemporaryTwoHouseSection form={f} onChange={() => {}} {...fullProps(f)} />);
     expect(shows(TEMP_TWO)).toBe(true);
     expect(shows(REPLACEMENT)).toBe(true);
-    // §155⑧·합가도 여전히 함께 있다(판정 메뉴에서는 둘 다 필요하다).
-    expect(shows(UNAVOIDABLE)).toBe(true);
+    // 합가는 여전히 함께 있다. §155⑧은 명부 행으로 갔다(위 주석).
     expect(shows(MARRIAGE)).toBe(true);
   });
 });

@@ -28,6 +28,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRuralHouseBlock } from "@/components/calc/transfer/HouseEntryRuralHouseBlock";
+import { HouseEntryUnavoidableOutsideCapitalBlock } from "@/components/calc/transfer/HouseEntryUnavoidableOutsideCapitalBlock";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
@@ -70,6 +71,9 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate }: Props) {
 
       {/* §155⑦ 농어촌주택 (3b) */}
       <HouseEntryRuralHouseBlock house={house} onUpdate={onUpdate} />
+
+      {/* §155⑧ 수도권 밖 부득이 주택 (4) — ④의 3호와 **다른 조문**이다 */}
+      <HouseEntryUnavoidableOutsideCapitalBlock house={house} onUpdate={onUpdate} />
     </ToneCard>
   );
 }

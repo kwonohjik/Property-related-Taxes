@@ -73,20 +73,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
       }
     : {}),
   // ④⑬ §155⑧ 수도권 밖 부득이 주택 FLAT → nested. 해소일은 미입력 시 미전송(= 미해소).
-  ...(form.unavoidableOutsideCapitalSpecial
-    ? {
-        unavoidableOutsideCapitalHouse: {
-          reason: form.unavoidableOutsideCapitalReason as
-            | "study"
-            | "work"
-            | "illness"
-            | "other",
-          ...(form.unavoidableOutsideCapitalResolvedDate
-            ? { resolvedDate: form.unavoidableOutsideCapitalResolvedDate }
-            : {}),
-        },
-      }
-    : {}),
+  // ④⑬ §155⑧은 아래 도출 블록이 담당한다(D-6 4 · 행 정본 + 레거시 폴백).
   /**
    * ④⑬ §155⑥1호 국가유산주택 — 요건이 boolean 하나(2·3호 삭제). false는 보내지 않는다.
    *
@@ -103,6 +90,21 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
      */
     const derived = deriveOneHouseFactsFromHouses(form.houses, {
       culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
+      ...(form.unavoidableOutsideCapitalSpecial
+        ? {
+            unavoidableOutsideCapitalHouse: {
+              reason: form.unavoidableOutsideCapitalReason as
+                | "study"
+                | "work"
+                | "illness"
+                | "other",
+              // 미입력 = 미해소 ⇒ 키를 만들지 않는다(기한 미기산 — 계획서 W-1).
+              ...(form.unavoidableOutsideCapitalResolvedDate
+                ? { resolvedDate: form.unavoidableOutsideCapitalResolvedDate }
+                : {}),
+            },
+          }
+        : {}),
       ...(form.ruralHouseSpecial && form.ruralHouseKind
         ? {
             ruralHouse: {
@@ -131,6 +133,9 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
     return {
       ...(derived.culturalHeritageHouse ? { culturalHeritageHouse: true } : {}),
       ...(derived.ruralHouse ? { ruralHouse: derived.ruralHouse } : {}),
+      ...(derived.unavoidableOutsideCapitalHouse
+        ? { unavoidableOutsideCapitalHouse: derived.unavoidableOutsideCapitalHouse }
+        : {}),
     };
   })(),
   };

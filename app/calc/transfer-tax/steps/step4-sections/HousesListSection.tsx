@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
+import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import { SellingHouseTwoHouseExclusionSection } from "@/components/calc/transfer/SellingHouseTwoHouseExclusionSection";
@@ -497,6 +498,45 @@ export function HousesListSection({
 
   // ①(세대 보유 주택 수) ↔ ④(다른 보유 주택 목록) 정합성 안내 (표시 전용 — 계획서 §2·§3).
   // 배제규칙은 엔진 전용이라 UI 재계산 금지 → 구조적 개수만 대조(useMemo 파생, store 미기록).
+  /**
+   * OH-30 — 세대 단위 레거시 §155 사실만 있고 **행 지정이 없는가**.
+   * 도출 leaf가 내보내는 `fromLegacyOnly`를 그대로 읽는다(화면이 규칙을 재구현하지 않는다).
+   */
+  const legacyOneHouseFacts = useMemo(
+    () =>
+      deriveOneHouseFactsFromHouses(form.houses, {
+        culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
+        ...(form.ruralHouseSpecial && form.ruralHouseKind
+          ? {
+              ruralHouse: {
+                kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
+                isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
+              },
+            }
+          : {}),
+        ...(form.unavoidableOutsideCapitalSpecial
+          ? {
+              unavoidableOutsideCapitalHouse: {
+                reason: form.unavoidableOutsideCapitalReason as
+                  | "study"
+                  | "work"
+                  | "illness"
+                  | "other",
+              },
+            }
+          : {}),
+      }).fromLegacyOnly,
+    [
+      form.houses,
+      form.culturalHeritageHouseSpecial,
+      form.ruralHouseSpecial,
+      form.ruralHouseKind,
+      form.ruralHouseOutsideCapitalEupMyeon,
+      form.unavoidableOutsideCapitalSpecial,
+      form.unavoidableOutsideCapitalReason,
+    ],
+  );
+
   const divergence = useMemo(
     () =>
       computeHouseCountDivergence({
@@ -581,6 +621,24 @@ export function HousesListSection({
               </tbody>
             </table>
           </div>
+        )}
+
+        {/*
+          ── OH-30 — 레거시 §155 사실이 「어느 주택인지」 미지정 (D-6 4) ──
+
+          🔴 옛 record는 §155⑥⑦⑧을 **세대 단위 값**으로만 들고 있어 어느 행인지 알 수 없다.
+             자동 배정하면 틀린 주택에 사실을 붙이게 되므로 **지정하지 않고 밝힌다**.
+             세액은 저장 당시와 같다 — 어댑터가 레거시 값을 그대로 쓴다(OH-21).
+        */}
+        {legacyOneHouseFacts && (
+          <ToneCard tone="violet" bodyClassName="" className="px-3 py-2">
+            <p className="text-xs leading-relaxed" data-testid="one-house-legacy-unassigned">
+              저장된 <b>1세대1주택 특례 사실</b>(§155⑥ 문화유산 · §155⑦ 농어촌 · §155⑧ 수도권 밖
+              부득이)이 <b>어느 주택인지 지정되지 않았습니다</b>. 계산은 저장 당시와 같은 값으로
+              하지만, 해당 주택 행의 <b>편집 → ⑤ 1세대1주택 비과세 특례 사실</b>에서 지정하면
+              명부가 정본이 됩니다.
+            </p>
+          </ToneCard>
         )}
 
         {/* ── ①↔④ 정합성 안내 (표시 전용) ── */}
