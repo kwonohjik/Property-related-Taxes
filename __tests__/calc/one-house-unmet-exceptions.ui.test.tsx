@@ -97,4 +97,28 @@ describe("판정 결과 — 선언했으나 적용되지 않은 특례", () => {
     expect(screen.getByTestId("one-house-unmet-155-4-parental-care-merge")).toBeTruthy();
     expect(screen.getByText("동거봉양 합가 — 요건 미충족")).toBeTruthy();
   });
+
+  /**
+   * UMUI-5 — 축이 **여럿**이면 **여럿 다** 보인다.
+   *
+   * 엔진은 §155②·⑦·⑧을 각각 별도 항목으로 낸다(`UMX-26`). 화면이 `[0]`만 읽거나 `find`로
+   * 하나만 집으면 나머지 축은 조용히 사라진다 — 배열을 `map`한다는 사실을 여기서 고정한다.
+   */
+  it("UMUI-5 세 축이 동시에 불성립이면 세 항목을 모두 렌더한다", () => {
+    render(
+      <OneHouseJudgmentResultView
+        result={response([
+          { id: "155-2-inherited-house", label: "상속주택 주택 수 제외", legalBasis: "소득세법 시행령 §155②", reasons: ["상속주택 1채를 「순위상 상속주택이 아님」으로 선언했습니다 — 주택 수 제외 대상이 아닙니다(§155②1~4호)."] },
+          { id: "155-7-rural:inherited", label: "농어촌주택 (1호 상속)", legalBasis: "소득세법 시행령 §155⑦", reasons: ["농어촌주택이 수도권 밖의 읍(도시지역 제외)·면에 있다는 요건을 충족하지 않습니다 — 유형(상속·이농·귀농)과 무관한 공통 요건입니다."] },
+          { id: "155-8-unavoidable:work", label: "수도권 밖 부득이한 사유 주택 (근무상 형편)", legalBasis: "소득세법 시행령 §155⑧", reasons: ["세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."] },
+        ])}
+      />,
+    );
+
+    expect(screen.getByTestId("one-house-unmet-155-2-inherited-house")).toBeTruthy();
+    expect(screen.getByTestId("one-house-unmet-155-7-rural:inherited")).toBeTruthy();
+    expect(screen.getByTestId("one-house-unmet-155-8-unavoidable:work")).toBeTruthy();
+    expect(screen.getByText("상속주택 주택 수 제외 — 요건 미충족")).toBeTruthy();
+    expect(screen.getByText("농어촌주택 (1호 상속) — 요건 미충족")).toBeTruthy();
+  });
 });
