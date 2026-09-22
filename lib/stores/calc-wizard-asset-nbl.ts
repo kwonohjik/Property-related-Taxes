@@ -114,14 +114,21 @@ export interface HouseEntry {
    * 국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」
    * ⇒ 문화유산주택은 **보유 중인 다른 주택**이므로 명부 행의 속성이다(양도 대상이 아니다).
    *
-   * 🔴 **`HouseInfo.isCulturalHeritage`와 다른 필드다** — 그쪽은 영 §167의3①**6호** 중과 배제
-   *    축이고(`multi-house-surcharge-exclusion.ts:58·506`), 이 필드는 **비과세** 축이다.
-   *    이름을 `oneHouse` 접두로 가른 이유다([[feedback_rename_same_name_two_axes]]).
+   * ✅ **두 축에 모두 흐른다** (2026-09-22 — D-6 후속 ①).
    *
-   * 📌 **두 축은 법문상 같은 사실이다** — §167의3①6호가 「**제155조제6항제1호에 해당하는
-   *    국가유산주택**」이라고 §155⑥1호를 **직접 인용**한다(실독). 그래도 이 PR은 **순수 이관**이라
-   *    비과세 축에만 연결한다 — 현행 `culturalHeritageHouseSpecial`도 비과세에만 연결돼 있어
-   *    중과로 넓히면 **세액이 바뀐다**(배제가 늘어 감소 방향). 별도 측정·anchor가 선행돼야 한다.
+   * | 축 | 엔진 칸 | 경유 |
+   * |---|---|---|
+   * | 비과세 §155⑥1호 | `culturalHeritageHouse` | `deriveOneHouseFactsFromHouses` |
+   * | 중과 배제 §167의3①**6호** | `HouseInfo.isCulturalHeritage` | 명부 행 map(단건·다건) |
+   *
+   * 근거는 **6호 법문이 §155⑥1호를 그대로 인용**한다는 것이다(실독 2026-09-22 · MST 286211):
+   * 「6. 제155조제6항제1호에 해당하는 국가유산주택」. §155⑥1호는 주택의 **정의**뿐이고
+   * 「각각 1개씩」은 ⑥ **본문**에 있어 6호로 넘어오지 않는다 ⇒ 같은 사실, 같은 칸.
+   *
+   * ⚠️ 이름이 다른 것은 **필드가 달라서가 아니라** `HouseInfo`가 엔진 타입이고 이쪽이 폼 타입이기
+   *    때문이다. 두 축이 **갈라지는** 동명이축(`isUnavoidableReason` ↔
+   *    `oneHouseUnavoidableOutsideCapital`)과 혼동하지 말 것
+   *    ([[feedback_rename_same_name_two_axes]]).
    */
   oneHouseCulturalHeritage?: boolean;
 

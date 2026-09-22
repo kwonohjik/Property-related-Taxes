@@ -809,7 +809,7 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 국가유산주택**」이라고 §155⑥1호를 **직접 인용**한다(실독 2026-09-21 · MST 286211). 그래도 이 PR은
 **순수 이관**이라 비과세 축에만 연결했다 — 현행 `culturalHeritageHouseSpecial`도 비과세에만 연결돼
 있어 중과로 넓히면 **세액이 바뀐다**(배제가 늘어 감소 방향).
-🟠 **별건**: 중과 축 연결 — 수치 측정·anchor 선행 필요.
+✅ **별건 해소 — 중과 축 연결 완료**(2026-09-22 · 아래 §5.10-A).
 
 **3b 구현 요약 (P7-4)**
 
@@ -853,11 +853,58 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 양도 주택용(`SellingHouseTwoHouseExclusionSection`), 안은 명부 행용. 같은 라벨·다른 스코프다.
 이 PR과 무관한 기존 중복이라 E2E에서 스코프로 갈랐다.
 
-⏳ **D-6 이후 남은 🟠 2건**(둘 다 세액이 바뀌므로 측정 선행):
-1. **중과 축 연결** — §167의3①6호가 §155⑥1호를 직접 인용하므로 문화유산 행이 중과 배제에도
-   닿아야 한다(현행은 비과세만).
-2. **양도 주택 자신의 상속·장기임대 중과배제** — 어댑터가 `isInherited: false`를 하드코딩해
-   엔진 분기(`multi-house-surcharge-exclusion.ts:461·469`)가 **잠들어 있다**.
+⏳ **D-6 이후 남은 🟠**(세액이 바뀌므로 측정 선행):
+1. ✅ **중과 축 연결 — 완료**(2026-09-22 · §5.10-A).
+2. 🟠 **양도 주택 자신의 상속·장기임대 중과배제** — 어댑터가 `isInherited: false`·
+   `isLongTermRental: false`를 하드코딩해(`transfer-tax-api-houses.ts:38-39` ·
+   `multi-transfer-tax-api.ts:104-105`) 엔진 분기
+   (`multi-house-surcharge-exclusion.ts:461·469`, D16 추가)가 **잠들어 있다**.
+   D16 anchor(A4·B9)는 `HouseInfo`를 직접 만드는 **엔진 leaf**라 이 배선을 증명하지 않는다.
+   - **상속(7호)**: 폼에 자료가 이미 있다 — `acquisitionCause === "inheritance"`
+     (`calc-wizard-asset.ts:355`) · `inheritanceDate`(:194) ·
+     `decedentSameHouseholdBeforeInheritance`(:489). 나머지 게이트 둘은 **부재 선언 시 통과**라
+     (`transfer-inheritance-exclusion.ts:48·53`) 새 필드 없이 배선만으로 된다.
+     ⚠️ `decedentSameHouseholdBeforeInheritance`는 **§154⑧3호 축** 필드다 — §155② 단서와 같은
+     사실인지 확인이 선행돼야 한다(동명이축).
+   - **장기임대(2호)**: 자료가 **없다**. `rentalHousingException`은 §155⑳(다른 집이 임대인
+     거주주택 특례)이고 `reductions`의 조특법 §97 계열은 §167의3①2호와 **다른 축**이다.
+     신규 입력 설계가 필요하다.
+
+### 5.10-A 중과 축 연결 — §167의3①6호 (2026-09-22 · D-6 후속 ①)
+
+**법문 확정**(실독 2026-09-22 · MST 286211 · 시행 2026-07-01):
+
+> §167의3① … 다음 각 호의 어느 하나에 **해당하지 않는** 주택을 말한다.
+>   **6. 제155조제6항제1호에 해당하는 국가유산주택**
+
+그리고 §155⑥**1호**는 주택의 **정의**뿐이다 — 「지정문화유산 … 국가등록문화유산 … 천연기념물등」.
+「각각 1개씩」은 ⑥ **본문**(각 호 외의 부분)에 있어 **6호로 넘어오지 않는다**.
+⇒ 행의 선언 그 자체가 6호 요건의 전부이고, 두 축이 **같은 칸**을 쓴다.
+
+**끊긴 곳은 어댑터 한 층이었다.** Zod(`transfer-tax-schema-sub.ts:301`) ·
+route(`transfer-route-multi-house.ts:97`) · 엔진(`multi-house-surcharge-exclusion.ts:58·81`)은
+전부 열려 있는데 **명부 행 map이 그 키를 싣지 않았다**(`HouseEntry`에 필드 자체가 없었다).
+양도 주택(`selling`)에는 종전부터 `sellingHouseExclusion`이라는 **다른** 입력 경로가 있었다.
+
+**변경**: `isCulturalHeritage: h.oneHouseCulturalHeritage` — 단건(`transfer-tax-api-houses.ts`) ·
+다건(`multi-transfer-tax-api.ts`) **양쪽**. 비과세 축(`buildHouseholdSpecialPayload`)이 3경로
+공유라 한쪽만 넣으면 같은 입력이 「계산」과 「합산 계산」에서 갈린다.
+
+**⚠️ 주택 수에는 산입된다.** §167의3① 본문 괄호가 불산입으로 정한 것은 **1호·12호뿐**이고
+`countEffectiveHouses`는 이 필드를 보지 않는다. 6호는 ⑩호 「유일한 일반주택」 판정
+(`isGroupExcludable`)과 그 행 자신의 중과 배제에만 쓰인다.
+
+**세액 실측**(조정지역 강남 8억/3억 · 양도 2026-09-18 · fallback 세율 — D16 anchor와 같은 시료):
+
+| 시료 | 종전 | 연결 후 | 차이 |
+|---|---|---|---|
+| 3주택, 나머지 **둘** 다 6호 → ⑩호 유일한 일반주택 | 354,541,000 | **141,966,000** | −212,575,000 |
+| 3주택, 6호가 **한 채뿐** (음성 짝) | 354,541,000 | 354,541,000 | **0** · 주택 수 3 유지 |
+| 2주택, 상대가 6호 → §167의10①10호 준용 | 299,816,000 | **141,966,000** | −157,850,000 |
+
+**anchor**: `__tests__/lib/calc/house-row-cultural-heritage-surcharge.anchor.test.ts` (CH-1~9).
+뮤테이션 확인 — 배선 한 줄을 죽이면 **CH-1·CH-3이 KILL**한다(세액 CH-6~9는 엔진 leaf라 안 잡는다.
+그래서 배선 anchor를 따로 둔다 — [[feedback_library_anchor_does_not_prove_component_uses_it]]).
 
 ### 5.11 세대 주택 수 — 명부에서 센다 (Q-8 · P6)
 

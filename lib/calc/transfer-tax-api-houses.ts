@@ -86,6 +86,19 @@ export function buildHousesPayload(
       isApartment: h.isApartment,
       isOfficetel: h.isOfficetel,
       isUnsoldHousing: h.isUnsoldHousing,
+      /**
+       * ④⑬ §167의3①**6호** 국가유산주택 — **비과세 선언과 같은 칸에서 나온다**.
+       *
+       * 법문(실독 2026-09-22 · MST 286211): 「6. **제155조제6항제1호에 해당하는 국가유산주택**」
+       * — 6호가 §155⑥1호를 **그대로 인용**한다. 그리고 §155⑥1호는 주택의 **정의**일 뿐이다
+       * (「지정문화유산 … 국가등록문화유산 … 천연기념물등」). 「각각 1개씩」은 ⑥ **본문**에 있어
+       * 6호로 넘어오지 않는다 ⇒ **행의 선언 그 자체가 6호의 요건 전부**다.
+       *
+       * 주택 수에는 **산입된다** — §167의3① 본문 괄호가 불산입으로 정한 것은 1호·12호뿐이라
+       * `countEffectiveHouses`는 이 필드를 보지 않는다. 6호는 ⑩호 「유일한 일반주택」 판정
+       * (`isGroupExcludable`)과 그 행 자신의 중과 배제에만 쓰인다.
+       */
+      isCulturalHeritage: h.oneHouseCulturalHeritage,
       // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목)
       acquisitionPrice: parseAmount(h.acquisitionPrice || "") || undefined,
       exclusiveArea: h.exclusiveArea ? parseFloat(h.exclusiveArea) : undefined,

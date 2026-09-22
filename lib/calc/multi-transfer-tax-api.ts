@@ -121,6 +121,10 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
               isApartment: h.isApartment,
               isOfficetel: h.isOfficetel,
               isUnsoldHousing: h.isUnsoldHousing,
+              // ④' §167의3①6호 국가유산주택 — 단건과 동일 배선.
+              // 비과세 축(`buildHouseholdSpecialPayload`)은 이 경로와 **공유**라 이미 흐르고 있었다.
+              // 중과 축만 단건에 넣으면 같은 입력이 「계산」과 「합산 계산」에서 갈린다.
+              isCulturalHeritage: h.oneHouseCulturalHeritage,
             })),
         ]
       : undefined;
