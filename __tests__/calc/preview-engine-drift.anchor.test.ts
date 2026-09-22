@@ -100,6 +100,15 @@ describe("Step4 거주요건 안내 — ④와 같은 게이트를 통과한 사
     const f = form({
       householdHousingCount: "2",
       temporaryTwoHouseSpecial: true,
+      /**
+       * ⚠️ **신규주택 취득일이 있어야 이 anchor가 제 축을 본다** (2026-09-22 보완).
+       *
+       * §155①이 명부 파생으로 바뀐 뒤(`resolveTemporaryTwoHouse`), 신규주택을 알 수 없으면
+       * `provisoGate`가 `temporary_two_house` 모드를 **아예 열지 않는다**. 그 상태로 두면
+       * 이 단언은 「화이트리스트 밖이라 버렸다」가 아니라 **「모드가 안 열려서 버렸다」**로
+       * 통과해 구별력이 0이 된다(`feedback_mutation_zero_discrimination_is_not_proof`).
+       */
+      newHouseAcquisitionDate: "2021-01-01",
       // 화이트리스트는 `TEMP_TWO_HOUSE_PROVISO_REASONS` = 임대5년거주·수용·부득이 3종뿐이다.
       provisoReason: "overseas_migration",
     });
@@ -115,10 +124,30 @@ describe("Step4 거주요건 안내 — ④와 같은 게이트를 통과한 사
     const f = form({
       householdHousingCount: "2",
       temporaryTwoHouseSpecial: true,
+      // 위 S-2와 같은 이유 — §155①이 성립해야 그 준용 화이트리스트를 볼 맥락이 생긴다.
+      newHouseAcquisitionDate: "2021-01-01",
       provisoReason: "expropriation",
       provisoExpropriationDate: "2023-05-01",
     });
     expect(buildResidenceReqInput(f).oneHouseExemptionProviso?.reason).toBe("expropriation");
+  });
+
+  /**
+   * S-6 — **신규주택을 알 수 없으면 §155① 준용 모드가 열리지 않는다** (2026-09-22 신규).
+   *
+   * 종전에는 토글 하나로 열렸다. §155①은 「종전주택 + 신규주택」이 있어야 성립하므로,
+   * 신규주택이 특정되지 않은 상태에서 그 준용 화이트리스트(§154①1·2가·3호)를 적용할
+   * 법 근거가 없다. 위 두 anchor가 통과하는 이유를 이 대조군이 고정한다.
+   */
+  it("S-6: 2주택 선언만 있고 신규주택을 모르면 §154① 단서를 전달하지 않는다", () => {
+    const f = form({
+      householdHousingCount: "2",
+      temporaryTwoHouseSpecial: true,
+      // newHouseAcquisitionDate 없음 · houses 없음 ⇒ 파생 불가
+      provisoReason: "expropriation",
+      provisoExpropriationDate: "2023-05-01",
+    });
+    expect(buildResidenceReqInput(f).oneHouseExemptionProviso).toBeUndefined();
   });
 
   it("S-4: 비주택 자산에서도 버린다 — §154①은 주택 판정이다", () => {

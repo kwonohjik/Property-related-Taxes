@@ -119,14 +119,14 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
     isOneHousehold: true,
     isHousing: true,
     householdHousingCount: 1,
-    temporaryTwoHouseSpecial: false,
+    temporaryTwoHouseApplies: false,
   };
   it("1주택 → visible·one_house", () => {
     expect(provisoGate(base)).toEqual({ visible: true, mode: "one_house" });
   });
   it("2주택+일시적특례 → visible·temporary_two_house", () => {
     expect(
-      provisoGate({ ...base, householdHousingCount: 2, temporaryTwoHouseSpecial: true }),
+      provisoGate({ ...base, householdHousingCount: 2, temporaryTwoHouseApplies: true }),
     ).toEqual({ visible: true, mode: "temporary_two_house" });
   });
   it("2주택 특례 OFF → 숨김", () => {

@@ -210,16 +210,20 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    *    `transfer-tax-validate.ts`의 같은 자리 주석에 남아 있다.
    */
   if (judgmentTemporaryTwoHouseVisible(form)) {
-    if (form.temporaryTwoHouseSpecial) {
-      if (!form.assets?.[0]?.acquisitionDate) {
-        errors.push(
-          err("assets.0.acquisitionDate", "일시적 2주택: 양도 자산의 취득일을 ③에서 입력하세요."),
-        );
-      }
-      if (!form.newHouseAcquisitionDate) {
-        errors.push(err("newHouseAcquisitionDate", "일시적 2주택: 신규 주택 취득일을 입력하세요."));
-      }
-    }
+    /**
+     * 🔄 **§155① 두 날짜의 필수 검증을 없앴다** (2026-09-22).
+     *
+     * 종전에는 사용자가 토글을 켜고 신규 주택 취득일을 **직접 입력**했으므로 「켜 놓고 비운」
+     * 상태를 ⑧이 막아야 했다. 이제 그 날짜는 **명부에서 도출**되고(`resolveTemporaryTwoHouse`)
+     * 화면에 입력란 자체가 없다 ⇒ 막을 대상이 사라졌다.
+     *
+     * 🔴 **남겨 두면 영구 차단이 된다** — 「화면엔 칸이 없는데 ⑧이 요구」는 이 저장소가
+     *    반복해 밟은 실패모드다(`transfer-tax-validate.ts` 같은 자리 주석 · D-6 4건).
+     *
+     * 도출이 성립하지 않으면(명부 0건·나중 취득 2채 이상) §155①이 **적용되지 않을 뿐**
+     * 계산은 진행된다. 그 사실은 판정 결과의 불성립 사유(`collectUnmetExceptions`)가 알린다.
+     * 양도 자산 취득일은 ③ 단계가 이미 필수로 막는다(`transferDate`·`acquisitionDate` 블록).
+     */
 
     if (form.replacementHouseSpecial) {
       if (!form.replBusinessApprovalDate) {

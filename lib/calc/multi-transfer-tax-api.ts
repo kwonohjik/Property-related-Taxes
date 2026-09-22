@@ -14,7 +14,7 @@ import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingEx
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
-import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
@@ -213,7 +213,14 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         houses: form.houses,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
     }).mode,
     form.provisoReason,
   );

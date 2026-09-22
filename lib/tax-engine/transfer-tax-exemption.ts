@@ -27,6 +27,7 @@ import type {
 import {
   collectPendingConditions,
   collectUndetermined,
+  collectUnmetExceptions,
   meetsTemporaryTwoHousePrevHolding,
 } from "./one-house/pending";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
@@ -105,12 +106,23 @@ export function checkExemption(
     ? []
     : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
 
+  /**
+   * 「선언했는데 왜 적용 안 됐나」 — **`coreWouldPass`로 막는다**(`settled`가 아니다).
+   *
+   * §89② 배제면 `settled === false`지만 본체 판정은 통과했다. 그 경우 합가 특례는 실제로
+   * **성립했고** 다른 조문이 결론을 뒤집은 것이므로, 「합가가 적용되지 않았다」는 안내는
+   * 거짓이 된다. 본체가 통과한 경우는 사유를 내지 않는다.
+   */
+  const unmetExceptions =
+    settled || coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules);
+
   return {
     ...verdict,
     article89Clause2,
     appliedExceptions,
     pending,
     undetermined: collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+    unmetExceptions,
     legalBasis: dedupeLegalBasis([
       ...appliedExceptions.map((e) => e.legalBasis),
       ...pending.map((p) => p.legalBasis),

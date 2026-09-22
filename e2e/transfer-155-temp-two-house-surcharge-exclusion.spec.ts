@@ -41,8 +41,15 @@ function seedForm(over: Record<string, unknown>) {
         isRegulatedArea: true,
         wasRegulatedAtAcquisition: false,
         isUnregistered: false,
-        temporaryTwoHouseSpecial: true,
-        newHouseAcquisitionDate: "2025-01-01", // 종전+1년 경과 · 3년 내 양도
+        /**
+         * 🔄 **토글·날짜 시드를 뺐다** (2026-09-22). §155①은 이제 명부에서 도출된다
+         * (`resolveTemporaryTwoHouse`) — 아래 `houses[0]`(2025-01-01)이 양도주택(2018-01-01)보다
+         * 나중 취득인 **유일한** 행이라 신규주택으로 특정된다.
+         *
+         * 종전에는 `newHouseAcquisitionDate: "2025-01-01"`과 `houses[0].acquisitionDate`가
+         * **같은 값으로 중복 시드**돼 있었다 — 그 자체가 dual truth의 흔적이었다. 빼고 나면
+         * 이 spec은 「명부만으로 중과 배제(영 §167의10①15호)까지 닿는가」를 증명한다.
+         */
         houses: [
           {
             id: "h2",
@@ -91,11 +98,33 @@ test.describe("일시적 2주택 §155① 의제 → 중과 배제 (§167의10�
     await expect(page.getByText("일시적 2주택 특례", { exact: true }).first()).toBeVisible();
   });
 
-  test("특례 미적용(토글 OFF) → 배제 없이 중과 적용 (대조군)", async ({ page }) => {
+  /**
+   * 🔄 **대조군을 전환했다** (2026-09-22 — 토글이 더 이상 적용 여부를 가르지 않는다).
+   *
+   * 종전 대조군은 `temporaryTwoHouseSpecial: false`로 특례를 껐다. §155①이 명부 파생으로
+   * 바뀐 뒤 그 시드는 **아무것도 끄지 못한다**(명부는 그대로라 자동 도출된다) — 그대로 두면
+   * 대조군이 긍정 케이스와 같은 상태가 되어 구별력을 잃는다.
+   *
+   * ⇒ **명부 쪽에서** 불성립을 만든다. 다른 주택을 양도주택(2018-01-01)보다 **먼저** 취득한
+   *   것으로 두면 「양도하기 전에 다른 주택을 취득」이라는 §155① 요건 자체가 성립하지 않는다
+   *   — 일시적 2주택이 아니라 **일반 2주택**이므로 중과가 그대로 적용된다.
+   */
+  test("§155① 불성립(신규주택 없음) → 배제 없이 중과 적용 (대조군)", async ({ page }) => {
     test.setTimeout(60_000);
     await seedAndCalc(page, {
-      temporaryTwoHouseSpecial: false,
-      newHouseAcquisitionDate: "",
+      houses: [
+        {
+          id: "h2",
+          region: "capital",
+          acquisitionDate: "2017-01-01", // 양도주택보다 **먼저** 취득 ⇒ 신규주택이 아니다
+          officialPrice: "800000000",
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: true,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+        },
+      ],
     });
 
     await expect(page.getByText("다주택 중과세 판정 상세").first()).toBeVisible();

@@ -13,6 +13,7 @@ import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline
 import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
+import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { phdPayloadActive } from "./phd-toggle-scope";
 
 /**
@@ -47,15 +48,25 @@ export function buildLateFilingPayload(form: TransferFormData): object {
 
 /** ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (FLAT → nested) */
 export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
+  /**
+   * §155① 두 날짜의 **단일 생산 지점**. 명부에서 신규주택을 도출하고, 도출이 성립하지 않을
+   * 때만 종전 flat 필드로 폴백한다 — 규칙과 근거는 `resolveTemporaryTwoHouse` 주석 참조.
+   */
+  const tempTwoHouse = resolveTemporaryTwoHouse({
+    primaryKind: primary?.assetKind,
+    primaryAcquisitionDate: primary?.acquisitionDate,
+    houses: form.houses,
+    legacyPrecedence: form.legacyHouseCountPrecedence === true,
+    declaredSpecial: form.temporaryTwoHouseSpecial === true,
+    declaredNewHouseDate: form.newHouseAcquisitionDate,
+  });
+
   return {
-  ...(form.temporaryTwoHouseSpecial &&
-  primary?.acquisitionDate &&
-  form.newHouseAcquisitionDate
+  ...(tempTwoHouse
     ? {
         temporaryTwoHouse: {
-          // 종전주택 취득일 = 양도 자산 취득일(단일소스)
-          previousAcquisitionDate: primary.acquisitionDate,
-          newAcquisitionDate: form.newHouseAcquisitionDate,
+          previousAcquisitionDate: tempTwoHouse.previousAcquisitionDate,
+          newAcquisitionDate: tempTwoHouse.newAcquisitionDate,
           // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
           ...(form.publicInstitutionRelocation
             ? {

@@ -56,12 +56,19 @@ export function provisoGate(args: {
    * **컴파일러가 호출부를 전부 찾게** 했다 — 호출부는 `resolveHouseholdHousingCount`를 부른다.
    */
   householdHousingCount: number;
-  temporaryTwoHouseSpecial: boolean;
+  /**
+   * §155①이 **성립하는가** — 종전에는 사용자 토글(`temporaryTwoHouseSpecial`)이었다.
+   *
+   * 🔑 이름을 바꾼 것은 **컴파일러로 호출부 6곳을 전부 찾기 위해서**다(`householdHousingCount`를
+   *    `string`→`number`로 바꿀 때와 같은 기법). 토글은 법령에 없는 요건이었고, 이제 명부에서
+   *    도출한다 — 호출부는 `resolveTemporaryTwoHouse(...) !== undefined`를 넘긴다.
+   */
+  temporaryTwoHouseApplies: boolean;
 }): { visible: boolean; mode: ProvisoMode } {
   if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
   const n = args.householdHousingCount;
   if (n === 1) return { visible: true, mode: "one_house" };
-  if (n === 2 && args.temporaryTwoHouseSpecial) return { visible: true, mode: "temporary_two_house" };
+  if (n === 2 && args.temporaryTwoHouseApplies) return { visible: true, mode: "temporary_two_house" };
   return { visible: false, mode: null };
 }
 

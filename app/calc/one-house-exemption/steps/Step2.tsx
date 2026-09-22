@@ -35,6 +35,7 @@ import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeRuralHouseLocation, classifyEupMyeon } from "@/lib/geo/rural-house-location";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { judgmentTemporaryTwoHouseVisible } from "@/lib/calc/one-house-judgment-section-scope";
+import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import {
   deriveJudgmentHouseCount,
   withDerivedHouseCount,
@@ -62,12 +63,38 @@ export function Step2({ form, onChange }: Props) {
   const patchPrimaryAsset = (patch: Record<string, unknown>) =>
     onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) });
 
+  /**
+   * §155① 신규 주택 — **명부에서 도출**한다(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`).
+   *
+   * 🔑 화면과 ④ 변환이 **같은 함수**를 써야 한다. 종전에는 화면이 `form.newHouseAcquisitionDate`를
+   *    직접 읽어 「화면은 요건 충족이라는데 판정은 과세」가 조용히 생길 수 있었다.
+   */
+  const derivedNewHouse = useMemo(
+    () =>
+      resolveTemporaryTwoHouse({
+        primaryKind: primary?.assetKind,
+        primaryAcquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence === true,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
+    [
+      primary?.assetKind,
+      primaryAcquisitionDate,
+      form.houses,
+      form.legacyHouseCountPrecedence,
+      form.temporaryTwoHouseSpecial,
+      form.newHouseAcquisitionDate,
+    ],
+  );
+
   // ── F-4 파생 props 5종 (계산기 Step4와 같은 leaf) ──────────────
   const tempTwoHouseVerdict = useMemo(
     () =>
       judgeTempTwoHouseFromForm({
         previousAcquisitionDate: primaryAcquisitionDate,
-        newHouseAcquisitionDate: form.newHouseAcquisitionDate,
+        newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
         transferDate: form.transferDate,
         provisoReason: form.provisoReason,
         provisoDepartureDate: form.provisoDepartureDate,
@@ -79,7 +106,7 @@ export function Step2({ form, onChange }: Props) {
       }),
     [
       primaryAcquisitionDate,
-      form.newHouseAcquisitionDate,
+      derivedNewHouse?.newAcquisitionDate,
       form.transferDate,
       form.provisoReason,
       form.provisoDepartureDate,
@@ -142,9 +169,9 @@ export function Step2({ form, onChange }: Props) {
         isOneHousehold: form.isOneHousehold,
         isHousing: true,
         householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
-        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+        temporaryTwoHouseApplies: derivedNewHouse !== undefined,
       }),
-    [form.isOneHousehold, houseCount, form.temporaryTwoHouseSpecial],
+    [form.isOneHousehold, houseCount, derivedNewHouse],
   );
 
   return (
@@ -177,6 +204,7 @@ export function Step2({ form, onChange }: Props) {
           relocationRegionVerdict={relocationRegionVerdict}
           proviso={proviso}
           primaryAcquisitionDate={primaryAcquisitionDate}
+          derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
         />
       )}
 

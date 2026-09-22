@@ -64,12 +64,45 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
     await expect(page.getByTestId("temp-two-house-verdict")).toContainText("미충족 · 요건 A");
   });
 
-  test("입력 부족(신규취득일 미입력) → 판정 대기 카드", async ({ page }) => {
+  /**
+   * 🔄 **「판정 대기」 상태가 사라졌다** (2026-09-22 — 토글·날짜 입력 제거).
+   *
+   * 종전에는 사용자가 신규취득일을 **비워 둘 수 있어** 「요건 자동 판정 대기」 카드가 필요했다.
+   * 이제 그 날짜는 명부에서 도출되므로(`resolveTemporaryTwoHouse`) 상태는 둘뿐이다 —
+   * **도출되면** 요건을 판정하고, **도출되지 않으면** 축 자체를 그리지 않는다.
+   * 「대기」를 남겨 두면 채울 칸이 없는데 기다리라고 말하는 화면이 된다.
+   *
+   * ⇒ 단언을 전환한다. 위 네 건(충족·미충족)의 **부정 짝**은 이제 「축이 아예 없다」이다.
+   */
+  test("명부에서 신규주택을 특정할 수 없으면 §155① 축을 그리지 않는다", async ({ page }) => {
     await gotoHolding(page, "2018-01-01", {
       transferDate: "2021-06-01",
       newHouseAcquisitionDate: "",
+      /**
+       * ⚠️ **명부를 비우면 안 된다** — 주택 수가 1이 되어 `judgmentTemporaryTwoHouseVisible`가
+       *    섹션 **전체**를 숨기고, 그러면 이 단언은 「§155① 축이 없다」가 아니라
+       *    「섹션이 통째로 없다」로 공허하게 통과한다.
+       * ⇒ 주택 수는 2로 유지하되 **양도주택(2018-01-01)보다 먼저 취득한** 행만 둔다.
+       *   나중 취득 행이 0채라 신규주택을 특정할 수 없다.
+       */
+      houses: [
+        {
+          id: "h2",
+          region: "capital",
+          acquisitionDate: "2015-01-01",
+          officialPrice: "300000000",
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: true,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+        },
+      ],
     });
-    await expect(page.getByText("요건 자동 판정 대기", { exact: true })).toBeVisible();
+    // 섹션 자체는 떠 있다(합가·대체주택은 그대로) — §155① 축만 없다
+    await expect(page.getByText("혼인합가일", { exact: true })).toBeVisible();
+    await expect(page.getByText("일시적 2주택 특례 (§155①)", { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("temp-two-house-verdict")).toHaveCount(0);
   });
 
   /**
@@ -106,7 +139,9 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await expect(page.getByTestId("judgment-handoff-notice")).toBeVisible();
-    await expect(page.getByText("일시적 2주택 특례 해당", { exact: true })).toHaveCount(0);
+    // 🔄 토글 제거(2026-09-22) — 이제 축 제목으로 본다. 종전 문구는 어디에도 없어 **공허하게**
+    //    통과했다([[feedback_mutation_zero_discrimination_is_not_proof]]).
+    await expect(page.getByText("일시적 2주택 특례 (§155①)", { exact: true })).toHaveCount(0);
     // 합가는 **그대로 있다** — 사라지면 중과 입력 경로가 끊긴다(영 §167의3⑨).
     await expect(page.getByText("혼인합가일", { exact: true })).toBeVisible();
     /**

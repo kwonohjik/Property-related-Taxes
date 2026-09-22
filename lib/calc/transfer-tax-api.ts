@@ -11,7 +11,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
-import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
@@ -548,7 +548,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         houses: form.houses,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
       }).mode;
       const reason = effectiveProvisoReason(provisoMode, form.provisoReason);
       return reason

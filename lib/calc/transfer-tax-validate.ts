@@ -25,7 +25,7 @@ import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
-import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -621,7 +621,14 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         houses: form.houses,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
     }).mode;
     /**
      * ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).

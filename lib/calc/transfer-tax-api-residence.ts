@@ -10,7 +10,7 @@ import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-co
 import { toDate } from "@/lib/api/date-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
-import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -49,7 +49,14 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         houses: form.houses,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
     }).mode,
     form.provisoReason,
   ) as NonNullable<ResidenceReqInput["oneHouseExemptionProviso"]>["reason"] | "";
