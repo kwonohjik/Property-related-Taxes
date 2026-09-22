@@ -445,7 +445,14 @@ export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Dat
  *    종전에는 위 관용도가 ④를 우연히 대신하고 있었다(종전 주석의 「과도 부합한다」).
  *    ④의 정본 경로는 `isLongTermRentalDutyPeriodPending`이고, 거기에 유형 미선택 분기를 넣었다.
  */
-/** §167의3①7호 「상속받은 날부터 5년이 경과하지 아니한 경우」 */
+/**
+ * §167의3①7호 「상속받은 날부터 **5년**이 경과하지 아니한 경우」 — 이 수치의 **정본**.
+ *
+ * ⛔ DB(`house_count_exclusion.inheritedHouseYears`)로 되돌리지 말 것 (2026-09-22 제거).
+ *   D16 이후 그 키는 프로덕션 소비처가 0건인 **침묵 no-op 노브**였다 — DB에서 바꿔도 아무
+ *   일이 없었다. 게다가 `houseCountExclusionRules`는 **optional**이라 DB 키가 없으면
+ *   `undefined`가 된다: 세액을 가르는 수치를 그런 경로에 두면 키 하나 빠질 때 조용히 무너진다.
+ */
 const INHERITED_HOUSE_SURCHARGE_YEARS = 5;
 
 export function isSurchargeExemptRental(house: HouseInfo, transferDate: Date): boolean {

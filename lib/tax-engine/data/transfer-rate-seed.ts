@@ -187,7 +187,6 @@ export const transferTaxSeeds = [
     deduction_rules: null,
     special_rules: {
       type: "house_count_exclusion",
-      inheritedHouseYears: 5,
       lowPriceThreshold: {
         capital: null,        // 수도권은 저가 배제 없음
         non_capital: 300000000, // 지방(광역시 군·수도권 군 포함) 기준시가 3억 이하 배제 (§167의3①1호)

@@ -561,11 +561,16 @@ export interface MultiHouseSurchargeResult {
  *   동작 변화는 없었지만, DB에서 `false`로 바꿔도 아무 일이 없는 **침묵 no-op 노브**였다.
  *   장기임대 배제 판정의 정본은 `isSurchargeExemptRental` →
  *   `isLongTermRentalHousingExempt`(§167의3①2호 본문·각 목)이다.
+ *
+ * ⛔ `inheritedHouseYears`도 **되살리지 말 것** (2026-09-22 제거). 같은 D16에서 같은 방식으로
+ *   끊긴 형제 고아다 — 엔진은 `INHERITED_HOUSE_SURCHARGE_YEARS`
+ *   (`multi-house-surcharge-count.ts`)를 쓰고 DB 값을 읽지 않는다.
+ *   §167의3①7호 「상속받은 날부터 **5년**이 경과하지 아니한 경우」는 시행령이 정한 수치이고,
+ *   이 규칙 객체 자체가 **optional**이라(`houseCountExclusionRules?`) DB 키가 없으면
+ *   `undefined`가 된다 — 세액을 가르는 수치를 그런 경로에 두면 안 된다.
  */
 export interface HouseCountExclusionRules {
   type: "house_count_exclusion";
-  /** 상속주택 배제 기간 (년, 기본값 5) */
-  inheritedHouseYears: number;
   /** 저가주택 공시가격 한도 */
   lowPriceThreshold: {
     capital: number | null;    // null = 수도권(REGION) 저가 배제 없음
