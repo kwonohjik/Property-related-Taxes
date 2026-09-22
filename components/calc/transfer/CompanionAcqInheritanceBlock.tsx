@@ -118,7 +118,41 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
                 장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
               </p>
             </div>
+            {/* §155② 단서 예외 — 동일세대 상속은 중과 배제(7호)가 원칙적으로 서지 않는다 */}
+            <ToggleCard
+              variant="chip"
+              tone="violet"
+              checked={asset.parentalCareMergeInheritedHouse ?? false}
+              onCheckedChange={(v) =>
+                onChange({ parentalCareMergeInheritedHouse: v || undefined })
+              }
+              title="양도 주택이 동거봉양 합가 전 피상속인 보유분"
+              description="60세 이상 직계존속 동거봉양으로 세대를 합쳐 2주택이 된 경우로서 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다 (§155② 단서 예외)."
+            />
+            <p className="text-caption text-muted-foreground/70">
+              동일세대 상속은 §155② 단서로 상속주택 특례가 원칙 배제되고, 그에 따라 이 주택을 양도할
+              때 <b>다주택 중과 배제(영 §167의3①7호)도 서지 않습니다</b>. 위 예외에 해당하면 켜세요.
+            </p>
           </div>
+        </ToggleCard>
+      )}
+
+      {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 선순위가 아니면 「상속받은 주택」이 아니다 */}
+      {asset.assetKind === "housing" && (
+        <ToggleCard
+          variant="card"
+          tone="violet"
+          checked={asset.isRankingDisqualifiedInheritedHouse ?? false}
+          onCheckedChange={(v) =>
+            onChange({ isRankingDisqualifiedInheritedHouse: v || undefined })
+          }
+          title="양도 주택이 선순위 상속주택이 아님 (피상속인 2주택 이상)"
+          description="선순위가 아니면 「상속받은 주택」으로 보지 않아 중과 배제가 서지 않습니다 (§155②1~4호)."
+        >
+          <p className="text-caption text-muted-foreground/70 pt-1">
+            순위는 ① 피상속인 보유기간이 가장 긴 주택 → ② 거주기간이 가장 긴 주택 → ③ 상속개시 당시
+            거주한 주택 → ④ 기준시가가 가장 높은 주택 순입니다. 피상속인이 1주택만 보유했다면 끄세요.
+          </p>
         </ToggleCard>
       )}
 

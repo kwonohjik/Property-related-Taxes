@@ -491,6 +491,29 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   decedentCohabitationHoldingStartDate: string;
   /** §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월 (비과세 거주요건·표2 대상 판정용, 공제율은 실거주 별도) */
   decedentCohabitationResidenceMonths: string;
+  /**
+   * §155② 단서 **예외** — 동거봉양 합가 + 합가 이전부터 피상속인이 보유하던 주택인가.
+   * `decedentSameHouseholdBeforeInheritance === true`일 때만 의미가 있다.
+   *
+   * 🔑 **동일세대 사실은 위 `decedentSameHouseholdBeforeInheritance`를 그대로 쓴다** — §154⑧3호와
+   *    §155② 단서는 **같은 질문**이다(법제처 실독 2026-09-22 · MST 286211):
+   *    §154⑧3호 「상속인과 피상속인이 상속개시 당시 **동일세대**인 경우」 ·
+   *    §155② 단서 「상속인과 피상속인이 상속개시 당시 **1세대**인 경우」.
+   *    주체·시점이 같고 「동일세대」·「1세대」는 법 §88 6호의 같은 개념이다.
+   *    효과만 반대다(§154⑧3호 = 통산 유리 / §155② 단서 = 특례 배제 불리) — **사실은 하나**다.
+   *
+   * 이 필드가 없으면 동일세대 상속인은 §155② 단서 예외를 **주장할 길이 없어** 중과가 유지된다
+   * (실측 −212,575,000 차이). 명부 행에는 종전부터 있던 칸이라 양도 주택만 비대칭이었다.
+   */
+  parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * §155②1~4호 **순위 부적격** — 피상속인이 2주택 이상이었고 이 주택이 선순위가 아닌가.
+   * true면 「상속받은 주택」으로 보지 않으므로 §167의3①7호 중과 배제가 서지 않는다.
+   *
+   * ⚠️ 이 칸이 없으면 기본값이 「순위 적격」이라 **선순위가 아닌 주택도 배제**된다(과소 과세).
+   *    명부 행과 같은 기본값·같은 이름이다.
+   */
+  isRankingDisqualifiedInheritedHouse?: boolean;
   /** 증여자 취득일 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */

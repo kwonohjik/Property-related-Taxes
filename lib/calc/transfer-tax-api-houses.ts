@@ -35,7 +35,51 @@ export function buildHousesPayload(
     regionCode: primary.regionCode || undefined,
     acquisitionDate: primary.acquisitionDate,
     officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
-    isInherited: false,
+    /**
+     * ④⑬ §167의3①**7호** — 양도 주택 **자신**이 5년 내 상속주택이면 중과 대상에서 빠진다.
+     *
+     * 🔴 종전에는 `false` **하드코딩**이었다. 엔진은 D16(2026-09-18)부터 양도 주택에도 이 호를
+     *    적용하는데(`multi-house-surcharge-exclusion.ts:461`), 어댑터가 사실을 싣지 않아 그 분기가
+     *    **잠들어 있었다**. D16 anchor(A4·B9)는 `HouseInfo`를 직접 만드는 **엔진 leaf**라 이 배선을
+     *    증명하지 못한다([[feedback_library_anchor_does_not_prove_component_uses_it]]).
+     *    실측 −212,575,000(3주택) · −157,850,000(2주택) — **과다 과세** 방향이었다.
+     *
+     * 🔑 비과세 축은 **건드리지 않는다** — 상속주택 주택 수 제외
+     *    (`transfer-inheritance-exclusion.ts:72`)와 §89② 판정(`transfer-tax-89-2-exclusion.ts:449`)은
+     *    둘 다 `h.id !== sellingHouseId`로 양도 행을 **명시 제외**한다. 주택 수도 그대로다
+     *    (7호는 §167의3① 본문 괄호의 불산입 대상이 아니다 — D16).
+     */
+    isInherited: primary.acquisitionCause === "inheritance",
+    /**
+     * 기산일 fallback — **상속 자산의 취득시기가 곧 상속개시일**이다.
+     *
+     * 법문(실독 2026-09-22 · MST 286211) 영 §162①5호: 「**상속** 또는 증여에 의하여 취득한
+     * 자산에 대하여는 그 **상속이 개시된 날** 또는 증여를 받은 날」.
+     *
+     * ⑧ validate는 `inheritanceDate`를 필수로 요구하지 않는다. fallback이 없으면 취득일만 적은
+     * 사용자는 `isInherited: true`인데 기산일이 없어 7호가 **조용히 죽는다**(엔진은 둘 다 있어야
+     * 판정한다 — `multi-house-surcharge-count.ts:442`).
+     */
+    inheritedDate:
+      primary.acquisitionCause === "inheritance"
+        ? primary.inheritanceDate || primary.acquisitionDate || undefined
+        : undefined,
+    // §155② 단서·순위 게이트 — 명부 행과 **같은 술어**(`passesHouseholdGate`·`passesRankingGate`).
+    // 동일세대 사실은 §154⑧3호 칸을 그대로 쓴다(두 조문이 같은 질문 — 필드 주석의 실독 근거).
+    decedentSameHouseholdAtInheritance:
+      primary.acquisitionCause === "inheritance"
+        ? primary.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    parentalCareMergeInheritedHouse:
+      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
+        ? primary.parentalCareMergeInheritedHouse
+        : undefined,
+    isRankingDisqualifiedInheritedHouse:
+      primary.acquisitionCause === "inheritance"
+        ? primary.isRankingDisqualifiedInheritedHouse
+        : undefined,
+    // 🟠 §167의3①2호(장기임대)는 **아직 입력 경로가 없다** — `rentalHousingException`은 §155⑳
+    //    (다른 집이 임대인 거주주택 특례)이고 조특법 §97 계열 감면은 다른 축이다. 신규 입력 설계 필요.
     isLongTermRental: false,
     isApartment: false,
     isOfficetel: false,
