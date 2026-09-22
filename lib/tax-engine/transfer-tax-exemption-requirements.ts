@@ -39,11 +39,11 @@ const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
 
 // §155⑦1호·2호 — 거주 요건 연수.
-const RURAL_HOUSE_RESIDENCE_YEARS = 5;
+export const RURAL_HOUSE_RESIDENCE_YEARS = 5;
 // §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
 export const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
 // §155⑩3호 — 귀농주택 대지면적 상한(㎡).
-const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
+export const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
 
 /** §155⑦ 각 호 라벨 (exemptReason 표시용 — 내부 id 노출 금지) */
 export const RURAL_HOUSE_LABEL: Record<RuralHouseKind, string> = {

@@ -8,7 +8,7 @@
  * 순환 의존 방지: 이 파일은 transfer-tax.ts를 import하지 않는다.
  */
 
-import { resolveInheritedHouseExclusion, buildInheritedExclusionSteps } from "./transfer-inheritance-exclusion";
+import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps } from "./transfer-inheritance-exclusion";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -50,12 +50,9 @@ export function runHouseCountExclusionStep(
   );
   // §155②③ 상속·공동상속주택 비과세 주택수 제외 (2-A2) — 단독(§155②)·공동소수지분(§155③) 풀 분리, 각 최대 1채.
   // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 게이트-오프. 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
-  const inheritedSellingId = effectiveInput.sellingHouseId ?? effectiveInput.houses?.[0]?.id;
-  const inheritedExclusion = resolveInheritedHouseExclusion(
-    effectiveInput.houses,
-    inheritedSellingId,
-    effectiveInput.generalHouseGiftedFromDecedentWithin2yr,
-  );
+  // 🔑 selling id 폴백 규칙은 `resolveInheritedHouseExclusionFromInput` 안에만 둔다 —
+  //    불성립 사유 안내(`collectInheritedUnmet`)가 같은 후보 집합을 봐야 하기 때문.
+  const inheritedExclusion = resolveInheritedHouseExclusionFromInput(effectiveInput);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
   const exemptionJudgeInput = totalExcluded > 0

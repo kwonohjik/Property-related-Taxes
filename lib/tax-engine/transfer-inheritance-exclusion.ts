@@ -17,7 +17,7 @@
  * 피상속인이 다르면 엔진이 우열을 못 정함). 순위 게이트로 하위순위를 배제하면 적격 1채만 남아 제외 1채.
  */
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
-import type { CalculationStep } from "./types/transfer.types";
+import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import { INHERITED_HOUSE } from "./legal-codes";
 
 export interface InheritedHouseExclusionResult {
@@ -39,6 +39,16 @@ export interface InheritedHouseExclusionResult {
    * `excludedCount`는 여기 길이와 항상 같다(아래에서 함께 만든다).
    */
   excludedHouses: Array<{ houseId: string; basis: "sole" | "co_inherited" }>;
+  /**
+   * 게이트 2종을 통과한 **적격** 상속주택 수 — 풀별. **표시용**이며 계산에는 쓰이지 않는다.
+   *
+   * 🔑 `soleExcludedCount`만으로는 「적격이 0채」와 「적격이 2채 이상이라 선순위를 특정하지
+   *    못해 제외 0」을 **구별할 수 없다**. 둘은 납세자에게 전혀 다른 사실이라
+   *    (앞은 해당 없음, 뒤는 「입력을 더 좁히면 제외된다」) 불성립 사유 안내가 이 값을 읽는다.
+   *    여기서 내보내지 않으면 안내 쪽이 같은 필터를 다시 쓰게 되어 두 벌이 된다.
+   */
+  eligibleSoleCount: number;
+  eligibleCoMinorityCount: number;
 }
 
 /**
@@ -66,6 +76,8 @@ export function resolveInheritedHouseExclusion(
     sameHouseholdDisqualifiedCount: 0,
     rankingDisqualifiedCount: 0,
     excludedHouses: [],
+    eligibleSoleCount: 0,
+    eligibleCoMinorityCount: 0,
   };
   if (generalHouseGiftedFromDecedentWithin2yr || !houses) return empty;
 
@@ -106,7 +118,42 @@ export function resolveInheritedHouseExclusion(
     sameHouseholdDisqualifiedCount,
     rankingDisqualifiedCount,
     excludedHouses,
+    eligibleSoleCount: soleCount,
+    eligibleCoMinorityCount: coMinorityCount,
   };
+}
+
+/**
+ * 입력에서 §155②③ 제외를 판정하는 **단일 진입점**.
+ *
+ * 🔴 양도(일반)주택 id의 **폴백 규칙**(`sellingHouseId ?? houses[0].id`)이 이 함수 안에만 있다.
+ *    `runHouseCountExclusionStep`이 인라인으로 갖고 있던 것을 끌어올린 것이다 — 불성립 사유
+ *    안내(`collectInheritedUnmet`)가 같은 판정을 해야 하는데, 폴백을 두 곳에 적으면
+ *    `sellingHouseId` 미입력 케이스에서만 답이 갈린다(제외 대상 주택이 달라진다).
+ */
+export function resolveInheritedHouseExclusionFromInput(
+  input: Pick<
+    TransferTaxInput,
+    "houses" | "sellingHouseId" | "generalHouseGiftedFromDecedentWithin2yr"
+  >,
+): InheritedHouseExclusionResult {
+  return resolveInheritedHouseExclusion(
+    input.houses,
+    resolveInheritedSellingHouseId(input),
+    input.generalHouseGiftedFromDecedentWithin2yr,
+  );
+}
+
+/**
+ * 양도(일반)주택으로 볼 명부 행 id — `sellingHouseId` 미입력 시 **첫 행**으로 폴백한다.
+ *
+ * 제외 후보는 「상속주택이면서 **양도 대상이 아닌** 행」이므로, 불성립 사유 안내도 이 id를
+ * 같은 규칙으로 정해야 후보 집합이 어긋나지 않는다.
+ */
+export function resolveInheritedSellingHouseId(
+  input: Pick<TransferTaxInput, "houses" | "sellingHouseId">,
+): string | undefined {
+  return input.sellingHouseId ?? input.houses?.[0]?.id;
 }
 
 /**
