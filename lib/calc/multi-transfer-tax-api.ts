@@ -101,7 +101,28 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
             officialPrice: primary?.standardPriceAtTransfer
               ? parseAmount(primary.standardPriceAtTransfer)
               : 0,
-            isInherited: false,
+            // ④' §167의3①7호 — 양도 주택 자신의 상속 5년 배제. 단건과 동일 배선.
+            // 종전 `false` 하드코딩으로 D16 엔진 분기가 잠들어 있었다(실측 과다 과세).
+            isInherited: primary?.acquisitionCause === "inheritance",
+            // 기산일 fallback — 영 §162①5호(상속 자산의 취득시기 = 상속개시일). 단건과 동일.
+            inheritedDate:
+              primary?.acquisitionCause === "inheritance"
+                ? primary.inheritanceDate || primary.acquisitionDate || undefined
+                : undefined,
+            decedentSameHouseholdAtInheritance:
+              primary?.acquisitionCause === "inheritance"
+                ? primary.decedentSameHouseholdBeforeInheritance
+                : undefined,
+            parentalCareMergeInheritedHouse:
+              primary?.acquisitionCause === "inheritance" &&
+              primary.decedentSameHouseholdBeforeInheritance
+                ? primary.parentalCareMergeInheritedHouse
+                : undefined,
+            isRankingDisqualifiedInheritedHouse:
+              primary?.acquisitionCause === "inheritance"
+                ? primary.isRankingDisqualifiedInheritedHouse
+                : undefined,
+            // 🟠 2호(장기임대)는 아직 입력 경로가 없다 — 단건과 같은 상태.
             isLongTermRental: false,
             isApartment: false,
             isOfficetel: false,

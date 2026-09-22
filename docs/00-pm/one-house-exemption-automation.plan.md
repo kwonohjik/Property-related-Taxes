@@ -855,20 +855,69 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 
 ⏳ **D-6 이후 남은 🟠**(세액이 바뀌므로 측정 선행):
 1. ✅ **중과 축 연결 — 완료**(2026-09-22 · §5.10-A).
-2. 🟠 **양도 주택 자신의 상속·장기임대 중과배제** — 어댑터가 `isInherited: false`·
-   `isLongTermRental: false`를 하드코딩해(`transfer-tax-api-houses.ts:38-39` ·
-   `multi-transfer-tax-api.ts:104-105`) 엔진 분기
-   (`multi-house-surcharge-exclusion.ts:461·469`, D16 추가)가 **잠들어 있다**.
+2. **양도 주택 자신의 상속·장기임대 중과배제** — 어댑터가 `isInherited: false`·
+   `isLongTermRental: false`를 하드코딩해 엔진 분기
+   (`multi-house-surcharge-exclusion.ts:461·469`, D16 추가)가 **잠들어 있었다**.
    D16 anchor(A4·B9)는 `HouseInfo`를 직접 만드는 **엔진 leaf**라 이 배선을 증명하지 않는다.
-   - **상속(7호)**: 폼에 자료가 이미 있다 — `acquisitionCause === "inheritance"`
-     (`calc-wizard-asset.ts:355`) · `inheritanceDate`(:194) ·
-     `decedentSameHouseholdBeforeInheritance`(:489). 나머지 게이트 둘은 **부재 선언 시 통과**라
-     (`transfer-inheritance-exclusion.ts:48·53`) 새 필드 없이 배선만으로 된다.
-     ⚠️ `decedentSameHouseholdBeforeInheritance`는 **§154⑧3호 축** 필드다 — §155② 단서와 같은
-     사실인지 확인이 선행돼야 한다(동명이축).
-   - **장기임대(2호)**: 자료가 **없다**. `rentalHousingException`은 §155⑳(다른 집이 임대인
+   - ✅ **상속(7호) — 완료**(2026-09-22 · 아래 §5.10-B).
+   - 🟠 **장기임대(2호)**: 자료가 **없다**. `rentalHousingException`은 §155⑳(다른 집이 임대인
      거주주택 특례)이고 `reductions`의 조특법 §97 계열은 §167의3①2호와 **다른 축**이다.
      신규 입력 설계가 필요하다.
+
+### 5.10-B 양도 주택 자신의 상속 5년 중과배제 — §167의3①7호 (2026-09-22 · D-6 후속 ②-상속)
+
+**동명이축 확인이 착수 조건이었고, 같은 사실로 판정됐다.** 법제처 실독(2026-09-22 · MST 286211):
+
+| | 법문 | 효과 |
+|---|---|---|
+| §154⑧3호 | 「상속인과 피상속인이 상속개시 당시 **동일세대**인 경우」 | 보유·거주기간 통산(**유리**) |
+| §155② 단서 | 「상속인과 피상속인이 상속개시 당시 **1세대**인 경우」 | 상속주택 특례 배제(**불리**) |
+
+주체·시점이 같고 「동일세대」·「1세대」는 법 §88 6호의 같은 개념이다. **효과만 반대이고 사실은
+하나**이므로 `decedentSameHouseholdBeforeInheritance` 한 칸을 두 축이 공유한다.
+
+**⑤ 신규 2필드가 필요했다** — 게이트가 **양방향**이기 때문이다(실측, 조정지역 3주택):
+
+| 선언 | 세액 | 칸이 없으면 |
+|---|---|---|
+| 상속 5년 내 (기본) | 141,966,000 | — |
+| + 동일세대 | 354,541,000 | §155② 단서로 배제 소멸 |
+| + 동일세대 + **동거봉양 예외** | 141,966,000 | **과다** — 예외를 주장할 길이 없다 |
+| + **순위 부적격** | 354,541,000 | **과소** — 기본값이 「순위 적격」이다 |
+
+⇒ `AssetForm.parentalCareMergeInheritedHouse` · `isRankingDisqualifiedInheritedHouse` 신설.
+명부 행에는 종전부터 있던 칸이라 **양도 주택만 비대칭**이었다.
+
+**세액 실측 전체**:
+
+| 시료 | 종전 | 연결 후 |
+|---|---|---|
+| 3주택, 양도 주택이 5년 내 상속 | 354,541,000 | **141,966,000** (−212,575,000) |
+| 2주택, 같은 조건 (§167의10①2호 준용) | 299,816,000 | **141,966,000** (−157,850,000) |
+| 5년 경과(2019 상속) — 기간 요건 | 354,541,000 | 354,541,000 |
+
+**⚠️ 비과세 축에 하중이 생겼다.** 상속주택 주택 수 제외(`transfer-inheritance-exclusion.ts:72`)와
+§89② 판정(`transfer-tax-89-2-exclusion.ts:449`)은 `h.id !== sellingHouseId`로 양도 행을 제외하는데,
+종전에는 `selling.isInherited`가 **항상 false**라 그 필터가 있으나 마나였다. 이제 하중을 받으므로
+IH-15·IH-16이 고정한다(필터를 지우면 IH-15가 KILL).
+
+**⑫ Zod·⑭ route는 4필드 전부 이미 열려 있었다** — 또 어댑터 한 층만 끊긴 구조였다.
+
+**⑧ 기산일 fallback을 함께 넣었다.** `inheritanceDate`는 validate가 **요구하지 않는다** — 취득일만
+적은 사용자는 `isInherited: true`인데 기산일이 없어 7호가 **조용히 죽는다**(엔진은 둘 다 있어야
+판정한다 — `multi-house-surcharge-count.ts:442`). 근거는 영 §162①5호(실독 2026-09-22):
+「상속 … 에 의하여 취득한 자산에 대하여는 그 **상속이 개시된 날**」 ⇒ 상속 자산의 취득시기가 곧
+상속개시일이다. ⇒ `inheritanceDate || acquisitionDate`(단건·다건 동일 · IH-17·IH-18).
+
+**anchor**: `__tests__/lib/calc/selling-house-inherited-surcharge.anchor.test.ts`(IH-1~16) ·
+`__tests__/calc/selling-asset-155-2-proviso-toggle.test.tsx`(SP-1~6). 뮤테이션 4종 전부 KILL —
+`isInherited` 하드코딩 복귀(IH-1·IH-7) · 동거봉양 게이트 완화(IH-4) · 비과세 필터 삭제(IH-15) ·
+UI 토글 배선 절단(SP-5).
+
+⚠️ **제목이 명부 행과 겹쳤다** — 처음에 「동거봉양 합가 + 합가 전 피상속인 보유 주택」을 그대로
+복사했고, `inherited-house-155-2-proviso-toggle.test.tsx:32`의 정규식과 **완전 일치**하는 것을
+역방향 grep으로 잡았다. 「**양도 주택이**」로 축을 박아 해소
+([[feedback_new_widget_breaks_uniqueness_selectors]]).
 
 ### 5.10-A 중과 축 연결 — §167의3①6호 (2026-09-22 · D-6 후속 ①)
 

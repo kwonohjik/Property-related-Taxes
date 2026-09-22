@@ -167,6 +167,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     decedentSameHouseholdBeforeInheritance: false,
     decedentCohabitationHoldingStartDate: "",
     decedentCohabitationResidenceMonths: "",
+    // §155② 단서 예외·순위 — 미선언이 기본값(명부 행과 동일 규약)
+    parentalCareMergeInheritedHouse: undefined,
+    isRankingDisqualifiedInheritedHouse: undefined,
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
     isAppraisalAcquisition: false,
