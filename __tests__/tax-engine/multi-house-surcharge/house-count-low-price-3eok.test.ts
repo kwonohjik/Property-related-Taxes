@@ -21,7 +21,6 @@ import { makeHouse } from "../_helpers/multi-house-mock";
 const prodRules: HouseCountExclusionRules = {
   type: "house_count_exclusion",
   inheritedHouseYears: 5,
-  rentalHousingExempt: true,
   lowPriceThreshold: { capital: null, non_capital: 300_000_000 },
   presaleRightStartDate: "2021-01-01",
   officetelStartDate: "2022-01-01",

@@ -196,7 +196,6 @@ export type OneHouseSpecialRulesData = z.infer<typeof oneHouseSpecialRulesSchema
 export const houseCountExclusionSchema = z.object({
   type: z.literal("house_count_exclusion"),
   inheritedHouseYears: z.number().int().positive(),     // 상속주택 배제 기간 (5년)
-  rentalHousingExempt: z.boolean(),                     // 장기임대 배제 여부 (true)
   lowPriceThreshold: z.object({
     capital: z.number().int().nullable(),               // 수도권: null (배제 없음)
     non_capital: z.number().int().nonnegative(),        // 지방(VALUE): 300_000_000 (§167의3①1호)

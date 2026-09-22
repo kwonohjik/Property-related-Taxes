@@ -552,13 +552,20 @@ export interface MultiHouseSurchargeResult {
 // DB 파싱용 규칙 데이터 타입
 // ============================================================
 
-/** DB transfer:special:house_count_exclusion 에서 파싱된 주택 수 산정 규칙 */
+/**
+ * DB transfer:special:house_count_exclusion 에서 파싱된 주택 수 산정 규칙.
+ *
+ * ⛔ `rentalHousingExempt`를 **되살리지 말 것** (2026-09-22 제거). D16(`60225941`)이 종전
+ *   `countEffectiveHouses`의 「배제 2: 장기임대 등록주택 (말소 전)」 블록을 옮길 때 그 게이트를
+ *   **함께 옮기지 않아** 프로덕션 소비처가 0건이 됐다. 값은 seed에서 항상 `true`였으므로
+ *   동작 변화는 없었지만, DB에서 `false`로 바꿔도 아무 일이 없는 **침묵 no-op 노브**였다.
+ *   장기임대 배제 판정의 정본은 `isSurchargeExemptRental` →
+ *   `isLongTermRentalHousingExempt`(§167의3①2호 본문·각 목)이다.
+ */
 export interface HouseCountExclusionRules {
   type: "house_count_exclusion";
   /** 상속주택 배제 기간 (년, 기본값 5) */
   inheritedHouseYears: number;
-  /** 장기임대 등록주택 배제 여부 */
-  rentalHousingExempt: boolean;
   /** 저가주택 공시가격 한도 */
   lowPriceThreshold: {
     capital: number | null;    // null = 수도권(REGION) 저가 배제 없음

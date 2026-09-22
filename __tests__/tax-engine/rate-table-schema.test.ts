@@ -8,7 +8,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseProgressiveRate } from "@/lib/tax-engine/schemas/rate-table.schema";
+import {
+  parseProgressiveRate,
+  parseHouseCountExclusion,
+} from "@/lib/tax-engine/schemas/rate-table.schema";
 
 describe("progressiveRateSchema — bracket 오름차순 정렬 강제", () => {
   it("역순 입력 brackets를 max 오름차순으로 정렬 (최상위 max 없음 = Infinity 후순위)", () => {
@@ -44,5 +47,48 @@ describe("progressiveRateSchema — bracket 오름차순 정렬 강제", () => {
       ],
     });
     expect(parsed.brackets.map((b) => b.rate)).toEqual([0.06, 0.15, 0.45]);
+  });
+});
+
+// ============================================================
+// houseCountExclusionSchema — `rentalHousingExempt` 제거 하위호환 (2026-09-22)
+// ============================================================
+
+/**
+ * `rentalHousingExempt`를 타입·Zod·seed에서 **제거**했다. D16(`60225941`)이 종전
+ * `countEffectiveHouses`의 「배제 2: 장기임대 등록주택 (말소 전)」 블록을 옮길 때 그 게이트를
+ * 함께 옮기지 않아 프로덕션 소비처가 0건이 됐고, seed 값이 항상 `true`라 동작 변화는 없었지만
+ * **DB에서 `false`로 바꿔도 아무 일이 없는 침묵 no-op 노브**였다.
+ *
+ * 🔑 제거의 위험은 **파싱**에 있다 — `parseHouseCountExclusion`은 `safeParse` 실패 시
+ *   `TaxRateValidationError`를 **throw**한다(계산 전체가 죽는다). Supabase `tax_rates`의
+ *   기존 row는 아직 이 키를 **갖고 있으므로**, 스키마가 그 여분 키를 거부하면 안 된다.
+ *   `z.object`는 기본 non-strict라 strip하지만, 나중에 누가 `.strict()`를 붙이면 조용히 깨진다
+ *   ⇒ HC-1이 그 경계를 고정한다.
+ */
+const HOUSE_COUNT_RULES = {
+  type: "house_count_exclusion",
+  inheritedHouseYears: 5,
+  lowPriceThreshold: { capital: null, non_capital: 300_000_000 },
+  presaleRightStartDate: "2021-01-01",
+  officetelStartDate: "2022-01-01",
+} as const;
+
+describe("houseCountExclusionSchema — 폐기된 `rentalHousingExempt` 하위호환", () => {
+  it("HC-1 레거시 DB row(그 키를 아직 가진 row)도 파싱된다 — strip, 거부 아님", () => {
+    const parsed = parseHouseCountExclusion({ ...HOUSE_COUNT_RULES, rentalHousingExempt: true });
+    expect(parsed.presaleRightStartDate).toBe("2021-01-01");
+    expect(parsed.lowPriceThreshold.non_capital).toBe(300_000_000);
+    // 스키마에서 빠졌으므로 파싱 결과에 남지 않는다(살아 있는 노브로 오인 방지)
+    expect("rentalHousingExempt" in parsed).toBe(false);
+  });
+
+  it("HC-2 그 키가 없는 새 row도 파싱된다 (제거는 느슨해지는 방향)", () => {
+    expect(parseHouseCountExclusion(HOUSE_COUNT_RULES).presaleRightStartDate).toBe("2021-01-01");
+  });
+
+  it("HC-3 살아 있는 키가 빠지면 여전히 throw한다 (게이트가 죽지 않았다)", () => {
+    const { presaleRightStartDate: _omit, ...missing } = HOUSE_COUNT_RULES;
+    expect(() => parseHouseCountExclusion(missing)).toThrow();
   });
 });
