@@ -1,6 +1,13 @@
 # B — §104①9호 비사업용 토지 과다소유법인 주식 세율(기본세율 + 10%p) 구현 계획
 
-**상태**: 🟡 **착수 조건 충족** — 법령 체인 전부 본문 확보(§2). 미착수.
+**상태**: ✅ **구현 완료** (2026-09-22 감사에서 stale 표지 정정).
+
+> 🔴 종전 「🟡 착수 조건 충족 — **미착수**」는 **stale이었다.** 코드 실측:
+> - 세율 카테고리 `other_asset_heavy_re_nbl` — `lib/tax-engine/stock-transfer/stock-classification.ts:215·372` · `stock-rate-tables.ts:303`
+> - 입력 축 D-1(비율 숫자) — `lib/stores/calc-wizard-stock-form-types.ts:163` `nblRatioOfCorpAssets` · `calc-wizard-stock-normalize.ts:183` · `calc-wizard-stock-form.ts:102`
+>
+> ❌ **미결로 재기재 금지.** 남은 한계는 R-2(9호 세율표 연혁)뿐이고, 이는 `BASIC_PROGRESSIVE_BRACKETS`가
+> 애초에 연도 분기를 갖지 않아 **상속한 한계**이지 이 축의 신규 결함이 아니다(별건).
 **선행**: [[stock-other-asset-104-5-and-104-1-9.plan.md]] 결함 B (A는 PR#1026으로 종결)
 **후속**: 같은 계획서 결함 C(§104⑤ 후단 8호·9호 동일 자산 의제) — **이 건이 선행돼야 한다**
 
