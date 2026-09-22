@@ -46,6 +46,7 @@ import { SellingHouseTwoHouseExclusionSection } from "@/components/calc/transfer
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
+import { housesPatchWithDerivedCount } from "@/lib/calc/household-house-count";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import {
   checkGracePeriodExemption,
@@ -450,6 +451,15 @@ export function HousesListSection({
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  /**
+   * 명부 patch — **파생 주택 수를 같은 patch 에 싣는다**(Q-8 후속).
+   * 세 쓰기 지점(추가·삭제·수정)이 전부 이걸 거친다. 한 곳이라도 빠지면 그 경로로만
+   * 스칼라가 어긋나므로 `onChange({ houses })` 를 직접 부르지 말 것.
+   */
+  function patchHouses(next: HouseEntry[]) {
+    return housesPatchWithDerivedCount(next, form.assets?.[0]?.assetKind);
+  }
+
   // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
   const sellingRegionCode = form.assets?.[0]?.regionCode;
   const sellingRegionLabel =
@@ -478,18 +488,18 @@ export function HousesListSection({
       decedentSameHouseholdAtInheritance: false,
       isRankingDisqualifiedInheritedHouse: false,
     };
-    onChange({ houses: [...houses, newHouse] });
+    onChange(patchHouses([...houses, newHouse]));
     // 추가 즉시 편집 모달 오픈
     setEditingId(newHouse.id);
   }
 
   function removeHouse(id: string) {
-    onChange({ houses: houses.filter((h) => h.id !== id) });
+    onChange(patchHouses(houses.filter((h) => h.id !== id)));
     if (editingId === id) setEditingId(null);
   }
 
   function updateHouse(id: string, patch: Partial<HouseEntry>) {
-    onChange({ houses: houses.map((h) => (h.id === id ? { ...h, ...patch } : h)) });
+    onChange(patchHouses(houses.map((h) => (h.id === id ? { ...h, ...patch } : h))));
   }
 
   // gracePeriod 노출 조건: 1세대 + 주택수 2채 이상 + (보유 주택 OR 분양권·입주권) 1건 이상.

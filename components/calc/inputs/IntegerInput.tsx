@@ -23,6 +23,8 @@ interface IntegerInputBaseProps {
   /** 외부 FieldCard 라벨이 있을 때 접근성 라벨 */
   ariaLabel?: string;
   className?: string;
+  /** 형제 입력(`CurrencyInput`·`DecimalInput`)과 같은 규약 — 값이 파생일 때 편집을 막는다. */
+  disabled?: boolean;
   /**
    * 🔴 IG-094: 빈 입력을 `0`이 아니라 `undefined`로 올린다.
    *
@@ -50,6 +52,7 @@ export function IntegerInput({
   id,
   ariaLabel,
   className,
+  disabled = false,
   allowEmpty = false,
 }: IntegerInputProps) {
   const display = allowEmpty
@@ -65,6 +68,7 @@ export function IntegerInput({
       type="text"
       inputMode="numeric"
       aria-label={ariaLabel}
+      disabled={disabled}
       value={display}
       onChange={(e) => {
         if (allowEmpty && e.target.value.trim() === "") {
@@ -75,7 +79,7 @@ export function IntegerInput({
       }}
       placeholder={placeholder}
       className={cn(
-        "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
         className,
       )}
     />

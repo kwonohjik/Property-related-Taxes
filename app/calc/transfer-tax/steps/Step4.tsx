@@ -26,7 +26,7 @@ import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHa
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
-import { resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, houseCountScalarLocked } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 
 /**
@@ -165,6 +165,23 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       form.houses,
       form.temporaryTwoHouseSpecial,
     ],
+  );
+
+  /**
+   * Q-8 — ① 스칼라 버튼 잠금. 명부가 정본이고 선언값이 **이미 그 파생값과 같을 때만** 잠근다.
+   *
+   * 명부 편집이 스칼라를 함께 갱신하므로(`housesPatchWithDerivedCount`) 정상 흐름에서는 항상
+   * 잠긴 상태가 된다. 어긋난 채 복원된 구 이력은 **열어 두고** 불일치 경고가 안내한다 —
+   * 그때 잠그면 맞출 화면이 사라진다(술어 주석 참조).
+   */
+  const houseCountLocked = useMemo(
+    () =>
+      houseCountScalarLocked(
+        primaryKind,
+        form.houses,
+        parseInt(form.householdHousingCount || "1", 10) || 0,
+      ),
+    [primaryKind, form.houses, form.householdHousingCount],
   );
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
@@ -337,23 +354,32 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             <label className="block text-sm font-medium">
               세대 보유 주택 수 <span className="text-destructive">*</span>
             </label>
-            <div className="flex gap-2">
+            {/* 문구("목록의 3채로 합니다" 등)에도 「N채」가 나와 텍스트 셀렉터가 충돌한다 —
+                anchor 가 버튼군을 유일하게 집도록 testid 를 둔다. */}
+            <div className="flex gap-2" data-testid="household-house-count-buttons">
               {["1", "2", "3+"].map((v) => (
                 <button
                   key={v}
                   type="button"
+                  disabled={houseCountLocked}
                   onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v })}
                   className={cn(
                     "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
                     (v === "3+" ? parseInt(form.householdHousingCount) >= 3 : form.householdHousingCount === v)
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border hover:bg-muted",
+                    houseCountLocked && "cursor-not-allowed opacity-60 hover:bg-transparent",
                   )}
                 >
                   {v === "3+" ? "3채 이상" : `${v}채`}
                 </button>
               ))}
             </div>
+            {houseCountLocked && (
+              <p className="pt-0.5 text-xs text-muted-foreground">
+                아래 「세대 보유 주택 목록」에 입력한 주택으로 자동 산정됩니다. 바꾸려면 목록을 수정하세요.
+              </p>
+            )}
             {/* 3채 이상: 정확한 세대 보유 주택 수 — 비과세·장특(§89①3호가목 1주택 요건) 판정에 실제 주택 수 사용.
                 토글 캡("3")이 4채+를 3으로 저장하면 감면·특례 배제 겹칠 때 1주택 특례를 오부여하므로 정확값을 입력받는다. */}
             {parseInt(form.householdHousingCount) >= 3 && (
@@ -365,6 +391,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                     value={parseInt(form.householdHousingCount) || 3}
                     onChange={(n) => onChange({ householdHousingCount: String(Math.max(3, n)) })}
                     ariaLabel="정확한 세대 보유 주택 수"
+                    disabled={houseCountLocked}
                   />
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground">채</span>
