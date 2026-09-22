@@ -21,6 +21,18 @@
  *
  * ⇒ 문화유산주택은 **보유 중인 다른 주택**이다. 양도 대상이 아니므로 명부 행의 속성이다.
  *
+ * ## ✅ §155⑥1호만은 **두 축 공용**이다 (2026-09-22)
+ *
+ * 영 §167의3①**6호**가 「**제155조제6항제1호에 해당하는 국가유산주택**」이라고 §155⑥1호를
+ * **그대로 인용**한다(실독 · MST 286211). §155⑥1호는 주택의 **정의**뿐이고 「각각 1개씩」은
+ * ⑥ 본문에 있어 6호로 넘어오지 않는다 ⇒ 같은 사실, 같은 칸.
+ *
+ * **카드는 그대로 가른다.** 사용자는 사실을 **한 번만** 선언하고, 어댑터가 비과세 칸
+ * (`culturalHeritageHouse`)과 중과 칸(`HouseInfo.isCulturalHeritage`)을 **함께** 채운다
+ * (`transfer-tax-api-houses.ts` · `multi-transfer-tax-api.ts`). ④에 토글을 하나 더 두면
+ * 같은 집에 대해 두 번 선언하게 되고 서로 모순될 수 있다.
+ * ⑦(§155⑦)·⑧(§155⑧)은 여전히 비과세 전용이다.
+ *
  * 정책: ToggleCard 전용 · OFF 시 `onUpdate`로 직접 정리(useEffect 미러링 금지).
  */
 
@@ -48,7 +60,8 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate }: Props) {
     >
       <p className="text-xs text-muted-foreground leading-relaxed">
         이 주택을 <b>보유</b>한 상태에서 <b>다른 주택(일반주택)을 양도</b>할 때 1세대1주택으로 보는
-        특례입니다. 중과 배제(④)와는 요건이 다르므로 따로 받습니다.
+        특례입니다. 대개 중과 배제(④)와는 요건이 다르므로 따로 받습니다 — 다만 아래 첫 항목은
+        <b>두 축에 함께</b> 쓰입니다.
       </p>
 
       {/* §155⑥1호 국가유산주택 */}
@@ -59,8 +72,13 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate }: Props) {
         checked={house.oneHouseCulturalHeritage ?? false}
         onCheckedChange={(v) => onUpdate({ oneHouseCulturalHeritage: v || undefined })}
         title="지정문화유산·국가등록문화유산·천연기념물등 주택 (§155⑥1호)"
-        description="이 주택과 일반주택을 각각 1개씩 보유한 상태에서 일반주택을 양도하면 1세대1주택으로 봅니다. 조합원입주권·분양권을 함께 보유한 경우에는 §156의2⑩·§156의3⑦이 준용합니다."
+        description="이 주택과 일반주택을 각각 1개씩 보유한 상태에서 일반주택을 양도하면 1세대1주택으로 봅니다. 이 선언 하나로 다주택 중과(영 §167의3①6호)에서도 빠집니다."
       >
+        {/* 🔑 준용 상세는 «켠 뒤에» 필요한 정보다 — description은 켤지 말지를 판단할 만큼만
+            짧게 둔다(150자 정책 · `__tests__/components/hint-length-policy.test.ts`). */}
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          조합원입주권·분양권을 함께 보유한 경우에는 §156의2⑩·§156의3⑦이 준용합니다.
+        </p>
         <div className="pt-1">
           <LawArticleModal
             legalBasis={TRANSFER.CULTURAL_HERITAGE_HOUSE}

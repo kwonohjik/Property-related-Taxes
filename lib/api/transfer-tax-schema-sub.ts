@@ -298,6 +298,11 @@ export const houseSchema = z.object({
   isEmployeeHousing: z.boolean().optional(),
   freeProvisionYears: z.number().nonnegative().optional(),
   isTaxSpecialExemption: z.boolean().optional(),
+  /**
+   * ⚠️ 이 칸만은 **selling 전용이 아니다** (2026-09-22) — §167의3①6호가 §155⑥1호를 그대로
+   * 인용해 명부 행도 이 호에 해당할 수 있다. 어댑터가 행의 `oneHouseCulturalHeritage`를
+   * 여기에 싣는다(`transfer-tax-api-houses.ts` · `multi-transfer-tax-api.ts`).
+   */
   isCulturalHeritage: z.boolean().optional(),
   isDayCareCenter: z.boolean().optional(),
   dayCareOperationYears: z.number().nonnegative().optional(),
