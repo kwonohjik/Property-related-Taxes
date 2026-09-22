@@ -57,7 +57,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
           onChange({ ...v, longTermRental: b ? { ...ltr, isLongTermRental: true } : undefined })
         }
         title="양도 주택이 등록 장기임대주택"
-        description="유형을 고르면 목별 요건(기간·기준시가·호수·아파트 제한 등)으로 정밀 판정합니다. 유형을 고르지 않으면 요건 충족 선언으로 보아 그대로 배제합니다."
+        description="유형을 고르면 목별 요건(기간·기준시가·호수·아파트 제한 등)으로 정밀 판정합니다. 유형을 고르지 않으면 등록 완비 + 임대 5년 이상으로 판정합니다."
       >
         <div className="space-y-3 pt-1">
           {/* 아파트 여부 — 아·자목 일괄 제외 / 가·마목 2020.7.11 이후 등록 제외의 판정 입력 */}

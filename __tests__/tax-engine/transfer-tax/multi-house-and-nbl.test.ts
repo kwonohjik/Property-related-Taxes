@@ -106,7 +106,10 @@ describe("T-25: 장기임대 등록주택 → 10호 배제, 중과 미적용", (
     const h1 = makeHouseInfo("h1", { regionCode: "11680" }); // 강남구 (조정, 양도주택)
     const h2 = makeHouseInfo("h2", {
       isLongTermRental: true,
+      isRegisteredRental: true,
       rentalRegistrationDate: new Date("2020-01-01"),
+      businessRegistrationDate: new Date("2020-01-01"),
+      rentalPeriodYears: 6,
       rentalCancelledDate: undefined,
     });
 

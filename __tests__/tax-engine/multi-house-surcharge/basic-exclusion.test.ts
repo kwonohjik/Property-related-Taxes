@@ -125,12 +125,18 @@ describe("MH-02: 상속주택 5년 이내 — 산입 + 중과 대상 제외", ()
 // MH-03: 장기임대 등록주택 — 산입 + 중과 대상 제외 / 말소 시 해당 없음 (D16)
 // ============================================================
 
+// 🔴 2026-09-22 — 시료에 등록 완비(`isRegisteredRental`·사업자등록일)와 임대기간을 채웠다.
+//    종전엔 `isLongTermRental` + 임대등록일만으로 통과했는데, 술어가 유형 미선택 입력의 요건을
+//    전혀 보지 않았기 때문이다. 이름이 말하는 「장기임대 **등록**주택」 의도는 그대로다.
 describe("MH-03: 장기임대 등록주택 (말소 시 해당 없음)", () => {
   it("임대 등록 유효 중 → 주택 수 산입(2) · 2호 해당 → §167의10①10호 배제", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
+      isRegisteredRental: true,
       rentalRegistrationDate: new Date("2020-01-01"),
+      businessRegistrationDate: new Date("2020-01-01"),
+      rentalPeriodYears: 6,
       rentalCancelledDate: undefined, // 말소 없음
     });
     const td = new Date("2024-06-01");
@@ -146,7 +152,10 @@ describe("MH-03: 장기임대 등록주택 (말소 시 해당 없음)", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
+      isRegisteredRental: true,
       rentalRegistrationDate: new Date("2020-01-01"),
+      businessRegistrationDate: new Date("2020-01-01"),
+      rentalPeriodYears: 6,
       rentalCancelledDate: new Date("2023-01-01"), // 양도일 이전 말소
     });
     const td = new Date("2024-06-01");
