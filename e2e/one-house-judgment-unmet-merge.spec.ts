@@ -76,7 +76,8 @@ async function gotoResult(page: Page, over: Record<string, unknown> = {}) {
   await page.reload();
   await expect(page.getByTestId("one-house-household")).toBeVisible();
 
-  // ① 세대 → ② 보유 주택·권리 → ③ 양도 예정
+  // ① 세대 → ② 양도 대상 주택 → ③ 보유 주택·권리 (2026-09-23 재배치 — 클릭 수는 그대로다)
+  // 🔑 시드가 취득일·양도예정일·양도가액을 이미 갖고 있어 ②의 ⑧이 막지 않는다.
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByRole("button", { name: "다음" }).click();
   // ⚠️ 마지막 단계의 액션은 「다음」이 아니라 **「판정 결과 보기」**다(실측 정정).

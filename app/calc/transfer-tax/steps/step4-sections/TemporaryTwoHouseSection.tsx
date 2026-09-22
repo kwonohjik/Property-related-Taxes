@@ -91,6 +91,18 @@ type FullOnlyProps = {
 type BaseProps = {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
+  /**
+   * 합가 특례(`MergeDateSection`) 숨김 — **판정 메뉴 전용**(F-1 `hideSellingHouseExclusion`과 같은 층위).
+   *
+   * 🔴 판정 메뉴는 합가일을 **① 세대 단계가 소유**한다(`judgmentMergeDateOwnedByStep1`).
+   *    그런데 아래 `<MergeDateSection>`은 `full` 가드 **밖**이라 주택 수 ≥ 2이면 ①과 이 섹션
+   *    **양쪽에 같은 칸이 떴다** — 배타 규약(`one-house-judgment-section-scope.ts:26-32`)이
+   *    `MergedHouseholdRightSection`만 상대로 쓰고 이 경로를 빠뜨렸다.
+   *
+   * 계산기(`mode="calc"`)는 이 자리에서 합가를 받아야 하므로(`:437` 설명) 컴포넌트 쪽 기본
+   * 동작은 바꾸지 않고, 판정 메뉴에서만 끈다. 넘기지 않으면 종전과 같다.
+   */
+  hideMergeDate?: boolean;
 };
 
 /**
@@ -129,17 +141,36 @@ function TempTwoHouseCoreBlocks({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">종전 주택 취득일</label>
-              <DateInput value={primaryAcquisitionDate} disabled onChange={() => {}} />
+              {/* testid로 스코프한다 — 래퍼 div의 텍스트에는 아래 힌트까지 섞여 있어
+                  텍스트 필터로는 집히지 않는다(e2e/CLAUDE.md §4 「추정 금지」). */}
+              <DateInput
+                data-testid="temp-two-house-prev-acq-date"
+                value={primaryAcquisitionDate}
+                disabled
+                onChange={() => {}}
+              />
+              {/*
+                🔴 종전 문구는 「1단계에서 입력」이었다 — **양도세 계산기**의 Step1을 가리키는
+                   스테일 텍스트였고, 이 블록은 `full` 모드(= 판정 메뉴)에만 뜨는데 그 마법사의
+                   1단계는 「① 세대」라 취득일 칸이 없다. 빈 칸 + 없는 단계 안내가 겹쳐
+                   「입력해야 하는 칸」으로 읽혔다(사용자 제보 2026-09-23).
+              */}
               <p className="text-xs text-muted-foreground">
-                지금 양도하는 주택의 취득일에서 자동 반영 (1단계에서 입력)
+                지금 양도하는 주택의 취득일에서 자동 반영 (② 양도 대상 주택 단계에서 입력)
               </p>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">신규 주택 취득일</label>
               <DateInput value={derivedNewHouseAcquisitionDate} disabled onChange={() => {}} />
+              {/*
+                🔑 「위」·「아래」로 쓰지 않는다 — 이 섹션은 명부 **뒤**에 렌더되므로 목록은 위에
+                   있지만, 섹션 순서가 바뀌면 그 표현이 조용히 틀려진다. 위치에 의존하지 않는
+                   표현으로 둔다(종전 「② 보유 주택 목록」도 재배치로 번호가 어긋났다).
+              */}
               <p className="text-xs text-muted-foreground">
-                ② 보유 주택 목록에서 <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로
-                찾아 반영합니다 — 목록을 고치면 판정도 함께 바뀝니다.
+                같은 화면의 <strong>보유 주택 목록</strong>에서{" "}
+                <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로 찾아 반영합니다 —
+                목록을 고치면 판정도 함께 바뀝니다.
               </p>
             </div>
           </div>
@@ -458,7 +489,7 @@ export function TemporaryTwoHouseSection(props: TemporaryTwoHouseSectionProps) {
 
         {full && <TempTwoHouseOtherSpecials {...props} />}
 
-        <MergeDateSection form={form} onChange={onChange} />
+        {!props.hideMergeDate && <MergeDateSection form={form} onChange={onChange} />}
       </div>
     </section>
   );

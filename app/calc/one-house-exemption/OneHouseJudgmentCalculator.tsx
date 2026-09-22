@@ -33,7 +33,20 @@ import {
   validateStep3,
 } from "@/lib/calc/one-house-exemption-validate";
 
-const STEPS = ["세대", "보유 주택·권리", "양도 예정", "판정 결과"] as const;
+/**
+ * 🔑 **파일명 ≠ 화면 순서다** — `Step3`(양도 대상)이 2번째, `Step2`(보유 주택)가 3번째 화면이다.
+ *
+ * 순서를 뒤집은 이유는 미관이 아니라 **데이터 의존 방향**이다. `assets[0].acquisitionDate`·
+ * `transferDate`의 유일한 입력 경로가 `Step3`인데 `Step2`가 그 둘을 6곳에서 소비한다
+ * (§155① 도출·요건 자동판정·§154① 단서 게이트·§155⑳). 종전 순서에서는 순방향으로 처음
+ * 도달한 사용자에게 §155① 블록이 **아예 뜨지 않았다**(`household-house-count.ts:263`
+ * `if (!prev) return fallback()` → `TemporaryTwoHouseSection.tsx:123`이 `null`).
+ *
+ * 파일명을 그대로 둔 것은 이 저장소의 관례다(양도세 계산기도 Step1·Step4·Step5·Step6 ↔ 인덱스
+ * 0~3). 유닛 9파일이 `Step2`·`Step3`를 **경로로 import**하고 소스 문자열 anchor 2건이 그 경로를
+ * 고정하므로, 이름을 바꾸면 얻는 것 없이 그 전부를 건드리게 된다.
+ */
+const STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과"] as const;
 const RESULT_STEP = 3;
 
 export default function OneHouseJudgmentCalculator() {
@@ -53,12 +66,13 @@ export default function OneHouseJudgmentCalculator() {
   useResetOnNewParam(reset);
 
   const validateCurrent = useCallback(() => {
+    // idx 1 = 양도 대상(`Step3`) · idx 2 = 보유 주택(`Step2`) — 위 STEPS 주석 참조.
     const errors =
       currentStep === 0
         ? validateStep1(formData)
         : currentStep === 1
-          ? validateStep2(formData)
-          : validateStep3(formData);
+          ? validateStep3(formData)
+          : validateStep2(formData);
     return errors.find((e) => e.severity === "error") ?? null;
   }, [currentStep, formData]);
 
@@ -180,8 +194,8 @@ export default function OneHouseJudgmentCalculator() {
         <div className="flex gap-8">
           <div className="min-w-0 flex-1">
             {currentStep === 0 && <Step1 form={formData} onChange={updateFormData} />}
-            {currentStep === 1 && <Step2 form={formData} onChange={updateFormData} />}
-            {currentStep === 2 && <Step3 form={formData} onChange={updateFormData} />}
+            {currentStep === 1 && <Step3 form={formData} onChange={updateFormData} />}
+            {currentStep === 2 && <Step2 form={formData} onChange={updateFormData} />}
             {currentStep === RESULT_STEP && (
               <Step4
                 result={result}

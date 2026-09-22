@@ -17,7 +17,8 @@ import {
 } from "@/lib/calc/one-house-exemption-validate";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
-const STEP_LABELS = ["세대", "보유 주택·권리", "양도 예정", "판정 결과"] as const;
+/** ⚠️ `OneHouseJudgmentCalculator.tsx`의 `STEPS`와 **같은 문자열**이다 — 한쪽만 고치면 갈린다. */
+const STEP_LABELS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과"] as const;
 
 export function OneHouseJudgmentSidebar({
   form,

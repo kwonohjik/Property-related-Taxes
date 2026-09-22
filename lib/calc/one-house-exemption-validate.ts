@@ -127,73 +127,39 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
   }
 
-  // §155의2 — 어댑터가 전송을 포기하는 조건과 **같은 자리**에서 막는다.
-  if (form.longTermMortgageSpecial) {
-    if (!form.longTermMortgageContractDate) {
-      errors.push(err("longTermMortgageContractDate", "장기저당담보주택: 계약체결일을 입력하세요."));
-    }
-    if (!form.longTermMortgageBorrowerAge) {
-      errors.push(
-        err("longTermMortgageBorrowerAge", "장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요."),
-      );
-    }
-    if (!form.longTermMortgageContractYears) {
-      errors.push(err("longTermMortgageContractYears", "장기저당담보주택: 계약기간(년)을 입력하세요."));
-    }
-  }
+  /**
+   * 🔄 **§155의2 · §155의3 · §155⑳(error)의 필수값 검증은 `validateStep3`로 옮겼다**
+   *    (2026-09-23 재배치 — 그 입력 3블록이 ② 양도 대상 화면으로 갔다).
+   *    ⑤와 ⑧이 같은 화면에 있어야 한다는 3중 패턴 규약을 따른 것이다.
+   */
 
   /**
-   * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.
+   * §155⑳ **이중 입력 경고만** 여기에 남는다 — 조건이 `form.houses.length > 0`이라
+   * **명부가 있는 이 화면**에서만 의미가 있다. ②(양도 대상)의 검증에 두면 사용자가 ②를
+   * 지난 **뒤에** 명부를 채우므로 그 시점에 다시 평가되지 않는다.
    *
-   * 🔑 `mode: "facts"`가 §161① 안분 입력(직전거주주택 양도일·3시점 기준시가)을 요구하지
-   *    않게 한다. 그 칸들은 ⑤가 판정 메뉴에서 감추므로, 여기서 막으면 화면에 없는 값 때문에
-   *    판정이 영구 차단된다(3중 패턴 — ⑤/④/⑧).
+   * ⚠️ **다만 지금 이 경고는 화면에 뜨지 않는다** — 판정 마법사에는 `severity: "warning"`을
+   *    표시하는 경로가 없다(`OneHouseJudgmentCalculator.tsx:76`이 `error`만 배너에 띄우고
+   *    `getStepErrorCount`도 `error`만 센다. `validateStep1`의 경고 2건도 같은 처지다).
+   *    그러니 위 배치 근거는 「지금 죽는다」가 아니라 **표시 경로가 생겼을 때 옳은 자리**라는
+   *    뜻이다. 표시 경로 부재는 이번 변경이 만든 것이 아니라 기존 상태다.
+   *
+   * 특례로 주택 수에서 빼는 임대주택을 명부에도 넣으면 주택 수가 부풀려져 판정이 과세로
+   * 뒤집힌다. 차단하지는 않는다 — 둘이 정말 다른 주택일 수 있다.
    */
   const primary = form.assets[0];
-  if (primary) {
-    const rentalError = validateRentalHousingException(
-      primary.rentalHousingException,
-      primary,
-      0, // 판정 메뉴는 `form.assets[0]`만 판정한다 — 컴패니언 개념이 없다.
-      "장기임대주택 특례",
-      form.transferDate,
-      "facts",
+  if (
+    primary?.rentalHousingException?.applyException &&
+    (primary.rentalHousingException.rentalUnits?.length ?? 0) > 0 &&
+    (form.houses?.length ?? 0) > 0
+  ) {
+    errors.push(
+      warn(
+        "houses",
+        "장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. " +
+          "특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다.",
+      ),
     );
-    if (rentalError) errors.push(err("rentalHousingException", rentalError));
-
-    /**
-     * 이중 입력 경고 — 특례로 주택 수에서 빼는 임대주택을 **명부에도** 넣으면 주택 수가
-     * 부풀려져 판정이 과세로 뒤집힌다. 차단하지는 않는다(둘이 정말 다른 주택일 수 있다).
-     */
-    if (
-      primary.rentalHousingException?.applyException &&
-      (primary.rentalHousingException.rentalUnits?.length ?? 0) > 0 &&
-      (form.houses?.length ?? 0) > 0
-    ) {
-      errors.push(
-        warn(
-          "houses",
-          "장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. " +
-            "특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다.",
-        ),
-      );
-    }
-  }
-
-  // §155의3 — 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
-  if (form.winWinRentalSpecial) {
-    if (!form.winWinRentalContractDate) {
-      errors.push(err("winWinRentalContractDate", "상생임대주택: 상생임대차계약 체결일을 입력하세요."));
-    }
-    if (!form.winWinRentalIncreaseRatePct) {
-      errors.push(err("winWinRentalIncreaseRatePct", "상생임대주택: 임대료 증가율(%)을 입력하세요."));
-    }
-    if (!form.winWinRentalPriorLeaseMonths) {
-      errors.push(err("winWinRentalPriorLeaseMonths", "상생임대주택: 직전임대차 임대기간(개월)을 입력하세요."));
-    }
-    if (!form.winWinRentalLeaseMonths) {
-      errors.push(err("winWinRentalLeaseMonths", "상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."));
-    }
   }
 
   /**
@@ -264,7 +230,13 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   return errors;
 }
 
-/** ③ 양도 예정 — 판정에 **실제로 필요한** 값만 막는다. */
+/**
+ * ② 양도 대상 주택 — 판정에 **실제로 필요한** 값만 막는다.
+ *
+ * 🔑 **함수명 ≠ 화면 번호다**(`getStepErrorCount` 주석 참조). 2026-09-23 재배치로 이 검증이
+ *    2번째 화면(`Step3.tsx`)을 맡는다. 이름을 그대로 둔 것은 저장소 관례이고, 유닛·anchor가
+ *    `validateStep3`를 직접 부르기 때문이다.
+ */
 export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   const errors: Errors = [];
   const primary = form.assets[0];
@@ -287,22 +259,83 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
   }
 
+  /**
+   * ── 거주요건 면제 특례 3종 — 입력이 ② 화면으로 오면서 ⑧도 따라왔다 (2026-09-23) ──
+   *
+   * 🔴 **입력이 옮겨오면 그 검증도 따라와야 한다.** 남겨 두면 「화면엔 칸이 없는데 ⑧이 요구」
+   *    하는 영구 차단이 되고, 그것은 이 저장소가 반복해 밟은 실패모드다
+   *    (`transfer-tax-validate.ts` 같은 자리 주석 · D-6 4건).
+   */
+
+  // §155의2 — 어댑터가 전송을 포기하는 조건과 **같은 자리**에서 막는다.
+  if (form.longTermMortgageSpecial) {
+    if (!form.longTermMortgageContractDate) {
+      errors.push(err("longTermMortgageContractDate", "장기저당담보주택: 계약체결일을 입력하세요."));
+    }
+    if (!form.longTermMortgageBorrowerAge) {
+      errors.push(
+        err("longTermMortgageBorrowerAge", "장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요."),
+      );
+    }
+    if (!form.longTermMortgageContractYears) {
+      errors.push(err("longTermMortgageContractYears", "장기저당담보주택: 계약기간(년)을 입력하세요."));
+    }
+  }
+
+  // §155의3 — 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
+  if (form.winWinRentalSpecial) {
+    if (!form.winWinRentalContractDate) {
+      errors.push(err("winWinRentalContractDate", "상생임대주택: 상생임대차계약 체결일을 입력하세요."));
+    }
+    if (!form.winWinRentalIncreaseRatePct) {
+      errors.push(err("winWinRentalIncreaseRatePct", "상생임대주택: 임대료 증가율(%)을 입력하세요."));
+    }
+    if (!form.winWinRentalPriorLeaseMonths) {
+      errors.push(err("winWinRentalPriorLeaseMonths", "상생임대주택: 직전임대차 임대기간(개월)을 입력하세요."));
+    }
+    if (!form.winWinRentalLeaseMonths) {
+      errors.push(err("winWinRentalLeaseMonths", "상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."));
+    }
+  }
+
+  /**
+   * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.
+   *
+   * 🔑 `mode: "facts"`가 §161① 안분 입력(직전거주주택 양도일·3시점 기준시가)을 요구하지
+   *    않게 한다. 그 칸들은 ⑤가 판정 메뉴에서 감추므로, 여기서 막으면 화면에 없는 값 때문에
+   *    판정이 영구 차단된다(3중 패턴 — ⑤/④/⑧).
+   * 🔑 **이중 입력 경고는 여기 없다** — 명부를 보는 경고라 `validateStep2`에 남겼다.
+   */
+  if (primary) {
+    const rentalError = validateRentalHousingException(
+      primary.rentalHousingException,
+      primary,
+      0, // 판정 메뉴는 `form.assets[0]`만 판정한다 — 컴패니언 개념이 없다.
+      "장기임대주택 특례",
+      form.transferDate,
+      "facts",
+    );
+    if (rentalError) errors.push(err("rentalHousingException", rentalError));
+  }
+
   return errors;
 }
 
 /**
  * 사이드바·단계 배지용 — 단계별 error 개수.
  *
- * 단계 인덱스는 화면과 같다: 0=①세대 · 1=②보유 · 2=③양도예정 · 3=④결과(검증 없음).
+ * 🔑 **함수명 ≠ 화면 번호다.** 인덱스 매핑은 0=①세대 · 1=②양도 대상(`validateStep3`) ·
+ *    2=③보유 주택(`validateStep2`) · 3=④결과(검증 없음). 순서를 뒤집은 이유는
+ *    `OneHouseJudgmentCalculator.tsx`의 `STEPS` 주석에 있다(데이터 의존 방향).
  */
 export function getStepErrorCount(form: OneHouseJudgmentFormData, step: number): number {
   const errors =
     step === 0
       ? validateStep1(form)
       : step === 1
-        ? validateStep2(form)
+        ? validateStep3(form)
         : step === 2
-          ? validateStep3(form)
+          ? validateStep2(form)
           : [];
   return errors.filter((e) => e.severity === "error").length;
 }

@@ -20,17 +20,22 @@ function toggleSwitch(page: Page, titleText: string | RegExp) {
     .getByRole("switch");
 }
 
-/** ① → ② 로 넘어간다. `isOneHousehold`는 기본값 true라 누르지 않는다. */
-async function gotoStep2(page: Page) {
+/**
+ * ① → ② 양도 대상 주택. `isOneHousehold`는 기본값 true라 누르지 않는다.
+ *
+ * 🔄 2026-09-23 재배치 — §155⑳ 거주주택 특례 입력이 **이 화면으로 옮겨왔다**(거주요건을
+ * 면제하는 특례라 거주기간 입력과 같은 화면에 모았다). ⑧ 차단도 함께 `validateStep3`로 갔다.
+ */
+async function gotoSaleStep(page: Page) {
   await page.goto("/calc/one-house-exemption?new=1");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
+  await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
 }
 
 test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
   test("[OHR-1] 토글 ON이면 임대주택 1호 카드가 자동으로 열린다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
 
     const toggle = toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용");
     await expect(toggle).toBeVisible();
@@ -47,7 +52,7 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
    * 판정 메뉴에서는 그것이 **열리지 않고** 안내로 대체돼야 한다 — 세액 산식 입력이기 때문이다.
    */
   test("[OHR-2] B 시나리오를 골라도 §161 안분 입력이 뜨지 않는다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
 
     await page.getByRole("radio", { name: /임대주택을 거주주택으로 전환/ }).click();
@@ -67,14 +72,29 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
    * ⑧ 배선 — 「판정이 불가능한 입력」은 막는다. 「요건 미달」은 막지 않는다(그건 판정 결과다).
    */
   test("[OHR-3] 등록일을 비운 채 다음으로 가면 차단된다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
+
+    /*
+      🔄 2026-09-23 재배치 — §155⑳이 ② 양도 대상 화면으로 오면서 **같은 화면의 필수 3값**과
+         한 검증(`validateStep3`)을 공유하게 됐다. 배너는 **첫 error 하나만** 띄우므로
+         (`OneHouseJudgmentCalculator.tsx:66-71`) 기본값을 비워 두면 「양도 예정일을 입력하세요」가
+         먼저 뜨고 이 spec이 겨냥한 축이 가려진다. ⇒ 기본 3값을 먼저 채워 축을 남긴다.
+    */
+    await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, {
+      scope: page.getByTestId("one-house-acq-date"),
+    });
+    await fillDateAndVerify(page, { year: "2026", month: "06", day: "01" }, {
+      scope: page.getByTestId("one-house-sale-date"),
+    });
+    await page.getByTestId("one-house-sale-price").fill("900000000");
+
     await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
 
     await page.getByRole("button", { name: "다음" }).click();
 
     // 배너가 뜨고 ② 단계에 그대로 남는다.
     await expect(page.getByText(/사업자등록일을 입력하세요/)).toBeVisible();
-    await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
+    await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
   });
 
   /**
@@ -83,7 +103,7 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
    *    「과세」로 돌아오는지를 **판정 결과 화면**에서 본다.
    */
   test("[OHR-4] 요건 미충족 임대주택이면 판정이 과세로 나온다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
 
     /*
@@ -112,10 +132,7 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
     */
     await page.getByRole("switch", { name: /^임대료 5% 상한/ }).click();
 
-    await page.getByRole("button", { name: "다음" }).click();
-    await expect(page.getByText("③ 양도 예정")).toBeVisible();
-
-    // ③ — 판정에 필요한 최소 입력
+    // ② — 판정에 필요한 최소 입력 (특례와 **같은 화면**이다)
     await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, {
       scope: page.getByTestId("one-house-acq-date"),
     });
@@ -124,6 +141,9 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
     });
     await page.getByTestId("one-house-sale-price").fill("900000000");
 
+    // ③ 보유 주택·권리 — 명부는 비운 채 지나간다. CTA는 이 마지막 입력 단계에만 있다.
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
     await page.getByTestId("one-house-judge-cta").click();
 
     await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();

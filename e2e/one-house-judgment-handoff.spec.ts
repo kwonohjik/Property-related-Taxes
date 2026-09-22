@@ -25,12 +25,17 @@ function toggleSwitch(page: Page, titleText: string | RegExp) {
     .getByRole("switch");
 }
 
-/** ① → ② */
-async function gotoStep2(page: Page) {
+/**
+ * ① → ② 양도 대상 주택.
+ *
+ * 🔄 2026-09-23 재배치 — §155의3 상생임대 입력도 **이 화면으로 옮겨왔다**(거주요건 면제
+ * 특례 3종은 거주기간 입력과 같은 화면에 모았다).
+ */
+async function gotoSaleStep(page: Page) {
   await page.goto("/calc/one-house-exemption?new=1");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
+  await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
 }
 
 /** ② 에서 §155의3 상생임대 특례를 **성립하도록** 채운다. */
@@ -49,10 +54,8 @@ async function declareWinWinRental(page: Page) {
   await page.getByLabel("상생임대차 임대기간").fill("24");
 }
 
-/** ② → ③ 을 채우고 판정 결과까지 간다. */
+/** ②의 필수 3값을 채우고 ③을 지나 판정 결과까지 간다. */
 async function judge(page: Page) {
-  await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("③ 양도 예정")).toBeVisible();
   await fillDateAndVerify(page, { year: "2021", month: "03", day: "01" }, {
     scope: page.getByTestId("one-house-acq-date"),
   });
@@ -60,6 +63,9 @@ async function judge(page: Page) {
     scope: page.getByTestId("one-house-sale-date"),
   });
   await page.getByTestId("one-house-sale-price").fill("900000000");
+  // ③ 보유 주택·권리 — 명부는 비운 채 지나간다. CTA는 이 마지막 입력 단계에만 있다.
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
   await page.getByTestId("one-house-judge-cta").click();
   await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
 }
@@ -67,9 +73,10 @@ async function judge(page: Page) {
 /**
  * 계산기 0단계의 **소재지**를 채운다.
  *
- * 🔑 판정 메뉴에는 소재지 입력이 **없다** — 비과세 판정에 필요한 값이 아니기 때문이다.
- *    그래서 전달 직후 계산기 0단계는 「소재지를 입력하세요」로 막힌다. 이것은 결함이 아니라
- *    전달이 **0단계에 내려놓는 이유**다(취득가액·필요경비도 여기서 받는다).
+ * 🔑 판정 메뉴에도 소재지 칸이 생겼지만(2026-09-23 — 조정대상지역 정밀 판정용) **선택 입력**이라
+ *    비워 둘 수 있고, 이 spec은 비운 채 넘긴다. 그래서 전달 직후 계산기 0단계는
+ *    「소재지를 입력하세요」로 막힌다. 이것은 결함이 아니라 전달이 **0단계에 내려놓는 이유**다
+ *    (취득가액·필요경비도 여기서 받는다).
  */
 async function fillCalculatorAddress(page: Page) {
   await page.route("**/api/address/search*", (route) =>
@@ -123,7 +130,7 @@ async function gotoHoldingStep(page: Page) {
 test.describe("판정 메뉴 → 계산기 사실 전달", () => {
   /** 🔑 판정 결과 화면에 전달 통로가 **실제로 있다**. 없으면 사용자는 다시 입력해야 한다. */
   test("[HO-1] 판정 결과에 「이 결과로 세액 계산」 CTA가 뜬다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await judge(page);
     await expect(page.getByTestId("one-house-to-calculator")).toBeVisible();
   });
@@ -133,7 +140,7 @@ test.describe("판정 메뉴 → 계산기 사실 전달", () => {
    *    읽기 전용으로 보인다.
    */
   test("[HO-2] CTA를 누르면 계산기로 이동하고 넘겨받은 사실이 보인다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await declareWinWinRental(page);
     await judge(page);
 
@@ -152,7 +159,7 @@ test.describe("판정 메뉴 → 계산기 사실 전달", () => {
    *    사용자는 「사실이 넘어왔다」는 카드를 보면서 빈 폼을 다시 채워야 한다.
    */
   test("[HO-3] 양도일 등 공유 필드도 함께 넘어온다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await judge(page);
     await page.getByTestId("one-house-to-calculator").click();
     await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
@@ -179,7 +186,7 @@ test.describe("판정 메뉴 → 계산기 사실 전달", () => {
    *    특례가 사라졌다고 의심한다(사실은 켠 적이 없다).
    */
   test("[HO-5] 특례를 선언하지 않고 넘기면 「선언하지 않았다」고 알린다", async ({ page }) => {
-    await gotoStep2(page);
+    await gotoSaleStep(page);
     await judge(page);
     await page.getByTestId("one-house-to-calculator").click();
     await gotoHoldingStep(page);
