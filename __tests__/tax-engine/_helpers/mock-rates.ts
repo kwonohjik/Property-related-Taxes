@@ -232,7 +232,6 @@ export function makeMockRatesWithHouseEngine(): TaxRatesMap {
       specialRules: {
         type: "house_count_exclusion",
         inheritedHouseYears: 5,
-        rentalHousingExempt: true,
         // ⚠️ seed(`transfer-rate-seed.ts`)와 동일해야 한다 — 2026-07-31 정정(계획서 V-2).
         //    §167의3①1호 지방 저가주택 기준은 1억 → **3억**으로 개정됐는데 mock만 구법이라
         //    테스트가 구법 동작을 고정하고 있었다. (2주택 §167의10①9호 「기준시가 1억 이하」는

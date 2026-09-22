@@ -961,9 +961,33 @@ canonical 술어(`isLongTermRentalHousingExempt`의 유형 미선택 분기 = �
 **뮤테이션 5종 전부 KILL** — 관용도 복귀(6건 red) · legacy 기간 요건 삭제(3) ·
 legacy 등록 요건 삭제(2) · ④ 유형 미선택 분기 제거(2) · 문턱 5→4년(4).
 
-⚠️ **부수 발견 — `rules.rentalHousingExempt`가 고아가 됐다.** D16이 위 블록을 옮길 때 그
-게이트를 안 옮겼다. 세율표 스키마·seed·픽스처에는 남아 있고 값은 항상 `true`라 **동작 변화는
-없다**. 제거는 DB seed·Zod·타입을 함께 건드려야 하므로 **언급만** 한다(Surgical).
+✅ **부수 발견 해소 — `rules.rentalHousingExempt` 제거**(2026-09-22 · §5.10-E).
+
+### 5.10-E 침묵 no-op 노브 제거 — `rentalHousingExempt` (2026-09-22)
+
+D16(`60225941`)이 종전 `countEffectiveHouses`의 「배제 2: 장기임대 등록주택 (말소 전)」 블록을
+옮길 때 **그 게이트를 함께 옮기지 않아** 프로덕션 소비처가 0건이 됐다. seed 값이 항상 `true`라
+동작 변화는 없었지만, **DB에서 `false`로 바꿔도 아무 일이 없는** 노브였다 — 살아 있는 설정으로
+오인되면 「껐는데 왜 중과 배제가 되나」로 이어진다.
+
+⇒ 타입·Zod·seed·픽스처 3곳, **6개 지점 전부** 제거. 장기임대 배제의 정본은
+`isSurchargeExemptRental` → `isLongTermRentalHousingExempt`(§5.10-D)다.
+
+**제거의 위험은 파싱에 있었다.** `parseHouseCountExclusion`은 `safeParse` 실패 시
+`TaxRateValidationError`를 **throw**한다(계산 전체가 죽는다). Supabase `tax_rates`의 기존 row는
+아직 이 키를 **갖고 있으므로** 스키마가 여분 키를 거부하면 안 된다. `z.object`는 기본
+non-strict라 strip하지만 나중에 `.strict()`가 붙으면 **조용히 깨진다** ⇒ HC-1이 고정한다
+(`__tests__/tax-engine/rate-table-schema.test.ts` HC-1~3).
+뮤테이션 3종 KILL — `.strict()` 부착 · 살아있는 키 optional화 · 필드 required 복귀.
+
+**🟠 형제 고아가 하나 더 있다 — `inheritedHouseYears`.** 같은 D16에서 같은 방식으로 끊겼다:
+엔진은 로컬 상수 `INHERITED_HOUSE_SURCHARGE_YEARS = 5`
+(`multi-house-surcharge-count.ts:449`)를 쓰고 DB 값을 **읽지 않는다**(소비처 0건).
+`rentalHousingExempt`와 같은 침묵 no-op 노브다. 다만 **다른 조문 축(§167의3①7호)** 이고
+사용자가 요청한 범위 밖이라 **건드리지 않았다**(Surgical) — 치울지는 별건 판단.
+
+⚠️ `officetelStartDate`는 **고아가 아니라 의도적 보존**이다(F-11 · `@deprecated` 주석에 근거).
+혼동해 함께 지우지 말 것.
 
 **anchor**: `__tests__/lib/calc/selling-house-long-term-rental-surcharge.anchor.test.ts`
 (LR-1~12 · LR-A~G) · `__tests__/calc/selling-house-long-term-rental-section.test.tsx`(SR-1~7).
