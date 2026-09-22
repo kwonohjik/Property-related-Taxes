@@ -314,8 +314,15 @@ CI E2E `transfer-burdened-gift-carryover-block.spec.ts` **CB-2 실패**로 드�
 | ③ normalize | 기존 마이그레이션 | ✅ 있음 |
 | ④ **API 변환** | `buildGeneralBuildingValuation`에 `landCarryoverTaxation` 추가 | 🔴 **이번 작업** |
 | ⑤ UI 위젯 | `CarryoverGiftBlock` | ✅ 있음 |
-| ⑥ 사이드바 | 취득가액이 비교과세 후 값으로 바뀌는지 | 🟡 확인 필요 |
-| ⑦ 결과 카드 | `CarryoverComparisonCard`가 GB aggregate에서 렌더되는지 | 🟡 확인 필요 |
+| ⑥ 사이드바 | 취득가액이 비교과세 후 값으로 바뀌는지 | 🟡 **여전히 확인 필요** (아래 반증 기록) |
+| ⑦ 결과 카드 | `CarryoverComparisonCard`가 GB aggregate에서 렌더되는지 | ✅ **K-16에서 종결** — 「이미 되고 있었다」(D3 정정) |
+
+> 🔴 **⑥을 닫지 않은 이유 (2026-09-22 감사).** 「`transfer-per-asset-summary.ts:134`에
+> `carryover_gift` 분기가 있으니 ⑥도 닫혔다」는 판단이 나왔으나 **코드로 반증했다.**
+> 그 줄은 `isPlainLumpSumAsset`의 **제외 조건**이다 — 주석이 「기준시가를 전용 경로가 따로
+> 만드는 자산은 뺀다 … 이월과세(증여자 기준시가)」라고 명시한다. 즉 이월과세를 **공통
+> 프리뷰에서 빼는** 줄이지, 사이드바가 비교과세 후 취득가액을 표시한다는 증거가 아니다.
+> ⇒ ⑥은 **미확인 그대로** 둔다([[feedback_guard_uses_proxy_not_the_claim]]).
 | ⑧ **validation** | GB × 이월과세 검증 **0건** | 🔴 **이번 작업** |
 | ⑨⑩ Zod enum | `landAcquisitionCause`에 `carryover_gift` 존재 | ✅ 있음 |
 | ⑪ 자산-수준 `acquisitionDate` fallback | 증여일 = 취득일 | ✅ 있음 |
@@ -323,7 +330,7 @@ CI E2E `transfer-burdened-gift-carryover-block.spec.ts` **CB-2 실패**로 드�
 | ⑬ body spread | top-level `carryoverTaxation`은 이미 감 | ✅ (GB는 미사용) |
 | ⑭ route 매핑 | `coerceGeneralBuildingPayload`가 날짜 2필드 변환 | ✅ 있음 |
 
-**변경은 ④·⑧ 두 곳**이고 나머지는 확인 작업이다. ⑥⑦은 🟡 — **확인하지 않았다.**
+**변경은 ④·⑧ 두 곳**이고 나머지는 확인 작업이다. ~~⑥⑦은 🟡 — **확인하지 않았다.**~~ → **⑦ 종결(K-16) · ⑥ 미확인 유지**(2026-09-22 감사).
 
 ---
 
@@ -331,8 +338,8 @@ CI E2E `transfer-burdened-gift-carryover-block.spec.ts` **CB-2 실패**로 드�
 
 - [x] §6 **Q1~Q4 전건 확정** (2026-08-10)
 - [ ] 법 §97의2① 본문 **직독**(§5 ⚠️ — MCP 쿼터 소진으로 미완)
-- [ ] 케이스 인벤토리 K-01~K-18 전 행 anchor
-- [ ] **K-17 E2E** — 브라우저에서 세액이 실제로 바뀌는 것 확인
+- [x] 케이스 인벤토리 K-01~K-18 전 행 anchor — **§7 표 전 행 ✅ green**(2026-09-22 감사 확인)
+- [x] **K-17 E2E** — `e2e/general-building-carryover.spec.ts` 존재 · §7 K-17 ✅ green
 - [ ] mutation probe — ④ 배선을 되돌리면 K-12가 실패함을 실측
 - [ ] tsc 0 · lint 0 errors · `npm run test:transfer` 회귀 0
-- [ ] ⑥⑦ 확인 결과를 문서에 기록 (렌더되지 않으면 그것도 이번 범위)
+- [~] ⑥⑦ 확인 결과 기록 — **⑦만 완료**(K-16). ⑥은 위 반증 기록대로 **미확인**이 결론이고, 그 사실을 문서에 남긴 것으로 갈음한다.

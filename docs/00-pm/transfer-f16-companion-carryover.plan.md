@@ -5,7 +5,12 @@
 > `donorRelation`·`donorDeceased` 침묵 strip을 수정했다(= 리뷰 F15). 2필드 추가가 아니라
 > **열거 자체를 spread로 교체**해 같은 결함의 재발을 구조적으로 막았고, anchor 7건(구별력 5 red)을
 > 심었다. 실측 22,450,000 과대 해소(시나리오 의존 — 계획서 축 C의 106,722,000은 다른 픽스처 값).
-> ⚠️ 이 수정은 **단건 경로 전용**이다 — 컴패니언(⑫⑭)은 여전히 결함 상태이며 Q-1이 남아 있다.
+> ~~⚠️ 이 수정은 **단건 경로 전용**이다 — 컴패니언(⑫⑭)은 여전히 결함 상태이며 Q-1이 남아 있다.~~
+> 🔴 **위 줄은 stale이다**(2026-09-22 감사 · 코드로 반증). Q-1은 **(a) 정식 지원**으로 확정돼 구현됐다:
+> ⑫ `lib/api/transfer-tax-schema-sub.ts:705` `carryoverTaxation: carryoverTaxationEngineShape.optional()` ·
+> ⑭ `app/api/calc/transfer/bundled-companion-split.ts:217·232·257`(`splitCarryover` 안분) ·
+> ④ `lib/calc/transfer-tax-api-companion-payload.ts:396·399`(이월과세 전용 서브객체).
+> ❌ 미결로 재기재 금지.
 > 아래 D-6 서술은 착수 시점 기록으로 보존한다.
 
 > ---

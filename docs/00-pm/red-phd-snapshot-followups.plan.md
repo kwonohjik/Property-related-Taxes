@@ -335,6 +335,11 @@ PR #1267에서 재개발 호출부에 대해 고친 것과 **같은 결함**이�
 
 ## 범위 밖
 
+> 🔴 **2026-09-22 감사 — 첫 항목(`transfer-tax-validate-redev.ts` 인라인 트리거 통합)은 이미 닫혔다.**
+> `lib/calc/transfer-tax-validate-redev.ts:337`이 `isRedevPhdTriggered(asset)` **단일 소스**를 호출하고
+> `:17`에서 import한다(:332 주석 「판정은 `isRedevPhdTriggered` **단일 소스**다(2026-08-24 B-3)」).
+> B-3에서 함께 정리됐다 — 「범위 밖」 표기가 stale이었다. ❌ 미결 재기재 금지.
+
 - `transfer-tax-validate-redev.ts`의 인라인 트리거 판정 통합 — `isHousingRightReceiveEstimated`
   플래그가 validate 내부 계산이라 술어 시그니처를 넓혀야 한다(#1268 §3-2에 근거 기재).
   B-3에서 의제취득일을 손대게 되면 **그때 함께** 정리하는 편이 낫다.
