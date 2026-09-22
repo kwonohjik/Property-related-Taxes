@@ -20,7 +20,6 @@ import { makeHouse } from "../_helpers/multi-house-mock";
 // production seed와 동일: non_capital=3억, local 미제공(dead) — 실 런타임 재현
 const prodRules: HouseCountExclusionRules = {
   type: "house_count_exclusion",
-  inheritedHouseYears: 5,
   lowPriceThreshold: { capital: null, non_capital: 300_000_000 },
   presaleRightStartDate: "2021-01-01",
   officetelStartDate: "2022-01-01",

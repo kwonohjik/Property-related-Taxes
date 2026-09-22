@@ -19,7 +19,6 @@ import type { SurchargeSpecialRulesData } from "@/lib/tax-engine/schemas/rate-ta
 
 export const defaultRules: HouseCountExclusionRules = {
   type: "house_count_exclusion",
-  inheritedHouseYears: 5,
   lowPriceThreshold: {
     capital: null,         // 수도권은 저가 배제 없음
     non_capital: 100_000_000,

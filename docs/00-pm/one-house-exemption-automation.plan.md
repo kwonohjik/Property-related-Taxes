@@ -980,11 +980,22 @@ non-strict라 strip하지만 나중에 `.strict()`가 붙으면 **조용히 깨�
 (`__tests__/tax-engine/rate-table-schema.test.ts` HC-1~3).
 뮤테이션 3종 KILL — `.strict()` 부착 · 살아있는 키 optional화 · 필드 required 복귀.
 
-**🟠 형제 고아가 하나 더 있다 — `inheritedHouseYears`.** 같은 D16에서 같은 방식으로 끊겼다:
-엔진은 로컬 상수 `INHERITED_HOUSE_SURCHARGE_YEARS = 5`
-(`multi-house-surcharge-count.ts:449`)를 쓰고 DB 값을 **읽지 않는다**(소비처 0건).
-`rentalHousingExempt`와 같은 침묵 no-op 노브다. 다만 **다른 조문 축(§167의3①7호)** 이고
-사용자가 요청한 범위 밖이라 **건드리지 않았다**(Surgical) — 치울지는 별건 판단.
+✅ **형제 고아 `inheritedHouseYears`도 제거**(2026-09-22 · 같은 절차). 같은 D16에서 같은
+방식으로 끊겼다 — 엔진은 `INHERITED_HOUSE_SURCHARGE_YEARS = 5`를 쓰고 DB 값을 읽지 않는다.
+
+🔴 **「소비처 0건」이라는 종전 서술은 부정확했다.** 부정 단언을 grep으로만 믿지 않고
+뮤테이션으로 재확인한 결과(seed 값 5→99) **1건이 깨졌다** —
+`__tests__/tax-engine/_helpers/mock-seed-parity.test.ts`의 mock↔seed 정합 가드다.
+프로덕션 소비처는 0건이 맞지만 **테스트 소비처가 있었다**
+([[feedback_negative_assertion_needs_mutation_probe]]). 그 가드는 seed와 mock을 함께
+지우면 그대로 살아남고, Q4(세 곳 중 seed에만 되살리기)가 그것을 고정한다.
+
+**§167의3①7호의 5년은 시행령이 정한 수치**이고, 규칙 객체 자체가 optional
+(`houseCountExclusionRules?`)이라 DB 키가 없으면 `undefined`가 된다 — 세액을 가르는 수치를
+그런 경로에 두면 키 하나 빠질 때 조용히 무너진다. ⇒ 엔진 상수를 정본으로 못박았다.
+
+뮤테이션 4종 KILL — `.strict()` 부착(HC-1) · 필드 required 복귀(111건 red) ·
+엔진 상수 5→4(정본 생존) · seed에만 되살리기(정합 가드 생존).
 
 ⚠️ `officetelStartDate`는 **고아가 아니라 의도적 보존**이다(F-11 · `@deprecated` 주석에 근거).
 혼동해 함께 지우지 말 것.
