@@ -47,6 +47,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         primaryKind: primary?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode,

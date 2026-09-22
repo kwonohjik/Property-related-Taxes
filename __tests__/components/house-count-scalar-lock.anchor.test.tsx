@@ -196,3 +196,76 @@ describe("SL Step4 스칼라 버튼 잠금", () => {
     expect(screen.getByLabelText("정확한 세대 보유 주택 수")).not.toBeDisabled();
   });
 });
+
+/**
+ * ── OH-34 레거시 표식 UI ──
+ *
+ * | # | 주장 |
+ * |---|---|
+ * | SL-9 | 표식 ON → 레거시 카드(저장 당시 값으로 계산) + 종전 불일치 카드 **미노출** |
+ * | SL-10 | 표식 ON → 「목록 기준으로 전환」이 표식을 끄고 스칼라를 파생값으로 맞춘다 |
+ * | SL-11 | 🔴 표식 ON 이면 명부를 편집해도 스칼라를 덮지 않는다 — 전환 버튼만이 끈다 |
+ * | SL-12 | 표식 ON 이면 C-1 「목록 기준으로 산정됩니다」 안내를 숨긴다 (그 상태에선 거짓) |
+ */
+describe("SL OH-34 레거시 표식", () => {
+  const two = [house("h1", "2018-01-01"), house("h2", "2019-01-01")]; // 파생 3채
+
+  function renderList(over: Partial<TransferFormData>) {
+    const onChange = vi.fn();
+    render(<HousesListSection form={baseForm(over)} onChange={onChange} />);
+    return onChange;
+  }
+
+  it("[SL-9] 표식 ON → 레거시 카드가 뜨고 종전 불일치 카드는 안 뜬다", () => {
+    renderList({ householdHousingCount: "1", houses: two, legacyHouseCountPrecedence: true });
+    expect(screen.getByTestId("house-count-legacy-precedence")).toBeTruthy();
+    expect(screen.queryByTestId("house-count-mismatch")).toBeNull();
+  });
+
+  it("[SL-9-twin] 표식 OFF → 종전 불일치 카드 (구별력 확인)", () => {
+    renderList({ householdHousingCount: "1", houses: two });
+    expect(screen.queryByTestId("house-count-legacy-precedence")).toBeNull();
+    expect(screen.getByTestId("house-count-mismatch")).toBeTruthy();
+  });
+
+  it("[SL-10] 「목록 기준으로 전환」 → 표식 OFF + 스칼라를 파생값 3으로", () => {
+    const onChange = renderList({
+      householdHousingCount: "1",
+      houses: two,
+      legacyHouseCountPrecedence: true,
+    });
+    fireEvent.click(screen.getByTestId("house-count-adopt-roster"));
+    expect(onChange).toHaveBeenCalledWith({
+      legacyHouseCountPrecedence: false,
+      householdHousingCount: "3",
+    });
+  });
+
+  it("[SL-11] 🔴 표식 ON 이면 명부를 편집해도 스칼라를 덮지 않는다", () => {
+    const onChange = renderList({
+      householdHousingCount: "1",
+      houses: two,
+      legacyHouseCountPrecedence: true,
+    });
+    fireEvent.click(screen.getByText("+ 주택 추가"));
+    const patch = onChange.mock.calls.at(-1)![0];
+    expect(patch.houses).toHaveLength(3);
+    expect(patch.householdHousingCount).toBeUndefined();
+  });
+
+  it("[SL-11-twin] 표식 OFF 면 같은 조작이 스칼라를 갱신한다 (구별력 확인)", () => {
+    const onChange = renderList({ householdHousingCount: "1", houses: two });
+    fireEvent.click(screen.getByText("+ 주택 추가"));
+    expect(onChange.mock.calls.at(-1)![0].householdHousingCount).toBe("3");
+  });
+
+  it("[SL-12] 표식 ON 이면 C-1 「목록 기준으로 산정됩니다」를 숨긴다 — 그 상태에선 거짓", () => {
+    renderList({ householdHousingCount: "1", houses: two, legacyHouseCountPrecedence: true });
+    expect(screen.queryByText(/목록이 비어 있을 때만 사용됩니다/)).toBeNull();
+  });
+
+  it("[SL-12-twin] 표식 OFF 면 C-1 이 그대로 뜬다 (구별력 확인)", () => {
+    renderList({ householdHousingCount: "1", houses: two });
+    expect(screen.getByText(/목록이 비어 있을 때만 사용됩니다/)).toBeTruthy();
+  });
+});

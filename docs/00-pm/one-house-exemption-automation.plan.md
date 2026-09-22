@@ -1160,9 +1160,18 @@ Q-8 이후에는 2주택으로 판정된다. 현행이 명부와 모순된 스�
 
 - 🔴 **스칼라 버튼 비활성화 + 「명부 기준 N채」 표시**를 하지 않았다. 스칼라는 여전히 편집 가능하고,
   불일치는 **경고 + 「목록 기준으로 계산합니다」 문구**로만 알린다. ⇒ 불일치가 **여전히 생길 수 있다**.
-- 🔴 **OH-34 레거시 표식 미구현**. 스칼라 ≠ 명부로 저장된 이력을 **재계산하면 세액이 달라질 수 있다**
-  (저장된 결과 자체는 불변). 종전에도 그 상태는 경고를 받고 있었으므로 침묵 변경은 아니지만,
-  위 「기존 이력(세액 보존)」 약속은 **아직 지켜지지 않았다**.
+- ~~🔴 **OH-34 레거시 표식 미구현**~~ → ✅ **종결(2026-09-22)**. `legacyHouseCountPrecedence`
+  신설 — `resumeTransferRecord`가 복원 시 `houseCountDivergedFromRoster`로 판정해 붙이고,
+  `resolveHouseholdHousingCount`가 **F1 게이트보다 앞서** 저장 당시 스칼라를 돌려준다.
+  끄는 경로는 「목록 기준으로 전환」 버튼 하나뿐이며, 표식이 켜진 동안에는
+  `housesPatchWithDerivedCount`가 스칼라 동기화를 **건너뛴다**(보완 중에 저장 값이 덮이면
+  「전환할 때만 명부로 센다」가 깨진다).
+  - ⚠️ **복원은 shallow merge 다**(`transfer-resume-entry.ts:136`) ⇒ 어긋날 때 `true`만 쓰면
+    깨끗한 record 가 **직전 폼의 표식을 물려받는다**. `false`도 반드시 함께 쓴다(anchor R-4d).
+  - 인자를 **필수**로 둬 컴파일러가 호출부 7곳을 전부 찾게 했다(`provisoGate` 때와 같은 기법).
+  - 안전망: HC-10(5) · HC-11(5) 술어 · R-4(5) 복원 배선 · SL-9~12(8) 컴포넌트 ·
+    뮤테이션 8종 전건 KILLED · 전건 회귀 2190파일 22,970 통과.
+  - ❌ 미결 재기재 금지.
 - ⑤ 노출 게이트 다수가 아직 스칼라를 읽는다(`house-count-inputs-scope.ts` · `Step4.tsx` 주택수 버튼 ·
   `SurchargeJudgmentSection` · `MergedHouseholdRightSection` 등). **중과 축은 엔진이 이미 명부 정본**이라
   (`house-count-divergence.ts:3-5`) 이 PR이 새 불일치를 만든 것은 아니지만, V-20 전수 분류대로 정리해야 한다.

@@ -59,6 +59,14 @@ export interface ResolveHouseholdHousingCountArgs {
   declared: number;
   /** ④ 다른 보유 주택 목록. */
   houses: readonly HouseRowForCount[] | undefined;
+  /**
+   * OH-34 레거시 표식(`form.legacyHouseCountPrecedence`). 켜져 있으면 **명부보다 스칼라가 앞선다**.
+   *
+   * ⚠️ **optional 로 두지 않는다** — 빠뜨린 호출부가 조용히 「레거시 아님」으로 동작하면
+   *    그 경로만 세액이 달라진다. 필수로 두어 컴파일러가 전 호출부를 찾게 한다
+   *    (이 계획서가 `provisoGate` 인자를 `string`→`number`로 바꿀 때 쓴 것과 같은 기법).
+   */
+  legacyPrecedence: boolean;
 }
 
 /**
@@ -69,10 +77,14 @@ export interface ResolveHouseholdHousingCountArgs {
  * 분양권·입주권은 세지 않는다(F7 — ①은 「주택」만 센다).
  *
  * D-4 유지: 1주택자는 명부를 채울 필요가 없다 ⇒ 명부가 비면 스칼라가 그대로 답이다.
+ *
+ * OH-34: 레거시 표식이 켜진 폼은 **저장 당시 스칼라**를 그대로 쓴다(세액 보존) —
+ * 사용자가 「명부 기준으로 전환」을 누를 때만 표식이 꺼지고 명부로 센다.
  */
 export function resolveHouseholdHousingCount(
   args: ResolveHouseholdHousingCountArgs,
 ): number {
+  if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (args.primaryKind !== "housing") return args.declared; // F1
   const rows = countedHouseRows(args.houses);
   if (rows === 0) return args.declared; // D-4 간이 입력
@@ -121,9 +133,32 @@ export function houseRosterIsAuthoritative(
 export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   houses: T[],
   primaryKind: string | undefined,
+  legacyPrecedence: boolean,
 ): { houses: T[]; householdHousingCount?: string } {
+  // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
+  // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
+  if (legacyPrecedence) return { houses };
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses };
   return { houses, householdHousingCount: String(1 + countedHouseRows(houses)) };
+}
+
+/**
+ * OH-34 — **복원된 이력에 레거시 표식을 붙일 것인가**.
+ *
+ * 저장 당시 스칼라가 명부 파생값과 **어긋난** record 를 다시 계산하면 세액이 바뀐다
+ * (P7-2 이후 비과세·장특 표2 판정도 명부를 쓴다 — 계획서 OH-33). 조용히 바꾸지 않는다.
+ *
+ * ⚠️ 복원은 `updateFormData` **shallow merge** 다(`transfer-resume-entry.ts:136`).
+ *    직전 폼의 표식이 그대로 남을 수 있으므로 호출부는 **false 도 반드시 써야** 한다
+ *    — 「어긋나면 켠다」만 하면 깨끗한 record 가 앞 폼의 표식을 물려받는다.
+ */
+export function houseCountDivergedFromRoster(
+  primaryKind: string | undefined,
+  houses: readonly HouseRowForCount[] | undefined,
+  declared: number,
+): boolean {
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
+  return declared !== 1 + countedHouseRows(houses);
 }
 
 /**

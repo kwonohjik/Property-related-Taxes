@@ -423,6 +423,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primaryKind: primary.assetKind,
       declared: parseInt(form.householdHousingCount) || 0,
       houses: form.houses,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
@@ -545,6 +546,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         primaryKind: primary.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }).mode;

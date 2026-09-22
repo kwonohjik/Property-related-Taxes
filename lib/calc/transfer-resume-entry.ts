@@ -28,6 +28,7 @@
 import type { useRouter } from "next/navigation";
 import type { CalculationRecord } from "@/lib/storage/types";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { houseCountDivergedFromRoster } from "@/lib/calc/household-house-count";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -132,7 +133,18 @@ export async function resumeTransferRecord(
   const migrated = Array.isArray(form?.assets)
     ? { ...form, assets: form.assets.map((a) => migrateAsset({ ...a })) }
     : form;
-  updateFormData(migrated);
+  /**
+   * OH-34 — 저장 당시 스칼라가 명부와 **어긋난** 이력이면 레거시 표식을 붙여 그 값으로 계산한다.
+   *
+   * ⚠️ `updateFormData`는 **단순 merge**다(위 주석과 같은 이유). 「어긋나면 켠다」만 하면
+   *    깨끗한 record를 이어서 열 때 **직전 폼의 표식이 그대로 남는다** ⇒ `false`도 함께 쓴다.
+   */
+  const legacyHouseCountPrecedence = houseCountDivergedFromRoster(
+    migrated?.assets?.[0]?.assetKind,
+    migrated?.houses,
+    parseInt(migrated?.householdHousingCount || "1", 10) || 0,
+  );
+  updateFormData({ ...migrated, legacyHouseCountPrecedence });
   setStep(0);
   router.push(TRANSFER_ROUTE);
   return null;

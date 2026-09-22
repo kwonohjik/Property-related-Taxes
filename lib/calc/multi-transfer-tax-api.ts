@@ -211,6 +211,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         primaryKind: primaryKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode,
@@ -313,6 +314,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       primaryKind,
       declared: parseInt(form.householdHousingCount) || 0,
       houses: form.houses,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
