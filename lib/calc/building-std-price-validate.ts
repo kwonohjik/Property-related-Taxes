@@ -14,6 +14,7 @@ import {
   resolveMechParkingFormula,
   normalUseRatioError,
   remodelYearError,
+  builtYearOrderError,
 } from "@/lib/tax-engine/data/building-standard-price";
 import {
   isSameAdjustmentPeriodConversion,
@@ -111,6 +112,11 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
     const y = intOrUndef(f.valuationYear);
     if (y === undefined) return "상속·증여일을 입력하세요.";
 
+    // 신축연도 ≤ 평가연도 — 아래 대수선 검증보다 **앞**에 둔다. 둘 다 어긋난 입력에서
+    // 「대수선이 신축보다 앞선다」가 아니라 근본 원인인 신축연도를 먼저 알려주기 위해서다.
+    const builtErr = builtYearOrderError(builtYear, y, "평가연도");
+    if (builtErr) return builtErr;
+
     // 대수선(리모델링)연도 — 엔진(`calcEffectiveResidualRate`)과 **같은 술어를 같은 인자로** 부른다.
     // 잔가율 할증은 상증에만 적용되므로 이 분기에 둔다.
     const remodelErr = remodelYearError(intOrUndef(f.remodelYear), builtYear, y);
@@ -165,6 +171,12 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
     const tY = intOrUndef(f.transferYear);
     if (acqY !== undefined && tY !== undefined && tY < acqY) {
       return `양도연도(${tY})가 취득연도(${acqY})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`;
+    }
+    // 신축연도 ≤ 양도연도 — 상증 평가연도 축과 **같은 leaf** 를 쓴다.
+    // 양도연도 칸이 숨는 모드(공동주택 환산·취득 전용)는 위 가시성 leaf 가 이미 걸러낸다.
+    if (tY !== undefined) {
+      const builtErr = builtYearOrderError(builtYear, tY, "양도연도");
+      if (builtErr) return builtErr;
     }
   }
 
