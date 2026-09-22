@@ -56,7 +56,8 @@ const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
  */
 const UNAVOIDABLE_MOVED_TO_ROW = true;
 const MARRIAGE = /혼인합가일/;
-const TEMP_TWO = /일시적 2주택 특례 해당/;
+// 🔄 토글 제거(2026-09-22) — 축 제목으로 셀렉터를 옮겼다. 종전 「일시적 2주택 특례 해당」은 없다.
+const TEMP_TWO = /일시적 2주택 특례 \(§155①\)/;
 /**
  * 🔄 **§155⑥1호은 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 · P7-3).
  *    정본 `HouseEntry.oneHouseCulturalHeritage` · 입력 `HouseEntryOneHouseFactsSection`.
@@ -96,9 +97,11 @@ const fullProps = (f: TransferFormData) => ({
     isOneHousehold: true,
     isHousing: true,
     householdHousingCount: 2,
-    temporaryTwoHouseSpecial: f.temporaryTwoHouseSpecial,
+    temporaryTwoHouseApplies: f.temporaryTwoHouseSpecial,
   }),
   primaryAcquisitionDate: "2019-03-01",
+  // §155① 신규주택은 이제 명부 파생값이다 — 이 시료는 폼 필드를 그대로 흘려보낸다.
+  derivedNewHouseAcquisitionDate: f.newHouseAcquisitionDate || undefined,
 });
 
 describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
@@ -131,7 +134,13 @@ describe("CM-1·2 계산기 `mode=\"calc\"`", () => {
 
 describe("CM-3 판정 메뉴(기본 모드)는 전부 그린다 — CM-2의 **긍정 짝**", () => {
   it("[CM-3] 같은 컴포넌트가 full에서는 네 특례를 모두 그린다", () => {
-    const f = form({ temporaryTwoHouseSpecial: true });
+    /**
+     * ⚠️ `newHouseAcquisitionDate`가 있어야 §155① 블록이 그려진다 (2026-09-22).
+     *    토글이 사라지고 **신규주택이 특정돼야** 그 축을 그린다 — 특정되지 않으면 화면이
+     *    「신규주택이 없다」고 말하는 대신 축 자체를 숨긴다(`TempTwoHouseCoreBlocks` 조기 반환).
+     *    이 시료는 `fullProps`가 그 값을 `derivedNewHouseAcquisitionDate`로 흘려보낸다.
+     */
+    const f = form({ temporaryTwoHouseSpecial: true, newHouseAcquisitionDate: "2023-05-01" });
     render(<TemporaryTwoHouseSection form={f} onChange={() => {}} {...fullProps(f)} />);
     expect(shows(TEMP_TWO)).toBe(true);
     expect(shows(REPLACEMENT)).toBe(true);

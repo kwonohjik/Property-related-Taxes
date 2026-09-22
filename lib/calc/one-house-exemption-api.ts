@@ -27,6 +27,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
+import { temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
@@ -160,7 +161,14 @@ export function buildOneHouseExemptionApiBody(
         isOneHousehold: form.isOneHousehold,
         isHousing: primary.assetKind === "housing",
         householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
-        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
       }).mode;
       const reason = effectiveProvisoReason(mode, form.provisoReason);
       return reason

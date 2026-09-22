@@ -38,7 +38,12 @@ import {
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
-import type { OneHouseJudgeInput, OneHousePendingCondition, OneHouseUndetermined } from "./types";
+import type {
+  OneHouseJudgeInput,
+  OneHousePendingCondition,
+  OneHouseUndetermined,
+  OneHouseUnmetException,
+} from "./types";
 
 type OneHouseRule = OneHouseSpecialRulesData["one_house_exemption"];
 
@@ -327,4 +332,137 @@ export function collectUndetermined(
   }
 
   return undetermined;
+}
+
+/**
+ * 「선언했는데 왜 적용되지 않았는가」 수집 — §155④⑤ 합가 축 (2026-09-22).
+ *
+ * ## 왜 필요했나
+ *
+ * 합가일을 입력하고 「세대 내 먼저 양도하는 주택」까지 켰는데 과세가 나오면, 종전에는 화면에
+ * **아무 단서도 없었다**. `pending`은 기한 초과만, `undetermined`는 자료 부재만 담기 때문이다.
+ * 제보 사례(혼인합가 2017-03-11 · 양도주택 취득 2017-08-31 · 3주택)는 `matchMergeWindow`의
+ * **합가 전 취득** 조건에서 탈락했는데 `pending=[]`·`undetermined=[]`로 나왔다.
+ *
+ * ## 🔑 성립 판정은 정본이 한다
+ *
+ * 이 함수는 **성립 여부를 다시 판정하지 않는다**. `resolveMergeDeeming`·
+ * `resolveMergeOverlapDeeming`(정본)이 `undefined`를 돌려준 경우에만 들어와, **사유만** 열거한다.
+ * 정본과 별도로 성립을 판정하면 두 벌이 되어 「비과세인데 불성립 사유가 뜨는」 모순이 난다.
+ * 그 계약은 `merge-unmet-reasons.anchor.test.ts`의 드리프트 가드가 고정한다.
+ *
+ * ## 🔑 기한 초과는 여기서 말하지 않는다
+ *
+ * `collectPendingConditions`의 합가 축이 **날짜와 함께** 안내한다(`155-5-marriage-merge`).
+ * 두 곳에서 같은 사실을 말하면 어느 쪽이 정본인지 흐려진다.
+ */
+export function collectUnmetExceptions(
+  input: OneHouseJudgeInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+): OneHouseUnmetException[] {
+  const rule = oneHouseRules.one_house_exemption;
+  const unmet: OneHouseUnmetException[] = [];
+
+  /**
+   * 🔴 **자산 게이트** — `checkExemptionCore`(`transfer-tax-exemption.ts`)의 진입 조건과 같다.
+   *
+   * §155④⑤는 **주택 양도** 특례다. 입주권 양도는 §89①4호가 따로 판정하고, route가
+   * `applyOneRightVerdict`로 비과세를 **켠다**. 그 경로에서 이 함수가 사유를 내면
+   * 「비과세인데 합가 요건 미충족 카드가 뜨는」 모순이 난다 — 사유는 `judgment`에 spread로
+   * 그대로 실려 나가기 때문이다(`one-right-verdict.ts:142`).
+   */
+  if (input.propertyType !== "housing" || !input.isOneHousehold) return unmet;
+
+  /**
+   * §155④⑤ — 혼인이 먼저다(E-3.5와 같은 순서). 둘 다 입력돼 있으면 혼인 축으로 안내한다.
+   * 입력이 아예 없으면 **선언하지 않은 특례**이므로 아무것도 내지 않는다.
+   */
+  const marriageDate = input.marriageMerge?.marriageDate;
+  const parentalCareDate = input.parentalCareMerge?.mergeDate;
+  const mergeDate = marriageDate ?? parentalCareDate;
+  if (!mergeDate) return unmet;
+
+  const isMarriage = marriageDate !== undefined;
+  const mergeLabel = isMarriage ? "혼인한 날" : "합친 날";
+  const reasons: string[] = [];
+
+  // ── 창(窓) 조건 — `matchMergeWindow`(requirements.ts)의 각 탈락 지점과 1:1 ──
+  if (input.isFirstTransferredInMerge !== true) {
+    reasons.push(
+      "「세대 내 먼저 양도하는 주택」으로 선언하지 않았습니다 — 합가 특례는 합가 후 세대에서 먼저 양도하는 주택에만 적용됩니다.",
+    );
+  }
+  if (input.transferDate < mergeDate) {
+    reasons.push(
+      `양도일(${fmtDate(input.transferDate)})이 ${mergeLabel}(${fmtDate(mergeDate)})보다 빠릅니다 — 합가로 2주택이 되기 전의 양도입니다.`,
+    );
+  }
+  if (input.acquisitionDate > mergeDate) {
+    reasons.push(
+      `양도 주택을 ${mergeLabel}(${fmtDate(mergeDate)}) 이후인 ${fmtDate(input.acquisitionDate)}에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.`,
+    );
+  }
+
+  // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──
+  const count = input.householdHousingCount;
+  if (count === 3) {
+    /**
+     * 3주택은 §155①과 **겹친 경우만** 인정된다(F-1 — 사전-2025-법규재산-1240 ·
+     * 서면-2022-법규재산-5124). 토글을 켜지 않으면 `temporaryTwoHouse`가 아예 만들어지지 않아
+     * (`transfer-tax-api-body-blocks.ts` `buildHouseholdSpecialPayload`) 중첩 분기에 들어가지 못한다.
+     */
+    if (!input.temporaryTwoHouse) {
+      /**
+       * §155①은 이제 **명부에서 자동 도출**된다(`resolveTemporaryTwoHouse`) — 사용자가 켤
+       * 토글이 없다. 도출이 성립하지 않는 경우는 「양도주택보다 나중 취득한 주택이 명부에
+       * 없거나 둘 이상」뿐이므로, 안내도 **명부를 가리켜야** 한다.
+       * (종전 문구는 「『일시적 2주택 특례 해당』을 함께 선언해야 합니다」였다 — 2026-09-22
+       *  토글 제거로 **존재하지 않는 컨트롤을 누르라는 안내**가 되어 정정했다.)
+       */
+      reasons.push(
+        "세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 신규 주택(양도 주택보다 나중에 취득한 주택)이 하나로 특정되지 않습니다.",
+      );
+    } else if (
+      // 규칙 행이 없으면 정본(`resolveMergeOverlapDeeming`)도 기간을 보지 않고 불성립시킨다 —
+      // 여기서도 「기간 미충족」이라 단정하지 않는다(규칙을 못 읽은 것과 요건 미충족은 다르다).
+      oneHouseRules.temporary_two_house !== undefined &&
+      !evaluateTemporaryTwoHouseTiming(input, oneHouseRules.temporary_two_house).timing.overall
+    ) {
+      reasons.push(
+        "겹쳐 있는 일시적 2주택 특례가 기간 요건(종전주택 취득 후 1년 경과 후 신규주택 취득 · 신규주택 취득일부터 처분기한 내 양도)을 충족하지 않습니다.",
+      );
+    }
+  } else if (count !== undefined && count !== 2) {
+    reasons.push(
+      `세대 주택 수가 ${count}채입니다 — 합가 특례는 2주택(일시적 2주택 특례와 겹친 경우 3주택)까지만 적용됩니다.`,
+    );
+  }
+
+  /**
+   * ── §154① 보유·거주 ──
+   * 의제(①)가 성립해도 §154①(②)은 **따로 충족**해야 한다(`transfer-tax-exemption.ts` E-3.5의
+   * `mergeBasis && meetsOneHouseHoldingResidence` 연언). 위 사유가 하나도 없는데 과세라면
+   * 남은 원인은 이것뿐이다.
+   */
+  if (reasons.length === 0 && !meetsOneHouseHoldingResidence(input, rule)) {
+    reasons.push(
+      `${shortArticle(TRANSFER.ONE_HOUSE_REQUIREMENT)}① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 않습니다.`,
+    );
+  }
+
+  // 사유를 하나도 대지 못하면 항목을 만들지 않는다 — 「적용 안 됨」만 말하면 안내가 아니다.
+  if (reasons.length === 0) return unmet;
+
+  unmet.push({
+    id: isMarriage ? "155-5-marriage-merge" : "155-4-parental-care-merge",
+    label: isMarriage ? "혼인 합가" : "동거봉양 합가",
+    legalBasis: isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
+    reasons,
+  });
+  return unmet;
+}
+
+/** 표시용 날짜 — 화면이 아니라 엔진이 문장을 만들므로 여기서 포맷한다(YYYY-MM-DD). */
+function fmtDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }

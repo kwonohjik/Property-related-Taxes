@@ -74,6 +74,18 @@ type FullOnlyProps = {
   relocationRegionVerdict: RelocationRegionVerdict | null;
   proviso: ReturnType<typeof provisoGate>;
   primaryAcquisitionDate: string;
+  /**
+   * §155① 신규 주택 취득일 — **명부에서 파생된 값**(`resolveTemporaryTwoHouse`).
+   *
+   * 🔴 종전에는 사용자가 토글을 켜고 이 날짜를 **직접 입력**했다. 그 구조는 두 가지를
+   *    동시에 잘못했다: ① 법령에 없는 「선언」 요건을 만들어 요건 충족 세대를 과세로 떨어뜨렸고
+   *    (소령 §155①은 「…보아 §154①을 적용한다」는 강행규정이다) ② 명부와 **두 번째 진실**이
+   *    되어 어긋나도 아무도 잡지 못했다. 실측·근거는 `resolveTemporaryTwoHouse` 주석 참조.
+   *
+   * 도출이 성립하지 않으면(`undefined`) 이 특례 블록을 **그리지 않는다** — 화면이 「신규 주택이
+   * 없다」고 말하는 것이 아니라, 판정할 사실이 명부에 없다는 뜻이다.
+   */
+  derivedNewHouseAcquisitionDate: string | undefined;
 };
 
 type BaseProps = {
@@ -95,22 +107,25 @@ function TempTwoHouseCoreBlocks({
   tempTwoHouseVerdict,
   relocationRegionVerdict,
   primaryAcquisitionDate,
-}: BaseProps & Pick<FullOnlyProps, "tempTwoHouseVerdict" | "relocationRegionVerdict" | "primaryAcquisitionDate">) {
+  derivedNewHouseAcquisitionDate,
+}: BaseProps &
+  Pick<
+    FullOnlyProps,
+    | "tempTwoHouseVerdict"
+    | "relocationRegionVerdict"
+    | "primaryAcquisitionDate"
+    | "derivedNewHouseAcquisitionDate"
+  >) {
+  /**
+   * 명부에서 신규 주택을 도출하지 못하면 이 특례 축 자체를 그리지 않는다.
+   * 「양도주택보다 나중 취득한 행이 정확히 1채」가 아닌 경우다(0채 · 2채 이상 · 권리 양도).
+   */
+  if (!derivedNewHouseAcquisitionDate) return null;
+
   return (
     <>
-        <p className="text-sm font-medium">일시적 2주택 특례</p>
-        <ToggleCard
-          checked={form.temporaryTwoHouseSpecial}
-          onCheckedChange={(v) =>
-            onChange({
-              temporaryTwoHouseSpecial: v,
-              newHouseAcquisitionDate: v ? form.newHouseAcquisitionDate : "",
-            })
-          }
-          title="일시적 2주택 특례 해당"
-          description="종전 주택 보유 중 신규 주택 취득 후 일정 기간(보통 3년) 내 종전 주택 양도 시 비과세"
-          tone="emerald"
-        >
+        <p className="text-sm font-medium">일시적 2주택 특례 (§155①)</p>
+        <ToneCard tone="emerald" bodyClassName="" className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">종전 주택 취득일</label>
@@ -120,14 +135,12 @@ function TempTwoHouseCoreBlocks({
               </p>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">
-                신규 주택 취득일 <span className="text-destructive">*</span>
-              </label>
-              <DateInput
-                value={form.newHouseAcquisitionDate}
-                onChange={(v) => onChange({ newHouseAcquisitionDate: v })}
-              />
-              <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
+              <label className="text-sm font-medium">신규 주택 취득일</label>
+              <DateInput value={derivedNewHouseAcquisitionDate} disabled onChange={() => {}} />
+              <p className="text-xs text-muted-foreground">
+                ② 보유 주택 목록에서 <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로
+                찾아 반영합니다 — 목록을 고치면 판정도 함께 바뀝니다.
+              </p>
             </div>
           </div>
 
@@ -229,10 +242,10 @@ function TempTwoHouseCoreBlocks({
               </p>
             </div>
           </div>
-        </ToggleCard>
+        </ToneCard>
 
-        {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm), 특례 토글 직하 배치 */}
-        {form.temporaryTwoHouseSpecial && (
+        {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm) */}
+        {(
           <ToneCard
             tone={
               tempTwoHouseVerdict.status === "eligible"

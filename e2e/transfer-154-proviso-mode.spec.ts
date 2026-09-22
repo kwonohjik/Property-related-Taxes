@@ -2,7 +2,7 @@
  * §154① 단서 카드 mode별 노출·옵션 필터 E2E.
  *
  * - 1주택(one_house) → 섹션② 카드 노출 + 전체 옵션(나·다목·5호 포함)
- * - 순수 2주택(특례 OFF)·3주택 → 카드 숨김
+ * - 순수 2주택(§155① 불성립)·3주택 → 카드 숨김
  * - 일시적 2주택(temporary_two_house) → 섹션③ 카드 노출 + 나·다목·5호 옵션 부재(1·2가·3호만)
  *
  * 계획서: docs/02-design/features/transfer-154-proviso-temporary-two-house-gap.plan.md §9(DoD E2E).
@@ -82,11 +82,15 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     await expect(page.getByTestId("proviso-reason-pre_contract")).toBeVisible();
   });
 
-  test("판정 메뉴 — 순수 2주택(일시적 특례 OFF) → 카드 숨김", async ({ page }) => {
+  /**
+   * 🔄 **토글이 아니라 명부가 가른다** (2026-09-22). `HOUSE("h1")`는 2018-01-01 취득이라
+   *    양도주택(`judgeAsset` 2023-01-01)보다 **먼저**다 ⇒ 신규주택이 없어 §155①이 불성립한다.
+   *    `temporaryTwoHouseSpecial: false`는 이제 아무것도 끄지 않으므로 시드에서 뺐다.
+   */
+  test("판정 메뉴 — 순수 2주택(§155① 불성립) → 카드 숨김", async ({ page }) => {
     await gotoJudgmentStep2(page, {
       assets: judgeAsset,
       houses: [HOUSE("h1")],
-      temporaryTwoHouseSpecial: false,
     });
     await expect(page.getByTestId("proviso-reason-none")).toHaveCount(0);
   });

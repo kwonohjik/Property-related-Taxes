@@ -228,6 +228,41 @@ export type OneHouseUndetermined = {
 };
 
 /**
+ * 「선언했는데 왜 적용되지 않았는가」 — **네 번째 범주**.
+ *
+ * 기존 3갈래로는 이 사실을 담을 수 없었다:
+ * - `appliedExceptions` — 적용**됐다**
+ * - `pending` — **기한**만 남았다(「이 날까지 하면 비과세」)
+ * - `undetermined` — 자료가 없어 **판정하지 않았다**
+ *
+ * 특례를 입력했는데 기한이 아닌 **구조적 요건**(취득일과 합가일의 선후, 주택 수 등)에서
+ * 탈락하면 셋 중 어디에도 안 들어가, 화면에 **아무 단서도 남지 않았다**. 사용자는 특례를
+ * 켰는데 왜 무시됐는지 알 길이 없었다(2026-09-22 제보 — 혼인합가일 2017-03-11 · 양도주택
+ * 취득일 2017-08-31로 `matchMergeWindow`의 합가 전 취득 조건에서 탈락, `pending=[]`).
+ *
+ * 🔑 **선언한 특례만** 낸다. 선언하지 않은 조문을 「해당 없음」으로 나열하면 화면이 안 쓰는
+ *    조문으로 길어지고, 읽는 사람은 그것이 판정에 영향을 줬다고 읽는다
+ *    (`OneHouseJudgmentResultView`의 확립된 원칙 — §155⑳·§89①4호 카드가 같은 규칙을 쓴다).
+ * 🔑 **기한 초과는 담지 않는다** — 그 축은 `pending`이 이미 날짜와 함께 안내한다. 두 곳에서
+ *    같은 사실을 말하면 어느 쪽이 정본인지 흐려진다.
+ * 🔑 성립 여부 판정은 **정본**(`resolveMergeDeeming` 등)이 하고, 이 타입은 **사유만** 담는다.
+ *    수집기가 따로 성립을 판정하면 정본과 드리프트한다.
+ */
+export type OneHouseUnmetException = {
+  /** 안정 식별자 — 화면·테스트가 문자열 라벨 대신 이것을 본다 */
+  id: string;
+  /** 사람이 읽는 특례 이름(한국어) */
+  label: string;
+  /** 근거 조문 — `legal-codes`의 `TRANSFER.*` 상수값 */
+  legalBasis: string;
+  /**
+   * 미충족 사유 — **하나 이상**. 빈 배열이면 항목 자체를 만들지 않는다
+   * (「적용 안 됨」만 말하고 이유를 못 대면 안내가 아니라 혼란이다).
+   */
+  reasons: string[];
+};
+
+/**
  * 판정 결과 — **단일 정본**(P4-1에서 `ExemptionResult`를 흡수했다).
  *
  * P2까지는 `transfer-tax-exemption-requirements.ts`의 `ExemptionResult`와 **필드가 같은
@@ -282,6 +317,11 @@ export type OneHouseJudgment = {
   pending: OneHousePendingCondition[];
   /** 판정 보류 */
   undetermined: OneHouseUndetermined[];
+  /**
+   * 선언했으나 요건 미충족으로 **적용되지 않은** 특례. 비과세·부분과세면 항상 `[]`
+   * (특례가 실제로 적용됐거나, 적용 없이도 결론이 났으므로 「왜 안 됐나」가 없다).
+   */
+  unmetExceptions: OneHouseUnmetException[];
   /** 근거 조문 — `appliedExceptions`·`pending`에서 중복 제거해 모은다(파생값, 입력 아님) */
   legalBasis: string[];
   /**
@@ -307,7 +347,7 @@ export type OneHouseJudgment = {
  */
 export type OneHouseCoreVerdict = Omit<
   OneHouseJudgment,
-  "pending" | "undetermined" | "legalBasis" | "appliedExceptions"
+  "pending" | "undetermined" | "unmetExceptions" | "legalBasis" | "appliedExceptions"
 > & {
   appliedExceptions?: OneHouseAppliedException[];
 };

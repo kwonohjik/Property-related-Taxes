@@ -181,3 +181,101 @@ export function houseCountScalarLocked(
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
   return declared === 1 + countedHouseRows(houses);
 }
+
+/**
+ * §155① 일시적 2주택 — **신규 주택을 명부에서 도출**한다 (2026-09-22).
+ *
+ * ## 🔴 종전에는 사용자 토글이 적용 여부를 갈랐다
+ *
+ * ④ 변환(`buildHouseholdSpecialPayload`)은 `temporaryTwoHouseSpecial` **토글**과 폼-전역
+ * `newHouseAcquisitionDate`가 **둘 다** 있어야 `temporaryTwoHouse`를 만들었다. 그래서:
+ *
+ * | 실측(2주택 · 양도주택 2017-08-31 · 명부 2024-05-30 · 양도 2026-09-30) | 판정 |
+ * |---|---|
+ * | 토글 OFF — 요건은 전부 충족 | **과세** ← 명부에 사실이 다 있는데 |
+ * | 토글 ON + 날짜 2024-05-30 | 비과세 |
+ * | 토글 ON + **명부와 다른** 날짜 2026-01-01 | **비과세** ← 명부를 무시하고 그 값으로 판정 |
+ *
+ * 두 가지가 동시에 잘못이다. ①은 **법령에 없는 요건**을 만든 것이고 — 소령 §155①은
+ * 「…경우에는 이를 1세대1주택으로 **보아** 제154조제1항을 적용한다」는 강행규정이라 납세자의
+ * 신청·선택을 요건으로 하지 않는다(신고서 제출을 요구하는 항은 ⑬뿐이고 그것도 ⑦ 전용이다)
+ * — ②는 `newHouseAcquisitionDate`가 명부와 **두 번째 진실**이라 어긋나도 아무도 잡지 못한 것이다
+ * (주택 수 스칼라↔명부 괴리와 같은 구조 — PR #1757).
+ *
+ * ## 도출 규칙 — 「양도주택보다 나중 취득한 행이 **정확히 1채**」
+ *
+ * §155①의 신규 주택은 「그 주택을 양도하기 전에 취득한 **다른 주택**」이다. 명부에서 양도주택
+ * 취득일보다 **나중에 취득한** 행이 하나뿐이면 그것이 신규 주택이고, 모호성이 없다.
+ * 2주택(명부 1채)은 언제나 이 경우이고, 합가 중첩 3주택도 대개 그렇다(배우자 보유분은
+ * 합가 전 취득이라 앞선다).
+ *
+ * 🔑 **0채·2채 이상이면 도출하지 않는다.** 어느 것이 신규 주택인지 억측으로 고르지 않는다
+ *    (`feedback_no_silent_apportion_fallback` — 자동 안분 fallback 금지와 같은 층위).
+ *    `HouseEntry`에는 이를 가릴 단서가 없다(취득일뿐 — 처분 예정일도 신규주택 플래그도 없다).
+ *
+ * 🔑 **1년·3년 요건은 여기서 보지 않는다.** 엔진(`evaluateTemporaryTwoHouseTiming`)이 §155⑯·⑱·
+ *    조정대상지역 처분기한까지 반영해 판정하는 정본이다. 여기서 미리 거르면 두 벌이 된다.
+ *
+ * ## 폴백 — 명부가 정본이 아닐 때는 **종전 그대로**
+ *
+ * 계산기에서 명부는 비어 있을 수 있다(위 `resolveHouseholdHousingCount`의 D-4 — 「1주택자는
+ * 명부를 채울 필요가 없다」). OH-34 레거시 표식이 켜진 폼도 스칼라가 앞선다. 그 경로까지
+ * 명부 전용으로 바꾸면 **「스칼라 3채 + 명부 0건」 폼에서 §155①이 영구 미적용**된다.
+ * ⇒ 도출이 성립하지 않으면 종전 flat 필드(`temporaryTwoHouseSpecial` + `newHouseAcquisitionDate`)를
+ *   그대로 쓴다. 레거시 이력·간이 입력이 이 경로로 계속 동작한다.
+ */
+export interface ResolveTemporaryTwoHouseArgs {
+  /** 양도 대표 자산 종류 — `"housing"`일 때만 명부를 정본으로 쓴다(F1과 같은 축). */
+  primaryKind: string | undefined;
+  /** 양도 대상 주택(= 종전주택) 취득일 `YYYY-MM-DD`. */
+  primaryAcquisitionDate: string | undefined;
+  houses: readonly HouseRowForCount[] | undefined;
+  /** OH-34 레거시 표식 — 켜져 있으면 명부를 보지 않는다. */
+  legacyPrecedence: boolean;
+  /** 종전 flat 필드 — 도출이 성립하지 않을 때만 쓰인다. */
+  declaredSpecial: boolean;
+  declaredNewHouseDate: string | undefined;
+}
+
+export interface TemporaryTwoHouseDates {
+  previousAcquisitionDate: string;
+  newAcquisitionDate: string;
+  /** 어디서 왔는가 — 화면이 「명부에서 자동 판정」과 「직접 선언」을 구분해 안내한다. */
+  source: "roster" | "declared";
+}
+
+export function resolveTemporaryTwoHouse(
+  args: ResolveTemporaryTwoHouseArgs,
+): TemporaryTwoHouseDates | undefined {
+  const prev = args.primaryAcquisitionDate;
+
+  const fallback = (): TemporaryTwoHouseDates | undefined =>
+    args.declaredSpecial && prev && args.declaredNewHouseDate
+      ? {
+          previousAcquisitionDate: prev,
+          newAcquisitionDate: args.declaredNewHouseDate,
+          source: "declared",
+        }
+      : undefined;
+
+  if (args.legacyPrecedence) return fallback(); // OH-34 세액 보존
+  if (args.primaryKind !== "housing") return fallback(); // F1 — 권리 양도는 축이 다르다
+  if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
+
+  // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
+  const later = (args.houses ?? []).filter(
+    (h) => h.acquisitionDate !== undefined && h.acquisitionDate > prev,
+  );
+  if (later.length !== 1) return fallback(); // 0채·2채 이상 — 억측으로 고르지 않는다
+
+  return {
+    previousAcquisitionDate: prev,
+    newAcquisitionDate: later[0].acquisitionDate!,
+    source: "roster",
+  };
+}
+
+/** §155①이 성립하는가 — `provisoGate` 등 boolean 하나만 필요한 호출부용 얇은 래퍼. */
+export function temporaryTwoHouseApplies(args: ResolveTemporaryTwoHouseArgs): boolean {
+  return resolveTemporaryTwoHouse(args) !== undefined;
+}

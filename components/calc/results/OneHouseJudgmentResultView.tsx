@@ -215,6 +215,40 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
         </ToneCard>
       )}
 
+      {/*
+        ── 선언했으나 적용되지 않은 특례 ──
+        🔑 「조건부」(amber)와 **다른 것**이다. 저쪽은 「이 날까지 하면 비과세」이고 여기는
+           「이 입력으로는 적용되지 않았다」다. 기한 축은 `pending`이 이미 날짜와 함께 안내하므로
+           엔진이 여기에 담지 않는다 — 두 카드가 같은 사실을 말하지 않는다.
+        🔑 §155⑳ 임대주택 미충족 카드와 **같은 톤(rose)·같은 모양**을 쓴다.
+      */}
+      {judgment.unmetExceptions.length > 0 && (
+        <ToneCard
+          tone="rose"
+          sectionNum={nextNo()}
+          title="선언했으나 적용되지 않은 특례"
+        >
+          <p className="text-sm text-muted-foreground">
+            입력하신 특례가 아래 사유로 요건을 충족하지 않아 판정에 반영되지 않았습니다.
+          </p>
+          <ul className="space-y-3">
+            {judgment.unmetExceptions.map((u) => (
+              <li key={u.id} className="text-sm" data-testid={`one-house-unmet-${u.id}`}>
+                <p className="font-semibold">{u.label} — 요건 미충족</p>
+                <ul className="ml-4 list-disc space-y-1">
+                  {u.reasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+                <span className="mt-1 inline-block">
+                  <LawArticleModal legalBasis={u.legalBasis} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </ToneCard>
+      )}
+
       {/* ── 판정 보류 ── */}
       {judgment.undetermined.length > 0 && (
         <ToneCard tone="rose" sectionNum={nextNo()} title="판정하지 않은 부분">

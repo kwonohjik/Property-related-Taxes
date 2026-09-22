@@ -26,7 +26,7 @@ import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHa
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
-import { resolveHouseholdHousingCount, houseCountScalarLocked } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, houseCountScalarLocked, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 
 /**
@@ -156,15 +156,36 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           houses: form.houses,
           legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         }),
-        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+          primaryKind: form.assets?.[0]?.assetKind,
+          primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+          houses: form.houses,
+          legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+          declaredSpecial: form.temporaryTwoHouseSpecial === true,
+          declaredNewHouseDate: form.newHouseAcquisitionDate,
+        }),
       }),
-    // ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
+    /**
+     * ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
+     *
+     * §155①이 명부 파생으로 바뀌며 의존이 셋 늘어(양도주택 취득일 · 신규주택 취득일 ·
+     * OH-34 표식) deps도 함께 늘렸다(2026-09-22).
+     *
+     * ⚠️ **이 화면에서 관측되는 차이는 없다** — `:598`이 `mode === "one_house"`만 소비하고,
+     *    1주택이면 `provisoGate`가 `temporaryTwoHouseApplies`를 보지도 않는다. 그래도 인자가
+     *    늘었으면 deps를 늘린다(규율). `temporary_two_house` 모드를 실제로 쓰는 곳은
+     *    **판정 메뉴 `Step2.tsx`**이고, 그쪽 deps는 `derivedNewHouse`를 포함한다 —
+     *    안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD)가 진다.
+     */
     [
       form.isOneHousehold,
       primaryKind,
       form.householdHousingCount,
       form.houses,
       form.temporaryTwoHouseSpecial,
+      form.assets,
+      form.legacyHouseCountPrecedence,
+      form.newHouseAcquisitionDate,
     ],
   );
 

@@ -97,6 +97,13 @@ const HOUSE = {
   isInherited: false,
 };
 
+/** 취득일을 바꿔 가며 쓰는 명부 행 — §155① 신규주택 도출(TM-2·2b)이 취득일 선후만 본다. */
+const houseRow = (id: string, acquisitionDate: string) => ({
+  ...HOUSE,
+  id,
+  acquisitionDate,
+});
+
 const judgmentForm = (over: Record<string, unknown> = {}): OneHouseJudgmentFormData =>
   ({
     ...createInitialOneHouseJudgmentForm(),
@@ -146,9 +153,47 @@ describe("TM-1·5 계산기 ⑧ — 옮긴 것만 빠지고 남긴 것은 그대
 });
 
 describe("TM-2·3·4 판정 메뉴 ⑧ — **긍정 짝**", () => {
-  it("[TM-2] 일시적 2주택 ON + 신규 취득일 미입력 → 판정 메뉴가 막는다", () => {
-    const msgs = judgeMsgs(judgmentForm({ temporaryTwoHouseSpecial: true }));
-    expect(msgs).toContain("일시적 2주택: 신규 주택 취득일을 입력하세요.");
+  /**
+   * 🔄 **TM-2가 지키던 실패모드가 사라졌다** (2026-09-22 — 토글·날짜 입력 제거).
+   *
+   * 종전 단언은 「토글 ON + 신규 취득일 미입력 → ⑧이 막는다」였다. 그 검증이 필요했던 이유는
+   * 사용자가 날짜를 **직접 입력**했기 때문인데, 이제 그 날짜는 명부에서 도출되고
+   * (`resolveTemporaryTwoHouse`) **화면에 입력란이 없다**. 없는 칸을 요구하면 영구 차단이
+   * 되므로 ⑧에서 그 규칙을 지웠다(`one-house-exemption-validate.ts` 같은 자리 주석).
+   *
+   * ⇒ 단언을 **뒤집지 않고 전환한다**. 지켜야 할 성질은 이제 「토글 없이도 명부만으로
+   *   §155①이 payload에 실린다」이고, 그 부정 짝은 아래 TM-2b다.
+   *   (`feedback_shared_assertion_reversal_erases_sibling_net` — 그냥 지우면 이 축의
+   *    안전망이 통째로 사라진다.)
+   */
+  it("[TM-2] 토글 없이 명부만으로 §155①이 payload에 실린다", () => {
+    const f = judgmentForm({
+      temporaryTwoHouseSpecial: false,
+      newHouseAcquisitionDate: "",
+      houses: [houseRow("h2", "2024-05-30")],
+    });
+    // ⑧이 막지 않는다 — 없는 칸을 요구하지 않는다
+    expect(judgeMsgs(f)).not.toContain("일시적 2주택: 신규 주택 취득일을 입력하세요.");
+
+    const payload = buildHouseholdSpecialPayload(
+      f as never,
+      f.assets[0] as never,
+    ) as Record<string, { newAcquisitionDate?: string }>;
+    expect(payload.temporaryTwoHouse?.newAcquisitionDate).toBe("2024-05-30");
+  });
+
+  it("[TM-2b] 명부에서 신규 주택을 특정할 수 없으면 §155①을 싣지 않는다", () => {
+    const f = judgmentForm({
+      temporaryTwoHouseSpecial: false,
+      newHouseAcquisitionDate: "",
+      // 양도주택(2019-03-01)보다 나중 취득이 2채 — 어느 것이 신규 주택인지 알 수 없다
+      houses: [houseRow("h2", "2024-05-30"), houseRow("h3", "2025-01-01")],
+    });
+    const payload = buildHouseholdSpecialPayload(
+      f as never,
+      f.assets[0] as never,
+    ) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toBeUndefined();
   });
 
   it("[TM-3] 대체주택 ON → 4필드를 전부 막는다 (자동 fallback 금지)", () => {
