@@ -72,8 +72,13 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate }: Props) {
         checked={house.oneHouseCulturalHeritage ?? false}
         onCheckedChange={(v) => onUpdate({ oneHouseCulturalHeritage: v || undefined })}
         title="지정문화유산·국가등록문화유산·천연기념물등 주택 (§155⑥1호)"
-        description="이 주택과 일반주택을 각각 1개씩 보유한 상태에서 일반주택을 양도하면 1세대1주택으로 봅니다. 조합원입주권·분양권을 함께 보유한 경우에는 §156의2⑩·§156의3⑦이 준용합니다. 이 선언 하나로 다주택 중과에서도 빠집니다 — 영 §167의3①6호가 §155⑥1호를 그대로 인용합니다."
+        description="이 주택과 일반주택을 각각 1개씩 보유한 상태에서 일반주택을 양도하면 1세대1주택으로 봅니다. 이 선언 하나로 다주택 중과(영 §167의3①6호)에서도 빠집니다."
       >
+        {/* 🔑 준용 상세는 «켠 뒤에» 필요한 정보다 — description은 켤지 말지를 판단할 만큼만
+            짧게 둔다(150자 정책 · `__tests__/components/hint-length-policy.test.ts`). */}
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          조합원입주권·분양권을 함께 보유한 경우에는 §156의2⑩·§156의3⑦이 준용합니다.
+        </p>
         <div className="pt-1">
           <LawArticleModal
             legalBasis={TRANSFER.CULTURAL_HERITAGE_HOUSE}
