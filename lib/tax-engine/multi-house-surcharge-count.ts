@@ -208,8 +208,16 @@ function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
 }
 
 /**
+ * 유형(가~자목) 미선택 입력의 의무임대기간 — 최단 목(가·나·다·라목)의 5년.
+ *
+ * 유형을 고르지 않은 입력에 목을 추정해 붙일 수는 없으므로, **가장 관대한 목**의 기간을 쓴다.
+ * (마·바목 10년 · 아·자목 6년보다 짧으니 어느 목이든 이 문턱은 넘어야 한다.)
+ */
+const LEGACY_RENTAL_YEARS = 5;
+
+/**
  * ② 장기임대주택 중과배제 여부 (가~자목 유형별 검증 — 공용 checkRentalArticle 위임, Phase 2 C3).
- * rentalType 미제공 시 legacy boolean 판정으로 폴백.
+ * rentalType 미제공 시 legacy 판정(등록 완비 + 5년)으로 폴백.
  */
 export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLongTermRental) return false;
@@ -217,12 +225,7 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
   if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
 
   if (!house.rentalType) {
-    return !!(
-      house.isRegisteredRental &&
-      house.rentalRegistrationDate &&
-      house.businessRegistrationDate &&
-      calcRentalPeriodYears(house) >= 5
-    );
+    return hasBasicRegistration(house) && calcRentalPeriodYears(house) >= LEGACY_RENTAL_YEARS;
   }
 
   // 사업자등록등 완비 — isRegisteredRental flag 포함(공용 predicate가 검사하지 않는 다주택 전용 요건).
@@ -260,9 +263,18 @@ function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): 
  * ⚠️ 10호 판정(일반주택 양도) 전용이다 — 양도 주택 **자신**의 2호 판정에 쓰면 안 된다.
  */
 export function isLongTermRentalDutyPeriodPending(house: HouseInfo, transferDate: Date): boolean {
-  if (!house.isLongTermRental || !house.rentalType) return false;
+  if (!house.isLongTermRental) return false;
   if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
   if (!hasBasicRegistration(house)) return false;
+  /**
+   * 유형 미선택 — 「임대기간요건 외에 해당 목의 다른 요건」이 **등록 완비뿐**이므로,
+   * 등록을 갖추고 기간만 모자라면 ④ 대상이다.
+   *
+   * 🔑 이 분기가 없으면 `isSurchargeExemptRental` 관용도 제거(2026-09-22)가 **법이 주는 혜택을
+   *   함께 없앤다** — 종전에는 그 관용도가 ④를 우연히 대신하고 있었다. 조이기는 2호에만,
+   *   ④는 그대로 살린다.
+   */
+  if (!house.rentalType) return calcRentalPeriodYears(house) < LEGACY_RENTAL_YEARS;
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
   if (article === "사") return false;
   if (!passesRegistrationCap(house, article)) return false;
@@ -413,20 +425,31 @@ export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Dat
 /**
  * §167의3①2호 장기임대주택 — 중과 **대상에서** 빠지는 주택(주택 수에는 산입 · D16).
  *
- * 판정 기준은 종전 주택 수 제외 규칙을 그대로 옮겼다 — 임대 유형(`rentalType`) 입력이 있으면
- * 9유형 정밀 판정(`isLongTermRentalHousingExempt`), 없으면 등록주택(말소 전) 선언으로 인정한다.
- * 화면이 유형 없이도 장기임대를 받으므로(`HouseEntryEditor`) 기준을 바꾸면 기존 입력의 결과가
- * 조용히 달라진다. 3주택 「유일한 일반주택」 판정이 종전에 쓰던 `isLongTermRentalHousingExempt`와는
- * 유형 없는 입력에서만 갈리는데, 그 입력은 종전에 주택 수에서 먼저 빠져 그 판정에 닿지 않았다.
- * (§167의3④ — 의무임대기간 충족 전 일반주택 양도도 10호를 적용 — 과도 부합한다.)
+ * 판정은 `isLongTermRentalHousingExempt` **하나**에 위임한다 — 같은 질문에 술어가 둘이면
+ * 조용히 갈린다([[feedback_shared_predicate_argument_parity]]).
+ *
+ * 🔴 **2026-09-22 정정 — 유형 미선택이면 아무 요건도 보지 않았다.**
+ *    종전 마지막 줄은 `house.rentalType ? 정밀판정 : true`였다. 유형이 없으면 등록·임대기간을
+ *    **전혀 확인하지 않고** 배제했다(실측: 등록 무증빙·임대 4년도 3주택 141,966,000 — 중과라면
+ *    354,541,000). 이 관용도는 D16보다 오래됐다 — D16(`60225941`)이 종전 주택 수 제외 블록
+ *    「배제 2: 장기임대 등록주택 (말소 전)」의 `: true`를 **문언 그대로** 옮긴 것이다(diff 실측).
+ *
+ *    법문(실독 2026-09-22 · MST 286211) §167의3①2호 **본문**이 요구하는 것:
+ *      「법 제168조에 따른 **사업자등록**과 민간임대주택법 제5조에 따른 **임대사업자 등록**을 한
+ *       거주자가 민간임대주택으로 등록하여 임대하는 **다음 각 목의 어느 하나에 해당하는 주택**」
+ *    그리고 **각 목은 전부 임대기간 요건을 가진다**(가·나·다·라 5년 · 마·바 10년 · 아·자 6년 ·
+ *    사목은 말소 특례). ⇒ 등록도 기간도 없는 선언이 충족하는 목은 **하나도 없다**.
+ *    ⇒ 유형 미선택도 `LEGACY_RENTAL_YEARS`(최단 목 5년) + 등록 완비를 요구한다.
+ *
+ * 🔑 §167의3④(의무임대기간 충족 전 일반주택 양도 → 10호 의제)를 **잃지 않도록** 같이 넓혔다 —
+ *    종전에는 위 관용도가 ④를 우연히 대신하고 있었다(종전 주석의 「과도 부합한다」).
+ *    ④의 정본 경로는 `isLongTermRentalDutyPeriodPending`이고, 거기에 유형 미선택 분기를 넣었다.
  */
 /** §167의3①7호 「상속받은 날부터 5년이 경과하지 아니한 경우」 */
 const INHERITED_HOUSE_SURCHARGE_YEARS = 5;
 
 export function isSurchargeExemptRental(house: HouseInfo, transferDate: Date): boolean {
-  if (!house.isLongTermRental) return false;
-  if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
-  return house.rentalType ? isLongTermRentalHousingExempt(house, transferDate) : true;
+  return isLongTermRentalHousingExempt(house, transferDate);
 }
 
 /**

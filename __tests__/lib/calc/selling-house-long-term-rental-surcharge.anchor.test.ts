@@ -32,13 +32,13 @@
  *
  * 배선 전에는 **과다 과세** 방향이었다.
  *
- * ## 🟠 함께 드러난 것 — 유형 미선택이면 엔진이 **아무 요건도 보지 않는다**
+ * ## ✅ 후속 해소 — 유형 미선택도 등록 완비 + 5년을 요구한다 (2026-09-22)
  *
- * `isSurchargeExemptRental`의 마지막 줄은 `house.rentalType ? 정밀판정 : true`다. 유형이 없으면
- * 등록·임대기간을 **전혀 확인하지 않고** 배제한다(실측: 임대 4년·무증빙도 141,966,000).
- * 이는 D16이 종전 주택 수 제외 규칙의 「bare boolean」 의미를 **의도적으로 보존한 것**이고
- * (그 함수 주석이 근거를 남겼다), 바꾸면 명부 행 기존 입력의 세액이 조용히 오른다.
- * ⇒ 이 PR은 **엔진을 건드리지 않고** 그 사실을 LR-11로 **고정만** 한다 — 정책 변경은 별건이다.
+ * 최초 배선 시점의 `isSurchargeExemptRental` 마지막 줄은 `house.rentalType ? 정밀판정 : true`로,
+ * 유형이 없으면 등록·임대기간을 **전혀 확인하지 않고** 배제했다. §167의3①2호 **본문**이
+ * 사업자등록등을, **각 목 전부**가 임대기간을 요구하므로(실독 MST 286211) 근거가 없었다.
+ * ⇒ 술어를 `isLongTermRentalHousingExempt` **하나**에 위임하고, §167의3④(기간만 미달 → 10호
+ * 의제)는 `isLongTermRentalDutyPeriodPending`의 유형 미선택 분기로 **살렸다**. LR-11·LR-12가 고정.
  */
 
 import { describe, it, expect } from "vitest";
@@ -316,25 +316,48 @@ describe("LR 세액 — 양도 주택 자신의 2호 배제", () => {
   });
 });
 
-// ────────────────────────────── 🟠 현행 관용도 고정 ──────────────────────────────
+// ────────────────────────── 유형 미선택도 요건을 요구한다 ──────────────────────────
 
-describe("LR 🟠 유형 미선택이면 엔진이 요건을 보지 않는다 — 현행을 고정만 한다", () => {
+describe("LR 유형 미선택 — 등록 완비 + 5년이 문턱이다 (2026-09-22 정정)", () => {
   /**
-   * `isSurchargeExemptRental` 마지막 줄: `house.rentalType ? 정밀판정 : true`.
-   * D16이 종전 주택 수 제외 규칙의 bare-boolean 의미를 **의도적으로 보존**한 결과다
-   * (그 함수 주석이 근거). 바꾸면 명부 행 기존 입력의 세액이 조용히 오르므로 **별건**이다.
-   *
-   * 이 anchor는 「알고 있다」는 표식이다 — 나중에 정책을 바꾸면 **여기가 먼저 빨개진다**.
+   * 🔴 종전에는 `isLongTermRental: true` **하나**로 배제됐다(실측 141,966,000 = −212,575,000의
+   *    무근거 감세). §167의3①2호 본문의 사업자등록등·각 목의 임대기간을 아무것도 보지 않았다.
    */
-  it("LR-11 등록·기간 없이 토글만으로도 현재는 배제된다 (임대 4년·무증빙 포함)", () => {
-    expect(calc(hh([{}, {}], { isLongTermRental: true })).tax).toBe(141_966_000);
-    expect(calc(hh([{}, {}], { ...ENG_REG, rentalPeriodYears: 4 })).tax).toBe(141_966_000);
+  it("LR-11 토글만·기간 미달·등록 미완비는 배제되지 않는다", () => {
+    expect(calc(hh([{}, {}], { isLongTermRental: true })).tax).toBe(354_541_000);
+    expect(calc(hh([{}, {}], { ...ENG_REG, rentalPeriodYears: 4 })).tax).toBe(354_541_000);
+    expect(
+      calc(hh([{}, {}], { ...ENG_REG, businessRegistrationDate: undefined })).tax,
+    ).toBe(354_541_000);
   });
 
-  it("LR-12 유형을 고르면 정밀 판정이 살아난다 (관용도는 유형 미선택에 한정된다)", () => {
-    // 가목 — 기준시가 6억 초과면 배제되지 않는다
+  it("LR-12 긍정 짝: 등록 완비 + 5년이면 배제된다 (문턱이 5년에 있다)", () => {
+    expect(calc(hh([{}, {}], { ...ENG_REG, rentalPeriodYears: 5 })).tax).toBe(141_966_000);
+    expect(calc(hh([{}, {}], { ...ENG_REG, rentalPeriodYears: 4.9 })).tax).toBe(354_541_000);
+  });
+
+  it("LR-13 유형을 고르면 목별 정밀 판정이 살아 있다", () => {
+    // 가목 — 임대개시 기준시가 6억(수도권) 초과면 배제되지 않는다
     const 가 = { ...ENG_REG, rentalType: "A", rentIncreaseUnder5Pct: true, isApartment: false };
     expect(calc(hh([{}, {}], { ...가, rentalStartOfficialPrice: 500_000_000 })).tax).toBe(141_966_000);
     expect(calc(hh([{}, {}], { ...가, rentalStartOfficialPrice: 700_000_000 })).tax).toBe(354_541_000);
+  });
+
+  /**
+   * §167의3④ — 「의무임대기간…의 요건을 충족하기 전에 **일반주택을 양도**하는 경우에도 …
+   * 장기임대주택등으로 보아 제1항제10호를 적용한다」. 2호를 조이면서 이 혜택을 함께 없애면
+   * **법이 주는 것을 빼앗는다** ⇒ 유형 미선택 분기를 ④에 넣었다.
+   *
+   * 🔑 여기서는 임대주택이 **다른 집**이고 양도 주택은 일반주택이다 — 10호 경로다.
+   */
+  it("LR-14 ④ 기간 미달 임대주택 + 일반주택 양도 → 10호 의제로 배제 (혜택 보존)", () => {
+    const 기간미달 = { ...ENG_REG, rentalPeriodYears: 4 };
+    const r = calc(hh([기간미달], {}));
+    expect(r.count).toBe(2);
+    expect(r.tax).toBe(141_966_000);
+  });
+
+  it("LR-15 음성 짝: 등록 미완비면 ④도 아니다 (「기간 외 요건」을 못 갖췄다)", () => {
+    expect(calc(hh([{ isLongTermRental: true }], {})).tax).toBe(299_816_000);
   });
 });

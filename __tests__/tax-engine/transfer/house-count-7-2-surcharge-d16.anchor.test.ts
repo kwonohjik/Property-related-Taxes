@@ -20,6 +20,7 @@ import { baseTransferInput } from "../_helpers/mock-rates";
 import {
   isSurchargeExemptInherited,
   isSurchargeExemptRental,
+  isLongTermRentalDutyPeriodPending,
 } from "@/lib/tax-engine/multi-house-surcharge-count";
 
 type H = Record<string, unknown>;
@@ -59,7 +60,19 @@ function calc(i: TransferTaxInput) {
 }
 
 const INH = { isInherited: true, inheritedDate: new Date("2024-01-01") };
-const RENTAL = { isLongTermRental: true };
+/**
+ * 🔴 2026-09-22 — 종전엔 `{ isLongTermRental: true }` **하나**였다. 술어가 유형 미선택 입력의
+ *    등록·기간을 전혀 보지 않아 그래도 통과했기 때문이다(§167의3①2호 본문은 사업자등록등을,
+ *    각 목은 임대기간을 요구한다 — 실독 MST 286211). 술어를 조인 뒤에도 **이 시료들의 의도**
+ *    (「요건을 갖춘 장기임대주택」)는 그대로이므로 요건을 채워 보강했다.
+ */
+const RENTAL = {
+  isLongTermRental: true,
+  isRegisteredRental: true,
+  rentalRegistrationDate: new Date("2017-01-01"),
+  businessRegistrationDate: new Date("2017-01-01"),
+  rentalPeriodYears: 6,
+};
 const SAME_HH = { ...INH, decedentSameHouseholdAtInheritance: true };
 
 describe("D16 3주택 — 7호·2호는 주택 수에 산입", () => {
@@ -162,9 +175,43 @@ describe("D16 술어", () => {
     expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true }) as never, TD)).toBe(false);
   });
 
-  it("D16-P2 2호: 유형 없으면 등록(말소 전) 선언으로 인정 · 말소 후 불해당", () => {
-    expect(isSurchargeExemptRental(house("x", "2012-01-01", RENTAL) as never, TD)).toBe(true);
-    expect(isSurchargeExemptRental(house("x", "2012-01-01", { ...RENTAL, rentalCancelledDate: new Date("2026-01-01") }) as never, TD)).toBe(false);
-    expect(isSurchargeExemptRental(house("x", "2012-01-01") as never, TD)).toBe(false);
+  /**
+   * 🔴 **정정 2026-09-22** — 종전 이름은 「유형 없으면 등록(말소 전) **선언으로 인정**」이었고
+   *    `{ isLongTermRental: true }` 하나로 `true`를 단언했다. 법문에 근거가 없다:
+   *    §167의3①2호 **본문**이 사업자등록등을, **각 목 전부**가 임대기간을 요구한다
+   *    (실독 MST 286211). ⇒ 유형 미선택도 등록 완비 + 5년을 요구하도록 정정했다.
+   *
+   *    긍정 짝(등록 완비 + 6년)을 함께 둬 분기가 양방향으로 고정된다
+   *    ([[feedback_negative_anchor_needs_positive_twin]] ·
+   *     [[feedback_shared_assertion_reversal_erases_sibling_net]]).
+   */
+  it("D16-P2 2호: 유형 미선택도 등록 완비 + 5년을 요구한다 · 말소 후 불해당", () => {
+    const at = (o: Record<string, unknown>) => house("x", "2012-01-01", o) as never;
+    // 긍정 짝 — 등록 완비 + 6년
+    expect(isSurchargeExemptRental(at(RENTAL), TD)).toBe(true);
+    // 말소가 양도일 이전이면 불해당
+    expect(isSurchargeExemptRental(at({ ...RENTAL, rentalCancelledDate: new Date("2026-01-01") }), TD)).toBe(false);
+    // 장기임대 선언 자체가 없으면 불해당
+    expect(isSurchargeExemptRental(at({}), TD)).toBe(false);
+    // 🔑 토글만 — 종전에는 이것이 `true`였다(실측 −212,575,000 무근거 감세)
+    expect(isSurchargeExemptRental(at({ isLongTermRental: true }), TD)).toBe(false);
+    // 등록 완비인데 기간(5년) 미달 → 2호 불해당
+    expect(isSurchargeExemptRental(at({ ...RENTAL, rentalPeriodYears: 4 }), TD)).toBe(false);
+    // 기간은 채웠으나 사업자등록일 누락 → 등록 미완비로 불해당
+    expect(isSurchargeExemptRental(at({ ...RENTAL, businessRegistrationDate: undefined }), TD)).toBe(false);
+  });
+
+  /**
+   * §167의3④ — 기간만 모자란 임대주택도 **일반주택 양도 시** 10호를 적용받는다.
+   * 2호를 조이면서 이 혜택을 함께 없애지 않았음을 고정한다(유형 미선택 분기 신설).
+   */
+  it("D16-P3 ④ 의무기간 미달: 유형 미선택도 10호 의제 대상이다 (2호 조이기의 짝)", () => {
+    const at = (o: Record<string, unknown>) => house("x", "2012-01-01", o) as never;
+    const 기간미달 = { ...RENTAL, rentalPeriodYears: 4 };
+    expect(isLongTermRentalDutyPeriodPending(at(기간미달), TD)).toBe(true);
+    // 기간을 채웠으면 ④가 아니라 2호 본체로 간다
+    expect(isLongTermRentalDutyPeriodPending(at(RENTAL), TD)).toBe(false);
+    // 등록이 미완비면 「기간 외 요건」을 못 갖춘 것이라 ④도 아니다
+    expect(isLongTermRentalDutyPeriodPending(at({ isLongTermRental: true }), TD)).toBe(false);
   });
 });

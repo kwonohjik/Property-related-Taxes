@@ -908,12 +908,62 @@ D-6는 **미구현**이다. 산출물 3종이 저장소에 **0건**이다 — `o
 **⚠️ `isApartment: false` 하드코딩도 함께 끊었다.** 아·자목 일괄 제외와 가·마목 2020.7.11 이후 등록
 제외가 이 값을 본다 — 그대로 뒀으면 아파트 소유자에게 **과소 과세**가 됐다(LR-6·LR-F).
 
-**🟠 함께 드러난 것 — 유형 미선택이면 엔진이 요건을 보지 않는다.**
-`isSurchargeExemptRental` 마지막 줄이 `house.rentalType ? 정밀판정 : true`다. 유형이 없으면
-등록·임대기간을 **전혀 확인하지 않고** 배제한다(실측: 임대 4년·무증빙도 141,966,000).
-D16이 종전 주택 수 제외 규칙의 bare-boolean 의미를 **의도적으로 보존한 것**이고(그 함수 주석이
-근거), 바꾸면 **명부 행 기존 입력의 세액이 조용히 오른다**. ⇒ 이 PR은 엔진을 건드리지 않고
-LR-11·LR-12로 **현행을 고정만** 한다. 정책 변경은 별건 — 바꾸면 LR-11이 먼저 빨개진다.
+**🟠→✅ 함께 드러난 것 — 유형 미선택이면 엔진이 요건을 보지 않았다** (§5.10-D에서 해소).
+`isSurchargeExemptRental` 마지막 줄이 `house.rentalType ? 정밀판정 : true`였다. 유형이 없으면
+등록·임대기간을 **전혀 확인하지 않고** 배제했다(실측: 임대 4년·무증빙도 141,966,000).
+최초 배선 PR은 엔진을 건드리지 않고 LR-11로 고정만 했고, 후속 §5.10-D가 조였다.
+
+### 5.10-D 장기임대 유형 미선택 관용도 제거 — §167의3①2호 본문 + ④ (2026-09-22)
+
+**관용도는 D16보다 오래됐다.** 「D16이 의도적으로 보존」이라는 종전 서술을 커밋 diff로
+검증했다(`60225941`): D16은 종전 `countEffectiveHouses`의 「배제 2: 장기임대 등록주택 (말소 전)」
+블록을 옮겼고, 그 블록에 이미 `: true` 폴백이 있었다. **문언 그대로 이관**이 맞다 —
+관용도의 출처는 D16이 아니라 그 이전이다.
+
+**법문에 근거가 없었다**(실독 2026-09-22 · MST 286211):
+
+| 층위 | 요구 |
+|---|---|
+| §167의3①2호 **본문** | 「법 제168조에 따른 **사업자등록**과 민간임대주택법 제5조에 따른 **임대사업자 등록**을 한 거주자가 … **다음 각 목의 어느 하나에 해당하는 주택**」 |
+| **각 목 전부** | 가·나·다·라 5년 · 마·바 10년 · 아·자 6년 · 사목은 말소 특례 |
+
+⇒ 등록도 기간도 없는 선언이 충족하는 목은 **하나도 없다**. 또 저장소에는 같은 질문의
+canonical 술어(`isLongTermRentalHousingExempt`의 유형 미선택 분기 = 등록 완비 + 5년)가
+**이미 있었다** — 술어가 둘이어서 조용히 갈린 것이다
+([[feedback_shared_predicate_argument_parity]]).
+
+⇒ `isSurchargeExemptRental`을 그 술어 **하나에 위임**한다(관용 분기 삭제).
+`LEGACY_RENTAL_YEARS = 5`(최단 목)를 명명 상수로 뽑아 단일 소스화했다.
+
+**🔑 조이면서 §167의3④를 잃지 않게 함께 넓혔다.** ④는 「의무임대기간…의 요건을 충족하기 전에
+**일반주택을 양도**하는 경우에도 … 장기임대주택등으로 보아 제1항제10호를 적용한다」 —
+**기간 요건만** 면제한다. 종전에는 위 관용도가 ④를 **우연히 대신**하고 있었다(종전 주석의
+「과도 부합한다」). ④의 정본 경로 `isLongTermRentalDutyPeriodPending`은 `!rentalType`이면
+즉시 false였으므로, 조이기만 하면 **법이 주는 혜택을 함께 없앴을 것**이다
+([[feedback_no_unfavorable_application_without_legal_basis]]).
+⇒ 유형 미선택 분기 신설: 등록 완비 + 기간(5년) 미달 → ④ 대상(LR-14 · D16-P3).
+
+**안전망 측정을 선행했다**([[feedback_pre_change_safety_net_probe]]) — 위임만 적용하고 전건을
+돌려 **7건 / 4파일**이 관용 경로에 의존함을 확인했다:
+
+| 대상 | 시료 | 처리 |
+|---|---|---|
+| `house-count-7-2-surcharge-d16.anchor` A5·B6·B9·P2 | `RENTAL = { isLongTermRental: true }` | 요건 채워 **보강**(의도 동일) |
+| `basic-exclusion` MH-03 ×2 | `isLongTermRental` + 임대등록일만 | 보강 — 이름이 「장기임대 **등록**주택」 |
+| `transfer-tax/multi-house-and-nbl` T-25 | 같음 | 보강 |
+| `selling-house-long-term-rental` LR-11 | 관용도를 **의도적으로** 고정 | **정정** + 긍정 짝 |
+
+**D16-P2는 이름이 정책을 단언했다**(「유형 없으면 등록(말소 전) **선언으로 인정**」).
+법령 정합 우선으로 정정하고([[feedback_anchor_correction_legal_priority]]), 긍정 짝(등록 완비 +
+6년 → true)을 함께 둬 분기를 양방향으로 고정했다
+([[feedback_shared_assertion_reversal_erases_sibling_net]]).
+
+**뮤테이션 5종 전부 KILL** — 관용도 복귀(6건 red) · legacy 기간 요건 삭제(3) ·
+legacy 등록 요건 삭제(2) · ④ 유형 미선택 분기 제거(2) · 문턱 5→4년(4).
+
+⚠️ **부수 발견 — `rules.rentalHousingExempt`가 고아가 됐다.** D16이 위 블록을 옮길 때 그
+게이트를 안 옮겼다. 세율표 스키마·seed·픽스처에는 남아 있고 값은 항상 `true`라 **동작 변화는
+없다**. 제거는 DB seed·Zod·타입을 함께 건드려야 하므로 **언급만** 한다(Surgical).
 
 **anchor**: `__tests__/lib/calc/selling-house-long-term-rental-surcharge.anchor.test.ts`
 (LR-1~12 · LR-A~G) · `__tests__/calc/selling-house-long-term-rental-section.test.tsx`(SR-1~7).
