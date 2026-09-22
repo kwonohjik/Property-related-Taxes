@@ -14,6 +14,8 @@
  * | HC-7 | `houseRosterIsAuthoritative` — 화면이 스칼라 버튼을 잠글 조건 |
  * | HC-8 | `housesPatchWithDerivedCount` — 명부 patch 가 스칼라를 **함께** 갱신한다 |
  * | HC-9 | `houseCountScalarLocked` — **정합된 상태만** 잠근다(어긋나면 열어 둔다) |
+ * | HC-10 | `houseCountDivergedFromRoster` — 복원된 이력에 레거시 표식을 붙일 조건(OH-34) |
+ * | HC-11 | 레거시 표식이 켜지면 ④·⑧이 **저장 당시 스칼라**로 계산한다(세액 보존) |
  *
  * ## 🔑 HC-6이 이 PR의 존재 이유다
  *
@@ -46,13 +48,14 @@ import {
   houseRosterIsAuthoritative,
   housesPatchWithDerivedCount,
   houseCountScalarLocked,
+  houseCountDivergedFromRoster,
 } from "@/lib/calc/household-house-count";
 
 const row = (acquisitionDate?: string) => ({ acquisitionDate });
 
 /** 기본: 주택 양도 · 스칼라 1 · 명부 비었음. */
 function args(over: Partial<Parameters<typeof resolveHouseholdHousingCount>[0]> = {}) {
-  return { primaryKind: "housing", declared: 1, houses: [], ...over };
+  return { primaryKind: "housing", declared: 1, houses: [], legacyPrecedence: false, ...over };
 }
 
 describe("HC-1·2 명부 우선", () => {
@@ -149,34 +152,39 @@ describe("HC-7 명부가 정본인 상태", () => {
 
 describe("HC-8 명부 patch 가 스칼라를 함께 갱신한다", () => {
   it("[HC-8a] 취득일 있는 행 2개 → 스칼라 '3' (= 1 + 2)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01"), row("2021-01-01")], "housing");
+    const p = housesPatchWithDerivedCount([row("2020-01-01"), row("2021-01-01")], "housing", false);
     expect(p.householdHousingCount).toBe("3");
     expect(p.houses).toHaveLength(2);
   });
 
   it("[HC-8b] 행 1개 → '2'", () => {
-    expect(housesPatchWithDerivedCount([row("2020-01-01")], "housing").householdHousingCount).toBe("2");
+    expect(housesPatchWithDerivedCount([row("2020-01-01")], "housing", false).householdHousingCount).toBe("2");
   });
 
   it("[HC-8c] 취득일 없는 행은 세지 않는다 — 갱신 자체가 없다", () => {
-    const p = housesPatchWithDerivedCount([row()], "housing");
+    const p = housesPatchWithDerivedCount([row()], "housing", false);
     expect(p.householdHousingCount).toBeUndefined();
     expect(p.houses).toHaveLength(1);
   });
 
   it("[HC-8d] 명부를 비우면 갱신하지 않는다 — 몇 채인지 알 수 없다(D-4 복귀)", () => {
-    expect(housesPatchWithDerivedCount([], "housing").householdHousingCount).toBeUndefined();
+    expect(housesPatchWithDerivedCount([], "housing", false).householdHousingCount).toBeUndefined();
   });
 
   it("[HC-8e] 주택 양도가 아니면 갱신하지 않는다 (F1)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in");
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false);
     expect(p.householdHousingCount).toBeUndefined();
   });
 
   it("[HC-8f] 갱신값은 ④·⑧ leaf 와 같다 — 한 값만 남는다", () => {
     const houses = [row("2020-01-01"), row("2021-01-01"), row()];
-    const derived = housesPatchWithDerivedCount(houses, "housing").householdHousingCount;
-    const leaf = resolveHouseholdHousingCount({ primaryKind: "housing", declared: 1, houses });
+    const derived = housesPatchWithDerivedCount(houses, "housing", false).householdHousingCount;
+    const leaf = resolveHouseholdHousingCount({
+      primaryKind: "housing",
+      declared: 1,
+      houses,
+      legacyPrecedence: false,
+    });
     expect(Number(derived)).toBe(leaf);
   });
 });
@@ -202,7 +210,83 @@ describe("HC-9 잠금은 «정합된 상태»만 고정한다", () => {
   });
 
   it("[HC-9e] HC-8 갱신 직후는 반드시 잠긴 상태다 — 두 술어가 같은 산식을 쓴다", () => {
-    const declared = Number(housesPatchWithDerivedCount(two, "housing").householdHousingCount);
+    const declared = Number(housesPatchWithDerivedCount(two, "housing", false).householdHousingCount);
     expect(houseCountScalarLocked("housing", two, declared)).toBe(true);
+  });
+});
+
+describe("HC-10 OH-34 레거시 표식을 붙일 조건", () => {
+  const two = [row("2020-01-01"), row("2021-01-01")]; // 파생 = 3
+
+  it("[HC-10a] 저장 당시 스칼라가 명부와 어긋나면 true", () => {
+    expect(houseCountDivergedFromRoster("housing", two, 1)).toBe(true);
+    expect(houseCountDivergedFromRoster("housing", two, 5)).toBe(true);
+  });
+
+  it("[HC-10b] 정합이면 false — 표식을 붙이지 않는다", () => {
+    expect(houseCountDivergedFromRoster("housing", two, 3)).toBe(false);
+  });
+
+  it("[HC-10c] 명부가 비면 false (D-4 — 스칼라가 원래 정본)", () => {
+    expect(houseCountDivergedFromRoster("housing", [], 5)).toBe(false);
+  });
+
+  it("[HC-10d] 주택 양도가 아니면 false (F1)", () => {
+    expect(houseCountDivergedFromRoster("right_to_move_in", two, 1)).toBe(false);
+  });
+
+  it("[HC-10e] 잠금 술어와 정확히 반대다(명부가 정본인 구간에서) — 같은 산식을 쓴다", () => {
+    for (const declared of [1, 2, 3, 4, 5]) {
+      expect(houseCountDivergedFromRoster("housing", two, declared)).toBe(
+        !houseCountScalarLocked("housing", two, declared),
+      );
+    }
+  });
+});
+
+describe("HC-11 레거시 표식이 켜지면 저장 당시 스칼라로 계산한다", () => {
+  const two = [row("2020-01-01"), row("2021-01-01")]; // 파생 = 3
+
+  it("[HC-11a] 🔑 표식 ON → 명부(3채)가 아니라 스칼라(1채)", () => {
+    expect(
+      resolveHouseholdHousingCount({
+        primaryKind: "housing",
+        declared: 1,
+        houses: two,
+        legacyPrecedence: true,
+      }),
+    ).toBe(1);
+  });
+
+  it("[HC-11a-twin] 표식 OFF 면 종전대로 명부(3채) — 구별력 확인", () => {
+    expect(
+      resolveHouseholdHousingCount({
+        primaryKind: "housing",
+        declared: 1,
+        houses: two,
+        legacyPrecedence: false,
+      }),
+    ).toBe(3);
+  });
+
+  it("[HC-11b] 표식 ON 이면 명부를 편집해도 스칼라를 덮지 않는다 — 전환 버튼만이 끈다", () => {
+    const p = housesPatchWithDerivedCount(two, "housing", true);
+    expect(p.householdHousingCount).toBeUndefined();
+    expect(p.houses).toHaveLength(2);
+  });
+
+  it("[HC-11b-twin] 표식 OFF 면 갱신한다 — 구별력 확인", () => {
+    expect(housesPatchWithDerivedCount(two, "housing", false).householdHousingCount).toBe("3");
+  });
+
+  it("[HC-11c] 표식은 F1 게이트보다 앞선다 — 입주권 이력도 저장 당시 값을 쓴다", () => {
+    expect(
+      resolveHouseholdHousingCount({
+        primaryKind: "right_to_move_in",
+        declared: 4,
+        houses: two,
+        legacyPrecedence: true,
+      }),
+    ).toBe(4);
   });
 });

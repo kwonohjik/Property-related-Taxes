@@ -154,6 +154,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           primaryKind,
           declared: parseInt(form.householdHousingCount || "1", 10) || 0,
           houses: form.houses,
+          legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         }),
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }),

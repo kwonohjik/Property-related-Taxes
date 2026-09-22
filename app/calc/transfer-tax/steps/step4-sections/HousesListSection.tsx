@@ -457,7 +457,12 @@ export function HousesListSection({
    * 스칼라가 어긋나므로 `onChange({ houses })` 를 직접 부르지 말 것.
    */
   function patchHouses(next: HouseEntry[]) {
-    return housesPatchWithDerivedCount(next, form.assets?.[0]?.assetKind);
+    return housesPatchWithDerivedCount(
+      next,
+      form.assets?.[0]?.assetKind,
+      // OH-34: 레거시 표식이 켜져 있으면 스칼라를 덮지 않는다(전환 버튼만이 끈다).
+      form.legacyHouseCountPrecedence ?? false,
+    );
   }
 
   // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
@@ -659,7 +664,9 @@ export function HousesListSection({
         )}
 
         {/* ── ①↔④ 정합성 안내 (표시 전용) ── */}
-        {divergence.showPrecedence && (
+        {/* ⚠️ OH-34 표식이 켜져 있으면 이 문장은 **거짓**이다(계산이 스칼라로 간다) — 숨긴다.
+            그 상태의 안내는 아래 레거시 카드가 대신한다. */}
+        {divergence.showPrecedence && !form.legacyHouseCountPrecedence && (
           <ToneCard tone="sky" bodyClassName="" className="px-3 py-2">
             <p className="text-xs leading-relaxed">
               <b>세대 주택 수</b>는 이 <b>다른 보유 주택 목록</b> 기준으로 산정됩니다 — 중과
@@ -668,7 +675,35 @@ export function HousesListSection({
             </p>
           </ToneCard>
         )}
-        {divergence.showMismatch && (
+        {/* OH-34 — 저장 당시 스칼라가 명부와 어긋난 **이력을 복원**한 경우.
+            계산은 저장 당시 값으로 하고(세액 보존), 명부로 넘어가는 것은 사용자가 고른다. */}
+        {divergence.showMismatch && form.legacyHouseCountPrecedence && (
+          <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+            <div className="space-y-1.5" data-testid="house-count-legacy-precedence">
+              <p className="text-xs leading-relaxed">
+                저장 당시 직접 입력한 주택 수(<b>{divergence.declared}채</b>)와 목록
+                (<b>{divergence.structuralCount}채</b>, 양도주택 포함)가 다릅니다 — 저장 당시 세액을
+                유지하려고 계산은 <b>{divergence.declared}채</b>로 합니다. 누락된 주택을 목록에
+                보완하거나, 목록 기준으로 전환하세요.{" "}
+                <span className="text-muted-foreground">(분양권·입주권은 별도 집계)</span>
+              </p>
+              <button
+                type="button"
+                data-testid="house-count-adopt-roster"
+                onClick={() =>
+                  onChange({
+                    legacyHouseCountPrecedence: false,
+                    householdHousingCount: String(divergence.structuralCount),
+                  })
+                }
+                className="rounded-md border border-amber-400 bg-amber-100/60 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200"
+              >
+                목록 기준({divergence.structuralCount}채)으로 전환
+              </button>
+            </div>
+          </ToneCard>
+        )}
+        {divergence.showMismatch && !form.legacyHouseCountPrecedence && (
           <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
             <p className="text-xs leading-relaxed" data-testid="house-count-mismatch">
               ① 세대 보유 주택 수(<b>{divergence.declared}채</b>)와 목록의 주택 수

@@ -240,3 +240,91 @@ describe("R-5. 공통 부수효과 — 드로어에도 함께 적용된다", () 
     expect(useBuildingStdSnapshotStore.getState().snapshots).toHaveProperty("asset-1");
   });
 });
+
+/**
+ * ── OH-34 레거시 표식 — 저장 당시 스칼라가 명부와 어긋난 이력의 **세액 보존** ──
+ *
+ * P7-2 이후 비과세·장특 표2 판정도 명부를 쓴다(계획서 OH-33). 그래서 「선언 1채 + 명부 2행」으로
+ * 저장된 이력을 그대로 재계산하면 3채가 되어 **세액이 달라진다**. 조용히 바꾸지 않는다 —
+ * 복원 시 표식을 붙여 저장 당시 값으로 계산하고, 「목록 기준으로 전환」을 누를 때만 명부로 센다.
+ *
+ * 🔑 **술어 anchor(HC-10·HC-11)는 이 배선을 증명하지 않는다.** `resumeTransferRecord`가
+ *    표식을 실제로 쓰는지는 store 를 보고 확인해야 한다
+ *    (`feedback_library_anchor_does_not_prove_component_uses_it`).
+ */
+const house = (acquisitionDate: string) => ({
+  id: `h-${acquisitionDate}`,
+  region: "capital" as const,
+  acquisitionDate,
+  officialPrice: "300000000",
+  isInherited: false,
+  isLongTermRental: false,
+  isApartment: false,
+  isOfficetel: false,
+  isUnsoldHousing: false,
+});
+
+const legacyRec = (householdHousingCount: string, otherHouses: string[]) =>
+  rec({
+    id: `rec-legacy-${householdHousingCount}-${otherHouses.length}`,
+    inputData: {
+      assets: [{ assetKind: "housing", addressJibun: "레거시 주택" }],
+      transferDate: "2026-03-03",
+      isOneHousehold: true,
+      householdHousingCount,
+      houses: otherHouses.map(house),
+    },
+    resultData: { mode: "single", result: { determinedTax: 1 } },
+  });
+
+describe("R-4. OH-34 — 복원 시 레거시 표식", () => {
+  const flag = () => useCalcWizardStore.getState().formData.legacyHouseCountPrecedence;
+
+  it("[R-4a] 🔑 선언 1채 + 명부 2행(파생 3채) → 표식이 켜진다", async () => {
+    const { router } = routerMock();
+    await resumeTransferRecord(legacyRec("1", ["2018-01-01", "2019-01-01"]), router);
+    expect(flag()).toBe(true);
+    // 저장 당시 스칼라는 그대로 남아 있어야 계산의 근거가 된다
+    expect(useCalcWizardStore.getState().formData.householdHousingCount).toBe("1");
+  });
+
+  it("[R-4b] 정합하면(선언 3 = 1 + 2행) 표식이 꺼진다", async () => {
+    const { router } = routerMock();
+    await resumeTransferRecord(legacyRec("3", ["2018-01-01", "2019-01-01"]), router);
+    expect(flag()).toBe(false);
+  });
+
+  it("[R-4c] 명부가 비면 표식이 꺼진다 — D-4 간이 입력은 원래 스칼라가 정본", async () => {
+    const { router } = routerMock();
+    await resumeTransferRecord(legacyRec("5", []), router);
+    expect(flag()).toBe(false);
+  });
+
+  /**
+   * 🔴 이것이 이 절의 핵심이다. `updateFormData`는 **단순 merge** 라
+   * 「어긋나면 켠다」만 구현하면 깨끗한 record 가 **직전 폼의 표식을 물려받는다**.
+   */
+  it("[R-4d] 🔴 어긋난 이력 → 깨끗한 이력을 연달아 열면 표식이 꺼져 있어야 한다", async () => {
+    const { router } = routerMock();
+    await resumeTransferRecord(legacyRec("1", ["2018-01-01", "2019-01-01"]), router);
+    expect(flag()).toBe(true); // 선행 조건
+    await resumeTransferRecord(legacyRec("3", ["2018-01-01", "2019-01-01"]), router);
+    expect(flag()).toBe(false);
+  });
+
+  it("[R-4e] 주택 양도가 아니면 표식을 붙이지 않는다 (F1)", async () => {
+    const { router } = routerMock();
+    const r = rec({
+      id: "rec-legacy-right",
+      inputData: {
+        assets: [{ assetKind: "right_to_move_in", addressJibun: "입주권" }],
+        transferDate: "2026-03-03",
+        householdHousingCount: "1",
+        houses: [house("2018-01-01"), house("2019-01-01")],
+      },
+      resultData: { mode: "single", result: { determinedTax: 1 } },
+    });
+    await resumeTransferRecord(r, router);
+    expect(flag()).toBe(false);
+  });
+});

@@ -619,6 +619,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         primaryKind: form.assets?.[0]?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode;
