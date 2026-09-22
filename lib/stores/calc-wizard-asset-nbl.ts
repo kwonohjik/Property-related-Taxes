@@ -303,6 +303,58 @@ export interface HouseEntry {
 }
 
 /**
+ * §167의3①2호 장기임대주택 선언 묶음 — **명부 행과 양도 주택이 공유**한다.
+ *
+ * ## 왜 공유하는가 — 9목 전부가 「양도하는 그 주택」에도 성립한다
+ *
+ * 법문(실독 2026-09-22 · MST 286211)은 2호의 가~자목 어디에도 「임대주택 **외의** 주택을
+ * 양도하는 경우」라는 제한을 두지 않는다. 오히려 그 반대다:
+ *   · **사목** = 「등록 말소 이후 1년 이내 **양도하는** 주택」 — 문언 자체가 양도 주택이다.
+ *   · **라목** = 「해당 주택을 **양도하는** 거주자는 … 미분양주택 확인서 사본 … 제출해야 한다」.
+ *
+ * ⇒ 「양도 주택에는 일부 목만 쓰인다」는 추정은 **법문으로 반증됐다**. 목을 골라낼 수 없으므로
+ *   명부 행의 매트릭스를 그대로 공유한다 — 복제하면 두 진실이 된다.
+ *
+ * 🔑 `Partial`인 이유: 명부 행은 `isLongTermRental`·`isApartment`가 필수지만, 양도 주택은
+ *   이 묶음 자체가 `sellingHouseExclusion.longTermRental`로 **선택적**이다(미선언 = 장기임대 아님).
+ *   `HouseEntry`는 이 타입에 구조적으로 대입되므로 매트릭스 위젯을 양쪽이 함께 쓴다.
+ */
+export type RentalDeclaration = Partial<
+  Pick<
+    HouseEntry,
+    // 공통 — 아파트 여부는 아·자목 일괄 제외 / 가·마목 2020.7.11 이후 등록 제외의 판정 입력이다
+    | "isLongTermRental"
+    | "isApartment"
+    // legacy 등록 경로 (rentalType 미선택 시)
+    | "isRegisteredRental"
+    | "rentalRegistrationDate"
+    | "businessRegistrationDate"
+    | "rentalPeriodYears"
+    | "rentalCancelledDate"
+    // 9유형 매트릭스 (가~자목)
+    | "rentalType"
+    | "rentIncreaseUnder5Pct"
+    | "isNationalSizeHousing"
+    | "hasMinimum2Units"
+    | "hasMinimum5UnitsInCity"
+    | "rentalLandArea"
+    | "rentalTotalFloorArea"
+    | "isConvertedToSale"
+    | "firstSaleContractDate"
+    | "acquisitionOfficialPrice"
+    | "rentalStartOfficialPrice"
+    | "hasHalfDutyPeriodMet"
+    | "isSoldWithin1YearOfCancellation"
+    | "rentalCancellationDate"
+    | "saMokBaseArticle"
+    | "isExcluded918Rule"
+    | "isExcludedAfter20200711Apt"
+    | "isExcludedShortToLongChange"
+    | "hasContractDepositProof"
+  >
+>;
+
+/**
  * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).
  * 소령 §167의11·§167의3①: 2021.1.1 이후 취득분은 주택 수 산정에 포함.
  */

@@ -23,6 +23,7 @@ import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
+import { buildSellingRentalPayload, sellingRentalAcquisitionPrice } from "@/lib/calc/transfer-tax-api-houses";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
@@ -122,9 +123,15 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
               primary?.acquisitionCause === "inheritance"
                 ? primary.isRankingDisqualifiedInheritedHouse
                 : undefined,
-            // 🟠 2호(장기임대)는 아직 입력 경로가 없다 — 단건과 같은 상태.
-            isLongTermRental: false,
-            isApartment: false,
+            // ④' §167의3①2호 — 양도 주택 자신의 장기임대 배제. 단건과 **같은 leaf**.
+            //   종전 `false` 하드코딩으로 엔진 `isSurchargeExemptRental(sellingHouse, …)`가
+            //   잠들어 있었다. 여기만 빠뜨리면 같은 자산이 「계산」과 「합산 계산」에서 다른
+            //   세액이 된다([[feedback_sibling_path_already_implements_rule]]).
+            ...buildSellingRentalPayload(form.sellingHouseExclusion?.longTermRental),
+            // 나·라목 「취득 당시 기준시가」 — 이 경로에는 §167의10①3호(부득이) 칸이 없어 겸용 충돌이 없다.
+            acquisitionOfficialPrice: sellingRentalAcquisitionPrice(
+              form.sellingHouseExclusion?.longTermRental,
+            ),
             isOfficetel: false,
             isUnsoldHousing: false,
           },

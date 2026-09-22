@@ -17,15 +17,21 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { getRentalTypeLabel } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
-import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+import type { RentalDeclaration } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
-  house: HouseEntry;
-  onUpdate: (patch: Partial<HouseEntry>) => void;
+  /**
+   * 장기임대 선언 묶음. **명부 행(`HouseEntry`)과 양도 주택이 함께 쓴다** — `HouseEntry`는
+   * 이 타입의 상위집합이라 구조적으로 대입된다(2026-09-22 · 양도 주택 2호 배선).
+   */
+  house: RentalDeclaration;
+  /** 라디오 그룹 `name` 유일성 — 명부 행은 행 id, 양도 주택은 `"selling"`. */
+  idPrefix: string;
+  onUpdate: (patch: RentalDeclaration) => void;
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
-const TYPE_FIELDS: Record<RentalHousingType, Array<keyof HouseEntry>> = {
+const TYPE_FIELDS: Record<RentalHousingType, Array<keyof RentalDeclaration>> = {
   A: ["rentalStartOfficialPrice", "rentIncreaseUnder5Pct"],
   B: ["acquisitionOfficialPrice", "isNationalSizeHousing", "hasMinimum2Units"],
   C: ["rentalStartOfficialPrice", "hasMinimum2Units", "rentalLandArea", "rentalTotalFloorArea", "rentIncreaseUnder5Pct", "isConvertedToSale"],
@@ -64,20 +70,20 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   hasContractDepositProof: { kind: "bool", label: "계약금 지급 증빙 보유" },
 };
 
-export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
+export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate }: Props) {
   const rentalType = house.rentalType;
-  let fields: Array<keyof HouseEntry> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
+  let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
   // 사목(G) — base 목 선택 시 그 목의 "해당 목의 다른 요건" 필드 동적 추가(중복 제거)
   if (rentalType === "G" && house.saMokBaseArticle && SAMOK_BASE_TO_TYPE[house.saMokBaseArticle]) {
     const baseFields = TYPE_FIELDS[SAMOK_BASE_TO_TYPE[house.saMokBaseArticle]];
     fields = [...fields, ...baseFields.filter((f) => !fields.includes(f))];
   }
 
-  function setStr(key: keyof HouseEntry, v: string) {
-    onUpdate({ [key]: v || undefined } as Partial<HouseEntry>);
+  function setStr(key: keyof RentalDeclaration, v: string) {
+    onUpdate({ [key]: v || undefined } as RentalDeclaration);
   }
-  function setBool(key: keyof HouseEntry, v: boolean) {
-    onUpdate({ [key]: v } as Partial<HouseEntry>);
+  function setBool(key: keyof RentalDeclaration, v: boolean) {
+    onUpdate({ [key]: v } as RentalDeclaration);
   }
 
   return (
@@ -88,7 +94,7 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
           장기임대주택 유형 <span className="text-muted-foreground/60 font-normal">(미선택 시 등록임대 5년 단순 판정)</span>
         </label>
         <RadioCardGroup
-          name={`rental-type-${house.id}`}
+          name={`rental-type-${idPrefix}`}
           layout="stack"
           tone="violet"
           value={rentalType ?? ""}
@@ -148,7 +154,7 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
                 <div key={key as string} className="space-y-1">
                   <label className="block text-caption text-muted-foreground font-medium">{meta.label}</label>
                   <RadioCardGroup
-                    name={`samok-base-${house.id}`}
+                    name={`samok-base-${idPrefix}`}
                     layout="inline"
                     tone="violet"
                     value={(house[key] as string) ?? ""}

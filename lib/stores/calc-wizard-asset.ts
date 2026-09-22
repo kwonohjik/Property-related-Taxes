@@ -21,6 +21,7 @@ export type {
   GracePeriodInput,
   NblGracePeriodInput,
   HouseEntry,
+  RentalDeclaration,
   PresaleRightEntry,
 } from "./calc-wizard-asset-nbl";
 

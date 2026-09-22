@@ -6,11 +6,66 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import type { HouseEntry, RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike } from "./transfer-tax-api-helpers";
 import { deriveHouseRegionFromCode } from "./house-region";
+
+/**
+ * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
+ *
+ * 명부 행 매핑(아래 `otherHouses`)과 **같은 규약**이다: 등록 경로는 `isLongTermRental`이 켜진
+ * 때만, 9유형 매트릭스는 `rentalType`까지 고른 때만 싣는다. 미선언이면 `isLongTermRental: false`
+ * 하나만 나가 종전과 동일하다(⑫ `isLongTermRental`은 필수 boolean이다).
+ *
+ * ⚠️ `acquisitionOfficialPrice`는 여기서 내보내지 않는다 — §167의10①3호(부득이)와 칸이 겹쳐
+ *   호출부가 한 번에 결정한다(`sellingRentalAcquisitionPrice`).
+ */
+export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): object {
+  if (!ltr?.isLongTermRental) return { isLongTermRental: false, isApartment: false };
+  return {
+    isLongTermRental: true,
+    isApartment: ltr.isApartment ?? false,
+    isRegisteredRental: ltr.isRegisteredRental,
+    rentalRegistrationDate: ltr.rentalRegistrationDate || undefined,
+    businessRegistrationDate: ltr.businessRegistrationDate || undefined,
+    rentalPeriodYears: ltr.rentalPeriodYears ? parseFloat(ltr.rentalPeriodYears) : undefined,
+    rentalCancelledDate: ltr.rentalCancelledDate || undefined,
+    ...(ltr.rentalType
+      ? {
+          rentalType: ltr.rentalType,
+          rentIncreaseUnder5Pct: ltr.rentIncreaseUnder5Pct,
+          isNationalSizeHousing: ltr.isNationalSizeHousing,
+          hasMinimum2Units: ltr.hasMinimum2Units,
+          hasMinimum5UnitsInCity: ltr.hasMinimum5UnitsInCity,
+          rentalLandArea: ltr.rentalLandArea ? parseFloat(ltr.rentalLandArea) : undefined,
+          rentalTotalFloorArea: ltr.rentalTotalFloorArea
+            ? parseFloat(ltr.rentalTotalFloorArea)
+            : undefined,
+          isConvertedToSale: ltr.isConvertedToSale,
+          firstSaleContractDate: ltr.firstSaleContractDate || undefined,
+          rentalStartOfficialPrice: ltr.rentalStartOfficialPrice
+            ? parseInt(ltr.rentalStartOfficialPrice)
+            : undefined,
+          hasHalfDutyPeriodMet: ltr.hasHalfDutyPeriodMet,
+          isSoldWithin1YearOfCancellation: ltr.isSoldWithin1YearOfCancellation,
+          rentalCancellationDate: ltr.rentalCancellationDate || undefined,
+          saMokBaseArticle: ltr.saMokBaseArticle,
+          isExcluded918Rule: ltr.isExcluded918Rule,
+          isExcludedAfter20200711Apt: ltr.isExcludedAfter20200711Apt,
+          isExcludedShortToLongChange: ltr.isExcludedShortToLongChange,
+          hasContractDepositProof: ltr.hasContractDepositProof,
+        }
+      : {}),
+  };
+}
+
+/** 장기임대 나·라목의 「취득 당시 기준시가」 — 부득이 3호와 칸을 겸하므로 분리했다. */
+export function sellingRentalAcquisitionPrice(ltr: RentalDeclaration | undefined): number | undefined {
+  if (!ltr?.isLongTermRental || !ltr.acquisitionOfficialPrice) return undefined;
+  return parseInt(ltr.acquisitionOfficialPrice);
+}
 
 /**
  * 양도주택(selling) + 보유주택 목록 → Zod houseSchema 배열 페이로드 빌드.
@@ -78,10 +133,18 @@ export function buildHousesPayload(
       primary.acquisitionCause === "inheritance"
         ? primary.isRankingDisqualifiedInheritedHouse
         : undefined,
-    // 🟠 §167의3①2호(장기임대)는 **아직 입력 경로가 없다** — `rentalHousingException`은 §155⑳
-    //    (다른 집이 임대인 거주주택 특례)이고 조특법 §97 계열 감면은 다른 축이다. 신규 입력 설계 필요.
-    isLongTermRental: false,
-    isApartment: false,
+    /**
+     * ④⑬ §167의3①**2호** — 양도 주택 **자신**이 등록 장기임대주택이면 중과 대상에서 빠진다.
+     *
+     * 🔴 종전에는 `false` **하드코딩**이었다. 엔진은 양도 주택에도 2호를 적용하는데
+     *    (`multi-house-surcharge-exclusion.ts` `isSurchargeExemptRental(sellingHouse, …)`)
+     *    어댑터가 사실을 싣지 않아 그 분기가 **잠들어 있었다** — 문화유산(6호)·상속(7호)과
+     *    같은 「어댑터 한 층만 끊긴 잠자는 분기」다.
+     *
+     * 🔑 9목 전부가 양도 주택에 성립하므로 명부 행과 **같은 필드 묶음**을 그대로 보낸다
+     *    (근거: `RentalDeclaration` 주석의 법문 실독 — 사목은 문언이 「양도하는 주택」).
+     */
+    ...buildSellingRentalPayload(se?.longTermRental),
     isOfficetel: false,
     isUnsoldHousing: false,
     // P2 양도 주택 3주택+ 전용 배제 특례
@@ -104,11 +167,18 @@ export function buildHousesPayload(
     unavoidableReasonResolvedDate: se?.isUnavoidableReason
       ? se.unavoidableReasonResolvedDate || undefined
       : undefined,
-    // 3호의 기준시가는 「취득 당시」다 — 양도 주택의 `officialPrice`에는 양도 당시 값이 실린다.
+    /**
+     * 3호의 기준시가는 「취득 당시」다 — 양도 주택의 `officialPrice`에는 양도 당시 값이 실린다.
+     *
+     * ⚠️ **한 필드가 두 조문 축을 겸한다** — §167의10①3호(부득이)와 장기임대 나·라목이 둘 다
+     *    「취득 당시 기준시가」를 본다. 가리키는 **사실이 같으므로** 값은 하나여야 하고, 어느
+     *    칸에 적혔든 살아남아야 한다. 부득이 칸이 비어 있을 때 `undefined`로 덮으면 위 spread가
+     *    실은 임대 쪽 값이 조용히 지워진다(속성 순서상 이 줄이 뒤에 온다).
+     */
     acquisitionOfficialPrice:
-      se?.isUnavoidableReason && se.acquisitionOfficialPrice
+      (se?.isUnavoidableReason && se.acquisitionOfficialPrice
         ? parseAmount(se.acquisitionOfficialPrice)
-        : undefined,
+        : undefined) ?? sellingRentalAcquisitionPrice(se?.longTermRental),
     isLitigationHousing: se?.isLitigationHousing,
     litigationAcquisitionDate: se?.isLitigationHousing
       ? se.litigationAcquisitionDate || undefined

@@ -20,6 +20,7 @@ import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-
 export type {
   AssetForm,
   HouseEntry,
+  RentalDeclaration,
   PresaleRightEntry,
   PriorReductionUsageItem,
   SpecialHouseExclusionFormItem,

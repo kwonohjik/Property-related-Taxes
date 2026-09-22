@@ -458,7 +458,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
             </p>
           )}
           {/* 9유형(가~자목) 매트릭스 — 유형 선택 시 유형별 요건 정밀 판정 */}
-          <HouseEntryRentalTypeSection house={house} onUpdate={onUpdate} />
+          <HouseEntryRentalTypeSection house={house} idPrefix={house.id} onUpdate={onUpdate} />
         </div>
       </ToggleCard>
     </ToneCard>
