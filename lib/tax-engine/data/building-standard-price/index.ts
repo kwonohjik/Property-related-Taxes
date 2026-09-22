@@ -47,6 +47,7 @@ export {
   calcResidualRate,
   calcResidualRateByDurable,
   remodelYearError,
+  builtYearOrderError,
 } from "./residual-rate";
 
 // D7 조정율

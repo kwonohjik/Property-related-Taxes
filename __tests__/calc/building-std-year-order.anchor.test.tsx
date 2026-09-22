@@ -31,12 +31,35 @@
  * ⇒ 술어를 손으로 다시 적지 않고 **`transferYearVisible` leaf** 를 신설해 UI 와 ⑧검증이
  *   같은 답을 내게 한다([[feedback_leaf_unification_leaves_one_handwritten_predicate]]).
  *
- * ## ⚠️ 신축연도 축은 **차단하지 않는다** (같은 probe 에서 실측했으나 제외)
+ * ## ⚠️ 신축연도 축 — **착수 시점 기록**(2026-08-26). 아래 §4·§5 로 갈렸다.
  *
- * `builtYear > acquisitionYear` (실측: 취득 기준시가 118,800,000 vs 정상 95,000,000, **+25%**)
- * 와 `builtYear > valuationYear` 도 똑같이 무검증 통과한다. 그러나 재개발·입주권처럼
- * **신축이 취득보다 뒤인 정당한 조합**을 배제할 위험이 있어 판단 근거가 부족하다 —
- * 법령 근거 없이 정상 입력을 막는 방향이므로 **기록만 남기고 별건으로 둔다**.
+ * > `builtYear > acquisitionYear` (실측: 취득 기준시가 118,800,000 vs 정상 95,000,000, **+25%**)
+ * > 와 `builtYear > valuationYear` 도 똑같이 무검증 통과한다. 그러나 재개발·입주권처럼
+ * > **신축이 취득보다 뒤인 정당한 조합**을 배제할 위험이 있어 판단 근거가 부족하다 —
+ * > 법령 근거 없이 정상 입력을 막는 방향이므로 **기록만 남기고 별건으로 둔다**.
+ *
+ * ✅ **2026-09-22 정정 — 두 축은 근거 강도가 다르다.** 위 기재는 둘을 한 덩어리로 묶었으나,
+ *    실측이 갈라 놓았다.
+ *
+ *    - **평가·양도 시점 축(§4)**: 그 시점에 건물이 없다는 것은 재개발·입주권으로도 설명되지
+ *      않는다(양도하려면 그 건물이 존재해야 한다). 게다가 형제 술어 `remodelYearError` 가
+ *      **대수선**에는 이미 같은 규칙을 걸고 있어, 대수선을 입력한 경우에만 신축 ≤ 평가가
+ *      간접 강제되는 **비대칭**이 있었다. ⇒ `builtYearOrderError` 로 차단한다.
+ *    - **취득 시점 축(§5)**: 「완공 전 취득」이 고시상 별도 범주로 **실재한다**. 산정기준율표가
+ *      그 셀을 의도적으로 비워 두었고(`acq-base-rate.ts:12` 「값 없는 셀(취득<신축=완공전취득
+ *      §8④ 등) = 미수록」), 취득 ≤2000 경로는 실제로 「산정기준율 미수록」으로 멈춘다
+ *      (실측 2026-09-22: 신축 1995 · 취득 1990 → THROW). ⇒ 위 보류 판단이 **옳았다**.
+ *      취득 ≥2001 경로(+25%)의 처방은 **고시 §8④ 본문 확인이 착수 조건**이다.
+ *
+ * 실측(2026-09-22 · rc · 용도1 · 200㎡ · 취득공시 1,000,000 · 양도공시 1,100,000):
+ *
+ * | 입력 | 수정 전 validate | 산출 | 수정 후 |
+ * |---|---|---|---|
+ * | 신축 2000 · 취득 2010 · 양도 2020 | 통과 | acq 95,000,000(0.8) | 통과(불변) |
+ * | **신축 2025 · 양도 2020** | **통과** | trans **168,600,000(잔가율 1.000)** | **차단**(§4) |
+ * | **신축 2025 · 상증 평가 2020** | **통과** | val **168,600,000(1.000)** | **차단**(§4) |
+ * | 신축 2015 · 취득 2010 (취득≥2001) | 통과 | acq **118,800,000(1.000)** vs 95,000,000 | **통과 유지**(§5) |
+ * | 신축 1995 · 취득 1990 (취득≤2000) | 통과 | **THROW** 산정기준율 미수록 | 불변 |
  *
  * 법령: 「소득세법 시행규칙」 제80조 제1항 제1호 본문 *"취득일이 속하는 연도의 다음 연도
  * 말일 이전에 양도하는 경우"* — 양도가 취득 뒤라는 사실이 요건에 흡수돼 있다.
@@ -199,5 +222,106 @@ describe("연도 순서 — §3 UI 가시성 ↔ 검증 동치 (같은 leaf)", (
     expect(screen.queryByText("양도연도")).toBeNull();
     const msg = validateBuildingStdPriceForm(reversed({ singleTimePoint: "acquisition" })) ?? "";
     expect(msg).not.toContain("취득 후에만 양도할 수 있습니다");
+  });
+});
+
+/** 정상 순서(취득 2010 · 양도 2020)에 신축연도만 갈아끼운다. */
+const built = (builtYear: string, over: Partial<BuildingStdPriceFormState> = {}) =>
+  reversed({ acquisitionYear: "2010", transferYear: "2020", builtYear, ...over });
+
+/** 상증 1시점 — 평가연도 2020 고정, 신축연도만 갈아끼운다. */
+const builtEstate = (builtYear: string, over: Partial<BuildingStdPriceFormState> = {}) =>
+  ({
+    ...initialBuildingStdPriceForm,
+    taxType: "inheritance_gift",
+    floorArea: "200",
+    builtYear,
+    valuationYear: "2020",
+    valStructureKey: "rc",
+    valUsageNo: "1",
+    valLandPrice: "1,000,000",
+    ...over,
+  }) as BuildingStdPriceFormState;
+
+describe("연도 순서 — §4 신축연도 ≤ 평가시점 (수정 전 실패)", () => {
+  it("★ 양도 일반 2시점 — 신축 2025 > 양도 2020", () => {
+    expect(validateBuildingStdPriceForm(built("2025"))).toContain("신축연도(2025)");
+  });
+
+  it("★ 상증 평가 — 신축 2025 > 평가 2020", () => {
+    expect(validateBuildingStdPriceForm(builtEstate("2025"))).toContain("신축연도(2025)");
+  });
+
+  it("★ 복합구조", () => {
+    const f = built("2025", {
+      compositeMode: true,
+      compositeParts: [
+        { label: "1층", structureKey: "rc", usageNo: "1", acqUsageNo: "1", floorArea: "200" },
+      ],
+    } as never);
+    expect(validateBuildingStdPriceForm(f)).toContain("신축연도(2025)");
+  });
+
+  it("★ 기계식주차", () => {
+    const f = built("2025", { isMechanicalParking: true, parkingLotCount: "10" } as never);
+    expect(validateBuildingStdPriceForm(f)).toContain("신축연도(2025)");
+  });
+
+  it("★ 단일시점(양도)", () => {
+    expect(validateBuildingStdPriceForm(built("2025", { singleTimePoint: "transfer" })))
+      .toContain("신축연도(2025)");
+  });
+
+  it("★ 메시지에 두 연도를 함께 적는다", () => {
+    const msg = validateBuildingStdPriceForm(built("2025")) ?? "";
+    expect(msg).toContain("2025");
+    expect(msg).toContain("2020");
+  });
+
+  // 긍정 짝 — 경계(같은 해 준공·양도)는 경과 0년이라 정상이다.
+  it("신축 == 양도연도는 통과한다 (경계)", () => {
+    expect(validateBuildingStdPriceForm(built("2020"))).toBeNull();
+  });
+
+  it("신축 == 평가연도는 통과한다 (경계·상증)", () => {
+    expect(validateBuildingStdPriceForm(builtEstate("2020"))).toBeNull();
+  });
+
+  // 대수선 축과 겹칠 때 — 근본 원인(신축)을 먼저 알린다.
+  it("신축·대수선이 둘 다 평가연도보다 뒤면 신축연도를 먼저 알린다", () => {
+    const f = builtEstate("2025", { remodelYear: "2026" } as never);
+    expect(validateBuildingStdPriceForm(f)).toContain("신축연도(2025)");
+  });
+
+  it("🔴 양도연도 칸이 없는 모드는 차단하지 않는다 — dead-end 방지 (취득 전용)", () => {
+    const msg = validateBuildingStdPriceForm(built("2025", { singleTimePoint: "acquisition" })) ?? "";
+    expect(msg).not.toContain("신축연도(2025)");
+  });
+});
+
+describe("연도 순서 — §5 취득 시점 축은 **차단하지 않는다** (배제 축 고정)", () => {
+  /**
+   * ⛔ **이 describe 는 결함을 고정하는 것이 아니라 「아직 근거가 없다」를 고정한다.**
+   *
+   * 「완공 전 취득」은 국세청 고시 「건물 기준시가 계산방법」 §8④ 의 별도 범주다 —
+   * 산정기준율표가 그 셀을 비워 두었고(`acq-base-rate.ts:12`), 취득 ≤2000 경로는
+   * 실제로 「산정기준율 미수록」으로 멈춘다. 취득 ≥2001 경로만 잔가율 1.000 으로 통과한다
+   * (실측 2026-09-22: 신축 2015 · 취득 2010 → 취득 기준시가 **118,800,000**,
+   *  정상 신축 2000 의 95,000,000 대비 **+25.05%**).
+   *
+   * ⇒ **§8④ 본문을 확인해 처방이 정해지면** 이 describe 를 지우고 그 규칙의 anchor 로 바꾼다.
+   *   그 전까지 「신축 > 취득」을 일괄 차단하지 말 것 — 법 근거 없이 정당한 입력을 막는 방향이다.
+   */
+  it("🔴 신축 2015 > 취득 2010 (취득 ≥2001) — 통과한다", () => {
+    expect(validateBuildingStdPriceForm(built("2015"))).toBeNull();
+  });
+
+  it("🔴 취득 전용 단일시점에서도 통과한다", () => {
+    expect(validateBuildingStdPriceForm(built("2015", { singleTimePoint: "acquisition" }))).toBeNull();
+  });
+
+  // 긍정 짝 — 같은 폼에서 양도 시점 축은 살아 있다(§4 가 §5 에 흡수되지 않았음을 보인다).
+  it("같은 폼에서 신축을 양도연도 뒤로 옮기면 차단된다", () => {
+    expect(validateBuildingStdPriceForm(built("2021"))).toContain("신축연도(2021)");
   });
 });

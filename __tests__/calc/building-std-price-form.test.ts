@@ -391,10 +391,14 @@ describe("상속·증여 평가시점 — eventDate 단일 입력 → 연도 도
   });
 
   // C-3: 데이터 없는 연도(2000) → 차단(유효연도 검증, 드롭다운 폐지 후에도 방어)
+  // ⚠️ builtYear 는 이 단언과 무관한 기본값이었는데 "2020"(평가 2000보다 **뒤**)이라 모순
+  //    입력이었다. `builtYearOrderError` 신설 후 그 가드가 먼저 걸려 관측 대상이 바뀐다
+  //    ([[feedback_new_guard_absorbs_sibling_anchor_discriminance]]) — 단언은 그대로 두고
+  //    신축연도만 평가연도 이전으로 내려 원래 의도(지수 자료 부재)를 관측하게 한다.
   it("C-3: 데이터 없는 연도 → '자료가 없습니다'", () => {
     const f = form({
       taxType: "inheritance_gift",
-      builtYear: "2020",
+      builtYear: "1995",
       floorArea: "500",
       valuationYear: "2000",
       valStructureKey: "rc",
