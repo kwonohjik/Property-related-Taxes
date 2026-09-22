@@ -74,3 +74,19 @@ export function sellingHouseTwoHouseExclusionVisible(form: TransferFormData): bo
   if (se?.isUnavoidableReason || se?.isLitigationHousing) return true;
   return parseInt(form.householdHousingCount || "1", 10) === 2;
 }
+
+/**
+ * 「양도 주택이 장기임대주택인 경우」 섹션(§167의3①2호)을 렌더하는가.
+ *
+ * ⚠️ 기준은 **2채**다 — 위 3주택+ 게이트와 다르다. 2호는 2주택에서도 §167의10①2호가
+ *    「제167조의3제1항제2호부터 제8호까지」를 준용해 성립하고, 엔진도 `effectiveHouseCount >= 2`
+ *    에서 판정한다(`multi-house-surcharge-exclusion.ts`). 3으로 좁히면 2주택 사용자가
+ *    **선언할 화면을 잃는다**.
+ *
+ * 켜져 있으면 주택수와 무관하게 남긴다 — 다른 두 게이트와 같은 이유(끌 화면이 사라지면
+ * 그 선언을 되돌릴 길이 없다).
+ */
+export function sellingHouseLongTermRentalVisible(form: TransferFormData): boolean {
+  if (form.sellingHouseExclusion?.longTermRental?.isLongTermRental) return true;
+  return parseInt(form.householdHousingCount || "1", 10) >= 2;
+}

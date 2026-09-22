@@ -21,7 +21,11 @@ import { useMemo, useState } from "react";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
-import { sellingHouseExclusionVisible, sellingHouseTwoHouseExclusionVisible } from "@/lib/calc/house-count-inputs-scope";
+import {
+  sellingHouseExclusionVisible,
+  sellingHouseTwoHouseExclusionVisible,
+  sellingHouseLongTermRentalVisible,
+} from "@/lib/calc/house-count-inputs-scope";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -37,6 +41,7 @@ import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
+import { SellingHouseLongTermRentalSection } from "@/components/calc/transfer/SellingHouseLongTermRentalSection";
 import { SellingHouseTwoHouseExclusionSection } from "@/components/calc/transfer/SellingHouseTwoHouseExclusionSection";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
@@ -688,6 +693,17 @@ export function HousesListSection({
           입력이 있어 양도 주택에는 경로가 없었다. dead-end 회피는 위 3주택+ 섹션과 같은 규칙. */}
       {!hideSellingHouseExclusion && sellingHouseTwoHouseExclusionVisible(form) && (
         <SellingHouseTwoHouseExclusionSection
+          value={form.sellingHouseExclusion}
+          onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
+        />
+      )}
+
+      {/* ── 양도 주택이 장기임대주택인 경우 (§167의3①2호) ──
+          🔴 게이트가 **2채**다 — 위 두 섹션과 다르다. 2호는 2주택에서도 §167의10①2호가 준용하고
+             엔진도 `effectiveHouseCount >= 2`에서 판정한다. 3으로 맞추면 2주택에서 선언 경로가
+             사라져 종전의 「입력 경로 없음」이 절반만 해소된다. */}
+      {!hideSellingHouseExclusion && sellingHouseLongTermRentalVisible(form) && (
+        <SellingHouseLongTermRentalSection
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
         />

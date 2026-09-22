@@ -9,6 +9,7 @@
 import type {
   AssetForm,
   HouseEntry,
+  RentalDeclaration,
   PresaleRightEntry,
   PriorReductionUsageItem,
   SpecialHouseExclusionFormItem,
@@ -253,6 +254,24 @@ export interface TransferFormData {
     isLitigationHousing?: boolean;
     /** 소송 **확정판결일** — 취득일이 아니다. 필드명은 legacy(F-17) */
     litigationAcquisitionDate?: string;
+    /**
+     * §167의3①**2호** 장기임대주택 — **양도하는 주택 자신**이 등록 장기임대주택인 경우.
+     *
+     * 🔴 종전에는 입력 경로가 아예 없었고 ④가 `isLongTermRental: false`를 **하드코딩**했다.
+     *    엔진은 양도 주택 자신의 2호를 이미 판정하는데(`multi-house-surcharge-exclusion.ts`
+     *    `isSurchargeExemptRental(sellingHouse, …)`) 어댑터가 사실을 싣지 않아 잠들어 있었다 —
+     *    문화유산(6호)·상속(7호)과 **같은 「어댑터 한 층만 끊긴」 결함**이다.
+     *
+     * 🔑 `rentalHousingException`(§155⑳ 거주주택 특례 — **다른** 집이 임대)과도, 조특법 §97
+     *    계열 감면(`reductions`)과도 **다른 축**이다. 셋이 같은 낱말을 쓸 뿐이다.
+     *
+     * 🔑 명부 행과 **같은 타입**을 쓴다 — 9목 전부가 양도 주택에도 성립하므로(사목은 문언 자체가
+     *    「양도하는 주택」) 목을 골라낼 수 없다. 상세 근거는 `RentalDeclaration` 주석.
+     *
+     * ⚠️ 2호는 3주택(§167의3①2호)과 2주택(§167의10①**2호** 준용) **양쪽**에서 성립한다 —
+     *    노출 게이트를 3주택으로 좁히면 2주택 사용자가 선언할 화면을 잃는다.
+     */
+    longTermRental?: RentalDeclaration;
   };
 
   // ── Step 4 (구 Step5): 감면·공제 ──
