@@ -99,8 +99,12 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
         },
       ],
     });
-    // 섹션 자체는 떠 있다(합가·대체주택은 그대로) — §155① 축만 없다
-    await expect(page.getByText("혼인합가일", { exact: true })).toBeVisible();
+    /*
+      섹션 자체는 떠 있다 — §155① 축만 없다.
+      🔄 2026-09-23: 긍정 짝을 「혼인합가일」에서 **섹션 제목**으로 바꿨다. 합가일 칸은 ① 세대
+         단계가 소유하도록 정리되면서(중복 제거 — `hideMergeDate`) 이 화면에서 사라졌다.
+    */
+    await expect(page.getByText("③ 일시적 2주택·합가 특례", { exact: true })).toBeVisible();
     await expect(page.getByText("일시적 2주택 특례 (§155①)", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("temp-two-house-verdict")).toHaveCount(0);
   });

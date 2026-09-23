@@ -113,7 +113,9 @@ test.describe("대체주택 비과세 특례 §156의2⑤ (사례 43)", () => {
   test("RH-E2E-3: 판정 메뉴 — 토글 ON + 날짜 미입력 → validation 차단(⑧)", async ({ page }) => {
     await gotoJudgmentStep2(page);
     await page.getByRole("switch", { name: /대체주택 비과세 특례 해당/ }).setChecked(true);
-    await page.getByRole("button", { name: "다음" }).click();
+    // 🔄 2026-09-23 재배치 — 보유 주택·권리가 **마지막 입력 단계**가 되어 액션이
+    //    「다음」이 아니라 「판정 결과 보기」다. ⑧(`validateStep2`)은 그 CTA에서도 돈다.
+    await page.getByRole("button", { name: "판정 결과 보기" }).click();
     await expect(page.getByText(/사업시행계획인가일을 입력/)).toBeVisible({ timeout: 5000 });
   });
 

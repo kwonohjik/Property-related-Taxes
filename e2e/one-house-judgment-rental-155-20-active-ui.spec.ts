@@ -88,7 +88,8 @@ async function gotoRentalSection(page: Page, unitOver: Record<string, unknown> =
   await page.reload();
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
+  // 🔄 2026-09-23 재배치 — §155⑳ 거주주택 특례가 ② 양도 대상 화면으로 옮겨왔다.
+  await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
 }
 
 test.describe("§155⑳ 임대주택 능동형 UI", () => {

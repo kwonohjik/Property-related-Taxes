@@ -31,9 +31,9 @@ async function mockAddress(page: Page) {
 async function judge(page: Page) {
   await page.goto("/calc/one-house-exemption?new=1");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
+  // ② 양도 대상 주택 (2026-09-23 재배치 — 종전에는 3번째 화면이었다)
   await page.getByRole("button", { name: "다음" }).click();
-  await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("③ 양도 예정")).toBeVisible();
+  await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
   await fillDateAndVerify(page, { year: "2019", month: "03", day: "10" }, {
     scope: page.getByTestId("one-house-acq-date"),
   });
@@ -41,6 +41,9 @@ async function judge(page: Page) {
     scope: page.getByTestId("one-house-sale-date"),
   });
   await page.getByTestId("one-house-sale-price").fill("900000000");
+  // ③ 보유 주택·권리 — 명부는 비운 채 지나간다. CTA는 이 마지막 입력 단계에만 있다.
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
   await page.getByTestId("one-house-judge-cta").click();
   await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
 }

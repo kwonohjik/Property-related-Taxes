@@ -12,17 +12,31 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 
-/** ①②를 지나 ③까지 간다. `isOneHousehold`는 기본값 true라 누르지 않는다. */
-async function gotoStep3(page: Page) {
+/**
+ * ①을 지나 **② 양도 대상 주택**까지 간다. `isOneHousehold`는 기본값 true라 누르지 않는다.
+ *
+ * 🔄 2026-09-23 재배치 — 양도 대상이 3번째에서 **2번째 화면**으로 왔다
+ * (`docs/00-pm/one-house-judgment-step-reorder.plan.md`).
+ */
+async function gotoSaleStep(page: Page) {
   await page.goto("/calc/one-house-exemption?new=1");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("② 보유 주택·권리")).toBeVisible();
-  await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByText("③ 양도 예정")).toBeVisible();
+  await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
 }
 
-/** ③의 필수 3값 — 어느 자산 종류에서도 같다. */
+/**
+ * ②에서 ③(보유 주택·권리)으로 넘어간 뒤 판정을 띄운다.
+ *
+ * 🔑 「판정 결과 보기」 CTA는 **마지막 입력 단계(③)에만** 있다. 명부는 비운 채 지나간다 —
+ *    1주택 세대가 이 화면의 가장 흔한 입력이라 ⑧이 막지 않는다.
+ */
+async function gotoHoldingsStep(page: Page) {
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
+}
+
+/** ②의 필수 3값 — 어느 자산 종류에서도 같다. */
 async function fillSaleBasics(page: Page, price = "900000000") {
   await fillDateAndVerify(page, { year: "2019", month: "03", day: "10" }, {
     scope: page.getByTestId("one-house-acq-date"),
@@ -44,7 +58,7 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
    *    사용자가 같은 질문을 두 번 받고 판정에는 하나만 쓰인다.
    */
   test("[ORR-1] 조합원입주권을 고르면 §89①4호 카드가 열리고 거주기간 섹션이 닫힌다", async ({ page }) => {
-    await gotoStep3(page);
+    await gotoSaleStep(page);
 
     // 주택(기본값)에서는 거주기간 섹션이 있고 §89①4호 카드는 없다.
     await expect(page.getByText("1세대1입주권 비과세 요건")).toHaveCount(0);
@@ -60,7 +74,7 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
    *    장기보유특별공제 과세구조 안내는 계산기(`mode="full"`)의 것이다.
    */
   test("[ORR-2] 장기보유특별공제 과세구조 안내는 뜨지 않는다", async ({ page }) => {
-    await gotoStep3(page);
+    await gotoSaleStep(page);
     await pickRight(page);
 
     await expect(page.getByText("관리처분 인가 후 조합원입주권 양도 — 과세 구조 안내")).toHaveCount(0);
@@ -73,10 +87,12 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
    * 명부가 비면 가목이 성립해야 한다 — `selling` 행을 주택으로 세면 1채가 되어 절대 성립하지 않는다.
    */
   test("[ORR-3] 가목 — 다른 주택·분양권이 없으면 비과세로 판정된다", async ({ page }) => {
-    await gotoStep3(page);
+    await gotoSaleStep(page);
     await pickRight(page);
     await page.getByRole("switch", { name: /인가일 현재/ }).click();
     await fillSaleBasics(page);
+
+    await gotoHoldingsStep(page);
 
     const response = page.waitForResponse(
       (r) => r.url().includes("/api/calc/one-house-exemption") && r.request().method() === "POST",
@@ -92,10 +108,11 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
   });
 
   test("[ORR-4] 인가일 요건을 선언하지 않으면 과세이고 사유가 나온다", async ({ page }) => {
-    await gotoStep3(page);
+    await gotoSaleStep(page);
     await pickRight(page);
     await fillSaleBasics(page);
 
+    await gotoHoldingsStep(page);
     await page.getByTestId("one-house-judge-cta").click();
     await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
     await expect(page.getByTestId("one-house-one-right-verdict")).toContainText("요건 미충족");
@@ -104,11 +121,12 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
 
   /** 12억 초과 — 각 목 외의 부분 단서로 **부분 비과세**다(전액이 아니다). */
   test("[ORR-5] 12억 초과면 부분 비과세로 판정된다", async ({ page }) => {
-    await gotoStep3(page);
+    await gotoSaleStep(page);
     await pickRight(page);
     await page.getByRole("switch", { name: /인가일 현재/ }).click();
     await fillSaleBasics(page, "1500000000");
 
+    await gotoHoldingsStep(page);
     await page.getByTestId("one-house-judge-cta").click();
     await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
     await expect(page.getByTestId("one-house-verdict")).toHaveText("부분 비과세");

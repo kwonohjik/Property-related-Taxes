@@ -291,10 +291,17 @@ describe("P4-2b-1 — validate는 어댑터와 같은 자리에서 막는다", (
     expect((await postForm(baseForm())).status).toBe(200);
   });
 
+  /**
+   * 🔄 2026-09-23 재배치 — §155의2 입력이 ② 양도 대상 화면으로 옮겨가며 ⑧도 `validateStep3`로
+   *    따라갔다. **⑤와 ⑧이 같은 화면에 있어야 한다**는 3중 패턴 규약이라, 여기서 부르는 함수가
+   *    바뀐 것 자체가 그 규약이 지켜졌다는 증거다.
+   */
   it("[VD-3] §155의2 토글 ON + 계약일 미입력 = 어댑터가 포기하는 조건 ↔ validate가 막는 조건", () => {
     const form = baseForm({ longTermMortgageSpecial: true });
     expect(buildOneHouseExemptionApiBody(form).longTermMortgageHouse).toBeUndefined();
-    expect(validateStep2(form).some((e) => e.field === "longTermMortgageContractDate")).toBe(true);
+    expect(validateStep3(form).some((e) => e.field === "longTermMortgageContractDate")).toBe(true);
+    // 입력이 없는 화면의 ⑧은 막지 않는다 — 「화면엔 칸이 없는데 ⑧이 요구」를 만들지 않는다.
+    expect(validateStep2(form).some((e) => e.field === "longTermMortgageContractDate")).toBe(false);
   });
 
   it("[VD-4] 1세대 비해당은 **warning**이다 — 사실대로 적을 수 있어야 한다", async () => {
@@ -514,9 +521,14 @@ describe("P4-3a — §155⑳ 판정 배선", () => {
    * 🔑 여기서 막는 것은 「요건 미달」이 아니라 **판정 자체가 불가능한 입력**이다 —
    *    등록일이 없으면 어느 목(가·나·다)인지조차 도출되지 않는다.
    */
+  /**
+   * 🔄 2026-09-23 재배치 — §155⑳ 입력이 ② 양도 대상 화면으로 옮겨가며 **차단(error)** 은
+   *    `validateStep3`로 따라갔다. **경고(warning)만 `validateStep2`에 남았다**(RA-6) —
+   *    그 조건이 `form.houses.length > 0`이라 명부가 있는 화면에서만 의미가 있기 때문이다.
+   */
   it("[RA-7] 등록일 미입력은 ⑧이 막는다 (요건 미달과 다르다)", () => {
     const f = passingRentalForm({ businessRegistrationDate: "" });
-    const blocking = validateStep2(f).filter((e) => e.severity === "error");
+    const blocking = validateStep3(f).filter((e) => e.severity === "error");
     expect(blocking.length).toBeGreaterThan(0);
     expect(blocking[0].field).toBe("rentalHousingException");
   });
