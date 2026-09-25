@@ -138,11 +138,15 @@ F-1과 무관한 큰 수술이므로, **줄을 늘리지 않는 쪽**을 택했�
 만들기 때문일 뿐이었다(실측 — foreign·exit 변형 포함). 우연에 기대지 않도록 `default: []`로
 못 박았다.
 
-### D-5. 사이드바는 건드리지 않는다 ✅ (이번 범위 밖)
+### D-5. 사이드바는 건드리지 않는다 ✅ (이번 범위 밖) → **F-5에서 해소(2026-09-25)**
 
 `WizardSidebar`의 `status: "attention"`이 **이미 amber `!`** 다(`WizardSidebar.tsx:44-52`) —
 그런데 그것은 **오류** 표식이다. 경고 표식을 더하면 같은 색이 두 의미를 갖는다. 게다가 status
 union은 **6개 마법사 공용**이라 영향권이 넓다. ⇒ 별건(§7 F-5).
+
+> ⚠️ **위 두 문장은 뒤에 실측으로 정정됐다** — 「6개 공용」은 4개 렌더·2개 세팅이었고, 색
+> 충돌은 「더하면 생길 일」이 아니라 이 PR(F-1)이 amber 경고 카드를 넣으면서 **이미 출하됐다**.
+> 결론(별건으로 미룬다)은 유효했으나 근거의 규모는 틀렸다. 전말은 §7 F-5.
 
 ---
 
@@ -259,7 +263,10 @@ union은 **6개 마법사 공용**이라 영향권이 넓다. ⇒ 별건(§7 F-5
 | **F-3** | ✅ **해소(2026-09-25). 전제가 틀렸다 — 토글은 죽어 있지 않았다.** 소비처 **둘**을 실측 확인: ① 판정 §155① 처분기한(`one-house/pending.ts:157` → `resolveTemporaryTwoHouseDeadlineYears`) ② 핸드오프로 계산기에 전달 → 다주택 중과. 🔴 그런데 **비대칭**이었다 — 「취득 당시」·중과는 이미 `regionCode`를 우선하는데 **§155① 기한만 boolean을 직접** 읽어, 같은 폼의 세 판정이 서로 다른 근거를 썼다. 그리고 UI에서 「취득 당시」만 자동 판정 카드로 바뀌어, 주소를 넣으면 **엔진이 무시하는 토글**이 양도 당시 쪽에만 남았다. ⇒ 엔진에 `resolveIsRegulatedAtTransfer` 신설(형제 둘과 같은 규약) + UI를 `RegulatedAreaField` 공용 컴포넌트로 대칭화. ❌ 미결 재기재 금지 |
 | | 📌 **부수 사실**: 기한 데이터가 비조정 3년 · 조정 2년 · **조정+2022-05-10 이후 양도 3년(완화)** 이라, **양도일 2022-05-10 이후에는 이 축이 판정 결과를 바꾸지 않는다**(실측). 그 날짜 이후 fixture로는 이 축을 **잴 수 없다** — anchor가 그 사실 자체를 단언으로 고정했다 |
 | | 📌 **부수 분리**: 엔진 수정이 `transfer-tax-exemption-requirements.ts`를 779 → 802줄로 밀어 올려, §155① 타이밍 4함수를 `transfer-tax-temporary-two-house-timing.ts`로 추출(부모 **706** · 자식 133). `evaluateTemporaryTwoHouseTiming`은 부모의 `resolveExemptionProviso`를 부르므로 **함께 옮기지 않았다**(순환 회피). 재수출을 빠뜨려 tsc가 5곳을 잡았다 — `feedback_800line_split_export_preservation`을 그대로 밟았다 |
-| **F-5** | 🆕 사이드바 `attention`(amber `!`)이 **오류**를 나타낸다 — 경고 표식을 더하려면 색 의미 충돌을 먼저 정리해야 하고, status union이 6개 마법사 공용이라 영향권이 넓다 (D-5) |
+| **F-5** | ✅ **해소(2026-09-25). 기록 두 줄이 틀렸다.** ① 「6개 마법사 공용」은 과다 — `WizardSidebar`를 **렌더**하는 곳은 4개(양도세·판정·취득세·주식)이고 `InheritanceSidebar`는 import조차 하지 않는다(주석만 «패턴 따름»). 그중 `attention`을 **세팅**하는 곳은 **2개뿐**(`TransferTaxCalculator.tsx:359` · `OneHouseJudgmentSidebar.tsx:46`). ② 색 충돌은 「더하면 생길 일」이 아니라 **F-1에서 이미 출하됐다** — 배너는 rose=오류·amber=경고인데 사이드바·StepIndicator만 amber=오류였다. ⇒ **오류를 rose로 내리고 amber를 경고 전용으로 비운 뒤** `status: "warning"`을 신설, 판정 사이드바에 배선했다(`getStepWarningCount`). ❌ 미결 재기재 금지 |
+| | 🔴 **부수 실측 — 경고만 있는 단계는 «표식이 없는» 게 아니라 «✓ 완료»로 떴다.** Pre-Do anchor가 화면0 «세대» 행을 `"✓세대"`로 잡았다. 미해소 주의사항에 초록 체크를 붙이던 것이라 「없음」보다 나쁘다. ⇒ 우선순위를 **오류 > 경고 > 완료**로 못 박았다(SB-3가 고정, 뮤테이션 M-B로 구별력 확인) |
+| | ⚖️ **«조기 `!`» 규약은 통일하지 않았다.** 판정은 `i < currentStep` 게이트가 없어 **첫 로드에 화면1이 이미 `!`** 다(양도세엔 없는 증상). 계약을 어긴 것은 맞지만 **F-2 이후 명분이 생겼다** — 전진 점프가 차단되므로 미방문 단계의 `!`가 그 차단의 예고다. ⇒ 동작은 그대로 두고 거짓이 된 `WizardSidebar.tsx`의 타입 주석만 「마법사마다 다르다」로 정정했다 |
+| | 📌 **의도적 제외 3건** — ⓐ **양도세 사이드바**: 경고가 1건(미래 양도일)뿐이고 이미 amber 배너가 있다 ⓑ **주식·취득세 사이드바**: 위치 기반(`done/active/todo`)만 써서 **오류 표식조차 없다** — 경고 이전에 그쪽이 먼저다 ⓒ **StepIndicator의 warning 상태**: `stepStatus` 소비처 2곳(양도세·상속세)이 요구하지 않아 색만 rose로 맞췄다. ⓑ는 새 별건이다 |
 | **F-6** | ✅ **해소(2026-09-25).** `validateStep1`의 국내 본문(172–637행)을 `stock-transfer-tax-validate-step1.ts`의 `validateStep1Domestic`으로 추출 — `validateStep2`가 이미 쓰던 규약(`-step2.ts`·`-foreign.ts`·`-exit.ts`)을 그대로 따랐다. **798 → 261줄**(신규 568줄), 둘 다 상한 아래. `pushLotTimelineErrors`·`parseF`·`parseI`와 `block-shareholder-gate` import가 본 파일에서 고아가 되어 함께 옮겼다. 동작 동일성은 **원본 사본과의 차분 대조**로 확인(9개 시장 × 21표본 = 189건, 차이 0 · 오류 발생 표본 100건 초과 · 1줄 뮤테이션으로 하네스 KILLED 확인). ❌ 미결 재기재 금지 |
 | **F-7** | 🆕 `transfer-nbl-revenue-deemed-common.spec.ts:74`가 `getByRole("combobox").nth(1)` — **인덱스 셀렉터**다(e2e/CLAUDE.md §1이 지양하는 형태). 부하에 흔들리는 데다 그 화면에 combobox가 하나 늘면 조용히 엉뚱한 컨트롤을 집는다. 전건 실행에서 **두 PR 연속** 실패한 유일한 건이다 |
 

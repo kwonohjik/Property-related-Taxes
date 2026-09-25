@@ -77,3 +77,48 @@ test.describe("검증 경고 표시", () => {
     await expect(card).toContainText("1세대1주택 비과세 판정 대상이 아닙니다");
   });
 });
+
+/**
+ * 사이드바 표식 — **색이 심각도를 말한다** (F-5).
+ *
+ * ## 유닛이 못 보는 것
+ *
+ * `__tests__/components/calc/wizard-sidebar-severity.predo.anchor.test.tsx`는
+ * `OneHouseJudgmentSidebar`를 **직접** 렌더한다 — 「그 props면 그 표식이 난다」까지다.
+ * 여기서만 관측되는 것은 **마법사가 실제로 그 사이드바를 그렇게 먹인다**는 것과,
+ * 배너가 못 보여 주는 **다른 단계의** 경고가 눈에 띈다는 것이다
+ * (`feedback_library_anchor_does_not_prove_component_uses_it`).
+ */
+test.describe("사이드바 심각도 표식", () => {
+  /** 사이드바 행 — StepIndicator의 같은 이름 버튼과 섞이지 않도록 nav로 범위를 좁힌다. */
+  const sidebarRow = (page: import("@playwright/test").Page, label: string) =>
+    page
+      .getByRole("navigation", { name: "진행 단계" })
+      .getByRole("listitem")
+      .filter({ hasText: new RegExp(`^[!✓]?${label}$`) });
+
+  test("[SB-E1] 오류는 «입력 필요», 경고는 «확인 필요»로 갈린다", async ({ page }) => {
+    await page.goto("/calc/one-house-exemption?new=1");
+    await expect(page.getByTestId("one-house-household")).toBeVisible();
+
+    // ② 양도 대상 주택은 빈 폼에서 필수 3건이 비어 있다 → 차단 오류 표식.
+    await expect(sidebarRow(page, "양도 대상 주택").getByLabel("입력 필요")).toBeVisible();
+
+    // ① 세대는 아직 아무 문제가 없다 — 「항상 떠 있는 표식」이 아님을 먼저 못 박는다.
+    await expect(sidebarRow(page, "세대").getByLabel("확인 필요")).toHaveCount(0);
+
+    // 1세대 비해당 선언 → ①에 **비차단 경고**가 생긴다.
+    await page.getByTestId("one-house-household").getByRole("switch").click();
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+
+    /*
+      🔑 여기가 F-5의 본체다. 사용자는 지금 ②에 있고 배너는 ②의 경고만 띄운다 —
+         ①의 경고를 알려 주는 것은 이 표식뿐이다. 종전에는 이 행이 «✓세대»(완료)였다.
+    */
+    const row = sidebarRow(page, "세대");
+    await expect(row.getByLabel("확인 필요")).toBeVisible();
+    // 차단 오류로 **승격되지 않았다** — 경고는 진행을 막지 않는다.
+    await expect(row.getByLabel("입력 필요")).toHaveCount(0);
+  });
+});
