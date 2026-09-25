@@ -78,6 +78,35 @@ test.describe("§39 증자 이익 cap-table", () => {
     await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
+  test("혼합 증자 — 재배정분(§39①1호 가목)은 특수관계가 없어도 과세 → 을 125,000,000", async ({ page }) => {
+    // 교재 사례2 구조에서 **특수관계 칩을 하나도 켜지 않는다**.
+    //   가목(실권주 배정)은 법문에 특수관계 문언이 없어 을의 재배정 10,000주분은 그대로 과세된다.
+    //   반면 병·소액주주는 재배정분이 없어 순수 나목분이므로 0이 법령상 정답 — 같은 화면에서
+    //   두 성격이 갈리는 것을 확인해 ⑤ 재배정 칸이 엔진까지 도달하는지도 함께 고정한다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-low").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("30000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
+
+    await page.getByTestId("ci-alloc-add-row").click();
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "갑", "30000", "30000", "0", "0"); // 전량 실권 (증여자)
+    await fillRow(page, 1, "을", "10000", "10000", "20000", "10000"); // 자기분 + 재배정 10,000
+    await fillRow(page, 2, "병", "5000", "5000", "5000", "0"); // 자기분만
+    await fillRow(page, 3, "소액주주", "5000", "5000", "5000", "0");
+
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // 가목분 = (㉯ 22,500 − 10,000) × 재배정 10,000 = 125,000,000
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("125,000,000");
+    await expect(page.getByTestId("ci-alloc-total-sh-3")).toHaveText("0"); // 순수 나목분
+    await expect(page.getByTestId("ci-alloc-total-sh-4")).toHaveText("0");
+  });
+
   test("§39① 공모 모집 배정 — 적용 제외로 증여재산가액 0 (상증령 §29③ 간주모집은 과세)", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await page.getByTestId("deemed-type-capital_increase").click();
