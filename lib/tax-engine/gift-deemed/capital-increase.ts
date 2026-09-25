@@ -68,6 +68,26 @@ function deemedPublicOfferingNote(input: CapitalIncreaseInput): string | undefin
     : undefined;
 }
 
+/**
+ * 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**이면 증여세 납세의무자가 아니다.
+ *
+ * ⚠️ **이익 자체를 부정하는 것이 아니다.** 그 금액은 「법인세법 시행령」§89⑥이 §39·§29②를
+ *    준용해 계산하는 **익금**으로 그대로 쓰인다 ⇒ 산출근거(breakdown)는 남기고 과세분만 0으로 둔다.
+ * ⚠️ 「영리법인이면 항상 0」이 아니다 — §4의2②(명의신탁 §45의2)·§4의2④ 단서(§45의3~§45의5)는
+ *    예외다. 그 조문들은 각자의 엔진이 다루고, 이 축은 **§39 경로에 한정**한다.
+ */
+function forProfitCorpExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
+  return {
+    type: "capital_increase",
+    applied: false,
+    deemedGiftValue: 0,
+    breakdown,
+    exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+    legalBasis: GIFT.CAPITAL_INCREASE,
+    thresholdEcho: { gain: 0 },
+  };
+}
+
 /** §39① 적용 제외 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 한다 */
 function publicOfferingExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
   return {
@@ -156,6 +176,8 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   ];
   // §39① 괄호 — 주권상장법인 모집방법 배정은 「배정」에서 제외되어 과세 요건 자체가 성립하지 않는다
   if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
+  // §4의2①·③ — 수증자가 영리법인이면 납세의무자가 아니다(산출근거는 남긴다)
+  if (input.doneeIsForProfitCorp === true) return forProfitCorpExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,
@@ -223,6 +245,8 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   ];
   // §39① 괄호는 「이하 이 항에서 같다」로 **2호(고가)에도** 걸린다
   if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
+  // §4의2①·③ — 수증자(고가에서는 신주 인수를 포기한 자)가 영리법인이면 납세의무자가 아니다
+  if (input.doneeIsForProfitCorp === true) return forProfitCorpExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,

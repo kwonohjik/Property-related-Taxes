@@ -123,6 +123,39 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByText("병 증자이익(§39)")).toHaveCount(0);
   });
 
+  test("영리법인 주주는 증여세 납세의무자가 아니다 — 450,000,000 → 0 (검증내역은 보존)", async ({ page }) => {
+    // 「상증법」§2 9호·§4의2① — 수증자 범위는 거주자·비거주자(각 **비영리법인 포함**)뿐이고
+    //   영리법인은 어디에도 없다. 같은 조 ③이 「법인세가 부과되는 경우에는 증여세를 부과하지
+    //   아니한다」로 보강한다. 그 이익은 「법인세법 시행령」§89⑥이 §39·§29②를 준용해 계산하는
+    //   익금으로 그대로 쓰이므로 **검증내역(zero-sum)은 지우지 않는다**.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-low").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("20000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "갑", "60000", "60000", "0", "0"); // 개인 · 전량 포기
+    await fillRow(page, 1, "㈜을", "20000", "20000", "80000", "60000"); // 실권주 인수
+    await fillRow(page, 2, "병", "20000", "20000", "20000", "0");
+
+    // ① 개인 수증자 기준 — 450,000,000
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("450,000,000");
+
+    // ② ㈜을 행을 영리법인으로 표시 → 과세분만 0
+    await page.getByTestId("deemed-edit-btn").click();
+    await page.getByTestId("ci-alloc-corp-1").click();
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("0");
+    await expect(page.getByTestId("deemed-result")).toContainText("영리법인 수증자");
+    // 이익 자체는 부정되지 않는다 — 검증내역 zero-sum 유지
+    await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
+  });
+
   test("혼합 증자 — 재배정분(§39①1호 가목)은 특수관계가 없어도 과세 → 을 125,000,000", async ({ page }) => {
     // 교재 사례2 구조에서 **특수관계 칩을 하나도 켜지 않는다**.
     //   가목(실권주 배정)은 법문에 특수관계 문언이 없어 을의 재배정 10,000주분은 그대로 과세된다.

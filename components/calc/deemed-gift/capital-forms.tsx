@@ -274,6 +274,16 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         options={ALLOCATION_METHOD_OPTIONS.map((o) => ({ ...o, testId: `ci-alloc-method-${o.value}` }))}
       />
       <p className="text-xs text-muted-foreground">{allocationMethodHint(form.ciAllocationMethod)}</p>
+      {/* 「상증법」§2 9호·§4의2①·③ — 영리법인은 증여세 납세의무자 범위 자체에 없다 */}
+      <ToggleCard
+        lawLinks="상증법"
+        tone="violet"
+        checked={form.ciDoneeIsForProfitCorp}
+        onCheckedChange={(v) => set({ ciDoneeIsForProfitCorp: v })}
+        title="수증자가 영리법인 (§2 9호·§4의2①·③)"
+        description="영리법인은 증여세 납세의무자가 아닙니다. 이익 자체는 「법인세법 시행령」 §89⑥이 §39·§29②를 준용해 계산하는 익금으로 그대로 쓰이므로 산출근거는 그대로 표시됩니다."
+        data-testid="ci-donee-corp"
+      />
       <ToggleCard
         lawLinks="상증법"
         tone="emerald"
@@ -459,6 +469,16 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 ))}
               </select>
             </div>
+            {/* 「상증법」§2 9호·§4의2①·③ — 영리법인 주주는 증여세 납세의무자가 아니다.
+                이익·검증내역(zero-sum)은 보존하고 그 행의 과세분만 0이 된다. */}
+            <ToggleCard
+              variant="chip"
+              tone="violet"
+              checked={r.isCorporate === true}
+              onCheckedChange={(v) => updateRow(r.id, { isCorporate: v })}
+              title="영리법인 주주 (§4의2①·③ — 증여세 납세의무자 아님)"
+              data-testid={`ci-alloc-corp-${idx}`}
+            />
             <div className="space-y-1">
               <p className="text-caption text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>
               <div className="flex flex-wrap gap-1.5" data-testid={`ci-alloc-related-${idx}`}>

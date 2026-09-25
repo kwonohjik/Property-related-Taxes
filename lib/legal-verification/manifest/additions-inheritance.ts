@@ -413,6 +413,18 @@ export const INHERITANCE_ADDITIONS: VerificationRule[] = [
 
   // ── 증여세 납부의무·무체재산권 평가·경정청구 특례 (커버리지 보강) ────────
   {
+    // 「수증자」 정의 자체가 **영리법인을 배제**한다 — §39 등 증여의제의 납세의무자 축이
+    // 이 한 문장에 달려 있다(「비영리법인을 **포함**한다」가 「법인」으로 개정되면 축이 뒤집힌다).
+    id: "INH.DEFINITIONS",
+    citation: "상증법 §2",
+    keywords: [
+      "증여재산을 받은 거주자",
+      "본점이나 주된 사무소의 소재지가 국내에 있는 비영리법인을 포함한다",
+      "타인에게 무상으로 유형ㆍ무형의 재산 또는 이익을 이전",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "INH.GIFT_TAX_LIABILITY",
     citation: "상증법 §4의2",
     keywords: [

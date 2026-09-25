@@ -26,10 +26,16 @@ export interface CapTableRow {
   reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
   relatedTo: string[]; // 특수관계인 주주 id 목록
   allocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외 판정 (행별)
+  /**
+   * 영리법인 주주 — 「상증법」§2 9호·§4의2①·③상 증여세 납세의무자가 아니다(이익·검증내역은 보존).
+   * optional인 것은 ③ 때문이다 — 이 필드가 생기기 전에 저장된 sessionStorage 행은 `undefined`로
+   * 들어오고, 그때는 **개인**으로 본다(안전측 — 법인으로 오판하면 과소과세 방향이다).
+   */
+  isCorporate?: boolean;
 }
 
 export function makeCapTableRow(id: string): CapTableRow {
-  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal" };
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", isCorporate: false };
 }
 
 /**

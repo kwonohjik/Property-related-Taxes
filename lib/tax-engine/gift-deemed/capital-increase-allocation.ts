@@ -9,6 +9,7 @@
  * 증자후 1주당 평가가액(㉯) = [(증자전평가×증자전총주식) + (인수가×실제 증가주식)] ÷ (증자전총 + 증가)
  *   - 실제 증가주식 = Σ 인수신주(subscribedShares). 검증내역·증여재산가액 모두 실제 ㉯ 사용.
  */
+import { GIFT } from "../legal-codes";
 import { computeWeightedPerShare, meetsRatioThreshold } from "./capital-helpers";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
@@ -98,8 +99,17 @@ export function calcCapitalIncreaseAllocation(
 
   const shareholderById = new Map(shareholders.map((s) => [s.id, s]));
 
+  // 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**이면 증여세 납세의무자가 아니다.
+  //   ⚠️ 이익 자체를 부정하는 것이 아니다 — 그 금액은 「법인세법 시행령」§89⑥이 §39·§29②를
+  //      준용해 계산하는 익금으로 그대로 쓰인다. ⇒ `byShareholder`·`reconciliation`(zero-sum)은
+  //      **보존**하고 과세분(`value`)만 0으로 둔다.
+  //   ⚠️ 「영리법인이면 항상 0」이 아니다 — §4의2②(명의신탁)·§4의2④ 단서(§45의3~§45의5)는 예외이고
+  //      각자의 엔진이 다룬다. 이 축은 **§39 경로에 한정**한다.
+  const forProfitCorpIds = new Set(shareholders.filter((s) => s.isCorporate === true).map((s) => s.id));
+
   for (const b of byShareholder) {
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
+    const forProfitCorpOut = forProfitCorpIds.has(b.id); // §4의2①·③ 납세의무자 아님
 
     // 「상증법」§39①1호 **가·다·라목** 몫을 나목 몫과 가른다 — 국세청 재산세과-60(2010.2.1.)은
     //   「일부는 재배정하고 나머지는 실권처리한 경우 증여이익을 **각각 산정하여 합산**」한다고 한다.
@@ -146,11 +156,14 @@ export function calcCapitalIncreaseAllocation(
       const isRelated = isRelatedTo(d.id);
       const relationExcluded = relationGateApplies && !isRelated;
       // 가·다·라목분은 저가에서 특수관계·기준금액 어느 게이트도 받지 않는다.
-      const taxableRealloc = publicOfferingOut ? 0 : rawRealloc[i];
-      const taxableForfeit = publicOfferingOut || gatedOut || relationExcluded ? 0 : rawForfeit[i];
+      const taxableRealloc = publicOfferingOut || forProfitCorpOut ? 0 : rawRealloc[i];
+      const taxableForfeit =
+        publicOfferingOut || forProfitCorpOut || gatedOut || relationExcluded ? 0 : rawForfeit[i];
       const value = taxableRealloc + taxableForfeit;
-      const excludedReason = publicOfferingOut
-        ? "주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외"
+      const excludedReason = forProfitCorpOut
+        ? `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`
+        : publicOfferingOut
+          ? "주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외"
         : value > 0
           ? undefined
           : gatedOut
