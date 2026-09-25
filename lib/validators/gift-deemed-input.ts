@@ -215,6 +215,9 @@ const capShareholderSchema = z.object({
   allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
   // 행별 §4의2①·③ 영리법인 — 이익·검증내역은 보존하고 과세분만 0이 된다
   isCorporate: z.boolean().optional(),
+  // 「상증령」§29⑤ 소액주주 판정의 액면 요건(3억원 미만) — §39② 1인 의제 자동 판정용.
+  // optional인 것은 「선택 입력」이기 때문이다 — 미입력은 「소액주주 아님」(요건 미입증)이다.
+  faceValueSum: z.number().nonnegative().optional(),
 });
 const capitalIncreaseAllocationSchema = z
   .object({

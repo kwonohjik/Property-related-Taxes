@@ -51,7 +51,19 @@ export function AllocationResultView({
                     {b.byDonor.map((d, i) => (
                       <tr key={i} className="border-t border-rose-50" data-testid={`ci-alloc-split-${b.beneficiaryId}-${d.donorId}`}>
                         <td className="py-1 pr-2 text-muted-foreground">
-                          증여자 {nameById.get(d.donorId)}
+                          {/* 「상증법」§39② — 소액주주 2명 이상이면 「1명인 것으로 보고 이익을 계산한다」.
+                              합계는 그대로이고 바뀌는 것은 §47② 동일인 합산 단위이므로, 합쳐졌다는
+                              사실과 누가 합쳐졌는지를 함께 보여 준다. */}
+                          {d.imputedSmallShareholderIds ? (
+                            <>
+                              증여자 소액주주 {d.imputedSmallShareholderIds.length}명
+                              <span className="ml-1 text-xs text-violet-700">
+                                (§39② 1인 의제 — {d.imputedSmallShareholderIds.map((id) => nameById.get(id)).join("·")})
+                              </span>
+                            </>
+                          ) : (
+                            <>증여자 {nameById.get(d.donorId)}</>
+                          )}
                           {d.excludedReason ? <span className="ml-1 text-xs text-gray-500">({d.excludedReason})</span> : null}
                         </td>
                         <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap" data-testid={`ci-alloc-split-value-${b.beneficiaryId}-${d.donorId}`}>{formatKRW(d.value)}</td>

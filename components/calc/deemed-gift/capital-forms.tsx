@@ -453,6 +453,18 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               <CurrencyInput hideUnit label="실제 인수" value={r.subscribedShares} onChange={(v) => updateRow(r.id, { subscribedShares: v })} placeholder="실제 인수 신주수" />
               <CurrencyInput hideUnit label="재배정·제3자·초과" value={r.reallocatedShares} onChange={(v) => updateRow(r.id, { reallocatedShares: v })} placeholder="재배정/제3자/초과 신주수" />
             </div>
+            {/* 「상증령」§29⑤ 소액주주 = 발행주식총수등의 100분의 1 **미만** AND 주식등 액면가액
+                합계액 3억원 **미만**. 지분율은 위 「증자 전 보유」로 구해지지만 액면 요건은 이 입력이
+                없으면 판정할 수 없다. 저가(§39①1호)에서만 §39② 1인 의제가 걸리므로 그때만 받는다. */}
+            {form.ciAllocDirection === "low" && (
+              <CurrencyInput
+                label="주식등 액면가액 합계 (§29⑤ 소액주주 판정 · 선택)"
+                value={r.faceValueSum ?? ""}
+                onChange={(v) => updateRow(r.id, { faceValueSum: v })}
+                data-testid={`ci-alloc-face-${idx}`}
+                hint="미입력이면 소액주주로 보지 않아 §39② 1인 의제를 적용하지 않습니다"
+              />
+            )}
             <div className="space-y-1">
               <p className="text-caption text-emerald-700">배정 방법 (§39① 공모 모집 제외)</p>
               <select
