@@ -199,6 +199,11 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // 저가 나목 §29②2호 다목 — 세 인자 중 하나만 비어도 엔진이 종전(가중 없음) 동작으로
       //   되돌아가 **과다과세**가 되므로, 부분 입력을 통과시키지 않는다.
       if (form.ciDirection === "low" && form.ciSubType === "no_realloc") {
+        // §29②2호 가목 — 미입력이면 엔진이 실제 증가주식수로 되돌아가 ㉯가 높게 잡히고,
+        //   차액·30% 기준선·증여재산가액이 **한 방향으로** 치우친다(과다과세).
+        if (parseAmount(form.ciEqualIssueShares) <= 0) return "균등증자 가정 증가주식수를 입력하세요";
+        if (parseAmount(form.ciEqualIssueShares) < parseAmount(form.ciIssuedShares))
+          return "균등증자 가정 증가주식수는 실제 증자 주식수보다 작을 수 없습니다";
         if (parseAmount(form.ciRelatedAcquiredShares) <= 0)
           return "신주인수자의 특수관계인의 실권주수를 입력하세요";
         if (parseAmount(form.ciPostHeldShares) <= 0) return "증자 후 신주인수자 보유주식수를 입력하세요";

@@ -22,6 +22,7 @@ type CsKeys = {
   forfeitedShares: keyof DeemedFormState;
   relatedAcquired: keyof DeemedFormState;
   ratioDenom: keyof DeemedFormState;
+  equalIssue: keyof DeemedFormState;
   postHeld: keyof DeemedFormState;
   postTotal: keyof DeemedFormState;
   isListed: keyof DeemedFormState;
@@ -124,6 +125,7 @@ function CsNumericSection({
       )}
       {needsLowDanmok && (
         <>
+          <CurrencyInput label="균등증자 가정 증가주식수" value={v(keys.equalIssue)} onChange={on(keys.equalIssue)} hint="나목의 증자 후 1주당 가액은 «균등하게 증자했다면 늘었을 주식수» 기준입니다" />
           <CurrencyInput label="신주인수자의 특수관계인의 실권주수" value={v(keys.relatedAcquired)} onChange={on(keys.relatedAcquired)} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder={`${ph} 특수관계인 실권주 주식수`} />
           <CurrencyInput label="증자 후 신주인수자 보유주식수" value={v(keys.postHeld)} onChange={on(keys.postHeld)} placeholder={`${ph} 증자 후 보유주식수`} />
           <CurrencyInput label="증자 후 발행주식총수" value={v(keys.postTotal)} onChange={on(keys.postTotal)} placeholder={`${ph} 증자 후 발행주식총수`} />
@@ -191,6 +193,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csConvForfeitedShares",
           relatedAcquired: "csConvRelatedAcquiredShares",
           ratioDenom: "csConvRatioDenomShares",
+          equalIssue: "csConvEqualIssueShares",
           postHeld: "csConvPostHeldShares",
           postTotal: "csConvPostTotalShares",
           isListed: "csConvIsListed",
@@ -223,6 +226,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csIssueForfeitedShares",
           relatedAcquired: "csIssueRelatedAcquiredShares",
           ratioDenom: "csIssueRatioDenomShares",
+          equalIssue: "csIssueEqualIssueShares",
           postHeld: "csIssuePostHeldShares",
           postTotal: "csIssuePostTotalShares",
           isListed: "csIssueIsListed",

@@ -25,23 +25,39 @@ const base = (over: Partial<DeemedFormState>): DeemedFormState => ({
 describe("§39 증자 비율 인자 — ⑧ 부분 입력 차단", () => {
   const LOW_NR = { ciDirection: "low", ciSubType: "no_realloc" } as const;
 
-  it("[V-LOW-NR-ALL] 저가 나목: 세 인자가 모두 차면 통과한다", () => {
+  const FULL_LOW_NR = { ciEqualIssueShares: "100000", ciRelatedAcquiredShares: "30000", ciPostHeldShares: "75000", ciPostTotalShares: "150000" } as const;
+
+  it("[V-LOW-NR-ALL] 저가 나목: 네 인자가 모두 차면 통과한다", () => {
+    expect(validateDeemedInput(base({ ...LOW_NR, ...FULL_LOW_NR }))).toBeNull();
+  });
+
+  it("[V-LOW-NR-EQUAL] 저가 나목: 균등증자 가정 증가주식수 미입력이면 차단된다", () => {
+    // ⚠️ `not.toBeNull()`로는 부족하다 — 바로 뒤 범위 검사(균등 < 실제)가 0을 걸러내며
+    //    **같은 자리에서 다른 사유**를 돌려주기 때문이다. 두 가드가 서로를 가리므로
+    //    필수화만 지워도 통과해버린다(뮤테이션 실측). ⇒ 사유 문자열까지 고정한다.
+    expect(validateDeemedInput(base({ ...LOW_NR, ...FULL_LOW_NR, ciEqualIssueShares: "" }))).toBe(
+      "균등증자 가정 증가주식수를 입력하세요",
+    );
+  });
+
+  it("[V-LOW-NR-EQUAL-RANGE] 균등증자 가정치가 실제 증자 주식수보다 작으면 차단된다", () => {
+    // 실권주가 소멸해 실제가 줄어드는 방향이므로 균등 ≥ 실제가 항상 성립한다.
     expect(
-      validateDeemedInput(base({ ...LOW_NR, ciRelatedAcquiredShares: "30000", ciPostHeldShares: "75000", ciPostTotalShares: "150000" })),
-    ).toBeNull();
+      validateDeemedInput(base({ ...LOW_NR, ...FULL_LOW_NR, ciIssuedShares: "50000", ciEqualIssueShares: "49999" })),
+    ).not.toBeNull();
   });
 
   it.each([
-    ["특수관계인 실권주수", { ciRelatedAcquiredShares: "", ciPostHeldShares: "75000", ciPostTotalShares: "150000" }],
-    ["증자 후 보유주식수", { ciRelatedAcquiredShares: "30000", ciPostHeldShares: "", ciPostTotalShares: "150000" }],
-    ["증자 후 발행주식총수", { ciRelatedAcquiredShares: "30000", ciPostHeldShares: "75000", ciPostTotalShares: "" }],
+    ["특수관계인 실권주수", { ...FULL_LOW_NR, ciRelatedAcquiredShares: "" }],
+    ["증자 후 보유주식수", { ...FULL_LOW_NR, ciPostHeldShares: "" }],
+    ["증자 후 발행주식총수", { ...FULL_LOW_NR, ciPostTotalShares: "" }],
   ])("[V-LOW-NR-PARTIAL] 저가 나목: %s 미입력이면 차단된다", (_label, over) => {
     expect(validateDeemedInput(base({ ...LOW_NR, ...over }))).not.toBeNull();
   });
 
   it("[V-LOW-NR-RANGE] 저가 나목: 보유주식수 > 발행주식총수는 차단된다 (비율 > 1)", () => {
     expect(
-      validateDeemedInput(base({ ...LOW_NR, ciRelatedAcquiredShares: "30000", ciPostHeldShares: "150001", ciPostTotalShares: "150000" })),
+      validateDeemedInput(base({ ...LOW_NR, ...FULL_LOW_NR, ciPostHeldShares: "150001" })),
     ).not.toBeNull();
   });
 

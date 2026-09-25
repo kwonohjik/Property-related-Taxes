@@ -74,7 +74,13 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   const { preIssuePrice, preIssueShares, newSharePrice, issuedShares, forfeitedShares } = input;
   const subType = input.subType ?? "forfeited_realloc";
   // 증자 후 1주당 가액 = [(증자전평가×증자전주식수)+(인수가×증자주식수)] ÷ (증자전+증자주식수)
-  const theoretical = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, issuedShares);
+  // §29②2호 가목 — **나목만** 그 수량이 「증자전의 지분비율대로 균등하게 증자하는 경우의
+  //   증가주식수」다. 1호 가목(가·다·라목)은 「증자에 의하여 증가한 주식수」(실제)이므로
+  //   여기서 갈라야 한다. 미입력은 실제 수량으로 되돌아간다(하위호환).
+  const equalIssue = input.equalIssueShares;
+  const perShareBasisShares =
+    subType === "no_realloc" && equalIssue != null && equalIssue > 0 ? equalIssue : issuedShares;
+  const theoretical = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, perShareBasisShares);
   // §29②1가 단서 — 주권상장법인등은 증자후 평가가 산식값보다 **적으면** 그 평가액(Min)
   const perShareAfter = applyListedPerShareBound(theoretical, input, "min");
   const perShareGain = perShareAfter - newSharePrice; // 저가: 평가 > 인수가

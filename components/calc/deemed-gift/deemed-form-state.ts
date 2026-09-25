@@ -119,6 +119,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciForfeitedShares: string;
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 분모 신주수 (가목=실권주총수 / 나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수)
+  ciEqualIssueShares: string; // 저가 나목 §29②2호 가목 — 균등증자 가정 증가주식수(㉯ 기준 수량)
   ciPostHeldShares: string; // 저가 나목 §29②2호 다목 — 증자후 신주인수자 보유주식수(분자)
   ciPostTotalShares: string; // 저가 나목 §29②2호 다목 — 증자후 발행주식총수(분모)
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
@@ -203,6 +204,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   csConvForfeitedShares: string;
   csConvRelatedAcquiredShares: string;
   csConvRatioDenomShares: string;
+  csConvEqualIssueShares: string;
   csConvPostHeldShares: string; // 전환 시점 저가 나목 §29②2호 다목 분자
   csConvPostTotalShares: string; // 전환 시점 저가 나목 §29②2호 다목 분모
   csConvIsListed: boolean; // 전환 시점 주권상장법인등 (§29②6 → §29②1~5 상속)
@@ -214,6 +216,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   csIssueForfeitedShares: string;
   csIssueRelatedAcquiredShares: string;
   csIssueRatioDenomShares: string;
+  csIssueEqualIssueShares: string;
   csIssuePostHeldShares: string; // 발행 시점 저가 나목 §29②2호 다목 분자
   csIssuePostTotalShares: string; // 발행 시점 저가 나목 §29②2호 다목 분모
   csIssueIsListed: boolean; // 발행 시점 주권상장법인등
@@ -308,6 +311,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciForfeitedShares: "",
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
+  ciEqualIssueShares: "",
   ciPostHeldShares: "",
   ciPostTotalShares: "",
   ciSmallImputation: false,
@@ -381,6 +385,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csConvForfeitedShares: "",
   csConvRelatedAcquiredShares: "",
   csConvRatioDenomShares: "",
+  csConvEqualIssueShares: "",
   csConvPostHeldShares: "",
   csConvPostTotalShares: "",
   csConvIsListed: false,
@@ -392,6 +397,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueForfeitedShares: "",
   csIssueRelatedAcquiredShares: "",
   csIssueRatioDenomShares: "",
+  csIssueEqualIssueShares: "",
   csIssuePostHeldShares: "",
   csIssuePostTotalShares: "",
   csIssueIsListed: false,
