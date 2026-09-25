@@ -258,7 +258,7 @@ union은 **6개 마법사 공용**이라 영향권이 넓다. ⇒ 별건(§7 F-5
 | **F-2** | (기존) `validateAllSteps`에 **차단 소비처**가 없다 — 사이드바 점프로 앞 단계 **오류** 우회 가능. 이번에 경고 표시용 소비처가 생기지만 **게이트는 여전히 없다** |
 | **F-3** | (기존) `isRegulatedArea`(양도 당시) 토글의 판정 내 소비처 미확인 |
 | **F-5** | 🆕 사이드바 `attention`(amber `!`)이 **오류**를 나타낸다 — 경고 표식을 더하려면 색 의미 충돌을 먼저 정리해야 하고, status union이 6개 마법사 공용이라 영향권이 넓다 (D-5) |
-| **F-6** | 🆕 `stock-transfer-tax-validate.ts`가 **798줄**이다(상한 800, 착지목표 ≤700). 다음에 이 파일에 무엇이든 더하는 작업은 **분리를 먼저** 해야 한다 — 이번엔 우회했지만 한 줄만 더해도 걸린다 |
+| **F-6** | ✅ **해소(2026-09-25).** `validateStep1`의 국내 본문(172–637행)을 `stock-transfer-tax-validate-step1.ts`의 `validateStep1Domestic`으로 추출 — `validateStep2`가 이미 쓰던 규약(`-step2.ts`·`-foreign.ts`·`-exit.ts`)을 그대로 따랐다. **798 → 261줄**(신규 568줄), 둘 다 상한 아래. `pushLotTimelineErrors`·`parseF`·`parseI`와 `block-shareholder-gate` import가 본 파일에서 고아가 되어 함께 옮겼다. 동작 동일성은 **원본 사본과의 차분 대조**로 확인(9개 시장 × 21표본 = 189건, 차이 0 · 오류 발생 표본 100건 초과 · 1줄 뮤테이션으로 하네스 KILLED 확인). ❌ 미결 재기재 금지 |
 | **F-7** | 🆕 `transfer-nbl-revenue-deemed-common.spec.ts:74`가 `getByRole("combobox").nth(1)` — **인덱스 셀렉터**다(e2e/CLAUDE.md §1이 지양하는 형태). 부하에 흔들리는 데다 그 화면에 combobox가 하나 늘면 조용히 엉뚱한 컨트롤을 집는다. 전건 실행에서 **두 PR 연속** 실패한 유일한 건이다 |
 
 ## 7-1. ⚠️ 안전망이 **없는** 축 (`feedback_anchor_excluded_axis_is_unguarded`)
