@@ -60,3 +60,77 @@ mock은 브라우저 요청을 가로챌 뿐이다. 환경변수로 **화면 자
 > 🪤 **워크트리끼리 대조하면 오판한다.** 양쪽 다 키가 없어 **둘 다 실패**하므로 「master에서도
 > 실패하니 기존 실패」로 읽힌다 — 그런데 **메인 트리에서는 통과**한다. 환경 기인 실패를 의심할
 > 때 대조군은 **메인 체크아웃**이어야 한다.
+
+## 6. 클릭·입력은 **hydration 전에 조용히 유실된다** — 그리고 다른 줄에서 터진다
+
+(2026-09-25 `transfer-nbl-revenue-deemed-common.spec.ts` 실측 — 진단 전말은
+`docs/00-pm/validation-warnings-display.plan.md` §7 F-7)
+
+React 리스너가 붙기 전에 떨어진 클릭·`fill()`은 **아무 일도 일으키지 않는다.** 그런데 화면은
+멀쩡해 보인다 — DOM에는 값이 들어가고 native radio는 `checked`까지 된다. **React 상태만
+그대로다.** 그 어긋남은 그 자리에서 터지지 않고 **한참 뒤 전혀 다른 줄**에서 30초 타임아웃으로
+나타나, 범인이 늘 잘못 지목된다. 한 spec에서 실측된 증상만 넷이었다:
+
+| 증상이 난 자리 | 진짜 원인 |
+|---|---|
+| `getByRole("combobox").first()` 30초 | 그 앞의 라디오 클릭 유실 → 섹션 자체가 미렌더 |
+| 옵션이 「resolved … waiting for element to be visible」 | 전역 옵션 조회가 **다른 포털의 안 보이는 옵션**을 집음 |
+| 상세 섹션 미출현 | 토글 클릭 유실 |
+| 입력칸이 통째로 없음 | 날짜 `fill()` 유실 → 엔진이 **다른 분기**를 타 `aria-hidden` 처리 |
+
+- ✅ **긴 풀플로우 spec은 맨 앞에서 hydration을 기다린다.** React는 hydration 시점에 host DOM
+  노드에 `__reactFiber$…`/`__reactProps$…`를 붙인다 — 그 키의 존재가 직접 증거다.
+  ```ts
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="transfer-date"] input');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__react"));
+  });
+  ```
+- ✅ **누른 뒤에는 «그 결과»를 단언하고 넘어간다.** 유실을 그 자리에서 잡아야 범인이 바로 나온다.
+
+### 6-1. 🔴 「유실됐나 보다」며 **다시 누르는** 재시도가 부모를 토글한다
+
+재시도 헬퍼를 넣었다가 **없던 실패를 만들었다**(전건 실행에서 관측). 실측:
+
+| 동작 | 바깥 스위치 | 안쪽 섹션 |
+|---|---|---|
+| `ToggleCard` 스위치 ON | `true` | — |
+| 안쪽 라디오 클릭 | `true` | 1개 |
+| **같은 라디오 재클릭** | **`false`** | **0개** |
+
+이미 선택된 라디오를 다시 누르면 그 클릭이 바깥 `ToggleCard`까지 올라가 **카드가 꺼지고 내용이
+통째로 사라진다**. ⇒ 재시도는 **「이미 그 상태인가」를 먼저 읽고** 아닐 때만 누른다. 상태를 읽을
+수 없으면 **한 번만 누르고 넉넉히 기다린다**(유실은 §6의 hydration 대기로 막는다).
+
+### 6-2. 🔴 `isChecked()`는 상태 판정에 쓸 수 없다 — `aria-checked`는 쓸 수 있다
+
+| | 누가 세우는가 | 재시도 가드로 |
+|---|---|---|
+| native `<input type="radio">`의 `isChecked()` | **브라우저** — React 미도달 클릭도 `true` | ❌ 「골랐는데 안 뜨는」 교착 |
+| `ToggleCard`/`Switch`의 `aria-checked` | **React가 렌더** | ✅ |
+| BaseUI `Select` 트리거의 `aria-expanded` | **React가 렌더** | ✅ |
+
+판정 기준은 언제나 **React가 실제로 렌더한 결과**여야 한다.
+
+### 6-3. 옵션은 방금 연 `listbox` 안에서 찾는다
+
+`page.getByRole("option", { name })`는 **페이지 전역**이라 다른 Select의 포털에 걸린다. 그러면
+locator는 resolve되는데 영영 visible이 되지 않아 **30초를 버린다**.
+
+```ts
+await expect(page.getByRole("listbox")).toBeVisible();
+await page.getByRole("listbox").getByRole("option", { name }).click();
+```
+
+### 6-4. 긴 풀플로우에는 **예산**을 준다
+
+기본 타임아웃은 30초(CI 60초)다. 입력 30여 단계를 거치는 풀플로우 spec이 이 기본값으로 돌면
+평소엔 남아도 서버가 붐빌 때 **여유가 0**이 된다. 같은 무게의 spec들은 이미
+`test.setTimeout(60_000~120_000)`을 쓴다. ⚠️ 단언을 약화시키는 것이 아니다 — 틀린 결과는
+120초를 줘도 틀리다.
+
+> 🪤 **그 전에 dev 서버 나이부터 재라.** `reuseExistingServer: !CI`라 로컬 전건 실행은 며칠째
+> 떠 있던 서버를 그대로 쓴다. 가동 4일·RSS 3.3GB 서버에서 6/9 실패하던 spec이 **재시작만으로
+> 9/9 통과**했고 전건 소요도 17.2분 → 7.7분이 됐다(2026-09-25 실측). CI는 job마다 새 서버라
+> 이 증상이 없다 — 「로컬 전건에서만 깨지는 spec」의 유력한 정체다.
+> ⚠️ 환경이 시간에 따라 나빠지므로 **A/B는 교차 실행**할 것. 몰아서 재면 드리프트가 결과로 둔갑한다.
