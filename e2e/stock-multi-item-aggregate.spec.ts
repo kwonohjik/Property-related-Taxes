@@ -99,11 +99,17 @@ test.describe("주식 다종목 합산신고", () => {
   });
 
   /**
-   * MI-E2E-5 (Phase E · A-3) — **불완전 종목이 목록에 들어가는 경로가 실재한다.**
+   * MI-E2E-5 (Phase E · A-3) — **불완전 종목이 목록에 들어가면 계산이 종목을 지목해 막는다.**
    *
-   * 「다음」 버튼은 단계별 validate 를 거치지만 **사이드바 스텝 클릭은 그냥 점프**한다
-   * (`onStepClick={(i) => setStep(i)}`). 종목명·시장만 넣고 3단계로 점프하면 확정 게이트
-   * (종목명+시장 2개)를 통과해 **금액도 날짜도 빈 종목**이 목록에 쌓인다.
+   * 🔄 **경로가 바뀌었다 (F-8b, 2026-09-25).** 종전에는 「종목명·시장만 넣고 사이드바로 ③에
+   *    점프」해 확정 게이트(종목명+시장 2개)를 통과시켰다. 그 점프는 이제 `handleStepJump`가
+   *    막는다 — ③에 가려면 ①②가 유효해야 한다.
+   *
+   * 🔑 **그래도 불완전 종목은 만들 수 있다.** 확정 게이트는 여전히 2개뿐이고, ③ 자신의
+   *    필수(신고일)는 비운 채 「확정」을 누를 수 있다. 즉 이 테스트의 **주제**
+   *    (`validateFilingItems`가 몇 번째 종목인지 지목한다)는 그대로 살아 있고,
+   *    **수단**만 바뀌었다. 종전 수단으로 다시 쓰면 게이트 회귀를 놓친다
+   *    ([[feedback_shared_assertion_reversal_erases_sibling_net]]).
    *
    * 종전에는 그대로 계산돼 엔진이 `transferDate.getTime is not a function` 으로 터졌고
    * (500), 사용자는 어느 종목이 문제인지 알 수 없었다.
@@ -112,23 +118,25 @@ test.describe("주식 다종목 합산신고", () => {
     test.setTimeout(180_000);
     await gotoStockTransferTax(page);
 
-    // 1) 정상 종목 1건 확정
-    await fillItemThroughStep3(page, "정상종목", { y: "2024", m: "02", d: "01" });
-    await page.getByTestId("stock-item-add").click();
+    // 1) ①②는 유효하게 채워 ③까지 간 뒤, **신고일을 비운 채** 확정한다.
+    await fillItemThroughStep3(page, "빈종목", { y: "2024", m: "02", d: "01" });
+    const filingYear = page.locator('input[type="text"][aria-label="연도"]').nth(0);
+    await filingYear.click();
+    await filingYear.press("ControlOrMeta+a");
+    await filingYear.press("Backspace");
+    await expect(filingYear).toHaveValue("");
 
-    // 2) 종목명·시장만 넣고 **사이드바로 3단계 점프** — validate 를 우회한다
-    await page.getByPlaceholder("종목명을 입력하세요").fill("빈종목");
-    await page.getByRole("radio", { name: "비상장" }).first().click();
-    await page.getByRole("button", { name: /필요경비·신고/ }).first().click();
     await expect(page.getByTestId("stock-item-add")).toBeEnabled();
     await page.getByTestId("stock-item-add").click();
 
-    // 3) 목록에 「입력 미완료」 배지
+    // 2) 목록에 「입력 미완료」 배지
     await expect(page.getByText("입력 미완료")).toBeVisible();
 
+    // 3) 두 번째 종목은 완전하게 채운다 — 편집기가 유효해야 「결과 보기」에 도달한다.
+    await fillItemThroughStep3(page, "정상종목", { y: "2024", m: "09", d: "01" });
+
     // 4) 계산 시도 → 순번과 종목명으로 지목해 차단 (종전에는 500)
-    await page.getByRole("button", { name: /필요경비·신고/ }).first().click();
     await page.getByRole("button", { name: "결과 보기" }).click();
-    await expect(page.getByText(/2번째 종목 「빈종목」/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/1번째 종목 「빈종목」/)).toBeVisible({ timeout: 15_000 });
   });
 });
