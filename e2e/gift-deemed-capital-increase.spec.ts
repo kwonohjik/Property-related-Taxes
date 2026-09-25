@@ -61,12 +61,15 @@ test.describe("§39 증자 이익 cap-table", () => {
     await page.getByTestId("deemed-detail-confirm").click();
     await page.getByTestId("deemed-calc-btn").click();
 
-    const result = page.getByTestId("deemed-result");
-    await expect(result).toContainText("300,000,000"); // 병 합계
-    await expect(result).toContainText("225,000,000"); // 병 ← 갑(부)
-    await expect(result).toContainText("75,000,000"); // 병 ← 을(모) / 정 ← 갑(부)
-    await expect(result).toContainText("100,000,000"); // 정 합계
-    await expect(result).toContainText("25,000,000"); // 정 ← 을(모)
+    // 🔴 정밀 testid 단언 — `deemed-result` 전체 substring 매칭은 포섭으로 구별력이 0이다:
+    //    "25,000,000" ⊂ "225,000,000" 이라 정(sh-4) 관련 값이 전부 0이 되어도 초록이었다.
+    //    수증자 합계는 ci-alloc-total-{id}, 증여자별 분할은 ci-alloc-split-value-{수증자}-{증여자}.
+    await expect(page.getByTestId("ci-alloc-total-sh-3")).toHaveText("300,000,000"); // 병 합계
+    await expect(page.getByTestId("ci-alloc-split-value-sh-3-sh-1")).toHaveText("225,000,000"); // 병 ← 갑(부)
+    await expect(page.getByTestId("ci-alloc-split-value-sh-3-sh-2")).toHaveText("75,000,000"); // 병 ← 을(모)
+    await expect(page.getByTestId("ci-alloc-total-sh-4")).toHaveText("100,000,000"); // 정 합계
+    await expect(page.getByTestId("ci-alloc-split-value-sh-4-sh-1")).toHaveText("75,000,000"); // 정 ← 갑(부)
+    await expect(page.getByTestId("ci-alloc-split-value-sh-4-sh-2")).toHaveText("25,000,000"); // 정 ← 을(모)
 
     // 검증내역 증감 합계 0
     await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
