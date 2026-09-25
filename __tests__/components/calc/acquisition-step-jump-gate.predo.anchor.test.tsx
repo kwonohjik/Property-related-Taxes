@@ -126,6 +126,51 @@ describe("AQ-3 — 사이드바가 어느 단계가 빠졌는지 알려 준다",
     expect(mark!.className).toContain("text-rose-600");
   });
 
+  /**
+   * 🔴 **가 본 적 없는 단계는 빨개지면 안 된다** (2026-09-25 주식과 규약 통일).
+   *
+   * ①에서 연부취득 토글을 켜면 그 순간 ②「물건 상세」가 무효가 된다(실측 —
+   *    `"연부취득은 최소 2회차 이상 입력해야 합니다."`). 종전 규칙(무효한 단계 전부 표시)에서는
+   *    사용자가 ②를 **본 적도 없는데** rose `!`가 떴다. 빈 폼 무효 단계가 ① 하나뿐이라
+   *    이 함정이 오래 드러나지 않았을 뿐이다.
+   */
+  it("아직 가 본 적 없는 단계는 무효여도 표식이 붙지 않는다", () => {
+    const form = {
+      ...INITIAL_FORM,
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      isInstallmentAcquisition: true,
+      installmentContractDate: "2024-01-01",
+    } as FormState;
+    // 전제 — ②는 실제로 무효다(이 단언이 없으면 아래가 공허해진다).
+    expect(validateStep(1, form)).toContain("연부취득은 최소 2회차");
+
+    render(
+      <AcquisitionSidebar form={form} currentStep={0} maxVisitedStep={0} onStepClick={() => {}} />,
+    );
+    expect(
+      rows()[1].querySelector('[aria-label="입력 필요"]'),
+      "② «물건 상세»는 가 본 적이 없으므로 표식이 없어야 함",
+    ).toBeNull();
+  });
+
+  /** 긍정 짝 — 한 번 가 본 뒤에는(되돌아와도) 표식이 붙는다. */
+  it("가 본 적 있으면 되돌아와도 표식이 붙는다", () => {
+    const form = {
+      ...INITIAL_FORM,
+      propertyType: "housing",
+      acquisitionCause: "purchase",
+      isInstallmentAcquisition: true,
+      installmentContractDate: "2024-01-01",
+    } as FormState;
+    render(
+      <AcquisitionSidebar form={form} currentStep={0} maxVisitedStep={1} onStepClick={() => {}} />,
+    );
+    const mark = rows()[1].querySelector('[aria-label="입력 필요"]');
+    expect(mark, "② «물건 상세»에 오류 표식이 있어야 함").toBeTruthy();
+    expect(mark!.className).toContain("text-rose-600");
+  });
+
   it("오류가 없는 단계에는 표식이 붙지 않는다", () => {
     render(
       <AcquisitionSidebar
@@ -138,3 +183,41 @@ describe("AQ-3 — 사이드바가 어느 단계가 빠졌는지 알려 준다",
   });
 });
 
+/**
+ * AQ-4 — 표식 «범위»를 **오케스트레이터를 거쳐** 확인한다.
+ *
+ * 🔑 위 AQ-3 계열은 사이드바를 직접 렌더하며 `maxVisitedStep`을 명시로 준다. 그래서
+ *    **오케스트레이터가 실제로 추적하는지**는 못 본다 — 실측으로 확인했다: `setMaxVisitedStep`
+ *    호출을 통째로 지워도 AQ-3 7건이 전부 초록이었다(SURVIVED).
+ *    `visitedUpTo`에 `currentStep` 하한이 있어 「지나온 단계」는 추적 없이도 표시되기 때문이다.
+ *    추적이 실제로 일하는 자리는 **되돌아온 뒤**뿐이다.
+ *
+ * 주식은 E2E `SJE-3`가 이 축을 지킨다. 취득세에는 대응 E2E가 없어 여기서 고정한다.
+ */
+describe("AQ-4 — 되돌아와도 «가 본» 단계는 표식을 유지한다", () => {
+  /** ①을 채우고 「다음」으로 ②에 갔다가 사이드바로 ①에 되돌아온다. */
+  function goToStep1AndBack() {
+    render(<AcquisitionTaxForm />);
+    fireEvent.change(screen.getByLabelText(/취득가액 \(실거래가\)/), {
+      target: { value: "500000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    // ②에 도착했는지 — 이 단언이 없으면 아래가 공허해진다.
+    expect(rows()[1].querySelector("[aria-current]"), "②가 현재 단계여야 함").toBeTruthy();
+
+    // ①로 되돌아간다(후진은 막지 않는다).
+    jumpTo("취득 정보");
+    expect(rows()[0].querySelector("[aria-current]"), "①로 돌아와야 함").toBeTruthy();
+  }
+
+  it("②를 무효로 만들면 ①로 돌아와도 ②에 표식이 남는다", () => {
+    goToStep1AndBack();
+
+    // ①에서 연부취득을 켜면 ②「물건 상세」가 무효가 된다(회차 미입력).
+    fireEvent.click(screen.getByRole("switch", { name: /연부취득/ }));
+
+    const mark = rows()[1].querySelector('[aria-label="입력 필요"]');
+    expect(mark, "가 본 적 있는 ②에는 표식이 붙어야 함").toBeTruthy();
+    expect(mark!.className).toContain("text-rose-600");
+  });
+});

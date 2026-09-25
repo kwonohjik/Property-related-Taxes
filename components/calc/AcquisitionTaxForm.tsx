@@ -130,6 +130,19 @@ function firstInvalidStep(
 
 export function AcquisitionTaxForm() {
   const [step, setStep] = useState(0);
+  /**
+   * 사용자가 **가 본 가장 먼 단계** — 사이드바 오류 표식의 범위(주식 마법사와 동일 규약).
+   *
+   * 🔴 없으면 **아직 가 본 적 없는 단계가 빨개진다.** ①에서 연부취득 토글을 켜거나
+   *    간주취득(과점주주)을 고르는 순간 ②「물건 상세」가 rose가 된다(실측 —
+   *    「최소 2회차 이상」·「장부상 총가액을 입력하세요」). 사용자는 ②를 본 적도 없다.
+   *    빈 폼에서 무효 단계가 ① 하나뿐이라 이 함정이 오래 드러나지 않았을 뿐이다.
+   */
+  const [maxVisitedStep, setMaxVisitedStep] = useState(0);
+  const visitStep = (target: number) => {
+    setMaxVisitedStep((m) => Math.max(m, target));
+    setStep(target);
+  };
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -223,7 +236,7 @@ export function AcquisitionTaxForm() {
     }
 
     if (!isLastStep) {
-      setStep(nextStep);
+      visitStep(nextStep);
     } else {
       // Step 5 (감면 확인) → 계산 실행
       setLoading(true);
@@ -257,7 +270,7 @@ export function AcquisitionTaxForm() {
     }
     setResult(null);
     setError(null);
-    setStep(target);
+    visitStep(target);
   };
 
   const handleBack = () => {
@@ -283,6 +296,7 @@ export function AcquisitionTaxForm() {
       {/* 사이드바 — lg 이상에서 좌측 sticky */}
       <div className="hidden lg:block">
         <AcquisitionSidebar
+          maxVisitedStep={maxVisitedStep}
           form={form}
           currentStep={step}
           onStepClick={handleStepJump}

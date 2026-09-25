@@ -294,10 +294,21 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
 interface Props {
   form: FormState;
   currentStep: number;
+  /**
+   * 사용자가 가 본 가장 먼 단계 — 오류 표식의 범위.
+   * 미지정 시 `currentStep`으로 본다(사이드바를 직접 렌더하는 테스트 편의).
+   */
+  maxVisitedStep?: number;
   onStepClick: (step: number) => void;
 }
 
-export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
+export function AcquisitionSidebar({
+  form,
+  currentStep,
+  maxVisitedStep,
+  onStepClick,
+}: Props) {
+  const visitedUpTo = Math.max(maxVisitedStep ?? currentStep, currentStep);
   const isDeemed = isDeemedAcquisitionCause(form.acquisitionCause);
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- 명시 deps로 selector 안정화. Compiler 자동 메모와 별도로 유지
@@ -344,17 +355,25 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     🔑 **건너뛰는 단계는 저절로 빠진다** — `validateStep`의 검사가 그 단계의 활성 조건과 같은
        술어를 쓰기 때문이다(예: ③ 주택 현황 검사는 `propertyType === "housing"` 게이트 안에
        있어 비주택이면 null). 여기서 스킵 규칙을 다시 적지 않는다.
+
+    🔴 **가 본 적 있는 단계까지만** 붙인다(`i <= visitedUpTo`). 주식 마법사와 같은 규약이다.
+       종전에는 무효한 단계를 전부 붙였는데, 빈 폼 무효 단계가 ① 하나뿐이고 그게 `active`라
+       **노이즈가 우연히 0이었을 뿐**이다. 조건부 필수가 걸리는 순간 드러난다 — ①에서
+       연부취득 토글을 켜거나 간주취득(과점주주)을 고르면 ②「물건 상세」가 **즉시 rose**가
+       된다(실측 「최소 2회차 이상」·「장부상 총가액을 입력하세요」). 사용자는 ②를 본 적도 없다.
   */
   const steps: WizardSidebarStep[] = activeSteps.map((label, i) => ({
     label,
     status:
       i === currentStep
         ? "active"
-        : validateStep(i, form) !== null
-          ? "attention"
-          : i < currentStep
-            ? "done"
-            : "todo",
+        : i > visitedUpTo
+          ? "todo"
+          : validateStep(i, form) !== null
+            ? "attention"
+            : i < currentStep
+              ? "done"
+              : "todo",
     onClick: () => onStepClick(i),
   }));
 
