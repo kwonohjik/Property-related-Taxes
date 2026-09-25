@@ -176,3 +176,49 @@ test.describe("취득세 — 과점주주 상장법인 비과세", () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// 4. 단계 점프 게이트 — 필수 입력을 건너뛰고 계산할 수 없다 (F-8)
+// ─────────────────────────────────────────────────────────────────
+/**
+ * ## 유닛이 못 보는 것
+ *
+ * `__tests__/components/calc/acquisition-step-jump-gate.predo.anchor.test.tsx`가
+ * 오케스트레이터를 렌더해 게이트를 고정한다 — 「그 클릭이면 막힌다」까지다.
+ * 여기서만 관측되는 것은 **사이드바가 실제로 보이는 폭에서**(`hidden lg:block`) 그 경로가
+ * 존재하고, 서버에 계산 요청이 **아예 나가지 않는다**는 것이다.
+ */
+test.describe("취득세 — 단계 점프 게이트", () => {
+  const sidebar = (page: Page) => page.getByRole("navigation", { name: "진행 단계" });
+
+  test("[AQJ-1] 취득가액을 비운 채 ⑥으로 점프하면 ①로 되돌리고 계산 요청이 나가지 않는다", async ({
+    page,
+  }) => {
+    const calls: string[] = [];
+    await page.route("**/api/calc/acquisition", async (route) => {
+      calls.push(route.request().method());
+      await route.continue();
+    });
+
+    await page.goto("/calc/acquisition-tax");
+    await expect(sidebar(page)).toBeVisible();
+
+    // 아직 아무 표식도 없다 — ①이 현재 단계다.
+    await expect(sidebar(page).getByLabel("입력 필요")).toHaveCount(0);
+
+    await sidebar(page).getByRole("button", { name: /감면 확인/ }).click();
+
+    // 🔑 ①로 되돌아왔고 누락 사유를 짚어 준다.
+    await expect(page.getByText("취득가액을 입력하세요.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /취득세 계산/ })).toHaveCount(0);
+    expect(calls, "필수 입력을 건너뛴 채 계산 요청이 나갔다").toEqual([]);
+  });
+
+  test("[AQJ-2] 취득가액을 채우면 같은 점프가 통한다", async ({ page }) => {
+    await page.goto("/calc/acquisition-tax");
+    await fillAndVerify(page.getByPlaceholder("계약서상 거래금액"), "600000000");
+
+    await sidebar(page).getByRole("button", { name: /감면 확인/ }).click();
+    await expect(page.getByRole("button", { name: /취득세 계산/ })).toBeVisible();
+  });
+});
