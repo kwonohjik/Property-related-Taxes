@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
+import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
@@ -22,6 +23,11 @@ import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-
 
 interface StockSidebarProps {
   currentStep: number;
+  /**
+   * 사용자가 가 본 가장 먼 단계 — 오류 표식의 범위.
+   * 미지정 시 `currentStep`으로 본다(직접 렌더하는 테스트 편의).
+   */
+  maxVisitedStep?: number;
   onStepClick: (step: number) => void;
   /** 입력된 종목명 — 있는 경우 사이드바 상단 배지로 표시 */
   stockName?: string;
@@ -64,7 +70,13 @@ function computeFormTransferPrice(f: StockTransferFormData): number | null {
   return priceMode === "exchange" ? (exchangeTotal > 0 ? exchangeTotal : null) : transferPrice;
 }
 
-export function StockSidebar({ currentStep, onStepClick, stockName }: StockSidebarProps) {
+export function StockSidebar({
+  currentStep,
+  maxVisitedStep,
+  onStepClick,
+  stockName,
+}: StockSidebarProps) {
+  const visitedUpTo = Math.max(maxVisitedStep ?? currentStep, currentStep);
   // atomic selector (무한 루프 방지)
   const formData = useStockTransferStore(useShallow((s) => s.formData));
   const result = useStockTransferStore((s) => s.result);
@@ -300,14 +312,41 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
     return items;
   }, [formData, result, savedItems, aggregateResult, isMultiFiling]);
 
+  /**
+   * 단계 표식 — 위치(`done/active/todo`)에 **차단 오류**(rose `!`)를 얹는다.
+   *
+   * 🔴 종전에는 위치 기반만이라, 필수를 비운 단계도 지나오기만 하면 «✓ 완료»로 보였다.
+   *    그 상태로 「결과」에 점프하면 취득가액이 조용히 0원 처리돼 **그럴듯한 오답**이
+   *    나왔다(실측 19,500,000 → 21,500,000). F-5에서 정한 규약(rose = 차단 오류)을 따른다.
+   *
+   * 🔑 `severity === "error"`만 본다 — warning을 attention으로 올리면 오탐이 된다.
+   *    결과 단계(인덱스 3)는 `validateStepByIndex`가 의도적으로 `[]`라 저절로 빠진다.
+   *
+   * 🔴 **가 본 적 있는 단계(`i <= maxVisitedStep`)에만** 붙인다. 두 대안은 실측으로 탈락했다:
+   *    ⓐ 무효한 단계 전부 → 빈 폼 첫 화면에서 ②③이 동시에 빨개진다(오류 6·2·1).
+   *       취득세는 빈 폼 무효 단계가 ① 하나뿐이고 그게 current라 이 함정이 드러나지 않았다 —
+   *       **같은 코드가 세목에 따라 다르게 보이는 자리다.**
+   *    ⓑ `i < currentStep`만 → 고치러 뒤로 가면 다시 «todo»가 되어 표식이 영영 안 뜬다.
+   *
+   * 🔑 «가 봤는데 무효»가 되는 경로는 실재한다 — 게이트는 전진만 막으므로 뒤로 가서 지운 뒤
+   *    한 칸 더 뒤로 가면 그 상태가 된다(E2E `SJE-3`).
+   */
   const steps = useMemo((): WizardSidebarStep[] => {
     return STEP_LABELS.map((label, i) => ({
       label,
       status:
-        i < currentStep ? "done" : i === currentStep ? "active" : "todo",
+        i === currentStep
+          ? "active"
+          : i > visitedUpTo
+            ? "todo"
+            : validateStepByIndex(formData, i).some((e) => e.severity === "error")
+              ? "attention"
+              : i < currentStep
+                ? "done"
+                : "todo",
       onClick: () => onStepClick(i),
     }));
-  }, [currentStep, onStepClick]);
+  }, [currentStep, visitedUpTo, formData, onStepClick]);
 
   return (
     <div className="space-y-3">

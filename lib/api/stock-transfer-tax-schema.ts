@@ -442,8 +442,15 @@ export {
  *    **단건이면 400인 payload가 items[]에 넣으면 통과**했다 —
  *    국외 갈래는 자체 `.superRefine`이 인라인이라 살아남고 국내만 빠지는 비대칭이었다.
  *    이 파일 상단 주석이 「API를 직접 호출하는 경로에는 이 게이트가 유일한 방어다」라고
- *    적어 둔 그 게이트다(마법사 UI는 `validateFilingItems`가 먼저 막으므로 발현은
- *    API 직접 호출·외부 연동에 한정된다).
+ *    적어 둔 그 게이트다.
+ *
+ * 🔴 **「마법사 UI가 먼저 막는다」는 전제는 틀렸다** (2026-09-25 실측, 정정).
+ *    `validateFilingItems`는 **다종목 경로에만** 붙어 있었고 단건은 무검증으로 API에
+ *    갔다. 게다가 이 refine은 **빈 폼만** 막는다 — 부분 입력은 통과한다. 취득단가만
+ *    비우면 Zod PASS · 엔진 200이고 취득가액이 조용히 0원 처리돼 세액이
+ *    19,500,000 → 21,500,000으로 나왔다(경고 0건). ⇒ 단건 백스톱과 단계 점프 게이트를
+ *    `StockTransferTaxCalculator.tsx`에 넣었다(F-8 후속). **이 refine은 여전히 빈 폼
+ *    수준만 본다** — 필수 누락의 방어는 UI 층이 진다.
  *
  * ⚠️ `addStockRefines`는 `ZodEffects`를 돌려주므로 union 요소 타입이 바뀐다 —
  *    `route.ts`의 `rawItems.map`·`marketType === "foreign_stock"` 분기는 **파싱 출력**을
