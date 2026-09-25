@@ -10,7 +10,7 @@
  *   - 실제 증가주식 = Σ 인수신주(subscribedShares). 검증내역·증여재산가액 모두 실제 ㉯ 사용.
  */
 import { GIFT } from "../legal-codes";
-import { computeWeightedPerShare, meetsRatioThreshold } from "./capital-helpers";
+import { computeWeightedPerShare, isSmallShareholder, meetsRatioThreshold } from "./capital-helpers";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   CapShareholder,
@@ -25,6 +25,36 @@ const ABSOLUTE_THRESHOLD = 300_000_000; // §29②2·4 3억원
 function forfeitedBy(s: CapShareholder): number {
   const ownSubscribed = s.subscribedShares - (s.reallocatedShares ?? 0);
   return Math.max(0, s.entitledShares - ownSubscribed);
+}
+
+/**
+ * 「상증법」§39② 1인 의제 — `imputedIds`에 속한 증여자 행들을 입력 순서상 첫 행 자리에 합친다.
+ * 값은 단순 합(총액 불변)이고, 합친 행의 `excludedReason`은 합계가 0일 때만 남긴다.
+ */
+function mergeSmallShareholderDonors(rows: DonationSplit[], smallIds: Set<string>): DonationSplit[] {
+  const targets = rows.filter((r) => smallIds.has(r.donorId));
+  if (targets.length < 2) return rows; // 「**2명 이상**인 경우」 — 이 조가 유일한 판정 지점이다
+  const value = targets.reduce((a, r) => a + r.value, 0);
+  const mergedRow: DonationSplit = {
+    beneficiaryId: targets[0].beneficiaryId,
+    donorId: targets[0].donorId,
+    value,
+    excludedReason: value > 0 ? undefined : targets.find((r) => r.excludedReason)?.excludedReason,
+    imputedSmallShareholderIds: targets.map((r) => r.donorId),
+  };
+  let placed = false;
+  const out: DonationSplit[] = [];
+  for (const r of rows) {
+    if (!smallIds.has(r.donorId)) {
+      out.push(r);
+      continue;
+    }
+    if (!placed) {
+      out.push(mergedRow);
+      placed = true;
+    }
+  }
+  return out;
 }
 
 export function calcCapitalIncreaseAllocation(
@@ -107,6 +137,36 @@ export function calcCapitalIncreaseAllocation(
   //      각자의 엔진이 다룬다. 이 축은 **§39 경로에 한정**한다.
   const forProfitCorpIds = new Set(shareholders.filter((s) => s.isCorporate === true).map((s) => s.id));
 
+  // 「상증법」§39② — 「**제1항제1호를 적용할 때** 이익을 증여한 자가 … 소액주주로서 2명 이상인
+  //   경우에는 이익을 증여한 소액주주가 **1명인 것으로 보고 이익을 계산한다**」
+  //   「상증령」§29⑤ — 「발행주식총수등의 100분의 1**미만** … 액면가액의 합계액이 3억원 **미만**」
+  //
+  // ⚠️ **저가(제1항제1호) 한정**이다. 법문이 적용 대상을 제1항제1호로 못박고 있고, 고가(제2호)에서는
+  //    증여자가 「신주를 인수한 자」로 사람 자체가 바뀐다. 범위를 넓히면 근거 없는 병합이 된다.
+  // ⚠️ **총액은 바뀌지 않는다.** §29② 각 호 산식에 「증여자 수」가 들어가지 않고 증여자측 수량은
+  //    전부 주식수의 합(실권주 총수·특수관계인의 실권주수)이라, N명을 1명으로 보아도 합이 같다.
+  //    ⇒ 병합은 **요건 판정·게이트를 모두 거친 뒤** 행을 합치는 자리에서만 한다. 게이트보다 앞서
+  //       합치면 각자에 대해 따로 판정해야 할 특수관계·공모·영리법인 축이 뭉개진다.
+  // ⚠️ 액면가액 합계 **미입력은 「소액주주 아님」**이다 — 요건 입증 없이 의제할 수 없다(타입 주석).
+  //   ℹ️ 「2명 이상인 경우」 요건은 이 집합이 아니라 `mergeSmallShareholderDonors`가 **단독으로**
+  //      판정한다. 양쪽에 두면 한쪽이 죽은 조건이 되어 뮤테이션에서 구별력 0으로 측정된다
+  //      (S2 SURVIVED로 실측 — 여기서 `>= 2`를 `>= 1`로 바꿔도 헬퍼 가드가 그대로 막았다).
+  const smallShareholderDonorIds =
+    direction === "high"
+      ? new Set<string>()
+      : new Set(
+          donors
+            .filter((d) => {
+              const s = shareholderById.get(d.id);
+              return (
+                s !== undefined &&
+                s.faceValueSum !== undefined && // 미입력 = 요건 미입증 (타입이 이 가드를 강제한다)
+                isSmallShareholder({ ownedShares: s.preShares, totalShares: preTotal, faceValueSum: s.faceValueSum })
+              );
+            })
+            .map((d) => d.id),
+        );
+
   for (const b of byShareholder) {
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
     const forProfitCorpOut = forProfitCorpIds.has(b.id); // §4의2①·③ 납세의무자 아님
@@ -173,11 +233,13 @@ export function calcCapitalIncreaseAllocation(
                 ? "특수관계 부재(§39①2호)"
                 : "특수관계 부재(§39①1호나목)"
               : undefined;
-      const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value, excludedReason };
-      splits.push(row);
-      return row;
+      return { beneficiaryId: b.id, donorId: d.id, value, excludedReason };
     });
-    perBeneficiary.push({ beneficiaryId: b.id, total: byDonor.reduce((a, r) => a + r.value, 0), byDonor });
+
+    // §39② 1인 의제 — 소액주주 증여자 행들을 **대표 1행**으로 합친다(합계 불변).
+    const merged = mergeSmallShareholderDonors(byDonor, smallShareholderDonorIds);
+    splits.push(...merged);
+    perBeneficiary.push({ beneficiaryId: b.id, total: merged.reduce((a, r) => a + r.value, 0), byDonor: merged });
   }
 
   return {

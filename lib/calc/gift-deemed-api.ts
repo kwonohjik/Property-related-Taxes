@@ -262,6 +262,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
           allocationMethod: r.allocationMethod,
           isCorporate: r.isCorporate || undefined,
+          // 「상증령」§29⑤ 액면 요건 — 0·공란은 「미입력」이라 undefined로 보낸다(판정 불가 → 의제 없음)
+          faceValueSum: parseAmount(r.faceValueSum) || undefined,
         })),
       } as unknown as DeemedGiftInput;
     case "capital_decrease":

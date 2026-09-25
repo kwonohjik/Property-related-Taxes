@@ -156,6 +156,48 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
   });
 
+  test("§39② 소액주주 1인 의제 — 증여자 2행(각 50,000,000) → 1행 100,000,000 (총액 불변)", async ({ page }) => {
+    // 「상증법」§39② — 「제1항제1호를 적용할 때 이익을 증여한 자가 … 소액주주로서 2명 이상인
+    //   경우에는 이익을 증여한 소액주주가 **1명인 것으로 보고 이익을 계산한다**」
+    // 「상증령」§29⑤ — 100분의 1 **미만** AND 액면가액 합계 3억원 **미만**(둘 다 strict).
+    //   지분율은 「증자 전 보유」로 구해지지만 **액면 요건은 입력이 없으면 판정할 수 없다**
+    //   ⇒ 미입력 상태에서는 의제가 걸리지 않고, 입력하는 순간 걸린다. 그 전환을 여기서 고정한다.
+    // ㉮ 200,000 · 인수가 50,000 · A 198,000주(99%) · s1·s2 각 1,000주(0.5%) 전량 포기
+    //   ⇒ ㉯ 150,000 · A delta +100,000,000 · s_i delta −50,000,000(각 50%)
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-low").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("200000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("50000");
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "A", "198000", "99000", "100000", "1000"); // 대주주 — 실권주 전량 인수
+    await fillRow(page, 1, "s1", "1000", "500", "0", "0"); // 소액주주 — 전량 포기
+    await fillRow(page, 2, "s2", "1000", "500", "0", "0"); // 소액주주 — 전량 포기
+
+    // ① 액면가액 합계 미입력 → §29⑤ 판정 불가 ⇒ 의제 없음, 증여자 2행
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-1")).toHaveText("100,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-1-sh-2")).toHaveText("50,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-1-sh-3")).toHaveText("50,000,000");
+    await expect(page.getByTestId("deemed-result")).not.toContainText("1인 의제");
+
+    // ② 액면가액 합계 입력(각 5,000,000 < 3억) → 소액주주 2명 ⇒ 1인 의제로 **1행**
+    await page.getByTestId("deemed-edit-btn").click();
+    await page.getByTestId("ci-alloc-face-1").fill("5000000");
+    await page.getByTestId("ci-alloc-face-2").fill("5000000");
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result")).toContainText("§39② 1인 의제");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-1-sh-2")).toHaveText("100,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-1-sh-3")).toHaveCount(0);
+    // 🔑 긍정 짝 — 의제는 **분할 단위만** 바꾼다. 총액도 검증내역도 그대로다.
+    await expect(page.getByTestId("ci-alloc-total-sh-1")).toHaveText("100,000,000");
+    await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
+  });
+
   test("혼합 증자 — 재배정분(§39①1호 가목)은 특수관계가 없어도 과세 → 을 125,000,000", async ({ page }) => {
     // 교재 사례2 구조에서 **특수관계 칩을 하나도 켜지 않는다**.
     //   가목(실권주 배정)은 법문에 특수관계 문언이 없어 을의 재배정 10,000주분은 그대로 과세된다.

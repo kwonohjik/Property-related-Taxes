@@ -32,10 +32,17 @@ export interface CapTableRow {
    * 들어오고, 그때는 **개인**으로 본다(안전측 — 법인으로 오판하면 과소과세 방향이다).
    */
   isCorporate?: boolean;
+  /**
+   * 이 주주가 소유한 주식등의 **액면가액 합계액** — 「상증령」§29⑤ 소액주주 판정의 액면 요건
+   * (3억원 미만)이고, 지분율 요건(100분의 1 미만)과 함께 「상증법」§39② 1인 의제를 자동 판정한다.
+   * 선택 입력이며 **미입력은 「소액주주 아님」**이다(요건 미입증 — 엔진 주석 참조).
+   * optional인 것은 ③ 때문이다 — 이 필드가 생기기 전 sessionStorage 행은 `undefined`로 들어온다.
+   */
+  faceValueSum?: string;
 }
 
 export function makeCapTableRow(id: string): CapTableRow {
-  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", isCorporate: false };
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", isCorporate: false, faceValueSum: "" };
 }
 
 /**
