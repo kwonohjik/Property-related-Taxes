@@ -55,8 +55,18 @@ export function calcCapitalIncreaseAllocation(
   const totalRealloc = shareholders.reduce((a, s) => a + (s.reallocatedShares ?? 0), 0);
   const hasForfeitProcessing = totalForfeit > totalRealloc;
   // 차액(|㉯−㉰|) ≥ 증자후가 30% (per-share, 수증자 무관)
-  const perShareDiff = Math.abs(perShareAfter - priceIn);
-  const ratioMet = perShareDiff >= safeMultiplyThenDivide(perShareAfter, RATIO_NUMER, RATIO_DENOM);
+  // §29②2호 가목 — 저가 나목(실권처리)의 기준선 ㉯는 「증자전의 지분비율대로 **균등하게
+  //   증자하는 경우의 증가주식수**」 기준이다. 실권주가 소멸해 실제 증가분이 줄면 실제 ㉯가
+  //   높게 잡혀 차액이 부풀고, 게이트가 **한 방향으로만** 헐거워져 법정 미과세가 과세된다.
+  //   Σ`entitledShares`가 곧 균등증자 가정 증가주식수라 새 입력 없이 구할 수 있다.
+  // ⚠️ 고가는 그대로 둔다 — §29②4호의 비율 요건은 「제3호 **나목의 가액**의 100분의 30 이상」
+  //   이고 그 나목 산식은 「증자에 의하여 증가한 주식수」(실제)다. 한 값으로 묶어 고치면 고가가 깨진다.
+  const perShareForRatio =
+    direction !== "high" && hasForfeitProcessing
+      ? computeWeightedPerShare(pre, preTotal, priceIn, shareholders.reduce((a, s) => a + s.entitledShares, 0))
+      : perShareAfter;
+  const perShareDiff = Math.abs(perShareForRatio - priceIn);
+  const ratioMet = perShareDiff >= safeMultiplyThenDivide(perShareForRatio, RATIO_NUMER, RATIO_DENOM);
 
   // §39①: 저가발행(1호) 가목(재배정)·다목(제3자배정)·라목(초과배정)은 특수관계 요건 없음.
   //        나목(실권주 미배정=실권처리)·고가발행(2호)만 특수관계인 요구.

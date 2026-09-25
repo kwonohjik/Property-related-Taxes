@@ -313,6 +313,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       )}
       {needsLowDanmok && (
         <>
+          <CurrencyInput label="균등증자 가정 증가주식수" value={form.ciEqualIssueShares} onChange={(v) => set({ ciEqualIssueShares: v })} hint="나목의 증자 후 1주당 가액은 «증자전 지분비율대로 균등하게 증자했다면 늘었을 주식수» 기준입니다 — 위 «증자 주식수»(실제 증가분)와 다릅니다" />
           <CurrencyInput label="신주인수자의 특수관계인의 실권주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder="특수관계인 실권주 주식수" />
           <CurrencyInput label="증자 후 신주인수자 보유주식수" value={form.ciPostHeldShares} onChange={(v) => set({ ciPostHeldShares: v })} />
           <CurrencyInput label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />

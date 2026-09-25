@@ -88,7 +88,7 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
   // ── 2-A 다목 가중이 ⑤→④→⑫→⑭→엔진 전 구간을 통과하는지 실증 ─────────────────
   //   leaf anchor는 Zod(⑫)와 route 매핑(⑭)을 건너뛴다 — 여기서만 전 구간이 증명된다.
 
-  test("§39 증자 저가 나목 §29②2호 다목 — 지분비율 1/2 가중 → 49,995,000 (가중 없으면 99,990,000)", async ({ page }) => {
+  test("§39 증자 저가 나목 — 균등 ㉯ 7,500(§29②2호 가목) × 지분비율 1/2 가중(다목) → 37,500,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "capital_increase");
     await page.getByTestId("ci-subtype-no_realloc").click();
@@ -97,12 +97,14 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
     await page.getByPlaceholder("증자 주식수").fill("50000");
     await page.getByPlaceholder("실권주수").fill("30000");
+    await page.getByLabel("균등증자 가정 증가주식수", { exact: true }).fill("100000");
     await page.getByPlaceholder("특수관계인 실권주 주식수").fill("30000");
     await page.getByLabel("증자 후 신주인수자 보유주식수", { exact: true }).fill("75000");
     await page.getByLabel("증자 후 발행주식총수", { exact: true }).fill("150000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
-    await expect(page.getByTestId("deemed-result-value")).toContainText("49,995,000");
+    // 두 축이 동시에 걸린다: ㉯가 실제 8,333 → 균등 7,500 · 귀속 3만 → 1.5만
+    await expect(page.getByTestId("deemed-result-value")).toContainText("37,500,000");
   });
 
   test("§39 증자 고가 가목 §29②3호 다목 — 1만÷3만 가중 → 66,670,000 (가중 없으면 200,010,000)", async ({ page }) => {

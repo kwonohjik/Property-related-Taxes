@@ -194,6 +194,15 @@ export interface CapitalIncreaseInput {
    * 미입력이면 종전 동작(원시 `forfeitedShares`)을 유지한다 — 입력 필수화는 ⑧ validate 담당.
    */
   postIssueSubscriberRatio?: { numer: number; denom: number };
+  /**
+   * 「상증령」§29②**2호 가목**의 「증자전의 지분비율대로 **균등하게 증자하는 경우의 증가주식수**」
+   * — **저가 나목 전용**. ㉯(증자 후 1주당 가액)와 거기서 파생되는 30% 기준선의 곱셈 수량이다.
+   *
+   * ⚠️ §29②**1호 가목**(저가 가·다·라목)과 §29②**3호 나목**(고가)은 「증자에 의하여 증가한
+   *    주식수」= **실제**라 같은 수량이 아니다. 나목은 실권주를 배정하지 않아 소멸시키므로
+   *    두 값이 갈린다. 미입력이면 `issuedShares`로 되돌아간다(하위호환).
+   */
+  equalIssueShares?: number;
   // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
   smallShareholderImputation?: boolean;
   /** 주권상장법인등 — §29②1가 단서(저가 min)·§29②3나 단서(고가 max) */
