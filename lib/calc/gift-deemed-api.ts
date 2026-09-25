@@ -239,6 +239,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         isListed: form.ciIsListed,
         listedMarketAvg: form.ciIsListed ? parseAmount(form.ciListedMarketAvg) : undefined,
         allocationMethod: form.ciAllocationMethod,
+        // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 납세의무자가 아니다
+        doneeIsForProfitCorp: form.ciDoneeIsForProfitCorp || undefined,
       };
     }
     case "capital_increase_allocation":
@@ -259,6 +261,7 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
           relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
           allocationMethod: r.allocationMethod,
+          isCorporate: r.isCorporate || undefined,
         })),
       } as unknown as DeemedGiftInput;
     case "capital_decrease":
@@ -435,6 +438,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         isListed: k.isListed,
         listedMarketAvg: k.isListed ? parseAmount(k.listedMarketAvg) : undefined,
         allocationMethod: k.allocationMethod,
+        // 수증자는 두 시점에 걸쳐 **같은 사람**이다 — 시점별 값이 아니라 건 단위 축이라 공용 키를 쓴다.
+        doneeIsForProfitCorp: form.ciDoneeIsForProfitCorp || undefined,
       });
       return {
         type: "convertible_stock",

@@ -9,6 +9,11 @@ import type { DeemedGiftResult, ConvertibleStockInput } from "./types";
  * 나목(전환주식 발행 당시 §29②1~5 계산한 이익)을 차감. 그 금액이 영 이하이면 이익 없음.
  */
 export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGiftResult {
+  // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 §39①3호 경로에서도 납세의무자가 아니다.
+  //   두 leg가 각각 0을 내면 차감 결과도 0이지만, 그 0은 「전환후 이익 ≤ 발행당시 이익」이라는
+  //   **다른 사유**로 표시된다. 사유가 화면·이력에 남으므로 여기서 먼저 가른다.
+  const doneeIsForProfitCorp =
+    input.atConversion.doneeIsForProfitCorp === true || input.atIssuance.doneeIsForProfitCorp === true;
   const conversion = calcCapitalIncreaseGift(input.atConversion);
   // 나목(차감항)은 「전환주식 발행 당시 **제1호부터 제5호까지의 규정에 따라 계산한 이익**」이다.
   //   제1호~제5호는 **계산방법** 규정이고, 공모 제외는 그 바깥의 **법** §39① 본문 괄호에 있다.
@@ -27,6 +32,17 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     { label: "전환주식 발행 당시 이익 (§29②1~5)", amount: issuance.deemedGiftValue },
     { label: "증여재산가액 (전환후 − 발행당시, 영 이하면 0)", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: "§39①3호 전환주식" },
   ];
+  if (doneeIsForProfitCorp) {
+    return {
+      type: "convertible_stock",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown,
+      exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+      legalBasis: GIFT.CAPITAL_INCREASE,
+      thresholdEcho: { gain: 0 },
+    };
+  }
   return {
     type: "convertible_stock",
     applied,

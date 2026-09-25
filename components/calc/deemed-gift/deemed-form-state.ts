@@ -127,6 +127,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciListedMarketAvg: string; // 평가기준일(§29① — 상장 주주배정은 권리락일) 전후 2개월 종가평균
   ciStockCode: string; // 키움 자동조회용 종목코드 (UI 전용)
   ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
+  /** 수증자가 영리법인인가 — 「상증법」§2 9호·§4의2①·③ 납세의무자 범위 밖(단건·전환주식 공용) */
+  ciDoneeIsForProfitCorp: boolean;
   // 증자 §39 cap-table (다수증자·다증여자)
   ciAllocIsListed: boolean; // §39① 괄호 「주권상장법인이」 — 공모 배정 제외 AND 조건 (㉯ 미접촉)
   ciAllocDirection: "low" | "high";
@@ -326,6 +328,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciListedMarketAvg: "",
   ciStockCode: "",
   ciAllocationMethod: "normal",
+  ciDoneeIsForProfitCorp: false,
   ciAllocIsListed: false,
   ciAllocDirection: "low",
   ciAllocPrePrice: "",

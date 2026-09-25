@@ -68,6 +68,24 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-result-value")).toContainText("33,330,000");
   });
 
+  test("§39 단건 — 수증자가 영리법인이면 33,330,000이 배제된다 (§2 9호·§4의2①·③)", async ({ page }) => {
+    // 「상증법」§4의2① 수증자 범위에 영리법인이 없다. 산출근거는 남고 과세분만 0이 된다 —
+    //   그 금액은 「법인세법 시행령」§89⑥이 §39·§29②를 준용해 계산하는 익금으로 쓰인다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
+    await page.getByPlaceholder("증자 주식수").fill("50000");
+    await page.getByPlaceholder("배정받은 실권주수").fill("10000");
+    await page.getByRole("switch", { name: /수증자가 영리법인/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    // 배제 상태에서는 값 대신 배제 배너가 렌더된다 — `deemed-result-value`에 "0"을 쓰면
+    //   substring 매칭이라 "33,330,000"도 통과한다(이 저장소에서 실제로 그렇게 무력화된 적이 있다).
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("영리법인");
+  });
+
   test("§39 증자 고가발행 나목(실권주 미배정·비율가중) → 60,003,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "capital_increase");
