@@ -40,6 +40,81 @@ type Props = {
   onChange: (patch: Partial<OneHouseJudgmentFormData>) => void;
 };
 
+/**
+ * 조정대상지역 한 축 — **주소가 있으면 자동 판정(읽기전용) · 없으면 토글**.
+ *
+ * 취득 당시·양도 당시 **둘이 같은 컴포넌트**를 쓴다. 종전에는 취득 당시만 자동 판정으로
+ * 바뀌어, 주소를 넣으면 「엔진이 무시하는 토글」이 양도 당시 쪽에만 남아 있었다(F-3).
+ *
+ * 🔑 주소가 있을 때 토글을 띄우면 **사용자가 켠 값이 조용히 버려진다** — 엔진 소비처
+ *    셋(거주요건·§155① 처분기한·다주택 중과)이 전부 `regionCode`를 우선하기 때문이다.
+ */
+function RegulatedAreaField({
+  verdict,
+  autoLabel,
+  autoTestId,
+  toggleTestId,
+  toggleTitle,
+  checked,
+  onCheckedChange,
+}: {
+  verdict: ReturnType<typeof isRegulatedByBjdCode> | null;
+  autoLabel: string;
+  autoTestId: string;
+  toggleTestId: string;
+  toggleTitle: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  if (!verdict) {
+    return (
+      <ToggleCard
+        data-testid={toggleTestId}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        title={toggleTitle}
+        description="소재지를 입력하면 읍·면·동·택지지구 예외까지 자동 판정합니다"
+        tone="rose"
+        size="sm"
+      />
+    );
+  }
+  return (
+    <div className="space-y-2" data-testid={autoTestId}>
+      <ToneCard
+        tone={verdict.isRegulated ? "rose" : "emerald"}
+        bodyClassName=""
+        className="px-3 py-2"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-green-100 px-2 py-0.5 text-micro font-semibold text-green-700">
+            자동
+          </span>
+          <span className="text-sm font-medium">
+            {autoLabel} {verdict.isRegulated ? "해당" : "미해당"}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">{verdict.basis}</p>
+      </ToneCard>
+      {/*
+        🔴 「아래 토글」이라고 쓰지 않는다 — 이 분기에서는 토글이 렌더되지 않는다.
+           화면에 없는 것을 가리키는 안내가 「1단계에서 입력하세요」를 만든 병이다.
+        ⚠️ 이 주석은 `&&` 괄호 **밖**에 둔다 — 안은 표현식 자리라 중괄호 주석이
+           객체 리터럴로 파싱돼 파일 전체가 깨진다(실측). 주석 본문에 닫는
+           슬래시-별표 표기를 적는 것도 같은 이유로 금지다(주석이 거기서 끝난다).
+      */}
+      {verdict.confidence === "low" && (
+        <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+          <p className="text-xs leading-relaxed">
+            이 지역은 지정 이력 자료에 없어 자동 판정이 <b>불확실</b>합니다. 직접 선택하려면
+            위 <b>소재지</b>를 지우세요 — 그러면 직접 고르는 토글이 나타납니다.
+          </p>
+        </ToneCard>
+      )}
+    </div>
+  );
+}
+
 export function Step3({ form, onChange }: Props) {
   const primary = form.assets[0];
   /** 양도 대상이 조합원입주권인가 — §89①3호(주택)와 §89①4호(입주권)를 가르는 축이다. */
@@ -65,6 +140,21 @@ export function Step3({ form, onChange }: Props) {
     if (!primary.regionCode || !primary.acquisitionDate) return null;
     return isRegulatedByBjdCode(primary.regionCode, primary.acquisitionDate);
   }, [primary.regionCode, primary.acquisitionDate]);
+
+  /**
+   * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
+   *
+   * 기준일만 `form.transferDate`로 바뀐다. 엔진 쪽 소비처 둘도 `regionCode`를 우선한다:
+   *   · §155① 처분기한 — `transfer-tax-temporary-two-house-timing.ts`의 `resolveIsRegulatedAtTransfer`
+   *   · 다주택 중과 — `multi-house-surcharge.ts:226` (양도일 기준)
+   *
+   * 🔴 종전에는 「취득 당시」만 자동 판정으로 바뀌고 이쪽은 수동 토글이라, **주소를 넣으면
+   *    중과에서는 무시되는 토글**이 화면에 남아 있었다 — 형제 축에서 이미 고친 것과 같은 병이다.
+   */
+  const transferRegulatedVerdict = useMemo(() => {
+    if (!primary.regionCode || !form.transferDate) return null;
+    return isRegulatedByBjdCode(primary.regionCode, form.transferDate);
+  }, [primary.regionCode, form.transferDate]);
 
   return (
     <div className="space-y-6">
@@ -176,63 +266,24 @@ export function Step3({ form, onChange }: Props) {
           양도 당시 지정 여부는 거주요건과 무관합니다.
         </p>
 
-        {regulatedVerdict ? (
-          /*
-            🔑 주소가 있으면 **엔진이 이 판정을 쓴다** — 토글을 띄우면 사용자가 켠 값이
-               조용히 버려진다(`resolveWasRegulatedAtAcquisition:383`). 읽기 전용으로 보여준다.
-          */
-          <div className="space-y-2" data-testid="one-house-regulated-auto">
-            <ToneCard
-              tone={regulatedVerdict.isRegulated ? "rose" : "emerald"}
-              bodyClassName=""
-              className="px-3 py-2"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-micro font-semibold text-green-700">
-                  자동
-                </span>
-                <span className="text-sm font-medium">
-                  취득 당시 조정대상지역{" "}
-                  {regulatedVerdict.isRegulated ? "해당" : "미해당"}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{regulatedVerdict.basis}</p>
-            </ToneCard>
-            {/*
-              🔴 「아래 토글」이라고 쓰지 않는다 — 이 분기에서는 토글이 렌더되지 않는다.
-                 화면에 없는 것을 가리키는 안내가 「1단계에서 입력하세요」를 만든 병이다.
-              ⚠️ 이 주석은 `&&` 괄호 **밖**에 둔다 — 안은 표현식 자리라 중괄호 주석이
-                 객체 리터럴로 파싱돼 파일 전체가 깨진다(실측). 주석 본문에 닫는
-                 슬래시-별표 표기를 적는 것도 같은 이유로 금지다(주석이 거기서 끝난다).
-            */}
-            {regulatedVerdict.confidence === "low" && (
-              <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
-                <p className="text-xs leading-relaxed">
-                  이 지역은 지정 이력 자료에 없어 자동 판정이 <b>불확실</b>합니다. 직접 선택하려면
-                  위 <b>소재지</b>를 지우세요 — 그러면 직접 고르는 토글이 나타납니다.
-                </p>
-              </ToneCard>
-            )}
-          </div>
-        ) : (
-          <ToggleCard
-            data-testid="one-house-was-regulated"
-            checked={form.wasRegulatedAtAcquisition}
-            onCheckedChange={(wasRegulatedAtAcquisition) => onChange({ wasRegulatedAtAcquisition })}
-            title="취득 당시 조정대상지역이었습니다"
-            description="소재지를 입력하면 읍·면·동·택지지구 예외까지 자동 판정합니다"
-            tone="rose"
-            size="sm"
-          />
-        )}
+        <RegulatedAreaField
+          verdict={regulatedVerdict}
+          autoLabel="취득 당시 조정대상지역"
+          autoTestId="one-house-regulated-auto"
+          toggleTestId="one-house-was-regulated"
+          toggleTitle="취득 당시 조정대상지역이었습니다"
+          checked={form.wasRegulatedAtAcquisition}
+          onCheckedChange={(wasRegulatedAtAcquisition) => onChange({ wasRegulatedAtAcquisition })}
+        />
 
-        <ToggleCard
-          data-testid="one-house-is-regulated"
+        <RegulatedAreaField
+          verdict={transferRegulatedVerdict}
+          autoLabel="양도 당시 조정대상지역"
+          autoTestId="one-house-transfer-regulated-auto"
+          toggleTestId="one-house-is-regulated"
+          toggleTitle="양도 당시 조정대상지역입니다"
           checked={form.isRegulatedArea}
           onCheckedChange={(isRegulatedArea) => onChange({ isRegulatedArea })}
-          title="양도 당시 조정대상지역입니다"
-          tone="rose"
-          size="sm"
         />
       </ToneCard>
 
