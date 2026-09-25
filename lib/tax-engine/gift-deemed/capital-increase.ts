@@ -1,7 +1,7 @@
 /** (8) 증자에 따른 이익의 증여 (§39) — 저가발행(①1호) / 고가발행(①2호) sub-case (시행령 §29②) */
 import { GIFT } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
-import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
+import { computeWeightedPerShare, applyListedPerShareBound, meetsRatioThreshold } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
 
@@ -115,7 +115,8 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   if (subType === "no_realloc") {
     // §29②2: 차액 ≥ 증자후가 100분의 30 또는 「그 가액에 **다목의 규정에 의한 실권주수**를
     //         곱하여 계산한 가액」 ≥ 3억 ⇒ 3억 arm은 **가중 후** base로 판정한다.
-    const ratioMet = perShareGain >= safeMultiplyThenDivide(perShareAfter, 30, 100);
+    //         임계는 절사하지 않는다(`meetsRatioThreshold` — 절사는 과다과세 방향으로만 작동).
+    const ratioMet = meetsRatioThreshold(perShareGain, perShareAfter);
     applied = base > 0 && (ratioMet || base >= ABSOLUTE_THRESHOLD);
     exclusionReason = applied ? undefined : "이익이 기준금액(증자후가 30%·3억) 미만";
   } else {
@@ -188,7 +189,7 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
     const weighted = denom > 0 ? safeMultiplyThenDivide(base, numer, denom) : 0;
     if (subType === "no_realloc") {
       // §29②4: 가중이익 ≥ 3억 또는 차액 ≥ 증자후가 100분의 30
-      const ratioMet = perShareGain >= safeMultiplyThenDivide(perShareAfter, 30, 100);
+      const ratioMet = meetsRatioThreshold(perShareGain, perShareAfter);
       applied = weighted > 0 && (ratioMet || weighted >= ABSOLUTE_THRESHOLD);
       exclusionReason = applied ? undefined : "이익이 기준금액(증자후가 30%·3억) 미만";
     } else {
