@@ -85,36 +85,78 @@ export function calcCapitalIncreaseAllocation(
   const splits: DonationSplit[] = [];
   const perBeneficiary: CapitalIncreaseAllocationResult["perBeneficiary"] = [];
 
+  /** 손해비례 배분 + floor 잔액 흡수(마지막 증여자가 잔액 흡수 — 누적 −1 차단) */
+  function splitByLoss(amount: number): number[] {
+    let assigned = 0;
+    return donors.map((d, i) => {
+      const raw =
+        i === donors.length - 1 ? amount - assigned : safeMultiplyThenDivide(amount, -d.delta, totalLoss);
+      assigned += raw;
+      return raw;
+    });
+  }
+
+  const shareholderById = new Map(shareholders.map((s) => [s.id, s]));
+
   for (const b of byShareholder) {
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
-    // 집계 게이트(②⑤): 실권처리 발생 시 차액 30% 미만 AND 집계이익 3억 미만이면 미과세
-    const gatedOut = hasForfeitProcessing && !ratioMet && b.delta < ABSOLUTE_THRESHOLD;
     const publicOfferingOut = publicOfferingIds.has(b.id); // §39① 적용 제외
 
-    // 손해비례 증여자별 배분 + floor 잔액 흡수(마지막 증여자가 잔액 흡수)
-    const byDonor: DonationSplit[] = [];
-    let assigned = 0;
-    donors.forEach((d, i) => {
-      const raw =
-        i === donors.length - 1
-          ? b.delta - assigned // 마지막 = 잔액(floor 누적 −1 차단)
-          : safeMultiplyThenDivide(b.delta, -d.delta, totalLoss);
-      assigned += raw;
-      const isRelated = relatedSets.get(b.id)?.has(d.id) ?? false;
+    // 「상증법」§39①1호 **가·다·라목** 몫을 나목 몫과 가른다 — 국세청 재산세과-60(2010.2.1.)은
+    //   「일부는 재배정하고 나머지는 실권처리한 경우 증여이익을 **각각 산정하여 합산**」한다고 한다.
+    //   · 가목(실권주 배정)·다목(제3자 직접배정)·라목(초과배정) — 법문에 **특수관계 문언이 없고**,
+    //     「상증령」§29②1호에는 **기준금액 규정 자체가 없다**.
+    //   · 나목(실권주 미배정) — §29②2호가 30%·3억 기준금액을 두고, 법문이 특수관계인을 요건으로 한다.
+    //   가·다·라목분 = (㉯ − 인수가) × 배정받은 신주수 = §29②1호 가목 산식 그 자체다.
+    //
+    // ⚠️ **저가에 한정한다.** 법문상 「배정받은 자」는 저가(§39①1호)에서는 이익을 얻는 자 = 수증자지만,
+    //    고가(§39①2호)에서는 「그 실권주를 배정받은 자가 인수함으로써 **그의 특수관계인인 포기자**가
+    //    얻은 이익」이라 배정받은 자가 **증여자**다. 고가의 목별 분해는 증여자 행 기준이어야 하고
+    //    equity-delta에서 증여자 손해를 자기배정분/재배정분으로 가르는 기준이 확정되지 않았다
+    //    ⇒ 고가는 현행 유지(리뷰 2-C 보류분).
+    //    ℹ️ 이 `direction` 항은 **정상 입력에서는 아래 `perShareGain > 0`과 중복**이다 —
+    //       인수가 > ㉮이면 항상 ㉯ < 인수가이기 때문이다(㉮T + P·I < P(T+I) ⟺ ㉮ < P).
+    //       뮤테이션에서 구별력 0으로 측정됐고(N6 SURVIVED), 그 원인은 커버리지 공백이 아니라
+    //       조건 중복이다. direction이 실제 부호와 어긋나게 들어온 경우에만 단독으로 작동한다.
+    const reallocShares = direction === "high" ? 0 : (shareholderById.get(b.id)?.reallocatedShares ?? 0);
+    const perShareGain = perShareAfter - priceIn;
+    const reallocGain =
+      reallocShares > 0 && perShareGain > 0
+        ? Math.min(safeMultiply(perShareGain, reallocShares), b.delta)
+        : 0;
+    const forfeitGain = b.delta - reallocGain; // 나목분(§29②2호·4호)
+
+    const rawRealloc = splitByLoss(reallocGain);
+    const rawForfeit = splitByLoss(forfeitGain);
+    const isRelatedTo = (donorId: string) => relatedSets.get(b.id)?.has(donorId) ?? false;
+
+    // 기준금액(3억) 게이트(§29②2호 다목·4호) — 판정 대상은 **특수관계인 몫으로 가중한 뒤의 금액**이다.
+    //   종전에는 분할 **전** `b.delta`로 봐서 비특수관계 증여자 몫까지 합산됐고,
+    //   `b.delta ≥ 특수관계 가중액`이 항상 성립하므로 오차가 **게이트가 헐거워지는 한 방향**으로만 났다.
+    const relatedForfeitSum = donors.reduce((a, d, i) => (isRelatedTo(d.id) ? a + rawForfeit[i] : a), 0);
+    const gatedOut = hasForfeitProcessing && !ratioMet && relatedForfeitSum < ABSOLUTE_THRESHOLD;
+
+    const byDonor: DonationSplit[] = donors.map((d, i) => {
+      const isRelated = isRelatedTo(d.id);
       const relationExcluded = relationGateApplies && !isRelated;
-      const taxable = publicOfferingOut || gatedOut || relationExcluded ? 0 : raw;
+      // 가·다·라목분은 저가에서 특수관계·기준금액 어느 게이트도 받지 않는다.
+      const taxableRealloc = publicOfferingOut ? 0 : rawRealloc[i];
+      const taxableForfeit = publicOfferingOut || gatedOut || relationExcluded ? 0 : rawForfeit[i];
+      const value = taxableRealloc + taxableForfeit;
       const excludedReason = publicOfferingOut
         ? "주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외"
-        : gatedOut
-          ? "이익이 기준금액(증자후가 30%·3억) 미만"
-          : relationExcluded
-            ? direction === "high"
-              ? "특수관계 부재(§39①2호)"
-              : "특수관계 부재(§39①1호나목)"
-            : undefined;
-      const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value: taxable, excludedReason };
-      byDonor.push(row);
+        : value > 0
+          ? undefined
+          : gatedOut
+            ? "이익이 기준금액(증자후가 30%·3억) 미만"
+            : relationExcluded
+              ? direction === "high"
+                ? "특수관계 부재(§39①2호)"
+                : "특수관계 부재(§39①1호나목)"
+              : undefined;
+      const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value, excludedReason };
       splits.push(row);
+      return row;
     });
     perBeneficiary.push({ beneficiaryId: b.id, total: byDonor.reduce((a, r) => a + r.value, 0), byDonor });
   }
