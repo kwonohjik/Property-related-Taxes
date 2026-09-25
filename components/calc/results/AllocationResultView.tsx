@@ -45,12 +45,12 @@ export function AllocationResultView({
                 <table className="w-full text-sm">
                   <tbody>
                     {b.byDonor.map((d, i) => (
-                      <tr key={i} className="border-t border-rose-50">
+                      <tr key={i} className="border-t border-rose-50" data-testid={`ci-alloc-split-${b.beneficiaryId}-${d.donorId}`}>
                         <td className="py-1 pr-2 text-muted-foreground">
                           증여자 {nameById.get(d.donorId)}
                           {d.excludedReason ? <span className="ml-1 text-xs text-gray-500">({d.excludedReason})</span> : null}
                         </td>
-                        <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(d.value)}</td>
+                        <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap" data-testid={`ci-alloc-split-value-${b.beneficiaryId}-${d.donorId}`}>{formatKRW(d.value)}</td>
                       </tr>
                     ))}
                   </tbody>
