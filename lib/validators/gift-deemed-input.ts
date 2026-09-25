@@ -182,6 +182,8 @@ const capitalIncreaseShape = {
   forfeitedShares: z.number().nonnegative(),
   relatedAcquiredShares: z.number().nonnegative().optional(),
   ratioDenomShares: z.number().nonnegative().optional(),
+  // 증여일(§29①) — 행위시법 판정 전용. route는 parsed.data를 그대로 넘기므로 여기서 Date가 된다.
+  giftDate: z.coerce.date().optional(),
   // §29②2호 가목 「증자전의 지분비율대로 균등하게 증자하는 경우의 증가주식수」 — 저가 나목 ㉯ 기준 수량
   equalIssueShares: z.number().nonnegative().optional(),
   // §29②2호 다목 「증자후 신주인수자의 지분비율」 — 저가 나목 전용. 분모는 파생하지 않고 받는다.

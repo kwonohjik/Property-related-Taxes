@@ -213,6 +213,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       const ciPostDenom = parseAmount(form.ciPostTotalShares);
       return {
         type: "capital_increase",
+        // 1-C — 행위시법 판정용(§29③ 시기 게이트). 산식에는 접촉하지 않는다.
+        giftDate: toOptionalDate(form.giftDate || undefined),
         direction: form.ciDirection,
         subType: form.ciSubType,
         preIssuePrice: parseAmount(form.ciPrePrice),
@@ -410,9 +412,12 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
     case "convertible_stock": {
       const isHigh = form.csDirection === "high";
       const { needsRatio, needsLowDanmok } = capitalRatioNeeds(form.csDirection, form.csSubType);
-      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; equalIssue: string; postHeld: string; postTotal: string; isListed: boolean; listedMarketAvg: string; allocationMethod: DeemedFormState["ciAllocationMethod"] }) => ({
+      // 전환주식은 시점마다 적용법이 다르다 — 전환 시점은 증여일(§29①2호 「전환한 날」),
+      //   발행 시점은 「전환주식 발행 당시」(§29②6호 나목)다. 한 날짜를 양쪽에 쓰면 안 된다.
+      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; equalIssue: string; postHeld: string; postTotal: string; asOf: string; isListed: boolean; listedMarketAvg: string; allocationMethod: DeemedFormState["ciAllocationMethod"] }) => ({
         direction: form.csDirection,
         subType: form.csSubType,
+        giftDate: toOptionalDate(k.asOf || undefined),
         preIssuePrice: parseAmount(k.prePrice),
         preIssueShares: parseAmount(k.preShares),
         newSharePrice: parseAmount(k.newPrice),
@@ -433,8 +438,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       });
       return {
         type: "convertible_stock",
-        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, equalIssue: form.csConvEqualIssueShares, postHeld: form.csConvPostHeldShares, postTotal: form.csConvPostTotalShares, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
-        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, equalIssue: form.csIssueEqualIssueShares, postHeld: form.csIssuePostHeldShares, postTotal: form.csIssuePostTotalShares, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
+        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, equalIssue: form.csConvEqualIssueShares, postHeld: form.csConvPostHeldShares, postTotal: form.csConvPostTotalShares, asOf: form.giftDate, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
+        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, equalIssue: form.csIssueEqualIssueShares, postHeld: form.csIssuePostHeldShares, postTotal: form.csIssuePostTotalShares, asOf: form.csIssuanceDate, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
       };
     }
     default:

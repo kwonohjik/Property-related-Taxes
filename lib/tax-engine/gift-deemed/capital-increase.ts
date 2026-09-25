@@ -25,13 +25,34 @@ const SUBTYPE_NOTE: Record<NonNullable<CapitalIncreaseInput["subType"]>, string>
  * ⚠️ **「주권상장법인이」는 AND 조건이다** — 법문의 주어가 주권상장법인이므로, 비상장법인이
  *    모집방법으로 배정하더라도 제외되지 않는다. 이 검사를 빠뜨리면 **과소과세**다(PO-9가 고정).
  */
+/**
+ * 「상증령」§29③ 시행일 — **〈신설 2016.2.5〉**(본문 실측).
+ *
+ * 그 전에는 §39①1호 가목 괄호의 「대통령령으로 정하는 경우」가 **공집합**이라
+ * 간주모집이어도 제외가 유지된다(비과세). 두 선행 구간의 결론이 같으므로 컷오프 하나로 덮인다:
+ *   · 2015-12-31 이전 — 괄호 단서 자체가 없음(대법원 2013두15798: 「모집방법」에 간주모집 포함)
+ *   · 2016-01-01 ~ 2016-02-04 — 괄호는 있으나 위임받은 §29③ 부존재
+ */
+const DEEMED_OFFERING_CANCELS_FROM = Date.UTC(2016, 1, 5);
+
+/** 간주모집이라 제외가 **취소되는가** — 증여일이 §29③ 시행일 이후일 때만 취소된다. */
+function deemedOfferingCancelsExclusion(input: CapitalIncreaseInput): boolean {
+  if (input.allocationMethod !== "deemed_public_offering" || input.isListed !== true) return false;
+  const d = input.giftDate;
+  // 미입력 = 시기 판정 불가 ⇒ 종전 동작(취소) 유지. 필수화는 ⑧이 UI 경로에서 이미 하고 있다.
+  return d == null || d.getTime() >= DEEMED_OFFERING_CANCELS_FROM;
+}
+
 function publicOfferingExcluded(input: CapitalIncreaseInput): boolean {
-  return input.allocationMethod === "public_offering" && input.isListed === true;
+  if (input.isListed !== true) return false;
+  if (input.allocationMethod === "public_offering") return true;
+  // 간주모집도 §29③ 시행 전이면 「모집방법 배정」으로 제외된다.
+  return input.allocationMethod === "deemed_public_offering" && !deemedOfferingCancelsExclusion(input);
 }
 
 /** 간주모집이라 제외가 취소된 경우에만 붙이는 근거 note (감사 추적성 — 세액은 normal과 같다) */
 function deemedPublicOfferingNote(input: CapitalIncreaseInput): string | undefined {
-  return input.allocationMethod === "deemed_public_offering" && input.isListed === true
+  return deemedOfferingCancelsExclusion(input)
     ? `유가증권 모집방법 배정이나 간주모집이라 제외 취소 (${GIFT.CI_DEEMED_PUBLIC_OFFERING})`
     : undefined;
 }
