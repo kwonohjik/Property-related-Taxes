@@ -41,7 +41,14 @@ export function DeemedGiftResultView({
   const [open, setOpen] = useState(true);
 
   if ("perBeneficiary" in result) {
-    return <AllocationResultView result={result} onToGiftTax={onToGiftTax} />;
+    return (
+      <AllocationResultView
+        result={result}
+        onToGiftTax={onToGiftTax}
+        selectedDoneeIndex={selectedDoneeIndex}
+        onSelectDonee={onSelectDonee ?? (() => {})}
+      />
+    );
   }
 
   // §39의3 고가인수 과세 수증자 — prefill 대상 선택지(가액 0 = 기준금액 미달, 신고 대상 아님).

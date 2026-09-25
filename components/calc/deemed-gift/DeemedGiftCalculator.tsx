@@ -91,7 +91,9 @@ export function DeemedGiftCalculator() {
           ? { conSelectedDoneeIndex: i }
           : result?.type === "related_corp"
             ? { rcSelectedDoneeIndex: i }
-            : { cdSelectedDoneeIndex: i }),
+            : result?.type === "capital_increase_allocation"
+              ? { ciAllocSelectedDoneeIndex: i }
+              : { cdSelectedDoneeIndex: i }),
     }));
 
   return (
@@ -165,7 +167,9 @@ export function DeemedGiftCalculator() {
                 ? form.conSelectedDoneeIndex
                 : result.type === "related_corp"
                   ? form.rcSelectedDoneeIndex
-                  : form.cdSelectedDoneeIndex
+                  : result.type === "capital_increase_allocation"
+                    ? form.ciAllocSelectedDoneeIndex
+                    : form.cdSelectedDoneeIndex
           }
           onSelectDonee={selectDonee}
         />

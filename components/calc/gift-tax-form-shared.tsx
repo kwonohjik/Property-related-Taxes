@@ -40,7 +40,13 @@ export interface FormState extends AppraisalFeeFormFields {
   giftDate: string;
   donorRelation: DonorRelation;
   /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) */
-  donor: GiftDonorRelation;
+  /**
+   * §47 동일인 합산 그룹 + §53 공제 관계의 **단일 소스**.
+   * `""`(미선택)을 허용한다 — 증여의제 이관(`buildGiftWizardPrefill`)은 관계를 모르는 분기에서
+   * 이 값을 비워 보내고 ⑧(`validateStep(0)`)이 차단한다. 기본값 「부」가 *선택 완료 상태*로
+   * 남아 §53 제2호 5천만원 공제가 묻지 않고 붙던 것을 막는다(리뷰 #1, 실측 −3,880,000).
+   */
+  donor: GiftDonorRelation | "";
   /** G-M2b: isGenerationSkip은 buildInput에서 donor 파생으로 자동 설정됨.
    *  UI 토글 제거됨 — donor=grandparent이면 엔진에서 세대생략 적용.
    *  이 필드는 예외 케이스(manually override)를 위해 FormState에 보존하나
@@ -205,7 +211,7 @@ export interface FormState extends AppraisalFeeFormFields {
  * @see buildSimultaneousGiftInputs (lib/calc/gift-api.ts)
  */
 export type GiftSubFormState = Omit<FormState, "simultaneousGiftForms" | "donor"> & {
-  donor?: GiftDonorRelation;
+  donor?: GiftDonorRelation | "";
 };
 
 export const INITIAL_FORM: FormState = {
@@ -339,6 +345,7 @@ export function Step0({
       <ToneCard tone="violet" sectionNum="§47" title="증여자 (동일인 합산 그룹 + §57 적용 판정)" bodyClassName="space-y-2" noDark>
         <select
           value={form.donor}
+          data-testid="gift-donor-select"
           onChange={(e) => {
             const newDonor = e.target.value as GiftDonorRelation;
             // G-M3: donorRelation 자동 도출 — 혼인·출산 공제 초기화(직계존속 외)
@@ -354,6 +361,8 @@ export function Step0({
           }}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
+          {/* 미선택 상태는 증여의제 이관에서만 들어온다 — 고르기 전까지 ⑧이 다음 단계를 막는다 */}
+          {form.donor === "" && <option value="">관계 선택</option>}
           {DONOR_OPTIONS.map((d) => (
             <option key={d} value={d}>
               {DONOR_LABELS[d]}
@@ -390,8 +399,11 @@ export function Step0({
           onResidentNumberChange={(v) => set({ doneeResidentNumber: v })}
           onMinorToggle={(v) => {
             // G-M3: 수동 토글 시 donorRelation 재도출 (채택안 A — store set 유지)
-            const newDonorRelation = deriveDonorRelation(form.donor, v);
-            set({ isMinorDonee: v, donorRelation: newDonorRelation });
+            // 증여자 미선택이면 도출할 관계가 없다 — 되메움 없이 그대로 둔다(⑧이 차단).
+            set({
+              isMinorDonee: v,
+              ...(form.donor ? { donorRelation: deriveDonorRelation(form.donor, v) } : {}),
+            });
           }}
         />
       )}
@@ -544,7 +556,7 @@ export function Step2({
           onChange={(gifts) => set({ priorGifts: gifts })}
           mode="gift"
           currentGiftDate={form.giftDate}
-          currentDonor={form.donor}
+          currentDonor={form.donor || undefined}
           currentClientId={activeClientId}
         />
       </div>

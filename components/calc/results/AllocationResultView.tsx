@@ -14,9 +14,13 @@ import type { CapitalIncreaseAllocationResult } from "@/lib/tax-engine/gift-deem
 export function AllocationResultView({
   result,
   onToGiftTax,
+  selectedDoneeIndex,
+  onSelectDonee,
 }: {
   result: CapitalIncreaseAllocationResult;
   onToGiftTax: () => void;
+  selectedDoneeIndex: number;
+  onSelectDonee: (i: number) => void;
 }) {
   const [open, setOpen] = useState(true);
   const nameById = new Map(result.byShareholder.map((b) => [b.id, (b.name ?? "").trim() || "주주"]));
@@ -88,6 +92,28 @@ export function AllocationResultView({
           </table>
         </div>
       </div>
+
+      {/* 과세 수증자 선택 (2명 이상일 때) — 「상증법」§4의2①·§68①상 수증자별 독립 신고다.
+          선례: 감자 §39의2 `cd-multi-donee-selector` · 특정법인 §45의5 · 일감몰아주기 §45의3. */}
+      {taxedBeneficiaries.length > 1 && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4" data-testid="ci-alloc-donee-select">
+          <p className="text-sm font-semibold text-rose-800">증여세 계산 대상 수증자 선택</p>
+          <select
+            value={Math.min(selectedDoneeIndex, taxedBeneficiaries.length - 1)}
+            onChange={(e) => onSelectDonee(Number(e.target.value))}
+            data-testid="ci-alloc-donee-selector"
+            aria-label="증여세 계산 대상 수증자"
+            className="mt-2 w-full rounded-md border border-rose-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
+          >
+            {taxedBeneficiaries.map((b, i) => (
+              <option key={b.beneficiaryId} value={i}>
+                {nameById.get(b.beneficiaryId)} — 증여재산가액 {formatKRW(b.total)}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">수증자별로 각각 별도 증여세 신고가 필요합니다.</p>
+        </div>
+      )}
 
       {taxedBeneficiaries.length > 0 && (
         <button

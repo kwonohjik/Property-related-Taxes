@@ -73,24 +73,51 @@ function sec68ProvisoFields(
   };
 }
 
+/**
+ * 「상증법」§53은 「거주자가 **다음 각 호의 어느 하나에 해당하는 사람으로부터** 증여를 받은
+ * 경우에는 …」이라는 **한정 열거 요건규정**이다. §39·§39의2·§39의3의 증여자는 신주인수권을
+ * 포기한 주주·감자 주주·현물출자자 등이라 **수증자의 직계존속인 경우가 오히려 예외**다.
+ *
+ * 그런데 종전에는 어느 분기도 `donor`를 싣지 않아 마법사가 `INITIAL_FORM.donor = "father"`를
+ * 그대로 들고 §53 제2호 5천만원 공제를 적용했다(실측 −3,880,000). ⑧에 차단 게이트는
+ * **이미 있었지만**(`gift-tax-form-validate.ts` 「증여자를 선택하세요.」) 기본값이 「선택 완료
+ * 상태」라 도달하지 못했다.
+ *
+ * ⇒ 관계를 **아는 분기는 그 값을**, 모르는 분기는 `""`(미선택)을 싣는다.
+ *   🚫 기본값 되메움 금지 — 틀린 공제가 조용히 붙는 것보다 차단이 낫다.
+ *   ⚠️ `undefined`는 쓸 수 없다. 이관 경로가 `JSON.stringify` → sessionStorage → `JSON.parse`라
+ *      값이 `undefined`인 키는 **삭제**되고 병합 후 `"father"`가 그대로 남는다(실측).
+ *   ⚠️ `donor`와 `donorRelation`을 함께 실을 때는 반드시 **같은 값에서 파생**시킨다 —
+ *      어긋나면 `prior-gift-lookup.ts`가 이력에서 둘을 각각 읽어 불일치가 이월된다.
+ */
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
   result: DeemedGiftAnyResult,
 ): Partial<GiftFormState> {
-  // 증자 cap-table: 수증자별 과세분(total>0)을 각각 별도 증여항목으로 이관 (수증자별 증여세 단위 상이)
+  // 증자 cap-table — 수증자는 **각자 독립 납세의무자**다.
+  //   「상증법」§4의2① 「… 증여재산에 대하여 **수증자가** … 증여세를 납부할 의무가 있다」 ·
+  //   §68① 「증여받은 날이 속하는 달의 말일부터 3개월 이내에 … 신고하여야 한다」
+  //   ⇒ 마법사 세션 1개 = 신고 1건이므로 **선택된 1명만** 이관한다.
+  //   종전에는 `perBeneficiary` 전원을 한 세션의 `giftItems`로 합산해 누진구간이 올라가고
+  //   §53 공제가 1회만 적용됐다(실측 +24,250,000). 형제 4개 분기(§39의2 감자·§39의3 고가·
+  //   §45의3·§45의5)는 이미 같은 처리를 받고 있었고 이 분기만 비대칭이었다.
   if ("perBeneficiary" in result) {
     const nameById = new Map(result.byShareholder.map((b) => [b.id, b.name]));
+    const taxable = result.perBeneficiary.filter((b) => b.total > 0);
+    const selected = taxable[form.ciAllocSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate, donor: "", giftItems: [] };
     return {
       giftDate: form.giftDate,
-      giftItems: result.perBeneficiary
-        .filter((b) => b.total > 0)
-        .map((b) => ({
-          id: `deemed-ci-alloc-${b.beneficiaryId}`,
+      donor: "",
+      giftItems: [
+        {
+          id: `deemed-ci-alloc-${selected.beneficiaryId}`,
           category: "other" as const,
-          name: `${(nameById.get(b.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
-          marketValue: b.total,
+          name: `${(nameById.get(selected.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
+          marketValue: selected.total,
           ...aggregationExclusionFlags(result),
-        })),
+        },
+      ],
     };
   }
 
@@ -107,20 +134,26 @@ export function buildGiftWizardPrefill(
       const mainBreakdown = result.contributionBreakdown[0];
       const restBreakdowns = result.contributionBreakdown.slice(1);
 
-      const toDonorRel = (r?: GiftDonorRelation) =>
-        r ? deriveDonorRelation(r, false) : ("other_relative" as const);
+      // 🚫 되메움 금지 — 종전 `?? "other_relative"`는 관계 미지정을 「기타친족」으로 조용히 확정했다.
+      //    roster 경로는 ⑧(`gift-deemed-validate.ts` 「관계를 선택하세요」)이 이미 빈 값을 막는다.
+      const known = (r?: GiftDonorRelation) => (r ? r : undefined);
+      const mainDonor = known(mainBreakdown.relation);
 
       const simultaneousGifts =
         restBreakdowns.length > 0
-          ? restBreakdowns.map((bd) => ({
-              donorRelation: toDonorRel(bd.relation),
-              taxableValue: String(bd.value),
-            }))
+          ? restBreakdowns
+              .filter((bd) => known(bd.relation) !== undefined)
+              .map((bd) => ({
+                donorRelation: deriveDonorRelation(bd.relation as GiftDonorRelation, false),
+                taxableValue: String(bd.value),
+              }))
           : undefined;
 
       return {
         giftDate: form.giftDate,
-        donorRelation: toDonorRel(mainBreakdown.relation),
+        // 관계를 모르면 미선택으로 넘겨 ⑧이 차단하게 둔다.
+        donor: mainDonor ?? "",
+        ...(mainDonor ? { donorRelation: deriveDonorRelation(mainDonor, false) } : {}),
         giftItems: [
           {
             id: `deemed-contribution-${mainBreakdown.party}`,
@@ -141,12 +174,12 @@ export function buildGiftWizardPrefill(
     const taxableDonees = result.contributionBreakdown.filter((bd) => bd.value > 0);
     const selectedDonee = taxableDonees[form.conSelectedDoneeIndex] ?? taxableDonees[0];
     if (!selectedDonee) return { giftDate: form.giftDate, giftItems: [] };
+    // 🚫 되메움 금지 — 종전 `?? "other"`는 관계 미지정을 「기타」로 확정해 §53 제4호를 붙였다.
+    const doneeDonor = selectedDonee.relation || "";
     return {
       giftDate: form.giftDate,
-      donorRelation: deriveDonorRelation(
-        (selectedDonee.relation ?? "other") as GiftDonorRelation,
-        false,
-      ),
+      donor: doneeDonor,
+      ...(doneeDonor ? { donorRelation: deriveDonorRelation(doneeDonor, false) } : {}),
       giftItems: [
         {
           id: `deemed-contribution-high-${selectedDonee.party}`,
@@ -172,13 +205,15 @@ export function buildGiftWizardPrefill(
   if (result.type === "related_corp" && result.recipientBreakdown && result.recipientBreakdown.length > 0) {
     const taxable = result.recipientBreakdown.filter((r) => r.subtotal > 0);
     const selected = taxable[form.rcSelectedDoneeIndex] ?? taxable[0];
-    if (!selected) return { giftDate: form.giftDate };
+    if (!selected) return { giftDate: form.giftDate, donor: "" };
     return {
       giftDate: form.giftDate,
       ...sec68ProvisoFields(form),
       // §45의3의 증여자는 특수관계「법인」이라 §53 어느 호에도 해당하지 않는다.
       // §55①2호 스트림이라 증여재산공제가 적용되지 않으므로 이 값은 세액에 영향이 없다 —
-      // 폼이 값을 요구하므로 종전 기본값을 유지한다.
+      // 폼이 값을 요구하므로 종전 기본값을 유지한다. `donor`를 함께 실어 두 필드를
+      // **같은 값에서 파생**시킨다(어긋나면 이력 조회가 둘을 각각 읽어 불일치가 이월된다).
+      donor: "other_relative" as const,
       donorRelation: "other_relative" as const,
       giftItems: [
         {
@@ -208,9 +243,10 @@ export function buildGiftWizardPrefill(
   if (result.type === "specific_corp" && result.specificCorpMulti) {
     const taxable = result.specificCorpMulti.donees.filter((d) => d.isTaxable);
     const selected = taxable[form.scSelectedDoneeIndex] ?? taxable[0];
-    if (!selected) return { giftDate: form.giftDate, giftItems: [] };
+    if (!selected) return { giftDate: form.giftDate, donor: "", giftItems: [] };
     return {
       giftDate: form.giftDate,
+      donor: "",
       ...sec68ProvisoFields(form),
       giftItems: [
         {
@@ -229,6 +265,7 @@ export function buildGiftWizardPrefill(
   if (result.type === "specific_corp" && result.specificCorpLimit) {
     return {
       giftDate: form.giftDate,
+      donor: "",
       ...sec68ProvisoFields(form),
       giftItems: [
         {
@@ -247,9 +284,10 @@ export function buildGiftWizardPrefill(
   if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {
     const taxable = result.capitalDecreaseMulti.donees.filter((d) => d.isTaxable);
     const selected = taxable[form.cdSelectedDoneeIndex] ?? taxable[0];
-    if (!selected) return { giftDate: form.giftDate, giftItems: [] };
+    if (!selected) return { giftDate: form.giftDate, donor: "", giftItems: [] };
     return {
       giftDate: form.giftDate,
+      donor: "",
       giftItems: [
         {
           id: `deemed-capital_decrease-${selected.name}`,
@@ -268,6 +306,7 @@ export function buildGiftWizardPrefill(
     const RIGHT_LABEL = { principal: "원본권", income: "수익권" } as const;
     return {
       giftDate: form.tbIncomeGiftDate || form.tbPrincipalGiftDate || form.giftDate,
+      donor: "",
       giftItems: result.subGifts.map((sg) => ({
         id: `deemed-trust-${sg.right}`,
         category: "other" as const,
@@ -280,6 +319,7 @@ export function buildGiftWizardPrefill(
 
   return {
     giftDate: form.giftDate,
+    donor: "",
     // §45의3·§45의5가 위 분기를 타지 못한 경우(결과 형태가 달라 조기 반환이 안 된 경우)에도
     // 단서 표지는 반드시 실어 보낸다 — 표지가 빠지면 마법사가 본문 기한으로 조용히 넘어간다.
     ...(result.type === "related_corp" || result.type === "specific_corp"

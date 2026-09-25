@@ -71,6 +71,11 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     await dialog.getByPlaceholder("주식수 입력").nth(0).fill("35000");
     await dialog.getByLabel("수증자 2 성명").fill("C");
     await dialog.getByPlaceholder("주식수 입력").nth(1).fill("10000");
+    // 「상증법」§53은 한정 열거 요건규정이라 관계를 모르면 공제를 확정할 수 없다.
+    //   관계를 비워 두면 이관 payload의 `donor`가 미선택으로 넘어가 마법사 ⑧이 차단한다
+    //   (종전에는 조용히 「기타」로 되메워 §53 제4호가 붙었다 — 리뷰 #1).
+    await dialog.getByLabel("1번 관계").selectOption("father");
+    await dialog.getByLabel("2번 관계").selectOption("sibling");
 
     await page.getByTestId("deemed-detail-confirm").click();
     await page.getByTestId("deemed-calc-btn").click();
@@ -87,6 +92,8 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     await selector.selectOption("1"); // 둘째 수증자 C
 
     await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
+    // 증여자 축도 함께 이관된다 — C의 관계 sibling이 §53 제4호(기타친족) 그룹으로 실린다.
+    await expect(page.getByTestId("gift-donor-select")).toHaveValue("sibling");
     // 마법사 2단계(증여재산)에 **선택한 C**의 50,000,000이 들어왔는지 — 첫 행 B(175,000,000) 고정이 아님.
     // (sessionStorage는 마법사 마운트 시 소비·삭제되므로 화면으로 확인한다)
     await page.getByRole("button", { name: "다음" }).click();

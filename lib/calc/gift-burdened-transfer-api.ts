@@ -31,6 +31,7 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. category → propertyType 매핑 헬퍼
@@ -140,7 +141,8 @@ export function buildGiftBurdenedTransferBody(
   // 증여세 side에서 오는 부담부증여 정보
   // 수증자→증여자 관계 (burdened-gift-apportionment.ts:360가 역매핑).
   // 채택안 A: store form.donorRelation 직접 read 대신 resolveIsMinorDonee 기반 derive(자동판정 미성년 반영).
-  const donorRelation = deriveDonorRelation(form.donor, resolveIsMinorDonee(form));
+  // ⑧이 미선택("")을 차단하므로 ④ 도달 시 항상 선택돼 있다 — 되메움 금지(리뷰 #1).
+  const donorRelation = deriveDonorRelation(form.donor as GiftDonorRelation, resolveIsMinorDonee(form));
   const isGenerationSkip = form.donor === "grandparent";
   const isMinorDonee = resolveIsMinorDonee(form);
 
