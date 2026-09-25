@@ -23,6 +23,7 @@ import type {
   GiftTaxCreditInput,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FormState, GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // GiftSubForm re-export — gift-api.ts 공개 계약 (⑬ 지점에서 참조)
 export type { GiftSubFormState as GiftSubForm };
@@ -61,8 +62,13 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     .map((i) => injectPeriodicRemainingYears(i, form.giftDate || undefined))
     .map(injectCryptoUnitPriceIfTimeseries);
 
+  // ⑧(`gift-tax-form-validate.ts` 「증여자를 선택하세요.」)이 미선택("")을 차단하므로
+  //   ④ 도달 시 항상 선택돼 있다(anchor PF-S39-DONOR-BLOCK-SINGLE·ALLOC).
+  // 🚫 기본값 되메움 금지 — 「부」 고정이 증여의제 이관 과소과세의 원인이었다(리뷰 #1).
+  const donor = form.donor as GiftDonorRelation;
+
   const deductionInput: GiftDeductionInput = {
-    donorRelation: deriveDonorRelation(form.donor, resolveIsMinorDonee(form)),
+    donorRelation: deriveDonorRelation(donor, resolveIsMinorDonee(form)),
     marriageExemption: parseAmount(form.marriageExemption) || undefined,
     birthExemption: parseAmount(form.birthExemption) || undefined,
     priorUsedDeduction: parseAmount(form.priorUsedDeduction) || undefined,
@@ -103,8 +109,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
 
   return {
     giftDate: form.giftDate,
-    donorRelation: deriveDonorRelation(form.donor, resolveIsMinorDonee(form)),
-    donor: form.donor,
+    donorRelation: deriveDonorRelation(donor, resolveIsMinorDonee(form)),
+    donor,
     giftItems: allItems,
     exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
     // sourceCalculationId(UI 메타)는 엔진 입력에서 strip (지점 ④).

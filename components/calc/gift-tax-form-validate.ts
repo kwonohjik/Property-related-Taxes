@@ -316,7 +316,7 @@ export function validateStep(step: number, form: FormState): string | null {
         // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
         // (다른 그룹은 자동 무시되므로 검증 제외)
         // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제
-        if (isSameDonorGroup(p.donor, form.donor) && !p.specialTreatmentType) {
+        if (form.donor && isSameDonorGroup(p.donor, form.donor) && !p.specialTreatmentType) {
           if (!p.giftTaxBase || p.giftTaxBase <= 0) {
             return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
           }
@@ -500,7 +500,7 @@ export function validateStep(step: number, form: FormState): string | null {
         return "가업·창업 특례(2-스트림)와 대납(代納)은 현재 함께 계산할 수 없습니다.";
       }
       // ⓒ 세대생략(donorGroup=B) + 대납
-      if (getDonorGroup(form.donor) === "B") {
+      if (form.donor && getDonorGroup(form.donor) === "B") {
         return "세대생략 할증 대상 증여와 대납(代納)은 현재 함께 계산할 수 없습니다.";
       }
     }

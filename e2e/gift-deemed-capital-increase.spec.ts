@@ -78,6 +78,51 @@ test.describe("§39 증자 이익 cap-table", () => {
     await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
+  test("수증자 선택 → 선택 1명만 이관 + 증여자 미선택 차단 (§4의2①·§68① · §53)", async ({ page }) => {
+    // 「상증법」§4의2①·§68① — 증여세는 **수증자별**로 납세의무가 성립하고 신고도 수증자별이다.
+    //   전원을 한 마법사 세션에 합치면 누진구간이 올라가고 §53 공제가 1회만 적용된다(실측 +24,250,000).
+    // 「상증법」§53은 **한정 열거 요건규정**이라 증여자 관계를 모르면 공제를 확정할 수 없다.
+    //   종전에는 이관 payload에 `donor`가 없어 마법사 기본값 「부」가 그대로 남아
+    //   §53 제2호 5천만원 공제가 묻지도 않고 붙었다(실측 −3,880,000).
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-high").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("30000");
+    await page.getByTestId("ci-alloc-add-row").click();
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "갑", "50000", "50000", "80000", "30000");
+    await fillRow(page, 1, "을", "10000", "10000", "20000", "10000");
+    await fillRow(page, 2, "병", "30000", "30000", "0", "0");
+    await fillRow(page, 3, "정", "10000", "10000", "0", "0");
+    await page.getByTestId("ci-alloc-related-2-sh-1").click();
+    await page.getByTestId("ci-alloc-related-2-sh-2").click();
+    await page.getByTestId("ci-alloc-related-3-sh-1").click();
+    await page.getByTestId("ci-alloc-related-3-sh-2").click();
+
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // 과세 수증자 2명(병 300,000,000 · 정 100,000,000) → 선택 UI 노출
+    await expect(page.getByTestId("ci-alloc-donee-select")).toBeVisible();
+    await page.getByTestId("ci-alloc-donee-selector").selectOption("1"); // 정
+
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
+
+    // 증여자는 미선택으로 넘어온다 — 기본값 「부」가 조용히 선택돼 있지 않다
+    await expect(page.getByTestId("gift-donor-select")).toHaveValue("");
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("증여자를 선택하세요.")).toBeVisible();
+
+    // 관계를 고르면 통과하고, 이관된 항목은 **선택한 정 1명분**이다
+    await page.getByTestId("gift-donor-select").selectOption("other_relative");
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("정 증자이익(§39)")).toBeVisible();
+    await expect(page.getByText("병 증자이익(§39)")).toHaveCount(0);
+  });
+
   test("혼합 증자 — 재배정분(§39①1호 가목)은 특수관계가 없어도 과세 → 을 125,000,000", async ({ page }) => {
     // 교재 사례2 구조에서 **특수관계 칩을 하나도 켜지 않는다**.
     //   가목(실권주 배정)은 법문에 특수관계 문언이 없어 을의 재배정 10,000주분은 그대로 과세된다.

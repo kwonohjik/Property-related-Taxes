@@ -16,12 +16,28 @@
  */
 import { describe, it, expect } from "vitest";
 import { buildGiftWizardPrefill } from "@/lib/calc/gift-deemed-api";
+import { buildGiftTaxInput } from "@/lib/calc/gift-api";
+import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
+import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 import { calcContributionGift } from "@/lib/tax-engine/gift-deemed/contribution-in-kind";
 import { INITIAL_DEEMED, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import type { ContributionInput } from "@/lib/tax-engine/gift-deemed/types";
 
 function formOf(patch: Partial<DeemedFormState>): DeemedFormState {
   return { ...INITIAL_DEEMED, type: "contribution", giftDate: "2026-03-02", ...patch };
+}
+
+/**
+ * 🔄 **관측 단계를 옮겼다**(2026-09-25 · 리뷰 #27).
+ * 종전에는 payload 필드 `p.donorRelation`만 단언했는데, ④(`buildGiftTaxInput`)는 그 필드를
+ * 읽지 않고 **`form.donor`에서 재파생**한다. 이관 payload에 `donor`가 없던 시절에는
+ * 병합 후 `INITIAL_FORM.donor = "father"`가 남아 §53 제2호 5천만원 공제가 붙었고,
+ * 그런데도 anchor는 초록이었다(`feedback_anchor_observes_wrong_stage`).
+ * ⇒ **엔진 결정세액**까지 관통해서 본다. 이관 경로의 JSON 왕복도 그대로 재현한다.
+ */
+function taxOf(p: Partial<FormState>): number {
+  const roundtrip = JSON.parse(JSON.stringify(p)) as Partial<FormState>;
+  return calcGiftTax(buildGiftTaxInput({ ...INITIAL_FORM, ...roundtrip })).finalTax;
 }
 
 /**
@@ -68,8 +84,12 @@ describe("§39의3 고가인수 — 수증자 선택 prefill", () => {
     expect(p.giftItems).toHaveLength(1);
     expect(p.giftItems?.[0].marketValue).toBe(175_000_000);
     expect(p.giftItems?.[0].name).toContain("B");
-    // 증여자 = 현물출자자. B의 관계 father ⇒ §53 직계존속 그룹
-    expect(p.donorRelation).toBe("lineal_ascendant_adult");
+    // 증여자 = 현물출자자. B의 관계 father ⇒ §53 직계존속 그룹.
+    // payload 필드가 아니라 **④가 실제로 읽는 축(`donor`)** 과 엔진 결정세액으로 단언한다.
+    expect(p.donor).toBe("father");
+    expect(buildGiftTaxInput({ ...INITIAL_FORM, ...p }).deductionInput.donorRelation).toBe(
+      "lineal_ascendant_adult",
+    );
     // 고가는 독립 건 — 동시증여로 묶지 않는다
     expect(p.simultaneousGifts).toBeUndefined();
   });
@@ -82,7 +102,13 @@ describe("§39의3 고가인수 — 수증자 선택 prefill", () => {
     );
     expect(p.giftItems?.[0].marketValue).toBe(50_000_000);
     expect(p.giftItems?.[0].name).toContain("C");
-    expect(p.donorRelation).toBe("other_relative"); // sibling → 기타친족 그룹
+    // sibling → §53 제4호 기타친족 1천만원. 종전에는 `p.donorRelation`만 맞고 실제로는
+    // 병합 후 `donor="father"`라 직계존속 5천만원이 붙어 **결정세액 0원**이었다.
+    expect(p.donor).toBe("sibling");
+    expect(buildGiftTaxInput({ ...INITIAL_FORM, ...p }).deductionInput.donorRelation).toBe(
+      "other_relative",
+    );
+    expect(taxOf(p)).toBe(3_880_000);
   });
 
   it("PB-3 ⭐: 비과세(0원) 행이 선두여도 **과세 행**만 이관", () => {

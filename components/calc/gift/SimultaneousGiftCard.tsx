@@ -47,7 +47,8 @@ export interface SimultaneousGiftCardProps {
   /** 추가 건 서브폼 상태 */
   sub: GiftSubFormState;
   /** 건 0의 donor — 동일 그룹 경고 기준 */
-  mainDonor: GiftDonorRelation;
+  /** 주 건 증여자 — 증여의제 이관 직후에는 미선택("")일 수 있다 */
+  mainDonor: GiftDonorRelation | "";
   /** 서브폼 부분 업데이트 콜백 */
   onChange: (partial: Partial<GiftSubFormState>) => void;
   /** 이 건 삭제 콜백 */
@@ -98,7 +99,7 @@ export function SimultaneousGiftCard({
 
   // 동일 그룹 검사 — donor 선택 직후 인라인 경고 (1차 방어)
   const isSameGroup =
-    sub.donor && isSameDonorGroup(sub.donor, mainDonor);
+    sub.donor && !!mainDonor && isSameDonorGroup(sub.donor, mainDonor);
 
   // 재산 합계 — 헤더 요약용 (useMemo, useEffect 금지)
   const giftTotal = useMemo(
@@ -253,7 +254,7 @@ export function SimultaneousGiftCard({
                 onChange={(gifts) => onChange({ priorGifts: gifts })}
                 mode="gift"
                 currentGiftDate={sub.giftDate}
-                currentDonor={sub.donor}
+                currentDonor={sub.donor || undefined}
               />
             </div>
           </div>

@@ -133,6 +133,13 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
   ciAllocNewPrice: string; // ㉰ 신주 1주당 인수가액
   ciAllocRows: CapTableRow[];
+  /**
+   * cap-table 과세 수증자 선택 (prefill 이관용) — 「상증법」§4의2①·§68①상 증여세는
+   * **수증자별**로 납세의무가 성립하고 신고도 수증자별이다. 마법사 세션 1개 = 신고 1건.
+   * 선례: 감자 §39의2 `cdSelectedDoneeIndex` · 현물출자 고가 `conSelectedDoneeIndex` ·
+   *       일감몰아주기 §45의3 `rcSelectedDoneeIndex` · 특정법인 §45의5 `scSelectedDoneeIndex`.
+   */
+  ciAllocSelectedDoneeIndex: number;
   // 감자 §39의2
   cdCaseType: "low" | "high"; // 저가소각(①1호) / 고가소각(①2호)
   cdSharePrice: string;
@@ -324,6 +331,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",
   ciAllocRows: [makeCapTableRow("sh-1"), makeCapTableRow("sh-2")],
+  ciAllocSelectedDoneeIndex: 0,
   cdCaseType: "low",
   cdSharePrice: "",
   cdRedemptionPrice: "",

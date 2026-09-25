@@ -367,7 +367,7 @@ export function GiftTaxForm() {
         splitPaymentAmount={form.splitPaymentAmount}
         simultaneousResults={simultaneousResults.length > 0 ? simultaneousResults : undefined}
         simultaneousResultLabels={simultaneousResultLabels.length > 0 ? simultaneousResultLabels : undefined}
-        mainDonor={form.donor}
+        mainDonor={form.donor || undefined}
       />
     );
   }
