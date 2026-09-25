@@ -4,12 +4,12 @@ import { clickAndExpectUrl } from "./_helpers/navigation";
 
 /** E2E: 증여로 보는 경우 — 자본거래 (Phase 2 핵심 + sub-case 토글). 상세 입력은 모달 안. */
 
-async function openDetail(page: Page, type: string) {
+async function openDetail(page: Page, type: string, date: [string, string, string] = ["2025", "3", "15"]) {
   await page.getByTestId(`deemed-type-${type}`).click();
   const dialog = page.getByTestId("deemed-detail-dialog");
-  await dialog.getByLabel("연도").fill("2025");
-  await dialog.getByLabel("월").fill("3");
-  await dialog.getByLabel("일", { exact: true }).fill("15");
+  await dialog.getByLabel("연도").fill(date[0]);
+  await dialog.getByLabel("월").fill(date[1]);
+  await dialog.getByLabel("일", { exact: true }).fill(date[2]);
 }
 const closeDetail = (page: Page) => page.getByTestId("deemed-detail-confirm").click();
 
@@ -83,6 +83,41 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("60,003,000");
+  });
+
+  // ── 2-F-1 §29③ 시기 게이트가 ⑤→④→⑫→⑭→엔진까지 도달하는지 실증 ──────────────
+  //   증여일은 폼이 이미 수집하고 있었지만 엔진까지 배선돼 있지 않았다(1-C).
+
+  test("§39 간주모집 시기 게이트 — 2016-02-04 제외 유지 ↔ 2016-02-05 제외 취소 (경계 짝)", async ({ page }) => {
+    // 「상증령」§29③ 〈신설 2016.2.5〉 — 그 전에는 「대통령령으로 정하는 경우」가 공집합이라
+    // 간주모집이어도 §39① 괄호로 제외된다. 증여일은 폼이 이미 받고 있었으나 엔진에 안 갔다(1-C).
+    const fill = async (y: string, m: string, d: string) => {
+      await page.goto("/calc/gift-deemed");
+      await openDetail(page, "capital_increase", [y, m, d]);
+      const dlg = page.getByTestId("deemed-detail-dialog");
+      await dlg.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("20000");
+      await dlg.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+      await dlg.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
+      await dlg.getByPlaceholder("증자 주식수").fill("100000");
+      await dlg.getByPlaceholder("배정받은 실권주수").fill("60000");
+      // §39① 괄호의 주어가 「주권상장법인이」라 상장이 AND 조건(PO-9). ⑧이 종가평균을 요구하므로
+      // 이론 ㉯ 15,000보다 큰 20,000을 넣어 §29②1가 단서 Min이 이론값을 고르게 한다.
+      await dlg.getByRole("switch", { name: /주권상장법인등/ }).click();
+      await dlg.getByPlaceholder("평가기준일 전후 각 2개월 종가평균 (원)").fill("20000");
+      await dlg.getByTestId("ci-alloc-method-deemed_public_offering").click();
+      await closeDetail(page);
+      await page.getByTestId("deemed-calc-btn").click();
+    };
+
+    // 시행 전날 — 제외가 유지된다. ⚠️ `deemed-result-value`에 toContainText("0")을 쓰면
+    //   substring이라 "300,000,000"도 통과한다 ⇒ 제외 배너를 직접 단언한다.
+    await fill("2016", "2", "4");
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("모집방법");
+
+    // 시행 당일 — 제외가 취소되어 과세로 돌아온다 (긍정 짝)
+    await fill("2016", "2", "5");
+    await expect(page.getByTestId("deemed-result-value")).toContainText("300,000,000");
+    await expect(page.getByTestId("deemed-result")).toContainText("간주모집");
   });
 
   // ── 2-A 다목 가중이 ⑤→④→⑫→⑭→엔진 전 구간을 통과하는지 실증 ─────────────────

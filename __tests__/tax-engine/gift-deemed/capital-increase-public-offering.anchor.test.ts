@@ -86,6 +86,40 @@ describe("§39①1호 저가 — 공모 모집 배정 적용제외", () => {
     expect(JSON.stringify(r.breakdown)).toContain("간주모집");
   });
 
+  // ── 2-F-1 시기 축 (리뷰 A-2 / #5) ─────────────────────────────────────────
+  // 「상증령」§29③ 〈신설 2016.2.5〉 — 그 전에는 §39①1호 가목 괄호의 「대통령령으로 정하는
+  // 경우」가 **공집합**이라 간주모집이어도 제외가 유지된다(비과세).
+  //   · 2015-12-31 이전 — 괄호 단서 자체가 없음(대법원 2013두15798: 모집방법에 간주모집 포함)
+  //   · 2016-01-01 ~ 2016-02-04 — 괄호는 있으나 위임받은 §29③ 부존재
+  // 두 구간의 결론이 같으므로 **단일 컷오프 2016-02-05**가 정확히 덮는다.
+
+  it("PO-11 ⭐: 증여일이 2016-02-05 **전**이면 간주모집이어도 제외가 유지된다 (0원)", () => {
+    const r = calcCapitalIncreaseGift(
+      low({ allocationMethod: "deemed_public_offering", giftDate: new Date("2016-02-04") }),
+    );
+    expect(r.applied).toBe(false);
+    expect(r.deemedGiftValue).toBe(0);
+  });
+
+  it("PO-12: 시행일 당일(2016-02-05)부터 제외가 취소된다 (경계 짝)", () => {
+    const r = calcCapitalIncreaseGift(
+      low({ allocationMethod: "deemed_public_offering", giftDate: new Date("2016-02-05") }),
+    );
+    expect(r.applied).toBe(true);
+    expect(r.deemedGiftValue).toBe(300_000_000);
+  });
+
+  it("PO-13: 증여일 미입력이면 종전 동작(제외 취소) 유지 — 하위호환", () => {
+    expect(calcCapitalIncreaseGift(low({ allocationMethod: "deemed_public_offering" })).applied).toBe(true);
+  });
+
+  it("PO-14: **진성 공모**는 시기와 무관하게 제외된다 (괄호 본문은 2016-02-05과 무관)", () => {
+    const old = calcCapitalIncreaseGift(low({ allocationMethod: "public_offering", giftDate: new Date("2014-06-01") }));
+    const now = calcCapitalIncreaseGift(low({ allocationMethod: "public_offering", giftDate: new Date("2020-06-01") }));
+    expect(old.deemedGiftValue).toBe(0);
+    expect(now.deemedGiftValue).toBe(0);
+  });
+
   it("PO-3: normal·미지정은 기존 동작 그대로 (회귀)", () => {
     expect(calcCapitalIncreaseGift(low()).deemedGiftValue).toBe(300_000_000);
     expect(calcCapitalIncreaseGift(low({ allocationMethod: "normal" })).deemedGiftValue).toBe(300_000_000);
