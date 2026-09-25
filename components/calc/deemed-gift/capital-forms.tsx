@@ -229,7 +229,9 @@ export function MergerFields({ form, set }: Props) {
 /** (8) 증자 §39 — 저가발행(①1호) / 고가발행(①2호) + 가/나/다/라목 */
 export function CapitalIncreaseFields({ form, set }: Props) {
   const isHigh = form.ciDirection === "high";
-  const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc"; // 고가 나·다·라목 비율가중
+  // 1-A — 고가는 **전 subType**이 비율 가중(가목 §29②3호 다목 포함), 저가는 나목만 §29②2호 다목
+  const needsRatio = isHigh;
+  const needsLowDanmok = !isHigh && form.ciSubType === "no_realloc";
   const sharesLabel = CI_SHARES_LABEL[form.ciSubType];
   return (
     <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
@@ -306,7 +308,14 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       {needsRatio && (
         <>
           <CurrencyInput label="특수관계인이 인수한 신주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} placeholder="특수관계인이 인수한 신주수" />
-          <CurrencyInput label="분모 신주수" value={form.ciRatioDenomShares} onChange={(v) => set({ ciRatioDenomShares: v })} hint="나목=균등증자 증자주식총수 / 다·라목=주주 아닌 자 배정+초과인수 총수" placeholder="분모 신주수" />
+          <CurrencyInput label="분모 신주수" value={form.ciRatioDenomShares} onChange={(v) => set({ ciRatioDenomShares: v })} hint="가목=실권주 총수 / 나목=균등증자 증자주식총수 / 다·라목=주주 아닌 자 배정+초과인수 총수" placeholder="분모 신주수" />
+        </>
+      )}
+      {needsLowDanmok && (
+        <>
+          <CurrencyInput label="신주인수자의 특수관계인의 실권주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder="특수관계인 실권주 주식수" />
+          <CurrencyInput label="증자 후 신주인수자 보유주식수" value={form.ciPostHeldShares} onChange={(v) => set({ ciPostHeldShares: v })} />
+          <CurrencyInput label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />
         </>
       )}
       {!isHigh && (

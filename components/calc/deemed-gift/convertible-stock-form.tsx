@@ -22,6 +22,8 @@ type CsKeys = {
   forfeitedShares: keyof DeemedFormState;
   relatedAcquired: keyof DeemedFormState;
   ratioDenom: keyof DeemedFormState;
+  postHeld: keyof DeemedFormState;
+  postTotal: keyof DeemedFormState;
   isListed: keyof DeemedFormState;
   listedMarketAvg: keyof DeemedFormState;
   allocationMethod: keyof DeemedFormState;
@@ -39,6 +41,7 @@ function CsNumericSection({
   newPriceLabel,
   sharesLabel,
   needsRatio,
+  needsLowDanmok,
   stockCode,
   onStockCode,
   valuationDate,
@@ -56,6 +59,7 @@ function CsNumericSection({
   newPriceLabel: string;
   sharesLabel: string;
   needsRatio: boolean;
+  needsLowDanmok: boolean;
   stockCode: string;
   onStockCode: (v: string) => void;
   valuationDate: string;
@@ -118,6 +122,13 @@ function CsNumericSection({
           <CurrencyInput label="분모 신주수" value={v(keys.ratioDenom)} onChange={on(keys.ratioDenom)} placeholder={`${ph} 분모 신주수`} />
         </>
       )}
+      {needsLowDanmok && (
+        <>
+          <CurrencyInput label="신주인수자의 특수관계인의 실권주수" value={v(keys.relatedAcquired)} onChange={on(keys.relatedAcquired)} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder={`${ph} 특수관계인 실권주 주식수`} />
+          <CurrencyInput label="증자 후 신주인수자 보유주식수" value={v(keys.postHeld)} onChange={on(keys.postHeld)} placeholder={`${ph} 증자 후 보유주식수`} />
+          <CurrencyInput label="증자 후 발행주식총수" value={v(keys.postTotal)} onChange={on(keys.postTotal)} placeholder={`${ph} 증자 후 발행주식총수`} />
+        </>
+      )}
     </div>
   );
 }
@@ -125,7 +136,8 @@ function CsNumericSection({
 /** (8-3) 전환주식 §39①3호 — 전환 시점 − 발행 시점 이익 (시행령 §29②6) */
 export function ConvertibleStockFields({ form, set }: Props) {
   const isHigh = form.csDirection === "high";
-  const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
+  const needsRatio = isHigh; // 1-A — 고가 전 subType(가목 §29②3호 다목 포함)
+  const needsLowDanmok = !isHigh && form.csSubType === "no_realloc"; // §29②2호 다목
   const sharesLabel = CI_SHARES_LABEL[form.csSubType];
   return (
     <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
@@ -165,6 +177,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
         newPriceLabel="1주당 전환가액등"
         sharesLabel={sharesLabel}
         needsRatio={needsRatio}
+        needsLowDanmok={needsLowDanmok}
         stockCode={form.csStockCode}
         onStockCode={(val) => set({ csStockCode: val })}
         valuationDate={form.giftDate}
@@ -178,6 +191,8 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csConvForfeitedShares",
           relatedAcquired: "csConvRelatedAcquiredShares",
           ratioDenom: "csConvRatioDenomShares",
+          postHeld: "csConvPostHeldShares",
+          postTotal: "csConvPostTotalShares",
           isListed: "csConvIsListed",
           listedMarketAvg: "csConvListedMarketAvg",
           allocationMethod: "csConvAllocationMethod",
@@ -193,6 +208,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
         newPriceLabel="신주 1주당 인수가액"
         sharesLabel={sharesLabel}
         needsRatio={needsRatio}
+        needsLowDanmok={needsLowDanmok}
         stockCode={form.csStockCode}
         onStockCode={(val) => set({ csStockCode: val })}
         valuationDate={form.csIssuanceDate}
@@ -207,6 +223,8 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csIssueForfeitedShares",
           relatedAcquired: "csIssueRelatedAcquiredShares",
           ratioDenom: "csIssueRatioDenomShares",
+          postHeld: "csIssuePostHeldShares",
+          postTotal: "csIssuePostTotalShares",
           isListed: "csIssueIsListed",
           listedMarketAvg: "csIssueListedMarketAvg",
           allocationMethod: "csIssueAllocationMethod",

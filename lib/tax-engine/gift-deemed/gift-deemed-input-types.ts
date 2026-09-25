@@ -183,6 +183,17 @@ export interface CapitalIncreaseInput {
   // 고가 나·다·라목 — 특수관계인 비율 가중 (시행령 §29②4·5)
   relatedAcquiredShares?: number; // 특수관계인이 인수한 신주수 (분자)
   ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
+  /**
+   * 「상증령」§29②2호 **다목**의 「증자후 신주인수자의 지분비율」 — **저가 나목 전용**.
+   * 다목 = 실권주 총수 × 이 비율 × (신주인수자의 특수관계인의 실권주수 ÷ 실권주 총수)이며
+   * 실권주 총수가 약분되므로 엔진은 **이 비율 × `relatedAcquiredShares`** 로 계산한다.
+   *
+   * ⚠️ 분모를 `preIssueShares + issuedShares`로 **파생하지 않는다** — 나목은 실권주를 배정하지
+   *    않아 소멸시키므로 증자후 발행주식총수가 실제 증가분과 어긋난다. 추정 금지(자동 안분 금지
+   *    정책과 같은 층위) ⇒ 분자·분모를 각각 입력으로 받는다.
+   * 미입력이면 종전 동작(원시 `forfeitedShares`)을 유지한다 — 입력 필수화는 ⑧ validate 담당.
+   */
+  postIssueSubscriberRatio?: { numer: number; denom: number };
   // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
   smallShareholderImputation?: boolean;
   /** 주권상장법인등 — §29②1가 단서(저가 min)·§29②3나 단서(고가 max) */

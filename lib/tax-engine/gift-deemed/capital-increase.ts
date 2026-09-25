@@ -53,6 +53,22 @@ export function calcCapitalIncreaseGift(input: CapitalIncreaseInput): DeemedGift
   return (input.direction ?? "low") === "high" ? increaseHigh(input) : increaseLow(input);
 }
 
+/**
+ * 「상증령」§29②2호 **다목** — 실권주 총수 × 증자후 신주인수자의 지분비율 ×
+ * (신주인수자의 특수관계인의 실권주수 ÷ 실권주 총수).
+ *
+ * 실권주 총수가 약분되므로 **지분비율 × 특수관계인 실권주수**로 계산한다 — 법문 그대로
+ * 세 항을 차례로 곱하면 중간 절사가 두 번 일어나 1원 단위가 어긋난다.
+ * 두 인자가 **모두** 있을 때만 적용하고, 없으면 종전 동작(원시 실권주수)을 유지한다
+ * (계획서 `gift-capital-increase-section39.plan.md:171`의 하위호환 방침).
+ */
+function danmokShares(input: CapitalIncreaseInput, fallback: number): number {
+  const related = input.relatedAcquiredShares;
+  const ratio = input.postIssueSubscriberRatio;
+  if (related == null || ratio == null || ratio.denom <= 0) return fallback;
+  return safeMultiplyThenDivide(related, ratio.numer, ratio.denom);
+}
+
 /** ①1호 저가발행 — 가/다/라목(기준금액 없음, §29②1) · 나목(기준 30%·3억, §29②2) */
 function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   const { preIssuePrice, preIssueShares, newSharePrice, issuedShares, forfeitedShares } = input;
@@ -62,12 +78,16 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   // §29②1가 단서 — 주권상장법인등은 증자후 평가가 산식값보다 **적으면** 그 평가액(Min)
   const perShareAfter = applyListedPerShareBound(theoretical, input, "min");
   const perShareGain = perShareAfter - newSharePrice; // 저가: 평가 > 인수가
-  const base = perShareGain > 0 ? safeMultiply(perShareGain, forfeitedShares) : 0;
+  // 나목만 §29②2호 다목으로 가중한다. 가·다·라목(§29②1호 다목)은 「배정받은 실권주수 또는
+  // 신주수」가 그대로 곱셈 인자라 원시 주식수가 맞다 — 같은 「다목」이지만 다른 호의 정의다.
+  const attributedShares = subType === "no_realloc" ? danmokShares(input, forfeitedShares) : forfeitedShares;
+  const base = perShareGain > 0 ? safeMultiply(perShareGain, attributedShares) : 0;
 
   let applied: boolean;
   let exclusionReason: string | undefined;
   if (subType === "no_realloc") {
-    // §29②2: 차액 ≥ 증자후가 100분의 30 또는 차액×실권주수 ≥ 3억
+    // §29②2: 차액 ≥ 증자후가 100분의 30 또는 「그 가액에 **다목의 규정에 의한 실권주수**를
+    //         곱하여 계산한 가액」 ≥ 3억 ⇒ 3억 arm은 **가중 후** base로 판정한다.
     const ratioMet = perShareGain >= safeMultiplyThenDivide(perShareAfter, 30, 100);
     applied = base > 0 && (ratioMet || base >= ABSOLUTE_THRESHOLD);
     exclusionReason = applied ? undefined : "이익이 기준금액(증자후가 30%·3억) 미만";
@@ -88,7 +108,10 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
       note: perShareAfter !== theoretical ? `주권상장법인 평가액 적용 (${GIFT.CONTRIBUTION_LISTED_LOW})` : undefined },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
     { label: "1주당 이익", amount: perShareGain },
-    { label: "이익 귀속 주식수", amount: forfeitedShares },
+    { label: "이익 귀속 주식수", amount: attributedShares,
+      note: attributedShares !== forfeitedShares
+        ? `§29②2호 다목 가중 — 실권주 ${forfeitedShares}주 × 증자후 지분비율`
+        : undefined },
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①1호 저가발행 — ${SUBTYPE_NOTE[subType]}${imputationNote}` },
     ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
@@ -119,9 +142,17 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   let applied: boolean;
   let exclusionReason: string | undefined;
   if (subType === "forfeited_realloc") {
-    // §29②3: 기준금액 없음
-    applied = base > 0;
-    value = applied ? base : 0;
+    // §29②3호: 기준금액 없음. 다목 = 신주인수를 포기한 주주의 실권주수 ×
+    //          (포기 주주의 특수관계인이 인수한 실권주수 ÷ 실권주 총수).
+    //          `forfeitedShares`가 첫 항이고 두 인자가 비율을 이룬다. 미입력 = 가중 1.0(종전).
+    const numer = input.relatedAcquiredShares;
+    const denom = input.ratioDenomShares;
+    const weighted =
+      numer != null && denom != null && denom > 0
+        ? safeMultiplyThenDivide(base, numer, denom)
+        : base;
+    applied = weighted > 0;
+    value = applied ? weighted : 0;
     exclusionReason = applied ? undefined : "인수가가 증자후가 이하 — 이익 없음";
   } else {
     // §29②4(나목)·§29②5(다·라목): 특수관계인 비율 가중
