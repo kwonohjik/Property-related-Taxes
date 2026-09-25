@@ -107,6 +107,44 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByTestId("ci-alloc-total-sh-4")).toHaveText("0");
   });
 
+  test("고가 공모 제외는 «배정받은 자»(증여자) 행으로 판정 — A 표시 0 ↔ B 표시 375,000,000", async ({ page }) => {
+    // 「상증법」§39①2호 가목은 「그 실권주를 **배정받은 자**가 인수함으로써 **그의 특수관계인인
+    //  신주 인수 포기자**가 얻은 이익」이라 배정을 받는 사람과 이익을 얻는 사람이 다르다.
+    //  행별 배정방법 select(⑤)가 엔진의 증여자 행 판정까지 도달하는지 함께 고정한다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-high").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("5000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("20000");
+    await page.getByRole("switch", { name: /주권상장법인 \(공모 배정 제외 판정용\)/ }).click();
+
+    await fillRow(page, 0, "A", "50000", "50000", "100000", "50000"); // 실권주를 배정받은 인수자
+    await fillRow(page, 1, "B", "50000", "50000", "0", "0"); // 전량 포기 (수증자)
+    await page.getByTestId("ci-alloc-related-0-sh-2").click();
+    await page.getByTestId("ci-alloc-related-1-sh-1").click();
+
+    // ① 배정방법 표시 없음 → B 375,000,000
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("375,000,000");
+
+    // ② 실제로 실권주를 «배정받은» A 행에 공모 → 제외 발동 → B 0
+    await page.getByTestId("deemed-edit-btn").click();
+    await page.getByTestId("ci-alloc-method-row-0").selectOption("public_offering");
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("0");
+
+    // ③ 아무것도 배정받지 않은 포기자 B 행에 표시 → 제외 근거 없음 → 그대로 과세
+    await page.getByTestId("deemed-edit-btn").click();
+    await page.getByTestId("ci-alloc-method-row-0").selectOption("normal");
+    await page.getByTestId("ci-alloc-method-row-1").selectOption("public_offering");
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("375,000,000");
+  });
+
   test("§39① 공모 모집 배정 — 적용 제외로 증여재산가액 0 (상증령 §29③ 간주모집은 과세)", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await page.getByTestId("deemed-type-capital_increase").click();

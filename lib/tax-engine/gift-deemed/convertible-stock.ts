@@ -10,7 +10,14 @@ import type { DeemedGiftResult, ConvertibleStockInput } from "./types";
  */
 export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGiftResult {
   const conversion = calcCapitalIncreaseGift(input.atConversion);
-  const issuance = calcCapitalIncreaseGift(input.atIssuance);
+  // 나목(차감항)은 「전환주식 발행 당시 **제1호부터 제5호까지의 규정에 따라 계산한 이익**」이다.
+  //   제1호~제5호는 **계산방법** 규정이고, 공모 제외는 그 바깥의 **법** §39① 본문 괄호에 있다.
+  //   차감항은 과세단위가 아니라 **기준선**이므로 요건필터를 태우지 않는다.
+  //   ⚠️ 종전에는 차감항에만 필터가 걸려 **어느 독법으로도 도출되지 않는 비대칭**이었다 —
+  //      필터가 준용된다면 두 leg 모두 0이라 0 − 0 = 0이고, 준용되지 않는다면 둘 다 산식값이다.
+  //      실측: 발행 시점만 공모로 두면 200,000,000이 500,000,000으로 뛰었다(차감액 전액 소멸).
+  //      기준금액 게이트(30%·3억)는 §29②2호·4호 **안에** 있으므로 그대로 준용된다 — 떼지 말 것.
+  const issuance = calcCapitalIncreaseGift({ ...input.atIssuance, allocationMethod: "normal" });
   const raw = conversion.deemedGiftValue - issuance.deemedGiftValue;
   const value = raw > 0 ? raw : 0; // 시행령 §29②6 단서: 영 이하면 이익 없음
   const applied = value > 0;

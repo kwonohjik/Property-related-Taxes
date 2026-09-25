@@ -67,7 +67,16 @@ describe("§39①3호 전환주식 — 조합 축 (배정방법·기준금액·d
     forfeitedShares: 100_000,
   };
 
-  it("[CS-3-PO] 발행당시 leg에 §39① 공모 제외가 걸리면 차감항이 0이 되어 전환후 이익이 «전액» 남는다", () => {
+  /**
+   * 🔄 **2-D로 기대값을 정정했다**(2026-09-25). 이 anchor는 6단계에서 **당시 거동을 그대로**
+   *    고정한 뮤테이션 그물이었고(500,000,000), 법령 판정을 담은 것이 아니었다.
+   *    「상증령」§29②6호 나목 본문을 직접 조회하니 차감항은 「전환주식 발행 당시 **제1호부터
+   *    제5호까지의 규정에 따라 계산한 이익**」이다 — 제1호~제5호는 **계산방법** 규정이고
+   *    공모 제외는 그 바깥의 **법** §39① 괄호다. ⇒ 차감항에는 요건필터가 태워지지 않는다.
+   *    배정방법 축을 죽인다는 **목적은 그대로** 두고 관측 지점을 과세단위(전환 시점)로 옮겼다.
+   *    기준금액 게이트는 §29②2호·4호 **안에** 있어 그대로 준용된다 — 아래 [CS-4-NR]이 고정한다.
+   */
+  it("[CS-3-PO] 공모 제외는 과세단위(전환 시점)에만 걸리고 차감항(발행 시점)은 기준선이라 불변", () => {
     // 기준(양 시점 normal): 500,000,000 − 300,000,000 = 200,000,000
     const normal = calcConvertibleStockGift({
       atConversion: base,
@@ -75,13 +84,20 @@ describe("§39①3호 전환주식 — 조합 축 (배정방법·기준금액·d
     });
     expect(normal.deemedGiftValue).toBe(200_000_000);
 
-    // 발행당시만 「주권상장법인 + 공모 배정」 → 나목이 0 ⇒ 차감 소멸
-    const r = calcConvertibleStockGift({
+    // 발행당시만 「주권상장법인 + 공모 배정」 → 차감항은 산식값 그대로 ⇒ 결과 불변
+    const issuanceOnly = calcConvertibleStockGift({
       atConversion: base,
       atIssuance: { ...base, newSharePrice: 14_000, isListed: true, allocationMethod: "public_offering" },
     });
-    expect(r.applied).toBe(true);
-    expect(r.deemedGiftValue).toBe(500_000_000); // +300,000,000
+    expect(issuanceOnly.deemedGiftValue).toBe(200_000_000);
+
+    // 전환 시점(과세단위)에 걸면 §39① 적용 제외로 가목이 0 ⇒ 전체 0
+    const conversionOnly = calcConvertibleStockGift({
+      atConversion: { ...base, isListed: true, allocationMethod: "public_offering" },
+      atIssuance: { ...base, newSharePrice: 14_000 },
+    });
+    expect(conversionOnly.applied).toBe(false);
+    expect(conversionOnly.deemedGiftValue).toBe(0);
   });
 
   it("[CS-4-NR] 발행당시 leg이 §29②2호 기준금액 게이트에 걸리면 차감항이 0이 된다", () => {

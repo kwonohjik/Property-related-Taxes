@@ -100,7 +100,6 @@ export function calcCapitalIncreaseAllocation(
 
   for (const b of byShareholder) {
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
-    const publicOfferingOut = publicOfferingIds.has(b.id); // §39① 적용 제외
 
     // 「상증법」§39①1호 **가·다·라목** 몫을 나목 몫과 가른다 — 국세청 재산세과-60(2010.2.1.)은
     //   「일부는 재배정하고 나머지는 실권처리한 경우 증여이익을 **각각 산정하여 합산**」한다고 한다.
@@ -137,6 +136,13 @@ export function calcCapitalIncreaseAllocation(
     const gatedOut = hasForfeitProcessing && !ratioMet && relatedForfeitSum < ABSOLUTE_THRESHOLD;
 
     const byDonor: DonationSplit[] = donors.map((d, i) => {
+      // §39① 적용 제외 — 제외 대상은 **배정 행위**이므로 「배정받은 자」 행으로 판정한다.
+      //   저가(§39①1호): 「그 실권주를 **배정받은 자**가 배정받음으로써 얻은 이익」 ⇒ 배정받은 자 = 수증자
+      //   고가(§39①2호): 「그 실권주를 **배정받은 자**가 인수함으로써 **그의 특수관계인인 포기자**가
+      //                   얻은 이익」 ⇒ 배정받은 자 = **증여자**(인수자), 이익을 얻는 자와 다른 사람이다.
+      //   종전에는 양쪽 다 수증자 행으로 조회해 고가에서 판정 주체가 뒤바뀌어 있었다(양방향 오류 —
+      //   배정받은 자에 표시하면 제외 미발동으로 과다과세, 포기자에 표시하면 근거 없이 0원).
+      const publicOfferingOut = publicOfferingIds.has(direction === "high" ? d.id : b.id);
       const isRelated = isRelatedTo(d.id);
       const relationExcluded = relationGateApplies && !isRelated;
       // 가·다·라목분은 저가에서 특수관계·기준금액 어느 게이트도 받지 않는다.

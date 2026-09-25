@@ -43,8 +43,19 @@ function deemedOfferingCancelsExclusion(input: CapitalIncreaseInput): boolean {
   return d == null || d.getTime() >= DEEMED_OFFERING_CANCELS_FROM;
 }
 
+/**
+ * ⚠️ **나목(실권주 미배정)에는 걸리지 않는다.** 제외 괄호는 「**배정**(…으로 배정하는 경우는
+ *    제외한다)」으로 배정이라는 **구성요건 동사에 삽입**돼 있는데, 나목은 「해당 법인이
+ *    **실권주를 배정하지 아니한** 경우」라 제외가 걸릴 배정 자체가 없다.
+ *    두 독법 어느 쪽으로 읽어도 「나목 + 공모 = 0원」은 나오지 않는다:
+ *      ① 구조 독법 — 배정이 없으니 괄호가 걸릴 자리가 없다 ⇒ 나목 그대로 과세
+ *      ② 문언 대입 독법 — 「(공모배정을 제외한) 배정을 하지 아니한 경우」로 읽으면
+ *         공모로 배정한 사안은 오히려 **나목 요건을 충족**한다 ⇒ 과세
+ *    (anchor PO-S39-NOREALLOC-LOW·HIGH — 각 300,000,000 · 500,000,000이 0이 되던 것)
+ */
 function publicOfferingExcluded(input: CapitalIncreaseInput): boolean {
   if (input.isListed !== true) return false;
+  if ((input.subType ?? "forfeited_realloc") === "no_realloc") return false;
   if (input.allocationMethod === "public_offering") return true;
   // 간주모집도 §29③ 시행 전이면 「모집방법 배정」으로 제외된다.
   return input.allocationMethod === "deemed_public_offering" && !deemedOfferingCancelsExclusion(input);
