@@ -91,6 +91,43 @@ function computeNextStep(
   }
 }
 
+/**
+ * 이 폼에서 **실제로 거치는** 단계 목록 — skip 규칙의 단일 소스(`computeNextStep`)를 그대로 걷는다.
+ *
+ * 🔑 「비주택이면 ③ 건너뜀」 같은 규칙을 여기 다시 적으면 둘이 갈린다. 걷기만 한다.
+ */
+function activeStepIndices(form: FormState): number[] {
+  const visited: number[] = [];
+  let s = 0;
+  while (s >= 0 && s < STEPS.length && !visited.includes(s)) {
+    visited.push(s);
+    const next = computeNextStep(s, form, true);
+    if (next === -1) break; // 간주취득 — 여기서 계산으로 넘어간다
+    s = next;
+  }
+  return visited;
+}
+
+/**
+ * 거치는 단계 중 **첫 번째** 차단 오류. `upTo`가 있으면 그 앞까지만 본다(전진 점프 검사용).
+ *
+ * 🔴 이것이 없으면 사이드바로 마지막 단계에 점프해 **필수 입력을 건너뛴 채 계산**할 수 있다.
+ *    `handleNext`가 **현재 단계만** 보기 때문이다 — ⑥에는 필수가 없어 그대로 통과했고,
+ *    API는 빈 입력을 200으로 받아 **«0원» 결과 화면**을 냈다(실측).
+ *    양도세는 이미 같은 가드를 갖고 있다(`TransferTaxCalculator.tsx` `handleSubmit`).
+ */
+function firstInvalidStep(
+  form: FormState,
+  upTo?: number,
+): { step: number; message: string } | null {
+  for (const s of activeStepIndices(form)) {
+    if (upTo !== undefined && s >= upTo) break;
+    const message = validateStep(s, form);
+    if (message) return { step: s, message };
+  }
+  return null;
+}
+
 export function AcquisitionTaxForm() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
@@ -161,6 +198,16 @@ export function AcquisitionTaxForm() {
 
     const nextStep = computeNextStep(step, form, true);
 
+    // 계산으로 넘어가기 직전 — 거쳐온 단계를 전부 재검증한다(점프·필드 비우기 우회 차단).
+    if (nextStep === -1 || isLastStep) {
+      const blocking = firstInvalidStep(form);
+      if (blocking) {
+        setStep(blocking.step); // 누락된 그 단계로 데려간다 — 어디가 문제인지 즉시 보이게
+        setError(blocking.message);
+        return;
+      }
+    }
+
     if (nextStep === -1) {
       // 간주취득: Step 1에서 바로 API 호출
       setLoading(true);
@@ -191,6 +238,28 @@ export function AcquisitionTaxForm() {
     }
   };
 
+  /**
+   * 사이드바·StepIndicator 점프 — **앞으로 가는 점프만** 검사한다.
+   *
+   * 🔑 뒤로 가는 것은 막지 않는다. 고치러 돌아가는 길이라 막으면 사용자가 갇힌다.
+   * 🔑 막을 때는 **건너뛰려던 첫 무효 단계로 데려간다** — 「못 갑니다」만 띄우면
+   *    어디를 고쳐야 하는지 알 수 없다(F-2에서 판정 마법사에 세운 것과 같은 규약).
+   */
+  const handleStepJump = (target: number) => {
+    if (target > step) {
+      const blocking = firstInvalidStep(form, target);
+      if (blocking) {
+        setResult(null);
+        setStep(blocking.step);
+        setError(blocking.message);
+        return;
+      }
+    }
+    setResult(null);
+    setError(null);
+    setStep(target);
+  };
+
   const handleBack = () => {
     if (step === 0) {
       window.location.href = "/";
@@ -216,7 +285,7 @@ export function AcquisitionTaxForm() {
         <AcquisitionSidebar
           form={form}
           currentStep={step}
-          onStepClick={(s) => { setResult(null); setError(null); setStep(s); }}
+          onStepClick={handleStepJump}
         />
       </div>
 
@@ -230,7 +299,7 @@ export function AcquisitionTaxForm() {
       <StepIndicator
         steps={activeSteps}
         current={step}
-        onStepClick={(s) => { setResult(null); setError(null); setStep(s); }}
+        onStepClick={handleStepJump}
       />
 
       {/* ── Step 0: 취득 정보 ── */}
@@ -262,7 +331,7 @@ export function AcquisitionTaxForm() {
                 result={result}
                 isRegulatedArea={form.isRegulatedArea}
                 isCorporation={isCorporation}
-                onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
+                onGoToStep={handleStepJump}
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
                 savedId={autoSave.savedId ?? undefined}
               />
@@ -329,7 +398,7 @@ export function AcquisitionTaxForm() {
                 result={result}
                 isRegulatedArea={form.isRegulatedArea}
                 isCorporation={isCorporation}
-                onGoToStep={(s) => { setResult(null); setError(null); setStep(s); }}
+                onGoToStep={handleStepJump}
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
                 savedId={autoSave.savedId ?? undefined}
               />

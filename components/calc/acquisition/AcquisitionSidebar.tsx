@@ -16,7 +16,7 @@ import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-ho
 import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 import type { PropertyObjectType, AcquisitionCause } from "@/lib/tax-engine/types/acquisition.types";
 import type { FormState } from "./shared";
-import { STEPS, isDeemedAcquisitionCause } from "./shared";
+import { STEPS, isDeemedAcquisitionCause, validateStep } from "./shared";
 import {
   deemedProvisoRate,
   provisoFromLuxuryFlag,
@@ -336,9 +336,25 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     ? ["취득 정보", "간주취득 상세"]
     : STEPS;
 
+  /*
+    🔑 표식 규약은 F-5에서 정한 것을 따른다 — rose `!` = **차단 오류**(`WizardSidebar.tsx`).
+       종전에는 위치 기반(`done/active/todo`)만 써서 **오류 표식이 아예 없었다**. 그래서
+       ⑥으로 점프하면 필수가 빈 ①까지 «✓ 완료»로 떴다(실측 `"✓취득 정보"`).
+
+    🔑 **건너뛰는 단계는 저절로 빠진다** — `validateStep`의 검사가 그 단계의 활성 조건과 같은
+       술어를 쓰기 때문이다(예: ③ 주택 현황 검사는 `propertyType === "housing"` 게이트 안에
+       있어 비주택이면 null). 여기서 스킵 규칙을 다시 적지 않는다.
+  */
   const steps: WizardSidebarStep[] = activeSteps.map((label, i) => ({
     label,
-    status: i < currentStep ? "done" : i === currentStep ? "active" : "todo",
+    status:
+      i === currentStep
+        ? "active"
+        : validateStep(i, form) !== null
+          ? "attention"
+          : i < currentStep
+            ? "done"
+            : "todo",
     onClick: () => onStepClick(i),
   }));
 
