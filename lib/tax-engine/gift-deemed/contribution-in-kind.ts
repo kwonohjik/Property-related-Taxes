@@ -12,7 +12,8 @@ type ContributionBreakdownRow = NonNullable<DeemedGiftResult["contributionBreakd
 /** 결과뷰 법령 근거 행 — 4대 비수치 법령효과 키워드 부착 (증여시기·할증배제·연대면제·중복배제) */
 function legalNote(base: string): string {
   return (
-    `${base} · 증여시기 현물출자 납입일(${GIFT.CONTRIBUTION_TIMING})` +
+    `${base} · 계산방법(${GIFT.CONTRIBUTION_CALC})` +
+    ` · 증여시기 현물출자 납입일(${GIFT.CONTRIBUTION_TIMING})` +
     ` · 최대주주 할증평가 배제(${GIFT.PREMIUM_EXCLUSION_29_3})` +
     ` · 증여자 연대납부의무 면제(${GIFT.JOINT_LIABILITY_EXEMPTION})` +
     ` · 중복적용 배제(${GIFT.DUP_EXCLUSION})`
@@ -196,7 +197,7 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
       amount: countedShares,
       note: publicOfferingNote(input, allocatedShares),
     },
-    { label: "차액 × 인수신주(base)", amount: base, note: "특수관계인 지분비율 적용 전" },
+    { label: "차액 × 인수신주(base)", amount: base, note: `특수관계인 지분비율 적용 전 · 과세 게이트 ${GIFT.CONTRIBUTION_RATIO_GATE}` },
   ];
 
   if (parties === undefined || parties.length === 0) {
@@ -222,7 +223,7 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
           note: legalNote("§39의3①2호 고가인수"),
         },
       ],
-      exclusionReason: applied ? undefined : "이익이 기준금액(출자후평가 30%·3억) 미만",
+      exclusionReason: applied ? undefined : `이익이 기준금액(출자후평가 30%·3억) 미만 — ${GIFT.CONTRIBUTION_RATIO_GATE}`,
       legalBasis: GIFT.CONTRIBUTION,
       thresholdEcho: { gain: value },
     };
@@ -264,7 +265,7 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
     grossDeemedGiftValue: base,
     contributionBreakdown,
     breakdown,
-    exclusionReason: deemedGiftValue > 0 ? undefined : "이익이 기준금액(출자후평가 30%·3억) 미만",
+    exclusionReason: deemedGiftValue > 0 ? undefined : `이익이 기준금액(출자후평가 30%·3억) 미만 — ${GIFT.CONTRIBUTION_RATIO_GATE}`,
     legalBasis: GIFT.CONTRIBUTION,
     thresholdEcho: { gain: deemedGiftValue },
   };
