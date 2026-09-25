@@ -32,6 +32,7 @@ export function MergeDateSection({
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">혼인합가일</label>
             <DateInput
+              data-testid="merge-date-marriage"
               value={form.marriageDate}
               onChange={(v) => onChange({ marriageDate: v })}
             />
@@ -40,6 +41,7 @@ export function MergeDateSection({
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">동거봉양 합가일</label>
             <DateInput
+              data-testid="merge-date-parental-care"
               value={form.parentalCareMergeDate}
               onChange={(v) => onChange({ parentalCareMergeDate: v })}
             />
