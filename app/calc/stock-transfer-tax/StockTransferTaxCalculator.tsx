@@ -24,7 +24,10 @@ import { callStockTransferTaxAggregateAPI } from "@/lib/calc/stock-transfer-tax-
 import { validateFilingItems } from "@/lib/calc/stock-transfer-tax-validate";
 import { StockItemListCard } from "@/components/calc/stock-transfer/StockItemListCard";
 import { StockAggregateSummaryCard } from "@/components/calc/results/StockAggregateSummaryCard";
-import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
+// ⚠️ 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import를 지울 때
+//    같은 라인의 **사용 중인** named까지 함께 날린다(CLAUDE.md의 ESLint --fix 함정).
+import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
+import { validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runStockManualSave, formatStockSaveMessage } from "@/components/calc/stock-transfer-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
@@ -140,29 +143,18 @@ export default function StockTransferTaxCalculator() {
   /**
    * 현재 단계의 검증 결과 **전체**(오류 + 경고).
    *
-   * 🔑 `handleNext`와 경고 배너가 **같은 한 벌**을 쓴다. 인덱스 매핑 사본이 갈리면 차단과
-   *    경고가 서로 다른 단계를 가리킨다.
-   * 🔑 이 매핑을 validate 모듈로 올리지 않은 이유는 `stock-transfer-tax-validate.ts`가
-   *    798줄이라 함수 하나를 더하면 **800줄 상한을 넘기기** 때문이다(실측 809). 판정 쪽은
-   *    여유가 있어 모듈에 두었다 — 두 마법사의 구조가 이 한 가지에서 다르다.
+   * 🔑 `handleNext`·경고 배너·사이드바 배지가 **같은 한 벌**(`validateStepByIndex`)을 쓴다.
+   *    사본이 갈리면 셋이 서로 다른 단계를 가리킨다. 판정 마법사와 같은 규약이다.
+   * 🔑 결과 화면(3)은 빈 배열이라 경고 카드가 뜨지 않는다 — 그래야 한다: 다종목 모드에서
+   *    `commitCurrentItem`이 확정 직후 `formData`를 비우므로
+   *    (`calc-wizard-stock-store.ts:200-207`) 결과 화면에 `formData` 파생 경고를 띄우면
+   *    계산에 들어간 종목이 아니라 **빈 편집기**를 설명하게 된다. 판정 마법사는 다종목
+   *    개념이 없어 결과 화면에도 띄운다 — 두 마법사가 갈리는 유일한 지점이다.
    */
-  const currentStepErrors = useMemo(() => {
-    switch (currentStep) {
-      case 0: return validateStep1(formData);
-      case 1: return validateStep2(formData);
-      case 2: return validateStep3(formData);
-      /*
-        🔑 결과 화면(3)은 **단계 검증 대상이 아니다.** 종전 삼항은 여기서 `validateStep3`으로
-           흘러내렸는데, 그것이 무해했던 것은 `validateStep3`이 경고를 **하나도 만들지 않기**
-           때문일 뿐이다(실측 — foreign·exit 변형 포함 0건). 우연에 기대지 않도록 명시한다.
-        🔑 결과 화면에 `formData` 파생 경고를 띄우면 **안 된다**: 다종목 모드에서
-           `commitCurrentItem`이 확정 직후 `formData`를 비우므로
-           (`calc-wizard-stock-store.ts:200-207`) 계산에 들어간 종목이 아니라 **빈 편집기**를
-           설명하게 된다. 판정 마법사는 다종목 개념이 없어 결과 화면에도 띄운다 — 그래서 다르다.
-      */
-      default: return [];
-    }
-  }, [currentStep, formData]);
+  const currentStepErrors = useMemo(
+    () => validateStepByIndex(formData, currentStep),
+    [currentStep, formData],
+  );
 
   // 다음 단계 진행 (validation 체크)
   const handleNext = useCallback(() => {
