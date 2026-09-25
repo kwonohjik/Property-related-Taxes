@@ -349,6 +349,16 @@ export function getStepErrorCount(form: OneHouseJudgmentFormData, step: number):
   return validateStepByIndex(form, step).filter((e) => e.severity === "error").length;
 }
 
+/**
+ * ⑥ 사이드바 경고 표식용 — `getStepErrorCount`의 **심각도 짝**.
+ *
+ * 🔑 배너(`ValidationWarnings`)는 **현재 단계**의 경고만 띄운다. 다른 단계의 경고는
+ *    결과 화면에 가야 모이므로, 그 전까지 알려 주는 것은 사이드바 표식뿐이다.
+ */
+export function getStepWarningCount(form: OneHouseJudgmentFormData, step: number): number {
+  return validateStepByIndex(form, step).filter((e) => e.severity === "warning").length;
+}
+
 /** 결과 단계 진입 전 전 단계 일괄 검증. */
 export function validateAllSteps(form: OneHouseJudgmentFormData): Errors {
   return [...validateStep1(form), ...validateStep2(form), ...validateStep3(form)];

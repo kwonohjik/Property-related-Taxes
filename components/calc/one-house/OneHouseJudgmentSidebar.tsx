@@ -14,6 +14,7 @@ import { WizardSidebar, type WizardSidebarStep } from "@/components/calc/shared/
 import {
   computeOneHouseJudgmentSummary,
   getStepErrorCount,
+  getStepWarningCount,
 } from "@/lib/calc/one-house-exemption-validate";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
@@ -44,9 +45,16 @@ export function OneHouseJudgmentSidebar({
             : // 마지막 단계는 검증 대상이 아니다(결과 화면).
               i < 3 && getStepErrorCount(form, i) > 0
               ? "attention"
-              : i < currentStep
-                ? "done"
-                : "todo",
+              : /*
+                  🔑 경고는 «완료»를 **이긴다**. 종전에는 경고만 있는 단계가 `✓`로 떴다(실측 —
+                  화면0 «세대»가 «✓세대»). 미해소 주의사항에 초록 체크를 붙이는 셈이었다.
+                  오류보다는 뒤다 — 차단 사유가 비차단 주의에 가려지면 안 된다.
+                */
+                i < 3 && getStepWarningCount(form, i) > 0
+                ? "warning"
+                : i < currentStep
+                  ? "done"
+                  : "todo",
         onClick: () => onStepClick(i),
       })),
     [form, currentStep, onStepClick],

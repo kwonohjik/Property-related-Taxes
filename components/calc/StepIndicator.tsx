@@ -5,7 +5,12 @@ import { cn } from "@/lib/utils";
 /**
  * 단계별 완료 상태.
  * - "complete": 해당 단계의 필수 입력이 모두 충족됨 (emerald ✓)
- * - "attention": 사용자가 지나친(또는 건너뛴) 단계인데 필수 입력 누락 (amber !)
+ * - "attention": 사용자가 지나친(또는 건너뛴) 단계인데 필수 입력 누락 (rose !)
+ *
+ * 🔑 색은 **심각도**를 말한다 — rose=차단 오류. 같은 화면의 오류 배너와 같은 색이다.
+ *    amber는 비차단 경고 전용으로 비워 둔다(`ValidationWarnings`·`WizardSidebar`).
+ *    여기에 경고 상태는 두지 않는다 — `stepStatus`를 쓰는 두 소비처(양도세·상속세)가
+ *    요구하지 않는다. 필요해지면 그때 더한다.
  * - "neutral": 아직 도달하지 않았거나 평가 보류 — 기존 번호 표시
  */
 export type StepStatus = "complete" | "attention" | "neutral";
@@ -32,7 +37,7 @@ const STATUS_CIRCLE_CLASS: Record<StepStatus, string> = {
   complete:
     "bg-emerald-500 border-emerald-500 text-white dark:bg-emerald-600 dark:border-emerald-600",
   attention:
-    "bg-amber-50 border-amber-400 text-amber-600 dark:bg-amber-950/40 dark:border-amber-500 dark:text-amber-300",
+    "bg-rose-50 border-rose-400 text-rose-600 dark:bg-rose-950/40 dark:border-rose-500 dark:text-rose-300",
   neutral: "", // 아래에서 current 여부로 결정
 };
 
