@@ -1,3 +1,29 @@
+import { safeMultiply } from "../tax-utils";
+
+/** 「상증령」§29②2호·4호 비율 요건 — 「100분의 30 이상」 */
+const RATIO_NUMER = 30;
+const RATIO_DENOM = 100;
+
+/**
+ * 「상증령」§29②2호·4호의 「100분의 30 이상」 판정 — **임계를 절사하지 않는다**.
+ *
+ *   2호(저가 나목): 차액이 「가목의 규정에 의하여 계산한 가액」의 100분의 30 이상
+ *   4호(고가 나목): 차액이 「제3호 나목의 가액」의 100분의 30 이상
+ *   두 기준가액 모두 **증자 후 1주당 가액**이다.
+ *
+ * ⚠️ `safeMultiplyThenDivide(기준가액, 30, 100)`으로 임계를 만들면 `Math.floor`가 임계를
+ *    **낮춘다**(`tax-utils.ts`). 비교가 `>=`(이상)이라 절사는 게이트를 **통과시키는 쪽으로만**
+ *    작동하고, 따라서 오차 방향이 항상 **과다과세**다.
+ *    기준가액이 10의 배수가 아니면 `기준가액 × 0.3`에 소수부가 남아 **기준가액마다 경계점이
+ *    1점씩** 생긴다. 게이트가 all-or-nothing이라 그 1점에서 어긋나는 금액은 1원이 아니라
+ *    **증여재산가액 전액**이다(실측: 저가·고가 각 150,000,000 · cap-table 282,600,000).
+ *
+ * ⇒ 양변에 분모를 곱한 교차곱으로 비교한다. 부호와 무관하게 원식과 동치다(분모 > 0).
+ */
+export function meetsRatioThreshold(diffPerShare: number, basePerShare: number): boolean {
+  return safeMultiply(diffPerShare, RATIO_DENOM) >= safeMultiply(basePerShare, RATIO_NUMER);
+}
+
 /**
  * 자본거래 공용 헬퍼 — 증자·현물출자·전환 후 가중평균 1주당 가액.
  * 시행령 §29②1가목 산식: [(전 1주평가 × 전 주식총수) + (신주인수가 × 증가주식수)] ÷ (전 주식총수 + 증가주식수)

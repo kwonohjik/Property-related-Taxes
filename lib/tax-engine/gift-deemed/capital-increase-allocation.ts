@@ -9,7 +9,7 @@
  * 증자후 1주당 평가가액(㉯) = [(증자전평가×증자전총주식) + (인수가×실제 증가주식)] ÷ (증자전총 + 증가)
  *   - 실제 증가주식 = Σ 인수신주(subscribedShares). 검증내역·증여재산가액 모두 실제 ㉯ 사용.
  */
-import { computeWeightedPerShare } from "./capital-helpers";
+import { computeWeightedPerShare, meetsRatioThreshold } from "./capital-helpers";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   CapShareholder,
@@ -19,8 +19,6 @@ import type {
 } from "./types";
 
 const ABSOLUTE_THRESHOLD = 300_000_000; // §29②2·4 3억원
-const RATIO_NUMER = 30; // 100분의 30
-const RATIO_DENOM = 100;
 
 /** 주주의 실권주수 = max(0, 당초배정 − 본인 당초배정분 인수) */
 function forfeitedBy(s: CapShareholder): number {
@@ -65,8 +63,9 @@ export function calcCapitalIncreaseAllocation(
     direction !== "high" && hasForfeitProcessing
       ? computeWeightedPerShare(pre, preTotal, priceIn, shareholders.reduce((a, s) => a + s.entitledShares, 0))
       : perShareAfter;
+  // 「100분의 30」 임계는 절사하지 않는다 — 절사는 게이트를 통과시키는 쪽으로만 작동해 과다과세다.
   const perShareDiff = Math.abs(perShareForRatio - priceIn);
-  const ratioMet = perShareDiff >= safeMultiplyThenDivide(perShareForRatio, RATIO_NUMER, RATIO_DENOM);
+  const ratioMet = meetsRatioThreshold(perShareDiff, perShareForRatio);
 
   // §39①: 저가발행(1호) 가목(재배정)·다목(제3자배정)·라목(초과배정)은 특수관계 요건 없음.
   //        나목(실권주 미배정=실권처리)·고가발행(2호)만 특수관계인 요구.
