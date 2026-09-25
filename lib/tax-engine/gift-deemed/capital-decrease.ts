@@ -35,14 +35,14 @@ function decreaseLow(input: CapitalDecreaseInput): DeemedGiftResult {
     { label: "1주당 차액", amount: diff },
     { label: "총감자 주식수", amount: totalRedeemedShares },
     { label: "대주주등 특수관계인 감자 주식수", amount: relatedRedeemedShares },
-    { label: "증여재산가액 (차액 × 관련 감자주식수 × 감자후 지분비율)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: "§39의2①1호 저가소각" },
+    { label: "증여재산가액 (차액 × 관련 감자주식수 × 감자후 지분비율)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: `§39의2①1호 저가소각 · 계산방법 ${GIFT.CAPITAL_DECREASE_CALC}1호 · 기준금액 ${GIFT.CAPITAL_DECREASE_THRESHOLD}` },
   ];
   return {
     type: "capital_decrease",
     applied,
     deemedGiftValue: value,
     breakdown,
-    exclusionReason: applied ? undefined : "이익이 기준금액(3억, 차액 30%↑ 시 0) 미만",
+    exclusionReason: applied ? undefined : `이익이 기준금액(3억, 차액 30%↑ 시 0) 미만 — ${GIFT.CAPITAL_DECREASE_THRESHOLD}`,
     legalBasis: GIFT.CAPITAL_DECREASE,
     thresholdEcho: { gain, threshold },
   };
@@ -67,10 +67,10 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
   const breakdown: CalculationStep[] = [
     { label: "소각 시 지급한 1주당 금액", amount: redemptionPrice, lawRef: GIFT.CAPITAL_DECREASE },
     { label: "감자주식 1주당 평가액", amount: sharePrice },
-    { label: "1주당 액면가액", amount: faceValue ?? 0, note: "§29의2①2호 — 평가액 < 액면가액 한정" },
+    { label: "1주당 액면가액", amount: faceValue ?? 0, note: `${GIFT.CAPITAL_DECREASE_CALC}2호 — 평가액 < 액면가액 한정` },
     { label: "1주당 차액", amount: diff },
     { label: "해당 주주등 감자 주식수", amount: ownRedeemedShares },
-    { label: "증여재산가액 (차액 × 해당 감자주식수)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: "§39의2①2호 고가소각" },
+    { label: "증여재산가액 (차액 × 해당 감자주식수)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: `§39의2①2호 고가소각 · 계산방법 ${GIFT.CAPITAL_DECREASE_CALC}2호 · 기준금액 ${GIFT.CAPITAL_DECREASE_THRESHOLD}` },
   ];
   return {
     type: "capital_decrease",
@@ -80,8 +80,8 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
     exclusionReason: applied
       ? undefined
       : faceGateFail
-        ? "고가소각: 평가액이 액면가 이상(§29의2①2호 미충족)"
-        : "이익이 기준금액(3억, 차액 30%↑ 시 0) 미만",
+        ? `고가소각: 평가액이 액면가 이상(${GIFT.CAPITAL_DECREASE_CALC}2호 미충족)`
+        : `이익이 기준금액(3억, 차액 30%↑ 시 0) 미만 — ${GIFT.CAPITAL_DECREASE_THRESHOLD}`,
     legalBasis: GIFT.CAPITAL_DECREASE,
     thresholdEcho: { gain, threshold },
   };
