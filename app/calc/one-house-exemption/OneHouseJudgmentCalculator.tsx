@@ -90,6 +90,32 @@ export default function OneHouseJudgmentCalculator() {
     [formData, currentStep],
   );
 
+  /**
+   * 🔴 **앞 단계의 차단 오류를 건너뛰지 못하게 한다** (F-2).
+   *
+   * 이것이 미관 문제가 아닌 이유: 명부에 **취득일 없는 주택**을 넣으면 ⑧은 막지만 엔진은
+   * 그 주택을 **주택 수에서 조용히 뺀다**. ③을 건너뛰고 ④로 점프하면 2주택 과세가
+   * **1주택 비과세로 뒤집힌다**(`judgment-step-jump-bypass.predo.anchor.test.tsx` FB-1이
+   * 실측으로 고정). 서버는 그 본문을 200으로 받으므로 **클라이언트 관문이 유일한 방어선**이다.
+   *
+   * 막을 때 **그 단계로 데려간다** — 메시지만 띄우고 제자리에 두면 어디를 고쳐야 할지 모른다.
+   * 반환값은 「막았는가」다.
+   */
+  const blockOnFirstInvalidStep = useCallback(
+    (upTo: number): boolean => {
+      for (let i = 0; i < upTo && i < RESULT_STEP; i++) {
+        const first = validateStepByIndex(formData, i).find((e) => e.severity === "error");
+        if (!first) continue;
+        setError(first.message);
+        setStep(i);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return true;
+      }
+      return false;
+    },
+    [formData, setError, setStep],
+  );
+
   const handleNext = useCallback(() => {
     const first = validateCurrent();
     if (first) {
@@ -108,6 +134,13 @@ export default function OneHouseJudgmentCalculator() {
   }, [currentStep, setError, setStep]);
 
   const handleJudge = useCallback(async () => {
+    /*
+      🔴 **마지막 관문.** ④에 어떤 경로로 도달했든 판정 불가 입력으로는 판정하지 않는다.
+         점프 관문(`onStepClick`)만 두면 경로를 하나 놓칠 때마다 구멍이 다시 생긴다 —
+         여기서 막으면 「④에 도달했다」와 무관하게 **구조적으로** 보장된다.
+         F-2가 지목한 「`validateAllSteps`에 차단 소비처가 없다」가 바로 이 자리다.
+    */
+    if (blockOnFirstInvalidStep(RESULT_STEP)) return;
     setLoading(true);
     setError(null);
     try {
@@ -117,7 +150,7 @@ export default function OneHouseJudgmentCalculator() {
     } finally {
       setLoading(false);
     }
-  }, [formData, setLoading, setError, setResult]);
+  }, [formData, setLoading, setError, setResult, blockOnFirstInvalidStep]);
 
   /**
    * 🔑 확인 다이얼로그를 여기서 만들지 않는다 — `ResetButton`이 `ConfirmDialog`를 **내장**한다.
@@ -128,7 +161,26 @@ export default function OneHouseJudgmentCalculator() {
 
 
   const isResult = currentStep === RESULT_STEP && result !== null;
-  const onStepClick = useMemo(() => (i: number) => setStep(i), [setStep]);
+  /**
+   * 단계 점프 — StepIndicator와 사이드바가 **같은 이것**을 쓴다.
+   *
+   * 🔑 **뒤로·제자리는 언제나 허용한다.** 고치러 가는 길을 막으면 사용자가 갇힌다.
+   * 🔑 앞으로 갈 때만 **건너뛰는 입력 단계**를 검사한다 — 「다음」 버튼과 같은 기준이다.
+   *
+   * ⚠️ `target > currentStep` 조건은 **오늘은 뮤테이션으로 재지지 않는다**(실측 생존).
+   *    `blockOnFirstInvalidStep`이 `i < target`만 보므로 뒤로 갈 때는 검사 대상이 거의 없고,
+   *    유일하게 갈리는 ④→③(②가 불완전)은 백스톱 때문에 **도달 불가능한 상태**라서다.
+   *    그래도 남긴다 — 이 조건이 없으면 「뒤로가기 자유」가 `upTo` 산식의 **우연**에 기대게 되고,
+   *    나중에 그 산식을 넓히는 순간 사용자가 조용히 갇힌다.
+   */
+  const onStepClick = useCallback(
+    (target: number) => {
+      if (target > currentStep && blockOnFirstInvalidStep(target)) return;
+      setError(null);
+      setStep(target);
+    },
+    [currentStep, blockOnFirstInvalidStep, setError, setStep],
+  );
 
   /**
    * 이력 자동저장 (P4-2b-3).

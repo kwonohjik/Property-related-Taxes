@@ -167,8 +167,25 @@ describe("AW-2 (반전) — ③ 단계 경고가 DOM에 뜬다", () => {
    사이드바로 단계를 건너뛴 사용자가 한 번도 못 보는 경로를 덮는다(계획서 D-3).
    ───────────────────────────────────────────────────────────────────────── */
 describe("AW-5 — ④ 결과 화면이 전 단계 경고를 모은다", () => {
+  /**
+   * 🔑 ②·③의 **필수값을 채운 채로** ①의 경고만 남긴다.
+   *
+   * 2026-09-25 F-2 이후 `handleJudge`가 `validateAllSteps`로 막으므로, ②가 빈 폼은 **④에
+   * 머무를 수 없다**(③으로 되돌려진다). 종전 픽스처는 그 상태를 전제해 red가 됐다 —
+   * 결함이 아니라 **전제가 바뀐 것**이라 픽스처를 고쳤다.
+   */
+  function formAtResultWithStep1Warnings(): OneHouseJudgmentFormData {
+    const f = formWithStep1Warnings();
+    return {
+      ...f,
+      transferDate: "2026-06-01",
+      contractTotalPrice: "900000000",
+      assets: [{ ...f.assets[0], assetKind: "housing", acquisitionDate: "2015-03-10" }],
+    } as OneHouseJudgmentFormData;
+  }
+
   it("①의 경고가 결과 화면에서도 보인다", () => {
-    renderAtStep(3, formWithStep1Warnings());
+    renderAtStep(3, formAtResultWithStep1Warnings());
     const card = screen.getByTestId("one-house-validation-warnings");
     expect(card.textContent).toMatch(/판정 시 전제된 주의사항/);
     expect(card.textContent).toMatch(/1세대1주택 비과세 판정 대상이 아닙니다/);
