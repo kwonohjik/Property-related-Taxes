@@ -26,6 +26,17 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { buildPhase3DeemedInput } from "./gift-deemed-api-phase3";
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
+/**
+ * 1-A — 비율 인자 개방. 어느 갈래에 어떤 인자가 필요한지 한 곳에서 정한다.
+ *  · 고가(§39①2호) **전 subType**: 가목=§29②3호 다목 · 나목=§29②4호 · 다·라목=§29②5호 —
+ *    모두 `relatedAcquiredShares ÷ ratioDenomShares`로 가중한다(종전엔 가목이 빠져 있었다).
+ *  · 저가 나목(§39①1호 나목): §29②2호 다목 = 증자후 지분비율 × 특수관계인 실권주수.
+ */
+function capitalRatioNeeds(direction: "low" | "high", subType: DeemedFormState["ciSubType"]) {
+  const isHigh = direction === "high";
+  return { needsRatio: isHigh, needsLowDanmok: !isHigh && subType === "no_realloc" };
+}
+
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   // Phase 3 추정·의제는 별도 파일로 분리했다(800줄 정책). 해당 없으면 null.
   const phase3 = buildPhase3DeemedInput(form);
@@ -198,7 +209,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       }
     case "capital_increase": {
       const isHigh = form.ciDirection === "high";
-      const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc";
+      const { needsRatio, needsLowDanmok } = capitalRatioNeeds(form.ciDirection, form.ciSubType);
+      const ciPostDenom = parseAmount(form.ciPostTotalShares);
       return {
         type: "capital_increase",
         direction: form.ciDirection,
@@ -208,8 +220,14 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         newSharePrice: parseAmount(form.ciNewPrice),
         issuedShares: parseAmount(form.ciIssuedShares),
         forfeitedShares: parseAmount(form.ciForfeitedShares),
-        relatedAcquiredShares: needsRatio ? parseAmount(form.ciRelatedAcquiredShares) : undefined,
+        relatedAcquiredShares:
+          needsRatio || needsLowDanmok ? parseAmount(form.ciRelatedAcquiredShares) : undefined,
         ratioDenomShares: needsRatio ? parseAmount(form.ciRatioDenomShares) : undefined,
+        // 분모가 0이면 비율이 성립하지 않으므로 아예 보내지 않는다 — 엔진이 종전 동작으로 되돌아간다.
+        postIssueSubscriberRatio:
+          needsLowDanmok && ciPostDenom > 0
+            ? { numer: parseAmount(form.ciPostHeldShares), denom: ciPostDenom }
+            : undefined,
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
         isListed: form.ciIsListed,
         listedMarketAvg: form.ciIsListed ? parseAmount(form.ciListedMarketAvg) : undefined,
@@ -386,8 +404,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
     }
     case "convertible_stock": {
       const isHigh = form.csDirection === "high";
-      const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
-      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; isListed: boolean; listedMarketAvg: string; allocationMethod: DeemedFormState["ciAllocationMethod"] }) => ({
+      const { needsRatio, needsLowDanmok } = capitalRatioNeeds(form.csDirection, form.csSubType);
+      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; postHeld: string; postTotal: string; isListed: boolean; listedMarketAvg: string; allocationMethod: DeemedFormState["ciAllocationMethod"] }) => ({
         direction: form.csDirection,
         subType: form.csSubType,
         preIssuePrice: parseAmount(k.prePrice),
@@ -395,8 +413,12 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         newSharePrice: parseAmount(k.newPrice),
         issuedShares: parseAmount(k.issuedShares),
         forfeitedShares: parseAmount(k.forfeitedShares),
-        relatedAcquiredShares: needsRatio ? parseAmount(k.relatedAcquired) : undefined,
+        relatedAcquiredShares: needsRatio || needsLowDanmok ? parseAmount(k.relatedAcquired) : undefined,
         ratioDenomShares: needsRatio ? parseAmount(k.ratioDenom) : undefined,
+        postIssueSubscriberRatio:
+          needsLowDanmok && parseAmount(k.postTotal) > 0
+            ? { numer: parseAmount(k.postHeld), denom: parseAmount(k.postTotal) }
+            : undefined,
         // §29②6이 §29②1~5를 상속하므로 시점별로 단서가 각각 걸린다
         isListed: k.isListed,
         listedMarketAvg: k.isListed ? parseAmount(k.listedMarketAvg) : undefined,
@@ -404,8 +426,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       });
       return {
         type: "convertible_stock",
-        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
-        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
+        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, postHeld: form.csConvPostHeldShares, postTotal: form.csConvPostTotalShares, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
+        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, postHeld: form.csIssuePostHeldShares, postTotal: form.csIssuePostTotalShares, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
       };
     }
     default:

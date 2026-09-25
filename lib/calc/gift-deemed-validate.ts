@@ -191,8 +191,20 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // 1주당 이익이 실제로 양수인데도 거짓인 사유가 결과에 표시된다.
       if (parseAmount(form.ciForfeitedShares) <= 0)
         return `${CI_SHARES_LABEL[form.ciSubType]}을(를) 입력하세요`;
-      if (form.ciDirection === "high" && form.ciSubType !== "forfeited_realloc") {
+      // 1-A — 고가는 **전 subType**이 §29②3·4·5호 비율 가중이므로 분모가 필수다.
+      //   가목(`forfeited_realloc`)이 빠져 있던 탓에 분모 미입력이 조용히 가중 1.0으로 통과했다.
+      if (form.ciDirection === "high") {
         if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
+      }
+      // 저가 나목 §29②2호 다목 — 세 인자 중 하나만 비어도 엔진이 종전(가중 없음) 동작으로
+      //   되돌아가 **과다과세**가 되므로, 부분 입력을 통과시키지 않는다.
+      if (form.ciDirection === "low" && form.ciSubType === "no_realloc") {
+        if (parseAmount(form.ciRelatedAcquiredShares) <= 0)
+          return "신주인수자의 특수관계인의 실권주수를 입력하세요";
+        if (parseAmount(form.ciPostHeldShares) <= 0) return "증자 후 신주인수자 보유주식수를 입력하세요";
+        if (parseAmount(form.ciPostTotalShares) <= 0) return "증자 후 발행주식총수를 입력하세요";
+        if (parseAmount(form.ciPostHeldShares) > parseAmount(form.ciPostTotalShares))
+          return "증자 후 신주인수자 보유주식수가 발행주식총수를 초과할 수 없습니다";
       }
       // 상장 ON인데 평균액 미입력이면 엔진이 조용히 이론값으로 통과한다(§29②1가·3나 단서 미발동)
       if (form.ciIsListed && parseAmount(form.ciListedMarketAvg) <= 0)

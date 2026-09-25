@@ -182,6 +182,10 @@ const capitalIncreaseShape = {
   forfeitedShares: z.number().nonnegative(),
   relatedAcquiredShares: z.number().nonnegative().optional(),
   ratioDenomShares: z.number().nonnegative().optional(),
+  // §29②2호 다목 「증자후 신주인수자의 지분비율」 — 저가 나목 전용. 분모는 파생하지 않고 받는다.
+  postIssueSubscriberRatio: z
+    .object({ numer: z.number().nonnegative(), denom: z.number().positive() })
+    .optional(),
   smallShareholderImputation: z.boolean().optional(),
   // §29②1가·3나 단서 — 주권상장법인등 Min(저가)/Max(고가). 전환주식(§39①3호)의
   // atConversion·atIssuance도 이 shape을 재사용하므로 한 곳 수정으로 함께 커버된다.

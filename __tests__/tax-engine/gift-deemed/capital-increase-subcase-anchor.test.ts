@@ -160,3 +160,111 @@ describe("[CI-S39-NR-3E-BOUNDARY] §39①1호 나목 — 3억원 arm 경계 (비
     expect(r.exclusionReason).toContain("기준금액");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2-A — 「상증령」§29②2호 다목 · §29②3호 다목 **가중 적용** (리뷰 J-1·J-2, 1-A 입력 축 동반)
+//
+// 종전에는 두 호의 **다목이 통째로 빠져** 이익 귀속 주식수로 `forfeitedShares`(원시 실권주수)를
+// 그대로 썼다. 다목은 곱셈 인자이고 그 값은 항상 실권주수 이하이므로 **과다과세** 방향이며,
+// §29②2호의 3억 게이트도 「그 가액에 **다목의 규정에 의한 실권주수**를 곱하여 계산한 가액」이라
+// 가중 후 금액으로 판정해야 한다 ⇒ 미과세 건이 과세로 뒤집히기도 했다.
+//
+// ⚠️ 두 인자가 **모두 입력된 경우에만** 가중한다. 미입력은 종전 동작(`forfeitedShares`)을 유지해
+//    기존 anchor·API 호출자를 보존한다(계획서 `gift-capital-increase-section39.plan.md:171`).
+//    입력 필수화는 ⑧ `gift-deemed-validate.ts`가 UI 경로에서 담당한다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("§29②2호 다목 — 저가 나목 3항 곱 (실권주총수 × 증자후 지분비율 × 특수관계인실권주수÷실권주총수)", () => {
+  // 실권주 총수가 약분되어 **증자후 지분비율 × 특수관계인 실권주수**로 축약된다.
+  const BASE = {
+    direction: "low",
+    subType: "no_realloc",
+    preIssuePrice: 10_000,
+    preIssueShares: 100_000,
+    newSharePrice: 5_000,
+    issuedShares: 50_000,
+    forfeitedShares: 30_000,
+  } as const;
+
+  it("[CI-S39-2NA-DANMOK] 지분비율 1/2 · 특수관계인 실권주 3만 → 귀속 1.5만 → 49,995,000 (종전 99,990,000의 1/2)", () => {
+    // ㉯ = (10,000×100,000 + 5,000×50,000) ÷ 150,000 = 8,333 · 차액 3,333
+    // 다목 = 30,000 × 1/2 × (30,000÷30,000) = 15,000 ⇒ 3,333 × 15,000
+    const weighted = calcCapitalIncreaseGift({
+      ...BASE,
+      relatedAcquiredShares: 30_000,
+      postIssueSubscriberRatio: { numer: 1, denom: 2 },
+    });
+    expect(weighted.applied).toBe(true);
+    expect(weighted.deemedGiftValue).toBe(49_995_000);
+
+    // 같은 사실관계에서 두 인자를 빼면 종전 동작 — 정확히 2.0배
+    const legacy = calcCapitalIncreaseGift(BASE);
+    expect(legacy.deemedGiftValue).toBe(99_990_000);
+    expect(legacy.deemedGiftValue).toBe(weighted.deemedGiftValue * 2);
+  });
+
+  it("[CI-S39-2NA-GATE] 3억 게이트가 **가중 후** 금액으로 판정된다 — 1,499,940,000 → 0원 반전", () => {
+    // ㉯ = (100,000×1,000,000 + 90,000×200,000) ÷ 1,200,000 = 98,333 · 차액 8,333
+    // 30% 기준선 = 29,499 > 8,333 ⇒ 비율 arm 미충족. 3억 arm만 남는다.
+    const GATE = {
+      direction: "low",
+      subType: "no_realloc",
+      preIssuePrice: 100_000,
+      preIssueShares: 1_000_000,
+      newSharePrice: 90_000,
+      issuedShares: 200_000,
+      forfeitedShares: 180_000,
+    } as const;
+
+    // 종전: 8,333 × 180,000 = 1,499,940,000 ≥ 3억 → 과세
+    const legacy = calcCapitalIncreaseGift(GATE);
+    expect(legacy.applied).toBe(true);
+    expect(legacy.deemedGiftValue).toBe(1_499_940_000);
+
+    // 법정: 다목 = 180,000 × 1/10 = 18,000 ⇒ 8,333 × 18,000 = 149,994,000 < 3억 → **미과세**
+    const weighted = calcCapitalIncreaseGift({
+      ...GATE,
+      relatedAcquiredShares: 180_000,
+      postIssueSubscriberRatio: { numer: 1, denom: 10 },
+    });
+    expect(weighted.applied).toBe(false);
+    expect(weighted.deemedGiftValue).toBe(0);
+  });
+});
+
+describe("§29②3호 다목 — 고가 가목 비율 가중 (포기주주 실권주수 × 특수관계인 인수실권주수÷실권주총수)", () => {
+  const BASE = {
+    direction: "high",
+    subType: "forfeited_realloc",
+    preIssuePrice: 10_000,
+    preIssueShares: 100_000,
+    newSharePrice: 20_000,
+    issuedShares: 50_000,
+    forfeitedShares: 30_000,
+  } as const;
+
+  it("[CI-S39-3GA-DANMOK] 특수관계인 인수 1만 ÷ 실권주총수 3만 → 200,010,000 × 1/3 = 66,670,000", () => {
+    // ㉯ = (10,000×100,000 + 20,000×50,000) ÷ 150,000 = 13,333 · 차액 6,667
+    const weighted = calcCapitalIncreaseGift({
+      ...BASE,
+      relatedAcquiredShares: 10_000,
+      ratioDenomShares: 30_000,
+    });
+    expect(weighted.applied).toBe(true);
+    expect(weighted.deemedGiftValue).toBe(66_670_000);
+
+    // 두 인자를 빼면 [CI-HIGH-A]와 같은 종전 동작(가중 1.0)
+    expect(calcCapitalIncreaseGift(BASE).deemedGiftValue).toBe(200_010_000);
+  });
+
+  it("[CI-S39-3GA-NOGATE] §29②3호엔 기준금액이 없다 — 가중 후 3억 미만이어도 과세된다", () => {
+    const weighted = calcCapitalIncreaseGift({
+      ...BASE,
+      relatedAcquiredShares: 1_000,
+      ratioDenomShares: 30_000,
+    });
+    // 6,667 × 30,000 × (1,000÷30,000) = 6,667,000 — 3억에 한참 못 미쳐도 applied
+    expect(weighted.deemedGiftValue).toBe(6_667_000);
+    expect(weighted.applied).toBe(true);
+  });
+});
