@@ -138,11 +138,10 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    * **명부가 있는 이 화면**에서만 의미가 있다. ②(양도 대상)의 검증에 두면 사용자가 ②를
    * 지난 **뒤에** 명부를 채우므로 그 시점에 다시 평가되지 않는다.
    *
-   * ⚠️ **다만 지금 이 경고는 화면에 뜨지 않는다** — 판정 마법사에는 `severity: "warning"`을
-   *    표시하는 경로가 없다(`OneHouseJudgmentCalculator.tsx:76`이 `error`만 배너에 띄우고
-   *    `getStepErrorCount`도 `error`만 센다. `validateStep1`의 경고 2건도 같은 처지다).
-   *    그러니 위 배치 근거는 「지금 죽는다」가 아니라 **표시 경로가 생겼을 때 옳은 자리**라는
-   *    뜻이다. 표시 경로 부재는 이번 변경이 만든 것이 아니라 기존 상태다.
+   * ✅ **표시 경로가 생겼다**(2026-09-25). 오케스트레이터가 현재 단계의 경고를 amber 카드로
+   *    상시 렌더한다(`OneHouseJudgmentCalculator.tsx` · `ValidationWarnings.tsx`). 그러니
+   *    위 배치 근거는 이제 **실제로 작동한다** — ③에 두었기에 명부를 채운 뒤 그 화면에서 뜬다.
+   *    ②에 두었다면 사용자가 ②를 지난 **뒤에** 명부를 채우므로 영영 평가되지 않았다.
    *
    * 특례로 주택 수에서 빼는 임대주택을 명부에도 넣으면 주택 수가 부풀려져 판정이 과세로
    * 뒤집힌다. 차단하지는 않는다 — 둘이 정말 다른 주택일 수 있다.
@@ -322,22 +321,32 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
 }
 
 /**
- * 사이드바·단계 배지용 — 단계별 error 개수.
+ * 화면 인덱스 → 그 단계의 검증 (**매핑 정본 1벌**).
  *
  * 🔑 **함수명 ≠ 화면 번호다.** 인덱스 매핑은 0=①세대 · 1=②양도 대상(`validateStep3`) ·
  *    2=③보유 주택(`validateStep2`) · 3=④결과(검증 없음). 순서를 뒤집은 이유는
  *    `OneHouseJudgmentCalculator.tsx`의 `STEPS` 주석에 있다(데이터 의존 방향).
+ *
+ * 종전에는 이 삼항이 **두 벌**이었다(여기 + 오케스트레이터 `validateCurrent`). 경고 배너가
+ * 「현재 단계의 전체 배열」을 필요로 하면서 세 벌째가 될 참이라 한 벌로 합쳤다 —
+ * 매핑이 갈리면 배지·차단·경고가 서로 다른 단계를 가리킨다.
  */
+export function validateStepByIndex(form: OneHouseJudgmentFormData, step: number): Errors {
+  switch (step) {
+    case 0:
+      return validateStep1(form);
+    case 1:
+      return validateStep3(form);
+    case 2:
+      return validateStep2(form);
+    default:
+      return [];
+  }
+}
+
+/** 사이드바·단계 배지용 — 단계별 error 개수(경고는 세지 않는다 — 진행을 막지 않으므로). */
 export function getStepErrorCount(form: OneHouseJudgmentFormData, step: number): number {
-  const errors =
-    step === 0
-      ? validateStep1(form)
-      : step === 1
-        ? validateStep3(form)
-        : step === 2
-          ? validateStep2(form)
-          : [];
-  return errors.filter((e) => e.severity === "error").length;
+  return validateStepByIndex(form, step).filter((e) => e.severity === "error").length;
 }
 
 /** 결과 단계 진입 전 전 단계 일괄 검증. */

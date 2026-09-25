@@ -33,6 +33,7 @@ import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveT
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { extractStockTransferDate } from "@/lib/storage/title-generator";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
+import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
 
 const STEPS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"] as const;
 
@@ -136,14 +137,36 @@ export default function StockTransferTaxCalculator() {
     }
   };
 
+  /**
+   * 현재 단계의 검증 결과 **전체**(오류 + 경고).
+   *
+   * 🔑 `handleNext`와 경고 배너가 **같은 한 벌**을 쓴다. 인덱스 매핑 사본이 갈리면 차단과
+   *    경고가 서로 다른 단계를 가리킨다.
+   * 🔑 이 매핑을 validate 모듈로 올리지 않은 이유는 `stock-transfer-tax-validate.ts`가
+   *    798줄이라 함수 하나를 더하면 **800줄 상한을 넘기기** 때문이다(실측 809). 판정 쪽은
+   *    여유가 있어 모듈에 두었다 — 두 마법사의 구조가 이 한 가지에서 다르다.
+   */
+  const currentStepErrors = useMemo(() => {
+    switch (currentStep) {
+      case 0: return validateStep1(formData);
+      case 1: return validateStep2(formData);
+      case 2: return validateStep3(formData);
+      /*
+        🔑 결과 화면(3)은 **단계 검증 대상이 아니다.** 종전 삼항은 여기서 `validateStep3`으로
+           흘러내렸는데, 그것이 무해했던 것은 `validateStep3`이 경고를 **하나도 만들지 않기**
+           때문일 뿐이다(실측 — foreign·exit 변형 포함 0건). 우연에 기대지 않도록 명시한다.
+        🔑 결과 화면에 `formData` 파생 경고를 띄우면 **안 된다**: 다종목 모드에서
+           `commitCurrentItem`이 확정 직후 `formData`를 비우므로
+           (`calc-wizard-stock-store.ts:200-207`) 계산에 들어간 종목이 아니라 **빈 편집기**를
+           설명하게 된다. 판정 마법사는 다종목 개념이 없어 결과 화면에도 띄운다 — 그래서 다르다.
+      */
+      default: return [];
+    }
+  }, [currentStep, formData]);
+
   // 다음 단계 진행 (validation 체크)
   const handleNext = useCallback(() => {
-    const errors =
-      currentStep === 0
-        ? validateStep1(formData)
-        : currentStep === 1
-          ? validateStep2(formData)
-          : validateStep3(formData);
+    const errors = currentStepErrors;
 
     const hasError = errors.some((e) => e.severity === "error");
     if (hasError) {
@@ -160,7 +183,7 @@ export default function StockTransferTaxCalculator() {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [currentStep, formData, setError, setStep]);
+  }, [currentStep, currentStepErrors, setError, setStep]);
 
   const handleBack = useCallback(() => {
     // step 0에서는 `WizardBackNav`가 `onBack`을 부르지 않는다 — `WizardNav.tsx:56`이
@@ -250,6 +273,18 @@ export default function StockTransferTaxCalculator() {
             {error}
           </div>
         )}
+
+        {/*
+          경고(`severity: "warning"`) — 오류 배너 **아래**.
+          결과 화면 제외는 여기서 가드하지 않는다: `currentStepErrors`가 그 단계에서 빈 배열을
+          돌려주고(위 switch `default`), 빈 배열이면 이 컴포넌트가 `null`을 낸다. 같은 규칙을
+          두 곳에 두면 한쪽만 고쳐질 때 갈린다.
+        */}
+        <ValidationWarnings
+          items={currentStepErrors}
+          title="확인이 필요합니다"
+          testId="stock-validation-warnings"
+        />
 
         {/* 메인 레이아웃: 폼 + 사이드바 */}
         <div className="flex gap-8">

@@ -28,10 +28,10 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { callOneHouseExemptionAPI } from "@/lib/calc/one-house-exemption-api";
 import { openTransferWithOneHouseFacts } from "@/lib/calc/one-house-judgment-handoff";
 import {
-  validateStep1,
-  validateStep2,
-  validateStep3,
+  validateAllSteps,
+  validateStepByIndex,
 } from "@/lib/calc/one-house-exemption-validate";
+import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
 
 /**
  * 🔑 **파일명 ≠ 화면 순서다** — `Step3`(양도 대상)이 2번째, `Step2`(보유 주택)가 3번째 화면이다.
@@ -65,16 +65,30 @@ export default function OneHouseJudgmentCalculator() {
 
   useResetOnNewParam(reset);
 
-  const validateCurrent = useCallback(() => {
-    // idx 1 = 양도 대상(`Step3`) · idx 2 = 보유 주택(`Step2`) — 위 STEPS 주석 참조.
-    const errors =
-      currentStep === 0
-        ? validateStep1(formData)
-        : currentStep === 1
-          ? validateStep3(formData)
-          : validateStep2(formData);
-    return errors.find((e) => e.severity === "error") ?? null;
-  }, [currentStep, formData]);
+  const validateCurrent = useCallback(
+    // 인덱스 → validateStepN 매핑은 validate 모듈이 갖는다(사이드바 배지와 **같은 한 벌**).
+    () => validateStepByIndex(formData, currentStep).find((e) => e.severity === "error") ?? null,
+    [currentStep, formData],
+  );
+
+  /**
+   * 경고(`severity: "warning"`) — **파생값이다. store에 넣지 않는다.**
+   *
+   * 🔑 `error` store 필드에 태우면 안 된다: 그 필드는 「다음」을 눌렀을 때만 채워지는데
+   *    경고는 진행을 막지 않으므로 곧바로 `setStep(+1)` → `setError(null)`이 이어져
+   *    **띄우자마자 사라진다**. 조건이 성립하는 동안 계속 보여야 하므로 `formData`에서 파생한다.
+   *
+   * 🔑 결과 단계에서는 **전 단계를 모은다** — 사이드바로 단계를 건너뛴 사용자가 그 단계의
+   *    경고를 한 번도 못 보는 경로가 있기 때문이다. 다만 이것이 그 우회 자체를 막지는 않는다
+   *    (계획서 §7 F-2는 여전히 열려 있다).
+   */
+  const stepWarnings = useMemo(
+    () =>
+      currentStep === RESULT_STEP
+        ? validateAllSteps(formData)
+        : validateStepByIndex(formData, currentStep),
+    [formData, currentStep],
+  );
 
   const handleNext = useCallback(() => {
     const first = validateCurrent();
@@ -190,6 +204,17 @@ export default function OneHouseJudgmentCalculator() {
             {error}
           </div>
         )}
+
+        {/*
+          경고는 오류 배너 **아래**다 — 차단 사유를 먼저 읽고 주의사항을 읽는 순서.
+          결과 화면에서는 번호를 붙이지 않는다: 결과뷰의 섹션 번호는 `nextNo()`가 판정 내용에
+          매기는 연번이고, 이것은 **입력에 대한 주의**라 그 연번에 끼우면 판정의 일부로 읽힌다.
+        */}
+        <ValidationWarnings
+          items={stepWarnings}
+          title={currentStep === RESULT_STEP ? "판정 시 전제된 주의사항" : "확인이 필요합니다"}
+          testId="one-house-validation-warnings"
+        />
 
         <div className="flex gap-8">
           <div className="min-w-0 flex-1">
