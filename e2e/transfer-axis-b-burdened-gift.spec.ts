@@ -110,7 +110,8 @@ test.describe("축 B × 부담부증여 (소령 §159)", () => {
       174_600_000, 116_400_000,
     ]);
     // 합계는 단건 100%와 일치 (취득일이 같은 픽스처)
-    expect(body.data.aggregated.totalTax).toBe(64_600_360);
+    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 15년 30%(vitest axis-b-burdened-gift-plumbing P-3과 같은 픽스처)
+    expect(body.data.aggregated.totalTax).toBe(62_167_600);
   });
 
   test("결과 화면에 물건 전체 기준 §159 카드가 뜬다", async ({ page }) => {

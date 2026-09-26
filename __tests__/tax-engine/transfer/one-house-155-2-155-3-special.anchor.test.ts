@@ -308,8 +308,10 @@ describe("§155의3 상생임대주택 — 거주요건 면제 (의제 아님)",
     } as const;
     const without = run(base);
     const withWinWin = run({ ...base, winWinRentalHouse: WIN_WIN_OK });
-    expect(without.longTermHoldingRate).toBeCloseTo(0.18, 5); // 표1 — 보유 9년 × 2%
-    expect(withWinWin.longTermHoldingRate).toBeCloseTo(0.36, 5); // 표2 보유분 — 9년 × 4%
+    // 보유연수: 2014-06-01 → 2024-06-01(baseTransferInput 기본 양도일) = §95④ 초일 산입으로 10년
+    // (정본 anchor holding-period-first-day-inclusion.anchor.test.ts — 종전 구현은 9년으로 셌다).
+    expect(without.longTermHoldingRate).toBeCloseTo(0.2, 5); // 표1 — 보유 10년 × 2%
+    expect(withWinWin.longTermHoldingRate).toBeCloseTo(0.4, 5); // 표2 보유분 — 10년 × 4%
     expect(withWinWin.totalTax).toBeLessThan(without.totalTax);
   });
 

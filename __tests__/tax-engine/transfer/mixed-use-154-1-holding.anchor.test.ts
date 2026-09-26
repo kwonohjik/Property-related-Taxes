@@ -74,13 +74,17 @@ describe("P3a (D-9) 겸용주택 영 §154① 보유 2년 요건", () => {
     expect(r.housingPart?.incomeAmount).toBeGreaterThan(0);
   });
 
-  it("B-20b(경계): 보유 2년 — **초일불산입**(민법 §157) 기준으로 하루가 갈린다", () => {
-    // `calculateHoldingPeriod`(tax-utils.ts:239)는 취득일 다음날부터 기산한다.
+  it("B-20b(경계): 보유 2년 — **초일 산입**(소득세법 §95④) 기준으로 하루가 갈린다", () => {
+    // `calculateHoldingPeriod`(tax-utils.ts)는 취득일을 기산일로 산입하고, N년은 응당일
+    // 전날에 만료한다(민법 §160② — 재산46014-205·국심1994경6005·집행기준 89-154-20).
+    // 정본 anchor: __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts
     // 일반 단건 엔진의 §154① 판정과 **같은 함수**를 쓴다(정본 일치).
-    //   2020-02-15 취득 → 기산 2020-02-16 → 2022-02-16 = 만 2년 → 충족
-    expect(run({ building: D("2020-02-15") }).housingPart?.incomeAmount).toBe(0);
-    //   2020-02-16 취득 → 기산 2020-02-17 → 1년 11개월 30일 → 미충족
-    expect(run({ building: D("2020-02-16") }).housingPart?.incomeAmount).toBeGreaterThan(0);
+    //   2020-02-16 취득 → 2022-02-16(응당일) 양도 → 2년 0월 1일 → 충족 (종전 초일불산입은 미충족)
+    expect(run({ building: D("2020-02-16") }).housingPart?.incomeAmount).toBe(0);
+    //   2020-02-17 취득 → 2년 만료일 2022-02-16 = 양도일 → 만 2년 → 충족
+    expect(run({ building: D("2020-02-17") }).housingPart?.incomeAmount).toBe(0);
+    //   2020-02-18 취득 → 만료일 2022-02-17 > 양도일 → 1년 11개월 30일 → 미충족
+    expect(run({ building: D("2020-02-18") }).housingPart?.incomeAmount).toBeGreaterThan(0);
   });
 });
 

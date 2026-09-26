@@ -206,7 +206,8 @@ describe("POST /api/calc/one-house-exemption", () => {
     expect(json.data.judgment.pending).toHaveLength(1);
     expect(json.data.judgment.pending[0].id).toBe("154-1-holding-years");
     // Date는 JSON 직렬화로 ISO 문자열이 된다 — 화면이 그대로 포맷한다.
-    expect(String(json.data.judgment.pending[0].deadline).slice(0, 10)).toBe("2025-06-01");
+    // §95④ 초일 산입 — 2년은 응당일의 전날(2025-05-31) 만료
+    expect(String(json.data.judgment.pending[0].deadline).slice(0, 10)).toBe("2025-05-31");
   });
 
   it("[R-3] 🔴 본문의 `householdHousingCount`를 믿지 않는다 — 명부에서 도출한다", async () => {

@@ -58,12 +58,18 @@ function run(over: Partial<MixedUseAssetInput> = {}) {
   );
 }
 
+/**
+ * 보유기간은 **초일 산입**(소득세법 §95④ — 정본 anchor
+ * `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`)이다.
+ * 건물 2018-06-01 취득 → 2026-06-01(응당일) 양도 = **8년**(종전 초일불산입 구현은 7년).
+ * ⇒ 주택·상가 **건물분** 장특이 표1 16%(종전 14%) · 표2 보유분 32%(종전 28%)다. 토지분(1992 취득)은 상한이라 불변.
+ */
 /** 비과세 유지 시 주택 소득금액(12억 초과분 안분) — 보유 8년·거주 0년 */
-const EXEMPT_HOUSING_INCOME = 257_630_000;
-const EXEMPT_TAX = 331_360_256;
-/** 비과세 배제 시 주택 소득금액(양도차익 전액 − 장특 14%) */
-const TAXED_HOUSING_INCOME = 1_239_354_676;
-const TAXED_TAX = 769_372_093;
+const EXEMPT_HOUSING_INCOME = 252_933_751;
+const EXEMPT_TAX = 329_103_528;
+/** 비과세 배제 시 주택 소득금액(양도차익 전액 − 장특 건물분 16%·토지분 30%) */
+const TAXED_HOUSING_INCOME = 1_216_762_904;
+const TAXED_TAX = 758_901_185;
 
 describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
   it("B-A0: 2017-08-03 **이전** 취득은 조정대상지역이어도 거주요건 면제 (부칙 경과규정)", () => {
@@ -96,7 +102,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
   it("B-A3: 조정대상지역 취득이어도 **실거주** 2년 이상이면 비과세 유지 + 표2 적용", () => {
     const r = run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 });
     expect(r.housingPart.longTermDeductionTable).toBe(2);
-    expect(r.total.transferTax).toBe(303_648_926);
+    expect(r.total.transferTax).toBe(299_419_774);
   });
 
   it("B-A5: 거주요건은 **§154⑧3호 통산값**(table2ResidencePeriodYears)으로 판정한다", () => {
@@ -104,7 +110,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     // (표2 '거주분 공제율'은 실거주 0년이라 붙지 않는다 — 대상판정/공제율 분리, 사전법령해석재산 2021-202)
     const consolidated = run({ wasRegulatedAtAcquisition: true, table2ResidencePeriodYears: 2 });
     expect(consolidated.housingPart.longTermDeductionTable).toBe(2);
-    expect(consolidated.total.transferTax).toBe(314_211_807);
+    expect(consolidated.total.transferTax).toBe(309_982_654);
 
     // 통산이 1년이면 여전히 미충족 — **이중 통산이 없음**을 반증한다
     // (한 번 더 더해졌다면 2년이 되어 충족했을 것이다).
@@ -116,7 +122,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 1 }).total.transferTax)
       .toBe(TAXED_TAX); // 미충족
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 }).total.transferTax)
-      .toBe(303_648_926); // 충족
+      .toBe(299_419_774); // 충족
   });
 });
 
@@ -125,12 +131,16 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
   const EXPROPRIATION: Partial<MixedUseAssetInput> = {
     oneHouseExemptionProviso: { reason: "expropriation", expropriationDate: D("2024-01-01") },
   };
-  /** 보유 1년(= §154① 보유요건 미충족) — 토지·건물 동시 취득 */
+  /**
+   * 보유 1년(= §154① 보유요건 미충족) — 토지·건물 동시 취득.
+   * 2025-06-01 → 2026-06-01(응당일)은 초일 산입으로 **만 1년**이라 §104①2호 단기세율
+   * (주택 60% · 상가 40%)이다. 종전 초일불산입 구현은 1년 미만(70%·50%)으로 셌다.
+   */
   const SHORT_HOLD: Partial<MixedUseAssetInput> = {
     landAcquisitionDate: D("2025-06-01"),
     buildingAcquisitionDate: D("2025-06-01"),
   };
-  const SHORT_HOLD_TAXED_TAX = 1_495_427_008;
+  const SHORT_HOLD_TAXED_TAX = 1_256_734_205;
 
   it("B-A4: 단서 2호가(수용) → 조정지역 취득·거주 0년이어도 **거주요건 면제**", () => {
     const r = run({ wasRegulatedAtAcquisition: true, ...EXPROPRIATION });
@@ -159,7 +169,7 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
     // P3a(PR #937)는 단서를 무시해 이 케이스를 과세했다(과다과세).
     const r = run({ ...SHORT_HOLD, ...EXPROPRIATION });
     expect(r.housingPart.incomeAmount).toBe(314_371_438); // 12억 초과분 안분 — 비과세 살아 있음
-    expect(r.total.transferTax).toBe(656_866_515);
+    expect(r.total.transferTax).toBe(537_968_068);
     // 단서가 없으면 여전히 전액 과세여야 한다(게이트가 과도하게 열리지 않았음).
     expect(run({ ...SHORT_HOLD }).housingPart.incomeAmount).toBe(1_512_314_999);
   });

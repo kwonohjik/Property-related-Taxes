@@ -189,22 +189,25 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
    *   보유기간: 2015-01-01 ~ 2026-01-01 = 11년 (LTHD 22%)
    *   중과: 없음, 기본공제 250만
    *
-   * 보유기간 2015-01-01~2026-01-01 → LTHD 표1 20% (엔진 실측).
+   * 보유기간 2015-01-01~2026-01-01 → 11년 · LTHD 표1 22%. 보유기간은 초일 산입(소득세법 §95④ —
+   *   __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts)이라 응당일 양도는
+   *   만 11년이다. 종전 구현(초일·말일 불산입)은 10년 20%로 셌다(옛 기대값 88,550,000 ·
+   *   39,910,000 · 48,640,000).
    *
    * 일반 산식 (§97) — 기준가액 = 상속개시일 평가액 300M (소령 §163⑨):
    *   양도차익 = 500M - 300M = 200M
-   *   LTHD = 200M × 0.20 = 40,000,000 → 양도소득금액 160,000,000
-   *   과세표준 = 160,000,000 - 2,500,000 = 157,500,000
+   *   LTHD = 200M × 0.22 = 44,000,000 → 양도소득금액 156,000,000
+   *   과세표준 = 156,000,000 - 2,500,000 = 153,500,000
    *   세율: 150M~300M 38%, 누진공제 19,940,000
-   *   산출세액 = 157,500,000 × 0.38 - 19,940,000 = 39,910,000  → cgtUnderSection97
+   *   산출세액 = 153,500,000 × 0.38 - 19,940,000 = 38,390,000  → cgtUnderSection97
    *
    * 의제 산식 (§97의2④) — 의제 취득가 140M:
    *   양도차익 = 500M - 140M = 360M
-   *   LTHD = 360M × 0.20 = 72,000,000 → 양도소득금액 288,000,000
-   *   과세표준 = 288,000,000 - 2,500,000 = 285,500,000
-   *   산출세액 = 285,500,000 × 0.38 - 19,940,000 = 88,550,000  → cgtUnderSection97_2_4
+   *   LTHD = 360M × 0.22 = 79,200,000 → 양도소득금액 280,800,000
+   *   과세표준 = 280,800,000 - 2,500,000 = 278,300,000
+   *   산출세액 = 278,300,000 × 0.38 - 19,940,000 = 85,814,000  → cgtUnderSection97_2_4
    *
-   * creditAmount = max(0, 88,550,000 - 39,910,000) = 48,640,000
+   * creditAmount = max(0, 85,814,000 - 38,390,000) = 47,424,000
    *   (정상 상속: 피상속인가 100M < 상속평가 300M → 의제취득가 < 상속평가 baseline
    *    → 의제세액 > 일반세액 → 양(+)의 §18의2⑩ 공제가 발생하는 것이 법령상 정상)
    */
@@ -236,10 +239,10 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
     expect(result.familyBusinessDetail!.appliedRate).toBe(0.8);
     // cgtUnderSection97_2_4 = 의제 취득가(140M) 적용 결정세액
     // cgtUnderSection97 = 상속개시일 평가액(300M) 적용 결정세액 (소령 §163⑨)
-    expect(result.familyBusinessDetail!.cgtUnderSection97_2_4).toBe(88_550_000);
-    expect(result.familyBusinessDetail!.cgtUnderSection97).toBe(39_910_000);
+    expect(result.familyBusinessDetail!.cgtUnderSection97_2_4).toBe(85_814_000);
+    expect(result.familyBusinessDetail!.cgtUnderSection97).toBe(38_390_000);
     // creditAmount = max(0, 의제 − 일반) — 정상 상속에서 양(+)
-    expect(result.familyBusinessDetail!.creditAmount).toBe(48_640_000);
+    expect(result.familyBusinessDetail!.creditAmount).toBe(47_424_000);
   });
 
   /**
@@ -248,9 +251,12 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
    * 피상속인 원취득가 100M < 상속개시일 평가 500M (정상: 상속 시점 가치 상승)
    * 적용률 0.8 → 의제 취득가 = 100M×0.8 + 500M×0.2 = 80M + 100M = 180M
    *
-   * 일반 §97 (기준 = 상속평가 500M, 소령 §163⑨): 양도 600M → 차익 100M → 세액 12,840,000
-   * 의제 §97의2④ (취득가 180M): 양도 600M → 차익 420M → 세액 107,460,000
-   * → creditAmount = 107,460,000 − 12,840,000 = 94,620,000 > 0
+   * LTHD 22%(2015-01-01 → 2026-01-01 = 11년, 초일 산입 — 종전 구현은 10년 20%):
+   * 일반 §97 (기준 = 상속평가 500M, 소령 §163⑨): 양도 600M → 차익 100M
+   *   → (78M − 2.5M) × 24% − 5,760,000 = 12,360,000
+   * 의제 §97의2④ (취득가 180M): 양도 600M → 차익 420M
+   *   → (327.6M − 2.5M) × 40% − 25,940,000 = 104,100,000
+   * → creditAmount = 104,100,000 − 12,360,000 = 91,740,000 > 0
    */
   it("FB-CGT-FULL-POSITIVE: 피상속인가 < 상속평가(정상 상속) → creditAmount > 0", () => {
     const input = baseTransferInput({
@@ -276,9 +282,9 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
 
     expect(result.familyBusinessDetail).toBeDefined();
     expect(result.familyBusinessDetail!.imputedAcquisitionPrice).toBe(180_000_000);
-    // 의제 취득가 180M → 차익 420M (세액 107,460,000)
-    // 일반 기준 상속평가 500M → 차익 100M (세액 12,840,000)
-    expect(result.familyBusinessDetail!.creditAmount).toBe(94_620_000);
+    // 의제 취득가 180M → 차익 420M (세액 104,100,000)
+    // 일반 기준 상속평가 500M → 차익 100M (세액 12,360,000)
+    expect(result.familyBusinessDetail!.creditAmount).toBe(91_740_000);
     expect(result.familyBusinessDetail!.creditAmount).toBeGreaterThan(0);
   });
 

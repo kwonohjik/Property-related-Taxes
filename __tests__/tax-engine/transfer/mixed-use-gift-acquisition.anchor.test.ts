@@ -71,7 +71,8 @@ describe("겸용주택 증여 취득가액 엔진 정합 (소령 §163⑨, 상�
     expect(r.housingPart.landAppraisalDed).toBe(0);
     expect(r.housingPart.buildingAppraisalDed).toBe(0);
     // 상속 anchor와 동일 입력 → 동일 golden(§163⑨ 상속·증여 동일)
-    expect(r.total.totalPayable).toBe(525_493_500);
+    // 보유기간 초일 산입(§95④): 2020-06-01 → 2026-06-01 = 6년(종전 구현 5년 → 525,493,500).
+    expect(r.total.totalPayable).toBe(507_898_499);
   });
 
   // G-1b 신고가액 override (fallback, max 아님)

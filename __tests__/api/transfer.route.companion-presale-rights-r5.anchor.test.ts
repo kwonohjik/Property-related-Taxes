@@ -141,7 +141,11 @@ describe("R-5 — 일괄양도 컴패니언 주택도 §89② 판정을 받는�
   it("주 자산은 종전에도 배제됐다 (회귀 대조군)", async () => {
     const r = await run(body({ presaleRights: RIGHT }));
     expect(r.primary.isExempt).toBe(false);
-    expect(r.primary.determinedTax).toBe(71_260_000);
+    // 2015-06-01 → 2024-06-01(응당일) = §95④ 초일 산입으로 만 9년
+    //   (holding-period-first-day-inclusion.anchor — 헤더 표의 71,260,000은 초일불산입 8년 시절 값)
+    //   표2: 보유 9년 36% + 거주 5년 20% = 56% → 500,000,000 − 280,000,000 = 220,000,000
+    //   220,000,000 × 38% − 19,940,000 = 63,660,000
+    expect(r.primary.determinedTax).toBe(63_660_000);
   });
 
   it("★ 컴패니언 주택도 배제된다 — 종전에는 비과세 0원 그대로였다", async () => {

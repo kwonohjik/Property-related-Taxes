@@ -22,6 +22,11 @@
  *
  * ⚠️ 위 수치는 **mock 세율표(`makeMockRates`) 기준 실측값**이지 「정본 세액」이 아니다.
  *
+ * 🔄 표의 결정세액은 A1a(보유기간 초일 산입) **이전** 값이다. 수증 2021-06-01 → 양도 2024-06-01은
+ *    §95④ 초일 산입으로 **3년**(장특 표1 6%)이 되어(종전 2년·0%) 수정 후 값은 단건 **50,550,000** ·
+ *    신고단위 **146,660,000**이다. 양도차익·차손통산 행(이 anchor의 축)은 보유기간과 무관해 그대로다.
+ *    정본 anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+ *
  * ## 🔴 스케일하지 않는 것 (R-3이 지킨다)
  *
  * `donorStandardPriceAtAcquisition` · `donorStandardPriceAtTransfer`는 환산 산식에서 분자·분모로
@@ -251,7 +256,10 @@ describe("R-2: 배제경로(§97의2②1호 수용) — 음수 양도차익·허
     expect(res.carryoverTaxationDetail?.exclusionReason).toBe("expropriation");
     expect(res.transferGain, "수정 전에는 −100,000,000 → 0 clamp라 결정세액이 0이었다").toBeGreaterThanOrEqual(0);
     expect(res.transferGain).toBe(200_000_000);
-    expect(res.determinedTax).toBe(55_110_000);
+    // 수증 2021-06-01 → 양도 2024-06-01 = 초일 산입 3년 → 장특 6% = 12,000,000
+    // (200,000,000 − 12,000,000 − 2,500,000) × 38% − 19,940,000 = 50,550,000
+    // (종전 초일·말일 불산입 구현은 2년·장특 0으로 55,110,000이었다)
+    expect(res.determinedTax).toBe(50_550_000);
   });
 
   it("R-2b: 🔴 지분분할 2건 — 공유자 지분이 허수 차손을 흡수하지 않는다", async () => {
@@ -281,7 +289,10 @@ describe("R-2: 배제경로(§97의2②1호 수용) — 음수 양도차익·허
       "수정 전에는 허수 차손 100,000,000이 공유자 지분의 양도차익을 잠식해 " +
         "신고단위 결정세액이 151,460,000 → 34,785,000으로 떨어졌다",
     ).toBe(0);
-    expect(r.json.data.aggregated.determinedTax).toBe(151_460_000);
+    // primary 소득금액 188,000,000(= 200,000,000 − 장특 3년 6%) + 공유자 지분 246,000,000
+    // (= 300,000,000 − 장특 9년 18%) − 기본공제 2,500,000 = 431,500,000 × 40% − 25,940,000
+    // = 146,660,000 (종전 초일·말일 불산입 구현은 primary 2년·장특 0으로 151,460,000이었다)
+    expect(r.json.data.aggregated.determinedTax).toBe(146_660_000);
   });
 });
 

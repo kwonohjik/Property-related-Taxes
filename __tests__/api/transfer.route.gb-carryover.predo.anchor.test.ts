@@ -169,10 +169,14 @@ describe("GB × 이월과세 — anchor (route)", () => {
      * ⚠️ **회귀 방어용 스냅샷이지 「정본 세액」이 아니다.** mock 세율표 기준 실측값이다.
      * 이월과세 배선이 이 값을 **원 단위로도 바꾸면 안 된다**는 뜻일 뿐이다.
      */
-    it("기준선 — 결정세액 170,660,000", async () => {
+    it("기준선 — 결정세액 158,804,000", async () => {
+      // 2021-03-01 → 2024-03-01(응당일) = §95④ 초일 산입으로 만 3년 → 표1 6%
+      //   (holding-period-first-day-inclusion.anchor. 종전 초일불산입은 2년·0% → 170,660,000)
+      //   양도차익 토지·건물 각 247,000,000 = 494,000,000 × 94% − 2,500,000 = 461,860,000
+      //   × 40% − 25,940,000 = 158,804,000
       const r = await call(body());
       expect(r.status).toBe(200);
-      expect(r.determinedTax).toBe(170_660_000);
+      expect(r.determinedTax).toBe(158_804_000);
       expect(prop(r, "land")?.carryoverTaxationDetail).toBeUndefined();
       expect(prop(r, "building")?.carryoverTaxationDetail).toBeUndefined();
     });

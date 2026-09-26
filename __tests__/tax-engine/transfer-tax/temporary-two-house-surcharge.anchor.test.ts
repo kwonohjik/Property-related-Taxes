@@ -163,7 +163,11 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
     expect(r.exemptReason).toBe("일시적 2주택 고가주택"); // §155① 의제 성립
     expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
     // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 168,580,000. 위와 같은 이유(표1 6% → 표2 24%).
-    expect(r.calculatedTax).toBe(131_140_000);
+    // 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 종전 131,140,000. 종전주택 2018-01-01 → 2022-01-01은
+    //    응당일 양도라 §95④ 초일 산입으로 **4년**(종전 구현 3년) ⇒ 표2 보유 4년×4% + 거주 3년×4% = 28%.
+    //    12억 초과분 520,000,000 × 72% − 2,500,000 = 371,900,000 × 40% − 25,940,000 = 122,820,000.
+    //    비과세·중과배제 판정(위 두 단언)은 불변. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+    expect(r.calculatedTax).toBe(122_820_000);
   });
 
   it("T-B3 N4 (新 2015-01-01 — 기한 초과) → 배제 없음 · 중과 유지 (회귀)", () => {

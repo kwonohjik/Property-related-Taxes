@@ -19,7 +19,12 @@ import type { CarryoverTaxationInput } from "@/lib/tax-engine/types/transfer-car
 
 const MOCK_RATES = makeMockRates();
 
-/** DD anchor와 같은 픽스처 — 적용되면 A(169,060,000), 배제되면 B(79,430,000). */
+/**
+ * DD anchor와 같은 픽스처 — 적용되면 A(169,060,000), 배제되면 B(77,150,000).
+ * B는 수증자 증여등기일 2023-06-01 기산 → 2030-05-31(7년 만료일) = §95④ 초일 산입으로 보유 7년·표1 14%
+ * (holding-period-first-day-inclusion.anchor. 종전 초일불산입 구현은 6년·12% → 79,430,000).
+ *   300,000,000 × 86% − 2,500,000 = 255,500,000 × 38% − 19,940,000 = 77,150,000
+ */
 function makeInput(carryover: Partial<CarryoverTaxationInput>) {
   return baseTransferInput({
     propertyType: "housing",
@@ -68,7 +73,7 @@ describe("RS: 「그 외」 관계는 §97의2① 대상이 아니다", () => {
 
   it("RS-03: 결정세액이 「미적용」 값으로 확정 (MAX를 타지 않는다)", () => {
     const r = calculateTransferTax(makeInput({ donorRelation: "other" }), MOCK_RATES);
-    expect(r.determinedTax).toBe(79_430_000);
+    expect(r.determinedTax).toBe(77_150_000);
   });
 
   it("RS-04: 배우자는 그대로 **적용**된다 [양성 대조군]", () => {

@@ -33,6 +33,11 @@
  *
  * 배선을 넣은 채 `__tests__/tax-engine/transfer` + `__tests__/api` + `__tests__/calc`
  * **553파일 5,729건**을 돌려도 **전건 통과**했다. 이 파일이 그 사각지대를 덮는다.
+ *
+ * 📌 위 표는 옛 보유기간 규칙 시절 수치다. 보유기간 초일 산입(소득세법 §95④ —
+ *    `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`)으로 2009-03-01 →
+ *    2024-03-01(응당일 양도)은 **15년**(표1 30%)이다. 종전 구현은 14년 28%로 셌다. 아래 기대값은
+ *    LTHD 30% 기준으로 다시 도출했다(감면율·가산세율·산식은 그대로).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -171,7 +176,8 @@ describe("F17-A · 일반건물 감면 배관", () => {
     const base = await post(gbAsset());
     const red = await post(gbAsset(), { reductions: RED_77 });
 
-    expect(base.determinedTax).toBe(204_930_000);
+    // 차익 800,000,000 × 70%(15년 30%) − 2,500,000 = 557,500,000 × 42% − 35,940,000
+    expect(base.determinedTax).toBe(198_210_000);
     expect(base.reductionAmount).toBe(0);
 
     /**
@@ -180,8 +186,9 @@ describe("F17-A · 일반건물 감면 배관", () => {
      * 감면대상이라 §103②의 비감면소득이 없고, 그래서 C 250만원이 감면 분자에 그대로 실린다.
      * 상세: `__tests__/tax-engine/transfer/aggregate-reduction-77-series-buckets.anchor.test.ts`.
      */
-    expect(red.reductionAmount).toBe(20_493_000);
-    expect(red.determinedTax).toBe(184_437_000);
+    // 두 파트 모두 감면대상 ⇒ 산출세액 198,210,000 × 10%
+    expect(red.reductionAmount).toBe(19_821_000);
+    expect(red.determinedTax).toBe(178_389_000);
     expect(red.determinedTax).not.toBe(base.determinedTax);
   });
 
@@ -200,16 +207,17 @@ describe("F17-A · 일반건물 감면 배관", () => {
     const base = await post(gbAsset(ESTIMATED), {}, { useEstimatedAcquisition: true });
     const red = await post(gbAsset(ESTIMATED), { reductions: RED_77 }, { useEstimatedAcquisition: true });
 
-    expect(base.determinedTax).toBe(115_332_000);
-    // 값 갱신 (2026-09-03) — §90①의 `− C` 적용. GBR-01과 같은 뿌리다.
-    expect(red.reductionAmount).toBe(11_533_200);
-    expect(red.determinedTax).toBe(103_798_800);
+    // 차익 494,000,000 × 70%(15년 30%) − 2,500,000 = 343,300,000 × 40% − 25,940,000
+    expect(base.determinedTax).toBe(111_380_000);
+    // 값 갱신 (2026-09-03) — §90①의 `− C` 적용. GBR-01과 같은 뿌리다. 111,380,000 × 10%.
+    expect(red.reductionAmount).toBe(11_138_000);
+    expect(red.determinedTax).toBe(100_242_000);
   });
 
   it("GBR-04: 대조군 — 감면을 안 고르면 종전 값 그대로다 (회귀 0)", async () => {
     const base = await post(gbAsset());
-    expect(base.determinedTax).toBe(204_930_000);
-    expect(base.totalTax).toBe(225_423_000);
+    expect(base.determinedTax).toBe(198_210_000);
+    expect(base.totalTax).toBe(218_031_000); // + 지방소득세 19,821,000
     expect(base.properties.every((p) => (p.reductionAggregated ?? 0) === 0)).toBe(true);
   });
 });
@@ -260,9 +268,12 @@ describe("§77의3 매수 경로 × 일반건물 파트", () => {
      *   먼저 흡수한다 ⇒ C = 0 ⇒ **41,164,666 그대로**.
      * · `negotiated`(§20 협의매수) — 두 파트 모두 감면대상이라 비감면소득이 없다 ⇒ C 250만원이
      *   감면 분자에 실린다 ⇒ 82,329,332 → **81,972,000**.
+     * 📌 위 수치는 옛 보유기간(14년 28%) 기준이다. 초일 산입 15년 30%로 다시 도출:
+     *   claim = floor(198,210,000 × 토지 280,000,000 ÷ 과세표준 557,500,000 × 40%) = 39,819,766
+     *   negotiated = 198,210,000 × 40% = 79,284,000
      */
-    expect(claim.reductionAmount).toBe(41_164_666);
-    expect(negotiated.reductionAmount).toBe(81_972_000);
+    expect(claim.reductionAmount).toBe(39_819_766);
+    expect(negotiated.reductionAmount).toBe(79_284_000);
     expect(negotiated.determinedTax).toBeLessThan(claim.determinedTax);
   });
 });
@@ -273,18 +284,18 @@ describe("F17-A · 일반건물 가산세 배관", () => {
     const pen = await post(gbAsset(), { filingPenaltyDetails: PENALTY_NONE });
 
     expect(base.penaltyTax).toBe(0);
-    expect(pen.penaltyTax).toBe(40_986_000);
-    expect(pen.totalTax).toBe(266_409_000);
-    expect(pen.totalTax - base.totalTax).toBe(40_986_000);
+    expect(pen.penaltyTax).toBe(39_642_000);
+    expect(pen.totalTax).toBe(257_673_000);
+    expect(pen.totalTax - base.totalTax).toBe(39_642_000);
   });
 
   it("GBP-02: 🔴 **신고 1건 = 가산세 1회** — 카드 수만큼 배가되지 않는다", async () => {
     const pen = await post(gbAsset(), { filingPenaltyDetails: PENALTY_NONE });
 
-    // 무신고 20%(국세기본법 §47의2①1호) × 집계 결정세액 204,930,000 = 40,986,000.
-    // 카드(토지·건물)마다 실렸다면 정확히 2배인 81,972,000이 됐을 것이다.
-    expect(pen.penaltyTax).toBe(Math.floor(204_930_000 * 0.2));
-    expect(pen.filingUnitPenaltyDetail?.totalPenalty).toBe(40_986_000);
+    // 무신고 20%(국세기본법 §47의2①1호) × 집계 결정세액 198,210,000 = 39,642,000.
+    // 카드(토지·건물)마다 실렸다면 정확히 2배인 79,284,000이 됐을 것이다.
+    expect(pen.penaltyTax).toBe(Math.floor(198_210_000 * 0.2));
+    expect(pen.filingUnitPenaltyDetail?.totalPenalty).toBe(39_642_000);
   });
 
   it("GBP-03: 신고불성실 가산세는 **지방소득세 base가 아니다**", async () => {
@@ -293,7 +304,7 @@ describe("F17-A · 일반건물 가산세 배관", () => {
 
     // 지방소득세 = (결정세액 + §114의2 건물가산세) × 10% — 신고불성실은 제외(지방세법 §103의3).
     expect(pen.localIncomeTax).toBe(base.localIncomeTax);
-    expect(pen.localIncomeTax).toBe(20_493_000);
+    expect(pen.localIncomeTax).toBe(19_821_000);
   });
 
   it("GBP-04: 가산세 근거를 **화면에 남긴다** (세액만 바뀌고 침묵하지 않는다)", async () => {

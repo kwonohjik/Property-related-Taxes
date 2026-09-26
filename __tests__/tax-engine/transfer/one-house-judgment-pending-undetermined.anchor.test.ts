@@ -198,11 +198,12 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
 });
 
 describe("P4-1 pending — §154① 보유 2년", () => {
-  it("[PD-13] 보유만 미달(거주요건은 비구속) — 기한은 취득일 + 2년", () => {
+  it("[PD-13] 보유만 미달(거주요건은 비구속) — 기한은 취득일 + 2년의 전날(§95④ 초일 산입)", () => {
     const r = judge({ acquisitionDate: D("2023-06-01"), ...RESIDENCE_FREE });
     expect(r.isExempt).toBe(false);
     expect(r.pending.map((p) => p.id)).toEqual(["154-1-holding-years"]);
-    expect(iso(r.pending[0].deadline)).toBe("2025-06-01");
+    // §95④ 초일 산입 — 2년은 응당일(2025-06-01)의 전날 만료(holding-period-first-day-inclusion.anchor)
+    expect(iso(r.pending[0].deadline)).toBe("2025-05-31");
     // 🔑 과세이지만 **거주는 충족**이다 ⇒ 거주 판정보류 행이 서면 안 된다.
     //    이 단언이 없으면 「거주 미충족」 조건을 지워도 아무 테스트가 울지 않는다(뮤테이션 M9).
     expect(r.undetermined).toEqual([]);
@@ -212,6 +213,16 @@ describe("P4-1 pending — §154① 보유 2년", () => {
     const r = judge({ acquisitionDate: D("2019-06-01"), ...RESIDENCE_FREE });
     expect(r.isExempt).toBe(true);
     expect(r.pending).toEqual([]);
+  });
+
+  it("[PD-14b] 윤일 취득 — 2년 만료는 §160③ 월말(2022-02-28): 기한 안내와 비과세 판정이 같은 날에 맞물린다", () => {
+    const acq = { acquisitionDate: D("2020-02-29"), ...RESIDENCE_FREE };
+    const before = judge({ ...acq, transferDate: D("2022-01-15") });
+    expect(before.pending.map((p) => p.id)).toEqual(["154-1-holding-years"]);
+    expect(iso(before.pending[0].deadline)).toBe("2022-02-28");
+    // 짝: 안내된 기한 당일 양도는 비과세, 그 전날은 과세
+    expect(judge({ ...acq, transferDate: D("2022-02-28") }).isExempt).toBe(true);
+    expect(judge({ ...acq, transferDate: D("2022-02-27") }).isExempt).toBe(false);
   });
 
   it("[PD-15] 🔴 거주요건도 미달이면 보유 기한을 내지 않는다 — 대신 판정 보류", () => {

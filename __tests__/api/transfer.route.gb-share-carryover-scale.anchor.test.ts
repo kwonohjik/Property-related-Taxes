@@ -278,8 +278,14 @@ describe("GBSC — 일반건물 지분 × 이월과세: ④ 지분율 스케일"
   it("GBSC-06: 세액 실측 고정 — 허수 차손이 사라지고 타 지분 잠식이 0이 된다", async () => {
     const agg = await postShares(shares([share("share-a", "60"), carryoverShare("40")]) as never);
     // 실측값 (mock 세율). 산식 추론이 아니라 route 응답을 그대로 고정한다.
-    expect(agg.determinedTax).toBe(107_463_200);
-    expect(agg.totalTax).toBe(118_209_520);
+    // 보유기간 초일 산입(§95④ — holding-period-first-day-inclusion.anchor) 기준:
+    //   지분 A 2009-03-01 → 2024-03-01(응당일) = 15년 → 표1 30%(종전 14년·28%)
+    //   지분 B 건물 2021-03-01 → 2024-03-01(응당일) = 3년 → 표1 6%(종전 2년·0%)
+    //   지분 B 토지(이월과세)는 증여자 취득 2005-06-15 기산 18년 → 30%(불변)
+    //   장특 = 44,460,000×2 + 10,200,000 + 5,928,000 = 105,048,000
+    //   과세표준 429,200,000 − 105,048,000 − 2,500,000 = 321,652,000 × 40% − 25,940,000
+    expect(agg.determinedTax).toBe(102_720_800);
+    expect(agg.totalTax).toBe(112_992_880);
     expect(agg.totalTransferGain).toBe(429_200_000);
 
     // 이월과세 파트가 **양(+)의 양도차익**을 낸다 (종전 −140,000,000)
@@ -291,7 +297,7 @@ describe("GBSC — 일반건물 지분 × 이월과세: ④ 지분율 스케일"
     for (const p of agg.properties) expect(p.lossOffsetFromSameGroup ?? 0).toBe(0);
   });
 
-  it("GBSC-07: 수렴 — ④ 산출 payload = 손으로 × 0.4 한 payload · 미스케일은 62,914,160 과소", async () => {
+  it("GBSC-07: 수렴 — ④ 산출 payload = 손으로 × 0.4 한 payload · 미스케일은 62,677,040 과소", async () => {
     const s = shares([share("share-a", "60"), carryoverShare("40")]);
 
     // (1) 손으로 × 0.4 한 대조군 — ④를 신뢰하지 않고 값을 직접 적는다
@@ -320,7 +326,9 @@ describe("GBSC — 일반건물 지분 × 이월과세: ④ 지분율 스케일"
     expect(auto.totalTransferGain).toBe(manual.totalTransferGain);
 
     // 양성 대조군 — 미스케일이면 결함이 그대로 재현된다 (이게 없으면 위 수렴이 무의미하다)
-    expect(broken.determinedTax).toBe(44_549_040);
-    expect(auto.determinedTax - broken.determinedTax).toBe(62_914_160);
+    // 초일 산입 기준: 소득 103,740,000×2 + 92,872,000 − 차손 140,000,000 = 160,352,000
+    //   과세표준 157,852,000 × 38% − 19,940,000 = 40,043,760 (종전 초일불산입 44,549,040)
+    expect(broken.determinedTax).toBe(40_043_760);
+    expect(auto.determinedTax - broken.determinedTax).toBe(62_677_040);
   });
 });

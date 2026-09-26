@@ -172,8 +172,10 @@ describe("T-26: 비사업용 토지 정밀 판정 연동", () => {
     expect(result.surchargeType).toBe("non_business_land");
     expect(result.surchargeRate).toBe(0.1);
     // 비사업용이어도 장기보유특별공제 표1 적용 (현행 소득세법)
-    // 민법 초일불산입: 2020-01-02 기산 → 2025-01-01까지 4년 11개월 → years=4, rate=4×2%=8%
-    expect(result.longTermHoldingRate).toBe(0.08);
+    // §95④ 초일 산입(holding-period-first-day-inclusion.anchor.test.ts): 2020-01-01 기산,
+    // 5년 만료일 2024-12-31 경과 → 2025-01-01 양도 = 5년 → rate=5×2%=10%
+    // (종전 「민법 초일불산입」 구현은 2020-01-02 기산 4년 11개월 → 4년·8%로 셌다 — A1a에서 반전)
+    expect(result.longTermHoldingRate).toBe(0.1);
     expect(result.longTermHoldingDeduction).toBeGreaterThan(0);
   });
 

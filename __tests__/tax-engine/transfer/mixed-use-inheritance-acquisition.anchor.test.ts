@@ -9,6 +9,12 @@
  * Phase 2 조합(4부분·용도변경·공익수용) 가드 + 비상속 회귀.
  *
  * golden 수치는 신규 코드 실행값을 원단위 그대로 고정한 것(추정 아님, 2026-07-20 실측).
+ *
+ * 📌 보유기간 **초일 산입**(소득세법 §95④ — `holding-period-first-day-inclusion.anchor.test.ts`)
+ *    반영: 상속개시 2020-06-01 → 양도 2026-06-01(응당일) = 6년. 주택분 장특 표2 보유 24%+거주 24%
+ *    = 48%, 상가분·배율초과 부수토지 표1 12%. 종전(초일·말일 불산입) 구현은 5년(44%·10%)으로 세어
+ *    케이스#1 525,493,500 · #10 522,510,000 · #10-비사업용 655,712,475 / 651,758,662였다.
+ *    취득가액·개산공제·필요경비 안분(이 파일의 본 관심사)은 불변이다.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
@@ -79,9 +85,9 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
       selected: "standard_price",
     });
     // 총 납부세액 (원단위 golden — 회귀 방어)
-    expect(r.total.transferTax).toBe(477_721_364);
-    expect(r.total.localTax).toBe(47_772_136);
-    expect(r.total.totalPayable).toBe(525_493_500);
+    expect(r.total.transferTax).toBe(461_725_909);
+    expect(r.total.localTax).toBe(46_172_590);
+    expect(r.total.totalPayable).toBe(507_898_499);
   });
 
   // ─── 케이스#2 — 주택분 · 공시 · 상속세 신고가액(시가·감정) override ───
@@ -144,7 +150,7 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
     expect(r.commercialPart.buildingAppraisalDed).toBe(3_000_000);
     expect(r.commercialPart.landAppraisalDed + r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
     // 총세액 불변 — 토지/건물 재배분은 같은 부분 내 세율·장특율 동일이라 tax-neutral
-    expect(r.total.totalPayable).toBe(522_510_000);
+    expect(r.total.totalPayable).toBe(505_018_499);
   });
 
   // ─── 케이스#10-비사업용 — 배율초과 부수토지 존재 시 필요경비 안분은 세액 변동(non-neutral) ───
@@ -169,10 +175,12 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
     //   0이다. 주장(필요경비가 세액을 줄인다)은 **총세액 차이**로 관측한다.
     //   세액 자체도 낮아졌다: 704,289,025 → 655,712,475 / 699,456,587 → 651,758,662.
     //   종전 값은 모델 A(합산 누진 + 가산)로 §104⑤ MAX를 초과한 과다과세였다.
+    //   이후 보유기간 초일 산입(§95④)으로 5년→6년이 되어 655,712,475 → 639,501,720 /
+    //   651,758,662 → 635,635,770으로 다시 내려갔다(장특 표2 44→48% · 표1 10→12%).
     expect(noExp.total.nonBusinessSurcharge).toBe(0);
     expect(withExp.total.nonBusinessSurcharge).toBe(0);
-    expect(noExp.total.totalPayable).toBe(655_712_475);
-    expect(withExp.total.totalPayable).toBe(651_758_662);
+    expect(noExp.total.totalPayable).toBe(639_501_720);
+    expect(withExp.total.totalPayable).toBe(635_635_770);
     // 주장의 핵심 — 필요경비가 실제로 세액을 줄인다(tax-neutral이 아니다).
     expect(withExp.total.totalPayable).toBeLessThan(noExp.total.totalPayable);
   });

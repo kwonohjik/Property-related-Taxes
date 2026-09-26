@@ -49,7 +49,7 @@ const base = (extra?: Partial<TransferTaxInput>): TransferTaxInput =>
     transferPrice: 1_500_000_000, // 15억 고가 → 과세 발생
     acquisitionPrice: 1_100_000_000, // 차익 4억
     acquisitionDate: new Date("2014-06-01"),
-    transferDate: new Date("2024-06-01"), // 10년 보유
+    transferDate: new Date("2024-06-01"), // 10년 보유 (§95④ 초일 산입 — 응당일 양도 = 만 10년)
     residencePeriodMonths: 60, // 5년 거주
     isOneHousehold: true,
     householdHousingCount: 1,
@@ -66,19 +66,21 @@ describe("L-2: 장기임대 거주주택 특례 경로 가산세 반영", () => 
 
   it("특례 + 무신고 가산세 — 신고불성실가산세 totalTax 반영 (L-2 회귀)", () => {
     const r = calculateTransferTax(base({ filingPenaltyDetails: filingPenalty }), rates);
-    // 본세·지방소득세
-    expect(r.calculatedTax).toBe(3_645_000);
-    expect(r.determinedTax).toBe(3_645_000);
-    expect(r.localIncomeTax).toBe(364_500);
-    // 가산세 반영 (수정 전: penaltyDetail undefined, totalTax 4,009,500)
+    // 본세·지방소득세 — 차익 4억 × 12억 초과분 (15억−12억)/15억 = 80,000,000
+    //   표2: 보유 10년 40% + 거주 5년 20% = 60% (초일 산입. 종전 초일불산입은 보유 9년 → 56%)
+    //   80,000,000 × 40% − 2,500,000 = 29,500,000 × 15% − 1,260,000 = 3,165,000
+    expect(r.calculatedTax).toBe(3_165_000);
+    expect(r.determinedTax).toBe(3_165_000);
+    expect(r.localIncomeTax).toBe(316_500);
+    // 가산세 반영 (수정 전: penaltyDetail undefined, totalTax = 본세 + 지방소득세만)
     expect(r.penaltyDetail).toBeDefined();
     expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(2_000_000);
-    expect(r.totalTax).toBe(6_009_500); // 3,645,000 + 364,500 + 2,000,000
+    expect(r.totalTax).toBe(5_481_500); // 3,165,000 + 316,500 + 2,000,000
   });
 
   it("특례 + 가산세 미입력 — 기존 동작 보존 (penaltyDetail 없음)", () => {
     const r = calculateTransferTax(base(), rates);
     expect(r.penaltyDetail).toBeUndefined();
-    expect(r.totalTax).toBe(4_009_500); // 본세 + 지방소득세만
+    expect(r.totalTax).toBe(3_481_500); // 본세 + 지방소득세만
   });
 });

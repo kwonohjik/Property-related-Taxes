@@ -25,14 +25,19 @@
  *
  * | 신고 방식 | 토지/건물 | 현행 세액 | 가드 도입 후 |
  * |---|---|---|---|
- * | 일괄(안분) | 9억 / 6억 | 228,195,000 | 228,195,000 (불변) |
- * | 구분 · 범위 안 | 10억 / 5억 | 226,347,000 | 226,347,000 (불변) |
- * | 구분 · 토지 몰아주기 | 14억 / 1억 | 199,551,000 | **228,195,000** |
- * | 구분 · 건물 몰아주기 | 1억 / 14억 | 218,031,000 | **228,195,000** |
- * | 구분 · 건물 정확히 −30% | 10.8억 / 4.2억 | 224,868,600 | **228,195,000** |
- * | 구분 · 1원 안쪽 | 1,079,999,999 / 420,000,001 | 224,868,600 | 224,868,600 (불변) |
+ * | 일괄(안분) | 9억 / 6억 | 221,727,000 | 221,727,000 (불변) |
+ * | 구분 · 범위 안 | 10억 / 5억 | 219,879,000 | 219,879,000 (불변) |
+ * | 구분 · 토지 몰아주기 | 14억 / 1억 | 190,366,000 | **221,727,000** |
+ * | 구분 · 건물 몰아주기 | 1억 / 14억 | 208,791,000 | **221,727,000** |
+ * | 구분 · 건물 정확히 −30% | 10.8억 / 4.2억 | 218,400,600 | **221,727,000** |
+ * | 구분 · 1원 안쪽 | 1,079,999,999 / 420,000,001 | 218,400,600 | 218,400,600 (불변) |
  *
- * 🔴 마지막 두 fixture는 **현행에서 세액이 같다**(224,868,600 — 과세표준 절사가 1원을 흡수한다).
+ * 📌 세액은 보유기간 **초일 산입**(소득세법 §95④ — `holding-period-first-day-inclusion.anchor.test.ts`)
+ *    기준이다. 양도일 2024-06-01이 두 취득일의 응당일이라 토지 10년(장특 20%)·건물 8년(16%)이다.
+ *    종전(초일·말일 불산입) 구현은 9년·7년(18%·14%)으로 세어 위 세액이 각각 228,195,000 ·
+ *    226,347,000 · 199,551,000 · 218,031,000 · 224,868,600이었다 — 가드 계약(발동·미발동·경계)은 불변.
+ *
+ * 🔴 마지막 두 fixture는 **현행에서 세액이 같다**(218,400,600 — 과세표준 절사가 1원을 흡수한다).
  *    가드 도입 후 **갈라지는 것**이 경계가 정확히 30%에서 물린다는 증거다.
  *
  * ## 고정 계약
@@ -54,7 +59,7 @@ const rates = makeMockRates();
 /** 안분값 = 토지 9억 / 건물 6억 (양도시 기준시가 9억 : 6억 비율 × 총액 15억) */
 const APPORTIONED = { land: 900_000_000, building: 600_000_000 };
 /** 일괄양도(안분) 세액 — 발동 시 이 값으로 되돌아와야 한다 */
-const TAX_APPORTIONED = 228_195_000;
+const TAX_APPORTIONED = 221_727_000;
 
 const mk = (over: Partial<TransferTaxInput> = {}): TransferTaxInput =>
   baseTransferInput({
@@ -90,14 +95,14 @@ describe("U-8-1 — 발동 시 세액이 안분 결과와 일치한다", () => {
     expect(r.totalTax).toBe(TAX_APPORTIONED);
   });
 
-  it("🔴 토지 몰아주기(14억/1억) — 199,551,000 → 안분값으로 되돌아온다", () => {
+  it("🔴 토지 몰아주기(14억/1억) — 190,366,000 → 안분값으로 되돌아온다", () => {
     const over = { landTransferPrice: 1_400_000_000, buildingTransferPrice: 100_000_000 };
     expect(splitOf(over)!.land.transferPrice).toBe(APPORTIONED.land);
     expect(splitOf(over)!.building.transferPrice).toBe(APPORTIONED.building);
     expect(taxOf(over)).toBe(TAX_APPORTIONED);
   });
 
-  it("🔴 건물 몰아주기(1억/14억) — 218,031,000 → 안분값으로 되돌아온다", () => {
+  it("🔴 건물 몰아주기(1억/14억) — 208,791,000 → 안분값으로 되돌아온다", () => {
     const over = { landTransferPrice: 100_000_000, buildingTransferPrice: 1_400_000_000 };
     expect(taxOf(over)).toBe(TAX_APPORTIONED);
   });
@@ -113,7 +118,7 @@ describe("U-8-2 — 범위 안 구분값은 그대로 쓴다 (과잉 발동 금�
   it("토지 10억 / 건물 5억 — 이탈 11.1% · 16.7% → 구분값 유지", () => {
     const over = { landTransferPrice: 1_000_000_000, buildingTransferPrice: 500_000_000 };
     expect(splitOf(over)!.land.transferPrice).toBe(1_000_000_000);
-    expect(taxOf(over)).toBe(226_347_000);
+    expect(taxOf(over)).toBe(219_879_000);
     // 안분 세액과 **달라야** 한다 — 같아지면 가드가 과잉 발동한 것이다.
     expect(taxOf(over)).not.toBe(TAX_APPORTIONED);
   });
@@ -121,7 +126,7 @@ describe("U-8-2 — 범위 안 구분값은 그대로 쓴다 (과잉 발동 금�
 
 describe("U-8-3 — 경계는 「이상」이다", () => {
   /**
-   * 두 fixture는 **현행에서 세액이 같다**(224,868,600). 가드가 붙으면 갈라진다 —
+   * 두 fixture는 **현행에서 세액이 같다**(218,400,600). 가드가 붙으면 갈라진다 —
    * 이 갈라짐이 경계가 정확히 30%에 물린다는 증거다.
    */
   it("건물이 정확히 −30%(4.2억)이면 **발동**한다", () => {
@@ -136,7 +141,7 @@ describe("U-8-3 — 경계는 「이상」이다", () => {
   it("1원 안쪽(건물 420,000,001)은 **미발동** — 개구간이다", () => {
     const over = { landTransferPrice: 1_079_999_999, buildingTransferPrice: 420_000_001 };
     expect(splitOf(over)!.saleSplitJudgment!.deemedUnclear).toBe(false);
-    expect(taxOf(over)).toBe(224_868_600);
+    expect(taxOf(over)).toBe(218_400_600);
   });
 });
 
@@ -166,12 +171,12 @@ describe("U-8-5 — §166⑧ 예외를 선택하면 발동하지 않는다", () 
     expect(taxOf(over)).toBe(TAX_APPORTIONED);
   });
 
-  it("1호(다른 법령에 따라 구분) → 구분값 유지 = 199,551,000", () => {
-    expect(taxOf({ ...over, saleSplitExemption: "other_law" })).toBe(199_551_000);
+  it("1호(다른 법령에 따라 구분) → 구분값 유지 = 190,366,000", () => {
+    expect(taxOf({ ...over, saleSplitExemption: "other_law" })).toBe(190_366_000);
   });
 
   it("2호(철거 후 토지만 사용) → 구분값 유지", () => {
-    expect(taxOf({ ...over, saleSplitExemption: "demolished_land_only" })).toBe(199_551_000);
+    expect(taxOf({ ...over, saleSplitExemption: "demolished_land_only" })).toBe(190_366_000);
   });
 
   it("예외로 면했어도 **이탈 사실은 기록**한다 — 신고서 각주 재료다", () => {

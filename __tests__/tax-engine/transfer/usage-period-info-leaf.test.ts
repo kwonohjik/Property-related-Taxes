@@ -23,6 +23,18 @@ describe("calcUsagePeriodInfo — leaf 추출 후", () => {
     expect(info!.t2HoldingYears).toBe(3); // 3년 2개월 1일
   });
 
+  it("§95⑥ 경계 — 용도변경일은 주택 구간에만 속한다(비주택 구간은 전날까지, 이중 산입 금지)", () => {
+    // 비주택 2018-01-02 ~ 2021-12-31 = 3년 11개월 30일(§95④ 초일 산입) → 3년.
+    // 용도변경일(2022-01-01)을 비주택 끝으로 넘기면 정확히 4년이 되어 표1이 한 단계 부풀었다.
+    const info = calcUsagePeriodInfo(
+      new Date("2018-01-02"),
+      new Date("2022-01-01"),
+      new Date("2025-12-31"),
+    );
+    expect(info!.t1HoldingYears).toBe(3);
+    expect(info!.t2HoldingYears).toBe(4); // 2022-01-01 ~ 2025-12-31 = 4년(「사용한 날부터 기산」)
+  });
+
   it("C-8·C-9 방어 — 용도변경일이 구간 밖이면 null", () => {
     const acq = new Date("2018-02-10");
     const transfer = new Date("2026-01-27");

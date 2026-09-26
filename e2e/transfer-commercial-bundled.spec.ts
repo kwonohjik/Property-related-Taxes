@@ -130,7 +130,8 @@ test.describe("상가 × 함께양도·지분 분할", () => {
     expect(
       body.data.aggregated.properties.map((p: { transferGain: number }) => p.transferGain),
     ).toEqual([360_000_000, 240_000_000]);
-    expect(body.data.aggregated.totalTax).toBe(187_665_500);
+    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 10년 20%(vitest axis-b-commercial과 같은 값)
+    expect(body.data.aggregated.totalTax).toBe(181_989_500);
   });
 
   test("🔴 컴패니언(다른 물건) 상가 — 종전 400이 계산으로 바뀐다", async ({ page }) => {
@@ -145,6 +146,7 @@ test.describe("상가 × 함께양도·지분 분할", () => {
     expect(
       body.data.aggregated.properties.map((p: { transferGain: number }) => p.transferGain),
     ).toEqual([100_000_000, 200_000_000]);
-    expect(body.data.aggregated.totalTax).toBe(79_849_000);
+    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 10년 20%(vitest axis-b-commercial과 같은 값)
+    expect(body.data.aggregated.totalTax).toBe(77_341_000);
   });
 });

@@ -24,6 +24,7 @@
  */
 
 import { useMemo } from "react";
+import { addDays } from "date-fns";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -108,7 +109,8 @@ export function NonHousingConversionExpandedPanel({ asset, onChange, transferDat
     );
     return {
       total: periodLabel(acq, transfer),
-      nonHousing: periodLabel(acq, start),
+      // §95⑥ — 주택 구간은 사용 개시일부터, 비주택 구간은 그 전날까지(엔진 `calcUsagePeriodInfo`와 같은 경계)
+      nonHousing: periodLabel(acq, addDays(start, -1)),
       housing: periodLabel(start, transfer),
       table1Pct,
       table2HoldingPct,

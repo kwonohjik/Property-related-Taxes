@@ -146,12 +146,19 @@ describe("F30 · 세액", () => {
       makeMockRates(),
     );
 
-  it("F30-7: 공백 케이스 261,240,000원 (정정 전 204,090,000원) · 대조군은 204,090,000원 유지", () => {
+  /**
+   * 보유기간은 **초일 산입**(소득세법 §95④ — `holding-period-first-day-inclusion.anchor.test.ts`
+   * HP-FD-3): 2014-01-01 → 2024-01-01 = 10년, 장특 표1 20% ⇒ 과세표준 7억 − 1.4억 − 250만
+   * = 557,500,000. 비사업용: × 52%(42%+10%p) − 35,940,000 = 253,960,000 /
+   * 사업용: × 42% − 35,940,000 = 198,210,000.
+   * 종전(초일·말일 불산입) 구현은 9년·18%로 세어 261,240,000 / 204,090,000(차 57,150,000)이었다.
+   */
+  it("F30-7: 공백 케이스 253,960,000원 (정정 전 198,210,000원) · 대조군은 198,210,000원 유지", () => {
     const gap = tax(mk());
-    expect(gap.calculatedTax).toBe(261_240_000); // 정정 전 204,090,000 (차 57,150,000 과소)
+    expect(gap.calculatedTax).toBe(253_960_000); // 정정 전 198,210,000 (차 55,750,000 과소)
     expect(gap.surchargeType).toBe("non_business_land");
 
     const ctrl = tax(mk({ businessUsePeriods: SELF_FARMING_COVERING }));
-    expect(ctrl.calculatedTax).toBe(204_090_000); // 정정 전후 불변
+    expect(ctrl.calculatedTax).toBe(198_210_000); // 정정 전후 불변
   });
 });

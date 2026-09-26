@@ -248,7 +248,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landGain = landTransferPrice - (landSwap.swapApplied ? 0 : landAcqPrice) - landSwap.effectiveDirect - landSwap.effectiveAppraisalDed;
   const buildingGain = buildingTransferPrice - (buildingSwap.swapApplied ? 0 : buildingAcqPrice) - buildingSwap.effectiveDirect - buildingSwap.effectiveAppraisalDed;
 
-  // ⑥ 보유연수 (민법 초일불산입)
+  // ⑥ 보유연수 (§95④ 초일 산입 — calculateHoldingPeriod)
   const { years: landHoldingYears } = calculateHoldingPeriod(
     input.landAcquisitionDate,
     input.transferDate,

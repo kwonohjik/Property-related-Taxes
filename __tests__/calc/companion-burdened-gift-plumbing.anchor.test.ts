@@ -177,7 +177,10 @@ describe("컴패니언 × 부담부증여 — 배관", () => {
     ]);
     // 합계 194,000,000. 재배분을 끄면 각 카드가 자기 채무 전액을 B로 잡아 388,000,000이 된다
     // (Gate-B 해제 전 실측 — 이 anchor가 그 회귀를 막는다).
-    expect(data?.aggregated?.totalTax).toBe(35_830_300);
+    // 194,000,000 × 70%(2009-03-01 → 2024-03-01 = 15년 30%, 초일 산입 — 소득세법 §95④,
+    // holding-period-first-day-inclusion.anchor.test.ts. 종전 14년 28% → 35,830,300)
+    //   − 2,500,000 = 133,300,000 × 35% − 15,440,000 = 31,215,000 × 1.1
+    expect(data?.aggregated?.totalTax).toBe(34_336_500);
   });
 
   it("C-4 자산별 차익이 **debtRatio 0.25를 강제한 단건 참조**와 일치한다", async () => {
@@ -232,7 +235,8 @@ describe("컴패니언 × 부담부증여 — 배관", () => {
     const { status, body, data } = await run(f);
     expect(status).toBe(200);
     expect((body.burdenedGiftInfo as Record<string, unknown>).assumedDebtOverride).toBeUndefined();
-    // PR #1447이 고정한 값 그대로.
-    expect(data?.aggregated?.totalTax).toBe(64_600_360);
+    // PR #1447이 고정한 값 그대로(axis-b-burdened-gift-plumbing P-3과 동일). 보유기간 초일 산입으로
+    // 15년 30% — 종전 64,600,360(14년 28%) → 62,167,600.
+    expect(data?.aggregated?.totalTax).toBe(62_167_600);
   });
 });

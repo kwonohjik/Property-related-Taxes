@@ -52,7 +52,12 @@ describe("D-1 — 광주 조정대상지역 (지정 2020-12-18 ~ 해제 2022-09-
     const legacy = calc("2911010100");
     const current = calc("1221010100");
     expect(current.exemptReason).toBeUndefined();
-    expect(current.totalTax).toBe(518_248_500); // 종전 신 코드: 180,862,000 (−337,386,500 과소)
+    // 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 2021-06-01 → 2026-06-01은 응당일 양도라 §95④
+    //    초일 산입으로 **5년**(종전 구현 4년) ⇒ 장특 표1 8% → 10%. 13억 × 90% − 250만 =
+    //    1,167,500,000 × 45% − 65,940,000 = 459,435,000 + 지방 10% = 505,378,500 (종전 518,248,500).
+    //    결함 상태(비과세·12억 초과분 과세)도 같은 이유로 180,862,000 → 176,286,000.
+    //    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+    expect(current.totalTax).toBe(505_378_500); // 종전 신 코드: 176,286,000 (−329,092,500 과소)
     expect(current.totalTax).toBe(legacy.totalTax); // 같은 장소는 같은 결론
   });
 });

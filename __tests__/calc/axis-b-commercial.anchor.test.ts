@@ -20,8 +20,13 @@
  *
  * ## ⚠️ 「일치」가 「양쪽 다 미발동」이 아님을 함께 단언한다
  *
- * A-4가 판별력 대조군이다 — 부수토지 미입력본과 **819,500원** 차이가 난다.
+ * A-4가 판별력 대조군이다 — 부수토지 미입력본과 **423,500원** 차이가 난다.
  * 그 차가 0이면 A-2의 일치는 아무것도 증명하지 못한다.
+ *
+ * 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 2014-06-01 → 2024-06-01은 응당일 양도라 §95④
+ *    「취득일부터 양도일까지」 초일 산입으로 **10년**이다(종전 구현 9년). 장특 표1 18% → 20%.
+ *    세액은 전부 이 한 단계에서 파생된다(종전 차이 819,500 · 단건 187,665,500).
+ *    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
  *
  * ⚠️ 수치는 mock 세율표 실측값이지 「정본 세액」이 아니다.
  */
@@ -163,7 +168,9 @@ describe("상가 × 축 B(지분 분할)", () => {
     const single = await run(form([asset(1, CB)]));
     expect(single.status).toBe(200);
     expect(single.data?.result?.transferGain).toBe(600_000_000);
-    expect(single.data?.result?.totalTax).toBe(187_665_500);
+    // 6억 × 80% − 250만 = 477,500,000 → 비사업용 50% 분리 238,750,000 × 48% − 19,940,000
+    //   = 94,660,000 + 그 외 238,750,000 × 38% − 19,940,000 = 70,785,000 ⇒ 165,445,000 (+지방 10%)
+    expect(single.data?.result?.totalTax).toBe(181_989_500);
 
     const axisB = await run(form(AXIS_B));
     expect(axisB.status).toBe(200);
@@ -172,7 +179,7 @@ describe("상가 × 축 B(지분 분할)", () => {
     expect(axisB.data?.aggregated?.properties?.map((p) => p.transferGain)).toEqual([
       360_000_000, 240_000_000,
     ]);
-    expect(axisB.data?.aggregated?.totalTax).toBe(187_665_500);
+    expect(axisB.data?.aggregated?.totalTax).toBe(181_989_500);
   });
 
   it("A-3 🔑 §101① 부수토지 초과 판정이 **두 카드 모두에서** 발동한다", async () => {
@@ -186,10 +193,11 @@ describe("상가 × 축 B(지분 분할)", () => {
     // 이 차이가 0이면 A-2의 「일치」는 양쪽 다 미발동이어도 성립한다.
     const withAppurtenant = await run(form([asset(1, CB)]));
     const without = await run(form([asset(1, CB_NO_APPURTENANT)]));
-    expect(without.data?.result?.totalTax).toBe(186_846_000);
+    // 477,500,000 × 40% − 25,940,000 = 165,060,000 (+지방 10%) = 181,566,000
+    expect(without.data?.result?.totalTax).toBe(181_566_000);
     expect(
       (withAppurtenant.data?.result?.totalTax ?? 0) - (without.data?.result?.totalTax ?? 0),
-    ).toBe(819_500);
+    ).toBe(423_500);
   });
 
   it("A-5 ⑬ 컴패니언 payload에 상가 서브객체가 실린다 (지분 스케일 없이)", async () => {
@@ -232,7 +240,9 @@ describe("상가 × 컴패니언(다른 물건)", () => {
     expect(r.data?.aggregated?.properties?.map((p) => p.transferGain)).toEqual([
       100_000_000, 200_000_000,
     ]);
-    expect(r.data?.aggregated?.totalTax).toBe(79_849_000);
+    // 🔁 A1a — 장특 20%(10년): 소득 8,000만 + 1억6,000만 − 250만 = 237,500,000
+    //    × 38% − 19,940,000 = 70,310,000 (+지방 10%) = 77,341,000 (종전 79,849,000)
+    expect(r.data?.aggregated?.totalTax).toBe(77_341_000);
   });
 
   it("A-7 ⑭ 컴패니언 상가가 `land`로 접히지 않는다 — §101①이 발동한다", async () => {

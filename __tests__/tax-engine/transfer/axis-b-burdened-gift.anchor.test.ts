@@ -117,7 +117,12 @@ describe("축 B × 부담부증여 — 채무 안분 규약", () => {
     const b = r.transferBurdenedGiftBreakdown!;
     expect(b.perAsset.land.transferPrice + b.perAsset.building.transferPrice).toBe(600_000_000);
     expect(r.transferGain).toBe(291_000_000);
-    expect(r.totalTax).toBe(64_600_360);
+    // 2009-03-01 → 2024-03-01 = §95④ 초일 산입 15년 → 표1 30%(정본 anchor
+    // holding-period-first-day-inclusion.anchor.test.ts). 손 도출:
+    //   291,000,000 − 87,300,000 − 2,500,000 = 과표 201,200,000 × 38% − 19,940,000 = 56,516,000
+    //   + 지방 5,651,600 = 62,167,600
+    // (종전 초일·말일 불산입 구현은 14년·28%로 64,600,360이었다)
+    expect(r.totalTax).toBe(62_167_600);
   });
 
   it("T-1 ✅ 채무도 안분: 60%+40% 합계가 단건 100%와 **정확히 일치**", () => {
@@ -126,7 +131,7 @@ describe("축 B × 부담부증여 — 채무 안분 규약", () => {
     expect(r.properties[0].transferGain).toBe(174_600_000); // 291,000,000 × 0.6
     expect(r.properties[1].transferGain).toBe(116_400_000); // 291,000,000 × 0.4
     expect(sumGain(r)).toBe(291_000_000);
-    expect(r.totalTax).toBe(64_600_360);
+    expect(r.totalTax).toBe(62_167_600);
   });
 
   it("T-2 🔴 채무 미안분(축 A 규약)이면 세액이 2.9배로 뛴다 — 판별력", () => {
@@ -135,8 +140,10 @@ describe("축 B × 부담부증여 — 채무 안분 규약", () => {
     expect(r.properties[0].transferGain).toBe(291_000_000);
     // 40% 카드는 A<B라 더 크게 왜곡된다
     expect(r.properties[1].transferGain).toBe(394_000_000);
-    expect(r.totalTax).toBe(187_374_000);
-    expect(r.totalTax).toBeGreaterThan(64_600_360 * 2);
+    // 685,000,000 × (1 − 30%) − 2,500,000 = 477,000,000 × 40% − 25,940,000 = 164,860,000 × 1.1
+    // (종전 14년·28%에선 187,374,000)
+    expect(r.totalTax).toBe(181_346_000);
+    expect(r.totalTax).toBeGreaterThan(62_167_600 * 2);
   });
 
   it("T-3 취득일이 다르면 단건과 일치하지 않는 것이 **정상**이다", () => {
@@ -144,7 +151,7 @@ describe("축 B × 부담부증여 — 채무 안분 규약", () => {
     // 「일치해야 한다」로 오해해 T-1의 기준을 여기 적용하지 말 것.
     const r = agg([card("p1", 0.6, 0.6), card("p2", 0.4, 0.4, "2020-03-01")]);
     expect(sumGain(r)).toBe(291_000_000); // 차익 자체는 보유기간과 무관 — 같다
-    expect(r.totalTax).not.toBe(64_600_360); // 장특·세율이 갈려 세액은 다르다
+    expect(r.totalTax).not.toBe(62_167_600); // 장특·세율이 갈려 세액은 다르다
   });
 
   it("T-4 §159 항등: 카드별 엔진 양도가액 합 = 채무 총액 (지분 무관)", () => {

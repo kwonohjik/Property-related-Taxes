@@ -68,7 +68,15 @@ const PENALTY_NONE = {
   penaltyReason: "normal",
 };
 
-/** 주거 60㎡ · 비주거 40㎡ · 바닥 50㎡ · 토지 100㎡ · 양도 15억 / 취득 3억. */
+/**
+ * 주거 60㎡ · 비주거 40㎡ · 바닥 50㎡ · 토지 100㎡ · 양도 15억 / 취득 3억.
+ *
+ * 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 2009-03-01 → 2024-03-01은 응당일 양도라 §95④
+ *    「취득일부터 양도일까지」 초일 산입으로 **15년**이다(종전 구현 14년). 장특 표1 28% → 30%.
+ *    상가분 공제 전 소득 278,550,000 × 70% = 194,985,000 − 250만 = 과세표준 192,485,000
+ *    × 38% − 19,940,000 = 53,204,300. 아래 기대값은 전부 이 base에서 파생된다.
+ *    (위 헤더의 「60,853,408」은 F17-B 당시 실측 기록이다.) anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+ */
 const MIXED = {
   transferPrice: 1_500_000_000,
   transferDate: "2024-03-01",
@@ -146,25 +154,26 @@ describe("F17-B · 겸용주택 감면", () => {
     const red = await post({ reductions: RED_77 });
 
     expect(base.total.reductionAmount).toBe(0);
-    expect(base.total.totalPayable).toBe(60_853_408);
+    expect(base.total.totalPayable).toBe(58_524_730);
 
     // 현금보상 100% ⇒ 감면대상 소득 전액 · 2024년 양도 현금 10%.
-    expect(red.total.reductionAmount).toBe(5_532_128);
+    // 53,204,300 × (192,485,000 × 10%) / 192,485,000 = 5,320,430
+    expect(red.total.reductionAmount).toBe(5_320_430);
     expect(red.total.reductionType).toBe("공익사업용 토지 수용 (§77)");
-    expect(red.total.determinedTax).toBe(49_789_152);
-    expect(red.total.totalPayable).toBe(55_874_492);
+    expect(red.total.determinedTax).toBe(47_883_870);
+    expect(red.total.totalPayable).toBe(53_736_343);
   });
 
   it("MU-02: 지방소득세 base가 **결정세액**으로 내려간다 (산출세액이 아니다)", async () => {
     const red = await post({ reductions: RED_77 });
     // 지방세법 §103의3 — 소득세 결정세액의 10%.
-    expect(red.total.localTax).toBe(4_978_915);
+    expect(red.total.localTax).toBe(4_788_387);
     expect(red.total.localTax).toBe(Math.floor(red.total.determinedTax * 0.1));
   });
 
   it("MU-03: 농어촌특별세가 붙는다 — **세 경로 공용 판정표**", async () => {
     const red = await post({ reductions: RED_77 });
-    expect(red.total.ruralSurtax).toBe(1_106_425); // 5,532,128 × 20%
+    expect(red.total.ruralSurtax).toBe(1_064_086); // 5,320,430 × 20%
   });
 
   it("MU-04: §77 「직접 경작한 토지」면 농특세가 빠진다 (농특세령 §4①1호 괄호)", async () => {
@@ -172,15 +181,15 @@ describe("F17-B · 겸용주택 감면", () => {
       reductions: RED_77,
       isSelfCultivatedExpropriatedLand: true,
     });
-    expect(selfCultivated.total.reductionAmount).toBe(5_532_128); // 감면 자체는 불변
+    expect(selfCultivated.total.reductionAmount).toBe(5_320_430); // 감면 자체는 불변
     expect(selfCultivated.total.ruralSurtax).toBe(0);
-    expect(selfCultivated.total.totalPayable).toBe(54_768_067);
+    expect(selfCultivated.total.totalPayable).toBe(52_672_257);
   });
 
   it("MU-05: 🔑 차감형은 계산하지 않고 **고지**한다 (침묵 금지)", async () => {
     const deferred = await post({ reductions: RED_DEFERRED });
     expect(deferred.total.reductionAmount).toBe(0);
-    expect(deferred.total.totalPayable).toBe(60_853_408);
+    expect(deferred.total.totalPayable).toBe(58_524_730);
     expect(deferred.warnings.some((w) => /차감형\)은 이 계산에 반영되지 않았습니다/.test(w))).toBe(
       true,
     );
@@ -190,8 +199,8 @@ describe("F17-B · 겸용주택 감면", () => {
 
   it("MU-06: 대조군 — 감면을 안 고르면 종전 값 그대로다 (회귀 0)", async () => {
     const base = await post();
-    expect(base.total.transferTax).toBe(55_321_280);
-    expect(base.total.determinedTax).toBe(55_321_280);
+    expect(base.total.transferTax).toBe(53_204_300);
+    expect(base.total.determinedTax).toBe(53_204_300);
     expect(base.total.ruralSurtax).toBe(0);
     expect(base.total.penaltyTax).toBe(0);
   });
@@ -202,9 +211,9 @@ describe("F17-B · 겸용주택 가산세", () => {
     const base = await post();
     const pen = await post({ filingPenaltyDetails: PENALTY_NONE });
 
-    // 국세기본법 §47의2①1호 — 무신고 20% × 결정세액 55,321,280.
-    expect(pen.total.penaltyTax).toBe(11_064_256);
-    expect(pen.total.totalPayable - base.total.totalPayable).toBe(11_064_256);
+    // 국세기본법 §47의2①1호 — 무신고 20% × 결정세액 53,204,300.
+    expect(pen.total.penaltyTax).toBe(10_640_860);
+    expect(pen.total.totalPayable - base.total.totalPayable).toBe(10_640_860);
   });
 
   it("MU-11: 가산세는 **지방소득세 base가 아니다**", async () => {

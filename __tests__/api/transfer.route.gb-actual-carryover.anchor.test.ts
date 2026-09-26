@@ -32,9 +32,15 @@
  *   이월과세(토지) — 증여등기 2021-03-01 · 증여자 취득 2005-06-15 ·
  *                   증여자 취득가 150,000,000 · 증여 당시 평가액 400,000,000 · 증여세 30,000,000
  *
- * ⚠️ **부호를 일반화하지 말 것.** 이 픽스처는 증여자 취득일 승계로 LTHD가 급증해(2년11개월 0%
+ * ⚠️ **부호를 일반화하지 말 것.** 이 픽스처는 증여자 취득일 승계로 LTHD가 급증해(3년 6%
  *    → 18년8개월 30%) 세액이 **내려가지만**, 반대 방향 픽스처도 성립한다. 고정하는 것은
  *    「이월과세 유무로 결과가 **갈린다**」와 그때의 정확한 수치다.
+ *
+ * 📌 보유기간 초일 산입(소득세법 §95④ 「취득일부터 양도일까지」 —
+ *    `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`)으로 2021-03-01 →
+ *    2024-03-01(응당일 양도)은 **3년**(표1 6%)이다. 종전 구현(초일·말일 불산입)은 2년11개월 0%로
+ *    셌다 — 위 결함 기록의 「299,010,000」은 그 시절 수치다. 매매 파트(보유 2021-03-01~)의
+ *    LTHD 6%만 새로 붙고 나머지 산식은 같다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -180,9 +186,12 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
     const base = await post(gbAsset());
     const co = await post(landCarryover());
 
-    // 종전에는 이 두 값이 **바이트 동일**이었다(299,010,000 = 299,010,000).
-    expect(base.determinedTax).toBe(299_010_000);
-    expect(co.determinedTax).toBe(225_090_000);
+    // 종전에는 이 두 값이 **바이트 동일**이었다(299,010,000 = 299,010,000 — 옛 보유기간 규칙 수치).
+    // base: 차익 800,000,000 − LTHD 6%(3년) 48,000,000 − 2,500,000 = 749,500,000 × 42% − 35,940,000
+    expect(base.determinedTax).toBe(278_850_000);
+    // co: 토지 320,000,000 × 70%(18년 30%) + 건물 400,000,000 × 94%(3년 6%) = 600,000,000
+    //     − 2,500,000 = 597,500,000 × 42% − 35,940,000
+    expect(co.determinedTax).toBe(215_010_000);
     expect(co.determinedTax).not.toBe(base.determinedTax);
   });
 
@@ -205,7 +214,7 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
   // ══════════════════════════════════════════════════════════════════
   it("GBAC-02: 대조군 — 취득원인이 매매인 실가 경로는 불변 (회귀 0)", async () => {
     const base = await post(gbAsset());
-    expect(base.determinedTax).toBe(299_010_000);
+    expect(base.determinedTax).toBe(278_850_000);
     expect(card(base, "land").acquisitionPrice).toBe(100_000_000); // §166⑥ 50:50
     expect(card(base, "building").acquisitionPrice).toBe(100_000_000);
     for (const p of base.properties) expect(p.carryoverTaxationDetail).toBeUndefined();
@@ -219,8 +228,11 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
     const co = await post(
       gbAsset({ ...ESTIMATED, acquisitionCause: "carryover_gift", carryover: carryoverForm() as never }),
     );
-    expect(base.determinedTax).toBe(170_660_000);
-    expect(co.determinedTax).toBe(161_460_000);
+    // base: 차익 494,000,000(각 파트 500,000,000 − 환산 250,000,000 − 개산 3,000,000) × 94%(3년 6%)
+    //       − 2,500,000 = 461,860,000 × 40% − 25,940,000
+    expect(base.determinedTax).toBe(158_804_000);
+    // co: 토지 320,000,000 × 70% + 건물 247,000,000 × 94% = 456,180,000 − 2,500,000 → × 40% − 25,940,000
+    expect(co.determinedTax).toBe(155_532_000);
     expect(co.properties.find((p) => p.propertyId === "land")?.carryoverTaxationDetail).toBeDefined();
   });
 
@@ -242,7 +254,9 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
         buildingCarryover: buildingCarryoverForm() as never,
       }),
     );
-    expect(r.determinedTax).toBe(248_610_000);
+    // 토지 400,000,000 × 94%(3년 6%) + 건물 400,000,000 × 70%(18년 30%) = 656,000,000
+    //   − 2,500,000 = 653,500,000 × 42% − 35,940,000
+    expect(r.determinedTax).toBe(238_530_000);
     expect(card(r, "building").acquisitionPrice).toBe(80_000_000);
     expect(card(r, "building").necessaryExpense).toBe(20_000_000);
     // 토지 취득원인은 매매 그대로 — 파트 축이 독립임을 고정한다.
@@ -291,12 +305,15 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
     // 🔑 2배 계상이면 여기가 300,000,000이 된다.
     expect(biz.acquisitionPrice + nbl.acquisitionPrice).toBe(150_000_000);
     expect(biz.necessaryExpense + nbl.necessaryExpense).toBe(30_000_000);
-    expect(co.determinedTax).toBe(253_089_999);
+    // 토지 biz 128,000,000·nbl 192,000,000 × 70% + 건물 466,666,666 − floor(×6%) 27,999,999
+    //   = 662,666,667 − 2,500,000 = 660,166,667 × 42% → floor − 35,940,000
+    expect(co.determinedTax).toBe(241_330_000);
   });
 
   it("GBAC-05b: NBL 대조군 — 이월과세 없으면 종전 안분값 그대로", async () => {
     const base = await post(gbAsset(NBL));
-    expect(base.determinedTax).toBe(299_010_000);
+    // 차익 800,000,000 − LTHD(3년 6%, 카드별 floor) 47,999,999 − 2,500,000 = 749,500,001 × 42% − 35,940,000
+    expect(base.determinedTax).toBe(278_850_000);
     expect(card(base, "land_business").acquisitionPrice).toBe(66_666_666);
     expect(card(base, "land_nbl").acquisitionPrice).toBe(100_000_000);
   });
@@ -325,7 +342,8 @@ describe("GBAC — 일반건물 실가 모드 × 이월과세(§97의2) 배선",
     const land = card(r, "land");
     expect(land.acquisitionPrice).toBe(125_000_000);
     expect(land.acquisitionPrice).not.toBe(0);
-    expect(r.determinedTax).toBe(232_440_000);
+    // 토지 345,000,000 × 70% + 건물 400,000,000 × 94%(3년 6%) = 617,500,000 − 2,500,000 → × 42% − 35,940,000
+    expect(r.determinedTax).toBe(222_360_000);
   });
 
   // ══════════════════════════════════════════════════════════════════

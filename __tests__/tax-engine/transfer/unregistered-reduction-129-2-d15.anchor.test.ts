@@ -192,7 +192,7 @@ describe("D15 조기반환·분기 경로", () => {
 
   // F-8(2026-09-19): 미등기면 §155⑳ 특례 자체가 적용 불가(§91①)라 일반 경로로 계산된다 —
   //   감면 0·안내 1줄은 그 경로의 게이트가 낸다. 등기 긍정 짝은 특례 경로의 감면이다.
-  it("D15-A6 §155⑳ 입력: 미등기면 감면 0 · 안내 1줄 / 등기(특례 경로) 364,500", () => {
+  it("D15-A6 §155⑳ 입력: 미등기면 감면 0 · 안내 1줄 / 등기(특례 경로) 316,500", () => {
     const rentalHousingException = {
       applyException: true,
       scenario: "A",
@@ -233,7 +233,11 @@ describe("D15 조기반환·분기 경로", () => {
     expect(u.reductionAmount).toBe(0);
     expect(u.totalTax).toBe(rh(true, []).totalTax);
     expect(notices(u)).toHaveLength(1);
-    expect(rh(false, [E]).reductionAmount).toBe(364_500);
+    // 등기: 과세차익 400,000,000 × (15억 − 12억)/15억 = 80,000,000 × (1 − 60%) — 표2 보유 10년 40%
+    //   (2014-06-01 → 2024-06-01, 초일 산입 — 소득세법 §95④, holding-period-first-day-inclusion
+    //   .anchor.test.ts; 종전 구현은 9년 36%로 셌다 → 364,500) + 거주 5년 20%
+    //   = 32,000,000 − 2,500,000 = 29,500,000 × 15% − 1,260,000 = 3,165,000 × §77 현금 10%
+    expect(rh(false, [E]).reductionAmount).toBe(316_500);
   });
 });
 

@@ -78,17 +78,23 @@ describe("D-1 단순 증여 — 세율 보유기간은 증여받은 날부터 (�
    * N-1: 증여 2025-01-01 → 양도 2026-01-01. 증여자는 2010년 취득.
    *
    * 현행은 증여자 취득일을 통산해 누진(최고구간 40%)으로 떨어뜨린다 → 173,060,000.
-   * 조문대로면 증여받은 날 기산이므로 §104①3호 단기 50% → 248,750,000.
-   * **차이 75,690,000원 · 과소과세.**
+   * 조문대로면 증여받은 날 기산이므로 §104①2호 단기 40%(1년 이상 2년 미만) → 199,000,000.
+   * **차이 25,940,000원 · 과소과세.**
+   *
+   * 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 2025-01-01 → 2026-01-01은 응당일 양도라
+   *    §95④ 「취득일부터 양도일까지」 초일 산입으로 **만 1년**이다(종전 구현은 0년으로 세어
+   *    §104①3호 50%였다). anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+   *    ⚠️ 세율 40%가 누진 최고구간 40%와 같은 숫자라 `appliedRate` 단언은 통산 결함을
+   *    구별하지 못한다 — 구별은 `calculatedTax`(199,000,000 ↔ 통산 시 173,060,000)가 맡는다.
    */
-  it("N-1 증여 1년 — 매매와 같은 단기 50%여야 한다", () => {
+  it("N-1 증여 1년 — 매매와 같은 단기 40%(1년 이상 2년 미만)여야 한다", () => {
     const r = calc({
       acquisitionCause: "gift",
       acquisitionDate: D("2025-01-01"),
       donorAcquisitionDate: D("2010-01-01"),
     });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(248_750_000);
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(199_000_000);
   });
 
   it("N-2 증여 6개월 — 단기 50%여야 한다", () => {
@@ -101,11 +107,14 @@ describe("D-1 단순 증여 — 세율 보유기간은 증여받은 날부터 (�
     expect(r.calculatedTax).toBe(248_750_000);
   });
 
-  /** N-5 대조군 — 같은 보유기간을 매매로 취득하면 50%. N-1·N-2의 기대값 근거. */
-  it("N-5 매매 1년 (대조군) — 50%", () => {
+  /**
+   * N-5 대조군 — 같은 보유기간을 매매로 취득하면 40%. N-1의 기대값 근거.
+   * 🔁 A1a — 응당일 양도 = 만 1년(초일 산입) ⇒ 종전 50%에서 40%. N-2(6개월)는 여전히 50%.
+   */
+  it("N-5 매매 1년 (대조군) — 40%", () => {
     const r = calc({ acquisitionCause: "purchase", acquisitionDate: D("2025-01-01") });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(248_750_000);
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(199_000_000);
   });
 });
 
@@ -114,6 +123,10 @@ describe("D-1 회귀 감지선 — 고쳐도 움직이면 안 되는 경로", ()
    * N-3: 증여 2018-01-01(8년 보유) — 세율은 통산 여부와 무관하게 누진이다.
    * LTHD는 증여일 기산 8년이 유지되어야 한다(§95④ 단서는 §97의2① 적용 시에만 증여자 취득일).
    * 통산이 LTHD로 새면 16년치 공제가 적용되어 113,060,000(=N-5c)으로 떨어진다.
+   *
+   * 🔁 A1a — 제목의 「8년」은 초일 산입 기준으로 맞다. 종전 구현은 2018-01-01 → 2026-01-01을
+   *    7년(14%)으로 세어 145,060,000이었다. 8년×2% = 16% ⇒ 5억 × 84% − 250만 = 417,500,000
+   *    × 40% − 25,940,000 = 141,060,000. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
    */
   it("N-3 증여 8년 — 누진 · LTHD는 증여일 기산 유지", () => {
     const r = calc({
@@ -121,7 +134,7 @@ describe("D-1 회귀 감지선 — 고쳐도 움직이면 안 되는 경로", ()
       acquisitionDate: D("2018-01-01"),
       donorAcquisitionDate: D("2010-01-01"),
     });
-    expect(r.calculatedTax).toBe(145_060_000);
+    expect(r.calculatedTax).toBe(141_060_000);
   });
 
   /** N-4: §104②**1호** 상속은 정당한 통산 — 건드리면 안 된다. */
@@ -160,6 +173,12 @@ describe("D-1 회귀 감지선 — 고쳐도 움직이면 안 되는 경로", ()
 // D-2 — §97의2②로 배제되면 통산하지 않는다 (현행 확정 · 잠금장치)
 // ============================================================
 
+/**
+ * 🔁 A1a(보유기간 초일 산입) — 증여일 2025-01-01 → 양도 2026-01-01은 만 1년이라 단기세율이
+ *    50%(1년 미만)에서 40%(1년 이상 2년 미만)로 이동했다. 「증여일 기산 = 단기세율」이라는
+ *    잠금의 논지는 그대로이고, 통산 시 누진(173,060,000 / C-3은 35% 구간)과의 구별은
+ *    `calculatedTax`가 맡는다. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+ */
 describe("D-2 §97의2② 배제 — 증여일 기산 유지 (계획서 §2 ⑧ 연혁)", () => {
   const excluded = (extra: Record<string, unknown>) =>
     calc({
@@ -169,20 +188,20 @@ describe("D-2 §97의2② 배제 — 증여일 기산 유지 (계획서 §2 ⑧ 
       carryoverTaxation: { ...CT, ...extra } as never,
     });
 
-  it("C-1 ②1호 수용 배제 — 단기 50% 유지", () => {
+  it("C-1 ②1호 수용 배제 — 단기 40% 유지", () => {
     const r = excluded({ exclusionDeclared: { expropriationWithin2Years: true } });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(248_750_000);
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(199_000_000);
   });
 
-  it("C-2 ②2호 1세대1주택 배제 — 단기 50% 유지", () => {
+  it("C-2 ②2호 1세대1주택 배제 — 단기 40% 유지", () => {
     const r = excluded({ exclusionDeclared: { legacyOneHouseExemptionDeclared: true } });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(248_750_000);
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(199_000_000);
   });
 
   /** C-3 ②3호 세액비교 배제 — α를 취하면 순환이 생기는 호(계획서 §3.2 근거 3). */
-  it("C-3 ②3호 세액비교 배제 — 단기 50% 유지", () => {
+  it("C-3 ②3호 세액비교 배제 — 단기 40% 유지", () => {
     const r = calc({
       acquisitionCause: "carryover_gift",
       acquisitionDate: D("2025-01-01"),
@@ -193,8 +212,9 @@ describe("D-2 §97의2② 배제 — 증여일 기산 유지 (계획서 §2 ⑧ 
         donorAcquisitionPrice: 980_000_000,
       } as never,
     });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(48_750_000);
+    // (1억 − 250만) × 40% = 39,000,000
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(39_000_000);
   });
 });
 
@@ -213,15 +233,16 @@ describe("D-2 ①요건 미충족 — 애초에 「해당하는 자산」이 아
     expect(r.calculatedTax).toBe(113_060_000);
   });
 
-  it("C-5 증여자 사망(§97의2① 괄호) — 증여일 기산 · 단기 50%", () => {
+  // 🔁 A1a — 응당일 양도 = 만 1년(초일 산입) ⇒ 단기 40%. 위 D-2 describe 주석 참조.
+  it("C-5 증여자 사망(§97의2① 괄호) — 증여일 기산 · 단기 40%", () => {
     const r = calc({
       acquisitionCause: "carryover_gift",
       acquisitionDate: D("2025-01-01"),
       acquisitionPrice: 500_000_000,
       carryoverTaxation: { ...CT, donorDeceased: true } as never,
     });
-    expect(r.appliedRate).toBe(0.5);
-    expect(r.calculatedTax).toBe(248_750_000);
+    expect(r.appliedRate).toBe(0.4);
+    expect(r.calculatedTax).toBe(199_000_000);
   });
 });
 
@@ -256,6 +277,9 @@ describe("D-3② 다자산 §104⑤ 그룹 버킷 (classifyRateGroup)", () => {
   /**
    * G-1: 증여 자산이 통산으로 `short_term` 버킷을 벗어나면 §104⑤ 합산 단위가 달라진다.
    * 세율뿐 아니라 **그룹 편성**이 바뀌므로 회귀 위험이 가장 크다.
+   *
+   * 🔁 A1a — 2025-01-01 → 2026-01-01은 초일 산입으로 만 1년 ⇒ 두 자산 모두 40% 버킷.
+   *    (5억 + 5억 − 250만) × 40% = 399,000,000. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
    */
   it("G-1 gift + 매매 단기 — 두 자산 모두 단기 버킷이어야 한다", () => {
     const r = aggregate([
@@ -266,7 +290,7 @@ describe("D-3② 다자산 §104⑤ 그룹 버킷 (classifyRateGroup)", () => {
       }),
       item("B", { acquisitionCause: "purchase", acquisitionDate: D("2025-01-01") }),
     ]);
-    expect((r as unknown as Record<string, number>).calculatedTax).toBe(498_750_000);
+    expect((r as unknown as Record<string, number>).calculatedTax).toBe(399_000_000);
   });
 
   it("G-1b 매매 + 매매 (대조군) — G-1의 기대값 근거", () => {
@@ -274,7 +298,7 @@ describe("D-3② 다자산 §104⑤ 그룹 버킷 (classifyRateGroup)", () => {
       item("A", { acquisitionCause: "purchase", acquisitionDate: D("2025-01-01") }),
       item("B", { acquisitionCause: "purchase", acquisitionDate: D("2025-01-01") }),
     ]);
-    expect((r as unknown as Record<string, number>).calculatedTax).toBe(498_750_000);
+    expect((r as unknown as Record<string, number>).calculatedTax).toBe(399_000_000);
   });
 });
 
@@ -298,20 +322,25 @@ describe("D-3④ 토지·건물 분리 — 토지 파트 기산 (resolveLandStat
     householdHousingCount: 2,
   } as unknown as Partial<TransferTaxInput>;
 
-  it("G-2 토지 gift — 토지 파트는 증여일 기산(주택 단기 70%)이어야 한다", () => {
+  /**
+   * 🔁 A1a — 토지 2025-01-01 → 2026-01-01은 초일 산입으로 만 1년 ⇒ 주택 §104①2호 60%.
+   *    토지 파트 (3억 − 250만) × 60% = 178,500,000 + 건물 파트 33,560,000 = 212,060,000
+   *    (합산 누진 149,060,000보다 크다). anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+   */
+  it("G-2 토지 gift — 토지 파트는 증여일 기산(주택 단기 60%)이어야 한다", () => {
     const r = calc({
       ...split,
       landAcquisitionCause: "gift",
       landDonorAcquisitionDate: D("2010-01-01"),
     });
-    expect(r.appliedRate).toBe(0.7);
-    expect(r.calculatedTax).toBe(241_810_000);
+    expect(r.appliedRate).toBe(0.6);
+    expect(r.calculatedTax).toBe(212_060_000);
   });
 
   it("G-2b 토지 매매 (대조군) — G-2의 기대값 근거", () => {
     const r = calc({ ...split, landAcquisitionCause: "purchase" });
-    expect(r.appliedRate).toBe(0.7);
-    expect(r.calculatedTax).toBe(241_810_000);
+    expect(r.appliedRate).toBe(0.6);
+    expect(r.calculatedTax).toBe(212_060_000);
   });
 
   it("G-2c 토지 상속 — 피상속인 취득일 통산 유지 (§104②1호)", () => {

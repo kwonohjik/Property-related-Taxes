@@ -94,18 +94,20 @@ describe("§95⑤ 혼합 공제 — 기간 구성별 공제율", () => {
   });
 
   it("C-7 보유분 합계 40% 초과 — §95⑤1호 단서로 40%에서 자른다", () => {
-    // 비주택 2005-01-10 ~ 2018-01-10 = 12년 → 표1 24% (초일불산입 — 13주년 하루 전)
-    // 주택   2018-01-10 ~ 2026-01-27 =  8년 → 표2 보유 32%
-    // raw 56% → 40% 캡. 거주분 12%는 별도 → 총 52%
+    // 비주택 2005-01-10 ~ 2018-01-09(주거용 사용일 전날) = 13년 → 표1 26%
+    //   보유기간은 초일 산입(소득세법 §95④ — holding-period-first-day-inclusion.anchor.test.ts)이라
+    //   13년이 2018-01-09에 만료한다. 종전 구현(초일불산입)은 12년 24%로 셌다.
+    // 주택   2018-01-10 ~ 2026-01-27 =  8년 → 표2 보유 32% (§95⑥ 사용일부터 기산)
+    // raw 58% → 40% 캡. 거주분 12%는 별도 → 총 52%
     const r = calculateTransferTax(
       conv({ acquisitionDate: new Date("2005-01-10"), ...toggle("2018-01-10") }),
       rates,
     );
 
     expect(r.usageConversionDetail).toMatchObject({
-      nonHousingYears: 12,
+      nonHousingYears: 13,
       housingYears: 8,
-      table1Pct: 24,
+      table1Pct: 26,
       table2HoldingPct: 32,
       residencePct: 12,
       holdingRateCapped: true,

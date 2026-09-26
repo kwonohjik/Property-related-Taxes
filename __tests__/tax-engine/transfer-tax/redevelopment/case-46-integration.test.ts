@@ -75,9 +75,14 @@ describe("사례 46 통합 anchor — APT 1세대1주택자 청산금 수령분 
     expect(result.redevelopmentDetail?.settlement.lthdResidencePart).toBe(0);
   });
 
-  it("보유기간 표시 — 6년 9월 10일 (holdingMonths=81 + holdingDays=10, date-fns DATEDIF)", () => {
+  it("보유기간 표시 — 6년 9월 12일 (holdingMonths=81 + holdingDays=12, §95④ 초일 산입)", () => {
     expect(result.redevelopmentDetail?.settlement.holdingMonths).toBe(81); // 6년 × 12 + 9월
-    expect(result.redevelopmentDetail?.settlement.holdingDays).toBe(10);   // 2016-05-06 → 2023-02-17 = 6년 9월 10일 (date-fns 산정)
+    // 2016-05-06 ~ 2023-02-17 양 끝 포함(§95④ 「취득일부터 양도일까지」): 6년 9월 → 2023-02-05까지,
+    // 잔여 02-06 ~ 02-17 = 12일(holding-period-first-day-inclusion.anchor).
+    // 📌 사례 원문 전사(설계서 case-46.engine.design.md:18·:187)는 「6년 9월 11일」 — 한쪽 끝을 뺀
+    //    일수 표기다. 교재 일수 표기는 사례마다 방식이 달라(사례 30은 양 끝 제외) 근거로 쓰지 않는다.
+    //    연·월(81개월)과 장특 연수(6년, 12%)는 원문과 일치한다. 종전 구현값은 10일(양 끝 제외).
+    expect(result.redevelopmentDetail?.settlement.holdingDays).toBe(12);
   });
 
   it("12억 안분 비활성화 (exemptionEligibleAtApproval=false → 전부 과세)", () => {

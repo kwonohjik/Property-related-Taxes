@@ -397,12 +397,16 @@ describe("T-34: 일시적 2주택, 종전 주택 보유 2년 미만 → 비과�
 // ============================================================
 
 describe("T-35: 보유기간 경계값 — 정확히 2년 → 비과세", () => {
+  // 보유기간은 §95④ 「취득일부터 양도일까지」 초일 산입 — 2년은 취득일 응당일의 전날에 만료
+  // (민법 §160②). 2022-01-01 취득 → 2년 만료일 2023-12-31. 정본 anchor:
+  // __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts
+  // ⚠️ 종전(초일·말일 불산입)에는 2024-01-01 양도를 1년으로 봐 과세했다 — A1a에서 반전.
   it("취득일 2022-01-01, 양도일 2024-01-02 → holding.years=2 → isExempt=true", () => {
     const input = baseInput({
       transferPrice: 900_000_000,
       acquisitionPrice: 600_000_000,
       acquisitionDate: new Date("2022-01-01"),
-      transferDate: new Date("2024-01-02"), // 초일불산입: start=2022-01-02, 2년 충족
+      transferDate: new Date("2024-01-02"), // 초일 산입: 2년 만료일(2023-12-31) 이후
       isOneHousehold: true,
       householdHousingCount: 1,
       wasRegulatedAtAcquisition: false,
@@ -413,12 +417,28 @@ describe("T-35: 보유기간 경계값 — 정확히 2년 → 비과세", () => 
     expect(result.isExempt).toBe(true);
   });
 
-  it("취득일 2022-01-01, 양도일 2024-01-01 → holding.years=1 → isExempt=false", () => {
+  it("취득일 2022-01-01, 양도일 2024-01-01(응당일) → holding.years=2 → isExempt=true", () => {
     const input = baseInput({
       transferPrice: 900_000_000,
       acquisitionPrice: 600_000_000,
       acquisitionDate: new Date("2022-01-01"),
-      transferDate: new Date("2024-01-01"), // 1년 11개월 → 2년 미충족
+      transferDate: new Date("2024-01-01"), // 응당일 — 2년 만료일(2023-12-31) 다음날 → 2년 충족
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      wasRegulatedAtAcquisition: false,
+      isRegulatedArea: false,
+      residencePeriodMonths: 24,
+    });
+    const result = calculateTransferTax(input, mockRates);
+    expect(result.isExempt).toBe(true);
+  });
+
+  it("취득일 2022-01-01, 양도일 2023-12-30 → holding.years=1 → isExempt=false", () => {
+    const input = baseInput({
+      transferPrice: 900_000_000,
+      acquisitionPrice: 600_000_000,
+      acquisitionDate: new Date("2022-01-01"),
+      transferDate: new Date("2023-12-30"), // 2년 만료일(2023-12-31) 전날 → 2년 미충족
       isOneHousehold: true,
       householdHousingCount: 1,
       wasRegulatedAtAcquisition: false,
@@ -530,12 +550,14 @@ describe("T-38: 1세대1주택 보유 3년 + 거주 2년 → 특례 공제 20%",
 // ============================================================
 
 describe("T-39: 윤년 취득일 경계값 (P0-1·P2-7 회귀)", () => {
-  it("2020-02-29 취득 → 2024-02-28 양도: 보유 3년 364일 → LTHD 6%", () => {
-    // 달력 기준 만 3년 (2020-02-29 ~ 2024-02-28)
+  // 보유기간은 §95④ 초일 산입 — 4년은 취득일 응당일(2024-02-29)의 전날 2024-02-28에 만료
+  // (민법 §160②). 정본 anchor: __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts
+  // ⚠️ 종전(초일·말일 불산입 — 기산일 03-01)에는 02-28·02-29 양도를 3년으로 봤다 — A1a에서 반전.
+  it("2020-02-29 취득 → 2024-02-27 양도: 4년 만료일(02-28) 전날 → 보유 3년 → LTHD 6%", () => {
     const result = calculateTransferTax(
       baseInput({
         acquisitionDate: new Date("2020-02-29"),
-        transferDate: new Date("2024-02-28"),
+        transferDate: new Date("2024-02-27"),
         transferPrice: 600_000_000,
         acquisitionPrice: 400_000_000,
         isOneHousehold: false,
@@ -548,9 +570,24 @@ describe("T-39: 윤년 취득일 경계값 (P0-1·P2-7 회귀)", () => {
     expect(result.longTermHoldingRate).toBe(0.06);
   });
 
-  it("2020-02-29 취득 → 2024-02-29 양도: 초일불산입 기산일(03-01) 기준 3년 364일 → LTHD 6%", () => {
-    // 민법 초일불산입: 기산일 = 2020-03-01
-    // 2020-03-01 ~ 2024-02-29 = 3년 364일 → 만 3년 → LTHD 6%
+  it("2020-02-29 취득 → 2024-02-28 양도: 4년 만료일 → 보유 4년 → LTHD 8%", () => {
+    const result = calculateTransferTax(
+      baseInput({
+        acquisitionDate: new Date("2020-02-29"),
+        transferDate: new Date("2024-02-28"),
+        transferPrice: 600_000_000,
+        acquisitionPrice: 400_000_000,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        residencePeriodMonths: 0,
+      }),
+      mockRates,
+    );
+    // 보유 4년 → 일반 LTHD 2%/년 × 4년 = 8%
+    expect(result.longTermHoldingRate).toBe(0.08);
+  });
+
+  it("2020-02-29 취득 → 2024-02-29 양도: 응당일 → 보유 4년 → LTHD 8%", () => {
     const result = calculateTransferTax(
       baseInput({
         acquisitionDate: new Date("2020-02-29"),
@@ -563,7 +600,7 @@ describe("T-39: 윤년 취득일 경계값 (P0-1·P2-7 회귀)", () => {
       }),
       mockRates,
     );
-    expect(result.longTermHoldingRate).toBe(0.06);
+    expect(result.longTermHoldingRate).toBe(0.08);
   });
 
   it("2020-02-29 취득 → 2024-03-01 양도: 보유 만 4년 → LTHD 8%", () => {

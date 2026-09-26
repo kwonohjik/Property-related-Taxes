@@ -273,7 +273,12 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
   });
 
   it("B-B17: 보유 2년 미만 + 중과 → §104⑦ **후단 MAX** — 여기서는 단기 70%가 이긴다", () => {
-    const SHORT = { landAcquisitionDate: D("2025-06-01"), buildingAcquisitionDate: D("2025-06-01") };
+    // 보유 1년 미만(§104①3호 70%)이어야 한다. §95④ 초일 산입(정본 anchor
+    // holding-period-first-day-inclusion.anchor.test.ts)에선 1년이 응당일 **전날** 만료하므로
+    // 2025-06-01·06-02 취득 → 2026-06-01 양도는 **1년**(60%)이 되어 MAX가 중과 65%를 고른다.
+    // ⇒ 축(단기 70% 승리)을 지키려고 취득일을 1년 미만이 되는 가장 가까운 날 06-03으로 옮겼다
+    //   (A1a 이전엔 06-01이 초일·말일 불산입으로 0년이었다).
+    const SHORT = { landAcquisitionDate: D("2025-06-03"), buildingAcquisitionDate: D("2025-06-03") };
     const r = run({ multiHouse: multiHouse(1), ...SHORT });
     expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
     // 중과 한계세율 45%+20%p = 65% < 단기 70% → 후단 MAX가 §104①3호를 채택한다.

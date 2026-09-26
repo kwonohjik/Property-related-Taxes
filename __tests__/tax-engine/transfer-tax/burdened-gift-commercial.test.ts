@@ -49,12 +49,15 @@ const rates = makeMockRates();
 //
 // transferGain = 400M - 160M - 4.8M = 235,200,000
 //
-// 장특공 표1 (보유 11년 환산, 22%): 235,200,000 × 0.22 = 51,744,000
-// 양도소득금액 = 235,200,000 - 51,744,000 = 183,456,000
-// 과세표준 = 183,456,000 - 2,500,000 = 180,956,000
+// 장특공 표1 (보유 12년, 24%): 235,200,000 × 0.24 = 56,448,000
+//   🔁 A1a(보유기간 초일 산입, 2026-09-26) — 종전 주석은 「보유 11년 환산, 22%」였다(취득일 다음날
+//      기산 · 양도일 불산입). §95④ 「취득일부터 양도일까지」는 초일 산입이므로 응당일 양도
+//      2012-01-01 → 2024-01-01은 만 12년이다. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`
+// 양도소득금액 = 235,200,000 - 56,448,000 = 178,752,000
+// 과세표준 = 178,752,000 - 2,500,000 = 176,252,000
 //
 // §55 2024 누진세율: 150M~300M = 38% (누진공제 19,940,000)
-//   180,956,000 × 0.38 - 19,940,000 = 68,763,280 - 19,940,000 = 48,823,280
+//   176,252,000 × 0.38 - 19,940,000 = 66,975,760 - 19,940,000 = 47,035,760
 
 describe("F-3-1 — 상업용건물 부담부증여 + §95 표1", () => {
   const TRANSFER_DATE = new Date("2024-01-01");
@@ -102,19 +105,19 @@ describe("F-3-1 — 상업용건물 부담부증여 + §95 표1", () => {
     expect(b.perAsset.building.estimatedDeduction).toBe(4_800_000);
   });
 
-  it("양도차익 = 235,200,000 / 장특공 표1 22%", () => {
+  it("양도차익 = 235,200,000 / 장특공 표1 24%", () => {
     const result = calculateTransferTax(makeF31Input(), rates);
     expect(result.transferGain).toBe(235_200_000);
-    expect(result.longTermHoldingDeduction).toBe(51_744_000);
-    expect(result.longTermHoldingRate).toBeCloseTo(0.22, 7);
+    expect(result.longTermHoldingDeduction).toBe(56_448_000);
+    expect(result.longTermHoldingRate).toBeCloseTo(0.24, 7);
   });
 
-  it("§55 양도연도 누진세율 자가검증 → 산출세액 = 48,823,280", () => {
+  it("§55 양도연도 누진세율 자가검증 → 산출세액 = 47,035,760", () => {
     const result = calculateTransferTax(makeF31Input(), rates);
-    // 과세표준 = (235.2M - 51.744M) - 2.5M = 180,956,000
-    expect(result.taxBase).toBe(180_956_000);
-    // 150M~300M = 38% (누진공제 19,940,000) → 180,956,000 × 0.38 - 19,940,000 = 48,823,280
-    expect(result.calculatedTax).toBe(48_823_280);
+    // 과세표준 = (235.2M - 56.448M) - 2.5M = 176,252,000
+    expect(result.taxBase).toBe(176_252_000);
+    // 150M~300M = 38% (누진공제 19,940,000) → 176,252,000 × 0.38 - 19,940,000 = 47,035,760
+    expect(result.calculatedTax).toBe(47_035_760);
   });
 
   // Phase 3 (2026-05-12): 증여세 통합 anchor
@@ -232,12 +235,13 @@ describe("F-3-3 — 상업용건물 K-4(시가+실지): 취득시 기준시가�
   });
 
   // 회귀 가드: 시가 모드(K-4)에서도 장기보유특별공제(§95② 표1)가 적용되어야 한다.
-  //   (보유 2012-01-01~2024-01-01 = 표1 22%. "시가 모드 LTHD 누락" 의혹에 대한 실증 anchor —
-  //    LTHD=0은 보유기간 3년 미만일 때만 발생, 시가 모드 자체로는 누락되지 않음.)
-  it("시가 K-4 — 장기보유특별공제 적용(표1 22%) — LTHD 누락 회귀 가드", () => {
+  //   (보유 2012-01-01~2024-01-01 = 초일 산입 12년 = 표1 24%. "시가 모드 LTHD 누락" 의혹에 대한
+  //    실증 anchor — LTHD=0은 보유기간 3년 미만일 때만 발생, 시가 모드 자체로는 누락되지 않음.)
+  //   🔁 A1a — 종전 22%(11년, 초일불산입). anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`
+  it("시가 K-4 — 장기보유특별공제 적용(표1 24%) — LTHD 누락 회귀 가드", () => {
     const r = calculateTransferTax(makeK4Input(0), rates);
     expect(r.longTermHoldingDeduction).toBeGreaterThan(0);
-    expect(r.longTermHoldingRate).toBeCloseTo(0.22, 2);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.24, 2);
     // LTHD가 실제 과세표준에 차감됨 (양도차익 − 기본공제보다 작아야 함)
     expect(r.taxBase).toBeLessThan(r.transferGain - 2_500_000);
   });

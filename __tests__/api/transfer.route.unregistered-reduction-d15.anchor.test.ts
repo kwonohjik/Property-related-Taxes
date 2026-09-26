@@ -108,7 +108,11 @@ beforeEach(() => {
 });
 
 describe("D15 겸용주택 — §129② 게이트", () => {
-  it("D15-MU1 미등기 + §77: 감면 0 · 감면 없음과 같은 세액 · §129② 안내 / 등기(긍정 짝) 5,532,128", async () => {
+  // 🔁 A1a(보유기간 초일 산입) — 등기 짝의 감면액 5,532,128 → 5,320,430. 2009-03-01 → 2024-03-01이
+  //    초일 산입으로 15년(종전 14년)이라 상가분 장특 28% → 30%. 미등기 쪽은 장특 배제라 불변.
+  //    산식은 transfer.route.mixed-use-reduction-penalty-f17b.anchor.test.ts MIXED 주석 참조.
+  //    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+  it("D15-MU1 미등기 + §77: 감면 0 · 감면 없음과 같은 세액 · §129② 안내 / 등기(긍정 짝) 5,320,430", async () => {
     const u = await post({ isUnregistered: true, reductions: RED_77 });
     const uNone = await post({ isUnregistered: true, reductions: [] });
     expect(u.total.reductionAmount).toBe(0);
@@ -118,7 +122,7 @@ describe("D15 겸용주택 — §129② 게이트", () => {
     expect(uNone.warnings.filter((w) => w.includes("조특법 §129②"))).toHaveLength(0);
 
     const reg = await post({ isUnregistered: false, reductions: RED_77 });
-    expect(reg.total.reductionAmount).toBe(5_532_128);
+    expect(reg.total.reductionAmount).toBe(5_320_430);
   });
 });
 

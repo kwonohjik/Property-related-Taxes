@@ -90,7 +90,10 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     );
     const loss = calculateTransferTax(lossLand(PENALTY_INPUTS), mockRates);
 
-    expect(gain.determinedTax).toBe(83_990_000);
+    // 양도차익 3억 · 2019-06-01 → 2024-06-01 = 5년(§95④ 초일 산입 — holding-period-first-day-
+    // inclusion.anchor.test.ts) 장특 10% ⇒ 267,500,000 × 38% − 19,940,000 = 81,710,000.
+    // 종전(초일·말일 불산입) 구현은 4년·8%로 83,990,000이었다. 가산세 축은 보유기간과 무관.
+    expect(gain.determinedTax).toBe(81_710_000);
     expect(gain.penaltyDetail!.totalPenalty).toBe(7_402_400);
     expect(loss.penaltyDetail!.totalPenalty).toBe(gain.penaltyDetail!.totalPenalty);
   });

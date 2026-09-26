@@ -39,8 +39,8 @@ interface Props {
  *    거짓이 되어 「⚠ 보유 3년 미만 — … 2개월 내 납부해야 합니다 (§99의4⑥)」 **추징 경고가
  *    사라졌다** — 사후 추징 위험이 있는 사용자에게 안전하다는 신호를 준 셈이다.
  *
- * 엔진은 민법 초일불산입(취득일 다음날 기산)까지 반영한다(`tax-utils.ts:241`) — 그 판정을
- * 그대로 빌려 화면과 계산이 갈리지 않게 한다.
+ * 엔진의 보유기간 함수(`calculateHoldingPeriod`, §95④ 초일 산입)를 그대로 빌려 화면과 계산이
+ * 갈리지 않게 한다.
  */
 function diffYears(from: string, to: string): number | null {
   if (!from || !to) return null;
