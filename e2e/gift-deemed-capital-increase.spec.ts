@@ -294,10 +294,16 @@ test.describe("§39 증자 이익 cap-table", () => {
     await d.getByTestId("ci-alloc-method-public_offering").click();
     await page.getByTestId("deemed-detail-confirm").click();
     await page.getByTestId("deemed-calc-btn").click();
-    // ⚠️ `deemed-result-value`에 toContainText("0")을 쓰지 말 것 — **substring 매칭**이라
-    //    "300,000,000"도 통과해 제외가 안 돼도 초록으로 남는다(실제로 그렇게 무력화된 적이 있다).
-    //    제외 상태에서는 값 대신 제외 배너가 렌더되므로 배너를 직접 단언한다.
+    // ⚠️ `toContainText("0")`을 쓰지 말 것 — **substring 매칭**이라 "300,000,000"도 통과해
+    //    제외가 안 돼도 초록으로 남는다(실제로 그렇게 무력화된 적이 있다).
+    //    ⇒ `toHaveText`로 **정확 일치**를 건다. 종전에는 이 단언을 아예 건너뛰고 배너만 봤는데,
+    //       헤드라인도 함께 렌더되므로 건너뛸 이유가 없었다(리뷰 5단계 E-5).
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("0");
     await expect(page.getByTestId("deemed-exclusion")).toContainText("모집방법");
+    // 5-A — 펼침 표의 결론 행이 헤드라인과 **같은 말**을 해야 한다. 종전에는 헤드라인 0원과
+    //   표의 「증여재산가액 300,000,000」이 동시에 떴다. 산출값은 남기되 이름을 바꾼다.
+    await expect(page.getByTestId("deemed-result")).toContainText("제외 전 산출 이익");
+    await expect(page.getByTestId("deemed-result")).not.toContainText("증여재산가액 300,000,000");
 
     // ③ 간주모집(자시령 §11③) — 제외가 취소되어 다시 과세
     await page.getByTestId("deemed-edit-btn").click();

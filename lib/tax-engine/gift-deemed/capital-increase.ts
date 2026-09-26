@@ -76,29 +76,61 @@ function deemedPublicOfferingNote(input: CapitalIncreaseInput): string | undefin
  * ⚠️ 「영리법인이면 항상 0」이 아니다 — §4의2②(명의신탁 §45의2)·§4의2④ 단서(§45의3~§45의5)는
  *    예외다. 그 조문들은 각자의 엔진이 다루고, 이 축은 **§39 경로에 한정**한다.
  */
-function forProfitCorpExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
+/**
+ * 제외 경로 공통 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 하되 **결론 행의 라벨을 바꾼다**.
+ *
+ * 종전에는 제외 전 배열을 그대로 들고 `deemedGiftValue`만 0으로 뒀다. 그 결과 화면에
+ * 헤드라인 「증여재산가액 0원」과 펼침 표 「증여재산가액 450,000,000」이 **동시에** 떴다.
+ *
+ * 「상증법」§39① 각 호 외의 부분은 「그 이익에 상당하는 금액을 … **증여재산가액**으로 한다」이고,
+ * 같은 법 §31①이 「증여재산의 가액(이하 "증여재산가액"이라 한다)」으로 **과세대상 가액**에 한정해
+ * 정의한다 ⇒ 제외되면 그 이름이 성립하지 않는다.
+ *
+ * ⚠️ **금액은 0으로 만들지 않는다.** 영리법인 경로에서 그 금액은 「법인세법 시행령」 제89조제6항이
+ *    §39·§29②를 준용해 계산하는 **익금**으로 그대로 쓰이고, 공모 경로에서도 「왜 0인지」를
+ *    사후에 재현하려면 산출값이 있어야 한다. 대신 `thresholdEcho.gain`에도 살려 둔다.
+ * ⚠️ **기준금액 미달(§29②2·4호)로 0인 경로는 여기 오지 않는다** — 그쪽은 요건 불성립이 아니라
+ *    계산 결과가 0이라 라벨이 이미 맞고, 그 행의 금액도 0이다.
+ */
+function excludedResult(
+  breakdown: CalculationStep[],
+  exclusionReason: string,
+  conclusionLabel: string,
+): DeemedGiftResult {
+  const rows = [...breakdown];
+  let gain = 0;
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i].label !== "증여재산가액") continue;
+    gain = rows[i].amount;
+    rows[i] = { ...rows[i], label: conclusionLabel };
+    break;
+  }
   return {
     type: "capital_increase",
     applied: false,
     deemedGiftValue: 0,
-    breakdown,
-    exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+    breakdown: rows,
+    exclusionReason,
     legalBasis: GIFT.CAPITAL_INCREASE,
-    thresholdEcho: { gain: 0 },
+    thresholdEcho: { gain },
   };
+}
+
+function forProfitCorpExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
+  return excludedResult(
+    breakdown,
+    `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+    "제외 전 산출 이익 (「법인세법 시행령」 제89조제6항 준용 익금 — 증여세 미과세)",
+  );
 }
 
 /** §39① 적용 제외 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 한다 */
 function publicOfferingExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
-  return {
-    type: "capital_increase",
-    applied: false,
-    deemedGiftValue: 0,
+  return excludedResult(
     breakdown,
-    exclusionReason: `주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외 (${GIFT.CI_PUBLIC_OFFERING_EXCLUSION})`,
-    legalBasis: GIFT.CAPITAL_INCREASE,
-    thresholdEcho: { gain: 0 },
-  };
+    `주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외 (${GIFT.CI_PUBLIC_OFFERING_EXCLUSION})`,
+    "제외 전 산출 이익 (§39① 적용 제외 — 미과세)",
+  );
 }
 
 export function calcCapitalIncreaseGift(input: CapitalIncreaseInput): DeemedGiftResult {
@@ -202,6 +234,10 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   let value: number;
   let applied: boolean;
   let exclusionReason: string | undefined;
+  // 5-B — 「상증령」§29②3·4·5호의 비율 가중을 **화면에 드러낸다**. 종전 breakdown은
+  //   「1주당 차액 → 이익 귀속 주식수 → 증여재산가액」이라 산술이 맞지 않았다
+  //   (8,334 × 30,000 = 250,020,000인데 결론은 75,006,000). 그 사이 단계가 가중이다.
+  let weightNote: string | undefined;
   if (subType === "forfeited_realloc") {
     // §29②3호: 기준금액 없음. 다목 = 신주인수를 포기한 주주의 실권주수 ×
     //          (포기 주주의 특수관계인이 인수한 실권주수 ÷ 실권주 총수).
@@ -212,6 +248,8 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
       numer != null && denom != null && denom > 0
         ? safeMultiplyThenDivide(base, numer, denom)
         : base;
+    if (weighted !== base && numer != null && denom != null)
+      weightNote = `§29②3호 다목 — 특수관계인이 인수한 실권주수 ${numer.toLocaleString()} ÷ 실권주 총수 ${denom.toLocaleString()}`;
     applied = weighted > 0;
     value = applied ? weighted : 0;
     exclusionReason = applied ? undefined : "인수가가 증자후가 이하 — 이익 없음";
@@ -220,6 +258,11 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
     const numer = input.relatedAcquiredShares ?? 0;
     const denom = input.ratioDenomShares ?? 0;
     const weighted = denom > 0 ? safeMultiplyThenDivide(base, numer, denom) : 0;
+    if (weighted !== base)
+      weightNote =
+        subType === "no_realloc"
+          ? `§29②4호 — 특수관계인이 인수한 신주수 ${numer.toLocaleString()} ÷ 균등증자 가정 증자 주식총수 ${denom.toLocaleString()}`
+          : `§29②5호 — 특수관계인이 인수한 신주수 ${numer.toLocaleString()} ÷ 주주 아닌 자 배정·초과인수 총수 ${denom.toLocaleString()}`;
     if (subType === "no_realloc") {
       // §29②4: 가중이익 ≥ 3억 또는 차액 ≥ 증자후가 100분의 30
       const ratioMet = meetsRatioThreshold(perShareGain, perShareAfter);
@@ -240,6 +283,7 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
       note: perShareAfter !== theoretical ? `주권상장법인 평가액 적용 (${GIFT.CONTRIBUTION_LISTED_HIGH})` : undefined },
     { label: "1주당 차액", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
+    ...(weightNote ? [{ label: "비율 가중 전 이익", amount: base, note: weightNote }] : []),
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①2호 고가발행 — ${SUBTYPE_NOTE[subType]}` },
     ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
