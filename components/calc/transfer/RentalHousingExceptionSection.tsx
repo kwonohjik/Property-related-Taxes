@@ -693,6 +693,16 @@ export function RentalHousingExceptionSection({
             </strong>{" "}
             · 임대주택 {rh.rentalUnits.length}호
           </p>
+          {/* OH-40 — 넘겨받은 생애 1회 판정 사실(세액을 바꾼다). 값이 있을 때만 말한다. */}
+          {(rh.priorRentalExemptionHistory || rh.residenceTransitionUnderAddendum) && (
+            <p data-testid="imported-rental-lifetime-facts">
+              {rh.residenceTransitionUnderAddendum
+                ? "2019.2.12 부칙 경과조치(당시 거주·계약금 지급) 해당"
+                : rh.priorRentalExemptionHistory === "used"
+                  ? "장기임대주택 보유 중 거주주택 양도 이력: 있음 (생애 1회 제한)"
+                  : "장기임대주택 보유 중 거주주택 양도 이력: 없음"}
+            </p>
+          )}
           <p className="text-caption text-muted-foreground">
             시나리오와 임대주택 정보는 이 화면에서 수정할 수 없습니다 — 고치려면 판정 메뉴로
             돌아가 다시 판정하세요.

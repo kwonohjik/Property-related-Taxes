@@ -162,4 +162,11 @@ describe("W-40 생애 1회 구간 입력", () => {
     renderSection(sectionAsset({}, "2019-06-01"), "calc", "2024-06-01");
     expect(screen.queryByTestId("rental-lifetime-limit-block")).toBeNull();
   });
+  it("W-40e 계산기는 넘겨받은 이력을 요약 카드에 말한다(세액을 바꾸는 사실 — 침묵 금지)", () => {
+    renderSection(sectionAsset({ priorRentalExemptionHistory: "used" }, "2019-06-01"), "calc", "2024-06-01");
+    expect(screen.getByTestId("imported-rental-lifetime-facts").textContent).toContain("있음");
+    cleanup();
+    renderSection(sectionAsset({}, "2019-06-01"), "calc", "2024-06-01");
+    expect(screen.queryByTestId("imported-rental-lifetime-facts")).toBeNull();
+  });
 });
