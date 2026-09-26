@@ -31,6 +31,7 @@ import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import {
   judgeTemporaryTwoHouseTiming,
   meetsPublicInstitutionRelocationRegion,
+  resolveTemporaryTwoHouseDeadline,
   resolveTemporaryTwoHouseDeadlineYears,
 } from "./transfer-tax-temporary-two-house-timing";
 /*
@@ -616,11 +617,15 @@ export function evaluateTemporaryTwoHouseTiming(
     TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason);
 
   // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
+  // OH-01 — 연혁 기한 + 2019-12-17 체제의 임차인 단서 기한·전입 요건을 한 번에 받는다(A2b).
+  const era = resolveTemporaryTwoHouseDeadline(input, twoHouseRule);
   const timing = judgeTemporaryTwoHouseTiming({
     previousAcquisitionDate,
     newAcquisitionDate,
     transferDate: input.transferDate,
-    deadlineYears: resolveTemporaryTwoHouseDeadlineYears(input, twoHouseRule),
+    deadlineYears: era.years,
+    deadlineDate: era.deadlineDate,
+    moveInMet: era.moveInMet,
     oneYearWaived: provisoRelaxesHolding,
     // §155⑯ 후단(1년 면제) · §155⑱(기한 예외) — 정본 한 곳에서 전달해 비과세·중과가 같은 값을 쓴다.
     publicInstitutionRelocation: input.temporaryTwoHouse!.publicInstitutionRelocation,

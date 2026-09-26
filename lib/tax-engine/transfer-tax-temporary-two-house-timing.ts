@@ -10,7 +10,13 @@
  * 의존 방향은 **부모 → 이 파일** 한 방향뿐이다.
  */
 import { format } from "date-fns";
-import { firstDayAfterPeriod, isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
+import {
+  firstDayAfterPeriod,
+  isAfterPeriod,
+  isOnOrBeforeDay,
+  isWithinPeriod,
+  periodEndFrom,
+} from "./civil-period";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -45,11 +51,23 @@ export function judgeTemporaryTwoHouseTiming(p: {
   publicInstitutionRelocation?: boolean;
   /** §155⑱ — 해당 시 처분기한 초과여도 요건 B 충족 */
   disposalDelayReason?: TemporaryTwoHouseDelayReason;
+  /**
+   * §155①2호 단서(기존 임차인)로 늘어난 기한 말일 — 있으면 `deadlineYears` 대신 이 날까지다
+   * (연혁 leaf `TemporaryTwoHouseDeadlineEra.deadlineDate`).
+   */
+  deadlineDate?: Date;
+  /**
+   * §155①2호 가목(1년 내 세대전원 이사·전입신고) 판정 — `false`면 「다음 각 목의 요건을 **모두**
+   * 충족한 경우」가 깨져 특례 불성립. `undefined`는 해당 없음 또는 미판정(고지로 알린다).
+   */
+  moveInMet?: boolean;
 }): {
   oneYearThreshold: Date;
   oneYearMet: boolean;
   deadline: Date;
   threeYearMet: boolean;
+  /** §155①2호 가목 — 입력 그대로(해당 없음·미판정이면 `undefined`) */
+  moveInMet?: boolean;
   overall: boolean;
 } {
   const oneYearThreshold = firstDayAfterPeriod(p.previousAcquisitionDate, 1);
@@ -59,14 +77,25 @@ export function judgeTemporaryTwoHouseTiming(p: {
     p.oneYearWaived ||
     p.publicInstitutionRelocation === true ||
     isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
-  const deadline = periodEndFrom(p.newAcquisitionDate, p.deadlineYears);
+  const deadline = p.deadlineDate ?? periodEndFrom(p.newAcquisitionDate, p.deadlineYears);
   // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
   //   ⑱ 각 호는 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 해당 여부이므로 양도일과 무관하다.
   //   ⑱은 **요건 B(기한)만** 치유한다 — 요건 A(1년)는 그대로다(본문 괄호가 3년 절에만 붙어 있다).
   const threeYearMet =
     p.disposalDelayReason !== undefined ||
-    isWithinPeriod(p.newAcquisitionDate, p.deadlineYears, p.transferDate);
-  return { oneYearThreshold, oneYearMet, deadline, threeYearMet, overall: oneYearMet && threeYearMet };
+    (p.deadlineDate
+      ? isOnOrBeforeDay(p.transferDate, p.deadlineDate)
+      : isWithinPeriod(p.newAcquisitionDate, p.deadlineYears, p.transferDate));
+  // ⑱은 양도 기한만 치유한다 — 가목(전입)은 「각 목의 요건을 모두 충족」의 별개 요건이다.
+  const moveInOk = p.moveInMet !== false;
+  return {
+    oneYearThreshold,
+    oneYearMet,
+    deadline,
+    threeYearMet,
+    ...(p.moveInMet !== undefined ? { moveInMet: p.moveInMet } : {}),
+    overall: oneYearMet && threeYearMet && moveInOk,
+  };
 }
 
 /**
@@ -130,8 +159,42 @@ export function resolveTemporaryTwoHouseDeadlineYears(
 }
 
 /**
+ * §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 —
+ * **신규 주택 취득일** 기준 두 주택의 조정 여부 (OH-01 판정 대상·시점).
+ *
+ * 주택마다 법정동코드가 있으면 `isRegulatedByBjdCode(취득일)`로 정밀 판정하고(형제
+ * `resolveWasRegulatedAtAcquisition`과 같은 규약 — 코드가 선언을 이긴다), 없으면 사용자 선언을 쓴다.
+ *
+ * 2호 괄호 「조정대상지역의 공고가 있은 날 이전에 … 매매계약을 체결하고 계약금을 지급한 사실이
+ * 증명서류에 의해 확인되는 경우는 제외」 — 신규 주택 코드와 계약일이 있으면 **계약일 기준**으로도
+ * 조정 여부를 보고, 그때 미지정이었으면 신규 주택을 조정대상지역 취득으로 보지 않는다.
+ * ⚠️ 확인 필요: 데이터의 `designatedDate`는 효력일이다 — 공고일 **당일** 계약(「공고가 있은 날 이전」에
+ *    포함)은 여기서 조정 취득으로 잡힌다. 경계 하루의 해석 근거를 찾지 못해 데이터 규약을 따른다.
+ *
+ * 어느 쪽이 `false`면 결론이 확정된다(한쪽만 조정 = 본문 3년). 둘 다 `true`여야 조정→조정이다.
+ * 그 밖(미입력)은 `determined: false` — 호출부가 종전 대리 지표로 계산하고 판정 보류를 고지한다.
+ */
+export function resolveRegulatedAtNewAcquisition(
+  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode">,
+): { previous?: boolean; next?: boolean; bothRegulated: boolean; determined: boolean } {
+  const tt = p.temporaryTwoHouse;
+  if (!tt) return { bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false };
+  const at = (code: string | undefined, declared: boolean | undefined, date: Date) =>
+    code ? isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd")).isRegulated : declared;
+  const previous = at(p.regionCode, tt.previousHouseRegulatedAtNewAcquisition, tt.newAcquisitionDate);
+  let next = at(tt.newHouseRegionCode, tt.newHouseRegulatedAtAcquisition, tt.newAcquisitionDate);
+  if (next === true && tt.newHouseRegionCode && tt.newHouseContractDate) {
+    next = isRegulatedByBjdCode(tt.newHouseRegionCode, format(tt.newHouseContractDate, "yyyy-MM-dd")).isRegulated;
+  }
+  if (previous === false || next === false) return { previous, next, bothRegulated: false, determined: true };
+  if (previous === true && next === true) return { previous, next, bothRegulated: true, determined: true };
+  // 미입력 — 저장 당시 결론을 보존하려고 종전 대리 지표(양도일 기준 양도주택)로 계산한다(고지 동반).
+  return { previous, next, bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false };
+}
+
+/**
  * §155① 처분기한 — 연혁 leaf(`data/temporary-two-house-deadline-era.ts`)의 결과를 그대로 돌려준다.
- * `moveInRequirementPending`은 2019-12-17 체제의 전입요건·임차인 단서를 **판정하지 않았다**는 신호다
+ * `moveInRequirementPending`은 2019-12-17 체제의 전입요건을 **판정하지 않았다**는 신호다
  * (판정 보류 고지 — `one-house/era-undetermined.ts`).
  */
 export function resolveTemporaryTwoHouseDeadline(
@@ -147,17 +210,16 @@ export function resolveTemporaryTwoHouseDeadline(
   if (p.temporaryTwoHouse && meetsPublicInstitutionRelocationRegion(p.temporaryTwoHouse)) {
     return { years: PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS, moveInRequirementPending: false };
   }
-  /*
-    OH-01 — 조정대상지역 처분기한 연혁은 코드 leaf가 정한다(seed의 `regulatedAreaRelaxDate` 등 폐지).
-    ⚠️ A2b 전까지의 대리 지표: 법은 「종전 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는
-       신규 주택을 **취득**」(신규 취득 당시 두 주택 모두)인데, 여기서는 종전 소스인 **양도일 기준
-       양도주택 조정 여부**(`resolveIsRegulatedAtTransfer`)를 `bothRegulated`로 넘긴다. 신규주택
-       취득 당시 두 주택의 조정 여부 입력은 A2b(계획서 §6.1 Q-3)가 만든다.
-  */
+  // OH-01 — 조정대상지역 처분기한 연혁은 코드 leaf가, 조정 판정 대상·시점(신규 취득 당시 두 주택)은
+  //   `resolveRegulatedAtNewAcquisition`이 정한다(A2b — 종전 대리 지표는 미입력 폴백으로만 남았다).
+  const tt = p.temporaryTwoHouse;
   return resolveTemporaryTwoHouseDeadlineEra({
-    bothRegulated: resolveIsRegulatedAtTransfer(p),
+    bothRegulated: resolveRegulatedAtNewAcquisition(p).bothRegulated,
     baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
-    newAcquisitionDate: p.temporaryTwoHouse?.newAcquisitionDate,
+    newAcquisitionDate: tt?.newAcquisitionDate,
+    newContractDate: tt?.newHouseContractDate,
+    moveInDate: tt?.wholeHouseholdMoveInDate,
+    existingTenantLeaseEndDate: tt?.existingTenantLeaseEndDate,
     transferDate: p.transferDate,
   });
 }

@@ -178,6 +178,8 @@ export function collectPendingConditions(
     if (
       !timing.threeYearMet &&
       timing.oneYearMet &&
+      // §155①2호 가목(전입) 미충족이면 기한 내 양도로도 치유되지 않는다 — 기한을 약속하지 않는다.
+      timing.moveInMet !== false &&
       meetsTemporaryTwoHousePrevHolding(input, rule, provisoRelaxesHolding) &&
       meetsOneHouseHoldingResidence(input, rule)
     ) {

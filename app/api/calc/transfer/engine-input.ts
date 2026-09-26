@@ -14,6 +14,7 @@
 import type { z } from "zod";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
@@ -120,6 +121,8 @@ export function buildTransferEngineInput(
           relocatedSigunguCode: data.temporaryTwoHouse.relocatedSigunguCode,
           newHouseSigunguCode: data.temporaryTwoHouse.newHouseSigunguCode,
           disposalDelayReason: data.temporaryTwoHouse.disposalDelayReason,
+          // ⑭ §155①2호 — 신규 취득 당시 조정 여부·계약일·전입·임차인 단서(OH-01 A2b). 단건·다건 공용.
+          ...mapTemporaryTwoHouseEraFacts(data.temporaryTwoHouse),
         }
       : undefined,
     // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).

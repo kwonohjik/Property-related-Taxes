@@ -14,6 +14,7 @@ import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { phdPayloadActive } from "./phd-toggle-scope";
 
 /**
@@ -80,6 +81,9 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
           ...(form.disposalDelayReason
             ? { disposalDelayReason: form.disposalDelayReason as TemporaryTwoHouseDelayReason }
             : {}),
+          // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
+          //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
+          ...toTemporaryTwoHouseEraFacts(form, tempTwoHouse.newHouseRegionCode),
         },
       }
     : {}),

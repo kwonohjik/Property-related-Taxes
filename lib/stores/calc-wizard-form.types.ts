@@ -109,6 +109,19 @@ export interface TransferFormData {
   newHouseJibun: string;
   /** §155⑯ 신규주택 시·군 코드 (행안부 10자리) */
   newHouseSigunguCode: string;
+  // ── §155①2호 조정대상지역 일시적 2주택 (OH-01 A2b) — 판정 메뉴 ③에서 입력, 계산기는 넘겨받아 싣는다 ──
+  /** 신규 주택 취득 당시 신규 주택이 조정대상지역이었나 — ""(미선택)|"yes"|"no". 명부 행 주소가 있으면 쓰지 않는다 */
+  newHouseRegulatedAtAcquisition: string;
+  /** 신규 주택 취득 당시 종전(양도) 주택이 조정대상지역이었나 — ""|"yes"|"no". 양도주택 주소가 있으면 쓰지 않는다 */
+  prevHouseRegulatedAtNewAcquisition: string;
+  /** 신규 주택 매매계약 체결·계약금 지급일 (YYYY-MM-DD) — 부칙 경과조치·공고 전 계약 제외 */
+  newHouseContractDate: string;
+  /** §155①2호 가목 — 신규 주택으로 세대전원 이사·전입신고를 마친 날 (YYYY-MM-DD) */
+  newHouseMoveInDate: string;
+  /** §155①2호 단서 — 신규 주택 취득일 현재 기존 임차인이 거주했는가 */
+  newHouseExistingTenant: boolean;
+  /** §155①2호 단서 — 전 소유자와 기존 임차인 사이 임대차계약 종료일 (YYYY-MM-DD) */
+  newHouseTenantLeaseEndDate: string;
   /** §155⑧ 수도권 밖 부득이 주택 보유 여부 — 양도 대상은 **일반주택**이다 */
   unavoidableOutsideCapitalSpecial: boolean;
   /** §155⑧ 부득이한 사유 ("study"|"work"|"illness"|"other") */
