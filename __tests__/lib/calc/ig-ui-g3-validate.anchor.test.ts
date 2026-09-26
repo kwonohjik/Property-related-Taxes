@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 
 import { validateDeemedInput } from "@/lib/calc/gift-deemed-validate";
 import { INITIAL_DEEMED, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
+import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
 import { validateStep } from "@/components/calc/gift-tax-form-validate";
 import { INITIAL_FORM as GIFT_INITIAL_FORM } from "@/components/calc/gift-tax-form-shared";
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
@@ -81,18 +82,22 @@ describe("[G3-A] IG-017 — 합병 대주주등 주식수는 이익에 곱해지
 // ════════════════════════════════════════════════════
 
 describe("[G3-B] IG-016 — 증자 이익 귀속 주식수", () => {
+  // 🔄 3단계(2026-09-26)로 「증자 주식수」·「신주 1주당 인수가액」이 **같은 case에서 먼저**
+  //    필수가 됐다(#10·#12·#24). 두 칸을 비워 두면 이 anchor가 재는 축(`ciForfeitedShares`)에
+  //    닿기 전에 반환돼 **IG-016의 구별력이 통째로 사라진다**. ⇒ 픽스처에 채워 둔다.
   const base = {
     type: "capital_increase" as const,
     ciPrePrice: "10000",
     ciPreShares: "10000",
+    ciNewPrice: "5000",
+    ciIssuedShares: "5000",
   };
 
   it("B-1: 🔴 비면 차단되고, 메시지가 하위유형 라벨을 그대로 쓴다", () => {
     const err = validateDeemedInput(D({ ...base, ciForfeitedShares: "" }));
-    expect(err).toMatch(/입력하세요$/);
-    expect(err).not.toBeNull();
-    // 라벨 재사용 — 「실권주수」·「직접배정 신주수」·「초과배정 신주수」 중 하나
-    expect(err).toMatch(/주수|신주수/);
+    // ⚠️ 종전 `/주수|신주수/`는 너무 느슨해 3단계 신설 메시지(「증자 주식수를 입력하세요」)에도
+    //    맞는다 — 픽스처가 굶으면 **엉뚱한 규칙으로 초록**이 된다. 라벨을 정확히 못 박는다.
+    expect(err).toBe(`${CI_SHARES_LABEL[INITIAL_DEEMED.ciSubType]}을(를) 입력하세요`);
   });
 
   it("B-2: 양성 쌍둥이 — 채우면 이 칸으로는 막지 않는다", () => {
@@ -135,33 +140,40 @@ describe("[G3-C] IG-015 — 저가감자는 ⑧이 지키던 칸이 산식에 �
 // ════════════════════════════════════════════════════
 
 describe("[G3-D] IG-018 — 전환주식은 한 시점만 비어도 결과가 뒤집힌다", () => {
+  // 🔄 3단계(2026-09-26)로 두 시점의 「증자 주식수」·「인수가액」과 **분자**가 필수가 됐다.
+  //    분모 축의 구별력을 지키려면 그 칸들이 채워져 있어야 한다(위 IG-016과 같은 이유).
   const base = {
     type: "convertible_stock" as const,
     csDirection: "high" as const,
     csSubType: "third_party" as const,
     csConvPrePrice: "10000",
     csConvPreShares: "10000",
+    csConvNewPrice: "12000",
+    csConvIssuedShares: "5000",
     csIssuePrePrice: "9000",
     csIssuePreShares: "10000",
+    csIssueNewPrice: "11000",
+    csIssueIssuedShares: "5000",
   };
+  const numer = { csConvRelatedAcquiredShares: "50", csIssueRelatedAcquiredShares: "50" } as const;
 
   it("D-1: 🔴 전환 시점 분모 신주수가 비면 차단된다", () => {
     const err = validateDeemedInput(
-      D({ ...base, csConvRatioDenomShares: "", csIssueRatioDenomShares: "100" }),
+      D({ ...base, ...numer, csConvRatioDenomShares: "", csIssueRatioDenomShares: "100" }),
     );
     expect(err).toBe("전환 시점 분모 신주수를 입력하세요");
   });
 
   it("D-2: 🔴 발행 시점 분모 신주수가 비면 차단된다", () => {
     const err = validateDeemedInput(
-      D({ ...base, csConvRatioDenomShares: "100", csIssueRatioDenomShares: "" }),
+      D({ ...base, ...numer, csConvRatioDenomShares: "100", csIssueRatioDenomShares: "" }),
     );
     expect(err).toBe("발행 시점 분모 신주수를 입력하세요");
   });
 
   it("D-3: 양성 쌍둥이 — 둘 다 채우면 통과한다", () => {
     const err = validateDeemedInput(
-      D({ ...base, csConvRatioDenomShares: "100", csIssueRatioDenomShares: "100" }),
+      D({ ...base, ...numer, csConvRatioDenomShares: "100", csIssueRatioDenomShares: "100" }),
     );
     expect(err).toBeNull();
   });

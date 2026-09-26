@@ -36,7 +36,10 @@ export function computeWeightedPerShare(
   newShares: number,
 ): number {
   const denom = preShares + newShares;
-  if (denom <= 0) return 0;
+  // ⚠️ `denom > 0`만으로는 부족하다 — 0 < denom < 1이면 아래 `BigInt(Math.floor(denom))`이
+  //    **0n**이 되어 RangeError(Division by zero)가 난다. 정수성의 진짜 방어는 ⑫
+  //    (`lib/validators/gift-deemed-input.ts`의 `.int()`)이고, 여기는 마지막 그물이다.
+  if (!Number.isFinite(denom) || Math.floor(denom) <= 0) return 0;
   const numer =
     BigInt(Math.floor(prePrice)) * BigInt(Math.floor(preShares)) +
     BigInt(Math.floor(newPrice)) * BigInt(Math.floor(newShares));
