@@ -269,7 +269,15 @@ export type DonorRelation =
   | "lineal_ascendant_adult"    // 성인 직계존속
   | "lineal_ascendant_minor"    // 미성년자 직계존속
   | "lineal_descendant"         // 직계비속
-  | "other_relative";           // 기타 친족
+  | "other_relative"            // 기타 친족 — §53 제4호(4촌 이내 혈족·3촌 이내 인척)
+  /**
+   * 비친족·타인 — §53 각 호 **어디에도 해당하지 않는** 증여자.
+   *
+   * §53 본문은 "다음 각 호의 어느 하나에 해당하는 사람으로부터"라는 **한정 열거**이고
+   * 잔여조항이 없다. 종전에는 이 값이 없어 비친족을 `other_relative`(제4호 1천만원)로
+   * 접을 수밖에 없었고, 그것이 곧 과소과세였다.
+   */
+  | "none";
 
 /** 증여공제 입력 */
 export interface GiftDeductionInput {

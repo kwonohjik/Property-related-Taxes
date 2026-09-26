@@ -42,6 +42,8 @@ export const GIFT_DEDUCTION_LIMIT: Record<DonorRelation, number> = {
   lineal_ascendant_minor:    20_000_000,
   lineal_descendant:         50_000_000,
   other_relative:            10_000_000,
+  // §53 열거 밖 — 공제 없음. 이 0이 곧 「제4호로 접지 않는다」의 본체다.
+  none:                               0,
 };
 
 /** 혼인·출산 공제 최대 한도 (§53의2): 1억원 */
@@ -358,6 +360,7 @@ function getDonorRelationLabel(relation: DonorRelation): string {
     lineal_ascendant_minor: "직계존속(미성년 수증자)",
     lineal_descendant: "직계비속(성년 수증자)",
     other_relative: "기타친족",
+    none: "증여재산공제 없음(비친족)",
   };
   return labels[relation];
 }

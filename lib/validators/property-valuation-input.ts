@@ -552,6 +552,8 @@ export const giftTaxInputSchema = z
       "lineal_ascendant_minor",
       "lineal_descendant",
       "other_relative",
+      // §53 열거 밖(비친족) — ⑫ strip 방지
+      "none",
     ]),
     /** Phase A: 증여자 관계 (동일인 §47 합산 그룹화 + §57 적용 판정) — 필수 */
     donor: giftDonorRelationSchema,

@@ -46,6 +46,7 @@ export const DONOR_RELATION_LABELS: Record<DonorRelation, string> = {
   lineal_ascendant_minor: "직계존속 (미성년자 기준)",
   lineal_descendant: "직계비속",
   other_relative: "기타 친족",
+  none: "비친족 (공제 없음)",
 };
 
 export const DONOR_RELATION_LIST: DonorRelation[] = [
@@ -54,6 +55,9 @@ export const DONOR_RELATION_LIST: DonorRelation[] = [
   "lineal_ascendant_minor",
   "lineal_descendant",
   "other_relative",
+  // 수유자·영리법인 등 §53 열거 밖 증여자 — 선택지가 없으면 사용자가
+  // 「기타 친족」을 고르고 1천만원 공제가 붙는다.
+  "none",
 ];
 
 // Phase A: 증여자 관계 8 enum (gift 모드에서 §47 합산 그룹화·§57 적용 판정용)

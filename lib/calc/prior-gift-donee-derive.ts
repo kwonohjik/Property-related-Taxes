@@ -103,7 +103,11 @@ export function deriveDoneeRelationFromHeir(
  *   isMinorDonee=true 이면 lineal_ascendant_minor (2천만원 공제)
  * - spouse → spouse
  * - lineal_descendant → lineal_descendant
- * - sibling/other_relative/other → other_relative
+ * - sibling/other_relative → other_relative (§53 제4호)
+ * - other(기타·타인) → none — §53 각 호 열거 밖이므로 공제 대상이 아니다.
+ *   ⚠️ `other_relative`와 한 case로 묶지 말 것. 저장소의 다른 곳은 이미 둘을 구별한다
+ *   (`gift-prior-aggregation.ts:45-48`가 F/G 그룹으로 분리, `SpecificCorpShareholderTable.tsx:48`가
+ *   `other`를 「타인」으로 라벨). 묶는 순간 비친족에게 1천만원이 붙는다.
  */
 export function deriveDonorRelation(
   donor: GiftDonorRelation,
@@ -120,7 +124,8 @@ export function deriveDonorRelation(
       return "lineal_descendant";
     case "sibling":
     case "other_relative":
-    case "other":
       return "other_relative";
+    case "other":
+      return "none";
   }
 }

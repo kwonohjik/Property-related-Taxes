@@ -145,12 +145,20 @@ export function toEstateItemTypeCode(category: AssetCategory): string {
  * ⑧ 평가기준코드 (01~08) — KoreanLaw 검증 부표 2 코드표.
  * cash는 평가방법과 무관하게 "06"(현금 등 가액) 우선. 그 외 vr.method 매핑.
  * vr 미보유(평가 결과 매칭 실패) 시 "08"(기준시가 등 보충적 평가) fallback.
+ *
+ * 「상증령」 법정 산식으로 산정된 증여의제 이익(`isStatutoryFormulaValue`)은 **01을 쓸 수
+ * 없다** — 코드 01의 법정 설명은 "해당 재산의 매매거래가액(「상속세 및 증여세법」 제60조)"
+ * 인데 신주 인수·감자는 자본거래이지 매매거래가 아니다. 이관 payload가 산정액을
+ * `marketValue`에 싣는 탓에 `vr.method`는 `market_value`로 나온다.
+ * ⚠️ 법령에서 도출되는 것은 「01은 틀렸다」까지이며, 08은 같은 서식의 사전증여 행이 이미
+ * 하드코딩하고 있는 **이 저장소의 확립된 fallback**이라는 근거로 고른 값이다.
  */
 export function toEstateItemValuationMethodCode(
   item: EstateItem,
   vr: PropertyValuationResult | undefined,
 ): string {
   if (item.category === "cash") return "06";
+  if (item.isStatutoryFormulaValue) return "08";
   switch (vr?.method) {
     case "market_value":
       return "01";

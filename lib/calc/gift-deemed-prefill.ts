@@ -38,11 +38,22 @@ function scTaxCap(gain: number, limitCalc: SpecificCorpLimitCalc | undefined) {
   } as const;
 }
 
-function aggregationExclusionFlags(result: DeemedGiftAnyResult) {
-  if (!("aggregationExcluded" in result) || !result.aggregationExcluded) return {};
+/**
+ * 이관 항목 공통 플래그.
+ *
+ * 이 파일이 만드는 `giftItems` 항목 **9개 전부**가 이 헬퍼를 통과한다(1:1). 새 분기를
+ * 추가할 때도 반드시 통과시킬 것 — 빠지면 그 유형만 부표1 ⑧에 01이 찍힌다.
+ */
+function deemedGiftItemFlags(result: DeemedGiftAnyResult) {
   return {
-    isAggregationExcludedGift: true as const,
-    ...(result.aggExclClass ? { aggregationExcludedClass: result.aggExclClass } : {}),
+    // 여기 실리는 금액은 전부 「상증령」 법정 산식 산정액이다 — 매매거래가액이 아니다.
+    isStatutoryFormulaValue: true as const,
+    ...(("aggregationExcluded" in result) && result.aggregationExcluded
+      ? {
+          isAggregationExcludedGift: true as const,
+          ...(result.aggExclClass ? { aggregationExcludedClass: result.aggExclClass } : {}),
+        }
+      : {}),
   };
 }
 
@@ -115,7 +126,7 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `${(nameById.get(selected.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
           marketValue: selected.total,
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -163,7 +174,7 @@ export function buildGiftWizardPrefill(
             category: "other" as const,
             name: `현물출자에 따른 이익 — ${mainBreakdown.party} 증여분`,
             marketValue: mainBreakdown.value,
-            ...aggregationExclusionFlags(result),
+            ...deemedGiftItemFlags(result),
           },
         ],
         simultaneousGifts,
@@ -189,7 +200,7 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `현물출자에 따른 이익 — ${selectedDonee.party} 수증자분`,
           marketValue: selectedDonee.value,
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -224,7 +235,7 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `일감몰아주기 이익 — ${selected.recipientName.trim() || "지배주주등"}`,
           marketValue: selected.subtotal,
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -258,7 +269,7 @@ export function buildGiftWizardPrefill(
           name: `특정법인과의 거래 이익 — ${selected.name.trim() || "지배주주등"}`,
           marketValue: selected.gain,
           ...scTaxCap(selected.gain, selected.limitCalc),
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -277,7 +288,7 @@ export function buildGiftWizardPrefill(
           name: "특정법인과의 거래 이익 증여이익",
           marketValue: result.deemedGiftValue,
           ...scTaxCap(result.deemedGiftValue, result.specificCorpLimit),
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -297,7 +308,7 @@ export function buildGiftWizardPrefill(
           category: "other",
           name: `감자에 따른 이익 증여이익 (${selected.name})`,
           marketValue: selected.total,
-          ...aggregationExclusionFlags(result),
+          ...deemedGiftItemFlags(result),
         },
       ],
     };
@@ -315,7 +326,7 @@ export function buildGiftWizardPrefill(
         category: "other" as const,
         name: `신탁이익(${RIGHT_LABEL[sg.right]}) 증여이익`,
         marketValue: sg.value,
-        ...aggregationExclusionFlags(result),
+        ...deemedGiftItemFlags(result),
       })),
     };
   }
@@ -336,7 +347,7 @@ export function buildGiftWizardPrefill(
         marketValue: result.deemedGiftValue,
         // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55① 호별 스트림. 비합산배제 deemed는 undefined.
         //   aggExclClass: 명의신탁(1호)·일감몰아주기(2호)는 3천만 공제 없음, 그 외(3호)는 3천만 공제. (H-40·G-4)
-        ...aggregationExclusionFlags(result),
+        ...deemedGiftItemFlags(result),
       },
     ],
   };

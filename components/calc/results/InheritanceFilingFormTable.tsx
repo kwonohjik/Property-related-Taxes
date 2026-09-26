@@ -45,12 +45,14 @@ import {
   inferPropertyKindCode,
 } from "@/components/calc/results/inheritance-filing-form-helpers";
 
+// ⚠️ `Record<string, string>`이라 키 커버리지 가드가 없다 — `DonorRelation` 확장 시 함께 볼 것.
 const RELATION_LABEL: Record<string, string> = {
   spouse: "배우자",
   lineal_ascendant_adult: "직계존속(성인)",
   lineal_ascendant_minor: "직계존속(미성년)",
   lineal_descendant: "직계비속",
   other_relative: "기타친족",
+  none: "비친족",
 };
 
 interface Props {

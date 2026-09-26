@@ -16,6 +16,8 @@ const donorRelationEnum = z.enum([
   "lineal_ascendant_minor",
   "lineal_descendant",
   "other_relative",
+  // §53 열거 밖(비친족) — ⑫ strip 방지
+  "none",
 ]);
 
 export const giftDeductionInputSchema = z.object({

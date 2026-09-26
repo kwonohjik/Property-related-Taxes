@@ -25,12 +25,14 @@ const ACQ_METHOD_LABEL: Record<string, string> = {
   converted: "환산취득가액 · 시행령 §176의2②2호",
 };
 
+// ⚠️ `Record<string, string>`이라 키 커버리지 가드가 없다 — `DonorRelation` 확장 시 함께 볼 것.
 const RELATION_LABEL: Record<string, string> = {
   spouse: "배우자",
   lineal_descendant: "직계비속(성년 수증자)",
   lineal_ascendant_adult: "직계존속(성년 수증자)",
   lineal_ascendant_minor: "직계존속(미성년 수증자)",
   other_relative: "기타 친족",
+  none: "비친족",
 };
 
 interface Props {

@@ -39,6 +39,9 @@ export function toGiftDeductionDonorRelation(
       return "spouse";
     case "other_relative":
       return "other_relative";
+    case "none":
+      // 비친족은 관점을 뒤집어도 비친족이다.
+      return "none";
   }
 }
 
