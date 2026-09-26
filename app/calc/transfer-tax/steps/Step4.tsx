@@ -26,6 +26,8 @@ import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHa
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
+import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { resolveHouseholdHousingCount, houseCountScalarLocked, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
@@ -89,11 +91,27 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // (서면-2020-부동산-5098). 엔진 resolveWasRegulatedAtAcquisition과 **같은 술어·같은 기준일**을
   // 써야 화면 안내와 판정이 어긋나지 않는다.
   const conversionActive = isUsageConversionActive(primary);
+  /**
+   * 🔴 OH-51 — 승계조합원 완공APT의 「취득 당시」는 **준공일**이다(시행령 §162①4호). 엔진이 그 날짜로
+   *    조정대상지역을 판정하는데(`transfer-tax-redevelopment-apt-exemption.ts`) 화면은 입주권
+   *    취득일로 자동판별·토글을 채워, 준공일에 지정된 지역이 「미지정」으로 보였다.
+   *    ⑧ 거주 구간 검증과 **같은 leaf**(`redevAptHoldingStartDate`)를 쓴다.
+   */
+  const successorCompletionActive =
+    !conversionActive && !!primary && redevAptHoldingStartDate(primary) !== primary.acquisitionDate;
   const residenceJudgmentDate = conversionActive
     ? primary!.residentialUseStartDate
-    : primaryAcquisitionDate;
+    : primary
+      ? redevAptHoldingStartDate(primary)
+      : primaryAcquisitionDate;
   /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
-  const judgmentDateLabel = conversionActive ? "용도변경일" : "취득일";
+  const judgmentDateLabel = conversionActive
+    ? "용도변경일"
+    : successorCompletionActive
+      ? "준공일"
+      : "취득일";
+  /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신하는가(엔진 `resolveAptResidenceMonths`와 같은 조건). */
+  const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
 
   /**
    * 토지만 출자한 조합원입주권 — 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
@@ -149,7 +167,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     () =>
       provisoGate({
         isOneHousehold: form.isOneHousehold,
-        isHousing: primaryKind === "housing",
+        // OH-20 — 재개발 완공APT도 §154① 단서 대상이다(④ · ⑧과 같은 술어). 시행령 §154① 단서는
+        //   자산 종류를 가리지 않고 「1세대가 양도일 현재 국내에 1주택을 보유」한 경우에 걸린다.
+        isHousing: isOneHouseExemptionAsset(primaryKind),
         // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴).
         householdHousingCount: resolveHouseholdHousingCount({
           primaryKind,
@@ -562,7 +582,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 ④(`transfer-tax-api.ts:399`)는 `residencePeriodMonths`를 자산종류 게이트 없이
                 보내므로 이 게이트가 **유일한 입력 통제점**이다 — 조정대상지역 토글과 짝이라
                 한쪽만 열면 「거주 2년 필요」라 안내하고 채울 칸이 없는 dead-end가 된다. */}
-            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && (
+            {/* OH-48 — 분리 입력이 있으면 엔진은 그것만 읽는다. 같은 질문을 두 번 받지 않도록 안내로 대체. */}
+            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && redevSplitResidence && (
+              <RedevSplitResidenceNotice isSuccessor={primary.redevIsSuccessorMember === "yes"} />
+            )}
+            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && !redevSplitResidence && (
               <ResidencePeriodSection
                 residenceInputMode={primary.residenceInputMode}
                 residencePeriods={primary.residencePeriods}
@@ -591,6 +615,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                     입주일·퇴거일 구간으로 입력하면 자동으로 잘라 계산합니다.
                   </p>
                 </div>
+              )}
+
+            {/* OH-50 — 승계조합원 개월 수 직접 입력 안내(구간 입력은 ⑧이 준공일과 비교해 막는다). */}
+            {successorCompletionActive &&
+              form.isOneHousehold &&
+              !redevSplitResidence &&
+              primary?.residenceInputMode === "direct" && (
+                <SuccessorResidenceDirectHint completionDate={residenceJudgmentDate} />
               )}
 
             {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}

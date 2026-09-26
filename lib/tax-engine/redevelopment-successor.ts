@@ -25,6 +25,7 @@
 
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyLthdToGain, computeLthdRateSplit } from "./redevelopment-lthd";
+import { resolveAptResidenceMonths } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import type {
   RedevelopmentBranchDetail,
@@ -108,7 +109,15 @@ export function runSuccessorMember(
    *    **준공일 기산**(시행령 §162①4호)이라 그 구간 안의 거주만 §159의4의 「보유기간 중 거주기간」에
    *    해당한다. 종전주택 거주월수(`priorHouseResidenceMonths`)는 승계 전 타인의 거주라 무관하다.
    */
-  const successorResidenceMonths = redevelopment.newHouseResidenceMonths ?? 0;
+  //
+  // 🔑 §154① 비과세 판정과 **같은 leaf**다(OH-48·OH-50) — 신축 거주 입력이 비면 Step4 거주값
+  //    (⑧이 「입주일 ≥ 준공일」로 막아 둔 값)을 쓴다. 종전에는 여기만 `?? 0`이라 한 계산 안에서
+  //    비과세는 Step4 거주를, 표2는 0개월을 봤다.
+  const successorResidenceMonths = resolveAptResidenceMonths({
+    isSuccessorMember: true,
+    newHouseResidenceMonths: redevelopment.newHouseResidenceMonths,
+    residencePeriodMonths: input.residencePeriodMonths,
+  });
   const lthdSplit = computeLthdRateSplit(
     holdingPeriod.years,
     input.isOneHouseSingle ?? false,

@@ -12,6 +12,7 @@ import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption"
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
+import { isOneHouseExemptionAsset } from "./housing-like-asset";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -43,7 +44,8 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
   const effectiveReason = effectiveProvisoReason(
     provisoGate({
       isOneHousehold: form.isOneHousehold,
-      isHousing: primary?.assetKind === "housing",
+      // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
+        isHousing: isOneHouseExemptionAsset(primary?.assetKind),
       householdHousingCount: resolveHouseholdHousingCount({
         primaryKind: primary?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,

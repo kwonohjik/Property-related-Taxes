@@ -505,14 +505,32 @@ export function applyAptOneHouseExemption(
     lthdAfterAllocation: branch.lthd,
     gain: 0,
     lthd: 0,
+    // 🔴 E3-05 규약 — 공제를 0으로 가리면 분해 2필드도 함께 0으로(값이 있을 때만).
+    //    빠져 있어 신고서가 「공제 0 · 보유분 N」을 함께 인쇄할 수 있었다. 수령 동시신고가
+    //    이 경로를 타게 되면서(OH-19) `lthd-parts-masking-consistency` E3-05-01이 드러냈다.
+    ...zeroLthdParts(branch),
   });
+
+  /**
+   * 🔴 **청산금 「수령」 방향에서는 청산금 분기를 가리지 않는다** (2026-09-26 · OH-19).
+   *
+   * 수령 동시신고(사례 47)의 청산금 분기는 신축주택이 아니라 **종전 부동산 일부의 양도**이고,
+   * 그 비과세는 「관리처분 인가일 현재 종전주택」 축으로 `applySettlementExemption`(Step A.6)이
+   * 판정한다(서면-2016-법령해석재산-2705). 신축주택 §89①3호가목 판정으로 그 분기까지 지우면
+   * 「인가일 현재 요건 미충족」을 선언한 청산금분이 조용히 비과세된다.
+   * 납부 방향의 청산금 분기는 신축주택 취득대가의 일부라 신축주택과 함께 가린다(종전 동작).
+   */
+  const settlement =
+    redevInfo.settlementDirection === "receive" ? redev.settlement : maskBranch(redev.settlement);
+  const totalGain = settlement.gain;
+  const totalLthd = settlement.lthd;
 
   return {
     ...redev,
     preApproval: maskBranch(redev.preApproval),
     postApprovalExistingHouse: maskBranch(redev.postApprovalExistingHouse),
-    settlement: maskBranch(redev.settlement),
-    total: { gain: 0, lthd: 0, taxableIncome: 0 },
+    settlement,
+    total: { gain: totalGain, lthd: totalLthd, taxableIncome: totalGain - totalLthd },
     aptOneHouseExemptionApplied: true,
   };
 }
