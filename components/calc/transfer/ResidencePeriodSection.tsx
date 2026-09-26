@@ -16,7 +16,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Plus, Trash2 } from "lucide-react";
 import {
   type ResidencePeriod,
-  diffMonthsClamped,
+  residenceIntervalMonths,
   sumResidenceMonths,
 } from "@/lib/stores/calc-wizard-asset-residence";
 
@@ -100,7 +100,7 @@ export function ResidencePeriodSection({
               </p>
             )}
             {residencePeriods.map((p, idx) => {
-              const m = diffMonthsClamped(p.moveInDate, p.moveOutDate);
+              const m = residenceIntervalMonths(p.moveInDate, p.moveOutDate);
               const isMoveInOnly = !!p.moveInDate && !p.moveOutDate;
               return (
                 <div

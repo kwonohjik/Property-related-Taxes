@@ -80,7 +80,7 @@ import type {
   MergedHouseholdFirstHouse,
 } from "./types/transfer.types";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
-import { addYears } from "date-fns";
+import { isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
 
 /** §156의2③·§156의3②의 처분기한 — 조문 문언 그대로 3년(단축·연장 규정 없음). */
@@ -344,9 +344,15 @@ export function resolveArticle89Clause2(
    * ③~⑤(②·③)를 준용한다. ⇒ 타이밍 판정의 상대는 **상속 외 권리**다.
    */
   const right = isArticle7Shape ? otherRights[0] : rights[0];
-  const oneYearMet = right.acquisitionDate >= addYears(input.acquisitionDate, 1);
-  const deadline = addYears(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
-  const withinDeadline = input.transferDate <= deadline;
+  // 「1년 이상이 지난 후」·「3년 이내」 모두 초일불산입 — 응당일 권리 취득은 1년 미경과(§155①과 같은 문언,
+  //   조심2020서1405 · 서면2017법령해석재산-785). ③·②의 직접 선례는 미확보(계획서 §7-1).
+  const oneYearMet = isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
+  const deadline = periodEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
+  const withinDeadline = isWithinPeriod(
+    right.acquisitionDate,
+    ARTICLE_156_2_3_DEADLINE_YEARS,
+    input.transferDate,
+  );
   const clause = right.type === "redevelopment_right" ? "§156의2 ③" : "§156의3 ②";
 
   /** 준용 근거 — ⑦(상속 축) 또는 ⑩·⑪(2주택 축). 둘 다 아니면 ③이 직접 적용된 것이다. */
@@ -495,7 +501,7 @@ function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHous
   ];
   for (const { date, clause } of axes) {
     if (!date) continue;
-    if (input.transferDate > addYears(date, ARTICLE_156_2_8_MERGE_YEARS)) continue;
+    if (!isWithinPeriod(date, ARTICLE_156_2_8_MERGE_YEARS, input.transferDate)) continue;
     const item = matchMergedHouseholdClause(declared, {
       mergeDate: date,
       houseAcquisitionDate: input.acquisitionDate,
@@ -633,7 +639,7 @@ function meetsThreeYearException(
   // 2호 후단 — 완성일 + 3년 이내. 완성일이 양도일보다 뒤인 저장분도 전단으로 성립한다.
   return (
     transferDate < declared.completionDate ||
-    transferDate <= addYears(declared.completionDate, ARTICLE_156_2_3_DEADLINE_YEARS)
+    isWithinPeriod(declared.completionDate, ARTICLE_156_2_3_DEADLINE_YEARS, transferDate)
   );
 }
 
@@ -645,7 +651,7 @@ export function isRightThreeYearExceeded(p: {
   rightAcquisitionDate: Date;
   transferDate: Date;
 }): boolean {
-  return p.transferDate > addYears(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
+  return !isWithinPeriod(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS, p.transferDate);
 }
 
 function dedupe(items: string[]): string[] {

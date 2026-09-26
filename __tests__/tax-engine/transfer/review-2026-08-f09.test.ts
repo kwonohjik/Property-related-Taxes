@@ -42,10 +42,15 @@ const inheritedHouse = (extra: Partial<TransferTaxInput> = {}): TransferTaxInput
     ...extra,
   });
 
+/**
+ * 신규 취득일은 종전(2025-01-01)의 응당일 **다음날**이다 — 「1년 이상이 지난 후」는 초일불산입이라
+ * 응당일(2026-01-01)이면 §155① 요건 A가 먼저 깨져 이 파일이 재려는 §154⑧3호 기산일 축에 닿지 않는다
+ * (2026-09-26 리뷰 OH-00 반영).
+ */
 const TEMP_TWO_HOUSE = {
   temporaryTwoHouse: {
     previousAcquisitionDate: new Date("2025-01-01"),
-    newAcquisitionDate: new Date("2026-01-01"),
+    newAcquisitionDate: new Date("2026-01-02"),
   },
 };
 

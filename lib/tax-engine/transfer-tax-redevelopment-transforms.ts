@@ -14,6 +14,7 @@
  *    덮는다. 순서를 바꾸면 안분 비율이 배제 후 값에 적용된다.
  */
 
+import { isWithinPeriod } from "./civil-period";
 import { REDEVELOPMENT } from "./legal-codes";
 import { preApprovalNecessaryExpense } from "./redevelopment-split";
 import type {
@@ -269,9 +270,9 @@ export function resolveOneRightExemptionClause(
     // 취득일 미입력이면 3년 요건을 **판정할 수 없다**. 「모르니까 준다」도, 「모르니까 뺏는다」도
     // 하지 않는다 — 나목 불성립으로 두고(비과세·안분 모두 미적용) 화면이 사유를 안내한다.
     if (!acquired) return undefined;
-    const deadline = new Date(acquired);
-    deadline.setFullYear(deadline.getFullYear() + CLAUSE_NA_YEARS);
-    return input.transferDate <= deadline ? "na" : undefined;
+    // 「취득한 날부터 3년 이내」 — 초일불산입(민법 §157·§160). `setFullYear`는 2/29 취득을 3/1로 넘겨
+    //   하루 길었고, 평년 2/28 취득은 윤년 2/29 만료를 하루 짧게 봤다.
+    return isWithinPeriod(acquired, CLAUSE_NA_YEARS, input.transferDate) ? "na" : undefined;
   }
 
   return undefined;

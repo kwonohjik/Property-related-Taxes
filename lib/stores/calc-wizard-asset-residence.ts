@@ -6,6 +6,8 @@
  * 합산값을 주입한다.
  */
 
+import { completedMonthsInclusive } from "@/lib/tax-engine/civil-period";
+
 export interface ResidencePeriod {
   /** 입주일 YYYY-MM-DD */
   moveInDate: string;
@@ -43,6 +45,9 @@ export function migrateResidenceFields(a: Record<string, unknown>): void {
 /**
  * 두 날짜 사이 개월수 (양도일 클램프). 윤년·월 경계 안전.
  * end가 빈값이면 0 반환 (호출자가 양도일 fallback 처리).
+ *
+ * ⚠️ 시작일(초일)을 산입하지 않는다 — **임대기간**(§155⑳, `calc-wizard-asset-rental-period.ts`)
+ *    전용으로 남아 있다(계획서 one-house-exemption-fix §6.1 Q-2). 거주기간은 `residenceIntervalMonths`.
  */
 export function diffMonthsClamped(start: string, end: string): number {
   if (!start || !end) return 0;
@@ -52,6 +57,18 @@ export function diffMonthsClamped(start: string, end: string): number {
   let m = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
   if (e.getDate() < s.getDate()) m -= 1;
   return Math.max(0, m);
+}
+
+/**
+ * §154⑥ 거주 구간 개월 — 「전입일부터 전출일까지」 **초일 산입**(서면4팀-82 · 집행기준 89-154-20).
+ * 응당일 전날 전출이 완성 개월이다(2020-03-10~2022-03-09 = 24). 빈값·무효는 0.
+ */
+export function residenceIntervalMonths(moveInDate: string, moveOutDate: string): number {
+  if (!moveInDate || !moveOutDate) return 0;
+  const s = new Date(moveInDate);
+  const e = new Date(moveOutDate);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  return completedMonthsInclusive(s, e);
 }
 
 /**
@@ -70,7 +87,7 @@ export function sumResidenceMonths(
 ): number {
   void _transferDate;
   return periods.reduce((sum, p) => {
-    return sum + diffMonthsClamped(p.moveInDate, p.moveOutDate);
+    return sum + residenceIntervalMonths(p.moveInDate, p.moveOutDate);
   }, 0);
 }
 
@@ -154,9 +171,9 @@ export function clampResidenceToHousingPeriod(
 
   const clamped = primary.residencePeriods.reduce((sum, p) => {
     if (!p.moveInDate || !p.moveOutDate) return sum;
-    // 구간 전체가 주거용 사용일 이전이면 0이 된다(diffMonthsClamped가 음수를 0으로 막는다).
+    // 구간 전체가 주거용 사용일 이전이면 0이 된다(역전 구간은 0).
     const start = p.moveInDate < residentialUseStartDate ? residentialUseStartDate : p.moveInDate;
-    return sum + diffMonthsClamped(start, p.moveOutDate);
+    return sum + residenceIntervalMonths(start, p.moveOutDate);
   }, 0);
 
   return { months: clamped, trimmed: Math.max(0, raw - clamped) };

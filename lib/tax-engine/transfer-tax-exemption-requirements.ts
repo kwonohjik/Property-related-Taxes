@@ -12,7 +12,8 @@
  *   §155① 의제 1주택 선판정 · 농어촌주택 · 부득이한 사유 수도권 밖
  */
 
-import { addYears, format } from "date-fns";
+import { format } from "date-fns";
+import { isWithinPeriod } from "./civil-period";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -93,7 +94,7 @@ export function qualifiesRuralHouse(
       if ((r.landAreaSqm ?? Infinity) > RURAL_RETURN_TO_FARM_MAX_LAND_SQM) return false; // ⑩3호
       if (r.wholeHouseholdMoved !== true) return false; // ⑩5호
       if (!r.acquisitionDate) return false; // ⑦ 단서 판정 불가 → 적용하지 않는다
-      return input.transferDate <= addYears(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+      return isWithinPeriod(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
     }
   }
 }
@@ -117,7 +118,7 @@ export function qualifiesUnavoidableOutsideCapital(
   if (input.householdHousingCount !== 2 || !u) return false;
   // 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 본다(계획서 W-1).
   if (u.resolvedDate === undefined) return true;
-  return input.transferDate <= addYears(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
+  return isWithinPeriod(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate);
 }
 
 /**
@@ -346,13 +347,13 @@ export function resolveExemptionProviso(
       //   §154①2호가목의 5년은 **수용일 기산**이므로, 수용일을 모르면 요건을 판정할 수 없다
       //   → 특례 미적용(null)이 맞다. 미입력을 유리하게 추정할 근거가 없다.
       if (!p.expropriationDate) return null;
-      return input.transferDate <= addYears(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS)
+      return isWithinPeriod(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS, input.transferDate)
         ? "both"
         : null;
     case "overseas_migration":
     case "overseas_residence":
       // 2호 나·다목: 출국일부터 2년 이내
-      return p.departureDate && input.transferDate <= addYears(p.departureDate, C.OVERSEAS_TRANSFER_YEARS)
+      return p.departureDate && isWithinPeriod(p.departureDate, C.OVERSEAS_TRANSFER_YEARS, input.transferDate)
         ? "both"
         : null;
     case "unavoidable":
@@ -673,7 +674,7 @@ function matchMergeWindow(
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
-  if (input.transferDate > addYears(mergeDate, MERGE_EXEMPTION_YEARS)) return undefined;
+  if (!isWithinPeriod(mergeDate, MERGE_EXEMPTION_YEARS, input.transferDate)) return undefined;
   return input.marriageMerge ? "marriage_merge" : "parental_care_merge";
 }
 

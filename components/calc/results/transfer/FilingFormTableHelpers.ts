@@ -14,6 +14,7 @@ import {
 } from "@/components/calc/results/transfer/lthd-split-display";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type {
@@ -343,7 +344,7 @@ export function buildRows(
     if (primary?.residenceInputMode === "interval" && periods.length > 0) {
       return periods.reduce((sum, p) => {
         const end = p.moveOutDate || transferDate;
-        return sum + holdingMonthsFromDates(p.moveInDate, end);
+        return sum + residenceIntervalMonths(p.moveInDate, end); // §154⑥ 초일 산입(입력 경로와 같은 leaf)
       }, 0);
     }
     return parseInt(primary?.residencePeriodMonthsAsset || formData?.residencePeriodMonths || "0") || 0;

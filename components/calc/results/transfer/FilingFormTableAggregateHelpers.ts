@@ -14,6 +14,7 @@ import {
 } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import {
   type AggregateMeta,
   type ColumnKey,
@@ -186,7 +187,7 @@ export function buildAggregateRows(
       if (a?.residenceInputMode === "interval" && periods.length > 0) {
         return periods.reduce((sum, pp) => {
           const end = pp.moveOutDate || colTransferDate;
-          return sum + holdingMonthsFromDates(pp.moveInDate, end);
+          return sum + residenceIntervalMonths(pp.moveInDate, end); // §154⑥ 초일 산입(입력 경로와 같은 leaf)
         }, 0);
       }
       return parseInt(a?.residencePeriodMonthsAsset || "0") || 0;
