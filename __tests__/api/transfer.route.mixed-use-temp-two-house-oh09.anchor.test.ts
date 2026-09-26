@@ -162,3 +162,47 @@ describe("OH-09 ④ — isOneHouseExempt는 폐기된 토글을 읽지 않는다
     expect(buildMixedUsePayload(form.assets[0], form)?.isOneHouseExempt).toBe(false);
   });
 });
+
+describe("OH-17 route — §154③ 본문(주택 60 > 상가 40 · 10억 · 1세대1주택)", () => {
+  it("🔴 상가분까지 비과세(route 조립을 지나도 엔진 분기에 도달)", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...MIXED,
+          householdHousingCount: 1,
+          mixedUse: { ...MIXED.mixedUse, isOneHouseExempt: true },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const r = (await res.json()).data.result as {
+      commercialPart: { incomeAmount: number; deemedHouseBy154_3Main?: boolean };
+      total: { totalPayable: number };
+    };
+    expect(r.commercialPart.deemedHouseBy154_3Main).toBe(true);
+    expect(r.commercialPart.incomeAmount).toBe(0);
+  });
+
+  it("대조군 — 상가 연면적이 더 크면(40 < 60) 상가분 과세", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...MIXED,
+          householdHousingCount: 1,
+          mixedUse: {
+            ...MIXED.mixedUse,
+            residentialFloorArea: 40,
+            nonResidentialFloorArea: 60,
+            isOneHouseExempt: true,
+          },
+        }),
+      }),
+    );
+    const r = (await res.json()).data.result as { commercialPart: { incomeAmount: number } };
+    expect(r.commercialPart.incomeAmount).toBeGreaterThan(0);
+  });
+});
