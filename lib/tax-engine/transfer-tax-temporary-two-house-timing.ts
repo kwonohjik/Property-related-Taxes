@@ -15,6 +15,10 @@ import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/tra
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
+import {
+  resolveTemporaryTwoHouseDeadlineEra,
+  type TemporaryTwoHouseDeadlineEra,
+} from "./data/temporary-two-house-deadline-era";
 
 /** §155⑯ 전단 — 공공기관 지방이전 시 처분기한 5년 */
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
@@ -66,13 +70,6 @@ export function judgeTemporaryTwoHouseTiming(p: {
 }
 
 /**
- * §155① 처분기한(년) 산정 — 조정대상지역 부칙 완화 반영.
- *
- * 비과세 판정(`checkExemption` E-3)과 중과 배제(§167의10①15호) **양쪽이 같은 값을 써야** 한다.
- * 중과 배제가 이 규칙을 자체 재구현했다가 「비과세 O / 중과배제 X」 모순을 만든 것이
- * 계획서 F-2다. 인라인이던 것을 추출만 했으며 **동작은 불변**이다.
- */
-/**
  * §155⑯ 「이전한 시·군 또는 **이와 연접한 시·군**」 충족 여부.
  *
  * 두 코드가 모두 있으면 자동 판정한다(동일 시·군 또는 인접 매트릭스 조회).
@@ -115,6 +112,13 @@ function resolveIsRegulatedAtTransfer(
   return p.isRegulatedArea === true;
 }
 
+/**
+ * §155① 처분기한(년) 산정 — 조정대상지역 연혁(OH-01) 반영.
+ *
+ * 비과세 판정(`checkExemption` E-3)과 중과 배제(§167의10①15호) **양쪽이 같은 값을 써야** 한다.
+ * 중과 배제가 이 규칙을 자체 재구현했다가 「비과세 O / 중과배제 X」 모순을 만든 것이
+ * 계획서 F-2다.
+ */
 export function resolveTemporaryTwoHouseDeadlineYears(
   p: Pick<
     TransferTaxInput,
@@ -122,19 +126,38 @@ export function resolveTemporaryTwoHouseDeadlineYears(
   >,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
 ): number {
+  return resolveTemporaryTwoHouseDeadline(p, twoHouseRule).years;
+}
+
+/**
+ * §155① 처분기한 — 연혁 leaf(`data/temporary-two-house-deadline-era.ts`)의 결과를 그대로 돌려준다.
+ * `moveInRequirementPending`은 2019-12-17 체제의 전입요건·임차인 단서를 **판정하지 않았다**는 신호다
+ * (판정 보류 고지 — `one-house/era-undetermined.ts`).
+ */
+export function resolveTemporaryTwoHouseDeadline(
+  p: Pick<
+    TransferTaxInput,
+    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode"
+  >,
+  twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
+): TemporaryTwoHouseDeadlineEra {
   // §155⑯ 전단: "제1항 중 '3년'을 '5년'으로 본다."
-  //   🔶 조정대상지역 단축 기한(DB 2년)과의 우선순위는 명문이 없다(계획서 W-4).
+  //   🔶 조정대상지역 단축 기한과의 우선순위는 명문이 없다(계획서 W-4).
   //   법문이 §155① 본문의 "3년"을 직접 치환하므로 5년이 덮는 것으로 구현한다.
   if (p.temporaryTwoHouse && meetsPublicInstitutionRelocationRegion(p.temporaryTwoHouse)) {
-    return PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS;
+    return { years: PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS, moveInRequirementPending: false };
   }
-  if (!resolveIsRegulatedAtTransfer(p)) return twoHouseRule.disposalDeadlineYears;
-  // 부칙: 양도일이 완화 시행일(2022-05-10) 이후이면 완화 기한 적용
-  const relaxDate = twoHouseRule.regulatedAreaRelaxDate
-    ? new Date(twoHouseRule.regulatedAreaRelaxDate)
-    : null;
-  if (relaxDate && p.transferDate >= relaxDate) {
-    return twoHouseRule.regulatedAreaRelaxDeadlineYears ?? twoHouseRule.regulatedAreaDeadlineYears;
-  }
-  return twoHouseRule.regulatedAreaDeadlineYears;
+  /*
+    OH-01 — 조정대상지역 처분기한 연혁은 코드 leaf가 정한다(seed의 `regulatedAreaRelaxDate` 등 폐지).
+    ⚠️ A2b 전까지의 대리 지표: 법은 「종전 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는
+       신규 주택을 **취득**」(신규 취득 당시 두 주택 모두)인데, 여기서는 종전 소스인 **양도일 기준
+       양도주택 조정 여부**(`resolveIsRegulatedAtTransfer`)를 `bothRegulated`로 넘긴다. 신규주택
+       취득 당시 두 주택의 조정 여부 입력은 A2b(계획서 §6.1 Q-3)가 만든다.
+  */
+  return resolveTemporaryTwoHouseDeadlineEra({
+    bothRegulated: resolveIsRegulatedAtTransfer(p),
+    baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
+    newAcquisitionDate: p.temporaryTwoHouse?.newAcquisitionDate,
+    transferDate: p.transferDate,
+  });
 }

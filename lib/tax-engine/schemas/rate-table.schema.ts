@@ -177,10 +177,14 @@ export const oneHouseSpecialRulesSchema = z.object({
   }),
   temporary_two_house: z
     .object({
+      /**
+       * §155① 본문 처분기한(3년). 조정대상지역 처분기한의 **연혁**은 규칙 행이 아니라 코드 leaf
+       * `data/temporary-two-house-deadline-era.ts`가 정한다(OH-01) — 다건 route가 과세기간 말일로
+       * 행을 고르므로 행으로는 자산별 양도일·신규취득일 연혁을 표현할 수 없다.
+       * 종전 `regulatedAreaDeadlineYears`·`regulatedAreaRelaxDate`·`regulatedAreaRelaxDeadlineYears`는
+       * 폐지했다(DB에 남아 있어도 z.object가 버린다).
+       */
       disposalDeadlineYears: z.number().int().positive(),
-      regulatedAreaDeadlineYears: z.number().int().positive(),
-      regulatedAreaRelaxDate: z.string().optional(),
-      regulatedAreaRelaxDeadlineYears: z.number().int().positive().optional(),
     })
     .optional(),
 });

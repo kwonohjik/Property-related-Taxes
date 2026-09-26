@@ -149,13 +149,22 @@ const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
     transferDate: new Date(transferDate),
   });
 
+/*
+ * OH-29(2026-09-26) — §155⑤의 10년은 **2024-11-12 이후 양도분**부터다(대통령령 제34990호 부칙 제2조).
+ * 종전 픽스처(양도 2024-06-01)는 5년 시대라 10년 창을 잴 수 없다 ⇒ 10년 축 두 케이스는 양도일을
+ * 2025-06-01로 옮기고 혼인일도 같은 간격(7년·정확히 10년)으로 옮겼다. 5년 시대 경계는
+ * `merge-exemption-era.anchor.test.ts`가 고정한다.
+ */
+const TEN_YEAR_ERA_TRANSFER = "2025-06-01";
+
 describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", () => {
   it("A-155-7y: 1+1=2, 혼인 7년전 → 10년 이내 전면배제", () => {
     const r = run(
       makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
         sellingHouseId: "h1",
-        marriageMerge: { marriageDate: new Date("2017-06-01") },
-        deemedOneHouseBy155: deemMarriage("2017-06-01"),
+        transferDate: new Date(TEN_YEAR_ERA_TRANSFER),
+        marriageMerge: { marriageDate: new Date("2018-06-01") },
+        deemedOneHouseBy155: deemMarriage("2018-06-01", TEN_YEAR_ERA_TRANSFER),
       }),
     );
     expect(r.surchargeApplicable).toBe(false);
@@ -166,8 +175,9 @@ describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", (
     const r = run(
       makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
         sellingHouseId: "h1",
-        marriageMerge: { marriageDate: new Date("2014-06-01") }, // +10년 = 2024-06-01 = transferDate
-        deemedOneHouseBy155: deemMarriage("2014-06-01"),
+        transferDate: new Date(TEN_YEAR_ERA_TRANSFER),
+        marriageMerge: { marriageDate: new Date("2015-06-01") }, // +10년 = 2025-06-01 = transferDate
+        deemedOneHouseBy155: deemMarriage("2015-06-01", TEN_YEAR_ERA_TRANSFER),
       }),
     );
     expect(r.surchargeApplicable).toBe(false);

@@ -77,6 +77,9 @@ function houseInput(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     transferDate: new Date("2024-06-01"),
     residencePeriodMonths: 60,
     presaleRights: [right()],
+    // OH-30b — 2015-10-01 취득 권리(1년 요건 미충족·3년 초과 양도)는 구 ④(1년 요건 없음 — 대통령령
+    //   제32420호 부칙 제12조)를 받으므로, 「배제 확정」을 재려면 ④·§75① 「해당 없음」을 명시한다.
+    rightThreeYearException: { kind: "none" },
     ...over,
   });
 }

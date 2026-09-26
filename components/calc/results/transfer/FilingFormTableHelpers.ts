@@ -17,6 +17,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
@@ -140,14 +141,19 @@ export { deriveColumns } from "./FilingFormTableColumns";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
+/**
+ * 보유 개월 수 — 「소득세법」 §95④ 「취득일부터 양도일까지」(**초일 산입**). 엔진 정본
+ * `calculateHoldingPeriod`를 그대로 부른다 — 종전 자체 계산(초일 불산입)은 A1a(#1784) 이후 엔진과
+ * 하루 차이로 갈려, 응당일 전날 양도에서 표의 보유연수가 1년 모자랐다.
+ */
 export function holdingMonthsFromDates(acq?: string, transfer?: string): number {
   if (!acq || !transfer) return 0;
   const a = new Date(acq);
   const t = new Date(transfer);
   if (isNaN(a.getTime()) || isNaN(t.getTime())) return 0;
-  let m = (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
-  if (t.getDate() < a.getDate()) m -= 1;
-  return Math.max(0, m);
+  if (t < a) return 0;
+  const h = calculateHoldingPeriod(a, t);
+  return h.years * 12 + h.months;
 }
 
 export function fmtDate(s?: string): string {

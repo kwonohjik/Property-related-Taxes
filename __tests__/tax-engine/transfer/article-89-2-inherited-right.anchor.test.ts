@@ -234,7 +234,9 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
 
   it("상속 외 권리가 1년 요건 미충족 → 배제 확정", () => {
     // 종전주택 2015-06-01 → 상속 외 권리 2015-10-01(4개월)
-    const r = article7("2015-10-01");
+    // OH-30b — 2022-02-15 전 취득 권리는 구 ④(1년 요건 없음, 대통령령 제32420호 부칙 제12조)를 준용받으므로
+    //   3년 초과 양도인 이 세대는 ④·§75① 「해당 없음」을 명시해야 배제가 확정된다(③은 1년 미충족으로 탈락).
+    const r = article7("2015-10-01", { rightThreeYearException: { kind: "none" } });
     expect(r.isExempt).toBe(false);
   });
 
@@ -298,9 +300,11 @@ describe("회귀 — 상속과 무관한 경로는 그대로다", () => {
   });
 
   it("상속 선언이 없으면 1년 요건 미충족은 여전히 배제다", () => {
+    // OH-30b — 2015-10-01 취득 권리는 구 ④(1년 요건 없음)를 받으므로 「해당 없음」 명시가 있어야 배제 확정.
     const r = run(
       inheritedCase({
         presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        rightThreeYearException: { kind: "none" },
       }),
     );
     expect(r.isExempt).toBe(false);

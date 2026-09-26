@@ -46,7 +46,12 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 /**
  * 종전주택 취득(2015-06-01) 4개월 뒤 취득 ⇒ §156의2③의 「1년 이상이 지난 후」 미충족.
  * 나머지 예외도 전부 미해당이라 **배제가 확정**된다 — 판정 불가로 새지 않는다.
+ *
+ * OH-30b(2026-09-26) — 2022-02-15 전 취득 권리라 **구 ④**(1년 요건 없음 — 대통령령 제32420호 부칙
+ * 제12조)가 남는다. 3년 초과 양도이므로 ④·§75① 「해당 없음」(`NO_3YR_EXCEPTION`)을 명시해야
+ * 배제가 확정된다(명시하지 않으면 판정 불가 — 아래 마지막 테스트가 그 갈래다).
  */
+const NO_3YR_EXCEPTION = { rightThreeYearException: { kind: "none" as const } };
 const RIGHT = [
   {
     id: "r1",
@@ -139,7 +144,7 @@ describe("R-5 — 일괄양도 컴패니언 주택도 §89② 판정을 받는�
   });
 
   it("주 자산은 종전에도 배제됐다 (회귀 대조군)", async () => {
-    const r = await run(body({ presaleRights: RIGHT }));
+    const r = await run(body({ presaleRights: RIGHT, ...NO_3YR_EXCEPTION }));
     expect(r.primary.isExempt).toBe(false);
     // 2015-06-01 → 2024-06-01(응당일) = §95④ 초일 산입으로 만 9년
     //   (holding-period-first-day-inclusion.anchor — 헤더 표의 71,260,000은 초일불산입 8년 시절 값)
@@ -149,7 +154,7 @@ describe("R-5 — 일괄양도 컴패니언 주택도 §89② 판정을 받는�
   });
 
   it("★ 컴패니언 주택도 배제된다 — 종전에는 비과세 0원 그대로였다", async () => {
-    const r = await run(body({ presaleRights: RIGHT }));
+    const r = await run(body({ presaleRights: RIGHT, ...NO_3YR_EXCEPTION }));
     expect(r.companion.isExempt).toBe(false);
     expect(r.companion.exemptReason).toBeUndefined();
     expect(r.companion.determinedTax).toBeGreaterThan(0);
@@ -157,7 +162,7 @@ describe("R-5 — 일괄양도 컴패니언 주택도 §89② 판정을 받는�
 
   it("★ 총세액이 실제로 움직인다 — 과소 산출이 해소된다", async () => {
     const kept = await run(body());
-    const excluded = await run(body({ presaleRights: RIGHT }));
+    const excluded = await run(body({ presaleRights: RIGHT, ...NO_3YR_EXCEPTION }));
     expect(kept.agg.totalTax).toBe(0);
     // 종전 실측 77,341,000(주 자산분만) → 컴패니언분이 더해진다.
     expect(excluded.agg.totalTax).toBeGreaterThan(77_341_000);

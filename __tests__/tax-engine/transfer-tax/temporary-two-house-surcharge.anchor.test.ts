@@ -44,24 +44,24 @@ describe("Phase A — resolveTemporaryTwoHouseDeadlineYears (동작 불변 추�
     ).toBe(expected);
   });
 
-  // 완화 시행일 당일(2022-05-10)은 `>=` 이므로 완화 기한이 적용된다.
-  it("T-A1b 조정 · 완화 시행일 당일 양도 → 3년 (경계 `>=`)", () => {
+  // 🔁 OH-01(2026-09-26) — 종전 기대값 3년은 seed의 「2022-05-10 완화 3년」을 옮긴 것이었는데 법령과
+  //    다르다. 대통령령 제32654호 부칙 제3조①: 2022-05-10 이후 양도분의 §155①2호는 **2년**이다
+  //    (MST 242735 본문 「신규 주택을 취득한 날부터 2년 이내」). 3년 통일은 2023-01-12 이후 양도분
+  //    (제33267호 부칙 제8조). 경계 anchor: `temporary-two-house-deadline-era.anchor.test.ts`.
+  it("T-A1b 조정 · 2022-05-10 당일 양도 → 2년 (제32654호 부칙 제3조)", () => {
     expect(
       resolveTemporaryTwoHouseDeadlineYears(
         { isRegulatedArea: true, transferDate: new Date("2022-05-10") },
         twoHouseRule,
       ),
-    ).toBe(3);
+    ).toBe(2);
   });
 
   // seed 값 자체를 고정한다 — mock↔seed 드리프트(F-3) 재발 시 여기서 먼저 깨진다.
-  it("T-B9 seed 규칙 고정 — 조정지역 완화 전 기한은 2년", () => {
-    expect(twoHouseRule).toEqual({
-      disposalDeadlineYears: 3,
-      regulatedAreaDeadlineYears: 2,
-      regulatedAreaRelaxDate: "2022-05-10",
-      regulatedAreaRelaxDeadlineYears: 3,
-    });
+  // 🔁 OH-01 — 조정대상지역 연혁 3필드는 seed에서 폐지하고 코드 leaf가 정한다
+  //    (`data/temporary-two-house-deadline-era.ts`). 남는 것은 §155① 본문 3년뿐이다.
+  it("T-B9 seed 규칙 고정 — §155① 본문 처분기한 3년만 남는다", () => {
+    expect(twoHouseRule).toEqual({ disposalDeadlineYears: 3 });
   });
 });
 
@@ -156,10 +156,15 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
     expect(r.totalTax).toBe(98_742_600);
   });
 
-  it("T-B2 🔴 N2 (新 2020-06-01 · 양 2022-01-01 · 조정) → 「비과세 O / 중과배제 X」 소멸", () => {
-    // F-2 드리프트 재현 조합. 비과세 정본은 seed 2년 기한으로 의제를 인정하는데
+  it("T-B2 🔴 N2 (新 2020-06-01 · 양 2022-05-31 · 조정) → 「비과세 O / 중과배제 X」 소멸", () => {
+    // F-2 드리프트 재현 조합. 비과세 정본은 2년 기한으로 의제를 인정하는데
     // 구 중과 배제는 하드코딩 1년으로 부정했다 → 같은 사실관계에 두 결론.
-    const r = calc({ newAcq: "2020-06-01", transfer: "2022-01-01" });
+    // 🔁 OH-01(2026-09-26) — 종전 양도일 2022-01-01은 신규 2019-12-17 이후 취득·2022-05-09 이전 양도라
+    //    **1년 체제**(대통령령 제30395호 부칙 제15조)에 걸려 의제 자체가 불성립한다(법령상 정답).
+    //    이 anchor의 주제(두 경로가 같은 기한)를 재려면 2년 기한이 실제로 적용되는 날이어야 하므로
+    //    2022-05-10 이후(제32654호 부칙 제3조 — 2년)·2년 이내인 2022-05-31로 옮겼다. 보유 4년·거주 3년·
+    //    12억 기준이 같아 세액은 불변이다.
+    const r = calc({ newAcq: "2020-06-01", transfer: "2022-05-31" });
     expect(r.exemptReason).toBe("일시적 2주택 고가주택"); // §155① 의제 성립
     expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
     // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 168,580,000. 위와 같은 이유(표1 6% → 표2 24%).

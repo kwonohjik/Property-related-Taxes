@@ -134,10 +134,13 @@ describe("§156의2⑩ · §156의3⑦ — 문화유산 주택 + 일반주택 + 
 
   it("🔑 준용이므로 ③ 타이밍이 깨지면 그대로 탈락한다", () => {
     // 권리를 종전주택 취득 4개월 뒤에 취득 ⇒ 1년 요건 미충족.
+    // OH-30b — 2022-02-15 전 취득 권리라 준용되는 구 ④에는 1년 요건이 없다(대통령령 제32420호 부칙
+    //   제12조) ⇒ 3년 초과 양도의 ④·§75① 「해당 없음」을 명시해야 ③ 탈락이 배제로 이어진다.
     const v = verdict(
       twoHouse({
         culturalHeritageHouse: true,
         presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        rightThreeYearException: { kind: "none" },
       }),
     );
     expect(v.status).toBe("excluded");

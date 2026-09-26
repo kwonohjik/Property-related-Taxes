@@ -157,7 +157,7 @@ export function NonHousingConversionExpandedPanel({ asset, onChange, transferDat
           <p className="mt-1">
             「소득세법」 제95조 제5항·제6항은 부칙(법률 제19933호) 제7조에 따라 2025년 1월 1일 이후
             양도분부터 적용됩니다. 이 양도일에는 장기보유특별공제가 종전 방식으로 계산됩니다.
-            (비과세 보유기간 기산은 2024년 3월 1일 이후 양도분부터 별도로 적용됩니다.)
+            (비과세 보유기간 기산은 2024년 2월 29일 이후 양도분부터 별도로 적용됩니다.)
           </p>
         </div>
       )}

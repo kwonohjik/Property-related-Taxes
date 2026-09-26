@@ -123,13 +123,10 @@ export function makeMockRates(
           prePolicyExemptResidence: true,
         },
         temporary_two_house: {
-          disposalDeadlineYears: 3,
           // ⚠️ seed와 동일해야 한다 — 2026-07-31 정정(계획서 F-3).
-          //    종전 mock의 1년이 구 중과 배제의 하드코딩 1년과 **우연히 일치**해
-          //    「비과세 O / 중과배제 X」 드리프트(F-2)를 테스트에서 가리고 있었다.
-          regulatedAreaDeadlineYears: 2,
-          regulatedAreaRelaxDate: "2022-05-10",
-          regulatedAreaRelaxDeadlineYears: 3,
+          //    조정대상지역 처분기한 연혁은 규칙 행이 아니라 코드 leaf가 정한다(OH-01,
+          //    `data/temporary-two-house-deadline-era.ts`) — 종전 regulatedArea* 3필드는 폐지.
+          disposalDeadlineYears: 3,
         },
       },
     },

@@ -82,17 +82,22 @@ import type {
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
+import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
+import {
+  clause4RequiresOneYearGap,
+  resolve1562DeadlineYears,
+} from "./data/article-156-2-completion-era";
 
 /** §156의2③·§156의3②의 처분기한 — 조문 문언 그대로 3년(단축·연장 규정 없음). */
 export const ARTICLE_156_2_3_DEADLINE_YEARS = 3;
 
-/**
- * §156의2⑧·⑨의 「합친 날(혼인한 날)부터 **10년 이내**에 먼저 양도하는 주택」.
- *
- * ⚠️ §155④⑤의 10년과 **숫자만 같고 조문이 다르다**(`MERGE_EXEMPTION_YEARS`) — 상수를
- *    공유하면 한쪽이 개정될 때 다른 쪽이 조용히 따라간다.
+/*
+ * §156의2⑧·⑨의 「합친 날(혼인한 날)부터 N년 이내에 먼저 양도하는 주택」의 N은
+ * `data/merge-exemption-era.ts` `resolveMergeExemptionYears`가 정한다(OH-29).
+ * §155④⑤와 **조문은 다르지만 같은 개정령·같은 부칙**으로 함께 바뀌었다 — 대통령령 제28637호
+ * 부칙 제2조②(⑧·④ 2018-02-13) · 제34990호 부칙 제2조(⑨·⑤ 2024-11-12, 「제155조제5항 및
+ * 제156조의2제9항의 개정규정은」이라 두 조항을 한 문장에 적었다). 그래서 한 함수를 공유한다.
  */
-export const ARTICLE_156_2_8_MERGE_YEARS = 10;
 
 /**
  * §89②의 **조합원입주권 축 시행일** — 법률 제7837호(2005-12-31 공포·2006-01-01 시행) 부칙 §12.
@@ -365,10 +370,17 @@ export function resolveArticle89Clause2(
   if (oneYearMet && withinDeadline) {
     return { status: "exception_met", exception: `소득세법 시행령 ${clause}`, viaArticle };
   }
-  if (oneYearMet) {
+  /**
+   * OH-30b — ④(§156의3③)의 「종전주택 취득 후 1년이 지난 후 권리 취득」 요건은 대통령령 제32420호
+   * (2022-02-15 시행)가 신설했고, 부칙 제12조가 그 전에 취득한 권리에는 **종전 규정**(1년 요건 없음)을
+   * 적용한다. ③은 그 전부터 1년 요건이 있었으므로 여기서 풀리는 것은 ④ 경로뿐이다.
+   * (구 ④도 「3년이 **지나**」 양도한 경우에만 적용되므로 3년 이내 양도에는 영향이 없다.)
+   */
+  const clause4Open = oneYearMet || !clause4RequiresOneYearGap(right.acquisitionDate);
+  if (!withinDeadline && clause4Open) {
     /**
-     * 1년은 충족했는데 3년을 넘겼다 — 남은 갈래는 **둘뿐**이다(16항 전수 대조):
-     *   · §156의2④ · §156의3③ — 신축주택 완성 후 3년 내 세대전원 이사 + 1년 이상 계속 거주
+     * 3년을 넘겼다(④의 1년 요건은 충족했거나 적용되지 않는다) — 남은 갈래는 **둘뿐**이다(16항 전수 대조):
+     *   · §156의2④ · §156의3③ — 신축주택 완성 후 N년(양도일 연혁 2·3년) 내 세대전원 이사 + 1년 이상 계속 거주
      *   · 시행규칙 §75① — 3년이 되는 날 현재 매각의뢰·경매·공매 **이고 그 방법으로 양도**
      *
      * 🔴 **선언이 없으면 판정하지 않는다**(Phase 2). 신규 필드라 기존 저장분에 값이 없고,
@@ -379,14 +391,23 @@ export function resolveArticle89Clause2(
         ? TRANSFER.RIGHT_3YR_EXCEPTION_156_2_4
         : TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3;
     const declared = input.rightThreeYearException;
+    /*
+     * 1년 요건을 못 채운 채 여기 온 경우(구 ④ — 2022-02-15 전 취득 권리)는 ④만 열려 있다.
+     * 시행규칙 §75①은 ③ 괄호(「3년 이내에 양도하지 못하는 경우」)의 위임이라 ③의 1년 요건을 함께
+     * 요구하고, 「3년 이내 양도했으면 비과세」 기한 안내(`deadline`)도 ③ 경로라 낼 수 없다.
+     */
+    const thirdClauseOpen = oneYearMet;
     if (declared === undefined) {
       return {
         status: "undetermined",
-        openArticles: [fourthClause, "소득세법 시행규칙 §75 ①"],
-        deadline,
+        openArticles: thirdClauseOpen ? [fourthClause, "소득세법 시행규칙 §75 ①"] : [fourthClause],
+        ...(thirdClauseOpen ? { deadline } : {}),
       };
     }
-    if (meetsThreeYearException(declared, input.transferDate)) {
+    if (
+      meetsThreeYearException(declared, input.transferDate) &&
+      (thirdClauseOpen || declared.kind !== "delay")
+    ) {
       return {
         status: "exception_met",
         viaArticle,
@@ -397,12 +418,13 @@ export function resolveArticle89Clause2(
             : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
       };
     }
-    return { status: "excluded", deadline };
+    return { status: "excluded", ...(thirdClauseOpen ? { deadline } : {}) };
   }
 
   /**
-   * 1년 요건 미충족 — ③도 ④도 「1년이 지난 후에 권리를 취득」을 **함께** 요구하므로 둘 다 탈락하고,
-   * 나머지 예외는 위에서 전부 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
+   * 1년 요건 미충족 — ③은 탈락하고, ④는 3년 이내 양도라 대상이 아니거나(구 ④는 「3년이 지나」
+   * 한정) 2022-02-15 이후 취득 권리라 1년 요건을 함께 요구한다. 나머지 예외는 위에서 전부
+   * 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
   return { status: "excluded" };
 }
@@ -492,7 +514,7 @@ function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHous
     };
   }
 
-  // ⑧·⑨ 본문 공통 — 「합친 날부터 10년 이내에 **먼저 양도하는 주택**」.
+  // ⑧·⑨ 본문 공통 — 「합친 날부터 N년 이내에 **먼저 양도하는 주택**」(N = 양도일 연혁).
   if (input.isFirstTransferredInMerge !== true) return { status: "unmet" };
 
   const axes: { date: Date | undefined; clause: "⑧" | "⑨" }[] = [
@@ -501,7 +523,11 @@ function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHous
   ];
   for (const { date, clause } of axes) {
     if (!date) continue;
-    if (!isWithinPeriod(date, ARTICLE_156_2_8_MERGE_YEARS, input.transferDate)) continue;
+    const years = resolveMergeExemptionYears(
+      clause === "⑧" ? "parental_care" : "marriage",
+      input.transferDate,
+    );
+    if (!isWithinPeriod(date, years, input.transferDate)) continue;
     const item = matchMergedHouseholdClause(declared, {
       mergeDate: date,
       houseAcquisitionDate: input.acquisitionDate,
@@ -614,8 +640,10 @@ function qualifyInheritedRight(
  * 3년 초과 예외 선언이 **요건을 충족하는가**.
  *
  * · `new_house` — 「소득세법 시행령」 §156의2④1호·2호 / §156의3③1호·2호
- *   1호: 완성 후 3년 이내 세대전원 이사 + 1년 이상 계속 거주 (둘 다 자기선언)
- *   2호: **완성되기 전 또는 완성된 후 3년 이내**에 종전주택을 양도
+ *   1호: 완성 후 N년 이내 세대전원 이사 + 1년 이상 계속 거주 (둘 다 자기선언)
+ *   2호: **완성되기 전 또는 완성된 후 N년 이내**에 종전주택을 양도
+ *   N = 양도일 2023-01-12 전 2년 · 이후 3년 (대통령령 제33267호 부칙 제8조 — OH-30).
+ *   1호의 이사 기한은 자기선언이라 화면 문구가 같은 N을 묻는다(`RightThreeYearExceptionSection`).
  * · `delay` — 「소득세법 시행규칙」 §75① : 사유 해당 **그리고** 그 방법에 따라 양도
  * · `none` — 명시적 미해당 선언
  */
@@ -636,10 +664,10 @@ function meetsThreeYearException(
    * 사업이 진행 중이면 준공일 자체가 정해지지 않으므로 완성일을 요구할 수 없다(R-3).
    */
   if (declared.kind === "before_completion") return true;
-  // 2호 후단 — 완성일 + 3년 이내. 완성일이 양도일보다 뒤인 저장분도 전단으로 성립한다.
+  // 2호 후단 — 완성일 + N년 이내(N = 양도일 연혁). 완성일이 양도일보다 뒤인 저장분도 전단으로 성립한다.
   return (
     transferDate < declared.completionDate ||
-    isWithinPeriod(declared.completionDate, ARTICLE_156_2_3_DEADLINE_YEARS, transferDate)
+    isWithinPeriod(declared.completionDate, resolve1562DeadlineYears(transferDate), transferDate)
   );
 }
 

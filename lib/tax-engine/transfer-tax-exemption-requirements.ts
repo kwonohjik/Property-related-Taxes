@@ -17,6 +17,8 @@ import { isWithinPeriod } from "./civil-period";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
+import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
+import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 import type {
   TransferTaxInput,
   TemporaryTwoHouseDelayReason,
@@ -42,13 +44,11 @@ export {
   resolveTemporaryTwoHouseDeadlineYears,
 };
 
-// §156의2⑤ 대체주택 특례 — 신축주택 완성 후 대체주택 양도 기한.
-// 2023.01.12 이후 양도분부터 3년(구 2년). 소득세법 시행령 부칙(대통령령 제33267호).
-export const REPLACEMENT_HOUSE_3YR_TRANSFER_START = new Date("2023-01-12");
-export const REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW = 3;
-export const REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD = 2;
-// §155④⑤ 합가·혼인 1세대1주택 비과세 처분기한 — 합가·혼인일부터 10년.
-export const MERGE_EXEMPTION_YEARS = 10;
+// §156의2⑤ 대체주택 특례의 「완성 후 N년」은 `data/article-156-2-completion-era.ts`
+// `resolve1562DeadlineYears`가 정한다 — 같은 부칙(대통령령 제33267호 제8조)이 §156의2④·§156의3③도
+// 함께 옮겼으므로 한 함수를 공유한다(OH-30).
+// §155④⑤ 합가 처분기한은 `data/merge-exemption-era.ts` `resolveMergeExemptionYears`가 정한다 —
+// 동거봉양·혼인의 경계일이 달라 상수 하나로 표현할 수 없다(OH-29).
 // §155⑯ 공공기관·법인 지방이전 — §155① 본문의 "3년"을 "5년"으로 치환.
 // §155⑧ — 부득이한 사유가 해소된 날부터 일반주택 양도 기한.
 export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
@@ -224,11 +224,16 @@ export const TABLE2_MIN_RESIDENCE_YEARS = 2;
  *
  * @param table2ResidenceYears §154⑧3호 통산을 반영한 거주 연수(호출부가 이미 계산해 둔 값을 받는다 —
  *   여기서 다시 계산하면 통산 규칙이 두 벌이 된다).
+ *
+ * OH-31 — 거주 2년 요건은 **2020-01-01 이후 양도분**부터다(시행령 §159의3 <개정 2018.10.23>,
+ * 대통령령 제29242호 부칙 제1조 단서·제3조). 2009-01-01~2019-12-31 양도분은 요건이 없다
+ * (`data/lthd-table2-era.ts`). `transferDate`가 없는 호출(겸용주택 — 2022년 이후 양도만)은 현행대로 본다.
  */
 export function meetsTable2ResidenceRequirement(
-  input: Pick<TransferTaxInput, "winWinRentalHouse">,
+  input: Pick<TransferTaxInput, "winWinRentalHouse"> & Partial<Pick<TransferTaxInput, "transferDate">>,
   table2ResidenceYears: number,
 ): boolean {
+  if (input.transferDate && resolveLthdTable2Era(input.transferDate) === "holding_8pct") return true;
   return table2ResidenceYears >= TABLE2_MIN_RESIDENCE_YEARS || qualifiesWinWinRental(input);
 }
 
@@ -509,7 +514,7 @@ export function meetsOneHouseResidenceRequirement(
 /**
  * §154① 비과세 **보유기간 기산일** — 취득일을 옮기는 두 규정을 한 곳에서 판정한다.
  *
- *   §154⑤ 단서: 비주택 → 주택 용도변경 시 **주택으로 사용한 날**부터 (2024-03-01 이후 양도분)
+ *   §154⑤ 단서: 비주택 → 주택 용도변경 시 **주택으로 사용한 날**부터 (2024-02-29 이후 양도분)
  *   §154⑧3호 : 동일세대 상속이면 상속개시 전 동일세대 보유 개시일부터 통산 → backdate
  *
  * 어느 쪽도 아니면 acquisitionDate(상속개시일 등) 그대로.
@@ -520,7 +525,7 @@ export function meetsOneHouseResidenceRequirement(
  */
 export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date {
   // §154⑤ 단서 — 주택이 아닌 건물을 주택으로 용도변경한 경우 보유기간은 **주택으로 사용한 날**부터
-  // 기산한다. 2024-03-01 이후 양도분부터 적용(대통령령 제34265호).
+  // 기산한다. 2024-02-29 이후 양도분부터 적용(대통령령 제34265호 — 공포일 시행).
   //
   // ⚠️ §154⑧3호(상속 통산 backdate)보다 **먼저** 판정한다.
   //    2026-08-05 근거 강화 — 종전 주석은 "두 사유가 동시에 성립하는 조합은 **명문이 없어**
@@ -650,12 +655,12 @@ export function resolveDeemedOneHouseBy155(
  *
  * 요건(§155④·⑤ 문언):
  * - 합침(혼인)으로써 **1세대가 2주택**을 보유하게 된 경우
- * - 합친 날(혼인한 날)부터 10년 이내에 **먼저 양도하는 주택** — 사용자 선언(`isFirstTransferredInMerge`)
+ * - 합친 날(혼인한 날)부터 N년 이내에 **먼저 양도하는 주택** — 사용자 선언(`isFirstTransferredInMerge`)
+ *   (N = 양도일 연혁: 동거봉양 2018-02-13·혼인 2024-11-12 전 양도는 5년, 이후 10년 — OH-29)
  * - 양도 주택이 합가(혼인) **전 또는 당일** 취득분 — 서면-2023-부동산-0231(동거봉양 합가일 = 취득일이면
  *   §155④ 적용 가능) · 부동산거래관리과-410(혼인일 = 취득일이면 납세자가 선택한 순서)
  *
  * 혼인·동거봉양 입력이 둘 다 있으면 혼인을 먼저 본다(종전 E-3.5 순서 유지).
- * ⚠️ 연수는 현행 10년 상수다 — 혼인 5년→10년 시점 분기는 「1세대1주택 판정 자동화」 계획서 G-7.
  */
 export function resolveMergeDeeming(
   input: MergeDeemingReqInput,
@@ -664,7 +669,7 @@ export function resolveMergeDeeming(
   return matchMergeWindow(input);
 }
 
-/** 합가 창(窓) — 「먼저 양도」·합가 전(또는 당일) 취득·합친 날부터 10년 이내. **주택 수는 보지 않는다.** */
+/** 합가 창(窓) — 「먼저 양도」·합가 전(또는 당일) 취득·합친 날부터 N년 이내. **주택 수는 보지 않는다.** */
 function matchMergeWindow(
   input: MergeDeemingReqInput,
 ): "marriage_merge" | "parental_care_merge" | undefined {
@@ -674,7 +679,12 @@ function matchMergeWindow(
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
-  if (!isWithinPeriod(mergeDate, MERGE_EXEMPTION_YEARS, input.transferDate)) return undefined;
+  // 연수는 **양도일** 연혁이다 — 대통령령 제28637호 부칙 제2조②(동거봉양) · 제34990호 부칙 제2조(혼인).
+  const years = resolveMergeExemptionYears(
+    input.marriageMerge ? "marriage" : "parental_care",
+    input.transferDate,
+  );
+  if (!isWithinPeriod(mergeDate, years, input.transferDate)) return undefined;
   return input.marriageMerge ? "marriage_merge" : "parental_care_merge";
 }
 

@@ -31,13 +31,13 @@ import {
   resolveInheritedSellingHouseId,
 } from "../transfer-inheritance-exclusion";
 import { calculateHoldingPeriod } from "../tax-utils";
+import { resolveMergeExemptionYears, type MergeExemptionKind } from "../data/merge-exemption-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
   meetsOneHouseResidenceRequirement,
-  MERGE_EXEMPTION_YEARS,
   qualifiesLongTermMortgageResidenceExemption,
   resolveExemptionHoldingStartDate,
   RURAL_HOUSE_LABEL,
@@ -47,6 +47,7 @@ import {
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
+import { collectEraUndetermined } from "./era-undetermined";
 import type {
   OneHouseJudgeInput,
   OneHousePendingCondition,
@@ -194,21 +195,30 @@ export function collectPendingConditions(
   }
 
   /**
-   * §155④⑤ 혼인·동거봉양 합가 — 합가일부터 **10년** 이내 「먼저 양도하는 주택」.
+   * §155④⑤ 혼인·동거봉양 합가 — 합가일부터 **N년** 이내 「먼저 양도하는 주택」
+   * (N = 양도일 연혁 — `resolveMergeExemptionYears`, OH-29).
    *
-   * `resolveMergeDeeming`은 10년을 넘기면 `undefined`를 돌려줄 뿐 날짜를 남기지 않는다
-   * (`matchMergeWindow`의 `isWithinPeriod(mergeDate, MERGE_EXEMPTION_YEARS, …)`).
-   * 같은 기간 함수로 기한(만료일 — 초일불산입)을 복원한다.
+   * `resolveMergeDeeming`은 기한을 넘기면 `undefined`를 돌려줄 뿐 날짜를 남기지 않는다
+   * (`matchMergeWindow`의 `isWithinPeriod(mergeDate, years, …)`).
+   * 같은 기간 함수·같은 연수로 기한(만료일 — 초일불산입)을 복원한다.
    */
-  const mergeAxes: Array<{ id: string; mergeDate?: Date; label: string; basis: string }> = [
+  const mergeAxes: Array<{
+    id: string;
+    kind: MergeExemptionKind;
+    mergeDate?: Date;
+    label: string;
+    basis: string;
+  }> = [
     {
       id: "155-5-marriage-merge",
+      kind: "marriage",
       mergeDate: input.marriageMerge?.marriageDate,
       label: "혼인한 날",
       basis: TRANSFER.MARRIAGE_MERGE_EXEMPT,
     },
     {
       id: "155-4-parental-care-merge",
+      kind: "parental_care",
       mergeDate: input.parentalCareMerge?.mergeDate,
       label: "합친 날",
       basis: TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
@@ -218,9 +228,10 @@ export function collectPendingConditions(
     if (!axis.mergeDate) continue;
     // 합가 의제는 「먼저 양도하는 주택」이 전제다 — 그 선언이 없으면 기한 안내가 의미 없다.
     if (input.isFirstTransferredInMerge !== true) continue;
-    const deadline = periodEndFrom(axis.mergeDate, MERGE_EXEMPTION_YEARS);
+    const years = resolveMergeExemptionYears(axis.kind, input.transferDate);
+    const deadline = periodEndFrom(axis.mergeDate, years);
     // 기한 내인데 과세면 원인이 다른 곳이다
-    if (isWithinPeriod(axis.mergeDate, MERGE_EXEMPTION_YEARS, input.transferDate)) continue;
+    if (isWithinPeriod(axis.mergeDate, years, input.transferDate)) continue;
     if (!meetsOneHouseHoldingResidence(input, rule)) continue;
     pending.push({
       id: axis.id,
@@ -354,6 +365,9 @@ export function collectUndetermined(
         "거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문입니다.",
     });
   }
+
+  // 입력 경로가 없는 연혁 분기(OH-22 · OH-38 · OH-01 2019-12-17 체제) — `era-undetermined.ts`.
+  undetermined.push(...collectEraUndetermined(input, oneHouseRules, settled));
 
   return undetermined;
 }
