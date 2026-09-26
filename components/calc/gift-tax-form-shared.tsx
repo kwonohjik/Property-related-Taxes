@@ -272,6 +272,7 @@ export const RELATION_LABELS: Record<DonorRelation, string> = {
   lineal_ascendant_minor: "직계존속 — 미성년 수증자 (2천만원)",
   lineal_descendant: "직계비속 (5천만원)",
   other_relative: "기타 친족 (1천만원)",
+  none: "비친족 — 증여재산공제 없음",
 };
 
 // Phase A: 증여자 관계 (8 enum / 7 그룹) — UI 셀렉트 옵션

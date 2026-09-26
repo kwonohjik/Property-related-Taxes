@@ -60,12 +60,15 @@ const DONOR_LABEL: Record<GiftDonorRelation, string> = {
   other: "기타",
 };
 
+// ⚠️ `Partial<Record<…>>`이라 **tsc가 키 커버리지를 강제하지 않는다** —
+//    `DonorRelation`에 값을 더하면 여기서 조용히 빠지고 아래 `?? "본인"`으로 떨어진다.
 const RELATION_LABEL: Partial<Record<DonorRelation, string>> = {
   spouse: "배우자",
   lineal_ascendant_adult: "직계존속(성인)",
   lineal_ascendant_minor: "직계존속(미성년)",
   lineal_descendant: "직계비속",
   other_relative: "기타친족",
+  none: "비친족",
 };
 
 // ============================================================

@@ -171,6 +171,7 @@ const DONOR_RELATION_LABEL: Record<DonorRelation, string> = {
   lineal_ascendant_minor: "직계존속(미성년)",
   lineal_descendant: "직계비속",
   other_relative: "기타친족",
+  none: "비친족(공제 없음)",
 };
 
 /**

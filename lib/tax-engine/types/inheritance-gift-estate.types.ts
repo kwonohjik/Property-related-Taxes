@@ -711,6 +711,19 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
   /** §47① 합산배제증여재산(§41의3·§41의5 등). true→§47② 10년합산 격리 + §55①3호 과세표준(증여이익−3천만, §53·§54 미적용) + §56 일반세율. false/undef→일반(현행 보존). */
   isAggregationExcludedGift?: boolean;
   /**
+   * 「상증령」의 **법정 산식**으로 산정된 증여의제 이익임을 나타내는 표지.
+   *
+   * 별지 제10호서식 부표 1 ⑧ 평가기준코드에서 **01(매매거래가액 §60)을 배제**하기 위한
+   * 필드다. 이관 payload가 산정액을 `marketValue`에 싣는 탓에 `resolveValuationMethod`가
+   * `market_value`로 판정하는데, 신주 인수·감자 등은 자본거래이지 매매거래가 아니다.
+   *
+   * ⚠️ `id`가 `deemed-`로 시작한다는 사실로 대신하지 말 것 — 그 문자열은 표시용이다.
+   * ⚠️ 평가액 자체는 바꾸지 않는다(표시 전용). 보충평가 경로 필드로 옮겨 싣는 대안은
+   * `property-valuation.ts`의 `standard_price` 분기가 켜져 §66 하한·§61⑤ 임대료환산이
+   * 발동하므로 **평가액이 달라질 위험**이 있어 채택하지 않았다.
+   */
+  isStatutoryFormulaValue?: boolean;
+  /**
    * §55① 합산배제증여재산 과세표준 호분기 — isAggregationExcludedGift===true일 때만 유효.
    *   "nominee_trust"  → §55①1호 명의신탁(§45의2): 명의신탁재산금액 − 감정평가수수료 (3천만 공제 없음)
    *   "deemed_profit"  → §55①2호 일감몰아주기·사업기회(§45의3·§45의4): 증여의제이익 − 감정평가수수료 (3천만 공제 없음)

@@ -37,6 +37,8 @@ export const priorGiftSchema = z
         "lineal_ascendant_minor",
         "lineal_descendant",
         "other_relative",
+        // §53 열거 밖(비친족) — 빠지면 ⑫가 침묵 strip 해 공제 0이 마법사에 도달하지 못한다.
+        "none",
       ])
       .optional(),
     // Phase A: 동일인 §47 합산 + §58/§57 한도 산식용

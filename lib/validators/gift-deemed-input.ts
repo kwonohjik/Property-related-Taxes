@@ -459,6 +459,8 @@ const excessDividendGiftTaxContextSchema = z.object({
     "lineal_ascendant_minor",
     "lineal_descendant",
     "other_relative",
+    // §53 열거 밖(비친족) — ⑫ strip 방지
+    "none",
   ]),
   priorDeductionApplied: z.number().nonnegative().optional(),
   isGenerationSkip: z.boolean().optional(),
@@ -548,7 +550,8 @@ const specificCorpShareholderSchema = z.object({
   isRelated: z.boolean(),
   isCorporate: z.boolean().optional(),
   donorRelation: z
-    .enum(["spouse", "lineal_ascendant_adult", "lineal_ascendant_minor", "lineal_descendant", "other_relative"])
+    // "none" = §53 열거 밖(비친족) — ⑫ strip 방지
+    .enum(["spouse", "lineal_ascendant_adult", "lineal_ascendant_minor", "lineal_descendant", "other_relative", "none"])
     .optional(),
   isGenerationSkip: z.boolean().optional(),
 });
