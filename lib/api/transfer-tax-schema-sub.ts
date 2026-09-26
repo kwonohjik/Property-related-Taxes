@@ -32,19 +32,8 @@ export function addRentalHousingExceptionRefines(
 
 // ─── 하위 스키마 ────────────────────────────────────────────────
 
-export const temporaryTwoHouseSchema = z.object({
-  previousAcquisitionDate: z.string().date(),
-  newAcquisitionDate: z.string().date(),
-  /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 */
-  publicInstitutionRelocation: z.boolean().optional(),
-  /** §155⑯ 연접 판정 — 행안부 표준 10자리. 미제공 시 자기선언 신뢰 */
-  relocatedSigunguCode: z.string().optional(),
-  newHouseSigunguCode: z.string().optional(),
-  /** §155⑱ 처분기한 예외 — 「다른 주택 취득일부터 3년이 되는 날 현재」 각 호 해당 */
-  disposalDelayReason: z
-    .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
-    .optional(),
-});
+// ⑫ §155① 일시적 2주택 — 800줄 정책으로 분리(경로 호환 재수출).
+export { temporaryTwoHouseSchema } from "./transfer-tax-schema-temp-two-house";
 
 /** ⑫ §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 일반주택이고 이 주택은 보유만 한다 */
 export const unavoidableOutsideCapitalHouseSchema = z.object({

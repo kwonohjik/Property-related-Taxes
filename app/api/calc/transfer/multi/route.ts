@@ -21,6 +21,7 @@ import {
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -230,6 +231,8 @@ export async function POST(request: NextRequest) {
             relocatedSigunguCode: p.temporaryTwoHouse.relocatedSigunguCode,
             newHouseSigunguCode: p.temporaryTwoHouse.newHouseSigunguCode,
             disposalDelayReason: p.temporaryTwoHouse.disposalDelayReason,
+            // ⑭ §155①2호 — 신규 취득 당시 조정 여부·계약일·전입·임차인 단서(OH-01 A2b). 단건·다건 공용.
+            ...mapTemporaryTwoHouseEraFacts(p.temporaryTwoHouse),
           }
         : undefined,
       // ⑭ §155⑧ 수도권 밖 부득이 — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).

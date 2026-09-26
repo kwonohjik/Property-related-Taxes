@@ -12,8 +12,9 @@
  * | 양도 2022-05-10 ~ 2023-01-11 | 양도일 | 2년 | 제32654호 부칙 제3조 |
  * | 양도 ≥ 2023-01-12 | 양도일 | 3년 | 제33267호 부칙 제8조 |
  *
- * ⚠️ 조정 여부의 **판정 대상·시점**(신규 취득 당시 종전·신규 모두 조정)은 A2b다 — 여기서는
- *    기존 소스(양도일 기준 양도주택 조정 여부)를 그대로 leaf에 넣는다.
+ * ⚠️ 조정 여부의 **판정 대상·시점**(신규 취득 당시 종전·신규 모두 조정)은 A2b가 입력 경로를 만들었다
+ *    (`temporary-two-house-regulated-move-in-a2b.anchor.test.ts`). 이 파일의 통합 케이스는 두 주택의
+ *    조정 여부를 넣지 않으므로 **미입력 폴백**(양도일 기준 양도주택 = `isRegulatedArea`)으로 계산된다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";

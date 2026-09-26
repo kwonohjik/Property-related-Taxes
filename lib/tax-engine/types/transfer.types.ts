@@ -355,6 +355,26 @@ export interface TransferTaxInput {
      * (계획서 G-2). 자기선언 입력이므로 UI가 기준시점을 명시한다.
      */
     disposalDelayReason?: TemporaryTwoHouseDelayReason;
+    // ── §155①2호 조정대상지역 — 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는
+    //    신규 주택을 취득」 (OH-01 A2b). 판정: `resolveRegulatedAtNewAcquisition`.
+    /** 신규 주택 법정동코드(10자리 — 명부 행 주소). 있으면 신규 취득일 기준 정밀 판정(선언보다 우선). */
+    newHouseRegionCode?: string;
+    /** 코드가 없을 때 — 신규 주택 취득 당시 신규 주택이 조정대상지역이었나(사용자 선언). */
+    newHouseRegulatedAtAcquisition?: boolean;
+    /** 양도주택 `regionCode`가 없을 때 — 신규 주택 취득 당시 종전 주택이 조정대상지역이었나(사용자 선언). */
+    previousHouseRegulatedAtNewAcquisition?: boolean;
+    /**
+     * 신규 주택 매매계약 체결·계약금 지급일 — 대통령령 제29242호 부칙 제2조②2호·제30395호 부칙
+     * 제15조②2호(기준일 이전 계약이면 종전 규정)와 §155①2호 괄호(조정대상지역 공고 전 계약 제외).
+     */
+    newHouseContractDate?: Date;
+    /** §155①2호 가목(2019-12-17 체제) — 신규 주택으로 세대전원 이사·전입신고를 마친 날. */
+    wholeHouseholdMoveInDate?: Date;
+    /**
+     * §155①2호 단서 — 신규 주택 취득일 현재 거주하던 기존 임차인과 **전 소유자** 사이 임대차계약의
+     * 종료일(취득일 이후 갱신한 계약은 인정하지 않는다). 가·나목 기한이 이 날까지(최대 2년) 늘어난다.
+     */
+    existingTenantLeaseEndDate?: Date;
   };
   /**
    * §156의2⑤ 대체주택 비과세 특례 — 재개발·재건축 시행기간 중 거주목적 대체주택 취득 후 양도.

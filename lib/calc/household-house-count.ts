@@ -50,6 +50,8 @@
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
 export interface HouseRowForCount {
   acquisitionDate?: string;
+  /** 법정동코드(10자리) — §155①2호 신규 주택 조정 여부 판정에만 쓴다(`resolveTemporaryTwoHouse`). */
+  regionCode?: string;
 }
 
 export interface ResolveHouseholdHousingCountArgs {
@@ -242,6 +244,11 @@ export interface TemporaryTwoHouseDates {
   newAcquisitionDate: string;
   /** 어디서 왔는가 — 화면이 「명부에서 자동 판정」과 「직접 선언」을 구분해 안내한다. */
   source: "roster" | "declared";
+  /**
+   * 신규 주택 법정동코드 — 명부 행 주소가 있을 때만(§155①2호 「조정대상지역에 있는 신규 주택」 정밀
+   * 판정). 직접 선언 경로에는 신규 주택 주소가 없다.
+   */
+  newHouseRegionCode?: string;
 }
 
 export function resolveTemporaryTwoHouse(
@@ -272,6 +279,7 @@ export function resolveTemporaryTwoHouse(
     previousAcquisitionDate: prev,
     newAcquisitionDate: later[0].acquisitionDate!,
     source: "roster",
+    ...(later[0].regionCode ? { newHouseRegionCode: later[0].regionCode } : {}),
   };
 }
 

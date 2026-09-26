@@ -10,7 +10,8 @@
  * |---|---|---|
  * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | 과거 2주택 이상 보유 여부 · 다른 주택 전부의 처분(양도·증여·용도변경)일 |
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | 2019-12-16 이전 사업자등록·임대사업자 등록 신청 사실 · 임대의무기간·5% 증액 단서 |
- * | `155-1-move-in-requirement-unverified` | §155①2호 가목·단서(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 · 기존 임차인 임대차 종료일 (A2b) |
+ * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
+ * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  */
@@ -20,7 +21,12 @@ import {
   meetsOneHouseResidenceRequirement,
   qualifiesLongTermMortgageResidenceExemption,
 } from "../transfer-tax-exemption-requirements";
-import { resolveTemporaryTwoHouseDeadline } from "../transfer-tax-temporary-two-house-timing";
+import {
+  meetsPublicInstitutionRelocationRegion,
+  resolveRegulatedAtNewAcquisition,
+  resolveTemporaryTwoHouseDeadline,
+} from "../transfer-tax-temporary-two-house-timing";
+import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 
 /**
@@ -41,6 +47,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-5-final-one-house-restart-unverified",
   "154-1-4ho-rental-registration-unverified",
   "155-1-move-in-requirement-unverified",
+  "155-1-regulated-at-new-acquisition-unverified",
 ]);
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
@@ -97,20 +104,43 @@ export function collectEraUndetermined(
   }
 
   /*
-   * OH-01 — 2019-12-17 체제(1년 내 양도 + 1년 내 세대전원 전입, 기존 임차인 단서). 기한(1년)만 적용했고
-   * 전입 요건·임차인 단서는 판정하지 않았다(A2b에서 입력 경로를 만든다). 결론과 무관하게 낸다 —
-   * 비과세면 전입 요건이 빠졌고, 과세면 임차인 단서(최대 2년)가 빠졌을 수 있다.
+   * OH-01 — §155①2호. 결론과 무관하게 낸다(입력이 없어 판정하지 않은 사실을 밝힌다).
+   *   ① 신규 취득일 기준 두 주택의 조정 여부가 미입력이고 그 값이 기한을 바꾸는 구간이면 —
+   *      종전 대리 지표(양도일 기준 양도주택)로 계산했음을 알린다.
+   *   ② 2019-12-17 체제인데 세대전원 전입일이 없으면 — 가목(1년 내 전입)을 판정하지 않았다.
    */
   const twoHouseRule = oneHouseRules.temporary_two_house;
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  const tt = input.temporaryTwoHouse;
+  if (input.householdHousingCount === 2 && tt && twoHouseRule) {
+    const reg = resolveRegulatedAtNewAcquisition(input);
+    if (!reg.determined && !meetsPublicInstitutionRelocationRegion(tt)) {
+      const eraFor = (bothRegulated: boolean) =>
+        resolveTemporaryTwoHouseDeadlineEra({
+          bothRegulated,
+          baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
+          newAcquisitionDate: tt.newAcquisitionDate,
+          newContractDate: tt.newHouseContractDate,
+          transferDate: input.transferDate,
+        }).years;
+      if (eraFor(true) !== eraFor(false)) {
+        out.push({
+          id: "155-1-regulated-at-new-acquisition-unverified",
+          reason:
+            `이 양도 시기에는 종전주택이 조정대상지역에 있는 상태에서 조정대상지역의 신규주택을 취득하면 처분기한이 ` +
+            `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
+            "주소나 조정대상지역 여부가 입력되지 않아 양도일 기준 양도주택의 조정대상지역 여부로 대신 계산했습니다 — " +
+            "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요.",
+        });
+      }
+    }
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending) {
       out.push({
         id: "155-1-move-in-requirement-unverified",
         reason:
           `조정대상지역 종전주택 보유 중 2019년 12월 17일 이후 조정대상지역 신규주택을 취득해 2022년 5월 9일 이전에 ` +
-          `양도하면 신규주택 취득일부터 1년 이내 양도 외에 1년 이내 세대전원 전입 요건이 있고, 기존 임차인이 있으면 ` +
-          `그 임대차 종료일까지(최대 2년) 기한이 늘어납니다(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호 — 대통령령 제30395호 부칙 제15조). ` +
-          "전입일·임대차 사실을 입력받지 않아 두 요건은 판정하지 않았습니다(처분기한 1년만 적용).",
+          `양도하면 신규주택 취득일부터 1년 이내 양도 외에 1년 이내 세대전원 전입 요건이 있습니다` +
+          `(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호 가목 — 대통령령 제30395호 부칙 제15조). ` +
+          "세대전원 전입일이 입력되지 않아 전입 요건은 판정하지 않았습니다(처분기한만 적용).",
       });
     }
   }

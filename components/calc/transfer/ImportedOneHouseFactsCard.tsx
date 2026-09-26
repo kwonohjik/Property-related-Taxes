@@ -79,6 +79,12 @@ export type ImportedSpecialsSlice = Pick<
   | "newHouseAcquisitionDate"
   | "publicInstitutionRelocation"
   | "disposalDelayReason"
+  | "newHouseRegulatedAtAcquisition"
+  | "prevHouseRegulatedAtNewAcquisition"
+  | "newHouseContractDate"
+  | "newHouseMoveInDate"
+  | "newHouseExistingTenant"
+  | "newHouseTenantLeaseEndDate"
   | "culturalHeritageHouseSpecial"
   | "ruralHouseSpecial"
   | "ruralHouseKind"
@@ -125,6 +131,18 @@ function specialsRows(f: ImportedSpecialsSlice, replacementHouseApplies: boolean
      *    편집 칸과 읽기 전용 요약 두 곳에 보인다(`provisoGate`가 맥락을 가르는 기준과 동일).
      */
     push("§154① 단서 사유", PROVISO_REASON[f.provisoReason]);
+  }
+  /**
+   * §155①2호 조정대상지역 사실(OH-01 A2b) — 명부 도출 경로에서도 ④가 싣으므로 토글과 무관하게
+   * **입력된 것만** 적는다. 신규 필드라 옛 record에는 없다(`?? ""` 대신 falsy 스킵).
+   */
+  const REG: Record<string, string> = { yes: "조정대상지역", no: "조정대상지역 아님" };
+  push("신규 주택 취득 당시 종전 주택 (§155①2호)", REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
+  push("신규 주택 취득 당시 신규 주택 (§155①2호)", REG[f.newHouseRegulatedAtAcquisition ?? ""]);
+  push("신규 주택 매매계약·계약금 지급일", f.newHouseContractDate || undefined);
+  push("세대전원 전입일 (§155①2호 가목)", f.newHouseMoveInDate || undefined);
+  if (f.newHouseExistingTenant) {
+    push("기존 임차인 임대차 종료일 (§155①2호 단서)", f.newHouseTenantLeaseEndDate || "미입력");
   }
   if (f.culturalHeritageHouseSpecial) push("문화유산 주택 보유 (§155⑥1호)", "예");
   if (f.ruralHouseSpecial) push("농어촌주택 보유 (§155⑦)", RURAL_KIND[f.ruralHouseKind] ?? "예");

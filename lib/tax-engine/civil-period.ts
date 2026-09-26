@@ -57,6 +57,11 @@ export function isWithinPeriod(event: Date, years: number, target: Date): boolea
   return dayKey(target) <= dayKey(periodEndFrom(event, years));
 }
 
+/** `target`이 기한 말일 `end` **당일까지**인가 — 기한이 연수가 아니라 날짜로 정해질 때(§155①2호 단서) */
+export function isOnOrBeforeDay(target: Date, end: Date): boolean {
+  return dayKey(target) <= dayKey(end);
+}
+
 /**
  * D 유형 — 전입일~전출일(양 끝 포함) 구간에서 완성된 개월 수.
  * 예: 2020-03-10~2022-03-09 = 24, 2020-02-29~2021-02-28 = 12(§160③). 역전 구간은 0.

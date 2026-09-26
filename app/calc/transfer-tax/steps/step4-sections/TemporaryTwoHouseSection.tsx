@@ -273,6 +273,16 @@ function TempTwoHouseCoreBlocks({
                 해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
               </p>
             </div>
+
+            {/* §155①2호 조정대상지역 — 결론을 바꾸는 양도 시기에만(OH-01 A2b). 게이트는 판정 카드와 같은 leaf. */}
+            {tempTwoHouseVerdict.status !== "pending" && tempTwoHouseVerdict.regulated.relevant && (
+              <TempTwoHouseRegulatedInputs
+                form={form}
+                onChange={onChange}
+                regulated={tempTwoHouseVerdict.regulated}
+                newHouseAcquisitionDate={derivedNewHouseAcquisitionDate}
+              />
+            )}
           </div>
         </ToneCard>
 
@@ -309,19 +319,163 @@ function TempTwoHouseCoreBlocks({
                   </p>
                   <p>
                     {tempTwoHouseVerdict.threeYearMet ? "충족" : "미충족"} · 요건 B — 신규주택 취득일부터{" "}
-                    {tempTwoHouseVerdict.deadlineYears}년 내 종전주택 양도
+                    {tempTwoHouseVerdict.deadlineExtendedByTenant
+                      ? "기존 임차인의 임대차계약 종료일까지(최대 2년)"
+                      : `${tempTwoHouseVerdict.deadlineYears}년 내`}{" "}
+                    종전주택 양도
                     {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
                     {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
                   </p>
-                  <p className="text-caption">
-                    최종 비과세 여부는 계산 결과에서 확정됩니다(조정지역 종전 처분기한 등 반영).
-                  </p>
+                  {/* §155①2호 가목 — 2019-12-17 체제에서만(엔진 연혁 leaf가 정한다) */}
+                  {(tempTwoHouseVerdict.moveInMet !== undefined || tempTwoHouseVerdict.moveInPending) && (
+                    <p>
+                      {tempTwoHouseVerdict.moveInPending
+                        ? "미입력"
+                        : tempTwoHouseVerdict.moveInMet
+                          ? "충족"
+                          : "미충족"}{" "}
+                      · 요건 C — 같은 기한 내 신규주택으로 세대전원 이사·전입신고 (§155①2호 가목)
+                    </p>
+                  )}
+                  <p className="text-caption">최종 비과세 여부는 판정 결과에서 확정됩니다.</p>
                 </>
               )}
             </div>
           </ToneCard>
         )}
     </>
+  );
+}
+
+type RegulatedVerdict = Extract<
+  ReturnType<typeof judgeTempTwoHouseFromForm>,
+  { status: "eligible" | "ineligible" }
+>["regulated"];
+
+const REGULATED_OPTIONS = [
+  { value: "yes" as const, label: "조정대상지역" },
+  { value: "no" as const, label: "조정대상지역 아님" },
+];
+
+/**
+ * §155①2호 조정대상지역 일시적 2주택 입력 (OH-01 A2b) — 판정 메뉴 전용.
+ *
+ * 법문 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 ⇒ 판정
+ * 기준은 **신규 주택 취득일** 현재 두 주택의 소재지다. 주소(법정동코드)가 있으면 자동 판정 결과만
+ * 보여 주고, 없을 때만 선언을 받는다(엔진 `resolveRegulatedAtNewAcquisition`과 같은 우선순위).
+ *
+ * 전입일·임차인 단서는 2019-12-17 체제(`regulated.moveInRelevant`)에서만 연다.
+ */
+function TempTwoHouseRegulatedInputs({
+  form,
+  onChange,
+  regulated,
+  newHouseAcquisitionDate,
+}: BaseProps & { regulated: RegulatedVerdict; newHouseAcquisitionDate: string }) {
+  const auto = (v: boolean | undefined) =>
+    v === undefined ? "판정 불가" : v ? "조정대상지역" : "조정대상지역 아님";
+  return (
+    <ToneCard tone="sky" title="조정대상지역 처분기한 (§155①2호)" className="p-3">
+      <div data-testid="temp-two-house-regulated-block" className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          이 양도 시기에는 종전 주택이 조정대상지역에 있는 상태에서 조정대상지역의 신규 주택을 취득하면
+          처분기한이 짧아집니다. 판정 기준은 <strong>신규 주택 취득일({newHouseAcquisitionDate})</strong> 현재
+          두 주택의 소재지입니다.
+        </p>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">종전 주택(양도 주택) — 신규 주택 취득일 현재</label>
+          {regulated.previousAuto ? (
+            <p data-testid="temp-two-house-prev-regulated-auto" className="text-xs">
+              {auto(regulated.previous)} — 양도 주택 주소로 자동 판정
+            </p>
+          ) : (
+            <RadioCardGroup
+              name="prevHouseRegulatedAtNewAcquisition"
+              layout="inline"
+              value={(form.prevHouseRegulatedAtNewAcquisition ?? "") as "" | "yes" | "no"}
+              onChange={(v) => onChange({ prevHouseRegulatedAtNewAcquisition: v })}
+              options={REGULATED_OPTIONS}
+            />
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">신규 주택 — 취득일 현재</label>
+          {regulated.nextAuto ? (
+            <p data-testid="temp-two-house-new-regulated-auto" className="text-xs">
+              {auto(regulated.next)} — 보유 주택 목록의 주소로 자동 판정
+            </p>
+          ) : (
+            <>
+              <RadioCardGroup
+                name="newHouseRegulatedAtAcquisition"
+                layout="inline"
+                value={(form.newHouseRegulatedAtAcquisition ?? "") as "" | "yes" | "no"}
+                onChange={(v) => onChange({ newHouseRegulatedAtAcquisition: v })}
+                options={REGULATED_OPTIONS}
+              />
+              <p className="text-xs text-muted-foreground">
+                보유 주택 목록에서 신규 주택의 주소를 검색하면 자동으로 판정합니다. 조정대상지역 공고가 있은
+                날 이전에 매매계약을 체결하고 계약금을 지급했다면(증명서류로 확인되는 경우) 「조정대상지역 아님」을
+                고르세요.
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">신규 주택 매매계약 체결·계약금 지급일 (해당 시)</label>
+          <DateInput
+            data-testid="temp-two-house-new-contract-date"
+            value={form.newHouseContractDate ?? ""}
+            onChange={(v) => onChange({ newHouseContractDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">
+            취득일보다 먼저 계약하고 계약금을 지급했다면 입력하세요(증빙서류로 확인되는 경우). 2018년 9월
+            13일 또는 2019년 12월 16일 이전 계약이면 종전 규정이 적용됩니다(대통령령 제29242호 부칙 제2조·제30395호
+            부칙 제15조).
+          </p>
+        </div>
+
+        {regulated.moveInRelevant && (
+          <>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">신규 주택으로 세대전원 이사·전입신고한 날</label>
+              <DateInput
+                data-testid="temp-two-house-move-in-date"
+                value={form.newHouseMoveInDate ?? ""}
+                onChange={(v) => onChange({ newHouseMoveInDate: v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                신규 주택 취득일부터 1년 이내에 세대전원이 이사하고 전입신고를 마쳐야 합니다(§155①2호 가목).
+                취학·근무상 형편·질병 요양 등 부득이한 사유로 일부 세대원이 이사하지 못한 경우도 포함됩니다.
+              </p>
+            </div>
+            <ToggleCard
+              data-testid="temp-two-house-existing-tenant"
+              checked={form.newHouseExistingTenant === true}
+              onCheckedChange={(v) => onChange({ newHouseExistingTenant: v })}
+              title="신규 주택 취득일 현재 기존 임차인이 거주 (§155①2호 단서)"
+              description="임대차계약서 등으로 확인되고 그 임대차기간이 취득일부터 1년 후에 끝나면, 전입·양도 기한이 전 소유자와 임차인 간 임대차계약 종료일까지(취득일부터 최대 2년) 늘어납니다"
+              tone="sky"
+            >
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">전 소유자와 임차인 간 임대차계약 종료일</label>
+                <DateInput
+                  data-testid="temp-two-house-lease-end-date"
+                  value={form.newHouseTenantLeaseEndDate ?? ""}
+                  onChange={(v) => onChange({ newHouseTenantLeaseEndDate: v })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  신규 주택 취득일 이후 갱신한 임대차계약은 인정되지 않습니다.
+                </p>
+              </div>
+            </ToggleCard>
+          </>
+        )}
+      </div>
+    </ToneCard>
   );
 }
 

@@ -25,7 +25,9 @@ import {
   judgmentHouseCountExclusionReductions,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
+  judgmentTemporaryTwoHouseVisible,
 } from "./one-house-judgment-section-scope";
+import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-house-judgment-temp-two-house";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
@@ -228,6 +230,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
   }
 
+  errors.push(...collectTempTwoHouseEraIssues(form));
+
   const provisoReason = effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason);
   for (const message of collectExemptionProvisoErrors({
     reason: provisoReason,
@@ -239,6 +243,62 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   }
 
   return errors;
+}
+
+/**
+ * §155①2호 조정대상지역 일시적 2주택 새 입력 (OH-01 A2b).
+ *
+ * 🔑 게이트는 ⑤(`TempTwoHouseRegulatedInputs`)와 **같은 판정 결과**(`judgmentTempTwoHouseVerdict`의
+ *    `regulated.relevant`·`moveInRelevant`)다 — 칸이 없는 화면에서 막지 않는다.
+ * 🔑 차단은 모순뿐이다(계약일 > 취득일 · 임차인 토글 ON인데 종료일 없음 · 종료일 ≤ 취득일).
+ *    ④는 임차인 토글이 켜졌을 때만 종료일을 싣는다(`toTemporaryTwoHouseEraFacts`) — 같은 조건이다.
+ * 🔑 미입력은 **경고**만 한다 — 엔진이 판정 보류로 고지하고(종전 대리 지표로 계산) 결론을 지어내지 않는다.
+ */
+function collectTempTwoHouseEraIssues(form: OneHouseJudgmentFormData): Errors {
+  if (!judgmentTemporaryTwoHouseVisible(form)) return [];
+  const derived = judgmentDerivedNewHouse(form);
+  const v = judgmentTempTwoHouseVerdict(form, derived);
+  if (v.status === "pending" || !v.regulated.relevant) return [];
+  const out: Errors = [];
+  const derivedNewAcq = derived?.newAcquisitionDate;
+  if (form.newHouseContractDate && derivedNewAcq && form.newHouseContractDate > derivedNewAcq) {
+    out.push(
+      err(
+        "newHouseContractDate",
+        "신규 주택 매매계약 체결·계약금 지급일은 신규 주택 취득일보다 늦을 수 없습니다.",
+      ),
+    );
+  }
+  if (!v.regulated.determined) {
+    out.push(
+      warn(
+        "newHouseRegulatedAtAcquisition",
+        "신규 주택 취득일 현재 두 주택이 조정대상지역이었는지 선택하세요 — 선택하지 않으면 양도일 기준 양도 주택의 조정대상지역 여부로 대신 판정합니다.",
+      ),
+    );
+  }
+  if (!v.regulated.moveInRelevant) return out;
+  if (form.newHouseExistingTenant === true) {
+    if (!form.newHouseTenantLeaseEndDate) {
+      out.push(err("newHouseTenantLeaseEndDate", "기존 임차인 특례: 전 소유자와 임차인 간 임대차계약 종료일을 입력하세요."));
+    } else if (derivedNewAcq && form.newHouseTenantLeaseEndDate <= derivedNewAcq) {
+      out.push(
+        err(
+          "newHouseTenantLeaseEndDate",
+          "기존 임차인 특례: 임대차계약 종료일은 신규 주택 취득일 뒤여야 합니다(취득일 현재 거주 중인 임차인).",
+        ),
+      );
+    }
+  }
+  if (!form.newHouseMoveInDate) {
+    out.push(
+      warn(
+        "newHouseMoveInDate",
+        "신규 주택으로 세대전원이 이사·전입신고한 날을 입력하세요 — 입력하지 않으면 1년 내 전입 요건(§155①2호 가목)은 판정하지 않습니다.",
+      ),
+    );
+  }
+  return out;
 }
 
 /**

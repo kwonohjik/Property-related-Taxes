@@ -32,7 +32,6 @@ import { RightThreeYearExceptionSection } from "@/components/calc/transfer/Right
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
-import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
@@ -40,8 +39,10 @@ import {
   judgmentTemporaryTwoHouseVisible,
 } from "@/lib/calc/one-house-judgment-section-scope";
 import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
-import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
-import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import {
+  judgmentDerivedNewHouse,
+  judgmentTempTwoHouseVerdict,
+} from "@/lib/calc/one-house-judgment-temp-two-house";
 import { SpecialTaxHouseCountExclusionSection } from "./SpecialTaxHouseCountExclusionSection";
 import {
   deriveJudgmentHouseCount,
@@ -74,64 +75,16 @@ export function Step2({ form, onChange }: Props) {
    * 🔑 화면과 ④ 변환이 **같은 함수**를 써야 한다. 종전에는 화면이 `form.newHouseAcquisitionDate`를
    *    직접 읽어 「화면은 요건 충족이라는데 판정은 과세」가 조용히 생길 수 있었다.
    */
-  const derivedNewHouse = useMemo(
-    () =>
-      resolveTemporaryTwoHouse({
-        primaryKind: primary?.assetKind,
-        primaryAcquisitionDate,
-        houses: form.houses,
-        legacyPrecedence: form.legacyHouseCountPrecedence === true,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-      }),
-    [
-      primary?.assetKind,
-      primaryAcquisitionDate,
-      form.houses,
-      form.legacyHouseCountPrecedence,
-      form.temporaryTwoHouseSpecial,
-      form.newHouseAcquisitionDate,
-    ],
-  );
+  const derivedNewHouse = useMemo(() => judgmentDerivedNewHouse(form), [form]);
 
+  // ── F-4 파생 props (계산기 Step4와 같은 leaf) ──────────────
   /**
-   * 거주 개월 — ④와 **같은 정본**(`deriveJudgmentResidenceMonths`, OH-56).
-   * 🔴 폼-전역 `residencePeriodMonths`는 이 메뉴의 위젯이 쓰지 않는 옛 필드다(기본 "0").
+   * §155① 요건 카드 — 조립은 ⑧ 검증과 **같은 함수**(`judgmentTempTwoHouseVerdict`)다(OH-01 A2b).
+   * 거주 개월은 ④와 같은 정본(`deriveJudgmentResidenceMonths`, OH-56)을 그 안에서 쓴다.
    */
-  const residenceMonths = useMemo(() => deriveJudgmentResidenceMonths(form), [form]);
-
-  // ── F-4 파생 props 5종 (계산기 Step4와 같은 leaf) ──────────────
   const tempTwoHouseVerdict = useMemo(
-    () =>
-      judgeTempTwoHouseFromForm({
-        previousAcquisitionDate: primaryAcquisitionDate,
-        newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
-        transferDate: form.transferDate,
-        provisoReason: form.provisoReason,
-        provisoDepartureDate: form.provisoDepartureDate,
-        provisoExpropriationDate: form.provisoExpropriationDate,
-        provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
-        residencePeriodMonths: String(residenceMonths),
-        publicInstitutionRelocation: form.publicInstitutionRelocation,
-        // §155⑯ 지역 요건 — 엔진과 같이 처분기한 5년 적용 여부를 가른다(OH-57).
-        relocatedSigunguCode: form.relocatedSigunguCode,
-        newHouseSigunguCode: form.newHouseSigunguCode,
-        disposalDelayReason: form.disposalDelayReason,
-      }),
-    [
-      primaryAcquisitionDate,
-      derivedNewHouse?.newAcquisitionDate,
-      form.transferDate,
-      form.provisoReason,
-      form.provisoDepartureDate,
-      form.provisoExpropriationDate,
-      form.provisoBusinessApprovalDate,
-      residenceMonths,
-      form.publicInstitutionRelocation,
-      form.relocatedSigunguCode,
-      form.newHouseSigunguCode,
-      form.disposalDelayReason,
-    ],
+    () => judgmentTempTwoHouseVerdict(form, derivedNewHouse),
+    [form, derivedNewHouse],
   );
 
   /**
