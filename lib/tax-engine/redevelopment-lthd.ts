@@ -63,6 +63,49 @@ export function resolveRightResidenceMonths(input: {
   return hasSplit ? (input.priorHouseResidenceMonths ?? 0) : (input.residencePeriodMonths ?? 0);
 }
 
+/**
+ * 완공 신축주택(subject="apt") 양도의 **거주월수 단일 소스** — §154① 비과세 판정 · §95② 표2 공용 leaf
+ * (2026-09-26 · OH-48 · OH-50).
+ *
+ * ## 🔴 왜 한 함수인가
+ *
+ * 완공APT는 거주를 두 곳에서 받는다 — ① 재개발 카드의 분리 입력(`prior`·`new`)과 ② Step4
+ * 거주기간(`residencePeriodMonths`). 종전에는 표2가 ①을, §154① 판정이 ②를 따로 읽어 **같은
+ * 계산에서 표2는 「거주 2년 이상」, 비과세는 「거주 미달」**이 동시에 나왔다
+ * (실측: 분리 종전 30개월 · Step4 0 · 10억 → 비과세 부정 124,491,714원).
+ * 「소득세법 시행령」 §154①(「그 보유기간 중 거주기간이 2년 이상」)과 §159의4(같은 문언)는
+ * **같은 사실**을 요구하므로 한 값이어야 한다.
+ *
+ * ## 규칙 — 분리 입력이 있으면 그것, 없으면 Step4 값
+ *
+ * - **원조합원**: `prior + new` — 시행령 §154⑧1호 「그 멸실된 주택과 재건축한 주택에 대한
+ *   거주기간」 통산. 표2가 종전부터 쓰던 식 그대로다.
+ * - **승계조합원**: `new`만 — 보유기간이 준공일(사용승인서 교부일, 시행령 §162①4호)부터라
+ *   「그 보유기간 중」 거주는 신축주택 거주뿐이다. 서면-2019-부동산-4508(2022.12.06) 요지:
+ *   「보유기간은 해당 주택의 취득일(준공인가증 교부일)부터 계산하는 것으로 **멸실 전 거주기간을
+ *   통산하지 아니함**」. `prior`는 승계 전 거주라 읽지 않는다.
+ *
+ * ⚠️ 분리 입력이 **없을 때**의 Step4 값은 ⑧(`transfer-tax-validate.ts`)이 「입주일 ≥ 보유 기산일」을
+ *    막아 둔 값이다(승계조합원은 준공일 기준 — OH-50). 월수 직접 입력은 날짜가 없어 막을 수 없다.
+ */
+export function resolveAptResidenceMonths(input: {
+  isSuccessorMember?: boolean;
+  priorHouseResidenceMonths?: number;
+  newHouseResidenceMonths?: number;
+  residencePeriodMonths?: number;
+}): number {
+  if (input.isSuccessorMember === true) {
+    return input.newHouseResidenceMonths !== undefined
+      ? input.newHouseResidenceMonths
+      : (input.residencePeriodMonths ?? 0);
+  }
+  const hasSplit =
+    input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
+  return hasSplit
+    ? (input.priorHouseResidenceMonths ?? 0) + (input.newHouseResidenceMonths ?? 0)
+    : (input.residencePeriodMonths ?? 0);
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 입력·결과
 // ──────────────────────────────────────────────────────────────────────────────
@@ -162,9 +205,13 @@ export function computeRedevelopmentLthd(
   //   청산금분   = 0 (해석례 보수적 적용 — 신축거주 입력 없으면 표1 강등)
   const hasSplitResidence =
     input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
-  const prior = input.priorHouseResidenceMonths ?? 0;
   const newMonths = input.newHouseResidenceMonths ?? 0;
-  const existingResidenceMonths = hasSplitResidence ? prior + newMonths : input.residencePeriodMonths ?? 0;
+  // 식은 §154① 판정과 공용 leaf(`resolveAptResidenceMonths`) — 두 판정이 같은 거주월수를 본다(OH-48).
+  const existingResidenceMonths = resolveAptResidenceMonths({
+    priorHouseResidenceMonths: input.priorHouseResidenceMonths,
+    newHouseResidenceMonths: input.newHouseResidenceMonths,
+    residencePeriodMonths: input.residencePeriodMonths,
+  });
   const payResidenceMonths = hasSplitResidence ? newMonths : 0;
 
   // ─ subject="right" (입주권 양도) 분기 ─

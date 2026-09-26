@@ -181,3 +181,57 @@ export function isReceiveOnlyFiling(
     asset.redevReceiveOnlyMode === "yes"
   );
 }
+
+/**
+ * 완공APT의 **§154① 거주기간을 재개발 카드의 분리 입력이 대신하는가** — ⑤ Step4 · ⑧ validate 공용
+ * (2026-09-26 · OH-48).
+ *
+ * 엔진은 분리 입력이 있으면 그것을 §154① 판정과 §95② 표2에 **함께** 쓰고 Step4 값은 읽지 않는다
+ * (`resolveAptResidenceMonths` — `lib/tax-engine/redevelopment-lthd.ts`). 그래서 이 술어가 참이면
+ * ⑤는 Step4 거주 입력 대신 안내를 띄우고, ⑧은 보이지 않는 Step4 구간을 검증하지 않는다
+ * (채울 칸 없는 영구 차단 방지 — memory `feedback_ui_gate_removes_sole_input_path`).
+ *
+ * 조건은 ④(`buildRedevelopmentPayload`)가 값을 **보내는 조건**과 엔진이 **읽는 조건**의 교집합이다:
+ * - 승계조합원 — 신축주택 거주(`redevNewHouseResidenceMonths`)만 읽는다(종전주택 거주는 승계 전 거주).
+ * - 원조합원 — 종전주택 또는 신축주택 거주 중 하나라도 있으면 분리 입력이다.
+ */
+export function redevSplitResidenceSupersedesStep4(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "redevSubject"
+    | "redevIsSuccessorMember"
+    | "redevPriorHouseResidenceMonths"
+    | "redevNewHouseResidenceMonths"
+  >,
+): boolean {
+  if (asset.assetKind !== "redevelopment_apt" || resolveRedevSubject(asset) !== "apt") return false;
+  if (asset.redevIsSuccessorMember === "yes") return !!asset.redevNewHouseResidenceMonths;
+  return !!asset.redevPriorHouseResidenceMonths || !!asset.redevNewHouseResidenceMonths;
+}
+
+/**
+ * 완공APT §154① **보유 기산일**(= 거주 산입 시작일·「취득 당시」 조정대상지역 판정일) — ⑤ · ⑧ 공용
+ * (2026-09-26 · OH-50 · OH-51).
+ *
+ * 승계조합원의 신축주택 취득시기는 **준공일(사용승인서 교부일)**이다 — 「소득세법 시행령」
+ * §162①4호. 엔진도 그 날짜로 보유기간·조정대상지역을 판정한다
+ * (`transfer-tax-redevelopment-apt-exemption.ts`). 국세청 서면-2019-부동산-4508(2022.12.06):
+ * 「보유기간은 해당 주택의 취득일(준공인가증 교부일)부터 계산하는 것으로 멸실 전 거주기간을
+ * 통산하지 아니함」. 원조합원은 종전주택 취득일이 그대로다(§154⑧1호 통산).
+ *
+ * 준공일이 비어 있으면 입주권 취득일을 돌려준다 — 그 상태는 ⑧(`validateRedevelopmentAsset`)이
+ * 「준공일을 입력하세요」로 먼저 막는다.
+ */
+export function redevAptHoldingStartDate(
+  asset: Pick<
+    AssetForm,
+    "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevCompletionDate" | "acquisitionDate"
+  >,
+): string {
+  const isSuccessorApt =
+    asset.assetKind === "redevelopment_apt" &&
+    resolveRedevSubject(asset) === "apt" &&
+    asset.redevIsSuccessorMember === "yes";
+  return isSuccessorApt && asset.redevCompletionDate ? asset.redevCompletionDate : asset.acquisitionDate;
+}

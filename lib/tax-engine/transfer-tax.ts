@@ -51,6 +51,7 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclu
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
+import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
 import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -158,93 +159,10 @@ export function calculateTransferTax(
         redevInput = { ...effectiveInput, acquisitionPrice: inhAcqPrice, useEstimatedAcquisition: false };
       }
     }
-    /**
-     * 🔴 **§89①3호가목 비과세 판정 — 2026-08-25 추가 (E3-01).**
-     *
-     * 이 분기는 STEP 1(`checkExemption`)보다 **먼저** return하므로 비과세 판정을 통째로
-     * 건너뛰고 있었다. 그런데 `calculateRedevelopmentTax`는 §95③ **12억 초과 안분만** 구현해
-     * 두어, 1세대1주택 요건을 갖춘 완공 신축주택이 양도가액 **12억 이하**면 전액 과세되고
-     * 12억을 1원 넘기면 안분으로 세액이 0에 수렴하는 **불연속**이 생겼다
-     * (실측: 12억 98,241,000원 → 12억+1원 0원).
-     *
-     * ⚠️ **subject="apt"(완공 신축주택) 전용이다.** 조합원입주권(subject="right") 양도의
-     *    비과세는 §89①**4호**이고 그 경로는 `applyOneRightExemption`이 이미 담당한다 —
-     *    여기서 §89①3호를 함께 태우면 근거가 다른 두 규정이 겹친다.
-     *
-     * 주택수 제외 스텝을 함께 태우는 이유: §99의4·§98의9·감면주택 제외가 반영된
-     * `exemptionJudgeInput`이라야 일반 주택 경로와 **같은 판정**이 나온다. steps에도 그대로
-     * 쌓여 근거가 보인다(일반 경로와 동일한 additive 동작).
-     */
-    /** STEP 0.9+0.95 산출물 — IIFE 안에서 채워 `calculateRedevelopmentTax`로 넘긴다 (D4-08). */
-    let redevHouseExclusion:
-      | Pick<TransferTaxResult, "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail">
-      | undefined;
-    const redevExemption =
-      redevInput.redevelopment?.subject === "apt" &&
-      // ⚠️ **청산금 「수령」 축은 제외한다.** 그 경우 양도 대상에 종전 부동산 일부(청산금 상당분)가
-      //    섞이고, 비과세 판정 축도 「양도일 현재 신축주택」이 아니라 **「관리처분 인가일 현재
-      //    종전주택이 §89①3호가목 요건을 충족했는지」**다(서면-2016-법령해석재산-2705).
-      //    그 사실은 `exemptionEligibleAtApproval` 자기선언이 담고 있고, 전용 규칙
-      //    `applySettlementExemption`(Step A.6)이 이미 그 축으로 판정한다.
-      //    여기서 양도일 기준 판정을 겹치면 **근거가 다른 두 규정이 충돌**한다
-      //    (실측: 사례 46 — 사용자가 「인가일 현재 요건 미충족」을 선언했는데 양도일 기준으로는
-      //     충족이라 전액 비과세가 되어 안내와 계산이 어긋났다).
-      redevInput.redevelopment.settlementDirection !== "receive"
-        ? (() => {
-            const {
-              exemptionJudgeInput,
-              new994Detail: redevNew994,
-              unsold989Detail: redevUnsold989,
-              specialHouseExclusionDetail: redevSpecialHouse,
-            } = runHouseCountExclusionStep(redevInput, steps, hceGeneralHouseAcquisitionDate);
-            // 🔴 종전에는 `exemptionJudgeInput`만 꺼내고 나머지 셋을 버렸다 — 결과에 실리지 않아
-            //   §99의4⑥ 3년 미보유 **추징 경고**(`clawbackWarning`)·농어촌주택 보유기간·
-            //   §98의9 `dualExclusionWarning`이 통째로 사라졌다(코드리뷰 D4-08).
-            //   적격 미달(isEligible=false)이면 step조차 push되지 않아 근거가 아예 안 남는다.
-            //   실측: 같은 사실관계에서 §99의4가 세액을 111,228,857 → 0으로 바꾸는데 카드가 없다.
-            //   ⚠️ 바로 아래 주석이 기록한 `multiHouseSurchargeResult`·`carryoverDetail`에 이은
-            //     **같은 결함의 세 번째 재발**이다 — 조기이탈 분기가 상류 산출물을 버리는 패턴.
-            redevHouseExclusion = {
-              new994Detail: redevNew994,
-              unsold989Detail: redevUnsold989,
-              specialHouseExclusionDetail:
-                redevSpecialHouse.entries.length > 0 ? redevSpecialHouse : undefined,
-            };
-            /**
-             * `checkExemption`의 유일한 자산 게이트는 `propertyType !== "housing"`이다
-             * (`transfer-tax-exemption.ts:613` — 파일 전체에서 `propertyType`을 쓰는 곳은 그 한 줄뿐).
-             * 재개발로 **완공된 신축주택**은 소득세법 §94①1호 「건물」이자 §89①3호가목의 「주택」이므로
-             * 그 게이트를 통과해야 한다. `redevelopment_apt`는 이 저장소가 §166 분기 라우팅을 위해
-             * 쓰는 **내부 자산종류 태그**이지 법령상 자산 구분이 아니다.
-             * ⇒ 판정 경계에서만 `housing`으로 번역한다(게이트 자체를 넓히면 §166 데이터가 없는
-             *   다른 경로까지 함께 바뀌므로 이 배치의 범위를 넘는다).
-             */
-            /**
-             * 🔑 **승계조합원 신축주택의 취득시기는 준공일이다** — 「소득세법 시행령」 §162①4호
-             * 「자기가 건설한 건축물에 있어서는 **사용승인서 교부일**」(+ 사전-2019-법령해석재산-0649).
-             * 원조합원(종전주택 제공)은 소유권의 연장이라 종전주택 취득일이 그대로 취득시기지만,
-             * 승계조합원은 입주권을 취득한 것이라 신축주택 취득시기가 따로 정해진다.
-             *
-             * 엔진은 이미 이 규칙을 쓰고 있다 — `runSuccessorMember`의 보유기간·`§104②` 세율 기산
-             * 모두 `completionDate`다. 비과세(§154① 보유 2년) 판정만 원래 취득일을 쓰면 **한 계산
-             * 안에서 취득시기가 두 개**가 된다(실측: 사례 48 — 준공 2.5개월인데 비과세로 판정됐다).
-             */
-            const exemptionAcquisitionDate =
-              redevInput.redevelopment?.isSuccessorMember === true &&
-              redevInput.redevelopment.completionDate
-                ? redevInput.redevelopment.completionDate
-                : exemptionJudgeInput.acquisitionDate;
-            return judgeOneHouseExemptionFromInput(
-              {
-                ...exemptionJudgeInput,
-                propertyType: "housing",
-                acquisitionDate: exemptionAcquisitionDate,
-              },
-              parsedRates.oneHouseSpecialRules,
-              presaleRightStartDate(parsedRates),
-            );
-          })()
-        : undefined;
+    // STEP 0.65a: 완공 신축주택(subject="apt") §89①3호가목 비과세 판정 + 주택수 제외 산출물.
+    //   근거·게이트(청산금 수령 단독신고 제외 — OH-19)·거주월수 단일 소스(OH-48)는 분리 파일 주석.
+    const { exemptionResult: redevExemption, houseCountExclusion: redevHouseExclusion } =
+      judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
 
     // 🔴 종전에는 `multiHouseSurchargeResult`를 **넘기지 않았다** — STEP 0.5(`:219`)에서
     //    판정해 놓고 이 분기가 버렸다. 형제 경로 둘(`buildExemptEarlyResult` ·

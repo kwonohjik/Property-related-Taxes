@@ -86,11 +86,20 @@ export function runRedevelopmentGainSteps(
     aptExemption?.isExempt === true,
   );
   if (redevAfterExemption.aptOneHouseExemptionApplied) {
+    // 기준금액은 **양도일** 시점 값이다(G-5 · OH-63) — 9억 시기 양도에 「≤ 12억」을 적으면 산식이
+    // 자기 값을 만들지 못한다. 수령 방향은 청산금분을 Step A.6이 따로 판정한다(OH-19).
+    const exemptThresholdLabel = formatHighValueThresholdLabel(
+      resolveHighValueHouseThreshold(input.transferDate),
+    );
+    const exemptScope =
+      input.redevelopment!.settlementDirection === "receive"
+        ? "신축주택분(인가전 분·인가후 기존건물분) 비과세 — 청산금 수령분은 인가일 기준으로 별도 판정"
+        : "전액 비과세";
     steps.push({
       label: "1세대1주택 비과세",
       formula:
         `§89①3호 가목 — ${aptExemption?.exemptReason ?? "1세대1주택 요건 충족"} + ` +
-        `양도가액 ${input.transferPrice.toLocaleString()} ≤ 12억 → 전액 비과세`,
+        `양도가액 ${input.transferPrice.toLocaleString()} ≤ ${exemptThresholdLabel} → ${exemptScope}`,
       amount: 0,
       legalBasis: REDEVELOPMENT.GAIN_BASE,
     });

@@ -534,9 +534,16 @@ export function calculateRedevelopmentTax(
      *   · `aptOneHouseExemptionApplied`   : 완공 신축주택 §89①**3호** 가목 (2026-08-25 신설 — E3-01)
      * subject 가드로 서로 배타적이라 OR로 합쳐도 두 규정이 겹치지 않는다.
      */
+    //
+    // 🔴 완공APT 청산금 **수령** 동시신고에서는 신축주택분만 §89①3호로 가려지고 청산금분은
+    //    인가일 축(`applySettlementExemption`)으로 따로 판정된다(OH-19). 그 분기가 비과세가
+    //    아니면 전액 비과세가 아니다 — 남은 청산금분 양도차익이 있으면 과세다.
     isExempt:
       redevAfterRight.oneRightExemptionApplied === true ||
-      redevAfterRight.aptOneHouseExemptionApplied === true,
+      (redevAfterRight.aptOneHouseExemptionApplied === true &&
+        (input.redevelopment!.settlementDirection !== "receive" ||
+          redevAfterRight.settlementExemptionApplied === true ||
+          redevAfterRight.settlement.gain <= 0)),
     /**
      * 🔴 **부분 비과세(고가주택) 플래그 — 종전에는 이 분기가 채우지 않았다** (E3-06).
      *

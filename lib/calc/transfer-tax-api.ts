@@ -54,6 +54,7 @@ import { selfBuiltActive } from "./self-built-scope";
 // 하위 호환 재수출 — 기존 import 경로 유지
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
+import { isOneHouseExemptionAsset } from "./housing-like-asset";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -533,7 +534,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·5호)은 미전송 (Part D 게이트, mirror)
       const provisoMode = provisoGate({
         isOneHousehold: form.isOneHousehold,
-        isHousing: primary.assetKind === "housing",
+        // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
+        isHousing: isOneHouseExemptionAsset(primary.assetKind),
         householdHousingCount: resolveHouseholdHousingCount({
         primaryKind: primary.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,

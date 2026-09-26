@@ -28,6 +28,8 @@ import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gif
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { isOneHouseExemptionAsset } from "./housing-like-asset";
+import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -616,7 +618,8 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     // (카드 숨김·temp-two-house 무효 reason(나·다목·5호)은 검증 skip — Part B/D mirror·데드락 차단)
     const provisoMode = provisoGate({
       isOneHousehold: form.isOneHousehold,
-      isHousing: form.assets?.[0]?.assetKind === "housing",
+      // OH-20 — 재개발 완공APT도 §89①3호가목 「주택」이다(⑤ Step4 · ④와 같은 술어).
+      isHousing: isOneHouseExemptionAsset(form.assets?.[0]?.assetKind),
       householdHousingCount: resolveHouseholdHousingCount({
         primaryKind: form.assets?.[0]?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
@@ -661,14 +664,22 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     }))
       issues.push({ step, message });
 
-    // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩 + 겹침
+    // 1세대1주택 + §154① 판정 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩 + 겹침
     // (규칙은 `residence-interval-validate.ts` 한 벌 — 판정 메뉴 OH-07과 공유)
+    //
+    // 🔴 OH-49 — 게이트가 `assetKind === "housing"`이었다. ⑤ Step4는 재개발 완공APT에도 같은
+    //    입력을 렌더하므로(`isOneHouseExemptionAsset`) 취득 전 임차·구간 겹침·퇴거일 누락이
+    //    차단 없이 §154① 거주기간에 합산됐다. ⑤와 같은 술어로 맞춘다 — 분리 입력이 Step4를
+    //    대신하면(OH-48) ⑤가 입력을 숨기므로 여기서도 건너뛴다.
+    // 🔴 OH-50 — 승계조합원의 기산일은 준공일이다(시행령 §162①4호). 입주권 취득일과 비교하면
+    //    멸실 전 종전주택 거주가 통과한다(서면-2019-부동산-4508 「멸실 전 거주기간을 통산하지 아니함」).
     const primary = form.assets?.[0];
-    if (form.isOneHousehold && primary && primary.assetKind === "housing"
+    if (form.isOneHousehold && primary && isOneHouseExemptionAsset(primary.assetKind)
+        && !redevSplitResidenceSupersedesStep4(primary)
         && primary.residenceInputMode === "interval") {
       for (const message of collectResidenceIntervalErrors({
         periods: primary.residencePeriods ?? [],
-        acquisitionDate: primary.acquisitionDate,
+        acquisitionDate: redevAptHoldingStartDate(primary),
         transferDate: form.transferDate,
       }))
         issues.push({ step, assetIndex: 0, message });

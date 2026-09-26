@@ -22,6 +22,7 @@ import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer"
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
+import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 
 interface Props {
   detail: RedevelopmentResult;
@@ -57,7 +58,7 @@ const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 const fmtMonths = (m: number) => `${Math.floor(m / 12)}년 ${m % 12}개월`;
 
 export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDirection = "pay", lthdExclusionReason }: Props) {
-  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied } = detail;
+  const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied, aptOneHouseExemptionApplied } = detail;
 
   // subject="right": 입주권 양도 분기 (사례 36)
   const isRightSubject = subject === "right";
@@ -292,33 +293,58 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
 
-      {/* 1세대1주택 + 12억 안분 박스 (§95③·시행령 §160 — 사례 45, subject="apt" 전용) */}
-      {!isRightSubject && highValueAllocation && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
+      {/* 1세대1주택 + 고가주택 안분 박스 (§95③·시행령 §160 — 사례 45, subject="apt" 전용)
+          🔴 OH-63 — 기준금액은 엔진이 **양도일** 기준으로 쓴 값(`nontaxableThreshold`)이다. 「12억」을
+             리터럴로 적으면 9억 시기 양도에서 「12억을 초과하므로」 옆에 900,000,000이 찍힌다. */}
+      {!isRightSubject && highValueAllocation && (() => {
+        const thresholdLabel = formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold);
+        return (
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
+              <span className="font-semibold">고가주택 {thresholdLabel} 초과 안분 적용</span>
+            </div>
+            <p className="text-amber-800">
+              1세대1주택 비과세 요건을 충족하고, 양도가액이 {thresholdLabel}을 초과하므로 §95③ 안분이 적용되었습니다.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+              <Row label="비과세 기준" value={highValueAllocation.nontaxableThreshold} />
+              <Row label="과세대상 비율 (%)" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
+              <Row label={`${thresholdLabel} 안분 전 양도차익`} value={highValueAllocation.nontaxableGain + highValueAllocation.taxableGain} />
+              <Row label="과세대상 양도차익 (안분 후)" value={highValueAllocation.taxableGain} highlight />
+            </div>
+          </div>
+        );
+      })()}
+      {/* 🔴 OH-44 — 전액 비과세(§89①3호가목)면 「전체 과세」 박스 대신 비과세를 알린다. 종전에는 이 플래그를
+             읽지 않아 상단 「납부세액 0」 아래에 「분기별 양도차익 전체가 과세대상」이 함께 떴다. */}
+      {!isRightSubject && aptOneHouseExemptionApplied && (
+        <div
+          data-testid="redev-apt-one-house-exempt"
+          className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-caption text-emerald-900 space-y-1"
+        >
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
-            <span className="font-semibold">고가주택 12억 초과 안분 적용</span>
+            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-micro font-bold text-emerald-800">§89①3호 가목</span>
+            <span className="font-semibold">1세대1주택 비과세 적용</span>
           </div>
-          <p className="text-amber-800">
-            보유 상황 단계에서 <span className="font-semibold">1세대 + 1주택</span>으로 입력되어, 양도가액이 12억을 초과하므로 §95③ 안분이 적용되었습니다.
+          <p className="text-emerald-800">
+            {settlementDirection === "receive"
+              ? "신축주택분(인가전 분 · 인가후 기존건물분) 양도차익이 비과세됩니다. 청산금 수령분은 관리처분계획 인가일 현재 종전주택 기준으로 따로 판정합니다 (서면-2016-법령해석재산-2705)."
+              : "1세대1주택 비과세 요건을 충족하고 양도가액이 고가주택 기준 이하이므로 3분기 양도차익 전체가 비과세됩니다."}
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-            <Row label="비과세 기준" value={highValueAllocation.nontaxableThreshold} />
-            <Row label="과세대상 비율 (%)" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
-            <Row label="12억 안분 전 양도차익" value={highValueAllocation.nontaxableGain + highValueAllocation.taxableGain} />
-            <Row label="과세대상 양도차익 (안분 후)" value={highValueAllocation.taxableGain} highlight />
-          </div>
         </div>
       )}
-      {!isRightSubject && !highValueAllocation && !successorMemberApplied && (
+      {!isRightSubject && !highValueAllocation && !successorMemberApplied && !aptOneHouseExemptionApplied && (
         <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-micro font-bold text-sky-800">일반 과세</span>
-            <span className="font-semibold">12억 안분 미적용 — 전체 과세</span>
+            <span className="font-semibold">고가주택 안분 미적용 — 전체 과세</span>
           </div>
+          {/* 1세대1주택 입력이어도 §154① 보유·거주 요건을 못 채우면 이 박스가 뜬다(E3-01·OH-19) —
+              「1세대1주택이 아닌 입력」이라고만 적으면 그 경우에 사실과 다르다. */}
           <p className="text-sky-800">
-            보유 상황 단계에서 <span className="font-semibold">1세대1주택이 아니거나 1주택자가 아닌</span> 입력으로 처리되어, §95③ 비과세 안분 없이 분기별 양도차익 전체가 과세대상입니다.
-            1세대1주택 + 12억 초과 비과세 안분을 적용하려면 &ldquo;보유 상황&rdquo; 단계에서 1세대 여부와 보유 주택 수를 확인하세요.
+            <span className="font-semibold">1세대1주택이 아니거나, 1세대1주택 비과세 요건(보유·거주 — 시행령 §154①)을 충족하지 않은 것</span>으로 판정되어, §95③ 비과세 안분 없이 신축주택분 양도차익 전체가 과세대상입니다.
+            &ldquo;보유 상황&rdquo; 단계의 1세대 여부·보유 주택 수와 거주기간을 확인하세요.
           </p>
         </div>
       )}
