@@ -97,7 +97,7 @@ describe("[G3-B] IG-016 — 증자 이익 귀속 주식수", () => {
     const err = validateDeemedInput(D({ ...base, ciForfeitedShares: "" }));
     // ⚠️ 종전 `/주수|신주수/`는 너무 느슨해 3단계 신설 메시지(「증자 주식수를 입력하세요」)에도
     //    맞는다 — 픽스처가 굶으면 **엉뚱한 규칙으로 초록**이 된다. 라벨을 정확히 못 박는다.
-    expect(err).toBe(`${CI_SHARES_LABEL[INITIAL_DEEMED.ciSubType]}을(를) 입력하세요`);
+    expect(err).toBe(`${CI_SHARES_LABEL[INITIAL_DEEMED.ciDirection][INITIAL_DEEMED.ciSubType]}을(를) 입력하세요`);
   });
 
   it("B-2: 양성 쌍둥이 — 채우면 이 칸으로는 막지 않는다", () => {

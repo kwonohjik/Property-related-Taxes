@@ -77,7 +77,7 @@ function CsNumericSection({
         <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>{num}</span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
       </div>
-      <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} />
+      <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
       <CurrencyInput label="증자 전 발행주식총수" value={v(keys.preShares)} onChange={on(keys.preShares)} placeholder={`${ph} 증자 전 발행주식총수`} />
       <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
       <CurrencyInput label="증자 주식수" value={v(keys.issuedShares)} onChange={on(keys.issuedShares)} placeholder={`${ph} 증자 주식수`} />
@@ -91,7 +91,10 @@ function CsNumericSection({
         options={ALLOCATION_METHOD_OPTIONS.map((o) => ({ ...o, testId: `cs-alloc-method-${ph}-${o.value}` }))}
       />
       <p className="text-xs text-muted-foreground">
-        {allocationMethodHint(form[keys.allocationMethod] as DeemedFormState["ciAllocationMethod"])}
+        {allocationMethodHint(form[keys.allocationMethod] as DeemedFormState["ciAllocationMethod"], {
+          isListed: form[keys.isListed] === true,
+          leg: keys.allocationMethod === "csIssueAllocationMethod" ? "issuance" : "conversion",
+        })}
       </p>
       <ToggleCard
         lawLinks="상증법"
@@ -140,7 +143,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
   const isHigh = form.csDirection === "high";
   const needsRatio = isHigh; // 1-A — 고가 전 subType(가목 §29②3호 다목 포함)
   const needsLowDanmok = !isHigh && form.csSubType === "no_realloc"; // §29②2호 다목
-  const sharesLabel = CI_SHARES_LABEL[form.csSubType];
+  const sharesLabel = CI_SHARES_LABEL[form.csDirection][form.csSubType];
   return (
     <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup

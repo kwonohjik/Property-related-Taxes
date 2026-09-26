@@ -232,7 +232,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   // 1-A — 고가는 **전 subType**이 비율 가중(가목 §29②3호 다목 포함), 저가는 나목만 §29②2호 다목
   const needsRatio = isHigh;
   const needsLowDanmok = !isHigh && form.ciSubType === "no_realloc";
-  const sharesLabel = CI_SHARES_LABEL[form.ciSubType];
+  const sharesLabel = CI_SHARES_LABEL[form.ciDirection][form.ciSubType];
   return (
     <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
@@ -260,11 +260,11 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           { value: "no_realloc", label: "실권주 미배정 (나목)", testId: "ci-subtype-no_realloc" },
         ]}
       />
-      <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciPrePrice} onChange={(v) => set({ ciPrePrice: v })} />
-      <CurrencyInput label="증자 전 발행주식총수" value={form.ciPreShares} onChange={(v) => set({ ciPreShares: v })} placeholder="증자 전 발행주식총수" />
+      <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciPrePrice} onChange={(v) => set({ ciPrePrice: v })} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
+      <CurrencyInput hideUnit label="증자 전 발행주식총수" value={form.ciPreShares} onChange={(v) => set({ ciPreShares: v })} placeholder="증자 전 발행주식총수" />
       <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} />
-      <CurrencyInput label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" />
-      <CurrencyInput label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
+      <CurrencyInput hideUnit label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" hint="「상증령」 §29②1호 가목의 «증자에 의하여 증가한 주식수»(실제 발행분)입니다. 나목(실권주 미배정)의 «균등증자 가정 증가주식수»는 아래 별도 칸입니다" />
+      <CurrencyInput hideUnit label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
       <RadioCardGroup
         lawLinks="상증법"
         name="ci-allocation-method"
@@ -273,7 +273,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         onChange={(v) => set({ ciAllocationMethod: v })}
         options={ALLOCATION_METHOD_OPTIONS.map((o) => ({ ...o, testId: `ci-alloc-method-${o.value}` }))}
       />
-      <p className="text-xs text-muted-foreground">{allocationMethodHint(form.ciAllocationMethod)}</p>
+      <p className="text-xs text-muted-foreground">{allocationMethodHint(form.ciAllocationMethod, { isListed: form.ciIsListed })}</p>
       {/* 「상증법」§2 9호·§4의2①·③ — 영리법인은 증여세 납세의무자 범위 자체에 없다 */}
       <ToggleCard
         lawLinks="상증법"
@@ -318,15 +318,15 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       {needsRatio && (
         <>
           <CurrencyInput label="특수관계인이 인수한 신주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} placeholder="특수관계인이 인수한 신주수" />
-          <CurrencyInput label="분모 신주수" value={form.ciRatioDenomShares} onChange={(v) => set({ ciRatioDenomShares: v })} hint="가목=실권주 총수 / 나목=균등증자 증자주식총수 / 다·라목=주주 아닌 자 배정+초과인수 총수" placeholder="분모 신주수" />
+          <CurrencyInput hideUnit label="분모 신주수" value={form.ciRatioDenomShares} onChange={(v) => set({ ciRatioDenomShares: v })} hint="가목=실권주 총수 / 나목=균등증자 증자주식총수 / 다·라목=주주 아닌 자 배정+초과인수 총수" placeholder="분모 신주수" />
         </>
       )}
       {needsLowDanmok && (
         <>
-          <CurrencyInput label="균등증자 가정 증가주식수" value={form.ciEqualIssueShares} onChange={(v) => set({ ciEqualIssueShares: v })} hint="나목의 증자 후 1주당 가액은 «증자전 지분비율대로 균등하게 증자했다면 늘었을 주식수» 기준입니다 — 위 «증자 주식수»(실제 증가분)와 다릅니다" />
-          <CurrencyInput label="신주인수자의 특수관계인의 실권주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder="특수관계인 실권주 주식수" />
+          <CurrencyInput hideUnit label="균등증자 가정 증가주식수" value={form.ciEqualIssueShares} onChange={(v) => set({ ciEqualIssueShares: v })} hint="나목의 증자 후 1주당 가액은 «증자전 지분비율대로 균등하게 증자했다면 늘었을 주식수» 기준입니다 — 위 «증자 주식수»(실제 증가분)와 다릅니다" />
+          <CurrencyInput hideUnit label="신주인수자의 특수관계인의 실권주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} hint="다목 = 실권주 총수 × 증자후 신주인수자의 지분비율 × (특수관계인 실권주수를 실권주 총수로 나눈 비율)" placeholder="특수관계인 실권주 주식수" />
           <CurrencyInput label="증자 후 신주인수자 보유주식수" value={form.ciPostHeldShares} onChange={(v) => set({ ciPostHeldShares: v })} />
-          <CurrencyInput label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />
+          <CurrencyInput hideUnit label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />
         </>
       )}
       {!isHigh && (
@@ -383,7 +383,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
             { value: "high", label: "고가발행 (①2호)", testId: "ci-alloc-direction-high" },
           ]}
         />
-        <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} />
+        <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
         <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} />
       </ToneCard>
 
