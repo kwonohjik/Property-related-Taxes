@@ -249,6 +249,9 @@ export function buildTransferEngineInput(
       : undefined,
     isFirstTransferredInMerge: data.isFirstTransferredInMerge,
     generalHouseGiftedFromDecedentWithin2yr: data.generalHouseGiftedFromDecedentWithin2yr,
+    // ⑭ OH-12c·OH-12 — string 일자 → Date (date-coerce)
+    generalHouseGiftDate: toOptionalDate(data.generalHouseGiftDate),
+    generalHouseRightAtInheritance: data.generalHouseRightAtInheritance,
     generalHouseHeldAtInheritance: data.generalHouseHeldAtInheritance,
     inheritedRightChoiceWhenBothHeld: data.inheritedRightChoiceWhenBothHeld,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)

@@ -20,6 +20,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { DecedentGiftDateField } from "./InheritanceGeneralHouseFields";
 
 type Props = {
   form: TransferFormData;
@@ -73,6 +74,10 @@ export function InheritedRightExceptionSection({ form, onChange }: Props) {
         description="해당하면 일반주택에서 제외되어 이 특례를 적용할 수 없습니다."
         tone="violet"
       />
+      {/* OH-12c — ②의 같은 토글과 한 필드다. 명부에 상속주택이 있으면 그쪽이 날짜 칸을 이미 연다. */}
+      {!form.houses.some((h) => h.isInherited) && (
+        <DecedentGiftDateField form={form} onChange={onChange} />
+      )}
 
       {showArticle15 && (
         <FieldCard
