@@ -15,7 +15,6 @@
  *   L-3  1세대1주택 표2 / L-4 일반 표1
  */
 import { format } from "date-fns";
-import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import {
   applyRate,
   applyFairMarketRatio,
@@ -370,30 +369,17 @@ export function calcLongTermHoldingDeduction(
     const ownsLand = selfOwns !== "building_only";
     const ownsBuilding = selfOwns !== "land_only";
 
-    // 1세대1주택 12억 초과 안분: 본인 소유 파트 양도가액 기준
-    // G-5: 양도일 시점 기준금액(6억/9억/12억) — 판정(`checkExemptionCore`)과 같은 단일 소스.
-    const THRESHOLD = resolveHighValueHouseThreshold(input.transferDate);
-    const selfTransferPrice = selfOwns === "building_only"
-      ? splitDetail.building.transferPrice
-      : selfOwns === "land_only"
-        ? splitDetail.land.transferPrice
-        : input.transferPrice;
-    // ⚠️ 여기는 **12억 안분 축**이지 표2 대상 축이 아니다 — 이름이 비슷해도 다른 판정이므로
-    //    §159의4 의제(`isOneHouseForTable2`)를 대입하지 않는다. 12억 안분은 STEP 3
-    //    (`resolveTaxableGain`)이 `checkExemption`의 `isPartialExempt`로 이미 판정한 축이다.
-    const isProratedSplit = isOneHouseSingle && selfTransferPrice > THRESHOLD;
-    const proratePartGain = (g: number): number => {
-      if (!isProratedSplit || g <= 0) return g;
-      return Math.floor(g * (selfTransferPrice - THRESHOLD) / selfTransferPrice);
-    };
-
-    // 파트별 과세 양도차익 — 호출부가 미리 확정해 두었으면(G-3 부수토지 비과세 제외 등) 그 값을
-    // 따른다. 여기서 다시 안분하면 STEP 3의 과세 양도차익과 어긋난다(이중 진실).
+    // 파트별 과세 양도차익 — **STEP 3(`resolveTaxableGain`)이 확정한 값**을 그대로 쓴다(OH-04).
+    //   12억 안분 여부·분모는 비과세 판정(`isPartialExempt` — §155 의제 포함)과 STEP 3 분모
+    //   (부담부증여 > 공유지분 물건 전체 > 양도가액)가 정본이다. 안분하지 않은 경우(비과세 미충족·
+    //   기준 이하 과세 등)에는 STEP 3이 값을 쓰지 않으므로 파트 양도차익 전액이 과세 대상이다.
+    //   🔴 종전에는 여기서 「실제 1주택 && 파트 가액 > 기준」으로 **다시** 안분해 의제 1주택·공유지분·
+    //   요건 미충족 세대의 공제액이 과세표준과 다른 기준으로 산정됐다.
     const landTaxableGain = ownsLand
-      ? (splitDetail.land.taxableGainAfterProration ?? proratePartGain(splitDetail.land.gain))
+      ? (splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain)
       : 0;
     const buildingTaxableGain = ownsBuilding
-      ? (splitDetail.building.taxableGainAfterProration ?? proratePartGain(splitDetail.building.gain))
+      ? (splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain)
       : 0;
 
     const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
