@@ -185,7 +185,19 @@ export function buildHousesPayload(
       : undefined,
   };
 
-  const otherHouses = houses
+  return [sellingHouse, ...buildOtherHousesPayload(houses)];
+}
+
+/**
+ * ④⑬ 명부(「다른 보유 주택」) 행 → Zod `houseSchema` 배열. 취득일 입력분만 싣는다.
+ *
+ * 🔑 단건(`buildHousesPayload`)과 다건(`multi-transfer-tax-api.ts` `buildPropertyPayload`)이
+ *    **이 함수 하나**를 부른다. 종전 다건은 11필드만 손으로 옮겨 §155② 단서·순위·§155③
+ *    공동상속 게이트가 빠졌고, 엔진은 그 부재를 「게이트 통과」로 읽어 상속주택을 주택 수에서
+ *    무조건 뺐다(리뷰 OH-10 — 단건 과세 ↔ 다건 비과세).
+ */
+export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
+  return houses
     .filter((h) => h.acquisitionDate)
     .map((h) => ({
       id: h.id,
@@ -290,6 +302,4 @@ export function buildHousesPayload(
           }
         : {}),
     }));
-
-  return [sellingHouse, ...otherHouses];
 }
