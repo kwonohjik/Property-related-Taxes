@@ -57,6 +57,20 @@ export type OneHouseCountBreakdown = {
   /** §89①3호 판정에 쓰는 유효 주택 수 = `total` − 제외 */
   countedForExemption: number;
   excluded: OneHouseCountExclusion[];
+  /**
+   * 선언했으나 **요건 미달로 제외되지 않은** 조특법 §99의4·§98의9 (OH-28).
+   *
+   * 🔑 성공 목록만 담으면 「왜 주택 수가 그대로인가」가 사라진다(`feedback_success_only_breakdown_hides_failures`).
+   *    불성립 선언이 없으면 키 자체가 없다 — 선언하지 않은 사람에게 조문을 나열하지 않는다.
+   */
+  notApplied?: OneHouseCountNotApplied[];
+};
+
+/** 선언했으나 제외되지 않은 조문 1건 — 엔진 불성립 사유(`ineligibleReasons`)를 그대로 옮긴다. */
+export type OneHouseCountNotApplied = {
+  label: string;
+  legalBasis: string;
+  reasons: string[];
 };
 
 /**
@@ -151,10 +165,25 @@ export function buildOneHouseCountBreakdown(p: {
     });
   }
 
+  // §99의4 · §98의9 — 선언했으나 불성립. 사유는 엔진 평가기가 낸 문장을 그대로 쓴다(재판정 금지).
+  const notApplied: OneHouseCountNotApplied[] = [];
+  for (const d of [p.houseCountExclusion.new994Detail, p.houseCountExclusion.unsold989Detail]) {
+    if (!d || d.isEligible) continue;
+    notApplied.push({
+      label:
+        d.id === "unsold_98_9"
+          ? "준공후미분양주택 — 요건 미충족으로 주택 수에서 빼지 않음"
+          : "농어촌주택등 — 요건 미충족으로 주택 수에서 빼지 않음",
+      legalBasis: d.legalBasis,
+      reasons: d.ineligibleReasons.map((r) => r.message),
+    });
+  }
+
   return {
     total: p.total,
     // 음수 방지는 `runHouseCountExclusionStep`과 같은 규약(`Math.max(… , 0)`).
     countedForExemption: Math.max(p.total - excluded.length, 0),
     excluded,
+    ...(notApplied.length > 0 ? { notApplied } : {}),
   };
 }

@@ -18,6 +18,7 @@ import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-red
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
+import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 
 /**
  * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7) 공용 — 취득 후 5년 경과 양도 시 5년 발생분
@@ -498,12 +499,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         }
         // §99의4 농어촌·고향주택 (2026-06-11): 취득일·기준시가 필수 (⑧).
         // 소재지·연접·고향 토글은 차단하지 않음 — 엔진 불적용 사유로 안내 (낙관 입력 패턴).
+        //    판정 메뉴 ⑧과 **같은 leaf**(OH-28) — 첫 오류만 띄우는 이 파일의 규약을 따른다.
         if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
-          const label994 = r.type === "new_99_4_rural" ? "§99의4 농어촌주택" : "§99의4 고향주택";
-          if (!r.ruralHouseAcquisitionDate)
-            return fail(`${label994} 적용: ${r.type === "new_99_4_rural" ? "농어촌주택" : "고향주택"} 취득일을 입력하세요.`);
-          if (parseAmount(r.ruralHouseStdPrice || "0") <= 0)
-            return fail(`${label994} 적용: 취득 당시 기준시가 합계(주택+부속토지)를 입력하세요.`);
+          const [first994] = collectHouseCountExclusionReductionErrors(r);
+          if (first994) return fail(first994);
         }
         // P1 §99 신축주택 IMF 1차 (2026-06-11): 유형별 기준일·기준시가·면적 필수 (⑧).
         // 배제 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
@@ -706,12 +705,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
         // 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "unsold_98_9") {
-          if (!r.unsoldHouseAcquisitionDate)
-            return fail("§98의9 적용: 준공후미분양주택 취득일을 입력하세요.");
-          if (parseAmount(r.unsoldHouseAcquisitionPrice || "0") <= 0)
-            return fail("§98의9 적용: 준공후미분양주택 취득가액을 입력하세요.");
-          if (!(parseDecimal(r.unsoldHouseExclusiveArea || "") > 0))
-            return fail("§98의9 적용: 준공후미분양주택 전용면적(㎡)을 입력하세요.");
+          const [first989] = collectHouseCountExclusionReductionErrors(r);
+          if (first989) return fail(first989);
         }
       }
     }

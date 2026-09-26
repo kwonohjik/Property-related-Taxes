@@ -475,3 +475,38 @@ export function buildMergedHouseholdFirstHousePayload(form: TransferFormData): o
   }
   return { mergedHouseholdFirstHouse: { kind } };
 }
+
+// ─── ④⑬ §154⑧3호 동일세대 상속 통산 (TS 미감지 영역 — 누락 시 침묵 strip) ───
+/**
+ * 「소득세법 시행령」 §154⑧3호 — 상속개시 당시 동일세대인 상속주택은 상속개시 **전** 동일세대로서
+ * 거주·보유한 기간을 §154① 거주·보유기간에 통산한다. 엔진은 `resolveExemptionHoldingStartDate`
+ * (보유 기산일 backdate)·`consolidateResidenceMonths`(거주 합산)로 소비한다.
+ *
+ * 🔑 계산기 단건 ④와 판정 메뉴 ④가 **같은 leaf**를 쓴다(OH-18). 판정 메뉴가 이 필드를 싣지 않아
+ *    같은 동일세대 상속주택이 계산기에서는 비과세, 판정 메뉴에서는 과세였다.
+ * 🔑 취득 원인이 상속이 아니면 전부 `undefined` — 원인을 바꿔도 남은 값이 엔진에 닿지 않는다.
+ */
+export function buildSameHouseholdInheritancePayload(
+  primary: Pick<
+    AssetForm,
+    | "acquisitionCause"
+    | "decedentSameHouseholdBeforeInheritance"
+    | "decedentCohabitationHoldingStartDate"
+    | "decedentCohabitationResidenceMonths"
+  >,
+) {
+  const inherited = primary.acquisitionCause === "inheritance";
+  return {
+    decedentSameHouseholdBeforeInheritance: inherited
+      ? primary.decedentSameHouseholdBeforeInheritance
+      : undefined,
+    decedentCohabitationHoldingStartDate:
+      inherited && primary.decedentCohabitationHoldingStartDate
+        ? primary.decedentCohabitationHoldingStartDate
+        : undefined,
+    decedentCohabitationResidenceMonths:
+      inherited && primary.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
+  };
+}

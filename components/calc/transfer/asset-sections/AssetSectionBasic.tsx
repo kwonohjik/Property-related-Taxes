@@ -315,6 +315,14 @@ export function AssetSectionBasic({
             // PNU 앞 10자리 = 법정동코드(regionCode) — 엔진 정밀 조정대상지역 판정에 사용.
             if (v.pnu && v.pnu.length >= 10) {
               patch.regionCode = v.pnu.slice(0, 10);
+            } else if (v.pnu !== undefined || (!v.road && !v.jibun)) {
+              /**
+               * 🔴 주소를 바꿨는데 PNU가 없으면 이전 코드를 지운다 — 판정 메뉴 ②(OH-32)와 같은 규칙.
+               * 「지우기」·「입력한 주소를 그대로 사용」은 `pnu: ""`를 보내는데, 코드를 두면 엔진이
+               * 사라진 주소로 조정대상지역을 판정한다(`regionCode`가 토글보다 우선한다).
+               * 🔑 `pnu`가 아예 없는(undefined) 호출은 상세주소·동호 변경이라 같은 물건 — 코드를 지킨다.
+               */
+              patch.regionCode = "";
             }
             // 전체 PNU 19자리 — 건물 기준시가 모달 prefill 시 건축물대장 조회 활성화용(UI 전용).
             if (v.pnu && v.pnu.length === 19) {

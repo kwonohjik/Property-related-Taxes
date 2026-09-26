@@ -19,6 +19,7 @@ import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeri
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
+import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHandoffNoticeCard";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
@@ -350,7 +351,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         아래 입력란이 이미 채워져 있는 이유를 먼저 말해 주지 않으면, 사용자는 자기가 넣지 않은
         값이 들어 있는 것을 보고 버그로 읽는다.
       */}
-      <ImportedOneHouseFactsCard facts={form.importedOneHouseFacts} rights={form} specials={form} />
+      <ImportedOneHouseFactsCard
+        facts={form.importedOneHouseFacts}
+        rights={form}
+        specials={form}
+        replacementHouseApplies={calcReplacementHouseApplies(form)}
+      />
 
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
       {primaryKind !== "housing" && regulatedAutoTip}

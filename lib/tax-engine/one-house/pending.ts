@@ -38,7 +38,10 @@ import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
   meetsOneHouseResidenceRequirement,
+  matchMergeApartFromWindow,
+  mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
+  qualifiesRuralHouseApartFromDeadline,
   resolveExemptionHoldingStartDate,
   RURAL_HOUSE_LABEL,
   RURAL_HOUSE_RESIDENCE_YEARS,
@@ -224,10 +227,19 @@ export function collectPendingConditions(
       basis: TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
     },
   ];
+  /**
+   * 🔴 **기한 외 요건을 같은 술어로 확인한다**(OH-23). 종전에는 합가일·「먼저 양도」·기한·§154①만
+   *    봐서, 4주택 세대나 혼인 **후** 취득한 주택에도 「기한 내 양도하면 비과세」를 약속했다.
+   *    `matchMergeApartFromWindow`(먼저 양도·합가 전 취득·축 선택) + `mergeDeemingHouseCountHolds`
+   *    (2주택 · §155① 중첩 3주택)는 `resolveMergeDeeming`·`resolveMergeOverlapDeeming`과 같은 조건이다.
+   */
+  const mergeApart = mergeDeemingHouseCountHolds(input, twoHouseRule)
+    ? matchMergeApartFromWindow(input)
+    : undefined;
   for (const axis of mergeAxes) {
     if (!axis.mergeDate) continue;
-    // 합가 의제는 「먼저 양도하는 주택」이 전제다 — 그 선언이 없으면 기한 안내가 의미 없다.
-    if (input.isFirstTransferredInMerge !== true) continue;
+    // 엔진이 실제로 판정하는 축만 — 혼인·동거봉양이 둘 다 있으면 혼인만 본다.
+    if (mergeApart?.kind !== axis.kind) continue;
     const years = resolveMergeExemptionYears(axis.kind, input.transferDate);
     const deadline = periodEndFrom(axis.mergeDate, years);
     // 기한 내인데 과세면 원인이 다른 곳이다
@@ -269,7 +281,8 @@ export function collectPendingConditions(
    * 1호(상속 농어촌주택)·2호(이농주택)에는 이 기한이 없다 — 3호에만 붙는다.
    */
   const rural = input.ruralHouse;
-  if (rural?.kind === "return_to_farm" && rural.acquisitionDate && input.householdHousingCount === 2) {
+  // 🔴 ⑦ 소재 · ⑩2·3·5호도 같은 술어로 본다(OH-23) — 기한만 남은 세대에게만 기한을 안내한다.
+  if (rural?.kind === "return_to_farm" && rural.acquisitionDate && qualifiesRuralHouseApartFromDeadline(input)) {
     const deadline = periodEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
     if (
       !isWithinPeriod(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&

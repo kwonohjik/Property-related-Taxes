@@ -23,7 +23,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { buildPrimaryContext } from "./transfer-tax-api-primary-context";
@@ -53,6 +53,7 @@ import { selfBuiltActive } from "./self-built-scope";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
+import { calcReplacementHouseApplies } from "./replacement-house-scope";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -472,19 +473,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           residenceMonthsTrimmed: residence.trimmed,
         }
       : undefined,
-    // §154⑧3호 상속주택 자체 양도 보유기간 통산
-    decedentSameHouseholdBeforeInheritance:
-      primary.acquisitionCause === "inheritance"
-        ? primary.decedentSameHouseholdBeforeInheritance
-        : undefined,
-    decedentCohabitationHoldingStartDate:
-      primary.acquisitionCause === "inheritance" && primary.decedentCohabitationHoldingStartDate
-        ? primary.decedentCohabitationHoldingStartDate
-        : undefined,
-    decedentCohabitationResidenceMonths:
-      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
-        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
-        : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산 — 판정 메뉴 ④와 같은 leaf(OH-18)
+    ...buildSameHouseholdInheritancePayload(primary),
     donorAcquisitionDate:
       primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
         ? primary.donorAcquisitionDate
@@ -507,7 +497,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)
     ...buildHouseholdSpecialPayload(form, primary),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)
-    ...buildReplacementHousePayload(form),
+    // 🔴 판정 메뉴와 **같은 조건**으로 게이트한다(OH-05 계산기 경로) — 넘겨받은 stale 토글이
+    //    입주권 없는 1주택을 비과세로 만들었다(엔진 대체주택 분기는 주택 수를 보지 않는다).
+    ...(calcReplacementHouseApplies(form) ? buildReplacementHousePayload(form) : {}),
     /**
      * ④⑬ §155의2 장기저당담보 · §155의3 상생임대 — **판정 메뉴에서 넘겨받은 사실**(P5-a).
      *

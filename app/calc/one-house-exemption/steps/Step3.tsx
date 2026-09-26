@@ -32,6 +32,7 @@ import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeri
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
+import { InheritedSameHouseholdField } from "./InheritedSameHouseholdField";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
@@ -261,6 +262,12 @@ export function Step3({ form, onChange }: Props) {
             />
           </FieldCard>
         </div>
+        {/*
+          §154⑧3호 동일세대 상속 통산 (OH-18) — 보유기간 기산일을 옮기므로 취득일 바로 다음에 둔다
+          (UI 순서 = 로직 순서). 입주권 양도에는 이 축이 없다 — ④·⑧과 같은 게이트.
+        */}
+        {!isRightSale && <InheritedSameHouseholdField asset={primary} onChange={patchAsset} />}
+
         <FieldCard
           label="예상 양도가액"
           hint="12억 초과 여부(고가주택)를 판정하는 데 쓰입니다"

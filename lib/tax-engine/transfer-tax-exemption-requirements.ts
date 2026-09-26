@@ -76,6 +76,23 @@ export const RURAL_HOUSE_LABEL: Record<RuralHouseKind, string> = {
 export function qualifiesRuralHouse(
   input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse">,
 ): boolean {
+  if (!qualifiesRuralHouseApartFromDeadline(input)) return false;
+  const r = input.ruralHouse!;
+  if (r.kind !== "return_to_farm") return true;
+  // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정.
+  return isWithinPeriod(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
+}
+
+/**
+ * §155⑦ 농어촌주택 요건 중 **⑦ 단서의 5년 기한만 뺀** 나머지 — `qualifiesRuralHouse`와
+ * pending 귀농 축(`one-house/pending.ts`)의 **같은 술어**(OH-23).
+ *
+ * pending은 「기한 하나만 남았을 때」만 기한을 안내한다. 기한 외 요건(소재·⑩2·3·5호)을 따로
+ * 베껴 쓰면 한쪽만 개정 반영되므로, 기한 판정만 떼어 낸 이 함수를 둘이 함께 쓴다.
+ */
+export function qualifiesRuralHouseApartFromDeadline(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "ruralHouse">,
+): boolean {
   const r = input.ruralHouse;
   if (input.householdHousingCount !== 2 || !r) return false;
   // 소재: 수도권 밖의 읍(도시지역 제외)·면 — 유형 불문 공통 요건.
@@ -88,14 +105,12 @@ export function qualifiesRuralHouse(
     case "farm_exit":
       // 2호: 이농인이 취득일 후 5년 이상 거주
       return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
-    case "return_to_farm": {
-      // 3호 + ⑩ 요건 + ⑦ 단서(취득일부터 5년 이내 일반주택 양도)
+    case "return_to_farm":
+      // 3호 + ⑩ 요건 (⑦ 단서 5년 기한은 호출부 몫)
       if (r.isHighPriceAtAcquisition === true) return false; // ⑩2호
       if ((r.landAreaSqm ?? Infinity) > RURAL_RETURN_TO_FARM_MAX_LAND_SQM) return false; // ⑩3호
       if (r.wholeHouseholdMoved !== true) return false; // ⑩5호
-      if (!r.acquisitionDate) return false; // ⑦ 단서 판정 불가 → 적용하지 않는다
-      return isWithinPeriod(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
-    }
+      return !!r.acquisitionDate; // ⑦ 단서 판정 불가 → 적용하지 않는다
   }
 }
 
@@ -673,19 +688,52 @@ export function resolveMergeDeeming(
 function matchMergeWindow(
   input: MergeDeemingReqInput,
 ): "marriage_merge" | "parental_care_merge" | undefined {
+  const m = matchMergeApartFromWindow(input);
+  if (!m) return undefined;
+  // 연수는 **양도일** 연혁이다 — 대통령령 제28637호 부칙 제2조②(동거봉양) · 제34990호 부칙 제2조(혼인).
+  const years = resolveMergeExemptionYears(m.kind, input.transferDate);
+  if (!isWithinPeriod(m.mergeDate, years, input.transferDate)) return undefined;
+  return m.kind === "marriage" ? "marriage_merge" : "parental_care_merge";
+}
+
+/**
+ * 합가 의제 요건 중 **N년 기한만 뺀** 나머지 — `matchMergeWindow`와 pending 합가 축의 같은 술어(OH-23).
+ *
+ * 「먼저 양도」 선언 · 합가(혼인) 이후 양도 · 양도 주택이 합가 **전 또는 당일** 취득분.
+ * 혼인·동거봉양이 둘 다 있으면 혼인을 본다(`matchMergeWindow`와 같은 순서).
+ * **주택 수는 보지 않는다** — `mergeDeemingHouseCountHolds`.
+ */
+export function matchMergeApartFromWindow(
+  input: MergeDeemingReqInput,
+): { kind: "marriage" | "parental_care"; mergeDate: Date } | undefined {
   if (input.isFirstTransferredInMerge !== true) return undefined;
   const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
   if (!mergeDate) return undefined;
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
-  // 연수는 **양도일** 연혁이다 — 대통령령 제28637호 부칙 제2조②(동거봉양) · 제34990호 부칙 제2조(혼인).
-  const years = resolveMergeExemptionYears(
-    input.marriageMerge ? "marriage" : "parental_care",
-    input.transferDate,
-  );
-  if (!isWithinPeriod(mergeDate, years, input.transferDate)) return undefined;
-  return input.marriageMerge ? "marriage_merge" : "parental_care_merge";
+  return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate };
+}
+
+/**
+ * 합가 의제의 **주택 수** 요건 — `resolveMergeDeeming`(2주택)·`resolveMergeOverlapDeeming`(§155① 중첩
+ * 3주택)이 보는 것과 같은 조건이다. pending 합가 축이 「기한 외 요건 충족」을 확인할 때 쓴다(OH-23).
+ */
+export function mergeDeemingHouseCountHolds(
+  input: DeemedOneHouseReqInput,
+  twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
+): boolean {
+  return input.householdHousingCount === 2 || mergeOverlapTwoHouseHolds(input, twoHouseRule);
+}
+
+/** F-1 중첩의 주택 수·§155① 조건 — `resolveMergeOverlapDeeming`과 `mergeDeemingHouseCountHolds` 공용. */
+function mergeOverlapTwoHouseHolds(
+  input: DeemedOneHouseReqInput,
+  twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
+): boolean {
+  if (input.householdHousingCount !== 3) return false;
+  if (!input.temporaryTwoHouse || !twoHouseRule) return false;
+  return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
 }
 
 /**
@@ -705,9 +753,7 @@ export function resolveMergeOverlapDeeming(
   input: DeemedOneHouseReqInput,
   twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
 ): "marriage_merge_overlap" | "parental_care_merge_overlap" | undefined {
-  if (input.householdHousingCount !== 3) return undefined;
-  if (!input.temporaryTwoHouse || !twoHouseRule) return undefined;
-  if (!evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall) return undefined;
+  if (!mergeOverlapTwoHouseHolds(input, twoHouseRule)) return undefined;
   const merge = matchMergeWindow(input);
   if (merge === "marriage_merge") return "marriage_merge_overlap";
   if (merge === "parental_care_merge") return "parental_care_merge_overlap";

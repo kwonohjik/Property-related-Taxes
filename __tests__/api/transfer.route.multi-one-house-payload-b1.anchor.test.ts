@@ -152,7 +152,16 @@ function winWinForm(facts?: typeof WIN_WIN_FACTS): Form {
   );
 }
 
-/** §156의2⑤ 대체주택 — 사업시행인가 후 취득 · 1년 이상 거주 · 준공 후 3년 내 양도 · 신축 입주 예정. */
+/**
+ * §156의2⑤ 대체주택 — 사업시행인가 후 취득 · 1년 이상 거주 · 준공 후 3년 내 양도 · 신축 입주 예정.
+ *
+ * 🔁 OH-05 계산기 경로(2026-09-26) — 종전 시료는 **조합원입주권 없는 1주택**이었다. §156의2⑤는
+ *    「국내에 1주택을 소유한 1세대가 그 주택에 대한 재개발사업 … 시행기간 동안 거주하기 위하여 다른
+ *    주택(대체주택)을 취득한 경우」라 종전주택이 바뀐 **조합원입주권**을 함께 보유하는 세대가 전제다.
+ *    계산기 ④가 판정 메뉴와 같은 게이트(`calcReplacementHouseApplies`)를 갖게 되면서 입주권 없는
+ *    1주택의 대체주택 선언은 전송되지 않는다 — 이 시료가 그 결함을 수단으로 쓰고 있었다.
+ *    ⇒ 법령 기본 사례(대체주택 1채 + 조합원입주권 1개)로 옮겨 주제(단건 = 다건)를 지킨다.
+ */
 function replacementForm(on: boolean): Form {
   return form(
     { acquisitionDate: "2024-01-10", fixedAcquisitionPrice: "300,000,000" },
@@ -160,6 +169,9 @@ function replacementForm(on: boolean): Form {
       transferDate: "2025-06-02",
       contractTotalPrice: "900,000,000",
       householdHousingCount: "1",
+      presaleRights: [
+        { id: "r-prev", type: "redevelopment_right", acquisitionDate: "2012-01-01", region: "capital" },
+      ],
       residencePeriodMonths: "16",
       replacementHouseSpecial: on,
       replBusinessApprovalDate: "2020-01-01",
