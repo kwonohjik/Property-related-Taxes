@@ -42,8 +42,12 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
   const nb = b.nonBusinessLandPart;
   const nbTaxableGain = nb?.transferGain ?? 0;
   const nbLtDeduction = nb?.longTermDeductionAmount ?? 0;
-  const taxableGain =
-    b.housingPart.proratedTaxableGain + b.commercialPart.transferGain + nbTaxableGain;
+  // OH-17 — §154③ 본문으로 상가 부분까지 비과세면(`deemedHouseBy154_3Main`) 상가분은 과세대상이 아니다
+  //   (배율 초과 토지 몫은 이미 `nonBusinessLandPart`에 들어 있다).
+  const commercialTaxableGain = b.commercialPart.deemedHouseBy154_3Main
+    ? 0
+    : b.commercialPart.transferGain;
+  const taxableGain = b.housingPart.proratedTaxableGain + commercialTaxableGain + nbTaxableGain;
   const longTermHoldingDeduction =
     b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount + nbLtDeduction;
   return {

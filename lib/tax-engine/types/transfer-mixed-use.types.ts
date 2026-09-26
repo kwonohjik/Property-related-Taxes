@@ -575,6 +575,12 @@ export interface MixedUseHousingPart {
    * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
    */
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
+  /**
+   * OH-61 — 12억 초과 판정·안분에 **실제로 쓴 분모**(공유지분이면 물건 전체 주택분 — 영 §156①).
+   * 산식 표시 전용 echo(세액 불변). 표시가 `housingTransferPrice`로 다시 만들면 지분·요건 미충족에서
+   * 값과 산식이 어긋난다. 비과세 미적용·12억 이하 여부는 `calculationRoute.highValueRule`이 정본이다.
+   */
+  highValueBase?: number;
 }
 
 /** 상가부분 계산 결과 */
@@ -640,6 +646,12 @@ export interface MixedUseCommercialPart {
    * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
    */
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
+  /**
+   * OH-17 — 「소득세법 시행령」 §154③ **본문**(주택 연면적 > 주택 외 연면적)으로 건물 전부를 주택으로 보아
+   * 1세대1주택 비과세(전체 실지거래가액 12억 이하 — §156②)가 이 부분에도 미쳤다. 이때 양도소득금액은 0이고,
+   * 배율 초과 토지분은 `nonBusinessLandPart`로 옮겨 과세한다. 표시 전용 echo(세액은 위 금액이 이미 반영).
+   */
+  deemedHouseBy154_3Main?: true;
 }
 
 /** 비사업용토지 부분 계산 결과 (배율초과 면적이 있을 때만 생성) */

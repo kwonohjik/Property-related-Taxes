@@ -1,8 +1,10 @@
 /**
  * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 오케스트레이터
  *
- * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분:
- *   주택연면적 ≥ 상가연면적이라도 주택부분/상가부분/비사업용토지 강제 분리.
+ * 소득세법 시행령 §160 ① 괄호 — 2022.1.1 이후 양도분 **고가주택**:
+ *   주택연면적 > 상가연면적이라도 주택부분/상가부분/비사업용토지 강제 분리.
+ *   ⚠️ 전체 실지거래가액 12억 이하 + 주택연면적 > 상가연면적 + 1세대1주택이면 §154③ 본문으로
+ *   건물 전부가 주택이라 상가분까지 비과세다(OH-17 — `wholeBuildingDeemedHouse`).
  *
  * 설계 문서: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
  */
@@ -10,6 +12,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import {
   meetsOneHouseHoldingResidence,
   resolveDeemedOneHouseBy155,
@@ -37,6 +40,8 @@ import {
   calcHousingGainSplit,
   calcCommercialGainSplit,
   calcExcessLandRatio,
+  calcWholeBuildingExcessLand,
+  exemptCommercialPartAsHouse,
   buildHousingPart,
   buildCommercialPart,
   buildNonBusinessPart,
@@ -370,7 +375,29 @@ export function calcMixedUseTransferTax(
 
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
   // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
-  const excessResult = calcExcessLandRatio(asset, derived, transferDate);
+  const splitExcessResult = calcExcessLandRatio(asset, derived, transferDate);
+
+  /**
+   * OH-17 — 「소득세법 시행령」 §154③ **본문**: 「법 제89조제1항제3호를 적용할 때 … 그 전부를 주택으로
+   * 본다. 다만, 주택의 연면적이 주택 외의 부분의 연면적보다 적거나 같을 때에는 주택외의 부분은 주택으로
+   * 보지 아니한다.」 ⇒ 주택 연면적이 **더 크면** 건물 전부가 주택이고, 고가 여부는 그 전부의 실지거래가액
+   * (§156② — 공유지분이면 물건 전체, §156①)으로 본다. 12억 이하면 고가주택이 아니므로 §160① 괄호
+   * (「주택 외의 부분은 주택으로 보지 않는다」 — **고가주택 한정**, 2022-01-01 시행)도 걸리지 않는다
+   * ⇒ 1세대1주택 비과세가 **상가 부분까지** 미친다.
+   *
+   * 🔑 이 분기는 **비과세가 성립할 때만** 연다(`isOneHouseExempt`). §154③은 §89①3호(비과세) 적용 조문이라
+   *    비과세 요건을 못 갖춘 세대의 과세 계산(세율·장특·중과)은 종전 분리 그대로다.
+   * ⚠️ 확인 필요(범위 밖): 주택 > 상가이면서 전체 12억 **초과**인 경우 §160① 안분 분모(주택분 vs 전체) —
+   *    종전 경로(주택분 기준) 유지.
+   */
+  const wholeBuildingDeemedHouse =
+    isOneHouseExempt &&
+    asset.residentialFloorArea > asset.nonResidentialFloorArea &&
+    (asset.totalPropertyTransferPrice ?? transferPrice) <= resolveHighValueHouseThreshold(transferDate);
+  // 본문이면 토지 전부가 주택 부수토지 — 배율 한도는 건물 전체 정착면적 기준(§154④는 단서 전용).
+  const excessResult = wholeBuildingDeemedHouse
+    ? calcWholeBuildingExcessLand(asset, splitExcessResult.multiplier)
+    : splitExcessResult;
 
   // STEP 7-prep: 상가부분 양도차익 (period-split에서도 housing 직전 commercial gain 필요)
   let commercialGainSplit = calcCommercialGainSplit(
@@ -486,7 +513,19 @@ export function calcMixedUseTransferTax(
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
-  const commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
+  const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
+  // OH-17 — §154③ 본문 + 전체 12억 이하 비과세: 상가 부분도 주택 → 소득금액 0, 배율 초과 토지분만 비사토로.
+  const commercialAsHouse = wholeBuildingDeemedHouse
+    ? exemptCommercialPartAsHouse(splitCommercialPart, excessResult.nonBizRatio)
+    : undefined;
+  const commercialPart = commercialAsHouse?.part ?? splitCommercialPart;
+  if (commercialAsHouse) {
+    warnings.push(
+      `주택 연면적(${asset.residentialFloorArea}㎡)이 주택 외 연면적(${asset.nonResidentialFloorArea}㎡)보다 커 ` +
+        `건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문) — 전체 실지거래가액이 고가주택 기준 이하라 ` +
+        `상가 부분까지 1세대1주택 비과세입니다(§156②). 배율 초과 부수토지만 비사업용 토지로 과세합니다.`,
+    );
+  }
 
   steps.push(buildHousingStep(housingPart, apportionment));
   steps.push(buildCommercialStep(commercialPart, apportionment));
@@ -497,6 +536,7 @@ export function calcMixedUseTransferTax(
     excessResult,
     housingGainSplit.landHoldingYears,
     isUnregistered,
+    commercialAsHouse?.nonBusinessTransferredGain ?? 0,
   );
   if (nonBusinessLandPart) {
     steps.push(buildNonBusinessStep(nonBusinessLandPart, excessResult, derived));

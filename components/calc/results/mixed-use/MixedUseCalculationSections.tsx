@@ -338,26 +338,48 @@ export function MixedUseCalculationSections({
           }
         />
         <DivRow />
+        {/*
+          OH-61 — 이 행은 엔진이 **실제로 쓴** 규칙·분모를 읽는다(재도출 금지):
+            · 비과세 미적용(`non_one_house_full_taxation`) — 안분 없이 전액이 과세대상이다.
+            · 12억 초과 안분 — 분모는 엔진 echo `highValueBase`(공유지분이면 물건 전체 주택분, 영 §156①).
+        */}
         {h.isExempt ? (
           <Row label="12억 이하 → 전액 비과세" value="0" />
-        ) : (
+        ) : breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation" ? (
           <Row
-            label="12억 초과 안분 후 과세대상 양도차익"
+            label="1세대1주택 비과세 미적용 → 과세대상 양도차익 (전액)"
             value={fmt(h.proratedTaxableGain)}
-            formula={
-              <FLine>
-                (주택 양도차익 {fmtPlain(h.transferGain)}
-                {h.nonBusinessTransferredGain > 0
-                  ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
-                  : ""}
-                ) ×{" "}
-                <Frac
-                  top={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)} - 12억`}
-                  bottom={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)}`}
-                />
-              </FLine>
-            }
+            formula={`주택 양도차익 ${fmtPlain(h.transferGain)}${
+              h.nonBusinessTransferredGain > 0
+                ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                : ""
+            } — 비과세 요건 미충족이라 12억 초과분 안분을 하지 않습니다`}
           />
+        ) : (
+          (() => {
+            const base = h.highValueBase ?? a.housingTransferPrice;
+            const baseLabel =
+              a.wholeHousingTransferPrice !== undefined ? "물건 전체 주택분 양도가액" : "주택 양도가액";
+            return (
+              <Row
+                label="12억 초과 안분 후 과세대상 양도차익"
+                value={fmt(h.proratedTaxableGain)}
+                formula={
+                  <FLine>
+                    (주택 양도차익 {fmtPlain(h.transferGain)}
+                    {h.nonBusinessTransferredGain > 0
+                      ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                      : ""}
+                    ) ×{" "}
+                    <Frac
+                      top={`${baseLabel} ${fmtPlain(base)} - 12억`}
+                      bottom={`${baseLabel} ${fmtPlain(base)}`}
+                    />
+                  </FLine>
+                }
+              />
+            );
+          })()
         )}
         {(() => {
           /**
@@ -475,18 +497,32 @@ export function MixedUseCalculationSections({
           }
         />
         <DivRow />
-        <Row
-          label={`장기보유공제 (표1, ${fmtPct(c.longTermDeductionRate)})`}
-          value={`△ ${fmt(c.longTermDeductionAmount)}`}
-          formula="보유연수×2% (최대 30%) — 토지/건물 별 보유연수 적용"
-        />
-        <DivRow />
-        <Row
-          label="상가부분 양도소득금액"
-          value={fmt(c.incomeAmount)}
-          highlight
-          formula={`양도차익 ${fmtPlain(c.transferGain)} - 장기보유공제 ${fmtPlain(c.longTermDeductionAmount)}`}
-        />
+        {c.deemedHouseBy154_3Main ? (
+          // OH-17 — 엔진이 §154③ 본문으로 건물 전부를 주택으로 봤다(주택 연면적 > 상가 · 전체 12억 이하).
+          <Row
+            label="주택으로 봄 → 1세대1주택 비과세"
+            value="0"
+            highlight
+            formula={`주택 연면적이 주택 외 연면적보다 커 건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문) — 전체 실지거래가액이 12억 이하라 이 부분도 비과세(§156②)${
+              nb ? " · 배율 초과 토지분은 ④ 비사업용토지로 이전" : ""
+            }`}
+          />
+        ) : (
+          <>
+            <Row
+              label={`장기보유공제 (표1, ${fmtPct(c.longTermDeductionRate)})`}
+              value={`△ ${fmt(c.longTermDeductionAmount)}`}
+              formula="보유연수×2% (최대 30%) — 토지/건물 별 보유연수 적용"
+            />
+            <DivRow />
+            <Row
+              label="상가부분 양도소득금액"
+              value={fmt(c.incomeAmount)}
+              highlight
+              formula={`양도차익 ${fmtPlain(c.transferGain)} - 장기보유공제 ${fmtPlain(c.longTermDeductionAmount)}`}
+            />
+          </>
+        )}
       </ResultSection>
 
       {/* 4. 비사업용토지 (조건부) */}

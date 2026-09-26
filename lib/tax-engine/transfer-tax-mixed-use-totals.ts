@@ -33,10 +33,15 @@ export function buildNonBusinessPart(
   landHoldingYears: number,
   /** §95② 미등기양도자산 장기보유특별공제 배제. */
   isUnregistered = false,
+  /**
+   * OH-17 — §154③ 본문(건물 전부 주택)이면 **상가 부수토지분의 배율 초과 양도차익**도 비사업용 토지로
+   * 옮겨 온다(토지 전부가 주택 부수토지라 배율 한도가 토지 전체에 걸린다). 단서 경로는 0.
+   */
+  additionalTransferredGain = 0,
 ): MixedUseNonBusinessLandPart | null {
   if (excessResult.excessArea <= 0) return null;
 
-  const transferredGain = housingPart.nonBusinessTransferredGain;
+  const transferredGain = housingPart.nonBusinessTransferredGain + additionalTransferredGain;
   const deductionRate = calcLongTermRate(landHoldingYears, 0, false, isUnregistered);
   const longTermDeductionAmount = applyRate(Math.max(transferredGain, 0), deductionRate);
 
