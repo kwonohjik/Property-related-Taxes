@@ -32,7 +32,8 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
     await page.getByPlaceholder("입증된 금액 (원)").fill("850000000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
-    await expect(page.getByTestId("deemed-result-value")).toContainText("0");
+    // ⚠️ substring 단언 금지 — 「850,000,000」도 `toHaveText("0")`을 통과한다.
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("0");
   });
 
   test("§45의2 명의신탁 증여의제 재산5억·조세회피목적 → 5억", async ({ page }) => {

@@ -86,7 +86,10 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-exclusion")).toContainText("영리법인");
   });
 
-  test("§39 증자 고가발행 나목(실권주 미배정·비율가중) → 60,003,000", async ({ page }) => {
+  // 🔄 픽스처 정합화(리뷰 6단계 #23) — 「증자 주식수」(실제 증가)와 「분모 신주수」(균등증자 가정
+  //    총수)에 같은 50,000을 넣고 있었다. 나목은 실권주 **미배정**이라 그만큼 발행되지 않으므로
+  //    실제 증가 = 50,000 − 30,000 = 20,000이 법문에 맞다. 엔진이 아니라 입력이 바뀐 것이다.
+  test("§39 증자 고가발행 나목(실권주 미배정·비율가중) → 75,006,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "capital_increase");
     await page.getByTestId("ci-direction-high").click();
@@ -94,13 +97,13 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
     await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
     await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("20000");
-    await page.getByPlaceholder("증자 주식수").fill("50000");
+    await page.getByPlaceholder("증자 주식수").fill("20000");
     await page.getByPlaceholder("실권주수").fill("30000");
     await page.getByPlaceholder("특수관계인이 인수한 신주수").fill("15000");
     await page.getByPlaceholder("분모 신주수").fill("50000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
-    await expect(page.getByTestId("deemed-result-value")).toContainText("60,003,000");
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("75,006,000");
   });
 
   // ── 2-F-1 §29③ 시기 게이트가 ⑤→④→⑫→⑭→엔진까지 도달하는지 실증 ──────────────
