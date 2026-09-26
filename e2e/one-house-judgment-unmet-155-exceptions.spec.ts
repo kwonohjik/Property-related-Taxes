@@ -94,8 +94,11 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
     test.setTimeout(60_000);
     await gotoResult(page, {
       houses: [
+        // A3 OH-12 — 판정 메뉴 ⑧이 상속주택의 상속개시일을 요구한다(계산기 ⑧과 같은 규칙).
+        //   양도주택 2016 취득 < 상속 2020 ⇒ 「상속개시 당시 보유」라 이 spec의 축은 그대로다.
         house("inh", "2020-01-01", {
           isInherited: true,
+          inheritedDate: "2020-01-01",
           isRankingDisqualifiedInheritedHouse: true,
         }),
         house("h3", "2014-03-01"),
@@ -120,7 +123,10 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
   }) => {
     test.setTimeout(60_000);
     await gotoResult(page, {
-      houses: [house("inh", "2020-01-01", { isInherited: true }), house("h3", "2014-03-01")],
+      houses: [
+        house("inh", "2020-01-01", { isInherited: true, inheritedDate: "2020-01-01" }),
+        house("h3", "2014-03-01"),
+      ],
     });
 
     await expect(page.getByTestId("one-house-unmet-155-2-inherited-house")).toHaveCount(0);

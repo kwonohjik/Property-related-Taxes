@@ -1,8 +1,10 @@
 /**
  * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 오케스트레이터
  *
- * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분:
- *   주택연면적 ≥ 상가연면적이라도 주택부분/상가부분/비사업용토지 강제 분리.
+ * 소득세법 시행령 §160 ① 괄호 — 2022.1.1 이후 양도분 **고가주택**:
+ *   주택연면적 > 상가연면적이라도 주택부분/상가부분/비사업용토지 강제 분리.
+ *   ⚠️ 전체 실지거래가액 12억 이하 + 주택연면적 > 상가연면적 + 1세대1주택이면 §154③ 본문으로
+ *   건물 전부가 주택이라 상가분까지 비과세다(OH-17 — `wholeBuildingDeemedHouse`).
  *
  * 설계 문서: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
  */
@@ -10,6 +12,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import {
   meetsOneHouseHoldingResidence,
   resolveDeemedOneHouseBy155,
@@ -37,6 +40,8 @@ import {
   calcHousingGainSplit,
   calcCommercialGainSplit,
   calcExcessLandRatio,
+  calcWholeBuildingExcessLand,
+  exemptCommercialPartAsHouse,
   buildHousingPart,
   buildCommercialPart,
   buildNonBusinessPart,
@@ -178,11 +183,40 @@ export function calcMixedUseTransferTax(
     asset.householdHousingCountForExclusion !== undefined
       ? Math.max(asset.householdHousingCountForExclusion - houseCountExclusionApplied, 0)
       : undefined;
+  /**
+   * §155 1세대1주택 의제(① 일시적 2주택 · ④⑤ 합가) — 비과세 주택 수 축과 중과 배제(§167의10①15호
+   * ① 요소)가 **같은 정본**(`resolveDeemedOneHouseBy155`)을 한 번 판정해 함께 쓴다(OH-09).
+   *
+   * 🔴 종전에는 이 판정을 중과 배제에만 넘기고, 비과세 주택 수 축은 ④가 만든 `isOneHouseExempt`
+   *    (UI가 사라진 `temporaryTwoHouseSpecial` 토글)를 그대로 믿었다 — 명부에서 §155①이 도출돼도
+   *    겸용 경로만 「다주택 전액 과세」였고, 저장분의 토글 true는 1년·3년 타이밍 없이 비과세를 열었다.
+   *    §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다(단건 E-3과 같은 분담).
+   */
+  const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(
+    {
+      ...exemptionReqInput,
+      isRegulatedArea:
+        asset.multiHouse?.isRegulatedArea ?? asset.surchargeFallback?.isRegulatedArea ?? false,
+      isOneHousehold: asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false,
+      temporaryTwoHouse: asset.temporaryTwoHouse,
+      // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
+      //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
+      // `householdHousingCount`는 §155④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
+      //   단건 E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함)이다.
+      householdHousingCount: asset.householdHousingCountForExclusion ?? 0,
+      ruralHouse: undefined,
+      marriageMerge: asset.multiHouse?.marriageMerge,
+      parentalCareMerge: asset.multiHouse?.parentalCareMerge,
+      isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
+    },
+    oneHouseSpecialRules,
+  );
   // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
+  // §155 의제가 성립하면 「1세대1주택으로 보아」 주택 수 축이 충족된다(OH-09).
   const houseCountOk =
-    effectiveHouseCount !== undefined && houseCountExclusionApplied > 0
+    (effectiveHouseCount !== undefined && houseCountExclusionApplied > 0
       ? effectiveHouseCount <= 1
-      : (asset.isOneHouseExempt ?? true);
+      : (asset.isOneHouseExempt ?? true)) || deemedOneHouseBy155 !== undefined;
   if (houseCountExclusionApplied > 0) {
     warnings.push(
       `주택 수 제외 ${houseCountExclusionApplied}채 적용 — 세대 보유 ${asset.householdHousingCountForExclusion}채에서 ` +
@@ -191,7 +225,7 @@ export function calcMixedUseTransferTax(
     );
   }
   const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered;
-  if ((asset.isOneHouseExempt ?? true) && !meetsOneHouseRequirements) {
+  if (houseCountOk && !meetsOneHouseRequirements) {
     // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
     const r = oneHouseSpecialRules.one_house_exemption;
     warnings.push(
@@ -221,24 +255,7 @@ export function calcMixedUseTransferTax(
             sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements,
             // §167의10①15호 ① 요소 — §155① 의제 성립. 단건과 **같은 정본 함수**를 쓴다
             // (기한 규칙 재구현 금지 — 계획서 F-2). `temporaryTwoHouse` 미주입 시 undefined.
-            deemedOneHouseBy155: resolveDeemedOneHouseBy155(
-              {
-                ...exemptionReqInput,
-                isRegulatedArea: asset.multiHouse.isRegulatedArea,
-                isOneHousehold: asset.multiHouse.isOneHousehold,
-                temporaryTwoHouse: asset.temporaryTwoHouse,
-                // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
-                //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
-                // `householdHousingCount`는 §155④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
-                //   단건 E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함)이다.
-                householdHousingCount: asset.householdHousingCountForExclusion ?? 0,
-                ruralHouse: undefined,
-                marriageMerge: asset.multiHouse.marriageMerge,
-                parentalCareMerge: asset.multiHouse.parentalCareMerge,
-                isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
-              },
-              oneHouseSpecialRules,
-            ),
+            deemedOneHouseBy155,
           },
           houseCountExclusionRules,
           regulatedAreaHistory ?? null,
@@ -358,7 +375,29 @@ export function calcMixedUseTransferTax(
 
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
   // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
-  const excessResult = calcExcessLandRatio(asset, derived, transferDate);
+  const splitExcessResult = calcExcessLandRatio(asset, derived, transferDate);
+
+  /**
+   * OH-17 — 「소득세법 시행령」 §154③ **본문**: 「법 제89조제1항제3호를 적용할 때 … 그 전부를 주택으로
+   * 본다. 다만, 주택의 연면적이 주택 외의 부분의 연면적보다 적거나 같을 때에는 주택외의 부분은 주택으로
+   * 보지 아니한다.」 ⇒ 주택 연면적이 **더 크면** 건물 전부가 주택이고, 고가 여부는 그 전부의 실지거래가액
+   * (§156② — 공유지분이면 물건 전체, §156①)으로 본다. 12억 이하면 고가주택이 아니므로 §160① 괄호
+   * (「주택 외의 부분은 주택으로 보지 않는다」 — **고가주택 한정**, 2022-01-01 시행)도 걸리지 않는다
+   * ⇒ 1세대1주택 비과세가 **상가 부분까지** 미친다.
+   *
+   * 🔑 이 분기는 **비과세가 성립할 때만** 연다(`isOneHouseExempt`). §154③은 §89①3호(비과세) 적용 조문이라
+   *    비과세 요건을 못 갖춘 세대의 과세 계산(세율·장특·중과)은 종전 분리 그대로다.
+   * ⚠️ 확인 필요(범위 밖): 주택 > 상가이면서 전체 12억 **초과**인 경우 §160① 안분 분모(주택분 vs 전체) —
+   *    종전 경로(주택분 기준) 유지.
+   */
+  const wholeBuildingDeemedHouse =
+    isOneHouseExempt &&
+    asset.residentialFloorArea > asset.nonResidentialFloorArea &&
+    (asset.totalPropertyTransferPrice ?? transferPrice) <= resolveHighValueHouseThreshold(transferDate);
+  // 본문이면 토지 전부가 주택 부수토지 — 배율 한도는 건물 전체 정착면적 기준(§154④는 단서 전용).
+  const excessResult = wholeBuildingDeemedHouse
+    ? calcWholeBuildingExcessLand(asset, splitExcessResult.multiplier)
+    : splitExcessResult;
 
   // STEP 7-prep: 상가부분 양도차익 (period-split에서도 housing 직전 commercial gain 필요)
   let commercialGainSplit = calcCommercialGainSplit(
@@ -474,7 +513,19 @@ export function calcMixedUseTransferTax(
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
-  const commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
+  const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
+  // OH-17 — §154③ 본문 + 전체 12억 이하 비과세: 상가 부분도 주택 → 소득금액 0, 배율 초과 토지분만 비사토로.
+  const commercialAsHouse = wholeBuildingDeemedHouse
+    ? exemptCommercialPartAsHouse(splitCommercialPart, excessResult.nonBizRatio)
+    : undefined;
+  const commercialPart = commercialAsHouse?.part ?? splitCommercialPart;
+  if (commercialAsHouse) {
+    warnings.push(
+      `주택 연면적(${asset.residentialFloorArea}㎡)이 주택 외 연면적(${asset.nonResidentialFloorArea}㎡)보다 커 ` +
+        `건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문) — 전체 실지거래가액이 고가주택 기준 이하라 ` +
+        `상가 부분까지 1세대1주택 비과세입니다(§156②). 배율 초과 부수토지만 비사업용 토지로 과세합니다.`,
+    );
+  }
 
   steps.push(buildHousingStep(housingPart, apportionment));
   steps.push(buildCommercialStep(commercialPart, apportionment));
@@ -485,6 +536,7 @@ export function calcMixedUseTransferTax(
     excessResult,
     housingGainSplit.landHoldingYears,
     isUnregistered,
+    commercialAsHouse?.nonBusinessTransferredGain ?? 0,
   );
   if (nonBusinessLandPart) {
     steps.push(buildNonBusinessStep(nonBusinessLandPart, excessResult, derived));

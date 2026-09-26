@@ -14,6 +14,7 @@
  * - 자산-수준 검증은 transfer-tax-validate-asset.ts로 분리 (800줄 정책).
  */
 
+import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
@@ -545,6 +546,28 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
       if (!se.acquisitionOfficialPrice)
         issues.push({ step, message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
+    }
+
+    // ⑧ OH-12c — 피상속인 증여분 선언이면 증여일 필수(2018-02-13 부칙 게이트). ⑤와 같은 게이트
+    //    (`HouseCountExemptionInputs` — 명부에 상속주택이 있을 때만 토글·날짜 칸이 열린다).
+    if (
+      form.houses?.some((h) => h.isInherited) &&
+      form.generalHouseGiftedFromDecedentWithin2yr &&
+      !form.generalHouseGiftDate
+    ) {
+      issues.push({
+        step,
+        message:
+          "피상속인으로부터 증여받은 날을 입력하세요. (2018.2.13. 이후 증여분만 상속주택 특례에서 제외됩니다)",
+      });
+    }
+    // ⑧ OH-12 — 상속개시 후 취득한 양도 주택이면 취득 경위 선택 필수(⑤·④와 같은 술어).
+    if (generalHouseRightAtInheritanceVisible(form) && !form.generalHouseRightAtInheritance) {
+      issues.push({
+        step,
+        message:
+          "양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요.",
+      });
     }
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)

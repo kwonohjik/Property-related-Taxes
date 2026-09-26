@@ -592,6 +592,26 @@ export function meetsOneHouseHoldingResidence(
 
 
 /**
+ * 「제154조제1항제1호, 같은 항 제2호가목 및 같은 항 제3호에 해당하는 경우에는 종전의 주택을 취득한 날부터
+ * 1년 이상이 지난 후 … 취득하는 요건을 적용하지 아니한다」 — **같은 후단 문언을 쓰는 네 조항의 단일 술어**.
+ *
+ *   · §155① 후단(신규 주택) · §156의2③·④ 후단(조합원입주권) · §156의3②·③ 후단(분양권)
+ *   (소득세법 시행령 MST 286211 현행 · §156의2④·§156의3③은 2022-02-15 시행본부터 1년 요건과 함께 — 실독)
+ *
+ * 단서 사유가 화이트리스트(1호·2호가목·3호)에 들고 그 사유의 요건까지 충족(`resolveExemptionProviso` "both")
+ * 해야 면제된다. 나·다목(출국)·5호(공고 전 계약)는 조문이 열거하지 않는다.
+ * OH-47 — 권리 경로(`resolveArticle89Clause2`)가 이 면제를 빠뜨려 수용·부득이 세대를 과세했다.
+ */
+export function waivesPriorHouseOneYearGap(input: ResidenceReqInput): boolean {
+  const provisoReason = input.oneHouseExemptionProviso?.reason;
+  return (
+    resolveExemptionProviso(input) === "both" &&
+    provisoReason !== undefined &&
+    TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason)
+  );
+}
+
+/**
  * §155① 일시적 2주택 **타이밍 요건(A·B)** 판정 — 비과세(E-3)와 중과 배제(§167의10①15호) 공용.
  *
  * `provisoRelaxesHolding`(§154① 단서 화이트리스트 → 1년 요건 면제)까지 함께 산출해
@@ -610,11 +630,7 @@ export function evaluateTemporaryTwoHouseTiming(
   // §155①→§154①1·2가·3호 준용: 종전주택이 §154① 단서(both, 화이트리스트) 해당 시 보유 2년 요건 면제.
   // 나·다목(출국일 1주택)·5호(무주택·residence_only)는 일시적 2주택과 양립 불가라 화이트리스트로 제외.
   // resolveExemptionProviso는 input.acquisitionDate(=종전주택 취득일, previousAcquisitionDate와 동일 의도) 기준.
-  const provisoReason = input.oneHouseExemptionProviso?.reason;
-  const provisoRelaxesHolding =
-    resolveExemptionProviso(input) === "both" &&
-    provisoReason !== undefined &&
-    TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason);
+  const provisoRelaxesHolding = waivesPriorHouseOneYearGap(input);
 
   // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
   // OH-01 — 연혁 기한 + 2019-12-17 체제의 임차인 단서 기한·전입 요건을 한 번에 받는다(A2b).
@@ -628,7 +644,9 @@ export function evaluateTemporaryTwoHouseTiming(
     moveInMet: era.moveInMet,
     oneYearWaived: provisoRelaxesHolding,
     // §155⑯ 후단(1년 면제) · §155⑱(기한 예외) — 정본 한 곳에서 전달해 비과세·중과가 같은 값을 쓴다.
-    publicInstitutionRelocation: input.temporaryTwoHouse!.publicInstitutionRelocation,
+    //   ⑯ 후단 「이 경우」는 전단의 지역 요건(이전한 시·군 또는 연접 시·군) 충족을 받는다 — 기한 5년과
+    //   **같은 술어**로 연다(OH-35 · 원시 토글을 넘기면 비연접에도 1년 요건이 면제됐다).
+    publicInstitutionRelocation: meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse!),
     disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
   });
 

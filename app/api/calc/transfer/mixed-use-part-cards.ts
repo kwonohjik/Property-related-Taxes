@@ -119,8 +119,23 @@ export function buildMixedUsePartCards(
    *
    *   ⇒ 단일 소스는 `apportionment`다.
    */
-  const housingTotal =
+  const housingTotalSplit =
     r.apportionment.wholeHousingTransferPrice ?? r.apportionment.housingTransferPrice;
+
+  /**
+   * OH-17 — 엔진이 §154③ **본문**(주택 연면적 > 상가 · 전체 12억 이하 · 1세대1주택)으로 건물 전부를
+   * 주택으로 봤으면(`deemedHouseBy154_3Main`) 상가 카드도 **주택 카드**다 — 세대 축을 싣고, 12억 판정
+   * 분모는 주택분이 아니라 **물건 전체**(§156②·①)다. 상가 토지분의 배율 초과 몫도 비사토 카드로 옮긴다.
+   * 판정은 다시 하지 않는다 — 엔진 결과를 그대로 따른다(카드마다 재판정하면 두 경로가 갈린다).
+   */
+  const wholeHouse = cp.deemedHouseBy154_3Main === true;
+  const housingTotal = wholeHouse
+    ? (mixedAsset.totalPropertyTransferPrice ?? partTransferPrice)
+    : housingTotalSplit;
+  const cnbGain = wholeHouse ? Math.floor(Math.max(cp.landTransferGain, 0) * ratio) : 0;
+  const cnblA = wholeHouse ? Math.floor(cp.landAcqPrice * ratio) : 0;
+  const cnblE = wholeHouse ? Math.floor(cp.landAppraisalDed * ratio) : 0;
+  const cnblT = cnbGain > 0 || cnblA > 0 || cnblE > 0 ? cnbGain + cnblA + cnblE : 0;
 
   /**
    * 두 축을 **명시적으로 중화**한다 — `companionEngine` 스프레드가 실어 오지만 파트 카드에서는
@@ -220,20 +235,20 @@ export function buildMixedUsePartCards(
     card(
       MIXED_USE_PART_IDS.commercialLand,
       "상가 부수토지",
-      "land",
+      wholeHouse ? "housing" : "land",
       false,
       {
-        transferPrice: cp.landTransferPrice,
-        acquisitionPrice: cp.landAcqPrice,
-        expenses: cp.landAppraisalDed,
+        transferPrice: cp.landTransferPrice - cnblT,
+        acquisitionPrice: cp.landAcqPrice - cnblA,
+        expenses: cp.landAppraisalDed - cnblE,
       },
       landAcqDate,
-      nonHousing,
+      wholeHouse ? { totalPropertyTransferPrice: housingTotal } : nonHousing,
     ),
     card(
       MIXED_USE_PART_IDS.commercialBuilding,
       "상가 건물",
-      "building",
+      wholeHouse ? "housing" : "building",
       true,
       {
         transferPrice: cp.buildingTransferPrice,
@@ -241,7 +256,7 @@ export function buildMixedUsePartCards(
         expenses: cp.buildingAppraisalDed,
       },
       bldAcqDate,
-      nonHousing,
+      wholeHouse ? { totalPropertyTransferPrice: housingTotal } : nonHousing,
     ),
     /**
      * §104⑤ 본문 **후단** — 한 필지가 비사업용 토지와 그 외로 구분되면 **각각을 별개 자산**으로
@@ -254,7 +269,7 @@ export function buildMixedUsePartCards(
             "주택 부수토지(배율초과)",
             "land",
             false,
-            { transferPrice: nblT, acquisitionPrice: nblA, expenses: nblE },
+            { transferPrice: nblT + cnblT, acquisitionPrice: nblA + cnblA, expenses: nblE + cnblE },
             landAcqDate,
             { ...nonHousing, isNonBusinessLand: true },
           ),

@@ -646,6 +646,7 @@ export function buildHousingPart(
     buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
     isExempt,
     proratedTaxableGain,
+    highValueBase,
     longTermDeductionTable,
     longTermDeductionRate,
     longTermDeductionAmount,
@@ -701,6 +702,45 @@ export function buildCommercialPart(
     acqStandardTotal: gainSplit.acqStandardLand + gainSplit.acqStandardBuilding,
     acqStandardLand: gainSplit.acqStandardLand,
     acqStandardBuilding: gainSplit.acqStandardBuilding,
+  };
+}
+
+/**
+ * OH-17 — 「소득세법 시행령」 §154③ **본문**: 주택 연면적이 주택 외 연면적보다 크면 건물 전부를 주택으로
+ * 본다. 부수토지 면적 비례 안분(§154④)은 **단서** 전용이므로 본문이면 토지 전부가 주택 부수토지이고,
+ * 배율 한도(§154⑦)는 **건물 전체 정착면적** × 배율이다. 배율은 단서 경로와 같은 값을 받는다.
+ */
+export function calcWholeBuildingExcessLand(
+  asset: MixedUseAssetInput,
+  multiplier: ExcessLandResult["multiplier"],
+): ExcessLandResult {
+  const allowedArea = asset.buildingFootprintArea * multiplier;
+  const excessArea = Math.max(0, asset.totalLandArea - allowedArea);
+  const nonBizRatio = asset.totalLandArea > 0 ? excessArea / asset.totalLandArea : 0;
+  return { multiplier, excessArea, nonBizRatio };
+}
+
+/**
+ * OH-17 — §154③ 본문으로 주택이 된 「상가」 부분: 1세대1주택 비과세(전체 12억 이하)가 미치므로
+ * 양도소득금액은 0이다. 토지분 중 배율 초과 비율만큼은 비과세 대상이 아니라 비사업용 토지로 옮긴다
+ * (`nonBusinessTransferredGain` — 주택 부분 ①과 같은 절사 규약). 양도차익·가액 echo는 그대로 둔다(산식 표시).
+ */
+export function exemptCommercialPartAsHouse(
+  part: MixedUseCommercialPart,
+  nonBizRatio: number,
+): { part: MixedUseCommercialPart; nonBusinessTransferredGain: number } {
+  const nonBusinessTransferredGain = Math.floor(Math.max(part.landTransferGain, 0) * nonBizRatio);
+  return {
+    part: {
+      ...part,
+      landIncomeAmount: 0,
+      buildingIncomeAmount: 0,
+      longTermDeductionRate: 0,
+      longTermDeductionAmount: 0,
+      incomeAmount: 0,
+      deemedHouseBy154_3Main: true,
+    },
+    nonBusinessTransferredGain,
   };
 }
 

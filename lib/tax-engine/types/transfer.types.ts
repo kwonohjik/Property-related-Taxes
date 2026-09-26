@@ -705,6 +705,18 @@ export interface TransferTaxInput {
   isFirstTransferredInMerge?: boolean;
   /** 양도(일반)주택이 상속개시일부터 소급 2년 내 피상속인 증여분 여부 (§155② 일반주택 제외 게이트). true면 상속주택 특례 미적용. */
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
+  /**
+   * 위 증여의 **증여일** — 소급 2년 내 증여주택 제외는 2018-02-13 이후 증여분부터다
+   * (대통령령 제28637호 부칙 제16조 — OH-12c). 미입력(구 저장분)이면 종전 동작(제외 적용)을 유지한다.
+   * `data/inheritance-general-house-era.ts` `isDecedentGiftExclusionApplicable`.
+   */
+  generalHouseGiftDate?: Date;
+  /**
+   * §155② 괄호 — 양도 일반주택이 상속개시 **후** 취득이지만 「상속개시 당시 보유한 조합원입주권이나 분양권에
+   * 의하여 사업시행 완료 후 취득한 신축주택」인가(OH-12). `"none"`은 해당 없음 선언.
+   * 연혁(입주권 2014-02-21·분양권 2021-01-01 양도분)은 `data/inheritance-general-house-era.ts`가 본다.
+   */
+  generalHouseRightAtInheritance?: import("../data/inheritance-general-house-era").GeneralHouseRightAtInheritance;
   /** 양도 주택 ID (houses 제공 시) */
   sellingHouseId?: string;
   /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */

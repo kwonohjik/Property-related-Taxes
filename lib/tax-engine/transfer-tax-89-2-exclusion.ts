@@ -82,11 +82,20 @@ import type {
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
+import {
+  waivesPriorHouseOneYearGap,
+  type ResidenceReqInput,
+} from "./transfer-tax-exemption-requirements";
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import {
   clause4RequiresOneYearGap,
   resolve1562DeadlineYears,
 } from "./data/article-156-2-completion-era";
+import {
+  INHERITANCE_GENERAL_HOUSE_HELD_START,
+  isDecedentGiftExclusionApplicable,
+  qualifiesAsInheritanceGeneralHouse,
+} from "./data/inheritance-general-house-era";
 
 /** §156의2③·§156의3②의 처분기한 — 조문 문언 그대로 3년(단축·연장 규정 없음). */
 export const ARTICLE_156_2_3_DEADLINE_YEARS = 3;
@@ -160,12 +169,16 @@ export type Article89Clause2Input = Pick<
   | "generalHouseHeldAtInheritance"
   | "inheritedRightChoiceWhenBothHeld"
   | "generalHouseGiftedFromDecedentWithin2yr"
+  | "generalHouseGiftDate"
+  | "generalHouseRightAtInheritance"
   | "mergedHouseholdFirstHouse"
   | "isFirstTransferredInMerge"
   | "culturalHeritageHouse"
   | "houses"
   | "sellingHouseId"
->;
+> &
+  // §156의2③④·§156의3②③ 후단 — §154① 단서(1호·2호가목·3호) 해당 시 1년 요건 면제(OH-47)
+  ResidenceReqInput;
 
 /**
  * 이 권리가 §89②의 적용 대상인가 — **권리 종류마다 축이 다르다**.
@@ -298,7 +311,7 @@ export function resolveArticle89Clause2(
    *    까지 그대로 도달하는데, ⑦ 후단의 「제3항 및 제4항의 규정을 적용받는 일반주택은
    *    **상속개시 당시 보유한 주택**으로 한정한다」가 한 번도 검증되지 않고 있었다(실측).
    */
-  if (hasInheritedHouseOtherThanSelling(input) && input.generalHouseHeldAtInheritance !== true) {
+  if (hasInheritedHouseOtherThanSelling(input) && !generalHouseHeldAtInheritanceEstablished(input)) {
     open.push("소득세법 시행령 §156의2 ⑦", "소득세법 시행령 §156의3 ⑤");
   }
 
@@ -351,7 +364,10 @@ export function resolveArticle89Clause2(
   const right = isArticle7Shape ? otherRights[0] : rights[0];
   // 「1년 이상이 지난 후」·「3년 이내」 모두 초일불산입 — 응당일 권리 취득은 1년 미경과(§155①과 같은 문언,
   //   조심2020서1405 · 서면2017법령해석재산-785). ③·②의 직접 선례는 미확보(계획서 §7-1).
-  const oneYearMet = isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
+  //   후단 — §154①1호·2호가목·3호에 해당하면 1년 요건을 적용하지 않는다(③·④ 모두 · §155① 후단과 같은 술어).
+  const oneYearMet =
+    waivesPriorHouseOneYearGap(input) ||
+    isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
   const deadline = periodEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
   const withinDeadline = isWithinPeriod(
     right.acquisitionDate,
@@ -475,6 +491,31 @@ function hasInheritedHouseOtherThanSelling(input: Article89Clause2Input): boolea
   const houses = input.houses ?? [];
   const sellingId = input.sellingHouseId ?? houses[0]?.id;
   return houses.some((h) => h.isInherited === true && h.id !== sellingId);
+}
+
+/**
+ * §156의2⑦ 후단 · §156의3⑤ — 「제3항 및 제4항의 규정을 적용받는 일반주택은 상속개시 당시 보유한 주택으로
+ * 한정한다」가 **성립하는가** (OH-12b).
+ *
+ * 긍정 선언(`generalHouseHeldAtInheritance`)이 있거나, §155② 경로와 **같은 leaf**
+ * (`qualifiesAsInheritanceGeneralHouse`)가 모든 상속주택에 대해 `yes`를 내면 성립한다 —
+ * 2013-02-15 전 취득 일반주택(제24356호 부칙 제20조 — 한정 없음)이거나 상속개시 전 취득이 날짜로 확인되는 경우.
+ * 상속개시일을 모르거나 상속 후 취득이면 종전대로 선언을 요구한다(판정 불가).
+ */
+function generalHouseHeldAtInheritanceEstablished(input: Article89Clause2Input): boolean {
+  if (input.generalHouseHeldAtInheritance === true) return true;
+  const houses = input.houses ?? [];
+  const sellingId = input.sellingHouseId ?? houses[0]?.id;
+  const inherited = houses.filter((h) => h.isInherited === true && h.id !== sellingId);
+  return inherited.every(
+    (h) =>
+      qualifiesAsInheritanceGeneralHouse({
+        generalHouseAcquisitionDate: input.acquisitionDate,
+        inheritedDate: h.inheritedDate,
+        transferDate: input.transferDate,
+        rightAtInheritance: input.generalHouseRightAtInheritance,
+      }) === "yes",
+  );
 }
 
 /**
@@ -628,10 +669,25 @@ function qualifyInheritedRight(
   }
 
   // ── 일반주택 요건: 상속개시일 소급 2년 내 피상속인 증여분이면 배제 ──
-  if (input.generalHouseGiftedFromDecedentWithin2yr === true) return "disqualified";
+  //    OH-12c — 2018-02-13 이후 증여분부터(대통령령 제28637호 부칙 제16조 — ⑥·⑦ 함께 적용).
+  if (
+    isDecedentGiftExclusionApplicable({
+      gifted: input.generalHouseGiftedFromDecedentWithin2yr,
+      giftDate: input.generalHouseGiftDate,
+    })
+  ) {
+    return "disqualified";
+  }
 
   // ── 일반주택 요건: 「상속개시 당시 보유한 주택」 — **긍정 선언 필수** ──
-  if (input.generalHouseHeldAtInheritance !== true) return "undetermined";
+  //    OH-12b — 2013-02-15 전 취득 일반주택에는 이 한정이 없다(제24356호 부칙 제20조 — ⑥·⑦ 함께 적용).
+  //    권리에는 상속개시일 입력이 없어 날짜로 보유를 확인할 수 없으므로 그 밖에는 선언을 요구한다.
+  if (
+    input.generalHouseHeldAtInheritance !== true &&
+    input.acquisitionDate >= INHERITANCE_GENERAL_HOUSE_HELD_START
+  ) {
+    return "undetermined";
+  }
 
   return "qualified";
 }
