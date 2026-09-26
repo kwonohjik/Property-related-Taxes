@@ -13,7 +13,9 @@ import {
   judgmentSaleIsHousing,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { provisoGate, type ProvisoMode } from "./transfer-tax-api-helpers";
+import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import { temporaryTwoHouseApplies } from "./household-house-count";
+import { replacementHouseApplies } from "./replacement-house-scope";
 
 /**
  * §155①⑥⑦⑧⑯⑱ 섹션 — 2주택 이상일 때만 의미가 있다.
@@ -61,11 +63,12 @@ export function judgmentMergeDateOwnedByStep1(form: OneHouseJudgmentFormData): b
  *    **조합원입주권을 1개 이상 보유**. 분양권은 §156의3 축이라 세지 않는다.
  */
 export function judgmentReplacementHouseVisible(form: OneHouseJudgmentFormData): boolean {
-  if (judgmentTemporaryTwoHouseVisible(form)) return true;
-  return (
-    judgmentSaleIsHousing(form) &&
-    (form.presaleRights ?? []).some((r) => r.type === "redevelopment_right")
-  );
+  // 조건 본문은 계산기 ④와 공용이다(`replacement-house-scope.ts`) — 인자만 명부 파생값으로 채운다.
+  return replacementHouseApplies({
+    houseCount: deriveJudgmentHouseCount(form),
+    saleIsHousing: judgmentSaleIsHousing(form),
+    holdsRedevelopmentRight: (form.presaleRights ?? []).some((r) => r.type === "redevelopment_right"),
+  });
 }
 
 /**
@@ -89,4 +92,43 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       declaredNewHouseDate: form.newHouseAcquisitionDate,
     }),
   }).mode;
+}
+
+/**
+ * 조특법 §99의4(농어촌·고향주택)·§98의9(준공후미분양) — **§89①3호 주택 수 제외** 축의 감면 유형.
+ *
+ * 두 조문 모두 효과가 「해당 1세대의 소유주택이 아닌 것으로 보아 「소득세법」 제89조제1항제3호를
+ * 적용한다」(조특법 §99의4① · §98의9①)라 세액이 아니라 **판정**을 바꾼다. 판정 메뉴가 입력받는
+ * 감면은 이 셋뿐이다.
+ */
+export const JUDGMENT_HOUSE_COUNT_EXCLUSION_TYPES = [
+  "new_99_4_rural",
+  "new_99_4_hometown",
+  "unsold_98_9",
+] as const;
+
+type HouseCountExclusionReduction = Extract<
+  AssetReductionForm,
+  { type: (typeof JUDGMENT_HOUSE_COUNT_EXCLUSION_TYPES)[number] }
+>;
+
+export function isHouseCountExclusionReduction(
+  r: AssetReductionForm,
+): r is HouseCountExclusionReduction {
+  return (JUDGMENT_HOUSE_COUNT_EXCLUSION_TYPES as readonly string[]).includes(r.type);
+}
+
+/**
+ * §99의4·§98의9 선언 — ⑤(칸 노출)·④(전송)·⑧(필수값)의 **공용 게이트** (OH-28).
+ *
+ * 🔑 양도 대상이 **주택**일 때만 연다 — 두 조문은 「일반주택(종전주택)을 양도하는 경우」이고,
+ *    조합원입주권 양도(§89①4호)에는 주택 수 제외 축이 없다. 입주권으로 바꾼 뒤 남은 선언은
+ *    ④가 보내지 않고 ⑧도 요구하지 않는다(값은 지우지 않는다 — 주택으로 되돌리면 복귀).
+ * 🔑 다른 감면 유형은 판정과 무관하므로 걸러 낸다(판정 route는 세액을 계산하지 않는다).
+ */
+export function judgmentHouseCountExclusionReductions(
+  form: OneHouseJudgmentFormData,
+): HouseCountExclusionReduction[] {
+  if (!judgmentSaleIsHousing(form)) return [];
+  return (form.assets?.[0]?.reductions ?? []).filter(isHouseCountExclusionReduction);
 }

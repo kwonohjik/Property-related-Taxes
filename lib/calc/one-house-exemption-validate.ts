@@ -22,12 +22,14 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
+  judgmentHouseCountExclusionReductions,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
 } from "./one-house-judgment-section-scope";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -216,6 +218,16 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    * 🔑 맥락은 ④와 **같은 함수**(`judgmentProvisoMode`)로 정한다 — ④가 사유를 보내지 않는
    *    맥락(카드 숨김)의 stale 사유는 막지 않는다(영구 차단 방지).
    */
+  /**
+   * 조특법 §99의4·§98의9 주택 수 제외 선언 — 필수값 (OH-28). 계산기와 **같은 leaf**.
+   * 🔑 게이트는 ⑤·④와 같은 `judgmentHouseCountExclusionReductions`(양도 대상 주택일 때만).
+   */
+  for (const r of judgmentHouseCountExclusionReductions(form)) {
+    for (const message of collectHouseCountExclusionReductionErrors(r)) {
+      errors.push(err("reductions", message));
+    }
+  }
+
   const provisoReason = effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason);
   for (const message of collectExemptionProvisoErrors({
     reason: provisoReason,
@@ -256,6 +268,51 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
 
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
+  }
+
+  /**
+   * §154⑧3호 동일세대 상속 통산 (OH-18) — ⑤·④와 같은 게이트(양도 대상 주택 · 상속 · 동일세대).
+   *
+   * 🔑 개시일이 없으면 ④는 보유 기산을 옮기지 못한다 — 계산기 ⑧과 같은 필수값이다.
+   * 🔴 개시일이 **상속개시일 이후**면 엔진(`resolveExemptionHoldingStartDate`)이 그 값을 조용히
+   *    버리고 상속개시일부터 센다. 입력한 통산이 사라지는 것을 여기서 알린다.
+   */
+  const inheritedSale =
+    !!primary && judgmentSaleIsHousing(form) && primary.acquisitionCause === "inheritance";
+  // ⑫ refine과 같은 필수값 — 비우면 route가 400으로 돌려보낸다(계산기 ⑧과 같은 문구 축).
+  if (inheritedSale && !primary.decedentAcquisitionDate) {
+    errors.push(err("decedentAcquisitionDate", "상속받은 주택이면 피상속인 취득일을 입력하세요."));
+  }
+  if (inheritedSale && primary.decedentSameHouseholdBeforeInheritance) {
+    if (!primary.decedentCohabitationHoldingStartDate) {
+      errors.push(
+        err(
+          "decedentCohabitationHoldingStartDate",
+          "동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)",
+        ),
+      );
+    } else if (
+      primary.acquisitionDate &&
+      primary.decedentCohabitationHoldingStartDate >= primary.acquisitionDate
+    ) {
+      errors.push(
+        err(
+          "decedentCohabitationHoldingStartDate",
+          "동일세대 거주·보유 개시일은 상속개시일(취득일)보다 앞서야 합니다. (§154⑧3호 — 상속개시 전 기간)",
+        ),
+      );
+    } else if (
+      primary.decedentAcquisitionDate &&
+      primary.decedentCohabitationHoldingStartDate < primary.decedentAcquisitionDate
+    ) {
+      // 피상속인이 취득하기 전에는 그 주택을 「동일세대로서 거주하고 보유한」 기간이 있을 수 없다.
+      errors.push(
+        err(
+          "decedentCohabitationHoldingStartDate",
+          "동일세대 거주·보유 개시일이 피상속인 취득일보다 빠릅니다. 피상속인이 이 주택을 취득한 날 이후로 입력하세요.",
+        ),
+      );
+    }
   }
 
   /**
@@ -433,6 +490,15 @@ export function computeOneHouseJudgmentSummary(
     form.replacementHouseSpecial && "대체주택",
     form.longTermMortgageSpecial && "장기저당담보주택",
     form.winWinRentalSpecial && "상생임대주택",
+    // OH-18·OH-28 — ④가 실제로 싣는 조건(⑤·⑧과 같은 게이트)일 때만 적는다.
+    judgmentSaleIsHousing(form) &&
+      form.assets[0]?.acquisitionCause === "inheritance" &&
+      form.assets[0]?.decedentSameHouseholdBeforeInheritance &&
+      "동일세대 상속 통산",
+    judgmentHouseCountExclusionReductions(form).some((r) => r.type !== "unsold_98_9") &&
+      "농어촌·고향주택(조특법)",
+    judgmentHouseCountExclusionReductions(form).some((r) => r.type === "unsold_98_9") &&
+      "준공후미분양주택(조특법)",
   ].filter(Boolean) as string[];
   if (declared.length > 0) {
     items.push({ label: "선언한 특례", value: declared.join(" · ") });

@@ -49,6 +49,10 @@ import {
   type OneHouseOneRightVerdict,
 } from "@/lib/tax-engine/one-house/one-right-verdict";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
+import {
+  resolveExemptionHoldingStartDate,
+  resolveExemptionResidenceMonths,
+} from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 /** 판정 메뉴 응답 — 화면(④ 결과)이 읽는 전부. */
@@ -65,6 +69,17 @@ export type OneHouseExemptionResponse = {
    * `undefined`는 「주택 양도라 물을 일이 아님」이고 `clause: null`은 「물었으나 미성립」이다.
    */
   oneRightExemption?: OneHouseOneRightVerdict;
+  /**
+   * §154⑧3호 동일세대 상속 통산 (OH-18) — 동일세대 상속을 **선언한 경우에만** 실린다.
+   * 값은 엔진 정본(`resolveExemptionHoldingStartDate`·`resolveExemptionResidenceMonths`)이 낸 것이다.
+   * 화면이 역산하지 않도록 route가 싣는다(`feedback_aggregate_display_rederives_engine_value`).
+   */
+  inheritedPeriodConsolidation?: {
+    /** §154① 보유기간 기산일(YYYY-MM-DD) — 통산이 성립하면 동일세대 거주·보유 개시일 */
+    holdingStartDate: string;
+    /** §154① 거주요건 판정에 쓰는 거주 개월 — 상속 후 실거주 + 상속개시 전 동일세대 거주 */
+    residenceMonths: number;
+  };
 };
 
 export async function POST(request: NextRequest) {
@@ -208,11 +223,22 @@ export async function POST(request: NextRequest) {
       inheritedExclusion: exclusion.inheritedExclusion,
     });
 
+    const judgeInput = exclusion.exemptionJudgeInput;
+    const inheritedPeriodConsolidation =
+      judgeInput.acquisitionCause === "inheritance" &&
+      judgeInput.decedentSameHouseholdBeforeInheritance === true
+        ? {
+            holdingStartDate: resolveExemptionHoldingStartDate(judgeInput).toISOString().slice(0, 10),
+            residenceMonths: resolveExemptionResidenceMonths(judgeInput),
+          }
+        : undefined;
+
     const payload: OneHouseExemptionResponse = {
       judgment,
       houseCount,
       ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),
       ...(oneRightVerdict ? { oneRightExemption: oneRightVerdict } : {}),
+      ...(inheritedPeriodConsolidation ? { inheritedPeriodConsolidation } : {}),
     };
     return NextResponse.json({ data: payload }, { status: 200 });
   } catch (err) {

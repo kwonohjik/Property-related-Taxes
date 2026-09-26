@@ -42,8 +42,10 @@ import {
 import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import { SpecialTaxHouseCountExclusionSection } from "./SpecialTaxHouseCountExclusionSection";
 import {
   deriveJudgmentHouseCount,
+  judgmentSaleIsHousing,
   withDerivedHouseCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
@@ -209,6 +211,22 @@ export function Step2({ form, onChange }: Props) {
         hideGracePeriod
         hideSellingHouseExclusion
       />
+
+      {/*
+        조특법 §99의4·§98의9 주택 수 제외 (OH-28) — 명부 바로 다음(주택 수를 바꾸는 입력끼리).
+        게이트는 ④·⑧과 같다: 양도 대상이 주택일 때만(`judgmentSaleIsHousing`).
+      */}
+      {judgmentSaleIsHousing(form) && (
+        <SpecialTaxHouseCountExclusionSection
+          reductions={primary.reductions ?? []}
+          transferDate={form.transferDate}
+          onChange={(reductions) =>
+            onChange({
+              assets: form.assets.map((a, i) => (i === 0 ? { ...a, reductions } : a)),
+            })
+          }
+        />
+      )}
 
       {judgmentTemporaryTwoHouseVisible(form) && (
         <TemporaryTwoHouseSection

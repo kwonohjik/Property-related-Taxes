@@ -35,14 +35,18 @@ import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
   buildMergedHouseholdFirstHousePayload,
+  buildSameHouseholdInheritancePayload,
   effectiveProvisoReason,
+  toEngineReductions,
 } from "./transfer-tax-api-helpers";
 import {
+  judgmentHouseCountExclusionReductions,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
 } from "./one-house-judgment-section-scope";
 import {
   deriveJudgmentHouseCount,
+  judgmentSaleIsHousing,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
@@ -109,7 +113,16 @@ export function buildOneHouseExemptionApiBody(
     acquisitionPrice: 0,
     expenses: 0,
     useEstimatedAcquisition: false,
-    reductions: [],
+    /**
+     * 🔴 `reductions`는 placeholder가 **아니다**(OH-28). route가 계산기와 같은 순서로 부르는
+     *    `runHouseCountExclusionStep`이 여기서 조특법 §99의4·§98의9를 찾아 §89①3호 주택 수를
+     *    1채씩 줄인다. 종전처럼 `[]`를 고정하면 두 조문이 판정 메뉴에 영원히 닿지 않는다.
+     * 🔑 변환은 계산기와 **같은 leaf**(`toEngineReductions`) — 게이트는 ⑤·⑧과 같은 함수다.
+     */
+    reductions: toEngineReductions(
+      judgmentHouseCountExclusionReductions(form),
+      primary.acquisitionCause,
+    ),
     annualBasicDeductionUsed: 0,
     isNonBusinessLand: false,
 
@@ -149,6 +162,22 @@ export function buildOneHouseExemptionApiBody(
      */
     residencePeriodMonths: deriveJudgmentResidenceMonths(form),
     householdHousingCount: houseCount,
+
+    /**
+     * §154⑧3호 동일세대 상속 통산 (OH-18) — 계산기와 **같은 leaf**.
+     *
+     * 🔑 게이트는 ⑤(`Step3.tsx`)·⑧(`validateStep3`)과 같은 `judgmentSaleIsHousing`이다. 조합원입주권
+     *    양도에는 칸이 없으므로 남은 값을 보내지 않는다. 취득 원인은 상속일 때만 싣는다 —
+     *    판정 메뉴에서 원인이 판정을 바꾸는 축은 이 통산뿐이다.
+     */
+    ...(judgmentSaleIsHousing(form) && primary.acquisitionCause === "inheritance"
+      ? {
+          acquisitionCause: "inheritance",
+          // ⑫ refine이 상속에 피상속인 취득일을 요구한다(계산기와 같은 계약 — 없으면 400).
+          decedentAcquisitionDate: primary.decedentAcquisitionDate || undefined,
+          ...buildSameHouseholdInheritancePayload(primary),
+        }
+      : {}),
 
     /**
      * ── 계산기와 **같은 leaf** ──────────────────────────────

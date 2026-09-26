@@ -46,7 +46,13 @@ type Props = {
 };
 
 export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
-  const { judgment, houseCount, rentalHousingException: rental, oneRightExemption: oneRight } = result;
+  const {
+    judgment,
+    houseCount,
+    rentalHousingException: rental,
+    oneRightExemption: oneRight,
+    inheritedPeriodConsolidation: inherited,
+  } = result;
   /**
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
    *    이력 목록은 「과세」인 상태가 조용히 생긴다.
@@ -93,7 +99,43 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
             ))}
           </ul>
         )}
+        {/*
+          선언했으나 요건 미달로 빼지 않은 조특법 §99의4·§98의9 (OH-28) — 성공 목록만 보여 주면
+          「왜 주택 수가 그대로인가」가 사라진다. 사유는 엔진 평가기의 문장 그대로다.
+        */}
+        {houseCount.notApplied?.map((n, i) => (
+          <div key={`na-${i}`} className="space-y-1" data-testid="one-house-count-not-applied">
+            <p className="text-sm font-semibold text-rose-700">
+              {n.label}
+              <span className="ml-2">
+                <LawArticleModal legalBasis={n.legalBasis} />
+              </span>
+            </p>
+            <ul className="ml-4 list-disc space-y-1 text-sm">
+              {n.reasons.map((r, j) => (
+                <li key={j}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </ToneCard>
+
+      {/*
+        ── §154⑧3호 동일세대 상속 통산 (OH-18) ──
+        🔑 선언한 경우에만 렌더한다. 날짜·개월은 route가 엔진 정본으로 낸 값이다(역산 금지).
+      */}
+      {inherited && (
+        <ToneCard tone="violet" sectionNum={nextNo()} title="상속주택 보유·거주기간 통산">
+          <p className="text-sm" data-testid="one-house-inherited-consolidation">
+            상속개시 당시 피상속인과 동일세대였으므로 보유기간은 <b>{inherited.holdingStartDate}</b>부터
+            세고, 거주기간은 상속개시 전 동일세대 거주분을 더해 <b>{inherited.residenceMonths}개월</b>로
+            봅니다.
+            <span className="ml-2">
+              <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="영 §154⑧3호" />
+            </span>
+          </p>
+        </ToneCard>
+      )}
 
       {/*
         ── §155⑳ 장기임대주택 특례 (P4-3a) ──

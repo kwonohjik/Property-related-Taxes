@@ -26,6 +26,7 @@ import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { buildSellingRentalPayload, sellingRentalAcquisitionPrice } from "@/lib/calc/transfer-tax-api-houses";
 import { buildOtherHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
 import { buildReplacementHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { buildOneHouseExtraFactsPayload } from "@/lib/calc/one-house-extra-facts-payload";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
@@ -356,7 +357,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     //    「판정 불러오기」는 다건 편집 화면(단건 계산기를 그대로 마운트)에도 뜨고 이 사실을 자산 폼에
     //    쓴다. ⑫·⑭는 세 키를 받는데 이 층만 싣지 않아 같은 폼이 단건 비과세 ↔ 다건 과세로 갈렸다.
     //    운반 상자(`importedOneHouseFacts`)는 UI 메타라 전송하지 않는다 — 빌더가 nested 두 키만 편다.
-    ...buildReplacementHousePayload(form),
+    //    🔴 대체주택은 단건과 **같은 게이트**(OH-05) — 입주권 없는 1주택의 stale 토글을 보내지 않는다.
+    ...(calcReplacementHouseApplies(form) ? buildReplacementHousePayload(form) : {}),
     ...buildOneHouseExtraFactsPayload(form.importedOneHouseFacts),
     // ⑬ §155④⑤ 합가 후 첫 양도 — 엔진 비과세 게이트가 `=== true`를 요구한다(transfer-tax-exemption.ts).
     //    marriageMerge·parentalCareMerge만 보내고 이 플래그를 빠뜨리면 특례가 조용히 미발동한다.

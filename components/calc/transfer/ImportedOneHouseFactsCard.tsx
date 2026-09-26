@@ -109,7 +109,7 @@ const PROVISO_REASON: Record<string, string> = {
 /**
  * 🔑 권리 요약과 같은 규칙 — **선언된 것만** 적는다.
  */
-function specialsRows(f: ImportedSpecialsSlice): Row[] {
+function specialsRows(f: ImportedSpecialsSlice, replacementHouseApplies: boolean): Row[] {
   const rows: Row[] = [];
   const push = (label: string, value: string | undefined) => {
     if (value) rows.push({ label, value });
@@ -129,7 +129,16 @@ function specialsRows(f: ImportedSpecialsSlice): Row[] {
   if (f.culturalHeritageHouseSpecial) push("문화유산 주택 보유 (§155⑥1호)", "예");
   if (f.ruralHouseSpecial) push("농어촌주택 보유 (§155⑦)", RURAL_KIND[f.ruralHouseKind] ?? "예");
   if (f.replacementHouseSpecial) {
-    push("대체주택 특례 (§156의2⑤)", "선언함");
+    /**
+     * 🔑 ④와 같은 게이트(`calcReplacementHouseApplies`, OH-05)가 닫혀 있으면 **계산에 쓰지 않는다** —
+     *    화면이 「선언함」만 적으면 전송되지 않는 사실을 적용되는 것처럼 보이게 한다.
+     */
+    push(
+      "대체주택 특례 (§156의2⑤)",
+      replacementHouseApplies
+        ? "선언함"
+        : "선언함 — 현재 세대 구성(2주택 미만·조합원입주권 없음)에서는 성립하지 않아 계산에 쓰지 않습니다",
+    );
     push("사업시행계획 인가일", f.replBusinessApprovalDate);
     push("신축주택 준공일", f.replCompletionDate);
     push("대체주택 거주기간", f.replResidenceMonths ? `${f.replResidenceMonths}개월` : undefined);
@@ -207,15 +216,18 @@ export function ImportedOneHouseFactsCard({
   facts,
   rights,
   specials,
+  replacementHouseApplies = true,
 }: {
   facts: OneHouseJudgmentExtraFields | undefined;
   /** 계산기에서 편집 위젯이 사라진 §89② 권리 예외 값 (P6-a). */
   rights?: ImportedRightsSlice;
   /** 계산기에서 편집 위젯이 사라진 ③ 특례 값 (P6-b). */
   specials?: ImportedSpecialsSlice;
+  /** §156의2⑤ 게이트 — ④(`calcReplacementHouseApplies`)와 같은 값을 호출부가 넘긴다(OH-05). */
+  replacementHouseApplies?: boolean;
 }) {
   const rRows = rights ? rightsRows(rights) : [];
-  const sRows = specials ? specialsRows(specials) : [];
+  const sRows = specials ? specialsRows(specials, replacementHouseApplies) : [];
   /**
    * 🔑 **둘 중 하나만 있어도 렌더한다.** P6 이전에 저장한 이력은 `importedOneHouseFacts`가
    *    없는데 권리 값은 갖고 있다 — `facts`만 보고 숨기면 그 값이 세액을 바꾸는 채로
