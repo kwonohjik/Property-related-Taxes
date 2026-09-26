@@ -185,6 +185,16 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "capital_increase":
       if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
+      // 3-A — 「상증령」§29②1호 가목 산식의 **분자·분모 양쪽**에 들어가는 수량이다
+      //   (「… + (신주 1주당 인수가액 × **증자에 의하여 증가한 주식수**)] ÷ (증자전의 발행주식
+      //    총수 + **증자에 의하여 증가한 주식수**)」). 비면 ㉯가 증자전 평가가액 그대로가 되어
+      //   1주당 이익이 부풀고 **과다과세**가 된다(실측 33,330,000 → 50,000,000).
+      if (parseAmount(form.ciIssuedShares) <= 0) return "증자 주식수를 입력하세요";
+      // 3-A — 같은 호 나목 「신주 1주당 인수가액」. ㉯의 분자이자 차감항이라 비면 2배가 된다
+      //   (실측 33,330,000 → 66,660,000). 고가에서는 반대로 0원 + 거짓 제외사유가 된다.
+      // ⚠️ **0은 막지 않는다** — 무상 배정은 법령상 성립하고 나목에 0을 금하는 문언이 없다.
+      //   `parseAmount`는 ""과 "0"을 모두 0으로 만들므로 **원문자열로** 공란만 가른다.
+      if (form.ciNewPrice.trim() === "") return "신주 1주당 인수가액을 입력하세요";
       // 🔴 IG-016: 엔진에서 1주당 이익에 곱해지는 유일한 수량이다
       // (`capital-increase.ts` — `base = perShareGain > 0 ? safeMultiply(perShareGain, forfeitedShares) : 0`).
       // 비면 증여재산가액이 0이 되면서 「증자 후 1주가가 인수가 이하 — 이익 없음」이라는,
@@ -194,7 +204,24 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // 1-A — 고가는 **전 subType**이 §29②3·4·5호 비율 가중이므로 분모가 필수다.
       //   가목(`forfeited_realloc`)이 빠져 있던 탓에 분모 미입력이 조용히 가중 1.0으로 통과했다.
       if (form.ciDirection === "high") {
-        if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
+        const denom = parseAmount(form.ciRatioDenomShares);
+        if (denom <= 0) return "분모 신주수를 입력하세요";
+        // 3-B — 분모만 필수화돼 있어 **분자**가 비면 엔진이 `?? 0`으로 0을 곱해 증여재산가액이
+        //   0이 되고, 그러면서 「이익이 기준금액 미만」이라는 **사실과 다른** 사유가 붙었다
+        //   (실측: 법정 60,003,000 → 0). IG-016이 이미 같은 실패 형태를 근거로 형제 칸을
+        //   필수화해 놓고 같은 산식의 분자에는 적용하지 않았다.
+        const numer = parseAmount(form.ciRelatedAcquiredShares);
+        if (numer <= 0) return "특수관계인이 인수한 신주수를 입력하세요";
+        // 3-B — 분수의 분자가 분모를 넘으면 가중이 1을 초과해 **증폭**이 된다. 세 호 전부
+        //   「… 인수한 신주수 ÷ (그 신주수를 포함하는 총수)」 형태라 분자 ≤ 분모가 법문상 자명하다.
+        if (numer > denom) return "특수관계인이 인수한 신주수가 분모 신주수를 초과합니다";
+        // 3-B — **나목 한정** 하한. §29②4호의 분모는 「증자전의 지분비율대로 균등하게 증자하는
+        //   경우의 증자 주식총수」라 실권주 소멸분을 포함하므로 실제 증가주식수 **이상**이다.
+        //   ⚠️ 다·라목(§29②5호)에 걸면 안 된다 — 그 분모는 「주주가 아닌 자에게 배정된 신주 및
+        //      … 초과하여 인수한 신주의 총수」로 증가주식수의 **부분집합**이라 더 작은 것이 정상이다
+        //      (anchor `[CI-HIGH-TPE]`가 denom 40,000 < issued 50,000을 법정 정답으로 고정한다).
+        if (form.ciSubType === "no_realloc" && denom < parseAmount(form.ciIssuedShares))
+          return "분모(균등증자 가정 증자 주식총수)는 증자 주식수보다 작을 수 없습니다";
       }
       // 저가 나목 §29②2호 다목 — 세 인자 중 하나만 비어도 엔진이 종전(가중 없음) 동작으로
       //   되돌아가 **과다과세**가 되므로, 부분 입력을 통과시키지 않는다.
@@ -212,7 +239,16 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           return "증자 후 신주인수자 보유주식수가 발행주식총수를 초과할 수 없습니다";
       }
       // 상장 ON인데 평균액 미입력이면 엔진이 조용히 이론값으로 통과한다(§29②1가·3나 단서 미발동)
-      if (form.ciIsListed && parseAmount(form.ciListedMarketAvg) <= 0)
+      // 3-D — 다만 **공모 배정**은 「상증법」§39① 괄호로 적용 자체가 제외되므로 이 칸이 세액에
+      //   닿지 않는다(실측: 1·8,000·999,999,999 어느 값을 넣어도 0원). 요구를 단서가 실제로
+      //   발동하는 경우로 좁힌다 — ⑫도 같은 술어로 맞춘다(3중 일치).
+      //   ⚠️ 간주모집(`deemed_public_offering` · 「상증령」§29③)은 **제외가 취소**되어 과세되므로
+      //      종전대로 요구한다. 두 값을 한 덩어리로 묶으면 과소과세가 된다.
+      if (
+        form.ciIsListed &&
+        form.ciAllocationMethod !== "public_offering" &&
+        parseAmount(form.ciListedMarketAvg) <= 0
+      )
         return "증자 후 1주당 평가가액(평가기준일 전후 2개월 종가평균)을 입력하세요";
       break;
     case "capital_increase_allocation": {
@@ -294,6 +330,17 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         for (const [i, p] of form.conParties.entries()) {
           if (parseAmount(p.shares) <= 0)
             return `${i + 1}번째 ${form.conCaseType === "high" ? "수증자" : "증여자"}의 주식수를 입력하세요`;
+          // 3-E — 관계는 §53 증여재산공제 구분이자 §47② 동일인 합산 단위다. 비워 두면
+          //   **차단되지 않은 채** 이관에서 조용히 빠진다:
+          //   · 저가 — `gift-deemed-prefill.ts`가 `relation` 없는 행을 `simultaneousGifts`에서
+          //     **필터로 버린다**. 동일인(부·모) 2명 roster 실측 2,909,418 → 969,418
+          //     (**−1,940,000 과소과세**). 첫 행에 관계가 있으면 마법사 ⑧도 막지 않는다.
+          //   · 고가 — 선택된 수증자의 관계가 비면 `donor: ""`로 이관돼 마법사 ⑧이 막는다.
+          //     화면을 두 번 거친 뒤 막히는 것보다 입력 단계에서 막는 것이 맞다.
+          //   ⚠️ 종전 `gift-deemed-prefill.ts:138` 주석은 「⑧이 이미 빈 값을 막는다」고 적었으나
+          //      그 규칙은 §45의4 주주 roster(`:562`)의 것이고 이 roster에는 없었다 — 주석 정정 동반.
+          if (!p.relation)
+            return `${i + 1}번째 ${form.conCaseType === "high" ? "수증자" : "증여자"}의 관계를 선택하세요`;
         }
         // 합계 주식수 > 기준 주식수 차단
         const sumShares = form.conParties.reduce((acc, p) => acc + parseAmount(p.shares), 0);
@@ -307,9 +354,23 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.csConvPreShares) <= 0) return "전환 시점 증자 전 발행주식총수를 입력하세요";
       if (parseAmount(form.csIssuePrePrice) <= 0) return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.csIssuePreShares) <= 0) return "발행 시점 증자 전 발행주식총수를 입력하세요";
-      if (form.csConvIsListed && parseAmount(form.csConvListedMarketAvg) <= 0)
+      // 3-A 대칭 — 전환주식은 「전환 시점 이익 − 발행 시점 이익」이라 한 시점만 비어도 결과가 뒤집힌다.
+      if (parseAmount(form.csConvIssuedShares) <= 0) return "전환 시점 증자 주식수를 입력하세요";
+      if (parseAmount(form.csIssueIssuedShares) <= 0) return "발행 시점 증자 주식수를 입력하세요";
+      if (form.csConvNewPrice.trim() === "") return "전환 시점 신주 1주당 인수가액을 입력하세요";
+      if (form.csIssueNewPrice.trim() === "") return "발행 시점 신주 1주당 인수가액을 입력하세요";
+      // 3-D 대칭 — 공모 배정이면 종가평균이 세액에 닿지 않는다(§39① 괄호로 적용 제외).
+      if (
+        form.csConvIsListed &&
+        form.csConvAllocationMethod !== "public_offering" &&
+        parseAmount(form.csConvListedMarketAvg) <= 0
+      )
         return "전환 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
-      if (form.csIssueIsListed && parseAmount(form.csIssueListedMarketAvg) <= 0)
+      if (
+        form.csIssueIsListed &&
+        form.csIssueAllocationMethod !== "public_offering" &&
+        parseAmount(form.csIssueListedMarketAvg) <= 0
+      )
         return "발행 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
       // 🔴 IG-018: 고가발행 + (제3자 직접배정·초과배정) 경로에서 «분모 신주수»는 엔진이
       // `denom > 0 ? safeMultiplyThenDivide(...) : 0`으로 읽는다 — 0이면 조용히 0을 낸다.
@@ -320,6 +381,15 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           return "전환 시점 분모 신주수를 입력하세요";
         if (parseAmount(form.csIssueRatioDenomShares) <= 0)
           return "발행 시점 분모 신주수를 입력하세요";
+        // 3-B 대칭 — 분자가 비면 그 시점 이익이 0이 되어 「전환 − 발행」 차가 통째로 틀어진다.
+        if (parseAmount(form.csConvRelatedAcquiredShares) <= 0)
+          return "전환 시점 특수관계인이 인수한 신주수를 입력하세요";
+        if (parseAmount(form.csIssueRelatedAcquiredShares) <= 0)
+          return "발행 시점 특수관계인이 인수한 신주수를 입력하세요";
+        if (parseAmount(form.csConvRelatedAcquiredShares) > parseAmount(form.csConvRatioDenomShares))
+          return "전환 시점 특수관계인이 인수한 신주수가 분모 신주수를 초과합니다";
+        if (parseAmount(form.csIssueRelatedAcquiredShares) > parseAmount(form.csIssueRatioDenomShares))
+          return "발행 시점 특수관계인이 인수한 신주수가 분모 신주수를 초과합니다";
       }
       break;
     case "acquisition_fund_presumption":

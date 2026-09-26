@@ -175,17 +175,25 @@ const mergerSchema = z.object({
 const capitalIncreaseShape = {
   direction: z.enum(["low", "high"]).optional(),
   subType: z.enum(["forfeited_realloc", "third_party", "excess", "no_realloc"]).optional(),
+  // 🔢 **주식수 필드에만 `.int()`를 건다.** 「상증령」§29② 각 호 산식이 「발행주식총수」·
+  //   「증가한 주식수」·「실권주수」를 분모·분자로 쓰므로 소수는 성립하지 않는다.
+  //   소수가 들어오면 `computeWeightedPerShare`의 `BigInt(Math.floor(denom))`이 0n이 되어
+  //   **RangeError → HTTP 500**이 났다(400이어야 할 입력 오류). 분모가 0과 1 사이면 예외 대신
+  //   `1/denom` 배 **증폭**이 된다(denom 0.5 → 정확히 2배, 0.1 → 10배, 상한 없음).
+  // 🚫 **가액 필드에는 걸지 말 것** — 「상증법」§63①1호 가목의 「최종 시세가액의 **평균액**」은
+  //   본래 소수다. `preIssuePrice`·`newSharePrice`·`listedMarketAvg`가 그 자리다.
   preIssuePrice: z.number().nonnegative(),
-  preIssueShares: z.number().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
+  preIssueShares: z.number().int().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
   newSharePrice: z.number().nonnegative(),
-  issuedShares: z.number().nonnegative(),
-  forfeitedShares: z.number().nonnegative(),
-  relatedAcquiredShares: z.number().nonnegative().optional(),
-  ratioDenomShares: z.number().nonnegative().optional(),
+  // 3-A — ㉯ 산식의 분자·분모 양쪽에 들어가므로 0이면 증자가 아니다(⑧과 대칭).
+  issuedShares: z.number().int().positive({ message: "증자 주식수는 0보다 커야 합니다" }),
+  forfeitedShares: z.number().int().nonnegative(),
+  relatedAcquiredShares: z.number().int().nonnegative().optional(),
+  ratioDenomShares: z.number().int().nonnegative().optional(),
   // 증여일(§29①) — 행위시법 판정 전용. route는 parsed.data를 그대로 넘기므로 여기서 Date가 된다.
   giftDate: z.coerce.date().optional(),
   // §29②2호 가목 「증자전의 지분비율대로 균등하게 증자하는 경우의 증가주식수」 — 저가 나목 ㉯ 기준 수량
-  equalIssueShares: z.number().nonnegative().optional(),
+  equalIssueShares: z.number().int().nonnegative().optional(),
   // §29②2호 다목 「증자후 신주인수자의 지분비율」 — 저가 나목 전용. 분모는 파생하지 않고 받는다.
   postIssueSubscriberRatio: z
     .object({ numer: z.number().nonnegative(), denom: z.number().positive() })
@@ -200,16 +208,73 @@ const capitalIncreaseShape = {
   // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 증여세 납세의무자가 아니다(전환주식 2시점도 이 shape 재사용)
   doneeIsForProfitCorp: z.boolean().optional(),
 } as const;
-const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
-const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
+/**
+ * §39 증자 축 공통 교차검증 — ⑧(`gift-deemed-validate.ts`)과 **같은 규칙**을 ⑫에도 건다.
+ * 한쪽만 고치면 다른 쪽이 남는다(직접 API 호출은 ⑧을 거치지 않는다).
+ */
+function refineCapitalIncrease(
+  val: {
+    direction?: "low" | "high";
+    subType?: "forfeited_realloc" | "third_party" | "excess" | "no_realloc";
+    issuedShares: number;
+    relatedAcquiredShares?: number;
+    ratioDenomShares?: number;
+    isListed?: boolean;
+    listedMarketAvg?: number;
+    allocationMethod?: "normal" | "public_offering" | "deemed_public_offering";
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const numer = val.relatedAcquiredShares;
+  const denom = val.ratioDenomShares;
+  // 3-B — 분자 ≤ 분모. 세 호 전부 「… 인수한 신주수 ÷ (그 신주수를 포함하는 총수)」 형태라
+  //   분자가 분모를 넘으면 가중이 1을 초과해 증폭이 된다.
+  if (numer != null && denom != null && denom > 0 && numer > denom) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["relatedAcquiredShares"],
+      message: "특수관계인이 인수한 신주수가 분모 신주수를 초과할 수 없습니다",
+    });
+  }
+  // 3-B — **나목 한정** 하한. §29②4호 분모는 균등증자 가정 총수라 실제 증가주식수 이상이다.
+  //   ⚠️ 다·라목(§29②5호) 분모는 증가주식수의 부분집합이므로 걸면 안 된다.
+  if (val.direction === "high" && val.subType === "no_realloc" && denom != null && denom > 0 && denom < val.issuedShares) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ratioDenomShares"],
+      message: "분모(균등증자 가정 증자 주식총수)는 증자 주식수보다 작을 수 없습니다",
+    });
+  }
+  // 3-C·3-D — 상장이면 「상증령」§29②1가·3나 단서의 종가평균이 필요하다. 없으면 엔진이
+  //   조용히 이론값으로 간다(`applyListedPerShareBound`가 `avg <= 0`이면 그대로 통과).
+  //   ⚠️ 공모 배정만 예외다 — §39① 괄호로 적용 자체가 제외돼 이 값이 세액에 닿지 않는다.
+  //      간주모집(§29③)은 제외가 취소되어 과세되므로 예외가 아니다.
+  if (
+    val.isListed === true &&
+    val.allocationMethod !== "public_offering" &&
+    (val.listedMarketAvg == null || val.listedMarketAvg <= 0)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["listedMarketAvg"],
+      message: "주권상장법인등은 증자 후 1주당 평가가액(전후 2개월 종가평균)이 필요합니다",
+    });
+  }
+}
+
+const capitalIncreaseSchema = z
+  .object({ type: z.literal("capital_increase"), ...capitalIncreaseShape })
+  .superRefine(refineCapitalIncrease);
+// 전환주식(§39①3호)의 2시점이 이 스키마를 재사용한다 — 같은 교차검증이 두 시점에 그대로 걸린다.
+const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape).superRefine(refineCapitalIncrease);
 // §39 cap-table 다수증자·다증여자 (equity-delta)
 const capShareholderSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
-  preShares: z.number().nonnegative(),
-  entitledShares: z.number().nonnegative(),
-  subscribedShares: z.number().nonnegative(),
-  reallocatedShares: z.number().nonnegative().optional(),
+  preShares: z.number().int().nonnegative(),
+  entitledShares: z.number().int().nonnegative(),
+  subscribedShares: z.number().int().nonnegative(),
+  reallocatedShares: z.number().int().nonnegative().optional(),
   relatedTo: z.array(z.string()).optional(),
   // 행별 §39① 공모 제외 — 한 증자에 공모 배정과 특정 배정이 섞일 수 있다
   allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
@@ -243,11 +308,27 @@ const capitalIncreaseAllocationSchema = z
       }
     });
   });
-const convertibleStockSchema = z.object({
-  type: z.literal("convertible_stock"),
-  atConversion: capitalIncreaseInnerSchema,
-  atIssuance: capitalIncreaseInnerSchema,
-});
+const convertibleStockSchema = z
+  .object({
+    type: z.literal("convertible_stock"),
+    atConversion: capitalIncreaseInnerSchema,
+    atIssuance: capitalIncreaseInnerSchema,
+  })
+  // 3-C — 「상증법」§39①3호는 **가목(저가)과 나목(고가)을 택일**한다. 두 시점은 같은 전환주식
+  //   한 건의 전후이므로 발행이 저가인데 전환이 고가일 수 없다. 종전에는 두 시점의 `direction`이
+  //   서로 독립이라 가목+나목 혼합이 그대로 통과했다(⑤는 `csDirection` 한 칸이라 UI로는 못
+  //   만들지만, 직접 API 호출은 ⑧을 거치지 않는다).
+  .superRefine((val, ctx) => {
+    const a = val.atConversion.direction;
+    const b = val.atIssuance.direction;
+    if (a != null && b != null && a !== b) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["atIssuance", "direction"],
+        message: "전환주식은 두 시점의 발행유형(저가/고가)이 같아야 합니다 (§39①3호 가목·나목 택일)",
+      });
+    }
+  });
 const capitalDecreaseShareholderSchema = z.object({
   id: z.string(),
   name: z.string(),

@@ -135,7 +135,10 @@ export function buildGiftWizardPrefill(
       const restBreakdowns = result.contributionBreakdown.slice(1);
 
       // 🚫 되메움 금지 — 종전 `?? "other_relative"`는 관계 미지정을 「기타친족」으로 조용히 확정했다.
-      //    roster 경로는 ⑧(`gift-deemed-validate.ts` 「관계를 선택하세요」)이 이미 빈 값을 막는다.
+      //    roster 경로는 ⑧(`gift-deemed-validate.ts` case "contribution" 「관계를 선택하세요」)이
+      //    빈 값을 막는다. ⚠️ 그 규칙은 **3단계(2026-09-26)에서 신설**됐다 — 종전 주석은 §45의4
+      //    주주 roster(같은 파일 `:562`)의 규칙을 §39의3 roster의 것으로 잘못 인용하고 있었고,
+      //    실제로는 아래 필터가 관계 없는 행을 **조용히 버렸다**(실측 −1,940,000 과소과세).
       const known = (r?: GiftDonorRelation) => (r ? r : undefined);
       const mainDonor = known(mainBreakdown.relation);
 

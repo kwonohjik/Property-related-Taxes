@@ -62,8 +62,11 @@ describe("§39 증자 비율 인자 — ⑧ 부분 입력 차단", () => {
   });
 
   it("[V-HIGH-GA-DENOM] 고가 **가목**도 분모가 필수다 — 종전엔 가목만 빠져 있었다", () => {
-    const high = { ciDirection: "high", ciSubType: "forfeited_realloc" } as const;
-    expect(validateDeemedInput(base({ ...high, ciRatioDenomShares: "" }))).not.toBeNull();
+    // 🔄 3단계(2026-09-26)로 **분자**도 필수가 됐다. 분자를 비워 두면 이 anchor가 재는 축(분모)이
+    //    아니라 분자 규칙에 먼저 걸려, 「분모를 채워도 통과하지 않는다」는 엉뚱한 실패가 난다.
+    //    ⇒ 분자를 픽스처에 채워 **분모 축의 구별력을 보존**한다(메시지까지 단언해 못 박는다).
+    const high = { ciDirection: "high", ciSubType: "forfeited_realloc", ciRelatedAcquiredShares: "20000" } as const;
+    expect(validateDeemedInput(base({ ...high, ciRatioDenomShares: "" }))).toBe("분모 신주수를 입력하세요");
     expect(validateDeemedInput(base({ ...high, ciRatioDenomShares: "30000" }))).toBeNull();
   });
 
