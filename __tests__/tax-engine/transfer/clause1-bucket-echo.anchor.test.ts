@@ -137,8 +137,13 @@ describe("§104①1호 버킷 echo (C-3a / 2b-1)", () => {
       land("L", 200_000_000),
     ]);
     expect(groupOf(r, "progressive")!.assetIds).toEqual(["C", "L"]);
-    expect(r.clause1BucketTaxBase).toBe(386_000_000);
-    expect(r.clause1BucketTax).toBe(128_460_000);
+    // C: 2010-06-01 → 2024-06-01(응당일) = §95④ 초일 산입으로 만 14년 → 표1 28%
+    //    (holding-period-first-day-inclusion.anchor. 종전 초일불산입은 13년·26% → 386,000,000)
+    // L: 2015-01-01 → 9년 → 18%
+    // 300,000,000 × 72% + 200,000,000 × 82% = 216,000,000 + 164,000,000 = 380,000,000
+    // 380,000,000 × 40% − 25,940,000 = 126,060,000
+    expect(r.clause1BucketTaxBase).toBe(380_000_000);
+    expect(r.clause1BucketTax).toBe(126_060_000);
     expect(r.clause8TaxBase).toBe(0); // 8호로는 잡히지 않는다
   });
 

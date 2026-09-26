@@ -14,7 +14,8 @@
  * 추가 회귀 anchor:
  *  - 35-2  1주택 케이스 (wasMultiHouseAtConversion=false) → 당초 취득일 기산 14년 → 표1 28%
  *  - 35-3  다주택 + 변경일~양도일 만 5년 → 표1 10%
- *  - 35-5  경계값: 변경일 +3년 0일 → 6% / 변경일 +3년 -1일 → 0%
+ *  - 35-5  경계값: 변경일 +3년 −1일(만료일) → 6% / 변경일 +3년 −2일 → 0%
+ *          (A1a 초일 산입 — 종전 「+3년 0일 → 0% / +3년 +1일 → 6%」는 초일·말일 불산입 기준)
  *  - 35-7  변경일 무시 보장: 1주택 케이스 + conversionDate 입력 → 당초 취득일 기산
  */
 
@@ -125,14 +126,19 @@ describe("사례 35-3: 배제 자산 + 변경일~양도일 만 5년 = 10%", () =
   });
 });
 
-describe("사례 35-5: 경계값 — 변경일 +3년 0일 = 6% 진입", () => {
+describe("사례 35-5: 경계값 — 변경일 +3년 −1일(만료일) = 6% 진입", () => {
   // ⚠️ 2026-08-11 날짜 정정 — 종전 2017-06-01은 LTHD 가능기(2012.1.1~2018.3.31)라 기산일이
   //    옮겨지지 않는다(0161). 보유연수 경계라는 의도만 지키고 배제기(2019-06-01)로 옮겼다.
-  it("conversionDate=2019-06-01, transferDate=2022-06-02 → 표1 6%", () => {
+  // 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 경계가 이틀 당겨졌다. §95④ 「취득일부터 양도일까지」는
+  //    초일을 산입하므로 3년은 기산일 응당일의 **전날**(2022-05-31)에 만료한다(민법 §160②).
+  //    종전 쌍(2022-06-02 → 6% / 2022-06-01 → 0%)은 초일·말일을 모두 빼던 구현의 경계였다.
+  //    경계쌍의 구별력을 유지하려고 양쪽을 새 경계(05-31 / 05-30)로 옮겼다.
+  //    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+  it("conversionDate=2019-06-01, transferDate=2022-05-31 → 만 3년(초일 산입) → 표1 6%", () => {
     const input: TransferTaxInput = baseTransferInput({
       propertyType: "building",
       transferPrice: 500_000_000,
-      transferDate: new Date("2022-06-02"),
+      transferDate: new Date("2022-05-31"),
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2010-01-01"),
       expenses: 0,
@@ -147,11 +153,11 @@ describe("사례 35-5: 경계값 — 변경일 +3년 0일 = 6% 진입", () => {
     expect(result.longTermHoldingRate).toBe(0.06);
   });
 
-  it("conversionDate=2019-06-01, transferDate=2022-06-01 → 만 2년 → 0%", () => {
+  it("conversionDate=2019-06-01, transferDate=2022-05-30 → 만 2년 → 0%", () => {
     const input: TransferTaxInput = baseTransferInput({
       propertyType: "building",
       transferPrice: 500_000_000,
-      transferDate: new Date("2022-06-01"),
+      transferDate: new Date("2022-05-30"),
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2010-01-01"),
       expenses: 0,
@@ -190,9 +196,12 @@ describe("사례 35-7: 변경일 무시 보장 — 1주택 케이스", () => {
       wasMultiHouseAtConversion: false,        // 1주택 → conversionDate 무시
     });
     const result = calculateTransferTax(input, RATES);
-    // 2010-01-01 ~ 2022-01-01: 초일불산입(민법 §157) → 2010-01-02 ~ 2022-01-01 = 만 11년 → 표1 22%
+    // 2010-01-01 ~ 2022-01-01: §95④ 초일 산입 → 만 12년 → 표1 24%
+    //   🔁 A1a — 종전 주석 「초일불산입(민법 §157) → 만 11년 → 22%」를 반전. §95④는 기간 계산의
+    //      특별규정이라 민법 §157이 배제된다(재산46014-205). anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`
+    //   (conversionDate 2021-12-31을 기산일로 썼다면 0%이므로 이 축의 구별력은 유지된다.)
     expect(result.lthdStartDate.getTime()).toBe(input.acquisitionDate.getTime());
-    expect(result.longTermHoldingRate).toBe(0.22);
+    expect(result.longTermHoldingRate).toBe(0.24);
   });
 });
 

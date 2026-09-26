@@ -221,24 +221,25 @@ describe("safeMultiplyThenDivide", () => {
 });
 
 // ============================================================
-// calculateHoldingPeriod — 세법상 보유기간 (민법 초일불산입)
+// calculateHoldingPeriod — 세법상 보유기간 (소득세법 §95④ 초일 산입)
+// 정본 anchor: __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts
 // ============================================================
 
 describe("calculateHoldingPeriod", () => {
-  it("취득일 다음날부터 기산: 2021-01-31 취득 → 2024-01-31 양도 = 3년 0월 0일", () => {
+  it("초일 산입: 2021-01-31 취득 → 2024-01-31(응당일) 양도 = 3년", () => {
     const acq = new Date("2021-01-31");
     const disp = new Date("2024-01-31");
-    // 기산일: 2021-02-01 ~ 2024-01-31 = 2년 364일 → 정확히 3년? 아니면 2년?
-    // 2021-02-01 + 3년 = 2024-02-01 > 2024-01-31 → 2년
-    // 실제: 2021-02-01 ~ 2024-01-31 = 2년 11개월 30일
+    // 기산일 = 취득일 2021-01-31(초일 산입). 3년은 응당일 전날 2024-01-30에 만료(민법 §160②)
+    // ⇒ 응당일 양도는 3년 0월 1일. (종전 초일불산입 구현은 2년으로 셌다 — HP-FD-3)
     const result = calculateHoldingPeriod(acq, disp);
-    expect(result.years).toBe(2);
+    expect(result.years).toBe(3);
   });
 
-  it("정확히 2년 보유: 2022-04-01 취득 → 2024-04-02 양도", () => {
-    // 기산일: 2022-04-02 ~ 2024-04-02 = 정확히 2년
+  it("정확히 2년 보유: 2022-04-01 취득 → 2024-03-31 양도", () => {
+    // 기산일 2022-04-01(초일 산입) ~ 2024-03-31(응당일 전날·만료일) = 정확히 2년 (HP-FD-6)
+    // 종전 초일불산입 기준의 「정확히 2년」은 2024-04-02였다.
     const acq = new Date("2022-04-01");
-    const disp = new Date("2024-04-02");
+    const disp = new Date("2024-03-31");
     const result = calculateHoldingPeriod(acq, disp);
     expect(result.years).toBe(2);
     expect(result.months).toBe(0);
@@ -261,12 +262,13 @@ describe("calculateHoldingPeriod", () => {
     expect(result.months).toBeGreaterThanOrEqual(5);
   });
 
-  it("양도일과 취득일이 같으면 0년 0월 0일 반환 (음수 방어)", () => {
+  it("양도일과 취득일이 같으면 0년 0월 1일 반환 (초일 산입 — 음수 방어)", () => {
+    // 초일 산입: [취득일, 양도일] 구간에 그 하루가 포함된다 ⇒ 1일
     const date = new Date("2024-01-01");
     const result = calculateHoldingPeriod(date, date);
     expect(result.years).toBe(0);
     expect(result.months).toBe(0);
-    expect(result.days).toBe(0);
+    expect(result.days).toBe(1);
   });
 });
 

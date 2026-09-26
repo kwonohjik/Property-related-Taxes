@@ -40,6 +40,7 @@ import {
   STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
+import { isHeldUnderOneYear } from "./stock-transfer-helpers";
 import { isStockCarryoverEra } from "../data/carryover-scope-era";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { accrueLotCarryoverExpense, resolveLotAcquisitionPrice } from "./stock-carryover";
@@ -116,7 +117,7 @@ interface RemainingAcqLot extends AcquisitionLot {
  * 실제 메인 엔진에서 sub-lot taxBase 안분 후 다시 계산해야 정확 — 본 echo는 참조용.
  *
  * @param perLotGain 양수 또는 음수 (양도손실 시 음수)
- * @param isShortTerm < 365일
+ * @param isShortTerm 1년 미만 보유(§104② 초일 산입 — `isHeldUnderOneYear`)
  * @param taxCategory 비대주주는 단일 세율
  * @param isMajorAndNonSME 대주주+비SME 게이트
  * @param isSME 중소기업 (비대주주 분기에서 단일 세율 결정용)
@@ -288,7 +289,7 @@ function matchSpecific(
     acq.remaining -= m.shareCount;
     allocatedByTrn.set(trn.id ?? "", (allocatedByTrn.get(trn.id ?? "") ?? 0) + m.shareCount);
     const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
-    const isShortTerm = holdingDays < 365;
+    const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
     // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
     const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
     accrue(carryover, acq, m.shareCount, trn.transferDate); // ①2호·①3호
@@ -394,7 +395,7 @@ function matchFifo(
       remainingSaleShares -= matchedShares;
 
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
-      const isShortTerm = holdingDays < 365;
+      const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
       // §97의2①1호 — 이월과세 lot 승계(1년 요건은 **매도 시점** 기준)
       const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
       accrue(carryover, acq, matchedShares, trn.transferDate); // ①2호·①3호
@@ -512,7 +513,7 @@ function matchMovingAvg(
       remainingSaleShares -= matchedShares;
 
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
-      const isShortTerm = holdingDays < 365;
+      const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
       /**
        * ①2호·①3호는 **FIFO 물량 트랙**을 따른다 — 「어느 증여분 주식을 팔았나」의 문제이지
        * 단가 평균과는 무관하다. 보유기간(§104②)을 FIFO lot으로 잡는 것과 같은 기준이다.

@@ -73,8 +73,12 @@ describe("A-12 — 🔑 세액으로 잰다 (payload 단언이 아니라 mutatio
     const withExp = run({ capitalExpenditure: 30_000_000, transferExpense: 10_000_000 });
     // 종전에는 이 두 값이 **같았다**(비용 미도달). 그것이 P-3이다.
     expect(withExp.aggregated.calculatedTax).toBeLessThan(without.aggregated.calculatedTax);
-    expect(without.aggregated.calculatedTax).toBe(133_060_000);
-    expect(withExp.aggregated.calculatedTax).toBe(120_260_000);
+    // 2015-03-01 → 2026-03-01 = 11년(초일 산입 — 소득세법 §95④, holding-period-first-day-inclusion
+    // .anchor.test.ts) ⇒ 표1 22%. 종전 구현은 10년 20%로 셌다(옛 133,060,000 · 120,260,000 · Δ 12,800,000).
+    //   without: 500,000,000 × 78% − 2,500,000 = 387,500,000 × 40% − 25,940,000
+    //   withExp: 460,000,000 × 78% − 2,500,000 = 356,300,000 × 40% − 25,940,000  (Δ 12,480,000)
+    expect(without.aggregated.calculatedTax).toBe(129_060_000);
+    expect(withExp.aggregated.calculatedTax).toBe(116_580_000);
   });
 });
 

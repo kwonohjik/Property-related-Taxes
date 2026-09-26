@@ -9,6 +9,7 @@
  *    사전-2022-법규재산-0427이 「보유기간 = 취득일~양도일」을 명시한다. 이 leaf의 현재
  *    소비처는 **§95⑤ 경로뿐**이다(`transfer-tax-lthd.ts` — 그쪽은 법이 기간을 나눈다).
  */
+import { addDays } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
 
 export interface UsagePeriodInfo {
@@ -22,9 +23,9 @@ export interface UsagePeriodInfo {
   t1Years: number;
   /** Period 2 보유연수 (365.25 기준, 시간비례 안분용) */
   t2Years: number;
-  /** Period 1 완성 보유연수 (초일불산입·calendar, LTHD 율 산정용) */
+  /** Period 1 완성 보유연수 (취득일 ~ 용도변경일 **전날**, §95④ 초일 산입·calendar, LTHD 율 산정용) */
   t1HoldingYears: number;
-  /** Period 2 완성 보유연수 (초일불산입·calendar, LTHD 율 산정용) */
+  /** Period 2 완성 보유연수 (용도변경일 ~ 양도일, §95⑥ 「사용한 날부터 기산」, LTHD 율 산정용) */
   t2HoldingYears: number;
 }
 
@@ -54,8 +55,11 @@ export function calcUsagePeriodInfo(
     totalDays,
     t1Years: t1Days / 365.25,
     t2Years: t2Days / 365.25,
-    // LTHD 율은 §95② 완성연수 기준 — 분수(t1Years/t2Years)가 아닌 초일불산입 calendar 연수 사용.
-    t1HoldingYears: calculateHoldingPeriod(acquisitionDate, usageChangeDate).years,
+    // LTHD 율은 §95② 완성연수 기준 — 분수(t1Years/t2Years)가 아닌 calendar 연수 사용.
+    // §95⑥ 주택 보유기간은 「사실상 주거용으로 사용한 날부터 기산」 ⇒ 용도변경일은 주택 구간(t2)에
+    // 속하고, 비주택 구간(t1)은 그 전날까지다. `calculateHoldingPeriod`는 양 끝 포함(§95④ 초일 산입)이라
+    // 용도변경일을 t1 끝으로 넘기면 그날이 두 구간에 이중 산입된다.
+    t1HoldingYears: calculateHoldingPeriod(acquisitionDate, addDays(usageChangeDate, -1)).years,
     t2HoldingYears: calculateHoldingPeriod(usageChangeDate, transferDate).years,
   };
 }

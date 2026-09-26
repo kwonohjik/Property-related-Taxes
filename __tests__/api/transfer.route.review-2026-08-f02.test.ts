@@ -12,6 +12,11 @@
  * 안전망이 없었다: 리뷰 시점에 다건 route를 import하는 테스트가 0건이었다.
  *
  * 기대값은 전부 **엔진을 실제 호출해 관측한 값**이다(산식 추론 아님).
+ *
+ * 📌 보유기간 **초일 산입**(소득세법 §95④ — `holding-period-first-day-inclusion.anchor.test.ts`):
+ *    2015-06-01 → 2025-06-01(응당일) = 10년, 장특 20% ⇒ 4억 − 8,000만 − 250만 = 317,500,000
+ *    × 40% − 누진공제 25,940,000 = 101,060,000. 종전(초일·말일 불산입) 구현은 9년(18%)으로 세어
+ *    104,260,000이었다.
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -86,9 +91,9 @@ describe("[F02] 다건 매매사례가액 추계 — ⑬→⑭ 도달", () => {
     // 양도가 10억 − 매매사례가액 6억 = 양도차익 4억.
     // ⑭ 매핑이 빠지면 취득가액 0 → 양도차익 10억(관측값 1,000,000,000)이 된다.
     expect(data.totalTransferGain).toBe(400_000_000);
-    expect(data.determinedTax).toBe(104_260_000);
-    expect(data.localIncomeTax).toBe(10_426_000);
-    expect(data.totalTax).toBe(114_686_000);
+    expect(data.determinedTax).toBe(101_060_000);
+    expect(data.localIncomeTax).toBe(10_106_000);
+    expect(data.totalTax).toBe(111_166_000);
   });
 
   it("F02-3: 동일 취득가액을 실지거래가(actual)로 넣은 대조군과 세액이 일치한다", async () => {
@@ -112,7 +117,7 @@ describe("[F02] 다건 매매사례가액 추계 — ⑬→⑭ 도달", () => {
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.totalTransferGain).toBe(400_000_000);
-    expect(data.determinedTax).toBe(104_260_000);
-    expect(data.totalTax).toBe(114_686_000);
+    expect(data.determinedTax).toBe(101_060_000);
+    expect(data.totalTax).toBe(111_166_000);
   });
 });

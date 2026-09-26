@@ -272,9 +272,11 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
      * 건물은 `valuation.buildingAcquisitionDate`가 정본이다(영 §162①4호).
      * 장기보유특별공제(법 §95④)는 자산별 보유기간으로 계산되므로 두 파트가 갈려야 한다.
      *
-     * ⚠️ 절대 공제**율**은 단언하지 않는다 — 이 엔진의 연수 산정은 (실제 연수 − 1)로 나오는데
-     *    그것은 **단건 경로와 동일한 기존 동작**이라 이 작업의 검증 대상이 아니다(GBF-10 주석).
-     *    대신 **같은 양도차익에서 LTHD만 갈리는지**로 판정한다.
+     * ⚠️ 절대 공제**율**은 단언하지 않는다 — 대신 **같은 양도차익에서 LTHD만 갈리는지**로 판정한다.
+     *    (종전 주석은 「엔진 연수 산정이 (실제 연수 − 1)」이라 적었다 — 초일·말일 불산입 구현의
+     *    응당일 양도 과소 계산이었고, 소득세법 §95④ 초일 산입으로 정정됐다:
+     *    `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+     *    2015-03-01 → 2024-03-01 = 9년 18%, 2005-03-01 → = 19년 30%(한도).)
      */
     const A_SPLIT = {
       ...SHARE_A,
@@ -293,8 +295,9 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
 
     it("대조군(분리 OFF) — 토지·건물 LTHD가 같다", async () => {
       const r = await call(fractionalBody([A_OFF, SHARE_B]));
-      expect(prop(r, "land#0")?.longTermHoldingDeduction).toBe(23_712_000);
-      expect(prop(r, "building#0")?.longTermHoldingDeduction).toBe(23_712_000);
+      // 148,200,000 × 18%(9년)
+      expect(prop(r, "land#0")?.longTermHoldingDeduction).toBe(26_676_000);
+      expect(prop(r, "building#0")?.longTermHoldingDeduction).toBe(26_676_000);
     });
 
     it("분리 ON — 양도차익은 같은데 토지 LTHD만 커진다", async () => {
@@ -302,8 +305,8 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
       // 양도차익이 동일해야 「LTHD 차이 = 날짜 차이」가 성립한다
       expect(prop(r, "land#0")?.transferGain).toBe(148_200_000);
       expect(prop(r, "building#0")?.transferGain).toBe(148_200_000);
-      expect(prop(r, "land#0")?.longTermHoldingDeduction).toBe(44_460_000);
-      expect(prop(r, "building#0")?.longTermHoldingDeduction).toBe(23_712_000);
+      expect(prop(r, "land#0")?.longTermHoldingDeduction).toBe(44_460_000); // × 30%(19년, 한도)
+      expect(prop(r, "building#0")?.longTermHoldingDeduction).toBe(26_676_000); // × 18%(9년)
     });
 
     it("🔑 지분 A의 분리가 지분 B로 새지 않는다", async () => {
@@ -315,7 +318,8 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
       expect(prop(on, "building#1")?.longTermHoldingDeduction).toBe(
         prop(off, "building#1")?.longTermHoldingDeduction,
       );
-      expect(prop(on, "land#1")?.longTermHoldingDeduction).toBe(7_712_000);
+      // 지분 B 토지 48,200,000 × 18%(2015-03-01 → 2024-03-01 = 9년)
+      expect(prop(on, "land#1")?.longTermHoldingDeduction).toBe(8_676_000);
     });
   });
 
@@ -523,10 +527,13 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
         expect(prop(on, "land#1")?.carryoverTaxationDetail?.adoptedScenario).toBe("A");
       });
 
-      it("보유기간 기산이 증여자 취득일(2005)로 당겨진다 — LTHD 0 → 38,400,000", async () => {
+      it("보유기간 기산이 증여자 취득일(2005)로 당겨진다 — LTHD 2,892,000 → 38,400,000", async () => {
         const off = await call(fractionalBody([SHARE_A, shareB("2021-03-01", false)]));
         const on = await call(fractionalBody([SHARE_A, shareB("2021-03-01", true)]));
-        expect(prop(off, "land#1")?.longTermHoldingDeduction).toBe(0);
+        // off: 2021-03-01 → 2024-03-01 = 3년(초일 산입, 소득세법 §95④) ⇒ 48,200,000 × 6%.
+        //      종전 구현은 2년11개월 0%로 셌다.
+        // on : 2005-06-15 → 18년 ⇒ 128,000,000 × 30%(한도)
+        expect(prop(off, "land#1")?.longTermHoldingDeduction).toBe(2_892_000);
         expect(prop(on, "land#1")?.longTermHoldingDeduction).toBe(38_400_000);
       });
 

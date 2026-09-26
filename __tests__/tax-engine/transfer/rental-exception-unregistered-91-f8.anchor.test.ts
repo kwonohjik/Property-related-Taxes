@@ -73,10 +73,13 @@ describe("F-8 §155⑳ × 미등기 (§91①)", () => {
     expect(r.totalTax).toBe(231_000_000);
   });
 
-  it("F8-3 긍정 짝: 등기면 특례 적용 — 15억 부분과세 4,009,500 · 10억 비과세 0", () => {
+  it("F8-3 긍정 짝: 등기면 특례 적용 — 15억 부분과세 3,481,500 · 10억 비과세 0", () => {
+    // 2014-06-01 → 2024-06-01(응당일) = §95④ 초일 산입으로 만 10년 → 표2 보유 40% + 거주 5년 20%
+    //   (종전 초일불산입은 9년·56% → 4,009,500). 80,000,000 × 40% − 2,500,000 = 29,500,000
+    //   × 15% − 1,260,000 = 3,165,000 + 지방소득세 316,500 = 3,481,500
     const r15 = run({ price: 1_500_000_000, acq: 1_100_000_000, unregistered: false, special: true });
     expect(r15.rentalHousingExceptionDetail?.applied).toBe(true);
-    expect(r15.totalTax).toBe(4_009_500);
+    expect(r15.totalTax).toBe(3_481_500);
     const r10 = run({ price: 1_000_000_000, acq: 700_000_000, unregistered: false, special: true });
     expect(r10.isExempt).toBe(true);
     expect(r10.totalTax).toBe(0);

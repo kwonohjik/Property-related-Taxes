@@ -47,15 +47,26 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 const TRANSFER_DATE = "2024-03-01";
 
-/** F17-A와 **같은 물건**을 쓴다 — 기준세액이 이미 실측·고정돼 있어 대조가 쉽다. */
-const BASE_TAX_ACTUAL = 204_930_000;
-const BASE_TAX_ESTIMATED = 115_332_000;
+/**
+ * F17-A와 **같은 물건**을 쓴다 — 기준세액이 이미 실측·고정돼 있어 대조가 쉽다.
+ *
+ * 📌 취득 2009-03-01 → 양도 2024-03-01(응당일)은 보유기간 **초일 산입**(소득세법 §95④ —
+ *    `holding-period-first-day-inclusion.anchor.test.ts`)으로 15년 = 장특 30%다.
+ *    실가: 양도차익 8억 − 장특 2.4억 − 기본공제 250만 = 과세표준 5.575억 → 42% − 누진공제 3,594만.
+ *    환산: 양도차익 4.94억 − 장특 1.482억 − 250만 = 3.433억 → 40% − 누진공제 2,594만.
+ *    종전(초일·말일 불산입) 구현은 14년(28%)으로 세어 204,930,000 · 115,332,000이었다.
+ */
+const BASE_TAX_ACTUAL = 198_210_000;
+const BASE_TAX_ESTIMATED = 111_380_000;
 
-/** 당초 결정세액을 기준세액보다 낮게 잡아 **추가납부 본세가 양수**가 되게 한다. */
-const ORIGINAL_ACTUAL = 200_000_000;
+/**
+ * 당초 결정세액을 기준세액보다 낮게 잡아 **추가납부 본세가 양수**가 되게 한다.
+ * (실가 당초세액은 종전 200,000,000이었으나 기준세액이 198,210,000으로 내려가 음수가 되므로 낮췄다.)
+ */
+const ORIGINAL_ACTUAL = 195_000_000;
 const ORIGINAL_ESTIMATED = 110_000_000;
-const ADDITIONAL_ACTUAL = BASE_TAX_ACTUAL - ORIGINAL_ACTUAL; // 4,930,000
-const ADDITIONAL_ESTIMATED = BASE_TAX_ESTIMATED - ORIGINAL_ESTIMATED; // 5,332,000
+const ADDITIONAL_ACTUAL = BASE_TAX_ACTUAL - ORIGINAL_ACTUAL; // 3,210,000
+const ADDITIONAL_ESTIMATED = BASE_TAX_ESTIMATED - ORIGINAL_ESTIMATED; // 1,380,000
 
 /** 가산세는 끈다 — 이 anchor가 재는 것은 **배관 도달**이지 가산세 산식이 아니다. */
 function amendment(originalDeterminedTax: number, over: object = {}) {

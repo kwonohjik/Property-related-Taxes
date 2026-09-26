@@ -122,8 +122,10 @@ describe("audit confirmed[1]: 분양권 2년+ 는 short_term(단일세율) 그�
 // confirmed[28] — 감면 배분 말단 잔액 흡수 (표시 자기일관성)
 // ============================================================
 describe("audit confirmed[28]: 같은 유형 감면 다자산 배분 합 === cappedAggregateReduction (말단 잔액 흡수)", () => {
-  // 자경농지 2필지(편입 없음 → 전액 감면). 보유 → LTHD 10%(엔진 실측).
-  //   토지1 차익 3억 → 소득 270,000,000, 토지2 차익 6억 → 소득 540,000,000 (비율 정확히 1:2).
+  // 자경농지 2필지(편입 없음 → 전액 감면). 보유 6년 → LTHD 12%.
+  //   (2018-06-01 → 2024-06-01은 초일 산입(소득세법 §95④ — holding-period-first-day-inclusion
+  //    .anchor.test.ts)으로 만 6년. 종전 구현은 5년 11개월 10%로 셌다 — 옛 소득 270M·540M.)
+  //   토지1 차익 3억 → 소득 264,000,000, 토지2 차익 6억 → 소득 528,000,000 (비율 정확히 1:2).
   //   reducibleIncome(전액) = 소득. 합산 산출세액 기준 원시 감면 > 1억 → §133 자경 1억 한도로 cap.
   const farmland = (
     id: string,
@@ -148,8 +150,8 @@ describe("audit confirmed[28]: 같은 유형 감면 다자산 배분 합 === cap
     taxYear: 2024,
     annualBasicDeductionUsed: 0,
     properties: [
-      farmland("F1", 500_000_000, 200_000_000), // 차익 3억 → 소득 270,000,000
-      farmland("F2", 800_000_000, 200_000_000), // 차익 6억 → 소득 540,000,000
+      farmland("F1", 500_000_000, 200_000_000), // 차익 3억 → 소득 264,000,000
+      farmland("F2", 800_000_000, 200_000_000), // 차익 6억 → 소득 528,000,000
     ],
   };
 
@@ -159,8 +161,8 @@ describe("audit confirmed[28]: 같은 유형 감면 다자산 배분 합 === cap
     const f2 = r.properties.find((p) => p.propertyId === "F2")!;
     expect(f1.reductionType).toBe("self_farming");
     expect(f2.reductionType).toBe("self_farming");
-    expect(f1.reducibleIncome).toBe(270_000_000);
-    expect(f2.reducibleIncome).toBe(540_000_000);
+    expect(f1.reducibleIncome).toBe(264_000_000);
+    expect(f2.reducibleIncome).toBe(528_000_000);
     // 감면대상 소득 비율 정확히 1:2 (배분 floor 드리프트를 발생시키는 조건)
     expect(f2.reducibleIncome).toBe(f1.reducibleIncome * 2);
   });

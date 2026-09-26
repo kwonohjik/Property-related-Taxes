@@ -30,6 +30,7 @@ import {
   MULTI_HOUSE_LTHD_EXCLUSION_LIFTED,
   MULTI_HOUSE_LTHD_EXCLUSION_RESTORED,
 } from "@/lib/tax-engine/data/lthd-multi-house-exclusion-era";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 interface Props {
   asset: AssetForm;
@@ -80,13 +81,9 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     const start = new Date(startISO);
     const end = new Date(transferDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-    // 만 보유연수 (초일불산입 — 민법 §157, calculateHoldingPeriod 동일 로직)
-    const startPlusOne = new Date(start);
-    startPlusOne.setDate(startPlusOne.getDate() + 1);
-    let years = end.getFullYear() - startPlusOne.getFullYear();
-    const m = end.getMonth() - startPlusOne.getMonth();
-    if (m < 0 || (m === 0 && end.getDate() < startPlusOne.getDate())) years -= 1;
-    years = Math.max(0, years);
+    // 만 보유연수 — 엔진과 같은 함수(§95④ 초일 산입). 화면에서 산식을 재구현하면 엔진이 바뀔 때
+    // 미리보기만 옛 규칙으로 남아 표시 공제율과 세액이 갈린다.
+    const { years } = calculateHoldingPeriod(start, end);
     const isUnder3Years = years < 3;
     const rate = isUnder3Years ? 0 : Math.min(years * 2, 30);
     return {

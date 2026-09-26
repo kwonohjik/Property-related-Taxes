@@ -23,7 +23,7 @@
  * (`resolveExemptionHoldingStartDate` 등). 기산일 규칙을 여기서 다시 쓰지 않는다 —
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
-import { addYears } from "date-fns";
+import { addDays, addYears } from "date-fns";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
   resolveInheritedHouseExclusionFromInput,
@@ -92,9 +92,17 @@ function holdingIsTheOnlyUnmetRequirement(input: OneHouseJudgeInput, rule: OneHo
   return !meetsOneHouseHoldingResidence(input, rule, residenceExempt);
 }
 
-/** §154① 보유요건 충족 예정일 — 정본 기산일 + 최소 보유연수. */
+/**
+ * §154① 보유요건 충족 예정일 — `calculateHoldingPeriod`(§95④ 초일 산입)로 최소 보유연수가 되는
+ * **가장 이른 양도일**. N년은 기산일 응당일의 전날 만료(민법 §160②)라 기본값은 그 전날이고,
+ * 응당일이 없는 달(2/29 기산)은 §160③ 월말이 만료일이라 판정 함수로 하루를 보정한다.
+ */
 function holdingDeadline(input: OneHouseJudgeInput, rule: OneHouseRule): Date {
-  return addYears(resolveExemptionHoldingStartDate(input), rule.minHoldingYears);
+  const start = resolveExemptionHoldingStartDate(input);
+  const candidate = addDays(addYears(start, rule.minHoldingYears), -1);
+  return calculateHoldingPeriod(start, candidate).years >= rule.minHoldingYears
+    ? candidate
+    : addDays(candidate, 1);
 }
 
 /**

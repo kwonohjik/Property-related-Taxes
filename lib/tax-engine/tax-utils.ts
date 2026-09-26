@@ -260,8 +260,15 @@ export function calculateProration(
 // ============================================================
 
 /**
- * 세법상 보유기간 계산 (민법 초일불산입 원칙)
- * 기산일: 취득일 다음날 ~ 양도일 (양도일 포함)
+ * 세법상 보유기간 계산 — 소득세법 §95④ 「자산의 취득일부터 양도일까지」
+ *
+ * §95④는 기간 계산의 특별규정이므로 **초일(취득일)을 산입**한다(민법 §157 초일불산입 배제 —
+ * 재산46014-205, 국심1994경6005, 집행기준 89-154-20). N년은 취득일 응당일의 전날에 만료하고
+ * (민법 §160②), 만료연도에 해당일이 없으면 그 달 말일(§160③)이다.
+ * ⇒ 취득일·양도일을 모두 포함한 구간 [취득일, 양도일]의 완성 기간 = 취득일 ~ (양도일+1일).
+ *
+ * ⚠️ 「~한 날부터 N년 이상이 지난 후」「N년 이내」 같은 요건 기간은 초일불산입이라 이 함수로
+ *    판정하면 안 된다(docs/00-pm/one-house-exemption-fix.plan.md §1 유형 A·B).
  *
  * @returns { years, months, days } — 연·월·일 분리 (장기보유공제에는 years만 사용)
  */
@@ -269,16 +276,16 @@ export function calculateHoldingPeriod(
   acquisitionDate: Date,
   disposalDate: Date,
 ): { years: number; months: number; days: number } {
-  // 민법 초일불산입: 취득일 다음날부터 기산
-  const start = addDays(acquisitionDate, 1);
+  // 초일 산입: 양도일까지 포함한 구간의 끝(양도일 다음날)과 취득일의 차이
+  const end = addDays(disposalDate, 1);
 
-  const years = differenceInYears(disposalDate, start);
-  const afterYears = addYears(start, years);
+  const years = differenceInYears(end, acquisitionDate);
+  const afterYears = addYears(acquisitionDate, years);
 
-  const months = differenceInMonths(disposalDate, afterYears);
+  const months = differenceInMonths(end, afterYears);
   const afterMonths = addMonths(afterYears, months);
 
-  const days = differenceInDays(disposalDate, afterMonths);
+  const days = differenceInDays(end, afterMonths);
 
   return { years: Math.max(0, years), months: Math.max(0, months), days: Math.max(0, days) };
 }

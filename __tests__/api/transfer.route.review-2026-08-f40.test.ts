@@ -14,6 +14,10 @@
  *                                  (총 결정세액 280,857,200 · `expropriationValuationDetail` 없음)
  * 수정 후 실측:                     컴패니언 양도차익 327,333,334 · 결정세액  82,597,066
  *                                  (총 결정세액 189,017,200 · 산출근거 detail 노출)
+ * 🔁 A1a(보유기간 초일 산입, 2026-09-26) 이후 — 2010-06-01 → 2020-06-01이 응당일 양도라
+ *    §95④ 초일 산입으로 **10년**(종전 구현 9년) ⇒ 장특 18% → 20%. 위 두 줄의 결정세액은
+ *    각각 164,680,000(총 273,118,000) · 80,109,333(총 183,518,001)이 된다. 양도차익은 불변.
+ *    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
  *
  * ## 법령 근거 — 컴패니언에도 미친다
  *
@@ -53,13 +57,16 @@ import { companionAssetSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { buildAssetPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 
-// ─── 고정 수치 (엔진 실측값 — 산식 추론 아님) ────────────────────
+// ─── 고정 수치 (엔진 실측값 — 아래 산식으로 교차 확인) ────────────────────
+// 🔁 A1a — 장특 20%(10년). 자산별 결정세액은 2020년 누진표로 기본공제 없이 매겨진다:
+//   특례 미적용 594,000,000 × 80% = 475,200,000 × 40% − 25,400,000 = 164,680,000 (종전 169,432,000)
+//   특례 적용   327,333,334 − floor(× 20%) = 261,866,668 × 38% − 19,400,000 = 80,109,333 (종전 82,597,066)
 /** 특례 **미적용** 대조군 양도차익 — 양도시 기준시가 5억이 환산 분모 */
 const GAIN_NO_SPECIAL = 594_000_000;
 /** 특례 **적용** 양도차익 — min[2,500,000·1,500,000·2,000,000] × 200㎡ = 3억이 분모 */
 const GAIN_WITH_SPECIAL = 327_333_334;
-const TAX_NO_SPECIAL = 169_432_000;
-const TAX_WITH_SPECIAL = 82_597_066;
+const TAX_NO_SPECIAL = 164_680_000;
+const TAX_WITH_SPECIAL = 80_109_333;
 
 /** 1호(협의매수·수용) 원/㎡ 3후보 */
 const EXPR_CLAUSE1 = {
@@ -170,7 +177,8 @@ describe("F40 — 컴패니언 §164⑨ 특례 배관 (④ transferCause emit + 
       denominator: 300_000_000,
     });
 
-    expect(json.data.aggregated.determinedTax).toBe(189_017_200); // 수정 전 280,857,200
+    // (261,866,668 × 2 − 2,500,000) × 42% − 35,400,000 = 183,518,001 (A1a 전 189,017,200)
+    expect(json.data.aggregated.determinedTax).toBe(183_518_001); // 수정 전 273,118,000
   });
 
   it("F40-2: ④ buildAssetPayload가 1호 게이트 `transferCause`를 싣는다", () => {

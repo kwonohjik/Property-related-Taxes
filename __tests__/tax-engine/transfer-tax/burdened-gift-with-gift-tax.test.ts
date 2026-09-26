@@ -99,9 +99,13 @@ describe("P3-1 — 직계비속 부담부증여 + 신고기한 내", () => {
     expect(gt.finalTax).toBe(77_600_000);
   });
 
-  it("양도세는 변동 없음 — 케이스 4 회귀 보존 (산출세액 45,458,000)", () => {
+  it("양도세는 변동 없음 — 케이스 4 회귀 보존 (산출세액 43,615,000)", () => {
     const result = calculateTransferTax(input, rates);
-    expect(result.calculatedTax).toBe(45_458_000);
+    // 케이스 4(burdened-gift-housing.test.ts)와 같은 산식: 양도차익 242,500,000 × 장특 30%
+    // (2009-03-01 → 2024-03-01, §95④ 초일 산입 15년 — holding-period-first-day-inclusion.anchor.test.ts)
+    // → 과세표준 167,250,000 × 38% − 19,940,000 = 43,615,000.
+    // 종전(초일·말일 불산입) 구현은 14년·28%로 45,458,000이었다.
+    expect(result.calculatedTax).toBe(43_615_000);
   });
 });
 
@@ -321,7 +325,7 @@ describe("P3-5 — 10년 이내 사전증여 합산 (§47②·§58)", () => {
     expect(gt.finalTax).toBe(111_550_000);
     // 자기일관성: computedTax − priorGiftCredit − filingCredit === finalTax
     expect(gt.computedTax - gt.priorGiftCredit! - gt.filingCredit).toBe(gt.finalTax);
-    // 양도세는 변동 없음 (사전증여는 증여세에만 영향)
-    expect(result.calculatedTax).toBe(45_458_000);
+    // 양도세는 변동 없음 (사전증여는 증여세에만 영향) — P3-1과 동일 43,615,000
+    expect(result.calculatedTax).toBe(43_615_000);
   });
 });

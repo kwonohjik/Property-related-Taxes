@@ -130,12 +130,15 @@ describe("S2: housing 1세대1주택 + 실거래가 + 실제 분리 입력", () 
     expect(result!.building.directExpenses).toBe(15_000_000);
   });
 
-  it("calcSplitGain: 토지 > 건물 보유연수 (민법 초일불산입 기준)", () => {
+  it("calcSplitGain: 토지 > 건물 보유연수 (§95④ 초일 산입 기준)", () => {
     const result = calcSplitGain(input);
-    // 토지: 2014.6.2.부터 2024.6.1. → 9년 11개월 → 9년
-    // 건물: 2016.6.2.부터 2024.6.1. → 7년 11개월 → 7년
-    expect(result!.land.holdingYears).toBe(9);
-    expect(result!.building.holdingYears).toBe(7);
+    // §95④ 「취득일부터 양도일까지」 초일 산입 — N년은 응당일 전날 만료(민법 §160②).
+    // 정본 anchor: __tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts
+    // 토지: 2014.6.1.부터 2024.6.1. → 10년 만료일 2024.5.31. 경과 → 10년
+    // 건물: 2016.6.1.부터 2024.6.1. → 8년 만료일 2024.5.31. 경과 → 8년
+    // (종전 초일·말일 불산입 구현은 9년/7년으로 셌다 — A1a에서 반전)
+    expect(result!.land.holdingYears).toBe(10);
+    expect(result!.building.holdingYears).toBe(8);
     expect(result!.land.holdingYears).toBeGreaterThan(result!.building.holdingYears);
   });
 
@@ -202,23 +205,33 @@ describe("S3: building 일반건물 + 환산취득가", () => {
     expect(result!.apportionRatio!.building).toBeCloseTo(0.25, 5);
   });
 
-  it("calcSplitGain: 토지 > 건물 보유연수 (민법 초일불산입 기준)", () => {
+  it("calcSplitGain: 토지 > 건물 보유연수 (§95④ 초일 산입 기준)", () => {
     const result = calcSplitGain(input);
-    // 토지: 2012.6.2. ~ 2024.6.1. → 11년 11개월 → 11년
-    // 건물: 2019.6.2. ~ 2024.6.1. → 4년 11개월 → 4년
-    expect(result!.land.holdingYears).toBe(11);
-    expect(result!.building.holdingYears).toBe(4);
+    // §95④ 초일 산입(정본 anchor: holding-period-first-day-inclusion.anchor.test.ts)
+    // 토지: 2012.6.1. ~ 2024.6.1. → 12년 만료일 2024.5.31. 경과 → 12년
+    // 건물: 2019.6.1. ~ 2024.6.1. → 5년 만료일 2024.5.31. 경과 → 5년
+    // (종전 초일·말일 불산입 구현은 11년/4년으로 셌다 — A1a에서 반전)
+    expect(result!.land.holdingYears).toBe(12);
+    expect(result!.building.holdingYears).toBe(5);
   });
 
-  it("calculateTransferTax: splitDetail.land.longTermDeduction > splitDetail.building", () => {
+  it("calculateTransferTax: splitDetail 파트별 장특공제 = 파트 양도차익 × 파트 보유연수 공제율", () => {
     const result = calculateTransferTax(input, mockRates);
     expect(result.splitDetail).toBeDefined();
-    // 토지 11년 × 2% = 22%, 건물 4년 × 2% = 8%
-    expect(result.splitDetail!.land.longTermRate).toBeCloseTo(0.22, 5);
-    expect(result.splitDetail!.building.longTermRate).toBeCloseTo(0.08, 5);
-    expect(result.splitDetail!.land.longTermDeduction).toBeGreaterThan(
-      result.splitDetail!.building.longTermDeduction,
-    );
+    // 토지 12년 × 2% = 24%, 건물 5년 × 2% = 10%
+    expect(result.splitDetail!.land.longTermRate).toBeCloseTo(0.24, 5);
+    expect(result.splitDetail!.building.longTermRate).toBeCloseTo(0.10, 5);
+    // 파트 양도차익(손 도출):
+    //   토지 = 1,200,000,000(양도 0.6) − 1,000,000,000(×600/720 환산) − 18,000,000(600M×3%) = 182,000,000
+    //   건물 =   800,000,000(양도 0.4) −   333,333,333(×200/480 환산) −  6,000,000(200M×3%) = 460,666,667
+    // 공제 = floor(차익 × 율) → 토지 43,680,000 · 건물 46,066,666.
+    // ⚠️ 종전 단언 「토지 공제 > 건물 공제」는 율(22%/8%) 조합의 우연이었다(40,040,000 > 36,853,333).
+    //    초일 산입으로 건물율이 10%가 되자 대소가 뒤집혔다 — 차익이 건물 쪽이 2.5배라 대소는
+    //    이 픽스처의 불변식이 아니다. 파트별 율이 파트별 차익에 곱해진다는 축을 정확값으로 고정한다.
+    expect(result.splitDetail!.land.gain).toBe(182_000_000);
+    expect(result.splitDetail!.building.gain).toBe(460_666_667);
+    expect(result.splitDetail!.land.longTermDeduction).toBe(43_680_000);
+    expect(result.splitDetail!.building.longTermDeduction).toBe(46_066_666);
   });
 });
 
@@ -316,8 +329,9 @@ describe("S5: landAcquisitionDate 미제공 → 기존 단일 로직 회귀", ()
     // landAcquisitionDate 없으므로 기존 경로 사용
     // 양도차익 = 800M - 400M - 10M = 390M
     expect(resultSingle.transferGain).toBe(390_000_000);
-    // 2주택 + 비조정 → L-4 일반: 보유 5년 11개월 → 5년 × 2% = 10%
-    // (2018.6.2. ~ 2024.6.1. = 5년 11개월 → years=5)
-    expect(resultSingle.longTermHoldingRate).toBeCloseTo(0.10, 5);
+    // 2주택 + 비조정 → L-4 일반: 보유 6년 × 2% = 12%
+    // (§95④ 초일 산입: 2018.6.1. ~ 2024.6.1. → 6년 만료일 2024.5.31. 경과 → years=6.
+    //  종전 초일·말일 불산입 구현은 5년 11개월로 셌다 — A1a에서 반전)
+    expect(resultSingle.longTermHoldingRate).toBeCloseTo(0.12, 5);
   });
 });

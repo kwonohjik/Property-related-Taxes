@@ -177,15 +177,20 @@ describe("GB × 지분 분할 — Pre-Do anchor", () => {
      *    2026-08-10 실측값이다. 지분 축 구현이 이 값을 **원 단위로도 바꾸면 안 된다**는 뜻일 뿐,
      *    이 숫자가 법령상 정답이라는 주장이 아니다.
      *    (메모리 교훈: 골든 anchor는 스스로 「정본 아님」을 적어야 한다.)
+     *
+     * 📌 보유기간 **초일 산입**(소득세법 §95④ — `holding-period-first-day-inclusion.anchor.test.ts`):
+     *    2009-03-01 → 2024-03-01(응당일) = 15년, 장특 30%. 양도차익 4.94억 − 1.482억 − 250만
+     *    = 3.433억 × 40% − 2,594만 = 111,380,000(지방소득세 포함 122,518,000). 종전(초일·말일
+     *    불산입) 구현은 14년·28%로 115,332,000 / 126,865,200이었다.
      */
-    it("현행 단건 경로가 2파트·determinedTax 115,332,000을 낸다", async () => {
+    it("현행 단건 경로가 2파트·determinedTax 111,380,000을 낸다", async () => {
       const r = await call(SINGLE_BODY);
       expect(r.status).toBe(200);
       expect(r.mode).toBe("bundled");
       expect(r.hasGbDetail).toBe(true);
       expect(r.apportioned.map((a) => a.assetId)).toEqual(["land", "building"]);
-      expect(r.determinedTax).toBe(115_332_000);
-      expect(r.totalTax).toBe(126_865_200);
+      expect(r.determinedTax).toBe(111_380_000);
+      expect(r.totalTax).toBe(122_518_000);
     });
 
     it("§166⑥ 안분비 50:50 — 픽스처 자체 검증", async () => {

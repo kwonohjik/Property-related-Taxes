@@ -47,13 +47,17 @@ function cb(
 }
 
 describe("상업용건물 §164⑨ 1호 공익수용 특례 (D16-CB)", () => {
+  // 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 2010-06-01 → 2020-06-01 = 초일 산입 10년(종전 9년)
+  //    ⇒ 장특 18% → 20%. 산출세액 81,107,066 → 78,619,333(양도차익 불변). 제목의 86,784,934는
+  //    D16-CB 당시(9년 기준) 과다액 기록이다. anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
   it("C-02 수용+환산 → min[] 적용, 세액 86,784,934원 해소", () => {
     const r = calculateTransferTax(cb(), rates);
     // 양도시 호별총액 = min[2,500,000·1,500,000·2,000,000] × 200㎡ = 300,000,000 (현행 500,000,000)
     // 환산취득가 = floor(10억 × 취득기준시가 2억 / 3억) = 666,666,666 (현행 400,000,000)
     // 양도차익 = 10억 − 666,666,666 − 개산공제 = 327,333,334 (현행 594,000,000)
     expect(r.transferGain).toBe(327_333_334);
-    expect(r.calculatedTax).toBe(81_107_066);
+    // 327,333,334 − floor(× 20%) 65,466,666 − 2,500,000 = 259,366,668 × 38% − 19,940,000
+    expect(r.calculatedTax).toBe(78_619_333);
     expect(r.expropriationValuationDetail?.denominator).toBe(300_000_000);
   });
 

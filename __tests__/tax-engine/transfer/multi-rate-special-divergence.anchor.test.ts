@@ -161,8 +161,13 @@ describe("§98의3(5년 내 100% 감면) — 산출세액만 갈리고 총부담
 
   it("R5: 5년 후 하이브리드(보유 6년)는 장기라 세율 특칙 자체가 무관 — 완전 일치", () => {
     const { single, multi } = bothWays({ ...BASE_983, transferDate: D("2015-12-01") });
-    expect(single.totalTax).toBe(34_028_500);
-    expect(multi.totalTax).toBe(34_028_500);
+    // 🔁 A1a(보유기간 초일 산입, 2026-09-26) — 제목의 「보유 6년」은 초일 산입 기준으로 맞다.
+    //    종전 구현은 2009-12-01 → 2015-12-01을 5년(장특 10%)으로 세어 34,028,500이었다.
+    //    6년 12%: 3억 × 88% = 264,000,000 − 5년간 발생분 132,000,000(= 264,000,000 × 1억/2억)
+    //    − 2,500,000 = 129,500,000 × 35% − 15,440,000 = 29,885,000 + 지방 2,988,500.
+    //    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
+    expect(single.totalTax).toBe(32_873_500);
+    expect(multi.totalTax).toBe(32_873_500);
   });
 });
 

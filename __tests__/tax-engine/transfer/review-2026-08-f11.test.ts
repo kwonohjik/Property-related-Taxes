@@ -25,7 +25,16 @@ import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 
 const rates = makeMockRates();
 
-/** 일괄양도 companion 부수토지 — 양도 5억 / 취득 1억 / 양도일 2024-06-01 */
+/**
+ * 일괄양도 companion 부수토지 — 양도 5억 / 취득 1억 / 양도일 2024-06-01
+ *
+ * ⚠️ 기본 취득일은 **2021-06-03**이다(종전 2021-06-01에서 이틀 이동 — SHIFTED).
+ *   §95④ 보유기간 **초일 산입** 전환(`holding-period-first-day-inclusion.anchor.test.ts`)으로
+ *   2021-06-01 → 2024-06-01(응당일)은 **만 3년**이 되어 표1 6%가 붙는다 — 이 파일 첫 두 케이스가
+ *   지키는 「토지 **3년 미만**이면 주택 축(14년)과 무관하게 표1 미적용」 게이트를 더는 검증하지 못한다.
+ *   초일 산입에서 3년 만료일은 응당일 전날이므로, 2021-06-02 취득도 2024-06-01에 만 3년이다.
+ *   ⇒ 2021-06-03 취득 = 2년 11개월 30일(종전 픽스처와 같은 「2년 11개월」 축).
+ */
 const companionLand = (
   over: Partial<TransferTaxInput>,
   primaryHoldingMonths: number,
@@ -35,7 +44,7 @@ const companionLand = (
     landNature: "appurtenant_to_housing",
     transferPrice: 500_000_000,
     acquisitionPrice: 100_000_000,
-    acquisitionDate: new Date("2021-06-01"),
+    acquisitionDate: new Date("2021-06-03"),
     transferDate: new Date("2024-06-01"),
     isOneHousehold: false,
     householdHousingCount: 3,
@@ -76,10 +85,13 @@ describe("F11 — 부수토지 LTHD 표1·3년 게이트는 토지 자신의 보
       rates,
     );
     // 수정 전: 주택 24개월 < 36 게이트에 걸려 rate 0 · 총세액 146,366,000
-    expect(r.longTermHoldingRate).toBeCloseTo(0.18, 10);
-    expect(r.longTermHoldingDeduction).toBe(72_000_000);
-    expect(r.calculatedTax).toBe(104_260_000);
-    expect(r.totalTax).toBe(114_686_000);
+    // 2014-06-01 → 2024-06-01(응당일) = 초일 산입(§95④)으로 **만 10년** → 표1 20%
+    // (종전 초일불산입 구현은 9년·18%로 셌다 — holding-period-first-day-inclusion.anchor HP-FD-3)
+    //   400,000,000 × 20% = 80,000,000 → 과세표준 317,500,000 × 40% − 25,940,000 = 101,060,000
+    expect(r.longTermHoldingRate).toBeCloseTo(0.2, 10);
+    expect(r.longTermHoldingDeduction).toBe(80_000_000);
+    expect(r.calculatedTax).toBe(101_060_000);
+    expect(r.totalTax).toBe(111_166_000);
   });
 
   it("🔁 표2 대상이어도 표1(토지 축)이 하한이다 — 기본통칙 95-0…1 (2026-09-02 갱신)", () => {

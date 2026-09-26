@@ -74,8 +74,14 @@ describe("DD-A: 배우자 증여자", () => {
       makeInput({ donorRelation: "spouse", donorDeceased: true }, GIFT_2023),
       MOCK_RATES,
     );
-    // 현행(배제 미구현)은 시나리오 A인 169,060,000을 채택해 89,630,000 과대과세된다.
-    expect(r.determinedTax).toBe(79_430_000);
+    // 현행(배제 미구현)은 시나리오 A인 169,060,000을 채택해 91,910,000 과대과세된다.
+    // 시나리오 B(수증자 증여등기일 2023-06-01 기산 → 2030-05-31): §95④ 초일 산입으로 7년 만료일
+    // 당일이라 보유 7년 → 표1 14%(정본 anchor holding-period-first-day-inclusion.anchor.test.ts).
+    //   차익 300,000,000 − 장특 42,000,000 = 258,000,000 − 기본공제 2,500,000 = 과표 255,500,000
+    //   × 38% − 누진공제 19,940,000 = 77,150,000
+    // (종전 초일·말일 불산입 구현은 6년·12%로 79,430,000이었다 — 계획서
+    //  docs/00-pm/transfer-carryover-donor-death.plan.md:104·176의 수치는 A1a 이전 값)
+    expect(r.determinedTax).toBe(77_150_000);
   });
 
   it("DD-03: A2 이혼(사망 아님) → **적용**된다 [양성 대조군]", () => {

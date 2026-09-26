@@ -28,7 +28,7 @@
  * ── 종전 동작이 만들던 부조리 ──────────────────────────────────────
  * either/or였기 때문에 §95② **단서**(1세대1주택 **혜택** 규정)가 본문 표1보다 **못 받는**
  * 결과를 냈다 — 토지 10년 보유 · 주택 2년 6개월 · 거주 2년이면 표2가 3년 게이트에 걸려
- * **0%**인데, 1세대1주택이 아니었다면 표1로 18%를 받는다.
+ * **0%**인데, 1세대1주택이 아니었다면 표1로 20%를 받는다.
  *
  * ⚠️ **max를 「토지가 더 긴 경우」로 게이트하지 않는다** — 표2 보유분 4%/년 vs 표1 2%/년이라
  *    `landYears <= houseYears`면 표2가 구조적으로 이겨 max가 no-op이다(A-6·A-7이 고정).
@@ -87,15 +87,20 @@ describe("부수토지 LTHD — 표1 ↔ 표2 max (기본통칙 95-0…1)", () =
     expect(r.totalTax).toBe(218_031_000);
   });
 
-  it("A-3: 🔑 부조리 케이스 — 주택 2년 6개월(표2 3년 게이트 미달)인데 토지는 9년 11개월", () => {
+  it("A-3: 🔑 부조리 케이스 — 주택 2년 6개월(표2 3년 게이트 미달)인데 토지는 10년", () => {
     /**
-     * 종전에는 표2 축만 보아 **0%**였다. 1세대1주택이 아니었다면 표1로 18%를 받는 자산이
+     * 종전에는 표2 축만 보아 **0%**였다. 1세대1주택이 아니었다면 표1로 20%를 받는 자산이
      * 「1세대1주택이라서」 공제를 통째로 잃는 구조였다.
+     *
+     * 📌 토지 2014-06-01 → 2024-06-01은 보유기간 초일 산입(소득세법 §95④ —
+     *    `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`)으로 **10년**(표1 20%)이다.
+     *    종전 구현은 9년 11개월 18%로 셌다(옛 기대값 144,000,000 · 262,383,000).
+     *    800,000,000 × 80% − 2,500,000 = 637,500,000 × 42% − 35,940,000 = 231,810,000 × 1.1
      */
     const r = calculateTransferTax(companionLand("2014-06-01", 30, 24), rates);
-    expect(r.longTermHoldingRate).toBe(0.18);
-    expect(r.longTermHoldingDeduction).toBe(144_000_000);
-    expect(r.totalTax).toBe(262_383_000); // 종전 328,911,000
+    expect(r.longTermHoldingRate).toBe(0.2);
+    expect(r.longTermHoldingDeduction).toBe(160_000_000);
+    expect(r.totalTax).toBe(254_991_000); // 종전 328,911,000
   });
 
   it("A-4: 표2가 이기면 표2 그대로 — 토지 15년(표1 30%) · 주택 4년 · 거주 4년 → 32%", () => {
@@ -127,7 +132,10 @@ describe("부수토지 LTHD — 표1 ↔ 표2 max (기본통칙 95-0…1)", () =
         landNature: "appurtenant_to_housing",
         transferPrice: 500_000_000,
         acquisitionPrice: 100_000_000,
-        acquisitionDate: D("2021-06-01"), // 2년 11개월 → 3년 미달
+        // 2년 11개월 30일 → 3년 미달. ⚠️ SHIFTED(2021-06-01 → 06-03): 보유기간 초일 산입(소득세법
+        // §95④ — holding-period-first-day-inclusion.anchor.test.ts)으로 06-01·06-02는 만 3년(6%)이
+        // 되어 「3년 게이트를 토지 축으로 판정한다」는 F11 구별력이 사라진다 — 게이트를 미달로 유지.
+        acquisitionDate: D("2021-06-03"),
         transferDate: D("2024-06-01"),
         isOneHousehold: false,
         householdHousingCount: 3,
@@ -155,8 +163,9 @@ describe("부수토지 LTHD — 산식 표시가 공제율의 출처와 일치�
    */
   it("A-9: 표1이 이기면 표1 형식으로 쓴다 (분해 = 합)", () => {
     const s = lthdStep(calculateTransferTax(companionLand("2004-06-01", 36, 36), rates));
-    expect(s?.formula).toContain("보유 19년×2% = 30% (30% 한도)");
-    expect(s?.formula).toContain("보유기간 19년 11개월"); // 토지 축
+    // 2004-06-01 → 2024-06-01 = 20년 0개월(초일 산입 — 종전 구현은 19년 11개월로 셌다)
+    expect(s?.formula).toContain("보유 20년×2% = 30% (30% 한도)");
+    expect(s?.formula).toContain("보유기간 20년 0개월"); // 토지 축
     expect(s?.formula).not.toContain("거주"); // 표2 형식이 새어 나오면 안 된다
   });
 

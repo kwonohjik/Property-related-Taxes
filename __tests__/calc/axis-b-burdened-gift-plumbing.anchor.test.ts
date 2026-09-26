@@ -149,7 +149,10 @@ describe("축 B × 부담부증여 — 배관", () => {
   it("P-3 축 B 합계 결정세액 = 단건 100%와 **완전 일치**", async () => {
     const single = await run(form([asset(1, "100")]));
     expect(single.status).toBe(200);
-    expect(single.data?.result?.totalTax).toBe(64_600_360);
+    // 차익 291,000,000 × 70%(2009-03-01 → 2024-03-01 = 15년, 초일 산입 — 소득세법 §95④,
+    // holding-period-first-day-inclusion.anchor.test.ts. 종전 14년 28% → 64,600,360)
+    //   − 2,500,000 = 201,200,000 × 38% − 19,940,000 = 56,516,000 × 1.1
+    expect(single.data?.result?.totalTax).toBe(62_167_600);
 
     const axisB = await run(form([asset(1, "60"), asset(2, "40")]));
     expect(axisB.status).toBe(200);
@@ -157,7 +160,7 @@ describe("축 B × 부담부증여 — 배관", () => {
     expect(axisB.data?.aggregated?.properties?.map((p) => p.transferGain)).toEqual([
       174_600_000, 116_400_000,
     ]);
-    expect(axisB.data?.aggregated?.totalTax).toBe(64_600_360);
+    expect(axisB.data?.aggregated?.totalTax).toBe(62_167_600);
   });
 
   it("P-4 🔴 증여세는 **물건 단위 1회** — 카드별로 쪼개지지 않는다", async () => {

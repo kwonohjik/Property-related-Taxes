@@ -33,7 +33,16 @@ const APPURTENANT = {
 };
 
 /**
- * 상가 환산 — 연면적 200㎡, 양도 10억, **2013-06-01** 취득 → 2020-06-01 양도(7년).
+ * 상가 환산 — 연면적 200㎡, 양도 10억, **2013-06-03** 취득 → 2020-06-01 양도(6년 11개월 ⇒ 만 6년).
+ *
+ * 📌 SHIFTED(취득일 2013-06-01 → 2013-06-03): 보유기간 **초일 산입**(소득세법 §95④ —
+ * `holding-period-first-day-inclusion.anchor.test.ts`)으로 2013-06-01 취득은 2020-05-31에 7년이
+ * 만료해 장특 12% → 14%가 된다. 그러면 과세표준이 472,700,000 → 461,900,000으로 내려가
+ * swap + 초과 1/2 조합에서도 §104⑤ 비교과세가 일반세액(158,820,000)을 택해 **+10%p 효과가
+ * 소멸**한다(파트별 합 158,737,000 < 일반 158,820,000) — I-1 「세액만 오른다」가 구별력을 잃는다.
+ * 이 파일의 관심사는 보유기간이 아니라 「STEP 0.35 재구성 후 중과 생존」이므로 종전과 같은
+ * 만 6년(장특 12%)이 되도록 취득일을 이틀 늦췄다(초일 산입에서 6년이 되는 가장 이른 날).
+ * 모든 케이스는 상대 비교라 종전 실측값(swap 단독 163,140,000 · 초과 1/2 163,381,000)을 그대로 재현한다.
  *
  * ⚠️ 취득일이 **2009.3.16~2012.12.31**이면 부칙 §9270호 §14①에 따라 비사업용 +10%p가
  * **배제**된다(`transfer-tax-rate-calc.ts:356` `isCrisisAcqExempt`). 기존 swap·수용 anchor는
@@ -45,7 +54,7 @@ function cb(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
     propertyType: "commercial_building",
     transferPrice: 1_000_000_000,
     transferDate: new Date("2020-06-01"),
-    acquisitionDate: new Date("2013-06-01"),
+    acquisitionDate: new Date("2013-06-03"), // SHIFTED — 위 주석 참조
     acquisitionPrice: 0,
     isOneHousehold: false,
     householdHousingCount: 0,

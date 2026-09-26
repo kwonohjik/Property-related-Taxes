@@ -23,6 +23,12 @@
  *            totalPayable **160,446,000**
  *   수정 후: proviso=undefined · 취득가액 500,000,000 유지 · totalPayable **289,755,577**
  *   ⇒ 129,309,577 과소가 해소된다.
+ *
+ * ⚠️ 위 실측은 보유기간 초일불산입 시절 값이다. §95④ **초일 산입** 전환 후
+ *   (`__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`)에는
+ *   2009-03-01 → 2024-03-01(응당일)이 14년이 아니라 **15년**이라 장특 표1이 28% → **30%**다.
+ *   ⇒ 기대값: 감정 280,576,560 · 환산(단서 발동) 155,166,000 · 실가 14,273,999.
+ *   (F19 게이트 판정 — proviso·취득가액·개산공제 — 은 보유기간과 무관해 그대로다.)
  */
 import { describe, it, expect } from "vitest";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
@@ -94,7 +100,7 @@ describe("F19 — 감정가액·매매사례가액 모드는 §97②2호 단서 
     expect(r.acqTotal).toBe(APPRAISAL_TOTAL);
     // 개산공제(§163⑥) 유지 — 발동 시 900,000,000으로 뒤바뀌었다.
     expect(r.dedTotal).toBe(6_600_000);
-    expect(r.totalPayable).toBe(289_755_577);
+    expect(r.totalPayable).toBe(280_576_560);
   });
 
   it("🔴 자본적지출 + 양도비 조합에서도 미발동 — 세액이 실비 미입력 기준선과 같다", () => {
@@ -103,7 +109,7 @@ describe("F19 — 감정가액·매매사례가액 모드는 §97②2호 단서 
       capitalExpenditure: HUGE_NAMOK,
       transferExpense: 10_000_000,
     });
-    expect(baseline.totalPayable).toBe(289_755_577);
+    expect(baseline.totalPayable).toBe(280_576_560);
     expect(withExpenses.totalPayable).toBe(baseline.totalPayable);
     expect(withExpenses.proviso).toBeUndefined();
     expect(withExpenses.acqTotal).toBe(APPRAISAL_TOTAL);
@@ -112,7 +118,7 @@ describe("F19 — 감정가액·매매사례가액 모드는 §97②2호 단서 
   it("나목이 가목보다 작아도 마찬가지로 비교 자체가 없다(proviso 미기록)", () => {
     const r = appraisal({ capitalExpenditure: 100_000_000 });
     expect(r.proviso).toBeUndefined();
-    expect(r.totalPayable).toBe(289_755_577);
+    expect(r.totalPayable).toBe(280_576_560);
   });
 });
 
@@ -127,7 +133,7 @@ describe("F19 — 게이트가 과잉 차단하지 않는다(대조군)", () => 
     });
     expect(r.acqTotal).toBe(0);
     expect(r.dedTotal).toBe(HUGE_NAMOK);
-    expect(r.totalPayable).toBe(160_446_000);
+    expect(r.totalPayable).toBe(155_166_000);
   });
 
   it("실가(§97①1호가목) 모드는 종전대로 미발동 — 기존 P4 계약 유지", () => {
@@ -140,6 +146,6 @@ describe("F19 — 게이트가 과잉 차단하지 않는다(대조군)", () => 
     // 실가는 §97②**1호** 가산이라 실비가 필요경비에 그대로 더해진다(취득가액도 유지).
     expect(r.acqTotal).toBe(APPRAISAL_TOTAL);
     expect(r.dedTotal).toBe(HUGE_NAMOK);
-    expect(r.totalPayable).toBe(14_915_998);
+    expect(r.totalPayable).toBe(14_273_999);
   });
 });

@@ -111,7 +111,12 @@ describe("F29 · judge·세액까지 전파된다", () => {
     expect(r.gracePeriodDays).toBe(0); // 정정 전 549
   });
 
-  it("F29-6: 세액 — 양도 10억·취득 3억 토지 261,240,000원 (정정 전 204,090,000원)", () => {
+  it("F29-6: 세액 — 양도 10억·취득 3억 토지 253,960,000원 (비사업용 +10%p 중과)", () => {
+    // 2014-01-01 → 2024-01-01(응당일) = §95④ 초일 산입으로 만 10년 → 표1 20%
+    //   (holding-period-first-day-inclusion.anchor HP-FD-3. 종전 초일불산입은 9년·18%)
+    //   700,000,000 × 80% − 2,500,000 = 557,500,000 × (42%+10%p) − 35,940,000 = 253,960,000
+    // 📌 아래 「정정 전 204,090,000」은 F29 정정 당시(초일불산입 9년·18%) 실측이다 —
+    //    같은 시절 정정 후 값은 261,240,000이었다(차 57,150,000 과소).
     const r = calculateTransferTax(
       baseTransferInput({
         propertyType: "land",
@@ -124,7 +129,7 @@ describe("F29 · judge·세액까지 전파된다", () => {
       }),
       makeMockRates(),
     );
-    expect(r.calculatedTax).toBe(261_240_000); // 정정 전 204,090,000 (차 57,150,000 과소)
+    expect(r.calculatedTax).toBe(253_960_000);
     expect(r.surchargeType).toBe("non_business_land");
     expect(r.surchargeRate).toBe(0.1);
   });

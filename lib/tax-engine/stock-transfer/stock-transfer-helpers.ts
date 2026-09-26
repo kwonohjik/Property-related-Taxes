@@ -5,6 +5,7 @@
  */
 
 import { differenceInDays, differenceInMonths } from "date-fns";
+import { calculateHoldingPeriod } from "../tax-utils";
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import type { ClassificationResult } from "./stock-classification";
 import {
@@ -29,6 +30,15 @@ export interface HoldingPeriodResult {
   /** 단기보유 여부 (1년 미만) */
   isShortTerm: boolean;
   appliedRule: string;
+}
+
+/**
+ * §104①11호가목 「1년 미만 보유」 — §104② 「취득일부터 양도일까지」(초일 산입, 부동산 §95④와 같은 문언).
+ * 1년은 기산일 응당일의 전날 만료(민법 §160②·③)라 일수 `< 365`로 판정하면 응당일 전날 양도를
+ * 단기로 오판하고 윤년 구간에서도 하루씩 어긋난다 ⇒ 부동산과 같은 `calculateHoldingPeriod`를 쓴다.
+ */
+export function isHeldUnderOneYear(startDate: Date, transferDate: Date): boolean {
+  return calculateHoldingPeriod(startDate, transferDate).years < 1;
 }
 
 /**
@@ -93,7 +103,7 @@ export function calcHoldingPeriod(input: StockTransferInput): HoldingPeriodResul
 
   const days = differenceInDays(transferDate, startDate);
   const months = differenceInMonths(transferDate, startDate);
-  const isShortTerm = days < 365;
+  const isShortTerm = isHeldUnderOneYear(startDate, transferDate);
 
   return { startDate, months, days, isShortTerm, appliedRule };
 }
