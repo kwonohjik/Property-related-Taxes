@@ -178,11 +178,40 @@ export function calcMixedUseTransferTax(
     asset.householdHousingCountForExclusion !== undefined
       ? Math.max(asset.householdHousingCountForExclusion - houseCountExclusionApplied, 0)
       : undefined;
+  /**
+   * §155 1세대1주택 의제(① 일시적 2주택 · ④⑤ 합가) — 비과세 주택 수 축과 중과 배제(§167의10①15호
+   * ① 요소)가 **같은 정본**(`resolveDeemedOneHouseBy155`)을 한 번 판정해 함께 쓴다(OH-09).
+   *
+   * 🔴 종전에는 이 판정을 중과 배제에만 넘기고, 비과세 주택 수 축은 ④가 만든 `isOneHouseExempt`
+   *    (UI가 사라진 `temporaryTwoHouseSpecial` 토글)를 그대로 믿었다 — 명부에서 §155①이 도출돼도
+   *    겸용 경로만 「다주택 전액 과세」였고, 저장분의 토글 true는 1년·3년 타이밍 없이 비과세를 열었다.
+   *    §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다(단건 E-3과 같은 분담).
+   */
+  const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(
+    {
+      ...exemptionReqInput,
+      isRegulatedArea:
+        asset.multiHouse?.isRegulatedArea ?? asset.surchargeFallback?.isRegulatedArea ?? false,
+      isOneHousehold: asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false,
+      temporaryTwoHouse: asset.temporaryTwoHouse,
+      // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
+      //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
+      // `householdHousingCount`는 §155④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
+      //   단건 E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함)이다.
+      householdHousingCount: asset.householdHousingCountForExclusion ?? 0,
+      ruralHouse: undefined,
+      marriageMerge: asset.multiHouse?.marriageMerge,
+      parentalCareMerge: asset.multiHouse?.parentalCareMerge,
+      isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
+    },
+    oneHouseSpecialRules,
+  );
   // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
+  // §155 의제가 성립하면 「1세대1주택으로 보아」 주택 수 축이 충족된다(OH-09).
   const houseCountOk =
-    effectiveHouseCount !== undefined && houseCountExclusionApplied > 0
+    (effectiveHouseCount !== undefined && houseCountExclusionApplied > 0
       ? effectiveHouseCount <= 1
-      : (asset.isOneHouseExempt ?? true);
+      : (asset.isOneHouseExempt ?? true)) || deemedOneHouseBy155 !== undefined;
   if (houseCountExclusionApplied > 0) {
     warnings.push(
       `주택 수 제외 ${houseCountExclusionApplied}채 적용 — 세대 보유 ${asset.householdHousingCountForExclusion}채에서 ` +
@@ -191,7 +220,7 @@ export function calcMixedUseTransferTax(
     );
   }
   const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered;
-  if ((asset.isOneHouseExempt ?? true) && !meetsOneHouseRequirements) {
+  if (houseCountOk && !meetsOneHouseRequirements) {
     // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
     const r = oneHouseSpecialRules.one_house_exemption;
     warnings.push(
@@ -221,24 +250,7 @@ export function calcMixedUseTransferTax(
             sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements,
             // §167의10①15호 ① 요소 — §155① 의제 성립. 단건과 **같은 정본 함수**를 쓴다
             // (기한 규칙 재구현 금지 — 계획서 F-2). `temporaryTwoHouse` 미주입 시 undefined.
-            deemedOneHouseBy155: resolveDeemedOneHouseBy155(
-              {
-                ...exemptionReqInput,
-                isRegulatedArea: asset.multiHouse.isRegulatedArea,
-                isOneHousehold: asset.multiHouse.isOneHousehold,
-                temporaryTwoHouse: asset.temporaryTwoHouse,
-                // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
-                //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
-                // `householdHousingCount`는 §155④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
-                //   단건 E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함)이다.
-                householdHousingCount: asset.householdHousingCountForExclusion ?? 0,
-                ruralHouse: undefined,
-                marriageMerge: asset.multiHouse.marriageMerge,
-                parentalCareMerge: asset.multiHouse.parentalCareMerge,
-                isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
-              },
-              oneHouseSpecialRules,
-            ),
+            deemedOneHouseBy155,
           },
           houseCountExclusionRules,
           regulatedAreaHistory ?? null,

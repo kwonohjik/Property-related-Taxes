@@ -198,6 +198,13 @@ export interface MixedUseAssetInput {
    * 중과 배제(영 §167의10①15호 ① 요소)에 넘긴다. 미주입 시 의제 미성립 — 종전 동작 불변.
    */
   temporaryTwoHouse?: { previousAcquisitionDate: Date; newAcquisitionDate: Date };
+  /**
+   * 1세대 여부 — **폼-전역** 값(route 주입). §155 의제(①·④⑤)를 비과세 주택 수 축에 반영할 때
+   * 정본 `resolveDeemedOneHouseBy155`가 첫 게이트로 본다(OH-09). `multiHouse`(명부가 있을 때만 조립)에
+   * 같은 값이 있지만, 비과세 축은 명부 유무와 무관하게 판정해야 하므로 자산-수준으로 따로 받는다.
+   * 미주입이면 의제를 판정하지 않는다(종전 동작 — 호출부 `isOneHouseExempt`만 신뢰).
+   */
+  isOneHousehold?: boolean;
 
   // ── 영 §154① 요건 판정 입력 (Phase A — 거주요건 + 단서 각호 면제) ──
   // 셋 다 **폼-전역(top-level)** 값이다. 클라이언트는 `mixedUse` 객체가 아니라 body 최상위로
