@@ -32,6 +32,7 @@ import type { useRouter } from "next/navigation";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import {
   deriveJudgmentHouseCount,
+  deriveJudgmentRightCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
@@ -95,6 +96,19 @@ export function toTransferFormPatch(
   return {
     ...(base as Partial<TransferFormData>),
     householdHousingCount: String(deriveJudgmentHouseCount(form)),
+    /**
+     * 🔴 **입주권 수도 같은 이유로 확정한다**(OH-34). 판정 메뉴엔 이 위젯이 없고 route가 명부로
+     *    도출하는데(`deriveHouseholdRightCount`), 계산기는 스칼라를 직접 보낸다. 판정 폼 기본값
+     *    `"0"`을 그대로 넘기면 §89①4호 가목(「1개 보유」)이 계산기에서 불성립한다.
+     *    3개 이상은 계산기 위젯의 「2개 이상」 값 `"2"`로 맞춘다(엔진은 `=== 1`만 본다).
+     */
+    householdRightCount: String(Math.min(deriveJudgmentRightCount(form), 2)),
+    /**
+     * 🔴 레거시 표식은 **판정 폼 값으로 확정한다**(OH-34 병합 보고). 표식은 이전 이력 record의
+     *    「스칼라 우선」 보존용인데, 위 주택 수는 판정 명부에서 새로 파생한 값이다. 계산기에 남은
+     *    표식을 두면 명부 도출 §155①이 꺼진다(`resolveTemporaryTwoHouse`의 legacy 분기).
+     */
+    legacyHouseCountPrecedence: form.legacyHouseCountPrecedence === true,
     assets: withMirroredSalePrice(form),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
     ...(judgmentId ? { sourceJudgmentId: judgmentId } : {}),

@@ -24,6 +24,9 @@ import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-bl
 import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { buildSellingRentalPayload, sellingRentalAcquisitionPrice } from "@/lib/calc/transfer-tax-api-houses";
+import { buildOtherHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
+import { buildReplacementHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { buildOneHouseExtraFactsPayload } from "@/lib/calc/one-house-extra-facts-payload";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
@@ -135,25 +138,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
             isOfficetel: false,
             isUnsoldHousing: false,
           },
-          ...form.houses
-            .filter((h) => h.acquisitionDate)
-            .map((h) => ({
-              id: h.id,
-              region: h.region,
-              // ④' 법정동 10자리 — 단건과 동일 배선 (length(10) 가드 · Zod 400 회피)
-              regionCode: h.regionCode?.length === 10 ? h.regionCode : undefined,
-              acquisitionDate: h.acquisitionDate,
-              officialPrice: parseInt(h.officialPrice) || 0,
-              isInherited: h.isInherited,
-              isLongTermRental: h.isLongTermRental,
-              isApartment: h.isApartment,
-              isOfficetel: h.isOfficetel,
-              isUnsoldHousing: h.isUnsoldHousing,
-              // ④' §167의3①6호 국가유산주택 — 단건과 동일 배선.
-              // 비과세 축(`buildHouseholdSpecialPayload`)은 이 경로와 **공유**라 이미 흐르고 있었다.
-              // 중과 축만 단건에 넣으면 같은 입력이 「계산」과 「합산 계산」에서 갈린다.
-              isCulturalHeritage: h.oneHouseCulturalHeritage,
-            })),
+          // ⑬ 명부 행 — 단건과 **같은 빌더**(OH-10). 종전 인라인 11필드 map은 §155② 단서·순위·
+          //    §155③ 공동상속 게이트를 빠뜨려, 합산 계산에서 상속주택이 무조건 주택 수에서 빠졌다.
+          ...buildOtherHousesPayload(form.houses),
         ]
       : undefined;
 
@@ -365,6 +352,12 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     //    §155⑯·⑱ 4필드와 §155⑦·⑧ 블록이 통째로 누락됐다(다건 Step4는 단건 Step4를 그대로 임베드하므로
     //    화면에는 토글이 보인다).
     ...(primary ? buildHouseholdSpecialPayload(form, primary) : {}),
+    // ⑬ §156의2⑤ 대체주택 · §155의2 장기저당담보 · §155의3 상생임대 — 단건 ④와 **같은 빌더**(OH-08·OH-11).
+    //    「판정 불러오기」는 다건 편집 화면(단건 계산기를 그대로 마운트)에도 뜨고 이 사실을 자산 폼에
+    //    쓴다. ⑫·⑭는 세 키를 받는데 이 층만 싣지 않아 같은 폼이 단건 비과세 ↔ 다건 과세로 갈렸다.
+    //    운반 상자(`importedOneHouseFacts`)는 UI 메타라 전송하지 않는다 — 빌더가 nested 두 키만 편다.
+    ...buildReplacementHousePayload(form),
+    ...buildOneHouseExtraFactsPayload(form.importedOneHouseFacts),
     // ⑬ §155④⑤ 합가 후 첫 양도 — 엔진 비과세 게이트가 `=== true`를 요구한다(transfer-tax-exemption.ts).
     //    marriageMerge·parentalCareMerge만 보내고 이 플래그를 빠뜨리면 특례가 조용히 미발동한다.
     ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
