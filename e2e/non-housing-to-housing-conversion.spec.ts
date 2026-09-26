@@ -101,10 +101,10 @@ test.describe("비주택 → 주택 용도변경 §95⑤·⑥", () => {
 
   test("§95⑤1호 단서 — 표1+표2 합계가 40%를 넘으면 자른다", async ({ page }) => {
     test.setTimeout(120_000);
-    // 비주택 12년(표1 24%) + 주택 8년(표2 32%) = 56% → 40%
+    // 비주택 2005-01-10 ~ 2018-01-09 = 13년(표1 26%, §95④·⑥) + 주택 8년(표2 32%) = 58% → 40%
     await seed(page, { acquisitionDate: "2005-01-10", residentialUseStartDate: "2018-01-10" });
 
-    await expect(page.getByTestId("conversion-nonhousing-holding")).toContainText("표1 24%");
+    await expect(page.getByTestId("conversion-nonhousing-holding")).toContainText("표1 26%");
     await expect(page.getByTestId("conversion-housing-holding")).toContainText("표2 32%");
     await expect(page.getByTestId("conversion-holding-rate")).toHaveText("40%");
     await expect(page.getByTestId("conversion-rate-capped")).toBeVisible();

@@ -127,7 +127,8 @@ test.describe("컴패니언 × 부담부증여 (소령 §159)", () => {
     expect(
       body.data.aggregated.properties.map((p: { transferGain: number }) => p.transferGain),
     ).toEqual([121_250_000, 72_750_000]);
-    expect(body.data.aggregated.totalTax).toBe(35_830_300);
+    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 15년 30%(vitest companion-burdened-gift-plumbing C-3과 같은 값)
+    expect(body.data.aggregated.totalTax).toBe(34_336_500);
   });
 
   test("결과 화면에 증여계약 전체 기준 §159 카드가 뜬다", async ({ page }) => {
