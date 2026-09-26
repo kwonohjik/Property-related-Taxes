@@ -30,16 +30,24 @@ interface Step2Props {
 function OwnedHouseCard({
   house,
   index,
+  requireDate,
   onChange,
   onRemove,
 }: {
   house: OwnedHouseInfo;
   index: number;
+  /** 분양권·입주권으로 취득(권리취득일 소급) — 모든 행의 취득일이 기준일 비교에 필요 */
+  requireDate: boolean;
   onChange: (updated: OwnedHouseInfo) => void;
   onRemove: () => void;
 }) {
   const set = <K extends keyof OwnedHouseInfo>(k: K, v: OwnedHouseInfo[K]) =>
     onChange({ ...house, [k]: v });
+  const isRightOrOffice =
+    house.propertyType === "officetel" ||
+    house.propertyType === "right" ||
+    house.propertyType === "subscription_right";
+  const dateRequired = isRightOrOffice || requireDate;
 
   return (
     <ToneCard
@@ -81,21 +89,36 @@ function OwnedHouseCard({
         placeholder="주택공시가격·개별공시지가×면적"
       />
 
-      {/* 취득일 */}
+      {/* 취득일 — 입주권·분양권·오피스텔은 2020.8.12. 전 취득분 제외(법률 제17473호 부칙 제3조) 판정에,
+          소급 산정 시에는 기준일 뒤 취득분 제외(§28의4① 후단) 판정에 필요 */}
       <div>
-        <p className="text-xs font-medium mb-1">취득일 (선택)</p>
+        <p className="text-xs font-medium mb-1">{dateRequired ? "취득일" : "취득일 (선택)"}</p>
         <DateInput
           value={house.acquisitionDate}
           onChange={(v) => set("acquisitionDate", v)}
         />
       </div>
 
+      {isRightOrOffice && (
+        <div>
+          <p className="text-xs font-medium mb-1">매매·분양계약일 (선택)</p>
+          <DateInput
+            value={house.contractDate ?? ""}
+            onChange={(v) => set("contractDate", v)}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            2020.8.12. 전에 취득했거나 매매계약(오피스텔 분양계약 포함)을 체결한 입주권·분양권·오피스텔은
+            주택 수에 넣지 않습니다 (지방세법 부칙 법률 제17473호 제3조·제7조).
+          </p>
+        </div>
+      )}
+
       {/* 수도권 여부 */}
       <ToggleCard
         tone="sky"
         size="sm"
         title="수도권 소재"
-        description="1억/2억 중과 한도 결정 (수도권 1억 이하 중과 배제)"
+        description="수도권 1억 / 수도권 외 2억 이하면 주택 수 제외 (취득하는 주택이 2025.1.2. 전 취득이면 전국 1억)"
         checked={house.isMetropolitanRegion}
         onCheckedChange={(v) => set("isMetropolitanRegion", v)}
       />
@@ -115,7 +138,7 @@ function OwnedHouseCard({
         tone="violet"
         size="sm"
         title="상속으로 취득한 주택"
-        description="5년 미경과 시 주택 수에서 제외 (시행령 §28의4⑥3호)"
+        description="5년 미경과 시 주택 수에서 제외 (시행령 §28의4⑥3호) — 2020.8.12. 전 상속분은 2025.8.11.까지 제외 (부칙 대통령령 제30939호 제3조)"
         checked={house.isInherited}
         onCheckedChange={(v) => set("isInherited", v)}
       >
@@ -150,25 +173,43 @@ function OwnedHouseCard({
               />
             </div>
           </div>
+          {/* §28의4⑤ — 지분이 가장 큰 상속인이 둘 이상이면 1. 거주하는 사람 2. 나이가 가장 많은 사람 */}
           <ToggleCard
             tone="violet"
             size="sm"
-            title="동순위 시 거주자 여부"
-            description="최다지분 동순위 시 거주자가 주된 상속자로 우선"
-            checked={house.isResident}
-            onCheckedChange={(v) => set("isResident", v)}
-          />
-          {/* 거주자가 아닌 경우에만 최연장자 여부 표시 — 거주자이면 이미 주된 상속자 */}
-          {!house.isResident && (
+            title="지분이 가장 큰 상속인이 두 명 이상 (동순위)"
+            description="본인 지분이 최대 지분과 같고 같은 지분의 다른 상속인이 있으면 켜세요 — 거주자 → 최연장자 순으로 소유자를 판정합니다 (시행령 §28의4⑤)"
+            checked={house.tieInMaxShare}
+            onCheckedChange={(v) => set("tieInMaxShare", v)}
+          >
             <ToggleCard
               tone="violet"
               size="sm"
-              title="동순위 상속자 중 최연장자"
-              description="공동상속에서 지분이 같은 경우, 거주자 → 최연장자 순으로 주된 상속자를 결정합니다 (시행령 §28의4⑤)"
-              checked={house.isOldest}
-              onCheckedChange={(v) => set("isOldest", v)}
+              title="본인이 그 주택에 거주"
+              description="동순위 상속인 중 거주하는 사람이 소유자 (§28의4⑤1호)"
+              checked={house.isResident}
+              onCheckedChange={(v) => set("isResident", v)}
             />
-          )}
+            <ToggleCard
+              tone="violet"
+              size="sm"
+              title="다른 동순위 상속인이 그 주택에 거주"
+              description="본인은 거주하지 않고 다른 동순위 상속인이 거주하면 그 상속인이 소유자 (§28의4⑤1호)"
+              checked={house.otherTiedHeirResides ?? false}
+              onCheckedChange={(v) => set("otherTiedHeirResides", v)}
+            />
+            {/* 거주자가 한 명으로 정해지면 최연장자는 따지지 않는다 — 둘 다 거주하거나 아무도 거주하지 않을 때만 2호 */}
+            {house.isResident === (house.otherTiedHeirResides ?? false) && (
+              <ToggleCard
+                tone="violet"
+                size="sm"
+                title={house.isResident ? "거주하는 동순위 상속인 중 최연장자" : "동순위 상속인 중 최연장자"}
+                description="거주자로 정해지지 않으면 나이가 가장 많은 사람이 소유자 (§28의4⑤2호)"
+                checked={house.isOldest}
+                onCheckedChange={(v) => set("isOldest", v)}
+              />
+            )}
+          </ToggleCard>
         </div>
       </ToggleCard>
 
@@ -307,7 +348,7 @@ export function Step2({
 분양권으로 취득 시 **권리취득일(분양계약일)** 기준.
 
 ## 주택 수 제외 11종 (시행령 §28의2·§28의4⑥)
-- 시가표준액 **수도권 1억 이하 / 비수도권 2억 이하** (정비구역 제외)
+- 시가표준액 **수도권 1억 이하 / 비수도권 2억 이하** (정비구역 제외 — 2025.1.2. 전 취득은 전국 1억)
 - 노인복지주택 (1년 내 직접 사용)
 - 공공지원민간임대주택 (임대사업자 등록)
 - 가정어린이집 (1년 내 직접 사용)
@@ -355,6 +396,7 @@ export function Step2({
             key={h.id}
             house={h}
             index={i}
+            requireDate={form.acquiredViaRight}
             onChange={(updated) => updateHouse(i, updated)}
             onRemove={() => removeHouse(i)}
           />
@@ -469,7 +511,11 @@ export function Step2({
           />
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          분양권으로 등기 시 잔금일이 아닌 권리취득일 기준 보유 주택 수로 산정합니다.
+          분양권으로 등기 시 잔금일이 아닌 <strong>이 주택을 취득하게 한 권리</strong>의 취득일 기준 보유 주택 수로
+          산정합니다. 1세대 안에서 매매·교환·증여로 같은 분양권의 취득일이 둘 이상이면 가장 빠른 날을 넣으세요.
+          보유 주택 목록에는 권리취득일 현재 가지고 있던 주택(그 뒤 처분한 주택 포함)을 취득일과 함께 넣으세요 —
+          권리취득일 뒤에 취득한 자산은 세지 않습니다. 2020.8.12. 전에 취득한 권리는 소급하지 않고
+          주택 취득일 기준으로 산정합니다 (시행령 §28의4①, 부칙 대통령령 제30939호 제2조).
         </p>
       </ToggleCard>
 

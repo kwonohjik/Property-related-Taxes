@@ -15,6 +15,7 @@
 // ============================================================
 
 export type HouseType =
+  | "housing"             // 주택 — 세부 유형 미구분 (취득세 보유주택 목록 「주택」 행이 보내는 값)
   | "apartment"           // 아파트
   | "villa"               // 빌라 (연립·다세대)
   | "single_family"       // 단독주택
@@ -110,9 +111,15 @@ export interface OwnedHouseInfo {
    */
   tieInMaxShare?: boolean;
   /**
-   * 상속 주택 거주자 여부 (동순위 시 거주자 우선)
+   * 상속 주택 거주자 여부 (동순위 시 거주자 우선) — 납세자 **본인**이 거주하는지
    */
   isResidentInInheritedHouse?: boolean;
+  /**
+   * 다른 동순위 상속인이 그 주택에 거주하는지 (§28의4⑤1호).
+   * 본인은 비거주·다른 동순위 상속인이 거주 → 그 상속인이 소유자(본인 제외).
+   * 본인·다른 상속인 모두 거주하거나 모두 비거주 → 2호 최연장자로 판정.
+   */
+  isOtherTiedHeirResident?: boolean;
   /**
    * 상속인 중 최연장자 여부 (거주자 동순위 시 최연장자 우선)
    */
@@ -134,9 +141,15 @@ export interface RightAsset {
   type: RightAssetType;
   /**
    * 권리 취득일 (YYYY-MM-DD)
-   * §28의4①: 분양권·입주권으로 주택 취득 시 주택 수 산정 기준일 = 권리취득일
+   * - 법률 제17473호 부칙 제3조: 2020.8.12. 전 취득분은 주택 수에 넣지 않는다
+   * - 권리취득일 소급(§28의4① 후단) 시 기준일 뒤 취득분은 넣지 않는다
    */
   rightAcquisitionDate: string;
+  /**
+   * 매매계약일 (YYYY-MM-DD, 선택) — 법률 제17473호 부칙 제7조: 2020.8.12. 전 매매계약 체결분은
+   * 취득일이 그 이후여도 주택 수에 넣지 않는다
+   */
+  contractDate?: string;
   /**
    * 혼인 전 배우자 보유 분양권 여부 (2026.12.31까지 한시 적용)
    * §28의4⑥10호: 혼인 전 분양권 → 주택 수 제외 (한시 2026년까지)
@@ -158,6 +171,13 @@ export interface OfficeAsset {
   id?: string;
   /** 시가표준액 (원) — 1억 초과만 주택 수에 카운트 */
   standardValue: number;
+  /**
+   * 취득일 (YYYY-MM-DD) — 법률 제17473호 부칙 제3조(2020.8.12. 전 취득분 제외)·
+   * 권리취득일 소급 시 기준일 뒤 취득분 제외 판정. 미입력이면 두 판정을 하지 못한다(경고).
+   */
+  acquisitionDate?: string;
+  /** 분양계약·매매계약일 (YYYY-MM-DD, 선택) — 법률 제17473호 부칙 제7조 */
+  contractDate?: string;
   /**
    * 상속개시일 (YYYY-MM-DD) — 5년 미경과 제외
    * §28의4⑥3호 준용
@@ -319,6 +339,9 @@ export type ExclusionReason =
   | "hansi_lease_registered"   // 한시 특례 임대등록
   | "hansi_unsold_apt"         // 한시 특례 미분양 아파트
   | "low_value_office"         // 시가표준액 1억 이하 오피스텔
+  | "pre_2020_08_12_right_office" // 2020.8.12. 전 취득·계약 입주권·분양권·오피스텔 (법률 제17473호 부칙 제3조·제7조)
+  | "acquired_after_reference_date" // 권리취득일 소급 기준일 뒤 취득 (§28의4① 후단)
+  | "joint_inheritance_not_owner" // 공동상속 주택의 소유자로 보지 않는 상속인 (§28의4⑤)
   | "pending_hansi_new_build"  // 취득 주택 한시 특례 신축
   | "pending_hansi_lease"      // 취득 주택 한시 특례 임대등록
   | "pending_hansi_unsold";    // 취득 주택 한시 특례 미분양

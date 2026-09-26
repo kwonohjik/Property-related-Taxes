@@ -21,10 +21,7 @@
  */
 
 import { ACQUISITION } from "../legal-codes";
-import {
-  getHouseCountReferenceDate,
-  getEarliestRightAcquisitionDate,
-} from "./right-acquisition";
+import { getHouseCountReferenceDate } from "./right-acquisition";
 import { isSeparateHousehold, hasMinorWithApparentIncomeCondition } from "./household";
 import { isExcludedBy5YearRule, assessMainInheritor } from "./inheritance";
 import { countCoOwnedHouse } from "./co-ownership";
@@ -68,22 +65,59 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
     balancePaymentDate: input.referenceDate,
   });
 
-  // 입주권·분양권 권리취득일 중 가장 빠른 날도 고려
-  const rightDates: string[] = [];
-  if (input.pendingAcquisition?.acquiredViaRight && input.pendingAcquisition?.rightAcquisitionDate) {
-    rightDates.push(input.pendingAcquisition.rightAcquisitionDate);
-  }
-  input.rights.forEach((r) => rightDates.push(r.rightAcquisitionDate));
+  // §28의4① 후단: 기준일은 **취득하는 주택을 낳은 그 권리**의 취득일이다. 「가장 빠른 날」은
+  // 1세대 내 동일한 주택분양권의 취득일이 둘 이상일 때만이며, 그 날은 입력값(rightAcquisitionDate)
+  // 자체로 받는다 — 무관한 다른 보유 권리(input.rights)의 취득일은 기준일이 아니다(OH-25).
+  const effectiveReferenceDate = rightDateResult.referenceDate;
+  const isSoGup = rightDateResult.isRightAcquisitionSoGup;
 
-  const effectiveReferenceDate =
-    rightDateResult.isRightAcquisitionSoGup && rightDates.length > 0
-      ? getEarliestRightAcquisitionDate(rightDates)
-      : rightDateResult.referenceDate;
-
-  if (rightDateResult.isRightAcquisitionSoGup) {
+  if (isSoGup || rightDateResult.legalBasis === ACQUISITION.HOUSE_COUNT_RIGHT_DATE_APPLICATION) {
     legalBasis.push(rightDateResult.legalBasis);
     warnings.push(rightDateResult.description);
   }
+  if (input.pendingAcquisition?.acquiredViaRight && !input.pendingAcquisition.rightAcquisitionDate) {
+    warnings.push(
+      `분양권·입주권으로 취득하는 주택인데 권리취득일이 없어 소급 산정(${ACQUISITION.HOUSE_COUNT_RIGHT_ACQUISITION_DATE})을 하지 못했습니다 — 주택 취득일 기준으로 산정했습니다.`
+    );
+  }
+
+  // 취득하는 주택의 취득일 — 저가주택 한도 연혁(대통령령 제35477호 부칙 제2조)·한시 특례 판정 기준.
+  // 소급 산정이어도 「2025.1.2. 이후 취득하는 주택」은 취득하는 주택의 취득일로 본다.
+  const acquisitionDate = input.referenceDate ?? new Date().toISOString().slice(0, 10);
+
+  /**
+   * §28의4① 후단 — 소급 기준일 현재 소유하지 않은 자산(기준일 뒤 취득)은 세지 않는다(OH-26).
+   * 기준일 당일 취득은 §28의4③(동시 취득은 납세의무자가 정하는 순서)이므로 산입하되 안내한다.
+   */
+  const excludeIfAfterReference = (
+    assetId: string | undefined,
+    assetType: "house" | "right" | "office",
+    assetDate: string | undefined
+  ): boolean => {
+    if (!isSoGup) return false;
+    if (!assetDate) {
+      warnings.push(
+        `권리취득일 소급 산정인데 취득일이 없는 자산(${assetId ?? assetType})이 있어 기준일 뒤 취득 여부를 판정하지 못했습니다.`
+      );
+      return false;
+    }
+    if (assetDate === effectiveReferenceDate) {
+      warnings.push(
+        `권리취득일(${effectiveReferenceDate})과 같은 날 취득한 자산이 있습니다 — 동시 취득은 납세의무자가 정하는 순서로 봅니다(지방세법 시행령 §28의4③). 기준일 현재 소유로 산입했습니다.`
+      );
+      return false;
+    }
+    if (assetDate < effectiveReferenceDate) return false;
+    excludedDetails.push({
+      assetId,
+      assetType,
+      reason: "acquired_after_reference_date",
+      legalBasis: ACQUISITION.HOUSE_COUNT_RIGHT_ACQUISITION_DATE,
+      description: `취득일(${assetDate})이 권리취득일(${effectiveReferenceDate}) 뒤 → 소급 기준일 현재 소유하지 않은 자산 → 주택 수 제외`,
+    });
+    legalBasis.push(ACQUISITION.HOUSE_COUNT_RIGHT_ACQUISITION_DATE);
+    return true;
+  };
 
   // ── Step 2: 세대 별도 인정 판정 (§28의3②) ──
   const separateHouseholdInfo = isSeparateHousehold(input.household);
@@ -103,8 +137,10 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedHouseCount = 0;
 
   for (const house of input.houses) {
+    if (excludeIfAfterReference(house.id, "house", house.acquisitionDate)) continue;
+
     // (3a) 제외 11종 + 한시 특례 체크
-    const exclusions = getExclusionReasonsForHouse(house, effectiveReferenceDate);
+    const exclusions = getExclusionReasonsForHouse(house, effectiveReferenceDate, acquisitionDate);
 
     if (exclusions.length > 0) {
       excludedDetails.push(...exclusions);
@@ -123,6 +159,7 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
           tieInMaxShare: house.tieInMaxShare ?? false,
           isResident: house.isResidentInInheritedHouse ?? false,
           isOldest: house.isOldestInheritor ?? false,
+          isOtherTiedHeirResident: house.isOtherTiedHeirResident ?? false,
         });
 
         if (!mainResult.isMainInheritor) {
@@ -130,7 +167,7 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
           excludedDetails.push({
             assetId: house.id,
             assetType: "house",
-            reason: "inheritance_under_5yr", // 가장 유사한 사유로 매핑
+            reason: "joint_inheritance_not_owner",
             legalBasis: mainResult.legalBasis,
             description: mainResult.reason,
           });
@@ -158,6 +195,8 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedRightCount = 0;
 
   for (const right of input.rights) {
+    if (excludeIfAfterReference(right.id, "right", right.rightAcquisitionDate)) continue;
+
     const exclusions = getExclusionReasonsForRight(right, effectiveReferenceDate);
 
     if (exclusions.length > 0) {
@@ -174,6 +213,13 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedOfficeCount = 0;
 
   for (const office of input.offices) {
+    if (excludeIfAfterReference(office.id, "office", office.acquisitionDate)) continue;
+    if (!office.acquisitionDate) {
+      warnings.push(
+        `오피스텔(${office.id ?? "취득일 미입력"}) 취득일이 없어 2020.8.12. 전 취득분 제외(${ACQUISITION.HOUSE_COUNT_RIGHT_OFFICE_APPLICATION})를 판정하지 못했습니다.`
+      );
+    }
+
     const exclusions = getExclusionReasonsForOffice(office, effectiveReferenceDate);
 
     if (exclusions.length > 0) {
@@ -193,10 +239,7 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
     legalBasis.push(ACQUISITION.TRUST_HOUSE_COUNT);
   }
 
-  // ── Step 7: 취득 대상 주택 한시 특례 판정 (§28의4②) ──
-  // 취득일: pendingAcquisition이 있으면 referenceDate 또는 오늘 날짜
-  const acquisitionDate = input.referenceDate ?? new Date().toISOString().slice(0, 10);
-
+  // ── Step 7: 취득 대상 주택 한시 특례 판정 (§28의4②) — 취득일은 Step 1에서 정함 ──
   const hansiBenefitResult = assessHansiBenefitForPendingAcquisition(
     input.pendingAcquisition,
     acquisitionDate

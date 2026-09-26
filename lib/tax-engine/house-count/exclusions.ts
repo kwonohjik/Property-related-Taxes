@@ -6,7 +6,7 @@
  *   (취득 대상 주택에는 §28의4② 한시 특례 별도 적용)
  *
  * 제외 항목 번호 기준:
- *   1. 시가표준액 한도 (수도권 1억 / 비수도권 2억)
+ *   1. 시가표준액 한도 (수도권 1억 / 비수도권 2억 — 2025.1.2. 전 취득 주택은 전국 1억)
  *   2. 노인복지주택
  *   3. 문화유산·천연기념물
  *   4. 농어촌 주택
@@ -24,6 +24,7 @@
 
 import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
 import { isExcludedBy5YearRule } from "./inheritance";
+import { getLowValueHouseLimit, describeLowValueHouseLimit } from "../acquisition-surcharge/low-value-limit";
 import type {
   OwnedHouseInfo,
   RightAsset,
@@ -37,28 +38,58 @@ import type {
 // ============================================================
 
 /**
- * [P1-4 + P3-1] 시가표준액 1억/2억 이하 중과 배제 판정
+ * [P1-4 + P3-1] 시가표준액 1억/2억 이하 주택 수 제외 판정 (§28의4⑥1호가목 → §28의2 1호)
  *
- * §28의2 1호: 수도권 1억 이하 / 비수도권 2억 이하 → 주택 수 제외
- * 단, 정비구역(재개발·재건축·소규모정비) 소재 주택은 제외 불가
+ * 수도권 1억 이하 / 수도권 외 2억 이하. 단, 정비구역(재개발·재건축·소규모정비) 소재 주택은 제외 불가.
+ * 수도권 외 2억은 **취득하는 주택**의 취득일이 2025.1.2. 이후일 때만 — 그 전은 전국 1억
+ * (대통령령 제35477호 부칙 제2조, `getLowValueHouseLimit`).
  *
  * @param standardValue 시가표준액 (원)
  * @param isMetropolitan 수도권 여부
  * @param isUrbanRegenerationArea 정비구역 소재 여부
+ * @param taxableHouseAcquisitionDate 취득하는 주택의 취득일 (YYYY-MM-DD)
  */
 export function isExcludedByLowValue(
   standardValue: number,
   isMetropolitan: boolean,
-  isUrbanRegenerationArea: boolean | undefined
+  isUrbanRegenerationArea: boolean | undefined,
+  taxableHouseAcquisitionDate: string
 ): boolean {
   // 정비구역은 제외 불가 (§28의2 1호 단서)
   if (isUrbanRegenerationArea) return false;
 
-  const limit = isMetropolitan
-    ? ACQUISITION_CONST.LOW_VALUE_METRO_LIMIT       // 수도권 1억
-    : ACQUISITION_CONST.LOW_VALUE_NON_METRO_LIMIT;  // 비수도권 2억
+  return standardValue <= getLowValueHouseLimit(isMetropolitan, taxableHouseAcquisitionDate);
+}
 
-  return standardValue <= limit;
+/**
+ * 법률 제17473호 부칙 제3조·제7조 — 조합원입주권·주택분양권·오피스텔(§13의3 2~4호)은
+ * 2020.8.12. 이후 취득분만 주택 수에 넣는다(제3조). 그 전에 매매계약(오피스텔 분양계약 포함)을
+ * 체결했으면 취득일이 그 이후여도 넣지 않는다(제7조).
+ */
+function isBeforeRightOfficeCounting(
+  acquisitionDate: string | undefined,
+  contractDate: string | undefined
+): boolean {
+  const from = ACQUISITION_CONST.HOUSE_COUNT_RIGHT_OFFICE_FROM;
+  return (!!acquisitionDate && acquisitionDate < from) || (!!contractDate && contractDate < from);
+}
+
+function preRightOfficeCountingItem(
+  assetId: string | undefined,
+  assetType: "right" | "office",
+  acquisitionDate: string | undefined,
+  contractDate: string | undefined
+): ExcludedItem {
+  const which = contractDate && contractDate < ACQUISITION_CONST.HOUSE_COUNT_RIGHT_OFFICE_FROM
+    ? `매매·분양계약일(${contractDate})`
+    : `취득일(${acquisitionDate})`;
+  return {
+    assetId,
+    assetType,
+    reason: "pre_2020_08_12_right_office",
+    legalBasis: ACQUISITION.HOUSE_COUNT_RIGHT_OFFICE_APPLICATION,
+    description: `${which}이 2020.8.12. 전 → 입주권·분양권·오피스텔 주택 수 가산 미적용 (${ACQUISITION.HOUSE_COUNT_RIGHT_OFFICE_APPLICATION})`,
+  };
 }
 
 // ============================================================
@@ -104,22 +135,28 @@ export function isExcludedByHansiNewBuild(
  */
 export function getExclusionReasonsForHouse(
   house: OwnedHouseInfo,
-  referenceDate: string
+  referenceDate: string,
+  taxableHouseAcquisitionDate: string
 ): ExcludedItem[] {
   const excluded: ExcludedItem[] = [];
 
-  // 1. 시가표준액 한도 (수도권 1억 / 비수도권 2억)
-  if (isExcludedByLowValue(house.standardValue, house.isMetropolitan, house.isUrbanRegenerationArea)) {
-    const limit = house.isMetropolitan
-      ? ACQUISITION_CONST.LOW_VALUE_METRO_LIMIT
-      : ACQUISITION_CONST.LOW_VALUE_NON_METRO_LIMIT;
+  // 1. 시가표준액 한도 (수도권 1억 / 수도권 외 2억 — 2025.1.2. 전 취득은 전국 1억)
+  if (
+    isExcludedByLowValue(
+      house.standardValue,
+      house.isMetropolitan,
+      house.isUrbanRegenerationArea,
+      taxableHouseAcquisitionDate
+    )
+  ) {
+    const limit = getLowValueHouseLimit(house.isMetropolitan, taxableHouseAcquisitionDate);
     const reason: ExclusionReason = house.isMetropolitan ? "low_value_metro" : "low_value_non_metro";
     excluded.push({
       assetId: house.id,
       assetType: "house",
       reason,
       legalBasis: ACQUISITION.HOUSE_COUNT_LOW_VALUE,
-      description: `시가표준액 ${house.standardValue.toLocaleString()} ≤ ${limit.toLocaleString()}원(${house.isMetropolitan ? "수도권" : "비수도권"} 기준) → 주택 수 제외`,
+      description: `시가표준액 ${house.standardValue.toLocaleString()} ≤ ${limit.toLocaleString()}원(${describeLowValueHouseLimit(house.isMetropolitan, taxableHouseAcquisitionDate)} 기준) → 주택 수 제외`,
     });
     return excluded; // 저가 기준 해당 시 다른 제외 사유와 중복 검사 불필요
   }
@@ -306,6 +343,14 @@ export function getExclusionReasonsForRight(
 ): ExcludedItem[] {
   const excluded: ExcludedItem[] = [];
 
+  // 2020.8.12. 전 취득·계약 (법률 제17473호 부칙 제3조·제7조)
+  if (isBeforeRightOfficeCounting(right.rightAcquisitionDate, right.contractDate)) {
+    excluded.push(
+      preRightOfficeCountingItem(right.id, "right", right.rightAcquisitionDate, right.contractDate)
+    );
+    return excluded;
+  }
+
   // 상속 5년 미경과 (§28의4⑥3호)
   if (right.inheritanceDate && isExcludedBy5YearRule(right.inheritanceDate, referenceDate)) {
     excluded.push({
@@ -354,6 +399,14 @@ export function getExclusionReasonsForOffice(
   referenceDate: string
 ): ExcludedItem[] {
   const excluded: ExcludedItem[] = [];
+
+  // 2020.8.12. 전 취득·계약 (법률 제17473호 부칙 제3조·제7조)
+  if (isBeforeRightOfficeCounting(office.acquisitionDate, office.contractDate)) {
+    excluded.push(
+      preRightOfficeCountingItem(office.id, "office", office.acquisitionDate, office.contractDate)
+    );
+    return excluded;
+  }
 
   // 상속 5년 미경과 (§28의4⑥3호 준용)
   if (office.inheritanceDate && isExcludedBy5YearRule(office.inheritanceDate, referenceDate)) {

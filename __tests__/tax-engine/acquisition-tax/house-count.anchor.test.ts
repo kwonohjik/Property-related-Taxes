@@ -539,10 +539,14 @@ describe("[Anchor] 한시 특례 판정 — assessHansiBenefitForPendingAcquisit
 // ============================================================
 
 describe("[경계값] 상속 5년 경계 + 시가표준액 경계", () => {
-  it("상속 정확히 5년 → 제외 안 됨 (5년 = 5년 이상 = 포함)", () => {
-    // differenceInYears("2026-04-30", "2021-04-30") = 5 → 5년 경과 → 포함
+  it("상속 정확히 5년(응당일) → 아직 5년이 지나지 않음 → 제외 (F1 정정)", () => {
+    // §28의4⑥3호 「상속개시일부터 5년이 지나지 않은」 — 지방세기본법 §23 → 민법 §157(초일 불산입)·
+    // §160②: 기산일 2021-05-01, 만료일 2026-04-30(응당일). 응당일 당일은 기간 안이다.
+    // 종전 기대값(false)은 differenceInYears(초일 산입) 기준이라 1일 이르게 산입했다.
     const isExcluded = isExcludedBy5YearRule("2021-04-30", "2026-04-30");
-    expect(isExcluded).toBe(false); // 5년 경과 = 포함
+    expect(isExcluded).toBe(true);
+    // 긍정 짝 — 응당일 다음날부터 5년 경과 → 산입
+    expect(isExcludedBy5YearRule("2021-04-30", "2026-05-01")).toBe(false);
   });
 
   it("상속 4년 364일 → 제외 됨 (5년 미경과)", () => {

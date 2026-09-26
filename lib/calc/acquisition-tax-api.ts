@@ -42,7 +42,13 @@ function earlierDateStr(a: string | undefined, b: string | undefined): string | 
 // [P3] ownedHouses[] FormState → HouseCountInput 변환
 // ============================================================
 
-/** FormState.OwnedHouseInfo → 엔진 OwnedHouseInfo (string → number 변환 포함) */
+/**
+ * FormState.OwnedHouseInfo → 엔진 OwnedHouseInfo (string → number 변환 포함)
+ *
+ * 이 함수에 오는 행은 오피스텔·입주권·분양권이 아닌 행, 즉 Step2 선택지 「주택」(`"housing"`)뿐이다.
+ * 폼은 아파트·빌라 등 세부 유형을 받지 않으므로 엔진·Zod의 `"housing"`(세부 유형 미구분)으로 보낸다.
+ * (종전에는 폼 값을 캐스팅해 넘겨 ⑫ enum에 없는 `"housing"`이 항상 400을 냈다 — OH-02)
+ */
 function mapToEngineHouseInfo(h: FormOwnedHouseInfo): EngineOwnedHouseInfo {
   const sv = parseAmount(h.standardValue) ?? 0;
   const share = parseFloat(h.ownershipShare);
@@ -50,7 +56,7 @@ function mapToEngineHouseInfo(h: FormOwnedHouseInfo): EngineOwnedHouseInfo {
   const info: EngineOwnedHouseInfo = {
     id: h.id,
     standardValue: sv,
-    type: (h.propertyType as EngineOwnedHouseInfo["type"]) ?? "housing",
+    type: "housing",
     acquisitionDate: h.acquisitionDate,
     isMetropolitan: h.isMetropolitanRegion,
     isUrbanRegenerationArea: h.isUrbanRegenArea,
@@ -72,6 +78,7 @@ function mapToEngineHouseInfo(h: FormOwnedHouseInfo): EngineOwnedHouseInfo {
     if (!isNaN(ms)) info.maxShareInInheritors = ms;
     info.tieInMaxShare = h.tieInMaxShare;
     info.isResidentInInheritedHouse = h.isResident;
+    info.isOtherTiedHeirResident = h.otherTiedHeirResides ?? false;
     info.isOldestInheritor = h.isOldest;
   }
 
@@ -83,6 +90,9 @@ function mapToEngineOfficeAsset(h: FormOwnedHouseInfo): OfficeAsset {
   return {
     id: h.id,
     standardValue: parseAmount(h.standardValue) ?? 0,
+    // 법률 제17473호 부칙 제3조·제7조 · 소급 기준일 뒤 취득 판정 (OH-03·OH-26)
+    acquisitionDate: h.acquisitionDate,
+    contractDate: strOrUndef(h.contractDate ?? ""),
     inheritanceDate: h.isInherited && h.inheritanceDate ? h.inheritanceDate : undefined,
   };
 }
@@ -93,6 +103,9 @@ function mapToEngineRightAsset(h: FormOwnedHouseInfo): RightAsset {
     id: h.id,
     type: h.propertyType === "subscription_right" ? "subscription_right" : "redevelopment_right",
     rightAcquisitionDate: h.acquisitionDate,
+    contractDate: strOrUndef(h.contractDate ?? ""),
+    // §28의4⑥3호 상속 5년 미경과 — 주택·오피스텔 행과 같은 규칙으로 전달 (OH-24)
+    inheritanceDate: h.isInherited && h.inheritanceDate ? h.inheritanceDate : undefined,
   };
 }
 

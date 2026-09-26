@@ -29,12 +29,14 @@ export interface BurdenedGiftComputation {
  * @param breakdown       과세표준 분리 결과 (유상분·무상분)
  * @param taxBase         전체 과세표준 (세율 구간 판정 기준)
  * @param resolvedHouseCount 취득 후 주택 수 (§13의2① 판정)
+ * @param acquisitionDate 취득일 (§28의2 1호 저가주택 한도 연혁 — 대통령령 제35477호 부칙 제2조)
  */
 export function computeBurdenedGiftResult(
   input: AcquisitionTaxInput,
   breakdown: { onerousTaxBase?: number; gratuitousTaxBase?: number },
   taxBase: number,
-  resolvedHouseCount: number
+  resolvedHouseCount: number,
+  acquisitionDate: string
 ): BurdenedGiftComputation {
   const { onerousTaxBase = 0, gratuitousTaxBase = 0 } = breakdown;
 
@@ -56,7 +58,8 @@ export function computeBurdenedGiftResult(
       isExemptFromSurcharge_LowValueV2(
         stdValue,
         input.isMetropolitanRegion ?? false,
-        input.isUrbanRegenerationArea ?? false
+        input.isUrbanRegenerationArea ?? false,
+        acquisitionDate
       );
     const tempTwoHouseExcluded = assessTemporaryTwoHouse({
       houseCount: resolvedHouseCount,

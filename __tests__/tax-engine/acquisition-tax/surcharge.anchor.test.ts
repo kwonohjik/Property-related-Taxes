@@ -250,7 +250,8 @@ describe("[Anchor] 시가표준액 저가 중과 배제 — v3 수도권/비수�
     const isExempt = isExemptFromSurcharge_LowValue(
       150_000_000, // 1.5억
       false,        // 비수도권
-      false         // 비정비구역
+      false,        // 비정비구역
+      "2025-01-02"  // 취득일 — 수도권 외 2억은 2025.1.2. 이후 취득분(대통령령 제35477호 부칙 제2조, F1)
     );
     expect(isExempt).toBe(true);
   });
@@ -260,7 +261,8 @@ describe("[Anchor] 시가표준액 저가 중과 배제 — v3 수도권/비수�
     const isExempt = isExemptFromSurcharge_LowValue(
       150_000_000, // 1.5억
       true,         // 수도권
-      false
+      false,
+      "2025-01-02"  // 취득일 (F1 — 연혁 인자)
     );
     expect(isExempt).toBe(false);
   });
@@ -270,7 +272,8 @@ describe("[Anchor] 시가표준액 저가 중과 배제 — v3 수도권/비수�
     const isExempt = isExemptFromSurcharge_LowValue(
       200_000_000, // 정확히 2억
       false,        // 비수도권
-      false
+      false,
+      "2025-01-02"  // 취득일 (F1 — 연혁 인자)
     );
     expect(isExempt).toBe(true);
   });

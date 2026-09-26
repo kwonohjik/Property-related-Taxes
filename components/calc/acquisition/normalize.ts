@@ -8,7 +8,7 @@
  * P5UI-3: normalize.ts 신설
  */
 
-import { INITIAL_FORM, type FormState, type OwnedHouseInfo } from "./shared";
+import { INITIAL_FORM, createOwnedHouseInfo, type FormState, type OwnedHouseInfo } from "./shared";
 
 // ============================================================
 // Legacy 폼 (18 필드 구버전) 타입
@@ -209,8 +209,13 @@ export function normalizeAcquisitionForm(
       ? (legacy.residesInSameOrAdjacentJurisdiction as boolean)
       : INITIAL_FORM.residesInSameOrAdjacentJurisdiction,
 
+    // 행 단위 기본값 보강 — 이후 추가된 칸(contractDate·otherTiedHeirResides 등)이 없는 저장본도
+    // 폼 계약(모든 칸 존재)을 지키게 한다.
     ownedHouses: Array.isArray(legacy.ownedHouses)
-      ? (legacy.ownedHouses as OwnedHouseInfo[])
+      ? (legacy.ownedHouses as OwnedHouseInfo[]).map((h) => ({
+          ...createOwnedHouseInfo(String(h?.id ?? "")),
+          ...h,
+        }))
       : INITIAL_FORM.ownedHouses,
     trustedHouseCount: (legacy.trustedHouseCount as string) ?? INITIAL_FORM.trustedHouseCount,
 

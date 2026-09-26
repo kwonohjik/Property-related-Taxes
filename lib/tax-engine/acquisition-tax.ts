@@ -259,6 +259,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     isMetropolitan: input.isMetropolitan,
     // [P1-0] 별장 폐지 판단용 잔금일
     balanceDate: input.balancePaymentDate,
+    // §28의2 1호 저가주택 한도 연혁(대통령령 제35477호 부칙 제2조) — 취득하는 주택의 §20 취득일
+    acquisitionDate: timingResult.acquisitionDate,
     // [P1-3 v4 M4] 무상취득 단서
     giftorRelation: input.giftorRelation,
     giftorIs1HHHolder: input.giftorIs1HHHolder,
@@ -330,7 +332,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       input,
       taxBaseResult.breakdown,
       taxBase,
-      resolvedHouseCount
+      resolvedHouseCount,
+      timingResult.acquisitionDate
     );
     acquisitionTax = bgResult.acquisitionTax;
     burdenedGiftBreakdown = bgResult.breakdown;
