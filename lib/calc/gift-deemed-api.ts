@@ -241,6 +241,9 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         allocationMethod: form.ciAllocationMethod,
         // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 납세의무자가 아니다
         doneeIsForProfitCorp: form.ciDoneeIsForProfitCorp || undefined,
+        // 「상증법」§4의2④ — 법인세가 부과된 영리법인의 «주주등»에는 부과하지 아니한다
+        issuerGainCorporateTaxed: form.ciIssuerGainCorporateTaxed || undefined,
+        doneeIsShareholderOfIssuer: form.ciDoneeIsShareholderOfIssuer || undefined,
       };
     }
     case "capital_increase_allocation":
@@ -442,6 +445,10 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         allocationMethod: k.allocationMethod,
         // 수증자는 두 시점에 걸쳐 **같은 사람**이다 — 시점별 값이 아니라 건 단위 축이라 공용 키를 쓴다.
         doneeIsForProfitCorp: form.ciDoneeIsForProfitCorp || undefined,
+        // §4의2④도 건 단위 축이다. 엔진은 이 값을 **가목(전환 후)에서만** 읽고 두 leg 호출에는
+        // false를 강제한다 — 차감항(기준선)에서 발동하면 결과가 부풀기 때문이다.
+        issuerGainCorporateTaxed: form.ciIssuerGainCorporateTaxed || undefined,
+        doneeIsShareholderOfIssuer: form.ciDoneeIsShareholderOfIssuer || undefined,
       });
       return {
         type: "convertible_stock",

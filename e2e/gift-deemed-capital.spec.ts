@@ -86,6 +86,50 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-exclusion")).toContainText("영리법인");
   });
 
+  // 「상증법」§4의2④ — 영리법인의 «수증이익»에 법인세가 부과되면 그 법인의 «주주등»에는
+  //   증여세를 부과하지 아니한다. 위 §4의2①·③(수증자 자신이 영리법인)과 **수범자가 다르다**.
+  //   ⑤ 토글이 실제로 엔진까지 도달하는지를 본다 — 단위 anchor는 배선을 증명하지 못한다.
+  test("§39 단건 — 발행법인 수증이익에 법인세가 부과되면 주주등에는 과세하지 않는다 (§4의2④)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    // 고가(§39①2호)는 이익을 얻는 자가 조문상 「주주등」으로 확정된다 → 주주 토글이 뜨지 않는다.
+    // 픽스처는 위 「고가 나목 → 75,006,000」과 같은 수치다 — 게이트가 없으면 그 값이 나온다.
+    await page.getByTestId("ci-direction-high").click();
+    await page.getByTestId("ci-subtype-no_realloc").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("20000");
+    await page.getByPlaceholder("증자 주식수").fill("20000");
+    await page.getByPlaceholder("실권주수").fill("30000");
+    await page.getByPlaceholder("특수관계인이 인수한 신주수").fill("15000");
+    await page.getByPlaceholder("분모 신주수").fill("50000");
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    // 조문이 확정하는 목이므로 주주 여부는 묻지 않고 그 사실을 고지한다.
+    await expect(page.getByTestId("ci-shareholder-fixed-note")).toContainText("조문상 확정");
+    await expect(page.getByTestId("ci-donee-shareholder")).toHaveCount(0);
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("§4의2④");
+  });
+
+  // 긍정 짝 — §39①1호 «다목»은 이익을 얻는 자가 조문상 「주주등이 **아닌** 자」다.
+  //   법인세가 부과돼도 §4의2④가 미치지 않는다. 일괄 배제 구현이었다면 여기서 0이 됐을 것이다.
+  test("§39 단건 — 1호 다목(제3자 직접배정)은 법인세가 부과돼도 배제되지 않는다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    await page.getByTestId("ci-subtype-third_party").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
+    await page.getByPlaceholder("증자 주식수").fill("50000");
+    await page.getByPlaceholder("직접배정 신주수").fill("20000");
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    await expect(page.getByTestId("ci-shareholder-fixed-note")).toContainText("적용되지 않습니다");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("66,660,000");
+  });
+
   // 🔄 픽스처 정합화(리뷰 6단계 #23) — 「증자 주식수」(실제 증가)와 「분모 신주수」(균등증자 가정
   //    총수)에 같은 50,000을 넣고 있었다. 나목은 실권주 **미배정**이라 그만큼 발행되지 않으므로
   //    실제 증가 = 50,000 − 30,000 = 20,000이 법문에 맞다. 엔진이 아니라 입력이 바뀐 것이다.
