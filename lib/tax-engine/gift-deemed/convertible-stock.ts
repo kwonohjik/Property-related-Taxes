@@ -27,9 +27,29 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   const value = raw > 0 ? raw : 0; // 시행령 §29②6 단서: 영 이하면 이익 없음
   const applied = value > 0;
 
+  // 5-C — 종전에는 두 leg의 **금액만** 읽고 `exclusionReason`·`direction`을 버렸다. 그래서
+  //   전환 시점이 공모로 제외돼 0이 된 사안과 산식상 0인 사안이 화면에서 구별되지 않았다.
+  //   금액을 다시 계산하지 않고 **하위 결과가 이미 들고 있는 사유**를 note로 옮기기만 한다.
+  const direction = input.atConversion.direction ?? "low";
   const breakdown: CalculationStep[] = [
-    { label: "전환 후 교부주식 기준 이익 (§29②1~5)", amount: conversion.deemedGiftValue, lawRef: GIFT.CAPITAL_INCREASE },
-    { label: "전환주식 발행 당시 이익 (§29②1~5)", amount: issuance.deemedGiftValue },
+    {
+      label: "발행유형",
+      amount: 0,
+      lawRef: GIFT.CAPITAL_INCREASE,
+      note: direction === "high" ? "§39①3호 나목 — 고가 발행 전환주식" : "§39①3호 가목 — 저가 발행 전환주식",
+    },
+    {
+      label: "전환 후 교부주식 기준 이익 (§29②1~5)",
+      amount: conversion.deemedGiftValue,
+      lawRef: GIFT.CAPITAL_INCREASE,
+      note: conversion.exclusionReason,
+    },
+    {
+      label: "전환주식 발행 당시 이익 (§29②1~5)",
+      amount: issuance.deemedGiftValue,
+      // 차감항은 기준선이라 배정방법 요건을 태우지 않는다(위 주석) — 그 사실도 함께 남긴다.
+      note: issuance.exclusionReason ?? "차감 기준선 — 배정방법 요건 미적용 (§29②6호 나목)",
+    },
     { label: "증여재산가액 (전환후 − 발행당시, 영 이하면 0)", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: "§39①3호 전환주식" },
   ];
   if (doneeIsForProfitCorp) {
