@@ -64,6 +64,10 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         : undefined,
       rentalMonths: deriveRentalMonths(u),
       rentalAutoTermination: u.rentalAutoTermination ?? false,
+      // OH-39 — 미선택("")·stale(undefined)이면 보내지 않는다(Zod optional). 엔진은 미입력이면 ㉓을 판정하지 않는다.
+      // 말소 토글 OFF면 의미가 없으므로 보내지 않는다(⑤가 토글 ON일 때만 노출 — 3중 패턴).
+      terminatedRegistrationType:
+        u.rentalAutoTermination && u.terminatedRegistrationType ? u.terminatedRegistrationType : undefined,
       requirementsConfirmed: u.requirementsConfirmed ?? false,
     })),
     priorResidenceTransferDate: rh.priorResidenceTransferDate
@@ -80,5 +84,14 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     standardPriceAtTransferForPhrp: isPhrpStdPriceLinked(asset)
       ? parseAmount(asset.standardPriceAtTransfer) || undefined
       : parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
+    // OH-15 — B만 보낸다(⑤가 B일 때만 노출). 빈값은 undefined(엔진 「미입력 = 불충족」, 0과 구별).
+    postRegistrationResidenceMonths:
+      rh.scenario === "B" && (rh.postRegistrationResidenceMonths ?? "") !== ""
+        ? parseInt(rh.postRegistrationResidenceMonths ?? "", 10) || 0
+        : undefined,
+    // OH-40 — 미선택("")은 보내지 않는다(엔진이 판정 보류 고지). A만 의미가 있다(⑤ 노출 조건과 동일).
+    priorRentalExemptionHistory:
+      rh.scenario === "A" && rh.priorRentalExemptionHistory ? rh.priorRentalExemptionHistory : undefined,
+    residenceTransitionUnderAddendum: rh.residenceTransitionUnderAddendum === true ? true : undefined,
   };
 }

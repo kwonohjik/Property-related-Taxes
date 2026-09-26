@@ -179,6 +179,12 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
               요건을 충족하지 못하면 <b>§155㉒</b>에 따라 차액을 신고·납부해야 합니다.
             </p>
           )}
+          {/* OH-40·§7-5 — 판정 보류·확인 필요 고지(결론은 그대로). 구 응답엔 필드가 없을 수 있다. */}
+          {(rental.notices ?? []).map((n, i) => (
+            <p key={`notice-${i}`} className="text-sm" data-testid="one-house-rental-notice">
+              {n}
+            </p>
+          ))}
           <div className="flex flex-wrap gap-2 pt-1">
             <LawArticleModal legalBasis={rental.legalBasis} />
           </div>

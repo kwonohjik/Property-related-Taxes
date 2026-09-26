@@ -21,6 +21,9 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
   standardPriceAtAcquisitionForPhrp: undefined,
   standardPriceAtPriorTransfer: undefined,
   standardPriceAtTransferForPhrp: undefined,
+  postRegistrationResidenceMonths: "",
+  priorRentalExemptionHistory: "",
+  residenceTransitionUnderAddendum: false,
 };
 
 /**
@@ -63,6 +66,7 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     rentalDong: "",
     rentalHo: "",
     rentalAutoTermination: false,
+    terminatedRegistrationType: "",
     requirementsConfirmed: false,
   };
 }

@@ -94,7 +94,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
   it("P_acq 미입력 → applied=false (fallback 없음)", () => {
     const input = makeBaseBInput({ standardPriceAtAcquisition: undefined });
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
     expect(result.eligibility.passed).toBe(false);
@@ -103,7 +103,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
   it("P_prior 미입력 → applied=false", () => {
     const input = makeBaseBInput({ standardPriceAtPriorTransfer: undefined });
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });
@@ -111,7 +111,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
   it("P_transfer 미입력 → applied=false", () => {
     const input = makeBaseBInput({ standardPriceAtTransfer: undefined });
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });
@@ -119,7 +119,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
   it("priorResidenceTransferDate 미입력 → applied=false", () => {
     const input = makeBaseBInput({ priorResidenceTransferDate: undefined });
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });
@@ -130,7 +130,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
       standardPriceAtTransfer: 500_000_000,
     });
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });
@@ -138,7 +138,7 @@ describe("calculateRentalHousingException B 시나리오 — 기준시가 미입
   it("모두 유효한 입력 → applied=true (회귀)", () => {
     const input = makeBaseBInput();
     const result = calculateRentalHousingException(
-      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2,
+      input, GAIN, S, HOLD_YEARS, LIVE_YEARS, 13, 2, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.taxableGain).toBe(172_605_000); // PDF#1 anchor

@@ -4,11 +4,16 @@
  * A/B 시나리오 분기 후 각 케이스 계산 오케스트레이션.
  *
  * ┌───────────────────────────────────────────────────────────────────────────┐
- * │  RH-A1  임대주택 + 거주주택 → 거주주택 양도 (12억 이하)  → taxableGain = 0  │
- * │  RH-A2  동상 (12억 초과)  → taxableGain = gain95T2 × (S−12억)/S           │
- * │  RH-B1  PHRP 양도 (12억 이하)  → §161① 안분                              │
- * │  RH-B2  PHRP 양도 (12억 초과)  → §161②1호+2호 합산                       │
+ * │  RH-A1  임대주택 + 거주주택 → 거주주택 양도 (기준 H 이하)  → taxableGain = 0 │
+ * │  RH-A2  동상 (H 초과)  → taxableGain = gain95T2 × (S−H)/S                 │
+ * │  RH-B1  PHRP 양도 (H 이하)  → §161① 안분                                 │
+ * │  RH-B2  PHRP 양도 (H 초과)  → §161②1호+2호 합산                          │
  * └───────────────────────────────────────────────────────────────────────────┘
+ *
+ * H = 양도일 기준 고가주택 기준금액 `resolveHighValueHouseThreshold(양도일)` (OH-13):
+ *   2008-10-07 ~ 2021-12-07 양도 9억 · 2021-12-08 이후 12억(법률 제18578호 부칙 제7조④).
+ *   §155⑳은 거주주택을 1주택으로 「보아 제154조제1항을 적용」하는 조문이라 고가주택 기준도 그 양도일의
+ *   §89①3호·§156①을 따른다. 종전의 12억 고정은 2021-12-07 이전 9억~12억 거주주택을 전액 비과세로 만들었다.
  *
  * 법령 근거:
  *   소득세법 시행령 §155⑳ (주택수 제외 + 비과세 특례)
@@ -17,7 +22,7 @@
  */
 
 import { safeMultiplyThenDivide } from "../../tax-utils";
-import { checkEligibility } from "./eligibility";
+import { checkEligibility, type EligibilityContext } from "./eligibility";
 import { calculateGain95BothTables } from "./ltc-table-split";
 import { validatePrices, calculatePrhpAllocation } from "./prhp-allocation";
 import type {
@@ -37,9 +42,6 @@ export type {
   RentalUnitVerdict,
   FormulaTrace,
 } from "./types";
-
-// 12억 비과세 임계값
-const HIGH_VALUE_THRESHOLD = 1_200_000_000;
 
 /**
  * 미충족 시 반환하는 기본 결과 (eligibility.passed === false)
@@ -74,6 +76,8 @@ function makeIneligibleResult(
  * @param liveYears 거주연수 (정수)
  * @param residenceHoldYears 거주주택 보유연수 (§155⑳ 2년 요건)
  * @param residenceLiveYears 거주주택 거주연수 (§155⑳ 2년 요건)
+ * @param highValueThreshold 양도일 기준 고가주택 기준금액 — `resolveHighValueHouseThreshold(양도일)`.
+ *   **기본값이 없다**(OH-13): 기본값을 두면 호출부가 빠뜨렸을 때 12억으로 조용히 계산된다.
  */
 export function calculateRentalHousingException(
   input: RentalHousingExceptionInput,
@@ -83,8 +87,11 @@ export function calculateRentalHousingException(
   liveYears: number,
   residenceHoldYears: number,
   residenceLiveYears: number,
+  highValueThreshold: number,
   /** §155의3① — 거주주택이 상생임대주택이면 §155⑳1호 거주요건이 면제된다. */
   winWinResidenceExempt = false,
+  /** 거주주택·양도 시점 사실(OH-15·16·40) — `checkEligibility`에 그대로 넘긴다. */
+  eligibilityContext?: EligibilityContext,
 ): RentalHousingExceptionResult {
   // ─── Step 0: 토글 OFF ─────────────────────────────────────
   if (!input.applyException) {
@@ -108,6 +115,7 @@ export function calculateRentalHousingException(
     residenceHoldYears,
     residenceLiveYears,
     winWinResidenceExempt,
+    eligibilityContext,
   );
 
   if (!eligibility.passed) {
@@ -117,11 +125,11 @@ export function calculateRentalHousingException(
   // ─── Step 3: 시나리오 분기 ────────────────────────────────
   if (input.scenario === "A") {
     return calculateScenarioA(
-      eligibility, gain95Table1, gain95Table2, S,
+      eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
     );
   } else {
     return calculateScenarioB(
-      input, eligibility, gain95Table1, gain95Table2, S,
+      input, eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
     );
   }
 }
@@ -135,8 +143,9 @@ function calculateScenarioA(
   gain95Table1: number,
   gain95Table2: number,
   S: number,
+  highValueThreshold: number,
 ): RentalHousingExceptionResult {
-  const isHighValue = S > HIGH_VALUE_THRESHOLD;
+  const isHighValue = S > highValueThreshold;
 
   if (!isHighValue) {
     // RH-A1: 전액 비과세
@@ -151,13 +160,14 @@ function calculateScenarioA(
         gain95Table1,
         gain95Table2,
         capApplied: false,
+        highValueThreshold,
       },
     };
   }
 
-  // RH-A2: 12억 초과 — 고가주택
-  // taxableGain = gain95(표2) × (S − 12억) / S
-  const highNumerator = S - HIGH_VALUE_THRESHOLD;
+  // RH-A2: 기준 초과 — 고가주택
+  // taxableGain = gain95(표2) × (S − 기준) / S
+  const highNumerator = S - highValueThreshold;
   const ratioHighValue = S > 0 ? highNumerator / S : 0;
 
   const taxableGain = safeMultiplyThenDivide(gain95Table2, highNumerator, S);
@@ -175,6 +185,7 @@ function calculateScenarioA(
       gain95Table2,
       ratioHighValue,
       capApplied: false,
+      highValueThreshold,
     },
   };
 }
@@ -189,6 +200,7 @@ function calculateScenarioB(
   gain95Table1: number,
   gain95Table2: number,
   S: number,
+  highValueThreshold: number,
 ): RentalHousingExceptionResult {
   // B 시나리오 전용 필드 검증
   const priceValidation = validatePrices(
@@ -257,9 +269,10 @@ function calculateScenarioB(
     P_acq,
     P_prior,
     P_transfer,
+    highValueThreshold,
   );
 
-  const isHighValue = S > HIGH_VALUE_THRESHOLD;
+  const isHighValue = S > highValueThreshold;
   const scenarioId = isHighValue ? "RH-B2" : "RH-B1";
   const appliedTable = isHighValue ? "mixed" : "table-1";
 
@@ -275,6 +288,7 @@ function calculateScenarioB(
     capApplied: allocation.capApplied,
     part1: allocation.part1,
     part2: allocation.part2,
+    highValueThreshold,
   };
 
   return {

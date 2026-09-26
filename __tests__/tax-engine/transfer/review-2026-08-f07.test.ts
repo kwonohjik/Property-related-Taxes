@@ -64,6 +64,8 @@ const rheB: NonNullable<TransferTaxInput["rentalHousingException"]> = {
   standardPriceAtAcquisition: 300_000_000,
   standardPriceAtPriorTransfer: 450_000_000,
   standardPriceAtTransfer: 500_000_000,
+  // OH-15: B의 §155⑳1호 거주요건 = 등록 이후 거주기간(이 픽스처는 거주 36개월 전부 등록 이후)
+  postRegistrationResidenceMonths: 36,
 };
 
 function fixture(o: Partial<TransferTaxInput>): TransferTaxInput {

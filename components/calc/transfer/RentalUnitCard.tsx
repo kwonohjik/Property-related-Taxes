@@ -31,6 +31,7 @@ import {
   deriveStdPriceCap,
   isApartmentRestricted,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -51,9 +52,14 @@ export interface RentalUnitCardProps {
   onChange: (u: AssetForm["rentalHousingException"]["rentalUnits"][number]) => void;
   onRemove: () => void;
   canRemove: boolean;
+  /**
+   * 양도일(YYYY-MM-DD) — 마목 1) 포함 여부 안내(OH-16, 대통령령 제31442호 부칙 제2조② 양도분)의
+   * 기준축. 엔진 `checkEligibility`와 같은 leaf(`isMa1IncludedIn15520`)로 판정한다. 빈값이면 판정하지 않는다.
+   */
+  transferDate?: string;
 }
 
-export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUnitCardProps) {
+export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, transferDate }: RentalUnitCardProps) {
   function set<K extends keyof typeof unit>(key: K, val: (typeof unit)[K]) {
     onChange({ ...unit, [key]: val });
   }
@@ -113,6 +119,11 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
   const showRegion = article === "가" || article === "마" || article === "아" || article === "구법" || isLa;
   // 918 조정취득: 마목(hard)·아목(carve-out)
   const show918 = article === "마" || article === "아";
+  // OH-16 — 2021-02-17 이후 양도분은 ⑳이 마목 1)을 포함한다(엔진과 같은 leaf). 양도일 미입력이면 판정 보류.
+  const ma1Included =
+    article === "마" && !!transferDate && !Number.isNaN(new Date(transferDate).getTime())
+      ? isMa1IncludedIn15520(new Date(transferDate))
+      : null;
   // 아목 carve-out: 918 ON 시 계약금 지급 증빙으로 배제 해제
   const showDepositProof = article === "아";
   // 단기→장기 변경신고 배제: 마·바
@@ -354,7 +365,11 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           title="2018.9.14 이후 조정대상지역에 신규취득한 주택입니다."
           description={
             article === "마"
-              ? "마목(장기 매입)은 해당하면 §155⑳ 특례가 배제됩니다."
+              ? ma1Included === true
+                ? "2021.2.17 이후 양도분은 해당해도 §155⑳ 장기임대주택에 포함됩니다(소령 §155⑳ 괄호 — 아파트·단기→장기 변경 주택은 제외)."
+                : ma1Included === false
+                  ? "2021.2.16 이전 양도분은 해당하면 §155⑳ 특례가 배제됩니다(2021.2.17 이후 양도분부터 포함)."
+                  : "양도일에 따라 달라집니다 — 2021.2.17 이후 양도분은 포함, 그 전 양도분은 배제(소령 §155⑳ 괄호)."
               : "아목(단기 매입)은 원칙 배제 — 조정대상지역 공고 전 계약 + 계약금 지급 증빙이 있으면 예외."
           }
           checked={unit.isExcluded918Rule}
@@ -434,10 +449,32 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           size="sm"
           tone="violet"
           title="자진·자동 말소된 임대주택이며, 말소 이후 5년 이내에 거주주택을 양도합니다."
-          description="자진말소는 의무임대기간 1/2 이상 임대한 경우에 한합니다. 해당하면 의무임대기간요건을 충족한 것으로 봅니다(소령 §155⑳㉓)."
+          description="자진말소는 「민간임대주택에 관한 특별법」 임대의무기간(단기 4년·장기일반 8년)의 1/2 이상 임대한 경우에 한합니다. 해당하면 임대기간요건을 충족한 것으로 봅니다(소령 §155㉓)."
           checked={unit.rentalAutoTermination}
-          onCheckedChange={(v) => set("rentalAutoTermination", v)}
-        />
+          // 끄면 등록 유형도 함께 비운다 — 같은 onChange 한 번(useEffect 미러링 금지)
+          onCheckedChange={(v) =>
+            onChange({ ...unit, rentalAutoTermination: v, ...(v ? {} : { terminatedRegistrationType: "" }) })
+          }
+        >
+          {/*
+            OH-39 — ㉓1호 「같은 법 제43조에 따른 임대의무기간의 2분의 1」은 소득세법 목별 임대기간요건
+            (가목 5년 등)이 아니라 말소 전 민특법 등록 유형의 임대의무기간이다(종전 §2 5호 8년 · 6호 4년).
+          */}
+          <FieldCard label="말소 전 민간임대주택 등록 유형" required hint="자진말소 1/2 판정 기준 (소령 §155㉓1호)">
+            <RadioCardGroup
+              name={`rental-terminated-type-${index}`}
+              data-testid={`rental-terminated-type-${index}`}
+              tone="violet"
+              layout="inline"
+              options={[
+                { value: "short_term", label: "단기민간임대(4년)", description: "1/2 = 24개월", testId: `rental-terminated-type-short-${index}` },
+                { value: "long_term_general", label: "장기일반민간임대(8년)", description: "1/2 = 48개월", testId: `rental-terminated-type-long-${index}` },
+              ]}
+              value={unit.terminatedRegistrationType ?? ""}
+              onChange={(v) => set("terminatedRegistrationType", v)}
+            />
+          </FieldCard>
+        </ToggleCard>
       )}
 
       {/* 규모요건 (대지 298㎡ · 연면적/전용 149㎡) — 건설(다·바·자) + 라목(미분양) */}
@@ -563,25 +600,28 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         />
       )}
 
-      {/* 기타 요건 자기확인 (나·라목은 5%룰 미검사 — 숨김: 엔진·validate 정합) */}
-      {!isNa && !isLa && (
-        <ToggleCard
-          variant="card"
-          size="sm"
-          tone="violet"
-          title="임대료 5% 상한, 임대사업자 등록 유지, 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
-          description={
-            unit.requirementsConfirmed
-              ? undefined
-              : "특례 적용을 위해 위 요건을 확인하고 체크하세요."
-          }
-          trailing={
-            <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
-          }
-          checked={unit.requirementsConfirmed}
-          onCheckedChange={(v) => set("requirementsConfirmed", v)}
-        />
-      )}
+      {/*
+        기타 요건 자기확인 — §155⑳2호(양도일 현재 사업자등록·민간임대주택 등록·임대 중·임대료등 증가율 5% 이내)는
+        목을 가리지 않는 ⑳ 고유 요건이다(OH-41). 종전에는 §167의3 나·라목 문언에 5% 규정이 없다는 이유로 이 토글을
+        숨겨 나·라목에서는 ⑳2호가 통째로 빠졌다. 엔진·⑧과 같이 전 목에 띄운다.
+      */}
+      <ToggleCard
+        variant="card"
+        size="sm"
+        tone="violet"
+        data-testid={`rental-requirements-confirmed-${index}`}
+        title="임대료 5% 상한, 임대사업자 등록 유지(양도일 현재 등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
+        description={
+          unit.requirementsConfirmed
+            ? undefined
+            : "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호)."
+        }
+        trailing={
+          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
+        }
+        checked={unit.requirementsConfirmed}
+        onCheckedChange={(v) => set("requirementsConfirmed", v)}
+      />
     </div>
   );
 }

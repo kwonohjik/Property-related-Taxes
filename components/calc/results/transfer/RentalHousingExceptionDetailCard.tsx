@@ -16,6 +16,7 @@
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -25,12 +26,20 @@ function formatN(n: number): string {
   return n.toLocaleString();
 }
 
-function ScenarioBadge({ id }: { id: RentalHousingExceptionResult["scenarioId"] }) {
+/**
+ * 고가주택 기준 표시 — 엔진이 양도일로 정한 값(OH-13: 2021-12-07 이전 양도 9억). 그 echo가 없는 결과는
+ * 이 필드가 생기기 전 이력이고, 그때 엔진은 12억 고정으로 계산했으므로 그 값을 그대로 보인다(계산과 표시 일치).
+ */
+function thresholdLabel(detail: RentalHousingExceptionResult): string {
+  return formatHighValueThresholdLabel(detail.formulaTrace.highValueThreshold ?? 1_200_000_000);
+}
+
+function ScenarioBadge({ id, threshold }: { id: RentalHousingExceptionResult["scenarioId"]; threshold: string }) {
   const labels: Record<string, string> = {
-    "RH-A1": "거주주택 양도 (12억원 이하)",
-    "RH-A2": "거주주택 양도 (고가주택 12억원 초과)",
-    "RH-B1": "임대→거주 전환 주택 양도 (12억원 이하)",
-    "RH-B2": "임대→거주 전환 주택 양도 (고가주택 12억원 초과)",
+    "RH-A1": `거주주택 양도 (${threshold} 이하)`,
+    "RH-A2": `거주주택 양도 (고가주택 ${threshold} 초과)`,
+    "RH-B1": `임대→거주 전환 주택 양도 (${threshold} 이하)`,
+    "RH-B2": `임대→거주 전환 주택 양도 (고가주택 ${threshold} 초과)`,
   };
   return (
     <span className="text-xs rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 px-2 py-0.5 font-medium">
@@ -98,7 +107,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
           장기임대주택 보유자 거주주택 비과세 특례
         </p>
-        <ScenarioBadge id={scenarioId} />
+        <ScenarioBadge id={scenarioId} threshold={thresholdLabel(detail)} />
         <span className="text-micro text-muted-foreground">소득세법 시행령 §155⑳</span>
       </div>
 
@@ -239,7 +248,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs text-muted-foreground">
             <p>
-              과세 비율 = <Frac top="양도가액 − 12억원" bottom="양도가액" />
+              과세 비율 = <Frac top={`양도가액 − ${thresholdLabel(detail)}`} bottom="양도가액" />
               {" "}= <span className="font-mono tabular-nums text-foreground font-semibold">
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>

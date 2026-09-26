@@ -43,7 +43,7 @@ describe("RH-Cap — §161③ 캡 발동 검증", () => {
       standardPriceAtTransfer: 500_000_000,
     };
     const result = calculateRentalHousingException(
-      input, 200_000_000, 800_000_000, 10, 5, 10, 5,
+      input, 200_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.capApplied).toBe(false);
     expect(result.taxableGain).toBeLessThanOrEqual(result.formulaTrace.gain95Table1);
@@ -76,7 +76,7 @@ describe("RH-Cap — §161③ 캡 발동 검증", () => {
       standardPriceAtTransfer: 600_000_000,
     };
     const result = calculateRentalHousingException(
-      input, 100_000_000, 800_000_000, 10, 5, 10, 5,
+      input, 100_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
     );
     // 비율 = 200/400 = 0.5
     // gain95T1 = 100M − (10×2% × 100M) = 100M − 20M = 80M
@@ -111,7 +111,7 @@ describe("RH-Cap — §161③ 캡 발동 검증", () => {
       standardPriceAtTransfer: 1_000_000_000,
     };
     const result = calculateRentalHousingException(
-      input, 600_000_000, 1_500_000_000, 15, 5, 15, 5,
+      input, 600_000_000, 1_500_000_000, 15, 5, 15, 5, 1_200_000_000,
     );
 
     expect(result.formulaTrace.part1).toBeLessThanOrEqual(result.formulaTrace.gain95Table1);

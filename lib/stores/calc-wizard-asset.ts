@@ -850,6 +850,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       rentalHo: string;
       /** §155⑳㉓ 말소 특례 — 자진(의무기간 1/2↑)·자동말소 후 5년 내 거주주택 양도 여부 (가·다·라·마목) */
       rentalAutoTermination: boolean;
+      /**
+       * ㉓1호 자진말소 1/2 판정용 — 말소 주택의 종전 민특법 등록 유형(OH-39). "" = 미선택.
+       * short_term = 단기민간임대(4년 → 24개월) · long_term_general = 장기일반민간임대(8년 → 48개월).
+       */
+      terminatedRegistrationType: "" | "short_term" | "long_term_general";
       /** 기타 요건 충족 자기확인 (5%증액 등) */
       requirementsConfirmed: boolean;
     }>;
@@ -861,6 +866,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     standardPriceAtPriorTransfer?: string;
     /** B 시나리오: 현 양도 당시 기준시가 P_transfer (원, 문자열) */
     standardPriceAtTransferForPhrp?: string;
+    /**
+     * B 시나리오: 사업자등록·임대사업자 등록 이후 거주기간(개월, 문자열) — §155⑳1호 괄호(OH-15).
+     * "" = 미입력(⑧이 차단).
+     */
+    postRegistrationResidenceMonths?: string;
+    /**
+     * 생애 1회 제한 구간(2019-02-12 이후 취득 · 2025-02-27 이전 양도)의 종전 §155⑳ 적용 이력(OH-40).
+     * "" = 미선택.
+     */
+    priorRentalExemptionHistory?: "" | "none" | "used";
+    /** 대통령령 제29523호 부칙 제7조② 경과조치 해당(2019-02-12 당시 거주 중 · 그 전 계약금 지급) — OH-40 */
+    residenceTransitionUnderAddendum?: boolean;
   };
 
 

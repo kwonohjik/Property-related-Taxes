@@ -36,7 +36,7 @@ export type RentalArticle = "가" | "나" | "다" | "라" | "마" | "바" | "아
  * 임대주택 1호 입력 데이터
  *
  * 복수 임대주택 보유 시 배열로 전달. 최소 1호 필수.
- * 1호라도 요건을 충족하면 특례 적용 (§155⑳ 호별 검증).
+ * 거주주택 외의 주택이 **모두** 장기임대주택이어야 한다(§155⑳ 「장기임대주택 … 과 그 밖의 1주택」 — OH-14).
  */
 export type RentalUnitInput = {
   /** 세무서 사업자등록일 (소득세법 §168) */
@@ -88,6 +88,15 @@ export type RentalUnitInput = {
    */
   rentalAutoTermination: boolean;
   /**
+   * §155㉓1호 자진말소 「같은 법(민특법) 제43조에 따른 **임대의무기간**의 2분의 1 이상」 판정용 —
+   * 말소된 주택의 종전 「민간임대주택에 관한 특별법」 등록 유형(OH-39).
+   * - `short_term`: 종전 민특법 §2 6호 단기민간임대주택 — 「4년 이상」 → 1/2 = 24개월
+   * - `long_term_general`: 종전 민특법 §2 5호 장기일반민간임대주택 — 「8년 이상」 → 1/2 = 48개월
+   * (법률 제17482호 개정 전 본문, MST 211593. 자진말소는 민특법 §6①11호가 이 두 유형만 허용한다.)
+   * 소득세법 §167의3 목별 임대기간요건(가목 5년 등)과 **다른 축**이다. 미입력이면 ㉓을 판정하지 않는다.
+   */
+  terminatedRegistrationType?: "short_term" | "long_term_general";
+  /**
    * 기타 요건 자기확인 체크
    * (임대료 5% 이내 증액·임대차계약 체결·임대료 지급 등 — LawArticleModal 안내 후 사용자 확인)
    */
@@ -123,6 +132,24 @@ export type RentalHousingExceptionInput = {
   standardPriceAtPriorTransfer?: number;
   /** P_transfer: PHRP 양도 당시 기준시가 (원) */
   standardPriceAtTransfer?: number;
+  /**
+   * B 시나리오 전용 — §155⑳1호 괄호 「직전거주주택보유주택의 경우에는 법 제168조에 따른 사업자등록과
+   * 「민간임대주택에 관한 특별법」 제5조에 따른 임대사업자 등록을 한 날 … **이후의 거주기간**」(OH-15).
+   * 전체 거주기간(`TransferTaxInput.residencePeriodMonths`)은 장특 표2 거주분에만 쓰고, 1호 거주요건은
+   * 이 값으로 판정한다. 미입력이면 B의 거주요건을 충족으로 보지 않는다.
+   */
+  postRegistrationResidenceMonths?: number;
+  /**
+   * 대통령령 제29523호(2019-02-12)~제35349호(2025-02-27) 구간의 「생애 한 차례만 거주주택을 최초로
+   * 양도하는 경우에 한정」 판정 사실(OH-40) — 장기임대주택을 보유한 상태에서 이미 거주주택을 양도해
+   * §155⑳을 적용받은 적이 있는가. 미입력이면 판정 보류 경고를 낸다(요건 미충족으로 단정하지 않는다).
+   */
+  priorRentalExemptionHistory?: "none" | "used";
+  /**
+   * 대통령령 제29523호 부칙 제7조② 경과조치 — 2019-02-12 당시 그 거주주택에 거주 중이었거나, 그 전에
+   * 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인된다(종전 규정 적용). 미입력 = false.
+   */
+  residenceTransitionUnderAddendum?: boolean;
 };
 
 // ============================================================
@@ -148,7 +175,7 @@ export type RentalUnitVerdict = {
 
 /** 요건 판정 결과 */
 export type EligibilityResult = {
-  /** 전체 통과 여부 (최소 1호 통과 + 거주주택 요건 충족) */
+  /** 전체 통과 여부 (입력한 임대주택 **전 호** 통과 + 거주주택 요건 충족 — OH-14) */
   passed: boolean;
   /** 미충족 사유 목록 */
   failReasons: RentalUnitFailReason[];
@@ -158,6 +185,11 @@ export type EligibilityResult = {
   laws: string[];
   /** 호별 판정기준 echo (결과카드 표시용) */
   perUnitVerdict?: RentalUnitVerdict[];
+  /**
+   * 결론을 바꾸지 않는 **판정 보류·확인 필요 고지**(OH-40 생애 1회 이력 미입력 · 계획서 §7-5 분기).
+   * 계산기는 warnings로, 판정 메뉴는 결과 카드로 낸다.
+   */
+  notices?: string[];
   /**
    * 의무임대기간을 채우기 전이라 §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 안내 대상.
    * 기간을 채웠거나 ㉓ 말소 특례로 간주 충족한 호는 들어가지 않는다.
@@ -179,6 +211,11 @@ export type FormulaTrace = {
   ratioHighValue?: number;
   /** §161③ 캡 발동 여부 */
   capApplied: boolean;
+  /**
+   * 적용한 고가주택 기준금액(원) — 양도일 기준 `resolveHighValueHouseThreshold`(OH-13).
+   * 결과 카드가 「12억」을 리터럴로 적지 않고 이 값을 표시한다.
+   */
+  highValueThreshold?: number;
   /** B2 각 호 과세 양도소득금액 (1호 + 2호 합산 전 개별값) */
   part1?: number;
   part2?: number;

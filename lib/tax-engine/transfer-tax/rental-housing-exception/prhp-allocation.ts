@@ -1,6 +1,9 @@
 /**
  * 직전거주주택보유주택(PHRP) 양도소득금액 안분 계산
  *
+ * 「12억」 = 양도일 기준 고가주택 기준금액 H(`resolveHighValueHouseThreshold` — 2021-12-07 이전 양도 9억, OH-13).
+ * §161②는 「제156조제1항에 따른 고가주택인 경우」이고 2호 산식의 금액도 그 기준을 따른다.
+ *
  * §161① (B1 — 12억 이하):
  *   taxableGain = gain95(표1) × (P_prior − P_acq) / (P_transfer − P_acq)
  *
@@ -119,6 +122,7 @@ export type AllocationResult = {
  * @param P_acq PHRP 취득 당시 기준시가 (원)
  * @param P_prior 직전거주주택 양도 당시 PHRP 기준시가 (원)
  * @param P_transfer PHRP 양도 당시 기준시가 (원)
+ * @param highValueThreshold 양도일 기준 고가주택 기준금액(원) — 기본값 없음(OH-13)
  */
 export function calculatePrhpAllocation(
   gain95T1: number,
@@ -127,8 +131,9 @@ export function calculatePrhpAllocation(
   P_acq: number,
   P_prior: number,
   P_transfer: number,
+  highValueThreshold: number,
 ): AllocationResult {
-  const HIGH_VALUE_THRESHOLD = 1_200_000_000; // 12억
+  const HIGH_VALUE_THRESHOLD = highValueThreshold;
 
   // 공통 분자·분모
   const numerator1 = P_prior - P_acq;          // (P_prior − P_acq)

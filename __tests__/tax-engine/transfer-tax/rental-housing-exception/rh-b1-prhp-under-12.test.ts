@@ -71,7 +71,7 @@ describe("RH-B1 — 사례문제 PDF#1 (예제 2023, 사례 25)", () => {
     holdYears,
     liveYears,
     /* residenceHoldYears */ 13,
-    /* residenceLiveYears */ 2,
+    /* residenceLiveYears */ 2, 1_200_000_000,
   );
 
   it("anchor 1: 양도차익 = 311,000,000", () => {

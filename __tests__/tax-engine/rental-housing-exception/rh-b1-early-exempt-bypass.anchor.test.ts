@@ -56,6 +56,8 @@ const scenarioBInput = (extra?: Partial<TransferTaxInput>): TransferTaxInput =>
       standardPriceAtAcquisition: 300_000_000,
       standardPriceAtPriorTransfer: 450_000_000,
       standardPriceAtTransfer: 500_000_000,
+      // OH-15: B의 §155⑳1호 거주요건 = 사업자·임대사업자 등록 이후 거주기간(사례 25: 거주 24개월 전부 등록 이후)
+      postRegistrationResidenceMonths: 24,
     },
     ...extra,
   });
