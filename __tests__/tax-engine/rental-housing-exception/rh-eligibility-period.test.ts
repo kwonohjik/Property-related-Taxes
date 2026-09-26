@@ -436,27 +436,33 @@ describe("checkEligibility — Phase3 라목·말소 특례", () => {
       .failReasons.find((f) => f.code === "MIN_UNITS_NOT_MET")).toBeDefined();
   });
 
-  it("㉓ 말소 특례: 마목 자진말소 1/2(60개월=의무10년×1/2) + 5년내 양도 → 의무기간 간주 충족 passed", () => {
+  // OH-39(2026-09-26): ㉓1호의 1/2은 소득세법 목별 기간(마목 10년)이 아니라 「민간임대주택에 관한 특별법」
+  //   제43조 임대의무기간(종전 §2 5호 장기일반 8년 → 48개월)이다 — 등록 유형을 함께 입력한다.
+  it("㉓ 말소 특례: 마목 자진말소 1/2(장기일반 8년×1/2=48개월 ≤ 60개월) + 5년내 양도 → 의무기간 간주 충족 passed", () => {
     const maTerminated = makeUnit({
       rentalCategory: "long_general", rentalAcquisitionType: "purchase",
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
       region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
-      rentalMonths: 60, // 5년 < 의무 10년이나 1/2 이상 + 말소
+      rentalMonths: 60, // 5년 < 의무 10년이나 민특법 임대의무기간 8년의 1/2 이상 + 말소
       rentalAutoTermination: true,
+      terminatedRegistrationType: "long_term_general",
     });
     const r = checkEligibility([maTerminated], 5, 5);
     expect(r.passed).toBe(true);
     expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeUndefined();
   });
 
-  it("㉓ 말소 특례: 자진말소 1/2 미달(48개월) → 특례 미적용·RENTAL_PERIOD_SHORT 유지", () => {
+  // OH-39: 48개월은 이제 장기일반 8년의 1/2 **충족**이다(종전 10년×1/2=60 기준은 법령 오독) — 미달 경계는 47개월.
+  //   불충족 사유는 「의무임대기간 미충족」이 아니라 ㉓1호 불충족(RENTAL_TERMINATION_RESTRICTED)으로 낸다.
+  it("㉓ 말소 특례: 자진말소 1/2 미달(47개월 < 장기일반 48개월) → 특례 미적용·㉓ 불충족 사유", () => {
     const r = checkEligibility([makeUnit({
       rentalCategory: "long_general", rentalAcquisitionType: "purchase",
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
       region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
-      rentalMonths: 48, rentalAutoTermination: true,
+      rentalMonths: 47, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general",
     })], 5, 5);
-    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeDefined();
+    expect(r.passed).toBe(false);
+    expect(r.failReasons.find((f) => f.code === "RENTAL_TERMINATION_RESTRICTED")).toBeDefined();
   });
 
   it("㉓ 말소 특례: 바목(대상 목 아님)은 말소여도 RENTAL_PERIOD_SHORT 유지", () => {
@@ -489,7 +495,7 @@ describe("calculateRentalHousingException — 미충족 시 applied=false", () =
         }),
       ],
     };
-    const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5);
+    const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5, 1_200_000_000);
     expect(result.applied).toBe(false);
     expect(result.eligibility.passed).toBe(false);
   });
@@ -506,7 +512,7 @@ describe("calculateRentalHousingException — 미충족 시 applied=false", () =
         }),
       ],
     };
-    const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5);
+    const result = calculateRentalHousingException(input, 100_000_000, 800_000_000, 10, 5, 5, 5, 1_200_000_000);
     expect(result.applied).toBe(true);
     expect(result.eligibility.periodPendingUnitIndexes).toEqual([0]);
   });

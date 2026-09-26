@@ -25,6 +25,9 @@ import { RentalUnitCard } from "./RentalUnitCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
+import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { isLifetimeLimitEra155_20 } from "@/lib/tax-engine/data/rental-155-20-era";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
@@ -110,6 +113,13 @@ export function RentalHousingExceptionSection({
   const showAllocationInputs = mode !== "facts";
   /** 판정 사실(토글·시나리오·① 임대주택 정보) — 계산기는 받지 않는다(P6-c-2). */
   const showJudgmentFacts = mode !== "calc";
+  /** OH-40 구간(경과조치 선언 전 기준) — 양도일·취득일이 모두 있어야 판정한다(표시 전용 파생). */
+  const lifetimeEraBase =
+    !!acquisitionDate &&
+    !!transferDate &&
+    !Number.isNaN(new Date(acquisitionDate).getTime()) &&
+    !Number.isNaN(new Date(transferDate).getTime()) &&
+    isLifetimeLimitEra155_20(new Date(acquisitionDate), new Date(transferDate), false);
   function set<K extends keyof AssetForm["rentalHousingException"]>(
     key: K,
     val: AssetForm["rentalHousingException"][K],
@@ -205,6 +215,7 @@ export function RentalHousingExceptionSection({
                   onChange={(u) => updateUnit(i, u)}
                   onRemove={() => removeUnit(i)}
                   canRemove={rh.rentalUnits.length > 1}
+                  transferDate={transferDate}
                 />
               ))}
             </div>
@@ -217,6 +228,60 @@ export function RentalHousingExceptionSection({
               + 임대주택 추가
             </button>
           </div>
+
+          {/*
+            OH-40 — 대통령령 제29523호(2019.2.12) 부칙 제7조①: 이후 취득한 거주주택은 ⑳ 두 괄호(생애 한 차례 ·
+            직전거주주택보유주택 1주택 한정)가 적용되고, 제35349호 부칙 제14조로 2025.2.28 이후 양도분부터 삭제됐다.
+            게이트는 엔진과 같은 leaf(`isLifetimeLimitEra155_20`) — 경과조치를 켜기 전 기준으로 연다.
+          */}
+          {lifetimeEraBase && (
+            <div className="space-y-2" data-testid="rental-lifetime-limit-block">
+              <ToneCard tone="amber" title="2019.2.12 이후 취득 · 2025.2.27 이전 양도 — 적용 범위 제한">
+                <p className="text-caption">
+                  이 구간의 양도는{" "}
+                  {rh.scenario === "B"
+                    ? "임대주택을 거주주택으로 전환한 경우 1주택 외의 주택을 모두 양도한 후 1주택을 보유하게 된 때에만"
+                    : "장기임대주택을 보유한 채 생애 한 차례만 거주주택을 최초로 양도하는 경우에만"}{" "}
+                  특례가 적용됩니다(소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).
+                </p>
+              </ToneCard>
+              <ToggleCard
+                variant="card"
+                size="sm"
+                tone="emerald"
+                data-testid="rental-residence-transition"
+                title="2019.2.12 당시 이 주택에 거주하고 있었거나, 그 전에 매매계약을 체결하고 계약금을 지급했습니다."
+                description="증빙서류로 확인되면 종전 규정을 따라 위 제한이 적용되지 않습니다(대통령령 제29523호 부칙 제7조②)."
+                checked={rh.residenceTransitionUnderAddendum === true}
+                onCheckedChange={(v) => set("residenceTransitionUnderAddendum", v)}
+              />
+              {rh.scenario === "A" && rh.residenceTransitionUnderAddendum !== true && (
+                <FieldCard label="장기임대주택 보유 중 거주주택 양도 이력" required>
+                  <RadioCardGroup
+                    name={`rental-prior-history-${asset.assetId ?? "primary"}`}
+                    data-testid="rental-prior-history"
+                    tone="amber"
+                    layout="stack"
+                    options={[
+                      {
+                        value: "none",
+                        label: "없음 — 이번이 최초의 거주주택 양도입니다",
+                        testId: "rental-prior-history-none",
+                      },
+                      {
+                        value: "used",
+                        label: "있음 — 이미 거주주택을 양도해 이 특례를 적용받았습니다",
+                        description: "생애 한 차례 제한으로 이번 양도에는 적용되지 않습니다.",
+                        testId: "rental-prior-history-used",
+                      },
+                    ]}
+                    value={rh.priorRentalExemptionHistory ?? ""}
+                    onChange={(v) => set("priorRentalExemptionHistory", v)}
+                  />
+                </FieldCard>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -381,7 +446,11 @@ export function RentalHousingExceptionSection({
       {/* ③ 거주주택 요건 충족 상태 (실시간) + 적용 요건 안내 */}
       {(() => {
         // 거주기간(개월) — interval/direct 도출값(엔진·validation과 동일 소스)
-        const liveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
+        const totalLiveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
+        // OH-15 — B의 §155⑳1호 거주요건은 등록 이후 거주기간이다(엔진 `checkEligibility`와 같은 축).
+        const isB = rh.scenario === "B";
+        const postRegRaw = rh.postRegistrationResidenceMonths ?? "";
+        const liveMonths = isB ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
         // 보유기간(일) 계산 — 취득일 ~ 양도일
         let holdDays = 0;
         let holdYearsLabel = "-";
@@ -463,10 +532,33 @@ export function RentalHousingExceptionSection({
               </div>
             )}
 
+            {/*
+              OH-15 — 직전거주주택보유주택(B)은 「법 제168조에 따른 사업자등록과 「민간임대주택에 관한 특별법」
+              제5조에 따른 임대사업자 등록을 한 날 … 이후의 거주기간」만 센다(소령 §155⑳1호 괄호). 전체 거주기간은
+              장기보유특별공제 표2 거주분에 쓰이므로 따로 받는다. 모든 모드에서 띄운다(⑧이 두 모드 모두 요구).
+            */}
+            {isB && (
+              <FieldCard
+                label="사업자등록·임대사업자 등록 이후 거주기간"
+                required
+                unit="개월"
+                hint="이 주택의 세무서 사업자등록과 지자체 임대사업자 등록을 모두 마친 날 이후 이 주택에서 거주한 기간 (소령 §155⑳1호)"
+              >
+                <IntegerInput
+                  ariaLabel="사업자등록·임대사업자 등록 이후 거주기간"
+                  allowEmpty
+                  value={postRegRaw === "" ? undefined : Number(postRegRaw)}
+                  onChange={(v) => set("postRegistrationResidenceMonths", v === undefined ? "" : String(v))}
+                />
+              </FieldCard>
+            )}
+
             {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건) */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-violet-800">거주주택 거주기간 (2년 이상 필요)</span>
+                <span className="text-violet-800">
+                  {isB ? "거주주택 거주기간 — 등록 이후 (2년 이상 필요)" : "거주주택 거주기간 (2년 이상 필요)"}
+                </span>
                 <span
                   className={cn(
                     "font-semibold",
@@ -601,6 +693,16 @@ export function RentalHousingExceptionSection({
             </strong>{" "}
             · 임대주택 {rh.rentalUnits.length}호
           </p>
+          {/* OH-40 — 넘겨받은 생애 1회 판정 사실(세액을 바꾼다). 값이 있을 때만 말한다. */}
+          {(rh.priorRentalExemptionHistory || rh.residenceTransitionUnderAddendum) && (
+            <p data-testid="imported-rental-lifetime-facts">
+              {rh.residenceTransitionUnderAddendum
+                ? "2019.2.12 부칙 경과조치(당시 거주·계약금 지급) 해당"
+                : rh.priorRentalExemptionHistory === "used"
+                  ? "장기임대주택 보유 중 거주주택 양도 이력: 있음 (생애 1회 제한)"
+                  : "장기임대주택 보유 중 거주주택 양도 이력: 없음"}
+            </p>
+          )}
           <p className="text-caption text-muted-foreground">
             시나리오와 임대주택 정보는 이 화면에서 수정할 수 없습니다 — 고치려면 판정 메뉴로
             돌아가 다시 판정하세요.

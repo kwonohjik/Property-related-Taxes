@@ -52,7 +52,7 @@ function run(
     10,
     5,
     residenceHoldYears,
-    residenceLiveYears,
+    residenceLiveYears, 1_200_000_000,
   );
 }
 
@@ -70,10 +70,11 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
     expect(result.applied).toBe(false);
   });
 
-  it("말소 후 임대 60개월 미만(㉓ 1/2 미충족) → unit RENTAL_PERIOD_SHORT", () => {
-    const result = run({ rentalMonths: 24, rentalAutoTermination: true });
+  // OH-39: ㉓1호 불충족은 「의무임대기간 미충족」이 아니라 ㉓ 사유 코드로 낸다(장기일반 8년 → 48개월 기준).
+  it("말소 후 임대 48개월 미만(㉓ 1/2 미충족) → unit RENTAL_TERMINATION_RESTRICTED", () => {
+    const result = run({ rentalMonths: 24, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general" });
     expect(result.eligibility.passed).toBe(false);
-    expect(result.eligibility.failReasons.some(r => r.code === "RENTAL_PERIOD_SHORT")).toBe(true);
+    expect(result.eligibility.failReasons.some(r => r.code === "RENTAL_TERMINATION_RESTRICTED")).toBe(true);
   });
 
   it("F-15: 말소 없이 임대 60개월 미만 → §155㉑로 통과 (기간 요건만 면제)", () => {
@@ -109,7 +110,7 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
   it("토글 OFF → applied=false, scenarioId='RH-A1' (default)", () => {
     const result = calculateRentalHousingException(
       { ...baseInput, applyException: false },
-      300_000_000, 1_000_000_000, 10, 5, 5, 5,
+      300_000_000, 1_000_000_000, 10, 5, 5, 5, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });

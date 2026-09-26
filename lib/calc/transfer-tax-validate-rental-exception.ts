@@ -15,6 +15,7 @@ import {
   deriveEffectiveRegDate,
   deriveRentalArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { isLifetimeLimitEra155_20 } from "@/lib/tax-engine/data/rental-155-20-era";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -33,6 +34,12 @@ export function validateRentalHousingException(
    *    ⑤가 감추는 것은 ⑧도 요구하지 않는다.
    */
   mode: "full" | "facts" = "full",
+  /**
+   * §155의3① — 거주주택이 상생임대주택이면 「제155조제20항제1호 … 거주기간의 제한을 받지 않는다」(OH-42).
+   * 엔진(`checkEligibility`의 `winWinResidenceExempt`)과 같은 술어 `qualifiesWinWinRental` 결과를 호출부가
+   * 넘긴다 — 여기서 24개월로 막으면 판정 메뉴·엔진은 비과세인데 계산기만 영구 차단된다.
+   */
+  winWinResidenceExempt = false,
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -90,7 +97,7 @@ export function validateRentalHousingException(
     const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, eff);
 
     if (article === "나") {
-      // 나목(기존사업자 매입) — 취득당시 기준시가 3억·국민주택규모·2호 (임대개시일 기준시가·5%룰 미사용)
+      // 나목(기존사업자 매입) — 취득당시 기준시가 3억·국민주택규모·2호 (임대개시일 기준시가 미사용)
       if (!u.acquisitionOfficialPrice || parseAmount(u.acquisitionOfficialPrice) <= 0) {
         return `${unitLabel}: 취득 당시 기준시가를 입력하세요 (나목 3억 이하 요건).`;
       }
@@ -101,7 +108,7 @@ export function validateRentalHousingException(
         return `${unitLabel}: 나목은 2호 이상 임대 요건 충족 확인이 필요합니다.`;
       }
     } else if (article === "라") {
-      // 라목(미분양 매입) — 취득당시 기준시가 3억·최초분양계약일·5호·면적 (비수도권·임대개시일 기준시가·5%룰 미사용)
+      // 라목(미분양 매입) — 취득당시 기준시가 3억·최초분양계약일·5호·면적 (비수도권·임대개시일 기준시가 미사용)
       if (!u.acquisitionOfficialPrice || parseAmount(u.acquisitionOfficialPrice) <= 0) {
         return `${unitLabel}: 취득 당시 기준시가를 입력하세요 (라목 3억 이하 요건).`;
       }
@@ -127,10 +134,41 @@ export function validateRentalHousingException(
           return `${unitLabel}: 건설임대는 대지면적·연면적(㎡)을 입력하세요 (규모요건 대지 298㎡·연면적 149㎡ 이하).`;
         }
       }
-      if (!u.requirementsConfirmed) {
-        return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한, 등록 유지 등).`;
-      }
     }
+    // §155⑳2호(양도일 현재 등록·임대 중·임대료 5% 이내)는 목을 가리지 않는다 — 나·라목 포함(OH-41).
+    // 엔진 `checkEligibility`가 전 목에 요구하므로 ⑤도 전 목에 토글을 띄운다(3중 패턴).
+    if (!u.requirementsConfirmed) {
+      return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한, 등록 유지 등).`;
+    }
+    // ㉓1호 자진말소 1/2은 민특법 임대의무기간 기준이다 — 등록 유형 없이는 판정할 수 없다(OH-39).
+    // ⑤는 말소 토글 ON + 가·다·라·마목일 때 이 선택지를 띄운다(엔진 `terminationEligibleArticle`과 같은 목).
+    if (
+      u.rentalAutoTermination &&
+      (article === "가" || article === "다" || article === "라" || article === "마") &&
+      !u.terminatedRegistrationType
+    ) {
+      return `${unitLabel}: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택하세요 (소령 §155㉓1호 임대의무기간 1/2 판정).`;
+    }
+  }
+
+  /**
+   * OH-40 — 2019.2.12 이후 취득 · 2025.2.27 이전 양도(부칙 경과조치 제외) 거주주택 양도(A)는 「생애 한 차례만
+   * 거주주택을 최초로 양도하는 경우」로 한정된다. 판정 메뉴(`facts`)에서만 묻는다 — 계산기(`calc`)는 판정 사실
+   * 칸이 없으므로(P6-c-2) 막지 않고, 엔진이 「판정 보류」 고지를 낸다(침묵 적용 아님).
+   */
+  if (
+    mode === "facts" &&
+    rh.scenario === "A" &&
+    !rh.priorRentalExemptionHistory &&
+    asset.acquisitionDate &&
+    formTransferDate &&
+    isLifetimeLimitEra155_20(
+      new Date(asset.acquisitionDate),
+      new Date(formTransferDate),
+      rh.residenceTransitionUnderAddendum === true,
+    )
+  ) {
+    return `${label}: 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 이력이 있는지 선택하세요 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).`;
   }
 
   // B 시나리오 추가 검증 — §161① 안분 입력. 판정에는 쓰이지 않으므로 facts 모드에서는 묻지 않는다.
@@ -174,6 +212,14 @@ export function validateRentalHousingException(
     }
   }
 
+  /**
+   * OH-15 — B의 §155⑳1호 거주요건은 「사업자등록·임대사업자 등록 이후 거주기간」이다. ⑤가 ③ 거주 블록에
+   * **모든 모드에서** 띄우므로 두 모드 모두 막는다(화면에 있는 칸). 미입력이면 엔진이 요건 불충족으로 본다.
+   */
+  if (rh.scenario === "B" && (rh.postRegistrationResidenceMonths ?? "") === "") {
+    return `${label}: 임대→거주 전환 주택 시나리오 — 사업자등록·임대사업자 등록 이후 거주기간(개월)을 입력하세요 (소령 §155⑳1호).`;
+  }
+
   // 거주주택 취득일 검증 (자산-수준)
   /**
    * ── 여기부터는 **거주주택 자신의 보유·거주 요건**이다 ────────────────────────────
@@ -199,7 +245,16 @@ export function validateRentalHousingException(
   // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
   const liveMonthsVal = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
 
-  if (!liveMonthsVal || liveMonthsVal < 24) {
+  if (rh.scenario === "B") {
+    // OH-15 — 등록 이후 거주기간은 전체 거주기간의 일부다. 더 길면 두 입력 중 하나가 틀렸다.
+    const postReg = parseInt(rh.postRegistrationResidenceMonths ?? "", 10) || 0;
+    if (postReg > (liveMonthsVal || 0)) {
+      return `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${postReg}개월)이 전체 거주기간(${liveMonthsVal || 0}개월)보다 깁니다. 확인 후 재입력하세요.`;
+    }
+    if (postReg < 24 && !winWinResidenceExempt) {
+      return `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호).`;
+    }
+  } else if ((!liveMonthsVal || liveMonthsVal < 24) && !winWinResidenceExempt) {
     return `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`;
   }
 

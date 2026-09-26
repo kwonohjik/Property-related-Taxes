@@ -53,6 +53,8 @@ function makeScenarioBRhe(
     rentalUnits: [unit],
     priorResidenceTransferDate: "2016-08-01",
     standardPriceAtPriorTransfer: "450,000,000",
+    // OH-15: B의 §155⑳1호 거주요건(등록 이후 거주기간) — 판정 사실. 이 픽스처는 거주 38개월 전부 등록 이후.
+    postRegistrationResidenceMonths: "38",
     ...over,
   };
 }

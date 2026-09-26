@@ -63,6 +63,8 @@ const input = (
             standardPriceAtAcquisition: 300_000_000,
             standardPriceAtPriorTransfer: 450_000_000,
             standardPriceAtTransfer: 500_000_000,
+            // OH-15: B의 §155⑳1호 거주요건은 등록 이후 거주기간 — 이 픽스처는 전 기간이 등록 이후다.
+            postRegistrationResidenceMonths: 60,
           },
   });
 
@@ -119,7 +121,9 @@ describe("F-15 ㉒ — 사후 추징 안내", () => {
     expect(
       clawback(calculateTransferTax(input(unit({ rentalMonths: 120 }), 1_500_000_000), rates).warnings),
     ).toEqual([]);
-    const terminated = unit({ rentalMonths: 72, rentalAutoTermination: true });
+    // OH-39: ㉓1호 1/2은 민특법 임대의무기간 기준 — 등록 유형(장기일반 8년 → 48개월)을 함께 둔다.
+    const terminated = unit({ rentalMonths: 72, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general" });
+    expect(checkEligibility([terminated], 5, 5).passed).toBe(true);
     expect(checkEligibility([terminated], 5, 5).periodPendingUnitIndexes).toEqual([]);
     expect(clawback(calculateTransferTax(input(terminated), rates).warnings)).toEqual([]);
   });
@@ -152,9 +156,10 @@ describe("F-15 대조 — 면제되는 것은 기간 요건뿐", () => {
   });
 
   it("F15-8 말소됐는데 ㉓(자진말소 1/2)을 못 채웠으면 과세 — 양도일 현재 임대 중이 아니다(⑳2호)", () => {
-    const u = unit({ rentalMonths: 36, rentalAutoTermination: true }); // 10년 × 1/2 = 60개월 미만
+    // OH-39: 민특법 임대의무기간(장기일반 8년) × 1/2 = 48개월 미만 — 사유는 ㉓ 불충족 코드로 낸다.
+    const u = unit({ rentalMonths: 36, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general" });
     expect(calculateTransferTax(input(u), rates).totalTax).toBe(TAXED);
-    expect(checkEligibility([u], 5, 5).failReasons.map((f) => f.code)).toEqual(["RENTAL_PERIOD_SHORT"]);
+    expect(checkEligibility([u], 5, 5).failReasons.map((f) => f.code)).toEqual(["RENTAL_TERMINATION_RESTRICTED"]);
   });
 
   it("F15-9 거주주택 요건(거주 2년) 미충족은 그대로 막는다", () => {

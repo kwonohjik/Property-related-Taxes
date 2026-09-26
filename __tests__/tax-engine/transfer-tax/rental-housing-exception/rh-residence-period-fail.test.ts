@@ -53,7 +53,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13, // holdYears (PHRP 보유)
       0, // liveYears (PHRP 거주) — 미입력 케이스
       13, // residenceHoldYears (거주주택 보유)
-      0, // residenceLiveYears (거주주택 거주) — 0개월 시뮬
+      0, 1_200_000_000, // residenceLiveYears (거주주택 거주) — 0개월 시뮬
     );
     expect(result.applied).toBe(false);
     expect(result.eligibility.passed).toBe(false);
@@ -67,7 +67,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13,
       0,
       13,
-      0,
+      0, 1_200_000_000,
     );
     const joined = result.eligibility.residenceFailReasons.join(" · ");
     expect(joined).toContain("거주기간");
@@ -82,7 +82,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13,
       0,
       13,
-      0,
+      0, 1_200_000_000,
     );
     expect(result.taxableGain).toBe(0);
   });
@@ -95,7 +95,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13,
       1,
       13,
-      1,
+      1, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });
@@ -108,7 +108,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13,
       2,
       13,
-      2,
+      2, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.scenarioId).toBe("RH-B1");
@@ -124,7 +124,7 @@ describe("RH-ResidencePeriodFail — 거주주택 거주기간 미달 침묵 실
       13,
       2,
       1, // residenceHoldYears = 1년 (2년 미만)
-      2,
+      2, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });

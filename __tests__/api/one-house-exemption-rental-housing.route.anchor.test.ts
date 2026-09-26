@@ -139,7 +139,11 @@ describe("판정 메뉴 §155⑳ — route", () => {
    */
   it("[RH-5] 시나리오 B를 §161 안분 입력 **없이** 보내도 판정이 난다", async () => {
     const { status, json } = await post({
-      rentalHousingException: rentalBody({ scenario: "B" }),
+      // OH-40: 기본 픽스처(2019-06-01 취득 · 2024-06-01 양도)는 PHRP 1주택 한정 구간이라 B가 불성립한다 —
+      //   이 테스트의 축(§161 입력 없이 판정)을 지키려고 구간 밖 취득일로 둔다.
+      acquisitionDate: "2018-01-01",
+      // OH-15: B의 §155⑳1호 거주요건(등록 이후 거주기간)은 **판정 사실**이다 — §161 안분 입력이 아니다.
+      rentalHousingException: rentalBody({ scenario: "B", postRegistrationResidenceMonths: 36 }),
     });
     expect(status).toBe(200);
     expect(json.data.rentalHousingException.scenario).toBe("B");
@@ -208,6 +212,7 @@ describe("판정 메뉴 §155⑳ — leaf", () => {
       residenceFailReasons: [],
       unitFailReasons: [],
       periodPendingUnitIndexes: [],
+      notices: [],
       legalBasis: "소득세법 시행령 §155⑳",
     };
     expect(applyRentalHousingVerdict(judgment, verdict)).toBe(judgment);
@@ -220,6 +225,7 @@ describe("판정 메뉴 §155⑳ — leaf", () => {
       residenceFailReasons: ["거주주택 거주기간 2년 미충족 (현재: 1년)"],
       unitFailReasons: [],
       periodPendingUnitIndexes: [],
+      notices: [],
       legalBasis: "소득세법 시행령 §155⑳",
     };
     const out = applyRentalHousingVerdict(judgment, verdict);

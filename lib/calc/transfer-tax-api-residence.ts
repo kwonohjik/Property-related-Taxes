@@ -11,6 +11,7 @@ import { toDate } from "@/lib/api/date-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -88,6 +89,10 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
           residenceMonthsTrimmed: residence.trimmed,
         }
       : undefined,
+    // OH-58 — §155의3① 상생임대주택이면 §154① 거주요건 면제(`meetsOneHouseResidenceRequirement`가
+    // `qualifiesWinWinRental`로 소비). ④가 운반 상자에서 보내는 것과 **같은 사실**을 싣는다 — 빠뜨리면
+    // 계산은 비과세인데 Step4만 「거주요건 불충족」을 띄운다.
+    winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts),
     // 사유는 ④와 같은 게이트를 통과한 값이다 — 근거는 `effectiveReason` 선언부 참조.
     oneHouseExemptionProviso: effectiveReason
       ? {

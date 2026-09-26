@@ -142,7 +142,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
   // ─── anchor #6: §161① 비율 ───────────────────────────────
   it("anchor #6: r161_1 = 0.75", () => {
     const { ratio161_1 } = calculatePrhpAllocation(
-      GAIN95_T1, GAIN95_T1, S, P_ACQ, P_PRIOR, P_TRANSFER,
+      GAIN95_T1, GAIN95_T1, S, P_ACQ, P_PRIOR, P_TRANSFER, 1_200_000_000,
     );
     expect(ratio161_1).toBe(RATIO_161_1);
   });
@@ -150,7 +150,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
   // ─── anchor #7: 과세대상 양도소득금액 ────────────────────
   it("anchor #7: taxableGain (§161① 결과) = 172,605,000", () => {
     const { taxableGain } = calculatePrhpAllocation(
-      GAIN95_T1, GAIN95_T1, S, P_ACQ, P_PRIOR, P_TRANSFER,
+      GAIN95_T1, GAIN95_T1, S, P_ACQ, P_PRIOR, P_TRANSFER, 1_200_000_000,
     );
     expect(taxableGain).toBe(TAXABLE_GAIN);
   });
@@ -160,7 +160,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
     const result = calculateRentalHousingException(
       makePdf1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS,
+      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.exemptGain).toBe(EXEMPT_GAIN);
   });
@@ -170,7 +170,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
     const result = calculateRentalHousingException(
       makePdf1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS,
+      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.appliedTable).toBe("table-1");
   });
@@ -180,7 +180,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
     const result = calculateRentalHousingException(
       makePdf1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS,
+      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.scenarioId).toBe("RH-B1");
   });
@@ -190,7 +190,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
     const result = calculateRentalHousingException(
       makePdf1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS,
+      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.formulaTrace.capApplied).toBe(false);
   });
@@ -235,7 +235,7 @@ describe("RH-B1: PDF#1 사례 25 — anchor 17개 (원단위 toBe)", () => {
     const result = calculateRentalHousingException(
       makePdf1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS,
+      RESIDENCE_HOLD_YEARS, RESIDENCE_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.eligibility.passed).toBe(true);

@@ -443,12 +443,17 @@ export async function POST(request: NextRequest) {
               firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
               rentalMonths: u.rentalMonths,
               rentalAutoTermination: u.rentalAutoTermination,
+              terminatedRegistrationType: u.terminatedRegistrationType,
               requirementsConfirmed: u.requirementsConfirmed,
             })),
             priorResidenceTransferDate: toOptionalDate(p.rentalHousingException.priorResidenceTransferDate),
             standardPriceAtAcquisition: p.rentalHousingException.standardPriceAtAcquisitionForPhrp,
             standardPriceAtPriorTransfer: p.rentalHousingException.standardPriceAtPriorTransfer,
             standardPriceAtTransfer: p.rentalHousingException.standardPriceAtTransferForPhrp,
+            // OH-15·OH-40 판정 사실 (단건 `_rental-engine-input.ts`와 동일 매핑)
+            postRegistrationResidenceMonths: p.rentalHousingException.postRegistrationResidenceMonths,
+            priorRentalExemptionHistory: p.rentalHousingException.priorRentalExemptionHistory,
+            residenceTransitionUnderAddendum: p.rentalHousingException.residenceTransitionUnderAddendum,
           }
         : undefined,
     };

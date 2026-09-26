@@ -29,6 +29,8 @@ import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
 import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
+import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
+import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import {
@@ -308,7 +310,11 @@ export function validateAssetEntry(
   }
 
   // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳)
-  const rhError = validateRentalHousingException(a.rentalHousingException, a, index, label, form.transferDate);
+  // OH-42 — 상생임대주택(§155의3①)이면 §155⑳1호 거주요건 면제. 엔진과 같은 술어·같은 사실(④가 보내는 운반 상자).
+  const rhError = validateRentalHousingException(
+    a.rentalHousingException, a, index, label, form.transferDate, "full",
+    qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts) }),
+  );
   if (rhError) return rhError;
 
   // 날짜 순서 (취득-양도·상속·증여) — 실시간 인라인 경고와 단일 진실 공유

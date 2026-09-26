@@ -47,7 +47,7 @@ describe("RH-NoPrice — B 시나리오 3-시점 기준시가 누락", () => {
     const result = (() => {
       try {
         return calculateRentalHousingException(
-          input, 200_000_000, 800_000_000, 10, 5, 10, 5,
+          input, 200_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
         );
       } catch {
         return null;
@@ -71,7 +71,7 @@ describe("RH-NoPrice — B 시나리오 3-시점 기준시가 누락", () => {
     const result = (() => {
       try {
         return calculateRentalHousingException(
-          input, 200_000_000, 800_000_000, 10, 5, 10, 5,
+          input, 200_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
         );
       } catch {
         return null;
@@ -90,7 +90,7 @@ describe("RH-NoPrice — B 시나리오 3-시점 기준시가 누락", () => {
     const result = (() => {
       try {
         return calculateRentalHousingException(
-          input, 200_000_000, 800_000_000, 10, 5, 10, 5,
+          input, 200_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
         );
       } catch {
         return null;
@@ -103,7 +103,7 @@ describe("RH-NoPrice — B 시나리오 3-시점 기준시가 누락", () => {
 
   it("3-시점 모두 입력 → 정상 결과", () => {
     const result = calculateRentalHousingException(
-      baseInput, 200_000_000, 800_000_000, 10, 5, 10, 5,
+      baseInput, 200_000_000, 800_000_000, 10, 5, 10, 5, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.scenarioId).toBe("RH-B1");

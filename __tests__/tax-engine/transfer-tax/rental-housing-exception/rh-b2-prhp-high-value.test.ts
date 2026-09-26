@@ -63,7 +63,7 @@ describe("RH-B2 — PHRP 고가주택 양도 (12억 초과, §161② 1호+2호 �
     /* holdYears */ 15,
     /* liveYears */ 10, // 거주 10년 → 표2 80% 캡 도달 (15×4%=40+10×4%=40=80%)
     /* residenceHoldYears */ 15,
-    /* residenceLiveYears */ 10,
+    /* residenceLiveYears */ 10, 1_200_000_000,
   );
 
   it("scenarioId = 'RH-B2'", () => {

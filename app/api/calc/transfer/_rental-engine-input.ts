@@ -37,6 +37,7 @@ export function toRentalHousingExceptionEngineInput(
       firstSaleContractDate: u.firstSaleContractDate ? new Date(u.firstSaleContractDate) : undefined,
       rentalMonths: u.rentalMonths,
       rentalAutoTermination: u.rentalAutoTermination,
+      terminatedRegistrationType: u.terminatedRegistrationType,
       requirementsConfirmed: u.requirementsConfirmed,
     })),
     priorResidenceTransferDate: rhe.priorResidenceTransferDate
@@ -45,5 +46,8 @@ export function toRentalHousingExceptionEngineInput(
     standardPriceAtAcquisition: rhe.standardPriceAtAcquisitionForPhrp,
     standardPriceAtPriorTransfer: rhe.standardPriceAtPriorTransfer,
     standardPriceAtTransfer: rhe.standardPriceAtTransferForPhrp,
+    postRegistrationResidenceMonths: rhe.postRegistrationResidenceMonths,
+    priorRentalExemptionHistory: rhe.priorRentalExemptionHistory,
+    residenceTransitionUnderAddendum: rhe.residenceTransitionUnderAddendum,
   };
 }

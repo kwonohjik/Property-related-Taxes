@@ -58,7 +58,7 @@ describe("§161③ 캡 (B1) — 분자 > 분모 시 캡 발동", () => {
     const result = calculatePrhpAllocation(
       GAIN95_T1, GAIN95_T2,
       S,
-      P_ACQ, P_PRIOR, P_TRANSFER,
+      P_ACQ, P_PRIOR, P_TRANSFER, 1_200_000_000,
     );
     expect(result.capApplied).toBe(true);
     expect(result.taxableGain).toBe(GAIN95_T1); // 캡 = gain95T1
@@ -68,7 +68,7 @@ describe("§161③ 캡 (B1) — 분자 > 분모 시 캡 발동", () => {
     const result = calculatePrhpAllocation(
       GAIN95_T1, GAIN95_T2,
       S,
-      P_ACQ, P_PRIOR, P_TRANSFER,
+      P_ACQ, P_PRIOR, P_TRANSFER, 1_200_000_000,
     );
     // r161_1 = 200M/100M = 2.0
     expect(result.ratio161_1).toBeCloseTo(2.0, 10);
@@ -81,6 +81,7 @@ describe("§161③ 캡 미발동 — 정상 케이스", () => {
       230_140_000, 230_140_000,  // gain95T1, gain95T2
       800_000_000,               // S
       300_000_000, 450_000_000, 500_000_000, // P_acq, P_prior, P_transfer
+      1_200_000_000,
     );
     expect(result.capApplied).toBe(false);
     expect(result.taxableGain).toBe(172_605_000); // PDF#1 anchor
@@ -106,6 +107,7 @@ describe("§161③ 캡 (B2) — 호별 분리 비교 검증", () => {
       100_000_000,  // gain95T2
       1_500_000_000, // S = 15억 (B2)
       100_000_000, 300_000_000, 200_000_000, // P_acq, P_prior > P_transfer
+      1_200_000_000,
     );
     // numerator1 = 300M − 100M = 200M
     // denominator = 200M − 100M = 100M

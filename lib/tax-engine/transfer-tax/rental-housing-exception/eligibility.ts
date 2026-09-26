@@ -9,16 +9,26 @@
  *    (c) 도출 목·지역별 임대개시일 기준시가 상한
  *    (d) 아파트 등록 제한 / 단기 조정대상지역 / 건설 규모·호수
  *    (e) 기타 요건 자기확인
- * 3. 1호라도 통과하면 PASS
+ * 3. 입력한 임대주택이 **전 호** 통과해야 PASS (OH-14)
+ *    §155⑳ 본문은 「장기임대주택 … 과 **그 밖의 1주택**을 국내에 소유하고 있는 1세대」다 — 요건을 못 갖춘
+ *    임대주택은 장기임대주택이 아니라 일반 주택이므로, 한 호라도 탈락하면 거주주택은 「그 밖의 1주택」이
+ *    아니다(조심 2023서7289 — 미등록 임대주택을 주택 수에서 빼고 1세대1주택 비과세를 적용할 수 없다).
+ *    ㉑이 구제하는 것은 임대기간요건 미충족뿐이다.
  *    (의무임대기간만 못 채운 호는 §155㉑로 통과 — ㉒ 사후 추징 안내용으로 호 번호를 남긴다)
  *
  * 파생 함수(deriveEffectiveRegDate·deriveRentalArticle·deriveRequiredYears·deriveStdPriceCap)는
  * UI(⑤)·validate(⑧)가 그대로 import 재사용 — 판정 규칙 단일 소스(dual-truth 회피).
  *
  * 법령 근거: 소득세법 시행령 §155⑳·㉑·㉓ + §167조의3①2호
+ * 연혁(마목 1) 포함·생애 1회·PHRP 1주택 한정): `../../data/rental-155-20-era.ts`
  */
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
+import {
+  isMa1IncludedIn15520,
+  isLifetimeLimitEra155_20,
+  needsPre2019ArticleScopeNotice,
+} from "../../data/rental-155-20-era";
 import { rentalStdPriceCap, rentalRequiredYears, RA_CUT } from "../../rental-article/rules";
 import {
   checkRentalArticle,
@@ -35,7 +45,33 @@ import type {
   EligibilityResult,
   RentalUnitFailReason,
   RentalUnitVerdict,
+  RentalHousingExceptionInput,
 } from "./types";
+
+/**
+ * 호별 판정 외에 §155⑳이 요구하는 **거주주택·양도 시점 사실** (OH-15 · OH-16 · OH-40).
+ * 계산기·판정 메뉴가 공유하는 `judgeRentalHousingEligibility`·`runRentalHousingExceptionStep`이 넘긴다.
+ * 없으면(직접 호출 단위 테스트) 연혁 게이트를 판정하지 않는다 — 종전 동작.
+ */
+export type EligibilityContext = {
+  scenario: RentalHousingExceptionInput["scenario"];
+  /** 양도일 — 마목 1) 포함(OH-16)·생애 1회 구간(OH-40) 판정 */
+  transferDate: Date;
+  /** 양도하는 거주주택(B는 직전거주주택보유주택)의 취득일 — OH-40 부칙 제7조① 기준축 */
+  residenceAcquisitionDate: Date;
+} & Pick<
+  RentalHousingExceptionInput,
+  "postRegistrationResidenceMonths" | "priorRentalExemptionHistory" | "residenceTransitionUnderAddendum"
+>;
+
+/**
+ * 종전 「민간임대주택에 관한 특별법」 임대의무기간(년) — §43①이 가리키는 §2 5호(장기일반 「8년 이상」)·
+ * 6호(단기 「4년 이상」) (법률 제17482호 개정 전, MST 211593). §155㉓1호 1/2 판정 전용(OH-39).
+ */
+const TERMINATED_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminatedRegistrationType"]>, number> = {
+  short_term: 4,
+  long_term_general: 8,
+};
 
 // ============================================================
 // 날짜 경계 상수 (§167조의3①2호·§155⑳)
@@ -192,8 +228,15 @@ function buildFailMessage(
       return `${n}호: 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 요건을 충족해야 합니다.`;
     case "REGION_RESTRICTED":
       return `${n}호: 해당 유형은 비수도권 소재 주택만 대상입니다.`;
-    case "RENTAL_TERMINATION_RESTRICTED":
-      return `${n}호: 자진·자동 말소 후 양도 요건(2020.8.18 이후 말소·의무기간 1/2 이상·1년 내 양도)을 충족하지 않습니다.`;
+    case "RENTAL_TERMINATION_RESTRICTED": {
+      // ⑳ 경로에서는 ㉓(말소 후 5년 내 거주주택 양도)만 이 코드를 쓴다 — 사목은 ⑳에서 도출되지 않는다.
+      const t = unit.terminatedRegistrationType;
+      if (!t) {
+        return `${n}호: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호(임대의무기간 1/2 이상)를 판정할 수 있습니다.`;
+      }
+      const duty = TERMINATED_DUTY_YEARS[t];
+      return `${n}호: 자진말소는 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대해야 합니다 (현재: ${unit.rentalMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`;
+    }
     case "REQUIREMENTS_NOT_CONFIRMED":
       return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
     default:
@@ -222,8 +265,10 @@ export function checkEligibility(
    * ⚠️ **보유 2년은 면제되지 않는다** — 법문이 면제하는 것은 거주기간뿐이다.
    */
   winWinResidenceExempt = false,
+  ctx?: EligibilityContext,
 ): EligibilityResult {
   const residenceFailReasons: string[] = [];
+  const notices: string[] = [];
 
   // ── 1. 거주주택 요건 ──
   if (residenceHoldYears < 2) {
@@ -231,17 +276,63 @@ export function checkEligibility(
       `거주주택 보유기간 2년 미충족 (현재: ${residenceHoldYears}년)`,
     );
   }
-  if (residenceLiveYears < 2 && !winWinResidenceExempt) {
+  if (ctx?.scenario === "B") {
+    /**
+     * OH-15 — §155⑳1호 괄호: 직전거주주택보유주택의 거주기간은 「법 제168조에 따른 사업자등록과
+     * 「민간임대주택에 관한 특별법」 제5조에 따른 임대사업자 등록을 한 날 … **이후의 거주기간**」이다
+     * (MST 202148·207800·262425·286211 모두 같은 괄호). 전체 거주기간으로 판정하지 않는다.
+     */
+    const m = ctx.postRegistrationResidenceMonths;
+    if (!winWinResidenceExempt) {
+      if (m == null) {
+        residenceFailReasons.push(
+          "직전거주주택보유주택 — 사업자등록·임대사업자 등록 이후 거주기간을 입력하지 않아 거주요건(2년)을 판정할 수 없습니다 (소령 §155⑳1호)",
+        );
+      } else if (Math.floor(m / 12) < 2) {
+        residenceFailReasons.push(
+          `거주주택 거주기간(사업자등록·임대사업자 등록 이후) 2년 미충족 (현재: ${Math.floor(m / 12)}년 ${m % 12}개월)`,
+        );
+      }
+    }
+  } else if (residenceLiveYears < 2 && !winWinResidenceExempt) {
     residenceFailReasons.push(
       `거주주택 거주기간 2년 미충족 (현재: ${residenceLiveYears}년)`,
     );
   }
 
+  /**
+   * OH-40 — 대통령령 제29523호 부칙 제7조①(2019-02-12 이후 취득 거주주택)·제35349호 부칙 제14조
+   * (2025-02-28 이후 양도분 삭제) 사이 구간의 두 괄호.
+   */
+  if (ctx) {
+    const transition = ctx.residenceTransitionUnderAddendum === true;
+    if (isLifetimeLimitEra155_20(ctx.residenceAcquisitionDate, ctx.transferDate, transition)) {
+      if (ctx.scenario === "B") {
+        // 「민간임대주택으로 등록한 사실이 있는 주택인 경우에는 1주택 외의 주택을 모두 양도한 후
+        //   1주택을 보유하게 된 경우로 한정」 — 임대주택을 계속 보유 중이면 직전거주주택보유주택이 아니다.
+        if (rentalUnits.length > 0) {
+          residenceFailReasons.push(
+            "2019.2.12 이후 취득한 직전거주주택보유주택을 2025.2.27 이전에 양도하는 경우, 1주택 외의 주택을 모두 양도한 후 1주택을 보유하게 된 경우에만 특례가 적용됩니다 — 임대주택을 계속 보유하고 있어 적용되지 않습니다 (소령 §155⑳ 후단 괄호, 대통령령 제29523호 부칙 제7조①)",
+          );
+        }
+      } else if (ctx.priorRentalExemptionHistory === "used") {
+        residenceFailReasons.push(
+          "2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 장기임대주택 보유 중 생애 한 차례만 거주주택을 최초로 양도하는 경우에 한정됩니다 — 이미 거주주택을 양도해 특례를 적용받은 이력이 있어 적용되지 않습니다 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)",
+        );
+      } else if (ctx.priorRentalExemptionHistory == null) {
+        notices.push(
+          "생애 한 차례 제한(2019.2.12 이후 취득 거주주택 · 2025.2.27 이전 양도 — 소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)은 판정하지 않았습니다. 장기임대주택을 보유한 채 이미 거주주택을 양도해 이 특례를 적용받은 적이 있다면 적용되지 않습니다 — 판정 메뉴에서 이력을 입력하세요.",
+        );
+      }
+    }
+  }
+
   // ── 2. 임대주택 호별 요건 ──
   const unitFailReasons: RentalUnitFailReason[] = [];
   const perUnitVerdict: RentalUnitVerdict[] = [];
-  let anyUnitPassed = false;
+  let allUnitsPassed = rentalUnits.length > 0;
   const periodPendingUnitIndexes: number[] = [];
+  const derivedArticles: RentalArticle[] = [];
 
   for (let i = 0; i < rentalUnits.length; i++) {
     const unit = rentalUnits[i];
@@ -249,6 +340,15 @@ export function checkEligibility(
     // 목 도출 + 공용 canonical predicate(check.ts)에 위임 — 판정 로직 단일 소스.
     const effectiveRegDate = deriveEffectiveRegDate(unit);
     const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effectiveRegDate);
+    derivedArticles.push(article);
+    /**
+     * OH-16 — 양도일 2021-02-17 이후 ⑳은 「같은 호 마목에 해당하는 주택의 경우에는 같은 목 1)에 따른
+     * 주택[같은 목 2) 및 3)에 해당하지 않는 경우로 한정한다]을 **포함**한다」(대통령령 제31442호, 부칙
+     * 제2조② 양도분). 공용 predicate의 마목 918 hard 배제(다주택 §167의3 축)를 이 경로에서만 끈다.
+     * 2)(아파트)·3)(단기→장기 변경)은 APARTMENT_RESTRICTED·SHORT_TO_LONG_CHANGE로 그대로 남는다.
+     * 양도일이 없으면(직접 호출) 종전대로 배제한다.
+     */
+    const ma1Included = article === "마" && ctx != null && isMa1IncludedIn15520(ctx.transferDate);
     const normalized: NormalizedRentalUnit = {
       businessRegistrationDate: unit.businessRegistrationDate,
       rentalRegistrationDate: unit.rentalRegistrationDate,
@@ -263,20 +363,54 @@ export function checkEligibility(
       hasMinimum5UnitsInCity: unit.hasMinimum5UnitsInCity, // 라목
       firstSaleContractDate: unit.firstSaleContractDate, // 라목
       isNationalSizeHousing: unit.isNationalSizeHousing, // 나목
-      isExcluded918Rule: unit.isExcluded918Rule, // 마 hard·아 carve-out
+      isExcluded918Rule: ma1Included ? false : unit.isExcluded918Rule, // 마 hard·아 carve-out
       hasContractDepositProof: unit.hasContractDepositProof, // 아 carve-out
       isExcludedShortToLongChange: unit.isExcludedShortToLongChange, // 마·바
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
     };
     const result = checkRentalArticle(article, normalized);
 
-    // §155⑳㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소(의무기간 1/2 이상)·자동말소되고
-    // 말소 이후 5년 이내 거주주택 양도 시 의무임대기간요건 간주 충족(RENTAL_PERIOD_SHORT 억제).
-    // (자진말소 1/2 = 의무기간×6개월. 자동말소는 의무기간 종료라 항상 충족.)
+    /**
+     * OH-41 — §155⑳2호(「양도일 현재 법 제168조에 따른 사업자등록을 하고, 장기임대주택을 … 민간임대주택으로
+     * 등록하여 임대하고 있으며, 임대료등의 증가율이 100분의 5를 초과하지 않을 것」)는 목을 가리지 않는 ⑳ 고유
+     * 요건이다. 공용 predicate의 `fivePct`는 §167의3 목별 문언(나·라목엔 5% 문언 없음)이라 나·라목에서
+     * 이 요건이 통째로 빠졌다 — ⑳ 경로에서는 전 목에 자기확인을 요구한다.
+     */
+    if (!unit.requirementsConfirmed && !result.failCodes.includes("REQUIREMENTS_NOT_CONFIRMED")) {
+      result.failCodes.push("REQUIREMENTS_NOT_CONFIRMED");
+      result.passed = false;
+    }
+
+    /**
+     * §155㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소·자동말소되고 말소 이후 5년 이내 거주주택
+     * 양도 시 임대기간요건 간주 충족(RENTAL_PERIOD_SHORT 억제).
+     *
+     * OH-39 — ㉓1호 자진말소의 「2분의 1」은 「같은 법(민특법) 제43조에 따른 **임대의무기간**」 기준이다
+     * (단기 4년 → 24개월 · 장기일반 8년 → 48개월). 종전에는 소득세법 목별 임대기간요건(`requiredYears`,
+     * 가목 5년 → 30개월)을 썼다. 자동말소(㉓2호)는 임대의무기간 종료일 말소라 이 1/2을 언제나 넘는다.
+     * 등록 유형을 모르면 판정하지 않는다(간주 충족을 주지 않는다).
+     */
+    const dutyYears = unit.terminatedRegistrationType
+      ? TERMINATED_DUTY_YEARS[unit.terminatedRegistrationType]
+      : null;
+    const terminationEligibleArticle =
+      article === "가" || article === "다" || article === "라" || article === "마";
     const terminationRelief =
       unit.rentalAutoTermination &&
-      (article === "가" || article === "다" || article === "라" || article === "마") &&
-      unit.rentalMonths >= result.requiredYears * 6;
+      terminationEligibleArticle &&
+      dutyYears != null &&
+      unit.rentalMonths >= dutyYears * 6;
+    if (
+      unit.rentalAutoTermination &&
+      terminationEligibleArticle &&
+      !terminationRelief &&
+      result.failCodes.includes("RENTAL_PERIOD_SHORT")
+    ) {
+      // 기간 미달의 실제 사유는 ㉓1호 불충족이다 — 「의무임대기간 5년 미충족」이 아니라 그 사유를 낸다.
+      result.failCodes = result.failCodes.map((c) =>
+        c === "RENTAL_PERIOD_SHORT" ? "RENTAL_TERMINATION_RESTRICTED" : c,
+      );
+    }
     // §155㉑ — 임대기간요건을 **충족하기 전에** 거주주택을 양도해도 장기임대주택으로 보아 ⑳을 적용한다.
     // 면제되는 것은 기간 요건뿐이다(다른 실패 코드는 그대로). 말소된 주택은 양도일 현재 임대 중이
     // 아니므로(⑳2호) ㉓으로만 풀린다. ㉑로 통과한 호는 ㉒ 사후 추징 대상이라 따로 남긴다.
@@ -296,9 +430,8 @@ export function checkEligibility(
       sizeRequired: isConstructionArticle(article),
     });
 
-    if (result.passed) {
-      anyUnitPassed = true;
-    } else {
+    if (!result.passed) {
+      allUnitsPassed = false;
       for (const code of result.failCodes) {
         unitFailReasons.push({
           unitIndex: i,
@@ -309,7 +442,20 @@ export function checkEligibility(
     }
   }
 
-  const passed = residenceFailReasons.length === 0 && anyUnitPassed;
+  const passed = residenceFailReasons.length === 0 && allUnitsPassed;
+
+  if (
+    ctx &&
+    needsPre2019ArticleScopeNotice(
+      ctx.residenceAcquisitionDate,
+      ctx.residenceTransitionUnderAddendum === true,
+      derivedArticles,
+    )
+  ) {
+    notices.push(
+      "2019.2.12 이전에 취득한 거주주택(또는 부칙 경과조치 해당)과 함께 마목·바목 임대주택을 보유하고 있습니다. 대통령령 제29523호 부칙 제7조①은 2019.2.12 개정(장기임대주택 범위를 가~라목에서 가~바목으로 확대)을 「시행 이후 취득하는 주택부터」 적용한다고 정하고 있어, 이 거주주택에 마목·바목 임대주택이 장기임대주택으로 인정되는지 확인이 필요합니다. 이 계산은 현행 문언대로 인정했습니다.",
+    );
+  }
 
   return {
     passed,
@@ -318,5 +464,6 @@ export function checkEligibility(
     laws: [TRANSFER_RENTAL_HOUSING.PIT_RD_155_20],
     perUnitVerdict,
     periodPendingUnitIndexes,
+    ...(notices.length > 0 ? { notices } : {}),
   };
 }

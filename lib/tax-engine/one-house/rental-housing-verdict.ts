@@ -25,7 +25,7 @@ import type { OneHouseJudgment } from "./types";
 export type OneHouseRentalHousingVerdict = {
   /** A: 거주주택 양도 · B: 임대주택→거주주택 전환 후 양도(§161① 안분) */
   scenario: "A" | "B";
-  /** 요건 충족 여부 — 최소 1호 통과 + 거주주택 보유·거주 2년 */
+  /** 요건 충족 여부 — 입력한 임대주택 전 호 통과(OH-14) + 거주주택 요건 */
   passed: boolean;
   /** 거주주택 요건 미충족 사유(보유 2년·거주 2년) */
   residenceFailReasons: string[];
@@ -33,6 +33,8 @@ export type OneHouseRentalHousingVerdict = {
   unitFailReasons: { unitIndex: number; message: string }[];
   /** §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 대상임을 알린다 */
   periodPendingUnitIndexes: number[];
+  /** 결론을 바꾸지 않는 판정 보류·확인 필요 고지(OH-40 생애 1회 이력 미입력 · 계획서 §7-5) */
+  notices: string[];
   legalBasis: string;
 };
 
@@ -54,6 +56,7 @@ export function buildRentalHousingVerdict(
       message: f.message,
     })),
     periodPendingUnitIndexes: eligibility.periodPendingUnitIndexes ?? [],
+    notices: eligibility.notices ?? [],
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   };
 }

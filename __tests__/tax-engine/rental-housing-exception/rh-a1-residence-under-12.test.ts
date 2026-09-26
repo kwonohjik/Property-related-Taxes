@@ -47,7 +47,7 @@ describe("RH-A1: 거주주택 양도 12억 이하 — 전액 비과세", () => {
     const result = calculateRentalHousingException(
       makeA1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RES_HOLD_YEARS, RES_LIVE_YEARS,
+      RES_HOLD_YEARS, RES_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.taxableGain).toBe(0);
@@ -58,7 +58,7 @@ describe("RH-A1: 거주주택 양도 12억 이하 — 전액 비과세", () => {
     const result = calculateRentalHousingException(
       makeA1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RES_HOLD_YEARS, RES_LIVE_YEARS,
+      RES_HOLD_YEARS, RES_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.appliedTable).toBe("table-2");
   });
@@ -67,7 +67,7 @@ describe("RH-A1: 거주주택 양도 12억 이하 — 전액 비과세", () => {
     const result = calculateRentalHousingException(
       makeA1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RES_HOLD_YEARS, RES_LIVE_YEARS,
+      RES_HOLD_YEARS, RES_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.exemptGain).toBeGreaterThan(0);
   });
@@ -76,7 +76,7 @@ describe("RH-A1: 거주주택 양도 12억 이하 — 전액 비과세", () => {
     const result = calculateRentalHousingException(
       makeA1Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RES_HOLD_YEARS, RES_LIVE_YEARS,
+      RES_HOLD_YEARS, RES_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.eligibility.passed).toBe(true);
     expect(result.eligibility.failReasons).toHaveLength(0);
@@ -87,7 +87,7 @@ describe("RH-A1: 거주주택 양도 12억 이하 — 전액 비과세", () => {
     const result = calculateRentalHousingException(
       input,
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      RES_HOLD_YEARS, RES_LIVE_YEARS,
+      RES_HOLD_YEARS, RES_LIVE_YEARS, 1_200_000_000,
     );
     expect(result.applied).toBe(false);
   });

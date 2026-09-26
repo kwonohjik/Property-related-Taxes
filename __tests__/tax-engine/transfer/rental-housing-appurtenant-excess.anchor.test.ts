@@ -200,6 +200,8 @@ describe("§155⑳ B 시나리오(§161 안분) + 배율 초과 부수토지", (
     standardPriceAtAcquisition: 300_000_000,
     standardPriceAtPriorTransfer: 450_000_000,
     standardPriceAtTransfer: 500_000_000,
+    // OH-15: B의 §155⑳1호 거주요건 = 등록 이후 거주기간(이 픽스처는 거주 30개월 전부 등록 이후)
+    postRegistrationResidenceMonths: 30,
   };
 
   // 양도 8억(토지 6억 + 건물 2억) / 취득 3억(토지 2억 + 건물 1억)

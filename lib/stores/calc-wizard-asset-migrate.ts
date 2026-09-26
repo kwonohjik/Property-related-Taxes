@@ -610,12 +610,22 @@ export function migrateAsset(raw: unknown): AssetForm {
         if (u.hasMinimum5UnitsInCity === undefined) u.hasMinimum5UnitsInCity = false;
         if (u.firstSaleContractDate === undefined) u.firstSaleContractDate = "";
         if (u.rentalAutoTermination === undefined) u.rentalAutoTermination = false;
+        // OH-39 — 말소 주택 민특법 등록 유형(구 세션엔 없다 → 미선택)
+        if (u.terminatedRegistrationType !== "short_term" && u.terminatedRegistrationType !== "long_term_general") {
+          u.terminatedRegistrationType = "";
+        }
       });
     }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;
     if (rhe.standardPriceAtAcquisitionForPhrp === undefined) rhe.standardPriceAtAcquisitionForPhrp = undefined;
     if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;
     if (rhe.standardPriceAtTransferForPhrp === undefined) rhe.standardPriceAtTransferForPhrp = undefined;
+    // OH-15·OH-40 신규 판정 사실 — 구 세션엔 없다 → 미입력(⑧·엔진이 「판정 불가」로 다룬다, 침묵 충족 금지)
+    if (typeof rhe.postRegistrationResidenceMonths !== "string") rhe.postRegistrationResidenceMonths = "";
+    if (rhe.priorRentalExemptionHistory !== "none" && rhe.priorRentalExemptionHistory !== "used") {
+      rhe.priorRentalExemptionHistory = "";
+    }
+    if (typeof rhe.residenceTransitionUnderAddendum !== "boolean") rhe.residenceTransitionUnderAddendum = false;
   }
   // ── Phase 2·3 + 매매사례가액 신규 필드 normalize — 별도 모듈 (800줄 정책, 2026-06-15) ──
   applyPhase3Normalize(a);

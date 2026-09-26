@@ -60,7 +60,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.scenarioId).toBe("RH-A2");
   });
@@ -69,7 +69,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.appliedTable).toBe("table-2");
   });
@@ -78,7 +78,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.taxableGain).toBe(TAXABLE_GAIN_EXPECTED);
   });
@@ -87,7 +87,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.exemptGain).toBe(EXEMPT_GAIN_EXPECTED);
   });
@@ -96,7 +96,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.gain95Table2).toBe(GAIN95_T2_EXPECTED);
   });
@@ -105,7 +105,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.ratioHighValue).toBeCloseTo(R_HIGH_EXPECTED, 10);
   });
@@ -114,7 +114,7 @@ describe("RH-A2: 거주주택 양도 12억 초과 — 고가주택 자체 검증
     const result = calculateRentalHousingException(
       makeA2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.applied).toBe(true);
     expect(result.eligibility.passed).toBe(true);

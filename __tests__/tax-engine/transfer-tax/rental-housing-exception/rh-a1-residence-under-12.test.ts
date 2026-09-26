@@ -40,7 +40,7 @@ describe("RH-A1 — 거주주택 양도 (12억 이하)", () => {
     /* holdYears */ 10,
     /* liveYears */ 5,
     /* residenceHoldYears */ 10,
-    /* residenceLiveYears */ 5,
+    /* residenceLiveYears */ 5, 1_200_000_000,
   );
 
   it("scenarioId = 'RH-A1'", () => {

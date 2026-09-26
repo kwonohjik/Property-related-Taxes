@@ -50,7 +50,7 @@ describe("RH-A2 — 거주주택 고가주택 양도 (12억 초과)", () => {
     /* holdYears */ 10,
     /* liveYears */ 10,
     /* residenceHoldYears */ 10,
-    /* residenceLiveYears */ 10,
+    /* residenceLiveYears */ 10, 1_200_000_000,
   );
 
   it("scenarioId = 'RH-A2'", () => {

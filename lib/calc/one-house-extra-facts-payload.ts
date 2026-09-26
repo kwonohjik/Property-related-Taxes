@@ -16,6 +16,8 @@
  *    「폼 전체를 받는데 일부만 읽는다」는 오해도 사라진다.
  */
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import { toDate } from "@/lib/api/date-coerce";
 
 /**
  * §155의2 FLAT → nested. 토글 OFF이거나 계약체결일 미입력이면 **아예 보내지 않는다**
@@ -65,4 +67,24 @@ export function buildOneHouseExtraFactsPayload(
 ): object {
   if (!extra) return {};
   return { ...buildLongTermMortgagePayload(extra), ...buildWinWinRentalPayload(extra) };
+}
+
+/**
+ * §155의3 사실을 **엔진 입력 모양**(`TransferTaxInput.winWinRentalHouse`, 계약일 `Date`)으로 편다.
+ *
+ * 화면 쪽 판정(⑧ `validateRentalHousingException` — OH-42 · Step4 거주요건 안내 — OH-58)이 엔진과
+ * **같은 술어** `qualifiesWinWinRental`에 넣기 위한 것이다. 페이로드 규칙은 위 `buildWinWinRentalPayload`
+ * 하나를 그대로 쓴다(두 벌 금지) — 날짜만 route와 같은 `toDate`로 바꾼다.
+ */
+export function toWinWinRentalHouseFact(
+  extra: OneHouseJudgmentExtraFields | undefined,
+): TransferTaxInput["winWinRentalHouse"] {
+  if (!extra) return undefined;
+  const w = (buildWinWinRentalPayload(extra) as {
+    winWinRentalHouse?: Omit<NonNullable<TransferTaxInput["winWinRentalHouse"]>, "winWinContractDate"> & {
+      winWinContractDate: string;
+    };
+  }).winWinRentalHouse;
+  if (!w) return undefined;
+  return { ...w, winWinContractDate: toDate(w.winWinContractDate, "winWinContractDate") };
 }

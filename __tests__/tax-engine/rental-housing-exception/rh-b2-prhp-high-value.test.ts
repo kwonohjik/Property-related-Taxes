@@ -95,7 +95,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.scenarioId).toBe("RH-B2");
   });
@@ -104,7 +104,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.appliedTable).toBe("mixed");
   });
@@ -113,7 +113,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.gain95Table1).toBe(GAIN95_T1_EXPECTED);
   });
@@ -122,7 +122,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.gain95Table2).toBe(GAIN95_T2_EXPECTED);
   });
@@ -131,7 +131,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.part1).toBe(PART1_EXPECTED);
   });
@@ -140,7 +140,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.part2).toBe(PART2_EXPECTED);
   });
@@ -149,7 +149,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.taxableGain).toBe(TAXABLE_GAIN_EXPECTED);
   });
@@ -158,7 +158,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.capApplied).toBe(false);
   });
@@ -167,7 +167,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.ratio161_1).toBe(0.5);
   });
@@ -176,7 +176,7 @@ describe("RH-B2: PHRP 양도 12억 초과 — §161② 1호+2호 합산 자체 �
     const result = calculateRentalHousingException(
       makeB2Input(),
       GAIN, S, HOLD_YEARS, LIVE_YEARS,
-      10, 5,
+      10, 5, 1_200_000_000,
     );
     expect(result.formulaTrace.ratio161_2_2).toBe(0.5);
   });

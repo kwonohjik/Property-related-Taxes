@@ -24,6 +24,12 @@ export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
 /** 소재지역: 수도권·비수도권 (918 조정취득은 isExcluded918Rule 별도 축) */
 export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro']);
 
+/** ㉓1호 자진말소 1/2 판정용 — 말소 주택의 종전 민특법 등록 유형 (단기 4년·장기일반 8년, OH-39) */
+export const TerminatedRegistrationTypeEnum = z.enum(['short_term', 'long_term_general']);
+
+/** 생애 1회 제한 구간(2019.2.12~2025.2.27)의 종전 §155⑳ 적용 이력 (OH-40) */
+export const PriorRentalExemptionHistoryEnum = z.enum(['none', 'used']);
+
 /** ⑫ 임대주택 1호 Zod 객체 스키마 (미정의 시 침묵 stripping 방지) */
 export const rentalUnitSchema = z.object({
   businessRegistrationDate: z.string().datetime(),
@@ -45,6 +51,7 @@ export const rentalUnitSchema = z.object({
   firstSaleContractDate: z.string().datetime().optional(),
   rentalMonths: z.number().nonnegative(),
   rentalAutoTermination: z.boolean(),
+  terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
   requirementsConfirmed: z.boolean(),
 });
 
@@ -57,4 +64,9 @@ export const rentalHousingExceptionSchema = z.object({
   standardPriceAtAcquisitionForPhrp: z.number().int().nonnegative().optional(),
   standardPriceAtPriorTransfer: z.number().int().nonnegative().optional(),
   standardPriceAtTransferForPhrp: z.number().int().nonnegative().optional(),
+  /** B — 사업자등록·임대사업자 등록 이후 거주기간(개월) §155⑳1호 괄호 (OH-15) */
+  postRegistrationResidenceMonths: z.number().int().nonnegative().optional(),
+  priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
+  /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
+  residenceTransitionUnderAddendum: z.boolean().optional(),
 });
