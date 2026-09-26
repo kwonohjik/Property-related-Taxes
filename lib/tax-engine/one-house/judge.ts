@@ -69,6 +69,8 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     decedentCohabitationHoldingStartDate: facts.decedentCohabitationHoldingStartDate,
     generalHouseHeldAtInheritance: facts.generalHouseHeldAtInheritance,
     generalHouseGiftedFromDecedentWithin2yr: facts.generalHouseGiftedFromDecedentWithin2yr,
+    generalHouseGiftDate: facts.generalHouseGiftDate,
+    generalHouseRightAtInheritance: facts.generalHouseRightAtInheritance,
     // ── §154① 단서 · §155 각 항 ──
     oneHouseExemptionProviso: facts.oneHouseExemptionProviso,
     temporaryTwoHouse: facts.temporaryTwoHouse,
@@ -135,6 +137,8 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     decedentCohabitationHoldingStartDate: input.decedentCohabitationHoldingStartDate,
     generalHouseHeldAtInheritance: input.generalHouseHeldAtInheritance,
     generalHouseGiftedFromDecedentWithin2yr: input.generalHouseGiftedFromDecedentWithin2yr,
+    generalHouseGiftDate: input.generalHouseGiftDate,
+    generalHouseRightAtInheritance: input.generalHouseRightAtInheritance,
     oneHouseExemptionProviso: input.oneHouseExemptionProviso,
     temporaryTwoHouse: input.temporaryTwoHouse,
     ruralHouse: input.ruralHouse,

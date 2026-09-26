@@ -61,6 +61,8 @@ export type OneHouseJudgeInput = Pick<
   | "decedentCohabitationHoldingStartDate"
   | "generalHouseHeldAtInheritance"
   | "generalHouseGiftedFromDecedentWithin2yr"
+  | "generalHouseGiftDate"
+  | "generalHouseRightAtInheritance"
   // ── §154① 단서 · §155 각 항 특례 사실 ──
   | "oneHouseExemptionProviso"
   | "temporaryTwoHouse"
@@ -142,6 +144,10 @@ export type OneHouseFacts = {
   decedentCohabitationHoldingStartDate?: Date;
   generalHouseHeldAtInheritance?: boolean;
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
+  /** OH-12c — 소급 2년 내 증여의 증여일(2018-02-13 부칙 게이트) */
+  generalHouseGiftDate?: Date;
+  /** OH-12 — 상속개시 후 취득 일반주택이 상속개시 당시 보유 권리의 신축주택인가 */
+  generalHouseRightAtInheritance?: TransferTaxInput["generalHouseRightAtInheritance"];
 
   // ── §154① 단서 · §155 각 항 ──
   oneHouseExemptionProviso?: TransferTaxInput["oneHouseExemptionProviso"];
