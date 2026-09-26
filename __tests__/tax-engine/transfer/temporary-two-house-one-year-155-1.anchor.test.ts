@@ -66,15 +66,32 @@ describe("일시적 2주택 §155① 1년 경과 요건 (D1 앵커)", () => {
     expect(r.isExempt).toBe(false);
   });
 
-  // TT-경계: 신규취득 = 종전취득 + 정확히 1년 → "1년 이상 지난 후" 충족(>=) → 비과세
-  it("TT-경계 1년 정각: 신규=종전+1년 → 요건 A 충족 → 비과세", () => {
+  // TT-경계: 「1년 이상이 지난 후」는 초일불산입(국기법 §4→민법 §157) — 종전 2018-01-01 취득이면
+  //   1년은 2019-01-01(응당일)에 만료하고, 「지난 후」는 2019-01-02부터다(조심2019서1704 · 서면2017법령해석재산-785).
+  //   2026-09-26 반전(리뷰 OH-00): 종전 기대값(응당일 = 충족·비과세)은 법적 근거 없이 `>=`를 고정한 것이었다.
+  it("TT-경계 1년 정각: 신규=종전의 응당일 → 1년 미경과 → 과세", () => {
     const r = calculateTransferTax(
       tt({
         acquisitionDate: new Date("2018-01-01"),
         transferDate: new Date("2021-06-01"),
         temporaryTwoHouse: {
           previousAcquisitionDate: new Date("2018-01-01"),
-          newAcquisitionDate: new Date("2019-01-01"), // 정확히 1년
+          newAcquisitionDate: new Date("2019-01-01"), // 응당일 — 아직 1년 안
+        },
+      }),
+      mockRates,
+    );
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("TT-경계 긍정 짝: 신규=응당일 다음날(2019-01-02) → 요건 A 충족 → 비과세", () => {
+    const r = calculateTransferTax(
+      tt({
+        acquisitionDate: new Date("2018-01-01"),
+        transferDate: new Date("2021-06-01"),
+        temporaryTwoHouse: {
+          previousAcquisitionDate: new Date("2018-01-01"),
+          newAcquisitionDate: new Date("2019-01-02"),
         },
       }),
       mockRates,

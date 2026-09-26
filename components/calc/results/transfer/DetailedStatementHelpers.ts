@@ -17,6 +17,7 @@ import {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
@@ -71,15 +72,11 @@ export function residenceMonthsOfAsset(
 ): number {
   const ps = asset?.residenceInputMode === "interval" ? (asset.residencePeriods ?? []) : [];
   if (ps.length > 0) {
-    return ps.reduce((sum, pp) => {
-      const end = pp.moveOutDate || transferDate;
-      const a = new Date(pp.moveInDate);
-      const t = new Date(end);
-      if (isNaN(a.getTime()) || isNaN(t.getTime())) return sum;
-      let m = (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
-      if (t.getDate() < a.getDate()) m -= 1;
-      return sum + Math.max(0, m);
-    }, 0);
+    // 입력 경로(`sumResidenceMonths`)와 같은 §154⑥ 초일 산입 leaf — 결과 표시가 엔진 입력과 갈리지 않게.
+    return ps.reduce(
+      (sum, pp) => sum + residenceIntervalMonths(pp.moveInDate, pp.moveOutDate || transferDate),
+      0,
+    );
   }
   return parseInt(asset?.residencePeriodMonthsAsset || "0") || 0;
 }

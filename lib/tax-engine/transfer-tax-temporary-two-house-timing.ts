@@ -9,7 +9,8 @@
  *
  * 의존 방향은 **부모 → 이 파일** 한 방향뿐이다.
  */
-import { addYears, format } from "date-fns";
+import { format } from "date-fns";
+import { firstDayAfterPeriod, isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -22,8 +23,11 @@ const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 /**
  * §155① 일시적 2주택 타이밍 요건 판정 (순수 — rule·waiver는 caller 주입).
  *
- * - 요건 A(1년): 신규취득일 ≥ 종전취득일 + 1년. 단 oneYearWaived(§154①1·2가·3호) 시 면제.
- * - 요건 B(3년): 양도일 ≤ 신규취득일 + deadlineYears(조정지역 부칙은 caller가 반영해 주입).
+ * - 요건 A(1년): 「종전의 주택을 취득한 날부터 1년 이상이 지난 후」 — 초일불산입(국기법 §4→민법 §157)이라
+ *   종전취득일의 **응당일은 미충족**, 그 다음날부터 충족(조심2019서1704). 단 oneYearWaived(§154①1·2가·3호) 시 면제.
+ *   `oneYearThreshold`는 **최초 충족일**(=만료일 다음날) — 판정 카드가 「1년 경과일」로 표시한다.
+ * - 요건 B(3년): 「다른 주택을 취득한 날부터 3년 이내」 — 초일불산입, 만료일(`deadline`) 당일까지
+ *   (조정지역 부칙은 caller가 반영해 주입). 규칙: `civil-period.ts` 유형 A·B.
  *
  * 엔진 E-3·UI 판정 카드 공용(single-source). UI는 waiver를 resolveExemptionProviso로 별도 산출해 주입.
  */
@@ -44,16 +48,20 @@ export function judgeTemporaryTwoHouseTiming(p: {
   threeYearMet: boolean;
   overall: boolean;
 } {
-  const oneYearThreshold = addYears(p.previousAcquisitionDate, 1);
+  const oneYearThreshold = firstDayAfterPeriod(p.previousAcquisitionDate, 1);
   // §155⑯ 후단: "…종전의 주택을 취득한 날부터 1년 이상이 지난 후 다른 주택을 취득하는 요건을
   //   적용하지 아니한다." — 기한 5년(전단)과 **별개의 두 번째 효과**다.
   const oneYearMet =
-    p.oneYearWaived || p.publicInstitutionRelocation === true || p.newAcquisitionDate >= oneYearThreshold;
-  const deadline = addYears(p.newAcquisitionDate, p.deadlineYears);
+    p.oneYearWaived ||
+    p.publicInstitutionRelocation === true ||
+    isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
+  const deadline = periodEndFrom(p.newAcquisitionDate, p.deadlineYears);
   // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
   //   ⑱ 각 호는 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 해당 여부이므로 양도일과 무관하다.
   //   ⑱은 **요건 B(기한)만** 치유한다 — 요건 A(1년)는 그대로다(본문 괄호가 3년 절에만 붙어 있다).
-  const threeYearMet = p.disposalDelayReason !== undefined || p.transferDate <= deadline;
+  const threeYearMet =
+    p.disposalDelayReason !== undefined ||
+    isWithinPeriod(p.newAcquisitionDate, p.deadlineYears, p.transferDate);
   return { oneYearThreshold, oneYearMet, deadline, threeYearMet, overall: oneYearMet && threeYearMet };
 }
 

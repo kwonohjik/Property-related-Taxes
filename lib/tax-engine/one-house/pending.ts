@@ -19,11 +19,12 @@
  * ## 🔑 재계산하지 않는다
  *
  * 날짜는 전부 기존 술어가 이미 만든 값이거나(`judgeTemporaryTwoHouseTiming.deadline`),
- * 기존 정본 기산일 함수에 `addYears`를 한 번 더 부른 것이다
+ * 기존 정본 기산일에 술어와 같은 기간 함수(`civil-period.ts`·`calculateHoldingPeriod`)를 적용한 것이다
  * (`resolveExemptionHoldingStartDate` 등). 기산일 규칙을 여기서 다시 쓰지 않는다 —
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
 import { addDays, addYears } from "date-fns";
+import { isWithinPeriod, periodEndFrom } from "../civil-period";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
   resolveInheritedHouseExclusionFromInput,
@@ -196,8 +197,8 @@ export function collectPendingConditions(
    * §155④⑤ 혼인·동거봉양 합가 — 합가일부터 **10년** 이내 「먼저 양도하는 주택」.
    *
    * `resolveMergeDeeming`은 10년을 넘기면 `undefined`를 돌려줄 뿐 날짜를 남기지 않는다
-   * (`requirements.ts:750` `if (input.transferDate > addYears(mergeDate, MERGE_EXEMPTION_YEARS))`).
-   * 같은 식으로 기한을 복원한다.
+   * (`matchMergeWindow`의 `isWithinPeriod(mergeDate, MERGE_EXEMPTION_YEARS, …)`).
+   * 같은 기간 함수로 기한(만료일 — 초일불산입)을 복원한다.
    */
   const mergeAxes: Array<{ id: string; mergeDate?: Date; label: string; basis: string }> = [
     {
@@ -217,8 +218,9 @@ export function collectPendingConditions(
     if (!axis.mergeDate) continue;
     // 합가 의제는 「먼저 양도하는 주택」이 전제다 — 그 선언이 없으면 기한 안내가 의미 없다.
     if (input.isFirstTransferredInMerge !== true) continue;
-    const deadline = addYears(axis.mergeDate, MERGE_EXEMPTION_YEARS);
-    if (input.transferDate <= deadline) continue; // 기한 내인데 과세면 원인이 다른 곳이다
+    const deadline = periodEndFrom(axis.mergeDate, MERGE_EXEMPTION_YEARS);
+    // 기한 내인데 과세면 원인이 다른 곳이다
+    if (isWithinPeriod(axis.mergeDate, MERGE_EXEMPTION_YEARS, input.transferDate)) continue;
     if (!meetsOneHouseHoldingResidence(input, rule)) continue;
     pending.push({
       id: axis.id,
@@ -236,8 +238,11 @@ export function collectPendingConditions(
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
   if (unavoidable?.resolvedDate && input.householdHousingCount === 2) {
-    const deadline = addYears(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
-    if (input.transferDate > deadline && meetsOneHouseHoldingResidence(input, rule)) {
+    const deadline = periodEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
+    if (
+      !isWithinPeriod(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
+      meetsOneHouseHoldingResidence(input, rule)
+    ) {
       pending.push({
         id: "155-8-unavoidable-resolved",
         description: "부득이한 사유가 해소된 날부터 이 날짜까지 일반주택을 양도해야 비과세",
@@ -254,8 +259,11 @@ export function collectPendingConditions(
    */
   const rural = input.ruralHouse;
   if (rural?.kind === "return_to_farm" && rural.acquisitionDate && input.householdHousingCount === 2) {
-    const deadline = addYears(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
-    if (input.transferDate > deadline && meetsOneHouseHoldingResidence(input, rule)) {
+    const deadline = periodEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+    if (
+      !isWithinPeriod(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
+      meetsOneHouseHoldingResidence(input, rule)
+    ) {
       pending.push({
         id: "155-7-3ho-return-to-farm",
         description: "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세",
