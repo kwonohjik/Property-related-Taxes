@@ -302,7 +302,10 @@ test("§45의3 과세요건 미충족(거래비율 40% ≤ 정상거래비율 50
   await page.getByTestId("deemed-detail-confirm").click();
   await page.getByTestId("deemed-calc-btn").click();
 
-  await expect(page.getByTestId("deemed-result-value")).toContainText("0");
+  // ⚠️ `toContainText("0")`을 쓰지 말 것 — **substring 매칭**이라 「150,000,000」도 통과한다.
+  //    이 저장소는 같은 함정으로 PR#1008이 spec을 조용히 무력화시킨 적이 있다(CLAUDE.md).
+  //    `deemed-result-value`는 `formatKRW(headValue)` 하나만 담으므로 정확 일치가 가능하다.
+  await expect(page.getByTestId("deemed-result-value")).toHaveText("0");
   const banner = page.getByTestId("deemed-exclusion");
   await expect(banner).toBeVisible();
   await expect(banner).toContainText("정상거래비율 이하");
