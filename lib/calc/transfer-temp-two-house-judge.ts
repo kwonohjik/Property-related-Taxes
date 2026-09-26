@@ -176,7 +176,8 @@ export function judgeTempTwoHouseFromForm(p: {
     transferDate: transfer,
     deadlineYears,
     oneYearWaived,
-    publicInstitutionRelocation: p.publicInstitutionRelocation,
+    // ⑯ 후단 1년 면제도 지역 요건에 묶인다 — 엔진 `evaluateTemporaryTwoHouseTiming`과 같은 술어(OH-35).
+    publicInstitutionRelocation: relocation,
     disposalDelayReason: (p.disposalDelayReason || undefined) as
       | TemporaryTwoHouseDelayReason
       | undefined,
@@ -189,7 +190,7 @@ export function judgeTempTwoHouseFromForm(p: {
     oneYearThreshold: t.oneYearThreshold,
     oneYearMet: t.oneYearMet,
     // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.
-    oneYearWaived: oneYearWaived || p.publicInstitutionRelocation === true,
+    oneYearWaived: oneYearWaived || relocation,
     deadline: t.deadline,
     deadlineYears,
     deadlineExtendedByTenant: era.deadlineDate !== undefined,

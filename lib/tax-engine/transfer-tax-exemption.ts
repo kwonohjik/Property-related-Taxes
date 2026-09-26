@@ -37,6 +37,7 @@ import {
   DISPOSAL_DELAY_REASON_LABEL,
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
+  meetsPublicInstitutionRelocationRegion,
   PROVISO_LABEL,
   qualifiesRuralHouse,
   qualifiesUnavoidableOutsideCapital,
@@ -312,7 +313,8 @@ function checkExemptionCore(
           legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
         });
       }
-      if (input.temporaryTwoHouse.publicInstitutionRelocation) {
+      // ⑯ 근거 표시는 **실제로 적용된 경우**(지역 요건 충족)에만 — 판정과 같은 술어(OH-35).
+      if (meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse)) {
         basisParts.push("§155⑯ 지방이전 처분기한 5년·1년요건 면제");
         exceptions.push({
           id: "155-16-public-institution-relocation",

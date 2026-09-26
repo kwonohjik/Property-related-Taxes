@@ -82,6 +82,10 @@ import type {
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
+import {
+  waivesPriorHouseOneYearGap,
+  type ResidenceReqInput,
+} from "./transfer-tax-exemption-requirements";
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import {
   clause4RequiresOneYearGap,
@@ -165,7 +169,9 @@ export type Article89Clause2Input = Pick<
   | "culturalHeritageHouse"
   | "houses"
   | "sellingHouseId"
->;
+> &
+  // §156의2③④·§156의3②③ 후단 — §154① 단서(1호·2호가목·3호) 해당 시 1년 요건 면제(OH-47)
+  ResidenceReqInput;
 
 /**
  * 이 권리가 §89②의 적용 대상인가 — **권리 종류마다 축이 다르다**.
@@ -351,7 +357,10 @@ export function resolveArticle89Clause2(
   const right = isArticle7Shape ? otherRights[0] : rights[0];
   // 「1년 이상이 지난 후」·「3년 이내」 모두 초일불산입 — 응당일 권리 취득은 1년 미경과(§155①과 같은 문언,
   //   조심2020서1405 · 서면2017법령해석재산-785). ③·②의 직접 선례는 미확보(계획서 §7-1).
-  const oneYearMet = isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
+  //   후단 — §154①1호·2호가목·3호에 해당하면 1년 요건을 적용하지 않는다(③·④ 모두 · §155① 후단과 같은 술어).
+  const oneYearMet =
+    waivesPriorHouseOneYearGap(input) ||
+    isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
   const deadline = periodEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
   const withinDeadline = isWithinPeriod(
     right.acquisitionDate,
