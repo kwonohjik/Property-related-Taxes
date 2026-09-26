@@ -207,6 +207,9 @@ const capitalIncreaseShape = {
   allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
   // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 증여세 납세의무자가 아니다(전환주식 2시점도 이 shape 재사용)
   doneeIsForProfitCorp: z.boolean().optional(),
+  // §4의2④ 납세의무 게이트 2축 — ⑫ strip 방지(빠지면 게이트가 엔진에 도달하지 못한다)
+  issuerGainCorporateTaxed: z.boolean().optional(),
+  doneeIsShareholderOfIssuer: z.boolean().optional(),
 } as const;
 /**
  * §39 증자 축 공통 교차검증 — ⑧(`gift-deemed-validate.ts`)과 **같은 규칙**을 ⑫에도 건다.

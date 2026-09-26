@@ -2,6 +2,7 @@
 import { GIFT } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound, meetsRatioThreshold } from "./capital-helpers";
+import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
 
@@ -124,6 +125,19 @@ function forProfitCorpExcludedResult(breakdown: CalculationStep[]): DeemedGiftRe
   );
 }
 
+/**
+ * 「상증법」§4의2④ — 법인세가 부과된 영리법인의 주주등에게는 증여세를 부과하지 않는다.
+ * 금액은 보존한다 — 그 이익은 발행법인 단계에서 **법인세 익금으로 이미 과세**된 것이라
+ * 허수가 아니다(§31①이 「증여재산가액」을 과세대상 가액에 한정 정의하므로 라벨만 바뀐다).
+ */
+function shareholderOfTaxedCorpExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
+  return excludedResult(
+    breakdown,
+    `법인세가 부과된 영리법인의 주주등 — 증여세 미부과 (${GIFT.SHAREHOLDER_OF_TAXED_CORP_EXEMPTION})`,
+    "제외 전 산출 이익 (「상증법」§4의2④ — 주주등 증여세 미과세)",
+  );
+}
+
 /** §39① 적용 제외 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 한다 */
 function publicOfferingExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
   return excludedResult(
@@ -210,6 +224,8 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
   // §4의2①·③ — 수증자가 영리법인이면 납세의무자가 아니다(산출근거는 남긴다)
   if (input.doneeIsForProfitCorp === true) return forProfitCorpExcludedResult(breakdown);
+  // §4의2④ — 발행법인 수증이익에 법인세가 부과됐고 수증자가 그 법인의 주주등이면 미부과
+  if (shareholderOfTaxedCorpExcluded(input)) return shareholderOfTaxedCorpExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,
@@ -291,6 +307,8 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
   // §4의2①·③ — 수증자(고가에서는 신주 인수를 포기한 자)가 영리법인이면 납세의무자가 아니다
   if (input.doneeIsForProfitCorp === true) return forProfitCorpExcludedResult(breakdown);
+  // §4의2④ — 발행법인 수증이익에 법인세가 부과됐고 수증자가 그 법인의 주주등이면 미부과
+  if (shareholderOfTaxedCorpExcluded(input)) return shareholderOfTaxedCorpExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,
