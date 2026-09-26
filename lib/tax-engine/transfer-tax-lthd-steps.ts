@@ -16,6 +16,7 @@ import type { CalculationStep } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
+import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 
 /**
  * 장특공제 보유·거주 분리 sub-step 라벨 — **표시 계층이 이 문자열로 sub-step을 찾는다**.
@@ -57,6 +58,11 @@ export interface LthdStepArgs {
    * 분해가 실제 공제율과 어긋나 자기모순이 된다. 켜지면 표1 형식으로 내려간다.
    */
   appurtenantTable1Applied?: boolean;
+  /**
+   * 양도일 — 표2 연혁(OH-31). 2009~2020 양도분 표2는 보유 연 8%(80% 한도) **단일축**이라 산식 문구를
+   * 「보유 N년×8%」로 쓰고 거주분 sub-step을 내지 않는다(거주분 공제율 개념이 없다).
+   */
+  transferDate?: Date;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -77,6 +83,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     fbLthdFormula,
     appurtenantTable1Applied,
     meetsTable2Residence,
+    transferDate,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -90,14 +97,24 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     // 부수토지에서 표1이 이겼으면 공제율의 출처가 표2가 아니다 — 표2 형식으로 쓰면
     // 「보유 20년×4%=40% + 거주 3년×4%=12% = 30%」처럼 분해가 합과 어긋난다.
     !appurtenantTable1Applied;
+  // 2009~2020 양도분 표2 — 보유 연 8% 단일축(OH-31). 계산 축(`calcLongTermRate`)과 같은 leaf로 가른다.
+  const era = transferDate ? resolveLthdTable2Era(transferDate) : undefined;
+  const singleAxisTable2 =
+    isOneHouseSpecial && !conv && (era === "holding_8pct" || era === "holding_8pct_residence_2y");
   // 보유분 공제율 — §95⑤이면 표1(비주택 기간) + 표2(주택 기간)의 합(40% 한도)이고,
-  // 그 외 표2 경로는 총 보유기간 × 4%다. sub-step 안분도 이 값을 기준으로 한다.
+  // 그 외 표2 경로는 총 보유기간 × 4%(단일축 시기는 × 8%, 80% 한도)다. sub-step 안분도 이 값을 기준으로 한다.
   const holdingPct = conv
     ? conv.table1Pct + conv.table2HoldingPct > 40
       ? 40
       : conv.table1Pct + conv.table2HoldingPct
-    : Math.min(holdingPeriod.years * 4, 40);
-  const residencePct = conv ? conv.residencePct : Math.min(residenceYearsForStep * 4, 40);
+    : singleAxisTable2
+      ? Math.min(holdingPeriod.years * 8, 80)
+      : Math.min(holdingPeriod.years * 4, 40);
+  const residencePct = conv
+    ? conv.residencePct
+    : singleAxisTable2
+      ? 0
+      : Math.min(residenceYearsForStep * 4, 40);
 
   const lthdFormulaRate = fbLthdFormula
     ? `${fbLthdFormula} (소득세법 §95④ 후단)`
@@ -107,6 +124,8 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`
       + ` = 보유분 ${holdingPct}%${conv.holdingRateCapped ? " (40% 한도 적용)" : ""}`
       + ` + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${holdingPct + residencePct}%`
+    : singleAxisTable2
+    ? `표2 보유 ${holdingPeriod.years}년×8% = ${Math.round(longTermHoldingRate * 100)}% (80% 한도 — 2020.12.31. 이전 양도분)`
     : isOneHouseSpecial
     ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${Math.round(longTermHoldingRate * 100)}%`
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
@@ -127,7 +146,8 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   // STEP 4.1·4.2: 1세대1주택 특례(표2) 적용 시 보유분/거주분 sub-step 정식 emit.
   // 명세서 카드의 "보유 기간분 장특"·"거주 기간분 장특" 행에 step.formula 자동 매핑 (정확한 안분율 노출).
   // 비특례 케이스는 sub-step 미발생 (보유분 일률 표1 적용 — UI는 표1 안내 노출).
-  if ((isOneHouseSpecial || conv) && longTermHoldingDeduction > 0) {
+  // 단일축 시기(2009~2020 양도분 표2)는 거주분이 없어 나눌 것이 없다 — sub-step을 내지 않는다.
+  if ((isOneHouseSpecial || conv) && !singleAxisTable2 && longTermHoldingDeduction > 0) {
     const totalRate = holdingPct + residencePct;
     if (totalRate > 0) {
       // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 표2 / §95⑤). floor 잔액(≤1원)은

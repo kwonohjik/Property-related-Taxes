@@ -231,9 +231,6 @@ export const historicalSeeds = [
       },
       temporary_two_house: {
         disposalDeadlineYears: 3,
-        regulatedAreaDeadlineYears: 2,
-        regulatedAreaRelaxDate: "2022-05-10",
-        regulatedAreaRelaxDeadlineYears: 3,
       },
     },
     is_active: true,

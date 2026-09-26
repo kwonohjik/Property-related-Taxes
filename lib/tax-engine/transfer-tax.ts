@@ -42,6 +42,9 @@ import {
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
+import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
+import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
+import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -322,8 +325,9 @@ export function calculateTransferTax(
      * 1세대를 **포함한다**」라 준용 경로도 추징 대상이다 ⇒ 준용 근거를 함께 알린다.
      */
     const via = exemptionResult.article89Clause2?.viaArticle;
+    // 「완성 후 N년」은 양도일 연혁(OH-30 — 대통령령 제33267호 부칙 제8조, ④·⑤ 공통).
     warnings.push(
-      `1세대1주택 비과세를 「${clause2Exception}${via ? ` (${via} 준용)` : ""}」의 자기선언 요건(신축주택 완성 후 3년 이내 ` +
+      `1세대1주택 비과세를 「${clause2Exception}${via ? ` (${via} 준용)` : ""}」의 자기선언 요건(신축주택 완성 후 ${resolve1562DeadlineYears(input.transferDate)}년 이내 ` +
         "세대전원 이사 + 1년 이상 계속 거주)으로 인정했습니다. 그 요건을 갖추지 못하게 되면 " +
         "「소득세법 시행령」 §156의2⑬(분양권은 §156의3⑩)에 따라 사유 발생일이 속하는 달의 " +
         "말일부터 2개월 이내에 이 특례를 적용받지 않았을 경우의 세액을 신고·납부해야 합니다(추징).",
@@ -339,6 +343,9 @@ export function calculateTransferTax(
         (exemptionResult.article89Clause2.openArticles ?? []).join(" · "),
     );
   }
+
+  // 입력 경로가 없는 연혁 분기(OH-22·OH-38·OH-01)의 판정 보류 — 판정 메뉴와 같은 문장을 낸다.
+  for (const u of exemptionResult.undetermined) if (ERA_UNDETERMINED_IDS.has(u.id)) warnings.push(u.reason);
 
   // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
   //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다
@@ -647,7 +654,10 @@ export function calculateTransferTax(
     // §95④ 후단(가업상속) 적용 시 공제율 분해 문구로 대체한다.
     fbLthdFormula,
     appurtenantTable1Applied,
+    transferDate: exemptionJudgeInput.transferDate,
   });
+  // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
+  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && exemptionJudgeInput.isOneHousehold && (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
   const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);

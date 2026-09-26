@@ -34,6 +34,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
+import { resolve1562DeadlineYears } from "@/lib/tax-engine/data/article-156-2-completion-era";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 type Props = {
@@ -61,6 +62,13 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
   if (!exceeded) return null;
 
   const kind = form.rightThreeYearExceptionKind;
+  /**
+   * OH-30 — 「완성된 후 N년 이내」의 N은 **양도일** 연혁이다(2023-01-12 전 양도 2년 · 이후 3년,
+   * 대통령령 제33267호 부칙 제8조). 엔진 `meetsThreeYearException`과 같은 leaf를 부른다 —
+   * 이사 기한은 자기선언이라 문구가 틀리면 사용자가 틀린 기한으로 답한다.
+   * 카드가 떠 있다는 것은 `rightThreeYearExceptionVisible`이 양도일을 이미 읽었다는 뜻이다.
+   */
+  const completionYears = resolve1562DeadlineYears(new Date(form.transferDate));
 
   return (
     <ToneCard
@@ -92,7 +100,7 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
             value: "new_house",
             label: "신축주택이 완성된 뒤 양도했다",
             description:
-              "완성 후 3년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 §156의2④1호·2호 후단)",
+              `완성 후 ${completionYears}년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 §156의2④1호·2호 후단)`,
           },
           {
             value: "before_completion",
@@ -119,7 +127,7 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
           {kind === "new_house" && (
           <FieldCard
             label="신축주택 완성일"
-            hint="관리처분계획등(분양권은 그 계약)에 따라 취득하는 주택이 완성된 날. 이 날부터 3년 이내에 이사·양도해야 합니다."
+            hint={`관리처분계획등(분양권은 그 계약)에 따라 취득하는 주택이 완성된 날. 이 날부터 ${completionYears}년 이내에 이사·양도해야 합니다.`}
           >
             <DateInput
               value={form.rightNewHouseCompletionDate}
@@ -132,8 +140,8 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
             onCheckedChange={(v: boolean) => onChange({ rightMovedInWithin3Years: v })}
             title={
               kind === "before_completion"
-                ? "완성 후 3년 이내에 세대전원이 이사할 예정이다"
-                : "완성 후 3년 이내에 세대전원이 이사했다"
+                ? `완성 후 ${completionYears}년 이내에 세대전원이 이사할 예정이다`
+                : `완성 후 ${completionYears}년 이내에 세대전원이 이사했다`
             }
             description="취학·근무상 형편·질병 요양·학교폭력 전학으로 세대원 중 일부가 이사하지 못한 경우도 포함합니다(시행규칙 §75의2① → §71③)."
             tone="amber"

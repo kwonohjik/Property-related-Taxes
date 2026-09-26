@@ -224,7 +224,7 @@ export function calcLongTermHoldingDeduction(
     // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 **주택 부수토지로서의** 보유연수
     // = primary 주택의 보유연수. 거주분은 주택에서 하는 것이라 그대로 `residenceYears`다.
     const table2Rate = useTable2ForCompanion
-      ? calcLongTermRate(primaryHoldingYears, residenceYears, true)
+      ? calcLongTermRate(primaryHoldingYears, residenceYears, true, false, input.transferDate)
       : 0;
     // 통칙 95-0…1 — 「표1의 공제율과 표2의 공제율 중 **큰 공제율**」.
     const useTable1Axis = table1Rate >= table2Rate;
@@ -360,8 +360,9 @@ export function calcLongTermHoldingDeduction(
   // 의제만으로 표2가 열리지 않으며 거주 2년 요건은 그대로 유지된다.
   // §155의3 상생임대주택은 §159의4의 거주기간 제한을 받지 않는다(같은 조가 명시 열거).
   const useTable2 = isOneHouseForTable2 && meetsTable2ResidenceRequirement(input, table2ResidenceYears);
+  // 양도일을 넘겨 표2 연혁(OH-31 — 2009~2020 연 8% 단일축)을 가른다.
   const rateForYears = (years: number): number =>
-    calcLongTermRate(years, residenceYears, useTable2);
+    calcLongTermRate(years, residenceYears, useTable2, false, input.transferDate);
 
   // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
   if (splitDetail) {
@@ -463,7 +464,8 @@ export function calcLongTermHoldingDeduction(
       fbl.decedentAcquisitionDate,
       input.transferDate,
     );
-    const holdOnly = (years: number): number => calcLongTermRate(years, 0, useTable2);
+    const holdOnly = (years: number): number =>
+      calcLongTermRate(years, 0, useTable2, false, input.transferDate);
     const decedentHoldRate = holdOnly(holdingFromDecedent.years);
     const heirHoldRate = holdOnly(holding.years);
     const residencePart = rate - heirHoldRate; // 표2 거주분(표1이면 0)

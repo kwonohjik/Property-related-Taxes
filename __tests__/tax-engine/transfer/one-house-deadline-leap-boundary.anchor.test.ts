@@ -131,7 +131,13 @@ describe("§156의2④2호 — 신축주택 완성일(2021-02-28) 후 3년 이�
   });
 });
 
-describe("§156의2⑨ — 혼인한 날(2014-02-28)부터 10년 이내 먼저 양도", () => {
+/*
+ * 🔁 OH-29(2026-09-26) — 혼인 합가의 10년은 **2024-11-12 이후 양도분**부터다(대통령령 제34990호 부칙
+ *    제2조 — §155⑤·§156의2⑨). 만료일 2024-02-29 양도는 **5년** 시대이므로 종전 픽스처(혼인 2014-02-28
+ *    + 10년)는 법령상 창 밖이다. 이 파일의 주제(평년 2/28 사건 → 윤년 2/29 만료)를 그대로 재려고
+ *    혼인일을 2019-02-28(+5년 = 2024-02-29)로 옮겼다. 연혁 경계 자체는 `merge-exemption-era.anchor.test.ts`.
+ */
+describe("§156의2⑨ — 혼인한 날(2019-02-28)부터 5년 이내 먼저 양도(2024-11-12 전 양도)", () => {
   const merged = (transferDate: string) =>
     input({
       acquisitionDate: D("2010-01-01"),
@@ -139,7 +145,7 @@ describe("§156의2⑨ — 혼인한 날(2014-02-28)부터 10년 이내 먼저 �
       presaleRights: [
         { id: "r1", type: "redevelopment_right", acquisitionDate: D("2012-01-01"), region: "capital" },
       ],
-      marriageMerge: { marriageDate: D("2014-02-28") } as TransferTaxInput["marriageMerge"],
+      marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       mergedHouseholdFirstHouse: { kind: "house_only" },
       isFirstTransferredInMerge: true,
     });
@@ -155,13 +161,13 @@ describe("§156의2⑨ — 혼인한 날(2014-02-28)부터 10년 이내 먼저 �
   });
 });
 
-describe("§155④⑤ 합가 — 혼인한 날(2014-02-28)부터 10년 이내", () => {
+describe("§155④⑤ 합가 — 혼인한 날(2019-02-28)부터 5년 이내(2024-11-12 전 양도)", () => {
   const merge = (transferDate: string) =>
     input({
       householdHousingCount: 2,
       acquisitionDate: D("2010-01-01"),
       transferDate: D(transferDate),
-      marriageMerge: { marriageDate: D("2014-02-28") } as TransferTaxInput["marriageMerge"],
+      marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       isFirstTransferredInMerge: true,
     });
 
@@ -173,7 +179,7 @@ describe("§155④⑤ 합가 — 혼인한 날(2014-02-28)부터 10년 이내", 
     const r = judge({
       householdHousingCount: 2,
       acquisitionDate: D("2010-01-01"),
-      marriageMerge: { marriageDate: D("2014-02-28") } as TransferTaxInput["marriageMerge"],
+      marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       isFirstTransferredInMerge: true,
     });
     expect(r.pending.map((p) => [p.id, iso(p.deadline)])).toEqual([["155-5-marriage-merge", LAST]]);

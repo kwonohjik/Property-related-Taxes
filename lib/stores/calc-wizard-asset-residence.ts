@@ -136,7 +136,7 @@ export function deriveResidencePeriodMonths(
  *
  * ⚠️ 사정거리는 **취득 당시 조정대상지역**뿐이다 — 비조정이면 거주요건 자체가 없어 세액이
  *    바뀌지 않는다(`meetsOneHouseResidenceRequirement`의 `!wasRegulated` 단락).
- * ⚠️ 예규·심판례 **0건**(§154⑤ 단서가 2024-03-01 신설). 조문 해석이지 유권해석이 아니다.
+ * ⚠️ 예규·심판례 **0건**(§154⑤ 단서가 2024-02-29 신설). 조문 해석이지 유권해석이 아니다.
  * 세액 anchor: `non-housing-to-housing-conversion.engine.test.ts` **R-G-1~R-G-3**.
  *
  * ⚠️ **`direct` 모드는 클램프할 수 없다** — 개월 수 스칼라에는 시점 정보가 없다.

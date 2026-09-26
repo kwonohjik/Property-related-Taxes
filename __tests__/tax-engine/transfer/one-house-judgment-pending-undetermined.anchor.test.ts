@@ -104,7 +104,11 @@ describe("P4-1 pending — §155① 일시적 2주택 처분기한", () => {
 
 describe("P4-1 pending — §155④⑤ 합가 10년", () => {
   it("[PD-5] 혼인 합가 10년 초과 — 기한은 혼인일 + 10년", () => {
+    // 🔁 OH-29(2026-09-26) — 혼인 합가 10년은 2024-11-12 이후 양도분부터(대통령령 제34990호 부칙 제2조).
+    //    기본 양도일(2024-06-01)은 5년 시대라 기한이 2015-01-01로 바뀐다 — 이 케이스의 주제(10년 축)를
+    //    재려고 양도일을 2025-06-01로 옮겼다. 5년 시대 기한은 `merge-exemption-era.anchor.test.ts`가 고정한다.
     const r = judge({
+      transferDate: D("2025-06-01"),
       householdHousingCount: 2,
       marriageMerge: { marriageDate: D("2010-01-01") },
       isFirstTransferredInMerge: true,

@@ -14,12 +14,14 @@
  */
 
 import { applyRate } from "./tax-utils";
+import { resolveLthdTable2Era, table2HoldingOnlyRate } from "./data/lthd-table2-era";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
 
 /**
  * 장기보유공제율 (§95② 별표, mixed-use 공용 — helpers.ts에서 re-export).
  *   표2: 1세대1주택 거주 2년+ → min(holdYears×4%,40%) + min(resYears×4%,40%) (합계 최대 80%).
+ *        2009~2020 양도분은 min(holdYears×8%, 80%) — `transferDate`로 연혁을 가른다(OH-31).
  *   표1: 그 외 → min(holdYears×2%, 30%). 보유 3년 미만은 0.
  * 보유분·거주분 각각 40% 상한 후 합산(합산 후 80% 상한만 적용하면 과대 공제 — H-7 회귀).
  */
@@ -35,9 +37,22 @@ export function calcLongTermRate(
    * 따라서 어느 사유가 걸리는지는 **호출부가 판단**해 넘긴다. 이 leaf는 결과만 받는다.
    */
   lthdExcluded = false,
+  /**
+   * 양도일 — 표2 **연혁**(OH-31, `data/lthd-table2-era.ts`). 2009-01-01~2020-12-31 양도분은 보유 연 8%
+   * (10년 80%) 단일축이라 거주분이 없다. 미제공이면 현행 식(보유 4% + 거주 4%) — 겸용주택 경로는
+   * 2022-01-01 이후 양도만 받으므로(`MIXED_USE_EFFECTIVE_DATE`) 넘기지 않아도 값이 같다.
+   * 2009-01-01 전(미지원)도 현행 식으로 계산하고 호출부가 고지한다.
+   */
+  transferDate?: Date,
 ): number {
   if (lthdExcluded) return 0;
   if (holdingYears < 3) return 0;
+  if (useTable2 && transferDate) {
+    const era = resolveLthdTable2Era(transferDate);
+    if (era === "holding_8pct" || era === "holding_8pct_residence_2y") {
+      return table2HoldingOnlyRate(holdingYears);
+    }
+  }
   if (useTable2) {
     const holdingPart = Math.min(holdingYears * 0.04, 0.40);
     const residencePart = Math.min(residenceYears * 0.04, 0.40);

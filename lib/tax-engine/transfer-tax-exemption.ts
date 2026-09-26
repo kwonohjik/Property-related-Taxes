@@ -17,6 +17,7 @@ import { isWithinPeriod } from "./civil-period";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { TRANSFER, shortArticle } from "./legal-codes";
 import type {
   OneHouseAppliedException,
@@ -39,9 +40,6 @@ import {
   PROVISO_LABEL,
   qualifiesRuralHouse,
   qualifiesUnavoidableOutsideCapital,
-  REPLACEMENT_HOUSE_3YR_TRANSFER_START,
-  REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW,
-  REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
   qualifiesLongTermMortgageResidenceExemption,
@@ -220,11 +218,9 @@ function checkExemptionCore(
     const meetsAcquisition =
       input.acquisitionDate >= rh.businessApprovalDate &&
       Math.floor(rh.replacementResidenceMonths / 12) >= 1;
-    // ④ 신축주택 완성 전 또는 완성 후 3년(2023.01.12 이후 양도분; 구 2년)내 대체주택 양도
-    const deadlineYears =
-      input.transferDate >= REPLACEMENT_HOUSE_3YR_TRANSFER_START
-        ? REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW
-        : REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD;
+    // ⑤3호 신축주택 완성 전 또는 완성 후 N년 내 대체주택 양도 — N은 양도일 연혁(2023-01-12 이후 3년,
+    //   전 2년). §156의2④·§156의3③과 같은 부칙(대통령령 제33267호 제8조)이라 함수를 공유한다.
+    const deadlineYears = resolve1562DeadlineYears(input.transferDate);
     const meetsTransferTiming =
       input.transferDate < rh.completionDate ||
       isWithinPeriod(rh.completionDate, deadlineYears, input.transferDate);

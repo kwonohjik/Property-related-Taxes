@@ -70,6 +70,13 @@ function right(over: Partial<PresaleRight> = {}): PresaleRight {
 }
 
 const run = (input: TransferTaxInput) => calculateTransferTax(input, mockRates);
+/**
+ * OH-30b(2026-09-26) — 「1년 요건 미충족」 픽스처는 권리 취득일이 2015-10-01이라 **구 ④**를 받는다.
+ * ④의 1년 요건은 대통령령 제32420호(2022-02-15)가 신설했고 부칙 제12조가 그 전 취득 권리에
+ * 종전 규정(1년 요건 없음)을 적용한다 ⇒ 3년이 지나 양도한 이 세대는 ④ 선언이 없으면 **판정 불가**다.
+ * 배제 확정을 재려면 ④·§75① 「해당 없음」을 명시한다(③은 1년 요건 미충족으로 여전히 탈락한다).
+ */
+const NO_3YR_EXCEPTION = { rightThreeYearException: { kind: "none" as const } };
 /** 분양권 기산일 게이트를 실제로 태우는 실행기 — 위 주석 참조. */
 const runHE = (input: TransferTaxInput) => calculateTransferTax(input, houseEngineRates);
 
@@ -86,6 +93,7 @@ describe("§89② 배제 — 켜야 할 때 켠다", () => {
     const r = run(
       houseInput({
         presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        ...NO_3YR_EXCEPTION,
       }),
     );
     expect(r.isExempt).toBe(false);
@@ -95,7 +103,10 @@ describe("§89② 배제 — 켜야 할 때 켠다", () => {
   it("★ 배제가 세액을 실제로 움직인다 — 0 → 양수", () => {
     const kept = run(houseInput());
     const excluded = run(
-      houseInput({ presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })] }),
+      houseInput({
+        presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        ...NO_3YR_EXCEPTION,
+      }),
     );
     expect(kept.totalTax).toBe(0);
     expect(excluded.totalTax).toBeGreaterThan(0);
@@ -115,7 +126,10 @@ describe("§89② 배제 — 켜야 할 때 켠다", () => {
    */
   it("🔑 배제해도 장기보유특별공제 표2는 유지된다 (§95② 단서 · 시행령 §159의4는 §89②을 인용하지 않는다)", () => {
     const excluded = run(
-      houseInput({ presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })] }),
+      houseInput({
+        presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        ...NO_3YR_EXCEPTION,
+      }),
     );
     const table1Control = run(houseInput({ isOneHousehold: false }));
     expect(excluded.longTermHoldingDeduction).toBeGreaterThan(
@@ -131,6 +145,7 @@ describe("§89② 배제 — 켜야 할 때 켠다", () => {
       houseInput({
         ...over12,
         presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        ...NO_3YR_EXCEPTION,
       }),
     );
     expect(kept.isPartialExempt).toBe(true);
@@ -295,13 +310,17 @@ describe("§89② — 적용 대상 자체가 아닌 경우", () => {
   it("🔑 2021-01-01 **전** 취득 분양권은 §89②의 「분양권」이 아니다 (§88 10호 정의 시행일)", () => {
     // 같은 날짜의 조합원입주권이면 배제되는 조합인데, 분양권이면 배제되지 않는다.
     const asRight = runHE(
-      houseInput({ presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })] }),
+      houseInput({
+        presaleRights: [right({ acquisitionDate: new Date("2015-10-01") })],
+        ...NO_3YR_EXCEPTION,
+      }),
     );
     const asPresale = runHE(
       houseInput({
         presaleRights: [
           right({ type: "presale_right", acquisitionDate: new Date("2015-10-01") }),
         ],
+        ...NO_3YR_EXCEPTION,
       }),
     );
     expect(asRight.isExempt).toBe(false);

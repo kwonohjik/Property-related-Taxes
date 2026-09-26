@@ -20,10 +20,12 @@ describe("용도변경 게이트 상수", () => {
     expect(LTHD_CONVERSION_95_5_CUTOFF.getDate()).toBe(1);
   });
 
-  it("시행령 §154⑤ 단서 — 2024-03-01 (대통령령 제34265호)", () => {
+  // 🔁 OH-59(2026-09-26) — 대통령령 제34265호는 공포·시행 모두 2024-02-29(부칙 제1조 「공포한 날부터
+  //    시행」 — 2024-03-01 예외는 별표 2 간이세액표뿐). 종전 2024-03-01은 오기였다.
+  it("시행령 §154⑤ 단서 — 2024-02-29 (대통령령 제34265호)", () => {
     expect(CONVERSION_EXEMPTION_CUTOFF.getFullYear()).toBe(2024);
-    expect(CONVERSION_EXEMPTION_CUTOFF.getMonth()).toBe(2);
-    expect(CONVERSION_EXEMPTION_CUTOFF.getDate()).toBe(1);
+    expect(CONVERSION_EXEMPTION_CUTOFF.getMonth()).toBe(1);
+    expect(CONVERSION_EXEMPTION_CUTOFF.getDate()).toBe(29);
   });
 
   it("★ 로컬 자정 파싱 — 시행일 당일 양도가 게이트를 통과한다", () => {
@@ -34,10 +36,10 @@ describe("용도변경 게이트 상수", () => {
     const dayBefore = new Date("2024-12-31T00:00:00");
     expect(dayBefore >= LTHD_CONVERSION_95_5_CUTOFF).toBe(false);
 
-    const exemptOnCutoff = new Date("2024-03-01T00:00:00");
+    const exemptOnCutoff = new Date("2024-02-29T00:00:00");
     expect(exemptOnCutoff >= CONVERSION_EXEMPTION_CUTOFF).toBe(true);
 
-    const exemptDayBefore = new Date("2024-02-29T00:00:00");
+    const exemptDayBefore = new Date("2024-02-28T00:00:00");
     expect(exemptDayBefore >= CONVERSION_EXEMPTION_CUTOFF).toBe(false);
   });
 
