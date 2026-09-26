@@ -127,6 +127,11 @@ export interface OwnedHouseInfo {
   standardValue: string;      // 시가표준액 (원)
   propertyType: string;       // "housing" | "officetel" | "right" | "subscription_right"
   acquisitionDate: string;    // 취득일 (YYYY-MM-DD)
+  /**
+   * 매매·분양계약일 (입주권·분양권·오피스텔 행, 선택) — 법률 제17473호 부칙 제7조:
+   * 2020.8.12. 전 계약분은 취득일이 그 이후여도 주택 수에 넣지 않는다
+   */
+  contractDate: string;
   isRegulated: boolean;       // 조정대상지역 여부
   /** 상속주택인지 (5년 미경과 제외 규칙 적용) */
   isInherited: boolean;
@@ -139,8 +144,13 @@ export interface OwnedHouseInfo {
   /** 주된 상속자 판정 관련 */
   shareInInheritance: string; // 본인 지분
   maxShareInInheritors: string; // 최대 지분
+  /** 지분이 가장 큰 상속인이 두 명 이상(동순위) — §28의4⑤ 후단 */
   tieInMaxShare: boolean;
+  /** 본인이 그 주택에 거주 (§28의4⑤1호) */
   isResident: boolean;
+  /** 다른 동순위 상속인이 그 주택에 거주 (§28의4⑤1호) */
+  otherTiedHeirResides: boolean;
+  /** 최연장자 (§28의4⑤2호 — 거주자가 둘 이상이면 거주자 중, 없으면 동순위 상속인 중) */
   isOldest: boolean;
   isMetropolitanRegion: boolean; // 수도권 여부 (1억/2억 한도)
   isUrbanRegenArea: boolean;  // 정비구역 여부
@@ -152,6 +162,7 @@ export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
     standardValue: "",
     propertyType: "housing",
     acquisitionDate: "",
+    contractDate: "",
     isRegulated: false,
     isInherited: false,
     inheritanceDate: "",
@@ -163,6 +174,7 @@ export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
     maxShareInInheritors: "1",
     tieInMaxShare: false,
     isResident: false,
+    otherTiedHeirResides: false,
     isOldest: false,
     isMetropolitanRegion: false,
     isUrbanRegenArea: false,

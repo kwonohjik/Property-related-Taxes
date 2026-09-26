@@ -32,5 +32,40 @@ export function validateAcquisitionCrossFields(
     }
   }
 
+  // ── step 2 (주택 현황 — 보유주택 목록) ──
+  if (step === 2 && form.propertyType === "housing") {
+    const msg = validateOwnedHouses(form);
+    if (msg) return msg;
+  }
+
+  return null;
+}
+
+/**
+ * 보유주택 목록 — 엔진이 날짜 없이 조용히 계산하는 조합을 막는다(④·⑫와 같은 조건).
+ *
+ * - 입주권·분양권·오피스텔 행: 취득일 필수 — 법률 제17473호 부칙 제3조(2020.8.12. 전 취득분 제외)
+ * - 분양권·입주권으로 취득(소급): 권리취득일 필수, 모든 행 취득일 필수 — §28의4① 후단 기준일 비교
+ * - 상속 토글 ON: 상속개시일 필수 — ④는 날짜가 없으면 상속 정보를 통째로 보내지 않는다
+ */
+function validateOwnedHouses(form: FormState): string | null {
+  if (form.acquiredViaRight && !form.rightAcquisitionDate) {
+    return "분양권·입주권으로 취득 — 권리취득일(분양계약일)을 입력하세요.";
+  }
+  const rows = form.ownedHouses ?? [];
+  for (let i = 0; i < rows.length; i++) {
+    const h = rows[i];
+    const isRightOrOffice =
+      h.propertyType === "officetel" || h.propertyType === "right" || h.propertyType === "subscription_right";
+    if (!h.acquisitionDate && isRightOrOffice) {
+      return `보유 주택 #${i + 1} — 입주권·분양권·오피스텔은 취득일을 입력하세요 (2020.8.12. 전 취득분은 주택 수에서 제외).`;
+    }
+    if (!h.acquisitionDate && form.acquiredViaRight) {
+      return `보유 주택 #${i + 1} — 권리취득일 기준 소급 산정에는 취득일이 필요합니다.`;
+    }
+    if (h.isInherited && !h.inheritanceDate) {
+      return `보유 주택 #${i + 1} — 상속개시일을 입력하세요.`;
+    }
+  }
   return null;
 }

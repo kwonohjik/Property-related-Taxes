@@ -8,7 +8,8 @@
  *   일반 매매: 잔금지급일(balancePaymentDate) 기준
  *   분양권·입주권으로 취득: rightAcquisitionDate(권리취득일) 기준으로 소급
  *
- * 1세대 내 다회 취득 시: 가장 빠른 권리취득일 적용.
+ * 1세대 내 매매·교환·증여로 **동일한 주택분양권**의 취득일이 둘 이상이면 가장 빠른 날
+ * (그 날짜는 입력 단계에서 사용자가 넣는다 — 다른 무관한 보유 권리의 취득일은 기준일이 아니다).
  *
  * 실무 예시:
  *   2023년 분양권 취득 + 2024년 주택 매수 + 2026년 분양권→아파트 등기
@@ -16,7 +17,7 @@
  *   → 2023년 기준으로 다른 주택 1채 보유 → 취득 후 2주택 → 1+1 = 2주택 판정
  */
 
-import { ACQUISITION } from "../legal-codes";
+import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
 
 // ============================================================
 // 권리취득일 기준 산정
@@ -62,6 +63,22 @@ export function getHouseCountReferenceDate(
   input: RightAcquisitionDateInput,
   today: string = new Date().toISOString().slice(0, 10)
 ): RightAcquisitionDateResult {
+  // 대통령령 제30939호 부칙 제2조 — §28의4① 후단은 2020.8.12. 이후 권리를 취득한 경우부터.
+  // 그 전에 취득한 권리로 취득하는 주택은 전단(주택 취득일 현재) 기준으로 산정한다.
+  if (
+    input.acquiredViaRight &&
+    input.rightAcquisitionDate &&
+    input.rightAcquisitionDate < ACQUISITION_CONST.HOUSE_COUNT_RIGHT_OFFICE_FROM
+  ) {
+    const referenceDate = input.balancePaymentDate ?? today;
+    return {
+      referenceDate,
+      isRightAcquisitionSoGup: false,
+      legalBasis: ACQUISITION.HOUSE_COUNT_RIGHT_DATE_APPLICATION,
+      description: `권리취득일(${input.rightAcquisitionDate})이 2020.8.12. 전 → 권리취득일 소급 산정 미적용(${ACQUISITION.HOUSE_COUNT_RIGHT_DATE_APPLICATION}), 주택 취득일(${referenceDate}) 기준 산정`,
+    };
+  }
+
   // 분양권·입주권으로 취득하는 경우 권리취득일 소급
   if (input.acquiredViaRight && input.rightAcquisitionDate) {
     return {

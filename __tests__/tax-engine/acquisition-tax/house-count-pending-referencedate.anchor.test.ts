@@ -19,8 +19,10 @@ function ownedHouse(id: string): OwnedHouseInfo {
   return {
     id,
     standardValue: "500000000",
-    propertyType: "apartment",
+    // UI가 실제로 만드는 값("housing") — 종전 "apartment"는 UI가 만들지 않는 값이라 OH-02(항상 400)를 가렸다
+    propertyType: "housing",
     acquisitionDate: "2015-01-01",
+    contractDate: "",
     isRegulated: true,
     isInherited: false,
     inheritanceDate: "",
@@ -32,6 +34,7 @@ function ownedHouse(id: string): OwnedHouseInfo {
     maxShareInInheritors: "",
     tieInMaxShare: false,
     isResident: false,
+    otherTiedHeirResides: false,
     isOldest: false,
     isMetropolitanRegion: true,
     isUrbanRegenArea: false,

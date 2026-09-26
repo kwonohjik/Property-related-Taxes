@@ -189,7 +189,8 @@ const deemedAcquisitionInputSchema = z.object({
 // ============================================================
 
 const houseTypeSchema = z.enum([
-  "apartment", "villa", "single_family", "multi_household",
+  // "housing" = 세부 유형 미구분 — 취득세 Step2 보유주택 목록 「주택」 행이 보내는 값 (OH-02)
+  "housing", "apartment", "villa", "single_family", "multi_household",
   "urban_living", "officetel", "other",
 ]);
 
@@ -223,13 +224,16 @@ const ownedHouseInfoSchema = z.object({
   maxShareInInheritors: z.number().optional(),
   tieInMaxShare: z.boolean().optional(),
   isResidentInInheritedHouse: z.boolean().optional(),
+  isOtherTiedHeirResident: z.boolean().optional(),
   isOldestInheritor: z.boolean().optional(),
 });
 
 const rightAssetSchema = z.object({
   id: z.string().optional(),
   type: z.enum(["redevelopment_right", "subscription_right"]),
-  rightAcquisitionDate: z.string(),
+  // 필수 — 법률 제17473호 부칙 제3조(2020.8.12. 전 취득분 제외)·소급 기준일 판정에 쓴다. 빈 값 금지(OH-25)
+  rightAcquisitionDate: dateStr,
+  contractDate: dateStr.optional(),
   isPreMarriageSubscriptionRight: z.boolean().optional(),
   inheritanceDate: z.string().optional(),
 });
@@ -237,6 +241,9 @@ const rightAssetSchema = z.object({
 const officeAssetSchema = z.object({
   id: z.string().optional(),
   standardValue: z.number().nonnegative(),
+  // 필수 — 법률 제17473호 부칙 제3조·소급 기준일 판정 (OH-03·OH-26)
+  acquisitionDate: dateStr,
+  contractDate: dateStr.optional(),
   inheritanceDate: z.string().optional(),
 });
 
@@ -274,6 +281,28 @@ const houseCountInputSchema = z.object({
   household: z.object({ members: z.array(householdMemberSchema) }).optional(),
   trustedHouseCount: z.number().int().nonnegative().optional(),
   referenceDate: z.string().optional(),
+}).superRefine((v, ctx) => {
+  /**
+   * §28의4① 후단 권리취득일 소급 — 기준일(권리취득일)이 없거나, 기준일과 비교할 보유주택
+   * 취득일이 비면 엔진이 소급 없이·기준일 비교 없이 조용히 계산한다. 막는다(OH-25·OH-26).
+   */
+  if (!v.pendingAcquisition?.acquiredViaRight) return;
+  if (!dateStr.safeParse(v.pendingAcquisition.rightAcquisitionDate ?? "").success) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["pendingAcquisition", "rightAcquisitionDate"],
+      message: "분양권·입주권으로 취득하는 주택은 권리취득일(분양계약일)이 필요합니다",
+    });
+  }
+  v.houses.forEach((h, i) => {
+    if (!dateStr.safeParse(h.acquisitionDate).success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["houses", i, "acquisitionDate"],
+        message: "권리취득일 소급 산정에는 보유 주택의 취득일이 필요합니다",
+      });
+    }
+  });
 });
 
 // ============================================================

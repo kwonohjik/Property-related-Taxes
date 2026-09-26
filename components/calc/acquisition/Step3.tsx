@@ -169,7 +169,7 @@ export function Step3({
         <ToggleCard
           tone="rose"
           title="시가표준액 1억/2억 이하 중과 배제"
-          description="전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제 (시행령 §28의2①1호)"
+          description="전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제 (시행령 §28의2①1호 — 2025.1.2. 전 취득은 전국 1억)"
           checked={!!form.wholeHouseStandardValue && parseFloat(form.wholeHouseStandardValue.replace(/,/g, "")) > 0}
           onCheckedChange={(v) => {
             if (!v) set("wholeHouseStandardValue", "");
@@ -178,9 +178,10 @@ export function Step3({
             <TaxHelp
               title="시가표준액 중과 배제 기준 (시행령 §28의2①1호)"
               summary="수도권 1억 이하 / 비수도권 2억 이하인 주택은 다주택 중과 배제. 전체 주택 기준."
-              details={`## 이중 기준 (2021년 법 개정)
+              details={`## 이중 기준 (2025.1.2. 이후 취득 주택부터)
 - **수도권** (서울·경기·인천): 시가표준액 **1억 원 이하**
 - **비수도권** (그 외 지역): 시가표준액 **2억 원 이하**
+- 2025.1.2. **전**에 취득한 주택은 지역 구분 없이 **1억 원 이하** (시행령 부칙 대통령령 제35477호 제2조)
 
 ## 전체 주택 기준
 지분 취득·부속토지만 소유 시 — **전체 주택의 시가표준액**으로 판단.

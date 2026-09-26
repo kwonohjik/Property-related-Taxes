@@ -25,6 +25,7 @@ import {
   isExemptFromSurcharge_LowValue,
   resolveRegulatedAreaStatus,
 } from "./exclusion";
+import { describeLowValueHouseLimit } from "./low-value-limit";
 import {
   assessMultiHouseSurcharge,
   assessGiftSurcharge,
@@ -66,6 +67,12 @@ export interface SurchargeCheckInput {
   // ── [P1-0] 입력 일관성 검증 ──
   /** 잔금일 (별장 폐지 판단용) */
   balanceDate?: string;
+  /**
+   * 취득하는 주택의 취득일 (YYYY-MM-DD, 지방세법 §20 확정 취득일) — §28의2 1호 저가주택 한도 연혁
+   * (대통령령 제35477호 부칙 제2조). 오케스트레이터가 `determineAcquisitionTiming` 결과를 넘긴다.
+   * 미전달 시 잔금일 → 오늘 순(엔진의 취득시기 기본값과 같은 규약).
+   */
+  acquisitionDate?: string;
 
   // ── [P1-3/v4 M4] 무상취득 단서 ──
   /** 증여자 관계 (수증자 관점) — 단서 배제 여부 판단 */
@@ -218,10 +225,12 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
       // 폼 기본값(false=비수도권)과 일치시키고, 명문부재 시 납세자 유리(2억 한도) 방향으로 default.
       const isMetro = input.isMetropolitanRegion ?? false;
       const isUrbanRegen = input.isUrbanRegenerationArea ?? false;
-      if (isExemptFromSurcharge_LowValue(stdValue, isMetro, isUrbanRegen)) {
-        const limit = isMetro ? "1억원" : "2억원";
+      const lowValueDate =
+        input.acquisitionDate ?? input.balanceDate ?? new Date().toISOString().slice(0, 10);
+      if (isExemptFromSurcharge_LowValue(stdValue, isMetro, isUrbanRegen, lowValueDate)) {
+        const limit = describeLowValueHouseLimit(isMetro, lowValueDate);
         exceptions.push(
-          `시가표준액 ${stdValue.toLocaleString()}원이 ${limit} 이하 — 중과 배제 (${ACQUISITION.SURCHARGE_EXCLUSION} 1호)`
+          `시가표준액 ${stdValue.toLocaleString()}원이 ${limit}원 이하 — 중과 배제 (${ACQUISITION.SURCHARGE_EXCLUSION} 1호)`
         );
         // 생애최초 감면 처리 후 배제 결과 반환
         const firstHomeReduction = calcFirstHomeReduction(input, undefined);

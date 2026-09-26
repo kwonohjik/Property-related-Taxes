@@ -42,6 +42,9 @@ const EXCLUSION_TYPE_LABELS: Record<string, string> = {
   low_officetel: "시가표준액 1억 이하 오피스텔",
   low_land_only: "시가표준액 1억 이하 부속토지",
   pre_marriage_right: "혼인 전 분양권 (배우자)",
+  pre_2020_08_12_right_office: "2020.8.12. 전 취득·계약 입주권·분양권·오피스텔",
+  acquired_after_reference_date: "권리취득일 뒤 취득",
+  joint_inheritance_not_owner: "공동상속 — 소유자로 보지 않는 상속인",
 };
 
 // ============================================================

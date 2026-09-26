@@ -84,7 +84,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
     items.push({
       id: "low_value_exclusion",
       label: "시가표준액 1억/2억 이하 중과 배제 여부 확인",
-      description: "전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제",
+      description: "전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제 (2025.1.2. 전 취득은 전국 1억)",
       step: 3,
     });
   }

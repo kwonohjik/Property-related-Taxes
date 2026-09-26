@@ -9,7 +9,8 @@
  * 지방세법 시행령 §28의2 1호 — 시가표준액 한도 충족 시 중과 배제
  */
 
-import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
+import { ACQUISITION } from "../legal-codes";
+import { getLowValueHouseLimit } from "./low-value-limit";
 
 // ============================================================
 // P1-0: 입력 일관성 검증
@@ -100,27 +101,26 @@ export function validateInputConsistency(input: {
  * - 가목: 수도권 소재 — 시가표준액(전체 주택 기준) 1억원 이하
  * - 나목: 수도권 외 소재 — 시가표준액(전체 주택 기준) 2억원 이하
  * - 단서: 정비구역(재개발·재건축조합·소규모주택정비) 소재 주택은 배제 불가
+ * - 연혁: 가목·나목 구분은 2025.1.2. 이후 취득 주택부터(대통령령 제35477호 부칙 제2조).
+ *   그 전 취득은 전국 1억 — `getLowValueHouseLimit`
  *
  * @param wholeStdValue 전체 주택 시가표준액 (지분/부속토지 취득 시 전체 주택 기준)
- * @param isMetropolitanRegion 수도권 여부 (true: 1억 한도, false: 2억 한도)
+ * @param isMetropolitanRegion 수도권 여부
  * @param isUrbanRegenerationArea 정비구역(재개발·재건축·소규모주택정비) 소재 여부
+ * @param taxableHouseAcquisitionDate 취득하는 주택의 취득일 (YYYY-MM-DD) — 한도 연혁 판정
  *
  * 주의: 지분 50% 취득 + 전체 시가 2억 → 중과 배제 불가 (전체 기준이므로)
  */
 export function isExemptFromSurcharge_LowValue(
   wholeStdValue: number,
   isMetropolitanRegion = true,
-  isUrbanRegenerationArea = false
+  isUrbanRegenerationArea = false,
+  taxableHouseAcquisitionDate: string,
 ): boolean {
   // 정비구역은 단서에 의해 배제 불가
   if (isUrbanRegenerationArea) return false;
 
-  // 수도권 1억 / 비수도권 2억 이중 기준
-  const limit = isMetropolitanRegion
-    ? ACQUISITION_CONST.LOW_VALUE_SURCHARGE_EXEMPT_METRO    // 1억
-    : ACQUISITION_CONST.LOW_VALUE_SURCHARGE_EXEMPT_NON_METRO; // 2억
-
-  return wholeStdValue <= limit;
+  return wholeStdValue <= getLowValueHouseLimit(isMetropolitanRegion, taxableHouseAcquisitionDate);
 }
 
 // ============================================================
