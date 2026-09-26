@@ -16,6 +16,9 @@ export { ContributionFields } from "./contribution-form";
 export { ConvertibleStockFields } from "./convertible-stock-form";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+// ⑤가 「주주 여부를 물어야 하는 목인지」를 따로 판단하면 엔진과 두 개의 진실이 생긴다.
+// 판정표는 엔진 모듈 하나가 갖는다.
+import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -284,6 +287,37 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         description="영리법인은 증여세 납세의무자가 아닙니다. 이익 자체는 「법인세법 시행령」 §89⑥이 §39·§29②를 준용해 계산하는 익금으로 그대로 쓰이므로 산출근거는 그대로 표시됩니다."
         data-testid="ci-donee-corp"
       />
+      {/* 「상증법」§4의2④ — 영리법인의 «수증이익»에 법인세가 부과되면 그 법인의 «주주등»에는
+          증여세를 부과하지 아니한다. 위 §4의2①·③(수증자 자신이 영리법인)과 **수범자가 다르다**. */}
+      <ToggleCard
+        lawLinks="상증법"
+        tone="violet"
+        checked={form.ciIssuerGainCorporateTaxed}
+        onCheckedChange={(v) => set({ ciIssuerGainCorporateTaxed: v })}
+        title="발행법인 수증이익에 법인세 부과 (§4의2④)"
+        description="신주발행법인이 이 자본거래로 얻은 수증이익(채무면제익 등)에 법인세가 부과된 경우입니다(비과세·감면 포함). 그 법인의 주주등에게는 증여세를 부과하지 않습니다 — 국세청 과세기준자문 기준-2022-법무재산-0178."
+        data-testid="ci-issuer-corp-taxed"
+      >
+        {statuteFixesShareholderStatus(form.ciDirection, form.ciSubType) === undefined ? (
+          // 사안 의존 목(§39①1호 가·나목)에서만 묻는다 — 나머지 목은 조문이 확정하므로
+          // 엔진이 이 값을 무시한다. 물으면 「입력했는데 반영이 안 된다」가 된다.
+          <ToggleCard
+            lawLinks="상증법"
+            tone="violet"
+            checked={form.ciDoneeIsShareholderOfIssuer}
+            onCheckedChange={(v) => set({ ciDoneeIsShareholderOfIssuer: v })}
+            title="이익을 얻은 자가 발행법인의 주주등"
+            description="§4의2④는 「해당 법인의 주주등」에만 미칩니다. 이 목은 이익을 얻는 자가 주주인지 조문으로 정해지지 않아 사실관계로 판단합니다. 끄면 배제하지 않습니다(요건 미입증)."
+            data-testid="ci-donee-shareholder"
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground" data-testid="ci-shareholder-fixed-note">
+            {statuteFixesShareholderStatus(form.ciDirection, form.ciSubType)
+              ? "이 목은 이익을 얻는 자가 「해당 법인의 주주등」으로 조문상 확정되어 별도 입력이 필요 없습니다."
+              : "이 목(§39①1호 다목)은 이익을 얻는 자가 「해당 법인의 주주등이 아닌 자」이므로 §4의2④ 배제가 적용되지 않습니다."}
+          </p>
+        )}
+      </ToggleCard>
       <ToggleCard
         lawLinks="상증법"
         tone="emerald"

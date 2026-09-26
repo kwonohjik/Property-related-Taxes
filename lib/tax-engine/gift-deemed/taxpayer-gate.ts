@@ -31,8 +31,12 @@ import type { CapitalIncreaseInput } from "./gift-deemed-input-types";
  * | 2호 다·라 | 「그의 특수관계인인 **주주등**이 얻은 이익」 | **항상 주주** |
  *
  * ⚠️ 조문이 확정하는 목에서는 **입력을 무시한다** — 사용자 입력이 법문을 이기지 못하게.
+ *
+ * ⑤ UI도 이 함수를 쓴다 — 폼이 「주주 여부를 물어야 하는 목인지」를 따로 판단하면
+ * 엔진과 두 개의 진실이 생기고, 목이 하나 바뀔 때 한쪽만 고쳐진다.
+ * `undefined`(사안 의존)일 때만 주주 여부를 묻는다.
  */
-function statuteFixesShareholderStatus(
+export function statuteFixesShareholderStatus(
   direction: "low" | "high",
   subType: NonNullable<CapitalIncreaseInput["subType"]>,
 ): boolean | undefined {

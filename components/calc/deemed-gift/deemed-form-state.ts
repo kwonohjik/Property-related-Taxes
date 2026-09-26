@@ -129,6 +129,14 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
   /** 수증자가 영리법인인가 — 「상증법」§2 9호·§4의2①·③ 납세의무자 범위 밖(단건·전환주식 공용) */
   ciDoneeIsForProfitCorp: boolean;
+  /** 「상증법」§4의2④ 요건 ㉠ — 발행법인 수증이익에 법인세가 부과됐는가(비과세·감면 포함) */
+  ciIssuerGainCorporateTaxed: boolean;
+  /**
+   * 「상증법」§4의2④ 요건 ㉡ — 수증자가 발행법인의 주주등인가.
+   * **목이 조문으로 확정하는 경우 엔진이 이 값을 무시한다**(`taxpayer-gate.ts`) —
+   * 폼도 그때는 이 토글을 띄우지 않는다.
+   */
+  ciDoneeIsShareholderOfIssuer: boolean;
   // 증자 §39 cap-table (다수증자·다증여자)
   ciAllocIsListed: boolean; // §39① 괄호 「주권상장법인이」 — 공모 배정 제외 AND 조건 (㉯ 미접촉)
   ciAllocDirection: "low" | "high";
@@ -329,6 +337,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciStockCode: "",
   ciAllocationMethod: "normal",
   ciDoneeIsForProfitCorp: false,
+  ciIssuerGainCorporateTaxed: false,
+  ciDoneeIsShareholderOfIssuer: false,
   ciAllocIsListed: false,
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
