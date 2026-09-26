@@ -144,7 +144,17 @@ export function ExemptionProvisoSection({
               onChange={(v) => onChange({ provisoBusinessApprovalDate: v })}
             />
           </FieldCard>
-          <FieldCard label="수용일" hint="양도일·수용일부터 5년 내 양도 (미입력 시 양도일 기준)">
+          {/*
+            🔴 「미입력 시 양도일 기준」 안내를 지웠다(OH-33). 엔진은 2026-07-29(#591 R7)부터 수용일이
+               없으면 단서를 **적용하지 않는다** — 5년 기한(2호 후단)은 잔존주택 축이라 수용일 없이는
+               수용된 주택 자체의 양도인지 가를 수 없다. ⑧이 이 칸을 필수로 막는다
+               (`exemption-proviso-validate.ts`).
+          */}
+          <FieldCard
+            label="수용일"
+            required
+            hint="필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년 내 양도해야 합니다"
+          >
             <DateInput
               value={provisoExpropriationDate}
               onChange={(v) => onChange({ provisoExpropriationDate: v })}

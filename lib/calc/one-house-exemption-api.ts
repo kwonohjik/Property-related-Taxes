@@ -27,7 +27,6 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
-import { temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
@@ -36,15 +35,36 @@ import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
   buildMergedHouseholdFirstHousePayload,
-  provisoGate,
   effectiveProvisoReason,
 } from "./transfer-tax-api-helpers";
+import {
+  judgmentProvisoMode,
+  judgmentReplacementHouseVisible,
+} from "./one-house-judgment-section-scope";
 import {
   deriveJudgmentHouseCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 
+
+/**
+ * 판정 메뉴의 **거주 개월 정본** — ④ 본문과 ⑤ 일시적 2주택 요건 카드가 함께 쓴다(OH-56).
+ *
+ * 🔴 폼-전역 `residencePeriodMonths`를 직접 읽지 않는다 — 이 메뉴의 거주 위젯은 자산-수준
+ *    필드에만 쓴다(아래 본문 주석). 카드가 폼-전역 값(기본 "0")을 읽어 §154① 단서 1·3호의
+ *    거주연수 요건을 늘 미충족으로 보고 「요건 A 미충족」을 띄운 것이 OH-56이다.
+ */
+export function deriveJudgmentResidenceMonths(form: OneHouseJudgmentFormData): number {
+  const primary = form.assets[0];
+  if (!primary) return 0;
+  return clampResidenceToHousingPeriod(
+    primary,
+    form.transferDate,
+    form.residencePeriodMonths,
+    isUsageConversionActive(primary) ? primary.residentialUseStartDate : undefined,
+  ).months;
+}
 
 /** ④ 판정 메뉴 폼 → API 본문. */
 export function buildOneHouseExemptionApiBody(
@@ -57,7 +77,8 @@ export function buildOneHouseExemptionApiBody(
    * 🔴 **주택 수는 명부에서 파생한다**(G-1 · D-3). 판정 메뉴에는 선언 위젯이 없다.
    *
    * route도 본문의 `householdHousingCount`를 믿지 않고 독립적으로 도출하지만(P4-2a),
-   * 여기서 같은 값을 실어야 하는 이유가 따로 있다 — **`provisoGate`가 이 값을 읽는다**.
+   * 여기서 같은 값을 실어야 하는 이유가 따로 있다 — **`provisoGate`가 이 값을 읽는다**
+   * (지금은 `judgmentProvisoMode`가 같은 파생값으로 부른다).
    * 빈 문자열을 넘기면 `parseInt("") = NaN`으로 `visible:false`가 되어
    * **§154① 단서(해외이주·수용·부득이)가 조용히 사라진다**.
    */
@@ -126,12 +147,7 @@ export function buildOneHouseExemptionApiBody(
      * ⚠️ 이 결함은 anchor가 **픽스처로 가렸다** — 폼-전역 값을 직접 넣어 두면 위젯을 붙이기
      *    전까지 드러나지 않는다(`feedback_fixture_default_masks_gate_defect`).
      */
-    residencePeriodMonths: clampResidenceToHousingPeriod(
-      primary,
-      form.transferDate,
-      form.residencePeriodMonths,
-      isUsageConversionActive(primary) ? primary.residentialUseStartDate : undefined,
-    ).months,
+    residencePeriodMonths: deriveJudgmentResidenceMonths(form),
     householdHousingCount: houseCount,
 
     /**
@@ -144,7 +160,12 @@ export function buildOneHouseExemptionApiBody(
      *    쓰이지 않는 사본은 「언젠가 필요할 것」이라는 추측이므로 두지 않는다.
      */
     ...buildHouseholdSpecialPayload(form, primary),
-    ...buildReplacementHousePayload(form),
+    /**
+     * §156의2⑤ — ⑤·⑧과 **같은 게이트**(`judgmentReplacementHouseVisible`, OH-05).
+     * 🔴 칸이 숨은 세대(입주권 없는 1주택)에서 남은 토글을 보내면 엔진 분기가 주택 수를 보지
+     *    않으므로 보유기간과 무관하게 비과세가 된다.
+     */
+    ...(judgmentReplacementHouseVisible(form) ? buildReplacementHousePayload(form) : {}),
     ...buildRightThreeYearExceptionPayload(form),
     ...buildMergedHouseholdFirstHousePayload(form),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
@@ -171,21 +192,9 @@ export function buildOneHouseExemptionApiBody(
         requirementsConfirmed: e.requirementsConfirmed,
       })),
     // §154① 단서 — 계산기와 같은 두 단계 정규화(게이트 → 유효 사유).
+    // 🔑 맥락은 ⑧과 **같은 함수**로 정한다(`judgmentProvisoMode` — OH-06).
     ...(() => {
-      const mode = provisoGate({
-        isOneHousehold: form.isOneHousehold,
-        isHousing: primary.assetKind === "housing",
-        householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
-        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-        primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
-        houses: form.houses,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-      }),
-      }).mode;
-      const reason = effectiveProvisoReason(mode, form.provisoReason);
+      const reason = effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason);
       return reason
         ? {
             oneHouseExemptionProviso: {

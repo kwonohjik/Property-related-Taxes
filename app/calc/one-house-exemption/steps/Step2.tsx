@@ -35,7 +35,12 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
-import { judgmentTemporaryTwoHouseVisible } from "@/lib/calc/one-house-judgment-section-scope";
+import {
+  judgmentReplacementHouseVisible,
+  judgmentTemporaryTwoHouseVisible,
+} from "@/lib/calc/one-house-judgment-section-scope";
+import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
+import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import {
   deriveJudgmentHouseCount,
@@ -87,6 +92,12 @@ export function Step2({ form, onChange }: Props) {
     ],
   );
 
+  /**
+   * 거주 개월 — ④와 **같은 정본**(`deriveJudgmentResidenceMonths`, OH-56).
+   * 🔴 폼-전역 `residencePeriodMonths`는 이 메뉴의 위젯이 쓰지 않는 옛 필드다(기본 "0").
+   */
+  const residenceMonths = useMemo(() => deriveJudgmentResidenceMonths(form), [form]);
+
   // ── F-4 파생 props 5종 (계산기 Step4와 같은 leaf) ──────────────
   const tempTwoHouseVerdict = useMemo(
     () =>
@@ -98,8 +109,11 @@ export function Step2({ form, onChange }: Props) {
         provisoDepartureDate: form.provisoDepartureDate,
         provisoExpropriationDate: form.provisoExpropriationDate,
         provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
-        residencePeriodMonths: form.residencePeriodMonths,
+        residencePeriodMonths: String(residenceMonths),
         publicInstitutionRelocation: form.publicInstitutionRelocation,
+        // §155⑯ 지역 요건 — 엔진과 같이 처분기한 5년 적용 여부를 가른다(OH-57).
+        relocatedSigunguCode: form.relocatedSigunguCode,
+        newHouseSigunguCode: form.newHouseSigunguCode,
         disposalDelayReason: form.disposalDelayReason,
       }),
     [
@@ -110,8 +124,10 @@ export function Step2({ form, onChange }: Props) {
       form.provisoDepartureDate,
       form.provisoExpropriationDate,
       form.provisoBusinessApprovalDate,
-      form.residencePeriodMonths,
+      residenceMonths,
       form.publicInstitutionRelocation,
+      form.relocatedSigunguCode,
+      form.newHouseSigunguCode,
       form.disposalDelayReason,
     ],
   );
@@ -214,6 +230,17 @@ export function Step2({ form, onChange }: Props) {
           */
           hideMergeDate
         />
+      )}
+
+      {/*
+        §156의2⑤ 대체주택 — 일시적 2주택 섹션이 숨는 **1주택 + 조합원입주권** 세대(법령 기본 사례)
+        에서는 여기서 따로 그린다(OH-05). 2주택 이상이면 위 섹션 안에 있으므로 두 벌이 되지 않게
+        그 조건을 배제한다. 게이트는 ④·⑧과 같은 `judgmentReplacementHouseVisible`.
+      */}
+      {!judgmentTemporaryTwoHouseVisible(form) && judgmentReplacementHouseVisible(form) && (
+        <ToneCard tone="emerald">
+          <ReplacementHouseSpecialBlock form={viewForm} onChange={onChange} />
+        </ToneCard>
       )}
 
       {/* §89② 배제의 예외 3종 — 각자 내부 게이트를 갖고 있어 해당 없으면 스스로 숨는다. */}
