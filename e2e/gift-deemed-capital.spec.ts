@@ -106,6 +106,42 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-result-value")).toHaveText("75,006,000");
   });
 
+  test("§39 ⑤ 라벨·안내가 direction·상장 토글을 따라간다 (리뷰 4단계)", async ({ page }) => {
+    // ⚠️ 라이브러리 anchor는 **배선을 증명하지 않는다** — 상수를 고쳐도 화면이 옛 값을 쓰면
+    //    그대로 초록이다. 그래서 같은 축을 화면에서 한 번 더 고정한다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+
+    // ① 저가 라목 — 「초과배정 신주수」
+    await page.getByTestId("ci-direction-low").click();
+    await page.getByTestId("ci-subtype-excess").click();
+    await expect(page.getByPlaceholder("초과배정 신주수")).toBeVisible();
+
+    // ② 고가 라목 — 손해자(미달 배정된 주주) 기준으로 바뀐다
+    //    「상증령」§29②5호의 곱셈 인자는 인수자의 초과분이 아니라 **주주의 미달분**이다.
+    await page.getByTestId("ci-direction-high").click();
+    await expect(page.getByPlaceholder("미달 배정된 부분의 신주수")).toBeVisible();
+    await expect(page.getByPlaceholder("초과배정 신주수")).toHaveCount(0);
+
+    // ③ 고가 다목 — 「배정받지 못한 부분의 신주수」
+    await page.getByTestId("ci-subtype-third_party").click();
+    await expect(page.getByPlaceholder("배정받지 못한 부분의 신주수")).toBeVisible();
+
+    // ④ 고가 가목은 종전 라벨 유지(§29②3호 다목 — 대수적 동일)
+    await page.getByTestId("ci-subtype-forfeited_realloc").click();
+    await expect(page.getByPlaceholder("배정받은 실권주수")).toBeVisible();
+
+    // ⑤ 공모 배정 + **비상장** → 「0이 됩니다」라고 말하면 안 된다(§39① 괄호는 AND 조건)
+    const dlg = page.getByTestId("deemed-detail-dialog");
+    await page.getByTestId("ci-alloc-method-public_offering").click();
+    await expect(dlg).toContainText("제외가 적용되지 않고 그대로 과세됩니다");
+    await expect(dlg).not.toContainText("증여재산가액이 0이 됩니다");
+
+    // ⑥ 상장 토글을 켜면 종전 안내로 돌아온다 (긍정 짝)
+    await dlg.getByRole("switch", { name: /주권상장법인등/ }).click();
+    await expect(dlg).toContainText("증여재산가액이 0이 됩니다");
+  });
+
   // ── 2-F-1 §29③ 시기 게이트가 ⑤→④→⑫→⑭→엔진까지 도달하는지 실증 ──────────────
   //   증여일은 폼이 이미 수집하고 있었지만 엔진까지 배선돼 있지 않았다(1-C).
 

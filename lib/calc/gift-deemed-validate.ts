@@ -200,7 +200,7 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // 비면 증여재산가액이 0이 되면서 「증자 후 1주가가 인수가 이하 — 이익 없음」이라는,
       // 1주당 이익이 실제로 양수인데도 거짓인 사유가 결과에 표시된다.
       if (parseAmount(form.ciForfeitedShares) <= 0)
-        return `${CI_SHARES_LABEL[form.ciSubType]}을(를) 입력하세요`;
+        return `${CI_SHARES_LABEL[form.ciDirection][form.ciSubType]}을(를) 입력하세요`;
       // 1-A — 고가는 **전 subType**이 §29②3·4·5호 비율 가중이므로 분모가 필수다.
       //   가목(`forfeited_realloc`)이 빠져 있던 탓에 분모 미입력이 조용히 가중 1.0으로 통과했다.
       if (form.ciDirection === "high") {

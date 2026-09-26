@@ -12,11 +12,36 @@ import type { DeemedFormState } from "./shared";
 export type SetFn = (patch: Partial<DeemedFormState>) => void;
 export type Props = { form: DeemedFormState; set: SetFn };
 
-export const CI_SHARES_LABEL: Record<DeemedFormState["ciSubType"], string> = {
-  forfeited_realloc: "배정받은 실권주수",
-  third_party: "직접배정 신주수",
-  excess: "초과배정 신주수",
-  no_realloc: "실권주수",
+/**
+ * ⑤ 「이익 귀속 주식수」 칸의 라벨 — **direction × subType**으로 갈린다.
+ *
+ * 저가(§39①1호)에서는 이익을 얻는 자 = 수증자가 곧 「배정받은 자」라 배정 수량이 곱셈 인자다.
+ * 고가(§39①2호)에서는 이익을 얻는 자가 **인수를 포기·미달한 주주**이고, 인수자 측 수량은
+ * 시행령에서 **분수의 분자·분모로만** 등장한다(엔진이 `relatedAcquiredShares`·
+ * `ratioDenomShares`로 따로 받는다).
+ *
+ *   「상증령」§29②5호 — 「… × [신주를 배정받지 아니하거나 균등한 조건에 의하여 배정받을
+ *     신주수에 미달되게 신주를 배정받은 **주주의** 배정받지 아니하거나 그 미달되게 배정받은
+ *     **부분의 신주수**] × (…)」
+ *
+ * ⚠️ **고가 가목은 바꾸지 않는다.** §29②3호 다목은 「포기자의 실권주수 F × (특수관계인이 인수한
+ *    실권주수 R ÷ 실권주 총수 T)」인데 포기자 1인이면 F = T라 F × (R ÷ T) = R이 되어
+ *    「배정받은 실권주수」와 **대수적으로 동일**하다. 여기를 「정정」하면 과다과세가 된다.
+ * ⚠️ 저가는 네 목 전부 종전 그대로다.
+ */
+export const CI_SHARES_LABEL: Record<"low" | "high", Record<DeemedFormState["ciSubType"], string>> = {
+  low: {
+    forfeited_realloc: "배정받은 실권주수",
+    third_party: "직접배정 신주수",
+    excess: "초과배정 신주수",
+    no_realloc: "실권주수",
+  },
+  high: {
+    forfeited_realloc: "배정받은 실권주수", // §29②3호 다목 — 대수적 동일(위 주석)
+    third_party: "배정받지 못한 부분의 신주수", // §29②5호 — 손해자 주주 기준
+    excess: "미달 배정된 부분의 신주수", // §29②5호 — 손해자 주주 기준
+    no_realloc: "실권주수",
+  },
 };
 
 /** §39① 공모 모집 배정 제외 3택 — 증자·전환주식·cap-table 공용 옵션 */
@@ -26,12 +51,32 @@ export const ALLOCATION_METHOD_OPTIONS = [
   { value: "deemed_public_offering", label: "간주모집 (자시령 §11③)" },
 ] as const;
 
-/** 3택 선택 시 화면에 붙는 효과 안내 — 「왜 0인가/왜 과세인가」를 입력 시점에 알려준다 */
-export function allocationMethodHint(v: DeemedFormState["ciAllocationMethod"]): string {
+/**
+ * 3택 선택 시 화면에 붙는 효과 안내 — 「왜 0인가/왜 과세인가」를 입력 시점에 알려준다.
+ *
+ * ⚠️ **「주권상장법인이」는 AND 조건이다.** 「상증법」§39①1호 가목 괄호가 「**주권상장법인이**
+ *    … 유가증권의 모집방법 … 으로 배정하는 경우는 제외한다」로 쓰고, 엔진도
+ *    `allocationMethod === "public_offering" && isListed === true`로 둘을 함께 본다.
+ *    상장 토글을 보지 않고 「0이 됩니다」라고 말하면 **비상장에서 사실과 정반대**가 된다.
+ * ⚠️ **전환주식 「발행 시점」은 배정방법이 결과에 닿지 않는다.** 「상증령」§29②6호 나목의
+ *    차감항은 「제1호부터 제5호까지의 규정에 따라 **계산한 이익**」 — 계산방법 규정이고 기준선이라,
+ *    엔진이 `allocationMethod: "normal"`로 고정해 호출한다(`convertible-stock.ts` · 리뷰 2-D).
+ */
+export function allocationMethodHint(
+  v: DeemedFormState["ciAllocationMethod"],
+  opts?: { isListed?: boolean; leg?: "conversion" | "issuance" },
+): string {
+  const listed = opts?.isListed === true;
+  if (opts?.leg === "issuance" && v !== "normal")
+    return "전환주식 「발행 당시 이익」은 「상증령」 §29②6호 나목의 차감 기준선이라 배정방법 요건을 타지 않습니다 — 이 선택은 결과에 영향이 없습니다.";
   if (v === "public_offering")
-    return "주권상장법인이 50인 이상에게 청약을 권유하는 모집방법으로 배정한 경우 — 「상증법」 §39①이 적용되지 않아 증여재산가액이 0이 됩니다.";
+    return listed
+      ? "주권상장법인이 50인 이상에게 청약을 권유하는 모집방법으로 배정한 경우 — 「상증법」 §39①이 적용되지 않아 증여재산가액이 0이 됩니다."
+      : "「상증법」 §39① 괄호는 **주권상장법인이** 모집방법으로 배정한 경우만 제외합니다. 아래 「주권상장법인」이 꺼져 있어 제외가 적용되지 않고 그대로 과세됩니다.";
   if (v === "deemed_public_offering")
-    return "청약권유 인원이 50인 미만이지만 전매기준에 해당해 모집으로 의제된 경우 — 「상증령」 §29③으로 위 제외가 취소되어 일반 배정과 같이 과세됩니다.";
+    return listed
+      ? "청약권유 인원이 50인 미만이지만 전매기준에 해당해 모집으로 의제된 경우 — 「상증령」 §29③으로 위 제외가 취소되어 일반 배정과 같이 과세됩니다."
+      : "비상장법인이라 §39① 제외가 애초에 발동하지 않습니다 — 모집 의제 여부와 무관하게 그대로 과세됩니다.";
   return "실권주 일부만 공모로 배정했다면 공모분을 뺀 주식수를 「이익 귀속 주식수」에 입력하세요.";
 }
 
