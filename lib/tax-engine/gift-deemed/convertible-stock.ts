@@ -1,6 +1,7 @@
 /** (8-3) 전환주식에 따른 이익의 증여 (§39①3호) — 전환후 이익 − 발행당시 이익 (시행령 §29②6) */
 import { GIFT } from "../legal-codes";
 import { calcCapitalIncreaseGift } from "./capital-increase";
+import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleStockInput } from "./types";
 
@@ -14,7 +15,14 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   //   **다른 사유**로 표시된다. 사유가 화면·이력에 남으므로 여기서 먼저 가른다.
   const doneeIsForProfitCorp =
     input.atConversion.doneeIsForProfitCorp === true || input.atIssuance.doneeIsForProfitCorp === true;
-  const conversion = calcCapitalIncreaseGift(input.atConversion);
+  // 「상증법」§4의2④ — **최상위에서 한 번만** 판정한다.
+  //   ⚠️ leg 안에서 돌리면 안 된다. 두 leg는 `direction`·`subType`이 서로 다를 수 있고
+  //   (가목=전환 후 / 나목=발행 당시), 목마다 「주주등」 확정 여부가 갈린다. 차감항에서만
+  //   게이트가 발동하면 **기준선이 0이 되어 결과가 부풀어 오른다** — 이 파일이 공모 제외에서
+  //   이미 겪은 비대칭과 같은 형태다(위 주석의 200,000,000 → 500,000,000).
+  //   과세단위는 가목(전환 후)이므로 그쪽 입력으로 판정한다.
+  const shareholderOfTaxedCorp = shareholderOfTaxedCorpExcluded(input.atConversion);
+  const conversion = calcCapitalIncreaseGift({ ...input.atConversion, issuerGainCorporateTaxed: false });
   // 나목(차감항)은 「전환주식 발행 당시 **제1호부터 제5호까지의 규정에 따라 계산한 이익**」이다.
   //   제1호~제5호는 **계산방법** 규정이고, 공모 제외는 그 바깥의 **법** §39① 본문 괄호에 있다.
   //   차감항은 과세단위가 아니라 **기준선**이므로 요건필터를 태우지 않는다.
@@ -22,7 +30,11 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   //      필터가 준용된다면 두 leg 모두 0이라 0 − 0 = 0이고, 준용되지 않는다면 둘 다 산식값이다.
   //      실측: 발행 시점만 공모로 두면 200,000,000이 500,000,000으로 뛰었다(차감액 전액 소멸).
   //      기준금액 게이트(30%·3억)는 §29②2호·4호 **안에** 있으므로 그대로 준용된다 — 떼지 말 것.
-  const issuance = calcCapitalIncreaseGift({ ...input.atIssuance, allocationMethod: "normal" });
+  const issuance = calcCapitalIncreaseGift({
+    ...input.atIssuance,
+    allocationMethod: "normal",
+    issuerGainCorporateTaxed: false, // 위 주석 — 차감항에서 게이트가 발동하면 기준선이 소멸한다
+  });
   const raw = conversion.deemedGiftValue - issuance.deemedGiftValue;
   const value = raw > 0 ? raw : 0; // 시행령 §29②6 단서: 영 이하면 이익 없음
   const applied = value > 0;
@@ -61,6 +73,18 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
       exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
       legalBasis: GIFT.CAPITAL_INCREASE,
       thresholdEcho: { gain: 0 },
+    };
+  }
+  if (shareholderOfTaxedCorp) {
+    return {
+      type: "convertible_stock",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown,
+      exclusionReason: `법인세가 부과된 영리법인의 주주등 — 증여세 미부과 (${GIFT.SHAREHOLDER_OF_TAXED_CORP_EXEMPTION})`,
+      legalBasis: GIFT.CAPITAL_INCREASE,
+      // 금액은 보존한다 — 발행법인 단계에서 법인세 익금으로 이미 과세된 이익이다.
+      thresholdEcho: { gain: value },
     };
   }
   return {
