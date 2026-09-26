@@ -10,6 +10,7 @@ import {
   judgeTemporaryTwoHouseTiming,
   resolveExemptionProviso,
 } from "@/lib/tax-engine/transfer-tax-exemption";
+import { meetsPublicInstitutionRelocationRegion } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 
@@ -30,6 +31,8 @@ export type TempTwoHouseVerdict =
       oneYearMet: boolean;
       oneYearWaived: boolean;
       deadline: Date;
+      /** 처분기한 연수 — 카드 문구(「N년 내」)가 기한 날짜와 같은 값을 말하게 한다(OH-57). */
+      deadlineYears: number;
       threeYearMet: boolean;
       /** §155⑱ 사유로 기한 요건이 치유됐는지 — 카드가 "기한 초과이나 예외 적용"을 구분해 표시 */
       delayReasonApplied: boolean;
@@ -50,6 +53,10 @@ export function judgeTempTwoHouseFromForm(p: {
   residencePeriodMonths: string;
   /** §155⑯ 공공기관 지방이전 — 기한 5년 + 1년 요건 면제 */
   publicInstitutionRelocation?: boolean;
+  /** §155⑯ 「이전한 시·군」 코드 — 신규주택 소재 코드와 함께 연접 여부를 자동 판정한다 */
+  relocatedSigunguCode?: string;
+  /** §155⑯ 신규주택 소재 시·군 코드 */
+  newHouseSigunguCode?: string;
   /** §155⑱ 처분기한 예외 사유 ("" = 해당 없음) */
   disposalDelayReason?: string;
 }): TempTwoHouseVerdict {
@@ -84,14 +91,27 @@ export function judgeTempTwoHouseFromForm(p: {
     oneYearWaived = relax === "both";
   }
 
+  /**
+   * §155⑯이면 본문 "3년"이 "5년"으로 치환된다 — 단 신규주택이 「이전한 시·군 또는 이와
+   * 연접한 시·군」에 있을 때만이다. 🔴 종전에는 토글만 보고 5년을 줘서, 같은 화면의 지역 배지는
+   * 「5년이 적용되지 않습니다」인데 이 카드는 5년 기한으로 「충족」을 말했다(OH-57).
+   * ⇒ 엔진 `resolveTemporaryTwoHouseDeadlineYears`가 쓰는 **같은 술어**로 가른다.
+   */
+  const deadlineYears = meetsPublicInstitutionRelocationRegion({
+    previousAcquisitionDate: prev,
+    newAcquisitionDate: nw,
+    publicInstitutionRelocation: p.publicInstitutionRelocation,
+    relocatedSigunguCode: p.relocatedSigunguCode || undefined,
+    newHouseSigunguCode: p.newHouseSigunguCode || undefined,
+  })
+    ? PUBLIC_INSTITUTION_RELOCATION_UI_DEADLINE_YEARS
+    : TEMP_TWO_HOUSE_UI_DEADLINE_YEARS;
+
   const t = judgeTemporaryTwoHouseTiming({
     previousAcquisitionDate: prev,
     newAcquisitionDate: nw,
     transferDate: transfer,
-    // §155⑯이면 본문 "3년"이 "5년"으로 치환된다.
-    deadlineYears: p.publicInstitutionRelocation
-      ? PUBLIC_INSTITUTION_RELOCATION_UI_DEADLINE_YEARS
-      : TEMP_TWO_HOUSE_UI_DEADLINE_YEARS,
+    deadlineYears,
     oneYearWaived,
     publicInstitutionRelocation: p.publicInstitutionRelocation,
     disposalDelayReason: (p.disposalDelayReason || undefined) as
@@ -106,6 +126,7 @@ export function judgeTempTwoHouseFromForm(p: {
     // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.
     oneYearWaived: oneYearWaived || p.publicInstitutionRelocation === true,
     deadline: t.deadline,
+    deadlineYears,
     threeYearMet: t.threeYearMet,
     delayReasonApplied: !!p.disposalDelayReason,
   };

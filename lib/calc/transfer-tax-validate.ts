@@ -26,6 +26,8 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
+import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -642,71 +644,34 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      */
 
     /**
-     * 🔑 P6-b — **좁히지 않았다.** `temporary_two_house` 맥락의 §154① 단서 카드는 판정
-     *    메뉴로 갔지만, `effectiveProvisoReason`이 그 맥락에서 화이트리스트
-     *    (§154①1호·2호가목·3호) 밖 사유를 이미 ""로 만든다. 아래 두 검증이 보는 사유
-     *    (2호나·다목·5호)는 전부 그 밖이라 **그 맥락에서는 원래 발동하지 않는다** —
-     *    여기에 게이트를 더하면 동작이 같은 코드만 늘어난다(무효과 확인: TM-7).
+     * 🔑 §154① 단서 사유별 필수 입력 — 판정 메뉴와 **같은 leaf**(`exemption-proviso-validate.ts`).
+     *
+     * 🔴 **`one_house` 맥락에서만 본다.** 이 화면(Step4)이 단서 카드를 그리는 것은
+     *    `one_house`뿐이다 — `temporary_two_house` 맥락 카드는 판정 메뉴로 갔다(P6-b).
+     *    종전에는 게이트가 없어도 무효과였다(그 맥락의 화이트리스트 1호·2호가목·3호 밖 사유만
+     *    검사했으므로 — TM-7). 2호가목 **수용일**이 필수가 되면서(OH-33) 수용은 화이트리스트
+     *    **안**이라, 게이트 없이는 채울 칸이 없는 이 화면에서 영구 차단이 된다.
      */
     const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
-    if (
-      (provisoReasonEff === "overseas_migration" || provisoReasonEff === "overseas_residence") &&
-      !form.provisoDepartureDate
-    )
-      issues.push({
-        step,
-        message: "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)",
-      });
-    if (provisoReasonEff === "pre_designation_contract" && !form.provisoPreContractNoHouse)
-      issues.push({
-        step,
-        message: "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.",
-      });
+    for (const message of collectExemptionProvisoErrors({
+      reason: provisoMode === "one_house" ? provisoReasonEff : "",
+      departureDate: form.provisoDepartureDate,
+      expropriationDate: form.provisoExpropriationDate,
+      preContractNoHouse: form.provisoPreContractNoHouse,
+    }))
+      issues.push({ step, message });
 
-    // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩
+    // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩 + 겹침
+    // (규칙은 `residence-interval-validate.ts` 한 벌 — 판정 메뉴 OH-07과 공유)
     const primary = form.assets?.[0];
     if (form.isOneHousehold && primary && primary.assetKind === "housing"
         && primary.residenceInputMode === "interval") {
-      const periods = primary.residencePeriods ?? [];
-      for (let i = 0; i < periods.length; i++) {
-        const p = periods[i];
-        const label = `거주 구간 #${i + 1}`;
-        const firstError = (() => {
-          if (!p.moveInDate) return `${label}: 입주일을 입력하세요.`;
-          if (!p.moveOutDate)
-            return `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`;
-          if (p.moveOutDate < p.moveInDate)
-            return `${label}: 퇴거일은 입주일보다 이후여야 합니다.`;
-          // 거주기간은 보유기간(취득일~양도일) 중 거주만 산입 (소령 §154①·법 §95⑤2호)
-          // — 취득 전 임차 거주 구간을 산입하면 거주요건·표2 공제가 과대 계산됨
-          if (primary.acquisitionDate && p.moveInDate < primary.acquisitionDate)
-            return `${label}: 입주일이 취득일(${primary.acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.`;
-          if (form.transferDate && p.moveInDate > form.transferDate)
-            return `${label}: 입주일은 양도일 이전이어야 합니다.`;
-          if (form.transferDate && p.moveOutDate && p.moveOutDate > form.transferDate)
-            return `${label}: 퇴거일은 양도일 이전이어야 합니다.`;
-          return null;
-        })();
-        if (firstError) issues.push({ step, assetIndex: 0, message: firstError });
-      }
-
-      // 구간 간 겹침 차단 — sumResidenceMonths는 단순 합산이므로 겹침 시 거주개월 이중 계산
-      // (입주일 정렬 후 인접 비교. 퇴거일 = 다음 입주일(이사 당일)은 겹침 아님 — 초과만 차단)
-      const complete = periods
-        .map((p, idx) => ({ ...p, idx }))
-        .filter((p) => p.moveInDate && p.moveOutDate)
-        .sort((a, b) => (a.moveInDate < b.moveInDate ? -1 : a.moveInDate > b.moveInDate ? 1 : 0));
-      for (let i = 1; i < complete.length; i++) {
-        const prev = complete[i - 1];
-        const cur = complete[i];
-        if (prev.moveOutDate > cur.moveInDate) {
-          issues.push({
-            step,
-            assetIndex: 0,
-            message: `거주 구간 #${prev.idx + 1}(퇴거 ${prev.moveOutDate})과 #${cur.idx + 1}(입주 ${cur.moveInDate})이 겹칩니다. 구간이 겹치면 거주기간이 이중 계산되므로 구간을 분리하거나 합쳐서 입력하세요.`,
-          });
-        }
-      }
+      for (const message of collectResidenceIntervalErrors({
+        periods: primary.residencePeriods ?? [],
+        acquisitionDate: primary.acquisitionDate,
+        transferDate: form.transferDate,
+      }))
+        issues.push({ step, assetIndex: 0, message });
     }
   }
 

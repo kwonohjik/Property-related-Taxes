@@ -78,5 +78,17 @@ export function applyRentalHousingVerdict(
   verdict: OneHouseRentalHousingVerdict | null,
 ): OneHouseJudgment {
   if (!verdict || verdict.passed) return judgment;
-  return { ...judgment, isExempt: false, isPartialExempt: false };
+  /**
+   * 🔴 비과세를 끄면 **비과세 사유도 함께 지운다**(OH-53). 코어 판정이 남긴
+   *    `exemptReason`(「1세대1주택 비과세」)과 `appliedExceptions`는 **비과세였을 때의 근거**다.
+   *    그대로 두면 결과 화면이 「과세」 배지 바로 아래에 「1세대1주택 비과세」와 「적용된 특례」
+   *    카드를 함께 그린다. 코어 판정도 과세일 때는 두 필드를 비워 낸다 — 같은 불변식을 지킨다.
+   */
+  return {
+    ...judgment,
+    isExempt: false,
+    isPartialExempt: false,
+    exemptReason: undefined,
+    appliedExceptions: [],
+  };
 }

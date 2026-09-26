@@ -21,7 +21,13 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
-import { judgmentTemporaryTwoHouseVisible } from "./one-house-judgment-section-scope";
+import {
+  judgmentProvisoMode,
+  judgmentReplacementHouseVisible,
+} from "./one-house-judgment-section-scope";
+import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
+import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -162,69 +168,63 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   }
 
   /**
-   * ③ 일시적 2주택(§155①) · 대체주택(§156의2⑤) · §154① 단서 — 필수 입력
-   * (P6-b에서 계산기 ⑧에서 **이관**).
+   * ③ 대체주택(§156의2⑤) — 필수 입력 (P6-b에서 계산기 ⑧에서 **이관**).
    *
-   * 🔴 입력이 옮겨오면 **그 검증도 따라와야 한다.** 계산기에는 이제 이 칸들이 없다
-   *    (`TemporaryTwoHouseSection mode="calc"`는 §155⑧·합가만 그린다). 여기서 막지 않으면
-   *    토글만 켜고 필수값을 비운 채 계산기로 넘어가고, ④는 두 날짜가 다 있어야
-   *    `temporaryTwoHouse` 키를 만들므로 §155① 특례가 **조용히 누락**된다.
+   * 🔴 입력이 옮겨오면 **그 검증도 따라와야 한다.** 계산기에는 이 칸이 없다
+   *    (`TemporaryTwoHouseSection mode="calc"`는 합가만 그린다).
    *
-   * 🔑 게이트는 ⑤와 **같은 술어**(`judgmentTemporaryTwoHouseVisible`)다. 계산기가 이
-   *    짝을 잃었다가 「화면엔 칸이 없는데 ⑧이 요구」하는 영구 차단을 낸 전례가
-   *    `transfer-tax-validate.ts`의 같은 자리 주석에 남아 있다.
+   * 🔑 게이트는 ⑤·④와 **같은 술어**(`judgmentReplacementHouseVisible`)다(OH-05). 종전에는
+   *    일시적 2주택 섹션 게이트(주택 2채 이상)를 빌려 써서, 법령 기본 사례인 「대체주택 1채 +
+   *    조합원입주권 1개」에서 칸도 검증도 사라졌다. 계산기가 이 짝을 잃었다가 「화면엔 칸이
+   *    없는데 ⑧이 요구」하는 영구 차단을 낸 전례가 `transfer-tax-validate.ts`에 남아 있다.
+   *
+   * 🔄 §155① 두 날짜의 필수 검증은 없앴다(2026-09-22) — 신규주택 취득일은 명부에서 도출되고
+   *    화면에 입력란이 없다. 도출이 성립하지 않으면 §155①이 적용되지 않을 뿐 계산은 진행되고,
+   *    그 사실은 판정 결과의 불성립 사유(`collectUnmetExceptions`)가 알린다.
    */
-  if (judgmentTemporaryTwoHouseVisible(form)) {
-    /**
-     * 🔄 **§155① 두 날짜의 필수 검증을 없앴다** (2026-09-22).
-     *
-     * 종전에는 사용자가 토글을 켜고 신규 주택 취득일을 **직접 입력**했으므로 「켜 놓고 비운」
-     * 상태를 ⑧이 막아야 했다. 이제 그 날짜는 **명부에서 도출**되고(`resolveTemporaryTwoHouse`)
-     * 화면에 입력란 자체가 없다 ⇒ 막을 대상이 사라졌다.
-     *
-     * 🔴 **남겨 두면 영구 차단이 된다** — 「화면엔 칸이 없는데 ⑧이 요구」는 이 저장소가
-     *    반복해 밟은 실패모드다(`transfer-tax-validate.ts` 같은 자리 주석 · D-6 4건).
-     *
-     * 도출이 성립하지 않으면(명부 0건·나중 취득 2채 이상) §155①이 **적용되지 않을 뿐**
-     * 계산은 진행된다. 그 사실은 판정 결과의 불성립 사유(`collectUnmetExceptions`)가 알린다.
-     * 양도 자산 취득일은 ③ 단계가 이미 필수로 막는다(`transferDate`·`acquisitionDate` 블록).
-     */
-
-    if (form.replacementHouseSpecial) {
-      if (!form.replBusinessApprovalDate) {
-        errors.push(err("replBusinessApprovalDate", "대체주택 특례: 사업시행계획인가일을 입력하세요."));
-      }
-      if (!form.replCompletionDate) {
-        errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요."));
-      }
-      if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0) {
-        errors.push(
-          err("replResidenceMonths", "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요."),
-        );
-      }
-      if (!form.replWillResideNewHouse) {
-        errors.push(
-          err(
-            "replWillResideNewHouse",
-            "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다.",
-          ),
-        );
-      }
+  if (judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial) {
+    if (!form.replBusinessApprovalDate) {
+      errors.push(err("replBusinessApprovalDate", "대체주택 특례: 사업시행계획인가일을 입력하세요."));
+    }
+    if (!form.replCompletionDate) {
+      errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요."));
+    }
+    if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0) {
+      errors.push(
+        err("replResidenceMonths", "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요."),
+      );
+    }
+    if (!form.replWillResideNewHouse) {
+      errors.push(
+        err(
+          "replWillResideNewHouse",
+          "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다.",
+        ),
+      );
     }
   }
 
   /**
-   * 🔑 **§154① 단서는 옮길 것이 없다** — 실측으로 확인했다(P6-b).
+   * §154① 단서 — **사유별 필수 입력** (OH-06 · OH-33). 계산기와 같은 leaf.
    *
-   * `effectiveProvisoReason`은 `temporary_two_house` 맥락에서 `TEMP_TWO_HOUSE_PROVISO_REASONS`
-   * (§154①**1호·2호가목·3호** = `rental_5yr_residence`·`expropriation`·`unavoidable`) 밖의
-   * 사유를 ""로 정규화한다. 그런데 계산기 ⑧의 단서 검증 2건이 요구하는 사유는
-   * `overseas_migration`·`overseas_residence`(2호나·다목)와 `pre_designation_contract`(5호)로
-   * **전부 그 화이트리스트 밖**이다 ⇒ 그 맥락에서는 애초에 한 건도 발동하지 않는다.
+   * 🔴 종전 주석은 「옮길 것이 없다」였다. 그 근거는 `temporary_two_house` 맥락만 따졌다 —
+   *    그 맥락에서는 2호나·다목·5호가 화이트리스트 밖이라 ""로 정규화된다. 그러나 이 화면은
+   *    `one_house` 맥락 카드도 그리고(`Step2.tsx`), 거기서는 7개 사유가 모두 선택된다.
+   *    엔진은 5호의 「계약금 지급일 현재 무주택」을 **UI 검증에 맡긴 채** 거주요건을 면제하므로
+   *    (`resolveExemptionProviso`) 여기서 막지 않으면 막는 층이 하나도 없다.
    *
-   * ⇒ 여기에 짝을 만들면 **호출되지 않는 코드**가 된다. 검증이 사라진 것처럼 보이지 않도록
-   *    이유를 남긴다(`temp-two-house-sections-moved.anchor.test.ts` TM-7이 고정한다).
+   * 🔑 맥락은 ④와 **같은 함수**(`judgmentProvisoMode`)로 정한다 — ④가 사유를 보내지 않는
+   *    맥락(카드 숨김)의 stale 사유는 막지 않는다(영구 차단 방지).
    */
+  const provisoReason = effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason);
+  for (const message of collectExemptionProvisoErrors({
+    reason: provisoReason,
+    departureDate: form.provisoDepartureDate,
+    expropriationDate: form.provisoExpropriationDate,
+    preContractNoHouse: form.provisoPreContractNoHouse,
+  })) {
+    errors.push(err("provisoReason", message));
+  }
 
   return errors;
 }
@@ -256,6 +256,32 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
 
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
+  }
+
+  /**
+   * 거주 구간 — 계산기와 **같은 leaf**(`residence-interval-validate.ts`, OH-07).
+   *
+   * 🔴 ④는 구간을 단순 합산한다(`sumResidenceMonths` — 취득일·양도일로 자르지 않고 겹침도
+   *    빼지 않으며 퇴거일이 비면 0개월). 취득 전 임차 거주·중복 구간은 비과세를 과다로,
+   *    퇴거일 누락은 과소로 판정을 뒤집는다. 위젯은 퇴거일 누락만 안내하고 막지 않는다.
+   *
+   * 🔑 게이트는 ⑤(`Step3.tsx`)와 같다 — 입주권 양도에는 거주 위젯이 없고, 직접 입력 모드는
+   *    구간을 쓰지 않는다(`deriveResidencePeriodMonths`). 1세대가 아니면 판정 대상이 아니므로
+   *    계산기와 같이 보지 않는다.
+   */
+  if (
+    form.isOneHousehold &&
+    primary &&
+    primary.assetKind !== "right_to_move_in" &&
+    primary.residenceInputMode === "interval"
+  ) {
+    for (const message of collectResidenceIntervalErrors({
+      periods: primary.residencePeriods ?? [],
+      acquisitionDate: primary.acquisitionDate,
+      transferDate: form.transferDate,
+    })) {
+      errors.push(err("residencePeriods", message));
+    }
   }
 
   /**

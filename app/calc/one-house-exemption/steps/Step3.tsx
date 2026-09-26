@@ -223,7 +223,23 @@ export function Step3({ form, onChange }: Props) {
                 buildingName: v.building,
                 addressDetail: v.detail,
               };
-              if (v.pnu && v.pnu.length >= 10) patch.regionCode = v.pnu.slice(0, 10);
+              if (v.pnu && v.pnu.length >= 10) {
+                patch.regionCode = v.pnu.slice(0, 10);
+              } else if (v.pnu !== undefined || (!v.road && !v.jibun)) {
+                /**
+                 * 🔴 **주소를 바꿨는데 PNU가 없으면 이전 코드를 지운다**(OH-32).
+                 *
+                 * 「지우기」·「입력한 주소를 그대로 사용」은 `pnu: ""`를 보낸다
+                 * (`address-search.tsx` `handleClear`·`handleUseTypedAddress`). 여기서 코드를 두면
+                 * 사라진 주소로 조정대상지역이 판정되고(엔진은 `regionCode`를 토글보다 우선한다),
+                 * 저신뢰 안내가 약속한 「지우면 토글이 나타난다」가 거짓이 된다.
+                 *
+                 * 🔑 `pnu`가 **아예 없는**(undefined) 호출은 상세주소·동호 변경이다 — 위젯이
+                 *    `{ ...value, detail }`로 보내는데 이 화면의 `value`에는 `pnu`가 없다. 같은
+                 *    물건이므로 코드를 지키고, 주소 자체가 빈 경우만 해제한다.
+                 */
+                patch.regionCode = "";
+              }
               patchAsset(patch);
             }}
           />
