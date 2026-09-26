@@ -107,8 +107,12 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
     // 🔁 OH-29(2026-09-26) — 혼인 합가 10년은 2024-11-12 이후 양도분부터(대통령령 제34990호 부칙 제2조).
     //    기본 양도일(2024-06-01)은 5년 시대라 기한이 2015-01-01로 바뀐다 — 이 케이스의 주제(10년 축)를
     //    재려고 양도일을 2025-06-01로 옮겼다. 5년 시대 기한은 `merge-exemption-era.anchor.test.ts`가 고정한다.
+    // 🔁 OH-23(2026-09-26) — 기본 취득일(2019-06-01)은 혼인 **후**라 §155⑤ 의제(「혼인함으로써
+    //    1세대가 2주택」 = 혼인 전 보유분)가 기한 안에서도 서지 않는다. pending이 그 요건을 보게 되면서
+    //    이 시료는 기한만 남은 세대가 아니게 됐다 — 주제(10년 기한)를 지키려고 혼인 전 취득으로 옮겼다.
     const r = judge({
       transferDate: D("2025-06-01"),
+      acquisitionDate: D("2005-01-01"),
       householdHousingCount: 2,
       marriageMerge: { marriageDate: D("2010-01-01") },
       isFirstTransferredInMerge: true,
@@ -130,7 +134,9 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
   });
 
   it("[PD-7] 동거봉양 합가도 같은 축 — 기한은 합친 날 + 10년", () => {
+    // 🔁 OH-23 — PD-5와 같은 이유로 합가 전 취득(2005-01-01)으로 옮겼다(§155④ 「합침으로써 2주택」).
     const r = judge({
+      acquisitionDate: D("2005-01-01"),
       householdHousingCount: 2,
       parentalCareMerge: { mergeDate: D("2012-03-15") },
       isFirstTransferredInMerge: true,
