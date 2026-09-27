@@ -278,6 +278,7 @@ export function evaluateTaxpayerGate(args: {
 7-5. ✅ 뮤테이션 측정 9종 → **9/9 KILLED**(2건은 안전망 보강 후 전환). 전환주식 ⑤ 신설
 7-6. ✅ 7-4 PR에서 수행(별도 단계 아님)
 7-7. ✅ cap-table 경로 — 행별 토글 없이 `preShares`로 판정. 뮤테이션 8/8 KILLED (§8-A)
+7-8. ✅ 형제 축 §4의2①③ 전환주식 ⑤ + 산출근거 소실 수정. 뮤테이션 8/8 KILLED (§8-B)
 ```
 
 > **7-5 완료(2026-09-27)** — 7-3의 뮤테이션 6건은 전부 **엔진 내부**를 겨냥했다. 7-4가 추가한
@@ -420,6 +421,65 @@ cap-table에는 그 사실이 **입력에 이미 있다** — `CapShareholder.pr
 CM2가 걸린 것은 고가 픽스처(나목 몫)를 anchor에 넣었기 때문이고, 그 테스트에
 **기준선 500,000,000을 같은 테스트에서 단언**해 두지 않았으면 「원래 0이었다」와 구별되지 않아
 구별력이 0이었을 것이다.
+
+## 8-B. 형제 축 §4의2①·③ 전환주식 — 7-8 (2026-09-27 완료)
+
+> 7-5(M6)에서 §4의2④의 「④는 실렸는데 ⑤가 없다」를 고치며 **형제 축도 같은 모양**임을 기록만
+> 해 뒀던 항목이다. 입력 경로를 열자 **잠복 결함**이 드러났다.
+
+### 🔴 산출근거가 통째로 0으로 소실됐다 (실측)
+
+④(`gift-deemed-api.ts`의 `side()`)는 `doneeIsForProfitCorp`를 **두 leg에 각각** 싣는다.
+그러면 각 leg가 `forProfitCorpExcludedResult`로 0을 내고, 전환주식 결과의 산출근거가 사라진다:
+
+| | 기준선 | ①③ 표시 (수정 전) |
+|---|---|---|
+| 전환 후 교부주식 기준 이익 | 500,000,000 | **0** |
+| 전환주식 발행 당시 이익 | 300,000,000 | **0** |
+| 결론 | 200,000,000 | 0 |
+| `thresholdEcho.gain` | 200,000,000 | **0**(하드코딩) |
+
+이는 **이 저장소가 명시한 규칙에 정면으로 어긋난다** — `CapShareholder.isCorporate` JSDoc과
+anchor 파일 머리말이 「이익 자체를 0으로 만드는 플래그가 아니다 … 과세분만 0으로 둔다」고 적고,
+그 금액은 「법인세법 시행령」§89⑥이 §39·§29②를 준용해 계산하는 **익금**으로 쓰인다.
+0으로 지워지면 그 준용 계산액을 화면·이력에서 되읽을 수 없다.
+
+§4의2④는 7-3에서 이 함정을 이미 피했다(두 leg에 `issuerGainCorporateTaxed: false` 강제).
+형제 축에는 그 강제가 **없었다**.
+
+### 수정
+
+- 두 leg 호출에 `doneeIsForProfitCorp: false` 강제 — ④와 같은 방식
+- 두 배제 분기를 공통 `excluded(reason, conclusionLabel)`로 묶고
+  **결론 행 라벨을 전환**(「증여재산가액…」 → 「제외 전 산출 이익…」) + `thresholdEcho.gain = value`.
+  「상증법」§31①이 「증여재산가액」을 **과세대상 가액**으로 한정 정의하므로 제외되면 그 이름이
+  성립하지 않는다 — 단건 경로의 `excludedResult`가 하던 전환을 전환주식에도 맞췄다
+  (④ 분기도 라벨 전환이 없었다 ⇒ 7-3에서 내가 남긴 불일치를 같이 닫았다)
+- ⑤ `convertible-stock-form.tsx`에 §4의2①③ 토글 신설(`cs-donee-for-profit-corp`)
+
+### 실측 — anchor 34/34 · E2E 20/20 · 뮤테이션 **8/8 KILLED**
+
+| 뮤테이션 | anchor | E2E |
+|---|---|---|
+| SM1 전환 leg strip 제거 | KILLED (3) | KILLED |
+| SM2 발행 leg(차감항) strip 제거 | KILLED (2) | KILLED |
+| SM3 `thresholdEcho.gain` → 0 | KILLED (4) | 통과 |
+| SM4 라벨 전환 제거 | KILLED | KILLED |
+| SM5 최상위 OR → 전환 leg만 | 🔴 SURVIVED → KILLED | 통과 |
+| SM6 ⑤ onChange 무력화 | 통과 | KILLED |
+| SM7 ④ 미탑재 | 통과 | KILLED |
+| SM8 ①③/④ 우선순위 뒤집기 | 🔴 SURVIVED → KILLED | 통과 |
+
+🔴 **SM8이 가장 중요하다 — 내가 쓴 우선순위 anchor가 공허했다.** `[CS-S39-CORP-VS-424]`는
+두 배제가 겹치는 입력을 만들었다고 **믿었지만**, `leg()`에 `subType`이 없어
+`statuteFixesShareholderStatus`가 undefined를 내고 `doneeIsShareholderOfIssuer`도 없어
+**④ 요건이 성립하지 않았다**. 겹치지 않는 입력으로 우선순위를 단언하고 있었던 것이다.
+⇒ `doneeIsShareholderOfIssuer: true`를 넣고, **①③을 껐을 때 ④ 사유가 나오는지**를 전제로
+먼저 단언했다(그 전제 없이는 같은 함정이 재발한다).
+
+🔴 **SM5** — 최상위 판정이 `atConversion || atIssuance`인데 뒤쪽 arm이 무방비였다.
+④는 `atConversion`만 본다(목 판정이 필요해 과세단위인 가목) — **두 축의 관행이 다르므로**
+①③의 OR을 명시적으로 고정했다.
 
 ## 8. 이 문서가 닫지 않는 것
 
