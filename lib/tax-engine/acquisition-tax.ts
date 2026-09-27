@@ -154,7 +154,19 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   let resolvedHouseCount = input.houseCountAfter ?? 0;
 
   if (input.houseCountInput) {
-    const houseCountRes = resolveHouseCount(input.houseCountInput as Parameters<typeof resolveHouseCount>[0], input.houseCountAfter);
+    /**
+     * 주택 수 산정일 = **§20 확정 취득일**(E-5). 영 §28의4①은 「주택 취득일 현재」로 세고, 저가주택
+     * 한도 연혁(부칙<제35477호> 제2조 「2025년 1월 2일 이후 취득하는 주택」)은 §28의2 1호(중과 배제 —
+     * 아래 `assessSurcharge`가 `timingResult.acquisitionDate`로 판정)와 §28의4⑥1호가목(이 경로)이
+     * **한 조항을 공유**한다. 종전에는 ④가 만든 잔금일→계약일을 그대로 써서, 등기가 잔금보다 앞선
+     * 경우(§20⑭) 같은 신고서의 두 경로가 다른 날로 한도 연혁을 골랐다.
+     * 입주권·분양권 소급(§28의4① 후단)은 `getHouseCountReferenceDate`가 이 값 대신 권리취득일을 쓴다.
+     */
+    const houseCountInput = {
+      ...input.houseCountInput,
+      referenceDate: timingResult.acquisitionDate,
+    } as Parameters<typeof resolveHouseCount>[0];
+    const houseCountRes = resolveHouseCount(houseCountInput, input.houseCountAfter);
     resolvedHouseCount = houseCountRes.effectiveCount;
     houseCountDetail = houseCountRes.detail;
 

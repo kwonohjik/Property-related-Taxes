@@ -148,6 +148,8 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
     : undefined;
 
   // [H10] 주택 수 산정 기준일 = 취득일(잔금일 우선, 없으면 계약일). 미전달 시 엔진이 오늘로 defaulting.
+  // ⚠️ E-5 — 취득세 엔진(`acquisition-tax.ts` Step 4.5)은 이 값을 **§20 확정 취득일로 덮어쓴다**
+  //    (등기일이 잔금일보다 앞서면 등기일 · 영 §20⑭). 유일한 소비자가 덮어쓰므로 판정에는 쓰이지 않는다.
   const referenceDate = strOrUndef(form.balancePaymentDate) ?? strOrUndef(form.contractDate);
 
   return {
