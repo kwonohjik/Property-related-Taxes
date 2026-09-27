@@ -386,4 +386,22 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("cs-shareholder-fixed-note")).toContainText("조문상 확정");
     await expect(page.getByTestId("cs-donee-shareholder")).toHaveCount(0);
   });
+
+  // 형제 축 §4의2①·③ — ④는 진작 `side()`에 실려 있었지만 **이 화면에 토글이 없었다**.
+  //   7-5에서 §4의2④가 같은 형태(M6)로 측정돼 고쳤고, 그때 기록만 해 둔 항목이다.
+  //   입력 경로를 열자 잠복 결함이 드러났다 — 두 leg에 플래그가 각각 실려 **산출근거가 통째로
+  //   0으로 소실**됐다. 이 파일의 규칙은 「과세분만 0, 이익의 존재는 부정하지 않는다」다.
+  test("§39①3호 전환주식 — 수증자가 영리법인이면 배제되지만 산출근거는 보존된다 (§4의2①·③)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_stock");
+    await fillConvertible(page);
+    await page.getByRole("switch", { name: /수증자가 영리법인/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("영리법인");
+    // 「상증법」§31①이 「증여재산가액」을 과세대상 가액에 한정 정의하므로 라벨이 전환된다.
+    //   그 금액은 「법인세법 시행령」§89⑥ 준용 익금이라 화면에서 되읽을 수 있어야 한다.
+    await expect(page.getByTestId("deemed-result")).toContainText("제외 전 산출 이익");
+    await expect(page.getByTestId("deemed-result")).toContainText("13,330,000");
+  });
 });

@@ -22,7 +22,14 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   //   이미 겪은 비대칭과 같은 형태다(위 주석의 200,000,000 → 500,000,000).
   //   과세단위는 가목(전환 후)이므로 그쪽 입력으로 판정한다.
   const shareholderOfTaxedCorp = shareholderOfTaxedCorpExcluded(input.atConversion);
-  const conversion = calcCapitalIncreaseGift({ ...input.atConversion, issuerGainCorporateTaxed: false });
+  //   ⚠️ ①③도 같다 — `side()`가 두 leg에 플래그를 각각 실으므로 그대로 두면 각 leg가 0을 내고
+  //      **산출근거가 통째로 소실**된다(실측: 500,000,000·300,000,000 두 행이 전부 0).
+  //      이 파일의 규칙은 「과세분만 0, 이익의 존재는 부정하지 않는다」다.
+  const conversion = calcCapitalIncreaseGift({
+    ...input.atConversion,
+    doneeIsForProfitCorp: false,
+    issuerGainCorporateTaxed: false,
+  });
   // 나목(차감항)은 「전환주식 발행 당시 **제1호부터 제5호까지의 규정에 따라 계산한 이익**」이다.
   //   제1호~제5호는 **계산방법** 규정이고, 공모 제외는 그 바깥의 **법** §39① 본문 괄호에 있다.
   //   차감항은 과세단위가 아니라 **기준선**이므로 요건필터를 태우지 않는다.
@@ -33,6 +40,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   const issuance = calcCapitalIncreaseGift({
     ...input.atIssuance,
     allocationMethod: "normal",
+    doneeIsForProfitCorp: false, // 위 주석 — leg에 남기면 산출근거가 0으로 소실된다
     issuerGainCorporateTaxed: false, // 위 주석 — 차감항에서 게이트가 발동하면 기준선이 소멸한다
   });
   const raw = conversion.deemedGiftValue - issuance.deemedGiftValue;
@@ -64,28 +72,31 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     },
     { label: "증여재산가액 (전환후 − 발행당시, 영 이하면 0)", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: "§39①3호 전환주식" },
   ];
+  // 「상증법」§31①은 「증여재산가액」을 **과세대상 가액**으로 한정 정의한다 ⇒ 제외되면 그 이름이
+  //   성립하지 않는다. 단건 경로의 `excludedResult`가 하는 라벨 전환을 여기서도 한다.
+  //   금액은 **보존**한다 — 부정되는 것은 증여세 부과이지 이익의 존재가 아니다.
+  const excluded = (reason: string, conclusionLabel: string): DeemedGiftResult => ({
+    type: "convertible_stock",
+    applied: false,
+    deemedGiftValue: 0,
+    breakdown: breakdown.map((r) =>
+      r.label.startsWith("증여재산가액") ? { ...r, label: conclusionLabel } : r,
+    ),
+    exclusionReason: reason,
+    legalBasis: GIFT.CAPITAL_INCREASE,
+    thresholdEcho: { gain: value },
+  });
   if (doneeIsForProfitCorp) {
-    return {
-      type: "convertible_stock",
-      applied: false,
-      deemedGiftValue: 0,
-      breakdown,
-      exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
-      legalBasis: GIFT.CAPITAL_INCREASE,
-      thresholdEcho: { gain: 0 },
-    };
+    return excluded(
+      `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+      "제외 전 산출 이익 (「법인세법 시행령」 제89조제6항 준용 익금 — 증여세 미과세)",
+    );
   }
   if (shareholderOfTaxedCorp) {
-    return {
-      type: "convertible_stock",
-      applied: false,
-      deemedGiftValue: 0,
-      breakdown,
-      exclusionReason: `법인세가 부과된 영리법인의 주주등 — 증여세 미부과 (${GIFT.SHAREHOLDER_OF_TAXED_CORP_EXEMPTION})`,
-      legalBasis: GIFT.CAPITAL_INCREASE,
-      // 금액은 보존한다 — 발행법인 단계에서 법인세 익금으로 이미 과세된 이익이다.
-      thresholdEcho: { gain: value },
-    };
+    return excluded(
+      `법인세가 부과된 영리법인의 주주등 — 증여세 미부과 (${GIFT.SHAREHOLDER_OF_TAXED_CORP_EXEMPTION})`,
+      "제외 전 산출 이익 (「상증법」§4의2④ — 주주등 증여세 미과세)",
+    );
   }
   return {
     type: "convertible_stock",
