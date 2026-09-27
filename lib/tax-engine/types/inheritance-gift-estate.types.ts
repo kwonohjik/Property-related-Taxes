@@ -724,6 +724,18 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    */
   isStatutoryFormulaValue?: boolean;
   /**
+   * 「상증법」§4의2⑥ 단서 — 이 증여재산이 **증여자 연대납부의무 면제** 대상 유형임을 나타낸다.
+   *
+   * 엔진 결과의 `donorJointLiabilityExempt`가 prefill을 거쳐 **행별**로 내려온 값이다.
+   * `GiftCreditChecklist`가 이 표지를 읽어 「증여자가 연대납세의무자였습니까?」 토글을 잠근다 —
+   * §4의2⑥ 단서 열거 유형에서는 「예」가 **법적으로 선택될 수 없는 답**이기 때문이다.
+   *
+   * ⚠️ **행별인 이유** — `donorHasJointLiability`는 계산 단위 단일 boolean인데 `giftItems`는
+   *    배열이고 프리필 후 일반 증여를 더할 수 있다. 혼합 계산에서는 그 일반 증여분에 대해
+   *    「예」가 성립 가능하므로 **전 항목이 표지를 가질 때만** 잠근다.
+   */
+  isJointLiabilityExemptGift?: boolean;
+  /**
    * §55① 합산배제증여재산 과세표준 호분기 — isAggregationExcludedGift===true일 때만 유효.
    *   "nominee_trust"  → §55①1호 명의신탁(§45의2): 명의신탁재산금액 − 감정평가수수료 (3천만 공제 없음)
    *   "deemed_profit"  → §55①2호 일감몰아주기·사업기회(§45의3·§45의4): 증여의제이익 − 감정평가수수료 (3천만 공제 없음)

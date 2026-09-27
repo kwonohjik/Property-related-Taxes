@@ -382,7 +382,11 @@ describe("C-11: 동시증여 + 대납 → Zod 차단", () => {
 
 describe("C-12: 의제증여 유형 수증 후 대납 → 연대의무 불가 → gross-up 적용", () => {
   it("[C-12] §4의2⑥ 단서 열거 조문 해당 유형 — donorHasJointLiability 입력 불문 gross-up 적용은 MVP 제외(C-12는 UI 쪽 처리), Zod 통과 확인", () => {
-    // MVP에서 C-12 구분은 UI 레이어 처리(의제증여 유형 시 연대의무 토글 잠금).
+    // C-12 구분은 **UI 레이어**가 맡는다 — 「상증법」§4의2⑥ 단서 열거 유형이면
+    //   `GiftCreditChecklist`가 연대의무 토글을 잠그고 ④ `gift-api.ts`가 값을 false로 고정한다
+    //   (단일 소스 `lib/calc/gift-joint-liability-exempt.ts`).
+    // ⚠️ 이 주석은 2026-09-27까지 **존재하지 않는 잠금을 현재형으로** 기술했다.
+    //   실물은 `__tests__/components/calc/gift/gift-credit-checklist.test.tsx` JL-UI-1~4가 고정한다.
     // 엔진 측에서는 donorHasJointLiability=false일 때 gross-up이 적용됨을 확인.
     const input: GiftTaxInput = {
       ...baseParentChildInput,

@@ -37,6 +37,7 @@ import {
   type GiftCreditGroup,
   type GiftCreditItemMeta,
 } from "@/lib/calc/gift-credit-checklist";
+import { jointLiabilityExemptMixed, jointLiabilityStatutorilyExempt } from "@/lib/calc/gift-joint-liability-exempt";
 
 // ────────────────────────────────────────────────────
 // 칩 스타일 (정적 매핑 — feedback_tailwind_static_tone_mapping)
@@ -121,6 +122,9 @@ export function GiftCreditChecklist({
    */
   hideSimultaneous?: boolean;
 }) {
+  // 「상증법」§4의2⑥ 단서 — UI와 ④ API 변환이 **같은 술어**를 쓴다(두 진실 회피).
+  const jointLiabilityLocked = jointLiabilityStatutorilyExempt(form.giftItems, form.stockItems);
+  const jointLiabilityMixed = jointLiabilityExemptMixed(form.giftItems, form.stockItems);
   const [openSet, setOpenSet] = useState<Set<GiftCreditKey>>(new Set());
 
   const items = visibleCreditItems(form);
@@ -355,14 +359,35 @@ export function GiftCreditChecklist({
         checked={form.donorPaysGiftTax === true}
         onCheckedChange={(v) => set({ donorPaysGiftTax: v, donorHasJointLiability: false })}
       >
-        {/* 연대납세의무 — ON 시 재차증여 아님 → gross-up 미적용 */}
+        {/* 연대납세의무 — ON 시 재차증여 아님 → gross-up 미적용.
+            「상증법」§4의2⑥ 단서 열거 유형(§35~§39·§39의2·§39의3·§40·§41의2~§41의5·§42·
+            §42의2·§42의3·§45·§45의3~§45의5·§48)에서는 연대의무가 **불성립**하므로
+            「예」가 법적으로 선택될 수 없다 ⇒ 계산 재산이 전부 그 유형이면 잠근다.
+            ⚠️ 혼합 계산은 잠그지 않는다 — 일반 증여분에 대해서는 「예」가 성립할 수 있다. */}
         <ToggleCard
           tone="amber"
           title="증여자가 해당 증여의 연대납세의무자(§4의2⑥)이었습니까?"
           description="증여자가 이미 해당 증여세의 연대납세의무자인 경우, 대납은 새로운 채무면제이익 증여로 보지 않아 gross-up이 적용되지 않습니다."
-          checked={form.donorHasJointLiability === true}
+          checked={jointLiabilityLocked ? false : form.donorHasJointLiability === true}
+          disabled={jointLiabilityLocked}
+          disabledReason={
+            jointLiabilityLocked
+              ? "「상증법」§4의2⑥ 단서 — 이 계산에 담긴 증여재산은 모두 연대납부의무 배제 열거 조문(§35~§39 등)에 해당해 증여자에게 연대납부의무가 성립하지 않습니다. 「예」를 선택할 수 없습니다."
+              : undefined
+          }
           onCheckedChange={(v) => set({ donorHasJointLiability: v })}
+          data-testid="gift-donor-joint-liability"
         />
+        {jointLiabilityMixed && (
+          <div
+            className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+            data-testid="gift-joint-liability-mixed-warning"
+          >
+            이 계산에는 「상증법」§4의2⑥ 단서 배제 대상(의제증여)과 일반 증여가 섞여 있습니다.
+            배제 대상 부분에는 증여자의 연대납부의무가 성립하지 않으므로, 「예」는 일반 증여분에
+            한정해 판단하세요.
+          </div>
+        )}
         {form.donorHasJointLiability === true && (
           <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
             연대납세의무자가 납부한 세액은 채무면제이익에 해당하지 않아 gross-up 계산이 생략됩니다 (§4의2⑥).

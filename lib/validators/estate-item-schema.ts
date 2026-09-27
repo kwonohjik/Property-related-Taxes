@@ -56,6 +56,8 @@ const baseItemSchema = z.object({
   isAggregationExcludedGift: z.boolean().optional(),
   // 증여의제 법정 산식 산정액 표지 — 부표1 ⑧ 평가기준코드 01 배제. ⑫ strip 방지
   isStatutoryFormulaValue: z.boolean().optional(),
+  // 「상증법」§4의2⑥ 단서 면제 표지 — ⑫ strip 방지(빠지면 토글 잠금이 발동하지 않는다)
+  isJointLiabilityExemptGift: z.boolean().optional(),
   // §55① 호분기 — 명의신탁(1호)·일감몰아주기(2호)=3천만 공제 없음, 그 외(3호)=3천만 공제. ⑫ strip 방지 (G-4)
   aggregationExcludedClass: z.enum(["nominee_trust", "deemed_profit", "general"]).optional(),
   // §45의5② 증여세 한도 + staleness 근거 — ⑫ strip 방지(빠지면 마법사가 한도를 모른 채 계산한다)
