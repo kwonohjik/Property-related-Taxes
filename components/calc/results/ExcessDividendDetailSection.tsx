@@ -268,16 +268,10 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
         </div>
       )}
 
-      {/* ── F: 연대납부의무 면제 안내 ── */}
-      <div
-        className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"
-        data-testid="ed-joint-liability-exempt"
-      >
-        <p className="text-xs">
-          ※ 초과배당에 대한 증여세는 수증자(초과배당 수령 주주)의 단독 납부 의무 — 증여자(배당 포기 주주)의
-          연대납부의무가 면제됩니다 (§4의2⑥ 단서).
-        </p>
-      </div>
+      {/* ── F: 연대납부의무 면제 고지는 여기 두지 않는다 ──
+          「상증법」§4의2⑥ 단서 고지는 `DeemedGiftResultView`가 **엔진 표지**(`donorJointLiabilityExempt`)를
+          읽어 전 유형 공통으로 띄운다(`deemed-joint-liability-exempt`). 이 섹션은 그 안에 렌더되므로
+          여기에 같은 고지를 또 두면 한 화면에 두 번 뜨고, 유형별 사본이 법 개정 때 따로 낡는다. */}
     </>
   );
 }

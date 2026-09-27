@@ -3,7 +3,7 @@
  *
  * 설계·근거: `docs/00-pm/gift-deemed-taxpayer-gate-4-2.plan.md`
  *
- * 이 모듈이 다루는 것은 **④(영리법인의 주주등)** 하나다.
+ * 이 모듈이 다루는 것은 **④(영리법인의 주주등)** 와 **⑥ 단서(증여자 연대납부의무 면제)** 둘이다.
  * ①·③(수증자 자신이 영리법인·소득세/법인세 피부과)은 각 엔진의 `doneeIsForProfitCorp`로
  * 이미 구현돼 있고, **수범자가 다르다**:
  *
@@ -14,6 +14,7 @@
  */
 
 import type { CapitalIncreaseInput } from "./gift-deemed-input-types";
+import type { DeemedGiftType } from "./types";
 
 /**
  * 「상증법」§39① 각 목이 **수증자의 주주 여부를 조문으로 확정하는지**.
@@ -100,4 +101,72 @@ export function capTableShareholderOfTaxedCorpExcluded(
 ): boolean {
   if (issuerGainCorporateTaxed !== true) return false;
   return preShares > 0;
+}
+
+/**
+ * 「상증법」§4의2⑥ 단서 — 증여자 **연대납부의무 면제** 대상 유형인가.
+ *
+ * ⑥ 본문은 증여자에게 연대납부의무를 지우고, 그 뒤에 단서가 붙는다(2025.10.01. 시행본 verbatim):
+ *
+ *   「다만, 제4조제1항제2호 및 제3호, 제35조부터 제39조까지, 제39조의2, 제39조의3,
+ *    제40조, 제41조의2부터 제41조의5까지, 제42조, 제42조의2, 제42조의3, 제45조,
+ *    제45조의3부터 제45조의5까지 및 제48조(출연자가 해당 공익법인의 운영에 책임이 없는
+ *    경우로서 대통령령으로 정하는 경우만 해당한다)에 해당하는 경우는 제외한다.」
+ *
+ * 단서는 각 호 **외의 부분 본문 뒤**에 놓여 제1호~제3호 전부에 걸린다. 조건부 괄호가
+ * 붙은 것은 **제48조뿐**이므로, 아래 유형들은 요건을 더 볼 것 없이 면제다.
+ *
+ * 🔑 **입력 축이 없다.** ④와 달리 ⑥ 단서는 「어느 조문에 해당하는가」만 묻는다 —
+ *    사용자에게 물을 사실이 없으므로 토글도 ⑧ 검증도 생기지 않는다.
+ *
+ * 🔴 **④의 「제45조의3부터 제45조의5까지」와 혼동하지 말 것.** 같은 조문 묶음이 두 항에
+ *    정반대로 등장한다:
+ *      · ④ — 그 세 유형은 배제의 **예외**(= 주주등에게 증여세를 **부과**한다)
+ *      · ⑥ — 그 세 유형은 단서 열거 **안**(= 증여자 연대납부의무가 **없다**)
+ *    항이 다르면 결론도 다르다. `related_corp`·`specific_corp`가 아래에서 `true`인 이유다.
+ *
+ * ⚠️ 새 유형을 `DeemedGiftType`에 추가하면 tsc가 이 표의 키를 요구한다 —
+ *    「등록을 잊어 조용히 면제되지 않는」 경로를 만들지 않기 위한 의도적 설계다.
+ *    추가할 때는 **단서 열거 원문을 다시 읽고** 판단할 것. 열거 밖인데 `true`를 세우면
+ *    화면이 「연대납부의무 없음」이라고 **거짓 고지**한다.
+ */
+const JOINT_LIABILITY_EXEMPT_BY_TYPE: Record<DeemedGiftType, boolean> = {
+  // ── 단서 열거 **밖** — 증여자에게 연대납부의무가 성립한다 ──
+  trust_benefit: false, // §33 신탁이익
+  insurance: false, // §34 보험금
+  nominee_trust: false, // §45의2 명의신탁 (열거는 §45와 §45의3~§45의5뿐)
+
+  // ── 「제35조부터 제39조까지」 ──
+  bargain_transfer: true, // §35
+  debt_forgiveness: true, // §36
+  free_realestate: true, // §37
+  merger: true, // §38
+  capital_increase: true, // §39
+  capital_increase_allocation: true, // §39 — cap-table(라우터를 거치지 않는 별도 진입점)
+  convertible_stock: true, // §39①3호
+
+  // ── 개별 열거 ──
+  capital_decrease: true, // §39의2
+  contribution: true, // §39의3
+  convertible_bond: true, // §40
+
+  // ── 「제41조의2부터 제41조의5까지」 ──
+  excess_dividend: true, // §41의2
+  listing_gain: true, // §41의3 (§41의5 합병상장이익 포함 — 같은 구간)
+  free_loan: true, // §41의4
+  free_loan_aggregated: true, // §41의4 (§43② 합산 축)
+
+  // ── §42·§42의2·§42의3 ──
+  property_service_use: true, // §42
+  org_change: true, // §42의2
+  value_increase: true, // §42의3
+
+  // ── §45 및 「제45조의3부터 제45조의5까지」 ──
+  acquisition_fund_presumption: true, // §45
+  related_corp: true, // §45의3 — ④에서는 제외의 예외, ⑥에서는 열거 안
+  specific_corp: true, // §45의5 — 같음
+};
+
+export function jointLiabilityExemptForDeemedType(type: DeemedGiftType): boolean {
+  return JOINT_LIABILITY_EXEMPT_BY_TYPE[type];
 }
