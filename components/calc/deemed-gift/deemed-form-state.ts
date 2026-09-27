@@ -129,6 +129,12 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
   /** 수증자가 영리법인인가 — 「상증법」§2 9호·§4의2①·③ 납세의무자 범위 밖(단건·전환주식 공용) */
   ciDoneeIsForProfitCorp: boolean;
+  /**
+   * 수증자가 영리법인인가 — §39 **밖** 단일 수증자 13종 공통(7-12).
+   * §39는 위 `ciDoneeIsForProfitCorp`를 쓴다 — 결과 라벨(「법인세법 시행령」§89⑥ 준용 익금)이
+   * §39 전용이라 축을 합치지 않았다. 노출 유형은 `commonForProfitDoneeGateApplies`가 정한다.
+   */
+  doneeIsForProfitCorp: boolean;
   /** 「상증법」§4의2④ 요건 ㉠ — 발행법인 수증이익에 법인세가 부과됐는가(비과세·감면 포함) */
   ciIssuerGainCorporateTaxed: boolean;
   /**
@@ -344,6 +350,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciStockCode: "",
   ciAllocationMethod: "normal",
   ciDoneeIsForProfitCorp: false,
+  doneeIsForProfitCorp: false,
   ciIssuerGainCorporateTaxed: false,
   ciDoneeIsShareholderOfIssuer: false,
   ciAllocIsListed: false,

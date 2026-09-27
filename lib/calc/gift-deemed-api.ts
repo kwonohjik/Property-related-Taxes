@@ -24,6 +24,7 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 import { buildPhase3DeemedInput } from "./gift-deemed-api-phase3";
+import { commonForProfitDoneeGateApplies } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 /**
@@ -37,7 +38,21 @@ function capitalRatioNeeds(direction: "low" | "high", subType: DeemedFormState["
   return { needsRatio: isHigh, needsLowDanmok: !isHigh && subType === "no_realloc" };
 }
 
+/**
+ * ④ 「상증법」§4의2①·③ 공통 축(7-12) — 유형별 case에 흩지 않고 **진입점 한 곳**에서 싣는다.
+ *
+ * 판정은 폼 유형이 아니라 **실제로 만들어진 페이로드의 type**으로 한다 — `free_loan` 화면은 다건
+ * 토글에 따라 `free_loan_aggregated`를 만들고, 두 유형 모두 게이트 대상이다.
+ * ⚠️ 켜졌을 때만 싣는다(`true` 또는 부재). 미입력은 「영리법인 아님」이다.
+ */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
+  const payload = buildDeemedGiftInputByType(form);
+  return form.doneeIsForProfitCorp && commonForProfitDoneeGateApplies(payload.type)
+    ? ({ ...payload, doneeIsForProfitCorp: true } as DeemedGiftInput)
+    : payload;
+}
+
+function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
   // Phase 3 추정·의제는 별도 파일로 분리했다(800줄 정책). 해당 없으면 null.
   const phase3 = buildPhase3DeemedInput(form);
   if (phase3) return phase3;

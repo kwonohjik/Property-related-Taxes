@@ -3,9 +3,9 @@
  *
  * 설계·근거: `docs/00-pm/gift-deemed-taxpayer-gate-4-2.plan.md`
  *
- * 이 모듈이 다루는 것은 **④(영리법인의 주주등)** 와 **⑥ 단서(증여자 연대납부의무 면제)** 둘이다.
- * ①·③(수증자 자신이 영리법인·소득세/법인세 피부과)은 각 엔진의 `doneeIsForProfitCorp`로
- * 이미 구현돼 있고, **수범자가 다르다**:
+ * 이 모듈이 다루는 것은 **①·③ 공통 게이트(§39 밖)** · **④(영리법인의 주주등)** · **⑥ 단서** 셋이다.
+ * ①·③(수증자 자신이 영리법인)은 §39 3경로가 각 엔진의 `doneeIsForProfitCorp`로 따로 갖고,
+ * 나머지 단일 수증자 유형은 아래 공통 게이트가 맡는다. ①③과 ④는 **수범자가 다르다**:
  *
  *   ①(+§2 9호)·③ … 증여세를 면하는 자 = **수증자 자신**
  *   ④            … 증여세를 면하는 자 = 그 **영리법인의 주주등** (수증자와 별개일 수 있다)
@@ -14,7 +14,8 @@
  */
 
 import type { CapitalIncreaseInput } from "./gift-deemed-input-types";
-import type { DeemedGiftType } from "./types";
+import type { DeemedGiftResult, DeemedGiftType } from "./types";
+import { GIFT } from "../legal-codes";
 
 /**
  * 「상증법」§39① 각 목이 **수증자의 주주 여부를 조문으로 확정하는지**.
@@ -169,4 +170,95 @@ const JOINT_LIABILITY_EXEMPT_BY_TYPE: Record<DeemedGiftType, boolean> = {
 
 export function jointLiabilityExemptForDeemedType(type: DeemedGiftType): boolean {
   return JOINT_LIABILITY_EXEMPT_BY_TYPE[type];
+}
+
+/**
+ * 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**이면 증여세 납세의무자가 아니다.
+ * §39 밖 유형에 이 규칙을 **한 곳에서** 적용할지 판정하는 표(7-12).
+ *
+ * 규칙 자체는 유형과 무관하다 — 영리법인은 §2 9호 「수증자」 정의(「…**비영리법인**을
+ * 포함한다」)에도, §4의2① 납세의무자 범위에도 없다. 그런데도 표를 두는 이유는
+ * **「계산 단위 토글 하나」로 판정해도 되는 유형**이 전부가 아니기 때문이다:
+ *
+ *   · 명부형(§38·§39의2·§39의3·§41의2) — 수증자가 여럿이고 법인·개인이 섞일 수 있다.
+ *     계산 단위 토글 하나로 판정하면 개인 수증자까지 배제된다 ⇒ 행별 축이 필요하다
+ *     (cap-table 7-7이 행별 `isCorporate`를 둔 것과 같은 이유). **미착수**.
+ *   · §45의2 — §4의2②가 「(명의자가 영리법인인 경우를 포함한다)」 **실제소유자**에게 납세의무를
+ *     지운다. 명의자가 법인이라는 이유로 배제하면 **틀린다**.
+ *   · §45의3·§45의5 — 수증자는 그 법인의 주주(지배주주 등)이고, 각 엔진이 법인 주주를 이미
+ *     자체 규정으로 거른다(`related-corp.ts`·`specific-corp.ts`).
+ *   · §39 3경로 — 자체 토글과 결과 라벨(「법인세법 시행령」§89⑥ 준용 익금)을 이미 갖는다.
+ *
+ * ⚠️ UI(⑤)도 이 함수로 토글 노출을 정한다 — 폼이 따로 판단하면 두 개의 진실이 생긴다.
+ */
+const COMMON_FOR_PROFIT_DONEE_GATE: Record<DeemedGiftType, boolean> = {
+  // ── 단일 수증자 — 공통 게이트 ──
+  trust_benefit: true, // §33
+  insurance: true, // §34
+  bargain_transfer: true, // §35
+  debt_forgiveness: true, // §36
+  free_realestate: true, // §37
+  convertible_bond: true, // §40
+  listing_gain: true, // §41의3 (§41의5 포함)
+  free_loan: true, // §41의4
+  free_loan_aggregated: true, // §41의4 (§43② 합산 — 차입자는 한 사람)
+  property_service_use: true, // §42
+  org_change: true, // §42의2
+  value_increase: true, // §42의3
+  acquisition_fund_presumption: true, // §45
+
+  // ── 명부형 — 행별 축 미착수 ──
+  merger: false, // §38
+  capital_decrease: false, // §39의2
+  contribution: false, // §39의3
+  excess_dividend: false, // §41의2
+
+  // ── 법이 다르게 정한다 ──
+  nominee_trust: false, // §45의2 — §4의2② 실제소유자
+  related_corp: false, // §45의3 — 엔진이 법인 주주를 자체 배제
+  specific_corp: false, // §45의5 — 같음
+
+  // ── 자체 경로 ──
+  capital_increase: false, // §39
+  capital_increase_allocation: false, // §39 cap-table — 행별 isCorporate
+  convertible_stock: false, // §39①3호
+};
+
+export function commonForProfitDoneeGateApplies(type: DeemedGiftType): boolean {
+  return COMMON_FOR_PROFIT_DONEE_GATE[type];
+}
+
+/**
+ * 공통 게이트의 제외 결과 — **금액은 결론 행에 보존**하고 과세분만 0으로 둔다.
+ *
+ * 「상증법」§31①이 「증여재산가액」을 **과세대상 가액**으로 한정 정의하므로 제외되면 그 이름이
+ * 성립하지 않는다. 그래서 정의어(「증여재산가액」, §45의 「증여추정가액」)만 바꾼다 — 행 전체를
+ * 갈아 끼우지 않는 이유는 괄호 속 산식 설명(「(시가 − 인수가)」 등)이 「왜 그 금액인지」를
+ * 말해 주기 때문이다. 실측한 결론 행 라벨은 네 형태다: 「증여재산가액」 · 「증여재산가액 (…)」 ·
+ * 「합산 증여재산가액 (…)」 · 「증여추정가액」.
+ *
+ * ⚠️ §39의 결론 라벨(「법인세법 시행령」제89조제6항 준용 익금)을 **쓰지 않는다** — 그 준용은
+ *    §39·「상증령」§29②에 한정이다. 다른 유형의 금액이 법인 단계에서 어떻게 과세되는지는
+ *    유형마다 다르고 여기서 단정할 근거가 없다.
+ * ⚠️ `thresholdEcho`는 건드리지 않는다 — §40·§41의3·§42·§42의3이 `gain` 키를 **각자의 의미로**
+ *    이미 쓴다. 덮어쓰면 그 의미가 바뀐다.
+ */
+export function forProfitDoneeExcludedResult(result: DeemedGiftResult): DeemedGiftResult {
+  return {
+    ...result,
+    applied: false,
+    deemedGiftValue: 0,
+    exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+    breakdown: result.breakdown.map((row) =>
+      /증여재산가액|증여추정가액/.test(row.label)
+        ? {
+            ...row,
+            label: row.label
+              .replace("합산 증여재산가액", "제외 전 합산 산출 이익")
+              .replace("증여재산가액", "제외 전 산출 이익")
+              .replace("증여추정가액", "제외 전 추정가액"),
+          }
+        : row,
+    ),
+  };
 }

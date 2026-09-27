@@ -520,26 +520,39 @@ import type {
 } from "./gift-deemed-input-phase3";
 
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
+/**
+ * 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**인가(§39 밖 단일 수증자 13종 공통 축).
+ *
+ * 붙는 유형은 `taxpayer-gate.ts`의 `COMMON_FOR_PROFIT_DONEE_GATE`가 정한다. 명부형 4종·§45의2·
+ * §45의3·§45의5·§39에는 **붙이지 않는다**(그 이유도 그 표에 있다) — 타입이 넓으면 붙지 말아야 할
+ * 유형의 페이로드에 이 필드를 실어도 tsc가 알려 주지 않는다.
+ *
+ * ⚠️ 미입력은 「영리법인 아님」이다 — 배제는 요건이 입증돼야 한다(미입력을 배제로 읽으면 과소과세).
+ */
+export interface ForProfitDoneeAxis {
+  doneeIsForProfitCorp?: boolean;
+}
+
 export type DeemedGiftInput =
-  | ({ type: "trust_benefit" } & TrustBenefitInput)
-  | ({ type: "insurance" } & InsuranceInput)
-  | ({ type: "bargain_transfer" } & BargainTransferInput)
-  | ({ type: "debt_forgiveness" } & DebtForgivenessInput)
-  | ({ type: "free_realestate" } & FreeRealEstateInput)
-  | ({ type: "free_loan" } & FreeLoanInput)
-  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput)
+  | ({ type: "trust_benefit" } & TrustBenefitInput & ForProfitDoneeAxis)
+  | ({ type: "insurance" } & InsuranceInput & ForProfitDoneeAxis)
+  | ({ type: "bargain_transfer" } & BargainTransferInput & ForProfitDoneeAxis)
+  | ({ type: "debt_forgiveness" } & DebtForgivenessInput & ForProfitDoneeAxis)
+  | ({ type: "free_realestate" } & FreeRealEstateInput & ForProfitDoneeAxis)
+  | ({ type: "free_loan" } & FreeLoanInput & ForProfitDoneeAxis)
+  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput & ForProfitDoneeAxis)
   | ({ type: "merger" } & MergerInput)
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)
   | ({ type: "contribution" } & ContributionInput)
   | ({ type: "convertible_stock" } & ConvertibleStockInput)
-  | ({ type: "convertible_bond" } & ConvertibleBondInput)
-  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput)
+  | ({ type: "convertible_bond" } & ConvertibleBondInput & ForProfitDoneeAxis)
+  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput & ForProfitDoneeAxis)
   | ({ type: "nominee_trust" } & NomineeTrustInput)
   | ({ type: "excess_dividend" } & ExcessDividendInput)
-  | ({ type: "listing_gain" } & ListingGainInput)
-  | ({ type: "property_service_use" } & PropertyServiceUseInput)
-  | ({ type: "org_change" } & OrgChangeInput)
-  | ({ type: "value_increase" } & ValueIncreaseInput)
+  | ({ type: "listing_gain" } & ListingGainInput & ForProfitDoneeAxis)
+  | ({ type: "property_service_use" } & PropertyServiceUseInput & ForProfitDoneeAxis)
+  | ({ type: "org_change" } & OrgChangeInput & ForProfitDoneeAxis)
+  | ({ type: "value_increase" } & ValueIncreaseInput & ForProfitDoneeAxis)
   | ({ type: "specific_corp" } & SpecificCorpInput)
   | ({ type: "related_corp" } & RelatedCorpInput);
