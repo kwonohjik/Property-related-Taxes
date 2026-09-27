@@ -3,6 +3,7 @@
 /** 감자 §39의2 멀티(불균등 N:N) — 주주 명단 입력 테이블 (행 추가/삭제). */
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { CdShareholderRow } from "./shared";
 
 type Props = {
@@ -67,6 +68,16 @@ export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Prop
                 data-testid={`cd-sh-group-${i}`}
                 placeholder="특수관계 그룹 (같은 값=특수관계, 예: 가족A)"
                 className={textInputCls}
+              />
+              {/* 「상증법」§2 9호·§4의2①·③ — **모든 행**에 둔다. 수증자는 저가소각이면 잔존주주,
+                  고가소각이면 감자주주라(엔진이 자동 판정) 같은 행이 역할을 바꾼다. 증여자로 판정되면 무효 */}
+              <ToggleCard
+                variant="chip"
+                tone="violet"
+                checked={row.isForProfitCorp === true}
+                onCheckedChange={(v) => update(i, { isForProfitCorp: v })}
+                title="영리법인 (수증자인 경우만 반영 — §4의2①·③ 증여세 납세의무자 아님)"
+                data-testid={`cd-sh-corp-${i}`}
               />
             </div>
           );

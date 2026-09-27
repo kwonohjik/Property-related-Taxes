@@ -228,6 +228,9 @@ export function commonForProfitDoneeGateApplies(type: DeemedGiftType): boolean {
   return COMMON_FOR_PROFIT_DONEE_GATE[type];
 }
 
+/** 영리법인 수증자 제외 사유 — 공통 게이트(13종)와 명부형 행별 축(§38·§39의2·§39의3)이 같이 쓴다 */
+export const FOR_PROFIT_DONEE_REASON = `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`;
+
 /**
  * 공통 게이트의 제외 결과 — **금액은 결론 행에 보존**하고 과세분만 0으로 둔다.
  *
@@ -248,7 +251,7 @@ export function forProfitDoneeExcludedResult(result: DeemedGiftResult): DeemedGi
     ...result,
     applied: false,
     deemedGiftValue: 0,
-    exclusionReason: `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`,
+    exclusionReason: FOR_PROFIT_DONEE_REASON,
     breakdown: result.breakdown.map((row) =>
       /증여재산가액|증여추정가액/.test(row.label)
         ? {

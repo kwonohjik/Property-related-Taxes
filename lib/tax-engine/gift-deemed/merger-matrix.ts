@@ -7,6 +7,7 @@ import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide, safeMulDivRound } from "../tax-utils";
 import { isSameMergerShareholder } from "./capital-helpers";
 import { resolveMergedPrice } from "./merger-valuation";
+import { FOR_PROFIT_DONEE_REASON } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, MergerInput, MergerMatrix } from "./types";
 
@@ -45,10 +46,17 @@ export function calcMergerMatrix(input: MergerInput): DeemedGiftResult {
 
     // §28④1 기준금액 = Min(합병후평가 × 교부주식수 × 30%, 3억) — 수증자별 개별 판정
     const threshold = Math.min(applyRate(safeMultiply(merged, grantedShares), 0.3), ABSOLUTE_THRESHOLD);
-    const applied = netGain > 0 && netGain >= threshold;
+    const meetsThreshold = netGain > 0 && netGain >= threshold;
+    // 「상증법」§2 9호·§4의2①·③ — 영리법인은 수증자가 아니다. 이 행만 빠지고, 같은 사람이
+    // 증여자(undervalued)로서 갖는 몫과 아래 증여자별 안분은 그대로다.
+    const forProfitOut = meetsThreshold && k.isForProfitCorp === true;
+    const applied = meetsThreshold && !forProfitOut;
     if (applied) totalDeemedGift += netGain;
 
-    recipients.push({ id: k.id, name: k.name, grossGain, selfGift, netGain, applied, threshold });
+    recipients.push({
+      id: k.id, name: k.name, grossGain, selfGift, netGain, applied, threshold,
+      ...(forProfitOut && { excludedReason: FOR_PROFIT_DONEE_REASON }),
+    });
 
     // 증여자별 안분: 순이익을 (자기 제외) 증여자 지분으로 안분. 마지막 증여자 잔액 흡수(floor 정합).
     const donors = sh.undervalued.filter((j) => !isSameMergerShareholder(k.id, j.id));
@@ -74,8 +82,11 @@ export function calcMergerMatrix(input: MergerInput): DeemedGiftResult {
     { label: "과대평가법인 1주당 평가가액 (합병전÷교부 비율 조정)", amount: adjustedOvervalued },
     { label: "1주당 이익", amount: perShareGain },
     ...recipients.map((r) => ({
-      label: `${r.name} 증여재산가액${r.applied ? "" : " (기준금액 미만 제외)"}`,
-      amount: r.applied ? r.netGain : 0,
+      // 제외된 행은 정의어(§31① 「증여재산가액」)를 달지 않고 금액을 「제외 전」으로 남긴다(7-12와 같은 규칙)
+      label: r.excludedReason
+        ? `${r.name} 제외 전 산출 이익 (영리법인 수증자 — 과세 제외)`
+        : `${r.name} 증여재산가액${r.applied ? "" : " (기준금액 미만 제외)"}`,
+      amount: r.applied || r.excludedReason ? r.netGain : 0,
       note: r.selfGift > 0 ? `차감전 ${r.grossGain.toLocaleString()} − 자기증여 ${r.selfGift.toLocaleString()}` : undefined,
     })),
     { label: "증여재산가액 합계", amount: totalDeemedGift, lawRef: GIFT.MERGER, note: "§38 주주 매트릭스" },
@@ -86,7 +97,12 @@ export function calcMergerMatrix(input: MergerInput): DeemedGiftResult {
     applied: totalDeemedGift > 0,
     deemedGiftValue: totalDeemedGift,
     breakdown,
-    exclusionReason: totalDeemedGift > 0 ? undefined : "전 수증자 이익이 기준금액(합병후평가 30%·3억 중 적은 금액) 미만",
+    exclusionReason:
+      totalDeemedGift > 0
+        ? undefined
+        : recipients.some((r) => r.excludedReason)
+          ? FOR_PROFIT_DONEE_REASON
+          : "전 수증자 이익이 기준금액(합병후평가 30%·3억 중 적은 금액) 미만",
     legalBasis: GIFT.MERGER,
     mergerMatrix,
     thresholdEcho: computedSimpleAvg !== undefined ? { computedMergedPrice: computedSimpleAvg } : undefined,

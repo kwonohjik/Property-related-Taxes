@@ -162,8 +162,13 @@ export interface MergerInput {
  *  주주배열은 `shares`만 → preMergerShares=Σovervalued.shares 도출(중복입력 제거).
  *  1주평가(overvaluedSharePrice·underSharePrice)는 평가액이라 배열에 없음 → 스칼라 입력 유지(㉮·㉯ 산정). */
 export interface MergerShareholders {
-  /** 과대평가(이익측=수증자) 법인 주주. Σshares = preMergerShares */
-  overvalued: { id: string; name: string; shares: number }[];
+  /**
+   * 과대평가(이익측=수증자) 법인 주주. Σshares = preMergerShares.
+   * `isForProfitCorp` — 이 수증자가 **영리법인**이면 「상증법」§2 9호·§4의2①·③상 납세의무자가
+   * 아니라 그 행만 과세에서 빠진다(이익·자기증여·증여자별 안분은 보존). 미지정 = 개인(안전측).
+   * undervalued(증여자측)에는 두지 않는다 — 증여자가 법인이어도 수증자의 납세의무는 그대로다.
+   */
+  overvalued: { id: string; name: string; shares: number; isForProfitCorp?: boolean }[];
   /** 과소평가(증여자측) 법인 주주. self·안분의 증여자 풀 */
   undervalued: { id: string; name: string; shares: number }[];
   /** 교부주식 환산비(과대평가법인 합병전→합병후 교부). 사례2 = {numer:1, denom:2}(2주→1주) */
@@ -384,6 +389,12 @@ export interface CapitalDecreaseShareholder {
   redeemedShares: number; // 감자(소각)주식수 (0이면 잔존주주)
   redemptionPricePerShare?: number; // 소각 1주당 대가 (감자주주만)
   relationGroup?: string; // 특수관계 그룹 태그 (같은 문자열 = 특수관계)
+  /**
+   * 영리법인 — **수증자로서만** 효력이 있다(「상증법」§2 9호·§4의2①·③). 수증자는 저가소각이면
+   * 잔존주주, 고가소각이면 감자주주다(엔진이 자동 판정 — 같은 행이 역할을 바꾼다). 증여자 쪽에
+   * 붙으면 무효다. 미지정 = 개인(안전측 — 법인으로 오판하면 과소과세 방향이다).
+   */
+  isForProfitCorp?: boolean;
 }
 
 /**
@@ -398,6 +409,11 @@ export interface ContributionParty {
   preShares: number;
   /** 관계 — 증여세 본세 prefill 시 donorRelation(저가)/수증자 관계(고가) 매핑용. 미지정 시 마법사에서 선택 */
   relation?: GiftDonorRelation;
+  /**
+   * 영리법인 — **고가(①2호) 명부에서만** 효력이 있다. 그때 parties가 수증자이기 때문이다
+   * (「상증법」§2 9호·§4의2①·③). 저가 명부는 증여자 명부라 무효다. 미지정 = 개인(안전측).
+   */
+  isForProfitCorp?: boolean;
 }
 
 /** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */

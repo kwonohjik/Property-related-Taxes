@@ -417,7 +417,11 @@ export function DeemedGiftResultView({
                         {row.ratioLabel}
                       </td>
                       <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                        {formatKRW(row.value)}
+                        {row.excludedReason ? (
+                          <span className="font-sans text-xs text-muted-foreground">제외 — 영리법인 수증자</span>
+                        ) : (
+                          formatKRW(row.value)
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -592,7 +596,10 @@ export function DeemedGiftResultView({
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
-                  <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">{r.applied ? "과세" : "제외"}</td>
+                  {/* 영리법인 제외는 기준금액 미달과 구별해 사유를 적는다(「상증법」§2 9호·§4의2①·③) */}
+                  <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">
+                    {r.applied ? "과세" : r.excludedReason ? "제외 — 영리법인 수증자" : "제외"}
+                  </td>
                 </tr>
               ))}
             </tbody>
