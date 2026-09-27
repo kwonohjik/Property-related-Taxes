@@ -233,4 +233,4 @@
 | G1 (표시·연혁 문구) | 43·54·55·60·62·64·65 | 이 레인 |
 
 - OH-36은 코드상 이미 반영돼 있다(`ImportedOneHouseFactsCard.tsx` §155⑯·⑱ 행). 반영 커밋은 확인 필요.
-- G1 범위 밖 잔여: 다건 PDF(`lib/pdf/ResultPdfTransferSections.tsx`)도 안분 행 없이 전체 양도차익 → 장특 → 양도소득금액으로 간다(OH-62 형제) — 후속.
+- G1 후속: 다건 PDF(`lib/pdf/ResultPdfTransferSections.tsx`) 자산별 표에 안분 후 과세대상 양도차익 행 추가(OH-62 형제) — G1b.
