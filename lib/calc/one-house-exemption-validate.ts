@@ -32,6 +32,7 @@ import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-hous
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 import {
   deriveJudgmentHouseCount,
@@ -382,27 +383,10 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
           "동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)",
         ),
       );
-    } else if (
-      primary.acquisitionDate &&
-      primary.decedentCohabitationHoldingStartDate >= primary.acquisitionDate
-    ) {
-      errors.push(
-        err(
-          "decedentCohabitationHoldingStartDate",
-          "동일세대 거주·보유 개시일은 상속개시일(취득일)보다 앞서야 합니다. (§154⑧3호 — 상속개시 전 기간)",
-        ),
-      );
-    } else if (
-      primary.decedentAcquisitionDate &&
-      primary.decedentCohabitationHoldingStartDate < primary.decedentAcquisitionDate
-    ) {
-      // 피상속인이 취득하기 전에는 그 주택을 「동일세대로서 거주하고 보유한」 기간이 있을 수 없다.
-      errors.push(
-        err(
-          "decedentCohabitationHoldingStartDate",
-          "동일세대 거주·보유 개시일이 피상속인 취득일보다 빠릅니다. 피상속인이 이 주택을 취득한 날 이후로 입력하세요.",
-        ),
-      );
+    } else {
+      // 순서(상속개시 전 · 피상속인 취득 후) — 계산기 ⑤·⑧과 **같은 leaf**(E-2).
+      const order = sameHouseholdInheritanceOrderError(primary);
+      if (order) errors.push(err("decedentCohabitationHoldingStartDate", order));
     }
   }
 

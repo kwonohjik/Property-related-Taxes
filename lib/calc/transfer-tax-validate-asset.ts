@@ -55,6 +55,7 @@ export function todayLocalISO(): string {
 // ─── ⑧ 취득가액 축 검증 — transfer-tax-validate-acquisition.ts로 분리 (800줄 정책, 재export 호환) ───
 export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
+import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 
 /**
@@ -84,6 +85,12 @@ export function getAssetDateOrderError(
     a.donorAcquisitionDate >= a.acquisitionDate
   )
     return "증여자 취득일은 증여일보다 이전이어야 합니다.";
+  // §154⑧3호 동일세대 상속 통산 개시일 — 판정 메뉴 ⑧과 **같은 leaf**(E-2). 게이트는 ⑤
+  // (`CompanionAcqInheritanceBlock` — 주택일 때만 동일세대 토글을 연다)와 같다.
+  if (a.assetKind === "housing") {
+    const cohabitation = sameHouseholdInheritanceOrderError(a);
+    if (cohabitation) return cohabitation;
+  }
   return null;
 }
 
