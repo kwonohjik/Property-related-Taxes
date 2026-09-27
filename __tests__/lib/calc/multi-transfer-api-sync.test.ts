@@ -397,6 +397,11 @@ describe("[R2-H2] 다건 priorReductionUsage 합성·전송", () => {
 describe("F1 — 다건 gracePeriod per-property 전송", () => {
   function housingFormWithGrace(gp?: PropertyItem["form"]["gracePeriod"]): PropertyItem["form"] {
     const form = baseForm();
+    // 🔁 E-9(2026-09-27) — 다건 게이트가 단건과 같은 `gracePeriodInScope`(Q03)로 바뀌었다. 기본 양도일
+    //    2026-03-01은 한시배제 창(영 §167의3①12의2 가목 「2026년 5월 9일까지 양도」) **안**이라
+    //    경과조치 입력이 증명 가능한 no-op이고 단건도 싣지 않는다. 경과조치(나목)가 의미를 갖는
+    //    창 **밖** 양도일로 옮겨 주제(자산별 전송)를 지킨다.
+    form.transferDate = "2026-06-15";
     form.assets[0] = { ...form.assets[0], assetKind: "housing", regionCode: "11680" }; // 강남 4개월
     form.householdHousingCount = "2";
     form.isOneHousehold = true;

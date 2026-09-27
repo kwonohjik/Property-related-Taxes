@@ -22,6 +22,18 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
+/**
+ * 🔴 A17의 엔진·목 세율은 **정적 import**로 둔다(9.5 · 2026-09-27 원인 규명).
+ *
+ * 종전에는 두 테스트 본문이 각자 `await import("@/lib/tax-engine/transfer-tax")`를 불렀다. 양도세 엔진
+ * 그래프 전체가 **테스트 타임아웃 안에서** 처음 평가되므로, 고부하 병렬 실행에서 A17-1이 import 도중
+ * 5초를 넘겨 타임아웃되고 → 평가가 끝나지 않은 채 A17-2가 같은 모듈을 다시 import해 **초기화 중인
+ * 모듈 레코드**를 받아 `Cannot access '__vite_ssr_import_5__' before initialization`(TDZ)가 났다.
+ * 재현: 수정 전 `--testTimeout=300`이면 A17-1 타임아웃 + A17-2 TDZ가 매번 난다(두 증상이 한 원인).
+ * 정적 import는 수집 단계에서 그래프를 **끝까지** 평가하므로 테스트 시간에 import가 들어가지 않는다.
+ */
+import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { makeMockRates, baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 
 afterEach(cleanup);
 
@@ -95,9 +107,7 @@ describe("[A22] 결과 카드 — 표시 산식과 표시 금액이 자기일관
  * 엔진 게이트와 **같은 술어**(`isFamilyBusinessCgtEra`)를 UI가 쓰게 해 dual truth를 없앤다.
  */
 describe("[A17] 엔진 — G-1 게이트 탈락 사유가 warnings에 남는다", () => {
-  it("A17-1: 2014.1.1. 전 상속이면 특례 미적용 사유가 결과 warnings에 있다", async () => {
-    const { calculateTransferTax } = await import("@/lib/tax-engine/transfer-tax");
-    const { makeMockRates, baseTransferInput } = await import("../tax-engine/_helpers/mock-rates");
+  it("A17-1: 2014.1.1. 전 상속이면 특례 미적용 사유가 결과 warnings에 있다", () => {
     const fb = {
       decedentAcquisitionPrice: 200_000_000,
       inheritanceMarketValue: 500_000_000,
@@ -120,9 +130,7 @@ describe("[A17] 엔진 — G-1 게이트 탈락 사유가 warnings에 남는다"
     expect((r.warnings ?? []).join(" ")).toMatch(/§97의2④.*미적용.*2014/);
   });
 
-  it("A17-2(회귀): 2014.1.1. 이후 상속이면 특례가 적용되고 그 경고는 없다", async () => {
-    const { calculateTransferTax } = await import("@/lib/tax-engine/transfer-tax");
-    const { makeMockRates, baseTransferInput } = await import("../tax-engine/_helpers/mock-rates");
+  it("A17-2(회귀): 2014.1.1. 이후 상속이면 특례가 적용되고 그 경고는 없다", () => {
     const r = calculateTransferTax(
       baseTransferInput({
         propertyType: "land",

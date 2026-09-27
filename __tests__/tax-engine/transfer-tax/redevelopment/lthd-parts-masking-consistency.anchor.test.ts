@@ -125,6 +125,23 @@ describe("E3-05 · 마스킹 3경로의 LTHD 분해 정합", () => {
     );
   });
 
+  /**
+   * 🔁 9.5(2026-09-27) — 위 `run({})`(apt+receive)은 E1(#1796) 이후 **1세대1주택 비과세 마스킹**을
+   *    지난다(인가전·인가후 열 gain·lthd 0 + `gainAfterAllocation` trace 부착 · 실측). 「마스킹이 없는
+   *    완공APT·청산금 수령 경로」가 대조군에서 사라졌으므로, 세대 2주택(비과세 불성립)으로 **세 열이
+   *    모두 살아 있는** 수령 시료를 따로 둔다. 시료가 정말 비마스킹인지를 먼저 단언한다 —
+   *    그렇지 않으면 이 대조군은 다시 조용히 마스킹 경로를 볼 수 있다.
+   *    뮤테이션: 완공APT·수령일 때만 인가후 열 보유분에 +1 → 이 케이스만 KILLED(위 두 대조군은 생존).
+   */
+  it("E3-05-04b: 대조군 — 완공APT·청산금 수령이 **마스킹 없이** 세 열 모두 정합이다", () => {
+    const d = run({}, { householdHousingCount: 2 });
+    for (const k of BRANCHES) {
+      expect(d[k].gainAfterAllocation, `${k} — 마스킹 trace 없음`).toBeUndefined();
+      expect(d[k].lthd, `${k} — 공제가 살아 있다`).toBeGreaterThan(0);
+    }
+    expectAllConsistent(d, "비마스킹 apt+receive");
+  });
+
   it("E3-05-05: §95② 배제(미등기)도 정합이다 — 이미 지켜지던 규약의 고정", () => {
     const d = run({}, { isUnregistered: true });
     expect(d.total.lthd).toBe(0);
