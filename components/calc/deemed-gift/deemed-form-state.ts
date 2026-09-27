@@ -142,6 +142,13 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciAllocDirection: "low" | "high";
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
   ciAllocNewPrice: string; // ㉰ 신주 1주당 인수가액
+  /**
+   * 「상증법」§4의2④ 요건 ㉠ — 발행법인 수증이익에 법인세가 부과됐는가. **건 단위 축**이다.
+   * 요건 ㉡(주주등 여부)에는 대응 필드가 **없다** — 행의 「증자 전 보유」(`preShares`)로 판정한다.
+   * cap-table에는 명부가 있어 단건처럼 목(目) 표에 의존할 필요가 없고, 행별 토글을 두면
+   * 명부와 모순되는 답이 가능해진다.
+   */
+  ciAllocIssuerGainCorporateTaxed: boolean;
   ciAllocRows: CapTableRow[];
   /**
    * cap-table 과세 수증자 선택 (prefill 이관용) — 「상증법」§4의2①·§68①상 증여세는
@@ -343,6 +350,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",
+  ciAllocIssuerGainCorporateTaxed: false,
   ciAllocRows: [makeCapTableRow("sh-1"), makeCapTableRow("sh-2")],
   ciAllocSelectedDoneeIndex: 0,
   cdCaseType: "low",

@@ -333,6 +333,22 @@ export interface CapitalIncreaseAllocationInput {
    *    (계획서 `capital-increase-captable-listed-proviso.plan.md` v1.7 §13 · anchor CL-1·CL-2)
    */
   isListed?: boolean;
+  /**
+   * 신주발행법인이 이 자본거래로 얻은 **수증이익에 법인세가 부과**됐는가 —
+   * 「상증법」§4의2④(「해당 법인의 **주주등**에 대해서는」 증여세를 부과하지 아니한다)의 요건 ㉠.
+   *
+   * ⚠️ **건 단위 축이다**(행별이 아니다). 「그 법인에 법인세가 부과됐는가」는 법인 하나의 사실이고
+   *    주주마다 달라질 수 없다. 요건 ㉡(주주등 여부)만 행별이며, 그것은 **새 필드가 아니라
+   *    `CapShareholder.preShares`로 판정한다** — cap-table에는 명부가 있으므로 단건처럼 목(目)
+   *    표에 의존할 필요가 없다(`capTableShareholderOfTaxedCorpExcluded` JSDoc 참조).
+   *
+   * ⚠️ ①③(`CapShareholder.isCorporate`)과 **수범자가 다르다** — ①③은 수증자 자신이 영리법인인
+   *    경우, ④는 수증자가 **그 법인의 주주등**인 경우다. 한 축으로 뭉뚱그리면 틀린다.
+   *
+   * ⚠️ 이익 자체를 0으로 만들지 않는다 — `byShareholder`·`reconciliation`은 보존하고
+   *    과세분(`value`)만 0으로 둔다(①③과 동일).
+   */
+  issuerGainCorporateTaxed?: boolean;
 }
 
 /** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */

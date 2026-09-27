@@ -277,6 +277,7 @@ export function evaluateTaxpayerGate(args: {
 7-4. ✅ 14지점 배선 — ①②④⑤ + E2E 왕복 실증 (③⑥⑧⑨⑩⑪ N/A·근거 아래)
 7-5. ✅ 뮤테이션 측정 9종 → **9/9 KILLED**(2건은 안전망 보강 후 전환). 전환주식 ⑤ 신설
 7-6. ✅ 7-4 PR에서 수행(별도 단계 아님)
+7-7. ✅ cap-table 경로 — 행별 토글 없이 `preShares`로 판정. 뮤테이션 8/8 KILLED (§8-A)
 ```
 
 > **7-5 완료(2026-09-27)** — 7-3의 뮤테이션 6건은 전부 **엔진 내부**를 겨냥했다. 7-4가 추가한
@@ -361,6 +362,64 @@ export function evaluateTaxpayerGate(args: {
 > 비율 가중이 **없다** — 같은 파일이 이미 `capitalRatioNeeds`로 그 구분을 갖고 있는데
 > validate가 쓰지 않는다. 처음 쓴 E2E 픽스처(고가 가목)가 이 과잉 검증에 막혀 계산 자체가
 > 안 돌았고, 그래서 **배선 결함으로 오인할 뻔했다**. 별건이라 손대지 않았다.
+
+## 8-A. cap-table 경로 — 7-7 (2026-09-27 완료)
+
+> 7-3이 「수증자별로 주주 여부가 갈려 `CapShareholder`에 **행별 축과 ⑤ 행별 토글이 필요하다**」고
+> 적어 별도 단계로 뺐던 항목이다. **그 전제가 측정으로 뒤집혔다.**
+
+### 🔑 행별 토글은 필요 없다 — 명부가 이미 그 사실이다
+
+단건 경로가 `statuteFixesShareholderStatus`로 「이 목은 이익을 얻는 자가 주주인가」를 판정하는 것은
+**명부가 없어서**다. §39①1호 가목(실권주 배정)이 그 표에서 「사안 의존」인 이유도, 배정받은 자가
+기존 주주인지 제3자인지 단건 입력만으로는 알 수 없기 때문이다.
+
+cap-table에는 그 사실이 **입력에 이미 있다** — `CapShareholder.preShares`(증자 전 보유 주식수)다.
+
+| 행 | preShares | §4의2④ | 단건 대응 |
+|---|---|---|---|
+| 기존 주주 | > 0 | 배제 | 1호 라목·2호(주주 확정) |
+| 제3자 직접배정 | **0** | **배제 안 됨** | 1호 **다목**(「주주등이 **아닌** 자」) |
+
+⇒ 행별 토글을 만들면 **명부와 토글이라는 두 개의 진실**이 생기고, 「증자 전 보유 0」인 행에
+「주주다」라고 답하는 모순을 막을 방법이 없다. 그래서 행별 입력은 **추가하지 않았다**.
+
+신주를 인수해 증자 **후** 주주가 되는 것은 ④의 「해당 법인의 주주등」과 **다른 시점**이라
+배제하지 않는다 — 단건 다목과 같은 결론이다. `preShares` 미입력(0)도 요건 미입증이므로 배제하지
+않는다(배제 쪽이 과소과세 방향이다).
+
+### 배선 — 건 단위 1축만 새로 생긴다
+
+- `CapitalIncreaseAllocationInput.issuerGainCorporateTaxed?: boolean` (요건 ㉠, **건 단위**)
+- `capTableShareholderOfTaxedCorpExcluded(issuerGainCorporateTaxed, preShares)` —
+  단건 술어와 **같은 모듈**(`taxpayer-gate.ts`)에 둔다
+- 엔진 `capital-increase-allocation.ts` — `taxableRealloc`·`taxableForfeit` **양쪽** + 사유 문구.
+  사유 체인의 **셋째 자리**에 넣었다(기존 두 분기 순서 불변 ⇒ 기존 케이스의 문구가 바뀌지 않는다)
+- ① `ciAllocIssuerGainCorporateTaxed` · ② `false` · ④ cap-table case · ⑤ 건 단위 ToggleCard ·
+  ⑫ `capitalIncreaseAllocationSchema`
+- ③⑥⑦⑧⑨⑩⑪⑬ N/A — ⑦은 `AllocationResultView.tsx:67`이 `excludedReason`을 **이미 일반적으로**
+  렌더한다(①③이 그 경로를 쓴다) ⇒ 새 표시 코드 없음
+
+### 실측 — anchor 8/8 · 뮤테이션 **8/8 KILLED**
+
+픽스처(저가 ㉮12,000/㉰10,000·㉯11,000)는 **한 실행 안에 긍정 짝**을 갖는다 —
+을(preShares 100,000) 100,000,000 → 0 / 병(preShares **0**) 100,000,000 **유지**.
+
+| 뮤테이션 | anchor | E2E |
+|---|---|---|
+| CM1 가·다·라목 몫에서 게이트 제거 | KILLED | KILLED |
+| CM2 **나목 몫**에서 게이트 제거 | KILLED | 통과 |
+| CM3 `preShares > 0` → `>= 0` (과잉 배제) | KILLED | KILLED |
+| CM4 법인세 요건 제거 | KILLED (3) | KILLED (7) |
+| CM5 ⑫ Zod strip | KILLED | KILLED |
+| CM6 ④ 미탑재 | 통과 | KILLED |
+| CM7 ⑤ onChange 무력화 | 통과 | KILLED |
+| CM8 사유 문구 분기 제거 | KILLED (2) | KILLED |
+
+🔴 **두 층이 서로를 대체하지 못한다** — CM2는 anchor만, CM6·CM7은 E2E만 잡았다.
+CM2가 걸린 것은 고가 픽스처(나목 몫)를 anchor에 넣었기 때문이고, 그 테스트에
+**기준선 500,000,000을 같은 테스트에서 단언**해 두지 않았으면 「원래 0이었다」와 구별되지 않아
+구별력이 0이었을 것이다.
 
 ## 8. 이 문서가 닫지 않는 것
 

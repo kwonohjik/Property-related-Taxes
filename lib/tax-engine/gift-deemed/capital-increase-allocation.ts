@@ -11,6 +11,7 @@
  */
 import { GIFT } from "../legal-codes";
 import { computeWeightedPerShare, isSmallShareholder, meetsRatioThreshold } from "./capital-helpers";
+import { capTableShareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   CapShareholder,
@@ -60,7 +61,7 @@ function mergeSmallShareholderDonors(rows: DonationSplit[], smallIds: Set<string
 export function calcCapitalIncreaseAllocation(
   input: CapitalIncreaseAllocationInput,
 ): CapitalIncreaseAllocationResult {
-  const { preIssuePrice: pre, newSharePrice: priceIn, shareholders, direction } = input;
+  const { preIssuePrice: pre, newSharePrice: priceIn, shareholders, direction, issuerGainCorporateTaxed } = input;
   const preTotal = shareholders.reduce((a, s) => a + s.preShares, 0);
   const issuedActual = shareholders.reduce((a, s) => a + s.subscribedShares, 0);
 
@@ -170,6 +171,14 @@ export function calcCapitalIncreaseAllocation(
   for (const b of byShareholder) {
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
     const forProfitCorpOut = forProfitCorpIds.has(b.id); // §4의2①·③ 납세의무자 아님
+    // 「상증법」§4의2④ — 법인세가 부과된 영리법인의 **주주등**에는 증여세를 부과하지 아니한다.
+    //   ①③과 **수범자가 다르다**(①③=수증자 자신이 법인 / ④=그 법인의 주주등).
+    //   요건 ㉡(주주등 여부)은 **명부에서 읽는다** — `preShares > 0`. 행별 토글을 만들면
+    //   명부와 모순되는 답이 가능해진다(`capTableShareholderOfTaxedCorpExcluded` JSDoc).
+    const shareholderOfTaxedCorpOut = capTableShareholderOfTaxedCorpExcluded(
+      issuerGainCorporateTaxed,
+      shareholderById.get(b.id)?.preShares ?? 0,
+    );
 
     // 「상증법」§39①1호 **가·다·라목** 몫을 나목 몫과 가른다 — 국세청 재산세과-60(2010.2.1.)은
     //   「일부는 재배정하고 나머지는 실권처리한 경우 증여이익을 **각각 산정하여 합산**」한다고 한다.
@@ -216,14 +225,19 @@ export function calcCapitalIncreaseAllocation(
       const isRelated = isRelatedTo(d.id);
       const relationExcluded = relationGateApplies && !isRelated;
       // 가·다·라목분은 저가에서 특수관계·기준금액 어느 게이트도 받지 않는다.
-      const taxableRealloc = publicOfferingOut || forProfitCorpOut ? 0 : rawRealloc[i];
+      const taxableRealloc =
+        publicOfferingOut || forProfitCorpOut || shareholderOfTaxedCorpOut ? 0 : rawRealloc[i];
       const taxableForfeit =
-        publicOfferingOut || forProfitCorpOut || gatedOut || relationExcluded ? 0 : rawForfeit[i];
+        publicOfferingOut || forProfitCorpOut || shareholderOfTaxedCorpOut || gatedOut || relationExcluded
+          ? 0
+          : rawForfeit[i];
       const value = taxableRealloc + taxableForfeit;
       const excludedReason = forProfitCorpOut
         ? `영리법인 수증자 — 증여세 납세의무자가 아님 (${GIFT.FOR_PROFIT_CORP_NOT_TAXPAYER})`
         : publicOfferingOut
           ? "주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외"
+        : shareholderOfTaxedCorpOut
+          ? `법인세가 부과된 영리법인의 주주등 — 증여세 미부과 (${GIFT.SHAREHOLDER_OF_TAXED_CORP_EXEMPTION})`
         : value > 0
           ? undefined
           : gatedOut

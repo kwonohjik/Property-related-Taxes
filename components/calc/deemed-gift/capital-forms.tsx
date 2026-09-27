@@ -422,6 +422,24 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
       </ToneCard>
 
       {/*
+        「상증법」§4의2④ — 발행법인 수증이익에 법인세가 부과되면 「해당 법인의 **주주등**」에는
+        증여세를 부과하지 않는다. 행별 §4의2①·③(영리법인 **수증자**)과 **수범자가 다르다**.
+
+        🔑 주주 여부는 **행별 토글을 두지 않는다** — 명부의 「증자 전 보유」가 그 사실이다.
+           단건 모드가 목(目) 표로 판정하는 것은 명부가 없어서이고, 여기서 토글을 만들면
+           「증자 전 보유 0」인 행에 「주주다」라고 답하는 모순을 막을 수 없다.
+      */}
+      <ToggleCard
+        lawLinks="상증법"
+        tone="violet"
+        checked={form.ciAllocIssuerGainCorporateTaxed}
+        onCheckedChange={(v) => set({ ciAllocIssuerGainCorporateTaxed: v })}
+        title="발행법인 수증이익에 법인세 부과 (§4의2④)"
+        description="신주발행법인이 이 자본거래로 얻은 수증이익에 법인세가 부과된 경우입니다(비과세·감면 포함). 그 법인의 주주등에게는 증여세를 부과하지 않습니다 — 「증자 전 보유」가 있는 행만 배제되고, 0인 행(제3자 직접배정 = 「주주등이 아닌 자」)은 그대로 과세됩니다."
+        data-testid="ci-alloc-issuer-corp-taxed"
+      />
+
+      {/*
         주권상장법인 단서 미반영 안내 (안 C) — 계획서
         docs/00-pm/capital-increase-captable-listed-proviso.plan.md v1.2 §6 · v1.7 §13.
         차단(validate)하지 않고 **안내에 그친다**: 비상장 다주주 사용을 막아서도 안 된다.
