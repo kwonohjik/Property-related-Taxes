@@ -7,6 +7,8 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { commonForProfitDoneeGateApplies } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +108,24 @@ export function DeemedDetailModal({
 
           {/* ② 상세 입력 (유형별) */}
           {form.type && <DeemedInputFields form={form} set={set} />}
+
+          {/* 「상증법」§2 9호·§4의2①·③ — §39 밖 단일 수증자 13종 공통(7-12).
+              노출 여부를 폼이 따로 판단하지 않는다 — 엔진 라우터와 **같은 술어**를 쓴다.
+              명부형(§38·§39의2·§39의3·§41의2)은 수증자가 여럿이라 계산 단위 토글 하나로 판정할 수
+              없고, §45의2는 §4의2②가 실제소유자에게 납세의무를 지우며, §39는 자체 토글이 있다. */}
+          {form.type && commonForProfitDoneeGateApplies(form.type) && (
+            <div className="mt-4">
+              <ToggleCard
+                lawLinks="상증법"
+                tone="violet"
+                checked={form.doneeIsForProfitCorp}
+                onCheckedChange={(v) => set({ doneeIsForProfitCorp: v })}
+                title="수증자가 영리법인 (§2 9호·§4의2①·③)"
+                description="영리법인은 증여세 납세의무자가 아닙니다(「상증법」 제2조제9호 「수증자」 정의에 비영리법인만 포함). 산출된 이익은 산출근거에 「제외 전 산출 이익」으로 남습니다."
+                data-testid="deemed-donee-for-profit-corp"
+              />
+            </div>
+          )}
 
           {error && (
             <p
