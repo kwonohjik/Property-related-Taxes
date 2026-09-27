@@ -10,6 +10,7 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
@@ -226,6 +227,19 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
           {props.map((p, idx) => {
             const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
             const propIncome = (num(p.income) ?? 0) as number;
+            /**
+             * 고가주택 안분 후 과세대상 양도차익 (OH-62 형제) — `transferGain`은 안분 전 전체 차익이고
+             * `income`은 안분 후 차익 − 장특공제다. 이 행이 없으면 「전체 양도차익 − 장특공제 ≠
+             * 양도소득금액」이 된다. 역산은 화면 아코디언·신고서 어댑터와 같은 leaf다(#019).
+             */
+            const propTransferGain = (num(p.transferGain) ?? 0) as number;
+            const propTaxableGain = assetTaxableGain({
+              isExempt: bool(p.isExempt),
+              exemptGrossGain: num(p.exemptGrossGain) as number | undefined,
+              transferGain: propTransferGain,
+              income: propIncome,
+              longTermHoldingDeduction: (num(p.longTermHoldingDeduction) ?? 0) as number,
+            });
             const propReducibleIncome = reductionEligibleIncome(
               p.reductionType as string | undefined,
               propIncome,
@@ -245,6 +259,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
                     {num(p.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(p.transferPrice)}</Text></View>)}
                     {num(p.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(p.acquisitionPrice)}</Text></View>)}
                     <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
+                    {propTaxableGain !== propTransferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(propTaxableGain)}</Text></View>)}
                     {(num(p.longTermHoldingDeduction) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>)}
                     <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(propIncome)}</Text></View>
                     {(num(p.lossOffsetFromSameGroup) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>차손 통산 (동일그룹, §102②)</Text><Text style={s.val}>- {fmt(p.lossOffsetFromSameGroup)}</Text></View>)}
