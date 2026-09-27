@@ -3,6 +3,7 @@ import { GIFT } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound, meetsRatioThreshold } from "./capital-helpers";
 import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
+import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
 
@@ -151,7 +152,7 @@ export function calcCapitalIncreaseGift(input: CapitalIncreaseInput): DeemedGift
   const result = (input.direction ?? "low") === "high" ? increaseHigh(input) : increaseLow(input);
   // 「상증법」§4의2⑥ 단서 — 배제 열거의 「제35조부터 제39조까지」에 §39가 들어 있다.
   //   계산 분기와 무관한 **상수 표지**라 진입점에서 한 번만 붙인다(배제 경로도 함께 덮는다).
-  return { ...result, donorJointLiabilityExempt: true };
+  return { ...result, donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("capital_increase") };
 }
 
 /**

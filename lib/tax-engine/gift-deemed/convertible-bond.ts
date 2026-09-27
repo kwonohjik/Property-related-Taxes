@@ -7,12 +7,17 @@ import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleBondInput, ConvertibleBondClause } from "./types";
+import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 
 const ABSOLUTE_THRESHOLD = 100_000_000;
 
 /** §40 공통 증여세 연계 echo: 연대납부 면제(§4의2⑥)는 §40 전체, 합산배제(§47①)는 caseType별 호출부에서 지정 */
 function withGiftFlags(result: DeemedGiftResult, aggregationExcluded: boolean): DeemedGiftResult {
-  return { ...result, aggregationExcluded, donorJointLiabilityExempt: true };
+  return {
+    ...result,
+    aggregationExcluded,
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_bond"),
+  };
 }
 
 /**

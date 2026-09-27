@@ -12,6 +12,7 @@
 import { GIFT } from "../legal-codes";
 import { computeWeightedPerShare, isSmallShareholder, meetsRatioThreshold } from "./capital-helpers";
 import { capTableShareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
+import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   CapShareholder,
@@ -263,7 +264,7 @@ export function calcCapitalIncreaseAllocation(
     byShareholder,
     reconciliation: { totalGain, totalLoss, balanced: totalGain === totalLoss },
     // 「상증법」§4의2⑥ 단서 — §39는 배제 열거의 「제35조부터 제39조까지」에 든다(조건 없음)
-    donorJointLiabilityExempt: true,
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("capital_increase_allocation"),
     splits,
   };
 }

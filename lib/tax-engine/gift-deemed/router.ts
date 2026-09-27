@@ -22,8 +22,26 @@ import { calcValueIncreaseGift } from "./value-increase";
 import { calcSpecificCorpGift, calcSpecificCorpGiftMulti } from "./specific-corp";
 import { calcRelatedCorpGift } from "./related-corp";
 import { calcTrustBenefit } from "./trust-benefit";
+import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 
+/**
+ * 「상증법」§4의2⑥ 단서 — 증여자 연대납부의무 면제 표지를 **전 유형에 한 곳에서** 세운다.
+ *
+ * 유형만으로 결정되는 사실이라(입력 축 0개) 각 엔진에 흩어 두면 새 유형이 조용히 빠진다.
+ * 판정 자체는 `taxpayer-gate.ts`의 표가 갖는다 — 이 파일은 그 표를 적용만 한다.
+ *
+ * ⚠️ 이것은 「후처리」가 아니라 **결과 echo 필드**다. 금액·적용 여부에 손대지 않는다.
+ *    §39·§40 엔진은 leaf 호출자(테스트)를 위해 자기 결과에도 같은 표를 적용하며,
+ *    같은 표에서 파생되므로 값이 어긋날 수 없다.
+ */
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
+  return {
+    ...dispatchDeemedGift(input),
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType(input.type),
+  };
+}
+
+function dispatchDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   switch (input.type) {
     case "trust_benefit":
       return calcTrustBenefit(input);
@@ -73,7 +91,11 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcRelatedCorpGift(input);
   }
 }
-// 🔴 「router 후처리」는 **없다** — 이 파일은 `switch` 하나가 전부다.
+// 🔴 「router 후처리」로 **계산을 바꾸는 것은 없다** — 금액·적용 여부는 `dispatchDeemedGift`의
+//    `switch`가 전부다. 그 바깥에 있는 것은 §4의2⑥ 표지 한 줄(유형표 조회)뿐이고,
+//    이것은 계산이 아니라 **결과 echo 필드**다.
+//    ⚠️ 종전 문구는 「이 파일은 `switch` 하나가 전부다」였다 — 7-10에서 ⑥ 표지가 붙으면서
+//       그대로 두면 XX-B와 같은 stale 단언이 된다(아래 §43② 목록이 겪은 실패형).
 //    §43① 중복배제 구현체(`dup-exclusion.ts`의 `selectPrimaryDeemedGift`)는 프로덕션
 //    호출처가 0건이고(테스트만 참조), UI가 한 번에 한 유형만 계산하므로 도달 경로가 없다.
 //

@@ -2,6 +2,7 @@
 import { GIFT } from "../legal-codes";
 import { calcCapitalIncreaseGift } from "./capital-increase";
 import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
+import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleStockInput } from "./types";
 
@@ -86,7 +87,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     legalBasis: GIFT.CAPITAL_INCREASE,
     thresholdEcho: { gain: value },
     // §4의2⑥ 단서 — 배제돼도 「연대납부의무가 없다」는 사실은 남는다(다른 축이다)
-    donorJointLiabilityExempt: true,
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
   });
   if (doneeIsForProfitCorp) {
     return excluded(
@@ -108,7 +109,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     exclusionReason: applied ? undefined : "전환후 이익이 발행당시 이익 이하 — 추가 이익 없음",
     legalBasis: GIFT.CAPITAL_INCREASE,
     // §4의2⑥ 단서 — §39①3호도 「제35조부터 제39조까지」에 든다
-    donorJointLiabilityExempt: true,
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
     thresholdEcho: { gain: value },
   };
 }
