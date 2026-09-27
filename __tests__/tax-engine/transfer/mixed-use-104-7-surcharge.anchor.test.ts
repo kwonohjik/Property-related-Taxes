@@ -372,7 +372,10 @@ describe("Phase B2 — §167의10①15호 일시적 2주택 중과 배제 (겸�
   };
 
   it("T-B2a: temporaryTwoHouse 주입 → 배제. 중과·장특배제 모두 해제", () => {
-    const r = run({ multiHouse: multiHouse(1), temporaryTwoHouse: TTH });
+    // E-14 — §155①은 세대 **2주택**에서만 성립한다(정본 `resolveDeemedOneHouseBy155` 주택 수 게이트).
+    //   route는 세대 주택 수를 항상 싣는다(`mixed-use-asset-input.ts` householdHousingCountForExclusion) —
+    //   직접 호출 시료도 명부(multiHouse(1) = 2주택)와 같은 값을 준다.
+    const r = run({ multiHouse: multiHouse(1), temporaryTwoHouse: TTH, householdHousingCountForExclusion: 2 });
     expect(r.multiHouseSurcharge).toBeDefined(); // R-9 침묵 스킵 방어
     expect(r.multiHouseSurcharge!.exclusionReasons[0].type).toBe("temporary_two_house");
     expect(r.multiHouseSurcharge!.surchargeApplicable).toBe(false);

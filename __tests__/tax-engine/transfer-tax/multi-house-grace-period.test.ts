@@ -38,6 +38,11 @@ describe("MHG-01: inheritedDate end-to-end (houses[] → calculateTransferTax)",
       acquisitionDate: new Date("2020-01-01"),
       transferDate: new Date("2024-06-01"),
       isRegulatedArea: true,
+      // E-14 — 이 세대는 §155② 상속주택 + 일반주택이라 §154① 요건을 충족하면 15호가 **먼저** 배제한다
+      //   (10호와 결론이 같아 inheritedDate 도달을 가리지 못한다). 조정대상지역 취득·거주 0으로 §154①을
+      //   깨 15호 ② 요소를 끄고, §154① 요건이 없는 10호만 남긴다.
+      wasRegulatedAtAcquisition: true,
+      residencePeriodMonths: 0,
       householdHousingCount: 2,
       isOneHousehold: true,
       sellingHouseId: "h1",

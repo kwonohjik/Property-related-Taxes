@@ -673,7 +673,10 @@ export function resolveDeemedOneHouseBy155(
   // F-1 — ①과 ④⑤가 겹친 3주택. ① 단독 분기보다 먼저 본다(합가 근거를 잃지 않게).
   const overlap = resolveMergeOverlapDeeming(input, twoHouseRule);
   if (overlap) return overlap;
+  // E-14 — §155① 「1주택을 소유한 1세대가 … 일시적으로 2주택」: 비과세 E-3과 같은 주택 수 2 게이트
+  //   (3주택 세대의 명부가 중과 불산입 주택을 「신규 주택」으로 도출해 15호가 새던 결함 · 부동산납세과-1179).
   if (
+    input.householdHousingCount === 2 &&
     input.temporaryTwoHouse &&
     twoHouseRule &&
     evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall

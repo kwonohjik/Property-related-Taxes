@@ -6,7 +6,7 @@
  * 모두 `workingInput`을 읽어 판정 결과를 내고, 그 결과로 파생 입력
  * (`effectiveInput`)을 만든다. 세액 계산 자체는 하지 않는다.
  */
-import { NBL } from "./legal-codes";
+import { NBL, INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -19,10 +19,55 @@ import { judgeNonBusinessLand } from "./non-business-land";
 import type { NonBusinessLandJudgment } from "./non-business-land";
 import { resolveDeemedOneHouseBy155, qualifiesUnavoidableOutsideCapital, meetsOneHouseHoldingResidence } from "./transfer-tax-helpers";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
+import { resolveExemptionHouseCountExclusions, surcharge15HouseCount } from "./transfer-tax-house-exclusion-step";
+import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import type { IncomeDeductionId } from "./transfer-reductions";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
 type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
+
+/**
+ * 영 §167의10①15호(·§167의3①13호) **① 요소** — 「제155조 … 에 따라 1세대가 국내에 1개의 주택을 소유하고
+ * 있는 것으로 보거나 1세대 1주택으로 보아 제154조제1항이 적용되는 주택」 (E-14).
+ *
+ * 🔴 종전에는 **원시 세대 주택 수**로 `resolveDeemedOneHouseBy155`를 불렀고, 그 함수의 §155① 분기는 주택 수를
+ *    보지 않았다. 3주택 세대(강남 2채 + 지방 기준시가 2억 1채)에서 명부 도출이 중과 불산입 주택(영 §167의3①1호)을
+ *    「신규 주택」으로 골라 15호가 성립했다 — 세대는 §155 기준 3주택이라 비과세도 과세인데(부동산납세과-1179,
+ *    2018.12.12. 「1세대 3주택자가 해당 주택을 양도하는 경우에는 같은 호가 적용되지 아니하는 것」).
+ * ⇒ 비과세 정본과 **같은 주택 수**(§155②③·조특법 제외 후 — `surcharge15HouseCount`)로 판정한다.
+ *
+ * §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 ①·④⑤·⑦ 어느 분기에도 걸리지 않는다. 종전에는 상속주택이
+ * 「신규 주택」으로 도출되고 1년·3년 타이밍이 맞을 때만 §155① 분기로 **우연히** 덮였다 ⇒ 경로를 따로 둔다.
+ * 조특법 제외가 섞이면 이 경로를 열지 않는다(`surcharge15HouseCount` 주석 — 확인 필요).
+ */
+export function resolveSurchargeDeemedOneHouse(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): DeemedOneHouseBasis | undefined {
+  const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
+  const inheritedExcluded = ex.inheritedExclusion.excludedCount;
+  const count = surcharge15HouseCount(
+    workingInput.householdHousingCount,
+    inheritedExcluded,
+    ex.specialActExcludedCount,
+  );
+  const deemed = resolveDeemedOneHouseBy155(
+    { ...workingInput, householdHousingCount: count },
+    parsedRates.oneHouseSpecialRules,
+  );
+  if (deemed) return deemed;
+  if (
+    workingInput.isOneHousehold &&
+    count === 1 &&
+    inheritedExcluded > 0 &&
+    ex.specialActExcludedCount === 0 &&
+    workingInput.transferDate >= INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE
+  ) {
+    return "inherited_general_house";
+  }
+  return undefined;
+}
 
 /** STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정. */
 export function runMultiHouseSurchargeStep(
@@ -30,6 +75,8 @@ export function runMultiHouseSurchargeStep(
   parsedRates: ParsedRates,
   steps: CalculationStep[],
   surchargeExclusionByReduction: SurchargeExclusionByReduction,
+  /** §99의4·§98의9 「취득 전 보유 주택」 판정 기준일 — STEP 0.9와 같은 값(`hceGeneralHouseAcquisitionDate`) */
+  generalHouseAcquisitionDate?: Date,
 ): MultiHouseSurchargeResult | undefined {
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
@@ -49,7 +96,8 @@ export function runMultiHouseSurchargeStep(
       //   `meetsOneHouseHoldingResidence`를 여기서 precompute하는 것과 같은 패턴이다.
       //   ⚠️ 타이밍(요건 A·B)만 본다 — §154① 충족(② 요소)은
       //   `sellingHouseMeetsOneHouseRequirements`가 별도로 담당하며, 중과 엔진이 둘을 AND한다.
-      deemedOneHouseBy155: resolveDeemedOneHouseBy155(workingInput, parsedRates.oneHouseSpecialRules),
+      //   E-14 — 주택 수는 원시값이 아니라 비과세 정본의 값이다(`resolveSurchargeDeemedOneHouse`).
+      deemedOneHouseBy155: resolveSurchargeDeemedOneHouse(workingInput, parsedRates, generalHouseAcquisitionDate),
       // 영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택. 15호와 **별개 호**라 슬롯이 다르다.
       //   요건(2주택·해소일부터 3년) 판정은 비과세와 같은 정본을 쓴다.
       unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(workingInput),

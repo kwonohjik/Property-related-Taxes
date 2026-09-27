@@ -329,6 +329,15 @@ function deemedOneHouseExclusionReason(
         type: "rural_house",
         detail: `농어촌주택 보유 1세대1주택 의제 (${MULTI_HOUSE.RURAL_HOUSE_2HOUSE_BASIS})`,
       };
+    case "inherited_general_house":
+      return {
+        type: "inherited_general_house",
+        detail: `상속주택 보유 일반주택 1세대1주택 의제 (${
+          input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE
+            ? MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS_OLD
+            : MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS
+        })`,
+      };
     case "marriage_merge_overlap":
     case "parental_care_merge_overlap": {
       const marriage = input.deemedOneHouseBy155 === "marriage_merge_overlap";
