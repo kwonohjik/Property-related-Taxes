@@ -14,7 +14,7 @@
  *    덮는다. 순서를 바꾸면 안분 비율이 배제 후 값에 적용된다.
  */
 
-import { isWithinPeriod } from "./civil-period";
+import { isWithinDeadline } from "./civil-period";
 import { REDEVELOPMENT } from "./legal-codes";
 import { preApprovalNecessaryExpense } from "./redevelopment-split";
 import type {
@@ -272,7 +272,8 @@ export function resolveOneRightExemptionClause(
     if (!acquired) return undefined;
     // 「취득한 날부터 3년 이내」 — 초일불산입(민법 §157·§160). `setFullYear`는 2/29 취득을 3/1로 넘겨
     //   하루 길었고, 평년 2/28 취득은 윤년 2/29 만료를 하루 짧게 봤다.
-    return isWithinPeriod(acquired, CLAUSE_NA_YEARS, input.transferDate) ? "na" : undefined;
+    //   말일이 토요일·공휴일이면 익일(국세기본법 §4 → 민법 §161 — L-1).
+    return isWithinDeadline(acquired, CLAUSE_NA_YEARS, input.transferDate) ? "na" : undefined;
   }
 
   return undefined;

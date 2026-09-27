@@ -80,13 +80,14 @@ describe("§155④ 동거봉양 합가 — 양도일 연혁", () => {
 describe("pending 합가 축 — 기한도 같은 연혁을 쓴다", () => {
   const RULES = mockRates.get("transfer:special:one_house_exemption")!
     .specialRules as unknown as OneHouseSpecialRulesData;
-  it("혼인 2015-01-01 · 양도 2023-06-01 → 기한 2020-01-01(5년 만료일)", () => {
+  // L-1 — 5년 역상 말일 2020-01-01은 1월 1일 공휴일이라 기한은 01-02(국세기본법 §4 → 민법 §161).
+  it("혼인 2015-01-01 · 양도 2023-06-01 → 기한 2020-01-02(5년 역상 말일 01-01 공휴일 → 익일)", () => {
     const j = judgeOneHouseExemptionFromInput(
       merge("2023-06-01", { marriageMerge: { marriageDate: d("2015-01-01") } }) as OneHouseJudgeInput,
       RULES,
     );
     const p = j.pending.find((x) => x.id === "155-5-marriage-merge");
-    expect(p?.deadline.toISOString().slice(0, 10)).toBe("2020-01-01");
+    expect(p?.deadline.toISOString().slice(0, 10)).toBe("2020-01-02");
   });
 });
 

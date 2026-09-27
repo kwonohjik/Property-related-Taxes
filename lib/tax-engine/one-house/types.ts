@@ -217,7 +217,10 @@ export type OneHousePendingCondition = {
   id: string;
   /** 「종전주택을 이 날짜까지 양도」처럼 **무엇을 해야 하는지** */
   description: string;
+  /** 기한 말일(그 날 당일까지) — 토요일·공휴일이면 민법 §161로 연장된 날 */
   deadline: Date;
+  /** 연장됐거나 공휴일 표 밖이면 한 줄 설명(L-1) */
+  deadlineNote?: string;
   legalBasis: string;
 };
 

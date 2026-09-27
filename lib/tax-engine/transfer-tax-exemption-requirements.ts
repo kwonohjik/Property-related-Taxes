@@ -13,7 +13,7 @@
  */
 
 import { format } from "date-fns";
-import { isWithinPeriod } from "./civil-period";
+import { isWithinDeadline } from "./civil-period";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -81,7 +81,7 @@ export function qualifiesRuralHouse(
   const r = input.ruralHouse!;
   if (r.kind !== "return_to_farm") return true;
   // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정.
-  return isWithinPeriod(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
+  return isWithinDeadline(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
 }
 
 /**
@@ -134,7 +134,7 @@ export function qualifiesUnavoidableOutsideCapital(
   if (input.householdHousingCount !== 2 || !u) return false;
   // 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 본다(계획서 W-1).
   if (u.resolvedDate === undefined) return true;
-  return isWithinPeriod(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate);
+  return isWithinDeadline(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate);
 }
 
 /**
@@ -368,13 +368,13 @@ export function resolveExemptionProviso(
       //   §154①2호가목의 5년은 **수용일 기산**이므로, 수용일을 모르면 요건을 판정할 수 없다
       //   → 특례 미적용(null)이 맞다. 미입력을 유리하게 추정할 근거가 없다.
       if (!p.expropriationDate) return null;
-      return isWithinPeriod(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS, input.transferDate)
+      return isWithinDeadline(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS, input.transferDate)
         ? "both"
         : null;
     case "overseas_migration":
     case "overseas_residence":
       // 2호 나·다목: 출국일부터 2년 이내
-      return p.departureDate && isWithinPeriod(p.departureDate, C.OVERSEAS_TRANSFER_YEARS, input.transferDate)
+      return p.departureDate && isWithinDeadline(p.departureDate, C.OVERSEAS_TRANSFER_YEARS, input.transferDate)
         ? "both"
         : null;
     case "unavoidable":
@@ -718,7 +718,7 @@ function matchMergeWindow(
   if (!m) return undefined;
   // 연수는 **양도일** 연혁이다 — 대통령령 제28637호 부칙 제2조②(동거봉양) · 제34990호 부칙 제2조(혼인).
   const years = resolveMergeExemptionYears(m.kind, input.transferDate);
-  if (!isWithinPeriod(m.mergeDate, years, input.transferDate)) return undefined;
+  if (!isWithinDeadline(m.mergeDate, years, input.transferDate)) return undefined;
   return m.kind === "marriage" ? "marriage_merge" : "parental_care_merge";
 }
 

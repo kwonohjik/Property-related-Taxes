@@ -57,10 +57,11 @@ describe("OH-23 합가 축 — 주택 수 요건", () => {
     expect(judge({ ...MARRIAGE, householdHousingCount: 4, transferDate: D("2014-06-01") }).isExempt).toBe(false);
   });
 
-  it("[C2-23a+] 긍정 짝 — 2주택이면 기한(2015-01-01)을 낸다 · 기한 안이면 실제로 비과세다", () => {
+  // L-1 — 역상 말일 2015-01-01(1월 1일 공휴일) → 기한 01-02(국세기본법 §4 → 민법 §161).
+  it("[C2-23a+] 긍정 짝 — 2주택이면 기한(2015-01-02)을 낸다 · 기한 안이면 실제로 비과세다", () => {
     const r = judge({ ...MARRIAGE, householdHousingCount: 2 });
     expect(r.pending.map((p) => p.id)).toEqual(["155-5-marriage-merge"]);
-    expect(iso(r.pending[0].deadline)).toBe("2015-01-01");
+    expect(iso(r.pending[0].deadline)).toBe("2015-01-02");
     expect(judge({ ...MARRIAGE, householdHousingCount: 2, transferDate: D("2014-06-01") }).isExempt).toBe(true);
   });
 
@@ -125,10 +126,11 @@ describe("OH-23 귀농 3호 축 — ⑦ 소재 · ⑩2·3·5호", () => {
   const ids = (over: Record<string, unknown>) =>
     judge({ householdHousingCount: 2, ruralHouse: RURAL(over), ...RESIDENCE_FREE }).pending.map((p) => p.id);
 
-  it("[C2-23c+] 긍정 짝 — 요건을 모두 갖춘 귀농주택은 5년 기한(2020-01-01)을 낸다", () => {
+  // L-1 — 역상 말일 2020-01-01(1월 1일 공휴일) → 기한 01-02(국세기본법 §4 → 민법 §161).
+  it("[C2-23c+] 긍정 짝 — 요건을 모두 갖춘 귀농주택은 5년 기한(2020-01-02)을 낸다", () => {
     const r = judge({ householdHousingCount: 2, ruralHouse: RURAL(), ...RESIDENCE_FREE });
     expect(r.pending.map((p) => p.id)).toEqual(["155-7-3ho-return-to-farm"]);
-    expect(iso(r.pending[0].deadline)).toBe("2020-01-01");
+    expect(iso(r.pending[0].deadline)).toBe("2020-01-02");
   });
 
   it("[C2-23c] 대지 800㎡(⑩3호 660㎡ 초과) → 기한 안이어도 과세 → pending 없음", () => {

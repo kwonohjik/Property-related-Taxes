@@ -326,6 +326,11 @@ function TempTwoHouseCoreBlocks({
                     {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
                     {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
                   </p>
+                  {tempTwoHouseVerdict.deadlineNote && (
+                    <p data-testid="temp-two-house-deadline-note" className="text-caption">
+                      {tempTwoHouseVerdict.deadlineNote}
+                    </p>
+                  )}
                   {/* §155①2호 가목 — 2019-12-17 체제에서만(엔진 연혁 leaf가 정한다) */}
                   {(tempTwoHouseVerdict.moveInMet !== undefined || tempTwoHouseVerdict.moveInPending) && (
                     <p>

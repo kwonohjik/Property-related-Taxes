@@ -13,7 +13,7 @@
  */
 
 import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
-import { isWithinPeriod } from "./civil-period";
+import { isWithinDeadline } from "./civil-period";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
@@ -225,7 +225,7 @@ function checkExemptionCore(
     const deadlineYears = resolve1562DeadlineYears(input.transferDate);
     const meetsTransferTiming =
       input.transferDate < rh.completionDate ||
-      isWithinPeriod(rh.completionDate, deadlineYears, input.transferDate);
+      isWithinDeadline(rh.completionDate, deadlineYears, input.transferDate);
     // ③ 신축주택 1년 이상 거주 (전제 — 자기선언, 미충족 시 §156의2⑬ 추징)
     const meetsNewHouseResidence = rh.willResideNewHouse === true;
 

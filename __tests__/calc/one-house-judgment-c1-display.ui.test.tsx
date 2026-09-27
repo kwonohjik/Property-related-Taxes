@@ -120,19 +120,22 @@ describe("OH-57 요건 카드의 처분기한 — §155⑯ 지역 요건을 엔�
       { acquisitionDate: "2018-01-01" },
     );
 
-  it("[C1-57a] 비연접(제주시) → 3년 기한(2025-03-01) · 「요건 미충족」", () => {
+  // L-1 — 역상 말일 2025-03-01(토 3·1절)·02(일)·03(월 대체공휴일) → 기한 03-04(국세기본법 §4 → 민법 §161).
+  it("[C1-57a] 비연접(제주시) → 3년 기한(역상 2025-03-01 → 03-04) · 「요건 미충족」", () => {
     render(<Step2 form={f("5011000000")} onChange={() => {}} />);
     expect(screen.getByText("일시적 2주택 특례 요건 미충족")).toBeInTheDocument();
     const card = screen.getByTestId("temp-two-house-verdict").textContent ?? "";
-    expect(card).toContain("처분기한 2025-03-01");
+    expect(card).toContain("처분기한 2025-03-04");
+    expect(screen.getByTestId("temp-two-house-deadline-note").textContent).toContain("역상 말일 2025-03-01");
     expect(card).toContain("3년 내 종전주택 양도");
   });
 
-  it("[C1-57b] 긍정 짝 — 이전한 시·군과 같으면 5년 기한(2027-03-01) · 「요건 충족」", () => {
+  // L-1 — 역상 말일 2027-03-01(월 3·1절) → 기한 03-02(민법 §161).
+  it("[C1-57b] 긍정 짝 — 이전한 시·군과 같으면 5년 기한(역상 2027-03-01 → 03-02) · 「요건 충족」", () => {
     render(<Step2 form={f("4111700000")} onChange={() => {}} />);
     expect(screen.getByText("일시적 2주택 특례 요건 충족")).toBeInTheDocument();
     const card = screen.getByTestId("temp-two-house-verdict").textContent ?? "";
-    expect(card).toContain("처분기한 2027-03-01");
+    expect(card).toContain("처분기한 2027-03-02");
     expect(card).toContain("5년 내 종전주택 양도");
   });
 });

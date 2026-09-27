@@ -251,7 +251,9 @@ describe("POST /api/calc/one-house-exemption", () => {
     expect(json.data.judgment.pending.map((p: { id: string }) => p.id)).toEqual([
       "155-1-disposal-deadline",
     ]);
-    expect(String(json.data.judgment.pending[0].deadline).slice(0, 10)).toBe("2023-07-01");
+    // L-1 — 역상 말일 2023-07-01(토) → 기한 07-03(월)(국세기본법 §4 → 민법 §161). 설명도 응답에 실린다.
+    expect(String(json.data.judgment.pending[0].deadline).slice(0, 10)).toBe("2023-07-03");
+    expect(json.data.judgment.pending[0].deadlineNote).toContain("2023-07-01");
   });
 
   it("[R-6] 1세대 비해당 선언은 판정 대상이 아니다 — 기한도 없다", async () => {

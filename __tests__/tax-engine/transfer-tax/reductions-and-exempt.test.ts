@@ -326,7 +326,9 @@ describe("T-33: 일시적 2주택 처분기한 초과 → 비과세 불가", () 
       transferPrice: 900_000_000,
       acquisitionPrice: 400_000_000,
       acquisitionDate: new Date("2018-01-01"),  // 종전주택 취득 (6년 보유)
-      transferDate: new Date("2024-01-02"),     // 처분기한(2024-01-01) 1일 초과
+      // L-1 — 역상 말일 2024-01-01은 1월 1일 공휴일이라 기한은 01-02까지(국세기본법 §4 → 민법 §161).
+      //   「1일 초과」 의도를 지키려고 양도일을 연장된 말일 다음 날(01-03)로 옮겼다.
+      transferDate: new Date("2024-01-03"),     // 처분기한(2024-01-02) 1일 초과
       isOneHousehold: true,
       householdHousingCount: 2,
       isRegulatedArea: false,
@@ -338,7 +340,7 @@ describe("T-33: 일시적 2주택 처분기한 초과 → 비과세 불가", () 
       },
     });
     const result = calculateTransferTax(input, mockRates);
-    // 처분기한(2024-01-01) 초과 → 비과세 불가
+    // 처분기한(2024-01-02) 초과 → 비과세 불가
     expect(result.isExempt).toBe(false);
     expect(result.totalTax).toBeGreaterThan(0);
   });

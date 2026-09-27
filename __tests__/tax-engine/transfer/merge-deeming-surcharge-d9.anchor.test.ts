@@ -106,12 +106,14 @@ describe("D9 합가 중과배제 — §167의10①15호·§167의3①13호", () 
     expect(calc({ ...s, ...MM("2022-01-01") }).totalTax).toBe(299_816_000);
   });
 
-  it("D9-A4 합가일부터 정확히 10년 되는 날 양도 → 10년 이내(경계 포함) 배제 · 다음 날은 배제 없음 (15억)", () => {
+  // L-1 — 10년 역상 말일 2026-08-01은 토요일이라 기한은 08-03(월)까지(국세기본법 §4 → 민법 §161).
+  //   「다음 날은 배제 없음」은 연장된 말일 다음 날(08-04)로 잰다.
+  it("D9-A4 합가일부터 정확히 10년 되는 날 양도 → 10년 이내(경계 포함) 배제 · 기한(토요일 → 월요일 08-03) 다음 날은 배제 없음 (15억)", () => {
     const hv = { transferPrice: 1_500_000_000, residencePeriodMonths: 60 };
     const at = households(2, "2026-08-01", "2010-01-01", hv);
     expect(calc({ ...at, ...PC("2016-08-01") }).totalTax).toBe(19_013_498);
     expect(calc({ ...at, ...MM("2016-08-01") }).totalTax).toBe(19_013_498);
-    const after = households(2, "2026-08-02", "2010-01-01", hv);
+    const after = households(2, "2026-08-04", "2010-01-01", hv);
     expect(calc({ ...after, ...PC("2016-08-01") }).totalTax).toBe(520_228_500);
     expect(calc({ ...after, ...MM("2016-08-01") }).totalTax).toBe(520_228_500);
   });
@@ -173,9 +175,11 @@ describe("resolveMergeDeeming — §155④⑤ 합가 의제 정본(비과세 E-3
     expect(resolveMergeDeeming({ ...base, acquisitionDate: new Date("2016-08-01") })).toBe("parental_care_merge");
     expect(resolveMergeDeeming({ ...base, acquisitionDate: new Date("2016-08-02") })).toBeUndefined();
   });
-  it("합가일부터 정확히 10년 되는 날은 성립, 다음 날은 불성립", () => {
+  // L-1 — 역상 말일 2026-08-01(토) → 기한 08-03(월)(민법 §161). 월요일까지 성립, 화요일 불성립.
+  it("합가일부터 정확히 10년 되는 날은 성립, 기한(토요일 → 월요일) 다음 날은 불성립", () => {
     expect(resolveMergeDeeming({ ...base, transferDate: new Date("2026-08-01") })).toBe("parental_care_merge");
-    expect(resolveMergeDeeming({ ...base, transferDate: new Date("2026-08-02") })).toBeUndefined();
+    expect(resolveMergeDeeming({ ...base, transferDate: new Date("2026-08-03") })).toBe("parental_care_merge");
+    expect(resolveMergeDeeming({ ...base, transferDate: new Date("2026-08-04") })).toBeUndefined();
   });
   it("합가 전 양도는 불성립", () => {
     expect(resolveMergeDeeming({ ...base, transferDate: new Date("2016-07-31") })).toBeUndefined();

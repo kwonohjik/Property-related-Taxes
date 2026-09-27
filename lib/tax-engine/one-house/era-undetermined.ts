@@ -12,10 +12,11 @@
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | 2019-12-16 이전 사업자등록·임대사업자 등록 신청 사실 · 임대의무기간·5% 증액 단서 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
+ * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  */
-import { TRANSFER } from "../legal-codes";
+import { DEADLINE_HOLIDAY_EXTENSION_161, PERIOD_CALCULATION_4, TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import {
   meetsOneHouseResidenceRequirement,
@@ -27,6 +28,11 @@ import {
   resolveTemporaryTwoHouseDeadline,
 } from "../transfer-tax-temporary-two-house-timing";
 import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
+import { holidayTableUncoveredBefore } from "../civil-period";
+import {
+  PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
+  PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
+} from "../data/public-holidays-kr";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 
 /**
@@ -48,6 +54,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-1-4ho-rental-registration-unverified",
   "155-1-move-in-requirement-unverified",
   "155-1-regulated-at-new-acquisition-unverified",
+  "civil-161-holiday-table-uncovered",
 ]);
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
@@ -143,6 +150,31 @@ export function collectEraUndetermined(
           "세대전원 전입일이 입력되지 않아 전입 요건은 판정하지 않았습니다(처분기한만 적용).",
       });
     }
+  }
+
+  /*
+   * L-1 — 「~이내」 기한(§155①④⑤⑦⑧·§154① 단서·§156의2·§156의3)은 말일이 토요일·공휴일이면 익일로 만료한다
+   * (민법 §161). 양도일 직전이 공휴일 표 밖의 해면 토·일요일만 반영했으므로 결론과 무관하게 밝힌다.
+   * 기한 축을 선언하지 않은 세대에게는 말하지 않는다.
+   */
+  const hasWithinDeadlineAxis =
+    !!input.temporaryTwoHouse ||
+    !!input.marriageMerge ||
+    !!input.parentalCareMerge ||
+    !!input.unavoidableOutsideCapitalHouse?.resolvedDate ||
+    input.ruralHouse?.kind === "return_to_farm" ||
+    !!input.oneHouseExemptionProviso ||
+    (input.presaleRights?.length ?? 0) > 0 ||
+    !!input.replacementHouse;
+  if (hasWithinDeadlineAxis && holidayTableUncoveredBefore(input.transferDate)) {
+    out.push({
+      id: "civil-161-holiday-table-uncovered",
+      reason:
+        `「~이내」 기한의 말일이 토요일·공휴일이면 다음 날까지 늘어납니다(${PERIOD_CALCULATION_4} → ${DEADLINE_HOLIDAY_EXTENSION_161}). ` +
+        `관공서 공휴일 계산표는 ${PUBLIC_HOLIDAY_TABLE_FIRST_YEAR}~${PUBLIC_HOLIDAY_TABLE_LAST_YEAR}년만 담고 있어 ` +
+        "양도일 직전 기간의 공휴일(설·추석·대체공휴일·임시공휴일 등)은 반영하지 못하고 토·일요일만 반영했습니다 — " +
+        "기한 말일이 공휴일이었다면 직접 확인하세요.",
+    });
   }
 
   return out;

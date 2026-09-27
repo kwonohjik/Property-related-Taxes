@@ -25,7 +25,7 @@
  */
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { addDays, addYears } from "date-fns";
-import { isWithinPeriod, periodEndFrom } from "../civil-period";
+import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-period";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
   resolveInheritedHouseExclusionFromInput,
@@ -153,6 +153,7 @@ export function collectPendingConditions(
       id: "156-2-3-right-three-year",
       description: "주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세",
       deadline: article89Clause2.deadline,
+      ...(article89Clause2.deadlineNote ? { deadlineNote: article89Clause2.deadlineNote } : {}),
       legalBasis: TRANSFER.RIGHT_HOLDING_EXCLUSION,
     });
     // §89② 배제가 확정된 이상 아래 §154①·§155 축의 기한을 함께 내면 「무엇을 하면 되는지」가
@@ -188,6 +189,7 @@ export function collectPendingConditions(
         id: "155-1-disposal-deadline",
         description: "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세",
         deadline: timing.deadline,
+        ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}),
         /**
          * 🔴 **`shortArticle`을 쓰지 않는다.** 이 필드는 `exemptReason` 문장 속 인라인 인용이
          *    아니라 화면이 `LawArticleModal legalBasis=`로 넘기는 **구조화 인용**이다.
@@ -205,7 +207,7 @@ export function collectPendingConditions(
    * (N = 양도일 연혁 — `resolveMergeExemptionYears`, OH-29).
    *
    * `resolveMergeDeeming`은 기한을 넘기면 `undefined`를 돌려줄 뿐 날짜를 남기지 않는다
-   * (`matchMergeWindow`의 `isWithinPeriod(mergeDate, years, …)`).
+   * (`matchMergeWindow`의 `isWithinDeadline(mergeDate, years, …)` — 민법 §161 연장 포함).
    * 같은 기간 함수·같은 연수로 기한(만료일 — 초일불산입)을 복원한다.
    */
   const mergeAxes: Array<{
@@ -244,14 +246,14 @@ export function collectPendingConditions(
     // 엔진이 실제로 판정하는 축만 — 혼인·동거봉양이 둘 다 있으면 혼인만 본다.
     if (mergeApart?.kind !== axis.kind) continue;
     const years = resolveMergeExemptionYears(axis.kind, input.transferDate);
-    const deadline = periodEndFrom(axis.mergeDate, years);
+    const dl = deadlineEndFrom(axis.mergeDate, years);
     // 기한 내인데 과세면 원인이 다른 곳이다
-    if (isWithinPeriod(axis.mergeDate, years, input.transferDate)) continue;
+    if (isWithinDeadline(axis.mergeDate, years, input.transferDate)) continue;
     if (!meetsOneHouseHoldingResidence(input, rule)) continue;
     pending.push({
       id: axis.id,
       description: `${axis.label}부터 이 날짜까지 두 주택 중 먼저 양도하는 주택을 양도해야 비과세`,
-      deadline,
+      ...deadlineFields(dl),
       legalBasis: axis.basis,
     });
   }
@@ -264,15 +266,15 @@ export function collectPendingConditions(
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
   if (unavoidable?.resolvedDate && input.householdHousingCount === 2) {
-    const deadline = periodEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
+    const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
-      !isWithinPeriod(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
+      !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
       meetsOneHouseHoldingResidence(input, rule)
     ) {
       pending.push({
         id: "155-8-unavoidable-resolved",
         description: "부득이한 사유가 해소된 날부터 이 날짜까지 일반주택을 양도해야 비과세",
-        deadline,
+        ...deadlineFields(dl),
         legalBasis: TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL,
       });
     }
@@ -286,15 +288,15 @@ export function collectPendingConditions(
   const rural = input.ruralHouse;
   // 🔴 ⑦ 소재 · ⑩2·3·5호도 같은 술어로 본다(OH-23) — 기한만 남은 세대에게만 기한을 안내한다.
   if (rural?.kind === "return_to_farm" && rural.acquisitionDate && qualifiesRuralHouseApartFromDeadline(input)) {
-    const deadline = periodEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+    const dl = deadlineEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
     if (
-      !isWithinPeriod(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
+      !isWithinDeadline(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
       meetsOneHouseHoldingResidence(input, rule)
     ) {
       pending.push({
         id: "155-7-3ho-return-to-farm",
         description: "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세",
-        deadline,
+        ...deadlineFields(dl),
         // 위와 같은 이유로 법령명을 남긴다 — `§155⑦3호`만으로는 파싱되지 않는다.
         legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
       });

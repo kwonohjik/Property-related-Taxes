@@ -80,7 +80,7 @@ import type {
   MergedHouseholdFirstHouse,
 } from "./types/transfer.types";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
-import { isAfterPeriod, isWithinPeriod, periodEndFrom } from "./civil-period";
+import { deadlineEndFrom, deadlineEndNote, isAfterPeriod, isWithinDeadline } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
 import {
   waivesPriorHouseOneYearGap,
@@ -148,8 +148,10 @@ export interface Article89Clause2Result {
    *
    * 🔑 **세액에는 영향이 없다** — 판정(`status`)은 이 필드 없이도 종전과 똑같이 난다.
    *    3년 기한을 **판정한 경로**에서만 채워지므로, 값이 없다는 것은 「그 축을 보지 않았다」는 뜻이다.
+   * 말일이 토요일·공휴일이면 익일(민법 §161 — L-1) — 연장된 날이며 `deadlineNote`가 이유를 말한다.
    */
   deadline?: Date;
+  deadlineNote?: string;
 }
 
 /** 이 술어가 읽는 입력만 — 겸용주택 등 부분 입력 경로도 그대로 재사용할 수 있게 좁힌다. */
@@ -368,8 +370,10 @@ export function resolveArticle89Clause2(
   const oneYearMet =
     waivesPriorHouseOneYearGap(input) ||
     isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
-  const deadline = periodEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
-  const withinDeadline = isWithinPeriod(
+  const dl = deadlineEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
+  const note = deadlineEndNote(dl);
+  const deadline = dl.end;
+  const withinDeadline = isWithinDeadline(
     right.acquisitionDate,
     ARTICLE_156_2_3_DEADLINE_YEARS,
     input.transferDate,
@@ -417,7 +421,7 @@ export function resolveArticle89Clause2(
       return {
         status: "undetermined",
         openArticles: thirdClauseOpen ? [fourthClause, "소득세법 시행규칙 §75 ①"] : [fourthClause],
-        ...(thirdClauseOpen ? { deadline } : {}),
+        ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}),
       };
     }
     if (
@@ -434,7 +438,7 @@ export function resolveArticle89Clause2(
             : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
       };
     }
-    return { status: "excluded", ...(thirdClauseOpen ? { deadline } : {}) };
+    return { status: "excluded", ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}) };
   }
 
   /**
@@ -568,7 +572,7 @@ function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHous
       clause === "⑧" ? "parental_care" : "marriage",
       input.transferDate,
     );
-    if (!isWithinPeriod(date, years, input.transferDate)) continue;
+    if (!isWithinDeadline(date, years, input.transferDate)) continue;
     const item = matchMergedHouseholdClause(declared, {
       mergeDate: date,
       houseAcquisitionDate: input.acquisitionDate,
@@ -723,7 +727,7 @@ function meetsThreeYearException(
   // 2호 후단 — 완성일 + N년 이내(N = 양도일 연혁). 완성일이 양도일보다 뒤인 저장분도 전단으로 성립한다.
   return (
     transferDate < declared.completionDate ||
-    isWithinPeriod(declared.completionDate, resolve1562DeadlineYears(transferDate), transferDate)
+    isWithinDeadline(declared.completionDate, resolve1562DeadlineYears(transferDate), transferDate)
   );
 }
 
@@ -735,7 +739,7 @@ export function isRightThreeYearExceeded(p: {
   rightAcquisitionDate: Date;
   transferDate: Date;
 }): boolean {
-  return !isWithinPeriod(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS, p.transferDate);
+  return !isWithinDeadline(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS, p.transferDate);
 }
 
 function dedupe(items: string[]): string[] {
