@@ -280,6 +280,7 @@ export default function OneHouseJudgmentCalculator() {
                 isLoading={isLoading}
                 onJudge={handleJudge}
                 onCalculateTax={handleCalculateTax}
+                transferDate={formData.transferDate || undefined}
               />
             )}
 

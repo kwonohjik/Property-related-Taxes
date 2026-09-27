@@ -332,6 +332,7 @@ export function AssetSectionAcquisition({
             onChange={onChange}
             isOneHouseSingle={isOneHouseSingle}
             judgmentLoaded={judgmentLoaded}
+            transferDate={transferDate}
           />
         )
       )}

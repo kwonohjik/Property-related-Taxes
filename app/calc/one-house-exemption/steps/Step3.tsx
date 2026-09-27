@@ -510,7 +510,7 @@ export function Step3({ form, onChange }: Props) {
         checked={form.isUnregistered}
         onCheckedChange={(isUnregistered) => onChange({ isUnregistered })}
         title="미등기 양도자산입니다"
-        description="미등기 양도는 비과세·감면이 배제됩니다 (법 §91①)"
+        description="미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다"
         tone="rose"
       />
     </div>

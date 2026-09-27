@@ -12,6 +12,8 @@
  *    읽어 라벨로 옮길 뿐이다. 요건을 여기서 다시 따지는 순간 dual truth가 된다.
  */
 
+import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
+
 /** 이력 resultData는 JSON을 거쳐 오므로 필드 존재를 가정하지 않는다. */
 type JudgmentLike = {
   isExempt?: boolean;
@@ -25,8 +27,18 @@ export type OneHouseVerdict = {
   detail: string;
 };
 
-/** 판정 배지 — 네 갈래(전액 비과세 / 부분 비과세 / 조건부 / 과세). */
-export function oneHouseVerdictOf(judgment: JudgmentLike): OneHouseVerdict {
+/**
+ * 판정 배지 — 네 갈래(전액 비과세 / 부분 비과세 / 조건부 / 과세).
+ *
+ * @param highValueThreshold 양도일 기준 고가주택 기준금액(원) — 호출부가
+ *   `resolveHighValueHouseThreshold(양도일)`로 구해 넘긴다(OH-54). 없으면(이력 목록처럼
+ *   양도일을 모르는 곳) 금액을 적지 않는다 — 「12억」 리터럴은 2021-12-07 이전 양도분(9억)에서
+ *   판정과 모순되는 문구가 된다.
+ */
+export function oneHouseVerdictOf(
+  judgment: JudgmentLike,
+  highValueThreshold?: number,
+): OneHouseVerdict {
   if (judgment.isExempt) {
     return { label: "비과세", tone: "emerald", detail: "1세대1주택 비과세 요건을 충족합니다." };
   }
@@ -34,7 +46,11 @@ export function oneHouseVerdictOf(judgment: JudgmentLike): OneHouseVerdict {
     return {
       label: "부분 비과세",
       tone: "amber",
-      detail: "고가주택이므로 12억 초과분에 해당하는 양도차익만 과세됩니다.",
+      detail: `고가주택이므로 ${
+        highValueThreshold !== undefined
+          ? `${formatHighValueThresholdLabel(highValueThreshold)} 초과분`
+          : "고가주택 기준금액 초과분"
+      }에 해당하는 양도차익만 과세됩니다.`,
     };
   }
   if ((judgment.pending?.length ?? 0) > 0) {
