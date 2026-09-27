@@ -74,3 +74,30 @@ export function shareholderOfTaxedCorpExcluded(input: CapitalIncreaseInput): boo
   );
   return fixed ?? input.doneeIsShareholderOfIssuer === true;
 }
+
+/**
+ * 「상증법」§4의2④ 배제가 성립하는가 — **cap-table 경로**.
+ *
+ * 🔑 **목(目) 표를 쓰지 않는다.** 단건 경로가 `statuteFixesShareholderStatus`로 주주 여부를
+ *    판정하는 것은 **명부가 없어서**다. §39①1호 가목(실권주 배정)이 그 표에서 「사안 의존」인
+ *    이유도, 배정받은 자가 기존 주주인지 제3자인지 단건 입력만으로는 알 수 없기 때문이다.
+ *    cap-table에는 그 사실이 **입력에 이미 있다** — `preShares`(증자 전 보유 주식수)다.
+ *
+ *    ⇒ 행별 토글을 새로 만들지 않는다. 만들면 명부와 토글이라는 **두 개의 진실**이 생기고,
+ *      사용자가 「증자 전 보유 0」인 행에 「주주다」라고 답하는 모순을 막을 방법이 없다.
+ *
+ * ⚠️ `preShares === 0`은 「증자 전 주주등이 아니다」다 — §39①1호 다목이 이익을 얻는 자를
+ *    「주주등이 **아닌** 자」로 부르는 그 자리다. 신주를 인수해 증자 **후** 주주가 되는 것은
+ *    ④의 「해당 법인의 주주등」과 다른 시점이므로 배제하지 않는다(단건 다목과 같은 결론).
+ *
+ * ⚠️ `preShares` 미입력(0)도 배제하지 않는다 — 요건 미입증이고, 배제 쪽이 과소과세 방향이다.
+ *
+ * ⚠️ §45의3~§45의5 단서는 이 함수가 알지 못한다 — 그 유형의 엔진이 부르지 않음으로써 지켜진다.
+ */
+export function capTableShareholderOfTaxedCorpExcluded(
+  issuerGainCorporateTaxed: boolean | undefined,
+  preShares: number,
+): boolean {
+  if (issuerGainCorporateTaxed !== true) return false;
+  return preShares > 0;
+}

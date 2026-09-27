@@ -296,6 +296,9 @@ const capitalIncreaseAllocationSchema = z
     shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),
     // §39① 괄호 「주권상장법인이」 — 공모 배정 제외의 AND 조건. ㉯ 계산에는 쓰이지 않는다(안 C 유지)
     isListed: z.boolean().optional(),
+    // 「상증법」§4의2④ 요건 ㉠ — 건 단위 축. ⑫ strip 방지(빠지면 게이트가 엔진에 도달하지 못한다).
+    //   요건 ㉡(주주등 여부)은 별도 필드가 없다 — 행의 `preShares > 0`으로 판정한다.
+    issuerGainCorporateTaxed: z.boolean().optional(),
   })
   .superRefine((val, ctx) => {
     // 포기 ↔ 재배정 병존 불가 (⑧ gift-deemed-validate.ts와 동일 규칙 — 3중 일치)

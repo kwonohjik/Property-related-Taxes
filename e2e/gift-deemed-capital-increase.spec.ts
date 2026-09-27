@@ -156,6 +156,52 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
   });
 
+  test("법인세가 부과된 영리법인의 주주등은 배제 · 「증자 전 보유 0」인 제3자는 그대로 (§4의2④)", async ({ page }) => {
+    // 「상증법」§4의2④ — 영리법인이 증여받은 재산·이익에 법인세가 부과되면 「해당 법인의
+    //   **주주등**에 대해서는」 증여세를 부과하지 아니한다. 위 §4의2①·③(수증자 **자신**이
+    //   영리법인)과 **수범자가 다르다** — 여기서 배제되는 사람은 그 법인의 주주다.
+    //
+    // 🔑 cap-table은 주주 여부를 **묻지 않는다** — 명부의 「증자 전 보유」가 그 사실이다.
+    //    단건 모드가 목(目) 표로 판정하는 것은 명부가 없어서다. 그래서 이 화면의 토글은
+    //    **건 단위 1개**(법인세 부과 여부)뿐이고, 행별 배제는 preShares로 갈린다.
+    //
+    // 긍정 짝이 **같은 실행 안에** 있다 — 병(증자 전 보유 0 = §39①1호 다목 「주주등이 아닌 자」)은
+    //   법인세가 부과돼도 배제되지 않는다. 일괄 배제 구현이었다면 병도 0이 됐을 것이다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-low").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("12000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "갑", "200000", "200000", "0", "0"); // 전량 포기 (증여자)
+    await fillRow(page, 1, "을", "100000", "100000", "200000", "100000"); // 기존 주주 · 실권주 인수
+    await fillRow(page, 2, "병", "0", "0", "100000", "100000"); // 제3자 직접배정 (증자 전 보유 0)
+    await page.getByTestId("ci-alloc-related-1-sh-1").click();
+    await page.getByTestId("ci-alloc-related-2-sh-1").click();
+
+    // ① 기준선 — 을·병 각 100,000,000 (㉯ 11,000)
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("100,000,000");
+    await expect(page.getByTestId("ci-alloc-total-sh-3")).toHaveText("100,000,000");
+
+    // ② 발행법인 수증이익에 법인세 부과 → 주주(을)만 0, 제3자(병)는 유지
+    await page.getByTestId("deemed-edit-btn").click();
+    // ⚠️ variant="card" ToggleCard는 카드 클릭으로 토글되지 않는다 — switch를 누른다
+    //    (위 `ci-alloc-corp-{idx}`가 testid 클릭으로 되는 것은 그쪽이 variant="chip"이기 때문이다).
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    await expect(page.getByTestId("ci-alloc-issuer-corp-taxed")).toBeVisible();
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("ci-alloc-total-sh-2")).toHaveText("0");
+    await expect(page.getByTestId("deemed-result")).toContainText("§4의2④");
+    await expect(page.getByTestId("ci-alloc-total-sh-3")).toHaveText("100,000,000"); // 긍정 짝
+    // 이익 자체는 부정되지 않는다 — 검증내역 zero-sum 유지
+    await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
+  });
+
   test("§39② 소액주주 1인 의제 — 증여자 2행(각 50,000,000) → 1행 100,000,000 (총액 불변)", async ({ page }) => {
     // 「상증법」§39② — 「제1항제1호를 적용할 때 이익을 증여한 자가 … 소액주주로서 2명 이상인
     //   경우에는 이익을 증여한 소액주주가 **1명인 것으로 보고 이익을 계산한다**」
