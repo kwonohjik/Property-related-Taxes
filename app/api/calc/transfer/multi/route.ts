@@ -325,6 +325,9 @@ export async function POST(request: NextRequest) {
       generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,
       inheritedRightChoiceWhenBothHeld: p.inheritedRightChoiceWhenBothHeld,
       generalHouseGiftedFromDecedentWithin2yr: p.generalHouseGiftedFromDecedentWithin2yr,
+      // ⑭ OH-12c·OH-12 — string 일자 → Date (date-coerce)
+      generalHouseGiftDate: toOptionalDate(p.generalHouseGiftDate),
+      generalHouseRightAtInheritance: p.generalHouseRightAtInheritance,
       // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
       replacementHouse: p.replacementHouse
         ? {

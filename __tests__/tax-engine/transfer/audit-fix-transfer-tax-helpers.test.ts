@@ -22,6 +22,7 @@ import { calculateProration, applyRate } from "@/lib/tax-engine/tax-utils";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer.types";
+import { resolveTaxableGain } from "@/lib/tax-engine/transfer-tax-taxable-gain";
 
 const RULES = parseRatesFromMap(makeMockRates()).longTermHoldingRules;
 
@@ -164,6 +165,9 @@ describe("D2 — split 12억 초과분 안분 BigInt 가드 (P0-2/P0-4)", () => 
 
   it("split 경로 building.longTermDeduction = 정확 안분값 기반 (raw 곱셈 미사용)", () => {
     // 1세대1주택 + selfOwns 'both' + selfTransferPrice=s>12억 → 12억 초과분 안분 적용.
+    // OH-04(2026-09-26): 파트 안분은 STEP 3(`resolveTaxableGain`)이 `calcOneHouseProration`
+    //   (BigInt `calculateProration`)으로 역기입하고 LTHD는 그 값을 읽는다 — 가드 대상 단계가 옮겨졌으므로
+    //   STEP 3 → STEP 4 순서로 태워 같은 정확값을 고정한다.
     // 건물분 보유 10년, 거주 0 → 표1 rate 20%. deduction = applyRate(정확안분, 0.20).
     const input = baseTransferInput({
       propertyType: "housing",
@@ -190,6 +194,15 @@ describe("D2 — split 12억 초과분 안분 BigInt 가드 (P0-2/P0-4)", () => 
     const exactProrated = 1_562_477_800;
     const expectedBuildingDed = applyRate(exactProrated, 0.20); // = 312,495,560
 
+    resolveTaxableGain({
+      effectiveInput: input,
+      splitDetail: split,
+      transferGain: g,
+      isExempt: false,
+      isPartialExempt: true,
+      steps: [],
+    });
+    expect(split.building.taxableGainAfterProration).toBe(exactProrated);
     calcLongTermHoldingDeduction(0, input, RULES, false, false, undefined, split);
 
     expect(split.building.longTermRate).toBeCloseTo(0.20, 10);

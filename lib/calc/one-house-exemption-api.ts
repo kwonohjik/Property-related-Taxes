@@ -23,6 +23,7 @@
  * 다만 `transferPrice`는 **양수 필수**이고 고가주택(12억 초과) 판정에 **실제로 쓰이므로**
  * 사용자에게 받는다(③ 예상 양도가액).
  */
+import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
@@ -207,6 +208,8 @@ export function buildOneHouseExemptionApiBody(
     ...(form.generalHouseGiftedFromDecedentWithin2yr
       ? { generalHouseGiftedFromDecedentWithin2yr: true }
       : {}),
+    // OH-12c 증여일 · OH-12 신축주택 선언 — 계산기 ④와 같은 빌더
+    ...buildInheritanceGeneralHousePayload(form),
     ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }

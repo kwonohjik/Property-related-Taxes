@@ -156,6 +156,9 @@ export const propertyBaseShape = {
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   isFirstTransferredInMerge: z.boolean().optional(),
   generalHouseGiftedFromDecedentWithin2yr: z.boolean().optional(),
+  // ⑫ OH-12c — 위 증여의 증여일(2018-02-13 부칙 게이트) · OH-12 상속개시 당시 보유 권리의 신축주택 선언
+  generalHouseGiftDate: z.string().date().optional(),
+  generalHouseRightAtInheritance: z.enum(["redevelopment_right", "presale_right", "none"]).optional(),
   // ⑫ §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 예외 축 — 엔진이 게이트, strip 방지
   generalHouseHeldAtInheritance: z.boolean().optional(),
   inheritedRightChoiceWhenBothHeld: z.enum(["redevelopment_right", "presale_right"]).optional(),

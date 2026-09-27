@@ -70,6 +70,9 @@ const JUDGE_INPUT_KEYS = [
   "decedentCohabitationHoldingStartDate",
   "generalHouseHeldAtInheritance",
   "generalHouseGiftedFromDecedentWithin2yr",
+  // A3 OH-12c·OH-12 — 증여일(2018-02-13 부칙 게이트) · 상속개시 당시 보유 권리의 신축주택
+  "generalHouseGiftDate",
+  "generalHouseRightAtInheritance",
   "oneHouseExemptionProviso",
   "temporaryTwoHouse",
   "ruralHouse",
@@ -130,6 +133,8 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   decedentCohabitationHoldingStartDate: D("2011-08-08"),
   generalHouseHeldAtInheritance: true,
   generalHouseGiftedFromDecedentWithin2yr: true,
+  generalHouseGiftDate: D("2019-03-04"),
+  generalHouseRightAtInheritance: "redevelopment_right",
   oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2024-01-15") },
   temporaryTwoHouse: {
     previousAcquisitionDate: D("2016-03-04"),
@@ -481,10 +486,18 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
     // 🔴 이 축도 세액으로는 안 보인다 — §155②③ 주택수 제외가 count를 1로 줄여 두어
     //    양쪽 모두 비과세이고, 갈리는 것은 「어느 조문을 확인하라」는 고지뿐이다(실측).
     expect(exempt(withInheritedHouse)).toBe(true);
-    expect(openArticles(withInheritedHouse)).toContain("§156의2 ⑦");
-    expect(openArticles({ ...withInheritedHouse, generalHouseHeldAtInheritance: true })).not.toContain(
-      "§156의2 ⑦",
-    );
+    // A3 OH-12b(2026-09-26) — 일반주택 2016 취득 · 상속 2021이면 「상속개시 당시 보유」가 **날짜로 확인**된다
+    //   (§155② 경로와 같은 leaf `qualifiesAsInheritanceGeneralHouse`) ⇒ 선언 없이도 ⑦ 후단이 닫힌다.
+    expect(openArticles(withInheritedHouse)).not.toContain("§156의2 ⑦");
+    // 선언이 여전히 의미를 갖는 갈래 — 상속개시일을 모르면(API 직접) 날짜로 확인할 수 없어 판정 불가로 남고,
+    //   선언하면 닫힌다(종전 J-25의 구별력을 이 갈래로 옮긴다).
+    const undated = {
+      ...withInheritedHouse,
+      houses: [withInheritedHouse.houses[0], { ...withInheritedHouse.houses[1], inheritedDate: undefined }],
+    };
+    expect(exempt(undated)).toBe(true);
+    expect(openArticles(undated)).toContain("§156의2 ⑦");
+    expect(openArticles({ ...undated, generalHouseHeldAtInheritance: true })).not.toContain("§156의2 ⑦");
   });
 
   it("J-26 권리 자체가 없으면 이 축은 발동하지 않는다 (긍정 짝)", () => {

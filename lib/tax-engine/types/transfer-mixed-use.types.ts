@@ -198,6 +198,13 @@ export interface MixedUseAssetInput {
    * 중과 배제(영 §167의10①15호 ① 요소)에 넘긴다. 미주입 시 의제 미성립 — 종전 동작 불변.
    */
   temporaryTwoHouse?: { previousAcquisitionDate: Date; newAcquisitionDate: Date };
+  /**
+   * 1세대 여부 — **폼-전역** 값(route 주입). §155 의제(①·④⑤)를 비과세 주택 수 축에 반영할 때
+   * 정본 `resolveDeemedOneHouseBy155`가 첫 게이트로 본다(OH-09). `multiHouse`(명부가 있을 때만 조립)에
+   * 같은 값이 있지만, 비과세 축은 명부 유무와 무관하게 판정해야 하므로 자산-수준으로 따로 받는다.
+   * 미주입이면 의제를 판정하지 않는다(종전 동작 — 호출부 `isOneHouseExempt`만 신뢰).
+   */
+  isOneHousehold?: boolean;
 
   // ── 영 §154① 요건 판정 입력 (Phase A — 거주요건 + 단서 각호 면제) ──
   // 셋 다 **폼-전역(top-level)** 값이다. 클라이언트는 `mixedUse` 객체가 아니라 body 최상위로
@@ -568,6 +575,12 @@ export interface MixedUseHousingPart {
    * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
    */
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
+  /**
+   * OH-61 — 12억 초과 판정·안분에 **실제로 쓴 분모**(공유지분이면 물건 전체 주택분 — 영 §156①).
+   * 산식 표시 전용 echo(세액 불변). 표시가 `housingTransferPrice`로 다시 만들면 지분·요건 미충족에서
+   * 값과 산식이 어긋난다. 비과세 미적용·12억 이하 여부는 `calculationRoute.highValueRule`이 정본이다.
+   */
+  highValueBase?: number;
 }
 
 /** 상가부분 계산 결과 */
@@ -633,6 +646,12 @@ export interface MixedUseCommercialPart {
    * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
    */
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
+  /**
+   * OH-17 — 「소득세법 시행령」 §154③ **본문**(주택 연면적 > 주택 외 연면적)으로 건물 전부를 주택으로 보아
+   * 1세대1주택 비과세(전체 실지거래가액 12억 이하 — §156②)가 이 부분에도 미쳤다. 이때 양도소득금액은 0이고,
+   * 배율 초과 토지분은 `nonBusinessLandPart`로 옮겨 과세한다. 표시 전용 echo(세액은 위 금액이 이미 반영).
+   */
+  deemedHouseBy154_3Main?: true;
 }
 
 /** 비사업용토지 부분 계산 결과 (배율초과 면적이 있을 때만 생성) */

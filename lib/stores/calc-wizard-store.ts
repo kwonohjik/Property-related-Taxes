@@ -127,6 +127,8 @@ const defaultFormData: TransferFormData = {
   culturalHeritageHouseSpecial: false,
   isFirstTransferredInMerge: false,
   generalHouseGiftedFromDecedentWithin2yr: false,
+  generalHouseGiftDate: "",
+  generalHouseRightAtInheritance: "",
   generalHouseHeldAtInheritance: false,
   inheritedRightChoiceWhenBothHeld: "",
   parentalCareMergeDate: "",

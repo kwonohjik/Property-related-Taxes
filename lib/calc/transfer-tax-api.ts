@@ -6,6 +6,7 @@
  * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
+import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
@@ -525,6 +526,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : {}),
     ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
     ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),
+    // ⑬ OH-12c 증여일 · OH-12 상속개시 당시 보유 권리의 신축주택 — 게이트와 같은 조건(단일 빌더)
+    ...buildInheritanceGeneralHousePayload(form),
     // ⑬ §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 예외 축 — 긍정 선언·⑮ 선택
     ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
     ...(form.inheritedRightChoiceWhenBothHeld

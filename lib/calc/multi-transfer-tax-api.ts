@@ -3,6 +3,7 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
+import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
@@ -367,6 +368,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(form.generalHouseGiftedFromDecedentWithin2yr
       ? { generalHouseGiftedFromDecedentWithin2yr: true }
       : {}),
+    // ⑬ OH-12c 증여일 · OH-12 신축주택 선언 — 단건과 같은 빌더
+    ...buildInheritanceGeneralHousePayload(form),
     ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }

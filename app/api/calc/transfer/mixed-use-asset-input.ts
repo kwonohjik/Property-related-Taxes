@@ -171,6 +171,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     oneHouseExemptionProviso: s.oneHouseExemptionProviso,
     // ⑭ §155① 일시적 2주택 — 겸용 서브엔진이 §155① 의제 성립을 선판정해 중과 배제(§167의10①15호)로 넘긴다.
     temporaryTwoHouse: s.temporaryTwoHouse,
+    // ⑭ OH-09 — §155 의제를 비과세 주택 수 축에도 반영(일반 경로 `checkExemption`과 같은 정본).
+    isOneHousehold: s.isOneHousehold,
     // ⑭ §89①3호 주택수 제외 축 (D4-02).
     householdHousingCountForExclusion: s.householdHousingCount,
     // ⑭ §155④⑤ 합가 「먼저 양도」 — 중과 15호 ① 요소(D9).

@@ -17,6 +17,7 @@
  * 「요건 미달이라 계산조차 못 하는」 화면이 되어, 사용자가 왜 비과세가 아닌지 알 수 없다.
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
+import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
@@ -97,7 +98,37 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     if (!h.acquisitionDate) {
       errors.push(err(`houses.${i}.acquisitionDate`, `보유 주택 ${i + 1}: 취득일을 입력하세요.`));
     }
+    // OH-12 — §155② 「상속개시 당시 보유한 주택」 판정 기준일. 계산기 ⑧(`transfer-tax-validate.ts`)과 같은 요구다.
+    //   비우면 엔진이 판정할 수 없어 종전 동작(제외)으로 남는다 — 조용한 비과세를 막는다.
+    if (h.isInherited && !h.inheritedDate) {
+      errors.push(
+        err(`houses.${i}.inheritedDate`, `보유 주택 ${i + 1}: 상속주택이면 상속개시일을 입력하세요.`),
+      );
+    }
   });
+
+  // ⑧ OH-12c — 증여분 선언이면 증여일 필수. 토글이 열리는 두 자리(② 명부 상속주택 · 상속 권리 카드) 중
+  //    어느 하나라도 열려 있어야 요구한다(닫힌 칸을 요구하면 막다른 길).
+  const giftToggleVisible =
+    (form.houses ?? []).some((h) => h.isInherited) ||
+    (form.presaleRights ?? []).some((r) => r.isInherited);
+  if (giftToggleVisible && form.generalHouseGiftedFromDecedentWithin2yr && !form.generalHouseGiftDate) {
+    errors.push(
+      err(
+        "generalHouseGiftDate",
+        "피상속인으로부터 증여받은 날을 입력하세요. (2018.2.13. 이후 증여분만 상속주택 특례에서 제외됩니다)",
+      ),
+    );
+  }
+  // ⑧ OH-12 — 계산기 ⑧과 같은 술어.
+  if (generalHouseRightAtInheritanceVisible(form) && !form.generalHouseRightAtInheritance) {
+    errors.push(
+      err(
+        "generalHouseRightAtInheritance",
+        "양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요.",
+      ),
+    );
+  }
 
   form.presaleRights?.forEach((r, i) => {
     if (!r.acquisitionDate) {

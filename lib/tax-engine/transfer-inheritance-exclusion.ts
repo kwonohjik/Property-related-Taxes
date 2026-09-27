@@ -19,6 +19,11 @@
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import { INHERITED_HOUSE } from "./legal-codes";
+import {
+  isDecedentGiftExclusionApplicable,
+  qualifiesAsInheritanceGeneralHouse,
+  type GeneralHouseRightAtInheritance,
+} from "./data/inheritance-general-house-era";
 
 export interface InheritedHouseExclusionResult {
   /** §155② 단독상속 상속주택 제외 수 (0 또는 1) */
@@ -49,6 +54,18 @@ export interface InheritedHouseExclusionResult {
    */
   eligibleSoleCount: number;
   eligibleCoMinorityCount: number;
+  /**
+   * OH-12 — 양도 주택이 「상속개시 당시 보유한 주택」이 아니라서(§155② 괄호, 2013-02-15 이후 취득분)
+   * 단독상속 제외가 배제된 상속주택 수. **표시용**(불성립 사유 안내) — 계산은 위 필드가 이미 반영했다.
+   */
+  generalHouseNotHeldCount: number;
+}
+
+/** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
+export interface InheritanceGeneralHouseFacts {
+  acquisitionDate: Date;
+  transferDate: Date;
+  rightAtInheritance?: GeneralHouseRightAtInheritance;
 }
 
 /**
@@ -68,6 +85,7 @@ export function resolveInheritedHouseExclusion(
   houses: HouseInfo[] | undefined,
   sellingHouseId: string | undefined,
   generalHouseGiftedFromDecedentWithin2yr: boolean | undefined,
+  generalHouse?: InheritanceGeneralHouseFacts,
 ): InheritedHouseExclusionResult {
   const empty: InheritedHouseExclusionResult = {
     soleExcludedCount: 0,
@@ -78,8 +96,23 @@ export function resolveInheritedHouseExclusion(
     excludedHouses: [],
     eligibleSoleCount: 0,
     eligibleCoMinorityCount: 0,
+    generalHouseNotHeldCount: 0,
   };
   if (generalHouseGiftedFromDecedentWithin2yr || !houses) return empty;
+
+  /**
+   * OH-12 — §155② 괄호 「그 밖의 주택(상속개시 당시 보유한 주택 … 만 해당)」은 **단독상속 풀**의 요건이다
+   * (§155③ 공동상속주택 조문에는 이 괄호가 없다). 상속주택마다 상속개시일이 다르므로 행별로 본다.
+   * 상속개시일을 모르면(`unknown`) 종전 동작을 유지한다.
+   */
+  const heldForSole = (h: HouseInfo) =>
+    !generalHouse ||
+    qualifiesAsInheritanceGeneralHouse({
+      generalHouseAcquisitionDate: generalHouse.acquisitionDate,
+      inheritedDate: h.inheritedDate,
+      transferDate: generalHouse.transferDate,
+      rightAtInheritance: generalHouse.rightAtInheritance,
+    }) !== "no";
 
   const inheritedOthers = houses.filter((h) => h.isInherited && h.id !== sellingHouseId);
 
@@ -93,7 +126,9 @@ export function resolveInheritedHouseExclusion(
     else if (!passesRankingGate(h)) rankingDisqualifiedCount++;
   }
 
-  const eligible = inheritedOthers.filter((h) => passesHouseholdGate(h) && passesRankingGate(h));
+  const gatesPassed = inheritedOthers.filter((h) => passesHouseholdGate(h) && passesRankingGate(h));
+  const generalHouseNotHeldCount = gatesPassed.filter((h) => !h.isCoInherited && !heldForSole(h)).length;
+  const eligible = gatesPassed.filter((h) => h.isCoInherited || heldForSole(h));
   const soleCount = eligible.filter((h) => !h.isCoInherited).length;
   const coMinorityCount = eligible.filter(
     (h) => h.isCoInherited && h.isLargestCoInheritedShareholder !== true,
@@ -120,6 +155,7 @@ export function resolveInheritedHouseExclusion(
     excludedHouses,
     eligibleSoleCount: soleCount,
     eligibleCoMinorityCount: coMinorityCount,
+    generalHouseNotHeldCount,
   };
 }
 
@@ -134,13 +170,29 @@ export function resolveInheritedHouseExclusion(
 export function resolveInheritedHouseExclusionFromInput(
   input: Pick<
     TransferTaxInput,
-    "houses" | "sellingHouseId" | "generalHouseGiftedFromDecedentWithin2yr"
+    | "houses"
+    | "sellingHouseId"
+    | "generalHouseGiftedFromDecedentWithin2yr"
+    | "generalHouseGiftDate"
+    | "generalHouseRightAtInheritance"
+    | "acquisitionDate"
+    | "transferDate"
   >,
 ): InheritedHouseExclusionResult {
   return resolveInheritedHouseExclusion(
     input.houses,
     resolveInheritedSellingHouseId(input),
-    input.generalHouseGiftedFromDecedentWithin2yr,
+    // OH-12c — 소급 2년 내 증여주택 제외는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조).
+    isDecedentGiftExclusionApplicable({
+      gifted: input.generalHouseGiftedFromDecedentWithin2yr,
+      giftDate: input.generalHouseGiftDate,
+    }),
+    // OH-12 — 양도 주택(일반주택)의 취득일이 「상속개시 당시 보유」 판정의 기준이다.
+    {
+      acquisitionDate: input.acquisitionDate,
+      transferDate: input.transferDate,
+      rightAtInheritance: input.generalHouseRightAtInheritance,
+    },
   );
 }
 
@@ -189,6 +241,14 @@ export function buildInheritedExclusionSteps(
     steps.push({
       label: "동일세대 상속주택 — 주택수 제외 배제 (§155② 단서)",
       formula: `상속개시 당시 피상속인과 동일세대(동거봉양 합가 아님) ${result.sameHouseholdDisqualifiedCount}채 — 주택수 제외 대상 아님`,
+      amount: 0,
+      legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
+    });
+  }
+  if (result.generalHouseNotHeldCount > 0) {
+    steps.push({
+      label: "상속개시 후 취득한 일반주택 — 주택수 제외 배제 (§155② 괄호)",
+      formula: `양도 주택은 상속개시 당시 보유한 주택이 아닙니다(2013.2.15. 이후 취득분 한정 — 대통령령 제24356호 부칙 제20조) — 상속주택 ${result.generalHouseNotHeldCount}채 주택수 제외 대상 아님`,
       amount: 0,
       legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
     });

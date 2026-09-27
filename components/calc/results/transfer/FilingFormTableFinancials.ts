@@ -44,19 +44,27 @@ export function fourPartFinancials(
   // 12억 초과 안분 비율의 분모는 **비사토를 뺀** 주택분 양도차익이다 — 엔진(`buildHousingPart` ①②)이
   // 비사토를 먼저 떼어낸 뒤 남은 차익에만 안분하므로, 분모에 비사토를 남기면 그만큼이
   // 「비과세」로 흡수된다. 비사토분은 안분 대상이 아니라 **전액 과세**로 주택분 토지 열에 되돌린다.
-  const housingBaseGain = hp.transferGain - nbGain;
+  //
+  // OH-17 — §154③ 본문으로 상가 부분도 주택이 되면(`deemedHouseBy154_3Main`) 비사토 차익에 **상가 토지분**
+  // 배율 초과 몫이 합쳐진다. 주택분 몫은 엔진 `nonBusinessTransferredGain`, 나머지가 상가분 몫이다
+  // (단서 경로에서는 두 값이 같아 상가분 몫은 0 — 종전과 동일).
+  const hpNbGain = hp.nonBusinessTransferredGain;
+  const cpNbGain = nbGain - hpNbGain;
+  const housingBaseGain = hp.transferGain - hpNbGain;
   const housingExemptRatio = housingBaseGain > 0 ? hp.proratedTaxableGain / housingBaseGain : 1;
   const housingLandTaxable =
-    Math.floor((hp.landTransferGain - nbGain) * housingExemptRatio) + nbGain;
+    Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
   const housingBuildingTaxable = Math.floor(hp.buildingTransferGain * housingExemptRatio);
+  const commercialExempt = cp.deemedHouseBy154_3Main === true;
   setNum("taxableGain", "housingLand", housingLandTaxable);
   setNum("taxableGain", "housingBuilding", housingBuildingTaxable);
-  setNum("taxableGain", "commercialLand", cp.landTransferGain);
-  setNum("taxableGain", "commercialBuilding", cp.buildingTransferGain);
+  // 상가 토지분 배율 초과 몫은 같은 열에서 과세(비과세 대상 아님)로 남긴다 — 열별 과세+비과세 = 양도차익.
+  setNum("taxableGain", "commercialLand", commercialExempt ? cpNbGain : cp.landTransferGain);
+  setNum("taxableGain", "commercialBuilding", commercialExempt ? 0 : cp.buildingTransferGain);
   setNum("exemptGain", "housingLand", hp.landTransferGain - housingLandTaxable);
   setNum("exemptGain", "housingBuilding", hp.buildingTransferGain - housingBuildingTaxable);
-  setNum("exemptGain", "commercialLand", 0);
-  setNum("exemptGain", "commercialBuilding", 0);
+  setNum("exemptGain", "commercialLand", commercialExempt ? cp.landTransferGain - cpNbGain : 0);
+  setNum("exemptGain", "commercialBuilding", commercialExempt ? cp.buildingTransferGain : 0);
   const hpLandRatio = hp.transferGain > 0 ? hp.landTransferGain / hp.transferGain : 0.5;
   const hpBuildRatio = 1 - hpLandRatio;
   const cpLandRatio = cp.transferGain > 0 ? cp.landTransferGain / cp.transferGain : 0.5;

@@ -65,6 +65,18 @@ export function resolveTaxableGain(args: {
   if (!isPartialExempt) return transferGain;
 
   const taxableGain = prorate(transferGain);
+  /**
+   * OH-04 — 토지·건물 분리취득이면 **같은 `prorate`** 로 파트별 과세 양도차익을 역기입한다.
+   * 장특공제(`calcLongTermHoldingDeduction`)는 파트별 보유연수로 공제율을 달리 곱하므로 파트 값이
+   * 필요한데, 종전에는 거기서 「실제 1주택 && 파트 가액 > 기준」으로 안분을 **다시 판정**해
+   * §155 의제 1주택·공유지분(물건 전체 분모)·비과세 미충족 세대에서 과세표준과 다른 기준으로 공제했다.
+   * 안분 여부(`isPartialExempt`)와 분모(부담부증여 > 공유지분 전체 > 양도가액)는 이 STEP의 판정이 정본이다.
+   */
+  if (splitDetail) {
+    const prorateNonNegative = (g: number) => (g <= 0 ? g : prorate(g));
+    splitDetail.land.taxableGainAfterProration ??= prorateNonNegative(splitDetail.land.gain);
+    splitDetail.building.taxableGainAfterProration ??= prorateNonNegative(splitDetail.building.gain);
+  }
   const denom =
     effectiveInput.burdenedGiftDenominator ??
     effectiveInput.totalPropertyTransferPrice ??

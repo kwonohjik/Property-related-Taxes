@@ -206,6 +206,17 @@ export interface TransferFormData {
   /** §155② 양도(일반)주택이 상속개시 2년내 피상속인 증여분 여부 (상속주택 특례 배제 게이트) */
   generalHouseGiftedFromDecedentWithin2yr: boolean;
   /**
+   * 위 증여의 **증여일**(YYYY-MM-DD) — 소급 2년 내 증여주택 제외는 2018-02-13 이후 증여분부터
+   * (대통령령 제28637호 부칙 제16조 — OH-12c). 토글을 켜면 ⑧이 필수로 받는다.
+   */
+  generalHouseGiftDate: string;
+  /**
+   * §155② 괄호 — 상속개시 **후** 취득한 양도 주택이 「상속개시 당시 보유한 조합원입주권이나 분양권에 의하여
+   * 사업시행 완료 후 취득한 신축주택」인가(OH-12). `""` = 미선택 — 게이트
+   * (`generalHouseRightAtInheritanceVisible`)가 열리면 ⑧이 선택을 요구한다.
+   */
+  generalHouseRightAtInheritance: "" | "redevelopment_right" | "presale_right" | "none";
+  /**
    * §156의2⑥·⑦ · §156의3④·⑤ — 양도하는 일반주택을 **상속개시 당시 이미 보유**하고 있었는가.
    * ⚠️ 긍정 선언이 있어야 상속 권리 예외를 인정한다(미선언 = 판정 불가).
    */

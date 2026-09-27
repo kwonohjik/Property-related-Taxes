@@ -33,6 +33,10 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { HousesListSection } from "./HousesListSection";
+import {
+  DecedentGiftDateField,
+  GeneralHouseRightAtInheritanceField,
+} from "@/components/calc/transfer/InheritanceGeneralHouseFields";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 export function HouseCountExemptionInputs({
@@ -75,6 +79,11 @@ export function HouseCountExemptionInputs({
           onCheckedChange={(v) => onChange({ generalHouseGiftedFromDecedentWithin2yr: v })}
         />
       )}
+      {/* OH-12c — 증여일(2018-02-13 부칙 게이트) · OH-12 — 상속개시 후 취득 양도 주택의 취득 경위 */}
+      {form.houses?.some((h) => h.isInherited) && (
+        <DecedentGiftDateField form={form} onChange={onChange} />
+      )}
+      <GeneralHouseRightAtInheritanceField form={form} onChange={onChange} />
     </>
   );
 }

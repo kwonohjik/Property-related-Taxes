@@ -37,6 +37,7 @@ export type ImportedRightsSlice = Pick<
   | "rightDisposedByThatMethod"
   | "generalHouseHeldAtInheritance"
   | "generalHouseGiftedFromDecedentWithin2yr"
+  | "generalHouseGiftDate"
   | "inheritedRightChoiceWhenBothHeld"
   | "mergedHouseholdFirstHouseKind"
   | "mergedHouseholdAcquiredAfterApproval"
@@ -181,7 +182,11 @@ function rightsRows(r: ImportedRightsSlice): Row[] {
   push("처분 지연 사유", r.rightDisposalDelayReason ? "선언함" : undefined);
   if (r.rightDisposedByThatMethod) push("그 방법으로 양도됨", "예");
   if (r.generalHouseHeldAtInheritance) push("상속개시 당시 보유한 주택", "예");
-  if (r.generalHouseGiftedFromDecedentWithin2yr) push("상속개시 2년 내 피상속인 증여분", "예");
+  if (r.generalHouseGiftedFromDecedentWithin2yr) {
+    push("상속개시 2년 내 피상속인 증여분", "예");
+    // OH-12c — 2018.2.13. 이후 증여분만 특례 배제(부칙 제28637호 제16조) — 날짜가 결론을 가른다.
+    push("피상속인으로부터 증여받은 날", r.generalHouseGiftDate || "미입력");
+  }
   push("상속받은 권리 선택", INHERITED_CHOICE[r.inheritedRightChoiceWhenBothHeld]);
   push("합가 세대 먼저 양도 자산", MERGED_KIND[r.mergedHouseholdFirstHouseKind]);
   if (r.mergedHouseholdAcquiredAfterApproval) push("사업시행계획 인가일 이후 취득", "예");

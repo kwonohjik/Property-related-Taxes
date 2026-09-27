@@ -17,6 +17,7 @@ import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-resi
 import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exemption";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { resolveHouseholdHousingCount } from "./household-house-count";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
@@ -241,10 +242,19 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     // ⚠️ form.isOneHousehold 사용 — Step4 "1세대 해당" 토글은 form-level에만 쓰고 asset-level로 동기화되지 않음.
     //    primary.isOneHousehold(기본 false·미동기화)를 읽으면 겸용주택은 토글 ON에도 항상 비과세 미적용.
     //    일반 엔진(:467)과 동일하게 form.isOneHousehold를 단일 소스로 사용.
+    //
+    // 🔴 OH-09 — 여기는 **주택 수 축만** 싣는다. §155①(일시적 2주택)은 엔진이 `temporaryTwoHouse`
+    //    (④ `buildHouseholdSpecialPayload`가 명부에서 도출)로 **타이밍까지** 판정한다 — 일반 경로
+    //    `checkExemption`과 같은 정본. 종전에는 UI가 사라진 `temporaryTwoHouseSpecial` 토글을 읽어
+    //    명부 도출 §155①이 겸용에만 반영되지 않았다. 주택 수는 일반 경로와 같은 명부 정본 leaf다.
     isOneHouseExempt:
       form.isOneHousehold &&
-      (form.householdHousingCount === "1" ||
-        (form.householdHousingCount === "2" && form.temporaryTwoHouseSpecial === true)),
+      resolveHouseholdHousingCount({
+        primaryKind: primary.assetKind,
+        declared: parseInt(form.householdHousingCount) || 0,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+      }) === 1,
     // ④ §164⑨1호 공익수용 특례 (계획 P7/D8) — 목별 독립: 주택분(P5 필드 재사용)·상가분(신규 2필드).
     // 엔진이 수용·환산·2009.02.04·후보>0 게이트 판정 — 여기선 원값 전달(침묵 strip 방지).
     transferCause: primary.transferCause,

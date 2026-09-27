@@ -23,6 +23,7 @@
  * (`resolveExemptionHoldingStartDate` 등). 기산일 규칙을 여기서 다시 쓰지 않는다 —
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
+import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { addDays, addYears } from "date-fns";
 import { isWithinPeriod, periodEndFrom } from "../civil-period";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
@@ -725,9 +726,20 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   const x = resolveInheritedHouseExclusionFromInput(input);
   const reasons: string[] = [];
 
-  if (input.generalHouseGiftedFromDecedentWithin2yr === true) {
+  // OH-12c — 증여 제외 괄호는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조). 정본 leaf로 같은 판정을 한다.
+  if (
+    isDecedentGiftExclusionApplicable({
+      gifted: input.generalHouseGiftedFromDecedentWithin2yr,
+      giftDate: input.generalHouseGiftDate,
+    })
+  ) {
     reasons.push(
-      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 이 경우 상속주택 주택 수 제외가 전부 배제됩니다(§155② 단서).",
+      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 이 경우 상속주택 주택 수 제외가 전부 배제됩니다(§155② 괄호).",
+    );
+  }
+  if (x.generalHouseNotHeldCount > 0) {
+    reasons.push(
+      "양도하는 주택을 상속개시 후(2013.2.15. 이후) 취득했습니다 — §155② 괄호의 「상속개시 당시 보유한 주택」이 아니라 상속주택을 주택 수에서 빼지 않습니다(대통령령 제24356호 부칙 제20조). 상속개시 당시 보유한 조합원입주권·분양권으로 사업시행 완료 후 취득한 신축주택이면 ② 보유 주택 목록 아래에서 선택하세요.",
     );
   }
   if (x.sameHouseholdDisqualifiedCount > 0) {
