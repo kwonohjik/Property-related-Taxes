@@ -300,6 +300,29 @@ export function buildGiftWizardPrefill(
     };
   }
 
+  // 합병 매트릭스(§38): 과대평가법인 대주주등이 **각자** 수증자다 → 선택된 1명의 순이익만 이관.
+  //   종전에는 아래 기본 분기로 떨어져 과세 수증자 전원 합계(deemedGiftValue)를 한 항목에 실었다
+  //   (교재 사례2 실측 1,000,000,000 = 갑 400,000,000 + 병 600,000,000). 단일 모드(mergerMatrix 없음)는
+  //   수증자가 한 묶음이라 종전 그대로 기본 분기다.
+  if (result.type === "merger" && result.mergerMatrix) {
+    const taxable = result.mergerMatrix.recipients.filter((r) => r.applied);
+    const selected = taxable[form.mrgSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate, donor: "", giftItems: [] };
+    return {
+      giftDate: form.giftDate,
+      donor: "",
+      giftItems: [
+        {
+          id: `deemed-merger-${selected.id}`,
+          category: "other",
+          name: `합병에 따른 이익 증여이익 (${selected.name.trim() || "수증자"})`,
+          marketValue: selected.netGain,
+          ...deemedGiftItemFlags(result),
+        },
+      ],
+    };
+  }
+
   // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
   if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {
     const taxable = result.capitalDecreaseMulti.donees.filter((d) => d.isTaxable);

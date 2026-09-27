@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { clickAndExpectUrl } from "./_helpers/navigation";
 
 /** E2E: 합병 §38 보완 — 단순평균액 자동(§28⑤) + 주주 매트릭스 자기증여 차감(재산세과-799). */
 
@@ -76,6 +77,29 @@ test.describe("합병 §38 — 평가 보조·주주 매트릭스", () => {
     const matrix = page.getByTestId("merger-matrix");
     await expect(matrix).toContainText("제외 — 영리법인 수증자");
     await expect(matrix).toContainText("400,000,000"); // 갑의 이익 자체는 표에 남는다
+  });
+
+  test("Phase B 수증자 선택 → 병 1인분(600,000,000)만 이관 — 합계 1,000,000,000이 아니다 (§4의2①·§68①)", async ({ page }) => {
+    // 매트릭스 수증자는 각자 독립 납세의무자다. 종전에는 과세 수증자 전원 합계가 한 항목으로 넘어갔다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "merger");
+    await fillMatrixCase2(page);
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    const selector = page.getByTestId("mrg-donee-selector");
+    await expect(selector.locator("option")).toHaveCount(2);
+    await selector.selectOption("1"); // 병
+    // 화면이 고른 값을 유지해야 한다 — 표시 인덱스와 이관 인덱스가 다른 필드를 읽으면 선택기는 갑으로
+    // 되돌아가 보이는데 이관은 병이 된다(DeemedGiftCalculator의 두 삼항이 짝으로 맞아야 한다)
+    await expect(selector).toHaveValue("1");
+
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
+    await page.getByTestId("gift-donor-select").selectOption("other_relative");
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("합병에 따른 이익 증여이익 (병)")).toBeVisible();
+    await expect(page.getByText("합병에 따른 이익 증여이익 (갑)")).toHaveCount(0);
+    await expect(page.getByText("600,000,000").first()).toBeVisible();
+    await expect(page.getByText("1,000,000,000")).toHaveCount(0);
   });
 
   test("Phase C 분할합병 순자산비율(§28⑦) → 과대평가 안분 → 350,000,000", async ({ page }) => {

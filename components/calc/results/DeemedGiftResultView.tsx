@@ -54,6 +54,7 @@ export function DeemedGiftResultView({
   // §39의3 고가인수 과세 수증자 — prefill 대상 선택지(가액 0 = 기준금액 미달, 신고 대상 아님).
   // 인덱스 기준을 prefill(`buildGiftWizardPrefill`)과 동일하게 **과세 행만**으로 맞춘다.
   const contribTaxableDonees = (result.contributionBreakdown ?? []).filter((r) => r.value > 0);
+  const mergerTaxable = (result.mergerMatrix?.recipients ?? []).filter((r) => r.applied);
 
   // §41의3④ 단서·령§31의3⑥ 평가손실 환급 — 증여이익(과세)과 별도 표시(정적 색조 매핑)
   const isRefund = result.direction === "refund";
@@ -616,6 +617,27 @@ export function DeemedGiftResultView({
             );
           })}
           <p className="mt-2 text-caption text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
+          {/* 수증자는 각자 독립 납세의무자 ⇒ 이관 대상 1명 선택. 목록 기준 = prefill과 같은 `applied` */}
+          {mergerTaxable.length > 1 && (
+            <div className="mt-3 rounded-md border border-emerald-200 bg-white/60 p-3" data-testid="mrg-donee-select">
+              <p className="text-sm font-semibold text-emerald-800">증여세 계산 대상 수증자 선택</p>
+              <select
+                value={selectedDoneeIndex}
+                onChange={(e) => onSelectDonee?.(Number(e.target.value))}
+                data-testid="mrg-donee-selector"
+                className="mt-2 w-full rounded-md border border-emerald-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
+              >
+                {mergerTaxable.map((r, i) => (
+                  <option key={`${r.id}-${i}`} value={i}>
+                    {r.name.trim() || "주주"} — 증여재산가액 {formatKRW(r.netGain)}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                선택한 수증자의 건만 증여세 마법사로 이관됩니다. 나머지 수증자는 다시 선택해 각각 이관하세요.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

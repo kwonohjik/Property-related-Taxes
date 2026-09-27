@@ -104,6 +104,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   mrgUnderShareholders: { name: string; shares: string }[]; // 과소평가(증여자측) 법인 주주
   mrgExchangeNumer: string; // 교부 환산비 분자
   mrgExchangeDenom: string; // 교부 환산비 분모
+  /** 매트릭스 과세 수증자 선택 (prefill 이관용) — 수증자별 독립 납세의무. 선례는 `ciAllocSelectedDoneeIndex` 주석 */
+  mrgSelectedDoneeIndex: number;
   // Phase C 분할합병 §28⑦
   mrgIsSplitMerger: boolean;
   mrgSplitMode: "supplementary" | "net_asset_ratio"; // 보충평가(2016.2.5~) / 순자산비율(2016.2.4 이전)
@@ -329,6 +331,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   mrgUnderShareholders: [],
   mrgExchangeNumer: "1",
   mrgExchangeDenom: "1",
+  mrgSelectedDoneeIndex: 0,
   mrgIsSplitMerger: false,
   mrgSplitMode: "supplementary",
   mrgSplitPrePrice: "",
