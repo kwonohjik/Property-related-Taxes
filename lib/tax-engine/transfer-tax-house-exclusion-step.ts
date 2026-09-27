@@ -92,7 +92,7 @@ export function runHouseCountExclusionStep(
   // STEP 0.95 (P5 모드 2): 보유 감면주택 N-way 주택수 제외 — 7개 조문 ② + §98 령②·⑥ + §99②.
   // 비과세(§89①3호) 판정 주택수만 차감 — 중과 주택수는 원본 유지 (R-D).
   // §155②③ 상속·공동상속주택 비과세 주택수 제외 (2-A2) — 단독(§155②)·공동소수지분(§155③) 풀 분리, 각 최대 1채.
-  // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 게이트-오프. 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
+  // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 단독상속 풀만 게이트-오프(L-11 — ③ 풀 무관). 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
   // 🔑 selling id 폴백 규칙은 `resolveInheritedHouseExclusionFromInput` 안에만 둔다 —
   //    불성립 사유 안내(`collectInheritedUnmet`)가 같은 후보 집합을 봐야 하기 때문.
   const { hceApplied, new994Detail, unsold989Detail, specialHouseExclusionDetail, inheritedExclusion } =

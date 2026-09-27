@@ -727,14 +727,16 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   const reasons: string[] = [];
 
   // OH-12c — 증여 제외 괄호는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조). 정본 leaf로 같은 판정을 한다.
+  // L-11 — 괄호는 §155② 단독상속 풀에만 걸린다(「이하 이 항에서」). 단독상속 후보가 있을 때만 말한다.
   if (
+    candidates.some((h) => !h.isCoInherited) &&
     isDecedentGiftExclusionApplicable({
       gifted: input.generalHouseGiftedFromDecedentWithin2yr,
       giftDate: input.generalHouseGiftDate,
     })
   ) {
     reasons.push(
-      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 이 경우 상속주택 주택 수 제외가 전부 배제됩니다(§155② 괄호).",
+      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 단독상속주택은 주택 수에서 빼지 않습니다(§155② 괄호). §155③ 공동상속주택(소수지분)에는 이 괄호가 없어 제외에 영향이 없습니다.",
     );
   }
   if (x.generalHouseNotHeldCount > 0) {
