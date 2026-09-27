@@ -275,9 +275,65 @@ export function evaluateTaxpayerGate(args: {
      ❌ **cap-table 경로는 미배선** — 수증자별로 주주 여부가 갈려 `CapShareholder`에
         행별 축과 ⑤ 행별 토글이 필요하다. 단건과 형태가 달라 별도 단계로 뺀다.
 7-4. ✅ 14지점 배선 — ①②④⑤ + E2E 왕복 실증 (③⑥⑧⑨⑩⑪ N/A·근거 아래)
-7-5. 뮤테이션 측정 → verify: 게이트·단서·주주요건 각각 KILLED
-7-6. 전체 게이트 + E2E
+7-5. ✅ 뮤테이션 측정 9종 → **9/9 KILLED**(2건은 안전망 보강 후 전환). 전환주식 ⑤ 신설
+7-6. ✅ 7-4 PR에서 수행(별도 단계 아님)
 ```
+
+> **7-5 완료(2026-09-27)** — 7-3의 뮤테이션 6건은 전부 **엔진 내부**를 겨냥했다. 7-4가 추가한
+> **배선 6개소**(①2필드·②·④2곳·⑤)는 아직 load-bearing인지 재지 않았다. 그래서 잰다.
+>
+> 🔴 **전제부터 측정했다 — 이 필드들에 대한 vitest 안전망은 0파일이다**
+> (`grep -rl "ciIssuerGainCorporateTaxed\|ciDoneeIsShareholderOfIssuer" __tests__/` → 0건).
+> ⇒ ①②④⑤의 유일한 그물은 **E2E**다. 측정 대상은 `e2e/gift-deemed-capital.spec.ts` 전건,
+> 대조군(무뮤테이션) 포함. 복원은 **백업 사본(`cp`)** 으로만 했다 — `git checkout`은 WIP를 지운다.
+>
+> | | 뮤테이션 | 1차 | 보강 후 |
+> |---|---|---|---|
+> | 대조군 | 없음 | 14 passed / 0 | **19 passed / 0** |
+> | M1 | ④ 단건 `issuerGainCorporateTaxed` 미탑재 | KILLED (1) | KILLED (2) |
+> | M2 | ④ 단건 `doneeIsShareholderOfIssuer` 미탑재 | 🔴 **SURVIVED** | KILLED (1) |
+> | M3 | ② 기본값 `false` → `true` (과잉 배제 방향) | KILLED (4) | — |
+> | M4 | ⑤ 조건부 렌더 `=== undefined` → `!==` | KILLED (2) | KILLED (3) |
+> | M5 | ⑤ 토글 `onCheckedChange` 무력화 | KILLED (2) | KILLED (3) |
+> | M6 | ④ **전환주식** `issuerGainCorporateTaxed` 미탑재 | 🔴 **SURVIVED** | KILLED (1) |
+> | M7 | ⑤ 고지 분기를 항상 「주주 확정」으로 | KILLED (1) | — |
+> | M8 | 전환주식 ⑤(신설) `onCheckedChange` 무력화 | — | KILLED (1) |
+> | M9 | 전환주식 ⑤ 목 판정을 `cs*` → `ci*` | — | 🔴 SURVIVED → KILLED (1) |
+>
+> #### M2 — 「확정하는 목」만 보고 있었다
+>
+> 7-4의 E2E 2건은 **고가**(주주 확정)와 **1호 다목**(비주주 확정)만 쓴다. 두 목 모두
+> `statuteFixesShareholderStatus`가 값을 확정하므로 엔진은 `doneeIsShareholderOfIssuer`를
+> **읽지 않는다**. 그래서 그 필드를 ④에서 통째로 빼도 전건 초록이었다. 게이트의 두 축 중
+> 하나가 무방비였다는 뜻이고, 이것이 7-5의 성공 기준(「주주요건 KILLED」)에 정면으로 걸렸다.
+>
+> ⇒ **사안 의존 목**(§39①1호 가목 — 저가·실권주 재배정)에 **긍정 짝 포함 2건**을 추가했다.
+> 주주 토글 ON → 배제 / OFF → 33,330,000 유지. 뒤의 것이 「법인세 ON이면 무조건 배제」
+> 구현을 잡는다.
+>
+> #### M6 — ④만 있고 ⑤가 없던 반쪽 배선 (7-4가 만든 것)
+>
+> 7-4는 전환주식 `side()`(`gift-deemed-api.ts:450`)에도 두 필드를 실었지만, ⑤ 토글은
+> `CapitalIncreaseFields`에만 넣었다. `ConvertibleStockFields`에는 **입력 경로가 없다**
+> ⇒ 그 줄을 지워도 아무 테스트가 반응하지 않았다(「트리거만 열고 입력 경로가 없으면 no-op」).
+>
+> 값이 완전히 죽어 있지는 않았다 — `set({ type: v })`가 **머지**라 자본증자 화면에서 켠 값이
+> 유형을 바꿔도 남는다. 즉 **다른 화면에서 켠 토글이 조용히 따라오는** 형태였다.
+>
+> ⇒ `convertible-stock-form.tsx`에 §4의2④ 토글을 신설하고 E2E 2건(배제 / 긍정 짝)을 넣었다.
+> 긍정 짝은 **차감항 전파 금지의 증인**이기도 하다 — 게이트가 발행 시점 leg에 퍼지면
+> 기준선 20,000,000이 사라져 13,330,000이 아니라 33,330,000이 나온다.
+>
+> 📌 **형제 축 §4의2①·③(`ciDoneeIsForProfitCorp`)도 전환주식 화면에 없다.** 7-4 이전부터
+> 비어 있던 자리라 이번엔 건드리지 않고 기록만 했다(폼 주석에도 남겼다).
+>
+> #### M9 — 술어를 공유해도 인자가 어긋나면 단일 소스가 아니다
+>
+> 전환주식 ⑤의 목 판정을 `cs*` → `ci*`로 바꿔치기해도 **전건 초록**이었다.
+> `ciDirection`·`ciSubType`과 `csDirection`·`csSubType`의 **초기값이 똑같아서**
+> (둘 다 `low` / `forfeited_realloc`) 픽스처가 둘을 구별하지 못했다 — 등가 뮤턴트가 아니라
+> **픽스처 한정 등가**다. ⇒ `cs-direction-high`만 눌러 두 축을 갈라놓는 단언 1건을 추가하니
+> KILLED. (`feedback_shared_predicate_argument_parity`)
 
 > **7-4 완료(2026-09-26)** — ①`deemed-form-state.ts` 2필드 · ②`INITIAL_DEEMED` false ·
 > ④`gift-deemed-api.ts` 단건·전환주식 2곳 · ⑤`capital-forms.tsx` 토글 + 조건부 하위 토글.

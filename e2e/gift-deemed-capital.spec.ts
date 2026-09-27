@@ -130,6 +130,45 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-result-value")).toHaveText("66,660,000");
   });
 
+  // 7-5 뮤테이션이 연 구멍 — 위 두 건은 **목이 주주 여부를 확정하는** 경우만 본다(고가=주주,
+  //   1호 다목=비주주). 그래서 `doneeIsShareholderOfIssuer`를 ④에서 통째로 빼도 전건 초록이었다
+  //   (M2 SURVIVED). §39①1호 «가목»(실권주 재배정)은 이익을 얻는 자가 주주인지 조문이 정하지
+  //   않아 **사실관계로 판단**한다 — 그 축이 엔진까지 가는지는 여기서만 증명된다.
+  //   픽스처는 위 「저가·실권주 재배정 → 33,330,000」과 같은 수치다.
+  test("§39 단건 — 1호 가목(사안 의존)은 주주 여부를 물어 배제한다 (§4의2④)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
+    await page.getByPlaceholder("증자 주식수").fill("50000");
+    await page.getByPlaceholder("배정받은 실권주수").fill("10000");
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    // 확정하는 목과 반대다 — 고지문이 아니라 **토글**이 떠야 한다.
+    await expect(page.getByTestId("ci-shareholder-fixed-note")).toHaveCount(0);
+    await page.getByRole("switch", { name: /이익을 얻은 자가 발행법인의 주주등/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("§4의2④");
+  });
+
+  // 긍정 짝 — 같은 목에서 주주 토글만 끈다. §4의2④는 「해당 법인의 주주등」에만 미치므로
+  //   법인세가 부과됐어도 요건이 미입증이면 배제하지 않는다. 이 단언이 없으면
+  //   「법인세 ON이면 무조건 배제」로 구현해도 위 건이 초록으로 통과한다.
+  test("§39 단건 — 1호 가목에서 주주 요건이 미입증이면 배제되지 않는다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("5000");
+    await page.getByPlaceholder("증자 주식수").fill("50000");
+    await page.getByPlaceholder("배정받은 실권주수").fill("10000");
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("33,330,000");
+  });
+
   // 🔄 픽스처 정합화(리뷰 6단계 #23) — 「증자 주식수」(실제 증가)와 「분모 신주수」(균등증자 가정
   //    총수)에 같은 50,000을 넣고 있었다. 나목은 실권주 **미배정**이라 그만큼 발행되지 않으므로
   //    실제 증가 = 50,000 − 30,000 = 20,000이 법문에 맞다. 엔진이 아니라 입력이 바뀐 것이다.
@@ -288,5 +327,63 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("13,330,000");
+  });
+
+  // 7-5 뮤테이션 M6 — ④는 전환주식 `side()`에도 §4의2④를 싣고 있었지만 **이 화면에 토글이
+  //   없어** 그 줄을 통째로 지워도 전건 초록이었다. 게이트가 최상위에서 한 번만 판정하고
+  //   두 leg에는 false를 강제하는지(차감항에서 발동하면 기준선이 사라져 결과가 부푼다)도
+  //   함께 본다 — 픽스처는 위 「33,330,000 − 20,000,000 = 13,330,000」과 같다.
+  const fillConvertible = async (page: Page) => {
+    await page.getByPlaceholder("전환 증자 전 1주당 평가가액 (원)").fill("10000");
+    await page.getByPlaceholder("전환 증자 전 발행주식총수").fill("100000");
+    await page.getByPlaceholder("전환 1주당 전환가액등 (원)").fill("5000");
+    await page.getByPlaceholder("전환 증자 주식수").fill("50000");
+    await page.getByPlaceholder("전환 배정받은 실권주수").fill("10000");
+    await page.getByPlaceholder("발행 증자 전 1주당 평가가액 (원)").fill("10000");
+    await page.getByPlaceholder("발행 증자 전 발행주식총수").fill("100000");
+    await page.getByPlaceholder("발행 신주 1주당 인수가액 (원)").fill("7000");
+    await page.getByPlaceholder("발행 증자 주식수").fill("50000");
+    await page.getByPlaceholder("발행 배정받은 실권주수").fill("10000");
+  };
+
+  test("§39①3호 전환주식 — 발행법인 수증이익에 법인세가 부과되면 주주등에는 과세하지 않는다 (§4의2④)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_stock");
+    await fillConvertible(page);
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    // 3호 가목(저가·실권주 재배정)은 사안 의존이므로 고지문이 아니라 토글이 떠야 한다.
+    await expect(page.getByTestId("cs-shareholder-fixed-note")).toHaveCount(0);
+    await page.getByRole("switch", { name: /이익을 얻은 자가 발행법인의 주주등/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("§4의2④");
+  });
+
+  // 긍정 짝 — 주주 요건이 미입증이면 배제하지 않는다. 동시에 **차감항 전파 금지**의
+  //   증인이기도 하다: 게이트가 발행 시점 leg에도 퍼지면 기준선 20,000,000이 사라져
+  //   13,330,000이 아니라 33,330,000이 나온다.
+  test("§39①3호 전환주식 — 주주 요건이 미입증이면 배제되지 않고 차감항도 살아 있다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_stock");
+    await fillConvertible(page);
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("13,330,000");
+  });
+
+  // 술어를 공유해도 **인자가 어긋나면** 단일 소스가 아니다. 전환주식 ⑤는 `cs*`로 목을
+  //   판정해야 한다 — `side()`가 엔진에 넘기는 것이 `csDirection`·`csSubType`이기 때문이다.
+  //   두 축의 초기값이 똑같이 low/forfeited_realloc이라, 위 두 건만으로는 `ci*`로 바꿔치기해도
+  //   결과가 같아 구별되지 않았다(7-5 M9 SURVIVED — 픽스처 한정 등가). 여기서 갈라놓는다.
+  test("§39①3호 전환주식 고가 — 목 판정은 전환주식 축(cs*)을 따른다", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_stock");
+    // 자본증자 축(ci*)은 손대지 않는다 — 초기값 저가·실권주재배정(=사안 의존)에 머문다.
+    await page.getByTestId("cs-direction-high").click();
+    await page.getByRole("switch", { name: /발행법인 수증이익에 법인세 부과/ }).click();
+    // 고가(3호 나목)는 이익을 얻는 자가 조문상 「주주등」이다 → 묻지 않고 고지한다.
+    await expect(page.getByTestId("cs-shareholder-fixed-note")).toContainText("조문상 확정");
+    await expect(page.getByTestId("cs-donee-shareholder")).toHaveCount(0);
   });
 });

@@ -8,6 +8,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint, type Props, type SetFn } from "./capital-forms-shared";
+import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 const CS_SECTION_TONE = {
   sky: { box: "border-sky-200 bg-sky-50/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700" },
@@ -237,6 +238,46 @@ export function ConvertibleStockFields({ form, set }: Props) {
           allocationMethod: "csIssueAllocationMethod",
         }}
       />
+      {/*
+        「상증법」§4의2④ — 발행법인 수증이익에 법인세가 부과되면 그 법인의 «주주등»에는
+        증여세를 부과하지 않는다. ④(`gift-deemed-api.ts`의 `side()`)는 이 값을 이미 싣고
+        있었으나 **이 화면에 입력 경로가 없어** 7-5 뮤테이션에서 배선이 통째로 살아남았다
+        (M6 SURVIVED — 「트리거만 열고 입력 경로가 없으면 no-op」).
+
+        ⚠️ 목 판정은 `cs*`로 한다 — `side()`가 `direction: form.csDirection`·
+        `subType: form.csSubType`를 넘기므로 엔진이 보는 목과 같아야 한다.
+        값 자체는 시점이 아니라 **건 단위 축**이라 `ci*` 공용 키를 쓴다(`side()` 주석과 동일).
+
+        📌 형제 축 §4의2①·③(`ciDoneeIsForProfitCorp`)도 이 화면엔 없다. 그쪽은 7-4 이전부터
+        비어 있던 자리라 여기서 건드리지 않는다 — 기록만 한다.
+      */}
+      <ToggleCard
+        lawLinks="상증법"
+        tone="violet"
+        checked={form.ciIssuerGainCorporateTaxed}
+        onCheckedChange={(v) => set({ ciIssuerGainCorporateTaxed: v })}
+        title="발행법인 수증이익에 법인세 부과 (§4의2④)"
+        description="전환주식을 발행한 법인이 이 자본거래로 얻은 수증이익에 법인세가 부과된 경우입니다. 그 법인의 주주등에게는 증여세를 부과하지 않습니다. 게이트는 전환 시점(가목)에서 한 번만 판정합니다 — 차감항(발행 시점)에서 발동하면 기준선이 사라져 결과가 부풀기 때문입니다."
+        data-testid="cs-issuer-corp-taxed"
+      >
+        {statuteFixesShareholderStatus(form.csDirection, form.csSubType) === undefined ? (
+          <ToggleCard
+            lawLinks="상증법"
+            tone="violet"
+            checked={form.ciDoneeIsShareholderOfIssuer}
+            onCheckedChange={(v) => set({ ciDoneeIsShareholderOfIssuer: v })}
+            title="이익을 얻은 자가 발행법인의 주주등"
+            description="§4의2④는 「해당 법인의 주주등」에만 미칩니다. 이 목은 조문으로 정해지지 않아 사실관계로 판단합니다. 끄면 배제하지 않습니다(요건 미입증)."
+            data-testid="cs-donee-shareholder"
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground" data-testid="cs-shareholder-fixed-note">
+            {statuteFixesShareholderStatus(form.csDirection, form.csSubType)
+              ? "이 목은 이익을 얻는 자가 「해당 법인의 주주등」으로 조문상 확정되어 별도 입력이 필요 없습니다."
+              : "이 목은 이익을 얻는 자가 「해당 법인의 주주등이 아닌 자」이므로 §4의2④ 배제가 적용되지 않습니다."}
+          </p>
+        )}
+      </ToggleCard>
     </ToneCard>
   );
 }
