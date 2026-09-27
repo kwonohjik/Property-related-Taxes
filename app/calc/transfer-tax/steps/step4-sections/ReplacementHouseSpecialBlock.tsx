@@ -9,6 +9,7 @@
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
 
 export function ReplacementHouseSpecialBlock({
   form,
@@ -17,6 +18,8 @@ export function ReplacementHouseSpecialBlock({
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
 }) {
+  // §156의2⑤2호 「완성된 후 N년 이내」 — 양도일 연혁(2023-01-12 전 양도 2년 · 이후 3년, 엔진 leaf 단일 소스)
+  const completionYears = completionDeadlineYearsLabel(form.transferDate);
   return (
     <>
       <p className="text-sm font-medium mt-1">재개발·재건축 대체주택 특례</p>
@@ -76,14 +79,14 @@ export function ReplacementHouseSpecialBlock({
           checked={form.replWillResideNewHouse}
           onCheckedChange={(v) => onChange({ replWillResideNewHouse: v })}
           title="신축주택 1년 이상 거주 예정 (자기선언)"
-          description="신축주택 완성 후 3년 내 세대전원 이사 및 1년 이상 거주할 것을 확인합니다 (§156의2⑤③)"
+          description={`신축주택 완성 후 ${completionYears} 내 세대전원 이사 및 1년 이상 거주할 것을 확인합니다 (§156의2⑤2호)`}
           tone="violet"
         />
         {/* 사후관리 경고 카드 (§156의2⑬) */}
         <div className="rounded-lg border border-rose-300 bg-rose-50/60 px-4 py-3 text-xs leading-relaxed text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
           <p className="font-semibold text-rose-800 dark:text-rose-300">사후관리 주의 (소득세법 시행령 §156의2⑬)</p>
           <p className="mt-1">
-            신축주택 완성 후 3년(2023.1.12 이후 양도분) 내 세대전원 이사·1년 이상 거주하지 못하고
+            신축주택 완성 후 {completionYears} 내 세대전원 이사·1년 이상 거주하지 못하고
             신축주택을 양도하면 비과세받은 세액이 추징됩니다.
             추징세액은 해당 사유가 발생한 과세연도에 신고·납부해야 합니다.
           </p>

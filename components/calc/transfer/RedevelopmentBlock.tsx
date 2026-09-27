@@ -68,6 +68,7 @@ import {
   isHousingContribEstimatedBranch,
 } from "./asset-sections/AssetAreaRedevelopment";
 
+import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -102,6 +103,8 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   // subject="right" (입주권 양도) 포함: assetKind="right_to_move_in" 시에도 활성화
   const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
+  // 완공APT 안분 가이드의 고가주택 기준금액 — 양도일 기준(안내 전용, 세액은 엔진이 다시 정한다)
+  const highValueLabel = highValueThresholdForDisplay(transferDate).label;
 
   // 분양가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
   const preview = useMemo(() => {
@@ -142,14 +145,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
       */}
       {isRightSubject && <ImportedRedevRightFactsCard asset={asset} judgmentLoaded={judgmentLoaded} />}
 
-      {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — subject="apt" 시만 노출 */}
+      {/* 0️⃣ 1세대1주택 + 고가주택 안분 적용 가이드 — subject="apt" 시만 노출.
+          기준금액은 양도일 연혁(6억·9억·12억 — 엔진 `resolveHighValueHouseThreshold`와 같은 leaf). */}
       {!isRightSubject && (
       <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 leading-relaxed">
-        <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + 12억 초과 비과세 안분 적용 여부</p>
+        <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + {highValueLabel} 초과 비과세 안분 적용 여부</p>
         <p>
-          본 자산이 1세대1주택 + 12억 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
+          본 자산이 1세대1주택 + {highValueLabel} 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
           <span className="font-semibold"> 다음 &ldquo;보유 상황&rdquo; 단계의 &ldquo;세대·주택 현황&rdquo;</span> 입력(1세대 여부 + 보유 주택 수 1채)에 따라 결정됩니다.
-          1세대1주택이 아니면 분기별 양도차익 전체가 과세대상입니다 (12억 안분 미적용).
+          1세대1주택이 아니면 분기별 양도차익 전체가 과세대상입니다 ({highValueLabel} 안분 미적용).
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §95 ③" label="§95③" />

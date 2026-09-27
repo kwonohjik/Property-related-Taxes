@@ -20,6 +20,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
+import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
+import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
+import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
 
 /**
  * 계산기에서 **편집 위젯이 사라진** §89② 권리 예외 13필드 (P6-a).
@@ -45,12 +48,13 @@ export type ImportedRightsSlice = Pick<
   | "mergedHouseholdOwnedBeforeRight"
 >;
 
-const R3Y_KIND: Record<string, string> = {
-  new_house: "신축주택 완성 후 3년 내 전입",
+/** `years` — 「완성된 후 N년 이내」(§156의2④1호)의 N. 양도일 연혁이라 호출부가 leaf로 구해 넘긴다. */
+const r3yKind = (years: string): Record<string, string> => ({
+  new_house: `신축주택 완성 후 ${years} 내 전입`,
   before_completion: "완성 전 양도",
   delay: "처분 지연 사유",
   none: "해당 없음",
-};
+});
 const MERGED_KIND: Record<string, string> = {
   house_only: "주택만",
   initial_right: "원조합원 입주권",
@@ -103,6 +107,14 @@ const RURAL_KIND: Record<string, string> = {
   farm_exit: "2호 이농",
   return_to_farm: "3호 귀농",
 };
+/** ⑤ 위젯(`TemporaryTwoHouseSection` §155⑱ 라디오)의 value·label 그대로. */
+const DELAY_REASON: Record<string, string> = {
+  kamco: "한국자산관리공사 매각 의뢰 (1호)",
+  auction: "법원 경매 신청 (2호)",
+  public_sale: "「국세징수법」 공매 진행 중 (3호)",
+  cash_settlement_suit: "정비사업 현금청산금 지급 소송 (4호)",
+  expropriation_suit: "정비사업 수용재결·매도청구소송 (5호)",
+};
 /** ⑤ 위젯(`ExemptionProvisoSection` PROVISO_OPTIONS)의 value·label 그대로. */
 const PROVISO_REASON: Record<string, string> = {
   expropriation: "공익사업 수용 (2호 가목)",
@@ -115,23 +127,39 @@ const PROVISO_REASON: Record<string, string> = {
 
 /**
  * 🔑 권리 요약과 같은 규칙 — **선언된 것만** 적는다.
+ *
+ * 🔴 §155① 블록은 사용자 토글(`temporaryTwoHouseSpecial`)이 아니라 **④가 보내는 조건**으로 연다
+ *    (OH-36). §155①이 명부 도출로 바뀐 뒤 그 토글을 true로 쓰는 화면이 없어, 토글로 가르면
+ *    ④가 명부 도출만으로 보내 세액을 바꾸는 ⑯·⑱·§154① 단서가 계산기 어디에도 보이지 않았다.
+ *    ⇒ `temporaryTwoHouse`는 ④와 같은 leaf(`resolveTemporaryTwoHouse`) 결과를, `provisoMode`는
+ *      ④·⑧과 같은 `provisoGate` 맥락을 호출부가 넘긴다.
  */
-function specialsRows(f: ImportedSpecialsSlice, replacementHouseApplies: boolean): Row[] {
+function specialsRows(
+  f: ImportedSpecialsSlice,
+  replacementHouseApplies: boolean,
+  temporaryTwoHouse: TemporaryTwoHouseDates | undefined,
+  provisoMode: ProvisoMode,
+): Row[] {
   const rows: Row[] = [];
   const push = (label: string, value: string | undefined) => {
     if (value) rows.push({ label, value });
   };
-  if (f.temporaryTwoHouseSpecial) {
-    push("일시적 2주택 특례 (§155①)", "선언함");
-    push("신규 주택 취득일", f.newHouseAcquisitionDate);
+  if (temporaryTwoHouse) {
+    push(
+      "일시적 2주택 특례 (§155①)",
+      temporaryTwoHouse.source === "roster" ? "보유주택 명부에서 도출" : "선언함",
+    );
+    push("신규 주택 취득일", temporaryTwoHouse.newAcquisitionDate);
     if (f.publicInstitutionRelocation) push("공공기관·법인 지방이전 (§155⑯)", "예");
-    push("처분기한 예외 사유 (§155⑱)", f.disposalDelayReason ? "선언함" : undefined);
-    /**
-     * 🔑 §154① 단서는 **`temporary_two_house` 맥락일 때만** 적는다. `one_house` 맥락의 같은
-     *    카드는 계산기 섹션②에 **그대로 있다** — 조건 없이 적으면 1주택 사용자에게 같은 값이
-     *    편집 칸과 읽기 전용 요약 두 곳에 보인다(`provisoGate`가 맥락을 가르는 기준과 동일).
-     */
-    push("§154① 단서 사유", PROVISO_REASON[f.provisoReason]);
+    push("처분기한 예외 사유 (§155⑱)", f.disposalDelayReason ? DELAY_REASON[f.disposalDelayReason] ?? "선언함" : undefined);
+  }
+  /**
+   * 🔑 §154① 단서는 **`temporary_two_house` 맥락일 때만** 적는다. `one_house` 맥락의 같은
+   *    카드는 계산기 섹션②에 **그대로 있다** — 조건 없이 적으면 1주택 사용자에게 같은 값이
+   *    편집 칸과 읽기 전용 요약 두 곳에 보인다. 값은 ④가 보내는 유효 사유(`effectiveProvisoReason`).
+   */
+  if (provisoMode === "temporary_two_house") {
+    push("§154① 단서 사유", PROVISO_REASON[effectiveProvisoReason(provisoMode, f.provisoReason)]);
   }
   /**
    * §155①2호 조정대상지역 사실(OH-01 A2b) — 명부 도출 경로에서도 ④가 싣으므로 토글과 무관하게
@@ -170,14 +198,14 @@ function specialsRows(f: ImportedSpecialsSlice, replacementHouseApplies: boolean
  * 🔑 **선언된 것만 보여 준다.** 13필드를 전부 나열하면 「아니오」가 10줄 쌓여 실제 선언이 묻힌다.
  *    빈 문자열·false는 「선언하지 않음」이고, 그것은 말할 가치가 없다.
  */
-function rightsRows(r: ImportedRightsSlice): Row[] {
+function rightsRows(r: ImportedRightsSlice, completionYears: string): Row[] {
   const rows: Row[] = [];
   const push = (label: string, value: string | undefined) => {
     if (value) rows.push({ label, value });
   };
-  push("3년 초과 예외", R3Y_KIND[r.rightThreeYearExceptionKind]);
+  push("3년 초과 예외", r3yKind(completionYears)[r.rightThreeYearExceptionKind]);
   push("신축주택 완성일", r.rightNewHouseCompletionDate);
-  if (r.rightMovedInWithin3Years) push("완성 후 3년 내 전입", "예");
+  if (r.rightMovedInWithin3Years) push(`완성 후 ${completionYears} 내 전입`, "예");
   if (r.rightResidedOneYearOrMore) push("1년 이상 거주", "예");
   push("처분 지연 사유", r.rightDisposalDelayReason ? "선언함" : undefined);
   if (r.rightDisposedByThatMethod) push("그 방법으로 양도됨", "예");
@@ -240,6 +268,9 @@ export function ImportedOneHouseFactsCard({
   rights,
   specials,
   replacementHouseApplies = true,
+  temporaryTwoHouse,
+  provisoMode = null,
+  transferDate,
 }: {
   facts: OneHouseJudgmentExtraFields | undefined;
   /** 계산기에서 편집 위젯이 사라진 §89② 권리 예외 값 (P6-a). */
@@ -248,9 +279,17 @@ export function ImportedOneHouseFactsCard({
   specials?: ImportedSpecialsSlice;
   /** §156의2⑤ 게이트 — ④(`calcReplacementHouseApplies`)와 같은 값을 호출부가 넘긴다(OH-05). */
   replacementHouseApplies?: boolean;
+  /** §155① 두 날짜 — ④와 같은 leaf `resolveTemporaryTwoHouse` 결과. `undefined`면 ④가 보내지 않는다(OH-36). */
+  temporaryTwoHouse?: TemporaryTwoHouseDates;
+  /** §154① 단서 맥락 — ④·⑧과 같은 `provisoGate(...).mode` (OH-36). */
+  provisoMode?: ProvisoMode;
+  /** 양도일 — 「완성 후 N년」(§156의2④1호) 연혁 문구용 */
+  transferDate?: string;
 }) {
-  const rRows = rights ? rightsRows(rights) : [];
-  const sRows = specials ? specialsRows(specials, replacementHouseApplies) : [];
+  const rRows = rights ? rightsRows(rights, completionDeadlineYearsLabel(transferDate)) : [];
+  const sRows = specials
+    ? specialsRows(specials, replacementHouseApplies, temporaryTwoHouse, provisoMode)
+    : [];
   /**
    * 🔑 **둘 중 하나만 있어도 렌더한다.** P6 이전에 저장한 이력은 `importedOneHouseFacts`가
    *    없는데 권리 값은 갖고 있다 — `facts`만 보고 숨기면 그 값이 세액을 바꾸는 채로
@@ -317,7 +356,7 @@ export function ImportedOneHouseFactsCard({
       {facts && !hasMortgage && !hasWinWin && rRows.length === 0 && sRows.length === 0 && (
         <p className="text-sm" data-testid="imported-one-house-facts-none">
           판정 메뉴에서 <b>장기저당담보(§155의2)·상생임대(§155의3)</b> 특례를 선언하지 않았습니다.
-          나머지 판정 사실(명부·일시적 2주택 등)은 아래 입력란에 그대로 채워져 있습니다.
+          나머지 판정 사실(보유주택 명부 등)은 아래 입력란에 그대로 채워져 있습니다.
         </p>
       )}
     </ToneCard>

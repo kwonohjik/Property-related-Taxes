@@ -252,7 +252,8 @@ export function applyHousingLandExclusions(args: {
     reasons.push(
       `주택 취득 후 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법」 ` +
         `시행령 제154조 제1항 보유요건 미충족으로 1세대1주택 비과세 대상이 아님 — ` +
-        `양도차익 ${housingLandGain.toLocaleString()}을 12억 안분 없이 전액 과세`,
+        // 「12억」 리터럴 금지 — 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이다.
+        `양도차익 ${housingLandGain.toLocaleString()}을 고가주택 안분 없이 전액 과세`,
     );
   }
   const taxableGain = nonBusinessGain + landTaxableGain + buildingTaxableGain;
