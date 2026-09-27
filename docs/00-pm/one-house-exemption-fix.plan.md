@@ -181,7 +181,7 @@
 
 ## 5. 범위 밖 — 별건 등록
 
-- `calculateHoldingPeriod` 전역(장특·§104 세율, 호출부 45곳) — 초일 산입 전환 시 181건·68파일 반전(뮤테이션 B 실측). → **Q-1**
+- ~~`calculateHoldingPeriod` 전역(장특·§104 세율, 호출부 45곳) — 초일 산입 전환 시 181건·68파일 반전(뮤테이션 B 실측). → **Q-1**~~ — Q-1 결정으로 A1a(#1784)에서 전역 전환 완료
 - 중과 축 같은 패턴: `multi-house-surcharge.ts:174`, `multi-house-surcharge-exclusion.ts:61·84·166·187·478·643`, `multi-house-surcharge-count.ts:473`, UI `HousesListSection.tsx:236`
 - 임대기간 개월(`diffMonthsClamped` 공유 → §155⑳ 임대기간) → **Q-2**
 - 12억 리터럴 잔존: `transfer-tax-mixed-use-helpers.ts:527`(의도 주석 있음), `burdened-gift-eligibility.ts:19`
@@ -230,7 +230,11 @@
 | D1 | 13·14·15·16·39·40·41·42·58 | #1795 |
 | E1 | 19·20·44·48·49·50·51·63 | #1796 |
 | F1 | 02·03·24·25·26·27·52 | #1797 |
-| G1 (표시·연혁 문구) | 43·54·55·60·62·64·65 | 이 레인 |
+| G1 (표시·연혁 문구) | 43·54·55·60·62·64·65 | `1389294f`·`701e53c7`(G1b) |
+| G1 후속 | 36 + 레인 간 표시 후속 | #1810 |
+
+- PR 번호 대조: A1a #1784 · A1b #1788 · B1 #1787 · C1 #1789 · 계획서 #1782.
+- **전 레인 머지 완료(2026-09-27)** — 최종 master `c5819d9c`에서 `tsc` 0건, vitest 23,934건 중 23,917 통과·실패 0(13 skip·4 todo).
 
 - ~~OH-36은 코드상 이미 반영돼 있다~~ — **정정(2026-09-27)**: 행 자체는 있었으나 여전히 `temporaryTwoHouseSpecial`
   토글로 열려(명부 도출 경로에서는 항상 false) 숨어 있었다. G1 후속(`fix/one-house-g1-display`)에서 ④와 같은 leaf
@@ -238,3 +242,77 @@
 - G1 후속(같은 브랜치): 합가 기한(§155④⑤·§156의2⑧⑨)·완성 후 기한(§156의2④⑤) 문구 연혁, 중과 배제 합가 detail 연수,
   판정 메뉴 사이드바 대체주택 게이트, 취득세 주택 수 제외 사유 라벨, 재개발 완공APT 안분 안내·G-3 STEP의 「12억」 리터럴.
 - G1 후속: 다건 PDF(`lib/pdf/ResultPdfTransferSections.tsx`) 자산별 표에 안분 후 과세대상 양도차익 행 추가(OH-62 형제) — G1b.
+
+## 9. 남은 후속 과제 (2026-09-27, 전 레인 머지 후)
+
+출처는 각 레인 PR 본문·완료 보고다. 파일 경로는 2026-09-27 master `c5819d9c`에서 존재를 확인했고, 줄 번호는 적지 않는다(머지 후 드리프트). **착수 전 현행 코드로 재확인할 것** — 여기 적힌 「현재 동작」은 레인 보고 기준이다.
+
+### 9.1 법령 확인 필요 — 현재는 경고·보류 또는 문언 결론으로 동작
+
+| # | 항목 | 현재 동작 | 출처 |
+|---|---|---|---|
+| L-1 | 기한 말일이 공휴일일 때 민법 §161 적용 여부 | 미반영(달력일 만료) | §5·§7-6 |
+| L-2 | OH-22 2020년 이전 처분 완료 세대도 재기산 대상인지 / 거주기간도 재기산하는지 | 2021-01-01~2022-05-09 1주택 비과세 양도에 undetermined `154-5-final-one-house-restart-unverified` + 경고 | §7-2, A2a |
+| L-3 | OH-38 「1주택 보유」 판정 시점·2020.8.18 자동말소 시 단서 적용 | 조건 충족 시 undetermined `154-1-4ho-rental-registration-unverified` + 경고 | §7-3, A2a |
+| L-4 | OH-16 2019.2.12~2021.2.16 마목 1) 배제 — 직접 해석례 미확보 | 문언대로 배제 | §7-4, D1 |
+| L-5 | OH-40 부칙<제29523호> 제7조①: 2019.2.12 전 취득 거주주택에 종전 ⑳(가~라목) 적용 여부 | 경고만, 판정 불변 | §7-5, D1 |
+| L-6 | OH-46 입주권·분양권 1년 요건 초일 불산입 — 직접 선례 미확보 | 문언·일반원칙대로 초일 불산입 | §7-1, A1b |
+| L-7 | 조정대상지역 **공고일 당일** 계약분 — 「공고가 있은 날 이전」에 당일 포함 여부 | 데이터의 `designatedDate`(효력일) 기준이라 당일 계약은 조정 취득으로 판정 | A2b |
+| L-8 | §155①2호 가목 — 신규주택 **취득 전 전입**을 요건 충족으로 볼지 | 충족으로 판정 | A2b |
+| L-9 | 일반주택 취득일 = 상속개시일(같은 날)을 「상속개시 당시 보유」로 볼지 | 보유로 판정 | A3 |
+| L-10 | 겸용주택(주택 > 상가) 전체 12억 초과 시 §156②·§160① 분모를 주택분/전체 중 무엇으로 | 종전 경로(주택분) 유지 | A3 |
+| L-11 | §155③ 공동상속 풀까지 소급 2년 증여 제외를 적용하는 기존 동작 — ③ 원문에는 증여 제외 괄호 없음 | 종전 동작 유지(범위 밖) | A3 |
+| L-12 | 재개발 청산금 수령 동시신고 + 신축 고가(안분) + 청산금분 인가일 요건 미충족 시 청산금분에도 신축 안분 비율을 적용하는지 | 종전 동작 유지 | E1 |
+| L-13 | 취득세 부칙<제30939호> 제3조 「시행 이후 5년 동안」 종료일(민법 §157 단서 → 2025-08-11) 직접 해석례 미확보 | 2025-08-11까지 제외 | F1 |
+
+### 9.2 새 입력이 있어야 판정을 바꿀 수 있는 것
+
+| # | 항목 | 필요한 입력 | 출처 |
+|---|---|---|---|
+| I-1 | OH-22 최종 1주택 재기산 판정 | 과거 2주택 이상 보유 여부, 다른 주택 각각의 처분 유형(양도·증여·용도변경)·처분일 | A2a |
+| I-2 | OH-38 종전 §154①4호 경과조치 판정 | 임대사업자 등록 신청일(≤2019-12-16), 임대의무기간, 5% 증액 준수 | A2a |
+| I-3 | OH-38 알림 게이트가 취득 전 계약 상태로 등록한 사례를 놓침 | 계약일 | A2a |
+| I-4 | ㉓ 「2호 이상이면 최초 말소일부터 5년」 | 임대주택별 말소일 | D1 |
+| I-5 | §155⑳ 임대주택을 전부 처분하고 PHRP만 남은 경우 §161 안분 | (엔진이 임대주택 ≥1호 전제) | D1 |
+| I-6 | 취득세 공동상속 입주권·분양권·오피스텔 §28의4⑤ 지분 판정 | `RightAsset`·`OfficeAsset` 지분 필드 | F1 |
+| I-7 | 취득세 기준일 당일 동시 취득 순서(§28의4③ 납세의무자 선택) | 순서 선택 입력 (현재 산입 + 안내 경고) | F1 |
+| I-8 | 재개발 승계조합원 거주를 개월로 직접 입력한 경우 준공 전 거주 차단 | 거주 구간 날짜 (현재 hint만) | E1 |
+
+### 9.3 엔진·배선 잔여
+
+| # | 항목 | 출처 |
+|---|---|---|
+| E-1 | 증여세 부담부증여 양도 경로(`lib/calc/gift-burdened-transfer-api.ts`)가 A2b 새 입력(조정 여부·전입일·임대차 종료일·계약일)을 보내지 않음 → 옛 기준 판정 + 알림 | A2b |
+| E-2 | 계산기 ⑧에 §154⑧3호 상속 통산 시작일 순서 검사(피상속인 취득일 이후·상속개시일 이전) 없음 — 판정 메뉴에만 있음 | C2 |
+| E-3 | 재개발 입주권(§89①4호)·청산금 경로가 고정 `HIGH_VALUE_THRESHOLD`(12억) 사용 — `transfer-tax-redevelopment-transforms.ts` | E1·G1 (리뷰 P3) |
+| E-4 | §97의4① 단서 판정 `table2ActiveForRedev`(`transfer-tax-redevelopment-steps.ts`)가 공유 거주 leaf가 아닌 `residencePeriodMonths`를 읽음(OH-48 같은 축, anchor 없음) | E1 |
+| E-5 | 저가주택 한도 판정일이 경로마다 다름 — 주택 수는 `houseCountInput.referenceDate`(잔금일→계약일), 중과 배제는 §20 취득일 | F1 |
+| E-6 | 취득세 법률<제17473호> 부칙 제6조(2020.7.10 이전 계약 경과조치) 미반영 | F1 |
+| E-7 | 겸용 단건 엔진에 §89② 판정 없음(파트 카드 경로만 판정) | A3 |
+| E-8 | 재개발 원조합원 신축주택을 2014-02-21 전 양도한 경우 엔진 `acquisitionDate`(종전주택 취득일)로는 §155② 입주권 신축 포함 연혁 판별 불가 | A3 |
+| E-9 | 다건(multi) 경로에 `sellingHouseExclusion` 미전송(P2) | B1 |
+| E-10 | B1에서 다건 명부 행에 새로 실린 필드들이 중과 세액에 주는 영향 미측정 | B1 |
+| E-11 | 중과 축 `differenceInYears` 패턴(`multi-house-surcharge-exclusion.ts` 등) — 초일 규칙 미적용 | §5 |
+| E-12 | 12억 리터럴 잔존: `burdened-gift-eligibility.ts`, `RedevelopmentBlockCards.tsx`(보고만), `transfer-tax-mixed-use-helpers.ts`(의도 주석 — 겸용은 2022년 이후 양도만 받아 12억 시대) | §5·G1 |
+| E-13 | Supabase `tax_rates` 실데이터에 A2a가 스키마에서 제거한 필드 3개(`regulatedAreaDeadlineYears`·`regulatedAreaRelaxDate`·`regulatedAreaRelaxDeadlineYears`) 잔존 — 스키마가 strip, 다음 `npm run seed:tax-rates`에서 정리 | A2a |
+
+### 9.4 표시·구조
+
+| # | 항목 | 출처 |
+|---|---|---|
+| D-1 | `app/calc/transfer-tax/steps/Step4.tsx` 785줄 — 750~800 위험 구간(다음 기능 작업 시 기회주의적 분리) | G1 |
+| D-2 | 판정 메뉴 사이드바 「일시적 2주택」 항목 — 이제 true로 쓰는 화면이 없음 | G1 |
+| D-3 | `HouseCountVerifier` 세대 분리 표시가 description 없으면 reason id로 폴백 | G1 |
+| D-4 | 설계서 §155⑳ `r_high = S > 1_200_000_000` 줄이 12억 고정 | G1 |
+| D-5 | `BurdenedGiftDetailCard` 「고가주택 판정 분모」 문구 변경에 anchor 없음 | G1 |
+| D-6 | 판정 메뉴 보유 감면주택 7조문 제외가 선언 실패 사유를 숨김(기존 동작) | C2 |
+| D-7 | 주소 삭제 시 `addressPnu`·`acquisitionSigunguCode` 잔존(기준시가 prefill·RTMS 조회용, 세액 무관) | C2 |
+| D-8 | 옛 이력 레코드에 OH-53 `exemptReason` 잔존 | C1 |
+| D-9 | `legal-codes` 취득세 ⑥10호·⑥11호 인용이 현행 ⑥ 호 번호와 불일치, `normalizeAcquisitionForm` 호출처 없음 | F1 |
+| D-10 | 브라우저 수동 확인 미실시(RTL·route·E2E로 대체) | 전 레인 |
+
+### 9.5 테스트 안정성
+
+- `__tests__/components/fb-imputed-capex-display.anchor.test.tsx` A17-1·2 — 고부하 병렬 실행에서 동적 import 타임아웃·TDZ(`Cannot access '__vite_ssr_import_5__' before initialization`)로 간헐 실패(D1·F1·A2b·G1 레인에서 각 1회 관측, 단독·재실행 통과). 원인 미규명.
+- E2E 부하 flaky(레인 병렬 실행 중 관측, 단독 재실행 통과): `transfer-nbl-revenue-deemed-common.spec.ts`, `transfer-nbl-unconditional-exemption.spec.ts`, `transfer-replacement-house.spec.ts`, `mixed-use-asset-major-commercial-modal.spec.ts`.
+- `lthd-parts-masking-consistency.anchor.test.ts` E3-05-04 대조군이 E1 이후 비과세 마스킹 경로를 지나 「비마스킹 수령 경로」를 더 이상 검증하지 않음 — 대조군 보강 필요.
