@@ -42,11 +42,12 @@ const EXCLUDED_REASON_LABEL: Record<string, string> = {
 };
 
 // 배제 사유 레이블 매핑
+// 🔑 합가 기한 연수(5년·10년)는 라벨에 적지 않는다 — 양도일 연혁이라 엔진 `detail`이 말한다.
 const EXCLUSION_REASON_LABEL: Record<string, string> = {
   temporary_two_house: "일시적 2주택 특례",
   rural_house: "농어촌주택 1세대1주택 의제 (§155⑦)",
-  marriage_merge: "혼인합가 1세대1주택 의제 (2주택·10년)",
-  parental_care_merge: "동거봉양 합가 특례 (10년 이내)",
+  marriage_merge: "혼인합가 1세대1주택 의제 (2주택)",
+  parental_care_merge: "동거봉양 합가 특례",
   pre_designation_contract: "조정대상지역 공고일 이전 매매계약",
   only_one_remaining: "배제 후 유일한 1주택",
   mortgage_execution_3years: "저당권 실행 3년 이내",

@@ -211,8 +211,9 @@ function checkEligibility(rentalUnits, residenceHoldYears, residenceLiveYears, t
     // 기타 요건 (5%증액·등록·임대료 등) — requirementsConfirmed로 자기확인
     if (!unit.requirementsConfirmed) → fail;
 
-  // 1호라도 통과하면 PASS (특례는 1호 이상 임대 시 적용)
-  if (any(unit.passed)) → pass;
+  // 보유한 장기임대주택 **전 호**가 통과해야 PASS (D1 · 2026-09 — 1호라도 미충족이면 FAIL,
+  //   eligibility.ts `allUnitsPassed`). 종전 「1호라도 통과하면 PASS」는 폐기.
+  if (all(unit.passed)) → pass;
 }
 ```
 

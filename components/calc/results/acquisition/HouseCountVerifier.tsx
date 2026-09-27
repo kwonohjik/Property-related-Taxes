@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
+import type { ExclusionReason } from "@/lib/tax-engine/house-count/types";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 
 interface Props {
@@ -21,31 +22,35 @@ interface Props {
 // 제외 항목 레이블
 // ============================================================
 
-const EXCLUSION_TYPE_LABELS: Record<string, string> = {
-  low_standard_value: "시가표준액 1억/2억 이하",
-  public_housing: "공공주택사업자 매입임대",
-  elderly_welfare: "노인복지주택",
+/**
+ * 🔑 키는 엔진 사유값(`ExclusionReason`) 그대로다 — 종전 키(`low_standard_value`·`inherited_5yr` 등)는
+ *    엔진이 내는 값과 달라 화면에 내부 id가 그대로 나왔다. `satisfies`로 **누락**을 컴파일러가 잡는다.
+ */
+const EXCLUSION_TYPE_LABELS = {
+  low_value_metro: "시가표준액 1억 이하 (수도권)",
+  low_value_non_metro: "시가표준액 2억 이하 (수도권 밖)",
+  elder_housing: "노인복지주택",
   cultural_heritage: "문화유산·천연기념물",
-  public_supported_rental: "공공지원민간임대주택",
-  daycare: "가정어린이집",
-  reit: "부동산투자회사 매입",
-  demolition: "멸실 목적 주택",
-  unsold_contractor: "미분양 시공자 취득",
-  debt_repayment: "채권변제 취득",
-  rural_house: "농어촌 주택",
-  employee_rental: "사원임대용",
-  inherited_5yr: "상속 5년 미경과",
+  farmland_rural: "농어촌 주택",
+  unsold_apt_non_metro: "수도권 밖 미분양 아파트",
+  unsold_constructor: "멸실 목적 미분양 시공자 취득",
+  creditor_acquisition: "채권변제 취득",
+  public_supported_lease: "공공지원민간임대주택",
+  population_decline_lease: "인구감소지역 임대주택",
+  staff_rental: "사원임대용",
+  inheritance_under_5yr: "상속 5년 미경과",
+  pre_marriage_subscription_right: "혼인 전 분양권 (배우자)",
   hansi_new_build: "한시특례 신축",
-  hansi_lease: "한시특례 임대등록",
-  hansi_unsold: "한시특례 미분양",
-  right_owned: "입주권·분양권 보유",
-  low_officetel: "시가표준액 1억 이하 오피스텔",
-  low_land_only: "시가표준액 1억 이하 부속토지",
-  pre_marriage_right: "혼인 전 분양권 (배우자)",
+  hansi_lease_registered: "한시특례 임대등록",
+  hansi_unsold_apt: "한시특례 미분양",
+  low_value_office: "시가표준액 1억 이하 오피스텔",
   pre_2020_08_12_right_office: "2020.8.12. 전 취득·계약 입주권·분양권·오피스텔",
   acquired_after_reference_date: "권리취득일 뒤 취득",
   joint_inheritance_not_owner: "공동상속 — 소유자로 보지 않는 상속인",
-};
+  pending_hansi_new_build: "취득 주택 — 한시특례 신축",
+  pending_hansi_lease: "취득 주택 — 한시특례 임대등록",
+  pending_hansi_unsold: "취득 주택 — 한시특례 미분양",
+} satisfies Record<ExclusionReason, string>;
 
 // ============================================================
 // 메인 컴포넌트
@@ -101,7 +106,7 @@ export function HouseCountVerifier({ result }: Props) {
                     <span className="text-sky-500 shrink-0 mt-0.5">✓</span>
                     <div>
                       <span className="font-medium">
-                        {EXCLUSION_TYPE_LABELS[excl.reason] ?? excl.reason}
+                        {EXCLUSION_TYPE_LABELS[excl.reason] ?? "기타 제외 사유"}
                       </span>
                       {excl.description && (
                         <span className="text-muted-foreground ml-1">— {excl.description}</span>

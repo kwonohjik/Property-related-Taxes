@@ -28,6 +28,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { mergeExemptionYearsLabel } from "@/lib/calc/one-house-era-labels";
 
 type Props = {
   form: TransferFormData;
@@ -84,6 +85,12 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
   const kind = form.mergedHouseholdFirstHouseKind;
   const isInitialRight = kind === "initial_right";
   const isSucceededOrPresale = kind === "succeeded_right" || kind === "presale_right";
+  // 합가 기한 N년 — 양도일 연혁(동거봉양 2018-02-13·혼인 2024-11-12 전 양도는 5년). 엔진 leaf 단일 소스.
+  const mergeYears = mergeExemptionYearsLabel({
+    marriageDate: form.marriageDate,
+    parentalCareMergeDate: form.parentalCareMergeDate,
+    transferDate: form.transferDate,
+  });
 
   return (
     <ToneCard
@@ -98,7 +105,7 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
       bodyClassName="space-y-2"
     >
       <p className="text-xs leading-relaxed text-violet-900 dark:text-violet-200">
-        합가 후 <b>10년 이내에 먼저 양도하는 주택</b>이 아래 어느 하나에 해당하면 1세대1주택으로
+        합가 후 <b>{mergeYears} 이내에 먼저 양도하는 주택</b>이 아래 어느 하나에 해당하면 1세대1주택으로
         봅니다. 이 예외는 <b>1주택과 2조합원입주권</b>처럼 권리가 둘인 세대도 조문이 명문으로
         열거합니다.
       </p>
@@ -127,7 +134,7 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
               checked={form.isFirstTransferredInMerge}
               onCheckedChange={(v: boolean) => onChange({ isFirstTransferredInMerge: v })}
               title="합가 후 세대 내에서 먼저 양도하는 주택이다"
-              description="시행령 §156의2⑧·⑨은 「합친 날부터 10년 이내에 먼저 양도하는 주택」(최초양도주택)만 대상으로 합니다."
+              description={`시행령 §156의2⑧·⑨은 합친 날(혼인한 날)부터 ${mergeYears} 이내에 먼저 양도하는 주택(최초양도주택)만 대상으로 합니다.`}
               tone="violet"
             />
           )}

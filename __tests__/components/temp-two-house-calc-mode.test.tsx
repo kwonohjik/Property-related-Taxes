@@ -29,6 +29,7 @@ import {
 } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
+import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 
@@ -178,6 +179,18 @@ describe("CM-5 읽기 전용 요약 — ③ 값을 실제로 그린다", () => {
         specials={specials({
           temporaryTwoHouseSpecial: true,
           newHouseAcquisitionDate: "2023-06-01",
+        })}
+        /*
+         * OH-36(G1) — 카드는 토글이 아니라 ④와 같은 leaf의 도출 결과로 §155① 블록을 연다.
+         * 옛 record(선언 토글 + 신규 취득일)는 leaf의 레거시 폴백(`source: "declared"`)을 거친다.
+         */
+        temporaryTwoHouse={resolveTemporaryTwoHouse({
+          primaryKind: "housing",
+          primaryAcquisitionDate: "2018-01-01",
+          houses: [],
+          legacyPrecedence: false,
+          declaredSpecial: true,
+          declaredNewHouseDate: "2023-06-01",
         })}
       />,
     );

@@ -21,6 +21,8 @@ import {
   SURCHARGE_TRANSITION_DESIGNATION_DATE,
 } from "./legal-codes";
 import { REGULATED_REGIONS } from "./data/regulated-areas";
+// 합가 기한 연수(양도일 연혁) — 비과세 판정(`matchMergeWindow`)과 같은 leaf. 배제 detail 문구용.
+import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import type { RegulatedRegion } from "./data/regulated-areas";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import type {
@@ -333,10 +335,11 @@ function deemedOneHouseExclusionReason(
       const d = (marriage ? input.marriageMerge!.marriageDate : input.parentalCareMerge!.mergeDate)
         .toISOString()
         .slice(0, 10);
+      const years = resolveMergeExemptionYears(marriage ? "marriage" : "parental_care", input.transferDate);
       return {
         type: marriage ? "marriage_merge" : "parental_care_merge",
         detail:
-          `${marriage ? "혼인일" : "동거봉양 합가일"}(${d}) 10년 내 먼저 양도 + 일시적 2주택(§155①) 중첩 — ` +
+          `${marriage ? "혼인일" : "동거봉양 합가일"}(${d}) ${years}년 내 먼저 양도 + 일시적 2주택(§155①) 중첩 — ` +
           `1세대1주택 의제 중과 배제 (${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})`,
       };
     }
@@ -347,7 +350,7 @@ function deemedOneHouseExclusionReason(
         : MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS;
       return {
         type: "marriage_merge",
-        detail: `혼인일(${d}) 10년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
+        detail: `혼인일(${d}) ${resolveMergeExemptionYears("marriage", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
       };
     }
     case "parental_care_merge": {
@@ -357,7 +360,7 @@ function deemedOneHouseExclusionReason(
         : MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS;
       return {
         type: "parental_care_merge",
-        detail: `동거봉양 합가일(${d}) 10년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
+        detail: `동거봉양 합가일(${d}) ${resolveMergeExemptionYears("parental_care", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
       };
     }
     default:

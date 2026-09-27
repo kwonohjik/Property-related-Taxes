@@ -29,7 +29,7 @@ import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
-import { resolveHouseholdHousingCount, houseCountScalarLocked, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, houseCountScalarLocked, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
@@ -166,6 +166,21 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // 1세대1주택 안내 배너의 고가주택 기준금액 — 양도일 기준 6억·9억·12억 (OH-65, 안내 전용)
   const highValueLabel = highValueThresholdForDisplay(form.transferDate).label;
 
+  // §155① 두 날짜 — ④(`buildHouseholdSpecialPayload`)와 같은 leaf·인자. §154① 단서 맥락과 넘겨받은
+  // 사실 카드(⑯·⑱ — OH-36, 토글로 가르면 명부 도출분이 숨는다)가 함께 쓴다.
+  const tempTwoHouseDates = useMemo(
+    () =>
+      resolveTemporaryTwoHouse({
+        primaryKind: form.assets?.[0]?.assetKind,
+        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        houses: form.houses,
+        legacyPrecedence: form.legacyHouseCountPrecedence === true,
+        declaredSpecial: form.temporaryTwoHouseSpecial === true,
+        declaredNewHouseDate: form.newHouseAcquisitionDate,
+      }),
+    [form.assets, form.houses, form.legacyHouseCountPrecedence, form.temporaryTwoHouseSpecial, form.newHouseAcquisitionDate],
+  );
+
   // §154① 단서 카드 노출·맥락 — one_house(1주택)/temporary_two_house(2주택+일시적특례)/미노출 (Part B 단일 파생, store 미러링 금지)
   const proviso = useMemo(
     () =>
@@ -181,36 +196,23 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           houses: form.houses,
           legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         }),
-        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-          primaryKind: form.assets?.[0]?.assetKind,
-          primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
-          houses: form.houses,
-          legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-          declaredSpecial: form.temporaryTwoHouseSpecial === true,
-          declaredNewHouseDate: form.newHouseAcquisitionDate,
-        }),
+        temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
       }),
     /**
      * ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
      *
-     * §155①이 명부 파생으로 바뀌며 의존이 셋 늘어(양도주택 취득일 · 신규주택 취득일 ·
-     * OH-34 표식) deps도 함께 늘렸다(2026-09-22).
+     * §155① 의존(양도주택 취득일 · 신규주택 취득일 · OH-34 표식)은 `tempTwoHouseDates`가 싣는다.
      *
-     * ⚠️ **이 화면에서 관측되는 차이는 없다** — `:598`이 `mode === "one_house"`만 소비하고,
-     *    1주택이면 `provisoGate`가 `temporaryTwoHouseApplies`를 보지도 않는다. 그래도 인자가
-     *    늘었으면 deps를 늘린다(규율). `temporary_two_house` 모드를 실제로 쓰는 곳은
-     *    **판정 메뉴 `Step2.tsx`**이고, 그쪽 deps는 `derivedNewHouse`를 포함한다 —
-     *    안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD)가 진다.
+     * `temporary_two_house` 모드는 넘겨받은 사실 카드의 §154① 단서 행이 소비한다(OH-36).
+     * 판정 메뉴 `Step2.tsx` 쪽 안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD).
      */
     [
       form.isOneHousehold,
       primaryKind,
       form.householdHousingCount,
       form.houses,
-      form.temporaryTwoHouseSpecial,
-      form.assets,
       form.legacyHouseCountPrecedence,
-      form.newHouseAcquisitionDate,
+      tempTwoHouseDates,
     ],
   );
 
@@ -380,6 +382,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         rights={form}
         specials={form}
         replacementHouseApplies={calcReplacementHouseApplies(form)}
+        temporaryTwoHouse={tempTwoHouseDates}
+        provisoMode={proviso.mode}
+        transferDate={form.transferDate}
       />
 
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}

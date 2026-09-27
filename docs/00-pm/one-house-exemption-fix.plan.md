@@ -232,5 +232,9 @@
 | F1 | 02·03·24·25·26·27·52 | #1797 |
 | G1 (표시·연혁 문구) | 43·54·55·60·62·64·65 | 이 레인 |
 
-- OH-36은 코드상 이미 반영돼 있다(`ImportedOneHouseFactsCard.tsx` §155⑯·⑱ 행). 반영 커밋은 확인 필요.
+- ~~OH-36은 코드상 이미 반영돼 있다~~ — **정정(2026-09-27)**: 행 자체는 있었으나 여전히 `temporaryTwoHouseSpecial`
+  토글로 열려(명부 도출 경로에서는 항상 false) 숨어 있었다. G1 후속(`fix/one-house-g1-display`)에서 ④와 같은 leaf
+  (`resolveTemporaryTwoHouse`)·`provisoGate` 맥락으로 열도록 고쳤다.
+- G1 후속(같은 브랜치): 합가 기한(§155④⑤·§156의2⑧⑨)·완성 후 기한(§156의2④⑤) 문구 연혁, 중과 배제 합가 detail 연수,
+  판정 메뉴 사이드바 대체주택 게이트, 취득세 주택 수 제외 사유 라벨, 재개발 완공APT 안분 안내·G-3 STEP의 「12억」 리터럴.
 - G1 후속: 다건 PDF(`lib/pdf/ResultPdfTransferSections.tsx`) 자산별 표에 안분 후 과세대상 양도차익 행 추가(OH-62 형제) — G1b.
