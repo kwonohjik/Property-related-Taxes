@@ -316,3 +316,20 @@
 - `__tests__/components/fb-imputed-capex-display.anchor.test.tsx` A17-1·2 — 고부하 병렬 실행에서 동적 import 타임아웃·TDZ(`Cannot access '__vite_ssr_import_5__' before initialization`)로 간헐 실패(D1·F1·A2b·G1 레인에서 각 1회 관측, 단독·재실행 통과). 원인 미규명.
 - E2E 부하 flaky(레인 병렬 실행 중 관측, 단독 재실행 통과): `transfer-nbl-revenue-deemed-common.spec.ts`, `transfer-nbl-unconditional-exemption.spec.ts`, `transfer-replacement-house.spec.ts`, `mixed-use-asset-major-commercial-modal.spec.ts`.
 - `lthd-parts-masking-consistency.anchor.test.ts` E3-05-04 대조군이 E1 이후 비과세 마스킹 경로를 지나 「비마스킹 수령 경로」를 더 이상 검증하지 않음 — 대조군 보강 필요.
+
+### 9.6 우선순위와 진행 순서 (2026-09-27 결정)
+
+기준: ① 현행 양도분에 걸리는가(과거 시기보다 우선) ② 세액이 **조용히** 틀리는가 ③ 납세자 불리 방향인가(법 근거 없는 불리 적용 금지) ④ 품.
+재확인(2026-09-27 master `d21d0bec`): E-9 사실 — 다건 ④는 `sellingHouseExclusion` 중 장기임대분만 싣는다(`lib/calc/multi-transfer-tax-api.ts:135`). E-4는 §97의4 추가공제 가산 여부 판정에만 쓰여(`transfer-tax-redevelopment-steps.ts:265`) 영향이 좁다 → P3.
+
+| 등급 | 항목 | 이유 |
+|---|---|---|
+| **P0** 바로 | E-10 · E-9 · E-5 · E-2 · 9.5(A17 간헐 실패, E3-05-04 대조군) · E-13 | 작고, 현행 양도분 또는 이미 배포된 변경에 걸림. E-10은 측정 후 수정 여부 판단. E-13(seed)은 P0 머지 후 master 코드로 실행 |
+| **P1** 법령 확인 선행 | L-3→I-2·I-3(OH-38) · L-11 · L-1 · L-10 · I-4 · D-6 | 현행 양도분 + 납세자 불리 가능 |
+| **P2** 과거 양도분(경정청구 기간 내) | L-2·I-1(OH-22) · E-3 · E-1 · 선례 탐색 L-4·5·6·7·8·9·12 · D-9 | E-1은 2023-01-12 이후 양도분이면 조정 여부와 무관하게 3년이라 과거 시기에만 영향 |
+| **P3** 기회주의적 | E-6 · L-13 · E-8 · I-5·6·7·8 · E-7 · E-11 · E-12 · D-1·2·3·4·5·7·8 · E-4 | 지난 시기·드문 사례·1일 경계·표시. D-1은 `Step4.tsx`를 다음에 열 때 분리 |
+
+**진행 순서**
+1. **P0 레인**(코드, 브랜치 `fix/one-house-followups-p0`) — PR 1~2개.
+2. **법령 조사 1회**(문서만, 이 브랜치) — P1 L-3·L-11·L-1·L-10과 P2 선례(L-2·4·5·6·7·8·9·12)를 한 번에 조사해 §9.1에 결과를 반영. 1과 병렬.
+3. 조사 결과에 따라 **새 입력 레인** — OH-38(I-2·I-3) → ㉓ 말소일(I-4) → OH-22(I-1).
