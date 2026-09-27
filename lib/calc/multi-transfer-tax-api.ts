@@ -24,16 +24,14 @@ import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
-import { buildSellingRentalPayload, sellingRentalAcquisitionPrice } from "@/lib/calc/transfer-tax-api-houses";
-import { buildOtherHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
+import { buildHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
+import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { buildReplacementHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { buildOneHouseExtraFactsPayload } from "@/lib/calc/one-house-extra-facts-payload";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
-import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 
-import { isHousingLike } from "./housing-like-asset";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
@@ -95,56 +93,18 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ? buildPresaleRightsPayload(primary.assetKind, form.presaleRights)
     : undefined;
 
-  const housesPayload =
-    isHousingLike(primaryKind) && form.houses.length > 0
-      ? [
-          {
-            id: "selling",
-            // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지)
-            region: deriveHouseRegionFromCode(primary?.regionCode),
-            regionCode: primary?.regionCode || undefined,
-            acquisitionDate: primary?.acquisitionDate ?? "",
-            officialPrice: primary?.standardPriceAtTransfer
-              ? parseAmount(primary.standardPriceAtTransfer)
-              : 0,
-            // ④' §167의3①7호 — 양도 주택 자신의 상속 5년 배제. 단건과 동일 배선.
-            // 종전 `false` 하드코딩으로 D16 엔진 분기가 잠들어 있었다(실측 과다 과세).
-            isInherited: primary?.acquisitionCause === "inheritance",
-            // 기산일 fallback — 영 §162①5호(상속 자산의 취득시기 = 상속개시일). 단건과 동일.
-            inheritedDate:
-              primary?.acquisitionCause === "inheritance"
-                ? primary.inheritanceDate || primary.acquisitionDate || undefined
-                : undefined,
-            decedentSameHouseholdAtInheritance:
-              primary?.acquisitionCause === "inheritance"
-                ? primary.decedentSameHouseholdBeforeInheritance
-                : undefined,
-            parentalCareMergeInheritedHouse:
-              primary?.acquisitionCause === "inheritance" &&
-              primary.decedentSameHouseholdBeforeInheritance
-                ? primary.parentalCareMergeInheritedHouse
-                : undefined,
-            isRankingDisqualifiedInheritedHouse:
-              primary?.acquisitionCause === "inheritance"
-                ? primary.isRankingDisqualifiedInheritedHouse
-                : undefined,
-            // ④' §167의3①2호 — 양도 주택 자신의 장기임대 배제. 단건과 **같은 leaf**.
-            //   종전 `false` 하드코딩으로 엔진 `isSurchargeExemptRental(sellingHouse, …)`가
-            //   잠들어 있었다. 여기만 빠뜨리면 같은 자산이 「계산」과 「합산 계산」에서 다른
-            //   세액이 된다([[feedback_sibling_path_already_implements_rule]]).
-            ...buildSellingRentalPayload(form.sellingHouseExclusion?.longTermRental),
-            // 나·라목 「취득 당시 기준시가」 — 이 경로에는 §167의10①3호(부득이) 칸이 없어 겸용 충돌이 없다.
-            acquisitionOfficialPrice: sellingRentalAcquisitionPrice(
-              form.sellingHouseExclusion?.longTermRental,
-            ),
-            isOfficetel: false,
-            isUnsoldHousing: false,
-          },
-          // ⑬ 명부 행 — 단건과 **같은 빌더**(OH-10). 종전 인라인 11필드 map은 §155② 단서·순위·
-          //    §155③ 공동상속 게이트를 빠뜨려, 합산 계산에서 상속주택이 무조건 주택 수에서 빠졌다.
-          ...buildOtherHousesPayload(form.houses),
-        ]
-      : undefined;
+  /**
+   * ⑬ 세대 보유 주택 목록 — 단건 ④와 **같은 빌더**(`buildHousesPayload`)를 부른다(E-9).
+   *
+   * 🔴 종전 다건은 `selling` 행을 손으로 만들며 장기임대(`longTermRental`) 하나만 옮겼다. 다건 편집
+   *    화면은 단건 계산기를 그대로 마운트해 양도 주택 배제 세 섹션(3주택+ · 2주택 · 장기임대)이 모두
+   *    뜨는데, §167의3①4·5·6·8·8의2호와 §167의10①3·7호 선언이 합산 계산에서 **조용히 사라졌다**
+   *    (단건 배제 ↔ 다건 중과). 게이트도 달랐다 — 단건은 「명부 ≥1 ‖ 분양권·입주권 ≥1」, 다건은
+   *    명부만 봤다. 명부 행은 B1(OH-10)에서 이미 공유했다 — 이 한 층만 남아 있었다.
+   */
+  const housesPayload = primary
+    ? buildHousesPayload(primary, form.houses ?? [], form.presaleRights?.length ?? 0, form.sellingHouseExclusion)
+    : undefined;
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (단건 callTransferTaxAPI와 동일 규칙).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 deprecated — 더 이상 사용하지 않음.
@@ -395,9 +355,10 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
      */
     ...buildRightThreeYearExceptionPayload(form),
     ...buildMergedHouseholdFirstHousePayload(form),
-    // ⑬ 다주택 중과 한시 유예/경과조치 — houses 제공 시에만 엔진이 소비 (단건 callTransferTaxAPI와 동일 게이트).
+    // ⑬ 다주택 중과 한시 유예/경과조치 — 단건 ④·⑤·⑧과 **같은 술어**(`gracePeriodInScope`, Q03).
+    //    종전 다건은 `housesPayload && …`라 한시배제 창 안의 stale 값까지 실었다(단건은 막는다).
     // 다건은 자산별 form이라 gracePeriod도 native per-property.
-    ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
+    ...(gracePeriodInScope(form) && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
