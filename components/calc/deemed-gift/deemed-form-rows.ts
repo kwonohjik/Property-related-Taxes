@@ -14,6 +14,8 @@ export interface CdShareholderRow {
   redeemedShares: string;
   redemptionPrice: string;
   relationGroup: string;
+  /** 영리법인 — 수증자로서만 효력(저가=잔존주주·고가=감자주주, 「상증법」§2 9호·§4의2①·③). 미지정 = 개인 */
+  isForProfitCorp?: boolean;
 }
 
 /** 증자 cap-table 1행 (폼 — string 필드). API 변환에서 CapShareholder(number)로 변환 */

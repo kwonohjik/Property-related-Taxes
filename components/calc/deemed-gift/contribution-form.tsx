@@ -94,6 +94,18 @@ function ConPartyRow({
           <p className="mt-1 text-xs text-muted-foreground">{relLabel}</p>
         )}
       </FieldCard>
+      {/* 「상증법」§2 9호·§4의2①·③ — 고가 명부만 수증자 명부다. 저가 명부(증여자)에는 두지 않는다
+          (④가 같은 술어 isHigh로 거른다 — 저가로 바꿔도 남는 stale 값) */}
+      {isHigh && (
+        <ToggleCard
+          variant="chip"
+          tone="violet"
+          checked={party.isForProfitCorp === true}
+          onCheckedChange={(v) => onChange({ ...party, isForProfitCorp: v })}
+          title="영리법인 수증자 (§4의2①·③ — 증여세 납세의무자 아님)"
+          data-testid={`con-party-corp-${idx}`}
+        />
+      )}
     </div>
   );
 }

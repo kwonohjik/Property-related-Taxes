@@ -2,6 +2,7 @@
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
+import { FOR_PROFIT_DONEE_REASON } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ContributionInput, ContributionParty } from "./types";
 
@@ -231,24 +232,35 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
 
   // roster有: per-donee 분리. 30% 게이트=per-share 공통, 3억 게이트=per-donee(§29의3② "그 이익").
   const contributionBreakdown: ContributionBreakdownRow[] = [];
+  const preExclusion: number[] = [];
   let deemedGiftValue = 0;
   parties.forEach((p) => {
     const raw = safeMultiplyThenDivide(base, p.preShares, preContribShares);
-    const applied = raw > 0 && (ratioGateMet || raw >= ABSOLUTE_THRESHOLD);
-    const v = applied ? raw : 0;
+    const meetsThreshold = raw > 0 && (ratioGateMet || raw >= ABSOLUTE_THRESHOLD);
+    // 「상증법」§2 9호·§4의2①·③ — 고가 명부의 parties는 **수증자**라 영리법인이면 그 행만 빠진다.
+    // (저가 명부는 증여자 명부라 contributionLow는 이 표지를 읽지 않는다)
+    const forProfitOut = meetsThreshold && p.isForProfitCorp === true;
+    const v = meetsThreshold && !forProfitOut ? raw : 0;
     deemedGiftValue += v;
+    preExclusion.push(forProfitOut ? raw : 0);
     contributionBreakdown.push({
       party: partyName(p),
       preShares: p.preShares,
       ratioLabel: ratioLabel(p.preShares, preContribShares),
       value: v,
       relation: p.relation,
+      ...(forProfitOut && { excludedReason: FOR_PROFIT_DONEE_REASON }),
     });
   });
 
   const breakdown: CalculationStep[] = [...baseBreakdown];
-  contributionBreakdown.forEach((bd) =>
-    breakdown.push({ label: `수증자 ${bd.party} (${bd.ratioLabel})`, amount: bd.value }),
+  // 제외된 행은 정의어 없이 금액을 「제외 전」으로 남긴다(7-12와 같은 규칙)
+  contributionBreakdown.forEach((bd, i) =>
+    breakdown.push(
+      bd.excludedReason
+        ? { label: `수증자 ${bd.party} (${bd.ratioLabel}) 제외 전 산출 이익 — 영리법인 수증자 과세 제외`, amount: preExclusion[i] }
+        : { label: `수증자 ${bd.party} (${bd.ratioLabel})`, amount: bd.value },
+    ),
   );
   breakdown.push({
     label: "증여재산가액(과세)",
@@ -265,7 +277,12 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
     grossDeemedGiftValue: base,
     contributionBreakdown,
     breakdown,
-    exclusionReason: deemedGiftValue > 0 ? undefined : `이익이 기준금액(출자후평가 30%·3억) 미만 — ${GIFT.CONTRIBUTION_RATIO_GATE}`,
+    exclusionReason:
+      deemedGiftValue > 0
+        ? undefined
+        : contributionBreakdown.some((bd) => bd.excludedReason)
+          ? FOR_PROFIT_DONEE_REASON
+          : `이익이 기준금액(출자후평가 30%·3억) 미만 — ${GIFT.CONTRIBUTION_RATIO_GATE}`,
     legalBasis: GIFT.CONTRIBUTION,
     thresholdEcho: { gain: deemedGiftValue },
   };

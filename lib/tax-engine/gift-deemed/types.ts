@@ -162,8 +162,10 @@ export interface MergerMatrix {
     grossGain: number; // 차감전 이익
     selfGift: number; // 자기증여 차감액
     netGain: number; // 순 증여이익
-    applied: boolean; // §28④ 기준금액 이상
+    applied: boolean; // 과세 — §28④ 기준금액 이상 ∧ 납세의무자(영리법인 아님)
     threshold: number;
+    /** 기준금액을 넘었는데도 과세되지 않는 사유 — 현재는 영리법인 수증자(§2 9호·§4의2①·③)뿐 */
+    excludedReason?: string;
   }[];
   /** 수증자 id → 증여자 id → 안분액 */
   allocation: Record<string, Record<string, number>>;
@@ -394,6 +396,8 @@ export interface DeemedGiftResult {
     value: number;
     /** 관계 — 증여세 본세 prefill 시 donorRelation 매핑용 (GiftDonorRelation 그대로 전달) */
     relation?: GiftDonorRelation;
+    /** value가 0인 사유 — 고가 명부의 영리법인 수증자(§2 9호·§4의2①·③). 기준금액 미달은 붙지 않는다 */
+    excludedReason?: string;
   }[];
   /**
    * §37 다기간(G2/G3)·§41의4② 다년 — window별 별개 증여 산출. plain 배열(Map 금지).

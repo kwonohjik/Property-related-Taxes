@@ -5,6 +5,7 @@
  */
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
+import { FOR_PROFIT_DONEE_REASON } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type {
   DeemedGiftResult,
@@ -123,6 +124,10 @@ export function calcCapitalDecreaseMulti(input: CapitalDecreaseInput): DeemedGif
           evalPrice - Math.min(...relatedDonors.map((d) => d.redemptionPricePerShare ?? 0));
     const threshold = ratioNumer >= applyRate(evalPrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
     if (!(rawTotal > 0 && rawTotal >= threshold)) return reject("기준금액 미달", threshold);
+    // 「상증법」§2 9호·§4의2①·③ — 과세요건을 다 갖춰도 영리법인은 수증자가 아니다.
+    // 요건 게이트 **뒤**에 둔다: 요건 미충족이면 그 사유가 먼저다(납세의무 이전에 이익 자체가 없다).
+    // 증여자 행의 표지는 여기에 오지 않는다 — recipients(저가=잔존·고가=감자주주)만 도는 루프다.
+    if (rcpt.isForProfitCorp === true) return reject(FOR_PROFIT_DONEE_REASON, threshold);
 
     // (7) 증여자별 floor 안분 — 마지막 증여자 잔액 흡수
     const fromDonors: { donorName: string; amount: number }[] = [];
@@ -171,7 +176,12 @@ export function calcCapitalDecreaseMulti(input: CapitalDecreaseInput): DeemedGif
     applied: deemedGiftValue > 0,
     deemedGiftValue,
     breakdown,
-    exclusionReason: deemedGiftValue > 0 ? undefined : "과세 요건 충족 수증자 없음(대주주·특수관계·기준금액·액면 게이트)",
+    exclusionReason:
+      deemedGiftValue > 0
+        ? undefined
+        : donees.some((d) => d.nonTaxableReason === FOR_PROFIT_DONEE_REASON)
+          ? FOR_PROFIT_DONEE_REASON
+          : "과세 요건 충족 수증자 없음(대주주·특수관계·기준금액·액면 게이트)",
     legalBasis: GIFT.CAPITAL_DECREASE,
     capitalDecreaseMulti: { caseType, postPerShareExact, postPerShareDisplay, donees, verification },
   };

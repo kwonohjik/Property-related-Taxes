@@ -179,7 +179,8 @@ const mergerSchema = z.object({
   // Phase B 매트릭스
   shareholders: z
     .object({
-      overvalued: z.array(mergerShareholderSchema),
+      // 영리법인 표지는 수증자(과대평가) 행에만 — 증여자 행에 두면 그 의미가 없다(엔진도 읽지 않는다)
+      overvalued: z.array(mergerShareholderSchema.extend({ isForProfitCorp: z.boolean().optional() })),
       undervalued: z.array(mergerShareholderSchema),
       exchangeRatio: z.object({ numer: z.number(), denom: z.number() }),
     })
@@ -361,6 +362,7 @@ const capitalDecreaseShareholderSchema = z.object({
   redeemedShares: z.number().nonnegative(),
   redemptionPricePerShare: z.number().nonnegative().optional(),
   relationGroup: z.string().optional(),
+  isForProfitCorp: z.boolean().optional(), // 「상증법」§2 9호·§4의2①·③ — 수증자로서만 효력(저가=잔존·고가=감자주주)
 });
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
@@ -382,6 +384,7 @@ const contributionPartySchema = z.object({
   relation: z
     .enum(["father", "mother", "grandparent", "spouse", "lineal_descendant", "sibling", "other_relative", "other"])
     .optional(),
+  isForProfitCorp: z.boolean().optional(), // 「상증법」§2 9호·§4의2①·③ — 고가 명부(수증자)에서만 효력
 });
 const contributionSchema = z
   .object({

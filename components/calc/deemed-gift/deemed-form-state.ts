@@ -99,7 +99,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   mrgIsRelatedCompany: boolean; // G0 특수관계 전제 (기본 true)
   // Phase B 주주 매트릭스 (다수 대주주·동일인 자기증여). id=name.trim() 매칭
   mrgUseShareholders: boolean; // ON 시 주주 테이블 모드 (majorShares 무시·auto 강제)
-  mrgOverShareholders: { name: string; shares: string }[]; // 과대평가(이익측) 법인 주주
+  // isForProfitCorp — 수증자가 영리법인(「상증법」§2 9호·§4의2①·③). 미지정 = 개인. 증여자측 행에는 없다
+  mrgOverShareholders: { name: string; shares: string; isForProfitCorp?: boolean }[]; // 과대평가(이익측) 법인 주주
   mrgUnderShareholders: { name: string; shares: string }[]; // 과소평가(증여자측) 법인 주주
   mrgExchangeNumer: string; // 교부 환산비 분자
   mrgExchangeDenom: string; // 교부 환산비 분모
@@ -190,7 +191,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
    * 현물출자 §39의3 당사자 명부 — 3-state (undefined OFF / [] ON빈(validate 차단) / [{...}] 데이터).
    * low: 증여자(현물출자자 外 주주) / high: 수증자(특수관계 기존주주). 분모=conPreShares.
    */
-  conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | "" }>;
+  // isForProfitCorp — 고가(수증자 명부)에서만 의미가 있다. 저가로 바꿔도 값은 남으므로 ④가 거른다
+  conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | ""; isForProfitCorp?: boolean }>;
   conSelectedDoneeIndex: number; // 고가 과세 수증자 선택 (prefill 이관용 — 각자 독립 납세의무자)
   conIsListed: boolean; // 주권상장법인등 — §29의3①이 준용하는 §29②1가·3나 단서
   conListedMarketAvg: string; // 현물출자 납입일 전후 2개월 종가평균 (§63①1가)

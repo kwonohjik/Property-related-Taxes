@@ -13,7 +13,7 @@ type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
 
 /** 합병 주주 구성 행 편집 (과대평가·과소평가 법인 공용). id=name 매칭. */
-type ShRow = { name: string; shares: string };
+type ShRow = { name: string; shares: string; isForProfitCorp?: boolean };
 function ShareholderRows({
   label,
   hint,
@@ -21,6 +21,7 @@ function ShareholderRows({
   rows,
   onChange,
   testIdPrefix,
+  forProfitToggle = false,
 }: {
   label: string;
   hint: string;
@@ -28,6 +29,8 @@ function ShareholderRows({
   rows: ShRow[];
   onChange: (rows: ShRow[]) => void;
   testIdPrefix: string;
+  /** 수증자(과대평가) 행에만 — 증여자 행에 두면 켜도 엔진이 읽지 않는 거짓 입력 경로가 된다 */
+  forProfitToggle?: boolean;
 }) {
   const border = tone === "emerald" ? "border-emerald-200 bg-emerald-50/40" : "border-rose-200 bg-rose-50/40";
   const text = tone === "emerald" ? "text-emerald-700" : "text-rose-700";
@@ -37,24 +40,37 @@ function ShareholderRows({
       <p className={`text-xs font-semibold ${text}`}>{label}</p>
       <p className="text-caption text-muted-foreground">{hint}</p>
       {rows.map((r, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <input
-            className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm"
-            placeholder="주주명"
-            value={r.name}
-            onChange={(e) => update(i, { name: e.target.value })}
-            data-testid={`${testIdPrefix}-name-${i}`}
-          />
-          <div className="flex-1">
-            <CurrencyInput label="주식수" hideLabel value={r.shares} onChange={(v) => update(i, { shares: v })} placeholder="합병 전 주식수" data-testid={`${testIdPrefix}-shares-${i}`} />
+        <div key={i} className="space-y-1">
+          <div className="flex items-center gap-2">
+            <input
+              className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm"
+              placeholder="주주명"
+              value={r.name}
+              onChange={(e) => update(i, { name: e.target.value })}
+              data-testid={`${testIdPrefix}-name-${i}`}
+            />
+            <div className="flex-1">
+              <CurrencyInput label="주식수" hideLabel value={r.shares} onChange={(v) => update(i, { shares: v })} placeholder="합병 전 주식수" data-testid={`${testIdPrefix}-shares-${i}`} />
+            </div>
+            <button
+              type="button"
+              className="text-xs text-rose-600 hover:underline"
+              onClick={() => onChange(rows.filter((_, j) => j !== i))}
+            >
+              삭제
+            </button>
           </div>
-          <button
-            type="button"
-            className="text-xs text-rose-600 hover:underline"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-          >
-            삭제
-          </button>
+          {/* 「상증법」§2 9호·§4의2①·③ — 영리법인 수증자는 납세의무자가 아니다. 이 행의 과세분만 빠진다 */}
+          {forProfitToggle && (
+            <ToggleCard
+              variant="chip"
+              tone="violet"
+              checked={r.isForProfitCorp === true}
+              onCheckedChange={(v) => update(i, { isForProfitCorp: v })}
+              title="영리법인 수증자 (§4의2①·③ — 증여세 납세의무자 아님)"
+              data-testid={`${testIdPrefix}-corp-${i}`}
+            />
+          )}
         </div>
       ))}
       <button
@@ -199,7 +215,7 @@ export function MergerFields({ form, set }: Props) {
                 <div className="w-16"><CurrencyInput label="분모" hideLabel value={form.mrgExchangeDenom} onChange={(v) => set({ mrgExchangeDenom: v })} data-testid="mrg-ex-denom" /></div>
                 <span className="text-xs">주</span>
               </div>
-              <ShareholderRows label="과대평가(이익측)법인 주주" hint="이익을 얻는 측 — 수증자. 양 법인에 같은 주주명이면 동일인(자기증여 차감)." tone="emerald" rows={form.mrgOverShareholders} onChange={(rows) => set({ mrgOverShareholders: rows })} testIdPrefix="mrg-over" />
+              <ShareholderRows label="과대평가(이익측)법인 주주" hint="이익을 얻는 측 — 수증자. 양 법인에 같은 주주명이면 동일인(자기증여 차감)." tone="emerald" rows={form.mrgOverShareholders} onChange={(rows) => set({ mrgOverShareholders: rows })} testIdPrefix="mrg-over" forProfitToggle />
               <ShareholderRows label="과소평가(증여자측)법인 주주" hint="손해를 보는 측 — 증여자. 안분의 증여자 풀." tone="rose" rows={form.mrgUnderShareholders} onChange={(rows) => set({ mrgUnderShareholders: rows })} testIdPrefix="mrg-under" />
             </>
           ) : (

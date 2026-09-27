@@ -178,6 +178,8 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
           id: s.name.trim(),
           name: s.name.trim(),
           shares: parseAmount(s.shares),
+          // 수증자(과대평가) 행만 — 증여자(과소평가) 행에는 싣지 않는다
+          ...(s.isForProfitCorp === true && { isForProfitCorp: true }),
         }));
         const underSh = form.mrgUnderShareholders.map((s) => ({
           id: s.name.trim(),
@@ -301,6 +303,7 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
             redeemedShares: parseAmount(row.redeemedShares),
             redemptionPricePerShare: parseAmount(row.redemptionPrice) || undefined,
             relationGroup: row.relationGroup || undefined,
+            ...(row.isForProfitCorp === true && { isForProfitCorp: true }),
           })),
         };
       }
@@ -332,6 +335,8 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
               name: p.name || undefined,
               preShares: parseAmount(p.shares),
               relation: (p.relation || undefined) as GiftDonorRelation | undefined,
+              // 고가 명부만 수증자 명부다 — UI 토글과 같은 술어(isHigh). 저가로 바꾼 stale 값은 거른다
+              ...(isHigh && p.isForProfitCorp === true && { isForProfitCorp: true }),
             }));
       return {
         type: "contribution",
