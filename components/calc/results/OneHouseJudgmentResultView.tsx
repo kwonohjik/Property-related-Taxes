@@ -19,6 +19,8 @@ import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
+import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
 type Serialized<T> = T extends Date ? string : T;
@@ -43,9 +45,14 @@ type Props = {
    *    여기서 store를 직접 읽으면 판정 화면이 폼 store에 묶여 이력 상세에서 재사용할 수 없다.
    */
   onCalculateTax?: () => void;
+  /**
+   * 양도(예정)일 — 부분 비과세 배지의 고가주택 기준금액(6억·9억·12억)을 고르는 데만 쓴다(OH-54).
+   * 기준금액은 엔진과 같은 단일 소스 `resolveHighValueHouseThreshold`로 구한다.
+   */
+  transferDate?: string;
 };
 
-export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
+export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDate }: Props) {
   const {
     judgment,
     houseCount,
@@ -57,7 +64,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax }: Props) {
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
    *    이력 목록은 「과세」인 상태가 조용히 생긴다.
    */
-  const verdict = oneHouseVerdictOf(judgment);
+  const transferAt = toOptionalDate(transferDate);
+  const verdict = oneHouseVerdictOf(
+    judgment,
+    transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
+  );
   const pending = judgment.pending as unknown as PendingItem[];
 
   /**

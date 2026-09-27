@@ -58,6 +58,7 @@ import {
   TRANSFER_PRINT_SECTIONS,
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
+import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 // ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
 function fmtDeadline(d: Date | string | undefined): string {
@@ -445,15 +446,23 @@ export function TransferTaxResultView({
         )}
 
         {/* 부분 비과세(고가주택) 근거 — 전액 비과세는 위 카드가 이미 exemptReason을 표시한다.
-            어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 12억 초과분만 과세된 이유를
-            납세자가 확인할 수 없다. */}
-        {!result.isExempt && result.exemptReason && (
+            어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 기준금액 초과분만 과세된 이유를
+            납세자가 확인할 수 없다.
+            🔑 `isPartialExempt`로 가른다(OH-43) — 일반 경로 결과는 `isExempt:false`에 판정의
+               `exemptReason`을 그대로 싣는다. §155⑳ 요건 미충족·부수토지 비과세 제외(G-2·G-3)처럼
+               안분 없이 과세된 결과에서 「초과분에 대해서만 과세」라고 적으면 결과와 모순된다.
+            기준금액은 엔진 STEP 라벨(`과세 양도차익 (9억 초과분)` 등)에서 읽고, 없으면 양도일로 고른다. */}
+        {!result.isExempt && result.isPartialExempt && result.exemptReason && (
           <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/20">
             <p className="font-semibold text-emerald-900 dark:text-emerald-300">
               1세대1주택 특례 적용 — {result.exemptReason}
             </p>
             <p className="text-xs text-emerald-800 dark:text-emerald-400 mt-0.5">
-              양도가액 12억원 초과분에 대해서만 과세됩니다 (소득세법 §89①3호·시행령 §160).
+              양도가액{" "}
+              {result.steps
+                ?.map((st) => st.label?.match(/과세 양도차익 \((\d+억) 초과분\)/)?.[1])
+                .find(Boolean) ?? highValueThresholdForDisplay(formData?.transferDate).label}
+              원 초과분에 대해서만 과세됩니다 (소득세법 §89①3호·시행령 §160).
             </p>
           </div>
         )}

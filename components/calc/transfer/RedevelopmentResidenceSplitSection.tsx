@@ -18,21 +18,25 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
+import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   isOneHouseSingle?: boolean;
+  /** 양도일 — 안내 카드의 고가주택 기준금액(6억·9억·12억)을 고른다 (OH-65) */
+  transferDate?: string;
 }
 
-export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouseSingle }: Props) {
+export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouseSingle, transferDate }: Props) {
+  const { amount: highValueThreshold, label: hv } = highValueThresholdForDisplay(transferDate);
   const shouldHide = isOneHouseSingle === false;
 
   const guidance = useMemo(() => {
     const tp = parseAmount(asset.actualSalePrice || "");
     const prior = parseInt((asset.redevPriorHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
     const newM = parseInt((asset.redevNewHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
-    const isHighValue = tp > 1_200_000_000;
+    const isHighValue = tp > highValueThreshold;
 
     /**
      * 🔴 **양도가액이 0이면 「12억 이하」가 아니라 「판정 불가」다** (2026-09-07 UI 리뷰).
@@ -47,16 +51,16 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     if (tp <= 0) {
       return {
         tone: "sky" as const,
-        title: "C-1 — 양도가액 미입력, 12억 초과 여부 판정 불가",
-        body: "이 모드에서는 자산-수준 양도가액을 입력하지 않으므로(지분 분할·안분 모드) 12억 초과 여부를 여기서 판정할 수 없습니다. 아래 거주개월 입력은 12억 초과 시에만 세액에 반영되며, 최종 판정은 계산 시 엔진이 수행합니다.",
+        title: `C-1 — 양도가액 미입력, ${hv} 초과 여부 판정 불가`,
+        body: `이 모드에서는 자산-수준 양도가액을 입력하지 않으므로(지분 분할·안분 모드) ${hv} 초과 여부를 여기서 판정할 수 없습니다. 아래 거주개월 입력은 ${hv} 초과 시에만 세액에 반영되며, 최종 판정은 계산 시 엔진이 수행합니다.`,
       };
     }
 
     if (!isHighValue) {
       return {
         tone: "emerald" as const,
-        title: "C-2 — 12억 이하 전액 비과세",
-        body: "양도가액이 12억원 이하이므로 전체 양도차익이 비과세 대상입니다 (1세대1주택 충족 시).",
+        title: `C-2 — ${hv} 이하 전액 비과세`,
+        body: `양도가액이 ${hv}원 이하이므로 전체 양도차익이 비과세 대상입니다 (1세대1주택 충족 시).`,
       };
     }
     const exceedsExisting = prior + newM >= 24;
@@ -64,7 +68,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     if (exceedsExisting && exceedsNew) {
       return {
         tone: "sky" as const,
-        title: "C-3 — 12억 초과 + 분할 장기보유특별공제 모두 표2 적용",
+        title: `C-3 — ${hv} 초과 + 분할 장기보유특별공제 모두 표2 적용`,
         body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
       };
     }
@@ -80,12 +84,12 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       title: "C-5 — 거주 2년 미충족 (두 분기 모두 표1)",
       body: "종전+신축 통산 거주월수가 24개월 미만이면 표2(80% 캡) 진입 가드 미충족. 기존건물분·청산금분 모두 §95② 본문 표1(30% 캡) 적용.",
     };
-  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths]);
+  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths, highValueThreshold, hv]);
 
   if (shouldHide) return null;
 
   return (
-    <ToneCard tone="emerald" sectionNum="6" title="거주개월 분리 입력 (1세대1주택 + 12억 초과 시)" noDark>
+    <ToneCard tone="emerald" sectionNum="6" title={`거주개월 분리 입력 (1세대1주택 + ${hv} 초과 시)`} noDark>
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.

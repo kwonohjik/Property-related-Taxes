@@ -160,10 +160,12 @@ export function SplitGainDetailSection({
                  1세대1주택 고가주택(12억 초과)·부수토지 비과세 제외(G-3) 사안에서는
                  `taxableGainAfterProration < gain`이라 「양도차익 × 공제율 ≠ 장특공제액」이 되고,
                  12억 안분이 적용된 사실 자체가 이 카드에서 사라졌다. 두 값이 다를 때만 행을 낸다.
+                 라벨은 「12억 안분」이라 적지 않는다(OH-43) — G-3 부수토지 제외는 안분이 아니고,
+                 과거 양도분의 기준금액은 9억·6억이다.
             */}
             {(hasProration(splitDetail.land) || hasProration(splitDetail.building)) && (
               <>
-                <span className="text-muted-foreground">과세 양도차익 (12억 안분 후)</span>
+                <span className="text-muted-foreground">과세 양도차익 (비과세분 제외 후)</span>
                 <span className={colCls(landIsOwned)}>
                   {(splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain).toLocaleString()}
                 </span>

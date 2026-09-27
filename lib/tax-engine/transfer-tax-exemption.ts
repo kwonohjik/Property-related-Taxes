@@ -39,6 +39,7 @@ import {
   meetsOneHouseHoldingResidence,
   meetsPublicInstitutionRelocationRegion,
   PROVISO_LABEL,
+  resolveExemptionProviso,
   qualifiesRuralHouse,
   qualifiesUnavoidableOutsideCapital,
   resolveExemptionHoldingStartDate,
@@ -538,7 +539,11 @@ function checkExemptionCore(
   const exemptionPriceCheck =
     input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
   // §154① 단서 각호 적용 시 비과세 사유에 호 라벨 부가 (result detail·PDF·step formula 자동 노출)
-  const provisoReason = input.oneHouseExemptionProviso?.reason;
+  // 🔑 원시 선택값이 아니라 **요건 판정 결과**로 가드한다(OH-60) — 3호 거주 1년 미만·나·다목
+  //    출국 2년 초과·가목 수용일 미입력처럼 단서가 성립하지 않았는데 본칙만으로 비과세가 된 경우,
+  //    「§154① 단서 N호」를 적용 근거로 적으면 근거가 틀린다. E-3의 `provisoRelaxesHolding`과 같은 축.
+  const provisoReason =
+    resolveExemptionProviso(input) !== null ? input.oneHouseExemptionProviso?.reason : undefined;
   const provisoLabel = provisoReason ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason]})` : "";
   /**
    * 본칙 1주택은 「특례」가 아니므로 기본 행을 만들지 않는다 — 판정 배지가 이미 말한다.

@@ -188,6 +188,16 @@ export function PropertyBreakdownAccordion({
   const gainStep = getStep("양도차익");
   const lthdStep = getStep("장기보유특별공제");
   const reductionStep = getStep("감면세액");
+  /**
+   * 🔑 고가주택 안분 후 과세대상 양도차익 (OH-62) — `transferGain`은 **안분 전** 전체 차익이고
+   *    `income`은 안분 후 차익에서 장특공제를 뺀 값이다. 그 사이 행이 없으면 「양도소득금액 =
+   *    양도차익 − 장특공제」 산식이 화면에서 성립하지 않는다. 역산은 신고서 어댑터와 같은 leaf다(#019).
+   *    기준금액은 엔진 STEP 라벨(`과세 양도차익 (9억 초과분)` 등)을 그대로 쓴다 — 12억 리터럴 금지.
+   */
+  const taxableGain = assetTaxableGain(breakdown);
+  const hasProration = !breakdown.isExempt && taxableGain !== breakdown.transferGain;
+  const prorationStep = breakdown.steps.find((s) => /과세 양도차익 \(\d+억 초과분\)/.test(s.label));
+  const incomeBase = hasProration ? taxableGain : breakdown.transferGain;
 
   // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
   // 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 자산별 합 ≠ 합산 산출세액일 수 있어 "(참고)" 표기.
@@ -265,6 +275,16 @@ export function PropertyBreakdownAccordion({
                 value={breakdown.transferGain}
               />
 
+              {/* 과세대상 양도차익 — 고가주택 안분 후 (OH-62) */}
+              {hasProration && (
+                <DetailRow
+                  label={prorationStep?.label ?? "과세대상 양도차익 (비과세분 제외 후)"}
+                  formula={prorationStep?.formula}
+                  legalBasis={prorationStep?.legalBasis}
+                  value={taxableGain}
+                />
+              )}
+
               {/* 장기보유특별공제 */}
               {breakdown.longTermHoldingDeduction > 0 && (
                 <DetailRow
@@ -280,7 +300,7 @@ export function PropertyBreakdownAccordion({
                 label="양도소득금액"
                 formula={
                   breakdown.longTermHoldingDeduction > 0
-                    ? `${formatKRW(breakdown.transferGain)} - ${formatKRW(breakdown.longTermHoldingDeduction)}`
+                    ? `${formatKRW(incomeBase)} - ${formatKRW(breakdown.longTermHoldingDeduction)}`
                     : undefined
                 }
                 value={breakdown.income}

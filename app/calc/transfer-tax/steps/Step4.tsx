@@ -31,6 +31,7 @@ import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/compo
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { resolveHouseholdHousingCount, houseCountScalarLocked, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
+import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -161,6 +162,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     () => isMultiHouseSurchargeSuppressed(form.transferDate, primaryAcquisitionDate),
     [form.transferDate, primaryAcquisitionDate],
   );
+
+  // 1세대1주택 안내 배너의 고가주택 기준금액 — 양도일 기준 6억·9억·12억 (OH-65, 안내 전용)
+  const highValueLabel = highValueThresholdForDisplay(form.transferDate).label;
 
   // §154① 단서 카드 노출·맥락 — one_house(1주택)/temporary_two_house(2주택+일시적특례)/미노출 (Part B 단일 파생, store 미러링 금지)
   const proviso = useMemo(
@@ -561,7 +565,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
                 <p className="font-medium">1세대 1주택자 적용 효과</p>
                 <p className="mt-1 text-xs leading-relaxed text-violet-800">
-                  보유 2년 이상 시 양도가액 12억 원까지 비과세이며, 12억 초과 고가주택 부분에 한해 과세됩니다.
+                  보유 2년 이상 시 양도가액 {highValueLabel} 원까지 비과세이며, {highValueLabel} 초과 고가주택 부분에 한해 과세됩니다.
                   {conversionActive ? (
                     <>
                       {" "}거주 2년 이상이면 장기보유특별공제가 「소득세법」 제95조 제5항에 따라

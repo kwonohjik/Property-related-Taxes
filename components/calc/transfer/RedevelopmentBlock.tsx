@@ -82,6 +82,8 @@ interface Props {
    * 안내 문구가 「판정하러 가세요」/「선언이 없습니다」를 가른다.
    */
   judgmentLoaded?: boolean;
+  /** 양도일 — 거주월수 분리 카드의 고가주택 기준금액 안내용 (OH-65) */
+  transferDate?: string;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
    *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
@@ -91,7 +93,7 @@ interface Props {
    */
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -485,7 +487,12 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           (실측: 신축 거주 120개월만 입력 → LTHD 14% → 68%).
           승계조합원 모드 시에도 숨김 (본 PR 미지원). */}
       {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && (
-        <RedevelopmentResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+        <RedevelopmentResidenceSplitSection
+          asset={asset}
+          onChange={onChange}
+          isOneHouseSingle={isOneHouseSingle}
+          transferDate={transferDate}
+        />
       )}
     </div>
   );
