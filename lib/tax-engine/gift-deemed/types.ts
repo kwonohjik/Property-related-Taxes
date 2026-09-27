@@ -197,6 +197,20 @@ export interface CapitalIncreaseAllocationResult {
   byShareholder: Array<{ id: string; name?: string; preValuation: number; paidIn: number; postValuation: number; delta: number }>;
   reconciliation: { totalGain: number; totalLoss: number; balanced: boolean };
   splits: DonationSplit[];
+  /**
+   * 「상증법」§4의2⑥ 단서 — 증여자 **연대납부의무 면제** 대상 유형임을 나타내는 표지.
+   *
+   *   §4의2⑥ 「증여자는 … 연대하여 납부할 의무가 있다. **다만, … 제35조부터 제39조까지,
+   *           …에 해당하는 경우는 제외한다.**」
+   *
+   * ⚠️ **계산 결과와 무관한 상수 표지**다 — §39는 열거에 들어 있고 **조건 없이** 배제된다
+   *    (단서에서 조건부 괄호가 붙은 것은 제48조뿐). 배제(§4의2①③·④)로 과세분이 0이 되어도
+   *    「그 증여에 연대납부의무가 없다」는 사실은 그대로이므로 표지도 그대로 남는다.
+   *
+   * 🔴 **열거 밖 유형에 세우지 말 것** — §33(신탁이익)·§34(보험금)·§43·§44·§45의2(명의신탁)는
+   *    단서 열거에 **없다**. 세우면 화면이 「연대납부의무 없음」이라고 거짓 고지한다.
+   */
+  donorJointLiabilityExempt?: boolean;
 }
 
 /** 멀티 모드 결과 (Map 금지 — plain 배열) */

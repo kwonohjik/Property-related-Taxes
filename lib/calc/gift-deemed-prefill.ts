@@ -48,6 +48,12 @@ function deemedGiftItemFlags(result: DeemedGiftAnyResult) {
   return {
     // 여기 실리는 금액은 전부 「상증령」 법정 산식 산정액이다 — 매매거래가액이 아니다.
     isStatutoryFormulaValue: true as const,
+    // 「상증법」§4의2⑥ 단서 면제 표지 — **엔진이 세운 유형만** 옮긴다.
+    //   여기서 `true as const`로 일괄 부여하면 §33·§34·§43·§44·§45의2(열거 밖)까지 붙어
+    //   화면이 「연대납부의무 없음」이라고 거짓 고지한다.
+    ...(("donorJointLiabilityExempt" in result) && result.donorJointLiabilityExempt
+      ? { isJointLiabilityExemptGift: true as const }
+      : {}),
     ...(("aggregationExcluded" in result) && result.aggregationExcluded
       ? {
           isAggregationExcludedGift: true as const,

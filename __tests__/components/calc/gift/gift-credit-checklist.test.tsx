@@ -100,3 +100,81 @@ describe("GiftCreditChecklist — Step4 칩 컴팩트", () => {
     expect(screen.getByText("분납 신청 (상증법 §70②)")).toBeTruthy();
   });
 });
+
+/**
+ * #71 — 「상증법」§4의2⑥ 단서 연대납세의무 토글 **잠금**.
+ *
+ * 설계서(`gift-donor-paid-tax-grossup.engine.design.md:70`)와 anchor 주석
+ * (`gift-donor-paid-grossup-anchor.test.ts` C-12)이 이 잠금을 **현재형으로** 기술했지만
+ * 실물은 없었다 — 「계획서가 적은 배제 결정에는 코드 게이트가 필요하다」의 실례다.
+ * 이 블록이 그 게이트를 고정한다.
+ *
+ * 실측 세액 영향(리뷰 재현): §39 증자이익 1억 이관 · 부→성년자녀 · 신고기한 내,
+ * `donorPaysGiftTax: true` 기준 —
+ *   `donorHasJointLiability: false`(법령상 정답) → finalTax 5,370,986 (gross-up applied)
+ *   `donorHasJointLiability: true`(단서상 불가)  → finalTax 4,850,000 (applied=false)
+ *   ⇒ 차액 **520,986원 과소과세**.
+ */
+describe("GiftCreditChecklist — §4의2⑥ 단서 연대납세의무 토글 잠금 (#71)", () => {
+  const exemptItem = (id: string) => ({
+    id,
+    category: "other" as const,
+    name: `증자이익(§39) ${id}`,
+    marketValue: 100_000_000,
+    isJointLiabilityExemptGift: true as const,
+  });
+  const plainItem = (id: string) => ({
+    id,
+    category: "financial" as const,
+    name: `예금 ${id}`,
+    marketValue: 50_000_000,
+  });
+  const openParent = { donorPaysGiftTax: true };
+
+  it("[JL-UI-1] giftItems 전부가 단서 열거 유형이면 토글이 잠긴다", () => {
+    renderChecklist({ ...openParent, giftItems: [exemptItem("a"), exemptItem("b")] });
+    // BaseUI Switch는 `<span role="switch">`라 native `disabled` 속성이 없다 — `aria-disabled`를 본다.
+    const sw = screen.getByTestId("gift-donor-joint-liability").querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText(/연대납부의무가 성립하지 않습니다/)).toBeTruthy();
+  });
+
+  // 긍정 짝 ① — 표지가 없으면 평소대로 열려 있어야 한다. 이 단언이 없으면
+  //   「항상 잠그기」 구현이 위 테스트만으로 초록이 된다.
+  it("[JL-UI-2] 긍정 짝 — 일반 증여만 있으면 잠기지 않는다", () => {
+    renderChecklist({ ...openParent, giftItems: [plainItem("a")] });
+    const sw = screen.getByTestId("gift-donor-joint-liability").querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-disabled")).not.toBe("true");
+    expect(screen.queryByTestId("gift-joint-liability-mixed-warning")).toBeNull();
+  });
+
+  // 긍정 짝 ② — 혼합은 잠그지 않는다. `donorHasJointLiability`는 계산 단위 단일 boolean이고
+  //   일반 증여분에 대해서는 「예」가 성립할 수 있다(리뷰의 법령 렌즈 정정).
+  it("[JL-UI-3] 혼합 계산은 잠그지 않고 경고만 띄운다", () => {
+    renderChecklist({ ...openParent, giftItems: [exemptItem("a"), plainItem("b")] });
+    const sw = screen.getByTestId("gift-donor-joint-liability").querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-disabled")).not.toBe("true");
+    expect(screen.getByTestId("gift-joint-liability-mixed-warning")).toBeTruthy();
+  });
+
+  // KM8 SURVIVED로 드러난 공백 — `items.length > 0` 가드를 지워도 전건 초록이었다.
+  //   빈 배열에 `every`는 **true**라, 가드가 없으면 아무것도 입력하지 않은 화면에서
+  //   토글이 잠긴다(입력을 시작하기도 전에 선택지가 사라진다).
+  it("[JL-UI-5] 빈 폼에서는 잠기지 않는다 — 빈 배열의 every는 true다", () => {
+    renderChecklist({ ...openParent, giftItems: [], stockItems: [] });
+    const sw = screen.getByTestId("gift-donor-joint-liability").querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-disabled")).not.toBe("true");
+  });
+
+  it("[JL-UI-4] 잠긴 상태에서는 저장된 값이 true여도 꺼진 것으로 보인다", () => {
+    renderChecklist({
+      ...openParent,
+      donorHasJointLiability: true,
+      giftItems: [exemptItem("a")],
+    });
+    const sw = screen
+      .getByTestId("gift-donor-joint-liability")
+      .querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-checked")).toBe("false");
+  });
+});

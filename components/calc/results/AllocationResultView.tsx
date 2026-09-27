@@ -127,6 +127,20 @@ export function AllocationResultView({
         </div>
       )}
 
+      {/* 「상증법」§4의2⑥ 단서 — 배제 열거의 「제35조부터 제39조까지」 등에 해당하면
+          증여자에게 **연대납부의무가 성립하지 않는다**(조건부 괄호가 붙은 것은 제48조뿐).
+          엔진이 세운 표지만 읽는다 — 화면이 유형을 다시 판단하면 두 개의 진실이 생기고,
+          §33·§34·§43·§44·§45의2(열거 밖)에 잘못 붙으면 거짓 고지가 된다. */}
+      {result.donorJointLiabilityExempt === true && (
+        <div
+          className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800"
+          data-testid="deemed-joint-liability-exempt"
+        >
+          <b>증여자 연대납부의무 면제</b> (「상증법」§4의2⑥ 단서) — 이 유형은 배제 열거 조문에
+          해당해, 같은 조 제1호~제3호 요건과 무관하게 증여자에게 연대납부의무가 성립하지 않습니다.
+        </div>
+      )}
+
       {taxedBeneficiaries.length > 0 && (
         <button
           type="button"

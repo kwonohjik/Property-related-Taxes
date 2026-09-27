@@ -24,6 +24,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FormState, GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { jointLiabilityStatutorilyExempt } from "@/lib/calc/gift-joint-liability-exempt";
 
 // GiftSubForm re-export — gift-api.ts 공개 계약 (⑬ 지점에서 참조)
 export type { GiftSubFormState as GiftSubForm };
@@ -142,7 +143,12 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
       : undefined,
     // §36 대납(代納) gross-up — 명시 키 (spread 금지: 침묵 strip 방지)
     donorPaysGiftTax: form.donorPaysGiftTax,
-    donorHasJointLiability: form.donorHasJointLiability,
+    // 「상증법」§4의2⑥ 단서 — 계산 재산이 전부 열거 유형이면 「예」가 법적으로 불가하다.
+    //   ⑤가 토글을 잠그지만 폼 값이 `true`로 남아 있을 수 있어(복원·순서 조작) 여기서도 막는다
+    //   — 표시 fallback이 있는 필드는 API 변환에도 같은 fallback을 건다(3중 패턴).
+    donorHasJointLiability: jointLiabilityStatutorilyExempt(form.giftItems, form.stockItems)
+      ? false
+      : form.donorHasJointLiability,
     // §36 부분 대납 — 빈값/0 → undefined → 엔진 ?? 0 (전액 대납 기존 동작)
     doneePaidGiftTax: parseAmount(form.doneePaidGiftTax ?? "") || undefined,
   };
