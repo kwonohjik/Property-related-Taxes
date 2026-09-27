@@ -405,7 +405,9 @@ export type DeemedOneHouseBasis =
   /** F-1 — §155①+⑤ 중첩(3주택) — `resolveMergeOverlapDeeming` */
   | "marriage_merge_overlap"
   /** F-1 — §155①+④ 중첩(3주택) — `resolveMergeOverlapDeeming` */
-  | "parental_care_merge_overlap";
+  | "parental_care_merge_overlap"
+  /** E-14 — §155②③ 상속주택 + 일반주택 → 일반주택 1주택 의제 — `resolveSurchargeDeemedOneHouse` */
+  | "inherited_general_house";
 
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */
@@ -500,7 +502,8 @@ export interface ExclusionReason {
     | "litigation_housing_two_house" // ⑦ 2주택 소송 취득/진행 중 주택 (소령 §167의10①7호)
     | "inherited_house_5years"      // 양도 주택 자체가 §155② 상속주택 5년 이내 (§167의3①7호 · 2주택 §167의10①2호) — D16
     | "long_term_rental_house"      // 양도 주택 자체가 장기임대주택 (§167의3①2호 · 2주택 §167의10①2호) — D16
-    | "only_general_two_house";     // 2주택 — 다른 주택이 1~7호라 1주택만 소유 (§167의10①10호) — D16
+    | "only_general_two_house"      // 2주택 — 다른 주택이 1~7호라 1주택만 소유 (§167의10①10호) — D16
+    | "inherited_general_house";    // §155②③ 상속주택 보유 일반주택 1주택 의제 (§167의10①15호 · 구 13호) — E-14
   detail: string;
 }
 

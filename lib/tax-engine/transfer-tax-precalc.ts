@@ -265,6 +265,8 @@ export function runSurchargeAndLandSteps(
   workingInput: TransferTaxInput,
   parsedRates: ReturnType<typeof parseRatesFromMap>,
   steps: CalculationStep[],
+  /** STEP 0.9와 같은 §99의4·§98의9 기준일 — 15호 ① 요소 주택 수가 비과세와 같은 값을 보게(E-14) */
+  hceGeneralHouseAcquisitionDate?: Date,
 ): {
   /** STEP 4.05 §98의2 특칙이 downstream에서 다시 읽는다 — 같은 신호를 두 번 만들지 않는다 */
   surchargeExclusionByReduction: ReturnType<typeof resolveSurchargeExclusionByReduction>;
@@ -293,6 +295,7 @@ export function runSurchargeAndLandSteps(
     parsedRates,
     steps,
     surchargeExclusionByReduction,
+    hceGeneralHouseAcquisitionDate,
   );
 
   // eslint-disable-next-line prefer-const -- effectiveInput은 후속 STEP에서 파생 입력으로 재할당

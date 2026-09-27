@@ -94,7 +94,13 @@ export function calculateTransferTax(
 
 
   // STEP 0.45~0.62: 중과·비사업용 판정 전처리 — 별도 파일로 분리 (800줄 정책, CB-08)
-  const surchargeAndLand = runSurchargeAndLandSteps(input, workingInput, parsedRates, steps);
+  const surchargeAndLand = runSurchargeAndLandSteps(
+    input,
+    workingInput,
+    parsedRates,
+    steps,
+    hceGeneralHouseAcquisitionDate,
+  );
   const { surchargeExclusionByReduction, multiHouseSurchargeResult, nonBusinessLandJudgment } =
     surchargeAndLand;
   // effectiveInput만 후속 STEP(0.35 환산 등)에서 파생 입력으로 재할당된다.

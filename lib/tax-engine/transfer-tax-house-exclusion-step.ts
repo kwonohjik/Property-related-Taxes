@@ -14,6 +14,60 @@ import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybr
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
 /**
+ * STEP 0.9 + 0.95의 **제외 판정만** — step을 쓰지 않는 순수 함수.
+ *
+ * E-14 — 중과 판정(STEP 0.5)이 영 §167의10①15호 ① 요소를 판정할 때 비과세와 **같은** 세대 주택 수를
+ * 봐야 해서 끌어냈다(그 단계는 이 STEP보다 먼저 돈다). 인자가 같으면 `runHouseCountExclusionStep`과
+ * 항상 같은 값이다(그 함수가 이것을 부른다).
+ */
+export function resolveExemptionHouseCountExclusions(
+  effectiveInput: TransferTaxInput,
+  generalHouseAcquisitionDate?: Date,
+) {
+  const { appliedList: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
+    effectiveInput.reductions,
+    {
+      generalHouseAcquisitionDate: generalHouseAcquisitionDate ?? effectiveInput.acquisitionDate,
+      transferDate: effectiveInput.transferDate,
+    },
+  );
+  const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
+    effectiveInput.specialHouseExclusions,
+    effectiveInput.transferDate,
+  );
+  const inheritedExclusion = resolveInheritedHouseExclusionFromInput(effectiveInput);
+  return {
+    hceApplied,
+    new994Detail,
+    unsold989Detail,
+    specialHouseExclusionDetail,
+    inheritedExclusion,
+    /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
+    specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount,
+  };
+}
+
+/**
+ * 영 §167의10①15호(·§167의3①13호) **① 요소** 판정용 세대 주택 수 (E-14).
+ *
+ * 비과세 E-3이 보는 값(`exemptionJudgeInput.householdHousingCount` — §155②③·조특법 제외 후)과 같다.
+ * 단 **조특법 제외만으로 2 미만**이 되는 경우는 조특법 주택을 센 값을 쓴다 — 15호의 「「조세특례제한법」에
+ * 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」가 조특법 §99의4 등 「소유주택이 아닌 것으로 보아
+ * 소득세법 §89①3호를 적용」하는 조문까지 포섭하는지 직접 선례를 확보하지 못했다(확인 필요) ⇒ 그 축은
+ * 종전 동작(조특법 주택이 주택 수에 남은 채 §155 의제를 판정)을 유지한다.
+ */
+export function surcharge15HouseCount(
+  householdHousingCount: number,
+  inheritedExcludedCount: number,
+  specialActExcludedCount: number,
+): number {
+  const withoutInherited = Math.max(householdHousingCount - inheritedExcludedCount, 0);
+  const exemptionCount = Math.max(withoutInherited - specialActExcludedCount, 0);
+  if (specialActExcludedCount > 0 && exemptionCount < 2) return withoutInherited;
+  return exemptionCount;
+}
+
+/**
  * STEP 0.9 + 0.95 실행 — 비과세 판정용 유효 주택수(exemptionJudgeInput) 산정 + step push.
  * @param steps 계산 step 배열 (in-place push)
  */
@@ -35,24 +89,14 @@ export function runHouseCountExclusionStep(
 ) {
   // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — 각 1채씩(D4-01),
   // 비과세·12억 안분·LTHD 표2에 유효 주택수 반영. 중과는 §167의3 별개 — 원본(R-D).
-  const { appliedList: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
-    effectiveInput.reductions,
-    {
-      generalHouseAcquisitionDate: generalHouseAcquisitionDate ?? effectiveInput.acquisitionDate,
-      transferDate: effectiveInput.transferDate,
-    },
-  );
   // STEP 0.95 (P5 모드 2): 보유 감면주택 N-way 주택수 제외 — 7개 조문 ② + §98 령②·⑥ + §99②.
   // 비과세(§89①3호) 판정 주택수만 차감 — 중과 주택수는 원본 유지 (R-D).
-  const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
-    effectiveInput.specialHouseExclusions,
-    effectiveInput.transferDate,
-  );
   // §155②③ 상속·공동상속주택 비과세 주택수 제외 (2-A2) — 단독(§155②)·공동소수지분(§155③) 풀 분리, 각 최대 1채.
   // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 게이트-오프. 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
   // 🔑 selling id 폴백 규칙은 `resolveInheritedHouseExclusionFromInput` 안에만 둔다 —
   //    불성립 사유 안내(`collectInheritedUnmet`)가 같은 후보 집합을 봐야 하기 때문.
-  const inheritedExclusion = resolveInheritedHouseExclusionFromInput(effectiveInput);
+  const { hceApplied, new994Detail, unsold989Detail, specialHouseExclusionDetail, inheritedExclusion } =
+    resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
   const exemptionJudgeInput = totalExcluded > 0

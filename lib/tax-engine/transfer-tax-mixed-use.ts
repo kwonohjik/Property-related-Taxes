@@ -18,6 +18,7 @@ import {
   resolveDeemedOneHouseBy155,
 } from "./transfer-tax-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
+import { surcharge15HouseCount } from "./transfer-tax-house-exclusion-step";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
@@ -201,9 +202,14 @@ export function calcMixedUseTransferTax(
       temporaryTwoHouse: asset.temporaryTwoHouse,
       // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
       //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
-      // `householdHousingCount`는 §155④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
-      //   단건 E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함)이다.
-      householdHousingCount: asset.householdHousingCountForExclusion ?? 0,
+      // `householdHousingCount`는 §155①(일시적 2주택)·④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
+      //   단건 E-3·E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함 · 조특법 제외 후)이다.
+      //   E-14 — 단건 15호 ① 요소와 같은 규칙(`surcharge15HouseCount`). 겸용은 §155②③ 제외를 받지 않는다.
+      householdHousingCount: surcharge15HouseCount(
+        asset.householdHousingCountForExclusion ?? 0,
+        0,
+        houseCountExclusionApplied,
+      ),
       ruralHouse: undefined,
       marriageMerge: asset.multiHouse?.marriageMerge,
       parentalCareMerge: asset.multiHouse?.parentalCareMerge,
