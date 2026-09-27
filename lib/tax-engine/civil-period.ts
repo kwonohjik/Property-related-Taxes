@@ -7,7 +7,7 @@
  * | 유형 | 문구 | 초일 | 충족 | 함수 |
  * |---|---|---|---|---|
  * | A | 「~한 날부터 N년 이상이 지난 후」 | 불산입 | 만료일 **다음날부터** | `isAfterPeriod` · `firstDayAfterPeriod` |
- * | B | 「~한 날부터 N년 이내」 | 불산입 | 만료일 **당일까지** | `isWithinPeriod` · `periodEndFrom` |
+ * | B | 「~한 날부터 N년 이내」 | 불산입 | 만료일 **당일까지**(민법 §161 — 토요일·공휴일이면 익일) | `isWithinDeadline` · `deadlineEndFrom` (역상 말일만: `isWithinPeriod` · `periodEndFrom`) |
  * | C | 보유기간(§95④ 「취득일부터 양도일까지」) | 산입 | — | `calculateHoldingPeriod`(tax-utils) |
  * | D | 거주기간 개월(§154⑥ 전입일~전출일) | 산입 | — | `completedMonthsInclusive` |
  *
@@ -17,6 +17,14 @@
  * - 근거: 서면2017법령해석재산-785·조심2019서1704·조심2020서1405(A), 서면2018부동산-3033·
  *   조심2012중305(B), 서면4팀-82·집행기준 89-154-20(D).
  */
+
+import {
+  PUBLIC_HOLIDAY_LONGEST_RUN_DAYS,
+  PUBLIC_HOLIDAYS_KR,
+  PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
+  PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
+} from "./data/public-holidays-kr";
+import { DEADLINE_HOLIDAY_EXTENSION_161, PERIOD_CALCULATION_4 } from "./legal-codes/common";
 
 const DAY_MS = 86_400_000;
 
@@ -60,6 +68,101 @@ export function isWithinPeriod(event: Date, years: number, target: Date): boolea
 /** `target`이 기한 말일 `end` **당일까지**인가 — 기한이 연수가 아니라 날짜로 정해질 때(§155①2호 단서) */
 export function isOnOrBeforeDay(target: Date, end: Date): boolean {
   return dayKey(target) <= dayKey(end);
+}
+
+// ── 민법 §161 — 「~이내」 기한 말일의 토요일·공휴일 연장 (L-1) ──────────────────────────────
+//
+// 국세기본법 §4 「이 법 또는 세법에서 규정하는 기간의 계산은 … 「민법」에 따른다」 → 민법 §161 「기간의 말일이
+// 토요일 또는 공휴일에 해당한 때에는 기간은 그 익일로 만료한다」. 사전-2021-법령해석재산-1190(법령해석과-3656,
+// 2021.10.21.) — §155①2호 기한 말일(임대차 종료일)이 한글날 대체공휴일이면 「다음 날까지」 요건 충족.
+// ⚠️ **B 유형(「~이내」)의 말일에만** 쓴다. A 유형(「~이 지난 후」) 경계에 쓰면 충족일이 늦어진다(선례 없음 — 계획서 §9.7).
+
+/** 민법 §161에 「토요일」을 넣은 법률 제8720호 시행일 — 그 전 말일은 토요일로 연장되지 않는다. */
+export const CIVIL_161_SATURDAY_START = new Date(Date.UTC(2007, 11, 21));
+
+/** 「~이내」 기한의 말일 — 역(曆)상 말일(§160)과 §161 연장 후 말일 */
+export interface DeadlineEnd {
+  /** 기한 말일(민법 §161 반영) — 이 날 **당일까지** */
+  end: Date;
+  /** 역상 말일(§157·§160) */
+  calendarEnd: Date;
+  /** 역상 말일이 토요일·공휴일이라 늘어났다 */
+  extended: boolean;
+  /** 연장 판단에 공휴일 표(`data/public-holidays-kr.ts`) 밖의 해가 걸려 토·일요일만 반영했다 */
+  holidayTableUncovered: boolean;
+}
+
+const inHolidayTable = (d: Date) =>
+  d.getUTCFullYear() >= PUBLIC_HOLIDAY_TABLE_FIRST_YEAR &&
+  d.getUTCFullYear() <= PUBLIC_HOLIDAY_TABLE_LAST_YEAR;
+
+/** 민법 §161의 「토요일 또는 공휴일」인가. 표 밖의 해는 일요일만 공휴일로 본다(호출부가 고지). */
+function isSaturdayOrPublicHoliday(d: Date): boolean {
+  const w = d.getUTCDay();
+  if (w === 0) return true; // 관공서의 공휴일에 관한 규정 §2 1호
+  if (w === 6) return dayKey(d) >= dayKey(CIVIL_161_SATURDAY_START);
+  return inHolidayTable(d) && PUBLIC_HOLIDAYS_KR[d.toISOString().slice(0, 10)] !== undefined;
+}
+
+/** 역상 말일 `calendarEnd`에 민법 §161을 적용한다 — 토요일·공휴일이면 그 익일(익일도 그러면 다시 익일). */
+export function deadlineEnd(calendarEnd: Date): DeadlineEnd {
+  let end = new Date(dayKey(calendarEnd));
+  let uncovered = !inHolidayTable(end);
+  while (isSaturdayOrPublicHoliday(end)) {
+    end = new Date(dayKey(end) + DAY_MS);
+    if (!inHolidayTable(end)) uncovered = true;
+  }
+  return {
+    end,
+    calendarEnd: new Date(dayKey(calendarEnd)),
+    extended: dayKey(end) !== dayKey(calendarEnd),
+    holidayTableUncovered: uncovered,
+  };
+}
+
+/** 「`event`한 날부터 `years`년 이내」의 말일(민법 §161 반영) */
+export function deadlineEndFrom(event: Date, years: number): DeadlineEnd {
+  return deadlineEnd(periodEndFrom(event, years));
+}
+
+/** B 유형 기한 — `target`이 「`event`한 날부터 `years`년 이내」인가(민법 §161 반영) */
+export function isWithinDeadline(event: Date, years: number, target: Date): boolean {
+  return dayKey(target) <= dayKey(deadlineEndFrom(event, years).end);
+}
+
+/** 날짜로 정해진 기한(말일 `calendarEnd`) **당일까지**인가(민법 §161 반영) */
+export function isOnOrBeforeDeadline(target: Date, calendarEnd: Date): boolean {
+  return dayKey(target) <= dayKey(deadlineEnd(calendarEnd).end);
+}
+
+/** 기한 안내 필드 — 연장된 말일과(있으면) 한 줄 설명 */
+export function deadlineFields(d: DeadlineEnd): { deadline: Date; deadlineNote?: string } {
+  const note = deadlineEndNote(d);
+  return { deadline: d.end, ...(note ? { deadlineNote: note } : {}) };
+}
+
+/**
+ * `target` 직전 며칠(표 안 최장 연속 휴무 `PUBLIC_HOLIDAY_LONGEST_RUN_DAYS`) 중 공휴일 표 밖의 해가 있는가.
+ * 「~이내」 기한은 역상 말일이 그 안에 있을 때만 §161 연장이 `target`의 판정을 바꾼다 — 판정 보류 고지용.
+ */
+export function holidayTableUncoveredBefore(target: Date): boolean {
+  const from = new Date(dayKey(target) - PUBLIC_HOLIDAY_LONGEST_RUN_DAYS * DAY_MS);
+  return !inHolidayTable(from) || !inHolidayTable(target);
+}
+
+/** 기한 안내에 붙이는 한 줄 — 연장됐거나 공휴일 표가 덮지 못할 때만 */
+export function deadlineEndNote(d: DeadlineEnd): string | undefined {
+  const ymd = (x: Date) => x.toISOString().slice(0, 10);
+  if (d.holidayTableUncovered) {
+    return (
+      `역상 말일 ${ymd(d.calendarEnd)} — 이 해의 관공서 공휴일은 계산표에 없어 토·일요일만 반영했습니다` +
+      `(${DEADLINE_HOLIDAY_EXTENSION_161}). 말일 또는 그 뒤 날이 공휴일이면 기한이 더 늘어납니다.`
+    );
+  }
+  if (d.extended) {
+    return `역상 말일 ${ymd(d.calendarEnd)}이 토요일·공휴일이라 기한이 ${ymd(d.end)}까지 늘어났습니다(${PERIOD_CALCULATION_4} → ${DEADLINE_HOLIDAY_EXTENSION_161}).`;
+  }
+  return undefined;
 }
 
 /**

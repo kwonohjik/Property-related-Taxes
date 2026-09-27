@@ -28,6 +28,8 @@ type PendingItem = {
   id: string;
   description: string;
   deadline: Serialized<Date>;
+  /** 민법 §161 연장·공휴일 표 밖 안내(엔진 값) */
+  deadlineNote?: string;
   legalBasis: string;
 };
 
@@ -267,6 +269,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
                   {"까지 — "}
                   {p.description}
                 </p>
+                {p.deadlineNote && (
+                  <p className="text-xs text-muted-foreground" data-testid={`one-house-pending-note-${p.id}`}>
+                    {p.deadlineNote}
+                  </p>
+                )}
                 <LawArticleModal legalBasis={p.legalBasis} />
               </li>
             ))}

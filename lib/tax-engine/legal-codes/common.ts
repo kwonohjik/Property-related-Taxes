@@ -143,3 +143,15 @@ export const CLAIM_PERIOD_ORDINARY_YEARS = 5;
 export const CLAIM_PERIOD_POSTERIOR_MONTHS = 3;
 /** 국세환급가산금 이율(연) — 시행규칙 §19의3(연 1000분의 31). 안내 표기 전용(display-only) */
 export const REFUND_GAIN_RATE_ANNUAL = 0.031;
+
+// ============================================================
+// 기간 계산 — 국세기본법 §4 → 민법 §161 (L-1 · KoreanLaw 실독 2026-09-28)
+// ============================================================
+
+/** 국세기본법 §4 — 세법에서 규정하는 기간의 계산은 「민법」에 따른다 */
+export const PERIOD_CALCULATION_4 = "국세기본법 §4";
+/**
+ * 민법 §161 — 기간의 말일이 토요일 또는 공휴일이면 그 익일로 만료(2007.12.21. 법률 제8720호로 토요일 추가).
+ * 「~이내」 기한(civil-period.ts 유형 B)에만 쓴다 — 「~이 지난 후」 경계에는 쓰지 않는다.
+ */
+export const DEADLINE_HOLIDAY_EXTENSION_161 = "민법 §161";

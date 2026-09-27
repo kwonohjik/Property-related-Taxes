@@ -41,6 +41,8 @@ export type TempTwoHouseVerdict =
       oneYearMet: boolean;
       oneYearWaived: boolean;
       deadline: Date;
+      /** 처분기한 말일이 민법 §161로 늘어났거나 공휴일 표 밖이면 한 줄 설명(엔진 값 그대로) */
+      deadlineNote?: string;
       /** 처분기한 연수 — 카드 문구(「N년 내」)가 기한 날짜와 같은 값을 말하게 한다(OH-57). */
       deadlineYears: number;
       /** §155①2호 단서(기존 임차인)로 기한이 날짜로 늘어났는가 — 카드가 「N년 내」 대신 날짜를 말한다 */
@@ -192,6 +194,7 @@ export function judgeTempTwoHouseFromForm(p: {
     // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.
     oneYearWaived: oneYearWaived || relocation,
     deadline: t.deadline,
+    ...(t.deadlineNote ? { deadlineNote: t.deadlineNote } : {}),
     deadlineYears,
     deadlineExtendedByTenant: era.deadlineDate !== undefined,
     threeYearMet: t.threeYearMet,

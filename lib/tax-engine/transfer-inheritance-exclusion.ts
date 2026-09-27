@@ -5,7 +5,8 @@
  * - 단독상속 풀(§155②): isInherited && !isCoInherited → 적격 1채이면 제외 1채.
  * - 공동상속 풀(§155③): isInherited && isCoInherited && 최대지분자 아님 → 적격 1채이면 제외 1채.
  *   최대지분자(isLargestCoInheritedShareholder === true)는 산입(제외 안 함, §155③ 단서).
- * - 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 전체 게이트-오프.
+ * - 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② **단독상속 풀만** 게이트-오프(L-11 —
+ *   괄호가 「이하 이 항에서 "일반주택"」으로 ②에 한정되고 §155③에는 없다 · 법규과-1841 2022.6.21.).
  *
  * 적격(제외 후보) 게이트 2종 — 둘 다 통과해야 상속주택으로 인정(§155③도 단서 준용):
  * - 동거봉양 단서(§155② 단서): 상속개시 당시 피상속인과 동일세대(decedentSameHouseholdAtInheritance)
@@ -98,7 +99,7 @@ export function resolveInheritedHouseExclusion(
     eligibleCoMinorityCount: 0,
     generalHouseNotHeldCount: 0,
   };
-  if (generalHouseGiftedFromDecedentWithin2yr || !houses) return empty;
+  if (!houses) return empty;
 
   /**
    * OH-12 — §155② 괄호 「그 밖의 주택(상속개시 당시 보유한 주택 … 만 해당)」은 **단독상속 풀**의 요건이다
@@ -114,7 +115,18 @@ export function resolveInheritedHouseExclusion(
       rightAtInheritance: generalHouse.rightAtInheritance,
     }) !== "no";
 
-  const inheritedOthers = houses.filter((h) => h.isInherited && h.id !== sellingHouseId);
+  /**
+   * L-11 — 「상속개시일부터 소급하여 2년 이내에 피상속인으로부터 증여받은 주택 … 은 제외한다. **이하 이 항에서**
+   * "일반주택"이라 한다」는 §155②의 괄호다. §155③(공동상속주택)에는 이 괄호가 없고, 같은 항 단서처럼
+   * 「이하 제3항 … 에서 같다」는 연결도 없다 ⇒ 증여 게이트는 **단독상속 풀**만 비운다. ③ 풀은 그대로 판정한다
+   * (종전에는 두 풀을 모두 비워 ③ 특례를 근거 없이 껐다). 형제 선례: 위 `heldForSole`(보유 괄호)도 ② 풀에만.
+   */
+  const inheritedOthers = houses.filter(
+    (h) =>
+      h.isInherited &&
+      h.id !== sellingHouseId &&
+      !(generalHouseGiftedFromDecedentWithin2yr && !h.isCoInherited),
+  );
 
   // 표시용 부적격 카운트 — 제외 후보(단독 or 공동 소수지분)만 대상. household 사유 우선.
   let sameHouseholdDisqualifiedCount = 0;

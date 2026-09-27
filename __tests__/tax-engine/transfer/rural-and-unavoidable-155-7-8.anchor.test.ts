@@ -83,12 +83,25 @@ describe("E-3 — §155⑧ 수도권 밖 부득이 주택 보유 + 일반주택 
     expect(r.surchargeType).toBeUndefined();
   });
 
-  it("사유 해소 후 3년 초과 → 미적용 (기한 경계)", () => {
+  /**
+   * L-1 — 해소 2023-05-31이면 3년 역상 말일 2026-05-31은 **일요일**이라 기한은 06-01(월)까지다
+   * (국세기본법 §4 → 민법 §161). 종전 픽스처는 그 날 양도를 「초과」로 봤다 — 이제 적용이 법령상 맞다.
+   * 「초과」 경계는 말일이 평일인 해소일(2023-05-29 → 말일 2026-05-29 금)로 잰다.
+   */
+  it("사유 해소 후 3년 초과 → 미적용 (기한 경계 — 말일 평일)", () => {
     const r = calc({
-      unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: D("2023-05-31") },
+      unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: D("2023-05-29") },
     });
     expect(r.exemptReason).toBeUndefined();
     expect(r.surchargeType).toBe("multi_house_2");
+  });
+
+  it("L-1 역상 말일 일요일(해소 2023-05-31 → 말일 2026-05-31) → 06-01 양도까지 적용", () => {
+    const r = calc({
+      unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: D("2023-05-31") },
+    });
+    expect(r.exemptReason).toBe("수도권 밖 부득이한 사유 주택 고가주택 (§155⑧ 근무상 형편)");
+    expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("unavoidable_outside_capital");
   });
 
   it("해소일 당일 + 3년 = 경계 포함 (해소 2023-06-01 · 양도 2026-06-01)", () => {

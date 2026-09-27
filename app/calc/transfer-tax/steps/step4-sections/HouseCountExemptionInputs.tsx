@@ -74,7 +74,7 @@ export function HouseCountExemptionInputs({
           variant="card"
           tone="rose"
           title="양도주택이 상속개시 2년내 피상속인 증여분"
-          description="§155② 상속주택 특례에서 일반주택(양도 대상)이 상속개시일부터 2년 내 피상속인으로부터 증여받은 주택이면 특례가 배제됩니다. 해당 시 체크하세요."
+          description="§155② 상속주택 특례에서 일반주택(양도 대상)이 상속개시일부터 2년 내 피상속인으로부터 증여받은 주택이면 단독상속주택 특례가 배제됩니다(§155③ 공동상속주택 소수지분에는 적용되지 않습니다). 해당 시 체크하세요."
           checked={form.generalHouseGiftedFromDecedentWithin2yr}
           onCheckedChange={(v) => onChange({ generalHouseGiftedFromDecedentWithin2yr: v })}
         />

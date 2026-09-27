@@ -11,11 +11,12 @@
  */
 import { format } from "date-fns";
 import {
+  deadlineEnd,
+  deadlineEndFrom,
+  deadlineEndNote,
   firstDayAfterPeriod,
   isAfterPeriod,
   isOnOrBeforeDay,
-  isWithinPeriod,
-  periodEndFrom,
 } from "./civil-period";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
@@ -38,6 +39,7 @@ const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
  *   `oneYearThreshold`는 **최초 충족일**(=만료일 다음날) — 판정 카드가 「1년 경과일」로 표시한다.
  * - 요건 B(3년): 「다른 주택을 취득한 날부터 3년 이내」 — 초일불산입, 만료일(`deadline`) 당일까지
  *   (조정지역 부칙은 caller가 반영해 주입). 규칙: `civil-period.ts` 유형 A·B.
+ *   말일이 토요일·공휴일이면 익일(민법 §161 — L-1). `deadline`은 **연장된** 말일이고 `deadlineNote`가 이유를 말한다.
  *
  * 엔진 E-3·UI 판정 카드 공용(single-source). UI는 waiver를 resolveExemptionProviso로 별도 산출해 주입.
  */
@@ -65,6 +67,8 @@ export function judgeTemporaryTwoHouseTiming(p: {
   oneYearThreshold: Date;
   oneYearMet: boolean;
   deadline: Date;
+  /** 말일이 민법 §161로 늘어났거나 공휴일 표 밖이면 한 줄 설명 */
+  deadlineNote?: string;
   threeYearMet: boolean;
   /** §155①2호 가목 — 입력 그대로(해당 없음·미판정이면 `undefined`) */
   moveInMet?: boolean;
@@ -77,21 +81,20 @@ export function judgeTemporaryTwoHouseTiming(p: {
     p.oneYearWaived ||
     p.publicInstitutionRelocation === true ||
     isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
-  const deadline = p.deadlineDate ?? periodEndFrom(p.newAcquisitionDate, p.deadlineYears);
+  const dl = p.deadlineDate ? deadlineEnd(p.deadlineDate) : deadlineEndFrom(p.newAcquisitionDate, p.deadlineYears);
+  const deadline = dl.end;
+  const deadlineNote = deadlineEndNote(dl);
   // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
   //   ⑱ 각 호는 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 해당 여부이므로 양도일과 무관하다.
   //   ⑱은 **요건 B(기한)만** 치유한다 — 요건 A(1년)는 그대로다(본문 괄호가 3년 절에만 붙어 있다).
-  const threeYearMet =
-    p.disposalDelayReason !== undefined ||
-    (p.deadlineDate
-      ? isOnOrBeforeDay(p.transferDate, p.deadlineDate)
-      : isWithinPeriod(p.newAcquisitionDate, p.deadlineYears, p.transferDate));
+  const threeYearMet = p.disposalDelayReason !== undefined || isOnOrBeforeDay(p.transferDate, deadline);
   // ⑱은 양도 기한만 치유한다 — 가목(전입)은 「각 목의 요건을 모두 충족」의 별개 요건이다.
   const moveInOk = p.moveInMet !== false;
   return {
     oneYearThreshold,
     oneYearMet,
     deadline,
+    ...(deadlineNote ? { deadlineNote } : {}),
     threeYearMet,
     ...(p.moveInMet !== undefined ? { moveInMet: p.moveInMet } : {}),
     overall: oneYearMet && threeYearMet && moveInOk,

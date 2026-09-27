@@ -37,7 +37,7 @@
  * 신규 취득일 기준으로 판정해 `bothRegulated`로 넘긴다.
  */
 
-import { periodEndFrom } from "../civil-period";
+import { isOnOrBeforeDeadline, periodEndFrom } from "../civil-period";
 
 /** 제29242호 시행(공포)일 — 이 날 이후 양도분부터 조정→조정 2년 (부칙 제2조①). */
 export const TT_REGULATED_2Y_TRANSFER_START = new Date("2018-10-23");
@@ -147,7 +147,8 @@ function resolveMoveInRegime(
   return {
     years: 1,
     moveInRequirementPending: false,
-    moveInMet: dayKey(moveInDate) <= dayKey(deadlineDate ?? oneYearEnd),
+    // 「1년 이내」·단서 기한 말일에도 민법 §161(토요일·공휴일 → 익일) — 법령해석과-3656(2021.10.21.)이 바로 이 가목 기한.
+    moveInMet: isOnOrBeforeDeadline(moveInDate, deadlineDate ?? oneYearEnd),
     ...(deadlineDate ? { deadlineDate } : {}),
   };
 }

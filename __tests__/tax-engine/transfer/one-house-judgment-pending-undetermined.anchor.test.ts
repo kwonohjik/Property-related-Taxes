@@ -63,7 +63,8 @@ describe("P4-1 pending — §155① 일시적 2주택 처분기한", () => {
     const r = judge(OVER_DEADLINE);
     expect(r.isExempt).toBe(false);
     expect(r.pending.map((p) => p.id)).toEqual(["155-1-disposal-deadline"]);
-    expect(iso(r.pending[0].deadline)).toBe("2023-07-01");
+    // L-1 — 역상 말일 2023-07-01(토) → 기한 07-03(월)(국세기본법 §4 → 민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2023-07-03");
   });
 
   it("[PD-2] 긍정 짝 — 기한 내면 비과세이고 pending은 비어 있다", () => {
@@ -119,7 +120,8 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
       ...RESIDENCE_FREE,
     });
     expect(r.pending.map((p) => p.id)).toEqual(["155-5-marriage-merge"]);
-    expect(iso(r.pending[0].deadline)).toBe("2020-01-01");
+    // L-1 — 역상 말일 2020-01-01(1월 1일 공휴일) → 기한 01-02(민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2020-01-02");
   });
 
   it("[PD-6] 긍정 짝 — 10년 내면 비과세 · pending 없음", () => {
@@ -172,7 +174,8 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
   it("[PD-9] 귀농주택 5년 초과 — 기한은 귀농주택 취득일 + 5년", () => {
     const r = judge({ householdHousingCount: 2, ruralHouse: RURAL("2015-01-01"), ...RESIDENCE_FREE });
     expect(r.pending.map((p) => p.id)).toEqual(["155-7-3ho-return-to-farm"]);
-    expect(iso(r.pending[0].deadline)).toBe("2020-01-01");
+    // L-1 — 역상 말일 2020-01-01(1월 1일 공휴일) → 기한 01-02(민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2020-01-02");
   });
 
   it("[PD-10] 긍정 짝 — 5년 내면 비과세 · pending 없음", () => {
@@ -191,7 +194,8 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
       ...RESIDENCE_FREE,
     });
     expect(r.pending.map((p) => p.id)).toEqual(["155-8-unavoidable-resolved"]);
-    expect(iso(r.pending[0].deadline)).toBe("2021-01-01");
+    // L-1 — 역상 말일 2021-01-01(금 1월 1일)·02(토)·03(일) → 기한 01-04(월)(민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2021-01-04");
   });
 
   it("[PD-12] 🔴 §155⑧ 해소일 미입력 — 기한을 지어내지 않고 **판정 보류**로 남긴다", () => {
@@ -268,7 +272,8 @@ describe("P4-1 pending — §89② 권리 3년", () => {
     expect(r.article89Clause2?.status).toBe("excluded");
     expect(r.isExempt).toBe(false);
     expect(r.pending.map((p) => p.id)).toEqual(["156-2-3-right-three-year"]);
-    expect(iso(r.pending[0].deadline)).toBe("2023-07-01");
+    // L-1 — 역상 말일 2023-07-01(토) → 기한 07-03(월)(국세기본법 §4 → 민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2023-07-03");
   });
 
   it("[PD-18] 🔴 §89②만 아니었다면 어차피 과세인 경우(보유 미달) — 기한을 내지 않는다", () => {

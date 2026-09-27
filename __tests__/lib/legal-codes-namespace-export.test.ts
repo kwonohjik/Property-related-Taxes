@@ -160,6 +160,8 @@ const MODULES: ReadonlyArray<{
       "LATE_FILING_REDUCTION_48_2_2_TABLE",
       // 🔴 G-05 — §48②3호라목(예정신고 무신고 → 확정신고기한 이내 기한후신고 일률 50%)
       "LATE_FILING_REDUCTION_48_2_3_RA", "LATE_FILING_REDUCTION_48_2_3_RA_RATE",
+      // L-1 — 「~이내」 기한 말일 토요일·공휴일 연장 (국세기본법 §4 → 민법 §161)
+      "PERIOD_CALCULATION_4", "DEADLINE_HOLIDAY_EXTENSION_161",
     ],
   },
 ];

@@ -8,6 +8,20 @@ import type { VerificationRule } from "../verifier-types";
 
 export const COMMON_ADDITIONS: VerificationRule[] = [
   {
+    // common.ts PERIOD_CALCULATION_4 — 세법 기간 계산의 민법 준용(L-1 · civil-period.ts)
+    id: "NTBL.PERIOD_CALCULATION",
+    citation: "국세기본법 §4",
+    keywords: ["기간의 계산", "「민법」에 따른다"],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts DEADLINE_HOLIDAY_EXTENSION_161 — 「~이내」 기한 말일 토요일·공휴일 → 익일(L-1)
+    id: "CIVIL.DEADLINE_HOLIDAY_EXTENSION",
+    citation: "민법 §161",
+    keywords: ["기간의 말일이 토요일 또는 공휴일에 해당한 때에는 기간은 그 익일로 만료한다"],
+    keywordMode: "ALL",
+  },
+  {
     id: "NTBL.ASSESSMENT_PERIOD",
     citation: "국세기본법 §26의2",
     keywords: ["부과제척기간", "5년", "10년", "역외거래"],
