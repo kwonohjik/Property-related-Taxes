@@ -262,7 +262,13 @@ export interface MixedUseAssetInput {
   multiHouse?: Omit<
     MultiHouseSurchargeInput,
     // `deemedOneHouseSource`는 `deemedOneHouseBy155`의 표시용 짝이다(E-14c) — 같은 이유로 담지 않는다.
-    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "deemedOneHouseBy155" | "deemedOneHouseSource"
+    | "transferDate"
+    | "sellingHouseMeetsOneHouseRequirements"
+    | "deemedOneHouseBy155"
+    | "deemedOneHouseSource"
+    // E-14e·f — 구 8호·구 §167의11①1호 판정도 엔진이 한다(겸용 서브엔진이 `asset.temporaryTwoHouse`로 판정).
+    | "oldClause8TemporaryTwoHouse"
+    | "rightDeemingCitedByOldClause1"
   > & {
     /** 양도 당시 조정대상지역 boolean fallback (`regulatedAreaHistory` 미매칭 시). */
     isRegulatedArea: boolean;

@@ -137,6 +137,13 @@ export interface Article89Clause2Result {
    *    조용히 사라진다.
    */
   viaArticle?: string;
+  /**
+   * 예외가 §156의2**③·④** 또는 §156의3**②·③**(③ 후단 시행규칙 §75① 포함) 경로로 섰다 — ⑥(상속 권리)·⑧⑨(합가)·
+   * ⑤(대체주택)가 아니다. 준용(⑦⑩⑪) 여부는 `viaArticle`이 따로 말한다.
+   * 구 영 §167의11①1호(「제156조의2제3항부터 제5항까지 또는 제156조의3제2항ㆍ제3항에 따라」 — E-14f)의
+   * 인용 범위를 문자열 비교 없이 가르려고 둔다. 비과세 판정에는 쓰지 않는다.
+   */
+  byTimingClause?: boolean;
   /** 판정 불가 사유 — 사용자에게 「이 항을 직접 확인하라」고 알릴 조문 표기 */
   openArticles?: string[];
   /**
@@ -388,7 +395,7 @@ export function resolveArticle89Clause2(
       : resolveTwoHouseSpecialArticle(input, rights.length);
 
   if (oneYearMet && withinDeadline) {
-    return { status: "exception_met", exception: `소득세법 시행령 ${clause}`, viaArticle };
+    return { status: "exception_met", exception: `소득세법 시행령 ${clause}`, viaArticle, byTimingClause: true };
   }
   /**
    * OH-30b — ④(§156의3③)의 「종전주택 취득 후 1년이 지난 후 권리 취득」 요건은 대통령령 제32420호
@@ -431,6 +438,7 @@ export function resolveArticle89Clause2(
       return {
         status: "exception_met",
         viaArticle,
+        byTimingClause: true,
         exception:
           // ④2호는 전단·후단이 **같은 항**이다 — 인용을 갈래로 나누면 ⑬ 사후관리 경고가 끊긴다.
           declared.kind === "new_house" || declared.kind === "before_completion"

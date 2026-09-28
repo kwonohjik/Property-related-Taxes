@@ -24,6 +24,7 @@ import {
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
 import { evaluateTemporaryTwoHouseTiming } from "./transfer-tax-exemption-requirements";
+import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { judgeRentalHousingEligibility } from "./transfer-tax-rental-housing-judge";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
@@ -34,6 +35,7 @@ import {
   specialActHouseExclusionBasis,
 } from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
+import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import type { IncomeDeductionId } from "./transfer-reductions";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
@@ -67,12 +69,15 @@ export function resolveSurchargeDeemedOneHouse(
   return resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate)?.basis;
 }
 
-/** `resolveSurchargeDeemedOneHouse` + 표시용 근거 조문(조특법 감면주택·§156의2·§156의3 경로만). */
+/**
+ * `resolveSurchargeDeemedOneHouse` + 표시용 근거 조문(조특법 감면주택·§156의2·§156의3 경로만)
+ * + 구 §167의11①1호 인용 범위(`citedByOldClause1` — §156의2③④·§156의3②③ 직접 경로, E-14f).
+ */
 export function resolveSurchargeDeemedOneHouseDetail(
   workingInput: TransferTaxInput,
   parsedRates: ParsedRates,
   generalHouseAcquisitionDate?: Date,
-): { basis: DeemedOneHouseBasis; source?: string } | undefined {
+): { basis: DeemedOneHouseBasis; source?: string; citedByOldClause1?: boolean } | undefined {
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
   const inheritedExcluded = ex.inheritedExclusion.excludedCount;
   const count = surcharge15HouseCount(
@@ -121,6 +126,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
     return {
       basis: clause2.exception.includes("§156의3") ? "house_with_presale_right" : "house_with_redevelopment_right",
       source: clause2.viaArticle ? `${clause2.exception}(${clause2.viaArticle} 준용)` : clause2.exception,
+      citedByOldClause1: clause2.byTimingClause === true && clause2.viaArticle === undefined,
     };
   }
   return undefined;
@@ -193,6 +199,16 @@ export function runMultiHouseSurchargeStep(
       // 영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택. 15호와 **별개 호**라 슬롯이 다르다.
       //   요건(2주택·해소일부터 3년) 판정은 비과세와 같은 정본을 쓴다.
       unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(workingInput),
+      // E-14e·f — 2023.2.28. 전 양도분의 구 호(8호 · §167의11①1호). 판정은 `data/surcharge-old-clauses-era.ts`.
+      //   8호의 「1주택을 소유한 1세대」는 실제 소유 주택 수다(조심2021중1803) — §155②③·조특법 제외 전 값.
+      oldClause8TemporaryTwoHouse: qualifiesOldClause8TemporaryTwoHouse({
+        ...workingInput,
+        // §155⑯ 세대 5년 — 재산세제과-129. §155① 기한과 **같은 지역 술어**를 쓴다.
+        publicInstitutionRelocationMet:
+          workingInput.temporaryTwoHouse !== undefined &&
+          meetsPublicInstitutionRelocationRegion(workingInput.temporaryTwoHouse),
+      }),
+      rightDeemingCitedByOldClause1: deemed?.citedByOldClause1,
       marriageMerge: workingInput.marriageMerge,
       parentalCareMerge: workingInput.parentalCareMerge,
       presaleRights: workingInput.presaleRights ?? [],
