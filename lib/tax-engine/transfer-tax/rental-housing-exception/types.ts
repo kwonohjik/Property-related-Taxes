@@ -83,10 +83,18 @@ export type RentalUnitInput = {
   /** 실제 임대 개월수 (공실 차감 후) */
   rentalMonths: number;
   /**
-   * §155⑳㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소(의무기간 1/2 이상)·자동말소된 후
-   * 말소 이후 5년 이내 거주주택을 양도하는 경우. true면 의무임대기간요건을 간주 충족(RENTAL_PERIOD_SHORT 억제).
+   * §155㉓ 말소 — 가·다·라·마목 임대주택이 자진말소(민특법 §6①11호, 임대의무기간 1/2 이상)·자동말소
+   * (§6⑤)로 **등록이 말소됐다**는 선언. 「말소 이후 5년 이내 양도」는 선언이 아니라
+   * `registrationCancellationDate`로 엔진이 판정한다(I-4). 판정 맥락(`EligibilityContext`)이 없는 직접
+   * 호출에서는 종전대로 이 값만으로 임대기간요건을 간주 충족한다(RENTAL_PERIOD_SHORT 억제).
    */
   rentalAutoTermination: boolean;
+  /**
+   * §155㉓ 등록 말소일(I-4) — 「해당 등록이 말소된 이후(장기임대주택을 2호 이상 임대하는 경우에는 최초로
+   * 등록이 말소되는 장기임대주택의 등록 말소 이후를 말한다) 5년 이내」의 기산 사건일. `rentalAutoTermination`
+   * 이 true인데 없으면(구 기록) ㉓을 판정하지 않는다 — 간주 충족을 주지 않는다.
+   */
+  registrationCancellationDate?: Date;
   /**
    * §155㉓1호 자진말소 「같은 법(민특법) 제43조에 따른 **임대의무기간**의 2분의 1 이상」 판정용 —
    * 말소된 주택의 종전 「민간임대주택에 관한 특별법」 등록 유형(OH-39).
@@ -173,6 +181,22 @@ export type RentalUnitVerdict = {
   sizeRequired: boolean;    // 건설 규모요건 적용 여부
 };
 
+/** §155㉓ 「최초 말소일부터 5년 이내」 기한 echo (I-4) — 날짜는 YYYY-MM-DD */
+export type CancellationWindow = {
+  /** 입력한 말소 호 중 가장 먼저 말소된 날 */
+  firstCancellationDate: string;
+  /** 그 호(0-based) */
+  firstUnitIndex: number;
+  /** 역상 말일(민법 §157·§160) */
+  calendarEnd: string;
+  /** 기한 말일(민법 §161 — 토요일·공휴일이면 익일) — 이 날 당일까지 */
+  deadline: string;
+  /** 말일이 연장됐거나 공휴일 표가 그 해를 덮지 못할 때만 */
+  deadlineNote?: string;
+  /** 양도일이 기한 안인가 */
+  withinDeadline: boolean;
+};
+
 /** 요건 판정 결과 */
 export type EligibilityResult = {
   /** 전체 통과 여부 (입력한 임대주택 **전 호** 통과 + 거주주택 요건 충족 — OH-14) */
@@ -190,6 +214,11 @@ export type EligibilityResult = {
    * 계산기는 warnings로, 판정 메뉴는 결과 카드로 낸다.
    */
   notices?: string[];
+  /**
+   * §155㉓ 5년 창(I-4) — 말소일을 입력한 말소 호가 있을 때만. 「최초로 등록이 말소되는」 호의 말소일과
+   * 그 5년 기한(민법 §161 연장 반영). 결과 카드·판정 메뉴가 표시한다.
+   */
+  cancellationWindow?: CancellationWindow;
   /**
    * 의무임대기간을 채우기 전이라 §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 안내 대상.
    * 기간을 채웠거나 ㉓ 말소 특례로 간주 충족한 호는 들어가지 않는다.

@@ -848,8 +848,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       rentalDong: string;
       /** 공동주택 호(예: "1004") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */
       rentalHo: string;
-      /** §155⑳㉓ 말소 특례 — 자진(의무기간 1/2↑)·자동말소 후 5년 내 거주주택 양도 여부 (가·다·라·마목) */
+      /** §155㉓ 말소 — 자진(임대의무기간 1/2↑)·자동말소로 등록이 말소된 호 (가·다·라·마목) */
       rentalAutoTermination: boolean;
+      /**
+       * §155㉓ 등록 말소일(YYYY-MM-DD, I-4) — 「말소 이후(2호 이상이면 최초 말소 이후) 5년 이내 양도」의
+       * 기산일. "" = 미입력(말소 토글 ON이면 ⑧이 차단 · 엔진은 ㉓ 판정 보류).
+       */
+      registrationCancellationDate: string;
       /**
        * ㉓1호 자진말소 1/2 판정용 — 말소 주택의 종전 민특법 등록 유형(OH-39). "" = 미선택.
        * short_term = 단기민간임대(4년 → 24개월) · long_term_general = 장기일반민간임대(8년 → 48개월).

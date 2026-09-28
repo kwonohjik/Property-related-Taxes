@@ -30,6 +30,7 @@ import {
   needsPre2019ArticleScopeNotice,
 } from "../../data/rental-155-20-era";
 import { rentalStdPriceCap, rentalRequiredYears, RA_CUT } from "../../rental-article/rules";
+import { deadlineEndFrom, deadlineEndNote, type DeadlineEnd } from "../../civil-period";
 import {
   checkRentalArticle,
   isConstructionArticle,
@@ -43,6 +44,7 @@ import type {
   RentalArticle,
   RegionType,
   EligibilityResult,
+  CancellationWindow,
   RentalUnitFailReason,
   RentalUnitVerdict,
   RentalHousingExceptionInput,
@@ -72,6 +74,28 @@ const TERMINATED_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminatedRegis
   short_term: 4,
   long_term_general: 8,
 };
+
+/** §155㉓ 「등록이 말소된 이후 … 5년 이내에 거주주택을 양도」 — 기한 연수 (I-4) */
+export const TERMINATION_TRANSFER_YEARS = 5;
+
+/**
+ * §155㉓ 5년 기한 말일 — 「~이내」(B 유형)라 초일 불산입 + 민법 §161(말일이 토요일·공휴일이면 익일).
+ * 근거: 국세기본법 §4 → 민법 §157·§160·§161, 사전-2021-법령해석재산-1190(법령해석과-3656, 2021.10.21. —
+ * 「~이내」 기한 말일이 공휴일이면 다음 날까지). L-1(`civil-period.ts`)과 같은 규칙이다.
+ * UI(⑤ 카드의 호별 기한 표시)가 같은 함수를 쓴다.
+ */
+export function terminationDeadline(cancellationDate: Date): DeadlineEnd {
+  return deadlineEndFrom(cancellationDate, TERMINATION_TRANSFER_YEARS);
+}
+
+/** ㉓ 대상 목 — 「제167조의3제1항제2호가목 및 다목부터 마목까지」 */
+function isTerminationEligibleArticle(article: RentalArticle): boolean {
+  return article === "가" || article === "다" || article === "라" || article === "마";
+}
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+const validDate = (d: Date | undefined): d is Date => d instanceof Date && !Number.isNaN(d.getTime());
+const dayOf = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
 // ============================================================
 // 날짜 경계 상수 (§167조의3①2호·§155⑳)
@@ -327,6 +351,38 @@ export function checkEligibility(
     }
   }
 
+  /**
+   * ── §155㉓ 5년 창 (I-4) ──
+   * 「해당 등록이 말소된 이후(장기임대주택을 2호 이상 임대하는 경우에는 최초로 등록이 말소되는 장기임대주택의
+   * 등록 말소 이후를 말한다) 5년 이내에 거주주택을 양도하는 경우에 한정하여」. 기산점은 입력한 말소 호 중
+   * 가장 이른 말소일이다(기획재정부 재산세제과-1308, 2022.10.18. · 법규과-864, 2025.4.24.).
+   * ㉓ 말소는 법률 제17482호(2020.8.18. 시행)가 만든 자진·자동 말소라 그 전 날짜는 창에 넣지 않는다.
+   * 판정 맥락(양도일)이 없는 직접 호출은 판정하지 않는다 — 종전 동작.
+   */
+  let first: { date: Date; unitIndex: number } | null = null;
+  for (let i = 0; ctx && i < rentalUnits.length; i++) {
+    const u = rentalUnits[i];
+    const cd = u.registrationCancellationDate;
+    if (!u.rentalAutoTermination || !validDate(cd)) continue;
+    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveEffectiveRegDate(u));
+    if (!isTerminationEligibleArticle(art)) continue;
+    if (dayOf(cd) < RA_CUT.Y2020_08_18 || dayOf(cd) > dayOf(ctx.transferDate)) continue;
+    if (!first || dayOf(cd) < dayOf(first.date)) first = { date: cd, unitIndex: i };
+  }
+  const firstDeadline = first ? terminationDeadline(first.date) : null;
+  const cancellationWindow: CancellationWindow | undefined =
+    ctx && first && firstDeadline
+      ? {
+          firstCancellationDate: ymd(first.date),
+          firstUnitIndex: first.unitIndex,
+          calendarEnd: ymd(firstDeadline.calendarEnd),
+          deadline: ymd(firstDeadline.end),
+          ...(deadlineEndNote(firstDeadline) ? { deadlineNote: deadlineEndNote(firstDeadline) } : {}),
+          withinDeadline: dayOf(ctx.transferDate) <= dayOf(firstDeadline.end),
+        }
+      : undefined;
+  let terminationWindowApplied = false;
+
   // ── 2. 임대주택 호별 요건 ──
   const unitFailReasons: RentalUnitFailReason[] = [];
   const perUnitVerdict: RentalUnitVerdict[] = [];
@@ -393,8 +449,18 @@ export function checkEligibility(
     const dutyYears = unit.terminatedRegistrationType
       ? TERMINATED_DUTY_YEARS[unit.terminatedRegistrationType]
       : null;
-    const terminationEligibleArticle =
-      article === "가" || article === "다" || article === "라" || article === "마";
+    const terminationEligibleArticle = isTerminationEligibleArticle(article);
+    /**
+     * I-4 — ㉓ 5년 창. 말소된 호는 양도일 현재 등록·임대 중이 아니므로(⑳2호) 소득세법 임대기간을 이미
+     * 채웠더라도 ㉓으로만 장기임대주택이 된다 — 창을 벗어나면 기간 충족 여부와 무관하게 불충족이다
+     * (법규과-864: 8년 임대 후 자동말소된 호에도 최초 말소일 기준 5년을 적용).
+     */
+    const windowIssues =
+      ctx && unit.rentalAutoTermination && terminationEligibleArticle
+        ? terminationWindowIssues(i, unit, ctx, first, firstDeadline)
+        : [];
+    // ㉓1호 1/2 충족 여부. 창(windowIssues)을 벗어나면 아래에서 호를 불충족으로 따로 떨어뜨린다 —
+    // 1/2을 채운 호의 사유는 창 사유만 남는다(「의무임대기간 미충족」을 함께 내지 않는다).
     const terminationRelief =
       unit.rentalAutoTermination &&
       terminationEligibleArticle &&
@@ -420,6 +486,10 @@ export function checkEligibility(
       result.passed = result.failCodes.length === 0;
     }
     if (periodPending && result.passed) periodPendingUnitIndexes.push(i);
+    if (windowIssues.length > 0) result.passed = false;
+    else if (ctx && unit.rentalAutoTermination && terminationEligibleArticle && result.passed) {
+      terminationWindowApplied = true;
+    }
 
     perUnitVerdict.push({
       unitIndex: i,
@@ -439,7 +509,22 @@ export function checkEligibility(
           message: buildFailMessage(code, i, article, result.requiredYears, result.stdPriceCap, unit),
         });
       }
+      for (const message of windowIssues) {
+        unitFailReasons.push({ unitIndex: i, code: "RENTAL_TERMINATION_RESTRICTED", message });
+      }
     }
+  }
+
+  // 특례가 성립할 때만 싣는다 — 불성립이면 호별 사유와 결과 카드의 기한 표시가 이미 설명한다.
+  if (residenceFailReasons.length === 0 && allUnitsPassed && terminationWindowApplied && cancellationWindow) {
+    notices.push(
+      `등록이 말소된 장기임대주택이 있어 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}을 적용했습니다 — 최초 말소일 ` +
+        `${cancellationWindow.firstCancellationDate}(${cancellationWindow.firstUnitIndex + 1}호)부터 5년 이내인 ` +
+        `${cancellationWindow.deadline}까지 양도해야 합니다${cancellationWindow.deadlineNote ? ` (${cancellationWindow.deadlineNote})` : ""}. ` +
+        "이미 양도했거나 거주주택으로 전환한 장기임대주택이 이보다 먼저 말소됐다면 그 말소일부터 5년입니다" +
+        "(기획재정부 재산세제과-1308, 2022.10.18. — 양도일 현재 보유 여부 불문 · 법규과-864, 2025.4.24.). " +
+        "이 계산은 입력한 임대주택만으로 판정했습니다.",
+    );
   }
 
   const passed = residenceFailReasons.length === 0 && allUnitsPassed;
@@ -464,6 +549,48 @@ export function checkEligibility(
     laws: [TRANSFER_RENTAL_HOUSING.PIT_RD_155_20],
     perUnitVerdict,
     periodPendingUnitIndexes,
+    ...(cancellationWindow ? { cancellationWindow } : {}),
     ...(notices.length > 0 ? { notices } : {}),
   };
+}
+
+/**
+ * §155㉓ 5년 창 — 말소 호 하나의 불충족 사유(I-4). 비어 있으면 창 요건 충족.
+ * 입력이 모자라면 판정하지 않는다(간주 충족 없음) — OH-39 등록 유형 미입력과 같은 처리.
+ */
+function terminationWindowIssues(
+  i: number,
+  unit: RentalUnitInput,
+  ctx: EligibilityContext,
+  first: { date: Date; unitIndex: number } | null,
+  firstDeadline: DeadlineEnd | null,
+): string[] {
+  const n = i + 1;
+  const law = TRANSFER_RENTAL_HOUSING.PIT_RD_155_23;
+  const cd = unit.registrationCancellationDate;
+  if (!validDate(cd)) {
+    return [`${n}호: 등록 말소일을 입력해야 ${law}(말소 이후 5년 이내 거주주택 양도)을 판정할 수 있습니다.`];
+  }
+  if (dayOf(cd) < RA_CUT.Y2020_08_18) {
+    // 자진말소(민특법 §6①11호)·자동말소(§6⑤)는 법률 제17482호(2020.8.18. 시행)로 생겼다.
+    // ㉓은 2020.8.18. 이후 말소분부터 적용한다(부칙<제31083호, 2020.10.7.> 제3조②).
+    return [`${n}호: 등록 말소일(${ymd(cd)})이 2020.8.18. 전이라 ${law} 말소 특례 대상이 아닙니다(대통령령 제31083호 부칙 제3조②).`];
+  }
+  if (dayOf(cd) > dayOf(ctx.transferDate)) {
+    return [`${n}호: 등록 말소일(${ymd(cd)})이 양도일(${ymd(ctx.transferDate)}) 뒤입니다 — 양도일 현재 등록 중인 주택이면 말소 표시를 끄고, 말소일을 확인하세요.`];
+  }
+  const issues: string[] = [];
+  if (dayOf(ctx.residenceAcquisitionDate) > dayOf(cd)) {
+    issues.push(
+      `${n}호: 등록 말소일(${ymd(cd)}) 후에 취득한 거주주택(취득일 ${ymd(ctx.residenceAcquisitionDate)})에는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}이 적용되지 않습니다(${law} · 기획재정부 재산세제과-1308, 2022.10.18.).`,
+    );
+  }
+  if (first && firstDeadline && dayOf(ctx.transferDate) > dayOf(firstDeadline.end)) {
+    const base = first.unitIndex === i ? "등록 말소일" : `최초 말소일 ${ymd(first.date)}(${first.unitIndex + 1}호)`;
+    const note = deadlineEndNote(firstDeadline);
+    issues.push(
+      `${n}호: ${first.unitIndex === i ? `${base} ${ymd(first.date)}` : base}부터 5년 이내(${ymd(firstDeadline.end)}까지)에 거주주택을 양도해야 합니다 — 양도일 ${ymd(ctx.transferDate)}은 기한이 지났습니다(${law}${first.unitIndex === i ? "" : " — 2호 이상이면 최초로 말소된 호 기준"})${note ? `. ${note}` : ""}.`,
+    );
+  }
+  return issues;
 }

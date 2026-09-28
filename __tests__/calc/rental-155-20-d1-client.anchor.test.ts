@@ -129,7 +129,12 @@ describe("V-39 · V-41 — 호별 판정 사실", () => {
   it("V-39a 말소 토글 ON + 등록 유형 미선택 → 차단 / 선택 → 통과", () => {
     const off = asset({ rentalUnits: [unit({ rentalAutoTermination: true })] });
     expect(V(off)).toContain("등록 유형");
-    const on = asset({ rentalUnits: [unit({ rentalAutoTermination: true, terminatedRegistrationType: "short_term" })] });
+    // I-4 — 말소 호는 등록 말소일도 필수가 됐다(말소 후 5년 판정). 등록 유형 축만 보도록 말소일을 채운다.
+    const on = asset({
+      rentalUnits: [
+        unit({ rentalAutoTermination: true, terminatedRegistrationType: "short_term", registrationCancellationDate: "2021-03-03" }),
+      ],
+    });
     expect(V(on)).toBeNull();
   });
   it("V-41a 나목 자기확인 없음 → 차단 / 있음 → 통과", () => {

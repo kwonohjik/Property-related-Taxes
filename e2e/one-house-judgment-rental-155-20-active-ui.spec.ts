@@ -175,8 +175,22 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.locator('input[name="rental-region-0"]').first()).toBeVisible();
     await expect(page.getByText("라목(미분양)은 매입임대 전용입니다.")).toBeVisible();
 
-    // §155⑳㉓ 말소 특례 토글(가·다·라·마목) 노출
-    await expect(page.getByText("자진·자동 말소된 임대주택", { exact: false })).toBeVisible();
+    // §155⑳㉓ 말소 특례 토글(가·다·라·마목) 노출 — I-4에서 제목이 「5년 이내 양도」 선언에서 말소 사실로 바뀌었다
+    await expect(page.getByText("임대사업자 등록이 말소된 임대주택", { exact: false })).toBeVisible();
+  });
+
+  test("I-4 말소 토글 ON → 등록 말소일 입력 → 이 호 기한(민법 §161 연장)·양도일 기준 경과 표시", async ({ page }) => {
+    await gotoRentalSection(page, { rentalAutoTermination: true });
+
+    const dateBox = page.getByTestId("rental-cancellation-date-0");
+    await expect(dateBox).toBeVisible();
+    await fillDateAndVerify(page, { year: "2021", month: "03", day: "07" }, { scope: dateBox });
+
+    // 역상 말일 2026-03-07(토) → 2026-03-09(월). 시드 양도일 2027-01-01은 기한 경과.
+    const deadline = page.getByTestId("rental-cancellation-deadline-0");
+    await expect(deadline).toContainText("2026-03-09");
+    await expect(deadline).toContainText("토요일·공휴일");
+    await expect(deadline).toContainText("기한을 지났습니다");
   });
 
   test("두 등록일 중 하나 미입력 → 사업자등록등 미완비 경고", async ({ page }) => {

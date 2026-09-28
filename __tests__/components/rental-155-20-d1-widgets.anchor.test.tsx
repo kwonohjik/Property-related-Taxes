@@ -67,11 +67,18 @@ describe("W-39 ㉓ 말소 등록 유형", () => {
     expect(onChange.mock.calls.at(-1)?.[0].terminatedRegistrationType).toBe("short_term");
   });
   it("W-39c 토글을 끄면 등록 유형도 같은 onChange에서 비운다", () => {
-    const onChange = renderCard({ ...base, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general" });
-    fireEvent.click(screen.getByRole("switch", { name: /자진·자동 말소된 임대주택/ }));
+    const onChange = renderCard({
+      ...base,
+      rentalAutoTermination: true,
+      terminatedRegistrationType: "long_term_general",
+      registrationCancellationDate: "2021-03-03",
+    });
+    // I-4: 토글 제목이 「말소 이후 5년 이내 양도」 선언에서 「등록이 말소된 임대주택」으로 바뀌었다(기한은 말소일로 판정).
+    fireEvent.click(screen.getByRole("switch", { name: /자진말소 또는 자동말소로 임대사업자 등록이 말소된 임대주택/ }));
     const last = onChange.mock.calls.at(-1)?.[0];
     expect(last.rentalAutoTermination).toBe(false);
     expect(last.terminatedRegistrationType).toBe("");
+    expect(last.registrationCancellationDate).toBe(""); // I-4 — 말소일도 같은 onChange에서 비운다
   });
 });
 

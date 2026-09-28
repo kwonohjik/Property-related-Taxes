@@ -451,6 +451,7 @@ export async function POST(request: NextRequest) {
               firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
               rentalMonths: u.rentalMonths,
               rentalAutoTermination: u.rentalAutoTermination,
+              registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
               terminatedRegistrationType: u.terminatedRegistrationType,
               requirementsConfirmed: u.requirementsConfirmed,
             })),

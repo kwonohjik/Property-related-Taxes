@@ -51,6 +51,8 @@ export const rentalUnitSchema = z.object({
   firstSaleContractDate: z.string().datetime().optional(),
   rentalMonths: z.number().nonnegative(),
   rentalAutoTermination: z.boolean(),
+  /** §155㉓ 등록 말소일 — 「말소 이후 5년 이내」 기산일 (I-4) */
+  registrationCancellationDate: z.string().datetime().optional(),
   terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
   requirementsConfirmed: z.boolean(),
 });

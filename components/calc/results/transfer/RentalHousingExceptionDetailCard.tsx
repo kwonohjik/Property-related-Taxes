@@ -17,6 +17,7 @@ import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
+import { RentalCancellationWindowNote } from "./RentalCancellationWindowNote";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -90,6 +91,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               특례 적용 요건이 충족되지 않았습니다.
             </p>
           )}
+          <RentalCancellationWindowNote window={detail.eligibility.cancellationWindow} />
         </div>
 
         <p className="text-xs text-amber-800 dark:text-amber-300">
@@ -133,6 +135,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             ))}
           </ul>
         )}
+        <RentalCancellationWindowNote window={detail.eligibility.cancellationWindow} />
       </div>
 
       {/* 임대주택 호별 판정기준 (도출 목·의무기간·기준시가 상한 — P5) */}
