@@ -23,6 +23,7 @@ import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
+import { oneRightClauseNaYears } from "@/lib/tax-engine/data/one-right-requirement-era";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
@@ -77,6 +78,9 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
   const oneRightThreshold = oneRight
     ? (oneRight.highValueThreshold ?? (transferAt ? resolveOneRightHighValueThreshold(transferAt) : undefined))
     : undefined;
+  /** 나목 기한(년) — 양도일 연혁 1·2·3년(E-3 후속). 양도일을 모르면 현행 3년 문구. */
+  const oneRightNaYears =
+    oneRight?.naYears ?? (transferAt ? oneRightClauseNaYears(transferAt) : null) ?? 3;
   const verdict = oneHouseVerdictOf(
     judgment,
     oneRight ? oneRightThreshold : transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
@@ -252,7 +256,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
             {oneRight.clause === "ga"
               ? "가목 성립 — 다른 주택·분양권을 보유하지 않습니다"
               : oneRight.clause === "na"
-                ? "나목 성립 — 1주택 취득일부터 3년 이내 양도입니다"
+                ? `나목 성립 — 1주택 취득일부터 ${oneRightNaYears}년 이내 양도입니다`
                 : "요건 미충족 — 비과세가 적용되지 않습니다"}
           </p>
           {oneRight.isPartialExempt && (
@@ -266,6 +270,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
               {oneRight.thresholdNotice}
             </p>
           )}
+          {oneRight.requirementNotices?.map((n, i) => (
+            <p key={i} className="text-xs text-amber-800" data-testid="one-house-one-right-requirement-notice">
+              {n}
+            </p>
+          ))}
           {oneRight.reasons.length > 0 && (
             <ul className="ml-4 list-disc space-y-1 text-sm">
               {oneRight.reasons.map((r, i) => (

@@ -613,6 +613,21 @@ describe("P4-3b — §89①4호 판정 배선", () => {
     expect(json.data.oneRightExemption.clause).toBe("na");
   });
 
+  it("[RG-5b] 입주권 인가일(E-3 후속)이 body를 타고 분양권 요건 연혁에 도달한다", async () => {
+    const form = rightForm({ redevApprovalDate: "2019-01-01" }, {
+      presaleRights: [
+        { id: "p1", type: "presale_right", acquisitionDate: "2023-01-01", region: "capital" },
+      ] as OneHouseJudgmentFormData["presaleRights"],
+    });
+    const body = buildOneHouseExemptionApiBody(form) as Record<string, unknown>;
+    expect((body.oneRightExemptionFacts as Record<string, unknown>).approvalDate).toBe("2019-01-01");
+    const { json } = await postForm(form);
+    expect(json.data.oneRightExemption.clause).toBe("ga");
+    // 대조 — 인가일을 비우면 같은 분양권으로 판정 불가(미성립)
+    const { json: noDate } = await postForm(rightForm({}, { presaleRights: form.presaleRights }));
+    expect(noDate.data.oneRightExemption.clause).toBeNull();
+  });
+
   /** 파생 2축이 클라이언트에서도 갈린다 — 사이드바·섹션 게이트가 이 값을 읽는다. */
   it("[RG-6] 클라이언트 파생도 같은 갈래를 쓴다", () => {
     expect(deriveJudgmentHouseCount(baseForm())).toBe(1);

@@ -33,12 +33,20 @@ import type { PresaleRight } from "@/lib/tax-engine/types/multi-house-surcharge.
 
 const rates = makeMockRates();
 
-/** 사례 36 fixture와 동일 — 인가일 2018-10-23·권리가액 3억·청산금 납부 9천만 */
+/**
+ * 사례 36 fixture 기반 — 권리가액 3억·청산금 납부 9천만.
+ *
+ * ⚠️ 인가일을 2018-10-23 → **2022-01-01**로 옮겼다(E-3 후속). 가·나목의 분양권 요건은 법률 제18578호
+ *    부칙 제7조②에 따라 **2022.1.1. 이후 취득(원조합원 = 인가)한 입주권**에만 걸린다 — 2018년 인가
+ *    입주권은 종전 규정(분양권 요건 없음)이라 이 anchor가 지키려던 게이트를 시험할 수 없다
+ *    (서면-2021-법규재산-7792). 인가일 이동 후 세액 수치는 실측으로 변함이 없었다.
+ *    2022년 전 인가 입주권의 종전 규정 쪽은 `one-right-requirement-era.anchor.test.ts`가 고정한다.
+ */
 function redevInfo(): RedevelopmentInfo {
   return {
     subject: "right",
     approvalLawBasis: "urban_renovation_art_74",
-    approvalDate: new Date("2018-10-23"),
+    approvalDate: new Date("2022-01-01"),
     rightsValue: 300_000_000,
     settlementDirection: "pay",
     settlementAmount: 90_000_000,

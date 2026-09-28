@@ -8,8 +8,9 @@
  *
  * | 양도일 | 기준 | 근거 |
  * |---|---|---|
- * | < 2005-02-19 | **미지원**(DRF 시행본 범위 밖) — 현행 12억 + 고지 | 해석례 서면4팀-1246(2004.08.09)은 6억 |
- * | 2005-02-19 ~ 2008-10-06 | 6억 | 영 §155 제16항·제17항(1세대1주택 의제) → 법 §89(①)3호 괄호 → 영 §156① 6억 · 서면5팀-1152·서면4팀-3370·서면5팀-74 |
+ * | < 1999-01-01 | **미지원**(입주권 의제 조항 없음) — 현행 12억 + 고지 | 1997·1998 시행령 시행본 |
+ * | 1999-01-01 ~ 2003-03-01 | **미지원**(고급주택 체제) — 현행 12억 + 고지 | 영 §156 고급주택 · 대통령령 제17825호 부칙 제20조 |
+ * | 2003-03-02 ~ 2008-10-06 | 6억 | 영 §155 제16항·제17항(1세대1주택 의제) → 법 §89(①)3호 괄호 → 영 §156① 6억 · 서면4팀-1246·서면5팀-1152·서면4팀-3370·서면5팀-74 (E-3 후속: 2005-02-19 전은 DRF `LM`+`efYd`로 실독) |
  * | 2008-10-07 ~ 2016-12-31 | 9억 | 같은 체인 · 영 §156① 9억(대통령령 제21062호 부칙 제2조) · 재산세제과-1061 |
  * | 2017-01-01 ~ 2017-02-02 | **확인 필요** — 현행 12억 + 고지 | 법 §89①4호 단서 「대통령령으로 정하는 기준」(법률 제14389호) · 영 미개정 |
  * | 2017-02-03 ~ 2021-12-07 | 9억 | 영 §155 제17항(대통령령 제27829호 부칙 제2조②) |
@@ -70,7 +71,11 @@ const run = (transferDate: string, price: number, approvalDate?: string) =>
 // ──────────────────────────────────────────────────────────────────────────────
 describe("E-3 leaf — 조합원입주권 고가 기준금액 연혁 경계", () => {
   it.each([
-    ["2005-02-18", "unsupported", 1_200_000_000],
+    ["1998-12-31", "unsupported", 1_200_000_000],
+    ["1999-01-01", "luxury_house_regime", 1_200_000_000],
+    ["2003-03-01", "luxury_house_regime", 1_200_000_000],
+    ["2003-03-02", "deemed_one_house", 600_000_000],
+    ["2005-02-18", "deemed_one_house", 600_000_000],
     ["2005-02-19", "deemed_one_house", 600_000_000],
     ["2008-10-06", "deemed_one_house", 600_000_000],
     ["2008-10-07", "deemed_one_house", 900_000_000],
@@ -86,10 +91,11 @@ describe("E-3 leaf — 조합원입주권 고가 기준금액 연혁 경계", ()
     expect(resolveOneRightHighValueThreshold(d(date))).toBe(threshold);
   });
 
-  it("미확인 두 구간만 고지가 있다 — 확인된 구간은 고지 없음", () => {
-    expect(oneRightHighValueEraNotice(d("2005-02-18"))).toMatch(/지원하지 않습니다/);
+  it("미확인 구간만 고지가 있다 — 확인된 구간은 고지 없음", () => {
+    expect(oneRightHighValueEraNotice(d("1998-12-31"))).toMatch(/지원하지 않습니다/);
+    expect(oneRightHighValueEraNotice(d("2003-03-01"))).toMatch(/고급주택/);
     expect(oneRightHighValueEraNotice(d("2017-01-15"))).toMatch(/확인되지 않아/);
-    for (const s of ["2005-02-19", "2010-01-01", "2017-02-03", "2021-12-07", "2021-12-08"]) {
+    for (const s of ["2003-03-02", "2005-02-18", "2005-02-19", "2010-01-01", "2017-02-03", "2021-12-07", "2021-12-08"]) {
       expect(oneRightHighValueEraNotice(d(s))).toBeUndefined();
     }
   });
@@ -178,11 +184,17 @@ describe("E-3 엔진 — 2017 위임 공백 경계 2016-12-31 / 2017-01-01 / 201
   });
 });
 
-describe("E-3 엔진 — 2005-02-19 전 양도는 미지원 고지(현행 12억으로 계산 — 숨기지 않는다)", () => {
-  it("2004-12-01 양도 10억 — 전액 비과세(12억) + 미지원 고지", () => {
-    const r = run("2004-12-01", 1_000_000_000, "2003-06-01");
+describe("E-3 엔진 — 2003-03-01 이전 양도는 미지원 고지(현행 12억으로 계산 — 숨기지 않는다)", () => {
+  it("2003-03-01 양도 10억 — 전액 비과세(12억) + 고급주택 체제 미지원 고지", () => {
+    const r = run("2003-03-01", 1_000_000_000, "2002-06-01");
     expect(r.redevelopmentDetail?.oneRightExemptionApplied).toBe(true);
-    expect(r.warnings?.some((w) => w.includes("지원하지 않습니다"))).toBe(true);
+    expect(r.warnings?.some((w) => w.includes("고급주택"))).toBe(true);
+  });
+  it("E-3 후속 — 2004-12-01 양도 10억은 6억 → 안분 · 고지 없음 (종전 미지원 12억)", () => {
+    const r = run("2004-12-01", 1_000_000_000, "2003-06-01");
+    expect(r.redevelopmentDetail?.oneRightHighValueApplied).toBe(true);
+    expect(r.redevelopmentDetail?.highValueAllocation?.nontaxableThreshold).toBe(600_000_000);
+    expect(r.warnings?.some((w) => w.includes("고가 기준금액"))).toBe(false);
   });
   it("2005-02-19 양도 7억 — 6억 → 안분 · 고지 없음", () => {
     const r = run("2005-02-19", 700_000_000, "2004-06-01");
@@ -191,11 +203,11 @@ describe("E-3 엔진 — 2005-02-19 전 양도는 미지원 고지(현행 12억�
     expect(r.warnings?.some((w) => w.includes("고가 기준금액"))).toBe(false);
   });
   it("비과세가 성립하지 않으면(인가일 요건 미선언) 고지하지 않는다 — 기준금액을 쓰지 않았다", () => {
-    const input = rightInput("2004-12-01", 1_000_000_000, "2003-06-01");
+    const input = rightInput("2003-03-01", 1_000_000_000, "2002-06-01");
     input.redevelopment!.exemptionEligibleAtApproval = false;
     const r = calculateTransferTax(input, mockRates);
     expect(r.redevelopmentDetail?.oneRightExemptionApplied).toBeUndefined();
-    expect(r.warnings?.some((w) => w.includes("지원하지 않습니다"))).toBe(false);
+    expect(r.warnings?.some((w) => w.includes("고급주택"))).toBe(false);
   });
 });
 

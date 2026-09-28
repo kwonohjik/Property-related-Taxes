@@ -300,6 +300,11 @@ export interface TransferTaxInput {
   oneRightExemptionFacts?: {
     eligibleAtApproval: boolean;
     otherHouseAcquisitionDate?: Date;
+    /**
+     * 양도하는 입주권의 관리처분계획인가일(E-3 후속) — 분양권 요건(법률 제18578호 부칙 제7조②·③)과
+     * 재건축 기준일 고지용. 계산기는 같은 값을 `redevelopment.approvalDate`(필수)로 보낸다.
+     */
+    approvalDate?: Date;
   };
   /** 거주기간 (월) */
   residencePeriodMonths: number;
