@@ -133,6 +133,8 @@ export interface EdShareholderRow {
   ownershipRatioPctStr: string;
   /** 실제 수령 배당금 — CurrencyInput 입력값 */
   actualDividendStr: string;
+  /** 영리법인 — 특수관계인(수증자) 행에서만 효력(「상증법」§2 9호·§4의2①·③). 역할을 바꿔도 값은 남으므로 ④가 거른다 */
+  isForProfitCorp?: boolean;
 }
 
 /** §45의3 일감몰아주기 — 주주 roster 1행 (전부 string) */

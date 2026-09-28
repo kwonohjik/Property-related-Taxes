@@ -30,6 +30,11 @@ export interface DeemedPhase3Fields {
   ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
   // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
   edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
+  /**
+   * 계산 대상 수증자(특수관계인 행 id). "" = 자동(영리법인이 아닌 첫 수증자). 초과배당은 특수관계인
+   * **1인 단위**이고 아래 소득세·정산·증여자 관계 입력은 이 1명의 값이다(법 §41의2① · 별지 제10호의5서식).
+   */
+  edTargetDoneeId: string;
   edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
   edSeparateTaxAmount: string; // 분리과세 세액 직접입력
   edComprehensiveTaxBase: string; // 종합과세 과세표준 (ⓐ기준)
@@ -187,6 +192,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   ntActualOwner: "",
   ntNominee: "",
   edShareholders: undefined,
+  edTargetDoneeId: "",
   edIncomeTaxMode: "undetermined",
   edSeparateTaxAmount: "",
   edComprehensiveTaxBase: "",

@@ -48,6 +48,33 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
         </div>
 
         <div className={showCalcDetail ? "mt-3 block" : "mt-3 hidden print:block"}>
+          {/* 특수관계인 1인 단위(법 §41의2① 「본인이」) — 수증자가 여럿이면 아래 내역이 누구의 값인지 먼저 보인다 */}
+          {detail.donees && detail.donees.length > 1 && (
+            <table className="mb-3 w-full text-sm" data-testid="ed-donee-table">
+              <thead>
+                <tr className="text-xs text-sky-700">
+                  <th className="py-1 text-left font-medium">수증자</th>
+                  <th className="py-1 text-right font-medium">① 가액</th>
+                  <th className="py-1 text-right font-medium">초과배당금액</th>
+                  <th className="py-1 pl-2 text-right font-medium">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.donees.map((d) => (
+                  <tr key={d.id} className="border-t border-sky-100">
+                    <td className="py-1.5 pr-2 text-sky-800">{d.name}</td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(d.excessBeforeRatio)}</td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(d.excessDividendAmount)}</td>
+                    <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">
+                      {[d.id === detail.targetDoneeId ? "계산 대상" : "", d.isForProfitCorp ? "영리법인 — 과세 제외" : ""]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           <table className="w-full text-sm">
             <tbody>
               <tr className="border-t border-sky-100">
@@ -57,7 +84,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                 </td>
               </tr>
               <tr className="border-t border-sky-100">
-                <td className="py-1.5 pr-2 text-muted-foreground">특수관계인 비례배당액 (지분율 × 총배당)</td>
+                <td className="py-1.5 pr-2 text-muted-foreground">수증자 본인 비례배당액 (본인 지분율 × 총배당)</td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatKRW(detail.proportionalDividend)}
                 </td>

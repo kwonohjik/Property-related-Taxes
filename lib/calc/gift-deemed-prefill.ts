@@ -107,6 +107,14 @@ function sec68ProvisoFields(
  *   ⚠️ `donor`와 `donorRelation`을 함께 실을 때는 반드시 **같은 값에서 파생**시킨다 —
  *      어긋나면 `prior-gift-lookup.ts`가 이력에서 둘을 각각 읽어 불일치가 이월된다.
  */
+/** §41의2 계산 대상 수증자 표시명 — 수증자가 여럿일 때만(1명이면 항목명이 종전 그대로) */
+function edTargetName(result: DeemedGiftAnyResult): string | undefined {
+  if (result.type !== "excess_dividend") return undefined;
+  const d = result.excessDividendDetail;
+  if (!d?.donees || d.donees.length < 2) return undefined;
+  return d.donees.find((x) => x.id === d.targetDoneeId)?.name;
+}
+
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
   result: DeemedGiftAnyResult,
@@ -372,7 +380,8 @@ export function buildGiftWizardPrefill(
       {
         id: `deemed-${result.type}`,
         category: "other",
-        name: `${label} 증여이익`,
+        // §41의2는 특수관계인 1인 단위 — 결과가 **누구의** 증여이익인지 항목명에 싣는다
+        name: `${label} 증여이익${edTargetName(result) ? ` (${edTargetName(result)})` : ""}`,
         marketValue: result.deemedGiftValue,
         // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55① 호별 스트림. 비합산배제 deemed는 undefined.
         //   aggExclClass: 명의신탁(1호)·일감몰아주기(2호)는 3천만 공제 없음, 그 외(3호)는 3천만 공제. (H-40·G-4)

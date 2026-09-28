@@ -58,8 +58,14 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
           },
           actualDividend: parseAmount(row.actualDividendStr),
           name: row.name || undefined,
+          // 수증자(특수관계인) 행에만 — 역할을 바꿔 남은 stale 표지는 싣지 않는다
+          ...(row.role === "related_party" && row.isForProfitCorp === true && { isForProfitCorp: true }),
         };
       });
+      // 계산 대상 — 지금도 특수관계인 행인 id만. 행을 지우거나 역할을 바꾼 stale 값은 싣지 않는다(엔진 기본값)
+      const targetDoneeId = edRows.some((r) => r.role === "related_party" && r.id === form.edTargetDoneeId)
+        ? form.edTargetDoneeId
+        : undefined;
 
       // ② 소득세 모드별 조건부 필드
       const incomeTaxMode = form.edIncomeTaxMode ?? "undetermined";
@@ -105,6 +111,7 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
       return {
         type: "excess_dividend" as const,
         shareholders,
+        ...(targetDoneeId && { targetDoneeId }),
         dividendDate,
         incomeTaxMode,
         separateIncomeTax,
