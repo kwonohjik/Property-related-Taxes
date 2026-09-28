@@ -15,6 +15,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { resolveRedevSubject } from "@/lib/calc/redev-field-scope";
+import { settlementOneHouseAtSaleInScope } from "@/lib/calc/redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -292,8 +293,9 @@ export function ExemptionAtApprovalCard({
       noDark
     >
       <p className="text-caption text-violet-800 leading-relaxed">
-        서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 1세대1주택 비과세 판정 시
-        보유주택수는 양도일 기준이나 보유·거주요건은 관리처분계획인가일 기준으로 충족 여부를 판단합니다.
+        부동산거래관리과-380 (2012.07.20) — 청산금 수령분의 1세대1주택 비과세는 청산금분
+        양도일(소유권이전 고시일 다음날) 현재를 기준으로 적용하되, 종전주택을 조합에 제공한 때까지
+        보유기간이 요건에 미달하면 비과세되지 않습니다. 여기서는 그 보유(거주) 요건을 선언합니다.
       </p>
       <p className="text-caption text-violet-700 leading-relaxed">
         ※ 자동 판정은 <span className="font-semibold">관리처분계획인가일 기준</span>(원칙)입니다.
@@ -305,11 +307,19 @@ export function ExemptionAtApprovalCard({
       </p>
       <div className="flex flex-wrap gap-2">
         <LawArticleModal legalBasis="소득세법 시행령 §154 ①" label="시행령 §154①" />
+        {/* L-12 — 종전 인용 「서면2016-2705 (판정 시점)」의 요약은 그 회신 원문이 아니었다(원문은
+            380을 인용하며 「양도일 현재」). 판정 기준일의 근거는 380 · 1282 원문 그대로 싣는다. */}
         <PrecedentArticleModal
-          citation="서면2016-법령해석재산-2705 (2016.09.12)"
-          label="서면2016-2705 (판정 시점)"
+          citation="부동산거래관리과-380 (2012.07.20)"
+          label="부동산거래관리과-380 (판정 기준일)"
           kind="ruling"
-          summary="청산금 수령분의 1세대1주택 비과세 판정 시 보유주택수 여부는 양도일 현재 기준으로 판정하고, 보유 및 거주요건은 종전주택을 조합에 제공한 시점(관리처분계획인가일 현재)에 충족해야 한다."
+          summary="조합원이 종전주택을 당해 조합에 제공하고 종전주택의 평가액과 신축건물 분양가액의 차이에 따른 청산금을 수령한 경우 그 청산금의 1세대1주택 비과세는 양도일 현재를 기준으로 적용하는 것이나, 정비사업조합의 조합원이 3년 미만 보유하던 종전주택을 당해 조합에 제공한 경우 그 청산금은 「소득세법 시행령」(2012.6.29. 개정되기 전의 것) 제154조제1항의 1세대1주택 비과세 요건을 충족하지 아니하여 양도소득세가 과세되는 것입니다."
+        />
+        <PrecedentArticleModal
+          citation="사전-2022-법규재산-1282 (2023.02.17)"
+          label="사전2022-1282 (청산금분 양도일)"
+          kind="ruling"
+          summary="해당 청산금에 상당하는 종전주택(이하 “청산금 해당주택”)의 1세대 1주택 비과세를 적용 여부는 “청산금 해당주택”의 양도일 현재를 기준으로 판단하는 것이며, 이 경우 “청산금 해당주택”의 양도시기는 「도시 및 주거환경정비법」제86조 및 「소득세법 시행령」제162조제1항제9호 단서에 따라 소유권이전 고시일의 다음날이 되는 것입니다."
         />
         <PrecedentArticleModal
           citation="사전-2019-법령해석재산-0739 (2021.07.23)"
@@ -368,12 +378,13 @@ export function ExemptionAtApprovalCard({
           {
             value: "yes",
             label: "충족으로 선언",
-            description: "인가일 현재 비과세 요건을 갖췄음 — 청산금 비과세·표2 적용 대상",
+            description:
+              "종전주택을 조합에 제공한 때(인가일 · 철거 전 사실상 주거용 사용 기간 포함)까지 보유(거주) 요건 충족 — 청산금 비과세·표2 판정 대상",
           },
           {
             value: "no",
             label: "미충족으로 선언",
-            description: "인가일 현재 요건 미충족 — 장기보유특별공제 표1 강제",
+            description: "조합 제공 시까지 보유(거주) 요건 미충족 — 청산금 과세 · 장기보유특별공제 표1 강제",
           },
         ]}
         layout="inline"
@@ -409,6 +420,34 @@ export function ExemptionAtApprovalCard({
               <span className="font-semibold">미충족으로 선언됨</span> — 장기보유특별공제 표1 강제 (12억 안분 비활성)
             </p>
           )}
+        </div>
+      )}
+
+      {/* L-12 — 청산금분 양도일 현재 1세대1주택 (동시신고 전용). 세대 입력은 신축주택 양도일 사실이다. */}
+      {settlementOneHouseAtSaleInScope(asset) && (
+        <div className="space-y-1" data-testid="redev-one-house-at-settlement-sale">
+          <p className="text-caption font-semibold text-violet-900">
+            청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대 1주택이었습니까?
+          </p>
+          <p className="text-caption text-violet-700 leading-relaxed">
+            청산금 수령분의 1세대1주택 여부는 신축주택 양도일이 아니라 청산금분 양도일 현재로
+            판정합니다(사전-2022-법규재산-1282 — 그 날 입주권으로 받은 다른 신축주택을 함께 소유하면
+            비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력으로 판정하고, 다르면
+            청산금분 비과세를 적용하지 않습니다.
+          </p>
+          <RadioCardGroup
+            name={`redevOneHouseAtSettlementSale-${asset.assetId}`}
+            value={asset.redevOneHouseAtSettlementSale || ""}
+            onChange={(v) =>
+              onChange({ redevOneHouseAtSettlementSale: v as "" | "yes" | "no" })
+            }
+            options={[
+              { value: "", label: "선택 안 함", description: "양도일과 같으면 세대 입력으로 판정 · 다르면 판정 불가" },
+              { value: "yes", label: "1세대 1주택", description: "그 날 세대가 국내에 이 주택 1채만 보유" },
+              { value: "no", label: "아님", description: "그 날 다른 주택을 함께 보유 — 청산금분 과세" },
+            ]}
+            layout="inline"
+          />
         </div>
       )}
 

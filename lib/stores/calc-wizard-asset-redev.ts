@@ -198,11 +198,24 @@ export interface RedevelopmentFormSlice {
 
   /**
    * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부 (override).
-   * 서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 비과세 판정 시점.
+   * 청산금 수령분에서는 종전주택을 **조합에 제공한 때까지의 보유(거주) 요건**이다
+   * (부동산거래관리과-380 후단). 판정 기준일(1세대1주택)은 청산금분 양도일이다 — 아래
+   * `redevOneHouseAtSettlementSale`. (종전 주석의 「서면2016-법령해석재산-2705 — 판정 시점」은 L-12 정정.)
    * UI 자동 산정: monthsBetween(acquisitionDate, redevApprovalDate) ≥ 24 → "yes".
    * 빈문자열 = 자동 산정값 사용. "yes"/"no" = 사용자 override.
    */
   redevExemptionEligibleAtApproval: "" | "yes" | "no";
+
+  /**
+   * **청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택인가** — 자기선언 (L-12, 2026-09-28).
+   *
+   * 완공APT + 청산금 수령 **동시신고** 전용(`settlementOneHouseAtSaleInScope`). 세대 입력은 신축주택
+   * 양도일의 사실이라 청산금분 양도일의 주택 수를 대신하지 못한다(사전-2022-법규재산-1282).
+   * - "":    미선택 → 두 날이 같으면 세대 입력으로 판정, 다르면 판정 불가(청산금분 비과세 미적용 + 경고)
+   * - "yes": 그 날 현재 1세대1주택
+   * - "no":  그 날 현재 1세대1주택 아님
+   */
+  redevOneHouseAtSettlementSale: "" | "yes" | "no";
 
   /**
    * 관리처분계획인가일 **이후에도 기존주택이 철거되지 않고 사실상 주거용으로 사용**되었는가

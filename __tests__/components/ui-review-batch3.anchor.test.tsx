@@ -70,10 +70,16 @@ describe("R09·R17·B1 · 저장소 내부 용어가 사용자 화면에 없다"
     expect(s).toContain("사전-2019-법령해석재산-0649");
   });
 
-  it("🔑 사용자가 할 일이 남았다 — 「별도 산정」 안내", () => {
-    expect(src("components/calc/transfer/SettlementExemptionGuideCard.tsx")).toContain(
-      "별도 산정",
-    );
+  /**
+   * 🔄 L-12(2026-09-28) — `SettlementExemptionGuideCard`의 「별도 산정」 안내는 **사실이 아니게** 됐다.
+   * 권리가액 고가(청산금분 양도일 기준금액 초과)면 엔진이 청산금분을 §160①으로 직접 안분한다
+   * (서면-2016-법령해석재산-2705 질의2 — `transfer-tax-redevelopment-settlement.ts`). 그 카드는
+   * 이제 「무엇이 계산됐는가」를 알린다 — 트래킹 ID 없이(위 C-F1 규칙은 그대로).
+   */
+  it("🔑 사용자가 할 일이 남았다 — 「별도 산정」 안내 (청산금 고가는 이제 계산에 포함)", () => {
+    const guide = src("components/calc/transfer/SettlementExemptionGuideCard.tsx");
+    expect(codeOnly("components/calc/transfer/SettlementExemptionGuideCard.tsx")).not.toContain("별도 산정");
+    expect(guide).toContain("권리가액 기준 안분");
     expect(src("components/calc/transfer/RedevelopmentBlockCards.tsx")).toContain("별도 산정");
   });
 });

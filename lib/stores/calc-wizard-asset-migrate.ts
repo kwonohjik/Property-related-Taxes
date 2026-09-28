@@ -453,6 +453,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 46 — 청산금 수령분 단독 신고
   if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
+  // L-12 — 신설 필드. 구 저장분은 미선택("")으로 둔다(엔진: 두 날이 같으면 종전 동작).
+  if (a.redevOneHouseAtSettlementSale === undefined) a.redevOneHouseAtSettlementSale = "";
   // 인가일 이후 철거 전 사실상 주거용 사용 (사전-2019-법령해석재산-0739) — 구 저장값에는 없다.
   if (a.redevPostApprovalHousingUse === undefined) a.redevPostApprovalHousingUse = "";
   if (a.redevPostApprovalHousingUseEndDate === undefined) a.redevPostApprovalHousingUseEndDate = "";

@@ -187,7 +187,7 @@ export function calculateRedevelopmentTax(
    * `transfer-tax-redevelopment-steps.ts`로 분리했다(800줄 정책 — 이 함수가 828줄이었다).
    * 입력 3개·출력 5개로 이음매가 좁아 **구조분해로 받으면 하류 참조가 바뀌지 않는다**.
    */
-  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special } =
+  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning } =
     runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
@@ -536,14 +536,17 @@ export function calculateRedevelopmentTax(
      */
     //
     // 🔴 완공APT 청산금 **수령** 동시신고에서는 신축주택분만 §89①3호로 가려지고 청산금분은
-    //    인가일 축(`applySettlementExemption`)으로 따로 판정된다(OH-19). 그 분기가 비과세가
-    //    아니면 전액 비과세가 아니다 — 남은 청산금분 양도차익이 있으면 과세다.
+    //    청산금분 양도일 축(`applySettlementExemption`)으로 따로 판정된다(OH-19 · L-12). 그 분기가
+    //    비과세가 아니면 전액 비과세가 아니다 — 남은 청산금분 양도차익이 있으면 과세다.
+    //    단독신고(`receiveOnlyMode`)는 청산금분이 신고 대상의 전부다 — 그 분기가 비과세면 전액 비과세.
     isExempt:
       redevAfterRight.oneRightExemptionApplied === true ||
       (redevAfterRight.aptOneHouseExemptionApplied === true &&
         (input.redevelopment!.settlementDirection !== "receive" ||
           redevAfterRight.settlementExemptionApplied === true ||
-          redevAfterRight.settlement.gain <= 0)),
+          redevAfterRight.settlement.gain <= 0)) ||
+      (input.redevelopment!.receiveOnlyMode === true &&
+        redevAfterRight.settlementExemptionApplied === true),
     /**
      * 🔴 **부분 비과세(고가주택) 플래그 — 종전에는 이 분기가 채우지 않았다** (E3-06).
      *
@@ -552,7 +555,10 @@ export function calculateRedevelopmentTax(
      * 재개발 자산에서는 이 필드가 항상 undefined라 **언제나 false**였다.
      */
     isPartialExempt:
-      redevAfterRight.oneRightHighValueApplied === true || (isHighValue && !!allocated.highValueAllocation),
+      redevAfterRight.oneRightHighValueApplied === true ||
+      (isHighValue && !!allocated.highValueAllocation) ||
+      // L-12 — 청산금 수령분 권리가격 고가 안분(§160①)도 부분 비과세다.
+      !!redevAfterRight.settlementHighValueAllocation,
     ...(opts?.exemptionResult?.exemptReason
       ? { exemptReason: opts.exemptionResult.exemptReason }
       : {}),
@@ -581,7 +587,11 @@ export function calculateRedevelopmentTax(
     // 부담부증여 §159 명세 — 정상 경로는 `transfer-tax-finalize.ts`가 싣는데 이 분기만 버렸다 (D-4).
     ...(opts?.burdenedGift ? { transferBurdenedGiftBreakdown: opts.burdenedGift } : {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
-    warnings: lthdSpecialNotice ? [...(opts?.warnings ?? []), lthdSpecialNotice] : (opts?.warnings ?? []),
+    warnings: [
+      ...(opts?.warnings ?? []),
+      ...(lthdSpecialNotice ? [lthdSpecialNotice] : []),
+      ...(settlementWarning ? [settlementWarning] : []),
+    ],
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,
     usedEstimatedAcquisition: input.useEstimatedAcquisition ?? false,

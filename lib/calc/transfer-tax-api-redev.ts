@@ -20,6 +20,7 @@ import {
   resolveRedevSubject,
   exemptionAtApprovalInScope,
   postApprovalExpensesInScope,
+  settlementOneHouseAtSaleInScope,
 } from "./redev-field-scope";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -183,6 +184,15 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       : asset.redevExemptionEligibleAtApproval === "yes"
         ? true
         : asset.redevExemptionEligibleAtApproval === "no"
+          ? false
+          : undefined,
+    // L-12 — 청산금분 양도일 현재 1세대1주택 자기선언. 동시신고 축 밖이면 보내지 않는다(stale 가드 —
+    //         단독신고 전환·방향 되돌림 뒤 남은 값이 엔진 판정을 바꾸지 않게).
+    oneHouseAtSettlementSale: !settlementOneHouseAtSaleInScope(asset)
+      ? undefined
+      : asset.redevOneHouseAtSettlementSale === "yes"
+        ? true
+        : asset.redevOneHouseAtSettlementSale === "no"
           ? false
           : undefined,
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) — 인가일 기준 종전주택 보유월수

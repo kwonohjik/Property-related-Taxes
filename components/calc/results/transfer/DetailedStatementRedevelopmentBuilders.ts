@@ -95,7 +95,9 @@ const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
   postApprovalExistingHouse: { prefix: "② 인가후 기존건물분", legal: "§166②2호 · §166⑤2호나목" },
   settlement: {
     prefix: "③ 청산금 수령분 (1세대1주택 비과세)",
-    legal: "PDF 사례수정 2 (2)-1번 · 서면2016-법령해석재산-2705",
+    // L-12 — 판정 기준일은 청산금분 양도일(소유권이전 고시일 다음날)이다. 종전 인용
+    // 「서면2016-법령해석재산-2705」는 그 회신이 380을 인용할 뿐이라 기준일 근거로 부정확했다.
+    legal: "PDF 사례수정 2 (2)-1번 · 부동산거래관리과-380 · 사전-2022-법규재산-1282",
   },
 };
 
@@ -127,7 +129,23 @@ function getBranchLabels(
   // 우선순위 0: successorMemberApplied (사례 48 — 가장 먼저 평가)
   if (redev.successorMemberApplied === true) return BRANCH_LABEL_SUCCESSOR_MEMBER;
   // 우선순위 1: receiveOnlyMode (사례 46)
-  if (redev.receiveOnlyMode === true) return BRANCH_LABEL_RECEIVE_ONLY;
+  if (redev.receiveOnlyMode === true) {
+    // L-12 — 단독신고에도 청산금분 비과세·권리가액 고가 안분이 걸린다. 헤더에서 그 사실이 보이게 한다.
+    if (redev.settlementExemptionApplied === true || redev.settlementHighValueAllocation) {
+      return {
+        ...BRANCH_LABEL_RECEIVE_ONLY,
+        settlement: {
+          prefix: redev.settlementExemptionApplied
+            ? "③ 청산금 수령분 (단독 신고 · 1세대1주택 비과세)"
+            : "③ 청산금 수령분 (단독 신고 · 권리가액 기준 고가주택 안분)",
+          legal: redev.settlementExemptionApplied
+            ? "부동산거래관리과-380 · 사전-2022-법규재산-1282"
+            : "소득세법 §95③ · 시행령 §160① · 서면-2016-법령해석재산-2705",
+        },
+      };
+    }
+    return BRANCH_LABEL_RECEIVE_ONLY;
+  }
   // 우선순위 2: settlementExemptionApplied (사례 47)
   if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
   // 우선순위 3: subject="right" + settlementDirection="receive" — §166①2호 가목·나목 (R-5)
@@ -286,14 +304,18 @@ export function buildRedevGainFormula(
    *   전체 양도차익 행의 자산별 값이 그 행의 합계(Σ`gainBeforeAllocation`)와 어긋났다.
    */
   gross = false,
+  /**
+   * 완공APT 청산금 **수령**의 청산금 분기는 신축주택 12억 안분을 거치지 않는다(L-12) — 그 분기에
+   * 「12억 안분 후」 안내를 붙이지 않으려면 축을 알아야 한다. 미전달이면 종전 표시.
+   */
+  axis?: { subject?: "apt" | "right"; settlementDirection?: "pay" | "receive" },
 ): string {
   const detail = redev[branch];
   const t = detail.apportionedTransfer;
   const a = detail.apportionedAcquisition;
   const hva = redev.highValueAllocation;
 
-  // 사례 47 — settlement 비과세 차감 3단계 분해
-  // 안분 전(gainBeforeAllocation) → 안분 후(gainAfterAllocation) → 비과세 차감 → 0
+  // 사례 47·46 — 청산금 수령분 전액 비과세 (L-12: 신축주택 12억 안분을 거치지 않는다)
   if (
     redev.settlementExemptionApplied === true &&
     branch === "settlement" &&
@@ -301,19 +323,27 @@ export function buildRedevGainFormula(
   ) {
     const before = detail.gainBeforeAllocation ?? detail.gainAfterAllocation;
     const after = detail.gainAfterAllocation;
-    if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전)`;
+    if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)}`;
     return (
-      `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전) ` +
-      `→ × (양도가 − 12억) / (양도가) = ${fmt(after)} (안분 후) ` +
+      `${fmt(t)} − ${fmt(a)} = ${fmt(before)} ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0 ` +
-      `(인가일 평가액 ≤ 12억 — 서면2016-법령해석재산-2705)`
+      `(청산금분 양도일 현재 1세대1주택 · 권리가액 ≤ 고가주택 기준금액 — 부동산거래관리과-380 · 사전-2022-법규재산-1282)`
     );
   }
 
   // 12억 안분 적용 시 detail.gain 은 과세대상(전체 × taxableRatio). 안내 라벨 추가.
-  const suffix = hva && !gross
-    ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
-    : "";
+  // 🔴 청산금 수령분은 신축주택 비율로 안분하지 않는다(L-12) — 권리가액 기준 안분이면 그 비율을,
+  //    아니면(완공APT 수령의 청산금 분기) 안내를 붙이지 않는다.
+  const sva = branch === "settlement" ? redev.settlementHighValueAllocation : undefined;
+  const settlementOutsideNewHouseAllocation =
+    branch === "settlement" && axis?.subject !== "right" && axis?.settlementDirection === "receive";
+  const suffix = gross
+    ? ""
+    : sva
+      ? ` (권리가액 기준 고가주택 안분 후 과세대상 — 전체 × ${(sva.taxableRatio * 100).toFixed(0)}%)`
+      : hva && !settlementOutsideNewHouseAllocation
+        ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
+        : "";
   const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
@@ -340,7 +370,7 @@ export function buildRedevLthdFormula(
     const years = Math.floor(detail.holdingMonths / 12);
     const months = detail.holdingMonths % 12;
     return (
-      `안분 후 ${pct}% × ${fmt(detail.gainAfterAllocation ?? 0)} = ${fmt(after)} ` +
+      `${pct}% × ${fmt(detail.gainAfterAllocation ?? 0)} = ${fmt(after)} ` +
       `(보유 ${years}년 ${months}개월, 표1 강등 — 거주월수 귀속 분리) ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0`
     );
@@ -451,7 +481,7 @@ export function buildRedevPerAssetForGain(
   return buildPerAsset(
     redev,
     (b, r) => r[b].gain,
-    (b, r) => buildRedevGainFormula(b, r),
+    (b, r) => buildRedevGainFormula(b, r, false, { subject, settlementDirection }),
     subject,
     settlementDirection,
   );

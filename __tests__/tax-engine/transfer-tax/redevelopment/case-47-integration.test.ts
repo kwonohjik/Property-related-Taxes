@@ -86,12 +86,19 @@ describe("사례 47 통합 anchor — 신축APT 양도 + 청산금 수령 동시
     expect(detail.postApprovalExistingHouse.lthdAfterAllocation).toBe(448_000_000);
   });
 
-  it("[anchor 9] settlement.gainAfterAllocation = 70,000,000 (175M × 8/20)", () => {
-    expect(detail.settlement.gainAfterAllocation).toBe(70_000_000);
+  /**
+   * 🔄 L-12(2026-09-28) — 종전 기대값은 70,000,000(175M × 8/20)·21,000,000이었다. 청산금분을
+   * **신축주택의 12억 안분 비율로 먼저 줄인 뒤** 비과세로 가린 trace였다. 청산금 수령분은 종전주택
+   * 일부의 양도로 **권리가격**으로 따로 고가 판정한다(서면-2016-법령해석재산-2705 질의2 ·
+   * 부동산납세과-1850) — 신축주택 비율을 쓸 근거가 없다. 권리가격 8억 ≤ 12억이라 청산금분
+   * 175,000,000 **전액**이 비과세다. 산출세액(anchor 18 · 37,630,000)은 불변이다.
+   */
+  it("[anchor 9] settlement.gainAfterAllocation = 175,000,000 (신축주택 비율 미적용 — L-12)", () => {
+    expect(detail.settlement.gainAfterAllocation).toBe(175_000_000);
   });
 
-  it("[anchor 10] settlement.lthdAfterAllocation = 21,000,000 (70M × 30% 표1 강등 — 거주월수 귀속 분리)", () => {
-    expect(detail.settlement.lthdAfterAllocation).toBe(21_000_000);
+  it("[anchor 10] settlement.lthdAfterAllocation = 52,500,000 (175M × 30% 표1 강등 — 거주월수 귀속 분리)", () => {
+    expect(detail.settlement.lthdAfterAllocation).toBe(52_500_000);
   });
 
   // ──────────────────────────────────────────────────────────
@@ -102,12 +109,12 @@ describe("사례 47 통합 anchor — 신축APT 양도 + 청산금 수령 동시
     expect(detail.settlementExemptionApplied).toBe(true);
   });
 
-  it("[anchor 12] exemptedGain = 70,000,000 (= settlement.gainAfterAllocation)", () => {
-    expect(detail.exemptedGain).toBe(70_000_000);
+  it("[anchor 12] exemptedGain = 175,000,000 (= settlement.gainAfterAllocation · L-12 — 종전 70,000,000)", () => {
+    expect(detail.exemptedGain).toBe(175_000_000);
   });
 
-  it("[anchor 13] exemptedLthd = 21,000,000 (= settlement.lthdAfterAllocation)", () => {
-    expect(detail.exemptedLthd).toBe(21_000_000);
+  it("[anchor 13] exemptedLthd = 52,500,000 (= settlement.lthdAfterAllocation · L-12 — 종전 21,000,000)", () => {
+    expect(detail.exemptedLthd).toBe(52_500_000);
   });
 
   // ──────────────────────────────────────────────────────────
@@ -162,6 +169,7 @@ describe("사례 47 통합 anchor — 신축APT 양도 + 청산금 수령 동시
       s.label === "청산금 수령분 1세대1주택 비과세 차감",
     );
     expect(step).toBeDefined();
-    expect(step?.amount).toBe(-(70_000_000 - 21_000_000)); // = -49,000,000
+    // L-12 — 종전 −(70M − 21M) = −49,000,000(신축주택 비율로 줄인 청산금분). anchor 9 주석 참조.
+    expect(step?.amount).toBe(-(175_000_000 - 52_500_000)); // = -122,500,000
   });
 });

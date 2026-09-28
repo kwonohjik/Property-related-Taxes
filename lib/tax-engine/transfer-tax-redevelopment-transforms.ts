@@ -5,7 +5,7 @@
  * 오케스트레이터(`calculateRedevelopmentTax`)가 순서대로 호출하는 순수 변환 함수들이다:
  *
  *   A.5 `applyHighValueAllocation`  — §95③ 12억 초과 안분
- *   A.6 `applySettlementExemption`  — 청산금 수령분 1세대1주택 비과세 차감
+ *   A.6 `applySettlementExemption`  — 청산금 수령분 1세대1주택 비과세·고가 안분 (`…-settlement.ts`)
  *   A.7 `applyOneRightExemption`    — §89①4호 가목 1세대1입주권 비과세
  *   A.8 `applyLthdExclusion`        — §95② 다주택 중과 시 장특공제 배제
  *   B   `emitRedevelopmentSteps`    — 분기별 양도차익·LTHD steps
@@ -58,96 +58,9 @@ export {
 } from "./transfer-tax-redevelopment-lthd";
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 내부 헬퍼 — Step A.6 사례 47 settlement 비과세 차감
+// Step A.6 — 청산금 수령분 비과세·고가 안분 (L-12 · 800줄 정책으로 분리)
 // ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * 사례 47 (신축APT 양도 + 청산금 수령 동시신고) settlement 분기 비과세 차감.
- *
- * PDF 사례수정 2 (2)-1번 주석:
- *   "청산금 수령액은 기존부동산이 비과세 요건을 갖추었고 관리처분계획인가일 현재
- *    기존부동산 평가액이 12억원 이하이므로 고가주택에 해당하지 않아 비과세된다."
- *
- * 근거: 서면2016-법령해석재산-2705 (비과세 판정 시점 = 관리처분계획인가일)
- *
- * 트리거 (AND):
- *   1. settlementDirection === "receive"
- *   2. exemptionEligibleAtApproval === true (인가일 기준 1세대1주택 비과세 요건 충족)
- *   3. rightsValue ≤ HIGH_VALUE_THRESHOLD (1,200,000,000)
- *   4. receiveOnlyMode !== true (사례 46 단독신고는 별도 분기 — 본 함수 미적용)
- *   5. isOneHouseSingle === true (LTHD 표2 진입 가드)
- *
- * 동작:
- *   - 3분기 gainAfterAllocation·lthdAfterAllocation 모두 보존 (안분 후 trace)
- *   - settlement.gain → 0 마스킹 (totalGain 재계산용)
- *   - settlement.lthd → 0 마스킹 (totalLthd 재계산용)
- *   - exemptedGain/exemptedLthd 메타 분리 저장
- *   - settlementExemptionApplied = true 플래그
- *
- * 미적용 케이스에서는 redev 입력 그대로 반환 (회귀 안전).
- */
-export function applySettlementExemption(
-  redev: RedevelopmentResult,
-  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
-  isOneHouseSingle: boolean,
-): RedevelopmentResult {
-  // 트리거 조건 검사
-  if (
-    redevInfo.settlementDirection !== "receive" ||
-    redevInfo.exemptionEligibleAtApproval !== true ||
-    redevInfo.rightsValue > HIGH_VALUE_THRESHOLD ||
-    redevInfo.receiveOnlyMode === true ||
-    !isOneHouseSingle
-  ) {
-    return redev;
-  }
-
-  const exemptedGain = redev.settlement.gain;
-  const exemptedLthd = redev.settlement.lthd;
-
-  // settlement 마스킹 + 3분기 안분 후 값 trace 보존
-  const newPreApproval = {
-    ...redev.preApproval,
-    gainAfterAllocation: redev.preApproval.gain,
-    lthdAfterAllocation: redev.preApproval.lthd,
-  };
-  const newPostApprovalExistingHouse = {
-    ...redev.postApprovalExistingHouse,
-    gainAfterAllocation: redev.postApprovalExistingHouse.gain,
-    lthdAfterAllocation: redev.postApprovalExistingHouse.lthd,
-  };
-  const newSettlement = {
-    ...redev.settlement,
-    gainAfterAllocation: redev.settlement.gain,
-    lthdAfterAllocation: redev.settlement.lthd,
-    gain: 0,
-    lthd: 0,
-    // 🔴 2026-08-26 신설(E3-05) — 종전에는 분해 2필드가 원값으로 남아 신고서가
-    //    「청산금 열 공제 0 · 보유분 52,500,000」을 함께 인쇄했다.
-    ...zeroLthdParts(redev.settlement),
-  };
-
-  // total 재계산 (settlement 마스킹 반영)
-  const totalGain =
-    newPreApproval.gain + newPostApprovalExistingHouse.gain + newSettlement.gain;
-  const totalLthd =
-    newPreApproval.lthd + newPostApprovalExistingHouse.lthd + newSettlement.lthd;
-
-  return {
-    ...redev,
-    preApproval: newPreApproval,
-    postApprovalExistingHouse: newPostApprovalExistingHouse,
-    settlement: newSettlement,
-    total: {
-      gain: totalGain,
-      lthd: totalLthd,
-      taxableIncome: totalGain - totalLthd,
-    },
-    settlementExemptionApplied: true,
-    exemptedGain,
-    exemptedLthd,
-  };
-}
+export { applySettlementExemption } from "./transfer-tax-redevelopment-settlement";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 내부 헬퍼 — Step A.7 사례 36 1세대1입주권 비과세 (§89①4호 가목)
@@ -516,9 +429,10 @@ export function applyAptOneHouseExemption(
    * 🔴 **청산금 「수령」 방향에서는 청산금 분기를 가리지 않는다** (2026-09-26 · OH-19).
    *
    * 수령 동시신고(사례 47)의 청산금 분기는 신축주택이 아니라 **종전 부동산 일부의 양도**이고,
-   * 그 비과세는 「관리처분 인가일 현재 종전주택」 축으로 `applySettlementExemption`(Step A.6)이
-   * 판정한다(서면-2016-법령해석재산-2705). 신축주택 §89①3호가목 판정으로 그 분기까지 지우면
-   * 「인가일 현재 요건 미충족」을 선언한 청산금분이 조용히 비과세된다.
+   * 그 비과세는 **청산금분 양도일(소유권이전 고시일 다음날) 현재** 1세대1주택 + 조합 제공 시까지의
+   * 보유 요건으로 `applySettlementExemption`(Step A.6)이 판정한다(부동산거래관리과-380 ·
+   * 사전-2022-법규재산-1282). 신축주택 §89①3호가목 판정으로 그 분기까지 지우면
+   * 「보유 요건 미충족」을 선언한 청산금분이 조용히 비과세된다.
    * 납부 방향의 청산금 분기는 신축주택 취득대가의 일부라 신축주택과 함께 가린다(종전 동작).
    */
   const settlement =

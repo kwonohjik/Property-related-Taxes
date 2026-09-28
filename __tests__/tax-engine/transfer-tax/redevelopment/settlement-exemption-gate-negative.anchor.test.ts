@@ -63,12 +63,14 @@ describe("T1-04 · §166④1호 청산금 수령 비과세 게이트 — 음성 
     expect(detail.exemptedGain).toBeGreaterThan(0);
   });
 
-  it("T1-04-01: 🔑 권리가액 15억 — 12억 초과 고가주택이므로 비과세가 막힌다", () => {
+  it("T1-04-01: 🔑 권리가액 15억 — 12억 초과 고가주택이므로 전액 비과세가 막힌다", () => {
     const { detail } = run({ rightsValue: 1_500_000_000 });
     // 게이트가 회귀로 사라지면 true·gain 0이 되고, 종전에는 그것을 잡는 테스트가 없었다.
+    // L-12 — 막힌 뒤에는 §160① 안분이 걸린다(값은 `settlement-l12-transfer-date.anchor.test.ts` B-*).
     expect(detail.settlementExemptionApplied).toBeUndefined();
     expect(detail.settlement.gain).toBeGreaterThan(0);
     expect(detail.exemptedGain).toBeUndefined();
+    expect(detail.settlementHighValueAllocation).toBeDefined();
   });
 
   it("T1-04-02: 경계 — 정확히 12억은 「초과」가 아니므로 비과세가 유지된다", () => {
@@ -81,9 +83,19 @@ describe("T1-04 · §166④1호 청산금 수령 비과세 게이트 — 음성 
     expect(detail.settlementExemptionApplied).toBeUndefined();
   });
 
-  it("T1-04-04: 🔑 receiveOnlyMode=true — 청산금 단독신고 축에서는 이 비과세를 적용하지 않는다", () => {
+  /**
+   * 🔄 L-12(2026-09-28) 뒤집힘 — 종전 기대는 「단독신고에는 이 비과세를 적용하지 않는다」였다.
+   * 국세청 회신 3건(부동산거래관리과-380 · 서면-2016-법령해석재산-2705 · 사전-2022-법규재산-1282)은
+   * 모두 **청산금 수령분 그 자체**(신축주택을 팔지 않은 조합원)의 1세대1주택 비과세를 다루고
+   * 「양도일 현재」 요건을 갖추면 비과세라고 답한다. 단독신고를 배제할 법령·해석 근거는 확인되지
+   * 않는다 — 배제하면 요건 충족자도 전액 과세된다(납세자 불리).
+   * (이 fixture는 동시신고 양도가액·양도일 그대로 단독신고 플래그만 켠다 — 청산금분 양도일
+   *  2022-03-01 = 양도일이라 세대 입력이 그 날의 사실이다.)
+   */
+  it("T1-04-04: 🔑 receiveOnlyMode=true — 청산금 단독신고에도 같은 비과세가 적용된다 (L-12)", () => {
     const { detail } = run({ receiveOnlyMode: true });
-    expect(detail.settlementExemptionApplied).toBeUndefined();
+    expect(detail.settlementExemptionApplied).toBe(true);
+    expect(detail.settlement.gain).toBe(0);
   });
 
   it("T1-04-05: 세액이 실제로 갈린다 — 게이트가 막으면 더 많이 낸다", () => {

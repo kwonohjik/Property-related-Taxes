@@ -23,13 +23,14 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
  *    되므로 **아래쪽(이 파일)에 둔다** — 원본이 여기서 import 하면 방향이 하나로 유지된다
  *    ([[feedback_800line_split_playbook]] 「순환은 재export 탓」).
  *
- * ⚠️ **G-5(P1) 이후 남은 사용처는 둘뿐이다** — 둘 다 시점 축이 미확정이라 전환하지 않았다:
- *  - `applySettlementExemption` — 비교 대상이 양도가액이 아니라 **관리처분계획인가일 현재
- *    권리가액**(서면2016-법령해석재산-2705)이다. 기준일이 양도일인지 인가일인지 미확정.
- *  - `applyOneRightExemption` — 조합원입주권(§89①4호 단서). 2021-12-07까지 금액은 법률이 아니라
- *    시행령에 위임돼 있었는데 **그 위임 조항의 번호·연혁을 아직 실독하지 않았다**.
- *    근거 없이 낮은 기준을 소급하면 납세자에게 불리한 방향으로 틀린다.
- *  ⇒ 계획서 P3에서 다룬다(`one-house-exemption-automation.plan.md` §4 G-5 M-1 축).
+ * ⚠️ **남은 사용처는 하나다** — `applyOneRightExemption`(조합원입주권 §89①4호 단서).
+ *    2021-12-07까지 금액은 시행령에 위임돼 있었다. L-12(2026-09-28)에서 DRF로 확인한 것:
+ *    「소득세법 시행령」 제155조 제17항(당시 항 — 현행 삭제) 「조합원입주권의 양도 당시의 실지거래가액의 합계액이 9억원을
+ *    초과하는 경우」(<개정 2017.2.3> — 시행본 2017-02-03·2021-07-01 실독). 그 사이 시행본 전수와
+ *    2017-02-03 전(2017-01-01 법률 개정 직후 시행령 미개정 구간 포함) 연혁은 **미확인**이라 전환하지
+ *    않았다 — 계획서 §9 E-3(입주권 잔여).
+ *  - 청산금 수령분(`applySettlementExemption`)은 L-12에서 **청산금분 양도일** 시점 기준으로
+ *    전환했다(`transfer-tax-redevelopment-settlement.ts`).
  *
  * 주택(§89①3호) 축은 `one-house/threshold.ts` `resolveHighValueHouseThreshold(양도일)`가 정본이다.
  */
@@ -194,6 +195,15 @@ export function applyHighValueAllocation(
    *    (7억 양도 → (7억 − 12억)/7억 = −0.71).
    */
   transferDate: Date,
+  /**
+   * 🔴 **청산금 수령 방향에서는 청산금 분기를 안분하지 않는다** (L-12, 2026-09-28).
+   *
+   * 청산금 수령분은 종전주택 일부의 양도로 **따로** 판정·안분한다 — 기준은 권리가격과 청산금분
+   * 양도일의 기준금액이다(서면-2016-법령해석재산-2705 질의2). 신축주택의 비율을 쓸 근거가 없다.
+   * `true`면 청산금 분기를 그대로 두고, 안분 메타(`highValueAllocation`)도 **신축주택분
+   * (인가전 분 + 인가후 기존건물분)만**으로 산정한다. 청산금분은 Step A.6이 판정한다.
+   */
+  keepSettlement = false,
 ): RedevelopmentResult {
   const threshold = resolveHighValueHouseThreshold(transferDate);
   const taxableRatio = (transferPrice - threshold) / transferPrice;
@@ -221,15 +231,18 @@ export function applyHighValueAllocation(
 
   const preApproval = scaleBranch(redevRaw.preApproval);
   const postApprovalExistingHouse = scaleBranch(redevRaw.postApprovalExistingHouse);
-  const settlement = scaleBranch(redevRaw.settlement);
+  const settlement = keepSettlement ? redevRaw.settlement : scaleBranch(redevRaw.settlement);
 
   const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
   const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
   const taxableIncome = totalGain - totalLthd;
 
-  // 12억 안분 메타 (UI·결과카드 표시용)
-  const nontaxableGain = redevRaw.total.gain - Math.floor(redevRaw.total.gain * taxableRatio);
-  const taxableGainTotal = Math.floor(redevRaw.total.gain * taxableRatio);
+  // 12억 안분 메타 (UI·결과카드 표시용) — keepSettlement면 신축주택분만
+  const allocationBase = keepSettlement
+    ? redevRaw.preApproval.gain + redevRaw.postApprovalExistingHouse.gain
+    : redevRaw.total.gain;
+  const nontaxableGain = allocationBase - Math.floor(allocationBase * taxableRatio);
+  const taxableGainTotal = Math.floor(allocationBase * taxableRatio);
 
   // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §154⑧ 노출)
   const prior = redevInfo.priorHouseResidenceMonths ?? 0;
