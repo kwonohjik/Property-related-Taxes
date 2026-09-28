@@ -232,6 +232,11 @@ export interface CapitalIncreaseAllocationResult {
    *    단서 열거에 **없다**. 세우면 화면이 「연대납부의무 없음」이라고 거짓 고지한다.
    */
   donorJointLiabilityExempt?: boolean;
+  /**
+   * 「상증법」§43① 열거 유형 표지 — 하나의 증여에 둘 이상 동시 적용되면 이익이 가장 많은 하나만 적용.
+   * 유형표(`dup-exclusion.ts`)에서만 파생되는 **고지 전용** 상수다. 세액에 접촉하지 않는다(#112).
+   */
+  dupExclusionApplies?: boolean;
 }
 
 /** 멀티 모드 결과 (Map 금지 — plain 배열) */
@@ -394,6 +399,11 @@ export interface DeemedGiftResult {
   aggExclClass?: "nominee_trust" | "deemed_profit";
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
   donorJointLiabilityExempt?: boolean;
+  /**
+   * 「상증법」§43① 열거 유형 표지 — 하나의 증여에 둘 이상 동시 적용되면 이익이 가장 많은 하나만 적용.
+   * 유형표(`dup-exclusion.ts`)에서만 파생되는 **고지 전용** 상수다. 세액에 접촉하지 않는다(#112).
+   */
+  dupExclusionApplies?: boolean;
   /**
    * §39의3 현물출자 — caseType echo (echo-field-pattern, 산식 불변).
    * 결과뷰·prefill은 gross 대소비교 휴리스틱 대신 이 명시값으로 저가/고가 판정

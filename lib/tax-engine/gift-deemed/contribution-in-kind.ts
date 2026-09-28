@@ -10,14 +10,17 @@ const ABSOLUTE_THRESHOLD = 300_000_000;
 
 type ContributionBreakdownRow = NonNullable<DeemedGiftResult["contributionBreakdown"]>[number];
 
-/** 결과뷰 법령 근거 행 — 4대 비수치 법령효과 키워드 부착 (증여시기·할증배제·연대면제·중복배제) */
+/**
+ * 결과뷰 법령 근거 행 — 비수치 법령효과 키워드 부착 (증여시기·할증배제·연대면제).
+ * 중복적용 배제(§43①)는 전 유형 공통 표지(`dupExclusionApplies` → `DupExclusionNote`)로 옮겼다(#112) —
+ * 이 유형만 개별 표기하던 비대칭(G-12 「§39의3가 유일한 아웃라이어」)을 없앤다.
+ */
 function legalNote(base: string): string {
   return (
     `${base} · 계산방법(${GIFT.CONTRIBUTION_CALC})` +
     ` · 증여시기 현물출자 납입일(${GIFT.CONTRIBUTION_TIMING})` +
     ` · 최대주주 할증평가 배제(${GIFT.PREMIUM_EXCLUSION_29_3})` +
-    ` · 증여자 연대납부의무 면제(${GIFT.JOINT_LIABILITY_EXEMPTION})` +
-    ` · 중복적용 배제(${GIFT.DUP_EXCLUSION})`
+    ` · 증여자 연대납부의무 면제(${GIFT.JOINT_LIABILITY_EXEMPTION})`
   );
 }
 

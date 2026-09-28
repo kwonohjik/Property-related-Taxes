@@ -17,6 +17,7 @@ import { CapitalIncreaseAppliedLawDate } from "./CapitalIncreaseAppliedLawDate";
 import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import { GIFT } from "@/lib/tax-engine/legal-codes/inheritance-gift";
 import { FOR_PROFIT_DONEE_REASON } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
+import { DupExclusionNote } from "./DupExclusionNote";
 
 // ─────────────────────────────────────────────────────────────
 // 날짜 포맷 헬퍼
@@ -675,6 +676,7 @@ export function DeemedGiftResultView({
           해당해, 같은 조 제1호~제3호 요건과 무관하게 증여자에게 연대납부의무가 성립하지 않습니다.
         </div>
       )}
+      {result.dupExclusionApplies === true && <DupExclusionNote />}
 
       {!result.applied && result.exclusionReason && (
         <div

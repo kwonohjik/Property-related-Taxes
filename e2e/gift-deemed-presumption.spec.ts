@@ -60,5 +60,7 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
     await expect(page.getByTestId("deemed-result-value")).toContainText("275,625,000");
     await expect(page.getByTestId("nominee-capital-increase")).toBeVisible();
     await expect(page.getByTestId("nominee-capital-increase")).toContainText("평가에 미적용");
+    // #112 긍정 짝 — §45의2는 §43① 열거 밖(§45 다음이 §45의3)이라 중복적용 배제 고지가 없어야 한다
+    await expect(page.getByTestId("deemed-dup-exclusion-note")).toHaveCount(0);
   });
 });

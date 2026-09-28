@@ -27,6 +27,7 @@ import { forProfitDoneeGateApplies } from "./taxpayer-gate";
 import { forProfitDoneeExcludedResult } from "./taxpayer-gate";
 import { incomeTaxedDoneeGateApplies } from "./taxpayer-gate";
 import { incomeTaxedDoneeExcludedResult } from "./taxpayer-gate";
+import { dupExclusionAppliesToDeemedType } from "./dup-exclusion";
 
 /**
  * 「상증법」§4의2⑥ 단서 — 증여자 연대납부의무 면제 표지를 **전 유형에 한 곳에서** 세운다.
@@ -42,6 +43,8 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   return {
     ...incomeTaxedDoneeGate(input, forProfitDoneeGate(input, dispatchDeemedGift(input))),
     donorJointLiabilityExempt: jointLiabilityExemptForDeemedType(input.type),
+    // §43① 열거 표지 — ⑥ 표지와 같은 층위(유형표 조회, 계산 아님). #112
+    dupExclusionApplies: dupExclusionAppliesToDeemedType(input.type),
   };
 }
 
@@ -122,8 +125,8 @@ function dispatchDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   }
 }
 // 🔴 「router 후처리」로 **계산을 바꾸는 것은 없다** — 금액·적용 여부는 `dispatchDeemedGift`의
-//    `switch`가 전부다. 그 바깥에 있는 것은 §4의2⑥ 표지 한 줄(유형표 조회)뿐이고,
-//    이것은 계산이 아니라 **결과 echo 필드**다.
+//    `switch`와 §4의2 납세의무 게이트(영리법인·③)가 전부다. 그 밖에 붙는 §4의2⑥·§43① 표지는
+//    유형표 조회이고, 계산이 아니라 **결과 echo 필드**다(§43① 표지는 고지 전용 — #112).
 //    ⚠️ 종전 문구는 「이 파일은 `switch` 하나가 전부다」였다 — 7-10에서 ⑥ 표지가 붙으면서
 //       그대로 두면 XX-B와 같은 stale 단언이 된다(아래 §43② 목록이 겪은 실패형).
 //    §43① 중복배제 구현체(`dup-exclusion.ts`의 `selectPrimaryDeemedGift`)는 프로덕션

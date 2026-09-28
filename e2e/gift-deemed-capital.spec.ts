@@ -491,5 +491,7 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(box).toContainText("상증령 §29①");
     await expect(box).toContainText("현행 산식으로");
     await expect(box).not.toContainText("§45의5");
+    // #112 — §43① 중복적용 배제 공통 고지(전 유형 일괄, §45의2 명의신탁만 제외)
+    await expect(page.getByTestId("deemed-dup-exclusion-note")).toContainText("§43①");
   });
 });
