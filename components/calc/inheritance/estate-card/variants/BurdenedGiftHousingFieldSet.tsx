@@ -8,9 +8,13 @@
  * (평행 UI를 만들지 않는다). 게이트·조립은 `lib/calc/gift-burdened-one-house.ts` 한 곳이다(④⑧ 공용).
  *
  *   · 증여 주택 주소(PNU 앞 10자리)가 있으면 취득시 조정대상지역은 주소로 자동 판정(토글 대신 결과 표시)
+ *     · 양도시 조정대상지역 토글은 안 만졌으면 주소 판정을 따른다(계산기와 같은 규칙 — E-1 잔여 A)
  *     · §155①2호 종전 주택 조정 여부도 주소로 판정(`TempTwoHouseRegulatedInputs`가 결과만 보여 준다)
+ *   · §155①2호 신규 주택 소재지(E-1 잔여 B) — 같은 주소 위젯 한 칸 → 신규 주택 조정 여부도 자동 판정
  *   · §154① 단서(삭제 전 4호 OH-38 포함) — `ExemptionProvisoSection`
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
+ *   · §155⑳ 장기임대주택 보유자 거주주택 특례(E-1 잔여 C — ㉓ 말소일 포함) — `RentalHousingExceptionSection`
+ *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -21,13 +25,26 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
+import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
+import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
+import {
+  giftBurdenedRentalAsset,
+  giftBurdenedRentalExceptionInScope,
+  giftBurdenedRentalHousingException,
+} from "@/lib/calc/gift-burdened-rental-exception";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
-import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 import {
+  giftBurdenedNewHouseAddressPatch,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import {
+  giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
+  giftBurdenedInheritanceSlice,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -57,6 +74,8 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   const regionCode = giftBurdenedRegionCode(item);
   const eraGate = giftBurdenedTempTwoHouseRegulatedGate(bgt, transferDate, regionCode);
   const byAddress = giftBurdenedRegulatedByAddress(regionCode, bgt.acquisitionDate, transferDate);
+  // 「양도시 조정대상지역」 실효값 — ④⑧과 같은 leaf(E-1 잔여 A)
+  const regulatedAtGift = giftBurdenedEffectiveIsRegulatedArea(bgt, regionCode, transferDate);
   // §154① 단서·§154⑤ 단서 재기산(E-1 후속) — ④·⑧과 같은 게이트
   const provisoMode = giftBurdenedProvisoMode(bgt);
   const oneHouse = giftBurdenedOneHouseSlice(bgt, transferDate);
@@ -79,6 +98,10 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-acq-date"
         />
       </FieldCard>
+
+      {/* 상속받은 주택(E-1 잔여 D) — 판정 메뉴와 같은 위젯. 「위 취득일에는 상속개시일」 안내가 붙으므로
+          취득일 바로 뒤에 둔다. ④·⑧은 같은 slice(`giftBurdenedInheritanceSlice`)를 본다. */}
+      <InheritedSameHouseholdField asset={giftBurdenedInheritanceSlice(bgt)} onChange={(patch) => set(patch)} />
 
       {/* 취득시 기준시가 */}
       <FieldCard
@@ -148,7 +171,8 @@ dateToStr(bgt.acquisitionDate)
         />
       </FieldCard>
 
-      {/* 양도시 조정대상지역 */}
+      {/* 양도시 조정대상지역 — 양도세 계산기와 같은 규칙(E-1 잔여 A): 주소가 있으면 안 만진 토글은 주소 판정을
+          따르고, 만지면 그 선택을 저장해 주소보다 우선한다. ④·⑧은 같은 leaf(`giftBurdenedEffectiveIsRegulatedArea`). */}
       <ToggleCard
         tone="rose"
         size="sm"
@@ -156,12 +180,12 @@ dateToStr(bgt.acquisitionDate)
         description={
           byAddress.atGift === undefined
             ? "증여일 기준 조정대상지역이면 ON."
-            : `증여일 기준 조정대상지역이면 ON. 소재지 주소로는 증여일 현재 ${byAddress.atGift ? "조정대상지역" : "조정대상지역 아님"}입니다 — 중과·단기세율 판정은 이 선택을 따릅니다.`
+            : bgt.isRegulatedArea === undefined
+              ? `소재지 주소로 증여일 현재 ${byAddress.atGift ? "조정대상지역" : "조정대상지역 아님"}으로 자동 판정했습니다. 직접 바꾸면 그 선택을 따릅니다 — 중과·단기세율 판정에 쓰입니다.`
+              : `증여일 기준 조정대상지역이면 ON. 소재지 주소로는 증여일 현재 ${byAddress.atGift ? "조정대상지역" : "조정대상지역 아님"}입니다 — 직접 선택한 값으로 판정합니다.`
         }
-        checked={bgt.isRegulatedArea ?? false}
-        onCheckedChange={(v) =>
-          set({ isRegulatedArea: v || undefined })
-        }
+        checked={regulatedAtGift}
+        onCheckedChange={(v) => set({ isRegulatedArea: v })}
         data-testid="bg-transfer-regulated"
       />
 
@@ -249,7 +273,31 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }}
             />
           </FieldCard>
-          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 이 화면엔 보유 주택 목록이 없어 선언으로 받는다. */}
+          {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
+              같은 주소 위젯으로 한 칸만 받는다. 코드가 있으면 아래 위젯이 신규 주택도 자동 판정한다(④⑧ 같은 값). */}
+          {eraGate && bgt.temporaryTwoHouse && (
+            <FieldCard label="신규 주택 소재지" hint="신규 주택 취득일 현재 조정대상지역 여부를 주소로 판정합니다.">
+              <div data-testid="bg-transfer-new-house-address">
+                <AddressSearch
+                  disableUnits
+                  value={
+                    {
+                      road: "",
+                      jibun: bgt.temporaryTwoHouse.newHouseJibun ?? "",
+                      building: "",
+                      detail: "",
+                      lng: "",
+                      lat: "",
+                    } satisfies AddressValue
+                  }
+                  onChange={(v) =>
+                    set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedNewHouseAddressPatch(v) } })
+                  }
+                />
+              </div>
+            </FieldCard>
+          )}
+          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 신규 주택 코드가 없으면 선언으로 받는다. */}
           {eraGate && bgt.temporaryTwoHouse && (
             <TempTwoHouseRegulatedInputs
               form={bgt.temporaryTwoHouse}
@@ -283,6 +331,20 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           value={oneHouse}
           acquisitionDate={dateToStr(bgt.acquisitionDate)}
           onChange={(patch) => set(patch)}
+        />
+      )}
+
+      {/* §155⑳ 장기임대주택 보유자 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 양도세 계산기와 같은 카드.
+          거주기간은 위 「거주기간 (개월)」 한 칸이 정본이라 구간 편집기(onChangeResidence)는 넘기지 않는다.
+          게이트·합성 자산은 ④⑧과 같다(`gift-burdened-rental-exception.ts`). */}
+      {giftBurdenedRentalExceptionInScope(bgt) && (
+        <RentalHousingExceptionSection
+          rh={giftBurdenedRentalHousingException(bgt)}
+          asset={giftBurdenedRentalAsset(item, bgt)}
+          acquisitionDate={dateToStr(bgt.acquisitionDate)}
+          transferDate={transferDate ?? ""}
+          mode="full"
+          onChange={(rh) => set({ rentalHousingException: rh })}
         />
       )}
     </div>

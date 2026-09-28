@@ -22,6 +22,8 @@ import type { EstateLocationFields } from "./inheritance-asset-location.types";
 import type { EstateItemSavingsFields } from "./inheritance-gift-deposit.types";
 import type { EstateItemCryptoFields } from "./inheritance-gift-crypto.types";
 import type { RateFraction } from "../data/gift-deemed-rates";
+// §155⑳ 거주주택 특례 입력은 양도세 계산기 자산과 같은 모양이다(E-1 잔여 C) — 타입만 가져온다.
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ============================================================
 // 재산평가 (property-valuation.ts)
@@ -1101,7 +1103,10 @@ export interface BurdenedGiftTransferTaxInput {
   householdHousingCount?: number;
   /** 1세대1주택 여부 (기본 false — 안전 방향, 미입력 시 비과세 미적용). 증여자 기준. */
   isOneHousehold?: boolean;
-  /** 양도시(=증여일) 조정대상지역 여부 */
+  /**
+   * 양도시(=증여일) 조정대상지역 여부. `undefined` = 사용자가 토글을 만지지 않음 — 증여 주택 주소가 있으면
+   * 주소 판정을 따른다(E-1 잔여 A · `giftBurdenedEffectiveIsRegulatedArea`). 만지면 `true`/`false`를 저장한다.
+   */
   isRegulatedArea?: boolean;
   /** 취득시 조정대상지역 여부 (거주요건 경과규정 판단) */
   wasRegulatedAtAcquisition?: boolean;
@@ -1139,6 +1144,15 @@ export interface BurdenedGiftTransferTaxInput {
     newHouseExistingTenant?: boolean;
     /** 전 소유자와 임차인 간 임대차계약 종료일 (2호 단서) */
     newHouseTenantLeaseEndDate?: string;
+    /*
+     * 신규 주택 소재지 (E-1 잔여 B) — 양도세 계산기는 보유 주택 명부 행 주소에서 법정동코드를 얻는다
+     * (`resolveTemporaryTwoHouse` → `newHouseRegionCode`). 이 경로에는 명부가 없어 한 칸을 같은 주소 위젯으로
+     * 받는다. 코드가 있으면 엔진이 신규 주택 취득일(계약일) 현재 조정 여부를 선언 대신 코드로 판정한다.
+     */
+    /** 신규 주택 소재지 지번 주소 — 화면 표시용 */
+    newHouseJibun?: string;
+    /** 신규 주택 법정동코드 — 소재지 PNU 앞 10자리 */
+    newHouseRegionCode?: string;
   };
   /*
    * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──
@@ -1177,6 +1191,29 @@ export interface BurdenedGiftTransferTaxInput {
     date: string;
     temporaryTwoHouse: "" | "yes" | "no";
   }[];
+  /*
+   * ── housing 전용 — 상속받은 주택 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * 양도세 폼(`AssetForm`)과 **같은 이름·모양**이다 — ⑤는 판정 메뉴와 같은 위젯
+   * (`InheritedSameHouseholdField`)을, ④는 같은 leaf(`buildSameHouseholdInheritancePayload`)를 쓴다.
+   * 「상속받은 주택」이면 위 `acquisitionDate`가 상속개시일이다. 옛 record에는 없다(매매로 읽는다).
+   */
+  /** 증여자의 당초 취득 원인 — "inheritance"일 때만 ④가 싣는다 */
+  acquisitionCause?: "purchase" | "inheritance";
+  /** 피상속인 취득일 (YYYY-MM-DD) — 「소득세법」 §104②1호 세율 보유기간 기산 */
+  decedentAcquisitionDate?: string;
+  /** 「소득세법 시행령」 §154⑧3호 — 상속개시 당시 피상속인과 동일세대 */
+  decedentSameHouseholdBeforeInheritance?: boolean;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD) */
+  decedentCohabitationHoldingStartDate?: string;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주 개월 (정수 문자열) */
+  decedentCohabitationResidenceMonths?: string;
+  /**
+   * 「소득세법 시행령」 §155⑳ 장기임대주택 보유자 거주주택 특례 (E-1 잔여 C · I-4 §155㉓ 말소일 포함).
+   * 양도세 계산기 자산(`AssetForm.rentalHousingException`)과 **같은 모양**이다 — ⑤는 같은 카드
+   * (`RentalHousingExceptionSection`), ④⑧은 같은 leaf(`toRentalHousingExceptionApi`·`validateRentalHousingException`)를
+   * `lib/calc/gift-burdened-rental-exception.ts`의 어댑터로 부른다. 옛 record에는 없다(특례 미적용).
+   */
+  rentalHousingException?: AssetForm["rentalHousingException"];
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

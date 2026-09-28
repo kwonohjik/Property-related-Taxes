@@ -34,7 +34,10 @@ import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
+import { buildGiftBurdenedRentalExceptionPayload } from "@/lib/calc/gift-burdened-rental-exception";
 import {
+  buildGiftBurdenedInheritancePayload,
+  giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
@@ -301,8 +304,11 @@ export function buildGiftBurdenedTransferBody(
         : (next as unknown as string),
       // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b · E-1).
       //   양도세 계산기 ④(`buildHouseholdSpecialPayload`)·⑤ 판정 카드와 같은 leaf로 편다.
-      //   신규 주택 법정동코드는 이 경로에 입력 칸이 없어 싣지 않는다(선언으로 판정).
-      ...toTemporaryTwoHouseEraFacts(bgt.temporaryTwoHouse, undefined),
+      //   신규 주택 법정동코드는 신규 주택 소재지 칸에서 온다(E-1 잔여 B — 계산기는 명부 행). 없으면 선언으로 판정.
+      ...toTemporaryTwoHouseEraFacts(
+        bgt.temporaryTwoHouse,
+        bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
+      ),
     };
   }
 
@@ -312,6 +318,9 @@ export function buildGiftBurdenedTransferBody(
     //   취득시 조정(거주요건)·§155①2호 종전 주택 조정 여부를 선언 대신 코드로 판정한다.
     const regionCode = giftBurdenedRegionCode(item);
     if (regionCode) body.regionCode = regionCode;
+    // 「양도시 조정대상지역」 — 안 만진 토글은 주소 판정(계산기 `useRegulatedAreaAutoTip`과 같은 규칙 · ⑤⑧과 같은 leaf).
+    //   중과(§104⑦ 폴백)·단기세율이 이 값을 쓴다(E-1 잔여 A).
+    body.isRegulatedArea = giftBurdenedEffectiveIsRegulatedArea(bgt, regionCode, form.giftDate);
     const slice = giftBurdenedOneHouseSlice(bgt, form.giftDate);
     // §154① 단서(삭제 전 4호 포함) — 계산기와 같은 조립 leaf. 카드가 숨는 맥락의 stale 사유는 싣지 않는다.
     Object.assign(body, buildExemptionProvisoPayload(slice, giftBurdenedProvisoMode(bgt)));
@@ -320,6 +329,11 @@ export function buildGiftBurdenedTransferBody(
       body,
       buildFinalHouseRestartPayload(slice, giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate)),
     );
+    // 상속받은 주택(E-1 잔여 D) — 계산기와 같은 키(`acquisitionCause`·`decedent*`). 원인이 상속일 때만.
+    //   엔진에서 바뀌는 축: §104②1호 세율 보유기간 · 영 §154⑧3호 동일세대 통산(`gift-burdened-one-house.ts`).
+    Object.assign(body, buildGiftBurdenedInheritancePayload(bgt));
+    // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 계산기와 같은 leaf(`toRentalHousingExceptionApi`), ⑤⑧과 같은 게이트.
+    Object.assign(body, buildGiftBurdenedRentalExceptionPayload(item, bgt));
   }
 
   return body;

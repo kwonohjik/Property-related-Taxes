@@ -81,8 +81,8 @@ describe("UI-R 증여 주택 주소 → 조정대상지역 자동 판정", () =>
     render(<Harness start={item({}, { estateAddress: { pnu: GANGNAM_PNU } } as Partial<EstateItem>)} giftDate="2021-06-01" />);
     expect(has("bg-transfer-regulated-acq")).toBe(false);
     expect(screen.getByTestId("bg-transfer-regulated-acq-auto").textContent).toMatch(/^조정대상지역 — 소재지 주소로/);
-    // 양도시 토글은 남는다(중과·단기세율 판정용) — 주소 기준 결과를 안내만 한다
-    expect(screen.getByText(/소재지 주소로는 증여일 현재 조정대상지역입니다/)).toBeTruthy();
+    // 양도시 토글은 남는다(중과·단기세율 판정용) — 안 만졌으면 주소 판정을 따른다(E-1 잔여 A, 계산기와 같은 규칙)
+    expect(screen.getByText(/소재지 주소로 증여일 현재 조정대상지역으로 자동 판정/)).toBeTruthy();
   });
   it("부정 짝 — 주소 없음이면 종전 토글 그대로 · 2017-08-02 취득이면 「조정대상지역 아님」", () => {
     render(<Harness start={item()} giftDate="2021-06-01" />);

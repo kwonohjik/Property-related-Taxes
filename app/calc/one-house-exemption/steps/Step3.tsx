@@ -32,7 +32,7 @@ import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeri
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
-import { InheritedSameHouseholdField } from "./InheritedSameHouseholdField";
+import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
