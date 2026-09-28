@@ -12,6 +12,8 @@ import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps }
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
+import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
+import { INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
 
 /**
  * STEP 0.9 + 0.95의 **제외 판정만** — step을 쓰지 않는 순수 함수.
@@ -65,6 +67,33 @@ export function surcharge15HouseCount(
   const exemptionCount = Math.max(withoutInherited - specialActExcludedCount, 0);
   if (specialActExcludedCount > 0 && exemptionCount < 2) return withoutInherited;
   return exemptionCount;
+}
+
+/**
+ * 영 §167의10①15호(구 13호) ① 요소 — §155②③(상속주택 + 일반주택)으로 「국내에 1개의 주택을 소유하고 있는
+ * 것으로 보아 제154조제1항이 적용되는 주택」인가 (E-14).
+ *
+ * §155②③ 제외 뒤 1주택이면 ①·④⑤·⑦ 어느 의제 분기에도 걸리지 않으므로 경로를 따로 둔다. 조특법 제외가
+ * 섞이면 열지 않는다(`surcharge15HouseCount` 주석 — 확인 필요). 구 13호 신설(대통령령 제31442호) 전
+ * 양도분은 경로 없음.
+ *
+ * 단건(`resolveSurchargeDeemedOneHouse`)과 겸용(`calcMixedUseTransferTax`, E-14d)이 **같은 술어**를 쓴다.
+ */
+export function inheritedGeneralHouseSurchargeBasis(p: {
+  isOneHousehold: boolean;
+  /** `surcharge15HouseCount`의 값 */
+  houseCount: number;
+  inheritedExcludedCount: number;
+  specialActExcludedCount: number;
+  transferDate: Date;
+}): DeemedOneHouseBasis | undefined {
+  return p.isOneHousehold &&
+    p.houseCount === 1 &&
+    p.inheritedExcludedCount > 0 &&
+    p.specialActExcludedCount === 0 &&
+    p.transferDate >= INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE
+    ? "inherited_general_house"
+    : undefined;
 }
 
 /**

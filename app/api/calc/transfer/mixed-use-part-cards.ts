@@ -344,6 +344,12 @@ export function buildMixedUseCompanionItems(
     // §155의3 상생임대 (P5-c) — primary와 같은 폼-전역 값을 상속한다.
     winWinRentalHouse: g.winWinRentalHouse,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
+    /**
+     * §155②③ 상속주택 제외(E-14d)는 **싣지 않는다** — 파트 카드의 비과세는 aggregate item이 재판정하는데
+     * 컴패니언 item은 명부(`houses`)를 싣지 않아 §155②를 볼 수 없다. 서브엔진만 제외하면 §154③ 본문
+     * (상가 카드의 주택 취급)이 카드 판정과 갈린다 ⇒ 종전 동작 유지(확인 필요 — 컴패니언 × §155② 별건).
+     */
+    inheritedHouseExclusion: undefined,
     specialHouseExclusions: g.specialHouseExclusions,
     isOneHousehold: companionEngine.isOneHousehold ?? false,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,

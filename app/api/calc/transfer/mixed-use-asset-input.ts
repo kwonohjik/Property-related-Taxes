@@ -63,6 +63,12 @@ export interface MixedUseAssetInputSources {
   temporaryTwoHouse: TransferTaxInput["temporaryTwoHouse"];
   /** §89①3호 주택수 제외 축 (D4-02). */
   householdHousingCount: number;
+  /**
+   * §155② 괄호 사실(증여 2년·증여일·상속개시 당시 권리) — §155②③ 상속주택 제외(E-14d).
+   * ⚠️ `engineInput` 변환본(증여일이 Date). **`undefined`를 넘기면 제외를 판정하지 않는다** — 컴패니언 겸용
+   *    (aggregate 주택 카드가 명부를 싣지 않아 서브엔진만 제외하면 판정이 갈린다 · 엔진 타입 주석).
+   */
+  inheritedHouseExclusion: MixedUseAssetInput["inheritedHouseExclusion"];
   specialHouseExclusions: TransferTaxInput["specialHouseExclusions"];
   isOneHousehold: boolean;
   /**
@@ -175,6 +181,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     isOneHousehold: s.isOneHousehold,
     // ⑭ §89①3호 주택수 제외 축 (D4-02).
     householdHousingCountForExclusion: s.householdHousingCount,
+    // ⑭ §155②③ 상속주택 제외 (E-14d) — 상속주택 행은 `multiHouse.houses`로 간다.
+    inheritedHouseExclusion: s.inheritedHouseExclusion,
     // ⑭ §155④⑤ 합가 「먼저 양도」 — 중과 15호 ① 요소(D9).
     isFirstTransferredInMerge: s.isFirstTransferredInMerge,
     // ⑭ §97 시리즈 시한 기준일 (CB-05).

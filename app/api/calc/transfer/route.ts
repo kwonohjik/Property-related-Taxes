@@ -475,6 +475,12 @@ export async function POST(request: NextRequest) {
         oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
         temporaryTwoHouse: engineInput.temporaryTwoHouse,
         householdHousingCount: data.householdHousingCount,
+        // ⑭ §155②③ 상속주택 제외 (E-14d) — ⚠️ `engineInput`(증여일 Date 변환본).
+        inheritedHouseExclusion: {
+          generalHouseGiftedFromDecedentWithin2yr: engineInput.generalHouseGiftedFromDecedentWithin2yr,
+          generalHouseGiftDate: engineInput.generalHouseGiftDate,
+          generalHouseRightAtInheritance: engineInput.generalHouseRightAtInheritance,
+        },
         specialHouseExclusions: engineInput.specialHouseExclusions,
         isOneHousehold: data.isOneHousehold,
         isRegulatedArea: data.isRegulatedArea,
