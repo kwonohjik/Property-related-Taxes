@@ -10,6 +10,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
+import { ValuationEventDateField } from "./capital-forms-shared";
+import { valuationWindowOverride } from "./capital-forms-shared";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 type ConPartyItem = NonNullable<DeemedFormState["conParties"]>[number];
@@ -190,10 +192,16 @@ export function ContributionFields({ form, set }: Props) {
             평가기준일은 상단에 입력한 <b>증여일(현물출자 납입일)</b>
             {form.giftDate ? ` — ${form.giftDate}` : " — 미입력"} 을 사용합니다.
           </p>
+          <ValuationEventDateField
+            value={form.conValuationEventDate}
+            onChange={(v) => set({ conValuationEventDate: v })}
+            testId="con-stock-code-event-date"
+          />
           <KiwoomValuationAutoFetchButton
             variant="card"
             stockCode={form.conStockCode}
             valuationDate={form.giftDate}
+            {...valuationWindowOverride(form.giftDate, form.conValuationEventDate)}
             onFill={(patch) => set({ conListedMarketAvg: String(patch.listedStockAvgPrice) })}
           />
         </div>
@@ -210,8 +218,8 @@ export function ContributionFields({ form, set }: Props) {
           placeholder="자본시장법 §165의6①3 방식 배정분 — 없으면 비워두세요"
         />
         <p className="text-xs text-muted-foreground">
-          종가평균은 상증법 §63①1가에 따라 산정합니다. 자동조회는 평가기준일 전후 각 2개월 전 구간을 씁니다 —
-          그 구간에 별도의 증자·합병 등 사유가 있어 상증령 §52의2②로 기간이 단축되어야 하면 직접 산정해 입력하세요.
+          종가평균은 상증법 §63①1가에 따라 산정합니다. 증자·합병 등으로 그 평균이 부적당하면 위 사유발생일을
+          넣어 상증령 §52의2②로 조회 기간을 줄이세요(비우면 전후 2개월 전체).
           일반공모 배정분은 이익 계산의 신주수에서 제외됩니다.
         </p>
       </ToggleCard>

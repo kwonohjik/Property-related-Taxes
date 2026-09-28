@@ -430,4 +430,43 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-result")).toContainText("제외 전 산출 이익");
     await expect(page.getByTestId("deemed-result")).toContainText("13,330,000");
   });
+
+  // #7 — 「상증령」§52의2② 단축은 **사용자가 입력한** 사유발생일로만 한다(자동 판정 금지).
+  //   종전에는 §39 경로가 override를 전달하지 않아 항상 전후 2개월 전 구간으로 조회했다.
+  test("§39 종가평균 자동조회 — 사유발생일을 넣으면 그 다음날부터 조회한다 (상증령 §52의2②)", async ({ page }) => {
+    const bodies: Record<string, unknown>[] = [];
+    await page.route("**/api/kiwoom/valuation-2month", async (route) => {
+      bodies.push(route.request().postDataJSON());
+      await route.fulfill({
+        json: {
+          average: 11000, tradingDays: 1, sum: 11000, stockName: "테스트",
+          slotDates: ["2025-03-17"], closingPrices: [11000], weekendLabels: [""],
+        },
+      });
+    });
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase");
+    await page.getByRole("switch", { name: /주권상장법인등/ }).click();
+    await page.getByTestId("ci-stock-code").fill("005930");
+    const ev = page.getByTestId("ci-stock-code-event-date");
+    await ev.getByLabel("연도").fill("2025");
+    await ev.getByLabel("월").fill("3");
+    await ev.getByLabel("일", { exact: true }).fill("15");
+    await page.getByRole("button", { name: /키움 자동조회/ }).click();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ valuationDate: "2025-03-15", startOverrideDate: "2025-03-16" });
+    await expect(page.getByPlaceholder("평가기준일 전후 각 2개월 종가평균 (원)")).toHaveValue(/11,000/);
+  });
+
+  // #95 — 2015.2.3. 전 증자에는 권리락일 규정이 없었다(구 상증령 §29④ 단항 — 납입일뿐).
+  test("§39 증여일 시점 안내 — 2015.2.2.은 구 §29④(납입일), 2016.2.5.부터는 고지 없음", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase", ["2015", "2", "2"]);
+    await expect(page.getByTestId("ci-gift-date-era-notice")).toContainText("주식대금 납입일");
+    const gd = page.getByTestId("deemed-gift-date");
+    await gd.getByLabel("연도").fill("2016");
+    await gd.getByLabel("월").fill("2");
+    await gd.getByLabel("일", { exact: true }).fill("5");
+    await expect(page.getByTestId("ci-gift-date-era-notice")).toHaveCount(0);
+  });
 });
