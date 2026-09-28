@@ -48,14 +48,13 @@ import type {
 import {
   scaleLthdParts,
   zeroLthdParts,
-  HIGH_VALUE_THRESHOLD,
 } from "./transfer-tax-redevelopment-lthd";
 export {
   applyLthdExclusion,
   applyRental97LthdSpecial,
   applyHighValueAllocation,
-  HIGH_VALUE_THRESHOLD,
 } from "./transfer-tax-redevelopment-lthd";
+import { resolveOneRightHighValueThreshold } from "./data/one-right-high-value-era";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Step A.6 — 청산금 수령분 비과세·고가 안분 (L-12 · 800줄 정책으로 분리)
@@ -207,16 +206,17 @@ export function resolveOneRightExemptionClause(
  *       모두 지워져 있어, 분양권 보유 세대도 전액 비과세됐다. 실측 Δ 58,910,000)
  *
  * 동작:
- *   - transferPrice ≤ 12억 → 3분기 모두 gain/lthd 0 마스킹 → 산출세액 0 (전액 비과세)
+ *   (기준금액 H = 양도일 연혁 `resolveOneRightHighValueThreshold` — 6억·9억·12억, E-3)
+ *   - transferPrice ≤ H → 3분기 모두 gain/lthd 0 마스킹 → 산출세액 0 (전액 비과세)
  *     → oneRightExemptionApplied = true
- *   - transferPrice > 12억 → §89①4호 각 목 외의 부분 단서 + §95③ 안분
+ *   - transferPrice > H → §89①4호 각 목 외의 부분 단서 + §95③ 안분
  *     → taxableRatio × 각 분기 gain/lthd 보존, 비과세분 마스킹
  *     → oneRightHighValueApplied = true
  *
  * 법령 근거:
  *   - 소득세법 §89①4호 가목 본문: 1세대1입주권 비과세
- *   - 소득세법 §89①4호 각 목 외의 부분 단서: 12억 초과 시 안분과세
- *   - 소득세법 §95③ + 시행령 §160: 안분 산식 (taxableRatio = (양도가 − 12억) / 양도가)
+ *   - 소득세법 §89①4호 각 목 외의 부분 단서: H 초과 시 안분과세 (2017-02-03 전은 영 §155 1세대1주택 의제 → 영 §156)
+ *   - 소득세법 §95③ + 시행령 §160: 안분 산식 (taxableRatio = (양도가 − H) / 양도가)
  *   - 시행령 §154: 1세대 범위
  *
  * 국세청 해석례 근거 — **일반(유상) 양도**에서 분모 = 양도가액 단일 (해석 A):
@@ -288,9 +288,12 @@ export function applyOneRightExemption(
    * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
    */
   const highValueBase = oneRightHighValueBase(input);
+  // E-3 — 기준금액은 **양도일** 연혁이다(6억·9억·12억 · `data/one-right-high-value-era.ts`).
+  //        비교와 안분이 같은 값을 써야 하므로 한 번만 푼다.
+  const highValueThreshold = resolveOneRightHighValueThreshold(input.transferDate);
 
-  if (highValueBase <= HIGH_VALUE_THRESHOLD) {
-    // ── 전액 비과세 (12억 이하) ──
+  if (highValueBase <= highValueThreshold) {
+    // ── 전액 비과세 (기준금액 이하) ──
     // 3분기 모두 trace 보존 후 0 마스킹
     const maskBranch = (branch: RedevelopmentResult["preApproval"]) => ({
       ...branch,
@@ -312,11 +315,11 @@ export function applyOneRightExemption(
       oneRightExemptionClause: clause,
     };
   } else {
-    // ── 12억 초과 안분과세 (§89①4호 각 목 외의 부분 단서 + §95③) ──
+    // ── 기준금액 초과 안분과세 (§89①4호 각 목 외의 부분 단서 + §95③) ──
     // apt 분기 applyHighValueAllocation 과 동일 taxableRatio 로직 적용
     // 단, isOneHouseSingle 조건(householdHousingCount===1)과 별개로 right 전용 처리
     // 분모는 위 비교와 **같은 값**이다 (부담부증여면 증여가액 C, 그 외 양도가액).
-    const taxableRatio = (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase;
+    const taxableRatio = (highValueBase - highValueThreshold) / highValueBase;
 
     const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
       if (branch.gain <= 0) {
@@ -364,7 +367,7 @@ export function applyOneRightExemption(
         nontaxableGain: nontaxableGainTotal,
         taxableGain: taxableGainTotal,
         taxableRatio,
-        nontaxableThreshold: HIGH_VALUE_THRESHOLD,
+        nontaxableThreshold: highValueThreshold,
       },
     };
   }

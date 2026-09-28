@@ -28,6 +28,10 @@ import {
   SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING,
 } from "./transfer-tax-redevelopment-settlement";
 import { usesTable2 } from "./redevelopment-lthd";
+import {
+  resolveOneRightHighValueThreshold,
+  oneRightHighValueEraNotice,
+} from "./data/one-right-high-value-era";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import type {
@@ -392,10 +396,15 @@ export function runRedevelopmentGainSteps(
     });
   }
 
+  // E-3 — 기준금액은 양도일 연혁(`applyOneRightExemption`과 같은 leaf). 문구가 「12억」 리터럴이면
+  //        9억 시기 양도에서 산식이 자기 값을 만들지 못한다.
+  const oneRightThresholdLabel = formatHighValueThresholdLabel(
+    resolveOneRightHighValueThreshold(input.transferDate),
+  );
   if (redevAfterRight.oneRightExemptionApplied) {
     steps.push({
       label: "1세대1입주권 비과세",
-      formula: `§89①4호 가목 — 양도일 현재 입주권 1개 + 다른 주택 없음 + 인가일 기준 종전주택 비과세 요건 충족 + 양도가액 ${input.transferPrice.toLocaleString()} ≤ 12억 → 전액 비과세`,
+      formula: `§89①4호 가목 — 양도일 현재 입주권 1개 + 다른 주택 없음 + 인가일 기준 종전주택 비과세 요건 충족 + 양도가액 ${input.transferPrice.toLocaleString()} ≤ ${oneRightThresholdLabel} → 전액 비과세`,
       amount: 0,
       legalBasis: REDEVELOPMENT.GAIN_BASE,
     });
@@ -404,11 +413,16 @@ export function runRedevelopmentGainSteps(
   if (redevAfterRight.oneRightHighValueApplied && redevAfterRight.highValueAllocation) {
     const ha = redevAfterRight.highValueAllocation;
     steps.push({
-      label: "1세대1입주권 12억 초과 과세대상 양도차익 안분",
-      formula: `§89①4호 각 목 외의 부분 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      label: `1세대1입주권 ${oneRightThresholdLabel} 초과 과세대상 양도차익 안분`,
+      formula: `§89①4호 각 목 외의 부분 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - ${oneRightThresholdLabel}) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });
   }
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning };
+  // 기준금액 연혁 미지원·확인 필요 구간 — 비과세 판정에 기준금액을 실제로 쓴 경우에만 알린다.
+  const oneRightThresholdNotice =
+    redevAfterRight.oneRightExemptionApplied || redevAfterRight.oneRightHighValueApplied
+      ? oneRightHighValueEraNotice(input.transferDate)
+      : undefined;
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice };
 }

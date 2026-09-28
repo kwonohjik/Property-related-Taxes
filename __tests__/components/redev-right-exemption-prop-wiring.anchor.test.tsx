@@ -143,6 +143,23 @@ describe("U1-03 · 12억 초과 안분 안내 — 프로덕션 경로 도달", (
   });
 });
 
+/**
+ * E-3 — 기준금액은 **양도일** 연혁이다(엔진 `applyOneRightExemption`과 같은 leaf).
+ * 판정 메뉴 ③이 `form.transferDate`를 떨어뜨리면 9억 시기 양도에도 「12억」 안내가 나온다.
+ */
+describe("E-3 · 고가 안내 기준금액 — 양도일 배선(프로덕션 경로)", () => {
+  it("E3-UI-01: 🔑 2021-06-01 양도 10억 → 「9억 초과」 안내 (12억이 아니다)", () => {
+    const body = renderStep1(rightAsset({ actualSalePrice: "1000000000" }), { transferDate: "2021-06-01" });
+    expect(shows(body, "양도가액 9억 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용"), "9억 안내 미노출").toBe(true);
+    expect(shows(body, HIGH_VALUE_NOTICE), "9억 시기에 12억 안내").toBe(false);
+  });
+
+  it("E3-UI-02: 대조군 — 같은 10억이 2021-12-08 양도면 안내가 없다 (12억 이하)", () => {
+    const body = renderStep1(rightAsset({ actualSalePrice: "1000000000" }), { transferDate: "2021-12-08" });
+    expect(shows(body, "초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용")).toBe(false);
+  });
+});
+
 describe("U1-03 · 거주요건 미충족 경고 — 프로덕션 경로 도달", () => {
   it("U1-03-04: 🔑 조정대상지역 취득 + 거주 10개월 → 경고가 뜬다", () => {
     // 수정 전: `wasRegulatedAtAcquisition` prop이 없어 기본값 false → residenceWarning 항상 false.

@@ -16,22 +16,24 @@
  * 둘 다 계산기(`applyOneRightExemption`)가 쓰는 **그 함수**다. 사실을 담아 오는 상자만
  * 화면마다 다르고(`redevelopment` / `oneRightExemptionFacts`), 규칙은 복제하지 않는다.
  *
- * ## ⚠️ 고가 임계는 **12억 하드코딩**이다 — 일부러 그렇게 둔다
+ * ## 고가 기준금액은 양도일 연혁이다 (E-3)
  *
- * 다른 경로는 `resolveHighValueHouseThreshold(양도일)`(6억/9억/12억)을 쓰지만, 입주권 경로는
- * P1이 **의도적으로 이월**했다(계획서 §13.3): 2021-12-07까지 금액이 시행령에 위임돼 있었는데
- * **그 위임 조항의 번호·연혁을 실독하지 못했고**, 근거 없이 낮은 기준을 소급하면 납세자에게
- * **불리한 방향으로** 틀린다. ⇒ 판정 메뉴도 계산기와 **같은 상수**를 쓴다. 여기서만 시대별
- * 기준을 적용하면 두 화면이 같은 입력에 다른 답을 낸다.
+ * 계산기(`applyOneRightExemption`)와 **같은 leaf** `resolveOneRightHighValueThreshold(양도일)`를
+ * 쓴다 — 여기서만 시대별 기준을 적용하면 두 화면이 같은 입력에 다른 답을 낸다. 연혁·근거는
+ * `data/one-right-high-value-era.ts`. 미지원·확인 필요 구간은 현행 12억으로 판정하고
+ * `thresholdNotice`로 알린다.
  */
 import {
-  HIGH_VALUE_THRESHOLD,
   oneRightHighValueBase,
   pickOneRightExemptionFacts,
   resolveOneRightExemptionClause,
   householdHoldsPresaleRight,
 } from "../transfer-tax-redevelopment-transforms";
 import { TRANSFER } from "../legal-codes/transfer";
+import {
+  resolveOneRightHighValueThreshold,
+  oneRightHighValueEraNotice,
+} from "../data/one-right-high-value-era";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 
@@ -39,10 +41,17 @@ import type { OneHouseJudgment } from "./types";
 export type OneHouseOneRightVerdict = {
   /** 성립한 목. `null`이면 미성립 */
   clause: "ga" | "na" | null;
-  /** 12억 이하 → 전액 비과세 */
+  /** 기준금액 이하 → 전액 비과세 */
   isExempt: boolean;
-  /** 12억 초과 → 각 목 외의 부분 단서 + §95③ 안분(부분 비과세) */
+  /** 기준금액 초과 → 각 목 외의 부분 단서 + §95③ 안분(부분 비과세) */
   isPartialExempt: boolean;
+  /**
+   * 양도일 기준 고가 기준금액(원) — 6억·9억·12억 (E-3). 화면 문구가 리터럴을 쓰지 않게 싣는다.
+   * 엔진은 항상 싣는다 — optional인 것은 이 필드가 없던 옛 이력(`resultData`)을 읽기 때문이다.
+   */
+  highValueThreshold?: number;
+  /** 기준금액 연혁 미지원·확인 필요 구간 고지 — 성립한 경우에만 */
+  thresholdNotice?: string;
   /** 미성립 사유 — 사용자가 어디가 모자란지 알 수 있게 전부 모은다 */
   reasons: string[];
   legalBasis: string;
@@ -62,12 +71,16 @@ export function buildOneRightVerdict(
   if (!facts) return null;
 
   const clause = resolveOneRightExemptionClause(facts, input);
+  const highValueThreshold = resolveOneRightHighValueThreshold(input.transferDate);
   if (clause) {
-    const overThreshold = oneRightHighValueBase(input) > HIGH_VALUE_THRESHOLD;
+    const overThreshold = oneRightHighValueBase(input) > highValueThreshold;
+    const thresholdNotice = oneRightHighValueEraNotice(input.transferDate);
     return {
       clause,
       isExempt: !overThreshold,
       isPartialExempt: overThreshold,
+      highValueThreshold,
+      ...(thresholdNotice ? { thresholdNotice } : {}),
       reasons: [],
       legalBasis: TRANSFER.ONE_RIGHT_EXEMPT,
     };
@@ -116,6 +129,7 @@ export function buildOneRightVerdict(
     clause: null,
     isExempt: false,
     isPartialExempt: false,
+    highValueThreshold,
     reasons,
     legalBasis: TRANSFER.ONE_RIGHT_EXEMPT,
   };

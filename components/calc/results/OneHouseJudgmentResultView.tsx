@@ -21,6 +21,8 @@ import { RentalCancellationWindowNote } from "@/components/calc/results/transfer
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
+import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
+import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
@@ -68,9 +70,16 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
    *    이력 목록은 「과세」인 상태가 조용히 생긴다.
    */
   const transferAt = toOptionalDate(transferDate);
+  /**
+   * 입주권 양도면 §89①4호의 기준금액이다(E-3) — 주택 축(`resolveHighValueHouseThreshold`)과 연혁 경계가
+   * 다르다. 엔진이 실어 준 값을 우선하고, 그 필드가 없는 옛 이력이면 같은 leaf로 다시 구한다.
+   */
+  const oneRightThreshold = oneRight
+    ? (oneRight.highValueThreshold ?? (transferAt ? resolveOneRightHighValueThreshold(transferAt) : undefined))
+    : undefined;
   const verdict = oneHouseVerdictOf(
     judgment,
-    transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
+    oneRight ? oneRightThreshold : transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
   );
   const pending = judgment.pending as unknown as PendingItem[];
 
@@ -248,7 +257,13 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           </p>
           {oneRight.isPartialExempt && (
             <p className="text-sm">
-              양도가액이 12억원을 초과하므로 <b>초과분만 과세</b>됩니다 (각 목 외의 부분 단서 · §95③).
+              양도가액이 {oneRightThreshold !== undefined ? `${formatHighValueThresholdLabel(oneRightThreshold)}원` : "고가 기준금액"}을
+              초과하므로 <b>초과분만 과세</b>됩니다 (각 목 외의 부분 단서 · §95③).
+            </p>
+          )}
+          {oneRight.thresholdNotice && (
+            <p className="text-xs text-amber-800" data-testid="one-house-one-right-threshold-notice">
+              {oneRight.thresholdNotice}
             </p>
           )}
           {oneRight.reasons.length > 0 && (
