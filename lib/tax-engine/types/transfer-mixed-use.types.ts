@@ -171,6 +171,23 @@ export interface MixedUseAssetInput {
    */
   householdHousingCountForExclusion?: number;
   /**
+   * 「소득세법 시행령」 §155②③ 상속주택 주택 수 제외의 **양도 주택(일반주택) 사실** — 폼-전역(route 주입, E-14d).
+   *
+   * 상속주택 행 자체(`isInherited`·`inheritedDate`·`isCoInherited` 등)는 `multiHouse.houses`로 들어온다.
+   * 여기에는 §155② 괄호 판정용 세 사실만 담는다 — 정본 `resolveInheritedHouseExclusionFromInput`에 그대로 넘긴다.
+   * 겸용주택의 주택 부분은 §154③(「법 제89조제1항제3호를 적용할 때」)상 「주택」이므로 §155②의 일반주택이다.
+   *
+   * 🔑 **미전달(undefined)이면 이 제외를 판정하지 않는다**(종전 동작). 컴패니언 겸용은 aggregate item이 명부를
+   *    싣지 않아 주택 카드가 §155②를 재판정하지 못하므로, 서브엔진만 제외하면 두 판정이 갈린다 — 그래서 미전달.
+   * 🔑 키를 **필수**로 둔 매핑 타입이다 — route가 셋 중 하나를 빠뜨리면 컴파일이 실패한다(값은 undefined 가능).
+   */
+  inheritedHouseExclusion?: {
+    [K in
+      | "generalHouseGiftedFromDecedentWithin2yr"
+      | "generalHouseGiftDate"
+      | "generalHouseRightAtInheritance"]: TransferTaxInput[K];
+  };
+  /**
    * §155④⑤ 합가 「먼저 양도하는 주택」 사용자 선언 — **폼-전역** 값이라 route가 주입한다.
    *
    * 겸용 서브엔진이 이것과 `multiHouse.marriageMerge`·`parentalCareMerge`로 합가 의제를

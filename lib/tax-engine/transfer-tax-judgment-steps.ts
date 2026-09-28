@@ -6,7 +6,7 @@
  * 모두 `workingInput`을 읽어 판정 결과를 내고, 그 결과로 파생 입력
  * (`effectiveInput`)을 만든다. 세액 계산 자체는 하지 않는다.
  */
-import { NBL, INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
+import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -19,7 +19,11 @@ import { judgeNonBusinessLand } from "./non-business-land";
 import type { NonBusinessLandJudgment } from "./non-business-land";
 import { resolveDeemedOneHouseBy155, qualifiesUnavoidableOutsideCapital, meetsOneHouseHoldingResidence } from "./transfer-tax-helpers";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
-import { resolveExemptionHouseCountExclusions, surcharge15HouseCount } from "./transfer-tax-house-exclusion-step";
+import {
+  resolveExemptionHouseCountExclusions,
+  surcharge15HouseCount,
+  inheritedGeneralHouseSurchargeBasis,
+} from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import type { IncomeDeductionId } from "./transfer-reductions";
 
@@ -57,16 +61,13 @@ export function resolveSurchargeDeemedOneHouse(
     parsedRates.oneHouseSpecialRules,
   );
   if (deemed) return deemed;
-  if (
-    workingInput.isOneHousehold &&
-    count === 1 &&
-    inheritedExcluded > 0 &&
-    ex.specialActExcludedCount === 0 &&
-    workingInput.transferDate >= INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE
-  ) {
-    return "inherited_general_house";
-  }
-  return undefined;
+  return inheritedGeneralHouseSurchargeBasis({
+    isOneHousehold: workingInput.isOneHousehold,
+    houseCount: count,
+    inheritedExcludedCount: inheritedExcluded,
+    specialActExcludedCount: ex.specialActExcludedCount,
+    transferDate: workingInput.transferDate,
+  });
 }
 
 /** STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정. */
