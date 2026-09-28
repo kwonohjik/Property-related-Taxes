@@ -7,10 +7,52 @@ import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleStockInput } from "./types";
 
 /**
+ * §39①3호 행위시법 — 날짜 축이 **둘**이다(두 부칙 모두 개정본 MST 부칙단위 실독 2026-09-28).
+ *   ① 법률 — 「상증법」 법률 제14388호 부칙 §5②: 「제39조제1항제3호의 개정규정은 이 법 시행
+ *      (2017.1.1.) 이후 **신주를 발행하는 경우**부터 적용」. 「신주」는 §39①이 「자본금을 증가시키기
+ *      위하여 … 발행」하는 주식으로 정의하고 3호의 요건이 「전환주식을 **발행한** 경우」이므로 기준일은
+ *      전환일이 아니라 **전환주식 발행일**이다(형제 부칙 §6도 §40을 원 증권 인수·취득일로 가른다).
+ *      발행일은 `atIssuance.giftDate`(폼 `csIssuanceDate`)로 들어온다.
+ *   ② 시행령 — 대통령령 제27835호 부칙 §2: 「이 영 시행(2017.2.7.) 이후 … 증여받는 분부터 적용」.
+ *      증여일(§29①2호 「전환한 날」)과 계산방법(§29②6호)이 이 영으로 신설됐다. 발행이 2017년이어도
+ *      전환이 그 전이면 법률은 걸리는데 산식 규정이 없다.
+ * ⇒ 둘 다 **계산하지 않고 차단**한다 — 그 구간의 결과를 현행 산식으로 내면 법적 근거가 없는 수치다
+ *    (§45의3 `resolveRcEraExclusion`과 같은 정책: 「현행 산식으로 조용히 계산은 선택지가 아니다」).
+ *    미입력(leaf 호출)은 판정 불가 ⇒ 종전 동작(계산) — UI 경로는 ⑧이 발행일·증여일을 필수화한다.
+ */
+const CONVERTIBLE_STOCK_APPLIES_FROM = Date.UTC(2017, 0, 1);
+const CONVERSION_CALC_RULE_FROM = Date.UTC(2017, 1, 7);
+
+function convertibleStockEraExclusion(input: ConvertibleStockInput): string | undefined {
+  const issued = input.atIssuance.giftDate;
+  if (issued != null && issued.getTime() < CONVERTIBLE_STOCK_APPLIES_FROM)
+    return `전환주식 발행일이 2017.1.1. 전 — §39①3호 미적용 (${GIFT.CS_ERA_ADDENDA_14388})`;
+  const converted = input.atConversion.giftDate;
+  if (converted != null && converted.getTime() < CONVERSION_CALC_RULE_FROM)
+    return `전환일(증여일)이 2017.2.7. 전 — 계산방법(상증령 §29②6호) 신설 전이라 계산하지 않음, 직접 검토 필요 (${GIFT.CS_CALC_ERA_ADDENDA_27835})`;
+  return undefined;
+}
+
+/**
  * §29②6: 가목(전환 후 교부받은 주식을 신주로 보아 §29②1~5 계산한 이익)에서
  * 나목(전환주식 발행 당시 §29②1~5 계산한 이익)을 차감. 그 금액이 영 이하이면 이익 없음.
  */
 export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGiftResult {
+  // 시기 사유가 가장 먼저다 — 조문(또는 산식) 자체가 걸리지 않으면 납세의무자 판정(§4의2)은 물을 필요가 없다.
+  const eraExclusion = convertibleStockEraExclusion(input);
+  if (eraExclusion) {
+    return {
+      type: "convertible_stock",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown: [],
+      exclusionReason: eraExclusion,
+      legalBasis: GIFT.CAPITAL_INCREASE,
+      // 과세요건 판정이 아니라 적용 법령의 문제임을 명시한다(§45의3와 같은 표지)
+      eraBlocked: true,
+      donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
+    };
+  }
   // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 §39①3호 경로에서도 납세의무자가 아니다.
   //   두 leg가 각각 0을 내면 차감 결과도 0이지만, 그 0은 「전환후 이익 ≤ 발행당시 이익」이라는
   //   **다른 사유**로 표시된다. 사유가 화면·이력에 남으므로 여기서 먼저 가른다.

@@ -154,6 +154,8 @@ describe("[G3-D] IG-018 — 전환주식은 한 시점만 비어도 결과가 �
     csIssuePreShares: "10000",
     csIssueNewPrice: "11000",
     csIssueIssuedShares: "5000",
+    // #25(2026-09-28)로 발행일이 필수가 됐다 — 비우면 양성 쌍둥이가 분모 축이 아니라 이 칸에서 막힌다.
+    csIssuanceDate: "2017-06-01",
   };
   const numer = { csConvRelatedAcquiredShares: "50", csIssueRelatedAcquiredShares: "50" } as const;
 
