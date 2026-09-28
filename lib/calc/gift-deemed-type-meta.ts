@@ -37,3 +37,16 @@ export const DEEMED_TYPE_META: Record<
   specific_corp: { label: "특정법인과의 거래 이익", law: "상증법 §45의5" },
   related_corp: { label: "일감몰아주기 증여의제", law: "상증법 §45의3" },
 };
+
+/**
+ * 계산기 소개 문구 — 페이지 description·OG·본문과 홈 카드의 단일 출처(#121).
+ *
+ * 유형이 늘면 여기도 늘어야 한다. `__tests__/lib/calc/gift-deemed-scope-121.anchor.test.tsx`가
+ * `DEEMED_TYPE_META` 전 유형의 낱말이 이 문구에 있는지, 근거 조문이 범위 안인지 관측한다.
+ * 표제상 「…의 증여」(§33~§42의3)·「증여 추정」(§45)·「증여 의제」(§45의2~§45의5)를 구분한다.
+ */
+export const GIFT_DEEMED_SCOPE =
+  "신탁이익·보험금·저가양수·고가양도·채무면제·부동산 무상사용·금전 무상대출, 합병·증자·감자·현물출자·전환주식·전환사채 등 자본거래, 초과배당·상장·재산사용·용역제공·법인 조직변경·재산가치증가에 따른 이익, 재산취득자금 증여 추정, 명의신탁·특수관계법인·특정법인 거래 증여 의제";
+export const GIFT_DEEMED_SCOPE_LAW = "상증법 §33~§45의5";
+/** 홈 카드 부제 — 대분류만 */
+export const GIFT_DEEMED_SCOPE_SHORT = "보험·저가양수·무상사용·자본거래·증여 추정·의제";

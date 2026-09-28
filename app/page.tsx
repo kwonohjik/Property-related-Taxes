@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LegalVerifyPanel } from "@/components/admin/LegalVerifyPanel";
+import { GIFT_DEEMED_SCOPE_SHORT } from "@/lib/calc/gift-deemed-type-meta";
 
 type Tone =
   | "sky"
@@ -108,7 +109,7 @@ const MENU = [
   {
     href: "/calc/gift-deemed",
     title: "증여로 보는 경우",
-    subtitle: "보험·저가양수·채무면제·무상사용·무상대출 의제",
+    subtitle: GIFT_DEEMED_SCOPE_SHORT,
     icon: "🎀",
     tone: "rose",
   },
