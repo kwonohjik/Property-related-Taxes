@@ -23,10 +23,10 @@ import {
   meetsOneHouseHoldingResidence,
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
-import { evaluateTemporaryTwoHouseTiming } from "./transfer-tax-exemption-requirements";
 import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { judgeRentalHousingEligibility } from "./transfer-tax-rental-housing-judge";
+import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
 import {
   resolveExemptionHouseCountExclusions,
@@ -120,7 +120,9 @@ export function resolveSurchargeDeemedOneHouseDetail(
     specialActVerified15Basis: ex.specialActVerified15Basis,
   });
   if (special) return special;
-  if (qualifiesRentalResidenceDeeming(workingInput, parsedRates)) return { basis: "long_term_rental_residence" };
+  if (qualifiesRentalResidenceDeeming(workingInput, parsedRates, generalHouseAcquisitionDate)) {
+    return { basis: "long_term_rental_residence" };
+  }
   // §156의2⑤(대체주택)는 선언만으로 `exception_met`이고 요건은 E-5가 판정한다 — 여기서는 받지 않는다(확인 필요).
   if (clause2.status === "exception_met" && clause2.exception && clause2.exception !== TRANSFER.REPLACEMENT_HOUSE_156_2_5) {
     return {
@@ -139,30 +141,24 @@ export function resolveSurchargeDeemedOneHouseDetail(
  * … 국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」(영 §155⑳ · MST 286211).
  * 요건 판정은 STEP 2.5(세액)와 **같은 함수**(`judgeRentalHousingEligibility`)다.
  *
- * 세대 주택 수 — STEP 2.5는 「그 밖의 1주택」을 보지 않는다(명부 없이도 특례를 적용한다). 중과 배제까지 그
- * 판정에 기대면 비과세 쪽 누락이 중과 쪽으로 번지므로, 명부(`houses[]`)에서 장기임대주택이 아닌 주택을 센다:
- * - 1채(거주주택뿐) → 성립.
- * - 2채 + §155① 타이밍 충족 → 성립 — 사전-2021-법령해석재산-1719(2021.12.22.): 「…같은 영 제155조제1항에 따라
- *   1세대1주택으로 보아 같은 영 제154조제1항을 적용하는 것이며, … 같은 영 제154조제1항의 요건을 모두 충족하는
- *   경우에는 같은 영 제167조의3제1항제13호에 따라 중과세율을 적용하지 아니하며 장기보유특별공제도 적용할 수 있는 것」.
- * - 그 밖(다른 특례와의 중첩) → 불성립(확인 필요 — 종전 동작).
+ * 세대 구성(「그 밖의 1주택」) — 비과세 STEP 2.5와 **같은 판정**(`resolveRentalResidenceComposition`)이다(E-14h).
+ * `met`일 때만 연다 — §155① 중첩은 사전-2021-법령해석재산-1719(「…같은 영 제167조의3제1항제13호에 따라
+ * 중과세율을 적용하지 아니하며…」), §155② 중첩은 비과세를 인정한 사전-2025-법규재산-0162에 15호·13호의 공통 꼬리
+ * (「제155조 … 에 따라 … 1세대 1주택으로 보아 제154조제1항이 적용되는 주택」)가 그대로 걸린다.
+ * 판정 보류(`undetermined`)는 열지 않는다(확인 필요 — 종전 동작).
  * 시나리오 B(직전거주주택보유주택 — 「직전거주주택의 양도일 후의 기간분에 대해서만」)는 과세 기간분이 중과되는지
  * 해석을 확보하지 못했다 → 열지 않는다(확인 필요 — 종전 동작).
  */
-function qualifiesRentalResidenceDeeming(workingInput: TransferTaxInput, parsedRates: ParsedRates): boolean {
+function qualifiesRentalResidenceDeeming(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): boolean {
   const rhe = workingInput.rentalHousingException;
   if (!workingInput.isOneHousehold || workingInput.isUnregistered) return false;
   if (rhe?.applyException !== true || rhe.scenario !== "A") return false;
   if (judgeRentalHousingEligibility(workingInput)?.passed !== true) return false;
-  const nonRental = (workingInput.houses ?? []).filter((h) => !h.isLongTermRental).length;
-  if (nonRental === 1) return true;
-  const rule = parsedRates.oneHouseSpecialRules?.temporary_two_house;
-  return (
-    nonRental === 2 &&
-    workingInput.temporaryTwoHouse !== undefined &&
-    rule !== undefined &&
-    evaluateTemporaryTwoHouseTiming(workingInput, rule).timing.overall
-  );
+  return resolveRentalResidenceComposition(workingInput, parsedRates, generalHouseAcquisitionDate).status === "met";
 }
 
 /** STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정. */

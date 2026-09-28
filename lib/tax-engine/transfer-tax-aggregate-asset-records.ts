@@ -268,7 +268,14 @@ export function buildAssetRecords(
     }
     const taxableGain = pa.result.taxableGain;
     const lthd = pa.result.longTermHoldingDeduction;
-    const income = taxableGain - lthd;
+    /**
+     * 🔴 E-14g — §155⑳ 특례 경로는 `taxableGain` 슬롯에 **장특공제·§161 안분이 끝난 과세대상 양도소득금액**을
+     *    싣는다(`transfer-tax-rental-housing-step.ts` `taxableGain: totalTaxableIncome`). 장특공제를 다시 빼면
+     *    이중 차감이다 — 실측(거주 + 임대 · 20억 · RH-A2) 299,200,000 − 374,000,000 = −74,800,000 → 다건 총세액 0
+     *    (단건 102,086,600). 결과 화면·신고서 소비층이 같은 플래그로 이미 분기한다(`FilingFormTableHelpers.ts` ·
+     *    `DetailedStatementHelpers.ts` `isRentalHousingException`). `lthd`는 단건 echo 그대로 싣는다(표시축).
+     */
+    const income = pa.result.rentalHousingExceptionDetail?.applied === true ? taxableGain : taxableGain - lthd;
     return { ...pa, taxableGain, lthd, income };
   });
   return assetRecords;
