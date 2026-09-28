@@ -158,15 +158,41 @@ describe("겸용 공유지분 × §89①3호 12억 분모 (영 §156①·②)", 
     expect(r.result?.total?.transferTax).toBe(81_859_889);
   });
 
-  it("HV-3 대조군 — 물건 전체 주택분이 12억 **이하**면 지분이어도 비과세다", async () => {
-    /** 주택 기준시가를 낮춰 물건 전체 주택분을 12억 미만으로 만든다(안분 비율이 내려간다). */
-    const low = {
-      ...SHARE_60,
-      mixedTransferHousingPrice: "600000000",
-      mixedTransferCommercialBuildingPrice: "1000000000",
+  /** 주택 기준시가를 낮춰 물건 전체 주택분을 12억 미만으로 만든다(안분 비율이 내려간다). */
+  const low = {
+    ...SHARE_60,
+    mixedTransferHousingPrice: "600000000",
+    mixedTransferCommercialBuildingPrice: "1000000000",
+  };
+
+  /**
+   * 🔄 L-10 (2026-09-28) — 이 픽스처는 주택 60㎡ > 상가 40㎡(영 §154③ **본문**)이다. 영 §156②는 고가주택
+   *    실지거래가액에 「제154조제3항 본문에 따라 주택으로 보는 부분(이에 부수되는 토지를 포함한다)에 해당하는
+   *    실지거래가액을 포함한다」고 하므로 **판정은 물건 전체 건물(20억)** → 고가주택이다(법규과-3154 — 주택분
+   *    12억 이하·전체 13.2억을 고가주택으로 봄). 종전 `isExempt: true`는 주택분만으로 판정한 결과였다.
+   *    12억 초과분 산식은 영 §160① 괄호로 **주택 부분**(물건 전체 주택분 ≤ 12억)이라 과세대상은 여전히 0이다
+   *    ⇒ 이 대조군의 본래 주장(「물건 전체 주택분 ≤ 12억이면 지분이어도 주택분 과세 0」)은 그대로 단언한다.
+   */
+  it("HV-3 대조군 — 물건 전체 주택분이 12억 **이하**면 지분이어도 주택분 과세 0 (본문 → 고가 판정은 물건 전체)", async () => {
+    const r = (await run(form(low))) as {
+      result?: MixedResult & {
+        housingPart?: { highValueJudgmentBase?: number; proratedTaxableGain?: number };
+        calculationRoute?: { highValueRule?: string };
+      };
     };
-    const r = await run(form(low));
     expect(r.result?.apportionment?.wholeHousingTransferPrice).toBeLessThanOrEqual(1_200_000_000);
+    expect(r.result?.housingPart?.highValueJudgmentBase).toBe(2_000_000_000);
+    expect(r.result?.housingPart?.isExempt).toBe(false);
+    expect(r.result?.calculationRoute?.highValueRule).toBe("above_threshold_prorated");
+    expect(r.result?.housingPart?.proratedTaxableGain).toBe(0);
+  });
+
+  it("HV-3′ 대조군(단서 — 주택 40㎡ < 상가 60㎡) — 판정도 주택분이라 12억 이하 비과세", async () => {
+    const r = (await run(
+      form({ ...low, residentialFloorArea: "40", nonResidentialFloorArea: "60" }),
+    )) as { result?: MixedResult & { housingPart?: { highValueJudgmentBase?: number } } };
+    expect(r.result?.apportionment?.wholeHousingTransferPrice).toBeLessThanOrEqual(1_200_000_000);
+    expect(r.result?.housingPart?.highValueJudgmentBase).toBeUndefined();
     expect(r.result?.housingPart?.isExempt).toBe(true);
   });
 });

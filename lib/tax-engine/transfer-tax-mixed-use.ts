@@ -393,13 +393,15 @@ export function calcMixedUseTransferTax(
    *
    * 🔑 이 분기는 **비과세가 성립할 때만** 연다(`isOneHouseExempt`). §154③은 §89①3호(비과세) 적용 조문이라
    *    비과세 요건을 못 갖춘 세대의 과세 계산(세율·장특·중과)은 종전 분리 그대로다.
-   * ⚠️ 확인 필요(범위 밖): 주택 > 상가이면서 전체 12억 **초과**인 경우 §160① 안분 분모(주택분 vs 전체) —
-   *    종전 경로(주택분 기준) 유지.
+   * ✅ L-10 — 전체 12억 **초과**면 고가주택 **판정**은 이 전체 가액(§156②·법규과-3154)이고, 12억 초과분
+   *    **산식**은 주택 부분(§160① 괄호·법규과-3156)이다 ⇒ `buildHousingPart`에 판정 가액만 따로 넘긴다.
    */
+  const mainTextWholeHouse = asset.residentialFloorArea > asset.nonResidentialFloorArea;
+  const wholeBuildingPrice = asset.totalPropertyTransferPrice ?? transferPrice;
   const wholeBuildingDeemedHouse =
     isOneHouseExempt &&
-    asset.residentialFloorArea > asset.nonResidentialFloorArea &&
-    (asset.totalPropertyTransferPrice ?? transferPrice) <= resolveHighValueHouseThreshold(transferDate);
+    mainTextWholeHouse &&
+    wholeBuildingPrice <= resolveHighValueHouseThreshold(transferDate);
   // 본문이면 토지 전부가 주택 부수토지 — 배율 한도는 건물 전체 정착면적 기준(§154④는 단서 전용).
   const excessResult = wholeBuildingDeemedHouse
     ? calcWholeBuildingExcessLand(asset, splitExcessResult.multiplier)
@@ -516,6 +518,8 @@ export function calcMixedUseTransferTax(
     surchargeLthdExcluded,
     // §155의3 상생임대 — 표2 거주요건 면제 (P5-c). 위 `exemptionReqInput`과 **같은 필드**다.
     asset.winWinRentalHouse,
+    // L-10 — §154③ 본문이면 고가 판정은 건물 전체(§156②). 단서면 미주입 → 주택분으로 판정.
+    mainTextWholeHouse ? wholeBuildingPrice : undefined,
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.

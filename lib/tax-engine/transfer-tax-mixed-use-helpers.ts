@@ -507,6 +507,8 @@ export function buildHousingPart(
    * 판정은 하지 않고 단건과 **같은 술어**(`meetsTable2ResidenceRequirement`)에 그대로 넘긴다.
    */
   winWinRentalHouse?: TransferTaxInput["winWinRentalHouse"],
+  /** L-10 — 고가 **판정** 실지거래가액(영 §154③ 본문이면 건물 전체, 영 §156②). 미주입 = 산식 분모와 같음. */
+  highValueJudgmentBase?: number,
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -529,12 +531,16 @@ export function buildHousingPart(
   // - isOneHouseExempt === false: 다주택자·요건 미충족 → 12억 비과세 미적용 (전액 과세)
   // - isOneHouseExempt === true (기본): 12억 이하 비과세 + 표2 거주공제 가능
   /**
-   * §89①3호 고가주택 판정·안분 **분모** — 「소득세법 시행령」 제156조 제1항·제2항.
+   * §89①3호 고가주택 **안분 산식 분모**(영 §160①) — 공유지분 축은 「소득세법 시행령」 제156조 제1항.
    *
    * ①은 "1주택 및 이에 딸린 토지의 일부를 양도하거나 **일부가 타인 소유인 경우**"에
    * "양도하는 부분(**타인 소유부분을 포함한다**)"의 비율로 나눈 금액으로 12억을 판정하라고 한다
-   * ⇒ 공유지분이어도 **물건 전체 기준**이다. ②는 겸용주택에서 "**주택으로 보는 부분**"의
-   * 실지거래가액으로 판정하라고 한다 ⇒ 그 전체 중 **주택분**이다.
+   * ⇒ 공유지분이어도 **물건 전체 기준**이다. §160① 괄호가 고가주택 산식에서 「주택 외의 부분은
+   * 주택으로 보지 않는다」고 하므로 산식 분모는 그 전체 중 **주택분**이다.
+   *
+   * ⚠️ **판정** 분모는 다를 수 있다(L-10) — §156②가 「제154조제3항 **본문**에 따라 주택으로 보는
+   *    부분」의 가액을 포함하라고 하므로 주택 연면적 > 주택 외 연면적이면 **건물 전체**로 판정한다
+   *    (법규과-3154 — 주택분 12억 이하·전체 13.2억을 고가주택으로 봄). 호출부가 `highValueJudgmentBase`로 준다.
    *
    * 🔴 종전에는 이 분모가 `housingTransferPrice`(= **내 지분분**)뿐이라 지분 60%면 물건 전체
    *    20억까지 12억 이하로 판정돼 **전액 비과세**가 됐다(실측: 세액 153,322,963 → 17,983,739).
@@ -545,7 +551,8 @@ export function buildHousingPart(
    */
   const highValueBase =
     apportionment.wholeHousingTransferPrice ?? apportionment.housingTransferPrice;
-  const isExempt = isOneHouseExempt && highValueBase <= HIGH_VALUE_THRESHOLD;
+  const isExempt =
+    isOneHouseExempt && (highValueJudgmentBase ?? highValueBase) <= HIGH_VALUE_THRESHOLD;
 
   // ── ① 비사업용토지 이전 (안분 전 양도차익에서 분리) ──
   const nonBizRatio = excessResult.nonBizRatio;
@@ -561,9 +568,11 @@ export function buildHousingPart(
   } else if (isExempt) {
     proratio = 0;  // 1세대1주택자 + 12억 이하: 전액 비과세
   } else {
-    // 1세대1주택자 + 12억 초과: 안분 과세.
-    // 판정과 **같은 분모**를 쓴다 — 갈라 놓으면 「12억 초과로 판정해 놓고 지분분으로 안분」이 된다.
-    proratio = (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase;
+    // 1세대1주택자 + 12억 초과: 안분 과세. 분모는 물건 전체 주택분(지분분 아님 — 「12억 초과로 판정해
+    // 놓고 지분분으로 안분」 금지). L-10: 전체로 고가 판정됐어도 주택분 ≤ 12억이면 (주택분 − 12억) ≤ 0
+    // → 0(음수 양도차익은 산식상 의미가 없다 — 직접 선례 미확보, 법규과-3154 전제 「주택분 12억 이하 비과세」와 같은 결과).
+    proratio =
+      highValueBase > HIGH_VALUE_THRESHOLD ? (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase : 0;
   }
 
   const proratedLandGain = Math.floor(Math.max(housingLandGainAfterNB, 0) * proratio);
@@ -647,6 +656,7 @@ export function buildHousingPart(
     isExempt,
     proratedTaxableGain,
     highValueBase,
+    ...(highValueJudgmentBase !== undefined ? { highValueJudgmentBase } : {}),
     longTermDeductionTable,
     longTermDeductionRate,
     longTermDeductionAmount,
