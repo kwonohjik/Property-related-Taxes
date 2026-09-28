@@ -6,7 +6,7 @@
  * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
-import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -26,7 +26,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { buildPrimaryContext } from "./transfer-tax-api-primary-context";
@@ -556,18 +556,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         declaredNewHouseDate: form.newHouseAcquisitionDate,
       }),
       }).mode;
-      const reason = effectiveProvisoReason(provisoMode, form.provisoReason);
-      return reason
-        ? {
-            oneHouseExemptionProviso: {
-              reason,
-              ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
-              ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
-              ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
-              ...(reason === "rental_registration_4ho" ? { rentalRegistration4ho: buildRental4hoPayload(form) } : {}),
-            },
-          }
-        : {};
+      // 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속)
+      return buildExemptionProvisoPayload(form, provisoMode);
     })(),
     // ⑬ OH-22 §154⑤ 단서 처분 이력 — ⑤·⑧과 같은 노출 술어(범위 밖·미답이면 키 없음)
     ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),

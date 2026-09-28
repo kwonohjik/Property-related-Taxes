@@ -924,3 +924,110 @@ test("[BT-E2E-7] 일시적 2주택 §155①2호 새 입력 → 요청 본문 tem
     wholeHouseholdMoveInDate: "2021-06-02",
   });
 });
+
+/**
+ * [BT-E2E-8] E-1 후속 — 증여 주택 주소 · §154① 단서(삭제 전 4호) · §154⑤ 단서 재기산이 요청 본문에 실린다.
+ *
+ * 주소 검색은 `/api/address/search`만 모킹한다(강남 역삼동 PNU — `transfer-regulated-auto.spec.ts`와 같은 방식).
+ * PNU가 있으면 시·군·구 코드는 PNU에서 바로 뽑으므로(`resolveSigunguCode`) 역지오코딩 호출이 없다.
+ * 증여일 2022-03-01 = 재기산 구간(2021-01-01~2022-05-09) · 4호 부칙 제38조② 구간(신청 당시 1주택 질문 노출).
+ */
+test("[BT-E2E-8] 증여 주택 주소·§154① 단서 4호·§154⑤ 재기산 → 요청 본문 regionCode·oneHouseExemptionProviso·finalOneHouseRestart", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+  await page.route("**/api/address/search**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: [
+          {
+            pnu: "1168010100107360000",
+            title: "역삼동 736",
+            road: "서울 강남구 테헤란로 152",
+            jibun: "서울 강남구 역삼동 736",
+            building: "",
+            zipcode: "",
+            lng: "",
+            lat: "",
+          },
+        ],
+      }),
+    }),
+  );
+  await page.route("**/api/address/standard-price**", (route) =>
+    route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+  );
+
+  await page.goto("/calc/gift-tax");
+  await fillDateAndVerify(page, { year: "2022", month: "3", day: "1" });
+  await page.locator("select").first().selectOption({ index: 1 });
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const dialog = await addApartmentWithDebt(page);
+  const addr = dialog.getByPlaceholder("도로명 또는 지번 주소 입력");
+  await addr.fill("역삼동 736");
+  await dialog.getByRole("button", { name: /역삼동 736/ }).click();
+  await expect(addr).toHaveValue("서울 강남구 테헤란로 152", { timeout: 15_000 });
+
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog); // 취득 2010-03-15 · 1세대 1주택 ON · 거주 120개월
+
+  // 주소가 있으면 「취득시 조정대상지역」은 토글 대신 자동 판정(2010-03-15 강남 = 지정 전)
+  await expect(dialog.getByTestId("bg-transfer-regulated-acq-auto")).toContainText("조정대상지역 아님");
+
+  // §154① 단서 — 삭제 전 4호(OH-38)
+  await dialog.getByTestId("proviso-reason-rental_4ho").click();
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, {
+    scope: dialog.getByTestId("proviso-4ho-business-date"),
+  });
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, {
+    scope: dialog.getByTestId("proviso-4ho-rental-date"),
+  });
+  await dialog.getByTestId("proviso-4ho-regulated-one-house-yes").click();
+  await dialog.getByTestId("proviso-4ho-status-maintained").click();
+  await dialog.getByTestId("proviso-4ho-during-mandatory-no").click();
+  await dialog.getByTestId("proviso-4ho-rent-over5-no").click();
+
+  // §154⑤ 단서 재기산(OH-22)
+  await dialog.getByTestId("final-house-history-yes").click();
+  await dialog.getByTestId("final-house-kind-transfer").click();
+  await fillDateAndVerify(page, { year: "2021", month: "06", day: "01" }, {
+    scope: dialog.getByTestId("final-house-date-0"),
+  });
+  await dialog.getByTestId("final-house-temp-0-no").click();
+  await expect(dialog.getByTestId("final-house-restart-preview")).toContainText("2021-06-01부터 다시 셉니다");
+
+  await dialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const transferResponse = page.waitForResponse(
+    (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: /계산하기/ }).click();
+  await transferResponse;
+
+  expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+  const body = mock.bodies[0];
+  expect(body.regionCode).toBe("1168010100");
+  expect(body.oneHouseExemptionProviso).toEqual({
+    reason: "rental_registration_4ho",
+    rentalRegistration4ho: {
+      businessRegistrationApplicationDate: "2018-06-01",
+      rentalRegistrationApplicationDate: "2018-06-01",
+      regulatedOneHouseAtApplication: true,
+      statusAtTransfer: "maintained",
+      transferredDuringMandatoryPeriod: false,
+      rentIncreaseOver5Percent: false,
+    },
+  });
+  expect(body.finalOneHouseRestart).toEqual({
+    hadOtherHouseDisposal: true,
+    disposals: [{ kind: "transfer", date: "2021-06-01", temporaryTwoHouseSpecial: false }],
+  });
+});

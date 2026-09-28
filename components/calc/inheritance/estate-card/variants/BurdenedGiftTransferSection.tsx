@@ -21,10 +21,7 @@ import { useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import {
-  DecimalInput,
-  parseDecimal,
-} from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
@@ -37,38 +34,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
-import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
-import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
+import { dateToStr, strToDate } from "./burdened-gift-dates";
+import { HousingFieldSet } from "./BurdenedGiftHousingFieldSet";
 
-// ─── helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Date → YYYY-MM-DD (DateInput 교환용).
- *
- * 🔴 IG-117 — **정변환이 버그였다.** `new Date("YYYY-MM-DD")`는 UTC 자정으로 파싱되는데
- * 종전 이 함수는 로컬 getter(`getFullYear`/`getMonth`/`getDate`)로 되돌렸다. UTC보다 서쪽
- * 타임존에서는 왕복 시 하루가 앞당겨져 취득일·종전/신규 주택 취득일이 화면에서 하루 어긋나고,
- * 사용자가 그 표시를 고치려 재입력하면 그때 잘못된 날짜가 store에 저장된다.
- * 같은 카드의 형제 파일(`BurdenedGiftValuationModeSection`)은 UTC-in/UTC-out이라
- * 한 카드 안에 두 규칙이 공존했다 ⇒ 형제와 동일하게 `toISOString().slice(0,10)`로 통일한다.
- *
- * ⚠️ 인라인 복제 3곳(아래 DateInput들)도 같은 로컬 getter를 쓰고 있었다 — 함께 이 함수로 모은다.
- */
-function dateToStr(d: Date | undefined): string {
-  return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : "";
-}
-
-/**
- * YYYY-MM-DD → Date. `toOptionalDate`는 문자열에 대해 `new Date(value)`를 그대로 실행하므로
- * 런타임 동작은 같지만, 루트 CLAUDE.md의 「신규 코드 `new Date(x)` 직접 호출 금지」 정책과
- * 형제 파일 관례에 맞춘다(단일 진입점 유지).
- */
-function strToDate(s: string): Date | undefined {
-  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
-  return toOptionalDate(s);
-}
+/** housing 전용 1세대1주택 후속 입력(E-1 후속)을 비운 patch — 주택 여부를 끌 때 함께 비운다 */
+const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
+  provisoReason: undefined,
+  provisoDepartureDate: undefined,
+  provisoExpropriationDate: undefined,
+  provisoBusinessApprovalDate: undefined,
+  provisoPreContractNoHouse: undefined,
+  proviso4hoBusinessRegDate: undefined,
+  proviso4hoRentalRegDate: undefined,
+  proviso4hoRegulatedOneHouse: undefined,
+  proviso4hoStatus: undefined,
+  proviso4hoDuringMandatory: undefined,
+  proviso4hoRentOver5: undefined,
+  proviso4hoRentOver5ContractDate: undefined,
+  proviso4hoGiftSeparated: undefined,
+  finalHouseRestartHistory: undefined,
+  finalHouseRestartDisposals: undefined,
+};
 
 /** 초기 빈 객체 — 토글 ON 시 생성 */
 function createEmptyBgt(): BurdenedGiftTransferTaxInput {
@@ -358,6 +346,8 @@ export function BurdenedGiftTransferSection({
                         wasRegulatedAtAcquisition: undefined,
                         residencePeriodMonths: undefined,
                         temporaryTwoHouse: undefined,
+                        // E-1 후속 — §154① 단서·§154⑤ 단서 재기산 (housing 전용)
+                        ...CLEARED_ONE_HOUSE_FOLLOWUPS,
                       }
                     : {}),
                 })
@@ -449,217 +439,6 @@ export function BurdenedGiftTransferSection({
   );
 }
 
-// ─── 서브 컴포넌트: Housing 필드 세트 ─────────────────────────────────────────
-
-interface HousingFieldSetProps {
-  bgt: BurdenedGiftTransferTaxInput;
-  set: (patch: Partial<BurdenedGiftTransferTaxInput>) => void;
-  referenceDate: string;
-  stdPriceLabel: string;
-  stdPriceHint: string;
-  /** 양도시(증여시) 기준시가 — item.standardPrice (평가 '보충적 평가'와 동일 필드) */
-  transferStdPrice: number | undefined;
-  onTransferStdPriceChange: (v: number | undefined) => void;
-  transferStdPriceLabel: string;
-  isLand: boolean;
-  jibun?: string;
-  item: EstateItem;
-  transferDate?: string;
-}
-
-function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item, transferDate }: HousingFieldSetProps) {
-  const householdCount = bgt.householdHousingCount ?? 1;
-  // §155①2호 새 입력(A2b · E-1) — ⑧과 같은 게이트. 두 주택 조정 여부가 기한을 바꾸는 시기에만 연다.
-  const eraGate = giftBurdenedTempTwoHouseRegulatedGate(bgt, transferDate);
-  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
-  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
-  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
-  return (
-    <div className="space-y-2">
-      {/* 취득일 */}
-      <FieldCard label="취득일 (증여자 당초 취득일)" required>
-        <DateInput
-          value={
-dateToStr(bgt.acquisitionDate)
-          }
-          onChange={(v) => {
-            const d = strToDate(v);
-            set({ acquisitionDate: d as unknown as Date });
-          }}
-          data-testid="bg-transfer-acq-date"
-        />
-      </FieldCard>
-
-      {/* 취득시 기준시가 */}
-      <FieldCard
-        label={stdPriceLabel}
-        hint={
-          acqStdInert
-            ? "실지취득가액(K-4) 모드에서는 입력하지 않아도 됩니다 — 결과(양도차익)에 영향 없음."
-            : stdPriceHint
-        }
-        required={!acqStdInert}
-      >
-        <CurrencyInput
-          label={stdPriceLabel}
-          value={bgt.standardPriceAtAcquisition > 0 ? String(bgt.standardPriceAtAcquisition) : ""}
-          onChange={(v) => set({ standardPriceAtAcquisition: parseAmount(v) || 0 })}
-          hideLabel
-          hideUnit
-          data-testid="bg-transfer-acq-stdprice"
-        />
-      </FieldCard>
-
-      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
-      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} jibun={jibun} />
-
-      {/* 기준시가 모드: 양도시 기준시가 (시가 모드에서는 ValuationModeSection 내 시가 입력으로 대체) */}
-      {!isMarketMode && (
-        <FieldCard
-          label={transferStdPriceLabel}
-          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-          required
-        >
-          <CurrencyInput
-            label={transferStdPriceLabel}
-            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-            hideLabel
-            hideUnit
-            data-testid="bg-transfer-transfer-stdprice"
-          />
-        </FieldCard>
-      )}
-
-      {/* 1세대1주택 여부 */}
-      <ToggleCard
-        tone="emerald"
-        size="sm"
-        title="1세대 1주택 (§89)"
-        description="증여자가 1세대 1주택 요건을 충족하면 ON — 비과세 판정 및 장특공제 표2 적용."
-        checked={bgt.isOneHousehold ?? false}
-        onCheckedChange={(v) =>
-          set({
-            isOneHousehold: v || undefined,
-            residencePeriodMonths: v ? bgt.residencePeriodMonths : undefined,
-          })
-        }
-        data-testid="bg-transfer-one-house"
-      />
-
-      {/* 세대 보유 주택 수 */}
-      <FieldCard label="세대 보유 주택 수 (증여자 기준)" hint="증여자 세대가 보유한 주택 수. 비과세·중과 판정용.">
-        <DecimalInput
-          value={householdCount > 0 ? String(householdCount) : "1"}
-          onChange={(v) =>
-            set({ householdHousingCount: Math.max(1, parseDecimal(v) || 1) })
-          }
-          data-testid="bg-transfer-house-count"
-        />
-      </FieldCard>
-
-      {/* 양도시 조정대상지역 */}
-      <ToggleCard
-        tone="rose"
-        size="sm"
-        title="양도시(증여일) 조정대상지역"
-        description="증여일 기준 조정대상지역이면 ON."
-        checked={bgt.isRegulatedArea ?? false}
-        onCheckedChange={(v) =>
-          set({ isRegulatedArea: v || undefined })
-        }
-        data-testid="bg-transfer-regulated"
-      />
-
-      {/* 취득시 조정대상지역 */}
-      <ToggleCard
-        tone="rose"
-        size="sm"
-        title="취득시 조정대상지역"
-        description="취득일 기준 조정대상지역이면 ON. 2017.8.3 이전 취득 시 거주요건 면제."
-        checked={bgt.wasRegulatedAtAcquisition ?? false}
-        onCheckedChange={(v) =>
-          set({ wasRegulatedAtAcquisition: v || undefined })
-        }
-        data-testid="bg-transfer-regulated-acq"
-      />
-
-      {/* 거주기간 — 1세대1주택 ON 시 노출 */}
-      {(bgt.isOneHousehold) && (
-        <FieldCard
-          label="거주기간 (개월)"
-          hint="1세대1주택 장특공제 표2 적용을 위한 거주기간 (개월 정수)."
-          required
-        >
-          <div data-testid="bg-transfer-residence">
-            <DecimalInput
-              value={bgt.residencePeriodMonths !== undefined ? String(bgt.residencePeriodMonths) : ""}
-              onChange={(v) =>
-                set({ residencePeriodMonths: Math.max(0, Math.floor(parseDecimal(v) || 0)) })
-              }
-            />
-          </div>
-        </FieldCard>
-      )}
-
-      {/* 일시적 2주택 — 세대 주택수 == 2인 경우 */}
-      {householdCount === 2 && (
-        <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/15 p-3 space-y-2">
-          <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
-            일시적 2주택 비과세 특례 (§155①)
-          </p>
-          <FieldCard label="종전 주택 취득일">
-            <DateInput
-              value={
-dateToStr(bgt.temporaryTwoHouse?.previousAcquisitionDate)
-              }
-              onChange={(v) => {
-                const d = strToDate(v);
-                set({
-                  temporaryTwoHouse: {
-                    ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate: d as unknown as Date,
-                    newAcquisitionDate:
-                      bgt.temporaryTwoHouse?.newAcquisitionDate as Date,
-                  },
-                });
-              }}
-            />
-          </FieldCard>
-          <FieldCard label="신규 주택 취득일">
-            <DateInput
-              value={
-dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
-              }
-              onChange={(v) => {
-                const d = strToDate(v);
-                set({
-                  temporaryTwoHouse: {
-                    ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate:
-                      bgt.temporaryTwoHouse?.previousAcquisitionDate as Date,
-                    newAcquisitionDate: d as unknown as Date,
-                  },
-                });
-              }}
-            />
-          </FieldCard>
-          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 이 화면엔 보유 주택 목록이 없어 선언으로 받는다. */}
-          {eraGate && bgt.temporaryTwoHouse && (
-            <TempTwoHouseRegulatedInputs
-              form={bgt.temporaryTwoHouse}
-              onChange={(d) => set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...d } })}
-              regulated={eraGate.regulated}
-              newHouseAcquisitionDate={eraGate.newAcquisitionDate}
-              hasHouseRoster={false}
-            />
-          )}
-        </div>
-      )}
-
-    </div>
-  );
-}
 
 // ─── 서브 컴포넌트: 비주택 건물 (취득일·기준시가) ──────────────────────────────
 
