@@ -31,6 +31,7 @@ import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
 import {
   giftBurdenedFinalHouseRestartInScope,
+  giftBurdenedInheritanceError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -210,6 +211,10 @@ export function validateStep(step: number, form: FormState): string | null {
           giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate),
         )[0];
         if (restartError) return `${itemLabel}: ${restartError}`;
+        // 상속받은 주택(E-1 잔여 D) — ⑤·④와 같은 slice, 판정 메뉴·계산기와 같은 규칙·문구.
+        //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400).
+        const inheritanceError = giftBurdenedInheritanceError(bgt);
+        if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
       }
       // C-4: 채무인수액(§47①) 필수 — assumedDebtForGift가 0이면 양도소득세 과세 대상 없음
       // (소득세법 §88: 유상양도 = 수증자 채무인수가 있어야 양도가액 발생)

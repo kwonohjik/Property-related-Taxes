@@ -1177,6 +1177,22 @@ export interface BurdenedGiftTransferTaxInput {
     date: string;
     temporaryTwoHouse: "" | "yes" | "no";
   }[];
+  /*
+   * ── housing 전용 — 상속받은 주택 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * 양도세 폼(`AssetForm`)과 **같은 이름·모양**이다 — ⑤는 판정 메뉴와 같은 위젯
+   * (`InheritedSameHouseholdField`)을, ④는 같은 leaf(`buildSameHouseholdInheritancePayload`)를 쓴다.
+   * 「상속받은 주택」이면 위 `acquisitionDate`가 상속개시일이다. 옛 record에는 없다(매매로 읽는다).
+   */
+  /** 증여자의 당초 취득 원인 — "inheritance"일 때만 ④가 싣는다 */
+  acquisitionCause?: "purchase" | "inheritance";
+  /** 피상속인 취득일 (YYYY-MM-DD) — 「소득세법」 §104②1호 세율 보유기간 기산 */
+  decedentAcquisitionDate?: string;
+  /** 「소득세법 시행령」 §154⑧3호 — 상속개시 당시 피상속인과 동일세대 */
+  decedentSameHouseholdBeforeInheritance?: boolean;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD) */
+  decedentCohabitationHoldingStartDate?: string;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주 개월 (정수 문자열) */
+  decedentCohabitationResidenceMonths?: string;
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

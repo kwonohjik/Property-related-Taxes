@@ -15,6 +15,11 @@
  *    전달(`toTransferFormPatch`)이 자산을 그대로 넘기므로 두 화면이 같은 사실을 본다.
  * 🔑 게이트는 ④(`buildOneHouseExemptionApiBody`)·⑧(`validateStep3`)과 같다 — 호출부가
  *    양도 대상이 주택일 때만 렌더한다(`judgmentSaleIsHousing`).
+ *
+ * 2026-09-28 E-1 잔여 D: `app/calc/one-house-exemption/steps/`에서 옮겼다(JSX·testid 그대로). 증여세
+ * 부담부증여 양도 경로(`BurdenedGiftHousingFieldSet`)도 같은 사실을 받아야 해서 같은 위젯을 쓴다 —
+ * 평행 UI를 만들지 않는다. 두 폼이 같은 이름의 필드를 가지므로 props를 그 필드만의 `Pick`으로 좁혔다
+ * (타입만 — 동작 그대로). 그 화면의 ④⑧ 게이트는 `lib/calc/gift-burdened-one-house.ts`.
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -22,13 +27,22 @@ import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { DateInput } from "@/components/ui/date-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
+/** 이 위젯이 읽고 쓰는 필드 — 판정 메뉴 `AssetForm`과 증여세 부담부증여 폼이 같은 이름으로 갖는다 */
+type InheritedHouseFields = Pick<
+  AssetForm,
+  | "decedentAcquisitionDate"
+  | "decedentSameHouseholdBeforeInheritance"
+  | "decedentCohabitationHoldingStartDate"
+  | "decedentCohabitationResidenceMonths"
+> & { acquisitionCause: AssetForm["acquisitionCause"] | undefined };
+
 type Props = {
-  asset: AssetForm;
-  onChange: (patch: Partial<AssetForm>) => void;
+  asset: InheritedHouseFields;
+  onChange: (patch: Partial<Pick<AssetForm, keyof InheritedHouseFields>> & { acquisitionCause?: "purchase" | "inheritance" }) => void;
 };
 
 /** 동일세대 통산 3필드를 비운 patch — 토글을 끌 때 남은 값이 ④로 새지 않게 한다. */
-const CLEARED_CONSOLIDATION: Partial<AssetForm> = {
+const CLEARED_CONSOLIDATION = {
   decedentSameHouseholdBeforeInheritance: false,
   decedentCohabitationHoldingStartDate: "",
   decedentCohabitationResidenceMonths: "",

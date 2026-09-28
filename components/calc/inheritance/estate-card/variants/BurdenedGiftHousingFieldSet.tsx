@@ -11,6 +11,7 @@
  *     · §155①2호 종전 주택 조정 여부도 주소로 판정(`TempTwoHouseRegulatedInputs`가 결과만 보여 준다)
  *   · §154① 단서(삭제 전 4호 OH-38 포함) — `ExemptionProvisoSection`
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
+ *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -21,6 +22,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
+import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -28,6 +30,7 @@ import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheri
 import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 import {
   giftBurdenedFinalHouseRestartInScope,
+  giftBurdenedInheritanceSlice,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -79,6 +82,10 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-acq-date"
         />
       </FieldCard>
+
+      {/* 상속받은 주택(E-1 잔여 D) — 판정 메뉴와 같은 위젯. 「위 취득일에는 상속개시일」 안내가 붙으므로
+          취득일 바로 뒤에 둔다. ④·⑧은 같은 slice(`giftBurdenedInheritanceSlice`)를 본다. */}
+      <InheritedSameHouseholdField asset={giftBurdenedInheritanceSlice(bgt)} onChange={(patch) => set(patch)} />
 
       {/* 취득시 기준시가 */}
       <FieldCard
