@@ -87,10 +87,11 @@ export function deriveColumns(
     }
     // 그 외(apt): 4열
     // apt + receive + settlementExemptionApplied=true → 청산금 열 라벨에 비과세 차감 명시
+    // (L-12 — 청산금 수령분은 종전주택 일부의 양도라 근거가 §89①**3호**다. 종전 「§89①4호」(조합원입주권)는 오기.)
     const settlementLabel =
       redevSettlementDirection === "receive" &&
       result.redevelopmentDetail?.settlementExemptionApplied === true
-        ? "③ 청산금 분 (§89①4호 비과세 차감 후)"
+        ? "③ 청산금 분 (§89①3호 비과세 차감 후)"
         : "③ 청산금 분";
     return {
       mode: "redev-4split",

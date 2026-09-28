@@ -62,6 +62,8 @@ const FULL_PAYLOAD = {
   completionDate: "2021-05-01",
   receiveOnlyMode: false,
   exemptionEligibleAtApproval: true,
+  // L-12 — 청산금분 양도일 현재 1세대1주택 자기선언
+  oneHouseAtSettlementSale: true,
   priorHouseResidenceMonths: 24,
   newHouseResidenceMonths: 12,
   priorResidenceStartDate: "2005-01-01",

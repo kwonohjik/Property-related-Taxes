@@ -29,8 +29,8 @@ import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 /**
  * §95② 단서 표2 진입의 **1세대1주택 축** — 실가·환산 경로 **공용 leaf**.
  *
- * `exemptionEligibleAtApproval === false`(인가일 기준 요건 미충족 자기선언)는 표2를 강등한다
- * (서면2016-법령해석재산-2705). `undefined`는 강등하지 않는다 — 「선언하지 않음」이지
+ * `exemptionEligibleAtApproval === false`(종전주택 보유 요건 미충족 자기선언 — 조합 제공 시까지,
+ * 부동산거래관리과-380 후단)는 표2를 강등한다. `undefined`는 강등하지 않는다 — 「선언하지 않음」이지
  * 「미충족의 적극적 선언」이 아니다.
  *
  * 🔑 2026-08-25(E2-03): 환산 경로(`redevelopment-housing-contribution.ts`)가 이 값을
@@ -193,9 +193,8 @@ export function computeRedevelopmentLthd(
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
   // ─ 사례 46 가드: exemptionEligibleAtApproval=false 시 표1 강등 ─
-  // 서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 1세대1주택 비과세 판정 시점:
-  // 보유·거주요건은 관리처분계획인가일 현재 기준. 인가일 기준 2년 미충족 시
-  // 1세대1주택 비과세 미해당 → LTHD 표2 진입 차단, 표1 강제.
+  // 부동산거래관리과-380 (2012.07.20) 후단 — 종전주택을 조합에 제공한 때까지 보유 요건 미충족이면
+  // 청산금분 1세대1주택 비과세 미해당(판정 기준일 자체는 청산금분 양도일 — L-12) → 표2 진입 차단, 표1 강제.
   // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
   const effectiveOneHouseSingle = resolveRedevEffectiveOneHouseSingle(input);
 

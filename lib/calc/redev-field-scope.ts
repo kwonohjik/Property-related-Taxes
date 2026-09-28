@@ -99,6 +99,26 @@ export function postApprovalHousingUseInScope(
 }
 
 /**
+ * 「청산금분 양도일 현재 1세대1주택」 자기선언(`redevOneHouseAtSettlementSale`)이 의미를 갖는 축인가
+ * (L-12, 2026-09-28) — ⑤ UI · ④ payload · 마이그레이션 공용.
+ *
+ * 완공APT + 청산금 **수령** + 원조합원 + **동시신고**(단독신고 아님). 단독신고는 ④가 양도일을
+ * 청산금분 양도일(소유권이전 고시일 다음날)로 맞추므로 세대 입력이 그 날의 사실이다 — 따로 묻지 않는다.
+ */
+export function settlementOneHouseAtSaleInScope(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "redevSubject"
+    | "redevSettlementDirection"
+    | "redevIsSuccessorMember"
+    | "redevReceiveOnlyMode"
+  >,
+): boolean {
+  return postApprovalHousingUseInScope(asset) && asset.redevReceiveOnlyMode !== "yes";
+}
+
+/**
  * 승계조합원 전용 「인가후 필요경비」(`redevPostApprovalExpenses`)가 의미를 갖는 축인가 (U1-02).
  *
  * 입력칸은 `asset.redevIsSuccessorMember === "yes"` 게이트 안에만 있다
@@ -147,6 +167,9 @@ export function clearOutOfScopeRedevPatch(next: AssetForm): Partial<AssetForm> {
   }
   if (!postApprovalExpensesInScope(next) && next.redevPostApprovalExpenses) {
     patch.redevPostApprovalExpenses = "";
+  }
+  if (!settlementOneHouseAtSaleInScope(next) && next.redevOneHouseAtSettlementSale) {
+    patch.redevOneHouseAtSettlementSale = "";
   }
   return patch;
 }

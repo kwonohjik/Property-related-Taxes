@@ -42,6 +42,9 @@ export const redevelopmentSchema = z
     // 사례 46 — 청산금 수령분 단독 신고
     receiveOnlyMode: z.boolean().optional(),
     exemptionEligibleAtApproval: z.boolean().optional(),
+    // ⑫ L-12 — 청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택 자기선언.
+    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거된다.
+    oneHouseAtSettlementSale: z.boolean().optional(),
     // 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계 → 신축APT 양도).
     // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
     isSuccessorMember: z.boolean().optional(),

@@ -529,6 +529,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 46 — 청산금 수령분 단독 신고
     redevReceiveOnlyMode: "",
     redevExemptionEligibleAtApproval: "",
+    redevOneHouseAtSettlementSale: "",
     // 인가일 이후 철거 전 사실상 주거용 사용 (사전-2019-법령해석재산-0739) — 표시 전용
     redevPostApprovalHousingUse: "",
     redevPostApprovalHousingUseEndDate: "",

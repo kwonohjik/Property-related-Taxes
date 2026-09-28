@@ -46,12 +46,13 @@ export function judgeRedevAptOneHouseExemption(
   /**
    * ⚠️ **청산금 「수령」 단독신고(사례 46 · `receiveOnlyMode`)만 제외한다.**
    *
-   * 단독신고의 양도 대상은 신축주택이 아니라 **종전 부동산 일부(청산금 상당분)**이고, 그 비과세
-   * 축은 「양도일 현재 신축주택」이 아니라 **「관리처분 인가일 현재 종전주택이 §89①3호가목 요건을
-   * 충족했는지」**다(서면-2016-법령해석재산-2705). 그 사실은 `exemptionEligibleAtApproval`
-   * 자기선언이 담고, 전용 규칙 `applySettlementExemption`(Step A.6)이 그 축으로 판정한다.
-   * 여기서 양도일 기준 판정을 겹치면 근거가 다른 두 규정이 충돌한다(실측: 사례 46 — 「인가일 현재
-   * 요건 미충족」 선언인데 양도일 기준으로는 충족이라 전액 비과세가 되어 안내와 계산이 어긋났다).
+   * 단독신고의 양도 대상은 신축주택이 아니라 **종전 부동산 일부(청산금 상당분)**이고, 그 비과세는
+   * 신축주택 판정이 아니라 **청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택 + 종전주택을
+   * 조합에 제공한 때까지의 보유 요건**으로 내린다(부동산거래관리과-380 · 사전-2022-법규재산-1282).
+   * 보유 요건은 `exemptionEligibleAtApproval` 자기선언이 담고, 전용 규칙 `applySettlementExemption`
+   * (Step A.6)이 판정한다. 여기서 신축주택 보유기간으로 판정을 겹치면 근거가 다른 두 규정이 충돌한다
+   * (실측: 사례 46 — 「보유 요건 미충족」 선언인데 신축주택 기준으로는 충족이라 전액 비과세가 되어
+   * 안내와 계산이 어긋났다).
    *
    * 🔴 **종전에는 청산금 수령 「동시신고」(사례 47)까지 함께 제외했다** (2026-09-26 · OH-19).
    *    게이트가 `settlementDirection !== "receive"`라 `receiveOnlyMode`를 보지 않았다. 동시신고의
@@ -59,8 +60,9 @@ export function judgeRedevAptOneHouseExemption(
    *    같이 양도일 현재 §89①3호가목·시행령 §154① 요건으로 판정해야 한다. 판정을 건너뛰자
    *    12억 이하는 신축주택분이 전액 과세되고(실측 10억 54,351,000 · 12억 71,071,000), 12억 초과는
    *    요건 확인 없이 §95③ 안분이 걸렸다(§95③의 대상은 「제89조제1항제3호에 따라 비과세대상에서
-   *    제외되는 고가주택」뿐이다). 청산금분은 여전히 `applySettlementExemption`이 인가일 축으로
-   *    판정한다 — `applyAptOneHouseExemption`이 수령 방향에서는 청산금 분기를 건드리지 않는다.
+   *    제외되는 고가주택」뿐이다). 청산금분은 여전히 `applySettlementExemption`이 청산금분 양도일
+   *    축으로 판정한다(L-12) — `applyAptOneHouseExemption`·신축주택 12억 안분이 수령 방향에서는
+   *    청산금 분기를 건드리지 않는다.
    */
   if (redev.settlementDirection === "receive" && redev.receiveOnlyMode === true) {
     return { exemptionResult: undefined, houseCountExclusion: undefined };

@@ -254,7 +254,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
              입력 경로가 없으므로(④ `one-house-exemption-api.ts:208`이 `assetKind ===
              "right_to_move_in"`일 때만 `oneRightExemptionFacts`를 보낸다) 계산기가 계속
              소유한다 — 그래서 축으로 가른다. `redev-field-scope.ts` 참조. */}
-      {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && isOneHouseSingle && (
+      {/* L-12 — 동시신고에서 청산금분 양도일이 양도일과 다르면 세대 입력(신축주택 양도일 기준)이
+          1주택이 아니어도 청산금분은 그 날 1주택일 수 있다 → 그때도 카드를 연다. */}
+      {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" &&
+        (isOneHouseSingle ||
+          (asset.redevReceiveOnlyMode !== "yes" &&
+            !!asset.redevSettlementSaleDate &&
+            !!transferDate &&
+            asset.redevSettlementSaleDate !== transferDate)) && (
         <ExemptionAtApprovalCard asset={asset} onChange={onChange} />
       )}
 

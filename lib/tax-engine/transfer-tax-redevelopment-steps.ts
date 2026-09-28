@@ -22,6 +22,11 @@ import {
   applyRental97LthdSpecial,
 } from "./transfer-tax-redevelopment-transforms";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
+import {
+  resolveOneHouseAtSettlementSale,
+  settlementHighValueThreshold,
+  SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING,
+} from "./transfer-tax-redevelopment-settlement";
 import { usesTable2 } from "./redevelopment-lthd";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
@@ -93,7 +98,7 @@ export function runRedevelopmentGainSteps(
     );
     const exemptScope =
       input.redevelopment!.settlementDirection === "receive"
-        ? "신축주택분(인가전 분·인가후 기존건물분) 비과세 — 청산금 수령분은 인가일 기준으로 별도 판정"
+        ? "신축주택분(인가전 분·인가후 기존건물분) 비과세 — 청산금 수령분은 청산금분 양도일 기준으로 별도 판정"
         : "전액 비과세";
     steps.push({
       label: "1세대1주택 비과세",
@@ -143,9 +148,18 @@ export function runRedevelopmentGainSteps(
   //      안분(`applyHighValueAllocation`)도 같은 양도일로 풀지 않으면 과거 양도분에서
   //      `taxableRatio`가 음수가 된다.
   const highValueThreshold = resolveHighValueHouseThreshold(input.transferDate);
+  /**
+   * 🔴 **완공APT 청산금 수령 방향은 청산금분을 여기서 안분하지 않는다** (L-12, 2026-09-28).
+   * 청산금분은 종전주택 일부의 양도로 권리가격·청산금분 양도일 기준으로 Step A.6이 따로 판정한다
+   * (서면-2016-법령해석재산-2705 질의2). 단독신고(`receiveOnlyMode`)는 신축주택분이 없어
+   * 이 단계 자체가 대상이 아니다 — 종전에는 청산금 수령액(= 단독신고의 양도가액)으로 12억을 쟀다.
+   */
+  const settlementJudgedSeparately =
+    input.redevelopment!.subject === "apt" && input.redevelopment!.settlementDirection === "receive";
   const isHighValue = aptExemption
     ? aptExemption.isPartialExempt === true
     : input.redevelopment!.subject !== "right" &&
+      input.redevelopment!.receiveOnlyMode !== true &&
       isOneHouseSingle &&
       highValueBase > highValueThreshold;
   const allocated: RedevelopmentResult = isHighValue
@@ -154,6 +168,7 @@ export function runRedevelopmentGainSteps(
         highValueBase,
         input.redevelopment!,
         input.transferDate,
+        settlementJudgedSeparately,
       )
     : redevAfterExemption;
 
@@ -164,33 +179,67 @@ export function runRedevelopmentGainSteps(
       formula: (() => {
         const baseLabel =
           highValueBase === input.transferPrice ? "양도가액" : "증여가액";
-        return `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (${baseLabel} ${highValueBase.toLocaleString()} - ${formatHighValueThresholdLabel(highValueThreshold)}) / (${baseLabel} ${highValueBase.toLocaleString()}) = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`;
+        // 수령 방향은 신축주택분만 안분한다(청산금분은 Step A.6) — 산식이 자기 값을 만들도록 같은 합을 적는다.
+        const gainLabel = settlementJudgedSeparately
+          ? `신축주택분 양도차익 ${(redevRaw.preApproval.gain + redevRaw.postApprovalExistingHouse.gain).toLocaleString()}`
+          : `전체 양도차익 ${redevRaw.total.gain.toLocaleString()}`;
+        return `${gainLabel} × (${baseLabel} ${highValueBase.toLocaleString()} - ${formatHighValueThresholdLabel(highValueThreshold)}) / (${baseLabel} ${highValueBase.toLocaleString()}) = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`;
       })(),
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });
   }
 
-  // ─ Step A.6: 사례 47 settlement 분기 1세대1주택 비과세 차감 ─
-  // 트리거: settlementDirection="receive" + exemptionEligibleAtApproval=true
-  //         + rightsValue ≤ 12억 + receiveOnlyMode !== true + isOneHouseSingle=true
-  // 근거: PDF 사례수정 2 (2)-1번 주석 + 서면2016-법령해석재산-2705
+  // ─ Step A.6: 완공APT 청산금 수령분 1세대1주택 비과세·고가 안분 (L-12) ─
+  // 판정: 청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택 + 조합 제공 시까지 보유 요건
+  //       (부동산거래관리과-380 · 사전-2022-법규재산-1282). 고가 여부는 권리가격, 고가면 §160① 안분
+  //       (서면-2016-법령해석재산-2705 질의2). 단독신고·동시신고 모두 대상.
   const redev: RedevelopmentResult = applySettlementExemption(
     allocated,
     input.redevelopment!,
+    input,
     isOneHouseSingle,
   );
+  const settlementThresholdLabel = formatHighValueThresholdLabel(settlementHighValueThreshold(input));
+  const settlementSaleDateLabel = (input.redevelopment!.settlementSaleDate ?? input.transferDate)
+    .toISOString()
+    .slice(0, 10);
 
   if (redev.settlementExemptionApplied) {
     const exemptedGain = redev.exemptedGain ?? 0;
     const exemptedLthd = redev.exemptedLthd ?? 0;
     steps.push({
       label: "청산금 수령분 1세대1주택 비과세 차감",
-      formula: `안분 후 양도차익 ${exemptedGain.toLocaleString()} + LTHD ${exemptedLthd.toLocaleString()} 합산 제외 (인가일 평가액 ${input.redevelopment!.rightsValue.toLocaleString()} ≤ 12억 + 1세대1주택 비과세 요건 충족 — 서면2016-법령해석재산-2705)`,
+      formula:
+        `양도차익 ${exemptedGain.toLocaleString()} + 장기보유특별공제 ${exemptedLthd.toLocaleString()} 합산 제외 ` +
+        `(청산금분 양도일 ${settlementSaleDateLabel} 현재 1세대1주택 + 종전주택 보유 요건 충족 · ` +
+        `권리가액 ${input.redevelopment!.rightsValue.toLocaleString()} ≤ ${settlementThresholdLabel} — ` +
+        `${REDEVELOPMENT.REDEV_SETTLEMENT_ONE_HOUSE_RULING} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_RULING})`,
       amount: -(exemptedGain - exemptedLthd),
-      legalBasis: REDEVELOPMENT.GAIN_BASE,
+      legalBasis: REDEVELOPMENT.ONE_HOUSE_REQUIREMENT,
     });
   }
+  if (redev.settlementHighValueAllocation) {
+    const sh = redev.settlementHighValueAllocation;
+    steps.push({
+      label: `청산금 수령분 ${settlementThresholdLabel} 초과 과세대상 양도차익 안분`,
+      formula:
+        `청산금분 양도차익 ${sh.gainBeforeAllocation.toLocaleString()} ` +
+        `× (권리가액 ${sh.rightsValue.toLocaleString()} - ${settlementThresholdLabel}) / (권리가액 ${sh.rightsValue.toLocaleString()}) ` +
+        `= ${sh.taxableGain.toLocaleString()} ` +
+        `(비과세분 ${sh.nontaxableGain.toLocaleString()}) — 청산금분 양도일 ${settlementSaleDateLabel} 현재 1세대1주택 · ` +
+        `${REDEVELOPMENT.REDEV_SETTLEMENT_HIGH_VALUE_RULING}`,
+      amount: sh.taxableGain,
+      legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
+    });
+  }
+  // 판정 불가(청산금분 양도일 ≠ 양도일 + 그 날 1주택 여부 미입력) — 비과세 미적용을 알린다.
+  const settlementWarning =
+    settlementJudgedSeparately &&
+    input.redevelopment!.exemptionEligibleAtApproval === true &&
+    resolveOneHouseAtSettlementSale(input, isOneHouseSingle) === undefined
+      ? SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING
+      : undefined;
 
   // ─ Step A.7: 사례 36 §89①4호 가목 1세대1입주권 비과세 게이트 ─
   // 트리거: subject="right" + exemptionEligibleAtApproval=true + householdHousingCount=0
@@ -361,5 +410,5 @@ export function runRedevelopmentGainSteps(
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });
   }
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special };
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning };
 }

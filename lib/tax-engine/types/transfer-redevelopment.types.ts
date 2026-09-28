@@ -292,9 +292,12 @@ export interface RedevelopmentInfo {
   /**
    * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부.
    *
-   * 서면2016-법령해석재산-2705 (2016.09.12):
-   *   - 보유주택수: 양도일 현재 기준 (§154①)
-   *   - 보유·거주요건: 관리처분계획인가일 현재 기준 (해석례)
+   * 청산금 수령분(완공APT)에서는 **종전주택을 조합에 제공한 때까지의 보유(거주) 요건**이다
+   * (부동산거래관리과-380 후단 — 「3년 미만 보유하던 종전주택을 당해 조합에 제공한 경우 …
+   * 요건을 충족하지 아니하여」). 1세대1주택(주택 수) 판정은 **청산금분 양도일 현재**이고
+   * (380 전단 · 사전-2022-법규재산-1282) 아래 `oneHouseAtSettlementSale`이 담는다.
+   * ⚠️ 종전 주석은 이 축의 근거를 서면2016-법령해석재산-2705로 적었으나 그 회신은 380을 인용할
+   *    뿐이고 원문은 「양도일 현재」다(2026-09-28 정정 · L-12).
    *
    * false 시:
    *   - LTHD 표1 강제 (표2 진입 차단)
@@ -306,6 +309,20 @@ export interface RedevelopmentInfo {
    * 사례 46: 자동 판정 false (1년 2개월 < 2년).
    */
   exemptionEligibleAtApproval?: boolean;
+
+  /**
+   * **청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택인가** — 자기선언 (L-12, 2026-09-28).
+   *
+   * 완공APT + 청산금 수령 **동시신고** 전용. 세대 입력(`householdHousingCount` 등)은 **신축주택
+   * 양도일**의 사실이라, 청산금분 양도일(`settlementSaleDate`)이 그와 다르면 그 날의 주택 수를
+   * 알 수 없다(사전-2022-법규재산-1282 — 이전고시 당시 입주권으로 받은 신축 2채를 함께 소유 →
+   * §154① 불가).
+   *
+   * - `undefined` + 두 날이 같다 → 세대 입력으로 판정(종전 동작)
+   * - `undefined` + 두 날이 다르다 → 판정 불가: 청산금분 비과세 미적용 + 경고
+   * 판정: `resolveOneHouseAtSettlementSale` (`transfer-tax-redevelopment-settlement.ts`).
+   */
+  oneHouseAtSettlementSale?: boolean;
 
   /**
    * 인가일 기준 종전주택 보유 월수 (C-1 안전장치 a — 자동 검증용).
@@ -650,10 +667,12 @@ export interface RedevelopmentResult {
   };
 
   /**
-   * 사례 47 — 청산금 수령 동시신고 settlement 분기 비과세 차감 적용 여부.
+   * 완공APT 청산금 **수령분** 전액 비과세 적용 여부 (사례 47 동시신고 · 사례 46 단독신고).
    *
-   * 트리거 (AND): settlementDirection === "receive" AND exemptionEligibleAtApproval === true
-   *   AND rightsValue ≤ 12억 AND receiveOnlyMode !== true AND isOneHouseSingle === true.
+   * 트리거 (AND · L-12 2026-09-28 개정): subject === "apt" AND settlementDirection === "receive"
+   *   AND exemptionEligibleAtApproval === true AND 청산금분 양도일 현재 1세대1주택
+   *   AND rightsValue ≤ 기준금액(청산금분 양도일 시점 — 6억·9억·12억).
+   *   권리가액이 기준금액을 넘으면 이 플래그 대신 `settlementHighValueAllocation`.
    *
    * true 시:
    *   - settlement.gain → 0 (마스킹, totalGain 재계산용)
@@ -663,10 +682,30 @@ export interface RedevelopmentResult {
    *   - exemptedGain = settlement.gainAfterAllocation (별도 메타)
    *   - exemptedLthd = settlement.lthdAfterAllocation (별도 메타)
    *
-   * 사례 46(receiveOnlyMode=true)·44/45(pay 모드)에서는 undefined.
-   * 근거: 서면2016-법령해석재산-2705 + PDF 사례수정 2 (2)-1번 주석.
+   * 44/45(pay 모드)·입주권에서는 undefined.
+   * 근거: 부동산거래관리과-380 · 사전-2022-법규재산-1282 · 서면-2016-법령해석재산-2705 +
+   *       PDF 사례수정 2 (2)-1번 주석.
    */
   settlementExemptionApplied?: boolean;
+
+  /**
+   * 청산금 수령분 **고가주택 안분** — 권리가격(§166④1호)이 청산금분 양도일의 기준금액을 넘을 때
+   * (서면-2016-법령해석재산-2705 질의2 · 부동산납세과-1850 → 「소득세법」 §95③ · 시행령 §160①).
+   *
+   * 청산금분 과세대상 양도차익 = 청산금분 양도차익 × (권리가격 − 기준금액) ÷ 권리가격.
+   * **신축주택의 안분 비율과 무관**하다(L-12). `settlement.gainBeforeAllocation`·`nontaxableGain`도
+   * 함께 채워 신고서 비과세 행이 그대로 읽는다.
+   */
+  settlementHighValueAllocation?: {
+    rightsValue: number;
+    /** 청산금분 양도일 시점 기준금액 */
+    threshold: number;
+    /** (권리가격 − 기준금액) ÷ 권리가격 (float, 표시용 — 계산은 정수 분수연산) */
+    taxableRatio: number;
+    gainBeforeAllocation: number;
+    taxableGain: number;
+    nontaxableGain: number;
+  };
 
   /**
    * 사례 47 비과세로 차감된 양도차익 (= settlement.gainAfterAllocation).

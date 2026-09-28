@@ -316,6 +316,33 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
         );
       })()}
+      {/* L-12 — 청산금 수령분 권리가액 기준 고가주택 안분(§95③·시행령 §160①). 신축주택 안분과 따로 표시한다. */}
+      {!isRightSubject && detail.settlementHighValueAllocation && (() => {
+        const sva = detail.settlementHighValueAllocation;
+        const thresholdLabel = formatHighValueThresholdLabel(sva.threshold);
+        return (
+          <div
+            data-testid="redev-settlement-high-value"
+            className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1"
+          >
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§95③·시행령 §160①</span>
+              <span className="font-semibold">청산금 수령분 고가주택 {thresholdLabel} 초과 안분</span>
+            </div>
+            <p className="text-amber-800">
+              청산금 수령분은 종전주택 일부의 양도로 보아 권리가액으로 고가주택 여부를 판정합니다. 권리가액이{" "}
+              {thresholdLabel}(청산금분 양도일 기준)을 초과하므로 청산금분 양도차익 × <Frac top={`권리가액 − ${thresholdLabel}`} bottom="권리가액" />만 과세합니다
+              (서면-2016-법령해석재산-2705 · 부동산납세과-1850).
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+              <Row label="권리가액" value={sva.rightsValue} />
+              <Row label="비과세 기준" value={sva.threshold} />
+              <Row label="청산금분 양도차익 (안분 전)" value={sva.gainBeforeAllocation} />
+              <Row label="과세대상 양도차익 (안분 후)" value={sva.taxableGain} highlight />
+            </div>
+          </div>
+        );
+      })()}
       {/* 🔴 OH-44 — 전액 비과세(§89①3호가목)면 「전체 과세」 박스 대신 비과세를 알린다. 종전에는 이 플래그를
              읽지 않아 상단 「납부세액 0」 아래에 「분기별 양도차익 전체가 과세대상」이 함께 떴다. */}
       {!isRightSubject && aptOneHouseExemptionApplied && (
@@ -329,12 +356,12 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           <p className="text-emerald-800">
             {settlementDirection === "receive"
-              ? "신축주택분(인가전 분 · 인가후 기존건물분) 양도차익이 비과세됩니다. 청산금 수령분은 관리처분계획 인가일 현재 종전주택 기준으로 따로 판정합니다 (서면-2016-법령해석재산-2705)."
+              ? "신축주택분(인가전 분 · 인가후 기존건물분) 양도차익이 비과세됩니다. 청산금 수령분은 종전주택 일부의 양도로 청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택 여부와 권리가액으로 따로 판정합니다 (부동산거래관리과-380 · 사전-2022-법규재산-1282 · 서면-2016-법령해석재산-2705)."
               : "1세대1주택 비과세 요건을 충족하고 양도가액이 고가주택 기준 이하이므로 3분기 양도차익 전체가 비과세됩니다."}
           </p>
         </div>
       )}
-      {!isRightSubject && !highValueAllocation && !successorMemberApplied && !aptOneHouseExemptionApplied && (
+      {!isRightSubject && !highValueAllocation && !successorMemberApplied && !aptOneHouseExemptionApplied && !detail.settlementExemptionApplied && !detail.settlementHighValueAllocation && (
         <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-micro font-bold text-sky-800">일반 과세</span>
@@ -567,9 +594,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               </div>
             </>
           ) : detail.settlementExemptionApplied ? (
-            // 사례 47 — 옵션 B 4행 분해 시각화 (안분 후 → LTHD → 비과세 차감 → 결과 0)
+            // 사례 47·46 — 4행 분해 (양도차익 → LTHD → 비과세 차감 → 결과 0). L-12: 신축주택 안분 미적용
             <>
-              <Row label="양도차익 (안분 후)" value={settlement.gainAfterAllocation ?? 0} />
+              <Row label="양도차익" value={settlement.gainAfterAllocation ?? 0} />
               <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
                 장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
               </p>
@@ -580,7 +607,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                   value={-((settlement.gainAfterAllocation ?? 0) - (settlement.lthdAfterAllocation ?? 0))}
                 />
                 <p className="text-micro text-rose-700 mt-0.5">
-                  PDF 사례수정 2 (2)-1번 · 서면2016-법령해석재산-2705 — 양도소득금액 합산 제외
+                  청산금분 양도일 현재 1세대1주택 · 권리가액 ≤ 고가주택 기준금액 — 부동산거래관리과-380 · 사전-2022-법규재산-1282 — 양도소득금액 합산 제외
                 </p>
               </div>
               <Row label="과세 양도소득금액" value={0} highlight />
