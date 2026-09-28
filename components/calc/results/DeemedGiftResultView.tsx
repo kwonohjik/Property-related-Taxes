@@ -619,7 +619,7 @@ export function DeemedGiftResultView({
           <p className="mt-2 text-caption text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
           {/* 수증자는 각자 독립 납세의무자 ⇒ 이관 대상 1명 선택. 목록 기준 = prefill과 같은 `applied` */}
           {mergerTaxable.length > 1 && (
-            <div className="mt-3 rounded-md border border-emerald-200 bg-white/60 p-3" data-testid="mrg-donee-select">
+            <div className="mt-3 rounded-md border border-emerald-200 bg-white/60 dark:bg-white/5 p-3" data-testid="mrg-donee-select">
               <p className="text-sm font-semibold text-emerald-800">증여세 계산 대상 수증자 선택</p>
               <select
                 value={selectedDoneeIndex}
