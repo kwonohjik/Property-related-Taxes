@@ -576,11 +576,18 @@ export interface MixedUseHousingPart {
    */
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
   /**
-   * OH-61 — 12억 초과 판정·안분에 **실제로 쓴 분모**(공유지분이면 물건 전체 주택분 — 영 §156①).
+   * OH-61 — 12억 초과 **안분 산식**(영 §160①)에 **실제로 쓴 분모**(공유지분이면 물건 전체 주택분 — 영 §156①).
    * 산식 표시 전용 echo(세액 불변). 표시가 `housingTransferPrice`로 다시 만들면 지분·요건 미충족에서
    * 값과 산식이 어긋난다. 비과세 미적용·12억 이하 여부는 `calculationRoute.highValueRule`이 정본이다.
+   * 판정 분모가 이와 다를 때(아래 `highValueJudgmentBase`)는 판정이 아니라 **산식 전용**이다.
    */
   highValueBase?: number;
+  /**
+   * L-10 — 고가주택 **판정**에 쓴 실지거래가액 — 주택 연면적 > 주택 외 연면적(영 §154③ **본문**)일 때만 존재.
+   * 영 §156②가 「제154조제3항 본문에 따라 주택으로 보는 부분」을 포함하라고 하므로 **건물 전체**
+   * (공유지분이면 물건 전체 — 영 §156①)다. 단서(주택 ≤ 주택 외)면 undefined — 판정 분모 = `highValueBase`.
+   */
+  highValueJudgmentBase?: number;
 }
 
 /** 상가부분 계산 결과 */
@@ -795,7 +802,7 @@ export interface MixedUseCalculationRoute {
   /**
    * 12억 비과세 적용 결과
    * - below_threshold_exempt: 1세대1주택자 + 12억 이하 → 비과세
-   * - above_threshold_prorated: 1세대1주택자 + 12억 초과 → 안분 과세
+   * - above_threshold_prorated: 1세대1주택자 + 12억 초과 → 안분 과세 (L-10: 주택분 ≤ 12억이면 안분 결과 0)
    * - non_one_house_full_taxation: 다주택자 등 1세대1주택 미적용 → 전액 과세
    */
   highValueRule: "below_threshold_exempt" | "above_threshold_prorated" | "non_one_house_full_taxation";

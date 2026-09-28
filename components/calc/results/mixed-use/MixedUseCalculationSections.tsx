@@ -17,6 +17,7 @@
 
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
@@ -342,6 +343,7 @@ export function MixedUseCalculationSections({
           OH-61 — 이 행은 엔진이 **실제로 쓴** 규칙·분모를 읽는다(재도출 금지):
             · 비과세 미적용(`non_one_house_full_taxation`) — 안분 없이 전액이 과세대상이다.
             · 12억 초과 안분 — 분모는 엔진 echo `highValueBase`(공유지분이면 물건 전체 주택분, 영 §156①).
+            · L-10 — 판정 분모가 다르면 엔진 echo `highValueJudgmentBase`(건물 전체, 영 §156②)를 따로 그린다.
         */}
         {h.isExempt ? (
           <Row label="12억 이하 → 전액 비과세" value="0" />
@@ -360,24 +362,39 @@ export function MixedUseCalculationSections({
             const base = h.highValueBase ?? a.housingTransferPrice;
             const baseLabel =
               a.wholeHousingTransferPrice !== undefined ? "물건 전체 주택분 양도가액" : "주택 양도가액";
+            // L-10 — 판정(건물 전체, 영 §156②)과 산식(주택 부분, 영 §160① 괄호)의 분모가 다르면 판정 행을 먼저 그린다.
+            const judged = h.highValueJudgmentBase;
             return (
-              <Row
-                label="12억 초과 안분 후 과세대상 양도차익"
-                value={fmt(h.proratedTaxableGain)}
-                formula={
-                  <FLine>
-                    (주택 양도차익 {fmtPlain(h.transferGain)}
-                    {h.nonBusinessTransferredGain > 0
-                      ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
-                      : ""}
-                    ) ×{" "}
-                    <Frac
-                      top={`${baseLabel} ${fmtPlain(base)} - 12억`}
-                      bottom={`${baseLabel} ${fmtPlain(base)}`}
-                    />
-                  </FLine>
-                }
-              />
+              <>
+                {judged !== undefined && (
+                  <Row
+                    label="고가주택 판정 — 건물 전체 실지거래가액"
+                    value={fmt(judged)}
+                    formula={`주택 연면적 > 주택 외 연면적 → 주택 외 부분 포함 12억 초과 → 고가주택 (${MIXED_USE.HIGH_VALUE_WHOLE_BUILDING})`}
+                  />
+                )}
+                <Row
+                  label="12억 초과 안분 후 과세대상 양도차익"
+                  value={fmt(h.proratedTaxableGain)}
+                  formula={
+                    base <= 1_200_000_000 ? (
+                      `${baseLabel} ${fmtPlain(base)} ≤ 12억 → 12억 초과분 없음 — 산식은 주택 부분만 (${MIXED_USE.HIGH_VALUE_FORMULA_HOUSING_ONLY})`
+                    ) : (
+                      <FLine>
+                        (주택 양도차익 {fmtPlain(h.transferGain)}
+                        {h.nonBusinessTransferredGain > 0
+                          ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                          : ""}
+                        ) ×{" "}
+                        <Frac
+                          top={`${baseLabel} ${fmtPlain(base)} - 12억`}
+                          bottom={`${baseLabel} ${fmtPlain(base)}`}
+                        />
+                      </FLine>
+                    )
+                  }
+                />
+              </>
             );
           })()
         )}

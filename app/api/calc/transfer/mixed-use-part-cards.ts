@@ -118,6 +118,11 @@ export function buildMixedUsePartCards(
    *      비사토가 있으면 그만큼 분모가 작아져 안분율이 달라진다.
    *
    *   ⇒ 단일 소스는 `apportionment`다.
+   *
+   * ⚠️ L-10 — 엔진의 고가 **판정**은 §154③ 본문이면 건물 전체(`highValueJudgmentBase`)지만 카드에는
+   *    **산식 분모**(주택분)를 싣는다. 일반 엔진은 이 한 값으로 판정과 안분을 겸하므로(`calcOneHouseProration`)
+   *    전체를 실으면 §160① 괄호에 반해 전체로 안분된다. 주택분 ≤ 12억 < 전체면 엔진도 산식 0이라 세액은 같다
+   *    (anchor `one-house-l10-…` ⑦).
    */
   const housingTotalSplit =
     r.apportionment.wholeHousingTransferPrice ?? r.apportionment.housingTransferPrice;

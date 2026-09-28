@@ -169,7 +169,23 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.EXPENSIVE_HOUSE_GAIN",
     citation: "소득세법 시행령 §160",
-    keywords: ["고가주택에 대한 양도차익등의 계산", "12억원", "안분계산"],
+    keywords: [
+      "고가주택에 대한 양도차익등의 계산",
+      "12억원",
+      "안분계산",
+      // ① 괄호 — 겸용 고가주택 산식은 주택 부분만(L-10, MST 286211 실독 2026-09-28)
+      "주택 외의 부분은 주택으로 보지 않는다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // L-10 — 겸용주택(주택 연면적 > 주택 외) 고가 판정은 건물 전체(MST 286211 실독 2026-09-28)
+    id: "TRANSFER_DECREE.EXPENSIVE_HOUSE_SCOPE",
+    citation: "소득세법 시행령 §156",
+    keywords: [
+      "고가주택의 범위",
+      "제154조제3항 본문에 따라 주택으로 보는 부분(이에 부수되는 토지를 포함한다)에 해당하는 실지거래가액을 포함한다",
+    ],
     keywordMode: "ALL",
   },
   {
