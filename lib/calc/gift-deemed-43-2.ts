@@ -9,6 +9,7 @@
  * 「선행 이익 합계」 칸을 쓴다 — 수증자별로 금액기준을 따로 판정하기 때문이다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/deemed-form-state";
 import type { ScPriorTxRow } from "@/components/calc/deemed-gift/deemed-form-rows";
 import type { SameClauseGainItem } from "@/lib/tax-engine/gift-deemed/same-clause-43-2";
@@ -18,7 +19,9 @@ export type SameClauseRowsKey =
   | "mrgPriorSameClauseRows"
   | "cdPriorSameClauseRows"
   | "conPriorSameClauseRows"
-  | "cbPriorSameClauseRows";
+  | "cbPriorSameClauseRows"
+  | "freePriorSameClauseRows"
+  | "psuPriorSameClauseRows";
 
 /** ⑧ 오류 문구의 명사 — 「선행 합병 1의 증여일을 입력하세요」 */
 export const SAME_CLAUSE_ITEM: Record<SameClauseRowsKey, string> = {
@@ -27,6 +30,8 @@ export const SAME_CLAUSE_ITEM: Record<SameClauseRowsKey, string> = {
   cdPriorSameClauseRows: "선행 감자",
   conPriorSameClauseRows: "선행 현물출자",
   cbPriorSameClauseRows: "선행 전환사채등 거래",
+  freePriorSameClauseRows: "선행 부동산 무상사용·담보",
+  psuPriorSameClauseRows: "선행 재산사용·용역",
 };
 
 /**
@@ -36,6 +41,8 @@ export const SAME_CLAUSE_ITEM: Record<SameClauseRowsKey, string> = {
  * - §39의2 감자: 단일 경로 — 멀티는 행 칸.
  * - §39의3 현물출자: 고가(2호) + 명부 없음 — 저가(1호)는 금액기준이 없다(영 §29의3②).
  * - §40 전환사채: 라목(conversion_reverse) 외 — 라목은 기준 0원(영 §30②3).
+ * - §37 부동산 무상사용·담보: 전부(영 §27④ 1억·⑥ 1천만원) — 다기간이면 첫 기간(당해 증여) 판정에만 닿는다.
+ * - §42 재산사용·용역: 무상만(영 §32②1호 1천만원) — 저가·고가는 시가 30% 상당액뿐이라 정책 (a)상 없음.
  */
 export function activeSameClauseRowsKey(form: DeemedFormState): SameClauseRowsKey | null {
   switch (form.type) {
@@ -49,6 +56,10 @@ export function activeSameClauseRowsKey(form: DeemedFormState): SameClauseRowsKe
       return form.conCaseType === "high" && form.conParties === undefined ? "conPriorSameClauseRows" : null;
     case "convertible_bond":
       return form.cbCaseType !== "conversion_reverse" ? "cbPriorSameClauseRows" : null;
+    case "free_realestate":
+      return "freePriorSameClauseRows";
+    case "property_service_use":
+      return form.psuSubType === "free_use" ? "psuPriorSameClauseRows" : null;
     default:
       return null;
   }
@@ -63,6 +74,15 @@ export function sameClauseGainsFor(form: DeemedFormState, key: SameClauseRowsKey
     gain: parseAmount(r.benefit),
     ...(r.label.trim() ? { label: r.label.trim() } : {}),
   }));
+}
+
+/**
+ * ④ — 단일 경로의 선행 이익 표가 활성이고 행이 있으면 증여일(윈도 기준)과 함께 싣는다.
+ * 활성 조건은 ⑤·⑧과 같은 술어다. 윈도 판정은 엔진이 한다.
+ */
+export function sameClauseFields(form: DeemedFormState, key: SameClauseRowsKey) {
+  const priorSameClauseGains = sameClauseGainsFor(form, key);
+  return priorSameClauseGains ? { giftDate: toOptionalDate(form.giftDate || undefined), priorSameClauseGains } : {};
 }
 
 /** ④ — 명부·매트릭스 행의 「선행 이익 합계」 칸. 0·빈 칸은 보내지 않는다 */

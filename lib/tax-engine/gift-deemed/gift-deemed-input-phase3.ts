@@ -1,3 +1,4 @@
+import type { SameClauseGainItem } from "./same-clause-43-2";
 import type { DonorRelation } from "../types/inheritance-gift-deduction.types";
 
 /**
@@ -172,6 +173,10 @@ export interface PropertyServiceUseInput {
   subType: "free_use" | "low_price" | "high_price"; // §32① 1·2·3호
   marketValue: number; // 시가 (무상=시가상당액, 저가/고가=시가)
   consideration?: number; // 대가 (저가·고가)
+  /** 증여일 — §43² 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 10호 — 1년 이내 같은 호 선행 이익. 무상(1천만원 기준)에서만 읽는다 */
+  priorSameClauseGains?: SameClauseGainItem[];
 }
 
 /** §42의2 법인 조직변경 */

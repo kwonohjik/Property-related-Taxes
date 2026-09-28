@@ -25,16 +25,8 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 import { buildPhase3DeemedInput } from "./gift-deemed-api-phase3";
 import { commonForProfitDoneeGateApplies } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
-import { sameClauseGainsFor, rowPriorSameClauseGain, type SameClauseRowsKey } from "./gift-deemed-43-2";
+import { sameClauseGainsFor, rowPriorSameClauseGain, sameClauseFields } from "./gift-deemed-43-2";
 
-/**
- * §43² — 단일 경로의 선행 이익 표가 활성이고 행이 있으면 증여일(윈도 기준)과 함께 싣는다.
- * 활성 조건은 ⑤·⑧과 같은 술어(`gift-deemed-43-2.ts`)다. 윈도 판정은 엔진이 한다.
- */
-function sameClauseFields(form: DeemedFormState, key: SameClauseRowsKey) {
-  const priorSameClauseGains = sameClauseGainsFor(form, key);
-  return priorSameClauseGains ? { giftDate: toOptionalDate(form.giftDate || undefined), priorSameClauseGains } : {};
-}
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 /**
@@ -201,7 +193,8 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
               giftDate: form.freeRectGiftDate,
               terminationDate: form.freeRectTermDate,
             }
-          : undefined,
+          : undefined,        // §43²·영 §32의4 2호·2의2호 — 기준금액 판정용 1년 이내 선행 이익(다기간이면 첫 기간만)
+        ...sameClauseFields(form, "freePriorSameClauseRows"),
       };
     case "free_loan": {
       // §43² 다건 합산 (loanLoans 토글 ON) → free_loan_aggregated 별도 type dispatch

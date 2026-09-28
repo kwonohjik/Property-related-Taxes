@@ -4,7 +4,7 @@
  * `gift-deemed-input-phase3.ts` 분할과 같은 경계다. union 조립은 본 파일에 남는다.
  */
 import { z } from "zod";
-import { forProfitDoneeShape, incomeTaxedDoneeShape, ratioSchema } from "./gift-deemed-input-shared";
+import { forProfitDoneeShape, incomeTaxedDoneeShape, ratioSchema, sameClausePriorShape } from "./gift-deemed-input-shared";
 
 export const acquisitionFundSchema = z.object({
   type: z.literal("acquisition_fund_presumption"),
@@ -106,6 +106,7 @@ export const propertyServiceUseSchema = z.object({
   subType: z.enum(["free_use", "low_price", "high_price"]),
   marketValue: z.number().nonnegative(),
   consideration: z.number().nonnegative().optional(),
+  ...sameClausePriorShape,
 });
 export const orgChangeSchema = z.object({
   type: z.literal("org_change"),

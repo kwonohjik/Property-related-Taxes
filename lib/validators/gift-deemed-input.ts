@@ -6,7 +6,7 @@
  * cross-field 검증은 union 전체에 .superRefine()을 한 번만 적용한다.
  */
 import { z } from "zod";
-import { forProfitDoneeShape, incomeTaxedDoneeShape, ratioSchema } from "./gift-deemed-input-shared";
+import { forProfitDoneeShape, incomeTaxedDoneeShape, ratioSchema, sameClausePriorShape } from "./gift-deemed-input-shared";
 import {
   acquisitionFundSchema,
   nomineeTrustSchema,
@@ -20,16 +20,6 @@ import {
 } from "./gift-deemed-input-phase3";
 
 const rateFractionSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
-/**
- * §43²·영 §32의4 — 소급 1년 이내 같은 단위 선행 이익(금액기준 판정에만 합산). ⑫ strip 방지.
- * 증여일은 윈도 기준이라 함께 받는다(route가 parsed.data를 그대로 넘기므로 여기서 Date가 된다).
- */
-const sameClausePriorShape = {
-  giftDate: z.coerce.date().optional(),
-  priorSameClauseGains: z
-    .array(z.object({ date: z.string().min(1), gain: z.number().nonnegative(), label: z.string().optional() }))
-    .optional(),
-};
 /** 명부·매트릭스 행의 §43² 선행 이익 합계 */
 const rowPriorSameClauseGain = z.number().nonnegative().optional();
 
@@ -116,6 +106,7 @@ const freeRealEstateSchema = z.object({
       terminationDate: z.string().min(1),
     })
     .optional(),
+  ...sameClausePriorShape,
 });
 
 const freeLoanSchema = z.object({

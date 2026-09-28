@@ -10,6 +10,7 @@ import type { DeemedGiftInput, RcExclusionType } from "@/lib/tax-engine/gift-dee
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { sameClauseFields } from "./gift-deemed-43-2";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";
 
 export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput | null {
@@ -149,6 +150,8 @@ export function buildPhase3DeemedInput(form: DeemedFormState): DeemedGiftInput |
         subType: form.psuSubType,
         marketValue: parseAmount(form.psuMarketValue),
         consideration: form.psuSubType === "free_use" ? undefined : parseAmount(form.psuConsideration),
+        // §43²·영 §32의4 10호 — 무상(1천만원 기준)에서만 싣는다(⑤·⑧과 같은 술어)
+        ...sameClauseFields(form, "psuPriorSameClauseRows"),
       };
     case "org_change":
       return {
