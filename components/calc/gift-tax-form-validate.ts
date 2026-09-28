@@ -24,6 +24,8 @@ import {
 import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
+import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
+import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -170,6 +172,19 @@ export function validateStep(step: number, form: FormState): string | null {
         if (bgt.residencePeriodMonths === undefined || bgt.residencePeriodMonths < 0) {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
+      }
+      // §155①2호 새 입력(OH-01 A2b · E-1) — ⑤와 같은 게이트, 양도세 판정 메뉴와 같은 규칙 leaf.
+      //   모순만 차단한다. 미입력(경고)은 엔진이 판정 보류로 고지하고 결과 카드 경고에 뜬다.
+      if (propertyType === "housing") {
+        const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate);
+        const eraError = gate
+          ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {
+              newAcquisitionDate: gate.newAcquisitionDate,
+              determined: gate.regulated.determined,
+              moveInRelevant: gate.regulated.moveInRelevant,
+            }).find((i) => i.severity === "error")
+          : undefined;
+        if (eraError) return `${itemLabel}: ${eraError.message}`;
       }
       // C-4: 채무인수액(§47①) 필수 — assumedDebtForGift가 0이면 양도소득세 과세 대상 없음
       // (소득세법 §88: 유상양도 = 수증자 채무인수가 있어야 양도가액 발생)

@@ -1097,11 +1097,31 @@ export interface BurdenedGiftTransferTaxInput {
    * 일시적 2주택 비과세 특례.
    * householdHousingCount===2 일 때만 UI 노출.
    * - previousAcquisitionDate: 종전 주택 취득일
-   * - newAcquisitionDate: 신규 주택(=이번 증여 주택) 취득일
+   * - newAcquisitionDate: 신규 주택 취득일
+   *
+   * ⚠️ 엔진(§155①)은 **양도하는 주택(= 이번 증여 주택)을 종전 주택**으로 본다(E-1 정정 — 종전 주석은
+   *    신규 주택을 「이번 증여 주택」이라 적어 엔진 판정과 반대였다).
    */
   temporaryTwoHouse?: {
     previousAcquisitionDate: Date;
     newAcquisitionDate: Date;
+    /*
+     * §155①2호 조정대상지역 일시적 2주택 새 입력 (OH-01 A2b · E-1) — 양도세 폼과 **같은 이름·모양**이다
+     * (`lib/calc/temporary-two-house-era-facts.ts` `TemporaryTwoHouseEraFormFields`). ④가 같은 leaf
+     * (`toTemporaryTwoHouseEraFacts`)로 펴서 싣는다. 선언은 3-상태("yes"·"no"·""), 날짜는 YYYY-MM-DD 문자열.
+     */
+    /** 신규 주택 취득일 현재 신규 주택이 조정대상지역 */
+    newHouseRegulatedAtAcquisition?: string;
+    /** 신규 주택 취득일 현재 종전 주택(증여 주택)이 조정대상지역 */
+    prevHouseRegulatedAtNewAcquisition?: string;
+    /** 신규 주택 매매계약 체결·계약금 지급일 */
+    newHouseContractDate?: string;
+    /** 신규 주택으로 세대전원 이사·전입신고한 날 (2호 가목) */
+    newHouseMoveInDate?: string;
+    /** 신규 주택 취득일 현재 기존 임차인 거주 (2호 단서) */
+    newHouseExistingTenant?: boolean;
+    /** 전 소유자와 임차인 간 임대차계약 종료일 (2호 단서) */
+    newHouseTenantLeaseEndDate?: string;
   };
 
   // ===== real_estate_land 전용 =====

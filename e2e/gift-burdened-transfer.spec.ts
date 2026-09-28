@@ -844,3 +844,75 @@ test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증�
     },
   );
 });
+
+/**
+ * [BT-E2E-7] E-1 — §155①2호 새 입력(OH-01 A2b)이 부담부증여 화면에 뜨고 양도세 요청 본문에 실린다.
+ *
+ * 증여일 2021-03-01(조정→조정 1년·전입 체제) · 세대 2주택 · 신규 주택 2020-06-01 취득.
+ * 판정 결론은 anchor(`__tests__/api/gift-burdened-temp-two-house-e1.route.anchor.test.ts`)가 실제 route로
+ * 고정한다 — 여기서는 **화면 → ④ 본문** 배선만 본다(이 spec의 양도세 API는 모킹이다).
+ */
+test("[BT-E2E-7] 일시적 2주택 §155①2호 새 입력 → 요청 본문 temporaryTwoHouse", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+
+  await page.goto("/calc/gift-tax");
+  await fillDateAndVerify(page, { year: "2021", month: "3", day: "1" });
+  await page.locator("select").first().selectOption({ index: 1 });
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog);
+
+  // 세대 보유 주택 수 2 → 일시적 2주택 블록
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+
+  // 블록의 두 DateInput — FieldCard 라벨에서 연·월·일 칸을 가진 가장 가까운 조상으로 스코프한다
+  //   (「월」 이름의 textbox가 다이얼로그에 더 있어 nth 순번은 어긋난다 — 실측).
+  const dateField = (label: string) =>
+    dialog
+      .getByText(label, { exact: true })
+      .locator("xpath=ancestor::div[.//input[@aria-label='연도']][1]");
+  const fillDate = async (label: string, y: string, m: string, d: string) => {
+    const f = dateField(label);
+    await f.getByRole("textbox", { name: "연도" }).fill(y);
+    await f.getByRole("textbox", { name: "월" }).fill(m);
+    await f.getByRole("textbox", { name: "일" }).fill(d);
+  };
+  await fillDate("종전 주택 취득일", "2010", "3", "15");
+  await fillDate("신규 주택 취득일", "2020", "6", "1");
+
+  const block = dialog.getByTestId("temp-two-house-regulated-block");
+  await expect(block).toBeVisible();
+  await block.locator('input[name="prevHouseRegulatedAtNewAcquisition"][value="yes"]').check();
+  await block.locator('input[name="newHouseRegulatedAtAcquisition"][value="yes"]').check();
+  const moveIn = block.getByTestId("temp-two-house-move-in-date");
+  await moveIn.getByRole("textbox", { name: "연도" }).fill("2021");
+  await moveIn.getByRole("textbox", { name: "월" }).fill("6");
+  await moveIn.getByRole("textbox", { name: "일" }).fill("2");
+  await expect(moveIn.getByRole("textbox", { name: "일" })).toHaveValue("2");
+
+  await dialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const transferResponse = page.waitForResponse(
+    (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: /계산하기/ }).click();
+  await transferResponse;
+
+  expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+  expect(mock.bodies[0].temporaryTwoHouse).toEqual({
+    previousAcquisitionDate: "2010-03-15",
+    newAcquisitionDate: "2020-06-01",
+    previousHouseRegulatedAtNewAcquisition: true,
+    newHouseRegulatedAtAcquisition: true,
+    wholeHouseholdMoveInDate: "2021-06-02",
+  });
+});

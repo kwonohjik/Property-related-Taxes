@@ -39,6 +39,8 @@ import {
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
+import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
+import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -123,6 +125,8 @@ interface Props {
   hasOtherBurdenedGiftTransfer: boolean;
   /** 자산 소재지 jibun (LandPriceLookupField 조회용) */
   jibun?: string;
+  /** 증여일(= 양도일) — §155①2호 새 입력 노출 게이트(E-1) */
+  transferDate?: string;
 }
 
 // ─── 컴포넌트 ────────────────────────────────────────────────────────────────
@@ -132,6 +136,7 @@ export function BurdenedGiftTransferSection({
   onChange,
   hasOtherBurdenedGiftTransfer,
   jibun,
+  transferDate,
 }: Props) {
   const [discardOpen, setDiscardOpen] = useState(false);
   // 개별공시지가 «단가» local state — store에는 총액만 넣는다.
@@ -374,6 +379,7 @@ export function BurdenedGiftTransferSection({
                 isLand={false}
                 jibun={jibun}
                 item={item}
+                transferDate={transferDate}
               />
             )}
 
@@ -407,6 +413,7 @@ export function BurdenedGiftTransferSection({
             isLand={false}
             jibun={jibun}
             item={item}
+            transferDate={transferDate}
           />
         )}
       </ToggleCard>
@@ -457,10 +464,13 @@ interface HousingFieldSetProps {
   isLand: boolean;
   jibun?: string;
   item: EstateItem;
+  transferDate?: string;
 }
 
-function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item }: HousingFieldSetProps) {
+function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item, transferDate }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
+  // §155①2호 새 입력(A2b · E-1) — ⑧과 같은 게이트. 두 주택 조정 여부가 기한을 바꾸는 시기에만 연다.
+  const eraGate = giftBurdenedTempTwoHouseRegulatedGate(bgt, transferDate);
   const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
   // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
   const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
@@ -607,6 +617,7 @@ dateToStr(bgt.temporaryTwoHouse?.previousAcquisitionDate)
                 const d = strToDate(v);
                 set({
                   temporaryTwoHouse: {
+                    ...bgt.temporaryTwoHouse,
                     previousAcquisitionDate: d as unknown as Date,
                     newAcquisitionDate:
                       bgt.temporaryTwoHouse?.newAcquisitionDate as Date,
@@ -624,6 +635,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                 const d = strToDate(v);
                 set({
                   temporaryTwoHouse: {
+                    ...bgt.temporaryTwoHouse,
                     previousAcquisitionDate:
                       bgt.temporaryTwoHouse?.previousAcquisitionDate as Date,
                     newAcquisitionDate: d as unknown as Date,
@@ -632,6 +644,16 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }}
             />
           </FieldCard>
+          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 이 화면엔 보유 주택 목록이 없어 선언으로 받는다. */}
+          {eraGate && bgt.temporaryTwoHouse && (
+            <TempTwoHouseRegulatedInputs
+              form={bgt.temporaryTwoHouse}
+              onChange={(d) => set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...d } })}
+              regulated={eraGate.regulated}
+              newHouseAcquisitionDate={eraGate.newAcquisitionDate}
+              hasHouseRoster={false}
+            />
+          )}
         </div>
       )}
 
