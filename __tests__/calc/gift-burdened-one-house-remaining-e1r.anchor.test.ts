@@ -13,6 +13,8 @@ import {
   giftBurdenedInheritanceSlice,
 } from "@/lib/calc/gift-burdened-one-house";
 import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
+import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+import { giftBurdenedRentalAsset } from "@/lib/calc/gift-burdened-rental-exception";
 import {
   giftBurdenedNewHouseAddressPatch,
   giftBurdenedTempTwoHouseRegulatedGate,
@@ -176,5 +178,63 @@ describe("B 신규 주택 소재지 — leaf · ③ · ④ · ⑤⑧ 게이트",
     expect(g.regulated).toMatchObject({ nextAuto: true, next: false, determined: true });
     const none = giftBurdenedTempTwoHouseRegulatedGate(bgt(), "2021-08-01", "1168010100")!;
     expect(none.regulated).toMatchObject({ nextAuto: false, determined: false });
+  });
+});
+
+describe("C §155⑳ 거주주택 특례 — ③ · 합성 자산 · ⑧", () => {
+  const unit = (over: Record<string, unknown> = {}) => ({
+    ...makeDefaultRentalUnit(),
+    businessRegistrationDate: "2018-06-01",
+    rentalRegistrationDate: "2018-06-01",
+    standardPriceAtRentalStart: "300,000,000",
+    rentalInputMode: "direct" as const,
+    rentalMonths: "30",
+    requirementsConfirmed: true,
+    rentalAutoTermination: true,
+    terminatedRegistrationType: "short_term" as const,
+    registrationCancellationDate: "2021-03-03",
+    ...over,
+  });
+  const rhe = (u = unit()) => ({
+    applyException: true,
+    scenario: "A" as const,
+    rentalUnits: [u],
+    postRegistrationResidenceMonths: "",
+    priorRentalExemptionHistory: "" as const,
+    residenceTransitionUnderAddendum: false,
+  });
+  const base = { acquisitionDate: new Date("2016-01-10"), residencePeriodMonths: 60, householdHousingCount: 2 };
+
+  it("C-N1 ③ 복원 — JSON 왕복 후 특례 입력(말소일 포함) 보존", () => {
+    const parsed = JSON.parse(JSON.stringify({ giftItems: [item({ ...base, rentalHousingException: rhe() })] }));
+    const bgt = normalizeRestoredFormDates(parsed).giftItems![0].burdenedGiftTransferTax!;
+    expect(bgt.rentalHousingException?.rentalUnits[0]).toMatchObject({ registrationCancellationDate: "2021-03-03" });
+  });
+  it("C-S1 합성 자산 — 주택 · 취득일 · 거주 개월(직접) · 특례 입력만 얹는다", () => {
+    const a = giftBurdenedRentalAsset({ id: "apt-1" }, item({ ...base, rentalHousingException: rhe() }).burdenedGiftTransferTax!);
+    expect(a).toMatchObject({
+      assetId: "apt-1",
+      assetKind: "housing",
+      acquisitionDate: "2016-01-10",
+      residenceInputMode: "direct",
+      residencePeriodMonthsAsset: "60",
+    });
+    expect(a.rentalHousingException.applyException).toBe(true);
+  });
+  it("V-C1 ⑧ 말소 표시인데 말소일 없음 → 차단(계산기와 같은 규칙·문구) / 채우면 통과", () => {
+    expect(v("2025-06-01", item({ ...base, rentalHousingException: rhe(unit({ registrationCancellationDate: "" })) }))).toContain(
+      "등록 말소일을 입력하세요",
+    );
+    expect(v("2025-06-01", item({ ...base, rentalHousingException: rhe() }))).toBeNull();
+  });
+  it("V-C2 ⑧ 거주 24개월 미만 → 차단(이 경로의 「거주기간 (개월)」을 읽는다)", () => {
+    expect(v("2025-06-01", item({ ...base, residencePeriodMonths: 12, rentalHousingException: rhe() }))).toContain(
+      "거주주택 거주기간 2년(24개월) 이상이 필요합니다",
+    );
+  });
+  it("V-C3 부정 짝 — 1세대 1주택 OFF(카드가 숨는 맥락)의 stale 선언은 막지 않는다", () => {
+    expect(
+      v("2025-06-01", item({ ...base, isOneHousehold: false, rentalHousingException: rhe(unit({ registrationCancellationDate: "" })) })),
+    ).toBeNull();
   });
 });

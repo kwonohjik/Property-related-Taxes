@@ -9,6 +9,7 @@
  * |---|---|---|---|
  * | A — 「양도시 조정대상지역」 토글 ↔ 증여 주택 주소 | 주소가 있어도 토글(기본 OFF)만 중과·단기세율에 쓰임 | 안 만진 토글은 주소 판정(`giftBurdenedEffectiveIsRegulatedArea`) | 계산기 `useRegulatedAreaAutoTip`이 주소로 채운 토글 |
  * | B — §155①2호 신규 주택 소재지 | 신규 주택 조정 여부는 선언으로만(미선언이면 판정 보류·대리 지표) | 주소 한 칸 → `temporaryTwoHouse.newHouseRegionCode` | 보유 주택 명부 행 `regionCode` |
+ * | C — §155⑳ 거주주택 특례(I-4 §155㉓ 말소일 포함) | 특례 칸 없음 → 거주주택 부담부증여가 2주택 과세 | 계산기 카드·leaf 재사용 → `rentalHousingException` | `assets[0].rentalHousingException` |
  * | D — 상속받은 주택(§104②1호 · §154⑧3호) | 취득 원인 칸 없음 → 상속개시일부터 세율·보유 기산 | `InheritedSameHouseholdField` 재사용 → `acquisitionCause` · `decedent*` | `assets[0].acquisitionCause` · `decedent*` |
  *
  * 시료는 모두 아파트 1채 부담부증여(증여일 = 양도일) · 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억.
@@ -389,5 +390,77 @@ describe("B ⑭ route — 신규 주택 주소가 선언 없이 신규 주택 �
     };
     expect((await transfer(calcAt("2020-06-18"))).isExempt).toBe(true);
     expect((await transfer(calcAt("2020-06-19"))).isExempt).toBe(false);
+  });
+});
+
+// ═══ C — §155⑳ 장기임대주택 보유자 거주주택 특례 (I-4 §155㉓ 말소일 포함) ═══════════════════════
+
+/**
+ * 계산기와 같은 카드(`RentalHousingExceptionSection`)·같은 ④ leaf(`toRentalHousingExceptionApi`)를 쓴다.
+ * 시료는 계산기 I-4 anchor(`rental-155-23-cancellation-date-i4.route`)와 같다: 가목(2018-06-01 등록) 자진말소
+ * (단기 4년) · 30개월 임대 · 거주주택 2016-01-10 취득 · 거주 60개월. 말소 2021-03-03 → 기한 2026-03-03.
+ * 근거(부담부증여에 §155⑳ 적용): 사전-2020-법령해석재산-0097 — 「장기임대주택과 1거주주택을 … 소유하고 있는
+ * 1세대가 거주주택을 양도(부담부증여)하는 경우 국내에 1개의 주택을 소유하고 있는 것으로 보아 1세대1주택 비과세
+ * 규정을 적용하는 것」.
+ */
+describe("C ⑭ route — §155⑳ 거주주택 특례 · ㉓ 말소일이 엔진에 닿는다 (계산기와 같은 결론)", () => {
+  const unit = async (date: string) => {
+    const { makeDefaultRentalUnit } = await import("@/lib/stores/calc-wizard-asset-factory");
+    return {
+      ...makeDefaultRentalUnit(),
+      businessRegistrationDate: "2018-06-01",
+      rentalRegistrationDate: "2018-06-01",
+      standardPriceAtRentalStart: "300,000,000",
+      rentalInputMode: "direct" as const,
+      rentalMonths: "30",
+      requirementsConfirmed: true,
+      rentalAutoTermination: true,
+      terminatedRegistrationType: "short_term" as const,
+      registrationCancellationDate: date,
+    };
+  };
+  const rhe = async () => ({
+    applyException: true,
+    scenario: "A" as const,
+    rentalUnits: [await unit("2021-03-03")],
+    postRegistrationResidenceMonths: "",
+    priorRentalExemptionHistory: "" as const,
+    residenceTransitionUnderAddendum: false,
+  });
+  const RESIDENCE = { acquisitionDate: new Date("2016-01-10"), residencePeriodMonths: 60, householdHousingCount: 2 };
+
+  it("C-0 종전(base) — 특례 입력 없음: 2주택 과세 7,957,200", async () => {
+    const r = await gift("2025-06-01", RESIDENCE);
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(7_957_200);
+  });
+
+  it("C-1 ★ 말소 후 5년 안(증여 2025-06-01) → §155⑳ 비과세 · ㉓ 기한 2026-03-03, 계산기와 같은 결론", async () => {
+    const r = await gift("2025-06-01", { ...RESIDENCE, rentalHousingException: await rhe() } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(r.isExempt).toBe(true);
+    expect(r.exemptReason).toContain("§155⑳");
+    expect((r as unknown as { rentalHousingExceptionDetail: { eligibility: { cancellationWindow: Obj } } })
+      .rentalHousingExceptionDetail.eligibility.cancellationWindow).toMatchObject({ deadline: "2026-03-03", withinDeadline: true });
+    const f = transferForm("2025-06-01", "2016-01-10", { householdHousingCount: "2" }, { residencePeriodMonthsAsset: "60" });
+    f.assets[0].rentalHousingException = { ...f.assets[0].rentalHousingException, ...(await rhe()) };
+    expect((await transfer(f)).isExempt).toBe(true);
+  });
+
+  it("C-2 부정 짝 — 말소 후 5년 밖(증여 2026-06-01) → 특례 불성립 · 과세 7,608,000(입력 없음과 같은 값), 계산기도 과세", async () => {
+    const r = await gift("2026-06-01", { ...RESIDENCE, rentalHousingException: await rhe() } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(7_608_000);
+    expect((await gift("2026-06-01", RESIDENCE)).determinedTax).toBe(7_608_000);
+    const f = transferForm("2026-06-01", "2016-01-10", { householdHousingCount: "2" }, { residencePeriodMonthsAsset: "60" });
+    f.assets[0].rentalHousingException = { ...f.assets[0].rentalHousingException, ...(await rhe()) };
+    expect((await transfer(f)).isExempt).toBe(false);
+  });
+
+  it("C-3 ④ 게이트 — 1세대 1주택 OFF면 남은 특례 선언을 싣지 않는다(⑤·⑧과 같은 게이트)", async () => {
+    const body = buildGiftBurdenedTransferBody(
+      giftItem({ ...RESIDENCE, isOneHousehold: false, rentalHousingException: await rhe() } as Partial<BurdenedGiftTransferTaxInput>),
+      giftForm("2025-06-01"),
+    );
+    expect(body).not.toHaveProperty("rentalHousingException");
   });
 });

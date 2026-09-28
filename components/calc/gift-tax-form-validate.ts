@@ -36,6 +36,7 @@ import {
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
 } from "@/lib/calc/gift-burdened-one-house";
+import { giftBurdenedRentalExceptionError } from "@/lib/calc/gift-burdened-rental-exception";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -215,6 +216,9 @@ export function validateStep(step: number, form: FormState): string | null {
         //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400).
         const inheritanceError = giftBurdenedInheritanceError(bgt);
         if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
+        // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — ⑤·④와 같은 게이트·합성 자산, 계산기와 같은 규칙 leaf.
+        const rentalError = giftBurdenedRentalExceptionError(bgItem, bgt, form.giftDate, itemLabel);
+        if (rentalError) return rentalError;
       }
       // C-4: 채무인수액(§47①) 필수 — assumedDebtForGift가 0이면 양도소득세 과세 대상 없음
       // (소득세법 §88: 유상양도 = 수증자 채무인수가 있어야 양도가액 발생)

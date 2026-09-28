@@ -22,6 +22,8 @@ import type { EstateLocationFields } from "./inheritance-asset-location.types";
 import type { EstateItemSavingsFields } from "./inheritance-gift-deposit.types";
 import type { EstateItemCryptoFields } from "./inheritance-gift-crypto.types";
 import type { RateFraction } from "../data/gift-deemed-rates";
+// §155⑳ 거주주택 특례 입력은 양도세 계산기 자산과 같은 모양이다(E-1 잔여 C) — 타입만 가져온다.
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ============================================================
 // 재산평가 (property-valuation.ts)
@@ -1205,6 +1207,13 @@ export interface BurdenedGiftTransferTaxInput {
   decedentCohabitationHoldingStartDate?: string;
   /** §154⑧3호 — 상속개시 전 동일세대 거주 개월 (정수 문자열) */
   decedentCohabitationResidenceMonths?: string;
+  /**
+   * 「소득세법 시행령」 §155⑳ 장기임대주택 보유자 거주주택 특례 (E-1 잔여 C · I-4 §155㉓ 말소일 포함).
+   * 양도세 계산기 자산(`AssetForm.rentalHousingException`)과 **같은 모양**이다 — ⑤는 같은 카드
+   * (`RentalHousingExceptionSection`), ④⑧은 같은 leaf(`toRentalHousingExceptionApi`·`validateRentalHousingException`)를
+   * `lib/calc/gift-burdened-rental-exception.ts`의 어댑터로 부른다. 옛 record에는 없다(특례 미적용).
+   */
+  rentalHousingException?: AssetForm["rentalHousingException"];
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

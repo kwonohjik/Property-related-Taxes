@@ -193,3 +193,49 @@ test("[BT-E2E-11] 신규 주택 소재지 → 자동 판정 · 요청 본문 tem
     previousHouseRegulatedAtNewAcquisition: true,
   });
 });
+
+/**
+ * [BT-E2E-12] E-1 잔여 C — §155⑳ 장기임대주택 보유자 거주주택 특례(㉓ 말소일 포함). 계산기와 같은 카드가
+ * 부담부증여 주택 입력(1세대 1주택 ON)에 뜨고, 계산기와 같은 leaf로 본문 `rentalHousingException`에 실린다.
+ */
+test("[BT-E2E-12] §155⑳ 거주주택 특례 · 말소일 → 요청 본문 rentalHousingException", async ({ page }) => {
+  test.setTimeout(150_000);
+  const mock = await setupTransferApiMock(page);
+  await goToGiftAssets(page, { year: "2025", month: "6", day: "1" });
+
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog); // 취득 2010-03-15 · 1세대 1주택 ON · 거주 120개월
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+
+  await dialog.getByRole("switch", { name: /장기임대주택 보유자 거주주택 비과세 특례 적용/ }).click();
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, { scope: dialog.getByTestId("rental-biz-reg-date-0") });
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, { scope: dialog.getByTestId("rental-reg-date-0") });
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, { scope: dialog.getByTestId("rental-period-0-start-0") });
+  await fillDateAndVerify(page, { year: "2020", month: "12", day: "01" }, { scope: dialog.getByTestId("rental-period-0-end-0") });
+  await fillAndVerify(
+    dialog.getByTestId("rental-stdprice-0-price-input").getByRole("textbox"),
+    "300000000",
+  );
+  await dialog.getByRole("switch", { name: /^임대료 5% 상한/ }).click();
+  await dialog.getByRole("switch", { name: /자진말소 또는 자동말소/ }).click();
+  await dialog.getByTestId("rental-terminated-type-short-0").click();
+  await fillDateAndVerify(page, { year: "2021", month: "03", day: "03" }, {
+    scope: dialog.getByTestId("rental-cancellation-date-0"),
+  });
+
+  const body = await calculateAndCapture(page, mock);
+  const rhe = body.rentalHousingException as { applyException: boolean; scenario: string; rentalUnits: Record<string, unknown>[] };
+  expect(rhe.applyException).toBe(true);
+  expect(rhe.scenario).toBe("A");
+  expect(rhe.rentalUnits[0]).toMatchObject({
+    businessRegistrationDate: "2018-06-01T00:00:00.000Z",
+    rentalAutoTermination: true,
+    terminatedRegistrationType: "short_term",
+    registrationCancellationDate: "2021-03-03T00:00:00.000Z",
+    requirementsConfirmed: true,
+    rentalMonths: 30,
+  });
+});

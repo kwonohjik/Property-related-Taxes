@@ -10,6 +10,7 @@
  * |---|---|
  * | UI-A | 「양도시 조정대상지역」 토글 — 주소가 있고 안 만졌으면 주소 판정으로 켜져 있다 · 만지면 그 값(false 포함)을 저장한다 |
  * | UI-B | §155①2호 신규 주택 소재지 — 주소를 고르면 `newHouseRegionCode`가 저장되고 신규 주택 조정 여부가 선언 라디오 대신 자동 판정으로 바뀐다 |
+ * | UI-C | §155⑳ 거주주택 특례 카드(계산기와 같은 `RentalHousingExceptionSection`) — 켜면 임대주택 1호가 생기고 patch가 `burdenedGiftTransferTax.rentalHousingException`에 들어간다 · 1세대 1주택 OFF면 카드 없음 · 주택 여부 OFF면 비움 |
  * | UI-D | 상속받은 주택 위젯(판정 메뉴와 같은 `InheritedSameHouseholdField`) → patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -175,5 +176,49 @@ describe("UI-B §155①2호 신규 주택 소재지", () => {
   it("부정 짝 — §155①2호 판정이 필요 없는 시기(증여 2017-01-01)에는 소재지 칸이 없다", () => {
     render(<Harness start={item({ householdHousingCount: 2, temporaryTwoHouse: tt("2016-06-01") })} giftDate="2017-01-01" />);
     expect(screen.queryByTestId("bg-transfer-new-house-address")).toBeNull();
+  });
+});
+
+describe("UI-C §155⑳ 장기임대주택 보유자 거주주택 특례 (㉓ 말소일 포함)", () => {
+  const rentalSwitch = () => screen.queryByRole("switch", { name: /장기임대주택 보유자 거주주택 비과세 특례 적용/ });
+  it("★ 켜면 임대주택 1호 · 시나리오 A · 말소 토글 → 말소일 칸 — patch는 bgt.rentalHousingException", () => {
+    render(<Harness start={item({ acquisitionDate: new Date("2016-01-10"), residencePeriodMonths: 60, householdHousingCount: 2 })} giftDate="2025-06-01" />);
+    fireEvent.click(rentalSwitch()!);
+    const rh = bgtOf().rentalHousingException!;
+    expect(rh.applyException).toBe(true);
+    expect(rh.scenario).toBe("A");
+    expect(rh.rentalUnits).toHaveLength(1);
+    // 다른 입력은 보존
+    expect(bgtOf().residencePeriodMonths).toBe(60);
+    // 카드의 거주 요건 표시는 이 경로의 「거주기간 (개월)」 한 칸을 읽는다(합성 자산 — ④⑧과 같은 값)
+    expect(screen.getByText(/현재 60개월/)).toBeTruthy();
+  });
+  it("부정 짝 — 1세대 1주택 OFF면 카드가 없다(거주기간 칸이 없는 맥락 · ④⑧ 같은 게이트)", () => {
+    render(<Harness start={item({ isOneHousehold: false, householdHousingCount: 2 })} giftDate="2025-06-01" />);
+    expect(rentalSwitch()).toBeNull();
+  });
+  it("주택 여부를 끄면 특례 입력을 비운다", () => {
+    render(
+      <Harness
+        start={item(
+          {
+            isHousing: true,
+            householdHousingCount: 2,
+            rentalHousingException: {
+              applyException: true,
+              scenario: "A",
+              rentalUnits: [],
+              postRegistrationResidenceMonths: "",
+              priorRentalExemptionHistory: "",
+              residenceTransitionUnderAddendum: false,
+            },
+          },
+          { category: "real_estate_building" } as Partial<EstateItem>,
+        )}
+        giftDate="2025-06-01"
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch", { name: /주택 여부/ }));
+    expect(bgtOf().rentalHousingException).toBeUndefined();
   });
 });

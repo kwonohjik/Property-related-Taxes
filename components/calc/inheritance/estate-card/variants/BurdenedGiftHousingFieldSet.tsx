@@ -13,6 +13,7 @@
  *   · §155①2호 신규 주택 소재지(E-1 잔여 B) — 같은 주소 위젯 한 칸 → 신규 주택 조정 여부도 자동 판정
  *   · §154① 단서(삭제 전 4호 OH-38 포함) — `ExemptionProvisoSection`
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
+ *   · §155⑳ 장기임대주택 보유자 거주주택 특례(E-1 잔여 C — ㉓ 말소일 포함) — `RentalHousingExceptionSection`
  *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -25,6 +26,12 @@ import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoH
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
+import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
+import {
+  giftBurdenedRentalAsset,
+  giftBurdenedRentalExceptionInScope,
+  giftBurdenedRentalHousingException,
+} from "@/lib/calc/gift-burdened-rental-exception";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -324,6 +331,20 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           value={oneHouse}
           acquisitionDate={dateToStr(bgt.acquisitionDate)}
           onChange={(patch) => set(patch)}
+        />
+      )}
+
+      {/* §155⑳ 장기임대주택 보유자 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 양도세 계산기와 같은 카드.
+          거주기간은 위 「거주기간 (개월)」 한 칸이 정본이라 구간 편집기(onChangeResidence)는 넘기지 않는다.
+          게이트·합성 자산은 ④⑧과 같다(`gift-burdened-rental-exception.ts`). */}
+      {giftBurdenedRentalExceptionInScope(bgt) && (
+        <RentalHousingExceptionSection
+          rh={giftBurdenedRentalHousingException(bgt)}
+          asset={giftBurdenedRentalAsset(item, bgt)}
+          acquisitionDate={dateToStr(bgt.acquisitionDate)}
+          transferDate={transferDate ?? ""}
+          mode="full"
+          onChange={(rh) => set({ rentalHousingException: rh })}
         />
       )}
     </div>

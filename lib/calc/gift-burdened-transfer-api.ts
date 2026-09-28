@@ -34,6 +34,7 @@ import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
+import { buildGiftBurdenedRentalExceptionPayload } from "@/lib/calc/gift-burdened-rental-exception";
 import {
   buildGiftBurdenedInheritancePayload,
   giftBurdenedEffectiveIsRegulatedArea,
@@ -331,6 +332,8 @@ export function buildGiftBurdenedTransferBody(
     // 상속받은 주택(E-1 잔여 D) — 계산기와 같은 키(`acquisitionCause`·`decedent*`). 원인이 상속일 때만.
     //   엔진에서 바뀌는 축: §104②1호 세율 보유기간 · 영 §154⑧3호 동일세대 통산(`gift-burdened-one-house.ts`).
     Object.assign(body, buildGiftBurdenedInheritancePayload(bgt));
+    // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 계산기와 같은 leaf(`toRentalHousingExceptionApi`), ⑤⑧과 같은 게이트.
+    Object.assign(body, buildGiftBurdenedRentalExceptionPayload(item, bgt));
   }
 
   return body;
