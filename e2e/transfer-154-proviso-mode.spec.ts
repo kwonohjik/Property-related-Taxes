@@ -80,6 +80,8 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     // 1주택 맥락: 나·다목·5호 옵션도 전부 노출
     await expect(page.getByTestId("proviso-reason-overseas_migration")).toBeVisible();
     await expect(page.getByTestId("proviso-reason-pre_contract")).toBeVisible();
+    // OH-38 삭제 전 4호(임대사업자 등록) — 1주택 맥락에서만 고를 수 있다
+    await expect(page.getByTestId("proviso-reason-rental_4ho")).toBeVisible();
   });
 
   /**
@@ -118,6 +120,7 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     await expect(page.getByTestId("proviso-reason-rental")).toBeVisible();
     // 나·다목·5호는 옵션 필터로 부재
     await expect(page.getByTestId("proviso-reason-overseas_migration")).toHaveCount(0);
+    await expect(page.getByTestId("proviso-reason-rental_4ho")).toHaveCount(0);
     await expect(page.getByTestId("proviso-reason-overseas_residence")).toHaveCount(0);
     await expect(page.getByTestId("proviso-reason-pre_contract")).toHaveCount(0);
   });

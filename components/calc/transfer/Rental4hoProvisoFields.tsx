@@ -76,20 +76,24 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <FieldCard label="사업자등록 신청일" required hint="세무서 — 소득세법 §168①">
-          <DateInput
-            value={value.proviso4hoBusinessRegDate ?? ""}
-            onChange={(v) => onChange({ proviso4hoBusinessRegDate: v })}
-          />
+          <div data-testid="proviso-4ho-business-date">
+            <DateInput
+              value={value.proviso4hoBusinessRegDate ?? ""}
+              onChange={(v) => onChange({ proviso4hoBusinessRegDate: v })}
+            />
+          </div>
         </FieldCard>
         <FieldCard
           label="임대사업자 등록 신청일"
           required
           hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일"
         >
-          <DateInput
-            value={value.proviso4hoRentalRegDate ?? ""}
-            onChange={(v) => onChange({ proviso4hoRentalRegDate: v })}
-          />
+          <div data-testid="proviso-4ho-rental-date">
+            <DateInput
+              value={value.proviso4hoRentalRegDate ?? ""}
+              onChange={(v) => onChange({ proviso4hoRentalRegDate: v })}
+            />
+          </div>
         </FieldCard>
       </div>
 
@@ -150,10 +154,12 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
           required
           hint="여러 번이면 가장 늦은 날 — 2019년 2월 12일 이후 체결·갱신한 계약부터 제외 사유가 됩니다"
         >
-          <DateInput
-            value={value.proviso4hoRentOver5ContractDate ?? ""}
-            onChange={(v) => onChange({ proviso4hoRentOver5ContractDate: v })}
-          />
+          <div data-testid="proviso-4ho-rent-over5-date">
+            <DateInput
+              value={value.proviso4hoRentOver5ContractDate ?? ""}
+              onChange={(v) => onChange({ proviso4hoRentOver5ContractDate: v })}
+            />
+          </div>
         </FieldCard>
       )}
 
