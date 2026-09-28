@@ -5,7 +5,7 @@
  * 유형 선택 → 상세 입력 모달(증여일 + 유형별 입력) → 증여이익 산정 → 증여세 마법사 prefill 이관.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { CtaButton } from "@/components/calc/shared/WizardNav";
@@ -22,6 +22,8 @@ import { DeemedGiftResultView } from "@/components/calc/results/DeemedGiftResult
 import { buildDeemedGiftInput, buildGiftWizardPrefill } from "@/lib/calc/gift-deemed-api";
 import { validateDeemedInput } from "@/lib/calc/gift-deemed-validate";
 import type { DeemedGiftAnyResult, DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 
 export function DeemedGiftCalculator() {
   const router = useRouter();
@@ -30,6 +32,30 @@ export function DeemedGiftCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const activeClientId = useProfessionalStore((s) => s.activeClientId);
+
+  // 이력 재개(#72) — `history-resume-entry.ts`가 실어 둔 폼을 마운트 때 1회 소비한다(증여세 마법사와 같은 패턴).
+  //   `INITIAL_DEEMED` 위에 펼쳐 구 record에 없는 신규 필드도 기본값을 갖게 한다. 결과는 되살리지 않는다.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("giftDeemedResumeInput");
+    if (!raw) return;
+    sessionStorage.removeItem("giftDeemedResumeInput");
+    try {
+      const parsed = JSON.parse(raw) as Partial<DeemedFormState>;
+      setForm({ ...INITIAL_DEEMED, ...parsed });
+    } catch {
+      // JSON 파싱 실패 시 무시 (빈 폼 유지)
+    }
+  }, []);
+
+  // 로컬 이력 자동 저장(#72) — 결과가 나오면 1회. 세액이 없는 계산기라 기준일은 증여일이다.
+  useAutoSaveCalculation({
+    taxType: "gift_deemed",
+    inputData: form as unknown as Record<string, unknown>,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: form.giftDate || new Date().toISOString().split("T")[0],
+    clientId: activeClientId,
+  });
 
   const set = (patch: Partial<DeemedFormState>) => {
     setForm((p) => ({ ...p, ...patch }));

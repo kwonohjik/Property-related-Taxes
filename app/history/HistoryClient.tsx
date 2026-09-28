@@ -21,6 +21,7 @@ import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { deemedGiftHeadline } from "@/lib/calc/gift-deemed-history";
 
 /**
  * 배지·필터 라벨 — **`TAX_LABEL`이 정본**이다(`title-generator.ts`). 제목 접두어를 만드는 것과
@@ -42,6 +43,7 @@ export const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = 
   { label: "취득세", value: "acquisition" },
   { label: "상속세", value: "inheritance" },
   { label: "증여세", value: "gift" },
+  { label: "증여이익", value: "gift_deemed" },
   { label: "재산세", value: "property" },
   { label: "종합부동산세", value: "comprehensive_property" },
 ];
@@ -141,6 +143,10 @@ function extractCardSummary(
       address: securityName,
       dateLabel: fmt(rawDate, "양도일"),
     };
+  }
+  if (taxType === "gift_deemed") {
+    // 주소 축이 없다 — 증여일만. 유형은 제목이 이미 싣는다(`generateTitle`).
+    return { address: null, dateLabel: fmt(inputData.giftDate as string | undefined, "증여일") };
   }
   if (taxType === "stock_valuation") {
     // 대표 종목(평가대상회사) → address 위치, 평가기준일 → dateLabel
@@ -531,6 +537,9 @@ export function HistoryClient() {
                     <>판정: <span className="font-semibold text-foreground">{oneHouseVerdictLabel(record.resultData)}</span></>
                   ) : record.taxType === "stock_valuation" ? (
                     <>평가액: <span className="font-semibold text-foreground">{extractStockValuationTotal(record.resultData)}</span></>
+                  ) : record.taxType === "gift_deemed" ? (
+                    /* 증여이익 계산기는 **세액이 없다** — 증여재산가액을 띄운다(카드·드로어 공용 leaf). */
+                    <>증여이익: <span className="font-semibold text-foreground">{deemedGiftHeadline(record.resultData)}</span></>
                   ) : (
                     <>납부세액: <span className="font-semibold text-foreground">{extractTotalTax(record.resultData)}</span></>
                   )}

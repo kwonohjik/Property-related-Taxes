@@ -98,6 +98,10 @@ export function extractBusinessKey(
       const date = formatDate(inputData.valuationDate as string | undefined);
       return `sec-val:${sec}|${date ?? ""}`;
     }
+    case "gift_deemed":
+      // 증여이익 계산기 폼에는 인적·물건 식별 필드가 없다(증여세와 같은 사정) → content 폴백.
+      //   같은 금액이라도 산정 인자가 다르면 폼이 달라 contentHash가 갈린다.
+      return null;
     default:
       // gift·comprehensive_property — 인적 식별 필드 부재(실측 확정) → content 폴백
       return null;
