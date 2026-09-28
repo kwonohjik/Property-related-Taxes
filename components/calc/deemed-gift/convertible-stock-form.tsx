@@ -6,6 +6,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint, type Props, type SetFn } from "./capital-forms-shared";
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
@@ -78,6 +79,17 @@ function CsNumericSection({
         <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>{num}</span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
       </div>
+      {/* 발행일은 상장 여부와 무관하게 받는다 — 종가평균 기준일이기 전에 §39①3호 **적용 요건**이다
+          (「상증법」 법률 제14388호 부칙 §5②). 종전에는 상장 토글 안에만 있어 비상장이면 입력 경로가 없었다. */}
+      {onValuationDate && (
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">전환주식 발행일</label>
+          <DateInput value={valuationDate} onChange={onValuationDate} data-testid="cs-issuance-date" />
+          <p className="mt-1 text-xs text-muted-foreground">
+            2017.1.1. 전에 발행한 전환주식은 전환이 그 뒤여도 §39①3호를 적용하지 않습니다(법률 제14388호 부칙 §5②).
+          </p>
+        </div>
+      )}
       <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
       <CurrencyInput label="증자 전 발행주식총수" value={v(keys.preShares)} onChange={on(keys.preShares)} placeholder={`${ph} 증자 전 발행주식총수`} />
       <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
@@ -112,7 +124,6 @@ function CsNumericSection({
           dateLabel={dateLabel}
           onFill={(val) => on(keys.listedMarketAvg)(val)}
           testId={stockCodeTestId}
-          onValuationDate={onValuationDate}
         />
         <CurrencyInput
           label="증자 후 1주당 평가가액"

@@ -391,6 +391,9 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.csIssueRelatedAcquiredShares) > parseAmount(form.csIssueRatioDenomShares))
           return "발행 시점 특수관계인이 인수한 신주수가 분모 신주수를 초과합니다";
       }
+      // #25 — 발행일은 §39①3호 적용 요건이다(「상증법」 법률 제14388호 부칙 §5② — 2017.1.1. 이후 발행분).
+      //   엔진은 미입력을 「적용」으로 읽으므로(leaf 호환) UI 경로에서는 여기서 막아야 판정이 성립한다.
+      if (!form.csIssuanceDate) return "전환주식 발행일을 입력하세요";
       break;
     case "acquisition_fund_presumption":
       if (parseAmount(form.afAcquisitionValue) <= 0)

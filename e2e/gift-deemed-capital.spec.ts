@@ -6,10 +6,19 @@ import { clickAndExpectUrl } from "./_helpers/navigation";
 
 async function openDetail(page: Page, type: string, date: [string, string, string] = ["2025", "3", "15"]) {
   await page.getByTestId(`deemed-type-${type}`).click();
-  const dialog = page.getByTestId("deemed-detail-dialog");
-  await dialog.getByLabel("연도").fill(date[0]);
-  await dialog.getByLabel("월").fill(date[1]);
-  await dialog.getByLabel("일", { exact: true }).fill(date[2]);
+  // 전환주식은 발행일 칸(`cs-issuance-date`)이 항상 있어 다이얼로그 전체 `getByLabel("연도")`가
+  //   유일하지 않다(#25) — 증여일 위젯으로 좁힌다.
+  const gd = page.getByTestId("deemed-detail-dialog").getByTestId("deemed-gift-date");
+  await gd.getByLabel("연도").fill(date[0]);
+  await gd.getByLabel("월").fill(date[1]);
+  await gd.getByLabel("일", { exact: true }).fill(date[2]);
+}
+/** 전환주식 발행일 — 「상증법」 법률 제14388호 부칙 §5②(2017.1.1. 이후 발행분부터 §39①3호 적용) */
+async function fillIssuanceDate(page: Page, date: [string, string, string] = ["2020", "6", "1"]) {
+  const w = page.getByTestId("cs-issuance-date");
+  await w.getByLabel("연도").fill(date[0]);
+  await w.getByLabel("월").fill(date[1]);
+  await w.getByLabel("일", { exact: true }).fill(date[2]);
 }
 const closeDetail = (page: Page) => page.getByTestId("deemed-detail-confirm").click();
 
@@ -324,6 +333,7 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await page.getByPlaceholder("발행 신주 1주당 인수가액 (원)").fill("7000");
     await page.getByPlaceholder("발행 증자 주식수").fill("50000");
     await page.getByPlaceholder("발행 배정받은 실권주수").fill("10000");
+    await fillIssuanceDate(page);
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("13,330,000");
@@ -344,7 +354,23 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await page.getByPlaceholder("발행 신주 1주당 인수가액 (원)").fill("7000");
     await page.getByPlaceholder("발행 증자 주식수").fill("50000");
     await page.getByPlaceholder("발행 배정받은 실권주수").fill("10000");
+    await fillIssuanceDate(page);
   };
+
+  // #25 — 비상장(토글 OFF)에서도 발행일을 받아 엔진 시기 게이트까지 닿는다. 종전에는 발행일 칸이
+  //   상장 토글 안에만 있어 이 경로가 없었다. 기준은 전환일(증여일 2025)이 아니라 발행일이다.
+  test("§39①3호 전환주식 — 2017.1.1. 전 발행분은 전환이 그 뒤여도 미적용 (법률 제14388호 부칙 §5②)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_stock");
+    await fillConvertible(page);
+    await fillIssuanceDate(page, ["2016", "12", "31"]);
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toHaveText("0");
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("부칙 §5②");
+    // 계산하지 않고 차단한다 — 그 구간의 현행 산식 금액은 법적 근거가 없는 수치다(§45의3 선례)
+    await expect(page.getByTestId("deemed-result")).not.toContainText("13,330,000");
+  });
 
   test("§39①3호 전환주식 — 발행법인 수증이익에 법인세가 부과되면 주주등에는 과세하지 않는다 (§4의2④)", async ({ page }) => {
     await page.goto("/calc/gift-deemed");

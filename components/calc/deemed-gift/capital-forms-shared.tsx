@@ -5,7 +5,6 @@
  * (두 파일이 서로를 import하면 순환이 되므로 공용분만 여기로 분리 — 800줄 정책 분할의 부산물)
  */
 
-import { DateInput } from "@/components/ui/date-input";
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
 
@@ -93,7 +92,6 @@ export function ListedAvgAutoFetch({
   dateLabel,
   onFill,
   testId,
-  onValuationDate,
 }: {
   stockCode: string;
   onStockCode: (v: string) => void;
@@ -101,8 +99,6 @@ export function ListedAvgAutoFetch({
   dateLabel: string;
   onFill: (v: string) => void;
   testId: string;
-  /** 기준일이 증여일과 다른 경우(전환주식 발행 당시)만 전달 — 있으면 DateInput을 함께 렌더 */
-  onValuationDate?: (v: string) => void;
 }) {
   return (
     <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
@@ -118,17 +114,12 @@ export function ListedAvgAutoFetch({
         aria-label="종목코드"
         data-testid={testId}
       />
-      {onValuationDate ? (
-        <div>
-          <label className="mb-1 block text-xs text-muted-foreground">평가기준일 — {dateLabel}</label>
-          <DateInput value={valuationDate} onChange={onValuationDate} />
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          평가기준일 — {dateLabel}
-          {valuationDate ? ` (${valuationDate})` : " (미입력)"}
-        </p>
-      )}
+      {/* 기준일 입력칸은 호출부가 갖는다 — 전환주식 발행일은 종가평균 기준일이기 전에
+          §39①3호 적용 요건(법률 제14388호 부칙 §5②)이라 상장 토글 밖에 있어야 한다 */}
+      <p className="text-xs text-muted-foreground">
+        평가기준일 — {dateLabel}
+        {valuationDate ? ` (${valuationDate})` : " (미입력)"}
+      </p>
       <KiwoomValuationAutoFetchButton
         variant="card"
         stockCode={stockCode}
