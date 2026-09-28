@@ -5,6 +5,7 @@ import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-hel
 import { FOR_PROFIT_DONEE_REASON } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ContributionInput, ContributionParty } from "./types";
+import { sameClauseAggregate } from "./same-clause-43-2";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
@@ -210,7 +211,9 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
     //    개인별 < 3억·합계 ≥ 3억이면 §29의3② per-donee 기준과 어긋날 수 있음(roster 경로 권장).
     const relatedRatio = input.relatedRatio ?? { numer: 0, denom: 1 };
     const gain = safeMultiplyThenDivide(base, relatedRatio.numer, relatedRatio.denom);
-    const applied = gain > 0 && (ratioGateMet || gain >= ABSOLUTE_THRESHOLD);
+    // §43²·영 §32의4 6호 — 3억 leg에만 1년 이내 2호 선행 이익을 더한다(과세액은 당해 gain)
+    const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, gain);
+    const applied = gain > 0 && (ratioGateMet || agg.total >= ABSOLUTE_THRESHOLD);
     const value = applied ? gain : 0;
     return {
       type: "contribution",
@@ -226,6 +229,7 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
           lawRef: GIFT.CONTRIBUTION,
           note: legalNote("§39의3①2호 고가인수"),
         },
+        ...(agg.row ? [agg.row] : []),
       ],
       exclusionReason: applied ? undefined : `이익이 기준금액(출자후평가 30%·3억) 미만 — ${GIFT.CONTRIBUTION_RATIO_GATE}`,
       legalBasis: GIFT.CONTRIBUTION,
@@ -239,7 +243,7 @@ function contributionHigh(input: ContributionInput): DeemedGiftResult {
   let deemedGiftValue = 0;
   parties.forEach((p) => {
     const raw = safeMultiplyThenDivide(base, p.preShares, preContribShares);
-    const meetsThreshold = raw > 0 && (ratioGateMet || raw >= ABSOLUTE_THRESHOLD);
+    const meetsThreshold = raw > 0 && (ratioGateMet || raw + (p.priorSameClauseGain ?? 0) >= ABSOLUTE_THRESHOLD);
     // 「상증법」§2 9호·§4의2①·③ — 고가 명부의 parties는 **수증자**라 영리법인이면 그 행만 빠진다.
     // (저가 명부는 증여자 명부라 contributionLow는 이 표지를 읽지 않는다)
     const forProfitOut = meetsThreshold && p.isForProfitCorp === true;

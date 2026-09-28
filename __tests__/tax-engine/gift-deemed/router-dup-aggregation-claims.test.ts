@@ -104,11 +104,14 @@ describe("주장④ 주석이 배선된 두 축을 «이름으로» 적는다", 
     expect(ci("2024-09-01").applied).toBe(false); // 윈도 밖 — 짝
   });
 
-  it("[X-4] §41의4·§45의5·§39가 배선 축으로 명시돼 있다", () => {
+  it("[X-4] §41의4·§45의5·§39·자본거래 4축이 배선 축으로, 금액기준 없는 축이 「대상 없음」으로 명시돼 있다", () => {
     const src = read(`${GD}/router.ts`);
+    expect(src).toMatch(/배선된 것은 \*\*7개\*\*/);
     expect(src).toMatch(/§41의4/);
     expect(src).toMatch(/§45의5/);
-    expect(src).toMatch(/§39 — `capital-increase-43-2\.ts`/);
+    expect(src).toMatch(/§39 — `same-clause-43-2\.ts`/);
+    expect(src).toMatch(/§38·§39의2·§39의3·§40 — 같은 헬퍼/);
+    expect(src).toMatch(/§41의2 초과배당 — 기준금액 없음/);
     // §43①의 미배선 서술은 «여전히 참»이므로 남아 있어야 한다([X-0]이 뒷받침).
     expect(src).toMatch(/호출처가 0건/);
   });

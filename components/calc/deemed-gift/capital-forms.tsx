@@ -21,7 +21,7 @@ import { CiGiftDateEraNotice } from "./capital-forms-shared";
 // ⑤가 「주주 여부를 물어야 하는 목인지」를 따로 판단하면 엔진과 두 개의 진실이 생긴다.
 // 판정표는 엔진 모듈 하나가 갖는다.
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
-import { SpecificCorpPriorTxTable } from "./SpecificCorpPriorTxTable";
+import { SameClausePriorTable } from "./SameClausePriorTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -165,20 +165,13 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           <CurrencyInput hideUnit label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />
         </>
       )}
-      {/* §43②·영 §32의4 4호 — 3억 금액기준이 있는 나목(저가·고가)에서만 받는다(④·⑧과 같은 조건 · #19) */}
-      {form.ciSubType === "no_realloc" && (
-        <SpecificCorpPriorTxTable
-          rows={form.ciPriorSameClauseRows ?? []}
-          onChange={(rows) => set({ ciPriorSameClauseRows: rows })}
-          testIdPrefix="ci"
-          copy={{
-            item: "선행 증자",
-            dateLabel: "증여일",
-            benefitLabel: "그 증자의 이익",
-            benefitHint: `같은 호(${isHigh ? "고가발행 §39①2호" : "저가발행 §39①1호"})의 이익만 — 3억 금액기준 판정에만 합산하고 과세는 이번 증자분입니다`,
-          }}
-        />
-      )}
+      {/* §43²·영 §32의4 4호 — 3억 금액기준이 있는 나목(저가·고가)에서만 받는다(④·⑧과 같은 술어 · #19) */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="ciPriorSameClauseRows"
+        benefitHint={`같은 호(${isHigh ? "고가발행 §39①2호" : "저가발행 §39①1호"})의 이익만 — 3억 금액기준 판정에만 합산하고 과세는 이번 증자분입니다`}
+      />
       {!isHigh && (
         <ToggleCard
           lawLinks="상증법"
@@ -460,6 +453,13 @@ export function CapitalDecreaseFields({ form, set }: Props) {
               <CurrencyInput label="대주주등 특수관계인 감자 주식수" value={form.cdRelatedShares} onChange={(v) => set({ cdRelatedShares: v })} placeholder="대주주등 특수관계인 감자 주식수" />
             </>
           )}
+          {/* §43²·영 §32의4 5호 — 같은 호(저가/고가) 선행 감자. 멀티는 주주 행 칸 */}
+          <SameClausePriorTable
+            form={form}
+            set={set}
+            rowsKey="cdPriorSameClauseRows"
+            benefitHint={`같은 호(${isHigh ? "고가소각 §39의2①2호" : "저가소각 §39의2①1호"})의 이익만 — 3억 금액기준 판정에만 합산하고 과세는 이번 감자분입니다`}
+          />
         </>
       )}
     </ToneCard>
@@ -643,6 +643,13 @@ export function ConvertibleBondFields({ form, set }: Props) {
           <DecimalInput value={form.cbRelatedPreRatioPct} onChange={(v) => set({ cbRelatedPreRatioPct: v })} />
         </FieldCard>
       )}
+      {/* §43²·영 §32의4 7호 — 같은 호 선행 거래. 2호 라목은 기준 0원이라 표가 없다 */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="cbPriorSameClauseRows"
+        benefitHint={`같은 호(${ct === "acquisition" ? "①1호 인수·취득" : ct === "transfer" ? "①3호 양도" : "①2호 주식전환"})의 이익만 — 1억 금액기준 판정에만 합산하고 과세는 이번 거래분입니다`}
+      />
     </ToneCard>
   );
 }

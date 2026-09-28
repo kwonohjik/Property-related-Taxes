@@ -7,9 +7,18 @@ import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleBondInput, ConvertibleBondClause } from "./types";
+import { sameClauseAggregate } from "./same-clause-43-2";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 
 const ABSOLUTE_THRESHOLD = 100_000_000;
+const AGG_LABELS = { amount: "1억", unit: "같은 호" };
+
+/** 영 §30②1 min(시가 30%, 1억) — 「비율 leg(건별) OR 1억 leg(§43² 1년 합산)」 */
+function meetsMinThreshold(input: ConvertibleBondInput, gain: number) {
+  const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, gain, AGG_LABELS);
+  const met = gain > 0 && (gain >= applyRate(input.bondMarketValue, 0.3) || agg.total >= ABSOLUTE_THRESHOLD);
+  return { met, row: agg.row };
+}
 
 /** §40 공통 증여세 연계 echo: 연대납부 면제(§4의2⑥)는 §40 전체, 합산배제(§47①)는 caseType별 호출부에서 지정 */
 function withGiftFlags(result: DeemedGiftResult, aggregationExcluded: boolean): DeemedGiftResult {
@@ -111,7 +120,8 @@ function bondAcquisition(input: ConvertibleBondInput): DeemedGiftResult {
   const acquisitionPrice = input.acquisitionPrice ?? 0;
   const gain = bondMarketValue - acquisitionPrice;
   const threshold = Math.min(applyRate(bondMarketValue, 0.3), ABSOLUTE_THRESHOLD);
-  const applied = gain > 0 && gain >= threshold;
+  const gate = meetsMinThreshold(input, gain);
+  const applied = gate.met;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
@@ -126,6 +136,7 @@ function bondAcquisition(input: ConvertibleBondInput): DeemedGiftResult {
     lawRef: GIFT.CONVERTIBLE_BOND,
     note: deemedPublicOfferingNote(input) ?? "§40①1호 저가 인수·취득",
   });
+  if (gate.row) breakdown.push(gate.row);
   return withGiftFlags(
     {
       type: "convertible_bond",
@@ -156,7 +167,8 @@ function bondConversion(input: ConvertibleBondInput): DeemedGiftResult {
     net = Math.min(net, input.bondTransferGainForCap); // 영§30①2 단서 — 전환사채 양도 시 양도차익 한도
   }
   const threshold = ABSOLUTE_THRESHOLD; // §30②2 = 1억
-  const applied = net >= threshold;
+  const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, net, AGG_LABELS);
+  const applied = net > 0 && agg.total >= threshold;
   const value = applied ? net : 0;
 
   const breakdown: CalculationStep[] = [
@@ -177,6 +189,7 @@ function bondConversion(input: ConvertibleBondInput): DeemedGiftResult {
     lawRef: GIFT.CONVERTIBLE_BOND,
     note: deemedPublicOfferingNote(input) ?? "§40①2호 가·나·다목 주식전환",
   });
+  if (agg.row) breakdown.push(agg.row);
   return withGiftFlags(
     {
       type: "convertible_bond",
@@ -229,13 +242,15 @@ function bondTransfer(input: ConvertibleBondInput): DeemedGiftResult {
   const transferPrice = input.transferPrice ?? 0;
   const gain = transferPrice - bondMarketValue;
   const threshold = Math.min(applyRate(bondMarketValue, 0.3), ABSOLUTE_THRESHOLD);
-  const applied = gain > 0 && gain >= threshold;
+  const gate = meetsMinThreshold(input, gain);
+  const applied = gate.met;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
     { label: "전환사채등 양도가액", amount: transferPrice, lawRef: GIFT.CONVERTIBLE_BOND },
     { label: "전환사채등 시가", amount: bondMarketValue },
     { label: "증여재산가액 (양도가액 − 시가)", amount: value, lawRef: GIFT.CONVERTIBLE_BOND, note: "§40①3호 특수관계인 양도" },
+    ...(gate.row ? [gate.row] : []),
   ];
   return withGiftFlags(
     {
