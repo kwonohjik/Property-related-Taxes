@@ -18,6 +18,7 @@ import {
   runSettlement2Pass,
   runLegacyCredit,
 } from "./excess-dividend-settlement";
+import { FOR_PROFIT_DONEE_REASON } from "./taxpayer-gate";
 import type {
   DeemedGiftResult,
   ExcessDividendInput,
@@ -37,8 +38,11 @@ import type {
 export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftResult {
   const { shareholders, dividendDate, incomeTaxMode } = input;
 
-  // ① 초과배당금액 자동산정 (시행령 §31의2②)
-  const amountDetail = computeExcessDividendAmount(shareholders);
+  // ① 초과배당금액 자동산정 (시행령 §31의2②) — 계산 대상 수증자 1인분
+  const amountDetail = computeExcessDividendAmount(shareholders, input.targetDoneeId);
+  // 「상증법」§2 9호·§4의2①·③ — 대상 수증자가 영리법인이면 납세의무자가 아니다
+  const targetIsForProfitCorp =
+    amountDetail.donees?.find((d) => d.id === amountDetail.targetDoneeId)?.isForProfitCorp === true;
   const { excessDividendAmount, totalShortfall } = amountDetail;
 
   // 총과소배당 0 → 과세 없음
@@ -58,7 +62,11 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
       breakdown: [
         { label: "초과배당금액", amount: 0, lawRef: GIFT.EXCESS_DIVIDEND_AUTO_COMPUTE },
       ],
-      exclusionReason: "초과배당금액이 없음 — 과소배당 없거나 최대주주등 과소배당 비율 0",
+      exclusionReason:
+        amountDetail.targetDoneeId !== undefined &&
+        !amountDetail.donees?.some((d) => d.id === amountDetail.targetDoneeId)
+          ? "초과배당금액이 없음 — 선택한 특수관계인은 본인 지분에 비례한 배당보다 많이 받지 않았습니다"
+          : "초과배당금액이 없음 — 과소배당 없거나 최대주주등 과소배당 비율 0",
       legalBasis: GIFT.EXCESS_DIVIDEND,
       excessDividendDetail: detail,
     };
@@ -84,13 +92,13 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
     deemedGiftValue = excessDividendAmount;
   }
 
-  const applied = deemedGiftValue > 0;
+  const applied = deemedGiftValue > 0 && !targetIsForProfitCorp;
 
   // ⑤ 정산 2-pass (현행 + giftTaxContext 제공 시) — settlement 파일에서 처리
   let settlementResult: ExcessDividendDetail["settlement"] = undefined;
   let legacyCreditResult: ExcessDividendDetail["legacyCredit"] = undefined;
 
-  if (input.giftTaxContext) {
+  if (input.giftTaxContext && !targetIsForProfitCorp) {
     if (isCurrentMethod && input.actualIncomeTax !== undefined) {
       // 현행 정산 2-pass
       settlementResult = runSettlement2Pass({
@@ -121,7 +129,8 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
     taxMethod,
     settlement: settlementResult,
     legacyCredit: legacyCreditResult,
-    isAggregationExcluded: !applied,
+    // §47② 합산배제 안내는 「초과배당금액 ≤ 소득세 상당액」일 때뿐 — 영리법인 제외와 섞지 않는다
+    isAggregationExcluded: deemedGiftValue <= 0,
   };
 
   const breakdown: CalculationStep[] = [
@@ -136,9 +145,10 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
       lawRef: GIFT.EXCESS_DIVIDEND_INCOME_TAX_RATE,
     },
     {
-      label: isCurrentMethod
-        ? "증여재산가액 (초과배당금액 − 소득세상당액)"
-        : "증여재산가액 (초과배당금액 전액, 산출세액에서 소득세 공제)",
+      // 제외되면 정의어(§31① 「증여재산가액」)를 달지 않고 금액을 「제외 전」으로 남긴다(7-12와 같은 규칙)
+      label: `${targetIsForProfitCorp ? "제외 전 산출 이익" : "증여재산가액"} ${
+        isCurrentMethod ? "(초과배당금액 − 소득세상당액)" : "(초과배당금액 전액, 산출세액에서 소득세 공제)"
+      }`,
       amount: deemedGiftValue,
       lawRef: GIFT.EXCESS_DIVIDEND,
       note: isCurrentMethod
@@ -150,11 +160,13 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
   return {
     type: "excess_dividend",
     applied,
-    deemedGiftValue,
+    deemedGiftValue: applied ? deemedGiftValue : 0,
     breakdown,
     exclusionReason: applied
       ? undefined
-      : "초과배당금액이 소득세 상당액 이하 — §47② 재차증여 합산 배제 해당",
+      : targetIsForProfitCorp
+        ? FOR_PROFIT_DONEE_REASON
+        : "초과배당금액이 소득세 상당액 이하 — §47② 재차증여 합산 배제 해당",
     legalBasis: GIFT.EXCESS_DIVIDEND,
     thresholdEcho: {
       excessDividendAmount,
@@ -170,21 +182,30 @@ export function calcExcessDividendGift(input: ExcessDividendInput): DeemedGiftRe
 // ──────────────────────────────────────────────────────────────
 
 /**
- * 시행령 §31의2② — 주주 배열에서 초과배당금액 자동산정.
+ * 시행령 §31의2② — 주주 배열에서 초과배당금액 자동산정. **특수관계인 1인 단위**다.
+ *
+ * 원문(현행 MST 288887):
+ *   1호 「최대주주등의 특수관계인이 배당등을 받은 금액에서 **본인이** 보유한 주식등에 비례하여 배당등을
+ *       받을 경우의 그 배당등의 금액을 차감한 가액」
+ *   2호 「보유한 주식등에 비하여 낮은 금액의 배당등을 받은 **주주등**이 … 적게 배당등을 받은 금액
+ *       (과소배당금액) 중 최대주주등의 과소배당금액이 차지하는 비율」
  *
  * 알고리즘:
  * 1. 총배당 = Σ actualDividend (모든 주주 합계)
- * 2. 특수관계인 비례배당 = 총배당 × (특수관계인 지분율)
- * 3. ①가액 = 특수관계인 실수령 − 특수관계인 비례배당 (과소 시 0)
- * 4. 각 주주 과소배당 = max(0, 비례배당 − 실수령)
- *    - 최대주주 과소: majorShortfall
- *    - 기타 주주 과소: otherShortfall (⚠️ 분모에 포함 — 교차검토 정정)
- *    - 총과소배당: totalShortfall = majorShortfall + otherShortfall
- * 5. ②비율 = majorShortfall / totalShortfall (분모 0 방어)
- * 6. 초과배당금액 = ①가액 × ②비율 (safeMultiplyThenDivide 정수연산)
+ * 2. 각 주주 비례배당 = floor(총배당 × 지분율) — 정수 분수(리뷰 #10)
+ * 3. 과소배당 = max(0, 비례배당 − 실수령) — **역할 불문 전원**(2호 「주주등」). 과소수령 특수관계인도 분모다.
+ *    - 최대주주 과소: majorShortfall / 그 외(기타·특수관계인) 과소: 분모에만
+ * 4. 수증자 = 과다수령한 특수관계인 **각자**: ①가액 = 실수령 − 본인 비례배당
+ * 5. 초과배당금액(수증자별) = ①가액 × majorShortfall / totalShortfall (정수연산)
+ * 6. 계산 대상 1명 = targetDoneeId → 없거나 불일치면 영리법인이 아닌 첫 수증자 → 그래도 없으면 첫 수증자
+ *
+ * ⚠️ 종전에는 특수관계인 전원의 실수령·비례배당을 **합산**해 ①을 하나로 만들었다 — 과다수령 2명이
+ *    한 사람이 되고(누진 율표·증여세가 합계에 걸림), 과소수령 특수관계인은 ①에서 상계되면서 ② 분모에서는
+ *    빠졌다. 비특수관계 과다수령자가 없으면 합계는 대수적으로 같아서 1명 픽스처로는 보이지 않았다.
  */
 export function computeExcessDividendAmount(
   shareholders: ShareholderDividend[],
+  targetDoneeId?: string,
 ): Pick<
   ExcessDividendDetail,
   | "totalDividend"
@@ -195,67 +216,65 @@ export function computeExcessDividendAmount(
   | "ratioNumer"
   | "ratioDenom"
   | "excessDividendAmount"
+  | "donees"
+  | "targetDoneeId"
 > {
-  // 총배당
   const totalDividend = shareholders.reduce((sum, sh) => sum + sh.actualDividend, 0);
+  const proportionalOf = (sh: ShareholderDividend) =>
+    safeMultiplyThenDivide(totalDividend, sh.ownershipRatio.numer, sh.ownershipRatio.denom);
 
-  // 특수관계인 비례배당: Σ floor(totalDividend × 지분율) — 정수 분수 연산.
-  // (부동소수 백분율 numer×(100/denom) 경로는 denom=10000 등에서 1원 오차 → 개별주주 경로와 동일 정수화)
-  const proportionalDividend = shareholders
-    .filter((sh) => sh.role === "related_party")
-    .reduce(
-      (sum, sh) =>
-        sum + safeMultiplyThenDivide(totalDividend, sh.ownershipRatio.numer, sh.ownershipRatio.denom),
-      0,
-    );
-
-  // 특수관계인 실수령 합계
-  const relatedActual = shareholders
-    .filter((sh) => sh.role === "related_party")
-    .reduce((sum, sh) => sum + sh.actualDividend, 0);
-
-  // ①가액 = 실수령 − 비례 (과소 시 0)
-  const excessBeforeRatio = Math.max(0, relatedActual - proportionalDividend);
-
-  // 각 주주 과소배당 계산 (주주별 비례배당 = totalDividend × 지분율)
+  // 과소배당 — 「과소배당을 받은 주주등」 전원(2호). 역할이 특수관계인이어도 과소수령이면 분모다.
   let majorShortfall = 0;
   let otherShortfall = 0;
-
   for (const sh of shareholders) {
-    if (sh.role === "related_party") continue; // 특수관계인 제외
-    const proportional = Math.floor(
-      (totalDividend * sh.ownershipRatio.numer) / sh.ownershipRatio.denom,
-    );
-    const shortfall = Math.max(0, proportional - sh.actualDividend);
-    if (sh.role === "major_shareholder") {
-      majorShortfall += shortfall;
-    } else {
-      // role === 'other' — 기타 주주도 분모에 포함 (교차검토 A3 정정)
-      otherShortfall += shortfall;
-    }
+    const shortfall = Math.max(0, proportionalOf(sh) - sh.actualDividend);
+    if (sh.role === "major_shareholder") majorShortfall += shortfall;
+    else otherShortfall += shortfall; // 기타 주주(교차검토 A3) · 과소수령 특수관계인
   }
-
   const totalShortfall = majorShortfall + otherShortfall;
 
-  // ②비율 = majorShortfall / totalShortfall (분모 0 방어)
-  // 초과배당금액 = excessBeforeRatio × (majorShortfall / totalShortfall)
-  let excessDividendAmount = 0;
-  if (totalShortfall > 0) {
-    // 정수연산: excessBeforeRatio × majorShortfall / totalShortfall
-    excessDividendAmount = Math.floor(
-      (excessBeforeRatio * majorShortfall) / totalShortfall,
-    );
+  // 수증자 = 과다수령한 특수관계인 각자(1호 「본인이」)
+  let relatedSeq = 0;
+  const donees: NonNullable<ExcessDividendDetail["donees"]> = [];
+  for (const sh of shareholders) {
+    if (sh.role !== "related_party") continue;
+    relatedSeq += 1;
+    const proportionalDividend = proportionalOf(sh);
+    const excessBeforeRatio = Math.max(0, sh.actualDividend - proportionalDividend);
+    if (excessBeforeRatio === 0) continue;
+    donees.push({
+      id: sh.id,
+      name: sh.name?.trim() || `특수관계인 ${relatedSeq}`, // 내부 id 표시 금지(feedback_no_internal_id_in_result)
+      proportionalDividend,
+      actualDividend: sh.actualDividend,
+      excessBeforeRatio,
+      excessDividendAmount:
+        totalShortfall > 0 ? safeMultiplyThenDivide(excessBeforeRatio, majorShortfall, totalShortfall) : 0,
+      ...(sh.isForProfitCorp === true && { isForProfitCorp: true }),
+    });
   }
+
+  // 실재하는 특수관계인 행을 골랐으면 그 사람이다 — 초과수령이 없어도 **다른 사람으로 바꾸지 않는다**.
+  // 행이 없는 id(삭제된 행 등 stale)만 기본값으로 돌아간다.
+  const pickedRelatedRow = shareholders.some((sh) => sh.role === "related_party" && sh.id === targetDoneeId);
+  const target = pickedRelatedRow
+    ? donees.find((d) => d.id === targetDoneeId)
+    : (donees.find((d) => d.isForProfitCorp !== true) ?? donees[0]);
 
   return {
     totalDividend,
-    proportionalDividend,
-    excessBeforeRatio,
+    // 수증자가 없으면 특수관계인 비례배당 합계(표시용 — 종전 값)
+    proportionalDividend:
+      target?.proportionalDividend ??
+      shareholders.filter((sh) => sh.role === "related_party").reduce((a, sh) => a + proportionalOf(sh), 0),
+    excessBeforeRatio: target?.excessBeforeRatio ?? 0,
     majorShortfall,
     totalShortfall,
     ratioNumer: majorShortfall,
     ratioDenom: totalShortfall,
-    excessDividendAmount,
+    excessDividendAmount: target?.excessDividendAmount ?? 0,
+    donees,
+    targetDoneeId: pickedRelatedRow ? targetDoneeId : target?.id,
   };
 }
 

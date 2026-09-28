@@ -27,6 +27,7 @@ type Props = { form: DeemedFormState; set: SetFn };
 /** §41의2 초과배당 */
 export function ExcessDividendFields({ form, set }: Props) {
   const incomeTaxMode = form.edIncomeTaxMode;
+  const edRelatedRows = (form.edShareholders ?? []).filter((r) => r.role === "related_party");
 
   return (
     <div className="space-y-3">
@@ -36,6 +37,33 @@ export function ExcessDividendFields({ form, set }: Props) {
           rows={form.edShareholders}
           onChange={(rows) => set({ edShareholders: rows })}
         />
+        {/* 초과배당은 특수관계인 **1인 단위**다(법 §41의2① 「본인이」 · 별지 제10호의5서식 수증자 1명).
+            아래 소득세·정산·증여자 관계는 그 1명의 값이라 계산 대상을 고른다. 비례배당은 미리 계산하지
+            않으므로(§0.5) 특수관계인 행 전부를 나열한다 — 초과수령이 없는 사람을 고르면 「초과배당 없음」. */}
+        {edRelatedRows.length > 1 && (
+          <div className="mt-3 space-y-1">
+            <label className="text-xs font-semibold text-sky-800" htmlFor="ed-target-donee">
+              계산 대상 수증자 (소득세·정산·증여자 관계 입력은 이 수증자의 값)
+            </label>
+            <select
+              id="ed-target-donee"
+              value={form.edTargetDoneeId}
+              onChange={(e) => set({ edTargetDoneeId: e.target.value })}
+              data-testid="ed-target-donee"
+              className="w-full rounded-md border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
+            >
+              <option value="">자동 — 영리법인이 아닌 첫 수증자</option>
+              {edRelatedRows.map((r, i) => (
+                <option key={r.id} value={r.id}>
+                  {r.name.trim() || `특수관계인 ${i + 1}`}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              특수관계인은 각자 따로 신고합니다. 다른 수증자는 선택을 바꿔 다시 계산하세요.
+            </p>
+          </div>
+        )}
       </ToneCard>
 
       {/* ── 섹션 3: 소득세 상당액 모드 ── */}

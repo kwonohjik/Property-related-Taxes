@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { EdShareholderRow } from "./shared";
 
 type Props = {
@@ -91,7 +92,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
               </tr>
             </thead>
             <tbody>
-              {safeRows.map((row) => (
+              {safeRows.map((row, i) => (
                 <tr key={row.id} className="border-b border-sky-100 last:border-0">
                   <td className="py-1.5 pl-3 pr-2">
                     <input
@@ -111,6 +112,20 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
                     >
                       {ROLE_LABELS[row.role]}
                     </button>
+                    {/* 「상증법」§2 9호·§4의2①·③ — 수증자(특수관계인) 행에만. 최대주주·기타 행에 두면 켜도
+                        엔진이 읽지 않는 거짓 입력 경로가 된다(④도 역할로 거른다) */}
+                    {row.role === "related_party" && (
+                      <div className="mt-1">
+                        <ToggleCard
+                          variant="chip"
+                          tone="violet"
+                          checked={row.isForProfitCorp === true}
+                          onCheckedChange={(v) => patchRow(row.id, { isForProfitCorp: v })}
+                          title="영리법인 (§4의2①·③)"
+                          data-testid={`ed-sh-corp-${i}`}
+                        />
+                      </div>
+                    )}
                   </td>
                   <td className="py-1.5 pr-2">
                     <CurrencyInput

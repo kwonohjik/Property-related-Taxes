@@ -479,6 +479,7 @@ const shareholderDividendSchema = z.object({
   ownershipRatio: ratioSchema,
   actualDividend: z.number().nonnegative(),
   name: z.string().optional(),
+  isForProfitCorp: z.boolean().optional(), // 「상증법」§2 9호·§4의2①·③ — 특수관계인(수증자) 행에서만 효력
 });
 
 const excessDividendGiftTaxContextSchema = z.object({
@@ -500,6 +501,7 @@ const excessDividendGiftTaxContextSchema = z.object({
 const excessDividendSchema = z.object({
   type: z.literal("excess_dividend"),
   shareholders: z.array(shareholderDividendSchema).min(1),
+  targetDoneeId: z.string().optional(), // 계산 대상 수증자(특수관계인 1인 단위 — 법 §41의2①)
   dividendDate: z.coerce.date(),
   incomeTaxMode: z.enum(["undetermined", "separate", "comprehensive", "exempt"]),
   separateIncomeTax: z.number().nonnegative().optional(),

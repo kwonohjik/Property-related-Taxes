@@ -93,7 +93,22 @@ export interface ExcessDividendDetail {
   totalShortfall: number;       // 총과소배당금액
   ratioNumer: number;           // ②비율 분자 = majorShortfall
   ratioDenom: number;           // ②비율 분모 = totalShortfall
-  excessDividendAmount: number; // 초과배당금액 = ①×②
+  excessDividendAmount: number; // 초과배당금액 = ①×② — **계산 대상 수증자 1인분**
+  /**
+   * 특수관계인 수증자별 초과배당금액 — 과다수령한 `related_party` 행 전원(배열, Map 금지).
+   * 위 excessBeforeRatio·proportionalDividend·excessDividendAmount는 이 중 `targetDoneeId` 1명의 값이다.
+   */
+  donees?: {
+    id: string;
+    name: string;
+    proportionalDividend: number;
+    actualDividend: number;
+    excessBeforeRatio: number;
+    excessDividendAmount: number;
+    isForProfitCorp?: boolean;
+  }[];
+  /** 계산 대상 수증자 id (수증자가 없으면 undefined) */
+  targetDoneeId?: string;
 
   // 소득세 상당액 산정 내역
   incomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";

@@ -185,4 +185,24 @@ test.describe("§41의2 초과배당 — E2E spec", () => {
     // 율표 적용 라벨 확인 (7구간 rate table)
     await expect(page.getByTestId("ed-income-tax-detail")).toBeVisible();
   });
+
+  test("특수관계인 2명 — 병을 계산 대상으로 고르면 병 1인분 43,000,000 (종전 합산 325,940,000)", async ({ page }) => {
+    // 법 §41의2① 「본인이」 · 별지 제10호의5서식(수증자 1명) — 초과배당은 특수관계인 1인 단위다.
+    // 총배당 10억: 갑 50% 0 · 을 25% 7억(4.5억 초과) · 병 25% 3억(5천만 초과) → 병 5천만 − 소득세 상당액 7백만
+    await page.goto("/calc/gift-deemed");
+    await page.getByTestId("deemed-type-excess_dividend").click();
+    const dialog = page.getByTestId("deemed-detail-dialog");
+    await fillGiftDate(dialog, "2025", "6", "30");
+    await addShareholder(dialog, { name: "갑", role: "major_shareholder", dividend: "0", ratio: "50" });
+    await addShareholder(dialog, { name: "을", role: "related_party", dividend: "700000000", ratio: "25" });
+    await addShareholder(dialog, { name: "병", role: "related_party", dividend: "300000000", ratio: "25" });
+    await dialog.getByTestId("ed-target-donee").selectOption({ label: "병" });
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+
+    await expect(page.getByTestId("deemed-result-value")).toContainText("43,000,000", { timeout: 15_000 });
+    const donees = page.getByTestId("ed-donee-table");
+    await expect(donees).toContainText("450,000,000"); // 을
+    await expect(donees.locator("tr", { hasText: "병" })).toContainText("계산 대상");
+  });
 });
