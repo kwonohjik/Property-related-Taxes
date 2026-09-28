@@ -21,6 +21,8 @@ import {
 import { calcInheritanceGiftFilingPenalty } from "@/lib/tax-engine/inheritance-gift-penalty";
 import { resolveGiftStatutoryDeadline } from "@/lib/calc/gift-api";
 import { buildGiftWizardPrefill } from "@/lib/calc/gift-deemed-api";
+// 실제 폼은 항상 INITIAL_DEEMED 전체다 — 이관이 엔진 입력(출처 #100)을 만들므로 부분 폼은 성립하지 않는다.
+import { INITIAL_DEEMED } from "@/components/calc/deemed-gift/deemed-form-state";
 import { validateStep } from "@/components/calc/gift-tax-form-validate";
 import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 
@@ -122,7 +124,7 @@ describe("⑧ — 단서 건의 공란을 막는다", () => {
 describe("이관 payload — 단서 표지와 기한", () => {
   it("[P-8] §45의3은 증여일이 곧 사업연도 종료일이라 추가 입력 없이 파생된다", () => {
     const out = buildGiftWizardPrefill(
-      { type: "related_corp", giftDate: "2024-12-31", corpHonestFilingConfirm: false } as never,
+      { ...INITIAL_DEEMED, type: "related_corp", giftDate: "2024-12-31", corpHonestFilingConfirm: false } as never,
       { type: "related_corp", deemedGiftValue: 1_000_000, applied: true, breakdown: [] } as never,
     );
     expect(out.filingDeadlineBasis).toBe("sec68_1_proviso");
@@ -132,6 +134,7 @@ describe("이관 payload — 단서 표지와 기한", () => {
   it("[P-8b] §45의5는 «거래일»이 아니라 특정법인 사업연도 종료일에서 파생된다", () => {
     const out = buildGiftWizardPrefill(
       {
+        ...INITIAL_DEEMED,
         type: "specific_corp",
         giftDate: "2025-05-20", // 거래한 날 — 사업연도와 무관
         scCorpFiscalYearEndDate: "2024-12-31",
@@ -144,7 +147,7 @@ describe("이관 payload — 단서 표지와 기한", () => {
 
   it("[P-8c] 파생하지 못하면 기한을 «넣지 않고» 표지만 보낸다 — 본문으로 되메우지 않는다", () => {
     const out = buildGiftWizardPrefill(
-      { type: "specific_corp", giftDate: "2025-05-20", scCorpFiscalYearEndDate: "" } as never,
+      { ...INITIAL_DEEMED, type: "specific_corp", giftDate: "2025-05-20", scCorpFiscalYearEndDate: "" } as never,
       { type: "specific_corp", deemedGiftValue: 1_000_000, applied: true, breakdown: [] } as never,
     );
     expect(out.filingDeadlineBasis).toBe("sec68_1_proviso");
@@ -153,7 +156,7 @@ describe("이관 payload — 단서 표지와 기한", () => {
 
   it("[P-8e] 성실신고확인 플래그가 이관 파생까지 도달한다 — 4개월 기산", () => {
     const out = buildGiftWizardPrefill(
-      { type: "related_corp", giftDate: "2024-12-31", corpHonestFilingConfirm: true } as never,
+      { ...INITIAL_DEEMED, type: "related_corp", giftDate: "2024-12-31", corpHonestFilingConfirm: true } as never,
       { type: "related_corp", deemedGiftValue: 1_000_000, applied: true, breakdown: [] } as never,
     );
     expect(out.statutoryDeadline).toBe("2025-07-30");
@@ -161,7 +164,7 @@ describe("이관 payload — 단서 표지와 기한", () => {
 
   it("[P-8d] 단서 대상이 아닌 유형에는 표지가 붙지 않는다", () => {
     const out = buildGiftWizardPrefill(
-      { type: "free_loan", giftDate: "2024-12-31" } as never,
+      { ...INITIAL_DEEMED, type: "free_loan", giftDate: "2024-12-31" } as never,
       { type: "free_loan", deemedGiftValue: 1_000_000, applied: true, breakdown: [] } as never,
     );
     expect(out.filingDeadlineBasis).toBeUndefined();

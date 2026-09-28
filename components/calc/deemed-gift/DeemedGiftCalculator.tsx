@@ -49,7 +49,7 @@ export function DeemedGiftCalculator() {
   }, []);
 
   // 로컬 이력 자동 저장(#72) — 결과가 나오면 1회. 세액이 없는 계산기라 기준일은 증여일이다.
-  useAutoSaveCalculation({
+  const { savedId } = useAutoSaveCalculation({
     taxType: "gift_deemed",
     inputData: form as unknown as Record<string, unknown>,
     resultData: result ? (result as unknown as Record<string, unknown>) : null,
@@ -102,7 +102,8 @@ export function DeemedGiftCalculator() {
 
   function handleToGiftTax() {
     if (!result) return;
-    const prefill = buildGiftWizardPrefill(form, result);
+    // 출처 record id(R12) — 자동저장이 끝나기 전이면 없이 넘긴다(사실 이관 자체는 막지 않는다).
+    const prefill = buildGiftWizardPrefill(form, result, savedId ?? undefined);
     sessionStorage.setItem("giftTaxResumeInput", JSON.stringify(prefill));
     router.push("/calc/gift-tax");
   }

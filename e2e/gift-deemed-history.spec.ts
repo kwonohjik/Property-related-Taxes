@@ -57,6 +57,40 @@ test.describe("증여이익 계산 — 이력", () => {
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
   });
 
+  test("[GDH-4] #100·R12 — 증여세로 넘기는 항목이 사실관계와 출처 record id를 싣는다", async ({ page }) => {
+    // 이관 payload는 증여세 화면 마운트 때 즉시 소비된다 — setItem을 가로채 그 값을 붙잡는다(SPA 이동이라 window 유지).
+    await page.addInitScript(() => {
+      const orig = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "giftTaxResumeInput") (window as unknown as { __handoff?: string }).__handoff = v;
+        return orig.call(this, k, v);
+      };
+    });
+    await calcConvertibleBond(page);
+    await waitForCalculationSaved(page, "gift_deemed");
+    await page.getByTestId("deemed-to-wizard").click();
+    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+
+    const handoff = await page.evaluate(() => JSON.parse((window as unknown as { __handoff: string }).__handoff));
+    const src = handoff.giftItems[0].deemedSource;
+    expect(src.type).toBe("convertible_bond");
+    expect(src.input).toMatchObject({ type: "convertible_bond" });
+
+    const savedIds: string[] = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const req = indexedDB.open("KoreanTaxCalcLocal");
+          req.onsuccess = () => {
+            const all = req.result.transaction("calculations", "readonly").objectStore("calculations").getAll();
+            all.onsuccess = () =>
+              resolve((all.result as { id: string; taxType: string }[]).filter((r) => r.taxType === "gift_deemed").map((r) => r.id));
+          };
+        }),
+    );
+    expect(savedIds).toHaveLength(1);
+    expect(src.sourceCalculationId).toBe(savedIds[0]);
+  });
+
   test("[GDH-3] 이력 필터 「증여이익」이 그 세목만 남긴다", async ({ page }) => {
     await calcConvertibleBond(page);
     await waitForCalculationSaved(page, "gift_deemed");
