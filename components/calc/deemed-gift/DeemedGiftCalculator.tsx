@@ -93,7 +93,9 @@ export function DeemedGiftCalculator() {
             ? { rcSelectedDoneeIndex: i }
             : result?.type === "capital_increase_allocation"
               ? { ciAllocSelectedDoneeIndex: i }
-              : { cdSelectedDoneeIndex: i }),
+              : result?.type === "merger"
+                ? { mrgSelectedDoneeIndex: i }
+                : { cdSelectedDoneeIndex: i }),
     }));
 
   return (
@@ -169,7 +171,9 @@ export function DeemedGiftCalculator() {
                   ? form.rcSelectedDoneeIndex
                   : result.type === "capital_increase_allocation"
                     ? form.ciAllocSelectedDoneeIndex
-                    : form.cdSelectedDoneeIndex
+                    : result.type === "merger"
+                      ? form.mrgSelectedDoneeIndex
+                      : form.cdSelectedDoneeIndex
           }
           onSelectDonee={selectDonee}
         />
