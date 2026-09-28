@@ -615,7 +615,10 @@ describe("[경계값] 상속 5년 경계 + 시가표준액 경계", () => {
     expect(result.isSeparate).toBe(false); // age < 30 조건 미충족
   });
 
-  it("혼인 전 분양권 (2026.12.31 경계 — 한시 종료일) → 제외 됨", () => {
+  // 지방세법 시행령 §28의4⑥6호는 혼인 전 분양권 **자체**를 빼지 않는다 — 「혼인 전 소유한 주택분양권으로
+  // 주택을 취득하는 경우 다른 배우자가 혼인 전부터 소유하고 있는 주택」을 뺀다. 문언·부칙(대통령령
+  // 제33325호 이후 전부)에 2026.12.31 기한도 없다(계획서 D-9b). 종전 표시는 기한 전후 모두 주택 수에 넣는다.
+  it("종전 「혼인 전 분양권」 표시 (2026.12.31 — 종전 한시 종료일) → 분양권 제외 안 됨", () => {
     const result = calculateHouseCount({
       houses: [],
       rights: [
@@ -627,13 +630,13 @@ describe("[경계값] 상속 5년 경계 + 시가표준액 경계", () => {
         },
       ],
       offices: [],
-      referenceDate: "2026-12-31", // 한시 종료일 (포함)
+      referenceDate: "2026-12-31",
     });
-    expect(result.effectiveCount).toBe(0); // 제외
-    expect(result.excludedDetails[0].reason).toBe("pre_marriage_subscription_right");
+    expect(result.effectiveCount).toBe(1); // 포함 — 6호는 분양권을 빼지 않는다
+    expect(result.excludedDetails).toEqual([]);
   });
 
-  it("혼인 전 분양권 (2027.01.01 이후 — 한시 종료 후) → 제외 안 됨", () => {
+  it("종전 「혼인 전 분양권」 표시 (2027.01.01) → 분양권 제외 안 됨 (기한과 무관)", () => {
     const result = calculateHouseCount({
       houses: [],
       rights: [
@@ -645,8 +648,8 @@ describe("[경계값] 상속 5년 경계 + 시가표준액 경계", () => {
         },
       ],
       offices: [],
-      referenceDate: "2027-01-01", // 한시 종료 후
+      referenceDate: "2027-01-01",
     });
-    expect(result.effectiveCount).toBe(1); // 포함 (한시 종료)
+    expect(result.effectiveCount).toBe(1);
   });
 });

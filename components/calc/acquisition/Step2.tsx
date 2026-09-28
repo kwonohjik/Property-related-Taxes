@@ -31,6 +31,7 @@ function OwnedHouseCard({
   house,
   index,
   requireDate,
+  showSpouseOwner,
   onChange,
   onRemove,
 }: {
@@ -38,6 +39,8 @@ function OwnedHouseCard({
   index: number;
   /** 분양권·입주권으로 취득(권리취득일 소급) — 모든 행의 취득일이 기준일 비교에 필요 */
   requireDate: boolean;
+  /** 혼인 전 소유한 주택분양권으로 취득(§28의4⑥6호) — 주택 행에 「배우자 소유」 칸을 연다 */
+  showSpouseOwner: boolean;
   onChange: (updated: OwnedHouseInfo) => void;
   onRemove: () => void;
 }) {
@@ -111,6 +114,18 @@ function OwnedHouseCard({
             주택 수에 넣지 않습니다 (지방세법 부칙 법률 제17473호 제3조·제7조).
           </p>
         </div>
+      )}
+
+      {/* §28의4⑥6호 — 주택 행만 (6호는 「주택」만 뺀다). ④는 같은 조건에서만 보낸다 */}
+      {showSpouseOwner && house.propertyType === "housing" && (
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="배우자 소유 주택"
+          description="혼인일 전에 취득해 지금까지 소유한 배우자 주택은 주택 수에서 뺍니다 (시행령 §28의4⑥6호) — 혼인 후 취득한 주택은 넣습니다"
+          checked={house.ownedBySpouse}
+          onCheckedChange={(v) => set("ownedBySpouse", v)}
+        />
       )}
 
       {/* 수도권 여부 */}
@@ -397,6 +412,7 @@ export function Step2({
             house={h}
             index={i}
             requireDate={form.acquiredViaRight}
+            showSpouseOwner={form.acquiredViaRight && form.acquiredViaPreMarriageRight}
             onChange={(updated) => updateHouse(i, updated)}
             onRemove={() => removeHouse(i)}
           />
@@ -517,6 +533,27 @@ export function Step2({
           권리취득일 뒤에 취득한 자산은 세지 않습니다. 2020.8.12. 전에 취득한 권리는 소급하지 않고
           주택 취득일 기준으로 산정합니다 (시행령 §28의4①, 부칙 대통령령 제30939호 제2조).
         </p>
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="혼인 전 소유한 주택분양권으로 취득 (§28의4⑥6호)"
+          description="다른 배우자가 혼인 전부터 소유한 주택은 주택 수에서 뺍니다 — 조합원입주권은 해당하지 않습니다"
+          checked={form.acquiredViaPreMarriageRight}
+          onCheckedChange={(v) => set("acquiredViaPreMarriageRight", v)}
+        >
+          <div>
+            <label className="text-xs font-medium block mb-1">혼인일 (혼인신고일)</label>
+            <DateInput
+              value={form.marriageDate}
+              onChange={(v) => set("marriageDate", v)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            권리취득일이 혼인일보다 앞서야 합니다. 보유 주택 목록에서 배우자 주택에 「배우자 소유 주택」을 켜세요 —
+            혼인일 전에 취득한 배우자 주택만 뺍니다. 2023.3.14. 이후 취득하는 주택부터 적용합니다
+            (부칙 대통령령 제33325호 제2조).
+          </p>
+        </ToggleCard>
       </ToggleCard>
 
       {/* 취득 주택 자체 한시 특례 */}

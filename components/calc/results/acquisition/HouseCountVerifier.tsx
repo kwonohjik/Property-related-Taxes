@@ -39,7 +39,7 @@ const EXCLUSION_TYPE_LABELS = {
   population_decline_lease: "인구감소지역 임대주택",
   staff_rental: "사원임대용",
   inheritance_under_5yr: "상속 5년 미경과",
-  pre_marriage_subscription_right: "혼인 전 분양권 (배우자)",
+  spouse_pre_marriage_house: "배우자의 혼인 전 주택 (혼인 전 분양권으로 취득)",
   hansi_new_build: "한시특례 신축",
   hansi_lease_registered: "한시특례 임대등록",
   hansi_unsold_apt: "한시특례 미분양",

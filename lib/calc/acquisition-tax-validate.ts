@@ -52,6 +52,15 @@ function validateOwnedHouses(form: FormState): string | null {
   if (form.acquiredViaRight && !form.rightAcquisitionDate) {
     return "분양권·입주권으로 취득 — 권리취득일(분양계약일)을 입력하세요.";
   }
+  // §28의4⑥6호 — ⑤(토글 안 혼인일)·④(acquiredViaRight && acquiredViaPreMarriageRight)와 같은 조건
+  if (form.acquiredViaRight && form.acquiredViaPreMarriageRight) {
+    if (!form.marriageDate) {
+      return "혼인 전 소유한 주택분양권으로 취득 — 혼인일(혼인신고일)을 입력하세요.";
+    }
+    if (form.rightAcquisitionDate && form.rightAcquisitionDate >= form.marriageDate) {
+      return "혼인 전 소유한 주택분양권으로 취득 — 권리취득일(분양계약일)이 혼인일보다 앞서야 합니다.";
+    }
+  }
   const rows = form.ownedHouses ?? [];
   for (let i = 0; i < rows.length; i++) {
     const h = rows[i];

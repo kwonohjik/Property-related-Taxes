@@ -215,6 +215,8 @@ const ownedHouseInfoSchema = z.object({
   isHansiBenefitNewBuild: z.boolean().optional(),
   isHansiBenefitLeaseRegistered: z.boolean().optional(),
   isHansiBenefitUnsoldApt: z.boolean().optional(),
+  // §28의4⑥6호 — 취득자의 배우자 소유 주택 (혼인 전 분양권으로 취득 시 배우자의 혼인 전 주택 제외)
+  ownedBySpouse: z.boolean().optional(),
   // 공유지분
   ownershipShare: z.number().nonnegative().optional(),
   coOwnersAllInHousehold: z.boolean().optional(),
@@ -234,6 +236,7 @@ const rightAssetSchema = z.object({
   // 필수 — 법률 제17473호 부칙 제3조(2020.8.12. 전 취득분 제외)·소급 기준일 판정에 쓴다. 빈 값 금지(OH-25)
   rightAcquisitionDate: dateStr,
   contractDate: dateStr.optional(),
+  // 종전 입력(분양권 자체 제외) — 엔진은 빼지 않고 경고한다(§28의4⑥6호, 계획서 D-9b). 조용히 떨어지지 않게 받는다
   isPreMarriageSubscriptionRight: z.boolean().optional(),
   inheritanceDate: z.string().optional(),
 });
@@ -258,6 +261,9 @@ const pendingAcquisitionSchema = z.object({
   isMultiHouseholdWithUnitArea: z.boolean().optional(),
   acquiredViaRight: z.boolean().optional(),
   rightAcquisitionDate: z.string().optional(),
+  // §28의4⑥6호 — 혼인 전 소유한 주택분양권으로 취득 + 혼인일
+  viaPreMarriageSubscriptionRight: z.boolean().optional(),
+  marriageDate: dateStr.optional(),
 });
 
 const householdMemberSchema = z.object({
@@ -287,6 +293,14 @@ const houseCountInputSchema = z.object({
    * 취득일이 비면 엔진이 소급 없이·기준일 비교 없이 조용히 계산한다. 막는다(OH-25·OH-26).
    */
   if (!v.pendingAcquisition?.acquiredViaRight) return;
+  // §28의4⑥6호 — 「혼인 전」은 혼인일 없이 판정할 수 없다. 엔진이 조용히 주택 수에 넣지 않게 막는다
+  if (v.pendingAcquisition.viaPreMarriageSubscriptionRight && !v.pendingAcquisition.marriageDate) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["pendingAcquisition", "marriageDate"],
+      message: "혼인 전 소유한 주택분양권으로 취득하는 주택은 혼인일이 필요합니다",
+    });
+  }
   if (!dateStr.safeParse(v.pendingAcquisition.rightAcquisitionDate ?? "").success) {
     ctx.addIssue({
       code: "custom",
