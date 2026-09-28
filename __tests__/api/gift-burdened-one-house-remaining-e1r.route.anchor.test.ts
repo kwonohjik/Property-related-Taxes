@@ -7,6 +7,7 @@
  *
  * | 축 | 종전(base) | 고친 뒤 | 패리티(양도세 계산기 `callTransferTaxAPI`) |
  * |---|---|---|---|
+ * | A — 「양도시 조정대상지역」 토글 ↔ 증여 주택 주소 | 주소가 있어도 토글(기본 OFF)만 중과·단기세율에 쓰임 | 안 만진 토글은 주소 판정(`giftBurdenedEffectiveIsRegulatedArea`) | 계산기 `useRegulatedAreaAutoTip`이 주소로 채운 토글 |
  * | D — 상속받은 주택(§104②1호 · §154⑧3호) | 취득 원인 칸 없음 → 상속개시일부터 세율·보유 기산 | `InheritedSameHouseholdField` 재사용 → `acquisitionCause` · `decedent*` | `assets[0].acquisitionCause` · `decedent*` |
  *
  * 시료는 모두 아파트 1채 부담부증여(증여일 = 양도일) · 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억.
@@ -263,5 +264,56 @@ describe("D ⑭ route — 축별 기여 (같은 시료에서 한 축씩 연다)"
       expect(r.transferGain).toBe(base.transferGain);
       expect(r.longTermHoldingRate).toBe(base.longTermHoldingRate);
     }
+  });
+});
+
+// ═══ A — 「양도시(증여일) 조정대상지역」 토글 ↔ 증여 주택 주소 ═══════════════════════════════
+
+/**
+ * 계산기 규칙(`useRegulatedAreaAutoTip`): 주소가 있으면 `/api/address/regulated-area`(= `checkRegulatedAreaByCode`)의
+ * 양도일 판정으로 토글을 채운다 — **사용자가 직접 만진 토글은 덮어쓰지 않는다**(`isRegulatedAreaTouched`).
+ * 이 경로는 store에 쓰지 않고 같은 규칙을 파생한다: 저장값이 없으면(= 안 만짐) 주소 판정, 있으면 그 값.
+ */
+describe("A ⑭ route — 주소가 있으면 안 만진 토글은 주소 판정을 따른다 (계산기와 같은 규칙)", () => {
+  /** 강남 · 2주택(일시적 2주택 아님) · 증여 2021-06-01(중과 유예 전) */
+  const TWO = { acquisitionDate: new Date("2015-01-01"), householdHousingCount: 2, isRegulatedArea: undefined };
+
+  it("A-0 종전(base 재현) — 토글 저장값 false면 중과 없음 9,544,800", async () => {
+    const r = await gift("2021-06-01", { ...TWO, isRegulatedArea: false }, GANGNAM_PNU);
+    expect(r.determinedTax).toBe(9_544_800);
+  });
+
+  it("A-1 ★ 안 만진 토글(저장값 없음) + 강남 주소 → 조정 2주택 중과 25,690,000, 계산기(주소로 채운 토글)와 같은 세액", async () => {
+    const r = await gift("2021-06-01", TWO, GANGNAM_PNU);
+    expect(r.determinedTax).toBe(25_690_000);
+    // 패리티 — 계산기는 주소 판정값(`checkRegulatedAreaByCode`)으로 토글을 채운다
+    const { checkRegulatedAreaByCode } = await import("@/lib/regulated-area");
+    const filled = checkRegulatedAreaByCode(GANGNAM, "2021-06-01").isRegulated;
+    expect(filled).toBe(true);
+    const same = { actualSalePrice: "150,000,000", fixedAcquisitionPrice: "77,250,000" };
+    const calc = await transfer(
+      transferForm(
+        "2021-06-01",
+        "2015-01-01",
+        { contractTotalPrice: "150,000,000", householdHousingCount: "2", isRegulatedArea: filled },
+        same,
+        GANGNAM,
+      ),
+    );
+    expect(calc.determinedTax).toBe(25_690_000);
+  });
+
+  it("A-2 부정 짝 — 주소가 없으면 저장값 그대로(없음 = 아님) · 사용자가 끈 토글(false)은 주소가 있어도 이긴다", async () => {
+    expect((await gift("2021-06-01", TWO)).determinedTax).toBe(9_544_800);
+    expect((await gift("2021-06-01", { ...TWO, isRegulatedArea: false }, GANGNAM_PNU)).determinedTax).toBe(9_544_800);
+    expect((await gift("2021-06-01", { ...TWO, isRegulatedArea: true })).determinedTax).toBe(25_690_000);
+  });
+
+  it("A-3 부정 짝 — 증여일에 조정이 아닌 주소(강남 2017-08-02 = 지정 전)면 안 만진 토글은 「아님」", async () => {
+    const r = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01") }, GANGNAM_PNU);
+    const on = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01"), isRegulatedArea: true }, GANGNAM_PNU);
+    const off = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01"), isRegulatedArea: false }, GANGNAM_PNU);
+    expect(r.determinedTax).toBe(off.determinedTax);
+    expect(r.determinedTax).not.toBe(on.determinedTax);
   });
 });

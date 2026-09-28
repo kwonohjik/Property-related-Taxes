@@ -36,6 +36,7 @@ import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-paylo
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
 import {
   buildGiftBurdenedInheritancePayload,
+  giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
@@ -313,6 +314,9 @@ export function buildGiftBurdenedTransferBody(
     //   취득시 조정(거주요건)·§155①2호 종전 주택 조정 여부를 선언 대신 코드로 판정한다.
     const regionCode = giftBurdenedRegionCode(item);
     if (regionCode) body.regionCode = regionCode;
+    // 「양도시 조정대상지역」 — 안 만진 토글은 주소 판정(계산기 `useRegulatedAreaAutoTip`과 같은 규칙 · ⑤⑧과 같은 leaf).
+    //   중과(§104⑦ 폴백)·단기세율이 이 값을 쓴다(E-1 잔여 A).
+    body.isRegulatedArea = giftBurdenedEffectiveIsRegulatedArea(bgt, regionCode, form.giftDate);
     const slice = giftBurdenedOneHouseSlice(bgt, form.giftDate);
     // §154① 단서(삭제 전 4호 포함) — 계산기와 같은 조립 leaf. 카드가 숨는 맥락의 stale 사유는 싣지 않는다.
     Object.assign(body, buildExemptionProvisoPayload(slice, giftBurdenedProvisoMode(bgt)));

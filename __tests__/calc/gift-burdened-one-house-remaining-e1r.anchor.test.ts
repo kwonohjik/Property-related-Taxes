@@ -9,6 +9,7 @@ import { validateStep } from "@/components/calc/gift-tax-form-validate";
 import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 import {
   buildGiftBurdenedInheritancePayload,
+  giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedInheritanceSlice,
 } from "@/lib/calc/gift-burdened-one-house";
 import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
@@ -115,5 +116,23 @@ describe("D ⑧ 상속받은 주택 — 판정 메뉴·계산기와 같은 규�
     expect(v("2021-06-01", item({ acquisitionCause: "purchase", decedentSameHouseholdBeforeInheritance: true }))).toBeNull();
     const building = item({ acquisitionCause: "inheritance", isHousing: false }, { category: "real_estate_building" } as Partial<EstateItem>);
     expect(v("2021-06-01", building)).toBeNull();
+  });
+});
+
+describe("A leaf — 「양도시 조정대상지역」 실효값 (⑤④ 공용)", () => {
+  it("A-L1 저장값 없음 + 주소 → 증여일 주소 판정 · 저장값 있으면 그 값 · 주소 없으면 저장값(없음 = 아님)", () => {
+    expect(giftBurdenedEffectiveIsRegulatedArea({}, "1168010100", "2021-06-01")).toBe(true);
+    expect(giftBurdenedEffectiveIsRegulatedArea({}, "1168010100", "2017-08-02")).toBe(false);
+    expect(giftBurdenedEffectiveIsRegulatedArea({ isRegulatedArea: false }, "1168010100", "2021-06-01")).toBe(false);
+    expect(giftBurdenedEffectiveIsRegulatedArea({ isRegulatedArea: true }, "1168010100", "2017-08-02")).toBe(true);
+    expect(giftBurdenedEffectiveIsRegulatedArea({}, undefined, "2021-06-01")).toBe(false);
+    expect(giftBurdenedEffectiveIsRegulatedArea({ isRegulatedArea: true }, undefined, "2021-06-01")).toBe(true);
+  });
+  it("A-L2 ④ — 주택이면 실효값을, 비주택 건물이면 저장값을 싣는다", () => {
+    const withAddr = { estateAddress: { jibun: "x", pnu: "1168010100100120034" } } as Partial<EstateItem>;
+    const apt = item({}, withAddr);
+    expect(buildGiftBurdenedTransferBody(apt, form("2021-06-01", apt)).isRegulatedArea).toBe(true);
+    const building = item({ isHousing: false }, { ...withAddr, category: "real_estate_building" } as Partial<EstateItem>);
+    expect(buildGiftBurdenedTransferBody(building, form("2021-06-01", building)).isRegulatedArea).toBe(false);
   });
 });

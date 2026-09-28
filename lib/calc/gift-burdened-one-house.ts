@@ -8,6 +8,7 @@
  * | 축 | 양도세 계산기와 공용인 leaf |
  * |---|---|
  * | 증여 주택 주소 → 조정대상지역 | `regionCode`(PNU 앞 10자리 — `AssetSectionBasic`과 같은 규칙) → 엔진 `resolveWasRegulatedAtAcquisition` · `resolveRegulatedAtNewAcquisition` |
+ * | 증여 주택 주소 → 「양도시 조정대상지역」 토글(E-1 잔여 A) | 계산기 `useRegulatedAreaAutoTip`과 같은 규칙(안 만진 토글은 주소 판정) — `giftBurdenedEffectiveIsRegulatedArea` |
  * | §154① 단서(삭제 전 4호 포함) | `provisoGate` · `buildExemptionProvisoPayload` · `collectExemptionProvisoErrors` |
  * | §154⑤ 단서 재기산 | `finalHouseRestartInScope` · `buildFinalHouseRestartPayload` · `collectFinalHouseRestartErrors` |
  * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
@@ -50,7 +51,7 @@ export function giftBurdenedRegionCode(item: Pick<EstateItem, "estateAddress">):
  *  - `atAcquisition`: 엔진 `resolveWasRegulatedAtAcquisition` 그대로(취득일 기준 — §154① 거주요건). 코드가
  *    있으면 엔진은 「취득시 조정대상지역」 토글을 읽지 않는다 ⇒ 화면은 토글 대신 이 값을 보여 준다.
  *  - `atGift`: 증여일(양도일) 기준 — 엔진 §155① 폴백(`resolveIsRegulatedAtTransfer`)과 같은 `isRegulatedByBjdCode`.
- *    「양도시 조정대상지역」 토글은 중과·단기세율 판정에 그대로 쓰이므로 화면은 토글을 두고 이 값을 안내만 한다.
+ *    「양도시 조정대상지역」 토글은 안 만졌으면 이 값을 따른다(`giftBurdenedEffectiveIsRegulatedArea` — E-1 잔여 A).
  */
 export function giftBurdenedRegulatedByAddress(
   regionCode: string | undefined,
@@ -69,6 +70,29 @@ export function giftBurdenedRegulatedByAddress(
       ? { atGift: isRegulatedByBjdCode(regionCode, ymd(gift)).isRegulated }
       : {}),
   };
+}
+
+/**
+ * 「양도시(증여일) 조정대상지역」의 **실효값** (E-1 잔여 A) — ⑤ 토글 표시와 ④ `isRegulatedArea`가 같은 값을 쓴다
+ * (3중 패턴 — store에 쓰지 않고 파생한다). ⑧에는 이 값을 읽는 규칙이 없다 — §155①2호 게이트
+ * (`giftBurdenedTempTwoHouseRegulatedGate`)는 저장값을 넘기지만, 주소 코드가 있으면 판정이 코드를 먼저 보고
+ * (`resolveIsRegulatedAtTransfer`) 없으면 실효값 = 저장값이라 결과가 같다.
+ *
+ * 규칙은 양도세 계산기(`useRegulatedAreaAutoTip`)와 같다: 주소가 있으면 증여일(= 양도일) 판정
+ * (`/api/address/regulated-area`와 같은 `isRegulatedByBjdCode`)으로 토글을 채우되, **사용자가 직접 만진
+ * 토글은 덮어쓰지 않는다**. 계산기의 「만짐」 표지(`isRegulatedAreaTouched`)는 여기서는 저장값의 유무다 —
+ * ⑤는 토글을 만지면 `true`/`false`를 그대로 저장하고, 안 만졌으면 저장값이 없다(`undefined`).
+ * 주소가 없으면 저장값(없으면 아님)이다 — 종전 동작 그대로.
+ *
+ * 이 값은 엔진의 중과(§104⑦ — 양도 주택 명부가 없는 경로의 폴백)·단기세율·§155①2호 폴백 판정에 쓰인다.
+ */
+export function giftBurdenedEffectiveIsRegulatedArea(
+  bgt: Pick<BurdenedGiftTransferTaxInput, "isRegulatedArea">,
+  regionCode: string | undefined,
+  giftDate: string | undefined,
+): boolean {
+  if (bgt.isRegulatedArea !== undefined) return bgt.isRegulatedArea === true;
+  return giftBurdenedRegulatedByAddress(regionCode, undefined, giftDate).atGift ?? false;
 }
 
 /**

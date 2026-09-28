@@ -1101,7 +1101,10 @@ export interface BurdenedGiftTransferTaxInput {
   householdHousingCount?: number;
   /** 1세대1주택 여부 (기본 false — 안전 방향, 미입력 시 비과세 미적용). 증여자 기준. */
   isOneHousehold?: boolean;
-  /** 양도시(=증여일) 조정대상지역 여부 */
+  /**
+   * 양도시(=증여일) 조정대상지역 여부. `undefined` = 사용자가 토글을 만지지 않음 — 증여 주택 주소가 있으면
+   * 주소 판정을 따른다(E-1 잔여 A · `giftBurdenedEffectiveIsRegulatedArea`). 만지면 `true`/`false`를 저장한다.
+   */
   isRegulatedArea?: boolean;
   /** 취득시 조정대상지역 여부 (거주요건 경과규정 판단) */
   wasRegulatedAtAcquisition?: boolean;

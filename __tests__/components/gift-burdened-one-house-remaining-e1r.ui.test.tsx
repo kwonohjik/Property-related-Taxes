@@ -8,6 +8,7 @@
  *
  * | # | 무엇을 고정하나 |
  * |---|---|
+ * | UI-A | 「양도시 조정대상지역」 토글 — 주소가 있고 안 만졌으면 주소 판정으로 켜져 있다 · 만지면 그 값(false 포함)을 저장한다 |
  * | UI-D | 상속받은 주택 위젯(판정 메뉴와 같은 `InheritedSameHouseholdField`) → patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -22,6 +23,8 @@ vi.mock("@/components/ui/address-search", () => ({
 }));
 
 afterEach(cleanup);
+
+const GANGNAM_PNU = "1168010100100120034";
 
 function item(bgt: Partial<BurdenedGiftTransferTaxInput> = {}, over: Partial<EstateItem> = {}): EstateItem {
   return {
@@ -121,5 +124,25 @@ describe("UI-D 상속받은 주택 (§104②1호 · §154⑧3호)", () => {
     expect(bgtOf().acquisitionCause).toBeUndefined();
     expect(bgtOf().decedentAcquisitionDate).toBeUndefined();
     expect(screen.queryByRole("switch", { name: /상속받은 주택입니다/ })).toBeNull();
+  });
+});
+
+describe("UI-A 「양도시(증여일) 조정대상지역」 토글 ↔ 증여 주택 주소", () => {
+  const regulated = () => screen.getByRole("switch", { name: /양도시\(증여일\) 조정대상지역/ });
+  it("★ 강남 주소 · 안 만짐 → 켜져 있고(주소 판정) 자동 판정 안내 · 끄면 false를 저장한다(주소보다 우선)", () => {
+    render(<Harness start={item({}, { estateAddress: { pnu: GANGNAM_PNU } } as Partial<EstateItem>)} giftDate="2021-06-01" />);
+    expect(regulated().getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText(/소재지 주소로 증여일 현재 조정대상지역으로 자동 판정/)).toBeTruthy();
+    fireEvent.click(regulated());
+    expect(bgtOf().isRegulatedArea).toBe(false);
+    expect(regulated().getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText(/직접 선택한 값으로 판정합니다/)).toBeTruthy();
+  });
+  it("부정 짝 — 주소 없음이면 꺼져 있다(종전 그대로) · 증여일이 지정 전(2017-08-02)이면 주소 판정도 「아님」", () => {
+    render(<Harness start={item()} giftDate="2021-06-01" />);
+    expect(regulated().getAttribute("aria-checked")).toBe("false");
+    cleanup();
+    render(<Harness start={item({}, { estateAddress: { pnu: GANGNAM_PNU } } as Partial<EstateItem>)} giftDate="2017-08-02" />);
+    expect(regulated().getAttribute("aria-checked")).toBe("false");
   });
 });
