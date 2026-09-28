@@ -33,6 +33,7 @@ import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectFinalHouseRestartErrors, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 import {
@@ -297,46 +298,12 @@ function collectTempTwoHouseEraIssues(form: OneHouseJudgmentFormData): Errors {
   const derived = judgmentDerivedNewHouse(form);
   const v = judgmentTempTwoHouseVerdict(form, derived);
   if (v.status === "pending" || !v.regulated.relevant) return [];
-  const out: Errors = [];
-  const derivedNewAcq = derived?.newAcquisitionDate;
-  if (form.newHouseContractDate && derivedNewAcq && form.newHouseContractDate > derivedNewAcq) {
-    out.push(
-      err(
-        "newHouseContractDate",
-        "신규 주택 매매계약 체결·계약금 지급일은 신규 주택 취득일보다 늦을 수 없습니다.",
-      ),
-    );
-  }
-  if (!v.regulated.determined) {
-    out.push(
-      warn(
-        "newHouseRegulatedAtAcquisition",
-        "신규 주택 취득일 현재 두 주택이 조정대상지역이었는지 선택하세요 — 선택하지 않으면 양도일 기준 양도 주택의 조정대상지역 여부로 대신 판정합니다.",
-      ),
-    );
-  }
-  if (!v.regulated.moveInRelevant) return out;
-  if (form.newHouseExistingTenant === true) {
-    if (!form.newHouseTenantLeaseEndDate) {
-      out.push(err("newHouseTenantLeaseEndDate", "기존 임차인 특례: 전 소유자와 임차인 간 임대차계약 종료일을 입력하세요."));
-    } else if (derivedNewAcq && form.newHouseTenantLeaseEndDate <= derivedNewAcq) {
-      out.push(
-        err(
-          "newHouseTenantLeaseEndDate",
-          "기존 임차인 특례: 임대차계약 종료일은 신규 주택 취득일 뒤여야 합니다(취득일 현재 거주 중인 임차인).",
-        ),
-      );
-    }
-  }
-  if (!form.newHouseMoveInDate) {
-    out.push(
-      warn(
-        "newHouseMoveInDate",
-        "신규 주택으로 세대전원이 이사·전입신고한 날을 입력하세요 — 입력하지 않으면 1년 내 전입 요건(§155①2호 가목)은 판정하지 않습니다.",
-      ),
-    );
-  }
-  return out;
+  // 규칙 본문은 증여세 부담부증여(E-1)와 공용 leaf다 — 두 벌로 두지 않는다.
+  return temporaryTwoHouseEraIssues(form, {
+    newAcquisitionDate: derived?.newAcquisitionDate,
+    determined: v.regulated.determined,
+    moveInRelevant: v.regulated.moveInRelevant,
+  });
 }
 
 /**

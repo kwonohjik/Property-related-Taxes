@@ -265,6 +265,7 @@ export function EstateBodyRealEstate({
           onChange={(patch) => onUpdate({ ...item, ...patch })}
           hasOtherBurdenedGiftTransfer={hasOtherBurdenedGiftTransfer}
           jibun={addrValue.jibun}
+          transferDate={valuationDate}
         />
       )}
     </div>

@@ -119,6 +119,8 @@ function normalizeEstateItemDates(item: EstateItem): EstateItem {
       ...(bgt.temporaryTwoHouse !== undefined
         ? {
             temporaryTwoHouse: {
+              // §155①2호 새 입력(A2b · E-1)은 문자열·boolean이라 그대로 둔다 — 펼치지 않으면 복원 때 사라진다.
+              ...bgt.temporaryTwoHouse,
               previousAcquisitionDate:
                 toOptionalDate(bgt.temporaryTwoHouse.previousAcquisitionDate) ??
                 bgt.temporaryTwoHouse.previousAcquisitionDate,

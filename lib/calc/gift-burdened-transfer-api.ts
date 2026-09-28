@@ -31,6 +31,7 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,6 +291,10 @@ export function buildGiftBurdenedTransferBody(
       newAcquisitionDate: next instanceof Date
         ? next.toISOString().slice(0, 10)
         : (next as unknown as string),
+      // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b · E-1).
+      //   양도세 계산기 ④(`buildHouseholdSpecialPayload`)·⑤ 판정 카드와 같은 leaf로 편다.
+      //   신규 주택 법정동코드는 이 경로에 입력 칸이 없어 싣지 않는다(선언으로 판정).
+      ...toTemporaryTwoHouseEraFacts(bgt.temporaryTwoHouse, undefined),
     };
   }
 
