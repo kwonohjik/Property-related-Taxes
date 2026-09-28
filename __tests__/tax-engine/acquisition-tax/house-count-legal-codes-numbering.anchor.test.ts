@@ -61,22 +61,34 @@ describe("§28의4⑥ 호 번호 — 상수 ↔ 매니페스트 verbatim", () =>
 });
 
 describe("§28의4⑥ 호 번호 — 엔진 legalBasis 배선", () => {
-  it("혼인 전 분양권 제외 사유의 근거는 ⑥6호", () => {
+  // ⑥6호가 빼는 것은 「다른 배우자가 혼인 전부터 소유하고 있는 주택」이다 — 종전 엔진은 혼인 전
+  // 분양권 자체를 뺐다(계획서 D-9b). 제외 대상을 배우자 주택으로 옮겨 같은 근거 배선을 지킨다.
+  it("배우자 혼인 전 주택 제외 사유의 근거는 ⑥6호", () => {
     const result = calculateHouseCount({
-      houses: [],
-      rights: [
+      houses: [
         {
-          id: "r1",
-          type: "subscription_right",
-          rightAcquisitionDate: "2023-06-01",
-          isPreMarriageSubscriptionRight: true,
+          id: "h1",
+          standardValue: 300_000_000,
+          type: "housing",
+          acquisitionDate: "2018-01-01",
+          isMetropolitan: true,
+          ownedBySpouse: true,
         },
       ],
+      rights: [],
       offices: [],
+      pendingAcquisition: {
+        isMetropolitan: true,
+        acquisitionValue: 500_000_000,
+        acquiredViaRight: true,
+        rightAcquisitionDate: "2022-05-01",
+        viaPreMarriageSubscriptionRight: true,
+        marriageDate: "2023-01-10",
+      },
       referenceDate: "2025-06-01",
     });
     expect(result.excludedDetails).toHaveLength(1);
-    expect(result.excludedDetails[0].reason).toBe("pre_marriage_subscription_right");
+    expect(result.excludedDetails[0].reason).toBe("spouse_pre_marriage_house");
     expect(result.excludedDetails[0].legalBasis).toBe("지방세법 시행령 §28의4⑥6호");
   });
 

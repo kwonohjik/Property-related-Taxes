@@ -5,7 +5,7 @@
  *   1. 시점  — 권리취득일 소급 (§28의4①)
  *   2. 지분  — 공유지분 1세대 내/외 (§28의4④)
  *   3. 상속  — 공동상속 주된 상속자 + 5년 미경과 제외 (§28의4⑤⑥3호)
- *   4. 권리  — 입주권·분양권 포함 + 혼인 전 분양권 제외
+ *   4. 권리  — 입주권·분양권 포함 (+ 혼인 전 분양권으로 취득 시 배우자의 혼인 전 주택 제외 §28의4⑥6호)
  *   5. 세대  — 별도 세대 인정 4종 (§28의3②)
  *   6. 한시  — 신축·임대·미분양 카운트 제외 (§28의4②)
  *
@@ -29,6 +29,8 @@ import {
   getExclusionReasonsForHouse,
   getExclusionReasonsForRight,
   getExclusionReasonsForOffice,
+  assessPreMarriageRightRule,
+  getSpousePreMarriageHouseExclusion,
 } from "./exclusions";
 import { assessHansiBenefitForPendingAcquisition } from "./hansi";
 import { getDisposalDeadlineDate, getDisposalDeadlineYears } from "../acquisition-surcharge/multi-house";
@@ -136,6 +138,10 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   // ── Step 3: 보유 주택 제외 판정 + 공유지분 + 공동상속 ──
   let includedHouseCount = 0;
 
+  // §28의4⑥6호 — 혼인 전 소유한 주택분양권으로 취득 시 다른 배우자의 혼인 전 주택 (계획서 D-9b)
+  const preMarriageRule = assessPreMarriageRightRule(input.pendingAcquisition, acquisitionDate);
+  if (preMarriageRule.warning) warnings.push(preMarriageRule.warning);
+
   for (const house of input.houses) {
     if (excludeIfAfterReference(house.id, "house", house.acquisitionDate)) continue;
 
@@ -146,6 +152,21 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
       excludedDetails.push(...exclusions);
       legalBasis.push(...exclusions.map((e) => e.legalBasis));
       continue; // 제외 항목은 카운트 스킵
+    }
+
+    // (3a′) 배우자의 혼인 전 주택 (§28의4⑥6호)
+    if (preMarriageRule.marriageDate && house.ownedBySpouse) {
+      const spouseItem = getSpousePreMarriageHouseExclusion(house, preMarriageRule.marriageDate);
+      if (spouseItem) {
+        excludedDetails.push(spouseItem);
+        legalBasis.push(spouseItem.legalBasis, ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT_APPLICATION);
+        continue;
+      }
+      if (!house.acquisitionDate) {
+        warnings.push(
+          `배우자 소유 주택(${house.id ?? "취득일 미입력"})의 취득일이 없어 혼인 전부터 소유했는지 판정하지 못했습니다 — 주택 수에 넣었습니다.`
+        );
+      }
     }
 
     // (3b) 공동상속 — 5년 경과 후 주된 상속자 판정
@@ -195,6 +216,11 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedRightCount = 0;
 
   for (const right of input.rights) {
+    if (right.isPreMarriageSubscriptionRight) {
+      warnings.push(
+        `「혼인 전 분양권」 표시(${right.id ?? right.type})는 그 분양권을 주택 수에서 빼지 않습니다 — ${ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT}가 빼는 것은 혼인 전 소유한 주택분양권으로 주택을 취득할 때 다른 배우자가 혼인 전부터 소유한 주택입니다. 그 분양권은 주택 수에 넣었습니다.`
+      );
+    }
     if (excludeIfAfterReference(right.id, "right", right.rightAcquisitionDate)) continue;
 
     const exclusions = getExclusionReasonsForRight(right, effectiveReferenceDate);

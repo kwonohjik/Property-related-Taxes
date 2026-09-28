@@ -49,7 +49,7 @@ function earlierDateStr(a: string | undefined, b: string | undefined): string | 
  * 폼은 아파트·빌라 등 세부 유형을 받지 않으므로 엔진·Zod의 `"housing"`(세부 유형 미구분)으로 보낸다.
  * (종전에는 폼 값을 캐스팅해 넘겨 ⑫ enum에 없는 `"housing"`이 항상 400을 냈다 — OH-02)
  */
-function mapToEngineHouseInfo(h: FormOwnedHouseInfo): EngineOwnedHouseInfo {
+function mapToEngineHouseInfo(h: FormOwnedHouseInfo, preMarriageRight: boolean): EngineOwnedHouseInfo {
   const sv = parseAmount(h.standardValue) ?? 0;
   const share = parseFloat(h.ownershipShare);
 
@@ -67,6 +67,8 @@ function mapToEngineHouseInfo(h: FormOwnedHouseInfo): EngineOwnedHouseInfo {
     isHansiBenefitNewBuild: h.isHansiBenefit && h.hansiBenefitType === "new_build",
     isHansiBenefitLeaseRegistered: h.isHansiBenefit && h.hansiBenefitType === "lease_registered",
     isHansiBenefitUnsoldApt: h.isHansiBenefit && h.hansiBenefitType === "unsold_apt",
+    // §28의4⑥6호 — 「배우자 소유」 칸은 혼인 전 분양권 취득 토글이 켜졌을 때만 보이므로 그때만 보낸다(⑤·⑧과 같은 조건)
+    ownedBySpouse: preMarriageRight && h.ownedBySpouse ? true : undefined,
   };
 
   // 공동상속 (§28의4⑤·⑥3호)
@@ -119,6 +121,8 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
   const houses: EngineOwnedHouseInfo[] = [];
   const rights: RightAsset[] = [];
   const offices: OfficeAsset[] = [];
+  // §28의4⑥6호 — 혼인 전 분양권 취득은 분양권·입주권 취득(acquiredViaRight) 안의 하위 입력이다
+  const preMarriageRight = form.acquiredViaRight && form.acquiredViaPreMarriageRight;
 
   for (const h of form.ownedHouses) {
     if (h.propertyType === "officetel") {
@@ -126,7 +130,7 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
     } else if (h.propertyType === "right" || h.propertyType === "subscription_right") {
       rights.push(mapToEngineRightAsset(h));
     } else {
-      houses.push(mapToEngineHouseInfo(h));
+      houses.push(mapToEngineHouseInfo(h, preMarriageRight));
     }
   }
 
@@ -141,6 +145,8 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
         areaSqm: form.areaSqm ? parseFloat(form.areaSqm) || undefined : undefined,
         acquiredViaRight: form.acquiredViaRight || undefined,
         rightAcquisitionDate: strOrUndef(form.rightAcquisitionDate),
+        viaPreMarriageSubscriptionRight: preMarriageRight || undefined,
+        marriageDate: preMarriageRight ? strOrUndef(form.marriageDate) : undefined,
         isHansiBenefitNewBuild: form.isHansiBenefitNewBuild || undefined,
         isHansiBenefitLeaseRegistered: form.isHansiBenefitLeaseRegistered || undefined,
         isHansiBenefitUnsoldApt: form.isHansiBenefitUnsoldApt || undefined,

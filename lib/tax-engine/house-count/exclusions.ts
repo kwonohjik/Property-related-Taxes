@@ -17,7 +17,7 @@
  *   9. 인구감소지역 임대주택
  *  10. 사원임대용 주택
  *  11. 상속 5년 미경과 (§28의4⑥3호)
- *  12. 혼인 전 분양권 (§28의4⑥6호 — 2026.12.31 기한은 근거 미확인, 계획서 D-9)
+ *  12. 혼인 전 분양권으로 취득 시 다른 배우자의 혼인 전 주택 (§28의4⑥6호 — 기한 없음, 계획서 D-9b)
  *  13. 한시 특례 신축 (§28의4⑥7호)
  *  14. 시가표준액 1억 이하 오피스텔
  */
@@ -31,6 +31,7 @@ import type {
   OfficeAsset,
   ExcludedItem,
   ExclusionReason,
+  PendingAcquisition,
 } from "./types";
 
 // ============================================================
@@ -363,22 +364,71 @@ export function getExclusionReasonsForRight(
     return excluded;
   }
 
-  // 혼인 전 분양권 (§28의4⑥6호 — 2026.12.31 기한은 근거 미확인, 계획서 D-9)
-  if (right.isPreMarriageSubscriptionRight && right.type === "subscription_right") {
-    // 한시 기간 판단: referenceDate ≤ 2026.12.31
-    if (referenceDate <= ACQUISITION_CONST.PRE_MARRIAGE_RIGHT_HANSI_END) {
-      excluded.push({
-        assetId: right.id,
-        assetType: "right",
-        reason: "pre_marriage_subscription_right",
-        legalBasis: ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT,
-        description: `혼인 전 배우자 분양권 — 2026.12.31까지 한시 적용 → 주택 수 제외 (${ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT})`,
-      });
-      return excluded;
-    }
-  }
+  // ⚠️ 종전 `isPreMarriageSubscriptionRight`(혼인 전 분양권 자체 제외·2026.12.31 기한)는 §28의4⑥6호에
+  //    근거가 없어 제외 사유에서 뺐다 — 6호는 분양권이 아니라 배우자의 혼인 전 주택을 뺀다(계획서 D-9b).
+  //    그 값이 오면 오케스트레이터가 주택 수에 넣고 경고한다.
 
   return excluded;
+}
+
+// ============================================================
+// §28의4⑥6호 — 혼인 전 주택분양권으로 취득 시 다른 배우자의 혼인 전 주택
+// ============================================================
+
+/**
+ * 「혼인한 사람이 혼인 전 소유한 주택분양권으로 주택을 취득하는 경우 다른 배우자가 혼인 전부터
+ * 소유하고 있는 주택」(지방세법 시행령 §28의4⑥6호, 2023.3.14. ⑤6호 신설 → 2024.3.26. ⑥6호).
+ *
+ * 적용 조건 — 하나라도 빠지면 적용하지 않는다(보수적으로 주택 수에 넣는다):
+ *  1. 주택분양권으로 취득(`acquiredViaRight` + `viaPreMarriageSubscriptionRight` — 조합원입주권은 문언 밖)
+ *  2. 그 분양권을 혼인 전에 소유 — 권리취득일 < 혼인일
+ *  3. 주택 취득일 ≥ 2023.3.14. — 대통령령 제33325호 부칙 제2조 「이 영 시행 이후 납세의무가 성립하는
+ *     분부터」(취득세 납세의무 성립 = 취득하는 때)
+ * 문언과 모든 후속 부칙에 기한이 없다 — 종료일을 두지 않는다.
+ *
+ * @returns 적용되면 혼인일, 아니면 null + 사유 경고(해당 시)
+ */
+export function assessPreMarriageRightRule(
+  pending: PendingAcquisition | undefined,
+  acquisitionDate: string
+): { marriageDate: string | null; warning?: string } {
+  if (!pending?.acquiredViaRight || !pending.viaPreMarriageSubscriptionRight) return { marriageDate: null };
+  const basis = ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT;
+  const { marriageDate, rightAcquisitionDate } = pending;
+  if (!marriageDate || !rightAcquisitionDate) {
+    return {
+      marriageDate: null,
+      warning: `혼인일 또는 권리취득일이 없어 배우자의 혼인 전 주택 제외(${basis})를 판정하지 못했습니다 — 주택 수에 넣었습니다.`,
+    };
+  }
+  if (rightAcquisitionDate >= marriageDate) {
+    return {
+      marriageDate: null,
+      warning: `권리취득일(${rightAcquisitionDate})이 혼인일(${marriageDate}) 전이 아니어서 「혼인 전 소유한 주택분양권」이 아닙니다 — 배우자 주택 제외(${basis})를 적용하지 않았습니다.`,
+    };
+  }
+  if (acquisitionDate < ACQUISITION_CONST.PRE_MARRIAGE_RIGHT_FROM) {
+    return {
+      marriageDate: null,
+      warning: `주택 취득일(${acquisitionDate})이 2023.3.14. 전 — ${basis}는 ${ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT_APPLICATION}에 따라 2023.3.14. 이후 납세의무가 성립하는 분부터 적용되어 배우자 주택을 빼지 않았습니다. 권리취득일 현재 세대 구성으로 판단한 조세심판원 결정(조심 2023지4299 등)이 있으니 확인이 필요합니다.`,
+    };
+  }
+  return { marriageDate };
+}
+
+/** §28의4⑥6호 — 배우자 소유이고 혼인일 전에 취득한 주택이면 제외 항목 */
+export function getSpousePreMarriageHouseExclusion(
+  house: OwnedHouseInfo,
+  marriageDate: string
+): ExcludedItem | null {
+  if (!house.ownedBySpouse || !house.acquisitionDate || house.acquisitionDate >= marriageDate) return null;
+  return {
+    assetId: house.id,
+    assetType: "house",
+    reason: "spouse_pre_marriage_house",
+    legalBasis: ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT,
+    description: `혼인 전 소유한 주택분양권으로 취득 — 다른 배우자가 혼인(${marriageDate}) 전부터 소유한 주택(취득일 ${house.acquisitionDate}) → 주택 수 제외`,
+  };
 }
 
 // ============================================================

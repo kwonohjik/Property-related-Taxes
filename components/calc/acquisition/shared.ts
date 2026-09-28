@@ -154,6 +154,8 @@ export interface OwnedHouseInfo {
   isOldest: boolean;
   isMetropolitanRegion: boolean; // 수도권 여부 (1억/2억 한도)
   isUrbanRegenArea: boolean;  // 정비구역 여부
+  /** 취득자의 배우자 소유 주택 — 혼인 전 분양권으로 취득 시 배우자의 혼인 전 주택 제외 (시행령 §28의4⑥6호) */
+  ownedBySpouse: boolean;
 }
 
 export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
@@ -178,6 +180,7 @@ export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
     isOldest: false,
     isMetropolitanRegion: false,
     isUrbanRegenArea: false,
+    ownedBySpouse: false,
   };
 }
 
@@ -314,6 +317,10 @@ export interface FormState {
   acquiredViaRight: boolean;
   /** 권리취득일 (분양계약일·조합원 입주권 취득일) */
   rightAcquisitionDate: string;
+  /** 혼인 전 소유한 주택분양권으로 취득 (시행령 §28의4⑥6호) — acquiredViaRight일 때만 의미 */
+  acquiredViaPreMarriageRight: boolean;
+  /** 혼인일 (혼인신고일) — §28의4⑥6호 「혼인 전」 판정 */
+  marriageDate: string;
 
   // ─── [P3 v3] 한시 특례 (취득 주택 자체) ───
   /** 취득 주택 한시 특례 신축 여부 */
@@ -498,6 +505,8 @@ export const INITIAL_FORM: FormState = {
   // P3 권리취득일
   acquiredViaRight: false,
   rightAcquisitionDate: "",
+  acquiredViaPreMarriageRight: false,
+  marriageDate: "",
 
   // P3 한시 특례
   isHansiBenefitNewBuild: false,

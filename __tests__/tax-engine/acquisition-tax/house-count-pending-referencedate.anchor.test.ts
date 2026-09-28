@@ -38,6 +38,7 @@ function ownedHouse(id: string): OwnedHouseInfo {
     isOldest: false,
     isMetropolitanRegion: true,
     isUrbanRegenArea: false,
+    ownedBySpouse: false,
   };
 }
 

@@ -78,6 +78,14 @@ export interface OwnedHouseInfo {
    */
   isHansiBenefitUnsoldApt?: boolean;
 
+  // ─── §28의4⑥6호 — 배우자의 혼인 전 주택 ───
+  /**
+   * 주택을 취득하는 사람의 **배우자** 소유 주택인지.
+   * 취득 주택이 혼인 전 소유한 주택분양권으로 취득하는 것(`PendingAcquisition.viaPreMarriageSubscriptionRight`)
+   * 이고 이 주택의 취득일이 혼인일 전이면 「다른 배우자가 혼인 전부터 소유하고 있는 주택」으로 뺀다.
+   */
+  ownedBySpouse?: boolean;
+
   // ─── [v4 D3] 공유지분 ───
   /**
    * 공유 지분율 (0~1, 단독이면 undefined 또는 1.0)
@@ -151,8 +159,10 @@ export interface RightAsset {
    */
   contractDate?: string;
   /**
-   * 혼인 전 배우자 보유 분양권 여부 (2026.12.31까지 한시 적용)
-   * §28의4⑥6호: 혼인 전 분양권 → 주택 수 제외 (2026년 기한은 근거 미확인 — 계획서 D-9)
+   * @deprecated 종전 입력 — 엔진은 이 표시로 **분양권 자체를 빼지 않는다**(계획서 D-9b).
+   * §28의4⑥6호가 빼는 것은 「혼인한 사람이 혼인 전 소유한 주택분양권으로 주택을 취득하는 경우
+   * 다른 배우자가 혼인 전부터 소유하고 있는 주택」이다 — `PendingAcquisition.viaPreMarriageSubscriptionRight`·
+   * `marriageDate`와 `OwnedHouseInfo.ownedBySpouse`로 입력한다. 이 값이 오면 주택 수에 넣고 경고한다.
    */
   isPreMarriageSubscriptionRight?: boolean;
   /**
@@ -229,6 +239,13 @@ export interface PendingAcquisition {
    * 1세대 내 다회 취득 시 가장 빠른 날
    */
   rightAcquisitionDate?: string;
+  /**
+   * 취득하는 주택이 **혼인 전 소유한 주택분양권**으로 취득하는 것인지 (§28의4⑥6호 — 조합원입주권 제외).
+   * `acquiredViaRight`일 때만 의미가 있고, 혼인 전 소유 여부는 `rightAcquisitionDate < marriageDate`로 확인한다.
+   */
+  viaPreMarriageSubscriptionRight?: boolean;
+  /** 혼인일 (YYYY-MM-DD, 혼인신고일) — §28의4⑥6호 「혼인 전」 판정 기준 */
+  marriageDate?: string;
 }
 
 // ============================================================
@@ -334,7 +351,7 @@ export type ExclusionReason =
   | "population_decline_lease" // 인구감소지역 임대
   | "staff_rental"             // 사원임대용 주택
   | "inheritance_under_5yr"    // 상속 5년 미경과 (§28의4⑥3호)
-  | "pre_marriage_subscription_right" // 혼인 전 분양권 (§28의4⑥6호)
+  | "spouse_pre_marriage_house" // 혼인 전 분양권으로 취득 시 다른 배우자의 혼인 전 주택 (§28의4⑥6호)
   | "hansi_new_build"          // 한시 특례 신축 (§28의4⑥7호)
   | "hansi_lease_registered"   // 한시 특례 임대등록
   | "hansi_unsold_apt"         // 한시 특례 미분양 아파트
