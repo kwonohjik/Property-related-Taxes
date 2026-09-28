@@ -12,6 +12,7 @@
  */
 
 import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
+import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import {
@@ -361,6 +362,8 @@ export async function POST(request: NextRequest) {
             rentalRegistration4ho: toEngineRental4ho(p.oneHouseExemptionProviso.rentalRegistration4ho),
           }
         : undefined,
+      // ⑭ OH-22 §154⑤ 단서 처분 이력 — 단건과 같은 변환
+      finalOneHouseRestart: toEngineFinalHouseRestart(p.finalOneHouseRestart),
       parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,
       rentalReductionDetails: p.rentalReductionDetails
         ? {

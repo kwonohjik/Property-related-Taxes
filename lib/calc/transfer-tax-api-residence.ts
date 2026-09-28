@@ -10,6 +10,8 @@ import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-co
 import { toDate } from "@/lib/api/date-coerce";
 import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
+import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
@@ -97,6 +99,16 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
     // `qualifiesWinWinRental`로 소비). ④가 운반 상자에서 보내는 것과 **같은 사실**을 싣는다 — 빠뜨리면
     // 계산은 비과세인데 Step4만 「거주요건 불충족」을 띄운다.
     winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts),
+    // OH-22 — §154⑤ 단서 재기산이면 거주도 재기산일 이후만 센다(재산세제과-1058). ④·⑭와 같은 빌더·같은 변환.
+    finalOneHouseRestart: toEngineFinalHouseRestart(
+      buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)).finalOneHouseRestart,
+    ),
+    householdHousingCount: resolveHouseholdHousingCount({
+      primaryKind: primary?.assetKind,
+      declared: parseInt(form.householdHousingCount || "1", 10) || 0,
+      houses: form.houses,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+    }),
     // 사유는 ④와 같은 게이트를 통과한 값이다 — 근거는 `effectiveReason` 선언부 참조.
     oneHouseExemptionProviso: effectiveReason
       ? {

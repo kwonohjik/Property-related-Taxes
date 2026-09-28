@@ -271,6 +271,8 @@ export function calculateTransferTax(
 
   // 입력 경로가 없는 연혁 분기(OH-22·OH-38·OH-01)의 판정 보류 — 판정 메뉴와 같은 문장을 낸다.
   for (const u of exemptionResult.undetermined) if (ERA_UNDETERMINED_IDS.has(u.id)) warnings.push(u.reason);
+  // OH-22 — §154⑤ 단서 재기산을 적용했으면 판정 메뉴 결과 카드와 같은 문장으로 알린다(재기산 기산일·근거).
+  if (exemptionResult.finalOneHouseRestart?.applied) warnings.push(exemptionResult.finalOneHouseRestart.description);
   // OH-38 — 삭제 전 §154①4호를 선택했으나 요건 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
   for (const u of exemptionResult.unmetExceptions ?? [])
     if (u.id === RENTAL_4HO_UNMET_ID) warnings.push(`${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);

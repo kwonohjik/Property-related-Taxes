@@ -462,6 +462,11 @@ export interface TransferTaxInput {
     businessApprovalDate?: Date;
   };
   /**
+   * §154⑤ 단서(2021-01-01~2022-05-09 양도) — 다주택 처분 후 **최종 1주택** 보유기간 재기산 판정 사실(OH-22 · I-1).
+   * 판정 leaf: `one-house/final-house-restart.ts`. **미입력이면 판정 보류**(재기산 없음으로 추정하지 않는다).
+   */
+  finalOneHouseRestart?: FinalOneHouseRestartFacts;
+  /**
    * 취득 원인 (매매·상속·증여·이월과세증여). 미지정 시 매매로 간주.
    * "carryover_gift" = 소득세법 §97조의2 이월과세 대상 증여 (배우자·직계존비속).
    * 기존 "gift"는 이월과세 미적용 단순 증여 취득 — 하위 호환 유지.
@@ -1257,4 +1262,28 @@ export interface Rental4hoRegistrationFacts {
   rentIncreaseContractDate?: Date;
   /** 2019-12-17 이후 증여로 등록 신청자의 임대사업자 지위를 포괄승계했고 양도일 현재 그와 별도 세대(사전-2024-법규재산-0747) */
   giftSuccessionSeparatedHousehold?: boolean;
+}
+
+/** §154⑤ 단서 「처분」의 유형 — 양도·증여·용도변경만 처분이다(그 밖(멸실 등)은 기록만 받는다). */
+export type FinalHouseDisposalKind = "transfer" | "gift" | "conversion" | "other";
+
+/** 양도 주택을 보유하는 동안 처분한 **다른 주택**(조합원입주권 포함 — 재산세제과-194 쟁점7) 1건. */
+export interface FinalHouseDisposalFact {
+  kind: FinalHouseDisposalKind;
+  /** 처분일(양도는 잔금일 등 양도시기, 증여는 증여일, 용도변경은 사실상 용도변경일) */
+  date: Date;
+  /**
+   * 처분 당시 양도 주택과 §155·§155의2·§156의2·§156의3에 따라 **일시적으로 2주택**이었던 관계인가 — 선언.
+   * 단서 괄호가 그 2주택을 「2주택 이상」에서 뺀다(재산세제과-678). 다만 다른 주택을 모두 처분한 뒤
+   * 새로 취득해 일시적 2주택이 된 경우는 빼지 않는다(같은 괄호 후단) — 그때는 false로 선언한다.
+   */
+  temporaryTwoHouseSpecial: boolean;
+}
+
+/** §154⑤ 단서 최종 1주택 재기산 판정 사실(OH-22). */
+export interface FinalOneHouseRestartFacts {
+  /** 양도 주택을 보유하는 동안 세대가 다른 주택(조합원입주권 포함)을 처분한 적이 있는가 */
+  hadOtherHouseDisposal: boolean;
+  /** `hadOtherHouseDisposal`이 true일 때의 처분 목록 */
+  disposals: FinalHouseDisposalFact[];
 }

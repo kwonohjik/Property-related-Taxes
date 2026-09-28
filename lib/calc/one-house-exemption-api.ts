@@ -33,6 +33,7 @@ import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
@@ -246,6 +247,9 @@ export function buildOneHouseExemptionApiBody(
           }
         : {};
     })(),
+
+    // ⑬ OH-22 §154⑤ 단서 처분 이력 — 계산기와 같은 빌더, 노출 술어는 명부 파생 주택 수(⑤·⑧ 공용)
+    ...buildFinalHouseRestartPayload(form, judgmentFinalHouseRestartInScope(form)),
 
     // ── 판정 메뉴 고유 (P4-2b-0이 ⑫⑭를 열어 둔 축) ──────────
     ...buildOneHouseExtraFactsPayload(form),

@@ -8,7 +8,7 @@
  *
  * | id | 조문 | 판정에 필요한 사실(미입력) |
  * |---|---|---|
- * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | 과거 2주택 이상 보유 여부 · 다른 주택 전부의 처분(양도·증여·용도변경)일 |
+ * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | OH-22(I-1)에서 입력 경로가 생겼다(보유 중 다른 주택 처분 이력). 이력 미답만 고지 — 판정은 `final-house-restart.ts` |
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | OH-38 입력 레인에서 입력 경로가 생겼다(§154① 단서 「4호 임대사업자 등록」). 사유 미선택 또는 선택했으나 사실 미입력만 고지 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
@@ -35,14 +35,13 @@ import {
 } from "../data/public-holidays-kr";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
+import { resolveFinalOneHouseRestart } from "./final-house-restart";
 
-/**
- * §154⑤ 단서(최종 1주택 보유기간 재기산)가 적용되는 양도 구간.
- * - 시작: 대통령령 제29523호 부칙 제1조3호(「제154조제5항의 개정규정: 2021년 1월 1일」)·제2조②(시행 이후 양도분)
- * - 끝: 대통령령 제32654호 부칙 제2조①(개정규정은 2022-05-10 이후 양도분부터)·②(그 전 양도는 종전 규정)
- */
-export const FINAL_ONE_HOUSE_RESTART_TRANSFER_START = new Date("2021-01-01");
-export const FINAL_ONE_HOUSE_RESTART_TRANSFER_END_EXCLUSIVE = new Date("2022-05-10");
+// §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
+export {
+  FINAL_ONE_HOUSE_RESTART_TRANSFER_START,
+  FINAL_ONE_HOUSE_RESTART_TRANSFER_END_EXCLUSIVE,
+} from "./final-house-restart";
 
 export const ERA_UNDETERMINED_IDS = new Set([
   "154-5-final-one-house-restart-unverified",
@@ -62,25 +61,20 @@ export function collectEraUndetermined(
   if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered) return [];
   if (input.oneHouseUnitRole === "appurtenant_land") return [];
   const out: OneHouseUndetermined[] = [];
-  const t = input.transferDate.getTime();
 
   /*
    * OH-22 — 비과세로 판정된 1주택 양도에만 낸다. 과세면 재기산은 결론을 바꾸지 못한다
-   * (기산일이 늦어질 뿐이다). 확인 필요(계획서 §7-2): 2020-12-31 이전 처분 완료 세대도 대상인지,
-   * 거주기간도 재기산하는지.
+   * (기산일이 늦어질 뿐이다). I-1에서 처분 이력 입력이 생겼다 — **이력 질문에 답하지 않았을 때만**
+   * 판정 보류로 남긴다(`undetermined`). 답했으면 leaf가 재기산 여부를 판정한다.
    */
-  if (
-    settled &&
-    input.householdHousingCount === 1 &&
-    t >= FINAL_ONE_HOUSE_RESTART_TRANSFER_START.getTime() &&
-    t < FINAL_ONE_HOUSE_RESTART_TRANSFER_END_EXCLUSIVE.getTime()
-  ) {
+  if (settled && resolveFinalOneHouseRestart(input).status === "undetermined") {
     out.push({
       id: "154-5-final-one-house-restart-unverified",
       reason:
         `2021년 1월 1일~2022년 5월 9일 양도분은 2주택 이상을 보유한 세대가 1주택 외의 주택을 모두 처분한 경우 ` +
         `처분 후 1주택이 된 날부터 보유기간을 다시 셉니다(${law("⑤")} 단서 — 대통령령 제29523호·제32654호 부칙). ` +
-        "과거 다른 주택의 보유·처분 이력을 입력받지 않아 이 요건은 판정하지 않았습니다 — 해당하면 그날부터 2년 보유를 직접 확인하세요.",
+        "이 주택을 보유하는 동안 다른 주택을 처분한 이력이 입력되지 않아 이 요건은 판정하지 않았습니다 — " +
+        "「최종 1주택 보유기간 재기산」 칸에 처분 이력을 입력하세요.",
     });
   }
 

@@ -32,6 +32,8 @@ import { RightThreeYearExceptionSection } from "@/components/calc/transfer/Right
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
+import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
+import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
@@ -235,6 +237,15 @@ export function Step2({ form, onChange }: Props) {
           provisoPreContractNoHouse={form.provisoPreContractNoHouse}
           rental4ho={form}
           mode={proviso.mode}
+          onChange={onChange}
+        />
+      )}
+
+      {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 명부 파생 1주택 · 2021.1.1.~2022.5.9. 양도(④·⑧과 같은 술어) */}
+      {judgmentFinalHouseRestartInScope(form) && (
+        <FinalHouseRestartSection
+          value={form}
+          acquisitionDate={form.assets[0]?.acquisitionDate}
           onChange={onChange}
         />
       )}
