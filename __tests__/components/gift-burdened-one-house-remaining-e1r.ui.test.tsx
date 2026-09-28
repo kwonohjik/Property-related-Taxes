@@ -9,6 +9,7 @@
  * | # | 무엇을 고정하나 |
  * |---|---|
  * | UI-A | 「양도시 조정대상지역」 토글 — 주소가 있고 안 만졌으면 주소 판정으로 켜져 있다 · 만지면 그 값(false 포함)을 저장한다 |
+ * | UI-B | §155①2호 신규 주택 소재지 — 주소를 고르면 `newHouseRegionCode`가 저장되고 신규 주택 조정 여부가 선언 라디오 대신 자동 판정으로 바뀐다 |
  * | UI-D | 상속받은 주택 위젯(판정 메뉴와 같은 `InheritedSameHouseholdField`) → patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -18,8 +19,17 @@ import { EstateBodyRealEstate } from "@/components/calc/inheritance/estate-card/
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
+/** 주소 검색 모킹 — 버튼을 누르면 인천 서구 PNU(2020-06-19 조정 지정)를 고른 것과 같다 */
 vi.mock("@/components/ui/address-search", () => ({
-  AddressSearch: () => null,
+  AddressSearch: ({ onChange }: { onChange: (v: Record<string, string>) => void }) => (
+    <button
+      type="button"
+      data-testid="mock-address-pick"
+      onClick={() =>
+        onChange({ road: "", jibun: "인천광역시 서구 x", building: "", detail: "", lng: "", lat: "", pnu: "2826010100100010000" })
+      }
+    />
+  ),
 }));
 
 afterEach(cleanup);
@@ -144,5 +154,26 @@ describe("UI-A 「양도시(증여일) 조정대상지역」 토글 ↔ 증여 �
     cleanup();
     render(<Harness start={item({}, { estateAddress: { pnu: GANGNAM_PNU } } as Partial<EstateItem>)} giftDate="2017-08-02" />);
     expect(regulated().getAttribute("aria-checked")).toBe("false");
+  });
+});
+
+describe("UI-B §155①2호 신규 주택 소재지", () => {
+  const tt = (newAcq: string) => ({ previousAcquisitionDate: new Date("2015-01-01"), newAcquisitionDate: new Date(newAcq) });
+  it("★ 주소 선택 → newHouseRegionCode = PNU 앞 10자리 · 신규 주택 판정이 자동으로(2020-06-18 = 지정 전 「조정대상지역 아님」)", () => {
+    render(<Harness start={item({ householdHousingCount: 2, temporaryTwoHouse: tt("2020-06-18") })} giftDate="2021-08-01" />);
+    expect(document.querySelector('input[name="newHouseRegulatedAtAcquisition"]')).not.toBeNull();
+    const box = screen.getByTestId("bg-transfer-new-house-address");
+    fireEvent.click(within(box).getByTestId("mock-address-pick"));
+    expect(bgtOf().temporaryTwoHouse).toMatchObject({ newHouseRegionCode: "2826010100", newHouseJibun: "인천광역시 서구 x" });
+    // 다른 §155① 값은 보존
+    expect(bgtOf().temporaryTwoHouse?.previousAcquisitionDate).toBeInstanceOf(Date);
+    expect(document.querySelector('input[name="newHouseRegulatedAtAcquisition"]')).toBeNull();
+    expect(screen.getByTestId("temp-two-house-new-regulated-auto").textContent).toBe(
+      "조정대상지역 아님 — 신규 주택 소재지 주소로 자동 판정",
+    );
+  });
+  it("부정 짝 — §155①2호 판정이 필요 없는 시기(증여 2017-01-01)에는 소재지 칸이 없다", () => {
+    render(<Harness start={item({ householdHousingCount: 2, temporaryTwoHouse: tt("2016-06-01") })} giftDate="2017-01-01" />);
+    expect(screen.queryByTestId("bg-transfer-new-house-address")).toBeNull();
   });
 });

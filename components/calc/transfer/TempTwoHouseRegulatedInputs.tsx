@@ -41,8 +41,8 @@ export function TempTwoHouseRegulatedInputs({
   regulated: TempTwoHouseRegulatedVerdict;
   newHouseAcquisitionDate: string;
   /**
-   * 신규 주택 주소를 받는 **보유 주택 목록**이 있는 화면인가. 없으면(증여세 부담부증여) 「목록에서 주소를
-   * 검색하면 자동 판정」 안내를 빼고 선언만 받는다 — 그 화면에는 그 목록이 없다.
+   * 신규 주택 주소를 받는 **보유 주택 목록**이 있는 화면인가. 없으면(증여세 부담부증여) 그 화면의
+   * 「신규 주택 소재지」 칸(E-1 잔여 B)을 가리킨다 — 그 화면에는 목록이 없다.
    */
   hasHouseRoster?: boolean;
 }) {
@@ -78,7 +78,7 @@ export function TempTwoHouseRegulatedInputs({
           <label className="text-sm font-medium">신규 주택 — 취득일 현재</label>
           {regulated.nextAuto ? (
             <p data-testid="temp-two-house-new-regulated-auto" className="text-xs">
-              {auto(regulated.next)} — 보유 주택 목록의 주소로 자동 판정
+              {auto(regulated.next)} — {hasHouseRoster ? "보유 주택 목록의 주소로" : "신규 주택 소재지 주소로"} 자동 판정
             </p>
           ) : (
             <>
@@ -90,7 +90,9 @@ export function TempTwoHouseRegulatedInputs({
                 options={REGULATED_OPTIONS}
               />
               <p className="text-xs text-muted-foreground">
-                {hasHouseRoster && "보유 주택 목록에서 신규 주택의 주소를 검색하면 자동으로 판정합니다. "}
+                {hasHouseRoster
+                  ? "보유 주택 목록에서 신규 주택의 주소를 검색하면 자동으로 판정합니다. "
+                  : "신규 주택 소재지를 검색하면 자동으로 판정합니다. "}
                 조정대상지역 공고가 있은 날 이전에 매매계약을 체결하고 계약금을 지급했다면(증명서류로 확인되는
                 경우) 「조정대상지역 아님」을 고르세요.
               </p>

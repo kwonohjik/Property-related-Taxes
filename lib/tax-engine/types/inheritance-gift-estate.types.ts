@@ -1142,6 +1142,15 @@ export interface BurdenedGiftTransferTaxInput {
     newHouseExistingTenant?: boolean;
     /** 전 소유자와 임차인 간 임대차계약 종료일 (2호 단서) */
     newHouseTenantLeaseEndDate?: string;
+    /*
+     * 신규 주택 소재지 (E-1 잔여 B) — 양도세 계산기는 보유 주택 명부 행 주소에서 법정동코드를 얻는다
+     * (`resolveTemporaryTwoHouse` → `newHouseRegionCode`). 이 경로에는 명부가 없어 한 칸을 같은 주소 위젯으로
+     * 받는다. 코드가 있으면 엔진이 신규 주택 취득일(계약일) 현재 조정 여부를 선언 대신 코드로 판정한다.
+     */
+    /** 신규 주택 소재지 지번 주소 — 화면 표시용 */
+    newHouseJibun?: string;
+    /** 신규 주택 법정동코드 — 소재지 PNU 앞 10자리 */
+    newHouseRegionCode?: string;
   };
   /*
    * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──

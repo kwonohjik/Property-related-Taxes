@@ -8,6 +8,7 @@
  * | 축 | 종전(base) | 고친 뒤 | 패리티(양도세 계산기 `callTransferTaxAPI`) |
  * |---|---|---|---|
  * | A — 「양도시 조정대상지역」 토글 ↔ 증여 주택 주소 | 주소가 있어도 토글(기본 OFF)만 중과·단기세율에 쓰임 | 안 만진 토글은 주소 판정(`giftBurdenedEffectiveIsRegulatedArea`) | 계산기 `useRegulatedAreaAutoTip`이 주소로 채운 토글 |
+ * | B — §155①2호 신규 주택 소재지 | 신규 주택 조정 여부는 선언으로만(미선언이면 판정 보류·대리 지표) | 주소 한 칸 → `temporaryTwoHouse.newHouseRegionCode` | 보유 주택 명부 행 `regionCode` |
  * | D — 상속받은 주택(§104②1호 · §154⑧3호) | 취득 원인 칸 없음 → 상속개시일부터 세율·보유 기산 | `InheritedSameHouseholdField` 재사용 → `acquisitionCause` · `decedent*` | `assets[0].acquisitionCause` · `decedent*` |
  *
  * 시료는 모두 아파트 1채 부담부증여(증여일 = 양도일) · 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억.
@@ -315,5 +316,78 @@ describe("A ⑭ route — 주소가 있으면 안 만진 토글은 주소 판정
     const off = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01"), isRegulatedArea: false }, GANGNAM_PNU);
     expect(r.determinedTax).toBe(off.determinedTax);
     expect(r.determinedTax).not.toBe(on.determinedTax);
+  });
+});
+
+// ═══ B — §155①2호 신규 주택 소재지 → 신규 주택 취득일 현재 조정대상지역 ═══════════════════════
+
+/**
+ * 계산기는 신규 주택 법정동코드를 **보유 주택 명부 행의 주소**에서만 얻는다(`resolveTemporaryTwoHouse` →
+ * `newHouseRegionCode`). 이 경로에는 명부가 없어 신규 주택 소재지 한 칸을 같은 주소 위젯(`AddressSearch`)으로
+ * 받고 같은 leaf(`toTemporaryTwoHouseEraFacts`)로 싣는다.
+ * 시료는 계산기 anchor `transfer.route.temp-two-house-a2b` R-4와 같다: 인천 서구는 2020-06-19 조정 지정.
+ */
+describe("B ⑭ route — 신규 주택 주소가 선언 없이 신규 주택 조정 여부를 정한다 (계산기 명부와 같은 결론)", () => {
+  const SEO_GU = "2826010100";
+  const at = (newAcq: string, newHouseRegionCode?: string) => ({
+    acquisitionDate: new Date("2015-01-01"),
+    householdHousingCount: 2,
+    temporaryTwoHouse: {
+      previousAcquisitionDate: new Date("2015-01-01"),
+      newAcquisitionDate: new Date(newAcq),
+      ...(newHouseRegionCode ? { newHouseRegionCode } : {}),
+    },
+  });
+
+  it("B-0 종전(base) — 신규 주택 선언·주소 없음: 판정 보류(양도일 기준 대리 지표 = 조정) → 1년 기한 경과로 과세", async () => {
+    const r = await gift("2021-08-01", at("2020-06-18"), GANGNAM_PNU);
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(9_544_800);
+    expect((r.warnings ?? []).some((w) => w.includes("신규주택 취득일 기준"))).toBe(true);
+  });
+
+  it("B-1 ★ 신규 주택 서구 2020-06-18 취득(지정 전) → 조정→비조정이라 3년 기한 → 비과세, 계산기 명부와 같은 결론", async () => {
+    const r = await gift("2021-08-01", at("2020-06-18", SEO_GU), GANGNAM_PNU);
+    expect(r.isExempt).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes("신규주택 취득일 기준"))).toBe(false);
+  });
+
+  it("B-2 부정 짝 — 2020-06-19 취득(지정 당일)이면 조정→조정 1년 기한 → 과세 9,544,800, 판정 보류 고지 없음", async () => {
+    const r = await gift("2021-08-01", at("2020-06-19", SEO_GU), GANGNAM_PNU);
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(9_544_800);
+    expect((r.warnings ?? []).some((w) => w.includes("신규주택 취득일 기준"))).toBe(false);
+  });
+
+  it("B-3 패리티 — 계산기에 같은 사실(명부 행 서구 주소)을 넣으면 같은 결론", async () => {
+    const calcAt = (newAcq: string) => {
+      const f = transferForm("2021-08-01", "2015-01-01", { householdHousingCount: "2" }, {}, GANGNAM);
+      f.houses = [
+        {
+          // 명부 1행 — UI가 만드는 모양(`transfer.route.temp-two-house-a2b`의 `house()`와 같다)
+          id: "h-new",
+          region: "capital",
+          acquisitionDate: newAcq,
+          officialPrice: "300000000",
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: false,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+          acquisitionPrice: "",
+          exclusiveArea: "",
+          isUnsoldNewHouse: false,
+          completionDate: "",
+          isSpouseOwned: false,
+          isCoInherited: false,
+          decedentSameHouseholdAtInheritance: false,
+          isRankingDisqualifiedInheritedHouse: false,
+          regionCode: SEO_GU,
+        } as unknown as TransferFormData["houses"][number],
+      ];
+      return f;
+    };
+    expect((await transfer(calcAt("2020-06-18"))).isExempt).toBe(true);
+    expect((await transfer(calcAt("2020-06-19"))).isExempt).toBe(false);
   });
 });

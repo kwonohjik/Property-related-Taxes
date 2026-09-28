@@ -7,7 +7,8 @@
  * 판정은 양도세 판정 카드와 같은 leaf(`judgeTempTwoHouseFromForm`)를 부른다. 종전(증여) 주택 주소
  * (`regionCode` — E-1 후속)는 ④가 싣는 값과 같은 것을 넘긴다(`giftBurdenedRegionCode`) — 있으면 종전 주택
  * 조정 여부는 주소로 자동 판정되고 위젯은 선언 칸 대신 결과를 보여 준다. 신규 주택 법정동코드는 이 경로에
- * 입력 칸(보유 주택 목록)이 없어 선언으로만 판정한다. §154① 단서는 `regulated`(노출 게이트)를 바꾸지 않아
+ * 보유 주택 목록이 없어 신규 주택 소재지 한 칸(`temporaryTwoHouse.newHouseRegionCode` — E-1 잔여 B)에서
+ * 온다 — ④와 같은 값을 넘기므로 코드가 있으면 신규 주택도 자동 판정된다. §154① 단서는 `regulated`(노출 게이트)를 바꾸지 않아
  * 넘기지 않는다(1년 요건 면제만 바꾼다 — 엔진은 ④가 싣는 사유로 판정한다).
  */
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -46,8 +47,26 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
     residencePeriodMonths: String(bgt.residencePeriodMonths ?? 0),
     regionCode,
     isRegulatedArea: bgt.isRegulatedArea === true,
+    // 신규 주택 소재지 코드(E-1 잔여 B) — ④ `toTemporaryTwoHouseEraFacts`와 같은 값
+    newHouseRegionCode: tt.newHouseRegionCode || undefined,
     eraFields: tt,
   });
   if (v.status === "pending" || !v.regulated.relevant) return null;
   return { regulated: v.regulated, newAcquisitionDate };
+}
+
+/**
+ * 신규 주택 소재지 주소 위젯(`AddressSearch`) → 저장 patch (E-1 잔여 B). 법정동코드는 PNU 앞 10자리 —
+ * 양도세 계산기 명부 행(`buildHouseAddressPatch`)·증여 주택(`giftBurdenedRegionCode`)과 같은 규칙이다.
+ * PNU가 없으면(직접 입력한 주소 · 지우기) 코드를 비운다 — 엔진은 선언으로 판정한다.
+ */
+export function giftBurdenedNewHouseAddressPatch(v: {
+  jibun?: string;
+  road?: string;
+  pnu?: string;
+}): { newHouseJibun: string; newHouseRegionCode: string } {
+  return {
+    newHouseJibun: v.jibun || v.road || "",
+    newHouseRegionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "",
+  };
 }

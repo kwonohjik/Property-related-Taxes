@@ -13,6 +13,10 @@ import {
   giftBurdenedInheritanceSlice,
 } from "@/lib/calc/gift-burdened-one-house";
 import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
+import {
+  giftBurdenedNewHouseAddressPatch,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
@@ -134,5 +138,43 @@ describe("A leaf — 「양도시 조정대상지역」 실효값 (⑤④ 공용
     expect(buildGiftBurdenedTransferBody(apt, form("2021-06-01", apt)).isRegulatedArea).toBe(true);
     const building = item({ isHousing: false }, { ...withAddr, category: "real_estate_building" } as Partial<EstateItem>);
     expect(buildGiftBurdenedTransferBody(building, form("2021-06-01", building)).isRegulatedArea).toBe(false);
+  });
+});
+
+describe("B 신규 주택 소재지 — leaf · ③ · ④ · ⑤⑧ 게이트", () => {
+  const tt = { previousAcquisitionDate: new Date("2015-01-01"), newAcquisitionDate: new Date("2020-06-18") };
+  it("B-L1 주소 → PNU 앞 10자리(계산기 명부·증여 주택과 같은 규칙) · PNU 없음(직접 입력·지우기)이면 코드 비움", () => {
+    expect(giftBurdenedNewHouseAddressPatch({ jibun: "인천 서구 x", pnu: "2826010100100010000" })).toEqual({
+      newHouseJibun: "인천 서구 x",
+      newHouseRegionCode: "2826010100",
+    });
+    expect(giftBurdenedNewHouseAddressPatch({ jibun: "직접 입력", pnu: "" })).toEqual({
+      newHouseJibun: "직접 입력",
+      newHouseRegionCode: "",
+    });
+  });
+  it("B-N1 ③ 복원 — JSON 왕복 후 신규 주택 소재지 보존", () => {
+    const fields = { householdHousingCount: 2, temporaryTwoHouse: { ...tt, newHouseJibun: "인천 서구 x", newHouseRegionCode: "2826010100" } };
+    const parsed = JSON.parse(JSON.stringify({ giftItems: [item(fields)] }));
+    const bgt = normalizeRestoredFormDates(parsed).giftItems![0].burdenedGiftTransferTax!;
+    expect(bgt.temporaryTwoHouse).toMatchObject({ newHouseJibun: "인천 서구 x", newHouseRegionCode: "2826010100" });
+    expect(bgt.temporaryTwoHouse?.newAcquisitionDate).toBeInstanceOf(Date);
+  });
+  it("B-B1 ④ — 코드가 있으면 temporaryTwoHouse.newHouseRegionCode · 빈 코드면 키 없음", () => {
+    const withCode = item({ householdHousingCount: 2, temporaryTwoHouse: { ...tt, newHouseRegionCode: "2826010100" } });
+    const b = buildGiftBurdenedTransferBody(withCode, form("2021-08-01", withCode)) as { temporaryTwoHouse: Record<string, unknown> };
+    expect(b.temporaryTwoHouse.newHouseRegionCode).toBe("2826010100");
+    const empty = item({ householdHousingCount: 2, temporaryTwoHouse: { ...tt, newHouseRegionCode: "" } });
+    const e = buildGiftBurdenedTransferBody(empty, form("2021-08-01", empty)) as { temporaryTwoHouse: Record<string, unknown> };
+    expect(e.temporaryTwoHouse).not.toHaveProperty("newHouseRegionCode");
+  });
+  it("B-G1 ⑤⑧ 게이트 — 신규 주택 코드가 있으면 신규 주택은 자동 판정(nextAuto)되고 종전 주택 코드와 함께 판정 확정", () => {
+    const bgt = (code?: string) =>
+      item({ householdHousingCount: 2, temporaryTwoHouse: { ...tt, ...(code ? { newHouseRegionCode: code } : {}) } })
+        .burdenedGiftTransferTax!;
+    const g = giftBurdenedTempTwoHouseRegulatedGate(bgt("2826010100"), "2021-08-01", "1168010100")!;
+    expect(g.regulated).toMatchObject({ nextAuto: true, next: false, determined: true });
+    const none = giftBurdenedTempTwoHouseRegulatedGate(bgt(), "2021-08-01", "1168010100")!;
+    expect(none.regulated).toMatchObject({ nextAuto: false, determined: false });
   });
 });

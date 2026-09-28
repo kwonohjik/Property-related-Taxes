@@ -303,8 +303,11 @@ export function buildGiftBurdenedTransferBody(
         : (next as unknown as string),
       // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b · E-1).
       //   양도세 계산기 ④(`buildHouseholdSpecialPayload`)·⑤ 판정 카드와 같은 leaf로 편다.
-      //   신규 주택 법정동코드는 이 경로에 입력 칸이 없어 싣지 않는다(선언으로 판정).
-      ...toTemporaryTwoHouseEraFacts(bgt.temporaryTwoHouse, undefined),
+      //   신규 주택 법정동코드는 신규 주택 소재지 칸에서 온다(E-1 잔여 B — 계산기는 명부 행). 없으면 선언으로 판정.
+      ...toTemporaryTwoHouseEraFacts(
+        bgt.temporaryTwoHouse,
+        bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
+      ),
     };
   }
 

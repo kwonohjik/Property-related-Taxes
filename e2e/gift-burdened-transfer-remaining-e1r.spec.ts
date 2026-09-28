@@ -128,3 +128,68 @@ test("[BT-E2E-10] 강남 주소 · 토글 안 만짐 → 켜져 있고 요청 �
   expect(body.regionCode).toBe("1168010100");
   expect(body.isRegulatedArea).toBe(true);
 });
+
+/**
+ * [BT-E2E-11] E-1 잔여 B — §155①2호 신규 주택 소재지. 주소를 고르면 신규 주택 조정 여부가 선언 라디오 대신
+ * 자동 판정되고 본문에 `temporaryTwoHouse.newHouseRegionCode`가 실린다. 인천 서구는 2020-06-19 조정 지정 —
+ * 2020-06-18 취득이면 「조정대상지역 아님」.
+ */
+test("[BT-E2E-11] 신규 주택 소재지 → 자동 판정 · 요청 본문 temporaryTwoHouse.newHouseRegionCode", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+  await page.route("**/api/address/search**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: [
+          {
+            pnu: "2826010100100010000",
+            title: "인천 서구 1",
+            road: "인천 서구 서곶로 1",
+            jibun: "인천광역시 서구 x동 1",
+            building: "",
+            zipcode: "",
+            lng: "",
+            lat: "",
+          },
+        ],
+      }),
+    }),
+  );
+  await goToGiftAssets(page, { year: "2021", month: "8", day: "1" });
+
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog);
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+  const dateField = (label: string) =>
+    dialog.getByText(label, { exact: true }).locator("xpath=ancestor::div[.//input[@aria-label='연도']][1]");
+  const fillDate = async (label: string, y: string, m: string, d: string) => {
+    const f = dateField(label);
+    await f.getByRole("textbox", { name: "연도" }).fill(y);
+    await f.getByRole("textbox", { name: "월" }).fill(m);
+    await f.getByRole("textbox", { name: "일" }).fill(d);
+  };
+  await fillDate("종전 주택 취득일", "2010", "3", "15");
+  await fillDate("신규 주택 취득일", "2020", "6", "18");
+
+  const box = dialog.getByTestId("bg-transfer-new-house-address");
+  await box.getByPlaceholder("도로명 또는 지번 주소 입력").fill("서구 1");
+  await box.getByRole("button", { name: /서곶로 1/ }).click();
+  const block = dialog.getByTestId("temp-two-house-regulated-block");
+  await expect(block.getByTestId("temp-two-house-new-regulated-auto")).toHaveText(
+    "조정대상지역 아님 — 신규 주택 소재지 주소로 자동 판정",
+  );
+  await block.locator('input[name="prevHouseRegulatedAtNewAcquisition"][value="yes"]').check();
+
+  const body = await calculateAndCapture(page, mock);
+  expect(body.temporaryTwoHouse).toEqual({
+    previousAcquisitionDate: "2010-03-15",
+    newAcquisitionDate: "2020-06-18",
+    newHouseRegionCode: "2826010100",
+    previousHouseRegulatedAtNewAcquisition: true,
+  });
+});

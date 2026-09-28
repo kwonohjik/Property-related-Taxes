@@ -10,6 +10,7 @@
  *   · 증여 주택 주소(PNU 앞 10자리)가 있으면 취득시 조정대상지역은 주소로 자동 판정(토글 대신 결과 표시)
  *     · 양도시 조정대상지역 토글은 안 만졌으면 주소 판정을 따른다(계산기와 같은 규칙 — E-1 잔여 A)
  *     · §155①2호 종전 주택 조정 여부도 주소로 판정(`TempTwoHouseRegulatedInputs`가 결과만 보여 준다)
+ *   · §155①2호 신규 주택 소재지(E-1 잔여 B) — 같은 주소 위젯 한 칸 → 신규 주택 조정 여부도 자동 판정
  *   · §154① 단서(삭제 전 4호 OH-38 포함) — `ExemptionProvisoSection`
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
  *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
@@ -28,7 +29,11 @@ import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
-import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
+import {
+  giftBurdenedNewHouseAddressPatch,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
@@ -261,7 +266,31 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }}
             />
           </FieldCard>
-          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 이 화면엔 보유 주택 목록이 없어 선언으로 받는다. */}
+          {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
+              같은 주소 위젯으로 한 칸만 받는다. 코드가 있으면 아래 위젯이 신규 주택도 자동 판정한다(④⑧ 같은 값). */}
+          {eraGate && bgt.temporaryTwoHouse && (
+            <FieldCard label="신규 주택 소재지" hint="신규 주택 취득일 현재 조정대상지역 여부를 주소로 판정합니다.">
+              <div data-testid="bg-transfer-new-house-address">
+                <AddressSearch
+                  disableUnits
+                  value={
+                    {
+                      road: "",
+                      jibun: bgt.temporaryTwoHouse.newHouseJibun ?? "",
+                      building: "",
+                      detail: "",
+                      lng: "",
+                      lat: "",
+                    } satisfies AddressValue
+                  }
+                  onChange={(v) =>
+                    set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedNewHouseAddressPatch(v) } })
+                  }
+                />
+              </div>
+            </FieldCard>
+          )}
+          {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 신규 주택 코드가 없으면 선언으로 받는다. */}
           {eraGate && bgt.temporaryTwoHouse && (
             <TempTwoHouseRegulatedInputs
               form={bgt.temporaryTwoHouse}
