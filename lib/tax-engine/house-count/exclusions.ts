@@ -17,8 +17,8 @@
  *   9. 인구감소지역 임대주택
  *  10. 사원임대용 주택
  *  11. 상속 5년 미경과 (§28의4⑥3호)
- *  12. 혼인 전 분양권 (§28의4⑥10호, 2026.12.31까지)
- *  13. 한시 특례 신축 (§28의4⑥11호)
+ *  12. 혼인 전 분양권 (§28의4⑥6호 — 2026.12.31 기한은 근거 미확인, 계획서 D-9)
+ *  13. 한시 특례 신축 (§28의4⑥7호)
  *  14. 시가표준액 1억 이하 오피스텔
  */
 
@@ -93,13 +93,13 @@ function preRightOfficeCountingItem(
 }
 
 // ============================================================
-// 한시 특례 판정 (보유 주택 적용 — §28의4⑥11호)
+// 한시 특례 판정 (보유 주택 적용 — §28의4⑥7호)
 // ============================================================
 
 /**
  * [P3-1] 보유 주택이 한시 특례 신축 주택인지 판정
  *
- * §28의4⑥11호 준용:
+ * §28의4⑥7호 → ②1호:
  * 2024.1.10~2027.12.31 취득한 60㎡·3억(수도권 6억) 이하
  * 다가구·연립·다세대·도시형생활주택 → 주택 수 제외
  *
@@ -282,7 +282,7 @@ export function getExclusionReasonsForHouse(
     return excluded;
   }
 
-  // 한시 특례 신축 보유 주택 (§28의4⑥11호)
+  // 한시 특례 신축 보유 주택 (§28의4⑥7호 → ②1호)
   if (isExcludedByHansiNewBuild(house, referenceDate)) {
     excluded.push({
       assetId: house.id,
@@ -294,7 +294,7 @@ export function getExclusionReasonsForHouse(
     return excluded;
   }
 
-  // 한시 특례 임대등록 (§28의4⑥11호 준용)
+  // 한시 특례 임대등록 (§28의4⑥7호 → ②2호)
   if (house.isHansiBenefitLeaseRegistered) {
     const acqDate = house.acquisitionDate;
     if (acqDate >= ACQUISITION_CONST.HANSI_START_DATE && acqDate <= ACQUISITION_CONST.HANSI_LEASE_END) {
@@ -309,7 +309,7 @@ export function getExclusionReasonsForHouse(
     }
   }
 
-  // 한시 특례 미분양 아파트 (§28의4⑥11호 준용)
+  // 한시 특례 미분양 아파트 (§28의4⑥7호 → ②3호)
   if (house.isHansiBenefitUnsoldApt) {
     const acqDate = house.acquisitionDate;
     if (acqDate >= ACQUISITION_CONST.HANSI_START_DATE && acqDate <= ACQUISITION_CONST.HANSI_UNSOLD_END) {
@@ -363,7 +363,7 @@ export function getExclusionReasonsForRight(
     return excluded;
   }
 
-  // 혼인 전 분양권 (§28의4⑥10호, 2026.12.31까지 한시)
+  // 혼인 전 분양권 (§28의4⑥6호 — 2026.12.31 기한은 근거 미확인, 계획서 D-9)
   if (right.isPreMarriageSubscriptionRight && right.type === "subscription_right") {
     // 한시 기간 판단: referenceDate ≤ 2026.12.31
     if (referenceDate <= ACQUISITION_CONST.PRE_MARRIAGE_RIGHT_HANSI_END) {

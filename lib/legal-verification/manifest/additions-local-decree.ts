@@ -86,6 +86,32 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywords: ["주택 수의 산정방법", "조합원입주권", "주택분양권", "오피스텔"],
     keywordMode: "ALL",
   },
+  // ── §28의4⑥ 호 번호 고정 (D-9) ──
+  // 조문 단위 규칙만으로는 ⑥ 각 호의 **번호**가 바뀌어도 통과한다. 법제처 호내용은 「N. 」으로
+  // 시작하므로 번호를 붙인 verbatim 키워드로 호 번호까지 검증한다. 상수값 ↔ 키워드 번호의 일치는
+  // `__tests__/tax-engine/acquisition-tax/house-count-legal-codes-numbering.anchor.test.ts`가 지킨다.
+  {
+    id: "ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR",
+    citation: "지방세법 시행령 §28의4⑥3호",
+    keywords: [
+      "3. 상속을 원인으로 취득한 주택, 조합원입주권, 주택분양권 또는 오피스텔로서 상속개시일부터 5년이 지나지 않은",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT",
+    citation: "지방세법 시행령 §28의4⑥6호",
+    keywords: [
+      "6. 혼인한 사람이 혼인 전 소유한 주택분양권으로 주택을 취득하는 경우 다른 배우자가 혼인 전부터 소유하고 있는 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "ACQUISITION.HOUSE_COUNT_HANSI_EXCLUSION",
+    citation: "지방세법 시행령 §28의4⑥7호",
+    keywords: ["7. 제2항제1호부터 제3호까지의 규정에 해당하는 주택"],
+    keywordMode: "ALL",
+  },
   {
     id: "LOCAL_DECREE.TEMPORARY_TWO_HOUSE",
     citation: "지방세법 시행령 §28의5",
