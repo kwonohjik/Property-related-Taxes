@@ -67,6 +67,10 @@ export interface FreeRealEstateInput {
   periods?: FreeUsePeriod[];
   /** 경정청구 (§79②1호·시행령§81⑨) — 무상사용기간 중 소유자 사망·양도 등 중단 시 잔여기간분 */
   rectification?: RectificationInput;
+  /** 증여일 — §43² 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 2호(①)·2의2호(②) — 1년 이내 같은 유형 선행 이익. 기준금액 판정에만 합산(다기간은 첫 기간만) */
+  priorSameClauseGains?: SameClauseGainItem[];
 }
 
 /** §37 다기간 window — 각 window는 별개 증여일의 별개 증여 */

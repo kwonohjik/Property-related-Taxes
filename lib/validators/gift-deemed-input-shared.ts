@@ -42,3 +42,14 @@ export const ratioSchema = z
   .refine((r) => r.numer <= r.denom, {
     message: "지분율은 100%를 초과할 수 없습니다",
   });
+
+/**
+ * §43²·영 §32의4 — 소급 1년 이내 같은 단위 선행 이익(금액기준 판정에만 합산). ⑫ strip 방지.
+ * 증여일은 윈도 기준이라 함께 받는다(route가 parsed.data를 그대로 넘기므로 여기서 Date가 된다).
+ */
+export const sameClausePriorShape = {
+  giftDate: z.coerce.date().optional(),
+  priorSameClauseGains: z
+    .array(z.object({ date: z.string().min(1), gain: z.number().nonnegative(), label: z.string().optional() }))
+    .optional(),
+};

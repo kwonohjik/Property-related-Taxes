@@ -3,6 +3,7 @@ import { GIFT } from "../legal-codes";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, PropertyServiceUseInput } from "./types";
+import { sameClauseAggregate } from "./same-clause-43-2";
 
 const FREE_USE_THRESHOLD = 10_000_000; // §32②1호 무상사용·용역 = 1천만원
 
@@ -30,7 +31,13 @@ export function calcPropertyServiceUseGift(input: PropertyServiceUseInput): Deem
     threshold = safeMultiplyThenDivide(marketValue, 30, 100);
     note = "§42①2·4호 고가사용하게함·용역제공";
   }
-  const applied = raw > 0 && raw >= threshold;
+  // §43²·영 §32의4 10호 — 금액기준(무상 1천만원)에만 1년 이내 같은 호 선행 이익을 더한다(과세액은 당해 raw).
+  //   저가·고가의 기준은 「시가의 100분의 30에 상당하는 가액」뿐이라 정책 (a)상 합산하지 않는다.
+  const agg =
+    subType === "free_use"
+      ? sameClauseAggregate(input.giftDate, input.priorSameClauseGains, raw, { amount: "1천만원", unit: "같은 호" })
+      : { total: raw, row: undefined };
+  const applied = raw > 0 && agg.total >= threshold;
   const value = applied ? raw : 0;
 
   const breakdown: CalculationStep[] = [
@@ -39,6 +46,7 @@ export function calcPropertyServiceUseGift(input: PropertyServiceUseInput): Deem
     { label: "이익", amount: raw },
     { label: subType === "free_use" ? "기준금액 (1천만원)" : "기준금액 (시가 30%)", amount: threshold },
     { label: "증여재산가액", amount: value, lawRef: GIFT.PROPERTY_SERVICE_USE, note },
+    ...(agg.row ? [agg.row] : []),
   ];
   return {
     type: "property_service_use",

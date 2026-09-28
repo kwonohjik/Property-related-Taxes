@@ -72,6 +72,8 @@ export interface DeemedPhase3Fields {
   psuSubType: "free_use" | "low_price" | "high_price";
   psuMarketValue: string;
   psuConsideration: string;
+  /** §43²·영 §32의4 10호 — 무상(1천만원 기준)에서만 쓰는 1년 이내 같은 호 선행 이익 표 */
+  psuPriorSameClauseRows?: ScPriorTxRow[];
   // 조직변경 §42의2
   ocSubType: "share_change" | "value_change";
   ocBaseValue: string;
@@ -221,6 +223,7 @@ export const INITIAL_DEEMED_PHASE3: DeemedPhase3Fields = {
   psuSubType: "free_use",
   psuMarketValue: "",
   psuConsideration: "",
+  psuPriorSameClauseRows: undefined,
   ocSubType: "share_change",
   ocBaseValue: "",
   ocPreShares: "",

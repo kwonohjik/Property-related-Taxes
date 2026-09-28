@@ -15,6 +15,8 @@ const PREFIX: Record<SameClauseRowsKey, string> = {
   cdPriorSameClauseRows: "cd",
   conPriorSameClauseRows: "con",
   cbPriorSameClauseRows: "cb",
+  freePriorSameClauseRows: "free",
+  psuPriorSameClauseRows: "psu",
 };
 
 type Props = {

@@ -131,6 +131,21 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    id: "INH_DECREE.FREE_REALESTATE_GAIN",
+    citation: "상증령 §27",
+    // `free-realestate-use.ts`의 5년 무상사용 기간·1년 담보 갱신·기준금액(④ 1억·⑥ 1천만원)이 이 조에서 온다.
+    //   엔진 주석이 「§27③」처럼 「영」 없이 적혀 스캐너에 잡히지 않다가, §43² 사용이익 축에서 「영 §27④」를
+    //   인용하면서 드러났다(`gift-deemed-decree-coverage.test.ts` DC-1).
+    keywords: [
+      "부동산 무상사용에 따른 이익의 계산방법",
+      "무상사용 기간은 5년으로 하고",
+      "이란 1억원을 말한다",
+      "이란 1천만원을 말한다",
+      "1년이 되는 날의 다음 날에 새로 해당 부동산의 담보 이용을 개시한 것으로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "INH_DECREE.CONTRIBUTION_GAIN",
     citation: "상증령 §29의3",
     // `contribution-in-kind.ts`의 30% 게이트·3억·일반공모 제외가 전부 이 조에서 온다.

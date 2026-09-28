@@ -8,6 +8,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
+import { SameClausePriorTable } from "./SameClausePriorTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 
@@ -96,6 +97,14 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
           title="거래관행상 정당한 사유 있음 (§37③)"
         />
       )}
+
+      {/* §43²·영 §32의4 2호·2의2호 — 기준금액(1억·1천만원) 판정에만 합산. 다기간이면 첫 기간(당해 증여)만 */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="freePriorSameClauseRows"
+        benefitHint={`같은 유형(${isFreeUse ? "부동산 무상사용 §37①" : "부동산 무상담보 §37②"})의 이익만 — ${isFreeUse ? "1억" : "1천만원"} 금액기준 판정에만 합산하고 과세는 이번 증여분입니다`}
+      />
 
       {/* 경정청구(§79②1호·§81⑨) — 무상사용(분모 60월)·담보(분모 12월) 공통 */}
       <div data-testid="free-rect-toggle">

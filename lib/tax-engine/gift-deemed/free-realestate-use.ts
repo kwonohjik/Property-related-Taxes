@@ -4,6 +4,7 @@ import { GIFT } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, FreeRealEstateInput, FreeUsePeriod, RectificationInput } from "./types";
+import { sameClauseAggregate } from "./same-clause-43-2";
 import {
   FREE_USE_ANNUAL_RATE,
   FREE_USE_DISCOUNT,
@@ -15,6 +16,20 @@ import {
 } from "../data/gift-deemed-rates";
 
 type SubType = FreeRealEstateInput["subType"];
+
+/**
+ * 「상증법」§43²·영 §32의4 2호(§37①)·2의2호(§37②) — 기준금액(영 §27④ 1억·⑥ 1천만원) 판정에만
+ * 1년 이내 같은 유형 선행 이익을 더한다. 과세액은 당해 이익(`same-clause-43-2.ts` 정책).
+ */
+type Gate43 = (benefit: number, threshold: number) => { met: boolean; row?: CalculationStep };
+function gate43(input: FreeRealEstateInput): Gate43 {
+  const labels =
+    input.subType === "free_use" ? { amount: "1억", unit: "부동산 무상사용" } : { amount: "1천만원", unit: "부동산 무상담보" };
+  return (benefit, threshold) => {
+    const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, benefit, labels);
+    return { met: benefit > 0 && agg.total >= threshold, row: agg.row };
+  };
+}
 
 interface SinglePeriodCalc {
   base: number; // free_use 부동산가액 / collateral 차입금
@@ -54,12 +69,15 @@ export function calcFreeRealEstateGift(input: FreeRealEstateInput): DeemedGiftRe
   }
 
   // ── 다기간 (G2/G3) ──
+  const gate = gate43(input);
   if (periods?.length) {
-    return _attachRect(_calcMultiPeriod(subType, periods), subType, rectification);
+    return _attachRect(_calcMultiPeriod(subType, periods, gate), subType, rectification);
   }
 
   // ── 단일기간 (기존 — 회귀 0) ──
-  const c = calcSinglePeriod(subType, input);
+  const single = calcSinglePeriod(subType, input);
+  const g = gate(single.benefit, single.threshold);
+  const c = { ...single, applied: g.met };
 
   if (subType === "free_use") {
     const annualBenefit = applyRateFraction(input.propertyValue ?? 0, FREE_USE_ANNUAL_RATE.numer, FREE_USE_ANNUAL_RATE.denom);
@@ -84,6 +102,7 @@ export function calcFreeRealEstateGift(input: FreeRealEstateInput): DeemedGiftRe
       );
     }
     steps.push({ label: "증여재산가액", amount: c.benefit, lawRef: GIFT.FREE_REALESTATE, note: "§37① 무상사용" });
+    if (g.row) steps.push(g.row);
     return _attachRect(
       { type: "free_realestate", applied: true, deemedGiftValue: c.benefit, breakdown: steps, legalBasis: GIFT.FREE_REALESTATE },
       subType,
@@ -115,6 +134,7 @@ export function calcFreeRealEstateGift(input: FreeRealEstateInput): DeemedGiftRe
     );
   }
   steps.push({ label: "증여재산가액", amount: value, lawRef: GIFT.FREE_REALESTATE, note: "§37② 무상담보" });
+  if (g.row) steps.push(g.row);
   return _attachRect(
     { type: "free_realestate", applied: true, deemedGiftValue: value, breakdown: steps, legalBasis: GIFT.FREE_REALESTATE },
     subType,
@@ -123,10 +143,16 @@ export function calcFreeRealEstateGift(input: FreeRealEstateInput): DeemedGiftRe
 }
 
 /** 다기간 window 루프 — 각 window는 별개 증여. deemedGiftValue=첫 window(현재 증여)만(합산 금지) */
-function _calcMultiPeriod(subType: SubType, periods: FreeUsePeriod[]): DeemedGiftResult {
+function _calcMultiPeriod(subType: SubType, periods: FreeUsePeriod[], gate: Gate43): DeemedGiftResult {
+  let aggRow: CalculationStep | undefined;
   const breakdown = periods.map((p, index) => {
     const c = calcSinglePeriod(subType, p);
-    return { index, giftDate: p.startDate, baseValue: c.base, benefit: c.benefit, applied: c.applied };
+    // §43² — 선행 이익은 첫 기간(당해 증여) 판정에만 닿는다. 후속 기간 개시일은 영 §27③⑤상
+    //   「5년·1년이 되는 날의 다음 날」이라 그 선행 이익의 소급 1년 윈도 밖이다.
+    if (index > 0) return { index, giftDate: p.startDate, baseValue: c.base, benefit: c.benefit, applied: c.applied };
+    const g = gate(c.benefit, c.threshold);
+    aggRow = g.row;
+    return { index, giftDate: p.startDate, baseValue: c.base, benefit: c.benefit, applied: g.met };
   });
   // ⚠️ 합산 금지(누진세율 과대): 세액연결용 deemedGiftValue = 첫 window 고정.
   //    첫 window 미달이면 0(현재 증여 과세제외). 후속 window는 미래 별건.
@@ -139,6 +165,7 @@ function _calcMultiPeriod(subType: SubType, periods: FreeUsePeriod[]): DeemedGif
     lawRef: GIFT.FREE_REALESTATE,
   }));
   steps.push({ label: "증여재산가액 (첫 기간·현재 증여)", amount: deemedGiftValue, lawRef: GIFT.FREE_REALESTATE, note: `${unit} 다기간` });
+  if (aggRow) steps.push(aggRow);
   return {
     type: "free_realestate",
     applied: deemedGiftValue > 0,

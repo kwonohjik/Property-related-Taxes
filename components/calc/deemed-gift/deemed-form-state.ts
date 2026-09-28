@@ -65,6 +65,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   freeJustifiable: boolean;
   // §37 다기간(G2/G3) — 3-state: undefined=단일 / []=다기간ON빈 / [...]=다기간
   freePeriods?: { startDate: string; value: string; interest: string }[];
+  /** §43²·영 §32의4 2호·2의2호 — 1년 이내 같은 유형 선행 이익 표(단일·다기간 공통). 활성 조건은 `lib/calc/gift-deemed-43-2.ts` */
+  freePriorSameClauseRows?: ScPriorTxRow[];
   // §37 경정청구(G1, free_use 한정)
   freeRectOn: boolean;
   freeRectTax: string;
@@ -314,6 +316,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   freeRelated: true,
   freeJustifiable: false,
   freePeriods: undefined,
+  freePriorSameClauseRows: undefined,
   freeRectOn: false,
   freeRectTax: "",
   freeRectGiftDate: "",

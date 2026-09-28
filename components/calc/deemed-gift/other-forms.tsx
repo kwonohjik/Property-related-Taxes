@@ -18,6 +18,7 @@ import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuatio
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { DeemedFormState } from "./shared";
+import { SameClausePriorTable } from "./SameClausePriorTable";
 
 export { SpecificCorpFields } from "./specific-corp-form";
 
@@ -419,6 +420,13 @@ export function PropertyServiceUseFields({ form, set }: Props) {
       {!isFree && (
         <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} />
       )}
+      {/* §43²·영 §32의4 10호 — 금액기준(1천만원)이 있는 무상에서만. 법 §42① 같은 호에는 무상·저가가 함께 있다 */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="psuPriorSameClauseRows"
+        benefitHint="같은 호(재산 사용이면 §42①1호, 용역이면 3호 — 무상·저가 모두)의 이익만 — 1천만원 금액기준 판정에만 합산하고 과세는 이번 이익입니다"
+      />
     </ToneCard>
   );
 }
