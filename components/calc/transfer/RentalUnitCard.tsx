@@ -458,7 +458,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           size="sm"
           tone="violet"
           title="자진말소 또는 자동말소로 임대사업자 등록이 말소된 임대주택입니다."
-          description="말소일부터 5년 이내(장기임대주택이 2호 이상이면 가장 먼저 말소된 주택의 말소일부터 5년 이내)에 거주주택을 양도하면 임대기간요건을 충족한 것으로 봅니다. 자진말소는 「민간임대주택에 관한 특별법」 임대의무기간(단기 4년·장기일반 8년)의 1/2 이상 임대한 경우에 한합니다(소령 §155㉓)."
+          description="말소일(2호 이상이면 최초 말소일)부터 5년 이내에 거주주택을 양도하면 임대기간요건을 충족한 것으로 봅니다. 자진말소는 민특법 임대의무기간(단기 4년·장기일반 8년)의 1/2 이상 임대한 경우에 한합니다(소령 §155㉓)."
           checked={unit.rentalAutoTermination}
           // 끄면 등록 유형·말소일도 함께 비운다 — 같은 onChange 한 번(useEffect 미러링 금지)
           onCheckedChange={(v) =>
