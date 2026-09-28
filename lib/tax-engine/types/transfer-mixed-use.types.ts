@@ -261,7 +261,8 @@ export interface MixedUseAssetInput {
    */
   multiHouse?: Omit<
     MultiHouseSurchargeInput,
-    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "deemedOneHouseBy155"
+    // `deemedOneHouseSource`는 `deemedOneHouseBy155`의 표시용 짝이다(E-14c) — 같은 이유로 담지 않는다.
+    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "deemedOneHouseBy155" | "deemedOneHouseSource"
   > & {
     /** 양도 당시 조정대상지역 boolean fallback (`regulatedAreaHistory` 미매칭 시). */
     isRegulatedArea: boolean;

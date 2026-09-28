@@ -6,7 +6,7 @@
  * 모두 `workingInput`을 읽어 판정 결과를 내고, 그 결과로 파생 입력
  * (`effectiveInput`)을 만든다. 세액 계산 자체는 하지 않는다.
  */
-import { NBL } from "./legal-codes";
+import { NBL, TRANSFER } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -17,12 +17,21 @@ import {
 } from "./multi-house-surcharge";
 import { judgeNonBusinessLand } from "./non-business-land";
 import type { NonBusinessLandJudgment } from "./non-business-land";
-import { resolveDeemedOneHouseBy155, qualifiesUnavoidableOutsideCapital, meetsOneHouseHoldingResidence } from "./transfer-tax-helpers";
+import {
+  resolveDeemedOneHouseBy155,
+  qualifiesUnavoidableOutsideCapital,
+  meetsOneHouseHoldingResidence,
+  presaleRightStartDate,
+} from "./transfer-tax-helpers";
+import { evaluateTemporaryTwoHouseTiming } from "./transfer-tax-exemption-requirements";
+import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
+import { judgeRentalHousingEligibility } from "./transfer-tax-rental-housing-judge";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
 import {
   resolveExemptionHouseCountExclusions,
   surcharge15HouseCount,
   inheritedGeneralHouseSurchargeBasis,
+  specialActHouseExclusionBasis,
 } from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import type { IncomeDeductionId } from "./transfer-reductions";
@@ -43,31 +52,111 @@ type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDedu
  * §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 ①·④⑤·⑦ 어느 분기에도 걸리지 않는다. 종전에는 상속주택이
  * 「신규 주택」으로 도출되고 1년·3년 타이밍이 맞을 때만 §155① 분기로 **우연히** 덮였다 ⇒ 경로를 따로 둔다.
  * 조특법 제외가 섞이면 이 경로를 열지 않는다(`surcharge15HouseCount` 주석 — 확인 필요).
+ *
+ * E-14a·c — 경로 셋을 더했다(모두 비과세 쪽과 **같은 술어**를 부른다):
+ * - 조특법 감면주택 제외로 1주택(`special_act_house_exclusion`) — 해석으로 확인된 조문만(부동산납세과-1627).
+ * - §155⑳ 거주주택(`long_term_rental_residence`) — `judgeRentalHousingEligibility`(STEP 2.5와 같은 판정).
+ * - §156의2·§156의3(`house_with_*_right`) — `resolveArticle89Clause2`(STEP 1 `checkExemption`과 같은 판정).
+ * 어느 호가 받는지(15호 · 13호 · §167의11①13호 · §167의4③7호)는 중과 엔진이 주택·권리 수로 정한다.
  */
 export function resolveSurchargeDeemedOneHouse(
   workingInput: TransferTaxInput,
   parsedRates: ParsedRates,
   generalHouseAcquisitionDate?: Date,
 ): DeemedOneHouseBasis | undefined {
+  return resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate)?.basis;
+}
+
+/** `resolveSurchargeDeemedOneHouse` + 표시용 근거 조문(조특법 감면주택·§156의2·§156의3 경로만). */
+export function resolveSurchargeDeemedOneHouseDetail(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): { basis: DeemedOneHouseBasis; source?: string } | undefined {
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
   const inheritedExcluded = ex.inheritedExclusion.excludedCount;
   const count = surcharge15HouseCount(
     workingInput.householdHousingCount,
     inheritedExcluded,
     ex.specialActExcludedCount,
+    ex.specialActVerified15Count,
   );
+  /**
+   * 「소득세법」 §89② — 주택과 조합원입주권·분양권을 함께 보유하면 §89①3호(§154①)를 적용하지 않는다(단서 예외는
+   * 영 §156의2·§156의3). 그러면 §155 의제가 서도 「제154조제1항이 적용되는 주택」이 아니다 ⇒ 비과세 정본
+   * (`checkExemption`)과 같은 술어로 먼저 거른다. 판정 보류(`undetermined` — 예외 사실을 입력받을 경로가 없는 조합)는
+   * 비과세가 종전 동작(적용)을 유지하고 경고하지만, 중과 배제까지 그 가정에 기대지 않는다(확인 필요 — 종전 동작).
+   */
+  const clause2 = resolveArticle89Clause2(
+    { ...workingInput, householdHousingCount: count },
+    presaleRightStartDate(parsedRates),
+  );
+  if (clause2.status === "excluded" || clause2.status === "undetermined") return undefined;
+
   const deemed = resolveDeemedOneHouseBy155(
     { ...workingInput, householdHousingCount: count },
     parsedRates.oneHouseSpecialRules,
   );
-  if (deemed) return deemed;
-  return inheritedGeneralHouseSurchargeBasis({
+  if (deemed) return { basis: deemed };
+  const inherited = inheritedGeneralHouseSurchargeBasis({
     isOneHousehold: workingInput.isOneHousehold,
     houseCount: count,
     inheritedExcludedCount: inheritedExcluded,
     specialActExcludedCount: ex.specialActExcludedCount,
     transferDate: workingInput.transferDate,
   });
+  if (inherited) return { basis: inherited };
+  // E-14a — 확인된 조특법 제외만으로 양도 주택 하나가 남았다(상속 제외와 섞이면 열지 않는다 — 확인 필요).
+  const special = specialActHouseExclusionBasis({
+    isOneHousehold: workingInput.isOneHousehold,
+    houseCount: count,
+    inheritedExcludedCount: inheritedExcluded,
+    specialActVerified15Count: ex.specialActVerified15Count,
+    specialActVerified15Basis: ex.specialActVerified15Basis,
+  });
+  if (special) return special;
+  if (qualifiesRentalResidenceDeeming(workingInput, parsedRates)) return { basis: "long_term_rental_residence" };
+  // §156의2⑤(대체주택)는 선언만으로 `exception_met`이고 요건은 E-5가 판정한다 — 여기서는 받지 않는다(확인 필요).
+  if (clause2.status === "exception_met" && clause2.exception && clause2.exception !== TRANSFER.REPLACEMENT_HOUSE_156_2_5) {
+    return {
+      basis: clause2.exception.includes("§156의3") ? "house_with_presale_right" : "house_with_redevelopment_right",
+      source: clause2.viaArticle ? `${clause2.exception}(${clause2.viaArticle} 준용)` : clause2.exception,
+    };
+  }
+  return undefined;
+}
+
+/**
+ * §155⑳ 거주주택 1주택 의제 — 영 §167의10①15호(구 14호)·§167의3①13호 ① 요소 (E-14c).
+ *
+ * 「장기임대주택 … 과 그 밖의 1주택을 국내에 소유하고 있는 1세대가 … 해당 1주택("거주주택")을 양도하는 경우
+ * … 국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」(영 §155⑳ · MST 286211).
+ * 요건 판정은 STEP 2.5(세액)와 **같은 함수**(`judgeRentalHousingEligibility`)다.
+ *
+ * 세대 주택 수 — STEP 2.5는 「그 밖의 1주택」을 보지 않는다(명부 없이도 특례를 적용한다). 중과 배제까지 그
+ * 판정에 기대면 비과세 쪽 누락이 중과 쪽으로 번지므로, 명부(`houses[]`)에서 장기임대주택이 아닌 주택을 센다:
+ * - 1채(거주주택뿐) → 성립.
+ * - 2채 + §155① 타이밍 충족 → 성립 — 사전-2021-법령해석재산-1719(2021.12.22.): 「…같은 영 제155조제1항에 따라
+ *   1세대1주택으로 보아 같은 영 제154조제1항을 적용하는 것이며, … 같은 영 제154조제1항의 요건을 모두 충족하는
+ *   경우에는 같은 영 제167조의3제1항제13호에 따라 중과세율을 적용하지 아니하며 장기보유특별공제도 적용할 수 있는 것」.
+ * - 그 밖(다른 특례와의 중첩) → 불성립(확인 필요 — 종전 동작).
+ * 시나리오 B(직전거주주택보유주택 — 「직전거주주택의 양도일 후의 기간분에 대해서만」)는 과세 기간분이 중과되는지
+ * 해석을 확보하지 못했다 → 열지 않는다(확인 필요 — 종전 동작).
+ */
+function qualifiesRentalResidenceDeeming(workingInput: TransferTaxInput, parsedRates: ParsedRates): boolean {
+  const rhe = workingInput.rentalHousingException;
+  if (!workingInput.isOneHousehold || workingInput.isUnregistered) return false;
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return false;
+  if (judgeRentalHousingEligibility(workingInput)?.passed !== true) return false;
+  const nonRental = (workingInput.houses ?? []).filter((h) => !h.isLongTermRental).length;
+  if (nonRental === 1) return true;
+  const rule = parsedRates.oneHouseSpecialRules?.temporary_two_house;
+  return (
+    nonRental === 2 &&
+    workingInput.temporaryTwoHouse !== undefined &&
+    rule !== undefined &&
+    evaluateTemporaryTwoHouseTiming(workingInput, rule).timing.overall
+  );
 }
 
 /** STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정. */
@@ -87,6 +176,7 @@ export function runMultiHouseSurchargeStep(
       ? workingInput.houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
       : workingInput.houses;
     if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
+    const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
       houses: housesForSurcharge,
       sellingHouseId: sellingId,
@@ -98,7 +188,8 @@ export function runMultiHouseSurchargeStep(
       //   ⚠️ 타이밍(요건 A·B)만 본다 — §154① 충족(② 요소)은
       //   `sellingHouseMeetsOneHouseRequirements`가 별도로 담당하며, 중과 엔진이 둘을 AND한다.
       //   E-14 — 주택 수는 원시값이 아니라 비과세 정본의 값이다(`resolveSurchargeDeemedOneHouse`).
-      deemedOneHouseBy155: resolveSurchargeDeemedOneHouse(workingInput, parsedRates, generalHouseAcquisitionDate),
+      deemedOneHouseBy155: deemed?.basis,
+      deemedOneHouseSource: deemed?.source,
       // 영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택. 15호와 **별개 호**라 슬롯이 다르다.
       //   요건(2주택·해소일부터 3년) 판정은 비과세와 같은 정본을 쓴다.
       unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(workingInput),

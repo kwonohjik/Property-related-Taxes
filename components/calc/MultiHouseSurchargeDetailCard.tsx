@@ -65,6 +65,9 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   long_term_rental_house: "장기임대주택 양도",
   only_general_two_house: "2주택 — 다른 주택이 중과배제 주택 (유일한 일반주택)",
   inherited_general_house: "상속주택 보유 일반주택 1세대1주택 의제 (§155②)",
+  long_term_rental_residence: "장기임대주택 보유 거주주택 1세대1주택 의제 (§155⑳)",
+  special_act_house_exclusion: "조특법 감면주택 소유주택 제외 — 1세대1주택 의제",
+  right_holding_one_house: "주택과 조합원입주권·분양권 보유 1세대1주택 의제 (§156의2·§156의3)",
 };
 
 export function MultiHouseSurchargeDetailCard({ detail }: Props) {

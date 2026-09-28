@@ -28,6 +28,7 @@ import { loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput } from "../_helpers/mock-rates";
 import { determineMultiHouseSurcharge } from "@/lib/tax-engine/multi-house-surcharge";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
 import {
   defaultRules,
   makeHouse,
@@ -239,7 +240,15 @@ describe("F-1 대조 — 중첩이 성립하지 않는 경우는 종전대로", 
     expect(r.totalTax).toBeGreaterThan(0);
   });
 
-  it("F1-10b 주택 3 + 분양권 1(=4개)도 대상이 아니다 — 분양권은 주택 수에 산입된다", () => {
+  /**
+   * E-14c(2026-09-28) — 분양권이 산입되면 세대는 법 §104⑦**4호**(주택 + 권리 합 3 이상)이고, 배제 호는
+   * §167의3①13호가 아니라 **§167의4③7호**(「제155조, 제156조의2, 제156조의3 또는 「조세특례제한법」에 따라 …」,
+   * 대통령령 제31442호 부칙 제10조② 2021.1.1. 이후 양도분)다. 그 호는 제155조를 인용하므로 의제가 **주입되면**
+   * 배제된다(종전 기대 「4개는 대상 아님」은 13호의 3주택 한정에서 나온 것이었다).
+   * 실흐름에서는 §89②(주택 + 분양권) 예외 판정이 보류되면 의제 자체를 주입하지 않는다 — 그 안전망은
+   * `surcharge-deemed-clauses-e14abc.anchor.test.ts` R-2n·R-3n이 고정한다.
+   */
+  it("F1-10b 주택 3 + 분양권 1(=4개) — 분양권은 주택 수에 산입되고(4), 주입된 의제는 §167의4③7호가 받는다", () => {
     const houses = [
       makeHouse("selling", { acquisitionDate: new Date("2015-01-01"), regionCode: "11680" }),
       makeHouse("h2", { acquisitionDate: new Date("2012-01-01"), regionCode: "11680" }),
@@ -265,10 +274,11 @@ describe("F-1 대조 — 중첩이 성립하지 않는 경우는 종전대로", 
         suspensionNone,
         true,
       );
-    expect(run([]).surchargeApplicable).toBe(false); // 3개 — 배제(긍정 짝)
+    expect(run([]).surchargeApplicable).toBe(false); // 3개 — 13호 배제(긍정 짝)
     const four = run([{ id: "p1" }]);
     expect(four.effectiveHouseCount).toBe(4);
-    expect(four.surchargeApplicable).toBe(true);
+    expect(four.surchargeApplicable).toBe(false);
+    expect(four.exclusionReasons[0]?.detail).toContain(MULTI_HOUSE.HOUSE_RIGHT_3PLUS_DEEMED_BASIS);
   });
 
   it("F1-11 「먼저 양도」 선언이 없으면 불성립", () => {
