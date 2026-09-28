@@ -25,8 +25,10 @@ describe("⑤ 상세 입력 모달 — 영리법인 수증자 공통 토글", ()
     },
   );
 
-  it.each(["merger", "nominee_trust", "specific_corp", "capital_increase"] as DeemedFormState["type"][])(
-    "[FPU-2] 긍정 짝: %s — 공통 토글이 없다 (명부형·§4의2②·자체 규정·자체 토글)",
+  // 7-15: §38 초기 폼은 단일 모드라 토글이 보인다 — 명부(행 축) 대표를 §41의2로 옮긴다.
+  //   §38·§39의2·§39의3의 명부 모드 비노출은 SFW-1이 모드 조합별로 고정한다.
+  it.each(["excess_dividend", "nominee_trust", "specific_corp", "capital_increase"] as DeemedFormState["type"][])(
+    "[FPU-2] 긍정 짝: %s — 공통 토글이 없다 (행 축·§4의2②·자체 규정·자체 토글)",
     (type) => {
       renderFor(type);
       expect(screen.queryByTestId("deemed-donee-for-profit-corp")).toBeNull();

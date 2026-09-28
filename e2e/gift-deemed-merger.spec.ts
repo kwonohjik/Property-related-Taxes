@@ -102,6 +102,24 @@ test.describe("합병 §38 — 평가 보조·주주 매트릭스", () => {
     await expect(page.getByText("1,000,000,000")).toHaveCount(0);
   });
 
+  test("Phase A 단일 + 대주주등이 영리법인(§4의2①·③) → 증여세 미적용 · 이관 없음 · 산출 이익 보존", async ({ page }) => {
+    // 7-15 — 단일 모드는 수증자(대주주등)가 한 묶음이라 계산 단위 토글이 맞다. 매트릭스는 행 토글(7-13)이다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "merger");
+    await page.getByTestId("mrg-over-price").fill("30000");
+    await page.getByPlaceholder("합병 전 주식수").fill("100000");
+    await page.getByPlaceholder("교부받은 주식수").fill("100000");
+    await page.getByLabel("합병 후 1주당 평가가액", { exact: true }).fill("36666");
+    await page.getByPlaceholder("대주주등 주식수").fill("70000");
+    await page.getByRole("switch", { name: /수증자가 영리법인/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("영리법인 수증자");
+    await expect(page.getByTestId("deemed-to-wizard")).toHaveCount(0);
+    await expect(page.getByText("제외 전 산출 이익").first()).toBeVisible();
+    // 매트릭스 모드의 공통 토글 비노출은 단위 anchor SFW-1이 모드 조합별로 고정한다
+  });
+
   test("Phase C 분할합병 순자산비율(§28⑦) → 과대평가 안분 → 350,000,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "merger");

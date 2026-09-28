@@ -6,7 +6,7 @@
  *    페이로드에 실리면, 그 유형이 나중에 이 필드를 읽게 되는 순간 **아무도 켠 적 없는 배제**가 된다.
  */
 import { describe, it, expect } from "vitest";
-import { buildDeemedGiftInput } from "@/lib/calc/gift-deemed-api";
+import { buildDeemedGiftInput, forProfitDoneeToggleVisible } from "@/lib/calc/gift-deemed-api";
 import { INITIAL_DEEMED, DEEMED_TYPE_META, type DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import { commonForProfitDoneeGateApplies } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
@@ -15,7 +15,9 @@ const FORM_TYPES = (Object.keys(DEEMED_TYPE_META) as DeemedFormState["type"][]).
   (t) => t !== "free_loan_aggregated",
 );
 const GATED = FORM_TYPES.filter((t) => commonForProfitDoneeGateApplies(t as never));
-const OTHERS = FORM_TYPES.filter((t) => !commonForProfitDoneeGateApplies(t as never));
+// 7-15: §38·§39의2·§39의3은 **초기 폼(단일 모드)**에서 토글이 보이므로 여기서 빠진다 — 그 세 유형의
+// 명부 모드 stale 차단은 SFW-2가 모드 조합별로 고정한다.
+const OTHERS = FORM_TYPES.filter((t) => !forProfitDoneeToggleVisible({ ...INITIAL_DEEMED, type: t } as DeemedFormState));
 
 const payload = (type: DeemedFormState["type"], on: boolean, extra: Partial<DeemedFormState> = {}) =>
   buildDeemedGiftInput({ ...INITIAL_DEEMED, ...extra, type, doneeIsForProfitCorp: on } as DeemedFormState) as unknown as Record<string, unknown>;

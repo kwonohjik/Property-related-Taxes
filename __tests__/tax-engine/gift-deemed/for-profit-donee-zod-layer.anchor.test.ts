@@ -24,8 +24,15 @@ describe("⑫ Zod — 영리법인 수증자 공통 축", () => {
     expect(r.data).not.toHaveProperty("doneeIsForProfitCorp");
   });
 
-  it("[FPZ-3] 긍정 짝: §38 합병(명부형) — 필드가 strip된다", () => {
-    const r = parse({ type: "merger", caseType: "non_stock", overvaluedSharePrice: 10_000, majorShares: 100_000 });
+  // 7-15에서 §38·§39의2·§39의3은 단일 모드 때문에 필드를 받게 됐다(SFW-3). 이 짝은 여전히 밖인
+  // §41의2(수증자가 특수관계인 **행** — 7-14 행 축)로 옮긴다 — 「명부형 스키마에 붙이면 샌다」는 안전망 유지.
+  it("[FPZ-3] 긍정 짝: §41의2 초과배당(행 축) — 필드가 strip된다", () => {
+    const r = parse({
+      type: "excess_dividend",
+      shareholders: [{ id: "A", role: "major_shareholder", ownershipRatio: { numer: 1, denom: 1 }, actualDividend: 0 }],
+      dividendDate: "2025-06-30",
+      incomeTaxMode: "undetermined",
+    });
     expect(r.success).toBe(true);
     expect(r.data).not.toHaveProperty("doneeIsForProfitCorp");
   });

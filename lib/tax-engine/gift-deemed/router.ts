@@ -23,7 +23,7 @@ import { calcSpecificCorpGift, calcSpecificCorpGiftMulti } from "./specific-corp
 import { calcRelatedCorpGift } from "./related-corp";
 import { calcTrustBenefit } from "./trust-benefit";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
-import { commonForProfitDoneeGateApplies } from "./taxpayer-gate";
+import { forProfitDoneeGateApplies } from "./taxpayer-gate";
 import { forProfitDoneeExcludedResult } from "./taxpayer-gate";
 
 /**
@@ -44,14 +44,14 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
 }
 
 /**
- * 「상증법」§2 9호·§4의2①·③ 공통 게이트 — §39 밖 단일 수증자 13종(7-12).
+ * 「상증법」§2 9호·§4의2①·③ 공통 게이트 — §39 밖 단일 수증자 13종(7-12) + 명부형 3종의 단일 모드(7-15).
  *
  * ⚠️ **과세되는 결과에만** 건다. 요건 불성립(기준금액 미달 등)으로 이미 미적용이면 그 사유가
  *    더 근본적이다 — 증여 자체가 성립하지 않았는데 「영리법인이라 제외」라고 덮으면 사유가 틀린다.
  * ⚠️ ⑥ 표지는 이 뒤에 붙는다 — 제외돼도 「그 유형에 연대납부의무가 없다」는 사실은 남는다.
  */
 function forProfitDoneeGate(input: DeemedGiftInput, result: DeemedGiftResult): DeemedGiftResult {
-  if (!commonForProfitDoneeGateApplies(input.type)) return result;
+  if (!forProfitDoneeGateApplies(input)) return result;
   if (!("doneeIsForProfitCorp" in input) || input.doneeIsForProfitCorp !== true) return result;
   if (result.applied !== true || result.deemedGiftValue <= 0) return result;
   return forProfitDoneeExcludedResult(result);

@@ -13,7 +13,7 @@
  * 한 축으로 뭉뚱그리면 틀린다.
  */
 
-import type { CapitalIncreaseInput } from "./gift-deemed-input-types";
+import type { CapitalIncreaseInput, DeemedGiftInput } from "./gift-deemed-input-types";
 import type { DeemedGiftResult, DeemedGiftType } from "./types";
 import { GIFT } from "../legal-codes";
 
@@ -226,6 +226,31 @@ const COMMON_FOR_PROFIT_DONEE_GATE: Record<DeemedGiftType, boolean> = {
 
 export function commonForProfitDoneeGateApplies(type: DeemedGiftType): boolean {
   return COMMON_FOR_PROFIT_DONEE_GATE[type];
+}
+
+/**
+ * 계산 단위 토글(`doneeIsForProfitCorp`)이 걸리는 입력인가 — 유형 단위 13종(위 표) + 명부형 3종의 **단일 모드**.
+ *
+ * §38·§39의2·§39의3은 모드에 따라 수증자가 1인(또는 한 묶음)이다. 그때는 계산 단위 토글이 맞고,
+ * 명부 모드는 행별 축(`isForProfitCorp`, 7-13)이다. 모드 조건은 각 엔진의 **dispatch 조건 그대로**다:
+ *   §38   `shareholders` 없음 (merger.ts — 있으면 매트릭스)
+ *   §39의2 `shareholders`가 비었거나 없음 (capital-decrease.ts — 1명 이상이면 멀티)
+ *   §39의3 저가는 **항상** — 저가 명부는 증여자 명부이고 수증자는 현물출자자 1인이다.
+ *          고가는 `parties`가 비었거나 없음(contribution-in-kind.ts — 있으면 수증자 명부)
+ * ⚠️ §41의2는 여기 없다 — 수증자가 특수관계인 **행**이고 1명을 골라 계산한다(7-14, 행 축).
+ */
+export function forProfitDoneeGateApplies(input: DeemedGiftInput): boolean {
+  if (COMMON_FOR_PROFIT_DONEE_GATE[input.type]) return true;
+  switch (input.type) {
+    case "merger":
+      return !input.shareholders;
+    case "capital_decrease":
+      return !(input.shareholders && input.shareholders.length > 0);
+    case "contribution":
+      return (input.caseType ?? "low") !== "high" || !(input.parties && input.parties.length > 0);
+    default:
+      return false;
+  }
 }
 
 /** 영리법인 수증자 제외 사유 — 공통 게이트(13종)와 명부형 행별 축(§38·§39의2·§39의3)이 같이 쓴다 */
