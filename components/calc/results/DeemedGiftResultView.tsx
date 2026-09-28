@@ -15,6 +15,7 @@ import { ExcessDividendDetailSection } from "./ExcessDividendDetailSection";
 import { AllocationResultView } from "./AllocationResultView";
 import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import { GIFT } from "@/lib/tax-engine/legal-codes/inheritance-gift";
+import { FOR_PROFIT_DONEE_REASON } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 // ─────────────────────────────────────────────────────────────
 // 날짜 포맷 헬퍼
@@ -428,10 +429,21 @@ export function DeemedGiftResultView({
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 text-xs text-muted-foreground">
-                각 {result.caseType === "high" ? "수증자" : "증여자"}는 위 이익을 각자의 증여재산가액으로 별도 증여세를 신고합니다.
-                &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
-              </p>
+              {/* 신고 안내는 과세되는 결과에만 — 저가 명부는 증여자 명부라, 현물출자자(수증자)가 영리법인이면
+                  표의 금액이 전부 「제외 전」이 된다(7-15). 고가 명부는 행마다 「제외」가 이미 적힌다(7-13). */}
+              {result.applied ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  각 {result.caseType === "high" ? "수증자" : "증여자"}는 위 이익을 각자의 증여재산가액으로 별도 증여세를 신고합니다.
+                  &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
+                </p>
+              ) : (
+                result.caseType !== "high" &&
+                result.exclusionReason === FOR_PROFIT_DONEE_REASON && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    수증자(현물출자자)가 영리법인이라 과세에서 제외됩니다 — 위 금액은 제외 전 산출 이익이며 신고 대상이 아닙니다.
+                  </p>
+                )
+              )}
 
               {/* 고가 — 수증자는 각자 독립 납세의무자(동시증여 아님) ⇒ 이관 대상 1명 선택.
                   선례: 감자 §39의2 `cd-multi-donee-select` · 특정법인 §45의5 */}

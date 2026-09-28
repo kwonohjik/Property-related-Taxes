@@ -47,9 +47,32 @@ function capitalRatioNeeds(direction: "low" | "high", subType: DeemedFormState["
  */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   const payload = buildDeemedGiftInputByType(form);
-  return form.doneeIsForProfitCorp && commonForProfitDoneeGateApplies(payload.type)
+  // ⑤와 **같은 함수**로 거른다 — 토글이 숨은 모드(명부·유형 밖)의 stale 값을 싣지 않는다.
+  // 엔진 판정(forProfitDoneeGateApplies)과의 일치는 parity anchor SFW-0이 모드 조합 전부로 고정한다
+  // (둘을 AND로 겹치면 도달 가능한 상태에서 구별력이 0이라 뮤테이션이 어느 쪽도 증명하지 못했다 — 7-15 SM9·SM10).
+  return form.doneeIsForProfitCorp && forProfitDoneeToggleVisible(form)
     ? ({ ...payload, doneeIsForProfitCorp: true } as DeemedGiftInput)
     : payload;
+}
+
+/**
+ * ⑤ 공통 토글(§2 9호·§4의2①·③) 노출 — 유형 단위 13종 + 명부형 3종의 **단일 모드**.
+ * 폼 모드 플래그로 엔진 `forProfitDoneeGateApplies`(페이로드 모양)와 **같은 판정**을 낸다 — parity는
+ * anchor(SFW-0)가 검증 통과 모드 조합 전부로 고정한다. 빈 명부는 ⑧이 막으므로 판정 대상이 아니다.
+ */
+export function forProfitDoneeToggleVisible(form: DeemedFormState): boolean {
+  if (!form.type) return false;
+  if (commonForProfitDoneeGateApplies(form.type)) return true;
+  switch (form.type) {
+    case "merger":
+      return !form.mrgUseShareholders;
+    case "capital_decrease":
+      return form.cdMode !== "multi";
+    case "contribution":
+      return form.conCaseType !== "high" || form.conParties === undefined;
+    default:
+      return false;
+  }
 }
 
 function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {

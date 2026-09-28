@@ -156,6 +156,7 @@ const mergerShareholderSchema = z.object({
 });
 const mergerSchema = z.object({
   type: z.literal("merger"),
+  ...forProfitDoneeShape, // 단일 모드만 엔진이 읽는다(forProfitDoneeGateApplies) — 7-15
   caseType: z.enum(["stock", "non_stock"]).optional(),
   overvaluedSharePrice: z.number().nonnegative(),
   majorShares: z.number().nonnegative(),
@@ -366,6 +367,7 @@ const capitalDecreaseShareholderSchema = z.object({
 });
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
+  ...forProfitDoneeShape, // 단일 모드만 엔진이 읽는다(forProfitDoneeGateApplies) — 7-15
   caseType: z.enum(["low", "high"]).optional(),
   sharePrice: z.number().nonnegative(),
   redemptionPrice: z.number().nonnegative().optional(),
@@ -389,6 +391,7 @@ const contributionPartySchema = z.object({
 const contributionSchema = z
   .object({
     type: z.literal("contribution"),
+    ...forProfitDoneeShape, // 저가 전부 · 고가 명부 없음만 엔진이 읽는다 — 7-15
     caseType: z.enum(["low", "high"]).optional(),
     preContribPrice: z.number().nonnegative(),
     preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),

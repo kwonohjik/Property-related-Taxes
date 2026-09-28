@@ -557,10 +557,10 @@ export type DeemedGiftInput =
   | ({ type: "free_realestate" } & FreeRealEstateInput & ForProfitDoneeAxis)
   | ({ type: "free_loan" } & FreeLoanInput & ForProfitDoneeAxis)
   | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput & ForProfitDoneeAxis)
-  | ({ type: "merger" } & MergerInput)
+  | ({ type: "merger" } & MergerInput & ForProfitDoneeAxis) // 단일 모드만 — forProfitDoneeGateApplies
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
-  | ({ type: "capital_decrease" } & CapitalDecreaseInput)
-  | ({ type: "contribution" } & ContributionInput)
+  | ({ type: "capital_decrease" } & CapitalDecreaseInput & ForProfitDoneeAxis) // 단일 모드만
+  | ({ type: "contribution" } & ContributionInput & ForProfitDoneeAxis) // 저가 전부 · 고가 명부 없음
   | ({ type: "convertible_stock" } & ConvertibleStockInput)
   | ({ type: "convertible_bond" } & ConvertibleBondInput & ForProfitDoneeAxis)
   | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput & ForProfitDoneeAxis)
