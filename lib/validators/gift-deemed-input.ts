@@ -329,6 +329,8 @@ const capitalIncreaseAllocationSchema = z
   .object({
     type: z.literal("capital_increase_allocation"),
     direction: z.enum(["low", "high"]),
+    // #37·#94 — 행위시법 판정 전용. route는 parsed.data를 그대로 넘기므로 여기서 Date가 된다(⑫ strip 방지).
+    giftDate: z.coerce.date().optional(),
     preIssuePrice: z.number().nonnegative(),
     newSharePrice: z.number().nonnegative(),
     shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),

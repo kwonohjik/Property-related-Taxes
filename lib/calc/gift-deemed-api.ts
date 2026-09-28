@@ -332,6 +332,9 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
       return {
         type: "capital_increase_allocation",
         direction: form.ciAllocDirection,
+        // #37·#94 — 행위시법 판정 전용(기준일 echo · §29③ 간주모집 시기 게이트). 종전에는 전송하지 않아
+        //   cap-table만 2016.2.5. 전 간주모집을 과세했다(단건 경로는 #5에서 이미 판정).
+        giftDate: toOptionalDate(form.giftDate || undefined),
         // §39① 괄호 「주권상장법인이」 — 공모 배정 제외 AND 조건. ㉯ 계산에는 쓰이지 않는다(안 C)
         isListed: form.ciAllocIsListed,
         // 「상증법」§4의2④ 요건 ㉠(건 단위). 요건 ㉡은 행의 preShares로 판정하므로 여기 없다.

@@ -6,6 +6,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import type { CapitalIncreaseAllocationResult } from "@/lib/tax-engine/gift-deemed/types";
+import { CapitalIncreaseAppliedLawDate } from "./CapitalIncreaseAppliedLawDate";
 
 // ─────────────────────────────────────────────────────────────
 // 증자 cap-table 결과 — 수증자별·증여자별 분할 + 검증내역(zero-sum)
@@ -28,6 +29,9 @@ export function AllocationResultView({
 
   return (
     <div className="space-y-4" data-testid="deemed-result">
+      {result.appliedLawDate && (
+        <CapitalIncreaseAppliedLawDate appliedLawDate={result.appliedLawDate} eraNotice={result.eraNotice} />
+      )}
       <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-rose-800">증자에 따른 이익의 증여 (증자 후 1주당 평가 {formatKRW(result.perShareAfter)})</span>

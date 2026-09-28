@@ -214,6 +214,10 @@ export interface CapitalIncreaseAllocationResult {
   byShareholder: Array<{ id: string; name?: string; preValuation: number; paidIn: number; postValuation: number; delta: number }>;
   reconciliation: { totalGain: number; totalLoss: number; balanced: boolean };
   splits: DonationSplit[];
+  /** 적용 법령 기준일 = §29①에 따른 증여일(#37·#94) — `DeemedGiftResult.appliedLawDate`와 같은 의미 */
+  appliedLawDate?: string;
+  /** 2017.2.7. 전 증여일이면 「현행 산식으로 계산」 고지 */
+  eraNotice?: string;
   /**
    * 「상증법」§4의2⑥ 단서 — 증여자 **연대납부의무 면제** 대상 유형임을 나타내는 표지.
    *
@@ -359,11 +363,15 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /**
    * 적용 법령 기준일 = **그 조문이 정한 증여시기**. 저장소의 4개 엔진(양도·취득·종부·증여 본세)이
-   * 이미 쓰는 관례를 증여의제에도 맞춘다 — 종전에는 증여의제 두 조문만 이 축이 없어
-   * 「어느 시점의 거래인가」가 결과에 드러나지도, 엔진에 도달하지도 않았다.
+   * 이미 쓰는 관례를 증여의제에도 맞춘다.
+   * ⚠️ 모집단 정정(#37·#94) — 종전 문구 「증여의제 두 조문만 이 축이 없어」는 오기였다. 실제로는
+   *    증여의제 유형 **대부분**에 이 축이 없고, 아래가 세팅하는 전부다.
    *
    * - §45의5① 「**거래한 날**을 증여일로 하여」 → `transactionDate`
    * - §45의3③ 「수혜법인의 해당 **사업연도 종료일**을 증여시기로 본다」 → `fiscalYearEndDate`
+   * - §39① 「주식대금 납입일 등 **대통령령으로 정하는 날**」 → 「상증령」§29①에 따라 입력된 `giftDate`
+   *   (단건·cap-table). 전환주식은 전환한 날(§29①2호) = 전환 leg의 `giftDate`. 법률이 직접 정하는
+   *   위 둘과 달리 **위임**이라 결과뷰 라벨이 따로다(`CapitalIncreaseAppliedLawDate`).
    *
    * ⚠️ 이 값이 있다고 해서 **행위시법 분기가 구현됐다는 뜻은 아니다** — 구간별 비율·산식은
    *    아직 현행 고정이다(§45의3 비율 상수 4종 · §45의5② 한도 규정). 결과뷰가 그 사실을 고지한다.

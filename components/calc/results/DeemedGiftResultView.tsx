@@ -13,6 +13,7 @@ import { SpecificCorpMultiResultView } from "./SpecificCorpMultiResultView";
 import { ScLimitTable } from "./ScLimitTable";
 import { ExcessDividendDetailSection } from "./ExcessDividendDetailSection";
 import { AllocationResultView } from "./AllocationResultView";
+import { CapitalIncreaseAppliedLawDate } from "./CapitalIncreaseAppliedLawDate";
 import type { DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import { GIFT } from "@/lib/tax-engine/legal-codes/inheritance-gift";
 import { FOR_PROFIT_DONEE_REASON } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
@@ -164,8 +165,16 @@ export function DeemedGiftResultView({
         />
       )}
 
-      {/* ── 적용 법령 기준일 — 조문이 증여시기를 명문으로 정하는 두 유형만 ── */}
-      {result.appliedLawDate && (
+      {/* ── 적용 법령 기준일 — §39는 §29① 위임이라 라벨이 다르다(별도 블록) ── */}
+      {result.appliedLawDate && (result.type === "capital_increase" || result.type === "convertible_stock") && (
+        <CapitalIncreaseAppliedLawDate
+          appliedLawDate={result.appliedLawDate}
+          eraNotice={result.eraNotice}
+          conversion={result.type === "convertible_stock"}
+        />
+      )}
+      {/* ── 적용 법령 기준일 — 법률이 증여시기를 명문으로 정하는 두 유형 ── */}
+      {result.appliedLawDate && (result.type === "related_corp" || result.type === "specific_corp") && (
         <div
           className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm"
           data-testid="deemed-applied-law-date"

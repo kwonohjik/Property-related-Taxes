@@ -1,6 +1,7 @@
 /** (8-3) 전환주식에 따른 이익의 증여 (§39①3호) — 전환후 이익 − 발행당시 이익 (시행령 §29②6) */
 import { GIFT } from "../legal-codes";
 import { calcCapitalIncreaseGift } from "./capital-increase";
+import { capitalIncreaseLawDateEcho } from "./capital-increase";
 import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
@@ -39,6 +40,10 @@ function convertibleStockEraExclusion(input: ConvertibleStockInput): string | un
  */
 export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGiftResult {
   // 시기 사유가 가장 먼저다 — 조문(또는 산식) 자체가 걸리지 않으면 납세의무자 판정(§4의2)은 물을 필요가 없다.
+  // #37·#94 — 적용 법령 기준일 = 전환한 날(§29①2호) = 전환 leg의 날짜. 2017.2.7. 전 전환은 위 차단이
+  //   먼저 걸리므로 시점 고지(eraNotice)는 붙을 일이 없다 — 기준일만 가져온다.
+  const lawDate = capitalIncreaseLawDateEcho(input.atConversion.giftDate).appliedLawDate;
+  const appliedLawDate = lawDate ? { appliedLawDate: lawDate } : {};
   const eraExclusion = convertibleStockEraExclusion(input);
   if (eraExclusion) {
     return {
@@ -51,6 +56,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
       // 과세요건 판정이 아니라 적용 법령의 문제임을 명시한다(§45의3와 같은 표지)
       eraBlocked: true,
       donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
+      ...appliedLawDate,
     };
   }
   // 「상증법」§2 9호·§4의2①·③ — 수증자가 영리법인이면 §39①3호 경로에서도 납세의무자가 아니다.
@@ -130,6 +136,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     thresholdEcho: { gain: value },
     // §4의2⑥ 단서 — 배제돼도 「연대납부의무가 없다」는 사실은 남는다(다른 축이다)
     donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
+    ...appliedLawDate,
   });
   if (doneeIsForProfitCorp) {
     return excluded(
@@ -153,5 +160,6 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     // §4의2⑥ 단서 — §39①3호도 「제35조부터 제39조까지」에 든다
     donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("convertible_stock"),
     thresholdEcho: { gain: value },
+    ...appliedLawDate,
   };
 }
