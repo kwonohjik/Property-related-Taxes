@@ -317,6 +317,16 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
             ? { numer: parseAmount(form.ciPostHeldShares), denom: ciPostDenom }
             : undefined,
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
+        // §43②·영 §32의4 4호 — 금액기준(3억)이 있는 나목에서만 보낸다(⑤ 표 노출과 같은 조건 · #19).
+        //   윈도 판정은 엔진이 한다. 날짜·이익이 빈 행은 ⑧이 막는다.
+        priorSameClauseGains:
+          form.ciSubType === "no_realloc" && (form.ciPriorSameClauseRows ?? []).length > 0
+            ? (form.ciPriorSameClauseRows ?? []).map((r) => ({
+                date: r.date,
+                gain: parseAmount(r.benefit),
+                ...(r.label.trim() ? { label: r.label.trim() } : {}),
+              }))
+            : undefined,
         isListed: form.ciIsListed,
         listedMarketAvg: form.ciIsListed ? parseAmount(form.ciListedMarketAvg) : undefined,
         allocationMethod: form.ciAllocationMethod,
@@ -349,6 +359,8 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
           subscribedShares: parseAmount(r.subscribedShares),
           reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
           relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
+          // §43② — 0·빈 칸은 보내지 않는다(구 record엔 필드가 없다 · #19)
+          priorSameClauseGain: parseAmount(r.priorSameClauseGain ?? "") > 0 ? parseAmount(r.priorSameClauseGain ?? "") : undefined,
           allocationMethod: r.allocationMethod,
           isCorporate: r.isCorporate || undefined,
           // 「상증령」§29⑤ 액면 요건 — 0·공란은 「미입력」이라 undefined로 보낸다(판정 불가 → 의제 없음)

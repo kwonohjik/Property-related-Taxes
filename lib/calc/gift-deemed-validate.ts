@@ -7,6 +7,7 @@ import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-sha
 import { resolveScEraExclusion } from "@/lib/tax-engine/gift-deemed/specific-corp-era";
 import { resolveRcEraExclusion } from "@/lib/tax-engine/gift-deemed/related-corp-era";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
+import type { ScPriorTxRow } from "@/components/calc/deemed-gift/deemed-form-rows";
 
 /**
  * 영 §34의5④2호가목 — 「산출세액(「법인세법」 §55의2에 따른 토지등 양도소득에 대한 법인세액은
@@ -29,17 +30,25 @@ function validateScLandTransferTax(form: DeemedFormState): string | null {
  * 이미 :46의 공통 가드(「증여일을 입력하세요」)가 **이 함수보다 앞에서** 막으므로 여기서
  * 다시 검사하지 않는다 — 도달 불가 분기를 두면 안전망이 있다고 착각하게 된다.
  */
-function validateScPriorTransactions(form: DeemedFormState): string | null {
-  const rows = form.scPriorTransactions ?? [];
-  if (rows.length === 0 || !form.giftDate) return null;
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r.date.trim()) return `선행거래 ${i + 1}의 거래일을 입력하세요`;
-    if (r.date > form.giftDate)
-      return `선행거래 ${i + 1}의 거래일이 증여일보다 뒤입니다 — 합산 대상은 «소급» 1년 이내입니다 (§43²)`;
-    if (parseAmount(r.benefit) <= 0) return `선행거래 ${i + 1}의 이익을 입력하세요`;
+function validatePriorSameClauseRows(
+  rows: ScPriorTxRow[] | undefined,
+  giftDate: string,
+  noun: { item: string; date: string },
+): string | null {
+  const list = rows ?? [];
+  if (list.length === 0 || !giftDate) return null;
+  for (let i = 0; i < list.length; i++) {
+    const r = list[i];
+    if (!r.date.trim()) return `${noun.item} ${i + 1}의 ${noun.date}을 입력하세요`;
+    if (r.date > giftDate)
+      return `${noun.item} ${i + 1}의 ${noun.date}이 증여일보다 뒤입니다 — 합산 대상은 «소급» 1년 이내입니다 (§43²)`;
+    if (parseAmount(r.benefit) <= 0) return `${noun.item} ${i + 1}의 이익을 입력하세요`;
   }
   return null;
+}
+
+function validateScPriorTransactions(form: DeemedFormState): string | null {
+  return validatePriorSameClauseRows(form.scPriorTransactions, form.giftDate, { item: "선행거래", date: "거래일" });
 }
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
@@ -237,6 +246,11 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.ciPostTotalShares) <= 0) return "증자 후 발행주식총수를 입력하세요";
         if (parseAmount(form.ciPostHeldShares) > parseAmount(form.ciPostTotalShares))
           return "증자 후 신주인수자 보유주식수가 발행주식총수를 초과할 수 없습니다";
+      }
+      // §43② #19 — 나목만 선행 증자 행을 보낸다(④와 같은 조건). 빈 행·증여일 뒤 행은 합산을 조용히 틀리게 한다.
+      if (form.ciSubType === "no_realloc") {
+        const priorErr = validatePriorSameClauseRows(form.ciPriorSameClauseRows, form.giftDate, { item: "선행 증자", date: "증여일" });
+        if (priorErr) return priorErr;
       }
       // 상장 ON인데 평균액 미입력이면 엔진이 조용히 이론값으로 통과한다(§29②1가·3나 단서 미발동)
       // 3-D — 다만 **공모 배정**은 「상증법」§39① 괄호로 적용 자체가 제외되므로 이 칸이 세액에

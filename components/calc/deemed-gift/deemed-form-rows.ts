@@ -27,6 +27,8 @@ export interface CapTableRow {
   subscribedShares: string; // 실제 인수 신주수
   reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
   relatedTo: string[]; // 특수관계인 주주 id 목록
+  /** §43②·영 §32의4 4호 — 이 주주가 수증자로서 1년 이내 같은 호 증자로 얻은 이익 합계(#19). 구 record엔 없다 */
+  priorSameClauseGain?: string;
   allocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외 판정 (행별)
   /**
    * 영리법인 주주 — 「상증법」§2 9호·§4의2①·③상 증여세 납세의무자가 아니다(이익·검증내역은 보존).
@@ -44,7 +46,7 @@ export interface CapTableRow {
 }
 
 export function makeCapTableRow(id: string): CapTableRow {
-  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", isCorporate: false, faceValueSum: "" };
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", isCorporate: false, faceValueSum: "", priorSameClauseGain: "" };
 }
 
 /**

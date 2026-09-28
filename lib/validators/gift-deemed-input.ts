@@ -232,6 +232,10 @@ const capitalIncreaseShape = {
   giftDate: z.coerce.date().optional(),
   // §29②2호 가목 「증자전의 지분비율대로 균등하게 증자하는 경우의 증가주식수」 — 저가 나목 ㉯ 기준 수량
   equalIssueShares: z.number().int().nonnegative().optional(),
+  // §43②·영 §32의4 4호 — 소급 1년 이내 같은 호 선행 증자 이익(나목 3억 금액기준 합산 · #19) — ⑫ strip 방지
+  priorSameClauseGains: z
+    .array(z.object({ date: z.string().min(1), gain: z.number().nonnegative(), label: z.string().optional() }))
+    .optional(),
   // §29②2호 다목 「증자후 신주인수자의 지분비율」 — 저가 나목 전용. 분모는 파생하지 않고 받는다.
   postIssueSubscriberRatio: z
     .object({ numer: z.number().nonnegative(), denom: z.number().positive() })
@@ -317,6 +321,8 @@ const capShareholderSchema = z.object({
   subscribedShares: z.number().int().nonnegative(),
   reallocatedShares: z.number().int().nonnegative().optional(),
   relatedTo: z.array(z.string()).optional(),
+  // §43②·영 §32의4 4호 — 수증자로서 1년 이내 같은 호 선행 이익 합계(#19) — ⑫ strip 방지
+  priorSameClauseGain: z.number().nonnegative().optional(),
   // 행별 §39① 공모 제외 — 한 증자에 공모 배정과 특정 배정이 섞일 수 있다
   allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
   // 행별 §4의2①·③ 영리법인 — 이익·검증내역은 보존하고 과세분만 0이 된다

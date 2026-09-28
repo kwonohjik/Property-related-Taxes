@@ -5,6 +5,7 @@
  */
 import type { GiftDonorRelation } from "../types/inheritance-gift.types";
 import type { BargainTransferInput } from "../bargain-transfer";
+import type { SameClauseGainItem } from "./capital-increase-43-2";
 
 /** (1) 신탁이익의 증여 §33 — 평가 상증령 §61·이자율 상증칙 §19의2(연 3%) */
 export interface TrustBenefitInput {
@@ -209,6 +210,11 @@ export interface CapitalIncreaseInput {
    */
   equalIssueShares?: number;
   /**
+   * 「상증법」§43② · 「상증령」§32의4 4호 — 증여일부터 소급 1년 이내 **같은 호**(저가/고가) 선행 증자의 이익 (#19).
+   * 나목(`no_realloc`)의 **3억 금액기준** 판정에만 합산한다(비율 30%는 건별 · 과세는 당해 건). 윈도 판정은 엔진이 한다.
+   */
+  priorSameClauseGains?: SameClauseGainItem[];
+  /**
    * 증여일 — 「상증령」§29①이 정하는 날(상장 주주배정=권리락일 / 전환주식=전환한 날 /
    * 그 밖=주식대금 납입일, 신주인수권증서 교부 시 교부일). ⚠️ 시점 3구간이다(#95) —
    * 2015.2.3. 전은 구 §29④ 단항(납입일뿐), 2016.2.5. 전은 §29④ 각 호(`CiGiftDateEraNotice`).
@@ -289,6 +295,12 @@ export interface CapShareholder {
   entitledShares: number; // 균등(당초지분) 배정 신주수
   subscribedShares: number; // 실제 인수한 총 신주수(당초+재배정+제3자+초과)
   reallocatedShares?: number; // 그 중 재배정/제3자/초과로 받은 신주수 (실권처리 판정용)
+  /**
+   * 「상증법」§43② · 「상증령」§32의4 4호 — 이 주주가 **수증자로서** 증여일 전 1년 이내 같은 호(저가/고가) 증자로 얻은
+   * 이익의 합계 (#19). 실권처리(나목)의 3억 금액기준 판정에만 더한다(비율 30%는 건별 · 과세는 당해 이익).
+   * cap-table 행에는 날짜 표가 없어 **윈도 안 합계**를 사용자가 넣는다.
+   */
+  priorSameClauseGain?: number;
   relatedTo?: string[]; // 특수관계인 주주 id — 어느 쪽 행에 적어도 같은 관계(§2제10호 후단 대칭). 양쪽 다 없으면 그 증여자 귀속분 과세 0
   /** 이 주주가 신주를 배정받은 방법 — §39① 공모 제외 판정(행별). 미지정 = "normal" */
   allocationMethod?: ShareAllocationMethod;

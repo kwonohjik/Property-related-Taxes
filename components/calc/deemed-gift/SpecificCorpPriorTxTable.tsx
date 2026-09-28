@@ -16,9 +16,27 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { makeScPriorTxRow, type ScPriorTxRow } from "./deemed-form-rows";
 
+/** 표 문구 — 기본값은 §45의5. §39 증자(#19)가 같은 표를 다른 문구로 쓴다 */
+export type PriorTxTableCopy = {
+  item: string;
+  dateLabel: string;
+  benefitLabel: string;
+  benefitHint: string;
+};
+
+const SC_COPY: PriorTxTableCopy = {
+  item: "선행거래",
+  dateLabel: "거래한 날",
+  benefitLabel: "그 거래의 이익",
+  benefitHint: "영 §34의5④1호 이익 — 이번 거래와 같은 호의 것만",
+};
+
 type Props = {
   rows: ScPriorTxRow[];
   onChange: (rows: ScPriorTxRow[]) => void;
+  /** testid 접두어 — 기본 `sc`(표 `sc-prior-tx-table`, 행 `sc-pt-*`) */
+  testIdPrefix?: string;
+  copy?: PriorTxTableCopy;
 };
 
 let rowSeq = 0;
@@ -27,14 +45,15 @@ function newRow(): ScPriorTxRow {
   return makeScPriorTxRow(`sc-pt-${rowSeq}-${Math.floor(performance.now())}`);
 }
 
-export function SpecificCorpPriorTxTable({ rows, onChange }: Props) {
+export function SpecificCorpPriorTxTable({ rows, onChange, testIdPrefix = "sc", copy = SC_COPY }: Props) {
+  const tid = (s: string) => `${testIdPrefix}-${s}`;
   const update = (i: number, patch: Partial<ScPriorTxRow>) =>
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
   return (
     <div
       className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3"
-      data-testid="sc-prior-tx-table"
+      data-testid={tid("prior-tx-table")}
     >
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-amber-800">
@@ -43,7 +62,7 @@ export function SpecificCorpPriorTxTable({ rows, onChange }: Props) {
         <button
           type="button"
           onClick={() => onChange([...rows, newRow()])}
-          data-testid="sc-pt-add"
+          data-testid={tid("pt-add")}
           className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100/60"
         >
           + 행 추가
@@ -61,15 +80,15 @@ export function SpecificCorpPriorTxTable({ rows, onChange }: Props) {
         {rows.map((row, i) => (
           <div
             key={row.id}
-            data-testid={`sc-pt-row-${i}`}
+            data-testid={tid(`pt-row-${i}`)}
             className="space-y-2 rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 p-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-amber-800">선행거래 {i + 1}</span>
+              <span className="text-xs font-medium text-amber-800">{copy.item} {i + 1}</span>
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
-                data-testid={`sc-pt-delete-${i}`}
+                data-testid={tid(`pt-delete-${i}`)}
                 className="text-xs font-medium text-rose-600 hover:text-rose-700"
               >
                 × 삭제
@@ -77,20 +96,20 @@ export function SpecificCorpPriorTxTable({ rows, onChange }: Props) {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="whitespace-nowrap text-xs text-muted-foreground">거래한 날</label>
+              <label className="whitespace-nowrap text-xs text-muted-foreground">{copy.dateLabel}</label>
               <DateInput
                 value={row.date}
                 onChange={(v) => update(i, { date: v })}
-                data-testid={`sc-pt-date-${i}`}
+                data-testid={tid(`pt-date-${i}`)}
               />
             </div>
 
             <CurrencyInput
-              label="그 거래의 이익"
+              label={copy.benefitLabel}
               value={row.benefit}
               onChange={(v) => update(i, { benefit: v })}
-              hint="영 §34의5④1호 이익 — 이번 거래와 같은 호의 것만"
-              data-testid={`sc-pt-benefit-${i}`}
+              hint={copy.benefitHint}
+              data-testid={tid(`pt-benefit-${i}`)}
             />
           </div>
         ))}

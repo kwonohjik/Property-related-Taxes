@@ -21,6 +21,7 @@ import { CiGiftDateEraNotice } from "./capital-forms-shared";
 // ⑤가 「주주 여부를 물어야 하는 목인지」를 따로 판단하면 엔진과 두 개의 진실이 생긴다.
 // 판정표는 엔진 모듈 하나가 갖는다.
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
+import { SpecificCorpPriorTxTable } from "./SpecificCorpPriorTxTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -163,6 +164,20 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           <CurrencyInput label="증자 후 신주인수자 보유주식수" value={form.ciPostHeldShares} onChange={(v) => set({ ciPostHeldShares: v })} />
           <CurrencyInput hideUnit label="증자 후 발행주식총수" value={form.ciPostTotalShares} onChange={(v) => set({ ciPostTotalShares: v })} hint="실권주를 배정하지 않아 소멸한 분을 뺀 실제 증자 후 총수입니다" />
         </>
+      )}
+      {/* §43②·영 §32의4 4호 — 3억 금액기준이 있는 나목(저가·고가)에서만 받는다(④·⑧과 같은 조건 · #19) */}
+      {form.ciSubType === "no_realloc" && (
+        <SpecificCorpPriorTxTable
+          rows={form.ciPriorSameClauseRows ?? []}
+          onChange={(rows) => set({ ciPriorSameClauseRows: rows })}
+          testIdPrefix="ci"
+          copy={{
+            item: "선행 증자",
+            dateLabel: "증여일",
+            benefitLabel: "그 증자의 이익",
+            benefitHint: `같은 호(${isHigh ? "고가발행 §39①2호" : "저가발행 §39①1호"})의 이익만 — 3억 금액기준 판정에만 합산하고 과세는 이번 증자분입니다`,
+          }}
+        />
       )}
       {!isHigh && (
         <ToggleCard
@@ -327,6 +342,14 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 hint="미입력이면 소액주주로 보지 않아 §39② 1인 의제를 적용하지 않습니다"
               />
             )}
+            {/* §43②·영 §32의4 4호 — 행에는 날짜 표를 두지 않고 윈도 안 합계를 받는다(#19) */}
+            <CurrencyInput
+              label="1년 이내 같은 호 증자로 얻은 이익 합계 (§43② · 선택)"
+              value={r.priorSameClauseGain ?? ""}
+              onChange={(v) => updateRow(r.id, { priorSameClauseGain: v })}
+              data-testid={`ci-alloc-prior-${idx}`}
+              hint="이 주주가 수증자로서 증여일 전 1년 이내 같은 호(저가·고가) 증자로 얻은 이익 — 실권처리(나목) 3억 금액기준 판정에만 더하고, 과세는 이번 이익입니다"
+            />
             <div className="space-y-1">
               <p className="text-caption text-emerald-700">배정 방법 (§39① 공모 모집 제외)</p>
               <select

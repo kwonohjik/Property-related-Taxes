@@ -231,7 +231,10 @@ export function calcCapitalIncreaseAllocation(
     //   종전에는 분할 **전** `b.delta`로 봐서 비특수관계 증여자 몫까지 합산됐고,
     //   `b.delta ≥ 특수관계 가중액`이 항상 성립하므로 오차가 **게이트가 헐거워지는 한 방향**으로만 났다.
     const relatedForfeitSum = donors.reduce((a, d, i) => (isRelatedTo(d.id) ? a + rawForfeit[i] : a), 0);
-    const gatedOut = hasForfeitProcessing && !ratioMet && relatedForfeitSum < ABSOLUTE_THRESHOLD;
+    // §43② · 영 §32의4 4호 — 3억 금액기준만 이 수증자의 1년 이내 같은 호 선행 이익을 더해 판정한다(비율은 건별 ·
+    //   과세는 당해 이익 — #19). cap-table 행에는 날짜 표가 없어 윈도 안 합계를 사용자가 넣는다.
+    const priorSameClause = shareholderById.get(b.id)?.priorSameClauseGain ?? 0;
+    const gatedOut = hasForfeitProcessing && !ratioMet && relatedForfeitSum + priorSameClause < ABSOLUTE_THRESHOLD;
 
     const byDonor: DonationSplit[] = donors.map((d, i) => {
       // §39① 적용 제외 — 제외 대상은 **배정 행위**이므로 「배정받은 자」 행으로 판정한다.
