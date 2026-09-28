@@ -211,17 +211,23 @@ describe("E-14c §155⑳ 거주주택 — 15호(구 14호)·13호 (종전: 2호 
     expect(r.appliedRate).toBe(0.38);
   });
 
-  it("C-2n 부정 짝 — 거주 + 임대 + 다른 일반주택(§155① 불성립) → 13호 불성립 · 3주택 중과 199,997,600 그대로", () => {
-    const r = calc(
-      input({
-        householdHousingCount: 3,
-        residencePeriodMonths: 48,
-        houses: [SELLING, RENTAL_ROW, GENERAL],
-        rentalHousingException: rhe(RENTAL_UNIT),
-      }),
-    );
-    expect(r.totalTax).toBe(199_997_600);
-    expect(r.appliedRate).toBe(0.68);
+  /**
+   * E-14h 이후 — 이 세대는 §155⑳ 비과세도 서지 않는다(「장기임대주택 … 과 그 밖의 1주택」 초과 · 비과세와 중과 배제가
+   * 같은 판정 `resolveRentalResidenceComposition`). 종전 값 199,997,600은 비과세 특례 적용 + 3주택 중과였다.
+   * 중과 쪽 관측(13호 불성립)은 ① 요소 leaf로 옮겨 그대로 단언한다.
+   */
+  it("C-2n 부정 짝 — 거주 + 임대 + 다른 일반주택(§155① 불성립) → 13호 불성립 · §155⑳도 불성립 → 일반 과세", () => {
+    const i = input({
+      householdHousingCount: 3,
+      residencePeriodMonths: 48,
+      houses: [SELLING, RENTAL_ROW, GENERAL],
+      rentalHousingException: rhe(RENTAL_UNIT),
+    });
+    expect(resolveSurchargeDeemedOneHouse(i, parseRatesFromMap(loadFallbackTransferRates(D("2026-09-18"))))).toBeUndefined();
+    expect(calculateTransferTax(i, loadFallbackTransferRates(i.transferDate)).rentalHousingExceptionDetail).toBeUndefined();
+    const r = calc(i);
+    expect(r.totalTax).toBe(1_327_903_500);
+    expect(r.appliedRate).toBe(0.75);
   });
 
   it("C-3 의제 판정 leaf — 시나리오 A만 연다(B 직전거주주택보유주택은 확인 필요 · 종전 동작)", () => {

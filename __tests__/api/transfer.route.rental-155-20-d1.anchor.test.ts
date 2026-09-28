@@ -208,9 +208,15 @@ describe("OH-15 route — B 등록 이후 거주기간", () => {
     expect((await single(b("0"))).rentalApplied).toBeUndefined();
     expect((await single(b("24"))).rentalApplied).toBe(true);
   });
-  it("D1R-7 다건 route도 같은 결론", async () => {
+  /**
+   * E-14g — 종전 단언 「off > on」은 다건의 장특 이중 차감(on 22,093,500 · 단건 67,309,000)에 기대어 성립했다.
+   * 단건에서는 이 시료의 on(RH-B1 67,309,000)이 off(50,589,000)보다 크다. 「같은 결론」을 단건 = 다건으로 단언한다.
+   */
+  it("D1R-7 다건 route도 같은 결론 (단건 = 다건)", async () => {
     const off = await multi(b("0"));
     const on = await multi(b("24"));
-    expect(off).toBeGreaterThan(on);
+    expect(off).toBe((await single(b("0"))).totalTax);
+    expect(on).toBe((await single(b("24"))).totalTax);
+    expect(on).not.toBe(off);
   });
 });

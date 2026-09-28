@@ -41,6 +41,7 @@ import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -84,6 +85,8 @@ export interface RentalHousingStepArgs {
     result?: TransferTaxResult["inheritedAcquisitionDetail"];
     houseValuationResult?: TransferTaxResult["inheritedHouseValuationDetail"];
   };
+  /** §99의4·§98의9 「취득 전 보유 주택」 판정 기준일 — STEP 0.9와 같은 값(세대 구성 판정의 조특법 제외용) */
+  generalHouseAcquisitionDate?: Date;
 }
 
 /**
@@ -291,7 +294,7 @@ export function runRentalHousingExceptionStep(
   const {
     effectiveInput, input, transferGain, usedEstimated,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
-    inheritedAcquisitionStep,
+    inheritedAcquisitionStep, generalHouseAcquisitionDate,
   } = args;
 
   /**
@@ -308,6 +311,22 @@ export function runRentalHousingExceptionStep(
       formula: "미등기양도자산에는 비과세 규정을 적용하지 않습니다",
       amount: 0,
       legalBasis: TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION,
+    });
+    return null;
+  }
+
+  /**
+   * E-14h — 「장기임대주택 … 과 **그 밖의 1주택**」. 종전에는 세대 구성을 보지 않아 거주 + 임대 + 다른 일반주택
+   * (특례 불성립)에도 특례를 적용했다. 중과 배제 ① 요소와 **같은 판정**이다(`resolveRentalResidenceComposition`).
+   * 판정 보류(`undetermined` — 명부 없음 등)는 종전 동작(적용)을 유지한다.
+   */
+  const composition = resolveRentalResidenceComposition(effectiveInput, parsedRates, generalHouseAcquisitionDate);
+  if (composition.status === "exceeded") {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
+      formula: composition.reason,
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
     return null;
   }
@@ -640,7 +659,18 @@ export function runRentalHousingExceptionStep(
     appliedRate: rheTaxResult.appliedRate,
     progressiveDeduction: rheTaxResult.progressiveDeduction,
     calculatedTax: rheTaxResult.calculatedTax,
-    isSurchargeSuspended: false,
+    /**
+     * E-14g — 중과 판정 echo. 다건 집계는 자산별 세액을 `calcTax`로 다시 구하면서 이 판정을 넘기고
+     * (`transfer-tax-aggregate-group-tax.ts` `assetTaxOf`), 없으면 원시 플래그(주택 수 ≥ 2 · 조정지역)로
+     * 중과를 되살린다(`classifyRateGroup` F01). 종전에는 이 경로만 싣지 않아 단건이 15호로 배제한 중과가
+     * 다건에서 살아났다(실측 단건 102,086,600 · 다건 167,360,600). 일반 경로(`transfer-tax-normal-return.ts`)와
+     * 같은 필드다 — 세액 불변(echo).
+     */
+    surchargeType: rheTaxResult.surchargeType,
+    surchargeRate: rheTaxResult.surchargeRate,
+    isSurchargeSuspended: rheTaxResult.surchargeSuspended,
+    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
+    multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     /**
      * 감면 fan-out — **다건(aggregate) 전파**까지 포함한다(F08).
      *
