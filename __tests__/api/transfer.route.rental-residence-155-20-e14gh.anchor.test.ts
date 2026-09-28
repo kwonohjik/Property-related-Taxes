@@ -297,3 +297,57 @@ describe("E-14h 비과세 — 「장기임대주택 … 과 그 밖의 1주택�
     expect(await multi(f)).toBe(FULLY_TAXED);
   });
 });
+
+/**
+ * #1856(E-14e·f) 결합 — 2023.2.28. 전 양도분(2022.3.15. · 중과 한시 배제 2022.5.10. 전 · 고가 기준 12억).
+ *
+ * 그 기간 §155⑳ 거주주택은 구 §167의10①14호(2021.2.17.~)가 받고, 구 8호(일시적 2주택 — §155①을 인용하지 않고
+ * §154① 요건도 없다)가 `resolveOldClauseExclusion`에서 **먼저** 판정된다. 8호의 「다른 주택」은 문언상 장기임대주택을
+ * 가리지 않으므로 임대주택을 3년 안에 취득한 세대는 8호로 배제된다(14호와 결론 같음 · 사유만 다름).
+ * 세대 구성 판정(E-14h)은 비과세(§155①은 현행 기한 — 조정→조정 1년)와 14호·13호 ① 요소에만 걸린다.
+ *
+ * ⚠️ 특례 불성립 3주택(OE-3)은 단건만 단언한다 — 이 기간 일반 3주택 세대는 §155⑳과 무관하게 단건 1,328,497,500 ·
+ *    다건 650,512,500으로 갈린다(base `b88b66c5`에서 같은 값 실측 · 별건).
+ */
+describe("#1856 결합 — 2023.2.28. 전 양도분 §155⑳", () => {
+  const OLD = "2022-03-15";
+  beforeEach(() => {
+    vi.mocked(preloadTaxRates).mockImplementation(
+      async () => loadFallbackTransferRates(new Date(OLD)) as Awaited<ReturnType<typeof preloadTaxRates>>,
+    );
+  });
+  async function reasons(f: Form): Promise<string> {
+    const res = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
+    const r = ((await res.json()) as { data: { result: Obj } }).data.result;
+    const mh = r.multiHouseSurchargeEvaluation as { exclusionReasons: { type: string; detail: string }[] } | undefined;
+    return (mh?.exclusionReasons ?? []).map((x) => `${x.type}:${x.detail}`).join(" | ");
+  }
+  const OLD_EXCLUDED = 138_512_000;
+
+  it("OE-1 거주 + 임대 → 구 14호 배제 138,512,000 (단건 = 다건)", async () => {
+    const f = withRental(form([RENTAL_ROW], { transferDate: OLD }));
+    expect(await single(f)).toMatchObject({ totalTax: OLD_EXCLUDED, rentalApplied: true });
+    expect(await reasons(f)).toMatch(/^long_term_rental_residence:.*§167의10①14호/);
+    expect(await multi(f)).toBe(OLD_EXCLUDED);
+  });
+
+  it("OE-2 임대주택을 3년 안에 취득(2020) → 구 8호가 먼저 받는다 · 세액 같음 (단건 = 다건)", async () => {
+    const f = withRental(form([{ ...RENTAL_ROW, acquisitionDate: "2020-01-01" }], { transferDate: OLD }));
+    expect(await single(f)).toMatchObject({ totalTax: OLD_EXCLUDED, rentalApplied: true });
+    expect(await reasons(f)).toMatch(/^temporary_two_house:.*§167의10①8호/);
+    expect(await multi(f)).toBe(OLD_EXCLUDED);
+  });
+
+  it("OE-3 거주 + 임대 + 다른 일반주택 → 특례 불성립 · 14호·8호 모두 불성립 (단건)", async () => {
+    const f = withRental(form([RENTAL_ROW, OTHER_OLD], { transferDate: OLD }));
+    expect(await single(f)).toMatchObject({ totalTax: 1_328_497_500, rentalApplied: false });
+    expect(await reasons(f)).toBe("");
+  });
+
+  it("OE-4 거주 + 임대 + §155② 상속 → 3주택 13호(2021.2.17.~) 배제 (단건 = 다건)", async () => {
+    const f = withRental(form([RENTAL_ROW, INHERITED], { transferDate: OLD }));
+    expect(await single(f)).toMatchObject({ totalTax: OLD_EXCLUDED, rentalApplied: true });
+    expect(await reasons(f)).toMatch(/^long_term_rental_residence:.*§167의3①13호/);
+    expect(await multi(f)).toBe(OLD_EXCLUDED);
+  });
+});
