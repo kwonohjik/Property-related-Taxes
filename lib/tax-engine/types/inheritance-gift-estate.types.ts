@@ -1140,6 +1140,43 @@ export interface BurdenedGiftTransferTaxInput {
     /** 전 소유자와 임차인 간 임대차계약 종료일 (2호 단서) */
     newHouseTenantLeaseEndDate?: string;
   };
+  /*
+   * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──
+   * 양도세 폼(`TransferFormData`)과 **같은 이름·모양**이다 — ⑤는 같은 위젯(`ExemptionProvisoSection`·
+   * `FinalHouseRestartSection`)을, ④⑧은 같은 leaf를 쓴다(`lib/calc/gift-burdened-one-house.ts`).
+   * 3-상태 선언은 "yes"·"no"·""(미답), 날짜는 YYYY-MM-DD 문자열. 옛 record에는 없다(미입력으로 읽는다).
+   */
+  /** §154① 단서 사유 — "" = 해당 없음. 삭제 전 4호(`rental_registration_4ho`)는 OH-38 경과조치 */
+  provisoReason?:
+    | ""
+    | "rental_5yr_residence"
+    | "expropriation"
+    | "overseas_migration"
+    | "overseas_residence"
+    | "unavoidable"
+    | "pre_designation_contract"
+    | "rental_registration_4ho";
+  provisoDepartureDate?: string;
+  provisoExpropriationDate?: string;
+  provisoBusinessApprovalDate?: string;
+  provisoPreContractNoHouse?: boolean;
+  proviso4hoBusinessRegDate?: string;
+  proviso4hoRentalRegDate?: string;
+  proviso4hoRegulatedOneHouse?: "" | "yes" | "no";
+  proviso4hoStatus?: "" | "maintained" | "auto_cancelled" | "voluntary_cancelled" | "demolition_cancelled" | "other";
+  proviso4hoDuringMandatory?: "" | "yes" | "no";
+  proviso4hoRentOver5?: "" | "yes" | "no";
+  proviso4hoRentOver5ContractDate?: string;
+  proviso4hoGiftSeparated?: boolean;
+  /** §154⑤ 단서 최종 1주택 재기산(OH-22) — 보유 중 다른 주택을 처분했는가 */
+  finalHouseRestartHistory?: "" | "yes" | "no";
+  /** `finalHouseRestartHistory === "yes"`일 때의 처분 목록 */
+  finalHouseRestartDisposals?: {
+    id: string;
+    kind: "" | "transfer" | "gift" | "conversion" | "other";
+    date: string;
+    temporaryTwoHouse: "" | "yes" | "no";
+  }[];
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

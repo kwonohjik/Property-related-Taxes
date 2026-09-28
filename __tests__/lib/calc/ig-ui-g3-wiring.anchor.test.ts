@@ -31,9 +31,15 @@ describe("[G3-S] IG-063 — currentClientId가 부모에서 내려온다", () =>
 });
 
 describe("[G3-T] IG-117 — 날짜 정변환이 UTC 기준으로 통일됐다", () => {
-  const src = read(
+  // 2026-09-28 E-1 후속: 800줄 정책으로 카드가 세 파일로 나뉘었다(주택 필드 세트 · 날짜 helper) —
+  // 카드 전체를 한 번에 본다(helper만 옮기고 가드가 빈 파일을 보는 일이 없게).
+  const src = [
     "components/calc/inheritance/estate-card/variants/BurdenedGiftTransferSection.tsx",
-  );
+    "components/calc/inheritance/estate-card/variants/BurdenedGiftHousingFieldSet.tsx",
+    "components/calc/inheritance/estate-card/variants/burdened-gift-dates.ts",
+  ]
+    .map(read)
+    .join("\n");
 
   it("T-1: 🔴 dateToStr이 toISOString 기준이다 (로컬 getter 아님)", () => {
     expect(src).toContain('d.toISOString().slice(0, 10)');

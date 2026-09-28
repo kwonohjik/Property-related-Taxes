@@ -68,18 +68,18 @@ describe("E-1 ③ 복원 — 새 필드가 살아남는다", () => {
 
 describe("E-1 ⑤⑧ 게이트 — 양도세 판정 카드와 같은 leaf", () => {
   it("G-1 2019-12-17 체제(신규 2020-06-01 · 증여 2021-03-01) — 열림 · 전입/임차인 칸 열림", () => {
-    const g = giftBurdenedTempTwoHouseRegulatedGate(item("2020-06-01").burdenedGiftTransferTax!, "2021-03-01");
+    const g = giftBurdenedTempTwoHouseRegulatedGate(item("2020-06-01").burdenedGiftTransferTax!, "2021-03-01", undefined);
     expect(g).not.toBeNull();
     expect(g!.regulated.moveInRelevant).toBe(true);
     expect(g!.regulated.determined).toBe(false);
   });
   it("G-2 닫힘 — 2023-01-12 이후 증여 · 세대 주택 수 3 · 신규 취득일 없음", () => {
-    expect(giftBurdenedTempTwoHouseRegulatedGate(item("2021-06-01").burdenedGiftTransferTax!, "2023-06-01")).toBeNull();
+    expect(giftBurdenedTempTwoHouseRegulatedGate(item("2021-06-01").burdenedGiftTransferTax!, "2023-06-01", undefined)).toBeNull();
     expect(
-      giftBurdenedTempTwoHouseRegulatedGate(item("2020-06-01", {}, { householdHousingCount: 3 }).burdenedGiftTransferTax!, "2021-03-01"),
+      giftBurdenedTempTwoHouseRegulatedGate(item("2020-06-01", {}, { householdHousingCount: 3 }).burdenedGiftTransferTax!, "2021-03-01", undefined),
     ).toBeNull();
     expect(
-      giftBurdenedTempTwoHouseRegulatedGate({ ...item("2020-06-01").burdenedGiftTransferTax!, temporaryTwoHouse: undefined }, "2021-03-01"),
+      giftBurdenedTempTwoHouseRegulatedGate({ ...item("2020-06-01").burdenedGiftTransferTax!, temporaryTwoHouse: undefined }, "2021-03-01", undefined),
     ).toBeNull();
   });
   it("G-3 선언 두 개가 들어오면 determined", () => {
@@ -87,6 +87,7 @@ describe("E-1 ⑤⑧ 게이트 — 양도세 판정 카드와 같은 leaf", () =
       item("2020-06-01", { newHouseRegulatedAtAcquisition: "yes", prevHouseRegulatedAtNewAcquisition: "yes" })
         .burdenedGiftTransferTax!,
       "2021-03-01",
+      undefined,
     );
     expect(g!.regulated.determined).toBe(true);
   });

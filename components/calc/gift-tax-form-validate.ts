@@ -26,6 +26,15 @@ import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
+import { collectExemptionProvisoErrors } from "@/lib/calc/exemption-proviso-validate";
+import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
+import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
+import {
+  giftBurdenedFinalHouseRestartInScope,
+  giftBurdenedOneHouseSlice,
+  giftBurdenedProvisoMode,
+  giftBurdenedRegionCode,
+} from "@/lib/calc/gift-burdened-one-house";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -176,7 +185,7 @@ export function validateStep(step: number, form: FormState): string | null {
       // §155①2호 새 입력(OH-01 A2b · E-1) — ⑤와 같은 게이트, 양도세 판정 메뉴와 같은 규칙 leaf.
       //   모순만 차단한다. 미입력(경고)은 엔진이 판정 보류로 고지하고 결과 카드 경고에 뜬다.
       if (propertyType === "housing") {
-        const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate);
+        const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
           ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {
               newAcquisitionDate: gate.newAcquisitionDate,
@@ -185,6 +194,22 @@ export function validateStep(step: number, form: FormState): string | null {
             }).find((i) => i.severity === "error")
           : undefined;
         if (eraError) return `${itemLabel}: ${eraError.message}`;
+        // §154① 단서(삭제 전 4호 포함)·§154⑤ 단서 재기산 (E-1 후속) — ⑤·④와 같은 게이트, 양도세 계산기와 같은 규칙 leaf.
+        //   카드가 숨는 맥락의 stale 사유·범위 밖 이력은 막지 않는다(영구 차단 방지).
+        const oneHouse = giftBurdenedOneHouseSlice(bgt, form.giftDate);
+        const provisoError = collectExemptionProvisoErrors({
+          reason: effectiveProvisoReason(giftBurdenedProvisoMode(bgt), oneHouse.provisoReason),
+          departureDate: oneHouse.provisoDepartureDate,
+          expropriationDate: oneHouse.provisoExpropriationDate,
+          preContractNoHouse: oneHouse.provisoPreContractNoHouse,
+          rental4ho: oneHouse,
+        })[0];
+        if (provisoError) return `${itemLabel}: ${provisoError}`;
+        const restartError = collectFinalHouseRestartErrors(
+          oneHouse,
+          giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate),
+        )[0];
+        if (restartError) return `${itemLabel}: ${restartError}`;
       }
       // C-4: 채무인수액(§47①) 필수 — assumedDebtForGift가 0이면 양도소득세 과세 대상 없음
       // (소득세법 §88: 유상양도 = 수증자 채무인수가 있어야 양도가액 발생)

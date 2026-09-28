@@ -32,6 +32,14 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
+import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
+import {
+  giftBurdenedFinalHouseRestartInScope,
+  giftBurdenedOneHouseSlice,
+  giftBurdenedProvisoMode,
+  giftBurdenedRegionCode,
+} from "@/lib/calc/gift-burdened-one-house";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -296,6 +304,22 @@ export function buildGiftBurdenedTransferBody(
       //   신규 주택 법정동코드는 이 경로에 입력 칸이 없어 싣지 않는다(선언으로 판정).
       ...toTemporaryTwoHouseEraFacts(bgt.temporaryTwoHouse, undefined),
     };
+  }
+
+  // ─── 1세대1주택 후속 입력 (E-1 후속) — 주택 전용, ⑤·⑧과 같은 게이트(`gift-burdened-one-house.ts`) ───
+  if (isHousingType) {
+    // 증여 주택 주소(PNU 앞 10자리) — 양도세 계산기 ④(`primary.regionCode`)와 같은 키. 있으면 엔진이
+    //   취득시 조정(거주요건)·§155①2호 종전 주택 조정 여부를 선언 대신 코드로 판정한다.
+    const regionCode = giftBurdenedRegionCode(item);
+    if (regionCode) body.regionCode = regionCode;
+    const slice = giftBurdenedOneHouseSlice(bgt, form.giftDate);
+    // §154① 단서(삭제 전 4호 포함) — 계산기와 같은 조립 leaf. 카드가 숨는 맥락의 stale 사유는 싣지 않는다.
+    Object.assign(body, buildExemptionProvisoPayload(slice, giftBurdenedProvisoMode(bgt)));
+    // §154⑤ 단서 재기산 — 범위 밖·미답이면 키 없음(엔진이 판정 보류를 고지한다)
+    Object.assign(
+      body,
+      buildFinalHouseRestartPayload(slice, giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate)),
+    );
   }
 
   return body;
