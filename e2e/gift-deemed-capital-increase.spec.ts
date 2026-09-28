@@ -78,6 +78,41 @@ test.describe("§39 증자 이익 cap-table", () => {
     await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
+  test("특수관계는 대칭 — 같은 관계를 증여자 행(갑·을)에 표시해도 병 300,000,000 · 정 100,000,000 (#44·#53)", async ({ page }) => {
+    // 「상증법」§2제10호 후단 — 「본인도 특수관계인의 특수관계인으로 본다」. 위 사례4는 수증자 행(병·정)에
+    //   표시한 입력이고 이 테스트가 그 **반대 배치**다. 종전 엔진은 수증자 행만 읽어 이 입력이 0원이었다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page);
+
+    await page.getByTestId("ci-alloc-direction-high").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("30000");
+    await page.getByTestId("ci-alloc-add-row").click();
+    await page.getByTestId("ci-alloc-add-row").click();
+
+    await fillRow(page, 0, "갑", "50000", "50000", "80000", "30000");
+    await fillRow(page, 1, "을", "10000", "10000", "20000", "10000");
+    await fillRow(page, 2, "병", "30000", "30000", "0", "0");
+    await fillRow(page, 3, "정", "10000", "10000", "0", "0");
+
+    // 증여자 행에서 누른다 — 병·정 행의 칩도 함께 켜진 모습이어야 한다
+    await page.getByTestId("ci-alloc-related-0-sh-3").click();
+    await page.getByTestId("ci-alloc-related-0-sh-4").click();
+    await page.getByTestId("ci-alloc-related-1-sh-3").click();
+    await page.getByTestId("ci-alloc-related-1-sh-4").click();
+    await expect(page.getByTestId("ci-alloc-related-2-sh-1")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("ci-alloc-related-3-sh-2")).toHaveAttribute("aria-pressed", "true");
+
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+
+    await expect(page.getByTestId("ci-alloc-total-sh-3")).toHaveText("300,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-3-sh-1")).toHaveText("225,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-3-sh-2")).toHaveText("75,000,000");
+    await expect(page.getByTestId("ci-alloc-total-sh-4")).toHaveText("100,000,000");
+    await expect(page.getByTestId("ci-alloc-split-value-sh-4-sh-2")).toHaveText("25,000,000");
+  });
+
   test("수증자 선택 → 선택 1명만 이관 + 증여자 미선택 차단 (§4의2①·§68① · §53)", async ({ page }) => {
     // 「상증법」§4의2①·§68① — 증여세는 **수증자별**로 납세의무가 성립하고 신고도 수증자별이다.
     //   전원을 한 마법사 세션에 합치면 누진구간이 올라가고 §53 공제가 1회만 적용된다(실측 +24,250,000).
@@ -287,8 +322,10 @@ test.describe("§39 증자 이익 cap-table", () => {
 
     await fillRow(page, 0, "A", "50000", "50000", "100000", "50000"); // 실권주를 배정받은 인수자
     await fillRow(page, 1, "B", "50000", "50000", "0", "0"); // 전량 포기 (수증자)
+    // 특수관계 칩은 대칭이다(#44·#53 · 「상증법」§2제10호 후단) — 한 번 누르면 두 행이 함께 켜진다.
+    //   종전처럼 반대 행을 한 번 더 누르면 그 쌍이 **꺼진다**.
     await page.getByTestId("ci-alloc-related-0-sh-2").click();
-    await page.getByTestId("ci-alloc-related-1-sh-1").click();
+    await expect(page.getByTestId("ci-alloc-related-1-sh-1")).toHaveAttribute("aria-pressed", "true");
 
     // ① 배정방법 표시 없음 → B 375,000,000
     await page.getByTestId("deemed-detail-confirm").click();
