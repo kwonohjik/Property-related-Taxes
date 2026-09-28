@@ -455,6 +455,19 @@ export interface MultiHouseSurchargeInput {
    * caller가 §155⑧ 요건(2주택 · 해소일부터 3년 · 소재)을 판정해 주입한다.
    */
   unavoidableOutsideCapitalHouse?: boolean;
+  /**
+   * 구 영 §167의10①**8호**(2018.4.1. ~ 2023.2.27. 양도분) — 일시적 2주택 종전 주택(E-14e).
+   *
+   * 15호와 요건이 다르다(§154① · §155① 1년 · 조정대상지역 기한 없음 · 실제 소유 2주택). caller가
+   * `qualifiesOldClause8TemporaryTwoHouse`(`data/surcharge-old-clauses-era.ts`)로 판정해 주입한다.
+   * 그 기간에는 `deemedOneHouseBy155: "temporary_two_house"`가 서도 이 값만 본다.
+   */
+  oldClause8TemporaryTwoHouse?: boolean;
+  /**
+   * 구 영 §167의11①**1호**(2018.4.1. ~ 2023.2.27. 양도분) 인용 범위 — `house_with_*_right` 의제가
+   * §156의2③·④ 또는 §156의3②·③에서 **직접**(⑦⑩⑪ 준용 아님) 섰는가(E-14f). 미제공은 `false`.
+   */
+  rightDeemingCitedByOldClause1?: boolean;
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;

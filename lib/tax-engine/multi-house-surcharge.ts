@@ -318,9 +318,8 @@ export function determineMultiHouseSurcharge(
   // Step 6: 중과 배제 사유 및 유예 판단
   // 산입 권리 수 — `countEffectiveHouses`와 같은 술어(`isPresaleRightCounted`)에서 ⑨ 차감분(Step 1.5)을 뺀다.
   const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
-  const countedRightCount =
-    input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate)).length -
-    excludedPresaleRights.length;
+  const countedRights = input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate));
+  const countedRightCount = countedRights.length - excludedPresaleRights.length;
   const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
@@ -329,6 +328,8 @@ export function determineMultiHouseSurcharge(
     new Set(excludedHouses.map((e) => e.houseId)),
     marriageSubtractionApplied,
     countedRightCount,
+    // E-14f 구 §167의11①6·7호 — 「합침으로써 1주택과 1권리」: 산입 권리의 취득일을 본다.
+    countedRights,
   );
 
   // 9호(양도 당시 기준시가 1억 이하)를 판정할 값이 없으면 중과를 그대로 적용하되 그 사실을 알린다.

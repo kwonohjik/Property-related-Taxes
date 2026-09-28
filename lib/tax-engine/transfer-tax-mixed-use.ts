@@ -14,6 +14,7 @@ import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
+import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
@@ -127,6 +128,13 @@ export function calcMixedUseTransferTax(
             // E-14d — §155②③(상속주택 + 일반주택) 경로(`inherited_general_house`)도 담는다.
             deemedOneHouseBy155: surchargeDeemedOneHouseBy155,
             deemedOneHouseSource: surchargeDeemedOneHouseSource,
+            // E-14e — 구 §167의10①8호(2023.2.28. 전 양도분). 단건과 같은 leaf · 실제 소유 주택 수(조심2021중1803).
+            oldClause8TemporaryTwoHouse: qualifiesOldClause8TemporaryTwoHouse({
+              isOneHousehold: asset.multiHouse.isOneHousehold,
+              householdHousingCount: asset.householdHousingCountForExclusion,
+              transferDate,
+              temporaryTwoHouse: asset.temporaryTwoHouse,
+            }),
           },
           houseCountExclusionRules,
           regulatedAreaHistory ?? null,

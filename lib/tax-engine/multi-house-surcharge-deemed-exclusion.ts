@@ -21,6 +21,12 @@
  * 구 5호(동거봉양)·6호(혼인) — §154① 요건 없음 · 구 8호(일시적 2주택) · 구 13호(§155② 상속, 2021.2.17.~) ·
  * 구 14호(§155⑳ 거주주택, 2021.2.17.~). §155⑦ 농어촌주택·조특법 감면주택을 인용하는 호는 **없었다**.
  *
+ * ## 구 8호 · 구 §167의11①1·6·7호 — §155 의제가 아니라 **호 자체의 요건** (E-14e·f)
+ *
+ * 네 호 모두 §154① 요건이 없고, 8호는 §155①을 인용하지도 않는다(1년 요건·조정 1·2년 기한 없음 · 실제 소유 2주택).
+ * 요건·구간은 leaf `data/surcharge-old-clauses-era.ts`가 갖고, 여기서는 그 결과로 사유를 만든다
+ * (`resolveOldClauseExclusion`). 그래서 그 기간의 `temporary_two_house` 의제는 호를 받지 않는다.
+ *
  * ① 요소(의제 성립)는 caller가 비과세 정본으로 선판정해 `deemedOneHouseBy155`로 준다
  * (`resolveSurchargeDeemedOneHouse`). 여기서는 재판정하지 않고 **어느 호가 받는지**만 정한다.
  */
@@ -33,10 +39,15 @@ import {
 } from "./legal-codes";
 // 합가 기한 연수(양도일 연혁) — 비과세 판정(`matchMergeWindow`)과 같은 leaf. 배제 detail 문구용.
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
+import {
+  isOldSurchargeClauseEra,
+  resolveOldMergeRightClause,
+} from "./data/surcharge-old-clauses-era";
 import type {
   DeemedOneHouseBasis,
   ExclusionReason,
   MultiHouseSurchargeInput,
+  PresaleRight,
 } from "./types/multi-house-surcharge.types";
 
 /** 의제가 어느 특례 조문에서 왔는가 — 호마다 인용 범위가 다르다. */
@@ -76,8 +87,7 @@ function resolveClause(
   if (countedRights > 0) {
     if (effectiveHouseCount === 2) {
       // 「제156조의2, 제156조의3 또는 「조세특례제한법」」 — 제155조는 없다.
-      // 2023.2.28. 전(구 1호 「제156조의2제3항부터 제5항까지 또는 제156조의3제2항ㆍ제3항 … 과세되는 주택」)은
-      // 요건 구조가 달라(§154① 충족 요건 없음) 판정하지 않는다 — 확인 필요(계획서 E-14c).
+      // 2023.2.28. 전은 구 1·6·7호(§154① 요건 없음)다 — `resolveOldClauseExclusion`(E-14f).
       return after15 && family !== "155" ? { kind: "house_right_one_each" } : null;
     }
     if (effectiveHouseCount >= 3) {
@@ -100,8 +110,9 @@ function resolveClause(
   if (isMerge(deemed)) return { kind: "two_house", oldRule: true }; // 구 5·6호 (§154① 요건 없음)
   switch (deemed) {
     case "inherited_general_house": // 구 13호 — 경로 자체가 2021.2.17. 게이트(`resolveSurchargeDeemedOneHouse`)
-    case "temporary_two_house": // 구 8호 — 종전 동작 유지(15호 요건으로 판정) · 확인 필요(계획서 E-14e)
       return { kind: "two_house", oldRule: false };
+    // `temporary_two_house`는 구 8호가 받는다 — §155① 의제가 아니라 8호 요건(`oldClause8TemporaryTwoHouse`)으로
+    //   판정한다(`resolveOldClauseExclusion` · E-14e). 여기서는 호가 없다.
     case "long_term_rental_residence": // 구 14호
       return transferDate >= RENTAL_RESIDENCE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE
         ? { kind: "two_house", oldRule: false }
@@ -228,13 +239,17 @@ function twoHouseReason(input: MultiHouseSurchargeInput, mergeUnderOldRule: bool
  * @param countedRightCount 그중 산입된 조합원입주권·분양권 수 — 0이면 주택만의 세대(15호·13호),
  *   1 이상이면 법 §104⑦2호·4호 세대(§167의11①13호·§167의4③7호)
  * @param marriageSubtractionApplied §167의3⑨ 차감으로 3→2가 된 경우는 §155⑤ 비해당(#2a) — 혼인 의제를 받지 않는다
+ * @param countedRightList 산입된 권리 목록 — 구 §167의11①6·7호 「합침으로써」 판정(E-14f). 미제공은 빈 목록.
  */
 export function resolveDeemedSurchargeExclusion(
   input: MultiHouseSurchargeInput,
   effectiveHouseCount: number,
   countedRightCount: number,
   marriageSubtractionApplied: boolean,
+  countedRightList: readonly PresaleRight[] = [],
 ): ExclusionReason | undefined {
+  const old = resolveOldClauseExclusion(input, effectiveHouseCount, countedRightCount, countedRightList);
+  if (old) return old;
   const deemed = input.deemedOneHouseBy155;
   if (!deemed) return undefined;
   if ((deemed === "marriage_merge" || deemed === "marriage_merge_overlap") && marriageSubtractionApplied) {
@@ -272,4 +287,58 @@ function mergeAwareLabel(input: MultiHouseSurchargeInput): string {
     return `동거봉양 합가일(${at}) ${resolveMergeExemptionYears("parental_care", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제(§155④)`;
   }
   return deemedSourceLabel(input);
+}
+
+/**
+ * 2023.2.28. 전 양도분의 구 호 — 구 §167의10①8호(주택 2) · 구 §167의11①1·6·7호(주택 1 + 권리 1). §154① 요건이 없다
+ * (E-14e·f · 요건·구간 leaf `data/surcharge-old-clauses-era.ts`). 해당이 없으면 `undefined` — 그 뒤 의제 호 판정이 이어진다.
+ */
+function resolveOldClauseExclusion(
+  input: MultiHouseSurchargeInput,
+  effectiveHouseCount: number,
+  countedRightCount: number,
+  countedRights: readonly PresaleRight[],
+): ExclusionReason | undefined {
+  if (!isOldSurchargeClauseEra(input.transferDate) || effectiveHouseCount !== 2) return undefined;
+  const rights = Math.max(countedRightCount, 0);
+
+  if (rights === 0) {
+    if (input.oldClause8TemporaryTwoHouse !== true) return undefined;
+    return {
+      type: "temporary_two_house",
+      detail: `일시적 2주택 종전 주택 — 다른 주택 취득일부터 3년 이내 (${MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS_OLD})`,
+    };
+  }
+  if (rights !== 1) return undefined;
+
+  // 구 1호 — 「제156조의2제3항부터 제5항까지 또는 제156조의3제2항ㆍ제3항에 따라 … 양도소득세가 과세되는 주택」
+  const deemed = input.deemedOneHouseBy155;
+  if (
+    (deemed === "house_with_redevelopment_right" || deemed === "house_with_presale_right") &&
+    input.rightDeemingCitedByOldClause1 === true
+  ) {
+    return {
+      type: "right_holding_one_house",
+      detail: `${deemedSourceLabel(input)} — 중과 배제 (${MULTI_HOUSE.HOUSE_RIGHT_ONE_EACH_DEEMED_BASIS_OLD})`,
+    };
+  }
+
+  // 구 6호(동거봉양)·7호(혼인) — 합침으로써 주택 1 + 권리 1
+  const merge = resolveOldMergeRightClause({
+    transferDate: input.transferDate,
+    sellingHouseAcquisitionDate: input.houses.find((x) => x.id === input.sellingHouseId)?.acquisitionDate,
+    countedRightAcquisitionDates: countedRights.map((r) => r.acquisitionDate),
+    marriageDate: input.marriageMerge?.marriageDate,
+    parentalCareMergeDate: input.parentalCareMerge?.mergeDate,
+  });
+  if (!merge) return undefined;
+  const marriage = merge.kind === "marriage";
+  return {
+    type: marriage ? "marriage_merge" : "parental_care_merge",
+    detail:
+      `${marriage ? "혼인일" : "동거봉양 합가일"}(${merge.mergeDate.toISOString().slice(0, 10)}) ${merge.years}년 이내 — ` +
+      `합가로 주택 1 + 권리 1 · 중과 배제 (${
+        marriage ? MULTI_HOUSE.HOUSE_RIGHT_MARRIAGE_MERGE_BASIS_OLD : MULTI_HOUSE.HOUSE_RIGHT_PARENTAL_CARE_MERGE_BASIS_OLD
+      })`,
+  };
 }

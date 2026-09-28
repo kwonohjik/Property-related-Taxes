@@ -403,8 +403,11 @@ describe("의제 배제 호의 적용 개시일 · 권리 수 축", () => {
     ["long_term_rental_residence", "2021-02-16", undefined],
     ["long_term_rental_residence", "2021-02-17", MULTI_HOUSE.RENTAL_RESIDENCE_2HOUSE_BASIS_OLD],
     ["long_term_rental_residence", "2023-02-28", MULTI_HOUSE.RENTAL_RESIDENCE_2HOUSE_BASIS],
-    // 종전 동작 불변 — 일시적 2주택(구 8호 차이는 E-14e)·상속(경로 게이트)
-    ["temporary_two_house", "2021-02-16", MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS],
+    // E-14e — 2023.2.28. 전 일시적 2주택은 §155① 의제가 아니라 구 8호 사실(`oldClause8TemporaryTwoHouse`)이 받는다.
+    //   의제만 주고 8호 사실이 없으면 호가 없다(8호 사실 경로는 `surcharge-old-clauses-e14ef.anchor.test.ts`).
+    ["temporary_two_house", "2021-02-16", undefined],
+    ["temporary_two_house", "2023-02-28", MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS],
+    // 종전 동작 불변 — 상속(경로 게이트)
     ["inherited_general_house", "2021-02-17", MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS_OLD],
   ] as const)("2주택 %s · 양도 %s → %s", (deemed, t, basis) => {
     const r = reason(deemed, t, 2);

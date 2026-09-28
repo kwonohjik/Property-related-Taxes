@@ -26,6 +26,7 @@ import type {
   HouseInfo,
   MultiHouseSurchargeInput,
   ExclusionReason,
+  PresaleRight,
   RegulatedAreaHistory,
 } from "./types/multi-house-surcharge.types";
 import {
@@ -332,6 +333,8 @@ export function determineSurchargeExclusion(
    * (주택만 → 15호·13호 / 권리 포함 → §167의11①13호·§167의4③7호). 미제공은 0(주택만 — 직접 호출 하위호환).
    */
   countedRightCount = 0,
+  /** 산입된 조합원입주권·분양권(E-14f — 구 §167의11①6·7호 「합침으로써」 판정). 미제공은 빈 목록. */
+  countedRights: readonly PresaleRight[] = [],
 ): {
   isExcluded: boolean;
   exclusionReasons: ExclusionReason[];
@@ -353,6 +356,7 @@ export function determineSurchargeExclusion(
     effectiveHouseCount,
     countedRightCount,
     marriageSubtractionApplied,
+    countedRights,
   );
   if (deemedReason) {
     exclusionReasons.push(deemedReason);
