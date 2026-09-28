@@ -271,22 +271,56 @@ export const FOR_PROFIT_DONEE_REASON = `영리법인 수증자 — 증여세 납
  * ⚠️ `thresholdEcho`는 건드리지 않는다 — §40·§41의3·§42·§42의3이 `gain` 키를 **각자의 의미로**
  *    이미 쓴다. 덮어쓰면 그 의미가 바뀐다.
  */
-export function forProfitDoneeExcludedResult(result: DeemedGiftResult): DeemedGiftResult {
+export function forProfitDoneeExcludedResult(
+  result: DeemedGiftResult,
+  reason: string = FOR_PROFIT_DONEE_REASON,
+): DeemedGiftResult {
   return {
     ...result,
     applied: false,
     deemedGiftValue: 0,
-    exclusionReason: FOR_PROFIT_DONEE_REASON,
+    exclusionReason: reason,
+    // §45의5의 결론 행은 「증여의제이익」이다(7-16 실측) — 정의어 목록에 없으면 제외 결과에 그대로 남는다
     breakdown: result.breakdown.map((row) =>
-      /증여재산가액|증여추정가액/.test(row.label)
+      /증여재산가액|증여추정가액|증여의제이익/.test(row.label)
         ? {
             ...row,
             label: row.label
               .replace("합산 증여재산가액", "제외 전 합산 산출 이익")
               .replace("증여재산가액", "제외 전 산출 이익")
-              .replace("증여추정가액", "제외 전 추정가액"),
+              .replace("증여추정가액", "제외 전 추정가액")
+              .replace("증여의제이익", "제외 전 산출 이익"),
           }
         : row,
     ),
   };
+}
+
+/** §4의2③ 제외 사유 */
+export const INCOME_TAXED_DONEE_REASON = `수증자에게 소득세·법인세 부과 — 증여세를 부과하지 아니함 (${GIFT.DONEE_INCOME_OR_CORP_TAXED})`;
+
+/**
+ * §4의2③ 계산 단위 토글(`doneeIncomeOrCorporateTaxed`)이 걸리는 입력 — 수증자 1명(한 묶음) 입력 (7-16).
+ *   = 영리법인 계산 단위 토글과 같은 모집단(`forProfitDoneeGateApplies`)
+ *   + §39 단건(`capital_increase`)·§39①3호 전환주식 — 영리법인 축은 자체 토글이 있어 위 모집단에 없다
+ *   + §45의5 단일 모드(`shareholders` 없음·빈 배열 — router의 dispatch 조건 그대로)
+ * 밖: §41의2(법 §41의2① 「제4조의2제3항에도 불구하고」) · §45의2(②가 「제1항에도 불구하고」 실제소유자에게) ·
+ *     §45의3(명부뿐) · 모든 명부 모드(범위 — 사용자 결정 2026-09-28) · cap-table(라우터 밖).
+ */
+export function incomeTaxedDoneeGateApplies(input: DeemedGiftInput): boolean {
+  if (forProfitDoneeGateApplies(input)) return true;
+  switch (input.type) {
+    case "capital_increase":
+    case "convertible_stock":
+      return true;
+    case "specific_corp":
+      return !(input.shareholders && input.shareholders.length > 0);
+    default:
+      return false;
+  }
+}
+
+/** §4의2③ 제외 결과 — 정의어·금액 규칙은 영리법인 제외와 같다. §45의5 한도 계산(결정세액)은 남기지 않는다 */
+export function incomeTaxedDoneeExcludedResult(result: DeemedGiftResult): DeemedGiftResult {
+  return { ...forProfitDoneeExcludedResult(result, INCOME_TAXED_DONEE_REASON), specificCorpLimit: undefined };
 }

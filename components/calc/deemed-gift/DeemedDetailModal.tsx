@@ -9,6 +9,8 @@
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { forProfitDoneeToggleVisible } from "@/lib/calc/gift-deemed-api";
+import { incomeTaxedToggleVisible } from "@/lib/calc/gift-deemed-api";
+import { incomeTaxedRosterNotice } from "@/lib/calc/gift-deemed-api";
 import {
   Dialog,
   DialogContent,
@@ -125,6 +127,27 @@ export function DeemedDetailModal({
                 data-testid="deemed-donee-for-profit-corp"
               />
             </div>
+          )}
+
+          {/* 「상증법」§4의2③ — 수증자 1명(한 묶음) 입력만(7-16). ④와 같은 판정 함수 */}
+          {incomeTaxedToggleVisible(form) && (
+            <div className="mt-3">
+              <ToggleCard
+                lawLinks="상증법"
+                tone="violet"
+                checked={form.doneeIncomeTaxed}
+                onCheckedChange={(v) => set({ doneeIncomeTaxed: v })}
+                title="수증자에게 소득세·법인세 부과 (§4의2③)"
+                description="이 증여재산(이익)에 대하여 수증자에게 「소득세법」에 따른 소득세 또는 「법인세법」에 따른 법인세가 부과되는 경우(비과세·감면되는 경우 포함) 증여세를 부과하지 않습니다. 산출된 이익은 산출근거에 「제외 전 산출 이익」으로 남습니다."
+                data-testid="deemed-donee-income-taxed"
+              />
+            </div>
+          )}
+          {incomeTaxedRosterNotice(form) && (
+            <p className="mt-3 text-xs text-muted-foreground" data-testid="deemed-donee-income-taxed-roster-notice">
+              명부 입력에서는 「상증법」 제4조의2제3항(수증자에게 소득세·법인세가 부과되면 증여세 없음)을 반영하지 않습니다.
+              소득세·법인세가 부과되는 수증자가 있으면 그 수증자는 이 결과를 그대로 적용할 수 없습니다.
+            </p>
           )}
 
           {error && (

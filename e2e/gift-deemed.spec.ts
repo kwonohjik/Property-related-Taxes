@@ -46,6 +46,21 @@ test.describe("증여로 보는 경우 (gift-deemed)", () => {
     await expect(page.getByText("제외 전 산출 이익").first()).toBeVisible();
   });
 
+  // 「상증법」§4의2③(7-16) — 수증자에게 소득세·법인세가 부과되면 증여세 없음. 영리법인 토글과 다른 축이다.
+  test("§35 수증자에게 소득세 부과(§4의2③) → 증여세 미적용 · 이관 버튼 없음 · 사유 ③", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "bargain_transfer");
+    await page.getByLabel("시가", { exact: true }).fill("1000000000");
+    await page.getByLabel("거래대가", { exact: true }).fill("600000000");
+    await page.getByRole("switch", { name: /소득세·법인세 부과/ }).click();
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("§4의2③");
+    await expect(page.getByTestId("deemed-exclusion")).not.toContainText("영리법인");
+    await expect(page.getByTestId("deemed-to-wizard")).toHaveCount(0);
+    await expect(page.getByText("제외 전 산출 이익").first()).toBeVisible();
+  });
+
   test("§34 보험금 1호 보험금1억·총1천만·타인600만 → 6,000만", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "insurance");
