@@ -19,6 +19,7 @@ import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import { resolveLthdTable2Era } from "./data/lthd-table2-era";
+import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
 import type {
   TransferTaxInput,
   TemporaryTwoHouseDelayReason,
@@ -342,6 +343,7 @@ export const PROVISO_LABEL: Record<
   overseas_residence: "2호다 국외거주",
   unavoidable: "3호 부득이",
   pre_designation_contract: "5호 공고전계약",
+  rental_registration_4ho: "4호 임대사업자 등록",
 };
 
 /**
@@ -386,6 +388,9 @@ export function resolveExemptionProviso(
     case "pre_designation_contract":
       // 5호: 거주만 면제 (계약금일 무주택은 UI validation으로 담보)
       return "residence_only";
+    case "rental_registration_4ho":
+      // 삭제 전 4호: 거주만 면제 — 부칙<제30395호> 제38조 경과조치 (`one-house/rental-registration-4ho.ts`)
+      return resolveRental4hoRegistration(input)?.status === "applies" ? "residence_only" : null;
     default:
       return null;
   }

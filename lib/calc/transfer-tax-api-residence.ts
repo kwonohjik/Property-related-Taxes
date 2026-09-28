@@ -8,6 +8,8 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { toDate } from "@/lib/api/date-coerce";
+import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
+import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
@@ -107,6 +109,10 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
             : {}),
           ...(form.provisoBusinessApprovalDate
             ? { businessApprovalDate: toDate(form.provisoBusinessApprovalDate, "provisoBusinessApprovalDate") }
+            : {}),
+          // OH-38 — Step4 거주요건 안내도 ④·⑭와 같은 조립·같은 변환(단일 진실)
+          ...(effectiveReason === "rental_registration_4ho"
+            ? { rentalRegistration4ho: toEngineRental4ho(buildRental4hoPayload(form)) }
             : {}),
         }
       : undefined,

@@ -21,6 +21,36 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywords: ["기간의 말일이 토요일 또는 공휴일에 해당한 때에는 기간은 그 익일로 만료한다"],
     keywordMode: "ALL",
   },
+  // ── 삭제된 소득세법 시행령 §154①4호 경과조치 (OH-38 · legal-codes/transfer-house.ts RENTAL_REGISTRATION_4HO) ──
+  // 키워드는 KoreanLaw MCP 현행 본문 verbatim(소득세법 2026-07-01 시행본 · 민간임대주택법 MST 276995, 2026-09-28 조회).
+  {
+    id: "INCOME_TAX.BUSINESS_REGISTRATION",
+    citation: "소득세법 §168",
+    keywords: ["사업자등록 및 고유번호의 부여", "새로 사업을 시작하는 사업자는"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "PRIVATE_RENTAL.REGISTRATION",
+    citation: "민간임대주택에 관한 특별법 §5",
+    keywords: ["임대사업자의 등록", "주택을 임대하려는 자는"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "PRIVATE_RENTAL.CANCELLATION",
+    citation: "민간임대주택에 관한 특별법 §6",
+    keywords: [
+      "임대사업자 등록의 말소",
+      "임대사업자가 임대의무기간 내 등록 말소를 신청",
+      "임대의무기간이 종료한 날 등록이 말소된다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "PRIVATE_RENTAL.MANDATORY_PERIOD",
+    citation: "민간임대주택에 관한 특별법 §43",
+    keywords: ["임대의무기간 및 양도 등", "그 기간이 지나지 아니하면 이를 양도할 수 없다"],
+    keywordMode: "ALL",
+  },
   {
     id: "NTBL.ASSESSMENT_PERIOD",
     citation: "국세기본법 §26의2",

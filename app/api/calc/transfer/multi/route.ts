@@ -11,6 +11,7 @@
  *   2차: determinedTax 주입 후 가산세 포함 재계산
  */
 
+import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import {
@@ -357,6 +358,7 @@ export async function POST(request: NextRequest) {
             departureDate: toOptionalDate(p.oneHouseExemptionProviso.departureDate),
             expropriationDate: toOptionalDate(p.oneHouseExemptionProviso.expropriationDate),
             businessApprovalDate: toOptionalDate(p.oneHouseExemptionProviso.businessApprovalDate),
+            rentalRegistration4ho: toEngineRental4ho(p.oneHouseExemptionProviso.rentalRegistration4ho),
           }
         : undefined,
       parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,

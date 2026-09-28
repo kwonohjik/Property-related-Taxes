@@ -52,6 +52,7 @@ import {
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
+import { collectRental4hoUnmet } from "./rental-registration-4ho";
 import type {
   OneHouseJudgeInput,
   OneHousePendingCondition,
@@ -437,6 +438,7 @@ export function collectUnmetExceptions(
     ...collectUnavoidableUnmet(input, oneHouseRules),
     ...collectCulturalHeritageUnmet(input, oneHouseRules),
     ...collectRuralUnmet(input, oneHouseRules),
+    ...collectRental4hoUnmet(input), // OH-38 삭제 전 §154①4호
   ];
 }
 

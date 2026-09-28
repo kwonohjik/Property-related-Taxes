@@ -3,6 +3,7 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
+import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -373,6 +374,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
             ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
             ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
             ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+            ...(effectiveProviso === "rental_registration_4ho"
+              ? { rentalRegistration4ho: buildRental4hoPayload(form) }
+              : {}),
           },
         }
       : {}),

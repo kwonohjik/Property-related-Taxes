@@ -173,10 +173,26 @@ export const propertyBaseShape = {
         "overseas_residence",
         "unavoidable",
         "pre_designation_contract",
+        "rental_registration_4ho",
       ]),
       departureDate: z.string().date().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
+      // ⑫ OH-38 삭제 전 4호 판정 사실 — ⑭ `toEngineRental4ho`(lib/api/rental-4ho-coerce.ts)와 같은 키
+      rentalRegistration4ho: z
+        .object({
+          businessRegistrationApplicationDate: z.string().date().optional(),
+          rentalRegistrationApplicationDate: z.string().date().optional(),
+          regulatedOneHouseAtApplication: z.boolean().optional(),
+          statusAtTransfer: z
+            .enum(["maintained", "auto_cancelled", "voluntary_cancelled", "demolition_cancelled", "other"])
+            .optional(),
+          transferredDuringMandatoryPeriod: z.boolean().optional(),
+          rentIncreaseOver5Percent: z.boolean().optional(),
+          rentIncreaseContractDate: z.string().date().optional(),
+          giftSuccessionSeparatedHousehold: z.boolean().optional(),
+        })
+        .optional(),
     })
     .optional(),
   // 다주택 중과 한시 유예 조건부 판정 — §167의3①12의2 가·나·다목(§167의10①12의2 미러).
