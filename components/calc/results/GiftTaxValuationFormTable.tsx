@@ -28,6 +28,7 @@ import {
   PROPERTY_TYPE_LABEL,
   computeRow10,
   computeRow14,
+  buppyo1QuantityOrArea,
 } from "@/lib/calc/gift-valuation-besshi";
 
 // ============================================================
@@ -242,7 +243,7 @@ export function GiftTaxValuationFormTable({
               const item = itemMap.get(vr.estateItemId);
               const propertyCode = item ? toEstateItemTypeCode(item.category) : "12";
               const methodCode = item ? toEstateItemValuationMethodCode(item, vr) : "08";
-              const shares = item?.listedStockShares;
+              const quantityOrArea = buppyo1QuantityOrArea(item);
               const unitPrice = item?.listedStockAvgPrice;
               return (
                 <tr key={vr.estateItemId} data-testid={`row-data-${i + 1}`}>
@@ -265,7 +266,7 @@ export function GiftTaxValuationFormTable({
                     &nbsp;
                   </td>
                   <td className={CELL_AMOUNT} data-testid="col-shares">
-                    {shares ? shares.toLocaleString() : ""}
+                    {quantityOrArea ? quantityOrArea.toLocaleString() : ""}
                   </td>
                   <td className={CELL_AMOUNT} data-testid="col-unit-price">
                     {unitPrice ? formatKRW(unitPrice) : ""}

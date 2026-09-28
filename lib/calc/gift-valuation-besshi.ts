@@ -10,6 +10,7 @@
  */
 
 import { computePriorGiftAddition } from "@/lib/tax-engine/gift-tax-filing-form-besshi10";
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
  * ② 재산종류코드 14종 라벨.
@@ -58,4 +59,23 @@ export function computeRow14(
   donorPaidTax: number = 0,
 ): number {
   return computePriorGiftAddition(aggregated, gross, exempt, debtAssumed, donorPaidTax);
+}
+
+/**
+ * ⑤ 수량(면적) — 상장주식은 주식수, 부동산은 면적(㎡). 그 밖에는 공란(#101).
+ *
+ * · 부동산 면적은 증여 마법사에서도 입력된다(동·호 조회 자동채움 · 부담부증여 면적). 상속 부표2
+ *   (`besshi-buppyo-2-data.ts`)는 이미 ⑤에 싣는데 증여 부표1만 버렸다.
+ *   카테고리가 부동산일 때만 읽는다 — 카테고리를 바꿔도 `areaSqm`이 남을 수 있다.
+ * · `quantityCount`는 읽지 않는다 — 입력 위젯(`EstateValuationMetaSection`)이 상속 모드 전용이라
+ *   증여에는 입력 경로가 없다.
+ * · §39 등 증여의제 이관 항목은 공란이 정답이다 — 「상증법」§39①은 「그 이익에 상당하는 **금액**」을
+ *   증여재산가액으로 하고, 「상증칙」 별지 제10호서식 부표1 작성방법에 ⑤·⑥ 기재 지시가 없다.
+ *   엔진 산출근거(1주당 이익 × 이익 귀속 주식수)를 여기에 주입하지 말 것.
+ */
+export function buppyo1QuantityOrArea(item: EstateItem | undefined): number | undefined {
+  if (!item) return undefined;
+  if (item.listedStockShares) return item.listedStockShares;
+  if (item.category.startsWith("real_estate") && item.areaSqm) return item.areaSqm;
+  return undefined;
 }
