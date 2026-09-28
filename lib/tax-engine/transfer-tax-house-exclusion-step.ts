@@ -11,6 +11,7 @@
 import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps } from "./transfer-inheritance-exclusion";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
+import type { SpecialHouseExclusionResolution } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
@@ -46,26 +47,100 @@ export function resolveExemptionHouseCountExclusions(
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
     specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount,
+    ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail),
   };
 }
+
+/**
+ * 보유 감면주택 제외 중 15호·13호의 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」에
+ * 든다고 **해석으로 확인된** 조문만 (E-14a) — `SPECIAL_ACT_15HO_VERIFIED_ARTICLES`. 단건·겸용 공용.
+ */
+export function verifiedSpecialAct15Exclusions(detail: SpecialHouseExclusionResolution): {
+  /** 확인된 조문으로 뺀 수 */
+  specialActVerified15Count: number;
+  /** 그 조문의 인용(표시용) — 중과 배제 사유 detail이 적는다 */
+  specialActVerified15Basis: string[];
+} {
+  const verified = detail.entries.filter((e) => e.eligible && SPECIAL_ACT_15HO_VERIFIED_ARTICLES.has(e.article));
+  return {
+    specialActVerified15Count: verified.length,
+    specialActVerified15Basis: verified.map((e) => e.legalBasis),
+  };
+}
+
+/**
+ * 영 §167의10①15호 등 ① 요소 — **확인된** 조특법 감면주택 제외만으로 양도 주택 하나가 남았는가 (E-14a).
+ * 상속(§155②③) 제외와 섞이면 열지 않는다(확인 필요). 단건(`resolveSurchargeDeemedOneHouseDetail`)과 겸용이 같은 술어를 쓴다.
+ */
+export function specialActHouseExclusionBasis(p: {
+  isOneHousehold: boolean;
+  /** `surcharge15HouseCount`의 값(확인 인자 포함) */
+  houseCount: number;
+  inheritedExcludedCount: number;
+  specialActVerified15Count: number;
+  specialActVerified15Basis: string[];
+}): { basis: DeemedOneHouseBasis; source: string } | undefined {
+  return p.isOneHousehold && p.houseCount === 1 && p.specialActVerified15Count > 0 && p.inheritedExcludedCount === 0
+    ? { basis: "special_act_house_exclusion", source: p.specialActVerified15Basis.join("·") }
+    : undefined;
+}
+
+/**
+ * 영 §167의10①15호·§167의3①13호의 「「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로
+ * 보거나」에 드는 것으로 **해석이 확인된** 보유 감면주택 조문 (E-14a).
+ *
+ * - 서면-2023-부동산-0197(부동산납세과-1627, 2023.6.22.) — 조특법 §99의2① 감면주택(A)과 상속주택(B) 보유,
+ *   B 양도: 「…A주택은 해당 거주자의 소유주택으로 보지 아니하는 것입니다」 · 「…같은 영 제154조제1항의 요건을
+ *   모두 충족하는 경우에는 같은 영 제167조의10제1항제15호에 따라 중과세율을 적용하지 아니하며 장기보유특별공제도
+ *   적용할 수 있는 것입니다」.
+ * - 아래 조문은 조특법 본문이 §99의2②와 **같은 문형**이다(조특법 MST 284389 실독): 「「소득세법」 제89조제1항
+ *   제3호를 적용할 때 제1항을 적용받는 …주택은 해당 거주자의 소유주택으로 보지 아니한다」 — §98의2④·§98의3③·
+ *   §98의5②·§98의6②·§98의7②·§98의8②·§99의2② · §99②·§99의3②(「…2007년 12월 31일까지 양도하는 경우에만」).
+ *
+ * ⚠️ **넣지 않은 것**(확인 필요 — 종전 동작 유지):
+ * - `unsold_98` — 근거가 법률이 아니라 조특법 **시행령** §98②·⑥(「…다른 주택만을 기준으로 하여 「소득세법」
+ *   제89조제1항제3호를 적용한다」)이다. 15호는 「「조세특례제한법」에 따라」라고만 한다.
+ * - §99의4(농어촌·고향주택)·§98의9(준공후미분양) — `resolveHouseCountExclusion` 축. 문형이 다르고(「…해당 1세대의
+ *   소유주택이 아닌 것으로 보아 「소득세법」 제89조제1항제3호를 적용한다」) 그 조문에 15호·13호를 적용한 해석을
+ *   찾지 못했다(국세청 검색 · 계획서 §9.3 E-14a).
+ */
+const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
+  "unsold_98_2",
+  "unsold_98_3",
+  "unsold_98_5",
+  "unsold_98_6",
+  "unsold_98_7",
+  "unsold_98_8",
+  "unsold_99_2",
+  "new_99",
+  "new_99_3",
+]);
 
 /**
  * 영 §167의10①15호(·§167의3①13호) **① 요소** 판정용 세대 주택 수 (E-14).
  *
  * 비과세 E-3이 보는 값(`exemptionJudgeInput.householdHousingCount` — §155②③·조특법 제외 후)과 같다.
- * 단 **조특법 제외만으로 2 미만**이 되는 경우는 조특법 주택을 센 값을 쓴다 — 15호의 「「조세특례제한법」에
- * 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」가 조특법 §99의4 등 「소유주택이 아닌 것으로 보아
- * 소득세법 §89①3호를 적용」하는 조문까지 포섭하는지 직접 선례를 확보하지 못했다(확인 필요) ⇒ 그 축은
- * 종전 동작(조특법 주택이 주택 수에 남은 채 §155 의제를 판정)을 유지한다.
+ * 단 **확인되지 않은 조특법 제외**가 섞인 채 2 미만이 되는 경우는 그 조특법 주택을 센 값을 쓴다 — 15호의
+ * 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」가 조특법 §99의4·§98의9(「…소유주택이
+ * 아닌 것으로 보아 「소득세법」 제89조제1항제3호를 적용한다」)까지 포섭하는지 직접 선례를 확보하지 못했다
+ * (확인 필요) ⇒ 그 축은 종전 동작(조특법 주택이 주택 수에 남은 채 §155 의제를 판정)을 유지한다.
+ *
+ * E-14a — 보유 감면주택 중 **해석으로 확인된** 조문(`verifiedSpecialActExcludedCount` —
+ * `SPECIAL_ACT_15HO_VERIFIED_ARTICLES`, 부동산납세과-1627)은 빼고 센다. 그래서 그 제외만으로 1이 되면 1이다.
+ * 생략하면 0 — 종전 동작과 같다(겸용 경로가 그렇게 부른다).
  */
 export function surcharge15HouseCount(
   householdHousingCount: number,
   inheritedExcludedCount: number,
   specialActExcludedCount: number,
+  verifiedSpecialActExcludedCount = 0,
 ): number {
   const withoutInherited = Math.max(householdHousingCount - inheritedExcludedCount, 0);
   const exemptionCount = Math.max(withoutInherited - specialActExcludedCount, 0);
-  if (specialActExcludedCount > 0 && exemptionCount < 2) return withoutInherited;
+  const unverified = specialActExcludedCount - verifiedSpecialActExcludedCount;
+  if (unverified > 0 && exemptionCount < 2) {
+    return Math.max(withoutInherited - verifiedSpecialActExcludedCount, 0);
+  }
   return exemptionCount;
 }
 

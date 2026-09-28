@@ -12,8 +12,6 @@
 import { addMonths, addDays, subDays, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import {
-  MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE,
-  CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE,
   MULTI_HOUSE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   SURCHARGE_TRANSITION,
@@ -21,8 +19,7 @@ import {
   SURCHARGE_TRANSITION_DESIGNATION_DATE,
 } from "./legal-codes";
 import { REGULATED_REGIONS } from "./data/regulated-areas";
-// 합가 기한 연수(양도일 연혁) — 비과세 판정(`matchMergeWindow`)과 같은 leaf. 배제 detail 문구용.
-import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
+import { resolveDeemedSurchargeExclusion } from "./multi-house-surcharge-deemed-exclusion";
 import type { RegulatedRegion } from "./data/regulated-areas";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import type {
@@ -318,68 +315,6 @@ function getFirstDesignatedDate(
   return dates.sort((a, b) => a.getTime() - b.getTime())[0];
 }
 
-/** 15호 배제 사유 — 의제 근거 항마다 라벨과 근거 조문이 다르다. */
-function deemedOneHouseExclusionReason(
-  input: MultiHouseSurchargeInput,
-  mergeUnderOldRule: boolean,
-): ExclusionReason {
-  switch (input.deemedOneHouseBy155) {
-    case "rural_house":
-      return {
-        type: "rural_house",
-        detail: `농어촌주택 보유 1세대1주택 의제 (${MULTI_HOUSE.RURAL_HOUSE_2HOUSE_BASIS})`,
-      };
-    case "inherited_general_house":
-      return {
-        type: "inherited_general_house",
-        detail: `상속주택 보유 일반주택 1세대1주택 의제 (${
-          input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE
-            ? MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS_OLD
-            : MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS
-        })`,
-      };
-    case "marriage_merge_overlap":
-    case "parental_care_merge_overlap": {
-      const marriage = input.deemedOneHouseBy155 === "marriage_merge_overlap";
-      const d = (marriage ? input.marriageMerge!.marriageDate : input.parentalCareMerge!.mergeDate)
-        .toISOString()
-        .slice(0, 10);
-      const years = resolveMergeExemptionYears(marriage ? "marriage" : "parental_care", input.transferDate);
-      return {
-        type: marriage ? "marriage_merge" : "parental_care_merge",
-        detail:
-          `${marriage ? "혼인일" : "동거봉양 합가일"}(${d}) ${years}년 내 먼저 양도 + 일시적 2주택(§155①) 중첩 — ` +
-          `1세대1주택 의제 중과 배제 (${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})`,
-      };
-    }
-    case "marriage_merge": {
-      const d = input.marriageMerge!.marriageDate.toISOString().slice(0, 10);
-      const basis = mergeUnderOldRule
-        ? MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS_OLD
-        : MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS;
-      return {
-        type: "marriage_merge",
-        detail: `혼인일(${d}) ${resolveMergeExemptionYears("marriage", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
-      };
-    }
-    case "parental_care_merge": {
-      const d = input.parentalCareMerge!.mergeDate.toISOString().slice(0, 10);
-      const basis = mergeUnderOldRule
-        ? MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS_OLD
-        : MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS;
-      return {
-        type: "parental_care_merge",
-        detail: `동거봉양 합가일(${d}) ${resolveMergeExemptionYears("parental_care", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
-      };
-    }
-    default:
-      return {
-        type: "temporary_two_house",
-        detail: `일시적 2주택 1세대1주택 의제 — 종전주택 처분기한 이내 (${MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS})`,
-      };
-  }
-}
-
 // ============================================================
 // Step 3: 중과세 배제 사유 판단 (소령 §167-10, §167-3 ①)
 // ============================================================
@@ -392,6 +327,11 @@ export function determineSurchargeExclusion(
   excludedHouseIds: Set<string>,
   /** #2a: 오케스트레이터 Step 1.5에서 §167의3⑨ 차감이 적용됐는지 — 배제 2(§155⑤) 오염 방지 */
   marriageSubtractionApplied: boolean,
+  /**
+   * `effectiveHouseCount` 중 산입된 조합원입주권·분양권 수(E-14c) — 의제 배제 호를 가른다
+   * (주택만 → 15호·13호 / 권리 포함 → §167의11①13호·§167의4③7호). 미제공은 0(주택만 — 직접 호출 하위호환).
+   */
+  countedRightCount = 0,
 ): {
   isExcluded: boolean;
   exclusionReasons: ExclusionReason[];
@@ -402,41 +342,21 @@ export function determineSurchargeExclusion(
   const exclusionReasons: ExclusionReason[] = [];
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
 
-  // 배제 1: §155 1세대1주택 의제 — 영 §167의10①15호(3주택 이상은 §167의3①13호 동문).
-  // 15호 2요소: ① §155 의제 성립 — caller가 **비과세 정본으로 선판정**해 주입한다
-  //   (①⑦ `resolveDeemedOneHouseBy155`, ④⑤ `resolveMergeDeeming`). 여기서 재판정하지 않는다 —
-  //   종전 배제 2(혼인)·3(동거봉양)은 자체 판정이라 2주택·먼저 양도·합가 전 취득·§154① 요건이
-  //   빠져 비과세와 어긋났다(계획서 transfer-review-4-defects D9).
+  // 배제 1: 1세대1주택 의제 — 영 §167의10①15호 · §167의3①13호 · §167의11①13호 · §167의4③7호(같은 문언).
+  // 2요소: ① 의제 성립 — caller가 **비과세 정본으로 선판정**해 주입한다(`resolveSurchargeDeemedOneHouse`).
+  //   여기서 재판정하지 않는다 — 종전 배제 2(혼인)·3(동거봉양)은 자체 판정이라 2주택·먼저 양도·합가 전
+  //   취득·§154① 요건이 빠져 비과세와 어긋났다(계획서 transfer-review-4-defects D9).
   // ② §154① 요건 모두 충족 — 미제공(?? true)은 충족 간주(직접 호출 하위호환).
-  //   합가(④⑤)는 2023.2.28. 전 양도분이면 구 5호(동거봉양)·6호(혼인)라 ② 요건이 없다.
-  const deemed = input.deemedOneHouseBy155;
-  const isOverlapDeemed =
-    deemed === "marriage_merge_overlap" || deemed === "parental_care_merge_overlap";
-  const isMergeDeemed =
-    deemed === "marriage_merge" || deemed === "parental_care_merge" || isOverlapDeemed;
-  const mergeUnderOldRule =
-    isMergeDeemed &&
-    effectiveHouseCount === 2 &&
-    input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE;
-  // ⑨ 차감으로 3→2가 된 경우는 §155⑤ 비해당 → 본인 2주택 중과
-  const marriageBlocked =
-    (deemed === "marriage_merge" || deemed === "marriage_merge_overlap") && marriageSubtractionApplied;
-  const meets154 = mergeUnderOldRule || (input.sellingHouseMeetsOneHouseRequirements ?? true);
-  /**
-   * F-1 — ①과 ④⑤가 겹쳐 **3주택**이 된 경우는 13호가 통로다. 13호는 2021.2.17. 신설이고,
-   * 그 전 양도분은 중첩으로 비과세가 되어도 중과세율이 적용됐다(사전-2019-법령해석재산-0368).
-   * 세대 주택 수가 제외 규정으로 2가 되면 종전 15호 경로(위 조건)가 그대로 맡는다.
-   */
-  const overlapExcluded =
-    isOverlapDeemed &&
-    effectiveHouseCount === 3 &&
-    input.transferDate >= CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE &&
-    (input.sellingHouseMeetsOneHouseRequirements ?? true);
-  if ((effectiveHouseCount === 2 && deemed && meets154) || overlapExcluded) {
-    if (!marriageBlocked) {
-      exclusionReasons.push(deemedOneHouseExclusionReason(input, mergeUnderOldRule));
-      return { isExcluded: true, exclusionReasons, isSuspended: false };
-    }
+  // 어느 호가 받는지(주택·권리 수 · 인용 특례 조문 · 양도일 연혁)는 `resolveDeemedSurchargeExclusion` (E-14b·c).
+  const deemedReason = resolveDeemedSurchargeExclusion(
+    input,
+    effectiveHouseCount,
+    countedRightCount,
+    marriageSubtractionApplied,
+  );
+  if (deemedReason) {
+    exclusionReasons.push(deemedReason);
+    return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
   // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 지급 증빙

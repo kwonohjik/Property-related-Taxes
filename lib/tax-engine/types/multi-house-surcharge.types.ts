@@ -407,7 +407,15 @@ export type DeemedOneHouseBasis =
   /** F-1 — §155①+④ 중첩(3주택) — `resolveMergeOverlapDeeming` */
   | "parental_care_merge_overlap"
   /** E-14 — §155②③ 상속주택 + 일반주택 → 일반주택 1주택 의제 — `resolveSurchargeDeemedOneHouse` */
-  | "inherited_general_house";
+  | "inherited_general_house"
+  /** E-14c — §155⑳ 장기임대주택 + 거주주택 → 거주주택 1주택 의제(시나리오 A) — `resolveSurchargeDeemedOneHouse` */
+  | "long_term_rental_residence"
+  /** E-14a — 조특법 감면주택을 「소유주택으로 보지 아니」해 양도 주택만 남는 경우 — `resolveSurchargeDeemedOneHouse` */
+  | "special_act_house_exclusion"
+  /** E-14c — §156의2(주택 + 조합원입주권) 예외 충족 → 1세대1주택 의제 — `resolveSurchargeDeemedOneHouse` */
+  | "house_with_redevelopment_right"
+  /** E-14c — §156의3(주택 + 분양권) 예외 충족 → 1세대1주택 의제 — `resolveSurchargeDeemedOneHouse` */
+  | "house_with_presale_right";
 
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */
@@ -430,9 +438,16 @@ export interface MultiHouseSurchargeInput {
    * 「비과세 O / 중과배제 X」 모순을 만들었다(계획서 F-2). caller가 §155① 정본
    * (`judgeTemporaryTwoHouseTiming` + `resolveTemporaryTwoHouseDeadlineYears`) 결과를 주입한다.
    *
-   * 값은 의제 근거 항이다. ⑦(농어촌)·①(일시적 2주택)·④⑤(합가)를 채운다 — 나머지 항은 후속.
+   * 값은 의제 근거 항이다. ⑦(농어촌)·①(일시적 2주택)·④⑤(합가)·②③(상속, E-14)·⑳(거주주택, E-14c)·
+   * 조특법 감면주택(E-14a)·§156의2·§156의3(E-14c — 이 둘은 15호가 아니라 §167의11①13호·§167의4③7호)을 채운다.
+   * 어느 호로 배제되는지는 주택·권리 수와 양도일로 `resolveDeemedSurchargeExclusion`이 정한다.
    */
   deemedOneHouseBy155?: DeemedOneHouseBasis;
+  /**
+   * 의제 근거 조문 **표시용** — 조특법 감면주택(`special_act_house_exclusion` — 예: 「조특법 §99의2②」)과
+   * §156의2·§156의3(충족한 예외 항 — 예: 「소득세법 시행령 §156의2 ③」)만 채운다. 판정에는 쓰지 않는다.
+   */
+  deemedOneHouseSource?: string;
   /**
    * 영 §167의10①**4호**「제155조제8항에 따른 수도권 밖에 소재하는 주택」.
    *
@@ -503,7 +518,10 @@ export interface ExclusionReason {
     | "inherited_house_5years"      // 양도 주택 자체가 §155② 상속주택 5년 이내 (§167의3①7호 · 2주택 §167의10①2호) — D16
     | "long_term_rental_house"      // 양도 주택 자체가 장기임대주택 (§167의3①2호 · 2주택 §167의10①2호) — D16
     | "only_general_two_house"      // 2주택 — 다른 주택이 1~7호라 1주택만 소유 (§167의10①10호) — D16
-    | "inherited_general_house";    // §155②③ 상속주택 보유 일반주택 1주택 의제 (§167의10①15호 · 구 13호) — E-14
+    | "inherited_general_house"     // §155②③ 상속주택 보유 일반주택 1주택 의제 (§167의10①15호 · 구 13호) — E-14
+    | "long_term_rental_residence"  // §155⑳ 장기임대주택 보유 거주주택 1주택 의제 (§167의10①15호 · 구 14호 · 3주택+ §167의3①13호) — E-14c
+    | "special_act_house_exclusion" // 조특법 감면주택 소유주택 제외 → 1주택 의제 (§167의10①15호) — E-14a
+    | "right_holding_one_house";    // §156의2·§156의3 1세대1주택 의제 (§167의11①13호 · 합 3 이상 §167의4③7호) — E-14c
   detail: string;
 }
 

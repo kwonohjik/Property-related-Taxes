@@ -98,7 +98,14 @@ describe("resolveSurchargeDeemedOneHouse — §155② 경로 시행일(구 13호
     expect(resolveSurchargeDeemedOneHouse(input("2026-09-18", { isOneHousehold: false }), parsed)).toBeUndefined();
   });
 
-  it("조특법 제외만으로 1주택 + 명부 도출 §155① 타이밍 충족 → 종전 동작(temporary_two_house) 유지 · 확인 필요", () => {
+  /**
+   * E-14a(2026-09-28)에서 갈라졌다 — 종전에는 조특법 제외 전부를 「확인 필요」로 두고 이 시료(§98의7)도
+   * `temporary_two_house`(조특법 주택을 센 채 §155① 판정)였다. 부동산납세과-1627(조특법 §99의2 감면주택 +
+   * 상속주택 양도 → 15호 배제)로 **같은 문형**(「「소득세법」 제89조제1항제3호를 적용할 때 … 소유주택으로 보지
+   * 아니한다」)의 보유 감면주택 조문은 확인됐다 ⇒ 그 제외만으로 1주택이면 조특법 경로다.
+   * 종전 동작 단언은 **확인되지 않은 축**(조특법 시행령 §98②·⑥)으로 옮겼다(아래 twin) — 약화가 아니다.
+   */
+  const specialSample = (article: string, acq: string) => {
     const special: HouseInfo = {
       ...ROW,
       id: "h2",
@@ -106,7 +113,7 @@ describe("resolveSurchargeDeemedOneHouse — §155② 경로 시행일(구 13호
       officialPrice: 200_000_000,
       region: "non_capital",
     };
-    const i = baseTransferInput({
+    return baseTransferInput({
       acquisitionDate: D("2015-01-01"),
       transferDate: D("2026-09-18"),
       householdHousingCount: 2,
@@ -114,10 +121,20 @@ describe("resolveSurchargeDeemedOneHouse — §155② 경로 시행일(구 13호
       sellingHouseId: "selling",
       temporaryTwoHouse: { previousAcquisitionDate: D("2015-01-01"), newAcquisitionDate: D("2024-06-01") },
       specialHouseExclusions: [
-        { article: "unsold_98_7", houseAcquisitionDate: D("2012-10-15"), requirementsConfirmed: true },
+        { article, houseAcquisitionDate: D(acq), requirementsConfirmed: true },
       ] as TransferTaxInput["specialHouseExclusions"],
     });
+  };
+
+  it("확인된 조특법 제외(§98의7)만으로 1주택 → 조특법 경로(special_act_house_exclusion) — E-14a", () => {
+    const i = specialSample("unsold_98_7", "2012-10-15");
     // 시료가 조특법 제외를 실제로 태운다(비과세 주택 수 2 → 1) — 아니면 이 단언은 무의미하다.
+    expect(resolveExemptionHouseCountExclusions(i).specialActExcludedCount).toBe(1);
+    expect(resolveSurchargeDeemedOneHouse(i, parsed)).toBe("special_act_house_exclusion");
+  });
+
+  it("확인되지 않은 조특법 제외(조특법 시행령 §98②·⑥)만으로 1주택 + 명부 도출 §155① → 종전 동작(temporary_two_house) · 확인 필요", () => {
+    const i = specialSample("unsold_98", "1996-06-01");
     expect(resolveExemptionHouseCountExclusions(i).specialActExcludedCount).toBe(1);
     expect(resolveSurchargeDeemedOneHouse(i, parsed)).toBe("temporary_two_house");
   });

@@ -337,6 +337,29 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // E-14c — 주택 + 조합원입주권·분양권 **각각 1개** 세대(법 §104⑦2호)의 중과 배제. 13호가 §156의2·§156의3·
+    // 조특법 의제를 받는다(제155조는 인용하지 않는다 — 15호와 다르다).
+    id: "TRANSFER_DECREE.HOUSE_RIGHT_ONE_EACH_SURCHARGE_EXCLUSION",
+    citation: "소득세법 시행령 §167의11",
+    keywords: [
+      "주택과 조합원입주권 또는 분양권을 각각 1개씩 소유하고 있는 1세대",
+      "제156조의2, 제156조의3 또는",
+      "같은 항의 요건을 모두 충족하는 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // E-14c — 주택 + 권리 합 3 이상 세대(법 §104⑦4호)의 중과 배제. ③7호가 제155조·§156의2·§156의3·조특법 의제를 받는다.
+    id: "TRANSFER_DECREE.HOUSE_RIGHT_3PLUS_SURCHARGE_EXCLUSION",
+    citation: "소득세법 시행령 §167의4",
+    keywords: [
+      "주택과 조합원입주권 또는 분양권 수의 합이 3개 이상인 1세대",
+      "제155조, 제156조의2, 제156조의3 또는",
+      "같은 항의 요건을 모두 충족하는 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.SHORT_TERM_HOUSE_LAND",
     citation: "소득세법 시행령 §167의5",
     keywords: ["주택이 정착된 면적", "배율", "3배", "10배"],

@@ -17,6 +17,8 @@ import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./tra
 import {
   surcharge15HouseCount,
   inheritedGeneralHouseSurchargeBasis,
+  specialActHouseExclusionBasis,
+  verifiedSpecialAct15Exclusions,
 } from "./transfer-tax-house-exclusion-step";
 import {
   resolveInheritedHouseExclusionFromInput,
@@ -41,6 +43,8 @@ export function judgeMixedUseOneHouseExemption(
   isOneHouseExempt: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
   surchargeDeemedOneHouseBy155: DeemedOneHouseBasis | undefined;
+  /** `surchargeDeemedOneHouseBy155`의 표시용 근거 조문 — 조특법 감면주택 경로만(E-14a) */
+  surchargeDeemedOneHouseSource: string | undefined;
   new994Detail: New994Result | undefined;
   unsold989Detail: Unsold989Result | undefined;
   specialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
@@ -112,6 +116,11 @@ export function judgeMixedUseOneHouseExemption(
    * 같은 규약이다. 주택 수가 미전달이면 종전 동작(호출부 판정을 그대로 신뢰)을 유지한다.
    */
   let houseCountExclusionApplied = 0;
+  // E-14a — 그중 15호·13호 포섭이 해석으로 확인된 보유 감면주택 조문(단건과 같은 leaf)
+  let verifiedSpecial: ReturnType<typeof verifiedSpecialAct15Exclusions> = {
+    specialActVerified15Count: 0,
+    specialActVerified15Basis: [],
+  };
   let mixedNew994Detail: New994Result | undefined;
   let mixedUnsold989Detail: Unsold989Result | undefined;
   let mixedSpecialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
@@ -125,6 +134,7 @@ export function judgeMixedUseOneHouseExemption(
     mixedUnsold989Detail = hce.unsold989Detail;
     mixedSpecialHouseExclusionDetail = special.entries.length > 0 ? special : undefined;
     houseCountExclusionApplied = hce.appliedList.length + special.excludedCount;
+    verifiedSpecial = verifiedSpecialAct15Exclusions(special);
   }
   const isOneHouseholdForHouseCount = asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false;
   /**
@@ -159,6 +169,7 @@ export function judgeMixedUseOneHouseExemption(
     asset.householdHousingCountForExclusion ?? 0,
     inheritedExcludedCount,
     houseCountExclusionApplied,
+    verifiedSpecial.specialActVerified15Count,
   );
   const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(
     {
@@ -215,6 +226,14 @@ export function judgeMixedUseOneHouseExemption(
     );
   }
 
+  // E-14a — 확인된 조특법 감면주택 제외만으로 1주택(단건과 같은 술어). 상속 경로가 서면 쓰지 않는다.
+  const specialDeemed = specialActHouseExclusionBasis({
+    isOneHousehold: isOneHouseholdForHouseCount,
+    houseCount: surcharge15Count,
+    inheritedExcludedCount,
+    ...verifiedSpecial,
+  });
+
   return {
     meetsOneHouseRequirements,
     isUnregistered,
@@ -229,7 +248,11 @@ export function judgeMixedUseOneHouseExemption(
         inheritedExcludedCount,
         specialActExcludedCount: houseCountExclusionApplied,
         transferDate,
-      }),
+      }) ??
+      specialDeemed?.basis,
+    // E-14a — 조특법 경로의 근거 조문(표시용). 다른 경로는 없다.
+    surchargeDeemedOneHouseSource:
+      deemedOneHouseBy155 === undefined ? specialDeemed?.source : undefined,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,

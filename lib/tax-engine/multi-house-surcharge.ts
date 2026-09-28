@@ -208,10 +208,13 @@ export function determineMultiHouseSurcharge(
 
   // F-1: 3주택에서 §155①(일시적 2주택)과 ④⑤가 겹쳐 의제가 서면 13호로 배제한다(아래 배제 1).
   //   중첩이 서지 않은 3주택 이상 합가는 종전대로 중과다 — 무엇이 빠졌는지 남긴다.
-  const overlapDeemed =
+  //   E-14b — 비과세 주택 수가 2가 되어 합가 의제가 **단독으로** 선 경우(중과 주택 수만 3 이상)도 13호가 받는다.
+  const mergeDeemed =
     input.deemedOneHouseBy155 === "marriage_merge_overlap" ||
-    input.deemedOneHouseBy155 === "parental_care_merge_overlap";
-  if (effectiveHouseCount >= 3 && !overlapDeemed && (input.marriageMerge || input.parentalCareMerge)) {
+    input.deemedOneHouseBy155 === "parental_care_merge_overlap" ||
+    input.deemedOneHouseBy155 === "marriage_merge" ||
+    input.deemedOneHouseBy155 === "parental_care_merge";
+  if (effectiveHouseCount >= 3 && !mergeDeemed && (input.marriageMerge || input.parentalCareMerge)) {
     warnings.push(
       `3주택 이상 세대의 혼인·동거봉양 합가 특례 — 일시적 2주택(§155①)과 겹쳐 1세대1주택 의제가 성립하는 경우에만 중과가 배제됩니다(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS}). 이 계산에는 그 중첩이 성립하지 않았습니다`,
     );
@@ -313,6 +316,11 @@ export function determineMultiHouseSurcharge(
   }
 
   // Step 6: 중과 배제 사유 및 유예 판단
+  // 산입 권리 수 — `countEffectiveHouses`와 같은 술어(`isPresaleRightCounted`)에서 ⑨ 차감분(Step 1.5)을 뺀다.
+  const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
+  const countedRightCount =
+    input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate)).length -
+    excludedPresaleRights.length;
   const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
@@ -320,6 +328,7 @@ export function determineMultiHouseSurcharge(
     regulatedAreaHistory,
     new Set(excludedHouses.map((e) => e.houseId)),
     marriageSubtractionApplied,
+    countedRightCount,
   );
 
   // 9호(양도 당시 기준시가 1억 이하)를 판정할 값이 없으면 중과를 그대로 적용하되 그 사실을 알린다.

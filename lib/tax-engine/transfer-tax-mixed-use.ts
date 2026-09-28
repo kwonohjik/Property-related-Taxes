@@ -100,6 +100,7 @@ export function calcMixedUseTransferTax(
     isUnregistered,
     isOneHouseExempt,
     surchargeDeemedOneHouseBy155,
+    surchargeDeemedOneHouseSource,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
@@ -125,6 +126,7 @@ export function calcMixedUseTransferTax(
             // (기한 규칙 재구현 금지 — 계획서 F-2). `temporaryTwoHouse` 미주입 시 undefined.
             // E-14d — §155②③(상속주택 + 일반주택) 경로(`inherited_general_house`)도 담는다.
             deemedOneHouseBy155: surchargeDeemedOneHouseBy155,
+            deemedOneHouseSource: surchargeDeemedOneHouseSource,
           },
           houseCountExclusionRules,
           regulatedAreaHistory ?? null,
