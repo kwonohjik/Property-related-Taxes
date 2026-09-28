@@ -17,6 +17,7 @@ export { ConvertibleStockFields } from "./convertible-stock-form";
 // §38 합병 폼도 분리(800줄 정책 · 7-13). re-export로 import 경로 보존.
 export { MergerFields } from "./merger-form";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
+import { CiGiftDateEraNotice } from "./capital-forms-shared";
 // ⑤가 「주주 여부를 물어야 하는 목인지」를 따로 판단하면 엔진과 두 개의 진실이 생긴다.
 // 판정표는 엔진 모듈 하나가 갖는다.
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
@@ -33,6 +34,8 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   const sharesLabel = CI_SHARES_LABEL[form.ciDirection][form.ciSubType];
   return (
     <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
+      {/* #95 — 증여일(이익 계산 기준일) 규정은 시점마다 다르다. 아래 「권리락일」 안내는 현행 §29① 기준 */}
+      <CiGiftDateEraNotice giftDate={form.giftDate} />
       <RadioCardGroup
         lawLinks="상증법"
         name="ci-direction"
@@ -132,6 +135,8 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           dateLabel="증여일 (상증령 §29① — 상장 주주배정은 권리락일)"
           onFill={(v) => set({ ciListedMarketAvg: v })}
           testId="ci-stock-code"
+          eventDate={form.ciValuationEventDate}
+          onEventDate={(v) => set({ ciValuationEventDate: v })}
         />
         <CurrencyInput
           label="증자 후 1주당 평가가액"
@@ -141,7 +146,8 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         />
         <p className="text-xs text-muted-foreground">
           평가기준일은 상증령 §29① — 상장·코스닥 법인이 주주에게 배정하면 권리락일, 전환주식은 전환한 날,
-          그 밖에는 주식대금 납입일입니다. 종가평균은 상증법 §63①1가에 따릅니다.
+          그 밖에는 주식대금 납입일입니다(2016.2.5. 전 증자는 위 시점 안내 참고). 종가평균은 상증법 §63①1가에 따르고,
+          증자·합병 등으로 그 평균이 부적당하면 상증령 §52의2②로 기간을 줄입니다.
         </p>
       </ToggleCard>
       {needsRatio && (

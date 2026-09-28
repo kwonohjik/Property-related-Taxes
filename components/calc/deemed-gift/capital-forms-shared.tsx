@@ -6,6 +6,8 @@
  */
 
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
+import { DateInput } from "@/components/ui/date-input";
+import { resolveOverridePeriod } from "@/lib/calc/listed-stock-besshi";
 import type { DeemedFormState } from "./shared";
 
 export type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -79,11 +81,50 @@ export function allocationMethodHint(
   return "실권주 일부만 공모로 배정했다면 공모분을 뺀 주식수를 「이익 귀속 주식수」에 입력하세요.";
 }
 
+const ISO_YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 「상증령」§52의2② 평가기간 단축 — **사용자가 입력한** 증자·합병 등 사유발생일로만 계산한다.
+ *
+ * 단축은 「상증법」§63①1가 괄호의 **2단 요건**(① 사유 발생 + ② 그 평균액이 부적당한 경우)이라
+ * 사유가 있다고 항상 단축되는 것이 아니다(서울고법 2023누64487). 그래서 자동 판정하지 않고,
+ * 비워 두면 종전대로 전후 2개월 전 구간으로 조회한다 — 적용된 구간은 조회 결과 카드가 보여준다.
+ * 판정기(`resolveOverridePeriod`)는 상속 상장주식 편집기와 같은 것을 쓴다(단일 소스).
+ */
+export function valuationWindowOverride(valuationDate: string, eventDate: string) {
+  if (!ISO_YMD.test(valuationDate) || !ISO_YMD.test(eventDate)) return {};
+  return resolveOverridePeriod({ capitalIncreaseDate: eventDate }, valuationDate);
+}
+
+/** §52의2② 사유발생일 입력칸 — 종가평균 자동조회 블록 안에 둔다(선택 입력). */
+export function ValuationEventDateField({
+  value,
+  onChange,
+  testId,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  testId: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs text-muted-foreground">
+        증자·합병 등 사유발생일 (상증령 §52의2② — 선택)
+      </label>
+      <DateInput value={value} onChange={onChange} data-testid={testId} />
+      <p className="mt-1 text-xs text-muted-foreground">
+        평가기준일 전후 2개월 안의 사유로 그 평균이 부적당하면 입력하세요 — 기준일 전 사유는 다음날부터,
+        뒤 사유는 전일까지로 조회 기간을 줄입니다. 비우면 전후 2개월 전체로 조회합니다.
+      </p>
+    </div>
+  );
+}
+
 /**
  * §63①1가 종가평균 키움 자동조회 블록 — 증자 §39 · 전환주식 §39①3호 공용.
  * 평가기준일은 호출부가 결정한다(상증령 §29① — 상장 주주배정 권리락일 / 전환한 날 / 납입일,
  * 전환주식 발행 시점은 §29②6나의 「발행 당시」로 증여일과 다르다).
- * 자동조회는 기준일 전후 각 2개월 전 구간을 쓴다 — §52의2② 단축 사유가 있으면 직접 산정해야 한다.
+ * 「상증령」§52의2② 단축은 사용자가 입력한 사유발생일로만 한다(`valuationWindowOverride`).
  */
 export function ListedAvgAutoFetch({
   stockCode,
@@ -92,6 +133,8 @@ export function ListedAvgAutoFetch({
   dateLabel,
   onFill,
   testId,
+  eventDate,
+  onEventDate,
 }: {
   stockCode: string;
   onStockCode: (v: string) => void;
@@ -99,7 +142,10 @@ export function ListedAvgAutoFetch({
   dateLabel: string;
   onFill: (v: string) => void;
   testId: string;
+  eventDate: string;
+  onEventDate: (v: string) => void;
 }) {
+  const { startOverrideDate, endOverrideDate } = valuationWindowOverride(valuationDate, eventDate);
   return (
     <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
       <p className="text-xs font-semibold text-emerald-700">§63①1가 종가평균 자동조회 (키움, 선택)</p>
@@ -120,12 +166,40 @@ export function ListedAvgAutoFetch({
         평가기준일 — {dateLabel}
         {valuationDate ? ` (${valuationDate})` : " (미입력)"}
       </p>
+      <ValuationEventDateField value={eventDate} onChange={onEventDate} testId={`${testId}-event-date`} />
       <KiwoomValuationAutoFetchButton
         variant="card"
         stockCode={stockCode}
         valuationDate={valuationDate}
+        startOverrideDate={startOverrideDate}
+        endOverrideDate={endOverrideDate}
         onFill={(patch) => onFill(String(patch.listedStockAvgPrice))}
       />
     </div>
+  );
+}
+
+const PRE_2015_ERA_END = "2015-02-03";
+const PRE_2016_ERA_END = "2016-02-05";
+
+/**
+ * #95 — §39 증여일(=이익 계산 기준일) 규정의 **시점 3구간**. 화면의 「권리락일」 안내는 현행 §29①
+ * 기준이라 옛 증자에는 틀린 지시가 된다(과세 여부까지 뒤집힐 수 있다 — 기준일이 다르면 종가평균 창이 다르다).
+ *   · ~2015-02-02 — 구 「상증령」§29④ 단항: 주식대금 납입일(교부일)뿐 (2014.11.19. 시행본 실독)
+ *   · 2015-02-03~2016-02-04 — 대통령령 제26069호 §29④ 각 호: 권리락일 분기 신설, 위치만 ④
+ *   · 2016-02-05~ — 현행 §29① 각 호 ⇒ 고지 없음
+ * 입력값(ISO)을 문자열로 비교한다 — `YYYY-MM-DD`는 사전식 순서가 날짜 순서와 같다.
+ */
+export function CiGiftDateEraNotice({ giftDate }: { giftDate: string }) {
+  if (!ISO_YMD.test(giftDate) || giftDate >= PRE_2016_ERA_END) return null;
+  return (
+    <p
+      className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+      data-testid="ci-gift-date-era-notice"
+    >
+      {giftDate < PRE_2015_ERA_END
+        ? "이 증여일에는 구 상증령 §29④(2015.2.3. 개정 전)가 적용됩니다 — 이익 계산 기준일은 주식대금 납입일(그 전에 실권주를 배정받은 자가 신주인수권증서를 교부받았으면 그 교부일)입니다. 권리락일 기준은 이 날 뒤에 신설됐으니 그 날 기준으로 평가하세요."
+        : "이 증여일의 기준일 규정은 상증령 §29④ 각 호에 있었습니다(2016.2.5. §29①로 이동) — 상장 주주배정은 권리락일, 그 밖에는 주식대금 납입일로 내용은 같습니다."}
+    </p>
   );
 }

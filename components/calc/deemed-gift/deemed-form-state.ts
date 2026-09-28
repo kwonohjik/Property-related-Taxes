@@ -129,6 +129,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciIsListed: boolean; // 주권상장법인등 — §29②1가 단서(저가 Min)·§29②3나 단서(고가 Max)
   ciListedMarketAvg: string; // 평가기준일(§29① — 상장 주주배정은 권리락일) 전후 2개월 종가평균
   ciStockCode: string; // 키움 자동조회용 종목코드 (UI 전용)
+  ciValuationEventDate: string; // 「상증령」§52의2② 증자·합병 등 사유발생일 — 자동조회 기간 단축용 (UI 전용·선택)
   ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
   /** 수증자가 영리법인인가 — 「상증법」§2 9호·§4의2①·③ 납세의무자 범위 밖(단건·전환주식 공용) */
   ciDoneeIsForProfitCorp: boolean;
@@ -202,6 +203,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   conListedMarketAvg: string; // 현물출자 납입일 전후 2개월 종가평균 (§63①1가)
   conPublicOfferingShares: string; // 일반공모(자본시장법 §165의6①3) 배정 신주수 — 상장 시 곱셈 인자에서 제외
   conStockCode: string; // 키움 자동조회용 종목코드 (UI 전용 — 엔진 미전달)
+  conValuationEventDate: string; // 「상증령」§52의2② 사유발생일 — 자동조회 기간 단축용 (UI 전용·선택)
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbClause: ConvertibleBondClause; // §40①1호·2호 각 목 — 세액 불변, 공모 발행 제외 대상 판정
@@ -258,6 +260,9 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   csIssueIsListed: boolean; // 발행 시점 주권상장법인등
   csIssueListedMarketAvg: string;
   csStockCode: string; // 키움 자동조회용 종목코드 (양 시점 공용 — 같은 법인)
+  // 「상증령」§52의2② 사유발생일은 **시점별**이다 — 평가기준일이 다르므로 전후 2개월 창도 다르다 (UI 전용·선택)
+  csConvValuationEventDate: string;
+  csIssueValuationEventDate: string;
   csConvAllocationMethod: ShareAllocationMethod; // 전환 시점 §39① 공모 제외
   csIssueAllocationMethod: ShareAllocationMethod; // 발행 시점 §39① 공모 제외
   csIssuanceDate: string; // 발행 시점 평가기준일 — 전환주식 **발행 당시**(§29②6나). 전환 시점은 증여일(§29①2호)
@@ -355,6 +360,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciIsListed: false,
   ciListedMarketAvg: "",
   ciStockCode: "",
+  ciValuationEventDate: "",
   ciAllocationMethod: "normal",
   ciDoneeIsForProfitCorp: false,
   doneeIsForProfitCorp: false,
@@ -394,6 +400,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conListedMarketAvg: "",
   conPublicOfferingShares: "",
   conStockCode: "",
+  conValuationEventDate: "",
   cbCaseType: "acquisition",
   cbClause: "from_related",
   cbIssuanceMethod: "normal",
@@ -447,6 +454,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueIsListed: false,
   csIssueListedMarketAvg: "",
   csStockCode: "",
+  csConvValuationEventDate: "",
+  csIssueValuationEventDate: "",
   csConvAllocationMethod: "normal",
   csIssueAllocationMethod: "normal",
   csIssuanceDate: "",

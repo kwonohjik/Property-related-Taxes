@@ -59,8 +59,14 @@ describe("전환주식 §39①3호 — 시점별 평가기준일 분리", () => 
     expect(screen.getByText(/증여일 = 전환한 날/)).toBeInTheDocument();
     // 발행 시점 — 「발행 당시」(§29②6나)라 증여일과 다르다
     expect(screen.getAllByText(/전환주식 발행 당시/).length).toBeGreaterThan(0);
-    // ⭐ 날짜 입력은 **발행 시점에만** 1개 — 전환 시점에도 생기면 증여일과 어긋날 수 있다
-    expect(screen.getAllByLabelText("연도")).toHaveLength(1);
+    // ⭐ **평가기준일** 날짜 입력은 **발행 시점에만** 1개 — 전환 시점에도 생기면 증여일과 어긋날 수 있다.
+    //   #7(2026-09-28)로 시점별 「상증령」§52의2② 사유발생일 칸이 생겼다 — 그것은 기준일이 아니므로 뺀다.
+    const valuationDateInputs = screen
+      .getAllByLabelText("연도")
+      .filter((el) => !el.closest("[data-testid$='-event-date']"));
+    expect(valuationDateInputs).toHaveLength(1);
+    expect(screen.getByTestId("cs-stock-code-event-date")).toBeInTheDocument();
+    expect(screen.getByTestId("cs-issue-stock-code-event-date")).toBeInTheDocument();
   });
 
   it("K-5: 종목코드는 같은 법인이므로 두 시점이 한 값을 공유한다", () => {

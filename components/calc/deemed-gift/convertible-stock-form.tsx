@@ -29,6 +29,7 @@ type CsKeys = {
   postTotal: keyof DeemedFormState;
   isListed: keyof DeemedFormState;
   listedMarketAvg: keyof DeemedFormState;
+  valuationEventDate: keyof DeemedFormState;
   allocationMethod: keyof DeemedFormState;
 };
 
@@ -124,6 +125,8 @@ function CsNumericSection({
           dateLabel={dateLabel}
           onFill={(val) => on(keys.listedMarketAvg)(val)}
           testId={stockCodeTestId}
+          eventDate={v(keys.valuationEventDate)}
+          onEventDate={on(keys.valuationEventDate)}
         />
         <CurrencyInput
           label="증자 후 1주당 평가가액"
@@ -213,6 +216,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           postTotal: "csConvPostTotalShares",
           isListed: "csConvIsListed",
           listedMarketAvg: "csConvListedMarketAvg",
+          valuationEventDate: "csConvValuationEventDate",
           allocationMethod: "csConvAllocationMethod",
         }}
       />
@@ -246,6 +250,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           postTotal: "csIssuePostTotalShares",
           isListed: "csIssueIsListed",
           listedMarketAvg: "csIssueListedMarketAvg",
+          valuationEventDate: "csIssueValuationEventDate",
           allocationMethod: "csIssueAllocationMethod",
         }}
       />
