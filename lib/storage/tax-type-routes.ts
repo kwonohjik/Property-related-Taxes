@@ -26,4 +26,5 @@ export const TAX_TYPE_ROUTES: Record<LocalTaxType, string> = {
   stock_transfer: "/calc/stock-transfer-tax",
   stock_valuation: "/tools/stock-valuation",
   one_house_exemption: "/calc/one-house-exemption",
+  gift_deemed: "/calc/gift-deemed",
 };

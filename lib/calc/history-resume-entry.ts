@@ -136,6 +136,16 @@ export async function resumeCalculationRecord(
     return null;
   }
 
+  if (record.taxType === "gift_deemed") {
+    /**
+     * 증여이익 계산기 — 폼만 넘긴다(계산기가 마운트 때 1회 소비). 결과는 되살리지 않는다 —
+     * 1세대1주택 판정과 같은 이유로, 저장된 금액을 「지금 다시 산정한 값」으로 읽게 하지 않는다.
+     */
+    sessionStorage.setItem("giftDeemedResumeInput", JSON.stringify(record.inputData));
+    router.push(route);
+    return null;
+  }
+
   // 취득세·재산세·종부세 — 종전부터 **hydrate 없이 이동만** 한다. 이 PR은 그 동작을 옮겨만 놓는다.
   router.push(route);
   return null;

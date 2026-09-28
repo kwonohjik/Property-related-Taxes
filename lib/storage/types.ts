@@ -19,6 +19,11 @@ export const LOCAL_TAX_TYPES = [
   "stock_valuation",
   /** 1세대1주택 비과세 **판정**(세액 없음) — `/calc/one-house-exemption` (P4-2b-3) */
   "one_house_exemption",
+  /**
+   * 증여이익(증여로 보는 경우) 산정 — `/calc/gift-deemed` (#72). 세액이 아니라 증여재산가액을 낸다.
+   * 종전에는 등록되지 않아 입력·산출근거가 어느 계층에도 남지 않았다(이관된 증여세 record에는 금액 1개).
+   */
+  "gift_deemed",
 ] as const;
 
 export type LocalTaxType = (typeof LOCAL_TAX_TYPES)[number];

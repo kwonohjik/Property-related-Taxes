@@ -1,4 +1,6 @@
 import type { LocalTaxType } from "./types";
+import { DEEMED_TYPE_META } from "@/lib/calc/gift-deemed-type-meta";
+import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
 
 /**
  * 세목 배지·제목 접두어 — **이력 화면과 같은 문자열을 쓴다**(`HistoryClient`가 이것을 편다).
@@ -15,6 +17,7 @@ export const TAX_LABEL: Record<LocalTaxType, string> = {
   stock_transfer: "주식 양도세",
   stock_valuation: "주식 평가",
   one_house_exemption: "1세대1주택 판정",
+  gift_deemed: "증여이익",
 };
 
 export function formatDate(dateStr: string | undefined | null): string | null {
@@ -221,6 +224,17 @@ export function generateTitle(
     if (sec && date) return `${label} — ${sec} (평가 ${date})`;
     if (sec) return `${label} — ${sec}`;
     if (date) return `${label} — 평가 ${date}`;
+  }
+
+  /**
+   * 증여이익 — 유형과 증여일. 주소 축이 없어 이 둘이 사람이 읽는 식별자다
+   * (businessKey는 만들지 않는다 — `business-key.ts` gift_deemed 분기).
+   */
+  if (taxType === "gift_deemed") {
+    const typeLabel = DEEMED_TYPE_META[inputData.type as DeemedGiftType]?.label;
+    const date = formatDate(inputData.giftDate as string | undefined);
+    if (typeLabel && date) return `${label} — ${typeLabel} (증여 ${date})`;
+    if (typeLabel) return `${label} — ${typeLabel}`;
   }
 
   // 기타 세목 + 주소·날짜 미입력: 저장 일시로 구분

@@ -23,6 +23,7 @@ import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/Sto
  *    ⇒ 정본(`lib/storage/tax-type-routes.ts`)을 import한다. 사본을 다시 만들지 말 것.
  */
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
+import { deemedGiftHeadline } from "@/lib/calc/gift-deemed-history";
 
 interface Props {
   record: CalculationRecord;
@@ -249,12 +250,18 @@ export function HistoryDetailDrawer({
           {/* 납부세액 — 판정 메뉴는 세액이 없으므로 그 자리에 판정 결론을 띄운다 */}
           <div className="rounded-lg bg-muted/40 px-4 py-3">
             <p className="text-xs text-muted-foreground mb-0.5">
-              {record.taxType === "one_house_exemption" ? "판정" : "납부세액"}
+              {record.taxType === "one_house_exemption"
+                ? "판정"
+                : record.taxType === "gift_deemed"
+                  ? "증여이익"
+                  : "납부세액"}
             </p>
             <p className="text-xl font-bold" data-testid="drawer-headline-value">
               {record.taxType === "one_house_exemption"
                 ? oneHouseVerdictLabel(record.resultData)
-                : extractTotalTax(record.resultData)}
+                : record.taxType === "gift_deemed"
+                  ? deemedGiftHeadline(record.resultData)
+                  : extractTotalTax(record.resultData)}
             </p>
           </div>
 
