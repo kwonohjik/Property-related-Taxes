@@ -177,6 +177,8 @@ describe("OH-39 route — 말소 주택 등록 유형", () => {
         rentalMonths: "27",
         rentalAutoTermination: true,
         terminatedRegistrationType: t,
+        // I-4 — ㉓은 말소일로 판정한다(양도 2024-06-01 · 거주주택 취득 2019-06-01 → 5년 창 안 · 말소 전 취득)
+        registrationCancellationDate: "2020-12-01",
       },
     );
   it("D1R-5 단기(4년 → 24개월) → 비과세 / 장기일반(8년 → 48개월) → 과세 (단건·다건)", async () => {

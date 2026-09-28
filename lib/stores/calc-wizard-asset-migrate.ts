@@ -612,6 +612,9 @@ export function migrateAsset(raw: unknown): AssetForm {
         if (u.hasMinimum5UnitsInCity === undefined) u.hasMinimum5UnitsInCity = false;
         if (u.firstSaleContractDate === undefined) u.firstSaleContractDate = "";
         if (u.rentalAutoTermination === undefined) u.rentalAutoTermination = false;
+        // I-4 — ㉓ 말소일. 구 기록은 「말소 후 5년 이내」를 불리언 하나로 선언했다 — 날짜가 없으니 미입력("")으로
+        // 둔다. 말소 토글이 켜진 구 기록은 ⑧이 말소일을 요구하고 엔진은 ㉓을 판정하지 않는다(비과세로 새지 않는다).
+        if (typeof u.registrationCancellationDate !== "string") u.registrationCancellationDate = "";
         // OH-39 — 말소 주택 민특법 등록 유형(구 세션엔 없다 → 미선택)
         if (u.terminatedRegistrationType !== "short_term" && u.terminatedRegistrationType !== "long_term_general") {
           u.terminatedRegistrationType = "";

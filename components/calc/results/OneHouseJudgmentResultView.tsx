@@ -17,6 +17,7 @@
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { RentalCancellationWindowNote } from "@/components/calc/results/transfer/RentalCancellationWindowNote";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
@@ -192,6 +193,8 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
               요건을 충족하지 못하면 <b>§155㉒</b>에 따라 차액을 신고·납부해야 합니다.
             </p>
           )}
+          {/* I-4 — §155㉓ 최초 말소일부터 5년 기한(엔진 echo). 구 응답엔 필드가 없다. */}
+          <RentalCancellationWindowNote window={rental.cancellationWindow} />
           {/* OH-40·§7-5 — 판정 보류·확인 필요 고지(결론은 그대로). 구 응답엔 필드가 없을 수 있다. */}
           {(rental.notices ?? []).map((n, i) => (
             <p key={`notice-${i}`} className="text-sm" data-testid="one-house-rental-notice">

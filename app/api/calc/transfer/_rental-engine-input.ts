@@ -7,6 +7,7 @@
 import type { z } from "zod";
 import type { rentalHousingExceptionSchema } from "@/lib/api/transfer-tax-schema";
 import type { RentalHousingExceptionInput } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type RentalHousingExceptionData = z.infer<typeof rentalHousingExceptionSchema>;
 
@@ -37,6 +38,7 @@ export function toRentalHousingExceptionEngineInput(
       firstSaleContractDate: u.firstSaleContractDate ? new Date(u.firstSaleContractDate) : undefined,
       rentalMonths: u.rentalMonths,
       rentalAutoTermination: u.rentalAutoTermination,
+      registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
       terminatedRegistrationType: u.terminatedRegistrationType,
       requirementsConfirmed: u.requirementsConfirmed,
     })),

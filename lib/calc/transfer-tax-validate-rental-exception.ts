@@ -149,6 +149,22 @@ export function validateRentalHousingException(
     ) {
       return `${unitLabel}: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택하세요 (소령 §155㉓1호 임대의무기간 1/2 판정).`;
     }
+    /**
+     * I-4 — ㉓ 「말소 이후 5년 이내」는 말소일로 판정한다. 없으면 판정할 수 없으므로 두 모드 모두 막는다
+     * (구 기록의 불리언만 있는 호 포함 — 엔진도 말소일이 없으면 ㉓을 주지 않는다). 순서가 뒤집힌 날짜도 막는다.
+     */
+    if (u.rentalAutoTermination && (article === "가" || article === "다" || article === "라" || article === "마")) {
+      const cd = (u.registrationCancellationDate ?? "").slice(0, 10);
+      if (!cd) {
+        return `${unitLabel}: 등록 말소일을 입력하세요 (소령 §155㉓ — 말소 이후 5년 이내 거주주택 양도 판정).`;
+      }
+      if (cd < u.rentalRegistrationDate.slice(0, 10)) {
+        return `${unitLabel}: 등록 말소일(${cd})은 지자체 임대사업자등록신청일(${u.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+      }
+      if (formTransferDate && cd > formTransferDate.slice(0, 10)) {
+        return `${unitLabel}: 등록 말소일(${cd})이 양도일(${formTransferDate.slice(0, 10)}) 뒤입니다 — 양도일 현재 등록 중인 주택이면 말소 표시를 끄세요.`;
+      }
+    }
   }
 
   /**

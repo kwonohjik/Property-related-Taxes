@@ -20,6 +20,7 @@ import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-st
 import { TRANSFER_RENTAL_HOUSING } from "../legal-codes/transfer";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
+import type { CancellationWindow } from "../transfer-tax/rental-housing-exception/types";
 
 /** 판정 메뉴 ④가 읽는 §155⑳ 결론. 금액·안분은 담지 않는다(세액은 계산기의 몫). */
 export type OneHouseRentalHousingVerdict = {
@@ -35,6 +36,8 @@ export type OneHouseRentalHousingVerdict = {
   periodPendingUnitIndexes: number[];
   /** 결론을 바꾸지 않는 판정 보류·확인 필요 고지(OH-40 생애 1회 이력 미입력 · 계획서 §7-5) */
   notices: string[];
+  /** §155㉓ 최초 말소일부터 5년 기한(I-4) — 말소일을 입력한 말소 호가 있을 때만 */
+  cancellationWindow?: CancellationWindow;
   legalBasis: string;
 };
 
@@ -57,6 +60,7 @@ export function buildRentalHousingVerdict(
     })),
     periodPendingUnitIndexes: eligibility.periodPendingUnitIndexes ?? [],
     notices: eligibility.notices ?? [],
+    ...(eligibility.cancellationWindow ? { cancellationWindow: eligibility.cancellationWindow } : {}),
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   };
 }

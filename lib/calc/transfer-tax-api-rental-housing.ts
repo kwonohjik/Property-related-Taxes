@@ -64,6 +64,14 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         : undefined,
       rentalMonths: deriveRentalMonths(u),
       rentalAutoTermination: u.rentalAutoTermination ?? false,
+      // I-4 — ㉓ 말소일. 말소 토글 ON일 때만 보낸다(⑤가 그때만 노출 — 3중 패턴). 미입력("")·stale(undefined)은
+      // 보내지 않는다(Zod optional) — 엔진은 말소일이 없으면 ㉓을 판정하지 않는다.
+      registrationCancellationDate:
+        u.rentalAutoTermination && u.registrationCancellationDate
+          ? (u.registrationCancellationDate.includes('T')
+            ? u.registrationCancellationDate
+            : `${u.registrationCancellationDate}T00:00:00.000Z`)
+          : undefined,
       // OH-39 — 미선택("")·stale(undefined)이면 보내지 않는다(Zod optional). 엔진은 미입력이면 ㉓을 판정하지 않는다.
       // 말소 토글 OFF면 의미가 없으므로 보내지 않는다(⑤가 토글 ON일 때만 노출 — 3중 패턴).
       terminatedRegistrationType:
