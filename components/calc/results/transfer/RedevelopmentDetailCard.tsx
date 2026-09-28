@@ -104,7 +104,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                 <span className="rounded-full bg-violet-300 px-2 py-0.5 text-micro font-bold text-violet-900">1세대1입주권 비과세</span>
               )}
               {oneRightHighValueApplied && (
-                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">12억 초과 안분</span>
+                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">
+                  {highValueAllocation ? formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold) : "고가 기준금액"} 초과 안분
+                </span>
               )}
             </>
           ) : (
@@ -174,24 +176,24 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
 
-      {/* 사례 36 — 12억 초과 안분 배지 (oneRightHighValueApplied) */}
+      {/* 사례 36 — 고가 기준금액 초과 안분 배지 (oneRightHighValueApplied) — 기준금액은 엔진이 양도일로 쓴 값(E-3) */}
       {isRightSubject && oneRightHighValueApplied && highValueAllocation && (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§89①4호 각 목 외의 부분 단서 + §95③</span>
-            <span className="font-semibold">1세대1입주권 12억 초과 안분 적용</span>
+            <span className="font-semibold">1세대1입주권 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)} 초과 안분 적용</span>
           </div>
           <p className="text-amber-800">
-            양도가액이 12억을 초과하여 초과 비율 분에 대해서만 과세됩니다. 각 분기 양도차익에 과세대상 비율을 곱한 값이 최종 과세 양도차익입니다.
+            양도가액이 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}을 초과하여 초과 비율 분에 대해서만 과세됩니다. 각 분기 양도차익에 과세대상 비율을 곱한 값이 최종 과세 양도차익입니다.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1">
-            <Row label="비과세 기준 (12억)" value={highValueAllocation.nontaxableThreshold} />
+            <Row label={`비과세 기준 (${formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)})`} value={highValueAllocation.nontaxableThreshold} />
             <Row label="과세대상 비율 (%)" value={Math.round(highValueAllocation.taxableRatio * 10000) / 100} />
             <Row label="과세대상 양도차익 합 (안분 후)" value={highValueAllocation.taxableGain} highlight />
           </div>
           <p className="text-micro text-amber-700 mt-1">
             <FLine>
-              산식: 각 분기 양도차익 × <Frac top="양도가액 − 12억" bottom="양도가액" />
+              산식: 각 분기 양도차익 × <Frac top={`양도가액 − ${formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}`} bottom="양도가액" />
             </FLine>
             <FLine>근거: §89①4호 각 목 외의 부분 단서 + §95③ + 시행령 §160 준용.</FLine>
           </p>

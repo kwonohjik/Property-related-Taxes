@@ -29,7 +29,7 @@
  *    ├── ToggleCard (redevExemptionEligibleAtApproval 기존 필드 재사용)
  *    ├── 보유·거주 월수 입력 (DecimalInput — 월수, 정수)
  *    ├── 나목 — 세대 보유 1주택 취득일 (DateInput)
- *    ├── 12억 초과 자동 안내 (transferPrice > 12억 + 토글 ON 시)
+ *    ├── 고가 기준금액 초과 자동 안내 (transferPrice > 양도일 기준금액 + 토글 ON 시 — E-3)
  *    ├── (a) useMemo 자동 검증 → (b) rose 경고 카드 조건부 노출
  *    └── (c) 면책 문구 (토글 ON 시만)
  *
@@ -49,6 +49,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 interface Props {
   asset: AssetForm;
@@ -63,14 +64,18 @@ interface Props {
    *    anchor `redev-right-exemption-prop-wiring.anchor.test.tsx`가 프로덕션 경로에서 지킨다.
    */
   wasRegulatedAtAcquisition?: boolean;
+  /**
+   * 폼-전역 양도(예정)일 — 고가 기준금액(6억·9억·12억)을 고르는 데만 쓴다(E-3).
+   * 엔진 `applyOneRightExemption`과 같은 leaf를 부른다. 미전달·빈값이면 현행 12억.
+   */
+  transferDate?: string;
 }
-
-const HIGH_VALUE_THRESHOLD = 1_200_000_000;
 
 export function RedevelopmentRightExemptionSection({
   asset,
   onChange,
   wasRegulatedAtAcquisition = false,
+  transferDate,
 }: Props) {
   const isRightSubject =
     asset.assetKind === "right_to_move_in" && (asset.redevSubject === "right" || !asset.redevSubject);
@@ -118,9 +123,10 @@ export function RedevelopmentRightExemptionSection({
    * ⚠️ 안분(bundled) 모드에서는 자산-수준 양도가액이 비어 안내가 뜨지 않는다 —
    *    안내·경고 전용이라 계산에는 영향이 없다(§89①4호 단서 판정은 엔진이 한다).
    */
+  const highValue = oneRightHighValueThresholdForDisplay(transferDate);
   const isHighValue = useMemo(
-    () => parseAmount(asset.actualSalePrice) > HIGH_VALUE_THRESHOLD,
-    [asset.actualSalePrice],
+    () => parseAmount(asset.actualSalePrice) > highValue.amount,
+    [asset.actualSalePrice, highValue.amount],
   );
 
   const isToggleOn = asset.redevExemptionEligibleAtApproval === "yes";
@@ -214,12 +220,12 @@ export function RedevelopmentRightExemptionSection({
               </p>
             </div>
 
-            {/* 12억 초과 자동 안내 */}
+            {/* 고가 기준금액 초과 자동 안내 (양도일 연혁 — E-3) */}
             {isHighValue && (
               <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-caption text-violet-900">
-                <p className="font-semibold">양도가액 12억 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용</p>
+                <p className="font-semibold">양도가액 {highValue.label} 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용</p>
                 <p className="mt-0.5">
-                  비과세 요건 충족 시 전액 비과세가 아닌 12억 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
+                  비과세 요건 충족 시 전액 비과세가 아닌 {highValue.label} 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
                   안분 상세는 결과 화면에서 확인하세요.
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

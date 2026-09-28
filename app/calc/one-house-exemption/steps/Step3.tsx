@@ -322,6 +322,7 @@ export function Step3({ form, onChange }: Props) {
           asset={primary}
           onChange={patchAsset}
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+          transferDate={form.transferDate}
         />
       )}
 

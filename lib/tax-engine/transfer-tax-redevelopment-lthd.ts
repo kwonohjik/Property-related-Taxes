@@ -16,26 +16,6 @@ import type {
 } from "./types/transfer.types";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 
-/**
- * §95③·영 §160 고가주택 기준 — **현행(2021-12-08 이후 양도)** 값.
- *
- * 🔑 이 상수는 분리된 두 파일이 **함께 쓴다**. 원본에 두면 「원본 → 이 파일 → 원본」 순환이
- *    되므로 **아래쪽(이 파일)에 둔다** — 원본이 여기서 import 하면 방향이 하나로 유지된다
- *    ([[feedback_800line_split_playbook]] 「순환은 재export 탓」).
- *
- * ⚠️ **남은 사용처는 하나다** — `applyOneRightExemption`(조합원입주권 §89①4호 단서).
- *    2021-12-07까지 금액은 시행령에 위임돼 있었다. L-12(2026-09-28)에서 DRF로 확인한 것:
- *    「소득세법 시행령」 제155조 제17항(당시 항 — 현행 삭제) 「조합원입주권의 양도 당시의 실지거래가액의 합계액이 9억원을
- *    초과하는 경우」(<개정 2017.2.3> — 시행본 2017-02-03·2021-07-01 실독). 그 사이 시행본 전수와
- *    2017-02-03 전(2017-01-01 법률 개정 직후 시행령 미개정 구간 포함) 연혁은 **미확인**이라 전환하지
- *    않았다 — 계획서 §9 E-3(입주권 잔여).
- *  - 청산금 수령분(`applySettlementExemption`)은 L-12에서 **청산금분 양도일** 시점 기준으로
- *    전환했다(`transfer-tax-redevelopment-settlement.ts`).
- *
- * 주택(§89①3호) 축은 `one-house/threshold.ts` `resolveHighValueHouseThreshold(양도일)`가 정본이다.
- */
-export const HIGH_VALUE_THRESHOLD = 1_200_000_000;
-
 export function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
   return {
     ...(b.lthdHoldingPart !== undefined ? { lthdHoldingPart: 0 } : {}),

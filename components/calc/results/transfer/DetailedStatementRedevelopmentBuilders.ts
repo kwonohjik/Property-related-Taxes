@@ -14,6 +14,7 @@ import type { StatementItem, PerAssetValue } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 
@@ -342,7 +343,7 @@ export function buildRedevGainFormula(
     : sva
       ? ` (권리가액 기준 고가주택 안분 후 과세대상 — 전체 × ${(sva.taxableRatio * 100).toFixed(0)}%)`
       : hva && !settlementOutsideNewHouseAllocation
-        ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
+        ? ` (${formatHighValueThresholdLabel(hva.nontaxableThreshold)} 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
         : "";
   const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {

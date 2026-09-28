@@ -13,6 +13,7 @@ import {
   formatHighValueThresholdLabel,
   resolveHighValueHouseThreshold,
 } from "@/lib/tax-engine/one-house/threshold";
+import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
 
 const CURRENT_THRESHOLD = 1_200_000_000;
 
@@ -22,5 +23,20 @@ export function highValueThresholdForDisplay(transferDate: string | undefined): 
 } {
   const d = toOptionalDate(transferDate);
   const amount = d ? resolveHighValueHouseThreshold(d) : CURRENT_THRESHOLD;
+  return { amount, label: formatHighValueThresholdLabel(amount) };
+}
+
+/**
+ * 조합원입주권(§89①4호) 안내용 기준금액 — 엔진 `applyOneRightExemption`과 같은 leaf (E-3).
+ *
+ * 입주권은 주택과 연혁 경계가 다르다(2017-01-01~02-02 확인 필요 구간 · 2005-02-19 전 미지원 —
+ * 두 구간은 현행 12억). 양도일이 비었거나 읽을 수 없으면 현행 기준(12억).
+ */
+export function oneRightHighValueThresholdForDisplay(transferDate: string | undefined): {
+  amount: number;
+  label: string;
+} {
+  const d = toOptionalDate(transferDate);
+  const amount = d ? resolveOneRightHighValueThreshold(d) : CURRENT_THRESHOLD;
   return { amount, label: formatHighValueThresholdLabel(amount) };
 }
