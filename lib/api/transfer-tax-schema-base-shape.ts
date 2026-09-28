@@ -195,6 +195,22 @@ export const propertyBaseShape = {
         .optional(),
     })
     .optional(),
+  // ⑨⑫ OH-22 §154⑤ 단서 최종 1주택 재기산 처분 이력 — ⑭ `toEngineFinalHouseRestart`
+  //   (lib/api/final-house-restart-coerce.ts)와 같은 키. propertyBaseShape 공유 → 단건·다건·판정 메뉴 동시.
+  finalOneHouseRestart: z
+    .object({
+      hadOtherHouseDisposal: z.boolean(),
+      disposals: z
+        .array(
+          z.object({
+            kind: z.enum(["transfer", "gift", "conversion", "other"]),
+            date: z.string().date(),
+            temporaryTwoHouseSpecial: z.boolean(),
+          }),
+        )
+        .max(50),
+    })
+    .optional(),
   // 다주택 중과 한시 유예 조건부 판정 — §167의3①12의2 가·나·다목(§167의10①12의2 미러).
   // 나목(isLandPermitTarget=true): 허가신청·허가·계약금 4요건. 다목(false): 계약·계약금 2요건.
   gracePeriod: z

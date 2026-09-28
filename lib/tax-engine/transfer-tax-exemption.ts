@@ -32,6 +32,7 @@ import {
   collectUnmetExceptions,
   meetsTemporaryTwoHousePrevHolding,
 } from "./one-house/pending";
+import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 import {
@@ -124,11 +125,21 @@ export function checkExemption(
     pending,
     undetermined: collectUndetermined(input, oneHouseRules, article89Clause2, settled),
     unmetExceptions,
+    // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
+    ...finalOneHouseRestartEchoOf(input),
     legalBasis: dedupeLegalBasis([
       ...appliedExceptions.map((e) => e.legalBasis),
       ...pending.map((p) => p.legalBasis),
     ]),
   };
+}
+
+/** 판정 서브트리의 선행 게이트(1세대 주택 · 등기 · 부수토지 카드 아님)를 지난 경우에만 echo를 싣는다. */
+function finalOneHouseRestartEchoOf(input: OneHouseJudgeInput): Pick<OneHouseJudgment, "finalOneHouseRestart"> {
+  if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered) return {};
+  if (input.oneHouseUnitRole === "appurtenant_land") return {};
+  const echo = describeFinalOneHouseRestart(input);
+  return echo ? { finalOneHouseRestart: echo } : {};
 }
 
 /** 근거 조문 목록 — 입력 순서를 유지한 채 중복만 제거한다(표시 순서가 곧 판정 순서다). */

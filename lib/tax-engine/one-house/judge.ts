@@ -88,6 +88,8 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     rightThreeYearException: facts.rightThreeYearException,
     mergedHouseholdFirstHouse: facts.mergedHouseholdFirstHouse,
     inheritedRightChoiceWhenBothHeld: facts.inheritedRightChoiceWhenBothHeld,
+    // ── §154⑤ 단서 (OH-22) ──
+    finalOneHouseRestart: facts.finalOneHouseRestart,
   } satisfies OneHouseJudgeInput;
 
   /**
@@ -153,6 +155,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     rightThreeYearException: input.rightThreeYearException,
     mergedHouseholdFirstHouse: input.mergedHouseholdFirstHouse,
     inheritedRightChoiceWhenBothHeld: input.inheritedRightChoiceWhenBothHeld,
+    finalOneHouseRestart: input.finalOneHouseRestart,
   } satisfies OneHouseFacts;
 
   type _Facts = typeof facts;

@@ -13,6 +13,7 @@
  *    없어서 `tsc`가 막고, 이 Pick에 추가하면 어댑터(`judge.ts`)의 키 커버리지 가드가 막는다.
  *    ⇒ 「판정 메뉴가 넘기는 사실만으로 계산기와 같은 판정이 나온다」가 **유지되는 불변식**이 된다.
  */
+import type { FinalOneHouseRestartEcho } from "./final-house-restart";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { HouseInfo, PresaleRight } from "../types/multi-house-surcharge.types";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
@@ -80,6 +81,8 @@ export type OneHouseJudgeInput = Pick<
   | "rightThreeYearException"
   | "mergedHouseholdFirstHouse"
   | "inheritedRightChoiceWhenBothHeld"
+  // ── §154⑤ 단서 최종 1주택 재기산 (OH-22) ──
+  | "finalOneHouseRestart"
 >;
 
 /**
@@ -170,6 +173,10 @@ export type OneHouseFacts = {
   rightThreeYearException?: TransferTaxInput["rightThreeYearException"];
   mergedHouseholdFirstHouse?: TransferTaxInput["mergedHouseholdFirstHouse"];
   inheritedRightChoiceWhenBothHeld?: TransferTaxInput["inheritedRightChoiceWhenBothHeld"];
+
+  // ── §154⑤ 단서 최종 1주택 재기산 (OH-22) ──
+  /** 양도 주택 보유 중 다른 주택 처분 이력 — 미입력이면 판정 보류(2021-01-01~2022-05-09 양도) */
+  finalOneHouseRestart?: TransferTaxInput["finalOneHouseRestart"];
 };
 
 /** 판정 대상 양도 정보 — 판정 메뉴는 「양도 예정」, 계산기는 실제 입력값(D-3 재판정). */
@@ -326,6 +333,11 @@ export type OneHouseJudgment = {
   pending: OneHousePendingCondition[];
   /** 판정 보류 */
   undetermined: OneHouseUndetermined[];
+  /**
+   * §154⑤ 단서(2021-01-01~2022-05-09 양도) 최종 1주택 재기산 판정 — 처분 이력을 입력한 1주택 양도에만 실린다(OH-22).
+   * 미답이면 싣지 않고 `undetermined`에 판정 보류로 남는다.
+   */
+  finalOneHouseRestart?: FinalOneHouseRestartEcho;
   /**
    * 선언했으나 요건 미충족으로 **적용되지 않은** 특례. 비과세·부분과세면 항상 `[]`
    * (특례가 실제로 적용됐거나, 적용 없이도 결론이 났으므로 「왜 안 됐나」가 없다).

@@ -4,6 +4,7 @@
  */
 
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -380,6 +381,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
           },
         }
       : {}),
+    // ⑬ OH-22 §154⑤ 단서 처분 이력 — 단건 ④와 같은 빌더·같은 노출 술어(자산별 form이라 native per-property)
+    ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),
     // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
     // 🔴 G-28: 신고서 단위 수정신고가 켜져 있으면 전송하지 않는다(상호배타 — JSDoc 참조).
     ...(!filingUnitAmendment && form.enablePenalty && form.filingType !== "correct"

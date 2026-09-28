@@ -87,6 +87,8 @@ const JUDGE_INPUT_KEYS = [
   "rightThreeYearException",
   "mergedHouseholdFirstHouse",
   "inheritedRightChoiceWhenBothHeld",
+  // OH-22 — §154⑤ 단서 최종 1주택 재기산 처분 이력
+  "finalOneHouseRestart",
 ] as const;
 
 const _frozenKeyGuards: [
@@ -175,6 +177,10 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   },
   mergedHouseholdFirstHouse: { kind: "succeeded_right", ownedBeforeRight: true },
   inheritedRightChoiceWhenBothHeld: "redevelopment_right",
+  finalOneHouseRestart: {
+    hadOtherHouseDisposal: true,
+    disposals: [{ kind: "gift", date: D("2021-05-05"), temporaryTwoHouseSpecial: false }],
+  },
 };
 
 describe("P2 — 판정 입력 왕복 (세액 불변의 근거)", () => {

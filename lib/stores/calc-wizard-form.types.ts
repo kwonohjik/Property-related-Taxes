@@ -16,6 +16,17 @@ import type {
 } from "./calc-wizard-asset";
 import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
 
+/** §154⑤ 단서 처분 이력 1행(OH-22). 3-state 칸은 `""` = 미선택. */
+export interface FinalHouseDisposalRow {
+  id: string;
+  /** 양도 · 증여 · 용도변경 · 그 밖(멸실 등 — 처분이 아니다) */
+  kind: "" | "transfer" | "gift" | "conversion" | "other";
+  /** 처분일 YYYY-MM-DD */
+  date: string;
+  /** 처분 당시 이 주택과 일시적 2주택(§155·§155의2·§156의2·§156의3) 관계였는가 */
+  temporaryTwoHouse: "" | "yes" | "no";
+}
+
 export interface TransferFormData {
   // ── Step 1: 자산 목록 + 양도 기본 정보 ──
   /** 모든 양도 자산 (최소 1건). assets[0]이 대표 자산. */
@@ -254,6 +265,14 @@ export interface TransferFormData {
   proviso4hoRentOver5: "" | "yes" | "no";
   proviso4hoRentOver5ContractDate: string;
   proviso4hoGiftSeparated: boolean;
+  /**
+   * §154⑤ 단서(2021-01-01~2022-05-09 양도) 최종 1주택 재기산 — 양도 주택을 보유하는 동안 세대가 다른 주택
+   * (조합원입주권 포함)을 처분한 적이 있는가(OH-22 · I-1). `""` = 미답 → 판정 보류(재기산 없음으로 추정하지 않는다).
+   * 노출·전송·검증 범위는 `lib/calc/final-house-restart.ts` 한 곳이 정한다.
+   */
+  finalHouseRestartHistory: "" | "yes" | "no";
+  /** `finalHouseRestartHistory === "yes"`일 때의 처분 목록(구 기록엔 없다 — 읽기는 `readFinalHouseDisposals`) */
+  finalHouseRestartDisposals: FinalHouseDisposalRow[];
   houses: HouseEntry[];
   /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
   presaleRights: PresaleRightEntry[];

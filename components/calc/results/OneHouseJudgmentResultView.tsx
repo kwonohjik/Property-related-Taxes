@@ -152,6 +152,25 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
       )}
 
       {/*
+        ── §154⑤ 단서 최종 1주택 재기산 (OH-22) ──
+        🔑 처분 이력을 입력한 경우에만 엔진이 싣는다(미답은 판정 보류 칸). 문장은 엔진 leaf 그대로(역산 금지).
+      */}
+      {judgment.finalOneHouseRestart && (
+        <ToneCard
+          tone={judgment.finalOneHouseRestart.applied ? "rose" : "sky"}
+          sectionNum={nextNo()}
+          title="최종 1주택 보유기간 재기산"
+        >
+          <p className="text-sm" data-testid="one-house-final-house-restart">
+            {judgment.finalOneHouseRestart.description}
+            <span className="ml-2">
+              <LawArticleModal legalBasis={judgment.finalOneHouseRestart.legalBasis} label="영 §154⑤ 단서" />
+            </span>
+          </p>
+        </ToneCard>
+      )}
+
+      {/*
         ── §155⑳ 장기임대주택 특례 (P4-3a) ──
         🔑 **선언한 경우에만** 렌더한다. 선언하지 않은 특례를 「해당 없음」으로 나열하면
            화면이 안 쓰는 조문으로 길어지고, 읽는 사람은 그것이 판정에 영향을 줬다고 읽는다.

@@ -28,6 +28,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
+import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
@@ -687,6 +688,8 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       rental4ho: form,
     }))
       issues.push({ step, message });
+    // OH-22 §154⑤ 단서 처분 이력 — ⑤·④와 같은 노출 술어(범위 밖 stale 이력으로 막지 않는다)
+    for (const message of collectFinalHouseRestartErrors(form, calcFinalHouseRestartInScope(form))) issues.push({ step, message });
 
     // 1세대1주택 + §154① 판정 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩 + 겹침
     // (규칙은 `residence-interval-validate.ts` 한 벌 — 판정 메뉴 OH-07과 공유)

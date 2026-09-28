@@ -145,6 +145,8 @@ const defaultFormData: TransferFormData = {
   proviso4hoRentOver5: "",
   proviso4hoRentOver5ContractDate: "",
   proviso4hoGiftSeparated: false,
+  finalHouseRestartHistory: "",
+  finalHouseRestartDisposals: [],
   houses: [],
   presaleRights: [],
   annualBasicDeductionUsed: "0",

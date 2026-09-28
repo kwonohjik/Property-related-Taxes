@@ -52,6 +52,7 @@ import {
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
+import { resolveFinalOneHouseRestart } from "./final-house-restart";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
 import type {
   OneHouseJudgeInput,
@@ -311,7 +312,16 @@ export function collectPendingConditions(
    *    비과세」가 거짓이 된다(거주 개시일 입력이 없어 거주 충족 예정일은 낼 수 없다 —
    *    `collectUndetermined` 참조).
    */
-  if (input.householdHousingCount === 1 && holdingIsTheOnlyUnmetRequirement(input, rule)) {
+  /*
+   * 🔴 OH-22 — §154⑤ 단서 재기산으로 모자란 보유기간에는 내지 않는다. 재기산일 + 2년은 언제나 2023-01-01
+   *    이후인데 그때 양도하면 단서가 삭제돼(제32654호 부칙 제2조) 재기산 자체가 없다 — 「이 날까지 보유」가
+   *    틀린 날짜가 된다(단서 없는 기산으로는 더 이른 날에도 충족될 수 있다).
+   */
+  if (
+    input.householdHousingCount === 1 &&
+    resolveFinalOneHouseRestart(input).status !== "restart" &&
+    holdingIsTheOnlyUnmetRequirement(input, rule)
+  ) {
     pending.push({
       id: "154-1-holding-years",
       description: "이 날짜까지 보유한 뒤 양도해야 비과세(보유기간 요건)",

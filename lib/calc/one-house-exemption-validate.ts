@@ -31,6 +31,7 @@ import {
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-house-judgment-temp-two-house";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
+import { collectFinalHouseRestartErrors, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
@@ -273,6 +274,10 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     rental4ho: form,
   })) {
     errors.push(err("provisoReason", message));
+  }
+  // OH-22 §154⑤ 단서 처분 이력 — ⑤·④와 같은 노출 술어(명부 파생 주택 수)
+  for (const message of collectFinalHouseRestartErrors(form, judgmentFinalHouseRestartInScope(form))) {
+    errors.push(err("finalHouseRestartHistory", message));
   }
 
   return errors;

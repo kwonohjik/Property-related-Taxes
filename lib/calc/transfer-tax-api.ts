@@ -7,6 +7,7 @@
  */
 
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -568,6 +569,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           }
         : {};
     })(),
+    // ⑬ OH-22 §154⑤ 단서 처분 이력 — ⑤·⑧과 같은 노출 술어(범위 밖·미답이면 키 없음)
+    ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     // 술어는 ⑤ 위젯·⑧ validate와 **같은 함수**를 쓴다 (Q03) — 종전에는 셋이 갈라져
     // 「⑤는 열리고 ④는 보내는데 ⑧이 검증 안 함」·「창 안인데 stale 값이 전송됨」으로 400이 났다.
