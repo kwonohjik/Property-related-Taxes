@@ -469,4 +469,27 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await gd.getByLabel("일", { exact: true }).fill("5");
     await expect(page.getByTestId("ci-gift-date-era-notice")).toHaveCount(0);
   });
+
+  // #37·#94 — §39 결과에 적용 법령 기준일이 없었다. 기준일 블록이 §45의3·§45의5 전용 삼항 라벨이라
+  //   그대로 흘리면 「거래한 날 — §45의5①」이 붙는다 — §29① 위임 라벨인지까지 본다.
+  test("§39 결과 — 적용 법령 기준일(§29①)과 2017.2.7. 전 증여의 현행 산식 고지", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase", ["2016", "6", "1"]);
+    await page.getByTestId("ci-direction-high").click();
+    await page.getByTestId("ci-subtype-no_realloc").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("20000");
+    await page.getByPlaceholder("증자 주식수").fill("20000");
+    await page.getByPlaceholder("실권주수").fill("30000");
+    await page.getByPlaceholder("특수관계인이 인수한 신주수").fill("15000");
+    await page.getByPlaceholder("분모 신주수").fill("50000");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    const box = page.getByTestId("deemed-applied-law-date");
+    await expect(box).toContainText("2016-06-01");
+    await expect(box).toContainText("상증령 §29①");
+    await expect(box).toContainText("현행 산식으로");
+    await expect(box).not.toContainText("§45의5");
+  });
 });

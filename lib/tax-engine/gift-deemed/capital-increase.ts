@@ -37,12 +37,37 @@ const SUBTYPE_NOTE: Record<NonNullable<CapitalIncreaseInput["subType"]>, string>
  */
 const DEEMED_OFFERING_CANCELS_FROM = Date.UTC(2016, 1, 5);
 
+/**
+ * 간주모집이어도 §29③ 신설 전이라 **제외가 유지되는가** — 단건·cap-table 공용(시기 축 단일 소스).
+ * 미입력 = 시기 판정 불가 ⇒ 종전 동작(취소 = 과세) 유지. 필수화는 ⑧이 UI 경로에서 이미 하고 있다.
+ */
+export function deemedOfferingKeepsExclusion(giftDate: Date | undefined): boolean {
+  return giftDate != null && giftDate.getTime() < DEEMED_OFFERING_CANCELS_FROM;
+}
+
 /** 간주모집이라 제외가 **취소되는가** — 증여일이 §29③ 시행일 이후일 때만 취소된다. */
 function deemedOfferingCancelsExclusion(input: CapitalIncreaseInput): boolean {
   if (input.allocationMethod !== "deemed_public_offering" || input.isListed !== true) return false;
-  const d = input.giftDate;
-  // 미입력 = 시기 판정 불가 ⇒ 종전 동작(취소) 유지. 필수화는 ⑧이 UI 경로에서 이미 하고 있다.
-  return d == null || d.getTime() >= DEEMED_OFFERING_CANCELS_FROM;
+  return !deemedOfferingKeepsExclusion(input.giftDate);
+}
+
+/**
+ * #37·#94 — 적용 법령 기준일. §39①은 증여일을 「대통령령으로 정하는 날」로 **전부 위임**하고
+ * 「상증령」§29①이 갈래를 정한다(권리락일 / 전환한 날 / 납입일) ⇒ §29①에 따라 입력된 증여일을 echo한다.
+ * §39·§29는 **2017.2.7. 이후 개정되지 않았다**(applicable_law 2017.01.02·2017.02.08 「현행과 동일」 실측).
+ * 그 전 증여일에만 「현행 산식으로 계산했다」고 고지한다 — 옛 조문 내용은 이 엔진이 판정하지 않는다.
+ */
+const S39_UNCHANGED_SINCE = Date.UTC(2017, 1, 7);
+
+export function capitalIncreaseLawDateEcho(giftDate: Date | undefined): { appliedLawDate?: string; eraNotice?: string } {
+  if (giftDate == null || isNaN(giftDate.getTime())) return {};
+  const appliedLawDate = giftDate.toISOString().slice(0, 10);
+  if (giftDate.getTime() >= S39_UNCHANGED_SINCE) return { appliedLawDate };
+  return {
+    appliedLawDate,
+    eraNotice:
+      "증여일이 2017.2.7. 전입니다 — 상증법 §39·상증령 §29는 그 뒤로 개정되지 않았지만 이 계산은 현행 산식으로 했습니다. 이 증여일에 시행되던 조문을 확인하십시오.",
+  };
 }
 
 /**
@@ -152,7 +177,12 @@ export function calcCapitalIncreaseGift(input: CapitalIncreaseInput): DeemedGift
   const result = (input.direction ?? "low") === "high" ? increaseHigh(input) : increaseLow(input);
   // 「상증법」§4의2⑥ 단서 — 배제 열거의 「제35조부터 제39조까지」에 §39가 들어 있다.
   //   계산 분기와 무관한 **상수 표지**라 진입점에서 한 번만 붙인다(배제 경로도 함께 덮는다).
-  return { ...result, donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("capital_increase") };
+  return {
+    ...result,
+    donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("capital_increase"),
+    // #37·#94 — 배제 경로도 덮도록 진입점에서 한 번만 붙인다(위 ⑥ 표지와 같은 이유)
+    ...capitalIncreaseLawDateEcho(input.giftDate),
+  };
 }
 
 /**

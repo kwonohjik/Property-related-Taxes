@@ -13,6 +13,8 @@ import { GIFT } from "../legal-codes";
 import { computeWeightedPerShare, isSmallShareholder, meetsRatioThreshold } from "./capital-helpers";
 import { capTableShareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
+import { deemedOfferingKeepsExclusion } from "./capital-increase";
+import { capitalIncreaseLawDateEcho } from "./capital-increase";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   CapShareholder,
@@ -109,10 +111,19 @@ export function calcCapitalIncreaseAllocation(
   //   한 증자에 공모 배정과 특정 배정이 섞일 수 있어 **주주별 행**으로 판정한다.
   //   ⚠️ 「주권상장법인이」는 **AND 조건**이다 — 비상장법인의 모집방법 배정은 제외 대상이 아니다(과소과세 차단).
   //      `isListed`는 여기서만 쓰이고 ㉯(`perShareAfter`)에는 접촉하지 않는다 — 안 C 유지(위 타입 주석).
-  //   ⚠️ 간주모집(「상증령」§29③ · 자시령 §11③)은 제외가 취소되므로 normal과 같이 과세된다.
+  //   ⚠️ 간주모집(「상증령」§29③ · 자시령 §11③)은 제외가 취소되므로 normal과 같이 과세된다 —
+  //      단, §29③ 신설(2016.2.5.) 전 증여일이면 제외가 **유지**된다(#37 · 단건 #5와 같은 술어).
+  //      종전에는 cap-table에 증여일이 없어 이 시기 축이 걸리지 않았다(2016.2.4. 사안 300,000,000 과세 실측).
+  const keepsDeemedExclusion = deemedOfferingKeepsExclusion(input.giftDate);
   const publicOfferingIds = new Set(
     input.isListed === true
-      ? shareholders.filter((s) => s.allocationMethod === "public_offering").map((s) => s.id)
+      ? shareholders
+          .filter(
+            (s) =>
+              s.allocationMethod === "public_offering" ||
+              (s.allocationMethod === "deemed_public_offering" && keepsDeemedExclusion),
+          )
+          .map((s) => s.id)
       : [],
   );
   const splits: DonationSplit[] = [];
@@ -266,5 +277,6 @@ export function calcCapitalIncreaseAllocation(
     // 「상증법」§4의2⑥ 단서 — §39는 배제 열거의 「제35조부터 제39조까지」에 든다(조건 없음)
     donorJointLiabilityExempt: jointLiabilityExemptForDeemedType("capital_increase_allocation"),
     splits,
+    ...capitalIncreaseLawDateEcho(input.giftDate),
   };
 }

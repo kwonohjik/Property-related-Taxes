@@ -326,6 +326,12 @@ export interface CapShareholder {
 /** 증자 cap-table 입력 (equity-delta: 실제 ㉯ + 손해비례 배분) */
 export interface CapitalIncreaseAllocationInput {
   direction: "low" | "high"; // 저가/고가 (이익자 방향 결정)
+  /**
+   * 증여일 — 「상증령」§29①이 정하는 날. **행위시법 판정에만** 쓴다(#37·#94):
+   * 적용 법령 기준일 echo와 §29③ 간주모집 시기 게이트(2016.2.5. 전이면 제외 유지 — 단건과 같은 술어).
+   * 미입력(leaf)이면 둘 다 적용하지 않는다(종전 동작).
+   */
+  giftDate?: Date;
   preIssuePrice: number; // ㉮ 증자 전 1주당 평가가액
   newSharePrice: number; // ㉰ 신주 1주당 인수가액
   shareholders: CapShareholder[];
