@@ -193,9 +193,11 @@ export function judgeMixedUseOneHouseExemption(
   );
   // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
   // §155 의제가 성립하면 「1세대1주택으로 보아」 주택 수 축이 충족된다(OH-09).
+  // E-14i — 제외 분기도 「1세대가」(§89①3호가목·영 §154①)를 본다. 조특법 §99의4①·§98의9①·§98의7② 등은 주택 수에서
+  //   뺄 뿐 1세대 요건을 대신하지 않는다. 단건 `checkExemptionCore`의 `!input.isOneHousehold` · 위 상속 제외(E-14d)와 같은 값.
   const houseCountOk =
     (effectiveHouseCount !== undefined && houseCountExclusionApplied + inheritedExcludedCount > 0
-      ? effectiveHouseCount <= 1
+      ? isOneHouseholdForHouseCount && effectiveHouseCount <= 1
       : (asset.isOneHouseExempt ?? true)) || deemedOneHouseBy155 !== undefined;
   // ⑦ E-14d — 단건 산식 step과 **같은 문구**(`buildInheritedExclusionSteps`)를 경고로 싣는다(제외·불성립 사유).
   if (inheritedExclusion) {
