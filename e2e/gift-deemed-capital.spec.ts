@@ -64,6 +64,43 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
   });
 
+  // #19 — 「상증법」§43② · 「상증령」§32의4 4호: 1년 이내 같은 호 증자 이익을 합산해 **3억 금액기준**만 판정한다.
+  //   과세는 당해 건(사용자 결정 (a)). 짝 — 선행 행이 없으면 199,992,000은 금액기준 미달로 0.
+  async function fillLowNoRealloc(page: Page) {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "capital_increase", ["2026", "3", "2"]);
+    await page.getByTestId("ci-subtype-no_realloc").click();
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("100000");
+    await page.getByPlaceholder("증자 전 발행주식총수").fill("1000000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("90000");
+    await page.getByPlaceholder("증자 주식수").fill("200000");
+    await page.getByPlaceholder("실권주수").fill("24000");
+    // 나목 필수 — 이익이 바뀌지 않는 값(균등증자 = 실제 증자 · 증자후 지분비율 1)
+    await page.getByLabel("균등증자 가정 증가주식수", { exact: true }).fill("200000");
+    await page.getByLabel("신주인수자의 특수관계인의 실권주수", { exact: true }).fill("24000");
+    await page.getByLabel("증자 후 신주인수자 보유주식수", { exact: true }).fill("1200000");
+    await page.getByLabel("증자 후 발행주식총수", { exact: true }).fill("1200000");
+  }
+
+  test("#19 §43② — 저가 나목 199,992,000 단독은 금액기준 미달 0 · 1년 내 같은 호 선행 이익 합산 시 당해분 과세", async ({ page }) => {
+    await fillLowNoRealloc(page);
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("3억");
+
+    await page.getByTestId("deemed-edit-btn").click();
+    await page.getByTestId("ci-pt-add").click();
+    const d = page.getByTestId("ci-pt-date-0");
+    await d.getByLabel("연도").fill("2025");
+    await d.getByLabel("월").fill("9");
+    await d.getByLabel("일", { exact: true }).fill("1");
+    await page.getByTestId("ci-pt-benefit-0").fill("199992000");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("199,992,000"); // 합계 399,984,000이 아니다
+    await expect(page.getByText("§43② 1년 합산 금액기준").first()).toBeVisible();
+  });
+
   test("§39 증자 저가발행·실권주 재배정 → 33,330,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "capital_increase");

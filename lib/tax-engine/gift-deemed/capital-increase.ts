@@ -6,6 +6,21 @@ import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
+import { sameClausePriorTotal, sameClauseAggregateNote } from "./capital-increase-43-2";
+
+/**
+ * 「상증법」§43② 1년 합산 — 나목 3억 금액기준 판정용 합계와 산출근거 행(#19).
+ * 합산이 없으면 행도 없다. 과세 금액은 바꾸지 않는다(`capital-increase-43-2.ts` 머리 주석).
+ */
+function aggregate43(input: CapitalIncreaseInput, current: number): { total: number; row?: CalculationStep } {
+  const agg = sameClausePriorTotal(input.giftDate, input.priorSameClauseGains);
+  if (agg.priorTotal <= 0) return { total: current };
+  const total = current + agg.priorTotal;
+  return {
+    total,
+    row: { label: "§43② 1년 합산 금액기준", amount: total, lawRef: GIFT.DUP_EXCLUSION_ANNUAL, note: sameClauseAggregateNote(current, agg) },
+  };
+}
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
@@ -223,12 +238,16 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
 
   let applied: boolean;
   let exclusionReason: string | undefined;
+  let agg43Row: CalculationStep | undefined;
   if (subType === "no_realloc") {
     // §29②2: 차액 ≥ 증자후가 100분의 30 또는 「그 가액에 **다목의 규정에 의한 실권주수**를
     //         곱하여 계산한 가액」 ≥ 3억 ⇒ 3억 arm은 **가중 후** base로 판정한다.
     //         임계는 절사하지 않는다(`meetsRatioThreshold` — 절사는 과다과세 방향으로만 작동).
+    // §43② — 3억 arm만 1년 이내 같은 호(1호) 선행 이익을 더해 판정한다. 비율 arm은 건별(#19).
     const ratioMet = meetsRatioThreshold(perShareGain, perShareAfter);
-    applied = base > 0 && (ratioMet || base >= ABSOLUTE_THRESHOLD);
+    const agg = aggregate43(input, base);
+    agg43Row = agg.row;
+    applied = base > 0 && (ratioMet || agg.total >= ABSOLUTE_THRESHOLD);
     exclusionReason = applied ? undefined : "이익이 기준금액(증자후가 30%·3억) 미만";
   } else {
     // §29②1 가·다·라목: 기준금액 없음
@@ -252,6 +271,7 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
         ? `§29②2호 다목 가중 — 실권주 ${forfeitedShares}주 × 증자후 지분비율`
         : undefined },
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①1호 저가발행 — ${SUBTYPE_NOTE[subType]}${imputationNote}` },
+    ...(agg43Row ? [agg43Row] : []),
     ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
   // §39① 괄호 — 주권상장법인 모집방법 배정은 「배정」에서 제외되어 과세 요건 자체가 성립하지 않는다
@@ -284,6 +304,7 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   let value: number;
   let applied: boolean;
   let exclusionReason: string | undefined;
+  let agg43Row: CalculationStep | undefined;
   // 5-B — 「상증령」§29②3·4·5호의 비율 가중을 **화면에 드러낸다**. 종전 breakdown은
   //   「1주당 차액 → 이익 귀속 주식수 → 증여재산가액」이라 산술이 맞지 않았다
   //   (8,334 × 30,000 = 250,020,000인데 결론은 75,006,000). 그 사이 단계가 가중이다.
@@ -315,8 +336,11 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
           : `§29②5호 — 특수관계인이 인수한 신주수 ${numer.toLocaleString()} ÷ 주주 아닌 자 배정·초과인수 총수 ${denom.toLocaleString()}`;
     if (subType === "no_realloc") {
       // §29②4: 가중이익 ≥ 3억 또는 차액 ≥ 증자후가 100분의 30
+      // §43② — 3억 arm만 1년 이내 같은 호(2호) 선행 이익을 더해 판정한다. 비율 arm은 건별(#19).
       const ratioMet = meetsRatioThreshold(perShareGain, perShareAfter);
-      applied = weighted > 0 && (ratioMet || weighted >= ABSOLUTE_THRESHOLD);
+      const agg = aggregate43(input, weighted);
+      agg43Row = agg.row;
+      applied = weighted > 0 && (ratioMet || agg.total >= ABSOLUTE_THRESHOLD);
       exclusionReason = applied ? undefined : "이익이 기준금액(증자후가 30%·3억) 미만";
     } else {
       // §29②5 다·라목: 기준금액 없음
@@ -335,6 +359,7 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
     { label: "이익 귀속 주식수", amount: forfeitedShares },
     ...(weightNote ? [{ label: "비율 가중 전 이익", amount: base, note: weightNote }] : []),
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①2호 고가발행 — ${SUBTYPE_NOTE[subType]}` },
+    ...(agg43Row ? [agg43Row] : []),
     ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
   // §39① 괄호는 「이하 이 항에서 같다」로 **2호(고가)에도** 걸린다

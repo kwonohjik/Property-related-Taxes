@@ -9,7 +9,7 @@
  */
 import type { ConvertibleBondClause, DeemedGiftType, ShareAllocationMethod } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
-import type { CapTableRow, CdShareholderRow, LoanLoanItem } from "./deemed-form-rows";
+import type { CapTableRow, CdShareholderRow, LoanLoanItem, ScPriorTxRow } from "./deemed-form-rows";
 import type { DeemedPhase3Fields } from "./deemed-form-phase3";
 import { INITIAL_DEEMED_PHASE3 } from "./deemed-form-phase3";
 import { makeCapTableRow } from "./deemed-form-rows";
@@ -123,6 +123,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 분모 신주수 (가목=실권주총수 / 나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수)
   ciEqualIssueShares: string; // 저가 나목 §29②2호 가목 — 균등증자 가정 증가주식수(㉯ 기준 수량)
+  /** §43②·영 §32의4 4호 — 소급 1년 이내 같은 호 선행 증자(나목 3억 금액기준 합산용, #19). 행 형태는 §45의5와 같다 */
+  ciPriorSameClauseRows?: ScPriorTxRow[];
   ciPostHeldShares: string; // 저가 나목 §29②2호 다목 — 증자후 신주인수자 보유주식수(분자)
   ciPostTotalShares: string; // 저가 나목 §29②2호 다목 — 증자후 발행주식총수(분모)
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
@@ -354,6 +356,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
   ciEqualIssueShares: "",
+  ciPriorSameClauseRows: undefined,
   ciPostHeldShares: "",
   ciPostTotalShares: "",
   ciSmallImputation: false,

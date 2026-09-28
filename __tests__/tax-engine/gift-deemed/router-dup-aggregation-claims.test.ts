@@ -93,10 +93,22 @@ describe("주장② §43② 1년 합산은 «축별 구현»으로 살아 있다
 describe("주장④ 주석이 배선된 두 축을 «이름으로» 적는다", () => {
   // ⚠️ 종전 문구를 «문자열 부정»으로 막으려 했더니, 경위를 설명하는 내 주석이 그 문장을
   //    인용하고 있어 스스로 걸렸다. 부정형 대신 **지금 사실을 긍정으로** 단언한다.
-  it("[X-4] §41의4·§45의5가 배선 축으로 명시돼 있다", () => {
+  it("[X-5] §39 — 1년 이내 같은 호 선행 이익이 3억 금액기준 판정에 합산된다(#19)", () => {
+    const ci = (priorDate: string) =>
+      calcDeemedGift({
+        type: "capital_increase", direction: "low", subType: "no_realloc",
+        preIssuePrice: 100_000, preIssueShares: 1_000_000, newSharePrice: 90_000, issuedShares: 200_000, forfeitedShares: 24_000,
+        giftDate: new Date("2026-03-02"), priorSameClauseGains: [{ date: priorDate, gain: 199_992_000 }],
+      });
+    expect(ci("2025-09-01").applied).toBe(true);
+    expect(ci("2024-09-01").applied).toBe(false); // 윈도 밖 — 짝
+  });
+
+  it("[X-4] §41의4·§45의5·§39가 배선 축으로 명시돼 있다", () => {
     const src = read(`${GD}/router.ts`);
     expect(src).toMatch(/§41의4/);
     expect(src).toMatch(/§45의5/);
+    expect(src).toMatch(/§39 — `capital-increase-43-2\.ts`/);
     // §43①의 미배선 서술은 «여전히 참»이므로 남아 있어야 한다([X-0]이 뒷받침).
     expect(src).toMatch(/호출처가 0건/);
   });
