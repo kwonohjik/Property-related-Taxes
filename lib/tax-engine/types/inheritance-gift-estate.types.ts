@@ -724,6 +724,23 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    */
   isStatutoryFormulaValue?: boolean;
   /**
+   * 증여이익 계산기에서 이관된 항목의 **출처**(#100 · 계획서 R12) — 표시·계산에 쓰지 않는 보존 전용.
+   *
+   * 「상증령」§29②1호처럼 (가 − 나) × 다의 **곱**인 산식은 인자가 달라도 금액이 같을 수 있다.
+   * 금액만 실으면 사실관계가 다른 두 건의 증여세 이력이 contentHash로 1건에 합쳐졌다.
+   * 엔진 입력(`input`)을 실어 두면 해시가 사실관계로 갈리고, 나중에 산정을 재현할 수 있다.
+   *
+   * ⚠️ `sourceCalculationId`만으로는 해시가 갈리지 않는다 — `content-hash.ts` `VOLATILE_ID_KEY`가 `…Id` 값을 토큰화한다.
+   * ⚠️ 이관 후 사용자가 금액을 고치면 `input`과 금액이 어긋난다. 소비자를 만들 때는 이 금액을
+   *    재산정해 대조할 것(현재 소비자 없음). Zod는 이 키를 모르므로 서버 엔진에는 닿지 않는다.
+   */
+  deemedSource?: {
+    type: string;
+    input: Record<string, unknown>;
+    /** 출처 증여이익 이력 record id — 자동저장 전이면 없다 */
+    sourceCalculationId?: string;
+  };
+  /**
    * 「상증법」§4의2⑥ 단서 — 이 증여재산이 **증여자 연대납부의무 면제** 대상 유형임을 나타낸다.
    *
    * 엔진 결과의 `donorJointLiabilityExempt`가 prefill을 거쳐 **행별**로 내려온 값이다.

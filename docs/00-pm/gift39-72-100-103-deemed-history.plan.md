@@ -2,7 +2,7 @@
 
 > 출처: `docs/review/gift-39/I-gift-tax-handoff.md:145`(#72 medium) · `:249`(#100 low) · `J-safety-net.md:309`(#103 low)
 > 선행 계획: `docs/00-pm/gift-deemed-transfer.plan.md:487` R12 (결과→마법사 이관 시 IndexedDB·`sourceCalculationId` 연동)
-> 상태: PR ① ✅ **구현 완료(2026-09-28)** · PR ② 착수 전 — 사용자 채택: 2개 PR · 예외 5건 사유 등재
+> 상태: PR ① ✅ **머지(#1842 · 2026-09-28)** · PR ② ✅ **구현 완료(2026-09-28)** — 사용자 채택: 2개 PR · 예외 5건 사유 등재
 
 ## 1. 실측 (master `54a010e9`)
 
@@ -38,6 +38,9 @@
 
 - `buildGiftWizardPrefill` 반환에 `deemedSource: { type, input(엔진 입력), deemedGiftValue }` + `sourceCalculationId`(PR ①의 `savedId`).
 - 증여세 `FormState`에 두 선택 필드 추가 → `inputData`에 실려 contentHash가 사실관계로 갈린다.
+- ✅ 구현: 출처는 **폼 최상위가 아니라 이관 항목(`giftItems[]`)마다** 붙인다 — 항목을 지우면 출처도 함께 사라지고,
+  §33처럼 항목이 여럿인 분기도 전부 받는다. 분기 9개에 흩뿌리지 않고 `buildGiftWizardPrefill` **출구 한 곳**에서 붙인다.
+  `EstateItem.deemedSource`(보존 전용 · Zod가 모르므로 서버 엔진에 닿지 않음).
 - ⚠️ staleness: 사용자가 이관 후 금액을 고치면 `deemedSource.deemedGiftValue ≠ giftItems 금액`이 된다. 현재 소비자가 없으므로 **보존만** 하고, 소비자를 만들 때 비교하도록 JSDoc에 적는다.
 
 ## 3. Pre-Do anchor (fail-first + 짝)

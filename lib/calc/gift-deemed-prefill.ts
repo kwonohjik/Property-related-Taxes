@@ -9,6 +9,8 @@ import { DEEMED_TYPE_META, type DeemedFormState } from "@/components/calc/deemed
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
 import { getSec68ProvisoGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
+// ⚠️ `gift-deemed-api.ts`가 이 파일을 재수출하므로 순환이지만, 호출 시점에만 쓰여 ESM에서 안전하다.
+import { buildDeemedGiftInput } from "@/lib/calc/gift-deemed-api";
 
 /**
  * §47① 합산배제증여재산 플래그 — **모든 분기가 이 헬퍼를 통과해야 한다.**
@@ -115,7 +117,28 @@ function edTargetName(result: DeemedGiftAnyResult): string | undefined {
   return d.donees.find((x) => x.id === d.targetDoneeId)?.name;
 }
 
+/**
+ * 증여이익 → 증여세 마법사 prefill. 이관 항목 **전부**에 출처(`deemedSource`)를 붙인다(#100).
+ *
+ * 분기가 9개라 분기마다 붙이면 하나를 빠뜨린다 — 출구 한 곳에서 붙인다(`deemedGiftItemFlags`와 같은 취지).
+ * `sourceCalculationId`는 자동저장된 증여이익 record id(R12)다 — 저장 전이면 넘기지 않는다.
+ */
 export function buildGiftWizardPrefill(
+  form: DeemedFormState,
+  result: DeemedGiftAnyResult,
+  sourceCalculationId?: string,
+): Partial<GiftFormState> {
+  const prefill = buildPrefillCore(form, result);
+  if (!prefill.giftItems?.length) return prefill;
+  const deemedSource = {
+    type: result.type,
+    input: buildDeemedGiftInput(form) as unknown as Record<string, unknown>,
+    ...(sourceCalculationId ? { sourceCalculationId } : {}),
+  };
+  return { ...prefill, giftItems: prefill.giftItems.map((item) => ({ ...item, deemedSource })) };
+}
+
+function buildPrefillCore(
   form: DeemedFormState,
   result: DeemedGiftAnyResult,
 ): Partial<GiftFormState> {

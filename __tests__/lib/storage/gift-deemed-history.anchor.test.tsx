@@ -111,4 +111,17 @@ describe("#72 DeemedGiftCalculator 배선", () => {
     expect(arg.inputData.type).toBe("capital_increase");
     expect(arg.taxLawVersion).toBe("2026-03-02");
   });
+
+  it("[GDV-3] #100·R12 — 증여세로 넘길 때 자동저장된 record id를 출처로 싣는다", async () => {
+    sessionStorage.setItem("giftDeemedResumeInput", JSON.stringify(CI_FORM));
+    render(<DeemedGiftCalculator />);
+    await waitFor(() => expect(screen.getByTestId("deemed-summary-card")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("deemed-calc-btn"));
+    await waitFor(() => expect(saveSpy).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId("deemed-to-wizard")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("deemed-to-wizard"));
+    const payload = JSON.parse(sessionStorage.getItem("giftTaxResumeInput")!);
+    expect(payload.giftItems[0].deemedSource.sourceCalculationId).toBe("rec-1");
+    expect(push).toHaveBeenCalledWith("/calc/gift-tax");
+  });
 });
