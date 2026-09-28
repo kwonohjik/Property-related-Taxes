@@ -104,11 +104,14 @@ describe("주장④ 주석이 배선된 두 축을 «이름으로» 적는다", 
     expect(ci("2024-09-01").applied).toBe(false); // 윈도 밖 — 짝
   });
 
-  it("[X-4] §41의4·§45의5·§39·자본거래 4축·§37·§42 무상이 배선 축으로, 금액기준 없는 축이 「대상 없음」으로 명시돼 있다", () => {
+  it("[X-4] §41의4·§45의5·§39·자본거래 4축·§37·§42 무상이 배선 축으로, 금액기준 없는 축과 §35가 「대상 없음」으로 명시돼 있다", () => {
     const src = read(`${GD}/router.ts`);
     expect(src).toMatch(/배선된 것은 \*\*9개\*\*/);
     expect(src).toMatch(/§37 무상사용 1억·무상담보 1천만원/);
-    expect(src).toMatch(/남은 미배선: §35\(/);
+    // §35는 「대상 없음(대수적 무효)」으로 닫았다 — 정책 (a) 아래 합산해도 과세액이 같다
+    // (`sec43-2-sec35-no-op.anchor.test.ts`가 실측으로 고정). 12개 축에 미배선이 남지 않는다.
+    expect(src).toMatch(/§35 저가양수·고가양도 — 기준금액이 판정과 공제를 겸한다/);
+    expect(src).not.toMatch(/남은 미배선/);
     expect(src).toMatch(/§41의4/);
     expect(src).toMatch(/§45의5/);
     expect(src).toMatch(/§39 — `same-clause-43-2\.ts`/);
