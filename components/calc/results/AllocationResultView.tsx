@@ -7,6 +7,7 @@ import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggl
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import type { CapitalIncreaseAllocationResult } from "@/lib/tax-engine/gift-deemed/types";
 import { CapitalIncreaseAppliedLawDate } from "./CapitalIncreaseAppliedLawDate";
+import { DupExclusionNote } from "./DupExclusionNote";
 
 // ─────────────────────────────────────────────────────────────
 // 증자 cap-table 결과 — 수증자별·증여자별 분할 + 검증내역(zero-sum)
@@ -144,6 +145,7 @@ export function AllocationResultView({
           해당해, 같은 조 제1호~제3호 요건과 무관하게 증여자에게 연대납부의무가 성립하지 않습니다.
         </div>
       )}
+      {result.dupExclusionApplies === true && <DupExclusionNote />}
 
       {taxedBeneficiaries.length > 0 && (
         <button

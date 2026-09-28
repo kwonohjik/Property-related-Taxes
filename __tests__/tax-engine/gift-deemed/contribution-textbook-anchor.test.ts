@@ -5,6 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { calcContributionGift } from "@/lib/tax-engine/gift-deemed/contribution-in-kind";
+import { calcDeemedGift } from "@/lib/tax-engine/gift-deemed/router";
 
 describe("§39의3 현물출자 — 교재 계산사례 anchor", () => {
   // ── TBC-1: 계산사례 1 저가·다수 증여자 안분 ──
@@ -115,8 +116,10 @@ describe("§39의3 현물출자 — 교재 계산사례 anchor", () => {
     expect(r.deemedGiftValue).toBe(13_333); // floor(20000×2/3)
   });
 
-  // ── TBC-NOTE: 결과 breakdown note에 4대 법령효과 키워드 ──
-  it("[TBC-NOTE] CASE-1 결과 breakdown note에 §53⑧3호·§4의2⑥·§43①·현물출자 납입일 포함", () => {
+  // ── TBC-NOTE: 결과 breakdown note에 법령효과 키워드 ──
+  // #112 — §43①은 전 유형 공통 표지로 옮겼다. 단언을 지우지 않고 **옮긴다**(아래 [TBC-NOTE-43]) —
+  //   지우기만 하면 §39의3에서 §43① 고지가 사라져도 아무도 모른다.
+  it("[TBC-NOTE] CASE-1 결과 breakdown note에 §53⑧3호·§4의2⑥·현물출자 납입일 포함", () => {
     const r = calcContributionGift({
       caseType: "low",
       preContribPrice: 20_000,
@@ -129,7 +132,20 @@ describe("§39의3 현물출자 — 교재 계산사례 anchor", () => {
     const notes = r.breakdown.map((s) => s.note ?? "").join(" ");
     expect(notes).toContain("§53⑧3호");
     expect(notes).toContain("§4의2⑥");
-    expect(notes).toContain("§43①");
     expect(notes).toContain("현물출자 납입일");
+  });
+
+  it("[TBC-NOTE-43] §43① 중복적용 배제는 라우터 표지로 붙는다(공통 고지)", () => {
+    const r = calcDeemedGift({
+      type: "contribution",
+      caseType: "low",
+      preContribPrice: 20_000,
+      preContribShares: 100_000,
+      newSharePrice: 10_000,
+      contributedShares: 100_000,
+      allocatedShares: 100_000,
+      parties: [{ name: "A", preShares: 55_000 }, { name: "B", preShares: 35_000 }],
+    });
+    expect(r.dupExclusionApplies).toBe(true);
   });
 });
