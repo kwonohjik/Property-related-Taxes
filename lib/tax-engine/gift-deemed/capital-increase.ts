@@ -18,6 +18,17 @@ function aggregate43(input: CapitalIncreaseInput, current: number): { total: num
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
+/**
+ * 「상증령」§29② 본문 단서 — 증자 전·후 1주당 가액이 **모두** 영 이하이면 이익이 없는 것으로 본다.
+ * 「증자 후」는 상장 단서(Min/Max)까지 적용한 뒤의 값이다 — 그것이 각 호가 이익 계산에 쓰는 가액이다.
+ * 값은 대개 이미 0이지만(인수가도 0이어야 증자 후가 0) 사유가 「기준금액 미만」 등으로 뜨던 것을
+ * 근거 조문으로 바로잡는다. 전환주식(§29②6호)의 두 시점 계산도 이 함수를 거친다.
+ */
+function nonPositiveProviso(preIssuePrice: number, perShareAfter: number): boolean {
+  return preIssuePrice <= 0 && perShareAfter <= 0;
+}
+const NON_POSITIVE_REASON = `「상증령」§29② 단서 — 증자 전·후 1주당 가액이 모두 영 이하 — 이익 없음 (${GIFT.CI_NON_POSITIVE_PROVISO})`;
+
 const SUBTYPE_NOTE: Record<NonNullable<CapitalIncreaseInput["subType"]>, string> = {
   forfeited_realloc: "실권주 재배정",
   third_party: "제3자 직접배정",
@@ -248,6 +259,10 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
     applied = base > 0;
     exclusionReason = applied ? undefined : "증자 후 1주가가 인수가 이하 — 이익 없음";
   }
+  if (nonPositiveProviso(preIssuePrice, perShareAfter)) {
+    applied = false;
+    exclusionReason = NON_POSITIVE_REASON;
+  }
   const value = applied ? base : 0;
 
   // §39②: 이익을 증여한 소액주주 2명 이상 → 1인 의제 (저가발행 ①1호 한정, 집계 이익 불변)
@@ -342,6 +357,11 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
       exclusionReason = applied ? undefined : "특수관계인 인수 이익 없음";
     }
     value = applied ? weighted : 0;
+  }
+  if (nonPositiveProviso(preIssuePrice, perShareAfter)) {
+    applied = false;
+    value = 0;
+    exclusionReason = NON_POSITIVE_REASON;
   }
 
   const breakdown: CalculationStep[] = [

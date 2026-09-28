@@ -149,7 +149,10 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       break;
     }
     case "capital_increase":
-      if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
+      // 「상증령」§29② 단서 축 — 증자 전 1주당 가액 **0은 정당한 평가액**이다(결손법인: 「상증령」§55①
+      //   순자산 0원 하한 · §56① 순손익 음수→영). 0을 막으면 결손법인 고가증자가 계산되지 않는다
+      //   (실측 1,800,000,000). 3-A 인수가와 같이 **원문자열로** 공란만 막는다.
+      if (form.ciPrePrice.trim() === "") return "증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
       // 3-A — 「상증령」§29②1호 가목 산식의 **분자·분모 양쪽**에 들어가는 수량이다
       //   (「… + (신주 1주당 인수가액 × **증자에 의하여 증가한 주식수**)] ÷ (증자전의 발행주식
@@ -218,8 +221,9 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         return "증자 후 1주당 평가가액(상증법 §63①1가 종가평균)을 입력하세요";
       break;
     case "capital_increase_allocation": {
-      if (parseAmount(form.ciAllocPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
-      if (parseAmount(form.ciAllocNewPrice) <= 0) return "신주 1주당 인수가액을 입력하세요";
+      // 단건(`capital_increase`)과 같다 — 증자 전 가액 0(결손법인)·인수가 0(무상 배정)은 법령상 성립한다.
+      if (form.ciAllocPrePrice.trim() === "") return "증자 전 1주당 평가가액을 입력하세요";
+      if (form.ciAllocNewPrice.trim() === "") return "신주 1주당 인수가액을 입력하세요";
       const rows = form.ciAllocRows;
       if (rows.length < 2) return "주주를 2명 이상 입력하세요";
       if (rows.some((r) => !r.name.trim())) return "각 주주의 이름을 입력하세요";
@@ -316,9 +320,10 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "convertible_stock":
-      if (parseAmount(form.csConvPrePrice) <= 0) return "전환 시점 증자 전 1주당 평가가액을 입력하세요";
+      // 두 시점 모두 단건과 같다 — 증자 전 가액 0(결손법인)은 법령상 성립한다(공란만 막는다).
+      if (form.csConvPrePrice.trim() === "") return "전환 시점 증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.csConvPreShares) <= 0) return "전환 시점 증자 전 발행주식총수를 입력하세요";
-      if (parseAmount(form.csIssuePrePrice) <= 0) return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
+      if (form.csIssuePrePrice.trim() === "") return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.csIssuePreShares) <= 0) return "발행 시점 증자 전 발행주식총수를 입력하세요";
       // 3-A 대칭 — 전환주식은 「전환 시점 이익 − 발행 시점 이익」이라 한 시점만 비어도 결과가 뒤집힌다.
       if (parseAmount(form.csConvIssuedShares) <= 0) return "전환 시점 증자 주식수를 입력하세요";
