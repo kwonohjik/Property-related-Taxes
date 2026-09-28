@@ -23,6 +23,7 @@ import {
   PROPERTY_TYPE_LABEL,
   computeRow10,
   computeRow14,
+  buppyo1QuantityOrArea,
 } from "@/lib/calc/gift-valuation-besshi";
 import type {
   EstateItem,
@@ -238,7 +239,7 @@ export function GiftValuationFormPdfPage({
     const item = itemMap.get(vr.estateItemId);
     const propertyCode = item ? toEstateItemTypeCode(item.category) : "12";
     const methodCode = item ? toEstateItemValuationMethodCode(item, vr) : "08";
-    const shares = item?.listedStockShares;
+    const quantityOrArea = buppyo1QuantityOrArea(item);
     const unitPrice = item?.listedStockAvgPrice;
     return [
       "A11",
@@ -247,7 +248,7 @@ export function GiftValuationFormPdfPage({
       "",
       item?.name ?? "—",
       "",
-      shares ? shares.toLocaleString("ko-KR") : "",
+      quantityOrArea ? quantityOrArea.toLocaleString("ko-KR") : "",
       unitPrice ? fmt(unitPrice) : "",
       fmt(vr.valuatedAmount),
       methodCode,

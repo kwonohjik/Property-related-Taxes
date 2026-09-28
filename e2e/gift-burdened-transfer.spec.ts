@@ -468,6 +468,14 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       expect(body.transferType).toBe("burdened_gift");
       expect(body.propertyType).toBe("land");
       expect(body.isNonBusinessLand).toBe(true);
+
+      // #101 — 입력한 토지 면적 100㎡가 증여 부표1 ⑤ 수량(면적)에 실린다(종전 공란) · ⑥ 단가는 공란
+      const valuationToggle = page.getByRole("button", { name: /별지 제10호서식 부표 1/ });
+      await valuationToggle.click();
+      const valuationCard = page.locator("div.border.rounded-xl").filter({ has: valuationToggle });
+      const row1 = valuationCard.getByTestId("row-data-1");
+      await expect(row1.getByTestId("col-shares")).toHaveText("100");
+      await expect(row1.getByTestId("col-unit-price")).toHaveText("");
     },
   );
 
