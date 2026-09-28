@@ -8,12 +8,13 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { DeemedFormState } from "./shared";
+import { SameClausePriorTable } from "./SameClausePriorTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
 
 /** 합병 주주 구성 행 편집 (과대평가·과소평가 법인 공용). id=name 매칭. */
-type ShRow = { name: string; shares: string; isForProfitCorp?: boolean };
+type ShRow = { name: string; shares: string; isForProfitCorp?: boolean; priorSameClauseGain?: string };
 function ShareholderRows({
   label,
   hint,
@@ -61,6 +62,16 @@ function ShareholderRows({
             </button>
           </div>
           {/* 「상증법」§2 9호·§4의2①·③ — 영리법인 수증자는 납세의무자가 아니다. 이 행의 과세분만 빠진다 */}
+          {/* §43²·영 §32의4 3호 — 수증자별 3억 판정이라 행마다 1년 이내 합병 이익 합계를 받는다 */}
+          {forProfitToggle && (
+            <CurrencyInput
+              label="1년 이내 합병으로 얻은 이익 합계 (§43² · 선택)"
+              value={r.priorSameClauseGain ?? ""}
+              onChange={(v) => update(i, { priorSameClauseGain: v })}
+              data-testid={`${testIdPrefix}-prior-${i}`}
+              hint="이 주주가 수증자로서 증여일 전 1년 이내 합병으로 얻은 이익 — 3억 금액기준 판정에만 더하고, 과세는 이번 이익입니다"
+            />
+          )}
           {forProfitToggle && (
             <ToggleCard
               variant="chip"
@@ -230,6 +241,13 @@ export function MergerFields({ form, set }: Props) {
           <CurrencyInput label="대주주등 주식수" value={form.mrgMajorShares} onChange={(v) => set({ mrgMajorShares: v })} placeholder="대주주등 주식수" />
         </>
       )}
+      {/* §43²·영 §32의4 3호 — 「합병에 따른 이익」 전체가 한 단위(호 구분 없음). 매트릭스는 수증자 행 칸 */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="mrgPriorSameClauseRows"
+        benefitHint="1년 이내 합병으로 얻은 이익(주식교부·주식 외 재산 교부 모두) — 3억 금액기준 판정에만 합산하고 과세는 이번 합병분입니다"
+      />
     </ToneCard>
   );
 }

@@ -5,7 +5,7 @@
  */
 import type { GiftDonorRelation } from "../types/inheritance-gift.types";
 import type { BargainTransferInput } from "../bargain-transfer";
-import type { SameClauseGainItem } from "./capital-increase-43-2";
+import type { SameClauseGainItem } from "./same-clause-43-2";
 
 /** (1) 신탁이익의 증여 §33 — 평가 상증령 §61·이자율 상증칙 §19의2(연 3%) */
 export interface TrustBenefitInput {
@@ -149,6 +149,11 @@ export interface MergerInput {
 
   // ── Phase B: 주주 매트릭스(자기증여 차감 재산세과-799) ──
   shareholders?: MergerShareholders;
+  /** 증여일 — §43② 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 3호 — 소급 1년 이내 합병에 따른 선행 이익. 금액기준 판정에만 합산(`same-clause-43-2.ts`) */
+  priorSameClauseGains?: SameClauseGainItem[];
+  // 매트릭스 모드는 수증자 행의 `priorSameClauseGain`을 쓴다
 
   // ── Phase C: 분할합병 §28⑦ (분할사업부문 합병직전 주식가액) ──
   isSplitMerger?: boolean;
@@ -169,7 +174,14 @@ export interface MergerShareholders {
    * 아니라 그 행만 과세에서 빠진다(이익·자기증여·증여자별 안분은 보존). 미지정 = 개인(안전측).
    * undervalued(증여자측)에는 두지 않는다 — 증여자가 법인이어도 수증자의 납세의무는 그대로다.
    */
-  overvalued: { id: string; name: string; shares: number; isForProfitCorp?: boolean }[];
+  overvalued: {
+    id: string;
+    name: string;
+    shares: number;
+    isForProfitCorp?: boolean;
+    /** §43² — 이 수증자의 소급 1년 이내 합병 이익 합계(윈도는 입력자가 거른 값). 3억 판정에만 합산 */
+    priorSameClauseGain?: number;
+  }[];
   /** 과소평가(증여자측) 법인 주주. self·안분의 증여자 풀 */
   undervalued: { id: string; name: string; shares: number }[];
   /** 교부주식 환산비(과대평가법인 합병전→합병후 교부). 사례2 = {numer:1, denom:2}(2주→1주) */
@@ -400,6 +412,10 @@ export interface CapitalDecreaseInput {
   // 멀티(불균등 감자 N:N) 모드 — shareholders 존재 시 dispatch
   shareholders?: CapitalDecreaseShareholder[]; // 주주 목록 (감자주주 + 잔존주주)
   preTotalShares?: number; // 감자 전 발행주식총수 (멀티 필수)
+  /** 증여일 — §43② 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 5호 — 소급 1년 이내 같은 호(①1호 저가·2호 고가) 선행 이익. 금액기준 판정에만 합산(`same-clause-43-2.ts`) */
+  priorSameClauseGains?: SameClauseGainItem[];
 }
 
 /** 멀티(불균등 감자) 모드 주주 1명 */
@@ -416,6 +432,8 @@ export interface CapitalDecreaseShareholder {
    * 붙으면 무효다. 미지정 = 개인(안전측 — 법인으로 오판하면 과소과세 방향이다).
    */
   isForProfitCorp?: boolean;
+  /** §43² — 이 **수증자**의 소급 1년 이내 같은 호 감자 이익 합계(윈도는 입력자가 거른 값). 3억 판정에만 합산 */
+  priorSameClauseGain?: number;
 }
 
 /**
@@ -435,6 +453,8 @@ export interface ContributionParty {
    * (「상증법」§2 9호·§4의2①·③). 저가 명부는 증여자 명부라 무효다. 미지정 = 개인(안전측).
    */
   isForProfitCorp?: boolean;
+  /** §43² — 고가(①2호) 명부 수증자의 소급 1년 이내 2호 이익 합계. 3억 판정에만 합산(저가 명부는 무효) */
+  priorSameClauseGain?: number;
 }
 
 /** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */
@@ -464,6 +484,10 @@ export interface ContributionInput {
    * 조문이 「주권상장법인이 … 방식으로 배정하는 경우」 한정이라 **isListed일 때만** 차감한다.
    */
   publicOfferingShares?: number;
+  /** 증여일 — §43② 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 6호 — 소급 1년 이내 2호(고가) 선행 이익. 3억 판정에만 합산(`same-clause-43-2.ts`). 1호 저가는 금액기준이 없어 읽지 않는다 */
+  priorSameClauseGains?: SameClauseGainItem[];
 }
 
 /** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */
@@ -514,6 +538,10 @@ export interface ConvertibleBondInput {
   bondTransferGainForCap?: number; // 전환가능기간 전환사채 양도차익(양도가−취득가) — Min cap 한도 (영§30①2 단서)
   // conversion_reverse(라목, §30①3) 비율
   relatedPreRatio?: { numer: number; denom: number }; // 교부받은 자의 특수관계인이 전환 전 보유 지분비율
+  /** 증여일 — §43② 소급 1년 윈도의 기준일. 없으면 합산하지 않는다 */
+  giftDate?: Date;
+  /** §43²·영 §32의4 7호 — 소급 1년 이내 같은 호(①1호 인수·2호 전환·3호 양도) 선행 이익. 1억 판정에만 합산(`same-clause-43-2.ts`). 2호 라목은 기준 0원이라 읽지 않는다 */
+  priorSameClauseGains?: SameClauseGainItem[];
 }
 
 // ── Phase 3(추정·의제) 타입은 gift-deemed-input-phase3.ts로 분리했다 ──

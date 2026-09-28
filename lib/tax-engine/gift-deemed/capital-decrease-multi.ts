@@ -123,7 +123,8 @@ export function calcCapitalDecreaseMulti(input: CapitalDecreaseInput): DeemedGif
         : // 저가: 특수관계 증여자 중 최저 소각가(최대 차액) 기준 — relatedDonors[0] 순서의존 제거
           evalPrice - Math.min(...relatedDonors.map((d) => d.redemptionPricePerShare ?? 0));
     const threshold = ratioNumer >= applyRate(evalPrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
-    if (!(rawTotal > 0 && rawTotal >= threshold)) return reject("기준금액 미달", threshold);
+    // §43² — 3억 쪽 판정에만 이 수증자의 1년 이내 같은 호 선행 이익을 더한다(과세액은 rawTotal 그대로)
+    if (!(rawTotal > 0 && rawTotal + (rcpt.priorSameClauseGain ?? 0) >= threshold)) return reject("기준금액 미달", threshold);
     // 「상증법」§2 9호·§4의2①·③ — 과세요건을 다 갖춰도 영리법인은 수증자가 아니다.
     // 요건 게이트 **뒤**에 둔다: 요건 미충족이면 그 사유가 먼저다(납세의무 이전에 이익 자체가 없다).
     // 증여자 행의 표지는 여기에 오지 않는다 — recipients(저가=잔존·고가=감자주주)만 도는 루프다.

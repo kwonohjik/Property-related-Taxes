@@ -3,9 +3,16 @@ import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalDecreaseInput } from "./types";
+import { sameClauseAggregate } from "./same-clause-43-2";
 import { calcCapitalDecreaseMulti } from "./capital-decrease-multi";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
+
+/** §29의2② 기준금액 3억(차액 30%↑면 0) — 3억 쪽에만 §43² 1년 이내 같은 호 선행 이익을 더한다 */
+function meetsDecreaseThreshold(input: CapitalDecreaseInput, gain: number, ratioMet: boolean) {
+  const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, gain);
+  return { met: gain > 0 && (ratioMet || agg.total >= ABSOLUTE_THRESHOLD), row: agg.row };
+}
 
 export function calcCapitalDecreaseGift(input: CapitalDecreaseInput): DeemedGiftResult {
   // 멀티(불균등 감자 N:N) 모드 dispatch — shareholders 존재 시
@@ -25,8 +32,10 @@ function decreaseLow(input: CapitalDecreaseInput): DeemedGiftResult {
   // 이익 = 차액 × 관련감자수 × 감자후지분비율 (총감자 × related/총감자 = related)
   const base = diff > 0 ? safeMultiply(diff, relatedRedeemedShares) : 0;
   const gain = safeMultiplyThenDivide(base, majorPostRatio.numer, majorPostRatio.denom);
-  const threshold = diff >= applyRate(sharePrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
-  const applied = gain > 0 && gain >= threshold;
+  const ratioMet = diff >= applyRate(sharePrice, 0.3);
+  const threshold = ratioMet ? 0 : ABSOLUTE_THRESHOLD;
+  const gate = meetsDecreaseThreshold(input, gain, ratioMet);
+  const applied = gate.met;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
@@ -36,6 +45,7 @@ function decreaseLow(input: CapitalDecreaseInput): DeemedGiftResult {
     { label: "총감자 주식수", amount: totalRedeemedShares },
     { label: "대주주등 특수관계인 감자 주식수", amount: relatedRedeemedShares },
     { label: "증여재산가액 (차액 × 관련 감자주식수 × 감자후 지분비율)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: `§39의2①1호 저가소각 · 계산방법 ${GIFT.CAPITAL_DECREASE_CALC}1호 · 기준금액 ${GIFT.CAPITAL_DECREASE_THRESHOLD}` },
+    ...(gate.row ? [gate.row] : []),
   ];
   return {
     type: "capital_decrease",
@@ -57,11 +67,13 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
 
   const diff = redemptionPrice - sharePrice; // 고가: 소각가 > 평가
   const gain = diff > 0 ? safeMultiply(diff, ownRedeemedShares) : 0;
-  const threshold = diff >= applyRate(sharePrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
+  const ratioMet = diff >= applyRate(sharePrice, 0.3);
+  const threshold = ratioMet ? 0 : ABSOLUTE_THRESHOLD;
+  const gate = meetsDecreaseThreshold(input, gain, ratioMet);
   // §29의2①2호 한정: 1주당 평가액이 액면가액에 미달하는 경우만 과세.
   // (고가소각=대가>평가이므로 "대가<액면 시 대가 기준" 단서는 이 구간에서 무영향 — 멀티 경로와 동일 게이트.)
   const faceGateFail = faceValue == null || sharePrice >= faceValue;
-  const applied = !faceGateFail && gain > 0 && gain >= threshold;
+  const applied = !faceGateFail && gate.met;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
@@ -71,6 +83,7 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
     { label: "1주당 차액", amount: diff },
     { label: "해당 주주등 감자 주식수", amount: ownRedeemedShares },
     { label: "증여재산가액 (차액 × 해당 감자주식수)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: `§39의2①2호 고가소각 · 계산방법 ${GIFT.CAPITAL_DECREASE_CALC}2호 · 기준금액 ${GIFT.CAPITAL_DECREASE_THRESHOLD}` },
+    ...(gate.row ? [gate.row] : []),
   ];
   return {
     type: "capital_decrease",

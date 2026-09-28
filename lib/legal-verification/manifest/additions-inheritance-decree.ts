@@ -157,6 +157,19 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    id: "INH_DECREE.PROPERTY_SERVICE_USE_GAIN",
+    citation: "상증령 §32",
+    // `property-service-use.ts`의 기준금액(무상 1천만원 · 저가·고가 시가 30%)이 ②에서 온다.
+    //   엔진은 「§32②1호」로만 적어 스캐너에 잡히지 않다가, §43² 축 정리(router 주석)에서 「영 §32②2호」를
+    //   인용하면서 드러났다(`gift-deemed-decree-coverage.test.ts` DC-1).
+    keywords: [
+      "재산사용 및 용역제공 등에 따른 이익의 계산방법",
+      "제1항제1호의 경우: 1천만원",
+      "시가의 100분의 30에 상당하는 가액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "INH_DECREE.EXCESS_DIVIDEND_GAIN",
     citation: "상증령 §31의2",
     keywords: ["초과배당금액", "최대주주등의 특수관계인", "과소배당금액", "소득세 상당액"],

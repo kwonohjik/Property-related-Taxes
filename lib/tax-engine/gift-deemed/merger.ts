@@ -2,11 +2,14 @@
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { calcMergerMatrix } from "./merger-matrix";
+import { sameClauseAggregate } from "./same-clause-43-2";
 import { resolveMajorShareholderEcho, resolveMergedPrice, resolveSplitOvervalued } from "./merger-valuation";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, MergerInput } from "./types";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
+/** 영 §32의4 3호 — 「합병에 따른 이익」 전체가 한 단위(호 구분 없음) */
+const AGG_LABELS = { amount: "3억", unit: "합병" };
 
 export function calcMergerGift(input: MergerInput): DeemedGiftResult {
   // §28⑦ 분할합병: 분할사업부문 합병직전 1주평가로 overvaluedSharePrice 대체(단일 정규화 지점)
@@ -29,8 +32,11 @@ function mergerStock(input: MergerInput): DeemedGiftResult {
     exchangedShares > 0 ? safeMultiplyThenDivide(overvaluedSharePrice, preMergerShares, exchangedShares) : 0;
   const perShareGain = mergedSharePrice - adjustedOvervalued;
   const gain = perShareGain > 0 ? safeMultiply(perShareGain, majorShares) : 0;
-  const threshold = Math.min(applyRate(safeMultiply(mergedSharePrice, majorShares), 0.3), ABSOLUTE_THRESHOLD);
-  const applied = gain > 0 && gain >= threshold;
+  // §28④1 min(평가 30%, 3억) = 「비율 leg(건별) OR 3억 leg(§43² 1년 합산)」
+  const ratioThreshold = applyRate(safeMultiply(mergedSharePrice, majorShares), 0.3);
+  const threshold = Math.min(ratioThreshold, ABSOLUTE_THRESHOLD);
+  const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, gain, AGG_LABELS);
+  const applied = gain > 0 && (gain >= ratioThreshold || agg.total >= ABSOLUTE_THRESHOLD);
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
@@ -43,6 +49,7 @@ function mergerStock(input: MergerInput): DeemedGiftResult {
     { label: "1주당 이익", amount: perShareGain },
     { label: "대주주등 교부 주식수", amount: majorShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.MERGER, note: "§38 주식교부" },
+    ...(agg.row ? [agg.row] : []),
   ];
   const isMajor = resolveMajorShareholderEcho(input);
   return {
@@ -70,7 +77,8 @@ function mergerNonStock(input: MergerInput): DeemedGiftResult {
   const perShareGain = base - overvaluedSharePrice;
   const gain = perShareGain > 0 ? safeMultiply(perShareGain, majorShares) : 0;
   const threshold = ABSOLUTE_THRESHOLD; // §28④2 = 3억
-  const applied = gain > 0 && gain >= threshold;
+  const agg = sameClauseAggregate(input.giftDate, input.priorSameClauseGains, gain, AGG_LABELS);
+  const applied = gain > 0 && agg.total >= threshold;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
@@ -79,6 +87,7 @@ function mergerNonStock(input: MergerInput): DeemedGiftResult {
     { label: "1주당 이익", amount: perShareGain },
     { label: "대주주등 주식수", amount: majorShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.MERGER, note: "§38 주식 외 재산 교부 (§28③2)" },
+    ...(agg.row ? [agg.row] : []),
   ];
   return {
     type: "merger",

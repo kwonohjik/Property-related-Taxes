@@ -44,9 +44,12 @@ export function calcMergerMatrix(input: MergerInput): DeemedGiftResult {
         : 0;
     const netGain = Math.max(0, grossGain - selfGift);
 
-    // §28④1 기준금액 = Min(합병후평가 × 교부주식수 × 30%, 3억) — 수증자별 개별 판정
-    const threshold = Math.min(applyRate(safeMultiply(merged, grantedShares), 0.3), ABSOLUTE_THRESHOLD);
-    const meetsThreshold = netGain > 0 && netGain >= threshold;
+    // §28④1 기준금액 = Min(합병후평가 × 교부주식수 × 30%, 3억) — 수증자별 개별 판정.
+    //   3억 leg에만 이 수증자의 §43² 1년 이내 선행 합병 이익을 더한다(`same-clause-43-2.ts` 정책).
+    const ratioThreshold = applyRate(safeMultiply(merged, grantedShares), 0.3);
+    const threshold = Math.min(ratioThreshold, ABSOLUTE_THRESHOLD);
+    const meetsThreshold =
+      netGain > 0 && (netGain >= ratioThreshold || netGain + (k.priorSameClauseGain ?? 0) >= ABSOLUTE_THRESHOLD);
     // 「상증법」§2 9호·§4의2①·③ — 영리법인은 수증자가 아니다. 이 행만 빠지고, 같은 사람이
     // 증여자(undervalued)로서 갖는 몫과 아래 증여자별 안분은 그대로다.
     const forProfitOut = meetsThreshold && k.isForProfitCorp === true;

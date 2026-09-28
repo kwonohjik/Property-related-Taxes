@@ -10,6 +10,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
+import { SameClausePriorTable } from "./SameClausePriorTable";
 import { ValuationEventDateField } from "./capital-forms-shared";
 import { valuationWindowOverride } from "./capital-forms-shared";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -106,6 +107,16 @@ function ConPartyRow({
           onCheckedChange={(v) => onChange({ ...party, isForProfitCorp: v })}
           title="영리법인 수증자 (§4의2①·③ — 증여세 납세의무자 아님)"
           data-testid={`con-party-corp-${idx}`}
+        />
+      )}
+      {/* §43²·영 §32의4 6호 — 금액기준(3억)은 고가(2호)에만 있다(영 §29의3②). ④도 isHigh로 거른다 */}
+      {isHigh && (
+        <CurrencyInput
+          label="1년 이내 고가 현물출자로 얻은 이익 합계 (§43² · 선택)"
+          value={party.priorSameClauseGain ?? ""}
+          onChange={(v) => onChange({ ...party, priorSameClauseGain: v })}
+          data-testid={`con-party-prior-${idx}`}
+          hint="이 수증자가 증여일 전 1년 이내 고가 현물출자(①2호)로 얻은 이익 — 3억 금액기준 판정에만 더하고, 과세는 이번 이익입니다"
         />
       )}
     </div>
@@ -230,6 +241,14 @@ export function ContributionFields({ form, set }: Props) {
           <DecimalInput value={form.conRelatedRatioPct} onChange={(v) => set({ conRelatedRatioPct: v })} />
         </FieldCard>
       )}
+
+      {/* §43²·영 §32의4 6호 — 고가 + 명부 없음. 저가(1호)는 금액기준이 없어 표가 없다 */}
+      <SameClausePriorTable
+        form={form}
+        set={set}
+        rowsKey="conPriorSameClauseRows"
+        benefitHint="같은 호(고가인수 §39의3①2호)의 이익만 — 3억 금액기준 판정에만 합산하고 과세는 이번 현물출자분입니다"
+      />
 
       {/* 저가: 소액주주 의제 토글 (roster 無 시) */}
       {!isHigh && !hasRoster && (

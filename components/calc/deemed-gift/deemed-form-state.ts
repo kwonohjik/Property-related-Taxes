@@ -100,7 +100,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   // Phase B 주주 매트릭스 (다수 대주주·동일인 자기증여). id=name.trim() 매칭
   mrgUseShareholders: boolean; // ON 시 주주 테이블 모드 (majorShares 무시·auto 강제)
   // isForProfitCorp — 수증자가 영리법인(「상증법」§2 9호·§4의2①·③). 미지정 = 개인. 증여자측 행에는 없다
-  mrgOverShareholders: { name: string; shares: string; isForProfitCorp?: boolean }[]; // 과대평가(이익측) 법인 주주
+  mrgOverShareholders: { name: string; shares: string; isForProfitCorp?: boolean; priorSameClauseGain?: string }[]; // 과대평가(이익측) 법인 주주 · priorSameClauseGain = §43² 1년 이내 합병 이익 합계(매트릭스)
   mrgUnderShareholders: { name: string; shares: string }[]; // 과소평가(증여자측) 법인 주주
   mrgExchangeNumer: string; // 교부 환산비 분자
   mrgExchangeDenom: string; // 교부 환산비 분모
@@ -125,6 +125,11 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciEqualIssueShares: string; // 저가 나목 §29②2호 가목 — 균등증자 가정 증가주식수(㉯ 기준 수량)
   /** §43②·영 §32의4 4호 — 소급 1년 이내 같은 호 선행 증자(나목 3억 금액기준 합산용, #19). 행 형태는 §45의5와 같다 */
   ciPriorSameClauseRows?: ScPriorTxRow[];
+  /** §43²·영 §32의4 3·5·6·7호 — 합병·감자·현물출자·전환사채 단일 경로의 선행 이익 표. 활성 조건은 `lib/calc/gift-deemed-43-2.ts` */
+  mrgPriorSameClauseRows?: ScPriorTxRow[];
+  cdPriorSameClauseRows?: ScPriorTxRow[];
+  conPriorSameClauseRows?: ScPriorTxRow[];
+  cbPriorSameClauseRows?: ScPriorTxRow[];
   ciPostHeldShares: string; // 저가 나목 §29②2호 다목 — 증자후 신주인수자 보유주식수(분자)
   ciPostTotalShares: string; // 저가 나목 §29②2호 다목 — 증자후 발행주식총수(분모)
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
@@ -199,7 +204,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
    * low: 증여자(현물출자자 外 주주) / high: 수증자(특수관계 기존주주). 분모=conPreShares.
    */
   // isForProfitCorp — 고가(수증자 명부)에서만 의미가 있다. 저가로 바꿔도 값은 남으므로 ④가 거른다
-  conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | ""; isForProfitCorp?: boolean }>;
+  conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | ""; isForProfitCorp?: boolean; priorSameClauseGain?: string }>;
   conSelectedDoneeIndex: number; // 고가 과세 수증자 선택 (prefill 이관용 — 각자 독립 납세의무자)
   conIsListed: boolean; // 주권상장법인등 — §29의3①이 준용하는 §29②1가·3나 단서
   conListedMarketAvg: string; // 현물출자 납입일 전후 2개월 종가평균 (§63①1가)
@@ -357,6 +362,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRatioDenomShares: "",
   ciEqualIssueShares: "",
   ciPriorSameClauseRows: undefined,
+  mrgPriorSameClauseRows: undefined,
+  cdPriorSameClauseRows: undefined,
+  conPriorSameClauseRows: undefined,
+  cbPriorSameClauseRows: undefined,
   ciPostHeldShares: "",
   ciPostTotalShares: "",
   ciSmallImputation: false,

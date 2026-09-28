@@ -79,6 +79,15 @@ export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Prop
                 title="영리법인 (수증자인 경우만 반영 — §4의2①·③ 증여세 납세의무자 아님)"
                 data-testid={`cd-sh-corp-${i}`}
               />
+              {/* §43²·영 §32의4 5호 — 수증자별 3억 판정이라 행마다 1년 이내 같은 호 감자 이익 합계를 받는다.
+                  모든 행에 둔다(수증자 역할은 엔진이 저가=잔존·고가=감자주주로 판정). 증여자로 판정되면 읽지 않는다 */}
+              <CurrencyInput
+                label="1년 이내 같은 호 감자로 얻은 이익 합계 (§43² · 선택)"
+                value={row.priorSameClauseGain ?? ""}
+                onChange={(v) => update(i, { priorSameClauseGain: v })}
+                data-testid={`cd-sh-prior-${i}`}
+                hint="이 주주가 수증자로서 증여일 전 1년 이내 같은 호(저가·고가) 감자로 얻은 이익 — 3억 금액기준 판정에만 더하고, 과세는 이번 이익입니다"
+              />
             </div>
           );
         })}

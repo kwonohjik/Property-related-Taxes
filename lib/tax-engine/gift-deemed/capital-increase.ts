@@ -6,20 +6,14 @@ import { shareholderOfTaxedCorpExcluded } from "./taxpayer-gate";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
-import { sameClausePriorTotal, sameClauseAggregateNote } from "./capital-increase-43-2";
+import { sameClauseAggregate } from "./same-clause-43-2";
 
 /**
  * 「상증법」§43② 1년 합산 — 나목 3억 금액기준 판정용 합계와 산출근거 행(#19).
- * 합산이 없으면 행도 없다. 과세 금액은 바꾸지 않는다(`capital-increase-43-2.ts` 머리 주석).
+ * 합산이 없으면 행도 없다. 과세 금액은 바꾸지 않는다(`same-clause-43-2.ts` 머리 주석).
  */
 function aggregate43(input: CapitalIncreaseInput, current: number): { total: number; row?: CalculationStep } {
-  const agg = sameClausePriorTotal(input.giftDate, input.priorSameClauseGains);
-  if (agg.priorTotal <= 0) return { total: current };
-  const total = current + agg.priorTotal;
-  return {
-    total,
-    row: { label: "§43② 1년 합산 금액기준", amount: total, lawRef: GIFT.DUP_EXCLUSION_ANNUAL, note: sameClauseAggregateNote(current, agg) },
-  };
+  return sameClauseAggregate(input.giftDate, input.priorSameClauseGains, current);
 }
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
