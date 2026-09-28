@@ -289,7 +289,7 @@ export interface CapShareholder {
   entitledShares: number; // 균등(당초지분) 배정 신주수
   subscribedShares: number; // 실제 인수한 총 신주수(당초+재배정+제3자+초과)
   reallocatedShares?: number; // 그 중 재배정/제3자/초과로 받은 신주수 (실권처리 판정용)
-  relatedTo?: string[]; // 특수관계인 주주 id (없으면 그 증여자 귀속분 과세 0)
+  relatedTo?: string[]; // 특수관계인 주주 id — 어느 쪽 행에 적어도 같은 관계(§2제10호 후단 대칭). 양쪽 다 없으면 그 증여자 귀속분 과세 0
   /** 이 주주가 신주를 배정받은 방법 — §39① 공모 제외 판정(행별). 미지정 = "normal" */
   allocationMethod?: ShareAllocationMethod;
   /**

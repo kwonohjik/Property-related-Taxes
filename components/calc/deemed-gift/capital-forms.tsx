@@ -196,11 +196,20 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         .filter((r) => r.id !== id)
         .map((r) => ({ ...r, relatedTo: r.relatedTo.filter((rid) => rid !== id) })),
     });
-  const toggleRelated = (row: CapTableRow, otherId: string) =>
-    updateRow(row.id, {
-      relatedTo: row.relatedTo.includes(otherId)
-        ? row.relatedTo.filter((x) => x !== otherId)
-        : [...row.relatedTo, otherId],
+  // 특수관계는 대칭이다(「상증법」§2제10호 후단) — 어느 행에 저장됐든 두 행 모두 켜진 것으로 보이고,
+  //   끌 때는 **두 행의 기록을 한 번의 set으로** 함께 지운다(엔진도 양쪽을 읽는다 — #44·#53).
+  const isRelatedPair = (a: CapTableRow, b: CapTableRow) => a.relatedTo.includes(b.id) || b.relatedTo.includes(a.id);
+  const toggleRelated = (row: CapTableRow, other: CapTableRow) =>
+    set({
+      ciAllocRows: isRelatedPair(row, other)
+        ? rows.map((x) =>
+            x.id === row.id
+              ? { ...x, relatedTo: x.relatedTo.filter((id) => id !== other.id) }
+              : x.id === other.id
+                ? { ...x, relatedTo: x.relatedTo.filter((id) => id !== row.id) }
+                : x,
+          )
+        : rows.map((x) => (x.id === row.id ? { ...x, relatedTo: [...x.relatedTo, other.id] } : x)),
     });
 
   return (
@@ -345,16 +354,16 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               data-testid={`ci-alloc-corp-${idx}`}
             />
             <div className="space-y-1">
-              <p className="text-caption text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>
+              <p className="text-caption text-emerald-700">특수관계인</p>
               <div className="flex flex-wrap gap-1.5" data-testid={`ci-alloc-related-${idx}`}>
                 {rows.filter((o) => o.id !== r.id).map((o) => {
-                  const on = r.relatedTo.includes(o.id);
+                  const on = isRelatedPair(r, o);
                   return (
                     <button
                       key={o.id}
                       type="button"
                       aria-pressed={on}
-                      onClick={() => toggleRelated(r, o.id)}
+                      onClick={() => toggleRelated(r, o)}
                       data-testid={`ci-alloc-related-${idx}-${o.id}`}
                       className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-500"}`}
                     >
@@ -367,6 +376,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
           </div>
         ))}
         <p className="text-caption text-muted-foreground">증자 후 1주당 평가가액·증여재산가액은 입력값으로 자동 계산(자동 안분 없음). 특수관계인 없는 자에게 귀속된 이익은 과세 제외.</p>
+        <p className="text-caption text-muted-foreground">특수관계는 한쪽 주주에만 표시해도 두 주주 모두 서로의 특수관계인으로 봅니다(상증법 §2제10호 후단).</p>
       </ToneCard>
     </div>
   );

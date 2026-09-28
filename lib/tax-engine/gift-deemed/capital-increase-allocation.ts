@@ -219,7 +219,13 @@ export function calcCapitalIncreaseAllocation(
 
     const rawRealloc = splitByLoss(reallocGain);
     const rawForfeit = splitByLoss(forfeitGain);
-    const isRelatedTo = (donorId: string) => relatedSets.get(b.id)?.has(donorId) ?? false;
+    // 특수관계는 **대칭**이다 — 「상증법」§2제10호 후단 「이 경우 본인도 특수관계인의 특수관계인으로
+    //   본다」(2012~2015는 「국세기본법」§2제20호 후단, 그 전 「상증령」§29①도 「인수하거나 인수하지
+    //   아니한 자와 … 관계에 있는 자」로 양 당사자 어느 쪽 기준이든 성립). 수증자 행에 증여자를 적든
+    //   증여자 행에 수증자를 적든 **같은 사실의 기재**다. 누가 수증자인지는 delta가 나와야 정해지므로
+    //   입력 시점에 행을 고를 수 없다(#44·#53 — 종전에는 수증자 행만 읽어 400,000,000이 0이 됐다).
+    const isRelatedTo = (donorId: string) =>
+      (relatedSets.get(b.id)?.has(donorId) ?? false) || (relatedSets.get(donorId)?.has(b.id) ?? false);
 
     // 기준금액(3억) 게이트(§29②2호 다목·4호) — 판정 대상은 **특수관계인 몫으로 가중한 뒤의 금액**이다.
     //   종전에는 분할 **전** `b.delta`로 봐서 비특수관계 증여자 몫까지 합산됐고,
