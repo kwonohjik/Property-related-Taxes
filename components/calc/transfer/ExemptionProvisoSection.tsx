@@ -4,6 +4,7 @@
  * §154① 단서 — 1세대1주택 비과세 보유·거주 요건 면제 사유 입력.
  *
  * 1·2·3호 = 보유+거주 면제 / 5호 = 거주만 면제 (소득세법 시행령 §154 ① 단서).
+ * 삭제 전 4호(임대사업자 등록) = 거주만 면제 — 대통령령 제30395호 부칙 제38조 경과조치(OH-38).
  * 폼은 FLAT(provisoReason 등), API 변환에서 oneHouseExemptionProviso로 조립.
  * 거주 충족(1호 5년·3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용 — 별도 입력 없음.
  *
@@ -18,6 +19,8 @@ import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/R
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import type { Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
+import { Rental4hoProvisoFields } from "./Rental4hoProvisoFields";
 
 type ProvisoReason =
   | "rental_5yr_residence"
@@ -25,7 +28,8 @@ type ProvisoReason =
   | "overseas_migration"
   | "overseas_residence"
   | "unavoidable"
-  | "pre_designation_contract";
+  | "pre_designation_contract"
+  | "rental_registration_4ho";
 
 type ReasonOrNone = "none" | ProvisoReason;
 
@@ -35,16 +39,23 @@ interface Props {
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   provisoPreContractNoHouse: boolean;
+  /**
+   * 삭제 전 4호 입력(OH-38) — 폼을 그대로 넘긴다. 4호는 `one_house` 맥락에서만 선택되므로
+   * `temporary_two_house` 맥락 호출부는 생략한다.
+   */
+  rental4ho?: Partial<Rental4hoFormSlice>;
   /** 노출 맥락 — one_house(1주택, 전체 옵션) / temporary_two_house(1·2가·3호만) */
   mode: ProvisoMode;
   onChange: (
-    patch: Partial<{
-      provisoReason: "" | ProvisoReason;
-      provisoDepartureDate: string;
-      provisoExpropriationDate: string;
-      provisoBusinessApprovalDate: string;
-      provisoPreContractNoHouse: boolean;
-    }>,
+    patch: Partial<
+      {
+        provisoReason: "" | ProvisoReason;
+        provisoDepartureDate: string;
+        provisoExpropriationDate: string;
+        provisoBusinessApprovalDate: string;
+        provisoPreContractNoHouse: boolean;
+      } & Omit<Rental4hoFormSlice, "transferDate">
+    >,
   ) => void;
 }
 
@@ -86,6 +97,13 @@ const OPTIONS: RadioCardOption<ReasonOrNone>[] = [
     description: "공고일 이전 매매계약+계약금 + 계약금일 무주택. 거주 요건만 면제(보유 2년 필요)",
     testId: "proviso-reason-pre_contract",
   },
+  {
+    value: "rental_registration_4ho",
+    label: "임대사업자 등록 (4호 — 2020.2.11. 삭제 전)",
+    description:
+      "2019.12.16. 이전 사업자등록·임대사업자 등록 신청(분양권 상태 포함). 거주 요건만 면제(보유 2년 필요)",
+    testId: "proviso-reason-rental_4ho",
+  },
 ];
 
 export function ExemptionProvisoSection({
@@ -94,6 +112,7 @@ export function ExemptionProvisoSection({
   provisoExpropriationDate,
   provisoBusinessApprovalDate,
   provisoPreContractNoHouse,
+  rental4ho,
   mode,
   onChange,
 }: Props) {
@@ -181,6 +200,10 @@ export function ExemptionProvisoSection({
           checked={provisoPreContractNoHouse}
           onCheckedChange={(v) => onChange({ provisoPreContractNoHouse: v })}
         />
+      )}
+
+      {effReason === "rental_registration_4ho" && (
+        <Rental4hoProvisoFields value={rental4ho ?? {}} onChange={onChange} />
       )}
 
       {(effReason === "unavoidable" || effReason === "rental_5yr_residence") && (

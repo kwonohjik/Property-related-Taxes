@@ -447,7 +447,13 @@ export interface TransferTaxInput {
       | "overseas_migration"        // 2호 나 : 보유+거주 면제 (해외이주, 출국일+2년)
       | "overseas_residence"        // 2호 다 : 보유+거주 면제 (국외거주, 출국일+2년)
       | "unavoidable"               // 3호    : 보유+거주 면제 (부득이, 거주 1년 전제)
-      | "pre_designation_contract"; // 5호    : 거주만 면제 (조정 공고 전 계약)
+      | "pre_designation_contract"  // 5호    : 거주만 면제 (조정 공고 전 계약)
+      | "rental_registration_4ho";  // 4호(2020.2.11. 삭제 전): 거주만 면제 — 대통령령 제30395호 부칙 제38조
+    /**
+     * 삭제된 4호(임대사업자 등록 주택) 판정 사실 — `reason === "rental_registration_4ho"`일 때만 읽는다.
+     * 판정 leaf: `one-house/rental-registration-4ho.ts`. 미입력 필드는 **판정 보류**(면제로 추정하지 않는다).
+     */
+    rentalRegistration4ho?: Rental4hoRegistrationFacts;
     /** 나·다목 출국일 (2년 기산). 라우트에서 toDate 변환 */
     departureDate?: Date;
     /** 가목 수용일 (5년 기산; 미제공 시 transferDate). toDate */
@@ -1226,3 +1232,29 @@ export type {
   SplitGainResult,
   SplitLandExpropriationValuationDetail,
 } from "./transfer-split-gain.types";
+
+/**
+ * 삭제된 소득세법 시행령 §154①4호(2020.2.11. 삭제 전 — 임대사업자 등록 주택 거주기간 제한 면제)
+ * 경과조치 판정 사실. 대통령령 제30395호 부칙 제38조 ①(시행 전 양도) · ②(2019-12-16 이전 등록 신청).
+ */
+export interface Rental4hoRegistrationFacts {
+  /** 소득세법 §168① 사업자등록 **신청일** */
+  businessRegistrationApplicationDate?: Date;
+  /** 민간임대주택에 관한 특별법 §5① 임대사업자 등록 **신청일**(분양권 상태 신청 포함 — 법규과-518) */
+  rentalRegistrationApplicationDate?: Date;
+  /**
+   * 신청 당시 세대가 조정대상지역에 이 주택(분양권 상태였다면 그 분양권) 1채만 보유했는가 — **선언**.
+   * 부칙 제38조② 「조정대상지역에 1주택을 보유한 거주자로서」의 판정 시점은 직접 선례 미확보(계획서 §9.7 L-3(a)).
+   */
+  regulatedOneHouseAtApplication?: boolean;
+  /** 양도일 현재 등록 상태 — 말소(자동·자진·멸실)면 종전 4호 단서(임대의무기간·5%)를 따지지 않는다 */
+  statusAtTransfer?: "maintained" | "auto_cancelled" | "voluntary_cancelled" | "demolition_cancelled" | "other";
+  /** 「유지」일 때 — 민간임대주택법 §43 임대의무기간 중 양도인가 */
+  transferredDuringMandatoryPeriod?: boolean;
+  /** 「유지」일 때 — 임대보증금·임대료 연 증가율 5% 초과 증액이 있었는가 */
+  rentIncreaseOver5Percent?: boolean;
+  /** 5% 초과 증액 계약의 체결·갱신일(여럿이면 가장 늦은 날) — 대통령령 제29523호 부칙 제6조 */
+  rentIncreaseContractDate?: Date;
+  /** 2019-12-17 이후 증여로 등록 신청자의 임대사업자 지위를 포괄승계했고 양도일 현재 그와 별도 세대(사전-2024-법규재산-0747) */
+  giftSuccessionSeparatedHousehold?: boolean;
+}

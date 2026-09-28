@@ -9,7 +9,7 @@
  * | id | 조문 | 판정에 필요한 사실(미입력) |
  * |---|---|---|
  * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | 과거 2주택 이상 보유 여부 · 다른 주택 전부의 처분(양도·증여·용도변경)일 |
- * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | 2019-12-16 이전 사업자등록·임대사업자 등록 신청 사실 · 임대의무기간·5% 증액 단서 |
+ * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | OH-38 입력 레인에서 입력 경로가 생겼다(§154① 단서 「4호 임대사업자 등록」). 사유 미선택 또는 선택했으나 사실 미입력만 고지 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영 |
@@ -34,6 +34,7 @@ import {
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
 } from "../data/public-holidays-kr";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
+import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 
 /**
  * §154⑤ 단서(최종 1주택 보유기간 재기산)가 적용되는 양도 구간.
@@ -42,12 +43,6 @@ import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
  */
 export const FINAL_ONE_HOUSE_RESTART_TRANSFER_START = new Date("2021-01-01");
 export const FINAL_ONE_HOUSE_RESTART_TRANSFER_END_EXCLUSIVE = new Date("2022-05-10");
-/**
- * 대통령령 제30395호 부칙 제38조② — 「2019년 12월 16일 이전에 해당 주택을 임대하기 위해 …
- * 임대사업자로 등록을 신청한 경우」. 그 날 뒤에 취득한 주택은 이 경과조치 대상이 될 수 없다고 본다
- * (⚠️ 매매계약만으로 먼저 등록 신청한 뒤 나중에 취득한 경우는 확인 필요 — 계약일 입력 없음).
- */
-export const RENTAL_4HO_REGISTRATION_DEADLINE = new Date("2019-12-16");
 
 export const ERA_UNDETERMINED_IDS = new Set([
   "154-5-final-one-house-restart-unverified",
@@ -91,12 +86,19 @@ export function collectEraUndetermined(
 
   /*
    * OH-38 — 거주요건 미충족으로 과세된 경우에만 낸다(비과세면 면제를 따질 이유가 없다).
-   * 확인 필요(계획서 §7-3): 「1주택 보유」 판정 시점, 2020-08-18 자동말소 시 임대의무기간 단서.
+   *
+   * 🔑 게이트 축은 **등록 신청일**이다(계획서 §9.7 L-3). 종전에는 주택 **취득일** ≤ 2019-12-16에 걸어
+   *    분양권 상태로 먼저 신청한 세대(사전-2025-법규재산-0117 — 준공 취득일은 기한 뒤)를 고지조차 하지 않았다.
+   *    신청일은 4호를 골라야 입력되므로, 고르지 않았으면 신청일을 모른다 — 취득일로 배제하지 않고 고지한다.
+   *    골랐는데 사실이 빠졌으면 빠진 사실을 적는다. 골랐고 판정이 났으면(성립·제외) 여기서 말하지 않는다
+   *    (제외 사유는 `collectRental4hoUnmet`이 「선언했으나 적용되지 않은 특례」로 낸다).
+   * 확인 필요(계획서 §9.7 L-3(a)): 「1주택 보유」 판정 시점 — 신청 당시 **선언**으로 받는다.
    */
+  const rental4ho = resolveRental4hoRegistration(input);
   if (
     !settled &&
     input.householdHousingCount === 1 &&
-    input.acquisitionDate.getTime() <= RENTAL_4HO_REGISTRATION_DEADLINE.getTime() &&
+    (rental4ho === null || rental4ho.status === "undetermined") &&
     // 취득 당시 비조정이면 거주요건 자체가 없어 아래 술어가 참이다 — 조정 여부를 따로 보지 않는다.
     !qualifiesLongTermMortgageResidenceExemption(input) &&
     !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption)
@@ -104,9 +106,13 @@ export function collectEraUndetermined(
     out.push({
       id: "154-1-4ho-rental-registration-unverified",
       reason:
-        `조정대상지역 1주택을 2019년 12월 16일 이전에 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, ` +
-        `삭제 전 ${law("①")}4호(거주기간 제한 없음 — 임대의무기간 중 양도·임대료 5% 초과 증액은 제외)가 적용됩니다` +
-        "(대통령령 제30395호 부칙 제38조). 등록 사실을 입력받지 않아 이 경과조치는 판정하지 않았습니다.",
+        rental4ho === null
+          ? `조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 ` +
+            `신청했다면, 삭제 전 ${law("①")}4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 ` +
+            `증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 §154① 단서에서 「4호 임대사업자 등록」을 ` +
+            "선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다."
+          : `삭제 전 ${law("①")}4호(임대사업자 등록)를 선택했지만 다음 사실이 입력되지 않아 판정하지 않았습니다: ` +
+            `${rental4ho.missing.join(" · ")}.`,
     });
   }
 

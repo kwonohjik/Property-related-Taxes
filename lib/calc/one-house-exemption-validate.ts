@@ -270,6 +270,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     departureDate: form.provisoDepartureDate,
     expropriationDate: form.provisoExpropriationDate,
     preContractNoHouse: form.provisoPreContractNoHouse,
+    rental4ho: form,
   })) {
     errors.push(err("provisoReason", message));
   }

@@ -73,9 +73,15 @@ describe("OH-38 삭제된 §154①4호 경과조치 — 2019-12-16 이전 임대
     expect(ids(i)).toContain(ID);
     expect(warn(i)).toContain("2019년 12월 16일 이전");
   });
-  it("취득 2019-12-16 고지 / 2019-12-17 고지 없음", () => {
+  /**
+   * 🔄 뒤집힘(OH-38 입력 레인, 계획서 §9.7 L-3) — 종전 단언은 「취득 2019-12-17 고지 없음」이었다.
+   *    게이트 축이 **등록 신청일**로 바뀌었다: 분양권 상태로 2019-12-16 이전에 신청하고 그 뒤에 준공
+   *    취득한 세대도 경과조치 대상이다(사전-2025-법규재산-0117). 4호를 고르지 않았으면 신청일을 모르므로
+   *    취득일로 배제하지 않는다. 신청일 기준 경계는 `one-house-rental-registration-4ho.anchor.test.ts`.
+   */
+  it("취득 2019-12-16 · 2019-12-17 모두 고지(신청일 미입력 — 분양권 상태 신청 가능)", () => {
     expect(ids(reg("2019-12-16"))).toContain(ID);
-    expect(ids(reg("2019-12-17"))).not.toContain(ID);
+    expect(ids(reg("2019-12-17"))).toContain(ID);
   });
   it("취득 당시 비조정(거주요건 없음)이면 고지 없음", () => {
     expect(ids(reg("2018-03-01", { wasRegulatedAtAcquisition: false, isRegulatedArea: false }))).not.toContain(ID);

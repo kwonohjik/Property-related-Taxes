@@ -235,11 +235,25 @@ export interface TransferFormData {
     | "overseas_migration"
     | "overseas_residence"
     | "unavoidable"
-    | "pre_designation_contract";
+    | "pre_designation_contract"
+    | "rental_registration_4ho";
   provisoDepartureDate: string;
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   provisoPreContractNoHouse: boolean;
+  /**
+   * §154① 단서 삭제 전 4호(임대사업자 등록) — `provisoReason === "rental_registration_4ho"`일 때만 쓴다(OH-38).
+   * 3-state 라디오는 `""`(미선택)을 두어 미입력을 판정 보류·검증 오류로 가른다(면제로 추정하지 않는다).
+   * 노출 범위는 `rental4hoFieldScope`(`lib/calc/rental-4ho-proviso.ts`)가 ⑤·④·⑧ 공용으로 정한다.
+   */
+  proviso4hoBusinessRegDate: string;
+  proviso4hoRentalRegDate: string;
+  proviso4hoRegulatedOneHouse: "" | "yes" | "no";
+  proviso4hoStatus: "" | "maintained" | "auto_cancelled" | "voluntary_cancelled" | "demolition_cancelled" | "other";
+  proviso4hoDuringMandatory: "" | "yes" | "no";
+  proviso4hoRentOver5: "" | "yes" | "no";
+  proviso4hoRentOver5ContractDate: string;
+  proviso4hoGiftSeparated: boolean;
   houses: HouseEntry[];
   /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
   presaleRights: PresaleRightEntry[];

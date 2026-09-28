@@ -32,6 +32,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
+import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
@@ -237,6 +238,9 @@ export function buildOneHouseExemptionApiBody(
                 : {}),
               ...(form.provisoBusinessApprovalDate
                 ? { businessApprovalDate: form.provisoBusinessApprovalDate }
+                : {}),
+              ...(reason === "rental_registration_4ho"
+                ? { rentalRegistration4ho: buildRental4hoPayload(form) }
                 : {}),
             },
           }

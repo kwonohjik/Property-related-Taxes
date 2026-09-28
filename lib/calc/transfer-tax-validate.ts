@@ -684,6 +684,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       departureDate: form.provisoDepartureDate,
       expropriationDate: form.provisoExpropriationDate,
       preContractNoHouse: form.provisoPreContractNoHouse,
+      rental4ho: form,
     }))
       issues.push({ step, message });
 

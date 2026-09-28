@@ -43,6 +43,7 @@ import {
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
+import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
@@ -270,6 +271,9 @@ export function calculateTransferTax(
 
   // 입력 경로가 없는 연혁 분기(OH-22·OH-38·OH-01)의 판정 보류 — 판정 메뉴와 같은 문장을 낸다.
   for (const u of exemptionResult.undetermined) if (ERA_UNDETERMINED_IDS.has(u.id)) warnings.push(u.reason);
+  // OH-38 — 삭제 전 §154①4호를 선택했으나 요건 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
+  for (const u of exemptionResult.unmetExceptions ?? [])
+    if (u.id === RENTAL_4HO_UNMET_ID) warnings.push(`${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);
 
   // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
   //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다

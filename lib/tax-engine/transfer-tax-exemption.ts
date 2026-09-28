@@ -17,6 +17,7 @@ import { isWithinDeadline } from "./civil-period";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./one-house/rental-registration-4ho";
 import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { TRANSFER, shortArticle } from "./legal-codes";
 import type {
@@ -544,7 +545,10 @@ function checkExemptionCore(
   //    「§154① 단서 N호」를 적용 근거로 적으면 근거가 틀린다. E-3의 `provisoRelaxesHolding`과 같은 축.
   const provisoReason =
     resolveExemptionProviso(input) !== null ? input.oneHouseExemptionProviso?.reason : undefined;
-  const provisoLabel = provisoReason ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason]})` : "";
+  // 삭제된 4호는 근거(종전 4호 + 부칙<제30395호> 제38조①/②)를 결과 문구에 함께 싣는다(OH-38).
+  const provisoBasis =
+    provisoReason === RENTAL_4HO_REASON ? ` — ${rental4hoLegalBasis(input.transferDate)}` : "";
+  const provisoLabel = provisoReason ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason]}${provisoBasis})` : "";
   /**
    * 본칙 1주택은 「특례」가 아니므로 기본 행을 만들지 않는다 — 판정 배지가 이미 말한다.
    * 요건을 **완화한 것이 있을 때만** 행이 선다(§154① 단서 · §155의2① · §155의3①).
@@ -554,7 +558,11 @@ function checkExemptionCore(
     exceptions.push({
       id: `154-1-proviso:${provisoReason}`,
       label: `§154① 단서 ${PROVISO_LABEL[provisoReason]}`,
-      legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
+      // 삭제된 4호는 현행 §154①이 아니라 종전 규정 + 경과조치 부칙이 근거다(OH-38).
+      legalBasis:
+        provisoReason === RENTAL_4HO_REASON
+          ? rental4hoLegalBasis(input.transferDate)
+          : TRANSFER.ONE_HOUSE_REQUIREMENT,
     });
   }
   if (qualifiesLongTermMortgageResidenceExemption(input)) {

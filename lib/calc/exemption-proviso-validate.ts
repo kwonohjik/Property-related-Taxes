@@ -13,13 +13,18 @@
  * | 2호나·다목 해외이주·국외거주 | 출국일 | 「출국일부터 2년 이내에 양도」 |
  * | 2호가목 수용 | 수용일 | 엔진이 미입력을 **불성립**으로 본다(#591 R7 fail-closed) — OH-33 |
  * | 5호 조정 공고 전 계약 | 계약금 지급일 현재 무주택 확인 | 「계약금 지급일 현재 주택을 보유하지 아니하는 경우」 |
+ * | 삭제 전 4호 임대사업자 등록 | 신청일 2개 · 등록 상태 · (②구간) 신청 당시 1주택 · (유지) 임대의무기간·5% | `rental-4ho-proviso.ts` (OH-38) |
  */
+import { collectRental4hoErrors, type Rental4hoFormSlice } from "./rental-4ho-proviso";
+
 export function collectExemptionProvisoErrors(p: {
   /** `effectiveProvisoReason` 적용 후 사유. "" = 해당 없음. */
   reason: string;
   departureDate?: string;
   expropriationDate?: string;
   preContractNoHouse?: boolean;
+  /** 4호 입력 — 호출부는 폼을 그대로 넘긴다(칸별 노출 범위는 leaf가 정한다) */
+  rental4ho?: Partial<Rental4hoFormSlice>;
 }): string[] {
   const errors: string[] = [];
   if ((p.reason === "overseas_migration" || p.reason === "overseas_residence") && !p.departureDate) {
@@ -37,5 +42,6 @@ export function collectExemptionProvisoErrors(p: {
   if (p.reason === "pre_designation_contract" && !p.preContractNoHouse) {
     errors.push("§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.");
   }
+  if (p.reason === "rental_registration_4ho") errors.push(...collectRental4hoErrors(p.rental4ho ?? {}));
   return errors;
 }
