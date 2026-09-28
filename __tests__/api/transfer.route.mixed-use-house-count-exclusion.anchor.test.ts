@@ -134,3 +134,13 @@ describe("D4-02 ⑭ — 겸용 route가 주택수 제외 축을 전달한다", (
     expect(r.warnings.some((w) => w.includes("주택 수 제외 1채"))).toBe(true);
   });
 });
+
+describe("E-14i ⑭ — 조특법 제외 분기의 1세대 게이트가 route 경로에서도 걸린다", () => {
+  it("E14I-R1: 비1세대(`isOneHousehold: false`) + §99의4 적격 → 제외 없는 대조군과 같은 과세표준(비과세 아님)", async () => {
+    const on = await post({ isOneHousehold: false, reductions: [RURAL] });
+    const off = await post({ isOneHousehold: false });
+    expect(on.new994Detail?.isEligible).toBe(true);
+    expect(on.total.taxBase).toBe(off.total.taxBase);
+    // 긍정 짝(1세대)은 D4-02-R3 — 같은 사실에서 과세표준이 줄어든다
+  });
+});

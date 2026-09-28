@@ -31,11 +31,13 @@ const RURAL = {
   meetsLocationRequirement: true,
 };
 
+// E-14i — 이 파일의 사안은 「1세대 2주택」이다. 종전 픽스처는 `isOneHousehold`를 싣지 않아(= 비1세대)
+//   제외 분기가 1세대를 보지 않는 결함 위에서만 D4-02-1·3이 통과했다. route는 항상 싣는다(`mixed-use-asset-input.ts`).
 function run(over: Partial<MixedUseAssetInput> = {}) {
   return calcMixedUseTransferTax(
     PRICE,
     CASE14_TRANSFER_DATE,
-    { ...mixedUseCase14(), isOneHouseExempt: false, ...over } as MixedUseAssetInput,
+    { ...mixedUseCase14(), isOneHouseExempt: false, isOneHousehold: true, ...over } as MixedUseAssetInput,
     rates,
   );
 }
