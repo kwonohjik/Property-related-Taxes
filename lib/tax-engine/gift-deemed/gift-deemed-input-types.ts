@@ -535,6 +535,15 @@ import type {
   RelatedCorpInput,
 } from "./gift-deemed-input-phase3";
 
+/**
+ * 「상증법」§4의2③ — 이 증여재산에 대하여 **수증자에게** 소득세·법인세가 부과되는가(비과세·감면 포함).
+ * 수증자 1명(한 묶음) 입력에만 걸린다(`incomeTaxedDoneeGateApplies`). 미입력 = 부과되지 않음(안전측 —
+ * 부과로 오판하면 과소과세 방향이다).
+ */
+export interface IncomeTaxedDoneeAxis {
+  doneeIncomeOrCorporateTaxed?: boolean;
+}
+
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 /**
  * 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**인가(§39 밖 단일 수증자 13종 공통 축).
@@ -550,25 +559,25 @@ export interface ForProfitDoneeAxis {
 }
 
 export type DeemedGiftInput =
-  | ({ type: "trust_benefit" } & TrustBenefitInput & ForProfitDoneeAxis)
-  | ({ type: "insurance" } & InsuranceInput & ForProfitDoneeAxis)
-  | ({ type: "bargain_transfer" } & BargainTransferInput & ForProfitDoneeAxis)
-  | ({ type: "debt_forgiveness" } & DebtForgivenessInput & ForProfitDoneeAxis)
-  | ({ type: "free_realestate" } & FreeRealEstateInput & ForProfitDoneeAxis)
-  | ({ type: "free_loan" } & FreeLoanInput & ForProfitDoneeAxis)
-  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput & ForProfitDoneeAxis)
-  | ({ type: "merger" } & MergerInput & ForProfitDoneeAxis) // 단일 모드만 — forProfitDoneeGateApplies
-  | ({ type: "capital_increase" } & CapitalIncreaseInput)
-  | ({ type: "capital_decrease" } & CapitalDecreaseInput & ForProfitDoneeAxis) // 단일 모드만
-  | ({ type: "contribution" } & ContributionInput & ForProfitDoneeAxis) // 저가 전부 · 고가 명부 없음
-  | ({ type: "convertible_stock" } & ConvertibleStockInput)
-  | ({ type: "convertible_bond" } & ConvertibleBondInput & ForProfitDoneeAxis)
-  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput & ForProfitDoneeAxis)
+  | ({ type: "trust_benefit" } & TrustBenefitInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "insurance" } & InsuranceInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "bargain_transfer" } & BargainTransferInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "debt_forgiveness" } & DebtForgivenessInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "free_realestate" } & FreeRealEstateInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "free_loan" } & FreeLoanInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "merger" } & MergerInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis) // 단일 모드만 — forProfitDoneeGateApplies
+  | ({ type: "capital_increase" } & CapitalIncreaseInput & IncomeTaxedDoneeAxis)
+  | ({ type: "capital_decrease" } & CapitalDecreaseInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis) // 단일 모드만
+  | ({ type: "contribution" } & ContributionInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis) // 저가 전부 · 고가 명부 없음
+  | ({ type: "convertible_stock" } & ConvertibleStockInput & IncomeTaxedDoneeAxis)
+  | ({ type: "convertible_bond" } & ConvertibleBondInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
   | ({ type: "nominee_trust" } & NomineeTrustInput)
   | ({ type: "excess_dividend" } & ExcessDividendInput)
-  | ({ type: "listing_gain" } & ListingGainInput & ForProfitDoneeAxis)
-  | ({ type: "property_service_use" } & PropertyServiceUseInput & ForProfitDoneeAxis)
-  | ({ type: "org_change" } & OrgChangeInput & ForProfitDoneeAxis)
-  | ({ type: "value_increase" } & ValueIncreaseInput & ForProfitDoneeAxis)
-  | ({ type: "specific_corp" } & SpecificCorpInput)
+  | ({ type: "listing_gain" } & ListingGainInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "property_service_use" } & PropertyServiceUseInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "org_change" } & OrgChangeInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "value_increase" } & ValueIncreaseInput & ForProfitDoneeAxis & IncomeTaxedDoneeAxis)
+  | ({ type: "specific_corp" } & SpecificCorpInput & IncomeTaxedDoneeAxis)
   | ({ type: "related_corp" } & RelatedCorpInput);

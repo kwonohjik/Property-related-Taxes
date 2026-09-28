@@ -20,9 +20,19 @@ const forProfitDoneeShape = {
   doneeIsForProfitCorp: z.boolean().optional(),
 };
 
+/**
+ * ⑫ 「상증법」§4의2③ 축(7-16) — 수증자 1명 입력 스키마에만. 영리법인 shape가 붙는 16곳 + §39 단건(최상위) ·
+ * 전환주식(최상위 — 2시점 leg가 아니다) · §45의5. §41의2·§45의2·§45의3에는 붙이지 않는다(법이 배제·명부뿐).
+ * `income-taxed-donee-wiring.anchor.test.tsx`가 두 방향을 고정한다.
+ */
+const incomeTaxedDoneeShape = {
+  doneeIncomeOrCorporateTaxed: z.boolean().optional(),
+};
+
 const trustBenefitSchema = z.object({
   type: z.literal("trust_benefit"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   beneficiaryType: z.enum(["same", "diff_principal", "diff_income"]),
   trustPropertyValue: z.number().nonnegative(),
   yieldRate: rateFractionSchema.optional(),
@@ -44,6 +54,7 @@ const trustBenefitSchema = z.object({
 const insuranceSchema = z.object({
   type: z.literal("insurance"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   caseType: z.enum(["non_payer", "gifted_premium"]),
   insuranceProceeds: z.number().nonnegative({ message: "보험금은 0 이상이어야 합니다" }),
   totalPremiumPaid: z.number().positive({ message: "총 납부보험료는 0보다 커야 합니다" }),
@@ -54,6 +65,7 @@ const insuranceSchema = z.object({
 const bargainTransferSchema = z.object({
   type: z.literal("bargain_transfer"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   transactionPrice: z.number().nonnegative({ message: "거래대가는 0 이상이어야 합니다" }),
   marketValue: z.number().positive({ message: "시가는 0보다 커야 합니다" }),
   isRelatedParty: z.boolean(),
@@ -65,6 +77,7 @@ const bargainTransferSchema = z.object({
 const debtForgivenessSchema = z.object({
   type: z.literal("debt_forgiveness"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   forgivenDebt: z.number().positive({ message: "면제·인수·변제 채무액은 0보다 커야 합니다" }),
   compensation: z.number().nonnegative({ message: "보상액은 0 이상이어야 합니다" }),
   occurType: z.enum(["creditor_waiver", "third_party_assumption"]),
@@ -73,6 +86,7 @@ const debtForgivenessSchema = z.object({
 const freeRealEstateSchema = z.object({
   type: z.literal("free_realestate"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   subType: z.enum(["free_use", "collateral"]),
   propertyValue: z.number().nonnegative().optional(),
   loanAmount: z.number().nonnegative().optional(),
@@ -103,6 +117,7 @@ const freeRealEstateSchema = z.object({
 const freeLoanSchema = z.object({
   type: z.literal("free_loan"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   loanAmount: z.number().positive({ message: "대출금액은 0보다 커야 합니다" }),
   actualInterestPaid: z.number().nonnegative({ message: "실제 지급이자는 0 이상이어야 합니다" }),
   appropriateRate: z.object({
@@ -128,6 +143,7 @@ const freeLoanItemSchema = z.object({
 const freeLoanAggregatedSchema = z.object({
   type: z.literal("free_loan_aggregated"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   loans: z.array(freeLoanItemSchema).min(1, { message: "대출 건을 1건 이상 입력하세요" }),
 });
 
@@ -157,6 +173,7 @@ const mergerShareholderSchema = z.object({
 const mergerSchema = z.object({
   type: z.literal("merger"),
   ...forProfitDoneeShape, // 단일 모드만 엔진이 읽는다(forProfitDoneeGateApplies) — 7-15
+  ...incomeTaxedDoneeShape,
   caseType: z.enum(["stock", "non_stock"]).optional(),
   overvaluedSharePrice: z.number().nonnegative(),
   majorShares: z.number().nonnegative(),
@@ -287,7 +304,7 @@ function refineCapitalIncrease(
 }
 
 const capitalIncreaseSchema = z
-  .object({ type: z.literal("capital_increase"), ...capitalIncreaseShape })
+  .object({ type: z.literal("capital_increase"), ...capitalIncreaseShape, ...incomeTaxedDoneeShape })
   .superRefine(refineCapitalIncrease);
 // 전환주식(§39①3호)의 2시점이 이 스키마를 재사용한다 — 같은 교차검증이 두 시점에 그대로 걸린다.
 const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape).superRefine(refineCapitalIncrease);
@@ -338,6 +355,7 @@ const capitalIncreaseAllocationSchema = z
 const convertibleStockSchema = z
   .object({
     type: z.literal("convertible_stock"),
+    ...incomeTaxedDoneeShape,
     atConversion: capitalIncreaseInnerSchema,
     atIssuance: capitalIncreaseInnerSchema,
   })
@@ -368,6 +386,7 @@ const capitalDecreaseShareholderSchema = z.object({
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
   ...forProfitDoneeShape, // 단일 모드만 엔진이 읽는다(forProfitDoneeGateApplies) — 7-15
+  ...incomeTaxedDoneeShape,
   caseType: z.enum(["low", "high"]).optional(),
   sharePrice: z.number().nonnegative(),
   redemptionPrice: z.number().nonnegative().optional(),
@@ -392,6 +411,7 @@ const contributionSchema = z
   .object({
     type: z.literal("contribution"),
     ...forProfitDoneeShape, // 저가 전부 · 고가 명부 없음만 엔진이 읽는다 — 7-15
+    ...incomeTaxedDoneeShape,
     caseType: z.enum(["low", "high"]).optional(),
     preContribPrice: z.number().nonnegative(),
     preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
@@ -446,6 +466,7 @@ const contributionSchema = z
 const acquisitionFundSchema = z.object({
   type: z.literal("acquisition_fund_presumption"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   subType: z.enum(["acquisition", "debt_repayment"]),
   acquisitionValue: z.number().positive({ message: "취득재산가액(채무상환금액)은 0보다 커야 합니다" }),
   provenAmount: z.number().nonnegative(),
@@ -518,6 +539,7 @@ const excessDividendSchema = z.object({
 const listingGainSchema = z.object({
   type: z.literal("listing_gain"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   eventType: z.enum(["listing", "merger"]).optional(),
   settlementPerSharePrice: z.number().nonnegative(),
   perShareAcqValue: z.number().nonnegative(),
@@ -537,6 +559,7 @@ const listingGainSchema = z.object({
 const propertyServiceUseSchema = z.object({
   type: z.literal("property_service_use"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   subType: z.enum(["free_use", "low_price", "high_price"]),
   marketValue: z.number().nonnegative(),
   consideration: z.number().nonnegative().optional(),
@@ -544,6 +567,7 @@ const propertyServiceUseSchema = z.object({
 const orgChangeSchema = z.object({
   type: z.literal("org_change"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   subType: z.enum(["share_change", "value_change"]),
   baseValue: z.number().nonnegative(),
   preShares: z.number().nonnegative().optional(),
@@ -555,6 +579,7 @@ const orgChangeSchema = z.object({
 const valueIncreaseSchema = z.object({
   type: z.literal("value_increase"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   currentValue: z.number().nonnegative(),
   acquisitionCost: z.number().nonnegative(),
   normalIncrease: z.number().nonnegative(),
@@ -606,6 +631,7 @@ const specificCorpIntermediarySchema = z.object({
 });
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
+  ...incomeTaxedDoneeShape,
   transactionBenefit: z.number().nonnegative(),
   // 법 §45의5① 거래상대방·각 호 거래유형 (영 §34의5②④⑥⑦) — ⑫ 미등록이면 조용히 stripping된다
   counterparty: z.enum(["ruling_shareholder", "ruling_related", "other"]).optional(),
@@ -649,6 +675,7 @@ const specificCorpSchema = z.object({
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
   ...forProfitDoneeShape,
+  ...incomeTaxedDoneeShape,
   caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
   // §40①1호·2호 각 목 — 세액 불변(상증령 §30①), 공모 발행 제외 대상 판정용
   clause: z.enum(["from_related", "major_excess", "major_related_nonshareholder"]).optional(),

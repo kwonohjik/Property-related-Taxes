@@ -138,6 +138,8 @@ export interface DeemedFormState extends DeemedPhase3Fields {
    * §39 전용이라 축을 합치지 않았다. 노출 유형은 `commonForProfitDoneeGateApplies`가 정한다.
    */
   doneeIsForProfitCorp: boolean;
+  /** 「상증법」§4의2③ — 수증자에게 소득세·법인세 부과(비과세·감면 포함). 수증자 1명 입력만(7-16) */
+  doneeIncomeTaxed: boolean;
   /** 「상증법」§4의2④ 요건 ㉠ — 발행법인 수증이익에 법인세가 부과됐는가(비과세·감면 포함) */
   ciIssuerGainCorporateTaxed: boolean;
   /**
@@ -356,6 +358,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciAllocationMethod: "normal",
   ciDoneeIsForProfitCorp: false,
   doneeIsForProfitCorp: false,
+  doneeIncomeTaxed: false,
   ciIssuerGainCorporateTaxed: false,
   ciDoneeIsShareholderOfIssuer: false,
   ciAllocIsListed: false,

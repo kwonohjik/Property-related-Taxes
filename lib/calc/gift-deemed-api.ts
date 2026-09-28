@@ -50,9 +50,50 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   // ⑤와 **같은 함수**로 거른다 — 토글이 숨은 모드(명부·유형 밖)의 stale 값을 싣지 않는다.
   // 엔진 판정(forProfitDoneeGateApplies)과의 일치는 parity anchor SFW-0이 모드 조합 전부로 고정한다
   // (둘을 AND로 겹치면 도달 가능한 상태에서 구별력이 0이라 뮤테이션이 어느 쪽도 증명하지 못했다 — 7-15 SM9·SM10).
-  return form.doneeIsForProfitCorp && forProfitDoneeToggleVisible(form)
-    ? ({ ...payload, doneeIsForProfitCorp: true } as DeemedGiftInput)
-    : payload;
+  const withForProfit =
+    form.doneeIsForProfitCorp && forProfitDoneeToggleVisible(form)
+      ? ({ ...payload, doneeIsForProfitCorp: true } as DeemedGiftInput)
+      : payload;
+  // §4의2③ — ⑤와 같은 함수로 거른다(명부 모드·법이 배제한 유형의 stale 값 차단). 엔진 판정과의 일치는 ITW-0b
+  return form.doneeIncomeTaxed && incomeTaxedToggleVisible(form)
+    ? ({ ...withForProfit, doneeIncomeOrCorporateTaxed: true } as DeemedGiftInput)
+    : withForProfit;
+}
+
+/**
+ * ⑤ §4의2③ 토글 노출 — 수증자 1명(한 묶음) 입력(7-16). 엔진 `incomeTaxedDoneeGateApplies`와 같은 판정이며
+ * parity는 anchor ITW-0b가 모드 조합별로 고정한다. 명부 모드는 범위 밖(사용자 결정) — 모달이 안내를 보인다.
+ */
+export function incomeTaxedToggleVisible(form: DeemedFormState): boolean {
+  if (forProfitDoneeToggleVisible(form)) return true;
+  switch (form.type) {
+    case "capital_increase":
+    case "convertible_stock":
+      return true;
+    case "specific_corp":
+      return form.scMode !== "roster";
+    default:
+      return false;
+  }
+}
+
+/** 명부 모드라 ③ 토글이 없는 폼 — 모달이 「반영되지 않는다」 안내를 보인다(조용히 빠지지 않게) */
+export function incomeTaxedRosterNotice(form: DeemedFormState): boolean {
+  switch (form.type) {
+    case "merger":
+      return form.mrgUseShareholders;
+    case "capital_decrease":
+      return form.cdMode === "multi";
+    case "contribution":
+      return form.conCaseType === "high" && form.conParties !== undefined;
+    case "specific_corp":
+      return form.scMode === "roster";
+    case "related_corp":
+    case "capital_increase_allocation":
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**

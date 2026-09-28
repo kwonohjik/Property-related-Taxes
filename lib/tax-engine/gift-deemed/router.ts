@@ -25,6 +25,8 @@ import { calcTrustBenefit } from "./trust-benefit";
 import { jointLiabilityExemptForDeemedType } from "./taxpayer-gate";
 import { forProfitDoneeGateApplies } from "./taxpayer-gate";
 import { forProfitDoneeExcludedResult } from "./taxpayer-gate";
+import { incomeTaxedDoneeGateApplies } from "./taxpayer-gate";
+import { incomeTaxedDoneeExcludedResult } from "./taxpayer-gate";
 
 /**
  * 「상증법」§4의2⑥ 단서 — 증여자 연대납부의무 면제 표지를 **전 유형에 한 곳에서** 세운다.
@@ -38,7 +40,7 @@ import { forProfitDoneeExcludedResult } from "./taxpayer-gate";
  */
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   return {
-    ...forProfitDoneeGate(input, dispatchDeemedGift(input)),
+    ...incomeTaxedDoneeGate(input, forProfitDoneeGate(input, dispatchDeemedGift(input))),
     donorJointLiabilityExempt: jointLiabilityExemptForDeemedType(input.type),
   };
 }
@@ -55,6 +57,18 @@ function forProfitDoneeGate(input: DeemedGiftInput, result: DeemedGiftResult): D
   if (!("doneeIsForProfitCorp" in input) || input.doneeIsForProfitCorp !== true) return result;
   if (result.applied !== true || result.deemedGiftValue <= 0) return result;
   return forProfitDoneeExcludedResult(result);
+}
+
+/**
+ * 「상증법」§4의2③ — 수증자에게 소득세·법인세가 부과되면 증여세를 부과하지 않는다(7-16).
+ * 수증자 1명(한 묶음) 입력만(`incomeTaxedDoneeGateApplies`). 영리법인 게이트 **뒤**다 — 둘 다 켜져도
+ * 먼저 성립한 사유(납세의무자 아님)가 남는다. 과세되는 결과에만 거는 규칙은 영리법인 게이트와 같다.
+ */
+function incomeTaxedDoneeGate(input: DeemedGiftInput, result: DeemedGiftResult): DeemedGiftResult {
+  if (!incomeTaxedDoneeGateApplies(input)) return result;
+  if (!("doneeIncomeOrCorporateTaxed" in input) || input.doneeIncomeOrCorporateTaxed !== true) return result;
+  if (result.applied !== true || result.deemedGiftValue <= 0) return result;
+  return incomeTaxedDoneeExcludedResult(result);
 }
 
 function dispatchDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
