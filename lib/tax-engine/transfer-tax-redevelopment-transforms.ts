@@ -55,6 +55,10 @@ export {
   applyHighValueAllocation,
 } from "./transfer-tax-redevelopment-lthd";
 import { resolveOneRightHighValueThreshold } from "./data/one-right-high-value-era";
+import {
+  oneRightClauseNaYears,
+  oneRightPresaleRightBlocks,
+} from "./data/one-right-requirement-era";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Step A.6 — 청산금 수령분 비과세·고가 안분 (L-12 · 800줄 정책으로 분리)
@@ -66,11 +70,16 @@ export { applySettlementExemption } from "./transfer-tax-redevelopment-settlemen
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * 「양도일 현재 세대가 **분양권**을 보유하는가」 — §89①4호 **가·나목 공용 leaf**.
+ * 세대 보유 분양권이 가·나목 「분양권을 보유하지 아니할 것」에 **걸리는가** — §89①4호 **가·나목 공용 leaf**.
  *
  * 두 목이 같은 사실을 요구한다:
  *   · 가목 — 「양도일 현재 다른 주택 **또는 분양권**을 보유하지 아니할 것」
  *   · 나목 — 「… 1주택을 보유한 경우(**분양권을 보유하지 아니하는 경우로 한정한다**)로서 …」
+ *
+ * 🔑 **연혁(E-3 후속)** — 이 문언은 법률 제18578호(2022-01-01 시행)가 넣었고 부칙 제7조②·③이
+ *    **입주권 취득일**(원조합원 = 관리처분계획인가일)과 **분양권 취득일** 두 축으로 적용 범위를 정한다.
+ *    규칙은 `data/one-right-requirement-era.ts` `oneRightPresaleRightBlocks` 하나다. 종전 술어
+ *    (`householdHoldsPresaleRight` — 보유 여부만)는 2022년 전 입주권에도 분양권 요건을 걸었다.
  *
  * ⚠️ **`presaleRights.length`를 세면 안 된다.** 이 배열은 「분양권」과 「조합원입주권」을 함께
  *    담는 목록(`PresaleRight.type`)이고, 조문이 배제하는 것은 **분양권**뿐이다. 조합원입주권
@@ -78,15 +87,26 @@ export { applySettlementExemption } from "./transfer-tax-redevelopment-settlemen
  *    목록에 적어 넣은 사용자가 근거 없이 비과세를 잃는다.
  *
  * ⚠️ **미제공(undefined)은 「보유하지 않음」으로 본다.** 비과세를 배제하는 방향이 불리 적용이라,
- *    사실이 입력되지 않았다는 이유만으로 납세자에게 불리하게 단정하지 않는다. 사용자가 분양권을
- *    선언할 입력 경로는 ⑤가 함께 열어야 한다(열지 않으면 이 게이트는 no-op이다).
+ *    사실이 입력되지 않았다는 이유만으로 납세자에게 불리하게 단정하지 않는다.
+ *
+ * - `"blocks"` — 걸리는 분양권이 있다.
+ * - `"undetermined"` — 2022-01-01 이후 취득 분양권이 있는데 입주권 인가일을 모른다(판정 메뉴 미입력).
+ *   호출부는 나목 취득일 미입력과 같이 불성립으로 두고 사유를 안내한다.
+ * - `"clear"` — 걸리는 분양권이 없다.
  */
-export function householdHoldsPresaleRight(input: TransferTaxInput): boolean {
-  return input.presaleRights?.some((p) => p.type === "presale_right") === true;
+export function oneRightPresaleGate(
+  input: TransferTaxInput,
+  facts: OneRightExemptionFacts,
+): "blocks" | "undetermined" | "clear" {
+  let undetermined = false;
+  for (const p of input.presaleRights ?? []) {
+    if (p.type !== "presale_right") continue;
+    const r = oneRightPresaleRightBlocks(p.acquisitionDate, facts.approvalDate);
+    if (r === true) return "blocks";
+    if (r === "undetermined") undetermined = true;
+  }
+  return undetermined ? "undetermined" : "clear";
 }
-
-/** §89①4호 나목 — 「해당 1주택을 취득한 날부터 **3년** 이내에 해당 조합원입주권을 양도할 것」 */
-const CLAUSE_NA_YEARS = 3;
 
 /**
  * **§89①4호 전용 술어** — 어느 목으로 비과세가 성립하는가 (2026-08-25 신설 · C1-03 · E3-03).
@@ -124,6 +144,11 @@ const CLAUSE_NA_YEARS = 3;
 export type OneRightExemptionFacts = {
   exemptionEligibleAtApproval?: boolean;
   otherHouseAcquisitionDate?: Date;
+  /**
+   * 양도하는 입주권의 관리처분계획인가일(= 원조합원의 입주권 취득일) — 분양권 요건 부칙 제7조②·③과
+   * 재건축 기준일 고지에 쓴다(E-3 후속). 계산기는 `redevelopment.approvalDate`(필수), 판정 메뉴는 선택 입력.
+   */
+  approvalDate?: Date;
 };
 
 /**
@@ -141,6 +166,7 @@ export function pickOneRightExemptionFacts(
   return {
     exemptionEligibleAtApproval: facts.eligibleAtApproval,
     otherHouseAcquisitionDate: facts.otherHouseAcquisitionDate,
+    approvalDate: facts.approvalDate,
   };
 }
 
@@ -171,21 +197,27 @@ export function resolveOneRightExemptionClause(
   }
 
   // 가·나목 **양쪽**이 분양권 미보유를 요구한다 — 목을 가르기 전에 한 번 본다.
-  if (householdHoldsPresaleRight(input)) return undefined;
+  // 연혁(E-3 후속): 2022-01-01 전 취득 입주권·분양권은 대상이 아니다(법률 제18578호 부칙 제7조②·③).
+  // 인가일을 몰라 갈리지 않으면 나목 취득일 미입력과 같이 불성립으로 두고 화면이 사유를 안내한다.
+  if (oneRightPresaleGate(input, redevInfo) !== "clear") return undefined;
 
   // ── 가목: 다른 주택 0채 ──
   if (input.householdHousingCount === 0) return "ga";
 
-  // ── 나목: 1주택 + 그 주택 취득일부터 3년 이내 양도 ──
+  // ── 나목: 1주택 + 그 주택 취득일부터 N년 이내 양도 ──
   if (input.householdHousingCount === 1) {
+    // 연혁(E-3 후속): 2005-12-31 이전 양도분은 나목이 없고(영 §155 제16항 — 「다른 주택이 없는 경우」뿐),
+    // 기한은 양도일 기준 1년(2006-01-01) → 2년(2008-11-28) → 3년(2012-06-29).
+    const naYears = oneRightClauseNaYears(input.transferDate);
+    if (naYears === null) return undefined;
     const acquired = redevInfo.otherHouseAcquisitionDate;
-    // 취득일 미입력이면 3년 요건을 **판정할 수 없다**. 「모르니까 준다」도, 「모르니까 뺏는다」도
+    // 취득일 미입력이면 기한 요건을 **판정할 수 없다**. 「모르니까 준다」도, 「모르니까 뺏는다」도
     // 하지 않는다 — 나목 불성립으로 두고(비과세·안분 모두 미적용) 화면이 사유를 안내한다.
     if (!acquired) return undefined;
-    // 「취득한 날부터 3년 이내」 — 초일불산입(민법 §157·§160). `setFullYear`는 2/29 취득을 3/1로 넘겨
+    // 「취득한 날부터 N년 이내」 — 초일불산입(민법 §157·§160). `setFullYear`는 2/29 취득을 3/1로 넘겨
     //   하루 길었고, 평년 2/28 취득은 윤년 2/29 만료를 하루 짧게 봤다.
     //   말일이 토요일·공휴일이면 익일(국세기본법 §4 → 민법 §161 — L-1).
-    return isWithinDeadline(acquired, CLAUSE_NA_YEARS, input.transferDate) ? "na" : undefined;
+    return isWithinDeadline(acquired, naYears, input.transferDate) ? "na" : undefined;
   }
 
   return undefined;

@@ -124,3 +124,25 @@ describe("E-3 판정 메뉴 결과 — 기준금액·고지", () => {
     expect(getByTestId("one-house-one-right-threshold-notice").textContent).toContain("확인되지 않아");
   });
 });
+
+describe("E-3 후속 판정 메뉴 결과 — 요건 연혁", () => {
+  it("나목 성립 문구가 양도일 기한(2년)을 쓴다 — 엔진이 실은 naYears 우선", () => {
+    const res = judgmentWith({ clause: "na", isExempt: true, isPartialExempt: false, naYears: 2 });
+    const { getByTestId } = render(<OneHouseJudgmentResultView result={res} transferDate="2010-06-01" />);
+    expect(getByTestId("one-house-one-right-verdict").textContent).toContain("2년 이내");
+  });
+  it("옛 이력(naYears 없음)은 같은 leaf로 — 2007-06-01 양도면 1년", () => {
+    const res = judgmentWith({ clause: "na", isExempt: true, isPartialExempt: false });
+    const { getByTestId } = render(<OneHouseJudgmentResultView result={res} transferDate="2007-06-01" />);
+    expect(getByTestId("one-house-one-right-verdict").textContent).toContain("1년 이내");
+  });
+  it("요건 고지를 띄운다", () => {
+    const res = judgmentWith({
+      isExempt: true,
+      isPartialExempt: false,
+      requirementNotices: ["재건축 조합원입주권이면 … 사업시행인가일 …"],
+    });
+    const { getAllByTestId } = render(<OneHouseJudgmentResultView result={res} transferDate="2005-05-30" />);
+    expect(getAllByTestId("one-house-one-right-requirement-notice")[0].textContent).toContain("사업시행인가일");
+  });
+});

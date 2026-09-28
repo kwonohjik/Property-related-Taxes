@@ -187,7 +187,7 @@ export function calculateRedevelopmentTax(
    * `transfer-tax-redevelopment-steps.ts`로 분리했다(800줄 정책 — 이 함수가 828줄이었다).
    * 입력 3개·출력 5개로 이음매가 좁아 **구조분해로 받으면 하류 참조가 바뀌지 않는다**.
    */
-  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice } =
+  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices } =
     runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
@@ -592,6 +592,7 @@ export function calculateRedevelopmentTax(
       ...(lthdSpecialNotice ? [lthdSpecialNotice] : []),
       ...(settlementWarning ? [settlementWarning] : []),
       ...(oneRightThresholdNotice ? [oneRightThresholdNotice] : []),
+      ...oneRightRequirementNotices,
     ],
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,

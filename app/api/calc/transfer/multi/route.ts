@@ -311,6 +311,8 @@ export async function POST(request: NextRequest) {
               otherHouseAcquisitionDate: toOptionalDate(
                   p.oneRightExemptionFacts.otherHouseAcquisitionDate,
               ),
+              // E-3 후속 — 분양권 요건 연혁. Date 변환 필수.
+              approvalDate: toOptionalDate(p.oneRightExemptionFacts.approvalDate),
             }
         : undefined,
       winWinRentalHouse: p.winWinRentalHouse

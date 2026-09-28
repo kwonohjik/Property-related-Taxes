@@ -10,6 +10,10 @@
  * 사실**이고 세액 산식 입력이 하나도 없다 — §166 3분할은 `RedevelopmentBlock`이 갖는다.
  * 계산기 마운트(`RedevelopmentBlock.tsx`)를 없애고 그 자리에 읽기 전용 요약을 뒀다.
  *
+ * ➕ E-3 후속: `redevApprovalDate`(입주권 관리처분계획인가일)도 편집한다 — 분양권 요건 연혁
+ *    (법률 제18578호 부칙 제7조②·③)에 필요하다. 이 필드는 계산기 `RedevelopmentBlock`의 §166
+ *    **산식 입력**이기도 해 두 화면이 한 값을 나눠 갖는다(아래 「중과 축 없음」은 위 4필드 얘기다).
+ *
  * ⚠️ 종전의 `mode="full"|"facts"` prop은 **지웠다**. `full`이 걷어내던 것은 §95② 장기보유
  *    특별공제 구조 안내(세액 맥락)였는데, 그것은 **계산기가 말해야 할 것**이라 컴포넌트에서
  *    꺼내 `ImportedRedevRightFactsCard`로 옮겼다. 소비자가 하나뿐인 분기를 남겨 두면
@@ -28,6 +32,7 @@
  *  §⑥    violet: 1세대1입주권 비과세 카드
  *    ├── ToggleCard (redevExemptionEligibleAtApproval 기존 필드 재사용)
  *    ├── 보유·거주 월수 입력 (DecimalInput — 월수, 정수)
+ *    ├── 입주권 관리처분계획인가일 (DateInput — 분양권 요건 연혁 · E-3 후속)
  *    ├── 나목 — 세대 보유 1주택 취득일 (DateInput)
  *    ├── 고가 기준금액 초과 자동 안내 (transferPrice > 양도일 기준금액 + 토글 ON 시 — E-3)
  *    ├── (a) useMemo 자동 검증 → (b) rose 경고 카드 조건부 노출
@@ -187,10 +192,22 @@ export function RedevelopmentRightExemptionSection({
               />
             </FieldCard>
 
-            {/* §89①4호 나목 — 그 1주택의 취득일 (3년 요건 판정) */}
+            {/* 입주권 관리처분계획인가일 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③ · E-3 후속).
+                계산기 §166 입력과 같은 필드(`redevApprovalDate`)다 — 두 화면이 한 값을 나눠 갖는다. */}
+            <FieldCard
+              label="양도하는 입주권의 관리처분계획인가일"
+              hint="2022.1.1. 이후 취득한 분양권이 있을 때 쓰입니다. 인가일이 2022.1.1. 전이면 분양권 요건이 없는 종전 규정입니다. 소규모정비는 사업시행계획인가일."
+            >
+              <DateInput
+                value={asset.redevApprovalDate}
+                onChange={(v) => onChange({ redevApprovalDate: v })}
+              />
+            </FieldCard>
+
+            {/* §89①4호 나목 — 그 1주택의 취득일 (기한 요건 판정 — 양도일 연혁 1년·2년·3년) */}
             <FieldCard
               label="세대 보유 1주택의 취득일 (나목)"
-              hint="세대가 입주권 외에 주택을 1채 보유한 경우에만 입력합니다. 그 주택을 취득한 날부터 3년 이내에 입주권을 양도해야 비과세됩니다. 세대 주택이 0채(가목)이면 비워 두세요."
+              hint="입주권 외에 주택 1채를 보유한 경우만 입력합니다. 그 취득일부터 3년(2012.6.28. 이전 양도 2년 · 2008.11.27. 이전 1년 · 2005년 이전 없음) 이내 양도해야 합니다. 0채(가목)면 비워 두세요."
             >
               <DateInput
                 value={asset.redevOtherHouseAcquisitionDate}
@@ -205,7 +222,8 @@ export function RedevelopmentRightExemptionSection({
               </p>
               <p className="mt-0.5">
                 §89①4호는 <span className="font-semibold">가목·나목 중 하나</span>를 충족하면 비과세됩니다.
-                두 목 모두 <span className="font-semibold">세대 보유 분양권이 없을 것</span>을 요구합니다.
+                두 목 모두 <span className="font-semibold">세대 보유 분양권이 없을 것</span>을 요구합니다
+                (2022.1.1. 이후 인가된 입주권에 한해 2022.1.1. 이후 취득한 분양권).
                 <br />
                 <span className="font-semibold">가목</span> — 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것
                 → ② 「보유 주택」 명부를{" "}
@@ -213,7 +231,8 @@ export function RedevelopmentRightExemptionSection({
                 <br />
                 <span className="font-semibold">나목</span> — 1입주권 외에 1주택을 보유(분양권 미보유)하고, 그 1주택
                 취득일부터 <span className="font-semibold">3년 이내</span>에 입주권을 양도할 것
-                → <span className="font-semibold">② 명부에 주택 1채</span> + 위 취득일 입력.
+                → <span className="font-semibold">② 명부에 주택 1채</span> + 위 취득일 입력
+                (기한은 양도일에 따라 1·2·3년 — 2005.12.31. 이전 양도분은 가목만).
                 <br />
                 어느 목이든 <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>여야
                 하며, 양도하는 입주권 자체도 카운트에 <span className="font-semibold">포함</span>됩니다.

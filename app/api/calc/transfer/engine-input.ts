@@ -210,6 +210,8 @@ export function buildTransferEngineInput(
           otherHouseAcquisitionDate: toOptionalDate(
             data.oneRightExemptionFacts.otherHouseAcquisitionDate,
           ),
+          // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 같은 이유로 Date 변환 필수.
+          approvalDate: toOptionalDate(data.oneRightExemptionFacts.approvalDate),
         }
       : undefined,
     // ⑭ §155의3 상생임대주택 — `winWinContractDate`만 Date 변환(2021-12-20~2026-12-31 창 판정에 쓰인다).

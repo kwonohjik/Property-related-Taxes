@@ -149,6 +149,35 @@ describe("판정 메뉴 §89①4호 — route", () => {
     expect(json.data.oneRightExemption.reasons.join(" ")).toContain("분양권");
   });
 
+  /**
+   * E-3 후속 — 분양권 요건은 2022.1.1. 이후 인가(취득) 입주권에만 걸린다(법률 제18578호 부칙 제7조②·③).
+   * 판정 메뉴의 새 입력 `oneRightExemptionFacts.approvalDate`가 ⑫ Zod → ⑭ Date 변환을 거쳐 엔진에 닿는지.
+   * (위 OR-7은 인가일 미입력 = 판정 불가 경로다.)
+   */
+  it("[OR-7b] 인가일 2019 → 종전 규정: 2022년 분양권이 있어도 가목 성립", async () => {
+    const { status, json } = await post({
+      presaleRights: [rightBody("p1", "presale_right")],
+      oneRightExemptionFacts: { eligibleAtApproval: true, approvalDate: "2019-01-01" },
+    });
+    expect(status).toBe(200);
+    expect(json.data.oneRightExemption.clause).toBe("ga");
+  });
+
+  it("[OR-7c] 인가일 2022-01-01 → 분양권 요건 적용: 미성립 · 사유에 부칙", async () => {
+    const { status, json } = await post({
+      presaleRights: [rightBody("p1", "presale_right")],
+      oneRightExemptionFacts: { eligibleAtApproval: true, approvalDate: "2022-01-01" },
+    });
+    expect(status).toBe(200);
+    expect(json.data.oneRightExemption.clause).toBeNull();
+    expect(json.data.oneRightExemption.reasons.join(" ")).toContain("제18578호");
+  });
+
+  it("[OR-7d] 인가일 미입력 → 판정 불가 사유(인가일 입력 안내)", async () => {
+    const { json } = await post({ presaleRights: [rightBody("p1", "presale_right")] });
+    expect(json.data.oneRightExemption.reasons.join(" ")).toContain("인가일을 입력하지 않으면");
+  });
+
   /** 🔴 입주권 수 파생 — 명부 입주권 1건 + 양도 대상 = **2개**라 본문이 깨진다. */
   it("[OR-8] 명부에 다른 입주권이 있으면 「1개 보유」가 아니다", async () => {
     const { status, json } = await post({

@@ -97,9 +97,20 @@ describe("C1-03 — §89①4호 나목 (1입주권 + 1주택 · 3년 이내)", (
 
   it("나목도 분양권 미보유가 요건이다 — 분양권 보유 시 불성립", () => {
     const presale: PresaleRight = { id: "p", type: "presale_right", acquisitionDate: new Date("2022-01-01"), region: "capital" };
-    const r = calculateTransferTax(input({ ...NA_OK, presaleRights: [presale] }), rates);
+    // E-3 후속 — 분양권 요건은 2022.1.1. 이후 인가(취득) 입주권에만 걸린다(법률 제18578호 부칙 제7조②).
+    //   이 파일의 기본 인가일(2018-10-23)로는 게이트를 시험할 수 없어 이 케이스만 인가일을 옮긴다.
+    const naOk2022 = {
+      householdHousingCount: 1,
+      redevelopment: redevInfo({ approvalDate: new Date("2022-01-01"), otherHouseAcquisitionDate: new Date("2022-08-01") }),
+    };
+    const r = calculateTransferTax(input({ ...naOk2022, presaleRights: [presale] }), rates);
     expect(r.redevelopmentDetail?.oneRightExemptionClause).toBeUndefined();
-    expect(r.totalTax).toBe(198_627_000);
+    // 인가일이 §166 3분할 경계라 과세액이 기본 fixture(198,627,000)와 다르다 — 실측값.
+    expect(r.totalTax).toBe(193_083_000);
+    // 긍정 짝 — 같은 사실에서 분양권만 빼면 나목 성립(게이트가 분양권 하나로 갈린다).
+    const clean = calculateTransferTax(input(naOk2022), rates);
+    expect(clean.redevelopmentDetail?.oneRightExemptionClause).toBe("na");
+    expect(clean.totalTax).toBe(0);
   });
 
   it("가목은 그대로 — 주택 0채는 clause \"ga\"로 전액 비과세 (회귀 가드)", () => {

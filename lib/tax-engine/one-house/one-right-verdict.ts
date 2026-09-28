@@ -27,13 +27,18 @@ import {
   oneRightHighValueBase,
   pickOneRightExemptionFacts,
   resolveOneRightExemptionClause,
-  householdHoldsPresaleRight,
+  oneRightPresaleGate,
 } from "../transfer-tax-redevelopment-transforms";
 import { TRANSFER } from "../legal-codes/transfer";
+import { REDEVELOPMENT } from "../legal-codes";
 import {
   resolveOneRightHighValueThreshold,
   oneRightHighValueEraNotice,
 } from "../data/one-right-high-value-era";
+import {
+  oneRightClauseNaYears,
+  oneRightRequirementEraNotices,
+} from "../data/one-right-requirement-era";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 
@@ -52,6 +57,13 @@ export type OneHouseOneRightVerdict = {
   highValueThreshold?: number;
   /** 기준금액 연혁 미지원·확인 필요 구간 고지 — 성립한 경우에만 */
   thresholdNotice?: string;
+  /**
+   * 요건 연혁 고지(E-3 후속 — 1999년 전 미지원 · 2005년까지 1개 문언 없음 · 재건축 기준일).
+   * 계산기 warnings와 같은 함수(`oneRightRequirementEraNotices`)다. 없으면 키를 싣지 않는다(옛 이력 호환).
+   */
+  requirementNotices?: string[];
+  /** 나목 성립 시 적용한 기한(년) — 양도일 연혁 1·2·3년(E-3 후속). 가목·미성립이면 없음. */
+  naYears?: number;
   /** 미성립 사유 — 사용자가 어디가 모자란지 알 수 있게 전부 모은다 */
   reasons: string[];
   legalBasis: string;
@@ -72,6 +84,13 @@ export function buildOneRightVerdict(
 
   const clause = resolveOneRightExemptionClause(facts, input);
   const highValueThreshold = resolveOneRightHighValueThreshold(input.transferDate);
+  const eraNotices = oneRightRequirementEraNotices({
+    transferDate: input.transferDate,
+    rightApprovalDate: facts.approvalDate,
+    householdRightCount: input.householdRightCount,
+    eligibleAtApprovalDeclared: facts.exemptionEligibleAtApproval === true,
+  });
+  const requirementNotices = eraNotices.length > 0 ? { requirementNotices: eraNotices } : {};
   if (clause) {
     const overThreshold = oneRightHighValueBase(input) > highValueThreshold;
     const thresholdNotice = oneRightHighValueEraNotice(input.transferDate);
@@ -81,6 +100,8 @@ export function buildOneRightVerdict(
       isPartialExempt: overThreshold,
       highValueThreshold,
       ...(thresholdNotice ? { thresholdNotice } : {}),
+      ...requirementNotices,
+      ...(clause === "na" ? { naYears: oneRightClauseNaYears(input.transferDate) ?? undefined } : {}),
       reasons: [],
       legalBasis: TRANSFER.ONE_RIGHT_EXEMPT,
     };
@@ -107,21 +128,36 @@ export function buildOneRightVerdict(
       `세대 보유 조합원입주권이 1개여야 합니다 (현재 ${input.householdRightCount ?? 0}개 — 양도 대상 포함).`,
     );
   }
-  if (householdHoldsPresaleRight(input)) {
-    reasons.push("가목·나목 모두 세대가 분양권을 보유하지 않을 것을 요구합니다.");
+  const presaleGate = oneRightPresaleGate(input, facts);
+  if (presaleGate === "blocks") {
+    reasons.push(
+      `가목·나목 모두 세대가 분양권을 보유하지 않을 것을 요구합니다(2022.1.1. 이후 취득한 입주권에 한해 2022.1.1. 이후 취득한 분양권 — ${REDEVELOPMENT.ONE_RIGHT_PRESALE_ADDENDUM}).`,
+    );
+  } else if (presaleGate === "undetermined") {
+    reasons.push(
+      `2022.1.1. 이후 취득한 분양권이 있습니다. 양도하는 입주권의 관리처분계획인가일이 2022.1.1. 전이면 분양권 요건이 적용되지 않고(종전 규정 — ${REDEVELOPMENT.ONE_RIGHT_PRESALE_RULING}), 그 뒤면 적용됩니다 — 인가일을 입력하지 않으면 판정할 수 없어 비과세를 적용하지 않습니다.`,
+    );
   }
   const houseCount = input.householdHousingCount;
+  // 나목 기한은 양도일 연혁(1년·2년·3년) — 2005.12.31. 이전 양도분은 나목이 없다(E-3 후속).
+  const naYears = oneRightClauseNaYears(input.transferDate);
   if (houseCount > 1) {
     reasons.push(
-      `다른 주택이 ${houseCount}채입니다. 가목은 0채, 나목은 1채(그 주택 취득일부터 3년 이내 양도)여야 합니다.`,
+      naYears === null
+        ? `다른 주택이 ${houseCount}채입니다. 2005.12.31. 이전 양도분은 양도일 현재 다른 주택이 없어야 합니다.`
+        : `다른 주택이 ${houseCount}채입니다. 가목은 0채, 나목은 1채(그 주택 취득일부터 ${naYears}년 이내 양도)여야 합니다.`,
+    );
+  } else if (houseCount === 1 && naYears === null) {
+    reasons.push(
+      `2005.12.31. 이전 양도분은 양도일 현재 다른 주택이 없어야 합니다 — 1주택 보유 경로(현행 나목)는 2006.1.1. 이후 양도분부터입니다(${REDEVELOPMENT.ONE_RIGHT_DECREE_155_16}).`,
     );
   } else if (houseCount === 1 && !facts.otherHouseAcquisitionDate) {
     reasons.push(
-      "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다.",
+      `나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 ${naYears}년 요건을 판정할 수 없어 나목을 적용하지 않습니다.`,
     );
   } else if (houseCount === 1) {
     reasons.push(
-      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다.",
+      `나목 — 그 1주택을 취득한 날부터 ${naYears}년 이내에 입주권을 양도해야 합니다. ${naYears}년을 넘겼습니다.`,
     );
   }
 
@@ -130,6 +166,7 @@ export function buildOneRightVerdict(
     isExempt: false,
     isPartialExempt: false,
     highValueThreshold,
+    ...requirementNotices,
     reasons,
     legalBasis: TRANSFER.ONE_RIGHT_EXEMPT,
   };
@@ -163,7 +200,7 @@ export function applyOneRightVerdict(
         label:
           verdict.clause === "ga"
             ? "1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)"
-            : "1세대1입주권 비과세 — 나목(1주택 취득일부터 3년 이내 양도)",
+            : `1세대1입주권 비과세 — 나목(1주택 취득일부터 ${verdict.naYears ?? 3}년 이내 양도)`,
         legalBasis: verdict.legalBasis,
       },
     ],

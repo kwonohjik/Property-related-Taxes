@@ -32,6 +32,7 @@ import {
   resolveOneRightHighValueThreshold,
   oneRightHighValueEraNotice,
 } from "./data/one-right-high-value-era";
+import { oneRightRequirementEraNotices } from "./data/one-right-requirement-era";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import type {
@@ -424,5 +425,16 @@ export function runRedevelopmentGainSteps(
     redevAfterRight.oneRightExemptionApplied || redevAfterRight.oneRightHighValueApplied
       ? oneRightHighValueEraNotice(input.transferDate)
       : undefined;
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice };
+  // E-3 후속 — 요건 연혁 고지(판정 메뉴 `buildOneRightVerdict`와 같은 함수). 입주권 양도에만.
+  const redevInfo = input.redevelopment;
+  const oneRightRequirementNotices =
+    redevInfo?.subject === "right"
+      ? oneRightRequirementEraNotices({
+          transferDate: input.transferDate,
+          rightApprovalDate: redevInfo.approvalDate,
+          householdRightCount: input.householdRightCount,
+          eligibleAtApprovalDeclared: redevInfo.exemptionEligibleAtApproval === true,
+        })
+      : [];
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices };
 }

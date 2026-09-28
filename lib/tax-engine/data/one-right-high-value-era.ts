@@ -4,11 +4,14 @@
  *
  * 계획서 `docs/00-pm/one-house-exemption-fix.plan.md` §9.3 E-3. 법제처 DRF `target=eflaw` 실독
  * (2026-09-28 — 소득세법 시행령 시행본 190개 전수 · 소득세법 §89 시행본 2005-12~2022-01 전수).
+ * E-3 후속(2026-09-28): 「DRF 범위 밖」이던 2005-02-19 전은 `lawSearch` 목록 범위 밖일 뿐 `LM`+`efYd` 조회는
+ * 된다 — 1997~2005 시행본을 부칙 목록의 시행일로 하나씩 읽어 아래 두 행을 세웠다.
  *
  * | 양도일 | 기준 | 근거 |
  * |---|---|---|
- * | < 2005-02-19 | **미지원** — 현행 12억으로 계산하고 고지 | DRF 시행본 범위 밖(최초 2005-02-19). 해석례 서면인터넷방문상담4팀-1246(2004.08.09)은 「제155조 제16항 … 6억원」 |
- * | 2005-02-19 ~ 2008-10-06 | 6억 | 영 §155 제16항·제17항 「… 제154조제1항에 따른 1세대1주택으로 본다」 → 법 §89(①)3호 괄호 고가주택 → 영 §156① 「6억원을 초과」 |
+ * | < 1999-01-01 | **미지원** — 현행 12억으로 계산하고 고지 | 1997·1998 시행본에 입주권 1세대1주택 의제 조항 없음(요건 연혁 `one-right-requirement-era.ts`) |
+ * | 1999-01-01 ~ 2003-03-01 | **미지원(고급주택 체제)** — 현행 12억으로 계산하고 고지 | 영 §156 「고급주택」(면적·시설·가액 기준 — 엔진에 면적 입력 없음). 6억 고가주택 기준은 대통령령 제17825호(2003-01-01 시행)부터이고, 같은 영 부칙 제20조가 기준면적 미만 주택의 2003-01-01 전 계약분을 「시행후 2월이 되는 날까지」 종전 규정에 두어 그 끝(2월 28일/3월 1일)까지 미지원으로 둔다 |
+ * | 2003-03-02 ~ 2008-10-06 | 6억 | 영 §155 제16항·제17항 「… 제154조제1항에 따른 1세대1주택으로 본다」 → 법 §89(①)3호 괄호 고가주택(법률 제6781호 — 2003-01-01 시행분) → 영 §156① 「6억원을 초과」(대통령령 제17825호 부칙 제4조 시행 후 최초 양도분) · 서면인터넷방문상담4팀-1246(2004.08.09) 「제155조 제16항 … 6억원」 |
  * | 2008-10-07 ~ 2016-12-31 | 9억 | 같은 체인 · 영 §156① 「9억원을 초과」(대통령령 제21062호 부칙 제2조 — 시행 후 최초 양도분) |
  * | 2017-01-01 ~ 2017-02-02 | **확인 필요** — 현행 12억으로 계산하고 고지 | 아래 「위임 공백」 |
  * | 2017-02-03 ~ 2021-12-07 | 9억 | 영 §155 제17항 「조합원입주권의 양도 당시의 실지거래가액의 합계액이 9억원을 초과하는 경우」(대통령령 제27829호 부칙 제2조② — 시행 이후 양도분) |
@@ -36,8 +39,8 @@
  * 갈리고 이 구간을 직접 다룬 해석례는 찾지 못했다 ⇒ 근거 없이 낮은 기준을 소급하지 않고
  * **종전 동작(12억)을 유지하며 고지**한다(`feedback_no_unfavorable_application_without_legal_basis`).
  *
- * ⚠️ 이 파일은 **기준금액만** 다룬다. 같은 시기의 요건 연혁(2005년 가목만 · 나목 기한 1년→2년→3년 ·
- *    재건축 사업시행인가일 기준 등)은 엔진이 현행 §89①4호 문언으로 판정한다 — 계획서 §9.3 E-3 기재.
+ * ⚠️ 이 파일은 **기준금액만** 다룬다. 같은 시기의 요건 연혁(2005년까지 가목만 · 나목 기한 1년→2년→3년 ·
+ *    분양권 요건 · 재건축 사업시행인가일 기준)은 `one-right-requirement-era.ts`.
  */
 
 import {
@@ -48,13 +51,20 @@ import { REDEVELOPMENT, TRANSFER } from "../legal-codes";
 
 export type OneRightHighValueEra =
   | "unsupported"
+  | "luxury_house_regime"
   | "deemed_one_house"
   | "delegation_gap"
   | "decree_155_17"
   | "statute";
 
-/** DRF 소득세법 시행령 최초 시행본(대통령령 제18705호) — 이 날 전은 원문 미확인이라 미지원. */
-export const ONE_RIGHT_ERA_VERIFIED_START = new Date("2005-02-19");
+/** 대통령령 제15969호 시행일 — 입주권 1세대1주택 의제(영 §155 제16항)의 시작. 이 날 전은 미지원. */
+export const ONE_RIGHT_ERA_VERIFIED_START = new Date("1999-01-01");
+/**
+ * 6억 고가주택 기준을 입주권에 쓰는 첫 양도일. 영 §156 6억은 2003-01-01 시행(대통령령 제17825호)이나
+ * 같은 영 부칙 제20조(기준면적 미만 고가주택 · 시행 전 계약 · 「시행후 2월이 되는 날까지」 양도 → 종전
+ * 고급주택 규정)의 끝을 2월 28일/3월 1일 중 어느 쪽으로 읽든 걸리지 않게 3월 2일부터 둔다.
+ */
+export const ONE_RIGHT_6EOK_START = new Date("2003-03-02");
 /** 법률 제14389호 시행일 — §89①4호 신설(단서 기준은 대통령령에 위임). */
 export const ONE_RIGHT_STATUTE_4HO_START = new Date("2017-01-01");
 /** 대통령령 제27829호 공포·시행일 — 영 §155 제17항 9억 적용 첫 양도일. */
@@ -69,7 +79,8 @@ export function resolveOneRightHighValueEra(transferDate: Date): OneRightHighVal
   if (t >= HIGH_VALUE_HOUSE_12EOK_EFFECTIVE_DATE.getTime()) return "statute";
   if (t >= ONE_RIGHT_DECREE_9EOK_START.getTime()) return "decree_155_17";
   if (t >= ONE_RIGHT_STATUTE_4HO_START.getTime()) return "delegation_gap";
-  if (t >= ONE_RIGHT_ERA_VERIFIED_START.getTime()) return "deemed_one_house";
+  if (t >= ONE_RIGHT_6EOK_START.getTime()) return "deemed_one_house";
+  if (t >= ONE_RIGHT_ERA_VERIFIED_START.getTime()) return "luxury_house_regime";
   return "unsupported";
 }
 
@@ -87,16 +98,21 @@ export function resolveOneRightHighValueThreshold(transferDate: Date): number {
       return THRESHOLD_9EOK;
     case "statute":
     case "delegation_gap":
+    case "luxury_house_regime":
     case "unsupported":
       return THRESHOLD_12EOK;
   }
 }
 
 const UNSUPPORTED_NOTICE =
-  "2005년 2월 19일 전에 양도한 조합원입주권의 1세대1주택 비과세 고가 기준금액 연혁은 지원하지 않습니다 — " +
-  `현행 기준(12억)으로 계산했습니다. 당시 시행령의 1세대1주택으로 보는 입주권 규정과 ` +
-  `${REDEVELOPMENT.HIGH_VALUE_HOUSE_DECREE_156}(고가주택 기준금액)으로 직접 확인하세요` +
-  `(당시 국세청 해석례는 6억원 기준 — ${REDEVELOPMENT.ONE_RIGHT_HIGH_VALUE_RULING_PRE_2005}).`;
+  "1999년 1월 1일 전에 양도한 조합원입주권의 1세대1주택 비과세 고가 기준금액 연혁은 지원하지 않습니다 — " +
+  "현행 기준(12억)으로 계산했습니다. 당시 소득세법 시행령에는 입주권을 1세대1주택으로 보는 조항이 없었습니다 — 직접 확인하세요.";
+
+const LUXURY_HOUSE_REGIME_NOTICE =
+  "2003년 3월 1일 이전에 양도한 조합원입주권은 고가 기준금액을 지원하지 않습니다 — 현행 기준(12억)으로 계산했습니다. " +
+  `당시 ${REDEVELOPMENT.HIGH_VALUE_HOUSE_DECREE_156}은 면적·시설·가액으로 정하는 「고급주택」 기준이었고` +
+  "(6억원 고가주택 기준은 2003.1.1. 이후 양도분부터 · 기준면적 미만 주택의 2002년 계약분은 2003년 2월까지 종전 기준), " +
+  "이 계산기에는 면적 입력이 없습니다. 당시 규정으로 직접 확인하세요.";
 
 const DELEGATION_GAP_NOTICE =
   "2017년 1월 1일~2월 2일에 양도한 조합원입주권은 고가 기준금액이 확인되지 않아 현행 기준(12억)으로 계산했습니다 — " +
@@ -108,6 +124,7 @@ const DELEGATION_GAP_NOTICE =
 export function oneRightHighValueEraNotice(transferDate: Date): string | undefined {
   const era = resolveOneRightHighValueEra(transferDate);
   if (era === "unsupported") return UNSUPPORTED_NOTICE;
+  if (era === "luxury_house_regime") return LUXURY_HOUSE_REGIME_NOTICE;
   if (era === "delegation_gap") return DELEGATION_GAP_NOTICE;
   return undefined;
 }

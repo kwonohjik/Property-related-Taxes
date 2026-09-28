@@ -108,7 +108,7 @@ export const SELLING_HOUSE_ID = "selling";
  * 🔑 **양도하는 입주권 자체를 포함**한다 — 계산기 위젯의 안내문과 같은 규약이다
  *    (`Step4.tsx:470` 「양도하는 입주권 자체도 포함하여」).
  * 🔑 분양권(`presale_right`)은 세지 않는다. 그 보유 여부는 가·나목이 **따로** 묻는 축이고
- *    `householdHoldsPresaleRight`가 본다 — 여기 합치면 두 요건이 한 숫자로 뭉개진다.
+ *    `oneRightPresaleGate`가 본다 — 여기 합치면 두 요건이 한 숫자로 뭉개진다.
  */
 export function deriveHouseholdRightCount(
   presaleRights: { type: "presale_right" | "redevelopment_right" }[] | undefined,

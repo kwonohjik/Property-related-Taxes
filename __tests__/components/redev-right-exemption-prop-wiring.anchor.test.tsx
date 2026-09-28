@@ -188,3 +188,25 @@ describe("U1-03 · 거주요건 미충족 경고 — 프로덕션 경로 도달"
     expect(shows(body, WARNING_CARD), "토글 OFF인데 경고가 떴다").toBe(false);
   });
 });
+
+/**
+ * E-3 후속 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③)에 필요한 **입주권 인가일** 입력이
+ * 판정 메뉴 프로덕션 경로에서 렌더되고, 계산기와 같은 `redevApprovalDate` 값을 보여 준다.
+ * ④ 이후(body → route → 엔진)는 `one-house-exemption-api.anchor.test.ts` [RG-5b]가 잇는다.
+ */
+describe("E-3 후속 · 입주권 관리처분계획인가일 입력 — 프로덕션 경로 도달", () => {
+  it("E3F-UI-01: 토글 ON이면 인가일 입력칸이 뜨고 저장값을 보여 준다", () => {
+    const body = renderStep1(rightAsset({ redevApprovalDate: "2019-03-15" }));
+    expect(shows(body, "양도하는 입주권의 관리처분계획인가일"), "인가일 입력칸 미노출").toBe(true);
+    // DateInput은 연·월·일 세 칸이다 — 라벨을 품은 가장 가까운 카드의 입력값을 이어 붙여 본다.
+    const label = Array.from(document.querySelectorAll("*")).find(
+      (el) => el.children.length === 0 && el.textContent === "양도하는 입주권의 관리처분계획인가일",
+    );
+    let card: Element | null = label ?? null;
+    while (card && card.querySelectorAll("input").length === 0) card = card.parentElement;
+    const parts = Array.from(card?.querySelectorAll("input") ?? []).map((i) =>
+      Number((i as HTMLInputElement).value),
+    );
+    expect(parts, "인가일 값 미표시").toEqual([2019, 3, 15]);
+  });
+});
