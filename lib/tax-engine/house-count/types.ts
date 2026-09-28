@@ -48,7 +48,7 @@ export interface OwnedHouseInfo {
   isCulturalHeritage?: boolean;
   /** 농어촌 주택 (대지 660㎡·연면적 150㎡·6,500만원 이내, 일정 지역 외) */
   isFarmlandRural?: boolean;
-  /** 미분양 아파트 (수도권 외 85㎡·6억 이하, 시행령 §28의4⑥11호) */
+  /** 미분양 아파트 (수도권 외 85㎡·6억 이하, 시행령 §28의4⑥1호바목 → §28의2 17호) */
   isUnsoldAptNonMetro?: boolean;
   /** 멸실 목적 취득 미분양 (시공자가 3년 한정 보유) */
   isUnsoldFromConstructor?: boolean;
@@ -63,7 +63,7 @@ export interface OwnedHouseInfo {
 
   // ─── [v3] 한시 특례 (2024.1.10 ~ 2027.12.31) ───
   /**
-   * 한시 특례 신축 (시행령 §28의4⑥11호 + 취득세 §28의4② 준용)
+   * 한시 특례 신축 (시행령 §28의4⑥7호 → §28의4②1호)
    * 2024.1.10~2027.12.31 신축 60㎡·3억(수도권 6억) 이하 다가구·연립·다세대·도시형생활주택
    */
   isHansiBenefitNewBuild?: boolean;
@@ -152,7 +152,7 @@ export interface RightAsset {
   contractDate?: string;
   /**
    * 혼인 전 배우자 보유 분양권 여부 (2026.12.31까지 한시 적용)
-   * §28의4⑥10호: 혼인 전 분양권 → 주택 수 제외 (한시 2026년까지)
+   * §28의4⑥6호: 혼인 전 분양권 → 주택 수 제외 (2026년 기한은 근거 미확인 — 계획서 D-9)
    */
   isPreMarriageSubscriptionRight?: boolean;
   /**
@@ -334,8 +334,8 @@ export type ExclusionReason =
   | "population_decline_lease" // 인구감소지역 임대
   | "staff_rental"             // 사원임대용 주택
   | "inheritance_under_5yr"    // 상속 5년 미경과 (§28의4⑥3호)
-  | "pre_marriage_subscription_right" // 혼인 전 분양권 (§28의4⑥10호, 2026.12.31까지)
-  | "hansi_new_build"          // 한시 특례 신축 (§28의4⑥11호)
+  | "pre_marriage_subscription_right" // 혼인 전 분양권 (§28의4⑥6호)
+  | "hansi_new_build"          // 한시 특례 신축 (§28의4⑥7호)
   | "hansi_lease_registered"   // 한시 특례 임대등록
   | "hansi_unsold_apt"         // 한시 특례 미분양 아파트
   | "low_value_office"         // 시가표준액 1억 이하 오피스텔

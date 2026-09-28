@@ -323,7 +323,7 @@
 | D-6 | 판정 메뉴 보유 감면주택 7조문 제외가 선언 실패 사유를 숨김(기존 동작) | C2 |
 | D-7 | 주소 삭제 시 `addressPnu`·`acquisitionSigunguCode` 잔존(기준시가 prefill·RTMS 조회용, 세액 무관) | C2 |
 | D-8 | 옛 이력 레코드에 OH-53 `exemptReason` 잔존 | C1 |
-| D-9 | `legal-codes` 취득세 ⑥10호·⑥11호 인용이 현행 ⑥ 호 번호와 불일치, `normalizeAcquisitionForm` 호출처 없음 | F1 |
+| ~~D-9~~ | ✅ **해결(`fix/acquisition-legal-code-numbering-d9`)** — 지방세법 시행령 §28의4⑥ 현행(MST 288831)은 **1~9호**뿐이고, 2020.8.12. 이후 전 시행본(DRF eflaw 대조)에도 제외 항(⑤ → 2024.3.26.부터 ⑥)에 10호 이상은 없다. `HOUSE_COUNT_PRE_MARRIAGE_RIGHT` ⑥10호 → **⑥6호**(「혼인한 사람이 혼인 전 소유한 주택분양권으로 주택을 취득하는 경우 다른 배우자가 혼인 전부터 소유하고 있는 주택」 — 2023.3.14. ⑤6호 신설 → 2024.3.26. ⑥6호), `HOUSE_COUNT_HANSI_EXCLUSION` ⑥11호 → **⑥7호**(「제2항제1호부터 제3호까지의 규정에 해당하는 주택」 — 2024.3.26. 신설). 주석·도움말 인용 동반 정정(`types.ts` 미분양 아파트 ⑥11호 → ⑥1호바목 → §28의2 17호). anchor `house-count-legal-codes-numbering.anchor.test.ts`(상수 ↔ 매니페스트 「N. 」 verbatim ↔ 엔진 `legalBasis` + 10호 이상 인용 스캔) · 매니페스트 호 단위 규칙 3건(`verify:legal` 번호 검증). `normalizeAcquisitionForm`(및 `components/calc/acquisition/normalize.ts` 전체)은 app·components·lib·__tests__·e2e에 호출·import 없음 — **dead code, 삭제하지 않음(보고만)**. 🟠 **별건 발견(미수정)**: 엔진 `pre_marriage_subscription_right`는 혼인 전 **분양권 자체**를 빼고 2026.12.31 기한(`PRE_MARRIAGE_RIGHT_HANSI_END`)을 두는데, ⑥6호 문언은 **다른 배우자가 혼인 전부터 소유한 주택**을 빼며 문언에 기한이 없다(신설 부칙 대통령령 제33325호 제2조는 적용례만 — 그 밖의 부칙 기한 규정 유무는 확인 필요). 도움말 표 6행 문구도 같은 독법 — 세액 영향 있는 판정 변경이라 별도 항목 필요 | F1 |
 | D-10 | 브라우저 수동 확인 미실시(RTL·route·E2E로 대체) | 전 레인 |
 
 ### 9.5 테스트 안정성
