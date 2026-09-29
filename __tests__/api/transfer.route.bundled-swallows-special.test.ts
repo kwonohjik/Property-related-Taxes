@@ -194,8 +194,11 @@ const GB = {
     buildingFootprintArea: 50,
     transferLandPricePerSqm: 2_000_000,
     transferBuildingStdPrice: 200_000_000,
-    acqLandPricePerSqm: 1_000_000,
-    acqBuildingStdPrice: 100_000_000,
+    // ⚠️ 키 이름은 Zod ⑫와 같아야 한다. 종전 `acqLandPricePerSqm`·`acqBuildingStdPrice`는 스키마에
+    //    없는 키라 조용히 strip됐고, 단건 응답의 건물 카드가 전 필드 NaN(→ JSON null)인 채 200이었다
+    //    (E-14l). 지금은 Zod가 그 입력을 400으로 막고, route가 NaN 응답을 500으로 끊는다.
+    acquisitionLandPricePerSqm: 1_000_000,
+    acquisitionBuildingStdPrice: 100_000_000,
     buildingAcquisitionCause: "purchase" as const,
     zoneType: "general_residential" as const,
   },

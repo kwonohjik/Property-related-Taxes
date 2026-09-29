@@ -426,6 +426,31 @@ export const generalBuildingValuationSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstDisclosureBuildingStdPrice"], message: "최초공시 당시 건물 기준시가를 입력하세요." });
     }
   }
+  /**
+   * 🔴 **환산 경로(`actualPriceMode` 아님)의 취득시 기준시가 — 환산 파트는 필수** (2026-09-29 E-14l).
+   *
+   * 두 필드는 위에서 `optional`이지만 엔진 타입(`GeneralBuildingInput`)은 필수 `number`다.
+   * 비워 보내면 Zod를 통과해 엔진에 `undefined`가 도달했다:
+   *   · 건물 — `general-building-converted-acquisition.ts`의 환산취득가 분자·개산공제 base가
+   *     NaN → 건물 카드 전 필드 NaN. 응답은 200이었다(JSON 직렬화로 NaN이 null이 된다).
+   *   · 토지 — `floorProduct`(`area-utils.ts`)가 비정상 인자를 0으로 돌려 환산취득가가 0.
+   *
+   * 요구 조건은 ④ `buildGeneralBuildingValuation`(`transfer-tax-api-gb.ts`)·⑧ V-5
+   * (`transfer-tax-validate-gb.ts`)와 **같은 축**이다 — 파트 모드가 환산이거나 증축이 있으면
+   * 그 파트의 값이 필요하고, 실가 파트는 요구하지 않는다(④는 그 파트에 0을 싣는다).
+   * 모드 미지정의 기본값 `"estimated"`는 엔진(`general-building-part-acq.ts`)과 같다.
+   */
+  if (val.actualPriceMode !== true) {
+    const hasExtension = val.extensionInfo !== undefined;
+    const needLandStd = (val.landAcqMode ?? "estimated") === "estimated" || hasExtension;
+    const needBuildingStd = (val.buildingAcqMode ?? "estimated") === "estimated" || hasExtension;
+    if (needLandStd && !val.acquisitionLandPricePerSqm) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["acquisitionLandPricePerSqm"], message: "취득시 토지 공시지가를 입력하세요." });
+    }
+    if (needBuildingStd && !val.acquisitionBuildingStdPrice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["acquisitionBuildingStdPrice"], message: "취득시 건물기준시가 총액을 입력하세요." });
+    }
+  }
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
