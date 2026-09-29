@@ -32,6 +32,11 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
+import {
+  giftBurdenedDeadlineExceptionFields,
+  giftBurdenedTempTwoHouseDeadlineInScope,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
 import { buildGiftBurdenedRentalExceptionPayload } from "@/lib/calc/gift-burdened-rental-exception";
@@ -310,6 +315,11 @@ export function buildGiftBurdenedTransferBody(
         bgt.temporaryTwoHouse,
         bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
       ),
+      // §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 계산기·판정 메뉴와 같은 leaf, ⑤와 같은 게이트.
+      //   신규 주택 시·군 코드는 신규 주택 소재지(E-1 잔여 B)에서 파생한다.
+      ...(giftBurdenedTempTwoHouseDeadlineInScope(bgt)
+        ? buildTempTwoHouseDeadlineExceptionFacts(giftBurdenedDeadlineExceptionFields(bgt))
+        : {}),
     };
   }
 

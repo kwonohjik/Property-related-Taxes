@@ -9,6 +9,11 @@ import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normal
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { validateStep3 } from "@/lib/calc/one-house-exemption-validate";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
+import {
+  giftBurdenedDeadlineExceptionFields,
+  giftBurdenedTempTwoHouseDeadlineInScope,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -150,5 +155,63 @@ describe("G2 ⑧ — 판정 메뉴와 같은 필수값 규칙·문구 · §155�
       "winWinRentalLeaseMonths",
     ]);
     expect(validateStep3({ ...f, ...WW }).some((e) => e.message.startsWith("상생임대주택:"))).toBe(false);
+  });
+});
+
+// ═══ G3 — §155⑯·⑱ ═══════════════════════════════════════════════════════════════
+
+const TT3 = (extra: Record<string, unknown> = {}): Partial<BurdenedGiftTransferTaxInput> => ({
+  acquisitionDate: new Date("2015-01-01"),
+  householdHousingCount: 2,
+  temporaryTwoHouse: {
+    previousAcquisitionDate: new Date("2015-01-01"),
+    newAcquisitionDate: new Date("2020-01-01"),
+    ...extra,
+  } as NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>,
+});
+
+describe("G3 ③ 복원 · 게이트 leaf", () => {
+  it("G3-N1 ③ JSON 왕복 후 ⑯·⑱ 필드 보존(날짜는 Date로)", () => {
+    const f = { publicInstitutionRelocation: true, relocatedInstitutionJibun: "세종 x", relocatedSigunguCode: "3611000000", disposalDelayReason: "auction" };
+    const parsed = JSON.parse(JSON.stringify({ giftItems: [aptItem(TT3(f))] }));
+    const tt = normalizeRestoredFormDates(parsed).giftItems![0].burdenedGiftTransferTax!.temporaryTwoHouse!;
+    expect(tt.previousAcquisitionDate).toBeInstanceOf(Date);
+    expect(tt).toMatchObject(f);
+  });
+  it("G3-G1 게이트 — 세대 2주택 + 두 날짜면 열리고, 1주택·날짜 없음이면 닫힌다", () => {
+    expect(giftBurdenedTempTwoHouseDeadlineInScope(aptItem(TT3()).burdenedGiftTransferTax!)).toBe(true);
+    expect(giftBurdenedTempTwoHouseDeadlineInScope(aptItem({ ...TT3(), householdHousingCount: 1 }).burdenedGiftTransferTax!)).toBe(false);
+    expect(
+      giftBurdenedTempTwoHouseDeadlineInScope(aptItem(TT3({ newAcquisitionDate: undefined })).burdenedGiftTransferTax!),
+    ).toBe(false);
+  });
+  it("G3-G2 ★ ⑤⑧ §155①2호 게이트 — ⑯이 성립하면 조정 기한 연혁 칸이 닫힌다(판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자)", () => {
+    // 신규 2020-06-01 · 증여 2021-03-01 — 두 주택 조정 여부가 기한을 바꾸는 시기(E-1 anchor와 같은 시료)
+    const tt = (extra: Record<string, unknown>) => ({
+      ...TT3(extra),
+      acquisitionDate: new Date("2015-01-01"),
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2015-01-01"),
+        newAcquisitionDate: new Date("2020-06-01"),
+        ...extra,
+      } as NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>,
+    });
+    expect(giftBurdenedTempTwoHouseRegulatedGate(aptItem(tt({})).burdenedGiftTransferTax!, "2021-03-01", undefined)).not.toBeNull();
+    expect(
+      giftBurdenedTempTwoHouseRegulatedGate(aptItem(tt({ publicInstitutionRelocation: true })).burdenedGiftTransferTax!, "2021-03-01", undefined),
+    ).toBeNull();
+  });
+  it("G3-F1 필드 파생 — 신규 주택 시·군 코드 = 소재지 법정동코드 앞 5자리 + 0 · 옛 record는 빈 값", () => {
+    expect(giftBurdenedDeadlineExceptionFields(aptItem(TT3({ newHouseRegionCode: "4415010100" })).burdenedGiftTransferTax!).newHouseSigunguCode).toBe(
+      "4415000000",
+    );
+    expect(giftBurdenedDeadlineExceptionFields(aptItem(TT3()).burdenedGiftTransferTax!)).toEqual({
+      publicInstitutionRelocation: false,
+      relocatedInstitutionJibun: "",
+      relocatedSigunguCode: "",
+      newHouseJibun: "",
+      newHouseSigunguCode: "",
+      disposalDelayReason: "",
+    });
   });
 });

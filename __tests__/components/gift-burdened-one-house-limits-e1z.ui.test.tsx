@@ -10,6 +10,7 @@
  * | # | 무엇을 고정하나 |
  * |---|---|
  * | UI-G2 | §155의3 상생임대주택 — 판정 메뉴와 같은 `WinWinRentalSpecialField`가 1세대 1주택 ON일 때만 뜨고 patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
+ * | UI-G3 | §155⑯·⑱ — 판정 메뉴와 같은 `TempTwoHouseDeadlineExceptionInputs`가 세대 2주택 + 두 날짜일 때 뜨고 patch가 `temporaryTwoHouse`에 들어간다 · ⑯ 신규 주택 소재지는 E-1 잔여 B와 같은 칸(`newHouseRegionCode`) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { useState } from "react";
@@ -120,5 +121,30 @@ describe("UI-G2 §155의3 상생임대주택", () => {
     expect(bgtOf().winWinRentalContractDate).toBeUndefined();
     expect(bgtOf().winWinRentalLeaseMonths).toBeUndefined();
     expect(screen.queryByRole("switch", { name: /상생임대주택 특례/ })).toBeNull();
+  });
+});
+
+describe("UI-G3 §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유", () => {
+  const tt = { previousAcquisitionDate: new Date("2015-01-01"), newAcquisitionDate: new Date("2020-01-01") };
+  it("★ ⑯ 켜기 → 이전지·신규 주택 소재지 → 코드 저장 · 연접 판정 안내 / ⑱ 사유 선택 → disposalDelayReason", () => {
+    render(<Harness start={item({ acquisitionDate: new Date("2015-01-01"), householdHousingCount: 2, temporaryTwoHouse: tt })} giftDate="2023-06-01" />);
+    fireEvent.click(screen.getByRole("switch", { name: /공공기관·법인 지방이전 특례/ }));
+    expect(bgtOf().temporaryTwoHouse?.publicInstitutionRelocation).toBe(true);
+    const picks = screen.getAllByTestId("mock-address-pick");
+    // 증여 주택 소재지 · 이전지 · 신규 주택 — ⑯이 켜지면 §155①2호 신규 주택 칸(E-1 잔여 B)은 닫혀 한 칸만 남는다
+    expect(picks).toHaveLength(3);
+    fireEvent.click(picks[1]);
+    expect(bgtOf().temporaryTwoHouse?.relocatedSigunguCode).toBe("2826000000");
+    fireEvent.click(screen.getAllByTestId("mock-address-pick")[2]);
+    expect(bgtOf().temporaryTwoHouse).toMatchObject({ newHouseRegionCode: "2826010100", newHouseJibun: "인천광역시 서구 x" });
+    expect(screen.getByTestId("relocation-region-verdict").textContent).toContain("이전한 시·군에 신규 주택이 소재합니다");
+    fireEvent.click(screen.getByText("법원 경매 신청"));
+    expect(bgtOf().temporaryTwoHouse?.disposalDelayReason).toBe("auction");
+    // 다른 §155① 값은 보존
+    expect(bgtOf().temporaryTwoHouse?.previousAcquisitionDate).toBeInstanceOf(Date);
+  });
+  it("부정 짝 — 세대 1주택이면 위젯 없음", () => {
+    render(<Harness start={item({ householdHousingCount: 1, temporaryTwoHouse: tt })} giftDate="2023-06-01" />);
+    expect(screen.queryByRole("switch", { name: /공공기관·법인 지방이전 특례/ })).toBeNull();
   });
 });

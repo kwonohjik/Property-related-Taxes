@@ -130,3 +130,41 @@ test("[BT-E2E-14] 상생임대주택 → 요청 본문 winWinRentalHouse", async
     winWinLeaseMonths: 24,
   });
 });
+
+/**
+ * [BT-E2E-15] E-1 한계 G3 — §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유. 판정 메뉴와 같은 위젯
+ * (`TempTwoHouseDeadlineExceptionInputs`)이 부담부증여 일시적 2주택 블록에 뜨고 계산기와 같은 leaf로 실린다.
+ */
+test("[BT-E2E-15] §155⑯·⑱ → 요청 본문 temporaryTwoHouse.publicInstitutionRelocation·disposalDelayReason", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+  await goToGiftAssets(page, { year: "2023", month: "6", day: "1" });
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog); // 취득 2010-03-15
+
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+  const dateField = (label: string) =>
+    dialog.getByText(label, { exact: true }).locator("xpath=ancestor::div[.//input[@aria-label='연도']][1]");
+  const fillDate = async (label: string, y: string, m: string, d: string) => {
+    const f = dateField(label);
+    await f.getByRole("textbox", { name: "연도" }).fill(y);
+    await f.getByRole("textbox", { name: "월" }).fill(m);
+    await f.getByRole("textbox", { name: "일" }).fill(d);
+  };
+  await fillDate("종전 주택 취득일", "2010", "3", "15");
+  await fillDate("신규 주택 취득일", "2020", "1", "1");
+
+  await dialog.getByRole("switch", { name: /공공기관·법인 지방이전 특례/ }).click();
+  await dialog.getByText("법원 경매 신청", { exact: true }).click();
+
+  const body = await calculateAndCapture(page, mock);
+  expect(body.temporaryTwoHouse).toMatchObject({
+    previousAcquisitionDate: "2010-03-15",
+    newAcquisitionDate: "2020-01-01",
+    publicInstitutionRelocation: true,
+    disposalDelayReason: "auction",
+  });
+});

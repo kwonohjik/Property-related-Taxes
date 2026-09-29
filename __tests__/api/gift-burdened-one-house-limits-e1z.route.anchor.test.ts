@@ -9,6 +9,7 @@
  * |---|---|---|
  * | G1 — 비주택(토지·건물) 상속 자산의 「소득세법」 §104②1호 | 상속 칸이 주택 필드 세트에만 있어 상속개시일부터 단기세율 | 같은 위젯(비주택 모드)으로 `acquisitionCause`·`decedentAcquisitionDate` |
  * | G2 — 「소득세법 시행령」 §155의3 상생임대주택 | 입력 없음 → 거주요건(§154①)·표2 거주 2년(§159의4) 그대로 요구 | 판정 메뉴 위젯 재사용 → `winWinRentalHouse` |
+ * | G3 — §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유 | 입력 없음 → 3년(연혁 기한) 경과면 과세 | 판정 메뉴 위젯 재사용 → `temporaryTwoHouse.publicInstitutionRelocation`·`disposalDelayReason` |
  *
  * 시료: 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억(토지·건물은 기준시가 모드) — 양도차익 72,750,000.
  */
@@ -375,5 +376,115 @@ describe("G2 ⑭ route — 거주요건이 면제된다 (계산기와 같은 결
       expect(r.isExempt, JSON.stringify(miss)).toBe(false);
       expect(r.determinedTax).toBe(9_004_800);
     }
+  });
+});
+
+// ═══ G3 — §155⑯ 공공기관·법인 지방이전 · §155⑱ 처분 지연 사유 ════════════════════════════
+
+/**
+ * 「소득세법 시행령」 §155⑯ 「… 이전한 시ㆍ군 또는 이와 연접한 시ㆍ군의 지역에 소재하는 경우에는 제1항 중 "3년"을
+ * "5년"으로 본다」 · §155⑱ 「다른 주택을 취득한 날부터 3년이 되는 날 현재 다음 각 호의 어느 하나에 해당하는 경우」
+ * (§155① 본문 괄호 「제18항에 따른 사유에 해당하는 경우를 포함한다」 — MST 286211 실독). 이 경로의 §155① 적용은
+ * E-1(#1836)에서 배선됐고, ⑯·⑱은 그 기한을 바꾸는 같은 항의 입력이다.
+ * 시료: 종전(증여) 주택 2015-01-01 · 신규 주택 2020-01-01 · 세대 2주택.
+ */
+const TT = (extra: Record<string, unknown> = {}) => ({
+  acquisitionDate: new Date("2015-01-01"),
+  householdHousingCount: 2,
+  temporaryTwoHouse: {
+    previousAcquisitionDate: new Date("2015-01-01"),
+    newAcquisitionDate: new Date("2020-01-01"),
+    ...extra,
+  },
+}) as Partial<BurdenedGiftTransferTaxInput>;
+/** 세종(3611) — 연접 목록에 공주(4415)가 있고 인천 서구(2826)는 없다(`getAdjacentSigunguCodes`) */
+const SEJONG = "3611000000";
+const GONGJU_BJD = "4415010100";
+const SEO_GU_BJD = "2826010100";
+
+describe("G3 ④ — 계산기·판정 메뉴와 같은 leaf(`buildTempTwoHouseDeadlineExceptionFacts`)로 싣는다", () => {
+  it("G3-B1 ★ ⑯ + 이전지·신규 주택 소재지 → publicInstitutionRelocation · relocatedSigunguCode · newHouseSigunguCode(소재지 법정동코드에서 파생) · ⑱ 사유", () => {
+    const body = buildGiftBurdenedTransferBody(
+      giftItem(TT({ publicInstitutionRelocation: true, relocatedSigunguCode: SEJONG, newHouseRegionCode: GONGJU_BJD, disposalDelayReason: "auction" })),
+      giftForm("2023-06-01"),
+    );
+    expect(body.temporaryTwoHouse).toMatchObject({
+      publicInstitutionRelocation: true,
+      relocatedSigunguCode: SEJONG,
+      newHouseSigunguCode: "4415000000",
+      disposalDelayReason: "auction",
+    });
+  });
+  it("G3-B2 부정 짝 — ⑯ OFF면 코드도 싣지 않는다 · 사유 \"\"(해당 없음) 미전송 · 세대 1주택(게이트 밖)이면 둘 다 없음", () => {
+    const off = buildGiftBurdenedTransferBody(
+      giftItem(TT({ publicInstitutionRelocation: false, relocatedSigunguCode: SEJONG, disposalDelayReason: "" })),
+      giftForm("2023-06-01"),
+    ).temporaryTwoHouse as Obj;
+    expect(off).not.toHaveProperty("publicInstitutionRelocation");
+    expect(off).not.toHaveProperty("relocatedSigunguCode");
+    expect(off).not.toHaveProperty("disposalDelayReason");
+    const one = buildGiftBurdenedTransferBody(
+      giftItem({ ...TT({ publicInstitutionRelocation: true, disposalDelayReason: "auction" }), householdHousingCount: 1 }),
+      giftForm("2023-06-01"),
+    ).temporaryTwoHouse as Obj | undefined;
+    expect(one?.publicInstitutionRelocation).toBeUndefined();
+    expect(one?.disposalDelayReason).toBeUndefined();
+  });
+});
+
+describe("G3 ⑭ route — 처분기한이 바뀐다 (계산기와 같은 결론)", () => {
+  it("G3-1 ★ ⑯(자기선언) — 증여 2023-06-01(신규 취득 3년 5개월): 과세 8,306,400 → 5년 기한 비과세", async () => {
+    const base = await gift("2023-06-01", TT());
+    expect(base.isExempt).toBe(false);
+    expect(base.determinedTax).toBe(8_306_400);
+    const r = await gift("2023-06-01", TT({ publicInstitutionRelocation: true }));
+    expect(r.isExempt).toBe(true);
+  });
+
+  it("G3-2 ⑯ 연접 판정 — 세종 이전 · 신규 주택 공주(연접)면 비과세 · 인천 서구(비연접)면 과세 8,306,400 그대로", async () => {
+    const adj = await gift("2023-06-01", TT({ publicInstitutionRelocation: true, relocatedSigunguCode: SEJONG, newHouseRegionCode: GONGJU_BJD }));
+    expect(adj.isExempt).toBe(true);
+    const far = await gift("2023-06-01", TT({ publicInstitutionRelocation: true, relocatedSigunguCode: SEJONG, newHouseRegionCode: SEO_GU_BJD }));
+    expect(far.isExempt).toBe(false);
+    expect(far.determinedTax).toBe(8_306_400);
+  });
+
+  it("G3-3 ★ ⑱ 경매 신청 — 증여 2025-06-01(5년 경과): 과세 7,608,000 → 비과세 · ⑯만으로는(5년 초과) 과세 그대로", async () => {
+    expect((await gift("2025-06-01", TT())).determinedTax).toBe(7_608_000);
+    expect((await gift("2025-06-01", TT({ disposalDelayReason: "auction" }))).isExempt).toBe(true);
+    const r16 = await gift("2025-06-01", TT({ publicInstitutionRelocation: true }));
+    expect(r16.isExempt).toBe(false);
+    expect(r16.determinedTax).toBe(7_608_000);
+  });
+
+  it("G3-4 패리티 — 계산기에 같은 사실(명부 행 신규 주택 · ⑯ · ⑱)을 넣으면 같은 결론", async () => {
+    const calcAt = (transferDate: string, over: Partial<TransferFormData>) => {
+      const f = transferForm(transferDate, "2015-01-01", { householdHousingCount: "2", ...over });
+      f.houses = [
+        {
+          id: "h-new",
+          region: "capital",
+          acquisitionDate: "2020-01-01",
+          officialPrice: "300000000",
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: false,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+          acquisitionPrice: "",
+          exclusiveArea: "",
+          isUnsoldNewHouse: false,
+          completionDate: "",
+          isSpouseOwned: false,
+          isCoInherited: false,
+          decedentSameHouseholdAtInheritance: false,
+          isRankingDisqualifiedInheritedHouse: false,
+        } as unknown as TransferFormData["houses"][number],
+      ];
+      return f;
+    };
+    expect((await transfer(calcAt("2023-06-01", {}))).isExempt).toBe(false);
+    expect((await transfer(calcAt("2023-06-01", { publicInstitutionRelocation: true }))).isExempt).toBe(true);
+    expect((await transfer(calcAt("2025-06-01", { disposalDelayReason: "auction" }))).isExempt).toBe(true);
   });
 });

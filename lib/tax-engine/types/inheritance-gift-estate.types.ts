@@ -1153,6 +1153,19 @@ export interface BurdenedGiftTransferTaxInput {
     newHouseJibun?: string;
     /** 신규 주택 법정동코드 — 소재지 PNU 앞 10자리 */
     newHouseRegionCode?: string;
+    /*
+     * §155① 처분기한 예외 (E-1 한계 G3) — 양도세 폼과 **같은 이름**이다. ⑤는 판정 메뉴와 같은 위젯
+     * (`TempTwoHouseDeadlineExceptionInputs`), ④는 같은 leaf(`buildTempTwoHouseDeadlineExceptionFacts`).
+     * 신규 주택 시·군 코드는 따로 두지 않는다 — 위 `newHouseRegionCode`에서 파생한다(같은 사실 한 칸).
+     */
+    /** §155⑯ 공공기관·법인 지방이전 특례 선언 */
+    publicInstitutionRelocation?: boolean;
+    /** §155⑯ 이전한 기관·법인 소재지 지번 — 화면 표시용 */
+    relocatedInstitutionJibun?: string;
+    /** §155⑯ 이전한 시·군 코드(행안부 표준 10자리 — PNU 앞 5자리 + 0) */
+    relocatedSigunguCode?: string;
+    /** §155⑱ 처분기한 예외 사유("" = 해당 없음) — 양도세 폼 `disposalDelayReason`과 같은 값 */
+    disposalDelayReason?: string;
   };
   /*
    * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──

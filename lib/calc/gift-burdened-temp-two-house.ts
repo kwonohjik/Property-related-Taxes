@@ -13,6 +13,8 @@
  */
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { judgeTempTwoHouseFromForm, type TempTwoHouseVerdict } from "@/lib/calc/transfer-temp-two-house-judge";
+import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
+import type { TempTwoHouseDeadlineExceptionFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 
 type RegulatedVerdict = Extract<TempTwoHouseVerdict, { status: "eligible" | "ineligible" }>["regulated"];
 
@@ -49,6 +51,9 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
     isRegulatedArea: bgt.isRegulatedArea === true,
     // 신규 주택 소재지 코드(E-1 잔여 B) — ④ `toTemporaryTwoHouseEraFacts`와 같은 값
     newHouseRegionCode: tt.newHouseRegionCode || undefined,
+    // §155⑯·⑱(E-1 한계 G3) — ④가 싣는 값과 같다. ⑯이 성립하면 조정 기한 연혁을 덮어 ①2호 칸이 닫힌다
+    //   (판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자).
+    ...giftBurdenedDeadlineJudgeArgs(bgt),
     eraFields: tt,
   });
   if (v.status === "pending" || !v.regulated.relevant) return null;
@@ -69,4 +74,61 @@ export function giftBurdenedNewHouseAddressPatch(v: {
     newHouseJibun: v.jibun || v.road || "",
     newHouseRegionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "",
   };
+}
+
+/**
+ * §155① 처분기한 예외 입력(§155⑯·⑱ — E-1 한계 G3)의 ⑤④ 공용 게이트 — 세대 주택 수 2 · 두 취득일 입력.
+ * 판정 메뉴는 명부에서 신규 주택이 도출될 때(`derivedNewHouseAcquisitionDate`) 같은 칸을 연다 — 이 경로의 같은
+ * 사실은 두 날짜 칸이다. 주택 여부는 호출부가 확인한다. ⑧ 규칙은 없다(판정 메뉴에도 없다).
+ */
+export function giftBurdenedTempTwoHouseDeadlineInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  const tt = bgt.temporaryTwoHouse;
+  return (bgt.householdHousingCount ?? 1) === 2 && !!tt && !!ymd(tt.previousAcquisitionDate) && !!ymd(tt.newAcquisitionDate);
+}
+
+/**
+ * 증여세 폼 → 위젯(`TempTwoHouseDeadlineExceptionInputs`) 필드. 신규 주택 시·군 코드는 신규 주택 소재지
+ * (`newHouseRegionCode` — 법정동코드 10자리)에서 파생한다 — 양도세 폼은 같은 주소 위젯의 PNU에서
+ * `extractSigunguCodeFromPnu`로 얻는다(앞 5자리 + 0 — 법정동코드 앞 5자리와 같다).
+ */
+export function giftBurdenedDeadlineExceptionFields(
+  bgt: BurdenedGiftTransferTaxInput,
+): TempTwoHouseDeadlineExceptionFields {
+  const tt = bgt.temporaryTwoHouse;
+  return {
+    publicInstitutionRelocation: tt?.publicInstitutionRelocation === true,
+    relocatedInstitutionJibun: tt?.relocatedInstitutionJibun ?? "",
+    relocatedSigunguCode: tt?.relocatedSigunguCode ?? "",
+    newHouseJibun: tt?.newHouseJibun ?? "",
+    newHouseSigunguCode: extractSigunguCodeFromPnu(tt?.newHouseRegionCode || undefined) ?? "",
+    disposalDelayReason: tt?.disposalDelayReason ?? "",
+  };
+}
+
+/** 판정 카드 leaf(`judgeTempTwoHouseFromForm`)에 넘길 §155⑯·⑱ 인자 — 게이트 밖이면 없음(④와 같다). */
+function giftBurdenedDeadlineJudgeArgs(bgt: BurdenedGiftTransferTaxInput) {
+  if (!giftBurdenedTempTwoHouseDeadlineInScope(bgt)) return {};
+  const f = giftBurdenedDeadlineExceptionFields(bgt);
+  return {
+    publicInstitutionRelocation: f.publicInstitutionRelocation,
+    relocatedSigunguCode: f.relocatedSigunguCode,
+    newHouseSigunguCode: f.newHouseSigunguCode,
+    disposalDelayReason: f.disposalDelayReason,
+  };
+}
+
+/**
+ * 위젯 patch → `temporaryTwoHouse` 저장 patch. 신규 주택 시·군 코드는 저장하지 않는다(소재지 법정동코드에서 파생 —
+ * 신규 주택 소재지 선택은 `onNewHouseAddress` → `giftBurdenedNewHouseAddressPatch`가 저장한다).
+ */
+export function giftBurdenedDeadlineExceptionPatch(
+  patch: Partial<TempTwoHouseDeadlineExceptionFields>,
+): Partial<NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>> {
+  const out: Partial<NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>> = {};
+  if (patch.publicInstitutionRelocation !== undefined) out.publicInstitutionRelocation = patch.publicInstitutionRelocation;
+  if (patch.relocatedInstitutionJibun !== undefined) out.relocatedInstitutionJibun = patch.relocatedInstitutionJibun;
+  if (patch.relocatedSigunguCode !== undefined) out.relocatedSigunguCode = patch.relocatedSigunguCode;
+  if (patch.disposalDelayReason !== undefined) out.disposalDelayReason = patch.disposalDelayReason;
+  if (patch.newHouseJibun !== undefined) out.newHouseJibun = patch.newHouseJibun;
+  return out;
 }
