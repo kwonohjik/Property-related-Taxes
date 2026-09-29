@@ -534,7 +534,8 @@ export interface ExclusionReason {
     | "inherited_general_house"     // §155②③ 상속주택 보유 일반주택 1주택 의제 (§167의10①15호 · 구 13호) — E-14
     | "long_term_rental_residence"  // §155⑳ 장기임대주택 보유 거주주택 1주택 의제 (§167의10①15호 · 구 14호 · 3주택+ §167의3①13호) — E-14c
     | "special_act_house_exclusion" // 조특법 감면주택 소유주택 제외 → 1주택 의제 (§167의10①15호) — E-14a
-    | "right_holding_one_house";    // §156의2·§156의3 1세대1주택 의제 (§167의11①13호 · 합 3 이상 §167의4③7호) — E-14c
+    | "right_holding_one_house"     // §156의2·§156의3 1세대1주택 의제 (§167의11①13호 · 합 3 이상 §167의4③7호) — E-14c
+    | "long_holding_10y_until_2020_06_30"; // 보유 10년 이상 · 2019.12.17.~2020.6.30. 양도 (§167의3①12호 등 · 2020.2.11. 신설) — E-14j
   detail: string;
 }
 

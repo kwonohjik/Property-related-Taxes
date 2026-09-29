@@ -16,6 +16,7 @@ import {
   surchargeSpecialRulesSchema,
   deductionRulesSchema,
   oneHouseSpecialRulesSchema,
+  houseCountExclusionSchema,
 } from "../lib/tax-engine/schemas/rate-table.schema";
 import { historicalSeeds } from "../lib/tax-engine/data/transfer-rate-seed-historical";
 
@@ -67,6 +68,13 @@ function validateSeed(seed: (typeof historicalSeeds)[number], index: number): vo
     const result = oneHouseSpecialRulesSchema.safeParse(seed.special_rules);
     if (!result.success) {
       throw new Error(`[${index}] one_house_exemption 검증 실패: ${result.error.message}`);
+    }
+  }
+
+  if (seed.special_rules && seed.sub_category === "house_count_exclusion") {
+    const result = houseCountExclusionSchema.safeParse(seed.special_rules);
+    if (!result.success) {
+      throw new Error(`[${index}] house_count_exclusion 검증 실패: ${result.error.message}`);
     }
   }
 }

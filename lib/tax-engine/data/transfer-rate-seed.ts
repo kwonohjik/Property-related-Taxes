@@ -11,6 +11,26 @@
 
 import { ONE_HOUSE_RESIDENCE, SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "../legal-codes/transfer";
 
+/**
+ * 주택 수 산정 배제 규칙(`transfer:special:house_count_exclusion`) 값 — 메인 seed(2022-01-01)와 역사 seed(2018-04-01)가
+ * **같은 객체**를 쓴다(E-14j). 두 시점 사이에 값이 바뀐 적이 없다:
+ *   · `lowPriceThreshold.non_capital` 3억 — 영 §167의3①1호 · §167의10①1호 · §167의4② · §167의11② 「양도 당시 3억원을
+ *     초과하지 아니하는 주택」(DRF eflaw 20180401 ~ 20220215 전 시행본 대조)
+ *   · `presaleRightStartDate` 2021-01-01 — 법률 제17477호 부칙 제4조 「제89조제2항 본문, 제104조제7항제2호 및 제4호의
+ *     개정규정은 2021년 1월 1일 이후 공급계약, 매매 또는 증여 등의 방법으로 취득한 분양권부터 적용한다」(취득일 게이트라
+ *     양도일 연혁과 무관)
+ *   · `officetelStartDate` — 엔진 소비처 0건(F-11에서 불산입 제거 · 스키마 호환용)
+ */
+export const HOUSE_COUNT_EXCLUSION_RULES = {
+  type: "house_count_exclusion",
+  lowPriceThreshold: {
+    capital: null,        // 수도권은 저가 배제 없음
+    non_capital: 300000000, // 지방(광역시 군·수도권 군 포함) 기준시가 3억 이하 배제 (§167의3①1호)
+  },
+  presaleRightStartDate: "2021-01-01",
+  officetelStartDate: "2022-01-01",
+} as const;
+
 export const transferTaxSeeds = [
   // 1. 누진세율 (2023.1.1~ 현행)
   {
@@ -182,15 +202,7 @@ export const transferTaxSeeds = [
     effective_date: "2022-01-01",
     rate_table: null,
     deduction_rules: null,
-    special_rules: {
-      type: "house_count_exclusion",
-      lowPriceThreshold: {
-        capital: null,        // 수도권은 저가 배제 없음
-        non_capital: 300000000, // 지방(광역시 군·수도권 군 포함) 기준시가 3억 이하 배제 (§167의3①1호)
-      },
-      presaleRightStartDate: "2021-01-01",
-      officetelStartDate: "2022-01-01",
-    },
+    special_rules: HOUSE_COUNT_EXCLUSION_RULES,
     is_active: true,
   },
 

@@ -68,6 +68,7 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   long_term_rental_residence: "장기임대주택 보유 거주주택 1세대1주택 의제 (§155⑳)",
   special_act_house_exclusion: "조특법 감면주택 소유주택 제외 — 1세대1주택 의제",
   right_holding_one_house: "주택과 조합원입주권·분양권 보유 1세대1주택 의제 (§156의2·§156의3)",
+  long_holding_10y_until_2020_06_30: "보유 10년 이상 주택 2020.6.30.까지 양도",
 };
 
 export function MultiHouseSurchargeDetailCard({ detail }: Props) {
