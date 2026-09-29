@@ -76,6 +76,9 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
   //      이 파일의 규칙은 「과세분만 0, 이익의 존재는 부정하지 않는다」다.
   const conversion = calcCapitalIncreaseGift({
     ...input.atConversion,
+    // 「상증령」§29④ 인수인 매입가는 **발행 시점 leg에만** 쓴다(사용자 결정 2026-09-29) — 인수인에게서
+    //   사는 것은 전환주식 자체이고, 전환 시점의 「신주 1주당 인수가액」은 전환가액등이다.
+    underwriterAcquisitionPrice: undefined,
     doneeIsForProfitCorp: false,
     issuerGainCorporateTaxed: false,
   });
