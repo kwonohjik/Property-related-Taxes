@@ -511,6 +511,15 @@ export const deemedGiftInputSchema = z
     relatedCorpSchema,
   ])
   .superRefine((data, ctx) => {
+    // 합병 주식교부 단일 대주주 모드 — ㉯(상증령 §28③1호)의 분자·분모. 비우면 엔진이 0으로 읽어 ㉯가 0이
+    // 되고 1주당 이익이 합병 후 평가액 전액이 됐다(2026-09-30 · 직접 평가 모드는 화면에서도 닿았다).
+    // ⑧ `gift-deemed-validate.ts` merger 단일 분기와 같은 조건. 주주 매트릭스 모드는 ④가 주주 합계를 싣는다.
+    if (data.type === "merger" && (data.caseType ?? "stock") === "stock" && !data.shareholders) {
+      if (!((data.preMergerShares ?? 0) > 0))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["preMergerShares"], message: "과대평가법인 합병 전 주식수가 필요합니다 (상증령 §28③1호)" });
+      if (!((data.exchangedShares ?? 0) > 0))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["exchangedShares"], message: "교부받은 주식수가 필요합니다 (상증령 §28③1호)" });
+    }
     if (data.type === "insurance") {
       if (data.relevantPremium > data.totalPremiumPaid) {
         ctx.addIssue({

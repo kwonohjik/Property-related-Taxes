@@ -134,10 +134,13 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         // 전부 차단되는데 이것만 빠져 있어, 비면 증여재산가액이 0원이 되고
         // 「이익이 기준금액 미만」이라는 틀린 사유가 표시된다.
         if (parseAmount(form.mrgMajorShares) <= 0) return "대주주등 주식수를 입력하세요";
+        // 합병 전 주식수는 ㉯(과대평가 1주평가 × 합병 전 주식수 ÷ 교부 주식수 — 상증령 §28③1호)의 분자라
+        // 평가 모드와 무관하게 필요하다. 종전엔 자동 모드에서만 요구해 직접 모드에서 비우면 ㉯가 0이 되고
+        // 1주당 이익이 합병 후 평가액 전액이 됐다(2026-09-30).
+        if (parseAmount(form.mrgPreShares) <= 0) return "과대평가법인 합병 전 주식수를 입력하세요";
         if (form.mrgMergedPriceMode === "auto") {
           // §28⑤ 단순평균액 — 자동추정 금지, 명시 입력 필수
           if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
-          if (parseAmount(form.mrgPreShares) <= 0) return "과대평가법인 합병 전 주식수를 입력하세요";
           if (parseAmount(form.mrgUnderPreShares) <= 0) return "과소평가법인 합병 전 주식수를 입력하세요";
           if (parseAmount(form.mrgPostMergerTotalShares) <= 0) return "합병 후 존속법인 주식수를 입력하세요";
           if (form.mrgIsListed && parseAmount(form.mrgListedPostAvgPrice) <= 0)

@@ -16,6 +16,8 @@ describe("⑫ 가업상속 Zod — 자동판정 날짜 2종 보존", () => {
     businessType: "corporate" as const,
     operatingYears: 15,
     enterpriseSize: "sme" as const,
+    // 중소기업 규모 요건 입력은 필수(⑧·⑫ 2026-09-30 — 비우면 엔진이 0으로 읽어 요건이 충족됐다)
+    totalAssets: 100_000_000_000,
     isEligibleIndustry: true,
     decedentCEORequirementMet: false,
     heirIsAdult: true,

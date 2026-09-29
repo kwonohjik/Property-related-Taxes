@@ -384,6 +384,9 @@ describe("[GM-C] Date 필드 string round-trip 후 계산 불변", () => {
           giftAmount: 40_000_000,
           giftTaxPaid: 0,
           donor: "father",
+          // 동일인 합산 회차의 과세표준·산출세액은 필수(⑫ 2026-09-30) — 공제 범위 안이라 0
+          giftTaxBase: 0,
+          computedTax: 0,
         },
       ],
       deductionInput: {
@@ -430,6 +433,9 @@ describe("[GM-C] Date 필드 string round-trip 후 계산 불변", () => {
           giftAmount: 20_000_000,
           giftTaxPaid: 0,
           donor: "father",
+          // 동일인 합산 회차의 과세표준·산출세액은 필수(⑫ 2026-09-30) — 공제 범위 안이라 0
+          giftTaxBase: 0,
+          computedTax: 0,
         },
       ],
       deductionInput: {
@@ -715,6 +721,9 @@ describe("[GM-E] 완전 파이프라인 통합 anchor — schema → calcGiftTax
           giftAmount: 40_000_000,
           giftTaxPaid: 0,
           donor: "father",
+          // 동일인 합산 회차의 과세표준·산출세액은 필수(⑫ 2026-09-30) — 공제 범위 안이라 0
+          giftTaxBase: 0,
+          computedTax: 0,
         },
       ],
       isGenerationSkip: false,

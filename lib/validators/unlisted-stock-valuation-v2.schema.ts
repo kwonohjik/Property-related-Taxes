@@ -39,8 +39,12 @@ export const unlistedPremiumExclusionReasonSchema = z.enum([
 /** 자본금 변동 — 상증규 §17의3⑤ + §56⑤ */
 export const unlistedCapitalChangeSchema = z.object({
   changeType: z.enum(["paid_in", "free_issue", "capital_reduction", "free_reduction"]),
-  /** 변동일 — 새 행은 undefined로 시작. 미입력은 inheritance-validate.ts가 차단. Zod는 optional 허용. */
-  changeDate: z.coerce.date().optional(),
+  /**
+   * 변동일 — ⑧(`inheritance-validate-unlisted.ts`)과 같이 필수(2026-09-30). 종전엔 optional이라 API가
+   * 비워 보내면 엔진이 그 행을 조용히 건너뛰어(`converted-shares.ts`·`capital-increase-adjustment.ts`)
+   * 무상증자 환산이 빠졌다. 이 스키마는 요청 검증에만 쓰인다(폼 새 행의 빈 값은 ⑧이 막는다).
+   */
+  changeDate: z.coerce.date(),
   sharesIssued: z.number().int().positive({ message: "주식수는 1 이상이어야 합니다." }),
   pricePerShare: z.number().nonnegative().optional(),
 });

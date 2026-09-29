@@ -68,4 +68,11 @@ export const familyBusinessInheritanceInputSchema = z.object({
   //    누락 시 z.object가 침묵 strip → legacy 수동 플래그(기본 false)로 떨어져 자동판정이 죽는다.
   openingDate: z.string().optional(),
   heirOfficerAppointDate: z.string().optional(),
+}).superRefine((fb, ctx) => {
+  // 기업 규모 요건 — ⑧ `validateFamilyBusinessEnterpriseSize`와 같은 조건(2026-09-30).
+  // 비우면 엔진이 0으로 읽어(`family-business.ts`) 규모 요건이 조용히 충족됐다.
+  if (fb.enterpriseSize === "sme" && fb.totalAssets == null)
+    ctx.addIssue({ code: "custom", path: ["totalAssets"], message: "중소기업은 자산총액이 필요합니다 (상증령 §15①3호 — 5천억원 미만)" });
+  if (fb.enterpriseSize === "medium" && fb.averageRevenue3Y == null)
+    ctx.addIssue({ code: "custom", path: ["averageRevenue3Y"], message: "중견기업은 직전 3년 평균 매출액이 필요합니다 (상증령 §15②3호)" });
 });
