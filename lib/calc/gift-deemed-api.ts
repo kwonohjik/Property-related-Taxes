@@ -565,7 +565,14 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
       return {
         type: "convertible_stock",
         atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, equalIssue: form.csConvEqualIssueShares, postHeld: form.csConvPostHeldShares, postTotal: form.csConvPostTotalShares, asOf: form.giftDate, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
-        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, equalIssue: form.csIssueEqualIssueShares, postHeld: form.csIssuePostHeldShares, postTotal: form.csIssuePostTotalShares, asOf: form.csIssuanceDate, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
+        // §29④ 인수인 매입가 — 발행 시점 leg에만, ⑤와 같은 술어(저가 다목)일 때만. 공란은 보내지 않는다.
+        atIssuance: {
+          ...side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, equalIssue: form.csIssueEqualIssueShares, postHeld: form.csIssuePostHeldShares, postTotal: form.csIssuePostTotalShares, asOf: form.csIssuanceDate, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
+          underwriterAcquisitionPrice:
+            !isHigh && form.csSubType === "third_party" && form.csIssueUnderwriterPrice.trim() !== ""
+              ? parseAmount(form.csIssueUnderwriterPrice)
+              : undefined,
+        },
       };
     }
     default:

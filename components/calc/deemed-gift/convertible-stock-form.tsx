@@ -53,6 +53,7 @@ function CsNumericSection({
   dateLabel,
   stockCodeTestId,
   onValuationDate,
+  underwriterPriceKey,
 }: {
   form: DeemedFormState;
   set: SetFn;
@@ -71,6 +72,8 @@ function CsNumericSection({
   dateLabel: string;
   stockCodeTestId: string;
   onValuationDate?: (v: string) => void;
+  /** 「상증령」§29④ 인수인 매입가 칸 — 발행 시점 · 저가 다목일 때만 넘긴다 */
+  underwriterPriceKey?: keyof DeemedFormState;
 }) {
   const t = CS_SECTION_TONE[tone];
   const v = (k: keyof DeemedFormState) => String(form[k]);
@@ -95,6 +98,15 @@ function CsNumericSection({
       <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
       <CurrencyInput label="증자 전 발행주식총수" value={v(keys.preShares)} onChange={on(keys.preShares)} placeholder={`${ph} 증자 전 발행주식총수`} />
       <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
+      {underwriterPriceKey && (
+        <CurrencyInput
+          label="인수인으로부터 취득한 1주당 가액"
+          value={v(underwriterPriceKey)}
+          onChange={on(underwriterPriceKey)}
+          placeholder={`${ph} 인수인으로부터 취득한 1주당 가액 (원)`}
+          hint="인수인(또는 제3자에게 취득시킬 목적으로 취득한 자)을 거쳐 전환주식을 인수·취득했다면 그에게 지급한 1주당 가액입니다. 발행 시점 이익은 «증자 후 1주당 가액(발행가 기준) − 이 가액»입니다. 직접 배정받았으면 비워 두세요"
+        />
+      )}
       <CurrencyInput label="증자 주식수" value={v(keys.issuedShares)} onChange={on(keys.issuedShares)} placeholder={`${ph} 증자 주식수`} />
       <CurrencyInput label={sharesLabel} value={v(keys.forfeitedShares)} onChange={on(keys.forfeitedShares)} placeholder={`${ph} ${sharesLabel}`} />
       <RadioCardGroup
@@ -238,6 +250,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
         dateLabel="전환주식 발행 당시 (상증령 §29②6나 — 증여일과 다르다)"
         stockCodeTestId="cs-issue-stock-code"
         onValuationDate={(val) => set({ csIssuanceDate: val })}
+        underwriterPriceKey={!isHigh && form.csSubType === "third_party" ? "csIssueUnderwriterPrice" : undefined}
         keys={{
           prePrice: "csIssuePrePrice",
           preShares: "csIssuePreShares",

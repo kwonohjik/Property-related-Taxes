@@ -265,6 +265,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   csIssueRelatedAcquiredShares: string;
   csIssueRatioDenomShares: string;
   csIssueEqualIssueShares: string;
+  csIssueUnderwriterPrice: string; // 저가 다목 §29④ — 발행 시점 인수인 매입가(차감항 전용 · 공란 = 발행가)
   csIssuePostHeldShares: string; // 발행 시점 저가 나목 §29②2호 다목 분자
   csIssuePostTotalShares: string; // 발행 시점 저가 나목 §29②2호 다목 분모
   csIssueIsListed: boolean; // 발행 시점 주권상장법인등
@@ -466,6 +467,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueRelatedAcquiredShares: "",
   csIssueRatioDenomShares: "",
   csIssueEqualIssueShares: "",
+  csIssueUnderwriterPrice: "",
   csIssuePostHeldShares: "",
   csIssuePostTotalShares: "",
   csIssueIsListed: false,
