@@ -93,6 +93,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     form.houses,
     form.presaleRights.length,
     form.sellingHouseExclusion,
+    form.transferDate,
   );
 
   // ── 세대 보유 분양권·입주권 (취득일 입력분만 — §104⑦2호·4호 주택수 산입) ──

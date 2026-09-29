@@ -359,6 +359,32 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // 공고 전 매매계약 중과 배제(legal-codes `PRE_DESIGNATION_CONTRACT_EXCLUSION` — 계획서 regulated-area-region-code-match).
+  // 네 호 문언이 같다(MST 286211 실독 2026-09-29). 호가 옮겨지거나 문언이 바뀌면 여기서 잡힌다.
+  {
+    id: "TRANSFER_DECREE.PRE_DESIGNATION_CONTRACT_THREE_HOUSE",
+    citation: "소득세법 시행령 §167의3",
+    keywords: ["조정대상지역의 공고가 있은 날 이전에 해당 지역의 주택을 양도하기 위하여 매매계약을 체결하고 계약금을 지급받은 사실이 증빙서류에 의하여 확인되는 주택"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.PRE_DESIGNATION_CONTRACT_TWO_HOUSE",
+    citation: "소득세법 시행령 §167의10",
+    keywords: ["조정대상지역의 공고가 있은 날 이전에 해당 지역의 주택을 양도하기 위하여 매매계약을 체결하고 계약금을 지급받은 사실이 증빙서류에 의하여 확인되는 주택"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.PRE_DESIGNATION_CONTRACT_HOUSE_RIGHT_ONE_EACH",
+    citation: "소득세법 시행령 §167의11",
+    keywords: ["조정대상지역의 공고가 있은 날 이전에 해당 지역의 주택을 양도하기 위하여 매매계약을 체결하고 계약금을 지급받은 사실이 증빙서류에 의하여 확인되는 주택"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.PRE_DESIGNATION_CONTRACT_HOUSE_RIGHT_3PLUS",
+    citation: "소득세법 시행령 §167의4",
+    keywords: ["조정대상지역의 공고가 있은 날 이전에 해당 지역의 주택을 양도하기 위하여 매매계약을 체결하고 계약금을 지급받은 사실이 증빙서류에 의하여 확인되는 주택"],
+    keywordMode: "ALL",
+  },
   {
     id: "TRANSFER_DECREE.SHORT_TERM_HOUSE_LAND",
     citation: "소득세법 시행령 §167의5",

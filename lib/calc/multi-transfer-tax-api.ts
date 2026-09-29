@@ -105,7 +105,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
    *    명부만 봤다. 명부 행은 B1(OH-10)에서 이미 공유했다 — 이 한 층만 남아 있었다.
    */
   const housesPayload = primary
-    ? buildHousesPayload(primary, form.houses ?? [], form.presaleRights?.length ?? 0, form.sellingHouseExclusion)
+    ? buildHousesPayload(primary, form.houses ?? [], form.presaleRights?.length ?? 0, form.sellingHouseExclusion, form.transferDate)
     : undefined;
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (단건 callTransferTaxAPI와 동일 규칙).

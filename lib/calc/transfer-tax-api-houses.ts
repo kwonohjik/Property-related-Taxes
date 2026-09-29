@@ -11,6 +11,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike } from "./transfer-tax-api-helpers";
 import { deriveHouseRegionFromCode } from "./house-region";
+import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -77,6 +78,8 @@ export function buildHousesPayload(
   houses: HouseEntry[],
   presaleRightsCount: number,
   sellingExclusion?: TransferFormData["sellingHouseExclusion"],
+  /** 공고 전 매매계약(11호) 범위 판정용 양도일 — 미제공이면 그 사실을 싣지 않는다(판정 메뉴) */
+  transferDate?: string,
 ): object[] | undefined {
   const hasMultiHouseEntries = houses.length > 0 || presaleRightsCount > 0;
   if (!isHousingLike(primary.assetKind) || !hasMultiHouseEntries) return undefined;
@@ -183,6 +186,26 @@ export function buildHousesPayload(
     litigationAcquisitionDate: se?.isLitigationHousing
       ? se.litigationAcquisitionDate || undefined
       : undefined,
+    /**
+     * ④⑬ 공고 전 매매계약 — 영 §167의3①11호 · §167의4③5호 · §167의10①11호 · §167의11①10호.
+     *
+     * 🔴 종전에는 이 사실을 실을 칸이 폼·Zod·route 어디에도 없어 11호가 API 경로로 **도달 불가**였다
+     *    (계획서 regulated-area-region-code-match D-2). 엔진은 장기임대 아목의 `hasContractDepositProof`
+     *    (취득 계약금 「지급한」)를 11호 요건으로 읽었다(D-3) — 이제 `saleDepositReceived`만 본다.
+     *
+     * 범위는 ⑤·⑧과 같은 술어(`preDesignationContractInScope`). 범위 밖이거나 수령 ❌이면 계약일도 싣지 않는다.
+     */
+    ...(se?.saleDepositReceived &&
+    se.saleContractDate &&
+    preDesignationContractInScope({
+      assetKind: primary.assetKind,
+      regionCode: primary.regionCode,
+      transferDate,
+      houseRows: houses.length,
+      presaleRights: presaleRightsCount,
+    })
+      ? { contractDate: se.saleContractDate, saleDepositReceived: true }
+      : {}),
   };
 
   return [sellingHouse, ...buildOtherHousesPayload(houses)];

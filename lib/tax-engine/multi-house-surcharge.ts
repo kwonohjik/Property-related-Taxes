@@ -320,7 +320,7 @@ export function determineMultiHouseSurcharge(
   const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
   const countedRights = input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate));
   const countedRightCount = countedRights.length - excludedPresaleRights.length;
-  const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline } = determineSurchargeExclusion(
+  const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline, warnings: exclusionWarnings } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
     suspensionRules,
@@ -331,6 +331,8 @@ export function determineMultiHouseSurcharge(
     // E-14f 구 §167의11①6·7호 — 「합침으로써 1주택과 1권리」: 산입 권리의 취득일을 본다.
     countedRights,
   );
+  // 판정하지 못한 배제 호(예: 11호 공고일 표 누락) — 중과가 남는 경로에서만 실린다.
+  if (exclusionWarnings) warnings.push(...exclusionWarnings);
 
   // 9호(양도 당시 기준시가 1억 이하)를 판정할 값이 없으면 중과를 그대로 적용하되 그 사실을 알린다.
   if (
