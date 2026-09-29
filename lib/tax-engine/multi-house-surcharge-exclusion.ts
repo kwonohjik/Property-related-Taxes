@@ -10,7 +10,7 @@
  */
 
 import { addMonths, addDays, subDays, differenceInYears, format } from "date-fns";
-import { isSurchargeSuspended } from "./tax-utils";
+import { isSurchargeSuspended, isBeforeSurchargeSuspensionStart } from "./tax-utils";
 import {
   MULTI_HOUSE,
   LONG_HOLDING_TEMPORARY_EXCLUSION,
@@ -663,7 +663,12 @@ export function determineSurchargeExclusion(
     ? differenceInYears(input.transferDate, sellingHouse.acquisitionDate)
     : 0;
 
-  if (suspensionHoldingYears >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS) {
+  // 2022.5.10. 전 양도분에는 12의2(가·나·다목 모두)가 없다 — 제32654호 부칙 제4조(E-14k).
+  //   가목 게이트(`checkGracePeriodExemption`)는 상한만 보므로 여기서 함께 닫는다.
+  if (
+    suspensionHoldingYears >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS &&
+    !isBeforeSurchargeSuspensionStart(input.transferDate)
+  ) {
     if (input.gracePeriod && suspensionRules?.surcharge_suspended) {
       const typeMatches =
         !suspensionRules.suspended_types ||

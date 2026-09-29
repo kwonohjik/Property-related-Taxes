@@ -1,5 +1,6 @@
 import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears, subMonths } from "date-fns";
 import type { Heir } from "./types/inheritance-gift.types";
+import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "./legal-codes/transfer";
 
 // ============================================================
 // P0-2 원칙: 세율(rate) × 금액(amount) 곱셈은 반드시 applyRate()를 사용.
@@ -394,6 +395,23 @@ export function isWithinValuationPeriod(
 // P0-3: 중과세 유예 판단
 // ============================================================
 
+/**
+ * 양도일이 12의2 한시 배제 적용 시작일(2022.5.10.) **전**인가 — 그 전 양도분에는 한시 배제가 없다.
+ *
+ * 근거: 대통령령 제32654호(2022.5.31.) 부칙 제4조 「제167조의3제1항제12호의2, 제167조의4제3항제6호의2,
+ * 제167조의10제1항제12호의2 및 제167조의11제1항제12호의 개정규정은 2022년 5월 10일 이후 주택을 양도하는
+ * 경우부터 적용한다.」
+ *
+ * 🔴 이 하한을 seed `effective_date`(2022-05-10 행)에 맡기면 안 된다(E-14k). 다건 route는 세율을
+ *    **과세기간 말일**로 한 번 읽으므로(`multi/route.ts`) 2022.1.1.~5.9. 양도분에도 유예 행이 골라져
+ *    다건에서만 중과가 빠졌다(3주택 20억 실측 단건 1,328,497,500 · 다건 650,512,500).
+ *
+ * 비교는 `YYYY-MM-DD` 문자열이다 — 엔진 날짜는 UTC 자정(`new Date("YYYY-MM-DD")`)이 규약이다.
+ */
+export function isBeforeSurchargeSuspensionStart(transferDate: Date): boolean {
+  return transferDate.toISOString().slice(0, 10) < SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.start;
+}
+
 interface SurchargeSpecialRules {
   surcharge_suspended: boolean;
   suspended_types?: string[];
@@ -415,6 +433,8 @@ export function isSurchargeSuspended(
   surchargeType: string,
 ): boolean {
   if (!specialRules?.surcharge_suspended) return false;
+  // 하한(2022.5.10.) — 행의 effective_date가 아니라 부칙으로 판정한다(E-14k)
+  if (isBeforeSurchargeSuspensionStart(referenceDate)) return false;
 
   // 해당 유형이 유예 대상인지 확인
   if (
