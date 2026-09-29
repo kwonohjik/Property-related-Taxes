@@ -389,13 +389,34 @@ export function resolveExemptionResidenceMonths(input: ResidenceReqInput): numbe
  * true = 거주요건 충족 또는 면제. 단서면제(both·residence_only)·취득시 비조정·
  * 2017.8.3 이전 취득(경과규정)·거주 2년 이상(§154⑧3호 동일세대 상속 통산 포함) 중 하나라도 해당하면 충족.
  */
-export function meetsOneHouseResidenceRequirement(
+/**
+ * §154① 거주요건 **판정 사유** — `meetsOneHouseResidenceRequirement`의 정본(2026-09-29 추출).
+ *
+ * 종전 boolean 함수의 OR 항을 **같은 순서로** 사유로 돌려준다. 요건 순차 검토 카드가
+ * 「충족」과 「요건 없음」(취득 당시 비조정·경과규정)·「면제」(단서·상생임대)를 구별해야 해서 뽑았다.
+ * boolean 함수는 이것에서 파생한다 — 판정 로직은 한 벌이다.
+ *
+ *   proviso      — §154① 단서(보유·거주 또는 거주만 면제)
+ *   not_regulated — 취득 당시 조정대상지역 아님 → 거주요건 자체가 없음
+ *   pre_policy   — 2017.8.2. 이전 취득(대통령령 제28293호 부칙) → 거주요건 없음
+ *   win_win_rental — §155의3① 상생임대주택 → 거주기간 제한 없음
+ *   met / unmet  — 거주 N년 요건 충족 여부
+ */
+export type OneHouseResidenceBasis =
+  | "proviso"
+  | "not_regulated"
+  | "pre_policy"
+  | "win_win_rental"
+  | "met"
+  | "unmet";
+
+export function describeOneHouseResidenceRequirement(
   input: ResidenceReqInput,
   rule: Pick<
     OneHouseSpecialRulesData["one_house_exemption"],
     "regulatedAreaMinResidenceYears" | "prePolicyDate" | "prePolicyExemptResidence"
   >,
-): boolean {
+): { basis: OneHouseResidenceBasis; wasRegulated: boolean; residenceMonths: number; requiredYears: number } {
   const proviso = resolveExemptionProviso(input);
   // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
   // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
@@ -405,21 +426,38 @@ export function meetsOneHouseResidenceRequirement(
   const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
   // §154⑧3호: 동일세대 상속이면 상속개시 전 동일세대 통산 거주분을 거주요건 판정에 합산.
   // §154⑤ 단서 재기산이면 재기산일 이후 거주만(재산세제과-1058 — `one-house/final-house-restart.ts`).
-  const residenceYears = Math.floor(capResidenceMonthsAtRestart(input, resolveExemptionResidenceMonths(input)) / 12);
+  const residenceMonths = capResidenceMonthsAtRestart(input, resolveExemptionResidenceMonths(input));
+  const residenceYears = Math.floor(residenceMonths / 12);
   // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
   const wasRegulated = resolveWasRegulatedAtAcquisition(input);
-  return (
-    proviso === "both" ||
-    proviso === "residence_only" ||
-    !wasRegulated ||
-    // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
-    (rule.prePolicyExemptResidence && isPrePolicy) ||
-    // §155의3① 상생임대주택 — 「제154조제1항 … 을 적용할 때 거주기간의 제한을 받지 않는다」.
-    // 🔑 §155의2는 여기 두지 않는다 — 경로가 한정돼 있어 공통 술어에 넣으면 샌다
-    //    (`qualifiesLongTermMortgageResidenceExemption` 주석 참조).
-    qualifiesWinWinRental(input) ||
-    residenceYears >= rule.regulatedAreaMinResidenceYears
-  );
+  const requiredYears = rule.regulatedAreaMinResidenceYears;
+  const basis: OneHouseResidenceBasis =
+    proviso === "both" || proviso === "residence_only"
+      ? "proviso"
+      : !wasRegulated
+        ? "not_regulated"
+        : // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
+          rule.prePolicyExemptResidence && isPrePolicy
+          ? "pre_policy"
+          : // §155의3① 상생임대주택 — 「제154조제1항 … 을 적용할 때 거주기간의 제한을 받지 않는다」.
+            // 🔑 §155의2는 여기 두지 않는다 — 경로가 한정돼 있어 공통 술어에 넣으면 샌다
+            //    (`qualifiesLongTermMortgageResidenceExemption` 주석 참조).
+            qualifiesWinWinRental(input)
+            ? "win_win_rental"
+            : residenceYears >= requiredYears
+              ? "met"
+              : "unmet";
+  return { basis, wasRegulated, residenceMonths, requiredYears };
+}
+
+export function meetsOneHouseResidenceRequirement(
+  input: ResidenceReqInput,
+  rule: Pick<
+    OneHouseSpecialRulesData["one_house_exemption"],
+    "regulatedAreaMinResidenceYears" | "prePolicyDate" | "prePolicyExemptResidence"
+  >,
+): boolean {
+  return describeOneHouseResidenceRequirement(input, rule).basis !== "unmet";
 }
 
 /**
@@ -481,15 +519,34 @@ function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
  *   있어, 공통 술어에 넣으면 일시적 2주택·혼인 합가 경로까지 면제가 새기 때문이다.
  *   중과 배제 게이트(§167의10①15호)는 §155의2를 인정하지 않으므로 **주입하지 않는다**.
  */
+/**
+ * §154① 보유요건 **판정 사유** — `meetsOneHouseHoldingResidence`의 보유 항 정본(2026-09-29 추출).
+ * 기산일은 `resolveExemptionHoldingStartDate`(§154⑤·⑧3호 보정), 기간은 §95④ 초일 산입.
+ * `provisoWaives`는 §154① 단서 "both"(보유·거주 모두 면제) — 연수 충족과 별개로 돌려준다.
+ */
+export function describeOneHouseHoldingRequirement(
+  input: ExemptionReqInput,
+  rule: Pick<OneHouseSpecialRulesData["one_house_exemption"], "minHoldingYears">,
+): { startDate: Date; years: number; months: number; met: boolean; provisoWaives: boolean } {
+  const startDate = resolveExemptionHoldingStartDate(input);
+  const holding = calculateHoldingPeriod(startDate, input.transferDate);
+  return {
+    startDate,
+    years: holding.years,
+    months: holding.months,
+    met: holding.years >= rule.minHoldingYears,
+    provisoWaives: resolveExemptionProviso(input) === "both",
+  };
+}
+
 export function meetsOneHouseHoldingResidence(
   input: ExemptionReqInput,
   rule: OneHouseSpecialRulesData["one_house_exemption"],
   longTermMortgageResidenceExempt = false,
 ): boolean {
-  const proviso = resolveExemptionProviso(input);
-  const holding = calculateHoldingPeriod(resolveExemptionHoldingStartDate(input), input.transferDate);
+  const holding = describeOneHouseHoldingRequirement(input, rule);
   // §155의2가 면제하는 것은 **거주기간뿐**이다 — 보유 2년은 그대로 본다(①② 법문).
-  const meetsHolding = proviso === "both" || holding.years >= rule.minHoldingYears;
+  const meetsHolding = holding.provisoWaives || holding.met;
   return (
     meetsHolding &&
     (longTermMortgageResidenceExempt || meetsOneHouseResidenceRequirement(input, rule))
@@ -530,6 +587,8 @@ export function evaluateTemporaryTwoHouseTiming(
 ): {
   provisoRelaxesHolding: boolean;
   timing: ReturnType<typeof judgeTemporaryTwoHouseTiming>;
+  /** 처분기한 연혁(연수·임차인 단서 말일) — 요건 검토 카드가 「N년」 문구에 쓴다 */
+  era: ReturnType<typeof resolveTemporaryTwoHouseDeadline>;
 } {
   const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse!;
 
@@ -556,7 +615,7 @@ export function evaluateTemporaryTwoHouseTiming(
     disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
   });
 
-  return { provisoRelaxesHolding, timing };
+  return { provisoRelaxesHolding, timing, era };
 }
 
 /**

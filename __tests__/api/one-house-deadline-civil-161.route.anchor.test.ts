@@ -25,6 +25,21 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { POST as POST_SINGLE } from "@/app/api/calc/transfer/route";
 import { POST as POST_JUDGE } from "@/app/api/calc/one-house-exemption/route";
 
+/**
+ * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
+ * 과거 기한을 단언하는 테스트는 그 기한 **이전의 오늘**에서 돌려야 한다. `Date`만 가짜로 돌린다.
+ */
+async function atToday<T>(isoDate: string, fn: () => Promise<T>): Promise<T> {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(`${isoDate}T03:00:00Z`));
+  try {
+    return await fn();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
 });
@@ -83,7 +98,10 @@ describe("L-1 — §155① 처분기한 말일 토요일 (route)", () => {
 
   it("🔴 판정 메뉴 — 같은 결론 · 화요일이면 기한 2024-06-03과 설명이 응답에 실린다", async () => {
     expect((await post(POST_JUDGE, "http://l/api/calc/one-house-exemption", body("2024-06-03"))).judgment.isExempt).toBe(true);
-    const j = (await post(POST_JUDGE, "http://l/api/calc/one-house-exemption", body("2024-06-04"))).judgment;
+    // 기한 2024-06-03이 아직 오지 않은 「오늘」에서 판정한다 — 지났으면 이룰 수 없어 pending에서 빠진다.
+    const j = (
+      await atToday("2024-05-01", () => post(POST_JUDGE, "http://l/api/calc/one-house-exemption", body("2024-06-04")))
+    ).judgment;
     expect(j.isExempt).toBe(false);
     const p = j.pending.find((x: { id: string }) => x.id === "155-1-disposal-deadline");
     expect(String(p.deadline).slice(0, 10)).toBe("2024-06-03");

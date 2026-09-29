@@ -91,11 +91,14 @@ export function applyRentalHousingVerdict(
    *    그대로 두면 결과 화면이 「과세」 배지 바로 아래에 「1세대1주택 비과세」와 「적용된 특례」
    *    카드를 함께 그린다. 코어 판정도 과세일 때는 두 필드를 비워 낸다 — 같은 불변식을 지킨다.
    */
+  //    요건 순차 검토(`requirementReview`)도 같은 이유로 지운다 — 코어 판정 기준으로 「전 요건 충족」인
+  //    행을 과세 배지 아래에 그리면 모순이다. §155⑳ 불충족 사유는 임대주택 카드가 말한다(2026-09-29).
   return {
     ...judgment,
     isExempt: false,
     isPartialExempt: false,
     exemptReason: undefined,
     appliedExceptions: [],
+    requirementReview: undefined,
   };
 }

@@ -33,6 +33,7 @@ import {
   meetsTemporaryTwoHousePrevHolding,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
+import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 import {
@@ -76,11 +77,22 @@ const REPLACEMENT_HOUSE_SHORT = shortArticle(TRANSFER.REPLACEMENT_HOUSE_156_2_5)
 const MARRIAGE_CLAUSE = shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT).replace("§155", "");
 const PARENTAL_CARE_CLAUSE = shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT).replace("§155", "");
 
+/**
+ * 판정 문맥 옵션 — 자산·세대의 **사실이 아니다**(그래서 `OneHouseJudgeInput`에 두지 않는다).
+ *
+ * @property judgmentBaseDate 판정 기준일(조회일, 한국 날짜의 UTC 자정). 주면 「이 날까지 양도」 기한 중
+ *   이미 지난 것을 pending에서 뺀다 — 이룰 수 없는 조건이다(2026-09-29 제보). 엔진은 「오늘」을 스스로
+ *   읽지 않는다(순수 함수). 계산기 경로는 넘기지 않으므로 종전 동작 그대로다.
+ */
+export type CheckExemptionOptions = { judgmentBaseDate?: Date };
+
 export function checkExemption(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   presaleRightStartDate?: Date,
+  options?: CheckExemptionOptions,
 ): OneHouseJudgment {
+  const judgmentBaseDate = options?.judgmentBaseDate;
   const article89Clause2 = resolveArticle89Clause2(input, presaleRightStartDate);
 
   /**
@@ -104,9 +116,13 @@ export function checkExemption(
   const settled = verdict.isExempt || verdict.isPartialExempt;
   const appliedExceptions = verdict.appliedExceptions ?? [];
   // 이미 비과세·부분과세면 「무엇을 더 하면」이 없다 — pending은 과세를 뒤집는 조건만 담는다.
-  const pending = settled
-    ? []
-    : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
+  const pending = (
+    settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass)
+  ).filter(
+    // 「이 날까지 양도」인데 그 날이 판정 기준일 전에 지났으면 이룰 수 없다 — 안내하지 않는다.
+    //   「이 날 이후 양도」(보유 2년 충족일)는 기준일이 지나면 오히려 충족되므로 남긴다.
+    (p) => !judgmentBaseDate || p.kind !== "transfer_by" || isDeadlineStillReachable(p.deadline, judgmentBaseDate),
+  );
 
   /**
    * 「선언했는데 왜 적용 안 됐나」 — **`coreWouldPass`로 막는다**(`settled`가 아니다).
@@ -127,6 +143,15 @@ export function checkExemption(
     unmetExceptions,
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),
+    ...requirementReviewEchoOf(
+      buildRequirementReview(
+        input,
+        oneHouseRules,
+        { isExempt: verdict.isExempt, isPartialExempt: verdict.isPartialExempt, appliedExceptions },
+        article89Clause2,
+        judgmentBaseDate,
+      ),
+    ),
     legalBasis: dedupeLegalBasis([
       ...appliedExceptions.map((e) => e.legalBasis),
       ...pending.map((p) => p.legalBasis),
@@ -140,6 +165,13 @@ function finalOneHouseRestartEchoOf(input: OneHouseJudgeInput): Pick<OneHouseJud
   if (input.oneHouseUnitRole === "appurtenant_land") return {};
   const echo = describeFinalOneHouseRestart(input);
   return echo ? { finalOneHouseRestart: echo } : {};
+}
+
+/** 요건 검토는 실릴 때만 키를 둔다 — 구 응답과 같은 모양(키 부재)을 유지한다. */
+function requirementReviewEchoOf(
+  review: OneHouseJudgment["requirementReview"],
+): Pick<OneHouseJudgment, "requirementReview"> {
+  return review ? { requirementReview: review } : {};
 }
 
 /** 근거 조문 목록 — 입력 순서를 유지한 채 중복만 제거한다(표시 순서가 곧 판정 순서다). */

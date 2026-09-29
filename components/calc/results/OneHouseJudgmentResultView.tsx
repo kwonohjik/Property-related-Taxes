@@ -18,6 +18,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RentalCancellationWindowNote } from "@/components/calc/results/transfer/RentalCancellationWindowNote";
+import { OneHouseRequirementReviewCard } from "@/components/calc/results/OneHouseRequirementReviewCard";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
@@ -106,6 +107,12 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         {judgment.exemptReason && (
           <p className="text-sm text-muted-foreground">{judgment.exemptReason}</p>
         )}
+        {/* 판정 기준일 — 지난 기한을 안내하지 않는 기준. 이력 상세는 저장 당시 판정이라 이 날짜가 필요하다. 구 이력엔 없다. */}
+        {result.judgmentBaseDate && (
+          <p className="text-caption text-muted-foreground" data-testid="one-house-judgment-base-date">
+            판정 기준일 <span className="font-mono tabular-nums">{result.judgmentBaseDate}</span>
+          </p>
+        )}
       </ToneCard>
 
       {/* ── 주택 수 산정 ── */}
@@ -146,6 +153,14 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           </div>
         ))}
       </ToneCard>
+
+      {/*
+        ── 비과세 요건 순차 검토 (2026-09-29) ──
+        🔑 주택 수 산정 다음 — 로직 순서 = 표시 순서. 엔진이 §155① 일시적 2주택·1주택 단독 판정에만 싣는다.
+      */}
+      {judgment.requirementReview && (
+        <OneHouseRequirementReviewCard review={judgment.requirementReview} sectionNum={nextNo()} />
+      )}
 
       {/*
         ── §154⑧3호 동일세대 상속 통산 (OH-18) ──
@@ -304,9 +319,13 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         </ToneCard>
       )}
 
-      {/* ── 조건부·기한 (G-3) ── */}
+      {/*
+        ── 양도일 조정 안내 (G-3) ──
+        🔑 배지가 아니다(Q-1=B, 2026-09-29) — 입력한 양도(예정)일로는 과세이고, 이 카드는 「날짜를 바꾸면」의
+           안내다. 판정 기준일 전에 지난 「이 날까지 양도」 기한은 엔진이 이미 뺐다(이룰 수 없는 조건).
+      */}
       {pending.length > 0 && (
-        <ToneCard tone="amber" sectionNum={nextNo()} title="조건부 — 기한 내에 갖추면 비과세">
+        <ToneCard tone="amber" sectionNum={nextNo()} title="양도일을 조정하면 요건을 갖출 수 있습니다">
           <ul className="space-y-3">
             {pending.map((p) => (
               <li key={p.id} className="text-sm" data-testid={`one-house-pending-${p.id}`}>
@@ -329,7 +348,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
 
       {/*
         ── 선언했으나 적용되지 않은 특례 ──
-        🔑 「조건부」(amber)와 **다른 것**이다. 저쪽은 「이 날까지 하면 비과세」이고 여기는
+        🔑 「양도일 조정 안내」(amber)와 **다른 것**이다. 저쪽은 「이 날까지 하면 비과세」이고 여기는
            「이 입력으로는 적용되지 않았다」다. 기한 축은 `pending`이 이미 날짜와 함께 안내하므로
            엔진이 여기에 담지 않는다 — 두 카드가 같은 사실을 말하지 않는다.
         🔑 §155⑳ 임대주택 미충족 카드와 **같은 톤(rose)·같은 모양**을 쓴다.

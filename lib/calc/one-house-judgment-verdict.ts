@@ -22,13 +22,20 @@ type JudgmentLike = {
 };
 
 export type OneHouseVerdict = {
-  label: "비과세" | "부분 비과세" | "조건부" | "과세";
+  label: "비과세" | "부분 비과세" | "과세";
   tone: "emerald" | "amber" | "rose";
   detail: string;
 };
 
 /**
- * 판정 배지 — 네 갈래(전액 비과세 / 부분 비과세 / 조건부 / 과세).
+ * 판정 배지 — 세 갈래(전액 비과세 / 부분 비과세 / 과세).
+ *
+ * 🔴 **「조건부」 라벨을 폐지했다**(2026-09-29 — 계획서 `one-house-judgment-temp-two-house-review.plan.md`
+ *    Q-1=B). 엔진은 **입력한 양도(예정)일**로 판정하고, `pending`은 그 날짜로는 과세일 때만 생긴다.
+ *    그런데 종전 배지는 pending이 있으면 「조건부」라 불러, 양도 예정일이 처분기한을 이미 넘긴
+ *    사안(제보: 기한 2026-07-01 · 예정일 2026-10-22)을 조건이 남은 것처럼 보이게 했다.
+ *    ⇒ 배지는 입력일 기준 결론(과세)이고, pending은 「양도일을 조정하면」 안내로만 남는다.
+ *    구 이력의 「조건부」 기록도 이 술어를 거치므로 「과세」로 읽힌다(같은 사실의 정정 표기).
  *
  * @param highValueThreshold 양도일 기준 고가주택 기준금액(원) — 호출부가
  *   `resolveHighValueHouseThreshold(양도일)`로 구해 넘긴다(OH-54). 없으면(이력 목록처럼
@@ -55,9 +62,9 @@ export function oneHouseVerdictOf(
   }
   if ((judgment.pending?.length ?? 0) > 0) {
     return {
-      label: "조건부",
-      tone: "amber",
-      detail: "아래 조건을 기한 내에 갖추면 비과세로 판정됩니다.",
+      label: "과세",
+      tone: "rose",
+      detail: "입력한 양도(예정)일로는 비과세 요건을 충족하지 않습니다. 아래 안내대로 양도일을 조정하면 요건을 갖출 수 있습니다.",
     };
   }
   return { label: "과세", tone: "rose", detail: "현재 입력으로는 비과세 요건을 충족하지 않습니다." };

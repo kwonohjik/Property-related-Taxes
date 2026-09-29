@@ -222,6 +222,13 @@ export type OneHouseAppliedException = {
  */
 export type OneHousePendingCondition = {
   id: string;
+  /**
+   * 기한의 **방향** — 판정 기준일 필터가 이것으로 가른다(2026-09-29).
+   *   `transfer_by`: 「이 날까지 양도」 — 기한이 판정 기준일 전에 지났으면 **이룰 수 없다** ⇒ 내지 않는다.
+   *   `transfer_after`: 「이 날 이후 양도」 — 기준일이 지나도 여전히 이룰 수 있다.
+   * 🔑 id 문자열로 분류하지 않는다 — 새 pending이 방향을 빠뜨리면 **타입이** 막는다.
+   */
+  kind: "transfer_by" | "transfer_after";
   /** 「종전주택을 이 날짜까지 양도」처럼 **무엇을 해야 하는지** */
   description: string;
   /** 기한 말일(그 날 당일까지) — 토요일·공휴일이면 민법 §161로 연장된 날 */
@@ -229,6 +236,38 @@ export type OneHousePendingCondition = {
   /** 연장됐거나 공휴일 표 밖이면 한 줄 설명(L-1) */
   deadlineNote?: string;
   legalBasis: string;
+};
+
+/**
+ * 비과세 요건 **순차 검토** 한 행 (2026-09-29 — 계획서 `one-house-judgment-temp-two-house-review.plan.md` §5-3).
+ *
+ * 🔑 `status`는 정본 술어의 반환값을 **옮긴 것**이다 — 여기서 요건을 다시 판정하지 않는다.
+ *    행의 결론과 판정 배지가 어긋나지 않음은 행렬 드리프트 가드가 고정한다.
+ *
+ *   met: 충족 · unmet: 미충족 · waived: 요건이 있으나 특례·단서로 면제 · not_required: 이 사안에는
+ *   요건 자체가 없음(예: 취득 당시 비조정 → 거주요건 없음) · partial: 고가주택 기준금액 초과(초과분 과세)
+ */
+export type OneHouseRequirementStatus = "met" | "unmet" | "waived" | "not_required" | "partial";
+
+export type OneHouseRequirementCheck = {
+  /** 안정 식별자 — 화면 testid·테스트가 본다 */
+  id: string;
+  /** 요건 문장(한국어) */
+  label: string;
+  status: OneHouseRequirementStatus;
+  /** 판정 근거 사실 — 날짜는 YYYY-MM-DD. 화면은 그대로 표시만 한다(재계산 금지) */
+  facts: { label: string; value: string }[];
+  /** 면제 사유·기한 안내 등 한 줄 */
+  note?: string;
+  /** 구조화 인용 — `LawArticleModal legalBasis=`로 넘긴다(법령명 포함) */
+  legalBasis: string;
+};
+
+export type OneHouseRequirementReview = {
+  /** `155-1-temporary-two-house`: §155① 일시적 2주택 · `154-1-one-house`: 1주택 단독 양도 */
+  scheme: "155-1-temporary-two-house" | "154-1-one-house";
+  /** 법정 검토 순서 그대로 */
+  items: OneHouseRequirementCheck[];
 };
 
 /**
@@ -346,6 +385,11 @@ export type OneHouseJudgment = {
   /** 근거 조문 — `appliedExceptions`·`pending`에서 중복 제거해 모은다(파생값, 입력 아님) */
   legalBasis: string[];
   /**
+   * 비과세 요건 순차 검토(2026-09-29) — §155① 일시적 2주택 · 1주택 단독 양도에만 실린다.
+   * 다른 특례로 결론이 났거나(합가·상속 등) §89② 배제면 싣지 않는다(그 카드들이 따로 말한다).
+   */
+  requirementReview?: OneHouseRequirementReview;
+  /**
    * ⚠️ **`highValueThreshold`를 담지 않는다** — 설계 초안은 이 필드를 두라고 적었지만,
    *    넣어 두고 뮤테이션을 돌리니 **12억으로 고정해도 2,067케이스 전건이 통과**했다.
    *    읽는 곳이 없다는 뜻이다. 실제 소비자(안분·장특·재개발)는 전부 P1이 만든 단일 소스
@@ -368,7 +412,7 @@ export type OneHouseJudgment = {
  */
 export type OneHouseCoreVerdict = Omit<
   OneHouseJudgment,
-  "pending" | "undetermined" | "unmetExceptions" | "legalBasis" | "appliedExceptions"
+  "pending" | "undetermined" | "unmetExceptions" | "legalBasis" | "appliedExceptions" | "requirementReview"
 > & {
   appliedExceptions?: OneHouseAppliedException[];
 };
