@@ -32,6 +32,7 @@ import { RightThreeYearExceptionSection } from "@/components/calc/transfer/Right
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
+import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpecialsGroup";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
@@ -147,6 +148,10 @@ export function Step2({ form, onChange }: Props) {
     [form.isOneHousehold, houseCount, derivedNewHouse],
   );
 
+  // §156의2⑤ — 일시적 2주택 섹션이 숨는 세대에서만 여기서 그린다(두 벌 방지).
+  const showStandaloneReplacement =
+    !judgmentTemporaryTwoHouseVisible(form) && judgmentReplacementHouseVisible(form);
+
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -206,40 +211,48 @@ export function Step2({ form, onChange }: Props) {
         />
       )}
 
-      {/*
-        §156의2⑤ 대체주택 — 일시적 2주택 섹션이 숨는 **1주택 + 조합원입주권** 세대(법령 기본 사례)
-        에서는 여기서 따로 그린다(OH-05). 2주택 이상이면 위 섹션 안에 있으므로 두 벌이 되지 않게
-        그 조건을 배제한다. 게이트는 ④·⑧과 같은 `judgmentReplacementHouseVisible`.
-      */}
-      {!judgmentTemporaryTwoHouseVisible(form) && judgmentReplacementHouseVisible(form) && (
-        <ToneCard tone="emerald">
-          <ReplacementHouseSpecialBlock form={viewForm} onChange={onChange} />
-        </ToneCard>
-      )}
-
       {/* §89② 배제의 예외 3종 — 각자 내부 게이트를 갖고 있어 해당 없으면 스스로 숨는다. */}
       <RightThreeYearExceptionSection form={viewForm} onChange={onChange} />
       <InheritedRightExceptionSection form={viewForm} onChange={onChange} />
       <MergedHouseholdRightSection form={viewForm} onChange={onChange} />
 
       {/*
-        §154① 단서 — 계산기 Step4와 같은 게이트. 판정 메뉴에도 **반드시 있어야 한다**:
-        없으면 해외이주·수용 등으로 거주요건이 면제되는 사람에게 「거주요건 미충족」을 낸다(§3.2-B).
-
-        🔑 이 카드는 ② 화면으로 옮기지 않았다 — 노출 게이트(`proviso`)가 **명부 파생**
-           `derivedNewHouse`에 의존하므로, 명부가 있는 이 화면에 있어야 게이트가 정확하다.
+        양도 대상 주택에 적용할 특례 — 2주택 이상이면 일시적 2주택 섹션 **안**의 같은 소제목이 소유한다.
+        여기는 그 섹션이 숨는 1주택(+권리) 세대 몫이다. 소제목은 자식이 하나라도 뜰 때만 그린다.
       */}
-      {proviso.visible && proviso.mode === "one_house" && (
-        <ExemptionProvisoSection
-          provisoReason={form.provisoReason}
-          provisoDepartureDate={form.provisoDepartureDate}
-          provisoExpropriationDate={form.provisoExpropriationDate}
-          provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
-          provisoPreContractNoHouse={form.provisoPreContractNoHouse}
-          rental4ho={form}
-          mode={proviso.mode}
-          onChange={onChange}
-        />
+      {((proviso.visible && proviso.mode === "one_house") || showStandaloneReplacement) && (
+        <SaleHouseSpecialsGroup>
+          {/*
+            §154① 단서 — 계산기 Step4와 같은 게이트. 판정 메뉴에도 **반드시 있어야 한다**:
+            없으면 해외이주·수용 등으로 거주요건이 면제되는 사람에게 「거주요건 미충족」을 낸다(§3.2-B).
+
+            🔑 이 카드는 ② 화면으로 옮기지 않았다 — 노출 게이트(`proviso`)가 **명부 파생**
+               `derivedNewHouse`에 의존하므로, 명부가 있는 이 화면에 있어야 게이트가 정확하다.
+          */}
+          {proviso.visible && proviso.mode === "one_house" && (
+            <ExemptionProvisoSection
+              provisoReason={form.provisoReason}
+              provisoDepartureDate={form.provisoDepartureDate}
+              provisoExpropriationDate={form.provisoExpropriationDate}
+              provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+              provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+              rental4ho={form}
+              mode={proviso.mode}
+              onChange={onChange}
+            />
+          )}
+
+          {/*
+            §156의2⑤ 대체주택 — 일시적 2주택 섹션이 숨는 **1주택 + 조합원입주권** 세대(법령 기본 사례)
+            에서는 여기서 따로 그린다(OH-05). 2주택 이상이면 위 섹션 안에 있으므로 두 벌이 되지 않게
+            그 조건을 배제한다. 게이트는 ④·⑧과 같은 `judgmentReplacementHouseVisible`.
+          */}
+          {showStandaloneReplacement && (
+            <ToneCard tone="emerald">
+              <ReplacementHouseSpecialBlock form={viewForm} onChange={onChange} />
+            </ToneCard>
+          )}
+        </SaleHouseSpecialsGroup>
       )}
 
       {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 명부 파생 1주택 · 2021.1.1.~2022.5.9. 양도(④·⑧과 같은 술어) */}

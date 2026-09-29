@@ -35,6 +35,7 @@ import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoH
 import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import { MergeDateSection } from "./MergeDateSection";
 import { ReplacementHouseSpecialBlock } from "./ReplacementHouseSpecialBlock";
+import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpecialsGroup";
 
 /** §155⑯ 연접 판정 결과 — 두 소재지 코드가 모두 있을 때만 결론을 낸다(없으면 null). */
 export interface RelocationRegionVerdict {
@@ -233,36 +234,6 @@ function TempTwoHouseCoreBlocks({
               )}
             </ToggleCard>
 
-            {/* §155⑱ — 3년 기한의 예외. 판정 기준시점이 양도일이 아님을 문구로 명시(G-2) */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
-              <RadioCardGroup
-                name="disposalDelayReason"
-                value={form.disposalDelayReason}
-                onChange={(v) => onChange({ disposalDelayReason: v })}
-                options={[
-                  { value: "", label: "해당 없음", description: "처분기한 내 양도 (일반)" },
-                  { value: "kamco", label: "한국자산관리공사 매각 의뢰", description: "1호" },
-                  { value: "auction", label: "법원 경매 신청", description: "2호" },
-                  { value: "public_sale", label: "「국세징수법」 공매 진행 중", description: "3호" },
-                  {
-                    value: "cash_settlement_suit",
-                    label: "정비사업 현금청산금 지급 소송",
-                    description: "4호 — 진행 중이거나 종료됐으나 미지급",
-                  },
-                  {
-                    value: "expropriation_suit",
-                    label: "정비사업 수용재결·매도청구소송",
-                    description: "5호 — 진행 중이거나 종료됐으나 미지급",
-                  },
-                ]}
-              />
-              <p className="text-xs text-muted-foreground">
-                <strong>신규 주택을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
-                해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
-              </p>
-            </div>
-
             {/* §155①2호 조정대상지역 — 결론을 바꾸는 양도 시기에만(OH-01 A2b). 게이트는 판정 카드와 같은 leaf. */}
             {tempTwoHouseVerdict.status !== "pending" && tempTwoHouseVerdict.regulated.relevant && (
               <TempTwoHouseRegulatedInputs
@@ -275,6 +246,26 @@ function TempTwoHouseCoreBlocks({
           </div>
         </ToneCard>
 
+    </>
+  );
+}
+
+/**
+ * §155① 요건 자동판정 카드 — 판정 메뉴 전용.
+ *
+ * 🔑 입력 블록(핵심 · 양도 대상 주택 특례) **뒤**에 둔다 — 요건 A는 §154① 단서가, 요건 B는
+ *    §155⑱이 바꾸므로 원인을 먼저 입력하고 결과를 읽는 순서다(UI 순서 = 로직 순서).
+ */
+function TempTwoHouseVerdictCard({
+  form,
+  tempTwoHouseVerdict,
+  derivedNewHouseAcquisitionDate,
+}: Pick<BaseProps, "form"> &
+  Pick<FullOnlyProps, "tempTwoHouseVerdict" | "derivedNewHouseAcquisitionDate">) {
+  // 핵심 블록과 같은 게이트 — 명부에서 신규 주택을 도출하지 못하면 판정할 사실이 없다.
+  if (!derivedNewHouseAcquisitionDate) return null;
+  return (
+    <>
         {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm) */}
         {(
           <ToneCard
@@ -351,9 +342,10 @@ function TempTwoHouseOtherSpecials({
   form,
   onChange,
   proviso,
-}: BaseProps & Pick<FullOnlyProps, "proviso">) {
+  derivedNewHouseAcquisitionDate,
+}: BaseProps & Pick<FullOnlyProps, "proviso" | "derivedNewHouseAcquisitionDate">) {
   return (
-    <>
+    <SaleHouseSpecialsGroup>
         {/*
           🔴 §155⑥1호 문화유산 주택 토글은 **명부 행으로 옮겼다**(D-6 · P7-3).
              정본: `HouseEntry.oneHouseCulturalHeritage`
@@ -395,9 +387,44 @@ function TempTwoHouseOtherSpecials({
           />
         )}
 
+        {/*
+          §155⑱ — 요건 B(처분기한)의 예외. 신규 주택이 도출될 때만(핵심 블록과 같은 게이트).
+          판정 기준시점이 양도일이 아님을 문구로 명시(G-2).
+        */}
+        {derivedNewHouseAcquisitionDate && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
+            <RadioCardGroup
+              name="disposalDelayReason"
+              value={form.disposalDelayReason}
+              onChange={(v) => onChange({ disposalDelayReason: v })}
+              options={[
+                { value: "", label: "해당 없음", description: "처분기한 내 양도 (일반)" },
+                { value: "kamco", label: "한국자산관리공사 매각 의뢰", description: "1호" },
+                { value: "auction", label: "법원 경매 신청", description: "2호" },
+                { value: "public_sale", label: "「국세징수법」 공매 진행 중", description: "3호" },
+                {
+                  value: "cash_settlement_suit",
+                  label: "정비사업 현금청산금 지급 소송",
+                  description: "4호 — 진행 중이거나 종료됐으나 미지급",
+                },
+                {
+                  value: "expropriation_suit",
+                  label: "정비사업 수용재결·매도청구소송",
+                  description: "5호 — 진행 중이거나 종료됐으나 미지급",
+                },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">
+              <strong>신규 주택을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
+              해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
+            </p>
+          </div>
+        )}
+
         {/* §156의2⑤ 대체주택 비과세 특례 — 판정 메뉴가 이 섹션 밖에서도 그린다(OH-05) */}
         <ReplacementHouseSpecialBlock form={form} onChange={onChange} />
-    </>
+    </SaleHouseSpecialsGroup>
   );
 }
 
@@ -436,6 +463,8 @@ export function TemporaryTwoHouseSection(props: TemporaryTwoHouseSectionProps) {
         */}
 
         {full && <TempTwoHouseOtherSpecials {...props} />}
+
+        {full && <TempTwoHouseVerdictCard {...props} />}
 
         <MergeDateSection form={form} onChange={onChange} />
       </div>
