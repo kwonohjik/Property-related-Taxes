@@ -403,14 +403,6 @@ export default function MultiTransferTaxCalculator() {
         />
       )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription className="whitespace-pre-wrap break-words">
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Step A: 자산 목록 */}
       {form.activeStep === "list" && (
         <Card>
@@ -513,6 +505,17 @@ export default function MultiTransferTaxCalculator() {
                   onChange={(d) => setForm(d as unknown as Parameters<typeof setForm>[0])}
                 />
               </div>
+            )}
+
+            {/* 오류는 방금 누른 「세액 계산」 바로 위에 — 종전엔 페이지 최상단이라 스크롤해 올라가야 했다.
+                Card가 overflow-hidden이라 sticky는 먹지 않지만, 버튼 옆이면 이미 시야 안이다(계획서 D-4).
+                `error`는 handleCalculate에서만 세팅된다. */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription className="whitespace-pre-wrap break-words">
+                  {error}
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="flex items-center justify-between gap-2 pt-4 border-t">

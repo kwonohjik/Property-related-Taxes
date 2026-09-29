@@ -14,6 +14,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { collectStepIssues, collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
 import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner";
+import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssuePanel";
 import type { StepStatus } from "@/components/calc/StepIndicator";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -58,10 +59,16 @@ export default function TransferTaxCalculator({
   useResetOnNewParam(reset);
   // API·계산 오류 (단건 메시지). 검증 오류는 issues 배열로 일괄 표시.
   const [error, setError] = useState<string | null>(null);
-  // 검증 오류 일괄 목록 — 한 단계의 모든 차단 오류를 한 번에 표시 (두더지잡기 제거)
-  const [issues, setIssues] = useState<ValidationIssue[]>([]);
-  // 검증 실패 자산 인덱스 — Step1 자산 카드 인라인 에러 + 자동 스크롤 대상 (step 0 한정)
-  const [errorAssetIndex, setErrorAssetIndex] = useState<number | null>(null);
+  // 검증에 실패한 단계 — 목록 자체는 저장하지 않고 formData에서 **파생**한다.
+  // 고친 항목은 즉시 사라지고 0건이면 패널이 닫힌다(계획서 D-5 Q-1=A).
+  // seq는 패널 key — 새 실패마다 접힘 상태를 펼침으로 되돌린다.
+  const [failed, setFailed] = useState<{ step: number; seq: number } | null>(null);
+  const issues = useMemo(
+    () => (failed ? collectStepIssues(failed.step, formData) : []),
+    [failed, formData],
+  );
+  // 자산 카드 인라인 배너 대상 — 첫 자산 오류. 그 자산을 다 고치면 다음 자산으로 넘어간다.
+  const errorAssetIndex = issues.find((it) => it.assetIndex != null)?.assetIndex ?? null;
   const [isLoading, setIsLoading] = useState(false);
   const [penaltyResult, setPenaltyResult] = useState<TransferTaxPenaltyResult | null>(null);
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
@@ -179,11 +186,10 @@ export default function TransferTaxCalculator({
     [formData, updateFormAndInvalidate],
   );
 
-  // 검증 실패 적용 — 오류 목록 일괄 표시 + 첫 자산 오류 인덱스 설정 + (step 0) 해당 카드로 자동 스크롤
-  function failWithIssues(list: ValidationIssue[]) {
-    setIssues(list);
+  // 검증 실패 적용 — 오류 목록 일괄 표시 + (step 0) 첫 자산 오류 카드로 자동 스크롤
+  function failWithIssues(step: number, list: ValidationIssue[]) {
+    setFailed((f) => ({ step, seq: (f?.seq ?? 0) + 1 }));
     const firstAsset = list.find((it) => it.assetIndex != null);
-    setErrorAssetIndex(firstAsset?.assetIndex ?? null);
     if (firstAsset?.assetIndex != null && firstAsset.step === 0) {
       scrollToAssetCard(firstAsset.assetIndex);
     }
@@ -194,14 +200,15 @@ export default function TransferTaxCalculator({
     setTimeout(() => {
       document
         .querySelector(`[data-asset-card-index="${targetIndex}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        // start — 카드 머리의 오류 배너가 보이도록(`center`는 전부 펼친 긴 카드의 배너를 잘랐다).
+        //   카드 루트 `scroll-mt-24`가 sticky 앱 헤더 높이를 비켜 준다.
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
   }
 
   function clearError() {
     setError(null);
-    setIssues([]);
-    setErrorAssetIndex(null);
+    setFailed(null);
   }
 
   // 스텝 이동 시 새 단계의 맨 위(①번 카드)가 기본으로 보이도록 최상단 스크롤.
@@ -211,7 +218,7 @@ export default function TransferTaxCalculator({
 
   function handleNext() {
     const list = collectStepIssues(currentStep, formData);
-    if (list.length > 0) { failWithIssues(list); return; }
+    if (list.length > 0) { failWithIssues(currentStep, list); return; }
     clearError();
     setStep(currentStep + 1);
     scrollToTop();
@@ -238,7 +245,7 @@ export default function TransferTaxCalculator({
       const list = collectStepIssues(s, formData);
       if (list.length > 0) {
         setStep(s); // 검증 실패 step으로 자동 이동 (사용자가 어디서 누락됐는지 즉시 인지)
-        failWithIssues(list); // 오류 목록 + 자산 인덱스 + 자동 스크롤
+        failWithIssues(s, list); // 오류 목록 + 자동 스크롤
         return;
       }
     }
@@ -569,48 +576,14 @@ export default function TransferTaxCalculator({
             </div>
           )}
 
-          {/* 에러 메시지 — 검증 오류 일괄 목록(issues) + API 오류(error) */}
-          {(error || issues.length > 0) && (
-            <div
-              className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-              data-testid="validation-issues"
-            >
-              {issues.length > 0 && (
-                <>
-                  <p className="font-semibold mb-1.5">
-                    입력 확인이 필요합니다 ({issues.length}건)
-                  </p>
-                  <ul className="space-y-1 list-disc pl-4">
-                    {issues.map((it, idx) => (
-                      <li key={idx}>
-                        {it.assetIndex != null && it.step === 0 && currentStep === 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => scrollToAssetCard(it.assetIndex!)}
-                            className="text-left underline underline-offset-2 hover:opacity-70 transition-opacity"
-                          >
-                            {it.message}
-                          </button>
-                        ) : (
-                          <span className="whitespace-pre-line">{it.message}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              {error && <p className="whitespace-pre-line">{error}</p>}
-              {isLastStep && (
-                <button
-                  type="button"
-                  onClick={() => { clearError(); handleSubmit(); }}
-                  className="mt-2 text-xs underline underline-offset-2 hover:opacity-70 transition-opacity"
-                >
-                  다시 계산하기
-                </button>
-              )}
-            </div>
-          )}
+          {/* 에러 메시지 — 검증 오류 일괄 목록(issues) + API 오류(error). 하단 sticky(D-1) */}
+          <ValidationIssuePanel
+            key={failed?.seq ?? 0}
+            issues={issues}
+            error={error}
+            onAssetClick={currentStep === 0 && failed?.step === 0 ? scrollToAssetCard : undefined}
+            onRetry={isLastStep ? () => { clearError(); handleSubmit(); } : undefined}
+          />
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
@@ -646,7 +619,7 @@ export default function TransferTaxCalculator({
                       tone="outline"
                       onClick={() => {
                         const list = collectStepIssues(currentStep, formData);
-                        if (list.length > 0) { failWithIssues(list); return; }
+                        if (list.length > 0) { failWithIssues(currentStep, list); return; }
                         clearError();
                         onSaveAndAddNext?.();
                       }}
@@ -656,7 +629,7 @@ export default function TransferTaxCalculator({
                     <CtaButton
                       onClick={() => {
                         const list = collectStepIssues(currentStep, formData);
-                        if (list.length > 0) { failWithIssues(list); return; }
+                        if (list.length > 0) { failWithIssues(currentStep, list); return; }
                         clearError();
                         onSaveAndGoToSettings?.();
                       }}
