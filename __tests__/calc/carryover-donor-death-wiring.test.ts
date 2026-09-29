@@ -145,6 +145,8 @@ describe("DD-W ⑫: Zod가 관계·사망을 통과시킨다", () => {
       useEstimatedAcquisition: false,
       giftTaxAmount: 0,
       giftDateValuation: 700_000_000,
+      // 환산 미사용이면 증여자 취득가액은 필수(⑧·⑫ — 비우면 엔진이 0으로 읽는다)
+      donorAcquisitionPrice: 300_000_000,
       donorRelation: "spouse",
       donorDeceased: true,
     },

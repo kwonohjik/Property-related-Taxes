@@ -505,6 +505,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "new_99") {
           if (r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
             return fail("§99 적용: 자기건설 주택의 사용승인일을 입력하세요.");
+          // 조특법 §99①2호 — 「최초로 매매계약을 체결하고 계약금을 납부한 자」. 비우면 엔진이 취득일로
+          // 대신 읽어 기간 판정이 바뀌었다. §99의3(위)과 같은 자산-수준 fallback 규약.
+          if (r.acquisitionType99 !== "self_built" && !(r.contractDate99 || asset.assetContractDate))
+            return fail("§99 적용: 매매계약일을 입력하세요 (자산 매매계약일도 비어 있습니다).");
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           if (r.phdMode99) {
             const phdInput = {

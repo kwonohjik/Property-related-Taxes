@@ -23,6 +23,8 @@ export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-buildin
 import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
 import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
+import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
+import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -112,6 +114,8 @@ export const propertySchema = z
   })
   .superRefine((data, ctx) => {
     addPropertyRefines(data, ctx);
+    refinePropertyRequiredInputs(data, ctx);
+    refineAmendmentInputs(data.amendment, ctx);
 
     // 수정신고 ↔ 무신고/과소신고 가산세 상호배타 (동시 전송 금지)
     if (data.amendment && (data.filingPenaltyDetails || data.delayedPaymentDetails)) {
@@ -122,28 +126,25 @@ export const propertySchema = z
       });
     }
 
-    // 소유자 분리 유효성 (소령 §166⑥, §168②)
-    if (data.selfOwns && data.selfOwns !== "both") {
-      if (!data.landAcquisitionDate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["landAcquisitionDate"],
-          message: "토지·건물 소유자가 다른 경우 토지 취득일을 입력해 주세요",
-        });
-      }
-      if (data.propertyType !== "housing" && data.propertyType !== "building") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["selfOwns"],
-          message: "소유자 분리는 주택(housing) 또는 건물(building) 자산에만 적용됩니다",
-        });
-      }
+    // 소유자 분리 유효성 (소령 §166⑥, §168②) — 토지 취득일 요구는 `addPropertyRefines`(단건·다건 공용).
+    if (
+      data.selfOwns &&
+      data.selfOwns !== "both" &&
+      data.propertyType !== "housing" &&
+      data.propertyType !== "building"
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["selfOwns"],
+        message: "소유자 분리는 주택(housing) 또는 건물(building) 자산에만 적용됩니다",
+      });
     }
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
     const companions = data.companionAssets ?? [];
     companions.forEach((c, i) => {
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
+      refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"]);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
     });
     if (companions.length > 0) {
@@ -302,6 +303,7 @@ export const propertyItemSchema = z
   })
   .superRefine((data, ctx) => {
     addPropertyRefines(data, ctx);
+    refinePropertyRequiredInputs(data, ctx);
     // F-5 · F-12 — 다건 ⑭가 옮기지 않는 서브객체 모드는 200 + 다른 세액 대신 400으로 거부한다.
     refineMultiUnsupported(data, ctx);
   });

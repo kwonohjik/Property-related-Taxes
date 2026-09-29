@@ -7,6 +7,7 @@ import { z } from "zod";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
+import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -90,11 +91,55 @@ export function addPropertyRefines(
     buildingStandardPriceAtAcquisition?: number;
     /** Q-1(D15) — 미등기 + 자경농지 감면 교차 검증 */
     isUnregistered?: boolean;
-    reductions?: ReadonlyArray<{ type: string }>;
+    reductions?: ReadonlyArray<{ type: string } & Record<string, unknown>>;
+    /** 감면 매매계약일 fallback(§99·§99의3) — ⑧·라우터와 같은 자산-수준 값 */
+    assetContractDate?: string;
+    selfOwns?: string;
+    landAcquisitionDate?: string;
+    houses?: ReadonlyArray<{ isInherited: boolean; inheritedDate?: string }>;
+    decedentSameHouseholdBeforeInheritance?: boolean;
+    decedentCohabitationHoldingStartDate?: string;
   },
   ctx: z.RefinementCtx,
 ) {
+  // 보유 주택 명부 — 상속주택이면 상속개시일 (⑧ `transfer-tax-validate.ts` 명부 검증·
+  // `one-house-exemption-validate.ts`와 같은 조건). 비우면 엔진이 「상속 당시 보유」로 읽어
+  // 주택 수·비과세 판정이 바뀌었다(`inheritance-general-house-era.ts` — 2026-09-30).
+  (data.houses ?? []).forEach((h, i) => {
+    if (h.isInherited && !h.inheritedDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["houses", i, "inheritedDate"],
+        message: "상속주택이면 상속개시일(inheritedDate)이 필요합니다",
+      });
+    }
+  });
+  // 동일세대 상속 주택 — 동일세대 거주·보유 개시일 (§154⑧3호 통산, ⑧ `transfer-tax-validate-acquisition.ts`
+  // 상속 분기와 같은 조건). 비우면 엔진이 취득일(상속개시일)로 기산했다.
+  if (
+    data.acquisitionCause === "inheritance" &&
+    data.propertyType === "housing" &&
+    data.decedentSameHouseholdBeforeInheritance === true &&
+    !data.decedentCohabitationHoldingStartDate
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["decedentCohabitationHoldingStartDate"],
+      message: "동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)",
+    });
+  }
+  // 소유자 분리 — 토지 취득일 (소령 §166⑥, §168②). 단건·다건 공용. 다건 자산은 이 검증 없이 통과해
+  // 토지 취득일 누락이 200 + 분리 없는 세액이 됐다(2026-09-30 — 단건만 걸려 있었다).
+  // (주택·건물 외 자산의 selfOwns 거부는 단건 superRefine에만 있다 — `transfer-tax-schema.ts`)
+  if (data.selfOwns && data.selfOwns !== "both" && !data.landAcquisitionDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["landAcquisitionDate"],
+      message: "토지·건물 소유자가 다른 경우 토지 취득일을 입력해 주세요",
+    });
+  }
   refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
+  refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"]);
   // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
   // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
   const hasPhd =
