@@ -52,6 +52,7 @@ import {
 export { classifyRateGroup };
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-item-rates";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 // transfer-tax-penalty 직접 호출 없음 — 자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행.
 
@@ -105,9 +106,13 @@ export function buildAssetRecords(
   rates: TaxRatesMap,
   carryoverOverrides: CarryoverScenarioOverrides,
   warnings: string[],
+  /** E-14n — 자산별 양도일 세율. 없으면 `rates` 하나로 전 자산을 계산한다(종전 · 같은 양도일 번들). */
+  ratesByTransferDate?: RatesByTransferDate,
 ) {
   // M-1: 건별 단건 엔진 호출 (기본공제 스킵, 차손 허용)
   const computeOne = (item: TransferTaxItemInput, assetIdx: number) => {
+    // 단건 route와 같은 기준 — 그 자산의 양도일로 고른 세율 행(E-14n).
+    const itemRates = ratesForTransferDate(item.transferDate, rates, ratesByTransferDate);
     const singleInput: TransferTaxInput = {
       ...(item as unknown as TransferTaxInput),
       annualBasicDeductionUsed: 0,
@@ -124,7 +129,7 @@ export function buildAssetRecords(
       const scenarioOverride = carryoverOverrides[assetIdx];
       result = calculateTransferTax(
         singleInput,
-        rates,
+        itemRates,
         scenarioOverride ? { carryoverScenarioOverride: scenarioOverride } : undefined,
       );
     } catch (e: unknown) {
@@ -218,7 +223,7 @@ export function buildAssetRecords(
     const correctedSingleInput: TransferTaxInput = hasOverride
       ? { ...singleInput, ...nblOverride, ...rateBasisOverride }
       : singleInput;
-    return { item, correctedItem, correctedSingleInput, singleInput, result };
+    return { item, correctedItem, correctedSingleInput, singleInput, result, rates: itemRates };
   };
 
   /**
@@ -245,12 +250,11 @@ export function buildAssetRecords(
   // ⚠️ `rateGroup`은 **§104⑤2호(비교과세) 합산 단위**다 — 그 축은 예규가 확정한 「**호**」다.
   //    §102② 차손 통산의 축은 영 §167의2①1호가 정한 「**세율**」이라 **다른 키**를 함께 만든다
   //    (`loss-offset-rate-key.ts` — 두 축이 직교한다는 실측·조문 근거가 그 파일 헤더에 있다).
-  const parsedRatesForKey = parseRatesFromMap(rates);
   const classified = perAsset.map((pa) => ({
     ...pa,
     rateGroup: classifyRateGroup(pa.correctedItem, pa.result),
     lossOffsetRateKey: lossOffsetRateKey({
-      ...resolveRateFacts(pa, parsedRatesForKey),
+      ...resolveRateFacts(pa, parseRatesFromMap(pa.rates)),
       propertyType: pa.correctedItem.propertyType,
       propertyId: pa.item.propertyId,
     }),

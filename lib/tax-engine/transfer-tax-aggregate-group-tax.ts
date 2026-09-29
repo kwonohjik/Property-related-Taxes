@@ -30,7 +30,6 @@ export function aggregateByGroup(
   records: AssetRecord[],
   incomeAfterOffset: number[],
   allocatedBasic: number[],
-  rates: TaxRatesMap,
 ): {
   groupTaxes: GroupTaxResult[];
   /**
@@ -112,7 +111,18 @@ export function aggregateByGroup(
   let clause1BucketTaxBase = 0;
   let clause1BucketTax = 0;
   const assetPartTax: { tax: number; note?: string }[] = [];
-  const parsedRates = parseRatesFromMap(rates);
+  // 자산별 세율(E-14n) — 같은 세율 Map을 공유하는 자산은 한 번만 파싱한다.
+  // ⚠️ 신고 단위 세율로 대신하지 말 것 — 연중 시작 행이 있는 해에 자산 세액이 단건과 갈린다.
+  const parsedCache = new Map<TaxRatesMap, ReturnType<typeof parseRatesFromMap>>();
+  const parsedRatesOf = (assetIdx: number) => {
+    const own = records[assetIdx].rates;
+    let parsed = parsedCache.get(own);
+    if (!parsed) {
+      parsed = parseRatesFromMap(own);
+      parsedCache.set(own, parsed);
+    }
+    return parsed;
+  };
   /**
    * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
    * 단건 엔진(`transfer-tax.ts` STEP 7)과 **같은 헬퍼**를 쓴다(이중 진실 방지).
@@ -124,7 +134,7 @@ export function aggregateByGroup(
       transferIncome: incomeAfterOffset[i],
       basicDeduction: allocatedBasic[i],
       splitDetail: records[i].result.splitDetail,
-      parsedRates,
+      parsedRates: parsedRatesOf(i),
       taxRateInput: records[i].correctedSingleInput,
       // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
       // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
@@ -255,7 +265,8 @@ export function aggregateByGroup(
         // `allocatedBasic[i] ≤ incomeAfterOffset[i]`이고, 파트 과세표준의 합은 자산 과세표준과
         // 같다(`computeSplitPartTax:286`가 어긋나면 `null`을 반환해 파트를 만들지 않는다).
         const mergedBase = bucket.reduce((s, p) => s + p.taxBase, 0);
-        const tr = calcTax(mergedBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
+        // 합산 재계산은 대표 파트(bucket[0])의 입력·판정을 쓴다 — 세율도 그 자산의 것(E-14n).
+        const tr = calcTax(mergedBase, parsedRatesOf(bucket[0].assetIdx), bucket[0].rateInput, bucket[0].mhResult);
         recordBucket(group, bucketKey, bucket, tr.calculatedTax, mergedBase);
         groupCalculatedTax += tr.calculatedTax;
         appliedRate = Math.max(appliedRate, tr.appliedRate);
@@ -368,7 +379,7 @@ export function aggregateByGroup(
           if (clauseGroups.size === 1) {
             // 파트 타입(`SplitRatePart`)에는 누진공제가 없다 — 같은 입력으로 한 번 더 계산해
             // **메타만** 얻는다. 세액은 건드리지 않고, 아래 항등식 검산이 어긋나면 버린다.
-            const tr = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
+            const tr = calcTax(bucketBase, parsedRatesOf(bucket[0].assetIdx), bucket[0].rateInput, bucket[0].mhResult);
             onlyBucketMeta = {
               appliedRate: tr.appliedRate,
               progressiveDeduction: tr.progressiveDeduction,
@@ -377,7 +388,7 @@ export function aggregateByGroup(
         } else {
           // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
           // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
-            const tr = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
+            const tr = calcTax(bucketBase, parsedRatesOf(bucket[0].assetIdx), bucket[0].rateInput, bucket[0].mhResult);
           bucketTax = tr.calculatedTax;
           if (clauseGroups.size === 1) {
             onlyBucketMeta = {

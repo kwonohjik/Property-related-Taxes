@@ -58,6 +58,7 @@ import { reducibleIncomeOf } from "./transfer-tax-aggregate-reduction-step";
 export { classifyRateGroup };
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import type { RatesByTransferDate } from "./transfer-tax-item-rates";
 // transfer-tax-penalty 직접 호출 없음 — 자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행.
 
 // ============================================================
@@ -169,6 +170,7 @@ function computeAggregateOnce(
   input: AggregateTransferInput,
   rates: TaxRatesMap,
   carryoverOverrides: CarryoverScenarioOverrides,
+  ratesByTransferDate: RatesByTransferDate | undefined,
 ): AggregateTransferResult {
   const warnings: string[] = [];
   const steps: CalculationStep[] = [];
@@ -198,7 +200,7 @@ function computeAggregateOnce(
   // 800줄 분리 — M-1(건별 단건 엔진 호출)+M-2(세율군 분류)는
   //   `transfer-tax-aggregate-asset-records.ts` 로 이동했다. in 1 · out 1 이라 하류 참조가
   //   하나도 바뀌지 않는다([[feedback_800line_split_playbook]] 「거대 단일 함수는 구조분해」).
-  const assetRecords = buildAssetRecords(input, rates, carryoverOverrides, warnings);
+  const assetRecords = buildAssetRecords(input, rates, carryoverOverrides, warnings, ratesByTransferDate);
 
 
   // M-3: §102② 차손 통산
@@ -716,14 +718,20 @@ function computeAggregateOnce(
  */
 export function calculateTransferTaxAggregate(
   input: AggregateTransferInput,
+  /** 신고 단위(과세기간) 세율 — §103 기본공제 · §104⑤1호 누진표. `ratesByTransferDate`가 없으면 자산 계산에도 쓴다. */
   rates: TaxRatesMap,
+  /**
+   * E-14n — 자산별 양도일 세율(`rateDateKey(양도일)` → 세율). 양도일이 서로 다른 다건 신고는 반드시 넘긴다 —
+   * 연중에 시작하는 세율 행이 있어 한 날짜로 읽은 세율은 그 전 양도분에 다른 규정을 준다.
+   */
+  ratesByTransferDate?: RatesByTransferDate,
 ): AggregateTransferResult {
   const memo = new Map<string, AggregateTransferResult>();
   const run = (overrides: CarryoverScenarioOverrides): AggregateTransferResult => {
     const key = JSON.stringify(overrides);
     const hit = memo.get(key);
     if (hit) return hit;
-    const computed = computeAggregateOnce(input, rates, overrides);
+    const computed = computeAggregateOnce(input, rates, overrides, ratesByTransferDate);
     memo.set(key, computed);
     return computed;
   };

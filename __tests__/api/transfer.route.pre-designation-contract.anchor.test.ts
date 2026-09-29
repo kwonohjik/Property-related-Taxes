@@ -8,7 +8,7 @@
  *    이 배관을 증명하지 못한다(`feedback_leaf_anchor_skips_zod_layer`) ⇒ 여기서 **폼부터** 보낸다.
  *
  * 강남 · 양도가액 20억 · 취득가액 3억 · 2013-06-01 취득 · 2주택(다른 주택 강남 2014).
- * 세율은 각 route가 부르는 날짜의 프로덕션 fallback(단건 = 양도일 · 다건 = 과세기간 말일).
+ * 세율은 각 route가 부르는 날짜의 프로덕션 fallback(단건 = 양도일 · 다건 = 자산별 양도일 + 과세기간 말일 — E-14n).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";

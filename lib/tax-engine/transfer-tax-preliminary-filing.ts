@@ -36,6 +36,7 @@
  * @see docs/00-pm/transfer-review-2026-08-open-items.plan.md §F03
  */
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-item-rates";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 자산 index → 그 자산의 예정신고 결정세액(§107① 산출세액 − 감면세액). */
@@ -61,6 +62,8 @@ export function computePreliminaryFilingTaxes(
   rates: TaxRatesMap,
   annualBasicDeductionUsed: number,
   calculateTransferTax: CalcFn,
+  /** E-14n — 자산별 양도일 세율. 예정신고는 그 건만의 신고라 양도일 세율이 곧 단건 세율이다. */
+  ratesByTransferDate?: RatesByTransferDate,
 ): PreliminaryFilingTaxes {
   // §103② — 「먼저 양도한 자산」부터. 같은 날이면 입력 순서를 유지한다(안정 정렬).
   const order = properties
@@ -87,7 +90,7 @@ export function computePreliminaryFilingTaxes(
       filingPenaltyDetails: undefined,
       delayedPaymentDetails: undefined,
     };
-    const r = calculateTransferTax(single, rates);
+    const r = calculateTransferTax(single, ratesForTransferDate(asset.transferDate, rates, ratesByTransferDate));
     result.set(index, {
       determinedTax: r.determinedTax,
       reductionAmount: r.reductionAmount ?? 0,
