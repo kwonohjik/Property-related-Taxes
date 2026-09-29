@@ -307,6 +307,11 @@ function buildDeemedGiftInputByType(form: DeemedFormState): DeemedGiftInput {
         preIssuePrice: parseAmount(form.ciPrePrice),
         preIssueShares: parseAmount(form.ciPreShares),
         newSharePrice: parseAmount(form.ciNewPrice),
+        // §29④ 인수인 매입가 — ⑤와 같은 술어(저가 다목)일 때만. 공란은 보내지 않는다(발행가로 차감 = 종전).
+        underwriterAcquisitionPrice:
+          !isHigh && form.ciSubType === "third_party" && form.ciUnderwriterPrice.trim() !== ""
+            ? parseAmount(form.ciUnderwriterPrice)
+            : undefined,
         issuedShares: parseAmount(form.ciIssuedShares),
         forfeitedShares: parseAmount(form.ciForfeitedShares),
         relatedAcquiredShares:

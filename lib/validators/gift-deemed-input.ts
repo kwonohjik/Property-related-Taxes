@@ -204,6 +204,8 @@ const capitalIncreaseShape = {
   preIssuePrice: z.number().nonnegative(),
   preIssueShares: z.number().int().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
   newSharePrice: z.number().nonnegative(),
+  // §29④ 인수인 매입가 — 저가 다목 차감항 전용(⑫ strip 방지)
+  underwriterAcquisitionPrice: z.number().nonnegative().optional(),
   // 3-A — ㉯ 산식의 분자·분모 양쪽에 들어가므로 0이면 증자가 아니다(⑧과 대칭).
   issuedShares: z.number().int().positive({ message: "증자 주식수는 0보다 커야 합니다" }),
   forfeitedShares: z.number().int().nonnegative(),
