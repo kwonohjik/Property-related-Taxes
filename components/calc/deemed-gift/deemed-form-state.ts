@@ -125,6 +125,7 @@ export interface DeemedFormState extends DeemedPhase3Fields {
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 분모 신주수 (가목=실권주총수 / 나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수)
   ciEqualIssueShares: string; // 저가 나목 §29②2호 가목 — 균등증자 가정 증가주식수(㉯ 기준 수량)
+  ciUnderwriterPrice: string; // 저가 다목 §29④ — 인수인에게 지급한 1주당 가액(차감항 전용 · 공란 = 발행가)
   /** §43②·영 §32의4 4호 — 소급 1년 이내 같은 호 선행 증자(나목 3억 금액기준 합산용, #19). 행 형태는 §45의5와 같다 */
   ciPriorSameClauseRows?: ScPriorTxRow[];
   /** §43²·영 §32의4 3·5·6·7호 — 합병·감자·현물출자·전환사채 단일 경로의 선행 이익 표. 활성 조건은 `lib/calc/gift-deemed-43-2.ts` */
@@ -364,6 +365,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
   ciEqualIssueShares: "",
+  ciUnderwriterPrice: "",
   ciPriorSameClauseRows: undefined,
   mrgPriorSameClauseRows: undefined,
   cdPriorSameClauseRows: undefined,

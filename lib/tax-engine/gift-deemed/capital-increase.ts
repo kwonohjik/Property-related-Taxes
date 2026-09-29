@@ -235,7 +235,9 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   const theoretical = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, perShareBasisShares);
   // §29②1가 단서 — 주권상장법인등은 증자후 평가가 산식값보다 **적으면** 그 평가액(Min)
   const perShareAfter = applyListedPerShareBound(theoretical, input, "min");
-  const perShareGain = perShareAfter - newSharePrice; // 저가: 평가 > 인수가
+  // 다목 인수인 경유 — 차감항만 인수인에게 지급한 가액(㉯는 위에서 발행가로 계산했다 · 타입 JSDoc)
+  const underwriterPrice = subType === "third_party" ? input.underwriterAcquisitionPrice : undefined;
+  const perShareGain = perShareAfter - (underwriterPrice ?? newSharePrice); // 저가: 평가 > 인수가
   // 나목만 §29②2호 다목으로 가중한다. 가·다·라목(§29②1호 다목)은 「배정받은 실권주수 또는
   // 신주수」가 그대로 곱셈 인자라 원시 주식수가 맞다 — 같은 「다목」이지만 다른 호의 정의다.
   const attributedShares = subType === "no_realloc" ? danmokShares(input, forfeitedShares) : forfeitedShares;
@@ -274,6 +276,10 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
     { label: "증자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CAPITAL_INCREASE,
       note: perShareAfter !== theoretical ? `주권상장법인 평가액 적용 (${GIFT.CONTRIBUTION_LISTED_LOW})` : undefined },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
+    ...(underwriterPrice != null
+      ? [{ label: "인수인으로부터 취득한 1주당 가액", amount: underwriterPrice,
+          note: "「상증법」§39①1호 다목 괄호 · 「상증령」§29④ — 차감은 이 가액, 증자 후 1주당 가액은 발행가 기준" }]
+      : []),
     { label: "1주당 이익", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: attributedShares,
       note: attributedShares !== forfeitedShares

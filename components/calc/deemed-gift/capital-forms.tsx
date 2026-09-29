@@ -66,6 +66,14 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciPrePrice} onChange={(v) => set({ ciPrePrice: v })} hint="「상증법」 §60·§63 평가액입니다. 최대주주등 주식이어도 **§63③ 20% 할증을 가산하지 않습니다** — 「상증령」 §53⑧3호가 「제29조에 따른 이익을 계산하는 경우」를 할증 대상에서 제외합니다" />
       <CurrencyInput hideUnit label="증자 전 발행주식총수" value={form.ciPreShares} onChange={(v) => set({ ciPreShares: v })} placeholder="증자 전 발행주식총수" />
       <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} />
+      {!isHigh && form.ciSubType === "third_party" && (
+        <CurrencyInput
+          label="인수인으로부터 취득한 1주당 가액"
+          value={form.ciUnderwriterPrice}
+          onChange={(v) => set({ ciUnderwriterPrice: v })}
+          hint="인수인(또는 제3자에게 취득시킬 목적으로 신주를 취득한 자)을 거쳐 인수·취득했다면 그에게 지급한 1주당 가액입니다. 이익은 «증자 후 1주당 가액 − 이 가액»으로 계산하고, 증자 후 1주당 가액은 위 발행가로 계산합니다. 법인으로부터 직접 배정받았으면 비워 두세요"
+        />
+      )}
       <CurrencyInput hideUnit label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" hint="「상증령」 §29②1호 가목의 «증자에 의하여 증가한 주식수»(실제 발행분)입니다. 나목(실권주 미배정)의 «균등증자 가정 증가주식수»는 아래 별도 칸입니다" />
       <CurrencyInput hideUnit label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
       <RadioCardGroup
