@@ -40,7 +40,7 @@ import {
 } from "@/lib/calc/one-house-extra-facts-payload";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { buildMergeFacts, type MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
-import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
+import { isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -317,9 +317,8 @@ export function buildGiftBurdenedMergePayload(bgt: BurdenedGiftTransferTaxInput)
  *    유지한다(확인 필요).
  */
 export function giftBurdenedInheritedConversionBlocked(bgt: BurdenedGiftTransferTaxInput): boolean {
-  if (bgt.acquisitionCause !== "inheritance") return false;
-  const d = ymd(bgt.acquisitionDate);
-  return !!d && d >= DEEMED_ACQUISITION_DATE;
+  // 상속개시일 = 이 경로의 취득일(위젯 안내) — 계산기 부담부증여와 같은 술어
+  return isPostDeemedInheritance(bgt.acquisitionCause, ymd(bgt.acquisitionDate));
 }
 
 /** ⑧ 문구 — 계산기 `postDeemedClauseARequiredError`와 같은 근거를 이 경로의 칸 이름으로 안내한다. */

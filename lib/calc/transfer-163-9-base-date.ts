@@ -53,6 +53,21 @@ export function deriveSec163_9BaseDate(asset: Sec163_9Asset): string {
  */
 export const DEEMED_ACQUISITION_DATE = "1985-01-01";
 
+/**
+ * 상속받은 자산이고 상속개시일이 의제취득일 **이후**인가 — 부담부증여 K-5(환산) 차단의 단일 술어(E-1 한계 G6).
+ *
+ * 영 §163⑨이 상속개시일 평가액을 가목(실지거래가액)으로 보고 상증법 §60③이 평가액의 부존재를 허용하지 않으므로
+ * 법 §97①1호 단서의 나목(환산)에 닿지 않는다(`postDeemedClauseARequiredError`와 같은 결론). 의제취득일 전
+ * 상속은 영 §176의2④ 경로가 있어 이 술어가 거짓이다. 증여세 부담부증여 경로(`giftBurdenedInheritedConversionBlocked`)와
+ * 양도세 계산기 부담부증여(`validateBurdenedGiftAsset`·`BurdenedGiftBlock`)가 같이 쓴다.
+ */
+export function isPostDeemedInheritance(
+  acquisitionCause: string | undefined,
+  inheritanceStartDate: string | undefined,
+): boolean {
+  return acquisitionCause === "inheritance" && !!inheritanceStartDate && inheritanceStartDate >= DEEMED_ACQUISITION_DATE;
+}
+
 /** §163⑨ 대상이면서 기준일이 의제취득일 **前**인가 — pre-deemed 분기의 단일 술어. */
 export function isSec163_9PreDeemed(asset: Sec163_9Asset): boolean {
   const baseDate = deriveSec163_9BaseDate(asset);

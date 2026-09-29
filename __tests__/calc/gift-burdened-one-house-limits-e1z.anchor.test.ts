@@ -7,6 +7,9 @@ import { describe, it, expect } from "vitest";
 import { validateStep } from "@/components/calc/gift-tax-form-validate";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
+import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { validateBurdenedGiftAsset } from "@/lib/calc/transfer-tax-validate-bg";
 import { validateStep3 } from "@/lib/calc/one-house-exemption-validate";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import {
@@ -250,5 +253,38 @@ describe("G6 ⑧ — 상속개시일 평가액이 가목이라 환산(K-5)은 �
         market({ acquisitionMethod: "converted", acquisitionDate: new Date("1984-06-01"), decedentAcquisitionDate: "1970-01-01" }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("G6 ⑧ 양도세 계산기 부담부증여 — 같은 술어로 막는다(두 경로 같은 결론)", () => {
+  const bgAsset = (over: Partial<AssetForm>): AssetForm =>
+    ({
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      transferType: "burdened_gift",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "2020-06-01",
+      inheritanceStartDate: "2020-06-01",
+      decedentAcquisitionDate: "2010-01-01",
+      bgValuationMode: "sangjeungbeop_market",
+      bgMarketValueAtTransfer: "400,000,000",
+      bgAcquisitionMethod: "converted",
+      bgLendingDepositTotal: "100,000,000",
+      bgMortgageDebtAmount: "50,000,000",
+      bgDonorRelation: "lineal_ascendant_adult",
+      standardPriceAtAcq: "150,000,000",
+      standardPriceAtTransfer: "300,000,000",
+      ...over,
+    }) as AssetForm;
+  it("V-G6-C1 ★ 상속(개시 2020-06-01) + 환산 → 차단", () => {
+    expect(validateBurdenedGiftAsset(bgAsset({}), "자산1")).toContain("환산취득가액을 쓸 수 없습니다");
+  });
+  it("V-G6-C2 부정 짝 — 매매 + 환산 · 상속개시 1985.1.1. 전은 이 규칙으로 막지 않는다", () => {
+    expect(validateBurdenedGiftAsset(bgAsset({ acquisitionCause: "purchase" }), "자산1") ?? "").not.toContain(
+      "환산취득가액을 쓸 수 없습니다",
+    );
+    expect(
+      validateBurdenedGiftAsset(bgAsset({ acquisitionDate: "1984-06-01", inheritanceStartDate: "1984-06-01" }), "자산1") ?? "",
+    ).not.toContain("환산취득가액을 쓸 수 없습니다");
   });
 });

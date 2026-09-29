@@ -17,6 +17,9 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { useState } from "react";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { EstateBodyRealEstate } from "@/components/calc/inheritance/estate-card/variants/EstateBodyRealEstate";
+import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
+import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
@@ -195,5 +198,29 @@ describe("UI-G6 상속받은 자산 — 환산취득가액(K-5) 라디오 비활
     render(<Harness start={land({})} giftDate="2021-06-01" />);
     expect(k5().disabled).toBe(false);
     expect(screen.queryByText(/환산\(K-5\)을 쓸 수 없습니다/)).toBeNull();
+  });
+});
+
+describe("UI-G6c 양도세 계산기 부담부증여 블록 — 같은 술어로 환산 라디오 비활성", () => {
+  const asset = (over: Record<string, unknown>) =>
+    ({
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      transferType: "burdened_gift",
+      acquisitionDate: "2020-06-01",
+      inheritanceStartDate: "2020-06-01",
+      bgValuationMode: "sangjeungbeop_market",
+      ...over,
+    }) as AssetForm;
+  const convertedRadio = () =>
+    (screen.getByText("환산취득가액").closest("label") as HTMLElement).querySelector("input") as HTMLInputElement;
+  it("★ 상속 → 환산 비활성 · 안내", () => {
+    render(<BurdenedGiftBlock asset={asset({ acquisitionCause: "inheritance" })} onChange={() => {}} transferDate="2021-06-01" />);
+    expect(convertedRadio().disabled).toBe(true);
+    expect(screen.getByText(/상속개시일 현재 상증법 평가액이 취득가액이라 쓸 수 없습니다/)).toBeTruthy();
+  });
+  it("부정 짝 — 매매면 활성", () => {
+    render(<BurdenedGiftBlock asset={asset({ acquisitionCause: "purchase" })} onChange={() => {}} transferDate="2021-06-01" />);
+    expect(convertedRadio().disabled).toBe(false);
   });
 });
