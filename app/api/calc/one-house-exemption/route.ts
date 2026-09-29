@@ -27,6 +27,7 @@ import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
 import { buildTransferEngineInput } from "../transfer/engine-input";
 import { parseRatesFromMap, presaleRightStartDate } from "@/lib/tax-engine/transfer-tax-helpers";
@@ -253,7 +254,7 @@ export async function POST(request: NextRequest) {
       ...(oneRightVerdict ? { oneRightExemption: oneRightVerdict } : {}),
       ...(inheritedPeriodConsolidation ? { inheritedPeriodConsolidation } : {}),
     };
-    return NextResponse.json({ data: payload }, { status: 200 });
+    return finiteJson({ data: payload }, { status: 200 });
   } catch (err) {
     console.error("[/api/calc/one-house-exemption] engine error:", err);
     if (err instanceof TaxCalculationError) {
