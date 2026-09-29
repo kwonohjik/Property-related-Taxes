@@ -231,6 +231,8 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* #95 — 단건과 같은 §39 증자다. 이 날짜로 엔진이 §29③ 시기 게이트·적용 법령 기준일을 판정한다 */}
+      <CiGiftDateEraNotice giftDate={form.giftDate} />
       <ToneCard tone="sky" sectionNum={1} title="증자 개요" bodyClassName="space-y-2" noDark>
         <RadioCardGroup
           lawLinks="상증법"
