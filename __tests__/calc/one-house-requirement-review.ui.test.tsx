@@ -81,6 +81,20 @@ describe("판정 결과 — 제보 사례(기한이 판정 기준일 전에 지�
     expect(screen.getByTestId("one-house-requirement-residence").textContent).toContain("26개월");
   });
 
+  /**
+   * 🔴 고가주택 행 제목이 판정과 **반대로** 읽히면 안 된다(2026-09-29 제보). 종전 제목은
+   *    「양도가액 12억원 이하(고가주택이 아님)」 고정이라, 24억 사례에서 「초과분 과세」 배지 옆에
+   *    「고가주택이 아님」이 그려졌다.
+   */
+  it("RVUI-2b 24억 → 고가주택 행 제목이 「고가주택 … 초과분 과세」이고 「고가주택 아님」이 없다", () => {
+    render(<OneHouseJudgmentResultView result={responseAt("2026-09-29")} />);
+    const row = screen.getByTestId("one-house-requirement-high-value");
+    expect(row.getAttribute("data-status")).toBe("partial");
+    expect(row.textContent).toContain("고가주택(양도가액 12억원 초과) — 12억원 초과분 과세");
+    expect(row.textContent).not.toContain("고가주택 아님");
+    expect(row.textContent).not.toContain("고가주택이 아님");
+  });
+
   it("RVUI-3 요건 카드는 「주택 수 산정」 바로 다음이다(로직 순서 = 표시 순서)", () => {
     render(<OneHouseJudgmentResultView result={responseAt("2026-09-29")} />);
 
