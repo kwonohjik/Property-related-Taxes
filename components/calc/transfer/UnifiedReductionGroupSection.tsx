@@ -23,8 +23,6 @@ import { Rental975InputForm } from "@/components/calc/transfer/rental/Rental975I
 import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
 import { Rental972InputForm } from "@/components/calc/transfer/rental/Rental972InputForm";
 import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974InputForm";
-import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
-import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputForm";
 import { New99InputForm } from "@/components/calc/transfer/New99InputForm";
 import { Unsold988InputForm } from "@/components/calc/transfer/Unsold988InputForm";
 import { Unsold987InputForm } from "@/components/calc/transfer/Unsold987InputForm";
@@ -45,6 +43,7 @@ import {
   type ReductionAssetKind,
   type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
+import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
 
 // ============================================================================
 // 서브 컴포넌트: 그룹 카테고리 (펼침 헤더 + 라디오)
@@ -65,6 +64,12 @@ const CATEGORY_LAW_BADGES: Record<
   standalone: [],
 };
 
+/** 패널에서 뺀 조특법 주택 수 제외 유형 — 어디서 입력하는지 한 줄로 안내한다(Q-3). */
+const ROW_COUNT_EXCLUSION_HINTS: Partial<Record<ReductionCategory, string>> = {
+  new_housing: "농어촌주택·고향주택(§99의4)을 보유해 주택 수에서 빼려면 이 목록이 아니라",
+  unsold_housing: "수도권 밖 준공후미분양주택(§98의9)을 보유해 주택 수에서 빼려면 이 목록이 아니라",
+};
+
 export function GroupCategorySection({
   category,
   isOpen,
@@ -80,8 +85,6 @@ export function GroupCategorySection({
   onUpdate993,
   onUpdate993Many,
   onUpdateRentalVariant,
-  onUpdate994,
-  onUpdate989,
   onUpdate99,
   onUpdate988,
   onUpdate987,
@@ -129,11 +132,6 @@ export function GroupCategorySection({
     id: RentalReductionFormVariant["type"],
     patch: Partial<RentalReductionFormVariant>,
   ) => void;
-  onUpdate994: (
-    id: "new_99_4_rural" | "new_99_4_hometown",
-    patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
-  ) => void;
-  onUpdate989: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_9" }>>) => void;
   onUpdate99: (patch: Partial<Extract<AssetReductionForm, { type: "new_99" }>>) => void;
   onUpdate988: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_8" }>>) => void;
   onUpdate987: (patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_7" }>>) => void;
@@ -163,7 +161,11 @@ export function GroupCategorySection({
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
   const schema = CATEGORY_UI_SCHEMA[category];
-  const items = ALL_REDUCTION_IDS.filter((id) => REDUCTION_METADATA[id].category === category);
+  // §99의4·§98의9는 이 목록이 아니라 명부 행 ⑥에서 받는다(`transfer-calc-count-exclusion-row-link.plan.md` Q-3).
+  const items = ALL_REDUCTION_IDS.filter(
+    (id) => REDUCTION_METADATA[id].category === category && !ROW_COUNT_EXCLUSION_TYPES.has(id),
+  );
+  const rowHint = ROW_COUNT_EXCLUSION_HINTS[category];
   // 감면 조문 입력 폼 공통 자산 props — 기준시가 조회형 위젯 + PHD 환산용(§99·§99의2·§98의3/5/6/7/8·§99의3).
   const reductionAssetProps = {
     assetId,
@@ -207,6 +209,11 @@ export function GroupCategorySection({
                 <LawArticleModal key={b.legalBasis} legalBasis={b.legalBasis} label={b.label} />
               ))}
             </div>
+          )}
+          {rowHint && (
+            <p className="text-caption text-muted-foreground leading-relaxed" data-testid={`reduction-row-count-exclusion-hint-${category}`}>
+              {rowHint} 보유 주택 목록(② 보유 상황)에서 그 주택의 「편집」 → <b>⑥ 주택 수 제외(조특법)</b>로 지정하세요.
+            </p>
           )}
           {/* Round 9 (2026-05-06): 매매계약일 입력 — 펼침 활성화 시에만 노출.
               3개 그룹(장기임대·신축·미분양) 펼침 영역 상단에 표시되며, 자산-수준 단일 필드를 공유.
@@ -347,26 +354,6 @@ export function GroupCategorySection({
                       transferDate={transferDate}
                     />
                   )}
-                  {/* §99의4 농어촌·고향주택 입력 폼 (2026-06-11) */}
-                  {(id === "new_99_4_rural" || id === "new_99_4_hometown") &&
-                    (() => {
-                      const form994 = reductions.find((r) => r.type === id);
-                      return form994 && (form994.type === "new_99_4_rural" || form994.type === "new_99_4_hometown") ? (
-                        <New994InputForm
-                          value={form994}
-                          onChange={(patch) => onUpdate994(id as "new_99_4_rural" | "new_99_4_hometown", patch)}
-                          transferDate={transferDate}
-                        />
-                      ) : null;
-                    })()}
-                  {/* §98의9 준공후미분양 입력 폼 (2026-06-11) */}
-                  {id === "unsold_98_9" &&
-                    (() => {
-                      const form989 = reductions.find((r) => r.type === "unsold_98_9");
-                      return form989 && form989.type === "unsold_98_9" ? (
-                        <Unsold989InputForm value={form989} onChange={onUpdate989} />
-                      ) : null;
-                    })()}
                   {/* P1 (2026-06-11): §99 신축주택 IMF 1차 입력 폼 */}
                   {id === "new_99" &&
                     (() => {

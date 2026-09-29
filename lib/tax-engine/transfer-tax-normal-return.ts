@@ -40,6 +40,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   lthdExclusionReason: TransferTaxResult["lthdExclusionReason"];
   new994Detail: TransferTaxResult["new994Detail"];
   unsold989Detail: TransferTaxResult["unsold989Detail"];
+  houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
   specialHouseExclusionDetail: NonNullable<TransferTaxResult["specialHouseExclusionDetail"]>;
   transferBurdenedGiftBreakdown: TransferTaxResult["transferBurdenedGiftBreakdown"];
   steps: CalculationStep[];
@@ -81,6 +82,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     lthdExclusionReason,
     new994Detail,
     unsold989Detail,
+    houseCountExclusionDetails,
     specialHouseExclusionDetail,
     transferBurdenedGiftBreakdown,
   } = args;
@@ -203,6 +205,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     rental97TaxDetail,
     new994Detail,
     unsold989Detail,
+    houseCountExclusionDetails,
     penaltyDetail,
     amendmentDetail,
     new993Detail: new993FinalResult,

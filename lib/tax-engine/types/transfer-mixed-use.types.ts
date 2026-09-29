@@ -840,6 +840,8 @@ export interface MixedUseGainBreakdown {
   new994Detail?: import("../transfer-reductions").New994Result;
   /** §98의9 준공후미분양 주택수 제외 상세 (D4-02) */
   unsold989Detail?: import("../transfer-reductions").Unsold989Result;
+  /** §99의4·§98의9 선언 전건(행 id 포함) — 단건 결과와 같은 필드(`transfer-result.types.ts`). */
+  houseCountExclusionDetails?: import("../transfer-reductions/unsold-98-9").HouseCountExclusionDetail[];
   /** 보유 감면주택 주택수 제외 상세 (모드 2 — D4-02) */
   specialHouseExclusionDetail?: import("../transfer-reductions").SpecialHouseExclusionResolution;
   /**

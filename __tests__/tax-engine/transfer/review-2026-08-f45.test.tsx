@@ -86,7 +86,7 @@ describe("F45 — §95⑤ 용도변경 카드가 공용 ReductionDetailCards에 
     expect(count).toBe(1);
   });
 
-  it("계약 25종을 ReductionDetailCards가 모두 렌더 분기한다 (소스 동기화 가드)", () => {
+  it("계약 26종을 ReductionDetailCards가 모두 렌더 분기한다 (소스 동기화 가드)", () => {
     // ValuationDetailCards 가드(transfer.route.bundled-swallows-special.test.ts)와 같은 방식.
     // ⚠️ 파일 전체를 훑으면 상단 `hasAny` 체크에 걸려 렌더 분기를 지워도 통과한다 →
     //    JSX(`return (` 이후)로 범위를 좁힌다.
@@ -97,11 +97,14 @@ describe("F45 — §95⑤ 용도변경 카드가 공용 ReductionDetailCards에 
           ...typeSrc
             .slice(typeSrc.indexOf("export type TransferReductionDetailSource"))
             .split(">;")[0]
-            .matchAll(/"(\w+Detail)"/g),
+            // `Details?` — 2026-09-30 `houseCountExclusionDetails`(복수형)도 계약에 들어왔다. `Detail"`만 보면
+            //   그 필드를 렌더하지 않아도 이 가드가 통과한다.
+            .matchAll(/"(\w+Details?)"/g),
         ].map((m) => m[1]),
       ),
     ];
     expect(contract).toContain("usageConversionDetail");
+    expect(contract).toContain("houseCountExclusionDetails");
     const ui = readFileSync("components/calc/results/transfer/ReductionDetailCards.tsx", "utf8");
     const jsx = ui.slice(ui.lastIndexOf("return ("));
     const missing = contract.filter((f) => !jsx.includes(`result.${f}`));

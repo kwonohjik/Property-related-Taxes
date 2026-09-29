@@ -732,6 +732,7 @@ export function TransferTaxResultView({
         // §127⑦ 승자·§133 한도 후 최종액 — 배제된 후보가 자기 감면세액을 단정하지 않게 한다(#045 #046).
         appliedReductionType={result.reductionTypeApplied}
         appliedReductionAmount={result.reductionAmount}
+        houses={formData?.houses}
       />
       </PrintSection>
       )}

@@ -25,6 +25,7 @@ import {
   buildInheritedExclusionSteps,
 } from "./transfer-inheritance-exclusion";
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
+import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import type {
   New994Result,
   Unsold989Result,
@@ -47,6 +48,7 @@ export function judgeMixedUseOneHouseExemption(
   surchargeDeemedOneHouseSource: string | undefined;
   new994Detail: New994Result | undefined;
   unsold989Detail: Unsold989Result | undefined;
+  houseCountExclusionDetails: HouseCountExclusionDetail[] | undefined;
   specialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
 } {
   // ── 영 §154① 본문 — 1세대1주택 비과세 **보유 2년** 요건 ─────────────────────────
@@ -123,6 +125,7 @@ export function judgeMixedUseOneHouseExemption(
   };
   let mixedNew994Detail: New994Result | undefined;
   let mixedUnsold989Detail: Unsold989Result | undefined;
+  let mixedHouseCountExclusionDetails: HouseCountExclusionDetail[] | undefined;
   let mixedSpecialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
   if (asset.householdHousingCountForExclusion !== undefined) {
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
@@ -132,6 +135,7 @@ export function judgeMixedUseOneHouseExemption(
     const special = resolveSpecialHouseExclusions(asset.specialHouseExclusions, transferDate);
     mixedNew994Detail = hce.new994Detail;
     mixedUnsold989Detail = hce.unsold989Detail;
+    mixedHouseCountExclusionDetails = hce.details.length > 0 ? hce.details : undefined;
     mixedSpecialHouseExclusionDetail = special.entries.length > 0 ? special : undefined;
     houseCountExclusionApplied = hce.appliedList.length + special.excludedCount;
     verifiedSpecial = verifiedSpecialAct15Exclusions(special);
@@ -257,6 +261,7 @@ export function judgeMixedUseOneHouseExemption(
       deemedOneHouseBy155 === undefined ? specialDeemed?.source : undefined,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
+    houseCountExclusionDetails: mixedHouseCountExclusionDetails,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
   };
 }

@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { HouseCountExemptionInputs } from "./step4-sections/HouseCountExemptionInputs";
+import { CalcCountExclusionLegacyNotice } from "./step4-sections/CalcCountExclusionLegacyNotice";
 import { SurchargeJudgmentSection } from "./step4-sections/SurchargeJudgmentSection";
 import { TemporaryTwoHouseSection } from "./step4-sections/TemporaryTwoHouseSection";
 import { SpecialSituationSection } from "./step4-sections/SpecialSituationSection";
@@ -36,6 +37,7 @@ import { resolveHouseholdHousingCount, houseCountScalarLocked, resolveTemporaryT
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -634,6 +636,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           주택 목록에 빈 행을 남긴 채 주택수를 1채로 낮추면 위젯이 사라지는데 ⑧은 그 행을
           계속 검증해 지울 화면이 없는 dead-end가 됐다. ⑧의 skip은 D4-03에서 이미 걷어낸
           것이므로(무검증 통과 비대칭) 고칠 곳은 렌더 게이트다. */}
+      <CalcCountExclusionLegacyNotice form={form} onChange={onChange} />
       {surchargeSuspended &&
         houseCountInputsVisible(form, primaryKind, { requireHousingPrimary: true }) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
@@ -669,7 +672,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   `suspended: true`를 내므로 **증명 가능한 no-op**이다.
                   ⑧ validate도 같은 조건으로 건너뛴다(보이지 않는 필드 차단 방지).
             */}
-            <HouseCountExemptionInputs form={form} onChange={onChange} hideGracePeriod />
+            <HouseCountExemptionInputs
+              form={form}
+              onChange={onChange}
+              hideGracePeriod
+              countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
+            />
           </div>
         </section>
       )}

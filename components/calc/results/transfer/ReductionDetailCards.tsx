@@ -28,6 +28,7 @@ import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
 import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
 import { SpecialHouseExclusionDetailCard } from "./SpecialHouseExclusionDetailCard";
+import { countExclusionHouseRef, detailHouseId, type HouseRefRow } from "./count-exclusion-house-ref";
 import {
   New993DetailCard,
   PublicExpropriationDetailCard,
@@ -60,6 +61,11 @@ interface Props {
    * 필수로 둬야 호출부 누락이 컴파일 에러로 드러난다(침묵 누락 방지).
    */
   longTermHoldingDeduction: number;
+  /**
+   * 명부(단건 결과뷰만) — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(계산기 계획서 Q-6).
+   * 명부를 모르는 화면은 넘기지 않는다 — 표시만 생략된다.
+   */
+  houses?: readonly HouseRefRow[];
   /**
    * 다건(multi) 결과뷰 전용 — §77·§77의2·§77의3 카드에서 ⑤ 감면세액·capping을 숨기고
    * ①~④ 구성만 보인다. 최종 감면세액은 조특법 §133 **합산 재계산 카드**가 낸다.
@@ -141,6 +147,7 @@ export function ReductionDetailCards({
   aggregatedContext = false,
   appliedReductionType,
   appliedReductionAmount,
+  houses,
 }: Props) {
   /**
    * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
@@ -227,9 +234,33 @@ export function ReductionDetailCards({
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
-      {result.new994Detail && <New994DetailCard detail={result.new994Detail} />}
-      {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
-      {result.unsold989Detail && <Unsold989DetailCard detail={result.unsold989Detail} />}
+      {/* §99의4·§98의9 — 선언 전건(`houseCountExclusionDetails`, 계산기 계획서 Q-6). 이 필드가 없는 옛 결과는
+          종전처럼 유형별 첫 선언(`new994Detail`·`unsold989Detail`)만 그린다. */}
+      {result.houseCountExclusionDetails?.length ? (
+        result.houseCountExclusionDetails.map((d, i) =>
+          d.id === "unsold_98_9" ? (
+            <Unsold989DetailCard key={i} detail={d} houseRef={countExclusionHouseRef(houses, d.houseId)} />
+          ) : (
+            <New994DetailCard key={i} detail={d} houseRef={countExclusionHouseRef(houses, d.houseId)} />
+          ),
+        )
+      ) : (
+        <>
+          {result.new994Detail && (
+            <New994DetailCard
+              detail={result.new994Detail}
+              houseRef={countExclusionHouseRef(houses, detailHouseId(result.new994Detail))}
+            />
+          )}
+          {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
+          {result.unsold989Detail && (
+            <Unsold989DetailCard
+              detail={result.unsold989Detail}
+              houseRef={countExclusionHouseRef(houses, detailHouseId(result.unsold989Detail))}
+            />
+          )}
+        </>
+      )}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
       {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} />}
       {result.unsold988Detail && (
@@ -317,7 +348,7 @@ export function ReductionDetailCards({
       {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}
       {result.specialHouseExclusionDetail &&
         result.specialHouseExclusionDetail.entries.length > 0 && (
-          <SpecialHouseExclusionDetailCard detail={result.specialHouseExclusionDetail} />
+          <SpecialHouseExclusionDetailCard detail={result.specialHouseExclusionDetail} houses={houses} />
         )}
     </>
   );

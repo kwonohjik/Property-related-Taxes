@@ -18,7 +18,7 @@ import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-red
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
-import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
+import { isRowReduction } from "./house-count-exclusion-rows";
 
 /**
  * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7) 공용 — 취득 후 5년 경과 양도 시 5년 발생분
@@ -91,6 +91,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
       }
 
       for (const r of asset.reductions ?? []) {
+        // 조특법 주택 수 제외 3유형은 ③ 패널에 입력 칸이 없다 — 명부 행 ⑥이 받고 ② 단계가 검증한다.
+        //   남은 옛 선언도 ② 단계가 막는다(`transfer-tax-validate-count-exclusion.ts`, 계획서 Q-3).
+        if (isRowReduction(r)) continue;
         /**
          * Q-1(D15): 조특법 §129②는 미등기양도자산의 감면을 끄지만, 자경농지(조특법 §69①) 토지는
          * 애초에 미등기양도자산이 아니다(소득세법 시행령 §168①3호). 둘이 함께 오면 모순 입력이라
@@ -497,13 +500,6 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.type === "rental_97_2" && !(r as { rental972Type?: string }).rental972Type)
             return fail(`${label} 적용: 건설임대(1호)/매입임대(2호) 유형을 선택하세요.`);
         }
-        // §99의4 농어촌·고향주택 (2026-06-11): 취득일·기준시가 필수 (⑧).
-        // 소재지·연접·고향 토글은 차단하지 않음 — 엔진 불적용 사유로 안내 (낙관 입력 패턴).
-        //    판정 메뉴 ⑧과 **같은 leaf**(OH-28) — 첫 오류만 띄우는 이 파일의 규약을 따른다.
-        if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
-          const [first994] = collectHouseCountExclusionReductionErrors(r);
-          if (first994) return fail(first994);
-        }
         // P1 §99 신축주택 IMF 1차 (2026-06-11): 유형별 기준일·기준시가·면적 필수 (⑧).
         // 배제 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "new_99") {
@@ -701,12 +697,6 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1). PHD ON이면 취득시 검증 skip.
           const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992);
           if (i992) return i992;
-        }
-        // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
-        // 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
-        if (r.type === "unsold_98_9") {
-          const [first989] = collectHouseCountExclusionReductionErrors(r);
-          if (first989) return fail(first989);
         }
       }
     }

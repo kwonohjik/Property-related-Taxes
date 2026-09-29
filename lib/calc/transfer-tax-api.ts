@@ -60,6 +60,8 @@ import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload"
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
+import { specialHouseExclusionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -82,8 +84,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 지분 모드(같은 물건 분할취득) 여부 — companion basic을 primary에서 병합할지 게이트.
   const fractionalBundleMerge = isFullFractionalBundle(form.assets);
 
-  // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
-  const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause, primary.expropriationNoticeDate);
+  // ── 대표 자산 감면 (자산별 reductions 배열 + 명부 행 ⑥의 §99의4·§98의9 — 게이트는 공용 술어) ──
+  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary.acquisitionCause, primary.expropriationNoticeDate);
 
   // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
   const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);
@@ -491,8 +493,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
     // ⑬ §133 5년 누적 한도 — 과거 4개 과세연도 감면 이력 (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     priorReductionUsage: form.priorReductionUsage ?? [],
-    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (행: article·취득일 입력분만 전달)
-    specialHouseExclusions: (form.specialHouseExclusions ?? [])
+    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (폼 전역 + 명부 행 ⑥ · article 입력분만 전달)
+    specialHouseExclusions: specialHouseExclusionsWithRows(form)
       .filter((e) => e.article)
       .map((e) => ({
         article: e.article,

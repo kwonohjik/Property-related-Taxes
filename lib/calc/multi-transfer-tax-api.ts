@@ -38,6 +38,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -50,7 +51,8 @@ import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-
  */
 export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment = false) {
   const primary = form.assets?.[0];
-  const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
+  // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 ⑧이 다건에서 막는다.
+  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
 
   // ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 — 단건과 동일 게이트·공용 헬퍼.

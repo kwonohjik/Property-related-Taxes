@@ -232,6 +232,8 @@ export {
  */
 export function countActiveReductionsByCategory(
   ctx: PeriodCheckContext,
+  /** 화면에 그리지 않는 조문 — 헤더 「가능 N / 전체 M」이 목록과 어긋나지 않게 함께 뺀다. */
+  exclude: ReadonlySet<string> = new Set(),
 ): Record<ReductionCategory, { active: number; total: number }> {
   const groups = getReductionsByCategory();
   const result: Record<ReductionCategory, { active: number; total: number }> = {
@@ -241,7 +243,7 @@ export function countActiveReductionsByCategory(
     standalone: { active: 0, total: 0 },
   };
   for (const cat of Object.keys(groups) as ReductionCategory[]) {
-    const items = groups[cat];
+    const items = groups[cat].filter((m) => !exclude.has(m.id));
     result[cat].total = items.length;
     for (const meta of items) {
       const r = checkReductionPeriod(meta.id, ctx);

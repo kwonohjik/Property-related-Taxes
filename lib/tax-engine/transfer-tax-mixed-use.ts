@@ -104,6 +104,7 @@ export function calcMixedUseTransferTax(
     surchargeDeemedOneHouseSource,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
+    houseCountExclusionDetails: mixedHouseCountExclusionDetails,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
   } = judgeMixedUseOneHouseExemption(asset, transferDate, oneHouseSpecialRules, warnings);
 
@@ -578,6 +579,7 @@ export function calcMixedUseTransferTax(
     // §89①3호 주택수 제외 echo (D4-02) — 근거 카드가 조문을 표시할 수 있게 한다.
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
+    houseCountExclusionDetails: mixedHouseCountExclusionDetails,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
     /**
      * §95② 배제 echo — 카드가 `multiHouseSurcharge`로 **재도출하던 것**을 대체한다.

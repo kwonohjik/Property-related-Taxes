@@ -107,7 +107,7 @@ export function calculateRedevelopmentTax(
      */
     houseCountExclusion?: Pick<
       TransferTaxResult,
-      "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail"
+      "new994Detail" | "unsold989Detail" | "houseCountExclusionDetails" | "specialHouseExclusionDetail"
     >;
     /**
      * §163⑨ 상속·증여 취득가액 의제 판정 결과 (STEP 0.45 산출) — A19(2026-09-02).

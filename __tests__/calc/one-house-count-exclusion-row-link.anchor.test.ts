@@ -13,8 +13,8 @@
  * | ROW-5 | 감면주택 요건 미달 → 불성립 사유가 명세에 남는다(종전에는 사라졌다) |
  * | ROW-6 | ④ 본문 — 행 값(취득일·주소·가액·면적·수도권 여부)으로 채우고 행 id를 싣는다 |
  * | ROW-7 | ⑧ — 어느 주택인지 지정되지 않은 옛 선언은 다시 판정하지 않는다(Q-2) |
- * | ROW-8 | 판정 → 계산기 전달 — 행 선언을 계산기 저장소로 옮기고 행 id를 남긴다(Q-4) |
- * | ROW-9 | 넘겨받은 계산기 입력도 route에서 비과세 — 행 id가 신규 주택 후보를 가른다(§7-2) |
+ * | ROW-8 | 판정 → 계산기 전달 — 행 ⑥을 그대로 넘긴다(계산기 계획서 §4-3 — 종전 저장소 이동은 되돌림) |
+ * | ROW-9 | 넘겨받은 계산기 입력도 route에서 비과세 — 행 ⑥이 계산기에서도 정본이다(계산기 계획서 §4-3) |
  *
  * 모든 부정형 단언에 긍정 짝을 둔다(`feedback_negative_anchor_needs_positive_twin`).
  */
@@ -277,12 +277,11 @@ describe("ROW-8·9 판정 → 계산기 전달 (Q-4 · §7-2)", () => {
   const calcForm = (patch: Partial<TransferFormData>): TransferFormData =>
     ({ ...createDefaultTransferFormData(), ...patch }) as TransferFormData;
 
-  it("[ROW-8] 행 선언을 계산기 감면 저장소로 옮기고(행 값·행 id 포함) 행 필드는 비운다", () => {
+  it("[ROW-8] 행 ⑥을 그대로 넘기고 감면 저장소로는 옮기지 않는다 — 계산기도 명부 행에서 받는다", () => {
+    // 계획서 `transfer-calc-count-exclusion-row-link.plan.md` §4-3 — 종전(PR #1881)의 저장소 이동을 되돌렸다.
     const patch = toTransferFormPatch(judged);
-    expect(patch.assets?.[0].reductions).toEqual([
-      expect.objectContaining({ type: "new_99_4_rural", houseId: "c", ruralHouseAcquisitionDate: "2019-10-21" }),
-    ]);
-    expect(patch.houses?.map((h) => h.countExclusion)).toEqual([undefined, undefined]);
+    expect(patch.houses?.find((h) => h.id === "c")?.countExclusion?.kind).toBe("reduction");
+    expect((patch.assets?.[0].reductions ?? []).some((r) => r.type === "new_99_4_rural")).toBe(false);
   });
 
   /** 계산기 ④ 본문을 가로채 계산기 route에 그대로 통과시킨다(`one-house-judgment-handoff.anchor.test.ts`와 같은 방식). */
@@ -314,13 +313,13 @@ describe("ROW-8·9 판정 → 계산기 전달 (Q-4 · §7-2)", () => {
     expect(result?.isExempt).toBe(true);
   });
 
-  it("[ROW-9+] 짝 — 행 id를 지우면(계산기에서 직접 입력한 선언과 같다) 종전 결함 그대로 과세 — 계획서 Q-1(a) 경계", async () => {
+  it("[ROW-9+] 짝 — 계산기에서 행 ⑥을 해제하면 3주택 과세", async () => {
     const patch = toTransferFormPatch(judged);
-    const stripped = {
+    const cleared = {
       ...patch,
-      assets: patch.assets?.map((a) => ({ ...a, reductions: a.reductions.map((r) => ({ ...r, houseId: undefined })) })),
+      houses: patch.houses?.map((h) => ({ ...h, countExclusion: undefined })),
     } as Partial<TransferFormData>;
-    const result = await runCalc(calcForm(stripped));
+    const result = await runCalc(calcForm(cleared));
     expect(result?.isExempt).toBe(false);
   });
 });

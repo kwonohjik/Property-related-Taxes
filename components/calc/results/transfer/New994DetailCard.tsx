@@ -12,6 +12,8 @@ import type { New994Result } from "@/lib/tax-engine/types/transfer.types";
 
 interface Props {
   detail: New994Result;
+  /** 「보유 주택 N (취득일)」 — 명부 행에서 온 선언일 때만(`count-exclusion-house-ref.ts`) */
+  houseRef?: string;
 }
 
 const ARTICLE_LABELS: Record<string, string> = {
@@ -19,7 +21,7 @@ const ARTICLE_LABELS: Record<string, string> = {
   new_99_4_hometown: "§99의4 — 고향주택 소유주택 제외",
 };
 
-export function New994DetailCard({ detail }: Props) {
+export function New994DetailCard({ detail, houseRef }: Props) {
   const houseLabel = detail.id === "new_99_4_hometown" ? "고향주택" : "농어촌주택";
 
   if (!detail.isEligible) {
@@ -28,6 +30,11 @@ export function New994DetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">
           {ARTICLE_LABELS[detail.id]} — 적용 불가
         </p>
+        {houseRef && (
+          <p className="text-xs font-medium" data-testid="count-exclusion-house-ref">
+            대상: {houseRef}
+          </p>
+        )}
         {detail.ineligibleReasons.length > 0 && (
           <div className="rounded border border-rose-200 bg-white/70 dark:border-rose-800/40 dark:bg-rose-950/40 p-2.5 space-y-1">
             <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">적용 불가 사유</p>
@@ -53,6 +60,11 @@ export function New994DetailCard({ detail }: Props) {
           주택수 제외
         </span>
       </div>
+      {houseRef && (
+        <p className="text-xs font-medium" data-testid="count-exclusion-house-ref">
+          대상: {houseRef}
+        </p>
+      )}
 
       <p className="text-xs text-violet-900/90 dark:text-violet-200/90">
         {houseLabel} 1채를 소유주택에서 제외하여 1세대 1주택으로 보아 소득세법

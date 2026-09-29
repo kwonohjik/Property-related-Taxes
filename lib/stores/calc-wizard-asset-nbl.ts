@@ -233,7 +233,8 @@ export interface HouseEntry {
    * 🔑 취득일·주소·취득가액·전용면적·수도권 여부는 **행 값**을 쓴다 — 선언의 같은 칸은
    *    `lib/calc/house-count-exclusion-rows.ts`가 행 값으로 덮어쓴다(두 벌 입력 금지).
    * ⚠️ `isUnsoldHousing`(중과 배제, 소령 §167의3①5호)과 **다른 축**이다 — 그 행은 주택 수에 산입한다.
-   * 판정 메뉴에서만 입력한다(계산기로 넘길 때는 계산기 저장소로 옮긴다 — Q-4).
+   * 판정 메뉴와 계산기가 모두 이 행에서 받는다(계산기: `transfer-calc-count-exclusion-row-link.plan.md` —
+   * 판정 → 계산기 전달도 행째로 넘긴다).
    */
   countExclusion?: HouseCountExclusionRowFact;
   /**

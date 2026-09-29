@@ -47,8 +47,8 @@ interface Props {
   /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴 전용). */
   mergeContext?: MergeContext;
   /**
-   * 조특법 주택 수 제외(⑥) 칸을 연다 — **판정 메뉴 전용**(계획서 Q-1(a)). 계산기는 넘기지 않아
-   * 동작 불변이다(계산기의 같은 선언은 감면 패널·감면주택 섹션이 받는다).
+   * 조특법 주택 수 제외(⑥) 칸을 연다 — 판정 메뉴(`judgmentSaleIsHousing`)와 계산기
+   * (`countExclusionRowsInScope`)가 각자 게이트를 넘긴다. 이 칸이 두 화면의 **유일한** 입력 경로다.
    */
   countExclusionEnabled?: boolean;
 }

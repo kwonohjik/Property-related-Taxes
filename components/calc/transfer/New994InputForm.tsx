@@ -30,7 +30,7 @@ interface Props {
   /** 자산의 양도일 — 보유기간 미리보기·추징 경고 예고 */
   transferDate?: string;
   /**
-   * 판정 메뉴 명부 행에서 쓸 때 — 취득일·주소는 **행 값**이다(`HouseEntry.countExclusion` 주석).
+   * 명부 행 ⑥에서 쓸 때(판정 메뉴·계산기) — 취득일·주소는 **행 값**이다(`HouseEntry.countExclusion` 주석).
    * 주면 두 칸을 입력으로 받지 않고 읽기 전용으로 보여 준다(두 벌 입력 금지).
    */
   rowFacts?: { acquisitionDate: string; jibun: string };
