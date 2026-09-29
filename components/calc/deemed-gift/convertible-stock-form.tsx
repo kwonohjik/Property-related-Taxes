@@ -9,6 +9,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint, type Props, type SetFn } from "./capital-forms-shared";
+import { THIRD_PARTY_UNDERWRITER_NOTE } from "./capital-forms-shared";
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 const CS_SECTION_TONE = {
@@ -181,7 +182,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
         onChange={(v) => set({ csSubType: v })}
         options={[
           { value: "forfeited_realloc", label: "실권주 재배정 (가목)", testId: "cs-subtype-forfeited_realloc" },
-          { value: "third_party", label: "제3자 직접배정 (다목)", testId: "cs-subtype-third_party" },
+          { value: "third_party", label: "제3자 직접배정 (다목)", description: THIRD_PARTY_UNDERWRITER_NOTE, testId: "cs-subtype-third_party" },
           { value: "excess", label: "초과배정 (라목)", testId: "cs-subtype-excess" },
           { value: "no_realloc", label: "실권주 미배정 (나목)", testId: "cs-subtype-no_realloc" },
         ]}

@@ -18,6 +18,7 @@ export { ConvertibleStockFields } from "./convertible-stock-form";
 export { MergerFields } from "./merger-form";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
 import { CiGiftDateEraNotice } from "./capital-forms-shared";
+import { THIRD_PARTY_UNDERWRITER_NOTE } from "./capital-forms-shared";
 // ⑤가 「주주 여부를 물어야 하는 목인지」를 따로 판단하면 엔진과 두 개의 진실이 생긴다.
 // 판정표는 엔진 모듈 하나가 갖는다.
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
@@ -57,7 +58,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         onChange={(v) => set({ ciSubType: v })}
         options={[
           { value: "forfeited_realloc", label: "실권주 재배정 (가목)", testId: "ci-subtype-forfeited_realloc" },
-          { value: "third_party", label: "제3자 직접배정 (다목)", testId: "ci-subtype-third_party" },
+          { value: "third_party", label: "제3자 직접배정 (다목)", description: THIRD_PARTY_UNDERWRITER_NOTE, testId: "ci-subtype-third_party" },
           { value: "excess", label: "초과배정 (라목)", testId: "ci-subtype-excess" },
           { value: "no_realloc", label: "실권주 미배정 (나목)", testId: "ci-subtype-no_realloc" },
         ]}
