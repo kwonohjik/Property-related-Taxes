@@ -311,10 +311,16 @@ describe("A ⑭ route — 주소가 있으면 안 만진 토글은 주소 판정
     expect((await gift("2021-06-01", { ...TWO, isRegulatedArea: true })).determinedTax).toBe(25_690_000);
   });
 
-  it("A-3 부정 짝 — 증여일에 조정이 아닌 주소(강남 2017-08-02 = 지정 전)면 안 만진 토글은 「아님」", async () => {
-    const r = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01") }, GANGNAM_PNU);
-    const on = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01"), isRegulatedArea: true }, GANGNAM_PNU);
-    const off = await gift("2017-08-02", { ...TWO, acquisitionDate: new Date("2010-01-01"), isRegulatedArea: false }, GANGNAM_PNU);
+  it("A-3 부정 짝 — 증여일에 조정이 아닌 주소(인천 서구 2020-06-18 = 지정 전날)면 안 만진 토글은 「아님」", async () => {
+    // ⚠️ 종전 시료(강남 2017-08-02)는 E-14n 뒤 구별력이 없다 — 이 시료(2010 취득 · 2주택)에서 2018.4.1. 전에는 조정 여부가 세액에 닿지 않는다
+    //    (§104⑦ 가산세율은 2018.4.1.부터 · §95② 괄호의 §104⑦ 자산 배제도 법률 제15225호 부칙 제1조1호로 2018.4.1.부터).
+    //    종전 on ≠ off는 2018.4.1. 전에도 장특을 빼던 결함이 만든 차이였다. 지정일 전날이 세액에 닿는 시기로 옮긴다.
+    const SEO_GU_PNU = "2826010100100120034";
+    const { checkRegulatedAreaByCode } = await import("@/lib/regulated-area");
+    expect(checkRegulatedAreaByCode("2826010100", "2020-06-18").isRegulated).toBe(false);
+    const r = await gift("2020-06-18", TWO, SEO_GU_PNU);
+    const on = await gift("2020-06-18", { ...TWO, isRegulatedArea: true }, SEO_GU_PNU);
+    const off = await gift("2020-06-18", { ...TWO, isRegulatedArea: false }, SEO_GU_PNU);
     expect(r.determinedTax).toBe(off.determinedTax);
     expect(r.determinedTax).not.toBe(on.determinedTax);
   });

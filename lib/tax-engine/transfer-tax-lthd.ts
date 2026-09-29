@@ -31,6 +31,7 @@ import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { TRANSFER } from "./legal-codes";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
+import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { meetsTable2ResidenceRequirement, resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
@@ -152,8 +153,11 @@ export function calcLongTermHoldingDeduction(
     };
   }
 
-  // L-1: 중과세 적용 중(유예 해제)이면 배제
-  if (isSurcharge && !isSuspended) {
+  // L-1: 중과세 적용 중(유예 해제)이면 배제 — **§95② 괄호가 다주택을 담던 시기에만**(E-14n).
+  //   2012.1.1.~2018.3.31. 괄호는 「미등기양도자산」(2012~2015는 비사업용 토지 포함)뿐이었다.
+  //   §104⑦ 자산을 넣은 개정은 법률 제15225호 부칙 제1조1호로 2018.4.1. 시행(제2조② 그 뒤 양도분부터).
+  //   구간 상수는 `data/lthd-multi-house-exclusion-era.ts` — 재개발 Step A.8과 같은 leaf를 쓴다.
+  if (isSurcharge && !isSuspended && isMultiHouseLthdExclusionEra(input.transferDate)) {
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "multi_house_surcharge" };
   }
 

@@ -13,6 +13,7 @@ import {
   formatHighValueThresholdLabel,
 } from "./one-house/threshold";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
+import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import {
   applyLthdExclusion,
   applyHighValueAllocation,
@@ -283,7 +284,9 @@ export function runRedevelopmentGainSteps(
     parsedRates.surchargeSpecialRules,
   );
   const lthdExcludedByUnregistered = input.isUnregistered === true;
-  const lthdExcludedBySurcharge = surchargeApplication.isSurchargeApplied;
+  // §95② 괄호가 다주택을 담던 시기에만 — 일반 경로 L-1과 같은 leaf(E-14n · 2018.4.1. 전 양도분은 배제 없음).
+  const lthdExcludedBySurcharge =
+    surchargeApplication.isSurchargeApplied && isMultiHouseLthdExclusionEra(input.transferDate);
   const lthdExclusionReason: "unregistered" | "multi_house_surcharge" | undefined =
     lthdExcludedByUnregistered
       ? "unregistered"
