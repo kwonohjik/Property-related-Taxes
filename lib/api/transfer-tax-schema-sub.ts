@@ -254,6 +254,8 @@ export const houseSchema = z.object({
   // ── ⑨⑫ 장기임대 9유형 매트릭스 (가~자목) 18필드 ──
   rentalType: z.enum(["A", "B", "C", "D", "E", "F", "G", "H", "I"]).optional(),
   rentIncreaseUnder5Pct: z.boolean().optional(),
+  // 5% 초과 증액 계약 체결·갱신일 — 대통령령 제29523호 부칙 제6조(2019-02-12 전 계약분은 요건 밖)
+  rentIncreaseContractDate: z.string().date().optional(),
   isNationalSizeHousing: z.boolean().optional(),
   hasMinimum2Units: z.boolean().optional(),
   hasMinimum5UnitsInCity: z.boolean().optional(),

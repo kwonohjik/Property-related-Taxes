@@ -228,6 +228,12 @@ export interface HouseEntry {
   rentalType?: RentalHousingType;
   /** 임대료 증가율 5% 이하 충족 여부 — A·C·E·F·H·I */
   rentIncreaseUnder5Pct?: boolean;
+  /**
+   * 5%를 넘게 올린 임대차계약의 체결·갱신일(YYYY-MM-DD · 여럿이면 가장 늦은 날) — 가·다·마·바목(사목 base 포함).
+   * 대통령령 제29523호 부칙 제6조: 5% 요건은 2019-02-12 이후 체결·갱신 계약분부터. ⑤·④ 범위는
+   * `rentIncreaseContractDateInScope`(등록 2019-02-12 전 + 미충족 선언일 때만 묻고 싣는다).
+   */
+  rentIncreaseContractDate?: string;
   /** 국민주택규모(85㎡ 이하) 여부 — B */
   isNationalSizeHousing?: boolean;
   /** 같은 시·군 내 2호 이상 보유 여부 — B·C·F·I */
@@ -334,6 +340,7 @@ export type RentalDeclaration = Partial<
     // 9유형 매트릭스 (가~자목)
     | "rentalType"
     | "rentIncreaseUnder5Pct"
+    | "rentIncreaseContractDate"
     | "isNationalSizeHousing"
     | "hasMinimum2Units"
     | "hasMinimum5UnitsInCity"

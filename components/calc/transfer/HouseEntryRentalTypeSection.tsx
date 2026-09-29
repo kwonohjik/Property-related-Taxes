@@ -18,6 +18,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { getRentalTypeLabel } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalDeclaration } from "@/lib/stores/calc-wizard-store";
+import { rentIncreaseContractDateInScope } from "@/lib/calc/rent-cap-contract-date-scope";
 
 interface Props {
   /**
@@ -171,7 +172,7 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate }: Props
               );
             }
             // bool
-            return (
+            const chip = (
               <ToggleCard
                 key={key as string}
                 variant="chip"
@@ -180,6 +181,28 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate }: Props
                 onCheckedChange={(v) => setBool(key, v)}
                 title={meta.label}
               />
+            );
+            // 5% 미충족 선언 + 등록 2019-02-12 전 → 초과 증액 계약일(부칙<제29523호> 제6조). ④와 같은 술어.
+            if (key !== "rentIncreaseUnder5Pct" || !rentIncreaseContractDateInScope(house)) return chip;
+            return (
+              <div key={key as string} className="space-y-2">
+                {chip}
+                <div className="space-y-1" data-testid={`rent-increase-contract-date-${idPrefix}`}>
+                  <label className="block text-caption text-muted-foreground font-medium">
+                    5% 넘게 올린 계약의 체결·갱신일 <span className="text-muted-foreground/60 font-normal">(선택)</span>
+                  </label>
+                  <DateInput
+                    value={house.rentIncreaseContractDate ?? ""}
+                    onChange={(v) => setStr("rentIncreaseContractDate", v)}
+                  />
+                  <p className="text-caption text-muted-foreground/70">
+                    여러 번이면 가장 늦은 날. 2019년 2월 12일 전에 체결·갱신한 계약뿐이면 5% 요건을 보지 않습니다
+                    (대통령령 제29523호 부칙 제6조). 2019년 2월 12일 이후 처음 체결·갱신한 표준임대차계약은 비교
+                    기준이므로, 그 계약에서만 올렸다면 위 「5% 이하 충족」을 켜세요(서면-2021-법규재산-3399). 비워 두면
+                    5% 요건 미충족으로 봅니다.
+                  </p>
+                </div>
+              </div>
             );
           })}
         </div>

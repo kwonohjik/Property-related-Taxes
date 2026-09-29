@@ -12,6 +12,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike } from "./transfer-tax-api-helpers";
 import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
+import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -37,6 +38,7 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
       ? {
           rentalType: ltr.rentalType,
           rentIncreaseUnder5Pct: ltr.rentIncreaseUnder5Pct,
+          ...rentIncreaseContractDatePayload(ltr),
           isNationalSizeHousing: ltr.isNationalSizeHousing,
           hasMinimum2Units: ltr.hasMinimum2Units,
           hasMinimum5UnitsInCity: ltr.hasMinimum5UnitsInCity,
@@ -304,6 +306,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
         ? {
             rentalType: h.rentalType,
             rentIncreaseUnder5Pct: h.rentIncreaseUnder5Pct,
+            // 부칙<제29523호> 제6조 — ⑤와 같은 범위 술어(stale 값은 싣지 않는다)
+            ...rentIncreaseContractDatePayload(h),
             isNationalSizeHousing: h.isNationalSizeHousing,
             hasMinimum2Units: h.hasMinimum2Units,
             hasMinimum5UnitsInCity: h.hasMinimum5UnitsInCity,
