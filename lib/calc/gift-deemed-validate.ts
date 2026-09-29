@@ -281,8 +281,25 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "contribution":
-      if (parseAmount(form.conPrePrice) <= 0) return "현물출자 전 1주당 평가가액을 입력하세요";
+      // 「상증령」§29의3① 단서 축 — 현물출자 전 가액 **0은 정당한 평가액**(결손법인: 「상증령」§55①·§56① 하한)이라
+      //   공란만 막는다(§39 증자와 같다). 0을 막으면 결손법인 고가 현물출자가 계산되지 않는다(실측 666,700,000).
+      if (form.conPrePrice.trim() === "") return "현물출자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.conPreShares) <= 0) return "현물출자 전 발행주식총수를 입력하세요";
+      // 아래 4칸은 검사가 없어 공란이 조용히 0으로 엔진에 닿았다(§39 3-A·IG-016과 같은 형태, 실측 기준
+      //   정상 저가 166,650,000 · 고가 333,350,000):
+      // · 인수가 — ㉯의 분자이자 차감항. 공란이면 저가 333,300,000(과다) · 고가 0 + 거짓 사유(과소).
+      //   0은 막지 않는다(무상 배정 — 「상증령」§29②1호 나목에 0을 금하는 문언이 없다). 원문자열로 공란만 가른다.
+      if (form.conNewPrice.trim() === "") return "신주 1주당 인수가액을 입력하세요";
+      // · 현물출자 주식수 — 「상증령」§29②1호 가목 산식(현물출자 준용)의 분자·분모. 비면 저가 250,000,000 ·
+      //   고가 500,000,000(과다) — ㉯가 출자 전 가액 그대로가 된다.
+      if (parseAmount(form.conContributedShares) <= 0) return "현물출자 주식수를 입력하세요";
+      // · 배정(저가)·인수(고가) 신주수 — 1주당 이익에 곱해지는 유일한 수량. 비면 0 + 「인수가 이하」 거짓 사유.
+      if (parseAmount(form.conAllocatedShares) <= 0)
+        return `${form.conCaseType === "high" ? "인수 신주수" : "배정받은 신주수"}를 입력하세요`;
+      // · 고가 · 명부 없음 지분비율 — ④(`gift-deemed-api.ts` relatedRatio)·⑤(`contribution-form.tsx`)와
+      //   **같은 술어**로 묻는다. 비면 0 + 「기준금액 미만」 거짓 사유. 0은 「특수관계인 주주 없음」이라 허용.
+      if (form.conCaseType === "high" && !form.conParties && form.conRelatedRatioPct.trim() === "")
+        return "현물출자자 특수관계인 주주등 지분비율을 입력하세요";
       // §29②1가·3나 단서 — 상장 ON·평균액 미입력이면 엔진이 이론값으로 조용히 통과한다
       if (form.conIsListed && parseAmount(form.conListedMarketAvg) <= 0)
         return "현물출자 후 1주당 평가가액(상증법 §63①1가 종가평균)을 입력하세요";
