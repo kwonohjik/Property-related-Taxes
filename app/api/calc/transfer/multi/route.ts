@@ -4,7 +4,7 @@
  * POST /api/calc/transfer/multi
  *
  * Layer 1 (Orchestrator):
- *   Rate Limiting → Zod 검증 → preloadTaxRates (과세기간 말일) → calculateTransferTaxAggregate → 반환
+ *   Rate Limiting → Zod 검증 → preloadTaxRates (자산별 양도일 + 과세기간 말일) → calculateTransferTaxAggregate → 반환
  *
  * 가산세 2-pass:
  *   1차: filingPenalty·delayedPayment 없이 계산 → determinedTax 확보
@@ -15,6 +15,7 @@ import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
+import { rateDateKey, type RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
 import {
   calculateTransferTaxAggregate,
   type AggregateTransferInput,
@@ -85,23 +86,43 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
-  // 세율 로드 — 과세기간 말일(12/31) 기준 1회 (Supabase 미도달 시 로컬 fallback)
-  const rateDate = new Date(data.taxYear, 11, 31);
-  let rates;
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  /**
+   * 세율 로드 (Supabase 미도달 시 로컬 fallback) — **두 층**이다(E-14n).
+   *   · 자산별: 그 자산의 **양도일**로 읽는다 — 단건 route(`route.ts` 단계 4)와 같은 기준. 연중에 시작하는
+   *     행(`surcharge:_default` 2022-05-10 · `special:house_count_exclusion` 2018-04-01 ·
+   *     `deduction:long_term_rental_v2` 2020-08-18 · `deduction:new_housing_matrix` 2001-05-23)이 있어
+   *     과세기간 말일 하나로 읽으면 그 전 양도분이 다른 규정을 받는다.
+   *   · 신고 단위: 과세기간 말일 — §103 기본공제 · §104⑤1호 §55① 누진표(제19196호 부칙 제14조 「과세기간」 기준).
+   * RPC는 **양도일 중복 제거 + 1회**(최대 자산 20건 → 21회, 병렬).
+   */
+  const loadRates = async (date: Date) => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return loadFallbackTransferRates(date);
     try {
-      rates = await preloadTaxRates(["transfer"], rateDate);
-      if (rates.size === 0) rates = loadFallbackTransferRates(rateDate);
+      const loaded = await preloadTaxRates(["transfer"], date);
+      return loaded.size === 0 ? loadFallbackTransferRates(date) : loaded;
     } catch (err) {
       console.warn(
         "[POST /api/calc/transfer/multi] preloadTaxRates 실패, 로컬 세율 fallback 사용:",
         err,
       );
-      rates = loadFallbackTransferRates(rateDate);
+      return loadFallbackTransferRates(date);
     }
-  } else {
-    rates = loadFallbackTransferRates(rateDate);
+  };
+  const rateDate = new Date(data.taxYear, 11, 31);
+  const transferDates = new Map<string, Date>();
+  for (const p of data.properties) {
+    const d = toDate(p.transferDate, "transferDate");
+    transferDates.set(rateDateKey(d), d);
   }
+  transferDates.delete(rateDateKey(rateDate)); // 과세기간 말일 양도분은 신고 단위 세율과 같은 로드
+  const [rates, ...itemRates] = await Promise.all([
+    loadRates(rateDate),
+    ...[...transferDates.values()].map(loadRates),
+  ]);
+  const ratesByTransferDate: RatesByTransferDate = new Map([
+    [rateDateKey(rateDate), rates],
+    ...[...transferDates.keys()].map((k, i) => [k, itemRates[i]] as const),
+  ]);
 
   // string → Date 변환 (건별)
   const properties: TransferTaxItemInput[] = data.properties.map((p) => {
@@ -519,7 +540,7 @@ export async function POST(request: NextRequest) {
   try {
     // 자산별 가산세 2-pass — 자산별 단건 엔진 호출 시 결정세액을 사전 계산해 주입.
     // 1차: 가산세 미주입 상태로 자산별 결정세액 산출.
-    const baseResult = calculateTransferTaxAggregate(engineInput, rates);
+    const baseResult = calculateTransferTaxAggregate(engineInput, rates, ratesByTransferDate);
 
     /**
      * 🔴 가산세 base는 **예정신고 세액**이다 — 집계 1차 pass의 자산별 standalone 값이 아니다(F03).
@@ -537,6 +558,7 @@ export async function POST(request: NextRequest) {
       rates,
       engineInput.annualBasicDeductionUsed,
       calculateTransferTax,
+      ratesByTransferDate,
     );
 
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
@@ -566,7 +588,7 @@ export async function POST(request: NextRequest) {
     });
 
     const finalInput: AggregateTransferInput = { ...engineInput, properties: enrichedProperties };
-    const result = calculateTransferTaxAggregate(finalInput, rates);
+    const result = calculateTransferTaxAggregate(finalInput, rates, ratesByTransferDate);
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
     assertFiniteResponse(result);
     return NextResponse.json({ data: result }, { status: 200 });

@@ -51,8 +51,8 @@ const THRESHOLD_12EOK = 1_200_000_000;
  * 「초과」 기준이다 — 반환값 **이하**면 고가주택이 아니다.
  *
  * @param transferDate 양도일. **자산별 양도일**을 넘길 것 —
- *   다건 route는 과세기간 말일로 세율 행을 고르므로(`app/api/calc/transfer/multi/route.ts`)
- *   규칙 행에서 기준금액을 읽으면 2021년 11월 양도가 12억 행을 받는다.
+ *   세율 행을 한 날짜로 읽는 호출자(E-14n 전 다건 route는 과세기간 말일)에서
+ *   규칙 행으로 기준금액을 읽으면 2021년 11월 양도가 12억 행을 받는다.
  *   그래서 이 값은 규칙 행이 아니라 이 함수가 단일 소스로 정한다.
  */
 export function resolveHighValueHouseThreshold(transferDate: Date): number {

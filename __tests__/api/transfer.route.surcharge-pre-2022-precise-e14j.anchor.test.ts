@@ -3,7 +3,7 @@
  * 엔진 anchor와 법령 근거: `__tests__/tax-engine/transfer/surcharge-pre-2022-precise-e14j.anchor.test.ts`.
  *
  * 🔑 새 사용자 입력은 없다 — 기존 입력(명부·권리)이 그 기간에도 정밀 판정에 도달하는지 본다(`feedback_leaf_anchor_skips_zod_layer`).
- * 세율은 **각 route가 부르는 날짜의** 프로덕션 fallback(단건 = 양도일 · 다건 = 과세기간 말일)이다.
+ * 세율은 **각 route가 부르는 날짜의** 프로덕션 fallback(단건 = 양도일 · 다건 = 자산별 양도일 + 과세기간 말일 — E-14n)이다.
  * 강남 · 양도가액 20억 · 취득가액 3억.
  *
  * | 시료 | 수정 전 | 수정 후 | 근거 |
@@ -125,7 +125,7 @@ async function multiTotal(f: Form): Promise<number> {
 }
 
 beforeEach(() => {
-  // route가 넘기는 날짜 그대로 — 단건은 양도일, 다건은 과세기간 말일.
+  // route가 넘기는 날짜 그대로 — 단건은 양도일, 다건은 자산별 양도일 + 과세기간 말일(E-14n).
   vi.mocked(preloadTaxRates).mockImplementation(
     async (_types, date) => loadFallbackTransferRates(date) as Awaited<ReturnType<typeof preloadTaxRates>>,
   );
@@ -168,7 +168,8 @@ describe("E-14j — 2022.1.1. 전 양도분 route (단건 = 다건)", () => {
   it("RJ-5 2018-03-31 양도(§104⑦ 시행 전) → 391,875,000 불변 · 2018-04-01 → 구 8호 391,875,000 (수정 전 494,450,000)", async () => {
     const before = form("2015-06-01", "2018-03-31", [row("2017-06-01")]);
     expect((await single(before)).totalTax).toBe(391_875_000);
-    // 다건은 과세기간 말일(2018-12-31)로 세율을 읽어 2018-04-01 행이 실린다 — §104⑦ 전 양도분은 세율 층이 막는다.
+    // E-14n 전 다건은 과세기간 말일(2018-12-31)로 세율을 읽어 2018-04-01 행이 실렸다 — §104⑦ 전 양도분은 세율 층이 막았다.
+    // (이 시료는 보유 3년 미만이라 장특 축이 보이지 않는다. 보유 3년 이상은 `transfer.route.multi-rate-date-e14n` H-1~H-3.)
     expect(await multiTotal(before)).toBe(391_875_000);
     const f = form("2015-06-01", "2018-04-01", [row("2017-06-01")]);
     expect(await single(f)).toMatchObject({ totalTax: 391_875_000, reasons: "temporary_two_house" });

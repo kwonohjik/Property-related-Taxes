@@ -164,6 +164,11 @@ export interface AssetRecord {
   singleInput: TransferTaxInput;
   result: TransferTaxResult;
   /**
+   * 이 자산을 계산한 세율 — **그 자산의 양도일**로 고른 행(E-14n · 단건 route와 같은 기준).
+   * M-5가 자산 세액을 다시 낼 때 이 값을 쓴다. 신고 단위 단계(§103 · §104⑤1호)는 집계 인자 `rates`를 쓴다.
+   */
+  rates: TaxRatesMap;
+  /**
    * §104⑤2호 **비교과세 합산 단위** — 축은 「**호**」다(예규가 확정).
    * ⛔ §102② 통산에 쓰지 말 것 — 그쪽 축은 「**세율**」이라 아래 `lossOffsetRateKey`가 담당한다.
    */
