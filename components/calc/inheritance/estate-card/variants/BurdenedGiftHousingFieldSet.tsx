@@ -15,6 +15,7 @@
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
  *   · §155⑳ 장기임대주택 보유자 거주주택 특례(E-1 잔여 C — ㉓ 말소일 포함) — `RentalHousingExceptionSection`
  *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
+ *   · §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) — `WinWinRentalSpecialField`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -27,6 +28,7 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
+import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import {
   giftBurdenedRentalAsset,
   giftBurdenedRentalExceptionInScope,
@@ -49,6 +51,8 @@ import {
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
   giftBurdenedRegulatedByAddress,
+  giftBurdenedWinWinInScope,
+  giftBurdenedWinWinSlice,
 } from "@/lib/calc/gift-burdened-one-house";
 
 export interface HousingFieldSetProps {
@@ -229,6 +233,12 @@ dateToStr(bgt.acquisitionDate)
             />
           </div>
         </FieldCard>
+      )}
+
+      {/* §155의3 상생임대주택(E-1 한계 G2) — 판정 메뉴와 같은 위젯. 거주기간 요건(§154①·§155⑳1호·§159의4 표2)을
+          면제하므로 거주기간 바로 뒤에 둔다. 게이트는 ④⑧과 같다(1세대 1주택 ON — `giftBurdenedWinWinInScope`). */}
+      {giftBurdenedWinWinInScope(bgt) && (
+        <WinWinRentalSpecialField value={giftBurdenedWinWinSlice(bgt)} onChange={(patch) => set(patch)} />
       )}
 
       {/* 일시적 2주택 — 세대 주택수 == 2인 경우 */}

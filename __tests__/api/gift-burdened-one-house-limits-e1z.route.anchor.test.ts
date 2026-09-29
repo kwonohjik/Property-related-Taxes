@@ -8,6 +8,7 @@
  * | 축 | 종전(base) | 고친 뒤 |
  * |---|---|---|
  * | G1 — 비주택(토지·건물) 상속 자산의 「소득세법」 §104②1호 | 상속 칸이 주택 필드 세트에만 있어 상속개시일부터 단기세율 | 같은 위젯(비주택 모드)으로 `acquisitionCause`·`decedentAcquisitionDate` |
+ * | G2 — 「소득세법 시행령」 §155의3 상생임대주택 | 입력 없음 → 거주요건(§154①)·표2 거주 2년(§159의4) 그대로 요구 | 판정 메뉴 위젯 재사용 → `winWinRentalHouse` |
  *
  * 시료: 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억(토지·건물은 기준시가 모드) — 양도차익 72,750,000.
  */
@@ -283,5 +284,96 @@ describe("G1 ⑭ route — 세율 보유기간만 바뀐다 (양도차익·장�
     expect(r.appliedRate).toBe(0.24);
     expect(r.determinedTax).toBe(7_680_000);
     expect(r.transferGain).toBe(base.transferGain);
+  });
+});
+
+// ═══ G2 — §155의3 상생임대주택 거주기간 면제 ════════════════════════════════════════
+
+/**
+ * 「소득세법 시행령」 §155의3① 「… 상생임대주택을 양도하는 경우에는 제154조제1항, 제155조제20항제1호 및 제159조의4를
+ * 적용할 때 해당 규정에 따른 거주기간의 제한을 받지 않는다」(MST 286211 실독). 부담부증여 채무액 부분은 양도(법 §88
+ * 1호 후단)이고 이 경로는 그 부분에 §154①을 적용한다 — 같은 구조(§154① 거주기간 면제 × 부담부증여 채무승계액)의
+ * 회신: 사전-2022-법규재산-0298(2022.4.29. — 부동산거래관리과-354 인용, taxlaw.nts Playwright 실독).
+ * §155의3 × 부담부증여 정면 해석례는 미확보.
+ */
+const WW = {
+  winWinRentalSpecial: true,
+  winWinRentalContractDate: "2022-01-10",
+  winWinRentalIncreaseRatePct: "0",
+  winWinRentalPriorLeaseMonths: "24",
+  winWinRentalLeaseMonths: "24",
+} as const;
+
+describe("G2 ④ — 계산기(판정 메뉴 운반 상자)와 같은 leaf로 winWinRentalHouse를 싣는다", () => {
+  it("G2-B1 ★ 1세대 1주택 ON + 특례 → winWinRentalHouse(개월·증가율 숫자)", () => {
+    const body = buildGiftBurdenedTransferBody(giftItem({ acquisitionDate: new Date("2018-01-01"), ...WW }), giftForm("2024-06-01"));
+    expect(body.winWinRentalHouse).toEqual({
+      winWinContractDate: "2022-01-10",
+      increaseRatePct: 0,
+      priorLeaseMonths: 24,
+      winWinLeaseMonths: 24,
+    });
+  });
+  it("G2-B2 부정 짝 — 특례 OFF · 1세대 1주택 OFF(게이트 밖) · 비주택 건물이면 키 없음", () => {
+    const off = buildGiftBurdenedTransferBody(giftItem({ ...WW, winWinRentalSpecial: false }), giftForm("2024-06-01"));
+    expect(off).not.toHaveProperty("winWinRentalHouse");
+    const noOne = buildGiftBurdenedTransferBody(giftItem({ ...WW, isOneHousehold: false }), giftForm("2024-06-01"));
+    expect(noOne).not.toHaveProperty("winWinRentalHouse");
+    const building = { ...giftItem({ ...WW, isHousing: false }), category: "real_estate_building" } as EstateItem;
+    expect(buildGiftBurdenedTransferBody(building, giftForm("2024-06-01"))).not.toHaveProperty("winWinRentalHouse");
+  });
+});
+
+describe("G2 ⑭ route — 거주요건이 면제된다 (계산기와 같은 결론)", () => {
+  /** 강남(2017-08-03 이후 조정) 2018-01-01 취득 · 거주 0 · 증여 2024-06-01 */
+  const REG = { acquisitionDate: new Date("2018-01-01") };
+
+  it("G2-1 ★ §154① 거주요건 — 과세 9,004,800 → 상생임대면 비과세, 계산기(운반 상자)와 같은 결론", async () => {
+    const base = await gift("2024-06-01", REG, GANGNAM_PNU);
+    expect(base.isExempt).toBe(false);
+    expect(base.determinedTax).toBe(9_004_800);
+    const r = await gift("2024-06-01", { ...REG, ...WW }, GANGNAM_PNU);
+    expect(r.isExempt).toBe(true);
+    expect(r.determinedTax).toBe(0);
+    const { oneHouseJudgmentExtraDefaults } = await import("@/lib/stores/one-house-extra-fields.types");
+    const f = transferForm("2024-06-01", "2018-01-01", {}, {}, GANGNAM);
+    expect((await transfer(f)).isExempt).toBe(false);
+    f.importedOneHouseFacts = { ...oneHouseJudgmentExtraDefaults, ...WW } as TransferFormData["importedOneHouseFacts"];
+    expect((await transfer(f)).isExempt).toBe(true);
+  });
+
+  it("G2-2 ★ §159의4 표2 거주 2년 — 12억 초과(증여가액 20억) · 비조정 취득(2016) · 거주 0: 표1 16% 41,034,800 → 표2 보유 32% 29,857,000", async () => {
+    const hv = (bgt: Partial<BurdenedGiftTransferTaxInput>) =>
+      run(
+        buildGiftBurdenedTransferBody(
+          {
+            ...giftItem({ acquisitionDate: new Date("2016-01-01"), standardPriceAtAcquisition: 1_000_000_000, ...bgt }, GANGNAM_PNU),
+            standardPrice: 2_000_000_000,
+            leaseDeposit: 1_000_000_000,
+            mortgageAmount: 0,
+            assumedDebtForGift: 1_000_000_000,
+          } as EstateItem,
+          giftForm("2024-06-01"),
+        ),
+      );
+    const base = await hv({});
+    expect(base.longTermHoldingRate).toBe(0.16);
+    expect(base.determinedTax).toBe(41_034_800);
+    const r = await hv(WW);
+    expect(r.longTermHoldingRate).toBe(0.32);
+    expect(r.determinedTax).toBe(29_857_000);
+    expect(r.transferGain).toBe(base.transferGain);
+  });
+
+  it("G2-3 부정 짝 — 요건 미충족(체결일 2021-12-19 · 증가율 6% · 상생임대 23개월)이면 면제 없음 9,004,800", async () => {
+    for (const miss of [
+      { winWinRentalContractDate: "2021-12-19" },
+      { winWinRentalIncreaseRatePct: "6" },
+      { winWinRentalLeaseMonths: "23" },
+    ]) {
+      const r = await gift("2024-06-01", { ...REG, ...WW, ...miss }, GANGNAM_PNU);
+      expect(r.isExempt, JSON.stringify(miss)).toBe(false);
+      expect(r.determinedTax).toBe(9_004_800);
+    }
   });
 });

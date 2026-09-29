@@ -37,6 +37,7 @@ import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
 import { buildGiftBurdenedRentalExceptionPayload } from "@/lib/calc/gift-burdened-rental-exception";
 import {
   buildGiftBurdenedInheritancePayload,
+  buildGiftBurdenedWinWinPayload,
   giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedOneHouseSlice,
@@ -336,6 +337,9 @@ export function buildGiftBurdenedTransferBody(
     );
     // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 계산기와 같은 leaf(`toRentalHousingExceptionApi`), ⑤⑧과 같은 게이트.
     Object.assign(body, buildGiftBurdenedRentalExceptionPayload(item, bgt));
+    // §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) — 계산기와 같은 leaf(`buildWinWinRentalPayload` → `winWinRentalHouse`).
+    //   엔진에서 §154① 거주요건 · §155⑳1호 · §159의4 표2 거주요건을 면제한다. ⑤⑧과 같은 게이트.
+    Object.assign(body, buildGiftBurdenedWinWinPayload(bgt));
   }
 
   return body;

@@ -5,6 +5,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { validateStep } from "@/components/calc/gift-tax-form-validate";
+import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
+import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+import { validateStep3 } from "@/lib/calc/one-house-exemption-validate";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -54,5 +58,97 @@ describe("G1 ⑧ 상속받은 토지 — ④가 원인을 싣는 순간 ⑫ refi
       ),
     ).toBeNull();
     expect(v("2021-06-01", landItem({ acquisitionCause: "purchase" }))).toBeNull();
+  });
+});
+
+// ═══ G2 — §155의3 상생임대주택 ═══════════════════════════════════════════════════
+
+function aptItem(over: Partial<BurdenedGiftTransferTaxInput> = {}): EstateItem {
+  return {
+    id: "apt-1",
+    category: "real_estate_apartment",
+    name: "테스트 아파트",
+    standardPrice: 300_000_000,
+    leaseDeposit: 100_000_000,
+    mortgageAmount: 50_000_000,
+    assumedDebtForGift: 150_000_000,
+    monthlyRent: 0,
+    burdenedGiftTransferTax: {
+      acquisitionDate: new Date("2016-01-10"),
+      standardPriceAtAcquisition: 150_000_000,
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      residencePeriodMonths: 0,
+      ...over,
+    },
+  } as EstateItem;
+}
+const WW = {
+  winWinRentalSpecial: true,
+  winWinRentalContractDate: "2022-01-10",
+  winWinRentalIncreaseRatePct: "0",
+  winWinRentalPriorLeaseMonths: "24",
+  winWinRentalLeaseMonths: "24",
+};
+
+describe("G2 ③ 복원 — JSON 왕복 후 normalize가 상생임대 5필드를 보존한다", () => {
+  it("G2-N1 5필드 그대로", () => {
+    const parsed = JSON.parse(JSON.stringify({ giftItems: [aptItem(WW)] }));
+    const bgt = normalizeRestoredFormDates(parsed).giftItems![0].burdenedGiftTransferTax!;
+    expect(bgt.acquisitionDate).toBeInstanceOf(Date);
+    expect(bgt).toMatchObject(WW);
+  });
+});
+
+describe("G2 ⑧ — 판정 메뉴와 같은 필수값 규칙·문구 · §155⑳1호 거주 24개월 면제(엔진과 같은 술어)", () => {
+  it("V-G2-1 ★ 특례 ON인데 체결일·증가율·기간 비움 → 판정 메뉴와 같은 문구로 차단", () => {
+    for (const [k, msg] of [
+      ["winWinRentalContractDate", "상생임대차계약 체결일을 입력"],
+      ["winWinRentalIncreaseRatePct", "임대료 증가율(%)을 입력"],
+      ["winWinRentalPriorLeaseMonths", "직전임대차 임대기간(개월)을 입력"],
+      ["winWinRentalLeaseMonths", "상생임대차 임대기간(개월)을 입력"],
+    ] as const) {
+      expect(v("2024-06-01", aptItem({ ...WW, [k]: "" })), k).toContain(msg);
+    }
+  });
+  it("V-G2-2 부정 짝 — 다 넣으면 통과 · 1세대 1주택 OFF(게이트 밖)의 stale 선언은 막지 않는다", () => {
+    expect(v("2024-06-01", aptItem(WW))).toBeNull();
+    expect(v("2024-06-01", aptItem({ ...WW, winWinRentalContractDate: "", isOneHousehold: false }))).toBeNull();
+  });
+  it("V-G2-3 ★ §155⑳ 거주 0개월 — 상생임대 없으면 24개월 요구로 차단 · 상생임대면 통과(엔진 §155의3①과 같은 면제)", () => {
+    const unit = {
+      ...makeDefaultRentalUnit(),
+      businessRegistrationDate: "2018-06-01",
+      rentalRegistrationDate: "2018-06-01",
+      standardPriceAtRentalStart: "300,000,000",
+      rentalInputMode: "direct" as const,
+      rentalMonths: "30",
+      requirementsConfirmed: true,
+      rentalAutoTermination: true,
+      terminatedRegistrationType: "short_term" as const,
+      registrationCancellationDate: "2021-03-03",
+    };
+    const rhe = {
+      applyException: true,
+      scenario: "A" as const,
+      rentalUnits: [unit],
+      postRegistrationResidenceMonths: "",
+      priorRentalExemptionHistory: "" as const,
+      residenceTransitionUnderAddendum: false,
+    };
+    const bgt = { householdHousingCount: 2, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>;
+    expect(v("2025-06-01", aptItem(bgt))).toContain("거주주택 거주기간 2년(24개월) 이상이 필요합니다");
+    expect(v("2025-06-01", aptItem({ ...bgt, ...WW }))).toBeNull();
+  });
+  it("V-G2-4 공용 leaf — 판정 메뉴 ⑧(validateStep3)도 같은 필드·문구를 낸다(규칙 이동 회귀)", () => {
+    const f = { ...createInitialOneHouseJudgmentForm(), winWinRentalSpecial: true };
+    const ww = validateStep3(f).filter((e) => e.message.startsWith("상생임대주택:"));
+    expect(ww.map((e) => e.field)).toEqual([
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+    ]);
+    expect(validateStep3({ ...f, ...WW }).some((e) => e.message.startsWith("상생임대주택:"))).toBe(false);
   });
 });

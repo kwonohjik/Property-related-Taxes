@@ -65,6 +65,12 @@ const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
   decedentCohabitationResidenceMonths: undefined,
   // E-1 잔여 C — §155⑳ 거주주택 특례
   rentalHousingException: undefined,
+  // E-1 한계 G2 — §155의3 상생임대주택
+  winWinRentalSpecial: undefined,
+  winWinRentalContractDate: undefined,
+  winWinRentalIncreaseRatePct: undefined,
+  winWinRentalPriorLeaseMonths: undefined,
+  winWinRentalLeaseMonths: undefined,
 };
 
 /** 초기 빈 객체 — 토글 ON 시 생성 */
@@ -98,6 +104,7 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.isOneHousehold !== undefined ||
     bgt.acquisitionCause === "inheritance" ||
     bgt.rentalHousingException?.applyException === true ||
+    bgt.winWinRentalSpecial === true ||
     !!bgt.residencePeriodMonths ||
     !!bgt.householdHousingCount ||
     bgt.valuationMode === "sangjeungbeop_market" ||

@@ -7,7 +7,12 @@
  */
 import { test, expect } from "@playwright/test";
 import { fillAndVerify, fillDateAndVerify } from "./_helpers/tax-flow";
-import { setupTransferApiMock } from "./_helpers/gift-burdened-transfer";
+import {
+  addApartmentWithDebt,
+  enableBurdenedTransferToggle,
+  fillApartmentTransferInfo,
+  setupTransferApiMock,
+} from "./_helpers/gift-burdened-transfer";
 
 type Page = Parameters<typeof fillDateAndVerify>[0];
 
@@ -97,4 +102,31 @@ test("[BT-E2E-13] 상속받은 토지 → 요청 본문 acquisitionCause·decede
   expect(body.acquisitionCause).toBe("inheritance");
   expect(body.decedentAcquisitionDate).toBe("2010-01-01");
   expect(body).not.toHaveProperty("decedentSameHouseholdBeforeInheritance");
+});
+
+/**
+ * [BT-E2E-14] E-1 한계 G2 — 「소득세법 시행령」 §155의3 상생임대주택. 판정 메뉴와 같은 위젯
+ * (`WinWinRentalSpecialField`)이 1세대 1주택 입력 거주기간 뒤에 뜨고, 계산기와 같은 leaf로 본문에 실린다.
+ */
+test("[BT-E2E-14] 상생임대주택 → 요청 본문 winWinRentalHouse", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+  await goToGiftAssets(page, { year: "2024", month: "6", day: "1" });
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog); // 1세대 1주택 ON · 거주 120개월
+
+  await dialog.getByRole("switch", { name: /상생임대주택 특례/ }).click();
+  await fillDateAndVerify(page, { year: "2022", month: "01", day: "10" }, { scope: dialog.getByTestId("ww-contract-date") });
+  await fillAndVerify(dialog.getByTestId("ww-increase-rate"), "0");
+  await fillAndVerify(dialog.getByRole("textbox", { name: "직전임대차 임대기간" }), "24");
+  await fillAndVerify(dialog.getByRole("textbox", { name: "상생임대차 임대기간" }), "24");
+
+  const body = await calculateAndCapture(page, mock);
+  expect(body.winWinRentalHouse).toEqual({
+    winWinContractDate: "2022-01-10",
+    increaseRatePct: 0,
+    priorLeaseMonths: 24,
+    winWinLeaseMonths: 24,
+  });
 });

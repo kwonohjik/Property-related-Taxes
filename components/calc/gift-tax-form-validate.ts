@@ -32,6 +32,7 @@ import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
 import {
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedInheritanceError,
+  giftBurdenedWinWinError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -191,6 +192,10 @@ export function validateStep(step: number, form: FormState): string | null {
       // §155①2호 새 입력(OH-01 A2b · E-1) — ⑤와 같은 게이트, 양도세 판정 메뉴와 같은 규칙 leaf.
       //   모순만 차단한다. 미입력(경고)은 엔진이 판정 보류로 고지하고 결과 카드 경고에 뜬다.
       if (propertyType === "housing") {
+        // §155의3 상생임대주택(E-1 한계 G2) — ⑤·④와 같은 게이트, 판정 메뉴와 같은 필수값 규칙·문구.
+        //   ⑤ 배치(거주기간 바로 뒤)와 같은 순서로 먼저 본다.
+        const winWinError = giftBurdenedWinWinError(bgt);
+        if (winWinError) return `${itemLabel}: ${winWinError}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
           ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {

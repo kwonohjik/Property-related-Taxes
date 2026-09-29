@@ -1192,7 +1192,8 @@ export interface BurdenedGiftTransferTaxInput {
     temporaryTwoHouse: "" | "yes" | "no";
   }[];
   /*
-   * ── housing 전용 — 상속받은 주택 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * ── 상속받은 자산 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * 원인·피상속인 취득일(§104②1호)은 토지·비주택 건물에도 쓴다(E-1 한계 G1). 동일세대 통산 3필드는 주택 전용.
    * 양도세 폼(`AssetForm`)과 **같은 이름·모양**이다 — ⑤는 판정 메뉴와 같은 위젯
    * (`InheritedSameHouseholdField`)을, ④는 같은 leaf(`buildSameHouseholdInheritancePayload`)를 쓴다.
    * 「상속받은 주택」이면 위 `acquisitionDate`가 상속개시일이다. 옛 record에는 없다(매매로 읽는다).
@@ -1214,6 +1215,22 @@ export interface BurdenedGiftTransferTaxInput {
    * `lib/calc/gift-burdened-rental-exception.ts`의 어댑터로 부른다. 옛 record에는 없다(특례 미적용).
    */
   rentalHousingException?: AssetForm["rentalHousingException"];
+  /*
+   * ── housing 전용 — 「소득세법 시행령」 §155의3 상생임대주택 (E-1 한계 G2) ──
+   * 판정 메뉴 운반 상자(`OneHouseJudgmentExtraFields`)와 **같은 이름·모양**이다 — ⑤는 같은 위젯
+   * (`WinWinRentalSpecialField`), ④⑧은 같은 leaf(`buildWinWinRentalPayload`·`winWinRentalFieldErrors`)를 쓴다.
+   * 옛 record에는 없다(특례 미적용).
+   */
+  /** 특례 적용 선언 */
+  winWinRentalSpecial?: boolean;
+  /** ①1호 상생임대차계약 체결일 (YYYY-MM-DD) */
+  winWinRentalContractDate?: string;
+  /** ①1호 직전임대차 대비 증가율(%) — 문자열 */
+  winWinRentalIncreaseRatePct?: string;
+  /** ①2호 직전임대차 임대기간(개월) — 정수 문자열 */
+  winWinRentalPriorLeaseMonths?: string;
+  /** ①3호 상생임대차 임대기간(개월) — 정수 문자열 */
+  winWinRentalLeaseMonths?: string;
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

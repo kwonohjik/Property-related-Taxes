@@ -12,6 +12,7 @@
  * | §154① 단서(삭제 전 4호 포함) | `provisoGate` · `buildExemptionProvisoPayload` · `collectExemptionProvisoErrors` |
  * | §154⑤ 단서 재기산 | `finalHouseRestartInScope` · `buildFinalHouseRestartPayload` · `collectFinalHouseRestartErrors` |
  * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) · 토지·비주택 건물(§104②1호만 — E-1 한계 G1) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
+ * | §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) | `buildWinWinRentalPayload` · `winWinRentalFieldErrors` · `qualifiesWinWinRental` |
  *
  * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다). 예외: 상속 취득 leaf는
  * 모든 부동산 유형에서 쓰고 주택 여부를 인자로 받는다(E-1 한계 G1).
@@ -30,6 +31,13 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { sameHouseholdInheritanceOrderError } from "@/lib/calc/same-household-inheritance-order";
+import {
+  buildWinWinRentalPayload,
+  toWinWinRentalHouseFact,
+  winWinRentalFieldErrors,
+  type WinWinRentalFields,
+} from "@/lib/calc/one-house-extra-facts-payload";
+import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -224,4 +232,45 @@ export function giftBurdenedInheritanceError(
     return sameHouseholdInheritanceOrderError(s);
   }
   return null;
+}
+
+/**
+ * 「소득세법 시행령」 §155의3 상생임대주택 (E-1 한계 G2) — ⑤④⑧ 공용 게이트: 주택(호출부가 확인) ·
+ * 1세대 1주택 ON(거주기간 칸이 있는 맥락 — §155⑳ 카드와 같은 게이트). 면제되는 거주기간은
+ * §154①·§155⑳1호·§159의4(표2)의 것이고 모두 1세대 1주택(의제 포함) 맥락이다.
+ */
+export function giftBurdenedWinWinInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  return bgt.isOneHousehold === true;
+}
+
+/** 증여세 폼 → 판정 메뉴 운반 상자와 같은 이름의 5필드. 옛 record(필드 없음)는 미적용. */
+export function giftBurdenedWinWinSlice(bgt: BurdenedGiftTransferTaxInput): WinWinRentalFields {
+  return {
+    winWinRentalSpecial: bgt.winWinRentalSpecial === true,
+    winWinRentalContractDate: bgt.winWinRentalContractDate ?? "",
+    winWinRentalIncreaseRatePct: bgt.winWinRentalIncreaseRatePct ?? "",
+    winWinRentalPriorLeaseMonths: bgt.winWinRentalPriorLeaseMonths ?? "",
+    winWinRentalLeaseMonths: bgt.winWinRentalLeaseMonths ?? "",
+  };
+}
+
+/** ④ — 계산기가 운반 상자에서 싣는 것과 같은 leaf(`buildWinWinRentalPayload` → `winWinRentalHouse`). 게이트 밖이면 키 없음. */
+export function buildGiftBurdenedWinWinPayload(bgt: BurdenedGiftTransferTaxInput): object {
+  if (!giftBurdenedWinWinInScope(bgt)) return {};
+  return buildWinWinRentalPayload(giftBurdenedWinWinSlice(bgt));
+}
+
+/** ⑧ — 판정 메뉴와 같은 필수값 규칙·문구. 첫 오류 또는 null. 게이트 밖의 stale 선언은 막지 않는다. */
+export function giftBurdenedWinWinError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if (!giftBurdenedWinWinInScope(bgt)) return null;
+  return winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt))[0]?.message ?? null;
+}
+
+/**
+ * ⑧ §155⑳1호 거주요건 면제 여부 — 엔진(`checkEligibility`)과 같은 술어 `qualifiesWinWinRental`에 ④와 같은 사실을
+ * 넣는다(계산기 `transfer-tax-validate-asset.ts`와 같은 배선). 게이트 밖이면 면제 없음.
+ */
+export function giftBurdenedWinWinResidenceExempt(bgt: BurdenedGiftTransferTaxInput): boolean {
+  if (!giftBurdenedWinWinInScope(bgt)) return false;
+  return qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)) });
 }
