@@ -59,6 +59,8 @@ const CHIP_AMBER =
   "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800";
 const CHIP_VIOLET =
   "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800";
+const CHIP_EMERALD =
+  "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800";
 
 interface HouseBadge {
   key: string;
@@ -108,10 +110,22 @@ interface RowProps {
   onRemove: () => void;
   /** §155④⑤ 합가 — 있으면 「특례」 열에 합가 전 보유 쪽 배지를 단다(판정 메뉴). */
   mergeContext?: MergeContext;
+  /** 조특법 주택 수 제외 배지 — 판정 메뉴에서 그 칸이 열려 있을 때만 단다. */
+  countExclusionEnabled?: boolean;
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext }: RowProps) {
+/** 조특법 주택 수 제외 사유 — 「특례」 열 배지 문구. 어느 주택이 무슨 사유로 빠지는지 표에서 보인다. */
+function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
+  const x = h.countExclusion;
+  if (!x) return undefined;
+  if (x.kind === "special") return "주택 수 제외: 감면주택";
+  if (x.reduction.type === "unsold_98_9") return "주택 수 제외: 준공후미분양";
+  return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
+}
+
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled }: RowProps) {
   const badges = resolveHouseBadges(house);
+  const exclusionLabel = countExclusionEnabled ? countExclusionBadgeLabel(house) : undefined;
   const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
@@ -132,6 +146,11 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext }: RowProps)
               {b.label}
             </span>
           ))}
+          {exclusionLabel && (
+            <span className={`${CHIP_BASE} ${CHIP_EMERALD}`} data-testid={`house-count-exclusion-badge-${house.id}`}>
+              {exclusionLabel}
+            </span>
+          )}
           {mergeContext && (
             <span
               className={`${CHIP_BASE} ${mergeSide ? CHIP_VIOLET : CHIP_AMBER}`}
@@ -180,6 +199,7 @@ export function HousesListSection({
   hideSellingHouseExclusion = false,
   hideSpouseOwned = false,
   mergeContext,
+  countExclusionEnabled = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -219,6 +239,8 @@ export function HousesListSection({
    * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다. 계산기는 넘기지 않는다.
    */
   mergeContext?: MergeContext;
+  /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 판정 메뉴 전용. 계산기는 넘기지 않는다. */
+  countExclusionEnabled?: boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -417,6 +439,7 @@ export function HousesListSection({
                     onEdit={() => setEditingId(h.id)}
                     onRemove={() => removeHouse(h.id)}
                     mergeContext={mergeContext}
+                    countExclusionEnabled={countExclusionEnabled}
                   />
                 ))}
               </tbody>
@@ -567,6 +590,7 @@ export function HousesListSection({
               showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
               transferDate={form.transferDate}
               mergeContext={mergeContext}
+              countExclusionEnabled={countExclusionEnabled}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

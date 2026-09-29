@@ -167,6 +167,8 @@ export type TransferReductionStub =
     }
   // §99의4 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "new_99_4_rural";
+      /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
+      houseId?: string;
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
@@ -174,6 +176,8 @@ export type TransferReductionStub =
       meetsLocationRequirement?: boolean;
       _phase1Stub?: true }
   | { type: "new_99_4_hometown";
+      /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
+      houseId?: string;
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
@@ -290,6 +294,8 @@ export type TransferReductionStub =
       _phase1Stub?: true }
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_9";
+      /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
+      houseId?: string;
       unsoldHouseAcquisitionDate?: Date;
       unsoldHouseAcquisitionPrice?: number;
       unsoldHouseExclusiveArea?: number;

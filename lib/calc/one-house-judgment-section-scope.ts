@@ -13,9 +13,15 @@ import {
   judgmentSaleIsHousing,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { provisoGate, type ProvisoMode } from "./transfer-tax-api-helpers";
-import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
+import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset";
 import { temporaryTwoHouseApplies } from "./household-house-count";
 import { replacementHouseApplies } from "./replacement-house-scope";
+import {
+  eligibleCountExcludedHouseIds,
+  rowCountExclusionReductions,
+  rowSpecialHouseExclusions,
+} from "@/lib/calc/house-count-exclusion-rows";
+import type { RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 
 /**
  * §155①⑥⑦⑧⑯⑱ 섹션 — 2주택 이상일 때만 의미가 있다.
@@ -91,6 +97,7 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
+      excludedHouseIds: eligibleCountExcludedHouseIds(form),
     }),
   }).mode;
 }
@@ -120,16 +127,46 @@ export function isHouseCountExclusionReduction(
 }
 
 /**
- * §99의4·§98의9 선언 — ⑤(칸 노출)·④(전송)·⑧(필수값)의 **공용 게이트** (OH-28).
+ * §99의4·§98의9 선언 — ④(전송)·⑧(필수값)·사이드바의 **공용 게이트** (OH-28).
+ *
+ * 🔄 **출처는 명부 행이다**(`HouseEntry.countExclusion` — 계획서
+ *    `one-house-judgment-count-exclusion-row-link.plan.md`). 종전에는 `assets[0].reductions`의
+ *    세대 단위 선언이라 어느 주택인지 몰랐고, 명부에 없는 주택까지 빼 주었다(P3·P6).
+ *    행에서 만든 선언은 취득일·주소 등을 행 값으로 채우고 `houseId`를 싣는다.
  *
  * 🔑 양도 대상이 **주택**일 때만 연다 — 두 조문은 「일반주택(종전주택)을 양도하는 경우」이고,
  *    조합원입주권 양도(§89①4호)에는 주택 수 제외 축이 없다. 입주권으로 바꾼 뒤 남은 선언은
  *    ④가 보내지 않고 ⑧도 요구하지 않는다(값은 지우지 않는다 — 주택으로 되돌리면 복귀).
- * 🔑 다른 감면 유형은 판정과 무관하므로 걸러 낸다(판정 route는 세액을 계산하지 않는다).
  */
 export function judgmentHouseCountExclusionReductions(
   form: OneHouseJudgmentFormData,
-): HouseCountExclusionReduction[] {
+): RowCountExclusionReduction[] {
   if (!judgmentSaleIsHousing(form)) return [];
-  return (form.assets?.[0]?.reductions ?? []).filter(isHouseCountExclusionReduction);
+  return rowCountExclusionReductions(form.houses);
+}
+
+/**
+ * 보유 감면주택(§98 등) 선언 — 명부 행에서. 게이트는 위와 같다: 감면 조문의 효과 문언이 모두
+ * 「「소득세법」 제89조제1항제3호를 적용할 때」라 입주권 양도(§89①4호)에는 닿지 않는다(계획서 §7-1 V-3).
+ */
+export function judgmentSpecialHouseExclusions(
+  form: OneHouseJudgmentFormData,
+): SpecialHouseExclusionFormItem[] {
+  if (!judgmentSaleIsHousing(form)) return [];
+  return rowSpecialHouseExclusions(form.houses);
+}
+
+/**
+ * **어느 주택인지 지정되지 않은** 옛 선언 수 — `assets[0].reductions`의 §99의4·§98의9와
+ * `form.specialHouseExclusions`(행 id 없음). 이 입력 화면이 종전에 쓰던 저장소다.
+ *
+ * 🔴 계획서 Q-2(a): 종전처럼 1채를 빼 주면 명부에 없는 주택을 빼는 과소과세(P6)가 보존된다.
+ *    ⑧이 다시 판정할 때 막고, ③ 화면이 「행에서 지정 → 옛 선언 삭제」를 안내한다(삭제 버튼이
+ *    유일한 해소 경로 — 입력 칸 없는 영구 차단을 만들지 않는다).
+ */
+export function judgmentLegacyCountExclusionCount(form: OneHouseJudgmentFormData): number {
+  if (!judgmentSaleIsHousing(form)) return 0;
+  const reductions = (form.assets?.[0]?.reductions ?? []).filter(isHouseCountExclusionReduction);
+  const specials = (form.specialHouseExclusions ?? []).filter((e) => e.article);
+  return reductions.length + specials.length;
 }

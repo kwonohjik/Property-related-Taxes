@@ -29,6 +29,11 @@ interface Props {
   onChange: (patch: Partial<New994Hometown>) => void;
   /** 자산의 양도일 — 보유기간 미리보기·추징 경고 예고 */
   transferDate?: string;
+  /**
+   * 판정 메뉴 명부 행에서 쓸 때 — 취득일·주소는 **행 값**이다(`HouseEntry.countExclusion` 주석).
+   * 주면 두 칸을 입력으로 받지 않고 읽기 전용으로 보여 준다(두 벌 입력 금지).
+   */
+  rowFacts?: { acquisitionDate: string; jibun: string };
 }
 
 /**
@@ -51,14 +56,16 @@ function diffYears(from: string, to: string): number | null {
   return calculateHoldingPeriod(d1, d2).years;
 }
 
-export function New994InputForm({ value, onChange, transferDate }: Props) {
+export function New994InputForm({ value, onChange, transferDate, rowFacts }: Props) {
   const isHometown = value.type === "new_99_4_hometown";
   const houseLabel = isHometown ? "고향주택" : "농어촌주택";
+  const acquisitionDate = rowFacts ? rowFacts.acquisitionDate : value.ruralHouseAcquisitionDate;
+  const jibun = rowFacts ? rowFacts.jibun : (value.ruralHouseJibun ?? "");
 
   // emerald 자동 표시 — 보유기간 미리보기 (엔진 판정과 별개 참고용)
   const holdingYears = useMemo(
-    () => diffYears(value.ruralHouseAcquisitionDate, transferDate ?? ""),
-    [value.ruralHouseAcquisitionDate, transferDate],
+    () => diffYears(acquisitionDate, transferDate ?? ""),
+    [acquisitionDate, transferDate],
   );
 
   return (
@@ -72,10 +79,17 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
       <ToneCard tone="amber" sectionNum="①" title={`${houseLabel} 취득 정보`} noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">{houseLabel} 취득일</label>
-          <DateInput
-            value={value.ruralHouseAcquisitionDate}
-            onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
-          />
+          {rowFacts ? (
+            <p className="text-sm" data-testid="new994-row-acq-date">
+              {rowFacts.acquisitionDate || "—"}{" "}
+              <span className="text-caption text-muted-foreground">(이 주택의 기본 정보 취득일)</span>
+            </p>
+          ) : (
+            <DateInput
+              value={value.ruralHouseAcquisitionDate}
+              onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
+            />
+          )}
           <p className="mt-1 text-micro text-muted-foreground">
             취득기간 {isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31 — 일반주택(양도 주택)을 먼저
             취득한 후 취득한 {houseLabel}이어야 합니다 (§99의4①)
@@ -85,33 +99,38 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ② 가액 요건 */}
       <ToneCard tone="sky" sectionNum="②" title="가액 요건" noDark>
-        {/* 농어촌주택 주소 — 기준시가 조회 소스(양도물건이 아닌 별개 물건) */}
-        <div>
-          <label className="mb-1 block text-xs font-medium">{houseLabel} 주소 (기준시가 조회용)</label>
-          <AddressSearch
-            value={
-              {
-                road: "",
-                jibun: value.ruralHouseJibun ?? "",
-                building: "",
-                detail: "",
-                lng: "",
-                lat: "",
-              } satisfies AddressValue
-            }
-            onChange={(v) => onChange({ ruralHouseJibun: v.jibun })}
-            disableUnits
-          />
-          <p className="mt-1 text-micro text-muted-foreground">
-            양도주택이 아닌 {houseLabel}의 주소 — 취득 당시 기준시가 조회에 사용합니다
-          </p>
-        </div>
+        {/* 행에서 쓸 때는 주소도 행 값이다(기본 정보의 주소 검색). */}
+        {!rowFacts && (
+          <>
+            {/* 농어촌주택 주소 — 기준시가 조회 소스(양도물건이 아닌 별개 물건) */}
+            <div>
+              <label className="mb-1 block text-xs font-medium">{houseLabel} 주소 (기준시가 조회용)</label>
+              <AddressSearch
+                value={
+                  {
+                    road: "",
+                    jibun: value.ruralHouseJibun ?? "",
+                    building: "",
+                    detail: "",
+                    lng: "",
+                    lat: "",
+                  } satisfies AddressValue
+                }
+                onChange={(v) => onChange({ ruralHouseJibun: v.jibun })}
+                disableUnits
+              />
+              <p className="mt-1 text-micro text-muted-foreground">
+                양도주택이 아닌 {houseLabel}의 주소 — 취득 당시 기준시가 조회에 사용합니다
+              </p>
+            </div>
+          </>
+        )}
         <HousingStdPriceLookupField
           label="취득 당시 기준시가 합계"
           value={value.ruralHouseStdPrice}
           onChange={(v) => onChange({ ruralHouseStdPrice: v })}
-          jibun={value.ruralHouseJibun}
-          referenceDate={value.ruralHouseAcquisitionDate}
+          jibun={jibun}
+          referenceDate={acquisitionDate}
           hint="주택+부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)"
           testidPrefix="new994-stdprice"
         />

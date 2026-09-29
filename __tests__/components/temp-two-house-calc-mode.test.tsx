@@ -191,6 +191,7 @@ describe("CM-5 읽기 전용 요약 — ③ 값을 실제로 그린다", () => {
           legacyPrecedence: false,
           declaredSpecial: true,
           declaredNewHouseDate: "2023-06-01",
+          excludedHouseIds: new Set(),
         })}
       />,
     );

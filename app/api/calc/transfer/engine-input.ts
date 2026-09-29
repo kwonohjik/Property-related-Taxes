@@ -233,6 +233,7 @@ export function buildTransferEngineInput(
     // P5 모드 2 (⑭): string 일자 → Date 변환
     specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
       article: e.article,
+      ...(e.houseId ? { houseId: e.houseId } : {}),
       houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
       houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
       isNationalHousing: e.isNationalHousing,

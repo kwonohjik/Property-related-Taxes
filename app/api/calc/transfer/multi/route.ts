@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       // P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — 세대 단위 공통이라 전 자산 주입
       specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
         article: e.article,
+        ...(e.houseId ? { houseId: e.houseId } : {}),
         houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
         houseContractDate: toOptionalDate(e.houseContractDate),
         isNationalHousing: e.isNationalHousing,

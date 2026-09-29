@@ -48,7 +48,8 @@ import {
   judgmentDerivedNewHouse,
   judgmentTempTwoHouseVerdict,
 } from "@/lib/calc/one-house-judgment-temp-two-house";
-import { SpecialTaxHouseCountExclusionSection } from "./SpecialTaxHouseCountExclusionSection";
+import { LegacyCountExclusionNotice } from "./LegacyCountExclusionNotice";
+import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import {
   deriveJudgmentHouseCount,
   judgmentSaleIsHousing,
@@ -70,9 +71,6 @@ export function Step2({ form, onChange }: Props) {
   const viewForm = useMemo(() => withDerivedHouseCount(form), [form]);
   const houseCount = deriveJudgmentHouseCount(form);
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
-
-  /** 양도 대상 자산 — §155① 도출의 자산 종류 축에만 쓴다(입력은 ② 화면이 갖는다). */
-  const primary = form.assets[0];
 
   /**
    * §155① 신규 주택 — **명부에서 도출**한다(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`).
@@ -148,6 +146,12 @@ export function Step2({ form, onChange }: Props) {
     [form.isOneHousehold, houseCount, derivedNewHouse],
   );
 
+  // 조특법 주택 수 제외 — 요건을 갖춘 행만(엔진 평가기 그대로 · Q-3(b)). 머리말의 주택 수 안내용.
+  const countExcludedIds = useMemo(
+    () => (judgmentSaleIsHousing(form) ? eligibleCountExcludedHouseIds(form) : new Set<string>()),
+    [form],
+  );
+
   // §156의2⑤ — 일시적 2주택 섹션이 숨는 세대에서만 여기서 그린다(두 벌 방지).
   const showStandaloneReplacement =
     !judgmentTemporaryTwoHouseVisible(form) && judgmentReplacementHouseVisible(form);
@@ -156,7 +160,11 @@ export function Step2({ form, onChange }: Props) {
     <div className="space-y-6">
       <SectionHeader
         title="③ 보유 주택·권리"
-        description={`세대가 보유한 주택과 분양권·입주권, 적용받을 특례를 입력하세요. (현재 판정 주택 수 ${houseCount}채)`}
+        description={`세대가 보유한 주택과 분양권·입주권, 적용받을 특례를 입력하세요. (현재 판정 주택 수 ${houseCount}채${
+          countExcludedIds.size > 0
+            ? ` — 조특법으로 소유주택으로 보지 않는 ${countExcludedIds.size}채를 빼면 ${houseCount - countExcludedIds.size}채`
+            : ""
+        })`}
       />
 
       <ToneCard tone="sky" bodyClassName="">
@@ -176,23 +184,16 @@ export function Step2({ form, onChange }: Props) {
         hideSpouseOwned
         // 합가 칸과 같은 게이트 — 칸이 없거나 합가일이 비면 행에 묻지 않는다.
         mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
+        /*
+          조특법 주택 수 제외(§99의4·§98의9·보유 감면주택)는 **명부 행**에서 받는다(행 편집 ⑥ · 「특례」 배지).
+          게이트는 ④·⑧과 같다: 양도 대상이 주택일 때만(`judgmentSaleIsHousing`).
+          계획서 `docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`.
+        */
+        countExclusionEnabled={judgmentSaleIsHousing(form)}
       />
 
-      {/*
-        조특법 §99의4·§98의9 주택 수 제외 (OH-28) — 명부 바로 다음(주택 수를 바꾸는 입력끼리).
-        게이트는 ④·⑧과 같다: 양도 대상이 주택일 때만(`judgmentSaleIsHousing`).
-      */}
-      {judgmentSaleIsHousing(form) && (
-        <SpecialTaxHouseCountExclusionSection
-          reductions={primary.reductions ?? []}
-          transferDate={form.transferDate}
-          onChange={(reductions) =>
-            onChange({
-              assets: form.assets.map((a, i) => (i === 0 ? { ...a, reductions } : a)),
-            })
-          }
-        />
-      )}
+      {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
+      {judgmentSaleIsHousing(form) && <LegacyCountExclusionNotice form={form} onChange={onChange} />}
 
       {judgmentTemporaryTwoHouseVisible(form) && (
         <TemporaryTwoHouseSection

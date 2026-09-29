@@ -327,6 +327,7 @@ export function toEngineReductions(
     // 날짜는 string 그대로 전달 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
       const common994 = {
+        ...(r.houseId ? { houseId: r.houseId } : {}),
         ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate || undefined,
         ruralHouseStdPrice: parseAmount(r.ruralHouseStdPrice || "0") || undefined,
         isRegisteredHanok: r.isRegisteredHanok,
@@ -626,6 +627,7 @@ export function toEngineReductions(
     if (r.type === "unsold_98_9") {
       return {
         type: "unsold_98_9" as const,
+        ...(r.houseId ? { houseId: r.houseId } : {}),
         unsoldHouseAcquisitionDate: r.unsoldHouseAcquisitionDate || undefined,
         unsoldHouseAcquisitionPrice: parseAmount(r.unsoldHouseAcquisitionPrice || "0") || undefined,
         unsoldHouseExclusiveArea: parseDecimal(r.unsoldHouseExclusiveArea || "") || undefined,

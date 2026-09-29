@@ -37,6 +37,7 @@ import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-perio
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
+import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -171,6 +172,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        excludedHouseIds: eligibleCountExcludedHouseIds(form),
       }),
     }).mode,
     form.provisoReason,

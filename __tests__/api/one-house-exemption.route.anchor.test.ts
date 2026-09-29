@@ -116,7 +116,7 @@ describe("P4-2a — 명부 → 세대 주택 수 도출 (G-1)", () => {
 // ── 2. 제외 명세 ─────────────────────────────────────────────────────
 describe("P4-2a — 주택 수 산정 명세", () => {
   const emptyExclusions = {
-    houseCountExclusion: { appliedList: [] },
+    houseCountExclusion: { appliedList: [], details: [] },
     specialHouseExclusion: { entries: [], excludedCount: 0 },
   };
 
@@ -248,7 +248,14 @@ describe("POST /api/calc/one-house-exemption", () => {
       total: 2,
       countedForExemption: 1,
       excluded: [
-        { houseId: "h1", label: "상속주택 — 주택 수 제외", legalBasis: "소득세법 시행령 §155②" },
+        {
+          houseId: "h1",
+          // 명부 순번·취득일 — 결과 화면의 「보유 주택 N (취득일)」(행 연결 계획 · 이력 상세에서도 보인다)
+          houseNo: 1,
+          houseAcquisitionDate: "2018-01-01",
+          label: "상속주택 — 주택 수 제외",
+          legalBasis: "소득세법 시행령 §155②",
+        },
       ],
     });
     expect(json.data.judgment.isExempt).toBe(true);

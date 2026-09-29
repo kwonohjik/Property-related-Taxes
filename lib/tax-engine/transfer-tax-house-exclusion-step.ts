@@ -27,7 +27,7 @@ export function resolveExemptionHouseCountExclusions(
   effectiveInput: TransferTaxInput,
   generalHouseAcquisitionDate?: Date,
 ) {
-  const { appliedList: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
+  const { appliedList: hceApplied, new994Detail, unsold989Detail, details: hceDetails } = resolveHouseCountExclusion(
     effectiveInput.reductions,
     {
       generalHouseAcquisitionDate: generalHouseAcquisitionDate ?? effectiveInput.acquisitionDate,
@@ -43,6 +43,7 @@ export function resolveExemptionHouseCountExclusions(
     hceApplied,
     new994Detail,
     unsold989Detail,
+    hceDetails,
     specialHouseExclusionDetail,
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
@@ -199,7 +200,7 @@ export function runHouseCountExclusionStep(
   // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 단독상속 풀만 게이트-오프(L-11 — ③ 풀 무관). 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
   // 🔑 selling id 폴백 규칙은 `resolveInheritedHouseExclusionFromInput` 안에만 둔다 —
   //    불성립 사유 안내(`collectInheritedUnmet`)가 같은 후보 집합을 봐야 하기 때문.
-  const { hceApplied, new994Detail, unsold989Detail, specialHouseExclusionDetail, inheritedExclusion } =
+  const { hceApplied, new994Detail, unsold989Detail, hceDetails, specialHouseExclusionDetail, inheritedExclusion } =
     resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
@@ -246,7 +247,7 @@ export function runHouseCountExclusionStep(
      * 종전에는 `steps`에 문자열로만 남고 구조화 결과가 밖으로 나오지 않았다.
      * **추가 반환일 뿐** 계산에는 쓰이지 않는다(세액 불변).
      */
-    houseCountExclusion: { appliedList: hceApplied, new994Detail, unsold989Detail },
+    houseCountExclusion: { appliedList: hceApplied, new994Detail, unsold989Detail, details: hceDetails },
     inheritedExclusion,
   };
 }

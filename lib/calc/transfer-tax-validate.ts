@@ -33,6 +33,7 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
+import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -660,6 +661,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        excludedHouseIds: eligibleCountExcludedHouseIds(form),
       }),
     }).mode;
     /**

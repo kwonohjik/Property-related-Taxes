@@ -16,6 +16,7 @@ import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { phdPayloadActive } from "./phd-toggle-scope";
+import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -60,6 +61,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,
+    excludedHouseIds: eligibleCountExcludedHouseIds(form),
   });
 
   return {

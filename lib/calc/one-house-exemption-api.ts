@@ -44,6 +44,7 @@ import {
 } from "./transfer-tax-api-helpers";
 import {
   judgmentHouseCountExclusionReductions,
+  judgmentSpecialHouseExclusions,
   judgmentMergeInputVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
@@ -214,10 +215,12 @@ export function buildOneHouseExemptionApiBody(
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
       : {}),
-    specialHouseExclusions: (form.specialHouseExclusions ?? [])
+    // 보유 감면주택 — 명부 행에서(행 id 포함). 옛 세대 단위 선언은 보내지 않는다(⑧이 막는다 — Q-2).
+    specialHouseExclusions: judgmentSpecialHouseExclusions(form)
       .filter((e) => e.article)
       .map((e) => ({
         article: e.article,
+        ...(e.houseId ? { houseId: e.houseId } : {}),
         houseAcquisitionDate: e.houseAcquisitionDate || undefined,
         houseContractDate: e.houseContractDate || undefined,
         isNationalHousing: e.isNationalHousing,

@@ -24,6 +24,8 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
   judgmentHouseCountExclusionReductions,
+  judgmentLegacyCountExclusionCount,
+  judgmentSpecialHouseExclusions,
   judgmentMergeInputVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
@@ -278,13 +280,35 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    *    맥락(카드 숨김)의 stale 사유는 막지 않는다(영구 차단 방지).
    */
   /**
-   * 조특법 §99의4·§98의9 주택 수 제외 선언 — 필수값 (OH-28). 계산기와 **같은 leaf**.
-   * 🔑 게이트는 ⑤·④와 같은 `judgmentHouseCountExclusionReductions`(양도 대상 주택일 때만).
+   * 조특법 주택 수 제외(§99의4·§98의9·보유 감면주택) — 명부 행의 필수값 (OH-28). 계산기와 **같은 leaf**.
+   * 🔑 게이트는 ④와 같은 `judgmentHouseCountExclusionReductions`·`judgmentSpecialHouseExclusions`
+   *    (양도 대상 주택일 때만). 선언은 행 값(취득일·가액·면적)으로 채워져 오므로 그 칸이 비면
+   *    행 기본 정보가 비어 있는 것이다 — 메시지에 행 번호를 붙여 어디를 고칠지 알린다.
    */
+  const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
   for (const r of judgmentHouseCountExclusionReductions(form)) {
     for (const message of collectHouseCountExclusionReductionErrors(r)) {
-      errors.push(err("reductions", message));
+      errors.push(err("houses", `보유 주택 ${rowNo(r.houseId)}: ${message}`));
     }
+  }
+  for (const e of judgmentSpecialHouseExclusions(form)) {
+    if (!e.article) {
+      errors.push(err("houses", `보유 주택 ${rowNo(e.houseId)}: 주택 수 제외 — 감면주택의 적용 조문을 선택하세요.`));
+    }
+  }
+  /**
+   * 🔴 어느 주택인지 지정되지 않은 옛 선언 — 다시 판정하지 않는다(계획서 Q-2(a)).
+   *    종전처럼 1채를 빼 주면 명부에 없는 주택을 빼는 과소과세(P6)가 그대로 남는다.
+   *    해소 경로는 ③ 화면의 안내 카드(행에서 지정 → 기존 선언 삭제)다 — 입력 칸 없는 영구 차단이 아니다.
+   */
+  const legacyCount = judgmentLegacyCountExclusionCount(form);
+  if (legacyCount > 0) {
+    errors.push(
+      err(
+        "houses",
+        `주택 수 제외(조특법) 선언 ${legacyCount}건이 어느 주택인지 지정되지 않았습니다. 보유 주택 목록에서 해당 주택의 「편집」 → 「주택 수 제외(조특법)」로 다시 지정한 뒤, 안내 카드에서 기존 선언을 삭제하세요.`,
+      ),
+    );
   }
 
   errors.push(...collectTempTwoHouseEraIssues(form));
@@ -571,6 +595,7 @@ export function computeOneHouseJudgmentSummary(
       "농어촌·고향주택(조특법)",
     judgmentHouseCountExclusionReductions(form).some((r) => r.type === "unsold_98_9") &&
       "준공후미분양주택(조특법)",
+    judgmentSpecialHouseExclusions(form).length > 0 && "감면주택(조특법)",
   ].filter(Boolean) as string[];
   if (declared.length > 0) {
     items.push({ label: "선언한 특례", value: declared.join(" · ") });

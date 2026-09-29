@@ -35,8 +35,14 @@ import type { HouseCountExclusionResolution } from "../transfer-reductions/unsol
 
 /** 비과세 판정 주택 수에서 빠진 주택 1건 — 판정 메뉴 「주택 수 산정」 한 줄. */
 export type OneHouseCountExclusion = {
-  /** 명부에서 특정된 경우의 행 id. 조문 기반 제외(§99의4 등)는 행을 특정하지 않아 생략된다. */
+  /**
+   * 명부에서 특정된 경우의 행 id. 판정 메뉴는 조특법 제외도 명부 행에 붙여 보낸다.
+   * 행을 모르는 선언(계산기에서 직접 입력한 선언)은 생략된다.
+   */
   houseId?: string;
+  /** 명부 순번(1부터 — 화면의 「보유 주택 N」)·취득일. `houseId`가 명부에서 찾아질 때만. */
+  houseNo?: number;
+  houseAcquisitionDate?: string;
   /** 사람이 읽는 제외 사유 */
   label: string;
   /** 근거 조문 — `legal-codes` 상수값 */
@@ -58,7 +64,7 @@ export type OneHouseCountBreakdown = {
   countedForExemption: number;
   excluded: OneHouseCountExclusion[];
   /**
-   * 선언했으나 **요건 미달로 제외되지 않은** 조특법 §99의4·§98의9 (OH-28).
+   * 선언했으나 **요건 미달로 제외되지 않은** 조특법 §99의4·§98의9 (OH-28)·보유 감면주택.
    *
    * 🔑 성공 목록만 담으면 「왜 주택 수가 그대로인가」가 사라진다(`feedback_success_only_breakdown_hides_failures`).
    *    불성립 선언이 없으면 키 자체가 없다 — 선언하지 않은 사람에게 조문을 나열하지 않는다.
@@ -68,6 +74,11 @@ export type OneHouseCountBreakdown = {
 
 /** 선언했으나 제외되지 않은 조문 1건 — 엔진 불성립 사유(`ineligibleReasons`)를 그대로 옮긴다. */
 export type OneHouseCountNotApplied = {
+  /** 선언이 붙은 명부 행 id (있을 때만) */
+  houseId?: string;
+  /** 명부 순번·취득일 — `OneHouseCountExclusion`과 같다. */
+  houseNo?: number;
+  houseAcquisitionDate?: string;
   label: string;
   legalBasis: string;
   reasons: string[];
@@ -133,12 +144,24 @@ export function buildOneHouseCountBreakdown(p: {
   specialHouseExclusion: SpecialHouseExclusionResolution;
   /** §155②③ 상속·공동상속 */
   inheritedExclusion: InheritedHouseExclusionResult;
+  /**
+   * 엔진 형태 명부(`selling` 행 포함) — `houseId`를 「보유 주택 N · 취득일」로 바꿔 싣는 데만 쓴다.
+   * 🔑 결과에 실어 두면 화면이 폼을 몰라도(이력 상세) 어느 주택인지 보인다.
+   */
+  houses?: HouseInfo[];
 }): OneHouseCountBreakdown {
+  const others = (p.houses ?? []).filter((h) => h.id !== SELLING_HOUSE_ID);
+  const locate = <T extends { houseId?: string }>(item: T): T => {
+    const idx = item.houseId ? others.findIndex((h) => h.id === item.houseId) : -1;
+    if (idx < 0) return item;
+    return { ...item, houseNo: idx + 1, houseAcquisitionDate: others[idx].acquisitionDate.toISOString().slice(0, 10) };
+  };
   const excluded: OneHouseCountExclusion[] = [];
 
-  // §99의4 · §98의9 — 조문 단위 제외(각 1채). 어느 명부 행인지는 특정되지 않는다.
+  // §99의4 · §98의9 — 각 1채. 판정 메뉴는 선언에 명부 행 id를 싣는다.
   for (const applied of p.houseCountExclusion.appliedList) {
     excluded.push({
+      ...(applied.houseId ? { houseId: applied.houseId } : {}),
       label:
         applied.id === "unsold_98_9"
           ? "준공후미분양주택 — 소유주택으로 보지 않음"
@@ -150,7 +173,11 @@ export function buildOneHouseCountBreakdown(p: {
   // 보유 감면주택 — 엔트리 단위로 라벨·근거가 이미 있다.
   for (const entry of p.specialHouseExclusion.entries) {
     if (!entry.eligible) continue;
-    excluded.push({ label: `${entry.articleLabel} — 주택 수 제외`, legalBasis: entry.legalBasis });
+    excluded.push({
+      ...(entry.houseId ? { houseId: entry.houseId } : {}),
+      label: `${entry.articleLabel} — 주택 수 제외`,
+      legalBasis: entry.legalBasis,
+    });
   }
 
   // §155②③ 상속 — **행을 특정할 수 있는 유일한 축**이다.
@@ -165,11 +192,12 @@ export function buildOneHouseCountBreakdown(p: {
     });
   }
 
-  // §99의4 · §98의9 — 선언했으나 불성립. 사유는 엔진 평가기가 낸 문장을 그대로 쓴다(재판정 금지).
+  // 선언했으나 불성립 — 사유는 엔진 평가기가 낸 문장을 그대로 쓴다(재판정 금지).
   const notApplied: OneHouseCountNotApplied[] = [];
-  for (const d of [p.houseCountExclusion.new994Detail, p.houseCountExclusion.unsold989Detail]) {
-    if (!d || d.isEligible) continue;
+  for (const d of p.houseCountExclusion.details) {
+    if (d.isEligible) continue;
     notApplied.push({
+      ...(d.houseId ? { houseId: d.houseId } : {}),
       label:
         d.id === "unsold_98_9"
           ? "준공후미분양주택 — 요건 미충족으로 주택 수에서 빼지 않음"
@@ -178,12 +206,23 @@ export function buildOneHouseCountBreakdown(p: {
       reasons: d.ineligibleReasons.map((r) => r.message),
     });
   }
+  // 보유 감면주택 불성립 — 종전에는 성공만 담아 「왜 주택 수가 그대로인가」가 사라졌다
+  // (`feedback_success_only_breakdown_hides_failures`).
+  for (const entry of p.specialHouseExclusion.entries) {
+    if (entry.eligible) continue;
+    notApplied.push({
+      ...(entry.houseId ? { houseId: entry.houseId } : {}),
+      label: `${entry.articleLabel} — 요건 미충족으로 주택 수에서 빼지 않음`,
+      legalBasis: entry.legalBasis,
+      reasons: entry.reason ? [entry.reason] : [],
+    });
+  }
 
   return {
     total: p.total,
     // 음수 방지는 `runHouseCountExclusionStep`과 같은 규약(`Math.max(… , 0)`).
     countedForExemption: Math.max(p.total - excluded.length, 0),
-    excluded,
-    ...(notApplied.length > 0 ? { notApplied } : {}),
+    excluded: excluded.map(locate),
+    ...(notApplied.length > 0 ? { notApplied: notApplied.map(locate) } : {}),
   };
 }

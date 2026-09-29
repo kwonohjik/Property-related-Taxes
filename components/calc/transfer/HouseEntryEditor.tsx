@@ -28,6 +28,7 @@ import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
+import { HouseEntryCountExclusionSection } from "@/components/calc/transfer/HouseEntryCountExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
@@ -45,6 +46,11 @@ interface Props {
   transferDate?: string;
   /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴 전용). */
   mergeContext?: MergeContext;
+  /**
+   * 조특법 주택 수 제외(⑥) 칸을 연다 — **판정 메뉴 전용**(계획서 Q-1(a)). 계산기는 넘기지 않아
+   * 동작 불변이다(계산기의 같은 선언은 감면 패널·감면주택 섹션이 받는다).
+   */
+  countExclusionEnabled?: boolean;
 }
 
 // ============================================================
@@ -473,7 +479,14 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 // 메인 에디터 (3섹션 조합)
 // ============================================================
 
-export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDate, mergeContext }: Props) {
+export function HouseEntryEditor({
+  house,
+  onUpdate,
+  showSpouseOwned,
+  transferDate,
+  mergeContext,
+  countExclusionEnabled = false,
+}: Props) {
   return (
     <div className="space-y-3">
       <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} transferDate={transferDate} />
@@ -486,6 +499,10 @@ export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDat
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
       <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} />
+      {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}
+      {countExclusionEnabled && (
+        <HouseEntryCountExclusionSection house={house} onUpdate={onUpdate} transferDate={transferDate} />
+      )}
     </div>
   );
 }

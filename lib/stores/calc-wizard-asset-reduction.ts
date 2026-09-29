@@ -297,6 +297,8 @@ export type RentalReductionFormVariant =
   // ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
   | {
       type: "new_99_4_rural";
+      /** 판정 메뉴 명부 행 id — 판정 → 계산기 전달분만 싣는다(「어느 주택인가」) */
+      houseId?: string;
       /** 농어촌주택 취득일 (YYYY-MM-DD) — 시한·3년 보유·취득순서 판정 */
       ruralHouseAcquisitionDate: string;
       /** 농어촌주택 지번 주소 — 기준시가 조회 소스(별개 물건, 양도물건 아님). 엔진 미전달·폼 지속 전용 */
@@ -312,6 +314,8 @@ export type RentalReductionFormVariant =
     }
   | {
       type: "new_99_4_hometown";
+      /** 판정 메뉴 명부 행 id — 판정 → 계산기 전달분만 싣는다(「어느 주택인가」) */
+      houseId?: string;
       ruralHouseAcquisitionDate: string;
       /** 고향주택 지번 주소 — 기준시가 조회 소스(별개 물건). 엔진 미전달·폼 지속 전용 */
       ruralHouseJibun?: string;
@@ -630,6 +634,8 @@ export type RentalReductionFormVariant =
   // ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
   | {
       type: "unsold_98_9";
+      /** 판정 메뉴 명부 행 id — 판정 → 계산기 전달분만 싣는다(「어느 주택인가」) */
+      houseId?: string;
       /** 준공후미분양주택 취득일 (YYYY-MM-DD) — 시한 2024.1.10~2026.12.31·취득순서·양도시점 */
       unsoldHouseAcquisitionDate: string;
       /** 취득가액 (원) — 7억 이하 (령 §98의8①2호. 기준시가 아님) */
@@ -651,6 +657,8 @@ export interface SpecialHouseExclusionFormItem {
   article:
     | "unsold_98" | "unsold_98_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6"
     | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "new_99_3" | "";
+  /** 판정 메뉴 명부 행 id — 판정 → 계산기 전달분만 싣는다(「어느 주택인가」) */
+  houseId?: string;
   /** 감면주택 취득일 (YYYY-MM-DD) */
   houseAcquisitionDate: string;
   /** 감면주택 매매계약일 (YYYY-MM-DD, 선택) */

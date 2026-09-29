@@ -58,6 +58,8 @@ const specialHouseExclusionSchema = z.array(
       "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
       "unsold_98_7", "unsold_98_8", "unsold_99_2", "new_99", "new_99_3",
     ]),
+    /** 판정 메뉴 명부 행 id — 「어느 주택인가」(⑫ — 누락 시 침묵 strip) */
+    houseId: z.string().optional(),
     houseAcquisitionDate: z.string().date().optional(),
     houseContractDate: z.string().date().optional(),
     isNationalHousing: z.boolean().optional(),

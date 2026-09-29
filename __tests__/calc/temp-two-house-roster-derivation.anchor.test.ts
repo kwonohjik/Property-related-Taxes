@@ -37,6 +37,7 @@ const base = {
   legacyPrecedence: false,
   declaredSpecial: false,
   declaredNewHouseDate: "",
+  excludedHouseIds: new Set<string>(),
 };
 
 describe("TTR — §155① 신규주택 명부 도출", () => {
