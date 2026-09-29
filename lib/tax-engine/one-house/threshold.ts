@@ -74,3 +74,18 @@ export function resolveHighValueHouseThreshold(transferDate: Date): number {
 export function formatHighValueThresholdLabel(threshold: number): string {
   return `${threshold / 100_000_000}억`;
 }
+
+/**
+ * 고가주택 판정에 쓰는 **양도가액** — 부담부증여 분모 → 지분 모드 총 물건가 → 단독 양도가액 순.
+ *
+ * `checkExemptionCore`의 E-1·E-3 등이 인라인으로 쓰는 `burdenedGiftDenominator ??
+ * totalPropertyTransferPrice ?? transferPrice`와 **같은 식**이다(2026-09-29 — 요건 검토 카드·기한 문구용).
+ * ⚠️ 기존 인라인 7곳은 아직 이 함수를 쓰지 않는다 — 우선순위를 바꿀 때는 그곳도 함께 바꿀 것.
+ */
+export function resolveHighValuePriceCheck(input: {
+  burdenedGiftDenominator?: number;
+  totalPropertyTransferPrice?: number;
+  transferPrice: number;
+}): number {
+  return input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+}

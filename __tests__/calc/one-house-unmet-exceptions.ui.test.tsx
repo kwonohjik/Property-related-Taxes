@@ -73,10 +73,11 @@ describe("판정 결과 — 선언했으나 적용되지 않은 특례", () => {
     expect(screen.queryByTestId("one-house-unmet-155-5-marriage-merge")).toBeNull();
   });
 
-  it("UMUI-3 「조건부」 카드와 별개다 — 불성립만 있을 때 조건부 카드는 뜨지 않는다", () => {
+  it("UMUI-3 「양도일 조정 안내」 카드와 별개다 — 불성립만 있을 때 안내 카드는 뜨지 않는다", () => {
     render(<OneHouseJudgmentResultView result={response(MARRIAGE_UNMET)} />);
 
-    expect(screen.queryByText("조건부 — 기한 내에 갖추면 비과세")).toBeNull();
+    // 2026-09-29 — 「조건부 — 기한 내에 갖추면 비과세」에서 제목이 바뀌었다(Q-1=B). 옛 제목으로 부정 단언하면 공허해진다.
+    expect(screen.queryByText("양도일을 조정하면 요건을 갖출 수 있습니다")).toBeNull();
     expect(screen.getByText("선언했으나 적용되지 않은 특례")).toBeTruthy();
   });
 

@@ -43,6 +43,11 @@ import {
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
+import {
+  formatHighValueThresholdLabel,
+  resolveHighValueHouseThreshold,
+  resolveHighValuePriceCheck,
+} from "./threshold";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
 import type {
   OneHouseJudgeInput,
@@ -117,6 +122,16 @@ export function collectPendingConditions(
 ): OneHousePendingCondition[] {
   const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;
   const pending: OneHousePendingCondition[] = [];
+  /**
+   * 기한을 지키면 얻는 결론 — 고가주택이면 **전액 비과세가 아니다**(계획서 Q-3, 2026-09-29).
+   * 기준금액은 판정과 같은 단일 소스(양도일 연혁). 종전 문구 「…양도해야 비과세」는 24억 양도에도
+   * 전액 비과세를 약속했다.
+   */
+  const threshold = resolveHighValueHouseThreshold(input.transferDate);
+  const exempt =
+    resolveHighValuePriceCheck(input) > threshold
+      ? `부분 비과세(양도가액 중 ${formatHighValueThresholdLabel(threshold)}원 초과분은 과세)`
+      : "비과세";
 
   /**
    * 🔴 판정 본체(`checkExemptionCore`)의 **선행 게이트 3개를 그대로 복제**한다 — 하나라도 빠지면
@@ -142,7 +157,8 @@ export function collectPendingConditions(
   if (article89Clause2.status === "excluded" && article89Clause2.deadline && coreWouldPass) {
     pending.push({
       id: "156-2-3-right-three-year",
-      description: "주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세",
+      kind: "transfer_by",
+      description: `주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 ${exempt}`,
       deadline: article89Clause2.deadline,
       ...(article89Clause2.deadlineNote ? { deadlineNote: article89Clause2.deadlineNote } : {}),
       legalBasis: TRANSFER.RIGHT_HOLDING_EXCLUSION,
@@ -178,7 +194,8 @@ export function collectPendingConditions(
     ) {
       pending.push({
         id: "155-1-disposal-deadline",
-        description: "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세",
+        kind: "transfer_by",
+        description: `신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 ${exempt}`,
         deadline: timing.deadline,
         ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}),
         /**
@@ -243,7 +260,8 @@ export function collectPendingConditions(
     if (!meetsOneHouseHoldingResidence(input, rule)) continue;
     pending.push({
       id: axis.id,
-      description: `${axis.label}부터 이 날짜까지 두 주택 중 먼저 양도하는 주택을 양도해야 비과세`,
+      kind: "transfer_by",
+      description: `${axis.label}부터 이 날짜까지 두 주택 중 먼저 양도하는 주택을 양도해야 ${exempt}`,
       ...deadlineFields(dl),
       legalBasis: axis.basis,
     });
@@ -264,7 +282,8 @@ export function collectPendingConditions(
     ) {
       pending.push({
         id: "155-8-unavoidable-resolved",
-        description: "부득이한 사유가 해소된 날부터 이 날짜까지 일반주택을 양도해야 비과세",
+        kind: "transfer_by",
+        description: `부득이한 사유가 해소된 날부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
         ...deadlineFields(dl),
         legalBasis: TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL,
       });
@@ -286,7 +305,8 @@ export function collectPendingConditions(
     ) {
       pending.push({
         id: "155-7-3ho-return-to-farm",
-        description: "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세",
+        kind: "transfer_by",
+        description: `귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
         ...deadlineFields(dl),
         // 위와 같은 이유로 법령명을 남긴다 — `§155⑦3호`만으로는 파싱되지 않는다.
         legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
@@ -313,7 +333,8 @@ export function collectPendingConditions(
   ) {
     pending.push({
       id: "154-1-holding-years",
-      description: "이 날짜까지 보유한 뒤 양도해야 비과세(보유기간 요건)",
+      kind: "transfer_after",
+      description: `보유기간 요건 — 이 날짜까지 보유한 뒤 양도해야 ${exempt}`,
       deadline: holdingDeadline(input, rule),
       legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
     });

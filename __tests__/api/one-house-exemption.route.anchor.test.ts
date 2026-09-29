@@ -13,7 +13,7 @@
  * 나머지(Zod 스키마·엔진 input 조립·주택수 제외·판정)는 **계산기와 같은 함수**를 부른다 —
  * 그 「같음」이 D-1의 배관 판이라, 여기서 갈라지면 두 화면이 다른 답을 낸다.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/one-house-exemption/route";
 import {
@@ -22,6 +22,21 @@ import {
 } from "@/lib/tax-engine/one-house/house-count";
 import { resolveInheritedHouseExclusion } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+
+/**
+ * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
+ * 과거 기한을 단언하는 테스트는 그 기한 **이전의 오늘**에서 돌려야 한다. `Date`만 가짜로 돌린다.
+ */
+async function atToday<T>(isoDate: string, fn: () => Promise<T>): Promise<T> {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(`${isoDate}T03:00:00Z`));
+  try {
+    return await fn();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 
 // ── route 호출 헬퍼 ──────────────────────────────────────────────────
 /** Zod(`propertySchema`) 필수 필드 기본값 — 각 테스트는 관심 축만 덮어쓴다. */
@@ -239,14 +254,17 @@ describe("POST /api/calc/one-house-exemption", () => {
     expect(json.data.judgment.isExempt).toBe(true);
   });
 
-  it("[R-5] 일시적 2주택 기한 도과 → 처분기한이 응답에 실린다", async () => {
-    const { json } = await post({
-      houses: [houseBody("selling"), houseBody("h1")],
-      temporaryTwoHouse: {
-        previousAcquisitionDate: "2019-06-01",
-        newAcquisitionDate: "2020-07-01",
-      },
-    });
+  const R5_BODY = {
+    houses: [houseBody("selling"), houseBody("h1")],
+    temporaryTwoHouse: {
+      previousAcquisitionDate: "2019-06-01",
+      newAcquisitionDate: "2020-07-01",
+    },
+  };
+
+  it("[R-5] 일시적 2주택 기한 도과 → 처분기한이 응답에 실린다 (오늘 2023-06-01 — 기한 전)", async () => {
+    const { json } = await atToday("2023-06-01", () => post(R5_BODY));
+    expect(json.data.judgmentBaseDate).toBe("2023-06-01");
     expect(json.data.judgment.isExempt).toBe(false);
     expect(json.data.judgment.pending.map((p: { id: string }) => p.id)).toEqual([
       "155-1-disposal-deadline",
@@ -254,6 +272,18 @@ describe("POST /api/calc/one-house-exemption", () => {
     // L-1 — 역상 말일 2023-07-01(토) → 기한 07-03(월)(국세기본법 §4 → 민법 §161). 설명도 응답에 실린다.
     expect(String(json.data.judgment.pending[0].deadline).slice(0, 10)).toBe("2023-07-03");
     expect(json.data.judgment.pending[0].deadlineNote).toContain("2023-07-01");
+  });
+
+  it("[R-5b] 짝 — 오늘이 기한(2023-07-03) 다음 날이면 이룰 수 없으므로 기한을 내지 않는다 · 요건 행이 사유를 말한다", async () => {
+    const { json } = await atToday("2023-07-04", () => post(R5_BODY));
+    expect(json.data.judgmentBaseDate).toBe("2023-07-04");
+    expect(json.data.judgment.isExempt).toBe(false);
+    expect(json.data.judgment.pending).toEqual([]);
+    const deadline = json.data.judgment.requirementReview.items.find(
+      (i: { id: string }) => i.id === "disposal-deadline",
+    );
+    expect(deadline.status).toBe("unmet");
+    expect(deadline.note).toContain("2023-07-04");
   });
 
   it("[R-6] 1세대 비해당 선언은 판정 대상이 아니다 — 기한도 없다", async () => {

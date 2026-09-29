@@ -56,7 +56,7 @@ export type JudgmentProvenance = {
     judgedFor: string;
     /** 원본 record가 마지막으로 저장된 시각(ISO) */
     updatedAt: string;
-    /** 「비과세」·「부분 비과세」·「조건부」·「과세」 — 이력 카드·판정 화면과 **같은 술어** */
+    /** 「비과세」·「부분 비과세」·「과세」 — 이력 카드·판정 화면과 **같은 술어** */
     verdictLabel: string;
   } | null;
 };

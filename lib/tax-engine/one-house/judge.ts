@@ -19,7 +19,7 @@
  * ⚠️ 이 파일은 **판정하지 않는다**. 판정을 옮기는 것은 P4 착수 시점의 방향 전환이다
  *    (그때 `checkExemption`이 이 파일을 부르는 얇은 래퍼가 된다).
  */
-import { checkExemption } from "../transfer-tax-exemption";
+import { checkExemption, type CheckExemptionOptions } from "../transfer-tax-exemption";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { OneHouseFacts, OneHouseJudgeInput, OneHouseJudgment, OneHouseSale } from "./types";
 
@@ -203,9 +203,10 @@ export function judgeOneHouseExemption(
   sale: OneHouseSale,
   oneHouseRules: OneHouseSpecialRulesData,
   presaleRightStartDate?: Date,
+  options?: CheckExemptionOptions,
 ): OneHouseJudgment {
   const judgeInput = toOneHouseJudgeInput(facts, sale);
-  return checkExemption(judgeInput, oneHouseRules, presaleRightStartDate);
+  return checkExemption(judgeInput, oneHouseRules, presaleRightStartDate, options);
 }
 
 /**
@@ -218,11 +219,14 @@ export function judgeOneHouseExemptionFromInput(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   presaleRightStartDate?: Date,
+  /** 판정 메뉴 route만 넘긴다(판정 기준일). 계산기는 넘기지 않는다 — 세액 경로 불변. */
+  options?: CheckExemptionOptions,
 ): OneHouseJudgment {
   return judgeOneHouseExemption(
     extractOneHouseFacts(input),
     extractOneHouseSale(input),
     oneHouseRules,
     presaleRightStartDate,
+    options,
   );
 }

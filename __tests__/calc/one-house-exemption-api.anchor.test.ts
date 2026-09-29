@@ -10,7 +10,7 @@
  * 발견했다. ⇒ 여기 anchor는 대부분 **`POST`를 직접 불러** 판정 결과로 관측한다
  * (`feedback_leaf_anchor_skips_zod_layer`).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/one-house-exemption/route";
 import {
@@ -31,6 +31,21 @@ import {
 } from "@/lib/calc/one-house-exemption-validate";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+
+/**
+ * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
+ * 과거 기한을 단언하는 테스트는 그 기한 **이전의 오늘**에서 돌려야 한다. `Date`만 가짜로 돌린다.
+ */
+async function atToday<T>(isoDate: string, fn: () => Promise<T>): Promise<T> {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(`${isoDate}T03:00:00Z`));
+  try {
+    return await fn();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 
 /** 판정이 실제로 나오는 최소 폼 — 각 테스트가 한 축씩만 바꾼다. */
 function baseForm(over: Partial<OneHouseJudgmentFormData> = {}): OneHouseJudgmentFormData {
@@ -181,8 +196,9 @@ describe("P4-2b-1 — 계산기 leaf 재사용", () => {
       previousAcquisitionDate: "2019-06-01",
       newAcquisitionDate: "2020-07-01",
     });
-    // 기한 도과 → 조건부·기한이 판정에 실린다(P4-1 축이 배관을 탄다)
-    const { json } = await postForm(form);
+    // 기한 도과 → 조건부·기한이 판정에 실린다(P4-1 축이 배관을 탄다).
+    //   기한 2023-07-03이 아직 오지 않은 「오늘」에서 판정한다 — 지났으면 이룰 수 없어 빠진다.
+    const { json } = await atToday("2023-06-01", () => postForm(form));
     expect(json.data.judgment.pending.map((p: { id: string }) => p.id)).toEqual([
       "155-1-disposal-deadline",
     ]);

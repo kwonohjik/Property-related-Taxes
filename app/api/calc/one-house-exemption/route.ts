@@ -32,6 +32,7 @@ import { buildTransferEngineInput } from "../transfer/engine-input";
 import { parseRatesFromMap, presaleRightStartDate } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
+import { resolveJudgmentBaseDate } from "@/lib/api/judgment-base-date";
 import {
   buildRentalHousingVerdict,
   applyRentalHousingVerdict,
@@ -58,6 +59,12 @@ import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/t
 /** 판정 메뉴 응답 — 화면(④ 결과)이 읽는 전부. */
 export type OneHouseExemptionResponse = {
   judgment: OneHouseJudgment;
+  /**
+   * 판정 기준일(조회일, 한국 날짜 YYYY-MM-DD) — 이 날 전에 지난 「이 날까지 양도」 기한은 `pending`에서
+   * 빠진다(2026-09-29). 이력 상세는 **저장 당시의 판정**이라 화면이 이 날짜를 함께 보여 준다.
+   * 구 이력에는 없다.
+   */
+  judgmentBaseDate?: string;
   houseCount: OneHouseCountBreakdown;
   /**
    * §155⑳ 장기임대주택 특례 결론 (P4-3a) — 특례를 **선언한 경우에만** 실린다.
@@ -190,10 +197,14 @@ export async function POST(request: NextRequest) {
      */
     const steps: CalculationStep[] = [];
     const exclusion = runHouseCountExclusionStep(engineInput, steps);
+    // 판정 기준일(오늘, 한국 날짜) — 이미 지난 「이 날까지 양도」 기한을 안내하지 않기 위해 넘긴다.
+    //   계산기(`transfer-tax.ts`)는 넘기지 않는다 — 세액 경로 불변.
+    const judgmentBaseDate = resolveJudgmentBaseDate();
     const coreJudgment = judgeOneHouseExemptionFromInput(
       exclusion.exemptionJudgeInput,
       parsedRates.oneHouseSpecialRules,
       presaleRightStartDate(parsedRates),
+      { judgmentBaseDate },
     );
 
     /**
@@ -235,6 +246,7 @@ export async function POST(request: NextRequest) {
 
     const payload: OneHouseExemptionResponse = {
       judgment,
+      judgmentBaseDate: judgmentBaseDate.toISOString().slice(0, 10),
       houseCount,
       ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),
       ...(oneRightVerdict ? { oneRightExemption: oneRightVerdict } : {}),
