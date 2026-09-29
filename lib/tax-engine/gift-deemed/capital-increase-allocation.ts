@@ -141,6 +141,18 @@ export function calcCapitalIncreaseAllocation(
     });
   }
 
+  /** `amount`를 `weights` 비례로 나눈다 — floor 잔액은 마지막 양수 가중치 행이 흡수(누적 −1 차단) */
+  function splitByWeights(amount: number, weights: number[]): number[] {
+    const sum = weights.reduce((a, w) => a + w, 0);
+    const last = weights.findLastIndex((w) => w > 0);
+    let assigned = 0;
+    return weights.map((w, i) => {
+      const raw = i === last ? amount - assigned : safeMultiplyThenDivide(amount, w, sum);
+      assigned += raw;
+      return raw;
+    });
+  }
+
   const shareholderById = new Map(shareholders.map((s) => [s.id, s]));
 
   // 「상증법」§2 9호·§4의2①·③ — 수증자가 **영리법인**이면 증여세 납세의무자가 아니다.
@@ -200,24 +212,38 @@ export function calcCapitalIncreaseAllocation(
     //   · 나목(실권주 미배정) — §29②2호가 30%·3억 기준금액을 두고, 법문이 특수관계인을 요건으로 한다.
     //   가·다·라목분 = (㉯ − 인수가) × 배정받은 신주수 = §29②1호 가목 산식 그 자체다.
     //
-    // ⚠️ **저가에 한정한다.** 법문상 「배정받은 자」는 저가(§39①1호)에서는 이익을 얻는 자 = 수증자지만,
-    //    고가(§39①2호)에서는 「그 실권주를 배정받은 자가 인수함으로써 **그의 특수관계인인 포기자**가
-    //    얻은 이익」이라 배정받은 자가 **증여자**다. 고가의 목별 분해는 증여자 행 기준이어야 하고
-    //    equity-delta에서 증여자 손해를 자기배정분/재배정분으로 가르는 기준이 확정되지 않았다
-    //    ⇒ 고가는 현행 유지(리뷰 2-C 보류분).
-    //    ℹ️ 이 `direction` 항은 **정상 입력에서는 아래 `perShareGain > 0`과 중복**이다 —
-    //       인수가 > ㉮이면 항상 ㉯ < 인수가이기 때문이다(㉮T + P·I < P(T+I) ⟺ ㉮ < P).
-    //       뮤테이션에서 구별력 0으로 측정됐고(N6 SURVIVED), 그 원인은 커버리지 공백이 아니라
-    //       조건 중복이다. direction이 실제 부호와 어긋나게 들어온 경우에만 단독으로 작동한다.
-    const reallocShares = direction === "high" ? 0 : (shareholderById.get(b.id)?.reallocatedShares ?? 0);
+    // 고가(§39①2호)는 「그 실권주를 **배정받은 자**가 인수함으로써 **그의 특수관계인인 포기자**가 얻은 이익」이라
+    //   배정받은 자가 **증여자**다 ⇒ 가목분은 수증자 행이 아니라 **증여자(재배정 인수자) 행**의 재배정 실권주수로
+    //   가른다. 「상증령」§29②3호 산식이 곧 그 귀속이다:
+    //   (인수가 − ㉯) × 포기자의 실권주수 × (특수관계인이 인수한 실권주수 ÷ 실권주 총수) — 기준금액 없음.
+    //   특수관계는 아래 `relationExcluded`가 증여자별로 거른다(가목도 요건이다). 손해비례로 나누면 재배정을
+    //   인수하지 않은 증여자에게 가목분이 새어 특수관계 판정이 뒤바뀐다(anchor `[CT-S39-HIGH-MOK-2]`).
+    //   고가 혼합을 직접 다룬 해석례는 없다 — 법문 + 집행기준 39-29-7 + 재산세과-60(저가 「각각 산정 합산」)
+    //   으로 분해했다(사용자 결정 2026-09-29).
+    //
+    // 상한(`min(…, delta)`)이 없으면 나목분이 음수가 되고 그 음수가 게이트에 걸려 사라지면서
+    //   **게이트가 세액을 늘린다** — 저가 `[CT-S39-MOK-CAP]` · 고가 `[CT-S39-HIGH-MOK-CAP]`.
     const perShareGain = perShareAfter - priceIn;
-    const reallocGain =
-      reallocShares > 0 && perShareGain > 0
-        ? Math.min(safeMultiply(perShareGain, reallocShares), b.delta)
-        : 0;
-    const forfeitGain = b.delta - reallocGain; // 나목분(§29②2호·4호)
-
-    const rawRealloc = splitByLoss(reallocGain);
+    let rawRealloc: number[];
+    if (direction === "high") {
+      const donorRealloc = donors.map((d) => shareholderById.get(d.id)?.reallocatedShares ?? 0);
+      // b는 명부 행에서 나왔다 — 조회는 항상 성공한다
+      const forfeitedByBeneficiary = forfeitedBy(shareholderById.get(b.id) as CapShareholder);
+      const formula = safeMultiplyThenDivide(
+        safeMultiply(-perShareGain, forfeitedByBeneficiary),
+        donorRealloc.reduce((a, r) => a + r, 0),
+        totalForfeit,
+      );
+      rawRealloc = splitByWeights(Math.min(formula, b.delta), donorRealloc);
+    } else {
+      const reallocShares = shareholderById.get(b.id)?.reallocatedShares ?? 0;
+      const reallocGain =
+        reallocShares > 0 && perShareGain > 0
+          ? Math.min(safeMultiply(perShareGain, reallocShares), b.delta)
+          : 0;
+      rawRealloc = splitByLoss(reallocGain);
+    }
+    const forfeitGain = b.delta - rawRealloc.reduce((a, v) => a + v, 0); // 나목분(§29②2호·4호)
     const rawForfeit = splitByLoss(forfeitGain);
     // 특수관계는 **대칭**이다 — 「상증법」§2제10호 후단 「이 경우 본인도 특수관계인의 특수관계인으로
     //   본다」(2012~2015는 「국세기본법」§2제20호 후단, 그 전 「상증령」§29①도 「인수하거나 인수하지
@@ -247,8 +273,11 @@ export function calcCapitalIncreaseAllocation(
       const isRelated = isRelatedTo(d.id);
       const relationExcluded = relationGateApplies && !isRelated;
       // 가·다·라목분은 저가에서 특수관계·기준금액 어느 게이트도 받지 않는다.
+      //   고가 가목분은 기준금액만 받지 않는다 — 특수관계는 §39①2호 가목의 요건이다.
       const taxableRealloc =
-        publicOfferingOut || forProfitCorpOut || shareholderOfTaxedCorpOut ? 0 : rawRealloc[i];
+        publicOfferingOut || forProfitCorpOut || shareholderOfTaxedCorpOut || (direction === "high" && relationExcluded)
+          ? 0
+          : rawRealloc[i];
       const taxableForfeit =
         publicOfferingOut || forProfitCorpOut || shareholderOfTaxedCorpOut || gatedOut || relationExcluded
           ? 0
