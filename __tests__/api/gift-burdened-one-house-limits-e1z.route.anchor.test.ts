@@ -9,6 +9,7 @@
  * |---|---|---|
  * | G1 — 비주택(토지·건물) 상속 자산의 「소득세법」 §104②1호 | 상속 칸이 주택 필드 세트에만 있어 상속개시일부터 단기세율 | 같은 위젯(비주택 모드)으로 `acquisitionCause`·`decedentAcquisitionDate` |
  * | G2 — 「소득세법 시행령」 §155의3 상생임대주택 | 입력 없음 → 거주요건(§154①)·표2 거주 2년(§159의4) 그대로 요구 | 판정 메뉴 위젯 재사용 → `winWinRentalHouse` |
+ * | G4 — §155④⑤ 합가 | 입력 없음 → 세대 2주택 과세 | 계산기 위젯(`MergeDateSection`) 재사용 → `marriageMerge`·`parentalCareMerge`·`isFirstTransferredInMerge` |
  * | G3 — §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유 | 입력 없음 → 3년(연혁 기한) 경과면 과세 | 판정 메뉴 위젯 재사용 → `temporaryTwoHouse.publicInstitutionRelocation`·`disposalDelayReason` |
  *
  * 시료: 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억(토지·건물은 기준시가 모드) — 양도차익 72,750,000.
@@ -486,5 +487,58 @@ describe("G3 ⑭ route — 처분기한이 바뀐다 (계산기와 같은 결론
     expect((await transfer(calcAt("2023-06-01", {}))).isExempt).toBe(false);
     expect((await transfer(calcAt("2023-06-01", { publicInstitutionRelocation: true }))).isExempt).toBe(true);
     expect((await transfer(calcAt("2025-06-01", { disposalDelayReason: "auction" }))).isExempt).toBe(true);
+  });
+});
+
+// ═══ G4 — §155④⑤ 합가 ══════════════════════════════════════════════════════════════
+
+/**
+ * 「소득세법 시행령」 §155⑤ 「… 혼인함으로써 1세대가 2주택을 보유하게 되는 경우 … 혼인한 날부터 10년 이내에 먼저
+ * 양도하는 주택은 이를 1세대1주택으로 보아 제154조제1항을 적용한다」 · ④ 동거봉양 합가(MST 286211 실독).
+ * 부담부증여 정면 회신: 서면-2022-법규재산-1634(법규과-1817, 2022.6.17. — 혼인합가 2주택 중 1주택을 별도세대에게
+ * 부담부증여 「인계하는 채무액에 해당하는 부분에 대해」 §155⑤ 비과세, taxlaw.nts Playwright 실독).
+ * 합가 전 보유 구성(#1876 — 명부 행별 합가 전 보유자)은 이 경로에 명부가 없어 판정하지 않는다(계산기 명부 없음과 같다).
+ */
+const TWO_HOUSES = { acquisitionDate: new Date("2015-01-01"), householdHousingCount: 2 };
+
+describe("G4 ④ — 계산기와 같은 leaf(`buildMergeFacts`)로 싣는다", () => {
+  it("G4-B1 ★ 세대 2주택 + 혼인합가일 · 먼저 양도 → marriageMerge · isFirstTransferredInMerge / 동거봉양 → parentalCareMerge", () => {
+    const m = buildGiftBurdenedTransferBody(
+      giftItem({ ...TWO_HOUSES, marriageDate: "2020-01-01", isFirstTransferredInMerge: true }),
+      giftForm("2023-06-01"),
+    );
+    expect(m).toMatchObject({ marriageMerge: { marriageDate: "2020-01-01" }, isFirstTransferredInMerge: true });
+    const p = buildGiftBurdenedTransferBody(giftItem({ ...TWO_HOUSES, parentalCareMergeDate: "2020-01-01" }), giftForm("2023-06-01"));
+    expect(p).toMatchObject({ parentalCareMerge: { mergeDate: "2020-01-01" } });
+  });
+  it("G4-B2 부정 짝 — 세대 1주택(게이트 밖)의 stale 합가일은 싣지 않는다 · 빈 값이면 키 없음", () => {
+    const one = buildGiftBurdenedTransferBody(
+      giftItem({ ...TWO_HOUSES, householdHousingCount: 1, marriageDate: "2020-01-01", isFirstTransferredInMerge: true }),
+      giftForm("2023-06-01"),
+    );
+    expect(one).not.toHaveProperty("marriageMerge");
+    expect(one).not.toHaveProperty("isFirstTransferredInMerge");
+    const empty = buildGiftBurdenedTransferBody(giftItem(TWO_HOUSES), giftForm("2023-06-01"));
+    expect(empty).not.toHaveProperty("marriageMerge");
+    expect(empty).not.toHaveProperty("parentalCareMerge");
+  });
+});
+
+describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 비과세 (계산기와 같은 결론)", () => {
+  it("G4-1 ★ 혼인 2020-01-01 · 증여 2023-06-01 · 세대 2주택: 과세 8,306,400 → 비과세, 계산기 같은 사실도 비과세", async () => {
+    const base = await gift("2023-06-01", TWO_HOUSES);
+    expect(base.isExempt).toBe(false);
+    expect(base.determinedTax).toBe(8_306_400);
+    const r = await gift("2023-06-01", { ...TWO_HOUSES, marriageDate: "2020-01-01", isFirstTransferredInMerge: true });
+    expect(r.isExempt).toBe(true);
+    const calc = (over: Partial<TransferFormData>) =>
+      transfer(transferForm("2023-06-01", "2015-01-01", { householdHousingCount: "2", ...over }));
+    expect((await calc({})).isExempt).toBe(false);
+    expect((await calc({ marriageDate: "2020-01-01", isFirstTransferredInMerge: true })).isExempt).toBe(true);
+  });
+  it("G4-2 부정 짝 — 혼인일부터 10년 경과(2013-01-01) 증여면 과세 8,306,400 그대로", async () => {
+    const r = await gift("2023-06-01", { ...TWO_HOUSES, marriageDate: "2013-01-01", isFirstTransferredInMerge: true });
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(8_306_400);
   });
 });

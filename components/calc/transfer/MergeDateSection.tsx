@@ -1,18 +1,23 @@
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 
 // ============================================================
 // 합가 특례 (P2) — Step 4 섹션
+//
+// 2026-09-29 E-1 한계(e1z) G4: `app/calc/transfer-tax/steps/step4-sections/`에서 옮겼다(JSX·testid 그대로).
+// 증여세 부담부증여 양도 경로(`BurdenedGiftHousingFieldSet`)도 같은 사실(「소득세법 시행령」 §155④⑤)을 받아야 해서
+// 같은 위젯을 쓴다 — 평행 UI를 만들지 않는다. props는 이 위젯이 읽고 쓰는 세 필드의 `Pick`으로 좁혔다(타입만).
 // ============================================================
+
 
 export function MergeDateSection({
   form,
   onChange,
 }: {
-  form: TransferFormData;
-  onChange: (d: Partial<TransferFormData>) => void;
+  form: MergeDateFields;
+  onChange: (d: Partial<MergeDateFields>) => void;
 }) {
   const hasAnyMerge = form.marriageDate || form.parentalCareMergeDate;
 

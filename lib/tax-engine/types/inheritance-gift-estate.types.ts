@@ -1244,6 +1244,17 @@ export interface BurdenedGiftTransferTaxInput {
   winWinRentalPriorLeaseMonths?: string;
   /** ①3호 상생임대차 임대기간(개월) — 정수 문자열 */
   winWinRentalLeaseMonths?: string;
+  /*
+   * ── housing 전용 — 「소득세법 시행령」 §155④⑤ 합가 (E-1 한계 G4) ──
+   * 양도세 폼과 **같은 이름**이다 — ⑤는 같은 위젯(`MergeDateSection`), ④는 같은 leaf(`buildMergeFacts`).
+   * 세대 주택 수 2 이상일 때만 쓴다. 옛 record에는 없다(특례 미적용).
+   */
+  /** §155⑤ 혼인합가일 (YYYY-MM-DD) */
+  marriageDate?: string;
+  /** §155④ 동거봉양 합가일 (YYYY-MM-DD) */
+  parentalCareMergeDate?: string;
+  /** §155④⑤ 합가 후 세대 내 먼저 양도하는 주택 */
+  isFirstTransferredInMerge?: boolean;
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */

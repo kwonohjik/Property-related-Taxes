@@ -17,6 +17,7 @@
  *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
  *   · §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) — `WinWinRentalSpecialField`
  *   · §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유(E-1 한계 G3) — `TempTwoHouseRelocationInputs` · `TempTwoHouseDelayReasonInput`
+ *   · §155④⑤ 합가(E-1 한계 G4) — `MergeDateSection`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -30,6 +31,7 @@ import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseR
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
+import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import {
   giftBurdenedRentalAsset,
   giftBurdenedRentalExceptionInScope,
@@ -60,6 +62,8 @@ import {
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
   giftBurdenedRegulatedByAddress,
+  giftBurdenedMergeInScope,
+  giftBurdenedMergeSlice,
   giftBurdenedWinWinInScope,
   giftBurdenedWinWinSlice,
 } from "@/lib/calc/gift-burdened-one-house";
@@ -366,6 +370,12 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           mode={provisoMode}
           onChange={(patch) => set(patch)}
         />
+      )}
+
+      {/* §155④⑤ 합가(E-1 한계 G4) — 양도세 계산기와 같은 위젯. 계산기와 같이 세대 주택 수 2 이상에서 §155① 블록·
+          단서 뒤에 둔다. 게이트는 ④와 같다(`giftBurdenedMergeInScope`). */}
+      {giftBurdenedMergeInScope(bgt) && (
+        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} />
       )}
 
       {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 증여(양도) 1주택만 */}

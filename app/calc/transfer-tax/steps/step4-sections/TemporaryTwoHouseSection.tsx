@@ -29,7 +29,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
-import { MergeDateSection } from "./MergeDateSection";
+import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import {
   TempTwoHouseDelayReasonInput,
   TempTwoHouseRelocationInputs,

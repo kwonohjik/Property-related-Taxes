@@ -71,6 +71,10 @@ const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
   winWinRentalIncreaseRatePct: undefined,
   winWinRentalPriorLeaseMonths: undefined,
   winWinRentalLeaseMonths: undefined,
+  // E-1 한계 G4 — §155④⑤ 합가
+  marriageDate: undefined,
+  parentalCareMergeDate: undefined,
+  isFirstTransferredInMerge: undefined,
 };
 
 /** 초기 빈 객체 — 토글 ON 시 생성 */
@@ -105,6 +109,8 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.acquisitionCause === "inheritance" ||
     bgt.rentalHousingException?.applyException === true ||
     bgt.winWinRentalSpecial === true ||
+    !!bgt.marriageDate ||
+    !!bgt.parentalCareMergeDate ||
     !!bgt.residencePeriodMonths ||
     !!bgt.householdHousingCount ||
     bgt.valuationMode === "sangjeungbeop_market" ||

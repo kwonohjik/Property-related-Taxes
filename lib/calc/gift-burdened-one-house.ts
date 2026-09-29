@@ -13,6 +13,7 @@
  * | §154⑤ 단서 재기산 | `finalHouseRestartInScope` · `buildFinalHouseRestartPayload` · `collectFinalHouseRestartErrors` |
  * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) · 토지·비주택 건물(§104②1호만 — E-1 한계 G1) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
  * | §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) | `buildWinWinRentalPayload` · `winWinRentalFieldErrors` · `qualifiesWinWinRental` |
+ * | §155④⑤ 합가(E-1 한계 G4) | `buildMergeFacts` |
  *
  * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다). 예외: 상속 취득 leaf는
  * 모든 부동산 유형에서 쓰고 주택 여부를 인자로 받는다(E-1 한계 G1).
@@ -38,6 +39,7 @@ import {
   type WinWinRentalFields,
 } from "@/lib/calc/one-house-extra-facts-payload";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
+import { buildMergeFacts, type MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -273,4 +275,28 @@ export function giftBurdenedWinWinError(bgt: BurdenedGiftTransferTaxInput): stri
 export function giftBurdenedWinWinResidenceExempt(bgt: BurdenedGiftTransferTaxInput): boolean {
   if (!giftBurdenedWinWinInScope(bgt)) return false;
   return qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)) });
+}
+
+/**
+ * 「소득세법 시행령」 §155④⑤ 합가 (E-1 한계 G4) — ⑤④ 공용 게이트: 주택(호출부가 확인) · 세대 주택 수 2 이상.
+ * 양도세 계산기가 `MergeDateSection`을 여는 조건(`isHousingLike && 세대 주택수 ≥ 2` — `TemporaryTwoHouseSection`
+ * 호출부)과 같다. 이 경로의 주택 수는 선언 스칼라(④와 같은 `?? 1`)다.
+ */
+export function giftBurdenedMergeInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  return (bgt.householdHousingCount ?? 1) >= 2;
+}
+
+/** 증여세 폼 → 위젯 필드(양도세 폼과 같은 이름). 옛 record는 빈 값. */
+export function giftBurdenedMergeSlice(bgt: BurdenedGiftTransferTaxInput): MergeDateFields {
+  return {
+    marriageDate: bgt.marriageDate ?? "",
+    parentalCareMergeDate: bgt.parentalCareMergeDate ?? "",
+    isFirstTransferredInMerge: bgt.isFirstTransferredInMerge === true,
+  };
+}
+
+/** ④ — 계산기와 같은 leaf. 게이트 밖이면 키 없음. */
+export function buildGiftBurdenedMergePayload(bgt: BurdenedGiftTransferTaxInput): object {
+  if (!giftBurdenedMergeInScope(bgt)) return {};
+  return buildMergeFacts(giftBurdenedMergeSlice(bgt));
 }

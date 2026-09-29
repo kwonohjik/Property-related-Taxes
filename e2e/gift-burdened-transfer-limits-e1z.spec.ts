@@ -168,3 +168,26 @@ test("[BT-E2E-15] §155⑯·⑱ → 요청 본문 temporaryTwoHouse.publicInstit
     disposalDelayReason: "auction",
   });
 });
+
+/**
+ * [BT-E2E-16] E-1 한계 G4 — §155④⑤ 합가. 계산기와 같은 위젯(`MergeDateSection`)이 세대 2주택 부담부증여 화면에
+ * 뜨고 계산기와 같은 leaf(`buildMergeFacts`)로 실린다.
+ */
+test("[BT-E2E-16] 혼인합가일 · 먼저 양도 → 요청 본문 marriageMerge·isFirstTransferredInMerge", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+  await goToGiftAssets(page, { year: "2023", month: "6", day: "1" });
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog);
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+
+  await fillDateAndVerify(page, { year: "2020", month: "01", day: "01" }, { scope: dialog.getByTestId("merge-date-marriage") });
+  await dialog.getByRole("switch", { name: /세대 내 먼저 양도하는 주택/ }).click();
+
+  const body = await calculateAndCapture(page, mock);
+  expect(body.marriageMerge).toEqual({ marriageDate: "2020-01-01" });
+  expect(body.isFirstTransferredInMerge).toBe(true);
+});

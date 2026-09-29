@@ -10,6 +10,7 @@
  * | # | 무엇을 고정하나 |
  * |---|---|
  * | UI-G2 | §155의3 상생임대주택 — 판정 메뉴와 같은 `WinWinRentalSpecialField`가 1세대 1주택 ON일 때만 뜨고 patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
+ * | UI-G4 | §155④⑤ 합가 — 계산기와 같은 `MergeDateSection`이 세대 2주택 이상일 때 뜨고 patch가 `burdenedGiftTransferTax`에 들어간다 · 주택 여부 OFF면 비운다 |
  * | UI-G3 | §155⑯·⑱ — 판정 메뉴와 같은 `TempTwoHouseDeadlineExceptionInputs`가 세대 2주택 + 두 날짜일 때 뜨고 patch가 `temporaryTwoHouse`에 들어간다 · ⑯ 신규 주택 소재지는 E-1 잔여 B와 같은 칸(`newHouseRegionCode`) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -146,5 +147,34 @@ describe("UI-G3 §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유", 
   it("부정 짝 — 세대 1주택이면 위젯 없음", () => {
     render(<Harness start={item({ householdHousingCount: 1, temporaryTwoHouse: tt })} giftDate="2023-06-01" />);
     expect(screen.queryByRole("switch", { name: /공공기관·법인 지방이전 특례/ })).toBeNull();
+  });
+});
+
+describe("UI-G4 §155④⑤ 합가", () => {
+  it("★ 세대 2주택 → 합가일·먼저 양도 → bgt에 계산기와 같은 이름으로 들어간다", () => {
+    render(<Harness start={item({ householdHousingCount: 2 })} giftDate="2023-06-01" />);
+    typeDate(screen.getByTestId("merge-date-marriage"), "2020-01-01");
+    expect(bgtOf().marriageDate).toBe("2020-01-01");
+    fireEvent.click(screen.getByRole("switch", { name: /세대 내 먼저 양도하는 주택/ }));
+    expect(bgtOf().isFirstTransferredInMerge).toBe(true);
+    expect(bgtOf().householdHousingCount).toBe(2);
+  });
+  it("부정 짝 — 세대 1주택이면 위젯 없음", () => {
+    render(<Harness start={item({ householdHousingCount: 1 })} giftDate="2023-06-01" />);
+    expect(screen.queryByTestId("merge-date-marriage")).toBeNull();
+  });
+  it("주택 여부를 끄면 합가 입력을 비운다", () => {
+    render(
+      <Harness
+        start={item(
+          { isHousing: true, householdHousingCount: 2, marriageDate: "2020-01-01", isFirstTransferredInMerge: true },
+          { category: "real_estate_building" } as Partial<EstateItem>,
+        )}
+        giftDate="2023-06-01"
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch", { name: /주택 여부/ }));
+    expect(bgtOf().marriageDate).toBeUndefined();
+    expect(bgtOf().isFirstTransferredInMerge).toBeUndefined();
   });
 });

@@ -85,6 +85,25 @@ export function buildTempTwoHouseDeadlineExceptionFacts(f: {
   };
 }
 
+/** §155④⑤ 합가 위젯(`MergeDateSection`)이 읽고 쓰는 필드 — 양도세 폼과 증여세 부담부증여 폼이 같은 이름으로 갖는다 */
+export type MergeDateFields = Pick<TransferFormData, "marriageDate" | "parentalCareMergeDate" | "isFirstTransferredInMerge">;
+
+/**
+ * 「소득세법 시행령」 §155④(동거봉양)·⑤(혼인) 합가 — 본문 조각. 양도세 계산기 ④와 증여세 부담부증여 경로 ④가
+ * 같이 쓴다(E-1 한계 G4). 빈 날짜·false는 싣지 않는다.
+ */
+export function buildMergeFacts(f: {
+  marriageDate?: string;
+  parentalCareMergeDate?: string;
+  isFirstTransferredInMerge?: boolean;
+}): object {
+  return {
+    ...(f.marriageDate ? { marriageMerge: { marriageDate: f.marriageDate } } : {}),
+    ...(f.parentalCareMergeDate ? { parentalCareMerge: { mergeDate: f.parentalCareMergeDate } } : {}),
+    ...(f.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+  };
+}
+
 export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
   /**
    * §155① 두 날짜의 **단일 생산 지점**. 명부에서 신규주택을 도출하고, 도출이 성립하지 않을

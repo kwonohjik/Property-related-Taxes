@@ -215,3 +215,13 @@ describe("G3 ③ 복원 · 게이트 leaf", () => {
     });
   });
 });
+
+// ═══ G4 — §155④⑤ 합가 ═══════════════════════════════════════════════════════════════
+
+describe("G4 ③ 복원", () => {
+  it("G4-N1 JSON 왕복 후 합가 3필드 보존", () => {
+    const f = { marriageDate: "2020-01-01", parentalCareMergeDate: "", isFirstTransferredInMerge: true };
+    const parsed = JSON.parse(JSON.stringify({ giftItems: [aptItem({ householdHousingCount: 2, ...f })] }));
+    expect(normalizeRestoredFormDates(parsed).giftItems![0].burdenedGiftTransferTax).toMatchObject(f);
+  });
+});
