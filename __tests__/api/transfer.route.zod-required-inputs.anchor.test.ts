@@ -36,7 +36,7 @@ type Json = {
   data?: { result?: { determinedTax: number; [k: string]: unknown }; totalTax?: number };
   error?: unknown;
 };
-async function post(handler: typeof SINGLE, url: string, body: unknown) {
+async function post(handler: (req: NextRequest) => Promise<Response>, url: string, body: unknown) {
   const res = await handler(
     new NextRequest(url, {
       method: "POST",

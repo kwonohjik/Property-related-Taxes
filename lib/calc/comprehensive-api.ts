@@ -80,6 +80,41 @@ export function validateLandParcels(formData: ComprehensiveFormData): string | n
 }
 
 /**
+ * 합산배제 임대주택 필수 입력 · 토지 재산세 과세표준 검증 (⑧ — 2026-09-30).
+ *
+ * - 임대주택(시행령 §3①): 등록일·임대개시일·전용면적. 종전엔 ④가 빈 칸을 `과세연도-01-01`·60㎡로
+ *   채워 보내 합산배제가 조용히 **적용**됐다(의무임대기간·면적 한도 판정이 가짜 값으로 통과).
+ * - 토지 집계 입력: 재산세 부과세액이 있으면 과세표준 필수 — 비율 안분 공제(시행령 §5의3)의 분모다.
+ *   0이면 공제가 0이 되어 세액이 조용히 늘었다. ⑫ `aggregateLandSchema`·`separateLandItemSchema` refine과 같은 조건.
+ */
+export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFormData): string | null {
+  for (const [i, p] of formData.properties.entries()) {
+    if (!RENTAL_TYPES.has(p.exclusionType)) continue;
+    const label = `주택 ${i + 1}`;
+    if (!p.rentalRegistrationDate) return `${label}: 합산배제 임대주택은 임대사업자 등록일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    if (!p.rentalStartDate) return `${label}: 합산배제 임대주택은 임대개시일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    if (!(parseDecimal(p.area) > 0)) return `${label}: 합산배제 임대주택은 전용면적(㎡)을 입력하세요 (종합부동산세법 시행령 §3① 면적 요건).`;
+  }
+  const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
+  const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
+  const baseMissing = (base: string, amount: string) => parseAmount(amount) > 0 && !(parseAmount(base) > 0);
+  if (
+    !aggParcelsMode &&
+    formData.hasAggregateLand &&
+    parseAmount(formData.landAggregate.totalOfficialValue) > 0 &&
+    baseMissing(formData.landAggregate.propertyTaxBase, formData.landAggregate.propertyTaxAmount)
+  )
+    return "종합합산 토지: 재산세 부과세액이 있으면 재산세 과세표준을 입력하세요 (종합부동산세법 시행령 §5의3 — 재산세 비율 안분 공제의 분모).";
+  if (!sepParcelsMode && formData.hasSeparateLand) {
+    for (const l of formData.landSeparate) {
+      if (parseAmount(l.publicPrice) > 0 && baseMissing(l.propertyTaxBase, l.propertyTaxAmount))
+        return "별도합산 토지: 재산세 부과세액이 있으면 재산세 과세표준을 입력하세요 (종합부동산세법 시행령 §5의3 — 재산세 비율 안분 공제의 분모).";
+    }
+  }
+  return null;
+}
+
+/**
  * 사례6 건물·부속토지 소유자 분리 검증 (⑧ — API/UI 동기화). 분리 ON 시 시가표준액 필수.
  * 미입력 시 callComprehensiveApi가 appurtenantSplit를 strip → 안분 미적용 침묵 누락 → 여기서 차단
  * (UI 통과↔validate 차단 모순 방지 — API strip 게이트(>0)와 동일 조건).
@@ -311,10 +346,12 @@ export async function callComprehensiveApi(
         ...base,
         rentalInfo: {
           registrationType,
-          rentalRegistrationDate: p.rentalRegistrationDate || `${formData.assessmentYear}-01-01`,
-          rentalStartDate: p.rentalStartDate || `${formData.assessmentYear}-01-01`,
+          // 빈 칸을 채우지 않는다 — ⑧ `validateRequiredExclusionAndLandInputs`가 막는다(종전엔
+          // `과세연도-01-01`·60㎡로 채워 합산배제가 조용히 적용됐다).
+          rentalRegistrationDate: p.rentalRegistrationDate,
+          rentalStartDate: p.rentalStartDate,
           assessedValue: base.assessedValue,
-          area: p.area ? parseFloat(p.area) : 60,
+          area: parseDecimal(p.area),
           location: p.location,
           previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,
           currentRent: parseAmount(p.currentRent),

@@ -310,7 +310,12 @@ export const aggregateLandSchema = z.object({
     .int()
     .nonnegative()
     .optional(),
-});
+}).refine(
+  // 재산세 부과세액이 있으면 과세표준도 있어야 한다 — 비율 안분 공제(시행령 §5의3)의 분모다.
+  // 0이면 엔진이 공제를 0으로 두어 세액이 조용히 늘었다(2026-09-30).
+  (v) => v.propertyTaxAmount === 0 || v.propertyTaxBase > 0,
+  { message: "재산세 부과세액이 있으면 재산세 과세표준을 입력해야 합니다 (종합부동산세법 시행령 §5의3).", path: ["propertyTaxBase"] },
+);
 
 // ============================================================
 // 별도합산 토지 개별 물건 스키마
@@ -337,7 +342,11 @@ export const separateLandItemSchema = z.object({
     .number()
     .int()
     .nonnegative(),
-});
+}).refine(
+  // 종합합산 집계 입력과 같은 규칙 — 과세표준 0이면 비율 안분 공제가 0이 된다.
+  (v) => v.propertyTaxAmount === 0 || v.propertyTaxBase > 0,
+  { message: "재산세 부과세액이 있으면 재산세 과세표준을 입력해야 합니다 (종합부동산세법 시행령 §5의3).", path: ["propertyTaxBase"] },
+);
 
 // ============================================================
 // 토지 필지 스키마 (납부할세액 카드 — 종합합산·별도합산 공용)
@@ -534,6 +543,29 @@ export const comprehensiveTaxInputSchema = z.object({
     message:
       "1세대1주택자와 부부 공동명의 특례(§10의2)는 동시에 선택할 수 없습니다. 부부 공동명의 1주택이면 특례만 선택하세요.",
     path: ["isJointOwnershipSpecialCase"],
+  },
+).refine(
+  // 1세대1주택자(§8①1호)·부부 공동명의 특례(§10의2)는 과세 일반주택 1채 전제 — ⑧
+  // `validateOneHouseConsistency`(comprehensive-api.ts)와 같은 조건. 개인만(법인은 ④가 토글을 뺀다).
+  // 2채 이상인데 받으면 12억 공제·세액공제가 적용됐다(2026-09-30).
+  (v) => {
+    if ((v.taxpayerType ?? "individual") !== "individual") return true;
+    if (!v.isOneHouseOwner && !v.isJointOwnershipSpecialCase) return true;
+    const normal = v.properties.filter(
+      (p) => (p.exclusionType ?? "none") === "none" && (p.section8para4Type ?? "none") === "none",
+    ).length;
+    return normal < 2;
+  },
+  {
+    message: "1세대 1주택자·부부 공동명의 특례는 과세 대상 일반주택이 1채일 때만 적용됩니다 (종합부동산세법 §8①1호·§10의2).",
+    path: ["isOneHouseOwner"],
+  },
+).refine(
+  // 직전연도 총세액 직접입력과 자동계산은 상호배타 — 둘 다 오면 엔진이 직접입력을 조용히 쓴다.
+  (v) => !(v.previousYearTotalTax !== undefined && v.previousYearAuto !== undefined),
+  {
+    message: "직전연도 총세액은 직접 입력(previousYearTotalTax)과 자동 계산(previousYearAuto) 중 하나만 보낼 수 있습니다.",
+    path: ["previousYearTotalTax"],
   },
 ).refine(
   // C-15: 법인 조건부 세부유형(민간건설임대·도시개발·사회적기업·공익법인)은 요건 충족 여부 필수 (미응답 차단)
