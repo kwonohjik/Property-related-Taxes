@@ -67,8 +67,26 @@ function partyName(p: ContributionParty): string {
 }
 
 export function calcContributionGift(input: ContributionInput): DeemedGiftResult {
-  return (input.caseType ?? "low") === "high" ? contributionHigh(input) : contributionLow(input);
+  const high = (input.caseType ?? "low") === "high";
+  const r = high ? contributionHigh(input) : contributionLow(input);
+  return nonPositiveProviso(input, high)
+    ? { ...r, applied: false, deemedGiftValue: 0, exclusionReason: NON_POSITIVE_REASON }
+    : r;
 }
+
+/**
+ * 「상증령」§29의3① 단서 — 현물출자 전·후 1주당 가액이 **모두** 영 이하이면 이익이 없는 것으로 본다.
+ * 반환 경로가 4개(저가·고가 × 명부 유무)라 진입점 한 곳에서 판정한다. 「후」는 상장 단서(저가 Min·고가 Max)
+ * 적용 후 가액 — 각 호가 이익 계산에 쓰는 값이다. 값은 대개 이미 0이지만(인수가도 0이어야 후가 0)
+ * 사유가 「인수가 이하」·「기준금액 미만」으로 뜨던 것을 근거 조문으로 바로잡는다(§39 증자와 같은 축).
+ */
+function nonPositiveProviso(input: ContributionInput, high: boolean): boolean {
+  const { preContribPrice, preContribShares, newSharePrice, contributedShares } = input;
+  if (preContribPrice > 0) return false;
+  const theoretical = computeWeightedPerShare(preContribPrice, preContribShares, newSharePrice, contributedShares);
+  return applyListedPerShareBound(theoretical, input, high ? "max" : "min") <= 0;
+}
+const NON_POSITIVE_REASON = `「상증령」§29의3① 단서 — 현물출자 전·후 1주당 가액이 모두 영 이하 — 이익 없음 (${GIFT.CONTRIBUTION_NON_POSITIVE_PROVISO})`;
 
 /** ①1호 저가인수 (시행령 §29의3①1 → §29②1가 준용) */
 function contributionLow(input: ContributionInput): DeemedGiftResult {

@@ -53,6 +53,13 @@ describe("엔진 — 단서 영역(증자 전 0 · 증자 후 0)", () => {
     expect(r.exclusionReason ?? "").not.toMatch(PROVISO);
   });
 
+  it("[P292-2b] 경계 짝 — 증자 전 **1원**·인수가 0이면 증자 후가 floor로 0이 되지만 전이 양수라 단서 밖(「모두」 — ±1 동등성)", () => {
+    // (1 × 1,000,000 + 0 × 200,000) ÷ 1,200,000 = 0.83… → floor 0. 값은 어차피 0이고 사유만 다르다(§39의3 작업 중 보강).
+    const r = ci("low", "forfeited_realloc", 1, 0);
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.exclusionReason ?? "").not.toMatch(PROVISO);
+  });
+
   it("[P292-2+] 짝 — 증자 전 양수(100,000)면 인수가 0이어도 단서 밖(증자 후 > 0)", () => {
     const r = ci("low", "forfeited_realloc", 100_000, 0);
     expect(r.applied).toBe(true);
