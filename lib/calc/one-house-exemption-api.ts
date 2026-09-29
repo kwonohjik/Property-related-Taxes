@@ -44,6 +44,7 @@ import {
 } from "./transfer-tax-api-helpers";
 import {
   judgmentHouseCountExclusionReductions,
+  judgmentMergeInputVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
 } from "./one-house-judgment-section-scope";
@@ -202,11 +203,8 @@ export function buildOneHouseExemptionApiBody(
     ...buildMergedHouseholdFirstHousePayload(form),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
-    ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
-    ...(form.parentalCareMergeDate
-      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
-      : {}),
-    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    // 합가 3필드 — ⑤·⑧과 **같은 게이트**. 칸이 사라진 뒤(명부를 1주택으로 줄임) 남은 값은 보내지 않는다.
+    ...(judgmentMergeInputVisible(form) ? buildMergePayload(form) : {}),
     ...(form.generalHouseGiftedFromDecedentWithin2yr
       ? { generalHouseGiftedFromDecedentWithin2yr: true }
       : {}),
@@ -314,4 +312,15 @@ export async function callOneHouseExemptionAPI(
     throw new Error(message);
   }
   return (json as { data: OneHouseExemptionResponse }).data;
+}
+
+/** 합가 3필드(§155④⑤) — 게이트는 호출부(`judgmentMergeInputVisible`)가 건다. */
+function buildMergePayload(form: OneHouseJudgmentFormData) {
+  return {
+    ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
+    ...(form.parentalCareMergeDate
+      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
+      : {}),
+    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+  };
 }

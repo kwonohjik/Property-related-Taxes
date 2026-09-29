@@ -50,7 +50,13 @@ afterEach(() => {
   useOneHouseJudgmentStore.getState().reset();
 });
 
-/** ① 경고 2건이 동시에 성립하는 폼 — 1세대 비해당 + 합가일 2개. */
+/**
+ * ① 경고 폼 — 1세대 비해당 + 합가일 2개.
+ *
+ * 🔄 2026-09-29 — 합가 칸과 그 경고는 ③ 보유 주택 단계로 옮겨 갔다
+ *    (`docs/00-pm/one-house-judgment-merge-house-link.plan.md` 1단계). 합가일이 남아 있어도
+ *    ①은 1세대 경고 **1건**만 낸다 — 합가 경고는 아래 `formWithMergeWarning`이 ③에서 본다.
+ */
 function formWithStep1Warnings(): OneHouseJudgmentFormData {
   return {
     ...createInitialOneHouseJudgmentForm(),
@@ -93,6 +99,17 @@ function formWithRentalDoubleEntry(): OneHouseJudgmentFormData {
   } as unknown as OneHouseJudgmentFormData;
 }
 
+/** ③ 합가 경고 — 2주택(명부 1행)에서 두 합가일을 모두 넣은 상태. */
+function formWithMergeWarning(): OneHouseJudgmentFormData {
+  const f = formWithRentalDoubleEntry();
+  return {
+    ...f,
+    assets: [{ ...f.assets[0], rentalHousingException: undefined }],
+    marriageDate: "2024-03-01",
+    parentalCareMergeDate: "2023-05-01",
+  } as unknown as OneHouseJudgmentFormData;
+}
+
 function renderAtStep(step: number, formData: OneHouseJudgmentFormData) {
   useOneHouseJudgmentStore.setState({ currentStep: step, formData, result: null, error: null });
   render(<OneHouseJudgmentCalculator />);
@@ -102,12 +119,18 @@ function renderAtStep(step: number, formData: OneHouseJudgmentFormData) {
    AW-3 — 긍정 짝. **데이터 계층에는 경고가 있다.**
    ───────────────────────────────────────────────────────────────────────── */
 describe("AW-3 (긍정 짝) — validate는 경고를 만들어 낸다", () => {
-  it("① 1세대 비해당 + 합가일 2개 → warning 2건", () => {
+  it("① 1세대 비해당 → warning 1건 (합가일이 남아 있어도 ①은 합가 경고를 내지 않는다)", () => {
     const warnings = validateStep1(formWithStep1Warnings()).filter(
       (e) => e.severity === "warning",
     );
-    expect(warnings).toHaveLength(2);
-    expect(warnings.map((w) => w.field).sort()).toEqual(["isOneHousehold", "marriageDate"]);
+    expect(warnings.map((w) => w.field)).toEqual(["isOneHousehold"]);
+  });
+
+  it("③ 2주택 + 합가일 2개 → 합가 warning 1건", () => {
+    const warnings = validateStep2(formWithMergeWarning()).filter(
+      (e) => e.severity === "warning" && e.field === "marriageDate",
+    );
+    expect(warnings).toHaveLength(1);
   });
 
   it("③ §155⑳ 이중입력 → warning 1건 (차단 오류가 아니다)", () => {
@@ -120,15 +143,15 @@ describe("AW-3 (긍정 짝) — validate는 경고를 만들어 낸다", () => {
    AW-1 · AW-2 — 그런데 **화면에는 도달하지 않는다**.
    ───────────────────────────────────────────────────────────────────────── */
 describe("AW-1 (반전) — ① 단계 경고가 DOM에 뜬다", () => {
-  it("① 경고 2건이 한 카드 안에 함께 뜬다", () => {
+  it("① 경고가 카드에 뜬다", () => {
     renderAtStep(0, formWithStep1Warnings());
     // 화면이 실제로 ① 단계를 그렸는지 먼저 못 박는다(빈 렌더를 통과로 읽지 않기 위해).
     expect(screen.getByTestId("one-house-household")).toBeTruthy();
 
     const card = screen.getByTestId("one-house-validation-warnings");
     expect(card.textContent).toMatch(/1세대1주택 비과세 판정 대상이 아닙니다/);
-    expect(card.textContent).toMatch(/각각 별개 특례이므로 해당하는 쪽만 남기세요/);
-    expect(card.querySelectorAll("li")).toHaveLength(2);
+    expect(card.textContent).not.toMatch(/각각 별개 특례이므로 해당하는 쪽만 남기세요/);
+    expect(card.querySelectorAll("li")).toHaveLength(1);
   });
 
   /**
@@ -143,6 +166,14 @@ describe("AW-1 (반전) — ① 단계 경고가 DOM에 뜬다", () => {
 });
 
 describe("AW-2 (반전) — ③ 단계 경고가 DOM에 뜬다", () => {
+  it("합가일 2개 경고가 ③에 뜬다 — 합가 칸과 같은 화면", () => {
+    renderAtStep(2, formWithMergeWarning());
+    expect(screen.getByText("③ 보유 주택·권리")).toBeTruthy();
+    expect(screen.getByTestId("one-house-validation-warnings").textContent).toMatch(
+      /각각 별개 특례이므로 해당하는 쪽만 남기세요/,
+    );
+  });
+
   it("§155⑳ 이중입력 경고가 뜬다", () => {
     renderAtStep(2, formWithRentalDoubleEntry());
     expect(screen.getByText("③ 보유 주택·권리")).toBeTruthy();

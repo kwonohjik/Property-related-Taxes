@@ -111,24 +111,19 @@ describe("🔑 ③ 섹션과 **상호 배타**로 합가일을 소유한다", ()
   } satisfies Partial<TransferFormData>;
 
   /**
-   * 🔄 **소유자가 ① 세대 단계로 정리됐다** (2026-09-23 재배치).
+   * 🔄 **합가 칸은 ③ 「일시적 2주택·합가 특례」 섹션이 소유한다** (2026-09-29 — ①에서 이동).
    *
-   * 종전에는 주택 수 ≥ 2에서 합가일 칸이 **두 벌** 떴다 — ①(`judgmentMergeDateOwnedByStep1`이
-   * true)과 ③ 섹션(`TemporaryTwoHouseSection`의 `<MergeDateSection>`이 `full` 가드 **밖**).
-   * 배타 규약(`one-house-judgment-section-scope.ts:26-32`)이 이 카드만 상대로 쓰고
-   * 그 경로를 빠뜨린 탓이다. 판정 메뉴에서 ③ 섹션 쪽을 `hideMergeDate`로 끄면서 해소됐다.
-   *
-   * ⇒ 이 테스트가 지키는 것은 **이 카드가 제 합가일 칸을 렌더하지 않는다**는 한 가지다.
-   *    ①이 실제로 소유한다는 것은
-   *    `judgment-step-reorder-preconditions.ui.test.tsx` AN-2가 본다.
+   * 2채 이상이면 `TemporaryTwoHouseSection`의 `<MergeDateSection>`이 칸을 그리고, 이 카드는
+   * 값을 읽기만 한다(배타 규약 — `judgmentMergeInputVisible`). 이 테스트는 **칸이 정확히
+   * 한 벌**인지를 본다 — 이 카드가 제 칸을 그리면 두 벌이 된다.
    */
-  it("2채 이상이면 이 카드는 합가일 칸을 렌더하지 않는다 — ① 세대 단계가 소유한다", () => {
+  it("2채 이상이면 이 카드는 합가일 칸을 렌더하지 않는다 — ③ 합가 특례 섹션이 한 벌만 그린다", () => {
     render(<Step2 form={form(twoHouse)} onChange={() => {}} />);
     // 이 카드가 제공하는 「먼저 양도」 토글 문구가 없다 = 카드가 합가 축을 잡지 않았다.
     expect(shows(/합가 후 세대 내에서 먼저 양도하는 주택이다/)).toBe(false);
-    // ③ 화면 어디에도 합가일 칸이 없다 — 중복이 사라졌다.
-    expect(shows(/동거봉양 합가일/)).toBe(false);
-    expect(shows(/세대 내 먼저 양도하는 주택/)).toBe(false);
+    // 합가 칸은 ③ 섹션에 정확히 한 벌이다.
+    expect(screen.getAllByText("동거봉양 합가일")).toHaveLength(1);
+    expect(screen.getAllByText("세대 내 먼저 양도하는 주택")).toHaveLength(1);
   });
 
   it("★ 2채 이상에서도 보유 구성 선택지는 열린다 (⑧은 2주택 조합도 열거한다)", () => {

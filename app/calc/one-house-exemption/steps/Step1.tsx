@@ -13,8 +13,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { MergeDateSection } from "@/app/calc/transfer-tax/steps/step4-sections/MergeDateSection";
-import { judgmentMergeDateOwnedByStep1 } from "@/lib/calc/one-house-judgment-section-scope";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 type Props = {
@@ -71,11 +69,9 @@ export function Step1({ form, onChange }: Props) {
       />
 
       {/*
-        🔴 합가일 입력 소유권은 **배타 규약**이다 — 분양권·입주권이 있고 주택 수가 2 미만이면
-           `MergedHouseholdRightSection`(② 단계)이 같은 3필드를 직접 소유한다. 둘 다 렌더하면
-           같은 칸이 두 벌 뜬다(F-3). 술어는 leaf 단일 소스.
+        합가일(혼인·동거봉양)은 ③ 보유 주택·권리 단계가 받는다 — 합가로 들어온 주택을 입력하는
+        명부 바로 아래에서 받아야 어느 주택이 합가 주택인지 이어진다(2026-09-29 이동).
       */}
-      {judgmentMergeDateOwnedByStep1(form) && <MergeDateSection form={form} onChange={onChange} />}
     </div>
   );
 }

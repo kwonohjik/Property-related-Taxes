@@ -30,20 +30,21 @@ export function judgmentTemporaryTwoHouseVisible(form: OneHouseJudgmentFormData)
 }
 
 /**
- * ① 세대 단계가 **합가일 입력을 소유하는가**.
+ * 합가일(혼인·동거봉양)·「먼저 양도」 칸이 **화면에 있는가** — ⑤(노출)·④(전송)·⑧(경고) 공용 게이트.
  *
- * 🔴 **배타 규약이다.** `MergedHouseholdRightSection`은 주택 수 < 2일 때
- *    `marriageDate`·`parentalCareMergeDate`·`isFirstTransferredInMerge`를 **직접 소유**한다
- *    (`MergedHouseholdRightSection.tsx:14-16·80-82`). 그 조건에서 `MergeDateSection`도 함께
- *    렌더하면 **같은 칸이 두 벌** 뜬다(F-3).
+ * 합가 칸은 ③ 보유 주택·권리 단계의 두 섹션 중 **정확히 하나**가 소유한다(배타 규약, F-3).
  *
- * 그 섹션은 `presaleRights.length === 0`이면 `null`을 반환하므로(`:77`), 실제로 소유하는
- * 조건은 **「분양권·입주권이 있고 + 주택 수 < 2」** 다. 그 밖에는 ①이 소유한다.
+ * | 조건 | 소유자 |
+ * |---|---|
+ * | 주택 수 ≥ 2 | `TemporaryTwoHouseSection`의 `<MergeDateSection>` |
+ * | 분양권·입주권 > 0 && 주택 수 < 2 | `MergedHouseholdRightSection`(`MergedHouseholdRightSection.tsx:78·83`) |
+ * | 그 밖(1주택 · 권리 없음) | **없음** — §155④⑤는 합가로 2주택이 된 경우라 입력할 이유가 없다 |
+ *
+ * 🔴 칸이 사라지는 조건(명부에서 주택을 지워 1주택이 됨)에서 남은 날짜를 보내면, 사용자가
+ *    볼 수 없는 합가 안내가 결과에 뜬다 ⇒ ④·⑧도 이 술어로 게이트한다.
  */
-export function judgmentMergeDateOwnedByStep1(form: OneHouseJudgmentFormData): boolean {
-  const ownedByRightSection =
-    (form.presaleRights?.length ?? 0) > 0 && deriveJudgmentHouseCount(form) < 2;
-  return !ownedByRightSection;
+export function judgmentMergeInputVisible(form: OneHouseJudgmentFormData): boolean {
+  return deriveJudgmentHouseCount(form) >= 2 || (form.presaleRights?.length ?? 0) > 0;
 }
 
 /**
