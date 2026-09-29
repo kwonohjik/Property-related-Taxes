@@ -153,6 +153,13 @@ describe("케이스 #5: 토지 증여 + 건물 매매 — 취득원인 분리", 
 // 미입력 시 Zod parse가 error를 반환해야 함.
 // ============================================================
 
+/**
+ * 환산 경로(`actualPriceMode` 아님)는 취득시 기준시가를 요구한다(E-14l · 2026-09-29).
+ * 이 케이스들은 `buildingAcquisitionCause` 판정만 보므로 그 두 값을 채워 **다른 사유로 실패하지 않게** 한다
+ * — 비우면 #8-3의 `success === false`가 enum이 아니라 기준시가 누락으로도 성립해 구별력이 사라진다.
+ */
+const ACQ_STD = { acquisitionLandPricePerSqm: 5_000_000, acquisitionBuildingStdPrice: 10_000_000 };
+
 describe("케이스 #8: Zod 스키마 — buildingAcquisitionCause 미입력 차단", () => {
   it("#8-1 buildingAcquisitionCause 미입력 → Zod.safeParse failure", () => {
     const rawPayload = {
@@ -160,6 +167,7 @@ describe("케이스 #8: Zod 스키마 — buildingAcquisitionCause 미입력 차
       buildingFootprintArea: 90.48,
       transferLandPricePerSqm: 10_830_000,
       transferBuildingStdPrice: 20_629_440,
+      ...ACQ_STD,
       // buildingAcquisitionCause 고의로 누락
     };
     const result = generalBuildingValuationSchema.safeParse(rawPayload);
@@ -176,6 +184,7 @@ describe("케이스 #8: Zod 스키마 — buildingAcquisitionCause 미입력 차
       buildingFootprintArea: 90.48,
       transferLandPricePerSqm: 10_830_000,
       transferBuildingStdPrice: 20_629_440,
+      ...ACQ_STD,
       buildingAcquisitionCause: "purchase",
     };
     const result = generalBuildingValuationSchema.safeParse(rawPayload);
@@ -189,9 +198,13 @@ describe("케이스 #8: Zod 스키마 — buildingAcquisitionCause 미입력 차
       buildingFootprintArea: 90.48,
       transferLandPricePerSqm: 10_830_000,
       transferBuildingStdPrice: 20_629_440,
+      ...ACQ_STD,
       buildingAcquisitionCause: "expropriation", // 건물 enum에 없음
     };
     const result = generalBuildingValuationSchema.safeParse(rawPayload);
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path.join("."))).toEqual(["buildingAcquisitionCause"]);
+    }
   });
 });
