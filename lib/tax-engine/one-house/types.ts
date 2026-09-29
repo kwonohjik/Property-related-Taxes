@@ -247,7 +247,11 @@ export type OneHousePendingCondition = {
  *   met: 충족 · unmet: 미충족 · waived: 요건이 있으나 특례·단서로 면제 · not_required: 이 사안에는
  *   요건 자체가 없음(예: 취득 당시 비조정 → 거주요건 없음) · partial: 고가주택 기준금액 초과(초과분 과세)
  */
-export type OneHouseRequirementStatus = "met" | "unmet" | "waived" | "not_required" | "partial";
+/**
+ * `unchecked` — 입력이 모자라 **판정하지 않은** 요건(합가 전 보유자 미입력 등). 결론은 종전 동작을
+ * 따른다는 뜻이지 충족·미충족이 아니다(`undetermined`와 같은 철학 — 억측 결론 금지).
+ */
+export type OneHouseRequirementStatus = "met" | "unmet" | "waived" | "not_required" | "partial" | "unchecked";
 
 export type OneHouseRequirementCheck = {
   /** 안정 식별자 — 화면 testid·테스트가 본다 */
@@ -264,8 +268,11 @@ export type OneHouseRequirementCheck = {
 };
 
 export type OneHouseRequirementReview = {
-  /** `155-1-temporary-two-house`: §155① 일시적 2주택 · `154-1-one-house`: 1주택 단독 양도 */
-  scheme: "155-1-temporary-two-house" | "154-1-one-house";
+  /**
+   * `155-1-temporary-two-house`: §155① 일시적 2주택 · `154-1-one-house`: 1주택 단독 양도 ·
+   * `155-4-5-merge`: §155④⑤ 동거봉양·혼인 합가
+   */
+  scheme: "155-1-temporary-two-house" | "154-1-one-house" | "155-4-5-merge";
   /** 법정 검토 순서 그대로 */
   items: OneHouseRequirementCheck[];
 };

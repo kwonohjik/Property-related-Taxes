@@ -27,6 +27,9 @@
 export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
 
 /** 세대 구성원이 보유한 주택 1채 정보 */
+/** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
+export type MergeOrigin = "seller_side" | "counterpart_side";
+
 export interface HouseInfo {
   /** 내부 식별자 */
   id: string;
@@ -125,6 +128,14 @@ export interface HouseInfo {
    * 양도일 현재 배우자 보유 주택 수를 차감(§167의3⑨). 미제공(기본 false)=본인 소유로 간주(차감 대상 아님).
    */
   isSpouseOwned?: boolean;
+  /**
+   * §155④⑤ 합가 의제 — 이 주택을 **합가(혼인) 전에** 누가 보유했나(판정 메뉴 명부 입력).
+   *
+   * 양도 주택은 늘 양도자 쪽이라 묻지 않는다. 합가일보다 나중에 취득한 행은 이 값과 무관하게
+   * 「합가 후 취득」이다(`classifyMergeHouse` — 날짜가 먼저). 미제공이면 구성을 판정하지 않는다.
+   * §167의3⑨ `isSpouseOwned`(중과 축, 양도일 현재 배우자 보유)와는 **다른 사실**이다.
+   */
+  mergeOrigin?: MergeOrigin;
   /** 대지면적(㎡) — 건설임대 규모 요건 판정용 (298㎡ 이하) */
   landArea?: number;
   /** 연면적(㎡) — 건설임대 규모 요건 판정용 (149㎡ 이하) */

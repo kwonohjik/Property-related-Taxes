@@ -33,6 +33,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { HousesListSection } from "./HousesListSection";
+import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import {
   DecedentGiftDateField,
   GeneralHouseRightAtInheritanceField,
@@ -44,6 +45,8 @@ export function HouseCountExemptionInputs({
   onChange,
   hideGracePeriod = false,
   hideSellingHouseExclusion = false,
+  hideSpouseOwned = false,
+  mergeContext,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -51,6 +54,10 @@ export function HouseCountExemptionInputs({
   hideGracePeriod?: boolean;
   /** 판정 메뉴 전용 — 중과배제 2섹션 숨김(F-1). 계산기는 넘기지 않아 동작 불변. */
   hideSellingHouseExclusion?: boolean;
+  /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다. */
+  hideSpouseOwned?: boolean;
+  /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다. */
+  mergeContext?: MergeContext;
 }) {
   return (
     <>
@@ -60,6 +67,8 @@ export function HouseCountExemptionInputs({
         onChange={onChange}
         hideGracePeriod={hideGracePeriod}
         hideSellingHouseExclusion={hideSellingHouseExclusion}
+        hideSpouseOwned={hideSpouseOwned}
+        mergeContext={mergeContext}
       />
 
       {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) */}

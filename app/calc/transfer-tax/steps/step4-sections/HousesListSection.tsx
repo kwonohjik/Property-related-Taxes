@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
+import { mergeHouseSideOf, mergeSideLabel, type MergeContext } from "@/lib/calc/merge-house-origin";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
@@ -105,10 +106,13 @@ interface RowProps {
   idx: number;
   onEdit: () => void;
   onRemove: () => void;
+  /** §155④⑤ 합가 — 있으면 「특례」 열에 합가 전 보유 쪽 배지를 단다(판정 메뉴). */
+  mergeContext?: MergeContext;
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove }: RowProps) {
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext }: RowProps) {
   const badges = resolveHouseBadges(house);
+  const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
       <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">{idx + 1}</td>
@@ -128,6 +132,15 @@ function HouseTableRow({ house, idx, onEdit, onRemove }: RowProps) {
               {b.label}
             </span>
           ))}
+          {mergeContext && (
+            <span
+              className={`${CHIP_BASE} ${mergeSide ? CHIP_VIOLET : CHIP_AMBER}`}
+              data-testid={`house-merge-badge-${house.id}`}
+              data-side={mergeSide ?? "unset"}
+            >
+              {mergeSide ? mergeSideLabel(mergeSide, mergeContext.kind) : "합가 전 보유자 미입력"}
+            </span>
+          )}
         </div>
       </td>
       <td className="px-3 py-2 text-right">
@@ -165,6 +178,8 @@ export function HousesListSection({
   onChange,
   hideGracePeriod = false,
   hideSellingHouseExclusion = false,
+  hideSpouseOwned = false,
+  mergeContext,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -193,6 +208,17 @@ export function HousesListSection({
    *    「수정 없이 재사용」 전제가 여기서 한 번 깨지며, 그 범위는 이 prop 하나로 한정된다.
    */
   hideSellingHouseExclusion?: boolean;
+  /**
+   * 「배우자 단독 보유」 칩(§167의3⑨·§167의4⑤ **중과 축**)을 숨긴다 — **판정 메뉴 전용**.
+   * 판정 route는 중과 엔진을 부르지 않아 이 값이 결과를 바꾸지 않는다(2026-09-29 route probe —
+   * 켜고 끈 응답이 동일). 같은 사실을 합가 전 보유 쪽(`mergeContext`)이 묻는다.
+   */
+  hideSpouseOwned?: boolean;
+  /**
+   * §155④⑤ 합가 — 넘기면 행 편집 창에 합가 전 보유 쪽을 묻고 표에 배지를 단다(판정 메뉴).
+   * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다. 계산기는 넘기지 않는다.
+   */
+  mergeContext?: MergeContext;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -390,6 +416,7 @@ export function HousesListSection({
                     idx={idx}
                     onEdit={() => setEditingId(h.id)}
                     onRemove={() => removeHouse(h.id)}
+                    mergeContext={mergeContext}
                   />
                 ))}
               </tbody>
@@ -473,7 +500,7 @@ export function HousesListSection({
       <PresaleRightsSection
         rights={form.presaleRights}
         onChange={(presaleRights) => onChange({ presaleRights })}
-        showSpouseOwned={!!form.marriageDate}
+        showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
       />
 
       {/* ── 양도 주택 3주택+ 전용 배제 특례 ──
@@ -537,8 +564,9 @@ export function HousesListSection({
             <HouseEntryEditor
               house={editingHouse}
               onUpdate={(patch) => updateHouse(editingHouse.id, patch)}
-              showSpouseOwned={!!form.marriageDate}
+              showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
               transferDate={form.transferDate}
+              mergeContext={mergeContext}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

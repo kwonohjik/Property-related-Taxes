@@ -45,6 +45,8 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isUnsoldNewHouse: h.isUnsoldNewHouse,
     completionDate: toOptionalDate(h.completionDate),
     isSpouseOwned: h.isSpouseOwned,
+    // §155④⑤ 합가 전 보유 쪽 — enum pass-through(분류는 엔진 `classifyMergeHouse`가 날짜 우선으로)
+    mergeOrigin: h.mergeOrigin,
     inheritedDate: toOptionalDate(h.inheritedDate),
     // §155③ 공동상속 (2-A2) — boolean pass-through
     isCoInherited: h.isCoInherited,

@@ -255,6 +255,13 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       completionDate: h.completionDate || undefined,
       // #2a 배우자 단독 보유 (§167의3⑨ 혼인 차감) — 양도주택(selling)은 본인 소유라 미설정
       isSpouseOwned: h.isSpouseOwned,
+      /**
+       * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴 명부 입력. 계산기는 이 칸이 없어 늘 미전송이다.
+       * enum 밖 값(저장소 손상)은 싣지 않는다 — ⑫가 400을 내 판정 전체가 막히는 것보다
+       * 「미입력 = 구성 판정 안 함」이 안전측이다.
+       */
+      mergeOrigin:
+        h.mergeOrigin === "seller_side" || h.mergeOrigin === "counterpart_side" ? h.mergeOrigin : undefined,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
       // §155③ 공동상속 (2-A2) — isInherited=true 일 때만 전달

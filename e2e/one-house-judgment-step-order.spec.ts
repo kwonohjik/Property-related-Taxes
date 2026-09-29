@@ -110,12 +110,17 @@ test.describe("판정 마법사 — 화면 순서", () => {
   /**
    * 합가일 중복 해소 — 주택 수 ≥ 2에서 종전에는 ①과 ③ **양쪽에** 떴다
    * (`TemporaryTwoHouseSection.tsx`의 `<MergeDateSection>`이 `full` 가드 밖이었다).
+   *
+   * 🔄 2026-09-29 — 소유자를 ①에서 ③으로 옮겼다. 합가로 들어온 주택을 입력하는 명부와 같은
+   *    화면이어야 어느 주택이 합가 주택인지 이어진다(`docs/00-pm/one-house-judgment-merge-house-link.plan.md`).
+   *    이 spec이 지키는 것은 여전히 「한 벌」이다 — 이제 ①에 없고 ③에 하나다.
    */
-  test("[SO-2] 합가일 칸은 ①에만 있고 ③에는 없다", async ({ page }) => {
+  test("[SO-2] 합가일 칸은 ③에만 있고 ①에는 없다", async ({ page }) => {
     await seedRosterOnly(page);
 
-    // ① — 소유자
-    await expect(page.getByText("혼인합가일", { exact: true })).toBeVisible();
+    // ① — 합가 칸이 없다. 긍정 짝으로 ① 화면 자체는 떠 있음을 함께 본다.
+    await expect(page.getByTestId("one-house-household")).toBeVisible();
+    await expect(page.getByText("혼인합가일", { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "다음" }).click();
     await fillDateAndVerify(page, PREV_ACQ, {
@@ -128,10 +133,10 @@ test.describe("판정 마법사 — 화면 순서", () => {
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
 
-    // ③ — 중복이 없다. 긍정 짝으로 섹션 자체는 살아 있음을 함께 본다.
+    // ③ — 「일시적 2주택·합가 특례」 섹션 안에 정확히 한 벌.
     await expect(page.getByText("③ 일시적 2주택·합가 특례")).toBeVisible();
-    await expect(page.getByText("혼인합가일", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("동거봉양 합가일", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("혼인합가일", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("동거봉양 합가일", { exact: true })).toHaveCount(1);
   });
 
   /**

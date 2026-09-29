@@ -37,9 +37,11 @@ import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
+  judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
   judgmentTemporaryTwoHouseVisible,
 } from "@/lib/calc/one-house-judgment-section-scope";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
 import {
   judgmentDerivedNewHouse,
@@ -165,6 +167,10 @@ export function Step2({ form, onChange }: Props) {
         onChange={onChange}
         hideGracePeriod
         hideSellingHouseExclusion
+        // 「배우자 단독 보유」(중과 축)는 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
+        hideSpouseOwned
+        // 합가 칸과 같은 게이트 — 칸이 없거나 합가일이 비면 행에 묻지 않는다.
+        mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
       />
 
       {/*

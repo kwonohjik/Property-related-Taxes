@@ -61,7 +61,7 @@ const CASES = [
 describe("MG-1 ⑤·④·⑧이 같은 게이트를 쓴다", () => {
   for (const c of CASES) {
     it(`${c.name} → 칸 ${c.visible ? "있음" : "없음"} · 전송 ${c.visible ? "함" : "안 함"} · ③ 경고 ${c.visible ? "있음" : "없음"}`, () => {
-      const f = form(c.over as Partial<OneHouseJudgmentFormData>);
+      const f = form(c.over as unknown as Partial<OneHouseJudgmentFormData>);
       expect(judgmentMergeInputVisible(f)).toBe(c.visible);
 
       const body = buildOneHouseExemptionApiBody(f);
