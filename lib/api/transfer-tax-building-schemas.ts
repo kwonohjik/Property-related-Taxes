@@ -399,6 +399,16 @@ export const generalBuildingValuationSchema = z.object({
   firstDisclosureLandStdPrice: z.number().int().nonnegative().optional(),
   firstDisclosureBuildingStdPrice: z.number().int().nonnegative().optional(),
 }).superRefine((val, ctx) => {
+  // 용도지역 — 무허가 건물(§101① 단서)이 아니면 부수토지 배율 판정에 필수(엔진 `appurtenant-land-excess.ts`가
+  // 없으면 던져 500이 났다 · 부담부증여 GB는 ⑧도 막지 않아 화면에서 닿았다 — 2026-09-30).
+  // 상업용 건물 부수토지(`commercialAppurtenantLandSchema`)와 같은 규칙.
+  if (val.unapprovedBuilding !== true && !val.zoneType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["zoneType"],
+      message: "용도지역(zoneType)이 필요합니다 — 비사업용토지 판정 배율 결정 (무허가 건물은 제외)",
+    });
+  }
   if (val.houseToCommercialConversion === true) {
     if (!val.conversionDate) {
       ctx.addIssue({

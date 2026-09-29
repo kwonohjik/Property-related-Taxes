@@ -22,6 +22,36 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
 /** 겸용주택 mixedUse 페이로드. 비-겸용이면 undefined. */
+/**
+ * 겸용 취득시 상가건물 기준시가 — 직접 입력, 없으면 PHD 전체 건물 기준시가 × (상가면적 / 전체면적).
+ * ④ 페이로드와 ⑧ `validateMixedUseAsset`이 **같은 값**을 보도록 한 곳에 둔다(2026-09-30).
+ */
+export function mixedAcqCommercialBuildingStd(primary: AssetForm): number {
+  const direct = parseAmount(primary.mixedAcqCommercialBuildingPrice);
+  if (direct > 0) return direct;
+  // house_to_commercial Case A: PHD 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
+  const phdBuilding = parseAmount(primary.phdBuildingStdPriceAtAcq);
+  const residentialArea = parseFloat(primary.residentialFloorArea) || 0;
+  const nonResidentialArea = parseFloat(primary.nonResidentialFloorArea) || 0;
+  const totalFloor = residentialArea + nonResidentialArea;
+  if (phdBuilding > 0 && totalFloor > 0) {
+    return Math.floor(phdBuilding * nonResidentialArea / totalFloor);
+  }
+  return 0;
+}
+
+/**
+ * 겸용 취득시 개별공시지가(원/㎡) — 직접 입력 → PHD ① → 1990.8.30. 이전 취득 토지 환산.
+ * (useEffect→store 미러링 제거 대체 · ④·⑧ 공용)
+ */
+export function mixedAcqLandPricePerSqm(primary: AssetForm, transferDate: string): number {
+  return (
+    parseAmount(primary.mixedAcqLandPricePerSqm) ||
+    parseAmount(primary.phdLandPricePerSqmAtAcq) ||
+    (derivePre1990PhdLandPricePerSqmAtAcq(primary, transferDate) ?? 0)
+  );
+}
+
 export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData) {
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
   if (!isMixed) return undefined;
@@ -123,24 +153,8 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     },
     acquisitionStandardPrice: {
       housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
-      commercialBuildingPrice: (() => {
-        const direct = parseAmount(primary.mixedAcqCommercialBuildingPrice);
-        if (direct > 0) return direct;
-        // house_to_commercial Case A: PHD 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
-        const phdBuilding = parseAmount(primary.phdBuildingStdPriceAtAcq);
-        const residentialArea = parseFloat(primary.residentialFloorArea) || 0;
-        const nonResidentialArea = parseFloat(primary.nonResidentialFloorArea) || 0;
-        const totalFloor = residentialArea + nonResidentialArea;
-        if (phdBuilding > 0 && totalFloor > 0) {
-          return Math.floor(phdBuilding * nonResidentialArea / totalFloor);
-        }
-        return 0;
-      })(),
-      // PHD ① 취득시 공시지가 fallback (마지막 항: 1990.8.30. 이전 취득 토지 환산 — useEffect→store 미러링 제거 대체)
-      landPricePerSqm:
-        parseAmount(primary.mixedAcqLandPricePerSqm) ||
-        parseAmount(primary.phdLandPricePerSqmAtAcq) ||
-        (derivePre1990PhdLandPricePerSqmAtAcq(primary, form.transferDate) ?? 0),
+      commercialBuildingPrice: mixedAcqCommercialBuildingStd(primary),
+      landPricePerSqm: mixedAcqLandPricePerSqm(primary, form.transferDate),
     },
     usePreHousingDisclosure: primary.usePreHousingDisclosure,
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.

@@ -81,6 +81,9 @@ export function validateGeneralBuildingAsset(
       return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
     if (!parseAmount(asset.gbAcqBuildingValue))
       return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+    // 용도지역 — 아래 일반 분기와 같은 요구(부담부증여 GB도 부수토지 배율 판정을 거친다). 비우면 엔진이 500.
+    if (!asset.gbUnapprovedBuilding && !asset.gbZoneType)
+      return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
     return null; // 부담부증여는 환산/신축 분기 미적용 — 여기서 종결
   }
 
@@ -90,8 +93,9 @@ export function validateGeneralBuildingAsset(
   if (!parseDecimal(asset.gbBuildingFootprintArea))
     return `${label}: 건축물 바닥면적(각 층 중 최대, 지하 포함)을 입력하세요.`;
 
-  // 용도지역 — 필수
-  if (!asset.gbZoneType)
+  // 용도지역 — 필수. 무허가 건물이면 화면이 용도지역 선택을 숨기고(`GeneralBuildingNblSection`) 엔진도
+  // 배율을 쓰지 않는다(§101① 단서) — 요구하면 보이지 않는 칸을 요구하게 된다(2026-09-30).
+  if (!asset.gbUnapprovedBuilding && !asset.gbZoneType)
     return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
 
   // 양도시 기준시가 — 모드 무관 필수 (§166⑥ 토지·건물 안분 + 환산 분모)
