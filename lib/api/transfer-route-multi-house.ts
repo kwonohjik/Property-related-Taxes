@@ -62,6 +62,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     // 엔진 HouseInfo 이름(landArea·totalFloorArea)으로 매핑. 날짜는 Date 변환. (누락 시 엔진 미도달=과다산정)
     rentalType: h.rentalType,
     rentIncreaseUnder5Pct: h.rentIncreaseUnder5Pct,
+    rentIncreaseContractDate: toOptionalDate(h.rentIncreaseContractDate),
     isNationalSizeHousing: h.isNationalSizeHousing,
     hasMinimum2Units: h.hasMinimum2Units,
     hasMinimum5UnitsInCity: h.hasMinimum5UnitsInCity,

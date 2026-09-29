@@ -31,13 +31,12 @@
  */
 import type { Rental4hoRegistrationFacts, TransferTaxInput } from "../types/transfer.types";
 import { RENTAL_REGISTRATION_4HO } from "../legal-codes";
+import { isRentCapContractSubject } from "../rental-article/check";
 
 /** 부칙<제30395호> 제1조 — 공포일(2020-02-11) 시행. 이 날 전 양도는 제38조①. */
 export const RENTAL_4HO_DELETION_EFFECTIVE_DATE = new Date("2020-02-11");
 /** 부칙<제30395호> 제38조② — 「2019년 12월 16일 이전에 … 등록을 신청한 경우」 */
 export const RENTAL_4HO_REGISTRATION_DEADLINE = new Date("2019-12-16");
-/** 부칙<제29523호> 제1조 본문(공포일 시행)·제6조 — 5% 단서는 이 날 이후 체결·갱신 계약분 */
-export const RENTAL_4HO_RENT_CAP_CONTRACT_START = new Date("2019-02-12");
 
 export const RENTAL_4HO_REASON = "rental_registration_4ho" as const;
 
@@ -136,7 +135,8 @@ export function resolveRental4hoRegistration(input: Rental4hoInput): Rental4hoVe
         const c = f.rentIncreaseContractDate;
         if (!c) {
           missing.push("5% 초과 증액 계약의 체결·갱신일");
-        } else if (c.getTime() >= RENTAL_4HO_RENT_CAP_CONTRACT_START.getTime()) {
+        } else if (isRentCapContractSubject(c)) {
+          // 부칙<제29523호> 제6조 — §167의3①2호와 같은 부칙·같은 술어(`rental-article/check.ts`).
           excluded.push(
             `${fmtDate(c)}에 체결·갱신한 계약에서 연 5%를 초과해 증액했습니다 — 종전 4호 단서로 제외됩니다` +
               `(2019년 2월 12일 이후 계약분부터 적용 — ${RENTAL_REGISTRATION_4HO.RENT_INCREASE_APPLICATION}).`,

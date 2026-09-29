@@ -172,13 +172,13 @@ function hasBasicRegistration(house: HouseInfo): boolean {
   );
 }
 
-/** 다주택 유형 A~I ↔ §167조의3①2호 가~자목 (실측 getRentalTypeLabel 정합). */
-const ARTICLE_BY_RENTAL_TYPE: Record<RentalHousingType, SharedRentalArticle> = {
+/** 다주택 유형 A~I ↔ §167조의3①2호 가~자목 (실측 getRentalTypeLabel 정합). ⑤·④ 게이트도 이 표를 쓴다. */
+export const ARTICLE_BY_RENTAL_TYPE: Record<RentalHousingType, SharedRentalArticle> = {
   A: "가", B: "나", C: "다", D: "라", E: "마", F: "바", G: "사", H: "아", I: "자",
 };
 
 /** HouseInfo → 공용 정규화 입력 (Phase 2 C3 — checkRentalArticle 위임). */
-function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
+function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): NormalizedRentalUnit {
   return {
     businessRegistrationDate: house.businessRegistrationDate ?? null,
     rentalRegistrationDate: house.rentalRegistrationDate ?? null,
@@ -193,6 +193,8 @@ function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
     hasMinimum5UnitsInCity: house.hasMinimum5UnitsInCity,
     isNationalSizeHousing: house.isNationalSizeHousing,
     rentIncreaseUnder5Pct: house.rentIncreaseUnder5Pct ?? false,
+    rentIncreaseContractDate: house.rentIncreaseContractDate, // 부칙<제29523호> 제6조
+    transferDate,
     isExcluded918Rule: house.isExcluded918Rule,
     hasContractDepositProof: house.hasContractDepositProof,
     firstSaleContractDate: house.firstSaleContractDate,
@@ -234,7 +236,7 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
   if (!passesRegistrationCap(house, article)) return false;
 
-  return checkRentalArticle(article, toNormalizedFromHouse(house)).passed;
+  return checkRentalArticle(article, toNormalizedFromHouse(house, transferDate)).passed;
 }
 
 /**
@@ -278,7 +280,7 @@ export function isLongTermRentalDutyPeriodPending(house: HouseInfo, transferDate
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
   if (article === "사") return false;
   if (!passesRegistrationCap(house, article)) return false;
-  const r = checkRentalArticle(article, toNormalizedFromHouse(house));
+  const r = checkRentalArticle(article, toNormalizedFromHouse(house, transferDate));
   return !r.passed && r.failCodes.every((c) => c === "RENTAL_PERIOD_SHORT");
 }
 

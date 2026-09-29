@@ -657,7 +657,10 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         description={
           unit.requirementsConfirmed
             ? undefined
-            : "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호)."
+            : "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호). 5% 상한은 2019년 2월 12일 이후, " +
+              "1년 이내 재증액 금지는 2020년 2월 11일 이후 체결·갱신한 임대차계약분부터 적용됩니다(대통령령 제29523호 " +
+              "부칙 제6조 · 제30395호 부칙 제16조) — 그 전 계약에서 올린 것은 보지 않고, 2019년 2월 12일 이후 처음 " +
+              "체결·갱신한 표준임대차계약이 비교 기준입니다(서면-2020-부동산-3300)."
         }
         trailing={
           <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />

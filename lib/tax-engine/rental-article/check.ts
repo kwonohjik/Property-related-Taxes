@@ -62,6 +62,13 @@ export type NormalizedRentalUnit = {
   isNationalSizeHousing?: boolean;
   /** 5%룰 (§155⑳는 requirementsConfirmed 묶음에서 매핑) */
   rentIncreaseUnder5Pct: boolean;
+  /**
+   * 5%를 넘게 올린 임대차계약의 체결·갱신일(여럿이면 가장 늦은 날) — `rentIncreaseUnder5Pct`가 false일 때만 본다.
+   * 가·다·마·바목 5%는 2019-02-12 이후 체결·갱신 계약분부터다(`isRentCapContractSubject`).
+   */
+  rentIncreaseContractDate?: Date;
+  /** 양도일 — 2019-02-12 전 양도분에는 가·다·마·바목 5% 문언이 없었다. 미제공이면 이 게이트를 보지 않는다. */
+  transferDate?: Date;
   /** 918 조정취득 배제 (마목 hard·아목 carve-out — 양 feature 공용, C4서 §155⑳도 이 필드로 통일) */
   isExcluded918Rule?: boolean;
   /** 아목 918 carve-out — 계약금 지급 증빙 */
@@ -129,6 +136,39 @@ const GATES: Record<SharedRentalArticle, ArticleGate> = {
   자: { priceAt: "rentalStart", fivePct: true, regDateMin: RA_CUT.Y2025_06_04, apartmentBlanket: true, size: true, min2: true },
   구법: { priceAt: "rentalStart", fivePct: true },
 };
+
+/**
+ * 대통령령 제29523호(2019.2.12.) 부칙 제6조 — 「제154조제1항제4호, 제155조제20항제2호 및 제167조의3제1항제2호
+ * (제167조의10제1항제2호가 적용되는 경우를 포함한다)의 개정규정은 이 영 시행 이후 주택 임대차계약을 체결하거나
+ * 기존 계약을 갱신하는 분부터 적용한다.」(MST 207800 부칙단위 실독 2026-09-29)
+ *
+ * 5% 문언(「임대보증금 또는 임대료의 연 증가율이 100분의 5를 초과하지 않는」)은 이 개정에서 **가·다·마·바목**에
+ * 들어왔다(직전 시행본 MST 204914에는 없다). 아·자목(2025.6.4. 신설)의 5%는 그 개정의 부칙을 따르므로 대상이 아니다.
+ * 사목은 base 목(가·다·마)의 5%를 그대로 본다.
+ *
+ * ⚠️ 이 날 이후 계약 중 **처음** 체결·갱신한 표준임대차계약은 비교 기준이다(서면-2021-법규재산-3399 ·
+ *    서면-2020-부동산-3300 · 조심 2022서7263) — 그 계약의 증액은 사용자가 5% 선언에서 뺀다(화면 안내). 엔진은
+ *    계약일만 본다.
+ */
+export const RENT_CAP_29523_ARTICLES: readonly SharedRentalArticle[] = ["가", "다", "마", "바"];
+
+/** 그 체결·갱신일의 임대차계약에 가·다·마·바목 5% 요건이 걸리는가 (부칙<제29523호> 제6조) — 단일 술어. */
+export function isRentCapContractSubject(contractDate: Date): boolean {
+  return contractDate.getTime() >= RA_CUT.Y2019_02_12;
+}
+
+/**
+ * 5% 미충족 선언이 실제로 요건 위반인가. 가·다·마·바목에서만 두 경계를 본다:
+ * - 양도일이 2019-02-12 전 — 5% 문언이 없던 시행본(부칙 제2조② 「이 영 시행 이후 양도하는 분부터」).
+ * - 초과 증액 계약(가장 늦은 것)이 2019-02-12 전 — 부칙 제6조.
+ */
+function isRentCapBreached(article: SharedRentalArticle, u: NormalizedRentalUnit): boolean {
+  if (u.rentIncreaseUnder5Pct) return false;
+  if (!RENT_CAP_29523_ARTICLES.includes(article)) return true;
+  if (u.transferDate && !isRentCapContractSubject(u.transferDate)) return false;
+  if (u.rentIncreaseContractDate && !isRentCapContractSubject(u.rentIncreaseContractDate)) return false;
+  return true;
+}
 
 /** 건설임대(다·바·자) — perUnitVerdict.sizeRequired 표시용(§155⑳ 도출 목 한정). */
 export function isConstructionArticle(article: SharedRentalArticle): boolean {
@@ -231,8 +271,8 @@ function checkArticleGates(
   // (k) 단기→장기 변경 배제 (마·바)
   if (gate.shortToLong && u.isExcludedShortToLongChange) fails.push("SHORT_TO_LONG_CHANGE");
 
-  // (l) 5%룰·기타 요건 (나·라·사 제외)
-  if (gate.fivePct && !u.rentIncreaseUnder5Pct) fails.push("REQUIREMENTS_NOT_CONFIRMED");
+  // (l) 5%룰·기타 요건 (나·라·사 제외) — 가·다·마·바는 부칙<제29523호> 제6조 적용 시기
+  if (gate.fivePct && isRentCapBreached(article, u)) fails.push("REQUIREMENTS_NOT_CONFIRMED");
 
   return fails;
 }

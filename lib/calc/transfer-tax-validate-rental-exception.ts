@@ -138,7 +138,7 @@ export function validateRentalHousingException(
     // §155⑳2호(양도일 현재 등록·임대 중·임대료 5% 이내)는 목을 가리지 않는다 — 나·라목 포함(OH-41).
     // 엔진 `checkEligibility`가 전 목에 요구하므로 ⑤도 전 목에 토글을 띄운다(3중 패턴).
     if (!u.requirementsConfirmed) {
-      return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한, 등록 유지 등).`;
+      return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
     }
     // ㉓1호 자진말소 1/2은 민특법 임대의무기간 기준이다 — 등록 유형 없이는 판정할 수 없다(OH-39).
     // ⑤는 말소 토글 ON + 가·다·라·마목일 때 이 선택지를 띄운다(엔진 `terminationEligibleArticle`과 같은 목).

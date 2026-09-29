@@ -113,6 +113,11 @@ export interface HouseInfo {
   rentalPeriodYears?: number;
   /** 임대료 증가율 5% 이하 충족 여부 */
   rentIncreaseUnder5Pct?: boolean;
+  /**
+   * 5%를 넘게 올린 임대차계약의 체결·갱신일(여럿이면 가장 늦은 날) — 5% 미충족 선언일 때만 의미가 있다.
+   * 2019-02-12 전이면 가·다·마·바목 5% 요건이 걸리지 않는다(대통령령 제29523호 부칙 제6조 · `isRentCapContractSubject`).
+   */
+  rentIncreaseContractDate?: Date;
   /** 임대사업자 정식 등록 여부 */
   isRegisteredRental?: boolean;
   /** 국민주택규모(85㎡ 이하, 수도권·도시지역 60㎡ 이하) 여부 */
