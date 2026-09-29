@@ -120,11 +120,17 @@ describe("UI-D 상속받은 주택 (§104②1호 · §154⑧3호)", () => {
     expect(bgtOf().decedentSameHouseholdBeforeInheritance).toBe(false);
     expect(bgtOf().decedentCohabitationHoldingStartDate).toBe("");
   });
-  it("비주택 건물에는 없다 · 주택 여부를 끄면 상속 값을 비운다", () => {
+  it("주택 여부를 끄면 주택 위젯은 사라지고 비주택 모드(§104②1호)로 바뀐다 · 동일세대 통산 값은 비운다", () => {
     render(
       <Harness
         start={item(
-          { isHousing: true, acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01" },
+          {
+            isHousing: true,
+            acquisitionCause: "inheritance",
+            decedentAcquisitionDate: "2010-01-01",
+            decedentSameHouseholdBeforeInheritance: true,
+            decedentCohabitationHoldingStartDate: "2012-01-01",
+          },
           { category: "real_estate_building" } as Partial<EstateItem>,
         )}
         giftDate="2021-06-01"
@@ -132,9 +138,15 @@ describe("UI-D 상속받은 주택 (§104②1호 · §154⑧3호)", () => {
     );
     expect(screen.queryByRole("switch", { name: /상속받은 주택입니다/ })).not.toBeNull();
     fireEvent.click(screen.getByRole("switch", { name: /주택 여부/ }));
-    expect(bgtOf().acquisitionCause).toBeUndefined();
-    expect(bgtOf().decedentAcquisitionDate).toBeUndefined();
+    // E-1 한계 G1(2026-09-29): 원인·피상속인 취득일은 비주택 건물에도 유효(§104②1호)하므로 남긴다 —
+    //   종전 단언(비움)은 그 갭 자체였다. 주택 전용 통산 값은 여전히 비운다.
+    expect(bgtOf().acquisitionCause).toBe("inheritance");
+    expect(bgtOf().decedentAcquisitionDate).toBe("2010-01-01");
+    expect(bgtOf().decedentSameHouseholdBeforeInheritance).toBeUndefined();
+    expect(bgtOf().decedentCohabitationHoldingStartDate).toBeUndefined();
     expect(screen.queryByRole("switch", { name: /상속받은 주택입니다/ })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /상속받은 자산입니다/ })).not.toBeNull();
+    expect(screen.queryByRole("switch", { name: /피상속인과 동일세대/ })).toBeNull();
   });
 });
 
@@ -220,5 +232,37 @@ describe("UI-C §155⑳ 장기임대주택 보유자 거주주택 특례 (㉓ �
     );
     fireEvent.click(screen.getByRole("switch", { name: /주택 여부/ }));
     expect(bgtOf().rentalHousingException).toBeUndefined();
+  });
+});
+
+describe("UI-G1 상속받은 토지·비주택 건물 (§104②1호 — E-1 한계 e1z)", () => {
+  it("★ 토지 — 같은 위젯의 비주택 모드: 토글 ON → 피상속인 취득일이 bgt에 들어가고 동일세대 칸은 없다", () => {
+    render(
+      <Harness
+        start={item({ isOneHousehold: undefined, householdHousingCount: undefined, residencePeriodMonths: undefined }, { category: "real_estate_land" } as Partial<EstateItem>)}
+        giftDate="2021-06-01"
+      />,
+    );
+    expect(screen.queryByRole("switch", { name: /상속받은 주택입니다/ })).toBeNull();
+    fireEvent.click(screen.getByRole("switch", { name: /상속받은 자산입니다/ }));
+    expect(bgtOf().acquisitionCause).toBe("inheritance");
+    typeDate(screen.getByTestId("one-house-decedent-acq-date"), "2010-01-01");
+    expect(bgtOf().decedentAcquisitionDate).toBe("2010-01-01");
+    expect(screen.queryByRole("switch", { name: /피상속인과 동일세대/ })).toBeNull();
+    // 다른 입력은 보존
+    expect(bgtOf().standardPriceAtAcquisition).toBe(150_000_000);
+  });
+  it("비주택 건물(주택 여부 OFF)에도 같은 위젯이 있다 · 끄면 원인 매매", () => {
+    render(
+      <Harness
+        start={item(
+          { isHousing: undefined, isOneHousehold: undefined, acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01" },
+          { category: "real_estate_building" } as Partial<EstateItem>,
+        )}
+        giftDate="2021-06-01"
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch", { name: /상속받은 자산입니다/ }));
+    expect(bgtOf().acquisitionCause).toBe("purchase");
   });
 });

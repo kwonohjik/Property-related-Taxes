@@ -184,6 +184,10 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
       }
+      // 상속받은 자산(E-1 잔여 D · E-1 한계 G1) — ⑤·④와 같은 slice·같은 주택 게이트, 판정 메뉴·계산기와 같은 규칙·문구.
+      //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400). 토지·비주택 건물도 §104②1호 대상이라 같이 본다.
+      const inheritanceError = giftBurdenedInheritanceError(bgt, propertyType === "housing");
+      if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
       // §155①2호 새 입력(OH-01 A2b · E-1) — ⑤와 같은 게이트, 양도세 판정 메뉴와 같은 규칙 leaf.
       //   모순만 차단한다. 미입력(경고)은 엔진이 판정 보류로 고지하고 결과 카드 경고에 뜬다.
       if (propertyType === "housing") {
@@ -212,10 +216,6 @@ export function validateStep(step: number, form: FormState): string | null {
           giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate),
         )[0];
         if (restartError) return `${itemLabel}: ${restartError}`;
-        // 상속받은 주택(E-1 잔여 D) — ⑤·④와 같은 slice, 판정 메뉴·계산기와 같은 규칙·문구.
-        //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400).
-        const inheritanceError = giftBurdenedInheritanceError(bgt);
-        if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
         // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — ⑤·④와 같은 게이트·합성 자산, 계산기와 같은 규칙 leaf.
         const rentalError = giftBurdenedRentalExceptionError(bgItem, bgt, form.giftDate, itemLabel);
         if (rentalError) return rentalError;

@@ -11,9 +11,10 @@
  * | 증여 주택 주소 → 「양도시 조정대상지역」 토글(E-1 잔여 A) | 계산기 `useRegulatedAreaAutoTip`과 같은 규칙(안 만진 토글은 주소 판정) — `giftBurdenedEffectiveIsRegulatedArea` |
  * | §154① 단서(삭제 전 4호 포함) | `provisoGate` · `buildExemptionProvisoPayload` · `collectExemptionProvisoErrors` |
  * | §154⑤ 단서 재기산 | `finalHouseRestartInScope` · `buildFinalHouseRestartPayload` · `collectFinalHouseRestartErrors` |
- * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
+ * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) · 토지·비주택 건물(§104②1호만 — E-1 한계 G1) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
  *
- * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다).
+ * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다). 예외: 상속 취득 leaf는
+ * 모든 부동산 유형에서 쓰고 주택 여부를 인자로 받는다(E-1 한계 G1).
  */
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -177,37 +178,46 @@ export function giftBurdenedInheritanceSlice(bgt: BurdenedGiftTransferTaxInput):
 }
 
 /**
- * ④ 상속받은 주택 — 양도세 계산기 ④(`transfer-tax-api.ts` — `acquisitionCause` · 상속일 때만
+ * ④ 상속받은 자산 — 양도세 계산기 ④(`transfer-tax-api.ts` — `acquisitionCause` · 상속일 때만
  * `decedentAcquisitionDate` · `buildSameHouseholdInheritancePayload`)와 같은 키·같은 leaf.
- * 원인이 상속이 아니면 키를 만들지 않는다(남은 값이 엔진에 닿지 않는다). 주택 여부는 호출부가 본다.
+ * 원인이 상속이 아니면 키를 만들지 않는다(남은 값이 엔진에 닿지 않는다).
  *
- * 엔진에서 바뀌는 축은 둘뿐이다(anchor D-1~D-4 실측 — 양도차익·장기보유특별공제는 그대로):
- *   · 「소득세법」 §104②1호 — 세율 보유기간을 피상속인 취득일부터
- *   · 「소득세법 시행령」 §154⑧3호 — 동일세대 보유·거주 통산(비과세 요건)
+ * 엔진에서 바뀌는 축(anchor D-1~D-4 · G1 실측 — 양도차익·장기보유특별공제는 그대로):
+ *   · 「소득세법」 §104②1호 — 세율 보유기간을 피상속인 취득일부터 (**주택·토지·건물 모두** — E-1 한계 G1)
+ *   · 「소득세법 시행령」 §154⑧3호 — 동일세대 보유·거주 통산(비과세 요건) — **주택만**(`isHousing`).
+ *     비주택이면 남은 통산 값을 싣지 않는다(계산기 `CompanionAcqInheritanceBlock`의 주택 게이트와 같다).
  */
-export function buildGiftBurdenedInheritancePayload(bgt: BurdenedGiftTransferTaxInput): Record<string, unknown> {
+export function buildGiftBurdenedInheritancePayload(
+  bgt: BurdenedGiftTransferTaxInput,
+  isHousing: boolean,
+): Record<string, unknown> {
   const s = giftBurdenedInheritanceSlice(bgt);
   if (s.acquisitionCause !== "inheritance") return {};
   return {
     acquisitionCause: "inheritance",
     // ⑫ refine이 상속에 피상속인 취득일을 요구한다 — 빈 값은 ⑧이 막는다(계산기와 같은 계약).
     ...(s.decedentAcquisitionDate ? { decedentAcquisitionDate: s.decedentAcquisitionDate } : {}),
-    ...buildSameHouseholdInheritancePayload(s),
+    ...(isHousing ? buildSameHouseholdInheritancePayload(s) : {}),
   };
 }
 
 /**
- * ⑧ 상속받은 주택 — 판정 메뉴 `validateStep3`·계산기 `getAssetDateOrderError`와 같은 규칙·문구.
- * 첫 오류 문구 또는 null. 주택 여부는 호출부가 본다(⑤·④와 같은 게이트).
+ * ⑧ 상속받은 자산 — 판정 메뉴 `validateStep3`·계산기 `getAssetDateOrderError`와 같은 규칙·문구.
+ * 첫 오류 문구 또는 null. 동일세대 통산(§154⑧3호) 규칙은 주택만 본다(④와 같은 `isHousing` 게이트 —
+ * 비주택의 stale 통산 값은 막지 않는다).
  */
-export function giftBurdenedInheritanceError(bgt: BurdenedGiftTransferTaxInput): string | null {
+export function giftBurdenedInheritanceError(
+  bgt: BurdenedGiftTransferTaxInput,
+  isHousing: boolean,
+): string | null {
   const s = giftBurdenedInheritanceSlice(bgt);
   if (s.acquisitionCause !== "inheritance") return null;
-  if (!s.decedentAcquisitionDate) return "상속받은 주택이면 피상속인 취득일을 입력하세요.";
+  const noun = isHousing ? "주택" : "자산";
+  if (!s.decedentAcquisitionDate) return `상속받은 ${noun}이면 피상속인 취득일을 입력하세요.`;
   if (s.acquisitionDate && s.decedentAcquisitionDate >= s.acquisitionDate) {
     return "피상속인 취득일은 상속개시일보다 이전이어야 합니다.";
   }
-  if (s.decedentSameHouseholdBeforeInheritance) {
+  if (isHousing && s.decedentSameHouseholdBeforeInheritance) {
     if (!s.decedentCohabitationHoldingStartDate) {
       return "동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)";
     }
