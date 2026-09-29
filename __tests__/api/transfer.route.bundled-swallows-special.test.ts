@@ -325,7 +325,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
   it.each([
     // 25종 — 2026-08-05 §95⑤ 용도변경 echo(`usageConversionDetail`) 추가. 감면은 아니지만
     // LTHD가 낳는 echo라 `rental97LthdDetail`과 같은 계약에 실린다.
-    ["감면·LTHD echo 25종", "TransferReductionDetailSource", "pickReductionDetails", 25],
+    // 26종 — 2026-09-30 §99의4·§98의9 선언 전건(`houseCountExclusionDetails`, 계산기 계획서 Q-6).
+    ["감면·LTHD echo 26종", "TransferReductionDetailSource", "pickReductionDetails", 26],
     ["평가·판정 13종", "TransferValuationDetailSource", "pickValuationDetails", 13],
   ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");

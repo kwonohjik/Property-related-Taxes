@@ -28,7 +28,7 @@ import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./typ
 
 export type RedevHouseCountExclusion = Pick<
   TransferTaxResult,
-  "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail"
+  "new994Detail" | "unsold989Detail" | "houseCountExclusionDetails" | "specialHouseExclusionDetail"
 >;
 
 export function judgeRedevAptOneHouseExemption(
@@ -71,6 +71,7 @@ export function judgeRedevAptOneHouseExemption(
     exemptionJudgeInput,
     new994Detail,
     unsold989Detail,
+    houseCountExclusionDetails,
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(redevInput, steps, hceGeneralHouseAcquisitionDate);
   // 🔴 종전에는 `exemptionJudgeInput`만 꺼내고 나머지 셋을 버렸다 — 결과에 실리지 않아
@@ -81,6 +82,7 @@ export function judgeRedevAptOneHouseExemption(
   const houseCountExclusion: RedevHouseCountExclusion = {
     new994Detail,
     unsold989Detail,
+    houseCountExclusionDetails,
     specialHouseExclusionDetail:
       specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
   };

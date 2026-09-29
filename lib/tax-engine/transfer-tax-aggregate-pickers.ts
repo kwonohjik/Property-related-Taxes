@@ -78,6 +78,7 @@ export function pickReductionDetails(r: SingleResult): TransferReductionDetailSo
     rental97TaxDetail: r.rental97TaxDetail,
     new994Detail: r.new994Detail,
     unsold989Detail: r.unsold989Detail,
+    houseCountExclusionDetails: r.houseCountExclusionDetails,
     new99Detail: r.new99Detail,
     unsold988Detail: r.unsold988Detail,
     unsold987Detail: r.unsold987Detail,

@@ -234,18 +234,32 @@ export function ReductionDetailCards({
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
-      {result.new994Detail && (
-        <New994DetailCard
-          detail={result.new994Detail}
-          houseRef={countExclusionHouseRef(houses, detailHouseId(result.new994Detail))}
-        />
-      )}
-      {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
-      {result.unsold989Detail && (
-        <Unsold989DetailCard
-          detail={result.unsold989Detail}
-          houseRef={countExclusionHouseRef(houses, detailHouseId(result.unsold989Detail))}
-        />
+      {/* §99의4·§98의9 — 선언 전건(`houseCountExclusionDetails`, 계산기 계획서 Q-6). 이 필드가 없는 옛 결과는
+          종전처럼 유형별 첫 선언(`new994Detail`·`unsold989Detail`)만 그린다. */}
+      {result.houseCountExclusionDetails?.length ? (
+        result.houseCountExclusionDetails.map((d, i) =>
+          d.id === "unsold_98_9" ? (
+            <Unsold989DetailCard key={i} detail={d} houseRef={countExclusionHouseRef(houses, d.houseId)} />
+          ) : (
+            <New994DetailCard key={i} detail={d} houseRef={countExclusionHouseRef(houses, d.houseId)} />
+          ),
+        )
+      ) : (
+        <>
+          {result.new994Detail && (
+            <New994DetailCard
+              detail={result.new994Detail}
+              houseRef={countExclusionHouseRef(houses, detailHouseId(result.new994Detail))}
+            />
+          )}
+          {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
+          {result.unsold989Detail && (
+            <Unsold989DetailCard
+              detail={result.unsold989Detail}
+              houseRef={countExclusionHouseRef(houses, detailHouseId(result.unsold989Detail))}
+            />
+          )}
+        </>
       )}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
       {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} />}

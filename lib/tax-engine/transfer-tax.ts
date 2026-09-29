@@ -204,8 +204,13 @@ export function calculateTransferTax(
 
   // STEP 0.9 + 0.95: 주택수 제외(§99의4·§98의9·보유 감면주택·상속주택) → 비과세 판정용 유효 주택수 산정.
   // 800줄 정책 분리 — runHouseCountExclusionStep (transfer-tax-house-exclusion-step.ts).
-  const { exemptionJudgeInput: judgeInputBeforeRental, new994Detail, unsold989Detail, specialHouseExclusionDetail } =
-    runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
+  const {
+    exemptionJudgeInput: judgeInputBeforeRental,
+    new994Detail,
+    unsold989Detail,
+    houseCountExclusionDetails,
+    specialHouseExclusionDetail,
+  } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
   const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput);
   const exemptionJudgeInput = rentalPremise.input;
@@ -322,6 +327,7 @@ export function calculateTransferTax(
       exemptReason: exemptionResult.exemptReason,
       new994Detail,
       unsold989Detail,
+      houseCountExclusionDetails,
       specialHouseExclusionDetail:
         specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
       warnings: warnings.length > 0 ? warnings : undefined,
@@ -424,6 +430,7 @@ export function calculateTransferTax(
       //   차손 경로만 빠져 있었다. 산출세액이 0이어도 §99의4⑥ 추징 경고는 남아야 한다.
       new994Detail,
       unsold989Detail,
+      houseCountExclusionDetails,
       specialHouseExclusionDetail:
         specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
       transferGain,
@@ -723,6 +730,7 @@ export function calculateTransferTax(
     lthdExclusionReason,
     new994Detail,
     unsold989Detail,
+    houseCountExclusionDetails,
     specialHouseExclusionDetail,
     transferBurdenedGiftBreakdown,
   });

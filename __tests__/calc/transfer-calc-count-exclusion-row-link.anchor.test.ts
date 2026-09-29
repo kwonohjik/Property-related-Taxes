@@ -21,6 +21,7 @@
  * | CR-9 | 옛 기록(Q-5) — 행 id가 있는 저장소 선언은 그 행으로 옮긴다 |
  * | CR-10 | ③ 감면 패널 검증은 세 유형을 보지 않는다(입력 칸이 없다) |
  * | CR-11 | 조문을 아직 고르지 않은 감면주택 행 — 제외 대상 계산이 던지지 않는다(PR #1881 잠복 결함) |
+ * | CR-12 | 엔진 결과 `houseCountExclusionDetails` — 선언 전건·행 id가 반환 경로마다 실린다(Q-6) |
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -140,7 +141,15 @@ async function runCalc(form: TransferFormData) {
     }),
   );
   expect(res.status).toBe(200);
-  const json = (await res.json()) as { data?: { result?: { isExempt?: boolean; totalTax?: number } } };
+  const json = (await res.json()) as {
+    data?: {
+      result?: {
+        isExempt?: boolean;
+        totalTax?: number;
+        houseCountExclusionDetails?: { id: string; houseId?: string; isEligible: boolean }[];
+      };
+    };
+  };
   return json.data?.result;
 }
 
@@ -411,5 +420,72 @@ describe("CR-11 조문 미선택 감면주택 행", () => {
     const f = withForm({ houses: [row("s", "2001-01-01", { countExclusion: { kind: "special", special: emptySpecial } })] });
     expect(() => eligibleCountExcludedHouseIds(f)).not.toThrow();
     expect(eligibleCountExcludedHouseIds(f).size).toBe(0);
+  });
+});
+
+describe("CR-12 엔진 결과 — 선언 전건 (Q-6)", () => {
+  const UNSOLD = {
+    type: "unsold_98_9",
+    unsoldHouseAcquisitionDate: "",
+    unsoldHouseAcquisitionPrice: "",
+    unsoldHouseExclusiveArea: "",
+    isNonCapitalRegion: true,
+    wasOneHouseholdAtAcquisition: true,
+    meetsSellerAndContractRequirement: true,
+  } as unknown as RowCountExclusionReduction;
+  const unsoldRow = (id: string, date: string) =>
+    row(id, date, {
+      acquisitionPrice: "500000000",
+      exclusiveArea: "84",
+      countExclusion: { kind: "reduction", reduction: UNSOLD },
+    });
+  const pick = (r: Awaited<ReturnType<typeof runCalc>>) =>
+    (r?.houseCountExclusionDetails ?? []).map((d) => ({ id: d.id, houseId: d.houseId, isEligible: d.isEligible }));
+
+  it("[CR-12] 비과세 조기 반환 — 행 R의 §99의4가 행 id와 함께 실린다", async () => {
+    const r = await runCalc(withForm({ houses: [ruralRow("r", "2021-01-01"), row("n", "2023-12-01")] }));
+    expect(r?.isExempt).toBe(true);
+    expect(pick(r)).toEqual([{ id: "new_99_4_rural", houseId: "r", isEligible: true }]);
+  });
+
+  it("[CR-12t] 과세(일반 반환) — 명부 N(2016, 처분기한 경과)이라 과세여도 R의 판정 결과는 실린다", async () => {
+    const r = await runCalc(withForm({ houses: [ruralRow("r", "2021-01-01"), row("n", "2016-01-01")] }));
+    expect(r?.isExempt).toBe(false);
+    expect(pick(r)).toEqual([{ id: "new_99_4_rural", houseId: "r", isEligible: true }]);
+  });
+
+  it("[CR-12l] 양도차손(차손 반환 경로) — 과세 사실관계에 취득가액이 양도가액보다 커도 실린다", async () => {
+    const f = withForm({ houses: [ruralRow("r", "2021-01-01"), row("n", "2016-01-01")] });
+    const g = {
+      ...f,
+      assets: f.assets.map((x, i) =>
+        i === 0 ? ({ ...x, fixedAcquisitionPrice: "1000000000", acquisitionPrice: "1000000000" } as AssetForm) : x,
+      ),
+    };
+    const r = await runCalc(g);
+    expect(r?.totalTax).toBe(0);
+    expect(pick(r)).toEqual([{ id: "new_99_4_rural", houseId: "r", isEligible: true }]);
+  });
+
+  it("[CR-12d] 같은 유형 두 행(§98의9) — 두 행 모두 실린다(종전 `unsold989Detail`은 첫 행뿐)", async () => {
+    const r = await runCalc(withForm({ houses: [unsoldRow("u1", "2024-02-01"), unsoldRow("u2", "2024-03-01")] }));
+    expect(pick(r).map((d) => d.houseId)).toEqual(["u1", "u2"]);
+  });
+
+  it("[CR-12r] 재개발 아파트 양도 — 재개발 분기에서도 실린다", async () => {
+    const r = await runCalc(
+      withForm(
+        { houses: [ruralRow("r", "2021-01-01"), row("n", "2016-01-01")] },
+        {
+          assetKind: "redevelopment_apt",
+          redevApprovalDate: "2018-01-01",
+          redevRightsValue: "400000000",
+          redevSettlementDirection: "pay",
+          redevSettlementAmount: "100000000",
+          redevIsSuccessorMember: "no",
+        } as Partial<AssetForm>,
+      ),
+    );
+    expect(pick(r)).toEqual([{ id: "new_99_4_rural", houseId: "r", isEligible: true }]);
   });
 });

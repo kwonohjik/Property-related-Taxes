@@ -168,4 +168,33 @@ describe("⑦ 결과 카드 — 어느 주택인가 (Q-6)", () => {
     expect(screen.queryByTestId("count-exclusion-house-ref")).toBeNull();
     expect(document.body.textContent).not.toContain('"r"');
   });
+
+  it("[UI-6] 엔진이 선언 전건을 주면 행마다 카드를 그린다 — 같은 유형 두 행도 둘 다 보인다", () => {
+    const unsold = (houseId: string) => ({
+      id: "unsold_98_9",
+      isEligible: true,
+      legalBasis: "조세특례제한법 §98의9",
+      effectCategory: "house_count_exclusion",
+      houseCountExclusion: 1,
+      comprehensiveTaxNote: true,
+      surchargeNotAffected: true,
+      houseId,
+    });
+    render(
+      <ReductionDetailCards
+        result={{ unsold989Detail: unsold("u1"), houseCountExclusionDetails: [unsold("u1"), unsold("u2")] } as never}
+        calculatedTax={0}
+        taxBase={0}
+        longTermHoldingDeduction={0}
+        houses={[
+          { ...ROW, id: "u1", acquisitionDate: "2024-02-01" } as HouseEntry,
+          { ...ROW, id: "u2", acquisitionDate: "2024-03-01" } as HouseEntry,
+        ]}
+      />,
+    );
+    expect(screen.getAllByTestId("count-exclusion-house-ref").map((e) => e.textContent)).toEqual([
+      "대상: 보유 주택 1 (2024-02-01 취득)",
+      "대상: 보유 주택 2 (2024-03-01 취득)",
+    ]);
+  });
 });

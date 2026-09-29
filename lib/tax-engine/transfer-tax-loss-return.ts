@@ -32,6 +32,7 @@ export interface LossReturnArgs {
    */
   new994Detail?: TransferTaxResult["new994Detail"];
   unsold989Detail?: TransferTaxResult["unsold989Detail"];
+  houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
   specialHouseExclusionDetail?: TransferTaxResult["specialHouseExclusionDetail"];
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
@@ -76,6 +77,7 @@ export function buildLossTransferTaxResult({
   splitDetail,
   new994Detail,
   unsold989Detail,
+  houseCountExclusionDetails,
   specialHouseExclusionDetail,
   rateEcho,
 }: LossReturnArgs): TransferTaxResult {
@@ -131,6 +133,7 @@ export function buildLossTransferTaxResult({
     // D4-08 — 주택수 제외 상세를 결과에 싣는다(§99의4⑥ 추징 경고 보존).
     ...(new994Detail ? { new994Detail } : {}),
     ...(unsold989Detail ? { unsold989Detail } : {}),
+    ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     ...(specialHouseExclusionDetail ? { specialHouseExclusionDetail } : {}),
     isExempt: false,
     /**

@@ -240,7 +240,7 @@ V-1에 따르면 `right_to_move_in`·`presale_right` 양도에서는 이 선언�
 
 **설계에서 바뀐 것**
 
-- **엔진 무변경**(A-1 유지). Q-6도 엔진 결과를 늘리지 않았다 — `new994Detail`·`unsold989Detail`은 첫 선언의 평가 결과 **그 객체**라 행 id가 런타임에 이미 실려 온다(`unsold-98-9.ts:259-260` ← `evaluateNew994Declarations`). 결과 화면이 가진 명부로 「보유 주택 N (취득일)」로 바꾼다(`components/calc/results/transfer/count-exclusion-house-ref.ts`). 같은 유형 2건 이상은 엔진이 전건 불성립(재산세과-1096)이라 첫 카드로 결과를 잃지 않는다. 명부를 모르는 화면(일괄·다건 하위 카드)은 표시를 생략한다.
+- **엔진 판정 무변경**(A-1 유지). 처음에는 Q-6도 엔진 결과를 늘리지 않았다 — `new994Detail`·`unsold989Detail`은 첫 선언의 평가 결과 **그 객체**라 행 id가 런타임에 이미 실려 온다(`unsold-98-9.ts:259-260` ← `evaluateNew994Declarations`). 결과 화면이 가진 명부로 「보유 주택 N (취득일)」로 바꾼다(`components/calc/results/transfer/count-exclusion-house-ref.ts`). 같은 유형 2건 이상은 엔진이 전건 불성립(재산세과-1096)이라 첫 카드로 결과를 잃지 않는다. 명부를 모르는 화면(일괄·다건 하위 카드)은 표시를 생략한다. → 이후 S3에서 결과에 선언 전건을 싣도록 확장(아래 표).
 - 패널 카테고리 부제목의 고정 개수가 목록과 어긋났다 — 「§99 시리즈 (4개)」→「§99·§99의3 (2개)」, 「(10개)」→「(9개)」(`metadata.ts` — 소비처는 패널 1곳). 헤더 카운터도 같은 3유형을 뺀다(`countActiveReductionsByCategory(ctx, exclude)`).
 - 🔴 **PR #1881 잠복 결함 발견·수정** — 명부 행에서 「감면주택」만 고르고 조문을 아직 고르지 않은 순간 `eligibleCountExcludedHouseIds`가 빈 조문으로 평가기를 불러 `TypeError`(`unsold-hybrid-p5.ts:395` 조문 표 조회). 판정 메뉴 ③ 헤더 `useMemo`(`Step2.tsx:135`)가 매 렌더 부르므로 화면이 깨질 수 있었다. `linkedDeclarations`에서 조문 없는 항목을 뺀다(CR-11).
 - 판정 메뉴 옛 선언 카드를 공용 본체(`components/calc/transfer/CountExclusionLegacyNotice.tsx`)로 뺐다 — 계산기 카드(`CalcCountExclusionLegacyNotice`)와 같은 본체.
@@ -260,7 +260,7 @@ V-1에 따르면 `right_to_move_in`·`presale_right` 양도에서는 이 선언�
 |---|---|---|
 | S2 | 대표 자산이 게이트 밖(토지 등)이면 함께 양도하는 **주택(컴패니언)**의 옛 §99의4·§98의9 선언이 ③ 패널에서 사라진 채 무검증으로 컴패니언 엔진 실행에 실린다 | ✅ 수정 — 옛 선언 감지·삭제의 게이트를 **선언이 붙은 자산 자신의 종류**로(`unlinkedCountExclusionDeclarations`·`clearUnlinkedCountExclusions`). ⑧·안내 카드가 같은 함수. CR-2l(토지+주택 컴패니언 → 차단) · CR-2l+(컴패니언이 입주권 → 미차단). 이 경우 명부가 보이지 않아(대표 자산이 주택이 아님) 해소 경로는 삭제뿐이다 — 컴패니언 선언의 효과는 미측정(V-4)이라 막는 쪽이 보수적 |
 | S1 | 비한시배제 분기에서 스칼라 주택 수를 1로 낮추면 명부가 숨는데 ⑥이 채워진 행은 남아 ④가 싣는다 | ⏸ 기록만 — 명부 행이 있으면 주택 수 자체가 `1 + 행 수`로 계산되고(`household-house-count.ts:94`) 불일치 안내(`house-count-mismatch`)가 뜨는 **종전 구조**다. 행 필드 전체(§155 사실·상속 등)에 공통이고 이번 diff가 만든 경로가 아니다. 선언이 가리키는 주택은 실재하는 행이라 C6(명부에 없는 주택)과 다르다 |
-| S3 | Q-6(a) 「전건」 — 결과 카드는 유형별 첫 선언만 그린다 | ⚠️ **범위 축소 — 사용자 확인 필요**. 전건을 그리려면 엔진 결과에 `details`를 새로 싣고 반환 경로 10개 파일(`finalize`·`loss-return`·`normal-return`·`mixed-use`·`redevelopment` 등)에 전부 이어야 한다. 실익: §99의4가 2건 이상이면 엔진이 전건 불성립(`MULTIPLE_HOUSES`)이라 첫 카드가 그 사유를 이미 보여 주고, 감면주택 카드는 원래 전건이다. 남는 차이는 **같은 유형(§98의9) 두 번째 행의 카드**뿐이다 |
+| S3 | Q-6(a) 「전건」 — 결과 카드는 유형별 첫 선언만 그린다 | ✅ 수정(사용자 결정 「엔진까지 이어서」) — 엔진 결과에 `houseCountExclusionDetails`(선언 전건 · 행 id 포함)를 싣고 반환 경로에 모두 이었다: 주택 수 제외 단계 → 비과세 조기 반환(`finalize`) · 일반(`normal-return`) · 차손(`loss-return`) · 재개발(`redevelopment-apt-exemption`→`redevelopment` 펼침) · 겸용(`mixed-use-exemption`·`mixed-use`) · 일괄 자산별(`aggregate-pickers`). 매개변수는 필수로 둬 빠진 호출부를 컴파일러가 잡는다. 카드는 전건을 그리고, 이 필드가 없는 옛 결과는 종전 첫 선언 카드로 대체한다. anchor CR-12(조기 반환)·CR-12t(일반)·CR-12l(차손)·CR-12r(재개발)·CR-12d(같은 유형 두 행) + UI-6 — 경로별 뮤테이션 5종 KILLED. 겸용·일괄 경로는 타입 배선만(anchor 없음) |
 
 - 주석 정정: `calc-wizard-asset-nbl.ts`(「판정 메뉴에서만 입력」) · `New994InputForm`·`Unsold989InputForm`(「판정 메뉴 명부 행에서 쓸 때」).
 - note: 같은 행 id의 저장소 선언이 둘이면 이동 시 하나만 남는다(판정 메뉴 전달은 행당 1건이라 생기지 않는 형태) · 다건 `properties[].form` 복원 경로에는 Q-5 이동이 없다(행 id 선언은 판정 → 단건 전달에서만 생긴다 — 남아도 `linkedDeclarations`가 읽어 올바르게 계산되고 보이지만 않는다).

@@ -633,6 +633,7 @@ export function buildExemptEarlyResult(p: {
   exemptReason: TransferTaxResult["exemptReason"];
   new994Detail: TransferTaxResult["new994Detail"];
   unsold989Detail: TransferTaxResult["unsold989Detail"];
+  houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
   specialHouseExclusionDetail: TransferTaxResult["specialHouseExclusionDetail"];
   warnings: TransferTaxResult["warnings"];
   multiHouseSurchargeResult?: MultiHouseSurchargeResult;
@@ -651,6 +652,7 @@ export function buildExemptEarlyResult(p: {
     exemptReason: p.exemptReason,
     new994Detail: p.new994Detail,
     unsold989Detail: p.unsold989Detail,
+    houseCountExclusionDetails: p.houseCountExclusionDetails,
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,

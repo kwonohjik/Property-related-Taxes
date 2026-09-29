@@ -367,6 +367,12 @@ export interface TransferTaxResult {
    * §98의9 수도권 밖 준공후미분양 주택수 제외 평가 결과 (2026-06-11).
    * eligible 시 §99의4 동일 경로 — 동시 적격이면 §99의4 우선(F-4). 종부세 ②는 범위 외. */
   unsold989Detail?: Unsold989Result;
+  /**
+   * §99의4·§98의9 **선언 전건** 평가 결과 — 명부 행에서 온 선언이면 행 id(`houseId`)를 싣는다.
+   * `new994Detail`·`unsold989Detail`은 각 유형의 **첫 선언**이라 같은 유형 두 번째 행이 보이지 않는다
+   * (`docs/00-pm/transfer-calc-count-exclusion-row-link.plan.md` Q-6). 표시 전용 — 세액 불변.
+   */
+  houseCountExclusionDetails?: import("../transfer-reductions/unsold-98-9").HouseCountExclusionDetail[];
   /** §99 신축주택(IMF 1차) 차감 — 5년 내 전액/5년 후 안분 + 재개발 변형(령 §99①) (P1) */
   new99Detail?: New99Result;
   /** §98의8 준공후미분양 50% 공제 — 5년 발생분 × 50% + 임대 5년(등록 후 기산) (P1) */
@@ -511,6 +517,7 @@ export type TransferReductionDetailSource = Pick<
   | "rental97TaxDetail"
   | "new994Detail"
   | "unsold989Detail"
+  | "houseCountExclusionDetails"
   | "new99Detail"
   | "unsold988Detail"
   | "unsold987Detail"

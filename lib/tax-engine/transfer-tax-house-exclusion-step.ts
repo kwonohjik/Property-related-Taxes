@@ -241,6 +241,12 @@ export function runHouseCountExclusionStep(
     exemptionJudgeInput,
     new994Detail,
     unsold989Detail,
+    /**
+     * §99의4·§98의9 **선언 전건**(행 id 포함) — 결과 카드가 「보유 주택 N」마다 그린다(계산기 계획서 Q-6).
+     * `new994Detail`·`unsold989Detail`은 각 유형의 첫 선언이라 같은 유형 두 번째 행이 보이지 않았다.
+     * **추가 반환일 뿐** 계산에는 쓰이지 않는다(세액 불변).
+     */
+    houseCountExclusionDetails: hceDetails.length > 0 ? hceDetails : undefined,
     specialHouseExclusionDetail,
     /**
      * 판정 메뉴(P4-2)의 「주택 수 산정」 명세용 — `buildOneHouseCountBreakdown`이 읽는다.
