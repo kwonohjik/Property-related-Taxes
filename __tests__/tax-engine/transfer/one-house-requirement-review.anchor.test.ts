@@ -210,6 +210,19 @@ describe("요건 순차 검토 — 1주택 단독 양도 (Q-2)", () => {
     ]);
   });
 
+  /**
+   * 고가주택 행 제목은 **판정 결과를 따라간다** — 종전 고정 제목 「… 이하(고가주택이 아님)」가
+   * 24억 사례에서 「초과분 과세」 배지 옆에 그려졌다(2026-09-29 제보). 경계(= 12억)는 이하 쪽이다.
+   */
+  it("[R-12b] 고가주택 행 제목 — 12억 이하·초과·경계", () => {
+    const hv = (price: number) => itemOf(judge({ ...ONE, transferPrice: price }, "2026-09-29"), "high-value");
+    expect(hv(1_000_000_000)?.label).toBe("양도가액 12억원 이하 — 고가주택 아님");
+    expect(hv(1_200_000_000)?.label).toBe("양도가액 12억원 이하 — 고가주택 아님");
+    expect(hv(1_200_000_001)?.label).toBe("고가주택(양도가액 12억원 초과) — 12억원 초과분 과세");
+    expect(hv(2_400_000_000)?.status).toBe("partial");
+    expect(hv(2_400_000_000)?.label).toBe("고가주택(양도가액 12억원 초과) — 12억원 초과분 과세");
+  });
+
   it("[R-13] 거주 23개월 ⇒ 거주 미충족 · 과세", () => {
     const r = judge({ ...ONE, residencePeriodMonths: 23 }, "2026-09-29");
     expect(r.isExempt || r.isPartialExempt).toBe(false);

@@ -426,7 +426,11 @@ function highValueItem(input: OneHouseJudgeInput): OneHouseRequirementCheck {
   const over = price > threshold;
   return {
     id: "high-value",
-    label: `양도가액 ${label}원 이하(고가주택이 아님)`,
+    // 🔴 제목은 **판정 결과를 따라간다**. 종전 「양도가액 12억원 이하(고가주택이 아님)」는 요건 문장인데
+    //    괄호가 결론형이라, 24억 사례에서 「초과분 과세」 배지 옆에 「고가주택이 아님」이 그려졌다(2026-09-29 제보).
+    label: over
+      ? `고가주택(양도가액 ${label}원 초과) — ${label}원 초과분 과세`
+      : `양도가액 ${label}원 이하 — 고가주택 아님`,
     status: over ? "partial" : "met",
     facts: [
       { label: "양도가액", value: price.toLocaleString("ko-KR") },
