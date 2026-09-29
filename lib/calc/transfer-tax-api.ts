@@ -22,6 +22,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import {
   buildHouseholdSpecialPayload,
+  buildMergeFacts,
   buildPenaltyAmendmentPayload,
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
@@ -523,11 +524,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
-    ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
-    ...(form.parentalCareMergeDate
-      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
-      : {}),
-    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    // §155④⑤ 합가 — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G4)
+    ...buildMergeFacts(form),
     ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),
     // ⑬ OH-12c 증여일 · OH-12 상속개시 당시 보유 권리의 신축주택 — 게이트와 같은 조건(단일 빌더)
     ...buildInheritanceGeneralHousePayload(form),

@@ -48,6 +48,62 @@ export function buildLateFilingPayload(form: TransferFormData): object {
 }
 
 /** ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (FLAT → nested) */
+/** §155⑯·⑱ 위젯(`TempTwoHouseDeadlineExceptionInputs`)이 읽고 쓰는 필드 — 양도세 폼(`TransferFormData`)과 같은 이름 */
+export type TempTwoHouseDeadlineExceptionFields = {
+  publicInstitutionRelocation: boolean;
+  relocatedInstitutionJibun: string;
+  relocatedSigunguCode: string;
+  newHouseJibun: string;
+  newHouseSigunguCode: string;
+  disposalDelayReason: string;
+};
+
+/**
+ * §155① 처분기한 예외 — §155⑯(처분기한 5년 + 1년 요건 면제) · §155⑱(처분 지연 사유) 본문 조각.
+ * 양도세 계산기·판정 메뉴 ④(`buildHouseholdSpecialPayload`)와 증여세 부담부증여 경로 ④가 같이 쓴다(E-1 한계 G3).
+ */
+export function buildTempTwoHouseDeadlineExceptionFacts(f: {
+  publicInstitutionRelocation?: boolean;
+  relocatedSigunguCode?: string;
+  newHouseSigunguCode?: string;
+  disposalDelayReason?: string;
+}): object {
+  return {
+    // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
+    ...(f.publicInstitutionRelocation
+      ? {
+          publicInstitutionRelocation: true,
+          // 연접 판정 코드 — 둘 다 있을 때만 자동 판정된다(엔진이 한쪽만 있으면 자기선언 유지).
+          ...(f.relocatedSigunguCode ? { relocatedSigunguCode: f.relocatedSigunguCode } : {}),
+          ...(f.newHouseSigunguCode ? { newHouseSigunguCode: f.newHouseSigunguCode } : {}),
+        }
+      : {}),
+    // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
+    ...(f.disposalDelayReason
+      ? { disposalDelayReason: f.disposalDelayReason as TemporaryTwoHouseDelayReason }
+      : {}),
+  };
+}
+
+/** §155④⑤ 합가 위젯(`MergeDateSection`)이 읽고 쓰는 필드 — 양도세 폼과 증여세 부담부증여 폼이 같은 이름으로 갖는다 */
+export type MergeDateFields = Pick<TransferFormData, "marriageDate" | "parentalCareMergeDate" | "isFirstTransferredInMerge">;
+
+/**
+ * 「소득세법 시행령」 §155④(동거봉양)·⑤(혼인) 합가 — 본문 조각. 양도세 계산기 ④와 증여세 부담부증여 경로 ④가
+ * 같이 쓴다(E-1 한계 G4). 빈 날짜·false는 싣지 않는다.
+ */
+export function buildMergeFacts(f: {
+  marriageDate?: string;
+  parentalCareMergeDate?: string;
+  isFirstTransferredInMerge?: boolean;
+}): object {
+  return {
+    ...(f.marriageDate ? { marriageMerge: { marriageDate: f.marriageDate } } : {}),
+    ...(f.parentalCareMergeDate ? { parentalCareMerge: { mergeDate: f.parentalCareMergeDate } } : {}),
+    ...(f.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+  };
+}
+
 export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
   /**
    * §155① 두 날짜의 **단일 생산 지점**. 명부에서 신규주택을 도출하고, 도출이 성립하지 않을
@@ -68,19 +124,8 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
         temporaryTwoHouse: {
           previousAcquisitionDate: tempTwoHouse.previousAcquisitionDate,
           newAcquisitionDate: tempTwoHouse.newAcquisitionDate,
-          // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
-          ...(form.publicInstitutionRelocation
-            ? {
-                publicInstitutionRelocation: true,
-                // 연접 판정 코드 — 둘 다 있을 때만 자동 판정된다(엔진이 한쪽만 있으면 자기선언 유지).
-                ...(form.relocatedSigunguCode ? { relocatedSigunguCode: form.relocatedSigunguCode } : {}),
-                ...(form.newHouseSigunguCode ? { newHouseSigunguCode: form.newHouseSigunguCode } : {}),
-              }
-            : {}),
-          // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
-          ...(form.disposalDelayReason
-            ? { disposalDelayReason: form.disposalDelayReason as TemporaryTwoHouseDelayReason }
-            : {}),
+          // §155⑯·⑱ — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G3).
+          ...buildTempTwoHouseDeadlineExceptionFacts(form),
           // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
           //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
           ...toTemporaryTwoHouseEraFacts(form, tempTwoHouse.newHouseRegionCode),

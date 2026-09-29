@@ -22,6 +22,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { makeDefaultAsset, RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-rental-housing";
 import { validateRentalHousingException } from "@/lib/calc/transfer-tax-validate-rental-exception";
+import { giftBurdenedWinWinResidenceExempt } from "@/lib/calc/gift-burdened-one-house";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -73,7 +74,8 @@ export function buildGiftBurdenedRentalExceptionPayload(
 
 /**
  * ⑧ — 계산기와 같은 규칙(`mode: "full"` — 카드가 판정 사실과 §161① 안분 입력을 모두 보이는 모드).
- * 게이트 밖의 stale 선언은 막지 않는다(영구 차단 방지). 상생임대(§155의3①) 거주 면제 입력은 이 경로에 없다.
+ * 게이트 밖의 stale 선언은 막지 않는다(영구 차단 방지). 상생임대(§155의3①)면 §155⑳1호 거주 24개월을
+ * 요구하지 않는다 — 엔진과 같은 술어(`giftBurdenedWinWinResidenceExempt` — E-1 한계 G2).
  */
 export function giftBurdenedRentalExceptionError(
   item: Pick<EstateItem, "id">,
@@ -83,5 +85,13 @@ export function giftBurdenedRentalExceptionError(
 ): string | null {
   if (!giftBurdenedRentalExceptionInScope(bgt)) return null;
   const asset = giftBurdenedRentalAsset(item, bgt);
-  return validateRentalHousingException(asset.rentalHousingException, asset, 0, label, giftDate, "full");
+  return validateRentalHousingException(
+    asset.rentalHousingException,
+    asset,
+    0,
+    label,
+    giftDate,
+    "full",
+    giftBurdenedWinWinResidenceExempt(bgt),
+  );
 }

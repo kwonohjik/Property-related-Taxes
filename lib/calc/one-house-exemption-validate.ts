@@ -36,6 +36,7 @@ import { collectFinalHouseRestartErrors, judgmentFinalHouseRestartInScope } from
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
+import { winWinRentalFieldErrors } from "./one-house-extra-facts-payload";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import {
@@ -436,20 +437,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   }
 
   // §155의3 — 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
-  if (form.winWinRentalSpecial) {
-    if (!form.winWinRentalContractDate) {
-      errors.push(err("winWinRentalContractDate", "상생임대주택: 상생임대차계약 체결일을 입력하세요."));
-    }
-    if (!form.winWinRentalIncreaseRatePct) {
-      errors.push(err("winWinRentalIncreaseRatePct", "상생임대주택: 임대료 증가율(%)을 입력하세요."));
-    }
-    if (!form.winWinRentalPriorLeaseMonths) {
-      errors.push(err("winWinRentalPriorLeaseMonths", "상생임대주택: 직전임대차 임대기간(개월)을 입력하세요."));
-    }
-    if (!form.winWinRentalLeaseMonths) {
-      errors.push(err("winWinRentalLeaseMonths", "상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."));
-    }
-  }
+  //   규칙·문구는 증여세 부담부증여 경로와 공용 leaf다(E-1 한계 G2).
+  for (const e of winWinRentalFieldErrors(form)) errors.push(err(e.field, e.message));
 
   /**
    * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.

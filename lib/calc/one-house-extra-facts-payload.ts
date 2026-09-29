@@ -39,12 +39,25 @@ function buildLongTermMortgagePayload(f: OneHouseJudgmentExtraFields): object {
 }
 
 /**
+ * §155의3 입력 5필드 — 판정 메뉴 운반 상자와 증여세 부담부증여 폼(`BurdenedGiftTransferTaxInput`)이
+ * **같은 이름**으로 갖는다(E-1 한계 G2). 위젯·빌더·검증을 이 모양으로 좁혀 두 폼이 같은 leaf를 쓴다.
+ */
+export type WinWinRentalFields = Pick<
+  OneHouseJudgmentExtraFields,
+  | "winWinRentalSpecial"
+  | "winWinRentalContractDate"
+  | "winWinRentalIncreaseRatePct"
+  | "winWinRentalPriorLeaseMonths"
+  | "winWinRentalLeaseMonths"
+>;
+
+/**
  * §155의3 FLAT → nested.
  *
  * ⚠️ `increaseRatePct`는 **인하(음수)도 유효**하다 — 「5% 이하」 요건이라 인하는 당연히 충족이다.
  *    `parseAmount`류로 음수를 잘라내면 정당한 상생임대인이 탈락한다.
  */
-function buildWinWinRentalPayload(f: OneHouseJudgmentExtraFields): object {
+export function buildWinWinRentalPayload(f: WinWinRentalFields): object {
   if (!f.winWinRentalSpecial || !f.winWinRentalContractDate) return {};
   return {
     winWinRentalHouse: {
@@ -77,7 +90,7 @@ export function buildOneHouseExtraFactsPayload(
  * 하나를 그대로 쓴다(두 벌 금지) — 날짜만 route와 같은 `toDate`로 바꾼다.
  */
 export function toWinWinRentalHouseFact(
-  extra: OneHouseJudgmentExtraFields | undefined,
+  extra: WinWinRentalFields | undefined,
 ): TransferTaxInput["winWinRentalHouse"] {
   if (!extra) return undefined;
   const w = (buildWinWinRentalPayload(extra) as {
@@ -87,4 +100,28 @@ export function toWinWinRentalHouseFact(
   }).winWinRentalHouse;
   if (!w) return undefined;
   return { ...w, winWinContractDate: toDate(w.winWinContractDate, "winWinContractDate") };
+}
+
+/**
+ * §155의3 ⑧ 필수값 — 판정 메뉴(`one-house-exemption-validate.ts`)와 증여세 부담부증여 경로(E-1 한계 G2)가
+ * **같은 규칙·문구**를 쓴다. 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
+ */
+export function winWinRentalFieldErrors(
+  f: WinWinRentalFields,
+): { field: keyof WinWinRentalFields; message: string }[] {
+  if (!f.winWinRentalSpecial) return [];
+  const errors: { field: keyof WinWinRentalFields; message: string }[] = [];
+  if (!f.winWinRentalContractDate) {
+    errors.push({ field: "winWinRentalContractDate", message: "상생임대주택: 상생임대차계약 체결일을 입력하세요." });
+  }
+  if (!f.winWinRentalIncreaseRatePct) {
+    errors.push({ field: "winWinRentalIncreaseRatePct", message: "상생임대주택: 임대료 증가율(%)을 입력하세요." });
+  }
+  if (!f.winWinRentalPriorLeaseMonths) {
+    errors.push({ field: "winWinRentalPriorLeaseMonths", message: "상생임대주택: 직전임대차 임대기간(개월)을 입력하세요." });
+  }
+  if (!f.winWinRentalLeaseMonths) {
+    errors.push({ field: "winWinRentalLeaseMonths", message: "상생임대주택: 상생임대차 임대기간(개월)을 입력하세요." });
+  }
+  return errors;
 }

@@ -11,9 +11,12 @@
  * | 증여 주택 주소 → 「양도시 조정대상지역」 토글(E-1 잔여 A) | 계산기 `useRegulatedAreaAutoTip`과 같은 규칙(안 만진 토글은 주소 판정) — `giftBurdenedEffectiveIsRegulatedArea` |
  * | §154① 단서(삭제 전 4호 포함) | `provisoGate` · `buildExemptionProvisoPayload` · `collectExemptionProvisoErrors` |
  * | §154⑤ 단서 재기산 | `finalHouseRestartInScope` · `buildFinalHouseRestartPayload` · `collectFinalHouseRestartErrors` |
- * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
+ * | 상속받은 주택(§104②1호 · §154⑧3호 — E-1 잔여 D) · 토지·비주택 건물(§104②1호만 — E-1 한계 G1) | `buildSameHouseholdInheritancePayload` · `sameHouseholdInheritanceOrderError` |
+ * | §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) | `buildWinWinRentalPayload` · `winWinRentalFieldErrors` · `qualifiesWinWinRental` |
+ * | §155④⑤ 합가(E-1 한계 G4) | `buildMergeFacts` |
  *
- * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다).
+ * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다). 예외: 상속 취득 leaf는
+ * 모든 부동산 유형에서 쓰고 주택 여부를 인자로 받는다(E-1 한계 G1).
  */
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -29,6 +32,15 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { sameHouseholdInheritanceOrderError } from "@/lib/calc/same-household-inheritance-order";
+import {
+  buildWinWinRentalPayload,
+  toWinWinRentalHouseFact,
+  winWinRentalFieldErrors,
+  type WinWinRentalFields,
+} from "@/lib/calc/one-house-extra-facts-payload";
+import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
+import { buildMergeFacts, type MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -177,37 +189,46 @@ export function giftBurdenedInheritanceSlice(bgt: BurdenedGiftTransferTaxInput):
 }
 
 /**
- * ④ 상속받은 주택 — 양도세 계산기 ④(`transfer-tax-api.ts` — `acquisitionCause` · 상속일 때만
+ * ④ 상속받은 자산 — 양도세 계산기 ④(`transfer-tax-api.ts` — `acquisitionCause` · 상속일 때만
  * `decedentAcquisitionDate` · `buildSameHouseholdInheritancePayload`)와 같은 키·같은 leaf.
- * 원인이 상속이 아니면 키를 만들지 않는다(남은 값이 엔진에 닿지 않는다). 주택 여부는 호출부가 본다.
+ * 원인이 상속이 아니면 키를 만들지 않는다(남은 값이 엔진에 닿지 않는다).
  *
- * 엔진에서 바뀌는 축은 둘뿐이다(anchor D-1~D-4 실측 — 양도차익·장기보유특별공제는 그대로):
- *   · 「소득세법」 §104②1호 — 세율 보유기간을 피상속인 취득일부터
- *   · 「소득세법 시행령」 §154⑧3호 — 동일세대 보유·거주 통산(비과세 요건)
+ * 엔진에서 바뀌는 축(anchor D-1~D-4 · G1 실측 — 양도차익·장기보유특별공제는 그대로):
+ *   · 「소득세법」 §104②1호 — 세율 보유기간을 피상속인 취득일부터 (**주택·토지·건물 모두** — E-1 한계 G1)
+ *   · 「소득세법 시행령」 §154⑧3호 — 동일세대 보유·거주 통산(비과세 요건) — **주택만**(`isHousing`).
+ *     비주택이면 남은 통산 값을 싣지 않는다(계산기 `CompanionAcqInheritanceBlock`의 주택 게이트와 같다).
  */
-export function buildGiftBurdenedInheritancePayload(bgt: BurdenedGiftTransferTaxInput): Record<string, unknown> {
+export function buildGiftBurdenedInheritancePayload(
+  bgt: BurdenedGiftTransferTaxInput,
+  isHousing: boolean,
+): Record<string, unknown> {
   const s = giftBurdenedInheritanceSlice(bgt);
   if (s.acquisitionCause !== "inheritance") return {};
   return {
     acquisitionCause: "inheritance",
     // ⑫ refine이 상속에 피상속인 취득일을 요구한다 — 빈 값은 ⑧이 막는다(계산기와 같은 계약).
     ...(s.decedentAcquisitionDate ? { decedentAcquisitionDate: s.decedentAcquisitionDate } : {}),
-    ...buildSameHouseholdInheritancePayload(s),
+    ...(isHousing ? buildSameHouseholdInheritancePayload(s) : {}),
   };
 }
 
 /**
- * ⑧ 상속받은 주택 — 판정 메뉴 `validateStep3`·계산기 `getAssetDateOrderError`와 같은 규칙·문구.
- * 첫 오류 문구 또는 null. 주택 여부는 호출부가 본다(⑤·④와 같은 게이트).
+ * ⑧ 상속받은 자산 — 판정 메뉴 `validateStep3`·계산기 `getAssetDateOrderError`와 같은 규칙·문구.
+ * 첫 오류 문구 또는 null. 동일세대 통산(§154⑧3호) 규칙은 주택만 본다(④와 같은 `isHousing` 게이트 —
+ * 비주택의 stale 통산 값은 막지 않는다).
  */
-export function giftBurdenedInheritanceError(bgt: BurdenedGiftTransferTaxInput): string | null {
+export function giftBurdenedInheritanceError(
+  bgt: BurdenedGiftTransferTaxInput,
+  isHousing: boolean,
+): string | null {
   const s = giftBurdenedInheritanceSlice(bgt);
   if (s.acquisitionCause !== "inheritance") return null;
-  if (!s.decedentAcquisitionDate) return "상속받은 주택이면 피상속인 취득일을 입력하세요.";
+  const noun = isHousing ? "주택" : "자산";
+  if (!s.decedentAcquisitionDate) return `상속받은 ${noun}이면 피상속인 취득일을 입력하세요.`;
   if (s.acquisitionDate && s.decedentAcquisitionDate >= s.acquisitionDate) {
     return "피상속인 취득일은 상속개시일보다 이전이어야 합니다.";
   }
-  if (s.decedentSameHouseholdBeforeInheritance) {
+  if (isHousing && s.decedentSameHouseholdBeforeInheritance) {
     if (!s.decedentCohabitationHoldingStartDate) {
       return "동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)";
     }
@@ -215,3 +236,92 @@ export function giftBurdenedInheritanceError(bgt: BurdenedGiftTransferTaxInput):
   }
   return null;
 }
+
+/**
+ * 「소득세법 시행령」 §155의3 상생임대주택 (E-1 한계 G2) — ⑤④⑧ 공용 게이트: 주택(호출부가 확인) ·
+ * 1세대 1주택 ON(거주기간 칸이 있는 맥락 — §155⑳ 카드와 같은 게이트). 면제되는 거주기간은
+ * §154①·§155⑳1호·§159의4(표2)의 것이고 모두 1세대 1주택(의제 포함) 맥락이다.
+ */
+export function giftBurdenedWinWinInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  return bgt.isOneHousehold === true;
+}
+
+/** 증여세 폼 → 판정 메뉴 운반 상자와 같은 이름의 5필드. 옛 record(필드 없음)는 미적용. */
+export function giftBurdenedWinWinSlice(bgt: BurdenedGiftTransferTaxInput): WinWinRentalFields {
+  return {
+    winWinRentalSpecial: bgt.winWinRentalSpecial === true,
+    winWinRentalContractDate: bgt.winWinRentalContractDate ?? "",
+    winWinRentalIncreaseRatePct: bgt.winWinRentalIncreaseRatePct ?? "",
+    winWinRentalPriorLeaseMonths: bgt.winWinRentalPriorLeaseMonths ?? "",
+    winWinRentalLeaseMonths: bgt.winWinRentalLeaseMonths ?? "",
+  };
+}
+
+/** ④ — 계산기가 운반 상자에서 싣는 것과 같은 leaf(`buildWinWinRentalPayload` → `winWinRentalHouse`). 게이트 밖이면 키 없음. */
+export function buildGiftBurdenedWinWinPayload(bgt: BurdenedGiftTransferTaxInput): object {
+  if (!giftBurdenedWinWinInScope(bgt)) return {};
+  return buildWinWinRentalPayload(giftBurdenedWinWinSlice(bgt));
+}
+
+/** ⑧ — 판정 메뉴와 같은 필수값 규칙·문구. 첫 오류 또는 null. 게이트 밖의 stale 선언은 막지 않는다. */
+export function giftBurdenedWinWinError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if (!giftBurdenedWinWinInScope(bgt)) return null;
+  return winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt))[0]?.message ?? null;
+}
+
+/**
+ * ⑧ §155⑳1호 거주요건 면제 여부 — 엔진(`checkEligibility`)과 같은 술어 `qualifiesWinWinRental`에 ④와 같은 사실을
+ * 넣는다(계산기 `transfer-tax-validate-asset.ts`와 같은 배선). 게이트 밖이면 면제 없음.
+ */
+export function giftBurdenedWinWinResidenceExempt(bgt: BurdenedGiftTransferTaxInput): boolean {
+  if (!giftBurdenedWinWinInScope(bgt)) return false;
+  return qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)) });
+}
+
+/**
+ * 「소득세법 시행령」 §155④⑤ 합가 (E-1 한계 G4) — ⑤④ 공용 게이트: 주택(호출부가 확인) · 세대 주택 수 2 이상.
+ * 양도세 계산기가 `MergeDateSection`을 여는 조건(`isHousingLike && 세대 주택수 ≥ 2` — `TemporaryTwoHouseSection`
+ * 호출부)과 같다. 이 경로의 주택 수는 선언 스칼라(④와 같은 `?? 1`)다.
+ */
+export function giftBurdenedMergeInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  return (bgt.householdHousingCount ?? 1) >= 2;
+}
+
+/** 증여세 폼 → 위젯 필드(양도세 폼과 같은 이름). 옛 record는 빈 값. */
+export function giftBurdenedMergeSlice(bgt: BurdenedGiftTransferTaxInput): MergeDateFields {
+  return {
+    marriageDate: bgt.marriageDate ?? "",
+    parentalCareMergeDate: bgt.parentalCareMergeDate ?? "",
+    isFirstTransferredInMerge: bgt.isFirstTransferredInMerge === true,
+  };
+}
+
+/** ④ — 계산기와 같은 leaf. 게이트 밖이면 키 없음. */
+export function buildGiftBurdenedMergePayload(bgt: BurdenedGiftTransferTaxInput): object {
+  if (!giftBurdenedMergeInScope(bgt)) return {};
+  return buildMergeFacts(giftBurdenedMergeSlice(bgt));
+}
+
+/**
+ * 상속받은 자산의 환산취득가액(K-5) 차단 여부 (E-1 한계 G6) — ⑤ 라디오 비활성 · ⑧ 차단이 같은 술어를 쓴다.
+ *
+ * 「소득세법 시행령」 §163⑨: 상속받은 자산에 법 §97①1호가목을 적용할 때 「상속개시일 … 현재 「상속세 및 증여세법」
+ * 제60조부터 제66조까지의 규정에 따라 평가한 가액 … 을 취득당시의 실지거래가액으로 본다」. 법 §97①1호 단서:
+ * 「가목의 실지거래가액을 확인할 수 없는 경우에 한정하여 나목(환산취득가액 등)의 금액을 적용한다」. 상증법 §60③은
+ * 시가를 산정하기 어려우면 §61~§65 보충적 평가액을 시가로 **본다** ⇒ 평가액이 없는 상속 자산은 없고 가목이 늘
+ * 확인된다 ⇒ 환산에 닿지 않는다(MST 286211·280405·276123 실독). 영 §159①1호 A = 법 §97①1호에 따른 가액이라
+ * 부담부증여 양도분에도 같다. 양도세 계산기 `postDeemedClauseARequiredError`와 같은 결론.
+ *
+ * 🔑 상속개시일이 의제취득일(1985.1.1.) **전**이면 막지 않는다 — 영 §176의2④·법 §97②1호나목의 의제취득일 환산
+ *    경로가 있다(계산기는 「가목 확인 불가」 선언 + 의제취득일 비교로 받는다). 이 경로에는 그 입력이 없어 종전 동작을
+ *    유지한다(확인 필요).
+ */
+export function giftBurdenedInheritedConversionBlocked(bgt: BurdenedGiftTransferTaxInput): boolean {
+  // 상속개시일 = 이 경로의 취득일(위젯 안내) — 계산기 부담부증여와 같은 술어
+  return isPostDeemedInheritance(bgt.acquisitionCause, ymd(bgt.acquisitionDate));
+}
+
+/** ⑧ 문구 — 계산기 `postDeemedClauseARequiredError`와 같은 근거를 이 경로의 칸 이름으로 안내한다. */
+export const GIFT_BURDENED_INHERITED_CONVERSION_ERROR =
+  "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — " +
+  "환산취득가액(K-5)을 쓸 수 없습니다(소득세법 §97①1호 단서). 실지취득가액(K-4)에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.";

@@ -15,6 +15,9 @@
  *   · §154⑤ 단서 최종 1주택 재기산(OH-22) — `FinalHouseRestartSection`
  *   · §155⑳ 장기임대주택 보유자 거주주택 특례(E-1 잔여 C — ㉓ 말소일 포함) — `RentalHousingExceptionSection`
  *   · 상속받은 주택(E-1 잔여 D — §104②1호 세율 보유기간 · §154⑧3호 동일세대 통산) — `InheritedSameHouseholdField`
+ *   · §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) — `WinWinRentalSpecialField`
+ *   · §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유(E-1 한계 G3) — `TempTwoHouseRelocationInputs` · `TempTwoHouseDelayReasonInput`
+ *   · §155④⑤ 합가(E-1 한계 G4) — `MergeDateSection`
  */
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -27,6 +30,8 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
+import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
+import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import {
   giftBurdenedRentalAsset,
   giftBurdenedRentalExceptionInScope,
@@ -37,9 +42,17 @@ import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import {
+  giftBurdenedDeadlineExceptionFields,
+  giftBurdenedDeadlineExceptionPatch,
   giftBurdenedNewHouseAddressPatch,
+  giftBurdenedTempTwoHouseDeadlineInScope,
   giftBurdenedTempTwoHouseRegulatedGate,
 } from "@/lib/calc/gift-burdened-temp-two-house";
+import {
+  TempTwoHouseDelayReasonInput,
+  TempTwoHouseRelocationInputs,
+} from "@/components/calc/transfer/TempTwoHouseDeadlineExceptionInputs";
+import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   giftBurdenedEffectiveIsRegulatedArea,
@@ -49,6 +62,10 @@ import {
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
   giftBurdenedRegulatedByAddress,
+  giftBurdenedMergeInScope,
+  giftBurdenedMergeSlice,
+  giftBurdenedWinWinInScope,
+  giftBurdenedWinWinSlice,
 } from "@/lib/calc/gift-burdened-one-house";
 
 export interface HousingFieldSetProps {
@@ -83,6 +100,8 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
   // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
   const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
+  // §155⑯·⑱(E-1 한계 G3) — ④와 같은 필드 파생(신규 주택 시·군 코드는 소재지 법정동코드에서)
+  const deadlineFields = giftBurdenedDeadlineExceptionFields(bgt);
   return (
     <div className="space-y-2">
       {/* 취득일 */}
@@ -231,6 +250,12 @@ dateToStr(bgt.acquisitionDate)
         </FieldCard>
       )}
 
+      {/* §155의3 상생임대주택(E-1 한계 G2) — 판정 메뉴와 같은 위젯. 거주기간 요건(§154①·§155⑳1호·§159의4 표2)을
+          면제하므로 거주기간 바로 뒤에 둔다. 게이트는 ④⑧과 같다(1세대 1주택 ON — `giftBurdenedWinWinInScope`). */}
+      {giftBurdenedWinWinInScope(bgt) && (
+        <WinWinRentalSpecialField value={giftBurdenedWinWinSlice(bgt)} onChange={(patch) => set(patch)} />
+      )}
+
       {/* 일시적 2주택 — 세대 주택수 == 2인 경우 */}
       {householdCount === 2 && (
         <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/15 p-3 space-y-2">
@@ -297,6 +322,28 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               </div>
             </FieldCard>
           )}
+          {/* §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 판정 메뉴와 같은 위젯. ⑯의 신규 주택 소재지는 위 칸과 같은 필드에
+              저장하고(⑯이 켜지면 조정 기한 연혁이 닫혀 위 칸은 숨는다) 시·군 코드는 거기서 파생한다. 게이트는 ④와 같다. */}
+          {giftBurdenedTempTwoHouseDeadlineInScope(bgt) && (
+            <>
+              <TempTwoHouseRelocationInputs
+                form={deadlineFields}
+                onChange={(p) =>
+                  set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedDeadlineExceptionPatch(p) } })
+                }
+                relocationRegionVerdict={judgeRelocationRegion(deadlineFields)}
+                onNewHouseAddress={(v) =>
+                  set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedNewHouseAddressPatch(v) } })
+                }
+              />
+              <TempTwoHouseDelayReasonInput
+                form={deadlineFields}
+                onChange={(p) =>
+                  set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedDeadlineExceptionPatch(p) } })
+                }
+              />
+            </>
+          )}
           {/* §155①2호 — 양도세 계산기·판정 메뉴와 같은 위젯. 신규 주택 코드가 없으면 선언으로 받는다. */}
           {eraGate && bgt.temporaryTwoHouse && (
             <TempTwoHouseRegulatedInputs
@@ -323,6 +370,12 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           mode={provisoMode}
           onChange={(patch) => set(patch)}
         />
+      )}
+
+      {/* §155④⑤ 합가(E-1 한계 G4) — 양도세 계산기와 같은 위젯. 계산기와 같이 세대 주택 수 2 이상에서 §155① 블록·
+          단서 뒤에 둔다. 게이트는 ④와 같다(`giftBurdenedMergeInScope`). */}
+      {giftBurdenedMergeInScope(bgt) && (
+        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} />
       )}
 
       {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 증여(양도) 1주택만 */}

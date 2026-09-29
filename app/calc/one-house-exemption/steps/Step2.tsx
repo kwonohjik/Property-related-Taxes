@@ -36,7 +36,7 @@ import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpec
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
-import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
+import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import {
   judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
@@ -93,33 +93,17 @@ export function Step2({ form, onChange }: Props) {
   );
 
   /**
-   * §155⑯ 연접 판정 — 계산기는 이 블록을 `Step4.tsx:292-317`에 **인라인**으로 갖고 있고
-   * 재사용 가능한 export가 없다. 같은 규칙을 그대로 옮긴다(F-4).
+   * §155⑯ 연접 판정 — 증여세 부담부증여 경로와 같은 leaf(`judgeRelocationRegion` — E-1 한계 G3에서 옮겼다).
    */
-  const relocationRegionVerdict = useMemo(() => {
-    if (!form.publicInstitutionRelocation) return null;
-    const from = form.relocatedSigunguCode;
-    const to = form.newHouseSigunguCode;
-    if (!from || !to) return null;
-    if (from === to) {
-      return { ok: true, reason: "이전한 시·군에 신규 주택이 소재합니다 — 지역 요건 충족." };
-    }
-    const adjacent = getAdjacentSigunguCodes(from);
-    if (adjacent.length === 0) {
-      return {
-        ok: true,
-        reason:
-          "이전지의 연접 시·군 정보가 없어 자동 판정할 수 없습니다 — 입력하신 선택을 유지합니다.",
-      };
-    }
-    return adjacent.includes(to)
-      ? { ok: true, reason: "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족." }
-      : {
-          ok: false,
-          reason:
-            "이전한 시·군과 연접하지 않습니다 — §155⑯ 지역 요건 미충족으로 처분기한 5년이 적용되지 않습니다.",
-        };
-  }, [form.publicInstitutionRelocation, form.relocatedSigunguCode, form.newHouseSigunguCode]);
+  const relocationRegionVerdict = useMemo(
+    () =>
+      judgeRelocationRegion({
+        publicInstitutionRelocation: form.publicInstitutionRelocation,
+        relocatedSigunguCode: form.relocatedSigunguCode,
+        newHouseSigunguCode: form.newHouseSigunguCode,
+      }),
+    [form.publicInstitutionRelocation, form.relocatedSigunguCode, form.newHouseSigunguCode],
+  );
 
   /**
    * 🔴 §155⑦ 농어촌 소재 자동판정 기계장치를 **전부 제거했다**(D-6 3b · P7-4).

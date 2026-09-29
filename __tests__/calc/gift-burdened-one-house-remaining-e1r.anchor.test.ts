@@ -79,21 +79,25 @@ describe("D slice·④ leaf — 옛 record(필드 없음)는 매매로 읽는다
       decedentCohabitationHoldingStartDate: "",
       decedentCohabitationResidenceMonths: "",
     });
-    expect(buildGiftBurdenedInheritancePayload(bgt)).toEqual({});
+    expect(buildGiftBurdenedInheritancePayload(bgt, true)).toEqual({});
   });
   it("D-S2 상속만(동일세대 아님) → 통산 3필드는 싣지 않는다(계산기 leaf와 같은 게이트)", () => {
-    const p = buildGiftBurdenedInheritancePayload(item(INHERITED).burdenedGiftTransferTax!);
+    const p = buildGiftBurdenedInheritancePayload(item(INHERITED).burdenedGiftTransferTax!, true);
     expect(p.acquisitionCause).toBe("inheritance");
     expect(p.decedentAcquisitionDate).toBe("2010-01-01");
     expect(p.decedentSameHouseholdBeforeInheritance).toBe(false);
     expect(p.decedentCohabitationHoldingStartDate).toBeUndefined();
     expect(p.decedentCohabitationResidenceMonths).toBeUndefined();
   });
-  it("D-S3 ④ 게이트 — 비주택 건물(isHousing OFF)에는 남은 상속 값을 싣지 않는다(⑤는 주택 필드 세트 안에만 있다)", () => {
+  it("D-S3 ④ 게이트 — 비주택 건물(isHousing OFF)에는 남은 동일세대 통산 값(§154⑧3호 — 주택 전용)을 싣지 않는다", () => {
+    // E-1 한계 G1(2026-09-29): 원인·피상속인 취득일(§104②1호)은 비주택에도 싣는다(⑤ 같은 위젯의 비주택 모드).
+    //   종전 단언(비주택 = 상속 키 없음)은 그 갭 자체였다 — 통산 키 배제는 그대로 지킨다.
     const building = item({ ...INHERITED, ...SAME, isHousing: false }, { category: "real_estate_building" } as Partial<EstateItem>);
     const body = buildGiftBurdenedTransferBody(building, form("2021-06-01", building));
-    expect(body).not.toHaveProperty("acquisitionCause");
-    expect(body).not.toHaveProperty("decedentAcquisitionDate");
+    expect(body).toMatchObject({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01" });
+    expect(body.decedentSameHouseholdBeforeInheritance).toBeUndefined();
+    expect(body.decedentCohabitationHoldingStartDate).toBeUndefined();
+    expect(body.decedentCohabitationResidenceMonths).toBeUndefined();
   });
 });
 
@@ -117,11 +121,15 @@ describe("D ⑧ 상속받은 주택 — 판정 메뉴·계산기와 같은 규�
       v("2021-06-01", item({ ...INHERITED, ...SAME, decedentCohabitationHoldingStartDate: "2009-01-01" })),
     ).toContain("피상속인 취득일보다 빠릅니다");
   });
-  it("V-D4 부정 짝 — 사실을 다 넣으면 통과 · 원인 매매(토글 OFF)의 stale 값은 막지 않는다 · 비주택 건물도 막지 않는다", () => {
+  it("V-D4 부정 짝 — 사실을 다 넣으면 통과 · 원인 매매(토글 OFF)의 stale 값은 막지 않는다 · 비주택 건물의 stale 통산 값도 막지 않는다", () => {
     expect(v("2021-06-01", item({ ...INHERITED, ...SAME }))).toBeNull();
     expect(v("2021-06-01", item({ acquisitionCause: "purchase", decedentSameHouseholdBeforeInheritance: true }))).toBeNull();
-    const building = item({ acquisitionCause: "inheritance", isHousing: false }, { category: "real_estate_building" } as Partial<EstateItem>);
-    expect(v("2021-06-01", building)).toBeNull();
+    // E-1 한계 G1: 비주택 건물도 상속이면 ④가 원인을 싣는다 ⇒ 피상속인 취득일은 ⑫ refine 필수값이라 막는다.
+    //   동일세대 통산(주택 전용) 칸의 stale 값은 막지 않는다(⑤에 칸이 없다 — 영구 차단 방지).
+    const building = (over: Partial<BurdenedGiftTransferTaxInput>) =>
+      item({ acquisitionCause: "inheritance", isHousing: false, ...over }, { category: "real_estate_building" } as Partial<EstateItem>);
+    expect(v("2021-06-01", building({}))).toContain("상속받은 자산이면 피상속인 취득일을 입력");
+    expect(v("2021-06-01", building({ decedentAcquisitionDate: "2010-01-01", decedentSameHouseholdBeforeInheritance: true }))).toBeNull();
   });
 });
 

@@ -29,6 +29,7 @@ import {
 } from "./burdened-gift-right-valuation";
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -190,6 +191,11 @@ export function validateBurdenedGiftAsset(
         return `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`;
       }
     } else if (acqMethod === "converted") {
+      // 상속받은 자산(상속개시일 1985.1.1. 이후) — 영 §163⑨ 평가액이 가목이라 환산 불가(E-1 한계 G6 ·
+      //   ⑤ 라디오와 같은 술어 · 증여세 부담부증여 경로와 같은 결론).
+      if (isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset))) {
+        return `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`;
+      }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
       if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
         if (

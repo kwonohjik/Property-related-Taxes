@@ -32,6 +32,9 @@ import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
 import {
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedInheritanceError,
+  giftBurdenedInheritedConversionBlocked,
+  GIFT_BURDENED_INHERITED_CONVERSION_ERROR,
+  giftBurdenedWinWinError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -134,6 +137,10 @@ export function validateStep(step: number, form: FormState): string | null {
         if (!bgt.acquisitionMethod) {
           return `${itemLabel}: 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
         }
+        // 상속받은 자산(상속개시일 1985.1.1. 이후) — §163⑨ 평가액이 가목이라 환산(K-5) 불가(E-1 한계 G6 · ⑤ 라디오와 같은 술어)
+        if (bgt.acquisitionMethod === "converted" && giftBurdenedInheritedConversionBlocked(bgt)) {
+          return `${itemLabel}: ${GIFT_BURDENED_INHERITED_CONVERSION_ERROR}`;
+        }
         // K-4 실지: 실지취득가액 합계 필수
         if (bgt.acquisitionMethod === "actual") {
           if (!bgt.actualAcquisitionTotal || bgt.actualAcquisitionTotal <= 0) {
@@ -184,9 +191,17 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
       }
+      // 상속받은 자산(E-1 잔여 D · E-1 한계 G1) — ⑤·④와 같은 slice·같은 주택 게이트, 판정 메뉴·계산기와 같은 규칙·문구.
+      //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400). 토지·비주택 건물도 §104②1호 대상이라 같이 본다.
+      const inheritanceError = giftBurdenedInheritanceError(bgt, propertyType === "housing");
+      if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
       // §155①2호 새 입력(OH-01 A2b · E-1) — ⑤와 같은 게이트, 양도세 판정 메뉴와 같은 규칙 leaf.
       //   모순만 차단한다. 미입력(경고)은 엔진이 판정 보류로 고지하고 결과 카드 경고에 뜬다.
       if (propertyType === "housing") {
+        // §155의3 상생임대주택(E-1 한계 G2) — ⑤·④와 같은 게이트, 판정 메뉴와 같은 필수값 규칙·문구.
+        //   ⑤ 배치(거주기간 바로 뒤)와 같은 순서로 먼저 본다.
+        const winWinError = giftBurdenedWinWinError(bgt);
+        if (winWinError) return `${itemLabel}: ${winWinError}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
           ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {
@@ -212,10 +227,6 @@ export function validateStep(step: number, form: FormState): string | null {
           giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate),
         )[0];
         if (restartError) return `${itemLabel}: ${restartError}`;
-        // 상속받은 주택(E-1 잔여 D) — ⑤·④와 같은 slice, 판정 메뉴·계산기와 같은 규칙·문구.
-        //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400).
-        const inheritanceError = giftBurdenedInheritanceError(bgt);
-        if (inheritanceError) return `${itemLabel}: ${inheritanceError}`;
         // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — ⑤·④와 같은 게이트·합성 자산, 계산기와 같은 규칙 leaf.
         const rentalError = giftBurdenedRentalExceptionError(bgItem, bgt, form.giftDate, itemLabel);
         if (rentalError) return rentalError;

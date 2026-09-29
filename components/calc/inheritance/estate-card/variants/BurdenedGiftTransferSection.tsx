@@ -37,6 +37,8 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import { HousingFieldSet } from "./BurdenedGiftHousingFieldSet";
+import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
+import { giftBurdenedInheritanceSlice } from "@/lib/calc/gift-burdened-one-house";
 
 
 /** housing 전용 1세대1주택 후속 입력(E-1 후속)을 비운 patch — 주택 여부를 끌 때 함께 비운다 */
@@ -56,14 +58,23 @@ const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
   proviso4hoGiftSeparated: undefined,
   finalHouseRestartHistory: undefined,
   finalHouseRestartDisposals: undefined,
-  // E-1 잔여 D — 상속받은 주택(§104②1호 · §154⑧3호)
-  acquisitionCause: undefined,
-  decedentAcquisitionDate: undefined,
+  // E-1 잔여 D — 상속받은 주택의 §154⑧3호 동일세대 통산(주택 전용). 원인·피상속인 취득일(§104②1호)은
+  //   비주택 건물에도 같은 위젯으로 남으므로 비우지 않는다(E-1 한계 G1).
   decedentSameHouseholdBeforeInheritance: undefined,
   decedentCohabitationHoldingStartDate: undefined,
   decedentCohabitationResidenceMonths: undefined,
   // E-1 잔여 C — §155⑳ 거주주택 특례
   rentalHousingException: undefined,
+  // E-1 한계 G2 — §155의3 상생임대주택
+  winWinRentalSpecial: undefined,
+  winWinRentalContractDate: undefined,
+  winWinRentalIncreaseRatePct: undefined,
+  winWinRentalPriorLeaseMonths: undefined,
+  winWinRentalLeaseMonths: undefined,
+  // E-1 한계 G4 — §155④⑤ 합가
+  marriageDate: undefined,
+  parentalCareMergeDate: undefined,
+  isFirstTransferredInMerge: undefined,
 };
 
 /** 초기 빈 객체 — 토글 ON 시 생성 */
@@ -97,6 +108,9 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.isOneHousehold !== undefined ||
     bgt.acquisitionCause === "inheritance" ||
     bgt.rentalHousingException?.applyException === true ||
+    bgt.winWinRentalSpecial === true ||
+    !!bgt.marriageDate ||
+    !!bgt.parentalCareMergeDate ||
     !!bgt.residencePeriodMonths ||
     !!bgt.householdHousingCount ||
     bgt.valuationMode === "sangjeungbeop_market" ||
@@ -258,6 +272,13 @@ export function BurdenedGiftTransferSection({
                 data-testid="bg-transfer-acq-date"
               />
             </FieldCard>
+
+            {/* 상속받은 토지(E-1 한계 G1 — §104②1호) — 주택과 같은 위젯의 비주택 모드. 취득일 바로 뒤(상속개시일 안내). */}
+            <InheritedSameHouseholdField
+              isHousing={false}
+              asset={giftBurdenedInheritanceSlice(bgt)}
+              onChange={(patch) => set(patch)}
+            />
 
             {/* 취득시 개별공시지가 — 단가는 local, store에는 «총액» */}
             <div data-testid="bg-transfer-acq-stdprice">
@@ -482,6 +503,12 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-acq-date"
         />
       </FieldCard>
+      {/* 상속받은 비주택 건물(E-1 한계 G1 — §104②1호) — 주택과 같은 위젯의 비주택 모드 */}
+      <InheritedSameHouseholdField
+        isHousing={false}
+        asset={giftBurdenedInheritanceSlice(bgt)}
+        onChange={(patch) => set(patch)}
+      />
       <FieldCard
         label={stdPriceLabel}
         hint={

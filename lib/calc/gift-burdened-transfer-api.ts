@@ -32,11 +32,18 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
+import {
+  giftBurdenedDeadlineExceptionFields,
+  giftBurdenedTempTwoHouseDeadlineInScope,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
 import { buildGiftBurdenedRentalExceptionPayload } from "@/lib/calc/gift-burdened-rental-exception";
 import {
   buildGiftBurdenedInheritancePayload,
+  buildGiftBurdenedMergePayload,
+  buildGiftBurdenedWinWinPayload,
   giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedOneHouseSlice,
@@ -309,8 +316,18 @@ export function buildGiftBurdenedTransferBody(
         bgt.temporaryTwoHouse,
         bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
       ),
+      // §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 계산기·판정 메뉴와 같은 leaf, ⑤와 같은 게이트.
+      //   신규 주택 시·군 코드는 신규 주택 소재지(E-1 잔여 B)에서 파생한다.
+      ...(giftBurdenedTempTwoHouseDeadlineInScope(bgt)
+        ? buildTempTwoHouseDeadlineExceptionFacts(giftBurdenedDeadlineExceptionFields(bgt))
+        : {}),
     };
   }
+
+  // ─── 상속받은 자산 (E-1 잔여 D · E-1 한계 G1) — 계산기와 같은 키(`acquisitionCause`·`decedent*`). 원인이 상속일 때만.
+  //   엔진에서 바뀌는 축: §104②1호 세율 보유기간(주택·토지·건물 모두) · 영 §154⑧3호 동일세대 통산(주택만 —
+  //   `isHousingType` 게이트, `gift-burdened-one-house.ts`). ⑤·⑧과 같은 게이트.
+  Object.assign(body, buildGiftBurdenedInheritancePayload(bgt, isHousingType));
 
   // ─── 1세대1주택 후속 입력 (E-1 후속) — 주택 전용, ⑤·⑧과 같은 게이트(`gift-burdened-one-house.ts`) ───
   if (isHousingType) {
@@ -329,11 +346,13 @@ export function buildGiftBurdenedTransferBody(
       body,
       buildFinalHouseRestartPayload(slice, giftBurdenedFinalHouseRestartInScope(bgt, form.giftDate)),
     );
-    // 상속받은 주택(E-1 잔여 D) — 계산기와 같은 키(`acquisitionCause`·`decedent*`). 원인이 상속일 때만.
-    //   엔진에서 바뀌는 축: §104②1호 세율 보유기간 · 영 §154⑧3호 동일세대 통산(`gift-burdened-one-house.ts`).
-    Object.assign(body, buildGiftBurdenedInheritancePayload(bgt));
     // §155⑳ 거주주택 특례(㉓ 말소일 포함 — E-1 잔여 C) — 계산기와 같은 leaf(`toRentalHousingExceptionApi`), ⑤⑧과 같은 게이트.
     Object.assign(body, buildGiftBurdenedRentalExceptionPayload(item, bgt));
+    // §155의3 상생임대주택 거주기간 면제(E-1 한계 G2) — 계산기와 같은 leaf(`buildWinWinRentalPayload` → `winWinRentalHouse`).
+    //   엔진에서 §154① 거주요건 · §155⑳1호 · §159의4 표2 거주요건을 면제한다. ⑤⑧과 같은 게이트.
+    Object.assign(body, buildGiftBurdenedWinWinPayload(bgt));
+    // §155④⑤ 합가(E-1 한계 G4) — 계산기와 같은 leaf(`buildMergeFacts`), ⑤와 같은 게이트(세대 주택 수 2 이상).
+    Object.assign(body, buildGiftBurdenedMergePayload(bgt));
   }
 
   return body;

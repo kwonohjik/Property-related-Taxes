@@ -31,6 +31,7 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 
 interface Props {
   asset: AssetForm;
@@ -209,6 +210,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   }, [asset.bgAnnualRentTotal, asset.bgMortgageSetAmount, lendingDeposit, mortgageDebt]);
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
+  // 상속받은 자산의 환산 차단(E-1 한계 G6) — ⑧ `validateBurdenedGiftAsset`과 같은 술어
+  const inheritedConversionBlocked = isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset));
   /**
    * 조합원입주권 — 증여재산 평가가 상증법 §61③이라 §159①1호 A괄호가 **발동하지 않는다**.
    * ⇒ 취득가액이 실지거래가액(K-4)으로 고정되고, 취득시·양도시 기준시가 칸을 쓰지 않는다.
@@ -375,7 +378,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               options={ACQUISITION_METHOD_OPTIONS.map((o) => ({
                 value: o.value,
                 label: o.label,
-                description: o.description,
+                // 상속받은 자산(E-1 한계 G6) — 영 §163⑨ 평가액이 가목이라 환산 불가. ⑧과 같은 술어.
+                description:
+                  o.value === "converted" && inheritedConversionBlocked
+                    ? "상속받은 자산은 상속개시일 현재 상증법 평가액이 취득가액이라 쓸 수 없습니다 (소령 §163⑨)"
+                    : o.description,
+                disabled: o.value === "converted" && inheritedConversionBlocked,
               }))}
             />
           </FieldCard>

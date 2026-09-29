@@ -1153,6 +1153,19 @@ export interface BurdenedGiftTransferTaxInput {
     newHouseJibun?: string;
     /** 신규 주택 법정동코드 — 소재지 PNU 앞 10자리 */
     newHouseRegionCode?: string;
+    /*
+     * §155① 처분기한 예외 (E-1 한계 G3) — 양도세 폼과 **같은 이름**이다. ⑤는 판정 메뉴와 같은 위젯
+     * (`TempTwoHouseDeadlineExceptionInputs`), ④는 같은 leaf(`buildTempTwoHouseDeadlineExceptionFacts`).
+     * 신규 주택 시·군 코드는 따로 두지 않는다 — 위 `newHouseRegionCode`에서 파생한다(같은 사실 한 칸).
+     */
+    /** §155⑯ 공공기관·법인 지방이전 특례 선언 */
+    publicInstitutionRelocation?: boolean;
+    /** §155⑯ 이전한 기관·법인 소재지 지번 — 화면 표시용 */
+    relocatedInstitutionJibun?: string;
+    /** §155⑯ 이전한 시·군 코드(행안부 표준 10자리 — PNU 앞 5자리 + 0) */
+    relocatedSigunguCode?: string;
+    /** §155⑱ 처분기한 예외 사유("" = 해당 없음) — 양도세 폼 `disposalDelayReason`과 같은 값 */
+    disposalDelayReason?: string;
   };
   /*
    * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──
@@ -1192,7 +1205,8 @@ export interface BurdenedGiftTransferTaxInput {
     temporaryTwoHouse: "" | "yes" | "no";
   }[];
   /*
-   * ── housing 전용 — 상속받은 주택 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * ── 상속받은 자산 (E-1 잔여 D · 「소득세법 시행령」 §154⑧3호 · 「소득세법」 §104②1호) ──
+   * 원인·피상속인 취득일(§104②1호)은 토지·비주택 건물에도 쓴다(E-1 한계 G1). 동일세대 통산 3필드는 주택 전용.
    * 양도세 폼(`AssetForm`)과 **같은 이름·모양**이다 — ⑤는 판정 메뉴와 같은 위젯
    * (`InheritedSameHouseholdField`)을, ④는 같은 leaf(`buildSameHouseholdInheritancePayload`)를 쓴다.
    * 「상속받은 주택」이면 위 `acquisitionDate`가 상속개시일이다. 옛 record에는 없다(매매로 읽는다).
@@ -1214,6 +1228,33 @@ export interface BurdenedGiftTransferTaxInput {
    * `lib/calc/gift-burdened-rental-exception.ts`의 어댑터로 부른다. 옛 record에는 없다(특례 미적용).
    */
   rentalHousingException?: AssetForm["rentalHousingException"];
+  /*
+   * ── housing 전용 — 「소득세법 시행령」 §155의3 상생임대주택 (E-1 한계 G2) ──
+   * 판정 메뉴 운반 상자(`OneHouseJudgmentExtraFields`)와 **같은 이름·모양**이다 — ⑤는 같은 위젯
+   * (`WinWinRentalSpecialField`), ④⑧은 같은 leaf(`buildWinWinRentalPayload`·`winWinRentalFieldErrors`)를 쓴다.
+   * 옛 record에는 없다(특례 미적용).
+   */
+  /** 특례 적용 선언 */
+  winWinRentalSpecial?: boolean;
+  /** ①1호 상생임대차계약 체결일 (YYYY-MM-DD) */
+  winWinRentalContractDate?: string;
+  /** ①1호 직전임대차 대비 증가율(%) — 문자열 */
+  winWinRentalIncreaseRatePct?: string;
+  /** ①2호 직전임대차 임대기간(개월) — 정수 문자열 */
+  winWinRentalPriorLeaseMonths?: string;
+  /** ①3호 상생임대차 임대기간(개월) — 정수 문자열 */
+  winWinRentalLeaseMonths?: string;
+  /*
+   * ── housing 전용 — 「소득세법 시행령」 §155④⑤ 합가 (E-1 한계 G4) ──
+   * 양도세 폼과 **같은 이름**이다 — ⑤는 같은 위젯(`MergeDateSection`), ④는 같은 leaf(`buildMergeFacts`).
+   * 세대 주택 수 2 이상일 때만 쓴다. 옛 record에는 없다(특례 미적용).
+   */
+  /** §155⑤ 혼인합가일 (YYYY-MM-DD) */
+  marriageDate?: string;
+  /** §155④ 동거봉양 합가일 (YYYY-MM-DD) */
+  parentalCareMergeDate?: string;
+  /** §155④⑤ 합가 후 세대 내 먼저 양도하는 주택 */
+  isFirstTransferredInMerge?: boolean;
 
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */
