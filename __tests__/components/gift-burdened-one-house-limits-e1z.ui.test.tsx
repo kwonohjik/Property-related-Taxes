@@ -178,3 +178,22 @@ describe("UI-G4 §155④⑤ 합가", () => {
     expect(bgtOf().isFirstTransferredInMerge).toBeUndefined();
   });
 });
+
+describe("UI-G6 상속받은 자산 — 환산취득가액(K-5) 라디오 비활성 (⑧과 같은 술어)", () => {
+  const land = (bgt: Partial<BurdenedGiftTransferTaxInput>) =>
+    item(
+      { isOneHousehold: undefined, householdHousingCount: undefined, residencePeriodMonths: undefined, valuationMode: "sangjeungbeop_market", ...bgt },
+      { category: "real_estate_land" } as Partial<EstateItem>,
+    );
+  const k5 = () => screen.getByTestId("bg-acq-method-converted") as HTMLInputElement;
+  it("★ 상속(개시 2018-03-01) → K-5 비활성 · 안내 문구", () => {
+    render(<Harness start={land({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01" })} giftDate="2021-06-01" />);
+    expect(k5().disabled).toBe(true);
+    expect(screen.getByText(/환산\(K-5\)을 쓸 수 없습니다/)).toBeTruthy();
+  });
+  it("부정 짝 — 매매면 K-5 활성", () => {
+    render(<Harness start={land({})} giftDate="2021-06-01" />);
+    expect(k5().disabled).toBe(false);
+    expect(screen.queryByText(/환산\(K-5\)을 쓸 수 없습니다/)).toBeNull();
+  });
+});

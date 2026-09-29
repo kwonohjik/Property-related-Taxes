@@ -40,6 +40,7 @@ import {
 } from "@/lib/calc/one-house-extra-facts-payload";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { buildMergeFacts, type MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -300,3 +301,28 @@ export function buildGiftBurdenedMergePayload(bgt: BurdenedGiftTransferTaxInput)
   if (!giftBurdenedMergeInScope(bgt)) return {};
   return buildMergeFacts(giftBurdenedMergeSlice(bgt));
 }
+
+/**
+ * 상속받은 자산의 환산취득가액(K-5) 차단 여부 (E-1 한계 G6) — ⑤ 라디오 비활성 · ⑧ 차단이 같은 술어를 쓴다.
+ *
+ * 「소득세법 시행령」 §163⑨: 상속받은 자산에 법 §97①1호가목을 적용할 때 「상속개시일 … 현재 「상속세 및 증여세법」
+ * 제60조부터 제66조까지의 규정에 따라 평가한 가액 … 을 취득당시의 실지거래가액으로 본다」. 법 §97①1호 단서:
+ * 「가목의 실지거래가액을 확인할 수 없는 경우에 한정하여 나목(환산취득가액 등)의 금액을 적용한다」. 상증법 §60③은
+ * 시가를 산정하기 어려우면 §61~§65 보충적 평가액을 시가로 **본다** ⇒ 평가액이 없는 상속 자산은 없고 가목이 늘
+ * 확인된다 ⇒ 환산에 닿지 않는다(MST 286211·280405·276123 실독). 영 §159①1호 A = 법 §97①1호에 따른 가액이라
+ * 부담부증여 양도분에도 같다. 양도세 계산기 `postDeemedClauseARequiredError`와 같은 결론.
+ *
+ * 🔑 상속개시일이 의제취득일(1985.1.1.) **전**이면 막지 않는다 — 영 §176의2④·법 §97②1호나목의 의제취득일 환산
+ *    경로가 있다(계산기는 「가목 확인 불가」 선언 + 의제취득일 비교로 받는다). 이 경로에는 그 입력이 없어 종전 동작을
+ *    유지한다(확인 필요).
+ */
+export function giftBurdenedInheritedConversionBlocked(bgt: BurdenedGiftTransferTaxInput): boolean {
+  if (bgt.acquisitionCause !== "inheritance") return false;
+  const d = ymd(bgt.acquisitionDate);
+  return !!d && d >= DEEMED_ACQUISITION_DATE;
+}
+
+/** ⑧ 문구 — 계산기 `postDeemedClauseARequiredError`와 같은 근거를 이 경로의 칸 이름으로 안내한다. */
+export const GIFT_BURDENED_INHERITED_CONVERSION_ERROR =
+  "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — " +
+  "환산취득가액(K-5)을 쓸 수 없습니다(소득세법 §97①1호 단서). 실지취득가액(K-4)에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.";

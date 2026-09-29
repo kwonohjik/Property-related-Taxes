@@ -20,6 +20,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { giftBurdenedInheritedConversionBlocked } from "@/lib/calc/gift-burdened-one-house";
 
 /** Date → YYYY-MM-DD (DateInput 교환용). new Date 직접 호출 금지 — 역변환은 toOptionalDate. */
 function dateToStr(d: Date | undefined): string {
@@ -50,6 +51,8 @@ export function ValuationModeSection({
   const currentAcqMethod = bgt.acquisitionMethod;
   const isActual = currentAcqMethod === "actual";
   const isConverted = currentAcqMethod === "converted";
+  // 상속받은 자산(E-1 한계 G6) — §163⑨ 평가액이 취득가액이라 K-5 불가. ⑧과 같은 술어.
+  const inheritedConversionBlocked = giftBurdenedInheritedConversionBlocked(bgt);
 
   return (
     <div className="space-y-2">
@@ -129,7 +132,11 @@ export function ValuationModeSection({
       {isMarketMode && (
         <FieldCard
           label="취득가액 산정방식"
-          hint="실지: 실제 취득대금 기준. 환산: 취득시 기준시가 / 양도시 기준시가 × 시가 (§176의2②2호)"
+          hint={
+            inheritedConversionBlocked
+              ? "상속받은 자산은 상속개시일 현재 상증법 평가액이 취득가액이라 환산(K-5)을 쓸 수 없습니다 (소령 §163⑨ · 소득세법 §97①1호 단서) — 실지(K-4)에 평가액을 입력하세요."
+              : "실지: 실제 취득대금 기준. 환산: 취득시 기준시가 / 양도시 기준시가 × 시가 (§176의2②2호)"
+          }
           required
         >
           <RadioCardGroup
@@ -170,6 +177,7 @@ export function ValuationModeSection({
                 label: "환산취득가액 (K-5)",
                 description: "§176의2②2호 환산 + §163⑥ 3% 개산공제",
                 testId: "bg-acq-method-converted",
+                disabled: inheritedConversionBlocked,
               },
             ]}
           />
@@ -184,7 +192,11 @@ export function ValuationModeSection({
           </p>
           <FieldCard
             label="실지취득가액 합계 (원)"
-            hint="건물·토지 합산 실제 취득대금. §159①1호 A괄호 안분 분자."
+            hint={
+              bgt.acquisitionCause === "inheritance"
+                ? "상속받은 자산은 상속개시일 현재 상증법 평가액(상속세 신고·결정가액)이 취득가액입니다 (소령 §163⑨). §159①1호 A괄호 안분 분자."
+                : "건물·토지 합산 실제 취득대금. §159①1호 A괄호 안분 분자."
+            }
             required
           >
             <CurrencyInput

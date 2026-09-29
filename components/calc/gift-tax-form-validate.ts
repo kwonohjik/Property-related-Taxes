@@ -32,6 +32,8 @@ import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
 import {
   giftBurdenedFinalHouseRestartInScope,
   giftBurdenedInheritanceError,
+  giftBurdenedInheritedConversionBlocked,
+  GIFT_BURDENED_INHERITED_CONVERSION_ERROR,
   giftBurdenedWinWinError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
@@ -134,6 +136,10 @@ export function validateStep(step: number, form: FormState): string | null {
         // 취득가액 산정방식 필수
         if (!bgt.acquisitionMethod) {
           return `${itemLabel}: 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
+        }
+        // 상속받은 자산(상속개시일 1985.1.1. 이후) — §163⑨ 평가액이 가목이라 환산(K-5) 불가(E-1 한계 G6 · ⑤ 라디오와 같은 술어)
+        if (bgt.acquisitionMethod === "converted" && giftBurdenedInheritedConversionBlocked(bgt)) {
+          return `${itemLabel}: ${GIFT_BURDENED_INHERITED_CONVERSION_ERROR}`;
         }
         // K-4 실지: 실지취득가액 합계 필수
         if (bgt.acquisitionMethod === "actual") {
