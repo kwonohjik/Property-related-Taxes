@@ -10,7 +10,7 @@
  * | 파트 | 엔진에서 | 응답 |
  * |---|---|---|
  * | 건물 | 환산취득가 분자·개산공제 base가 `undefined` → NaN(`general-building-converted-acquisition.ts`) | `general_building_unit` 카드 전 필드 NaN, **200** (JSON에서 null) |
- * | 토지 | `floorProduct`가 비정상 인자를 0으로 돌린다(`area-utils.ts`) | 토지 취득가액·개산공제 **0**, 200 — 총결정세액 85,868,200 (값이 있으면 48,415,400) |
+ * | 토지 | `floorProduct`가 비정상 인자를 0으로 돌린다(`area-utils.ts`) | 토지 취득가액·개산공제 **0**, 200 — `totalTax` 85,868,200 (값이 있으면 48,415,400) |
  *
  * 컴패니언 GB(`bundled-split-helpers.ts` → `buildGbPartCards`)·지분 분할(`generalBuildingShares`)·
  * 증축(3-way)도 같은 엔진을 불러 **같은 결함**이었다(각각 NaN 45·79·74곳).
