@@ -122,3 +122,17 @@ describe("SA-1·2 — API 직접 호출 누락은 400", () => {
     expect(JSON.stringify(r.json)).toContain("철거일");
   });
 });
+
+describe("주택 — 부속토지 시가표준액 정수", () => {
+  it("P5b 🔴 부속토지 시가표준액 소수 → 400 (종전 BigInt RangeError 500)", async () => {
+    const r = await post({
+      objectType: "housing",
+      publishedPrice: 600_000_000,
+      isUrbanArea: true,
+      targetDate: "2025-06-01",
+      housingBuildingValue: 200_000_000,
+      taxpayerInfo: { registeredOwner: "A", isHouseSplit: true, buildingOwner: "B", landOwner: "C", landStdValue: 400_000_000.5 },
+    });
+    expect(r.status).toBe(400);
+  });
+});

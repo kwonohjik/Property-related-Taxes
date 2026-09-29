@@ -256,8 +256,8 @@ export const propertyTaxInputSchema = z
         buildingOwner: z.string().optional(),
         /** 부속토지 소유자 식별자 */
         landOwner: z.string().optional(),
-        /** 부속토지 시가표준액 (원, §4①) */
-        landStdValue: z.number().nonnegative().optional(),
+        /** 부속토지 시가표준액 (원, §4①) — 원 단위 정수(소수면 BigInt 안분이 던져 500이 났다 — 2026-09-30) */
+        landStdValue: z.number().int().nonnegative().optional(),
       })
       .optional(),
   })
