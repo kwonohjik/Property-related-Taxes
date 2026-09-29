@@ -550,13 +550,10 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
         landArea,
         officialLandPrice,
         zoningDistrict: form.saZoningDistrict,
-        ...(form.saIsFactory
-          ? {
-              isFactory: true,
-            }
-          : {
-              buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
-            }),
+        // 공장용지도 기준면적은 바닥면적 × 배율(§101①1호)이라 바닥면적을 함께 싣는다 — ⑧(위)이 요구하는
+        // 값이다. 종전엔 공장용지일 때 이 값을 빼서 엔진이 「건축물 없음」으로 종합합산 처리했다.
+        buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+        ...(form.saIsFactory ? { isFactory: true } : {}),
         ...(form.saDemolished
           ? { demolished: true, demolishedDate: form.saDemolishedDate || undefined }
           : {}),

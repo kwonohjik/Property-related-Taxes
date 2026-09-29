@@ -360,6 +360,26 @@ export const propertyTaxInputSchema = z
           "별도합산(separate_aggregate) 계산 시 separateAggregateItem이 필요합니다.",
       });
     }
+    // 별도합산 필지 — UI ⑧(`components/calc/property/shared.ts` step 2)과 같은 축.
+    // 비우면 엔진이 「건축물 없음」·「철거일 미확인」으로 종합합산 처리해 세액이 조용히 바뀐다.
+    // 기준면적은 공장용지도 바닥면적 × 배율이다(「지방세법 시행령」 §101①1호 — `separate-aggregate-input.ts`와 같은 규칙).
+    const sa = data.separateAggregateItem;
+    if (data.landTaxType === "separate_aggregate" && sa) {
+      if (!sa.buildingFloorArea) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["separateAggregateItem", "buildingFloorArea"],
+          message: "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).",
+        });
+      }
+      if (sa.demolished === true && !sa.demolishedDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["separateAggregateItem", "demolishedDate"],
+          message: "건축물 철거(demolished=true) 시 철거일(demolishedDate)이 필요합니다.",
+        });
+      }
+    }
   });
 
 export type PropertyTaxInputDto = z.infer<typeof propertyTaxInputSchema>;
