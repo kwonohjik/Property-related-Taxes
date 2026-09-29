@@ -284,7 +284,9 @@ export function calculateGeneralBuildingTransfer(
   }
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
-  const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;
+  // 실가 파트는 이 값을 요구하지 않는다(Zod ⑩·④ — ④는 0을 싣는다). API가 생략하면 undefined가
+  // 와서 표시값이 NaN이 됐다(E-14l). 형제 `general-building-part-cards.ts`와 같이 0으로 읽는다.
+  const landStdAtAcq = (gbv.acquisitionLandPricePerSqm ?? 0) * gbv.landArea;
   /**
    * 🔴 **증축분(건물2)을 분모에 포함한다** (2026-08-12 사용자 지적).
    * 엔진의 §166⑥ 안분 분모는 `토지 + 건물1 + 건물2`인데(`general-building-extension.ts`),

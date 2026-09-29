@@ -31,11 +31,22 @@ import {
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
+
+/**
+ * 성공 응답 — NaN·Infinity가 있으면 던져 아래 `catch`가 500으로 응답한다(E-14l).
+ * `NextResponse.json`은 NaN을 `null`로 직렬화해 200으로 내보내므로, 여기서 끊지 않으면
+ * 계산이 깨진 결과가 정상 응답으로 보인다(`lib/api/non-finite-guard.ts`).
+ */
+function okJson<T>(body: T) {
+  assertFiniteResponse(body);
+  return NextResponse.json(body, { status: 200 });
+}
 
 // ============================================================
 // POST handler (⑫-2, ⑫-3)
@@ -167,9 +178,8 @@ export async function POST(request: NextRequest) {
         engineInput.filingPenaltyDetails,
         engineInput.delayedPaymentDetails,
       );
-      return NextResponse.json(
+      return okJson(
         { data: { mode: "bundled" as const, apportionment, aggregated } },
-        { status: 200 },
       );
     }
 
@@ -424,7 +434,7 @@ export async function POST(request: NextRequest) {
         rates,
       );
 
-      return NextResponse.json(
+      return okJson(
         {
           data: {
             mode: "bundled" as const,
@@ -443,7 +453,6 @@ export async function POST(request: NextRequest) {
               : {}),
           },
         },
-        { status: 200 },
       );
     }
 
@@ -506,9 +515,8 @@ export async function POST(request: NextRequest) {
         // ⚠️ raw data.amendment 전달 금지: Zod 출력은 string이라 §48② 감면율 판정(isAfter)이 침묵 오작동.
         engineInput.amendment,
       );
-      return NextResponse.json(
+      return okJson(
         { data: { mode: "mixed-use" as const, result: mixedResult } },
-        { status: 200 },
       );
     }
 
@@ -604,7 +612,7 @@ export async function POST(request: NextRequest) {
           amendment: engineInput.amendment,
         },
       );
-      return NextResponse.json(
+      return okJson(
         {
           data: {
             mode: "bundled" as const,
@@ -614,7 +622,6 @@ export async function POST(request: NextRequest) {
             ...(transferBurdenedGiftBreakdown ? { transferBurdenedGiftBreakdown } : {}),
           },
         },
-        { status: 200 },
       );
     }
 
@@ -636,7 +643,7 @@ export async function POST(request: NextRequest) {
       }
     }
     const result = calculateTransferTax(engineInput, rates);
-    return NextResponse.json({ data: { mode: "single" as const, result } }, { status: 200 });
+    return okJson({ data: { mode: "single" as const, result } });
   } catch (err) {
     // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별
     console.error("[/api/calc/transfer] engine error:", err);

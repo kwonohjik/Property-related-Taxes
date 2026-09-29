@@ -22,6 +22,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
@@ -565,6 +566,8 @@ export async function POST(request: NextRequest) {
 
     const finalInput: AggregateTransferInput = { ...engineInput, properties: enrichedProperties };
     const result = calculateTransferTaxAggregate(finalInput, rates);
+    // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
+    assertFiniteResponse(result);
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
