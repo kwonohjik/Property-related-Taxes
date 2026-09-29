@@ -82,6 +82,9 @@ const MODULES: ReadonlyArray<{
       // E-14c(2026-09-28) — 구 §167의10①14호(§155⑳ 거주주택) 신설일 · §167의4③7호 적용 개시일(부칙 제10조②).
       "RENTAL_RESIDENCE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE",
       "HOUSE_RIGHT_3PLUS_DEEMED_EXCLUSION_EFFECTIVE_DATE",
+      // E-14j(2026-09-29) — 2018.4.1.~2021.12.31. 양도분 정밀 중과 판정의 시기 게이트·신규 호.
+      "PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE",
+      "LONG_HOLDING_TEMPORARY_EXCLUSION",
       // P0(2026-09-20) — 1세대 범위 인용을 중과 축·비과세 축이 함께 쓰는 단일 소스.
       "ONE_HOUSEHOLD_DEF_CITATION",
     ],

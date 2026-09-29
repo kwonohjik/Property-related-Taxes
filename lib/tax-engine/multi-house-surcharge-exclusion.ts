@@ -13,6 +13,8 @@ import { addMonths, addDays, subDays, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import {
   MULTI_HOUSE,
+  LONG_HOLDING_TEMPORARY_EXCLUSION,
+  PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   SURCHARGE_TRANSITION,
   SURCHARGE_TRANSITION_FOUR_MONTH_SGG,
@@ -316,6 +318,38 @@ function getFirstDesignatedDate(
   return dates.sort((a, b) => a.getTime() - b.getTime())[0];
 }
 
+/**
+ * 「법 제95조제4항에 따른 보유기간이 10년 … 이상인 주택을 2020년 6월 30일까지 양도하는 경우 그 해당 주택」 —
+ * 영 §167의3①12호 · §167의4③6호 · §167의10①12호 · §167의11①11호(2020.2.11. 신설 · 2019.12.17. 이후 양도분 —
+ * 제30395호 부칙 제18조). 네 호의 문언이 같고, 세대의 주택·권리 수로 호만 갈린다.
+ *
+ * 보유기간은 양도 주택의 취득일부터 센다 — 12의2호 판정(아래 `suspensionHoldingYears`)과 같은 관례
+ * (재개발·재건축 조합원의 기존건물 기산은 `acquisitionDate`가 그 기산일을 담는다는 전제).
+ */
+function resolveLongHoldingTemporaryExclusion(
+  input: MultiHouseSurchargeInput,
+  sellingHouse: HouseInfo | undefined,
+  effectiveHouseCount: number,
+  countedRightCount: number,
+): ExclusionReason | undefined {
+  const w = LONG_HOLDING_TEMPORARY_EXCLUSION;
+  if (!sellingHouse || input.transferDate < w.FROM || input.transferDate > w.UNTIL) return undefined;
+  const years = differenceInYears(input.transferDate, sellingHouse.acquisitionDate);
+  if (years < w.MIN_HOLDING_YEARS) return undefined;
+  const basis =
+    countedRightCount > 0
+      ? effectiveHouseCount >= 3
+        ? w.HOUSE_RIGHT_THREE_PLUS_BASIS
+        : w.HOUSE_RIGHT_ONE_EACH_BASIS
+      : effectiveHouseCount >= 3
+        ? w.THREE_PLUS_BASIS
+        : w.TWO_HOUSE_BASIS;
+  return {
+    type: "long_holding_10y_until_2020_06_30",
+    detail: `보유기간 ${years}년(10년 이상) · 2020.6.30.까지 양도 — 중과 배제 (${basis})`,
+  };
+}
+
 // ============================================================
 // Step 3: 중과세 배제 사유 판단 (소령 §167-10, §167-3 ①)
 // ============================================================
@@ -363,8 +397,9 @@ export function determineSurchargeExclusion(
     return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
-  // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 지급 증빙
+  // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 지급 증빙 — 2018.8.28. 이후 양도분부터(제29242호 부칙 제5조 · E-14j)
   if (
+    input.transferDate >= PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE &&
     sellingHouse?.contractDate &&
     sellingHouse.hasContractDepositProof &&
     sellingHouse.regionCode &&
@@ -378,6 +413,13 @@ export function determineSurchargeExclusion(
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
+  }
+
+  // 보유 10년 이상 · 2019.12.17. ~ 2020.6.30. 양도분 (E-14j)
+  const longHolding = resolveLongHoldingTemporaryExclusion(input, sellingHouse, effectiveHouseCount, countedRightCount);
+  if (longHolding) {
+    exclusionReasons.push(longHolding);
+    return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
   // 양도 주택 **자체**가 §167의3①2호~8호·8호의2에 해당하는 경우의 배제.

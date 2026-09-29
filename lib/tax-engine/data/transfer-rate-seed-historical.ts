@@ -7,6 +7,7 @@
  * 순수 데이터 (side effect 없음 — route 번들 import 안전).
  */
 import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "../legal-codes/transfer";
+import { HOUSE_COUNT_EXCLUSION_RULES } from "./transfer-rate-seed";
 
 // ============================================================
 // 누진세율 구간별 역사 데이터 (소득세법 §104①1호)
@@ -233,6 +234,26 @@ export const historicalSeeds = [
         disposalDeadlineYears: 3,
       },
     },
+    is_active: true,
+  },
+
+  // ── special:house_count_exclusion ────────────────────────────
+
+  // 6. 주택 수 산정 배제 규칙 (effective 2018-04-01 — E-14j)
+  //   법 §104⑦(다주택 중과) 시행일 — 법률 제15225호 부칙 제1조1호 「… 같은 조 제7항ㆍ제8항 … 의 개정규정: 2018년 4월 1일」·
+  //   제2조② 「이 법 중 양도소득에 관한 개정규정은 이 법 시행 이후 양도하는 자산으로부터 발생하는 소득분부터 적용한다」.
+  //   종전에는 메인 seed의 2022-01-01 행뿐이라 2018.4.1.~2021.12.31. 양도분이 정밀 중과 판정(STEP 0.5)을 타지 않고
+  //   원시 플래그(조정 + 세대 주택 수 ≥ 2)로 중과됐다 — 1호 지방 저가주택 불산입·배제 호 전부 미적용.
+  //   값은 메인 seed와 **같은 객체**(`HOUSE_COUNT_EXCLUSION_RULES`) — 그 사이 개정 없음(상수 주석 참조).
+  //   ⚠️ 2018-04-01 **전**으로 내리지 않는다 — 그 전 양도에는 §104⑦이 없다(세율 층 `MULTI_HOUSE_SURCHARGE_START_DATE`).
+  {
+    tax_type: "transfer",
+    category: "special",
+    sub_category: "house_count_exclusion",
+    effective_date: "2018-04-01",
+    rate_table: null,
+    deduction_rules: null,
+    special_rules: HOUSE_COUNT_EXCLUSION_RULES,
     is_active: true,
   },
 ] as const;

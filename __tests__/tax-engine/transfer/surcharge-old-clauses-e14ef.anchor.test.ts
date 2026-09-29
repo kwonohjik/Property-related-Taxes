@@ -13,9 +13,9 @@
  * - 조심2021중1803(2021.6.9.) — 「1주택을 소유한 1세대」는 본문 괄호(1호 불산입)를 적용하지 않고 센다.
  * - 기획재정부 재산세제과-129(2023.1.19.) — §155⑯ 세대는 다른 주택 취득일부터 5년 내 양도하면 2주택 중과세율 미적용.
  *
- * ⚠️ 시료 양도일은 **2022.1.1. ~ 2023.2.27.**이다. 주택 수 산정 규칙(`transfer:special:house_count_exclusion`)의
- *    effective_date가 2022-01-01이라(fallback seed = Supabase — 계획서 transfer-review-4-defects V-3) 그 전 양도분은
- *    정밀 중과 판정(STEP 0.5) 자체를 타지 않는다(원시 플래그 fallback — E8-pre22가 고정). 2022.5.10. 이후는 보유 2년
+ * ⚠️ 시료 양도일은 주로 **2022.1.1. ~ 2023.2.27.**이다. 종전에는 주택 수 산정 규칙(`transfer:special:house_count_exclusion`)의
+ *    effective_date가 2022-01-01뿐이라 그 전 양도분은 정밀 중과 판정(STEP 0.5)을 타지 않았다 — E-14j에서 2018-04-01 행을
+ *    추가해 닿게 했다(E8-pre22 · `surcharge-pre-2022-precise-e14j.anchor.test.ts`). 2022.5.10. 이후는 보유 2년
  *    이상이면 한시 유예(§167의10①12의2호)가 가리므로 경계 시료는 보유 2년 미만으로 둔다.
  *
  * 세율 프로덕션 fallback · 강남 · 양도가액 20억 · 취득가액 3억.
@@ -205,9 +205,9 @@ describe("E-14e 구 §167의10①8호 — §154① · §155① 1년 · 조정대
     });
   });
 
-  it("E8-pre22 2022.1.1. 전 양도분은 정밀 중과 판정을 타지 않는다(주택 수 규칙 effective 2022-01-01) — 원시 플래그 중과 그대로", () => {
+  it("E8-pre22 2022.1.1. 전 양도분도 구 8호를 받는다(E-14j — 주택 수 규칙 effective 2018-04-01) · 종전 원시 플래그 중과 1,141,772,500 → 768,322,500(E8-2와 같은 값)", () => {
     const r = calc(two("2019-06-01", "2020-03-01", "2021-12-31", { residencePeriodMonths: 24 }));
-    expect(r).toMatchObject({ totalTax: SURCHARGED_2022, reasons: "", surchargeType: undefined });
+    expect(r).toMatchObject({ totalTax: 768_322_500, reasons: "temporary_two_house", surchargeType: "none" });
   });
 });
 
