@@ -296,6 +296,8 @@ export default function OneHouseJudgmentCalculator() {
                     const first = validateCurrent();
                     if (first) {
                       setError(first.message);
+                      // 오류 배너는 맨 위, 이 버튼은 맨 아래다 — 올리지 않으면 무반응으로 보인다.
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                       return;
                     }
                     setError(null);
