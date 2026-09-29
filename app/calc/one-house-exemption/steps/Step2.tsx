@@ -37,9 +37,11 @@ import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
+  judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
   judgmentTemporaryTwoHouseVisible,
 } from "@/lib/calc/one-house-judgment-section-scope";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
 import {
   judgmentDerivedNewHouse,
@@ -165,6 +167,10 @@ export function Step2({ form, onChange }: Props) {
         onChange={onChange}
         hideGracePeriod
         hideSellingHouseExclusion
+        // 「배우자 단독 보유」(중과 축)는 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
+        hideSpouseOwned
+        // 합가 칸과 같은 게이트 — 칸이 없거나 합가일이 비면 행에 묻지 않는다.
+        mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
       />
 
       {/*
@@ -193,15 +199,10 @@ export function Step2({ form, onChange }: Props) {
           primaryAcquisitionDate={primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
           /*
-            🔴 합가일은 ① 세대 단계가 소유한다 — `judgmentMergeDateOwnedByStep1`.
-               이 섹션의 `<MergeDateSection>`은 `full` 가드 **밖**이라 주택 수 ≥ 2이면
-               ①과 여기 **양쪽에 같은 칸이 떴다**(배타 규약이 이 경로를 빠뜨렸다).
-               계산기(calc 모드)는 그 자리에서 합가를 받아야 하므로 컴포넌트 쪽을
-               ⚠️ 위 한 줄에 `calc` 모드 표기를 **속성 문법으로 쓰지 말 것** — `TM-8` 소스
-                  anchor가 이 파일에 그 문자열이 없어야 한다고 고정한다(제 주석에 제가 걸렸다).
-               고치지 않고 **판정 메뉴에서만 끈다**(`hideSellingHouseExclusion`과 같은 층위).
+            합가일은 이 섹션의 `<MergeDateSection>`이 받는다(주택 수 ≥ 2 — 계산기와 같은 자리).
+            1주택 + 권리 세대는 아래 `MergedHouseholdRightSection`이 소유한다 —
+            배타 규약·④⑧ 게이트는 `judgmentMergeInputVisible` 한 곳.
           */
-          hideMergeDate
         />
       )}
 

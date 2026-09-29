@@ -15,15 +15,34 @@
  */
 import { test, expect } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
 
 test.describe("검증 경고 표시", () => {
   /**
-   * ① 세대 — 합가일 두 칸을 모두 채우면 경고가 뜬다(§155④·⑤는 별개 특례).
+   * ③ 보유 주택·권리 — 합가일 두 칸을 모두 채우면 경고가 뜬다(§155④·⑤는 별개 특례).
    * 종전에는 이 경고가 **계산되지만 화면에 도달하지 않았다**.
+   *
+   * 🔄 2026-09-29 — 합가 칸이 ① 세대에서 ③(명부 바로 아래 「일시적 2주택·합가 특례」)으로
+   *    옮겨 갔다(`docs/00-pm/one-house-judgment-merge-house-link.plan.md` 1단계). 그 칸은
+   *    2주택 이상에서 보이므로 명부 1채를 시드한다.
    */
-  test("[VW-1] 합가일 2개를 채우면 ①에 경고가 뜨고, 그래도 진행된다", async ({ page }) => {
-    await page.goto("/calc/one-house-exemption?new=1");
-    await expect(page.getByTestId("one-house-household")).toBeVisible();
+  test("[VW-1] 합가일 2개를 채우면 ③에 경고가 뜨고, 그래도 판정된다", async ({ page }) => {
+    await gotoJudgmentHoldingsStep(page, {
+      houses: [
+        {
+          id: "h1",
+          region: "capital",
+          acquisitionDate: "2018-01-01",
+          officialPrice: "300000000",
+          // 명부 행의 필수 boolean — 화면 입력은 항상 채운다. 없으면 route Zod가 400을 낸다.
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: true,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+        },
+      ],
+    });
 
     // 아직은 경고가 없다 — 「항상 떠 있는 카드」가 아님을 먼저 못 박는다.
     await expect(page.getByTestId("one-house-validation-warnings")).toHaveCount(0);
@@ -39,9 +58,9 @@ test.describe("검증 경고 표시", () => {
     await expect(card).toBeVisible();
     await expect(card).toContainText("각각 별개 특례이므로 해당하는 쪽만 남기세요");
 
-    // 🔑 경고는 **막지 않는다** — 「다음」이 그대로 먹힌다.
-    await page.getByRole("button", { name: "다음" }).click();
-    await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    // 🔑 경고는 **막지 않는다** — 판정이 그대로 나온다.
+    await page.getByTestId("one-house-judge-cta").click();
+    await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
   });
 
   /**

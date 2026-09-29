@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<OneHouseRequirementStatus, string> = {
   waived: "면제",
   not_required: "해당 없음",
   partial: "초과분 과세",
+  unchecked: "미확인",
 };
 
 const STATUS_TONE: Record<OneHouseRequirementStatus, Tone> = {
@@ -31,11 +32,13 @@ const STATUS_TONE: Record<OneHouseRequirementStatus, Tone> = {
   waived: "violet",
   not_required: "slate",
   partial: "amber",
+  unchecked: "amber",
 };
 
 const SCHEME_TITLE: Record<OneHouseRequirementReview["scheme"], string> = {
   "155-1-temporary-two-house": "일시적 2주택 비과세 요건 검토",
   "154-1-one-house": "1세대1주택 비과세 요건 검토",
+  "155-4-5-merge": "혼인·동거봉양 합가 특례 비과세 요건 검토",
 };
 
 export function OneHouseRequirementReviewCard({

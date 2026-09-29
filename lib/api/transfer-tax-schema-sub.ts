@@ -236,6 +236,8 @@ export const houseSchema = z.object({
   completionDate: z.string().date().optional(),
   // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감)
   isSpouseOwned: z.boolean().optional(),
+  // §155④⑤ 합가 전 보유 쪽 — 판정 메뉴 명부 입력(merge-composition.ts)
+  mergeOrigin: z.enum(["seller_side", "counterpart_side"]).optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
   // §155③ 공동상속 (2-A2)

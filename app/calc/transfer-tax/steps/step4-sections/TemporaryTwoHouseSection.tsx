@@ -93,18 +93,6 @@ type FullOnlyProps = {
 type BaseProps = {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
-  /**
-   * 합가 특례(`MergeDateSection`) 숨김 — **판정 메뉴 전용**(F-1 `hideSellingHouseExclusion`과 같은 층위).
-   *
-   * 🔴 판정 메뉴는 합가일을 **① 세대 단계가 소유**한다(`judgmentMergeDateOwnedByStep1`).
-   *    그런데 아래 `<MergeDateSection>`은 `full` 가드 **밖**이라 주택 수 ≥ 2이면 ①과 이 섹션
-   *    **양쪽에 같은 칸이 떴다** — 배타 규약(`one-house-judgment-section-scope.ts:26-32`)이
-   *    `MergedHouseholdRightSection`만 상대로 쓰고 이 경로를 빠뜨렸다.
-   *
-   * 계산기(`mode="calc"`)는 이 자리에서 합가를 받아야 하므로(`:437` 설명) 컴포넌트 쪽 기본
-   * 동작은 바꾸지 않고, 판정 메뉴에서만 끈다. 넘기지 않으면 종전과 같다.
-   */
-  hideMergeDate?: boolean;
 };
 
 /**
@@ -449,7 +437,7 @@ export function TemporaryTwoHouseSection(props: TemporaryTwoHouseSectionProps) {
 
         {full && <TempTwoHouseOtherSpecials {...props} />}
 
-        {!props.hideMergeDate && <MergeDateSection form={form} onChange={onChange} />}
+        <MergeDateSection form={form} onChange={onChange} />
       </div>
     </section>
   );

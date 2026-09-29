@@ -4,6 +4,7 @@
  * `pending.ts`(800줄 hard cap)에서 순수 이동했다(2026-09-29 — 판정 기준일·요건 검토 작업의 선행 분리).
  * 동작 변경 없음. 기존 import 경로(`./one-house/pending`)는 `pending.ts`의 재수출로 보존한다.
  */
+import { resolveMergeComposition } from "./merge-composition";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
@@ -146,6 +147,27 @@ function collectMergeUnmet(
     reasons.push(
       `세대 주택 수가 ${count}채입니다 — 합가 특례는 2주택(일시적 2주택 특례와 겹친 경우 3주택)까지만 적용됩니다.`,
     );
+  }
+
+  // ── 합가 전 보유 구성 — `resolveMergeComposition`(matchMergeApartFromWindow가 AND하는 같은 술어) ──
+  if (count === 2 || count === 3) {
+    const composition = resolveMergeComposition({
+      householdHousingCount: count,
+      houses: input.houses,
+      sellingHouseId: input.sellingHouseId,
+      mergeDate,
+    });
+    if (composition.status === "fails") {
+      const by = isMarriage ? "혼인으로" : "합가로";
+      const ev = isMarriage ? "혼인" : "합가";
+      reasons.push(
+        composition.reason === "acquired_after_merge"
+          ? `다른 주택을 ${mergeLabel}(${fmtDate(mergeDate)}) 이후인 ${composition.afterMergeDates.map(fmtDate).join("·")}에 취득했습니다 — ${by} 2주택이 된 것이 아니라 취득으로 늘어난 것이므로, 일시적 2주택 특례(§155①) 요건을 확인하세요.`
+          : composition.reason === "seller_side_only"
+            ? `${ev} 전 양도자 쪽이 이미 ${composition.sellerSide}주택이었고 상대 쪽은 무주택이었습니다 — 특례는 각자 1주택을 보유하다가 ${by} 2주택이 된 경우에 적용됩니다.`
+            : `${ev} 전 보유 구성(양도자 쪽 ${composition.sellerSide}채 · 상대 쪽 ${composition.counterpartSide}채)이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
+      );
+    }
   }
 
   /**

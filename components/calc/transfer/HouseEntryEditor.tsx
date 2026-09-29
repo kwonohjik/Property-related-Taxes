@@ -29,6 +29,8 @@ import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEnt
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
+import type { MergeContext } from "@/lib/calc/merge-house-origin";
 
 // ============================================================
 // Props
@@ -41,6 +43,8 @@ interface Props {
   showSpouseOwned?: boolean;
   /** 양도일 — 공시가격 조회 기준연도 기본값(§167의3①1호 기준시가는 **양도 당시**) */
   transferDate?: string;
+  /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴 전용). */
+  mergeContext?: MergeContext;
 }
 
 // ============================================================
@@ -469,10 +473,14 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 // 메인 에디터 (3섹션 조합)
 // ============================================================
 
-export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDate }: Props) {
+export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDate, mergeContext }: Props) {
   return (
     <div className="space-y-3">
       <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} transferDate={transferDate} />
+      {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
+      {mergeContext && (
+        <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />
+      )}
       <InheritanceSection house={house} onUpdate={onUpdate} />
       <LongTermRentalSection house={house} onUpdate={onUpdate} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />

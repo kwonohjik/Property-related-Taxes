@@ -228,11 +228,20 @@ describe("요건 순차 검토 — 1주택 단독 양도 (Q-2)", () => {
     expect(itemOf(r, "high-value")?.status).toBe("partial");
   });
 
-  it("[R-18] 범위 밖 특례(혼인 합가 선언)로 2주택이면 검토를 싣지 않는다", () => {
+  /**
+   * 🔄 2026-09-29 — 종전 시료는 「혼인 합가 선언 2주택」이었다. 합가가 검토 범위에 들어오면서
+   *    (`one-house-merge-composition.anchor.test.ts` MC-R) 범위 밖 특례의 대표를 §155⑦ 농어촌주택으로
+   *    바꿨다 — 「범위 밖이면 싣지 않는다」는 형제 안전망은 그대로 남긴다.
+   */
+  it("[R-18] 범위 밖 특례(§155⑦ 농어촌주택 선언)로 2주택이면 검토를 싣지 않는다", () => {
     const r = judge({
       ...ONE,
       householdHousingCount: 2,
-      marriageMerge: { marriageDate: D("2020-01-01") } as TransferTaxInput["marriageMerge"],
+      ruralHouse: {
+        kind: "inherited",
+        isOutsideCapitalEupMyeon: true,
+        decedentResidenceYears: 6,
+      } as TransferTaxInput["ruralHouse"],
     }, "2026-09-29");
     expect(r.requirementReview).toBeUndefined();
   });

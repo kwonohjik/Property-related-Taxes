@@ -24,6 +24,7 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
   judgmentHouseCountExclusionReductions,
+  judgmentMergeInputVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
   judgmentTemporaryTwoHouseVisible,
@@ -36,6 +37,7 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
+import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -62,7 +64,7 @@ const warn = (field: string, message: string): OneHouseJudgmentValidationError =
   severity: "warning",
 });
 
-/** ① 세대 — 1세대 해당 선언(Q-3′ 자기선언) + 합가일 정합성. */
+/** ① 세대 — 1세대 해당 선언(Q-3′ 자기선언). 합가일 정합성은 칸과 함께 ③(`validateStep2`)으로 옮겼다. */
 export function validateStep1(form: OneHouseJudgmentFormData): Errors {
   const errors: Errors = [];
 
@@ -77,14 +79,6 @@ export function validateStep1(form: OneHouseJudgmentFormData): Errors {
     );
   }
 
-  if (form.marriageDate && form.parentalCareMergeDate) {
-    errors.push(
-      warn(
-        "marriageDate",
-        "혼인합가일과 동거봉양 합가일이 모두 입력됐습니다. §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
-      ),
-    );
-  }
   return errors;
 }
 
@@ -96,6 +90,35 @@ export function validateStep1(form: OneHouseJudgmentFormData): Errors {
  */
 export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   const errors: Errors = [];
+
+  // 합가 칸은 ③ 이 화면에 있다 — 노출 게이트(`judgmentMergeInputVisible`)와 같은 조건에서만 경고한다.
+  if (judgmentMergeInputVisible(form) && form.marriageDate && form.parentalCareMergeDate) {
+    errors.push(
+      warn(
+        "marriageDate",
+        "혼인합가일과 동거봉양 합가일이 모두 입력됐습니다. §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
+      ),
+    );
+  }
+
+  /**
+   * §155④⑤ 합가 전 보유 쪽 — **차단하지 않는다**. 비워 두면 엔진이 구성을 판정하지 않고
+   * 종전처럼 합가일·선양도만으로 본다(`resolveMergeComposition` → `unknown`). 구 저장분이
+   * 전부 이 상태라 차단하면 기존 판정이 한꺼번에 막힌다. 칸·배지와 같은 게이트·같은 분류를 쓴다.
+   */
+  const mergeCtx = judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined;
+  if (mergeCtx) {
+    form.houses?.forEach((h, i) => {
+      if (mergeHouseSideOf(h, mergeCtx) === undefined) {
+        errors.push(
+          warn(
+            `houses.${i}.mergeOrigin`,
+            `보유 주택 ${i + 1}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르면 합가 특례의 「각자 1주택」 요건까지 판정합니다(편집 → 보유자 선택).`,
+          ),
+        );
+      }
+    });
+  }
 
   form.houses?.forEach((h, i) => {
     if (!h.acquisitionDate) {

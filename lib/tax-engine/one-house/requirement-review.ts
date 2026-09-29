@@ -14,15 +14,18 @@
  * 다시 쓰면 「과세」 배지 아래에 「전 요건 충족」이 그려지는 dual truth가 된다 —
  * 행렬 드리프트 가드(`one-house-requirement-review.anchor.test.ts`)가 동치를 고정한다.
  *
- * ## 🔑 싣는 경우는 두 가지뿐이다
+ * ## 🔑 싣는 경우는 세 가지뿐이다
  *
  *   `155-1-temporary-two-house` — §155① 일시적 2주택(E-3)으로 판정된 경우
  *   `154-1-one-house`           — 1주택 단독 양도(E-4·E-1·E-2)로 판정된 경우
+ *   `155-4-5-merge`             — §155④⑤ 합가(E-3.5)로 판정됐거나, 합가를 선언했는데 성립하지 않은
+ *                                 경우(2026-09-29 — `docs/00-pm/one-house-judgment-merge-house-link.plan.md`)
  *
- * 다른 특례(합가·상속·농어촌·대체주택 등)로 결론이 났거나 §89② 배제면 싣지 않는다. 그 요건은
+ * 다른 특례(상속·농어촌·대체주택 등)로 결론이 났거나 §89② 배제면 싣지 않는다. 그 요건은
  * 이 행들과 다르고, 「적용된 특례」·「선언했으나 적용되지 않은 특례」 카드가 따로 말한다.
  */
-import { isAfterPeriod, isOnOrBeforeDay } from "../civil-period";
+import { deadlineEndFrom, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
+import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
@@ -31,6 +34,7 @@ import {
   describeOneHouseResidenceRequirement,
   DISPOSAL_DELAY_REASON_LABEL,
   evaluateTemporaryTwoHouseTiming,
+  mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   type OneHouseResidenceBasis,
 } from "../transfer-tax-exemption-requirements";
@@ -39,6 +43,7 @@ import {
   resolveHighValueHouseThreshold,
   resolveHighValuePriceCheck,
 } from "./threshold";
+import { resolveMergeComposition } from "./merge-composition";
 import type {
   OneHouseAppliedException,
   OneHouseJudgeInput,
@@ -48,6 +53,9 @@ import type {
 } from "./types";
 
 type OneHouseRule = OneHouseSpecialRulesData["one_house_exemption"];
+
+/** §155④⑤ 합가로 결론이 났음을 뜻하는 적용 특례 id(중첩이면 §155①과 함께 붙는다). */
+const MERGE_EXCEPTION_IDS = ["155-5-marriage-merge", "155-4-parental-care-merge"];
 
 /** 1주택 경로(E-1·E-2)가 비과세일 때 붙일 수 있는 적용 특례 — 요건을 **완화**한 것만이다. */
 const ONE_HOUSE_RELAXATION_PREFIXES = ["154-1-proviso:", "155-2-1-", "155-3-1-"];
@@ -81,6 +89,12 @@ export function buildRequirementReview(
   const ids = verdict.appliedExceptions.map((e) => e.id);
   const rule = oneHouseRules.one_house_exemption;
   const twoHouseRule = oneHouseRules.temporary_two_house;
+  const mergeDeclared = !!(input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate);
+
+  // 합가로 결론이 났으면(중첩 3주택 포함) 그 요건이 근거다 — §155① 행보다 먼저 본다.
+  if (settled && ids.some((id) => MERGE_EXCEPTION_IDS.includes(id))) {
+    return { scheme: "155-4-5-merge", items: mergeItems(input, rule, twoHouseRule, judgmentBaseDate) };
+  }
 
   if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
     // 다른 §155 특례로 비과세가 됐으면 이 행들은 결론의 근거가 아니다.
@@ -89,6 +103,12 @@ export function buildRequirementReview(
       scheme: "155-1-temporary-two-house",
       items: temporaryTwoHouseItems(input, rule, twoHouseRule, judgmentBaseDate),
     };
+  }
+
+  // 합가를 선언했는데 결론이 나지 않았다 — 어느 요건에서 떨어졌는지 보여 준다.
+  //   (§155①도 함께 성립 가능한 2주택은 위 분기가 먼저 잡는다 — 그쪽이 법이 가리키는 다음 경로다.)
+  if (!settled && mergeDeclared && (input.householdHousingCount === 2 || input.householdHousingCount === 3)) {
+    return { scheme: "155-4-5-merge", items: mergeItems(input, rule, twoHouseRule, judgmentBaseDate) };
   }
 
   if (input.householdHousingCount === 1) {
@@ -196,6 +216,123 @@ function temporaryTwoHouseItems(
   // ④ 종전주택 거주 — E-3는 §155의2 면제 인자를 넘기지 않는다(1주택 경로 한정).
   items.push(residenceItem(describeOneHouseResidenceRequirement(input, rule), false, "종전주택"));
 
+  items.push(highValueItem(input));
+  return items;
+}
+
+/**
+ * §155④⑤ 합가 — ① 합가 전 구성 → ② 양도 주택 합가 전 취득 → ③ 먼저 양도 → ④ N년 이내 → 보유 → 거주 → 고가.
+ *
+ * 각 행은 `matchMergeApartFromWindow`·`matchMergeWindow`(requirements.ts)의 탈락 지점과 1:1이다.
+ * 합가 의제가 성립하면 E-3.5가 `meetsOneHouseHoldingResidence`(§155의2 면제 없이)로 보유·거주를 본다.
+ */
+function mergeItems(
+  input: OneHouseJudgeInput,
+  rule: OneHouseRule,
+  twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"],
+  judgmentBaseDate: Date | undefined,
+): OneHouseRequirementCheck[] {
+  const isMarriage = input.marriageMerge?.marriageDate !== undefined;
+  const mergeDate = (input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate)!;
+  const event = isMarriage ? "혼인" : "합가";
+  const basis = isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
+  const items: OneHouseRequirementCheck[] = [];
+
+  // ① 「1주택을 보유하는 자가 1주택을 보유하는 자와 … 합침으로써 1세대가 2주택」
+  const count = input.householdHousingCount;
+  const countHolds = mergeDeemingHouseCountHolds(input, twoHouseRule);
+  const composition = resolveMergeComposition({
+    householdHousingCount: count,
+    houses: input.houses,
+    sellingHouseId: input.sellingHouseId,
+    mergeDate,
+  });
+  const compositionFacts =
+    composition.status === "fails"
+      ? [
+          { label: `${event} 전 양도자 쪽`, value: `${composition.sellerSide}채` },
+          { label: `${event} 전 상대 쪽`, value: `${composition.counterpartSide}채` },
+          { label: `${event} 후 취득`, value: `${composition.afterMergeDates.length}채` },
+        ]
+      : [];
+  items.push({
+    id: "merge-composition",
+    label: `${event} 전 각자 1주택을 보유하다가 ${isMarriage ? "혼인으로" : "합가로"} 1세대 2주택이 됨`,
+    status: !countHolds || composition.status === "fails" ? "unmet" : composition.status === "holds" ? "met" : "unchecked",
+    facts: [{ label: "세대 주택 수", value: `${count}채` }, ...compositionFacts],
+    ...(!countHolds
+      ? {
+          note:
+            count === 3
+              ? "3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
+              : `합가 특례는 2주택(일시적 2주택과 겹친 경우 3주택)까지만 적용됩니다.`,
+        }
+      : composition.status === "fails"
+        ? {
+            note:
+              composition.reason === "acquired_after_merge"
+                ? `다른 주택을 ${event}일 이후에 취득했습니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 된 것이 아닙니다.`
+                : composition.reason === "seller_side_only"
+                  ? `${event} 전 양도자 쪽이 이미 ${composition.sellerSide}주택이었고 상대 쪽은 무주택이었습니다.`
+                  : `${event} 전 보유 구성이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
+          }
+        : composition.status === "unknown"
+          ? { note: `보유 주택 목록에서 각 주택의 ${event} 전 보유자를 고르면 이 요건까지 판정합니다.` }
+          : {}),
+    legalBasis: basis,
+  });
+
+  // ② 양도 주택이 합가 전(당일 포함) 보유분
+  items.push({
+    id: "merge-selling-before",
+    label: `양도 주택을 ${event}일 이전(당일 포함)에 취득`,
+    status: input.acquisitionDate.getTime() <= mergeDate.getTime() ? "met" : "unmet",
+    facts: [
+      { label: "양도 주택 취득일", value: fmt(input.acquisitionDate) },
+      { label: `${event}일`, value: fmt(mergeDate) },
+    ],
+    legalBasis: basis,
+  });
+
+  // ③ 「먼저 양도하는 주택」 — 사용자 선언
+  items.push({
+    id: "merge-first-transfer",
+    label: `${event} 후 세대에서 먼저 양도하는 주택`,
+    status: input.isFirstTransferredInMerge === true ? "met" : "unmet",
+    facts: [],
+    legalBasis: basis,
+  });
+
+  // ④ 「합친 날(혼인한 날)부터 N년 이내」 — N은 양도일 연혁(OH-29)
+  const years = resolveMergeExemptionYears(isMarriage ? "marriage" : "parental_care", input.transferDate);
+  const deadline = deadlineEndFrom(mergeDate, years).end;
+  const afterMerge = input.transferDate.getTime() >= mergeDate.getTime();
+  const within = afterMerge && isWithinDeadline(mergeDate, years, input.transferDate);
+  items.push({
+    id: "merge-window",
+    label: `${event}일부터 ${years}년 이내 양도`,
+    status: within ? "met" : "unmet",
+    facts: [
+      { label: `${event}일`, value: fmt(mergeDate) },
+      { label: "기한", value: fmt(deadline) },
+      { label: "양도(예정)일", value: fmt(input.transferDate) },
+    ],
+    ...(!afterMerge
+      ? { note: `${event}일 전의 양도입니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 되기 전입니다.` }
+      : !within
+        ? {
+            note:
+              judgmentBaseDate && !isDeadlineStillReachable(deadline, judgmentBaseDate)
+                ? `기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
+                : `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`,
+          }
+        : {}),
+    legalBasis: basis,
+  });
+
+  const holding = describeOneHouseHoldingRequirement(input, rule);
+  items.push(holdingItem(holding, rule, holding.met ? "met" : holding.provisoWaives ? "waived" : "unmet", "양도주택"));
+  items.push(residenceItem(describeOneHouseResidenceRequirement(input, rule), false, "양도주택"));
   items.push(highValueItem(input));
   return items;
 }

@@ -29,6 +29,7 @@ import type {
 } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
+import { resolveMergeComposition } from "./one-house/merge-composition";
 // §155① 타이밍·처분기한 — 800줄 정책 분리(자기완결 4함수). 의존은 이 방향 한쪽뿐.
 import {
   judgeTemporaryTwoHouseTiming,
@@ -216,6 +217,8 @@ export type MergeDeemingReqInput = Pick<
   | "isFirstTransferredInMerge"
   | "acquisitionDate"
   | "transferDate"
+  | "houses"
+  | "sellingHouseId"
 >;
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -690,7 +693,8 @@ function matchMergeWindow(
 /**
  * 합가 의제 요건 중 **N년 기한만 뺀** 나머지 — `matchMergeWindow`와 pending 합가 축의 같은 술어(OH-23).
  *
- * 「먼저 양도」 선언 · 합가(혼인) 이후 양도 · 양도 주택이 합가 **전 또는 당일** 취득분.
+ * 「먼저 양도」 선언 · 합가(혼인) 이후 양도 · 양도 주택이 합가 **전 또는 당일** 취득분 ·
+ * 합가 전 보유 구성(`resolveMergeComposition` — 각자 1주택, 판정할 수 없으면 통과).
  * 혼인·동거봉양이 둘 다 있으면 혼인을 본다(`matchMergeWindow`와 같은 순서).
  * **주택 수는 보지 않는다** — `mergeDeemingHouseCountHolds`.
  */
@@ -703,6 +707,14 @@ export function matchMergeApartFromWindow(
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
+  // 합가 전 각자 1주택 — 판정할 수 없으면(`unknown`) 종전 동작 그대로 둔다(merge-composition.ts).
+  const composition = resolveMergeComposition({
+    householdHousingCount: input.householdHousingCount,
+    houses: input.houses,
+    sellingHouseId: input.sellingHouseId,
+    mergeDate,
+  });
+  if (composition.status === "fails") return undefined;
   return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate };
 }
 

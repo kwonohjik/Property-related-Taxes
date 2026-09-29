@@ -13,8 +13,11 @@
  *     (`household-house-count.ts:263` → `TemporaryTwoHouseSection.tsx:123`이 `null`)
  *   - AN-2 주택 수 ≥ 2에서 합가일 칸이 ①과 ② **양쪽에** 뜬다
  *
- * 지금은 그 반대를 고정한다. **AN-1은 화면 순서가 되돌아가면, AN-2는 `hideMergeDate`가
- * 빠지면 다시 red가 된다** — 그것이 이 파일의 존재 이유다.
+ * 지금은 그 반대를 고정한다. **AN-1은 화면 순서가 되돌아가면, AN-2는 합가 칸이 다시 두 벌이
+ * 되면 red가 된다** — 그것이 이 파일의 존재 이유다.
+ *
+ * 🔄 2026-09-29 — 합가 칸의 소유자를 ①에서 ③으로 옮겼다(명부와 같은 화면). AN-2는 이제
+ *    「①에는 없고 ③에 한 벌」을 본다(`docs/00-pm/one-house-judgment-merge-house-link.plan.md` 1단계).
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -121,28 +124,38 @@ describe("AN-1 — 취득일이 §155① 블록보다 **먼저** 입력된다", 
   });
 });
 
-describe("AN-2 — 합가일 칸이 ①과 ② 양쪽에 뜬다 (주택 수 ≥ 2)", () => {
+describe("AN-2 — 합가일 칸은 ③ 보유 주택 단계에 한 벌만 (주택 수 ≥ 2)", () => {
   /**
-   * `Step1.tsx:78` `judgmentMergeDateOwnedByStep1` = `!(분양권>0 && 주택수<2)` ⇒ 주택수 2면 true.
-   * `TemporaryTwoHouseSection.tsx:461` `<MergeDateSection>`은 `full` 가드 **밖**이라 무조건 렌더.
-   * 배타 규약 주석(`one-house-judgment-section-scope.ts:26-32`)이 이 경로를 빠뜨렸다.
+   * 소유자는 `judgmentMergeInputVisible`(`one-house-judgment-section-scope.ts`) 한 곳이 정한다.
+   * 주택 수 ≥ 2면 `TemporaryTwoHouseSection`의 `<MergeDateSection>`이 그린다.
    */
-  it("[AN-2a] ① 세대 단계가 합가일을 소유한다", () => {
+  it("[AN-2a] ① 세대 단계에는 합가일 칸이 없다", () => {
     render(<Step1 form={form("2018-01-01")} onChange={() => {}} />);
-    expect(screen.queryByText("혼인합가일")).toBeTruthy();
-    expect(screen.queryByText("동거봉양 합가일")).toBeTruthy();
-  });
-
-  it("[AN-2b] ③ 보유 주택 단계에는 같은 칸이 없다 (중복 해소)", () => {
-    render(<Step2 form={form("2018-01-01")} onChange={() => {}} />);
     expect(screen.queryByText("혼인합가일")).toBeNull();
     expect(screen.queryByText("동거봉양 합가일")).toBeNull();
   });
 
+  it("[AN-2b] ③ 보유 주택 단계에 정확히 한 벌 있다", () => {
+    render(<Step2 form={form("2018-01-01")} onChange={() => {}} />);
+    expect(screen.getAllByText("혼인합가일")).toHaveLength(1);
+    expect(screen.getAllByText("동거봉양 합가일")).toHaveLength(1);
+  });
+
+  it("[AN-2d] 1주택·권리 없음이면 어디에도 없다 — §155④⑤는 합가로 2주택이 된 경우다", () => {
+    const one = { ...form("2018-01-01"), houses: [] };
+    render(<Step2 form={one} onChange={() => {}} />);
+    expect(screen.queryByText("혼인합가일")).toBeNull();
+  });
+
   /**
-   * 🔑 **부정 단언의 긍정 짝** — ③ 화면이 통째로 죽어도 AN-2b는 초록이다
-   *    (`feedback_negative_anchor_needs_positive_twin`). 같은 렌더에서 그 섹션이 살아 있음을 본다.
+   * 🔑 **부정 단언의 긍정 짝** — AN-2a는 ① 화면이 통째로 죽어도 초록이다
+   *    (`feedback_negative_anchor_needs_positive_twin`). 같은 렌더에서 ①의 다른 칸이 살아 있음을 본다.
    */
+  it("[AN-2e] 긍정 짝 — ①에 1세대 선언 토글은 그대로 있다", () => {
+    render(<Step1 form={form("2018-01-01")} onChange={() => {}} />);
+    expect(screen.queryByText("1세대에 해당합니다")).toBeTruthy();
+  });
+
   it("[AN-2c] 긍정 짝 — ③에 특례 섹션 자체는 그대로 있다", () => {
     render(<Step2 form={form("2018-01-01")} onChange={() => {}} />);
     expect(screen.queryByText("③ 일시적 2주택·합가 특례")).toBeTruthy();

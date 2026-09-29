@@ -92,6 +92,12 @@ export interface HouseEntry {
   completionDate?: string;
   /** #2a 배우자 단독 보유 주택 여부 (§167의3⑨ 3주택↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
   isSpouseOwned?: boolean;
+  /**
+   * §155④⑤ 합가 전 보유 쪽 — **판정 메뉴 전용** 입력(엔진 `HouseInfo.mergeOrigin`).
+   * 합가일보다 나중에 취득한 행은 이 값과 무관하게 「합가 후 취득」으로 본다(날짜가 먼저).
+   * 미입력이면 구성 판정을 하지 않는다(구 저장분 호환).
+   */
+  mergeOrigin?: "seller_side" | "counterpart_side";
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
