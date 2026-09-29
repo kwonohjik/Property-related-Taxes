@@ -232,6 +232,7 @@ export async function POST(request: NextRequest) {
       houseCountExclusion: exclusion.houseCountExclusion,
       specialHouseExclusion: exclusion.specialHouseExclusionDetail,
       inheritedExclusion: exclusion.inheritedExclusion,
+      houses: engineInput.houses,
     });
 
     const judgeInput = exclusion.exemptionJudgeInput;

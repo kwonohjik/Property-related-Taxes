@@ -49,6 +49,8 @@
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
 export interface HouseRowForCount {
+  /** 명부 행 id — 조특법 주택 수 제외 행을 신규 주택 후보에서 뺄 때 쓴다(`excludedHouseIds`). */
+  id?: string;
   acquisitionDate?: string;
   /** 법정동코드(10자리) — §155①2호 신규 주택 조정 여부 판정에만 쓴다(`resolveTemporaryTwoHouse`). */
   regionCode?: string;
@@ -237,6 +239,16 @@ export interface ResolveTemporaryTwoHouseArgs {
   /** 종전 flat 필드 — 도출이 성립하지 않을 때만 쓰인다. */
   declaredSpecial: boolean;
   declaredNewHouseDate: string | undefined;
+  /**
+   * 조특법(§99의4·§98의9·보유 감면주택)으로 **소유주택으로 보지 않는** 명부 행 id —
+   * `eligibleCountExcludedHouseIds`(`lib/calc/house-count-exclusion-rows.ts`)가 만든다.
+   *
+   * 🔴 이 행을 후보에 남기면 「나중 취득 행이 정확히 1채」가 깨져 §155①이 성립하지 않는다.
+   *    농어촌주택을 보유한 일시적 2주택 세대가 과세로 떨어진 실측(계획서 §2-3 P2)이 그것이다 —
+   *    국세청은 이 경우 1주택으로 보아 비과세한다(서면-2021-부동산-6220 · 사전-2021-법령해석재산-0072).
+   * 🔑 **필수 인자다** — 호출부가 새로 생겨도 넘기지 않으면 컴파일이 막힌다.
+   */
+  excludedHouseIds: ReadonlySet<string>;
 }
 
 export interface TemporaryTwoHouseDates {
@@ -271,7 +283,10 @@ export function resolveTemporaryTwoHouse(
 
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
   const later = (args.houses ?? []).filter(
-    (h) => h.acquisitionDate !== undefined && h.acquisitionDate > prev,
+    (h) =>
+      h.acquisitionDate !== undefined &&
+      h.acquisitionDate > prev &&
+      !(h.id !== undefined && args.excludedHouseIds.has(h.id)),
   );
   if (later.length !== 1) return fallback(); // 0채·2채 이상 — 억측으로 고르지 않는다
 

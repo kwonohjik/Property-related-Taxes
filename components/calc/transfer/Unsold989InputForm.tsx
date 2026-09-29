@@ -11,7 +11,7 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -23,9 +23,27 @@ type Unsold989Form = Extract<AssetReductionForm, { type: "unsold_98_9" }>;
 interface Props {
   value: Unsold989Form;
   onChange: (patch: Partial<Unsold989Form>) => void;
+  /**
+   * 판정 메뉴 명부 행에서 쓸 때 — 취득일·취득가액·전용면적은 **행 값**이고, 수도권 여부는 행
+   * 법정동코드로 판정한다(`nonCapital`, 코드가 없으면 `null` → 확인 토글로 받는다).
+   * 주면 그 칸들을 입력으로 받지 않고 읽기 전용으로 보여 준다(두 벌 입력 금지).
+   */
+  rowFacts?: { acquisitionDate: string; acquisitionPrice: string; exclusiveArea: string; nonCapital: boolean | null };
 }
 
-export function Unsold989InputForm({ value, onChange }: Props) {
+/** 행 값 읽기 전용 표시 — 비어 있으면 어디서 채우는지 알린다. */
+function RowFact({ value, suffix, testId }: { value: string; suffix?: string; testId: string }) {
+  return (
+    <p className="text-sm" data-testid={testId}>
+      {value ? `${value}${suffix ?? ""}` : "—"}{" "}
+      <span className="text-caption text-muted-foreground">
+        {value ? "(이 주택의 기본 정보)" : "— 이 주택의 기본 정보에서 입력하세요"}
+      </span>
+    </p>
+  );
+}
+
+export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -37,10 +55,14 @@ export function Unsold989InputForm({ value, onChange }: Props) {
       <ToneCard tone="sky" sectionNum="①" title="준공후미분양주택 취득 정보" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">준공후미분양주택 취득일</label>
-          <DateInput
-            value={value.unsoldHouseAcquisitionDate}
-            onChange={(v) => onChange({ unsoldHouseAcquisitionDate: v })}
-          />
+          {rowFacts ? (
+            <RowFact value={rowFacts.acquisitionDate} testId="unsold989-row-acq-date" />
+          ) : (
+            <DateInput
+              value={value.unsoldHouseAcquisitionDate}
+              onChange={(v) => onChange({ unsoldHouseAcquisitionDate: v })}
+            />
+          )}
           <p className="mt-1 text-micro text-muted-foreground">
             취득기간 2024.1.10~2026.12.31 — 종전주택(양도 주택)을 먼저 취득한 후 취득하고,
             취득한 후에 종전주택을 양도해야 합니다 (§98의9①)
@@ -52,22 +74,33 @@ export function Unsold989InputForm({ value, onChange }: Props) {
       <ToneCard tone="sky" sectionNum="②" title="가액·면적 요건" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">취득가액</label>
-          <CurrencyInput
-            label=""
-            value={value.unsoldHouseAcquisitionPrice}
-            onChange={(v) => onChange({ unsoldHouseAcquisitionPrice: v })}
-          />
+          {rowFacts ? (
+            <RowFact
+              value={rowFacts.acquisitionPrice ? parseAmount(rowFacts.acquisitionPrice).toLocaleString("ko-KR") : ""}
+              testId="unsold989-row-price"
+            />
+          ) : (
+            <CurrencyInput
+              label=""
+              value={value.unsoldHouseAcquisitionPrice}
+              onChange={(v) => onChange({ unsoldHouseAcquisitionPrice: v })}
+            />
+          )}
           <p className="mt-1 text-micro text-muted-foreground">
             실제 취득가액 — 7억 이하 (조특령 §98의8①2호. 기준시가 아님)
           </p>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium">전용면적</label>
-          <DecimalInput
-            value={value.unsoldHouseExclusiveArea}
-            onChange={(v) => onChange({ unsoldHouseExclusiveArea: v })}
-            unit="㎡"
-          />
+          {rowFacts ? (
+            <RowFact value={rowFacts.exclusiveArea} suffix="㎡" testId="unsold989-row-area" />
+          ) : (
+            <DecimalInput
+              value={value.unsoldHouseExclusiveArea}
+              onChange={(v) => onChange({ unsoldHouseExclusiveArea: v })}
+              unit="㎡"
+            />
+          )}
           <p className="mt-1 text-micro text-muted-foreground">
             전용면적 85㎡ 이하 (조특령 §98의8①1호)
           </p>
@@ -76,13 +109,21 @@ export function Unsold989InputForm({ value, onChange }: Props) {
 
       {/* ③ 소재지·자격 */}
       <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건" noDark>
-        <ToggleCard
-          checked={value.isNonCapitalRegion}
-          onCheckedChange={(v) => onChange({ isNonCapitalRegion: v })}
-          title="수도권 밖 소재"
-          description="조특법 §98의9①1호"
-          tone="rose"
-        />
+        {rowFacts && rowFacts.nonCapital !== null ? (
+          // 조특법 §2①9호 「수도권」= 수도권정비계획법 §2제1호(서울·인천·경기) — 행 주소의 법정동코드로 판정
+          <p className="text-xs" data-testid="unsold989-row-region">
+            {rowFacts.nonCapital ? "수도권 밖 소재 — 충족" : "수도권(서울·인천·경기) 소재 — 미충족"}{" "}
+            <span className="text-caption text-muted-foreground">(주소로 자동 판정 · 조특법 §98의9①1호)</span>
+          </p>
+        ) : (
+          <ToggleCard
+            checked={value.isNonCapitalRegion}
+            onCheckedChange={(v) => onChange({ isNonCapitalRegion: v })}
+            title="수도권 밖 소재"
+            description="조특법 §98의9①1호"
+            tone="rose"
+          />
+        )}
         <ToggleCard
           checked={value.wasOneHouseholdAtAcquisition}
           onCheckedChange={(v) => onChange({ wasOneHouseholdAtAcquisition: v })}

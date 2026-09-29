@@ -18,7 +18,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { evaluateNew994FromReductions } from "./new-99-4";
+import { evaluateNew994Declarations } from "./new-99-4";
 import type {
   New994Result,
   Unsold989EvaluationInput,
@@ -157,6 +157,8 @@ export function evaluateUnsold989(input: Unsold989EvaluationInput): Unsold989Res
 /** TransferReduction의 §98의9 멤버 구조 (구조적 타이핑 — 순환 import 회피) */
 interface Unsold989ReductionLike {
   type: "unsold_98_9";
+  /** 판정 메뉴 명부 행 id — 「어느 주택인가」(평가에는 쓰지 않고 결과에 되돌려 준다) */
+  houseId?: string;
   unsoldHouseAcquisitionDate?: Date;
   unsoldHouseAcquisitionPrice?: number;
   unsoldHouseExclusiveArea?: number;
@@ -165,13 +167,12 @@ interface Unsold989ReductionLike {
   meetsSellerAndContractRequirement?: boolean;
 }
 
-/** reductions[]에서 §98의9 항목을 찾아 평가 — 미포함 시 undefined */
-export function evaluateUnsold989FromReductions(
-  reductions: ReadonlyArray<{ type: string }>,
+const isUnsold989Like = (x: { type: string }): x is Unsold989ReductionLike => x.type === "unsold_98_9";
+
+function evaluateUnsold989Declaration(
+  r: Unsold989ReductionLike,
   ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
-): Unsold989Result | undefined {
-  const r = reductions.find((x): x is Unsold989ReductionLike => x.type === "unsold_98_9");
-  if (!r) return undefined;
+): Unsold989Result {
   return evaluateUnsold989({
     id: "unsold_98_9",
     generalHouseAcquisitionDate: ctx.generalHouseAcquisitionDate,
@@ -183,6 +184,15 @@ export function evaluateUnsold989FromReductions(
     wasOneHouseholdAtAcquisition: r.wasOneHouseholdAtAcquisition,
     meetsSellerAndContractRequirement: r.meetsSellerAndContractRequirement,
   });
+}
+
+/** reductions[]에서 §98의9 항목을 찾아 평가 — 미포함 시 undefined */
+export function evaluateUnsold989FromReductions(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
+): Unsold989Result | undefined {
+  const r = reductions.find(isUnsold989Like);
+  return r ? evaluateUnsold989Declaration(r, ctx) : undefined;
 }
 
 /** STEP 0.9 계산 단계 표시 — transfer-tax.ts 본문 압축용 (800줄 정책) */
@@ -200,11 +210,18 @@ export function buildHouseCountExclusionStep(
   };
 }
 
+/** 평가 결과 + 선언의 명부 행 id — 판정 메뉴 「주택 수 산정」이 어느 주택인지 표시한다. */
+export type HouseCountExclusionDetail = (New994Result | Unsold989Result) & { houseId?: string };
+
 export interface HouseCountExclusionResolution {
   /** 적용되는 조문 — 각 1채씩 제외. 둘 다 적격이면 2건(§99의4 → §98의9 순) */
-  appliedList: (New994Result | Unsold989Result)[];
+  appliedList: HouseCountExclusionDetail[];
+  /** 첫 §99의4 선언의 결과 — 계산기 결과 카드용(종전 의미 그대로) */
   new994Detail?: New994Result;
+  /** 첫 §98의9 선언의 결과 — 계산기 결과 카드용(종전 의미 그대로) */
   unsold989Detail?: Unsold989Result;
+  /** 선언 **전건**의 결과(성립·불성립) — 행 id를 싣는다. §99의4 → §98의9 순 */
+  details: HouseCountExclusionDetail[];
 }
 
 /**
@@ -217,20 +234,30 @@ export interface HouseCountExclusionResolution {
  * 각 조문의 요건이 서로를 인용하지 않으므로 취득 순서가 「일반주택 → 준공후미분양 →
  * 농어촌주택」이면 §98의9①의 「1주택을 보유한 1세대」와 §99의4①이 함께 성립한다.
  * (의존 방향: unsold-98-9 → new-99-4 단방향 — 순환 없음)
+ *
+ * 🔑 선언은 **전건** 평가한다 — 판정 메뉴는 명부 행마다 선언을 붙이므로 여러 건이 올 수 있다.
+ *    §99의4는 2채 이상이면 전부 불성립(`evaluateNew994Declarations`). §98의9는 조문에 채수
+ *    제한이 없어 건별로 판정한다(각 건의 「취득 당시 1주택 보유 1세대」 확인이 요건을 거른다).
+ *    선언이 1건씩이면 종전(`find`) 동작과 같다.
  */
 export function resolveHouseCountExclusion(
   reductions: ReadonlyArray<{ type: string }>,
   ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
 ): HouseCountExclusionResolution {
-  const new994Detail = evaluateNew994FromReductions(reductions, ctx);
-  let unsold989Detail = evaluateUnsold989FromReductions(reductions, ctx);
+  const details994 = evaluateNew994Declarations(reductions, ctx);
+  let details989: (Unsold989Result & { houseId?: string })[] = reductions
+    .filter(isUnsold989Like)
+    .map((r) => ({ ...evaluateUnsold989Declaration(r, ctx), ...(r.houseId ? { houseId: r.houseId } : {}) }));
 
-  const bothEligible = new994Detail?.isEligible === true && unsold989Detail?.isEligible === true;
-  if (bothEligible && unsold989Detail?.isEligible) {
-    unsold989Detail = { ...unsold989Detail, dualExclusionApplied: true };
+  const bothEligible = details994[0]?.isEligible === true && details989[0]?.isEligible === true;
+  if (bothEligible) {
+    details989 = details989.map((d, i) => (i === 0 && d.isEligible ? { ...d, dualExclusionApplied: true } : d));
   }
-  const appliedList: (New994Result | Unsold989Result)[] = [];
-  if (new994Detail?.isEligible) appliedList.push(new994Detail);
-  if (unsold989Detail?.isEligible) appliedList.push(unsold989Detail);
-  return { appliedList, new994Detail, unsold989Detail };
+  const details: HouseCountExclusionDetail[] = [...details994, ...details989];
+  return {
+    appliedList: details.filter((d) => d.isEligible),
+    new994Detail: details994[0],
+    unsold989Detail: details989[0],
+    details,
+  };
 }

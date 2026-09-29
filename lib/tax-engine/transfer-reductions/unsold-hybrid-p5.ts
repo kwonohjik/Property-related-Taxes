@@ -231,6 +231,8 @@ export type SpecialHouseExclusionArticle =
 
 export interface SpecialHouseExclusionInput {
   article: SpecialHouseExclusionArticle;
+  /** 판정 메뉴 명부 행 id — 「어느 주택인가」(평가에는 쓰지 않고 결과에 되돌려 준다) */
+  houseId?: string;
   /** 감면주택 취득일 (시한 판정 — D-1' 패턴: 양도 자산이 아닌 보유 감면주택 기준) */
   houseAcquisitionDate?: Date;
   /** 감면주택 매매계약일 (계약 기준 조문 — 계약+계약금 케이스) */
@@ -353,6 +355,8 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
 
 export interface SpecialHouseExclusionEntryResult {
   article: SpecialHouseExclusionArticle;
+  /** 선언의 명부 행 id (있을 때만) */
+  houseId?: string;
   articleLabel: string;
   eligible: boolean;
   reason?: string;
@@ -375,62 +379,70 @@ export function resolveSpecialHouseExclusions(
 ): SpecialHouseExclusionResolution {
   if (!exclusions || exclusions.length === 0) return { entries: [], excludedCount: 0 };
 
-  const entries: SpecialHouseExclusionEntryResult[] = exclusions.map((e) => {
-    const w = SPECIAL_HOUSE_EXCLUSION_WINDOWS[e.article];
-    const windows = e.isNationalHousing && w.nationalHousingWindows ? w.nationalHousingWindows : w.windows;
-    const inWindow = (d: Date | undefined) =>
-      d !== undefined && windows.some(([from, to]) => d.getTime() >= from.getTime() && d.getTime() <= to.getTime());
-
-    if (w.transferDeadline && transferDate.getTime() > w.transferDeadline.getTime()) {
-      return {
-        article: e.article,
-        articleLabel: w.label,
-        eligible: false,
-        reason: `${w.legalBasis}는 다른 주택을 ${fmtDate(w.transferDeadline)}까지 양도하는 경우에만 감면주택을 소유주택으로 보지 않습니다 — 양도일이 시한 이후입니다.`,
-        legalBasis: w.legalBasis,
-      };
-    }
-    // 취득기간 창이 없는 조문(§98의6)은 날짜 판정을 건너뛴다 (D5-01)
-    if (w.basis !== "none") {
-      const contractOnly = w.basis === "contract_only";
-      const required = contractOnly ? e.houseContractDate : (e.houseAcquisitionDate ?? e.houseContractDate);
-      if (!required) {
-        return {
-          article: e.article,
-          articleLabel: w.label,
-          eligible: false,
-          reason: contractOnly
-            ? "감면주택의 최초 매매계약일이 입력되지 않았습니다 (이 조문은 매매계약일만을 기준으로 취득기간을 판정합니다)."
-            : "감면주택의 취득일 또는 매매계약일이 입력되지 않았습니다 (취득기간 판정에 필요).",
-          legalBasis: w.legalBasis,
-        };
-      }
-      const ok = contractOnly
-        ? inWindow(e.houseContractDate)
-        : inWindow(e.houseAcquisitionDate) || inWindow(e.houseContractDate);
-      if (!ok) {
-        return {
-          article: e.article,
-          articleLabel: w.label,
-          eligible: false,
-          reason: contractOnly
-            ? "감면주택의 최초 매매계약일이 해당 조문의 취득기간 외입니다 (취득일은 기준이 아닙니다)."
-            : "감면주택의 취득일·매매계약일이 해당 조문의 취득기간 외입니다.",
-          legalBasis: w.legalBasis,
-        };
-      }
-    }
-    if (e.requirementsConfirmed !== true) {
-      return {
-        article: e.article,
-        articleLabel: w.label,
-        eligible: false,
-        reason: "해당 조문의 본 요건(미분양 확인·최초계약·가액·면적 등) 충족이 확인되지 않았습니다.",
-        legalBasis: w.legalBasis,
-      };
-    }
-    return { article: e.article, articleLabel: w.label, eligible: true, legalBasis: w.legalBasis };
-  });
+  const entries: SpecialHouseExclusionEntryResult[] = exclusions.map((e) => ({
+    ...evaluateSpecialHouseExclusion(e, transferDate),
+    ...(e.houseId ? { houseId: e.houseId } : {}),
+  }));
 
   return { entries, excludedCount: entries.filter((x) => x.eligible).length };
+}
+
+function evaluateSpecialHouseExclusion(
+  e: SpecialHouseExclusionInput,
+  transferDate: Date,
+): SpecialHouseExclusionEntryResult {
+  const w = SPECIAL_HOUSE_EXCLUSION_WINDOWS[e.article];
+  const windows = e.isNationalHousing && w.nationalHousingWindows ? w.nationalHousingWindows : w.windows;
+  const inWindow = (d: Date | undefined) =>
+    d !== undefined && windows.some(([from, to]) => d.getTime() >= from.getTime() && d.getTime() <= to.getTime());
+
+  if (w.transferDeadline && transferDate.getTime() > w.transferDeadline.getTime()) {
+    return {
+      article: e.article,
+      articleLabel: w.label,
+      eligible: false,
+      reason: `${w.legalBasis}는 다른 주택을 ${fmtDate(w.transferDeadline)}까지 양도하는 경우에만 감면주택을 소유주택으로 보지 않습니다 — 양도일이 시한 이후입니다.`,
+      legalBasis: w.legalBasis,
+    };
+  }
+  // 취득기간 창이 없는 조문(§98의6)은 날짜 판정을 건너뛴다 (D5-01)
+  if (w.basis !== "none") {
+    const contractOnly = w.basis === "contract_only";
+    const required = contractOnly ? e.houseContractDate : (e.houseAcquisitionDate ?? e.houseContractDate);
+    if (!required) {
+      return {
+        article: e.article,
+        articleLabel: w.label,
+        eligible: false,
+        reason: contractOnly
+          ? "감면주택의 최초 매매계약일이 입력되지 않았습니다 (이 조문은 매매계약일만을 기준으로 취득기간을 판정합니다)."
+          : "감면주택의 취득일 또는 매매계약일이 입력되지 않았습니다 (취득기간 판정에 필요).",
+        legalBasis: w.legalBasis,
+      };
+    }
+    const ok = contractOnly
+      ? inWindow(e.houseContractDate)
+      : inWindow(e.houseAcquisitionDate) || inWindow(e.houseContractDate);
+    if (!ok) {
+      return {
+        article: e.article,
+        articleLabel: w.label,
+        eligible: false,
+        reason: contractOnly
+          ? "감면주택의 최초 매매계약일이 해당 조문의 취득기간 외입니다 (취득일은 기준이 아닙니다)."
+          : "감면주택의 취득일·매매계약일이 해당 조문의 취득기간 외입니다.",
+        legalBasis: w.legalBasis,
+      };
+    }
+  }
+  if (e.requirementsConfirmed !== true) {
+    return {
+      article: e.article,
+      articleLabel: w.label,
+      eligible: false,
+      reason: "해당 조문의 본 요건(미분양 확인·최초계약·가액·면적 등) 충족이 확인되지 않았습니다.",
+      legalBasis: w.legalBasis,
+    };
+  }
+  return { article: e.article, articleLabel: w.label, eligible: true, legalBasis: w.legalBasis };
 }

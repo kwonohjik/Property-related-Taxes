@@ -42,6 +42,15 @@ function formatDate(v: string): string {
   return String(v).slice(0, 10);
 }
 
+/**
+ * 「보유 주택 N (취득일) — 」 — 명세 항목이 **어느 주택**인지(판정 메뉴 명부 행). 엔진이 결과에 싣는다
+ * (`buildOneHouseCountBreakdown`) — 폼 없이 이력 상세에서도 같은 문구가 나온다. 행을 모르면 비운다.
+ */
+function houseRef(x: { houseNo?: number; houseAcquisitionDate?: string }): string {
+  if (!x.houseNo) return "";
+  return `보유 주택 ${x.houseNo}${x.houseAcquisitionDate ? ` (${x.houseAcquisitionDate} 취득)` : ""} — `;
+}
+
 type Props = {
   result: OneHouseExemptionResponse;
   /**
@@ -124,7 +133,8 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         {houseCount.excluded.length > 0 && (
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {houseCount.excluded.map((e, i) => (
-              <li key={i}>
+              <li key={i} data-testid="one-house-count-excluded">
+                {houseRef(e)}
                 {e.label}
                 <span className="ml-2">
                   <LawArticleModal legalBasis={e.legalBasis} />
@@ -134,12 +144,13 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           </ul>
         )}
         {/*
-          선언했으나 요건 미달로 빼지 않은 조특법 §99의4·§98의9 (OH-28) — 성공 목록만 보여 주면
+          선언했으나 요건 미달로 빼지 않은 조특법 §99의4·§98의9 (OH-28)·보유 감면주택 — 성공 목록만 보여 주면
           「왜 주택 수가 그대로인가」가 사라진다. 사유는 엔진 평가기의 문장 그대로다.
         */}
         {houseCount.notApplied?.map((n, i) => (
           <div key={`na-${i}`} className="space-y-1" data-testid="one-house-count-not-applied">
             <p className="text-sm font-semibold text-rose-700">
+              {houseRef(n)}
               {n.label}
               <span className="ml-2">
                 <LawArticleModal legalBasis={n.legalBasis} />

@@ -4,6 +4,18 @@
  */
 
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
+import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
+
+/** 행에 붙는 조특법 §99의4·§98의9 선언 — 감면 폼과 같은 모양(입력 폼·④ 변환을 그대로 쓴다). */
+export type RowCountExclusionReduction = Extract<
+  AssetReductionForm,
+  { type: "new_99_4_rural" | "new_99_4_hometown" | "unsold_98_9" }
+>;
+
+/** 조특법 주택 수 제외 사유 — 한 주택에 하나. `HouseEntry.countExclusion` 주석 참조. */
+export type HouseCountExclusionRowFact =
+  | { kind: "reduction"; reduction: RowCountExclusionReduction }
+  | { kind: "special"; special: SpecialHouseExclusionFormItem };
 
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
@@ -210,6 +222,20 @@ export interface HouseEntry {
   unavoidableOutsideCapitalResolvedDate?: string;
   // ⚠️ 「수도권 밖」 요건에 별도 칸을 두지 않는다 — 행의 `regionCode`로 판정한다.
   //    다만 이 PR은 **순수 이관**이라 엔진 게이트를 새로 넣지 않고 화면 경고로만 알린다.
+  /**
+   * 조특법 **주택 수 제외** — 이 주택을 「소유주택이 아닌 것으로 보는」 사유 (판정 메뉴 행 사실).
+   *
+   * §99의4(농어촌·고향)·§98의9(준공후미분양)·감면주택(§98 등)은 법문의 대상이 「그 주택」이라
+   * 세대 단위 선언이 아니라 **행의 속성**이다 — §155⑥⑦⑧(D-6)과 같은 결정
+   * (`docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`). 종전에는 선언이 명부와
+   * 따로 놀아 신규 주택 후보에 섞이거나(일시적 2주택 불성립) 명부에 없는 주택을 빼 주었다.
+   *
+   * 🔑 취득일·주소·취득가액·전용면적·수도권 여부는 **행 값**을 쓴다 — 선언의 같은 칸은
+   *    `lib/calc/house-count-exclusion-rows.ts`가 행 값으로 덮어쓴다(두 벌 입력 금지).
+   * ⚠️ `isUnsoldHousing`(중과 배제, 소령 §167의3①5호)과 **다른 축**이다 — 그 행은 주택 수에 산입한다.
+   * 판정 메뉴에서만 입력한다(계산기로 넘길 때는 계산기 저장소로 옮긴다 — Q-4).
+   */
+  countExclusion?: HouseCountExclusionRowFact;
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.

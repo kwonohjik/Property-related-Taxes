@@ -59,6 +59,7 @@ import { selfBuiltActive } from "./self-built-scope";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
+import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -495,6 +496,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       .filter((e) => e.article)
       .map((e) => ({
         article: e.article,
+        ...(e.houseId ? { houseId: e.houseId } : {}),
         houseAcquisitionDate: e.houseAcquisitionDate || undefined,
         houseContractDate: e.houseContractDate || undefined,
         isNationalHousing: e.isNationalHousing,
@@ -553,6 +555,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        excludedHouseIds: eligibleCountExcludedHouseIds(form),
       }),
       }).mode;
       // 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속)

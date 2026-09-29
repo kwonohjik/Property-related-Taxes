@@ -217,9 +217,24 @@ const UNSOLD_989 = {
   meetsSellerAndContractRequirement: true,
 } as AssetReductionForm;
 
+/**
+ * 🔄 선언의 자리는 **명부 행**이다(`HouseEntry.countExclusion` — 계획서
+ *    `one-house-judgment-count-exclusion-row-link.plan.md`). 종전 `assets[0].reductions` 선언은
+ *    ④가 보내지 않고 ⑧이 막는다(Q-2 — `one-house-count-exclusion-row-link.anchor.test.ts` ROW-6c·ROW-7).
+ *    각 anchor가 지키는 주장은 그대로다 — 입력 자리만 행으로 옮겼다.
+ */
+const rowWith = (reduction: AssetReductionForm, over: Record<string, unknown> = {}) => ({
+  ...ROW,
+  ...over,
+  countExclusion: { kind: "reduction", reduction },
+});
+/** §98의9 행 — 취득일·취득가액·전용면적은 행 값이다. 수도권 여부는 법정동코드가 없어 폼의 확인값. */
+const unsoldRow = (over: Record<string, unknown> = {}) =>
+  rowWith(UNSOLD_989, { acquisitionDate: "2024-03-01", acquisitionPrice: "500000000", exclusiveArea: "84", ...over });
+
 describe("OH-28 조특법 §99의4·§98의9 주택 수 제외 — 판정 메뉴 ④ → route", () => {
-  it("[C2-28a] §99의4 농어촌주택 선언 → ④가 싣고 route가 2채 → 1채로 보아 비과세", async () => {
-    const f = jForm({ houses: [ROW] }, { reductions: [RURAL_994] });
+  it("[C2-28a] §99의4 농어촌주택 행 → ④가 싣고 route가 2채 → 1채로 보아 비과세", async () => {
+    const f = jForm({ houses: [rowWith(RURAL_994)] });
     const body = buildOneHouseExemptionApiBody(f);
     expect((body.reductions as { type: string }[]).map((r) => r.type)).toEqual(["new_99_4_rural"]);
     const d = await judgeForm(f);
@@ -234,16 +249,15 @@ describe("OH-28 조특법 §99의4·§98의9 주택 수 제외 — 판정 메뉴
     expect(d.judgment.isExempt).toBe(false);
   });
 
-  it("[C2-28b] §98의9 준공후미분양 선언 → 1채로 보아 비과세", async () => {
-    const row = { ...ROW, acquisitionDate: "2024-03-01" };
-    const d = await judgeForm(jForm({ houses: [row] }, { reductions: [UNSOLD_989] }));
+  it("[C2-28b] §98의9 준공후미분양 행 → 1채로 보아 비과세", async () => {
+    const d = await judgeForm(jForm({ houses: [unsoldRow()] }));
     expect(d.houseCount.countedForExemption).toBe(1);
     expect(d.judgment.isExempt).toBe(true);
   });
 
   it("[C2-28c] 요건 미달 선언(기준시가 4억 > 3억) → 제외하지 않고, 그 사유를 명세에 남긴다", async () => {
     const rural = { ...RURAL_994, ruralHouseStdPrice: "400000000" } as AssetReductionForm;
-    const d = await judgeForm(jForm({ houses: [ROW] }, { reductions: [rural] }));
+    const d = await judgeForm(jForm({ houses: [rowWith(rural)] }));
     expect(d.houseCount.countedForExemption).toBe(2);
     expect(d.judgment.isExempt).toBe(false);
     const notApplied = d.houseCount.notApplied as { label: string; reasons: string[] }[];
@@ -252,33 +266,38 @@ describe("OH-28 조특법 §99의4·§98의9 주택 수 제외 — 판정 메뉴
   });
 
   it("[C2-28c+] 짝 — 성립하면 불성립 명세는 없다", async () => {
-    const d = await judgeForm(jForm({ houses: [ROW] }, { reductions: [RURAL_994] }));
+    const d = await judgeForm(jForm({ houses: [rowWith(RURAL_994)] }));
     expect(d.houseCount.notApplied).toBeUndefined();
   });
 
   it("[C2-28d] ④는 주택 수 제외 축만 싣는다 — 판정과 무관한 감면 선언은 보내지 않는다", () => {
     const other = { type: "self_farming", farmingYears: "8" } as unknown as AssetReductionForm;
-    const body = buildOneHouseExemptionApiBody(jForm({ houses: [ROW] }, { reductions: [other, RURAL_994] }));
+    const body = buildOneHouseExemptionApiBody(jForm({ houses: [rowWith(RURAL_994)] }, { reductions: [other] }));
     expect((body.reductions as { type: string }[]).map((r) => r.type)).toEqual(["new_99_4_rural"]);
   });
 
   it("[C2-28e] 3중 패턴 — 양도 대상이 조합원입주권이면 ⑤가 칸을 숨기므로 ④도 보내지 않고 ⑧도 요구하지 않는다", () => {
-    const blank = { ...RURAL_994, ruralHouseAcquisitionDate: "" } as AssetReductionForm;
-    const f = jForm({ houses: [ROW] }, { assetKind: "right_to_move_in", reductions: [blank] } as Partial<AssetForm>);
+    const blank = { ...RURAL_994, ruralHouseStdPrice: "" } as AssetReductionForm;
+    const f = jForm({ houses: [rowWith(blank)] }, { assetKind: "right_to_move_in" } as Partial<AssetForm>);
     expect(buildOneHouseExemptionApiBody(f).reductions).toEqual([]);
     expect(errs2(f).filter((m) => m.includes("§99의4"))).toEqual([]);
   });
 
-  it("[C2-28f] ⑧ — §99의4 취득일·기준시가 · §98의9 취득일·취득가·면적 필수", () => {
-    const r994 = { ...RURAL_994, ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "" } as AssetReductionForm;
-    const r989 = { ...UNSOLD_989, unsoldHouseExclusiveArea: "" } as AssetReductionForm;
-    const m = errs2(jForm({ houses: [ROW] }, { reductions: [r994, r989] }));
-    expect(m.filter((x) => x.includes("§99의4"))).toHaveLength(2);
-    expect(m.filter((x) => x.includes("§98의9"))).toHaveLength(1);
+  it("[C2-28f] ⑧ — §99의4 기준시가 · §98의9 전용면적 필수 (취득일·가액·면적은 행 값에서 온다)", () => {
+    const r994 = { ...RURAL_994, ruralHouseStdPrice: "" } as AssetReductionForm;
+    const m = errs2(
+      jForm({ houses: [rowWith(r994, { id: "h1" }), unsoldRow({ id: "h2", exclusiveArea: "" })] }),
+    );
+    expect(m.filter((x) => x.includes("§99의4"))).toEqual([
+      "보유 주택 1: §99의4 농어촌주택 적용: 취득 당시 기준시가 합계(주택+부속토지)를 입력하세요.",
+    ]);
+    expect(m.filter((x) => x.includes("§98의9"))).toEqual([
+      "보유 주택 2: §98의9 적용: 준공후미분양주택 전용면적(㎡)을 입력하세요.",
+    ]);
   });
 
   it("[C2-28f+] 긍정 짝 — 채우면 막지 않는다", () => {
-    const m = errs2(jForm({ houses: [ROW] }, { reductions: [RURAL_994, UNSOLD_989] }));
+    const m = errs2(jForm({ houses: [rowWith(RURAL_994, { id: "h1" }), unsoldRow({ id: "h2" })] }));
     expect(m.filter((x) => x.includes("§99의4") || x.includes("§98의9"))).toEqual([]);
   });
 });

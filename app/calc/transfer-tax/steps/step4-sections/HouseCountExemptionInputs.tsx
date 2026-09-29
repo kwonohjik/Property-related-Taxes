@@ -47,6 +47,7 @@ export function HouseCountExemptionInputs({
   hideSellingHouseExclusion = false,
   hideSpouseOwned = false,
   mergeContext,
+  countExclusionEnabled = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -58,6 +59,12 @@ export function HouseCountExemptionInputs({
   hideSpouseOwned?: boolean;
   /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다. */
   mergeContext?: MergeContext;
+  /**
+   * 판정 메뉴 전용 — 조특법 주택 수 제외를 **명부 행**(행 편집 ⑥)에서 받는다. 켜면 아래의 세대 단위
+   * 「조특법 감면주택 보유」 섹션은 그리지 않는다 — 같은 사실을 두 곳에서 받지 않는다(계획서 Q-1(a)).
+   * 계산기는 넘기지 않아 동작 불변이다.
+   */
+  countExclusionEnabled?: boolean;
 }) {
   return (
     <>
@@ -69,13 +76,16 @@ export function HouseCountExemptionInputs({
         hideSellingHouseExclusion={hideSellingHouseExclusion}
         hideSpouseOwned={hideSpouseOwned}
         mergeContext={mergeContext}
+        countExclusionEnabled={countExclusionEnabled}
       />
 
-      {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) */}
-      <SpecialHouseExclusionSection
-        items={form.specialHouseExclusions ?? []}
-        onChange={(items) => onChange({ specialHouseExclusions: items })}
-      />
+      {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) — 판정 메뉴는 명부 행에서 받는다 */}
+      {!countExclusionEnabled && (
+        <SpecialHouseExclusionSection
+          items={form.specialHouseExclusions ?? []}
+          onChange={(items) => onChange({ specialHouseExclusions: items })}
+        />
+      )}
 
       {/* §155② 상속주택 특례 — 상속주택 존재 시 일반주택 양도 비과세(주택수 자동 제외). 2년내 증여분 게이트 */}
       {form.houses?.some((h) => h.isInherited) && (

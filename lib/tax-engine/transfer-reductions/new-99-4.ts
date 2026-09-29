@@ -42,6 +42,8 @@ export const NEW_99_4_MANDATORY_YEARS = 3;
 /** TransferReduction의 §99의4 멤버 구조 (구조적 타이핑 — 순환 import 회피, rental-97-router 패턴) */
 interface New994ReductionLike {
   type: New994ArticleId;
+  /** 판정 메뉴 명부 행 id — 「어느 주택인가」(평가에는 쓰지 않고 결과에 되돌려 준다) */
+  houseId?: string;
   ruralHouseAcquisitionDate?: Date;
   ruralHouseStdPrice?: number;
   isRegisteredHanok?: boolean;
@@ -50,18 +52,13 @@ interface New994ReductionLike {
   meetsHometownRequirement?: boolean;
 }
 
-/**
- * reductions[]에서 §99의4 항목을 찾아 평가 — transfer-tax.ts STEP 0.9 진입점.
- * 미포함 시 undefined (특례 미신청).
- */
-export function evaluateNew994FromReductions(
-  reductions: ReadonlyArray<{ type: string }>,
+const isNew994Like = (x: { type: string }): x is New994ReductionLike =>
+  x.type === "new_99_4_rural" || x.type === "new_99_4_hometown";
+
+function evaluateNew994Declaration(
+  r: New994ReductionLike,
   ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
-): New994Result | undefined {
-  const r = reductions.find(
-    (x): x is New994ReductionLike => x.type === "new_99_4_rural" || x.type === "new_99_4_hometown",
-  );
-  if (!r) return undefined;
+): New994Result {
   return evaluateNew994({
     id: r.type,
     generalHouseAcquisitionDate: ctx.generalHouseAcquisitionDate,
@@ -73,6 +70,54 @@ export function evaluateNew994FromReductions(
     meetsLocationRequirement: r.meetsLocationRequirement,
     meetsHometownRequirement: r.type === "new_99_4_hometown" ? r.meetsHometownRequirement : undefined,
   });
+}
+
+/**
+ * reductions[]에서 §99의4 항목을 찾아 평가 — transfer-tax.ts STEP 0.9 진입점.
+ * 미포함 시 undefined (특례 미신청).
+ */
+export function evaluateNew994FromReductions(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
+): New994Result | undefined {
+  const r = reductions.find(isNew994Like);
+  return r ? evaluateNew994Declaration(r, ctx) : undefined;
+}
+
+/**
+ * §99의4 선언 **전건** 평가 — 결과마다 선언의 `houseId`를 되돌려 준다.
+ *
+ * 🔑 농어촌주택등을 **2채 이상** 보유한 동안에는 어느 것도 제외하지 않는다. 법문이 「다음 각 호의
+ *    어느 하나에 해당하는 **1채의 주택**」이고, 국세청은 2채를 취득한 경우 「1채를 양도한 후에」
+ *    보유하고 있는 농어촌주택 취득 전 보유 주택을 양도할 때 특례를 적용한다고 회신했다
+ *    (재산세과-1096, 2009.06.02 · 부동산납세과-91, 2014.02.19).
+ *    농어촌주택 1채 + 고향주택 1채의 조합은 직접 해석이 없어 법문(1호·2호를 합쳐 「1채」)대로 합산한다.
+ */
+export function evaluateNew994Declarations(
+  reductions: ReadonlyArray<{ type: string }>,
+  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
+): (New994Result & { houseId?: string })[] {
+  const declared = reductions.filter(isNew994Like);
+  const results = declared.map((r) => ({
+    ...evaluateNew994Declaration(r, ctx),
+    ...(r.houseId ? { houseId: r.houseId } : {}),
+  }));
+  if (results.length < 2) return results;
+  return results.map((d) => ({
+    id: d.id,
+    isEligible: false as const,
+    ineligibleReasons: [
+      ...(d.isEligible ? [] : d.ineligibleReasons),
+      {
+        code: "MULTIPLE_HOUSES" as const,
+        message: `농어촌주택등을 ${results.length}채 보유하고 있습니다 — 1채를 양도한 뒤에 남은 1채에 적용됩니다 (재산세과-1096·부동산납세과-91).`,
+        legalBasis: d.legalBasis,
+      },
+    ],
+    legalBasis: d.legalBasis,
+    effectCategory: d.effectCategory,
+    ...(d.houseId ? { houseId: d.houseId } : {}),
+  }));
 }
 
 export function evaluateNew994(input: New994EvaluationInput): New994Result {

@@ -329,7 +329,9 @@ export type New994IneligibleCode =
   | "HOMETOWN_UNCONFIRMED"
   | "ACQUISITION_ORDER"
   // §98의9 검토 발견(2026-06-11): ① "취득한 후 … 양도" — 농어촌 취득 전 양도 배제
-  | "TRANSFER_BEFORE_ACQUISITION";
+  | "TRANSFER_BEFORE_ACQUISITION"
+  // ① 「1채의 주택」 — 2채 이상 보유 중에는 미적용(재산세과-1096·부동산납세과-91)
+  | "MULTIPLE_HOUSES";
 
 export interface New994IneligibleReason {
   code: New994IneligibleCode;

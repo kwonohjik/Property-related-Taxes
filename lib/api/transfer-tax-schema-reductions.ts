@@ -263,6 +263,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §99의4 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("new_99_4_rural"),
+    houseId: z.string().optional(),
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
@@ -272,6 +273,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("new_99_4_hometown"),
+    houseId: z.string().optional(),
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
@@ -409,6 +411,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("unsold_98_9"),
+    houseId: z.string().optional(),
     unsoldHouseAcquisitionDate: z.string().date().optional(),
     unsoldHouseAcquisitionPrice: z.number().int().nonnegative().optional(),
     unsoldHouseExclusiveArea: z.number().nonnegative().optional(),
