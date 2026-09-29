@@ -10,6 +10,7 @@
  * | G1 — 비주택(토지·건물) 상속 자산의 「소득세법」 §104②1호 | 상속 칸이 주택 필드 세트에만 있어 상속개시일부터 단기세율 | 같은 위젯(비주택 모드)으로 `acquisitionCause`·`decedentAcquisitionDate` |
  * | G2 — 「소득세법 시행령」 §155의3 상생임대주택 | 입력 없음 → 거주요건(§154①)·표2 거주 2년(§159의4) 그대로 요구 | 판정 메뉴 위젯 재사용 → `winWinRentalHouse` |
  * | G4 — §155④⑤ 합가 | 입력 없음 → 세대 2주택 과세 | 계산기 위젯(`MergeDateSection`) 재사용 → `marriageMerge`·`parentalCareMerge`·`isFirstTransferredInMerge` |
+ * | G5 — §155⑳ A 미충족 + 주택 수 1(엔진 — 계산기 공통) | 과세하면서 표2 장특 · 「1세대1주택 비과세」 사유 | 임대주택을 주택 수에 되돌려 판정(2주택 입력과 같은 값) |
  * | G3 — §155⑯ 공공기관 이전 · §155⑱ 처분 지연 사유 | 입력 없음 → 3년(연혁 기한) 경과면 과세 | 판정 메뉴 위젯 재사용 → `temporaryTwoHouse.publicInstitutionRelocation`·`disposalDelayReason` |
  *
  * 시료: 채무 1.5억 · 증여시 기준시가 3억 · 취득시 1.5억(토지·건물은 기준시가 모드) — 양도차익 72,750,000.
@@ -540,5 +541,77 @@ describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 
     const r = await gift("2023-06-01", { ...TWO_HOUSES, marriageDate: "2013-01-01", isFirstTransferredInMerge: true });
     expect(r.isExempt).toBe(false);
     expect(r.determinedTax).toBe(8_306_400);
+  });
+});
+
+// ═══ G5 — §155⑳ 시나리오 A 미충족 + 주택 수 1 (엔진 — 계산기 공통) ════════════════════════
+
+/**
+ * #1851 C probe의 미분석 결과(증여 2026-06-01 · 주택 수 1 · 특례 입력 → 결정세액 2,730,000에 「1세대1주택 비과세」 사유)의
+ * 원인: 카드는 A를 「임대주택 주택수 제외」로 안내해 주택 수 1을 받는데, 특례가 불성립(㉓ 기한 2026-03-03 경과)해도
+ * 하류가 주택 수 1을 그대로 봐 **표2 장특 60%**와 비과세 사유를 냈다(F3는 조기반환만 막았다). 영 §155⑳ 「… 1개의
+ * 주택을 소유하고 있는 것으로 보아」가 없으면 임대주택은 주택 수에 들어간다 ⇒ 2주택 세대 · 표1 · 사유 없음.
+ */
+describe("G5 ⑭ route — A 미충족이면 임대주택을 주택 수에 되돌린다 (계산기도 같은 엔진)", () => {
+  const rheOf = async () => {
+    const { makeDefaultRentalUnit } = await import("@/lib/stores/calc-wizard-asset-factory");
+    return {
+      applyException: true,
+      scenario: "A" as const,
+      rentalUnits: [
+        {
+          ...makeDefaultRentalUnit(),
+          businessRegistrationDate: "2018-06-01",
+          rentalRegistrationDate: "2018-06-01",
+          standardPriceAtRentalStart: "300,000,000",
+          rentalInputMode: "direct" as const,
+          rentalMonths: "30",
+          requirementsConfirmed: true,
+          rentalAutoTermination: true,
+          terminatedRegistrationType: "short_term" as const,
+          registrationCancellationDate: "2021-03-03",
+        },
+      ],
+      postRegistrationResidenceMonths: "",
+      priorRentalExemptionHistory: "" as const,
+      residenceTransitionUnderAddendum: false,
+    };
+  };
+  const RES = { acquisitionDate: new Date("2016-01-10"), residencePeriodMonths: 60 };
+
+  it("G5-1 ★ 증여 2026-06-01(㉓ 기한 경과) · 주택 수 1: 2,730,000(표2 60% · 비과세 사유) → 7,608,000(표1 20% · 사유 없음) = 주택 수 2 입력과 같은 값", async () => {
+    const rhe = await rheOf();
+    const r = await gift("2026-06-01", { ...RES, householdHousingCount: 1, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBe(7_608_000);
+    expect(r.longTermHoldingRate).toBe(0.2);
+    expect(r.exemptReason).toBeUndefined();
+    expect((r.warnings ?? []).some((w) => w.includes("임대주택 1호를 세대 주택 수에 넣어(2주택)"))).toBe(true);
+    const two = await gift("2026-06-01", { ...RES, householdHousingCount: 2, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(two.determinedTax).toBe(r.determinedTax);
+  });
+
+  it("G5-2 ★ 계산기 경로(같은 엔진) — 주택 수 1 + 같은 임대주택: 7,608,000, 주택 수 2와 같은 값", async () => {
+    const rhe = await rheOf();
+    const calc = async (count: string) => {
+      const f = transferForm("2026-06-01", "2016-01-10", { householdHousingCount: count }, { residencePeriodMonthsAsset: "60" });
+      f.assets[0].rentalHousingException = { ...f.assets[0].rentalHousingException, ...rhe };
+      return transfer(f);
+    };
+    const one = await calc("1");
+    expect(one.isExempt).toBe(false);
+    expect(one.exemptReason).toBeUndefined();
+    expect(one.determinedTax).toBe((await calc("2")).determinedTax);
+  });
+
+  it("G5-3 부정 짝 — 특례 성립(증여 2025-06-01)이면 주택 수 1 그대로 비과세 · 특례 선언 없으면 1주택 비과세 그대로", async () => {
+    const rhe = await rheOf();
+    const ok = await gift("2025-06-01", { ...RES, householdHousingCount: 1, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(ok.isExempt).toBe(true);
+    // 종전 경로(STEP 1a 조기반환 — 주택 수 1 그대로) 불변: 특례 성립이면 되돌리지 않는다
+    expect(ok.exemptReason).toBe("1세대1주택 비과세");
+    expect((ok.warnings ?? []).some((w) => w.includes("세대 주택 수에 넣어"))).toBe(false);
+    const none = await gift("2026-06-01", { ...RES, householdHousingCount: 1 });
+    expect(none.isExempt).toBe(true);
   });
 });

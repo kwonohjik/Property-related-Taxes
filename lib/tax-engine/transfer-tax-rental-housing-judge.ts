@@ -128,3 +128,40 @@ export function rentalNoticesForEarlyReturn(effectiveInput: TransferTaxInput): s
 export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
   return !isPrhpScenarioB(effectiveInput) && !isPrhpScenarioAIneligible(effectiveInput);
 }
+
+/**
+ * §155⑳ 시나리오 A **미충족** — 「임대주택을 주택 수에서 뺀」 입력 전제를 되돌린다 (E-1 한계 G5, 2026-09-29).
+ *
+ * 영 §155⑳: 「장기임대주택 … 과 그 밖의 1주택을 국내에 소유하고 있는 1세대가 … 거주주택을 양도하는 경우에는 국내에
+ * 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」(MST 286211 실독). 계산기·판정 메뉴 카드는 A를
+ * 「임대주택 주택수 제외」로 안내하고 사용자는 거주주택만 센 세대 주택 수 **1**을 넣는다. 특례가 불성립하면 그 「보아」가
+ * 없으므로 임대주택은 주택 수에 들어가고 세대는 1주택이 아니다 ⇒ §154① 비과세도, 12억 초과분 안분(법 §95③ ·
+ * 영 §160①)도, 표2(영 §159의4 「1세대가 양도일 현재 국내에 1주택(제155조 … 에 따라 1세대 1주택으로 보는 주택을
+ * 포함한다)을 보유」)도 적용할 수 없다.
+ *
+ * 🔴 종전: F3가 STEP 1a 조기반환만 막았다(`isPrhpScenarioAIneligible`). 하류는 여전히 주택 수 1을 봐 과세하면서도
+ *    표2 장특(보유+거주)·「1세대1주택 비과세」 사유를 그대로 냈다 — 실측 증여 2026-06-01 결정세액 2,730,000(표2 60%),
+ *    같은 사실을 주택 수 2로 넣으면 7,608,000(표1 20%). 비과세 판정 **전에** 주택 수를 되돌려 판정·장특·결과가 한
+ *    전제를 보게 한다.
+ *
+ * 🔑 주택 수가 **정확히 1**일 때만 되돌린다 — 1이면 거주주택만 센 값이 분명하다(임대주택을 넣었다면 최소 2).
+ *    2 이상이면 사용자가 임대주택을 이미 센 것일 수 있어 건드리지 않는다(이중 계상 방지 — 종전 동작).
+ * 🔑 시나리오 B(직전거주주택보유주택)는 §161① 안분 구조라 별도다 — 종전 고지(주택수 재확인)를 유지한다.
+ */
+export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
+  judgeInput: T,
+  effectiveInput: TransferTaxInput,
+): { input: T; notice?: string } {
+  if (judgeInput.householdHousingCount !== 1 || !isPrhpScenarioAIneligible(effectiveInput)) {
+    return { input: judgeInput };
+  }
+  const units = effectiveInput.rentalHousingException?.rentalUnits.length ?? 0;
+  if (units === 0) return { input: judgeInput };
+  return {
+    input: { ...judgeInput, householdHousingCount: 1 + units },
+    notice:
+      `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}) 요건을 충족하지 못해 임대주택 ${units}호를 ` +
+      `세대 주택 수에 넣어(${1 + units}주택) 계산했습니다 — 1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 ` +
+      `적용하지 않습니다. 임대주택이 다른 특례(일시적 2주택 등)에 해당하면 임대주택을 포함한 주택 수로 다시 입력하세요.`,
+  };
+}

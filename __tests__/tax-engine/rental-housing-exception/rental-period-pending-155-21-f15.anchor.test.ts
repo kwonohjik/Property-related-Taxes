@@ -146,11 +146,20 @@ describe("F-15 복수 임대주택 — ㉒ 대상 호만 남긴다", () => {
 });
 
 describe("F-15 대조 — 면제되는 것은 기간 요건뿐", () => {
-  const TAXED = 50_589_000;
+  /**
+   * 2026-09-29 E-1 한계 G5 정정: 종전 값 50,589,000은 특례 불성립인데도 주택 수 1(임대주택 제외 전제)을 그대로 봐
+   * 장기보유특별공제 **표2 60%**(보유 10년분 40% + 거주 5년 20%)를 적용한 값이었다. 영 §155⑳이 불성립하면 임대주택은
+   * 주택 수에 들어가 세대가 1주택이 아니고, 표2 대상(영 §159의4 「국내에 1주택 … 을 보유」)이 아니다 ⇒ 표1 18%
+   * (보유 9년 6개월). 같은 사실을 주택 수 2로 넣은 값과 같다(아래 F15-7 대조).
+   */
+  const TAXED = 114_686_000;
 
   it("F15-7 기준시가 상한 초과(수도권 6억)는 기간 미충족과 겹쳐도 과세", () => {
     const r = calculateTransferTax(input(unit({ standardPriceAtRentalStart: 700_000_000 })), rates);
     expect(r.totalTax).toBe(TAXED);
+    // 임대주택을 센 주택 수 2로 넣어도 같은 세액(특례 불성립 = 2주택 세대)
+    const counted = { ...input(unit({ standardPriceAtRentalStart: 700_000_000 })), householdHousingCount: 2 };
+    expect(calculateTransferTax(counted, rates).totalTax).toBe(TAXED);
     const e = checkEligibility([unit({ standardPriceAtRentalStart: 700_000_000 })], 5, 5);
     expect(e.failReasons.map((f) => f.code)).toEqual(["STANDARD_PRICE_EXCEEDED"]);
   });
