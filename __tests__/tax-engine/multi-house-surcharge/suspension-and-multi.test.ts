@@ -231,11 +231,14 @@ describe("MH-13: 지역기준(REGION) 광역시 주택 → 가액 불문 무조�
 // ============================================================
 
 describe("MH-14: 공고일 이전 매매계약 + 계약금 증빙 → 중과 배제", () => {
-  it("강남구 지정일(2017.8.3) 이전 계약 + 증빙 → pre_designation_contract 배제", () => {
+  // 2026-09-29(계획서 regulated-area-region-code-match §6.3): 계약금 사실은 양도 측 `saleDepositReceived`로 준다 —
+  //   장기임대 아목의 `hasContractDepositProof`는 11호 요건이 아니다(D-3). `detail`은 지정일이 아니라 **공고일**
+  //   (2017년 차수 2017.11.10. — 재산세제과-73)을 말한다.
+  it("강남구 공고일(2017.11.10) 이전 계약 + 계약금 수령 → pre_designation_contract 배제", () => {
     const h1 = makeHouse("h1", {
       regionCode: "11680",
-      contractDate: new Date("2017-07-01"), // 지정일 2017.8.3 이전
-      hasContractDepositProof: true,
+      contractDate: new Date("2017-07-01"), // 공고일 2017.11.10 이전
+      saleDepositReceived: true,
     });
     const h2 = makeHouse("h2");
 
@@ -254,14 +257,16 @@ describe("MH-14: 공고일 이전 매매계약 + 계약금 증빙 → 중과 배
 
     expect(result.surchargeApplicable).toBe(false);
     expect(result.exclusionReasons[0].type).toBe("pre_designation_contract");
-    expect(result.exclusionReasons[0].detail).toContain("2017-08-03");
+    expect(result.exclusionReasons[0].detail).toContain("2017-11-10");
   });
 
+  // 반전: 종전 계약일 2017-09-01은 「지정일 이후」였지만 공고일(2017.11.10.) 전이라 이제 배제된다 —
+  //   원래 의도(공고 뒤 계약 → 배제 없음)를 보존하려고 공고일 다음 날로 옮겼다.
   it("공고일 이후 계약 → 배제 안 됨", () => {
     const h1 = makeHouse("h1", {
       regionCode: "11680",
-      contractDate: new Date("2017-09-01"), // 지정일 이후
-      hasContractDepositProof: true,
+      contractDate: new Date("2017-11-11"), // 공고일 2017.11.10 다음 날
+      saleDepositReceived: true,
     });
     const h2 = makeHouse("h2");
 

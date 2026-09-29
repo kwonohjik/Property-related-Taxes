@@ -295,6 +295,9 @@ export const houseSchema = z.object({
   isCulturalHeritage: z.boolean().optional(),
   isDayCareCenter: z.boolean().optional(),
   dayCareOperationYears: z.number().nonnegative().optional(),
+  // ── 공고 전 매매계약(영 §167의10①11호 등) — selling 전용 · **양도** 계약일 + 계약금 수령(장기임대 `hasContractDepositProof`와 별개) ──
+  contractDate: z.string().date().optional(),
+  saleDepositReceived: z.boolean().optional(),
 });
 
 // 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11)

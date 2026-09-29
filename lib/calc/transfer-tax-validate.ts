@@ -30,6 +30,7 @@ import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/ca
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 
@@ -548,6 +549,8 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       if (!se.acquisitionOfficialPrice)
         issues.push({ step, message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
     }
+    // ⑧ 공고 전 매매계약(영 §167의10①11호 등) — ⑤·④와 같은 범위 술어(`pre-designation-contract-scope.ts`).
+    for (const message of collectPreDesignationContractErrors(form)) issues.push({ step, message });
 
     // ⑧ OH-12c — 피상속인 증여분 선언이면 증여일 필수(2018-02-13 부칙 게이트). ⑤와 같은 게이트
     //    (`HouseCountExemptionInputs` — 명부에 상속주택이 있을 때만 토글·날짜 칸이 열린다).

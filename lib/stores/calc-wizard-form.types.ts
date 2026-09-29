@@ -344,6 +344,20 @@ export interface TransferFormData {
      *    노출 게이트를 3주택으로 좁히면 2주택 사용자가 선언할 화면을 잃는다.
      */
     longTermRental?: RentalDeclaration;
+    // ── 공고 전 매매계약 (영 §167의3①11호 · §167의4③5호 · §167의10①11호 · §167의11①10호) ──
+    /**
+     * 이 주택을 **양도하기 위한** 매매계약의 계약금을 **지급받은** 사실이 증빙서류로 확인되는가.
+     *
+     * 🔑 장기임대 선언의 `hasContractDepositProof`(아목·마목 — 취득 계약금을 **지급한** 사실)와 **다른 사실**이다
+     *    (계획서 regulated-area-region-code-match D-3 · Q-3). 12의2 나·다목 `gracePeriod.depositReceiptConfirmed`와는
+     *    같은 종류의 사실이지만, `gracePeriod`가 3-state라 합치면 12의2 판정이 바뀌므로 칸을 나눴다(Q-3).
+     *
+     * 노출·전송·검증 범위는 `lib/calc/pre-designation-contract-scope.ts` 한 곳이 정한다. 부재(구 기록·stale
+     * sessionStorage) = 미입력 — 읽는 곳은 전부 `?.`로 받는다.
+     */
+    saleDepositReceived?: boolean;
+    /** 위 양도 매매계약 체결일(YYYY-MM-DD) — `saleDepositReceived`가 켜졌을 때만 의미가 있다 */
+    saleContractDate?: string;
   };
 
   // ── Step 4 (구 Step5): 감면·공제 ──

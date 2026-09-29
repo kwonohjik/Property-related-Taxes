@@ -9,18 +9,19 @@
  * 의존: 산정 헬퍼를 -count에서 import (단방향, 순환 0).
  */
 
-import { addMonths, addDays, subDays, differenceInYears } from "date-fns";
+import { addMonths, addDays, subDays, differenceInYears, format } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import {
   MULTI_HOUSE,
   LONG_HOLDING_TEMPORARY_EXCLUSION,
+  PRE_DESIGNATION_CONTRACT_EXCLUSION,
   PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   SURCHARGE_TRANSITION,
   SURCHARGE_TRANSITION_FOUR_MONTH_SGG,
   SURCHARGE_TRANSITION_DESIGNATION_DATE,
 } from "./legal-codes";
-import { REGULATED_REGIONS } from "./data/regulated-areas";
+import { REGULATED_REGIONS, governingDesignationStart } from "./data/regulated-areas";
 import { resolveDeemedSurchargeExclusion } from "./multi-house-surcharge-deemed-exclusion";
 import type { RegulatedRegion } from "./data/regulated-areas";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
@@ -307,15 +308,53 @@ export function checkGracePeriodExemption(
   return { suspended: false };
 }
 
-function getFirstDesignatedDate(
-  regionCode: string,
-  history: RegulatedAreaHistory,
-): Date | null {
-  const region = history.regions.find((r) => r.code === regionCode);
-  if (!region || region.designations.length === 0) return null;
-
-  const dates = region.designations.map((d) => new Date(d.designatedDate));
-  return dates.sort((a, b) => a.getTime() - b.getTime())[0];
+/**
+ * 「조정대상지역의 공고가 있은 날 이전에 해당 지역의 주택을 양도하기 위하여 매매계약을 체결하고 계약금을
+ * 지급받은 사실이 증빙서류에 의하여 확인되는 주택」 — 영 §167의3①11호 · §167의4③5호 · §167의10①11호 ·
+ * §167의11①10호(네 호 문언 동일 — MST 286211 실독 2026-09-29). 2018.8.28. 이후 양도분(제29242호 부칙 제5조).
+ *
+ * 계획서 `docs/00-pm/regulated-area-region-code-match.plan.md`:
+ * - 「공고」 = 양도일에 효력이 있는 **연속 지정 구간을 연 공고**(Q-1) — `governingDesignationStart`가 그 구간의
+ *   시작 효력일을 `isRegulatedByBjdCode`와 **같은 지역 해석**으로 찾는다(10자리·5자리·서울 "11"·동 편입·재지정).
+ * - 효력일 → 공고일은 legal-codes 표(2017-08-03 → 2017-11-10 등). 표에 없으면 배제를 열지 않고 경고한다.
+ * - 「이전」 = 당일 포함(Q-2).
+ * - 계약금은 **지급받은**(양도 측) 사실 — `saleDepositReceived`. 장기임대 아목의 `hasContractDepositProof`
+ *   (취득 측 「지급한」)는 읽지 않는다(D-3).
+ */
+function resolvePreDesignationContractExclusion(
+  input: MultiHouseSurchargeInput,
+  sellingHouse: HouseInfo | undefined,
+  effectiveHouseCount: number,
+  countedRightCount: number,
+): { reason?: ExclusionReason; warning?: string } {
+  if (input.transferDate < PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE) return {};
+  if (!sellingHouse?.contractDate || !sellingHouse.saleDepositReceived || !sellingHouse.regionCode) return {};
+  const start = governingDesignationStart(sellingHouse.regionCode, format(input.transferDate, "yyyy-MM-dd"));
+  if (!start) return {};
+  const announcement = PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES[start];
+  if (!announcement) {
+    return {
+      warning: `조정대상지역 지정(효력 ${start})의 공고일이 공고일 표에 없어 공고 전 매매계약 중과 배제를 판정하지 않았습니다 — 공고일을 직접 확인하세요`,
+    };
+  }
+  const contract = format(sellingHouse.contractDate, "yyyy-MM-dd");
+  if (contract > announcement) return {};
+  const w = PRE_DESIGNATION_CONTRACT_EXCLUSION;
+  const basis =
+    countedRightCount > 0
+      ? effectiveHouseCount >= 3
+        ? w.HOUSE_RIGHT_THREE_PLUS_BASIS
+        : w.HOUSE_RIGHT_ONE_EACH_BASIS
+      : effectiveHouseCount >= 3
+        ? w.THREE_PLUS_BASIS
+        : w.TWO_HOUSE_BASIS;
+  const effective = start === announcement ? "" : ` — 지정 효력 ${start}`;
+  return {
+    reason: {
+      type: "pre_designation_contract",
+      detail: `양도 매매계약일(${contract})이 조정대상지역 공고일(${announcement}${effective}) 이전 + 계약금 수령 증빙 확인 — 중과 배제 (${basis})`,
+    },
+  };
 }
 
 /**
@@ -358,7 +397,12 @@ export function determineSurchargeExclusion(
   input: MultiHouseSurchargeInput,
   effectiveHouseCount: number,
   suspensionRules: SurchargeSpecialRulesData | null,
-  regulatedAreaHistory: RegulatedAreaHistory | null,
+  /**
+   * 호출 시그니처 호환용 — 더 읽지 않는다. 11호(유일한 소비자)는 `governingDesignationStart`가 정적 명부
+   * (`REGULATED_REGIONS` — Step 2 `isRegulatedByBjdCode`와 같은 원천)를 직접 본다. 이 투영본은 하위 규칙
+   * (동 편입·읍면 제외)을 버린 축약본이라 10자리 코드를 판정할 수 없었다(계획서 §1.1 · 결함 D-1·D-4).
+   */
+  _regulatedAreaHistory: RegulatedAreaHistory | null,
   excludedHouseIds: Set<string>,
   /** #2a: 오케스트레이터 Step 1.5에서 §167의3⑨ 차감이 적용됐는지 — 배제 2(§155⑤) 오염 방지 */
   marriageSubtractionApplied: boolean,
@@ -375,6 +419,8 @@ export function determineSurchargeExclusion(
   isSuspended: boolean;
   suspensionBasis?: "a" | "na" | "da";
   suspensionDeadline?: Date;
+  /** 판정하지 못한 배제 호 — 중과가 남는 경로에서만 실린다(배제가 선 경우 무의미) */
+  warnings?: string[];
 } {
   const exclusionReasons: ExclusionReason[] = [];
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
@@ -397,23 +443,18 @@ export function determineSurchargeExclusion(
     return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
-  // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 지급 증빙 — 2018.8.28. 이후 양도분부터(제29242호 부칙 제5조 · E-14j)
-  if (
-    input.transferDate >= PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE &&
-    sellingHouse?.contractDate &&
-    sellingHouse.hasContractDepositProof &&
-    sellingHouse.regionCode &&
-    regulatedAreaHistory
-  ) {
-    const firstDesignatedDate = getFirstDesignatedDate(sellingHouse.regionCode, regulatedAreaHistory);
-    if (firstDesignatedDate && sellingHouse.contractDate < firstDesignatedDate) {
-      exclusionReasons.push({
-        type: "pre_designation_contract",
-        detail: `매매계약일(${sellingHouse.contractDate.toISOString().slice(0, 10)}) < 조정대상지역 지정일(${firstDesignatedDate.toISOString().slice(0, 10)}) + 계약금 증빙 확인`,
-      });
-      return { isExcluded: true, exclusionReasons, isSuspended: false };
-    }
+  // 배제 4: ⑪ 공고일 이전 매매계약 + 계약금 수령 증빙 — 2018.8.28. 이후 양도분부터(제29242호 부칙 제5조 · E-14j)
+  const preDesignation = resolvePreDesignationContractExclusion(
+    input,
+    sellingHouse,
+    effectiveHouseCount,
+    countedRightCount,
+  );
+  if (preDesignation.reason) {
+    exclusionReasons.push(preDesignation.reason);
+    return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
+  const warnings = preDesignation.warning ? [preDesignation.warning] : undefined;
 
   // 보유 10년 이상 · 2019.12.17. ~ 2020.6.30. 양도분 (E-14j)
   const longHolding = resolveLongHoldingTemporaryExclusion(input, sellingHouse, effectiveHouseCount, countedRightCount);
@@ -648,5 +689,6 @@ export function determineSurchargeExclusion(
     isSuspended: suspended,
     ...(suspensionBasis ? { suspensionBasis } : {}),
     ...(suspensionDeadline ? { suspensionDeadline } : {}),
+    ...(warnings ? { warnings } : {}),
   };
 }

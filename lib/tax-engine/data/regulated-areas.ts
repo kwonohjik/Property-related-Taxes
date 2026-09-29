@@ -9,6 +9,8 @@
  * 데이터·헬퍼를 **공유**한다. 별도 매칭/판정 함수 재정의 금지(dual-truth 회피).
  */
 
+import { addDays, format, parseISO, subDays } from "date-fns";
+
 import { expandSigunguAliases } from "@/lib/geo/sigungu-code-alias";
 
 import type {
@@ -163,6 +165,51 @@ export function isRegulatedByBjdCodeIn(
 /** REGULATED_REGIONS(모듈 데이터) 기준 판정 편의 래퍼. */
 export function isRegulatedByBjdCode(bjdCode: string, date: string): RegulatedAreaJudgment {
   return isRegulatedByBjdCodeIn(REGULATED_REGIONS, bjdCode, date);
+}
+
+/**
+ * 법정동코드 + 날짜 → 그 날짜가 속한 **연속 지정 구간의 시작 효력일**(YYYY-MM-DD). 그 날 미지정이면 null.
+ *
+ * 용도: 영 §167의10①11호 등 「조정대상지역의 공고가 있은 날 이전에 … 매매계약」의 **그 공고** 식별
+ * (계획서 `docs/00-pm/regulated-area-region-code-match.plan.md` §5.1 M-C — Q-1: 재지정·동 단위 편입 지역은
+ * 양도일에 효력이 있는 지정 구간을 연 공고). 공고일 변환은 legal-codes `PRE_DESIGNATION_CONTRACT_EXCLUSION`.
+ *
+ * 🔑 지역 해석은 **`isRegulatedByBjdCodeIn`을 그대로 부른다**(별칭 → 5자리 → 서울 "11" 폴백 → 10자리 하위 규칙) —
+ *    두 번째 매처를 두지 않는다. 종전 `getFirstDesignatedDate`는 `r.code === regionCode` 정확 일치라 10자리
+ *    법정동코드가 명부(5자리·"11")와 한 번도 맞지 않았고 최초 지정일 하나만 봤다(결함 D-1·D-4).
+ *
+ * 미지정 → 지정으로 바뀔 수 있는 날은 명부의 경계일뿐이다 — 지정일 · 하위 규칙 시작일 · 하위 규칙 종료일 다음 날
+ * (해제일 다음 날은 지정 → 미지정 쪽이라 구간 시작이 될 수 없고, 그 뒤 재지정은 위 경계로 다시 잡힌다).
+ * 양도일 이하의 경계일을 늦은 순으로 훑어 **전날이 미지정인 첫 경계일**이 구간 시작이다 — 두 경계 사이에
+ * 끊김이 있으려면 그 사이에 다시 지정되는 경계가 있어야 하므로 건너뛴 구간은 전부 지정 상태다.
+ * 2018-12-31(팔달 등 광교택지 한정 규칙의 종료 다음 날)처럼 `designatedDate`에 없는 편입일도 이렇게 나온다.
+ */
+export function governingDesignationStartIn(
+  regions: RegulatedRegion[],
+  bjdCode: string,
+  date: string,
+): string | null {
+  if (!isRegulatedByBjdCodeIn(regions, bjdCode, date).isRegulated) return null;
+  const nextDay = (d: string) => format(addDays(parseISO(d), 1), "yyyy-MM-dd");
+  const boundaries = new Set<string>();
+  for (const r of regions) {
+    for (const d of r.designations) boundaries.add(d.designatedDate);
+    for (const s of [...(r.excludedSubCodes ?? []), ...(r.includedSubCodes ?? [])]) {
+      if (s.appliesFrom) boundaries.add(s.appliesFrom);
+      if (s.appliesTo) boundaries.add(nextDay(s.appliesTo));
+    }
+  }
+  const candidates = [...boundaries].filter((b) => b <= date).sort().reverse();
+  for (const b of candidates) {
+    const dayBefore = format(subDays(parseISO(b), 1), "yyyy-MM-dd");
+    if (!isRegulatedByBjdCodeIn(regions, bjdCode, dayBefore).isRegulated) return b;
+  }
+  return null;
+}
+
+/** REGULATED_REGIONS(모듈 데이터) 기준 편의 래퍼. */
+export function governingDesignationStart(bjdCode: string, date: string): string | null {
+  return governingDesignationStartIn(REGULATED_REGIONS, bjdCode, date);
 }
 
 /**
