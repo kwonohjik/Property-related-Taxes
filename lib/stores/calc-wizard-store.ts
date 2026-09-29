@@ -49,6 +49,7 @@ function parseRaw(v: string | undefined): number {
 export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -283,6 +284,9 @@ export function mergePersistedWizard(
 
   // gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
   formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
+
+  // 조특법 주택 수 제외 — 행 id와 함께 저장소에 남은 선언을 그 행 ⑥으로(계획서 Q-5)
+  formData = moveLinkedCountExclusionsToRows(formData);
 
   // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 잔존값을 무시.
   return { ...current, ...ps, formData, currentStep: 0 };

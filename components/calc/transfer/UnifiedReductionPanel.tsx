@@ -52,6 +52,7 @@ import {
 // ============================================================================
 
 import { GroupCategorySection } from "./UnifiedReductionGroupSection";
+import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
 
 interface UnifiedReductionPanelProps {
   asset: AssetForm;
@@ -185,7 +186,10 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
   });
 
   const periodCtx = useMemo(() => buildPeriodContext(asset, transferDate), [asset, transferDate]);
-  const counters = useMemo(() => countActiveReductionsByCategory(periodCtx), [periodCtx]);
+  const counters = useMemo(
+    () => countActiveReductionsByCategory(periodCtx, ROW_COUNT_EXCLUSION_TYPES),
+    [periodCtx],
+  );
   const periodResults = useMemo(() => evaluateAllPeriods(periodCtx), [periodCtx]);
 
   // §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD dual-truth 완화 (아래 buildAssetPhdSnapshot).
@@ -237,27 +241,6 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     onChange({
       reductions: reductions.map((r) =>
         r.type === id ? ({ ...r, ...patch } as AssetReductionForm) : r,
-      ),
-    });
-  }
-
-  // ── §99의4 농어촌·고향주택 폼 필드 업데이트 (2026-06-11) ──
-  function update994(
-    id: "new_99_4_rural" | "new_99_4_hometown",
-    patch: Partial<Extract<AssetReductionForm, { type: "new_99_4_hometown" }>>,
-  ) {
-    onChange({
-      reductions: reductions.map((r) =>
-        r.type === id ? ({ ...r, ...patch } as AssetReductionForm) : r,
-      ),
-    });
-  }
-
-  // ── §98의9 준공후미분양 폼 필드 업데이트 (2026-06-11) ──
-  function update989(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_9" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
-        r.type === "unsold_98_9" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
     });
   }
@@ -404,8 +387,6 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate993={update993}
           onUpdate993Many={update993Many}
           onUpdateRentalVariant={updateRentalVariant}
-          onUpdate994={update994}
-          onUpdate989={update989}
           onUpdate99={update99}
           onUpdate988={update988}
           onUpdate987={update987}

@@ -23,6 +23,7 @@ import {
 } from "@/lib/tax-engine/legal-codes/transfer";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 
 /** 한시배제 종료일 표시 문자열 — 상수 단일 출처에서 파생(재연장 개정 시 문구 자동 추종, 하드코딩 금지) */
 const SUSPENSION_END_KO = (() => {
@@ -58,7 +59,11 @@ export function SurchargeJudgmentSection({
 
         {/* 비과세 판정 주택수 입력 3종 (한시배제 분기와 공용 — 두 분기는 배타) */}
         {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
-          <HouseCountExemptionInputs form={form} onChange={onChange} />
+          <HouseCountExemptionInputs
+            form={form}
+            onChange={onChange}
+            countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
+          />
         )}
 
         {/* 양도일 기준 조정대상지역 — 중과세 판단 기준 (주택 전용) */}

@@ -31,6 +31,7 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { houseCountDivergedFromRoster } from "@/lib/calc/household-house-count";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
+import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
 
 const TRANSFER_ROUTE = "/calc/transfer-tax";
 const MULTI_TRANSFER_ROUTE = "/calc/transfer-tax/multi";
@@ -130,9 +131,16 @@ export async function resumeTransferRecord(
    *    2026-09-07에 목록 카드에서 한 번 빠졌던 축이다.
    */
   const form = input as Parameters<typeof updateFormData>[0];
-  const migrated = Array.isArray(form?.assets)
+  const migratedAssets = Array.isArray(form?.assets)
     ? { ...form, assets: form.assets.map((a) => migrateAsset({ ...a })) }
     : form;
+  // 조특법 주택 수 제외 — 행 id와 함께 저장소에 남은 선언을 그 행 ⑥으로(계획서 Q-5, sessionStorage 복원과 같다)
+  const migrated =
+    Array.isArray(migratedAssets?.assets) && Array.isArray(migratedAssets?.houses)
+      ? (moveLinkedCountExclusionsToRows(
+          migratedAssets as Parameters<typeof moveLinkedCountExclusionsToRows>[0],
+        ) as typeof migratedAssets)
+      : migratedAssets;
   /**
    * OH-34 — 저장 당시 스칼라가 명부와 **어긋난** 이력이면 레거시 표식을 붙여 그 값으로 계산한다.
    *

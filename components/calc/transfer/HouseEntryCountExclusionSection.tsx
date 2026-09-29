@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * HouseEntryCountExclusionSection — 이 주택의 **조특법 주택 수 제외 사유** (판정 메뉴 전용)
+ * HouseEntryCountExclusionSection — 이 주택의 **조특법 주택 수 제외 사유** (판정 메뉴 · 계산기 공용)
  *
  * 계획서 `docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`.
  *

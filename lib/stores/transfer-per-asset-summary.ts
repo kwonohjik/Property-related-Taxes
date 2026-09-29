@@ -38,6 +38,7 @@ import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustm
 import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-std-price";
 import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPeriodStdPrice } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
+import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -687,7 +688,8 @@ export function computeTransferPerAssetSummary(
           ? "인가전 분 취득가액"
           : "취득가액",
       expense,
-      reductionTypes: (a.reductions ?? []).map((r) => r.type),
+      // 대표 자산은 명부 행 ⑥의 §99의4·§98의9도 칩으로(④와 같은 leaf — 행으로 옮겨도 칩이 사라지지 않게)
+      reductionTypes: (i === 0 ? primaryReductionsWithRows(formData) : (a.reductions ?? [])).map((r) => r.type),
       salePending,
       acqPending,
       expensePending,

@@ -110,7 +110,7 @@ interface RowProps {
   onRemove: () => void;
   /** §155④⑤ 합가 — 있으면 「특례」 열에 합가 전 보유 쪽 배지를 단다(판정 메뉴). */
   mergeContext?: MergeContext;
-  /** 조특법 주택 수 제외 배지 — 판정 메뉴에서 그 칸이 열려 있을 때만 단다. */
+  /** 조특법 주택 수 제외 배지 — 행 편집 ⑥이 열려 있을 때만 단다. */
   countExclusionEnabled?: boolean;
 }
 
@@ -239,7 +239,7 @@ export function HousesListSection({
    * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다. 계산기는 넘기지 않는다.
    */
   mergeContext?: MergeContext;
-  /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 판정 메뉴 전용. 계산기는 넘기지 않는다. */
+  /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 게이트는 호출부(`HouseCountExemptionInputs`)가 정한다. */
   countExclusionEnabled?: boolean;
 }) {
   const houses = form.houses;

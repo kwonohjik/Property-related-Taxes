@@ -9,12 +9,15 @@
  */
 
 import type { SpecialHouseExclusionResolution } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { countExclusionHouseRef, type HouseRefRow } from "./count-exclusion-house-ref";
 
 interface Props {
   detail: SpecialHouseExclusionResolution;
+  /** 명부 — 행에서 온 항목에 「보유 주택 N」을 붙인다(`count-exclusion-house-ref.ts`). */
+  houses?: readonly HouseRefRow[];
 }
 
-export function SpecialHouseExclusionDetailCard({ detail }: Props) {
+export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
   if (!detail.entries || detail.entries.length === 0) return null;
 
   return (
@@ -52,6 +55,9 @@ export function SpecialHouseExclusionDetailCard({ detail }: Props) {
                     : "font-medium text-rose-900 dark:text-rose-200"
                 }
               >
+                {countExclusionHouseRef(houses, e.houseId) && (
+                  <span data-testid="count-exclusion-house-ref">{countExclusionHouseRef(houses, e.houseId)} — </span>
+                )}
                 {e.articleLabel}
               </span>
               <span

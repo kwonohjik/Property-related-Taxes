@@ -34,6 +34,7 @@ import { collectPreDesignationContractErrors } from "./pre-designation-contract-
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -447,24 +448,8 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (!form.householdHousingCount)
       issues.push({ step, message: "세대 보유 주택 수를 선택하세요." });
 
-    /**
-     * P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
-     *
-     * 🔴 D4-03 — 종전에는 `surchargeSuppressed`면 이 검증을 **건너뛰었다**. 그런데
-     * `transfer-tax-api.ts`는 값을 그대로 전송하므로, 창 밖에서 입력한 뒤 양도일을 창
-     * 안으로 옮기면 **무검증 통과**가 됐다(비대칭). 지금은 한시배제 기간에도 ⑤ 입력
-     * 경로가 열려 있으므로(§89①3호 비과세는 §104⑦ 중과와 무관) skip을 제거한다.
-     * 「보이지 않는 필드 차단 방지」라는 원래 취지도 더는 성립하지 않는다.
-     */
-    const she = form.specialHouseExclusions ?? [];
-    for (let i = 0; i < she.length; i++) {
-      if (!she[i].article) {
-        issues.push({ step, message: `보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.` });
-        continue; // 행 내부는 첫 오류 1건
-      }
-      if (!she[i].houseAcquisitionDate && !she[i].houseContractDate)
-        issues.push({ step, message: `보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.` });
-    }
+    // ⑧ 조특법 주택 수 제외 — 명부 행 ⑥ · 옛 선언 차단 · 게이트 밖 감면주택 섹션(D4-03)
+    for (const message of collectCountExclusionIssues(form)) issues.push({ step, message });
 
     /**
      * ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)

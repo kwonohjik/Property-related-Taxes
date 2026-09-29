@@ -58,14 +58,17 @@ export const CATEGORY_UI_SCHEMA: Record<ReductionCategory, CategoryUiSchema> = {
   new_housing: {
     category: "new_housing",
     title: "신축주택",
-    subtitle: "조특법 §99 시리즈 (4개)",
+    // 개수는 ③ 감면 패널에 **그려지는** 항목 수다 — §99의4 두 유형은 명부 행 ⑥에서 받는다
+    //   (`transfer-calc-count-exclusion-row-link.plan.md` Q-3).
+    subtitle: "조특법 §99·§99의3 (2개)",
     uiPattern: "group",
     tone: "amber",
   },
   unsold_housing: {
     category: "unsold_housing",
     title: "미분양주택",
-    subtitle: "조특법 §98·§99의2 (10개)",
+    // §98의9는 명부 행 ⑥에서 받는다(위와 같은 이유) — 패널에는 9개.
+    subtitle: "조특법 §98·§99의2 (9개)",
     uiPattern: "group",
     tone: "sky",
   },

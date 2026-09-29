@@ -38,10 +38,6 @@ import {
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
 import { readJudgmentInputHash } from "./one-house-judgment-provenance";
-import {
-  judgmentHouseCountExclusionReductions,
-  judgmentSpecialHouseExclusions,
-} from "@/lib/calc/one-house-judgment-section-scope";
 
 const TRANSFER_ROUTE = "/calc/transfer-tax";
 
@@ -113,37 +109,15 @@ export function toTransferFormPatch(
      *    표식을 두면 명부 도출 §155①이 꺼진다(`resolveTemporaryTwoHouse`의 legacy 분기).
      */
     legacyHouseCountPrecedence: form.legacyHouseCountPrecedence === true,
-    ...withRowCountExclusions(form, withMirroredSalePrice(form)),
+    /**
+     * 조특법 주택 수 제외는 명부 행 ⑥(`HouseEntry.countExclusion`)째로 넘어간다 — 계산기도 같은 행에서
+     * 받는다(`transfer-calc-count-exclusion-row-link.plan.md` §4-3). 종전(PR #1881)처럼 감면 저장소로
+     * 옮기면 행과 저장소에 같은 선언이 두 벌 실린다.
+     */
+    assets: withMirroredSalePrice(form),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
     ...(judgmentId ? { sourceJudgmentId: judgmentId } : {}),
     ...(judgmentInputHash ? { sourceJudgmentInputHash: judgmentInputHash } : {}),
-  };
-}
-
-/**
- * 조특법 주택 수 제외 — 판정 메뉴 **명부 행** → 계산기 저장소(계획서 Q-4(a)).
- *
- * 판정 메뉴는 §99의4·§98의9·보유 감면주택을 행(`HouseEntry.countExclusion`)에 받지만, 계산기는
- * 감면 패널(`assets[0].reductions`)과 감면주택 섹션(`specialHouseExclusions`)에서 받는다. 행 필드를
- * 그대로 넘기면 계산기에는 그것을 보여 줄 칸이 없어 **보이지 않는 입력**이 된다 ⇒ 계산기가 보여 주는
- * 저장소로 옮기고 행 필드는 비운다(두 벌 방지).
- *
- * 🔑 옮긴 선언에는 `houseId`가 남는다 — 계산기의 §155① 신규 주택 도출도 그 행을 후보에서 뺀다
- *    (`eligibleCountExcludedHouseIds` · 계획서 §7-2). 사실(취득일·가액 등)은 행 값으로 채워져 있다.
- * 🔑 기존 선언은 지우지 않고 뒤에 덧붙인다 — 게이트(양도 대상이 주택) 밖에서 남은 선언은 종전처럼 넘긴다.
- */
-function withRowCountExclusions(
-  form: OneHouseJudgmentFormData,
-  assets: TransferFormData["assets"],
-): Pick<TransferFormData, "assets" | "houses" | "specialHouseExclusions"> {
-  const reductions = judgmentHouseCountExclusionReductions(form);
-  const specials = judgmentSpecialHouseExclusions(form);
-  return {
-    assets: assets.map((a, i) =>
-      i === 0 && reductions.length > 0 ? { ...a, reductions: [...(a.reductions ?? []), ...reductions] } : a,
-    ),
-    houses: (form.houses ?? []).map((h) => (h.countExclusion ? { ...h, countExclusion: undefined } : h)),
-    specialHouseExclusions: [...(form.specialHouseExclusions ?? []), ...specials],
   };
 }
 

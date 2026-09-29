@@ -16,6 +16,7 @@ import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { specialHouseExclusionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -182,8 +183,10 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (blockedReduction) {
     return MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE;
   }
-  // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)도 단건 전용
-  if ((form.specialHouseExclusions?.length ?? 0) > 0) {
+  // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)도 단건 전용.
+  // 🔑 명부 행 ⑥까지 본다 — 폼 전역 배열만 보면 행 기반 선언이 차단을 우회하고, 다건 ⑬은
+  //    감면주택을 싣지 않으므로 조용히 사라진다(계획서 `transfer-calc-count-exclusion-row-link.plan.md` Q-4).
+  if ((form.specialHouseExclusions?.length ?? 0) > 0 || specialHouseExclusionsWithRows(form).length > 0) {
     return "보유 감면주택 주택수 제외(§89①3호 의제)는 단건 계산기에서만 지원됩니다.";
   }
   if ((form.assets?.length ?? 0) > 1) {
