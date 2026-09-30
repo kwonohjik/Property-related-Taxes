@@ -76,6 +76,7 @@ describe("포기 ↔ 재배정 병존 차단 — ⑬ Zod (⑧과 동일 규칙)"
   const toInput = (rows: Row[]) => ({
     type: "capital_increase_allocation" as const,
     direction: "low" as const,
+    giftDate: "2025-06-01", // ⑧이 요구하는 증여일 — 2026-09-30 ⑫ 필수화(#20)
     preIssuePrice: 20_000,
     newSharePrice: 10_000,
     shareholders: rows.map((r) => ({

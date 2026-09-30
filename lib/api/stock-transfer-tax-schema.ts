@@ -42,11 +42,21 @@ export const marketTypeSchema = z.enum([
   "other_asset",
 ]);
 
+/**
+ * ⚠️ `face_value`(장부분실 액면가 **모드**)는 받지 않는다 — 2026-09-30 Zod↔엔진 필수 점검 2차 B12.
+ *
+ * 화면은 이 모드를 이미 없앴다(취득가액 라디오 → 환산취득가 하위 토글 `acqFaceValueOnly`로 일원화,
+ * `calc-wizard-stock-form-types.ts`). 폼 enum에도 없고 normalize가 stale 값을 "actual"로 떨군다
+ * (`calc-wizard-stock-normalize.ts`). 이 route를 부르는 body 빌더(마법사 단건·합산·
+ * 부담부증여 단건·합산)도 만들 수 없다. 남은 것은 API 직접 호출뿐이었는데 ⑧이 없어
+ * 액면가를 비우면 **200 + 취득가액 0**(2,608,000 → 3,820,000)이었다.
+ * 같은 규율은 `estimated` + `acqFaceValueOnly`로 그대로 계산된다(같은 입력 2,608,000).
+ * 엔진 `StockTransferInput`의 `face_value` 분기는 엔진 단위 테스트가 쓰므로 남겨 둔다.
+ */
 export const acquisitionModeSchema = z.enum([
   "actual",
   "sale_case",
   "estimated",
-  "face_value",
 ]);
 
 export const transferPriceModeSchema = z.enum(["actual", "exchange"]);

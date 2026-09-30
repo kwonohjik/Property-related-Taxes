@@ -29,7 +29,11 @@ describe("⑫ Zod — 영리법인 수증자 공통 축", () => {
   it("[FPZ-3] 긍정 짝: §41의2 초과배당(행 축) — 필드가 strip된다", () => {
     const r = parse({
       type: "excess_dividend",
-      shareholders: [{ id: "A", role: "major_shareholder", ownershipRatio: { numer: 1, denom: 1 }, actualDividend: 0 }],
+      // 최대주주등·특수관계인 행 모두 필요 — ⑧ F2·F3(2026-09-30 ⑫ 필수화 #29)
+      shareholders: [
+        { id: "A", role: "major_shareholder", ownershipRatio: { numer: 1, denom: 2 }, actualDividend: 0 },
+        { id: "B", role: "related_party", ownershipRatio: { numer: 1, denom: 2 }, actualDividend: 100_000_000 },
+      ],
       dividendDate: "2025-06-30",
       incomeTaxMode: "undetermined",
     });

@@ -7,6 +7,8 @@ import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-dat
 
 // 가업상속공제 스키마 — 800줄 정책으로 sibling 분리(2026-06-02)
 import { familyBusinessInheritanceInputSchema } from "./family-business-inheritance-schema";
+import { refineGiftRequiredInputs } from "./inheritance-gift-required-refines";
+import { refineInheritanceRequiredInputs } from "./inheritance-gift-required-refines";
 // 영농상속공제 사후관리 스키마 — 800줄 정책으로 sibling 분리(2026-06-07)
 import {
   farmingPostMgmtInputSchema,
@@ -558,6 +560,8 @@ export const inheritanceTaxInputSchema = z.object({
     if (typeof g.isHeir !== "boolean")
       ctx.addIssue({ code: "custom", path: ["creditInput", "priorGifts", i, "isHeir"], message: "사전증여의 상속인 여부(isHeir)가 필요합니다 (상증법 §13① 합산기간)" });
   });
+  // 생년월일·재해손실 날짜·주택부수토지 4필드·단기재상속 분모/세액 — ⑧ `inheritance-validate.ts`와 같은 술어
+  refineInheritanceRequiredInputs(d, ctx);
 });
 
 export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema>;
@@ -623,23 +627,9 @@ export const giftTaxInputSchema = z
     requestedSplitAmount: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
-    // 사전증여(§47② 합산) 필수 입력 — ⑧ `gift-tax-form-validate.ts` 사전증여 블록과 같은 조건(2026-09-30).
-    // 비우면 증여자 없는 회차는 합산에서 조용히 빠지고, 동일 그룹 회차는 기납부세액공제 한도(§58)가 0이 됐다.
-    data.priorGiftsWithin10Years.forEach((p, i) => {
-      if (!(p.giftAmount > 0)) return;
-      const at = (key: string) => ["priorGiftsWithin10Years", i, key];
-      if (!p.donor) {
-        ctx.addIssue({ code: "custom", path: at("donor"), message: "사전증여 증여자(donor)가 필요합니다 (§47 합산 그룹 판정)" });
-        return;
-      }
-      // 값의 **존재**만 요구한다 — 공제 범위 안의 회차는 과세표준·산출세액이 실제로 0일 수 있다.
-      if (getDonorGroup(p.donor) === getDonorGroup(data.donor) && !p.specialTreatmentType) {
-        if (p.giftTaxBase === undefined)
-          ctx.addIssue({ code: "custom", path: at("giftTaxBase"), message: "동일인 합산 회차는 그 회차 합산과세표준이 필요합니다 (상증법 §58)" });
-        if (p.computedTax === undefined)
-          ctx.addIssue({ code: "custom", path: at("computedTax"), message: "동일인 합산 회차는 그 회차 산출세액이 필요합니다 (상증법 §58)" });
-      }
-    });
+    // 사전증여(§47② 합산)·외국납부세액 필수 입력 — ⑧ `gift-tax-form-validate.ts`와 같은 술어(2026-09-30).
+    // 비우면 증여자 없는 회차는 합산에서 빠지고 동일 그룹 회차는 §58 한도가 0이 됐다(동일인 회차는 존재만 요구).
+    refineGiftRequiredInputs(data, ctx);
 
     // T-12 (동기화 지점 ⑩): 조특법 특례 2-스트림 — 혼합 자산 귀속 미설정 차단
     // §30의5⑪: 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.

@@ -29,7 +29,8 @@ export const SINGLE_MODE: Record<string, DeemedGiftInput> = {
   // §39의3 저가 **명부 있음** — 명부는 증여자다. 수증자는 여전히 현물출자자 1인
   con_low_roster: {
     type: "contribution", caseType: "low", preContribPrice: 7_500, newSharePrice: 2_500, ...CON,
-    parties: [{ name: "을", preShares: 10_000 }, { name: "정", preShares: 5_000 }],
+    // relation — ⑧ 3-E가 요구하는 행 관계(2026-09-30 ⑫ 필수화 #31). 엔진 가액에는 닿지 않는다(echo)
+    parties: [{ name: "을", preShares: 10_000, relation: "father" }, { name: "정", preShares: 5_000, relation: "father" }],
   } as DeemedGiftInput,
   // §39의3 고가 명부 없음 — 특수관계 기존주주 한 묶음(relatedRatio)
   con_high: {

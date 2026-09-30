@@ -92,6 +92,8 @@ describe("deemedGiftInputSchema", () => {
     const r = deemedGiftInputSchema.safeParse({
       type: "specific_corp", transactionBenefit: 10_000_000_000_000,
       corporateTax: 0, ownershipRatio: { numer: 2000, denom: 10_000 },
+      // §45의5① 거래상대방·거래일 — ⑧이 요구하는 값(2026-09-30 ⑫ 필수화 #20·#21)
+      counterparty: "ruling_shareholder", transactionDate: "2024-06-01",
     });
     expect(r.success).toBe(true);
   });

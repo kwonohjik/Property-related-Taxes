@@ -22,7 +22,10 @@ import {
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
 import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
+import { missingPriorRoundInputs } from "@/lib/calc/gift-required-inputs";
+import { foreignGiftTaxBaseMissing } from "@/lib/calc/gift-required-inputs";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
+import { missingBurdenedUnlistedValuationInputs } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
@@ -316,6 +319,14 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${sbLabel}: 증여자 취득일 이전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분자)`;
         }
       }
+      // C-S6b: 비상장 환산 — §165④ 보충적 평가 입력 필수 (B23). 미입력이면 엔진이 양도기준시가
+      // 0으로 읽어 취득가액 0이 된다. 규칙은 주식 마법사 ⑧의 거울(0·음수 적법 — 존재만 본다).
+      if (sbgt.acquisitionMode === "estimated" && sbgt.marketType === "unlisted") {
+        const missingUnlisted = missingBurdenedUnlistedValuationInputs(sbgt);
+        if (missingUnlisted.length > 0) {
+          return `${sbLabel}: ${missingUnlisted[0]}를 입력하세요. (소령 §165④ 비상장 보충적 평가 — 환산취득가 산정)`;
+        }
+      }
       // C-S7: 대주주 판정 기준일 — §157①은 「양도일이 속하는 사업연도의 직전 사업연도 종료일」이다.
       // 미입력이면 ④가 증여일에서 파생하므로 증여일이 있어야 판정이 성립한다.
       if (!sbgt.majorJudgmentDate && !form.giftDate) {
@@ -352,41 +363,36 @@ export function validateStep(step: number, form: FormState): string | null {
   if (step === 2) {
     // 사전증여 입력 시 동일인 그룹·⑤·⑦ 필수 (UI ↔ validate 모순 방지)
     // G-M4: isSameDonorGroup 엔진 헬퍼 재사용 — 그룹 C~G 포함 전수 적용
+    // 누락 판정은 ⑫와 같은 술어(`missingPriorRoundInputs`) — 동일인 합산 회차의 ⑤·⑦·⑫는
+    // **존재**만 요구한다(공제 범위 안 회차는 실제 0 — 종전 `> 0`은 그 회차를 화면에서 막았다).
+    // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제(술어 안).
     for (let i = 0; i < form.priorGifts.length; i++) {
       const p = form.priorGifts[i];
-      if (p.giftAmount > 0) {
-        if (!p.donor) {
-          return `사전증여 ${i + 1}: 증여자를 선택하세요 (§47 합산 그룹 판정).`;
-        }
-        // §71 농지 감면 회차이면 감면받은 증여세액 필수 (5년 1억 한도 누계 — 수증자별, donor 그룹 무관)
-        if (
-          p.farmlandReductionApplied &&
-          (!p.farmlandReductionAmount || p.farmlandReductionAmount <= 0)
-        ) {
-          return `사전증여 ${i + 1}: §71 농지 감면 회차이면 감면받은 증여세액을 입력하세요.`;
-        }
-        // §71⑥ 과세부분 ㉯ — 설정 시 전액(giftAmount) 이하 (㉯ = 농지가액 − 감면부분 ㉮)
-        if (
-          p.farmlandReductionApplied &&
-          p.farmlandTaxablePortion != null &&
-          p.farmlandTaxablePortion > p.giftAmount
-        ) {
-          return `사전증여 ${i + 1}: 과세부분 농지가액 ㉯은 증여재산가액 이하여야 합니다.`;
-        }
-        // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
-        // (다른 그룹은 자동 무시되므로 검증 제외)
-        // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제
-        if (form.donor && isSameDonorGroup(p.donor, form.donor) && !p.specialTreatmentType) {
-          if (!p.giftTaxBase || p.giftTaxBase <= 0) {
-            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
-          }
-          if (!p.computedTax || p.computedTax <= 0) {
-            return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 산출세액 ⑦을 입력하세요.`;
-          }
-          if (p.wasGenerationSkip && !p.additionalGenerationSkipSurcharge) {
-            return `사전증여 ${i + 1}: 세대생략 회차이면 추가 할증세액 ⑫를 입력하세요.`;
-          }
-        }
+      const missing = missingPriorRoundInputs(p, form.donor);
+      if (missing.includes("donor")) {
+        return `사전증여 ${i + 1}: 증여자를 선택하세요 (§47 합산 그룹 판정).`;
+      }
+      // §71 농지 감면 회차이면 감면받은 증여세액 필수 (5년 1억 한도 누계 — 수증자별, donor 그룹 무관)
+      if (missing.includes("farmlandReductionAmount")) {
+        return `사전증여 ${i + 1}: §71 농지 감면 회차이면 감면받은 증여세액을 입력하세요.`;
+      }
+      // §71⑥ 과세부분 ㉯ — 설정 시 전액(giftAmount) 이하 (㉯ = 농지가액 − 감면부분 ㉮)
+      if (
+        p.giftAmount > 0 &&
+        p.farmlandReductionApplied &&
+        p.farmlandTaxablePortion != null &&
+        p.farmlandTaxablePortion > p.giftAmount
+      ) {
+        return `사전증여 ${i + 1}: 과세부분 농지가액 ㉯은 증여재산가액 이하여야 합니다.`;
+      }
+      if (missing.includes("giftTaxBase")) {
+        return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
+      }
+      if (missing.includes("computedTax")) {
+        return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 산출세액 ⑦을 입력하세요.`;
+      }
+      if (missing.includes("additionalGenerationSkipSurcharge")) {
+        return `사전증여 ${i + 1}: 세대생략 회차이면 추가 할증세액 ⑫를 입력하세요.`;
       }
     }
   }
@@ -448,8 +454,7 @@ export function validateStep(step: number, form: FormState): string | null {
     // §59 외국납부세액공제 §21① 점유비 한도 (H-32): foreignTaxPaid>0이면 국외 증여재산 과세표준 필수.
     // 미입력 시 엔진이 한도 미적용(전액 공제)하므로, 침묵 과다공제 방지 위해 입력 요구.
     if (
-      parseAmount(form.foreignTaxPaid) > 0 &&
-      parseAmount(form.foreignGiftTaxBase) <= 0
+      foreignGiftTaxBaseMissing(parseAmount(form.foreignTaxPaid), parseAmount(form.foreignGiftTaxBase))
     ) {
       return "국외 증여재산 과세표준을 입력하세요. (§59 외국납부세액공제 §21① 점유비 한도 산정에 필요)";
     }

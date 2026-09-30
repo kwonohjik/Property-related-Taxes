@@ -343,9 +343,31 @@ describe("BG-VAL — 주식 부담부증여 ⑧ validate", () => {
     expect(err).toBeNull();
   });
 
+  /**
+   * 2026-09-30 B23 갱신 — 종전 이 테스트는 `{ marketType: "unlisted" }`만 넣고 **통과(null)**를
+   * 기대했다. 참인 주장(「종가평균은 요구하지 않는다」)과 함께 「§165④ 평가 입력도 없이 통과한다」는
+   * **결함 상태**까지 고정하고 있었다 — 그 입력 칸이 없어 엔진이 양도기준시가 0 → 취득가액 0으로
+   * 계산했다(199,500,000). 평가 입력을 채워 참인 주장만 남기고, 빈 상태는 BG-VAL-6이 차단으로 고정한다.
+   * (상세: `gift-burdened-stock-unlisted-valuation.anchor.test.ts`)
+   */
   it("BG-VAL-5: 비상장 환산은 §165④ 보충평가 경로라 종가평균을 요구하지 않는다", () => {
-    const err = validateStep(1, formWith({ marketType: "unlisted" }));
+    const err = validateStep(
+      1,
+      formWith({
+        marketType: "unlisted",
+        transferYearNetIncomePerShare: 500_000,
+        transferYearNetAssetPerShare: 400_000,
+        acquisitionYearNetIncomePerShare: 100_000,
+        acquisitionYearNetAssetPerShare: 80_000,
+      }),
+    );
     expect(err).toBeNull();
+  });
+
+  it("BG-VAL-6: 비상장 환산인데 §165④ 평가 입력이 없으면 차단한다 (B23)", () => {
+    const err = validateStep(1, formWith({ marketType: "unlisted" }));
+    expect(err).toContain("1주당 순손익가치");
+    expect(err).not.toContain("종가평균");
   });
 });
 

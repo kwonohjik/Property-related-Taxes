@@ -1059,6 +1059,38 @@ export interface BurdenedGiftStockTransferTaxInput {
    * 비상장 비대주주: 중소=10%, 비중소=20%.
    */
   isSmallMediumEnterprise?: boolean;
+
+  // ─── 환산 모드(estimated) × 비상장 전용: §165④ 보충적 평가 입력 (B23, 2026-09-30) ───
+  //
+  // 비상장 환산취득가 = 양도가액(채무인수액) × 취득기준시가 ÷ 양도기준시가이고, 두 기준시가는
+  // 소득세법 시행령 §165④의 평가액(1주당 순손익가치·순자산가치 가중평균 + 80% 하한)이다.
+  // 종전에는 이 입력 칸이 없어 엔진이 양도기준시가 0으로 읽고 **취득가액 0**으로 계산했다
+  // (토글 기본값이 비상장·환산이라 기본 경로가 곧 결함 경로였다).
+  // 값 규약은 주식 마법사와 같다 — 1주당 순손익가치(= 1주당 순손익액 ÷ 10%)·1주당 순자산가치(원).
+  // 결손·자본잠식은 음수, 0도 적법한 값이다 — 「미입력」은 undefined로만 표현한다.
+
+  /** 양도일(=증여일) 직전 사업연도 1주당 순손익가치 */
+  transferYearNetIncomePerShare?: number;
+  /** 양도일(=증여일) 직전 사업연도 1주당 순자산가치 */
+  transferYearNetAssetPerShare?: number;
+  /** 증여자 취득일 직전 사업연도 1주당 순손익가치 */
+  acquisitionYearNetIncomePerShare?: number;
+  /** 증여자 취득일 직전 사업연도 1주당 순자산가치 */
+  acquisitionYearNetAssetPerShare?: number;
+  /** §165④3 순자산가치 단독 평가 사유 — 설정 시 순손익가치를 쓰지 않는다 */
+  netAssetOnlyReason?:
+    | "liquidation_or_owner_death"
+    | "no_business_or_short_or_closed"
+    | "stock_holding_company"
+    | "remaining_term_under_3y";
+  /** 소득세법 시행규칙 §81④1호 — 같은 사업연도 취득·양도(양도·취득 평가액 동일 시에만 노출) */
+  unlistedSameBizYearToggle?: boolean;
+  /** §81④1호 전전사업연도 1주당 순손익가치 */
+  prePriorYearNetIncomePerShare?: number;
+  /** §81④1호 전전사업연도 1주당 순자산가치 */
+  prePriorYearNetAssetPerShare?: number;
+  /** §81④1호 직전 사업연도 월수 (1~12, 미입력이면 엔진 기본 12) */
+  priorBizYearMonths?: number;
 }
 
 // ============================================================

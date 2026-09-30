@@ -122,11 +122,13 @@ describe("[3-B] 고가 비율 가중 — 분자 가드와 분자 ≤ 분모 상�
 // 3-C — ⑫ 정수성·상장 단서·전환주식 direction 교차
 // ════════════════════════════════════════════════════════════
 
+// ⚠️ 아래 픽스처의 `giftDate`는 ⑧이 요구하는 증여일이다(2026-09-30 ⑫ 필수화 #20). 빠지면 부정 단언이
+//    검사 대상이 아닌 이유로 거부돼 구별력을 잃는다.
 describe("[3-C] ⑫ Zod — 주식수 정수성", () => {
   const ci = (patch: Record<string, unknown>) =>
     deemedGiftInputSchema.safeParse({
       type: "capital_increase", preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, ...patch,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01", ...patch,
     });
 
   it("[VL-C1] 소수 발행주식총수 → 실패 (종전: 엔진 RangeError → HTTP 500)", () => {
@@ -143,7 +145,7 @@ describe("[3-C] ⑫ Zod — 주식수 정수성", () => {
 
   it("[VL-C4] cap-table 주주 행의 주식수도 정수여야 한다", () => {
     const r = deemedGiftInputSchema.safeParse({
-      type: "capital_increase_allocation", direction: "low", preIssuePrice: 10_000, newSharePrice: 5_000,
+      type: "capital_increase_allocation", direction: "low", giftDate: "2025-06-01", preIssuePrice: 10_000, newSharePrice: 5_000,
       shareholders: [
         { id: "a", preShares: 0.25, entitledShares: 0, subscribedShares: 0 },
         { id: "b", preShares: 100, entitledShares: 50, subscribedShares: 50 },
@@ -157,7 +159,7 @@ describe("[3-C] ⑫ Zod — 상장 단서·전환주식 direction 교차", () =>
   it("[VL-C5] 상장 ON인데 종가평균이 없으면 실패 (§29②1가·3나 단서가 조용히 미발동)", () => {
     const r = deemedGiftInputSchema.safeParse({
       type: "capital_increase", preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, isListed: true,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01", isListed: true,
     });
     expect(r.success).toBe(false);
   });
@@ -165,7 +167,7 @@ describe("[3-C] ⑫ Zod — 상장 단서·전환주식 direction 교차", () =>
   it("[VL-C6] 🔑 공모 배정이면 종가평균 없이도 통과 — §39① 적용제외라 세액에 닿지 않는다", () => {
     const r = deemedGiftInputSchema.safeParse({
       type: "capital_increase", preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01",
       isListed: true, allocationMethod: "public_offering",
     });
     expect(r.success).toBe(true);
@@ -174,7 +176,7 @@ describe("[3-C] ⑫ Zod — 상장 단서·전환주식 direction 교차", () =>
   it("[VL-C7] 간주모집(§29③)은 제외가 취소되어 과세되므로 종가평균이 필요하다", () => {
     const r = deemedGiftInputSchema.safeParse({
       type: "capital_increase", preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01",
       isListed: true, allocationMethod: "deemed_public_offering",
     });
     expect(r.success).toBe(false);
@@ -183,7 +185,7 @@ describe("[3-C] ⑫ Zod — 상장 단서·전환주식 direction 교차", () =>
   it("[VL-C8] 전환주식 — 두 시점의 direction이 어긋나면 실패 (§39①3호 가목+나목 혼합)", () => {
     const leg = (direction: "low" | "high") => ({
       direction, preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01",
     });
     const r = deemedGiftInputSchema.safeParse({
       type: "convertible_stock", atConversion: leg("low"), atIssuance: leg("high"),
@@ -194,7 +196,7 @@ describe("[3-C] ⑫ Zod — 상장 단서·전환주식 direction 교차", () =>
   it("[VL-C9] 양성 짝 — 두 시점 direction이 같으면 통과", () => {
     const leg = (direction: "low" | "high") => ({
       direction, preIssuePrice: 10_000, preIssueShares: 100_000,
-      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000,
+      newSharePrice: 5_000, issuedShares: 50_000, forfeitedShares: 10_000, giftDate: "2025-06-01",
     });
     const r = deemedGiftInputSchema.safeParse({
       type: "convertible_stock", atConversion: leg("low"), atIssuance: leg("low"),

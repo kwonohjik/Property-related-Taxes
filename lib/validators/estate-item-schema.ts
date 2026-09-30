@@ -5,6 +5,7 @@
  * 외부 import 경로 보존: property-valuation-input.ts가 전량 re-export.
  */
 import { z } from "zod";
+import { refineVacancyPortion } from "./inheritance-gift-required-refines";
 import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-data";
 import { unlistedStockValuationV2Schema } from "./unlisted-stock-valuation-v2.schema";
 import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
@@ -715,6 +716,8 @@ export const estateItemSchema = z
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
+    // §61⑤ 미임대(공실) 부분 — ⑧ `validateVacancyPortion`과 같은 leaf (비우면 미임대분 0)
+    refineVacancyPortion(item, ctx);
     // 무관 카테고리 + 좌표 입력 → 차단
     const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "receivable", "convertible_bond", "trust_benefit", "periodic_payment", "crypto_asset", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {

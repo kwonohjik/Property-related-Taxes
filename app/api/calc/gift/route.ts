@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { finiteJson } from "@/lib/api/non-finite-guard";
+import { injectSavingsAccrualForItems } from "@/lib/api/savings-accrual-route-inject";
 import {
   giftSimultaneousRequestSchema,
 } from "@/lib/validators/property-valuation-input";
@@ -78,11 +79,16 @@ export async function POST(req: NextRequest) {
   // ─────────────────────────────────────────────
   try {
     const { simultaneousGiftForms, ...baseInputRaw } = parsed.data;
-    const baseInput = baseInputRaw as unknown as GiftTaxInput;
+    // §63④ auto 예금 미수이자 — ④와 같은 leaf·평가기준일(각 건의 증여일)로 주입(API 직접 호출도 같은 값)
+    const withSavings = <F extends { giftItems: unknown[]; giftDate: string }>(f: F): F => ({
+      ...f,
+      giftItems: injectSavingsAccrualForItems(f.giftItems, f.giftDate, "giftDate"),
+    });
+    const baseInput = withSavings(baseInputRaw) as unknown as GiftTaxInput;
 
     // 다건 경로: simultaneousGiftForms 있음 → calcSimultaneousGifts
     if (simultaneousGiftForms && simultaneousGiftForms.length > 0) {
-      const additionalInputs = simultaneousGiftForms as unknown as GiftTaxInput[];
+      const additionalInputs = simultaneousGiftForms.map(withSavings) as unknown as GiftTaxInput[];
       const allInputs: GiftTaxInput[] = [baseInput, ...additionalInputs];
       const results = calcSimultaneousGifts(allInputs);
 

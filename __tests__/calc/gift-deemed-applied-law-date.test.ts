@@ -39,6 +39,8 @@ const RC_FORM = {
   rcCorporateTaxNetStr: "340000000",
   rcShareholders: [
     { id: "gap", name: "갑", relation: "self", directRatioPctStr: "50", isCorporate: false },
+    // ⑧ R-3 「주주 2명 이상」 — ⑫도 요구한다(2026-09-30 #23). 비특수관계인이라 과세 대상은 갑뿐이다
+    { id: "eul", name: "을", relation: "other", directRatioPctStr: "50", isCorporate: false },
   ],
   rcIntermediaryCorps: [],
   rcSalesPartners: [
@@ -139,10 +141,11 @@ describe("⑧ validate가 구법 사업연도를 계산 전에 막는다 (엔진
   });
 
   it("[E-8] 긍정 짝 — 2018-01-01은 R-0을 통과해 다음 검증으로 넘어간다 (경계 ±1 동등성)", () => {
-    // RC_FORM은 주주 roster가 비어 있어 뒤쪽 검증에 걸린다 — 「걸리는 지점이 달라진 것」이
+    // RC_FORM은 매출처 합계가 총매출액과 달라 뒤쪽 검증(R-7)에 걸린다 — 「걸리는 지점이 달라진 것」이
     // R-0을 지났다는 증거다. null 단언은 여기서 성립하지 않는다.
+    // (2026-09-30: 주주를 2명으로 보충해 종전 걸리던 R-3 대신 R-7에 걸린다 — ⑫도 주주 2명을 요구하게 됐다)
     const msg = validateDeemedInput({ ...RC_FORM, giftDate: "2018-01-01" } as DeemedFormState);
     expect(msg).not.toContain("법률 제15224호");
-    expect(msg).toBe("주주를 2명 이상 입력하세요");
+    expect(msg).toContain("매출처 합계");
   });
 });

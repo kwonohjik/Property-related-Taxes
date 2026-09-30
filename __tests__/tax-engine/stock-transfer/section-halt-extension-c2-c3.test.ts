@@ -175,8 +175,18 @@ describe("C3 거래정지 + 취득후상장 양립 불가 차단", () => {
   it("C3-ZOD-0 (baseline): 단독(거래정지 OR 취득후상장)은 스키마 통과", () => {
     const schema = addStockRefines(stockTransferInputSchema);
     expect(schema.safeParse(zodBaseInput({ tradingHaltAtTransfer: true })).success).toBe(true);
+    // 취득 후 상장 간이 입력 3칸(상장일 이후 1개월 종가평균·상장연도 순손익·순자산)은 ⑧이 요구하는 값이다 —
+    // 2026-09-30 Zod↔엔진 필수 점검 2차(B10)부터 ⑫도 요구한다(비우면 취득가액 0이었다).
     expect(
-      schema.safeParse(zodBaseInput({ acquiredBeforeListing: true, listingDate: new Date("2020-01-01") })).success,
+      schema.safeParse(
+        zodBaseInput({
+          acquiredBeforeListing: true,
+          listingDate: new Date("2020-01-01"),
+          listingDatePriceAvg1Month: 10_000,
+          listingYearNetIncomePerShare: 6_000,
+          listingYearNetAssetPerShare: 5_000,
+        }),
+      ).success,
     ).toBe(true);
   });
 

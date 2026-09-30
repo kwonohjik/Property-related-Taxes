@@ -18,6 +18,11 @@ import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
 } from "@/lib/tax-engine/stock-transfer/block-shareholder-gate";
+import {
+  missingAcquisitionCauseKeys,
+  missingLotCauseKeys,
+  lotCauseMessage,
+} from "./stock-transfer-required-inputs";
 
 function parseF(s: string): number {
   const n = parseFloat(s.replace(/,/g, ""));
@@ -238,38 +243,23 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
       if (parseI(lot.perShareAcquisitionPrice) <= 0) {
         errors.push({ field: `acquisitionLots[${i}].perShareAcquisitionPrice`, message: `매수 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다 (C-22)`, severity: "error" });
       }
-      if (lot.acquisitionCause === "inheritance" && isEmpty(lot.decedentAcquisitionDate)) {
-        errors.push({ field: `acquisitionLots[${i}].decedentAcquisitionDate`, message: `매수 lot #${i + 1} (상속): 피상속인 취득일을 입력하세요 (§104②1)`, severity: "error" });
-      }
-      if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionDate)) {
-        errors.push({ field: `acquisitionLots[${i}].donorAcquisitionDate`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득일을 입력하세요 (§104②2)`, severity: "error" });
-      }
-      // §97의2① 본문 요건 — 미선택이면 엔진이 「배제하지 않음」으로 흘려보낸다(단건과 같은 규약).
-      if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorRelation)) {
-        errors.push({ field: `acquisitionLots[${i}].donorRelation`, message: `매수 lot #${i + 1} (이월과세): 증여자와의 관계를 선택하세요 (§97의2① 본문)`, severity: "error" });
+      /**
+       * 취득원인 보조 입력 — ⑫ lot 루프·step2 일자별 다건과 **공용 술어**.
+       * - 상속 피상속인 취득일(§104②1) · 합병 종전 취득일(§104②3) · 이월과세 증여자 취득일(§104②2)
+       * - §97의2① 본문 관계 — 미선택이면 엔진이 「배제하지 않음」으로 흘려보낸다(단건과 같은 규약)
+       * - ①3호 증여세는 **산출세액과 과세가액이 짝**이다 — 영 §163의2②가 둘의 비율로 안분하므로
+       *   한쪽만 있으면 계산되지 않고 조용히 0이 된다. 분자는 엔진이 lot에서 구한다.
+       */
+      for (const key of missingLotCauseKeys(
+        lot.acquisitionCause,
+        (k) => !isEmpty(lot[k]),
+        (k) => parseI(lot[k] ?? "") > 0,
+      )) {
+        errors.push({ field: `acquisitionLots[${i}].${key}`, message: lotCauseMessage(key, i), severity: "error" });
       }
       // 승계 효과가 0이면 ②3호로 배제된다 — 차단이 아니라 경고다.
       if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionPrice)) {
         errors.push({ field: `acquisitionLots[${i}].donorAcquisitionPrice`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득가액이 없으면 취득가액이 승계되지 않습니다 (§97의2①1호)`, severity: "warning" });
-      }
-      /**
-       * ①3호 증여세는 **산출세액과 과세가액이 짝**이다 — 영 §163의2②가 둘의 비율로 안분하므로
-       * 한쪽만 있으면 계산되지 않고 조용히 0이 된다(단건 축의 안분 3종 짝 규칙과 같다).
-       * 분자(양도한 자산가액)는 엔진이 매도 주식수 × 증여 당시 평가액으로 구한다.
-       */
-      if (lot.acquisitionCause === "carryover_gift") {
-        const hasGiftTax = parseI(lot.donorGiftTaxAmount ?? "") > 0;
-        const hasGiftBase = parseI(lot.donorGiftTaxableValue ?? "") > 0;
-        if (hasGiftTax !== hasGiftBase) {
-          errors.push({
-            field: `acquisitionLots[${i}].donorGiftTaxableValue`,
-            message: `매수 lot #${i + 1} (이월과세): 증여세 산출세액과 과세가액을 함께 입력하세요 (영 §163의2② 안분)`,
-            severity: "error",
-          });
-        }
-      }
-      if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
-        errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
       }
     });
     (form.transferLots || []).forEach((lot, i) => {
@@ -369,7 +359,16 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
 
   // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase")
   const acquisitionCause = form.acquisitionCause || "purchase";
-  if (acquisitionCause === "inheritance" && isEmpty(form.decedentAcquisitionDate)) {
+  /**
+   * 필수 키 집합은 ⑫(`stock-transfer-tax-refines.ts`)와 **공용 술어**다 — 한쪽만 고치면
+   * 「UI 통과 → API 400」 또는 「API 200 + 조용한 세율·필요경비 변경」이 된다.
+   * - §97의2① **본문 요건**(관계)은 필수다 — 배우자·직계존비속이 아니면 애초에 대상이 아니고,
+   *   사망 여부에 따라 적용이 갈린다. 미선택이면 엔진이 「배제하지 않음」으로 흘려보내므로
+   *   여기서 막지 않으면 사용자가 모른 채 적용받는다.
+   * - 증여세 산출세액을 넣었으면 영 §163의2② 안분 분자·분모가 함께 있어야 계산된다.
+   */
+  const missingCause = missingAcquisitionCauseKeys(acquisitionCause, (k) => !isEmpty(form[k]));
+  if (missingCause.includes("decedentAcquisitionDate")) {
     errors.push({
       field: "decedentAcquisitionDate",
       message: "상속의 경우 피상속인 취득일을 입력하세요 (§104②1 — 단기 30% 기산점)",
@@ -377,19 +376,14 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
     });
   }
   if (acquisitionCause === "carryover_gift") {
-    if (isEmpty(form.donorAcquisitionDate)) {
+    if (missingCause.includes("donorAcquisitionDate")) {
       errors.push({
         field: "donorAcquisitionDate",
         message: "이월과세(증여)의 경우 증여자 취득일을 입력하세요 (§104②2 — 단기 30% 기산점)",
         severity: "error",
       });
     }
-    /**
-     * §97의2① **본문 요건**이라 필수다 — 배우자·직계존비속이 아니면 애초에 대상이 아니고,
-     * 사망 여부에 따라 적용이 갈린다. 미선택이면 엔진이 「배제하지 않음」으로 흘려보내므로
-     * 여기서 막지 않으면 사용자가 모른 채 적용받는다.
-     */
-    if (isEmpty(form.donorRelation)) {
+    if (missingCause.includes("donorRelation")) {
       errors.push({
         field: "donorRelation",
         message: "이월과세(증여)의 경우 증여자와의 관계를 선택하세요 (§97의2① 본문)",
@@ -416,19 +410,17 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
       });
     }
     // 영 §163의2② 안분 — 증여세를 넣었으면 분자·분모가 함께 있어야 계산된다.
-    if (!isEmpty(form.giftTaxAmount)) {
-      if (isEmpty(form.transferredAssetValue) || isEmpty(form.giftTaxableValue)) {
-        errors.push({
-          field: "giftTaxableValue",
-          message:
-            "증여세 산출세액을 입력했다면 양도한 해당 자산가액과 증여세 과세가액도 입력하세요 " +
-            "(영 §163의2② 안분 분자·분모)",
-          severity: "error",
-        });
-      }
+    if (missingCause.includes("transferredAssetValue") || missingCause.includes("giftTaxableValue")) {
+      errors.push({
+        field: "giftTaxableValue",
+        message:
+          "증여세 산출세액을 입력했다면 양도한 해당 자산가액과 증여세 과세가액도 입력하세요 " +
+          "(영 §163의2② 안분 분자·분모)",
+        severity: "error",
+      });
     }
   }
-  if (acquisitionCause === "merger_split" && isEmpty(form.preMergerAcquisitionDate)) {
+  if (missingCause.includes("preMergerAcquisitionDate")) {
     errors.push({
       field: "preMergerAcquisitionDate",
       message: "합병·분할의 경우 종전 주식 취득일을 입력하세요 (§104②3)",

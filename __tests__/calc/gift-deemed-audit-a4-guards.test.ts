@@ -80,6 +80,8 @@ describe("RC-3-f — 같은 법인주주를 가리키는 간접출자 행이 중
     const base = {
       type: "related_corp" as const,
       giftDate: "2025-12-31",
+      // §45의3③ 증여시기 — ⑧이 요구하는 값(2026-09-30 ⑫ 필수화 #20). 없으면 긍정 짝이 다른 이유로 막힌다
+      fiscalYearEndDate: "2025-12-31",
       enterpriseSize: "small" as const,
       totalSales: 100_000_000_000,
       preTaxAdjOperatingIncome: 10_000_000_000,
@@ -147,6 +149,11 @@ const scBase = {
   type: "specific_corp" as const,
   giftDate: "2025-12-31",
   transactionBenefit: 1_000_000_000,
+  // ⑧이 요구하는 거래상대방·거래일·법인세(직접) — 2026-09-30 ⑫ 필수화(#20·#21·#22) 후
+  // 이 값이 없으면 아래 부정 단언이 «지분율»이 아닌 다른 이유로 거부돼 구별력을 잃는다.
+  counterparty: "ruling_shareholder" as const,
+  transactionDate: "2025-12-31",
+  corporateTax: 0,
 };
 
 describe("SC-7-g — ⑫ ratioSchema에 상한이 없어 200% 지분율이 서버를 통과했다", () => {
