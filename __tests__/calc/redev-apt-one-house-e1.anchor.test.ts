@@ -97,14 +97,16 @@ describe("OH-20 ④ — 재개발 완공APT의 §154① 단서가 body에 실린
   it("🔑 승계조합원 5호(공고 전 계약 · 무주택) → oneHouseExemptionProviso 전송 (종전 undefined)", async () => {
     const captured = captureBody();
     await callTransferTaxAPI(makeForm(successorAsset(), PROVISO_5));
-    expect(captured.body?.oneHouseExemptionProviso).toEqual({ reason: "pre_designation_contract" });
+    // O4(2026-09-30) — 5호 무주택 확인도 싣는다(⑫가 true를 요구)
+    expect(captured.body?.oneHouseExemptionProviso).toEqual({ reason: "pre_designation_contract", preContractNoHouse: true });
   });
 
   it("긍정 짝 — 주택은 종전부터 전송", async () => {
     const captured = captureBody();
     const housing = { ...makeDefaultAsset(1), assetKind: "housing", acquisitionDate: "2017-03-01", actualSalePrice: "1,100,000,000", fixedAcquisitionPrice: "500,000,000" } as Asset;
     await callTransferTaxAPI(makeForm(housing, PROVISO_5));
-    expect(captured.body?.oneHouseExemptionProviso).toEqual({ reason: "pre_designation_contract" });
+    // O4(2026-09-30) — 5호 무주택 확인도 싣는다(⑫가 true를 요구)
+    expect(captured.body?.oneHouseExemptionProviso).toEqual({ reason: "pre_designation_contract", preContractNoHouse: true });
   });
 
   it("부정 짝 — 조합원입주권(§89①4호 축)에는 보내지 않는다", async () => {

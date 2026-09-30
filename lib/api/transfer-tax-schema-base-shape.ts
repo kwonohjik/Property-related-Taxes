@@ -175,6 +175,9 @@ export const propertyBaseShape = {
       departureDate: z.string().date().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
+      // ⑫ O4 5호 「계약금 지급일 현재 무주택」 확인 — 종전엔 키가 없어 strip됐다. 엔진은 이 요건을 판정하지 않고
+      //    ⑧·⑫가 담보한다(`transfer-tax-schema-household-refines.ts` — 5호면 true 필수). ⑭ 매핑 없음(엔진 미소비).
+      preContractNoHouse: z.boolean().optional(),
       // ⑫ OH-38 삭제 전 4호 판정 사실 — ⑭ `toEngineRental4ho`(lib/api/rental-4ho-coerce.ts)와 같은 키
       rentalRegistration4ho: z
         .object({

@@ -284,7 +284,7 @@ export function resolveExemptionProviso(
       // 1호: 세대전원 거주 5년 이상
       return residenceYears >= C.RENTAL_RESIDENCE_YEARS ? "both" : null;
     case "pre_designation_contract":
-      // 5호: 거주만 면제 (계약금일 무주택은 UI validation으로 담보)
+      // 5호: 거주만 면제 (계약금일 무주택은 ⑧ `exemption-proviso-validate.ts`·⑫ `transfer-tax-schema-household-refines.ts`로 담보)
       return "residence_only";
     case "rental_registration_4ho":
       // 삭제 전 4호: 거주만 면제 — 부칙<제30395호> 제38조 경과조치 (`one-house/rental-registration-4ho.ts`)

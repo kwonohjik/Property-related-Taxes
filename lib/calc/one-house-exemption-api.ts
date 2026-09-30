@@ -244,6 +244,10 @@ export function buildOneHouseExemptionApiBody(
               ...(reason === "rental_registration_4ho"
                 ? { rentalRegistration4ho: buildRental4hoPayload(form) }
                 : {}),
+              // O4 — 5호 무주택 확인(⑫가 true 필수 — 계산기 ④ `exemption-proviso-payload.ts`와 같은 키)
+              ...(reason === "pre_designation_contract"
+                ? { preContractNoHouse: form.provisoPreContractNoHouse === true }
+                : {}),
             },
           }
         : {};

@@ -14,7 +14,11 @@ import { buildRental4hoPayload, type Rental4hoFormSlice } from "./rental-4ho-pro
 
 export type ExemptionProvisoFormSlice = Pick<
   TransferFormData,
-  "provisoReason" | "provisoDepartureDate" | "provisoExpropriationDate" | "provisoBusinessApprovalDate"
+  | "provisoReason"
+  | "provisoDepartureDate"
+  | "provisoExpropriationDate"
+  | "provisoBusinessApprovalDate"
+  | "provisoPreContractNoHouse"
 > &
   Rental4hoFormSlice;
 
@@ -31,6 +35,8 @@ export function buildExemptionProvisoPayload(
       ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
       ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
       ...(reason === "rental_registration_4ho" ? { rentalRegistration4ho: buildRental4hoPayload(form) } : {}),
+      // O4 — 5호 「계약금 지급일 현재 무주택」 확인. ⑫가 true를 요구한다(⑧과 같은 규칙) — 종전엔 싣지 않아 strip됐다.
+      ...(reason === "pre_designation_contract" ? { preContractNoHouse: form.provisoPreContractNoHouse === true } : {}),
     },
   };
 }

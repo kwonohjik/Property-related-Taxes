@@ -130,7 +130,7 @@ export function addPropertyRefines(
   }
   // 소유자 분리 — 토지 취득일 (소령 §166⑥, §168②). 단건·다건 공용. 다건 자산은 이 검증 없이 통과해
   // 토지 취득일 누락이 200 + 분리 없는 세액이 됐다(2026-09-30 — 단건만 걸려 있었다).
-  // (주택·건물 외 자산의 selfOwns 거부는 단건 superRefine에만 있다 — `transfer-tax-schema.ts`)
+  // (주택·건물 외 자산의 selfOwns 거부는 `refinePropertyRequiredInputs` — 단건·다건 공용, M2 2026-09-30)
   if (data.selfOwns && data.selfOwns !== "both" && !data.landAcquisitionDate) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

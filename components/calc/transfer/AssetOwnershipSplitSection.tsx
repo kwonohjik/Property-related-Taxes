@@ -20,11 +20,10 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { selfOwnsSplitApplicable } from "@/lib/calc/self-owns-scope";
 
-/** 토지·건물 분리 계산이 가능한 자산 종류 — 엔진 `calcSplitGain`의 propertyType 게이트와 동일. */
-export function isLandBuildingSplitable(assetKind: string | undefined): boolean {
-  return assetKind === "housing" || assetKind === "building";
-}
+// 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
+export { isLandBuildingSplitable } from "@/lib/calc/self-owns-scope";
 
 export function AssetOwnershipSplitSection(props: {
   asset: AssetForm;
@@ -32,9 +31,8 @@ export function AssetOwnershipSplitSection(props: {
 }) {
   const { asset, onChange } = props;
 
-  if (!isLandBuildingSplitable(asset.assetKind)) return null;
-  // 겸용주택은 자체 4부분 안분이 축을 지배한다 — 분리 축과 겹치면 이중 안분이 된다.
-  if (asset.isMixedUseHouse) return null;
+  // 주택·건물 + 겸용 아님 — 겸용주택은 자체 4부분 안분이 축을 지배한다(분리 축과 겹치면 이중 안분).
+  if (!selfOwnsSplitApplicable(asset)) return null;
 
   const selfOwns = asset.selfOwns ?? "both";
 
