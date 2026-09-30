@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { calculatePropertyTax } from "@/lib/tax-engine/property-tax";
@@ -96,9 +97,10 @@ export async function POST(req: NextRequest) {
   // ─────────────────────────────────────────────
   // 5. 순수 엔진 계산
   // ─────────────────────────────────────────────
-  let result;
   try {
-    result = calculatePropertyTax(input, rates);
+    const result = calculatePropertyTax(input, rates);
+    // 이력 저장은 클라이언트 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
+    return finiteJson({ data: result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(
@@ -117,7 +119,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-
-  // 이력 저장은 클라이언트 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
-  return NextResponse.json({ data: result });
 }

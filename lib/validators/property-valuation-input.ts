@@ -494,6 +494,19 @@ export const inheritanceGiftFilingPenaltySchema = z.object({
   actualPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
   /** §47의4③6호 — 기한 내 신고·납부 후 평가 경정 */
   paidOnTimeThenRevalued: z.boolean().optional(),
+}).superRefine((fp, ctx) => {
+  // 가산세 산정 필수 입력 (2026-09-30 Zod↔엔진 필수 점검) — ⑧ `inheritance-validate.ts`·
+  // `gift-tax-form-validate.ts`·`inheritance-gift-filing-penalty-input.ts`와 같은 조건.
+  // 비우면 감면율 0(가산세 전액)·base = 결정세액 전액·납부지연가산세 0으로 조용히 바뀌었다.
+  const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+  if (fp.filingStatus === "late") {
+    if (!fp.actualFilingDate) issue("actualFilingDate", "기한후신고일이 필요합니다 (국세기본법 §48②2호 감면 구간 판정)");
+    if (!fp.statutoryDeadline) issue("statutoryDeadline", "법정신고기한이 필요합니다 (국세기본법 §48②2호 감면 구간 판정)");
+  }
+  if (fp.filingStatus === "on_time" && fp.isUnderReported === true && fp.originalFiledTax === undefined)
+    issue("originalFiledTax", "당초 신고세액이 필요합니다 (국세기본법 §47의3① 과소신고한 납부세액 산정)");
+  if ((fp.unpaidTax ?? 0) > 0 && !fp.paymentDeadline)
+    issue("paymentDeadline", "법정납부기한이 필요합니다 (국세기본법 §47의4①1호 산정기간의 기산점)");
 });
 
 export const inheritanceTaxInputSchema = z.object({
@@ -533,6 +546,18 @@ export const inheritanceTaxInputSchema = z.object({
    * 상속인별 안분 입력이 아니다(상속세는 1건의 신고).
    */
   filingPenalty: inheritanceGiftFilingPenaltySchema.optional(),
+}).superRefine((d, ctx) => {
+  // 사전증여 상속인 여부 — 상속세 합산기간(상증법 §13① 1호 10년·2호 5년)을 가른다. 엔진은
+  // `isHeir ? 10 : 5`로 읽어 비우면 5년이 됐다(2026-09-30). 화면은 항상 싣는다(prior-gift meta).
+  // 공용 `priorGiftSchema`는 증여 route도 쓰고 거기서는 엔진이 읽지 않으므로 여기서만 요구한다.
+  d.preGiftsWithin10Years.forEach((g, i) => {
+    if (typeof g.isHeir !== "boolean")
+      ctx.addIssue({ code: "custom", path: ["preGiftsWithin10Years", i, "isHeir"], message: "사전증여의 상속인 여부(isHeir)가 필요합니다 (상증법 §13① 합산기간)" });
+  });
+  (d.creditInput.priorGifts ?? []).forEach((g, i) => {
+    if (typeof g.isHeir !== "boolean")
+      ctx.addIssue({ code: "custom", path: ["creditInput", "priorGifts", i, "isHeir"], message: "사전증여의 상속인 여부(isHeir)가 필요합니다 (상증법 §13① 합산기간)" });
+  });
 });
 
 export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema>;
@@ -598,6 +623,24 @@ export const giftTaxInputSchema = z
     requestedSplitAmount: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
+    // 사전증여(§47② 합산) 필수 입력 — ⑧ `gift-tax-form-validate.ts` 사전증여 블록과 같은 조건(2026-09-30).
+    // 비우면 증여자 없는 회차는 합산에서 조용히 빠지고, 동일 그룹 회차는 기납부세액공제 한도(§58)가 0이 됐다.
+    data.priorGiftsWithin10Years.forEach((p, i) => {
+      if (!(p.giftAmount > 0)) return;
+      const at = (key: string) => ["priorGiftsWithin10Years", i, key];
+      if (!p.donor) {
+        ctx.addIssue({ code: "custom", path: at("donor"), message: "사전증여 증여자(donor)가 필요합니다 (§47 합산 그룹 판정)" });
+        return;
+      }
+      // 값의 **존재**만 요구한다 — 공제 범위 안의 회차는 과세표준·산출세액이 실제로 0일 수 있다.
+      if (getDonorGroup(p.donor) === getDonorGroup(data.donor) && !p.specialTreatmentType) {
+        if (p.giftTaxBase === undefined)
+          ctx.addIssue({ code: "custom", path: at("giftTaxBase"), message: "동일인 합산 회차는 그 회차 합산과세표준이 필요합니다 (상증법 §58)" });
+        if (p.computedTax === undefined)
+          ctx.addIssue({ code: "custom", path: at("computedTax"), message: "동일인 합산 회차는 그 회차 산출세액이 필요합니다 (상증법 §58)" });
+      }
+    });
+
     // T-12 (동기화 지점 ⑩): 조특법 특례 2-스트림 — 혼합 자산 귀속 미설정 차단
     // §30의5⑪: 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.
     // 혼합 증여(N≥2 자산)에서 특례 선택 시 isSpecialTreatmentAsset 명시 필수.

@@ -287,6 +287,19 @@ export function validateStep3Foreign(form: StockTransferFormData): StockValidati
   const errors: StockValidationError[] = [];
 
   /**
+   * 납부지연가산세(국세기본법 §47의4①1호) — 국내 단계(`stock-transfer-tax-validate.ts` validateStep3)와 같은 규칙.
+   * 국외주식은 그 함수에 닿기 전에 이 함수로 돌아가서(:122) 이 검증이 빠져 있었다 — 기한 없이 미납세액만
+   * 넣으면 가산세가 조용히 0이었다(2026-09-30).
+   */
+  if (parseF(form.unpaidTax ?? "") > 0 && isEmpty(form.paymentDeadline)) {
+    errors.push({
+      field: "paymentDeadline",
+      message: "납부지연가산세를 계산하려면 법정납부기한을 입력하세요 (경과일수 기산점입니다).",
+      severity: "error",
+    });
+  }
+
+  /**
    * ⑧ 필요경비 **지출일 기준환율** (영 §178의5①) — 비우는 것은 **허용**한다.
    *
    * 미입력은 엔진에서 양도일 환율로 떨어지므로(근사치) 차단할 이유가 없다. 다만 **넣었는데

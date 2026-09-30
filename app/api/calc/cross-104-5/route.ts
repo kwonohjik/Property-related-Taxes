@@ -18,6 +18,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax";
 import { computeCross1045 } from "@/lib/tax-engine/comparative-104-5-cross";
@@ -114,36 +115,45 @@ export async function POST(request: NextRequest) {
     rates = loadFallbackTransferRates(rateDate);
   }
 
-  const basicBrackets = parseRatesFromMap(rates).brackets;
-  const input = buildCross1045Input({
-    realEstate: realEstate as CrossSide,
-    otherAsset: otherAsset as CrossSide,
-    basicBrackets,
-    nbl89Brackets: deriveNbl89Brackets(basicBrackets),
-  });
+  // 계산 오류와 NaN·Infinity 결과(`finiteJson`)는 500으로 응답한다.
+  try {
+    const basicBrackets = parseRatesFromMap(rates).brackets;
+    const input = buildCross1045Input({
+      realEstate: realEstate as CrossSide,
+      otherAsset: otherAsset as CrossSide,
+      basicBrackets,
+      nbl89Brackets: deriveNbl89Brackets(basicBrackets),
+    });
 
-  const result = computeCross1045(input);
+    const result = computeCross1045(input);
 
-  // 「현행(교차 미적용)」 = 두 계산기가 각각 낸 §104⑤2호의 단순합.
-  const currentSum = realEstate.clause2Tax + otherAsset.clause2Tax;
+    // 「현행(교차 미적용)」 = 두 계산기가 각각 낸 §104⑤2호의 단순합.
+    const currentSum = realEstate.clause2Tax + otherAsset.clause2Tax;
 
-  return NextResponse.json(
-    {
-      data: {
-        ...result,
-        input: {
-          totalTaxBase: input.totalTaxBase,
-          realEstateClause1TaxBase: input.realEstateClause1TaxBase,
-          otherAssetClause1TaxBase: input.otherAssetClause1TaxBase,
-          clause8TaxBase: input.clause8TaxBase,
-          clause9TaxBase: input.clause9TaxBase,
-          otherClausesTax: input.otherClausesTax,
+    return finiteJson(
+      {
+        data: {
+          ...result,
+          input: {
+            totalTaxBase: input.totalTaxBase,
+            realEstateClause1TaxBase: input.realEstateClause1TaxBase,
+            otherAssetClause1TaxBase: input.otherAssetClause1TaxBase,
+            clause8TaxBase: input.clause8TaxBase,
+            clause9TaxBase: input.clause9TaxBase,
+            otherClausesTax: input.otherClausesTax,
+          },
+          currentSum,
+          /** 크로스 적용 시 늘어나는 산출세액 (음수면 0으로 보지 않고 그대로 노출) */
+          difference: result.calculatedTax - currentSum,
         },
-        currentSum,
-        /** 크로스 적용 시 늘어나는 산출세액 (음수면 0으로 보지 않고 그대로 노출) */
-        difference: result.calculatedTax - currentSum,
       },
-    },
-    { status: 200 },
-  );
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error("[POST /api/calc/cross-104-5]", err);
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "계산 중 오류가 발생했습니다." } },
+      { status: 500 },
+    );
+  }
 }

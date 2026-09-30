@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import {
   inheritanceTaxInputSchema,
 } from "@/lib/validators/property-valuation-input";
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
   // ─────────────────────────────────────────────
   try {
     const result = calcInheritanceTax(input);
-    return NextResponse.json({ success: true, result });
+    return finiteJson({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(

@@ -19,6 +19,7 @@ import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/Wi
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, validatePriorAssessedValue, validateOneHouseConsistency, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
+import { validateRequiredExclusionAndLandInputs } from "@/lib/calc/comprehensive-api";
 import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -500,6 +501,13 @@ export default function ComprehensiveTaxPage() {
     const multiFamilyError = validateMultiFamily(formData);
     if (multiFamilyError) {
       setError(multiFamilyError);
+      return;
+    }
+
+    // 합산배제 임대주택 필수 입력 · 토지 집계 재산세 과세표준 (⑧ — ④가 빈 칸을 더는 채우지 않는다)
+    const requiredError = validateRequiredExclusionAndLandInputs(formData);
+    if (requiredError) {
+      setError(requiredError);
       return;
     }
 

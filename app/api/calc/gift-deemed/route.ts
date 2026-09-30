@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import { deemedGiftInputSchema } from "@/lib/validators/gift-deemed-input";
 import { calcDeemedGift } from "@/lib/tax-engine/gift-deemed/router";
 import { calcCapitalIncreaseAllocation } from "@/lib/tax-engine/gift-deemed/capital-increase-allocation";
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       data.type === "capital_increase_allocation"
         ? calcCapitalIncreaseAllocation(data as unknown as CapitalIncreaseAllocationInput)
         : calcDeemedGift(data as unknown as DeemedGiftInput);
-    return NextResponse.json({ success: true, result });
+    return finiteJson({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(

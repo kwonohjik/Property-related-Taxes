@@ -451,6 +451,36 @@ export const acquisitionTaxInputSchema = z.object({
   usageApprovalDate: dateStrOrEmpty,
   actualUsageDate: dateStrOrEmpty,
   targetDate: dateStrOrEmpty,
+}).superRefine((d, ctx) => {
+  // ── 원인별 필수 입력 (2026-09-30 Zod↔엔진 필수 점검) ──
+  // 비우면 400이 아니라 200 + 다른 세액이었다(엔진이 0·기본 분기로 읽는다). ⑧
+  // `components/calc/acquisition/shared.ts` validateStep과 같은 축.
+  const issue = (path: (string | number)[], message: string) =>
+    ctx.addIssue({ code: "custom", path, message });
+  const onerous = ["purchase", "exchange", "auction", "in_kind_investment"].includes(d.acquisitionCause);
+  // 유상취득 — 취득가액(연부취득은 ④가 회차 합산을 싣는다). 시가표준액 원천이 있으면 엔진이 그 경로로 계산한다.
+  if (
+    onerous &&
+    !(d.reportedPrice > 0) &&
+    !((d.standardValue ?? 0) > 0) &&
+    !d.standardPriceInput
+  )
+    issue(["reportedPrice"], "유상취득은 취득가액(reportedPrice)이 필요합니다 — 비우면 과세표준이 0이 됩니다");
+  // 부담부증여 — 채무액이 없으면 유상분 없이 전액 무상취득으로 계산됐다.
+  if (d.acquisitionCause === "burdened_gift" && !((d.encumbrance ?? 0) > 0))
+    issue(["encumbrance"], "부담부증여는 인수 채무액(encumbrance)이 필요합니다");
+  // 간주취득 — 원인에 맞는 서브객체가 없으면 「과세 요건 미충족」으로 세액 0이었다.
+  const deemedKey = {
+    deemed_major_shareholder: "majorShareholder",
+    deemed_land_category: "landCategory",
+    deemed_renovation: "renovation",
+  }[d.acquisitionCause as string] as "majorShareholder" | "landCategory" | "renovation" | undefined;
+  if (deemedKey && !d.deemedInput?.[deemedKey])
+    issue(["deemedInput", deemedKey], `간주취득(${d.acquisitionCause})은 deemedInput.${deemedKey}가 필요합니다`);
+  // 간주취득 사치성(§15② 단서·§13⑤) — 유형이 없으면 엔진이 10%(골프장 등과 같은 세율)로 계산했다.
+  // 과점주주 물건별 구분 모드는 ④가 최상위 플래그를 빼고 보낸다(행별 proviso).
+  if (deemedKey && d.isLuxuryProperty === true && !d.luxuryType)
+    issue(["luxuryType"], "간주취득 사치성 재산은 유형(luxuryType — 지방세법 §13⑤)이 필요합니다");
 });
 
 export type AcquisitionTaxInputSchema = z.infer<typeof acquisitionTaxInputSchema>;

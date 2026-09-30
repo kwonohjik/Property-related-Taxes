@@ -242,7 +242,8 @@ describe("POST /api/calc/one-house-exemption", () => {
   it("[R-4] 긍정 짝 — 같은 2주택 명부에 §155② 상속주택이면 1채 제외돼 비과세", async () => {
     const { json } = await post({
       householdHousingCount: 1,
-      houses: [houseBody("selling"), houseBody("h1", { isInherited: true })],
+      // 상속개시일은 필수(⑫) — 양도 주택(2019-06-01 취득)을 보유한 뒤의 상속이어야 §155②다.
+      houses: [houseBody("selling"), houseBody("h1", { isInherited: true, inheritedDate: "2020-01-01" })],
     });
     expect(json.data.houseCount).toEqual({
       total: 2,

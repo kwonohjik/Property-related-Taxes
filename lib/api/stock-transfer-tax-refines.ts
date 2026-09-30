@@ -260,6 +260,52 @@ export function addStockRefines(
       });
     }
 
+    // ── 단일 모드 필수 입력 (2026-09-30 Zod↔엔진 필수 점검) ──
+    // 비우면 엔진이 0으로 읽어 200 + 다른 세액이었다(양도가액 0 → 세액 0 · 전전연도 보정 누락).
+    // ⑧ `stock-transfer-tax-validate-step2.ts`(분할 모드는 거기서도 먼저 끝난다)·`-validate.ts`와 같은 조건.
+    {
+      const splitOrLots =
+        (data.acquisitionLots?.length ?? 0) > 0 ||
+        (data.transferLots?.length ?? 0) > 0 ||
+        data.costAllocationMethod !== undefined ||
+        (data.acquisitionActualInputMode ?? "per_share") === "lots";
+      const issue = (path: string, message: string) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+      if (!splitOrLots) {
+        if (
+          data.transferPriceMode === "actual" &&
+          data.transferActualInputMode === "per_share" &&
+          !((data.perShareTransferPrice ?? 0) > 0)
+        )
+          issue("perShareTransferPrice", "1주당 양도가액을 입력하세요");
+        if (
+          data.transferPriceMode === "exchange" &&
+          !((data.exchangePropertyValue ?? 0) > 0) &&
+          !((data.exchangeDebtRelief ?? 0) > 0) &&
+          !((data.exchangeCash ?? 0) > 0)
+        )
+          issue("exchangePropertyValue", "교환 양도가액: 부동산 가액·채무면제액·현금 중 1개 이상 양수로 입력하세요");
+        if (data.acquisitionMode === "actual") {
+          if (data.acquisitionActualInputMode === "total") {
+            if (!((data.acquisitionTotalPrice ?? 0) > 0)) issue("acquisitionTotalPrice", "취득가액 합계를 입력하세요");
+          } else if (data.perShareAcquisitionPrice === undefined) {
+            // ⑧은 0을 허용한다(무상 취득 등) — 빈 값만 막는다.
+            issue("perShareAcquisitionPrice", "1주당 취득가액을 입력하세요");
+          }
+        }
+      }
+      // 소칙 §81④1호 월할 가산 — 동일 사업연도 토글이면 전전사업연도 평가가 필요하다.
+      if (data.acquisitionMode === "estimated" && data.unlistedSameBizYearToggle === true) {
+        if (!data.netAssetOnlyReason && data.prePriorYearNetIncomePerShare === undefined)
+          issue("prePriorYearNetIncomePerShare", "전전사업연도 1주당 순손익가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
+        if (data.prePriorYearNetAssetPerShare === undefined)
+          issue("prePriorYearNetAssetPerShare", "전전사업연도 1주당 순자산가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
+      }
+      // 납부지연가산세 — 법정납부기한이 경과일수 기산점이다(국세기본법 §47의4①1호). 없으면 엔진이 0.
+      if ((data.unpaidTax ?? 0) > 0 && !data.paymentDeadline)
+        issue("paymentDeadline", "납부지연가산세를 계산하려면 법정납부기한이 필요합니다 (국세기본법 §47의4①1호)");
+    }
+
     // ── lots-only 모드 (취득 다건 입력 + 양도 단일) refine 3건 ──
     // 기존 isSplit 게이트와 독립 작용 (API 합성 후 body는 isSplit도 통과)
     const isLotsOnlyMode =

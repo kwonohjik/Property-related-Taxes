@@ -25,6 +25,7 @@ import { coerceDates } from "@/lib/api/date-coerce";
 import { STOCK_DATE_FIELDS } from "@/lib/api/stock-transfer-date-fields";
 import { buildEngineInput } from "@/lib/api/stock-transfer-engine-input";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { AggregateStockItemInput } from "@/lib/tax-engine/stock-transfer/foreign-stock-aggregate-adapter";
 import type { ExitTaxInput, ExitTaxHolding } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = calculateStockTransferTax(engineInput);
-    return NextResponse.json({ result }, { status: 200 });
+    return finiteJson({ result }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -144,7 +145,7 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
       preliminaryPaidTax,
       preliminaryPaidLocalTax,
     });
-    return NextResponse.json({ result, mode: "aggregate" }, { status: 200 });
+    return finiteJson({ result, mode: "aggregate" }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -185,7 +186,7 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
 
   try {
     const result = calculateStockTransferTax(engineInput);
-    return NextResponse.json({ result }, { status: 200 });
+    return finiteJson({ result }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -359,7 +360,7 @@ async function handleExitTax(body: unknown): Promise<NextResponse> {
 
   try {
     const result = calculateStockTransferTax(engineInput);
-    return NextResponse.json({ result }, { status: 200 });
+    return finiteJson({ result }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -165,7 +165,8 @@ const VARIANTS: [string, Record<string, unknown>][] = [
       redevActualAcquisitionPrice: "",
     },
   ],
-  ["승계조합원", { redevIsSuccessorMember: "yes" }],
+  // 준공일은 승계조합원 신축 APT의 필수 입력(⑧·⑫ — 소령 §162①4호)
+  ["승계조합원", { redevIsSuccessorMember: "yes", redevCompletionDate: "2022-12-01" }],
 ];
 
 describe("R4 RV — 재개발·입주권 × 공유지분 스케일 정합", () => {

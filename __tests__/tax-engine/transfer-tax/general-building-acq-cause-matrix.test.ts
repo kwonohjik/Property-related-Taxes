@@ -158,7 +158,12 @@ describe("케이스 #5: 토지 증여 + 건물 매매 — 취득원인 분리", 
  * 이 케이스들은 `buildingAcquisitionCause` 판정만 보므로 그 두 값을 채워 **다른 사유로 실패하지 않게** 한다
  * — 비우면 #8-3의 `success === false`가 enum이 아니라 기준시가 누락으로도 성립해 구별력이 사라진다.
  */
-const ACQ_STD = { acquisitionLandPricePerSqm: 5_000_000, acquisitionBuildingStdPrice: 10_000_000 };
+// 용도지역도 같은 이유로 채운다 — ⑫가 무허가 건물이 아니면 요구한다(2026-09-30).
+const ACQ_STD = {
+  acquisitionLandPricePerSqm: 5_000_000,
+  acquisitionBuildingStdPrice: 10_000_000,
+  zoneType: "general_residential",
+};
 
 describe("케이스 #8: Zod 스키마 — buildingAcquisitionCause 미입력 차단", () => {
   it("#8-1 buildingAcquisitionCause 미입력 → Zod.safeParse failure", () => {

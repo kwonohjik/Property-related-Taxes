@@ -179,6 +179,25 @@ export const foreignStockInputSchema = z.object({
     });
   }
 
+  // 외국납부세액 원화 환산 — 납세일 기준환율(영 §178의5). 비우면 엔진이 양도일 환율로 대신 썼다
+  // (⑧ `stock-transfer-tax-validate-foreign.ts`는 요구한다 — 2026-09-30).
+  if (d.hasForeignTax && !((d.foreignTaxExchangeRate ?? 0) > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["foreignTaxExchangeRate"],
+      message: "외국납부세액 납세일 기준환율을 입력하세요 (소득세법 시행령 §178의5)",
+    });
+  }
+
+  // 납부지연가산세 — 법정납부기한이 경과일수 기산점(국세기본법 §47의4①1호). 비우면 엔진이 0.
+  if ((d.unpaidTax ?? 0) > 0 && !d.paymentDeadline) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["paymentDeadline"],
+      message: "납부지연가산세를 계산하려면 법정납부기한이 필요합니다 (국세기본법 §47의4①1호)",
+    });
+  }
+
   // ⑫ §94①3호다목 트랙 개시일 이전 양도 차단 (계획서 §6.5)
   //
   // 🔑 클라이언트 ⑧(`stock-transfer-tax-validate-foreign.ts`)과 **같은 술어**를 쓴다.

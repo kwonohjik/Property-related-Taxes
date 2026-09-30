@@ -10,6 +10,8 @@ import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { validateMixedUseExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateMixedUseInheritanceAsset } from "./transfer-tax-validate-mixed-use-inheritance";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
+import { mixedAcqCommercialBuildingStd } from "./transfer-tax-api-mixed-use";
+import { mixedAcqLandPricePerSqm } from "./transfer-tax-api-mixed-use";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export function validateMixedUseAsset(
@@ -88,6 +90,28 @@ export function validateMixedUseAsset(
       return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (주택분/상가분 안분 비율)`;
     }
   }
+  // 환산·신축·1985 전 상속·증여 경로 — 엔진이 취득시 기준시가로 주택분·상가분 취득가액을 만든다
+  // (`transfer-tax-mixed-use-helpers.ts` 주택분 `housingPrice ?? 0` · `-commercial.ts` 상가분 필수).
+  // 비우면 주택분 취득가액이 조용히 0이 되거나(세액 증가) 상가분에서 500이 났다(2026-09-30).
+  // 실거래가·감정·매매사례 매매는 위 블록이 이미 요구한다. ⑫ `mixedUseAssetSchema` superRefine이 거울이다.
+  const isPurchaseActualLike = asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition;
+  const isPostDeemedInheritOrGift =
+    (asset.acquisitionCause === "inheritance" || asset.acquisitionCause === "gift") &&
+    asset.acquisitionDate >= "1985-01-01";
+  if (
+    !isPurchaseActualLike &&
+    !isPostDeemedInheritOrGift &&
+    !asset.usePreHousingDisclosure &&
+    !(asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house") &&
+    parseAmount(asset.mixedAcqHousingPrice) <= 0
+  )
+    return `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분 환산취득가 분자 — 미공시 주택이면 §164⑦ 3-시점 환산을 켜세요)`;
+  if (
+    !isPurchaseActualLike &&
+    !(asset.usePreHousingDisclosure && isMixedUseCaseA(asset)) &&
+    (mixedAcqCommercialBuildingStd(asset) <= 0 || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
+  )
+    return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (상가분 취득가액 산정)`;
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   if (asset.usePreHousingDisclosure) {
     if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
@@ -96,6 +120,12 @@ export function validateMixedUseAsset(
       return `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`;
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+    // ④(`transfer-tax-api-mixed-use.ts`)는 아래 두 값이 없으면 PHD 객체를 빼고 보낸다 — 그러면 주택분
+    // 취득가액이 조용히 0이 되면서 결과는 PHD 경로로 표시됐다(2026-09-30).
+    if (parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
+      return `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`;
+    if (mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
+      return `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 토지등급가액 환산을 켜고 등급을 입력하세요 — 소득세법 시행령 §164④)`;
     // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
     // 메인 양도시 섹션에서 입력한 값(mixedTransferHousingPrice)도 인정.
     const transferHousingValue =

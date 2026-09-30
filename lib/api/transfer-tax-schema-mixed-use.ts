@@ -102,4 +102,38 @@ export const mixedUseAssetSchema = z.object({
   if (total <= 0) {
     ctx.addIssue({ code: "custom", message: "주택+상가 연면적 합계는 0보다 커야 합니다", path: ["residentialFloorArea"] });
   }
+  // ── 취득시 기준시가 (2026-09-30 Zod↔엔진 필수 점검 · ⑧ `transfer-tax-validate-mixed-use-asset.ts`) ──
+  // PHD 토글만 켜고 객체가 없으면 엔진은 PHD 없이 주택분 취득가액을 0으로 두고 결과는 PHD 경로로 표시했다.
+  if (v.usePreHousingDisclosure === true && !v.preHousingDisclosure) {
+    ctx.addIssue({ code: "custom", message: "usePreHousingDisclosure=true이면 preHousingDisclosure(3-시점 환산 입력)가 필요합니다", path: ["preHousingDisclosure"] });
+  }
+  const phd = v.usePreHousingDisclosure === true ? v.preHousingDisclosure : undefined;
+  // 주택분 환산 분자(`transfer-tax-mixed-use-helpers.ts` `housingPrice ?? 0`) — 실가·추계·상속·증여·PHD·상가→주택
+  // 용도변경은 다른 원천을 쓴다.
+  if (
+    !v.useActualAcquisition &&
+    !v.useAppraisalSalesAcquisition &&
+    !v.acquisitionByInheritance &&
+    !v.acquisitionByGift &&
+    !phd &&
+    v.partialUsageChange?.direction !== "commercial_to_house" &&
+    !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)
+  ) {
+    ctx.addIssue({ code: "custom", message: "겸용주택 환산 경로는 취득시 개별주택공시가격이 필요합니다", path: ["acquisitionStandardPrice", "housingPrice"] });
+  }
+  // 상가분 — 엔진(`transfer-tax-mixed-use-commercial.ts`)이 PHD 4부분 안분(Case A) 외에는 두 값을 요구하고
+  // 없으면 던졌다(500). 4부분 안분 게이트는 `transfer-tax-mixed-use-helpers.ts`와 같은 조건.
+  const fourPart =
+    !!phd &&
+    phd.commercialBuildingStdPriceAtAcq !== undefined &&
+    phd.commercialBuildingStdPriceAtFirstDisclosure !== undefined &&
+    (phd.totalTransferPriceForFourPart ?? 0) > 0 &&
+    !!v.partialUsageChange?.usageChangeDate &&
+    phd.firstDisclosureDate < v.partialUsageChange.usageChangeDate;
+  if (!fourPart) {
+    if (!(v.acquisitionStandardPrice.commercialBuildingPrice > 0))
+      ctx.addIssue({ code: "custom", message: "겸용주택은 취득시 상가건물 기준시가가 필요합니다", path: ["acquisitionStandardPrice", "commercialBuildingPrice"] });
+    if (!(v.acquisitionStandardPrice.landPricePerSqm > 0))
+      ctx.addIssue({ code: "custom", message: "겸용주택은 취득시 개별공시지가가 필요합니다", path: ["acquisitionStandardPrice", "landPricePerSqm"] });
+  }
 });

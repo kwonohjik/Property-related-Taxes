@@ -34,6 +34,8 @@ function form(o: Partial<StockTransferFormData> = {}): StockTransferFormData {
     acquisitionDate: "2022-01-01",
     priorYearEndDate: "2023-12-31",
     transferTotalPrice: "40,000,000",
+    // 실가 취득가액(폼 기본 입력 방식 = 합계) — ⑧·⑫ 필수(2026-09-30 — 비우면 엔진이 취득가액 0으로 읽었다)
+    acquisitionTotalPrice: "12,000,000",
     filingType: "final",
     preliminaryPaidTax: "3,000,000",
     preliminaryPaidLocalTax: "300,000",

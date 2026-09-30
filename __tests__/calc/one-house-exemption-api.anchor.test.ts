@@ -214,7 +214,8 @@ describe("P4-2b-1 — 계산기 leaf 재사용", () => {
 
   it("[LF-3] §155② 상속주택이 주택 수에서 빠져 비과세가 된다 (명부 → 제외 → 판정)", async () => {
     const { json } = await postForm(
-      baseForm({ houses: [house("h1", { isInherited: true })] }),
+      // 상속개시일은 필수(⑧·⑫) — 양도 주택(2019-06-01 취득)을 이미 보유한 뒤 상속받아야 §155②다.
+      baseForm({ houses: [house("h1", { isInherited: true, inheritedDate: "2020-01-01" })] }),
     );
     expect(json.data.houseCount.total).toBe(2);
     expect(json.data.houseCount.countedForExemption).toBe(1);

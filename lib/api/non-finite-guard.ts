@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 /**
  * 계산 응답 본문에서 **유한하지 않은 숫자(NaN·±Infinity)** 의 경로를 찾는다 (2026-09-29 E-14l).
  *
@@ -27,4 +29,17 @@ export function assertFiniteResponse(body: unknown): void {
   throw new Error(
     `계산 결과에 유효하지 않은 숫자(NaN·Infinity)가 ${bad.length}곳 있어 결과를 반환하지 않습니다: ${bad.slice(0, 3).join(", ")}`,
   );
+}
+
+/**
+ * 성공 응답을 만든다 — 본문에 NaN·Infinity가 있으면 `assertFiniteResponse`가 **던진다**.
+ * route는 이 호출을 **계산 `try` 블록 안에서** 해야 한다. 그래야 그 route의 `catch`가 자기 오류
+ * 형식으로 500을 낸다(2026-09-30 — 양도세 외 route 확장).
+ *
+ * 성공 응답을 `NextResponse.json`으로 직접 만들면 이 가드를 우회한다 —
+ * `__tests__/api/calc-routes.non-finite-guard.test.ts`가 route 소스에서 그것을 잡는다.
+ */
+export function finiteJson<T>(body: T, init?: ResponseInit): NextResponse<T> {
+  assertFiniteResponse(body);
+  return NextResponse.json(body, init);
 }

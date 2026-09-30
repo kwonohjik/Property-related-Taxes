@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { finiteJson } from "@/lib/api/non-finite-guard";
 import {
   giftSimultaneousRequestSchema,
 } from "@/lib/validators/property-valuation-input";
@@ -87,12 +88,12 @@ export async function POST(req: NextRequest) {
 
       // 건 0 = result, 건 1.. = simultaneousResults
       const [result, ...simultaneousResults] = results;
-      return NextResponse.json({ success: true, result, simultaneousResults });
+      return finiteJson({ success: true, result, simultaneousResults });
     }
 
     // 단건 경로 (하위 호환): calcGiftTaxWithDonorPaidTax
     const result = calcGiftTaxWithDonorPaidTax(baseInput);
-    return NextResponse.json({ success: true, result });
+    return finiteJson({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
       return NextResponse.json(

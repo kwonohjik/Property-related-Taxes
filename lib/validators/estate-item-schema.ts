@@ -332,6 +332,14 @@ export const financialItemSchema = baseItemSchema.extend({
   // 주입 필드 (injectSavingsAccrualIfAuto 또는 manual 직접 입력) — ⑫ silent strip 방지
   savingsAccruedInterest: z.number().nonnegative().optional(),
   savingsWithholdingTax: z.number().nonnegative().optional(),
+}).superRefine((v, ctx) => {
+  // §63④ 정밀평가 — 예입원금·예입일(auto) 필수. ⑧ `validateFinancialSavingsFields`와 같은 조건.
+  // 비우면 재산가액이 조용히 0(auto)·이자만(manual)이 됐다(2026-09-30).
+  const mode = v.savingsValuationMode ?? "balance";
+  if ((mode === "auto" || mode === "manual") && !((v.savingsPrincipal ?? 0) > 0))
+    ctx.addIssue({ code: "custom", path: ["savingsPrincipal"], message: "§63④ 정밀평가는 예입원금이 필요합니다" });
+  if (mode === "auto" && !v.savingsStartDate)
+    ctx.addIssue({ code: "custom", path: ["savingsStartDate"], message: "§63④ 자동 계산은 예입일(최초 납입일)이 필요합니다" });
 });
 
 export const depositItemSchema = baseItemSchema.extend({

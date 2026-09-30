@@ -141,62 +141,7 @@ export function addCompanionAcquisitionCauseRefines(
           message: "이월과세(증여) 자산은 증여 정보(carryoverTaxation) 필수",
         });
       } else {
-        // ⑧ (a) §97의2④ 가업상속공제 의제 취득가액 자산은 미지원
-        if (ct.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "exclusionDeclared"],
-            message: "가업상속공제 적용 자산은 지원하지 않습니다 (소득세법 §97조의2 ④)",
-          });
-        }
-        // ⑧ (b-3a) §97의2① 본문 — 대상은 배우자·직계존비속뿐
-        if (ct.donorRelation === "other") {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "donorRelation"],
-            message: "이월과세는 배우자 또는 직계존비속 증여만 대상입니다 (소득세법 §97조의2 ①)",
-          });
-        }
-        // ⑧ (b-3) 사망을 선언했으면 관계가 있어야 판정이 갈린다
-        if (ct.donorDeceased && !ct.donorRelation) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "donorRelation"],
-            message: "증여자 사망 선언 시 증여자와의 관계 필수 (소득세법 §97조의2 ①)",
-          });
-        }
-        // ⑧ (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도
-        // (YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. Zod가 형식을 이미 강제한다.)
-        if (ct.donorAcquisitionDate >= ct.giftRegistryDate) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "donorAcquisitionDate"],
-            message: "증여자 취득일은 증여 등기접수일보다 이전이어야 합니다",
-          });
-        }
-        if (ct.giftRegistryDate >= transferDate) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "giftRegistryDate"],
-            message: "증여 등기접수일은 양도일보다 이전이어야 합니다",
-          });
-        }
-        // ⑧ (c) §97의2②3호 비교과세 시나리오 B 취득가액
-        if (ct.giftDateValuation <= 0) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "giftDateValuation"],
-            message: "이월과세 자산은 증여 당시 평가액 필수",
-          });
-        }
-        // ⑧ (d) 환산 미사용 시 증여자 취득가액 직접 입력 필수
-        if (!ct.useEstimatedAcquisition && (!ct.donorAcquisitionPrice || ct.donorAcquisitionPrice <= 0)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["companionAssets", i, "carryoverTaxation", "donorAcquisitionPrice"],
-            message: "이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)",
-          });
-        }
+        refineCarryoverTaxation(ct, transferDate, ctx, ["companionAssets", i, "carryoverTaxation"]);
       }
     } else if (c.acquisitionCause === "inheritance") {
       // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
@@ -208,5 +153,83 @@ export function addCompanionAcquisitionCauseRefines(
         });
       }
     }
+  }
+}
+
+/**
+ * 이월과세(§97의2) 서브객체 필수·정합 검증 — 컴패니언 arm과 주 자산(`transfer-tax-schema-required-refines.ts`)이
+ * 공용한다(2026-09-30 — 종전엔 컴패니언에만 있어 주 자산은 비워도 200이었다).
+ * 필수 항목은 ⑧(`transfer-tax-validate-acquisition.ts` `carryover_gift` 분기)과 같은 기준이다.
+ */
+export function refineCarryoverTaxation(
+  ct: NonNullable<CompanionAsset["carryoverTaxation"]>,
+  /** 폼-전역 양도일 (YYYY-MM-DD) */
+  transferDate: string,
+  ctx: z.RefinementCtx,
+  /** `carryoverTaxation` 객체의 경로 */
+  path: (string | number)[],
+  /**
+   * 관계 「그 외」 거부 — 컴패니언만 켠다. 주 자산은 엔진이 §97의2① 관계요건 불충족으로 **미적용**을
+   * 판정한다(조용한 값 변경이 아니다 — `transfer.route.review-2026-08-f15` F15-6이 그 행동을 고정한다).
+   */
+  rejectOtherRelation = true,
+): void {
+  // 주 자산의 「그 외」 관계는 엔진이 이월과세를 적용하지 않는다 — 아래 증여자 기준 값은 쓰이지 않는다.
+  if (!rejectOtherRelation && ct.donorRelation === "other") return;
+  // ⑧ (a) §97의2④ 가업상속공제 의제 취득가액 자산은 미지원
+  if (ct.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "exclusionDeclared"],
+      message: "가업상속공제 적용 자산은 지원하지 않습니다 (소득세법 §97조의2 ④)",
+    });
+  }
+  // ⑧ (b-3a) §97의2① 본문 — 대상은 배우자·직계존비속뿐
+  if (rejectOtherRelation && ct.donorRelation === "other") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "donorRelation"],
+      message: "이월과세는 배우자 또는 직계존비속 증여만 대상입니다 (소득세법 §97조의2 ①)",
+    });
+  }
+  // ⑧ (b-3) 사망을 선언했으면 관계가 있어야 판정이 갈린다
+  if (ct.donorDeceased && !ct.donorRelation) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "donorRelation"],
+      message: "증여자 사망 선언 시 증여자와의 관계 필수 (소득세법 §97조의2 ①)",
+    });
+  }
+  // ⑧ (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도
+  // (YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. Zod가 형식을 이미 강제한다.)
+  if (ct.donorAcquisitionDate >= ct.giftRegistryDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "donorAcquisitionDate"],
+      message: "증여자 취득일은 증여 등기접수일보다 이전이어야 합니다",
+    });
+  }
+  if (ct.giftRegistryDate >= transferDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "giftRegistryDate"],
+      message: "증여 등기접수일은 양도일보다 이전이어야 합니다",
+    });
+  }
+  // ⑧ (c) §97의2②3호 비교과세 시나리오 B 취득가액
+  if (ct.giftDateValuation <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "giftDateValuation"],
+      message: "이월과세 자산은 증여 당시 평가액 필수",
+    });
+  }
+  // ⑧ (d) 환산 미사용 시 증여자 취득가액 직접 입력 필수
+  if (!ct.useEstimatedAcquisition && (!ct.donorAcquisitionPrice || ct.donorAcquisitionPrice <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "donorAcquisitionPrice"],
+      message: "이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)",
+    });
   }
 }

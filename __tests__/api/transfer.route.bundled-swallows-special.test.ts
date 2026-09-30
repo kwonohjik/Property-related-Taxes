@@ -274,16 +274,18 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(r.inBundled).toBe(false);
   });
 
-  it("🔴 일반건물 — 단건 필수 검증(zoneType)조차 함께양도에서는 타지 않는다", async () => {
-    // 분기 미실행의 **결정적 증거**: 단건이면 500으로 막히는 입력이 일괄에서는 200으로 통과한다.
+  it("🟢 일반건물 — 용도지역 누락은 이제 ⑫가 단건·함께양도 모두 400으로 막는다", async () => {
+    // 종전: 단건 500(엔진이 던짐) · 함께양도 200(분기 미실행 — 위 marker 테스트와 같은 증거).
+    // 2026-09-30 Zod↔엔진 필수 점검에서 ⑫ `generalBuildingValuationSchema`가 무허가 건물이 아니면
+    // 용도지역을 요구한다 — 분기 실행 여부와 무관하게 입구에서 막힌다. 분기 미실행 증거는 위 marker 테스트가 맡는다.
     const noZone = {
       ...GB,
       generalBuildingValuation: { ...GB.generalBuildingValuation, zoneType: undefined },
     };
     const single = await POST(req(noZone));
     const bundled = await POST(req({ ...noZone, ...COMPANION }));
-    expect(single.status).toBe(500);
-    expect(bundled.status).toBe(200);
+    expect(single.status).toBe(400);
+    expect(bundled.status).toBe(400);
   });
 
   it("상가·오피스텔 — 계산 정상 + 상세도 이제 일괄에 실린다 (R1-a)", async () => {
