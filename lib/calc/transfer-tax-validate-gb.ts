@@ -19,6 +19,7 @@ import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 // 800줄 정책 분리(2026-08-13) — 로직 이동만, 계약 불변.
 import { validateGbCarryover } from "./transfer-tax-validate-gb-carryover";
 import { validateGbSaleAxis } from "./transfer-tax-validate-gb-sale";
+import { validateGbDecedentDates, validateGbBundledAcquisitionPrice } from "./transfer-tax-validate-gb-required";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -84,7 +85,8 @@ export function validateGeneralBuildingAsset(
     // 용도지역 — 아래 일반 분기와 같은 요구(부담부증여 GB도 부수토지 배율 판정을 거친다). 비우면 엔진이 500.
     if (!asset.gbUnapprovedBuilding && !asset.gbZoneType)
       return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
-    return null; // 부담부증여는 환산/신축 분기 미적용 — 여기서 종결
+    // D1·D3 피상속인 취득일 — 날짜 축은 §159와 무관하게 보유기간에 소비된다(2026-09-30)
+    return validateGbDecedentDates(asset, label); // 부담부증여는 환산/신축 분기 미적용 — 여기서 종결
   }
 
   // 면적 — 모드 무관 필수
@@ -188,6 +190,8 @@ export function validateGeneralBuildingAsset(
     if (isLandInherited !== isBuildingInherited && !isSeparate) {
       return `${label}: 토지·건물 중 한쪽만 상속으로 취득했다면 「토지·건물 취득일 다름」을 켜고 파트별로 입력하세요. (상속분은 상속개시일 평가액, 나머지는 그 파트의 실지거래가액)`;
     }
+    const decedentIssue = validateGbDecedentDates(asset, label); // D1·D3 (2026-09-30) — 화면 순서: 날짜 → 평가액
+    if (decedentIssue) return decedentIssue;
     /**
      * V3·V4 상속개시일 평가액 — **상속 파트만** 요구한다(Phase 2에서 파트별로 정정).
      * 자동 안분 fallback 금지(mirror-pattern·API 변환과 동일 소스).
@@ -294,6 +298,8 @@ export function validateGeneralBuildingAsset(
       }
     }
   }
+  const bundledIssue = validateGbBundledAcquisitionPrice(asset, label, landMode, buildingMode); // I3′ (2026-09-30)
+  if (bundledIssue) return bundledIssue;
 
   // ── 파트별 취득 입력 검증 (2026-08-05 P6) ─────────────────────────────
   // 계획서 §3.5. `isSeparate`·`landMode`·`buildingMode`는 상속·증여 게이트가 쓰도록

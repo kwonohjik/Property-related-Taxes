@@ -130,6 +130,8 @@ export interface GeneralBuildingActualPricePayload {
   buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /** 상속 시 피상속인 취득일 (영 §95④). */
   decedentAcquisitionDate?: Date;
+  /** 건물 전용 피상속인 취득일 — 비면 `decedentAcquisitionDate` (환산 경로와 같은 fallback · D3 2026-09-30) */
+  buildingDecedentAcquisitionDate?: Date;
   /** 증여 시 증여자 취득일 (영 §95④). */
   donorAcquisitionDate?: Date;
   /**
@@ -223,7 +225,7 @@ export function buildActualGeneralBuildingCards(
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue,
-    landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate,
+    landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate, buildingDecedentAcquisitionDate,
     landAcquisitionDate, buildingAcquisitionDate, buildingAcquisitionCause,
     landDirectExpenses, buildingDirectExpenses,
     landAcquisitionPrice, buildingAcquisitionPrice,
@@ -566,12 +568,13 @@ export function buildActualGeneralBuildingCards(
     } else {
       // 건물 카드 — 취득원인을 **항상** 싣는다(종전에는 상속만 실려 §104② 기산점 분기가 죽었다).
       // buildProperties(:158)가 `card.buildingAcquisitionCause`로 판독한다.
-      if (buildingAcquisitionByInheritance) {
-        // C1: 건물도 상속 — 피상속인 취득일(동일 피상속인 전제).
-        c.buildingAcquisitionCause = "inheritance";
-        if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
-      } else if (buildingAcquisitionCause) {
-        c.buildingAcquisitionCause = buildingAcquisitionCause;
+      const buildingCause = buildingAcquisitionByInheritance ? "inheritance" : buildingAcquisitionCause;
+      if (buildingCause) c.buildingAcquisitionCause = buildingCause;
+      if (buildingCause === "inheritance") {
+        // 🔴 D3(2026-09-30): 건물 전용 피상속인 취득일 우선 — 환산 경로(`general-building-valuation.ts`)와
+        //    같은 fallback. 종전에는 토지 값만 읽어 **건물만 상속**이면 날짜가 없었다(단기세율 — 94,061,000 → 126,269,000).
+        const bd = buildingDecedentAcquisitionDate ?? decedentAcquisitionDate;
+        if (bd) c.decedentAcquisitionDate = bd;
       }
     }
   }

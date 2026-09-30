@@ -117,6 +117,15 @@ export function normalizeLocalTaxZoneKey(zone: string): LocalTaxZoneKey | undefi
 }
 
 /**
+ * 입력으로 받는 용도지역 키 전부 — 정본 키 + 레거시 별칭(`normalizeLocalTaxZoneKey`가 받는 집합과 같다).
+ * ⑫ Zod가 `z.enum`으로 쓴다(자유 문자열이면 오타가 엔진까지 가서 던졌다 — 2026-09-30 Z3).
+ */
+export const LOCAL_TAX_ZONE_INPUT_KEYS = [
+  ...Object.keys(LOCAL_TAX_ZONE_AREA_MULTIPLIER),
+  ...Object.keys(ZONE_KEY_ALIAS),
+] as [string, ...string[]];
+
+/**
  * 용도지역별 적용배율 조회 — **전 세목 단일 진입점**.
  *
  * @returns 표 미등재 용도지역(세분 전 `residential` 등)은 `undefined`.

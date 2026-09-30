@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
+import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
 
 type Issue = (path: (string | number)[], message: string) => void;
@@ -163,6 +164,7 @@ export function refinePropertyRequiredInputs(
   refineHouseExclusionInputs(data.houses, ctx);
   refineBurdenedGiftInputs(data, ctx);
   refinePrimaryAcquisitionInputs(data, ctx);
+  refineGbPropertyRequired(data, ctx); // 일반건물 I1·I3·X1·Z4·Z5·C1~C4 (2차 점검)
   refineRequiredInputs2a(data, ctx); // §164⑨ EX · 분리취득 SP · 의제 전 상속 PD (2차 점검)
 }
 

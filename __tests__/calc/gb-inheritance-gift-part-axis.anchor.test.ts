@@ -67,6 +67,8 @@ const inherited = (over: Partial<AssetForm> = {}) =>
     gbBuildingAcquisitionCause: "inheritance",
     publishedValueAtInheritance: "300000000",
     gbBuildingInheritedValue: "100000000",
+    // 피상속인 취득일 — 일반건물 ⑧도 요구한다(2026-09-30 D1 · 종전 ⑧ 통과 → ⑫ 400 막다른 길)
+    decedentAcquisitionDate: "1990-01-01",
     ...over,
   } as Partial<AssetForm>);
 
