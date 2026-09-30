@@ -8,6 +8,7 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -291,8 +292,7 @@ export function buildRows(
   //   F4-1 검증으로 본 케이스는 차단되지만, 단독 모드(ratio=1.0)는 무영향이므로 안전한 방어 코드로 유지.
   const rawTotalPrice =
     transferPriceOverride ??
-    Number(formData?.contractTotalPrice || primary?.actualSalePrice || 0) ??
-    0;
+    parseAmount(formData?.contractTotalPrice || primary?.actualSalePrice || "0");
   const ownNum = parseFloat(primary?.ownershipNumerator || "100");
   const ownDen = parseFloat(primary?.ownershipDenominator || "100");
   const ownRatio =
