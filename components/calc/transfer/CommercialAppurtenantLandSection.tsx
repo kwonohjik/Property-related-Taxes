@@ -97,6 +97,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
       */}
       <FieldCard
         label="집합건물 전체 대지면적"
+        field="cbTotalLandArea"
         hint="건축물대장 총괄표제부의 대지면적. 위 환산 입력의 대지면적(해당 호 지분)과 다른 값입니다."
         unit="㎡"
       >
@@ -109,6 +110,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
 
       <FieldCard
         label="집합건물 전체 바닥면적"
+        field="cbTotalBuildingFootprintArea"
         hint="각 층 중 최대 바닥면적(지하 포함). 연면적·건축면적이 아닙니다."
         unit="㎡"
       >
@@ -131,6 +133,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         <>
           <FieldCard
             label="용도지역 (필수)"
+            field="cbZoneType"
             hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
           >
             <RadioCardGroup

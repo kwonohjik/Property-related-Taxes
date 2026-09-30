@@ -55,6 +55,7 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
 
       <FieldCard
         label="전기의 토지·건물 기준시가 합계액 (B)"
+        field="cbPrevStdPriceSum"
         unit="원"
         hint="취득 직전 고시분의 토지 기준시가 + 건물 기준시가 총액"
       >

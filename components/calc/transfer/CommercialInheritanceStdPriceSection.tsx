@@ -104,12 +104,14 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       {/* ② 건물 기준시가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="2" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
         {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
-          <Sec164_5ProvisoNotice
-            acquisitionDate={inheritanceDate}
-            checked={asset.cbAcqBuildingStdBy164_5}
-            onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
-            timePointLabel={`취득당시(${acqTimeLabel})`}
-          />
+          <div data-field="cbAcqBuildingStdBy164_5">
+            <Sec164_5ProvisoNotice
+              acquisitionDate={inheritanceDate}
+              checked={asset.cbAcqBuildingStdBy164_5}
+              onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+              timePointLabel={`취득당시(${acqTimeLabel})`}
+            />
+          </div>
         )}
         <FieldCard label={`취득시(${acqTimeLabel}) 건물 기준시가`} unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />

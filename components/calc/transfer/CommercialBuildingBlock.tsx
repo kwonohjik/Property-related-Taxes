@@ -237,6 +237,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard
                 label="양도시 ㎡당 호별고시가"
+                field="cbUnitPriceAtTransfer"
                 unit="원/㎡"
               >
                 <CurrencyInput
@@ -250,6 +251,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 최초고시(2005) 또는 취득시 — amber */}
             <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2">
               <FieldCard
+                field="cbUnitPriceAtFirstOrAcq"
                 label={isPreDisclosure
                   ? "최초고시(2005) ㎡당 호별고시가"
                   : "취득시 ㎡당 호별고시가"}
@@ -314,6 +316,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               )}
               <LandPriceLookupField
                 label="취득시 개별공시지가"
+                data-field="cbLandPricePerSqmAtAcq"
                 pricePerSqm={asset.cbLandPricePerSqmAtAcq || pre1990LandAtAcq}
                 onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
                 area={parseFloat(asset.cbLandArea || "0") || undefined}
@@ -336,6 +339,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 <p className="mb-1 text-caption font-medium text-amber-700">최초고시시(2005)</p>
                 <LandPriceLookupField
                   label="최초고시시(2005) 개별공시지가"
+                  data-field="cbLandPricePerSqmAtFirst"
                   pricePerSqm={asset.cbLandPricePerSqmAtFirst}
                   onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtFirst: v })}
                   area={parseFloat(asset.cbLandArea || "0") || undefined}
@@ -350,6 +354,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               <p className="mb-1 text-caption font-medium text-emerald-700">양도시</p>
               <LandPriceLookupField
                 label="양도시 개별공시지가"
+                data-field="cbLandPricePerSqmAtTransfer"
                 pricePerSqm={asset.cbLandPricePerSqmAtTransfer}
                 onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtTransfer: v })}
                 area={parseFloat(asset.cbLandArea || "0") || undefined}
@@ -389,15 +394,18 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               )
             )}
             {needs164_5 && (
-              <Sec164_5ProvisoNotice
-                acquisitionDate={asset.acquisitionDate}
-                checked={asset.cbAcqBuildingStdBy164_5}
-                onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
-              />
+              <div data-field="cbAcqBuildingStdBy164_5">
+                <Sec164_5ProvisoNotice
+                  acquisitionDate={asset.acquisitionDate}
+                  checked={asset.cbAcqBuildingStdBy164_5}
+                  onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+                />
+              </div>
             )}
             {/* 취득시 — amber */}
             <FieldCard
               label="취득시 건물 기준시가"
+              field="cbBuildingStdPriceAtAcq"
               unit="원"
               hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액"
             >
@@ -414,6 +422,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 최초고시시(2005) — amber */}
             <FieldCard
               label="최초고시시(2005) 건물 기준시가"
+              field="cbBuildingStdPriceAtFirst"
               unit="원"
             >
               <CurrencyInput
@@ -449,6 +458,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard
                 label="양도시 건물 기준시가"
+                field="cbBuildingStdPriceAtTransfer"
                 unit="원"
               >
                 <CurrencyInput

@@ -86,6 +86,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       {/* 취득당시 개별주택가격 (분자) */}
       <FieldCard
         label="취득당시 개별주택가격 (§166③ 분자)"
+        field="redevHousingStdPriceAtAcq"
         hint="취득일 직전 최근 공시된 개별주택가격 총액 (원). 취득일이 최초공시일 이전이면 최초공시 직후 가격 사용."
       >
         <CurrencyInput
@@ -99,6 +100,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       {/* 인가당시 개별주택가격 (분모) */}
       <FieldCard
         label="인가당시 개별주택가격 (§166③ 분모)"
+        field="redevHousingStdPriceAtApproval"
         hint="관리처분 인가일 직전 최근 공시된 개별주택가격 총액 (원). 인가일이 2013-10-23이면 2013-01-01 공시 가격."
       >
         <CurrencyInput

@@ -41,6 +41,9 @@ export interface ThreePointStandardPriceInputProps {
   fieldBuildingAtFirst?: string;
   fieldLandAtTransfer?: string;
   fieldBuildingAtTransfer?: string;
+  /** 같은 앵커 — Case A(asset-major) 상가건물 기준시가 칸 */
+  fieldCommercialBuildingAtAcq?: string;
+  fieldCommercialBuildingAtFirst?: string;
   // 취득시
   acquisitionDate: string;
   /**

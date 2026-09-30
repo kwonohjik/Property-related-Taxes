@@ -13,13 +13,14 @@ import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bri
 import { mixedAcqCommercialBuildingStd } from "./transfer-tax-api-mixed-use";
 import { mixedAcqLandPricePerSqm } from "./transfer-tax-api-mixed-use";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { fieldError } from "./transfer-tax-validate-field";
 
 export function validateMixedUseAsset(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
 ): string | null {
-  if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
+  if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 건물 취득일을 입력하세요.`);
   // 토지·건물 취득일 다름 토글 ON일 때만 토지 취득일 필수. OFF면 acquisitionDate로 폴백.
   // 상속·증여는 토지·건물 모두 상속개시일/증여일 = acquisitionDate 이며 별도 토지 취득일
   // 입력란이 없다(겸용 토글이 hasSeperate를 강제 ON 함). API가 acquisitionDate로 fallback
@@ -30,11 +31,11 @@ export function validateMixedUseAsset(
     asset.acquisitionCause !== "gift" &&
     !asset.landAcquisitionDate
   )
-    return `${label}: 토지 취득일을 입력하세요.`;
+    return fieldError("landAcquisitionDate", `${label}: 토지 취득일을 입력하세요.`);
   const areaErr = validateMixedUseAreas(asset, label, formTransferDate);
   if (areaErr) return areaErr;
   if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
-    return `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`;
+    return fieldError("mixedTransferHousingPrice", `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`);
   // ⑧ Validation fallback — UI 표시·API 변환이 mixedTransfer || phdLandPricePerSqmAtTransfer 로
   // fallback하므로(주택·상가 부수토지는 동일 필지 = 단가 공유) validate도 PHD 값을 인정한다.
   // 취득측 fallback 인정(아래 :403-408)과 대칭.
@@ -42,7 +43,7 @@ export function validateMixedUseAsset(
     parseAmount(asset.mixedTransferLandPricePerSqm) <= 0 &&
     parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0
   )
-    return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`;
+    return fieldError("mixedTransferLandPricePerSqm", `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`);
   // ⑧ §164⑨1호 겸용 공익수용 특례 — 수용 시 주택분·상가분 토지 보상 4필드 필수 (P7/D8).
   const mixedExprErr = validateMixedUseExprAsset(asset, label, formTransferDate);
   if (mixedExprErr) return mixedExprErr;
@@ -75,19 +76,25 @@ export function validateMixedUseAsset(
       ? parseAmount(asset.similarSalesValue)
       : parseAmount(asset.fixedAcquisitionPrice);
     if (totalValue <= 0) {
-      return isSalesCase
-        ? `${label}: 겸용주택 매매사례가액을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`
-        : `${label}: 겸용주택 ${basisLabel}을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`;
+      return fieldError(
+        isSalesCase ? "similarSalesValue" : "fixedAcquisitionPrice",
+        isSalesCase
+          ? `${label}: 겸용주택 매매사례가액을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`
+          : `${label}: 겸용주택 ${basisLabel}을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`,
+      );
     }
     // 취득시 기준시가(안분 비율) 필수 — 감정·매매사례는 개산공제(§163⑥) base로도 사용.
     if (!asset.mixedAcqHousingPrice || parseAmount(asset.mixedAcqHousingPrice) <= 0) {
-      return `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분/상가분 안분 비율)`;
+      return fieldError("mixedAcqHousingPrice", `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분/상가분 안분 비율)`);
     }
+    // 한 메시지가 두 칸을 묻는다 — 비어 있는 칸(건물 먼저)으로 보낸다.
+    const acqCommBuildingMissing =
+      !asset.mixedAcqCommercialBuildingPrice || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0;
     if (
-      (!asset.mixedAcqCommercialBuildingPrice || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0) ||
+      acqCommBuildingMissing ||
       (!asset.mixedAcqLandPricePerSqm || parseAmount(asset.mixedAcqLandPricePerSqm) <= 0)
     ) {
-      return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (주택분/상가분 안분 비율)`;
+      return fieldError(acqCommBuildingMissing ? "mixedAcqCommercialBuildingPrice" : "mixedAcqLandPricePerSqm", `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (주택분/상가분 안분 비율)`);
     }
   }
   // 환산·신축·1985 전 상속·증여 경로 — 엔진이 취득시 기준시가로 주택분·상가분 취득가액을 만든다
@@ -105,34 +112,35 @@ export function validateMixedUseAsset(
     !(asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house") &&
     parseAmount(asset.mixedAcqHousingPrice) <= 0
   )
-    return `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분 환산취득가 분자 — 미공시 주택이면 §164⑦ 3-시점 환산을 켜세요)`;
+    return fieldError("mixedAcqHousingPrice", `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분 환산취득가 분자 — 미공시 주택이면 §164⑦ 3-시점 환산을 켜세요)`);
+  const commStdMissing = mixedAcqCommercialBuildingStd(asset) <= 0;
   if (
     !isPurchaseActualLike &&
     !(asset.usePreHousingDisclosure && isMixedUseCaseA(asset)) &&
-    (mixedAcqCommercialBuildingStd(asset) <= 0 || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
+    (commStdMissing || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
   )
-    return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (상가분 취득가액 산정)`;
+    return fieldError(commStdMissing ? "mixedAcqCommercialBuildingPrice" : "mixedAcqLandPricePerSqm", `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (상가분 취득가액 산정)`);
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   if (asset.usePreHousingDisclosure) {
-    if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+    if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
     // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
     if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))
-      return `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`;
+      return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-      return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+      return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
     // ④(`transfer-tax-api-mixed-use.ts`)는 아래 두 값이 없으면 PHD 객체를 빼고 보낸다 — 그러면 주택분
     // 취득가액이 조용히 0이 되면서 결과는 PHD 경로로 표시됐다(2026-09-30).
     if (parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
-      return `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`;
+      return fieldError("phdLandPricePerSqmAtFirst", `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`);
     if (mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
-      return `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 토지등급가액 환산을 켜고 등급을 입력하세요 — 소득세법 시행령 §164④)`;
+      return fieldError("phdLandPricePerSqmAtAcq", `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 토지등급가액 환산을 켜고 등급을 입력하세요 — 소득세법 시행령 §164④)`);
     // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
     // 메인 양도시 섹션에서 입력한 값(mixedTransferHousingPrice)도 인정.
     const transferHousingValue =
       parseAmount(asset.phdTransferHousingPrice) ||
       parseAmount(asset.mixedTransferHousingPrice);
     if (transferHousingValue <= 0)
-      return `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`;
+      return fieldError("mixedTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`);
     // Case A 4부분 안분 — house_to_commercial + 최초공시일 < 용도변경일 시 상가건물 기준시가 별도 입력 필수
     // 판정은 정본 헬퍼 하나뿐이다 — 종전에는 ⑤ Legacy·⑧·④가 각자 표현식을 갖고 있었다.
     if (isMixedUseCaseA(asset)) {
@@ -142,28 +150,28 @@ export function validateMixedUseAsset(
         parseAmount(asset.phdCommercialBuildingStdPriceAtAcq) ||
         parseAmount(asset.mixedAcqCommercialBuildingPrice);
       if (acqCommercialBuildingValue <= 0) {
-        return `${label}: Case A 4부분 안분 — 취득시 상가건물 기준시가를 입력하세요. (홈택스 조회)`;
+        return fieldError("mixedAcqCommercialBuildingPrice", `${label}: Case A 4부분 안분 — 취득시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
       }
       if (!asset.phdCommercialBuildingStdPriceAtFirst || parseAmount(asset.phdCommercialBuildingStdPriceAtFirst) <= 0) {
-        return `${label}: Case A 4부분 안분 — 최초고시 상가건물 기준시가를 입력하세요. (홈택스 조회)`;
+        return fieldError("phdCommercialBuildingStdPriceAtFirst", `${label}: Case A 4부분 안분 — 최초고시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
       }
     }
   }
   // 보유 중 일부 용도변경 검증 (시행령 §166⑥ + 집행기준 99-164-10)
   if (asset.hasPartialUsageChange) {
     if (!asset.partialChangeDirection) {
-      return `${label}: 보유 중 일부 용도변경 — 취득시 자산 구성을 선택하세요.`;
+      return fieldError("partialChangeDirection", `${label}: 보유 중 일부 용도변경 — 취득시 자산 구성을 선택하세요.`);
     }
     if (asset.partialChangeAcqResidentialArea) {
       const v = parseFloat(asset.partialChangeAcqResidentialArea);
       if (!Number.isFinite(v) || v < 0) {
-        return `${label}: 취득시 주택 연면적이 잘못되었습니다.`;
+        return fieldError("partialChangeAcqResidentialArea", `${label}: 취득시 주택 연면적이 잘못되었습니다.`);
       }
     }
     if (asset.partialChangeAcqCommercialArea) {
       const v = parseFloat(asset.partialChangeAcqCommercialArea);
       if (!Number.isFinite(v) || v < 0) {
-        return `${label}: 취득시 상가 연면적이 잘못되었습니다.`;
+        return fieldError("partialChangeAcqCommercialArea", `${label}: 취득시 상가 연면적이 잘못되었습니다.`);
       }
     }
     // 주택→상가: 취득시 상가건물 기준시가·개별공시지가는 직접 입력 또는 PHD ① fallback으로 충족
@@ -179,7 +187,7 @@ export function validateMixedUseAsset(
           ? Math.floor((phdBuilding * nonResArea) / totalFloor)
           : 0;
       if (directBuilding <= 0 && autoBuilding <= 0) {
-        return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. PHD ① 전체 건물 기준시가 입력 시 자동 안분, 또는 직접 조회·입력해야 합니다.`;
+        return fieldError("mixedAcqCommercialBuildingPrice", `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. PHD ① 전체 건물 기준시가 입력 시 자동 안분, 또는 직접 조회·입력해야 합니다.`);
       }
       // 개별공시지가(상가): 직접 입력 / PHD ① 공시지가 / 1990.8.30. 이전 토지 환산(헬퍼) fallback
       const directLandPerSqm = parseAmount(asset.mixedAcqLandPricePerSqm);
@@ -187,18 +195,18 @@ export function validateMixedUseAsset(
       const pre1990LandPerSqm =
         derivePre1990PhdLandPricePerSqmAtAcq(asset, formTransferDate ?? "") ?? 0;
       if (directLandPerSqm <= 0 && phdLandPerSqm <= 0 && pre1990LandPerSqm <= 0) {
-        return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 개별공시지가(상가)를 입력하세요.`;
+        return fieldError("mixedAcqLandPricePerSqm", `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 개별공시지가(상가)를 입력하세요.`);
       }
     }
     // PHD ON + partialUsageChange ON 조합 시 용도변경일 필수
     // (Case A/B 분기 식별을 위해 firstDisclosureDate 와 비교 필요)
     if (asset.usePreHousingDisclosure) {
       if (!asset.partialChangeDate) {
-        return `${label}: 보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다. 시행령 §164⑤ 환산 산식이 최초공시일과 용도변경일의 선후 관계에 따라 달라집니다.`;
+        return fieldError("partialChangeDate", `${label}: 보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다. 시행령 §164⑤ 환산 산식이 최초공시일과 용도변경일의 선후 관계에 따라 달라집니다.`);
       }
       const ucDate = new Date(asset.partialChangeDate);
       if (Number.isNaN(ucDate.getTime())) {
-        return `${label}: 용도변경일 형식이 잘못되었습니다.`;
+        return fieldError("partialChangeDate", `${label}: 용도변경일 형식이 잘못되었습니다.`);
       }
     }
     // PHD 강제 변경 금지 (이슈 5) — 사용자 직전 상태 보존, 경고만 결과 카드에 표시

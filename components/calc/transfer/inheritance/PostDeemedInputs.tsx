@@ -162,6 +162,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ① 평가방법 선택 — 메모리 feedback_select_component 준수: SelectValue 단독 금지 */}
       <FieldCard
         label="상속세 신고 시 평가방법"
+        // 방법을 고르기 전에는 신고가액 칸이 없다 — 「평가액을 입력하세요」 오류는 여기로 온다
+        field={method ? undefined : "publishedValueAtInheritance"}
         required
         trailing={
           <LawArticleModal
@@ -211,6 +213,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           <CurrencyInput
             label=""
             hideUnit
+            data-field="publishedValueAtInheritance"
             value={asset.publishedValueAtInheritance}
             onChange={(v) => onChange({ publishedValueAtInheritance: v })}
             placeholder="신고가액 입력 (원)"

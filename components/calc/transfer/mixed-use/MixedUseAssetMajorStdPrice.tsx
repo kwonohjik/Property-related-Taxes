@@ -157,6 +157,7 @@ export function MixedUseAssetMajorStdPrice({
               <CurrencyInput
                 label=""
                 value={asset.mixedHousingInheritedValueOverride}
+                data-field="mixedHousingInheritedValueOverride"
                 onChange={(v) => onChange({ mixedHousingInheritedValueOverride: v })}
                 hint="시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
               />
@@ -179,6 +180,7 @@ export function MixedUseAssetMajorStdPrice({
               <CurrencyInput
                 label=""
                 value={asset.mixedHousingGiftValueOverride}
+                data-field="mixedHousingGiftValueOverride"
                 onChange={(v) => onChange({ mixedHousingGiftValueOverride: v })}
                 hint="증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
               />
@@ -236,6 +238,7 @@ export function MixedUseAssetMajorStdPrice({
               <StandardPriceInput
                 propertyKind="house_individual"
                 totalPrice={asset.mixedAcqHousingPrice}
+                data-field="mixedAcqHousingPrice"
                 onTotalPriceChange={(v) => onChange({ mixedAcqHousingPrice: v })}
                 jibun={asset.addressJibun || undefined}
                 referenceDate={acqReferenceDate}
@@ -253,6 +256,7 @@ export function MixedUseAssetMajorStdPrice({
             <StandardPriceInput
               propertyKind="house_individual"
               totalPrice={asset.mixedTransferHousingPrice}
+              data-field="mixedTransferHousingPrice"
               onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
               jibun={asset.addressJibun || undefined}
               referenceDate={transferDate}
@@ -283,6 +287,7 @@ export function MixedUseAssetMajorStdPrice({
             <CurrencyInput
               label=""
               value={asset.mixedCommercialInheritedValueOverride}
+              data-field="mixedCommercialInheritedValueOverride"
               onChange={(v) => onChange({ mixedCommercialInheritedValueOverride: v })}
               hint="미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
             />
@@ -306,6 +311,7 @@ export function MixedUseAssetMajorStdPrice({
             <CurrencyInput
               label=""
               value={asset.mixedCommercialGiftValueOverride}
+              data-field="mixedCommercialGiftValueOverride"
               onChange={(v) => onChange({ mixedCommercialGiftValueOverride: v })}
               hint="증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
             />
@@ -347,6 +353,7 @@ export function MixedUseAssetMajorStdPrice({
             <CurrencyInput
               label=""
               value={asset.mixedAcqCommercialBuildingPrice}
+              data-field="mixedAcqCommercialBuildingPrice"
               onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
               placeholder={`${acqLabel} 상가건물 기준시가 (필수)`}
               hideUnit
@@ -397,6 +404,7 @@ export function MixedUseAssetMajorStdPrice({
           <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
+            data-field="mixedAcqLandPricePerSqm"
             onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
             area={commercialLandArea > 0 ? commercialLandArea : undefined}
             referenceDate={acqLandReferenceDate}
@@ -409,6 +417,7 @@ export function MixedUseAssetMajorStdPrice({
           <p className="text-caption font-semibold text-emerald-700">양도시</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
+            data-field="mixedTransferLandPricePerSqm"
             onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
             area={commercialLandArea > 0 ? commercialLandArea : undefined}
             referenceDate={transferDate}

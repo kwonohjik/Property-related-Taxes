@@ -69,6 +69,11 @@ interface Props {
   /** 양도일 (YYYY-MM-DD) — 시행시기 가드용 */
   transferDate: string;
   onChange: (patch: Partial<AssetForm>) => void;
+  /**
+   * 일반건물 건물 파트 블록이면 "building" — 검증 오류 이동 앵커 키가 `buildingCarryover.*`가 된다
+   * (`transfer-tax-validate-gb-carryover.ts`가 파트별 객체를 가리킨다). 기본은 `carryover.*`.
+   */
+  part?: "land" | "building";
 }
 
 /** carryover 서브객체 패치 헬퍼 */
@@ -89,7 +94,8 @@ function patchExclusion(
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────────────
-export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
+export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land" }: Props) {
+  const isBuildingPart = part === "building";
   const c = asset.carryover ?? CARRYOVER_DEFAULTS;
 
   // 시행시기 가드: 양도일 < 2024-01-01 이면 증여자 자본적지출 비활성
@@ -153,7 +159,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여자 취득일"
-          field="carryover.donorAcquisitionDate"
+          field={isBuildingPart ? "buildingCarryover.donorAcquisitionDate" : "carryover.donorAcquisitionDate"}
           hint="보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)"
         >
           <DateInput
@@ -207,7 +213,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         {!c.useEstimatedAcquisition && (
           <FieldCard
             label="증여자 취득가액"
-            field="carryover.donorAcquisitionPrice"
+            field={isBuildingPart ? "buildingCarryover.donorAcquisitionPrice" : "carryover.donorAcquisitionPrice"}
             hint="증여자의 실제 취득가액 (매매계약서·상속세신고서 등 증빙 기준)"
           >
             <CurrencyInput
@@ -226,6 +232,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
             transferDate={transferDate}
             onCarryoverChange={(patch) => updateCarryover(patch)}
             onAssetChange={(patch) => onChange(patch)}
+            part={part}
           />
         )}
       </div>
@@ -323,7 +330,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여 당시 평가액"
-          field="carryover.giftDateValuation"
+          field={isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation"}
           hint="이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
         >
           <CurrencyInput

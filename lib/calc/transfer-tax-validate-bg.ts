@@ -30,6 +30,7 @@ import {
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
+import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -117,7 +118,7 @@ export function validateBurdenedGiftAsset(
   if (asset.acquisitionCause === "carryover_gift") {
     const missing = missingCoDonorBasisLabel(asset);
     if (missing) {
-      return `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`;
+      return fieldError(missing.field, `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing.label}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`);
     }
 
     /**
@@ -144,7 +145,7 @@ export function validateBurdenedGiftAsset(
 
   // (2) 평가 모드 선택 필수
   if (!asset.bgValuationMode) {
-    return `${label}: 부담부증여 평가 유형(상증법 기준시가·시가)을 선택하세요.`;
+    return fieldError("bgValuationMode", `${label}: 부담부증여 평가 유형(상증법 기준시가·시가)을 선택하세요.`);
   }
 
   // (3) 인수 채무 입력 필수
@@ -153,16 +154,16 @@ export function validateBurdenedGiftAsset(
   const assumedDebt = lending + mortgage;
   if (contractAssumedDebtTotal !== undefined) {
     if (contractAssumedDebtTotal <= 0) {
-      return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요. 여러 물건을 함께 부담부증여하는 경우 채무가 설정된 물건에만 입력하면 됩니다.`;
+      return fieldError("bgLendingDepositTotal", `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요. 여러 물건을 함께 부담부증여하는 경우 채무가 설정된 물건에만 입력하면 됩니다.`);
     }
   } else if (assumedDebt <= 0) {
-    return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`;
+    return fieldError("bgLendingDepositTotal", `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`);
   }
 
   // (4) 시가 모드 — 양도시 시가 + 취득가액 산정방식(K-4/K-5) + B/C>1 차단 (§100①·§159①1호 본문)
   if (asset.bgValuationMode === "sangjeungbeop_market") {
     if (!parseAmount(asset.bgMarketValueAtTransfer)) {
-      return `${label}: 부담부증여 시가 모드 — 양도시 시가 평가액을 입력하세요.`;
+      return fieldError("bgMarketValueAtTransfer", `${label}: 부담부증여 시가 모드 — 양도시 시가 평가액을 입력하세요.`);
     }
     /**
      * 취득가액 산정방식별 필수 입력 (H-5: bgMarketValueAtAcquisition 무조건 차단 제거)
@@ -181,20 +182,20 @@ export function validateBurdenedGiftAsset(
           !parseAmount(asset.bgActualAcquisitionLand) &&
           !parseAmount(asset.bgActualAcquisitionBuilding)
         ) {
-          return `${label}: 부담부증여 실지취득가액 안분 — 토지 또는 건물의 실지취득가액을 입력하세요 (§97①1호가목).`;
+          return fieldError("bgActualAcquisitionLand", `${label}: 부담부증여 실지취득가액 안분 — 토지 또는 건물의 실지취득가액을 입력하세요 (§97①1호가목).`);
         }
       } else if (asset.assetKind === "land") {
         if (!parseAmount(asset.bgActualAcquisitionLand)) {
-          return `${label}: 부담부증여 실지취득가액 안분 — 토지 실지취득가액을 입력하세요.`;
+          return fieldError("bgActualAcquisitionLand", `${label}: 부담부증여 실지취득가액 안분 — 토지 실지취득가액을 입력하세요.`);
         }
       } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
-        return `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`;
+        return fieldError("bgActualAcquisitionTotal", `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
       }
     } else if (acqMethod === "converted") {
       // 상속받은 자산(상속개시일 1985.1.1. 이후) — 영 §163⑨ 평가액이 가목이라 환산 불가(E-1 한계 G6 ·
       //   ⑤ 라디오와 같은 술어 · 증여세 부담부증여 경로와 같은 결론).
       if (isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset))) {
-        return `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`;
+        return fieldError("bgAcquisitionMethod", `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`);
       }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
       if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
@@ -207,7 +208,7 @@ export function validateBurdenedGiftAsset(
       }
     } else {
       // 미지정: 취득가액 산정방식 선택 강제 (시가 모드 입력 미완성 — collectStepIssues 단계 차단)
-      return `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`;
+      return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
     }
     // B/C > 1 차단 (C = bgMarketValueAtTransfer)
     //
@@ -230,7 +231,7 @@ export function validateBurdenedGiftAsset(
 
   // (5) Phase 3 — donorRelation 필수
   if (!asset.bgDonorRelation) {
-    return `${label}: 부담부증여 — 증여자-수증자 관계를 선택하세요 (상증법 §53 증여재산공제 산정).`;
+    return fieldError("bgDonorRelation", `${label}: 부담부증여 — 증여자-수증자 관계를 선택하세요 (상증법 §53 증여재산공제 산정).`);
   }
 
   // (5-b) 일반건물(general_building) 부담부증여 — §159①1호 환산용 취득시 기준시가 필수
@@ -238,10 +239,10 @@ export function validateBurdenedGiftAsset(
   // 사용자가 실거래가를 입력했더라도 취득시 기준시가가 산식 입력으로 필요.
   if (asset.assetKind === "general_building") {
     if (!parseAmount(asset.gbAcqLandPricePerSqm)) {
-      return `${label}: 부담부증여 — 취득시 토지 ㎡당 공시지가를 입력하세요 (소령 §159①1호 환산).`;
+      return fieldError("gbAcqLandPricePerSqm", `${label}: 부담부증여 — 취득시 토지 ㎡당 공시지가를 입력하세요 (소령 §159①1호 환산).`);
     }
     if (!parseAmount(asset.gbAcqBuildingValue)) {
-      return `${label}: 부담부증여 — 취득시 건물 기준시가를 입력하세요 (소령 §159①1호 환산).`;
+      return fieldError("gbAcqBuildingValue", `${label}: 부담부증여 — 취득시 건물 기준시가를 입력하세요 (소령 §159①1호 환산).`);
     }
   }
 
@@ -257,9 +258,9 @@ export function validateBurdenedGiftAsset(
    *    막힌다」가 된다. `general_building`은 (5-b)가 gb* 축으로 따로 검사한다.
    */
   if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
-    return asset.assetKind === "land"
+    return fieldError("standardPriceAtAcq", asset.assetKind === "land"
       ? `${label}: 부담부증여 기준시가 모드 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율입니다 (소득세법 시행령 제159조 제1항 제1호).`
-      : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`;
+      : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`);
   }
 
   /**
@@ -275,10 +276,10 @@ export function validateBurdenedGiftAsset(
    */
   if (asset.assetKind === "right_to_move_in") {
     if (deriveMemberRightsValue(asset) <= 0) {
-      return `${label}: 조합원입주권 증여재산 평가 — 조합원권리가액을 입력하세요 (상속세 및 증여세법 시행규칙 제16조 제3항 — 종전 토지·건축물 가격 × 비례율). 재개발 정보의 권리가액을 입력해 두면 그 값이 파생됩니다.`;
+      return fieldError("bgRightMemberRightsValue", `${label}: 조합원입주권 증여재산 평가 — 조합원권리가액을 입력하세요 (상속세 및 증여세법 시행규칙 제16조 제3항 — 종전 토지·건축물 가격 × 비례율). 재개발 정보의 권리가액을 입력해 두면 그 값이 파생됩니다.`);
     }
     if ((parseAmount(asset.bgActualAcquisitionTotal) || 0) <= 0) {
-      return `${label}: 조합원입주권 부담부증여 — 종전 부동산의 실지취득가액을 입력하세요. 증여재산 평가가 「소득세법 시행령」 제159조 제1항 제1호 괄호의 열거(상속세 및 증여세법 제61조 제1항·제2항·제5항 및 제66조)에 없는 같은 법 제61조 제3항이므로, 취득가액은 기준시가가 아니라 실지거래가액입니다 (소득세법 제97조 제1항 제1호 가목 · 시행령 제166조 제1항 제1호).`;
+      return fieldError("bgActualAcquisitionTotal", `${label}: 조합원입주권 부담부증여 — 종전 부동산의 실지취득가액을 입력하세요. 증여재산 평가가 「소득세법 시행령」 제159조 제1항 제1호 괄호의 열거(상속세 및 증여세법 제61조 제1항·제2항·제5항 및 제66조)에 없는 같은 법 제61조 제3항이므로, 취득가액은 기준시가가 아니라 실지거래가액입니다 (소득세법 제97조 제1항 제1호 가목 · 시행령 제166조 제1항 제1호).`);
     }
     /**
      * 🔴 자기일관 — 3항 합이 ④가 보내는 평가액 총액과 일치해야 한다.
@@ -304,18 +305,18 @@ export function validateBurdenedGiftAsset(
     const hasDate = !!row.giftDate;
     const amount = parseAmount(row.giftAmount) || 0;
     if (hasDate && amount <= 0) {
-      return `${label}: 사전증여 #${i + 1} — 증여일이 입력되었으나 증여재산가액이 0입니다. 가액을 입력하거나 행을 삭제하세요.`;
+      return fieldError(`bgPriorGifts.${i}.giftAmount`, `${label}: 사전증여 #${i + 1} — 증여일이 입력되었으나 증여재산가액이 0입니다. 가액을 입력하거나 행을 삭제하세요.`);
     }
     if (!hasDate && amount > 0) {
-      return `${label}: 사전증여 #${i + 1} — 증여재산가액이 입력되었으나 증여일이 비어있습니다.`;
+      return fieldError(`bgPriorGifts.${i}.giftDate`, `${label}: 사전증여 #${i + 1} — 증여재산가액이 입력되었으나 증여일이 비어있습니다.`);
     }
     // §58 Phase A — 유효 사전증여 행은 당시 산출세액·과세표준 입력 필수 (미입력 시 공제 누락·이중과세)
     if (hasDate && amount > 0) {
       if ((parseAmount(row.computedTax) || 0) <= 0) {
-        return `${label}: 사전증여 #${i + 1} — §58 기납부세액공제 적용을 위해 당시 산출세액을 입력하세요.`;
+        return fieldError(`bgPriorGifts.${i}.computedTax`, `${label}: 사전증여 #${i + 1} — §58 기납부세액공제 적용을 위해 당시 산출세액을 입력하세요.`);
       }
       if ((parseAmount(row.giftTaxBase) || 0) <= 0) {
-        return `${label}: 사전증여 #${i + 1} — §58 한도 산정을 위해 당시 과세표준을 입력하세요.`;
+        return fieldError(`bgPriorGifts.${i}.giftTaxBase`, `${label}: 사전증여 #${i + 1} — §58 한도 산정을 위해 당시 과세표준을 입력하세요.`);
       }
     }
   }
@@ -338,7 +339,7 @@ export function validateBurdenedGiftAsset(
  *
  * @returns 비어 있는 항목의 한국어 라벨 | null (전부 채워짐)
  */
-function missingCoDonorBasisLabel(asset: AssetForm): string | null {
+function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: IssueField } | null {
   const filled = (v: string | undefined) => v !== undefined && v.trim() !== "";
 
   // K-1~K-3(기준시가 모드) · K-5(환산) — 둘 다 취득시 기준시가 두 칸을 쓴다.
@@ -348,7 +349,12 @@ function missingCoDonorBasisLabel(asset: AssetForm): string | null {
     asset.bgAcquisitionMethod === "converted";
   if (needsStdPrice) {
     if (!filled(asset.bgCoDonorLandStdPriceAtAcq) || !filled(asset.bgCoDonorBuildingStdPriceAtAcq)) {
-      return "취득 당시 토지·건물 기준시가";
+      // 입력칸 이동 — 빈 쪽(토지 먼저)
+      const landEmpty = !filled(asset.bgCoDonorLandStdPriceAtAcq);
+      return {
+        label: "취득 당시 토지·건물 기준시가",
+        field: landEmpty ? "bgCoDonorLandStdPriceAtAcq" : "bgCoDonorBuildingStdPriceAtAcq",
+      };
     }
     return null;
   }
@@ -359,13 +365,22 @@ function missingCoDonorBasisLabel(asset: AssetForm): string | null {
       filled(asset.bgCoDonorActualAcquisitionLand) &&
       filled(asset.bgCoDonorActualAcquisitionBuilding);
     const hasTotal = filled(asset.bgCoDonorActualAcquisitionTotal);
-    if (!hasSplit && !hasTotal) return "실지취득가액(토지·건물 분리 또는 단일 총액)";
+    if (!hasSplit && !hasTotal) {
+      // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지 = 토지·건물 분리, 그 외 = 총액)
+      const splitUi = asset.assetKind === "general_building" || asset.assetKind === "land";
+      const landEmpty = !filled(asset.bgCoDonorActualAcquisitionLand);
+      return {
+        label: "실지취득가액(토지·건물 분리 또는 단일 총액)",
+        // 건물 칸은 일반건물에만 렌더된다 — 토지는 토지 칸
+        field: !splitUi ? "bgCoDonorActualAcquisitionTotal" : landEmpty || asset.assetKind === "land" ? "bgCoDonorActualAcquisitionLand" : "bgCoDonorActualAcquisitionBuilding",
+      };
+    }
     return null;
   }
 
   // legacy — 시가 모드인데 산정방식을 고르지 않은 경우.
   if (!filled(asset.bgCoDonorMarketValueAtAcquisition)) {
-    return "취득 당시 시가 평가액";
+    return { label: "취득 당시 시가 평가액", field: "bgCoDonorMarketValueAtAcquisition" };
   }
   return null;
 }

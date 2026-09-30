@@ -117,7 +117,7 @@ Phase 1 — 인프라 + 폼 전역 + 자산 공통
      → verify: 커버리지 게이트(D-8) 통과 · 대표 E2E
   4. 뮤테이션: field 제거 / data-field 제거 / 강제 펼침 1장 복귀 / focus 제거 → 각각 KILLED
 Phase 2 — 취득(acquisition 87) ✅ 83곳 부착(§7-2)
-Phase 3 — 자산 종류별(gb 55 · redev 45 · bg 27 · commercial 23 · mixed-use 22+)
+Phase 3 — 자산 종류별(gb 55 · redev 45 · bg 27 · commercial 23 · mixed-use 22+) ✅ 11파일 216곳 중 195곳 부착(§7-3)
 Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 ```
 
@@ -278,6 +278,87 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 
 ⇒ M2·M3·M5는 **정적 게이트가 구조적으로 못 잡는다**(「그 키의 앵커가 어딘가 있다」만 본다). 메시지별 E2E가 필요한 이유다.
 ⚠️ 하네스 함정 — 첫 실행에서 M1·M3의 E2E가 exit 1인데 요약이 비어 있었다. `-g "^키$"`의 `^`가 describe를 포함한 **전체 제목**과 맞지 않아 **0건 실행**이었다(가짜 KILLED). `--list`로 1건 선택을 확인한 패턴으로 재실행해 진짜 KILLED를 얻었다.
+
+## 7-3. Phase 3 실측 결과 — 자산 종류별 검증 (2026-09-30)
+
+브랜치·워크트리: `feat/transfer-validation-field-jump-p3` · `.claude/worktrees/transfer-field-jump-p3`. 자산 종류별 포크 에이전트 5개가 병렬로 작업하고(파일 소유 분리), 통합 검증·뮤테이션·결함 대조는 오케스트레이터가 했다.
+
+### 범위 (§4의 근사를 실측으로 보정)
+
+§4는 5개 파일만 적었으나 보조 파일(gb-carryover·gb-required·gb-sale, mixed-area·mixed-use-inheritance)과 승계조합원(`successor-right`)도 자산 종류별 분기라 포함했다 — **11파일 216곳**.
+
+| 영역 | 파일 | 부착 | 남김 | 케이스(skip) |
+|---|---|---|---|---|
+| 일반건물 | gb · gb-carryover · gb-required · gb-sale | 70 | 3 | 75 (4) |
+| 재개발·승계 | redev · successor-right | 46 | 7 | 48 (8) |
+| 부담부증여 | bg | 23 | 5 | 24 (0) |
+| 상가 | commercial-asset | 24 | 0 | 27 (0) |
+| 겸용 | mixed-use-asset · mixed-area · mixed-use-inheritance | 32 | 6 | 37 (4) |
+| **계** | 11 | **195** | **21** | **211 (16)** |
+
+**남긴 21곳**(카드 후퇴) — 전부 조합 오류·미지원 안내·도달 불가 값:
+- 일반건물: `gb.ts` 양도시 기준시가 합계 0(앞 검사가 각각 >0을 요구해 도달 불가) · 분리 OFF 상속·증여 환산 차단(고칠 라디오가 화면에 없음 — 아래 결함 G3) · `gb-carryover.ts` 파트 평가액 합 > 과세가액(조합)
+- 재개발: 양도 대상·인가 법령 근거(선택지 비활성)·출자 자산 종류(도달 불가 값) · 수령 단독 ↔ 청산금 방향(조합) · 승계 모드 미지원 3곳
+- 부담부증여: 미지원 자산 종류 · 이월과세 환산 불가(해결책 2가지) · 시가+환산 기준시가(입력칸 없음 — 결함 B2) · 채무 > 증여가액 · 입주권 평가 합계 불일치(조합)
+- 겸용: 추계·3-시점·일부 용도변경·공익수용 동시 사용 미지원 3곳 · 부수토지 합 ≠ 전체 토지(조합) · 상속·증여 × 일부 용도변경·공익수용 2곳
+
+**키 선택에서 판단이 들어간 곳**(대표):
+- 한 메시지가 두 칸을 물으면 **비어 있는 칸**으로(겸용 「취득시 상가건물 기준시가와 개별공시지가」 · 부담부증여 당초 증여자 기준시가·실지취득가액 — 보조 함수가 `{ label, field }`를 돌려주게 바꿨다, 호출처 1곳·문구 불변).
+- 「실거래가를 선택하세요」류는 모드 라디오(`useEstimatedAcquisition`·`bgAcquisitionMethod`), 「조합원 유형을 바꾸세요」는 `isSuccessorRightToMoveIn`, 「취득 원인을 증여로」는 원인 라디오(일반건물 건물 파트는 `gbBuildingAcquisitionCause`).
+- 일반건물 이월과세는 파트별 객체 — 토지 `carryover.*` · 건물 `buildingCarryover.*`(`fieldError(cond ? "a" : "b", …)`).
+
+### 인프라 변경
+
+- 정적 게이트: `fieldError(조건 ? "a" : "b", …)` · `(data-)field={조건 ? "a" : "b"}`도 읽는다.
+- 공용 위젯 전달 prop 추가: `LandPriceLookupField`(`data-field` = ㎡당 공시지가 칸) · `ThreePointStandardPriceInput`(`fieldCommercialBuildingAt*`) · `ThreePointAssetMajorRender`(Case A 경로 — `PointBlock`을 거치지 않는다) · `CarryoverGiftBlock`/`CarryoverEstimationSection`(`part="building"` → `buildingCarryover.*`) · `CompanionAcq*`(`fieldAcquisitionDate` — 일반건물 분리 모드 토지 카드가 `landAcquisitionDate`를 넘긴다. 없으면 건물 취득일 오류가 토지 날짜로 가도 E2E가 통과했다).
+- 케이스 `prepare?(page)` 훅 — 시드로 만들 수 없고 화면 조작으로만 도달하는 상태(승계 입주권 감정가액·매매사례 — 결함 R1)를 재현.
+- **동적 키** — 재개발 거주기간 3곳은 반복문 배열의 `startField`·`endField`라 정적 게이트가 못 읽는다. 메시지별 E2E가 유일한 안전망이다(P3-M4).
+
+### 🔴 별건 발견 — 막다른 오류·입력 유실 7건 (이 PR은 고치지 않는다)
+
+서브에이전트 실측 보고를 오케스트레이터가 **코드로 재확인**했다(✅ = 줄 단위 대조 완료).
+
+| # | 증상 | 근거 |
+|---|---|---|
+| G1 ✅ | 일반건물 **건물만** 이월과세 — 「증여 등기접수일」을 넣어도 계속 막힌다 | 건물 카드는 `buildingCarryover`에 쓰고(`GeneralBuildingAcquisitionCardsParts.tsx:229-234`) 검증은 `carryover.giftRegistryDate`를 읽는다(`gb-carryover.ts:63`). E2E: 입력 후 저장값 `carryover:""` · `building:"2020-01-01"` |
+| G2 | 고시 전 상속·증여 건물의 「취득시 건물기준시가」 칸이 실거래가·일괄가액·자본적지출 없으면 없다 | 유일한 입력 `GeneralBuildingBlock`이 `showAcqStdPrice`일 때만 렌더(`:241`·`:413`) — 앵커 0 실측 |
+| G3 | 분리 OFF 상속·증여에 환산 플래그가 남으면 「실거래가를 선택하세요」인데 라디오가 없다 | 상속·증여 카드는 매매 블록을 그리지 않는다. 세션 시드로 실측, 화면 조작 경로는 코드로만 확인 |
+| B1 | 토지 + 이월과세 + 부담부증여 시가·실지취득가액 — 영구 차단 | 검증은 토지·건물 분리 2칸 또는 총액을 요구, 토지 화면은 토지 칸 1개뿐(vitest probe) |
+| B2 ✅ | 주택·건물 부담부증여 「시가 + 환산취득가액」 — 기준시가 입력칸 없음 | 검증 `bg.ts` K-5가 `standardPriceAtTransfer`·`standardPriceAtAcq` 요구, 시가 모드는 두 칸을 숨긴다(E2E 전 섹션 펼침 probe) |
+| R1 ✅ | 승계조합원 입주권의 추계 모드(감정·매매사례)가 **새로고침하면 사라진다** | 마이그레이션이 모든 입주권의 `isAppraisalAcquisition`·`isSalesCaseAcquisition`을 지운다(`calc-wizard-asset-migrate.ts:391-395`) — 승계 라디오 `acqModePatch`가 바로 그 플래그를 쓴다(`SuccessorRightAcquisitionBlock.tsx:73-77`) |
+| R2 ✅ | 재개발 실거래가 모드에 이전 환산 입력(A·최초공시 단가)이 남으면 「최초공시일도 입력하세요」 막다른 오류 | `redev.ts:386-388` 검사가 모드를 보지 않는다 — 입력 섹션은 환산 모드에서만 렌더. 2026-08-26 P2-06은 신호 하나(`redevLandPricePerSqmAtAcq`)만 뺐다 — **같은 부류의 잔여** |
+
+추가 기록: 상속 상가 「상속세 신고가액」 칸은 평가방법을 고른 뒤에만 나타난다 — 결함은 아니고(입력 경로 있음), 평가방법 칸에 조건부 앵커를 달아 이동을 보완했다. 겸용 `mixed-use-asset.ts`의 2곳(`mixedTransferHousingPrice`·`mixedAcqLandPricePerSqm` 재검사)은 앞 검사가 같은 값을 먼저 요구해 **죽은 코드**다(키만 달고 케이스 없음).
+
+### V-2 (같은 메시지 충돌)
+
+전 메시지에 `${label}:` 접두(일반건물 파트는 「자산 토지:」·「자산 건물:」). 문구가 겹치는 곳은 **모두 같은 키**다 — 부담부증여 채무액(`gb.ts` ↔ `bg.ts` 문자열 완전 동일 → 둘 다 `bgLendingDepositTotal`) · 취득 검증과 같은 PHD 문구 3건 · 재개발 청산금 수령일 2곳. 「건물/토지 취득일」은 겸용·일반건물이 같은 문구지만 자산 하나는 한 분기만 탄다.
+⚠️ Phase 4: `clause-a` 「상속개시일 평가액」은 상가 검증과 같은 문구 — 달 때 같은 `publishedValueAtInheritance`로.
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| 케이스·게이트·수집기 vitest | 318/318 |
+| E2E `transfer-validation-field-jump.spec.ts` 전체(새 dev 서버) | **294 passed · 20 skipped · 0 failed · 0 flaky** (skip = Phase 1 1 + Phase 2 3 + Phase 3 16, 전부 사유 기재) |
+| tsc · eslint(변경 파일) | 0 · 에러 0 |
+| 800줄 | 최대 `CompanionAcqPurchaseBlock.tsx` 782 · `BurdenedGiftBlock.tsx` 790 (분리 트리거 미만) |
+
+**뮤테이션** — 전부 KILLED(`--list`로 선택 건수 확인 후 재시도 없이):
+
+| # | 뮤테이션 | 선택 | 결과 | 비고 |
+|---|---|---|---|---|
+| P3-M1 | `fieldError` 제거(일반건물 증축일) | 3 | 1 failed | 목표 케이스만 |
+| P3-M2 | 공용 `LandPriceLookupField` 전달 누락 | 5 | 5 failed | 정적 게이트 통과(호출부 리터럴 잔존) |
+| P3-M3 | 건물 이월과세 키 분기 제거(`part` 무시) | 5 | 3 failed | 나머지 2건은 `CarryoverEstimationSection` 쪽 앵커라 영향 없음 — 정상 |
+| P3-M4 | 동적 키(재개발 거주기간 입주일) 앵커 제거 | 3 | 2 failed · 1 skip | 정적 게이트가 **원래 못 보는** 키 |
+| P3-M5 | 케이스 `prepare` 훅 무시 | 2 | 2 failed | 승계 입주권 추계 2건 |
+
+영역 에이전트가 별도로 돌린 것: 겸용 asset-major 상가 칸 앵커 제거(2 KILLED) · 일반건물 건물 취득일 앵커 제거·토지 날짜 키 전달 제거(KILLED).
+
+**양도세 E2E 전체(118 spec)**: 590 passed · 20 skipped · 1 failed · 2 flaky(재시도 통과). 실패 `transfer-nbl-surcharge-amount.spec.ts:103`은 **기존 flake**다 — origin/master(`d8a5972c`) 대조 워크트리와 데운 서버에서 교차 실행해 **양쪽 모두 6회 중 2회 실패**(같은 비율). 이 spec은 hydration을 기다리지 않고 입력한다(`e2e/CLAUDE.md` §6). flaky 2건 중 `nbl-revenue-deemed-common`은 §6이 기록한 그 spec이다.
+
+**skip 16건 사유**: 음수 금액·음수 개월 수(`CurrencyInput`·`DecimalInput`이 「-」를 지운다) · 형식이 틀린 날짜(`DateInput` clamp) · 세션 복원이 되돌리는 상태(일반건물 M-2·M-2b·`setUnifiedCause`·`migrateCarryoverFields`) · 폐지 필드(겸용 `phdCommercialBuildingStdPriceAtAcq`).
 
 ## 8. 실행 함정 (선행 PR에서 밟은 것 — 반복 금지)
 

@@ -471,6 +471,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </label>
         <RadioCardGroup
           name="acqBasisMode"
+          data-field="useEstimatedAcquisition"
           tone="amber"
           /* 옵션 수 = 열 수. 종전 `length === 4 ? 4 : 3`은 일반건물이 3옵션일 때 맞았는데,
              2옵션으로 줄면서 오른쪽 1/3이 비고 카드가 좁아져 설명이 단어 중간에서 끊겼다

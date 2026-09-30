@@ -367,6 +367,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         <CurrencyInput
           label=""
           hideUnit
+          data-field="publishedValueAtInheritance"
           value={asset.publishedValueAtInheritance}
           onChange={(v) => onChange({ publishedValueAtInheritance: v })}
           placeholder="신고가액 입력 (원)"

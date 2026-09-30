@@ -102,6 +102,8 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
         startValue={asset.redevPriorResidenceStartDate}
         endValue={asset.redevPriorResidenceEndDate}
         monthsValue={asset.redevPriorHouseResidenceMonths}
+        fieldStart="redevPriorResidenceStartDate"
+        fieldEnd="redevPriorResidenceEndDate"
         onChangeStart={(v) => onChange(buildResidencePatch("prior", v, asset.redevPriorResidenceEndDate))}
         onChangeEnd={(v) => onChange(buildResidencePatch("prior", asset.redevPriorResidenceStartDate, v))}
       />
@@ -112,6 +114,8 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
         startValue={asset.redevNewResidenceStartDate}
         endValue={asset.redevNewResidenceEndDate}
         monthsValue={asset.redevNewHouseResidenceMonths}
+        fieldStart="redevNewResidenceStartDate"
+        fieldEnd="redevNewResidenceEndDate"
         onChangeStart={(v) => onChange(buildResidencePatch("new", v, asset.redevNewResidenceEndDate))}
         onChangeEnd={(v) => onChange(buildResidencePatch("new", asset.redevNewResidenceStartDate, v))}
       />
@@ -171,6 +175,8 @@ function ResidencePeriodGroup({
   monthsValue,
   onChangeStart,
   onChangeEnd,
+  fieldStart,
+  fieldEnd,
 }: {
   label: string;
   hint: string;
@@ -179,6 +185,9 @@ function ResidencePeriodGroup({
   monthsValue: string;
   onChangeStart: (v: string) => void;
   onChangeEnd: (v: string) => void;
+  /** 검증 오류 → 입력칸 이동 앵커 */
+  fieldStart: string;
+  fieldEnd: string;
 }) {
   const previewMonths = useMemo(() => computeResidenceMonths(startValue, endValue), [startValue, endValue]);
   const hasError = useMemo(() => {
@@ -203,10 +212,10 @@ function ResidencePeriodGroup({
         <p className="text-caption text-emerald-700">{hint}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <FieldCard label="입주일">
+        <FieldCard label="입주일" field={fieldStart}>
           <DateInput value={startValue} onChange={onChangeStart} />
         </FieldCard>
-        <FieldCard label="퇴거일">
+        <FieldCard label="퇴거일" field={fieldEnd}>
           <DateInput value={endValue} onChange={onChangeEnd} />
         </FieldCard>
       </div>

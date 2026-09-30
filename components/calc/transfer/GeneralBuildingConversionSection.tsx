@@ -137,6 +137,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
           }
         >
           <FieldCard
+            field="gbConversionDate"
             label="용도변경일"
             hint="건축물대장 용도변경 처리 완료일. 취득일 이후, 양도일 이전이어야 합니다."
           >
@@ -147,6 +148,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
           </FieldCard>
 
           <FieldCard
+            field="gbWasMultiHouseAtConversion"
             label="용도변경 당시 그 주택이 장기보유특별공제 대상에서 제외되는 중과 주택이었습니까?"
             hint={
               exclusionEra === false

@@ -9,6 +9,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * @param isBurdenedGiftGB 부담부증여 판정 — 호출부가 이미 도출한 값을 받는다.
@@ -32,7 +33,7 @@ export function validateGbSaleAxis(
    * 폐지했으므로 일자는 선택 입력이다. 「양쪽 모두」는 비율 산출의 **산술적 필요조건**이라 유지한다.
    */
   if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
-    return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
+    return fieldError(landApp <= 0 ? "landAppraisalAtTransfer" : "buildingAppraisalAtTransfer", `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`);
   }
 
   /**
@@ -58,7 +59,7 @@ export function validateGbSaleAxis(
     asset.gbHasExtension &&
     anyAppraisal
   ) {
-    return `${label}: 증축이 있는 건물에서는 감정평가가액으로 안분할 수 없습니다 — 감정평가가액은 토지·건물 두 값뿐이라 건물분을 본체와 증축분으로 다시 나눌 근거가 없습니다. 양도시 기준시가 비율로 안분됩니다.`;
+    return fieldError("saleSplitMode", `${label}: 증축이 있는 건물에서는 감정평가가액으로 안분할 수 없습니다 — 감정평가가액은 토지·건물 두 값뿐이라 건물분을 본체와 증축분으로 다시 나눌 근거가 없습니다. 양도시 기준시가 비율로 안분됩니다.`);
   }
 
   // ── 구분양도(§100②) — Phase 2 ────────────────────────────────────────────────
@@ -78,7 +79,7 @@ export function validateGbSaleAxis(
 
     // S-11 — 부담부증여는 §159가 채무비율로 자동 산정하므로 구분 기재가 성립하지 않는다.
     if (isBurdenedGiftGB && (landIn > 0 || buildingIn > 0)) {
-      return `${label}: 부담부증여는 양도가액을 인수 채무액 기준으로 자동 산정하므로 토지·건물 구분 기재를 쓸 수 없습니다 (소득세법 시행령 §159).`;
+      return fieldError("saleSplitMode", `${label}: 부담부증여는 양도가액을 인수 채무액 기준으로 자동 산정하므로 토지·건물 구분 기재를 쓸 수 없습니다 (소득세법 시행령 §159).`);
     }
 
     /**
@@ -92,7 +93,7 @@ export function validateGbSaleAxis(
     // R-5 — §166⑧ 예외는 30% 의제를 면제해 **세액을 바꾼다**. 근거 없이 켤 수 있으면
     // 가드를 무력화하는 스위치가 된다(split V9와 같은 규칙).
     if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
-      return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
+      return fieldError("saleSplitExemptionNote", `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`);
     }
   }
 

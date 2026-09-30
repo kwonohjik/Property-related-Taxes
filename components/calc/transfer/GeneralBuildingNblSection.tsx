@@ -99,6 +99,7 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             <>
               {/* 용도지역 */}
               <FieldCard
+                field="gbZoneType"
                 label="용도지역 (필수)"
                 hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
               >

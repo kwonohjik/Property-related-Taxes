@@ -128,7 +128,7 @@ export function SaleAppraisalFields({ asset, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="토지 감정평가가액">
+        <FieldCard field="landAppraisalAtTransfer" label="토지 감정평가가액">
           <CurrencyInput
             label=""
             value={asset.landAppraisalAtTransfer}
@@ -136,7 +136,7 @@ export function SaleAppraisalFields({ asset, onChange }: Props) {
             data-testid="sale-appraisal-land"
           />
         </FieldCard>
-        <FieldCard label="건물 감정평가가액">
+        <FieldCard field="buildingAppraisalAtTransfer" label="건물 감정평가가액">
           <CurrencyInput
             label=""
             value={asset.buildingAppraisalAtTransfer}
@@ -210,7 +210,7 @@ export function SaleSplitExemptionCard({ asset, onChange }: Props) {
           value={asset.saleSplitExemption as "other_law" | "demolished_land_only"}
           onChange={(v) => onChange({ saleSplitExemption: v })}
         />
-        <FieldCard label="근거">
+        <FieldCard field="saleSplitExemptionNote" label="근거">
           <input
             type="text"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

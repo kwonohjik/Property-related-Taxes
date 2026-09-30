@@ -78,6 +78,7 @@ export function SuccessorRightStdPriceSection({
 
       <FieldCard
         label="취득일까지 납입한 금액"
+        field="successorRightStdPaidAtAcq"
       >
         <CurrencyInput
           label=""
@@ -102,6 +103,7 @@ export function SuccessorRightStdPriceSection({
         <>
           <FieldCard
             label="양도일까지 납입한 금액"
+            field="successorRightStdPaidAtTransfer"
           >
             <CurrencyInput
               label=""

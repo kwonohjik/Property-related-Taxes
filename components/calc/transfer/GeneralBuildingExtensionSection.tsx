@@ -196,6 +196,7 @@ export function GeneralBuildingExtensionSection({
         >
           {/* 증축일 */}
           <FieldCard
+            field="gbExtensionDate"
             label="증축일"
             hint="건축물대장 사용승인일 또는 실제 사용일 (영 §162①4호)"
             trailing={<LawArticleModal legalBasis="소득세법 시행령 §162①" label="§162①4호 취득시기" />}
@@ -220,6 +221,7 @@ export function GeneralBuildingExtensionSection({
 
           {/* 증축분 취득방식 (실가/환산) — 원취득과 독립 선택 */}
           <FieldCard
+            field="gbExtensionAcquisitionMode"
             label="증축분 취득 방식"
           >
             <RadioCardGroup
@@ -268,6 +270,7 @@ export function GeneralBuildingExtensionSection({
 
               {/* 양도시 건물2 기준시가 */}
               <FieldCard
+                field="gbTransferExtensionBuildingStdPrice"
                 label="양도시 건물2 기준시가 총액"
                 unit="원"
                 hint="㎡당 단가가 아닌 총액입니다. 모르면 위 「증축분 2시점 기준시가 일괄 계산」으로 산정."
@@ -283,6 +286,7 @@ export function GeneralBuildingExtensionSection({
 
               {/* 취득시(증축시) 건물2 기준시가 */}
               <FieldCard
+                field="gbAcquisitionExtensionBuildingStdPrice"
                 label="취득시(증축시) 건물2 기준시가 총액"
                 unit="원"
                 hint="환산취득가 분자. ㎡당 단가가 아닌 총액입니다."
@@ -303,6 +307,7 @@ export function GeneralBuildingExtensionSection({
             <>
               {/* 양도시 건물2 기준시가 (실가 모드에서도 §166⑥ 안분 분모 구성에 필요) */}
               <FieldCard
+                field="gbTransferExtensionBuildingStdPrice"
                 label="양도시 건물2 기준시가 총액"
                 unit="원"
                 hint="§166⑥ 양도가액 안분 분모 계산에 필요합니다. 모르면 아래 계산기로 산정."
@@ -342,6 +347,7 @@ export function GeneralBuildingExtensionSection({
                   ③ 상단의 일괄 취득가액 안분 계산기가 다루지 않는 별도 슬롯이기 때문이다
                   (그 계산기는 `fixedAcquisitionPrice` = 토지+원건물 일괄만 산출한다). */}
               <FieldCard
+                field="gbExtensionActualAcquisitionPrice"
                 label="증축 실거래가"
                 unit="원"
                 hint={
@@ -380,7 +386,7 @@ export function GeneralBuildingExtensionSection({
           )}
 
           {/* 증축 취득원인 */}
-          <FieldCard label="증축 취득원인" hint="자가증축(신축자가건축)이 기본입니다. 타인에게 매수한 경우 매매 선택.">
+          <FieldCard field="gbExtensionAcquisitionCause" label="증축 취득원인" hint="자가증축(신축자가건축)이 기본입니다. 타인에게 매수한 경우 매매 선택.">
             <RadioCardGroup
               name={`gbExtensionAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"

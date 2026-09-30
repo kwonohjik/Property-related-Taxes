@@ -142,6 +142,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           <>
             <FieldCard
               label="승계취득가액"
+              field="successorRightAcqPrice"
               hint="조합원입주권을 양수하며 실제로 지급한 금액. 권리가액 상당액에 프리미엄을 지급했다면 포함합니다(객관적 입증자료 필요)."
             >
               <CurrencyInput
@@ -154,6 +155,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
 
             <FieldCard
               label="취득 후 납입 추가분담금"
+              field="successorRightAddedContribution"
               hint="승계취득 이후 조합원 분양계약에 따라 납입한 금액. 없으면 비워두세요. 받은 청산금이 있다면 아래 안내를 확인하세요."
             >
               <CurrencyInput
@@ -169,6 +171,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {mode === "salesCase" && (
           <FieldCard
             label="매매사례가액"
+            field="similarSalesValue"
           >
             <CurrencyInput
               label=""
@@ -182,6 +185,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {mode === "appraisal" && (
           <FieldCard
             label="감정가액"
+            field="fixedAcquisitionPrice"
             hint="취득일 전후 3개월 이내에 2 이상의 감정평가법인등이 평가한 가액의 평균액입니다(기준시가 10억 이하는 1개 가능)."
           >
             <CurrencyInput

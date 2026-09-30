@@ -183,6 +183,7 @@ export function RedevelopmentRightExemptionSection({
 
             <FieldCard
               label="인가일 기준 종전주택 거주 월수"
+              field="redevPriorHouseResidenceMonths"
               hint="개월 단위 정수. 보유 월수와 마찬가지로 인가일 이후 철거 전 사실상 주거용으로 사용·거주한 기간을 합산합니다 (사전-2019-법령해석재산-0739)."
             >
               <DecimalInput

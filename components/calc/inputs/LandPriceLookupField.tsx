@@ -64,6 +64,8 @@ export interface LandPriceLookupFieldProps {
    * 기본 placeholder("원/㎡")로는 셀렉터가 중복 매칭된다 — 필요할 때만 호출부가 부여한다.
    */
   pricePerSqmTestId?: string;
+  /** 검증 오류 → 입력칸 이동 앵커(`validation-jump.ts`) — ㎡당 공시지가 입력 칸에 단다 */
+  "data-field"?: string;
 }
 
 export function LandPriceLookupField({
@@ -80,6 +82,7 @@ export function LandPriceLookupField({
   hideLandStdPrice = false,
   landStdPriceTestId,
   pricePerSqmTestId,
+  "data-field": dataField,
 }: LandPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
   const [isManual, setIsManual] = useState(false);
@@ -221,6 +224,7 @@ export function LandPriceLookupField({
           placeholder={placeholder}
           hideUnit
           data-testid={pricePerSqmTestId}
+          data-field={dataField}
         />
       </FieldCard>
 

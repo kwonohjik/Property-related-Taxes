@@ -29,9 +29,11 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 양도일 — 의제분기 섹션의 환산 계산에 전달 */
   transferDate?: string;
+  /** 상속개시일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
+  fieldAcquisitionDate?: string;
 }
 
-export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: Props) {
+export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fieldAcquisitionDate = "acquisitionDate" }: Props) {
   // 겸용주택 모드: 취득가액은 §163⑨ 상속개시일 평가액을 ② 주택·③ 상가 기준시가 섹션에서
   // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
   // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
@@ -59,7 +61,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">상속개시일</label>
           <DateInput
-            data-field="acquisitionDate"
+            data-field={fieldAcquisitionDate}
             value={asset.acquisitionDate}
             onChange={(v) =>
               onChange({ acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v })

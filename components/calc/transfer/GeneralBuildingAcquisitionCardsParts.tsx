@@ -111,6 +111,7 @@ export function PartAcqModeField({
   return (
     <>
       <FieldCard
+        field={isLand ? "landAcqMode" : "buildingAcqMode"}
         label={`${label} 취득가액 산정 방식`}
         hint={
           isInheritedPart
@@ -134,6 +135,7 @@ export function PartAcqModeField({
           상속 파트는 위 주석대로 평가액이 정본이라 이 칸을 띄우지 않는다. */}
       {mode === "actual" && !isInheritedPart && (
         <FieldCard
+          field={isLand ? "landAcquisitionPrice" : "buildingAcquisitionPrice"}
           label={`${label} 취득가액`}
           unit="원"
           hint={`${label}에 귀속되는 실지거래가액 (소득세법 §97①1호). 별개 취득이라 총액에서 자동 계산되지 않습니다.`}
@@ -184,6 +186,7 @@ export function GbBuildingInheritedValueCard({
   return (
     <ToneCard tone="violet" title="상속개시일 건물 신고가액 (소득세법 시행령 §163⑨)">
       <CurrencyInput
+        data-field="gbBuildingInheritedValue"
         label="건물 평가액"
         value={asset.gbBuildingInheritedValue}
         onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
@@ -222,6 +225,7 @@ export function GbBuildingCarryoverCard({
         위 <strong>토지</strong> 블록에서 한 번만 입력합니다.
       </p>
       <CarryoverGiftBlock
+        part="building"
         asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
         transferDate={transferDate ?? ""}
         onChange={(patch) => {

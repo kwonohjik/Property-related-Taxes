@@ -360,6 +360,7 @@ export function GeneralBuildingBlock({
             {/* 최초공시주택가격 — §99-164-10 산식의 피승수. 토지·건물 어느 축도 아닌
                 **주택 단일 가격**이라 ①(토지)·②(건물) 어디에도 넣지 않고 여기 둔다. */}
             <FieldCard
+              field="gbFirstDisclosurePrice"
               label="최초공시주택가격"
               unit="원"
               hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)"
@@ -413,6 +414,7 @@ export function GeneralBuildingBlock({
             <div data-gb-stdprice="acq">
               <ToneCard tone="amber" title="취득시" noDark>
                 <LandPriceLookupField
+                  data-field="gbAcqLandPricePerSqm"
                   label="취득시 토지 공시지가"
                   pricePerSqm={asset.gbAcqLandPricePerSqm}
                   onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
@@ -436,6 +438,7 @@ export function GeneralBuildingBlock({
             <div data-gb-stdprice="first">
               <ToneCard tone="violet" title="최초공시시" noDark>
                 <LandPriceLookupField
+                  data-field="gbFirstDisclosureLandPricePerSqm"
                   label="최초공시시 토지 공시지가"
                   pricePerSqm={asset.gbFirstDisclosureLandPricePerSqm}
                   onPricePerSqmChange={(v) => onChange({ gbFirstDisclosureLandPricePerSqm: v })}
@@ -479,6 +482,7 @@ export function GeneralBuildingBlock({
           <div data-gb-stdprice="transfer">
             <ToneCard tone="emerald" title="양도시" noDark>
               <LandPriceLookupField
+                data-field="gbTransferLandPricePerSqm"
                 label="양도시 토지 공시지가"
                 pricePerSqm={asset.gbTransferLandPricePerSqm}
                 onPricePerSqmChange={(v) => onChange({ gbTransferLandPricePerSqm: v })}
@@ -564,6 +568,7 @@ export function GeneralBuildingBlock({
             <div data-gb-stdprice="acq">
               <ToneCard tone="amber" title="취득시" noDark>
                 <FieldCard
+                  field="gbAcqBuildingValue"
                   label={gbExtOn ? "취득시 원건물 기준시가" : "취득시 건물기준시가"}
                   unit="원"
                   hint={
@@ -592,6 +597,7 @@ export function GeneralBuildingBlock({
             <div data-gb-stdprice="first">
               <ToneCard tone="violet" title="최초공시시" noDark>
                 <FieldCard
+                  field="gbFirstDisclosureBuildingStdPrice"
                   label="최초공시시 건물 기준시가"
                   unit="원"
                   hint={
@@ -617,6 +623,7 @@ export function GeneralBuildingBlock({
             <ToneCard tone="emerald" title="양도시" noDark>
               {/* hint의 계산기 위치 안내는 실제 런처 위치를 따라간다 — 일괄이면 위, 아니면 아래. */}
               <FieldCard
+                field="gbTransferBuildingValue"
                 label={gbExtOn ? "양도시 원건물 기준시가" : "양도시 건물기준시가"}
                 unit="원"
                 hint={

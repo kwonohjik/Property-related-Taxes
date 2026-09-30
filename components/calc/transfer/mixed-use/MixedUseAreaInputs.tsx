@@ -212,7 +212,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 
         {/* 정착·전체토지 2열 한 행 */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
+          <div className="space-y-1" data-field="buildingFootprintArea">
             <label className="text-xs font-medium text-slate-700">건물 정착면적 (수평 투영, ㎡)</label>
             <DecimalInput
               value={asset.buildingFootprintArea}
@@ -224,7 +224,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
               unit="㎡"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1" data-field="mixedUseTotalLandArea">
             <label className="text-xs font-medium text-slate-700">전체 토지 면적 (㎡)</label>
             <DecimalInput
               value={asset.mixedUseTotalLandArea}
@@ -249,6 +249,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         >
           <FieldCard
             label="주택 연면적 (㎡)"
+            field="residentialFloorArea"
             stacked
             badge={floorDerived ? <AreaBadge manual={false} /> : undefined}
           >
@@ -261,6 +262,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           </FieldCard>
           <FieldCard
             label="상가 연면적 (㎡)"
+            field="nonResidentialFloorArea"
             stacked
             badge={floorDerived ? <AreaBadge manual={false} /> : undefined}
           >
@@ -274,6 +276,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 
           <FieldCard
             label="주택 정착면적 (㎡)"
+            field="mixedResidentialFootprintOverride"
             stacked
             badge={
               <AreaBadge
@@ -314,6 +317,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 
           <FieldCard
             label="주택 부수토지 (㎡)"
+            field="mixedResidentialLandAreaOverride"
             stacked
             badge={
               <AreaBadge
@@ -331,6 +335,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           </FieldCard>
           <FieldCard
             label="상가 부수토지 (㎡)"
+            field="mixedCommercialLandAreaOverride"
             stacked
             badge={
               <AreaBadge
@@ -384,6 +389,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         */}
         <FieldCard
           label="용도지역"
+          field="mixedZoneType"
           hint="미선택 시 종전과 같이 주거지역(수도권 3배 / 그 밖 5배)으로 계산합니다. 부수토지가 인정 면적을 넘을 수 있으면 반드시 선택하세요."
         >
           <RadioCardGroup

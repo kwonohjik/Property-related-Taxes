@@ -24,6 +24,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { fieldError } from "./transfer-tax-validate-field";
 // 술어·합산은 `transfer-successor-right.ts` 단일 소스 — ④ 변환·⑤ UI와 같은 함수를 쓴다.
 import { successorRightEstimationMode } from "./transfer-successor-right";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
@@ -40,7 +41,7 @@ import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 export function validateSuccessorRightAsset(asset: AssetForm, label: string): string | null {
   // ── 취득일 ──
   if (!asset.acquisitionDate) {
-    return `${label}: 조합원입주권 승계취득일을 입력하세요.`;
+    return fieldError("acquisitionDate", `${label}: 조합원입주권 승계취득일을 입력하세요.`);
   }
 
   /**
@@ -52,7 +53,7 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
     asset.redevApprovalDate &&
     new Date(asset.redevApprovalDate) > new Date(asset.acquisitionDate)
   ) {
-    return `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ① 기본정보의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`;
+    return fieldError("isSuccessorRightToMoveIn", `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ① 기본정보의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`);
   }
 
   /**
@@ -72,7 +73,7 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
   if (mode === "actual") {
     const acqPrice = parseAmount(asset.successorRightAcqPrice);
     if (acqPrice <= 0) {
-      return `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`;
+      return fieldError("successorRightAcqPrice", `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`);
     }
 
     /**
@@ -80,7 +81,7 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
      * 납입분이 없을 수 있다(자동 안분 fallback이 아니라 「없음」의 정상 표현).
      */
     if (parseAmount(asset.successorRightAddedContribution) < 0) {
-      return `${label}: 취득 후 납입한 추가분담금은 0 이상이어야 합니다.`;
+      return fieldError("successorRightAddedContribution", `${label}: 취득 후 납입한 추가분담금은 0 이상이어야 합니다.`);
     }
 
     return null;
@@ -98,13 +99,13 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
    * 취득했거나(=0) 납입 전 단계일 수 있어 각 칸을 개별 필수로 만들 근거가 없다.
    */
   if (successorRightStdPriceAtAcq(asset) <= 0) {
-    return `${label}: 추계 취득가액을 쓰려면 취득당시 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① — 조합원입주권의 §99①2호 가목 기준시가)`;
+    return fieldError("successorRightStdPaidAtAcq", `${label}: 추계 취득가액을 쓰려면 취득당시 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① — 조합원입주권의 §99①2호 가목 기준시가)`);
   }
 
   if (mode === "estimated") {
     // 환산 분모 — §176의2②2호의 「양도당시 기준시가」. 0이면 0으로 나눠 환산이 성립하지 않는다.
     if (successorRightStdPriceAtTransfer(asset) <= 0) {
-      return `${label}: 환산취득가액을 쓰려면 양도당시 기준시가(양도일까지 납입한 금액 + 양도일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① · §176의2②2호)`;
+      return fieldError("successorRightStdPaidAtTransfer", `${label}: 환산취득가액을 쓰려면 양도당시 기준시가(양도일까지 납입한 금액 + 양도일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① · §176의2②2호)`);
     }
     return null;
   }
@@ -112,14 +113,14 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
   if (mode === "appraisal") {
     // 감정가액은 기존 실가 입력 루틴과 같은 칸을 쓴다(`fixedAcquisitionPrice`) — ④ 변환과 동일 소스.
     if (parseAmount(asset.fixedAcquisitionPrice) <= 0) {
-      return `${label}: 감정가액을 입력하세요. (소득세법 시행령 §176의2③2호 — 취득일 전후 3개월 이내 2 이상의 감정평가법인등이 평가한 가액의 평균액)`;
+      return fieldError("fixedAcquisitionPrice", `${label}: 감정가액을 입력하세요. (소득세법 시행령 §176의2③2호 — 취득일 전후 3개월 이내 2 이상의 감정평가법인등이 평가한 가액의 평균액)`);
     }
     return null;
   }
 
   // salesCase
   if (parseAmount(asset.similarSalesValue) <= 0) {
-    return `${label}: 매매사례가액을 입력하세요. (소득세법 시행령 §176의2③1호 — 취득일 전후 3개월 이내 동일·유사 자산의 매매사례가액)`;
+    return fieldError("similarSalesValue", `${label}: 매매사례가액을 입력하세요. (소득세법 시행령 §176의2③1호 — 취득일 전후 3개월 이내 동일·유사 자산의 매매사례가액)`);
   }
 
   return null;

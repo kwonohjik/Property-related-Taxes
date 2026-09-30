@@ -56,6 +56,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
         </p>
         <CurrencyInput
           label="자본적 지출액 (원) — §97① 가목"
+          data-field="capitalExpenditure"
           value={asset.capitalExpenditure}
           onChange={(v) => onChange({ capitalExpenditure: v })}
           hint={
