@@ -51,6 +51,7 @@ import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggre
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
 import type { MixedUseCompanionContext } from "./bundled-split-helpers";
 import { reductionsForCard } from "./general-building-route-cards";
@@ -350,6 +351,11 @@ export function buildMixedUseCompanionItems(
      * (상가 카드의 주택 취급)이 카드 판정과 갈린다 ⇒ 종전 동작 유지(확인 필요 — 컴패니언 × §155② 별건).
      */
     inheritedHouseExclusion: undefined,
+    /**
+     * §89② 세대 사실(E-7) — **이 컴패니언 item에서** 고른다. 파트 카드의 비과세는 카드마다 도는 단건 엔진이 같은 item으로
+     * §89②를 판정하므로, 서브엔진(§154③ 본문 — 상가 카드의 주택 취급)도 같은 입력으로 판정해야 둘이 갈리지 않는다.
+     */
+    article89Clause2Facts: pickArticle89Clause2Facts(companionEngine),
     specialHouseExclusions: g.specialHouseExclusions,
     isOneHousehold: companionEngine.isOneHousehold ?? false,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,

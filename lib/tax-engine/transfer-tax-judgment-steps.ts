@@ -6,7 +6,7 @@
  * 모두 `workingInput`을 읽어 판정 결과를 내고, 그 결과로 파생 입력
  * (`effectiveInput`)을 만든다. 세액 계산 자체는 하지 않는다.
  */
-import { NBL, TRANSFER } from "./legal-codes";
+import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -25,6 +25,7 @@ import {
 } from "./transfer-tax-helpers";
 import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
+import { clause2BlocksSurchargeDeeming, clause2SurchargeDeemed } from "./transfer-tax-89-2-consequences";
 import { judgeRentalHousingEligibility } from "./transfer-tax-rental-housing-judge";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
@@ -96,7 +97,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
     { ...workingInput, householdHousingCount: count },
     presaleRightStartDate(parsedRates),
   );
-  if (clause2.status === "excluded" || clause2.status === "undetermined") return undefined;
+  if (clause2BlocksSurchargeDeeming(clause2)) return undefined;
 
   const deemed = resolveDeemedOneHouseBy155(
     { ...workingInput, householdHousingCount: count },
@@ -123,15 +124,8 @@ export function resolveSurchargeDeemedOneHouseDetail(
   if (qualifiesRentalResidenceDeeming(workingInput, parsedRates, generalHouseAcquisitionDate)) {
     return { basis: "long_term_rental_residence" };
   }
-  // §156의2⑤(대체주택)는 선언만으로 `exception_met`이고 요건은 E-5가 판정한다 — 여기서는 받지 않는다(확인 필요).
-  if (clause2.status === "exception_met" && clause2.exception && clause2.exception !== TRANSFER.REPLACEMENT_HOUSE_156_2_5) {
-    return {
-      basis: clause2.exception.includes("§156의3") ? "house_with_presale_right" : "house_with_redevelopment_right",
-      source: clause2.viaArticle ? `${clause2.exception}(${clause2.viaArticle} 준용)` : clause2.exception,
-      citedByOldClause1: clause2.byTimingClause === true && clause2.viaArticle === undefined,
-    };
-  }
-  return undefined;
+  // §156의2·§156의3 예외 충족 → `house_with_*_right`(겸용 단건 엔진과 같은 leaf — E-7). ⑤ 대체주택은 받지 않는다.
+  return clause2SurchargeDeemed(clause2);
 }
 
 /**

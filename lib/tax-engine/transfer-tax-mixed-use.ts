@@ -10,7 +10,7 @@
  */
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import { parseRatesFromMap } from "./transfer-tax-helpers";
+import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
@@ -83,6 +83,7 @@ export function calcMixedUseTransferTax(
   const steps: MixedUseStep[] = [];
 
   // 누진세율 brackets + 기본공제 한도 (DB 세율)
+  const parsedRates = parseRatesFromMap(rates);
   const {
     brackets,
     basicDeductionRules,
@@ -93,7 +94,7 @@ export function calcMixedUseTransferTax(
     regulatedAreaHistory,
     // F17-B — 조특법 §69 자경농지 감면 규칙(감면 계산이 요구한다).
     selfFarmingRules,
-  } = parseRatesFromMap(rates);
+  } = parsedRates;
 
   // ── §89①3호 1세대1주택 비과세 판정 (§154① 보유·거주 · 주택 수 제외 · §155 의제) — 800줄 정책 분리(E-14d) ──
   const {
@@ -102,11 +103,18 @@ export function calcMixedUseTransferTax(
     isOneHouseExempt,
     surchargeDeemedOneHouseBy155,
     surchargeDeemedOneHouseSource,
+    rightDeemingCitedByOldClause1,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
     houseCountExclusionDetails: mixedHouseCountExclusionDetails,
     specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
-  } = judgeMixedUseOneHouseExemption(asset, transferDate, oneHouseSpecialRules, warnings);
+  } = judgeMixedUseOneHouseExemption(
+    asset,
+    transferDate,
+    oneHouseSpecialRules,
+    warnings,
+    presaleRightStartDate(parsedRates),
+  );
 
   // ── 법 §104⑦ 다주택 중과 판정 ────────────────────────────────────────────────
   // 주택 수 산정·배제 주택·혼인합가 차감·한시 유예는 전부 정본
@@ -129,6 +137,8 @@ export function calcMixedUseTransferTax(
             // E-14d — §155②③(상속주택 + 일반주택) 경로(`inherited_general_house`)도 담는다.
             deemedOneHouseBy155: surchargeDeemedOneHouseBy155,
             deemedOneHouseSource: surchargeDeemedOneHouseSource,
+            // E-7 — §156의2·§156의3 의제의 구 §167의11①1호 인용 범위(단건 `runMultiHouseSurchargeStep`과 같은 값).
+            rightDeemingCitedByOldClause1,
             // E-14e — 구 §167의10①8호(2023.2.28. 전 양도분). 단건과 같은 leaf · 실제 소유 주택 수(조심2021중1803).
             oldClause8TemporaryTwoHouse: qualifiesOldClause8TemporaryTwoHouse({
               isOneHousehold: asset.multiHouse.isOneHousehold,

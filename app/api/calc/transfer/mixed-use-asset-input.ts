@@ -70,6 +70,12 @@ export interface MixedUseAssetInputSources {
    */
   inheritedHouseExclusion: MixedUseAssetInput["inheritedHouseExclusion"];
   specialHouseExclusions: TransferTaxInput["specialHouseExclusions"];
+  /**
+   * 「소득세법」 §89② 세대 사실(E-7) — `pickArticle89Clause2Facts`로 고른다.
+   * ⚠️ `engineInput`(날짜 Date 변환본) 또는 파트 카드의 컴패니언 item에서 고를 것 — 카드마다 도는 단건 엔진과
+   *    **같은 입력**이어야 서브엔진 판정(§154③ 본문 등)과 카드 판정이 갈리지 않는다.
+   */
+  article89Clause2Facts: MixedUseAssetInput["article89Clause2Facts"];
   isOneHousehold: boolean;
   /**
    * §155의3 상생임대주택 — 거주기간 제한 면제 (P5-c).
@@ -183,6 +189,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     householdHousingCountForExclusion: s.householdHousingCount,
     // ⑭ §155②③ 상속주택 제외 (E-14d) — 상속주택 행은 `multiHouse.houses`로 간다.
     inheritedHouseExclusion: s.inheritedHouseExclusion,
+    // ⑭ §89② 세대 사실 (E-7) — 명부 유무와 무관하게 권리 보유 세대를 판정한다.
+    article89Clause2Facts: s.article89Clause2Facts,
     // ⑭ §155④⑤ 합가 「먼저 양도」 — 중과 15호 ① 요소(D9).
     isFirstTransferredInMerge: s.isFirstTransferredInMerge,
     // ⑭ §97 시리즈 시한 기준일 (CB-05).
