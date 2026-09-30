@@ -42,6 +42,7 @@ import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
@@ -298,7 +299,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     acquisitionDate: parcelModeActive
       ? firstParcelAcqDate
       : primary.acquisitionCause === "carryover_gift"
-        ? (primary.acquisitionDate || primary.carryover?.giftRegistryDate || "")
+        ? carryoverAcquisitionDateFallback(primary) // 컴패니언과 같은 leaf (CP-5)
         : primary.acquisitionDate,
     // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary.assetContractDate || undefined,

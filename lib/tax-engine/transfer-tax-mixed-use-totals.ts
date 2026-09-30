@@ -8,6 +8,7 @@ import { calcReductions } from "./transfer-tax-reductions-calc";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { resolveUnpaidTax } from "./transfer-tax-unpaid-tax";
 import {
   calculateTransferTaxPenalty,
   type TransferTaxPenaltyResult,
@@ -459,10 +460,7 @@ function computeMixedUsePostTax(
           delayedPayment: input.delayedPaymentDetails
             ? {
                 ...input.delayedPaymentDetails,
-                unpaidTax:
-                  input.delayedPaymentDetails.unpaidTax === 0
-                    ? determinedTax
-                    : input.delayedPaymentDetails.unpaidTax,
+                unpaidTax: resolveUnpaidTax(input.delayedPaymentDetails, determinedTax),
               }
             : undefined,
         })

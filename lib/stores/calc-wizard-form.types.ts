@@ -435,6 +435,13 @@ export interface TransferFormData {
    */
   lateFilingNotified: boolean;
   unpaidTax: string;
+  /**
+   * PEN-C(2026-09-30) — 미납세액 산정 방식. `auto` = 결정세액 전액 미납 · `manual` = `unpaidTax` 그대로
+   * (**0 = 완납**). **부재는 값으로 판정**한다(0·빈칸 → auto, 양수 → manual) — 종전 저장 폼·이력의 의미
+   * 그대로다. 판정은 `effectiveUnpaidTaxMode`(`lib/calc/transfer-unpaid-tax-mode.ts`) 하나만 쓴다.
+   * 기본값을 두지 않는 것이 의도다 — 기본값 `auto`를 두면 병합 시 저장된 「값 입력」 폼이 자동으로 뒤집힌다.
+   */
+  unpaidTaxMode?: "auto" | "manual";
   paymentDeadline: string;
   actualPaymentDate: string;
 

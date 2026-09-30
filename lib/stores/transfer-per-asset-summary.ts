@@ -39,6 +39,7 @@ import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-s
 import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPeriodStdPrice } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -130,7 +131,7 @@ function isPlainLumpSumAsset(a: AssetForm): boolean {
     !a.isMixedUseHouse &&
     !isParcelMode(a) &&
     !a.hasSeperateLandAcquisitionDate &&
-    (a.selfOwns ?? "both") === "both" &&
+    (effectiveSelfOwns(a) ?? "both") === "both" &&
     a.transferType !== "burdened_gift" &&
     a.acquisitionCause !== "carryover_gift" &&
     !hasPre1990LandEstimation(a)

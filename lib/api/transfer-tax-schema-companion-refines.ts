@@ -10,6 +10,8 @@
 
 import { z } from "zod";
 import type { companionAssetSchema } from "./transfer-tax-schema-sub";
+// 의제취득일(1985.1.1.) — ⑧과 같은 상수(단일 소스)
+import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -130,8 +132,9 @@ export function addCompanionAcquisitionCauseRefines(
        *
        * 필수 항목은 ⑧(`lib/calc/transfer-tax-validate-asset.ts` `carryover_gift` 분기)과
        * **같은 기준**이다 — 어긋나면 「⑧ 통과 ↔ ⑩ 400」 모순이 된다(14지점 ⑧·⑩).
-       * ⚠️ **`acquisitionDate`는 요구하지 않는다** — ⑧이 이월과세 분기에서 일반 취득 검증을
-       *    건너뛰고(`return null`), ⑭도 미제공 시 주 자산 취득일로 대체하기 때문이다.
+       * ⚠️ **`acquisitionDate`는 이 arm이 아니라 `refineCompanionAcquisitionDate`가 요구한다**(CP-5, 2026-09-30).
+       *    ⑭의 「주 자산 취득일 대체」는 제거됐고, ④는 이월과세 컴패니언에 주 자산과 같은 helper
+       *    (`carryoverAcquisitionDateFallback`)로 증여 등기일을 싣는다 — 그래서 UI↔⑫ 모순이 없다.
        */
       const ct = c.carryoverTaxation;
       if (!ct) {
@@ -152,8 +155,87 @@ export function addCompanionAcquisitionCauseRefines(
           message: "상속 자산은 피상속인 취득일 필수",
         });
       }
+      refineCompanionInheritedValue(c, i, ctx);
+    } else if (c.acquisitionCause === "newConstruction") {
+      refineCompanionNewConstruction(c, i, ctx);
     }
+    refineCompanionAcquisitionDate(c, i, ctx);
   }
+}
+
+/**
+ * CP-1 (2026-09-30 2차 점검) — 컴패니언 상속: **①(상속 평가액) 또는 ②(§164④~⑦)** 필수.
+ *
+ * route는 컴패니언 상속 취득가액을 `inheritanceValuation`(①)으로, §163⑨ ②·의제 전 환산은
+ * `inheritedAcquisition`·`inheritedHouseValuation`·`commercialInheritanceValuation`(CP-3 — 주 자산과 같은 leaf)으로
+ * 만든다. 셋 다 없으면 **취득가액 0**으로 계산됐다(200 + 다른 세액).
+ *
+ * ⑧ 거울: `transfer-tax-validate-clause-a.ts` `postDeemedClauseARequiredError`(주택·토지·건물·분양권) ·
+ * `transfer-tax-validate-commercial-asset.ts` `validateCommercialInheritanceAsset`(상가) — post-deemed는
+ * ①·② 중 하나가 **필수**다(상증법 §60③ — 평가액이 「없는」 상태는 성립하지 않는다).
+ * ⚠️ **pre-deemed(1985.1.1. 前)는 요구하지 않는다** — ⑧은 「가목 확인 불가」 선언으로 ③(환산)을 통과시킨다
+ *    (`clauseADeclarationError`). 여기서 막으면 ⑧ 통과 ↔ ⑫ 400 막다른 길이 된다.
+ * 겸용·일반건물·재개발은 자기 서브객체가 취득가액을 만든다 — ⑧도 이 규칙을 걸지 않는다.
+ */
+const CLAUSE_A_KINDS = new Set(["housing", "land", "building", "presale_right", "commercial_building"]);
+function refineCompanionInheritedValue(c: CompanionAsset, i: number, ctx: z.RefinementCtx): void {
+  if (!CLAUSE_A_KINDS.has(c.assetKind)) return;
+  const baseDate = c.inheritanceValuation?.inheritanceDate ?? c.acquisitionDate;
+  if (baseDate && baseDate < DEEMED_ACQUISITION_DATE) return;
+  const clauseA1 = (c.inheritanceValuation?.publishedValueAtInheritance ?? 0) > 0;
+  // 구 API 계약(P2c 이전) — route가 `inheritanceValuation`이 없으면 `fixedAcquisitionPrice`를 그대로 취득가액으로
+  // 쓴다(`bundled-apportionment.ts` (2)). ④는 상속에 이 값을 싣지 않지만, 싣는 호출자는 명시 값을 준 것이다.
+  const legacyFixed = c.inheritanceValuation === undefined && (c.fixedAcquisitionPrice ?? 0) > 0;
+  const clauseA2 =
+    c.inheritedAcquisition !== undefined ||
+    c.inheritedHouseValuation !== undefined ||
+    c.commercialInheritanceValuation !== undefined;
+  if (clauseA1 || clauseA2 || legacyFixed) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["companionAssets", i, "inheritanceValuation"],
+    message:
+      "상속 자산은 상속개시일 평가액(inheritanceValuation.publishedValueAtInheritance) 또는 §164④~⑦ 기준시가(inheritedAcquisition 등)가 필요합니다 (소득세법 시행령 §163⑨ · 상증법 §60③)",
+  });
+}
+
+/**
+ * CP-2 — 컴패니언 신축(자가건축): 신축비용(취득가액) 필수. 비우면 취득가액 0으로 계산됐다.
+ * ⑧ 거울: `transfer-tax-validate-acquisition.ts` 신축 분기(「신축 비용(취득가액)을 입력하세요」).
+ * 겸용·일반건물·재개발은 ⑧이 그 분기 전에 자기 검증으로 빠진다 — 같은 제외.
+ */
+function refineCompanionNewConstruction(c: CompanionAsset, i: number, ctx: z.RefinementCtx): void {
+  if (c.mixedUse !== undefined || c.generalBuildingValuation !== undefined || c.redevelopment !== undefined) return;
+  if ((c.fixedAcquisitionPrice ?? 0) > 0) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["companionAssets", i, "fixedAcquisitionPrice"],
+    message: "신축(자가건축) 자산은 신축 비용(취득가액)이 필요합니다",
+  });
+}
+
+/**
+ * CP-4·5 — 컴패니언 취득일은 **모든 취득원인에서 필수**다.
+ *
+ * 🔴 종전에는 ⑭(`bundled-split-helpers.ts`)가 비어 있으면 **주 자산 취득일**로 대신 채웠다(C) — 다른 물건의
+ *    취득일로 보유기간·세율·장기보유공제가 계산됐다(200 + 다른 세액). 그 대체를 없애고 여기서 요구한다.
+ * ⑧은 모든 자산에 취득일을 요구한다(`validateAssetAcquisition` 공통 · 겸용·일반건물·재개발 전용 검증).
+ * 입력 칸이 없는 두 원인은 ④가 채운다 — 신축: 4시점 중 가장 이른 날(영 §162①4호) · 이월과세: 주 자산과
+ * **같은 규칙**(증여 등기접수일 — `carryoverAcquisitionDateFallback`). 매매·증여 arm은 위에서 이미 요구한다.
+ */
+function refineCompanionAcquisitionDate(c: CompanionAsset, i: number, ctx: z.RefinementCtx): void {
+  if (c.acquisitionDate) return;
+  const purchaseArmCovers =
+    c.acquisitionCause === "purchase" &&
+    c.burdenedGiftInfo === undefined &&
+    c.generalBuildingValuation === undefined &&
+    c.mixedUse === undefined;
+  if (purchaseArmCovers || c.acquisitionCause === "gift") return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["companionAssets", i, "acquisitionDate"],
+    message: "함께양도 자산은 취득일(상속개시일·사용승인일·증여 등기접수일 등)이 필요합니다",
+  });
 }
 
 /**

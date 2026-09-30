@@ -277,12 +277,20 @@ describe("E-14l · 일반건물 환산 경로 — 취득시 기준시가 누락 
     );
   });
 
-  it("E14L-P4 🟢 실가 경로(`actualPriceMode`)에는 이 요구를 걸지 않는다 — 판정은 그 경로의 것", async () => {
+  it("E14L-P4 🟢 실가 경로(`actualPriceMode`)에는 이 요구를 걸지 않는다 — 판정은 그 경로의 규칙(Z4·Z5 거울)", async () => {
     // 실가 경로는 자기 규칙(`requireAcqStd` — 「소득세법」 제100조 제2항)으로 판정한다.
     // Zod에서 막히면 400 + 이 필드 경로가 나온다 — 그렇지 않음을 본다.
+    // (2026-09-30 §4.3: 그 경로의 `TaxCalculationError(INVALID_INPUT)`도 이제 400이다 — 그래서 상태
+    //  코드가 아니라 「Zod 거부가 아니다」(Zod 메시지 아님)로 본다. 종전 단언 `not.toBe(400)`은 500 매핑을 고정했다.)
+    //
+    // 🔄 2026-09-30 Z4·Z5: 실가 경로의 그 자기 규칙(⑧ V-5b `needsGbActualAcqStdPrice`)이 이제 ⑫에도 거울로
+    //    걸린다 — 일괄 취득가액을 안분해야 하면 두 값을 요구한다. 그래서 400 + 이 경로는 **나오되**, 문구는
+    //    E-14l의 환산 경로 규칙이 아니라 실가 경로 규칙(§100② 취득 당시 기준시가)의 것이어야 한다.
+    //    (`transfer.route.zod-required-2-gb.anchor.test.ts` Z4·Z5가 긍정 짝 — 파트 두 칸이면 요구하지 않는다.)
     const r = await post(single({ ...V, actualPriceMode: true }));
-    expect(r.status).not.toBe(400);
-    expect(r.json.error?.fieldErrors?.[`generalBuildingValuation.${LAND_KEY}`]).toBeUndefined();
+    const msgs = r.json.error?.fieldErrors?.[`generalBuildingValuation.${LAND_KEY}`] ?? [];
+    expect(msgs.join()).toMatch(/토지·건물로 나누는 기준/);
+    expect(msgs).not.toContain("취득시 토지 공시지가를 입력하세요.");
   });
 });
 

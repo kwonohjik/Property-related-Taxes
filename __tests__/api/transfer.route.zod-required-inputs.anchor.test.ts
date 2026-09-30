@@ -431,9 +431,22 @@ describe("다건 — 단건과 같은 규칙", () => {
       "properties.0.landAcquisitionDate",
       multi,
     );
+    // 2026-09-30 SP-4: 🟢 짝에 취득시·양도시 기준시가를 보충했다 — 종전 본문은 기준시가가 없어 엔진이
+    // 분리 계산을 조용히 포기(selfOwns 무시)한 채 200이었다(⑧ V8·V7이 요구하는 값). 지금은 ⑫가 막는다.
     const ok = await multi({
       taxYear: 2024,
-      properties: [{ ...item, selfOwns: "land_only", landAcquisitionDate: "2003-01-15" }],
+      properties: [
+        {
+          ...item,
+          selfOwns: "land_only",
+          landAcquisitionDate: "2003-01-15",
+          standardPricePerSqmAtAcquisition: 100_000,
+          acquisitionArea: 1000,
+          standardPriceAtAcquisition: 200_000_000,
+          landStandardPriceAtTransfer: 300_000_000,
+          buildingStandardPriceAtTransfer: 100_000_000,
+        },
+      ],
       annualBasicDeductionUsed: 0,
     });
     expect(ok.status, JSON.stringify(ok.json.error)).toBe(200);

@@ -462,6 +462,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbFirstDisclosureLandStdPrice: "",
     gbFirstDisclosureBuildingStdPrice: "",
     gbBuildingInheritedValue: "",
+    gbBuildingDecedentAcquisitionDate: "",
     // ── 부담부증여 (소령 §159, Phase 2: 모든 propertyType 지원) ──
     transferType: "regular",
     bgValuationMode: "",

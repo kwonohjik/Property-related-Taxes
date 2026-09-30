@@ -17,16 +17,36 @@
  * `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면 드리프트다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE } from "@/lib/tax-engine/expropriation-scope";
 import {
-  isExprValuationEligibleAssetKind,
-  isAuctionEligibleAssetKind,
-  isHousingExprEligibleAssetKind,
-  isSplitLandExprEligibleAssetKind,
-  EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE,
-} from "@/lib/tax-engine/expropriation-scope";
+  type ExprGateFacts,
+  isExprPerSqmRequired,
+  exprAuctionGate,
+  isExprHousingTotalRequired,
+  exprSplitLandGate,
+  isExprMixedUseRequired,
+} from "./expropriation-required-gate";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
 
-/** 수용 + 양도일 게이트 (자산-수준 공통 축) */
+/**
+ * ⑧ 어댑터 — `AssetForm` → 게이트 사실. 판정은 `expropriation-required-gate.ts`가 한다
+ * (⑫ `lib/api/transfer-tax-schema-required-refines-2a.ts`와 **같은 술어** — 2026-09-30 EX-1~3).
+ */
+function exprFactsFromAsset(asset: AssetForm, formTransferDate: string | undefined): ExprGateFacts {
+  return {
+    assetKind: asset.assetKind,
+    isMixedUse: asset.assetKind === "housing" && !!asset.isMixedUseHouse,
+    transferCause: asset.transferCause,
+    transferDate: formTransferDate,
+    useEstimatedAcquisition: !!asset.useEstimatedAcquisition,
+    parcelMode: !!asset.parcelMode,
+    separateLandAcquisition: !!asset.hasSeperateLandAcquisitionDate,
+    usePreHousingDisclosure: !!asset.usePreHousingDisclosure,
+    isAuctionTransfer: !!asset.isAuctionTransfer,
+  };
+}
+
+/** 수용 + 양도일 게이트 (필지 축 — `validateExprValuationParcel` 전용) */
 function isExprValuationDateAndCauseOk(
   asset: AssetForm,
   formTransferDate: string | undefined,
@@ -47,14 +67,9 @@ export function validateExprValuationAsset(
   label: string,
   formTransferDate: string | undefined,
 ): string | null {
-  if (!isExprValuationEligibleAssetKind(asset.assetKind)) return null;
-  // 건물 split(토지·건물 취득일 분리)은 per-sqm 경로가 우회되고 UI도 per-sqm 블록을 숨긴다
-  // (`ExpropriationBlock.tsx` `showValuationMin = ... && !isSplitBuilding`) → per-sqm 필드를
-  // 요구하면 "UI 통과 ↔ validate 차단" 모순(숨겨진 필드 요구)이 된다. split 토지분 검증에 위임.
-  if (isSplitLandExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate) return null;
-  if (asset.parcelMode) return null; // 다필지 → 필지별 검증
-  if (!asset.useEstimatedAcquisition) return null;
-  if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
+  // 게이트 = `isExprPerSqmRequired` — 적격 자산 · 건물 split 제외(per-sqm 경로 우회 + UI가 블록을
+  // 숨김 → 요구하면 숨겨진 칸 요구) · 다필지 제외(필지별 검증) · 환산 · 수용 + 2009.02.04.
+  if (!isExprPerSqmRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.compensationPerSqm))
     return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
@@ -96,17 +111,13 @@ export function validateAuctionAsset(
   label: string,
   formTransferDate: string | undefined,
 ): string | null {
-  if (!asset.isAuctionTransfer) return null;
-  // N3 배타 — 1호(수용)와 동시 불가(§164⑨ "어느 하나"). 상태 무관 우선 차단.
-  if (asset.transferCause === "public_expropriation")
+  // 게이트 = `exprAuctionGate`. N3 배타 — 1호(수용)와 동시 불가(§164⑨ "어느 하나"), 상태 무관 우선 차단.
+  // A08: 다필지·분리취득은 §164⑨2호가 엔진에 도달하지 않으므로 값을 요구하지 않는다 — 요구해 놓고
+  // 무시하면 「차단됐다」가 아니라 「필수 입력을 버린다」가 된다.
+  const gate = exprAuctionGate(exprFactsFromAsset(asset, formTransferDate));
+  if (gate === "conflict")
     return `${label}: 공익수용(1호)과 공매·경락(2호) 특례는 동시에 적용할 수 없습니다(§164⑨ "어느 하나").`;
-  if (!isAuctionEligibleAssetKind(asset.assetKind)) return null;
-  if (!asset.useEstimatedAcquisition) return null;
-  // A08: ⑤ 노출 게이트와 **같은 술어**. 다필지·분리취득은 §164⑨2호가 엔진에 도달하지 않으므로
-  // 값을 요구하지 않는다 — 요구해 놓고 무시하면 「차단됐다」가 아니라 「필수 입력을 버린다」가 된다.
-  // 1호가 이미 같은 층위에서 `if (asset.parcelMode) return null;`을 쓴다.
-  if (asset.parcelMode || asset.hasSeperateLandAcquisitionDate) return null;
-  if (!formTransferDate || formTransferDate < MIN_TRANSFER_DATE) return null;
+  if (gate !== "required") return null;
 
   if (!parseAmount(asset.auctionPrice))
     return `${label}: 공매·경락 특례 — 공매·경락가액을 입력하세요.`;
@@ -122,16 +133,10 @@ export function validateHousingExprAsset(
   label: string,
   formTransferDate: string | undefined,
 ): string | null {
-  if (!isHousingExprEligibleAssetKind(asset.assetKind)) return null;
-  // 겸용주택은 `validateMixedUseExprAsset` 전담 — 여기서 처리 금지(방어적 제외).
-  if (asset.isMixedUseHouse) return null;
-  if (asset.parcelMode) return null;
-  // 주택 **regular** split(토지·건물 취득일 분리, 비-PHD)만 총액 트랙에서 제외 → §164⑨ 미지원(Q6),
-  // C-06b(`validateSplitLandExprAsset`)가 차단 메시지 담당. UI도 `showHousingTotal`에서 숨긴다.
-  // 주택 **PHD** split(§164⑦ 3시점 환산)은 총액 트랙을 정상 소비하므로(P6b/D15) 여기서 필드를 요구한다.
-  if (asset.hasSeperateLandAcquisitionDate && !asset.usePreHousingDisclosure) return null;
-  if (!asset.useEstimatedAcquisition) return null;
-  if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
+  // 게이트 = `isExprHousingTotalRequired`. 겸용은 `validateMixedUseExprAsset` 전담. 주택 **regular**
+  // split(비-PHD)은 총액 트랙에서 제외(§164⑨ 미지원 Q6 — C-06b가 차단 메시지 담당, UI도 숨김).
+  // 주택 **PHD** split(§164⑦ 3시점 환산)은 총액 트랙을 정상 소비하므로(P6b/D15) 필드를 요구한다.
+  if (!isExprHousingTotalRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.housingCompensationTotal))
     return `${label}: 주택 수용 환산 특례 — 보상액 총액을 입력하세요.`;
@@ -154,23 +159,15 @@ export function validateSplitLandExprAsset(
   formTransferDate: string | undefined,
   isNonPrimaryAsset = false,
 ): string | null {
-  // 겸용주택은 `validateMixedUseExprAsset` 전담 — 여기서 처리하면 안 된다. 겸용은 항상
-  // hasSeperateLandAcquisitionDate=true(MixedUseSection 강제)라 아래 C-06b 분기가 오발동해
-  // 겸용 수용을 "미지원"으로 잘못 차단한다(코드리뷰 2026-07-17). 겸용 제외 가드.
-  if (asset.assetKind === "housing" && asset.isMixedUseHouse) return null;
-  // split(토지·건물 취득일 분리) + 수용 + 환산 + 2009.02.04 조합에서만 판정
-  if (!asset.hasSeperateLandAcquisitionDate) return null;
-  if (asset.parcelMode) return null;
-  if (!asset.useEstimatedAcquisition) return null;
-  if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
+  // 게이트 = `exprSplitLandGate` — split + 다필지 아님 + 환산 + 수용 + 2009.02.04 조합에서만 판정.
+  // 겸용주택은 `validateMixedUseExprAsset` 전담(겸용은 항상 hasSeperateLandAcquisitionDate=true라
+  // 제외하지 않으면 C-06b가 오발동해 겸용 수용을 "미지원"으로 잘못 차단한다 — 코드리뷰 2026-07-17).
+  const gate = exprSplitLandGate(exprFactsFromAsset(asset, formTransferDate), isNonPrimaryAsset);
 
   // C-06b — 주택 regular split(비-PHD)은 미지원. 총액 미분해로 §164⑨ 각목별 차감 불가.
-  if (asset.assetKind === "housing" && !asset.usePreHousingDisclosure) {
+  if (gate === "housing_regular_unsupported") {
     return `${label}: 주택은 토지·건물 취득일 분리(분리 양도) + 공익수용 환산 시 개별주택가격이 총액이라 §164⑨ 특례를 적용할 수 없습니다(미지원). 취득일을 분리하지 않거나 실지취득가액으로 계산하세요.`;
   }
-
-  // 건물(나목) split — 토지분 보상 총액 2필드 필수
-  if (!isSplitLandExprEligibleAssetKind(asset.assetKind)) return null;
 
   /**
    * A05(2026-09-02): **컴패니언(함께양도 2번째 이후) 자산은 이 조합을 지원하지 않는다.**
@@ -186,9 +183,11 @@ export function validateSplitLandExprAsset(
    *
    * 차단은 부수적으로 그 500 경로를 **도달 불가**로 만든다.
    */
-  if (isNonPrimaryAsset) {
+  if (gate === "companion_unsupported") {
     return `${label}: 함께양도 자산은 토지·건물 분리취득 + 공익수용 환산(§164⑨1호) 조합을 지원하지 않습니다. 해당 자산을 첫 번째로 옮기거나 취득일 분리를 해제하세요.`;
   }
+
+  if (gate !== "required") return null;
 
   if (!parseAmount(asset.splitLandCompensationTotal))
     return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`;
@@ -207,9 +206,7 @@ export function validateMixedUseExprAsset(
   label: string,
   formTransferDate: string | undefined,
 ): string | null {
-  if (!(asset.assetKind === "housing" && asset.isMixedUseHouse)) return null;
-  if (asset.transferCause !== "public_expropriation") return null;
-  if (!formTransferDate || formTransferDate < MIN_TRANSFER_DATE) return null;
+  if (!isExprMixedUseRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.housingCompensationTotal))
     return `${label}: 겸용주택 수용 — 주택분 보상액 총액을 입력하세요.`;

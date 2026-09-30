@@ -11,6 +11,7 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
+import { effectiveUnpaidTaxMode } from "@/lib/calc/transfer-unpaid-tax-mode";
 
 // ============================================================
 // Step 6: 가산세 (선택 입력)
@@ -27,14 +28,20 @@ export function Step6({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // 기납부세액 변경 시 미납세액 자동 재계산
+  // PEN-C: 산출한 값은 「직접 입력(manual)」으로 싣는다 — 완납이면 0이 「완납」으로 엔진에 닿아야 한다.
   function handlePriorPaidChange(v: string) {
     onChange({ priorPaidTax: v });
     if (determinedTax !== null) {
       const priorPaid = parseAmount(v ?? "0");
       const autoUnpaid = Math.max(0, determinedTax - priorPaid);
-      onChange({ priorPaidTax: v, unpaidTax: autoUnpaid > 0 ? String(autoUnpaid) : "0" });
+      onChange({
+        priorPaidTax: v,
+        unpaidTax: autoUnpaid > 0 ? String(autoUnpaid) : "0",
+        unpaidTaxMode: "manual",
+      });
     }
   }
+  const unpaidMode = effectiveUnpaidTaxMode(form);
   return (
     <div className="space-y-5">
       {form.amendmentMode ? (
@@ -210,22 +217,44 @@ export function Step6({
           <div className="space-y-3 border-t border-border/50 pt-4">
             <SectionHeader title="지연납부가산세" description="국세기본법 §47의4" />
 
-            <FieldCard
-              label="미납·미달납부세액"
-              unit="원"
-              hint={
-                determinedTax !== null
-                  ? `결정세액 ${determinedTax.toLocaleString()} − 기납부세액 자동 계산`
-                  : "납부하지 않았거나 미달납부한 세액 (가산세 계산하기 클릭 시 자동 계산)"
-              }
-            >
-              <CurrencyInput
-                label=""
-                hideUnit
-                value={form.unpaidTax}
-                onChange={(v) => onChange({ unpaidTax: v })}
+            {/*
+              PEN-C(2026-09-30): 「자동(결정세액 전액 미납)」과 「직접 입력(0 = 완납)」을 명시 모드로 가른다.
+              종전에는 미납세액 0이 두 뜻을 겸해, 완납(0)도 전액 미납으로 계산돼 가산세가 붙었다.
+              모드가 없던 저장 폼은 값으로 판정한다(`effectiveUnpaidTaxMode` — 0 → 자동, 양수 → 직접 입력).
+            */}
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">미납·미달납부세액 산정</label>
+              <RadioCardGroup
+                name="unpaidTaxMode"
+                tone="amber"
+                value={unpaidMode}
+                onChange={(v) => onChange({ unpaidTaxMode: v })}
+                options={[
+                  { value: "auto", label: "자동", description: "결정세액 전액을 미납세액으로 봅니다" },
+                  { value: "manual", label: "직접 입력", description: "납부하지 않은 세액을 입력합니다 — 완납이면 0" },
+                ]}
               />
-            </FieldCard>
+            </div>
+
+            {unpaidMode === "manual" && (
+              <FieldCard
+                label="미납·미달납부세액"
+                field="unpaidTax"
+                unit="원"
+                hint={
+                  determinedTax !== null
+                    ? `결정세액 ${determinedTax.toLocaleString()} − 기납부세액 자동 계산 · 완납이면 0`
+                    : "납부하지 않았거나 미달납부한 세액 — 완납이면 0 (가산세 계산하기 클릭 시 자동 계산)"
+                }
+              >
+                <CurrencyInput
+                  label=""
+                  hideUnit
+                  value={form.unpaidTax}
+                  onChange={(v) => onChange({ unpaidTax: v, unpaidTaxMode: "manual" })}
+                />
+              </FieldCard>
+            )}
 
             <FieldCard
               label="법정납부기한"

@@ -20,7 +20,7 @@ import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
-import { buildInheritedAcquisition } from "./route-inherited-acquisition";
+import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
 
@@ -343,20 +343,9 @@ export function buildTransferEngineInput(
     standardPricePerSqmAtAcquisition: data.standardPricePerSqmAtAcquisition,
     acquisitionArea: data.acquisitionArea,
     selfOwns: data.selfOwns,
-    // 1990.8.30. 이전 취득 토지 기준시가 환산 (선택)
-    pre1990Land: data.pre1990Land
-      ? {
-          acquisitionDate: new Date(data.pre1990Land.acquisitionDate),
-          transferDate: new Date(data.pre1990Land.transferDate),
-          areaSqm: data.pre1990Land.areaSqm,
-          pricePerSqm_1990: data.pre1990Land.pricePerSqm_1990,
-          pricePerSqm_atTransfer: data.pre1990Land.pricePerSqm_atTransfer,
-          grade_1990_0830: data.pre1990Land.grade_1990_0830,
-          gradePrev_1990_0830: data.pre1990Land.gradePrev_1990_0830,
-          gradeAtAcquisition: data.pre1990Land.gradeAtAcquisition,
-          forceRatioCap: data.pre1990Land.forceRatioCap,
-        }
-      : undefined,
+    // 1990.8.30. 이전 취득 토지 기준시가 환산 · 상속 취득가액 의제 · 상속 주택 환산 보조 · 상속 상가 §164⑥ —
+    // §163⑨ 4키는 컴패니언과 **같은 leaf**로 변환한다(CP-3 · `route-inherited-acquisition.ts`).
+    ...toEngineSec163_9Inputs(data, transferDate, data.transferPrice),
     // 개별주택가격 미공시 취득 환산 (§164⑤) — 문자열 날짜 → Date 변환
     preHousingDisclosure: data.preHousingDisclosure
       ? {
@@ -364,23 +353,6 @@ export function buildTransferEngineInput(
           firstDisclosureDate: new Date(data.preHousingDisclosure.firstDisclosureDate),
         }
       : undefined,
-    // 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨)
-    inheritedAcquisition: data.inheritedAcquisition
-      ? buildInheritedAcquisition(data.inheritedAcquisition, transferDate, data.transferPrice)
-      : undefined,
-    // 상속 주택 환산취득가 보조 입력 (§164⑤·§176조의2④) — Date 변환
-    inheritedHouseValuation: data.inheritedHouseValuation
-      ? {
-          ...data.inheritedHouseValuation,
-          inheritanceDate: new Date(data.inheritedHouseValuation.inheritanceDate),
-          transferDate: new Date(data.inheritedHouseValuation.transferDate),
-          firstDisclosureDate: data.inheritedHouseValuation.firstDisclosureDate
-            ? new Date(data.inheritedHouseValuation.firstDisclosureDate)
-            : undefined,
-        }
-      : undefined,
-    // ⑭ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (§163⑨2호 max) — 숫자 payload(Date 변환 불요)
-    ...(data.commercialInheritanceValuation ? { commercialInheritanceValuation: data.commercialInheritanceValuation } : {}),
     // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환
     parcels: data.parcels?.map((p) => ({
       ...p,
@@ -399,6 +371,9 @@ export function buildTransferEngineInput(
     delayedPaymentDetails: data.delayedPaymentDetails
       ? {
           unpaidTax: data.delayedPaymentDetails.unpaidTax,
+          ...(data.delayedPaymentDetails.unpaidTaxMode
+            ? { unpaidTaxMode: data.delayedPaymentDetails.unpaidTaxMode }
+            : {}),
           paymentDeadline: new Date(data.delayedPaymentDetails.paymentDeadline),
           actualPaymentDate: data.delayedPaymentDetails.actualPaymentDate
             ? new Date(data.delayedPaymentDetails.actualPaymentDate)

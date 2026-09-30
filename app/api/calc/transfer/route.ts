@@ -29,6 +29,7 @@ import {
   buildCompanionEngineInputs,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
+import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 
 /**
  * 성공 응답 — NaN·Infinity가 있으면 던져 아래 `catch`가 500으로 응답한다(E-14l).
@@ -375,7 +377,6 @@ export async function POST(request: NextRequest) {
         const c = companions[idx - 1];
         return buildCompanionEngineInputs(c, a, {
           primaryCtxForSplit,
-          primaryAcquisitionDate: acquisitionDate,
           transferDate,
           primaryAcquisitionCause: data.acquisitionCause,
           primaryEngineInput: {
@@ -637,9 +638,12 @@ export async function POST(request: NextRequest) {
         engineInput.filingPenaltyDetails.determinedTax = baseResult.determinedTax;
         engineInput.filingPenaltyDetails.reductionAmount = baseResult.reductionAmount;
       }
-      // unpaidTax === 0이면 결정세액 전액 미납으로 가정 (자동 가산세 적용 흐름)
-      if (engineInput.delayedPaymentDetails && engineInput.delayedPaymentDetails.unpaidTax === 0) {
-        engineInput.delayedPaymentDetails.unpaidTax = baseResult.determinedTax;
+      // 자동(또는 모드 부재 + 0) = 결정세액 전액 미납 · 직접 입력은 그대로(0 = 완납) — PEN-C
+      if (engineInput.delayedPaymentDetails) {
+        engineInput.delayedPaymentDetails.unpaidTax = resolveUnpaidTax(
+          engineInput.delayedPaymentDetails,
+          baseResult.determinedTax,
+        );
       }
     }
     const result = calculateTransferTax(engineInput, rates);
@@ -647,12 +651,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별
     console.error("[/api/calc/transfer] engine error:", err);
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
-      );
-    }
+    // INVALID_INPUT → 400 (+ details.path가 있으면 fieldErrors) — `lib/api/tax-error-response.ts`
+    if (err instanceof TaxCalculationError) return taxCalculationErrorResponse(err);
     const errMsg = err instanceof Error ? err.message : String(err);
     const errStack = err instanceof Error ? err.stack : undefined;
     return NextResponse.json(

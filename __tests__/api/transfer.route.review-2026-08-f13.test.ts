@@ -125,7 +125,6 @@ describe("F13 — 컴패니언 §154⑧3호 통산 3필드 ⑭ 매핑", () => {
       { ...COMPANION_HOUSE } as never,
       { allocatedSalePrice: 200_000_000, allocatedAcquisitionPrice: 150_000_000, allocatedExpenses: 0 },
       {
-        primaryAcquisitionDate: new Date("2010-01-01"),
         transferDate: new Date("2024-05-01"),
         // 겸용 축 없음 — 명시 opt-out(누락을 컴파일 에러로 남기기 위한 `| null`)
         mixedUseCtx: null,

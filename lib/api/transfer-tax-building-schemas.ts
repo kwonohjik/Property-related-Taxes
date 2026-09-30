@@ -9,6 +9,8 @@
  */
 
 import { z } from "zod";
+import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물 공통. */
 const carryoverExclusionShape = z.object({
@@ -115,8 +117,8 @@ export const generalBuildingValuationSchema = z.object({
    * 「지방세법 시행령」 §101①2호(바닥면적 × §101② 적용배율).
    */
   buildingFootprintArea: z.number().positive(),
-  /** 용도지역 (「지방세법 시행령」 §101② 적용배율 결정). validate에서 필수 보장. */
-  zoneType: z.string().optional(),
+  /** 용도지역 (「지방세법 시행령」 §101② 적용배율 결정). validate에서 필수 보장. 키 집합은 배율표 단일 소스(Z3). */
+  zoneType: z.enum(LOCAL_TAX_ZONE_INPUT_KEYS).optional(),
   /** 수도권 소재 여부 */
   isMetropolitan: z.boolean().optional(),
   /**
@@ -461,6 +463,7 @@ export const generalBuildingValuationSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["acquisitionBuildingStdPrice"], message: "취득시 건물기준시가 총액을 입력하세요." });
     }
   }
+  refineGbValuationRequired(val, ctx); // D1·D3·I2 (2026-09-30 2차 — `transfer-tax-schema-required-refines-gb.ts`)
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

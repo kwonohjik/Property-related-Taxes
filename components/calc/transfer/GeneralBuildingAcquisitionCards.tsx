@@ -594,6 +594,28 @@ export function GeneralBuildingAcquisitionCards({
         </FieldCard>
 
         {/*
+          D3(2026-09-30) 건물 피상속인 취득일 — 건물만 상속이면 이 칸이 **유일한** 입력 경로다
+          (토지 카드의 `CompanionAcqInheritanceBlock`은 토지가 상속일 때만 뜬다).
+          술어는 ④·⑧과 같은 `gbBuildingOwnDecedentDate`의 게이트(분리 ON + 건물 상속)다 — 이 카드 자체가 분리 ON 전용.
+        */}
+        {asset.gbBuildingAcquisitionCause === "inheritance" && (
+          <FieldCard
+            label="건물 피상속인 취득일"
+            hint={
+              asset.acquisitionCause === "inheritance"
+                ? "피상속인이 이 건물을 취득한 날 — 단기보유 통산용 (소득세법 §95④·§104②1호). 토지와 같으면 비워 두세요 — 토지의 피상속인 취득일을 씁니다."
+                : "피상속인이 이 건물을 취득한 날 — 단기보유 통산용 (소득세법 §95④·§104②1호)"
+            }
+          >
+            <DateInput
+              data-testid="gb-building-decedent-acquisition-date"
+              value={asset.gbBuildingDecedentAcquisitionDate ?? ""}
+              onChange={(v) => onChange({ gbBuildingDecedentAcquisitionDate: v })}
+            />
+          </FieldCard>
+        )}
+
+        {/*
           건물 파트 이월과세 — 증여자 취득일·취득가액이 **토지와 다를 수 있다**
           (법 §95④·§97의2①1호). 그래서 파트별로 받는다.
 

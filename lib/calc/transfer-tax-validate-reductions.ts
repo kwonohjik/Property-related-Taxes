@@ -199,11 +199,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 취득 유형별 필수 일자 검증
           // Round 9 (2026-05-06): 1호 매매계약일은 자산-수준 assetContractDate fallback
           // 메모리 feedback_validation_sync_8th_point.md ⑧ 정책 (UI/API fallback ↔ validate 동기화)
-          if (r.acquisitionType993 === "from_builder") {
+          // §4.3(2026-09-30): ⑫(`transfer-tax-schema-reduction-refines.ts`)·라우터(`income-deduction-router.ts`
+          // 기본값 from_builder)와 같은 술어 — 2호(self_built)가 아니면 1호다. 화면(`New993InputForm`)도 미선택을
+          // 「1호」로 표시하고, 1호 매매계약일은 자산-수준 칸이라 항상 열려 있다(막다른 길 아님).
+          if (r.acquisitionType993 === "self_built") {
+            if (!r.usageApprovalDate993) return fail("§99의3 2호 적용: 사용승인일을 선택하세요.");
+          } else {
             const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
             if (!hasContractDate) return fail("§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.");
-          } else if (r.acquisitionType993 === "self_built") {
-            if (!r.usageApprovalDate993) return fail("§99의3 2호 적용: 사용승인일을 선택하세요.");
           }
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary와 동일 소스).
           // 상단 수동 필드는 PHD ON 시 숨겨지므로 빈 값 — canCalcReductionPhd로 대체 검증(UI/API/validate 3중 미러).

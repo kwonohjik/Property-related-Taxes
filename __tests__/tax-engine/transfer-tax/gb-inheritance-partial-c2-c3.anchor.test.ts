@@ -133,6 +133,8 @@ const C2 = asset({
   landAcqMode: "estimated",
   buildingAcqMode: "actual",
   gbBuildingInheritedValue: String(BUILDING_INHERITED),
+  // 건물만 상속 — 건물 피상속인 취득일은 건물 카드의 자기 칸이다(2026-09-30 D3 · ⑧·⑫ 필수). 값은 종전 fallback과 같다.
+  gbBuildingDecedentAcquisitionDate: "2000-01-01",
 });
 
 /** C2′ — 토지 매매(실가) + 건물 상속. 실가 경로. */
@@ -143,6 +145,8 @@ const C2_PRIME = asset({
   buildingAcqMode: "actual",
   landAcquisitionPrice: String(LAND_PURCHASE),
   gbBuildingInheritedValue: String(BUILDING_INHERITED),
+  // 건물만 상속 — 건물 피상속인 취득일은 건물 카드의 자기 칸이다(2026-09-30 D3 · ⑧·⑫ 필수). 값은 종전 fallback과 같다.
+  gbBuildingDecedentAcquisitionDate: "2000-01-01",
 });
 
 /** C3 — 토지 상속 + 건물 매매(실가). 실가 경로. */

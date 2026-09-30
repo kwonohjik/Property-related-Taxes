@@ -25,6 +25,7 @@ import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
+import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -126,19 +127,8 @@ export const propertySchema = z
       });
     }
 
-    // 소유자 분리 유효성 (소령 §166⑥, §168②) — 토지 취득일 요구는 `addPropertyRefines`(단건·다건 공용).
-    if (
-      data.selfOwns &&
-      data.selfOwns !== "both" &&
-      data.propertyType !== "housing" &&
-      data.propertyType !== "building"
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["selfOwns"],
-        message: "소유자 분리는 주택(housing) 또는 건물(building) 자산에만 적용됩니다",
-      });
-    }
+    // 소유자 분리 유효성 (소령 §166⑥, §168②) — 토지 취득일 요구는 `addPropertyRefines`, 주택·건물 외 자산
+    // 거부는 `refinePropertyRequiredInputs`(M2 — 단건·다건 공용 `transfer-tax-schema-household-refines.ts`).
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
     const companions = data.companionAssets ?? [];
@@ -146,6 +136,8 @@ export const propertySchema = z
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"]);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
+      // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
+      refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

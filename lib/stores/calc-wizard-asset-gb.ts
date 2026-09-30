@@ -269,6 +269,13 @@ export interface GeneralBuildingFormSlice {
    * 환산·개산공제(§163⑥) 미적용. Phase 1은 공시된 정상 케이스만(미공시 §163⑨2호 max는 Phase 2).
    */
   gbBuildingInheritedValue: string;
+  /**
+   * 건물 파트 **피상속인 취득일** (YYYY-MM-DD) — 분리 ON + 건물 상속일 때 건물 카드에서 받는다
+   * (2026-09-30 D3). 「소득세법」 제95조 제4항·제104조 제2항 제1호 단기보유 통산의 기산일이다.
+   * 비우면 토지도 상속인 경우 토지의 피상속인 취득일(`decedentAcquisitionDate`)을 쓴다(엔진 fallback과 같다).
+   * 소비는 `gbBuildingOwnDecedentDate()`를 거친다 — 분리 OFF·비상속에서 남은 값이 새지 않게.
+   */
+  gbBuildingDecedentAcquisitionDate: string;
 
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */

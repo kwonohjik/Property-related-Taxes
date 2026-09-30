@@ -24,13 +24,10 @@ import {
   nonBusinessLandRawSchema,
   rentalReductionDetailsSchema,
   newHousingDetailsSchema,
-  pre1990LandSchema,
   houseSchema,
   presaleRightSchema,
   reductionSchema,
   inheritanceValuationSchema,
-  inheritedAcquisitionSchema,
-  inheritanceHouseValuationSchema,
   companionAssetSchema,
   sameAdjustmentPeriodSchema,
   parcelSchema,
@@ -43,10 +40,10 @@ import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import {
   generalBuildingValuationSchema,
   generalBuildingSharesSchema,
-  commercialBuildingValuationSchema,
-  commercialInheritanceValuationSchema,
   commercialAppurtenantLandSchema,
 } from "./transfer-tax-building-schemas";
+import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
+import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
 
 export const propertyBaseShape = {
   propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building", "general_building", "redevelopment_apt"]),
@@ -178,6 +175,9 @@ export const propertyBaseShape = {
       departureDate: z.string().date().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
+      // ⑫ O4 5호 「계약금 지급일 현재 무주택」 확인 — 종전엔 키가 없어 strip됐다. 엔진은 이 요건을 판정하지 않고
+      //    ⑧·⑫가 담보한다(`transfer-tax-schema-household-refines.ts` — 5호면 true 필수). ⑭ 매핑 없음(엔진 미소비).
+      preContractNoHouse: z.boolean().optional(),
       // ⑫ OH-38 삭제 전 4호 판정 사실 — ⑭ `toEngineRental4ho`(lib/api/rental-4ho-coerce.ts)와 같은 키
       rentalRegistration4ho: z
         .object({
@@ -238,7 +238,7 @@ export const propertyBaseShape = {
   extensionFloorArea: z.number().nonnegative().optional(),
   // ⑫ Phase 2 증축 — 증축부분 취득시 기준시가 총액(원). §114조의2① 증축부분 환산취득가 분자.
   extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
-  pre1990Land: pre1990LandSchema.optional(),
+  // pre1990Land는 아래 `sec163_9AcquisitionShape` spread에 있다(컴패니언과 단일 소스 · CP-3)
   parcels: z.array(parcelSchema).max(10).optional(),
 
   // ─── 토지/건물 취득일 분리 (소득령 §166⑥·§168②) ────────────────
@@ -451,12 +451,11 @@ export const propertyBaseShape = {
       isFamilyBusinessInheritedAsset: z.boolean().optional(),
     }).optional(),
   }).optional(),
-  /** 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) — 의제취득일 전/후 분기 */
-  inheritedAcquisition: inheritedAcquisitionSchema.optional(),
-  /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
-  inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
-  /** ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 — 상가 + 상속개시일 < 2005-01-01 시 §163⑨2호 max */
-  commercialInheritanceValuation: commercialInheritanceValuationSchema.optional(),
+  /**
+   * §163⑨ 상속·증여 취득가액 운반 4키(pre1990Land·inheritedAcquisition·inheritedHouseValuation·
+   * commercialInheritanceValuation) — **컴패니언과 같은 shape**을 spread한다(CP-3 · 목록 복사 금지).
+   */
+  ...sec163_9AcquisitionShape,
   /** 겸용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
   mixedUse: mixedUseAssetSchema.optional(),
   /**
@@ -474,7 +473,8 @@ export const propertyBaseShape = {
    * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑥, §176조의2②2호).
    * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
-  commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
+  // §164⑥ 괄호 단서(§164⑧ 준용) 필수 입력 superRefine 포함 — 컴패니언과 같은 스키마(CB1)
+  commercialBuildingValuation: commercialBuildingValuationRequiredSchema.optional(),
   /**
    * ⑫ 상업용건물·오피스텔 부수토지 기준면적 초과분 판정 입력
    * (「지방세법 시행령」 §101①2호·§101②).

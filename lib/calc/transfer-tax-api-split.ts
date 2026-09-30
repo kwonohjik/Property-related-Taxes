@@ -11,6 +11,7 @@ import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveSelfOwns } from "./self-owns-scope";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -39,7 +40,8 @@ export function isSplitPayloadActive(primary: AssetForm, isBurdenedGift: boolean
   //    (계약 10억·§159 채무 4억에서 토지 6억 입력 → 건물 = 4억 − 6억 = −2억).
   //    부담부증여는 기준시가 비율 안분만 사용한다.
   return (
-    (primary.hasSeperateLandAcquisitionDate === true || primary.selfOwns !== "both") &&
+    // M2 — 소유 축은 ⑤가 여는 범위에서만 읽는다(`self-owns-scope.ts`). 토지 등에 남은 잔재는 `both`.
+    (primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both") &&
     !isBurdenedGift
   );
 }
@@ -84,7 +86,8 @@ export function buildSplitPayload(
   //
   // ⚠️ **기준시가 필드로 확대하지 않는다** — 비소유 토지의 취득시 기준시가 카드는 일부러
   //    렌더된다(주택 라목 결합 공시에서 건물분을 역산하는 유일 경로). 물건 속성값이라 소유 축과 무관하다.
-  const selfOwns = primary.selfOwns ?? "both";
+  const selfOwnsEff = effectiveSelfOwns(primary);
+  const selfOwns = selfOwnsEff ?? "both";
   const landOwned = selfOwns !== "building_only";
   const buildingOwned = selfOwns !== "land_only";
   // 파트별 취득가액 직접입력 게이트 — actual·appraisal 모드만(환산·매매사례는 총액을 사용자가 입력하지 않음).
@@ -117,7 +120,7 @@ export function buildSplitPayload(
 
   return {
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
-    selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
+    selfOwns: selfOwnsEff !== "both" ? selfOwnsEff : undefined,
     // ⚠️ `selfOwns !== "both"` fallback(2026-07-30) — 소유자 분리를 **비-매매 취득원인**으로
     //    확대하면서 추가. 상속·증여는 취득일이 하나(상속개시일·증여일)라 토지 취득일을 따로
     //    입력받지 않는데, 이 값이 없으면 `calcSplitGain`이 early-return하고(split-gain.ts:356)
@@ -126,9 +129,9 @@ export function buildSplitPayload(
     //    같은 날짜가 되므로 `isSeparateAcquisition`은 false — 파트별 취득가액 완결 규칙은
     //    발동하지 않고 §166⑥ 기준시가 비율 안분 경로로 흐른다(의도된 동작).
     landAcquisitionDate:
-      (primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both") && primary.landAcquisitionDate
+      (primary.hasSeperateLandAcquisitionDate || selfOwnsEff !== "both") && primary.landAcquisitionDate
         ? primary.landAcquisitionDate
-        : usesPhd || primary.selfOwns !== "both"
+        : usesPhd || selfOwnsEff !== "both"
           ? primary.acquisitionDate
           : undefined,
     // 파트별 취득 모드 + 양도 분리 모드 — 엔진 명시 입력(§9 M2, "죽은 모드" 재발 방지).

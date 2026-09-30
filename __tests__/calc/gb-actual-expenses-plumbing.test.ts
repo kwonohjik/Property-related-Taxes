@@ -93,8 +93,17 @@ describe("⑧ V-5b — 실가 경로 취득시 기준시가 (P-2)", () => {
   });
 
   it("자본적지출이 있으면 요구한다", () => {
+    // 취득가액은 파트 두 칸으로 확정돼 안분이 없다 — 자본적지출 축만 기준시가를 요구한다.
+    // (종전 픽스처는 일괄 취득가액을 비웠는데, 분리 OFF 매매 실가의 빈 일괄 취득가액은 이제 ⑧이 먼저 막는다 —
+    //  2026-09-30 I3′ · 실가 경로가 취득가액 0으로 계산하던 결함.)
     const err = validateGeneralBuildingAsset(
-      asset({ ...noAcqStd, fixedAcquisitionPrice: "", capitalExpenditure: "30,000,000" }), "자산",
+      asset({
+        ...noAcqStd,
+        capitalExpenditure: "30,000,000",
+        landAcquisitionPrice: "300,000,000",
+        buildingAcquisitionPrice: "200,000,000",
+      }),
+      "자산",
     );
     expect(err).toContain("취득시 토지 공시지가");
   });

@@ -148,7 +148,6 @@ describe("D11-01 다건 ⑬ — buildPropertyPayload", () => {
 
 describe("D11-02 일괄양도 컴패니언 — ④⑫⑭", () => {
   const CTX = {
-    primaryAcquisitionDate: new Date("2010-01-01"),
     transferDate: new Date("2026-03-01"),
     // 겸용 축 없음 — 명시 opt-out(누락을 컴파일 에러로 남기기 위한 `| null`)
     mixedUseCtx: null,

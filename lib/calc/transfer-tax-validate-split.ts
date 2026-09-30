@@ -25,6 +25,7 @@ import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveSelfOwns } from "./self-owns-scope";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -53,7 +54,7 @@ function withExpenses(asset: AssetForm) {
  * 비소유 파트(`selfOwns≠both`)도 대상이 아니다 — 그 파트의 양도차익은 버려진다.
  */
 function validateSeparateAcqParts(asset: AssetForm, label: string): string | null {
-  const selfOwns = asset.selfOwns ?? "both";
+  const selfOwns = effectiveSelfOwns(asset) ?? "both";
   const parts = [
     {
       owned: selfOwns !== "building_only",
@@ -104,7 +105,8 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   //    그 플래그를 켜지 않으므로(취득일 2열 UI가 없다) validate 전체가 early-return돼
   //    **양도가액 안분 근거·기준시가 검증이 통째로 건너뛰어졌다** — 엔진은 조용히 null을
   //    반환하고 `selfOwns`가 무시되어 비소유 파트까지 과세된다.
-  const selfOwnsSplit = (asset.selfOwns ?? "both") !== "both";
+  // M2 — ④ `isSplitPayloadActive`와 같은 유효 소유 축(`self-owns-scope.ts`). 토지 등의 잔재는 보지 않는다.
+  const selfOwnsSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
   if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit) return null;
 
   // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────
@@ -376,7 +378,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // ⚠️ **별개 취득은 제외**(V4): 취득가액 축에서 잔액 규칙 자체가 폐지돼 "합 = 총액" 불변식이
   //    성립하지 않는다. 파트 합이 상단 총액과 달라도 정상이며(총액은 사후 집계일 뿐),
   //    잔존한 `fixedAcquisitionPrice`로 차단하면 정당한 입력이 막힌다.
-  const selfOwns = asset.selfOwns ?? "both";
+  const selfOwns = effectiveSelfOwns(asset) ?? "both";
   const landAcqDirectActive =
     selfOwns !== "building_only" && (landMode === "actual" || landMode === "appraisal");
   const buildingAcqDirectActive =

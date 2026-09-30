@@ -52,6 +52,7 @@ import {
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 
 // ─── 사례 28 자동 분기 양방향 확장 ───────────────────────────────
 // 자산 순서와 무관하게(primary가 land여도) companion에서 housing을 검색하여
@@ -234,7 +235,8 @@ interface CompanionBuildContext {
     bundledSaleMode?: "actual" | "apportioned";
   };
   // userModeOverride 제거됨 (2026-05-07): 자산별 landNature 기반으로 대체
-  primaryAcquisitionDate: Date;
+  // primaryAcquisitionDate 제거됨 (2026-09-30 CP-5): 컴패니언 취득일이 비면 주 자산 취득일로 대신 채웠다(C).
+  //   이제 ⑫(`refineCompanionAcquisitionDate`)가 요구하고 ④가 신축·이월과세 취득일을 채운다.
   transferDate: Date;
   primaryAcquisitionCause: TransferTaxItemInput["acquisitionCause"];
   primaryEngineInput: {
@@ -321,7 +323,8 @@ export function buildCompanionEngineInputs(
   ctx: CompanionBuildContext,
 ): TransferTaxItemInput[] {
   const acqPrice = ctx.adjustedAcqPrice ?? a.allocatedAcquisitionPrice;
-  const acqDate = c.acquisitionDate ? new Date(c.acquisitionDate) : ctx.primaryAcquisitionDate;
+  // CP-5: 주 자산 취득일 대체 금지 — ⑫가 필수로 요구한다(다른 물건의 날짜로 보유기간을 세면 안 된다).
+  const acqDate = toDate(c.acquisitionDate, "companionAssets[].acquisitionDate");
   const decedent =
     c.acquisitionCause === "inheritance" && c.decedentAcquisitionDate
       ? new Date(c.decedentAcquisitionDate)
@@ -511,6 +514,12 @@ export function buildCompanionEngineInputs(
     decedentCohabitationHoldingStartDate: toOptionalDate(c.decedentCohabitationHoldingStartDate),
     decedentCohabitationResidenceMonths: c.decedentCohabitationResidenceMonths,
     donorAcquisitionDate: donor,
+    /**
+     * ⑭ §163⑨ 상속·증여 취득가액 4키(②·③) — **주 자산과 같은 leaf**(`toEngineSec163_9Inputs`, CP-3).
+     * 엔진 STEP 0.45(`runInheritedAcquisitionStep`)가 이 자산의 취득가액을 max(①,②)·③으로 확정한다.
+     * ⚠️ pre-deemed ③(환산)의 분자는 **이 자산의 §166⑥ 안분 양도가액**이다(계약 총액이 아니다).
+     */
+    ...toEngineSec163_9Inputs(c, ctx.transferDate, a.allocatedSalePrice),
     /**
      * ⑭ 배우자등 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
      *
