@@ -136,17 +136,21 @@ describe("A2b-R 조정 판정 대상·시점 — 신규 취득일 기준 두 주
     expect(exempt(tt("2020-06-01", "2021-08-01", { newHouseRegionCode: GANGNAM }, { regionCode: GANGNAM }))).toBe(false);
   });
 
-  it("R2 신규 인천 서구 — 지정 전날 2020-06-18 취득 → 3년 비과세 / 2020-06-19 취득 → 1년 과세", () => {
+  // L-7(2026-09-30): 공고일(2020-06-19) **당일** 취득·계약은 「공고가 있은 날 이전」이다(서면-2021-부동산-3718 →
+  //   서면-2021-법령해석재산-4728). 종전 경계(06-19 과세)를 06-20으로 옮겼다 — `temporary-two-house-announcement-day-l7`.
+  it("R2 신규 인천 서구 — 공고일(2020-06-19) 이하 취득 → 3년 비과세 / 2020-06-20 취득 → 1년 과세", () => {
     const at = (n: string) => tt(n, "2021-08-01", { newHouseRegionCode: SEO_GU }, { regionCode: GANGNAM });
     expect(exempt(at("2020-06-18"))).toBe(true);
-    expect(exempt(at("2020-06-19"))).toBe(false);
+    expect(exempt(at("2020-06-19"))).toBe(true);
+    expect(exempt(at("2020-06-20"))).toBe(false);
   });
 
-  it("R3 §155①2호 괄호 — 공고 전(2020-06-18) 계약·계약금 → 조정 취득 아님 → 비과세 / 2020-06-19 계약 → 과세", () => {
+  it("R3 §155①2호 괄호 — 공고일(2020-06-19) 이하 계약·계약금 → 조정 취득 아님 → 비과세 / 2020-06-20 계약 → 과세", () => {
     const at = (c: string) =>
       tt("2020-07-15", "2021-08-01", { newHouseRegionCode: SEO_GU, newHouseContractDate: d(c) }, { regionCode: GANGNAM });
     expect(exempt(at("2020-06-18"))).toBe(true);
-    expect(exempt(at("2020-06-19"))).toBe(false);
+    expect(exempt(at("2020-06-19"))).toBe(true);
+    expect(exempt(at("2020-06-20"))).toBe(false);
   });
 
   it("R4 ★ 역방향(과세 쪽 정정) — 종전 인천 서구가 양도일(2023-01-05)엔 해제됐어도 신규 취득(2020-12-01) 당시 조정이면 2년 → 과세", () => {

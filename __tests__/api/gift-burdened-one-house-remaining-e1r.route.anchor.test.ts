@@ -359,8 +359,9 @@ describe("B ⑭ route — 신규 주택 주소가 선언 없이 신규 주택 �
     expect((r.warnings ?? []).some((w) => w.includes("신규주택 취득일 기준"))).toBe(false);
   });
 
-  it("B-2 부정 짝 — 2020-06-19 취득(지정 당일)이면 조정→조정 1년 기한 → 과세 9,544,800, 판정 보류 고지 없음", async () => {
-    const r = await gift("2021-08-01", at("2020-06-19", SEO_GU), GANGNAM_PNU);
+  // L-7(2026-09-30): 지정·공고 당일(2020-06-19) 취득은 「공고가 있은 날 이전」이라 부정 짝을 06-20으로 옮겼다.
+  it("B-2 부정 짝 — 2020-06-20 취득(공고 다음 날)이면 조정→조정 1년 기한 → 과세 9,544,800, 판정 보류 고지 없음", async () => {
+    const r = await gift("2021-08-01", at("2020-06-20", SEO_GU), GANGNAM_PNU);
     expect(r.isExempt).toBe(false);
     expect(r.determinedTax).toBe(9_544_800);
     expect((r.warnings ?? []).some((w) => w.includes("신규주택 취득일 기준"))).toBe(false);
@@ -395,7 +396,22 @@ describe("B ⑭ route — 신규 주택 주소가 선언 없이 신규 주택 �
       return f;
     };
     expect((await transfer(calcAt("2020-06-18"))).isExempt).toBe(true);
-    expect((await transfer(calcAt("2020-06-19"))).isExempt).toBe(false);
+    expect((await transfer(calcAt("2020-06-20"))).isExempt).toBe(false);
+  });
+
+  it("B-4 L-7 — 신규 주택 서구 2020-06-19(공고일) 취득 → 「공고가 있은 날 이전」 → 3년 → 비과세(계산기 R-4와 같은 결론)", async () => {
+    const r = await gift("2021-08-01", at("2020-06-19", SEO_GU), GANGNAM_PNU);
+    expect(r.isExempt).toBe(true);
+    // 계산기 쪽 같은 사실(명부 행 서구 2020-06-19)은 `transfer.route.temp-two-house-a2b` R-4가 비과세로 고정한다.
+  });
+
+  it("B-5 L-7 — 계약일(2020-06-19 공고일) 입력도 증여 경로에 도달한다: 취득 2020-07-15 비과세 / 계약 06-20 과세", async () => {
+    const withContract = (c: string) => {
+      const x = at("2020-07-15", SEO_GU);
+      return { ...x, temporaryTwoHouse: { ...x.temporaryTwoHouse, newHouseContractDate: c } };
+    };
+    expect((await gift("2021-08-01", withContract("2020-06-19"), GANGNAM_PNU)).isExempt).toBe(true);
+    expect((await gift("2021-08-01", withContract("2020-06-20"), GANGNAM_PNU)).isExempt).toBe(false);
   });
 });
 
