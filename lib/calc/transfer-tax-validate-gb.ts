@@ -20,6 +20,7 @@ import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import { validateGbCarryover } from "./transfer-tax-validate-gb-carryover";
 import { validateGbSaleAxis } from "./transfer-tax-validate-gb-sale";
 import { validateGbDecedentDates, validateGbBundledAcquisitionPrice } from "./transfer-tax-validate-gb-required";
+import { needsGbSec1639BuildingStdPrice } from "./transfer-tax-validate-gb-required";
 import { fieldError } from "./transfer-tax-validate-field";
 
 /**
@@ -147,6 +148,8 @@ export function validateGeneralBuildingAsset(
     const msg = `${label}: ${causeBy} 취득한 ${partSubject} 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다. ${cause} 당시 평가액이 취득당시 실지거래가액이므로 「실거래가」를 선택하세요 (소득세법 §97①1호 단서·같은 법 시행령 §163⑨).`;
     // 분리 OFF면 고칠 라디오가 화면에 없다 — 상속·증여 카드는 매매 블록(자산 단위 「취득가액 산정 방식」)을
     // 그리지 않는다(E2E 실측: 앵커 0개). field를 달지 않아 카드로 후퇴한다.
+    // 화면 전환·복원 마이그레이션이 그 조합의 추계 플래그를 비우므로(`gbUnifiedSec1639ClearPatch`, G3)
+    // 화면으로는 여기 도달하지 않는다 — 두 정리를 거치지 않고 남은 값을 막는 방어선으로 둔다.
     if (!isSeparate) return msg;
     return fieldError(isLandPart ? "landAcqMode" : "buildingAcqMode", msg);
   };
@@ -232,11 +235,8 @@ export function validateGeneralBuildingAsset(
     ) {
       return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 상속 토지는 상속개시일 평가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`);
     }
-    if (
-      isBuildingInherited &&
-      isBeforeBuildingStdPriceNotice(asset.acquisitionDate) &&
-      !parseAmount(asset.gbAcqBuildingValue)
-    ) {
+    // 조건은 ⑤ 칸 노출과 **같은 술어**(G2) — 갈리면 칸 없는 차단이 된다
+    if (isBuildingInherited && needsGbSec1639BuildingStdPrice(asset) && !parseAmount(asset.gbAcqBuildingValue)) {
       return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 상속 건물은 상속개시일 평가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`);
     }
   }
@@ -299,7 +299,8 @@ export function validateGeneralBuildingAsset(
       if (landGiftSec164 && !effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")) {
         return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 증여 토지는 증여 신고가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`);
       }
-      if (buildingGiftSec164 && !parseAmount(asset.gbAcqBuildingValue)) {
+      // 분리 ON에서만 여기 온다 — ⑤ 칸 노출과 같은 술어(G2)
+      if (buildingGiftSec164 && needsGbSec1639BuildingStdPrice(asset) && !parseAmount(asset.gbAcqBuildingValue)) {
         return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 증여 건물은 증여 신고가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`);
       }
     }

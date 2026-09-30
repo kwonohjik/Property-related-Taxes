@@ -55,6 +55,11 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
        * `building_non_residential`로 매핑해 **비주거 건물 공시가격 조회 UI**까지 뜬다.
        */
       asset.assetKind === "right_to_move_in" ||
-      asset.bgValuationMode === "sangjeungbeop_market")
+      /**
+       * 시가 모드 — §159 분모(C)는 `bgMarketValueAtTransfer`가 받는다. 다만 **K-5(환산)** 는
+       * 환산 분모로 양도시 기준시가를 쓴다(소령 §176의2②2호 · ④가 `standardPriceAtTransfer`를
+       * 그대로 싣는다) — 그때는 공용 칸이 있어야 한다(2026-09-30 B2).
+       */
+      (asset.bgValuationMode === "sangjeungbeop_market" && asset.bgAcquisitionMethod !== "converted"))
   );
 }

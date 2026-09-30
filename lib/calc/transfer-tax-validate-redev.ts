@@ -384,7 +384,16 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
    *       블록이 이 단가를 여전히 필수로 요구한다.
    */
   const hasAnyPhd = parseAmount(asset.redevLandPricePerSqmAtFirst) > 0;
-  if ((hasA || hasAnyPhd) && !hasFirstDisclosureDate) {
+  /**
+   * 🔴 2026-09-30 정정(R2 — P2-06 잔여): 이 검사는 **최초공시일 칸이 화면에 있을 때만** 의미가 있다.
+   *    그 칸과 A·최초공시 단가 칸은 `RedevelopmentValuationSection`에만 있고, 그 섹션은 환산 모드
+   *    + 단독주택 출자 2-point 분기가 아닐 때만 렌더된다(토지 출자는 위에서 이미 반환).
+   *    실거래가 모드에 환산 때 넣은 값이 남으면 날짜를 넣을 칸도, 값을 지울 칸도 없는 영구 차단이었다.
+   *    엔진은 실거래가 모드에서 §164⑦ 값을 쓰지 않는다(`redevelopment-split.ts` `useEstimatedAcquisition`
+   *    게이트) — 좁혀도 계산이 조용히 틀어지지 않는다.
+   */
+  const phdInputsOnScreen = asset.useEstimatedAcquisition && !isHousingRightReceiveEstimated;
+  if (phdInputsOnScreen && (hasA || hasAnyPhd) && !hasFirstDisclosureDate) {
     return fieldError("redevFirstDisclosureDate", `${label}: A 또는 PHD 단가를 입력하셨다면 최초공시일도 입력하세요. (§164⑦ 본문 트리거)`);
   }
 

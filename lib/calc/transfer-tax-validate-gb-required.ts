@@ -8,6 +8,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { PartAcqMode } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
+import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 
 /**
  * 건물 파트의 **자기** 피상속인 취득일 — 분리 ON + 건물 상속일 때만 의미가 있다(그때만 건물 카드에 칸이 있다).
@@ -67,4 +68,25 @@ export function validateGbBundledAcquisitionPrice(
   if (landMode === "estimated" || buildingMode === "estimated") return null;
   if (parseAmount(asset.fixedAcquisitionPrice) > 0) return null;
   return fieldError("fixedAcquisitionPrice", `${label}: ${asset.isAppraisalAcquisition ? "감정가액" : "취득가액"}을 입력하세요. 토지·건물 일괄 실지거래가액입니다 (소득세법 §97①1호).`);
+}
+
+/**
+ * §163⑨ **단서 2호 비교값**(취득시 건물기준시가)이 필요한 일반건물인가 — ⑤ 노출·⑧ 요구 공용 (2026-09-30 G2).
+ *
+ * 건물 기준시가 고시 전 상속·증여 건물은 평가액(신고가액)과 §164⑤ 가액 중 **많은 금액**이 취득가액이다
+ * (「소득세법 시행령」 §163⑨ 단서 2호). 비교값이 없으면 평가액이 그대로 쓰여, 더 작을 때 조용히 과대과세다.
+ *
+ * 종전 ⑤는 이 칸을 환산·증축·부담부증여·§100② 안분 필요(`needsGbActualAcqStdPrice`)일 때만 열었다.
+ * 상속·증여 파트는 실가가 강제되고(§97①1호 단서) 파트별 평가액이 있으면 안분도 필요 없어,
+ * **⑧이 요구하는데 칸이 없는** 조합이 생겼다.
+ *
+ * 증여는 **분리 ON**일 때만 — 분리 OFF에서는 ⑧이 먼저 「토지·건물 취득일 다름을 켜세요」로 안내한다
+ * (자산 단위 총액으로는 파트별 비교가 안 된다).
+ */
+export function needsGbSec1639BuildingStdPrice(
+  asset: Pick<AssetForm, "gbBuildingAcquisitionCause" | "acquisitionDate" | "hasSeperateLandAcquisitionDate">,
+): boolean {
+  if (!isBeforeBuildingStdPriceNotice(asset.acquisitionDate)) return false;
+  if (asset.gbBuildingAcquisitionCause === "inheritance") return true;
+  return asset.gbBuildingAcquisitionCause === "gift" && !!asset.hasSeperateLandAcquisitionDate;
 }

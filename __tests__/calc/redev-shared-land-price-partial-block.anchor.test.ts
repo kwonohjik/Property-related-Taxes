@@ -69,15 +69,34 @@ describe("P2-06 · 공유 단가 필드는 §164⑦ opt-in 신호가 아니다",
     expect(V(asset)).toBeNull();
   });
 
-  it("§164⑦ **전용** 필드는 여전히 opt-in 신호다 — 최초공시일을 요구한다", () => {
+  /**
+   * 🔴 2026-09-30 정정(R2): 아래 두 건은 종전에 **실가 모드**로 「최초공시일을 요구한다」를 고정했다.
+   *    그 화면에는 최초공시일 칸이 없다 — 이 anchor가 막다른 오류를 기대값으로 삼고 있었다.
+   *    opt-in 신호는 **칸이 있는 환산 모드**에서만 본다.
+   */
+  const estimatedModeHousing = (over: Partial<AssetForm> = {}) =>
+    actualModeHousing({
+      useEstimatedAcquisition: true,
+      redevActualAcquisitionPrice: "",
+      redevManagementDisposalHousingPrice: "132,000,000",
+      redevAcquisitionHousingPrice: "80,000,000",
+      ...over,
+    });
+
+  it("§164⑦ **전용** 필드는 환산 모드에서 opt-in 신호다 — 최초공시일을 요구한다", () => {
     // 최초공시 당시 단가는 §164⑦ 블록에만 있다 ⇒ 그 값이 있는데 날짜가 없으면 모순이 맞다.
-    const asset = actualModeHousing({ redevLandPricePerSqmAtFirst: "700,000" });
+    const asset = estimatedModeHousing({ redevLandPricePerSqmAtFirst: "700,000" });
     expect(V(asset)).toContain("최초공시일");
   });
 
-  it("A(최초공시 주택가격)도 여전히 opt-in 신호다", () => {
-    const asset = actualModeHousing({ redevFirstDisclosureHousingPrice: "90,000,000" });
+  it("A(최초공시 주택가격)도 환산 모드에서 opt-in 신호다", () => {
+    const asset = estimatedModeHousing({ redevFirstDisclosureHousingPrice: "90,000,000" });
     expect(V(asset)).toContain("최초공시일");
+  });
+
+  it("R2 — 실가 모드에 남은 A·최초공시 단가는 막지 않는다 (날짜 칸이 없는 화면)", () => {
+    expect(V(actualModeHousing({ redevFirstDisclosureHousingPrice: "90,000,000" }))).toBeNull();
+    expect(V(actualModeHousing({ redevLandPricePerSqmAtFirst: "700,000" }))).toBeNull();
   });
 
   it("🔑 §164⑦ 본문이 발동하면 그 단가를 여전히 **필수**로 요구한다 (과소 차단 방지)", () => {

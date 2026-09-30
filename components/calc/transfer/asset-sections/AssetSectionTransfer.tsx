@@ -183,9 +183,19 @@ export function AssetSectionTransfer({
               <p className="text-xs font-semibold text-amber-800">취득시 기준시가</p>
               <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159" />
             </div>
+            {/* 시가 + 환산(K-5)에서도 이 칸이 열린다(B2) — 그때는 채무비율이 아니라 환산 분자다 */}
             <p className="text-caption text-amber-700">
-              취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호). 위 양도시 기준시가와
-              같은 기준(상증법 §60~§66)으로 취득 당시 값을 입력하세요.
+              {asset.bgValuationMode === "sangjeungbeop_market" ? (
+                <>
+                  환산취득가액 = 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />(소령 §176의2②2호).
+                  위 양도시 기준시가와 같은 기준으로 취득 당시 값을 입력하세요.
+                </>
+              ) : (
+                <>
+                  취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호). 위 양도시 기준시가와
+                  같은 기준(상증법 §60~§66)으로 취득 당시 값을 입력하세요.
+                </>
+              )}
             </p>
             <StandardPriceInput
               // 위 양도시 칸과 **같은 매핑 함수**를 쓴다(모드 불일치 방지 — 그 함수 JSDoc 참조).
@@ -207,7 +217,11 @@ export function AssetSectionTransfer({
               // 공시가격 조회 기준일은 **취득일**이다 — 양도일을 넘기면 취득 당시가 아닌 값이 조회된다
               referenceDate={asset.acquisitionDate || undefined}
               label="취득시 기준시가 (원)"
-              hint="§159①1호 A괄호 — 채무비율을 곱해 취득가액이 된다"
+              hint={
+                asset.bgValuationMode === "sangjeungbeop_market"
+                  ? "§176의2②2호 — 환산취득가액의 분자"
+                  : "§159①1호 A괄호 — 채무비율을 곱해 취득가액이 된다"
+              }
             />
           </div>
         )}

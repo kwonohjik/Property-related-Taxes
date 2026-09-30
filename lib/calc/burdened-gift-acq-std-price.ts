@@ -22,6 +22,7 @@ type AcqStdAsset = Pick<
   | "assetKind"
   | "transferType"
   | "bgValuationMode"
+  | "bgAcquisitionMethod"
   | "standardPriceAtAcq"
   | "standardPricePerSqmAtAcq"
   | "acquisitionArea"
@@ -31,7 +32,10 @@ type AcqStdAsset = Pick<
  * 「취득시 기준시가」를 **직접 입력받아야 하는** 상태인가 — UI 노출·validate 공용 게이트.
  *
  * 제외 이유:
- *  · 시가 모드    — 취득가액이 K-4(실지)·K-5(환산) 축으로 간다(§100①). 이 값을 쓰지 않는다.
+ *  · 시가 모드 + K-4(실지) — 취득가액이 실지취득가액 안분으로 간다(§100①). 이 값을 쓰지 않는다.
+ *    ⚠️ **K-5(환산)는 쓴다** — 환산취득가액 = 양도가액 × 취득시 기준시가 ÷ 양도시 기준시가
+ *    (소령 §176의2②2호 · `burdened-gift-apportionment.ts` K-5). 종전에는 시가 모드 전체를 제외해
+ *    ⑧(K-5)이 요구하는데 **칸이 없었다**(2026-09-30 B2).
  *  · `general_building` — `gbAcqLandPricePerSqm`·`gbAcqBuildingValue` 전용 입력이 있고 API가
  *    그것을 쓴다(`transfer-tax-api-burdened-gift.ts`). 여기 칸을 만들면 **엔진이
  *    쓰지 않는 값**을 입력하게 되고, validate가 그걸 요구하면 gb*를 채운 사용자가 막힌다.
@@ -43,7 +47,7 @@ type AcqStdAsset = Pick<
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
   return (
     asset.transferType === "burdened_gift" &&
-    asset.bgValuationMode !== "sangjeungbeop_market" &&
+    (asset.bgValuationMode !== "sangjeungbeop_market" || asset.bgAcquisitionMethod === "converted") &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in"
   );

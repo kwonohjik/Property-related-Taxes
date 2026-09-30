@@ -115,6 +115,17 @@ describe("함께양도 × 부담부증여 — 양도가액 축", () => {
     expect(err(mv, "apportioned")).not.toContain("양도시 기준시가");
   });
 
+  it("🔑 S-4b: 시가모드 + 환산(K-5)은 공용 칸을 쓴다 — 환산 분모가 양도시 기준시가다 (B2)", () => {
+    const k5 = ready({
+      transferType: "burdened_gift",
+      bgValuationMode: "sangjeungbeop_market",
+      bgAcquisitionMethod: "converted",
+      standardPriceAtTransfer: "",
+    });
+    expect(stdPriceAtTransferComesFromElsewhere(k5)).toBe(false);
+    expect(err(k5, "apportioned")).toContain("양도시 기준시가");
+  });
+
   it("S-5: 부담부증여여도 공용 칸을 쓰는 경우(주택·기준시가 모드)는 종전대로 요구한다", () => {
     const bg = ready({ transferType: "burdened_gift", standardPriceAtTransfer: "" });
     expect(err(bg, "apportioned")).toContain("양도시 기준시가");

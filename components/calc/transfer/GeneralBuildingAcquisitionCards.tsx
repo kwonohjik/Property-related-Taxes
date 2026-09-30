@@ -33,6 +33,7 @@ import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbUnifiedSec1639ClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -219,6 +220,8 @@ export function GeneralBuildingAcquisitionCards({
             hasSeperateLandAcquisitionDate: false,
             landAcquisitionDate: asset.acquisitionDate,
             gbBuildingAcquisitionCause: toBuildingCause(asset.acquisitionCause),
+            // 분리 OFF의 상속·증여 카드에는 산정 방식 라디오가 없다 — 파트 라디오로 고른 추계를 비운다(G3)
+            ...gbUnifiedSec1639ClearPatch(asset.acquisitionCause),
           },
     );
 
@@ -241,7 +244,12 @@ export function GeneralBuildingAcquisitionCards({
       return;
     }
     const cause = v as AssetForm["acquisitionCause"];
-    onChange({ acquisitionCause: cause, gbBuildingAcquisitionCause: toBuildingCause(cause) });
+    onChange({
+      acquisitionCause: cause,
+      gbBuildingAcquisitionCause: toBuildingCause(cause),
+      // 매매에서 고른 환산을 상속·증여 카드가 끌 수단이 없다 — 같은 배치에서 비운다(G3)
+      ...gbUnifiedSec1639ClearPatch(cause),
+    });
   };
 
   return (

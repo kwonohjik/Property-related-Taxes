@@ -190,7 +190,7 @@ export function ReplotIncreaseFields({
         증가분 자산을 자동 추가하여 취득가액을 별도 입력하세요.
       </p>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">환지처분확정일</label>
           <DateInput
@@ -205,10 +205,28 @@ export function ReplotIncreaseFields({
             </p>
           )}
         </div>
+        {/*
+          종전토지 면적 = 당초분의 **취득 당시 면적**(`acquisitionArea`) — 산정 방식과 무관하게 여기서 받는다
+          (2026-09-30 A1). 종전에는 ③ 취득정보의 기준시가 면적 칸(환산 모드 전용)에만 있어 실거래가
+          모드에서는 ⑧이 요구하는데 **넣을 칸이 없었다**. 실거래가 모드에서도 비사업용 토지 판정이 이
+          면적을 쓴다(`non-business-land/form-mapper.ts`). 환산 모드의 ③ 칸은 같은 값을 공유한다
+          (「일반」·「일부 양도」의 ① 면적 칸과 같은 배치).
+        */}
+        <div className="space-y-1.5" data-field="acquisitionArea">
+          <label className="text-sm font-medium">
+            종전토지 면적 (취득 당시 ㎡)
+            <span title="환지 전에 취득한 원래 토지의 면적 — 당초분 자산의 취득면적입니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+          </label>
+          <DecimalInput
+            value={asset.acquisitionArea}
+            onChange={(v) => onChange({ acquisitionArea: v })}
+            data-testid="replot-inc-prior-area"
+          />
+        </div>
         <div className="space-y-1.5" data-field="transferArea">
           <label className="text-sm font-medium">
             권리면적 (양도 당시 ㎡)
-            <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 당초분 자산의 양도면적이 됩니다. (취득면적=종전토지 면적은 ③ 취득정보에 입력)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+            <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 당초분 자산의 양도면적이 됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
             value={asset.entitlementArea}

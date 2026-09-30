@@ -233,9 +233,8 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "replottingConfirmDate (증환지)", field: "replottingConfirmDate", step: 0, assetIndex: A, message: /^자산: 환지처분확정일을 입력하세요/, form: land({ areaScenario: "increase" }) },
   {
     name: "acquisitionArea (증환지 종전토지)", field: "acquisitionArea", step: 0, assetIndex: A, message: /^자산: 종전토지 면적/,
-    // 환산 모드 — 이 칸은 ③ 취득정보의 기준시가 면적 칸에만 있다. 실거래가 모드에는 입력칸이
-    // 없다(2026-09-30 probe 실측 — 별건 결함, 계획서 §7-2). 그때는 카드로 후퇴한다.
-    form: land({ areaScenario: "increase", replottingConfirmDate: "2016-01-01", acquisitionArea: "", transferArea: "100", useEstimatedAcquisition: true, standardPriceAtAcq: "100000000", standardPriceAtTransfer: "300000000" }),
+    // 실거래가 모드 — ① 증환지 칸의 「종전토지 면적」(A1 해소 전에는 환산 모드 ③에만 있었다)
+    form: land({ areaScenario: "increase", replottingConfirmDate: "2016-01-01", acquisitionArea: "", transferArea: "100" }),
   },
   {
     name: "transferArea (증환지 권리면적)", field: "transferArea", step: 0, assetIndex: A, message: /^자산: 권리면적\(양도 당시 면적\)/,
