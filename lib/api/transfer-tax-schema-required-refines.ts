@@ -7,6 +7,8 @@
  * 모순이 된다(14지점 ⑧·⑩).
  */
 import { z } from "zod";
+import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
+import { toDate } from "./date-coerce";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
@@ -107,7 +109,14 @@ type PrimaryLike = {
   standardPriceAtTransfer?: number;
   preHousingDisclosure?: unknown;
   generalBuildingValuation?: unknown;
-  redevelopment?: { isSuccessorMember?: boolean; completionDate?: string } | null;
+  redevelopment?: {
+    subject?: string;
+    isSuccessorMember?: boolean;
+    completionDate?: string;
+    newHouseResidenceMonths?: number;
+  } | null;
+  isOneHousehold?: boolean;
+  residencePeriodMonths?: number;
   mixedUse?: unknown;
   commercialBuildingValuation?: unknown;
   carryoverTaxation?: Parameters<typeof refineCarryoverTaxation>[0];
@@ -156,6 +165,27 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   if (data.redevelopment?.isSuccessorMember === true && !data.redevelopment.completionDate) {
     issue(["redevelopment", "completionDate"], "승계조합원은 준공일(사용검사필증 교부일)이 필요합니다 (소득세법 시행령 §162①4호)");
   }
+
+  // I-8 — 승계조합원 완공APT 거주 개월 수 ≤ 준공일~양도일 개월 수(⑧ `successorAptResidenceOverflow` 같은 leaf).
+  //   엔진이 읽는 값(`resolveAptResidenceMonths` 승계 분기)만 본다: 신축 거주 칸이 있으면 그것, 없으면 Step4 값 —
+  //   Step4 값은 ⑤가 1세대일 때만 입력받으므로 그때만 본다.
+  const rd = data.redevelopment;
+  if (rd && rd.subject === "apt" && rd.isSuccessorMember === true && rd.completionDate) {
+    const max = successorAptMaxResidenceMonths(toDate(rd.completionDate, "completionDate"), toDate(data.transferDate, "transferDate"));
+    if (rd.newHouseResidenceMonths !== undefined) {
+      if (rd.newHouseResidenceMonths > max)
+        issue(["redevelopment", "newHouseResidenceMonths"], successorResidenceZodMessage(rd.newHouseResidenceMonths, max));
+    } else if (data.isOneHousehold === true && (data.residencePeriodMonths ?? 0) > max) {
+      issue(["residencePeriodMonths"], successorResidenceZodMessage(data.residencePeriodMonths ?? 0, max));
+    }
+  }
+}
+
+function successorResidenceZodMessage(months: number, max: number): string {
+  return (
+    `승계조합원 신축주택 거주기간 ${months}개월이 준공일부터 양도일까지의 ${max}개월을 넘습니다 — ` +
+    `준공 전 거주는 보유기간 중 거주기간이 아닙니다 (소득세법 시행령 §162①4호 · 서면-2019-부동산-4508)`
+  );
 }
 
 /** 단건·다건 자산 공용 진입점 — `propertySchema`·`propertyItemSchema` superRefine에서 부른다. */

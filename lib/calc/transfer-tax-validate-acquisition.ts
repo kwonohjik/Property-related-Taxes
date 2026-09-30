@@ -11,6 +11,8 @@
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { successorAptResidenceOverflow } from "./redev-field-scope";
+import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-tax-validate-sec164";
@@ -209,6 +211,13 @@ export function validateAssetAcquisition(
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
     const redevError = validateRedevelopmentAsset(asset, label);
     if (redevError) return redevError;
+    // I-8 — 승계조합원 신축주택 거주 개월 수는 준공일~양도일 개월 수를 넘을 수 없다(⑫ 같은 leaf).
+    const newMonthsRaw = (asset.redevNewHouseResidenceMonths || "").trim();
+    if (newMonthsRaw) {
+      const newMonths = parseInt(newMonthsRaw.replace(/,/g, ""), 10);
+      const max = successorAptResidenceOverflow(asset, formTransferDate, newMonths);
+      if (max !== null) return successorAptResidenceOverflowMessage(label, newMonths, max, asset.redevCompletionDate);
+    }
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
     if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
     return null;

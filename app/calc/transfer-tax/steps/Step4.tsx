@@ -536,7 +536,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 </div>
               )}
 
-            {/* OH-50 — 승계조합원 개월 수 직접 입력 안내(구간 입력은 ⑧이 준공일과 비교해 막는다). */}
+            {/* OH-50 — 승계조합원 개월 수 직접 입력 안내(구간 입력은 ⑧이 준공일과 비교해 막는다 · 개월 수는 준공일~양도일 상한만 ⑧ — I-8). */}
             {successorCompletionActive &&
               form.isOneHousehold &&
               !redevSplitResidence &&

@@ -13,6 +13,8 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
  * 양도 대상(§166 축) 판정 — `buildRedevelopmentPayload`·⑤ UI와 **같은 기본값**.
@@ -257,4 +259,43 @@ export function redevAptHoldingStartDate(
     resolveRedevSubject(asset) === "apt" &&
     asset.redevIsSuccessorMember === "yes";
   return isSuccessorApt && asset.redevCompletionDate ? asset.redevCompletionDate : asset.acquisitionDate;
+}
+
+/**
+ * I-8 ⑧ — 승계조합원 완공APT의 거주 **개월 수**가 준공일~양도일 개월 수를 넘는가(⑫ 미러:
+ * `refinePrimaryAcquisitionInputs`). 넘으면 그 상한, 아니면 null.
+ *
+ * 상한·근거는 엔진 leaf `successorAptMaxResidenceMonths`. 준공일·양도일이 없으면 판정하지 않는다
+ * (준공일 누락은 `validateRedevelopmentAsset`이 먼저 막는다).
+ */
+export function successorAptResidenceOverflow(
+  asset: Pick<
+    AssetForm,
+    "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevCompletionDate"
+  >,
+  transferDate: string | undefined,
+  months: number,
+): number | null {
+  if (asset.assetKind !== "redevelopment_apt" || resolveRedevSubject(asset) !== "apt") return null;
+  if (asset.redevIsSuccessorMember !== "yes") return null;
+  const completion = toOptionalDate(asset.redevCompletionDate);
+  const transfer = toOptionalDate(transferDate);
+  if (!completion || !transfer) return null;
+  const max = successorAptMaxResidenceMonths(completion, transfer);
+  return months > max ? max : null;
+}
+
+/** I-8 — ⑧ 두 지점(재개발 카드 개월 칸 · Step4 개월 직접 입력)이 같은 문장을 쓴다. */
+export function successorAptResidenceOverflowMessage(
+  label: string,
+  months: number,
+  max: number,
+  completionDate: string,
+): string {
+  return (
+    `${label}: 승계조합원 신축주택 거주기간 ${months}개월이 준공일(${completionDate})부터 양도일까지의 ` +
+    `${max}개월을 넘습니다. 준공 전 거주는 보유기간 중 거주기간이 아닙니다 (소득세법 시행령 §162①4호 · ` +
+    `서면-2019-부동산-4508). 사용승인 전에 사실상 사용하거나 임시사용승인을 받았다면 그 날을 준공일에 입력하세요 ` +
+    `(같은 호 단서).`
+  );
 }

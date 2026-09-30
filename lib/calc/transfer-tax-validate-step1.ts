@@ -17,6 +17,9 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
+import { successorAptResidenceOverflow } from "./redev-field-scope";
+import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -280,6 +283,20 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       transferDate: form.transferDate,
     }))
       issues.push({ step, assetIndex: 0, message });
+  }
+  // I-8 — 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없다. 준공일~양도일보다 긴 값만
+  //       막는다(⑤가 이 입력을 보이는 조건과 같다 · ⑫ `refinePrimaryAcquisitionInputs` 같은 leaf).
+  if (form.isOneHousehold && primary && isOneHouseExemptionAsset(primary.assetKind)
+      && !redevSplitResidenceSupersedesStep4(primary)
+      && primary.residenceInputMode === "direct") {
+    const months = deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths);
+    const max = successorAptResidenceOverflow(primary, form.transferDate, months);
+    if (max !== null)
+      issues.push({
+        step,
+        assetIndex: 0,
+        message: successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate),
+      });
   }
   return issues;
 }
