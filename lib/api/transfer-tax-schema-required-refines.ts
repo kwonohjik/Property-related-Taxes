@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
+import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
 
@@ -158,12 +159,13 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
 
 /** 단건·다건 자산 공용 진입점 — `propertySchema`·`propertyItemSchema` superRefine에서 부른다. */
 export function refinePropertyRequiredInputs(
-  data: PrimaryLike & { houses?: ReadonlyArray<HouseRow>; burdenedGiftInfo?: BurdenedGiftLike } & Required2aLike,
+  data: PrimaryLike & { houses?: ReadonlyArray<HouseRow>; burdenedGiftInfo?: BurdenedGiftLike; propertyType?: string } & Required2aLike,
   ctx: z.RefinementCtx,
 ) {
   refineHouseExclusionInputs(data.houses, ctx);
   refineBurdenedGiftInputs(data, ctx);
   refinePrimaryAcquisitionInputs(data, ctx);
+  refineMixedUsePresence(data, ctx); // MU-7 (2차 점검)
   refineGbPropertyRequired(data, ctx); // 일반건물 I1·I3·X1·Z4·Z5·C1~C4 (2차 점검)
   refineRequiredInputs2a(data, ctx); // §164⑨ EX · 분리취득 SP · 의제 전 상속 PD (2차 점검)
 }

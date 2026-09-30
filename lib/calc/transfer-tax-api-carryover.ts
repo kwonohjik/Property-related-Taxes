@@ -128,3 +128,13 @@ export function buildCarryoverPayload(
 
   return { carryoverTaxation, topLevelOverrides };
 }
+
+/**
+ * ④ 이월과세(`carryover_gift`) 자산의 `acquisitionDate` — 자산 카드에 취득일 칸이 따로 없으면 **증여 등기접수일**.
+ *
+ * 주 자산·컴패니언이 **같은 규칙**을 쓴다(2026-09-30 CP-5). 종전에는 주 자산만 이 fallback을 두고, 컴패니언은
+ * 빈 값을 보내 ⑭가 **주 자산 취득일**로 대신 채웠다(다른 물건의 날짜). ⑧은 등기접수일을 필수로 요구한다.
+ */
+export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
+  return asset.acquisitionDate || asset.carryover?.giftRegistryDate || "";
+}

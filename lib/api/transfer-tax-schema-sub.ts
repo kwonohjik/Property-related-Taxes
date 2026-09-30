@@ -191,24 +191,8 @@ export const newHousingDetailsSchema = z.object({
   calculatedTax: z.number().int().nonnegative().default(0),
 });
 
-// ─── 1990.8.30. 이전 취득 토지 기준시가 환산 ─────────────────────
-export const landGradeInputSchema = z.union([
-  z.number().int().min(1).max(365),
-  z.object({ gradeValue: z.number().positive() }),
-]);
-
-export const pre1990LandSchema = z.object({
-  acquisitionDate: z.string().date(),
-  transferDate: z.string().date(),
-  areaSqm: z.number().positive(),
-  pricePerSqm_1990: z.number().positive(),
-  // 양도시 기준시가는 상위 standardPriceAtTransfer로 공급 — 서브엔진은 산출하지 않음(deprecated).
-  pricePerSqm_atTransfer: z.number().positive().optional(),
-  grade_1990_0830: landGradeInputSchema,
-  gradePrev_1990_0830: landGradeInputSchema,
-  gradeAtAcquisition: landGradeInputSchema,
-  forceRatioCap: z.boolean().optional(),
-});
+// ─── 1990.8.30. 이전 취득 토지 기준시가 환산 — leaf로 분리(컴패니언 §163⑨ 운반이 순환 없이 재사용, CP-3) ──
+export { landGradeInputSchema, pre1990LandSchema } from "./transfer-tax-schema-pre1990-land";
 
 export const houseSchema = z.object({
   id: z.string().min(1),

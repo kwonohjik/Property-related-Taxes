@@ -130,6 +130,26 @@ export const mixedUseAssetSchema = z.object({
     (phd.totalTransferPriceForFourPart ?? 0) > 0 &&
     !!v.partialUsageChange?.usageChangeDate &&
     phd.firstDisclosureDate < v.partialUsageChange.usageChangeDate;
+  // ── 2차 점검(2026-09-30 · MU-4·5·6) — ⑧ `transfer-tax-validate-mixed-use-asset.ts`·`-inheritance.ts` 거울 ──
+  // 실가·감정·매매사례 안분(법 §100②)은 총액을 취득시 기준시가 비율로 나눈다. 총액이 비면 주택·상가 취득가액이
+  // 0(MU-4), 주택분 비율의 분자가 비면 주택분 0으로 안분됐다(MU-5) — 둘 다 200 + 다른 세액이었다.
+  const actualLike = v.useActualAcquisition === true || v.useAppraisalSalesAcquisition === true;
+  if (actualLike && !((v.acquisitionActualTotalPrice ?? 0) > 0)) {
+    ctx.addIssue({ code: "custom", message: "겸용주택 실지거래가액·감정가액·매매사례가액 안분은 취득가액 총액이 필요합니다 (소득세법 §100②)", path: ["acquisitionActualTotalPrice"] });
+  }
+  if (actualLike && !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)) {
+    ctx.addIssue({ code: "custom", message: "겸용주택 취득가액 안분은 취득시 개별주택공시가격(주택분 안분 비율)이 필요합니다 (소득세법 §100②)", path: ["acquisitionStandardPrice", "housingPrice"] });
+  }
+  // 상속·증여(§163⑨) 주택분 — 신고가액 또는 개별주택가격 중 하나. 둘 다 없으면 엔진이 던졌다(500 · MU-6).
+  // PHD는 자체 3-시점 환산이 주택분을 만든다 — ⑧도 `!usePreHousingDisclosure`에서만 요구한다.
+  if (
+    (v.acquisitionByInheritance === true || v.acquisitionByGift === true) &&
+    v.usePreHousingDisclosure !== true &&
+    !((v.housingInheritedValue ?? 0) > 0) &&
+    !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)
+  ) {
+    ctx.addIssue({ code: "custom", message: "상속·증여 겸용주택은 주택분 평가액(신고가액) 또는 취득시 개별주택가격이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
+  }
   if (!fourPart) {
     if (!(v.acquisitionStandardPrice.commercialBuildingPrice > 0))
       ctx.addIssue({ code: "custom", message: "겸용주택은 취득시 상가건물 기준시가가 필요합니다", path: ["acquisitionStandardPrice", "commercialBuildingPrice"] });
@@ -137,3 +157,22 @@ export const mixedUseAssetSchema = z.object({
       ctx.addIssue({ code: "custom", message: "겸용주택은 취득시 개별공시지가가 필요합니다", path: ["acquisitionStandardPrice", "landPricePerSqm"] });
   }
 });
+
+/**
+ * MU-7 — `propertyType: "mixed-use-house"`인데 `mixedUse` 서브객체가 없으면 route의 겸용 분기
+ * (`route.ts` `data.propertyType === "mixed-use-house" && data.mixedUse`)가 안 타고 **평범한 주택**으로
+ * 계산됐다(200 + 다른 세액). ④는 겸용이면 항상 싣는다(`buildMixedUsePayload` — ⑧도 겸용 전용 검증을 탄다).
+ * 단건·다건 공용 — `refinePropertyRequiredInputs`에서 부른다.
+ */
+export function refineMixedUsePresence(
+  data: { propertyType?: string; mixedUse?: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  if (data.propertyType === "mixed-use-house" && !data.mixedUse) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["mixedUse"],
+      message: "겸용주택(propertyType=mixed-use-house)은 주택·상가 면적과 기준시가 정보(mixedUse)가 필요합니다",
+    });
+  }
+}

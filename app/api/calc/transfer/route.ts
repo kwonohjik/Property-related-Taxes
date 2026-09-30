@@ -377,7 +377,6 @@ export async function POST(request: NextRequest) {
         const c = companions[idx - 1];
         return buildCompanionEngineInputs(c, a, {
           primaryCtxForSplit,
-          primaryAcquisitionDate: acquisitionDate,
           transferDate,
           primaryAcquisitionCause: data.acquisitionCause,
           primaryEngineInput: {

@@ -18,6 +18,12 @@ import {
 } from "@/lib/tax-engine/expropriation-scope";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
+import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
+import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
+import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
@@ -339,6 +345,28 @@ export function buildAssetPayload(
     //    같은 농지를 주 자산에 두면 0원 / 컴패니언에 두면 감면세액 × 20%가 부과됐다.
     isSelfCultivatedExpropriatedLand: toSelfCultivatedExpropriatedLand(asset.reductions),
     inheritanceValuation,
+    /**
+     * ⑬ §163⑨ 상속·증여 취득가액 ②(§164④~⑦)·③(의제 전 환산) — **주 자산과 같은 빌더**(CP-3, 2026-09-30).
+     *
+     * 🔴 종전에는 컴패니언에 이 운반이 없었다 — ⑤(`InheritedAcquisitionDeemedSection`)·⑧은 ②만 입력하거나
+     *    「가목 확인 불가」 선언(③)으로 가는 것을 허용하는데, ①(`inheritanceValuation`)만 실려 **취득가액 0**이었다.
+     * 지분 스케일은 빌더가 주 자산과 같은 방식으로 한다(①만 × ratio — 기준시가는 약분된다).
+     * 토지 §164④(`pre1990Land`)는 주 자산의 `hasPre1990ForSec164` 게이트와 같다(토지 × §163⑨ 취득원인).
+     *
+     * ⚠️ **겸용·일반건물·재개발은 싣지 않는다** — 취득가액을 자기 서브객체(`mixedUse`·`generalBuildingValuation`·
+     *    `redevelopment`)가 만들고 ⑧도 이 규칙(`postDeemedClauseARequiredError`)을 걸지 않는다. 특히 겸용은 ⑭가
+     *    컴패니언 입력을 파트 카드에 spread하므로(`mixed-use-part-cards.ts`) 실으면 카드마다 STEP 0.45가 다시 돈다.
+     */
+    ...(ownsAcquisitionSubobject(asset)
+      ? {}
+      : {
+          ...buildInheritedAcquisitionPayload(asset, ratio, fractional),
+          ...buildInheritedHouseValuationPayload(asset, transferDate),
+          ...buildCommercialInheritanceValuationPayload(asset),
+          ...(asset.assetKind === "land" && isSec163_9Cause(asset.acquisitionCause)
+            ? buildPre1990LandPayload(asset, transferDate)
+            : {}),
+        }),
     fixedAcquisitionPrice,
     // 세대 단위 — form.isOneHousehold(토글) 사용. asset.isOneHousehold는 UI 미동기화(기본 false)라
     // companion 주택이 일괄양도에서 항상 1세대1주택 비과세 미적용되던 버그 정정.
@@ -370,7 +398,11 @@ export function buildAssetPayload(
     acquisitionCause: asset.acquisitionCause,
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,
-    acquisitionDate: asset.acquisitionDate || newConstructionAcqDate || undefined,
+    // CP-5: 이월과세는 주 자산과 같은 fallback(증여 등기접수일) — ⑭는 더 이상 주 자산 취득일로 대신 채우지 않는다.
+    acquisitionDate:
+      (asset.acquisitionCause === "carryover_gift"
+        ? carryoverAcquisitionDateFallback(asset)
+        : asset.acquisitionDate || newConstructionAcqDate) || undefined,
     // Round 9 (2026-05-06): 자산-수준 매매계약일 (§99의3 등 13개 매매계약일 기준 조문)
     assetContractDate: asset.assetContractDate || undefined,
     decedentAcquisitionDate:
@@ -435,4 +467,14 @@ export function buildAssetPayload(
         }
       : {}),
   };
+}
+
+/** 취득가액을 **자기 서브객체**가 만드는 자산 — §163⑨ 운반(CP-3) 대상이 아니다. */
+function ownsAcquisitionSubobject(asset: AssetForm): boolean {
+  return (
+    (asset.assetKind === "housing" && asset.isMixedUseHouse === true) ||
+    asset.assetKind === "general_building" ||
+    asset.assetKind === "right_to_move_in" ||
+    asset.assetKind === "redevelopment_apt"
+  );
 }

@@ -8,11 +8,12 @@ import { z } from "zod";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas";
-import { commercialBuildingValuationSchema } from "./transfer-tax-building-schemas";
+import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import { generalBuildingValuationSchema } from "./transfer-tax-building-schemas";
 import { mixedUseAssetSchema } from "./transfer-tax-schema-mixed-use";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
+import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
 // ⑫ 분리취득 축 — 단건·컴패니언 공용 shape (leaf라 TDZ 안전).
 import { splitAcquisitionShape } from "./transfer-tax-schema-split";
 
@@ -140,7 +141,8 @@ export const companionAssetSchema = z.object({
    */
   commercialAppurtenantLand: commercialAppurtenantLandSchema.optional(),
   /** ⑫ 상가 환산취득가(cb 기준시가) — 분자·분모로 약분되므로 지분 스케일 불요. */
-  commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
+  // §164⑥ 괄호 단서(§164⑧ 준용) 필수 입력 superRefine 포함 — 단건과 같은 스키마(CB1)
+  commercialBuildingValuation: commercialBuildingValuationRequiredSchema.optional(),
   /**
    * 양도시점 기준시가 — **§97①1호나목 환산 분모**(매매 estimated·이월과세 general 환산).
    *
@@ -328,4 +330,11 @@ export const companionAssetSchema = z.object({
    *    컴패니언·단건은 사용자가 영 §163의2②로 산정해 넣은 **자산 전체분**이다.
    */
   carryoverTaxation: carryoverTaxationEngineShape.optional(),
+  /**
+   * ⑫ §163⑨ 상속·증여 취득가액 — ②(§164④~⑦)·③(의제 전 환산) 운반 (CP-3, 2026-09-30).
+   *
+   * 🔴 종전에는 없었다 — ⑤·⑧은 컴패니언에서도 ②만 입력하거나 「가목 확인 불가」 선언으로 ③에 가는 것을
+   *    허용하는데, 운반 칸이 없어 **컴패니언 취득가액 0**이었다. 주 자산과 **같은 shape**을 spread한다.
+   */
+  ...sec163_9AcquisitionShape,
 });
