@@ -80,7 +80,7 @@ export const TRANSFER_RENTAL_HOUSING = {
 | `liveYears` | 거주연수 | 년 | 자산-수준 입력 |
 | `r161_1` | §161① 비율 = (P_prior − P_acq) / (P_transfer − P_acq) | 소수 | 엔진 계산 |
 | `r161_2_2` | §161②2호 비율 = (P_transfer − P_prior) / (P_transfer − P_acq) | 소수 | 엔진 계산 |
-| `r_high` | 고가주택 과세비율 = (S − 12억) / S | 소수 | 엔진 계산 |
+| `r_high` | 고가주택 과세비율 = (S − H) / S — H = `resolveHighValueHouseThreshold(양도일)`(9억/12억, OH-13) | 소수 | 엔진 계산 |
 
 ---
 
@@ -220,16 +220,20 @@ function checkEligibility(rentalUnits, residenceHoldYears, residenceLiveYears, t
 ### 모듈: `prhp-allocation.ts`
 
 ```ts
-function calculatePrhpAllocation(scenario, gain95T1, gain95T2, S, P_acq, P_prior, P_transfer):
+// H = 고가주택 기준금액(양도일 기준) — `resolveHighValueHouseThreshold(transferDate)`.
+//     2021-12-07 이전 양도는 9억, 이후는 12억(OH-13) — **리터럴 고정 금지**.
+//     실제 구현(`prhp-allocation.ts`)은 `calculatePrhpAllocation`의 `highValueThreshold`
+//     매개변수로 받는다(기본값 없음).
+function calculatePrhpAllocation(scenario, gain95T1, gain95T2, S, P_acq, P_prior, P_transfer, H):
   AllocationResult {
   validateInputs(P_acq, P_prior, P_transfer);
     // 모두 양수 + P_transfer > P_acq + P_prior ∈ [P_acq, P_transfer]
 
   r161_1 = (P_prior - P_acq) / (P_transfer - P_acq);
   r161_2_2 = (P_transfer - P_prior) / (P_transfer - P_acq);
-  r_high = S > 1_200_000_000 ? (S - 1_200_000_000) / S : 0;
+  r_high = S > H ? (S - H) / S : 0;
 
-  if (S <= 1_200_000_000):  // B1
+  if (S <= H):  // B1
     taxable = floor(gain95T1 × r161_1);
     cap = gain95T1;
   else:  // B2

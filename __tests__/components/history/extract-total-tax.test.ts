@@ -110,4 +110,44 @@ describe("extractResultSummaryItems — taxType 분기 (Bug B 확장)", () => {
     expect(items.find((i) => i.label === "과세 여부")?.value).toBe("비과세");
     expect(items.find((i) => i.label === "결정세액")).toBeUndefined();
   });
+
+  /**
+   * D-8 — OH-53(2026-09-26, `8f1de0e8e`) 이전에 저장된 1세대1주택 판정 이력은
+   * §155⑳ 미충족으로 과세로 뒤집혔어도 `appliedExceptions`를 비우지 않았다.
+   * 「판정: 과세」 옆에 「적용 특례」가 함께 뜨면 모순이다 — 읽기 시점에 가려야 한다.
+   */
+  it("D-8: 과세로 뒤집힌 판정은 옛 이력의 잔존 appliedExceptions를 적용 특례로 보이지 않는다", () => {
+    const items = extractResultSummaryItems(
+      {
+        judgment: {
+          isExempt: false,
+          isPartialExempt: false,
+          // OH-53 이전 엔진이 남긴 stale 값 — 오늘의 엔진은 만들지 않지만 옛 기록엔 남아 있다.
+          appliedExceptions: [{ id: "rental_155_20", label: "장기임대주택 특례" }],
+          pending: [],
+        },
+        houseCount: { total: 1, countedForExemption: 1 },
+      },
+      "one_house_exemption"
+    );
+    expect(items.find((i) => i.label === "판정")?.value).toBe("과세");
+    expect(items.find((i) => i.label === "적용 특례")).toBeUndefined();
+  });
+
+  it("D-8 twin: 비과세 판정은 appliedExceptions를 그대로 보여준다(회귀 방지)", () => {
+    const items = extractResultSummaryItems(
+      {
+        judgment: {
+          isExempt: true,
+          isPartialExempt: false,
+          appliedExceptions: [{ id: "rural_house", label: "농어촌주택 특례" }],
+          pending: [],
+        },
+        houseCount: { total: 1, countedForExemption: 1 },
+      },
+      "one_house_exemption"
+    );
+    expect(items.find((i) => i.label === "판정")?.value).toBe("비과세");
+    expect(items.find((i) => i.label === "적용 특례")?.value).toBe("1건");
+  });
 });

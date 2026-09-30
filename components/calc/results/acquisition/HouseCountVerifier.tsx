@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
-import type { ExclusionReason } from "@/lib/tax-engine/house-count/types";
+import type { ExclusionReason, SeparateHouseholdReason } from "@/lib/tax-engine/house-count/types";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 
 interface Props {
@@ -53,6 +53,19 @@ const EXCLUSION_TYPE_LABELS = {
   pending_hansi_lease: "취득 주택 — 한시특례 임대등록",
   pending_hansi_unsold: "취득 주택 — 한시특례 미분양",
 } satisfies Record<ExclusionReason, string>;
+
+/**
+ * 🔑 D-3 — `description`이 없으면 `reason`(내부 id)이 그대로 화면에 나왔다
+ *    (`feedback_no_internal_id_in_result`). 엔진은 4종 모두 항상 `description`을 채우지만
+ *    (`lib/tax-engine/house-count/household.ts`), 화면 층에서도 같은 불변식을 지킨다 —
+ *    `satisfies`로 신설 사유 누락을 컴파일러가 잡는다.
+ */
+const SEPARATE_HOUSEHOLD_REASON_LABELS = {
+  under30_income: "30세 미만 자녀 — 소득 요건 충족 (§28의3② 1호)",
+  over65_cohabitation: "65세 이상 직계존속 동거봉양 합가 (§28의3② 2호)",
+  overseas_90days: "90일 이상 해외 출국 (§28의3② 3호)",
+  relocate_60days: "취득 후 60일 이내 주소 이전 (§28의3② 4호)",
+} satisfies Record<SeparateHouseholdReason, string>;
 
 // ============================================================
 // 메인 컴포넌트
@@ -124,7 +137,12 @@ export function HouseCountVerifier({ result }: Props) {
           {detail.separateHousehold && (
             <div className="rounded bg-violet-50/70 border border-violet-200 p-2 text-xs">
               <p className="font-semibold text-violet-700 mb-1">세대 별도 인정</p>
-              <p className="text-muted-foreground">{detail.separateHousehold.description ?? detail.separateHousehold.reason}</p>
+              <p className="text-muted-foreground">
+                {detail.separateHousehold.description ??
+                  (detail.separateHousehold.reason
+                    ? SEPARATE_HOUSEHOLD_REASON_LABELS[detail.separateHousehold.reason]
+                    : "세대 별도 인정 사유")}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 미성년자는 소득 충족 시에도 별도 세대 인정 불가 (§28의3②1호 단서)
               </p>

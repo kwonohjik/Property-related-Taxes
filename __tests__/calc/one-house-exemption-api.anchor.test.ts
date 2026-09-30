@@ -392,10 +392,19 @@ describe("P4-2b-1 — 사이드바 요약", () => {
   });
 
   it("[SB-2] 선언한 특례만 나열한다 — 성립 여부는 말하지 않는다(엔진 몫)", () => {
+    const items = computeOneHouseJudgmentSummary(baseForm({ winWinRentalSpecial: true }));
+    expect(items.find((i) => i.label === "선언한 특례")?.value).toBe("상생임대주택");
+  });
+
+  /**
+   * D-2 — `temporaryTwoHouseSpecial`은 §155①이 명부 도출로 바뀐 뒤 true로 쓰는 화면이
+   * 없다(죽은 필드). 남은 이력 JSON에 옛 값이 있어도 「선언한 특례」에 적지 않는다.
+   */
+  it("[SB-2 D-2] temporaryTwoHouseSpecial=true(옛 이력 잔존)는 「일시적 2주택」을 적지 않는다", () => {
     const items = computeOneHouseJudgmentSummary(
       baseForm({ temporaryTwoHouseSpecial: true, winWinRentalSpecial: true }),
     );
-    expect(items.find((i) => i.label === "선언한 특례")?.value).toBe("일시적 2주택 · 상생임대주택");
+    expect(items.find((i) => i.label === "선언한 특례")?.value).toBe("상생임대주택");
   });
 
   it("[SB-3] 미입력 금액은 항목 자체를 만들지 않는다 (0원 행 금지)", () => {
