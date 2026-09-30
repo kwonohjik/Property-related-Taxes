@@ -82,7 +82,7 @@ export function extractResultSummaryItems(
    */
   if (taxType === "one_house_exemption") {
     const judgment = resultData?.judgment as
-      | { appliedExceptions?: unknown[]; pending?: unknown[] }
+      | { appliedExceptions?: unknown[]; pending?: unknown[]; isExempt?: boolean; isPartialExempt?: boolean }
       | undefined;
     const houseCount = resultData?.houseCount as
       | { total?: number; countedForExemption?: number }
@@ -99,7 +99,14 @@ export function extractResultSummaryItems(
     ) {
       items.push({ label: "판정상 주택 수", value: `${houseCount.countedForExemption}채` });
     }
-    const applied = judgment.appliedExceptions?.length ?? 0;
+    /**
+     * 🔴 D-8 — OH-53(2026-09-26) 이전 저장분은 §155⑳ 미충족으로 과세로 뒤집혔어도
+     *    `appliedExceptions`가 비워지지 않았다. 「판정: 과세」 옆에 「적용 특례: N건」이
+     *    함께 뜨는 모순을 막는다 — 엔진 불변식(과세면 특례 없음)을 읽기 시점에도 지킨다.
+     */
+    const applied = judgment.isExempt || judgment.isPartialExempt
+      ? (judgment.appliedExceptions?.length ?? 0)
+      : 0;
     if (applied > 0) items.push({ label: "적용 특례", value: `${applied}건` });
     const pending = judgment.pending?.length ?? 0;
     if (pending > 0) items.push({ label: "남은 조건", value: `${pending}건` });

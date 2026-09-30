@@ -571,8 +571,11 @@ export function computeOneHouseJudgmentSummary(
   if (price > 0) items.push({ label: "예상 양도가액", value: price });
 
   // 적용을 **선언한** 특례 — 성립 여부는 엔진 판정이므로 여기서 말하지 않는다.
+  //
+  // 🔴 D-2 — `temporaryTwoHouseSpecial`은 없다(§155①이 명부 도출로 바뀐 뒤 이 토글을
+  //    true로 쓰는 화면이 전무하다 — `ImportedOneHouseFactsCard.tsx:131`과 같은 사실).
+  //    한때 있던 「일시적 2주택」 행은 항상 죽은 조건이라 제거했다.
   const declared = [
-    form.temporaryTwoHouseSpecial && "일시적 2주택",
     form.culturalHeritageHouseSpecial && "문화유산주택",
     form.ruralHouseSpecial && "농어촌주택",
     form.unavoidableOutsideCapitalSpecial && "수도권 밖 부득이",
