@@ -161,8 +161,10 @@ export const foreignStockInputSchema = z.object({
     }
   }
 
-  // 취득가액 필수성 검증 (actual 모드)
-  if (d.acquisitionMode === "actual" && (d.perShareAcquisitionPriceForeign == null || d.perShareAcquisitionPriceForeign < 0)) {
+  // 취득가액 필수성 검증 — 실가·시가 **두 모드 모두**. 엔진은 시가 모드도 이 칸을 1주당 시가로 읽는다
+  // (`foreign-stock.ts` STEP 3). 2026-09-30 B21: 종전엔 실가만 요구해 시가 모드에서 비우면 200 +
+  // 취득가액 0(2,700,000 → 5,100,000)이었고, 화면은 시가 모드에서 이 칸을 아예 렌더하지 않았다.
+  if (d.perShareAcquisitionPriceForeign == null || d.perShareAcquisitionPriceForeign < 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["perShareAcquisitionPriceForeign"],

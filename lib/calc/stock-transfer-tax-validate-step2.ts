@@ -21,6 +21,13 @@ import {
 // ② 종가평균 파생 단일 진실 — 미리보기·API 변환과 **같은 함수**를 쓴다.
 // 여기서 다시 구현하면 「화면은 통과, 서버는 0」 같은 갈림이 생긴다.
 import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
+// 필수 키 집합은 ⑫(`stock-transfer-tax-refines.ts`)와 공용 술어 — 한쪽만 고치면 3중 패턴이 깨진다.
+import {
+  requiredUnlistedValuationKeys,
+  missingLotCauseKeys,
+  lotCauseMessage,
+  type UnlistedValuationKey,
+} from "./stock-transfer-required-inputs";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -51,25 +58,25 @@ function parseI(s: string): number {
  * 비상장 본칙 분기 + 상장 거래정지 우회 분기(§165③) 공유 — 단일 소스.
  * - netAssetOnlyReason 있으면 NI 면제 / acqFaceValueOnly 있으면 취득연도 면제
  */
+const SIMPLE_FIELD_MESSAGE: Record<Exclude<UnlistedValuationKey, "acqFaceValuePerShare">, string> = {
+  transferYearNetIncomePerShare: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165④)",
+  transferYearNetAssetPerShare: "양도연도 1주당 순자산가치를 입력하세요",
+  acquisitionYearNetIncomePerShare: "취득연도 1주당 순손익가치를 입력하세요",
+  acquisitionYearNetAssetPerShare: "취득연도 1주당 순자산가치를 입력하세요",
+};
+
 function validateUnlistedSimpleFields(
   form: StockTransferFormData,
   errors: StockValidationError[],
 ): void {
-  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
-  const acqFaceValueOnly = form.acqFaceValueOnly === true;
-  if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) {
-    errors.push({ field: "transferYearNetIncomePerShare", message: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165④)", severity: "error" });
-  }
-  if (isEmpty(form.transferYearNetAssetPerShare)) {
-    errors.push({ field: "transferYearNetAssetPerShare", message: "양도연도 1주당 순자산가치를 입력하세요", severity: "error" });
-  }
-  if (!acqFaceValueOnly) {
-    if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
-      errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
-    }
-    if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
-      errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
-    }
+  for (const key of requiredUnlistedValuationKeys({
+    scope: "both",
+    niSkip: (form.netAssetOnlyReason ?? "") !== "",
+    acqFaceValueOnly: form.acqFaceValueOnly === true,
+  })) {
+    // 액면가는 모드 공통 검사(`validateUnlistedValuationFields`)가 본다 — 여기는 1주당 평가값만.
+    if (key === "acqFaceValuePerShare") continue;
+    if (isEmpty(form[key])) errors.push({ field: key, message: SIMPLE_FIELD_MESSAGE[key], severity: "error" });
   }
 }
 
@@ -84,7 +91,7 @@ function validateUnlistedValuationFields(
   const niSkip = (form.netAssetOnlyReason ?? "") !== "";
   const valuationMode = form.unlistedValuationMode || "simple";
   const acqFaceValueOnly = form.acqFaceValueOnly === true;
-  if (acqFaceValueOnly) {
+  if (requiredUnlistedValuationKeys({ scope: "both", niSkip, acqFaceValueOnly }).includes("acqFaceValuePerShare")) {
     if (isEmpty(form.acqFaceValuePerShare) || parseI(form.acqFaceValuePerShare) <= 0) {
       errors.push({ field: "acqFaceValuePerShare", message: "취득시점 액면가를 입력하세요 (§99①4 후단)", severity: "error" });
     }
@@ -149,12 +156,17 @@ function validateAcquisitionSideUnlistedFields(
   form: StockTransferFormData,
   errors: StockValidationError[],
 ): void {
-  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
-  if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
-    errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
-  }
-  if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
-    errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+  for (const key of requiredUnlistedValuationKeys({
+    scope: "acquisition",
+    niSkip: (form.netAssetOnlyReason ?? "") !== "",
+    acqFaceValueOnly: false, // 취득측 전용 경로는 액면가 토글을 읽지 않는다(위 주석)
+  })) {
+    if (key === "acquisitionYearNetIncomePerShare" && isEmpty(form.acquisitionYearNetIncomePerShare)) {
+      errors.push({ field: key, message: "취득연도 1주당 순손익가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+    }
+    if (key === "acquisitionYearNetAssetPerShare" && isEmpty(form.acquisitionYearNetAssetPerShare)) {
+      errors.push({ field: key, message: "취득연도 1주당 순자산가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+    }
   }
 }
 
@@ -236,11 +248,18 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           if (parseI(lot.perShareAcquisitionPrice) <= 0) {
             errors.push({ field: `acquisitionLots[${i}].perShareAcquisitionPrice`, message: `매수 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다`, severity: "error" });
           }
-          if (lot.acquisitionCause === "inheritance" && isEmpty(lot.decedentAcquisitionDate)) {
-            errors.push({ field: `acquisitionLots[${i}].decedentAcquisitionDate`, message: `매수 lot #${i + 1} (상속): 피상속인 취득일을 입력하세요 (§104②1)`, severity: "error" });
-          }
-          if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
-            errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
+          /**
+           * 취득원인 보조 입력 — 분할(step1)·⑫와 **공용 술어**.
+           * 🔴 2026-09-30(B18) 종전엔 상속·합병만 봤다. 이 모드도 같은 lot 카드(`AcquisitionLotCard`)라
+           *    이월과세를 고를 수 있는데 관계·증여자 취득일·증여세 짝을 요구하지 않아, 비우면 엔진이
+           *    관계를 배우자로(2,620,000), 증여자 취득일 없이 가액만 승계하고 세율은 단기(3,930,000)로 갔다.
+           */
+          for (const key of missingLotCauseKeys(
+            lot.acquisitionCause,
+            (k) => !isEmpty(lot[k]),
+            (k) => parseI(lot[k] ?? "") > 0,
+          )) {
+            errors.push({ field: `acquisitionLots[${i}].${key}`, message: lotCauseMessage(key, i), severity: "error" });
           }
         });
         // [A-2] 자본조정(무상증자) 시 매수 수량이 희석 전이라 매도>매수가 정당 → 엔진 allocateLots 가드에 위임
@@ -556,9 +575,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         severity: "error",
       });
     }
-    if (isEmpty(form.perShareAcquisitionPrice)) {
-      errors.push({ field: "perShareAcquisitionPrice", message: "1주당 매매사례가액을 입력하세요", severity: "error" });
-    }
+    // 🔴 2026-09-30(B11) 종전엔 여기서 `perShareAcquisitionPrice`를 무조건 요구했다. 그런데 이 모드의
+    //    화면(`MarketSampleBlock`)에는 그 칸이 없어 「1주당 취득 매매사례가액」만 채운 사용자가 막혔다
+    //    (숨은 칸 요구 = 막다른 길). 필수 규칙은 아래 R-1' 「사례가액 또는 1주당 취득가액」 하나다 — ⑫와 같다.
   }
 
   // ── R-1' 매매사례가액 (영§176의2③1호) ──

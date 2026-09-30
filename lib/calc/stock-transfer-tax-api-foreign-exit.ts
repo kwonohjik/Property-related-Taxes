@@ -131,11 +131,10 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     }
   }
 
-  // 취득가액 — actual 모드만 입력 필요
-  if (acquisitionModeFS === "actual") {
-    const perAcq = parseFloatOrUndef(form.perShareAcquisitionPriceForeign);
-    if (perAcq !== undefined) body.perShareAcquisitionPriceForeign = perAcq;
-  }
+  // 취득가액 — 실가·시가 **두 모드 모두** 같은 칸이다(엔진이 시가 모드도 1주당 시가로 읽는다).
+  // 🔴 2026-09-30(B21) 종전엔 실가만 실어 시가 모드는 취득가액 0으로 계산됐다(2,700,000 → 5,100,000).
+  const perAcq = parseFloatOrUndef(form.perShareAcquisitionPriceForeign);
+  if (perAcq !== undefined) body.perShareAcquisitionPriceForeign = perAcq;
 
   // 외국납부세액 — hasForeignTax=true 시 필수
   if (form.hasForeignTax) {

@@ -190,7 +190,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
         {acquisitionModeFS === "market_price" && (
           <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 leading-relaxed">
             §178의3②2호 — 양도일·취득일 이전 1개월 거래소 평균가격으로 산정합니다.
-            평균가격을 계산하여 취득가액 란에 직접 입력하세요.
+            평균가격을 계산하여 아래 「1주당 취득가액 — 시가」 란에 직접 입력하세요.
           </div>
         )}
 
@@ -224,26 +224,34 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           />
         </FieldCard>
 
-        {acquisitionModeFS === "actual" && (
-          <FieldCard
-            label="1주당 취득가액 (외화)"
-            hint="실제 매수 단가 (외화 기준)"
-            required
-            unit={form.acquisitionCurrencyCode || "USD"}
-          >
-            <DecimalInput
-              value={form.perShareAcquisitionPriceForeign}
-              onChange={(v) => onChange({ perShareAcquisitionPriceForeign: v })}
-              placeholder="외화 취득 단가"
-            />
-          </FieldCard>
-        )}
+        {/*
+          두 모드가 **같은 칸**이다 — 엔진은 시가 모드도 이 값을 1주당 시가로 읽는다(`foreign-stock.ts` STEP 3).
+          🔴 2026-09-30(B21) 종전엔 실가 모드에서만 렌더해, 시가 모드는 위 안내가 「취득가액 란에
+          입력하세요」라고 하는데 칸이 없었고 ④도 싣지 않아 취득가액 0으로 계산됐다.
+          라벨만 모드에 맞춘다(⑧·④·⑫는 모드 무관).
+        */}
+        <FieldCard
+          label={acquisitionModeFS === "market_price" ? "1주당 취득가액 — 시가 (외화)" : "1주당 취득가액 (외화)"}
+          hint={
+            acquisitionModeFS === "market_price"
+              ? "위 안내대로 산정한 1주당 평균가격 (외화 기준)"
+              : "실제 매수 단가 (외화 기준)"
+          }
+          required
+          unit={form.acquisitionCurrencyCode || "USD"}
+        >
+          <DecimalInput
+            value={form.perShareAcquisitionPriceForeign}
+            onChange={(v) => onChange({ perShareAcquisitionPriceForeign: v })}
+            placeholder="외화 취득 단가"
+          />
+        </FieldCard>
 
         {/* KRW 환산 미리보기 */}
         {(() => {
           const rate = parseDecimal(form.acquisitionExchangeRate);
           const count = parseInt(form.shareCount || "0", 10);
-          if (rate <= 0 || acquisitionModeFS !== "actual") return null;
+          if (rate <= 0) return null;
           const perShare = parseDecimal(form.perShareAcquisitionPriceForeign);
           if (perShare <= 0 || count <= 0) return null;
           const krw = Math.floor(perShare * count * rate);

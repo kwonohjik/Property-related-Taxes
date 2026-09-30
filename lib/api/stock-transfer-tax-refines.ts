@@ -19,6 +19,48 @@ import {
   isTradingHaltMarketScopeViolation,
   TRADING_HALT_MARKET_SCOPE_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
+import {
+  requiredUnlistedValuationKeys,
+  missingAcquisitionCauseKeys,
+  missingLotCauseKeys,
+  lotCauseMessage,
+  type UnlistedValuationKey,
+  type AcquisitionCauseKey,
+} from "@/lib/calc/stock-transfer-required-inputs";
+
+const UNLISTED_VALUATION_LABEL: Record<UnlistedValuationKey, string> = {
+  transferYearNetIncomePerShare: "양도연도 1주당 순손익가치를",
+  transferYearNetAssetPerShare: "양도연도 1주당 순자산가치를",
+  acquisitionYearNetIncomePerShare: "취득연도 1주당 순손익가치를",
+  acquisitionYearNetAssetPerShare: "취득연도 1주당 순자산가치를",
+  acqFaceValuePerShare: "취득시점 1주당 액면가(소득세법 §99①4호 후단)를",
+};
+
+/** 취득 후 상장 간이 입력(상세 모드 아님) — ⑧ step2 `post_listing` simple 분기와 같은 5칸 */
+const POST_LISTING_SIMPLE_REQUIRED = [
+  ["listingDatePriceAvg1Month", "상장일 이후 1개월 종가평균을"],
+  ["listingYearNetIncomePerShare", "상장연도 1주당 순손익가치를"],
+  ["listingYearNetAssetPerShare", "상장연도 1주당 순자산가치를"],
+  ["acquisitionYearNetIncomePerShare", "취득연도 1주당 순손익가치를"],
+  ["acquisitionYearNetAssetPerShare", "취득연도 1주당 순자산가치를"],
+] as const;
+
+const ACQUISITION_CAUSE_LABEL: Record<AcquisitionCauseKey, string> = {
+  decedentAcquisitionDate: "피상속인 취득일을",
+  preMergerAcquisitionDate: "합병·분할 전 종전 주식 취득일을",
+  donorAcquisitionDate: "증여자 취득일을",
+  donorRelation: "증여자와의 관계를",
+  transferredAssetValue: "양도한 해당 자산가액(증여세 안분 분자)을",
+  giftTaxableValue: "증여세 과세가액(증여세 안분 분모)을",
+};
+const ACQUISITION_CAUSE_BASIS: Record<AcquisitionCauseKey, string> = {
+  decedentAcquisitionDate: "소득세법 §104②1호",
+  preMergerAcquisitionDate: "소득세법 §104②3호",
+  donorAcquisitionDate: "소득세법 §104②2호",
+  donorRelation: "소득세법 §97의2① 본문",
+  transferredAssetValue: "소득세법 시행령 §163의2②",
+  giftTaxableValue: "소득세법 시행령 §163의2②",
+};
 
 /**
  * addStockRefines — 단건 입력에 cross-field 검증 추가
@@ -304,6 +346,56 @@ export function addStockRefines(
       // 납부지연가산세 — 법정납부기한이 경과일수 기산점이다(국세기본법 §47의4①1호). 없으면 엔진이 0.
       if ((data.unpaidTax ?? 0) > 0 && !data.paymentDeadline)
         issue("paymentDeadline", "납부지연가산세를 계산하려면 법정납부기한이 필요합니다 (국세기본법 §47의4①1호)");
+
+      // ── 2차(B5·B6·B8~B11) — 환산·매매사례 입력. 비우면 엔진이 0으로 읽어 취득가액이 조용히 바뀌었다.
+      // ⑧ `stock-transfer-tax-validate-step2.ts`와 같은 조건(분할 모드는 거기서도 먼저 끝난다).
+      // 순손익가치 0은 적법(결손 법인)이라 **존재**만 본다 — 키 집합은 ⑧과 공용 술어.
+      if (!splitOrLots && data.acquisitionMode === "estimated") {
+        const listed = ["kospi", "kosdaq", "konex"].includes(data.marketType as string);
+        // 비상장·기타자산 또는 양도일 거래정지 → 양·취 보충평가 / 취득일 거래정지 → 취득측만(시행령 §165③·④)
+        const scope = !listed || data.tradingHaltAtTransfer
+          ? ("both" as const)
+          : data.tradingHaltAtAcquisition
+            ? ("acquisition" as const)
+            : null;
+        if (scope) {
+          for (const key of requiredUnlistedValuationKeys({
+            scope,
+            niSkip: !!data.netAssetOnlyReason,
+            acqFaceValueOnly: data.acqFaceValueOnly === true,
+          })) {
+            if (data[key] === undefined)
+              issue(key, `${UNLISTED_VALUATION_LABEL[key]} 입력하세요 (소득세법 시행령 §165④ 보충적 평가)`);
+          }
+        }
+        // 취득 후 상장 간이 입력(시행령 §165⑤) — 상세 모드(`postListingDetail`)는 결산 원자료로 따로 온다.
+        if (listed && data.acquiredBeforeListing && !data.tradingHaltAtTransfer && !data.postListingDetail) {
+          for (const [key, label] of POST_LISTING_SIMPLE_REQUIRED) {
+            if (data[key] === undefined) issue(key, `${label} 입력하세요 (소득세법 시행령 §165⑤)`);
+          }
+        }
+      }
+      // 매매사례가액(시행령 §176의2③1호) — 사례가액 또는 1주당 취득가액 중 하나(⑧ step2 R-1').
+      if (
+        !splitOrLots &&
+        data.acquisitionMode === "sale_case" &&
+        !((data.acquisitionMarketSamplePrice ?? 0) > 0) &&
+        !((data.perShareAcquisitionPrice ?? 0) > 0)
+      )
+        issue("acquisitionMarketSamplePrice", "취득 매매사례 1주당 가액을 입력하세요 (소득세법 시행령 §176의2③1호)");
+    }
+
+    // ── 2차(B13~B17) — 취득원인 보조 입력(소득세법 §104② · §97의2①). ⑧ step1과 공용 술어.
+    // 비우면 상속·합병은 단기 세율로, 이월과세는 누락(날짜) 또는 배우자 취급(관계)으로, 증여세 안분은 0으로 갔다.
+    for (const key of missingAcquisitionCauseKeys(data.acquisitionCause, (k) => {
+      const v = data[k];
+      return v !== undefined && v !== "";
+    })) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${ACQUISITION_CAUSE_LABEL[key]} 입력하세요 (${ACQUISITION_CAUSE_BASIS[key]})`,
+      });
     }
 
     // ── lots-only 모드 (취득 다건 입력 + 양도 단일) refine 3건 ──
@@ -393,20 +485,19 @@ export function addStockRefines(
           message: "분할 모드에서는 양도가액 합계 직접 입력을 지원하지 않습니다 (lot별 단가 사용)",
         });
       }
-      // cause별 보조 일자 필수
+      // cause별 보조 입력 필수 — ⑧ 분할(step1)·일자별 다건(step2)과 공용 술어.
+      // 2차(B18): 이월과세 lot의 관계·증여자 취득일·증여세 짝을 더했다(종전엔 상속·합병만 —
+      // 관계를 비우면 배우자로, 증여자 취득일을 비우면 가액만 승계되고 세율은 단기로 갔다).
       data.acquisitionLots?.forEach((lot, i) => {
-        if (lot.acquisitionCause === "inheritance" && !lot.decedentAcquisitionDate) {
+        for (const key of missingLotCauseKeys(
+          lot.acquisitionCause,
+          (k) => !!lot[k],
+          (k) => (lot[k] ?? 0) > 0,
+        )) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["acquisitionLots", i, "decedentAcquisitionDate"],
-            message: "상속 lot은 피상속인 취득일을 입력하세요 (§104②1)",
-          });
-        }
-        if (lot.acquisitionCause === "merger_split" && !lot.preMergerAcquisitionDate) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["acquisitionLots", i, "preMergerAcquisitionDate"],
-            message: "합병·분할 lot은 종전 주식 취득일을 입력하세요 (§104②3)",
+            path: ["acquisitionLots", i, key],
+            message: lotCauseMessage(key, i),
           });
         }
       });

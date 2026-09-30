@@ -85,7 +85,9 @@ describe("W 주식 §104②2호 — 폼에서 엔진까지 값이 도달한다",
    */
   it("W-1 carryover_gift — donorAcquisitionDate가 body에 실리고 세액이 25%로 내려간다", () => {
     const { body, result } = runThroughPipeline(
-      form({ acquisitionCause: "carryover_gift", donorAcquisitionDate: "2015-01-01" }),
+      // 관계는 ⑧이 요구하는 §97의2① 본문 요건이다(2026-09-30 2차 B16부터 ⑫도 요구). 종전 무입력은
+      // 엔진이 「배제하지 않음」으로 읽었으므로 배우자를 넣어도 기대값이 같다.
+      form({ acquisitionCause: "carryover_gift", donorAcquisitionDate: "2015-01-01", donorRelation: "spouse" }),
     );
     expect(body.acquisitionCause).toBe("carryover_gift");
     expect(body.donorAcquisitionDate).toBe("2015-01-01");
@@ -126,6 +128,7 @@ describe("W 주식 §104②2호 — 폼에서 엔진까지 값이 도달한다",
         acquisitionDate: "2024-12-31",
         transferDate: "2025-11-01",
         donorAcquisitionDate: "2015-01-01",
+        donorRelation: "spouse", // ⑧ 필수(§97의2① 본문) — W-1 주석 참조
         priorYearEndDate: "2024-12-31",
         filingDate: "2026-01-31",
       }),

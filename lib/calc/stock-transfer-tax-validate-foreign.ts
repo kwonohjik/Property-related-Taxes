@@ -129,7 +129,6 @@ export function validateStep2Foreign(form: StockTransferFormData): StockValidati
 
   // 3중 패턴 default (API/validate/UI 동일)
   const fgTransferPriceMode = form.fgTransferPriceMode || "per_share";
-  const acquisitionModeFS = form.acquisitionModeFS || "actual";
   const fsTransferReceiptMode = form.fsTransferReceiptMode || "single";  // FS-09 3중 패턴 default
 
   // ── 양도 통화 ──
@@ -255,8 +254,11 @@ export function validateStep2Foreign(form: StockTransferFormData): StockValidati
     }
   }
 
-  // ── 취득가액 (actual 모드) ──
-  if (acquisitionModeFS === "actual") {
+  // ── 취득가액 (실가·시가 두 모드 모두) ──
+  // 🔴 2026-09-30(B21) 종전엔 실가 모드만 봤다. 엔진은 시가 모드도 같은 칸을 1주당 시가로 읽는데
+  //    ⑤가 그 칸을 시가 모드에서 렌더하지 않고 ④도 싣지 않아 취득가액이 0이었다(2,700,000 → 5,100,000).
+  //    ⑫(`stock-transfer-foreign-schema.ts`)와 같은 조건 — 모드 무관.
+  {
     if (isEmpty(form.perShareAcquisitionPriceForeign)) {
       errors.push({
         field: "perShareAcquisitionPriceForeign",
