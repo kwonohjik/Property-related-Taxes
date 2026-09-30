@@ -323,3 +323,34 @@ describe("ROW-8·9 판정 → 계산기 전달 (Q-4 · §7-2)", () => {
     expect(result?.isExempt).toBe(false);
   });
 });
+
+/**
+ * ROW-12 — 판정 메뉴는 주택 수를 **명부로만** 센다: ⑥ 행은 늘 그 수 안에 있다 (계산기 S1 후속 R-2)
+ *
+ * 계산기는 스칼라가 정본인 경우(옛 이력 · 재개발 아파트) ⑥ 행이 주택 수에 빠질 수 있어 ⑧이 막는다
+ * (`transfer-count-exclusion-hidden-roster.plan.md`). 판정 메뉴 route는 본문의 주택 수를 믿지 않고
+ * `deriveHouseholdHousingCount`(양도 행 + 명부 행 전부)로 세므로 같은 모순이 생기지 않는다 — 그 성질을 고정한다.
+ */
+describe("ROW-12 판정 메뉴 주택 수 = 1 + 명부 행 (⑥ 행 포함)", () => {
+  it("[ROW-12] 명부 [c⑥] → 전체 2 · 비과세 판정 1 / [c⑥, b] → 전체 3 · 비과세 판정 2", async () => {
+    const one = await judgeForm(jForm([C]));
+    expect([one.houseCount.total, one.houseCount.countedForExemption]).toEqual([2, 1]);
+    const two = await judgeForm(jForm([C, B]));
+    expect([two.houseCount.total, two.houseCount.countedForExemption]).toEqual([3, 2]);
+  });
+
+  it("[ROW-12+] 본문의 주택 수를 바꿔도 결과가 같다 — route가 명부로 센다", async () => {
+    const f = jForm([C]);
+    const body = { ...(buildOneHouseExemptionApiBody(f) as Record<string, unknown>), householdHousingCount: 1 };
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/one-house-exemption", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+        body: JSON.stringify(body),
+      }),
+    );
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect([json.data.houseCount.total, json.data.houseCount.countedForExemption]).toEqual([2, 1]);
+  });
+});
