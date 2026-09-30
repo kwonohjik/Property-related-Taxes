@@ -29,6 +29,7 @@ import {
   buildCompanionEngineInputs,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
@@ -647,12 +648,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별
     console.error("[/api/calc/transfer] engine error:", err);
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
-      );
-    }
+    // INVALID_INPUT → 400 (+ details.path가 있으면 fieldErrors) — `lib/api/tax-error-response.ts`
+    if (err instanceof TaxCalculationError) return taxCalculationErrorResponse(err);
     const errMsg = err instanceof Error ? err.message : String(err);
     const errStack = err instanceof Error ? err.stack : undefined;
     return NextResponse.json(

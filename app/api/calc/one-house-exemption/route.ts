@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { finiteJson } from "@/lib/api/non-finite-guard";
@@ -257,12 +258,8 @@ export async function POST(request: NextRequest) {
     return finiteJson({ data: payload }, { status: 200 });
   } catch (err) {
     console.error("[/api/calc/one-house-exemption] engine error:", err);
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
-      );
-    }
+    // INVALID_INPUT → 400 (+ details.path가 있으면 fieldErrors) — `lib/api/tax-error-response.ts`
+    if (err instanceof TaxCalculationError) return taxCalculationErrorResponse(err);
     const errMsg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
       { error: { code: "CALCULATION_FAILED", message: errMsg } },

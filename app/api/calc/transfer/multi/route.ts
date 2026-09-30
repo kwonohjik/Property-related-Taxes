@@ -22,6 +22,7 @@ import {
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -593,12 +594,8 @@ export async function POST(request: NextRequest) {
     assertFiniteResponse(result);
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (err) {
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
-      );
-    }
+    // INVALID_INPUT → 400 (+ details.path가 있으면 fieldErrors) — `lib/api/tax-error-response.ts`
+    if (err instanceof TaxCalculationError) return taxCalculationErrorResponse(err);
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "계산 중 오류가 발생했습니다" } },
       { status: 500 },
