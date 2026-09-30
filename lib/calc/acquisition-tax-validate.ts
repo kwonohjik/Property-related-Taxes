@@ -11,6 +11,10 @@
  */
 
 import type { FormState } from "@/components/calc/acquisition/shared";
+import {
+  TEMPORARY_TWO_HOUSE_REGION_MESSAGE,
+  missingTemporaryTwoHouseRegions,
+} from "@/lib/calc/acquisition-required-inputs";
 
 /**
  * 단계 공통 cross-field 검증.
@@ -21,15 +25,17 @@ export function validateAcquisitionCrossFields(
   form: FormState,
 ): string | null {
   // ── step 3 (중과 분기) ──
-  if (step === 3 && form.propertyType === "housing" && form.isTemporaryTwoHouse) {
+  if (step === 3) {
     // 일시적 2주택 처분기한(시행령 §28의5)은 종전·신규 주택 지역 조합으로
     // 결정된다. 미선택 시 엔진이 비조정으로 침묵 기본 처리하므로 명시 차단.
-    if (!form.previousHouseRegion) {
-      return "일시적 2주택 — 종전 주택 소재 지역(조정/비조정)을 선택하세요.";
-    }
-    if (!form.newHouseRegion) {
-      return "일시적 2주택 — 신규 주택 소재 지역(조정/비조정)을 선택하세요.";
-    }
+    // ⑫와 같은 술어 — `lib/calc/acquisition-required-inputs.ts`.
+    const [first] = missingTemporaryTwoHouseRegions({
+      isHousing: form.propertyType === "housing",
+      isTemporaryTwoHouse: form.isTemporaryTwoHouse,
+      previousHouseRegion: form.previousHouseRegion,
+      newHouseRegion: form.newHouseRegion,
+    });
+    if (first) return TEMPORARY_TWO_HOUSE_REGION_MESSAGE[first];
   }
 
   // ── step 2 (주택 현황 — 보유주택 목록) ──

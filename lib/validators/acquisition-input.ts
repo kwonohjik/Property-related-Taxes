@@ -14,6 +14,10 @@
 import { z } from "zod";
 import { DEEMED_PROVISO_VALUES } from "@/lib/tax-engine/acquisition-deemed-proviso";
 import type { AcquisitionTaxInput } from "@/lib/tax-engine/types/acquisition.types";
+import {
+  TEMPORARY_TWO_HOUSE_REGION_MESSAGE,
+  missingTemporaryTwoHouseRegions,
+} from "@/lib/calc/acquisition-required-inputs";
 
 // ============================================================
 // 공통 프리미티브
@@ -481,6 +485,23 @@ export const acquisitionTaxInputSchema = z.object({
   // 과점주주 물건별 구분 모드는 ④가 최상위 플래그를 빼고 보낸다(행별 proviso).
   if (deemedKey && d.isLuxuryProperty === true && !d.luxuryType)
     issue(["luxuryType"], "간주취득 사치성 재산은 유형(luxuryType — 지방세법 §13⑤)이 필요합니다");
+  // 일시적 2주택(「지방세법 시행령」 §28의5) 종전·신규 주택 지역 — 비우면 엔진이 둘 다 비조정으로 읽어
+  // 처분기한이 바뀌었다(2022.3.1. 잔금 조정+조정 1년 → 3년). ⑧(`lib/calc/acquisition-tax-validate.ts`)과 같은 술어.
+  for (const key of missingTemporaryTwoHouseRegions({
+    isHousing: d.propertyType === "housing",
+    isTemporaryTwoHouse: d.isTemporaryTwoHouse === true,
+    previousHouseRegion: d.previousHouseRegion,
+    newHouseRegion: d.newHouseRegion,
+  }))
+    issue([key], TEMPORARY_TWO_HOUSE_REGION_MESSAGE[key]);
+  // 저가주택 중과 배제(「지방세법 시행령」 §28의2 1호) — 가목 수도권 소재 1억 / 나목 수도권 외 2억.
+  // 조문에 소재지 추정 규정이 없어 미입력을 한쪽으로 읽을 근거가 없다(엔진은 비수도권 2억으로 읽었다).
+  // 엔진은 전체 주택 시가표준액이 있을 때만 이 판정을 한다. ④는 주택이면 토글 값을 항상 싣는다.
+  if (d.propertyType === "housing" && (d.wholeHouseStandardValue ?? 0) > 0 && d.isMetropolitanRegion === undefined)
+    issue(
+      ["isMetropolitanRegion"],
+      "전체 주택 시가표준액으로 중과 배제를 판정하려면 수도권 소재 여부(isMetropolitanRegion)가 필요합니다 — 「지방세법 시행령」 §28의2 1호 가목(수도권 1억)·나목(수도권 외 2억)",
+    );
 });
 
 export type AcquisitionTaxInputSchema = z.infer<typeof acquisitionTaxInputSchema>;
