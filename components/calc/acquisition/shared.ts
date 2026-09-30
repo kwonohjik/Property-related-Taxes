@@ -156,6 +156,11 @@ export interface OwnedHouseInfo {
   isUrbanRegenArea: boolean;  // 정비구역 여부
   /** 취득자의 배우자 소유 주택 — 혼인 전 분양권으로 취득 시 배우자의 혼인 전 주택 제외 (시행령 §28의4⑥6호) */
   ownedBySpouse: boolean;
+  /**
+   * 주택 수 산정일과 같은 날 취득 — 취득하는 주택 뒤에 취득한 것으로 정함 (시행령 §28의4③
+   * 「동시에 2개 이상 취득하는 경우에는 납세의무자가 정하는 바에 따라 순차적으로 취득하는 것으로 본다」)
+   */
+  sameDayOrderAfterPending: boolean;
 }
 
 export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
@@ -181,6 +186,7 @@ export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
     isMetropolitanRegion: false,
     isUrbanRegenArea: false,
     ownedBySpouse: false,
+    sameDayOrderAfterPending: false,
   };
 }
 
@@ -253,8 +259,14 @@ export interface FormState {
   contractDateBeforeRegulation: boolean;
   /** 조정대상지역 지정고시일 */
   regulationDesignationDate: string;
-  /** 계약금 지급 증빙 보유 여부 */
+  /** 계약금 지급 증빙 보유 여부 — §13의2④·법률 제17473호 부칙 제6조 단서 공용 */
   hasContractDepositProof: boolean;
+
+  // ─── [E-6] 법률 제17473호 부칙 제6조 (2020.7.10. 이전 매매계약) ───
+  /** 매매계약일(공동주택 분양계약일 포함) — 주택 매매만. 연부취득이면 `installmentContractDate`를 쓴다 */
+  saleContractDate: string;
+  /** 매매계약 당시 1세대가 국내에 주택을 1개 이상 소유 (개인) */
+  ownedHouseAtSaleContract: boolean;
 
   // ─── [P1 v3] 사치성 + 대도시 법인 중복 (§13⑦) ───
   /** 대도시 법인 중과 (§13②) 적용 여부 */
@@ -467,6 +479,10 @@ export const INITIAL_FORM: FormState = {
   contractDateBeforeRegulation: false,
   regulationDesignationDate: "",
   hasContractDepositProof: false,
+
+  // E-6 법률 제17473호 부칙 제6조
+  saleContractDate: "",
+  ownedHouseAtSaleContract: false,
 
   // P1 §13⑦
   isCorpMetroSurcharge: false,

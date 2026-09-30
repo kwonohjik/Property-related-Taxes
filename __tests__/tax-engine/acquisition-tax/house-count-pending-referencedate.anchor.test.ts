@@ -39,6 +39,7 @@ function ownedHouse(id: string): OwnedHouseInfo {
     isMetropolitanRegion: true,
     isUrbanRegenArea: false,
     ownedBySpouse: false,
+    sameDayOrderAfterPending: false,
   };
 }
 

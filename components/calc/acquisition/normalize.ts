@@ -166,6 +166,13 @@ export function normalizeAcquisitionForm(
     hasContractDepositProof: typeof legacy.hasContractDepositProof === "boolean"
       ? (legacy.hasContractDepositProof as boolean)
       : INITIAL_FORM.hasContractDepositProof,
+    // [E-6] 법률 제17473호 부칙 제6조 (2026-09-30 신규) — 기존 저장본엔 없다
+    saleContractDate: typeof legacy.saleContractDate === "string"
+      ? (legacy.saleContractDate as string)
+      : INITIAL_FORM.saleContractDate,
+    ownedHouseAtSaleContract: typeof legacy.ownedHouseAtSaleContract === "boolean"
+      ? (legacy.ownedHouseAtSaleContract as boolean)
+      : INITIAL_FORM.ownedHouseAtSaleContract,
 
     isCorpMetroSurcharge: typeof legacy.isCorpMetroSurcharge === "boolean"
       ? (legacy.isCorpMetroSurcharge as boolean)

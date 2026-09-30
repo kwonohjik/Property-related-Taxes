@@ -132,6 +132,33 @@ export interface OwnedHouseInfo {
    * 상속인 중 최연장자 여부 (거주자 동순위 시 최연장자 우선)
    */
   isOldestInheritor?: boolean;
+
+  /** §28의4③ 동시 취득 순서 — `SameDayOrderField` 참조 */
+  sameDayOrderAfterPending?: boolean;
+}
+
+/**
+ * §28의4③ — 「동시에 2개 이상 취득하는 경우에는 납세의무자가 정하는 바에 따라 순차적으로 취득하는
+ * 것으로 본다」. 주택 수 산정일(권리취득일 소급이면 그 권리의 취득일)과 **같은 날** 취득한 자산을
+ * 납세의무자가 「취득하는 주택 뒤에 취득한 것」으로 정했는지. 같은 날이 아니면 의미가 없다(고지).
+ */
+export interface SameDayOrderField {
+  sameDayOrderAfterPending?: boolean;
+}
+
+/**
+ * §28의4⑤ — 상속으로 여러 사람이 공동으로 소유하는 입주권·분양권·오피스텔의 소유자 판정 입력.
+ * 주택(`OwnedHouseInfo`)과 같은 칸이다. 입주권·분양권은 1호(거주)가 없어 거주 칸을 두지 않는다.
+ */
+export interface JointInheritanceShareFields {
+  /** 상속 자산에서 납세자(본인)의 지분율 (0~1) */
+  shareInInheritance?: number;
+  /** 상속인 중 최대 지분 (0~1) */
+  maxShareInInheritors?: number;
+  /** 지분이 가장 큰 상속인이 두 명 이상 */
+  tieInMaxShare?: boolean;
+  /** 동순위 상속인 중 최연장자 (§28의4⑤2호) */
+  isOldestInheritor?: boolean;
 }
 
 // ============================================================
@@ -142,7 +169,7 @@ export type RightAssetType =
   | "redevelopment_right"    // 조합원입주권 (재개발·재건축)
   | "subscription_right";    // 주택분양권 (분양사업자)
 
-export interface RightAsset {
+export interface RightAsset extends JointInheritanceShareFields, SameDayOrderField {
   /** 자산 식별자 */
   id?: string;
   /** 권리 유형 */
@@ -176,7 +203,7 @@ export interface RightAsset {
 // 주거형 오피스텔 (OfficeAsset)
 // ============================================================
 
-export interface OfficeAsset {
+export interface OfficeAsset extends JointInheritanceShareFields, SameDayOrderField {
   /** 자산 식별자 */
   id?: string;
   /** 시가표준액 (원) — 1억 초과만 주택 수에 카운트 */
@@ -193,6 +220,10 @@ export interface OfficeAsset {
    * §28의4⑥3호 준용
    */
   inheritanceDate?: string;
+  /** §28의4⑤1호 — 본인이 그 오피스텔에 거주 (동순위 시) */
+  isResidentInInheritedHouse?: boolean;
+  /** §28의4⑤1호 — 다른 동순위 상속인이 그 오피스텔에 거주 */
+  isOtherTiedHeirResident?: boolean;
 }
 
 // ============================================================
@@ -352,6 +383,8 @@ export type ExclusionReason =
   | "staff_rental"             // 사원임대용 주택
   | "inheritance_under_5yr"    // 상속 5년 미경과 (§28의4⑥3호)
   | "spouse_pre_marriage_house" // 혼인 전 분양권으로 취득 시 다른 배우자의 혼인 전 주택 (§28의4⑥6호)
+  | "spouse_not_in_household_at_right_date" // 2023.3.14. 전 취득 — 권리취득일 현재 세대 밖 배우자의 주택 (§28의4① 후단 · 조심 2023지4299)
+  | "same_day_ordered_after_pending" // 산정일 당일 취득 자산을 납세의무자가 취득 주택 뒤로 정함 (§28의4③)
   | "hansi_new_build"          // 한시 특례 신축 (§28의4⑥7호)
   | "hansi_lease_registered"   // 한시 특례 임대등록
   | "hansi_unsold_apt"         // 한시 특례 미분양 아파트

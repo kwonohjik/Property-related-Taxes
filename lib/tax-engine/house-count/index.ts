@@ -23,7 +23,7 @@
 import { ACQUISITION } from "../legal-codes";
 import { getHouseCountReferenceDate } from "./right-acquisition";
 import { isSeparateHousehold, hasMinorWithApparentIncomeCondition } from "./household";
-import { isExcludedBy5YearRule, assessMainInheritor } from "./inheritance";
+import { judgeJointInheritanceOwnership } from "./inheritance";
 import { countCoOwnedHouse } from "./co-ownership";
 import {
   getExclusionReasonsForHouse,
@@ -88,24 +88,45 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   const acquisitionDate = input.referenceDate ?? new Date().toISOString().slice(0, 10);
 
   /**
-   * §28의4① 후단 — 소급 기준일 현재 소유하지 않은 자산(기준일 뒤 취득)은 세지 않는다(OH-26).
-   * 기준일 당일 취득은 §28의4③(동시 취득은 납세의무자가 정하는 순서)이므로 산입하되 안내한다.
+   * 주택 수 산정일 기준 자산 선별.
+   *  - §28의4③ — 산정일(소급이면 권리취득일, 아니면 취득하는 주택의 취득일) **당일** 취득한 자산은
+   *    「동시에 2개 이상 취득」이라 납세의무자가 정하는 순서로 본다. 취득하는 주택 뒤로 정했으면
+   *    (`sameDayOrderAfterPending`) 산정일 현재 소유 자산이 아니므로 뺀다. 정하지 않았으면 산입하고 안내한다.
+   *  - §28의4① 후단 — 소급 기준일 현재 소유하지 않은 자산(기준일 뒤 취득)은 세지 않는다(OH-26).
    */
-  const excludeIfAfterReference = (
+  const excludeByReferenceDate = (
     assetId: string | undefined,
     assetType: "house" | "right" | "office",
-    assetDate: string | undefined
+    assetDate: string | undefined,
+    orderedAfterPending: boolean | undefined
   ): boolean => {
-    if (!isSoGup) return false;
-    if (!assetDate) {
+    const label = assetId ?? assetType;
+    if (orderedAfterPending && assetDate !== effectiveReferenceDate) {
       warnings.push(
-        `권리취득일 소급 산정인데 취득일이 없는 자산(${assetId ?? assetType})이 있어 기준일 뒤 취득 여부를 판정하지 못했습니다.`
+        `자산(${label})을 「같은 날 취득 — 취득하는 주택 뒤로 정함」으로 표시했지만 주택 수 산정일(${effectiveReferenceDate})과 같은 날 취득한 자산이 아니어서 ${ACQUISITION.HOUSE_COUNT_SIMULTANEOUS_ACQUISITION}(동시 취득 순서)을 적용하지 않았습니다.`
+      );
+    }
+    if (assetDate && assetDate === effectiveReferenceDate) {
+      if (orderedAfterPending) {
+        excludedDetails.push({
+          assetId,
+          assetType,
+          reason: "same_day_ordered_after_pending",
+          legalBasis: ACQUISITION.HOUSE_COUNT_SIMULTANEOUS_ACQUISITION,
+          description: `주택 수 산정일(${effectiveReferenceDate})과 같은 날 취득 — 납세의무자가 취득하는 주택 뒤에 취득한 것으로 정함 → 산정일 현재 소유 자산 아님 → 주택 수 제외`,
+        });
+        legalBasis.push(ACQUISITION.HOUSE_COUNT_SIMULTANEOUS_ACQUISITION);
+        return true;
+      }
+      warnings.push(
+        `${isSoGup ? "권리취득일" : "주택 수 산정일"}(${effectiveReferenceDate})과 같은 날 취득한 자산이 있습니다 — 동시 취득은 납세의무자가 정하는 순서로 봅니다(지방세법 시행령 §28의4③). 기준일 현재 소유로 산입했습니다. 취득하는 주택 뒤에 취득한 것으로 정하면 그 자산에서 「같은 날 취득 — 취득하는 주택 뒤로 정함」을 켜세요.`
       );
       return false;
     }
-    if (assetDate === effectiveReferenceDate) {
+    if (!isSoGup) return false;
+    if (!assetDate) {
       warnings.push(
-        `권리취득일(${effectiveReferenceDate})과 같은 날 취득한 자산이 있습니다 — 동시 취득은 납세의무자가 정하는 순서로 봅니다(지방세법 시행령 §28의4③). 기준일 현재 소유로 산입했습니다.`
+        `권리취득일 소급 산정인데 취득일이 없는 자산(${label})이 있어 기준일 뒤 취득 여부를 판정하지 못했습니다.`
       );
       return false;
     }
@@ -119,6 +140,20 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
     });
     legalBasis.push(ACQUISITION.HOUSE_COUNT_RIGHT_ACQUISITION_DATE);
     return true;
+  };
+
+  /** §28의4⑤ 공동상속 — 소유자로 보지 않으면 제외 항목을 쌓고 true */
+  const excludeIfNotJointInheritanceOwner = (
+    judgement: ReturnType<typeof judgeJointInheritanceOwnership>
+  ): boolean => {
+    if (!judgement) return false;
+    if (judgement.excluded) {
+      excludedDetails.push(judgement.excluded);
+      legalBasis.push(judgement.excluded.legalBasis);
+      return true;
+    }
+    if (judgement.ownerBasis) legalBasis.push(judgement.ownerBasis);
+    return false;
   };
 
   // ── Step 2: 세대 별도 인정 판정 (§28의3②) ──
@@ -139,11 +174,11 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedHouseCount = 0;
 
   // §28의4⑥6호 — 혼인 전 소유한 주택분양권으로 취득 시 다른 배우자의 혼인 전 주택 (계획서 D-9b)
-  const preMarriageRule = assessPreMarriageRightRule(input.pendingAcquisition, acquisitionDate);
+  const preMarriageRule = assessPreMarriageRightRule(input.pendingAcquisition, acquisitionDate, isSoGup);
   if (preMarriageRule.warning) warnings.push(preMarriageRule.warning);
 
   for (const house of input.houses) {
-    if (excludeIfAfterReference(house.id, "house", house.acquisitionDate)) continue;
+    if (excludeByReferenceDate(house.id, "house", house.acquisitionDate, house.sameDayOrderAfterPending)) continue;
 
     // (3a) 제외 11종 + 한시 특례 체크
     const exclusions = getExclusionReasonsForHouse(house, effectiveReferenceDate, acquisitionDate);
@@ -155,11 +190,21 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
     }
 
     // (3a′) 배우자의 혼인 전 주택 (§28의4⑥6호)
-    if (preMarriageRule.marriageDate && house.ownedBySpouse) {
-      const spouseItem = getSpousePreMarriageHouseExclusion(house, preMarriageRule.marriageDate);
+    if (preMarriageRule.marriageDate && preMarriageRule.era && house.ownedBySpouse) {
+      const spouseItem = getSpousePreMarriageHouseExclusion(
+        house,
+        preMarriageRule.marriageDate,
+        preMarriageRule.era,
+        input.pendingAcquisition?.rightAcquisitionDate ?? effectiveReferenceDate
+      );
       if (spouseItem) {
         excludedDetails.push(spouseItem);
-        legalBasis.push(spouseItem.legalBasis, ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT_APPLICATION);
+        legalBasis.push(
+          spouseItem.legalBasis,
+          preMarriageRule.era === "statute_6ho"
+            ? ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT_APPLICATION
+            : ACQUISITION.HOUSE_COUNT_RIGHT_DATE_APPLICATION
+        );
         continue;
       }
       if (!house.acquisitionDate) {
@@ -169,35 +214,9 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
       }
     }
 
-    // (3b) 공동상속 — 5년 경과 후 주된 상속자 판정
-    // (5년 미경과는 이미 exclusions에서 처리됨)
-    if (house.inheritanceDate && !isExcludedBy5YearRule(house.inheritanceDate, effectiveReferenceDate)) {
-      // 5년 경과 → 공동상속 여부 확인
-      if (house.shareInInheritance !== undefined && house.maxShareInInheritors !== undefined) {
-        const mainResult = assessMainInheritor({
-          shareOfTaxpayer: house.shareInInheritance,
-          maxShareInInheritors: house.maxShareInInheritors,
-          tieInMaxShare: house.tieInMaxShare ?? false,
-          isResident: house.isResidentInInheritedHouse ?? false,
-          isOldest: house.isOldestInheritor ?? false,
-          isOtherTiedHeirResident: house.isOtherTiedHeirResident ?? false,
-        });
-
-        if (!mainResult.isMainInheritor) {
-          // 주된 상속자 아님 → 카운트 제외
-          excludedDetails.push({
-            assetId: house.id,
-            assetType: "house",
-            reason: "joint_inheritance_not_owner",
-            legalBasis: mainResult.legalBasis,
-            description: mainResult.reason,
-          });
-          legalBasis.push(mainResult.legalBasis);
-          continue;
-        }
-        // 주된 상속자 → 카운트 포함 (공유지분 체크로 진행)
-        legalBasis.push(mainResult.legalBasis);
-      }
+    // (3b) 공동상속 — 5년 경과 후 주된 상속자 판정 (5년 미경과는 이미 exclusions에서 처리됨)
+    if (excludeIfNotJointInheritanceOwner(judgeJointInheritanceOwnership(house, "house", effectiveReferenceDate, true))) {
+      continue;
     }
 
     // (3c) 공유지분 카운트 (§28의4④)
@@ -221,13 +240,18 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
         `「혼인 전 분양권」 표시(${right.id ?? right.type})는 그 분양권을 주택 수에서 빼지 않습니다 — ${ACQUISITION.HOUSE_COUNT_PRE_MARRIAGE_RIGHT}가 빼는 것은 혼인 전 소유한 주택분양권으로 주택을 취득할 때 다른 배우자가 혼인 전부터 소유한 주택입니다. 그 분양권은 주택 수에 넣었습니다.`
       );
     }
-    if (excludeIfAfterReference(right.id, "right", right.rightAcquisitionDate)) continue;
+    if (excludeByReferenceDate(right.id, "right", right.rightAcquisitionDate, right.sameDayOrderAfterPending)) continue;
 
     const exclusions = getExclusionReasonsForRight(right, effectiveReferenceDate);
 
     if (exclusions.length > 0) {
       excludedDetails.push(...exclusions);
       legalBasis.push(...exclusions.map((e) => e.legalBasis));
+      continue;
+    }
+
+    // §28의4⑤ 공동상속 — 입주권·분양권은 1호(거주)가 없다
+    if (excludeIfNotJointInheritanceOwner(judgeJointInheritanceOwnership(right, "right", effectiveReferenceDate, false))) {
       continue;
     }
 
@@ -239,7 +263,7 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
   let includedOfficeCount = 0;
 
   for (const office of input.offices) {
-    if (excludeIfAfterReference(office.id, "office", office.acquisitionDate)) continue;
+    if (excludeByReferenceDate(office.id, "office", office.acquisitionDate, office.sameDayOrderAfterPending)) continue;
     if (!office.acquisitionDate) {
       warnings.push(
         `오피스텔(${office.id ?? "취득일 미입력"}) 취득일이 없어 2020.8.12. 전 취득분 제외(${ACQUISITION.HOUSE_COUNT_RIGHT_OFFICE_APPLICATION})를 판정하지 못했습니다.`
@@ -251,6 +275,11 @@ export function calculateHouseCount(input: HouseCountInput): HouseCountResult {
     if (exclusions.length > 0) {
       excludedDetails.push(...exclusions);
       legalBasis.push(...exclusions.map((e) => e.legalBasis));
+      continue;
+    }
+
+    // §28의4⑤ 공동상속 — 오피스텔은 1호(거주)가 있다
+    if (excludeIfNotJointInheritanceOwner(judgeJointInheritanceOwnership(office, "office", effectiveReferenceDate, true))) {
       continue;
     }
 

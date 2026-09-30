@@ -232,7 +232,18 @@ const ownedHouseInfoSchema = z.object({
   isResidentInInheritedHouse: z.boolean().optional(),
   isOtherTiedHeirResident: z.boolean().optional(),
   isOldestInheritor: z.boolean().optional(),
+  // §28의4③ 동시 취득 순서 — 산정일 당일 취득 자산을 취득하는 주택 뒤로 정함
+  sameDayOrderAfterPending: z.boolean().optional(),
 });
+
+/** §28의4⑤ 공동상속 지분 판정 칸 — 입주권·분양권·오피스텔 공용(주택과 같은 칸) */
+const jointInheritanceShareShape = {
+  shareInInheritance: z.number().optional(),
+  maxShareInInheritors: z.number().optional(),
+  tieInMaxShare: z.boolean().optional(),
+  isOldestInheritor: z.boolean().optional(),
+  sameDayOrderAfterPending: z.boolean().optional(),
+};
 
 const rightAssetSchema = z.object({
   id: z.string().optional(),
@@ -243,6 +254,7 @@ const rightAssetSchema = z.object({
   // 종전 입력(분양권 자체 제외) — 엔진은 빼지 않고 경고한다(§28의4⑥6호, 계획서 D-9b). 조용히 떨어지지 않게 받는다
   isPreMarriageSubscriptionRight: z.boolean().optional(),
   inheritanceDate: z.string().optional(),
+  ...jointInheritanceShareShape,
 });
 
 const officeAssetSchema = z.object({
@@ -252,6 +264,10 @@ const officeAssetSchema = z.object({
   acquisitionDate: dateStr,
   contractDate: dateStr.optional(),
   inheritanceDate: z.string().optional(),
+  ...jointInheritanceShareShape,
+  // §28의4⑤1호 — 오피스텔은 「그 주택 또는 오피스텔에 거주하는 사람」 단계가 있다
+  isResidentInInheritedHouse: z.boolean().optional(),
+  isOtherTiedHeirResident: z.boolean().optional(),
 });
 
 const pendingAcquisitionSchema = z.object({
@@ -390,6 +406,10 @@ export const acquisitionTaxInputSchema = z.object({
   contractDateBeforeRegulation: z.boolean().optional(),
   regulationDesignationDate: dateStrOrEmpty,
   hasContractDepositProof: z.boolean().optional(),
+
+  // ─── [E-6] 법률 제17473호 부칙 제6조 (2020.7.10. 이전 매매계약 경과조치) ───
+  saleContractDate: dateStr.optional(),
+  ownedHouseAtSaleContract: z.boolean().optional(),
 
   // ─── [P1] 사치성 + 대도시 법인 중복 (§13⑦) ───
   isCorpMetroSurcharge: z.boolean().optional(),

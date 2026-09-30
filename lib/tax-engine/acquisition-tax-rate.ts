@@ -244,7 +244,11 @@ export interface AdditionalTaxInput {
   isSurcharged?: boolean;
   // [P4-2] 중과세 교육세 매트릭스
   // [R3-05] section13_gamok = §13②③⑥⑦ 비주택 중과 → §151①1가 본문액×300%
-  surchargeType?: "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12" | "section13_gamok";
+  // [E-6] pre17473_four_house = 법률 제17473호 부칙 제6조 → 종전 §11④2호 4%(§11①8호 미적용 → §151①1 본문)
+  //       pre17473_corp_metro_housing = 부칙 제6조 → 종전 §13② 대도시 법인 주택(§151①1가 단서 → 나목)
+  surchargeType?:
+    | "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12" | "section13_gamok"
+    | "pre17473_four_house" | "pre17473_corp_metro_housing";
   // [P4-4] 농특세 읍·면 지역 100㎡ 분기
   isRuralRegion?: boolean;
   /**
@@ -399,15 +403,19 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
     surchargeType === "multi_house_12" ||
     surchargeType === "gift_12" ||
     surchargeType === "luxury_multi" ||
-    surchargeType === "corp_metro";
+    surchargeType === "corp_metro" ||
+    // [E-6] 종전 §13② 대도시 법인 주택 — 현행 §151①1가 단서 「법인이 §11①8호 주택을 취득하는 경우에는 나목」
+    surchargeType === "pre17473_corp_metro_housing";
   if (isSection13of2) {
     return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE); // 0.4%
   }
 
   // [R3-01] 본문(표준세율 기준) — 사치성 단독(§13⑤)·비중과·법인 §13② 비주택 등.
   //   ★ 사치성은 중과분을 교육세에 반영하지 않는다. 표준세율(basicRate)로 산출.
+  // [E-6] 종전 §11④2호 4주택 이상은 §11①8호가 아니다 → 아래 본문 (표준세율 − 2%) × 20%
   const isHousingOnerous =
     propertyType === "housing" &&
+    surchargeType !== "pre17473_four_house" &&
     ["purchase", "exchange", "auction", "in_kind_investment"].includes(acquisitionCause ?? "");
 
   if (isHousingOnerous) {
@@ -444,6 +452,10 @@ export function buildLocalEducationTaxFormula(
 ): string {
   if (surchargeType === "section13_gamok")
     return "본문 지방교육세액 × 300% (§151①1가: 법인 §13②③⑥⑦ 비주택)";
+  if (surchargeType === "pre17473_four_house")
+    return "과세표준 × (4% − 2%) × 20% (§151①1 본문: 종전 §11④2호 1세대 4주택 이상 — §11①8호 미적용)";
+  if (surchargeType === "pre17473_corp_metro_housing")
+    return "과세표준 × (4% − 2%) × 20% = 과세표준 × 0.4% (§151①1가 단서 → 나목: 법인 §11①8호 주택)";
   if (
     surchargeType === "multi_house_8" ||
     surchargeType === "multi_house_12" ||

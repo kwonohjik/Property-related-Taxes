@@ -368,8 +368,14 @@ export interface AcquisitionTaxInput {
   contractDateBeforeRegulation?: boolean;
   /** 조정대상지역 지정고시일 */
   regulationDesignationDate?: string;
-  /** 계약금 지급 증빙 보유 여부 */
+  /** 계약금 지급 증빙 보유 여부 — §13의2④·법률 제17473호 부칙 제6조 단서 공용 */
   hasContractDepositProof?: boolean;
+
+  // ─── [E-6] 법률 제17473호 부칙 제6조 (2020.7.10. 이전 매매계약 경과조치) ───
+  /** 매매계약일(공동주택 분양계약일 포함, YYYY-MM-DD) — 매매(`purchase`) 주택만 */
+  saleContractDate?: string;
+  /** 매매계약 당시 1세대가 국내에 주택을 1개 이상 소유했는지 (개인 — 부칙 제6조 「1세대」 요건) */
+  ownedHouseAtSaleContract?: boolean;
 
   // ─── [P1 v3] 사치성 + 대도시 법인 중복 (§13⑦) ───
   /** 대도시 법인 중과(§13②) 적용 여부 */
