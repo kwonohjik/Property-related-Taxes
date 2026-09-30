@@ -198,3 +198,68 @@ describe("⑦ 결과 카드 — 어느 주택인가 (Q-6)", () => {
     ]);
   });
 });
+
+/**
+ * ⑤ 스칼라 < 2에서 명부 — 값이 있으면 보이고, 분양권 목록은 정확히 한 벌 (S1 후속 F-2·F-3)
+ *
+ * 계획서 `docs/00-pm/transfer-count-exclusion-hidden-roster.plan.md` §1. 09-07 수정(「값이 남아 있으면 고칠 화면도
+ * 남는다」)이 섹션 바깥 게이트에만 걸려, 한시배제 창 **밖**에서는 행이 있어도 명부가 숨었다(보이지 않는 행이 ④·⑧에
+ * 계속 실린다). 창 **안**에서는 반대로 명부 안 분양권 목록과 ② 섹션 분양권 목록이 **두 벌** 떴다.
+ */
+describe("⑤ 스칼라 < 2 — 명부 노출과 분양권 목록 유일성 (F-2·F-3)", () => {
+  const RURAL_ROW = { ...ROW, countExclusion: { kind: "reduction", reduction: RURAL } } as HouseEntry;
+  const RIGHT = { id: "p", kind: "presale", acquisitionDate: "2023-01-01" } as unknown as TransferFormData["presaleRights"][number];
+  const IN = "2024-06-01"; // 한시배제 창 안(보유 2년↑)
+  const OUT = "2026-06-01"; // 창 밖
+  const view = (over: Partial<TransferFormData>, kind: AssetForm["assetKind"] = "housing") =>
+    render(<Step4 form={form({ householdHousingCount: "1", ...over }, kind)} onChange={() => {}} />);
+  const rowEdits = () => screen.queryAllByRole("button", { name: "주택 1 편집" }).length;
+  const presaleLists = () => screen.queryAllByText("분양권·입주권", { exact: true }).length;
+
+  it("[UI-7] 창 밖 · 옛 이력 표식 · 행 있음 → 명부가 보인다(종전 0개)", () => {
+    view({ transferDate: OUT, legacyHouseCountPrecedence: true, houses: [RURAL_ROW] });
+    expect(rowEdits()).toBe(1);
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-7r] 창 밖 · 재개발 아파트 · 행 있음 → 명부가 보인다", () => {
+    view({ transferDate: OUT, houses: [RURAL_ROW] }, "redevelopment_apt");
+    expect(rowEdits()).toBe(1);
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-8] 창 안 · 행 있음 → 분양권 목록은 한 벌(종전 2)", () => {
+    view({ transferDate: IN, legacyHouseCountPrecedence: true, houses: [RURAL_ROW] });
+    expect(rowEdits()).toBe(1);
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-8r] 입주권 양도(① 섹션 분양권 목록) · 창 안 · 행 있음 → 분양권 목록은 한 벌", () => {
+    view({ transferDate: IN, householdHousingCount: "0", houses: [ROW] }, "right_to_move_in");
+    expect(rowEdits()).toBe(1);
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-8p] 창 안 · 분양권만 있음 → ② 목록 한 벌 · 명부는 열지 않는다(입력 중인 위젯이 옮겨 가지 않는다)", () => {
+    view({ transferDate: IN, presaleRights: [RIGHT] });
+    expect(rowEdits()).toBe(0);
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-8-] 대조군 — 값이 없으면 창 안팎 모두 명부 없음 · ② 목록 한 벌", () => {
+    view({ transferDate: OUT });
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(presaleLists()).toBe(1);
+    cleanup();
+    view({ transferDate: IN });
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(presaleLists()).toBe(1);
+  });
+
+  it("[UI-8+] 짝 — 스칼라 2면 창 안팎 모두 명부 한 벌 · 분양권 목록 한 벌(명부 안)", () => {
+    view({ transferDate: OUT, householdHousingCount: "2" });
+    expect(screen.getAllByRole("button", { name: "+ 주택 추가" })).toHaveLength(1);
+    expect(presaleLists()).toBe(1);
+  });
+});

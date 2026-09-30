@@ -34,20 +34,36 @@ export function houseCountInputsHaveData(form: TransferFormData): boolean {
 }
 
 /**
- * `HouseCountExemptionInputs`(세대 보유 주택 목록 + 감면주택 제외 + 분양권)를 렌더하는가.
+ * 비한시배제 분기의 ④ 주택수·중과 판정 **섹션**을 렌더하는가.
  *
  * 종전 조건(`primaryKind === "housing"` 또는 `isHousingLike && ≥2채`)을 **그대로 유지**하고
  * 「담긴 데이터가 있으면」을 OR로 더한다 — 넓히기만 하므로 기존 노출은 하나도 줄지 않는다.
+ * 섹션 안의 세대 보유 주택 목록은 `houseRosterRendered`가 따로 정한다.
  */
 export function houseCountInputsVisible(
   form: TransferFormData,
   primaryKind: string | undefined,
-  opts: { requireHousingPrimary?: boolean } = {},
 ): boolean {
   if (houseCountInputsHaveData(form)) return true;
   const count = parseInt(form.householdHousingCount || "1", 10);
   if (isHousingLike(primaryKind ?? "") && count >= 2) return true;
-  return !opts.requireHousingPrimary && primaryKind === "housing";
+  return primaryKind === "housing";
+}
+
+/**
+ * 세대 보유 주택 목록(`HouseCountExemptionInputs` — 명부·감면주택·명부 안 분양권)을 렌더하는가.
+ * 한시배제 창 **안팎이 같은 술어**를 쓰고, ② 섹션의 분양권 목록은 이 술어의 **부정**일 때만 연다.
+ *
+ * 🔴 S1 후속(`docs/00-pm/transfer-count-exclusion-hidden-roster.plan.md` F-2·F-3):
+ *   - 창 밖 분기는 섹션 게이트만 넓히고(09-07) 안쪽 목록 게이트는 `≥2채` 그대로여서, 행이 남아 있어도
+ *     목록이 숨었다 — 보이지 않는 행이 ④에 실리고 ⑧에 걸렸다.
+ *   - 창 안 분기는 분양권만 있어도 목록을 열어 ② 섹션 분양권 목록과 **두 벌**이 떴다(같은 배열을
+ *     두 컴포넌트가 patch). 분양권은 ② 목록이 이미 고칠 화면이므로 목록을 여는 값에서 뺀다 —
+ *     넣으면 ②에서 입력하는 순간 그 위젯이 ④로 옮겨 간다.
+ */
+export function houseRosterRendered(form: TransferFormData, primaryKind: string | undefined): boolean {
+  if ((form.houses?.length ?? 0) > 0 || (form.specialHouseExclusions?.length ?? 0) > 0) return true;
+  return isHousingLike(primaryKind ?? "") && parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 
 /**
