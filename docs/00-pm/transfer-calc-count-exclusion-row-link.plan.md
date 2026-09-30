@@ -217,6 +217,7 @@
   - `MultiTransferPropertyBreakdown`
   - **`MixedUseCalculationSections.tsx:737`**(겸용)
 - ⇒ 카드 1곳만 고치면 된다.
+- ⚠️ **정정(2026-09-30, S4)**: 겸용은 카드 컴포넌트를 렌더하지만 `result`에 `total.reductionDetails`(세액감면형 7종)만 넘겨, 이 세 detail이 **한 번도 도달하지 않았다**. 「렌더한다」는 컴포넌트 존재만 본 것이고 입력 배선은 보지 않았다 — S4에서 수정.
 
 **V-4 — 컴패니언 자산의 선언도 엔진에 닿는다.**
 
@@ -261,6 +262,7 @@ V-1에 따르면 `right_to_move_in`·`presale_right` 양도에서는 이 선언�
 | S2 | 대표 자산이 게이트 밖(토지 등)이면 함께 양도하는 **주택(컴패니언)**의 옛 §99의4·§98의9 선언이 ③ 패널에서 사라진 채 무검증으로 컴패니언 엔진 실행에 실린다 | ✅ 수정 — 옛 선언 감지·삭제의 게이트를 **선언이 붙은 자산 자신의 종류**로(`unlinkedCountExclusionDeclarations`·`clearUnlinkedCountExclusions`). ⑧·안내 카드가 같은 함수. CR-2l(토지+주택 컴패니언 → 차단) · CR-2l+(컴패니언이 입주권 → 미차단). 이 경우 명부가 보이지 않아(대표 자산이 주택이 아님) 해소 경로는 삭제뿐이다 — 컴패니언 선언의 효과는 미측정(V-4)이라 막는 쪽이 보수적 |
 | S1 | 비한시배제 분기에서 스칼라 주택 수를 1로 낮추면 명부가 숨는데 ⑥이 채워진 행은 남아 ④가 싣는다 | ⏸ 기록만 — 명부 행이 있으면 주택 수 자체가 `1 + 행 수`로 계산되고(`household-house-count.ts:94`) 불일치 안내(`house-count-mismatch`)가 뜨는 **종전 구조**다. 행 필드 전체(§155 사실·상속 등)에 공통이고 이번 diff가 만든 경로가 아니다. 선언이 가리키는 주택은 실재하는 행이라 C6(명부에 없는 주택)과 다르다 |
 | S3 | Q-6(a) 「전건」 — 결과 카드는 유형별 첫 선언만 그린다 | ✅ 수정(사용자 결정 「엔진까지 이어서」) — 엔진 결과에 `houseCountExclusionDetails`(선언 전건 · 행 id 포함)를 싣고 반환 경로에 모두 이었다: 주택 수 제외 단계 → 비과세 조기 반환(`finalize`) · 일반(`normal-return`) · 차손(`loss-return`) · 재개발(`redevelopment-apt-exemption`→`redevelopment` 펼침) · 겸용(`mixed-use-exemption`·`mixed-use`) · 일괄 자산별(`aggregate-pickers`). 매개변수는 필수로 둬 빠진 호출부를 컴파일러가 잡는다. 카드는 전건을 그리고, 이 필드가 없는 옛 결과는 종전 첫 선언 카드로 대체한다. anchor CR-12(조기 반환)·CR-12t(일반)·CR-12l(차손)·CR-12r(재개발)·CR-12d(같은 유형 두 행) + UI-6 — 경로별 뮤테이션 5종 KILLED. 겸용·일괄 경로는 타입 배선만(anchor 없음) |
+| S4 | (머지 후 후속) 겸용 결과뷰에 조특법 주택 수 제외 카드가 없다 — 엔진은 detail을 결과 최상위(D4-02 echo)에 싣는데 결과뷰가 `total.reductionDetails`만 넘겼다. 세액은 맞고(route가 `engineInput.reductions`를 싣는다) 어느 주택인지·적용 불가 사유·§99의4⑥ 추징 경고만 사라졌다. #1884 이전부터 있던 표시 결함 | ✅ 수정 — `MixedUseCalculationSections`가 네 detail(`new994Detail`·`unsold989Detail`·`houseCountExclusionDetails`·`specialHouseExclusionDetail`)을 합쳐 넘기고 `houses={formData?.houses}`를 전달(단건과 같은 배선). anchor `mixed-use-count-exclusion-cards.anchor.test.tsx` 6건(MXC-0 구별력 · §99의4 카드+「보유 주택 2」+§99의4⑥ · 적용 불가 사유 · 감면주택 행 표시 · 명부 없음 짝 · 대조군) — 뮤테이션 3종(houses 미전달·§99의4 미전달·감면주택 미전달) KILLED. E2E CCX-3(겸용 폼 → 본문 houseId → 결과 「보유 주택 1」) — 수정 제거 시 실패 확인 |
 
 - 주석 정정: `calc-wizard-asset-nbl.ts`(「판정 메뉴에서만 입력」) · `New994InputForm`·`Unsold989InputForm`(「판정 메뉴 명부 행에서 쓸 때」).
 - note: 같은 행 id의 저장소 선언이 둘이면 이동 시 하나만 남는다(판정 메뉴 전달은 행당 1건이라 생기지 않는 형태) · 다건 `properties[].form` 복원 경로에는 Q-5 이동이 없다(행 id 선언은 판정 → 단건 전달에서만 생긴다 — 남아도 `linkedDeclarations`가 읽어 올바르게 계산되고 보이지만 않는다).

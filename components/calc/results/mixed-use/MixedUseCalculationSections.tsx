@@ -50,6 +50,7 @@ interface Props {
 
 export function MixedUseCalculationSections({
   breakdown,
+  formData,
   selectedPrintIds,
   openSections,
   toggleSection,
@@ -733,9 +734,19 @@ export function MixedUseCalculationSections({
 
         ⚠️ 겸용은 **세액감면형만** 계산한다(차감형은 어느 파트에서 뺄지 정한 명문이 없어 고지만
            한다) — 그래서 `calculatedTax`는 감면 차감 전 산출세액 `t.transferTax`다.
+
+        🔴 조특법 주택 수 제외(§99의4·§98의9·감면주택)는 §89①3호 판정 축이라 결과 **최상위**에 실린다
+           (D4-02 echo) — 종전에는 넘기지 않아 카드·사유·§99의4⑥ 경고가 사라졌다. `houses`는 「보유 주택 N」용.
       */}
       <ReductionDetailCards
-        result={t.reductionDetails ?? {}}
+        result={{
+          ...t.reductionDetails,
+          new994Detail: breakdown.new994Detail,
+          unsold989Detail: breakdown.unsold989Detail,
+          houseCountExclusionDetails: breakdown.houseCountExclusionDetails,
+          specialHouseExclusionDetail: breakdown.specialHouseExclusionDetail,
+        }}
+        houses={formData?.houses}
         calculatedTax={t.transferTax}
         taxBase={t.taxBase}
         longTermHoldingDeduction={
