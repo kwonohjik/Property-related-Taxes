@@ -316,7 +316,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           />
 
           {/* 주택 수 */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" data-field="householdHousingCount">
             <label className="block text-sm font-medium">
               세대 보유 주택 수 <span className="text-destructive">*</span>
             </label>

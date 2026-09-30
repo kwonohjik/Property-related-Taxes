@@ -41,17 +41,15 @@ interface Props {
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴
    *    전용이 되면서 이 체인의 소비처가 사라졌다. U1-03 감시는 판정 메뉴 경로로 옮겼다.
    */
-  /** 검증 실패 자산 인덱스 — 해당 카드에 인라인 에러 배너 표시 */
-  errorAssetIndex?: number | null;
-  /** 검증 실패 메시지 (errorAssetIndex 카드에 표시) */
-  errorMessage?: string | null;
+  /** 자산 인덱스 → 그 카드의 첫 검증 오류 (카드 배너 + 섹션 강제 펼침) */
+  assetErrors?: Record<number, string>;
   /** 자산 분할 모드 (Step1 단일 소스) — ③ 토글 B + "+ 추가" 버튼 분기 */
   splitMode: AssetSplitMode;
   /** 토글 B(지분분할) on/off 핸들러 — Step1 정의 */
   onFractionalToggle: (yes: boolean) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, assetErrors, splitMode, onFractionalToggle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -105,7 +103,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
           judgmentLoaded={judgmentLoaded}
-          errorMessage={errorAssetIndex === idx ? errorMessage ?? undefined : undefined}
+          errorMessage={assetErrors?.[idx]}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}
           hasSiblings={assets.length > 1}

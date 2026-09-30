@@ -31,15 +31,12 @@ import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance"
 export function Step1({
   form,
   onChange,
-  errorAssetIndex,
-  errorMessage,
+  assetErrors,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
-  /** 검증 실패 자산 인덱스 — 해당 카드 인라인 에러 표시 */
-  errorAssetIndex?: number | null;
-  /** 검증 실패 메시지 */
-  errorMessage?: string | null;
+  /** 자산 인덱스 → 그 카드의 첫 검증 오류. 배너 표시 + 섹션 강제 펼침 */
+  assetErrors?: Record<number, string>;
 }) {
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
@@ -225,6 +222,7 @@ export function Step1({
           <div className="space-y-3 mb-3">
             <FieldCard
               label="총 양도가액"
+              field="contractTotalPrice"
               required
               unit="원"
               badge={hasReplotIncrement ? "증환지 양도가액 입력란" : undefined}
@@ -302,8 +300,7 @@ export function Step1({
            *    ④를 거친 뒤 되돌아오거나 이력에서 복원한 경우에 동작한다.
            *    그래도 **넘기지 않으면 영영 뜨지 않는다** — 종전이 그 상태였다.
            */
-          errorAssetIndex={errorAssetIndex}
-          errorMessage={errorMessage}
+          assetErrors={assetErrors}
           splitMode={splitMode}
           onFractionalToggle={handleFractionalToggle}
         />

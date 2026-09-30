@@ -15,6 +15,7 @@ import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-pen
 import { collectStepIssues, collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
 import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner";
 import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssuePanel";
+import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
 import type { StepStatus } from "@/components/calc/StepIndicator";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -67,8 +68,13 @@ export default function TransferTaxCalculator({
     () => (failed ? collectStepIssues(failed.step, formData) : []),
     [failed, formData],
   );
-  // 자산 카드 인라인 배너 대상 — 첫 자산 오류. 그 자산을 다 고치면 다음 자산으로 넘어간다.
-  const errorAssetIndex = issues.find((it) => it.assetIndex != null)?.assetIndex ?? null;
+  // 자산 카드 인라인 배너 — 오류가 있는 **모든** 자산 카드에 그 카드의 첫 오류(계획서 D-5).
+  //   배너가 걸린 카드는 섹션이 전부 펼쳐져(`CompanionAssetCard` forceOpenAll) 입력칸으로 갈 수 있다.
+  const assetErrors = useMemo(() => {
+    const m: Record<number, string> = {};
+    for (const it of issues) if (it.assetIndex != null && m[it.assetIndex] == null) m[it.assetIndex] = it.message;
+    return m;
+  }, [issues]);
   const [isLoading, setIsLoading] = useState(false);
   const [penaltyResult, setPenaltyResult] = useState<TransferTaxPenaltyResult | null>(null);
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
@@ -186,20 +192,22 @@ export default function TransferTaxCalculator({
     [formData, updateFormAndInvalidate],
   );
 
-  // 검증 실패 적용 — 오류 목록 일괄 표시 + (step 0) 첫 자산 오류 카드로 자동 스크롤
+  // 검증 실패 적용 — 오류 목록 일괄 표시 + 첫 오류 입력칸으로 이동(계획서 Q-2=a).
+  //   입력칸을 못 찾으면 종전처럼 첫 자산 오류 카드로 후퇴한다.
   function failWithIssues(step: number, list: ValidationIssue[]) {
     setFailed((f) => ({ step, seq: (f?.seq ?? 0) + 1 }));
-    const firstAsset = list.find((it) => it.assetIndex != null);
-    if (firstAsset?.assetIndex != null && firstAsset.step === 0) {
-      scrollToAssetCard(firstAsset.assetIndex);
-    }
+    const firstAsset = list.find((it) => it.assetIndex != null && it.step === 0);
+    if (list[0]) jumpToIssue(list[0], firstAsset?.assetIndex);
   }
 
-  // setStep/리렌더 후 자산 카드가 마운트되도록 한 틱 뒤 스크롤
-  function scrollToAssetCard(targetIndex: number) {
+  // 입력칸(field) → 없으면 자산 카드 → 없으면 그대로(계획서 D-4).
+  // setStep·카드 펼침(D-5) 리렌더 후 대상이 표시되도록 한 틱 뒤에 찾는다.
+  function jumpToIssue(issue: ValidationIssue, fallbackAssetIndex = issue.assetIndex) {
     setTimeout(() => {
+      if (jumpToIssueField(issue)) return;
+      if (fallbackAssetIndex == null) return;
       document
-        .querySelector(`[data-asset-card-index="${targetIndex}"]`)
+        .querySelector(`[data-asset-card-index="${fallbackAssetIndex}"]`)
         // start — 카드 머리의 오류 배너가 보이도록(`center`는 전부 펼친 긴 카드의 배너를 잘랐다).
         //   카드 루트 `scroll-mt-24`가 sticky 앱 헤더 높이를 비켜 준다.
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -326,12 +334,7 @@ export default function TransferTaxCalculator({
       key={0}
       form={formData}
       onChange={handleFormChange}
-      errorAssetIndex={currentStep === 0 ? errorAssetIndex : null}
-      errorMessage={
-        currentStep === 0
-          ? (issues.find((it) => it.assetIndex === errorAssetIndex)?.message ?? error)
-          : null
-      }
+      assetErrors={currentStep === 0 ? assetErrors : undefined}
     />,
     <Step4 key={1} form={formData} onChange={updateFormAndInvalidate} />,
     <Step5 key={2} form={formData} onChange={updateFormAndInvalidate} />,
@@ -581,7 +584,7 @@ export default function TransferTaxCalculator({
             key={failed?.seq ?? 0}
             issues={issues}
             error={error}
-            onAssetClick={currentStep === 0 && failed?.step === 0 ? scrollToAssetCard : undefined}
+            onIssueClick={(it) => jumpToIssue(it)}
             onRetry={isLastStep ? () => { clearError(); handleSubmit(); } : undefined}
           />
 

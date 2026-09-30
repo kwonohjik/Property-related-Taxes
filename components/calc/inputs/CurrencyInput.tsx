@@ -58,6 +58,8 @@ export interface CurrencyInputProps {
   allowNegative?: boolean;
   /** E2E·단위 테스트 셀렉터용 data-testid (내부 input에 전달) */
   "data-testid"?: string;
+  /** 검증 오류 → 입력칸 이동 앵커 — 루트에 부여(FieldCard 밖 단독 사용 시) */
+  "data-field"?: string;
 }
 
 export function CurrencyInput({
@@ -72,6 +74,7 @@ export function CurrencyInput({
   hideLabel = false,
   allowNegative = false,
   "data-testid": dataTestId,
+  "data-field": dataField,
 }: CurrencyInputProps) {
   const [focused, setFocused] = useState(false);
   const [localRaw, setLocalRaw] = useState(toRawDigits(value, allowNegative));
@@ -112,7 +115,7 @@ export function CurrencyInput({
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" data-field={dataField}>
       {label && !hideLabel && (
         <label htmlFor={inputId} className="block text-sm font-medium">
           {label} {required && <span className="text-destructive">*</span>}

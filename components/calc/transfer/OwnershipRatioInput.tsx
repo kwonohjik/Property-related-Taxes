@@ -85,6 +85,7 @@ export function OwnershipRatioInput({
   return (
     <FieldCard
       label={label}
+      field="ownershipNumerator"
       hint="소유·취득 지분을 백분율(%)로 입력 (단독 소유는 100)"
       warning={ownershipRatioError(numerator, denominator)}
       trailing={

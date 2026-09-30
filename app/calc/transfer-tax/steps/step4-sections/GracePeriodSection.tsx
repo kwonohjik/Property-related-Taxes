@@ -174,6 +174,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                   토지거래허가 신청일 <span className="text-rose-500">*</span>
                 </label>
                 <DateInput
+                  data-field="gracePeriod.permitApplicationDate"
                   value={gp.permitApplicationDate ?? ""}
                   onChange={(v) => patchGp({ permitApplicationDate: v || undefined })}
                 />
@@ -199,6 +200,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                   매매계약일 <span className="text-rose-500">*</span>
                 </label>
                 <DateInput
+                  data-field="gracePeriod.contractDate"
                   value={gp.contractDate}
                   onChange={(v) => patchGp({ contractDate: v })}
                 />
