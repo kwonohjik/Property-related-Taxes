@@ -883,6 +883,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     priorRentalExemptionHistory?: "" | "none" | "used";
     /** 대통령령 제29523호 부칙 제7조② 경과조치 해당(2019-02-12 당시 거주 중 · 그 전 계약금 지급) — OH-40 */
     residenceTransitionUnderAddendum?: boolean;
+    /**
+     * §154⑩1호(I-5) — 이 주택이 임대주택 등록(민특법§5) 또는 어린이집 설치·운영(영유아보육법§12·§13)
+     * 사실이 있는가. `rentalUnits`가 0호인 B 시나리오(§154⑩ 표준 경로)에서만 UI가 노출·판정에 쓴다.
+     * 거주기간은 별도 필드 없이 취득 시기별로 `postRegistrationResidenceMonths`(2019.2.12 이후
+     * 취득) 또는 일반 거주기간(그 전 취득)을 재사용한다.
+     */
+    wasRegisteredRentalOrChildcare?: boolean;
   };
 
 

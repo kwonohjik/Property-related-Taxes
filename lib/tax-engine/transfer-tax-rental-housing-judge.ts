@@ -12,7 +12,10 @@ import {
   type EligibilityContext,
 } from "./transfer-tax/rental-housing-exception/eligibility";
 import type { EligibilityResult } from "./transfer-tax/rental-housing-exception/types";
-import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
+import {
+  qualifiesWinWinRental,
+  resolveWasRegulatedAtAcquisition,
+} from "./transfer-tax-exemption-requirements";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /**
@@ -41,6 +44,11 @@ export function buildEligibilityContext(effectiveInput: TransferTaxInput): Eligi
     postRegistrationResidenceMonths: rhe.postRegistrationResidenceMonths,
     priorRentalExemptionHistory: rhe.priorRentalExemptionHistory,
     residenceTransitionUnderAddendum: rhe.residenceTransitionUnderAddendum,
+    // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 checkEligibility가 참조한다.
+    priorResidenceTransferDate: rhe.priorResidenceTransferDate,
+    wasRegisteredRentalOrChildcare: rhe.wasRegisteredRentalOrChildcare,
+    // 거주주택 §154① 취득 당시 조정대상지역 판정과 같은 단일 소스(일반 1세대1주택 흐름과 동일 술어).
+    wasRegulatedAtAcquisition: resolveWasRegulatedAtAcquisition(effectiveInput),
   };
 }
 

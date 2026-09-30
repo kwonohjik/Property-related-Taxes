@@ -30,7 +30,14 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
    * **주택이 아닌 자산에 §155⑳ 거주주택 비과세가 적용된 payload**가 엔진까지 갔다.
    */
   if (!isRentalHousingExceptionApplicable(asset.assetKind)) return undefined;
-  if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
+  /**
+   * 시나리오 A(거주주택 양도, 임대주택 계속 보유)는 §155⑳ 본문이 공동보유 장기임대주택을
+   * 요구하므로 1호 이상 필요하다. 시나리오 B는 **0호를 허용**한다(I-5) — 양도일 현재 공동보유
+   * 중인 장기임대주택이 하나도 없는 §154⑩ 표준 경로(PHRP가 임대주택을 전부 처분·등록말소한 경우)가
+   * 그 경우다. 0호를 여기서 드롭하면 엔진 입력 자체가 사라져 §154⑩ 판정이 영구 차단된다.
+   */
+  if (!rh.rentalUnits) return undefined;
+  if (rh.scenario === "A" && rh.rentalUnits.length === 0) return undefined;
 
   return {
     applyException: true,
@@ -101,5 +108,12 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     priorRentalExemptionHistory:
       rh.scenario === "A" && rh.priorRentalExemptionHistory ? rh.priorRentalExemptionHistory : undefined,
     residenceTransitionUnderAddendum: rh.residenceTransitionUnderAddendum === true ? true : undefined,
+    // §154⑩ 표준 경로(I-5) — rentalUnits 0호(B)일 때만 의미가 있다(⑤가 그때만 노출 — 3중 패턴).
+    // 거주기간은 별도 필드 없이 위 postRegistrationResidenceMonths(2019.2.12 이후 취득)를 공유한다 —
+    // 2019.2.12 전 취득이면 이 값 없이도 일반 거주기간(자산-수준 residencePeriodMonths)으로 판정한다.
+    wasRegisteredRentalOrChildcare:
+      rh.scenario === "B" && rh.rentalUnits.length === 0
+        ? rh.wasRegisteredRentalOrChildcare === true
+        : undefined,
   };
 }

@@ -78,6 +78,31 @@ export function isLifetimeLimitEra155_20(
 }
 
 /**
+ * 「종전규정」 적용 대상인가 — 2019-02-12 **전** 취득(또는 부칙 제7조② 경과조치 해당).
+ *
+ * §154⑩(I-5) 표준 경로의 거주요건 분기가 재사용하는 단일 소스다: 서면-2023-법규재산-0426
+ * (법규과-1841, 2023.7.13.) 「’19.2.12. 전에 취득한 최종 직전거주주택보유주택 양도시 소득령§155⑳(1)의
+ * 거주주택에 대한 거주기간 요건을 고려하지 않고, 소득령§154①의 거주기간 요건을 고려함」·
+ * 기획재정부 재산세제과-1081(2022.8.31.) 「제155조제20항제1호의 거주주택에 대한 거주기간 요건을
+ * 고려하지 않는 것」 — 이 취득 시기 구간에서는 §155⑳1호(등록일 이후 거주기간)이 아니라 §154①
+ * 원칙(취득 당시 조정대상지역인 경우에만 거주 2년, 등록일로 자르지 않는 일반 거주기간)을 적용한다.
+ *
+ * 부칙 제29523호 제7조①②의 「이 영 시행 이후 취득하는 주택부터」·「시행 당시 거주 중이거나 시행 전
+ * 계약금 지급 증빙이 있으면 종전 규정」과 같은 축이다 — 양도일 상한(2025-02-27,
+ * `RENTAL_155_20_LIFETIME_LIMIT_REPEAL_TRANSFER_START`)은 이 분기와 무관하다(그 상한은
+ * 「생애 한 차례」·「1주택 외 주택을 모두 양도한 후」 제한에만 걸린다, `isLifetimeLimitEra155_20` 참조).
+ */
+export function isPreLifetimeLimitRegime(
+  residenceAcquisitionDate: Date,
+  transitionUnderAddendum7_2: boolean,
+): boolean {
+  return (
+    transitionUnderAddendum7_2 ||
+    residenceAcquisitionDate.getTime() < RENTAL_155_20_LIFETIME_LIMIT_ACQ_START.getTime()
+  );
+}
+
+/**
  * 계획서 §7-5 「확인 필요」 분기 — 2019-02-12 **전** 취득(또는 경과조치 해당) 거주주택에
  * 2019-02-12 개정으로 추가된 목(마·바목) 임대주택이 섞여 있는가. 결론은 바꾸지 않고 경고만 낸다.
  */
@@ -86,8 +111,6 @@ export function needsPre2019ArticleScopeNotice(
   transitionUnderAddendum7_2: boolean,
   derivedArticles: readonly string[],
 ): boolean {
-  const preRegime =
-    transitionUnderAddendum7_2 ||
-    residenceAcquisitionDate.getTime() < RENTAL_155_20_LIFETIME_LIMIT_ACQ_START.getTime();
+  const preRegime = isPreLifetimeLimitRegime(residenceAcquisitionDate, transitionUnderAddendum7_2);
   return preRegime && derivedArticles.some((a) => a === "마" || a === "바");
 }

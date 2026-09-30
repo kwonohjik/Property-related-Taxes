@@ -129,7 +129,13 @@ export type RentalHousingExceptionInput = {
    * B: 임대주택 → 거주주택으로 전환 후 양도 (직전거주주택보유주택, PHRP)
    */
   scenario: "A" | "B";
-  /** 임대주택 목록 (최소 1호) */
+  /**
+   * 임대주택 목록. 시나리오 A는 최소 1호. 시나리오 B는 **0호 가능**(I-5) —
+   * 양도일 현재 공동보유 중인 장기임대주택이 하나도 없으면(전부 처분·등록말소 후 미보유) §155⑳이 아니라
+   * §154⑩(PHRP 표준 경로)로 판정한다. 이때는 `wasRegisteredRentalOrChildcare`(§154⑩1호)와
+   * `priorResidenceTransferDate`(§154⑩2호 PHRP 확인)가 요건을 대신하고, 거주기간은 취득 시기에 따라
+   * `postRegistrationResidenceMonths`(2019.2.12 이후 취득) 또는 일반 거주기간(그 전 취득)을 쓴다.
+   */
   rentalUnits: RentalUnitInput[];
   // ─── B 시나리오 전용 (scenario === 'B' 시 필수) ───
   /** D_prior: 직전거주주택 양도일 */
@@ -158,6 +164,18 @@ export type RentalHousingExceptionInput = {
    * 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인된다(종전 규정 적용). 미입력 = false.
    */
   residenceTransitionUnderAddendum?: boolean;
+  /**
+   * §154⑩1호(I-5) — 이 주택이 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록되거나
+   * 「영유아보육법」 §12·§13에 따른 어린이집으로 설치·운영된 사실이 있는가. `rentalUnits`가 0호인
+   * 시나리오 B(§154⑩ 경로)에서만 판정에 쓰인다 — §167조의3①2호 요건(면적·가액·의무기간)은 인용하지
+   * 않는 **단순 등록·운영 사실**이다. 미입력·false면 §154⑩1호 불충족.
+   *
+   * 🔑 거주기간 요건은 이 필드와 별도로 취득 시기에 따라 갈린다(2019.2.12 이후 취득 →
+   * `postRegistrationResidenceMonths` 재사용 · 그 전 취득 → 일반 거주기간, `eligibility.ts` 상단 주석).
+   * `rentalUnits`가 0호인 시나리오 B에서 별도 필드가 필요하지 않다 — §154⑩ 경로도 §155⑳ PHRP와
+   * 같은 필드를 쓴다.
+   */
+  wasRegisteredRentalOrChildcare?: boolean;
 };
 
 // ============================================================

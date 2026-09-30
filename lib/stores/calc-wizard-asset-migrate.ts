@@ -648,6 +648,11 @@ export function migrateAsset(raw: unknown): AssetForm {
       rhe.priorRentalExemptionHistory = "";
     }
     if (typeof rhe.residenceTransitionUnderAddendum !== "boolean") rhe.residenceTransitionUnderAddendum = false;
+    // §154⑩ 표준 경로(I-5) 신규 필드 — 구 세션엔 없다 → 미입력(엔진이 「판정 불가」로 다룬다)
+    if (typeof rhe.wasRegisteredRentalOrChildcare !== "boolean") rhe.wasRegisteredRentalOrChildcare = false;
+    // 구 브랜치(PR #1903 초판)의 residenceMonthsAfterPriorResidenceTransfer 필드는 폐기 —
+    // 거주기간은 postRegistrationResidenceMonths(위 backfill)를 재사용한다. 남아 있어도 무해(미소비)하므로
+    // 굳이 delete하지 않는다.
   }
   // ── Phase 2·3 + 매매사례가액 신규 필드 normalize — 별도 모듈 (800줄 정책, 2026-06-15) ──
   applyPhase3Normalize(a);
