@@ -96,6 +96,8 @@ export interface FilingPenaltyInput {
 export interface DelayedPaymentInput {
   /** 미납·미달납부세액 */
   unpaidTax: number;
+  /** PEN-C — 「자동(결정세액 전액)」·「직접 입력(0=완납 포함)」. 결정세액 주입은 `resolveUnpaidTax` */
+  unpaidTaxMode?: import("./transfer-tax-unpaid-tax").UnpaidTaxMode;
   /** 납부기한 (이 날까지 납부해야 함) */
   paymentDeadline: Date;
   /** 실제 납부일 (미제공 시 계산 기준일 사용) */

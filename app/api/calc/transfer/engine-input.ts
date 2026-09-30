@@ -399,6 +399,9 @@ export function buildTransferEngineInput(
     delayedPaymentDetails: data.delayedPaymentDetails
       ? {
           unpaidTax: data.delayedPaymentDetails.unpaidTax,
+          ...(data.delayedPaymentDetails.unpaidTaxMode
+            ? { unpaidTaxMode: data.delayedPaymentDetails.unpaidTaxMode }
+            : {}),
           paymentDeadline: new Date(data.delayedPaymentDetails.paymentDeadline),
           actualPaymentDate: data.delayedPaymentDetails.actualPaymentDate
             ? new Date(data.delayedPaymentDetails.actualPaymentDate)

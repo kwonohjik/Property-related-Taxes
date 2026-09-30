@@ -38,6 +38,7 @@ import {
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
+import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 
 /**
  * 성공 응답 — NaN·Infinity가 있으면 던져 아래 `catch`가 500으로 응답한다(E-14l).
@@ -638,9 +639,12 @@ export async function POST(request: NextRequest) {
         engineInput.filingPenaltyDetails.determinedTax = baseResult.determinedTax;
         engineInput.filingPenaltyDetails.reductionAmount = baseResult.reductionAmount;
       }
-      // unpaidTax === 0이면 결정세액 전액 미납으로 가정 (자동 가산세 적용 흐름)
-      if (engineInput.delayedPaymentDetails && engineInput.delayedPaymentDetails.unpaidTax === 0) {
-        engineInput.delayedPaymentDetails.unpaidTax = baseResult.determinedTax;
+      // 자동(또는 모드 부재 + 0) = 결정세액 전액 미납 · 직접 입력은 그대로(0 = 완납) — PEN-C
+      if (engineInput.delayedPaymentDetails) {
+        engineInput.delayedPaymentDetails.unpaidTax = resolveUnpaidTax(
+          engineInput.delayedPaymentDetails,
+          baseResult.determinedTax,
+        );
       }
     }
     const result = calculateTransferTax(engineInput, rates);

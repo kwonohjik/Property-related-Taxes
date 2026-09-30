@@ -33,6 +33,7 @@ import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope"
 import { buildOneHouseExtraFactsPayload } from "@/lib/calc/one-house-extra-facts-payload";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
+import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -423,7 +424,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(!filingUnitAmendment && form.enablePenalty && form.paymentDeadline
       ? {
           delayedPaymentDetails: {
-            unpaidTax: parseAmount(form.unpaidTax ?? "0"),
+            // PEN-C — 단건 ④와 같은 leaf(모드 + auto면 값 0).
+            ...unpaidTaxPayload(form),
             paymentDeadline: form.paymentDeadline,
             actualPaymentDate: form.actualPaymentDate || undefined,
           },

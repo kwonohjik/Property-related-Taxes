@@ -357,8 +357,21 @@ export const filingPenaltyDetailsSchema = z.object({
 
 export const delayedPaymentDetailsSchema = z.object({
   unpaidTax:          z.number().int().nonnegative(),
+  /**
+   * PEN-C — `manual`은 값 그대로(0 = 완납) · `auto`는 결정세액 전액 미납 · 부재는 종전 의미
+   * (0 → 전액 · 값 → 그 값). 엔진 `resolveUnpaidTax`(`lib/tax-engine/transfer-tax-unpaid-tax.ts`).
+   */
+  unpaidTaxMode:      z.enum(["auto", "manual"]).optional(),
   paymentDeadline:    z.string().date(),
   actualPaymentDate:  z.string().date().optional(),
+}).superRefine((d, ctx) => {
+  // ④는 auto일 때 0을 싣는다 — auto에 값이 오면 「자동」과 「그 값」 중 무엇인지 모호하다.
+  if (d.unpaidTaxMode === "auto" && d.unpaidTax > 0)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["unpaidTaxMode"],
+      message: "미납세액 자동(결정세액 전액 미납) 모드에는 미납세액을 싣지 않습니다 — 값을 쓰려면 manual로 보내세요",
+    });
 });
 
 /** 수정신고(경정) — 국세기본법 §45·§48 */

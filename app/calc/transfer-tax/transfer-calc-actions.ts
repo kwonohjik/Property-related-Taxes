@@ -125,7 +125,13 @@ export async function runPenaltyCalc(
   const updatedUnpaidTax = autoUnpaid > 0 ? String(autoUnpaid) : "0";
   cb.setUnpaidTax(updatedUnpaidTax);
 
-  const penaltyRes = await callTransferTaxAPI({ ...formData, unpaidTax: updatedUnpaidTax });
+  // PEN-C — 산출한 미납세액은 「직접 입력」으로 싣는다. 완납(0)이 자동(결정세액 전액)으로 읽히면
+  //    가산세가 붙는다(종전 결함: 완납인데 납부지연가산세).
+  const penaltyRes = await callTransferTaxAPI({
+    ...formData,
+    unpaidTax: updatedUnpaidTax,
+    unpaidTaxMode: "manual",
+  });
   const penaltyResult =
     penaltyRes.mode === "single" ? (penaltyRes.result.penaltyDetail ?? null) : null;
   cb.setPenaltyResult(penaltyResult);

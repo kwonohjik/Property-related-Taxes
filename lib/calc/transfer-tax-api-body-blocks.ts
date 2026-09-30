@@ -16,6 +16,7 @@ import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { phdPayloadActive } from "./phd-toggle-scope";
+import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
@@ -249,7 +250,8 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
   ...(!form.amendmentMode && form.enablePenalty && form.paymentDeadline
     ? {
         delayedPaymentDetails: {
-          unpaidTax: parseAmount(form.unpaidTax),
+          // PEN-C — 모드를 함께 싣는다(auto는 값 0). 다건 ④와 같은 leaf.
+          ...unpaidTaxPayload(form),
           paymentDeadline: form.paymentDeadline,
           actualPaymentDate: form.actualPaymentDate || undefined,
         },

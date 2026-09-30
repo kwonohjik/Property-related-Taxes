@@ -289,7 +289,8 @@ export default function TransferTaxCalculator({
     try {
       await runPenaltyCalc(formData, {
         setDeterminedTax: setCalcDeterminedTax,
-        setUnpaidTax: (v) => updateFormData({ unpaidTax: v }),
+        // PEN-C — 산출값은 직접 입력 모드로 저장(완납 0이 자동으로 읽히지 않게)
+        setUnpaidTax: (v) => updateFormData({ unpaidTax: v, unpaidTaxMode: "manual" }),
         setPenaltyResult,
         setError,
       });

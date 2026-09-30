@@ -455,6 +455,17 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     if (issue) issues.push(issue);
   }
 
+  // step 3: 가산세 — PEN-C 직접 입력 모드의 빈 칸은 「완납(0)」인지 「미입력」인지 모른다(④는 0으로 싣는다).
+  if (
+    step === 3 &&
+    !form.amendmentMode &&
+    form.enablePenalty &&
+    form.paymentDeadline &&
+    form.unpaidTaxMode === "manual" &&
+    !(form.unpaidTax ?? "").trim()
+  )
+    issues.push({ step, field: "unpaidTax", message: "미납·미달납부세액을 입력하세요 (완납이면 0)." });
+
   // step 3: 가산세 / 수정신고
   if (step === 3 && form.amendmentMode) {
     if (parseAmount(form.originalDeterminedTax) <= 0)

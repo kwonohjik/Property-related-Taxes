@@ -32,6 +32,7 @@ export const PENALTY_ONLY_KEYS: ReadonlySet<string> = new Set([
   "enablePenalty",
   "priorPaidTax",
   "unpaidTax",
+  "unpaidTaxMode",
   "filingType",
   "penaltyReason",
   "lateFilingNotified",

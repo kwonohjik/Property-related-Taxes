@@ -34,6 +34,7 @@ import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -451,6 +452,7 @@ export async function POST(request: NextRequest) {
       delayedPaymentDetails: p.delayedPaymentDetails
         ? {
             unpaidTax: p.delayedPaymentDetails.unpaidTax,
+            ...(p.delayedPaymentDetails.unpaidTaxMode ? { unpaidTaxMode: p.delayedPaymentDetails.unpaidTaxMode } : {}),
             paymentDeadline: toDate(p.delayedPaymentDetails.paymentDeadline, "delayedPaymentDetails.paymentDeadline"),
             actualPaymentDate: toOptionalDate(p.delayedPaymentDetails.actualPaymentDate),
           }
@@ -579,10 +581,7 @@ export async function POST(request: NextRequest) {
       if (p.delayedPaymentDetails) {
         enriched.delayedPaymentDetails = {
           ...p.delayedPaymentDetails,
-          unpaidTax:
-            p.delayedPaymentDetails.unpaidTax === 0
-              ? determinedTax
-              : p.delayedPaymentDetails.unpaidTax,
+          unpaidTax: resolveUnpaidTax(p.delayedPaymentDetails, determinedTax),
         };
       }
       return enriched;

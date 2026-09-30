@@ -18,6 +18,7 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { resolveUnpaidTax } from "./transfer-tax-unpaid-tax";
 import {
   calculateTransferTaxPenalty,
   formatDelayedPaymentFormula,
@@ -405,11 +406,8 @@ function computeAggregateOnce(
           delayedPayment: input.delayedPaymentDetails
             ? {
                 ...input.delayedPaymentDetails,
-                // 미납세액 0 = 결정세액 전액 미납으로 본다(단건 route와 같은 규약).
-                unpaidTax:
-                  input.delayedPaymentDetails.unpaidTax === 0
-                    ? determinedTaxBeforePenalty
-                    : input.delayedPaymentDetails.unpaidTax,
+                // 자동·부재+0 = 결정세액 전액 미납 · 직접 입력은 그대로(0=완납) — 단건 route와 같은 leaf(PEN-C).
+                unpaidTax: resolveUnpaidTax(input.delayedPaymentDetails, determinedTaxBeforePenalty),
               }
             : undefined,
         })
