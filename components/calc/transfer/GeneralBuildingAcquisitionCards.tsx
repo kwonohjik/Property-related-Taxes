@@ -630,12 +630,13 @@ export function GeneralBuildingAcquisitionCards({
           건물 파트 이월과세 — 증여자 취득일·취득가액이 **토지와 다를 수 있다**
           (법 §95④·§97의2①1호). 그래서 파트별로 받는다.
 
-          ⚠️ 증여 사건 정보(등기접수일·증여세 산출세액·과세가액·적용배제)는 **토지 쪽 블록 하나**가
-             정본이다 — 하나의 증여이므로 두 벌을 두면 어긋난다. 여기서는 파트 정보만 받는다.
+          ⚠️ 증여 사건 정보(등기접수일·증여세 산출세액·과세가액·적용배제)는 **한 벌**이다 —
+             토지도 이월과세면 토지 쪽 블록이 정본이고, **건물만**이면 이 블록이 유일한 입력처다
+             (`gbCarryoverEventSource`, 2026-09-30 G1). 안내문은 토지 블록이 있을 때만 띄운다.
         */}
         {asset.gbBuildingAcquisitionCause === "carryover_gift" && (
           <>
-            {asset.acquisitionCause !== "carryover_gift" && (
+            {asset.acquisitionCause === "carryover_gift" && (
               <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
                 증여 등기접수일·증여세 산출세액·과세가액은 <strong>토지 취득</strong> 카드의 이월과세 정보에서
                 한 번만 입력합니다(하나의 증여이기 때문입니다).

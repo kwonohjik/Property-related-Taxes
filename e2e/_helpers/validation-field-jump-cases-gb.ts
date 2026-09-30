@@ -306,8 +306,8 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   {
     name: "gb: gbBuildingAcquisitionCause (이월과세 관계 그 외 · 건물만)", field: "gbBuildingAcquisitionCause", step: 0, assetIndex: A, message: /^자산: 이월과세는 배우자 또는 직계존비속/,
-    form: sep({ gbBuildingAcquisitionCause: "carryover_gift", carryover: carry({ donorRelation: "other" }) }),
-    unreachableInUi: "토지가 이월과세가 아니면 세션 복원(`migrateCarryoverFields`)이 `carryover`를 기본값으로 되돌리고, 화면의 건물 블록은 `buildingCarryover`에만 쓴다 — 검증이 읽는 `carryover.donorRelation`은 늘 비어 있다. E2E 실측: 「증여 등기접수일」 오류가 대신 뜬다",
+    // 건물만 이월과세면 사건 정보(관계 포함)는 건물 블록 = `buildingCarryover`에 있다(G1 · `gbCarryoverEventSource`)
+    form: sep({ gbBuildingAcquisitionCause: "carryover_gift", buildingCarryover: carry({ donorRelation: "other" }) }),
   },
   {
     name: "gb: carryover.donorRelation", field: "carryover.donorRelation", step: 0, assetIndex: A, message: /^자산: 증여자와의 관계를 선택하세요/,

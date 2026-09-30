@@ -127,8 +127,8 @@ export interface GeneralBuildingFormSlice {
    * 토지는 자산-수준 `carryover`를 쓰고, 건물은 이 필드를 쓴다. 증여자 취득일·취득가액이
    * 파트마다 다를 수 있기 때문이다(법 §95④·§97의2①1호).
    *
-   * 🔑 **증여 사건 정보(등기일·산출세액·과세가액·배제선언)는 `carryover` 쪽 하나만** 쓴다 —
-   *    하나의 증여이므로 두 벌을 두면 어긋난다.
+   * 🔑 **증여 사건 정보(등기일·산출세액·과세가액·배제선언)는 한 벌만** 쓴다 — 토지도 이월과세면
+   *    `carryover` 쪽, **건물만**이면 화면의 유일한 블록인 이 필드 쪽이다(`gbCarryoverEventSource`).
    */
   buildingCarryover?: import("./calc-wizard-asset-carryover").CarryoverTaxationForm;
   /**

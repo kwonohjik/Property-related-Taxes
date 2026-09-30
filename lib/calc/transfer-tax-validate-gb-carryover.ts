@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { fieldError } from "./transfer-tax-validate-field";
+import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -26,10 +27,11 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
   const buildingIsCarryover = asset.gbBuildingAcquisitionCause === "carryover_gift";
   if (!landIsCarryover && !buildingIsCarryover) return null;
 
-  const c = asset.carryover;
+  // 증여 사건 정보의 출처 — ④ `buildGbCarryoverPayload`와 **같은 함수**(G1)
+  const c = gbCarryoverEventSource(asset);
 
   /**
-   * §97조의2 ① **관계요건** — 증여 **사건**의 사실이라 토지 쪽(`c`) 하나가 정본이다.
+   * §97조의2 ① **관계요건** — 증여 **사건**의 사실이라 사건 출처(`c`) 하나가 정본이다.
    * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
    * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
    *

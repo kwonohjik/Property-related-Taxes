@@ -11,6 +11,7 @@
  * 무엇을 비우나 (계획서 §2.1 · §2.4(3) 실측 근거):
  *  - `isAppraisalAcquisition`·`isSalesCaseAcquisition` — 상단 축 A 제거로 **끌 수단이 없어진** 추계 플래그.
  *    남으면 API가 취득가액 0을 보내 「인가전 양도차익 = 권리가액 − 0」으로 과대과세된다.
+ *    **원조합원 입주권만** 비운다 — 승계조합원은 산정 방식 라디오가 이 플래그를 정본으로 쓴다(R1).
  *  - `redevIsSuccessorMember` — 사례 48 **완공APT** 전용 필드. 입주권에 남으면 ⑤ 카드가 숨겨지고
  *    validate가 「준공일을 입력하세요」로 막는데 그 입력칸도 숨겨져 **채울 칸 없는 영구 차단**이 된다.
  *
@@ -46,6 +47,23 @@ describe("재수화 경로 — migrateAsset", () => {
     expect(a.isAppraisalAcquisition).toBe(false);
     expect(a.isSalesCaseAcquisition).toBe(false);
     expect(a.redevIsSuccessorMember).toBe("");
+  });
+
+  it("승계조합원 입주권의 감정·매매사례 플래그는 보존한다 (R1 — 산정 방식 라디오의 정본)", () => {
+    for (const flag of ["isAppraisalAcquisition", "isSalesCaseAcquisition"] as const) {
+      const a = migrateAsset(
+        staleRightAsset({
+          isSuccessorRightToMoveIn: true,
+          isAppraisalAcquisition: false,
+          isSalesCaseAcquisition: false,
+          [flag]: true,
+        }) as never,
+      );
+      expect(
+        a[flag],
+        "비우면 새로고침마다 승계 입주권의 산정 방식이 실지거래가액으로 되돌아간다.",
+      ).toBe(true);
+    }
   });
 
   it("useEstimatedAcquisition은 보존한다 (⑤ 실가/환산 라디오의 정본)", () => {

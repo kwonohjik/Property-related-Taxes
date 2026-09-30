@@ -159,7 +159,6 @@ test.describe("검증 오류 → 입력칸 이동 (키 전수)", () => {
     test(c.name ?? c.field, async ({ page }) => {
       test.skip(!!c.unreachableInUi, c.unreachableInUi);
       await seedAndOpen(page, c.form());
-      if (c.prepare) await c.prepare(page);
       if (c.step === 1) await page.getByRole("button", { name: "보유 상황" }).first().click();
       if (c.step === 3) await page.getByRole("button", { name: "가산세" }).first().click();
       await (c.step === 3 ? page.getByRole("button", { name: /세금 계산하기/ }) : next(page)).click();
