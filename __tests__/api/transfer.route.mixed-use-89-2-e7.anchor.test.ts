@@ -138,6 +138,16 @@ describe("E-7 겸용 단건 × §89② — 단건 주택 경로와 같은 leaf",
     expect((await postHousing(over)).isExempt).toBe(false);
   });
 
+  it("🔴 분양권(§88 10호 시행 후 취득) 3년 초과 + 예외 없음 → 배제 — 분양권 축 시행일 게이트(DB)가 겸용에도 닿는다", async () => {
+    vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRatesWithHouseEngine());
+    const over = {
+      presaleRights: [right("2022-06-01", { type: "presale_right" })],
+      rightThreeYearException: { kind: "none" },
+    };
+    expect(rule(await post(over))).toBe("non_one_house_full_taxation");
+    expect((await postHousing(over)).isExempt).toBe(false);
+  });
+
   it("🔴 입주권 2개(합가·상속 축 없음) → 배제 확정", async () => {
     const r = await post({
       presaleRights: [right("2024-06-01"), right("2024-07-01", { id: "r2" })],
@@ -245,5 +255,73 @@ describe("E-7 겸용 단건 × §89② — 중과 배제 ① 요소(§156의2 �
     });
     expect(r.multiHouseSurcharge?.surchargeType).toBe("none");
     expect(r.total.determinedTax).toBe(168_318_240);
+  });
+});
+
+/**
+ * 겸용 **파트 카드**(주 자산·컴패니언 겸용) — 서브엔진도 카드 item의 §89② 사실로 판정한다.
+ * 카드마다 도는 단건 엔진은 이미 §89②를 판정했지만(`mixed-use-part-cards-right-3yr-exception`), 서브엔진은 보지 않아
+ * §154③ 본문(주택 연면적 > 상가 · 전체 12억 이하 · 1세대1주택 비과세 성립)으로 상가 카드까지 **주택 카드**로 만들었다.
+ * §154③은 「법 제89조제1항제3호를 적용할 때」의 규정이라 §89②로 그 호가 배제되면 상가 부분은 상가다.
+ */
+describe("E-7 겸용 파트 카드 — 서브엔진 §154③ 본문이 카드 §89② 판정과 갈리지 않는다", () => {
+  it("🔴 입주권 3년 초과·예외 없음 → 상가 카드는 land/building (종전: housing)", async () => {
+    const { buildMixedUseCompanionItems, MIXED_USE_PART_IDS } = await import(
+      "@/app/api/calc/transfer/mixed-use-part-cards"
+    );
+    const TD = new Date("2026-06-01");
+    const item = (presaleRights: unknown[], rightThreeYearException?: unknown) =>
+      ({
+        propertyId: "c1",
+        propertyLabel: "자산 2",
+        propertyType: "housing",
+        transferPrice: 1_000_000_000,
+        acquisitionPrice: 400_000_000,
+        expenses: 0,
+        transferDate: TD,
+        acquisitionDate: new Date("2018-06-01"),
+        isOneHousehold: true,
+        householdHousingCount: 1,
+        residencePeriodMonths: 60,
+        isRegulatedArea: false,
+        wasRegulatedAtAcquisition: false,
+        isUnregistered: false,
+        useEstimatedAcquisition: false,
+        isNonBusinessLand: false,
+        reductions: [],
+        presaleRights,
+        rightThreeYearException,
+      }) as never;
+    const cards = (presaleRights: unknown[], exception?: unknown) =>
+      buildMixedUseCompanionItems(
+        { ...MIXED.mixedUse, isMetropolitanArea: true } as never,
+        item(presaleRights, exception),
+        {
+          transferDate: TD,
+          mixedUseCtx: { rates: makeMockRates(), globals: {} as never },
+          primaryEngineInput: { householdHousingCount: 1, isRegulatedArea: false, wasRegulatedAtAcquisition: false },
+        },
+        {
+          ownershipRatio: undefined,
+          isUnregistered: false,
+          totalPropertyTransferPrice: undefined,
+          assetId: "c1",
+          assetLabel: "자산 2",
+          allocatedSalePrice: 1_000_000_000,
+        },
+      );
+    const commTypes = (cs: { propertyId: string; propertyType: string }[]) =>
+      cs
+        .filter(
+          (c) =>
+            c.propertyId.startsWith(MIXED_USE_PART_IDS.commercialLand) ||
+            c.propertyId.startsWith(MIXED_USE_PART_IDS.commercialBuilding),
+        )
+        .map((c) => c.propertyType);
+    const RIGHT = { id: "r1", type: "redevelopment_right", acquisitionDate: new Date("2022-06-01"), region: "capital" };
+    // 긍정 짝 — 권리 없음: §154③ 본문 성립 → 상가 카드도 주택 카드
+    expect(commTypes(cards([]))).toEqual(["housing", "housing"]);
+    // §89② 배제 확정 → 본문 불성립
+    expect(commTypes(cards([RIGHT], { kind: "none" }))).toEqual(["land", "building"]);
   });
 });
