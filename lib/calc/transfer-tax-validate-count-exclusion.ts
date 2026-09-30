@@ -14,7 +14,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
-import { resolveHouseholdHousingCount } from "./household-house-count";
+import { countedHouseRows, resolveHouseholdHousingCount } from "./household-house-count";
 import {
   countExclusionRowsInScope,
   rowCountExclusionReductions,
@@ -25,9 +25,9 @@ import {
 export const UNLINKED_COUNT_EXCLUSION_MESSAGE = (n: number) =>
   `주택 수 제외(조특법) 선언 ${n}건이 어느 주택인지 지정되지 않았습니다. 보유 주택 목록에서 해당 주택의 「편집」 → 「주택 수 제외(조특법)」로 다시 지정한 뒤, 안내 카드에서 기존 선언을 삭제하세요.`;
 
-/** 정본 주택 수가 ⑥ 행을 포함하지 않는다(S1 후속 F-1) — 두 입력이 모순이라 사용자가 고른다. */
-export const COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE = (count: number, rows: number) =>
-  `세대 보유 주택 수(${count}채)가 주택 수 제외로 지정한 보유 주택 ${rows}채를 포함하지 않습니다. 주택 수 제외는 세대 보유 주택 수에서 그 주택을 빼는 것입니다 — 세대 보유 주택 수를 ${1 + rows}채 이상으로 입력하거나, 보유 주택 목록에서 주택 수 제외 지정을 해제하세요.`;
+/** ⑥ 행이 있는데 정본 주택 수가 명부의 주택을 다 담지 못한다(S1 후속 F-1·R-1) — 두 입력이 모순이라 사용자가 고른다. */
+export const COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE = (count: number, required: number) =>
+  `세대 보유 주택 수(${count}채)가 보유 주택 목록의 주택(양도 주택 포함 ${required}채)보다 적습니다. 주택 수 제외는 목록의 주택을 세대 보유 주택 수에서 빼는 것이라, 두 값이 어긋나면 어느 주택을 뺐는지 알 수 없습니다 — 세대 보유 주택 수를 ${required}채 이상으로 입력하거나, 목록에서 주택 수 제외 지정을 해제하세요.`;
 
 export function collectCountExclusionIssues(form: TransferFormData): string[] {
   const messages: string[] = [];
@@ -59,10 +59,14 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
   }
 
   /**
-   * 🔴 F-1 — 스칼라가 주택 수의 정본인데(옛 이력 표식 · 대표 자산이 주택이 아님) ⑥ 행이 그 수에 없다.
-   * 엔진은 `max(주택 수 − 제외 수, 0)`으로 빼므로 스칼라 1 − ⑥ 1 = 0채 → 비과세를 잃는다(실측 과세
-   * 186,846,000 · 264,600,600). 주택 수는 ④(`transfer-tax-api.ts`)와 **같은 leaf·같은 인자**로 센다.
-   * 계획서 `docs/00-pm/transfer-count-exclusion-hidden-roster.plan.md` Q-1 (a).
+   * 🔴 스칼라가 주택 수의 정본인데(옛 이력 표식 · 대표 자산이 주택이 아님) 명부의 주택을 다 담지 못한다.
+   * 엔진은 정본 주택 수에서 ⑥ 행을 빼므로 두 방향으로 틀린다(계획서
+   * `docs/00-pm/transfer-count-exclusion-hidden-roster.plan.md` Q-1 (a)):
+   *   · F-1 스칼라 1 − ⑥ 1 = 0채 → 비과세 상실(과세 186,846,000 · 264,600,600)
+   *   · R-1 명부 [r⑥, n] · 스칼라 2 → 2 − 1 = 1채 → 비과세 — 스칼라가 n을 빠뜨려 사실상 n이 빠진다(정합 3이면 과세)
+   * ⇒ ⑥ 행이 있으면 정본 주택 수 ≥ 1 + 명부 주택. ⑥이 없으면 보지 않는다(스칼라·명부 전체 정합성은 F1 축).
+   * 주택 수는 ④(`transfer-tax-api.ts`)와 **같은 leaf·같은 인자**로 센다. 취득일 없는 ⑥ 행은 명부 계수에
+   * 빠지지만 아래 행 필수값 검증(취득일)이 따로 막는다.
    */
   const rowDeclarations =
     rowCountExclusionReductions(form.houses).length + rowSpecialHouseExclusions(form.houses).length;
@@ -72,8 +76,9 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
     houses: form.houses,
     legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
   });
-  if (rowDeclarations > 0 && effectiveCount - rowDeclarations < 1)
-    messages.push(COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE(effectiveCount, rowDeclarations));
+  const requiredCount = 1 + countedHouseRows(form.houses);
+  if (rowDeclarations > 0 && effectiveCount < requiredCount)
+    messages.push(COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE(effectiveCount, requiredCount));
 
   // 선언은 행 값(취득일·가액·면적)으로 채워져 온다 — 그 칸이 비면 행 기본 정보가 빈 것이다.
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
