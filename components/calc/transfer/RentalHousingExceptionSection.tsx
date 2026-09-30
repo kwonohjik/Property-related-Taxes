@@ -28,7 +28,7 @@ import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { isLifetimeLimitEra155_20 } from "@/lib/tax-engine/data/rental-155-20-era";
+import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
@@ -98,6 +98,13 @@ interface RentalHousingExceptionSectionProps {
    * `calc` 모드 안내 문구만 가른다. 자세한 것은 안내 블록 주석.
    */
   judgmentLoaded?: boolean;
+  /**
+   * §154⑩(I-5) — 거주주택 **취득 당시** 조정대상지역 여부. `rentalUnits` 0호(§154⑩ 표준 경로) +
+   * 2019.2.12 전 취득(「종전규정」)일 때만 거주요건 실시간 표시를 가른다(§154① 원칙 — 조정대상지역
+   * 취득 시에만 거주 2년). 미전달(기본 false)이면 이 표시만 「불필요」쪽으로 보인다 — 엔진
+   * (`checkPhrp154_10Eligibility`)이 최종 판정하므로 세액은 침묵으로 틀려지지 않는다.
+   */
+  wasRegulatedAtAcquisition?: boolean;
 }
 
 export function RentalHousingExceptionSection({
@@ -109,6 +116,7 @@ export function RentalHousingExceptionSection({
   onChange,
   mode = "full",
   judgmentLoaded = false,
+  wasRegulatedAtAcquisition = false,
 }: RentalHousingExceptionSectionProps) {
   /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
   const showAllocationInputs = mode !== "facts";
@@ -459,7 +467,6 @@ export function RentalHousingExceptionSection({
       {isStandalone154_10Path && (
         <RentalHousing154_10Block
           rh={rh}
-          transferDate={transferDate}
           onChange={(patch) => onChange({ ...rh, ...patch })}
           // §161 안분 섹션(②, allocationVisible)이 감춰지는 모드(facts)에서만 이 블록이 직접 받는다.
           showDateInput={!allocationVisible}
@@ -468,18 +475,31 @@ export function RentalHousingExceptionSection({
 
       {/*
         ③ 거주주택 요건 충족 상태 (실시간) + 적용 요건 안내.
-        §154⑩ 표준 경로(`isStandalone154_10Path`)에서만 건너뛴다 — 그 경로는 위 블록이 대체한다.
         시나리오 A가 아직 임대주택을 1호도 추가하지 않은 **과도기 상태**(예: 토글 직후 렌더)에서도
         거주기간 편집기는 계속 보여야 한다 — 이 블록이 그 편집기의 유일한 입력 경로다(R21).
       */}
-      {!isStandalone154_10Path && (() => {
+      {(() => {
         // 거주기간(개월) — interval/direct 도출값(엔진·validation과 동일 소스)
         const totalLiveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
         // OH-15 — B의 §155⑳1호 거주요건은 등록 이후 거주기간이다(엔진 `checkEligibility`와 같은 축).
         const isB = rh.scenario === "B";
+        /**
+         * §154⑩ 표준 경로(I-5)의 취득 시기별 분기 — `isPreLifetimeLimitRegime`가 단일 소스(엔진
+         * `checkPhrp154_10Eligibility`와 같은 leaf). 2019.2.12 전 취득(「종전규정」)이면 §155⑳1호
+         * 괄호를 쓰지 않고 §154① 원칙(조정대상지역 취득 시에만 거주 2년, 일반 거주기간)을 쓴다.
+         */
+        const preRegime154_10 =
+          isStandalone154_10Path && acquisitionDate && !Number.isNaN(new Date(acquisitionDate).getTime())
+            ? isPreLifetimeLimitRegime(new Date(acquisitionDate), rh.residenceTransitionUnderAddendum === true)
+            : false;
+        // 등록일 이후 거주기간(postRegistrationResidenceMonths) 칸을 쓰는 경우 — 일반 B(임대주택
+        // 있음) 또는 §154⑩ 표준 경로인데 2019.2.12 이후 취득(「종전규정」 아님).
+        const usesPostRegField = isB && !preRegime154_10;
         const postRegRaw = rh.postRegistrationResidenceMonths ?? "";
-        const liveMonths = isB ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
-        // 보유기간(일) 계산 — 취득일 ~ 양도일
+        const liveMonths = usesPostRegField ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
+        // §154⑩ 표준 경로 + 종전규정(preRegime)이면 취득 당시 조정대상지역일 때만 거주요건이 있다.
+        const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition);
+        // 보유기간(일) 계산 — 취득일 ~ 양도일 (§154⑩ 표준 경로도 재기산 없이 실제 취득일 기준)
         let holdDays = 0;
         let holdYearsLabel = "-";
         if (acquisitionDate && transferDate) {
@@ -493,7 +513,7 @@ export function RentalHousingExceptionSection({
             holdYearsLabel = `${years}년 ${months}개월`;
           }
         }
-        const livePass = liveMonths >= 24;
+        const livePass = !residenceRequired || liveMonths >= 24;
         const holdPass = holdDays >= 730;
 
         return (
@@ -565,12 +585,16 @@ export function RentalHousingExceptionSection({
               제5조에 따른 임대사업자 등록을 한 날 … 이후의 거주기간」만 센다(소령 §155⑳1호 괄호). 전체 거주기간은
               장기보유특별공제 표2 거주분에 쓰이므로 따로 받는다. 모든 모드에서 띄운다(⑧이 두 모드 모두 요구).
             */}
-            {isB && (
+            {usesPostRegField && (
               <FieldCard
                 label="사업자등록·임대사업자 등록 이후 거주기간"
                 required
                 unit="개월"
-                hint="이 주택의 세무서 사업자등록과 지자체 임대사업자 등록을 모두 마친 날 이후 이 주택에서 거주한 기간 (소령 §155⑳1호)"
+                hint={
+                  isStandalone154_10Path
+                    ? "이 주택의 세무서 사업자등록·임대사업자 등록 또는 어린이집 인가일 중 늦은 날 이후 거주한 기간 (소령 §155⑳1호 괄호 준용, §154⑩)"
+                    : "이 주택의 세무서 사업자등록과 지자체 임대사업자 등록을 모두 마친 날 이후 이 주택에서 거주한 기간 (소령 §155⑳1호)"
+                }
               >
                 <IntegerInput
                   ariaLabel="사업자등록·임대사업자 등록 이후 거주기간"
@@ -581,11 +605,23 @@ export function RentalHousingExceptionSection({
               </FieldCard>
             )}
 
-            {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건) */}
+            {isStandalone154_10Path && preRegime154_10 && (
+              <p className="text-caption text-violet-700 px-1">
+                2019.2.12 전 취득(또는 부칙 경과조치 해당)으로 종전규정이 적용됩니다 — 소령 §154① 원칙에
+                따라 <strong>취득 당시 조정대상지역인 경우에만</strong> 거주기간 2년이 필요합니다(등록일로
+                자르지 않는 일반 거주기간). {wasRegulatedAtAcquisition ? "이 주택은 조정대상지역 취득입니다." : "이 주택은 조정대상지역 취득이 아니므로 거주요건이 없습니다."}
+              </p>
+            )}
+
+            {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건 또는 §154⑩+§154① 원칙) */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-violet-800">
-                  {isB ? "거주주택 거주기간 — 등록 이후 (2년 이상 필요)" : "거주주택 거주기간 (2년 이상 필요)"}
+                  {!residenceRequired
+                    ? "거주주택 거주기간 (조정대상지역 취득이 아니므로 불필요)"
+                    : usesPostRegField
+                      ? "거주주택 거주기간 — 등록 이후 (2년 이상 필요)"
+                      : "거주주택 거주기간 (2년 이상 필요)"}
                 </span>
                 <span
                   className={cn(

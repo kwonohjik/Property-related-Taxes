@@ -398,6 +398,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           transferDate={transferDate ?? ""}
           mode="full"
           onChange={(rh) => set({ rentalHousingException: rh })}
+          // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건. API 변환·⑧ 검증과 같은 소스.
+          wasRegulatedAtAcquisition={bgt.wasRegulatedAtAcquisition ?? false}
         />
       )}
     </div>

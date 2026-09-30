@@ -93,5 +93,8 @@ export function giftBurdenedRentalExceptionError(
     giftDate,
     "full",
     giftBurdenedWinWinResidenceExempt(bgt),
+    // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건(조정대상지역 취득 시에만 필요) 판정.
+    // API 변환(`gift-burdened-transfer-api.ts:299`)과 같은 소스(`bgt.wasRegulatedAtAcquisition`).
+    bgt.wasRegulatedAtAcquisition ?? false,
   );
 }

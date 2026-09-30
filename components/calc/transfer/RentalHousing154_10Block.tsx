@@ -5,67 +5,50 @@
  *
  * 양도일 현재 함께 보유 중인 장기임대주택이 없으면(전부 처분·등록말소 후 미보유) §155⑳ 본문
  * (「장기임대주택 … 과 그 밖의 1주택을 국내에 소유」)이 성립하지 않는다. 이 경우 §154⑩이 §155⑳
- * 후단의 PHRP **정의**만 빌려 §154①(보유 2년·조정지역 취득 시 거주 2년)의 기산일을 「직전거주주택의
- * 양도일 후」로 재정의한다 — §167조의3①2호의 면적·가액·의무기간 요건은 인용하지 않는다.
+ * 후단의 PHRP **정의**만 빌린다 — §167조의3①2호의 면적·가액·의무기간 요건은 인용하지 않는다.
+ *
+ * 🔴 보유기간·거주기간은 **재기산하지 않는다**(§154⑤·§95④ — 실제 취득일 기준. 거주기간은 취득
+ * 시기별로 「③ 거주주택 요건」 블록(`RentalHousingExceptionSection.tsx`)이 재사용하는
+ * `postRegistrationResidenceMonths`(2019.2.12 이후 취득) 또는 일반 거주기간(그 전 취득)을 쓴다).
+ * 이 블록은 §154⑩1호(등록·운영 사실)와, §161① 안분 섹션이 가려지는 모드에서만 §154⑩2호(PHRP
+ * 정의)의 직전거주주택 양도일 입력만 담당한다.
  *
  * `RentalHousingExceptionSection.tsx`에서 800줄 정책에 따라 분리(2026-09-30).
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
-import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface RentalHousing154_10BlockProps {
   rh: AssetForm["rentalHousingException"];
-  /** 양도일 — 직전거주주택 양도일 후 보유기간 실시간 판정용 */
-  transferDate: string;
   onChange: (patch: Partial<AssetForm["rentalHousingException"]>) => void;
   /**
-   * 직전거주주택 양도일 입력칸을 이 블록에서 직접 받을지. §154⑩은 이 날짜가 **판정 축**(재기산
-   * 보유기간의 기산일)이라 §155⑳ PHRP(순수 세액 축, §161① 안분 비율)와 다르다 — 판정 메뉴
-   * (`facts` 모드)는 §161 안분 섹션을 감추므로 그 섹션의 DateInput에 닿지 않는다. `false`(기본)면
-   * 계산기(`full`)에서 §161 안분 섹션이 이미 같은 필드를 받고 있다는 뜻이다(중복 입력 방지).
+   * 직전거주주택 양도일 입력칸을 이 블록에서 직접 받을지. §161① 안분 섹션(②)이 이미 같은 필드를
+   * 받고 있으면(`allocationVisible`) 중복 입력을 피하기 위해 여기서는 감춘다. 판정 메뉴
+   * (`facts` 모드)는 그 섹션을 통째로 감추므로 여기서 받아야 한다(Q-7 예외 — §154⑩2호 정의 요소라
+   * 순수 세액 축이 아니다).
    */
   showDateInput?: boolean;
 }
 
 export function RentalHousing154_10Block({
   rh,
-  transferDate,
   onChange,
   showDateInput = false,
 }: RentalHousing154_10BlockProps) {
-  const priorDate = rh.priorResidenceTransferDate ?? "";
-  const residenceMonthsRaw = rh.residenceMonthsAfterPriorResidenceTransfer ?? "";
-
-  // 직전거주주택 양도일 후 보유기간(일) — 실시간 판정용 (엔진 calculateHoldingPeriod와 같은 기산 원칙)
-  let holdDaysLabel = "-";
-  let holdPass = false;
-  if (priorDate && transferDate) {
-    const priorMs = new Date(priorDate).getTime();
-    const trnMs = new Date(transferDate).getTime();
-    if (Number.isFinite(priorMs) && Number.isFinite(trnMs) && trnMs > priorMs) {
-      const days = Math.floor((trnMs - priorMs) / (1000 * 60 * 60 * 24));
-      holdPass = days >= 730;
-      const years = Math.floor(days / 365);
-      const months = Math.floor((days % 365) / 30);
-      holdDaysLabel = `${years}년 ${months}개월`;
-    }
-  }
-
   return (
     <div className="space-y-3" data-testid="rental-154-10-block">
       <ToneCard tone="emerald" title="§154⑩ 표준 경로 — 공동보유 장기임대주택 없음">
         <p className="text-caption">
           양도일 현재 함께 보유 중인 장기임대주택이 없습니다. 이 주택이 과거 임대주택으로 등록되거나
           어린이집으로 운영된 사실이 있고, 그 보유기간 중 다른 거주주택(직전거주주택)을 양도했다면
-          소득세법 시행령 §154⑩에 따라 <strong>직전거주주택 양도일 후의 기간분만</strong> 1주택 보유로
-          인정됩니다 — §167조의3①2호의 면적·가액·의무기간 요건은 적용되지 않습니다.
+          소득세법 시행령 §154⑩에 따라 §161① 안분 산식으로 과세되는 양도소득금액을 한정합니다 —
+          §167조의3①2호의 면적·가액·의무기간 요건은 적용되지 않습니다. 보유·거주기간은 아래
+          「거주주택 요건」에서 함께 판정합니다.
         </p>
       </ToneCard>
 
@@ -88,7 +71,7 @@ export function RentalHousing154_10Block({
           <FieldCard
             label="직전거주주택 양도일"
             required
-            hint="소령 §154⑩2호 — 이 날짜 후의 기간분만 1주택 보유로 인정됩니다. §161① 비과세 기산점이기도 합니다."
+            hint="소령 §154⑩2호 — 이 주택이 직전거주주택보유주택임을 확인하는 값이자 §161① 비과세 기산점입니다."
           >
             <DateInput
               value={rh.priorResidenceTransferDate ?? ""}
@@ -97,31 +80,6 @@ export function RentalHousing154_10Block({
           </FieldCard>
         </div>
       )}
-
-      <FieldCard
-        label="직전거주주택 양도일 이후 거주기간"
-        unit="개월"
-        hint="취득 당시 조정대상지역이었던 주택만 해당합니다. 비조정지역 취득 주택은 비워 두세요 (소령 §154⑩+§154①)."
-      >
-        <IntegerInput
-          ariaLabel="직전거주주택 양도일 이후 거주기간"
-          allowEmpty
-          value={residenceMonthsRaw === "" ? undefined : Number(residenceMonthsRaw)}
-          onChange={(v) =>
-            onChange({ residenceMonthsAfterPriorResidenceTransfer: v === undefined ? "" : String(v) })
-          }
-        />
-      </FieldCard>
-
-      {/* 실시간 충족 표시 (소령 §154⑩ + §154① 보유기간) */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2.5 space-y-1.5 text-xs">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-emerald-800">직전거주주택 양도일 후 보유기간 (2년 이상 필요)</span>
-          <span className={cn("font-semibold", holdPass ? "text-emerald-700" : "text-rose-700")}>
-            {priorDate ? (holdPass ? "✓ 충족" : "✗ 미충족") : "— 미입력"} — 현재 {holdDaysLabel}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

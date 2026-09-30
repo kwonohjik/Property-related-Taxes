@@ -451,6 +451,8 @@ export function Step3({ form, onChange }: Props) {
         acquisitionDate={primary.acquisitionDate ?? ""}
         transferDate={form.transferDate}
         onChange={(rentalHousingException) => patchAsset({ rentalHousingException })}
+        // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시(③)에 쓴다.
+        wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
       />
 
       <ToggleCard

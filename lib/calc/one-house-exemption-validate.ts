@@ -480,6 +480,11 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       "장기임대주택 특례",
       form.transferDate,
       "facts",
+      false, // winWinResidenceExempt — 이 화면은 종전대로 미전달(별도 관심사, 이번 수정 범위 밖)
+      // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 판정에 쓰인다(facts 모드는
+      // 이 값을 쓰는 검증 이전에 반환하므로 지금은 no-op이지만, 계산기(`full`)와 같은 소스를
+      // 유지해 향후 facts 모드가 이 축을 쓰게 되어도 3중 패턴이 깨지지 않게 한다).
+      form.wasRegulatedAtAcquisition,
     );
     if (rentalError) errors.push(err("rentalHousingException", rentalError));
   }

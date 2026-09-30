@@ -57,7 +57,7 @@ test.describe("판정 메뉴 §154⑩ 표준 경로 (rentalUnits 0호)", () => {
     });
   });
 
-  test("[I5-3] 등록·운영 사실 토글 + 거주기간(개월) 입력 → 실시간 보유기간 판정이 갱신된다", async ({
+  test("[I5-3] 등록·운영 사실 토글이 동작하고, 2019.2.12 이후 취득이면 등록일 이후 거주기간 칸이 뜬다", async ({
     page,
   }) => {
     await gotoSaleStep(page);
@@ -65,22 +65,41 @@ test.describe("판정 메뉴 §154⑩ 표준 경로 (rentalUnits 0호)", () => {
     await page.getByRole("radio", { name: /임대주택을 거주주택으로 전환/ }).click();
     await page.getByRole("button", { name: "삭제" }).click();
 
-    await expect(page.getByText("미입력", { exact: false })).toBeVisible();
-
-    await fillDateAndVerify(page, { year: "2020", month: "01", day: "01" }, {
-      scope: page.getByTestId("rental-154-10-prior-date"),
-    });
-
     // §154⑩1호 — 등록·운영 사실 토글. 바깥 `applyException` 토글-카드가 이 카드를 감싸므로
     // (hasText가 조상까지 매치) `rental-154-10-block` 안으로 스코프를 좁힌다.
     const block = page.getByTestId("rental-154-10-block");
-    await block
+    const factToggle = block
       .locator('[data-slot="toggle-card"]')
       .filter({ hasText: /임대주택 등록·어린이집 운영 사실/ })
-      .getByRole("switch")
-      .click();
+      .getByRole("switch");
+    await expect(factToggle).toHaveAttribute("aria-checked", "false");
+    await factToggle.click();
+    await expect(factToggle).toHaveAttribute("aria-checked", "true");
 
-    // 실시간 판정 — 직전거주주택 양도일만으로도 보유기간(일수 기반)이 갱신된다.
-    await expect(page.getByTestId("rental-154-10-block").getByText("충족", { exact: false })).toBeVisible();
+    // 2019.2.12 이후 취득 — §154① 종전규정이 아니므로 §155⑳1호 괄호를 준용해 등록일(또는
+    // 어린이집 인가일) 이후 거주기간 칸이 뜬다(rentalUnits 0호에서도 postRegistrationResidenceMonths
+    // 를 재사용한다는 것을 확인 — I-5 correction).
+    await page.getByTestId("one-house-acq-date").getByLabel("연도").fill("2020");
+    await page.getByTestId("one-house-acq-date").getByLabel("월").fill("01");
+    await page.getByTestId("one-house-acq-date").getByLabel("일").fill("01");
+
+    await expect(page.getByText("사업자등록·임대사업자 등록 이후 거주기간")).toBeVisible();
+    await expect(page.getByText("괄호 준용", { exact: false })).toBeVisible();
+  });
+
+  test("[I5-4] 2019.2.12 전 취득이면 §154① 원칙 안내가 뜨고 등록일 이후 거주기간 칸은 뜨지 않는다", async ({
+    page,
+  }) => {
+    await gotoSaleStep(page);
+    await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
+    await page.getByRole("radio", { name: /임대주택을 거주주택으로 전환/ }).click();
+    await page.getByRole("button", { name: "삭제" }).click();
+
+    await page.getByTestId("one-house-acq-date").getByLabel("연도").fill("2015");
+    await page.getByTestId("one-house-acq-date").getByLabel("월").fill("01");
+    await page.getByTestId("one-house-acq-date").getByLabel("일").fill("01");
+
+    await expect(page.getByText("종전규정이 적용됩니다", { exact: false })).toBeVisible();
+    await expect(page.getByText("사업자등록·임대사업자 등록 이후 거주기간")).toHaveCount(0);
   });
 });

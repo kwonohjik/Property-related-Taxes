@@ -109,15 +109,11 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       rh.scenario === "A" && rh.priorRentalExemptionHistory ? rh.priorRentalExemptionHistory : undefined,
     residenceTransitionUnderAddendum: rh.residenceTransitionUnderAddendum === true ? true : undefined,
     // §154⑩ 표준 경로(I-5) — rentalUnits 0호(B)일 때만 의미가 있다(⑤가 그때만 노출 — 3중 패턴).
+    // 거주기간은 별도 필드 없이 위 postRegistrationResidenceMonths(2019.2.12 이후 취득)를 공유한다 —
+    // 2019.2.12 전 취득이면 이 값 없이도 일반 거주기간(자산-수준 residencePeriodMonths)으로 판정한다.
     wasRegisteredRentalOrChildcare:
       rh.scenario === "B" && rh.rentalUnits.length === 0
         ? rh.wasRegisteredRentalOrChildcare === true
-        : undefined,
-    residenceMonthsAfterPriorResidenceTransfer:
-      rh.scenario === "B" &&
-      rh.rentalUnits.length === 0 &&
-      (rh.residenceMonthsAfterPriorResidenceTransfer ?? "") !== ""
-        ? parseInt(rh.residenceMonthsAfterPriorResidenceTransfer ?? "", 10) || 0
         : undefined,
   };
 }

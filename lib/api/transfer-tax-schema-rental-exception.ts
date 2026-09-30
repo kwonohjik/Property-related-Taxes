@@ -78,10 +78,12 @@ export const rentalHousingExceptionSchema = z
     priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
     /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
     residenceTransitionUnderAddendum: z.boolean().optional(),
-    /** §154⑩1호(I-5) — 임대주택 등록·어린이집 운영 사실. rentalUnits 0호 경로에서만 판정에 쓴다. */
+    /**
+     * §154⑩1호(I-5) — 임대주택 등록·어린이집 운영 사실. rentalUnits 0호 경로에서만 판정에 쓴다.
+     * 거주기간은 별도 필드 없이 취득 시기에 따라 `postRegistrationResidenceMonths`(2019.2.12 이후
+     * 취득) 또는 일반 거주기간(그 전 취득)을 재사용한다.
+     */
     wasRegisteredRentalOrChildcare: z.boolean().optional(),
-    /** §154⑩+§154①(I-5) — 직전거주주택 양도일 이후 거주기간(개월). 조정대상지역 취득 시에만 쓴다. */
-    residenceMonthsAfterPriorResidenceTransfer: z.number().int().nonnegative().optional(),
   })
   .refine((v) => v.scenario !== "A" || v.rentalUnits.length >= 1, {
     message: "시나리오 A(거주주택 양도)는 임대주택 정보를 1호 이상 입력해야 합니다.",

@@ -47,7 +47,6 @@ export function buildEligibilityContext(effectiveInput: TransferTaxInput): Eligi
     // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 checkEligibility가 참조한다.
     priorResidenceTransferDate: rhe.priorResidenceTransferDate,
     wasRegisteredRentalOrChildcare: rhe.wasRegisteredRentalOrChildcare,
-    residenceMonthsAfterPriorResidenceTransfer: rhe.residenceMonthsAfterPriorResidenceTransfer,
     // 거주주택 §154① 취득 당시 조정대상지역 판정과 같은 단일 소스(일반 1세대1주택 흐름과 동일 술어).
     wasRegulatedAtAcquisition: resolveWasRegulatedAtAcquisition(effectiveInput),
   };
