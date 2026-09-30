@@ -8,6 +8,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -39,10 +40,10 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    *    세액은 맞지만, 왜 안 걸렸는지 화면이 말해 주지 않는다). BG-W-01·02가 고정한다.
    */
   if (c?.donorRelation === "other")
-    return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
+    return fieldError(landIsCarryover ? "acquisitionCause" : "gbBuildingAcquisitionCause", `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`);
 
   if (c?.donorDeceased && !c.donorRelation)
-    return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
+    return fieldError("carryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`);
 
   /**
    * 🔴 **나머지는 부담부증여에서 손대지 않는다** (2026-08-10 정정).
@@ -60,24 +61,25 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
   if (asset.transferType === "burdened_gift") return null;
 
   if (!c?.giftRegistryDate)
-    return `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`;
+    return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`);
 
   const parts: Array<[CarryoverTaxationForm | undefined, string]> = [];
   if (landIsCarryover) parts.push([c, `${label} 토지`]);
   if (buildingIsCarryover) parts.push([asset.buildingCarryover ?? c, `${label} 건물`]);
 
   for (const [p, partLabel] of parts) {
+    const isBuildingPart = partLabel.endsWith(" 건물");
     if (!p?.donorAcquisitionDate)
-      return `${partLabel}: 증여자의 취득일을 입력하세요 (「소득세법」 제95조 제4항 — 보유기간 기산일).`;
+      return fieldError(isBuildingPart ? "buildingCarryover.donorAcquisitionDate" : "carryover.donorAcquisitionDate", `${partLabel}: 증여자의 취득일을 입력하세요 (「소득세법」 제95조 제4항 — 보유기간 기산일).`);
     if (!parseAmount(p.giftDateValuation))
-      return `${partLabel}: 증여 당시 평가액을 입력하세요 (비교과세 시나리오 B 취득가액).`;
+      return fieldError(isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${partLabel}: 증여 당시 평가액을 입력하세요 (비교과세 시나리오 B 취득가액).`);
     if (p.useEstimatedAcquisition) {
       if (!p.estimationMode)
-        return `${partLabel}: 증여자 취득가액의 환산 방식을 선택하세요.`;
+        return fieldError(isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode", `${partLabel}: 증여자 취득가액의 환산 방식을 선택하세요.`);
       if (!parseAmount(p.donorStandardPriceAtAcquisition))
-        return `${partLabel}: 증여자 취득 당시 기준시가를 입력하세요 (환산 분자).`;
+        return fieldError(isBuildingPart ? "buildingCarryover.donorStandardPriceAtAcquisition" : "carryover.donorStandardPriceAtAcquisition", `${partLabel}: 증여자 취득 당시 기준시가를 입력하세요 (환산 분자).`);
     } else if (!parseAmount(p.donorAcquisitionPrice)) {
-      return `${partLabel}: 증여자의 취득가액을 입력하세요 (「소득세법」 제97조의2 제1항 제1호).`;
+      return fieldError(isBuildingPart ? "buildingCarryover.donorAcquisitionPrice" : "carryover.donorAcquisitionPrice", `${partLabel}: 증여자의 취득가액을 입력하세요 (「소득세법」 제97조의2 제1항 제1호).`);
     }
   }
 

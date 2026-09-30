@@ -105,7 +105,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                 <div>
                   <p className="text-micro text-violet-700 mb-0.5">증여일</p>
                   <DateInput
-                    value={row.giftDate}
+                    value={row.giftDate} data-field={`bgPriorGifts.${idx}.giftDate`}
                     onChange={(v) => updateRow(idx, { giftDate: v })}
                   />
                 </div>
@@ -116,7 +116,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                   <CurrencyInput
                     label=""
                     hideUnit
-                    value={row.giftAmount}
+                    value={row.giftAmount} data-field={`bgPriorGifts.${idx}.giftAmount`}
                     onChange={(v) => updateRow(idx, { giftAmount: v })}
                   />
                 </div>
@@ -141,7 +141,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                   <CurrencyInput
                     label=""
                     hideUnit
-                    value={row.computedTax ?? ""}
+                    value={row.computedTax ?? ""} data-field={`bgPriorGifts.${idx}.computedTax`}
                     onChange={(v) => updateRow(idx, { computedTax: v })}
                   />
                 </div>
@@ -152,7 +152,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                   <CurrencyInput
                     label=""
                     hideUnit
-                    value={row.giftTaxBase ?? ""}
+                    value={row.giftTaxBase ?? ""} data-field={`bgPriorGifts.${idx}.giftTaxBase`}
                     onChange={(v) => updateRow(idx, { giftTaxBase: v })}
                   />
                 </div>

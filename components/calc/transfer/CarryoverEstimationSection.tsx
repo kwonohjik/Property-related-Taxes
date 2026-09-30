@@ -57,6 +57,8 @@ interface Props {
   transferDate: string;
   onCarryoverChange: (patch: Partial<CarryoverTaxationForm>) => void;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** 일반건물 건물 파트면 앵커 키가 `buildingCarryover.*` — `CarryoverGiftBlock`의 같은 prop */
+  part?: "land" | "building";
 }
 
 export function CarryoverEstimationSection({
@@ -65,7 +67,9 @@ export function CarryoverEstimationSection({
   transferDate,
   onCarryoverChange,
   onAssetChange,
+  part = "land",
 }: Props) {
+  const isBuildingPart = part === "building";
   return (
     <div className="space-y-3">
       {/* 환산 방식 선택 */}
@@ -73,7 +77,7 @@ export function CarryoverEstimationSection({
         <p className="text-sm font-medium text-amber-800">환산 방식 선택</p>
         <RadioCardGroup
           name={`carryoverEstimationMode-${asset.assetId ?? "primary"}`}
-          data-field="carryover.estimationMode"
+          data-field={isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode"}
           tone="amber"
           layout="stack"
           options={ESTIMATION_MODE_OPTIONS}
@@ -114,7 +118,7 @@ export function CarryoverEstimationSection({
           </div>
 
           <FieldCard
-            field="carryover.donorStandardPriceAtAcquisition"
+            field={isBuildingPart ? "buildingCarryover.donorStandardPriceAtAcquisition" : "carryover.donorStandardPriceAtAcquisition"}
             label="취득시 기준시가"
             hint="증여자 취득일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)"
             trailing={<LegalBadge text="시행령 §163⑨" />}

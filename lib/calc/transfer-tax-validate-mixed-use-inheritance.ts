@@ -12,6 +12,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 상속·증여 취득 겸용주택 §163⑨ 검증. `acquisitionCause`가 inheritance·gift가 아니면 즉시 null.
@@ -47,7 +48,7 @@ export function validateMixedUseInheritanceAsset(
   if (!asset.usePreHousingDisclosure) {
     const housingValue = housingOverride || parseAmount(asset.mixedAcqHousingPrice);
     if (housingValue <= 0) {
-      return `${label}: ${acqLabel} 주택분 평가액을 입력하세요. (신고가액 override 또는 개별주택공시가격)`;
+      return fieldError(isGift ? "mixedHousingGiftValueOverride" : "mixedHousingInheritedValueOverride", `${label}: ${acqLabel} 주택분 평가액을 입력하세요. (신고가액 override 또는 개별주택공시가격)`);
     }
   }
 
@@ -62,7 +63,7 @@ export function validateMixedUseInheritanceAsset(
       ? 1 // 존재 플래그 — 실제 합계는 엔진이 재계산 (dual-truth 회피, feedback_ui_engine_dual_truth_avoidance)
       : 0);
   if (commercialValue <= 0) {
-    return `${label}: ${acqLabel} 상가분 평가액을 입력하세요. (신고가액 override 또는 상가건물 기준시가+개별공시지가)`;
+    return fieldError(isGift ? "mixedCommercialGiftValueOverride" : "mixedCommercialInheritedValueOverride", `${label}: ${acqLabel} 상가분 평가액을 입력하세요. (신고가액 override 또는 상가건물 기준시가+개별공시지가)`);
   }
 
   return null;

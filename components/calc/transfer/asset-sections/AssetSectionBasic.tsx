@@ -359,7 +359,7 @@ export function AssetSectionBasic({
       {asset.assetKind === "right_to_move_in" && (
         <div className="space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
           <label className="block text-sm font-medium">조합원 유형</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" data-field="isSuccessorRightToMoveIn">
             {[
               {
                 value: false,

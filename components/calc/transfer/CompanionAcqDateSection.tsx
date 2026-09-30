@@ -122,7 +122,7 @@ export function CompanionAcqDateSection(props: {
               onChange={handleAcquisitionDateChange}
               onBlur={handleAcquisitionDateBlur}
               data-testid="acq-date-building"
-              data-field="acquisitionDate"
+              data-field={p.fieldAcquisitionDate ?? "acquisitionDate"}
             />
             {dateClampMsg && (
               <p className="text-xs text-amber-700 dark:text-amber-400">

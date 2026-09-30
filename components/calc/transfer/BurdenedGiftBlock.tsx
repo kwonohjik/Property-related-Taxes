@@ -267,7 +267,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         }
       >
         <RadioCardGroup
-          name={`bgValuationMode-${asset.assetId ?? "primary"}`}
+          name={`bgValuationMode-${asset.assetId ?? "primary"}`} data-field="bgValuationMode"
           layout="stack"
           columns={2}
           value={asset.bgValuationMode || ""}
@@ -315,7 +315,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           >
             <CurrencyInput label=""
               hideUnit
-              value={asset.bgLendingDepositTotal}
+              value={asset.bgLendingDepositTotal} data-field="bgLendingDepositTotal"
               onChange={(v) => onChange({ bgLendingDepositTotal: v })}
             />
           </FieldCard>
@@ -353,7 +353,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           <FieldCard label="양도시 시가 평가액 (총액)">
             <CurrencyInput label=""
               hideUnit
-              value={asset.bgMarketValueAtTransfer}
+              value={asset.bgMarketValueAtTransfer} data-field="bgMarketValueAtTransfer"
               onChange={(v) => onChange({ bgMarketValueAtTransfer: v })}
             />
           </FieldCard>
@@ -371,7 +371,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             }
           >
             <RadioCardGroup
-              name={`bgAcquisitionMethod-${asset.assetId ?? "primary"}`}
+              name={`bgAcquisitionMethod-${asset.assetId ?? "primary"}`} data-field="bgAcquisitionMethod"
               layout="stack"
               value={asset.bgAcquisitionMethod || ""}
               onChange={(v) => onChange({ bgAcquisitionMethod: v as AssetForm["bgAcquisitionMethod"] })}
@@ -431,7 +431,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               <>
                 <FieldCard label="토지 실지취득가액">
                   <CurrencyInput label="" hideUnit
-                    value={asset.bgActualAcquisitionLand}
+                    value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                     onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
                 </FieldCard>
                 <FieldCard label="건물 실지취득가액">
@@ -443,7 +443,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             ) : asset.assetKind === "land" ? (
               <FieldCard label="토지 실지취득가액">
                 <CurrencyInput label="" hideUnit
-                  value={asset.bgActualAcquisitionLand}
+                  value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                   onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
               </FieldCard>
             ) : (
@@ -451,7 +451,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 label={isRightToMoveIn ? "종전 부동산 실지취득가액" : "실지취득가액 (주택·건물 전체)"}
               >
                 <CurrencyInput label="" hideUnit
-                  value={asset.bgActualAcquisitionTotal}
+                  value={asset.bgActualAcquisitionTotal} data-field="bgActualAcquisitionTotal"
                   onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
               </FieldCard>
             )}
@@ -508,7 +508,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 <CurrencyInput
                   label=""
                   hideUnit
-                  data-testid="bg-codonor-land-std"
+                  data-testid="bg-codonor-land-std" data-field="bgCoDonorLandStdPriceAtAcq"
                   value={asset.bgCoDonorLandStdPriceAtAcq}
                   onChange={(v) => onChange({ bgCoDonorLandStdPriceAtAcq: v })}
                 />
@@ -520,7 +520,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 <CurrencyInput
                   label=""
                   hideUnit
-                  data-testid="bg-codonor-building-std"
+                  data-testid="bg-codonor-building-std" data-field="bgCoDonorBuildingStdPriceAtAcq"
                   value={asset.bgCoDonorBuildingStdPriceAtAcq}
                   onChange={(v) => onChange({ bgCoDonorBuildingStdPriceAtAcq: v })}
                 />
@@ -539,7 +539,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                     <CurrencyInput
                       label=""
                       hideUnit
-                      data-testid="bg-codonor-actual-land"
+                      data-testid="bg-codonor-actual-land" data-field="bgCoDonorActualAcquisitionLand"
                       value={asset.bgCoDonorActualAcquisitionLand}
                       onChange={(v) => onChange({ bgCoDonorActualAcquisitionLand: v })}
                     />
@@ -549,7 +549,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                       <CurrencyInput
                         label=""
                         hideUnit
-                        data-testid="bg-codonor-actual-building"
+                        data-testid="bg-codonor-actual-building" data-field="bgCoDonorActualAcquisitionBuilding"
                         value={asset.bgCoDonorActualAcquisitionBuilding}
                         onChange={(v) => onChange({ bgCoDonorActualAcquisitionBuilding: v })}
                       />
@@ -563,7 +563,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   <CurrencyInput
                     label=""
                     hideUnit
-                    data-testid="bg-codonor-actual-total"
+                    data-testid="bg-codonor-actual-total" data-field="bgCoDonorActualAcquisitionTotal"
                     value={asset.bgCoDonorActualAcquisitionTotal}
                     onChange={(v) => onChange({ bgCoDonorActualAcquisitionTotal: v })}
                   />
@@ -578,7 +578,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               <CurrencyInput
                 label=""
                 hideUnit
-                data-testid="bg-codonor-market"
+                data-testid="bg-codonor-market" data-field="bgCoDonorMarketValueAtAcquisition"
                 value={asset.bgCoDonorMarketValueAtAcquisition}
                 onChange={(v) => onChange({ bgCoDonorMarketValueAtAcquisition: v })}
               />
@@ -693,7 +693,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           hint="상증법 §53 증여재산공제가 관계에 따라 5천만 ↔ 6억으로 갈립니다. 반드시 선택하세요."
         >
           <RadioCardGroup
-            name={`bgDonorRelation-${asset.assetId ?? "primary"}`}
+            name={`bgDonorRelation-${asset.assetId ?? "primary"}`} data-field="bgDonorRelation"
             layout="stack"
             columns={3}
             value={asset.bgDonorRelation || ""}

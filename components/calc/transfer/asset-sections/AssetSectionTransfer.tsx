@@ -195,7 +195,7 @@ export function AssetSectionTransfer({
                   ? asset.assetKind
                   : "building",
               )}
-              totalPrice={asset.standardPriceAtAcq}
+              totalPrice={asset.standardPriceAtAcq} data-field="standardPriceAtAcq"
               onTotalPriceChange={(v) => onChange({ standardPriceAtAcq: v })}
               pricePerSqm={asset.standardPricePerSqmAtAcq}
               onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}

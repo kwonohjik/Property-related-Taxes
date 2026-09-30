@@ -34,6 +34,11 @@ function validatorKeys(): Set<string> {
     const src = readFileSync(join(dir, name), "utf8");
     for (const m of src.matchAll(/\bfield: ["`]([^"`]+)["`]/g)) keys.add(normalize(m[1]));
     for (const m of src.matchAll(/\bfieldError\(\s*["`]([^"`]+)["`]/g)) keys.add(normalize(m[1]));
+    // fieldError(cond ? "a" : "b", …) — 파트별로 다른 객체를 가리킬 때(일반건물 이월과세 토지/건물)
+    for (const m of src.matchAll(/\bfieldError\(\s*[^,"`()]*\?\s*"([^"]+)"\s*:\s*"([^"]+)"/g)) {
+      keys.add(m[1]);
+      keys.add(m[2]);
+    }
   }
   return keys;
 }
@@ -50,8 +55,8 @@ function anchorKeys(): Set<string> {
     for (const m of src.matchAll(/\b(?:data-)?field=(?:"([^"]+)"|\{`([^`]+)`\})/g)) keys.add(normalize(m[1] ?? m[2]));
     // 공용 위젯에 키를 넘기는 prop — fieldLandAtAcq="x" (`ThreePointStandardPriceInput`)
     for (const m of src.matchAll(/\bfield[A-Z]\w*="([^"]+)"/g)) keys.add(m[1]);
-    // data-field={cond ? "a" : "b"}
-    for (const m of src.matchAll(/\bdata-field=\{[^}]*\?\s*"([^"]+)"\s*:\s*"([^"]+)"\s*\}/g)) {
+    // data-field={cond ? "a" : "b"} · field={cond ? "a" : "b"}
+    for (const m of src.matchAll(/\b(?:data-)?field=\{[^}]*\?\s*"([^"]+)"\s*:\s*"([^"]+)"\s*\}/g)) {
       keys.add(m[1]);
       keys.add(m[2]);
     }

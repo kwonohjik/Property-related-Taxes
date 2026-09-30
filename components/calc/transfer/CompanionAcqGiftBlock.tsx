@@ -35,6 +35,8 @@ interface BlockProps {
    * (`CompanionAcqPurchaseBlock.tsx:262`). 날짜 두 칸은 보유기간·단기 통산에 쓰이므로 남긴다.
    */
   isBurdenedGift?: boolean;
+  /** 증여일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
+  fieldAcquisitionDate?: string;
 }
 
 export function CompanionAcqGiftBlock(props: BlockProps) {
@@ -44,7 +46,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">증여일</label>
           <DateInput
-            data-field="acquisitionDate"
+            data-field={props.fieldAcquisitionDate ?? "acquisitionDate"}
             value={props.acquisitionDate}
             onChange={props.onAcquisitionDateChange}
           />

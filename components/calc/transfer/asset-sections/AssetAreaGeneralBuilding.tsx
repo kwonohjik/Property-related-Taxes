@@ -100,6 +100,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열. CB(`AssetAreaCommercial`)와 동일 배치. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
         <FieldCard
+          field="gbLandArea"
           label={isPartial ? "양도분 토지 면적" : "토지 면적"}
           unit="㎡"
           stacked
@@ -116,6 +117,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
             「당초 취득 시 원건물 연면적」이 따로 받는다(2026-08-12 사용자 지적).
             여기 값은 엔진 계산에 들어가지 않는다 — `calc-wizard-asset-gb.ts` 주석 참조. */}
         <FieldCard
+          field="gbBuildingArea"
           label={
             isPartial
               ? "양도분 건물 연면적"
@@ -138,7 +140,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
           />
         </FieldCard>
 
-        <FieldCard label="건축물 바닥면적" unit="㎡" stacked>
+        <FieldCard field="gbBuildingFootprintArea" label="건축물 바닥면적" unit="㎡" stacked>
           <DecimalInput
             data-testid="gb-footprint-area"
             value={asset.gbBuildingFootprintArea}

@@ -38,6 +38,7 @@ import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields"
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 상업용건물·오피스텔 + **상속** (소령 §163⑨) — 환산 검증 전 우선 인터셉트.
@@ -47,8 +48,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
  * ⚠️ **호출부에서 `if (상가 && 상속) return this(...)` 로만 쓴다** — 진입하면 항상 종료다.
  */
 export function validateCommercialInheritanceAsset(asset: AssetForm, label: string): string | null {
-  if (!asset.acquisitionDate) return `${label}: 취득일(상속개시일)을 입력하세요.`;
-  if (!asset.decedentAcquisitionDate) return `${label}: 피상속인 취득일을 입력하세요.`;
+  if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일(상속개시일)을 입력하세요.`);
+  if (!asset.decedentAcquisitionDate) return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요.`);
 
   // ① 필수 — 다만 **「①이 유일 취득원」은 거짓**이었다(D-5 · 2026-08-07).
   //   §163⑨**2호**는 「평가액과 §164⑤~⑦ 가액 **중 많은 금액**」이므로 **② 단독도 가목**이고,
@@ -60,7 +61,7 @@ export function validateCommercialInheritanceAsset(asset: AssetForm, label: stri
     parseAmount(asset.publishedValueAtInheritance) > 0 ||
     isFullyFilled(sec164CommercialStatus(asset)) ||
     (isSec163_9PreDeemed(asset) && asset.preDeemedClauseAUnconfirmed === true);
-  if (!cbClauseAOk) return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
+  if (!cbClauseAOk) return fieldError("publishedValueAtInheritance", `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`);
 
   // §164⑥ **부분 입력 차단은 진입부 `sec164PartialInputError`로 이관**(2026-08-06) — 증여도
   // 같은 규정(§163⑨2호)인데 이 블록은 상속 전용이라 도달하지 못했고, 필드 목록이 빌더와
@@ -73,7 +74,7 @@ export function validateCommercialInheritanceAsset(asset: AssetForm, label: stri
     isBeforeBuildingStdPriceNotice(inhDate164) &&
     !asset.cbAcqBuildingStdBy164_5
   )
-    return `${label}: 취득당시(상속개시일) 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
+    return fieldError("cbAcqBuildingStdBy164_5", `${label}: 취득당시(상속개시일) 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`);
 
   return null;
 }
@@ -109,15 +110,15 @@ export function validateCommercialAppurtenantLand(asset: AssetForm, label: strin
    * ON에서도 두 칸을 렌더하므로(같은 PR) 사용자가 채울 수 있다.
    */
   if (asset.cbUnapprovedBuilding && !anyEntered)
-    return `${label}: 부수토지 판정 — 「허가·사용승인 미이행」을 선택하면 부속토지 전체가 비사업용이 되므로 집합건물 전체 대지면적·바닥면적을 입력하세요 (「지방세법 시행령」 §101① 단서).`;
+    return fieldError("cbTotalLandArea", `${label}: 부수토지 판정 — 「허가·사용승인 미이행」을 선택하면 부속토지 전체가 비사업용이 되므로 집합건물 전체 대지면적·바닥면적을 입력하세요 (「지방세법 시행령」 §101① 단서).`);
 
   if (!anyEntered) return null;
 
-  if (!(totalLand > 0)) return `${label}: 부수토지 판정 — 집합건물 전체 대지면적을 입력하세요.`;
+  if (!(totalLand > 0)) return fieldError("cbTotalLandArea", `${label}: 부수토지 판정 — 집합건물 전체 대지면적을 입력하세요.`);
   if (!(totalFootprint > 0))
-    return `${label}: 부수토지 판정 — 집합건물 전체 바닥면적을 입력하세요.`;
+    return fieldError("cbTotalBuildingFootprintArea", `${label}: 부수토지 판정 — 집합건물 전체 바닥면적을 입력하세요.`);
   if (!asset.cbUnapprovedBuilding && !asset.cbZoneType)
-    return `${label}: 부수토지 판정 — 용도지역을 선택하세요 (지방세법 시행령 §101② 적용배율).`;
+    return fieldError("cbZoneType", `${label}: 부수토지 판정 — 용도지역을 선택하세요 (지방세법 시행령 §101② 적용배율).`);
 
   return null;
 }
@@ -139,56 +140,59 @@ export function validateCommercialEstimatedAsset(
   // 취득일이 없으면 파생도 불가하므로 취득일 입력을 먼저 요구한다.
   const era = resolveCbEra(asset);
   if (!era) {
-    return `${label}: 상업용건물·오피스텔 — 취득일을 입력하세요 (호별고시 취득 시점 구분의 기준일).`;
+    return fieldError("acquisitionDate", `${label}: 상업용건물·오피스텔 — 취득일을 입력하세요 (호별고시 취득 시점 구분의 기준일).`);
   }
   // 면적 3종 필수
-  if (!parseDecimal(asset.cbExclusiveArea)) return `${label}: 전용면적을 입력하세요.`;
-  if (!parseDecimal(asset.cbSharedArea)) return `${label}: 공유면적을 입력하세요.`;
-  if (!parseDecimal(asset.cbLandArea)) return `${label}: 대지면적을 입력하세요.`;
+  if (!parseDecimal(asset.cbExclusiveArea)) return fieldError("cbExclusiveArea", `${label}: 전용면적을 입력하세요.`);
+  if (!parseDecimal(asset.cbSharedArea)) return fieldError("cbSharedArea", `${label}: 공유면적을 입력하세요.`);
+  if (!parseDecimal(asset.cbLandArea)) return fieldError("cbLandArea", `${label}: 대지면적을 입력하세요.`);
   // 호별고시가 공통 필수
   if (!parseAmount(asset.cbUnitPriceAtTransfer))
-    return `${label}: 양도시 ㎡당 호별고시가를 입력하세요.`;
+    return fieldError("cbUnitPriceAtTransfer", `${label}: 양도시 ㎡당 호별고시가를 입력하세요.`);
   if (!parseAmount(asset.cbUnitPriceAtFirstOrAcq))
-    return `${label}: ${era === "pre_disclosure" ? "최초고시(2005)" : "취득시"} ㎡당 호별고시가를 입력하세요.`;
+    return fieldError("cbUnitPriceAtFirstOrAcq", `${label}: ${era === "pre_disclosure" ? "최초고시(2005)" : "취득시"} ㎡당 호별고시가를 입력하세요.`);
   // 양도시 개별공시지가 공통 필수
   if (!parseAmount(asset.cbLandPricePerSqmAtTransfer))
-    return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요.`;
+    return fieldError("cbLandPricePerSqmAtTransfer", `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요.`);
 
   if (era === "pre_disclosure") {
     // 건물 기준시가 3시점 필수 (총액, 원 — 외부에서 ㎡당 단가 × 연면적 보정계수 반영)
     if (!parseAmount(asset.cbBuildingStdPriceAtAcq))
-      return `${label}: 취득시 건물 기준시가(총액)를 입력하세요.`;
+      return fieldError("cbBuildingStdPriceAtAcq", `${label}: 취득시 건물 기준시가(총액)를 입력하세요.`);
     if (!parseAmount(asset.cbBuildingStdPriceAtFirst))
-      return `${label}: 최초고시시(2005) 건물 기준시가(총액)를 입력하세요.`;
+      return fieldError("cbBuildingStdPriceAtFirst", `${label}: 최초고시시(2005) 건물 기준시가(총액)를 입력하세요.`);
     if (!parseAmount(asset.cbBuildingStdPriceAtTransfer))
-      return `${label}: 양도시 건물 기준시가(총액)를 입력하세요.`;
+      return fieldError("cbBuildingStdPriceAtTransfer", `${label}: 양도시 건물 기준시가(총액)를 입력하세요.`);
     // 개별공시지가 3시점 필수.
     // ⑧ API 동일 fallback — 취득 1990-08-30 이전은 가목의 가액이 없어 §164④ 토지등급 환산값을 쓴다.
     // UI 통과 ↔ validate 차단 모순을 막기 위해 API와 **같은 함수**로 유효값을 판정한다.
     if (!effectiveCommercialLandPriceAtAcq(asset, formTransferDate ?? ""))
-      return isCommercialPre1990Acquisition(asset)
-        ? `${label}: 취득일이 개별공시지가 고시(1990.8.30.) 전입니다 — §164④ 토지등급 환산 입력(1990 공시지가·등급 3종)을 완성하거나 취득시 개별공시지가를 직접 입력하세요.`
-        : `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;
+      return fieldError(
+        "cbLandPricePerSqmAtAcq",
+        isCommercialPre1990Acquisition(asset)
+          ? `${label}: 취득일이 개별공시지가 고시(1990.8.30.) 전입니다 — §164④ 토지등급 환산 입력(1990 공시지가·등급 3종)을 완성하거나 취득시 개별공시지가를 직접 입력하세요.`
+          : `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`,
+      );
     if (!parseAmount(asset.cbLandPricePerSqmAtFirst))
-      return `${label}: 최초고시시(2005) 개별공시지가(원/㎡)를 입력하세요.`;
+      return fieldError("cbLandPricePerSqmAtFirst", `${label}: 최초고시시(2005) 개별공시지가(원/㎡)를 입력하세요.`);
     // §164⑥ 단서 — 취득연도 ≤2000은 나목(건물 기준시가) 가액이 없어 §164⑤ 준용이 필요하다.
     // 준용 산정에는 신축연도·구조·용도가 필요해 엔진이 자동 산정할 수 없으므로(AssetForm 미보유)
     // 사용자의 명시적 확인을 요구한다. 확인 없이 임의 금액이 들어가면 P_A가 조용히 틀린다.
     if (isSec164_5ProvisoApplicable(era, asset.acquisitionDate) && !asset.cbAcqBuildingStdBy164_5)
-      return `${label}: 취득당시 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
+      return fieldError("cbAcqBuildingStdBy164_5", `${label}: 취득당시 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`);
     // §164⑥ 산식 괄호 단서 — 두 시점 기준시가합이 같으면 §164⑧ 준용이 강제된다.
     // B(전기의 기준시가합)가 없으면 준용 산정이 불가하고, 그대로 두면 비율 1로 법령과 다른 값이 나온다.
     if (isSec164_8ProvisoApplicable(asset) && !parseAmount(asset.cbPrevStdPriceSum))
-      return `${label}: 취득당시 기준시가합과 최초고시당시 기준시가합이 같습니다 — §164⑥ 산식 괄호 단서에 따라 §164⑧을 준용해야 합니다. 전기(취득 직전 고시분)의 토지·건물 기준시가 합계액을 입력하세요.`;
+      return fieldError("cbPrevStdPriceSum", `${label}: 취득당시 기준시가합과 최초고시당시 기준시가합이 같습니다 — §164⑥ 산식 괄호 단서에 따라 §164⑧을 준용해야 합니다. 전기(취득 직전 고시분)의 토지·건물 기준시가 합계액을 입력하세요.`);
   }
 
   if (era === "post_disclosure") {
     // post_disclosure: 취득시 개별공시지가 필수 (API와 동일 유효값 판정)
     if (!effectiveCommercialLandPriceAtAcq(asset, formTransferDate ?? ""))
-      return `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;
+      return fieldError("cbLandPricePerSqmAtAcq", `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`);
   }
 
   // 상업용건물 환산취득가 검증 완료 — 일반 취득 검증 스킵
-  if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+  if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
   return null;
 }

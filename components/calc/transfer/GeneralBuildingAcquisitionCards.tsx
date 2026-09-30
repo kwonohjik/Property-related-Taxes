@@ -247,6 +247,7 @@ export function GeneralBuildingAcquisitionCards({
   return (
     <div className="space-y-3">
 
+      <div data-field="hasSeperateLandAcquisitionDate">
       <ToggleCard
         variant="card"
         tone="amber"
@@ -255,6 +256,7 @@ export function GeneralBuildingAcquisitionCards({
         checked={isSeparate}
         onCheckedChange={setSeparate}
       />
+      </div>
 
       {/*
         증축 유무 — **모든 취득원인이 공유하는 자리**에 둔다 (2026-08-12 사용자 요청으로 재배치).
@@ -319,6 +321,7 @@ export function GeneralBuildingAcquisitionCards({
           {isSeparate ? (
             <RadioCardGroup
               name={`gbLandAcquisitionCause-${asset.assetId ?? "primary"}`}
+              data-field="acquisitionCause"
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={(v) =>
@@ -331,6 +334,7 @@ export function GeneralBuildingAcquisitionCards({
           ) : (
             <RadioCardGroup
               name={`gbUnifiedAcquisitionCause-${asset.assetId ?? "primary"}`}
+              data-field="acquisitionCause"
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={setUnifiedCause}
@@ -344,6 +348,7 @@ export function GeneralBuildingAcquisitionCards({
           <CompanionAcqPurchaseBlock
             acquisitionDate={asset.landAcquisitionDate}
             onAcquisitionDateChange={setLandAcqDate}
+            fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
             useEstimatedAcquisition={asset.useEstimatedAcquisition}
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
             isAppraisalAcquisition={asset.isAppraisalAcquisition}
@@ -432,6 +437,7 @@ export function GeneralBuildingAcquisitionCards({
             asset={asset}
             onChange={landCardOnChange}
             transferDate={transferDate}
+            fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
           />
         )}
 
@@ -460,6 +466,7 @@ export function GeneralBuildingAcquisitionCards({
               transferDate={transferDate}
             />
             <LandPriceLookupField
+              data-field="gbAcqLandPricePerSqm"
               label="취득시 개별공시지가"
               pricePerSqm={
                 asset.gbAcqLandPricePerSqm ||
@@ -478,6 +485,7 @@ export function GeneralBuildingAcquisitionCards({
           <CompanionAcqGiftBlock
             acquisitionDate={asset.landAcquisitionDate}
             onAcquisitionDateChange={setLandAcqDate}
+            fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
             donorAcquisitionDate={asset.donorAcquisitionDate}
             onDonorAcquisitionDateChange={(v) =>
               onChange({ donorAcquisitionDate: v })
@@ -549,6 +557,7 @@ export function GeneralBuildingAcquisitionCards({
         <FieldCard label="취득원인">
           <RadioCardGroup
             name={`gbBuildingAcquisitionCause-${asset.assetId ?? "primary"}`}
+            data-field="gbBuildingAcquisitionCause"
             layout="inline"
             value={asset.gbBuildingAcquisitionCause ?? ""}
             onChange={(v) => {
@@ -580,6 +589,7 @@ export function GeneralBuildingAcquisitionCards({
             하나가 두 파트를 함께 기록한다(불변식 §3.2(1)). 신축은 진입 시 분리가 켜지므로
             입력 경로가 사라지지 않는다. */}
         <FieldCard
+          field="acquisitionDate"
           label="건물 취득일"
           hint={
             asset.gbBuildingAcquisitionCause === "newConstruction"
@@ -600,6 +610,7 @@ export function GeneralBuildingAcquisitionCards({
         */}
         {asset.gbBuildingAcquisitionCause === "inheritance" && (
           <FieldCard
+            field="gbBuildingDecedentAcquisitionDate"
             label="건물 피상속인 취득일"
             hint={
               asset.acquisitionCause === "inheritance"
@@ -631,6 +642,7 @@ export function GeneralBuildingAcquisitionCards({
               </p>
             )}
             <CarryoverGiftBlock
+              part="building"
               asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
               transferDate={transferDate ?? ""}
               onChange={(patch) => {

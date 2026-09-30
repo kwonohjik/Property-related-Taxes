@@ -132,7 +132,7 @@ export function MixedUsePreHousingDisclosureSection({
           </p>
         </FieldCard>
 
-        <FieldCard label="최초 고시일" required stacked>
+        <FieldCard label="최초 고시일" field="phdFirstDisclosureDate" required stacked>
           <DateInput
             value={asset.phdFirstDisclosureDate}
             onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
@@ -145,6 +145,7 @@ export function MixedUsePreHousingDisclosureSection({
         <StandardPriceInput
           propertyKind="house_individual"
           totalPrice={asset.phdFirstDisclosureHousingPrice}
+          data-field="phdFirstDisclosureHousingPrice"
           onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
           jibun={asset.addressJibun || undefined}
           referenceDate={asset.phdFirstDisclosureDate}
@@ -155,6 +156,7 @@ export function MixedUsePreHousingDisclosureSection({
         <StandardPriceInput
           propertyKind="house_individual"
           totalPrice={asset.mixedTransferHousingPrice}
+          data-field="mixedTransferHousingPrice"
           onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
           jibun={asset.addressJibun || undefined}
           referenceDate={transferDate}
@@ -206,6 +208,10 @@ export function MixedUsePreHousingDisclosureSection({
         </p>
 
         <ThreePointStandardPriceInput
+          fieldLandAtAcq="phdLandPricePerSqmAtAcq"
+          fieldLandAtFirst="phdLandPricePerSqmAtFirst"
+          fieldCommercialBuildingAtAcq="mixedAcqCommercialBuildingPrice"
+          fieldCommercialBuildingAtFirst="phdCommercialBuildingStdPriceAtFirst"
           targetLabel="주택"
           enableBatchCalc
           jibun={asset.addressJibun || undefined}

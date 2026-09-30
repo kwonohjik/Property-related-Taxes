@@ -13,6 +13,7 @@ import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-a
 import { APPURTENANT_ZONE_OPTIONS } from "@/components/calc/transfer/appurtenant-zone-options";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 「선택이 세액을 가르는가」의 임계 배율 — **엔진 표에서 파생한다**(하드코딩 금지).
@@ -47,13 +48,13 @@ export function validateMixedUseAreas(
   formTransferDate?: string,
 ): string | null {
   if (!asset.residentialFloorArea || parseFloat(asset.residentialFloorArea) <= 0)
-    return `${label}: 주택 연면적(㎡)을 입력하세요. (면적 정보 — 전용/공통 입력 시 자동 파생)`;
+    return fieldError("residentialFloorArea", `${label}: 주택 연면적(㎡)을 입력하세요. (면적 정보 — 전용/공통 입력 시 자동 파생)`);
   if (!asset.nonResidentialFloorArea || parseFloat(asset.nonResidentialFloorArea) <= 0)
-    return `${label}: 상가 연면적(㎡)을 입력하세요. (면적 정보 — 전용/공통 입력 시 자동 파생)`;
+    return fieldError("nonResidentialFloorArea", `${label}: 상가 연면적(㎡)을 입력하세요. (면적 정보 — 전용/공통 입력 시 자동 파생)`);
   if (!asset.mixedUseTotalLandArea || parseFloat(asset.mixedUseTotalLandArea) <= 0)
-    return `${label}: 전체 토지 면적(㎡)을 입력하세요. (면적 정보)`;
+    return fieldError("mixedUseTotalLandArea", `${label}: 전체 토지 면적(㎡)을 입력하세요. (면적 정보)`);
   if (!asset.buildingFootprintArea || parseFloat(asset.buildingFootprintArea) <= 0)
-    return `${label}: 건물 정착면적(㎡)을 입력하세요. (면적 정보)`;
+    return fieldError("buildingFootprintArea", `${label}: 건물 정착면적(㎡)을 입력하세요. (면적 정보)`);
 
   const totalLandV = parseFloat(asset.mixedUseTotalLandArea) || 0;
   const footprintV = parseFloat(asset.buildingFootprintArea) || 0;
@@ -65,16 +66,17 @@ export function validateMixedUseAreas(
   const fpOv = (asset.mixedResidentialFootprintOverride ?? "").trim();
 
   // ── override 범위 가드 (three-state: 빈값=자동, 0 적법) ──
-  const guards: ReadonlyArray<readonly [string, string, number, string]> = [
-    [landOv, "주택 부수토지", totalLandV, "전체 토지면적"],
-    [commLandOv, "상가 부수토지", totalLandV, "전체 토지면적"],
-    [fpOv, "주택 정착면적", footprintV, "건물 정착면적"],
-  ];
-  for (const [raw, name, max, maxLabel] of guards) {
+  // `field:`는 입력칸 이동 앵커 키(리터럴 — 정적 게이트가 읽는다).
+  const guards = [
+    { raw: landOv, name: "주택 부수토지", max: totalLandV, maxLabel: "전체 토지면적", field: "mixedResidentialLandAreaOverride" },
+    { raw: commLandOv, name: "상가 부수토지", max: totalLandV, maxLabel: "전체 토지면적", field: "mixedCommercialLandAreaOverride" },
+    { raw: fpOv, name: "주택 정착면적", max: footprintV, maxLabel: "건물 정착면적", field: "mixedResidentialFootprintOverride" },
+  ] as const;
+  for (const { raw, name, max, maxLabel, field } of guards) {
     if (raw === "") continue;
     const v = parseFloat(raw);
     if (!Number.isFinite(v) || v < 0 || v > max)
-      return `${label}: ${name} 면적은 0 이상 ${maxLabel} 이하로 입력하세요. (면적 정보)`;
+      return fieldError(field, `${label}: ${name} 면적은 0 이상 ${maxLabel} 이하로 입력하세요. (면적 정보)`);
   }
 
   /**
@@ -121,7 +123,7 @@ export function validateMixedUseAreas(
       derived.residentialFootprintArea > 0 &&
       derived.residentialLandArea > derived.residentialFootprintArea * minMultiplier
     ) {
-      return `${label}: 부수토지가 정착면적의 ${minMultiplier}배를 넘습니다 — 배율(3·5·10배)이 세액을 가르므로 용도지역을 선택하세요 (「소득세법 시행령」 §168의12·§154⑦). (면적 정보)`;
+      return fieldError("mixedZoneType", `${label}: 부수토지가 정착면적의 ${minMultiplier}배를 넘습니다 — 배율(3·5·10배)이 세액을 가르므로 용도지역을 선택하세요 (「소득세법 시행령」 §168의12·§154⑦). (면적 정보)`);
     }
   }
 

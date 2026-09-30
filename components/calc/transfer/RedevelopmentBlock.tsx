@@ -301,7 +301,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
         {/* 2열 배치 (2026-08-13 사용자 지시) — 모바일은 1열로 자동 폴백.
             hint는 제거했다(법령 근거는 섹션 상단 배지가 담당). */}
         <div className="grid gap-2 sm:grid-cols-2">
-          <FieldCard label="관리처분 인가일">
+          <FieldCard label="관리처분 인가일" field="redevApprovalDate">
             <DateInput
               value={asset.redevApprovalDate}
               onChange={(v) => onChange({ redevApprovalDate: v })}
@@ -311,6 +311,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           {asset.redevIsSuccessorMember !== "yes" && (
             <FieldCard
               label="권리가액"
+              field="redevRightsValue"
               hint={isRedevFractional ? "물건 전체(100%) 기준으로 입력하세요 — 시스템이 지분율을 적용합니다." : undefined}
             >
               <CurrencyInput label=""
@@ -360,6 +361,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
                * 부담부증여 인수채무와 같은 처리다(`BurdenedGiftBlock` 「(지분 인수분)」).
                * 판정 술어는 API 변환·validate와 **같은 소스**(`isFractionalOwnership`)여야 한다.
                */
+              field="redevSettlementAmount"
               label={`${asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}${isRedevFractional ? " (지분 해당분)" : ""}`}
               hint={
                 isRedevFractional
@@ -376,7 +378,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           )}
 
           {asset.redevIsSuccessorMember !== "yes" && (
-            <FieldCard label="인가전 분 필요경비">
+            <FieldCard label="인가전 분 필요경비" field="redevPreApprovalExpenses">
               <CurrencyInput label=""
                 value={asset.redevPreApprovalExpenses}
                 onChange={(v) => onChange({ redevPreApprovalExpenses: v })}
@@ -459,6 +461,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
 
           <RadioCardGroup
             name={`redevAcqMode-${asset.assetId}`}
+            data-field="useEstimatedAcquisition"
             value={asset.useEstimatedAcquisition ? "estimated" : "actual"}
             onChange={(v) => onChange({ useEstimatedAcquisition: v === "estimated" })}
             options={ACQ_MODE_OPTIONS}
@@ -468,6 +471,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           {!asset.useEstimatedAcquisition ? (
             <FieldCard
               label="실거래가 취득가액"
+              field="redevActualAcquisitionPrice"
               hint="재개발 관리처분 인가 전 종전 부동산의 실거래가 (§166①1호 인가전 분 차감 기준)."
             >
               <CurrencyInput

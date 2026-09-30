@@ -55,7 +55,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
     <ToneCard tone="amber" sectionNum={sectionNum} title="취득시점 자산 구성 (보유 중 일부 용도변경)" bodyClassName="space-y-3" noDark>
 
       {/* 방향 Select — 양도시점/취득시점 혼동 방지 라벨 */}
-      <FieldCard label="취득시 자산 구성" hint="양도시와 다른 경우 선택">
+      <FieldCard label="취득시 자산 구성" field="partialChangeDirection" hint="양도시와 다른 경우 선택">
         <Select
           value={direction}
           onValueChange={(v) =>
@@ -123,7 +123,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
 
       {isCustomized && (
         <div className="space-y-2">
-          <FieldCard label="취득시 주택 연면적 (㎡)">
+          <FieldCard label="취득시 주택 연면적 (㎡)" field="partialChangeAcqResidentialArea">
             <DecimalInput
               value={asset.partialChangeAcqResidentialArea}
               onChange={(v) => onChange({ partialChangeAcqResidentialArea: v })}
@@ -131,7 +131,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
               unit="㎡"
             />
           </FieldCard>
-          <FieldCard label="취득시 상가 연면적 (㎡)">
+          <FieldCard label="취득시 상가 연면적 (㎡)" field="partialChangeAcqCommercialArea">
             <DecimalInput
               value={asset.partialChangeAcqCommercialArea}
               onChange={(v) => onChange({ partialChangeAcqCommercialArea: v })}
@@ -160,6 +160,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
         }
       >
         <DateInput
+          data-field="partialChangeDate"
           value={asset.partialChangeDate}
           onChange={(v) => onChange({ partialChangeDate: v })}
         />

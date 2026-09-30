@@ -44,6 +44,9 @@ interface Point {
   onHousingBuilding: (v: string) => void;
   commercialBuilding: string;
   onCommercialBuilding?: (v: string) => void;
+  /** 검증 오류 → 입력칸 이동 앵커 — 토지 공시지가·상가건물 기준시가 칸 */
+  landField?: string;
+  commercialField?: string;
 }
 
 const fmt = (n: number | null) => (n && n > 0 ? n.toLocaleString() : "—");
@@ -79,6 +82,7 @@ function AssetSection({
             <FieldCard label={`${label}건물 기준시가`}>
               <CurrencyInput
                 label=""
+                data-field={which === "commercial" ? p.commercialField : undefined}
                 value={building}
                 onChange={onBuilding ?? (() => {})}
                 placeholder="원"
@@ -145,6 +149,8 @@ export function ThreePointAssetMajorRender(
       onHousingBuilding: props.onBuildingStdPriceAtAcqChange,
       commercialBuilding: props.commercialBuildingStdPriceAtAcq ?? "",
       onCommercialBuilding: props.onCommercialBuildingStdPriceAtAcqChange,
+      landField: props.fieldLandAtAcq,
+      commercialField: props.fieldCommercialBuildingAtAcq,
     },
     {
       key: "first",
@@ -160,6 +166,8 @@ export function ThreePointAssetMajorRender(
       onHousingBuilding: props.onBuildingStdPriceAtFirstChange,
       commercialBuilding: props.commercialBuildingStdPriceAtFirst ?? "",
       onCommercialBuilding: props.onCommercialBuildingStdPriceAtFirstChange,
+      landField: props.fieldLandAtFirst,
+      commercialField: props.fieldCommercialBuildingAtFirst,
     },
     {
       key: "transfer",
@@ -195,6 +203,7 @@ export function ThreePointAssetMajorRender(
             onYearChange={p.onYear}
             landPricePerSqm={p.landPrice}
             onLandPricePerSqmChange={p.onLandPrice}
+            landField={p.landField}
             buildingStdPrice=""
             onBuildingStdPriceChange={() => {}}
             jibun={props.jibun}

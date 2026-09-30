@@ -220,6 +220,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
         <StandardPriceInput
           propertyKind="house_individual"
+          data-field="redevManagementDisposalHousingPrice"
           totalPrice={asset.redevManagementDisposalHousingPrice}
           onTotalPriceChange={(v) => onChange({ redevManagementDisposalHousingPrice: v })}
           jibun={asset.addressJibun || undefined}
@@ -230,6 +231,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
         <FieldCard
           label="최초공시일"
+          field="redevFirstDisclosureDate"
           hint="개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30, 공동 2006-04-28). 취득일이 이보다 이전이면 §164⑦ 본문 산식 발동."
         >
           <DateInput
@@ -241,6 +243,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         {!isPreDisclosureTriggered && (
           <StandardPriceInput
             propertyKind="house_individual"
+            data-field="redevAcquisitionHousingPrice"
             totalPrice={asset.redevAcquisitionHousingPrice}
             onTotalPriceChange={(v) => onChange({ redevAcquisitionHousingPrice: v })}
             jibun={asset.addressJibun || undefined}
@@ -259,6 +262,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
             <StandardPriceInput
               propertyKind="house_individual"
+              data-field="redevFirstDisclosureHousingPrice"
               totalPrice={asset.redevFirstDisclosureHousingPrice}
               onTotalPriceChange={(v) => onChange({ redevFirstDisclosureHousingPrice: v })}
               jibun={asset.addressJibun || undefined}
@@ -277,6 +281,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               <p className="text-caption font-semibold text-rose-700">토지 기준시가</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
+                data-field="redevLandPricePerSqmAtAcq"
                 hint="Vworld API 조회 — 기준연도 = 취득연도. 취득시 합계 기준시가를 구성합니다"
                 pricePerSqm={asset.redevLandPricePerSqmAtAcq}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
@@ -286,6 +291,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               />
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
+                data-field="redevLandPricePerSqmAtFirst"
                 hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006). 최초공시 당시 합계 기준시가를 구성합니다"
                 pricePerSqm={asset.redevLandPricePerSqmAtFirst}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtFirst: v })}
@@ -342,14 +348,14 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                   }
                 />
               </div>
-              <FieldCard label="취득시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). 취득시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
+              <FieldCard label="취득시 건물 기준시가" field="redevBuildingStdPriceAtAcq" hint="국세청 건물 기준시가 (총액, 원). 취득시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
                 <CurrencyInput label=""
                   value={asset.redevBuildingStdPriceAtAcq}
                   onChange={(v) => onChange({ redevBuildingStdPriceAtAcq: v })}
                   hideUnit
                 />
               </FieldCard>
-              <FieldCard label="최초공시 당시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). 최초공시 당시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
+              <FieldCard label="최초공시 당시 건물 기준시가" field="redevBuildingStdPriceAtFirst" hint="국세청 건물 기준시가 (총액, 원). 최초공시 당시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
                 <CurrencyInput label=""
                   value={asset.redevBuildingStdPriceAtFirst}
                   onChange={(v) => onChange({ redevBuildingStdPriceAtFirst: v })}
@@ -488,6 +494,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       {/* 취득당시 토지 ㎡당 단가 — §166③ 분자 */}
       <LandPriceLookupField
         label="취득당시 토지 ㎡당 단가"
+        data-field="redevLandPricePerSqmAtAcq"
         hint="§166③ 분자 — 취득일 기준 개별공시지가 (원/㎡). Vworld 조회 또는 국세청 기준시가 확인."
         pricePerSqm={asset.redevLandPricePerSqmAtAcq}
         onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
@@ -499,6 +506,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       {/* 관리처분 직전 토지 ㎡당 단가 — §166③ 분모 */}
       <LandPriceLookupField
         label="관리처분 직전 토지 ㎡당 단가"
+        data-field="redevLandPricePerSqmAtApproval"
         hint="§166③ 분모 — 관리처분 인가일 직전 개별공시지가 (원/㎡). §99①1호 공시기준일 적용."
         pricePerSqm={asset.redevLandPricePerSqmAtApproval}
         onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtApproval: v })}

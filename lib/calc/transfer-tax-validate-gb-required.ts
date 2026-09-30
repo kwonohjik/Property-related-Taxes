@@ -7,6 +7,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { PartAcqMode } from "./transfer-tax-split-acq-mode";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 건물 파트의 **자기** 피상속인 취득일 — 분리 ON + 건물 상속일 때만 의미가 있다(그때만 건물 카드에 칸이 있다).
@@ -36,13 +37,13 @@ export function gbBuildingOwnDecedentDate(asset: AssetForm): string {
 export function validateGbDecedentDates(asset: AssetForm, label: string): string | null {
   const landInherited = asset.acquisitionCause === "inheritance";
   if (landInherited && !asset.decedentAcquisitionDate)
-    return `${label}: 피상속인 취득일을 입력하세요. 상속받은 토지의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`;
+    return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요. 상속받은 토지의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`);
   if (
     asset.gbBuildingAcquisitionCause === "inheritance" &&
     !gbBuildingOwnDecedentDate(asset) &&
     !(landInherited && asset.decedentAcquisitionDate)
   )
-    return `${label}: 건물 피상속인 취득일을 입력하세요. 상속받은 건물의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`;
+    return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일을 입력하세요. 상속받은 건물의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`);
   return null;
 }
 
@@ -65,5 +66,5 @@ export function validateGbBundledAcquisitionPrice(
   if (asset.gbHasExtension) return null;
   if (landMode === "estimated" || buildingMode === "estimated") return null;
   if (parseAmount(asset.fixedAcquisitionPrice) > 0) return null;
-  return `${label}: ${asset.isAppraisalAcquisition ? "감정가액" : "취득가액"}을 입력하세요. 토지·건물 일괄 실지거래가액입니다 (소득세법 §97①1호).`;
+  return fieldError("fixedAcquisitionPrice", `${label}: ${asset.isAppraisalAcquisition ? "감정가액" : "취득가액"}을 입력하세요. 토지·건물 일괄 실지거래가액입니다 (소득세법 §97①1호).`);
 }

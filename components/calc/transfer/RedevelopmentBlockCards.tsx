@@ -65,6 +65,7 @@ export function SettlementAnnouncementDateField({
   return (
     <FieldCard
       label="소유권이전 고시일"
+      field="redevSettlementSaleDate"
       hint="도시정비법 §86 소유권이전 고시일. 양도일(NTS 집행기준 + 시행령 §162①9호)은 다음날로 자동 산정됩니다."
     >
       <div className="space-y-2">
@@ -349,6 +350,7 @@ export function ExemptionAtApprovalCard({
       >
         <FieldCard
           label="사실상 주거용 사용 종료일"
+          field="redevPostApprovalHousingUseEndDate"
           hint="철거일 또는 주거용 사용을 그만둔 날. 양도일이 아닙니다 — 철거 후 기간은 합산되지 않습니다."
         >
           <DateInput
@@ -567,6 +569,7 @@ export function SuccessorMemberSection({
         <div className="space-y-2 pt-1">
           <FieldCard
             label="준공일 (사용검사필증 교부일)"
+            field="redevCompletionDate"
             hint="보유기간·세율의 기산일이 됩니다."
             trailing={
               <LawArticleModal
@@ -595,6 +598,7 @@ export function SuccessorMemberSection({
           */}
           <FieldCard
             label="신축주택 거주기간 (개월)"
+            field="redevNewHouseResidenceMonths"
             hint="준공일~양도일 사이 신축아파트에 실제 거주한 개월 수. 1세대1주택이고 24개월 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다."
             trailing={
               <LawArticleModal

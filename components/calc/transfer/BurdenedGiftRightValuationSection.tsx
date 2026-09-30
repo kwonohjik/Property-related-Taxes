@@ -61,7 +61,7 @@ export function BurdenedGiftRightValuationSection({ asset, onChange }: Props) {
         <CurrencyInput
           label=""
           hideUnit
-          data-testid="bg-right-member-rights-value"
+          data-testid="bg-right-member-rights-value" data-field="bgRightMemberRightsValue"
           value={asset.bgRightMemberRightsValue}
           onChange={(v) => onChange({ bgRightMemberRightsValue: v })}
         />

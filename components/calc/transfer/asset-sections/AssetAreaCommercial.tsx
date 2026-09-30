@@ -54,21 +54,21 @@ export function AssetAreaCommercial({ asset, onChange }: Props) {
     <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FieldCard label="전용면적" unit="㎡" stacked>
+        <FieldCard label="전용면적" field="cbExclusiveArea" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbExclusiveArea}
             onChange={(v) => onChange({ cbExclusiveArea: v })}
             placeholder="전용면적 입력"
           />
         </FieldCard>
-        <FieldCard label="공유면적" unit="㎡" stacked>
+        <FieldCard label="공유면적" field="cbSharedArea" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbSharedArea}
             onChange={(v) => onChange({ cbSharedArea: v })}
             placeholder="공유면적 입력"
           />
         </FieldCard>
-        <FieldCard label="대지면적" unit="㎡" stacked>
+        <FieldCard label="대지면적" field="cbLandArea" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbLandArea}
             onChange={(v) => onChange({ cbLandArea: v })}

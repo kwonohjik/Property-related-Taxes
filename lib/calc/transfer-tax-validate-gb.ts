@@ -20,6 +20,7 @@ import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import { validateGbCarryover } from "./transfer-tax-validate-gb-carryover";
 import { validateGbSaleAxis } from "./transfer-tax-validate-gb-sale";
 import { validateGbDecedentDates, validateGbBundledAcquisitionPrice } from "./transfer-tax-validate-gb-required";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -49,14 +50,14 @@ export function validateGeneralBuildingAsset(
     asset.acquisitionCause === "burdened_gift";
   if (isBurdenedGiftGB) {
     if (!asset.bgValuationMode)
-      return `${label}: 부담부증여 평가 모드를 선택하세요 (상증법 기준시가/시가).`;
+      return fieldError("bgValuationMode", `${label}: 부담부증여 평가 모드를 선택하세요 (상증법 기준시가/시가).`);
     const deposit = parseAmount(asset.bgLendingDepositTotal) || 0;
     const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
     if (deposit + mortgageDebt <= 0)
-      return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`;
+      return fieldError("bgLendingDepositTotal", `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`);
     if (asset.bgValuationMode === "sangjeungbeop_market") {
       if (!asset.bgMarketValueAtTransfer || parseAmount(asset.bgMarketValueAtTransfer) <= 0)
-        return `${label}: 시가 모드의 양도시 평가액을 입력하세요.`;
+        return fieldError("bgMarketValueAtTransfer", `${label}: 시가 모드의 양도시 평가액을 입력하세요.`);
       /**
        * 🔴 **취득시 평가액(`bgMarketValueAtAcquisition`)을 여기서 요구하지 말 것** (2026-09-07).
        *
@@ -73,38 +74,38 @@ export function validateGeneralBuildingAsset(
        */
     }
     if (!parseDecimal(asset.gbLandArea))
-      return `${label}: 토지면적을 입력하세요.`;
+      return fieldError("gbLandArea", `${label}: 토지면적을 입력하세요.`);
     if (!parseAmount(asset.gbTransferLandPricePerSqm))
-      return `${label}: 양도시 토지 공시지가를 입력하세요.`;
+      return fieldError("gbTransferLandPricePerSqm", `${label}: 양도시 토지 공시지가를 입력하세요.`);
     if (!parseAmount(asset.gbAcqLandPricePerSqm))
-      return `${label}: 취득시 토지 공시지가를 입력하세요.`;
+      return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요.`);
     if (!parseAmount(asset.gbTransferBuildingValue))
-      return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
+      return fieldError("gbTransferBuildingValue", `${label}: 양도시 건물기준시가 총액을 입력하세요.`);
     if (!parseAmount(asset.gbAcqBuildingValue))
-      return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+      return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요.`);
     // 용도지역 — 아래 일반 분기와 같은 요구(부담부증여 GB도 부수토지 배율 판정을 거친다). 비우면 엔진이 500.
     if (!asset.gbUnapprovedBuilding && !asset.gbZoneType)
-      return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
+      return fieldError("gbZoneType", `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`);
     // D1·D3 피상속인 취득일 — 날짜 축은 §159와 무관하게 보유기간에 소비된다(2026-09-30)
     return validateGbDecedentDates(asset, label); // 부담부증여는 환산/신축 분기 미적용 — 여기서 종결
   }
 
   // 면적 — 모드 무관 필수
   if (!parseDecimal(asset.gbLandArea))
-    return `${label}: 토지면적을 입력하세요.`;
+    return fieldError("gbLandArea", `${label}: 토지면적을 입력하세요.`);
   if (!parseDecimal(asset.gbBuildingFootprintArea))
-    return `${label}: 건축물 바닥면적(각 층 중 최대, 지하 포함)을 입력하세요.`;
+    return fieldError("gbBuildingFootprintArea", `${label}: 건축물 바닥면적(각 층 중 최대, 지하 포함)을 입력하세요.`);
 
   // 용도지역 — 필수. 무허가 건물이면 화면이 용도지역 선택을 숨기고(`GeneralBuildingNblSection`) 엔진도
   // 배율을 쓰지 않는다(§101① 단서) — 요구하면 보이지 않는 칸을 요구하게 된다(2026-09-30).
   if (!asset.gbUnapprovedBuilding && !asset.gbZoneType)
-    return `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`;
+    return fieldError("gbZoneType", `${label}: 용도지역을 선택하세요. 비사업용토지 판정 배율 결정에 필수입니다.`);
 
   // 양도시 기준시가 — 모드 무관 필수 (§166⑥ 토지·건물 안분 + 환산 분모)
   if (!parseAmount(asset.gbTransferLandPricePerSqm))
-    return `${label}: 양도시 토지 공시지가를 입력하세요.`;
+    return fieldError("gbTransferLandPricePerSqm", `${label}: 양도시 토지 공시지가를 입력하세요.`);
   if (!parseAmount(asset.gbTransferBuildingValue))
-    return `${label}: 양도시 건물기준시가 총액을 입력하세요.`;
+    return fieldError("gbTransferBuildingValue", `${label}: 양도시 건물기준시가 총액을 입력하세요.`);
 
   // 0 분모 차단 (모드 무관)
   const transferLandStd =
@@ -142,7 +143,12 @@ export function validateGeneralBuildingAsset(
     // 조사는 받침 유무로 갈린다 — 토지(모음)는 「는」·건물(받침)은 「은」, 상속(받침)은 「으로」·증여(모음)는 「로」.
     const partSubject = part === "토지" ? "토지는" : "건물은";
     const causeBy = cause === "상속" ? "상속으로" : "증여로";
-    return `${label}: ${causeBy} 취득한 ${partSubject} 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다. ${cause} 당시 평가액이 취득당시 실지거래가액이므로 「실거래가」를 선택하세요 (소득세법 §97①1호 단서·같은 법 시행령 §163⑨).`;
+    const isLandPart = part === "토지";
+    const msg = `${label}: ${causeBy} 취득한 ${partSubject} 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다. ${cause} 당시 평가액이 취득당시 실지거래가액이므로 「실거래가」를 선택하세요 (소득세법 §97①1호 단서·같은 법 시행령 §163⑨).`;
+    // 분리 OFF면 고칠 라디오가 화면에 없다 — 상속·증여 카드는 매매 블록(자산 단위 「취득가액 산정 방식」)을
+    // 그리지 않는다(E2E 실측: 앵커 0개). field를 달지 않아 카드로 후퇴한다.
+    if (!isSeparate) return msg;
+    return fieldError(isLandPart ? "landAcqMode" : "buildingAcqMode", msg);
   };
 
   // ── §163⑨ 상속 취득가액 직접 산정 — **파트 축**(Phase 2: C1·C2·C2′·C3) ──
@@ -188,7 +194,7 @@ export function validateGeneralBuildingAsset(
      * 사용자에게도 사실에 맞는 입력이다(§95④도 파트별 취득일을 요구한다).
      */
     if (isLandInherited !== isBuildingInherited && !isSeparate) {
-      return `${label}: 토지·건물 중 한쪽만 상속으로 취득했다면 「토지·건물 취득일 다름」을 켜고 파트별로 입력하세요. (상속분은 상속개시일 평가액, 나머지는 그 파트의 실지거래가액)`;
+      return fieldError("hasSeperateLandAcquisitionDate", `${label}: 토지·건물 중 한쪽만 상속으로 취득했다면 「토지·건물 취득일 다름」을 켜고 파트별로 입력하세요. (상속분은 상속개시일 평가액, 나머지는 그 파트의 실지거래가액)`);
     }
     const decedentIssue = validateGbDecedentDates(asset, label); // D1·D3 (2026-09-30) — 화면 순서: 날짜 → 평가액
     if (decedentIssue) return decedentIssue;
@@ -199,10 +205,10 @@ export function validateGeneralBuildingAsset(
      *    평가액을 묻는 **거짓 차단**이 된다.
      */
     if (isLandInherited && !parseAmount(asset.publishedValueAtInheritance)) {
-      return `${label}: 상속개시일 토지 평가액을 입력하세요. (취득원인 「상속」 → 「취득가액 의제 특례」에서 평가방법을 고르면 「상속세 신고가액 (토지분)」 칸이 나옵니다. 건물분은 합산하지 마세요 — 아래 「상속개시일 건물 신고가액」에 따로 입력합니다)`;
+      return fieldError("publishedValueAtInheritance", `${label}: 상속개시일 토지 평가액을 입력하세요. (취득원인 「상속」 → 「취득가액 의제 특례」에서 평가방법을 고르면 「상속세 신고가액 (토지분)」 칸이 나옵니다. 건물분은 합산하지 마세요 — 아래 「상속개시일 건물 신고가액」에 따로 입력합니다)`);
     }
     if (isBuildingInherited && !parseAmount(asset.gbBuildingInheritedValue)) {
-      return `${label}: 상속개시일 건물 신고가액을 입력하세요.`;
+      return fieldError("gbBuildingInheritedValue", `${label}: 상속개시일 건물 신고가액을 입력하세요.`);
     }
     /**
      * V-6 **미공시 시기 상속은 ② 비교값(취득시 기준시가)을 요구한다** (Phase 3 신설).
@@ -224,14 +230,14 @@ export function validateGeneralBuildingAsset(
       partAcquisitionDates(asset).land < LAND_PRICE_NOTICE_START &&
       !effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")
     ) {
-      return `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 상속 토지는 상속개시일 평가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`;
+      return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 상속 토지는 상속개시일 평가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`);
     }
     if (
       isBuildingInherited &&
       isBeforeBuildingStdPriceNotice(asset.acquisitionDate) &&
       !parseAmount(asset.gbAcqBuildingValue)
     ) {
-      return `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 상속 건물은 상속개시일 평가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`;
+      return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 상속 건물은 상속개시일 평가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`);
     }
   }
 
@@ -267,7 +273,7 @@ export function validateGeneralBuildingAsset(
      * 검증 공백도 생기지 않는다.
      */
     if (!isSeparate && !parseAmount(asset.fixedAcquisitionPrice)) {
-      return `${label}: 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다. (소득세법 시행령 §163⑨)`;
+      return fieldError("fixedAcquisitionPrice", `${label}: 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다. (소득세법 시행령 §163⑨)`);
     }
     /**
      * V-7g **증여도 §163⑨ 단서의 §164 max를 받는다** (Phase 3 확장).
@@ -288,13 +294,13 @@ export function validateGeneralBuildingAsset(
       isBuildingGift && isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
     if (landGiftSec164 || buildingGiftSec164) {
       if (!isSeparate) {
-        return `${label}: 증여일이 기준시가 고시 전이라 토지·건물의 증여 신고가액을 **파트별로 나누어 입력하세요** — 「토지·건물 취득일 다름」을 켜면 파트별 칸이 열립니다. 각 파트의 신고가액과 §164 가액 중 많은 금액이 취득가액이기 때문입니다 (소득세법 시행령 §163⑨1호·2호).`;
+        return fieldError("hasSeperateLandAcquisitionDate", `${label}: 증여일이 기준시가 고시 전이라 토지·건물의 증여 신고가액을 **파트별로 나누어 입력하세요** — 「토지·건물 취득일 다름」을 켜면 파트별 칸이 열립니다. 각 파트의 신고가액과 §164 가액 중 많은 금액이 취득가액이기 때문입니다 (소득세법 시행령 §163⑨1호·2호).`);
       }
       if (landGiftSec164 && !effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")) {
-        return `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 증여 토지는 증여 신고가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`;
+        return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 증여 토지는 증여 신고가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`);
       }
       if (buildingGiftSec164 && !parseAmount(asset.gbAcqBuildingValue)) {
-        return `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 증여 건물은 증여 신고가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`;
+        return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 증여 건물은 증여 신고가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`);
       }
     }
   }
@@ -352,8 +358,8 @@ export function validateGeneralBuildingAsset(
      * 계획서: `docs/02-design/features/transfer-gb-inheritance-extension-3part.plan.md` §5
      */
     // V-1 파트 취득일 — 두 칸 모두 필요하다(§95④ 「그 자산의 취득일」).
-    if (!asset.landAcquisitionDate) return `${label}: 토지 취득일을 입력하세요.`;
-    if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
+    if (!asset.landAcquisitionDate) return fieldError("landAcquisitionDate", `${label}: 토지 취득일을 입력하세요.`);
+    if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 건물 취득일을 입력하세요.`);
 
     /**
      * V-8 자산 단위 자본적지출은 **두 파트가 모두 환산일 때만** 쓸 수 있다(O-1 해소 — 2026-08-05).
@@ -368,7 +374,7 @@ export function validateGeneralBuildingAsset(
      */
     const bothEstimated = landMode === "estimated" && buildingMode === "estimated";
     if (!bothEstimated && parseAmount(asset.capitalExpenditure)) {
-      return `${label}: 토지·건물의 취득가액 산정 방식을 따로 정했으면 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 두 파트가 모두 환산취득가액일 때만 쓸 수 있습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 합니다).`;
+      return fieldError("capitalExpenditure", `${label}: 토지·건물의 취득가액 산정 방식을 따로 정했으면 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 두 파트가 모두 환산취득가액일 때만 쓸 수 있습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 합니다).`);
     }
 
     /**
@@ -397,10 +403,12 @@ export function validateGeneralBuildingAsset(
     const landOverriddenByInheritance = isLandInherited;
     const buildingOverriddenByInheritance = isBuildingInherited;
     /** 증여 파트는 그 파트의 증여 신고가액이 취득가액이다(§163⑨) — 문구를 나눈다. */
-    const partPriceError = (part: "토지" | "건물", byGift: boolean) =>
-      byGift
+    const partPriceError = (part: "토지" | "건물", byGift: boolean) => {
+      const isLandPart = part === "토지";
+      return fieldError(isLandPart ? "landAcquisitionPrice" : "buildingAcquisitionPrice", byGift
         ? `${label}: ${part} 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다 (소득세법 시행령 §163⑨).`
-        : `${label}: ${part} 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+        : `${label}: ${part} 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`);
+    };
     if (
       !landOverriddenByInheritance &&
       landMode !== "estimated" &&
@@ -426,7 +434,7 @@ export function validateGeneralBuildingAsset(
   if (landMode === "estimated" || buildingMode === "estimated" || asset.gbHasExtension) {
     // 건물 연면적 — 환산 모드에서만 필수 (사례 33 일괄에서는 buildingFootprintArea로 대체 가능)
     if (asset.useEstimatedAcquisition && !parseDecimal(asset.gbBuildingArea))
-      return `${label}: 건물 연면적을 입력하세요.`;
+      return fieldError("gbBuildingArea", `${label}: 건물 연면적을 입력하세요.`);
     /**
      * V-5 취득시 기준시가 — **환산 파트만** 요구한다(2026-08-05 P6).
      * 종전에는 자산이 환산이면 토지·건물 둘 다 요구했으나, 파트별 모드에서는
@@ -437,9 +445,9 @@ export function validateGeneralBuildingAsset(
     const needLandStd = landMode === "estimated" || asset.gbHasExtension;
     const needBuildingStd = buildingMode === "estimated" || asset.gbHasExtension;
     if (needLandStd && !parseAmount(asset.gbAcqLandPricePerSqm))
-      return `${label}: 취득시 토지 공시지가를 입력하세요.`;
+      return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요.`);
     if (needBuildingStd && !parseAmount(asset.gbAcqBuildingValue))
-      return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+      return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요.`);
     // (V-5의 「실가 파트는 요구하지 않는다」는 **환산 경로 안에서만** 유효하다.
     //  두 파트가 모두 실가인 경우는 아래 V-5b가 따로 판정한다 — 그 경로는 취득 축 안분에
     //  취득시 기준시가를 **쓴다**(2026-08-07 P-2).)
@@ -465,17 +473,17 @@ export function validateGeneralBuildingAsset(
       !asset.gbBuildingAcquisitionCause ||
       !validBuildingCauses.includes(asset.gbBuildingAcquisitionCause)
     ) {
-      return `${label}: 건물 취득원인을 선택하세요 (매매·상속·증여·이월과세(증여)·신축(자가건축) 중).`;
+      return fieldError("gbBuildingAcquisitionCause", `${label}: 건물 취득원인을 선택하세요 (매매·상속·증여·이월과세(증여)·신축(자가건축) 중).`);
     }
     // (b) 신축(자가건축) + 건물 취득일 미입력 차단
     if (asset.gbBuildingAcquisitionCause === "newConstruction") {
       if (!asset.acquisitionDate) {
-        return `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
+        return fieldError("acquisitionDate", `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`);
       }
       // 건물 취득일은 토지 취득일 이후여야 함
       const { land: landDate } = partAcquisitionDates(asset);
       if (landDate && asset.acquisitionDate < landDate) {
-        return `${label}: 건물 취득일은 토지 취득일(${landDate}) 이후여야 합니다.`;
+        return fieldError("acquisitionDate", `${label}: 건물 취득일은 토지 취득일(${landDate}) 이후여야 합니다.`);
       }
     }
   }
@@ -501,9 +509,9 @@ export function validateGeneralBuildingAsset(
     //    각자 재기술하면 「칸이 없는데 차단」 또는 「차단 안 하는데 엔진이 throw」가 된다.
     if (needsGbActualAcqStdPrice(asset)) {
       if (!parseAmount(asset.gbAcqLandPricePerSqm))
-        return `${label}: 취득시 토지 공시지가를 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`;
+        return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`);
       if (!parseAmount(asset.gbAcqBuildingValue))
-        return `${label}: 취득시 건물기준시가 총액을 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`;
+        return fieldError("gbAcqBuildingValue", `${label}: 취득시 건물기준시가 총액을 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`);
     }
   }
 
@@ -514,11 +522,11 @@ export function validateGeneralBuildingAsset(
    * 5년 판정의 기산일이기도 하다.
    */
   if (asset.gbBuildingAcquisitionCause === "newConstruction" && !asset.acquisitionDate) {
-    return `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
+    return fieldError("acquisitionDate", `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`);
   }
 
   // 공통 취득일 검증
-  if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+  if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
 
   /**
    * V-9 일부 양도(O-4 · 2026-08-12) — 「양도분 취득가액이 구분되는가」 선택 강제.
@@ -549,7 +557,7 @@ export function validateGeneralBuildingAsset(
     parseAmount(asset.fixedAcquisitionPrice) > 0 &&
     !asset.partialAcqDistinct
   ) {
-    return `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`;
+    return fieldError("partialAcqDistinct", `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`);
   }
 
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
@@ -577,27 +585,27 @@ export function validateGeneralBuildingAsset(
       !asset.useEstimatedAcquisition &&
       !parseAmount(asset.fixedAcquisitionPrice)
     )
-      return `${label}: 토지·건물 일괄 취득가액을 입력하세요. (사례 33: 토지·원건물 일괄 실거래가)`;
+      return fieldError("fixedAcquisitionPrice", `${label}: 토지·건물 일괄 취득가액을 입력하세요. (사례 33: 토지·원건물 일괄 실거래가)`);
 
     // 공통 필수: 증축일
     if (!asset.gbExtensionDate)
-      return `${label}: 증축일을 입력하세요.`;
+      return fieldError("gbExtensionDate", `${label}: 증축일을 입력하세요.`);
 
     // 공통 필수: 증축 취득원인
     if (
       !asset.gbExtensionAcquisitionCause ||
       !["purchase", "newConstruction"].includes(asset.gbExtensionAcquisitionCause)
     )
-      return `${label}: 증축 취득원인을 선택하세요 (매매·자가증축 중).`;
+      return fieldError("gbExtensionAcquisitionCause", `${label}: 증축 취득원인을 선택하세요 (매매·자가증축 중).`);
 
     // 모드별 필수 필드 분기
     const extMode = asset.gbExtensionAcquisitionMode || "estimated";
     if (extMode === "estimated") {
       // 환산취득가 모드: 건물2 기준시가 2종 필수
       if (!parseAmount(asset.gbTransferExtensionBuildingStdPrice))
-        return `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
+        return fieldError("gbTransferExtensionBuildingStdPrice", `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`);
       if (!parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice))
-        return `${label}: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
+        return fieldError("gbAcquisitionExtensionBuildingStdPrice", `${label}: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`);
     } else if (extMode === "actual") {
       /**
        * 🔴 **양도시 건물2 기준시가는 실가 모드에서도 필수다** (2026-08-12 D-1).
@@ -615,13 +623,13 @@ export function validateGeneralBuildingAsset(
        * 「증축 실거래가」 → 「증축 실제 필요경비」 순으로 렌더한다.
        */
       if (!parseAmount(asset.gbTransferExtensionBuildingStdPrice))
-        return `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요 — 양도가액을 토지·건물1·건물2로 나누는 안분 분모입니다 (소득세법 시행령 §166⑥). ㎡당 단가가 아닌 총액(원)입니다.`;
+        return fieldError("gbTransferExtensionBuildingStdPrice", `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요 — 양도가액을 토지·건물1·건물2로 나누는 안분 분모입니다 (소득세법 시행령 §166⑥). ㎡당 단가가 아닌 총액(원)입니다.`);
       // 실거래가 모드: 증축 실거래가 필수 (필요경비는 0 허용)
       if (!parseAmount(asset.gbExtensionActualAcquisitionPrice))
-        return `${label}: 증축 실거래가(원)를 입력하세요.`;
+        return fieldError("gbExtensionActualAcquisitionPrice", `${label}: 증축 실거래가(원)를 입력하세요.`);
     } else {
       // 미선택 또는 알 수 없는 모드
-      return `${label}: 증축분 취득방식(환산취득가/실거래가)을 선택하세요.`;
+      return fieldError("gbExtensionAcquisitionMode", `${label}: 증축분 취득방식(환산취득가/실거래가)을 선택하세요.`);
     }
 
     // 증축일 범위: max(토지취득일, 건물1취득일) 이후
@@ -633,29 +641,29 @@ export function validateGeneralBuildingAsset(
           : buildingAcqDate
         : landAcqDate || buildingAcqDate;
     if (minAcqDate && asset.gbExtensionDate <= minAcqDate) {
-      return `${label}: 증축일은 토지·건물1 취득일 중 늦은 날(${minAcqDate}) 이후여야 합니다.`;
+      return fieldError("gbExtensionDate", `${label}: 증축일은 토지·건물1 취득일 중 늦은 날(${minAcqDate}) 이후여야 합니다.`);
     }
 
     // 증축일은 양도일 이전이어야 함
     if (formTransferDate && asset.gbExtensionDate >= formTransferDate) {
-      return `${label}: 증축일은 양도일(${formTransferDate}) 이전이어야 합니다.`;
+      return fieldError("gbExtensionDate", `${label}: 증축일은 양도일(${formTransferDate}) 이전이어야 합니다.`);
     }
   }
 
   // ── 사례 35: 주택→상가 용도변경 validation (사전법규재산 2022-684) ──
   if (asset.gbHouseToCommercialConversion === true) {
     if (!asset.gbConversionDate) {
-      return `${label}: 주택→상가 용도변경을 선택했습니다. 용도변경일을 입력하세요.`;
+      return fieldError("gbConversionDate", `${label}: 주택→상가 용도변경을 선택했습니다. 용도변경일을 입력하세요.`);
     }
     // 용도변경은 **건물**의 공부상 용도를 바꾸는 사건 → 하한은 건물 취득일(계획서 §3.6(4)).
     if (asset.acquisitionDate && asset.gbConversionDate < asset.acquisitionDate) {
-      return `${label}: 용도변경일은 건물 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
+      return fieldError("gbConversionDate", `${label}: 용도변경일은 건물 취득일(${asset.acquisitionDate}) 이후여야 합니다.`);
     }
     if (formTransferDate && asset.gbConversionDate > formTransferDate) {
-      return `${label}: 용도변경일은 양도일(${formTransferDate}) 이전이어야 합니다.`;
+      return fieldError("gbConversionDate", `${label}: 용도변경일은 양도일(${formTransferDate}) 이전이어야 합니다.`);
     }
     if (typeof asset.gbWasMultiHouseAtConversion !== "boolean") {
-      return `${label}: 변경 당시 다주택자 여부를 선택하세요.`;
+      return fieldError("gbWasMultiHouseAtConversion", `${label}: 변경 당시 다주택자 여부를 선택하세요.`);
     }
   }
 
@@ -683,13 +691,13 @@ export function validateGeneralBuildingAsset(
    */
   if (asset.gbHasFirstDisclosure === true && isGbFirstDisclosureApplicable(asset)) {
     if (!parseAmount(asset.gbFirstDisclosurePrice)) {
-      return `${label}: 최초공시주택가격을 입력하세요 (§99-164-10).`;
+      return fieldError("gbFirstDisclosurePrice", `${label}: 최초공시주택가격을 입력하세요 (§99-164-10).`);
     }
     if (!gbFirstDisclosureLandStdPriceOf(asset)) {
-      return `${label}: 최초공시 당시 토지 공시지가(원/㎡)를 입력하세요.`;
+      return fieldError("gbFirstDisclosureLandPricePerSqm", `${label}: 최초공시 당시 토지 공시지가(원/㎡)를 입력하세요.`);
     }
     if (!parseAmount(asset.gbFirstDisclosureBuildingStdPrice)) {
-      return `${label}: 최초공시 당시 건물 기준시가를 입력하세요.`;
+      return fieldError("gbFirstDisclosureBuildingStdPrice", `${label}: 최초공시 당시 건물 기준시가를 입력하세요.`);
     }
   }
 

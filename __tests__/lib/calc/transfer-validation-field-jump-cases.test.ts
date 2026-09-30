@@ -10,13 +10,14 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FIELD_JUMP_CASES, validBase } from "../../../e2e/_helpers/validation-field-jump-cases";
 import { ACQ_FIELD_JUMP_CASES } from "../../../e2e/_helpers/validation-field-jump-cases-acq";
+import { P3_FIELD_JUMP_CASES } from "../../../e2e/_helpers/validation-field-jump-cases-p3";
 
 describe("field-jump E2E 케이스 입력", () => {
   it("바탕 폼은 0~3단계 무오류", () => {
     for (const s of [0, 1, 2, 3]) expect(collectStepIssues(s, validBase() as unknown as TransferFormData), `step ${s}`).toEqual([]);
   });
 
-  it.each([...FIELD_JUMP_CASES, ...ACQ_FIELD_JUMP_CASES].map((c) => [c.name ?? c.field, c] as const))("%s", (_f, c) => {
+  it.each([...FIELD_JUMP_CASES, ...ACQ_FIELD_JUMP_CASES, ...P3_FIELD_JUMP_CASES].map((c) => [c.name ?? c.field, c] as const))("%s", (_f, c) => {
     const form = c.form() as unknown as TransferFormData;
     const hit = collectStepIssues(c.step, form).find((it) => c.message.test(it.message));
     expect(hit, `메시지 ${c.message} 없음`).toBeDefined();

@@ -168,6 +168,7 @@ export function MixedUseLegacyStdPrice({
                 <StandardPriceInput
                   propertyKind="house_individual"
                   totalPrice={asset.mixedAcqHousingPrice}
+                  data-field="mixedAcqHousingPrice"
                   onTotalPriceChange={(v) => onChange({ mixedAcqHousingPrice: v })}
                   jibun={jibun}
                   referenceDate={acqReferenceDate}
@@ -188,6 +189,7 @@ export function MixedUseLegacyStdPrice({
               <CurrencyInput
                 label=""
                 value={asset.mixedAcqCommercialBuildingPrice}
+                data-field="mixedAcqCommercialBuildingPrice"
                 onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
                 placeholder="취득시 상가건물 기준시가 (필수)"
               />
@@ -217,6 +219,7 @@ export function MixedUseLegacyStdPrice({
 
             <LandPriceLookupField
               pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
+              data-field="mixedAcqLandPricePerSqm"
               onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
               area={commercialLandArea > 0 ? commercialLandArea : undefined}
               referenceDate={acqLandReferenceDate}
@@ -299,6 +302,7 @@ export function MixedUseLegacyStdPrice({
           <StandardPriceInput
             propertyKind="house_individual"
             totalPrice={asset.mixedTransferHousingPrice}
+            data-field="mixedTransferHousingPrice"
             onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
             jibun={jibun}
             referenceDate={transferDate}
@@ -345,6 +349,7 @@ export function MixedUseLegacyStdPrice({
             </div>
             <LandPriceLookupField
               pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
+              data-field="mixedTransferLandPricePerSqm"
               onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
               area={commercialLandArea > 0 ? commercialLandArea : undefined}
               referenceDate={transferDate}
