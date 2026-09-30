@@ -210,6 +210,19 @@ export function validateBurdenedGiftAsset(
           );
         }
       }
+      /**
+       * 토지 — 양도시 기준시가가 환산 **분모**다. 비면 엔진이 토지 취득가액을 0으로 낸다
+       * (`burdened-gift-apportionment.ts` K-5 `landStdPriceAtTransfer === 0 ? 0`) — 막히지 않는 오답이었다
+       * (2026-09-30 막다른 오류 작업 중 별건). ④와 같은 해석: 총액이 없으면 ㎡당 공시지가 × 양도면적
+       * (`transfer-tax-api-burdened-gift.ts` 토지 분기). 취득시 기준시가는 아래 (5-c)가 같은 방식으로 요구한다.
+       */
+      if (asset.assetKind === "land") {
+        const perSqm = parseAmount(asset.standardPricePerSqmAtTransfer);
+        const area = parseFloat((asset.transferArea || "").replace(/,/g, "")) || 0;
+        if (!parseAmount(asset.standardPriceAtTransfer) && !(perSqm > 0 && area > 0)) {
+          return fieldError("standardPriceAtTransfer", `${label}: 부담부증여 환산취득가액 — 양도시 기준시가(또는 양도 당시 ㎡당 공시지가 + 면적)를 입력하세요. 환산취득가액의 분모이므로 비우면 취득가액이 0으로 계산됩니다 (소득세법 시행령 제176조의2 제2항 제2호).`);
+        }
+      }
     } else {
       // 미지정: 취득가액 산정방식 선택 강제 (시가 모드 입력 미완성 — collectStepIssues 단계 차단)
       return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
