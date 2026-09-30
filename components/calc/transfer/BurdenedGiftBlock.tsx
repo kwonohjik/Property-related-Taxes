@@ -394,7 +394,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               환산취득가액 = 양도가액(채무액) × <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> (시행령 §176의2②2호).
               {asset.assetKind === "general_building"
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
-                : " 취득시·양도시 기준시가를 입력하세요."}
+                : " 아래 「② 양도정보」에서 양도시·취득시 기준시가를 입력하세요."}
               {" "}개산공제(§163⑥ 3%) 자동 적용.
             </div>
           )}

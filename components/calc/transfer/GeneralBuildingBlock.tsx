@@ -66,6 +66,7 @@ import {
   effectivePartAcqMode,
   needsGbActualAcqStdPrice,
 } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { needsGbSec1639BuildingStdPrice } from "@/lib/calc/transfer-tax-validate-gb-required";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -254,6 +255,12 @@ export function GeneralBuildingBlock({
    *   · 배치 게이트 차단(§164⑧ 동일연도 등): 사유만 뜨고 일괄 버튼이 없다
    */
   const showBatchLauncher = showAcqStdPrice && canGbBatch;
+  /**
+   * 「취득시 건물기준시가」 칸만 따로 여는 조건 — 고시 전 상속·증여 건물의 §163⑨ 단서 2호 비교값(G2).
+   * ⑧과 같은 술어다. `showAcqStdPrice`를 넓히지 않는 이유: 그러면 토지 취득 공시지가 칸과 일괄 런처까지
+   * 함께 열려 **쓰이지 않는 칸**을 보여 준다(위 「필요할 때만 연다」). 이 경우 런처는 시점별 계산기가 뜬다.
+   */
+  const showAcqBuildingStdPrice = showAcqStdPrice || needsGbSec1639BuildingStdPrice(asset);
 
   /*
    * 🗑 카드 헤더(제목 「일반건물 (토지·건물 분리 산정)」 + 조문 인용줄 + §104의3 배지)는
@@ -564,7 +571,7 @@ export function GeneralBuildingBlock({
               )
             ))}
 
-          {showAcqStdPrice && (
+          {showAcqBuildingStdPrice && (
             <div data-gb-stdprice="acq">
               <ToneCard tone="amber" title="취득시" noDark>
                 <FieldCard

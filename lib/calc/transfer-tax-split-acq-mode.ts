@@ -63,6 +63,37 @@ export function deriveLegacyPartAcqMode(asset: LegacyAcqFlags): PartAcqMode {
   return "actual";
 }
 
+/**
+ * 일반건물 **분리 OFF**에서 취득원인이 상속·증여가 될 때 추계 플래그를 비우는 patch (2026-09-30 G3).
+ *
+ * §163⑨ 상속·증여 파트는 추계가 불가하다(⑧ `validate-gb.ts` `blockEstimation` — 「소득세법」 §97①1호
+ * 단서). 그런데 분리 OFF의 상속·증여 카드에는 취득가액 산정 방식 라디오가 없다. 매매에서 환산을 고른 뒤
+ * 원인을 바꾸거나, 분리 ON의 파트 라디오로 환산을 고른 뒤 분리를 끄면 플래그가 남아 **끌 칸 없는
+ * 영구 차단**이 된다. 검증을 좁히면 ④가 같은 플래그(`effectivePartAcqMode`)로 환산 계산을 하므로
+ * 입력 쪽에서 비운다.
+ *
+ * 쓰는 곳 — 같은 규칙을 두 경로가 공유한다: 화면 전환(`GeneralBuildingAcquisitionCards`
+ * `setUnifiedCause`·`setSeparate(false)`) · 저장값 복원(`normalizeRentalAndSplitFields`).
+ *
+ * 비우는 것은 **이 조합에서 항상 차단되는 값뿐**이라 유효한 입력을 잃지 않는다.
+ */
+export function gbUnifiedSec1639ClearPatch(cause: string | undefined): {
+  useEstimatedAcquisition?: false;
+  isAppraisalAcquisition?: false;
+  isSalesCaseAcquisition?: false;
+  landAcqMode?: "";
+  buildingAcqMode?: "";
+} {
+  if (cause !== "inheritance" && cause !== "gift") return {};
+  return {
+    useEstimatedAcquisition: false,
+    isAppraisalAcquisition: false,
+    isSalesCaseAcquisition: false,
+    landAcqMode: "",
+    buildingAcqMode: "",
+  };
+}
+
 /** `explicit`(land/buildingAcqMode, "" 허용)이 있으면 그대로, 없으면 레거시 파생값. */
 export function effectivePartAcqMode(
   explicit: PartAcqMode | "" | undefined,

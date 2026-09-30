@@ -110,7 +110,17 @@ function buildCarryoverDonorBasis(
     landStdPriceAtAcquisition: num(primary.bgCoDonorLandStdPriceAtAcq),
     buildingStdPriceAtAcquisition: num(primary.bgCoDonorBuildingStdPriceAtAcq),
     actualLandAcquisitionPrice: num(primary.bgCoDonorActualAcquisitionLand),
-    actualBuildingAcquisitionPrice: num(primary.bgCoDonorActualAcquisitionBuilding),
+    /**
+     * 토지 자산에는 건물 부분이 없다 — 토지 칸이 입력되면 건물은 **0**(B1, 2026-09-30).
+     * 화면에 건물 칸이 없어 비워 두면 엔진 게이트(`assertCarryoverDonorBasis` K-4 「분리 2칸 또는 총액」)가
+     * 던진다. 위 토지 자산 기준시가 변환(`buildingStdPriceAt*: 0`)과 같은 사실을 싣는 것이지 fallback이 아니다.
+     */
+    actualBuildingAcquisitionPrice:
+      primary.assetKind === "land"
+        ? num(primary.bgCoDonorActualAcquisitionLand) !== undefined
+          ? 0
+          : undefined
+        : num(primary.bgCoDonorActualAcquisitionBuilding),
     actualAcquisitionTotal: num(primary.bgCoDonorActualAcquisitionTotal),
     marketValueAtAcquisition: num(primary.bgCoDonorMarketValueAtAcquisition),
   };

@@ -25,6 +25,7 @@ const mk = (over: Partial<Arg>): Arg => ({
   assetKind: "housing" as AssetForm["assetKind"],
   transferType: "burdened_gift",
   bgValuationMode: "sangjeungbeop_standard",
+  bgAcquisitionMethod: "",
   standardPriceAtAcq: "",
   standardPricePerSqmAtAcq: "",
   acquisitionArea: "",
@@ -43,8 +44,12 @@ describe("G-1 게이트 — UI(⑤)와 validate(⑧)가 공유하는 단일 술�
     expect(needsBgAcqStdPriceInput(mk({ assetKind: "general_building" }))).toBe(false);
   });
 
-  it("시가 모드 → 불필요 (K-4/K-5 축)", () => {
-    expect(needsBgAcqStdPriceInput(mk({ bgValuationMode: "sangjeungbeop_market" }))).toBe(false);
+  it("시가 모드 + 실지(K-4) → 불필요 (실지취득가액 안분 축)", () => {
+    expect(needsBgAcqStdPriceInput(mk({ bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual" }))).toBe(false);
+  });
+
+  it("🔴 시가 모드 + 환산(K-5) → 필요 (환산 분자 — 2026-09-30 B2, 종전 「불필요」는 칸 없는 차단을 만들었다)", () => {
+    expect(needsBgAcqStdPriceInput(mk({ bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "converted" }))).toBe(true);
   });
 
   it("일반 양도 → 불필요", () => {

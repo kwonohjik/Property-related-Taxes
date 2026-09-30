@@ -20,6 +20,7 @@ import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-a
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS, makeDefaultAsset } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
+import { gbUnifiedSec1639ClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -560,6 +561,14 @@ export function migrateAsset(raw: unknown): AssetForm {
    */
   if (!a.hasSeperateLandAcquisitionDate) {
     a.landAcquisitionDate = (a.acquisitionDate as string) ?? "";
+  }
+  /**
+   * G3(2026-09-30) — 일반건물 분리 OFF 상속·증여에 남은 추계 플래그. 그 카드에는 끌 라디오가 없어
+   * 복원된 폼이 영구 차단된다. 화면 전환과 **같은 patch**로 비운다. ⚠️ 위 `gbUseEstimatedAcquisition`
+   * 흡수·`migrateGeneralBuildingFields`(원인 normalize)보다 **뒤**여야 한다 — 앞에 두면 다시 켜진다.
+   */
+  if (a.assetKind === "general_building" && !a.hasSeperateLandAcquisitionDate) {
+    Object.assign(a, gbUnifiedSec1639ClearPatch(a.acquisitionCause as string | undefined));
   }
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)

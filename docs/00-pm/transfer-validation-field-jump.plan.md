@@ -333,6 +333,21 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 - **G1** — 증여 사건 정보의 출처를 `gbCarryoverEventSource`(토지도 이월과세면 `carryover`, 건물만이면 `buildingCarryover`) 하나로 두고 ④ `buildGbCarryoverPayload`·⑧ `validateGbCarryover`가 같이 쓴다. ⑧만 풀었으면 ④가 `{}`를 돌려 **조용히 미발동**했다. 분리 ON 건물 카드의 「토지 카드에서 입력」 안내는 조건이 뒤집혀 있어(토지 블록이 없을 때만 표시) 바로잡았다. 「이월과세 관계 그 외 · 건물만」 케이스가 도달 가능해져 skip 20 → 19.
 - 나머지 6건(A1·G2·G3·B1·B2·R2)은 미착수.
 
+**해소 (2026-09-30, 별도 작업 2차 — 같은 spec에 이어서)**:
+- **R2** — 「A 또는 PHD 단가 → 최초공시일도 입력」 검사를 **최초공시일 칸이 화면에 있는 조건**(환산 모드 + 단독주택 출자 2-point 분기 아님)으로 좁혔다(`validate-redev.ts` `phdInputsOnScreen`). 엔진은 실거래가 모드에서 §164⑦ 값을 쓰지 않아(`redevelopment-split.ts` `useEstimatedAcquisition` 게이트) 계산은 그대로다. ⚠️ P2-06 anchor(`redev-shared-land-price-partial-block.anchor.test.ts`) 두 건이 **실가 모드로 이 막다른 오류를 기대값으로 고정**하고 있었다 — 환산 모드로 옮기고 실가 모드 통과 단언을 추가했다.
+- **G3** — 검증을 좁히면 ④가 같은 플래그(`effectivePartAcqMode`)로 §163⑨ 파트를 환산 계산하므로 **입력 쪽에서 비운다**. `gbUnifiedSec1639ClearPatch`(상속·증여면 추계 플래그 5종)를 세 경로가 공유: 분리 OFF 원인 전환(`setUnifiedCause`) · 분리 ON→OFF(`setSeparate`) · 복원 마이그레이션(legacy `gbUseEstimatedAcquisition` 흡수 **뒤**). 세 경로 각각 E2E로 재현·고정(뮤테이션 3건 KILLED).
+- 남은 4건: A1·G2·B2(입력칸 없음 — 칸을 열지 요구를 뺄지 법령 판단) · B1.
+
+**해소 (2026-09-30, 별도 작업 3차 — 입력칸 없음 3건은 전부 「칸을 연다」)**: 셋 다 요구 자체는 계산이 쓰는 값이라 뺄 수 없었다.
+- **A1** — 증환지 당초분 `acquisitionArea`는 실거래가 모드에서도 비사업용 토지 판정의 토지면적이다(`non-business-land/form-mapper.ts:73`). ① 기본정보 증환지 칸(`ReplotIncreaseFields`)에 「종전토지 면적」을 연다 — 「일반」·「일부 양도」가 ①과 ③ 기준시가 위젯에 같은 필드를 두는 배치와 같다. 입력칸 이동 케이스를 실거래가 모드로 되돌렸다.
+- **G2** — 고시 전 상속·증여 건물은 §163⑨ 단서 2호의 「많은 금액」 비교값이 필요하다. `needsGbSec1639BuildingStdPrice`(⑤·⑧ 공용)로 「취득시 건물기준시가」 칸**만** 연다 — `showAcqStdPrice`를 넓히면 토지 칸·일괄 런처까지 열려 쓰이지 않는 칸을 보인다. 케이스 2건의 `capitalExpenditure` 우회를 걷었다.
+- **B2** — K-5 환산은 양도시·취득시 기준시가를 모두 쓴다(`burdened-gift-apportionment.ts` K-5). `needsBgAcqStdPriceInput`·`stdPriceAtTransferComesFromElsewhere`가 시가 모드 전체를 제외하던 것을 **시가 + 실지(K-4)만** 제외로 좁혔다. ⚠️ anchor 1건(「시가 모드 → 불필요」)이 이 결함을 기대값으로 고정하고 있었다 — K-4/K-5로 나눴다. K-5 메시지에 field를 달았다(종전 카드 후퇴).
+- ⚠️ 별건 발견(미수정): **토지** 부담부증여 K-5는 ⑧이 양도시 기준시가를 요구하지 않는다(단일 자산) — 비면 엔진이 `landStdPriceAtTransfer === 0`으로 취득가액 0을 조용히 낸다. 이번 변경으로 칸은 열렸다.
+- ~~남은 것: B1~~ → 아래 4차에서 해소.
+
+**해소 (2026-09-30, 별도 작업 4차 — 8건 전건 종결)**:
+- **B1** — 토지 자산의 「당초 증여자」 K-4 칸은 토지 하나뿐인데 ⑧·엔진 게이트(`assertCarryoverDonorBasis`)가 모두 「분리 2칸 또는 총액」을 요구했다. ⑧은 토지 자산이면 토지 칸 하나로 충족, ④는 토지 칸이 있으면 건물 부분을 **0**으로 싣는다(건물이 없는 사실 — 토지 자산 기준시가 변환의 `buildingStdPriceAt*: 0`과 같은 규칙, 양도인 K-4도 토지는 토지 칸만 요구). ⑧만 풀었으면 계산 단계에서 엔진이 던졌다 — anchor가 ④→게이트까지 고정(E2E는 ⑧까지만 닿는다: ④ 원복 뮤테이션에서 E2E 통과·anchor 2건 FAIL로 확인).
+
 추가 기록: 상속 상가 「상속세 신고가액」 칸은 평가방법을 고른 뒤에만 나타난다 — 결함은 아니고(입력 경로 있음), 평가방법 칸에 조건부 앵커를 달아 이동을 보완했다. 겸용 `mixed-use-asset.ts`의 2곳(`mixedTransferHousingPrice`·`mixedAcqLandPricePerSqm` 재검사)은 앞 검사가 같은 값을 먼저 요구해 **죽은 코드**다(키만 달고 케이스 없음).
 
 ### V-2 (같은 메시지 충돌)

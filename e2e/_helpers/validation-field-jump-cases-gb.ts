@@ -151,9 +151,8 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   {
     name: "gb: gbAcqBuildingValue (기준시가 고시 전 상속 건물)", field: "gbAcqBuildingValue", step: 0, assetIndex: A, message: /^자산: 취득시 건물기준시가 총액을 입력하세요\. 건물 기준시가 고시 전 상속/,
-    // 자본적지출 — 이 칸(`GeneralBuildingBlock` ② 취득시)은 `showAcqStdPrice`일 때만 렌더된다. 실거래가 상속은
-    // 일괄 가액·자본적지출이 없으면 칸이 없다(별건 결함 — 입력 경로 부재). 칸이 렌더되는 입력으로 둔다.
-    form: inh({ acquisitionDate: "1995-06-01", landAcquisitionDate: "1995-06-01", decedentAcquisitionDate: "1990-01-01", gbAcqBuildingValue: "", capitalExpenditure: "1000000" }),
+    // G2 해소 전에는 자본적지출을 넣어야 칸이 렌더됐다(입력 경로 부재) — 이제 우회 없이 둔다
+    form: inh({ acquisitionDate: "1995-06-01", landAcquisitionDate: "1995-06-01", decedentAcquisitionDate: "1990-01-01", gbAcqBuildingValue: "" }),
   },
 
   // ── 증여 ──
@@ -175,7 +174,7 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   {
     name: "gb: gbAcqBuildingValue (고시 전 증여 건물 · 분리 ON)", field: "gbAcqBuildingValue", step: 0, assetIndex: A, message: /^자산: 취득시 건물기준시가 총액을 입력하세요\. 건물 기준시가 고시 전 증여/,
-    form: sep({ gbBuildingAcquisitionCause: "gift", landAcquisitionDate: "1995-01-01", acquisitionDate: "1995-06-01", gbAcqBuildingValue: "", capitalExpenditure: "1000000" }),
+    form: sep({ gbBuildingAcquisitionCause: "gift", landAcquisitionDate: "1995-01-01", acquisitionDate: "1995-06-01", gbAcqBuildingValue: "" }),
   },
 
   // ── 매매 일괄 · 분리 ──

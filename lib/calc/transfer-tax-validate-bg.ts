@@ -198,12 +198,16 @@ export function validateBurdenedGiftAsset(
         return fieldError("bgAcquisitionMethod", `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`);
       }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
+      //   칸은 「② 양도정보」에 있다(B2 — 종전에는 시가 모드가 두 칸을 숨겨 채울 곳이 없었다).
       if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
         if (
           !parseAmount(asset.standardPriceAtTransfer) ||
           !parseAmount(asset.standardPriceAtAcq)
         ) {
-          return `${label}: 부담부증여 환산취득가액 — 양도시·취득시 기준시가를 입력하세요 (소령 §176의2②2호).`;
+          return fieldError(
+            !parseAmount(asset.standardPriceAtTransfer) ? "standardPriceAtTransfer" : "standardPriceAtAcq",
+            `${label}: 부담부증여 환산취득가액 — 「② 양도정보」의 양도시·취득시 기준시가를 입력하세요 (소령 §176의2②2호).`,
+          );
         }
       }
     } else {
@@ -258,6 +262,9 @@ export function validateBurdenedGiftAsset(
    *    막힌다」가 된다. `general_building`은 (5-b)가 gb* 축으로 따로 검사한다.
    */
   if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
+    // 시가 + 환산(K-5)도 이 칸을 쓴다(B2) — 주택·건물은 위 K-5 검사가 먼저 잡으므로 여기 오는 것은 토지다
+    if (asset.bgValuationMode === "sangjeungbeop_market")
+      return fieldError("standardPriceAtAcq", `${label}: 부담부증여 환산취득가액 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 환산취득가액은 양도가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱한 값입니다 (소득세법 시행령 제176조의2 제2항 제2호).`);
     return fieldError("standardPriceAtAcq", asset.assetKind === "land"
       ? `${label}: 부담부증여 기준시가 모드 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율입니다 (소득세법 시행령 제159조 제1항 제1호).`
       : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`);
@@ -361,9 +368,15 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
 
   // K-4(시가 + 실지취득가액)
   if (asset.bgAcquisitionMethod === "actual") {
+    /**
+     * 🔴 토지 자산은 **토지 칸 하나로 충족**한다(2026-09-30 B1). 화면은 토지 칸만 렌더하고(건물·총액 칸 없음)
+     *    건물 부분이 없는 것은 사실이다 — ④가 건물을 0으로 싣는다(`buildCarryoverDonorBasis`).
+     *    종전에는 「분리 2칸 또는 총액」을 요구해 채울 칸 없는 영구 차단이었다.
+     *    양도인 K-4(위 `validateBurdenedGiftAsset`)도 토지는 토지 칸만 요구한다.
+     */
     const hasSplit =
       filled(asset.bgCoDonorActualAcquisitionLand) &&
-      filled(asset.bgCoDonorActualAcquisitionBuilding);
+      (asset.assetKind === "land" || filled(asset.bgCoDonorActualAcquisitionBuilding));
     const hasTotal = filled(asset.bgCoDonorActualAcquisitionTotal);
     if (!hasSplit && !hasTotal) {
       // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지 = 토지·건물 분리, 그 외 = 총액)
