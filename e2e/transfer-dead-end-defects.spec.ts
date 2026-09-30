@@ -386,3 +386,42 @@ test.describe("B1 — 토지 + 이월과세 + 부담부증여 시가·실지취�
     await expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
   });
 });
+
+test.describe("별건 — 토지 부담부증여 「시가 + 환산」: 양도시 기준시가를 비우면 막는다", () => {
+  // 비우면 엔진이 토지 취득가액을 0으로 낸다(`burdened-gift-apportionment.ts` K-5 `landStdPriceAtTransfer === 0`)
+  const transferStdMsg = /부담부증여 환산취득가액 — 양도시 기준시가/;
+  const landK5 = withPrimary({
+    assetKind: "land",
+    transferType: "burdened_gift",
+    bgValuationMode: "sangjeungbeop_market",
+    bgMarketValueAtTransfer: "500000000",
+    bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "100000000",
+    bgDonorRelation: "lineal_descendant",
+    acquisitionArea: "100",
+    transferArea: "100",
+    standardPriceAtAcq: "100000000",
+    standardPriceAtTransfer: "",
+    standardPricePerSqmAtTransfer: "",
+  });
+
+  test("비우면 오류 → 그 칸으로 이동", async ({ page }) => {
+    await seedFormAndOpen(page, landK5);
+    await next(page).click();
+    // 수정 전에는 오류 없이 다음 단계로 넘어갔다(취득가액 0으로 계산)
+    const issue = panel(page).getByRole("button", { name: transferStdMsg });
+    await expect(issue).toBeVisible();
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="standardPriceAtTransfer"]')))
+      .toBe(true);
+
+    // ㎡당 단가를 넣으면 통과한다 — 면적은 시드의 100㎡(④와 같은 해석: 단가 × 양도면적)
+    await page
+      .locator('[data-asset-card-index="0"] [data-field="standardPriceAtTransfer"]')
+      .getByLabel("㎡당 단가 (원/㎡)")
+      .fill("3000000");
+    await next(page).click();
+    await expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
+  });
+});
