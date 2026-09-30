@@ -33,6 +33,7 @@ import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
+import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
 import { resolveHouseholdHousingCount, houseCountScalarLocked, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
@@ -407,9 +408,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 세대 보유 분양권 — §89①4호 가목 「다른 주택 **또는 분양권**을 보유하지 아니할 것」.
                 ④ 주택수·중과 판정 섹션은 세대 주택 2채 이상에서만 이 목록을 렌더하는데, 가목이
                 요구하는 상태는 「주택 0채」라 **분양권을 선언할 경로가 전무했다**(L1-03).
-                ④가 이미 렌더 중이면 중복이므로 2채 미만에서만 연다 — 값은 같은 `form.presaleRights`다.
+                ④ 목록이 렌더 중이면 중복이므로 그 술어(`houseRosterRendered`)의 부정일 때만 연다 — 값은 같은 `form.presaleRights`다.
               */}
-              {parseInt(form.householdHousingCount || "0") < 2 && (
+              {!houseRosterRendered(form, primaryKind) && (
                 <PresaleRightsSection
                   rights={form.presaleRights}
                   onChange={(presaleRights) => onChange({ presaleRights })}
@@ -453,9 +454,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               제1항에도 불구하고 같은 항 제3호를 적용하지 아니한다」 ⇒ 1세대1주택 비과세 판정의
               **직접 입력**이다. 같은 값이 §104⑦ 중과 주택 수에도 쓰인다(`form.presaleRights` 공용).
 
-              ⚠️ 2채 이상에서는 ④의 `HousesListSection`이 같은 배열을 렌더하므로 여기서는 열지 않는다.
+              ⚠️ ④의 `HousesListSection`이 렌더 중이면(`houseRosterRendered`) 같은 배열이 두 벌이 되므로 열지 않는다.
             */}
-            {parseInt(form.householdHousingCount || "0") < 2 && (
+            {!houseRosterRendered(form, primaryKind) && (
               <PresaleRightsSection
                 rights={form.presaleRights}
                 onChange={(presaleRights) => onChange({ presaleRights })}
@@ -637,8 +638,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           계속 검증해 지울 화면이 없는 dead-end가 됐다. ⑧의 skip은 D4-03에서 이미 걷어낸
           것이므로(무검증 통과 비대칭) 고칠 곳은 렌더 게이트다. */}
       <CalcCountExclusionLegacyNotice form={form} onChange={onChange} />
-      {surchargeSuspended &&
-        houseCountInputsVisible(form, primaryKind, { requireHousingPrimary: true }) && (
+      {surchargeSuspended && houseRosterRendered(form, primaryKind) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader
             title="④ 주택수 판정 (비과세)"

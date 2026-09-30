@@ -489,3 +489,68 @@ describe("CR-12 엔진 결과 — 선언 전건 (Q-6)", () => {
     expect(pick(r)).toEqual([{ id: "new_99_4_rural", houseId: "r", isEligible: true }]);
   });
 });
+
+/**
+ * CR-13 — 스칼라가 주택 수의 정본인데 ⑥ 행이 그 수에 들어 있지 않다 (S1 후속, F-1)
+ *
+ * 계획서 `docs/00-pm/transfer-count-exclusion-hidden-roster.plan.md` §1. 엔진은 `max(주택 수 − 제외 수, 0)`으로
+ * 빼서 스칼라 1 − ⑥ 1 = **0채** → 1세대1주택 비과세를 잃는다(실측 C 186,846,000 · D 264,600,600).
+ * 두 입력이 모순이라(스칼라 1 = 다른 주택 없음 · ⑥ 행 = 다른 주택 있음) 사용자가 고르도록 ⑧이 막는다(Q-1 (a)).
+ * 주택 수는 ④와 **같은 leaf**(`resolveHouseholdHousingCount`)로 센다.
+ */
+describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면 ⑧이 막는다 (F-1)", () => {
+  const MSG = "주택 수 제외로 지정한";
+  const REDEV = {
+    assetKind: "redevelopment_apt",
+    redevApprovalDate: "2018-01-01",
+    redevRightsValue: "400000000",
+    redevSettlementDirection: "pay",
+    redevSettlementAmount: "100000000",
+    redevIsSuccessorMember: "no",
+  } as Partial<AssetForm>;
+  const blocked = (f: TransferFormData) => step1Messages(f).filter((m) => m.includes(MSG));
+
+  it("[CR-13] 옛 이력 표식 · 스칼라 1 · ⑥ 행 → 차단 (종전: 0채로 과세 186,846,000)", () => {
+    const f = withForm({ houses: [ruralRow("r", "2021-01-01")], householdHousingCount: "1", legacyHouseCountPrecedence: true });
+    expect(blocked(f)).toEqual([
+      "세대 보유 주택 수(1채)가 주택 수 제외로 지정한 보유 주택 1채를 포함하지 않습니다. 주택 수 제외는 세대 보유 주택 수에서 그 주택을 빼는 것입니다 — 세대 보유 주택 수를 2채 이상으로 입력하거나, 보유 주택 목록에서 주택 수 제외 지정을 해제하세요.",
+    ]);
+  });
+
+  it("[CR-13r] 재개발 아파트 · 스칼라 1 · ⑥ 행 → 차단 (종전: 과세 264,600,600) — 명부가 정본이 아니라 버튼이 잠기지 않는다", () => {
+    const f = withForm({ houses: [ruralRow("r", "2021-01-01")], householdHousingCount: "1" }, REDEV);
+    expect(blocked(f)).toHaveLength(1);
+  });
+
+  it("[CR-13s] 감면주택 ⑥ 행도 센다", () => {
+    const special = row("s", "2012-10-15", {
+      countExclusion: {
+        kind: "special",
+        special: { article: "unsold_98_7", requirementsConfirmed: true } as SpecialHouseExclusionFormItem,
+      },
+    });
+    const f = withForm({ houses: [special], householdHousingCount: "1" }, REDEV);
+    expect(blocked(f)).toHaveLength(1);
+  });
+
+  it("[CR-13+] 짝 — 스칼라가 ⑥ 행을 포함하면 막지 않고 비과세 (재개발 스칼라 2)", async () => {
+    const f = withForm({ houses: [ruralRow("r", "2021-01-01")], householdHousingCount: "2" }, REDEV);
+    expect(blocked(f)).toEqual([]);
+    expect((await runCalc(f))?.isExempt).toBe(true);
+  });
+
+  it("[CR-13++] 짝 — 명부가 정본인 주택 양도는 스칼라가 1이어도 명부로 센다(④와 같은 leaf) → 막지 않는다", async () => {
+    const f = withForm({ houses: [ruralRow("r", "2021-01-01")], householdHousingCount: "1" });
+    expect(blocked(f)).toEqual([]);
+    expect((await runCalc(f))?.isExempt).toBe(true);
+  });
+
+  it("[CR-13-] 대조군 — ⑥이 없으면 막지 않는다(옛 이력 · 재개발 모두 비과세)", async () => {
+    const legacy = withForm({ houses: [row("r", "2021-01-01")], householdHousingCount: "1", legacyHouseCountPrecedence: true });
+    const redev = withForm({ houses: [row("r", "2021-01-01")], householdHousingCount: "1" }, REDEV);
+    expect(blocked(legacy)).toEqual([]);
+    expect(blocked(redev)).toEqual([]);
+    expect((await runCalc(legacy))?.isExempt).toBe(true);
+    expect((await runCalc(redev))?.isExempt).toBe(true);
+  });
+});

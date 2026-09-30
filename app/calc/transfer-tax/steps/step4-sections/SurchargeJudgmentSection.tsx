@@ -16,7 +16,7 @@
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HouseCountExemptionInputs } from "./HouseCountExemptionInputs";
-import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
 import {
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   isWithinSurchargeSuspensionWindow,
@@ -52,13 +52,14 @@ export function SurchargeJudgmentSection({
              섹션 전체가 안내 카드로 대체되어 사라지는데, 「소득세법」 §89②(주택 + 권리 보유
              세대의 주택 양도 → §89①3호 배제)은 **중과와 무관한 비과세 규칙**이라 그때도
              선언 경로가 있어야 한다.
-          ⚠️ 2채 이상에서는 아래 `HousesListSection`이 같은 `form.presaleRights`를 렌더한다.
+          ⚠️ 아래 `HousesListSection`도 같은 `form.presaleRights`를 렌더한다.
              두 벌이 뜨면 같은 배열을 두 컴포넌트가 각각 patch해 마지막 것이 이긴다 —
-             그래서 ②는 `< 2`에서만 연다.
+             그래서 ②는 `houseRosterRendered`의 **부정**일 때만 연다.
         */}
 
         {/* 비과세 판정 주택수 입력 3종 (한시배제 분기와 공용 — 두 분기는 배타) */}
-        {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+        {/* 목록 게이트 = 창 안 분기와 같은 술어(S1 후속 F-2 — 값이 남아 있으면 스칼라 < 2여도 보인다) */}
+        {houseRosterRendered(form, primaryKind) && (
           <HouseCountExemptionInputs
             form={form}
             onChange={onChange}
