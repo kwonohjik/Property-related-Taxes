@@ -40,6 +40,8 @@ const EXCLUSION_TYPE_LABELS = {
   staff_rental: "사원임대용",
   inheritance_under_5yr: "상속 5년 미경과",
   spouse_pre_marriage_house: "배우자의 혼인 전 주택 (혼인 전 분양권으로 취득)",
+  spouse_not_in_household_at_right_date: "배우자 주택 — 권리취득일 현재 세대원 아님 (2023.3.14. 전 취득)",
+  same_day_ordered_after_pending: "같은 날 취득 — 취득하는 주택 뒤로 정함",
   hansi_new_build: "한시특례 신축",
   hansi_lease_registered: "한시특례 임대등록",
   hansi_unsold_apt: "한시특례 미분양",

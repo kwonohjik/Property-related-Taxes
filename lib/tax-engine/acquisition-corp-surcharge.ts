@@ -95,8 +95,11 @@ export interface CorpSurchargeResult {
    * - factory_building: §13① 공장 건물 신축 6.8%
    * - excluded: 중과제외업종 해당
    * - not_applicable: 해당 없음
+   * - pre17473_metro_corp_housing: 법률 제17473호 부칙 제6조 → 종전 §13② 괄호(대도시 법인 주택 =
+   *   표준세율 + 중과기준세율×200%). 이 모듈이 아니라 `acquisition-tax.ts`가 부칙 적용 시 덮어쓴다.
    */
   surchargeType:
+    | "pre17473_metro_corp_housing"
     | "headquarters_new_build"
     | "metro_corp_5yr"
     | "headquarters_metro_combined"

@@ -10,6 +10,11 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { FormState, OwnedHouseInfo as FormOwnedHouseInfo } from "@/components/calc/acquisition/shared";
 // 간주취득 판별 leaf — ⑤·⑧과 같은 술어를 쓴다(손술어 사본 금지)
 import { isDeemedAcquisitionCause } from "@/components/calc/acquisition/shared";
+// 법률 제17473호 부칙 제6조 입력 게이트 leaf — ⑤와 같은 술어
+import { effectiveSaleContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
+import { isPre17473ContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
+// §28의4③ 동시 취득 순서 입력 게이트 leaf — ⑤와 같은 술어
+import { isSameDayOrderCandidate } from "@/lib/calc/acquisition-same-day-order";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import type { HouseCountInput, OwnedHouseInfo as EngineOwnedHouseInfo, RightAsset, OfficeAsset, PendingAcquisition } from "@/lib/tax-engine/house-count/types";
 
@@ -49,7 +54,7 @@ function earlierDateStr(a: string | undefined, b: string | undefined): string | 
  * 폼은 아파트·빌라 등 세부 유형을 받지 않으므로 엔진·Zod의 `"housing"`(세부 유형 미구분)으로 보낸다.
  * (종전에는 폼 값을 캐스팅해 넘겨 ⑫ enum에 없는 `"housing"`이 항상 400을 냈다 — OH-02)
  */
-function mapToEngineHouseInfo(h: FormOwnedHouseInfo, preMarriageRight: boolean): EngineOwnedHouseInfo {
+function mapToEngineHouseInfo(h: FormOwnedHouseInfo, preMarriageRight: boolean, form: FormState): EngineOwnedHouseInfo {
   const sv = parseAmount(h.standardValue) ?? 0;
   const share = parseFloat(h.ownershipShare);
 
@@ -69,45 +74,72 @@ function mapToEngineHouseInfo(h: FormOwnedHouseInfo, preMarriageRight: boolean):
     isHansiBenefitUnsoldApt: h.isHansiBenefit && h.hansiBenefitType === "unsold_apt",
     // §28의4⑥6호 — 「배우자 소유」 칸은 혼인 전 분양권 취득 토글이 켜졌을 때만 보이므로 그때만 보낸다(⑤·⑧과 같은 조건)
     ownedBySpouse: preMarriageRight && h.ownedBySpouse ? true : undefined,
+    ...sameDayOrderField(form, h),
   };
 
   // 공동상속 (§28의4⑤·⑥3호)
-  if (h.isInherited && h.inheritanceDate) {
-    info.inheritanceDate = h.inheritanceDate;
-    const si = parseFloat(h.shareInInheritance);
-    if (!isNaN(si)) info.shareInInheritance = si;
-    const ms = parseFloat(h.maxShareInInheritors);
-    if (!isNaN(ms)) info.maxShareInInheritors = ms;
-    info.tieInMaxShare = h.tieInMaxShare;
-    info.isResidentInInheritedHouse = h.isResident;
-    info.isOtherTiedHeirResident = h.otherTiedHeirResides ?? false;
-    info.isOldestInheritor = h.isOldest;
-  }
+  Object.assign(info, jointInheritanceFields(h, true));
 
   return info;
 }
 
+/**
+ * §28의4⑤ 공동상속 칸 — 주택·입주권·분양권·오피스텔 공용. 상속 토글 + 상속개시일이 있을 때만 보낸다.
+ * 입주권·분양권은 1호(「그 주택 또는 오피스텔에 거주하는 사람」)가 없어 거주 칸을 보내지 않는다(⑤도 숨긴다).
+ */
+function jointInheritanceFields(h: FormOwnedHouseInfo, hasResidenceTier: boolean) {
+  if (!h.isInherited || !h.inheritanceDate) return {};
+  const out: {
+    inheritanceDate: string;
+    shareInInheritance?: number;
+    maxShareInInheritors?: number;
+    tieInMaxShare: boolean;
+    isOldestInheritor: boolean;
+    isResidentInInheritedHouse?: boolean;
+    isOtherTiedHeirResident?: boolean;
+  } = { inheritanceDate: h.inheritanceDate, tieInMaxShare: h.tieInMaxShare, isOldestInheritor: h.isOldest };
+  const si = parseFloat(h.shareInInheritance);
+  if (!isNaN(si)) out.shareInInheritance = si;
+  const ms = parseFloat(h.maxShareInInheritors);
+  if (!isNaN(ms)) out.maxShareInInheritors = ms;
+  if (hasResidenceTier) {
+    out.isResidentInInheritedHouse = h.isResident;
+    out.isOtherTiedHeirResident = h.otherTiedHeirResides ?? false;
+  }
+  return out;
+}
+
+/**
+ * §28의4③ 동시 취득 순서 — ⑤가 칸을 여는 행(취득일이 산정일 후보와 같은 행)에서 켠 값만 보낸다.
+ * 엔진은 확정 산정일과 같은 날인지 다시 본다.
+ */
+function sameDayOrderField(form: FormState, h: FormOwnedHouseInfo): { sameDayOrderAfterPending?: true } {
+  return h.sameDayOrderAfterPending && isSameDayOrderCandidate(form, h) ? { sameDayOrderAfterPending: true } : {};
+}
+
 /** FormState.OwnedHouseInfo (오피스텔) → 엔진 OfficeAsset */
-function mapToEngineOfficeAsset(h: FormOwnedHouseInfo): OfficeAsset {
+function mapToEngineOfficeAsset(h: FormOwnedHouseInfo, form: FormState): OfficeAsset {
   return {
     id: h.id,
     standardValue: parseAmount(h.standardValue) ?? 0,
     // 법률 제17473호 부칙 제3조·제7조 · 소급 기준일 뒤 취득 판정 (OH-03·OH-26)
     acquisitionDate: h.acquisitionDate,
     contractDate: strOrUndef(h.contractDate ?? ""),
-    inheritanceDate: h.isInherited && h.inheritanceDate ? h.inheritanceDate : undefined,
+    ...sameDayOrderField(form, h),
+    ...jointInheritanceFields(h, true),
   };
 }
 
 /** FormState.OwnedHouseInfo (입주권·분양권) → 엔진 RightAsset */
-function mapToEngineRightAsset(h: FormOwnedHouseInfo): RightAsset {
+function mapToEngineRightAsset(h: FormOwnedHouseInfo, form: FormState): RightAsset {
   return {
     id: h.id,
     type: h.propertyType === "subscription_right" ? "subscription_right" : "redevelopment_right",
     rightAcquisitionDate: h.acquisitionDate,
     contractDate: strOrUndef(h.contractDate ?? ""),
-    // §28의4⑥3호 상속 5년 미경과 — 주택·오피스텔 행과 같은 규칙으로 전달 (OH-24)
-    inheritanceDate: h.isInherited && h.inheritanceDate ? h.inheritanceDate : undefined,
+    ...sameDayOrderField(form, h),
+    // §28의4⑥3호 상속 5년 미경과(OH-24) · §28의4⑤ 공동상속 소유자 판정 — 입주권·분양권은 거주 단계 없음
+    ...jointInheritanceFields(h, false),
   };
 }
 
@@ -126,11 +158,11 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
 
   for (const h of form.ownedHouses) {
     if (h.propertyType === "officetel") {
-      offices.push(mapToEngineOfficeAsset(h));
+      offices.push(mapToEngineOfficeAsset(h, form));
     } else if (h.propertyType === "right" || h.propertyType === "subscription_right") {
-      rights.push(mapToEngineRightAsset(h));
+      rights.push(mapToEngineRightAsset(h, form));
     } else {
-      houses.push(mapToEngineHouseInfo(h, preMarriageRight));
+      houses.push(mapToEngineHouseInfo(h, preMarriageRight, form));
     }
   }
 
@@ -258,6 +290,15 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
       const rd = strOrUndef(form.regulationDesignationDate);
       if (rd) body.regulationDesignationDate = rd;
       if (form.hasContractDepositProof) body.hasContractDepositProof = true;
+    }
+
+    // [E-6] 법률 제17473호 부칙 제6조 — 주택 매매의 매매계약일(연부취득이면 연부 매매계약일).
+    //   요건 칸(계약금 증빙·계약 당시 보유)은 ⑤가 2020.7.10. 이전 계약일에서만 보여 주므로 같은 조건에서만 보낸다.
+    const scd = effectiveSaleContractDate(form);
+    if (scd) body.saleContractDate = scd;
+    if (isPre17473ContractDate(form)) {
+      if (form.hasContractDepositProof) body.hasContractDepositProof = true;
+      if (form.acquiredBy === "individual" && form.ownedHouseAtSaleContract) body.ownedHouseAtSaleContract = true;
     }
 
     // 공유지분

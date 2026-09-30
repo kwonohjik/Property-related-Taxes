@@ -14,6 +14,7 @@ import {
   type OwnedHouseInfo,
   createOwnedHouseInfo,
 } from "./shared";
+import { isSameDayOrderCandidate } from "@/lib/calc/acquisition-same-day-order";
 
 interface Step2Props {
   form: FormState;
@@ -32,6 +33,7 @@ function OwnedHouseCard({
   index,
   requireDate,
   showSpouseOwner,
+  showSameDayOrder,
   onChange,
   onRemove,
 }: {
@@ -41,6 +43,8 @@ function OwnedHouseCard({
   requireDate: boolean;
   /** 혼인 전 소유한 주택분양권으로 취득(§28의4⑥6호) — 주택 행에 「배우자 소유」 칸을 연다 */
   showSpouseOwner: boolean;
+  /** 취득일이 주택 수 산정일 후보와 같은 행 — §28의4③ 순서 선택 칸을 연다(`isSameDayOrderCandidate`) */
+  showSameDayOrder: boolean;
   onChange: (updated: OwnedHouseInfo) => void;
   onRemove: () => void;
 }) {
@@ -51,6 +55,8 @@ function OwnedHouseCard({
     house.propertyType === "right" ||
     house.propertyType === "subscription_right";
   const dateRequired = isRightOrOffice || requireDate;
+  // §28의4⑤1호 「그 주택 또는 오피스텔에 거주하는 사람」 — 입주권·분양권에는 거주 단계가 없다
+  const isRight = house.propertyType === "right" || house.propertyType === "subscription_right";
 
   return (
     <ToneCard
@@ -101,6 +107,18 @@ function OwnedHouseCard({
           onChange={(v) => set("acquisitionDate", v)}
         />
       </div>
+
+      {/* §28의4③ — 산정일과 같은 날 취득한 자산은 납세의무자가 순서를 정한다. ④는 같은 조건에서만 보낸다 */}
+      {showSameDayOrder && (
+        <ToggleCard
+          tone="sky"
+          size="sm"
+          title="같은 날 취득 — 취득하는 주택 뒤로 정함"
+          description="취득하는 주택(분양권·입주권으로 취득하면 그 권리)과 같은 날 취득했다면 취득 순서를 정할 수 있습니다 — 켜면 이 자산은 주택 수에서 뺍니다 (시행령 §28의4③)"
+          checked={house.sameDayOrderAfterPending ?? false}
+          onCheckedChange={(v) => set("sameDayOrderAfterPending", v)}
+        />
+      )}
 
       {isRightOrOffice && (
         <div>
@@ -193,10 +211,16 @@ function OwnedHouseCard({
             tone="violet"
             size="sm"
             title="지분이 가장 큰 상속인이 두 명 이상 (동순위)"
-            description="본인 지분이 최대 지분과 같고 같은 지분의 다른 상속인이 있으면 켜세요 — 거주자 → 최연장자 순으로 소유자를 판정합니다 (시행령 §28의4⑤)"
+            description={
+              isRight
+                ? "본인 지분이 최대 지분과 같고 같은 지분의 다른 상속인이 있으면 켜세요 — 입주권·분양권은 최연장자를 소유자로 판정합니다 (시행령 §28의4⑤2호)"
+                : "본인 지분이 최대 지분과 같고 같은 지분의 다른 상속인이 있으면 켜세요 — 거주자 → 최연장자 순으로 소유자를 판정합니다 (시행령 §28의4⑤)"
+            }
             checked={house.tieInMaxShare}
             onCheckedChange={(v) => set("tieInMaxShare", v)}
           >
+            {!isRight && (
+            <>
             <ToggleCard
               tone="violet"
               size="sm"
@@ -213,12 +237,15 @@ function OwnedHouseCard({
               checked={house.otherTiedHeirResides ?? false}
               onCheckedChange={(v) => set("otherTiedHeirResides", v)}
             />
-            {/* 거주자가 한 명으로 정해지면 최연장자는 따지지 않는다 — 둘 다 거주하거나 아무도 거주하지 않을 때만 2호 */}
-            {house.isResident === (house.otherTiedHeirResides ?? false) && (
+            </>
+            )}
+            {/* 거주자가 한 명으로 정해지면 최연장자는 따지지 않는다 — 둘 다 거주하거나 아무도 거주하지 않을 때만 2호.
+                입주권·분양권은 1호가 없어 곧바로 2호 */}
+            {(isRight || house.isResident === (house.otherTiedHeirResides ?? false)) && (
               <ToggleCard
                 tone="violet"
                 size="sm"
-                title={house.isResident ? "거주하는 동순위 상속인 중 최연장자" : "동순위 상속인 중 최연장자"}
+                title={!isRight && house.isResident ? "거주하는 동순위 상속인 중 최연장자" : "동순위 상속인 중 최연장자"}
                 description="거주자로 정해지지 않으면 나이가 가장 많은 사람이 소유자 (§28의4⑤2호)"
                 checked={house.isOldest}
                 onCheckedChange={(v) => set("isOldest", v)}
@@ -413,6 +440,7 @@ export function Step2({
             index={i}
             requireDate={form.acquiredViaRight}
             showSpouseOwner={form.acquiredViaRight && form.acquiredViaPreMarriageRight}
+            showSameDayOrder={isSameDayOrderCandidate(form, h)}
             onChange={(updated) => updateHouse(i, updated)}
             onRemove={() => removeHouse(i)}
           />
@@ -550,8 +578,9 @@ export function Step2({
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             권리취득일이 혼인일보다 앞서야 합니다. 보유 주택 목록에서 배우자 주택에 「배우자 소유 주택」을 켜세요 —
-            혼인일 전에 취득한 배우자 주택만 뺍니다. 2023.3.14. 이후 취득하는 주택부터 적용합니다
-            (부칙 대통령령 제33325호 제2조).
+            혼인일 전에 취득한 배우자 주택만 뺍니다 — 2023.3.14. 이후 취득하는 주택부터 적용합니다
+            (부칙 대통령령 제33325호 제2조). 그 전에 취득한 주택도 권리취득일이 2020.8.12. 이후면 권리취득일
+            현재 세대(혼인 전이라 배우자가 없음)로 세므로 배우자 주택을 뺍니다 (§28의4① 후단 · 조심 2023지4299).
           </p>
         </ToggleCard>
       </ToggleCard>

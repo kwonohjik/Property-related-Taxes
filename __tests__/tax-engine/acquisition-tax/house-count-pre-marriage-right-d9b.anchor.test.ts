@@ -171,10 +171,11 @@ describe("[D9B] 트리거·기간 쌍둥이 (엔진)", () => {
     expect(r.effectiveCount).toBe(3);
   });
 
-  it("[D9B-15] 취득일 2023.3.13. → 부칙 제2조 적용 전 → 제외 없음 + 경고", () => {
+  it("[D9B-15] 취득일 2023.3.13. → ⑥6호 적용 전이지만 §28의4① 후단(권리취득일 현재 세대)으로 제외 — 조심 2023지4299", () => {
+    // 종전 기대값(3 + 경고)은 6호만 보고 ① 후단 독법을 놓쳤다 — `house-count-pre-marriage-era.anchor.test.ts` PM-01·02
     const r = hc({ rightAcquisitionDate: "2021-05-01", marriageDate: "2022-01-10", referenceDate: "2023-03-13" });
-    expect(r.effectiveCount).toBe(3);
-    expect(r.warnings.some((w) => w.includes("2023.3.14. 전"))).toBe(true);
+    expect(r.effectiveCount).toBe(2);
+    expect(r.excludedDetails.map((e) => e.reason)).toEqual(["spouse_not_in_household_at_right_date"]);
   });
 
   it("[D9B-16] 취득일 2023.3.14.(시행일) → 제외", () => {

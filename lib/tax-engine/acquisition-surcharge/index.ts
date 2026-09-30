@@ -124,6 +124,13 @@ export interface SurchargeCheckInput {
   /** 대도시 법인 중과(§13②) 적용 여부 */
   isCorpMetroSurcharge?: boolean;
 
+  // ── [E-6] 법률 제17473호 부칙 제6조 ──
+  /**
+   * 부칙 제6조가 적용되면 그 사유(결과 화면용). 주어지면 §13의2(다주택·법인 주택 중과·사치성 중복)를
+   * 판정하지 않는다 — 종전 세율은 호출자가 `basicRate`(4주택 4%)·법인 중과로 넘긴다.
+   */
+  pre17473Exception?: string;
+
   // ── 생애최초 감면 ──
   isFirstHome?: boolean;
   isMetropolitan?: boolean;
@@ -217,6 +224,21 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
     }
   }
 
+  // ── 3.5단계: [E-6] 법률 제17473호 부칙 제6조 — §13의2 개정규정 대신 종전 규정 ──
+  //   사치성(§13⑤)은 부칙 대상이 아니므로 5단계로 가되, §13의2③ 중복(다주택 세율)은 쓰지 않는다.
+  if (isHousing && input.pre17473Exception && !input.isLuxuryProperty) {
+    exceptions.push(input.pre17473Exception);
+    return {
+      isSurcharged: false,
+      appliedBranch: "basic",
+      preRegulationContractApplied,
+      firstHomeReduction: calcFirstHomeReduction(input, undefined),
+      exceptions,
+      warnings,
+      legalBasis: [ACQUISITION.SURCHARGE_17473_TRANSITION],
+    };
+  }
+
   // ── 4단계: 시가표준액 저가 주택 중과 배제 (P1-4) ──
   if (isHousing) {
     const stdValue = input.wholeHouseStandardValue ?? 0;
@@ -264,7 +286,8 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
 
     // 사치성 + 다주택 중복 여부: 고급주택이면서 다주택 중과에도 해당 시
     let multiHouseRateForLuxury: number | undefined;
-    if (isHousing && input.isLuxuryProperty) {
+    if (input.pre17473Exception) exceptions.push(input.pre17473Exception);
+    if (isHousing && input.isLuxuryProperty && !input.pre17473Exception) {
       const multiResult = assessMultiHouseSurcharge({
         acquiredBy: input.acquiredBy,
         isHousing,

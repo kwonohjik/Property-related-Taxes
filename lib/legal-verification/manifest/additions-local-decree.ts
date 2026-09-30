@@ -112,6 +112,23 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywords: ["7. 제2항제1호부터 제3호까지의 규정에 해당하는 주택"],
     keywordMode: "ALL",
   },
+  // ── §28의4③·⑤ (계획서 I-7·I-6 — 2026-09-30 KoreanLaw 현행 MST 288831 본문 verbatim) ──
+  {
+    id: "ACQUISITION.HOUSE_COUNT_SIMULTANEOUS_ACQUISITION",
+    citation: "지방세법 시행령 §28의4③",
+    keywords: ["동시에 2개 이상 취득하는 경우에는 납세의무자가 정하는 바에 따라 순차적으로 취득하는 것으로 본다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "ACQUISITION.HOUSE_COUNT_JOINT_INHERITANCE",
+    citation: "지방세법 시행령 §28의4⑤",
+    keywords: [
+      "상속으로 여러 사람이 공동으로 1개의 주택, 조합원입주권, 주택분양권 또는 오피스텔을 소유하는 경우 지분이 가장 큰 상속인",
+      "그 주택 또는 오피스텔에 거주하는 사람",
+      "나이가 가장 많은 사람",
+    ],
+    keywordMode: "ALL",
+  },
   {
     id: "LOCAL_DECREE.TEMPORARY_TWO_HOUSE",
     citation: "지방세법 시행령 §28의5",

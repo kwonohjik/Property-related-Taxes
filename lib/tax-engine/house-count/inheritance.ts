@@ -154,3 +154,56 @@ export function assessMainInheritor(input: MainInheritorInput): MainInheritorRes
     legalBasis: ACQUISITION.HOUSE_COUNT_JOINT_INHERITANCE,
   };
 }
+
+// ============================================================
+// 공동상속 자산 — 소유자 아님 판정 (주택·입주권·분양권·오피스텔 공통)
+// ============================================================
+
+/** §28의4⑤ 판정에 필요한 자산 칸 (주택·오피스텔은 거주 칸까지, 입주권·분양권은 거주 칸 없음) */
+export interface JointInheritanceAsset {
+  id?: string;
+  inheritanceDate?: string;
+  shareInInheritance?: number;
+  maxShareInInheritors?: number;
+  tieInMaxShare?: boolean;
+  isResidentInInheritedHouse?: boolean;
+  isOtherTiedHeirResident?: boolean;
+  isOldestInheritor?: boolean;
+}
+
+/**
+ * §28의4⑤ — 상속으로 여러 사람이 공동 소유하는 주택·조합원입주권·주택분양권·오피스텔은 지분이 가장 큰
+ * 상속인의 소유로 본다(동순위면 1호 「그 주택 또는 오피스텔에 거주하는 사람」 → 2호 최연장자).
+ * 5년 미경과(⑥3호)는 제외 판정에서 이미 빠졌으므로 여기서는 5년이 지난 상속 자산만 본다.
+ * 지분 칸이 없으면(종전 기록) 판정하지 않는다 — 종전처럼 산입.
+ *
+ * @param hasResidenceTier 1호(거주)가 있는 자산인지 — 주택·오피스텔 true, 입주권·분양권 false
+ * @returns 소유자로 보지 않으면 제외 항목, 소유자면 `{ owner: legalBasis }`, 판정 대상이 아니면 null
+ */
+export function judgeJointInheritanceOwnership(
+  asset: JointInheritanceAsset,
+  assetType: "house" | "right" | "office",
+  referenceDate: string,
+  hasResidenceTier: boolean
+): { excluded?: { assetId?: string; assetType: "house" | "right" | "office"; reason: "joint_inheritance_not_owner"; legalBasis: string; description: string }; ownerBasis?: string } | null {
+  if (!asset.inheritanceDate || isExcludedBy5YearRule(asset.inheritanceDate, referenceDate)) return null;
+  if (asset.shareInInheritance === undefined || asset.maxShareInInheritors === undefined) return null;
+  const result = assessMainInheritor({
+    shareOfTaxpayer: asset.shareInInheritance,
+    maxShareInInheritors: asset.maxShareInInheritors,
+    tieInMaxShare: asset.tieInMaxShare ?? false,
+    isResident: hasResidenceTier ? (asset.isResidentInInheritedHouse ?? false) : false,
+    isOldest: asset.isOldestInheritor ?? false,
+    isOtherTiedHeirResident: hasResidenceTier ? (asset.isOtherTiedHeirResident ?? false) : false,
+  });
+  if (result.isMainInheritor) return { ownerBasis: result.legalBasis };
+  return {
+    excluded: {
+      assetId: asset.id,
+      assetType,
+      reason: "joint_inheritance_not_owner",
+      legalBasis: result.legalBasis,
+      description: result.reason,
+    },
+  };
+}

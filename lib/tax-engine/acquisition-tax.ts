@@ -55,6 +55,11 @@ import {
 } from "./acquisition-self-cultivation-reduction";
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 import { resolveHouseCount } from "./house-count/index";
+import {
+  resolveTransitional17473,
+  resolvePre17473Rate,
+  countHousesForPre17473,
+} from "./acquisition-surcharge/transitional-17473";
 import type {
   AcquisitionTaxInput,
   AcquisitionTaxResult,
@@ -176,9 +181,21 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     }
   }
 
+  // ── Step 4.6: [E-6] 법률 제17473호 부칙 제6조 — 2020.7.10. 이전 매매계약 경과조치 ──
+  const transitional17473 = resolveTransitional17473({
+    propertyType: effectiveInput.propertyType,
+    acquisitionCause: effectiveInput.acquisitionCause,
+    acquiredBy: input.acquiredBy,
+    acquisitionDate: timingResult.acquisitionDate,
+    saleContractDate: input.saleContractDate,
+    hasContractDepositProof: input.hasContractDepositProof,
+    ownedHouseAtSaleContract: input.ownedHouseAtSaleContract,
+  });
+  warnings.push(...transitional17473.warnings);
+
   // ── Step 5: 기본세율 결정 ──
   // P1-6 적용 시 effectiveInput.acquisitionCause = "gift"로 fallback되어 일반 무상취득 흐름.
-  const basicRateDecision = decideTaxRate({
+  const rawBasicRateDecision = decideTaxRate({
     propertyType: effectiveInput.propertyType,
     acquisitionCause: effectiveInput.acquisitionCause,
     acquisitionValue: taxBase,
@@ -187,8 +204,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── Step 5a: [P2-2] §13①② 법인·공장 중과 판정 ──
   // §13①②는 §13의2(다주택 중과)와 별개의 중과 체계.
   // corp-surcharge 결과가 있으면 surchargeDecision 전 finalRate 결정에 우선 반영.
-  const corpSurchargeResult = assessCorpSurcharge({
-    basicRate: basicRateDecision.appliedRate,
+  let corpSurchargeResult = assessCorpSurcharge({
+    basicRate: rawBasicRateDecision.appliedRate,
     acquiredBy: input.acquiredBy,
     isMetropolitanCongestion: input.isMetropolitanCongestion,
     isHeadquarterNewBuild: input.isHeadquarterNewBuild,
@@ -208,6 +225,37 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // corpSurchargeResult.isCorpMetroContext가 true이면 §15 특례 시 (basicRate - 2%) × 3 산식
   const effectiveCorpMetro = input.isCorpMetroSurcharge || corpSurchargeResult.isCorpMetroContext;
   const effectiveHqSurcharge = corpSurchargeResult.excludesSpecialRate;
+
+  // [E-6] 부칙 제6조 적용 시 종전 세율 — 개인 4주택 이상 4%(종전 §11④2호) · 대도시 법인 주택
+  //   표준세율 + 중과기준세율×200%(종전 §13② 괄호). §13의2는 아래 assessSurcharge가 건너뛴다.
+  const pre17473 = transitional17473.applies
+    ? resolvePre17473Rate({
+        acquiredBy: input.acquiredBy,
+        basicRate: rawBasicRateDecision.appliedRate,
+        saleContractDate: input.saleContractDate ?? "",
+        houseCount: countHousesForPre17473(input.houseCountInput, input.houseCountAfter),
+        isCorpMetro: effectiveCorpMetro === true,
+      })
+    : undefined;
+  if (pre17473) {
+    warnings.push(...pre17473.warnings);
+    legalBasis.push(...pre17473.legalBasis);
+  }
+  const basicRateDecision =
+    pre17473?.fourHouseRate !== undefined
+      ? { ...rawBasicRateDecision, appliedRate: pre17473.fourHouseRate, rateType: "basic" as const, legalBasis: ACQUISITION.PRE_17473_FOUR_HOUSE_RATE }
+      : rawBasicRateDecision;
+  if (pre17473?.metroCorpHousingRate !== undefined) {
+    corpSurchargeResult = {
+      ...corpSurchargeResult,
+      isSurcharged: true,
+      surchargeRate: pre17473.metroCorpHousingRate,
+      surchargeType: "pre17473_metro_corp_housing",
+      reason: pre17473.exception,
+      legalBasis: [ACQUISITION.PRE_17473_METRO_CORP_HOUSING],
+      isCorpMetroContext: true,
+    };
+  }
 
   // ── Step 5b: [P2-1] §15 세율특례 적용 ──
   // §13①(본점·공장) 중과 대상이면 §15 배제.
@@ -296,6 +344,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     isCorpMetroSurcharge: effectiveCorpMetro,
     // [P2-1] 세율특례 사유 (무상취득 단서 배제 판단에 사용)
     specialRateType: input.specialRateType,
+    // [E-6] 법률 제17473호 부칙 제6조 — §13의2 대신 종전 규정
+    pre17473Exception: pre17473?.exception,
   });
 
   warnings.push(...surchargeDecision.warnings);
@@ -391,6 +441,10 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── 부가세 계산 ──
   // [P4-2] 사치성 교육세 매트릭스 분기 — surchargeDecision의 appliedBranch 사용
   const surchargeTypeForEdu = ((): import("./acquisition-tax-rate").AdditionalTaxInput["surchargeType"] => {
+    // [E-6] 종전 §11④2호 4%는 §11①8호 주택세율이 아니다 → §151①1 본문 (표준세율 4% − 2%) × 20%
+    if (pre17473?.fourHouseRate !== undefined) return "pre17473_four_house";
+    // [E-6] 종전 §13② 대도시 법인 주택 → §151①1가 단서(법인 §11①8호 주택) → 나목 0.4%
+    if (corpSurchargeResult.surchargeType === "pre17473_metro_corp_housing") return "pre17473_corp_metro_housing";
     // [R3-05] 법인 §13②(대도시 5년내)·§13⑥(본점+대도시 중복) 비주택 중과 → §151①1가 본문×300%.
     //   §13①(본점·공장: headquarters_new_build/factory_*)는 §151①1가 열거 제외 → 본문(0.4%).
     //   §13② 중과는 corpSurchargeResult에서만 isSurcharged=true가 되므로 여기서 매핑.
