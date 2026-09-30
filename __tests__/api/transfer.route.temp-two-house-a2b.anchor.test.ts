@@ -220,14 +220,39 @@ describe("A2b ⑭ route — 단건·다건·판정 메뉴가 같은 결론", () 
     expect(await multi(at("2018-09-14"))).toBeGreaterThan(0);
   });
 
-  it("R-4 명부 행 주소 — 신규 인천 서구 2020-06-18 취득 비과세 / 2020-06-19 과세 (단건·다건·판정)", async () => {
+  // L-7(2026-09-30): 공고일(2020-06-19) 당일 취득은 「공고가 있은 날 이전」 — 과세 경계를 06-20으로 옮겼다.
+  it("R-4 명부 행 주소 — 신규 인천 서구 2020-06-18·06-19(공고일) 취득 비과세 / 2020-06-20 과세 (단건·다건·판정)", async () => {
     const at = (acq: string) =>
       form({ transferDate: "2021-08-01" }, { acquisitionDate: acq, regionCode: SEO_GU }, { regionCode: GANGNAM });
     expect(await single(at("2020-06-18"))).toBe(0);
-    expect(await single(at("2020-06-19"))).toBeGreaterThan(0);
+    expect(await single(at("2020-06-19"))).toBe(0);
+    expect(await single(at("2020-06-20"))).toBeGreaterThan(0);
     expect(await multi(at("2020-06-18"))).toBe(0);
-    expect(await multi(at("2020-06-19"))).toBeGreaterThan(0);
+    expect(await multi(at("2020-06-19"))).toBe(0);
+    expect(await multi(at("2020-06-20"))).toBeGreaterThan(0);
     expect(await judge(at("2020-06-18"))).toBe(true);
-    expect(await judge(at("2020-06-19"))).toBe(false);
+    expect(await judge(at("2020-06-19"))).toBe(true);
+    expect(await judge(at("2020-06-20"))).toBe(false);
+  });
+
+  /**
+   * L-7 — 서면-2021-부동산-3718 사실관계(청주 · 계약=매각허가결정 = 공고일 2020-06-19 · 잔금 2020-06-30 · 양도 2022-12)
+   * → 서면-2021-법령해석재산-4728 「매매계약 체결일(매각허가결정일)이 조정대상지역의 공고가 있는 날 이전인 경우 …
+   * 3년을 적용」. 종전(base)은 계약일에 이미 효력이 있어 2년(2022-06-30 도과) 과세였다.
+   */
+  it("R-5 L-7 계약 2020-06-19(공고일) 비과세 / 2020-06-20 과세 (단건·다건·판정)", async () => {
+    const CJ = "4311110100";
+    const at = (c: string) =>
+      form(
+        { transferDate: "2022-12-01", newHouseContractDate: c },
+        { acquisitionDate: "2020-06-30", regionCode: CJ },
+        { acquisitionDate: "2019-02-21", regionCode: CJ },
+      );
+    expect(await single(at("2020-06-19"))).toBe(0);
+    expect(await single(at("2020-06-20"))).toBeGreaterThan(0);
+    expect(await multi(at("2020-06-19"))).toBe(0);
+    expect(await multi(at("2020-06-20"))).toBeGreaterThan(0);
+    expect(await judge(at("2020-06-19"))).toBe(true);
+    expect(await judge(at("2020-06-20"))).toBe(false);
   });
 });

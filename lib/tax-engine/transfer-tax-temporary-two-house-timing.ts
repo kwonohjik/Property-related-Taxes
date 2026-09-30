@@ -20,7 +20,8 @@ import {
 } from "./civil-period";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
-import { isRegulatedByBjdCode } from "./data/regulated-areas";
+import { governingDesignationStart, isRegulatedByBjdCode } from "./data/regulated-areas";
+import { PRE_DESIGNATION_CONTRACT_EXCLUSION } from "./legal-codes";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
   resolveTemporaryTwoHouseDeadlineEra,
@@ -168,18 +169,36 @@ export function resolveTemporaryTwoHouseDeadlineYears(
  * 주택마다 법정동코드가 있으면 `isRegulatedByBjdCode(취득일)`로 정밀 판정하고(형제
  * `resolveWasRegulatedAtAcquisition`과 같은 규약 — 코드가 선언을 이긴다), 없으면 사용자 선언을 쓴다.
  *
- * 2호 괄호 「조정대상지역의 공고가 있은 날 이전에 … 매매계약을 체결하고 계약금을 지급한 사실이
- * 증명서류에 의해 확인되는 경우는 제외」 — 신규 주택 코드와 계약일이 있으면 **계약일 기준**으로도
- * 조정 여부를 보고, 그때 미지정이었으면 신규 주택을 조정대상지역 취득으로 보지 않는다.
- * ⚠️ 확인 필요: 데이터의 `designatedDate`는 효력일이다 — 공고일 **당일** 계약(「공고가 있은 날 이전」에
- *    포함)은 여기서 조정 취득으로 잡힌다. 경계 하루의 해석 근거를 찾지 못해 데이터 규약을 따른다.
+ * 2호 괄호 「조정대상지역의 공고가 있은 날 이전에 신규 주택…을 취득하거나 신규 주택을 취득하기 위해
+ * 매매계약을 체결하고 계약금을 지급한 사실이 증명서류에 의해 확인되는 경우는 제외한다」(MST 204914 §155①
+ * 괄호 · MST 218373·242735 §155①2호 — 세 시행본 모두 이 괄호가 있다) — 신규 주택 코드가 있으면 두 단계로 본다:
+ *   ① 계약일에 미지정이었으면 조정 취득이 아니다(종전 규칙 — 그대로 둔다).
+ *   ② `resolveNewHousePreAnnouncement` — 취득일에 효력이 있는 지정 구간을 연 **공고일**(11호와 같은 leaf·표)
+ *      이후가 아니면(계약일 또는 취득일 `<=` 공고일) 조정 취득이 아니다.
+ *
+ * 「이전」의 당일 포함 근거 — 서면-2021-부동산-3718 [부동산납세과-2395, 2022.8.25.]: 신규주택 매각허가결정일
+ * (= 매매계약 체결일)이 조정대상지역 지정 공고일(2020.6.19., 국토교통부공고 제2020-828호)과 **같은 날**인 사안에
+ * 서면-2021-법령해석재산-4728 [법령해석과-4509, 2021.12.20.] 「…신규주택의 매매계약 체결일(매각허가결정일)이
+ * 조정대상지역의 공고가 있는 날 이전인 경우 「소득세법 시행령」 제155조제1항에 따른 일시적 2주택 허용기간은
+ * 3년을 적용하는 것입니다」를 참고하라고 회신했다. 같은 문언의 취득 측 해석: 서면-2021-부동산-0624
+ * [부동산납세과-909, 2022.4.14.](「공고가 있은 날에 매매계약을 체결하고 계약금을 지급한 경우 거주요건을
+ * 적용하지 아니하는 것임」 — 영 §154①5호).
+ * ⚠️ **취득일 = 공고일**을 제외에 넣는 것은 위 해석들(모두 **계약일** 사안)을 같은 괄호의 「이전에 … 취득」에
+ *    옮겨 읽은 것이다 — 취득일 당일을 직접 다룬 해석은 찾지 못했다.
  *
  * 어느 쪽이 `false`면 결론이 확정된다(한쪽만 조정 = 본문 3년). 둘 다 `true`여야 조정→조정이다.
  * 그 밖(미입력)은 `determined: false` — 호출부가 종전 대리 지표로 계산하고 판정 보류를 고지한다.
  */
 export function resolveRegulatedAtNewAcquisition(
   p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode">,
-): { previous?: boolean; next?: boolean; bothRegulated: boolean; determined: boolean } {
+): {
+  previous?: boolean;
+  next?: boolean;
+  bothRegulated: boolean;
+  determined: boolean;
+  /** 신규 주택 지정 구간의 공고일이 공고일 표에 없어 ②를 판정하지 않았다(①만 적용) */
+  announcementWarning?: string;
+} {
   const tt = p.temporaryTwoHouse;
   if (!tt) return { bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false };
   const at = (code: string | undefined, declared: boolean | undefined, date: Date) =>
@@ -189,10 +208,47 @@ export function resolveRegulatedAtNewAcquisition(
   if (next === true && tt.newHouseRegionCode && tt.newHouseContractDate) {
     next = isRegulatedByBjdCode(tt.newHouseRegionCode, format(tt.newHouseContractDate, "yyyy-MM-dd")).isRegulated;
   }
-  if (previous === false || next === false) return { previous, next, bothRegulated: false, determined: true };
-  if (previous === true && next === true) return { previous, next, bothRegulated: true, determined: true };
+  let announcementWarning: string | undefined;
+  if (next === true && tt.newHouseRegionCode) {
+    const pre = resolveNewHousePreAnnouncement(tt.newHouseRegionCode, tt.newAcquisitionDate, tt.newHouseContractDate);
+    if (pre.excluded) next = false;
+    announcementWarning = pre.warning;
+  }
+  const warn = announcementWarning ? { announcementWarning } : {};
+  if (previous === false || next === false) return { previous, next, bothRegulated: false, determined: true, ...warn };
+  if (previous === true && next === true) return { previous, next, bothRegulated: true, determined: true, ...warn };
   // 미입력 — 저장 당시 결론을 보존하려고 종전 대리 지표(양도일 기준 양도주택)로 계산한다(고지 동반).
-  return { previous, next, bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false };
+  return { previous, next, bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false, ...warn };
+}
+
+/**
+ * 신규 주택이 「조정대상지역의 공고가 있은 날 이전에」 취득·계약된 것인가 (§155①2호 괄호 — 위 주석).
+ *
+ * 「공고」 = **신규 주택 취득일에 효력이 있는 연속 지정 구간을 연 공고** — 영 §167의10①11호 등 공고 전
+ * 매매계약 중과 배제(`multi-house-surcharge-exclusion.ts`)와 같은 leaf(`governingDesignationStart` — 지역 해석은
+ * `isRegulatedByBjdCode`와 동일)·같은 효력일→공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES`,
+ * 2017-08-03 → 2017-11-10 등)를 쓴다. 11호는 **양도일**, 여기는 **신규 주택 취득일**에 효력이 있는 구간이다.
+ *
+ * 계약일은 「매매계약을 체결하고 계약금을 지급한」 날로 받는 자기선언 입력이다(`newHouseContractDate`).
+ * 표에 없는 시작일이면 판정하지 않고 경고한다(11호와 같은 규약 — 근거 없이 유리하게 적용하지 않는다).
+ */
+function resolveNewHousePreAnnouncement(
+  code: string,
+  acquisitionDate: Date,
+  contractDate: Date | undefined,
+): { excluded: boolean; warning?: string } {
+  const acq = format(acquisitionDate, "yyyy-MM-dd");
+  const start = governingDesignationStart(code, acq);
+  if (!start) return { excluded: false };
+  const announcement = PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES[start];
+  if (!announcement) {
+    return {
+      excluded: false,
+      warning: `신규 주택 소재지의 조정대상지역 지정(효력 ${start}) 공고일이 공고일 표에 없어 「공고가 있은 날 이전」 취득·계약 여부를 판정하지 않았습니다 — 공고일을 직접 확인하세요`,
+    };
+  }
+  const contract = contractDate ? format(contractDate, "yyyy-MM-dd") : undefined;
+  return { excluded: acq <= announcement || (contract !== undefined && contract <= announcement) };
 }
 
 /**
