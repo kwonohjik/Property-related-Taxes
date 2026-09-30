@@ -28,6 +28,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import { buildBurdenedUnlistedValuationFields } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
@@ -630,6 +631,9 @@ export function buildGiftStockBurdenedTransferBody(
       if (bgt.acquisitionDatePriceAvg1Month !== undefined) {
         body.acquisitionDatePriceAvg1Month = bgt.acquisitionDatePriceAvg1Month;
       }
+    } else {
+      // 비상장 환산 — §165④ 평가 입력(B23). 종전엔 한 필드도 싣지 않아 취득가액 0이었다.
+      Object.assign(body, buildBurdenedUnlistedValuationFields(bgt));
     }
   }
 

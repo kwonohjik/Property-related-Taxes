@@ -36,6 +36,7 @@ import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync"
 import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 import { resolveBurdenedGiftJudgmentDate } from "@/lib/calc/gift-burdened-transfer-api";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { StockBurdenedUnlistedValuationBlock } from "@/components/calc/gift/StockBurdenedUnlistedValuationBlock";
 
 interface StockBurdenedDebtSectionProps {
   item: EstateItem;
@@ -409,6 +410,16 @@ export function StockBurdenedDebtSection({
                     />
                   </FieldCard>
                 </ToneCard>
+              )}
+
+              {/* ⑤″ 비상장 환산 — §165④ 보충적 평가 (B23 — 종전엔 입력 칸이 없어 취득가액 0) */}
+              {bgt?.marketType === "unlisted" && bgt.acquisitionMode === "estimated" && (
+                <StockBurdenedUnlistedValuationBlock
+                  item={item}
+                  bgt={bgt}
+                  transferDate={transferDate ?? ""}
+                  onChange={setBgt}
+                />
               )}
 
               {/* ⑤′ 중소기업 여부 (§104①11) — 대주주·비대주주 양쪽 세율 분기에 걸린다 */}
