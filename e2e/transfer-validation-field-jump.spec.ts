@@ -12,6 +12,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases";
 
 async function ready(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -148,4 +149,39 @@ test.describe("검증 오류 → 입력칸 이동", () => {
     // 입력칸으로 가지 않았다 — 카드 안에 포커스된 입력이 없다
     await expect(card.locator("input:focus")).toHaveCount(0);
   });
+});
+
+/**
+ * Phase 1 field 부착 키 전수 — 「그 오류를 누르면 그 키의 입력칸에 커서」.
+ * 입력은 `_helpers/validation-field-jump-cases.ts`(오류 발생은 vitest가 먼저 고정).
+ */
+test.describe("검증 오류 → 입력칸 이동 (키 전수)", () => {
+  for (const c of FIELD_JUMP_CASES) {
+    test(`${c.field}`, async ({ page }) => {
+      test.skip(!!c.unreachableInUi, c.unreachableInUi);
+      await seedAndOpen(page, c.form());
+      if (c.step === 1) await page.getByRole("button", { name: "보유 상황" }).first().click();
+      if (c.step === 3) await page.getByRole("button", { name: "가산세" }).first().click();
+      await (c.step === 3 ? page.getByRole("button", { name: /세금 계산하기/ }) : next(page)).click();
+
+      const item = panel(page).getByRole("button", { name: c.message });
+      await expect(item).toBeVisible();
+      await item.click();
+
+      // 포커스가 그 키의 앵커 안(자산 수준이면 그 카드 안)에 있고 화면에 보인다
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const el = document.activeElement as HTMLElement | null;
+            if (!el || el === document.body) return null;
+            return {
+              field: el.closest("[data-field]")?.getAttribute("data-field") ?? null,
+              card: el.closest("[data-asset-card-index]")?.getAttribute("data-asset-card-index") ?? null,
+            };
+          }),
+        )
+        .toMatchObject(c.assetIndex != null ? { field: c.field, card: String(c.assetIndex) } : { field: c.field });
+      await expect(page.locator(":focus")).toBeInViewport();
+    });
+  }
 });

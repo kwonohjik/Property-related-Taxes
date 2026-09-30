@@ -150,7 +150,7 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 | V-1 | 이슈 객체에 `field` 추가 시 기존 vitest 무변경 통과 | ✅ `npm run test:transfer` 996파일 **기존 테스트 수정 0건**으로 통과 |
 | V-2 | 한 검증 실행 내 동일 메시지 문자열 중복 여부 | ✅ Phase 1 범위는 충돌 없음 — `fieldError` 메시지 11건 전부 `${label}:`(「자산」/「자산 N」) 접두라 자산마다 유일. ⚠️ 접두 없는 메시지를 이관하는 Phase에서 재확인 |
 | V-3 | 메시지 생산 지점 정확한 수(§2.1 근사 440) | 확인 필요 — Phase 계획 규모 보정 |
-| V-4 | 1~3단계 입력의 접힘 구조 | 🟡 부분 — `householdHousingCount`는 E2E로 이동 확인. `gracePeriod.*`·`presaleRights.*`·수정신고 칸은 앵커만 달았고 E2E 미확인(오류가 날 때 그 칸이 렌더되는 조건이라 보이는 것으로 판단 — **실측 아님**) |
+| V-4 | 1~3단계 입력의 접힘·렌더 조건 | ✅ **E2E 키 전수로 해소**(아래 「키 전수 E2E」) — 20키 중 19키가 「그 오류를 누르면 그 키의 입력칸에 커서 + 화면 안」 통과. `assetKind`는 화면에서 도달 불가(사유 기재) |
 | V-5 | `checkVisibility()` 지원 | ✅ chromium E2E 통과. 미지원 브라우저는 `offsetParent` 대체 분기(`validation-jump.ts:isShown`) — Safari 실기 미확인 |
 
 ## 7-1. Phase 1 실측 결과 (Do)
@@ -173,6 +173,17 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 | 3단계 | `originalDeterminedTax` · `posteriorEventDate` · `statutoryFilingDeadline` · `amendedFilingDate` · `amendedPaymentDate` |
 
 **의도적으로 남긴 것(카드 후퇴)** — 0단계: 함께양도 불가 조합·부담부증여 평가 모드·매매사례가액 2번째 자산·지분 합계 100%(특정 칸이 아니라 조합 오류) · 일반건물 미등기 안내 · 지분 단독 불가 · 가업상속공제 4건 · 하위 검증(취득·특수자산 등 — Phase 2~4). 1단계: 보유 감면주택 행·보유 주택 목록 첫 오류·양도주택 특례 기간·지정 전 계약·단서·최종 1주택·거주기간·상속 일반주택 입주권(Phase 4).
+
+### 키 전수 E2E (사용자 요청 「e2e 확인해」, 2026-09-30)
+
+처음 E2E는 20키 중 **4키**(양도일·총 양도가액·소재지·주택 수)만 실제 이동을 봤고, 나머지 16키는 정적 게이트(「앵커가 소스에 있다」)뿐이었다 — 「그 오류가 날 때 그 칸이 렌더되고 보이는가」는 미확인이었다.
+
+- 케이스 정의 `e2e/_helpers/validation-field-jump-cases.ts` — 키마다 「검증이 그 오류를 내고 화면이 그 칸을 렌더하는」 입력. 중과 한시 유예는 1세대·2채·보유 주택 1행·**보유 2년 미만**(한시배제 창 밖)이어야 열린다.
+- vitest `transfer-validation-field-jump-cases.test.ts` 17건 — 각 입력이 **그 메시지·그 field·그 assetIndex**를 내는지, 3단계 케이스는 **0~2단계 무오류**(「세금 계산하기」가 앞 단계를 먼저 재검증)까지 고정. E2E가 엉뚱한 줄에서 30초로 터지기 전에 여기서 이름으로 실패한다.
+- E2E 판정: `document.activeElement.closest("[data-field]")` = 그 키, 자산 수준이면 `closest("[data-asset-card-index]")` = 그 카드, 그리고 `:focus`가 화면 안.
+- 결과: **15/15 통과 + `assetKind` 건너뜀**. `assetKind` 오류는 세션 복원이 빈 종류를 `"building"`으로 채우고(`calc-wizard-asset-migrate.ts:290`) 화면이 항상 한 종류를 선택해 두므로 **사용자가 낼 수 없다**(E2E 실측: 오류 항목 자체가 안 뜸) — 케이스에 `unreachableInUi` 사유를 적고 vitest만 유지.
+- 첫 실행 실패 9건 중 8건은 **테스트 버그**였다(`expect.anything()`은 `null`과 불일치 — 폼 전역 키의 카드 인덱스). field는 전부 일치했다.
+- 뮤테이션: M8 앵커 1개 제거(`posteriorEventDate`) → 그 케이스만 FAIL · M9 검증 키 오기(수정신고일 → 법정신고기한) → 그 케이스만 FAIL.
 
 ### 검증
 
