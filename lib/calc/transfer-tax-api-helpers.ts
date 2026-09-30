@@ -12,10 +12,10 @@ import {
   isHousingExprEligibleAssetKind,
   isSplitLandExprEligibleAssetKind,
 } from "@/lib/tax-engine/expropriation-scope";
-import { differenceInYears } from "date-fns";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
   isWithinSurchargeSuspensionWindow,
-  MULTI_HOUSE,
   TEMP_TWO_HOUSE_PROVISO_REASONS,
 } from "@/lib/tax-engine/legal-codes/transfer";
 
@@ -23,7 +23,8 @@ import {
  * 다주택 중과 한시배제(소득세법 시행령 §167의3①12의2·§167의10①12의2) 여부 —
  * 양도일 ∈ [2022-05-10, 2026-05-09] AND 양도 주택 보유기간 2년 이상(§95④).
  * true면 중과 전면배제(일반세율) → UI ④ 섹션 숨김 + 해당 검증 skip(양쪽 단일 술어).
- * 엔진 determineMultiHouseSurcharge의 배제 조건(양도일 윈도우 + differenceInYears≥2)과 동일.
+ * 엔진 determineMultiHouseSurcharge의 배제 조건(양도일 윈도우 + §95④ 보유기간 2년 — `meetsSurchargeSuspensionHolding`,
+ * 초일 산입 · E-11)과 **같은 함수**다.
  */
 export function isMultiHouseSurchargeSuppressed(
   transferDate: string | undefined | null,
@@ -31,10 +32,9 @@ export function isMultiHouseSurchargeSuppressed(
 ): boolean {
   if (!isWithinSurchargeSuspensionWindow(transferDate) || !transferDate || !acquisitionDate)
     return false;
-  return (
-    differenceInYears(new Date(transferDate), new Date(acquisitionDate)) >=
-    MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS
-  );
+  const t = toOptionalDate(transferDate);
+  const a = toOptionalDate(acquisitionDate);
+  return t !== undefined && a !== undefined && meetsSurchargeSuspensionHolding(a, t);
 }
 
 /** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / 미노출. */

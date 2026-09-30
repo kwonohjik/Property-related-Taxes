@@ -12,6 +12,7 @@
 
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "./legal-codes";
+import { isWithinDeadline } from "./civil-period";
 import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
 import { RA_CUT } from "./rental-article/rules";
@@ -143,6 +144,7 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
 export function calcRentalPeriodYears(house: HouseInfo): number {
   if (house.rentalPeriodYears != null) return house.rentalPeriodYears;
   if (house.rentalStartDate && house.rentalEndDate) {
+    // 임대기간은 §167의3③ → 조특령 §97 준용이라 E-11(초일 규칙) 범위 밖이다 — 계획서 Q-2(근거 확인 전 유지).
     return differenceInYears(house.rentalEndDate, house.rentalStartDate);
   }
   return 0;
@@ -472,7 +474,9 @@ export function isSurchargeExemptRental(house: HouseInfo, transferDate: Date): b
  */
 export function isSurchargeExemptInherited(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isInherited || !house.inheritedDate) return false;
-  if (differenceInYears(transferDate, house.inheritedDate) >= INHERITED_HOUSE_SURCHARGE_YEARS) return false;
+  // 「상속받은 날부터 5년이 경과하지 아니한」 — 초일불산입 기간의 말일(민법 §157·§160·§161)까지. 응당일 당일은 기간 안(E-11 ·
+  //   `isMortgageExecutionWithin3Years`와 같은 독법 — §161 직접 선례 미확보).
+  if (!isWithinDeadline(house.inheritedDate, INHERITED_HOUSE_SURCHARGE_YEARS, transferDate)) return false;
   return passesHouseholdGate(house) && passesRankingGate(house);
 }
 

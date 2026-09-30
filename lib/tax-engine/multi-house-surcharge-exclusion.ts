@@ -9,8 +9,14 @@
  * 의존: 산정 헬퍼를 -count에서 import (단방향, 순환 0).
  */
 
-import { addMonths, addDays, subDays, differenceInYears, format } from "date-fns";
-import { isSurchargeSuspended, isBeforeSurchargeSuspensionStart } from "./tax-utils";
+import { addMonths, addDays, subDays, format } from "date-fns";
+import {
+  isSurchargeSuspended,
+  isBeforeSurchargeSuspensionStart,
+  calculateHoldingPeriod,
+  meetsSurchargeSuspensionHolding,
+} from "./tax-utils";
+import { deadlineEnd, isWithinDeadline } from "./civil-period";
 import {
   MULTI_HOUSE,
   LONG_HOLDING_TEMPORARY_EXCLUSION,
@@ -60,11 +66,25 @@ export function isGroupExcludable(house: HouseInfo, transferDate: Date): boolean
   if (house.isUnsoldHousing) return true;
   if (house.isCulturalHeritage) return true;
   if (isSurchargeExemptInherited(house, transferDate)) return true;
-  if (house.isMortgageExecution) {
-    if (differenceInYears(transferDate, house.acquisitionDate) < 3) return true;
-  }
+  if (isMortgageExecutionWithin3Years(house, transferDate)) return true;
   if (house.isDayCareCenter && (house.dayCareOperationYears ?? 0) >= 5) return true;
   return false;
+}
+
+/** §167의3①8호·§167의4③·§167의10①2호 준용·§167의11 — 저당권 실행 기산 연수(「취득일부터 3년이 경과하지 아니한」). */
+const MORTGAGE_EXECUTION_YEARS = 3;
+
+/**
+ * §167의3①8호 — 「저당권의 실행으로 인하여 취득하거나 채권변제를 대신하여 취득한 주택으로서 **취득일부터 3년이
+ * 경과하지 아니한** 주택」(MST 286211 실독). 「경과하지 아니한」 = 기간(초일불산입 · 민법 §157·§160)의 말일까지 —
+ * 응당일 **당일**이 기간 안이다. 말일이 토요일·공휴일이면 익일(민법 §161 · 구 8호 `surcharge-old-clauses-era.ts`와 같은
+ * 독법 — 「경과하지 아니한」에 §161을 적용한 직접 선례는 미확보). 종전 `differenceInYears(…) < 3`은 응당일을 기간 밖으로 봤다(E-11).
+ */
+export function isMortgageExecutionWithin3Years(house: HouseInfo, transferDate: Date): boolean {
+  return (
+    house.isMortgageExecution === true &&
+    isWithinDeadline(house.acquisitionDate, MORTGAGE_EXECUTION_YEARS, transferDate)
+  );
 }
 
 export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): string {
@@ -83,9 +103,7 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
   if (house.isUnsoldHousing) return `⑤ 조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`;
   if (house.isCulturalHeritage) return "⑥ 문화재";
   if (isSurchargeExemptInherited(house, transferDate)) return "⑦ 상속주택 (5년 이내 · §155②)";
-  if (house.isMortgageExecution) {
-    if (differenceInYears(transferDate, house.acquisitionDate) < 3) return "⑧ 저당권 실행 (3년 이내)";
-  }
+  if (isMortgageExecutionWithin3Years(house, transferDate)) return "⑧ 저당권 실행 (3년 이내)";
   if (house.isDayCareCenter && (house.dayCareOperationYears ?? 0) >= 5) return "⑨ 어린이집 (5년 이상)";
   return "일반주택 (배제 불가)";
 }
@@ -165,8 +183,10 @@ function matchesUnavoidableReason(house: HouseInfo, transferDate: Date): boolean
   if ((house.unavoidableResidenceYears ?? 0) < 1) return false;
   const acquisitionPrice = house.acquisitionOfficialPrice ?? 0;
   if (acquisitionPrice <= 0 || acquisitionPrice > UNAVOIDABLE_ACQ_PRICE_CAP) return false;
+  // 「해당 사유가 해소된 날부터 3년이 경과하지 아니한 경우에 한정」 — 초일불산입 기간의 말일(민법 §161 포함)까지(E-11 ·
+  //   `isMortgageExecutionWithin3Years`와 같은 독법).
   if (house.unavoidableReasonResolvedDate) {
-    if (differenceInYears(transferDate, house.unavoidableReasonResolvedDate) >= 3) return false;
+    if (!isWithinDeadline(house.unavoidableReasonResolvedDate, 3, transferDate)) return false;
   }
   return true;
 }
@@ -187,7 +207,8 @@ export function isUnavoidableReasonUndecidable(house: HouseInfo | undefined): bo
 function matchesLitigationHousing(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLitigationHousing) return false;
   if (!house.litigationAcquisitionDate) return true;
-  return differenceInYears(transferDate, house.litigationAcquisitionDate) < 3;
+  // 「확정판결일부터 3년이 경과하지 아니한 경우에 한정」 — 초일불산입 기간의 말일(민법 §161 포함)까지(E-11).
+  return isWithinDeadline(house.litigationAcquisitionDate, 3, transferDate);
 }
 
 /**
@@ -281,7 +302,8 @@ export function checkGracePeriodExemption(
     }
     if (!permitGranted || !depositReceiptConfirmed) return { suspended: false };
 
-    let deadline = civilMonthsDeadline(contractDate, months);
+    // 「매매계약 체결일부터 4개월(6개월) 이내에 양도할 것」 — B 유형 말일이 토요일·공휴일이면 익일(민법 §161 · L-1 · E-11).
+    let deadline = deadlineEnd(civilMonthsDeadline(contractDate, months)).end;
     if (contractAfter0510) {
       const absolute = new Date(
         months === SURCHARGE_TRANSITION.MONTHS_TABLE_REGION
@@ -298,7 +320,8 @@ export function checkGracePeriodExemption(
   if (isLandPermitTarget === false) {
     // 다목
     if (contractAfter0510 || !depositReceiptConfirmed) return { suspended: false };
-    const deadline = civilMonthsDeadline(contractDate, months);
+    // 다목2) 「매매계약 체결일부터 4개월 … 이내에 양도할 것」 — 민법 §161(L-1 · E-11).
+    const deadline = deadlineEnd(civilMonthsDeadline(contractDate, months)).end;
     return transferDate <= deadline
       ? { suspended: true, basis: "da", deadline }
       : { suspended: false, basis: "da", deadline };
@@ -373,7 +396,8 @@ function resolveLongHoldingTemporaryExclusion(
 ): ExclusionReason | undefined {
   const w = LONG_HOLDING_TEMPORARY_EXCLUSION;
   if (!sellingHouse || input.transferDate < w.FROM || input.transferDate > w.UNTIL) return undefined;
-  const years = differenceInYears(input.transferDate, sellingHouse.acquisitionDate);
+  // 「법 제95조제4항에 따른 보유기간」 — 초일(취득일) 산입(유형 C · MST 214261 실독 · E-11).
+  const years = calculateHoldingPeriod(sellingHouse.acquisitionDate, input.transferDate).years;
   if (years < w.MIN_HOLDING_YEARS) return undefined;
   const basis =
     countedRightCount > 0
@@ -493,15 +517,13 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
-    if (sellingHouse.isMortgageExecution) {
-      const yearsHeld = differenceInYears(input.transferDate, sellingHouse.acquisitionDate);
-      if (yearsHeld < 3) {
-        exclusionReasons.push({
-          type: "mortgage_execution_3years",
-          detail: `저당권 실행·채권변제 취득(${sellingHouse.acquisitionDate.toISOString().slice(0, 10)})로부터 ${yearsHeld}년 (3년 미경과)`,
-        });
-        return { isExcluded: true, exclusionReasons, isSuspended: false };
-      }
+    if (isMortgageExecutionWithin3Years(sellingHouse, input.transferDate)) {
+      exclusionReasons.push({
+        type: "mortgage_execution_3years",
+        // 응당일 당일·§161 연장일은 만 연수가 3이라 「N년」 표기가 「3년 미경과」와 모순된다 — 기간 문언으로 적는다(E-11).
+        detail: `저당권 실행·채권변제 취득(${sellingHouse.acquisitionDate.toISOString().slice(0, 10)})부터 3년이 경과하지 아니한 양도`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
     if (sellingHouse.isEmployeeHousing && (sellingHouse.freeProvisionYears ?? 0) >= 10) {
@@ -659,14 +681,15 @@ export function determineSurchargeExclusion(
   // 12의2 본문: 양도 주택 보유기간 2년 이상 요건(§95④ 기산). 미충족 시 배제(suspension) 부적용
   // → 기존 §104 경로(단기 단일세율 vs 기본+중과 비교과세)로 처리. (재개발 조합원 기존건물 기산은
   //   sellingHouse.acquisitionDate가 그 기산일을 담는다는 전제 — 기존 §167의3 3년 판정 L213과 동일 관례.)
-  const suspensionHoldingYears = sellingHouse
-    ? differenceInYears(input.transferDate, sellingHouse.acquisitionDate)
-    : 0;
+  //   E-11 — §95④ 보유기간은 초일 산입(`meetsSurchargeSuspensionHolding` — ⑤ 화면 게이트와 같은 함수).
+  const meetsSuspensionHolding = sellingHouse
+    ? meetsSurchargeSuspensionHolding(sellingHouse.acquisitionDate, input.transferDate)
+    : false;
 
   // 2022.5.10. 전 양도분에는 12의2(가·나·다목 모두)가 없다 — 제32654호 부칙 제4조(E-14k).
   //   가목 게이트(`checkGracePeriodExemption`)는 상한만 보므로 여기서 함께 닫는다.
   if (
-    suspensionHoldingYears >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS &&
+    meetsSuspensionHolding &&
     !isBeforeSurchargeSuspensionStart(input.transferDate)
   ) {
     if (input.gracePeriod && suspensionRules?.surcharge_suspended) {

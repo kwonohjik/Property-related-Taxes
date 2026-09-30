@@ -175,10 +175,11 @@ describe("M8: 다목 — 계약 4-01(≤5-09), 4M 지역, 양도 8-01(계약+4M)
   });
 });
 
-describe("M9: 다목 — 계약 4-01, 4M 지역, 양도 8-02(계약+4M 초과) → 과세", () => {
+describe("M9: 다목 — 계약 4-01, 4M 지역, 양도 8-04(계약+4M 초과) → 과세", () => {
   it("과세", () => {
+    // E-11: 역상 말일 2026-08-01(토) → 민법 §161로 2026-08-03(월)까지 연장.
     const r = run(
-      make3PlusInput(new Date("2026-08-02"), {
+      make3PlusInput(new Date("2026-08-04"), {
         contractDate: new Date("2026-04-01"),
         isLandPermitTarget: false,
         depositReceiptConfirmed: true,

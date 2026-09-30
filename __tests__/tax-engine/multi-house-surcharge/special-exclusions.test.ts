@@ -585,9 +585,10 @@ describe("MH-21: 유예 경과조치 판정 (가·나·다목)", () => {
     expect(result.surchargeApplicable).toBe(false);
   });
 
-  it("다목: 계약 2026-04-01, 4개월 지역, 양도 2026-08-02 → 계약+4개월 초과 → 과세", () => {
+  it("다목: 계약 2026-04-01, 4개월 지역, 양도 2026-08-04 → 계약+4개월 초과 → 과세", () => {
+    // E-11: 역상 말일 2026-08-01(토) → 민법 §161로 2026-08-03(월)까지 연장.
     const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2026-08-02"), {
+      make2HouseInput(new Date("2026-08-04"), {
         contractDate: new Date("2026-04-01"),
         isLandPermitTarget: false,
         depositReceiptConfirmed: true,
