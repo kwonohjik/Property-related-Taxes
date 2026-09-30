@@ -122,6 +122,7 @@ export function CompanionAcqDateSection(props: {
               onChange={handleAcquisitionDateChange}
               onBlur={handleAcquisitionDateBlur}
               data-testid="acq-date-building"
+              data-field="acquisitionDate"
             />
             {dateClampMsg && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -151,6 +152,7 @@ export function CompanionAcqDateSection(props: {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" data-testid="acq-date-split-grid">
             <FieldCard
               label="토지 취득일"
+              field="landAcquisitionDate"
               trailing={isLandDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput
@@ -167,6 +169,7 @@ export function CompanionAcqDateSection(props: {
             </FieldCard>
             <FieldCard
               label={acqDateLabel}
+              field="acquisitionDate"
               trailing={isDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput

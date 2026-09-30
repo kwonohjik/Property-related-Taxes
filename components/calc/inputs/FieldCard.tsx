@@ -20,6 +20,8 @@ export interface FieldCardProps {
    * 다열 그리드 셀처럼 가로폭이 좁아 라벨-좌 배치가 입력을 압박할 때 사용.
    */
   stacked?: boolean;
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`). 검증의 `ValidationIssue.field`와 같은 값 */
+  field?: string;
 }
 
 export function FieldCard({
@@ -35,10 +37,12 @@ export function FieldCard({
   className,
   htmlFor,
   stacked = false,
+  field,
 }: FieldCardProps) {
   return (
     <div
       data-slot="field-card"
+      data-field={field}
       data-disabled={disabled || undefined}
       className={cn(
         "rounded-lg border bg-card px-4 py-3",

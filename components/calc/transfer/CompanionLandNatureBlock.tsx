@@ -39,7 +39,7 @@ interface Props {
  */
 export function CompanionLandNatureBlock({ landNature, assetId, onChange }: Props) {
   return (
-    <div className="rounded-lg border border-violet-200/70 bg-violet-50/70 p-3 space-y-2">
+    <div className="rounded-lg border border-violet-200/70 bg-violet-50/70 p-3 space-y-2" data-field="landNature">
       <div className="space-y-0.5">
         <p className="text-sm font-semibold text-violet-900">토지 성격</p>
         <p className="text-xs text-muted-foreground">

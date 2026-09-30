@@ -45,17 +45,25 @@ describe("ValidationIssuePanel", () => {
     expect(screen.getByText("총 양도가액을 입력하세요.")).toBeTruthy();
   });
 
-  it("onAssetClick이 있으면 자산 항목만 버튼이 되고 그 자산 인덱스를 넘긴다", () => {
-    const onAssetClick = vi.fn();
-    render(<ValidationIssuePanel issues={ISSUES} error={null} onAssetClick={onAssetClick} />);
+  it("onIssueClick이 있으면 자산 항목은 버튼이 되고 그 이슈를 넘긴다", () => {
+    const onIssueClick = vi.fn();
+    render(<ValidationIssuePanel issues={ISSUES} error={null} onIssueClick={onIssueClick} />);
 
     fireEvent.click(screen.getByRole("button", { name: "자산 2의 취득일을 입력하세요." }));
-    expect(onAssetClick).toHaveBeenCalledWith(1);
-    // 자산에 속하지 않는 항목은 버튼이 아니다
+    expect(onIssueClick).toHaveBeenCalledWith(ISSUES[0]);
+    // 입력칸도 자산도 가리키지 않는 항목은 버튼이 아니다
     expect(screen.queryByRole("button", { name: "총 양도가액을 입력하세요." })).toBeNull();
   });
 
-  it("onAssetClick이 없으면 자산 항목도 버튼이 아니다", () => {
+  it("field만 있는 항목(폼 전역·1~3단계)도 버튼이 된다", () => {
+    const onIssueClick = vi.fn();
+    const issue: ValidationIssue = { step: 1, field: "householdHousingCount", message: "세대 보유 주택 수를 선택하세요." };
+    render(<ValidationIssuePanel issues={[issue]} error={null} onIssueClick={onIssueClick} />);
+    fireEvent.click(screen.getByRole("button", { name: "세대 보유 주택 수를 선택하세요." }));
+    expect(onIssueClick).toHaveBeenCalledWith(issue);
+  });
+
+  it("onIssueClick이 없으면 어떤 항목도 버튼이 아니다", () => {
     render(<ValidationIssuePanel issues={ISSUES} error={null} />);
     expect(screen.queryByRole("button", { name: "자산 2의 취득일을 입력하세요." })).toBeNull();
   });

@@ -95,6 +95,7 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">취득일</span>
                 <DateInput
+                  data-field={`presaleRights.${idx}.acquisitionDate`}
                   value={r.acquisitionDate}
                   onChange={(v) => update(r.id, { acquisitionDate: v })}
                 />

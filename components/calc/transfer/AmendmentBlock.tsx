@@ -50,6 +50,7 @@ export function AmendmentBlock({
             label="당초 결정세액"
             value={form.originalDeterminedTax}
             onChange={(v) => onChange({ originalDeterminedTax: v })}
+            data-field="originalDeterminedTax"
             hint="당초 신고·납부한 양도소득세 본세 (이력에서 자동 입력)"
           />
 
@@ -83,6 +84,7 @@ export function AmendmentBlock({
               <DateInput
                 value={form.statutoryFilingDeadline}
                 onChange={(v) => onChange({ statutoryFilingDeadline: v })}
+                data-field="statutoryFilingDeadline"
               />
               <p className="text-xs text-muted-foreground">
                 확정신고기한 = 양도 다음 해 5월 31일 (소득세법 §110①). 여기서 5년 이내가 청구기한.
@@ -95,6 +97,7 @@ export function AmendmentBlock({
               <DateInput
                 value={form.posteriorEventDate}
                 onChange={(v) => onChange({ posteriorEventDate: v })}
+                data-field="posteriorEventDate"
               />
               <p className="text-xs text-muted-foreground">
                 판결·수용재결 확정 등 후발적 사유를 안 날부터 3개월 이내 (국세기본법 §45의2②).
@@ -107,6 +110,7 @@ export function AmendmentBlock({
             <DateInput
               value={form.amendedFilingDate}
               onChange={(v) => onChange({ amendedFilingDate: v })}
+              data-field="amendedFilingDate"
             />
             <p className="text-xs text-muted-foreground">
               경정청구서 제출(예정)일 — 기본 오늘. 청구기한 도과 판정에 사용.
@@ -172,6 +176,7 @@ export function AmendmentBlock({
           label="당초 결정세액"
           value={form.originalDeterminedTax}
           onChange={(v) => onChange({ originalDeterminedTax: v })}
+          data-field="originalDeterminedTax"
           hint="당초 신고·납부한 양도소득세 본세 (이력에서 자동 입력)"
         />
         <div className="space-y-1.5">
@@ -179,6 +184,7 @@ export function AmendmentBlock({
           <DateInput
             value={form.statutoryFilingDeadline}
             onChange={(v) => onChange({ statutoryFilingDeadline: v })}
+            data-field="statutoryFilingDeadline"
           />
           <p className="text-xs text-muted-foreground">
             확정신고기한 = 양도 다음 해 5월 31일 (소득세법 §110①). 자동 도출·수정 가능.
@@ -240,6 +246,7 @@ export function AmendmentBlock({
                   <DateInput
                     value={form.amendedFilingDate}
                     onChange={(v) => onChange({ amendedFilingDate: v })}
+                    data-field="amendedFilingDate"
                   />
                 </div>
                 {previewRate !== null && (
@@ -281,6 +288,7 @@ export function AmendmentBlock({
             <DateInput
               value={form.amendedPaymentDate}
               onChange={(v) => onChange({ amendedPaymentDate: v })}
+              data-field="amendedPaymentDate"
             />
             <p className="text-xs text-muted-foreground">
               법정신고기한 다음날부터 이 날까지 경과일수로 계산됩니다.

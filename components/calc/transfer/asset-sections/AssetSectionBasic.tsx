@@ -113,6 +113,7 @@ export function AssetSectionBasic({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldCard
             label="양도일"
+            field="transferDate"
             required
             warning={
               filingOverdue
@@ -126,7 +127,7 @@ export function AssetSectionBasic({
               data-testid="transfer-date"
             />
           </FieldCard>
-          <FieldCard label="신고일">
+          <FieldCard label="신고일" field="filingDate">
             <DateInput
               value={filingDate ?? ""}
               onChange={(v) => onFormChange?.({ filingDate: v })}
@@ -141,7 +142,7 @@ export function AssetSectionBasic({
       )}
 
       {/* 자산 종류 */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5" data-field="assetKind">
         <label className="block text-sm font-medium">자산 종류</label>
         <div className="flex gap-2 flex-wrap">
           {ASSET_KIND_OPTIONS.map((opt) => (
@@ -277,7 +278,7 @@ export function AssetSectionBasic({
       )}
 
       {/* 소재지 검색 — 물건 식별자라 필수다(이력 dedup 키). 계획서 §4-1 */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5" data-field="addressJibun">
         <label className="block text-sm font-medium">
           소재지 <span className="text-destructive">*</span>
         </label>

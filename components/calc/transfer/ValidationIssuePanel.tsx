@@ -17,13 +17,13 @@ interface Props {
   issues: ValidationIssue[];
   /** API·계산 오류 (검증 목록과 별개) */
   error: string | null;
-  /** 주면 자산-수준 항목이 해당 자산 카드로 이동하는 버튼이 된다 */
-  onAssetClick?: (assetIndex: number) => void;
+  /** 주면 입력칸(field) 또는 자산 카드(assetIndex)를 가리키는 항목이 이동 버튼이 된다 */
+  onIssueClick?: (issue: ValidationIssue) => void;
   /** 주면 「다시 계산하기」 버튼을 표시한다 */
   onRetry?: () => void;
 }
 
-export function ValidationIssuePanel({ issues, error, onAssetClick, onRetry }: Props) {
+export function ValidationIssuePanel({ issues, error, onIssueClick, onRetry }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   if (!error && issues.length === 0) return null;
 
@@ -51,10 +51,10 @@ export function ValidationIssuePanel({ issues, error, onAssetClick, onRetry }: P
               <ul className="mt-1.5 max-h-[40vh] overflow-y-auto space-y-1 list-disc pl-4">
                 {issues.map((it, idx) => (
                   <li key={idx}>
-                    {onAssetClick && it.assetIndex != null ? (
+                    {onIssueClick && (it.field != null || it.assetIndex != null) ? (
                       <button
                         type="button"
-                        onClick={() => onAssetClick(it.assetIndex!)}
+                        onClick={() => onIssueClick(it)}
                         className="text-left underline underline-offset-2 hover:opacity-70 transition-opacity"
                       >
                         {it.message}

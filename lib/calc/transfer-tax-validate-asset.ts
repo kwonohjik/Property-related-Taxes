@@ -18,6 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { fieldError } from "./transfer-tax-validate-field";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   usesSelfComputedTransferPrice,
@@ -107,7 +108,7 @@ export function validateAssetEntry(
 ): string | null {
   const label = form.assets.length === 1 ? "자산" : `자산 ${index + 1}`;
 
-  if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
+  if (!a.assetKind) return fieldError("assetKind", `${label}: 자산 유형을 선택하세요.`);
 
   /**
    * ⑧ F-7 — 컴패니언 일반건물에 남은 **단일** 「미등기 양도」 값.
@@ -137,7 +138,7 @@ export function validateAssetEntry(
    * 지분 모드 컴패니언은 primary에서 승계된다(`mergePrimaryBasic`) — 호출부가 병합 후 넘긴다.
    */
   if (!a.addressRoad?.trim() && !a.addressJibun?.trim()) {
-    return `${label}: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.`;
+    return fieldError("addressJibun", `${label}: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.`);
   }
   /**
    * ⑧ 집합건물 세대 — 「고를 수 있었는데 안 골랐으면」 차단한다. 같은 지번의 두 세대는
@@ -151,27 +152,27 @@ export function validateAssetEntry(
    *    memory `feedback_new_asset_field_stale_sessionstorage_guard`
    */
   if ((a.hasAddressUnits ?? false) && !a.addressDong?.trim() && !a.addressHo?.trim()) {
-    return `${label}: 동·호를 선택하세요. 같은 지번의 다른 세대와 구분되지 않습니다.`;
+    return fieldError("addressJibun", `${label}: 동·호를 선택하세요. 같은 지번의 다른 세대와 구분되지 않습니다.`);
   }
 
   // ── 양도일·취득일 정합 검증 (모든 자산 공통, 분기 진입 전) ──
   // YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. 빈 값이면 skip(존재성은 분기별 검증). strict > → 당일(==) 통과.
   const today = todayLocalISO();
   if (a.acquisitionDate && form.transferDate && a.acquisitionDate > form.transferDate) {
-    return `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`;
+    return fieldError("acquisitionDate", `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`);
   }
   if (
     a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && form.transferDate &&
     a.landAcquisitionDate > form.transferDate
   ) {
-    return `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`;
+    return fieldError("landAcquisitionDate", `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`);
   }
   // 취득일 미래 차단 (미래 취득은 입력 오류). 양도일<취득일 다음에 둠 — 둘 다 미래여도 모순이 먼저 잡히게.
   if (a.acquisitionDate && a.acquisitionDate > today) {
-    return `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`;
+    return fieldError("acquisitionDate", `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`);
   }
   if (a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && a.landAcquisitionDate > today) {
-    return `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`;
+    return fieldError("landAcquisitionDate", `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`);
   }
 
   // ⑧ §164⑨ 1호 공익수용 환산 min[] 특례 — 보상 2필드 필수 (별도 모듈, 800줄 정책)
@@ -201,7 +202,7 @@ export function validateAssetEntry(
           other.assetKind === "presale_right"),
     );
     if (hasHousingInBundle && !a.landNature) {
-      return `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`;
+      return fieldError("landNature", `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`);
     }
   }
 
@@ -213,7 +214,7 @@ export function validateAssetEntry(
     a.ownershipNumerator || "100",
     a.ownershipDenominator || "100",
   );
-  if (ownErr) return `${label}: ${ownErr}`;
+  if (ownErr) return fieldError("ownershipNumerator", `${label}: ${ownErr}`);
 
   /**
    * 단건 + 지분 모드 — **선언이 없으면** 차단한다 (R4, 2026-09-03).
@@ -260,7 +261,7 @@ export function validateAssetEntry(
      */
     if (effBundledMode === "actual" && !usesSelfComputedTransferPrice(a)) {
       if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
-        return `${label}: 계약서상 양도가액을 입력하세요.`;
+        return fieldError("actualSalePrice", `${label}: 계약서상 양도가액을 입력하세요.`);
     } else if (!stdPriceAtTransferComesFromElsewhere(a)) {
       /**
        * 🔴 부담부증여 × 일반건물·시가모드는 「양도시 기준시가」를 **다른 필드로 받는다**
@@ -271,7 +272,7 @@ export function validateAssetEntry(
       const replotIncDerivable =
         replotIncrementStdPriceAtTransfer(a, form.assets[0]) !== undefined;
       if (!replotIncDerivable && (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0))
-        return `${label}: 양도시 기준시가를 입력하세요.`;
+        return fieldError("standardPriceAtTransfer", `${label}: 양도시 기준시가를 입력하세요.`);
     }
   }
 

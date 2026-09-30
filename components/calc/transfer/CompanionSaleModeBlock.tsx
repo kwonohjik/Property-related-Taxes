@@ -150,25 +150,27 @@ function ApportionedPriceBlock({
   }
 
   return (
-    <StandardPriceInput
-      propertyKind={propertyKind}
-      totalPrice={standardPriceAtTransfer}
-      onTotalPriceChange={onStandardPriceAtTransferChange}
-      pricePerSqm={pricePerSqm}
-      onPricePerSqmChange={onPricePerSqmChange}
-      area={transferArea}
-      onAreaChange={handleAreaChange}
-      jibun={jibun}
-      dong={dong}
-      ho={ho}
-      referenceDate={transferDate}
-      label={
-        assetKind === "land"
-          ? "양도시 기준시가 (공시지가 × 양도 당시 면적, 원)"
-          : "양도시 기준시가 (원)"
-      }
-      hint="안분 비율 분모 (§166⑥ 단서)"
-    />
+    <div data-field="standardPriceAtTransfer">
+      <StandardPriceInput
+        propertyKind={propertyKind}
+        totalPrice={standardPriceAtTransfer}
+        onTotalPriceChange={onStandardPriceAtTransferChange}
+        pricePerSqm={pricePerSqm}
+        onPricePerSqmChange={onPricePerSqmChange}
+        area={transferArea}
+        onAreaChange={handleAreaChange}
+        jibun={jibun}
+        dong={dong}
+        ho={ho}
+        referenceDate={transferDate}
+        label={
+          assetKind === "land"
+            ? "양도시 기준시가 (공시지가 × 양도 당시 면적, 원)"
+            : "양도시 기준시가 (원)"
+        }
+        hint="안분 비율 분모 (§166⑥ 단서)"
+      />
+    </div>
   );
 }
 
@@ -256,16 +258,20 @@ export function CompanionSaleModeBlock(props: BlockProps) {
 
   if (props.bundledSaleMode === "actual") {
     return (
-      <CurrencyInput
-        label={props.singleMode ? "양도가액 (원)" : "계약서상 양도가액 (원)"}
-        value={props.actualSalePrice}
-        onChange={props.onActualSalePriceChange}
-        required
-        // 단건 모드는 힌트 없음 — "양도가액" 라벨만으로 자명(2026-07-16).
-        // 다건 모드는 자산별 가액이라는 구분이 필요해 §166⑥ 근거 힌트를 유지한다.
-        hint={props.singleMode ? undefined : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"}
-        data-testid="companion-actual-sale-price"
-      />
+      // 단건 모드의 이 칸은 곧 **총 양도가액**이다 — `Step1.updateAssets`가 contractTotalPrice로
+      // 동기화한다. 단건에서는 「계약서상 양도가액」 오류(자산 2개 이상 전용)가 나지 않아 키가 겹치지 않는다.
+      <div data-field={props.singleMode ? "contractTotalPrice" : "actualSalePrice"}>
+        <CurrencyInput
+          label={props.singleMode ? "양도가액 (원)" : "계약서상 양도가액 (원)"}
+          value={props.actualSalePrice}
+          onChange={props.onActualSalePriceChange}
+          required
+          // 단건 모드는 힌트 없음 — "양도가액" 라벨만으로 자명(2026-07-16).
+          // 다건 모드는 자산별 가액이라는 구분이 필요해 §166⑥ 근거 힌트를 유지한다.
+          hint={props.singleMode ? undefined : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"}
+          data-testid="companion-actual-sale-price"
+        />
+      </div>
     );
   }
 
