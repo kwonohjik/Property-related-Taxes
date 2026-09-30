@@ -26,6 +26,12 @@ import {
 } from "./transfer-inheritance-exclusion";
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
+import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
+import {
+  article89Clause2Notices,
+  clause2BlocksSurchargeDeeming,
+  clause2SurchargeDeemed,
+} from "./transfer-tax-89-2-consequences";
 import type {
   New994Result,
   Unsold989Result,
@@ -37,6 +43,8 @@ export function judgeMixedUseOneHouseExemption(
   transferDate: Date,
   oneHouseSpecialRules: OneHouseSpecialRulesData,
   warnings: string[],
+  /** §88 10호 「분양권」 정의 시행일 — 단건과 같은 값(`presaleRightStartDate(parsedRates)`). §89② 분양권 축 게이트. */
+  presaleRightStartDate?: Date,
 ): {
   /** 영 §154① 보유·거주 충족 — 중과 배제2(§155⑤ 의제) 게이트로도 쓴다. */
   meetsOneHouseRequirements: boolean;
@@ -44,8 +52,12 @@ export function judgeMixedUseOneHouseExemption(
   isOneHouseExempt: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
   surchargeDeemedOneHouseBy155: DeemedOneHouseBasis | undefined;
-  /** `surchargeDeemedOneHouseBy155`의 표시용 근거 조문 — 조특법 감면주택 경로만(E-14a) */
+  /** `surchargeDeemedOneHouseBy155`의 표시용 근거 조문 — 조특법 감면주택 · §156의2·§156의3 경로(E-14a · E-7) */
   surchargeDeemedOneHouseSource: string | undefined;
+  /** 구 영 §167의11①1호 인용 범위 — §156의2③④·§156의3②③ 직접 경로(E-14f · 단건 `resolveSurchargeDeemedOneHouseDetail`과 같은 값) */
+  rightDeemingCitedByOldClause1: boolean | undefined;
+  /** §89② 판정(E-7) — `article89Clause2Facts` 미전달이면 undefined(판정하지 않음). */
+  article89Clause2: Article89Clause2Result | undefined;
   new994Detail: New994Result | undefined;
   unsold989Detail: Unsold989Result | undefined;
   houseCountExclusionDetails: HouseCountExclusionDetail[] | undefined;
@@ -219,7 +231,36 @@ export function judgeMixedUseOneHouseExemption(
         `(조특법 §99의4①·§98의9① 등 · 소득세법 §89①3호 의제 — 다주택 중과 주택 수는 불변).`,
     );
   }
-  const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered;
+  /**
+   * E-7 — 「소득세법」 §89②: 주택과 조합원입주권·분양권을 함께 보유한 1세대가 그 주택을 양도하면 §89①3호를 적용하지
+   * 않는다(단서 예외 영 §156의2·§156의3). 겸용주택의 주택 부분도 §154③상 §89①3호의 「주택」이다. 단건 `checkExemption`과
+   * **같은 leaf**를 같은 모양의 입력(비과세 주택 수 = 제외 후 · §154① 요건 입력)으로 부른다. 배제 **확정**만 비과세를 끄고,
+   * 판정 보류는 종전 동작(적용) + 단건과 같은 고지다. 세대 사실이 없거나 주택 수가 없으면 판정하지 않는다(종전 동작).
+   */
+  const clause2Facts = asset.article89Clause2Facts;
+  const clause2Judge = (householdHousingCount: number) =>
+    resolveArticle89Clause2(
+      {
+        ...clause2Facts!,
+        ...exemptionReqInput,
+        propertyType: "housing",
+        isOneHousehold: isOneHouseholdForHouseCount,
+        householdHousingCount,
+      },
+      presaleRightStartDate,
+    );
+  const article89Clause2 =
+    clause2Facts && effectiveHouseCount !== undefined ? clause2Judge(effectiveHouseCount) : undefined;
+  const clause2Excluded = article89Clause2?.status === "excluded";
+  const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered && !clause2Excluded;
+  warnings.push(...article89Clause2Notices(article89Clause2, isOneHouseExempt, transferDate));
+  // 배제 확정 — 단건은 판정 결과(`article89Clause2`)를 결과 카드가 보여 주지만 겸용 결과뷰에는 그 칸이 없다 ⇒ 경고로 사유를 싣는다.
+  if (clause2Excluded && houseCountOk && meetsOneHouseRequirements && !isUnregistered) {
+    warnings.push(
+      "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 겸용주택을 양도해 「소득세법」 §89②에 따라 " +
+        "1세대1주택 비과세(§89①3호)를 적용하지 않았습니다 — 시행령 §156의2·§156의3의 예외에 해당하지 않습니다. 주택분도 과세됩니다.",
+    );
+  }
   if (houseCountOk && !meetsOneHouseRequirements) {
     // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
     const r = oneHouseSpecialRules.one_house_exemption;
@@ -240,25 +281,41 @@ export function judgeMixedUseOneHouseExemption(
     ...verifiedSpecial,
   });
 
+  /**
+   * 중과 배제 ① 요소 — 단건 `resolveSurchargeDeemedOneHouseDetail`과 같은 순서·같은 술어(E-7): §89② 게이트(15호 주택 수로
+   * 다시 판정 — 단건과 같은 값) → §155①④⑤ → §155②③ → 조특법 감면주택 → §156의2·§156의3. §155⑳ 거주주택 경로는 겸용에
+   * 입력이 없다(종전 동작).
+   */
+  const clause2ForSurcharge = clause2Facts ? clause2Judge(surcharge15Count) : undefined;
+  const surchargeBlocked = clause2ForSurcharge !== undefined && clause2BlocksSurchargeDeeming(clause2ForSurcharge);
+  const inheritedDeemed = inheritedGeneralHouseSurchargeBasis({
+    isOneHousehold: isOneHouseholdForHouseCount,
+    houseCount: surcharge15Count,
+    inheritedExcludedCount,
+    specialActExcludedCount: houseCountExclusionApplied,
+    transferDate,
+  });
+  const rightDeemed =
+    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && clause2ForSurcharge
+      ? clause2SurchargeDeemed(clause2ForSurcharge)
+      : undefined;
+
   return {
     meetsOneHouseRequirements,
     isUnregistered,
     isOneHouseExempt,
     // E-14d — §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 §155①④⑤ 의제 분기에 걸리지 않는다
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
-    surchargeDeemedOneHouseBy155:
-      deemedOneHouseBy155 ??
-      inheritedGeneralHouseSurchargeBasis({
-        isOneHousehold: isOneHouseholdForHouseCount,
-        houseCount: surcharge15Count,
-        inheritedExcludedCount,
-        specialActExcludedCount: houseCountExclusionApplied,
-        transferDate,
-      }) ??
-      specialDeemed?.basis,
-    // E-14a — 조특법 경로의 근거 조문(표시용). 다른 경로는 없다.
+    surchargeDeemedOneHouseBy155: surchargeBlocked
+      ? undefined
+      : (deemedOneHouseBy155 ?? inheritedDeemed ?? specialDeemed?.basis ?? rightDeemed?.basis),
+    // E-14a · E-7 — 조특법 · §156의2·§156의3 경로의 근거 조문(표시용). 다른 경로는 없다.
     surchargeDeemedOneHouseSource:
-      deemedOneHouseBy155 === undefined ? specialDeemed?.source : undefined,
+      surchargeBlocked || deemedOneHouseBy155 !== undefined || inheritedDeemed !== undefined
+        ? undefined
+        : (specialDeemed?.source ?? rightDeemed?.source),
+    rightDeemingCitedByOldClause1: surchargeBlocked ? undefined : rightDeemed?.citedByOldClause1,
+    article89Clause2,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
     houseCountExclusionDetails: mixedHouseCountExclusionDetails,

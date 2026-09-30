@@ -59,6 +59,7 @@ export function Unsold989DetailCard({ detail, houseRef }: Props) {
         </p>
       )}
 
+      {/* E-12 — 12억 고정 표기 유지: §98의9 취득기간이 2024.1.10.~(`UNSOLD_98_9_FROM`)이라 양도는 항상 12억 시대다. */}
       <p className="text-xs text-violet-900/90 dark:text-violet-200/90">
         수도권 밖 준공후미분양주택 1채를 소유주택에서 제외하여 1세대 1주택으로 보아 소득세법
         제89조제1항제3호(비과세·고가주택 12억 안분·장기보유특별공제 표2)를 적용합니다.

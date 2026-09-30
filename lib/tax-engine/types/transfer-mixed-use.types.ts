@@ -188,6 +188,17 @@ export interface MixedUseAssetInput {
       | "generalHouseRightAtInheritance"]: TransferTaxInput[K];
   };
   /**
+   * 「소득세법」 §89② 판정용 **세대 사실**(보유 조합원입주권·분양권 · 예외 선언 · 합가 · 명부 등) — route 주입(E-7).
+   *
+   * 겸용주택의 주택 부분은 「소득세법 시행령」 §154③상 §89①3호를 적용할 때의 「주택」이므로, 주택과 권리를 함께
+   * 보유한 세대의 양도에는 §89②가 걸린다. 엔진이 단건 주택 경로와 **같은 leaf**(`resolveArticle89Clause2`)로
+   * 판정한다 — 자산 값(자산 종류·건물 취득일·양도일·주택 수·§154① 요건 입력)은 엔진이 채운다.
+   *
+   * 🔑 **미전달(undefined)이면 §89②를 판정하지 않는다**(종전 동작). `multiHouse.presaleRights`는 명부가 있을 때만
+   *    조립되는 중과 입력이라 여기 쓰지 않는다 — 명부 없이 권리만 입력한 세대도 판정해야 한다.
+   */
+  article89Clause2Facts?: import("../transfer-tax-89-2-consequences").Article89Clause2HouseholdFacts;
+  /**
    * §155④⑤ 합가 「먼저 양도하는 주택」 사용자 선언 — **폼-전역** 값이라 route가 주입한다.
    *
    * 겸용 서브엔진이 이것과 `multiHouse.marriageMerge`·`parentalCareMerge`로 합가 의제를

@@ -66,9 +66,10 @@ export function New994DetailCard({ detail, houseRef }: Props) {
         </p>
       )}
 
+      {/* E-12 — 기준금액은 양도일 연혁(6억·9억·12억)이라 금액을 적지 않는다(§99의4 양도는 2021-12-08 전에도 있다). */}
       <p className="text-xs text-violet-900/90 dark:text-violet-200/90">
         {houseLabel} 1채를 소유주택에서 제외하여 1세대 1주택으로 보아 소득세법
-        제89조제1항제3호(비과세·고가주택 12억 안분·장기보유특별공제 표2)를 적용합니다.
+        제89조제1항제3호(비과세·고가주택 기준금액 초과분 안분·장기보유특별공제 표2)를 적용합니다.
       </p>
 
       <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">

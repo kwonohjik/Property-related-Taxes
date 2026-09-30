@@ -168,8 +168,10 @@ describe("D16 술어", () => {
   const TD = new Date("2026-09-18");
   it("D16-P1 7호: 5년 경계 · §155② 동일세대·순위 게이트", () => {
     expect(isSurchargeExemptInherited(house("x", "2012-01-01", INH) as never, TD)).toBe(true);
-    expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true, inheritedDate: new Date("2021-09-18") }) as never, TD)).toBe(false);
-    expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true, inheritedDate: new Date("2021-09-19") }) as never, TD)).toBe(true);
+    // E-11 — 「상속받은 날부터 5년이 경과하지 아니한」은 초일불산입 기간의 말일(응당일)까지다(민법 §157·§160).
+    //   종전 단언(2021-09-18 → false)은 date-fns 만 5년 비교였다. 양도 2026-09-18(금)은 2021-09-18 상속의 말일이다.
+    expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true, inheritedDate: new Date("2021-09-17") }) as never, TD)).toBe(false);
+    expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true, inheritedDate: new Date("2021-09-18") }) as never, TD)).toBe(true);
     expect(isSurchargeExemptInherited(house("x", "2012-01-01", SAME_HH) as never, TD)).toBe(false);
     expect(isSurchargeExemptInherited(house("x", "2012-01-01", { ...INH, isRankingDisqualifiedInheritedHouse: true }) as never, TD)).toBe(false);
     expect(isSurchargeExemptInherited(house("x", "2012-01-01", { isInherited: true }) as never, TD)).toBe(false);

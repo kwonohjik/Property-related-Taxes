@@ -97,10 +97,11 @@ describe("Pre-Do A3: gracePeriod 정밀 유예 판정 (P0 gracePeriod wiring 입
     makeHouse("h2"),
   ];
 
-  it("A3a: 양도일 2026-08-02(가목 이후) + 다목 계약+4개월 초과 → suspended=false, 중과 적용", () => {
+  it("A3a: 양도일 2026-08-04(가목 이후) + 다목 계약+4개월 초과 → suspended=false, 중과 적용", () => {
     const input = makeInput(twoHouses(), {
       sellingHouseId: "h1",
-      transferDate: new Date("2026-08-02"),
+      // E-11: 역상 말일 2026-08-01(토) → 민법 §161로 2026-08-03(월)까지 연장 — 그 뒤 첫 평일.
+      transferDate: new Date("2026-08-04"),
       gracePeriod: {
         contractDate: new Date("2026-04-01"), // +4개월(강남 4개월 지역) = 2026-08-01 < 양도일
         isLandPermitTarget: false,

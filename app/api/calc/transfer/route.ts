@@ -20,6 +20,7 @@ import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-split-helpers";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
@@ -492,6 +493,8 @@ export async function POST(request: NextRequest) {
           generalHouseRightAtInheritance: engineInput.generalHouseRightAtInheritance,
         },
         specialHouseExclusions: engineInput.specialHouseExclusions,
+        // ⑭ §89② 세대 사실 (E-7) — ⚠️ `engineInput`(권리 취득일·합가일 등 Date 변환본).
+        article89Clause2Facts: pickArticle89Clause2Facts(engineInput),
         isOneHousehold: data.isOneHousehold,
         isRegulatedArea: data.isRegulatedArea,
         isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,

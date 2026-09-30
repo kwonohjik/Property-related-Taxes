@@ -13,7 +13,8 @@
  * 인구감소지역 상수는 ./data/population-decline-areas.ts 로 분리.
  */
 
-import { addYears, format } from "date-fns";
+import { format } from "date-fns";
+import { isWithinDeadline } from "./civil-period";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -169,9 +170,10 @@ export function determineMultiHouseSurcharge(
   const excludedPresaleRights: Array<{ id: string; reason: "spouse_marriage_subtraction" }> = [];
   if (input.marriageMerge && effectiveHouseCount >= 3) {
     const m = input.marriageMerge.marriageDate;
+    // §167의3⑨ 「혼인한 날부터 5년 이내에 해당 주택을 양도하는 경우」 — B 유형(초일불산입 · 민법 §160③·§161, E-11).
     const within5y =
       input.transferDate >= m &&
-      input.transferDate <= addYears(m, MULTI_HOUSE.MARRIAGE_SUBTRACT_YEARS_3HOUSE);
+      isWithinDeadline(m, MULTI_HOUSE.MARRIAGE_SUBTRACT_YEARS_3HOUSE, input.transferDate);
     // 단서: 혼인 5년내 신규 주택·분양권·입주권 취득 시 그 취득일 이후 양도분에는 미적용
     const acquiredAfterMarriage =
       input.houses.some((h) => h.acquisitionDate > m && h.acquisitionDate <= input.transferDate) ||

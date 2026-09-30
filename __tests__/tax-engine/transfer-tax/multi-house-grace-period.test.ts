@@ -157,7 +157,8 @@ describe("MHG-03: surchargeSuspensionBasis/Deadline echo — TransferTaxResult �
     expect(r.isSurchargeSuspended).toBe(true);
     expect(r.surchargeSuspensionBasis).toBe("da");
     expect(r.surchargeSuspensionDeadline).toBeInstanceOf(Date);
-    expect((r.surchargeSuspensionDeadline as Date).toISOString().slice(0, 10)).toBe("2026-08-01");
+    // E-11: 역상 말일 2026-08-01(토) → 민법 §161로 2026-08-03(월)까지 연장.
+    expect((r.surchargeSuspensionDeadline as Date).toISOString().slice(0, 10)).toBe("2026-08-03");
   });
 
   it("가목 우선 게이트(양도일 ≤ 2026-05-09) → basis='a' echo", () => {

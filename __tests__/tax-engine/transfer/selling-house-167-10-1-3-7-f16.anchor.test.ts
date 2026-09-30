@@ -89,12 +89,14 @@ describe("F-16 §167의10①7호 — 소송 취득은 양도하는 주택 자신
     expect(calc(two({ isLitigationHousing: true })).totalTax).toBe(EXCLUDED);
   });
 
-  it("F16-3b 경계 — 3년이 되는 날은 「경과」다(배제 없음), 그 하루 뒤 취득분은 배제", () => {
-    // 양도 2026-08-01 기준. 2023-08-01 취득 = 만 3년 → 「3년이 경과하지 아니한」에 해당하지 않는다.
-    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2023-08-01") })).totalTax).toBe(
+  it("F16-3b 경계 — 확정판결일의 3년 응당일은 기간의 말일(배제), 그 하루 전 판결분은 경과(배제 없음)", () => {
+    // E-11 정정 — 「확정판결일부터 3년이 경과하지 아니한」은 초일불산입(민법 §157) 기간의 말일(§160 — 응당일)까지다.
+    //   양도 2026-08-01 기준: 2023-08-01 판결 → 말일 2026-08-01(기간 안 · 배제) · 2023-07-31 판결 → 말일 2026-07-31(경과).
+    //   종전 단언(2023-08-01 → 과세)은 date-fns 만 3년 비교였다.
+    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2023-07-31") })).totalTax).toBe(
       SURCHARGED,
     );
-    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2023-08-02") })).totalTax).toBe(
+    expect(calc(two({ isLitigationHousing: true, litigationAcquisitionDate: new Date("2023-08-01") })).totalTax).toBe(
       EXCLUDED,
     );
   });

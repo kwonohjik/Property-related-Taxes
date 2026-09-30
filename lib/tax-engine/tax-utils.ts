@@ -1,6 +1,7 @@
 import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears, subMonths } from "date-fns";
 import type { Heir } from "./types/inheritance-gift.types";
 import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "./legal-codes/transfer";
+import { MULTI_HOUSE } from "./legal-codes/transfer-house";
 
 // ============================================================
 // P0-2 원칙: 세율(rate) × 금액(amount) 곱셈은 반드시 applyRate()를 사용.
@@ -412,6 +413,18 @@ export function isWithinValuationPeriod(
  */
 export function isBeforeSurchargeSuspensionStart(transferDate: Date): boolean {
   return transferDate.toISOString().slice(0, 10) < SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.start;
+}
+
+/**
+ * 12의2 한시 배제의 보유 요건 — 「법 제95조제4항에 따른 **보유기간이 2년** … 이상인 주택」
+ * (「소득세법 시행령」 §167의3①12의2 · §167의10①12의2 본문, MST 286211 실독).
+ *
+ * §95④ 보유기간은 초일(취득일)을 산입한다(`calculateHoldingPeriod` — 유형 C). 종전에는 엔진·화면이
+ * `differenceInYears`(응당일 비교)를 따로 써 2년이 되는 날(응당일 전날) 양도를 2년 미만으로 봤다(E-11).
+ * 엔진(`determineSurchargeExclusion`)·⑤ 화면 게이트(`isMultiHouseSurchargeSuppressed`·`GracePeriodSection`)가 이 함수 하나를 쓴다.
+ */
+export function meetsSurchargeSuspensionHolding(acquisitionDate: Date, transferDate: Date): boolean {
+  return calculateHoldingPeriod(acquisitionDate, transferDate).years >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS;
 }
 
 interface SurchargeSpecialRules {

@@ -45,7 +45,7 @@ import {
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
-import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
+import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
@@ -230,54 +230,17 @@ export function calculateTransferTax(
   );
 
   /**
-   * §89② — 세대가 주택과 조합원입주권·분양권을 함께 보유하는데, 단서의 예외(시행령 §156의2③~⑪ ·
-   * §156의3②~⑧) 중 **판정에 필요한 사실을 입력받을 경로가 없는 항**이 남아 있는 경우.
-   *
-   * 배제를 켜면 그 예외에 해당하는 세대가 법 근거 없이 불리해지므로 종전 동작을 유지하고,
-   * 대신 어느 항을 직접 확인해야 하는지 그대로 알린다(자동 판정 대신 **판정 불가 고지** —
-   * §155⑦3호 귀농주택 경고와 같은 층위다).
+   * §89② 후속 경고 — 판정 보류 고지 · §156의2⑬·§156의3⑩ 사후관리(추징) 고지.
+   * 겸용 단건 엔진과 같은 leaf(`article89Clause2Notices` — E-7). 추징 리스크는 특례가 실제로 적용돼
+   * 비과세를 받은 경우에만 있다(⑤는 선언만으로 `exception_met`이고 요건 판정은 E-5가 한다).
    */
-  /**
-   * §156의2⑬ · §156의3⑩ **사후관리(추징)** — 자기선언으로 인정한 예외는 요건이 깨지면
-   * 「사유가 발생한 날이 속하는 달의 말일부터 **2개월 이내**에 … 신고·납부」 대상이다.
-   *
-   * 🔴 2026-08-26 신설: `transfer-tax-exemption.ts`의 E-5 주석이 「사후관리(§156의2⑬) 경고는
-   *    결과 warnings에서 별도 처리」라고 적어 두었지만 **그 경고가 없었다**(주석·구현 드리프트).
-   *    ④(Phase 2 신설)와 ⑤(기존 대체주택)를 함께 배선한다.
-   */
-  const clause2Exception = exemptionResult.article89Clause2?.exception;
-  if (
-    exemptionResult.article89Clause2?.status === "exception_met" &&
-    // 🔑 추징 리스크는 **특례가 실제로 적용돼 비과세를 받은 경우**에만 있다.
-    //    ⑤는 선언만으로 `exception_met`이 되고 요건 판정은 E-5가 하므로 그 결과를 함께 본다.
-    (exemptionResult.isExempt || exemptionResult.isPartialExempt) &&
-    (clause2Exception === TRANSFER.RIGHT_3YR_EXCEPTION_156_2_4 ||
-      clause2Exception === TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3 ||
-      clause2Exception === TRANSFER.REPLACEMENT_HOUSE_156_2_5)
-  ) {
-    /**
-     * §156의2⑬은 「**제7항·제10항 또는 제11항의 규정에 따라** 제4항 또는 제5항을 적용받은
-     * 1세대를 **포함한다**」라 준용 경로도 추징 대상이다 ⇒ 준용 근거를 함께 알린다.
-     */
-    const via = exemptionResult.article89Clause2?.viaArticle;
-    // 「완성 후 N년」은 양도일 연혁(OH-30 — 대통령령 제33267호 부칙 제8조, ④·⑤ 공통).
-    warnings.push(
-      `1세대1주택 비과세를 「${clause2Exception}${via ? ` (${via} 준용)` : ""}」의 자기선언 요건(신축주택 완성 후 ${resolve1562DeadlineYears(input.transferDate)}년 이내 ` +
-        "세대전원 이사 + 1년 이상 계속 거주)으로 인정했습니다. 그 요건을 갖추지 못하게 되면 " +
-        "「소득세법 시행령」 §156의2⑬(분양권은 §156의3⑩)에 따라 사유 발생일이 속하는 달의 " +
-        "말일부터 2개월 이내에 이 특례를 적용받지 않았을 경우의 세액을 신고·납부해야 합니다(추징).",
-    );
-  }
-
-  if (exemptionResult.article89Clause2?.status === "undetermined") {
-    warnings.push(
-      "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
-        "「소득세법」 §89②은 이 경우 1세대1주택 비과세(§89①3호)를 적용하지 않되, 시행령이 정하는 " +
-        "예외에 해당하면 그대로 적용합니다. 아래 조문의 요건 충족 여부를 직접 확인하세요 — " +
-        "이 계산에는 §89② 배제를 적용하지 않았습니다: " +
-        (exemptionResult.article89Clause2.openArticles ?? []).join(" · "),
-    );
-  }
+  warnings.push(
+    ...article89Clause2Notices(
+      exemptionResult.article89Clause2,
+      exemptionResult.isExempt || exemptionResult.isPartialExempt,
+      input.transferDate,
+    ),
+  );
 
   // 입력 경로가 없는 연혁 분기(OH-22·OH-38·OH-01)의 판정 보류 — 판정 메뉴와 같은 문장을 낸다.
   for (const u of exemptionResult.undetermined) if (ERA_UNDETERMINED_IDS.has(u.id)) warnings.push(u.reason);

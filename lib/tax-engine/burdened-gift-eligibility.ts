@@ -16,8 +16,6 @@ import type { BurdenedGiftInfo } from "./types/transfer-burdened-gift.types";
 // Phase 2 (2026-05-12) — propertyType 지원 범위·overshoot·고가주택 게이트
 // ============================================================
 
-const HIGH_PRICE_THRESHOLD_KRW = 1_200_000_000;
-
 /**
  * 부담부증여 지원 자산 종류 — **엔진 층 게이트**(3층 중 하나).
  *
@@ -122,9 +120,10 @@ export function assertBurdenedGiftEligible(args: {
   //   - 안분 산식: gain_burdened × (C − 12억) / C
   //   근거: D-0-2 국세청 해석례 5건 (ntstDcmId=010000000000028078·010000000000027439·
   //                                  010000000000038712·010000000000136005·010000000000042478)
-  // suppress: HIGH_PRICE_THRESHOLD_KRW·isOneHousehold·propertyType 변수는 정보성 변수로 보존
-  //   (후속 PR에서 다른 가드 케이스 추가 시 재사용).
-  void HIGH_PRICE_THRESHOLD_KRW;
+  //   - 기준금액은 **양도(증여)일 연혁**(`resolveHighValueHouseThreshold` — 6억·9억·12억)을 정본이 쓴다(E-12).
+  //     여기 있던 12억 리터럴(`HIGH_PRICE_THRESHOLD_KRW`)은 판정에 쓰이지 않던 사문 상수라 걷었다
+  //     (anchor `burdened-gift-high-value-era-e12` — 2021-12-07 증여는 9억 기준).
+  // suppress: isOneHousehold 변수는 정보성 변수로 보존(후속 PR에서 다른 가드 케이스 추가 시 재사용).
   void isOneHousehold;
 }
 

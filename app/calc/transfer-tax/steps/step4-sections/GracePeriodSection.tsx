@@ -8,7 +8,7 @@
  */
 
 import { useMemo } from "react";
-import { differenceInYears } from "date-fns";
+import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -91,8 +91,8 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
     if (
       sellingAcq &&
       !Number.isNaN(sellingAcq.getTime()) &&
-      differenceInYears(transferDate, sellingAcq) <
-        MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS
+      // 엔진·④ 게이트와 같은 함수 — §95④ 보유기간 초일 산입(E-11).
+      !meetsSurchargeSuspensionHolding(sellingAcq, transferDate)
     ) {
       return { suspended: false, deadline: undefined, holdingGateFailed: true };
     }
