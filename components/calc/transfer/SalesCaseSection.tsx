@@ -76,6 +76,7 @@ export function SalesCaseSection({
         <CurrencyInput
           label=""
           hideLabel
+          data-field="similarSalesValue"
           value={similarSalesValue}
           onChange={(v) => {
             onSimilarSalesValueChange(v);
@@ -128,6 +129,7 @@ export function SalesCaseSection({
       <CurrencyInput
         label="취득시 기준시가 (원) — 개산공제 기준액"
         required
+        data-field="standardPriceAtAcq"
         value={standardPriceAtAcq}
         onChange={onStandardPriceAtAcqChange}
         hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."

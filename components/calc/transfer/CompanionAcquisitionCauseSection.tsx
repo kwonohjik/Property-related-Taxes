@@ -81,6 +81,7 @@ export function CompanionAcquisitionCauseSection({
       */}
       <RadioCardGroup
         name={`acquisitionCause-${asset.assetId}`}
+        data-field="acquisitionCause"
         tone="sky"
         layout="inline"
         value={asset.acquisitionCause ?? ""}

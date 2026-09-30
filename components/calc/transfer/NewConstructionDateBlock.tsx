@@ -82,6 +82,7 @@ export function NewConstructionDateBlock({
       <ToneCard tone="amber" sectionNum="①" title="사용승인일 (필수)" noDark>
         <FieldCard
           label="사용승인일"
+          field="occupancyApprovalDate"
           hint="사용승인서 교부일. 취득일의 기본 기준 (영 §162①4호 본문)."
           required
         >

@@ -134,7 +134,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           이 패널의 3-시점 기준시가는 그 면적을 곱셈 인자로 씁니다.
         </div>
 
-        <FieldCard label="최초 고시일" required stacked>
+        <FieldCard label="최초 고시일" field="phdFirstDisclosureDate" required stacked>
           <DateInput
             value={asset.phdFirstDisclosureDate}
             onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
@@ -162,6 +162,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행, StandardPriceInput 자동조회) */}
       <div className="grid gap-4 sm:grid-cols-2">
         <StandardPriceInput
+          data-field="phdFirstDisclosureHousingPrice"
           propertyKind={housePropertyKind}
           totalPrice={asset.phdFirstDisclosureHousingPrice}
           onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
@@ -173,6 +174,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           required
         />
         <StandardPriceInput
+          data-field="phdTransferHousingPrice"
           propertyKind={housePropertyKind}
           totalPrice={asset.phdTransferHousingPrice}
           onTotalPriceChange={(v) => onChange({ phdTransferHousingPrice: v })}
@@ -220,6 +222,12 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         )}
 
         <ThreePointStandardPriceInput
+          fieldLandAtAcq="phdLandPricePerSqmAtAcq"
+          fieldBuildingAtAcq="phdBuildingStdPriceAtAcq"
+          fieldLandAtFirst="phdLandPricePerSqmAtFirst"
+          fieldBuildingAtFirst="phdBuildingStdPriceAtFirst"
+          fieldLandAtTransfer="phdLandPricePerSqmAtTransfer"
+          fieldBuildingAtTransfer="phdBuildingStdPriceAtTransfer"
           jibun={asset.addressJibun || undefined}
           landArea={asset.acquisitionArea || undefined}
           stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}

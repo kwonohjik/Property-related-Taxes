@@ -94,6 +94,7 @@ export function PartialAcqApportionSection({ asset, onChange, onApply }: Props) 
       >
         <RadioCardGroup
           name={`partialAcqDistinct-${asset.assetId}`}
+          data-field="partialAcqDistinct"
           layout="inline"
           value={asset.partialAcqDistinct}
           onChange={(v) =>

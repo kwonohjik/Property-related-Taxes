@@ -65,7 +65,7 @@ export function SelfBuiltSection({
         <label className="block text-sm font-medium">
           구분 <span className="text-destructive">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-2 max-w-xs">
+        <div className="grid grid-cols-2 gap-2 max-w-xs" data-field="buildingType">
           {(["new", "extension"] as const).map((t) => (
             <button
               key={t}
@@ -88,12 +88,12 @@ export function SelfBuiltSection({
         <label className="block text-sm font-medium">
           완공일 <span className="text-destructive">*</span>
         </label>
-        <DateInput value={constructionDate} onChange={onConstructionDateChange} />
+        <DateInput data-field="constructionDate" value={constructionDate} onChange={onConstructionDateChange} />
         <p className="text-xs text-muted-foreground">신축·증축이 완료된 날짜</p>
       </div>
 
       {buildingType === "extension" && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" data-field="extensionFloorArea">
           <label className="block text-sm font-medium">
             증축 부분 바닥면적 (㎡) <span className="text-destructive">*</span>
           </label>
@@ -111,6 +111,7 @@ export function SelfBuiltSection({
           </label>
           <CurrencyInput
             label="증축부분 취득(완공)당시 기준시가 총액"
+            data-field="extensionStdPriceAtAcquisition"
             hideUnit
             value={extensionStdPriceAtAcquisition}
             onChange={onExtensionStdPriceAtAcquisitionChange}

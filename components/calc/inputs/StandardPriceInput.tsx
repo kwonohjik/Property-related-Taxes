@@ -62,6 +62,10 @@ interface Props {
   onLookupSuccess?: (info: { year: string; price: number }) => void;
   /** true이면 단가칸을 넓히고(40%) 면적을 좁힘(20%) + 단가 라벨 단축 — 반폭 레이아웃(2-col) 줄바꿈 방지. 기본 false */
   unitPriceWide?: boolean;
+  /** 검증 오류 → 입력칸 이동 앵커 — 총액 칸에 단다(조회 버튼·단가 칸이 아니라) */
+  "data-field"?: string;
+  /** 같은 앵커 — 면적 칸(`area`를 넘긴 단가×면적 모드) */
+  fieldArea?: string;
 }
 
 /**
@@ -95,6 +99,8 @@ export function StandardPriceInput({
   forceYear,
   onLookupSuccess,
   unitPriceWide = false,
+  "data-field": dataField,
+  fieldArea,
 }: Props) {
   const isAreaMode =
     !forceTotalMode &&
@@ -251,7 +257,7 @@ export function StandardPriceInput({
               disabled={pricePerSqmDisabled}
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" data-field={fieldArea}>
             <label className="block text-sm font-medium">{areaLabel ?? "면적 (㎡)"}</label>
             <input
               type="number"
@@ -267,6 +273,7 @@ export function StandardPriceInput({
             <CurrencyInput
               label={totalPriceLabel}
               hideLabel={hideLabel}
+              data-field={dataField}
               value={totalPrice}
               onChange={handleTotalPriceChange}
               required={required}
@@ -279,6 +286,7 @@ export function StandardPriceInput({
         <CurrencyInput
           label={label ?? "공시가격 (원)"}
           hideLabel={hideLabel}
+          data-field={dataField}
           value={totalPrice}
           onChange={handleTotalPriceChange}
           required={required}

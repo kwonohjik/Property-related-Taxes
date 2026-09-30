@@ -202,6 +202,7 @@ export function Pre1990LandValuationInput({
               <div className="flex-1">
                 <CurrencyInput
                   label=""
+                  data-field="pre1990PricePerSqm_1990"
                   value={form.pre1990PricePerSqm_1990 ?? ""}
                   onChange={(v) => onChange({ pre1990PricePerSqm_1990: v })}
                   placeholder="㎡당 가액 입력"
@@ -251,6 +252,7 @@ export function Pre1990LandValuationInput({
           <div className="grid grid-cols-3 gap-2">
             <GradeField
               label="1990.8.30. 현재 등급"
+              field="pre1990Grade_current"
               value={form.pre1990Grade_current ?? ""}
               onChange={(v) => onChange({ pre1990Grade_current: v })}
               preview={previews.current}
@@ -258,6 +260,7 @@ export function Pre1990LandValuationInput({
             />
             <GradeField
               label="1990.8.30. 직전 등급"
+              field="pre1990Grade_prev"
               value={form.pre1990Grade_prev ?? ""}
               onChange={(v) => onChange({ pre1990Grade_prev: v })}
               preview={previews.prev}
@@ -265,6 +268,7 @@ export function Pre1990LandValuationInput({
             />
             <GradeField
               label={`${sec164AcqTimePointLabel(acquisitionDate, "취득시")} 유효 등급`}
+              field="pre1990Grade_atAcq"
               value={form.pre1990Grade_atAcq ?? ""}
               onChange={(v) => onChange({ pre1990Grade_atAcq: v })}
               preview={previews.atAcq}
@@ -294,15 +298,18 @@ function GradeField({
   onChange,
   preview,
   mode,
+  field,
 }: {
   label: string;
+  /** 검증 오류 → 입력칸 이동 앵커 */
+  field: string;
   value: string;
   onChange: (v: string) => void;
   preview: { value: number; note: string } | null;
   mode: "number" | "value";
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" data-field={field}>
       <label className="block text-xs font-medium leading-snug">{label} <span className="text-destructive">*</span></label>
       <div className="flex items-center gap-2">
         <input

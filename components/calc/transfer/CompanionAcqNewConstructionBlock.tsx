@@ -26,6 +26,7 @@ export function CompanionAcqNewConstructionBlock(props: BlockProps) {
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <CurrencyInput
         label="신축 비용 (취득가액)"
+        data-field="fixedAcquisitionPrice"
         value={props.fixedAcquisitionPrice}
         onChange={props.onFixedAcquisitionPriceChange}
         required

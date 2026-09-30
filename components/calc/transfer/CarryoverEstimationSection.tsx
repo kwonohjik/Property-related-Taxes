@@ -73,6 +73,7 @@ export function CarryoverEstimationSection({
         <p className="text-sm font-medium text-amber-800">환산 방식 선택</p>
         <RadioCardGroup
           name={`carryoverEstimationMode-${asset.assetId ?? "primary"}`}
+          data-field="carryover.estimationMode"
           tone="amber"
           layout="stack"
           options={ESTIMATION_MODE_OPTIONS}
@@ -113,6 +114,7 @@ export function CarryoverEstimationSection({
           </div>
 
           <FieldCard
+            field="carryover.donorStandardPriceAtAcquisition"
             label="취득시 기준시가"
             hint="증여자 취득일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)"
             trailing={<LegalBadge text="시행령 §163⑨" />}
@@ -125,6 +127,7 @@ export function CarryoverEstimationSection({
           </FieldCard>
 
           <FieldCard
+            field="carryover.donorStandardPriceAtTransfer"
             label="양도시 기준시가"
             hint="양도일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)"
           >

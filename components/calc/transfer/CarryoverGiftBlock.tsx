@@ -141,6 +141,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여 등기접수일"
+          field="carryover.giftRegistryDate"
           hint="소득세법 §97조의2 ③ — 이월과세 적용기간 기산일 (등기부 기재일)"
           trailing={<LawArticleModal legalBasis="소득세법 §97의2 ③" label="§97의2③" />}
         >
@@ -152,6 +153,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여자 취득일"
+          field="carryover.donorAcquisitionDate"
           hint="보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)"
         >
           <DateInput
@@ -205,6 +207,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         {!c.useEstimatedAcquisition && (
           <FieldCard
             label="증여자 취득가액"
+            field="carryover.donorAcquisitionPrice"
             hint="증여자의 실제 취득가액 (매매계약서·상속세신고서 등 증빙 기준)"
           >
             <CurrencyInput
@@ -275,6 +278,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         ) : (
           <FieldCard
             label="증여세 상당액"
+            field="carryover.giftTaxAmount"
             hint={
               "소득세법 시행령 §163의2②: 증여세 산출세액 × 「양도한 해당 자산가액을 증여세 과세가액으로 나눈 비율」. 미신고 시 0 입력." +
               giftTaxShareHint
@@ -292,6 +296,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여자 자본적지출"
+          field="carryover.donorCapitalExpenditure"
           hint={
             isAfter2024
               ? "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
@@ -318,6 +323,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여 당시 평가액"
+          field="carryover.giftDateValuation"
           hint="이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
         >
           <CurrencyInput

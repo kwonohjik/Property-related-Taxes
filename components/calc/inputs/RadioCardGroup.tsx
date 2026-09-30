@@ -125,6 +125,8 @@ export interface RadioCardGroupProps<T extends string> {
    * (JSX는 하이픈 속성명을 타입검사하지 않는다).
    */
   "data-testid"?: string;
+  /** 검증 오류 → 입력칸 이동 앵커(`components/calc/transfer/validation-jump.ts`) */
+  "data-field"?: string;
 }
 
 export function RadioCardGroup<T extends string>({
@@ -138,6 +140,7 @@ export function RadioCardGroup<T extends string>({
   className,
   lawLinks,
   "data-testid": dataTestId,
+  "data-field": dataField,
 }: RadioCardGroupProps<T>) {
   const t = TONES[tone];
 
@@ -161,6 +164,7 @@ export function RadioCardGroup<T extends string>({
       data-slot="radio-card-group"
       data-layout={layout}
       data-testid={dataTestId}
+      data-field={dataField}
       className={cn(
         layout === "inline"
           ? "flex flex-wrap gap-2"

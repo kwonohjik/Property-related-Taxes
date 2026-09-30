@@ -34,13 +34,13 @@ export const validBase = () => ({
 });
 
 /** 함께 양도 2건 — 둘째 자산을 바꿔 쓴다 */
-const bundle = (second: Record<string, unknown>, formPatch: Record<string, unknown> = {}) => ({
+export const bundle = (second: Record<string, unknown>, formPatch: Record<string, unknown> = {}) => ({
   ...validBase(),
   assets: [baseAsset(), { ...baseAsset(), ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 2-2", acquisitionDate: "2015-03-01", fixedAcquisitionPrice: "100000000", useEstimatedAcquisition: false, isAppraisalAcquisition: false, standardPriceAtTransfer: "100000000", ...second }],
   ...formPatch,
 });
 
-const withPrimary = (patch: Record<string, unknown>, formPatch: Record<string, unknown> = {}) => ({
+export const withPrimary = (patch: Record<string, unknown>, formPatch: Record<string, unknown> = {}) => ({
   ...validBase(),
   assets: [{ ...baseAsset(), ...patch }],
   ...formPatch,
@@ -87,6 +87,8 @@ const graceBase = (gracePeriod: Record<string, unknown>) =>
 
 export interface FieldJumpCase {
   field: string;
+  /** 테스트 이름 — 같은 키를 여러 분기에서 볼 때 구분한다(없으면 field) */
+  name?: string;
   /** 검증 단계 0~3 */
   step: 0 | 1 | 3;
   /** 오류 목록에서 누를 항목 (메시지 앞부분) */
@@ -150,3 +152,13 @@ export const FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: () => ({ ...validBase(), amendmentMode: true, originalDeterminedTax: "1000000", applyLatePaymentPenalty: true, statutoryFilingDeadline: "2024-05-31", amendedPaymentDate: "" }),
   },
 ];
+
+/**
+ * 후퇴 대조군 — 「field 없는 오류는 자산 카드로 후퇴」를 지키는 입력.
+ *
+ * 「지분 모드 자산은 단독으로 계산할 수 없습니다」(`transfer-tax-validate-asset.ts`)는 칸 하나가 아니라
+ * **조합 오류**(지분율 · 다른 지분 자산 · 「나머지 지분은 타인 소유」)라 field를 달지 않는다.
+ * ⚠️ Phase 2 전의 대조군 「자산: 취득일을 입력하세요.」는 Phase 2가 field를 달아 대조군 구실을 잃었다 —
+ *    이 입력을 바꿀 때도 **field가 영영 안 붙을 메시지**를 고를 것(계획서 §7-2).
+ */
+export const fallbackControlForm = () => withPrimary({ ownershipNumerator: "50", ownershipDenominator: "100" });
