@@ -322,6 +322,8 @@ export function validateAssetEntry(
   const rhError = validateRentalHousingException(
     a.rentalHousingException, a, index, label, form.transferDate, "full",
     qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts) }),
+    // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부(폼-전역, 일반 §154① 흐름과 동일 소스).
+    form.wasRegulatedAtAcquisition,
   );
   if (rhError) return rhError;
 

@@ -24,6 +24,9 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
   postRegistrationResidenceMonths: "",
   priorRentalExemptionHistory: "",
   residenceTransitionUnderAddendum: false,
+  // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 UI가 노출
+  wasRegisteredRentalOrChildcare: false,
+  residenceMonthsAfterPriorResidenceTransfer: "",
 };
 
 /**

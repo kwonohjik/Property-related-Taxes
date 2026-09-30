@@ -40,6 +40,13 @@ export function validateRentalHousingException(
    * 넘긴다 — 여기서 24개월로 막으면 판정 메뉴·엔진은 비과세인데 계산기만 영구 차단된다.
    */
   winWinResidenceExempt = false,
+  /**
+   * §154⑩+§154①(I-5) — 거주주택 **취득 당시** 조정대상지역 여부. `rentalUnits`가 0호인 B
+   * (§154⑩ 표준 경로)에서 「직전거주주택 양도일 이후 거주기간 2년」을 요구할지 결정한다.
+   * 미전달(기본 false)이면 이 하위 검증만 건너뛴다 — 엔진(`checkPhrp154_10Eligibility`)이
+   * 여전히 최종 판정하므로 세액이 침묵으로 틀려지지 않는다(막지 않을 뿐 계산은 정확하다).
+   */
+  wasRegulatedAtAcquisition = false,
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -56,12 +63,25 @@ export function validateRentalHousingException(
    */
   if (!canDeclareRentalHousingException(asset.assetKind, assetIndex)) return null;
 
-  // 임대주택 1호 이상 필수
+  /**
+   * 임대주택 1호 이상 필수 — **시나리오 A만**. B(PHRP)는 0호를 허용한다(I-5): 양도일 현재
+   * 공동보유 중인 장기임대주택이 하나도 없는 §154⑩ 표준 경로가 그 경우다.
+   */
   if (!rh.rentalUnits || rh.rentalUnits.length === 0) {
-    return `${label}: 장기임대주택 특례 — 임대주택 정보를 1호 이상 입력하세요.`;
+    if (rh.scenario === "A") {
+      return `${label}: 장기임대주택 특례 — 임대주택 정보를 1호 이상 입력하세요.`;
+    }
+    // §154⑩ 표준 경로(I-5) — 1호(등록·운영 사실)만 확인. 2호(PHRP)·§154① 보유·거주는
+    // 아래 B 전용 블록(§161 안분 입력과 같은 자리)·엔진이 마저 판정한다.
+    if (!rh.wasRegisteredRentalOrChildcare) {
+      return `${label}: 장기임대주택 특례(§154⑩) — 이 주택이 임대주택으로 등록되거나 어린이집으로 설치·운영된 사실이 있는지 확인하세요.`;
+    }
+    if (wasRegulatedAtAcquisition && (rh.residenceMonthsAfterPriorResidenceTransfer ?? "") === "") {
+      return `${label}: 장기임대주택 특례(§154⑩) — 취득 당시 조정대상지역이었던 주택입니다. 직전거주주택 양도일 이후 거주기간(개월)을 입력하세요.`;
+    }
   }
 
-  // 호별 검증
+  // 호별 검증 (임대주택이 있을 때만 — §154⑩ 표준 경로는 0호라 이 루프를 건너뛴다)
   for (let i = 0; i < rh.rentalUnits.length; i++) {
     const u = rh.rentalUnits[i];
     const unitLabel = `${label} 임대주택 #${i + 1}`;
@@ -231,8 +251,10 @@ export function validateRentalHousingException(
   /**
    * OH-15 — B의 §155⑳1호 거주요건은 「사업자등록·임대사업자 등록 이후 거주기간」이다. ⑤가 ③ 거주 블록에
    * **모든 모드에서** 띄우므로 두 모드 모두 막는다(화면에 있는 칸). 미입력이면 엔진이 요건 불충족으로 본다.
+   * §154⑩ 표준 경로(rentalUnits 0호)는 §155⑳1호가 아니라 §154①(재기산 보유기간)을 적용하므로 이 칸을
+   * 요구하지 않는다 — 위에서 이미 `residenceMonthsAfterPriorResidenceTransfer`로 확인했다.
    */
-  if (rh.scenario === "B" && (rh.postRegistrationResidenceMonths ?? "") === "") {
+  if (rh.scenario === "B" && rh.rentalUnits.length > 0 && (rh.postRegistrationResidenceMonths ?? "") === "") {
     return `${label}: 임대→거주 전환 주택 시나리오 — 사업자등록·임대사업자 등록 이후 거주기간(개월)을 입력하세요 (소령 §155⑳1호).`;
   }
 
@@ -256,6 +278,15 @@ export function validateRentalHousingException(
   if (!asset.acquisitionDate) {
     return `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`;
   }
+
+  /**
+   * §154⑩ 표준 경로(rentalUnits 0호)는 여기부터가 적용되지 않는다 — 「거주주택 자신의 보유·거주
+   * 요건」은 §155⑳1호(등록 이후 거주기간)·§154①(취득일~양도일 원래 보유기간)을 전제하는데, §154⑩은
+   * 그 보유기간 자체를 **직전거주주택 양도일 후**로 재정의한다(위에서 이미 확인). 원래 취득일 기준
+   * 24개월 검증을 그대로 적용하면 재기산 전 기간을 잘못된 기준으로 판정하게 된다 — 엔진
+   * (`checkPhrp154_10Eligibility`)이 재기산된 보유·거주기간으로 최종 판정한다.
+   */
+  if (rh.rentalUnits.length === 0) return null;
 
   // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
   // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).

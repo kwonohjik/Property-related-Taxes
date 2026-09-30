@@ -51,5 +51,8 @@ export function toRentalHousingExceptionEngineInput(
     postRegistrationResidenceMonths: rhe.postRegistrationResidenceMonths,
     priorRentalExemptionHistory: rhe.priorRentalExemptionHistory,
     residenceTransitionUnderAddendum: rhe.residenceTransitionUnderAddendum,
+    // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 엔진이 참조한다.
+    wasRegisteredRentalOrChildcare: rhe.wasRegisteredRentalOrChildcare,
+    residenceMonthsAfterPriorResidenceTransfer: rhe.residenceMonthsAfterPriorResidenceTransfer,
   };
 }

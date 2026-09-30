@@ -57,18 +57,33 @@ export const rentalUnitSchema = z.object({
   requirementsConfirmed: z.boolean(),
 });
 
-/** ⑫ 장기임대주택 거주주택 비과세 특례 Zod 스키마 (미정의 시 침묵 stripping 방지) */
-export const rentalHousingExceptionSchema = z.object({
-  applyException: z.boolean(),
-  scenario: RentalScenarioEnum,
-  rentalUnits: z.array(rentalUnitSchema).min(1),
-  priorResidenceTransferDate: z.string().datetime().optional(),
-  standardPriceAtAcquisitionForPhrp: z.number().int().nonnegative().optional(),
-  standardPriceAtPriorTransfer: z.number().int().nonnegative().optional(),
-  standardPriceAtTransferForPhrp: z.number().int().nonnegative().optional(),
-  /** B — 사업자등록·임대사업자 등록 이후 거주기간(개월) §155⑳1호 괄호 (OH-15) */
-  postRegistrationResidenceMonths: z.number().int().nonnegative().optional(),
-  priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
-  /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
-  residenceTransitionUnderAddendum: z.boolean().optional(),
-});
+/**
+ * ⑫ 장기임대주택 거주주택 비과세 특례 Zod 스키마 (미정의 시 침묵 stripping 방지)
+ *
+ * `rentalUnits`는 시나리오 A는 1호 이상, 시나리오 B는 **0호도 허용**한다(I-5) — 양도일 현재
+ * 공동보유 중인 장기임대주택이 하나도 없는 §154⑩ 표준 경로(PHRP가 임대주택을 전부 처분·등록말소한
+ * 경우)가 그 경우다. A는 종전대로 `.refine`으로 1호 이상을 강제한다(회귀 0).
+ */
+export const rentalHousingExceptionSchema = z
+  .object({
+    applyException: z.boolean(),
+    scenario: RentalScenarioEnum,
+    rentalUnits: z.array(rentalUnitSchema),
+    priorResidenceTransferDate: z.string().datetime().optional(),
+    standardPriceAtAcquisitionForPhrp: z.number().int().nonnegative().optional(),
+    standardPriceAtPriorTransfer: z.number().int().nonnegative().optional(),
+    standardPriceAtTransferForPhrp: z.number().int().nonnegative().optional(),
+    /** B — 사업자등록·임대사업자 등록 이후 거주기간(개월) §155⑳1호 괄호 (OH-15) */
+    postRegistrationResidenceMonths: z.number().int().nonnegative().optional(),
+    priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
+    /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
+    residenceTransitionUnderAddendum: z.boolean().optional(),
+    /** §154⑩1호(I-5) — 임대주택 등록·어린이집 운영 사실. rentalUnits 0호 경로에서만 판정에 쓴다. */
+    wasRegisteredRentalOrChildcare: z.boolean().optional(),
+    /** §154⑩+§154①(I-5) — 직전거주주택 양도일 이후 거주기간(개월). 조정대상지역 취득 시에만 쓴다. */
+    residenceMonthsAfterPriorResidenceTransfer: z.number().int().nonnegative().optional(),
+  })
+  .refine((v) => v.scenario !== "A" || v.rentalUnits.length >= 1, {
+    message: "시나리오 A(거주주택 양도)는 임대주택 정보를 1호 이상 입력해야 합니다.",
+    path: ["rentalUnits"],
+  });

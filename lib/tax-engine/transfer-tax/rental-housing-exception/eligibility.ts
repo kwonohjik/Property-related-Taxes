@@ -21,9 +21,16 @@
  *
  * 법령 근거: 소득세법 시행령 §155⑳·㉑·㉓ + §167조의3①2호
  * 연혁(마목 1) 포함·생애 1회·PHRP 1주택 한정): `../../data/rental-155-20-era.ts`
+ *
+ * ── §154⑩ 경로(I-5) ──────────────────────────────────────────────────────
+ * `rentalUnits`가 0호인 시나리오 B는 위 1·2·3 판정을 전부 건너뛰고 §154⑩을 따로 판정한다
+ * (`checkPhrp154_10Eligibility`). 양도일 현재 공동보유 중인 장기임대주택이 없으므로 §155⑳ 본문
+ * (「장기임대주택 … 과 그 밖의 1주택을 국내에 소유」)이 성립하지 않기 때문이다 — §154⑩은 §155⑳
+ * 후단의 PHRP **정의**만 빌려 §154①(보유 2년·조정지역 취득 시 거주 2년)의 기산일을 재정의한다.
  */
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
+import { calculateHoldingPeriod } from "../../tax-utils";
 import {
   isMa1IncludedIn15520,
   isLifetimeLimitEra155_20,
@@ -61,9 +68,20 @@ export type EligibilityContext = {
   transferDate: Date;
   /** 양도하는 거주주택(B는 직전거주주택보유주택)의 취득일 — OH-40 부칙 제7조① 기준축 */
   residenceAcquisitionDate: Date;
+  /**
+   * §154⑩(I-5) — 거주주택 **취득 당시** 조정대상지역 여부. `rentalUnits`가 0호인 시나리오 B
+   * (§154⑩ 경로)에서만 쓴다. 일반 §154① 거주요건 판정과 같은 단일 소스
+   * (`resolveWasRegulatedAtAcquisition`)를 호출부가 넘긴다.
+   */
+  wasRegulatedAtAcquisition?: boolean;
 } & Pick<
   RentalHousingExceptionInput,
-  "postRegistrationResidenceMonths" | "priorRentalExemptionHistory" | "residenceTransitionUnderAddendum"
+  | "postRegistrationResidenceMonths"
+  | "priorRentalExemptionHistory"
+  | "residenceTransitionUnderAddendum"
+  | "priorResidenceTransferDate"
+  | "wasRegisteredRentalOrChildcare"
+  | "residenceMonthsAfterPriorResidenceTransfer"
 >;
 
 /**
@@ -294,13 +312,22 @@ export function checkEligibility(
   const residenceFailReasons: string[] = [];
   const notices: string[] = [];
 
+  /**
+   * §154⑩(I-5) — 양도일 현재 공동보유 중인 장기임대주택이 0호인 시나리오 B.
+   * §155⑳ 본문(「장기임대주택 … 과 그 밖의 1주택을 국내에 소유」)이 성립하지 않으므로 아래 1·2·3
+   * (§155⑳ 3요건·호별 판정)을 전부 건너뛰고 §154⑩을 따로 판정한다.
+   */
+  const isStandalone154_10 = ctx?.scenario === "B" && rentalUnits.length === 0;
+
   // ── 1. 거주주택 요건 ──
-  if (residenceHoldYears < 2) {
+  if (isStandalone154_10 && ctx) {
+    checkPhrp154_10Eligibility(ctx, residenceFailReasons);
+  } else if (!isStandalone154_10 && residenceHoldYears < 2) {
     residenceFailReasons.push(
       `거주주택 보유기간 2년 미충족 (현재: ${residenceHoldYears}년)`,
     );
   }
-  if (ctx?.scenario === "B") {
+  if (!isStandalone154_10 && ctx?.scenario === "B") {
     /**
      * OH-15 — §155⑳1호 괄호: 직전거주주택보유주택의 거주기간은 「법 제168조에 따른 사업자등록과
      * 「민간임대주택에 관한 특별법」 제5조에 따른 임대사업자 등록을 한 날 … **이후의 거주기간**」이다
@@ -318,7 +345,7 @@ export function checkEligibility(
         );
       }
     }
-  } else if (residenceLiveYears < 2 && !winWinResidenceExempt) {
+  } else if (!isStandalone154_10 && residenceLiveYears < 2 && !winWinResidenceExempt) {
     residenceFailReasons.push(
       `거주주택 거주기간 2년 미충족 (현재: ${residenceLiveYears}년)`,
     );
@@ -326,9 +353,11 @@ export function checkEligibility(
 
   /**
    * OH-40 — 대통령령 제29523호 부칙 제7조①(2019-02-12 이후 취득 거주주택)·제35349호 부칙 제14조
-   * (2025-02-28 이후 양도분 삭제) 사이 구간의 두 괄호.
+   * (2025-02-28 이후 양도분 삭제) 사이 구간의 두 괄호. §154⑩2호는 §155⑳ 각 호 외의 부분
+   * **후단**(PHRP 정의)만 인용한다 — 「생애 한 차례」·「1주택 외 주택을 모두 양도한 후」는 본문
+   * (전단)의 문언이라 §154⑩ 표준 경로(`isStandalone154_10`)에는 적용되지 않는다.
    */
-  if (ctx) {
+  if (!isStandalone154_10 && ctx) {
     const transition = ctx.residenceTransitionUnderAddendum === true;
     if (isLifetimeLimitEra155_20(ctx.residenceAcquisitionDate, ctx.transferDate, transition)) {
       if (ctx.scenario === "B") {
@@ -386,7 +415,8 @@ export function checkEligibility(
   // ── 2. 임대주택 호별 요건 ──
   const unitFailReasons: RentalUnitFailReason[] = [];
   const perUnitVerdict: RentalUnitVerdict[] = [];
-  let allUnitsPassed = rentalUnits.length > 0;
+  // §154⑩ 표준 경로는 공동보유 장기임대주택이 없는 것이 요건이다 — 호가 0개인 것 자체는 불통과 사유가 아니다.
+  let allUnitsPassed = isStandalone154_10 || rentalUnits.length > 0;
   const periodPendingUnitIndexes: number[] = [];
   const derivedArticles: RentalArticle[] = [];
 
@@ -546,12 +576,63 @@ export function checkEligibility(
     passed,
     failReasons: unitFailReasons,
     residenceFailReasons,
-    laws: [TRANSFER_RENTAL_HOUSING.PIT_RD_155_20],
+    laws: isStandalone154_10
+      ? [TRANSFER_RENTAL_HOUSING.PIT_RD_154_10]
+      : [TRANSFER_RENTAL_HOUSING.PIT_RD_155_20],
     perUnitVerdict,
     periodPendingUnitIndexes,
     ...(cancellationWindow ? { cancellationWindow } : {}),
     ...(notices.length > 0 ? { notices } : {}),
   };
+}
+
+/**
+ * §154⑩ 표준 경로(I-5) — 공동보유 장기임대주택이 0호인 시나리오 B의 요건 판정.
+ *
+ * 1호: 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록하거나 「영유아보육법」 §12·§13에
+ *   따른 어린이집으로 설치·운영된 사실이 있을 것 (`wasRegisteredRentalOrChildcare`).
+ * 2호(+§154①): 직전거주주택의 양도일(`priorResidenceTransferDate`) **후**의 기간분에 대해서만
+ *   국내에 1주택을 보유한 것으로 보아 §154①을 적용한다 — 그 재기산된 보유기간이 2년 이상이어야
+ *   하고, 취득 당시 조정대상지역이었던 주택이면 그 보유기간 중 거주기간도 2년 이상이어야 한다.
+ *
+ * 실패 사유를 `residenceFailReasons`에 직접 push한다(부수효과) — 호출부(`checkEligibility`)의
+ * 배열을 그대로 받는다.
+ */
+function checkPhrp154_10Eligibility(
+  ctx: EligibilityContext,
+  residenceFailReasons: string[],
+): void {
+  if (ctx.wasRegisteredRentalOrChildcare !== true) {
+    residenceFailReasons.push(
+      "이 주택이 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록되거나 「영유아보육법」 §12·§13에 따른 어린이집으로 설치·운영된 사실이 확인되지 않습니다 (소령 §154⑩1호).",
+    );
+  }
+  const priorDate = ctx.priorResidenceTransferDate;
+  if (!validDate(priorDate)) {
+    residenceFailReasons.push(
+      "직전거주주택 양도일이 입력되지 않아 소령 §154⑩에 따른 보유기간 요건을 판정할 수 없습니다.",
+    );
+    return;
+  }
+  // 초일불산입(민법 §157) — calculateHoldingPeriod가 직전거주주택 양도일 다음날부터 기산한다.
+  const holdYearsFromPrior = calculateHoldingPeriod(priorDate, ctx.transferDate).years;
+  if (holdYearsFromPrior < 2) {
+    residenceFailReasons.push(
+      `직전거주주택 양도일 후 보유기간 2년 미충족 (현재: ${holdYearsFromPrior}년, 소령 §154⑩ + §154①)`,
+    );
+  }
+  if (ctx.wasRegulatedAtAcquisition === true) {
+    const m = ctx.residenceMonthsAfterPriorResidenceTransfer;
+    if (m == null) {
+      residenceFailReasons.push(
+        "취득 당시 조정대상지역이었던 주택입니다 — 직전거주주택 양도일 이후 거주기간을 입력하지 않아 거주요건(2년)을 판정할 수 없습니다 (소령 §154⑩ + §154①).",
+      );
+    } else if (Math.floor(m / 12) < 2) {
+      residenceFailReasons.push(
+        `직전거주주택 양도일 후 거주기간 2년 미충족 (현재: ${Math.floor(m / 12)}년 ${m % 12}개월, 소령 §154⑩ + §154①)`,
+      );
+    }
+  }
 }
 
 /**

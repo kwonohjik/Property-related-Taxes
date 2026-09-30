@@ -22,6 +22,7 @@ import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { isPhrpStdPriceLinked } from "@/lib/calc/transfer-phrp-stdprice-link";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RentalUnitCard } from "./RentalUnitCard";
+import { RentalHousing154_10Block } from "./RentalHousing154_10Block";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
@@ -132,6 +133,8 @@ export function RentalHousingExceptionSection({
    * 모드가 3종이 되면서 ①②가 각각 빠질 수 있어 하드코딩을 걷어냈다(P6-c-2).
    */
   const allocationVisible = rh.scenario === "B" && showAllocationInputs;
+  /** §154⑩ 표준 경로(I-5) — 공동보유 장기임대주택이 0호인 시나리오 B(§155⑳ 본문 미성립). */
+  const isStandalone154_10Path = rh.scenario === "B" && rh.rentalUnits.length === 0;
   const allocationNum = showJudgmentFacts ? 2 : 1;
   const residenceNum = (showJudgmentFacts ? 1 : 0) + (allocationVisible ? 1 : 0) + 1;
 
@@ -214,7 +217,9 @@ export function RentalHousingExceptionSection({
                   index={i}
                   onChange={(u) => updateUnit(i, u)}
                   onRemove={() => removeUnit(i)}
-                  canRemove={rh.rentalUnits.length > 1}
+                  // 시나리오 B(PHRP)는 마지막 호까지 제거할 수 있다(I-5) — 0호가 §154⑩ 표준 경로다.
+                  // A(§155⑳ 본문)는 공동보유 장기임대주택 1호 이상이 필수라 종전대로 막는다.
+                  canRemove={rh.scenario === "B" || rh.rentalUnits.length > 1}
                   transferDate={transferDate}
                 />
               ))}
@@ -287,10 +292,13 @@ export function RentalHousingExceptionSection({
 
       {/*
         ② B 시나리오 전용: 직전거주주택 정보 + 3-시점 기준시가.
-        🔑 **판정에는 쓰이지 않는다** — `checkEligibility`는 이 네 값을 보지 않는다.
+        🔑 3-시점 기준시가는 **판정에 쓰이지 않는다** — `checkEligibility`는 그 값을 보지 않는다.
            그래서 판정 메뉴(`mode="facts"`)에서는 통째로 접는다(Q-7 분할선).
+        ⚠️ 직전거주주택 양도일은 예외다(I-5) — rentalUnits 0호(§154⑩ 표준 경로)면 이 날짜 자체가
+           재기산 보유기간의 기산일이라 **판정 축이기도 하다**. 그 경우 `RentalHousing154_10Block`
+           이 이 섹션 밖에서 같은 필드를 직접 받으므로(`showDateInput`), 안내 문구도 그 갈래를 뺀다.
       */}
-      {rh.scenario === "B" && !showAllocationInputs && (
+      {rh.scenario === "B" && !showAllocationInputs && !isStandalone154_10Path && (
         <div
           className="rounded-lg border border-amber-200 bg-amber-50/40 p-2.5 text-xs text-amber-800"
           data-testid="rental-allocation-deferred-notice"
@@ -443,8 +451,28 @@ export function RentalHousingExceptionSection({
         </div>
       )}
 
-      {/* ③ 거주주택 요건 충족 상태 (실시간) + 적용 요건 안내 */}
-      {(() => {
+      {/*
+        §154⑩ 표준 경로(I-5) — 공동보유 장기임대주택이 0호인 시나리오 B. 아래 「③ 거주주택 요건」
+        블록은 §155⑳1호(등록 이후 거주기간)·원래 취득일 기준 보유기간을 전제하는데, §154⑩은 그
+        보유기간 자체를 직전거주주택 양도일 후로 재정의하므로 별도 블록으로 대체한다.
+      */}
+      {isStandalone154_10Path && (
+        <RentalHousing154_10Block
+          rh={rh}
+          transferDate={transferDate}
+          onChange={(patch) => onChange({ ...rh, ...patch })}
+          // §161 안분 섹션(②, allocationVisible)이 감춰지는 모드(facts)에서만 이 블록이 직접 받는다.
+          showDateInput={!allocationVisible}
+        />
+      )}
+
+      {/*
+        ③ 거주주택 요건 충족 상태 (실시간) + 적용 요건 안내.
+        §154⑩ 표준 경로(`isStandalone154_10Path`)에서만 건너뛴다 — 그 경로는 위 블록이 대체한다.
+        시나리오 A가 아직 임대주택을 1호도 추가하지 않은 **과도기 상태**(예: 토글 직후 렌더)에서도
+        거주기간 편집기는 계속 보여야 한다 — 이 블록이 그 편집기의 유일한 입력 경로다(R21).
+      */}
+      {!isStandalone154_10Path && (() => {
         // 거주기간(개월) — interval/direct 도출값(엔진·validation과 동일 소스)
         const totalLiveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
         // OH-15 — B의 §155⑳1호 거주요건은 등록 이후 거주기간이다(엔진 `checkEligibility`와 같은 축).

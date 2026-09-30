@@ -648,6 +648,11 @@ export function migrateAsset(raw: unknown): AssetForm {
       rhe.priorRentalExemptionHistory = "";
     }
     if (typeof rhe.residenceTransitionUnderAddendum !== "boolean") rhe.residenceTransitionUnderAddendum = false;
+    // §154⑩ 표준 경로(I-5) 신규 필드 — 구 세션엔 없다 → 미입력(엔진이 「판정 불가」로 다룬다)
+    if (typeof rhe.wasRegisteredRentalOrChildcare !== "boolean") rhe.wasRegisteredRentalOrChildcare = false;
+    if (typeof rhe.residenceMonthsAfterPriorResidenceTransfer !== "string") {
+      rhe.residenceMonthsAfterPriorResidenceTransfer = "";
+    }
   }
   // ── Phase 2·3 + 매매사례가액 신규 필드 normalize — 별도 모듈 (800줄 정책, 2026-06-15) ──
   applyPhase3Normalize(a);
