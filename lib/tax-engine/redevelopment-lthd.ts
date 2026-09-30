@@ -23,6 +23,7 @@
 
 import { applyRate } from "./tax-utils";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { completedMonthsInclusive } from "./civil-period";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
 
@@ -86,7 +87,8 @@ export function resolveRightResidenceMonths(input: {
  *   통산하지 아니함**」. `prior`는 승계 전 거주라 읽지 않는다.
  *
  * ⚠️ 분리 입력이 **없을 때**의 Step4 값은 ⑧(`transfer-tax-validate.ts`)이 「입주일 ≥ 보유 기산일」을
- *    막아 둔 값이다(승계조합원은 준공일 기준 — OH-50). 월수 직접 입력은 날짜가 없어 막을 수 없다.
+ *    막아 둔 값이다(승계조합원은 준공일 기준 — OH-50). 월수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수
+ *    없고, 준공일~양도일보다 긴 값만 ⑧·⑫가 막는다(I-8 `successorAptMaxResidenceMonths`).
  */
 export function resolveAptResidenceMonths(input: {
   isSuccessorMember?: boolean;
@@ -104,6 +106,21 @@ export function resolveAptResidenceMonths(input: {
   return hasSplit
     ? (input.priorHouseResidenceMonths ?? 0) + (input.newHouseResidenceMonths ?? 0)
     : (input.residencePeriodMonths ?? 0);
+}
+
+/**
+ * I-8 — 승계조합원 완공APT가 **거주월수로 쓸 수 있는 최댓값** = 준공일부터 양도일까지의 개월 수.
+ *
+ * 신축주택 취득시기는 「소득세법 시행령」 §162①4호(사용승인서 교부일 — 그 전 사실상 사용·임시사용승인이면
+ * 그 날)이고, §154①·§159의4의 「그 보유기간 중 거주기간」은 그 뒤의 거주뿐이다(서면-2019-부동산-4508
+ * 「멸실 전 거주기간을 통산하지 아니함」). 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없지만,
+ * **보유기간보다 긴 거주**는 사실상 불가능한 값이다 ⇒ ⑧·⑫가 이 상한으로 막는다.
+ *
+ * 셈은 구간 입력(`residenceIntervalMonths` = `completedMonthsInclusive`)이 [준공일, 양도일] 한 구간에서
+ * 만드는 값과 같다 — 구간으로 입력하면 통과하는 값을 개월 입력에서 막지 않는다.
+ */
+export function successorAptMaxResidenceMonths(completionDate: Date, transferDate: Date): number {
+  return completedMonthsInclusive(completionDate, transferDate);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -429,6 +446,58 @@ function computeLthdRate(
  */
 export function usesTable2(isOneHouseSingle: boolean, residenceYears: number): boolean {
   return isOneHouseSingle && residenceYears >= 2;
+}
+
+/**
+ * 재개발 경로의 §95② 단서(표2) 해당 여부 — 조특법 §97의4① 단서 판정용 (E-4).
+ *
+ * LTHD 산정이 실제로 쓰는 leaf를 그대로 쓴다(memory `feedback_shared_predicate_argument_parity`).
+ * 종전에는 Step4 `residencePeriodMonths`·원시 1세대1주택 값을 읽어, 분리 입력으로 표2가 적용된
+ * 계산에 추가공제율이 더해지거나(과소과세) 표1로 강등된 계산에서 가산이 빠졌다(과대과세).
+ *
+ * - 입주권 승계조합원: LTHD 부존재(§95② 본문 괄호) → 표2 아님
+ * - 입주권 원조합원: `resolveRedevEffectiveOneHouseSingle` + `resolveRightResidenceMonths`
+ * - 완공APT 승계조합원: `runSuccessorMember`와 같이 원시 1세대1주택 + 신축 거주(`resolveAptResidenceMonths`)
+ * - 완공APT 원조합원: 기존건물분 표2와 같은 `resolveRedevEffectiveOneHouseSingle` + `resolveAptResidenceMonths`
+ *
+ * ⚠️ 청산금 납부분은 신축 거주만으로 표를 정한다(해석례 2020-386) — 분기별 단서 판정은 하지 않고
+ *   자산 단위(기존건물분 기준)로 본다(종전 구조 유지).
+ */
+export function redevUsesTable2(input: {
+  redevelopment: {
+    subject: "apt" | "right";
+    isSuccessorMember?: boolean;
+    exemptionEligibleAtApproval?: boolean;
+    priorHouseResidenceMonths?: number;
+    newHouseResidenceMonths?: number;
+  };
+  isOneHouseSingle: boolean;
+  residencePeriodMonths?: number;
+  isSuccessorRightToMoveIn?: boolean;
+}): boolean {
+  const r = input.redevelopment;
+  const months = {
+    priorHouseResidenceMonths: r.priorHouseResidenceMonths,
+    newHouseResidenceMonths: r.newHouseResidenceMonths,
+    residencePeriodMonths: input.residencePeriodMonths,
+  };
+  if (r.subject === "right") {
+    if (input.isSuccessorRightToMoveIn === true) return false;
+    return usesTable2(
+      resolveRedevEffectiveOneHouseSingle(input),
+      Math.floor(resolveRightResidenceMonths(months) / 12),
+    );
+  }
+  if (r.isSuccessorMember === true) {
+    return usesTable2(
+      input.isOneHouseSingle,
+      Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true }) / 12),
+    );
+  }
+  return usesTable2(
+    resolveRedevEffectiveOneHouseSingle(input),
+    Math.floor(resolveAptResidenceMonths(months) / 12),
+  );
 }
 
 export function computeLthdRateSplit(

@@ -23,7 +23,8 @@ export function RedevSplitResidenceNotice({ isSuccessor }: { isSuccessor: boolea
 
 /**
  * OH-50 — 승계조합원은 준공일부터 보유기간이라 그 전(멸실 전 종전주택) 거주는 산입하지 않는다.
- * 구간 입력은 ⑧이 준공일과 비교해 막고, 개월 수 직접 입력은 날짜가 없어 안내로만 처리한다.
+ * 구간 입력은 ⑧이 준공일과 비교해 막는다. 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없으므로
+ * 이 안내를 두고, 준공일~양도일보다 긴 값만 ⑧·⑫가 막는다(I-8 `successorAptResidenceOverflow`).
  */
 export function SuccessorResidenceDirectHint({ completionDate }: { completionDate: string }) {
   return (

@@ -49,18 +49,29 @@ export function qualifiesAsInheritanceGeneralHouse(p: {
   inheritedDate: Date | undefined;
   transferDate: Date;
   rightAtInheritance?: GeneralHouseRightAtInheritance;
+  /**
+   * E-8 — 양도 주택이 **승계조합원 신축주택**이면 그 조합원입주권의 승계 취득일.
+   * 있으면 `generalHouseAcquisitionDate`는 준공일(§162①4호)이고, 「상속개시 당시 보유한 조합원입주권」
+   * 여부는 선언이 아니라 이 날짜로 정한다(승계일 ≤ 상속개시일 — 주택 보유와 같은 `<=` 규약).
+   */
+  successorRightAcquisitionDate?: Date;
 }): "yes" | "no" | "unknown" {
   if (p.generalHouseAcquisitionDate < INHERITANCE_GENERAL_HOUSE_HELD_START) return "yes";
   if (!p.inheritedDate) return "unknown";
   if (p.generalHouseAcquisitionDate <= p.inheritedDate) return "yes";
+  const rightAtInheritance: GeneralHouseRightAtInheritance | undefined = p.successorRightAcquisitionDate
+    ? p.successorRightAcquisitionDate <= p.inheritedDate
+      ? "redevelopment_right"
+      : "none"
+    : p.rightAtInheritance;
   if (
-    p.rightAtInheritance === "redevelopment_right" &&
+    rightAtInheritance === "redevelopment_right" &&
     p.transferDate >= INHERITANCE_GENERAL_HOUSE_REDEV_NEW_BUILD_START
   ) {
     return "yes";
   }
   if (
-    p.rightAtInheritance === "presale_right" &&
+    rightAtInheritance === "presale_right" &&
     p.transferDate >= INHERITANCE_GENERAL_HOUSE_PRESALE_NEW_BUILD_START
   ) {
     return "yes";

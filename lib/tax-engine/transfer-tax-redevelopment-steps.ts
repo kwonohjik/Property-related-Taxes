@@ -28,7 +28,7 @@ import {
   settlementHighValueThreshold,
   SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING,
 } from "./transfer-tax-redevelopment-settlement";
-import { usesTable2 } from "./redevelopment-lthd";
+import { redevUsesTable2 } from "./redevelopment-lthd";
 import {
   resolveOneRightHighValueThreshold,
   oneRightHighValueEraNotice,
@@ -319,10 +319,13 @@ export function runRedevelopmentGainSteps(
         stdPriceAtAcquisition: input.standardPriceAtAcquisition,
         stdPriceAtTransfer: input.standardPriceAtTransfer,
       });
-  const table2ActiveForRedev = usesTable2(
+  // §97의4① 단서 — LTHD 표2와 같은 leaf(분리 거주 입력·인가일 요건 강등·승계 분기) (E-4).
+  const table2ActiveForRedev = redevUsesTable2({
+    redevelopment: input.redevelopment!,
     isOneHouseSingle,
-    Math.floor((input.residencePeriodMonths ?? 0) / 12),
-  );
+    residencePeriodMonths: input.residencePeriodMonths,
+    isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
+  });
   let redevAfterRight: RedevelopmentResult = redevAfterLthdExclusion;
   if (
     rental97Special?.isEligible &&

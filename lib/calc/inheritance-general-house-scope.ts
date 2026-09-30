@@ -22,6 +22,16 @@ export function generalHouseRightAtInheritanceVisible(
 ): boolean {
   // 양도 대상이 §154① 비과세 판정 자산일 때만 — ⑤ 명부 섹션이 열리는 범위와 같다(막다른 길 방지).
   if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return false;
+  // E-8 — 승계조합원 신축주택은 엔진이 준공일·입주권 승계일로 판정하고 이 선언을 읽지 않는다
+  //       (`resolveInheritedHouseExclusionFromInput`). 준공일이 없으면 엔진도 종전 동작이라 그대로 둔다.
+  const primary = form.assets?.[0];
+  if (
+    primary?.assetKind === "redevelopment_apt" &&
+    primary.redevIsSuccessorMember === "yes" &&
+    toDate(primary.redevCompletionDate) !== undefined
+  ) {
+    return false;
+  }
   const acquisition = toDate(form.assets?.[0]?.acquisitionDate);
   const transfer = toDate(form.transferDate);
   if (!acquisition || !transfer) return false;

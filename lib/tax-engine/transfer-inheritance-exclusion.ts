@@ -67,6 +67,8 @@ export interface InheritanceGeneralHouseFacts {
   acquisitionDate: Date;
   transferDate: Date;
   rightAtInheritance?: GeneralHouseRightAtInheritance;
+  /** E-8 — 승계조합원 신축주택의 입주권 승계 취득일(있으면 `acquisitionDate`는 준공일). */
+  successorRightAcquisitionDate?: Date;
 }
 
 /**
@@ -113,6 +115,7 @@ export function resolveInheritedHouseExclusion(
       inheritedDate: h.inheritedDate,
       transferDate: generalHouse.transferDate,
       rightAtInheritance: generalHouse.rightAtInheritance,
+      successorRightAcquisitionDate: generalHouse.successorRightAcquisitionDate,
     }) !== "no";
 
   /**
@@ -189,8 +192,18 @@ export function resolveInheritedHouseExclusionFromInput(
     | "generalHouseRightAtInheritance"
     | "acquisitionDate"
     | "transferDate"
-  >,
+  > &
+    Partial<Pick<TransferTaxInput, "redevelopment">>,
 ): InheritedHouseExclusionResult {
+  /**
+   * E-8 — 승계조합원 신축주택(완공APT)은 종전주택을 보유한 적이 없어 `acquisitionDate`(입주권 승계일)가
+   * 주택 취득일이 아니다. 신축주택 취득일 = 준공일(소득세법 시행령 §162①4호 — 비과세 보유기간
+   * `judgeRedevAptOneHouseExemption`과 같은 축). 원조합원은 종전주택의 연장이라 `acquisitionDate` 그대로
+   * (서면-2021-부동산-5845 「기존주택의 취득일을 일반주택의 취득일로 보아 … 제155조제2항을 적용」).
+   */
+  const redev = input.redevelopment;
+  const successorNewBuild =
+    redev?.subject === "apt" && redev.isSuccessorMember === true && redev.completionDate !== undefined;
   return resolveInheritedHouseExclusion(
     input.houses,
     resolveInheritedSellingHouseId(input),
@@ -200,11 +213,17 @@ export function resolveInheritedHouseExclusionFromInput(
       giftDate: input.generalHouseGiftDate,
     }),
     // OH-12 — 양도 주택(일반주택)의 취득일이 「상속개시 당시 보유」 판정의 기준이다.
-    {
-      acquisitionDate: input.acquisitionDate,
-      transferDate: input.transferDate,
-      rightAtInheritance: input.generalHouseRightAtInheritance,
-    },
+    successorNewBuild
+      ? {
+          acquisitionDate: redev!.completionDate!,
+          transferDate: input.transferDate,
+          successorRightAcquisitionDate: input.acquisitionDate,
+        }
+      : {
+          acquisitionDate: input.acquisitionDate,
+          transferDate: input.transferDate,
+          rightAtInheritance: input.generalHouseRightAtInheritance,
+        },
   );
 }
 
