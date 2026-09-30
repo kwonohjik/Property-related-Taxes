@@ -37,9 +37,24 @@ describe("재산세 Zod — 도시지역분 세부담상한 v2 게이트", () =>
     }
   });
 
-  it("본세 직전세액만 → 통과 (도시지역분 선택)", () => {
+  // 2026-09-30 P3 — 종전 기대값은 「도시지역분 선택(통과)」이었다. 도시지역분(§112①2호)도 따로 상한을 받으므로
+  // (종전 「지방세법」 §122 본문 괄호 「각각의 세액」 · 「지방세법 시행령」 §118 「각각에 대하여 … 각각 산출한 세액」)
+  // 도시지역 주택에서 직전 도시지역분을 비우면 엔진이 도시지역분 상한을 건너뛴다(589,872 → 603,330). ⑧은 이미 요구했다.
+  it("도시지역 주택 + 본세 직전세액만 → 차단 (도시지역분 상한의 기준이 없다)", () => {
     const r = propertyTaxInputSchema.safeParse({
       ...housingBase,
+      previousYearHousingBaseTax: 215_336,
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.map((i) => i.path.join("."))).toContain("previousYearHousingUrbanTax");
+    }
+  });
+
+  it("도시지역 아닌 주택 + 본세 직전세액만 → 통과 (도시지역분 없음)", () => {
+    const r = propertyTaxInputSchema.safeParse({
+      ...housingBase,
+      isUrbanArea: false,
       previousYearHousingBaseTax: 215_336,
     });
     expect(r.success).toBe(true);

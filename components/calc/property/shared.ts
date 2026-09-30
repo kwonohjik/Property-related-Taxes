@@ -2,6 +2,12 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
+import {
+  HOUSE_SPLIT_MISSING_MESSAGE,
+  PRIOR_URBAN_TAX_MISSING_MESSAGE,
+  missingHouseSplitInputs,
+  needsPriorUrbanTax,
+} from "@/lib/calc/property-required-inputs";
 
 // ============================================================
 // 소유 형태 (납세의무자 §107) — 폼 전용 enum
@@ -373,17 +379,15 @@ export function validateStep(step: number, form: FormState): string | null {
 
       // ── §107①2호: 건물·부속토지 소유자 분리 — 시가표준액 안분 필수 차단 ──
       // 기타 6종 fallback과 달리, house_split 안분 비율은 두 시가표준액이 없으면 계산 불가.
+      // ⑫(`lib/validators/property-input.ts`)와 같은 술어 — `lib/calc/property-required-inputs.ts`.
       if (form.ownershipType === "house_split") {
-        if (!form.buildingOwner.trim())
-          return "건물 소유자 성명을 입력하세요.";
-        if (!form.landOwner.trim())
-          return "부속토지 소유자 성명을 입력하세요.";
-        const bldgVal = parseAmount(form.housingBuildingValue);
-        if (!bldgVal || bldgVal <= 0)
-          return "건축물 시가표준액을 입력하세요 (§107①2호 안분 필수).";
-        const landVal = parseAmount(form.landStdValue);
-        if (!landVal || landVal <= 0)
-          return "부속토지 시가표준액을 입력하세요 (§107①2호 안분 필수).";
+        const [first] = missingHouseSplitInputs({
+          buildingOwner: form.buildingOwner,
+          landOwner: form.landOwner,
+          buildingStdValue: parseAmount(form.housingBuildingValue),
+          landStdValue: parseAmount(form.landStdValue),
+        });
+        if (first) return HOUSE_SPLIT_MISSING_MESSAGE[first];
       }
 
       // 기타 6종(clan·installment·project·import·bankruptcy·unclear) —
@@ -474,10 +478,10 @@ export function validateStep(step: number, form: FormState): string | null {
     if (prev === null || prev <= 0)
       return "세부담상한 경과조치 적용 시 직전연도 재산세 본세를 입력하세요.";
     // 도시지역 주택은 도시지역분도 본세와 별개로 세부담상한 대상(§118 본문) — 직전 도시지역분 필수
-    if (form.isUrbanArea) {
+    // ⑫와 같은 술어 — `lib/calc/property-required-inputs.ts`.
+    if (needsPriorUrbanTax({ isHousing: true, isUrbanArea: form.isUrbanArea, baseCapApplied: true })) {
       const prevUrban = parseAmount(form.housingPreviousUrbanTax);
-      if (prevUrban === null || prevUrban <= 0)
-        return "도시지역 주택은 도시지역분 세부담상한 적용을 위해 직전연도 도시지역분을 입력하세요.";
+      if (prevUrban === null || prevUrban <= 0) return PRIOR_URBAN_TAX_MISSING_MESSAGE;
     }
   }
   return null;

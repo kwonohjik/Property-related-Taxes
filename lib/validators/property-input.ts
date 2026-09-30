@@ -5,6 +5,12 @@
  */
 
 import { z } from "zod";
+import {
+  HOUSE_SPLIT_MISSING_MESSAGE,
+  PRIOR_URBAN_TAX_MISSING_MESSAGE,
+  missingHouseSplitInputs,
+  needsPriorUrbanTax,
+} from "@/lib/calc/property-required-inputs";
 
 /**
  * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
@@ -340,6 +346,42 @@ export const propertyTaxInputSchema = z
         path: ["previousYearHousingUrbanTax"],
         message: "도시지역분 세부담상한은 직전연도 본세(previousYearHousingBaseTax)와 함께 입력해야 합니다.",
       });
+    }
+    // 도시지역 주택 + 본세 세부담상한(부칙 제15조) → 직전 도시지역분 필수 (2026-09-30 Zod↔엔진 필수 점검 P3).
+    // 도시지역분(§112①2호)도 따로 상한을 받는다 — 종전 「지방세법」 §122 본문 괄호 「각각의 세액」 ·
+    // 「지방세법 시행령」 §118 「각각에 대하여 … 각각 산출한 세액」. 비우면 엔진이 도시지역분 상한을 건너뛰어
+    // 200 + 다른 세액이었다. ⑧(`components/calc/property/shared.ts` step 3)과 같은 술어.
+    if (
+      needsPriorUrbanTax({
+        isHousing: data.objectType === "housing",
+        isUrbanArea: data.isUrbanArea === true,
+        baseCapApplied: (data.previousYearHousingBaseTax ?? 0) > 0,
+      }) &&
+      !((data.previousYearHousingUrbanTax ?? 0) > 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["previousYearHousingUrbanTax"],
+        message: PRIOR_URBAN_TAX_MISSING_MESSAGE,
+      });
+    }
+    // 주택 건물·부속토지 소유자 분리(§107①2호) — 두 소유자·두 시가표준액 필수 (P5a).
+    // 비우면 엔진이 경고만 남기고 공부상 소유자로 처리했다(안분 없음 · 건축물 값이 없으면 건물분 소방분도 누락).
+    // ⑧(`components/calc/property/shared.ts` step 0)과 같은 술어. 건축물 시가표준액은 `housingBuildingValue`를 쓴다.
+    if (data.taxpayerInfo?.isHouseSplit === true) {
+      const tp = data.taxpayerInfo;
+      for (const key of missingHouseSplitInputs({
+        buildingOwner: tp.buildingOwner,
+        landOwner: tp.landOwner,
+        buildingStdValue: data.housingBuildingValue,
+        landStdValue: tp.landStdValue,
+      })) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: key === "buildingStdValue" ? ["housingBuildingValue"] : ["taxpayerInfo", key],
+          message: HOUSE_SPLIT_MISSING_MESSAGE[key],
+        });
+      }
     }
     // landTaxType은 objectType==="land" 일 때 필수
     if (data.objectType === "land" && !data.landTaxType) {
