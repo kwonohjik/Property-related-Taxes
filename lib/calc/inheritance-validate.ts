@@ -18,11 +18,12 @@ import { injectSavingsAccrualIfAuto } from "@/lib/tax-engine/property-valuation"
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { validateUnlistedStockV2 } from "./inheritance-validate-unlisted";
 export { validateUnlistedStockV2 };
-import {
-  parseResidentNumber,
-  isCompleteResidentNumber,
-} from "@/lib/calc/resident-number";
+import { isCompleteResidentNumber } from "@/lib/calc/resident-number";
 import { endOfMonth, addMonths, format } from "date-fns";
+import { heirLacksBirthDateSource } from "@/lib/calc/inheritance-required-inputs";
+import { casualtyLossDateMissing } from "@/lib/calc/inheritance-required-inputs";
+import { ancillaryLandMissingKeys } from "@/lib/calc/inheritance-required-inputs";
+import { shortTermReinheritIssue } from "@/lib/calc/inheritance-required-inputs";
 import { validateAllExemptionInputs } from "./inheritance-validate-exemption";
 // 800줄 분리 — 외부 import 호환 보존 (feedback_800line_split_export_preservation)
 export {
@@ -95,18 +96,18 @@ export function validateInheritanceTaxInput(
 
   // ⑧ 주민등록번호 필수 (자연인 전 관계, 법인 제외) — 앞 6자리에서 생년월일·성별 도출
   //    (계획서 의견1: 13자리 입력 받되 앞 7자리만 파싱, 뒷자리 체크섬 미검증)
+  //    생년월일 원천 누락 판정은 ⑫와 같은 술어(`heirLacksBirthDateSource`).
   for (const heir of input.heirs) {
     if (heir.relation === "corporate") continue;
     const who = heir.name?.trim() || "상속인";
-    if (!heir.residentNumber) {
-      // 외국인 등록번호 등으로 주민번호가 없으면 생년월일 직접입력을 허용 (fallback)
-      if (!heir.birthDate) {
-        return `${who}의 주민등록번호를 입력하세요. (생년월일·성별 자동 도출 — 미입력 시 생년월일 직접 입력)`;
-      }
-    } else if (!isCompleteResidentNumber(heir.residentNumber)) {
+    if (heir.residentNumber && !isCompleteResidentNumber(heir.residentNumber)) {
       return `${who}의 주민등록번호 형식이 올바르지 않습니다. (13자리 숫자)`;
-    } else if (!parseResidentNumber(heir.residentNumber) && !heir.birthDate) {
-      return `${who}의 주민등록번호 앞자리에서 생년월일을 도출할 수 없습니다. 앞 7자리를 확인하거나 생년월일을 직접 입력하세요.`;
+    }
+    if (heirLacksBirthDateSource(heir)) {
+      // 외국인 등록번호 등으로 주민번호가 없으면 생년월일 직접입력을 허용 (fallback)
+      return heir.residentNumber
+        ? `${who}의 주민등록번호 앞자리에서 생년월일을 도출할 수 없습니다. 앞 7자리를 확인하거나 생년월일을 직접 입력하세요.`
+        : `${who}의 주민등록번호를 입력하세요. (생년월일·성별 자동 도출 — 미입력 시 생년월일 직접 입력)`;
     }
   }
 
@@ -212,65 +213,10 @@ export function validateInheritanceTaxInput(
   if (refErrs.length > 0) return refErrs[0];
 
   // §30 단기재상속 교차검증 — 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
-  // 신규 재산별 배열 모델 + legacy 단일 분수 모델 모두 처리.
-  // ⑧ 체크리스트 "shortTermReinherit" 비활성 시 buildInput에서 필드 전부 undefined 전달.
-  //    → shortTermCreditInput.shortTermReinheritAssets == null → hasArrayAssets = false
-  //    → 아래 검증 블록 완전 통과 (UI 통과 ↔ validate 차단 모순 없음, CLAUDE.md ⑧).
-  const shortTermCreditInput = input.creditInput;
-  if (shortTermCreditInput) {
-    const assets = shortTermCreditInput.shortTermReinheritAssets;
-    const priorDeath = shortTermCreditInput.shortTermReinheritPriorDeathDate;
-    const priorEstate = shortTermCreditInput.shortTermReinheritPriorEstateValue;
-    const hasArrayAssets = assets != null && assets.length > 0;
-    const hasLegacyAsset =
-      shortTermCreditInput.shortTermReinheritAssetValue != null &&
-      shortTermCreditInput.shortTermReinheritAssetValue > 0;
-    const hasPrior = priorEstate != null && priorEstate > 0;
-
-    // 1차(전의) 상속개시일 ≤ 2차 상속개시일
-    if (priorDeath && input.deathDate && priorDeath > input.deathDate) {
-      return "단기재상속 §30: 1차(전의) 상속개시일은 상속개시일보다 이후일 수 없습니다.";
-    }
-
-    if (hasArrayAssets) {
-      // ── 재산별 배열 모델 (집행 30-22-1②) ──
-      if (!hasPrior) {
-        return "단기재상속 §30: 재상속분 재산을 입력한 경우 전의 상속재산가액(분모)을 입력해야 합니다.";
-      }
-      if (
-        shortTermCreditInput.shortTermReinheritTaxPaid == null ||
-        shortTermCreditInput.shortTermReinheritTaxPaid <= 0
-      ) {
-        return "단기재상속 §30: 재상속분 재산을 입력한 경우 전의 상속세 산출세액을 입력해야 합니다.";
-      }
-      let sum = 0;
-      for (const a of assets!) {
-        // 각 재산 priorValue ≤ 전의 상속재산가액 (비율≤1, 집행 30-22-1③)
-        if (a.priorValue > priorEstate!) {
-          return `단기재상속 §30: 재상속분 재산 "${a.name ?? ""}" 가액이 전의 상속재산가액을 초과할 수 없습니다.`;
-        }
-        sum += a.priorValue;
-      }
-      // Σ priorValue ≤ 전의 상속재산가액 (재상속분 합 ≤ 전상속재산)
-      if (sum > priorEstate!) {
-        return "단기재상속 §30: 재상속분 재산가액 합계가 전의 상속재산가액을 초과할 수 없습니다.";
-      }
-    } else if (hasLegacyAsset || hasPrior) {
-      // ── legacy 단일 분수 모델 (§30②1호) — 분자·분모 동반 입력 강제 ──
-      if (hasLegacyAsset && !hasPrior) {
-        return "단기재상속 §30②1호 안분: 재상속분 재산가액을 입력한 경우 전의 상속재산가액도 함께 입력해야 합니다.";
-      }
-      if (!hasLegacyAsset && hasPrior) {
-        return "단기재상속 §30②1호 안분: 전의 상속재산가액을 입력한 경우 재상속분 재산가액도 함께 입력해야 합니다.";
-      }
-      if (hasLegacyAsset && hasPrior) {
-        const numerator = shortTermCreditInput.shortTermReinheritAssetValue!;
-        if (numerator > priorEstate!) {
-          return "단기재상속 §30②1호: 재상속분 재산가액(분자)이 전의 상속재산가액(분모)을 초과할 수 없습니다.";
-        }
-      }
-    }
-  }
+  // ⑫와 같은 leaf(`shortTermReinheritIssue`). ⑧ 체크리스트 "shortTermReinherit" 비활성 시
+  // buildInput에서 필드 전부 undefined 전달 → 검증 완전 통과 (UI 통과 ↔ validate 차단 모순 없음).
+  const stIssue = shortTermReinheritIssue(input.creditInput, input.deathDate);
+  if (stIssue) return stIssue.message;
 
   // §29 외국납부세액공제 교차검증 (상증령 §21①)
   // ⑧ 체크리스트 "foreignTax" 비활성 시 buildInput에서 foreignTaxPaid·foreignInheritanceTaxBase
@@ -299,16 +245,16 @@ export function validateInheritanceTaxInput(
     if (!casualtyLoss.lossValue || casualtyLoss.lossValue <= 0) {
       return "재해손실재산가액을 입력하세요. (§23 재해손실공제)";
     }
-    // 2. 재난 발생일 필수
-    if (!casualtyLoss.disasterDate) {
+    // 2. 재난 발생일 필수 — ⑫와 같은 술어(`casualtyLossDateMissing`)
+    if (casualtyLossDateMissing(casualtyLoss)) {
       return "재난 발생일을 입력하세요. (§23 재해손실공제)";
     }
     // 3. 재난 발생일 ≥ 상속개시일 (하한 — §23: 상속개시 후 재해)
-    if (input.deathDate && casualtyLoss.disasterDate < input.deathDate) {
+    if (input.deathDate && casualtyLoss.disasterDate && casualtyLoss.disasterDate < input.deathDate) {
       return "재난은 상속개시일 이후 발생해야 합니다. (§23 — 상속개시 후 신고기한 이내)";
     }
     // 4. 재난 발생일 ≤ 신고기한(상속개시월 말일 + 6개월) (상한)
-    if (input.deathDate) {
+    if (input.deathDate && casualtyLoss.disasterDate) {
       const deathDateObj = toOptionalDate(input.deathDate);
       if (deathDateObj) {
         const filingDeadline = format(addMonths(endOfMonth(deathDateObj), 6), "yyyy-MM-dd");
@@ -326,14 +272,9 @@ export function validateInheritanceTaxInput(
 
   // ⑧ G4 §23의2① 주택부수토지 면적한도 — 4필드 partial 입력 차단 (전부 또는 전무)
   // 자동 안분 fallback 금지: 미입력=차감 없음이므로, 일부만 입력 시 의도 불명확 → 오류 차단
+  //    ⑫와 같은 술어(`ancillaryLandMissingKeys`).
   {
-    const di = input.deductionInput;
-    const hasArea = di?.ancillaryLandArea !== undefined;
-    const hasFootprint = di?.buildingFootprintArea !== undefined;
-    const hasRegion = di?.ancillaryLandRegion !== undefined;
-    const hasLandPrice = di?.ancillaryLandStdPrice !== undefined;
-    const filledCount = [hasArea, hasFootprint, hasRegion, hasLandPrice].filter(Boolean).length;
-    if (filledCount > 0 && filledCount < 4) {
+    if (ancillaryLandMissingKeys(input.deductionInput).length > 0) {
       return "주택부수토지 면적한도(§23의2①): 부수토지 면적·건물 정착 면적·지역 구분·부수토지 공시가격 네 항목을 모두 입력하거나 모두 비워야 합니다.";
     }
   }

@@ -45,6 +45,10 @@ import { MinorAtGiftToggleBlock } from "@/components/calc/prior-gift/MinorAtGift
 import { GiftRowBesshiSection } from "@/components/calc/prior-gift/GiftRowBesshiSection";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 
+/** 빈칸만 미입력(undefined) — 명시 "0"은 0으로 보존한다(⑤·⑦·⑫는 공제 범위 안 회차가 실제 0). */
+const amountOrUndefined = (v: string): number | undefined =>
+  v.trim() === "" ? undefined : parseAmount(v);
+
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실,
 // 요약 라벨(donorSummaryLabel)은 meta.ts 단일 진실 (PriorGiftTableView 공용).
@@ -454,26 +458,19 @@ export function GiftRowEditor({
         <>
           <CurrencyInput
             label="과세표준 ⑤"
-            value={
-              gift.giftTaxBase && gift.giftTaxBase > 0
-                ? String(gift.giftTaxBase)
-                : ""
-            }
+            value={gift.giftTaxBase != null ? String(gift.giftTaxBase) : ""}
             onChange={(v) => {
               setUserTouchedBaseTax(true);
-              set({ giftTaxBase: parseAmount(v) || undefined });
+              // 공제 범위 안 회차는 실제 0 — 빈칸만 미입력(undefined), "0"은 0으로 보존(⑧·⑫ 존재 요구)
+              set({ giftTaxBase: amountOrUndefined(v) });
             }}
           />
           <CurrencyInput
             label="산출세액 ⑦"
-            value={
-              gift.computedTax && gift.computedTax > 0
-                ? String(gift.computedTax)
-                : ""
-            }
+            value={gift.computedTax != null ? String(gift.computedTax) : ""}
             onChange={(v) => {
               setUserTouchedBaseTax(true);
-              set({ computedTax: parseAmount(v) || undefined });
+              set({ computedTax: amountOrUndefined(v) });
             }}
           />
         </>
@@ -727,17 +724,11 @@ export function GiftRowEditor({
             <CurrencyInput
               label="그 회차 추가 할증세액 ⑫"
               value={
-                gift.additionalGenerationSkipSurcharge &&
-                gift.additionalGenerationSkipSurcharge > 0
+                gift.additionalGenerationSkipSurcharge != null
                   ? String(gift.additionalGenerationSkipSurcharge)
                   : ""
               }
-              onChange={(v) =>
-                set({
-                  additionalGenerationSkipSurcharge:
-                    parseAmount(v) || undefined,
-                })
-              }
+              onChange={(v) => set({ additionalGenerationSkipSurcharge: amountOrUndefined(v) })}
               hint="신고서 ⑱ 값. §57 누적 기할증과세액 ⑨ 산정용."
             />
           )}

@@ -106,6 +106,8 @@ describe("[GM-A] giftTaxInputSchema.safeParse JSON round-trip 보존", () => {
       creditInput: {
         isFiledOnTime: false,
         foreignTaxPaid: 5_000_000,
+        // ⑧·⑫ 모두 외국납부세액이 있으면 국외 과세표준을 요구한다(2026-09-30 #18)
+        foreignGiftTaxBase: 20_000_000,
       },
     });
     const body = jsonRoundTrip(raw);

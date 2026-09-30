@@ -8,11 +8,18 @@
 
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+/** ⑫ 경로(자산 기준 필드)와 ⑧ 메시지를 함께 돌려주는 검증 결과 */
+export interface VacancyPortionIssue {
+  field: "totalBuildingArea" | "vacantBuildingArea";
+  message: string;
+}
+
 /**
  * 미임대 입력 의사가 있을 때만 차단(V-9 단일 정의). "전체 건물 연면적만 입력 + 나머지 미입력"은
- * 미완성(특례 미적용)으로 통과. 반환: 오류 메시지 또는 null(통과).
+ * 미완성(특례 미적용)으로 통과. ⑧(`validateVacancyPortion`)·⑫(`estateItemSchema`) 공용 leaf —
+ * 엔진(`calcVacantPortionStandardPrice`)은 면적 하나라도 0이면 미임대분을 0으로 읽는다.
  */
-export function validateVacancyPortion(item: EstateItem): string | null {
+export function vacancyPortionIssue(item: EstateItem): VacancyPortionIssue | null {
   const area = item.vacantBuildingArea ?? 0;
   const buildingStd = item.vacantBuildingStandardPrice ?? 0;
   const total = item.totalBuildingArea ?? 0;
@@ -20,13 +27,21 @@ export function validateVacancyPortion(item: EstateItem): string | null {
   if (!intends) return null;
   const who = item.name?.trim() || "건물";
   if (area > 0 && total <= 0) {
-    return `${who}: 미임대(공실) 입력 시 전체 건물 연면적을 입력하세요.`;
+    return { field: "totalBuildingArea", message: `${who}: 미임대(공실) 입력 시 전체 건물 연면적을 입력하세요.` };
   }
   if (buildingStd > 0 && area <= 0) {
-    return `${who}: 미임대분 건물 기준시가 입력 시 미임대 건물 연면적을 입력하세요.`;
+    return { field: "vacantBuildingArea", message: `${who}: 미임대분 건물 기준시가 입력 시 미임대 건물 연면적을 입력하세요.` };
   }
   if (total > 0 && area > total) {
-    return `${who}: 미임대 건물 연면적(${area}㎡)이 전체 건물 연면적(${total}㎡)을 초과할 수 없습니다.`;
+    return {
+      field: "vacantBuildingArea",
+      message: `${who}: 미임대 건물 연면적(${area}㎡)이 전체 건물 연면적(${total}㎡)을 초과할 수 없습니다.`,
+    };
   }
   return null;
+}
+
+/** 반환: 오류 메시지 또는 null(통과). */
+export function validateVacancyPortion(item: EstateItem): string | null {
+  return vacancyPortionIssue(item)?.message ?? null;
 }

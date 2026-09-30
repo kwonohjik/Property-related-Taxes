@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { finiteJson } from "@/lib/api/non-finite-guard";
+import { injectSavingsAccrualForItems } from "@/lib/api/savings-accrual-route-inject";
 import {
   inheritanceTaxInputSchema,
 } from "@/lib/validators/property-valuation-input";
@@ -72,7 +73,12 @@ export async function POST(req: NextRequest) {
   const input: InheritanceTaxInput = {
     decedentType: parsedData.decedentType,
     deathDate: parsedData.deathDate,
-    estateItems: parsedData.estateItems as InheritanceTaxInput["estateItems"],
+    // §63④ auto 예금 미수이자 — ④와 같은 leaf·평가기준일(상속개시일)로 주입(API 직접 호출도 같은 값)
+    estateItems: injectSavingsAccrualForItems(
+      parsedData.estateItems as InheritanceTaxInput["estateItems"],
+      parsedData.deathDate,
+      "deathDate",
+    ),
     funeralExpense: parsedData.funeralExpense ?? 0,
     // §9②2호: 봉안시설·자연장지 별도 금액. undefined이면 엔진이 legacy boolean 경로로 fallback.
     funeralBonganExpense: parsedData.funeralBonganExpense,
