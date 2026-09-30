@@ -187,7 +187,7 @@ export function TransferTaxResultView({
   // 시나리오 B 카드도 같은 leaf를 태운다(계획서 §6-3 지점 C).
   const receiveOnlyDisplay = resolveReceiveOnlyDisplay(
     result,
-    transferPriceOverride ?? Number(formData?.contractTotalPrice ?? 0),
+    transferPriceOverride ?? parseAmount(formData?.contractTotalPrice),
     formData?.transferDate ?? "",
   );
 

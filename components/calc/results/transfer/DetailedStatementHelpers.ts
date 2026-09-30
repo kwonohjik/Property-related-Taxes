@@ -10,6 +10,7 @@
  */
 
 import type { ReactNode } from "react";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
@@ -108,7 +109,7 @@ export function buildStatementItems(
   // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
   const receiveOnly = resolveReceiveOnlyDisplay(
     result,
-    transferPriceOverride ?? (formData?.contractTotalPrice ? Number(formData.contractTotalPrice) : 0),
+    transferPriceOverride ?? parseAmount(formData?.contractTotalPrice),
     formData?.transferDate ?? "",
   );
   const transferDate = receiveOnly.transferDate;
