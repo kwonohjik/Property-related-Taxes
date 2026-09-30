@@ -80,3 +80,55 @@ test("[CCX-2] 어느 주택인지 모르는 옛 선언 — 안내 카드에 나�
   await page.getByRole("button", { name: "삭제" }).click();
   await expect(card).toHaveCount(0);
 });
+
+/**
+ * 겸용주택 양도 — 같은 행 ⑥ 선언이 겸용 결과뷰(`MixedUseResultCard`)에도 카드로 뜬다.
+ * 종전에는 겸용 엔진이 detail을 결과 최상위에 싣는데도 결과뷰가 감면 detail 묶음만 넘겨
+ * 카드가 한 번도 그려지지 않았다(`__tests__/components/mixed-use-count-exclusion-cards.anchor.test.tsx`).
+ */
+test("[CCX-3] 겸용주택 — 행 ⑥ 농어촌주택이 본문에 행 id로 실리고 결과 카드가 그 주택을 가리킨다", async ({ page }) => {
+  await gotoTransferHoldingsStep(page, {
+    houses: [
+      otherHouse("r", "2020-05-01", {
+        countExclusion: {
+          kind: "reduction",
+          reduction: {
+            type: "new_99_4_rural",
+            ruralHouseAcquisitionDate: "2020-05-01",
+            ruralHouseStdPrice: "150000000",
+            ruralHouseJibun: "",
+            isRegisteredHanok: false,
+            isAdjacentArea: false,
+            meetsLocationRequirement: true,
+          },
+        },
+      }),
+    ],
+    assetOver: {
+      acquisitionDate: "2014-03-15",
+      fixedAcquisitionPrice: "700000000",
+      isMixedUseHouse: true,
+      residentialFloorArea: "100",
+      nonResidentialFloorArea: "100",
+      mixedUseTotalLandArea: "200",
+      buildingFootprintArea: "100",
+      mixedTransferHousingPrice: "1600000000",
+      mixedTransferLandPricePerSqm: "12000000",
+      mixedTransferCommercialBuildingPrice: "100000000",
+      mixedAcqHousingPrice: "300000000",
+      mixedAcqLandPricePerSqm: "2500000",
+      mixedAcqCommercialBuildingPrice: "50000000",
+      mixedIsMetropolitanArea: false,
+    },
+    formOver: { transferDate: "2026-06-01", filingDate: "2026-08-31", contractTotalPrice: "2000000000" },
+  });
+  await expect(page.getByTestId("house-count-exclusion-badge-r")).toHaveText("주택 수 제외: 농어촌주택");
+
+  const { request } = await calculate(page);
+  expect(request.reductions).toEqual([
+    expect.objectContaining({ type: "new_99_4_rural", houseId: "r", ruralHouseAcquisitionDate: "2020-05-01" }),
+  ]);
+  await page.getByText("주택부분 양도소득금액").first().waitFor();
+  await expect(page.getByText("§99의4 — 농어촌주택 소유주택 제외").first()).toBeVisible();
+  await expect(page.getByTestId("count-exclusion-house-ref")).toHaveText("대상: 보유 주택 1 (2020-05-01 취득)");
+});

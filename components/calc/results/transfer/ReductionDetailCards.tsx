@@ -62,7 +62,7 @@ interface Props {
    */
   longTermHoldingDeduction: number;
   /**
-   * 명부(단건 결과뷰만) — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(계산기 계획서 Q-6).
+   * 명부(단건·겸용 결과뷰) — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(계산기 계획서 Q-6).
    * 명부를 모르는 화면은 넘기지 않는다 — 표시만 생략된다.
    */
   houses?: readonly HouseRefRow[];
