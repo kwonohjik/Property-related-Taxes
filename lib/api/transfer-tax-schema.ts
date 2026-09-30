@@ -25,6 +25,7 @@ import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
+import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -135,6 +136,8 @@ export const propertySchema = z
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"]);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
+      // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
+      refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

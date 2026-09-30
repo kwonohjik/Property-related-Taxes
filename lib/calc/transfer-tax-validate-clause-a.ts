@@ -37,6 +37,13 @@ import {
   sec164LandStatus,
 } from "./sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isSec163_9Cause } from "./transfer-163-9-base-date";
+import {
+  buildInheritedAcquisitionPayload,
+  buildInheritedHouseValuationPayload,
+  buildCommercialInheritanceValuationPayload,
+} from "./transfer-tax-api-inheritance";
+import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 
 /**
  * ②(§164④~⑦)가 **가목으로 성립**하는가 — 3경로 중 하나라도 완전 충족.
@@ -156,4 +163,50 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
   if (isSec164ClauseAFilled(asset)) return null;
 
   return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
+}
+
+/**
+ * PD-1 ⑧ 거울 — 의제취득일(1985.1.1.) 전 상속·증여 자산이 ③(환산)으로 갈 때 **분자·분모 필수**
+ * (2026-09-30 2차 점검 · ⑫ `refinePreDeemedAcquisitionSource`).
+ *
+ * E-1 선언은 「①·② 없음 → ③으로 간다」를 허용할 뿐 ③의 입력(의제취득일 현재 기준시가 · 양도시 기준시가)을
+ * 요구하지 않았다. 비우면 엔진(`inheritance-acquisition-price.ts` `calcPreDeemed`)은 던지지 않고 **취득가액 0**으로
+ * 계산했다(컴패니언 실측 379,731,000 vs 355,725,900). 주 자산은 ⑫가 400으로 막아 **⑧ 통과 ↔ ⑫ 400**
+ * 막다른 길이었고, 컴패니언은 ⑫도 없어 조용히 0이었다.
+ *
+ * 판정은 **④ 빌더 그대로** 한다 — ④가 pre-deemed `inheritedAcquisition`을 싣는지, ①·②(§164④~⑦) 원천을
+ * 싣는지를 같은 함수로 본다(⑫가 보는 것이 바로 그 payload다). 자기 서브객체로 취득가액을 만드는 자산
+ * (겸용·일반건물·재개발·입주권)은 ④가 운반하지 않거나 ⑫가 제외한다. 감정가액·매매사례는 주 자산만 제외 —
+ * 주 자산 ④는 `acquisitionMethod`로 보내 ⑫가 건너뛰지만, 컴패니언 payload에는 그 모드가 없다.
+ */
+export function preDeemedConversionInputError(
+  asset: AssetForm,
+  label: string,
+  formTransferDate: string | undefined,
+  isNonPrimaryAsset: boolean,
+): string | null {
+  if (
+    (asset.assetKind === "housing" && asset.isMixedUseHouse === true) ||
+    asset.assetKind === "general_building" ||
+    asset.assetKind === "right_to_move_in" ||
+    asset.assetKind === "redevelopment_apt" ||
+    asset.assetKind === "commercial_building"
+  )
+    return null;
+  if (!isNonPrimaryAsset && (asset.isAppraisalAcquisition === true || asset.isSalesCaseAcquisition === true)) return null;
+  const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
+    | { mode?: string; reportedValue?: number }
+    | undefined;
+  if (ia?.mode !== "pre-deemed" || (ia.reportedValue ?? 0) > 0) return null;
+  const td = formTransferDate ?? "";
+  const clauseB =
+    "inheritedHouseValuation" in buildInheritedHouseValuationPayload(asset, td) ||
+    "commercialInheritanceValuation" in buildCommercialInheritanceValuationPayload(asset) ||
+    (asset.assetKind === "land" && isSec163_9Cause(asset.acquisitionCause) && "pre1990Land" in buildPre1990LandPayload(asset, td));
+  if (clauseB) return null;
+  if (!(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
+    return `${label}: 의제취득일(1985.1.1.) 전 상속·증여 자산을 환산하려면 의제취득일 현재 기준시가를 입력하세요 (소득세법 시행령 §176의2④).`;
+  if (!(parseAmount(asset.standardPriceAtTransfer ?? "") > 0))
+    return `${label}: 의제취득일 전 상속·증여 자산의 환산에는 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④).`;
+  return null;
 }

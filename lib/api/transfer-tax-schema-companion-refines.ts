@@ -132,8 +132,9 @@ export function addCompanionAcquisitionCauseRefines(
        *
        * 필수 항목은 ⑧(`lib/calc/transfer-tax-validate-asset.ts` `carryover_gift` 분기)과
        * **같은 기준**이다 — 어긋나면 「⑧ 통과 ↔ ⑩ 400」 모순이 된다(14지점 ⑧·⑩).
-       * ⚠️ **`acquisitionDate`는 요구하지 않는다** — ⑧이 이월과세 분기에서 일반 취득 검증을
-       *    건너뛰고(`return null`), ⑭도 미제공 시 주 자산 취득일로 대체하기 때문이다.
+       * ⚠️ **`acquisitionDate`는 이 arm이 아니라 `refineCompanionAcquisitionDate`가 요구한다**(CP-5, 2026-09-30).
+       *    ⑭의 「주 자산 취득일 대체」는 제거됐고, ④는 이월과세 컴패니언에 주 자산과 같은 helper
+       *    (`carryoverAcquisitionDateFallback`)로 증여 등기일을 싣는다 — 그래서 UI↔⑫ 모순이 없다.
        */
       const ct = c.carryoverTaxation;
       if (!ct) {

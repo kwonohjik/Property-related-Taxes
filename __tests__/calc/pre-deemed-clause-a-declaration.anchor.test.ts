@@ -118,7 +118,11 @@ describe("E-1 — ①·② 미충족 시 「확인 불가」 선언 요구", () 
   });
 
   it("X-6: 상속 주택 · 실거래가 · ① 비움 · 선언 → 통과", () => {
-    expect(V(inhHouse({ preDeemedClauseAUnconfirmed: true }))).toBeNull();
+    // 2026-09-30 PD-1: 선언으로 간 ③(환산)의 분자·분모를 보충했다 — 종전 픽스처는 둘 다 비어 엔진이
+    // 취득가액 0으로 계산하는 상태였다(⑧ `preDeemedConversionInputError`가 이제 막는다).
+    expect(
+      V(inhHouse({ preDeemedClauseAUnconfirmed: true, standardPriceAtAcq: "50000000", standardPriceAtTransfer: "600000000" })),
+    ).toBeNull();
   });
 });
 

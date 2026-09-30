@@ -278,12 +278,31 @@ export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.Refinemen
  * 자체 서브객체로 취득가액을 잡는 자산(일반건물·재개발·겸용·상가)과 감정가액·매매사례 모드는 제외한다
  * (취득가액의 실제 소스가 따로 있다 — ⑧ `postDeemedClauseARequiredError`의 제외 표와 같은 이유).
  */
-export function refinePreDeemedAcquisitionSource(d: Required2aLike, ctx: z.RefinementCtx) {
+type PreDeemedLike = Pick<
+  Required2aLike,
+  | "inheritedAcquisition"
+  | "generalBuildingValuation"
+  | "redevelopment"
+  | "mixedUse"
+  | "commercialBuildingValuation"
+  | "acquisitionMethod"
+  | "inheritedHouseValuation"
+  | "commercialInheritanceValuation"
+  | "pre1990Land"
+  | "standardPriceAtTransfer"
+>;
+
+export function refinePreDeemedAcquisitionSource(
+  d: PreDeemedLike,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+) {
   const ia = d.inheritedAcquisition;
   if (ia?.mode !== "pre-deemed") return;
   if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
   if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
-  const issue = issuer(ctx);
+  const base = issuer(ctx);
+  const issue: Issue = (path, message) => base([...prefix, ...path], message);
 
   const clauseA =
     positive(ia.reportedValue) || !!d.inheritedHouseValuation || !!d.commercialInheritanceValuation || !!d.pre1990Land;
@@ -304,4 +323,20 @@ export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) 
   refineExpropriationInputs(d, ctx);
   refineSplitAcquisitionInputs(d, ctx);
   refinePreDeemedAcquisitionSource(d, ctx);
+}
+
+/**
+ * 컴패니언(`companionAssets[i]`) — 같은 PD-1 규칙(취득가액 리뷰 게이트 지적, 2026-09-30).
+ *
+ * CP-3가 컴패니언에 `inheritedAcquisition`(pre-deemed 포함) 운반을 처음 열었다. 이 호출이 없으면 같은 자산을
+ * 주 자산에 두면 400, 컴패니언에 두면 **200 + 취득가액 0**이었다(379,731,000 vs 355,725,900).
+ * 컴패니언 payload에는 감정·매매사례 모드(`acquisitionMethod`)가 없어 그 제외는 걸리지 않는다 — ⑧
+ * `preDeemedConversionInputError`도 컴패니언은 감정·매매사례를 제외하지 않는다.
+ */
+export function refineCompanionPreDeemedAcquisitionSource(
+  c: PreDeemedLike,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[],
+) {
+  refinePreDeemedAcquisitionSource(c, ctx, prefix);
 }

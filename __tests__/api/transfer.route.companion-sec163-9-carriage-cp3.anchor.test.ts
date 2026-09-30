@@ -221,3 +221,41 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
     expect(bundled(r.json).totalTax).toBe(328_370_189);
   });
 });
+
+/**
+ * PD-1 × CP-3 (취득가액 리뷰 게이트 지적, 2026-09-30) — ③(환산) 입력이 비면 주 자산·컴패니언 모두 막는다.
+ *
+ * 종전(이 PR 중간 상태): 주 자산은 ⑧ 통과 ↔ ⑫ PD-1 400(막다른 길), 컴패니언은 ⑧·⑫ 모두 통과해
+ * **200 + 취득가액 0**(합계 379,731,000 — 분자를 넣은 짝 355,725,900).
+ */
+describe("PD-1 — 의제 전 ③ 분자 누락 (주 자산·컴패니언 같은 규칙)", () => {
+  const NO_NUMERATOR = { ...HOUSE_PRE_DEEMED_DECLARED, standardPriceAtAcq: "" };
+  const MSG = "의제취득일(1985.1.1.) 전 상속·증여 자산을 환산하려면 의제취득일 현재 기준시가를 입력하세요";
+
+  it("🔴 ⑧ 주 자산 — 차단 (종전 통과 → ⑫ 400 막다른 길)", () => {
+    expect(issues(form([asset(1, NO_NUMERATOR)])).some((m) => m.includes(MSG))).toBe(true);
+  });
+
+  it("🔴 ⑧ 컴패니언 — 차단 (종전 통과 → 200 + 취득가액 0)", () => {
+    expect(issues(form([asset(1), asset(2, NO_NUMERATOR)])).some((m) => m.includes(MSG))).toBe(true);
+  });
+
+  it("🟢 ⑧ 분자가 있으면 통과 (CP-3b 짝 — 위 표의 72,727,272)", () => {
+    expect(issues(form([asset(1), asset(2, HOUSE_PRE_DEEMED_DECLARED)])).some((m) => m.includes(MSG))).toBe(false);
+  });
+
+  it("🔴 ⑫ 컴패니언 API — 분자를 지운 본문은 400 + 경로 (종전 200 · 취득가액 0)", async () => {
+    const { body } = await run(form([asset(1), asset(2, HOUSE_PRE_DEEMED_DECLARED)]));
+    delete body.companionAssets[0].inheritedAcquisition.standardPriceAtDeemedDate;
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+    const json = (await res.json()) as Body;
+    expect(res.status).toBe(400);
+    expect(Object.keys(json.error.fieldErrors)).toContain("companionAssets.0.inheritedAcquisition.reportedValue");
+  });
+});
