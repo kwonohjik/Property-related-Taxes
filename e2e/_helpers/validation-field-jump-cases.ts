@@ -101,11 +101,6 @@ export interface FieldJumpCase {
    * 「앵커가 있다」가 아니라 「사용자가 그 상태에 도달할 수 없다」일 때만 쓴다.
    */
   unreachableInUi?: string;
-  /**
-   * 시드 뒤 「다음」 전에 화면에서 할 조작 — 세션 복원 마이그레이션이 지우는 값을 **사용자처럼** 다시 만든다
-   * (예: 승계 입주권의 감정가액·매매사례 모드 — `calc-wizard-asset-migrate.ts`가 복원 때 끈다).
-   */
-  prepare?: (page: import("@playwright/test").Page) => Promise<void>;
 }
 
 export const FIELD_JUMP_CASES: FieldJumpCase[] = [

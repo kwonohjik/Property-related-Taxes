@@ -273,6 +273,25 @@ export function applyGbCarryoverShareScale(
 }
 
 /**
+ * 증여 **사건** 정보(등기접수일·산출세액·과세가액·관계·적용배제)를 읽을 서브객체 — ④·⑧ 공용.
+ *
+ * 사건 정보는 한 벌이다. 평소에는 토지 블록(`carryover`)이 정본이고 건물 블록의 같은 칸은
+ * 쓰이지 않는다. 그런데 **건물만** 이월과세면 화면에 토지 블록이 없다 — 사용자가 사건 정보를
+ * 넣을 수 있는 곳은 건물 블록 하나뿐이고, 그 편집은 `buildingCarryover`로 간다
+ * (`GbBuildingCarryoverCard`·`GeneralBuildingAcquisitionCards` 건물 카드). 토지 쪽만 읽으면
+ * ⑧은 「등기접수일을 입력하세요」로 영구 차단하고 ④는 조용히 미발동한다(2026-09-30 G1).
+ *
+ * ⚠️ 토지가 이월과세가 아니면 세션 복원(`migrateCarryoverFields`)이 `carryover`를 기본값으로
+ *    되돌린다 — 그쪽에 옮겨 쓰는 방식으로는 고칠 수 없다.
+ */
+export function gbCarryoverEventSource(
+  asset: Pick<AssetForm, "acquisitionCause" | "carryover" | "buildingCarryover">,
+): CarryoverTaxationForm | undefined {
+  if (asset.acquisitionCause === "carryover_gift") return asset.carryover;
+  return asset.buildingCarryover ?? asset.carryover;
+}
+
+/**
  * 일반건물 payload에 얹을 이월과세 조각.
  *
  * @returns 해당 없으면 `{}` — 스프레드해도 무해하다.
@@ -298,8 +317,8 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
   const buildingIsCarryover = asset.gbBuildingAcquisitionCause === "carryover_gift";
   if (!landIsCarryover && !buildingIsCarryover) return {};
 
-  // 증여 사건은 **토지 쪽 서브객체 하나**가 정본이다 — 하나의 증여이므로 두 벌을 두지 않는다.
-  const c = asset.carryover;
+  // 증여 사건은 서브객체 **하나**가 정본이다 — 토지가 이월과세면 토지 쪽, 건물만이면 건물 쪽.
+  const c = gbCarryoverEventSource(asset);
   if (!c?.giftRegistryDate) return {};
 
   const giftTaxCalculated = parseAmount(c.giftTaxCalculated);

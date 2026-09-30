@@ -311,7 +311,7 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 
 - 정적 게이트: `fieldError(조건 ? "a" : "b", …)` · `(data-)field={조건 ? "a" : "b"}`도 읽는다.
 - 공용 위젯 전달 prop 추가: `LandPriceLookupField`(`data-field` = ㎡당 공시지가 칸) · `ThreePointStandardPriceInput`(`fieldCommercialBuildingAt*`) · `ThreePointAssetMajorRender`(Case A 경로 — `PointBlock`을 거치지 않는다) · `CarryoverGiftBlock`/`CarryoverEstimationSection`(`part="building"` → `buildingCarryover.*`) · `CompanionAcq*`(`fieldAcquisitionDate` — 일반건물 분리 모드 토지 카드가 `landAcquisitionDate`를 넘긴다. 없으면 건물 취득일 오류가 토지 날짜로 가도 E2E가 통과했다).
-- 케이스 `prepare?(page)` 훅 — 시드로 만들 수 없고 화면 조작으로만 도달하는 상태(승계 입주권 감정가액·매매사례 — 결함 R1)를 재현.
+- 케이스 `prepare?(page)` 훅 — 시드로 만들 수 없고 화면 조작으로만 도달하는 상태(승계 입주권 감정가액·매매사례 — 결함 R1)를 재현했다. **R1 해소로 사용처가 0이 되어 훅째 제거**(2026-09-30).
 - **동적 키** — 재개발 거주기간 3곳은 반복문 배열의 `startField`·`endField`라 정적 게이트가 못 읽는다. 메시지별 E2E가 유일한 안전망이다(P3-M4).
 
 ### 🔴 별건 발견 — 막다른 오류·입력 유실 7건 (이 PR은 고치지 않는다)
@@ -327,6 +327,11 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 | B2 ✅ | 주택·건물 부담부증여 「시가 + 환산취득가액」 — 기준시가 입력칸 없음 | 검증 `bg.ts` K-5가 `standardPriceAtTransfer`·`standardPriceAtAcq` 요구, 시가 모드는 두 칸을 숨긴다(E2E 전 섹션 펼침 probe) |
 | R1 ✅ | 승계조합원 입주권의 추계 모드(감정·매매사례)가 **새로고침하면 사라진다** | 마이그레이션이 모든 입주권의 `isAppraisalAcquisition`·`isSalesCaseAcquisition`을 지운다(`calc-wizard-asset-migrate.ts:391-395`) — 승계 라디오 `acqModePatch`가 바로 그 플래그를 쓴다(`SuccessorRightAcquisitionBlock.tsx:73-77`) |
 | R2 ✅ | 재개발 실거래가 모드에 이전 환산 입력(A·최초공시 단가)이 남으면 「최초공시일도 입력하세요」 막다른 오류 | `redev.ts:386-388` 검사가 모드를 보지 않는다 — 입력 섹션은 환산 모드에서만 렌더. 2026-08-26 P2-06은 신호 하나(`redevLandPricePerSqmAtAcq`)만 뺐다 — **같은 부류의 잔여** |
+
+**해소 (2026-09-30, 별도 작업 1차 — `e2e/transfer-dead-end-defects.spec.ts`, 재현 FAIL 확인 후 수정)**:
+- **R1** — 복원 마이그레이션이 **원조합원 입주권만** 두 플래그를 지운다(승계는 라디오의 정본). 케이스의 `prepare` 우회와 훅을 걷어 시드만으로 통과한다.
+- **G1** — 증여 사건 정보의 출처를 `gbCarryoverEventSource`(토지도 이월과세면 `carryover`, 건물만이면 `buildingCarryover`) 하나로 두고 ④ `buildGbCarryoverPayload`·⑧ `validateGbCarryover`가 같이 쓴다. ⑧만 풀었으면 ④가 `{}`를 돌려 **조용히 미발동**했다. 분리 ON 건물 카드의 「토지 카드에서 입력」 안내는 조건이 뒤집혀 있어(토지 블록이 없을 때만 표시) 바로잡았다. 「이월과세 관계 그 외 · 건물만」 케이스가 도달 가능해져 skip 20 → 19.
+- 나머지 6건(A1·G2·G3·B1·B2·R2)은 미착수.
 
 추가 기록: 상속 상가 「상속세 신고가액」 칸은 평가방법을 고른 뒤에만 나타난다 — 결함은 아니고(입력 경로 있음), 평가방법 칸에 조건부 앵커를 달아 이동을 보완했다. 겸용 `mixed-use-asset.ts`의 2곳(`mixedTransferHousingPrice`·`mixedAcqLandPricePerSqm` 재검사)은 앞 검사가 같은 값을 먼저 요구해 **죽은 코드**다(키만 달고 케이스 없음).
 

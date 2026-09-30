@@ -205,8 +205,8 @@ export function GbBuildingInheritedValueCard({
  * ⚠️ **모듈 스코프에 둔다** — 렌더 안에서 선언하면 매 렌더 새 컴포넌트 타입이 되어 입력
  *    상태가 초기화된다(`react-hooks/static-components`, pre-commit 하드블록).
  *
- * 증여 **사건** 정보(등기접수일·산출세액·과세가액·적용배제)는 토지 블록 하나가 정본이다 —
- * 여기서 편집한 값은 전부 `buildingCarryover`로 간다.
+ * 증여 **사건** 정보(등기접수일·산출세액·과세가액·적용배제)는 토지도 이월과세면 토지 블록이,
+ * 건물만이면 이 블록이 정본이다(`gbCarryoverEventSource`). 여기서 편집한 값은 전부 `buildingCarryover`로 간다.
  */
 export function GbBuildingCarryoverCard({
   asset,
@@ -221,8 +221,13 @@ export function GbBuildingCarryoverCard({
     <ToneCard tone="violet" title="건물 파트 이월과세 (소득세법 §95④·§97의2①1호)">
       <p className="mb-2 text-caption text-violet-800">
         증여자의 취득일·취득가액과 증여 당시 평가액은 <strong>토지·건물이 각각</strong> 다릅니다
-        (증여세 신고서에 물건별로 적혀 있습니다). 증여 등기접수일·증여세 산출세액·과세가액은
-        위 <strong>토지</strong> 블록에서 한 번만 입력합니다.
+        (증여세 신고서에 물건별로 적혀 있습니다).
+        {/* 토지 블록이 없으면(건물만 이월과세) 사건 정보도 이 블록에서 받는다 — `gbCarryoverEventSource` */}
+        {asset.acquisitionCause === "carryover_gift" && (
+          <>
+            {" "}증여 등기접수일·증여세 산출세액·과세가액은 위 <strong>토지</strong> 블록에서 한 번만 입력합니다.
+          </>
+        )}
       </p>
       <CarryoverGiftBlock
         part="building"

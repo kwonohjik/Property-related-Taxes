@@ -5,7 +5,6 @@
  * 대상: `transfer-tax-validate-redev.ts`(재개발·재건축 §166) · `-successor-right.ts`(승계조합원 입주권 §97①1호 가목)
  * · `transfer-tax-validate-acquisition.ts`의 재개발 분기 「취득일을 입력하세요」.
  */
-import { expect, type Page } from "@playwright/test";
 import { withPrimary, type FieldJumpCase } from "./validation-field-jump-cases";
 
 const A = 0;
@@ -85,17 +84,6 @@ const successorRight = (patch: Record<string, unknown> = {}) => () =>
     useEstimatedAcquisition: false,
     ...patch,
   });
-
-/**
- * 승계 입주권의 추계 모드를 **화면에서** 고른다. 시드만으로는 안 된다 — 세션 복원 마이그레이션이
- * 입주권의 `isAppraisalAcquisition`·`isSalesCaseAcquisition`을 끈다(`calc-wizard-asset-migrate.ts`
- * 「입주권에서 도달 불가 입력 3종」). 그 정리가 승계 입주권의 모드 라디오까지 되돌리는 것은 별건 결함이다.
- */
-const pickSuccessorMode = (mode: "appraisal" | "salesCase") => async (page: Page) => {
-  const radio = page.locator(`input[type="radio"][name^="successorAcqMode-"][value="${mode}"]`);
-  await radio.evaluate((el: HTMLInputElement) => el.click());
-  await expect(radio).toBeChecked();
-};
 
 /** 1세대1주택 — 거주기간·사실상 주거용 카드의 렌더 조건(폼 전역 `isOneHouseSingle`) */
 const ONE_HOUSE = { isOneHousehold: true, householdHousingCount: "1" };
@@ -282,12 +270,10 @@ export const REDEV_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "redev: fixedAcquisitionPrice (승계 입주권 감정가액)", field: "fixedAcquisitionPrice", step: 0, assetIndex: A,
     message: /^자산: 감정가액을 입력하세요\. \(소득세법 시행령 §176의2③2호/,
     form: successorRight({ isAppraisalAcquisition: true, successorRightStdPaidAtAcq: "200000000", fixedAcquisitionPrice: "" }),
-    prepare: pickSuccessorMode("appraisal"),
   },
   {
     name: "redev: similarSalesValue (승계 입주권 매매사례)", field: "similarSalesValue", step: 0, assetIndex: A,
     message: /^자산: 매매사례가액을 입력하세요\. \(소득세법 시행령 §176의2③1호/,
     form: successorRight({ isSalesCaseAcquisition: true, successorRightStdPaidAtAcq: "200000000", similarSalesValue: "" }),
-    prepare: pickSuccessorMode("salesCase"),
   },
 ];

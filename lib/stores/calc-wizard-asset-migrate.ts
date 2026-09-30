@@ -385,13 +385,21 @@ export function migrateAsset(raw: unknown): AssetForm {
    *
    * ⚠️ `useEstimatedAcquisition`은 **비우지 않는다** — 원조합원 입주권에서는 ⑤ 카드의
    *    실가/환산 라디오가 이 필드를 정본으로 쓴다. 비우면 §166③ 환산 모드가 꺼진다.
-   *    승계조합원의 환산 차단은 API(`isEstimated` 정의)와 ⑧ validate가 담당한다.
+   *
+   * ⚠️ **승계조합원 입주권의 추계 플래그 2종은 비우지 않는다** (2026-09-30 R1). 그쪽은
+   *    `SuccessorRightAcquisitionBlock`의 산정 방식 라디오(감정·매매사례)가 이 플래그를 정본으로
+   *    쓰고, API도 승계조합원에게는 두 플래그를 연다(`transfer-tax-api-primary-context.ts`
+   *    `blocksAppraisalSalesCase`). 비우면 새로고침마다 고른 방식이 실지거래가액으로 되돌아간다.
    */
   if (a.assetKind === "right_to_move_in") {
     a.redevReceiveOnlyMode = "";
     a.redevNewHouseResidenceMonths = "";
-    a.isAppraisalAcquisition = false;
-    a.isSalesCaseAcquisition = false;
+    // `isSuccessorRightTransfer`와 같은 술어(바깥 if가 assetKind를 이미 확인). 그 모듈은
+    // CurrencyInput을 import해 store → 컴포넌트 방향이 되므로 여기서는 필드만 본다.
+    if (a.isSuccessorRightToMoveIn !== true) {
+      a.isAppraisalAcquisition = false;
+      a.isSalesCaseAcquisition = false;
+    }
     a.redevIsSuccessorMember = "";
   }
   /**
