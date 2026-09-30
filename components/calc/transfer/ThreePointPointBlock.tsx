@@ -91,6 +91,9 @@ interface PointBlockProps {
   onLandPricePerSqmChange: (v: string) => void;
   buildingStdPrice: string;
   onBuildingStdPriceChange: (v: string) => void;
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 토지 단위 공시지가·건물 기준시가 칸 */
+  landField?: string;
+  buildingField?: string;
   jibun?: string;
   landArea?: string;
   /** 라벨 prefix용 대상 명시 (예: "주택") */
@@ -134,6 +137,8 @@ export function PointBlock({
   onLandPricePerSqmChange,
   buildingStdPrice,
   onBuildingStdPriceChange,
+  landField,
+  buildingField,
   jibun,
   landArea,
   targetLabel,
@@ -290,6 +295,7 @@ export function PointBlock({
     >
       <CurrencyInput
         label=""
+        data-field={landField}
         value={landPricePerSqm}
         onChange={onLandPricePerSqmChange}
         placeholder="원/㎡"
@@ -380,6 +386,7 @@ export function PointBlock({
               >
                 <CurrencyInput
                   label=""
+                  data-field={buildingField}
                   value={buildingStdPrice}
                   onChange={onBuildingStdPriceChange}
                   placeholder="원"
@@ -434,6 +441,7 @@ export function PointBlock({
           <FieldCard label={labels.buildingStdPrice} unit="원">
             <CurrencyInput
               label=""
+              data-field={buildingField}
               value={buildingStdPrice}
               onChange={onBuildingStdPriceChange}
               placeholder="원"

@@ -45,6 +45,7 @@ export function ReplotReductionFields({
       <div className="space-y-1.5">
         <label className="text-sm font-medium">환지처분확정일</label>
         <DateInput
+          data-field="replottingConfirmDate"
           value={asset.replottingConfirmDate}
           onChange={(v) => onChange({ replottingConfirmDate: v })}
         />
@@ -56,7 +57,7 @@ export function ReplotReductionFields({
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="space-y-1">
+        <div className="space-y-1" data-field="entitlementArea">
           <label className="text-xs text-muted-foreground">
             권리면적 (㎡)
             <span title="환지예정지 지정 시 받기로 한 면적" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
@@ -69,7 +70,7 @@ export function ReplotReductionFields({
             }}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1" data-field="allocatedArea">
           <label className="text-xs text-muted-foreground">
             교부면적 (㎡)
             <span title="환지처분 확정 후 실제 교부받은 면적. 양도면적으로 자동 적용됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
@@ -82,7 +83,7 @@ export function ReplotReductionFields({
             }}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1" data-field="priorLandArea">
           <label className="text-xs text-muted-foreground">
             종전면적 (㎡)
             <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전면적 × 「교부면적을 권리면적으로 나눈 비율」" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
@@ -196,6 +197,7 @@ export function ReplotIncreaseFields({
             value={asset.replottingConfirmDate}
             onChange={(v) => onChange({ replottingConfirmDate: v })}
             data-testid="replot-inc-confirm-date"
+            data-field="replottingConfirmDate"
           />
           {asset.replottingConfirmDate && (
             <p className="text-xs text-blue-600">
@@ -203,7 +205,7 @@ export function ReplotIncreaseFields({
             </p>
           )}
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" data-field="transferArea">
           <label className="text-sm font-medium">
             권리면적 (양도 당시 ㎡)
             <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 당초분 자산의 양도면적이 됩니다. (취득면적=종전토지 면적은 ③ 취득정보에 입력)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>

@@ -44,6 +44,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">증여일</label>
           <DateInput
+            data-field="acquisitionDate"
             value={props.acquisitionDate}
             onChange={props.onAcquisitionDateChange}
           />
@@ -51,6 +52,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">증여자 취득일</label>
           <DateInput
+            data-field="donorAcquisitionDate"
             value={props.donorAcquisitionDate}
             onChange={props.onDonorAcquisitionDateChange}
           />
@@ -78,6 +80,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
       <div className="space-y-1.5">
         <CurrencyInput
           label="증여 신고가액 (원)"
+          data-field="fixedAcquisitionPrice"
           value={props.fixedAcquisitionPrice}
           onChange={props.onFixedAcquisitionPriceChange}
           required

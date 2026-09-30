@@ -9,6 +9,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { fallbackControlForm } from "../../../e2e/_helpers/validation-field-jump-cases";
 
 const form = (patch: Partial<TransferFormData>): TransferFormData =>
   ({ ...createDefaultTransferFormData(), ...patch }) as TransferFormData;
@@ -50,7 +51,7 @@ describe("collectStepIssues — field 부착", () => {
     expect(byMsg("자산: 소재지를 입력하세요")).toMatchObject({ assetIndex: 0, field: "addressJibun" });
   });
 
-  it("미부착 메시지(취득 검증 — Phase 2 대상)는 field가 없다 → 화면이 카드로 후퇴", () => {
+  it("취득 검증(Phase 2)에도 field가 붙는다", () => {
     const issues = collectStepIssues(
       0,
       form({
@@ -59,7 +60,20 @@ describe("collectStepIssues — field 부착", () => {
         contractTotalPrice: "1000000000",
       }),
     );
-    expect(issues).toEqual([{ step: 0, assetIndex: 0, message: "자산: 취득일을 입력하세요." }]);
+    expect(issues).toEqual([
+      { step: 0, assetIndex: 0, message: "자산: 취득일을 입력하세요.", field: "acquisitionDate" },
+    ]);
+  });
+
+  /**
+   * 후퇴 대조군 — **특정 칸이 아닌 조합 오류**라 앞으로도 field를 달지 않는다(계획서 §7-2).
+   * Phase 2 전에는 「자산: 취득일을 입력하세요.」가 대조군이었으나 Phase 2가 field를 달았다.
+   */
+  it("미부착 메시지(지분 단독 불가 — 조합 오류)는 field가 없다 → 화면이 카드로 후퇴", () => {
+    const issues = collectStepIssues(0, fallbackControlForm() as unknown as TransferFormData);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ step: 0, assetIndex: 0, message: expect.stringMatching(/^자산: 지분 모드 자산/) });
+    expect(issues[0].field).toBeUndefined();
   });
 
   it("1단계·3단계 직접 push에도 field가 붙는다", () => {

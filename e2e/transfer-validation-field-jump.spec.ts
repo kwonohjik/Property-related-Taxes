@@ -12,7 +12,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
-import { FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases";
+import { FIELD_JUMP_CASES, fallbackControlForm } from "./_helpers/validation-field-jump-cases";
+import { ACQ_FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases-acq";
 
 async function ready(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -135,13 +136,10 @@ test.describe("검증 오류 → 입력칸 이동", () => {
   });
 
   test("필드 미부착 오류는 현행처럼 자산 카드로 후퇴한다 (퇴행 0)", async ({ page }) => {
-    // 소재지·유형은 채우고 취득 정보를 비운다 → 취득 검증(Phase 2 대상, 미부착) 오류가 첫 오류
-    await seedAndOpen(page, {
-      assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", acquisitionDate: "" }],
-      transferDate: "2024-03-01",
-      contractTotalPrice: "1000000000",
-    });
+    // 지분 단독 불가 — 칸 하나가 아닌 조합 오류라 field가 영영 없다(대조군 근거는 헬퍼 주석)
+    await seedAndOpen(page, fallbackControlForm());
     await next(page).click();
+    await expect(panel(page).getByText(/^자산: 지분 모드 자산/)).toBeVisible();
 
     const card = page.locator('[data-asset-card-index="0"]');
     const banner = card.locator("p").first();
@@ -152,12 +150,12 @@ test.describe("검증 오류 → 입력칸 이동", () => {
 });
 
 /**
- * Phase 1 field 부착 키 전수 — 「그 오류를 누르면 그 키의 입력칸에 커서」.
- * 입력은 `_helpers/validation-field-jump-cases.ts`(오류 발생은 vitest가 먼저 고정).
+ * field 부착 메시지 전수(Phase 1 키 · Phase 2 취득 메시지) — 「그 오류를 누르면 그 키의 입력칸에 커서」.
+ * 입력은 `_helpers/validation-field-jump-cases*.ts`(오류 발생은 vitest가 먼저 고정).
  */
 test.describe("검증 오류 → 입력칸 이동 (키 전수)", () => {
-  for (const c of FIELD_JUMP_CASES) {
-    test(`${c.field}`, async ({ page }) => {
+  for (const c of [...FIELD_JUMP_CASES, ...ACQ_FIELD_JUMP_CASES]) {
+    test(c.name ?? c.field, async ({ page }) => {
       test.skip(!!c.unreachableInUi, c.unreachableInUi);
       await seedAndOpen(page, c.form());
       if (c.step === 1) await page.getByRole("button", { name: "보유 상황" }).first().click();
@@ -168,19 +166,20 @@ test.describe("검증 오류 → 입력칸 이동 (키 전수)", () => {
       await expect(item).toBeVisible();
       await item.click();
 
-      // 포커스가 그 키의 앵커 안(자산 수준이면 그 카드 안)에 있고 화면에 보인다
+      // 포커스가 그 키의 앵커 안(자산 수준이면 그 카드 안)에 있고 화면에 보인다.
+      // 「안」으로 본다 — 면적 칸처럼 앵커가 겹치는 곳이 있어 가장 가까운 앵커만 비교하면 틀린다.
       await expect
         .poll(() =>
-          page.evaluate(() => {
+          page.evaluate((key) => {
             const el = document.activeElement as HTMLElement | null;
             if (!el || el === document.body) return null;
             return {
-              field: el.closest("[data-field]")?.getAttribute("data-field") ?? null,
+              inField: !!el.closest(`[data-field="${CSS.escape(key)}"]`),
               card: el.closest("[data-asset-card-index]")?.getAttribute("data-asset-card-index") ?? null,
             };
-          }),
+          }, c.field),
         )
-        .toMatchObject(c.assetIndex != null ? { field: c.field, card: String(c.assetIndex) } : { field: c.field });
+        .toMatchObject(c.assetIndex != null ? { inField: true, card: String(c.assetIndex) } : { inField: true });
       await expect(page.locator(":focus")).toBeInViewport();
     });
   }

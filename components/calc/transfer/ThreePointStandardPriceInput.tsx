@@ -31,6 +31,16 @@ import { SEPARATE_LAND_ACQ_LANDPRICE_HINT } from "@/lib/calc/building-std-batch-
 // ─── Props ────────────────────────────────────────────────────────
 
 export interface ThreePointStandardPriceInputProps {
+  /**
+   * 검증 오류 → 입력칸 이동 앵커 키 — 시점별 토지 단위 공시지가·건물 기준시가 칸.
+   * 호출부가 **문자열 리터럴**로 넘긴다(정적 게이트 `transfer-validation-field-anchor-coverage`가 `field…="키"`를 읽는다).
+   */
+  fieldLandAtAcq?: string;
+  fieldBuildingAtAcq?: string;
+  fieldLandAtFirst?: string;
+  fieldBuildingAtFirst?: string;
+  fieldLandAtTransfer?: string;
+  fieldBuildingAtTransfer?: string;
   // 취득시
   acquisitionDate: string;
   /**
@@ -290,6 +300,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onLandPricePerSqmChange={props.onLandPricePerSqmAtAcqChange}
         buildingStdPrice={props.buildingStdPriceAtAcq}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtAcqChange}
+        landField={props.fieldLandAtAcq}
+        buildingField={props.fieldBuildingAtAcq}
         jibun={props.jibun}
         landArea={props.landArea}
         housingFloorArea={props.housingFloorArea}
@@ -317,6 +329,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         onLandPricePerSqmChange={props.onLandPricePerSqmAtFirstChange}
         buildingStdPrice={props.buildingStdPriceAtFirst}
         onBuildingStdPriceChange={props.onBuildingStdPriceAtFirstChange}
+        landField={props.fieldLandAtFirst}
+        buildingField={props.fieldBuildingAtFirst}
         jibun={props.jibun}
         landArea={props.landArea}
         housingFloorArea={props.housingFloorArea}
@@ -345,6 +359,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           onLandPricePerSqmChange={props.onLandPricePerSqmAtTransferChange}
           buildingStdPrice={props.buildingStdPriceAtTransfer}
           onBuildingStdPriceChange={props.onBuildingStdPriceAtTransferChange}
+          landField={props.fieldLandAtTransfer}
+          buildingField={props.fieldBuildingAtTransfer}
           jibun={props.jibun}
           landArea={props.landArea}
           housingFloorArea={props.housingFloorArea}

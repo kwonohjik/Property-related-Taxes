@@ -377,7 +377,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
 
             {/* same: 단일 면적 입력 */}
             {(asset.areaScenario ?? "same") === "same" && (
-              <div className="space-y-1">
+              <div className="space-y-1" data-field="acquisitionArea">
                 <label className="text-xs text-muted-foreground">
                   {AREA_LABEL_BY_ASSET_KIND[asset.assetKind] ??
                     "취득·양도 당시 면적 (㎡)"}
@@ -402,7 +402,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
           {/* partial: 취득·양도 분리 입력 */}
           {asset.areaScenario === "partial" && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
+              <div className="space-y-1" data-field="acquisitionArea">
                 <label className="text-xs text-muted-foreground">
                   취득 당시 면적 (㎡)
                   <span
@@ -418,7 +418,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
                   placeholder="전체 취득한 면적"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1" data-field="transferArea">
                 <label className="text-xs text-muted-foreground">
                   양도 당시 면적 (㎡)
                   <span

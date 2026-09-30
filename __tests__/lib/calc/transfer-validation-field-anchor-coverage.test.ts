@@ -48,6 +48,8 @@ function anchorKeys(): Set<string> {
     const src = readFileSync(f, "utf8");
     // field="x" · data-field="x" · data-field={`x.${i}.y`}
     for (const m of src.matchAll(/\b(?:data-)?field=(?:"([^"]+)"|\{`([^`]+)`\})/g)) keys.add(normalize(m[1] ?? m[2]));
+    // 공용 위젯에 키를 넘기는 prop — fieldLandAtAcq="x" (`ThreePointStandardPriceInput`)
+    for (const m of src.matchAll(/\bfield[A-Z]\w*="([^"]+)"/g)) keys.add(m[1]);
     // data-field={cond ? "a" : "b"}
     for (const m of src.matchAll(/\bdata-field=\{[^}]*\?\s*"([^"]+)"\s*:\s*"([^"]+)"\s*\}/g)) {
       keys.add(m[1]);

@@ -79,6 +79,7 @@ export function CarryoverGiftExclusionSection({
 
         <RadioCardGroup
           name={`carryover-donor-relation-${assetId}`}
+          data-field="carryover.donorRelation"
           layout="inline"
           options={[
             { value: "spouse", label: "배우자" },

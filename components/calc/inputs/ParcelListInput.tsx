@@ -209,6 +209,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                   <div className="space-y-1.5">
                     <Label className="text-sm">환지처분확정일</Label>
                     <DateInput
+                      data-field={`parcels.${i}.replottingConfirmDate`}
                       value={p.replottingConfirmDate}
                       onChange={(v) => update(i, { replottingConfirmDate: v })}
                     />
@@ -222,6 +223,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                   <div className="space-y-1.5">
                     <Label className="text-sm">취득일</Label>
                     <DateInput
+                      data-field={`parcels.${i}.acquisitionDate`}
                       value={p.acquisitionDate}
                       onChange={(v) => update(i, { acquisitionDate: v })}
                     />
@@ -274,6 +276,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                       type="number"
                       step="0.01"
                       className={AREA_INPUT_CLASS}
+                      data-field={`parcels.${i}.transferArea`}
                       value={p.transferArea}
                       onChange={(e) =>
                         update(i, {
@@ -303,6 +306,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                           type="number"
                           step="0.01"
                           className={AREA_INPUT_CLASS}
+                          data-field={`parcels.${i}.entitlementArea`}
                           value={p.entitlementArea}
                           onChange={(e) =>
                             update(i, { entitlementArea: e.target.value })
@@ -319,6 +323,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                           type="number"
                           step="0.01"
                           className={AREA_INPUT_CLASS}
+                          data-field={`parcels.${i}.allocatedArea`}
                           value={p.allocatedArea}
                           onChange={(e) =>
                             update(i, {
@@ -338,6 +343,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                           type="number"
                           step="0.01"
                           className={AREA_INPUT_CLASS}
+                          data-field={`parcels.${i}.priorLandArea`}
                           value={p.priorLandArea}
                           onChange={(e) =>
                             update(i, { priorLandArea: e.target.value })
@@ -388,6 +394,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                         type="number"
                         step="0.01"
                         className={AREA_INPUT_CLASS}
+                        data-field={`parcels.${i}.acquisitionArea`}
                         value={p.acquisitionArea}
                         onChange={(e) => update(i, { acquisitionArea: e.target.value })}
                         placeholder="전체 취득한 면적"
@@ -402,6 +409,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                         type="number"
                         step="0.01"
                         className={AREA_INPUT_CLASS}
+                        data-field={`parcels.${i}.transferArea`}
                         value={p.transferArea}
                         onChange={(e) => update(i, { transferArea: e.target.value })}
                         placeholder="이번에 파는 면적"
@@ -419,6 +427,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                     <input
                       type="number"
                       className={AREA_INPUT_CLASS}
+                      data-field={`parcels.${i}.standardPricePerSqmAtAcq`}
                       value={p.standardPricePerSqmAtAcq}
                       onChange={(e) =>
                         update(i, { standardPricePerSqmAtAcq: e.target.value })
@@ -431,6 +440,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                     <input
                       type="number"
                       className={AREA_INPUT_CLASS}
+                      data-field={`parcels.${i}.standardPricePerSqmAtTransfer`}
                       value={p.standardPricePerSqmAtTransfer}
                       onChange={(e) =>
                         update(i, { standardPricePerSqmAtTransfer: e.target.value })
@@ -484,6 +494,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
               {p.acquisitionMethod === "actual" && (
                 <CurrencyInput
                   label="취득가액 (원)"
+                  data-field={`parcels.${i}.acquisitionPrice`}
                   value={p.acquisitionPrice}
                   onChange={(v) => update(i, { acquisitionPrice: v })}
                 />
@@ -536,6 +547,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
         variant="outline"
         size="sm"
         onClick={addParcel}
+        data-field="parcels"
         disabled={parcels.length >= 10}
         className="w-full"
       >

@@ -59,6 +59,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">상속개시일</label>
           <DateInput
+            data-field="acquisitionDate"
             value={asset.acquisitionDate}
             onChange={(v) =>
               onChange({ acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v })
@@ -68,6 +69,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">피상속인 취득일</label>
           <DateInput
+            data-field="decedentAcquisitionDate"
             value={asset.decedentAcquisitionDate}
             onChange={(v) => onChange({ decedentAcquisitionDate: v })}
           />
@@ -96,6 +98,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
                 동일세대 거주·보유 개시일
               </label>
               <DateInput
+                data-field="decedentCohabitationHoldingStartDate"
                 value={asset.decedentCohabitationHoldingStartDate}
                 onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
               />

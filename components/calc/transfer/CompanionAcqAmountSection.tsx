@@ -76,6 +76,7 @@ export function CompanionAcqAmountSection({
         onChange={props.onFixedAcquisitionPriceChange}
         required
         data-testid="fixed-acquisition-price"
+        data-field="fixedAcquisitionPrice"
         hint={
           /**
            * B4-2 — 일부양도 안내. 실거래가 모드는 엔진이 면적·가액 안분을 하지 않으므로
@@ -165,6 +166,7 @@ export function CompanionAcqAmountSection({
         <CurrencyInput
           label="취득시 기준시가 (원) — 개산공제 기준액"
           required
+          data-field="standardPriceAtAcq"
           value={props.standardPriceAtAcq}
           onChange={props.onStandardPriceAtAcqChange}
           hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."

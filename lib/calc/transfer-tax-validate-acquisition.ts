@@ -37,52 +37,53 @@ import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-r
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
   const parcels = primary.parcels ?? [];
-  if (parcels.length === 0) return "필지를 최소 1개 추가하세요.";
+  if (parcels.length === 0) return fieldError("parcels", "필지를 최소 1개 추가하세요.");
   for (let i = 0; i < parcels.length; i++) {
     const p = parcels[i];
     const label = `필지 ${i + 1}`;
     const scenario = p.areaScenario ?? "partial";
 
     if (!p.useDayAfterReplotting && !p.acquisitionDate)
-      return `${label}: 취득일을 선택하세요.`;
+      return fieldError(`parcels.${i}.acquisitionDate`, `${label}: 취득일을 선택하세요.`);
     if (p.useDayAfterReplotting && !p.replottingConfirmDate)
-      return `${label}: 환지처분확정일을 선택하세요.`;
+      return fieldError(`parcels.${i}.replottingConfirmDate`, `${label}: 환지처분확정일을 선택하세요.`);
 
     if (scenario === "reduction") {
       if (!p.entitlementArea || parseFloat(p.entitlementArea) <= 0)
-        return `${label}: 권리면적을 입력하세요.`;
+        return fieldError(`parcels.${i}.entitlementArea`, `${label}: 권리면적을 입력하세요.`);
       if (!p.allocatedArea || parseFloat(p.allocatedArea) <= 0)
-        return `${label}: 교부면적을 입력하세요.`;
+        return fieldError(`parcels.${i}.allocatedArea`, `${label}: 교부면적을 입력하세요.`);
       if (!p.priorLandArea || parseFloat(p.priorLandArea) <= 0)
-        return `${label}: 종전토지면적을 입력하세요.`;
+        return fieldError(`parcels.${i}.priorLandArea`, `${label}: 종전토지면적을 입력하세요.`);
       if (parseFloat(p.entitlementArea) <= parseFloat(p.allocatedArea))
-        return `${label}: 감환지는 권리면적이 교부면적보다 커야 합니다.`;
+        return fieldError(`parcels.${i}.entitlementArea`, `${label}: 감환지는 권리면적이 교부면적보다 커야 합니다.`);
     } else {
       if (!p.transferArea || parseFloat(p.transferArea) <= 0)
-        return `${label}: 양도면적을 입력하세요.`;
+        return fieldError(`parcels.${i}.transferArea`, `${label}: 양도면적을 입력하세요.`);
       if (scenario === "partial") {
         if (!p.acquisitionArea || parseFloat(p.acquisitionArea) <= 0)
-          return `${label}: 총 취득면적을 입력하세요.`;
+          return fieldError(`parcels.${i}.acquisitionArea`, `${label}: 총 취득면적을 입력하세요.`);
         if (parseFloat(p.acquisitionArea) < parseFloat(p.transferArea))
-          return `${label}: 취득면적은 양도면적 이상이어야 합니다.`;
+          return fieldError(`parcels.${i}.acquisitionArea`, `${label}: 취득면적은 양도면적 이상이어야 합니다.`);
       }
     }
 
     if (p.acquisitionMethod === "estimated") {
       if (!p.standardPricePerSqmAtAcq || parseFloat(p.standardPricePerSqmAtAcq) <= 0)
-        return `${label}: 취득시 ㎡당 기준시가를 입력하세요.`;
+        return fieldError(`parcels.${i}.standardPricePerSqmAtAcq`, `${label}: 취득시 ㎡당 기준시가를 입력하세요.`);
       if (!p.standardPricePerSqmAtTransfer || parseFloat(p.standardPricePerSqmAtTransfer) <= 0)
-        return `${label}: 양도시 ㎡당 기준시가를 입력하세요.`;
+        return fieldError(`parcels.${i}.standardPricePerSqmAtTransfer`, `${label}: 양도시 ㎡당 기준시가를 입력하세요.`);
       // 공익수용 §164⑨ 1호 필지별 min[] 특례 — 보상 2필드 필수 (별도 모듈)
       const parcelExprError = validateExprValuationParcel(primary, p, label, formTransferDate);
       if (parcelExprError) return parcelExprError;
     } else {
       if (!p.acquisitionPrice || parseAmount(p.acquisitionPrice) <= 0)
-        return `${label}: 취득가액을 입력하세요.`;
+        return fieldError(`parcels.${i}.acquisitionPrice`, `${label}: 취득가액을 입력하세요.`);
     }
   }
   return null;
@@ -209,7 +210,7 @@ export function validateAssetAcquisition(
     const redevError = validateRedevelopmentAsset(asset, label);
     if (redevError) return redevError;
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
-    if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+    if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
     return null;
   }
 
@@ -237,22 +238,22 @@ export function validateAssetAcquisition(
       return `${label}: 가업상속공제 적용 자산은 현재 버전에서 지원하지 않습니다. 세무사에게 수동 계산을 의뢰하세요 (소득세법 §97조의2 ④).`;
     }
 
-    if (!c) return `${label}: 이월과세 증여 정보를 입력하세요.`;
+    if (!c) return fieldError("carryover.giftRegistryDate", `${label}: 이월과세 증여 정보를 입력하세요.`);
 
     // (b) 필수 날짜 필드
-    if (!c.giftRegistryDate) return `${label}: 증여 등기접수일을 입력하세요.`;
-    if (!c.donorAcquisitionDate) return `${label}: 증여자 취득일을 입력하세요.`;
+    if (!c.giftRegistryDate) return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요.`);
+    if (!c.donorAcquisitionDate) return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요.`);
 
     // (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도 (gift/inheritance 원인과 동일 수준 차단)
     if (c.donorAcquisitionDate >= c.giftRegistryDate)
-      return `${label}: 증여자 취득일은 증여 등기접수일보다 이전이어야 합니다.`;
+      return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일은 증여 등기접수일보다 이전이어야 합니다.`);
     if (formTransferDate && c.giftRegistryDate >= formTransferDate)
-      return `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`;
+      return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`);
 
     // (b-3a) §97조의2 ① 본문 — 대상은 **배우자·직계존비속뿐**이다.
     // 그 외 관계는 이월과세 자체가 성립하지 않으므로 취득원인을 바꿔야 한다.
     if (c.donorRelation === "other")
-      return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
+      return fieldError("acquisitionCause", `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`);
 
     // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
     //
@@ -261,60 +262,60 @@ export function validateAssetAcquisition(
     //    (memory `feedback_blocking_validation_full_e2e_regression`).
     //    사망 미선언이면 관계는 판정에 영향이 없다(`isCarryoverRelationExcluded`).
     if (c.donorDeceased && !c.donorRelation)
-      return `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`;
+      return fieldError("carryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`);
 
     // (c) 비교과세 B 시나리오 취득가
     if (parseAmount(c.giftDateValuation) <= 0)
-      return `${label}: 증여 당시 평가액을 입력하세요.`;
+      return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요.`);
 
     // (d) 취득가액 — 환산 미사용 시 직접 입력 필수
     if (!c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
-      return `${label}: 증여자 취득가액을 입력하세요. (환산취득가 사용 시 토글 켜기)`;
+      return fieldError("carryover.donorAcquisitionPrice", `${label}: 증여자 취득가액을 입력하세요. (환산취득가 사용 시 토글 켜기)`);
     }
 
     // (e) 환산 사용 시 모드 선택 필수 + 모드별 필수 필드 검증
     if (c.useEstimatedAcquisition) {
       // 환산 모드 미선택 차단
       if (!c.estimationMode) {
-        return `${label}: 환산 방식(일반 기준시가/개별주택가격 미공시/공동주택 최초고시 전)을 선택하세요.`;
+        return fieldError("carryover.estimationMode", `${label}: 환산 방식(일반 기준시가/개별주택가격 미공시/공동주택 최초고시 전)을 선택하세요.`);
       }
 
       if (c.estimationMode === "general") {
         // 일반 기준시가 환산 — donorStandardPrice* 2개 필수
         if (parseAmount(c.donorStandardPriceAtAcquisition) <= 0)
-          return `${label}: 취득시 기준시가를 입력하세요.`;
+          return fieldError("carryover.donorStandardPriceAtAcquisition", `${label}: 취득시 기준시가를 입력하세요.`);
         if (parseAmount(c.donorStandardPriceAtTransfer) <= 0)
-          return `${label}: 양도시 기준시가를 입력하세요.`;
+          return fieldError("carryover.donorStandardPriceAtTransfer", `${label}: 양도시 기준시가를 입력하세요.`);
       } else if (c.estimationMode === "phd") {
         // PHD §164⑤ — asset 수준 phdFirstDisclosureDate 등 필수
-        if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+        if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
         // §164⑦ 게이트 — 이월과세는 증여자 취득가액 기준: 비교일 = 증여자 취득일
         if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-          return `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`;
+          return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
         if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-          return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+          return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
         const transferPrice =
           parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
-        if (transferPrice <= 0) return `${label}: 양도시 개별주택가격을 입력하세요.`;
+        if (transferPrice <= 0) return fieldError("phdTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요.`);
       } else if (c.estimationMode === "apd") {
         // APD — PHD와 동일 경로(preHousingDisclosure)를 사용하므로 같은 필드 검증
-        if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`;
+        if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`);
         // §164⑦ 게이트 — 비교일 = 증여자 취득일 (phd 모드와 동일)
         if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-          return `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`;
+          return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
         if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-          return `${label}: 최초공시 공동주택가격을 입력하세요.`;
+          return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초공시 공동주택가격을 입력하세요.`);
         const transferPrice =
           parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
-        if (transferPrice <= 0) return `${label}: 양도시 공동주택가격을 입력하세요.`;
+        if (transferPrice <= 0) return fieldError("phdTransferHousingPrice", `${label}: 양도시 공동주택가격을 입력하세요.`);
       }
     }
 
     // (f) 음수 차단
     if (parseAmount(c.donorCapitalExpenditure) < 0)
-      return `${label}: 증여자 자본적지출은 음수일 수 없습니다.`;
+      return fieldError("carryover.donorCapitalExpenditure", `${label}: 증여자 자본적지출은 음수일 수 없습니다.`);
     if (parseAmount(c.giftTaxAmount) < 0)
-      return `${label}: 증여세 상당액은 음수일 수 없습니다.`;
+      return fieldError("carryover.giftTaxAmount", `${label}: 증여세 상당액은 음수일 수 없습니다.`);
 
     // carryover_gift 검증 완료 — 일반 취득 검증 스킵
     return null;
@@ -336,11 +337,11 @@ export function validateAssetAcquisition(
       !!asset.temporaryApprovalDate ||
       !!asset.actualUseDate;
     if (!hasAnyDate) {
-      return `${label}: 신축 주택의 사용승인일을 입력하세요. (소득세법 시행령 §162①4호 — 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중 하나 이상 필수)`;
+      return fieldError("occupancyApprovalDate", `${label}: 신축 주택의 사용승인일을 입력하세요. (소득세법 시행령 §162①4호 — 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중 하나 이상 필수)`);
     }
     // 취득가액(신축비용) 필수
     if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0) {
-      return `${label}: 신축 비용(취득가액)을 입력하세요.`;
+      return fieldError("fixedAcquisitionPrice", `${label}: 신축 비용(취득가액)을 입력하세요.`);
     }
     // acquisitionDate는 4시점 중 가장 이른 날이 자동으로 폼에 동기화되므로 별도 검증 불필요.
     // (CompanionAssetCard 신축 분기에서 4시점 onChange 시점에 acquisitionDate를 자동 patch)
@@ -358,7 +359,7 @@ export function validateAssetAcquisition(
     return null;
   }
 
-  if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+  if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
@@ -374,10 +375,10 @@ export function validateAssetAcquisition(
   // 0) 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 similarSalesValue 필수
   if (isSalesCase) {
     if (!asset.similarSalesValue || parseAmount(asset.similarSalesValue) <= 0)
-      return `${label}: 매매사례가액을 입력하세요.`;
+      return fieldError("similarSalesValue", `${label}: 매매사례가액을 입력하세요.`);
     // 개산공제 base(§163⑥) 필수 — 근거·경계는 `lumpSumBaseRequired` JSDoc.
     if (lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
-      return `${label}: 취득 당시 기준시가를 입력하세요.`;
+      return fieldError("standardPriceAtAcq", `${label}: 취득 당시 기준시가를 입력하세요.`);
     return null;
   }
 
@@ -415,7 +416,7 @@ export function validateAssetAcquisition(
       const acq = parseFloat((asset.acquisitionArea || "").replace(/,/g, ""));
       const tr = parseFloat((asset.transferArea || "").replace(/,/g, ""));
       if (acq > 0 && tr > 0 && acq < tr)
-        return `${label}: 취득 당시 면적은 양도 당시 면적 이상이어야 합니다. (① 기본정보)`;
+        return fieldError("acquisitionArea", `${label}: 취득 당시 면적은 양도 당시 면적 이상이어야 합니다. (① 기본정보)`);
 
       /**
        * B4-2b — 실거래가 모드에서 「양도분 취득가액이 구분되는가」 선택 강제.
@@ -447,7 +448,7 @@ export function validateAssetAcquisition(
         !asset.isMixedUseHouse;
       const hasAcqPrice = parseFloat((asset.fixedAcquisitionPrice || "").replace(/,/g, "")) > 0;
       if (partialConfirmed && isActualPriceMode && hasAcqPrice && !asset.partialAcqDistinct) {
-        return `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`;
+        return fieldError("partialAcqDistinct", `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`);
       }
     }
   }
@@ -455,42 +456,42 @@ export function validateAssetAcquisition(
   if (asset.assetKind === "land") {
     const scenario = asset.areaScenario ?? "same";
     if (scenario === "reduction") {
-      if (!asset.replottingConfirmDate) return `${label}: 환지처분확정일을 입력하세요.`;
+      if (!asset.replottingConfirmDate) return fieldError("replottingConfirmDate", `${label}: 환지처분확정일을 입력하세요.`);
       if (!asset.entitlementArea || parseFloat(asset.entitlementArea) <= 0)
-        return `${label}: 환지 권리면적을 입력하세요.`;
+        return fieldError("entitlementArea", `${label}: 환지 권리면적을 입력하세요.`);
       if (!asset.allocatedArea || parseFloat(asset.allocatedArea) <= 0)
-        return `${label}: 환지 교부면적을 입력하세요.`;
+        return fieldError("allocatedArea", `${label}: 환지 교부면적을 입력하세요.`);
       if (!asset.priorLandArea || parseFloat(asset.priorLandArea) <= 0)
-        return `${label}: 환지 이전 종전면적을 입력하세요.`;
+        return fieldError("priorLandArea", `${label}: 환지 이전 종전면적을 입력하세요.`);
       if (parseFloat(asset.entitlementArea) <= parseFloat(asset.allocatedArea))
-        return `${label}: 감환지는 권리면적이 교부면적보다 커야 합니다.`;
+        return fieldError("entitlementArea", `${label}: 감환지는 권리면적이 교부면적보다 커야 합니다.`);
     }
     if (scenario === "increase") {
-      if (!asset.replottingConfirmDate) return `${label}: 환지처분확정일을 입력하세요.`;
+      if (!asset.replottingConfirmDate) return fieldError("replottingConfirmDate", `${label}: 환지처분확정일을 입력하세요.`);
       if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
-        return `${label}: 종전토지 면적(① 기본정보의 취득 당시 면적)을 입력하세요.`;
+        return fieldError("acquisitionArea", `${label}: 종전토지 면적(① 기본정보의 취득 당시 면적)을 입력하세요.`);
       if (!asset.transferArea || parseFloat(asset.transferArea) <= 0)
-        return `${label}: 권리면적(양도 당시 면적)을 입력하세요.`;
+        return fieldError("transferArea", `${label}: 권리면적(양도 당시 면적)을 입력하세요.`);
     }
   }
 
   // 3) 1990.8.30. 이전 토지 환산 (자산-수준)
   if (hasPre1990) {
     const areaSqm = parseFloat((asset.acquisitionArea || "").replace(/,/g, ""));
-    if (!areaSqm || areaSqm <= 0) return `${label}: 취득 당시 면적(㎡)을 입력하세요.`;
+    if (!areaSqm || areaSqm <= 0) return fieldError("acquisitionArea", `${label}: 취득 당시 면적(㎡)을 입력하세요.`);
     if (!asset.pre1990PricePerSqm_1990 || parseAmount(asset.pre1990PricePerSqm_1990) <= 0)
-      return `${label}: 1990.1.1. 개별공시지가(원/㎡)를 입력하세요.`;
+      return fieldError("pre1990PricePerSqm_1990", `${label}: 1990.1.1. 개별공시지가(원/㎡)를 입력하세요.`);
     // 양도시 기준시가는 상위 standardPriceAtTransfer 필드로 입력 (㎡당 단가 × 면적 총액).
     // pre1990PricePerSqm_atTransfer(입력 UI 없는 필드)는 더 이상 검사하지 않음.
     if (!asset.standardPriceAtTransfer || parseAmount(asset.standardPriceAtTransfer) <= 0)
-      return `${label}: 양도 당시 기준시가를 입력하세요.`;
+      return fieldError("standardPriceAtTransfer", `${label}: 양도 당시 기준시가를 입력하세요.`);
     const gradeValid = (raw: string) => {
       const n = Number((raw || "").replace(/,/g, ""));
       return Number.isFinite(n) && n > 0;
     };
-    if (!gradeValid(asset.pre1990Grade_current)) return `${label}: 1990.8.30. 현재 토지등급을 입력하세요.`;
-    if (!gradeValid(asset.pre1990Grade_prev)) return `${label}: 1990.8.30. 직전 토지등급을 입력하세요.`;
-    if (!gradeValid(asset.pre1990Grade_atAcq)) return `${label}: 취득시 유효 토지등급을 입력하세요.`;
+    if (!gradeValid(asset.pre1990Grade_current)) return fieldError("pre1990Grade_current", `${label}: 1990.8.30. 현재 토지등급을 입력하세요.`);
+    if (!gradeValid(asset.pre1990Grade_prev)) return fieldError("pre1990Grade_prev", `${label}: 1990.8.30. 직전 토지등급을 입력하세요.`);
+    if (!gradeValid(asset.pre1990Grade_atAcq)) return fieldError("pre1990Grade_atAcq", `${label}: 취득시 유효 토지등급을 입력하세요.`);
   }
 
   // 4) 환산취득가 — 기준시가
@@ -507,9 +508,9 @@ export function validateAssetAcquisition(
 
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
-      return `${label}: 취득 당시 기준시가를 입력하세요.`;
+      return fieldError("standardPriceAtAcq", `${label}: 취득 당시 기준시가를 입력하세요.`);
     if (!asset.standardPriceAtTransfer || parseAmount(asset.standardPriceAtTransfer) <= 0)
-      return `${label}: 양도 당시 기준시가를 입력하세요.`;
+      return fieldError("standardPriceAtTransfer", `${label}: 양도 당시 기준시가를 입력하세요.`);
   }
 
   // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 일반 자산: 11개 필수 필드
@@ -517,7 +518,7 @@ export function validateAssetAcquisition(
   // 실거래가/감정가액 모드에서 usePreHousingDisclosure 플래그가 잔존해도 무시.
   if (usesPhd && isEstimated) {
     if (!asset.phdFirstDisclosureDate)
-      return `${label}: 최초 고시일을 입력하세요.`;
+      return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
     // ISO 날짜 유효성 — 존재하지 않는 날(1993-02-30 등) 차단
     {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(asset.phdFirstDisclosureDate);
@@ -526,20 +527,20 @@ export function validateAssetAcquisition(
           d.getUTCFullYear() !== Number(m[1]) ||
           d.getUTCMonth() + 1 !== Number(m[2]) ||
           d.getUTCDate() !== Number(m[3])) {
-        return `${label}: 최초 고시일이 유효하지 않습니다. (예: 공동주택 최초고시 1993-02-01)`;
+        return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일이 유효하지 않습니다. (예: 공동주택 최초고시 1993-02-01)`);
       }
     }
     // §164⑦ 적용가능 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면
     // 취득당시 고시분 존재 → 3-시점 환산 대상 아님 (isPhdEligible 단일 소스).
     // 이월과세(carryover_gift)는 위 전용 블록(:202~)에서 증여자 취득일 기준으로 별도 게이트.
     if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate)) {
-      return `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`;
+      return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
     }
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-      return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
+      return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
     // 일반 자산: acquisitionArea 직접 입력 필요 (겸용주택은 면적 자동 계산이므로 제외)
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
-      return `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`;
+      return fieldError("acquisitionArea", `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`);
     /**
      * 취득시 토지 단위 공시지가 — 1990.8.30. 이전 취득 주택은 **영 §164④ 등급가액 환산**이 대신한다.
      *
@@ -555,19 +556,19 @@ export function validateAssetAcquisition(
       (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0) &&
       derivePre1990PlainHousePhdLandPricePerSqmAtAcq(asset, formTransferDate ?? "") === null
     )
-      return `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 아래 토지등급가액 환산을 켜고 등급을 입력하세요 — 영 §164④)`;
+      return fieldError("phdLandPricePerSqmAtAcq", `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 아래 토지등급가액 환산을 켜고 등급을 입력하세요 — 영 §164④)`);
     if (!asset.phdBuildingStdPriceAtAcq || parseAmount(asset.phdBuildingStdPriceAtAcq) <= 0)
-      return `${label}: 취득시 건물 기준시가를 입력하세요.`;
+      return fieldError("phdBuildingStdPriceAtAcq", `${label}: 취득시 건물 기준시가를 입력하세요.`);
     if (!asset.phdLandPricePerSqmAtFirst || parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
-      return `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`;
+      return fieldError("phdLandPricePerSqmAtFirst", `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`);
     if (!asset.phdBuildingStdPriceAtFirst || parseAmount(asset.phdBuildingStdPriceAtFirst) <= 0)
-      return `${label}: 최초공시일 건물 기준시가를 입력하세요.`;
+      return fieldError("phdBuildingStdPriceAtFirst", `${label}: 최초공시일 건물 기준시가를 입력하세요.`);
     if (!asset.phdTransferHousingPrice || parseAmount(asset.phdTransferHousingPrice) <= 0)
-      return `${label}: 양도시 개별주택가격을 입력하세요.`;
+      return fieldError("phdTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요.`);
     if (!asset.phdLandPricePerSqmAtTransfer || parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0)
-      return `${label}: 양도시 토지 단위 공시지가를 입력하세요.`;
+      return fieldError("phdLandPricePerSqmAtTransfer", `${label}: 양도시 토지 단위 공시지가를 입력하세요.`);
     if (!asset.phdBuildingStdPriceAtTransfer || parseAmount(asset.phdBuildingStdPriceAtTransfer) <= 0)
-      return `${label}: 양도시 건물 기준시가를 입력하세요.`;
+      return fieldError("phdBuildingStdPriceAtTransfer", `${label}: 양도시 건물 기준시가를 입력하세요.`);
 
     /**
      * A11(2026-09-02) — §164⑦ 산식 **괄호 단서**(§164⑧ 준용) 미구현 구간 차단.
@@ -651,14 +652,14 @@ export function validateAssetAcquisition(
       // 판정은 엔진·API·UI와 **같은 헬퍼**(isSeparateAcquisition) — 재구현하면 dual-truth가 된다.
       if (!isSeparateAcquisition(asset)) {
         if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
-          return `${label}: ${isAppraisal ? "감정가액" : "취득가액"}을 입력하세요.`;
+          return fieldError("fixedAcquisitionPrice", `${label}: ${isAppraisal ? "감정가액" : "취득가액"}을 입력하세요.`);
       }
       // 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(위 0번 분기)와 같은 규칙.
       if (isAppraisal && lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
-        return `${label}: 취득 당시 기준시가를 입력하세요.`;
+        return fieldError("standardPriceAtAcq", `${label}: 취득 당시 기준시가를 입력하세요.`);
     } else if (asset.acquisitionCause === "gift") {
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
-        return `${label}: 증여 신고가액을 입력하세요.`;
+        return fieldError("fixedAcquisitionPrice", `${label}: 증여 신고가액을 입력하세요.`);
       // 증여자 취득일은 **필수가 아니다** — 단순 증여의 세율 보유기간은 「증여받은 날」부터이고
       // (§104② 본문 + 영 §162①5호), §104②2호는 「§97의2①에 해당하는 자산」 = 이월과세
       // (`carryover_gift`)에만 적용된다. 종전에는 「단기보유 통산」을 명목으로 필수였다.
@@ -668,18 +669,18 @@ export function validateAssetAcquisition(
       // 레거시 데이터는 normalize에서 transferType="burdened_gift" + acquisitionCause="gift" 로 자동 이전.
       // 본 분기에 도달했다면 normalize 미실행 또는 직접 입력된 비정상 상태 — gift 분기로 fallback.
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
-        return `${label}: 증여 신고가액을 입력하세요.`;
+        return fieldError("fixedAcquisitionPrice", `${label}: 증여 신고가액을 입력하세요.`);
       if (!asset.donorAcquisitionDate)
-        return `${label}: 증여자 취득일을 입력하세요.`;
+        return fieldError("donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요.`);
     } else if (asset.acquisitionCause === "inheritance") {
       if (!asset.decedentAcquisitionDate)
-        return `${label}: 피상속인 취득일을 입력하세요.`;
+        return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요.`);
       if (
         asset.assetKind === "housing" &&
         asset.decedentSameHouseholdBeforeInheritance &&
         !asset.decedentCohabitationHoldingStartDate
       )
-        return `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`;
+        return fieldError("decedentCohabitationHoldingStartDate", `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`);
       // ~~P2c: 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리)~~
       // 🔴 **2026-08-07 정정** — 「엔진이 0 처리」는 **3자 max 시절의 판단**이다. #1089가 가목
       //   우선으로 재편한 뒤로 ①·② 미입력은 **「가목 확인 불가」를 선언한 것과 같은 효과**를 내어
@@ -694,16 +695,16 @@ export function validateAssetAcquisition(
   //    **화면에 없는 칸**(SelfBuiltSection은 housing·building 전용)을 요구했다.
   //    술어는 ⑤·④와 같은 leaf 하나를 쓴다.
   if (selfBuiltActive(asset)) {
-    if (!asset.buildingType) return `${label}: 신축·증축 구분을 선택하세요.`;
-    if (!asset.constructionDate) return `${label}: 신축·증축 완공일을 입력하세요.`;
+    if (!asset.buildingType) return fieldError("buildingType", `${label}: 신축·증축 구분을 선택하세요.`);
+    if (!asset.constructionDate) return fieldError("constructionDate", `${label}: 신축·증축 완공일을 입력하세요.`);
     // 보유 중 공사 완료가 전제 — 양도일 이후 완공은 모순 (완공 당일 양도는 허용)
     if (formTransferDate && asset.constructionDate > formTransferDate)
-      return `${label}: 신축·증축 완공일이 양도일(${formTransferDate}) 이후입니다. 날짜를 확인하세요.`;
+      return fieldError("constructionDate", `${label}: 신축·증축 완공일이 양도일(${formTransferDate}) 이후입니다. 날짜를 확인하세요.`);
     if (asset.buildingType === "extension" && (!asset.extensionFloorArea || parseFloat(asset.extensionFloorArea) <= 0))
-      return `${label}: 증축 부분 바닥면적을 입력하세요.`;
+      return fieldError("extensionFloorArea", `${label}: 증축 부분 바닥면적을 입력하세요.`);
     // §114조의2① Phase2: 증축부분 취득시 기준시가 필수 (환산 취득가 산출 기준)
     if (asset.buildingType === "extension" && (!asset.extensionStdPriceAtAcquisition || parseAmount(asset.extensionStdPriceAtAcquisition) <= 0))
-      return `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`;
+      return fieldError("extensionStdPriceAtAcquisition", `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`);
   }
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.

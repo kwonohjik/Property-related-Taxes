@@ -619,6 +619,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               * 술어를 `usesTransferAreaForAcqStdPrice`로 **④와 공유**해 두 층이 갈리지 않게 했다.
               */}
             <StandardPriceInput
+              data-field="standardPriceAtAcq"
               propertyKind={propertyKind}
               totalPrice={props.standardPriceAtAcq}
               onTotalPriceChange={props.onStandardPriceAtAcqChange}
@@ -626,6 +627,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               onPricePerSqmChange={handleAcqPricePerSqmChange}
               area={acqStdUsesTransferArea ? props.transferArea : props.acquisitionArea}
               onAreaChange={acqStdUsesTransferArea ? props.onTransferAreaChange : props.onAcquisitionAreaChange}
+              fieldArea={acqStdUsesTransferArea ? "transferArea" : "acquisitionArea"}
               areaLabel={acqStdUsesTransferArea ? "양도분 면적 (㎡)" : props.acqAreaLabel}
               jibun={props.jibun}
               dong={props.dong}
@@ -664,6 +666,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               양도시 기준시가 (원) <span className="text-destructive">*</span>
             </label>
             <StandardPriceInput
+              data-field="standardPriceAtTransfer"
               propertyKind={propertyKind}
               totalPrice={props.standardPriceAtTransfer}
               onTotalPriceChange={props.onStandardPriceAtTransferChange}
