@@ -150,13 +150,16 @@ describe("§45의5① 거래상대방·거래유형 — ④⑧⑫ 관통", () =>
     expect(input.counterparty).toBeUndefined();
     expect("counterparty" in input).toBe(true); // 키는 있고 값이 undefined — JSON에서 사라진다
     // ⓐ(29% 미달)와 섞이지 않게 그룹비율 35%를 신고해 ⓐ를 통과시킨 뒤 상대방 축만 본다
-    const { result } = throughPipeline({
-      ...ROSTER,
-      scCounterparty: "",
-      scGroupRatioPct: "35",
-    } as DeemedFormState);
+    const noCp = buildDeemedGiftInput({ ...ROSTER, scCounterparty: "", scGroupRatioPct: "35" } as DeemedFormState);
+    // 2026-09-30(Zod↔엔진 필수 점검 2차 #21): 종전엔 ⑫가 이 입력을 통과시켜 route가 「판정 보류」인 채
+    //   580,000,000으로 과세했다 — 제3자 거래였어도 같은 값이다. ⑧이 이미 요구하는 값이라 ⑫도 거부한다.
+    const parsed = deemedGiftInputSchema.safeParse(JSON.parse(JSON.stringify(noCp)));
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((i) => i.path.join("."))).toContain("counterparty");
+    // 엔진 자체는 그대로다 — 직접 호출(⑫ 밖)에서는 판정 보류로 값을 유지한다(조용히 0원으로 막지 않는다)
+    const result = calcDeemedGift(noCp);
     expect(result.specificCorpTransaction!.counterpartyMet).toBe("unknown");
-    expect(result.deemedGiftValue).toBe(580_000_000); // 판정 보류 = 값 유지(조용히 0원으로 막지 않는다)
+    expect(result.deemedGiftValue).toBe(580_000_000);
   });
 
   it("[PL-12] ④는 2·3호일 때만 시가·대가를, 4호일 때만 해산 플래그를 보낸다", () => {

@@ -50,9 +50,10 @@ export const conInput = (caseType: "low" | "high", flag: string[] = []) => ({
   newSharePrice: caseType === "high" ? 2_000 : 2_500,
   contributedShares: 20_000,
   allocatedShares: 20_000,
+  // relation — ⑧ 3-E가 요구하는 행 관계(2026-09-30 ⑫ 필수화 #31). 엔진 가액에는 닿지 않는다(echo)
   parties: ([
-    { name: "을", preShares: 10_000 },
-    { name: "정", preShares: 5_000 },
+    { name: "을", preShares: 10_000, relation: "lineal_descendant" },
+    { name: "정", preShares: 5_000, relation: "lineal_descendant" },
   ] as ContributionParty[]).map((p) => (flag.includes(p.name!) ? { ...p, isForProfitCorp: true } : p)),
 });
 

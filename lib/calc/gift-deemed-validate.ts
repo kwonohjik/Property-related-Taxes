@@ -7,6 +7,14 @@ import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-sha
 import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import { validateDeemedPhase3 } from "./gift-deemed-validate-phase3";
 import { validateActiveSameClauseRows } from "./gift-deemed-43-2";
+import {
+  bondNeedsConversionInputs,
+  convertibleStockNeedsRatioInputs,
+  mergerSplitUsesNetAssetRatio,
+  trustLifetimeInputsComplete,
+  trustNeedsIncomeGiftDate,
+  trustNeedsPrincipalGiftDate,
+} from "@/lib/validators/gift-deemed-required-gates";
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
   // 신탁이익(§33)은 공통 증여일 대신 원본·수익 증여시기를 분리 입력(§25①) → 공통 giftDate 검사 skip
@@ -16,16 +24,19 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
   switch (form.type) {
     case "trust_benefit": {
       if (parseAmount(form.tbPropertyValue) <= 0) return "신탁재산(원본) 가액을 입력하세요";
-      if (form.tbBeneficiaryType !== "diff_principal" && !form.tbIncomeGiftDate)
+      if (trustNeedsIncomeGiftDate(form.tbBeneficiaryType) && !form.tbIncomeGiftDate)
         return "수익권 증여시기를 입력하세요";
-      if (form.tbBeneficiaryType !== "diff_income" && !form.tbPrincipalGiftDate)
+      if (trustNeedsPrincipalGiftDate(form.tbBeneficiaryType) && !form.tbPrincipalGiftDate)
         return "원본권 증여시기를 입력하세요";
       if (form.tbAnnuityType === "finite" && parseDecimal(form.tbInstallments) <= 0)
         return "수익 분할 횟수를 입력하세요";
       if (
         form.tbAnnuityType === "lifetime" &&
-        parseDecimal(form.tbExpectedRemainingYears) <= 0 &&
-        (!form.tbBeneficiaryGender || parseDecimal(form.tbBeneficiaryAge) <= 0)
+        !trustLifetimeInputsComplete(
+          parseDecimal(form.tbExpectedRemainingYears),
+          form.tbBeneficiaryGender || undefined,
+          parseDecimal(form.tbBeneficiaryAge),
+        )
       )
         return "종신정기금은 성별·연령 또는 기대여명을 입력하세요";
       break;
@@ -109,7 +120,7 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         break;
       }
       // §28⑦ 분할합병(순자산비율)이면 과대평가 1주평가 대신 분할 3필드 필수
-      const splitNet = form.mrgIsSplitMerger && form.mrgSplitMode === "net_asset_ratio";
+      const splitNet = mergerSplitUsesNetAssetRatio(form.mrgIsSplitMerger, form.mrgSplitMode);
       if (splitNet) {
         if (parseAmount(form.mrgSplitPrePrice) <= 0) return "분할법인 분할직전 1주당 평가가액을 입력하세요";
         if (parseAmount(form.mrgSplitBusinessNetAsset) <= 0) return "분할사업부문 순자산가액을 입력하세요";
@@ -367,7 +378,7 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // `denom > 0 ? safeMultiplyThenDivide(...) : 0`으로 읽는다 — 0이면 조용히 0을 낸다.
       // 전환주식은 「전환 시점 − 발행 시점」이라 **한 시점만 비어도 결과가 뒤집힌다**.
       // 증자 §39는 같은 조건으로 이미 차단하고 있었다(capital_increase 분기) — 여기만 빠져 있었다.
-      if (form.csDirection === "high" && form.csSubType !== "forfeited_realloc") {
+      if (convertibleStockNeedsRatioInputs(form.csDirection, form.csSubType)) {
         if (parseAmount(form.csConvRatioDenomShares) <= 0)
           return "전환 시점 분모 신주수를 입력하세요";
         if (parseAmount(form.csIssueRatioDenomShares) <= 0)
@@ -401,7 +412,7 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       break;
     }
     case "convertible_bond":
-      if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
+      if (bondNeedsConversionInputs(form.cbCaseType)) {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
         if (parseAmount(form.cbConversionPrice) <= 0) return "1주당 전환가액등을 입력하세요";
         if (parseAmount(form.cbIncreasedShares) <= 0) return "전환등 증가주식수를 입력하세요";

@@ -245,6 +245,7 @@ describe("[TG] ⑫ Zod — 게이트 2축이 침묵 strip 되지 않는다", () 
   // 최상위 discriminatedUnion으로 잰다 — route가 실제로 통과시키는 경계다.
   const payload = {
     type: "capital_increase" as const,
+    giftDate: "2025-06-01", // ⑧이 요구하는 증여일 — 2026-09-30 ⑫ 필수화(#20)
     direction: "high",
     subType: "excess",
     preIssuePrice: 3_153,

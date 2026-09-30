@@ -5,11 +5,15 @@
  */
 import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/gift-deemed-input-types";
 import { FOR_PROFIT_DONEE_APPLIED } from "./for-profit-donee-applied.fixture";
+import { toDate } from "@/lib/api/date-coerce";
 import { SINGLE_MODE, ROSTER_MODE } from "./for-profit-donee-single-mode.fixture";
 
 const CI = {
   direction: "low", subType: "forfeited_realloc", preIssuePrice: 10_000, preIssueShares: 100_000,
   issuedShares: 50_000, acquiredShares: 10_000, forfeitedShares: 20_000, relatedAcquiredShares: 10_000,
+  // ⑧이 요구하는 증여일 — 2026-09-30 ⑫ 필수화(#20). 현행 구간이라 가액 무관.
+  // 엔진 직접 호출 anchor도 이 픽스처를 쓰므로 Date로 둔다(JSON 왕복 anchor에서는 ISO 문자열이 된다).
+  giftDate: toDate("2025-06-01", "giftDate"),
 };
 
 export const INCOME_TAXED_APPLIED: Record<string, DeemedGiftInput> = {
@@ -21,11 +25,11 @@ export const INCOME_TAXED_APPLIED: Record<string, DeemedGiftInput> = {
   convertible_stock: {
     type: "convertible_stock",
     atConversion: { ...CI, newSharePrice: 3_000 },
-    atIssuance: { ...CI, newSharePrice: 7_000 },
+    atIssuance: { ...CI, newSharePrice: 7_000, giftDate: toDate("2020-01-01", "giftDate") }, // 발행일(부칙 §5② 2017 이후)
   } as unknown as DeemedGiftInput,
   // §45의5 단일(지분율 직접) — 1,449,000,000 (gift-deemed-45-5-limit-tax-path SINGLE)
   specific_corp_single: {
-    type: "specific_corp", counterparty: "ruling_shareholder", transactionType: "gratuitous",
+    type: "specific_corp", counterparty: "ruling_shareholder", transactionType: "gratuitous", transactionDate: "2025-06-01",
     transactionBenefit: 3_000_000_000, annualIncome: 4_000_000_000, corporateTaxComputed: 780_000_000,
     giftDeduction: 50_000_000, ownershipRatio: { numer: 6_000, denom: 10_000 },
   } as unknown as DeemedGiftInput,

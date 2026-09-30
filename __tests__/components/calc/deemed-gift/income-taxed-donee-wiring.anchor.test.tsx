@@ -86,7 +86,11 @@ describe("⑫ Zod — 왕복", () => {
   it("[ITW-5] 긍정 짝: §41의2·§45의2·§45의3 스키마는 필드를 strip한다", () => {
     const ed = deemedGiftInputSchema.safeParse({
       type: "excess_dividend", doneeIncomeOrCorporateTaxed: true,
-      shareholders: [{ id: "A", role: "major_shareholder", ownershipRatio: { numer: 1, denom: 1 }, actualDividend: 0 }],
+      // 최대주주등·특수관계인 행 모두 필요 — ⑧ F2·F3(2026-09-30 ⑫ 필수화 #29)
+      shareholders: [
+        { id: "A", role: "major_shareholder", ownershipRatio: { numer: 1, denom: 2 }, actualDividend: 0 },
+        { id: "B", role: "related_party", ownershipRatio: { numer: 1, denom: 2 }, actualDividend: 100_000_000 },
+      ],
       dividendDate: "2025-06-30", incomeTaxMode: "undetermined",
     });
     expect(ed.success).toBe(true);

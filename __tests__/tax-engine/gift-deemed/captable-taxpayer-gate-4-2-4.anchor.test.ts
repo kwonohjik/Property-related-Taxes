@@ -118,6 +118,7 @@ describe("[CT42] cap-table §4의2④ — 법인세가 부과된 영리법인의
     const parsed = deemedGiftInputSchema.safeParse({
       type: "capital_increase_allocation",
       direction: "low",
+      giftDate: "2025-06-01", // ⑧이 요구하는 증여일 — 2026-09-30 ⑫ 필수화(#20)
       preIssuePrice: 12_000,
       newSharePrice: 10_000,
       issuerGainCorporateTaxed: true,
