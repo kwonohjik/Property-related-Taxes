@@ -320,6 +320,70 @@ describe("§155의3 상생임대주택 — 거주요건 면제 (의제 아님)",
     // 않으므로 2주택 세대는 그대로 2주택이고, 비과세도 서지 않는다.
     expect(exempt({ householdHousingCount: 2, winWinRentalHouse: WIN_WIN_OK })).toBe(false);
   });
+
+  /**
+   * 2026-09-30 개정(대통령령 제36737호, MST 290841 실독) — §155①(본문) 양도기한 신설.
+   * 「제3호에 따른 임대기간이 종료된 날부터 1년이 되는 날과 2029년 12월 31일 중 빠른 날까지
+   * (2026년 12월 31일 이전에 해당 임대기간이 종료되는 경우에는 2027년 12월 31일까지로 한다)
+   * 양도하는 경우에는」. 부칙 제1조(시행 2026-10-01)뿐이고 이 조문만의 별도 적용례(부칙 제2조는
+   * §155①1호 전용)가 없어 **일반 원칙**(시행일 이후 양도부터)이 적용된다.
+   */
+  describe("2026 개정(제36737호) — 양도기한", () => {
+    it("시행일(2026-10-01) 전 양도는 기한이 없다 — ①3호 임대기간 종료일 미입력이어도 비과세", () => {
+      expect(
+        exempt({
+          ...RESIDENCE_BINDS,
+          transferDate: D("2026-09-30"),
+          winWinRentalHouse: WIN_WIN_OK, // winWinLeaseEndDate 미입력
+        }),
+      ).toBe(true);
+    });
+
+    it("시행일 이후 양도인데 ①3호 임대기간 종료일이 없으면 불성립(법 근거 없이 유리 적용 금지)", () => {
+      expect(
+        exempt({
+          ...RESIDENCE_BINDS,
+          transferDate: D("2026-10-01"),
+          winWinRentalHouse: WIN_WIN_OK, // winWinLeaseEndDate 미입력
+        }),
+      ).toBe(false);
+    });
+
+    it("임대기간 종료일이 2026-12-31 이전이면 고정 기한 2027-12-31 — 그 날 비과세·다음 날 과세", () => {
+      const at = (transfer: string) =>
+        exempt({
+          ...RESIDENCE_BINDS,
+          transferDate: D(transfer),
+          winWinRentalHouse: { ...WIN_WIN_OK, winWinLeaseEndDate: D("2023-12-20") },
+        });
+      expect(at("2027-12-31")).toBe(true);
+      expect(at("2028-01-01")).toBe(false);
+    });
+
+    it("임대기간 종료일이 2026-12-31 이후면 「종료일부터 1년」 — 그 날까지 비과세·다음 날 과세", () => {
+      const at = (transfer: string) =>
+        exempt({
+          ...RESIDENCE_BINDS,
+          transferDate: D(transfer),
+          winWinRentalHouse: { ...WIN_WIN_OK, winWinLeaseEndDate: D("2027-03-10") },
+        });
+      // periodEndFrom(2027-03-10, 1년) 말일 = 2028-03-10(초일불산입 기산 + 응당일 전날 = 응당일 익년 같은 날)
+      expect(at("2028-03-10")).toBe(true);
+      expect(at("2028-03-11")).toBe(false);
+    });
+
+    it("「2029년 12월 31일」 상한 — 종료일이 늦어도 그 날을 넘지 않는다", () => {
+      const at = (transfer: string) =>
+        exempt({
+          ...RESIDENCE_BINDS,
+          transferDate: D(transfer),
+          winWinRentalHouse: { ...WIN_WIN_OK, winWinLeaseEndDate: D("2029-06-01") },
+        });
+      // periodEndFrom(2029-06-01, 1년) 말일 = 2030-06-01이지만 상한 2029-12-31이 더 빠르다.
+      expect(at("2029-12-31")).toBe(true);
+      expect(at("2030-01-01")).toBe(false);
+    });
+  });
 });
 
 describe("§155의3 — §155⑳1호 거주요건 면제 (법문이 명시한 세 번째 대상)", () => {

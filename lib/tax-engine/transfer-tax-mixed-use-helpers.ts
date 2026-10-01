@@ -509,6 +509,12 @@ export function buildHousingPart(
   winWinRentalHouse?: TransferTaxInput["winWinRentalHouse"],
   /** L-10 — 고가 **판정** 실지거래가액(영 §154③ 본문이면 건물 전체, 영 §156②). 미주입 = 산식 분모와 같음. */
   highValueJudgmentBase?: number,
+  /**
+   * §155의3① 2026 개정(제36737호) — 상생임대주택 **양도기한** 판정에 필요한 양도일.
+   * `meetsTable2ResidenceRequirement`에 그대로 넘긴다(단건과 같은 술어). 미주입 시 종전 동작
+   * (기한 미판정 — 2026-10-01 전 양도로 본다)과 같다.
+   */
+  transferDate?: Date,
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -597,7 +603,8 @@ export function buildHousingPart(
    *    (`feedback_enumerate_all_write_sites_before_fixing`).
    */
   const useTable2 =
-    isOneHouseExempt && meetsTable2ResidenceRequirement({ winWinRentalHouse }, table2ResidenceYears);
+    isOneHouseExempt &&
+    meetsTable2ResidenceRequirement({ winWinRentalHouse, transferDate }, table2ResidenceYears);
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   const landDedRate = calcLongTermRate(

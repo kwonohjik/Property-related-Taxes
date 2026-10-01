@@ -203,7 +203,7 @@ export function validateStep(step: number, form: FormState): string | null {
       if (propertyType === "housing") {
         // §155의3 상생임대주택(E-1 한계 G2) — ⑤·④와 같은 게이트, 판정 메뉴와 같은 필수값 규칙·문구.
         //   ⑤ 배치(거주기간 바로 뒤)와 같은 순서로 먼저 본다.
-        const winWinError = giftBurdenedWinWinError(bgt);
+        const winWinError = giftBurdenedWinWinError(bgt, form.giftDate);
         if (winWinError) return `${itemLabel}: ${winWinError}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate

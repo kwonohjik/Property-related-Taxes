@@ -243,6 +243,7 @@ function winWinRows(f: OneHouseJudgmentExtraFields): Row[] {
     { label: "직전임대차 대비 증가율", value: f.winWinRentalIncreaseRatePct ? `${f.winWinRentalIncreaseRatePct}%` : "—" },
     { label: "직전임대차 임대기간", value: f.winWinRentalPriorLeaseMonths ? `${f.winWinRentalPriorLeaseMonths}개월` : "—" },
     { label: "상생임대차 임대기간", value: f.winWinRentalLeaseMonths ? `${f.winWinRentalLeaseMonths}개월` : "—" },
+    { label: "상생임대차 임대기간 종료일", value: f.winWinRentalLeaseEndDate || "—" },
   ];
 }
 

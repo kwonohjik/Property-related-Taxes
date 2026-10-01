@@ -404,6 +404,8 @@ export function calcMixedUseTransferTax(
     asset.winWinRentalHouse,
     // L-10 — §154③ 본문이면 고가 판정은 건물 전체(§156②). 단서면 미주입 → 주택분으로 판정.
     mainTextWholeHouse ? wholeBuildingPrice : undefined,
+    // §155의3① 2026 개정(제36737호) 양도기한 판정용 — 단건과 같은 필드.
+    transferDate,
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.

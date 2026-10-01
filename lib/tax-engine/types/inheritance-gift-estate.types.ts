@@ -1276,6 +1276,8 @@ export interface BurdenedGiftTransferTaxInput {
   winWinRentalPriorLeaseMonths?: string;
   /** ①3호 상생임대차 임대기간(개월) — 정수 문자열 */
   winWinRentalLeaseMonths?: string;
+  /** ①3호 임대기간이 종료된 날 (YYYY-MM-DD) — 2026 개정 양도기한 산정용 */
+  winWinRentalLeaseEndDate?: string;
   /*
    * ── housing 전용 — 「소득세법 시행령」 §155④⑤ 합가 (E-1 한계 G4) ──
    * 양도세 폼과 **같은 이름**이다 — ⑤는 같은 위젯(`MergeDateSection`), ④는 같은 leaf(`buildMergeFacts`).

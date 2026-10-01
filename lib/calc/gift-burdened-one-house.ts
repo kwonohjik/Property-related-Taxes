@@ -246,7 +246,7 @@ export function giftBurdenedWinWinInScope(bgt: BurdenedGiftTransferTaxInput): bo
   return bgt.isOneHousehold === true;
 }
 
-/** 증여세 폼 → 판정 메뉴 운반 상자와 같은 이름의 5필드. 옛 record(필드 없음)는 미적용. */
+/** 증여세 폼 → 판정 메뉴 운반 상자와 같은 이름의 6필드. 옛 record(필드 없음)는 미적용. */
 export function giftBurdenedWinWinSlice(bgt: BurdenedGiftTransferTaxInput): WinWinRentalFields {
   return {
     winWinRentalSpecial: bgt.winWinRentalSpecial === true,
@@ -254,6 +254,7 @@ export function giftBurdenedWinWinSlice(bgt: BurdenedGiftTransferTaxInput): WinW
     winWinRentalIncreaseRatePct: bgt.winWinRentalIncreaseRatePct ?? "",
     winWinRentalPriorLeaseMonths: bgt.winWinRentalPriorLeaseMonths ?? "",
     winWinRentalLeaseMonths: bgt.winWinRentalLeaseMonths ?? "",
+    winWinRentalLeaseEndDate: bgt.winWinRentalLeaseEndDate ?? "",
   };
 }
 
@@ -263,19 +264,33 @@ export function buildGiftBurdenedWinWinPayload(bgt: BurdenedGiftTransferTaxInput
   return buildWinWinRentalPayload(giftBurdenedWinWinSlice(bgt));
 }
 
-/** ⑧ — 판정 메뉴와 같은 필수값 규칙·문구. 첫 오류 또는 null. 게이트 밖의 stale 선언은 막지 않는다. */
-export function giftBurdenedWinWinError(bgt: BurdenedGiftTransferTaxInput): string | null {
+/**
+ * ⑧ — 판정 메뉴와 같은 필수값 규칙·문구. 첫 오류 또는 null. 게이트 밖의 stale 선언은 막지 않는다.
+ * @param giftDate 증여일(= 이 경로의 양도일, `form.giftDate`) — 2026 개정 양도기한 종료일 필수
+ *   여부를 판정 메뉴와 같은 경계(`isWinWinDeadlineEraApplicable`)로 가른다.
+ */
+export function giftBurdenedWinWinError(
+  bgt: BurdenedGiftTransferTaxInput,
+  giftDate?: string,
+): string | null {
   if (!giftBurdenedWinWinInScope(bgt)) return null;
-  return winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt))[0]?.message ?? null;
+  return winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt), giftDate)[0]?.message ?? null;
 }
 
 /**
  * ⑧ §155⑳1호 거주요건 면제 여부 — 엔진(`checkEligibility`)과 같은 술어 `qualifiesWinWinRental`에 ④와 같은 사실을
  * 넣는다(계산기 `transfer-tax-validate-asset.ts`와 같은 배선). 게이트 밖이면 면제 없음.
+ * @param giftDate 증여일(= 이 경로의 양도일) — 2026 개정 양도기한 판정에 필요(엔진과 같은 필드).
  */
-export function giftBurdenedWinWinResidenceExempt(bgt: BurdenedGiftTransferTaxInput): boolean {
+export function giftBurdenedWinWinResidenceExempt(
+  bgt: BurdenedGiftTransferTaxInput,
+  giftDate?: string,
+): boolean {
   if (!giftBurdenedWinWinInScope(bgt)) return false;
-  return qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)) });
+  return qualifiesWinWinRental({
+    winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)),
+    transferDate: toOptionalDate(giftDate),
+  });
 }
 
 /**

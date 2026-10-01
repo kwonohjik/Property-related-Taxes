@@ -79,6 +79,8 @@ export const winWinRentalHouseSchema = z.object({
   increaseRatePct: z.number(),
   priorLeaseMonths: z.number().int().nonnegative(),
   winWinLeaseMonths: z.number().int().nonnegative(),
+  /** ①3호 임대기간 종료일 — 2026-09-30 개정(제36737호) 양도기한 산정용. 2026-10-01 전 양도는 안 쓴다. */
+  winWinLeaseEndDate: z.string().date().optional(),
 });
 
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
