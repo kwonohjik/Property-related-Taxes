@@ -24,7 +24,7 @@
  */
 
 import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
-import { isExcludedBy5YearRule } from "./inheritance";
+import { assessInheritance5YearRule } from "./inheritance";
 import { getLowValueHouseLimit, describeLowValueHouseLimit } from "../acquisition-surcharge/low-value-limit";
 import { resolvePreMarriageSpouseHouseEra } from "../data/pre-marriage-spouse-house-era";
 import type {
@@ -273,16 +273,19 @@ export function getExclusionReasonsForHouse(
   }
 
   // 11. 상속 5년 미경과 (§28의4⑥3호)
-  if (house.inheritanceDate && isExcludedBy5YearRule(house.inheritanceDate, referenceDate)) {
-    // 공동상속의 경우 주된 상속자이더라도 5년 미경과이면 제외
-    excluded.push({
-      assetId: house.id,
-      assetType: "house",
-      reason: "inheritance_under_5yr",
-      legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
-      description: `상속개시일(${house.inheritanceDate})부터 5년 미경과 → 주택 수 제외 (${ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR})`,
-    });
-    return excluded;
+  if (house.inheritanceDate) {
+    const assessment = assessInheritance5YearRule(house.inheritanceDate, referenceDate);
+    if (assessment.excluded) {
+      // 공동상속의 경우 주된 상속자이더라도 5년 미경과이면 제외
+      excluded.push({
+        assetId: house.id,
+        assetType: "house",
+        reason: "inheritance_under_5yr",
+        legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
+        description: `상속개시일(${house.inheritanceDate})부터 5년 미경과 → 주택 수 제외 (${ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR})${assessment.note ? ` — ${assessment.note}` : ""}`,
+      });
+      return excluded;
+    }
   }
 
   // 한시 특례 신축 보유 주택 (§28의4⑥7호 → ②1호)
@@ -355,15 +358,18 @@ export function getExclusionReasonsForRight(
   }
 
   // 상속 5년 미경과 (§28의4⑥3호)
-  if (right.inheritanceDate && isExcludedBy5YearRule(right.inheritanceDate, referenceDate)) {
-    excluded.push({
-      assetId: right.id,
-      assetType: "right",
-      reason: "inheritance_under_5yr",
-      legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
-      description: `상속 입주권·분양권 — 상속개시일(${right.inheritanceDate})부터 5년 미경과 → 주택 수 제외`,
-    });
-    return excluded;
+  if (right.inheritanceDate) {
+    const assessment = assessInheritance5YearRule(right.inheritanceDate, referenceDate);
+    if (assessment.excluded) {
+      excluded.push({
+        assetId: right.id,
+        assetType: "right",
+        reason: "inheritance_under_5yr",
+        legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
+        description: `상속 입주권·분양권 — 상속개시일(${right.inheritanceDate})부터 5년 미경과 → 주택 수 제외${assessment.note ? ` — ${assessment.note}` : ""}`,
+      });
+      return excluded;
+    }
   }
 
   // ⚠️ 종전 `isPreMarriageSubscriptionRight`(혼인 전 분양권 자체 제외·2026.12.31 기한)는 §28의4⑥6호에
@@ -478,15 +484,18 @@ export function getExclusionReasonsForOffice(
   }
 
   // 상속 5년 미경과 (§28의4⑥3호 준용)
-  if (office.inheritanceDate && isExcludedBy5YearRule(office.inheritanceDate, referenceDate)) {
-    excluded.push({
-      assetId: office.id,
-      assetType: "office",
-      reason: "inheritance_under_5yr",
-      legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
-      description: `상속 오피스텔 — 상속개시일(${office.inheritanceDate})부터 5년 미경과 → 주택 수 제외`,
-    });
-    return excluded;
+  if (office.inheritanceDate) {
+    const assessment = assessInheritance5YearRule(office.inheritanceDate, referenceDate);
+    if (assessment.excluded) {
+      excluded.push({
+        assetId: office.id,
+        assetType: "office",
+        reason: "inheritance_under_5yr",
+        legalBasis: ACQUISITION.HOUSE_COUNT_INHERITANCE_5YR,
+        description: `상속 오피스텔 — 상속개시일(${office.inheritanceDate})부터 5년 미경과 → 주택 수 제외${assessment.note ? ` — ${assessment.note}` : ""}`,
+      });
+      return excluded;
+    }
   }
 
   // 시가표준액 1억 이하 오피스텔 → 카운트 제외

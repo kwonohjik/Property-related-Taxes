@@ -170,6 +170,8 @@ const MODULES: ReadonlyArray<{
       "LATE_FILING_REDUCTION_48_2_3_RA", "LATE_FILING_REDUCTION_48_2_3_RA_RATE",
       // L-1 — 「~이내」 기한 말일 토요일·공휴일 연장 (국세기본법 §4 → 민법 §161)
       "PERIOD_CALCULATION_4", "DEADLINE_HOLIDAY_EXTENSION_161",
+      // L-13 — 지방세관계법 쪽 대응 조문 (지방세기본법 §23 → 민법 §161)
+      "PERIOD_CALCULATION_LOCAL_23",
     ],
   },
 ];

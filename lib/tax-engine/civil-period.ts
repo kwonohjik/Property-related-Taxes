@@ -135,9 +135,9 @@ export function isOnOrBeforeDeadline(target: Date, calendarEnd: Date): boolean {
   return dayKey(target) <= dayKey(deadlineEnd(calendarEnd).end);
 }
 
-/** 기한 안내 필드 — 연장된 말일과(있으면) 한 줄 설명 */
-export function deadlineFields(d: DeadlineEnd): { deadline: Date; deadlineNote?: string } {
-  const note = deadlineEndNote(d);
+/** 기한 안내 필드 — 연장된 말일과(있으면) 한 줄 설명. `basisLaw`는 `deadlineEndNote` 참조 */
+export function deadlineFields(d: DeadlineEnd, basisLaw?: string): { deadline: Date; deadlineNote?: string } {
+  const note = deadlineEndNote(d, basisLaw);
   return { deadline: d.end, ...(note ? { deadlineNote: note } : {}) };
 }
 
@@ -150,8 +150,13 @@ export function holidayTableUncoveredBefore(target: Date): boolean {
   return !inHolidayTable(from) || !inHolidayTable(target);
 }
 
-/** 기한 안내에 붙이는 한 줄 — 연장됐거나 공휴일 표가 덮지 못할 때만 */
-export function deadlineEndNote(d: DeadlineEnd): string | undefined {
+/**
+ * 기한 안내에 붙이는 한 줄 — 연장됐거나 공휴일 표가 덮지 못할 때만.
+ *
+ * @param basisLaw 민법 §161을 끌어오는 준용 조문 — 세목마다 다르다(국세: 국세기본법 §4 ·
+ *   지방세: 지방세기본법 §23). 기본값은 국세기본법 §4(종전 모든 호출부가 국세 세목).
+ */
+export function deadlineEndNote(d: DeadlineEnd, basisLaw: string = PERIOD_CALCULATION_4): string | undefined {
   const ymd = (x: Date) => x.toISOString().slice(0, 10);
   if (d.holidayTableUncovered) {
     return (
@@ -160,7 +165,7 @@ export function deadlineEndNote(d: DeadlineEnd): string | undefined {
     );
   }
   if (d.extended) {
-    return `역상 말일 ${ymd(d.calendarEnd)}이 토요일·공휴일이라 기한이 ${ymd(d.end)}까지 늘어났습니다(${PERIOD_CALCULATION_4} → ${DEADLINE_HOLIDAY_EXTENSION_161}).`;
+    return `역상 말일 ${ymd(d.calendarEnd)}이 토요일·공휴일이라 기한이 ${ymd(d.end)}까지 늘어났습니다(${basisLaw} → ${DEADLINE_HOLIDAY_EXTENSION_161}).`;
   }
   return undefined;
 }
