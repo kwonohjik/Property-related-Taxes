@@ -107,7 +107,7 @@ function AssetReductionBlock({
     `자산 ${assetIndex + 1} (${asset.assetKind === "housing" ? "주택" : asset.assetKind === "land" ? "토지" : asset.assetKind === "building" ? "건물" : asset.assetKind})`;
 
   return (
-    <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
+    <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3" data-asset-card-index={assetIndex}>
       <p className="text-sm font-semibold">{label}</p>
 
       {/* Round 8 (2026-05-06): 5개 카테고리 통합 패널 (5개 평면 체크박스 → 카테고리 라디오/체크박스) */}
@@ -211,6 +211,7 @@ function AssetReductionBlock({
                     <span className="text-xs text-muted-foreground">년</span>
                   </div>
                   <ToggleCard
+                    data-field="reduction.self_farming.heirContinuedFarming1Year"
                     tone="emerald"
                     title="상속받은 농지를 1년 이상 계속 경작 (조특령 §66⑪ 본문)"
                     description="제1항 각 호의 지역에 거주하면서 경작한 경우에 한정합니다. 이 요건 또는 아래 §66⑫ 대체요건 중 하나가 충족되어야 피상속인 경작기간을 합산할 수 있습니다."
@@ -284,6 +285,7 @@ function AssetReductionBlock({
               <label className="block text-xs font-medium mb-1">현금 보상액</label>
               <CurrencyInput
                 label=""
+                data-field="reduction.public_expropriation.expropriationCash"
                 value={expropriation.expropriationCash}
                 onChange={(v) =>
                   updateReduction("public_expropriation", { expropriationCash: v } as Partial<AssetReductionForm>)
@@ -323,6 +325,7 @@ function AssetReductionBlock({
           <div>
             <label className="block text-xs font-medium mb-1">사업인정고시일</label>
             <DateInput
+              data-field="reduction.public_expropriation.expropriationApprovalDate"
               value={expropriation.expropriationApprovalDate || asset.expropriationNoticeDate}
               onChange={(v) =>
                 updateReduction("public_expropriation", {
@@ -369,6 +372,7 @@ function AssetReductionBlock({
                   범위 차이(§17 매수대상토지 ↔ §20 토지등)를 description으로 설명해야 하므로
                   stack 2열로 둔다. 종전에는 안내가 코드에만 있고 화면에는 없었다. */}
               <RadioCardGroup
+                data-field="reduction.gb_designated_land.gbPurchaseRoute"
                 name={`gbPurchaseRoute-${assetIndex}`}
                 layout="stack"
                 columns={2}
@@ -401,6 +405,7 @@ function AssetReductionBlock({
             <div>
               <label className="block text-xs font-medium mb-1">개발제한구역 지정일</label>
               <DateInput
+                data-field="reduction.gb_designated_land.gbDesignationDate"
                 value={gbDesignated.gbDesignationDate}
                 onChange={(v) => updateReduction("gb_designated_land", { gbDesignationDate: v })}
               />
@@ -410,6 +415,7 @@ function AssetReductionBlock({
                 {gbDesignated.gbBranch === "released" ? "사업인정고시일" : "매수청구·협의매수일"}
               </label>
               <DateInput
+                data-field="reduction.gb_designated_land.gbTriggerDate"
                 value={gbDesignated.gbTriggerDate}
                 onChange={(v) => updateReduction("gb_designated_land", { gbTriggerDate: v })}
               />
@@ -420,6 +426,7 @@ function AssetReductionBlock({
               <div>
                 <label className="block text-xs font-medium mb-1">개발제한구역 해제일</label>
                 <DateInput
+                  data-field="reduction.gb_designated_land.gbReleasedDate"
                   value={gbDesignated.gbReleasedDate}
                   onChange={(v) => updateReduction("gb_designated_land", { gbReleasedDate: v })}
                 />
@@ -467,6 +474,7 @@ function AssetReductionBlock({
               <label className="block text-xs font-medium mb-1">대토(토지) 보상액</label>
               <CurrencyInput
                 label=""
+                data-field="reduction.replacement_land_comp.rlLandComp"
                 value={replacementLand.rlLandComp}
                 onChange={(v) => updateReduction("replacement_land_comp", { rlLandComp: v })}
               />

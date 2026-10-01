@@ -169,6 +169,8 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclus
           <button
             type="button"
             onClick={onEdit}
+            // 검증 오류 → 이 행으로 이동. 입력칸은 편집 모달 안이라 DOM에 없으므로 행의 「편집」이 앵커다
+            data-field={`houses.${idx}`}
             className="inline-flex items-center gap-1 text-caption text-primary hover:underline"
             aria-label={`주택 ${idx + 1} 편집`}
           >

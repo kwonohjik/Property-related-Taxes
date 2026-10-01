@@ -15,6 +15,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { FIELD_JUMP_CASES, fallbackControlForm } from "./_helpers/validation-field-jump-cases";
 import { ACQ_FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases-acq";
 import { P3_FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases-p3";
+import { P4_FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases-p4";
 
 async function ready(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -155,11 +156,12 @@ test.describe("검증 오류 → 입력칸 이동", () => {
  * 입력은 `_helpers/validation-field-jump-cases*.ts`(오류 발생은 vitest가 먼저 고정).
  */
 test.describe("검증 오류 → 입력칸 이동 (키 전수)", () => {
-  for (const c of [...FIELD_JUMP_CASES, ...ACQ_FIELD_JUMP_CASES, ...P3_FIELD_JUMP_CASES]) {
+  for (const c of [...FIELD_JUMP_CASES, ...ACQ_FIELD_JUMP_CASES, ...P3_FIELD_JUMP_CASES, ...P4_FIELD_JUMP_CASES]) {
     test(c.name ?? c.field, async ({ page }) => {
       test.skip(!!c.unreachableInUi, c.unreachableInUi);
       await seedAndOpen(page, c.form());
       if (c.step === 1) await page.getByRole("button", { name: "보유 상황" }).first().click();
+      if (c.step === 2) await page.getByRole("button", { name: "감면·공제" }).first().click();
       if (c.step === 3) await page.getByRole("button", { name: "가산세" }).first().click();
       await (c.step === 3 ? page.getByRole("button", { name: /세금 계산하기/ }) : next(page)).click();
 

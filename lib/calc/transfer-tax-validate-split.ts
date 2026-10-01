@@ -26,6 +26,7 @@ import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -82,11 +83,15 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
     if (p.mode === "actual" || p.mode === "appraisal") {
       if (opt(p.price) == null) {
         const what = p.mode === "appraisal" ? "감정가액" : "취득가액";
-        return `${label}: ${p.name} ${what}을 입력하세요 — 토지·건물 취득시기가 다르면 나머지 금액에서 자동 계산되지 않습니다(소득세법 §97①1호·§114⑦).`;
+        const msg = `${label}: ${p.name} ${what}을 입력하세요 — 토지·건물 취득시기가 다르면 나머지 금액에서 자동 계산되지 않습니다(소득세법 §97①1호·§114⑦).`;
+        if (p.name === "토지") return fieldError("landAcquisitionPrice", msg);
+        return fieldError("buildingAcquisitionPrice", msg);
       }
     } else if (p.mode === "salesCase") {
       if (opt(p.salesCase) == null) {
-        return `${label}: ${p.name} 매매사례가액을 입력하세요 — 매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다(소득령 §176의2③1호).`;
+        const msg = `${label}: ${p.name} 매매사례가액을 입력하세요 — 매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다(소득령 §176의2③1호).`;
+        if (p.name === "토지") return fieldError("landSalesCaseValue", msg);
+        return fieldError("buildingSalesCaseValue", msg);
       }
     }
   }
@@ -123,7 +128,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const footprint = parseDecimal(asset.buildingFootprintArea);
     const landArea = parseDecimal(asset.acquisitionArea);
     if (footprint > 0 && landArea > footprint * 3) {
-      return `${label}: 토지 면적(${landArea}㎡)이 건물 정착면적의 3배를 초과합니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §168의12).`;
+      return fieldError("appurtenantLandZone", `${label}: 토지 면적(${landArea}㎡)이 건물 정착면적의 3배를 초과합니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §168의12).`);
     }
   }
 
@@ -136,7 +141,11 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const hasArea = parseDecimal(asset.acquisitionArea) > 0;
     const hasTotal = opt(asset.standardPriceAtAcq) != null;
     if (!hasPerSqm || !hasArea || !hasTotal) {
-      return `${label}: 토지·건물 소유자가 다르면 본인 소유분만 과세하므로 취득가액을 토지·건물로 나눠야 합니다 — 취득 당시 ㎡당 개별공시지가·면적·기준시가 총액을 입력하세요 (소득세법 §99①1호·시행령 §166⑥).`;
+      const ownerMsg = `${label}: 토지·건물 소유자가 다르면 본인 소유분만 과세하므로 취득가액을 토지·건물로 나눠야 합니다 — 취득 당시 ㎡당 개별공시지가·면적·기준시가 총액을 입력하세요 (소득세법 §99①1호·시행령 §166⑥).`;
+      // 비어 있는 칸으로 — 메시지 순서(㎡당 개별공시지가 → 면적 → 기준시가 총액)대로 첫 빈 칸
+      if (!hasPerSqm) return fieldError("standardPricePerSqmAtAcq", ownerMsg);
+      if (!hasArea) return fieldError("acquisitionArea", ownerMsg);
+      return fieldError("standardPriceAtAcq", ownerMsg);
     }
   }
 
@@ -174,7 +183,10 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
       })
     ) {
       if (opt(asset.standardPricePerSqmAtAcq) == null || opt(asset.acquisitionArea) == null) {
-        return `${label}: 건물분 취득시 기준시가를 입력하면 토지분도 취득 당시 ㎡당 개별공시지가와 토지 면적으로 산출해야 합니다 — 둘 다 입력하세요(소득세법 §99①1호 가목·나목).`;
+        const landPartMsg = `${label}: 건물분 취득시 기준시가를 입력하면 토지분도 취득 당시 ㎡당 개별공시지가와 토지 면적으로 산출해야 합니다 — 둘 다 입력하세요(소득세법 §99①1호 가목·나목).`;
+        // 비어 있는 칸으로 — ㎡당 개별공시지가 → 면적
+        if (opt(asset.standardPricePerSqmAtAcq) == null) return fieldError("standardPricePerSqmAtAcq", landPartMsg);
+        return fieldError("acquisitionArea", landPartMsg);
       }
     }
 
@@ -194,7 +206,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
         isSeparate: true,
       })
     ) {
-      return `${label}: 건물분 취득시 기준시가를 입력하세요 — 토지·건물 취득시기가 달라 각 파트가 자기 취득일의 직전 고시분을 쓰므로, 결합 총액에서 역산하면 건물분에 토지 취득시점이 섞입니다(소득세법 §99①1호 나목·시행령 §164③).`;
+      return fieldError("buildingStandardPriceAtAcq", `${label}: 건물분 취득시 기준시가를 입력하세요 — 토지·건물 취득시기가 달라 각 파트가 자기 취득일의 직전 고시분을 쓰므로, 결합 총액에서 역산하면 건물분에 토지 취득시점이 섞입니다(소득세법 §99①1호 나목·시행령 §164③).`);
     }
   }
 
@@ -239,7 +251,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     //    바뀌었으므로(2026-07-29) "양도시 토지 기준시가를 입력하세요"라고 하면 없는 칸을 찾게 된다.
     //    양도시 기준시가 2칸은 구분양도에서 화면에 없을 수 있으나(2026-07-30 파트 배치),
     //    일괄양도로 전환하면 나타나므로 유효한 해소 경로다 — 두 경로를 모두 안내한다.
-    return `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지 공시지가·면적과 건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`;
+    return fieldError("landTransferPrice", `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지 공시지가·면적과 건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`);
   }
 
   // ── V5. 취득시 기준시가 — **필요할 때만** 필수 (2026-07-29 사용자 확정 규칙 ③) ──────────
@@ -259,7 +271,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     requiresAcqStdPricePart("land", withExpenses(asset), { landMode, buildingMode, isSeparate: true })
   ) {
     if (opt(asset.standardPricePerSqmAtAcq) == null || parseDecimal(asset.acquisitionArea) <= 0) {
-      return `${label}: 환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 (소득세법 §99①1호 가목).`;
+      const acqStdMsg = `${label}: 환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 (소득세법 §99①1호 가목).`;
+      if (opt(asset.standardPricePerSqmAtAcq) == null) return fieldError("standardPricePerSqmAtAcq", acqStdMsg);
+      return fieldError("acquisitionArea", acqStdMsg);
     }
   }
 
@@ -270,10 +284,13 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
   // (transfer-tax-validate-split.test.ts:78,86,537,550).
   if (needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
-    return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
+    const saleLandMsg = `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
+    // 단가가 있으면 면적이 빈 것이다(`resolveLandStdAtTransfer` = 단가 × 면적, 또는 총액)
+    if (opt(asset.standardPricePerSqmAtTransfer) != null) return fieldError("transferArea", saleLandMsg);
+    return fieldError("standardPricePerSqmAtTransfer", saleLandMsg);
   }
   if (needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
-    return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`;
+    return fieldError("buildingStandardPriceAtTransfer", `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`);
   }
 
   // ── V8. 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────────
@@ -296,7 +313,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
    *    필요하다**는 산술적 필요조건이기 때문이다.
    */
   if (anyAppraisal && (landApp == null || buildingApp == null)) {
-    return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
+    const appraisalPairMsg = `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
+    if (landApp == null) return fieldError("landAppraisalAtTransfer", appraisalPairMsg);
+    return fieldError("buildingAppraisalAtTransfer", appraisalPairMsg);
   }
 
   /**
@@ -309,7 +328,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
    * ⚠️ 위 V8은 「한쪽만 입력」을 막고, 여기서는 「둘 다 빈 채로 모드만 선택」을 막는다.
    */
   if (asset.saleSplitMode === "appraisal" && !anyAppraisal) {
-    return `${label}: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).`;
+    return fieldError("landAppraisalAtTransfer", `${label}: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).`);
   }
 
   // ── 총액이 자산 필드와 1:1이 아닌 경로는 미검증(위 ⚠️ 참조) ──
@@ -341,7 +360,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     // ⚠️ 구분양도에서만 검사한다 — 예외를 골라 둔 채 일괄양도로 되돌리면 API가 전송하지 않으므로
     //    (`transfer-tax-api-split.ts` `saleDirectActive` 게이트) 차단할 이유가 없다(값은 보존).
     if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
-      return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
+      return fieldError("saleSplitExemptionNote", `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`);
     }
 
     // ① 양도가액 — 총액 = actualSalePrice (단건 자산 카드 입력)
@@ -353,9 +372,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
         const land = opt(asset.landTransferPrice);
         const building = opt(asset.buildingTransferPrice);
         if (isSplitPairOverflow(totalTransfer, land, building)) {
-          return land != null && building != null
+          return fieldError(land != null ? "landTransferPrice" : "buildingTransferPrice", land != null && building != null
             ? `${label}: 토지·건물 양도가액의 합이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다.`
-            : `${label}: ${land != null ? "토지" : "건물"} 양도가액이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`;
+            : `${label}: ${land != null ? "토지" : "건물"} 양도가액이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`);
         }
       }
     }
@@ -394,9 +413,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
       const land = opt(asset.landAcquisitionPrice);
       const building = opt(asset.buildingAcquisitionPrice);
       if (isSplitPairOverflow(totalAcq, land, building)) {
-        return land != null && building != null
+        return fieldError(land != null ? "landAcquisitionPrice" : "buildingAcquisitionPrice", land != null && building != null
           ? `${label}: 토지·건물 취득가액의 합이 취득가액(${totalAcq.toLocaleString()}원)을 초과합니다.`
-          : `${label}: ${land != null ? "토지" : "건물"} 취득가액이 취득가액(${totalAcq.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`;
+          : `${label}: ${land != null ? "토지" : "건물"} 취득가액이 취득가액(${totalAcq.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`);
       }
     }
   }
@@ -411,7 +430,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const land = opt(asset.landDirectExpenses);
     const building = opt(asset.buildingDirectExpenses);
     if (isSplitPairOverflow(totalExp, land, building)) {
-      return `${label}: 토지·건물 자본적지출이 총 자본적지출(${totalExp.toLocaleString()}원)과 맞지 않습니다.`;
+      return fieldError("landDirectExpenses", `${label}: 토지·건물 자본적지출이 총 자본적지출(${totalExp.toLocaleString()}원)과 맞지 않습니다.`);
     }
   }
 
@@ -459,7 +478,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const hasPartCapex =
       opt(asset.landDirectExpenses) != null || opt(asset.buildingDirectExpenses) != null;
     if (!hasPartCapex) {
-      return `${label}: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 계산에 반영되지 않습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다). 양도비는 자산 전체 칸을 그대로 쓰면 됩니다.`;
+      return fieldError("landDirectExpenses", `${label}: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 계산에 반영되지 않습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다). 양도비는 자산 전체 칸을 그대로 쓰면 됩니다.`);
     }
   }
 

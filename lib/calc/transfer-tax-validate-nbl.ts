@@ -25,6 +25,7 @@ import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
+import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -92,11 +93,11 @@ export function validateNblDetailedJudgment(
 
   const nblExempt = evaluateUnconditionalExemption(asset, formTransferDate ?? "").isExempt;
   if (!nblExempt && !asset.nblLandType)
-    return `${label}: 비사업용 토지 정밀판정을 선택했습니다. 지목을 선택하세요.`;
+    return fieldError("nblLandType", `${label}: 비사업용 토지 정밀판정을 선택했습니다. 지목을 선택하세요.`);
   if (!nblExempt && !asset.nblZoneType)
-    return `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`;
+    return fieldError("nblZoneType", `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`);
   if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
-    return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
+    return fieldError("acquisitionArea", `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`);
 
   /*
    * 공동소유 지분 범위 게이트(E5-03, 2026-09-02)는 2026-09-04에 **폐지**됐다.
@@ -133,13 +134,13 @@ export function validateNblDetailedJudgment(
   if (asset.nblLandType === "farmland" && asset.nblDisqualifiedTaxPeriods) {
     const { years, invalid } = parseTaxPeriodYears(asset.nblDisqualifiedTaxPeriods);
     if (invalid.length > 0)
-      return `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`;
+      return fieldError("nblDisqualifiedTaxPeriods", `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`);
     const acqYear = yearOf(asset.acquisitionDate);
     const trfYear = yearOf(formTransferDate);
     if (acqYear !== undefined && trfYear !== undefined) {
       const outOfRange = years.filter((y) => y < acqYear || y > trfYear);
       if (outOfRange.length > 0)
-        return `${label}: 결격 과세기간(조특령 §66⑭)은 취득연도(${acqYear})부터 양도연도(${trfYear}) 사이여야 합니다. 범위 밖: ${outOfRange.join(", ")}`;
+        return fieldError("nblDisqualifiedTaxPeriods", `${label}: 결격 과세기간(조특령 §66⑭)은 취득연도(${acqYear})부터 양도연도(${trfYear}) 사이여야 합니다. 범위 밖: ${outOfRange.join(", ")}`);
     }
   }
 
@@ -164,7 +165,7 @@ export function validateNblDetailedJudgment(
     isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
     (!asset.nblIsMetropolitanArea || asset.nblIsMetropolitanArea === "unknown")
   ) {
-    return `${label}: 주택부수토지 도시지역 주·상·공은 수도권 여부에 따라 배율이 달라집니다(수도권 3배 / 수도권 밖 5배). 수도권 여부를 선택하세요.`;
+    return fieldError("nblIsMetropolitanArea", `${label}: 주택부수토지 도시지역 주·상·공은 수도권 여부에 따라 배율이 달라집니다(수도권 3배 / 수도권 밖 5배). 수도권 여부를 선택하세요.`);
   }
 
   // §168의12 주택 정착면적 — 미입력 시 엔진(housing-land.ts:39)이 「정착면적 미입력」으로
@@ -174,9 +175,9 @@ export function validateNblDetailedJudgment(
     (asset.nblLandType === "housing_site" || asset.nblLandType === "villa_land") &&
     (!asset.nblHousingFootprint || parseFloat(asset.nblHousingFootprint) <= 0)
   ) {
-    return asset.nblLandType === "villa_land"
+    return fieldError("nblHousingFootprint", asset.nblLandType === "villa_land"
       ? `${label}: 별장 부속토지 — 주택 정착면적(㎡)을 입력하세요. 별장 요건에 해당하지 않으면 주택부수토지로 재분류되며, 정착면적이 없으면 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`
-      : `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`;
+      : `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`);
   }
 
   // 법 §104의3①1호나목·3호가목 지역 열거 — 시(市)·특별자치시는 읍·면 여부가 판정을 가른다.
@@ -190,7 +191,7 @@ export function validateNblDetailedJudgment(
     //    자동 연동 상태에서 falsy라 이 차단이 통째로 건너뛰어졌다.
     nblLandSigunguCodeOf(asset)
   ) {
-    return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 소재지 행정구역 단위(동 / 읍·면)를 선택하세요. 법 §104조의3①1호나목·3호가목은 읍·면지역을 도시지역 판정에서 제외합니다.`;
+    return fieldError("nblLandDivision", `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 소재지 행정구역 단위(동 / 읍·면)를 선택하세요. 법 §104조의3①1호나목·3호가목은 읍·면지역을 도시지역 판정에서 제외합니다.`);
   }
 
   // §168의8⑤⑥(농지)·§168의10⑤(목장)·§168의9①2호 단서(임야) 도시지역 편입 유예 —
@@ -205,7 +206,7 @@ export function validateNblDetailedJudgment(
     ) &&
     !resolveNblUrbanIncorporationDate(asset)
   ) {
-    return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 도시지역 편입일을 입력하세요. 미입력 시 편입 유예가 적용되지 않아 비사업용으로 판정됩니다.`;
+    return fieldError("nblUrbanIncorporationDate", `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 도시지역 편입일을 입력하세요. 미입력 시 편입 유예가 적용되지 않아 비사업용으로 판정됩니다.`);
   }
 
   // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지).
@@ -213,7 +214,7 @@ export function validateNblDetailedJudgment(
   //    지목을 주택부수토지로 바꾸면 섹션은 사라지고 사유만 남아 **화면에 없는 칸을
   //    요구하며 영구 차단**됐다(리셋 패치 없음).
   if (requiresDeemedTransferDate(asset) && !asset.nblDeemedTransferDate)
-    return `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`;
+    return fieldError("nblDeemedTransferDate", `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`);
   // §168의11①·⑤·⑥ 기타토지 정밀판정 입력 검증 (별도 파일 분리 — 800줄 정책)
   if (asset.nblLandType === "other_land") {
     const nblOtherErr = validateNblOtherLand(asset, label);
@@ -222,20 +223,21 @@ export function validateNblDetailedJudgment(
   // §168의11② 수입금액비율 — 업종 선택 시 당해 수입금액·토지가액 필수
   if (asset.nblLandType === "other_land" && asset.nblRevenueBusinessType) {
     if (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0)
-      return `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`;
+      return fieldError("nblRevenueCurrentRevenue", `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`);
     if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)
-      return `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`;
+      return fieldError("nblRevenueCurrentLandValue", `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`);
     // §168의11③2호 공통수입 안분 토글 ON → 당해 공통수입·그 밖의 토지가액 필수쌍
     if (asset.nblRevenueCommonApportion) {
       if (!asset.nblRevenueCommonRevenue || parseAmount(asset.nblRevenueCommonRevenue) <= 0)
-        return `${label}: 공통수입 안분 시 당해 공통수입금액을 입력하세요.`;
+        return fieldError("nblRevenueCommonRevenue", `${label}: 공통수입 안분 시 당해 공통수입금액을 입력하세요.`);
       if (!asset.nblRevenueOtherLandValue || parseAmount(asset.nblRevenueOtherLandValue) <= 0)
-        return `${label}: 공통수입 안분 시 당해 '그 밖의 토지가액'을 입력하세요.`;
+        return fieldError("nblRevenueOtherLandValue", `${label}: 공통수입 안분 시 당해 '그 밖의 토지가액'을 입력하세요.`);
       // 직전 공통쌍은 선택이나 한쪽만 입력 시 나머지도 필수
       const pc = parseAmount(asset.nblRevenuePriorCommonRevenue || "0");
       const po = parseAmount(asset.nblRevenuePriorOtherLandValue || "0");
       if ((pc > 0) !== (po > 0))
-        return `${label}: 직전 공통수입 안분은 공통수입금액과 '그 밖의 토지가액'을 함께 입력하세요.`;
+        // 한 메시지가 두 칸을 물으면 비어 있는 칸으로 간다
+        return fieldError(pc > 0 ? "nblRevenuePriorOtherLandValue" : "nblRevenuePriorCommonRevenue", `${label}: 직전 공통수입 안분은 공통수입금액과 '그 밖의 토지가액'을 함께 입력하세요.`);
     }
   }
   /**
@@ -253,47 +255,52 @@ export function validateNblDetailedJudgment(
    *
    * 아래 `nblGracePeriods` 검증(§168의14①)이 이미 같은 형태를 구현하고 있다 — 그 sibling 패턴을 따른다.
    */
+  // 행 단위 키 — 동적이라 정적 게이트(`transfer-validation-field-anchor-coverage`)가 읽지 못한다.
+  // 안전망은 메시지별 E2E 케이스다(Phase 3 재개발 거주기간과 같은 사정).
   const rowArrays: ReadonlyArray<{
     rows: ReadonlyArray<{ startDate?: string; endDate?: string }> | undefined;
     what: string;
     applies: boolean;
+    fieldOf: (i: number, part: "startDate" | "endDate") => IssueField;
   }> = [
-    { rows: asset.nblBusinessUsePeriods, what: "사업용 사용기간(자경 등)", applies: true },
+    { rows: asset.nblBusinessUsePeriods, what: "사업용 사용기간(자경 등)", applies: true, fieldOf: (i, p) => `nblBusinessUsePeriods.${i}.${p}` },
     {
       rows: asset.nblPastureLivestockPeriods,
       what: "목장 축산기간",
       applies: asset.nblLandType === "pasture",
+      fieldOf: (i, p) => `nblPastureLivestockPeriods.${i}.${p}`,
     },
     {
       rows: asset.nblVillaUsePeriods,
       what: "별장 사용기간",
       applies: asset.nblLandType === "villa_land",
+      fieldOf: (i, p) => `nblVillaUsePeriods.${i}.${p}`,
     },
-    { rows: asset.nblResidenceHistories, what: "거주 이력", applies: true },
+    { rows: asset.nblResidenceHistories, what: "거주 이력", applies: true, fieldOf: (i, p) => `nblResidenceHistories.${i}.${p}` },
   ];
-  for (const { rows, what, applies } of rowArrays) {
+  for (const { rows, what, applies, fieldOf } of rowArrays) {
     if (!applies) continue;
     for (const [i, r] of (rows ?? []).entries()) {
       if (!r.startDate)
-        return `${label}: ${what} ${i + 1}번째 행 — 시작일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`;
+        return fieldError(fieldOf(i, "startDate"), `${label}: ${what} ${i + 1}번째 행 — 시작일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`);
       if (!r.endDate)
-        return `${label}: ${what} ${i + 1}번째 행 — 종료일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`;
+        return fieldError(fieldOf(i, "endDate"), `${label}: ${what} ${i + 1}번째 행 — 종료일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`);
     }
   }
 
   // §168의14①·§83의5① 유예기간 — 사유별 필수 기산일/종료일 (자동 안분 fallback 금지)
-  for (const g of asset.nblGracePeriods ?? []) {
+  for (const [gi, g] of (asset.nblGracePeriods ?? []).entries()) {
     const spec = GRACE_REASON_SPECS[g.reasonCode];
     if (!spec) continue;
     if (spec.lengthKind === "compound_5") {
-      if (!g.secondaryDate) return `${label}: 건설 착공(5호) 유예기간 — 착공일을 입력하세요.`;
+      if (!g.secondaryDate) return fieldError(`nblGracePeriods.${gi}.secondaryDate`, `${label}: 건설 착공(5호) 유예기간 — 착공일을 입력하세요.`);
     } else if (spec.lengthKind === "fixed_from_anchor") {
       if (!spec.anchorFromAcquisition && !g.anchorDate)
-        return `${label}: ${spec.label} 유예기간 — 기산일을 입력하세요.`;
+        return fieldError(`nblGracePeriods.${gi}.anchorDate`, `${label}: ${spec.label} 유예기간 — 기산일을 입력하세요.`);
     } else {
       // event_window · anchor_to_input_end
-      if (!g.anchorDate) return `${label}: ${spec.label} 유예기간 — 개시일을 입력하세요.`;
-      if (!g.endDate) return `${label}: ${spec.label} 유예기간 — 종료일을 입력하세요.`;
+      if (!g.anchorDate) return fieldError(`nblGracePeriods.${gi}.anchorDate`, `${label}: ${spec.label} 유예기간 — 개시일을 입력하세요.`);
+      if (!g.endDate) return fieldError(`nblGracePeriods.${gi}.endDate`, `${label}: ${spec.label} 유예기간 — 종료일을 입력하세요.`);
     }
   }
   return null;

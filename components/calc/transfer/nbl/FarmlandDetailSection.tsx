@@ -39,6 +39,7 @@ export function FarmlandDetailSection({
           periods={asset.nblBusinessUsePeriods}
           onChange={(periods) => onAssetChange({ nblBusinessUsePeriods: periods })}
           label="자경 기간"
+          fieldPrefix="nblBusinessUsePeriods"
         />
         <p className="text-xs text-muted-foreground mt-1">
           거주 이력(재촌)과의 교집합으로 재촌·자경 기간을 산정합니다. (「소득세법 시행령」
@@ -57,6 +58,7 @@ export function FarmlandDetailSection({
            **어느 해가 빠지는지**가 판정을 가른다(`disqualified-tax-periods.ts` 헤더).
       */}
       <FieldCard
+        field="nblDisqualifiedTaxPeriods"
         label="결격 과세기간 (조특령 §66⑭)"
         hint="자경기간에서 제외할 과세기간의 연도를 쉼표로 구분해 입력합니다 (예: 2019, 2020). 해당 없으면 비워 두세요."
       >

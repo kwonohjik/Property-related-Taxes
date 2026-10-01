@@ -155,6 +155,7 @@ export function PastureDetailSection({
           periods={asset.nblPastureLivestockPeriods}
           onChange={(periods) => onAssetChange({ nblPastureLivestockPeriods: periods })}
           label="축산 사육기간"
+          fieldPrefix="nblPastureLivestockPeriods"
         />
       </FieldCard>
     </div>

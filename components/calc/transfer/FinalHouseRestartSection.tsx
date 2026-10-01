@@ -125,6 +125,7 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
                 <div className="space-y-1">
                   <span className="block text-caption font-medium text-muted-foreground">처분 유형</span>
                   <RadioCardGroup<Kind>
+                    data-field={`finalHouseRestartDisposals.${idx}.kind`}
                     name={`final-house-kind-${r.id}`}
                     layout="inline"
                     tone="violet"
@@ -142,7 +143,11 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
                   <span className="block text-caption font-medium text-muted-foreground">
                     처분일 <span className="font-normal">(양도는 잔금일 등 양도시기 · 증여일 · 용도변경일)</span>
                   </span>
-                  <DateInput value={r.date} onChange={(v) => update(r.id, { date: v })} />
+                  <DateInput
+                    data-field={`finalHouseRestartDisposals.${idx}.date`}
+                    value={r.date}
+                    onChange={(v) => update(r.id, { date: v })}
+                  />
                 </div>
                 {asksTemporaryTwoHouse(r.kind) && (
                   <div className="space-y-1">
@@ -150,6 +155,7 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
                       처분 당시 이 주택과 일시적 2주택(§155·§155의2·§156의2·§156의3 특례) 관계였나요?
                     </span>
                     <RadioCardGroup<YesNo>
+                      data-field={`finalHouseRestartDisposals.${idx}.temporaryTwoHouse`}
                       name={`final-house-temp-${r.id}`}
                       layout="inline"
                       tone="violet"
@@ -168,6 +174,7 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
               type="button"
               onClick={() => setRows([...rows, emptyRow()])}
               className="text-sm font-medium text-primary hover:underline"
+              data-field="finalHouseRestartDisposals"
               data-testid="final-house-add"
             >
               + 처분 주택 추가

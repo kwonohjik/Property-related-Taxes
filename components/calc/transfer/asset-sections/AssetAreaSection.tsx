@@ -508,6 +508,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
               </label>
               <RadioCardGroup
                 name={`appurtenantLandZone-${asset.assetId}`}
+                data-field="appurtenantLandZone"
                 tone="sky"
                 layout="stack"
                 columns={3}

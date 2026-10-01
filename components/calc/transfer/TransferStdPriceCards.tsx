@@ -62,6 +62,7 @@ export function TransferLandStdFields({ asset, onChange, transferDate }: FieldPr
     <>
       <LandPriceLookupField
         label="양도시 토지 공시지가"
+        data-field="standardPricePerSqmAtTransfer"
         pricePerSqm={asset.standardPricePerSqmAtTransfer}
         onPricePerSqmChange={(v) => writeLandStd(v, asset.transferArea)}
         area={parseDecimal(asset.transferArea) || undefined}
@@ -72,7 +73,7 @@ export function TransferLandStdFields({ asset, onChange, transferDate }: FieldPr
         landStdPriceTestId="split-land-std-transfer"
         pricePerSqmTestId="split-land-std-transfer-persqm"
       />
-      <FieldCard label="토지 면적 (양도 당시)" unit="㎡" hint="양도시 토지 기준시가 = ㎡당 공시지가 × 이 면적">
+      <FieldCard field="transferArea" label="토지 면적 (양도 당시)" unit="㎡" hint="양도시 토지 기준시가 = ㎡당 공시지가 × 이 면적">
         <DecimalInput
           value={asset.transferArea}
           onChange={(v) => writeLandStd(asset.standardPricePerSqmAtTransfer, v)}
@@ -103,6 +104,7 @@ export function TransferBuildingStdFields({
 }) {
   return (
     <FieldCard
+      field="buildingStandardPriceAtTransfer"
       label="양도시 건물 기준시가"
       unit="원"
       hint={

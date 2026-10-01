@@ -66,6 +66,8 @@ interface Props {
   "data-field"?: string;
   /** 같은 앵커 — 면적 칸(`area`를 넘긴 단가×면적 모드) */
   fieldArea?: string;
+  /** 같은 앵커 — ㎡당 단가 칸(`area`를 넘긴 단가×면적 모드) */
+  fieldPricePerSqm?: string;
 }
 
 /**
@@ -101,6 +103,7 @@ export function StandardPriceInput({
   unitPriceWide = false,
   "data-field": dataField,
   fieldArea,
+  fieldPricePerSqm,
 }: Props) {
   const isAreaMode =
     !forceTotalMode &&
@@ -251,6 +254,7 @@ export function StandardPriceInput({
           <div className={unitPriceWide ? "col-span-2" : undefined}>
             <CurrencyInput
               label={unitPriceWide ? "㎡당 단가" : "㎡당 단가 (원/㎡)"}
+              data-field={fieldPricePerSqm}
               value={pricePerSqmValue}
               onChange={handlePricePerSqmChange}
               placeholder={pricePerSqmDisabled ? "토지등급 환산 자동" : "공시지가 단가"}

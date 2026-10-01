@@ -147,7 +147,7 @@ export function NblSectionContainer({
         className={exemptionStatus.isExempt ? "opacity-50 pointer-events-none" : undefined}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldCard label="토지 지목">
+          <FieldCard field="nblLandType" label="토지 지목">
             <Select
               value={asset.nblLandType ?? ""}
               onValueChange={(v) => v && onAssetChange({ nblLandType: v as AssetForm["nblLandType"] })}
@@ -165,7 +165,7 @@ export function NblSectionContainer({
             </Select>
           </FieldCard>
 
-          <FieldCard label="용도지역">
+          <FieldCard field="nblZoneType" label="용도지역">
             <Select
               value={asset.nblZoneType ?? ""}
               onValueChange={(v) => v && onAssetChange({ nblZoneType: v })}
@@ -228,6 +228,7 @@ export function NblSectionContainer({
             {(asset.nblLandType === "farmland" || asset.nblLandType === "pasture") && (
               <div data-testid="nbl-land-division">
                 <FieldCard
+                  field="nblLandDivision"
                   label="소재지 행정구역 단위"
                   hint="법 §104조의3①1호나목·3호가목의 도시지역 판정은 특별시·광역시(군 제외)·특별자치시·특별자치도·시지역 안에서만 합니다. 읍·면지역은 제외되므로 도시지역이어도 지역기준이 적용되지 않습니다."
                   trailing={<LawArticleModal legalBasis="소득세법 §104조의3" label="§104의3①1호나" />}
@@ -267,7 +268,7 @@ export function NblSectionContainer({
 
         {/* 5. 공통 지원 필드 */}
         <div className="mt-3">
-          <FieldCard label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
+          <FieldCard field="nblUrbanIncorporationDate" label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
             <DateInput
               value={nblIncorpDateIsValid ? asset.nblUrbanIncorporationDate : ""}
               onChange={(v) => onAssetChange({ nblUrbanIncorporationDate: v })}

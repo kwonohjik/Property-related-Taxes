@@ -29,6 +29,7 @@ export function HousingLandDetailSection({
       <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} />
 
       <FieldCard
+        field="nblHousingFootprint"
         label="주택 정착면적"
         unit="㎡"
         hint="법 §104조의3①5호 「주택이 정착된 면적」 — 건물이 땅에 닿는 바닥면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 이 면적 × 배율을 초과하는 부속토지가 비사업용으로 판정됩니다."

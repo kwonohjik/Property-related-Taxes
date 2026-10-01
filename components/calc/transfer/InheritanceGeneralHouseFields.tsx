@@ -27,6 +27,7 @@ export function DecedentGiftDateField({ form, onChange }: Props) {
   if (!form.generalHouseGiftedFromDecedentWithin2yr) return null;
   return (
     <FieldCard
+      field="generalHouseGiftDate"
       label="피상속인으로부터 증여받은 날"
       required
       hint="2018년 2월 13일 이후 증여받은 주택만 상속주택 특례에서 제외됩니다(소득세법 시행령 부칙 제28637호 제16조). 그 전에 증여받았으면 특례가 그대로 적용됩니다."
@@ -43,6 +44,7 @@ export function GeneralHouseRightAtInheritanceField({ form, onChange }: Props) {
   if (!generalHouseRightAtInheritanceVisible(form)) return null;
   return (
     <FieldCard
+      field="generalHouseRightAtInheritance"
       label="상속개시 후 취득한 양도 주택 — 취득 경위"
       required
       hint="양도하는 주택을 상속개시일 뒤에 취득했습니다. §155② 상속주택 특례의 일반주택은 상속개시 당시 보유한 주택(또는 그때 보유한 조합원입주권·분양권으로 사업시행 완료 후 취득한 신축주택)만 해당합니다."

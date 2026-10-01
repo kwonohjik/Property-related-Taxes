@@ -70,6 +70,8 @@ export interface ReductionStdPriceSectionProps {
    * false여도 3시점 조회의 onExclusiveArea 콜백은 유지되어 조회 시 기존 면적 필드가 자동 채워진다.
    */
   showExclusiveArea?: boolean;
+  /** 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.standardPriceAt…` (감면 검증 `transfer-tax-validate-reductions.ts`) */
+  fieldType?: string;
 }
 
 export function ReductionStdPriceSection({
@@ -94,6 +96,7 @@ export function ReductionStdPriceSection({
   assetId,
   areaHint,
   showExclusiveArea = true,
+  fieldType = "unspecified",
 }: ReductionStdPriceSectionProps) {
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaMsg, setAreaMsg] = useState<string | null>(null);
@@ -160,6 +163,7 @@ export function ReductionStdPriceSection({
         snapshotKeyPrefix={snapshotKeyPrefix}
         assetId={assetId}
         value={phd}
+        fieldType={fieldType}
         onChange={onPhdChange}
         assetHasPhdData={!!assetPhdSnapshot}
         onCopyFromAsset={
@@ -204,6 +208,7 @@ export function ReductionStdPriceSection({
           <div className="sm:col-span-2">
             <HousingStdPriceLookupField
               label="취득시 기준시가"
+              data-field={`reduction.${fieldType}.standardPriceAtAcquisition`}
               value={stdPriceAtAcquisition}
               onChange={onStdPriceAtAcquisitionChange}
               jibun={jibun}
@@ -220,6 +225,7 @@ export function ReductionStdPriceSection({
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
             label="5년 시점 기준시가"
+            data-field={`reduction.${fieldType}.standardPriceAt5Years`}
             value={stdPriceAt5Years}
             onChange={onStdPriceAt5YearsChange}
             jibun={jibun}
@@ -235,6 +241,7 @@ export function ReductionStdPriceSection({
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
             label="양도시 기준시가"
+            data-field={`reduction.${fieldType}.standardPriceAtTransfer`}
             value={stdPriceAtTransfer}
             onChange={onStdPriceAtTransferChange}
             jibun={jibun}
@@ -252,7 +259,11 @@ export function ReductionStdPriceSection({
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <DecimalInput value={exclusiveArea ?? ""} onChange={onExclusiveAreaChange} />
+              <DecimalInput
+                data-field={`reduction.${fieldType}.exclusiveAreaSqm`}
+                value={exclusiveArea ?? ""}
+                onChange={onExclusiveAreaChange}
+              />
             </div>
             <button
               type="button"

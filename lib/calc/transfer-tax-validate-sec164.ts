@@ -24,11 +24,14 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { resolveSapPriorStdPrice } from "./transfer-same-adjustment-period-input";
 import { calcStdPriceMonths } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
-function message(label: string, s: Sec164FieldStatus): string {
-  return (
+function message(label: string, s: Sec164FieldStatus, field: IssueField = s.missingFields[0]): string {
+  // 기본은 누락 항목 중 첫 칸 — `missingFields`는 `missing`과 같은 순서
+  return fieldError(
+    field,
     `${label}: ${s.clause} 취득당시 기준시가는 ${s.total}개 항목을 **모두** 입력하거나 모두 비워두세요. ` +
-    `(누락: ${s.missing.join(" · ")})`
+      `(누락: ${s.missing.join(" · ")})`,
   );
 }
 
@@ -50,7 +53,9 @@ export function sec164PartialInputError(asset: AssetForm, label: string): string
   const hasPre1990 = hasPre1990LandEstimation(asset);
   if (!hasPre1990) {
     const land = sec164LandStatus(asset);
-    if (isPartiallyFilled(land)) return message(label, land);
+    // 이 분기는 「1990.8.30. 이전 취득 토지 기준시가 환산」 토글이 꺼진 상태에서만 닿는다(켜져 있으면 위 `hasPre1990`이
+    // 기존 환산 검증에 넘긴다). 토글이 꺼지면 토지등급·1990.1.1. 공시지가 칸이 숨으므로 입력칸이 아니라 토글로 데려간다.
+    if (isPartiallyFilled(land)) return message(label, land, "pre1990Enabled");
   }
 
   return null;
@@ -111,28 +116,33 @@ export function sameAdjustmentPeriodError(
    */
   if (formula === "prev") {
     const basis = asset.sapPriorBasis ?? "direct";
+    const hasFirstNoticePrice = parseAmount(asset.sapFirstNoticeStdPrice ?? "") > 0;
     if (
       basis === "first_notice_rate" &&
-      !(parseAmount(asset.sapFirstNoticeStdPrice ?? "") > 0 &&
-        parseFloat((asset.sapNoticeBaseRate ?? "").replace(/,/g, "")) > 0)
+      !(hasFirstNoticePrice && parseFloat((asset.sapNoticeBaseRate ?? "").replace(/,/g, "")) > 0)
     ) {
-      return (
+      // 비어 있는 칸으로 — 기준시가가 있으면 기준율 칸이 빈 것이다
+      return fieldError(
+        hasFirstNoticePrice ? "sapNoticeBaseRate" : "sapFirstNoticeStdPrice",
         `${label}: 전기의 기준시가를 「최초고시 × 기준율」로 산정하려면 ` +
-        `국세청장이 최초로 고시한 기준시가와 고시 기준율을 모두 입력하세요` +
-        `(소득세법 시행규칙 §80③2호).`
+          `국세청장이 최초로 고시한 기준시가와 고시 기준율을 모두 입력하세요` +
+          `(소득세법 시행규칙 §80③2호).`,
       );
     }
+    const hasAcqStdPrice = parseAmount(asset.standardPriceAtAcq ?? "") > 0;
+    const hasPriorSum = parseAmount(asset.sapPriorLandBuildingSum ?? "") > 0;
     if (
       basis === "ratio_conversion" &&
-      !(parseAmount(asset.standardPriceAtAcq ?? "") > 0 &&
-        parseAmount(asset.sapPriorLandBuildingSum ?? "") > 0 &&
-        parseAmount(asset.sapAcqLandBuildingSum ?? "") > 0)
+      !(hasAcqStdPrice && hasPriorSum && parseAmount(asset.sapAcqLandBuildingSum ?? "") > 0)
     ) {
-      return (
+      const ratioMessage =
         `${label}: 전기의 기준시가를 「합계액 비율환산」으로 산정하려면 취득당시 기준시가와 ` +
         `전기·취득당시의 토지·건물 기준시가 합계액이 모두 필요합니다` +
-        `(소득세법 시행규칙 §80③3호).`
-      );
+        `(소득세법 시행규칙 §80③3호).`;
+      // 비어 있는 칸으로 — 메시지 순서(취득당시 기준시가 → 전기 합계액 → 취득당시 합계액)대로 첫 빈 칸
+      if (!hasAcqStdPrice) return fieldError("standardPriceAtAcq", ratioMessage);
+      if (!hasPriorSum) return fieldError("sapPriorLandBuildingSum", ratioMessage);
+      return fieldError("sapAcqLandBuildingSum", ratioMessage);
     }
   }
 
@@ -143,8 +153,8 @@ export function sameAdjustmentPeriodError(
     : parseAmount(asset.sapNewStdPrice ?? "");
   if (resolved <= 0) {
     return formula === "prev"
-      ? `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호가목)에는 전기의 기준시가가 필요합니다.`
-      : `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호나목)에는 새로운 기준시가가 필요합니다.`;
+      ? fieldError("sapPriorStdPrice", `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호가목)에는 전기의 기준시가가 필요합니다.`)
+      : fieldError("sapNewStdPrice", `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호나목)에는 새로운 기준시가가 필요합니다.`);
   }
 
   // 나목 요건 검증 — 보유월수가 조정월수를 넘으면 「양도일+2월 내 새 고시」 전제가 깨진 것이다.
@@ -158,12 +168,12 @@ export function sameAdjustmentPeriodError(
       ? Number(asset.sapAdjustMonths.replace(/,/g, ""))
       : 12;
     if (months > 0 && adj > 0 && months > adj) {
-      return (
+      return fieldError("sapAdjustMonths", (
         `${label}: 보유기간 월수(${months})가 기준시가 조정월수(${adj})보다 큽니다. ` +
         `제2산식(소득세법 시행규칙 §80①1호나목)은 「양도일부터 2월이 되는 날이 속하는 월의 말일까지 ` +
         `새로운 기준시가가 고시된 경우」가 전제이므로 이 조합은 성립하지 않습니다. ` +
         `조정월수를 확인하거나 제1산식(가목)을 선택하세요.`
-      );
+      ));
     }
   }
 
@@ -171,7 +181,7 @@ export function sameAdjustmentPeriodError(
   if (asset.sapAdjustMonths) {
     const months = Number(asset.sapAdjustMonths.replace(/,/g, ""));
     if (!Number.isFinite(months) || months <= 0) {
-      return `${label}: 기준시가 조정월수는 1개월 이상이어야 합니다 (소득세법 시행규칙 §80②1호).`;
+      return fieldError("sapAdjustMonths", `${label}: 기준시가 조정월수는 1개월 이상이어야 합니다 (소득세법 시행규칙 §80②1호).`);
     }
   }
 

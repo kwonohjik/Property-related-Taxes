@@ -10,6 +10,7 @@
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { Rental4hoApiPayload } from "@/lib/api/rental-4ho-coerce";
 import { isRental4hoTransferredBeforeDeletion } from "@/lib/tax-engine/one-house/rental-registration-4ho";
+import { fieldError } from "./transfer-tax-validate-field";
 
 export type Rental4hoFormSlice = Pick<
   TransferFormData,
@@ -78,24 +79,25 @@ export function collectRental4hoErrors(form: Partial<Rental4hoFormSlice>): strin
   const P = "§154① 단서(4호 임대사업자 등록)";
   const afterTransfer = (d: string | undefined) =>
     !!d && !!form.transferDate && d > form.transferDate;
-  if (!form.proviso4hoBusinessRegDate) errors.push(`${P}: 사업자등록 신청일을 입력하세요.`);
-  if (!form.proviso4hoRentalRegDate) errors.push(`${P}: 임대사업자 등록 신청일을 입력하세요.`);
-  if (afterTransfer(form.proviso4hoBusinessRegDate) || afterTransfer(form.proviso4hoRentalRegDate)) {
-    errors.push(`${P}: 등록 신청일은 양도일 이전이어야 합니다.`);
-  }
+  if (!form.proviso4hoBusinessRegDate) errors.push(fieldError("proviso4hoBusinessRegDate", `${P}: 사업자등록 신청일을 입력하세요.`));
+  if (!form.proviso4hoRentalRegDate) errors.push(fieldError("proviso4hoRentalRegDate", `${P}: 임대사업자 등록 신청일을 입력하세요.`));
+  // 두 날짜 중 양도일 뒤인 쪽 칸으로 — 둘 다면 앞 칸부터(메시지는 하나)
+  const lateMessage = `${P}: 등록 신청일은 양도일 이전이어야 합니다.`;
+  if (afterTransfer(form.proviso4hoBusinessRegDate)) errors.push(fieldError("proviso4hoBusinessRegDate", lateMessage));
+  else if (afterTransfer(form.proviso4hoRentalRegDate)) errors.push(fieldError("proviso4hoRentalRegDate", lateMessage));
   if (scope.regulatedOneHouse && !form.proviso4hoRegulatedOneHouse) {
-    errors.push(`${P}: 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.`);
+    errors.push(fieldError("proviso4hoRegulatedOneHouse", `${P}: 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.`));
   }
-  if (!form.proviso4hoStatus) errors.push(`${P}: 양도일 현재 임대사업자 등록 상태를 선택하세요.`);
+  if (!form.proviso4hoStatus) errors.push(fieldError("proviso4hoStatus", `${P}: 양도일 현재 임대사업자 등록 상태를 선택하세요.`));
   if (scope.maintainedQuestions) {
-    if (!form.proviso4hoDuringMandatory) errors.push(`${P}: 임대의무기간 중 양도인지 선택하세요.`);
-    if (!form.proviso4hoRentOver5) errors.push(`${P}: 임대료 연 5% 초과 증액 여부를 선택하세요.`);
+    if (!form.proviso4hoDuringMandatory) errors.push(fieldError("proviso4hoDuringMandatory", `${P}: 임대의무기간 중 양도인지 선택하세요.`));
+    if (!form.proviso4hoRentOver5) errors.push(fieldError("proviso4hoRentOver5", `${P}: 임대료 연 5% 초과 증액 여부를 선택하세요.`));
   }
   if (scope.rentIncreaseContractDate) {
     if (!form.proviso4hoRentOver5ContractDate) {
-      errors.push(`${P}: 5% 초과 증액 계약의 체결·갱신일을 입력하세요.`);
+      errors.push(fieldError("proviso4hoRentOver5ContractDate", `${P}: 5% 초과 증액 계약의 체결·갱신일을 입력하세요.`));
     } else if (afterTransfer(form.proviso4hoRentOver5ContractDate)) {
-      errors.push(`${P}: 증액 계약의 체결·갱신일은 양도일 이전이어야 합니다.`);
+      errors.push(fieldError("proviso4hoRentOver5ContractDate", `${P}: 증액 계약의 체결·갱신일은 양도일 이전이어야 합니다.`));
     }
   }
   return errors;

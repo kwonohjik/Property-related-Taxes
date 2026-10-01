@@ -121,13 +121,14 @@ export function ResidencePeriodSection({
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <FieldCard label="입주일">
+                    <FieldCard field={`residencePeriods.${idx}.moveInDate`} label="입주일">
                       <DateInput
                         value={p.moveInDate}
                         onChange={(v) => setPeriod(idx, { moveInDate: v })}
                       />
                     </FieldCard>
                     <FieldCard
+                      field={`residencePeriods.${idx}.moveOutDate`}
                       label="퇴거일"
                       required
                       hint="양도일까지 거주한 경우 양도일을 퇴거일로 입력"
@@ -174,7 +175,7 @@ export function ResidencePeriodSection({
            「거주 기간 입력」 카드 제목만 보이고 **입력칸이 하나도 없었다**.
       */}
       {!isInterval && (
-        <FieldCard label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.">
+        <FieldCard field="residencePeriodMonthsAsset" label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.">
           <div className="flex items-center gap-2">
             <div className="w-32">
               <DecimalInput

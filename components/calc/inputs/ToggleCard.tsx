@@ -169,6 +169,8 @@ export interface ToggleCardProps {
    * `feedback_shared_card_testid_not_forwarded`). 여기서 받아 루트에 붙인다.
    */
   "data-testid"?: string;
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 루트에 단다. 검증의 `ValidationIssue.field`와 같은 값 */
+  "data-field"?: string;
 }
 
 export function ToggleCard({
@@ -187,6 +189,7 @@ export function ToggleCard({
   lawLinks,
   lawRefs,
   "data-testid": dataTestId,
+  "data-field": dataField,
 }: ToggleCardProps) {
   const t = TONES[tone];
   const handleChange = disabled ? undefined : onCheckedChange;
@@ -211,6 +214,7 @@ export function ToggleCard({
         data-slot="toggle-card"
         data-variant="chip"
         data-testid={dataTestId}
+        data-field={dataField}
         data-checked={checked || undefined}
         data-disabled={disabled || undefined}
         title={
@@ -255,6 +259,7 @@ export function ToggleCard({
       data-slot="toggle-card"
       data-variant="card"
       data-testid={dataTestId}
+      data-field={dataField}
       data-checked={checked || undefined}
       data-disabled={disabled || undefined}
       className={cn(

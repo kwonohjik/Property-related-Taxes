@@ -89,6 +89,7 @@ export function Unsold988InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">취득가액</label>
           <CurrencyInput
+            data-field="reduction.unsold_98_8.acquisitionPrice988"
             value={value.acquisitionPrice988}
             onChange={(v) => onChange({ acquisitionPrice988: v })}
             label=""
@@ -100,6 +101,7 @@ export function Unsold988InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
           <DecimalInput
+            data-field="reduction.unsold_98_8.exclusiveAreaSqm988"
             value={value.exclusiveAreaSqm988}
             onChange={(v) => onChange({ exclusiveAreaSqm988: v })}
           />
@@ -113,6 +115,7 @@ export function Unsold988InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">임대계약 체결일</label>
           <DateInput
+            data-field="reduction.unsold_98_8.rentalContractDate988"
             value={value.rentalContractDate988}
             onChange={(v) => onChange({ rentalContractDate988: v })}
           />
@@ -123,7 +126,7 @@ export function Unsold988InputForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
-          <DateInput value={value.rentalStartDate988} onChange={(v) => onChange({ rentalStartDate988: v })} />
+          <DateInput data-field="reduction.unsold_98_8.rentalStartDate988" value={value.rentalStartDate988} onChange={(v) => onChange({ rentalStartDate988: v })} />
           <p className="mt-1 text-micro text-muted-foreground">
             사업자등록(소법 §168)과 임대사업자등록(민특법 §5)을 한 후 임대를 개시한 날부터
             기산합니다 — 등록 전 임대분은 산입되지 않습니다 (조특령 §98의5⑤1호 준용)
@@ -211,6 +214,7 @@ export function Unsold988InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold988"
+          fieldType="unsold_98_8"
           snapshotKeyPrefix="red988"
         />
         <p className="mt-1 text-micro text-muted-foreground">

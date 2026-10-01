@@ -114,6 +114,7 @@ export function Unsold992InputForm({
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
             <DateInput
+              data-field="reduction.unsold_99_2.usageApprovalDate992"
               value={value.usageApprovalDate992}
               onChange={(v) => onChange({ usageApprovalDate992: v })}
             />
@@ -125,6 +126,7 @@ export function Unsold992InputForm({
           <div>
             <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
             <DateInput
+              data-field="reduction.unsold_99_2.contractDate992"
               value={value.contractDate992}
               onChange={(v) => onChange({ contractDate992: v })}
             />
@@ -140,6 +142,7 @@ export function Unsold992InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">실거래 취득가액</label>
           <CurrencyInput
+            data-field="reduction.unsold_99_2.acquisitionPrice992"
             value={value.acquisitionPrice992}
             onChange={(v) => onChange({ acquisitionPrice992: v })}
             label=""
@@ -151,6 +154,7 @@ export function Unsold992InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">연면적 (공동주택·오피스텔은 전용면적, ㎡)</label>
           <DecimalInput
+            data-field="reduction.unsold_99_2.exclusiveAreaSqm992"
             value={value.exclusiveAreaSqm992}
             onChange={(v) => onChange({ exclusiveAreaSqm992: v })}
           />
@@ -264,6 +268,7 @@ export function Unsold992InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold992"
+          fieldType="unsold_99_2"
           snapshotKeyPrefix="red992"
         />
         <p className="mt-1 text-micro text-muted-foreground">

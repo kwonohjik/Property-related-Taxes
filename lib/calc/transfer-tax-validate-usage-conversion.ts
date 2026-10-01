@@ -9,6 +9,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서) 전용 검증.
@@ -30,7 +31,7 @@ export function validateUsageConversion(
   // C-16 — 날짜가 없으면 기간을 나눌 수 없다.
   const start = asset.residentialUseStartDate ?? "";
   if (!start) {
-    return `${label}: 사실상 주거용 사용 개시일을 입력하세요. (「소득세법」 제95조 제6항)`;
+    return fieldError("residentialUseStartDate", `${label}: 사실상 주거용 사용 개시일을 입력하세요. (「소득세법」 제95조 제6항)`);
   }
 
   // C-8·C-9 — 취득일·양도일 사이여야 한다. 엔진도 같은 조건에서 오류를 던진다.
@@ -50,12 +51,12 @@ export function validateUsageConversion(
       ? asset.carryover?.giftRegistryDate || asset.acquisitionDate || ""
       : asset.acquisitionDate;
   if (acqFloor && start <= acqFloor) {
-    return asset.acquisitionCause === "carryover_gift"
+    return fieldError("residentialUseStartDate", asset.acquisitionCause === "carryover_gift"
       ? `${label}: 주거용 사용 개시일은 증여 등기접수일 이후여야 합니다.`
-      : `${label}: 주거용 사용 개시일은 취득일 이후여야 합니다.`;
+      : `${label}: 주거용 사용 개시일은 취득일 이후여야 합니다.`);
   }
   if (formTransferDate && start >= formTransferDate) {
-    return `${label}: 주거용 사용 개시일은 양도일 이전이어야 합니다.`;
+    return fieldError("residentialUseStartDate", `${label}: 주거용 사용 개시일은 양도일 이전이어야 합니다.`);
   }
 
   // C-14 — 건물 전부가 주택이 된 경우와 일부만 주택인 경우는 다른 규정이다.

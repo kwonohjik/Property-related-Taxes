@@ -222,7 +222,7 @@ export function GroupCategorySection({
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs font-semibold whitespace-nowrap">매매계약일 (분양/매매)</span>
               <div className="flex-1 min-w-[180px]">
-                <DateInput value={assetContractDate} onChange={onAssetContractDateChange} />
+                <DateInput data-field="assetContractDate" value={assetContractDate} onChange={onAssetContractDateChange} />
               </div>
             </div>
             <p className="mt-1.5 text-micro text-muted-foreground leading-relaxed">

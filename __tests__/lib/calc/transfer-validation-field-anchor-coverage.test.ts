@@ -29,8 +29,17 @@ const normalize = (k: string) => k.replace(/\$\{[^}]+\}/g, "*");
 function validatorKeys(): Set<string> {
   const keys = new Set<string>();
   const dir = join(ROOT, "lib/calc");
+  // Phase 4: 이름이 `transfer-tax-validate*`가 아니지만 양도세 검증이 부르는 하위 모듈
+  const LEAF_VALIDATORS = new Set([
+    "house-count-exclusion-reduction-validate.ts",
+    "exemption-proviso-validate.ts",
+    "residence-interval-validate.ts",
+    "rental-4ho-proviso.ts",
+    "final-house-restart.ts",
+    "pre-designation-contract-scope.ts",
+  ]);
   for (const name of readdirSync(dir)) {
-    if (!/^transfer-tax-validate.*\.ts$/.test(name) || name === "transfer-tax-validate-field.ts") continue;
+    if (!(/^transfer-tax-validate.*\.ts$/.test(name) || LEAF_VALIDATORS.has(name)) || name === "transfer-tax-validate-field.ts") continue;
     const src = readFileSync(join(dir, name), "utf8");
     for (const m of src.matchAll(/\bfield: ["`]([^"`]+)["`]/g)) keys.add(normalize(m[1]));
     for (const m of src.matchAll(/\bfieldError\(\s*["`]([^"`]+)["`]/g)) keys.add(normalize(m[1]));

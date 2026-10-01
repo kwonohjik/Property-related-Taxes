@@ -62,14 +62,16 @@ export function PreDeemedEstimatedNotice({
         환산 등 추계(나목)는 <b>가목을 확인할 수 없는 경우에 한정</b>해 적용합니다(§97①1호 단서).
         해당한다면 아래에서 선택하세요.
       </p>
-      <ToggleCard
-        tone="amber"
-        size="sm"
-        checked={asset.preDeemedClauseAUnconfirmed === true}
-        onCheckedChange={(v) => onChange({ preDeemedClauseAUnconfirmed: v })}
-        title={`「${dateLabel} 상증법 평가액」을 확인할 수 없음`}
-        description="선택하면 나목(환산취득가액 등)으로 계산합니다. 이후 평가액이나 §164④~⑦ 기준시가를 입력하면 그 값이 가목이 되어 이 선택과 무관하게 우선합니다."
-      />
+      <div data-field="preDeemedClauseAUnconfirmed">
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          checked={asset.preDeemedClauseAUnconfirmed === true}
+          onCheckedChange={(v) => onChange({ preDeemedClauseAUnconfirmed: v })}
+          title={`「${dateLabel} 상증법 평가액」을 확인할 수 없음`}
+          description="선택하면 나목(환산취득가액 등)으로 계산합니다. 이후 평가액이나 §164④~⑦ 기준시가를 입력하면 그 값이 가목이 되어 이 선택과 무관하게 우선합니다."
+        />
+      </div>
     </ToneCard>
   );
 }
