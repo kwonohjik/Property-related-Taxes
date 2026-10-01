@@ -151,6 +151,15 @@ export const REFUND_GAIN_RATE_ANNUAL = 0.031;
 /** 국세기본법 §4 — 세법에서 규정하는 기간의 계산은 「민법」에 따른다 */
 export const PERIOD_CALCULATION_4 = "국세기본법 §4";
 /**
+ * 지방세기본법 §23 — 「이 법 또는 지방세관계법과 지방세에 관한 조례에서 규정하는 기간의 계산은 …
+ * 「민법」을 따른다」(KoreanLaw 실독 2026-10-01 · MST 283257). 국세기본법 §4의 지방세 쪽 대응 조문 —
+ * 취득세·재산세 등 지방세관계법 기간 계산에는 이쪽이 정본이다. `civil-period.ts`의
+ * `deadlineEndNote`가 세목별 준용 조문을 받는 파라미터(`basisLaw`)를 두는 것은 이 값이
+ * 기본값(`PERIOD_CALCULATION_4`, 국세)과 다르기 때문이다 — L-13 이전에는 취득세 쪽
+ * 상속 5년 leaf(`isExcludedBy5YearRule`)가 §161을 아예 반영하지 않아 이 구분이 필요 없었다.
+ */
+export const PERIOD_CALCULATION_LOCAL_23 = "지방세기본법 §23";
+/**
  * 민법 §161 — 기간의 말일이 토요일 또는 공휴일이면 그 익일로 만료(2007.12.21. 법률 제8720호로 토요일 추가).
  * 「~이내」 기한(civil-period.ts 유형 B)에만 쓴다 — 「~이 지난 후」 경계에는 쓰지 않는다.
  */

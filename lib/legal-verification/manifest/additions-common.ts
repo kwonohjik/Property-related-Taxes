@@ -15,6 +15,13 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // common.ts PERIOD_CALCULATION_LOCAL_23 — 지방세관계법 기간 계산의 민법 준용(L-13 · civil-period.ts)
+    id: "LOCAL_TAX_BASIC.PERIOD_CALCULATION",
+    citation: "지방세기본법 §23",
+    keywords: ["기간의 계산", "「민법」을 따른다"],
+    keywordMode: "ALL",
+  },
+  {
     // common.ts DEADLINE_HOLIDAY_EXTENSION_161 — 「~이내」 기한 말일 토요일·공휴일 → 익일(L-1)
     id: "CIVIL.DEADLINE_HOLIDAY_EXTENSION",
     citation: "민법 §161",

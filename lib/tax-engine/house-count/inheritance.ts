@@ -12,44 +12,81 @@
  * 주된 상속자가 아니면 카운트에서 제외.
  */
 
-import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
-import { isWithinPeriod } from "../civil-period";
+import { ACQUISITION, ACQUISITION_CONST, PERIOD_CALCULATION_LOCAL_23 } from "../legal-codes";
+import { deadlineEndFrom, deadlineEndNote, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 
 // ============================================================
 // 5년 미경과 제외 판정
 // ============================================================
 
+/** `assessInheritance5YearRule`의 판정 결과 — 모든 소비처(주택·입주권·분양권·오피스텔)가 공유하는 단일 leaf */
+export interface Inheritance5YearAssessment {
+  /** 상속개시일부터 5년 미경과 — true면 주택 수 제외 대상 */
+  excluded: boolean;
+  /**
+   * 민법 §161 연장이 이 판정을 좌우했을 때(연장이 없었으면 산입됐을 날이 연장 덕에 제외됐을 때),
+   * 또는 공휴일 표 밖이라 판정이 불확실할 때만 붙는 한 줄 안내. 그 외에는 `undefined`.
+   */
+  note?: string;
+}
+
 /**
- * [P3-8] 상속 5년 미경과 여부 판정
+ * [P3-8] 상속 5년 미경과 여부 판정 — 모든 소비처(주택·입주권·분양권·오피스텔 제외 판정,
+ * 공동상속 소유자 판정)가 호출하는 **단일 leaf**.
  *
  * §28의4⑥3호: 「상속개시일부터 5년이 지나지 않은」 주택·입주권·분양권·오피스텔 → 주택 수 제외.
- *  - 기간 계산은 지방세기본법 §23 → 민법 §157(초일 불산입)·§160②. 만료일 = 5년 뒤 응당일이므로
- *    응당일 **당일까지** 「5년이 지나지 않은」 상태다(plan §1 B 유형 `isWithinPeriod`).
+ *  - 기간 계산은 지방세기본법 §23 → 민법 §157(초일 불산입)·§160②(응당일)·§161(말일이 토요일·공휴일이면
+ *    익일로 만료, 사용자 결정 2026-10-01). 만료일 = 5년 뒤 응당일이므로 응당일 **당일까지**(§161
+ *    연장 시 그 익일까지) 「5년이 지나지 않은」 상태다(plan §1 B 유형 `isWithinDeadline`).
  *
  * 대통령령 제30939호(2020.8.12.) 부칙 제3조: 「이 영 시행 전에 상속을 원인으로 취득한 주택,
  * 조합원입주권, 주택분양권 또는 오피스텔에 대해서는 …이 영 시행 이후 5년 동안 주택 수 산정 시
  * 소유주택 수에서 제외한다.」 — 시행일(2020.8.12.) 0시부터 기산(민법 §157 단서) → 2025.8.11.까지.
  * 이 특례 기간은 2020.8.12. 전 상속분의 본칙 기간보다 항상 길거나 같다.
+ * ⚠️ 말일 2025-08-11.은 **월요일**이라 민법 §161이 적용될 여지가 없다 — 이 날짜는 그대로
+ *   둔다(사용자 결정 2026-10-01 · anchor로 고정, 변경 금지).
  *
  * @param inheritanceDate 상속개시일 (YYYY-MM-DD)
  * @param referenceDate 기준일 (주택 수 산정일, YYYY-MM-DD)
- * @returns 5년 미경과 여부 (true = 제외 대상)
+ */
+export function assessInheritance5YearRule(
+  inheritanceDate: string,
+  referenceDate: string
+): Inheritance5YearAssessment {
+  if (
+    inheritanceDate < ACQUISITION_CONST.HOUSE_COUNT_RIGHT_OFFICE_FROM &&
+    referenceDate <= ACQUISITION_CONST.INHERITANCE_PRE_2020_EXCLUSION_END
+  ) {
+    return { excluded: true };
+  }
+
+  const start = new Date(inheritanceDate);
+  const target = new Date(referenceDate);
+  const years = ACQUISITION_CONST.INHERITANCE_EXCLUSION_YEARS;
+  const excluded = isWithinDeadline(start, years, target);
+  if (!excluded) return { excluded };
+
+  const dl = deadlineEndFrom(start, years);
+  if (dl.holidayTableUncovered) {
+    return { excluded, note: deadlineEndNote(dl, PERIOD_CALCULATION_LOCAL_23) };
+  }
+  // §161 연장이 없었어도(= 역상 말일까지) 이미 제외 대상이었으면 연장은 이 판정을 바꾸지 않았다 — 안내 생략.
+  const excludedWithoutExtension = isOnOrBeforeDay(target, dl.calendarEnd);
+  if (dl.extended && !excludedWithoutExtension) {
+    return { excluded, note: deadlineEndNote(dl, PERIOD_CALCULATION_LOCAL_23) };
+  }
+  return { excluded };
+}
+
+/**
+ * [P3-8] 상속 5년 미경과 여부 판정 — boolean만 필요한 호출부용 얇은 래퍼.
+ * 정본은 `assessInheritance5YearRule`(설명문에 §161 연장 안내가 필요하면 그쪽을 쓴다).
  */
 export function isExcludedBy5YearRule(
   inheritanceDate: string,
   referenceDate: string
 ): boolean {
-  if (
-    inheritanceDate < ACQUISITION_CONST.HOUSE_COUNT_RIGHT_OFFICE_FROM &&
-    referenceDate <= ACQUISITION_CONST.INHERITANCE_PRE_2020_EXCLUSION_END
-  ) {
-    return true;
-  }
-  return isWithinPeriod(
-    new Date(inheritanceDate),
-    ACQUISITION_CONST.INHERITANCE_EXCLUSION_YEARS,
-    new Date(referenceDate)
-  );
+  return assessInheritance5YearRule(inheritanceDate, referenceDate).excluded;
 }
 
 // ============================================================

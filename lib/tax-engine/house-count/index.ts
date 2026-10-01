@@ -423,7 +423,12 @@ export type {
 } from "./types";
 
 export { isSeparateHousehold } from "./household";
-export { isExcludedBy5YearRule, assessMainInheritor } from "./inheritance";
+export {
+  isExcludedBy5YearRule,
+  assessInheritance5YearRule,
+  assessMainInheritor,
+} from "./inheritance";
+export type { Inheritance5YearAssessment } from "./inheritance";
 export { countCoOwnedHouse } from "./co-ownership";
 export { getHouseCountReferenceDate, getEarliestRightAcquisitionDate } from "./right-acquisition";
 export { assessHansiBenefitForPendingAcquisition } from "./hansi";
