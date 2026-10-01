@@ -82,6 +82,24 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: h.isExcludedShortToLongChange,
     hasContractDepositProof: h.hasContractDepositProof,
+    // ⑭ 소령 §167의3①3호 감면대상장기임대주택 + 후단 4사실 — ⑪ 연장 기산일 3종은 Date 변환(date-coerce).
+    isTaxIncentiveRental: h.isTaxIncentiveRental,
+    isTaxIncentiveRentalPurchase: h.isTaxIncentiveRentalPurchase,
+    taxIncentiveRentalRegistrationType: h.taxIncentiveRentalRegistrationType,
+    isUrbanLifeHousingApartment: h.isUrbanLifeHousingApartment,
+    taxIncentiveRentalAptDeadlineExtension: h.taxIncentiveRentalAptDeadlineExtension
+      ? {
+          dutyPeriodEndCancellationDate: toOptionalDate(
+            h.taxIncentiveRentalAptDeadlineExtension.dutyPeriodEndCancellationDate,
+          ),
+          newRegulatedAreaAnnouncementDate: toOptionalDate(
+            h.taxIncentiveRentalAptDeadlineExtension.newRegulatedAreaAnnouncementDate,
+          ),
+          relocationAnnouncementDate: toOptionalDate(
+            h.taxIncentiveRentalAptDeadlineExtension.relocationAnnouncementDate,
+          ),
+        }
+      : undefined,
     // P2 특수 배제 (other-house 2주택·인구감소) — 날짜 Date 변환
     isUnavoidableReason: h.isUnavoidableReason,
     unavoidableResidenceYears: h.unavoidableResidenceYears,

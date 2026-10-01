@@ -63,13 +63,14 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         </div>
       </ToggleCard>
 
-      {/* 조특법 특례 주택 */}
+      {/* 조특법 감면주택 — 소령 §167의3①5호. §97·§97의2·§98 감면 임대주택은 3호라 별도 섹션이다. */}
       <ToggleCard
         variant="chip"
         tone="amber"
         checked={v.isTaxSpecialExemption ?? false}
         onCheckedChange={(b) => patch({ isTaxSpecialExemption: b })}
-        title="조세특례제한법 특례 적용 주택"
+        title="조특법 감면주택 (소령 §167의3①5호)"
+        description="조특법 §77·§98의2·§98의3·§98의5~§98의8·§99·§99의2·§99의3에 따라 양도소득세가 감면되는 주택. §97·§97의2·§98 감면 임대주택은 「양도 주택이 조특법 감면 임대주택인 경우」에 입력하세요."
       />
 
       {/* 문화재 주택 */}

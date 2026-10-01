@@ -31,6 +31,7 @@ import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/House
 import { HouseEntryCountExclusionSection } from "@/components/calc/transfer/HouseEntryCountExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
+import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 
 // ============================================================
@@ -51,13 +52,18 @@ interface Props {
    * (`countExclusionRowsInScope`)가 각자 게이트를 넘긴다. 이 칸이 두 화면의 **유일한** 입력 경로다.
    */
   countExclusionEnabled?: boolean;
+  /**
+   * 「특례 구분」에 §167의3①3호 감면대상장기임대주택 칩을 연다 — 계산기 전용(중과 축).
+   * 판정 메뉴는 넘기지 않는다(그 화면은 중과 엔진을 부르지 않는다 · 연결은 후속).
+   */
+  taxIncentiveRentalEnabled?: boolean;
 }
 
 // ============================================================
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate }: Props) {
+function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxIncentiveRentalEnabled }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
@@ -183,9 +189,35 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate }: Pr
             tone="sky"
             checked={house.isUnsoldHousing}
             onCheckedChange={(v) => onUpdate({ isUnsoldHousing: v })}
-            // F-11 — 조특법 감면 미분양·신축주택(소령 §167의3①5호). 주택 수에는 산입하고 중과 대상에서만 뺀다.
-            title="조특법 감면주택(미분양·신축)"
+            // F-11 — 소령 §167의3①5호(조특법 §77·§98의2·§98의3·§98의5~8·§99·§99의2·§99의3). 주택 수에는
+            // 산입하고 중과 대상에서만 뺀다. 종전 「(미분양·신축)」은 §77을 빠뜨렸다.
+            title="조특법 감면주택(5호)"
+            description="조특법 §77·§98의2·§98의3·§98의5~§98의8·§99·§99의2·§99의3 감면 주택 (소령 §167의3①5호)"
           />
+          {taxIncentiveRentalEnabled && (
+            <ToggleCard
+              variant="chip"
+              tone="sky"
+              checked={house.isTaxIncentiveRental ?? false}
+              onCheckedChange={(v) =>
+                // OFF 시 3호 전용 사실만 지운다. 임대기간은 2호와 같은 칸이라 2호가 켜져 있으면 남긴다.
+                onUpdate(
+                  v
+                    ? { isTaxIncentiveRental: true }
+                    : {
+                        isTaxIncentiveRental: false,
+                        isTaxIncentiveRentalPurchase: undefined,
+                        taxIncentiveRentalRegistrationType: undefined,
+                        isUrbanLifeHousingApartment: undefined,
+                        taxIncentiveRentalAptDeadlineExtension: undefined,
+                        rentalPeriodYears: house.isLongTermRental ? house.rentalPeriodYears : undefined,
+                      },
+                )
+              }
+              title="조특법 감면 임대주택(3호)"
+              description="조특법 §97·§97의2·§98에 따라 양도소득세가 감면되는 임대주택으로서 5년 이상 임대한 국민주택 (소령 §167의3①3호)"
+            />
+          )}
           <ToggleCard
             variant="chip"
             tone="sky"
@@ -195,6 +227,16 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate }: Pr
           />
         </div>
       </div>
+
+      {/* §167의3①3호 — 임대기간·국민주택은 2호와 같은 칸, 아파트는 위 「아파트」 칩 */}
+      {taxIncentiveRentalEnabled && house.isTaxIncentiveRental && (
+        <TaxIncentiveRentalFields
+          value={house}
+          onPatch={onUpdate}
+          idPrefix={house.id}
+          isApartment={house.isApartment}
+        />
+      )}
 
       {/* #3-B1 신축·준공후미분양 특례 비차단 경고 — 특례 의도(준공후미분양 토글·준공일 입력)인데
           판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
@@ -377,7 +419,8 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
             isRegisteredRental: v ? house.isRegisteredRental : undefined,
             rentalRegistrationDate: v ? house.rentalRegistrationDate : undefined,
             businessRegistrationDate: v ? house.businessRegistrationDate : undefined,
-            rentalPeriodYears: v ? house.rentalPeriodYears : undefined,
+            // 임대기간은 §167의3①3호와 같은 칸 — 3호가 켜져 있으면 지우지 않는다.
+            rentalPeriodYears: v || house.isTaxIncentiveRental ? house.rentalPeriodYears : undefined,
             rentalCancelledDate: v ? house.rentalCancelledDate : undefined,
           });
         }}
@@ -486,10 +529,17 @@ export function HouseEntryEditor({
   transferDate,
   mergeContext,
   countExclusionEnabled = false,
+  taxIncentiveRentalEnabled = false,
 }: Props) {
   return (
     <div className="space-y-3">
-      <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} transferDate={transferDate} />
+      <BasicInfoSection
+        house={house}
+        onUpdate={onUpdate}
+        showSpouseOwned={showSpouseOwned}
+        transferDate={transferDate}
+        taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
+      />
       {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
       {mergeContext && (
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />

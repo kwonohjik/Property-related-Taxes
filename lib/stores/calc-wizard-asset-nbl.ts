@@ -238,6 +238,16 @@ export interface HouseEntry {
    */
   countExclusion?: HouseCountExclusionRowFact;
   /**
+   * §167의3①3호 감면대상장기임대주택 사실 — `TaxIncentiveRentalFacts` 주석 참조.
+   * 「5년 이상 임대」·「국민주택」은 장기임대(2호)와 **같은 칸**(`rentalPeriodYears`·`isNationalSizeHousing`)을
+   * 쓴다 — 한 주택의 같은 사실이라 두 벌로 두면 두 진실이 된다.
+   */
+  isTaxIncentiveRental?: boolean;
+  isTaxIncentiveRentalPurchase?: boolean;
+  taxIncentiveRentalRegistrationType?: TaxIncentiveRentalRegistrationType;
+  isUrbanLifeHousingApartment?: boolean;
+  taxIncentiveRentalAptDeadlineExtension?: AptDeadlineExtensionForm;
+  /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
    * (가~자목 9유형 세부 매트릭스는 후속 과제 — rentalType 미노출.)
@@ -391,6 +401,45 @@ export type RentalDeclaration = Partial<
     | "isExcludedAfter20200711Apt"
     | "isExcludedShortToLongChange"
     | "hasContractDepositProof"
+  >
+>;
+
+/** 3호 후단 등록 유형 — 종전 민특법 §2 5호(장기일반)·6호(단기)·그 외. 미입력(undefined) = 모름. */
+export type TaxIncentiveRentalRegistrationType = "long_term_general" | "short_term" | "other";
+
+/** §167의3⑪ 기한 연장 세 호의 기산일(YYYY-MM-DD) — 엔진 `AptTransferDeadlineExtension`의 폼 문자열판 */
+export interface AptDeadlineExtensionForm {
+  /** ⑪1호 — 임대의무기간 2027.1.1 이후 종료 주택의 등록말소일 */
+  dutyPeriodEndCancellationDate?: string;
+  /** ⑪2호 — 2027.1.1 이후 조정대상지역 신규 지정 공고일 */
+  newRegulatedAreaAnnouncementDate?: string;
+  /** ⑪3호 — 재건축·재개발·소규모정비 이전고시일 */
+  relocationAnnouncementDate?: string;
+}
+
+/**
+ * 소령 §167의3①3호 「감면대상장기임대주택」 선언 — **명부 행과 양도 주택이 공유**한다.
+ *
+ * 법문(MST 290841 실독): 「「조세특례제한법」 제97조ㆍ제97조의2 및 제98조에 따라 양도소득세가 감면되는
+ * 임대주택으로서 5년 이상 임대한 국민주택」 + 후단(아파트 민간매입 장기일반·단기 → ⑪ 기한까지 양도).
+ *
+ * 🔑 후단 4사실은 **3-state**다 — 미입력(undefined)은 「모른다」이고 엔진이 판정 보류(종전 기준 유지 +
+ *    확인 필요 고지)로 처리한다(#1912 · `isTaxIncentiveRentalAptDeadlinePending`). false로 채우지 말 것.
+ * 🔑 명부 행은 `rentalPeriodYears`·`isNationalSizeHousing`·`isApartment`를 2호와 같은 칸으로 쓰고,
+ *    양도 주택은 그 세 칸을 `sellingHouseExclusion.taxIncentiveRental` 묶음에 둔다(2호 선언과의 공유는
+ *    `lib/calc/tax-incentive-rental-scope.ts`가 정한다).
+ */
+export type TaxIncentiveRentalFacts = Partial<
+  Pick<
+    HouseEntry,
+    | "isTaxIncentiveRental"
+    | "isTaxIncentiveRentalPurchase"
+    | "taxIncentiveRentalRegistrationType"
+    | "isUrbanLifeHousingApartment"
+    | "taxIncentiveRentalAptDeadlineExtension"
+    | "rentalPeriodYears"
+    | "isNationalSizeHousing"
+    | "isApartment"
   >
 >;
 

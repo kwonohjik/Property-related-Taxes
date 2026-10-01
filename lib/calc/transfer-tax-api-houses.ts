@@ -13,6 +13,7 @@ import { isHousingLike } from "./transfer-tax-api-helpers";
 import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
+import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -62,6 +63,22 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
         }
       : {}),
   };
+}
+
+/**
+ * ④⑬ 양도 주택의 §167의3①**3호** 감면대상장기임대주택 선언 → `houseSchema` 필드.
+ *
+ * 🔴 종전에는 입력 경로가 없어 엔진의 3호 분기(`isTaxIncentiveRentalHousingExempt`)가 잠들어 있었다.
+ * 🔑 2호 spread **뒤에** 둔다 — 2호 미선언이면 2호 빌더가 `isApartment: false`를 싣는데, 3호의
+ *    아파트 사실(후단 판정 입력)이 그것을 덮어야 한다. 2호가 켜져 있으면 유효 사실이 2호 칸의 값이라
+ *    덮어도 같은 값이다(`effectiveSellingTaxIncentiveRental`).
+ */
+export function buildSellingTaxIncentiveRentalPayload(
+  se: TransferFormData["sellingHouseExclusion"],
+): object {
+  const eff = effectiveSellingTaxIncentiveRental(se);
+  if (!eff) return {};
+  return { ...taxIncentiveRentalPayload(eff), isApartment: eff.isApartment ?? false };
 }
 
 /** 장기임대 나·라목의 「취득 당시 기준시가」 — 부득이 3호와 칸을 겸하므로 분리했다. */
@@ -150,6 +167,8 @@ export function buildHousesPayload(
      *    (근거: `RentalDeclaration` 주석의 법문 실독 — 사목은 문언이 「양도하는 주택」).
      */
     ...buildSellingRentalPayload(se?.longTermRental),
+    // ④⑬ §167의3①3호 — 위 2호 spread 뒤(아파트 사실 덮어쓰기 순서 — 함수 주석)
+    ...buildSellingTaxIncentiveRentalPayload(se),
     isOfficetel: false,
     isUnsoldHousing: false,
     // P2 양도 주택 3주택+ 전용 배제 특례
@@ -335,5 +354,10 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
             hasContractDepositProof: h.hasContractDepositProof,
           }
         : {}),
+      /**
+       * ④⑬ §167의3①3호 감면대상장기임대주택 — 선언 시에만 키를 만든다. 임대기간·국민주택은 2호와
+       * **같은 행 칸**이라 위 2호 매핑과 값이 같다(맨 뒤에 두어 2호 미선언이어도 실리게 한다).
+       */
+      ...taxIncentiveRentalPayload(h),
     }));
 }

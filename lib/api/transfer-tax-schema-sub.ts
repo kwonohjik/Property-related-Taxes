@@ -254,6 +254,19 @@ export const houseSchema = z.object({
   isExcludedAfter20200711Apt: z.boolean().optional(),
   isExcludedShortToLongChange: z.boolean().optional(),
   hasContractDepositProof: z.boolean().optional(),
+  // ── ⑫ 소령 §167의3①3호 감면대상장기임대주택 + 후단(아파트 민간매입 ⑪ 기한 · 대통령령 제36737호) ──
+  // 후단 4사실은 미전송 = 「모름」(엔진 판정 보류). 임대기간·국민주택은 위 2호 칸(rentalPeriodYears·isNationalSizeHousing)을 쓴다.
+  isTaxIncentiveRental: z.boolean().optional(),
+  isTaxIncentiveRentalPurchase: z.boolean().optional(),
+  taxIncentiveRentalRegistrationType: z.enum(["long_term_general", "short_term", "other"]).optional(),
+  isUrbanLifeHousingApartment: z.boolean().optional(),
+  taxIncentiveRentalAptDeadlineExtension: z
+    .object({
+      dutyPeriodEndCancellationDate: z.string().date().optional(),
+      newRegulatedAreaAnnouncementDate: z.string().date().optional(),
+      relocationAnnouncementDate: z.string().date().optional(),
+    })
+    .optional(),
   // ── P2 특수 배제 (other-house 2주택·인구감소) ──
   isUnavoidableReason: z.boolean().optional(),
   unavoidableResidenceYears: z.number().nonnegative().optional(),
