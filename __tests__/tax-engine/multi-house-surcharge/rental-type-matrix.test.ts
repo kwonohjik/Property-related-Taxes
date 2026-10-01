@@ -162,7 +162,7 @@ describe("C3 다주택 위임 — isLongTermRentalHousingExempt 유형별", () =
 
   it("나목(B) 2003 이전·국민주택·2호·취득당시 3억 → 배제 / 3.1억 → 미배제", () => {
     const ok = rental({
-      rentalType: "B",
+      rentalType: "B", isApartment: false,
       businessRegistrationDate: new Date("2003-01-01"), rentalRegistrationDate: new Date("2003-01-01"),
       rentalPeriodYears: 5, isNationalSizeHousing: true, hasMinimum2Units: true, acquisitionOfficialPrice: 300_000_000,
     });
@@ -183,7 +183,7 @@ describe("C3 다주택 위임 — isLongTermRentalHousingExempt 유형별", () =
 
   it("라목(D) 미분양 2008~2009·비수도권·3억·5호·298/149 → 배제 / 수도권 → 미배제", () => {
     const ok = rental({
-      rentalType: "D", region: "non_capital", isCapitalArea: false,
+      rentalType: "D", isApartment: false, region: "non_capital", isCapitalArea: false,
       businessRegistrationDate: new Date("2008-01-01"), rentalRegistrationDate: new Date("2008-01-01"),
       rentalPeriodYears: 5, firstSaleContractDate: new Date("2009-01-01"),
       landArea: 200, totalFloorArea: 140, acquisitionOfficialPrice: 300_000_000, hasMinimum5UnitsInCity: true,

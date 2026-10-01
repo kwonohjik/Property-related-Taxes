@@ -297,6 +297,12 @@ function buildFailMessage(
     }
     case "REQUIREMENTS_NOT_CONFIRMED":
       return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
+    case "APT_TRANSFER_DEADLINE_EXCEEDED":
+      return (
+        `${n}호: 해당 유형(${article}목)의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
+        "(2027.12.31 — 임대의무기간 2027.1.1 이후 종료·2027.1.1 이후 조정대상지역 신규지정·정비사업 이전고시로 " +
+        "각각 1년 연장될 수 있음)이 지난 후에도 양도하지 않아 장기임대주택으로 인정되지 않습니다."
+      );
     default:
       return `${n}호: 임대주택 요건 미충족`;
   }
@@ -471,8 +477,28 @@ export function checkEligibility(
       hasContractDepositProof: unit.hasContractDepositProof, // 아 carve-out
       isExcludedShortToLongChange: unit.isExcludedShortToLongChange, // 마·바
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
+      /**
+       * Q-1 — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한(§167조의3⑪). ⑳ 자체는 가목1)의 등록기한만
+       * 비적용할 뿐(괄호에 2)·8)·4) 언급 없음) 이 게이트를 비적용하지 않는다 — 거주주택 양도일(ctx.transferDate)
+       * 기준으로 그대로 판정한다. ㉓(말소 후 5년 내) 경로만 괄호로 명시 비적용(대통령령 제36737호).
+       */
+      aptTransferDate: ctx?.transferDate,
+      skipAptTransferDeadlineGate: unit.rentalAutoTermination && isTerminationEligibleArticle(article),
     };
     const result = checkRentalArticle(article, normalized);
+
+    /**
+     * Q-1 후속(판정 보류) — ⑪ 연장 세 호 입력 경로가 아직 없어 바닥(2027.12.31) 초과를 「연장 없음」으로
+     * 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 바꾸지 않고(종전 기준 유지) 호별로 확인 필요
+     * 고지를 낸다 — 통과·불통과 여부와 무관하게 낸다(성공 사례에서만 보이면 실패 사유가 가려진다).
+     */
+    if (result.aptDeadlinePending) {
+      notices.push(
+        `${i + 1}호: ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} 아파트 양도기한(2027.12.31. 또는 ` +
+          "등록말소일·조정대상지역 신규지정 공고일·이전고시일부터 1년 중 늦은 날)을 판정하지 못해 종전 " +
+          "기준으로 계산했습니다 — 연장 사유가 없으면 중과 대상일 수 있습니다.",
+      );
+    }
 
     /**
      * OH-41 — §155⑳2호(「양도일 현재 법 제168조에 따른 사업자등록을 하고, 장기임대주택을 … 민간임대주택으로

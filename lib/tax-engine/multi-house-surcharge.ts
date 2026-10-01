@@ -68,6 +68,7 @@ export type {
 export {
   classifyRegionCriteriaByCode,
   isLongTermRentalHousingExempt,
+  isAptTransferDeadlinePending,
   getRentalTypeLabel,
   isSmallNewHouseSpecial,
   isTaxIncentiveRentalHousingExempt,
@@ -125,7 +126,19 @@ import {
   determineSurchargeExclusion,
   isLowPriceSmallHouseUndecidable,
   isUnavoidableReasonUndecidable,
+  isAptTransferDeadlinePending,
 } from "./multi-house-surcharge-helpers";
+import { TRANSFER_RENTAL_HOUSING } from "./legal-codes";
+
+/**
+ * Q-1 후속(판정 보류) — §167조의3⑪ 연장 세 호 입력 경로가 아직 없다. 어느 결과로 귀결되든(배제·중과
+ * 어느 쪽이든) 호출부가 놓치지 않도록 `determineMultiHouseSurcharge`의 모든 반환 경로가 공유하는
+ * `warnings`에 싣는다(성공 경로에서만 보이면 실패 사유가 가려진다 — feedback_success_only_breakdown_hides_failures).
+ */
+const APT_DEADLINE_PENDING_WARNING =
+  `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} 아파트 양도기한(2027.12.31. 또는 등록말소일·조정대상지역 ` +
+  "신규지정 공고일·이전고시일부터 1년 중 늦은 날)을 판정하지 못해 종전 기준으로 계산했습니다 — " +
+  "연장 사유가 없으면 중과 대상일 수 있습니다.";
 
 /** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
 function usesDutyPeriodPending(house: Parameters<typeof isGroupExcludable>[0], transferDate: Date): boolean {
@@ -149,6 +162,11 @@ export function determineMultiHouseSurcharge(
   isRegulatedFallback: boolean,
 ): MultiHouseSurchargeResult {
   const warnings: string[] = [];
+
+  // Q-1 후속(판정 보류) — 결과 분기 전에 먼저 싣는다(모든 반환 경로가 같은 warnings를 공유).
+  if (input.houses.some((h) => isAptTransferDeadlinePending(h, input.transferDate))) {
+    warnings.push(APT_DEADLINE_PENDING_WARNING);
+  }
 
   // Step 1: 주택 수 산정 (effectiveHouseCount는 #2a ⑨ 차감으로 재할당 → let)
   const step1Count = countEffectiveHouses(

@@ -264,3 +264,165 @@ describe("checkRentalArticle — 사목 base 목 '해당 목의 다른 요건' (
       .toContain("RENTAL_TERMINATION_RESTRICTED");
   });
 });
+
+/**
+ * Q-1 — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한(§167조의3⑪, 대통령령 제36737호 2026.9.30 신설).
+ * 바닥 2027.12.31. 2027.12.31 양도는 항상 기한 내(=floor 경계값) — 2028.1.1부터 바닥을 넘길 수 있다.
+ *
+ * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 「연장 없음」과
+ * 「모름」을 구별 못 한다. 바닥 초과 + 연장 사실 전무 → **실패 코드를 내지 않고** `aptDeadlinePending`만
+ * 세운다(법 근거 없이 불리 적용 금지). 연장 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다.
+ */
+describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한 §167조의3⑪ (Q-1)", () => {
+  const FLOOR_OK = new Date("2027-12-31"); // 바닥 경계값 — 항상 기한 내
+  const PAST_FLOOR = new Date("2028-01-01"); // 바닥 다음 날 — 연장 사실 없으면 판정 보류
+
+  it("가목: 아파트·양도일 2027.12.31 → 기한 내 passed·보류 아님 / 2028.1.1·연장 사실 없음 → 판정 보류(실패 아님)", () => {
+    const ok = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true, aptTransferDate: FLOOR_OK,
+    }));
+    expect(ok.passed).toBe(true);
+    expect(ok.aptDeadlinePending).toBe(false); // ≤바닥 — 보류 트윈(언제나 기한 내, 고지 없음)
+    const pending = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(pending.passed).toBe(true); // 종전 기준 유지 — 다른 요건을 다 갖췄으므로 통과
+    expect(pending.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(pending.aptDeadlinePending).toBe(true);
+  });
+
+  it("가목: 아파트가 아니면(비아파트) 바닥을 넘겨도 영향 없음(보류도 아님)", () => {
+    const r = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: false, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(false);
+  });
+
+  it("나목: 아파트·바닥 초과·연장 사실 없음 → 판정 보류 (나목2) — 등록기준일 게이트와 독립)", () => {
+    const r = checkRentalArticle("나", base({
+      businessRegistrationDate: new Date("2003-01-01"), rentalRegistrationDate: new Date("2003-01-01"),
+      acquisitionOfficialPrice: 300_000_000, isNationalSizeHousing: true, hasMinimum2Units: true,
+      rentalYears: 5, rentIncreaseUnder5Pct: false, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(true);
+  });
+
+  it("라목: 아파트(라목8)·바닥 초과·연장 사실 없음 → 판정 보류", () => {
+    const r = checkRentalArticle("라", base({
+      isCapitalArea: false, acquisitionOfficialPrice: 300_000_000, rentalYears: 5,
+      firstSaleContractDate: new Date("2009-01-01"), landAreaM2: 200, totalFloorAreaM2: 140,
+      hasMinimum5UnitsInCity: true, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(true);
+  });
+
+  it("마목: 아파트(마목4)·바닥 초과·연장 사실 없음 → 판정 보류", () => {
+    const r = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      rentalYears: 10, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(true);
+  });
+
+  it("다·바목: 아파트 조건 자체가 없어 바닥 초과에도 영향 없음(보류도 아님)", () => {
+    const da = checkRentalArticle("다", base({
+      rentalStartOfficialPrice: 500_000_000, rentalYears: 5, landAreaM2: 200, totalFloorAreaM2: 140,
+      hasMinimum2Units: true, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(da.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(da.aptDeadlinePending).toBe(false);
+    const ba = checkRentalArticle("바", base({
+      businessRegistrationDate: new Date("2025-03-01"), rentalRegistrationDate: new Date("2025-03-01"),
+      rentalStartOfficialPrice: 700_000_000, rentalYears: 10, landAreaM2: 200, totalFloorAreaM2: 140,
+      hasMinimum2Units: true, isApartment: true, aptTransferDate: PAST_FLOOR,
+    }));
+    expect(ba.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(ba.aptDeadlinePending).toBe(false);
+  });
+
+  it("⑪1호: 연장 사실이 있으면(임대의무기간 2027.1.1 이후 종료=등록말소일+1년) 「안다」로 보고 정상 판정 — 말소일 2027.6.1 → 기한 2028.6.1", () => {
+    const stillOver = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: new Date("2028-07-01"),
+      aptDeadlineExtension: { dutyPeriodEndCancellationDate: new Date("2027-06-01") },
+    }));
+    // 연장 사실이 있어도 그 연장된 기한(2028-06-01)마저 넘기면 — 「모름」이 아니라 실제 위반이라 FAIL.
+    expect(stillOver.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(stillOver.aptDeadlinePending).toBe(false);
+    const withinExtended = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: new Date("2028-05-01"),
+      aptDeadlineExtension: { dutyPeriodEndCancellationDate: new Date("2027-06-01") },
+    }));
+    // 연장된 기한(2028-06-01) 이내 양도 — PASS.
+    expect(withinExtended.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(withinExtended.passed).toBe(true);
+    expect(withinExtended.aptDeadlinePending).toBe(false);
+    // 종료일이 2027.1.1 전이면 그 호는 성립하지 않는다 — 바닥(2027.12.31)만 적용. 사실 자체는 있으므로
+    // 「모름」이 아니라 「안다(이 호는 적용 안 됨)」로 보고 정상 판정 — 바닥 초과라 FAIL.
+    const beforeWindow = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: new Date("2028-05-01"),
+      aptDeadlineExtension: { dutyPeriodEndCancellationDate: new Date("2026-06-01") },
+    }));
+    expect(beforeWindow.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(beforeWindow.aptDeadlinePending).toBe(false);
+  });
+
+  it("⑪2호: 2027.1.1 이후 조정대상지역 신규지정 공고일+1년 연장 — 연장 사실 있음 → 정상 판정(PASS)", () => {
+    const r = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      rentalYears: 10, isApartment: true,
+      aptTransferDate: new Date("2028-02-01"),
+      aptDeadlineExtension: { newRegulatedAreaAnnouncementDate: new Date("2027-03-01") },
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(false);
+  });
+
+  it("⑪3호: 정비사업 이전고시일+1년 연장(기산일 하한 없음) — 연장 사실 있음 → 정상 판정(PASS)", () => {
+    const r = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: new Date("2028-03-01"),
+      aptDeadlineExtension: { relocationAnnouncementDate: new Date("2027-04-01") },
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(false);
+  });
+
+  it("skipAptTransferDeadlineGate(§155㉓ 경로) — 바닥 초과에도 게이트를 보지 않는다(보류도 아님)", () => {
+    const r = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: PAST_FLOOR, skipAptTransferDeadlineGate: true,
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(false);
+  });
+
+  it("사목(base=가) — 사목 자체 양도기한이 대체하므로 base 검사에서 이 게이트를 보지 않는다(보류도 아님)", () => {
+    const r = checkRentalArticle("사", base({
+      saMokBaseArticle: "가",
+      rentalStartOfficialPrice: 500_000_000,
+      rentalCancellationDate: new Date("2021-06-01"),
+      hasHalfDutyPeriodMet: true,
+      isSoldWithin1YearOfCancellation: true,
+      rentalYears: 2,
+      isApartment: true,
+      aptTransferDate: PAST_FLOOR, // 연장 없이 바닥을 넘겼어도
+    }));
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.aptDeadlinePending).toBe(false);
+  });
+
+  it("aptTransferDate 미제공 — 판정하지 않는다(단정 금지, 보류도 아님)", () => {
+    const r = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+    }));
+    expect(r.aptDeadlinePending).toBe(false);
+    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+  });
+});
