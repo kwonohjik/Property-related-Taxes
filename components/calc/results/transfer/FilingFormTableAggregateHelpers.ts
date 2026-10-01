@@ -150,11 +150,20 @@ export function buildAggregateRows(
   // 산출세액 행 주석: 자산별 shortTermNote (부수토지 일체과세 등 특수 세율)
   const taxNotes: Record<string, string> = {};
   /**
-   * 「감면후 소득금액」 열이 「양도소득금액」보다 작은데 감면이 0인 경우의 근거.
-   * 서식(별지 제84호 부표1)에는 §102② 결손금 통산 행이 없어, 종전에는 그 차액이
-   * **무설명으로 사라졌다** (결과탭 코드리뷰 #072).
+   * §102② 양도차손 통산 행 — 서식(별지 제84호 부표1)에는 이 행이 없어, 종전에는 「감면후 소득금액」
+   * 칸의 각주로만 있었다(결과탭 코드리뷰 #072). 각주는 소멸분을 통산으로 적고 합계 열과 가로
+   * 합이 어긋났다 — 주식 표(18-1·18-2행)와 같은 **전용 행**으로 옮긴다.
+   *
+   * 낸 금액은 엔진 `lossOffsetTable`에서 읽는다(재산출 금지). 통산이 없으면 행을 만들지 않는다.
    */
-  const offsetNotes: Record<string, string> = {};
+  const lossGiven = new Map<string, number>();
+  for (const row of aggregated.lossOffsetTable ?? []) {
+    lossGiven.set(row.fromPropertyId, (lossGiven.get(row.fromPropertyId) ?? 0) + row.amount);
+  }
+  const hasLossOffsetRow = (aggregated.lossOffsetTable?.length ?? 0) > 0;
+  const hasLossExpiredRow = (aggregated.unusedLoss ?? 0) > 0;
+  let sumLossOffset = 0;
+  let sumLossExpired = 0;
 
   for (const p of properties) {
     const col = p.propertyId;
@@ -264,14 +273,16 @@ export function buildAggregateRows(
     );
     setNum("reductionTargetIncome2", col, p.incomeDeductionReducible ?? 0);
     setNum("incomeAmountAfter", col, Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)));
+    // 흡수는 음수(소득이 줄었다) · 유출은 양수(차손이 나갔다) — 주식 18-1행과 같은 부호 규약.
     const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
-    if (received > 0) {
-      offsetNotes[col] =
-        `결손금 통산 ${received.toLocaleString()} 반영 (소득세법 §102②) — 감면과 무관`;
-    } else if (p.income < 0 && p.incomeAfterOffset === 0) {
-      offsetNotes[col] =
-        `결손금 ${Math.abs(p.income).toLocaleString()}이 다른 자산의 양도소득금액에 통산 (소득세법 §102②)`;
-    }
+    const given = lossGiven.get(col) ?? 0;
+    const offsetCell = received > 0 ? -received : given > 0 ? given : null;
+    setNum("lossOffset", col, offsetCell);
+    sumLossOffset += offsetCell ?? 0;
+    // 소멸 = 차손 − 통산으로 나간 몫. 이월이 없어 버려진다(§102② 단서).
+    const expiredCell = p.income < 0 && -p.income - given > 0 ? -p.income - given : null;
+    setNum("lossExpired", col, expiredCell);
+    sumLossExpired += expiredCell ?? 0;
     setNum("priorIncomeAmount", col, null); // 신고서 단위 개념 — 자산별 "-" (합계만 산정)
 
     // 합산-only 행 — 자산 셀 null
@@ -358,7 +369,15 @@ export function buildAggregateRows(
   setNum("ltDeduction", "total", sumLtDeduction);
   setNum("ltHoldingPart", "total", sumLtHolding);
   setNum("ltResidencePart", "total", sumLtResidence);
-  setNum("incomeAmount", "total", aggregated.totalIncomeAfterOffset);
+  // 합계도 자산 칸과 **같은 축(통산 전)** — `totalIncomeAfterOffset`은 통산 후라 소멸 차손이 있으면
+  // 칸의 합과 갈린다(`양도소득금액 + 통산 + 소멸 = 통산 후`이 가로로 성립해야 한다).
+  setNum(
+    "incomeAmount",
+    "total",
+    properties.reduce((sum, p) => sum + p.income, 0),
+  );
+  setNum("lossOffset", "total", sumLossOffset);
+  setNum("lossExpired", "total", sumLossExpired);
   setNum("nontaxableIncome", "total", 0);
   setNum(
     "reductionTargetIncome",
@@ -484,14 +503,16 @@ export function buildAggregateRows(
     ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
     ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
     ["incomeAmount", "양도소득금액"],
+    ...(hasLossOffsetRow
+      ? ([["lossOffset", "양도차손 통산 (§102②·영 §167의2)"]] as Array<[string, string]>)
+      : []),
+    ...(hasLossExpiredRow
+      ? ([["lossExpired", "통산되지 못한 차손 소멸 (이월 불가)"]] as Array<[string, string]>)
+      : []),
     ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
-    [
-      "incomeAmountAfter",
-      "감면후 소득금액",
-      Object.keys(offsetNotes).length > 0 ? { notes: offsetNotes } : undefined,
-    ],
+    ["incomeAmountAfter", "감면후 소득금액"],
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],
