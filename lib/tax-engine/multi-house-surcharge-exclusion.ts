@@ -59,7 +59,7 @@ export function isGroupExcludable(house: HouseInfo, transferDate: Date): boolean
   }
   // ②·⑦은 D16부터 주택 수에서 빠지지 않고 여기에 도달한다 — 양도 주택 자체 배제와 같은 술어.
   if (isSurchargeExemptRental(house, transferDate)) return true;
-  if (isTaxIncentiveRentalHousingExempt(house)) return true;
+  if (isTaxIncentiveRentalHousingExempt(house, transferDate)) return true;
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return true;
   if (house.isTaxSpecialExemption) return true;
   // §167의3①5호 — 조특법 감면 미분양·신축주택은 주택 수에 산입하되 중과 대상에서 뺀다(F-11).
@@ -97,7 +97,7 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
       ? `② 장기임대주택 (${getRentalTypeLabel(house.rentalType)})`
       : "② 장기임대 등록주택 (말소 전)";
   }
-  if (isTaxIncentiveRentalHousingExempt(house)) return "③ 조특법 감면 임대주택";
+  if (isTaxIncentiveRentalHousingExempt(house, transferDate)) return "③ 조특법 감면 임대주택";
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) >= 10) return "④ 사원용 주택 (10년 이상)";
   if (house.isTaxSpecialExemption) return "⑤ 조특법 특례";
   if (house.isUnsoldHousing) return `⑤ 조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`;
@@ -557,7 +557,7 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
-    if (isTaxIncentiveRentalHousingExempt(sellingHouse)) {
+    if (isTaxIncentiveRentalHousingExempt(sellingHouse, input.transferDate)) {
       exclusionReasons.push({
         type: "tax_incentive_rental",
         detail: `조특법 감면 장기임대주택 (국민주택 ${calcRentalPeriodYears(sellingHouse)}년 임대)`,
