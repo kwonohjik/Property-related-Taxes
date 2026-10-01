@@ -12,9 +12,19 @@
  *   - 아목 918 = (isExcluded918Rule && !hasContractDepositProof)(다주택·C4 §155⑳) OR isRegulatedAreaNewAcq(§155⑳ C3).
  *
  * 판정 상수는 rules.ts 단일 소스. 아파트 제한은 isApartmentRestrictedForArticle 공용.
+ *
+ * Q-1(2026-09-30 대통령령 제36737호, 2026.10.1. 시행): 가목2)·나목2)·라목8)·마목4) 아파트 양도기한
+ * (§167조의3⑪, 바닥 2027.12.31) 게이트 추가. 사목 base 검사(skipAptDeadline)·§155㉓ 경로
+ * (skipAptTransferDeadlineGate)는 각자의 양도기한이 대체하므로 이 게이트에서 빠진다.
  */
 
-import { rentalStdPriceCap, rentalRequiredYears, RA_CUT } from "./rules";
+import {
+  rentalStdPriceCap,
+  rentalRequiredYears,
+  RA_CUT,
+  resolveAptTransferDeadline,
+  type AptTransferDeadlineExtension,
+} from "./rules";
 import type { SharedRentalArticle } from "./types";
 
 /** 목별 요건 미충족 코드 (C3: 전 목·게이트 집합). */
@@ -33,7 +43,8 @@ export type ArticleFailCode =
   | "REGION_RESTRICTED"
   | "RENTAL_TERMINATION_RESTRICTED"
   | "SAMOK_BASE_REQUIRED"
-  | "REQUIREMENTS_NOT_CONFIRMED";
+  | "REQUIREMENTS_NOT_CONFIRMED"
+  | "APT_TRANSFER_DEADLINE_EXCEEDED";
 
 /** 사목 base 목 (§167조의3①2호 "가목 및 다목부터 마목까지") */
 export type SaMokBaseArticle = "가" | "다" | "라" | "마";
@@ -89,6 +100,20 @@ export type NormalizedRentalUnit = {
   isExcludedAfter20200711Apt?: boolean;
   /** 마·바목 단기→장기 변경신고 배제 */
   isExcludedShortToLongChange?: boolean;
+  /**
+   * 가목2)·나목2)·라목8)·마목4) 양도기한(§167조의3⑪) 판정용 — 이 주택 자신의 양도일.
+   * 다주택 중과는 양도 당사자 주택의 `transferDate`와 같은 값, §155⑳은 거주주택 양도일(ctx.transferDate)을
+   * 쓴다. 미제공이면 이 게이트를 보지 않는다(날짜를 모르면 기한 위반으로 단정하지 않는다).
+   */
+  aptTransferDate?: Date;
+  /** ⑪ 각 호 연장 사실 — 미제공이면 바닥(2027.12.31)만 적용. */
+  aptDeadlineExtension?: AptTransferDeadlineExtension;
+  /**
+   * §155㉓(말소 후 5년 내 거주주택 양도 특례) 경로 전용 — 그 호의 가목2)·라목8)·마목4) 요건은
+   * 적용하지 않는다(소령 §155㉓ 괄호, 대통령령 제36737호). 사목 경로는 opts.skipAptDeadline로
+   * 별도 처리(사목 자체 양도기한이 적용되므로 이 플래그가 필요 없다).
+   */
+  skipAptTransferDeadlineGate?: boolean;
 };
 
 export type ArticleCheckResult = {
@@ -115,11 +140,19 @@ type ArticleGate = {
   carveout918?: boolean; // 아
   shortToLong?: boolean; // 마·바
   cancellationOnly?: boolean; // 사 — period/price/size 등 skip
+  aptDeadlineGate?: boolean; // 가·나·라·마 (§167조의3⑪, 대통령령 제36737호)
 };
 
 const GATES: Record<SharedRentalArticle, ArticleGate> = {
-  가: { priceAt: "rentalStart", fivePct: true },
-  나: { priceAt: "acquisition", fivePct: false, bizRegDateMax: RA_CUT.Y2003_10_29, national: true, min2: true },
+  가: { priceAt: "rentalStart", fivePct: true, aptDeadlineGate: true },
+  나: {
+    priceAt: "acquisition",
+    fivePct: false,
+    bizRegDateMax: RA_CUT.Y2003_10_29,
+    national: true,
+    min2: true,
+    aptDeadlineGate: true,
+  },
   다: { priceAt: "rentalStart", fivePct: true, size: true, min2: true },
   라: {
     priceAt: "acquisition",
@@ -128,8 +161,9 @@ const GATES: Record<SharedRentalArticle, ArticleGate> = {
     min5City: true,
     saleWindow: [RA_CUT.Y2008_06_11, RA_CUT.Y2009_06_30],
     nonCapitalOnly: true,
+    aptDeadlineGate: true,
   },
-  마: { priceAt: "rentalStart", fivePct: true, hard918: true, shortToLong: true },
+  마: { priceAt: "rentalStart", fivePct: true, hard918: true, shortToLong: true, aptDeadlineGate: true },
   바: { priceAt: "rentalStart", fivePct: true, size: true, min2: true, shortToLong: true },
   사: { priceAt: "rentalStart", fivePct: false, cancellationOnly: true },
   아: { priceAt: "rentalStart", fivePct: true, regDateMin: RA_CUT.Y2025_06_04, apartmentBlanket: true, carveout918: true },
@@ -213,7 +247,7 @@ const SA_MOK_BASE: readonly SharedRentalArticle[] = ["가", "다", "라", "마"]
 function checkArticleGates(
   article: SharedRentalArticle,
   u: NormalizedRentalUnit,
-  opts: { skipPeriod?: boolean } = {},
+  opts: { skipPeriod?: boolean; skipAptDeadline?: boolean } = {},
 ): ArticleFailCode[] {
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
@@ -274,6 +308,21 @@ function checkArticleGates(
   // (l) 5%룰·기타 요건 (나·라·사 제외) — 가·다·마·바는 부칙<제29523호> 제6조 적용 시기
   if (gate.fivePct && isRentCapBreached(article, u)) fails.push("REQUIREMENTS_NOT_CONFIRMED");
 
+  // (m) 가목2)·나목2)·라목8)·마목4) 양도기한(§167조의3⑪, 대통령령 제36737호) — 아파트만.
+  // 사목 base 검사(skipAptDeadline)·§155㉓ 경로(skipAptTransferDeadlineGate)는 각각 사목 자체
+  // 양도기한·㉓ 괄호의 명시 비적용으로 대체되므로 이 게이트를 보지 않는다.
+  if (
+    gate.aptDeadlineGate &&
+    u.isApartment &&
+    !opts.skipAptDeadline &&
+    !u.skipAptTransferDeadlineGate
+  ) {
+    const t = u.aptTransferDate?.getTime();
+    if (t != null && !Number.isNaN(t) && t > resolveAptTransferDeadline(u.aptDeadlineExtension)) {
+      fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
+    }
+  }
+
   return fails;
 }
 
@@ -305,7 +354,7 @@ export function checkRentalArticle(
     if (base == null || !SA_MOK_BASE.includes(base)) {
       fails.push("SAMOK_BASE_REQUIRED");
     } else {
-      fails.push(...checkArticleGates(base, u, { skipPeriod: true }));
+      fails.push(...checkArticleGates(base, u, { skipPeriod: true, skipAptDeadline: true }));
     }
     return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
   }

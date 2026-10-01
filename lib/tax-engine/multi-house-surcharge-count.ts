@@ -208,6 +208,9 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
     isExcludedShortToLongChange: house.isExcludedShortToLongChange,
     saMokBaseArticle: house.saMokBaseArticle, // 사목 base 목 "해당 목의 다른 요건"
     // 아목 918 게이트는 양 feature 공용 isExcluded918Rule + hasContractDepositProof(carve-out)로 통일(C4).
+    // Q-1 — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한(§167조의3⑪). 이 house 자신의 양도일로 판정
+    // (사목 base 검사는 check.ts opts.skipAptDeadline으로 자동 면제 — 별도 플래그 불필요).
+    aptTransferDate: transferDate,
   };
 }
 

@@ -75,3 +75,50 @@ export function rentalRequiredYears(article: SharedRentalArticle, effRegTs: numb
       return 10;
   }
 }
+
+// ============================================================
+// §167조의3⑪ — 가목2)·나목2)·라목8)·마목4) 「제11항에 따른 기한」 (대통령령 제36737호,
+// 2026.9.30. 공포·2026.10.1. 시행 신설). 아파트인 매입장기(가·마)·기존사업자(나)·미분양매입(라)는
+// 이 기한까지 양도해야 §167조의3①2호 해당 목으로 인정된다(사목에 해당하면 사목 자체 양도기한 적용 — 단서).
+// ============================================================
+
+/** 가목2)·나목2)·라목8)·마목4) 게이트 대상 목. 다·바·아·자·구법·사는 대상 아님. */
+export const APT_DEADLINE_GATED_ARTICLES: readonly SharedRentalArticle[] = ["가", "나", "라", "마"];
+
+/** ⑪ 바닥 — 「제11항에 따른 기한은 2027년 12월 31일로 한다」. */
+export const APT_TRANSFER_DEADLINE_FLOOR = new Date("2027-12-31").getTime();
+
+const Y2027_01_01 = new Date("2027-01-01").getTime();
+
+/** ⑪ 각 호가 바닥을 밀어 올리는 기산일. 그 호의 사실이 없으면(미제공) 해당 호는 적용하지 않는다. */
+export type AptTransferDeadlineExtension = {
+  /** ⑪1호 — 민특법§43 임대의무기간이 2027.1.1 이후 종료되는 주택의 등록말소일 */
+  dutyPeriodEndCancellationDate?: Date;
+  /** ⑪2호 — 2027.1.1 이후 조정대상지역 신규 지정(2026.12.31 현재 지정지역은 제외) 공고일 */
+  newRegulatedAreaAnnouncementDate?: Date;
+  /** ⑪3호 — 재건축 조합설립인가·재개발 관리처분계획인가·소규모정비 조합설립인가에 따른 이전고시일 */
+  relocationAnnouncementDate?: Date;
+};
+
+function plusOneYear(ts: number): number {
+  const d = new Date(ts);
+  d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return d.getTime();
+}
+
+/**
+ * §167조의3⑪ 「제11항에 따른 기한」 = 2027.12.31과 해당 호에서 정하는 날 중 가장 늦은 날.
+ * 1·2호는 기산일이 2027.1.1 이후일 때만 호가 성립(「2027년 1월 1일 이후 종료」·「신규 지정」)
+ * — 그 전 기산일은 이미 바닥(2027.12.31)보다 이르므로 적용하지 않는다. 3호는 기산일(이전고시일) 자체에
+ * 그런 하한이 없다(3호 본문의 인가 시점요건은 바닥보다 느슨해 보수적으로 생략 — 확인 필요).
+ */
+export function resolveAptTransferDeadline(ext?: AptTransferDeadlineExtension): number {
+  let deadline = APT_TRANSFER_DEADLINE_FLOOR;
+  const d1 = ext?.dutyPeriodEndCancellationDate?.getTime();
+  if (d1 != null && !Number.isNaN(d1) && d1 >= Y2027_01_01) deadline = Math.max(deadline, plusOneYear(d1));
+  const d2 = ext?.newRegulatedAreaAnnouncementDate?.getTime();
+  if (d2 != null && !Number.isNaN(d2) && d2 >= Y2027_01_01) deadline = Math.max(deadline, plusOneYear(d2));
+  const d3 = ext?.relocationAnnouncementDate?.getTime();
+  if (d3 != null && !Number.isNaN(d3)) deadline = Math.max(deadline, plusOneYear(d3));
+  return deadline;
+}
