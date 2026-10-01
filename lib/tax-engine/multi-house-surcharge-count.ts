@@ -346,12 +346,13 @@ export function isSmallNewHouseSpecial(house: HouseInfo, transferDate: Date): bo
     return true;
   }
 
-  // 비수도권 준공 후 미분양 (소령 §167의3①12나목: 2024.1.10 ~ 2026.12.31, 전용 85㎡ 이하,
-  // 취득가 6억 이하 — 2026.2.27 이후 취득분은 7억 이하)
+  // 비수도권 준공 후 미분양 (소령 §167의3①12나목: 2024.1.10 ~ 2027.12.31, 전용 85㎡ 이하,
+  // 취득가 6억 이하 — 2026.2.27 이후 취득분은 7억 이하). 취득기간 끝은 대통령령 제36737호
+  // (2026.10.1. 시행)로 2026.12.31. → 2027.12.31. 연장(별도 적용례 없음).
   const unsoldNewPriceCap = acqDate >= UNSOLD_NEW_HOUSE_7EOK_ACQ_FROM ? 700_000_000 : 600_000_000;
   if (
     acqDate >= new Date("2024-01-10") &&
-    acqDate <= new Date("2026-12-31") &&
+    acqDate <= new Date("2027-12-31") &&
     !isCapital &&
     (house.exclusiveArea ?? 0) <= 85 &&
     house.acquisitionPrice <= unsoldNewPriceCap &&
