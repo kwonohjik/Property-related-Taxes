@@ -37,6 +37,8 @@ import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import { SellingHouseLongTermRentalSection } from "@/components/calc/transfer/SellingHouseLongTermRentalSection";
+import { SellingHouseTaxIncentiveRentalSection } from "@/components/calc/transfer/SellingHouseTaxIncentiveRentalSection";
+import { sellingHouseTaxIncentiveRentalVisible } from "@/lib/calc/tax-incentive-rental-scope";
 import { SellingHouseTwoHouseExclusionSection } from "@/components/calc/transfer/SellingHouseTwoHouseExclusionSection";
 import { SellingHousePreDesignationContractSection } from "@/components/calc/transfer/SellingHousePreDesignationContractSection";
 import { preDesignationContractInScopeOf } from "@/lib/calc/pre-designation-contract-scope";
@@ -558,6 +560,15 @@ export function HousesListSection({
         />
       )}
 
+      {/* ── 양도 주택이 감면대상장기임대주택인 경우 (§167의3①3호) ──
+          2호와 같은 이유로 게이트가 **2채**다(§167의10①2호 준용). 술어는 leaf 단일 소스. */}
+      {!hideSellingHouseExclusion && sellingHouseTaxIncentiveRentalVisible(form) && (
+        <SellingHouseTaxIncentiveRentalSection
+          value={form.sellingHouseExclusion}
+          onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
+        />
+      )}
+
       {/* ── 조정대상지역 공고 전 매매계약 (영 §167의10①11호 등) ──
           양도 매매계약 사실이라 12의2 나·다목(아래 gracePeriod)과 나란히 둔다 — 칸은 따로다(Q-3).
           범위는 ④·⑧과 같은 술어(`pre-designation-contract-scope.ts`). 판정 메뉴는 이 사실을 싣지 않는다. */}
@@ -591,6 +602,8 @@ export function HousesListSection({
               transferDate={form.transferDate}
               mergeContext={mergeContext}
               countExclusionEnabled={countExclusionEnabled}
+              // §167의3①3호는 중과 축 — 판정 메뉴(양도 주택 중과 섹션을 숨기는 화면)에서는 묻지 않는다.
+              taxIncentiveRentalEnabled={!hideSellingHouseExclusion}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

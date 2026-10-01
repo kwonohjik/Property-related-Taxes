@@ -14,6 +14,7 @@ import type {
   PriorReductionUsageItem,
   SpecialHouseExclusionFormItem,
 } from "./calc-wizard-asset";
+import type { TaxIncentiveRentalFacts } from "./calc-wizard-asset-nbl";
 import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
 
 /** §154⑤ 단서 처분 이력 1행(OH-22). 3-state 칸은 `""` = 미선택. */
@@ -344,6 +345,18 @@ export interface TransferFormData {
      *    노출 게이트를 3주택으로 좁히면 2주택 사용자가 선언할 화면을 잃는다.
      */
     longTermRental?: RentalDeclaration;
+    /**
+     * §167의3①**3호** 감면대상장기임대주택 — **양도하는 주택 자신**이 조특법 §97·§97의2·§98 감면
+     * 임대주택(5년 이상 임대한 국민주택)인 경우. 2호와 같은 이유로 노출 게이트는 **2채**다
+     * (§167의10①2호가 「제167조의3제1항제2호부터 제8호까지」를 준용 · 엔진 `effectiveHouseCount >= 2`).
+     *
+     * 🔑 §98은 감면 입력이 적격이면 엔진이 자동으로 배제한다(`resolveSurchargeExclusionByReduction`) —
+     *    이 선언과 **OR**로 공존한다(어느 쪽이든 배제).
+     * 🔑 「5년 이상 임대」·「국민주택」·「아파트」는 위 2호 선언이 켜져 있으면 그쪽 칸을 쓴다 —
+     *    같은 주택의 같은 사실이다(`lib/calc/tax-incentive-rental-scope.ts`).
+     * 부재(구 기록·stale sessionStorage) = 미선언 — 읽는 곳은 전부 `?.`로 받는다.
+     */
+    taxIncentiveRental?: TaxIncentiveRentalFacts;
     // ── 공고 전 매매계약 (영 §167의3①11호 · §167의4③5호 · §167의10①11호 · §167의11①10호) ──
     /**
      * 이 주택을 **양도하기 위한** 매매계약의 계약금을 **지급받은** 사실이 증빙서류로 확인되는가.
