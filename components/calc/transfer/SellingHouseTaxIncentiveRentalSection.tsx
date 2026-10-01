@@ -62,6 +62,7 @@ export function SellingHouseTaxIncentiveRentalSection({ value, onChange }: Props
           value={tir}
           onPatch={patch}
           idPrefix="selling"
+          fieldRentalPeriod="sellingHouseExclusion.taxIncentiveRentalYears"
           isApartment={eff?.isApartment ?? false}
           showApartmentToggle
           rentalPeriodSharedWith2ho={sellingTaxIncentiveSharesRentalFacts(v)}

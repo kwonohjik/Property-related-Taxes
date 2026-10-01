@@ -79,7 +79,7 @@ export function Unsold987InputForm({
       <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
-          <DateInput value={value.contractDate987} onChange={(v) => onChange({ contractDate987: v })} />
+          <DateInput data-field="reduction.unsold_98_7.contractDate987" value={value.contractDate987} onChange={(v) => onChange({ contractDate987: v })} />
           <p className="mt-1 text-micro text-muted-foreground">
             2012.9.24~2012.12.31 중 사업주체등과 최초로 체결한 매매계약 — 계약금을 납부한
             경우에 한정합니다 (법 §98의7①). 취득일·양도일은 자산 기본 입력을 사용합니다
@@ -91,6 +91,7 @@ export function Unsold987InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">취득가액</label>
           <CurrencyInput
+            data-field="reduction.unsold_98_7.acquisitionPrice987"
             value={value.acquisitionPrice987}
             onChange={(v) => onChange({ acquisitionPrice987: v })}
             label=""
@@ -172,6 +173,7 @@ export function Unsold987InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold987"
+          fieldType="unsold_98_7"
           snapshotKeyPrefix="red987"
         />
         <p className="mt-1 text-micro text-muted-foreground">

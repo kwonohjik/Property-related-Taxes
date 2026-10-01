@@ -334,7 +334,7 @@ export function RentalHousingExceptionSection({
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
             {/* 직전거주주택 양도일 */}
             <FieldCard
-              label="직전거주주택 양도일"
+              label="직전거주주택 양도일" field="rentalHousingException.priorResidenceTransferDate"
               required
               hint="§161① 비과세 기산점"
             >
@@ -370,7 +370,7 @@ export function RentalHousingExceptionSection({
             ) : (
               /* 취득 당시 기준시가 — 양도 물건(asset) 취득시점 공시가격 Vworld 조회 */
               <HousingStdPriceLookupField
-                label="취득 당시 기준시가"
+                label="취득 당시 기준시가" data-field="rentalHousingException.standardPriceAtAcquisitionForPhrp"
                 required
                 hint="임대주택(양도 물건)을 처음 취득한 시점의 공동주택가격(또는 개별주택가격)"
                 value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
@@ -385,7 +385,7 @@ export function RentalHousingExceptionSection({
 
             {/* 직전거주주택 양도 당시 기준시가 — 양도 물건(asset) 자신의 D_prior 시점 공시가격(§161①). 항상 독립 입력 */}
             <HousingStdPriceLookupField
-              label="직전거주주택 양도 당시 기준시가"
+              label="직전거주주택 양도 당시 기준시가" data-field="rentalHousingException.standardPriceAtPriorTransfer"
               required
               hint="직전 거주주택을 양도한 해의 임대주택(양도 물건) 공동주택가격(또는 개별주택가격)"
               value={rh.standardPriceAtPriorTransfer ?? ""}
@@ -400,7 +400,7 @@ export function RentalHousingExceptionSection({
             {/* 현 양도 당시 기준시가 — 연동 시 위 echo 카드로 대체 */}
             {!isPhrpStdPriceLinked(asset) && (
               <HousingStdPriceLookupField
-                label="현 양도 당시 기준시가"
+                label="현 양도 당시 기준시가" data-field="rentalHousingException.standardPriceAtTransferForPhrp"
                 required
                 value={rh.standardPriceAtTransferForPhrp ?? ""}
                 onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
@@ -528,7 +528,7 @@ export function RentalHousingExceptionSection({
             {/* 거주기간 입력 — 입주·퇴거일 다중 구간 (자산-수준 residence 필드 양방향 동기화).
                 토글 없이 상시 표시는 `251df37b`의 의도된 설계다(최소 1건 필수 입력) — 되돌리지 말 것. */}
             {onChangeResidence && (
-              <div className="space-y-1">
+              <div className="space-y-1" data-field="residencePeriods">
                 <p className="text-sm font-medium text-violet-800">
                   거주주택 거주기간 <span className="text-rose-500">*</span>
                 </p>
@@ -587,7 +587,7 @@ export function RentalHousingExceptionSection({
             */}
             {usesPostRegField && (
               <FieldCard
-                label="사업자등록·임대사업자 등록 이후 거주기간"
+                label="사업자등록·임대사업자 등록 이후 거주기간" field="rentalHousingException.postRegistrationResidenceMonths"
                 required
                 unit="개월"
                 hint={

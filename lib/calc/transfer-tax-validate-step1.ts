@@ -23,6 +23,7 @@ import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-resi
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPeriodMissing } from "./tax-incentive-rental-scope";
+import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 
@@ -51,57 +52,59 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
     const label = `보유 주택 ${i + 1}`;
+    // 행 편집은 모달이라 입력칸이 DOM에 없다 — 행의 「편집」 버튼(`HouseTableRow`)이 앵커다. 목록이 사용자를 그 행에 데려다 준다.
+    const rowKey = `houses.${i}` as const;
     const firstError = (() => {
-      if (!h.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+      if (!h.acquisitionDate) return fieldError(rowKey, `${label}: 취득일을 입력하세요.`);
       if (!h.officialPrice || parseAmount(h.officialPrice) <= 0)
-        return `${label}: 기준시가(공시가격)를 입력하세요.`;
+        return fieldError(rowKey, `${label}: 기준시가(공시가격)를 입력하세요.`);
       // 상속주택 5년 배제는 상속개시일이 있어야 기산 (소령 §167의3①7호) — 미입력 시 배제 미발동 → 차단
       if (h.isInherited && !h.inheritedDate)
-        return `${label}: 상속주택이면 상속개시일을 입력하세요. (상속 5년 중과배제 판정 기준)`;
+        return fieldError(rowKey, `${label}: 상속주택이면 상속개시일을 입력하세요. (상속 5년 중과배제 판정 기준)`);
       // 장기임대 등록 경로: 등록사업자 선택 시 등록일 2종·임대기간 필수
       if (h.isLongTermRental && h.isRegisteredRental) {
-        if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록일을 입력하세요.`;
-        if (!h.businessRegistrationDate) return `${label}: 사업자 등록일을 입력하세요.`;
+        if (!h.rentalRegistrationDate) return fieldError(rowKey, `${label}: 임대사업자 등록일을 입력하세요.`);
+        if (!h.businessRegistrationDate) return fieldError(rowKey, `${label}: 사업자 등록일을 입력하세요.`);
         if (!h.rentalPeriodYears || parseFloat(h.rentalPeriodYears) <= 0)
-          return `${label}: 임대기간(년)을 입력하세요.`;
+          return fieldError(rowKey, `${label}: 임대기간(년)을 입력하세요.`);
       }
       // 장기임대 9유형: 유형별 필수 입력값(가액·면적·날짜) — 미입력 시 엔진 오판정
       // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). exact 비교(.includes(t)=정확매칭).
       if (h.isLongTermRental && h.rentalType) {
         const t = h.rentalType;
         if (["A", "C", "E", "F", "H", "I"].includes(t) && !h.rentalStartOfficialPrice)
-          return `${label}: 임대개시 당시 공시가격을 입력하세요.`;
+          return fieldError(rowKey, `${label}: 임대개시 당시 공시가격을 입력하세요.`);
         if (["B", "D"].includes(t) && !h.acquisitionOfficialPrice)
-          return `${label}: 취득 당시 공시가격을 입력하세요.`;
+          return fieldError(rowKey, `${label}: 취득 당시 공시가격을 입력하세요.`);
         if (["C", "D", "F", "I"].includes(t) && (!h.rentalLandArea || !h.rentalTotalFloorArea))
-          return `${label}: 대지면적·연면적(㎡)을 입력하세요.`;
+          return fieldError(rowKey, `${label}: 대지면적·연면적(㎡)을 입력하세요.`);
         if (t === "D" && !h.firstSaleContractDate)
-          return `${label}: 최초 분양계약일을 입력하세요.`;
+          return fieldError(rowKey, `${label}: 최초 분양계약일을 입력하세요.`);
         if (t === "G") {
           if (!h.rentalCancellationDate)
-            return `${label}: 자진·자동 말소일을 입력하세요.`;
+            return fieldError(rowKey, `${label}: 자진·자동 말소일을 입력하세요.`);
           // 사목 base 목(가·다·라·마) + 그 목의 "해당 목의 다른 요건"(임대기간요건 외) — 엔진 SAMOK_BASE_REQUIRED·base 게이트와 동기화
           const base = h.saMokBaseArticle;
-          if (!base) return `${label}: 사목 — 말소 전 base 목(가·다·라·마)을 선택하세요.`;
+          if (!base) return fieldError(rowKey, `${label}: 사목 — 말소 전 base 목(가·다·라·마)을 선택하세요.`);
           if ((base === "가" || base === "다" || base === "마") && !h.rentalStartOfficialPrice)
-            return `${label}: 사목 base 목의 임대개시 당시 공시가격을 입력하세요.`;
+            return fieldError(rowKey, `${label}: 사목 base 목의 임대개시 당시 공시가격을 입력하세요.`);
           if (base === "라" && !h.acquisitionOfficialPrice)
-            return `${label}: 사목 base 라목의 취득 당시 공시가격을 입력하세요.`;
+            return fieldError(rowKey, `${label}: 사목 base 라목의 취득 당시 공시가격을 입력하세요.`);
           if ((base === "다" || base === "라") && (!h.rentalLandArea || !h.rentalTotalFloorArea))
-            return `${label}: 사목 base 목의 대지면적·연면적(㎡)을 입력하세요.`;
+            return fieldError(rowKey, `${label}: 사목 base 목의 대지면적·연면적(㎡)을 입력하세요.`);
           if (base === "라" && !h.firstSaleContractDate)
-            return `${label}: 사목 base 라목의 최초 분양계약일을 입력하세요.`;
+            return fieldError(rowKey, `${label}: 사목 base 라목의 최초 분양계약일을 입력하세요.`);
         }
       }
       // §167의3①3호 감면대상장기임대주택 — 「5년 이상 임대」 판정 칸. 미입력이면 엔진이 0년으로 읽어 조용히 불적용.
       if (taxIncentiveRentalPeriodMissing(h))
-        return `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`;
+        return fieldError(rowKey, `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`);
       // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
       if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
-        return `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`;
+        return fieldError(rowKey, `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`);
       // 3호의 기준시가는 「취득 당시」다 — 미입력이면 엔진이 판정 불가로 두고 배제하지 않는다(F-16).
       if (h.isUnavoidableReason && !h.acquisitionOfficialPrice)
-        return `${label}: 부득이한 사유 주택의 취득 당시 기준시가를 입력하세요.`;
+        return fieldError(rowKey, `${label}: 부득이한 사유 주택의 취득 당시 기준시가를 입력하세요.`);
       return null;
     })();
     if (firstError) issues.push({ step, message: firstError });
@@ -110,21 +113,21 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // ⑧ 양도 주택 3주택+ 전용 배제 특례 — 사원주택/어린이집 선택 시 기간(년) 필수
   const se = form.sellingHouseExclusion;
   if (se?.isEmployeeHousing && (!se.freeProvisionYears || parseFloat(se.freeProvisionYears) <= 0))
-    issues.push({ step, message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
+    issues.push({ step, field: "sellingHouseExclusion.freeProvisionYears", message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
   if (se?.isDayCareCenter && (!se.dayCareOperationYears || parseFloat(se.dayCareOperationYears) <= 0))
-    issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
+    issues.push({ step, field: "sellingHouseExclusion.dayCareOperationYears", message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
 
   // ⑧ 양도 주택 §167의3①3호 — 2호 선언이 켜져 있으면 그 칸의 임대기간을 함께 쓴다(⑤·④와 같은 유효 사실).
   if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))
-    issues.push({ step, message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
+    issues.push({ step, field: "sellingHouseExclusion.taxIncentiveRentalYears", message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
 
   // ⑧ 양도 주택 2주택 전용 배제 — §167의10①3호(F-16). 「다른 보유 주택」 행과 같은 요구다.
   //    7호(소송)는 날짜 미입력이 「진행 중」이라는 뜻이므로 요구하지 않는다.
   if (se?.isUnavoidableReason) {
     if (!se.unavoidableResidenceYears || parseFloat(se.unavoidableResidenceYears) <= 0)
-      issues.push({ step, message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
+      issues.push({ step, field: "sellingHouseExclusion.unavoidableResidenceYears", message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
     if (!se.acquisitionOfficialPrice)
-      issues.push({ step, message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
+      issues.push({ step, field: "sellingHouseExclusion.acquisitionOfficialPrice", message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
   }
   // ⑧ 공고 전 매매계약(영 §167의10①11호 등) — ⑤·④와 같은 범위 술어(`pre-designation-contract-scope.ts`).
   for (const message of collectPreDesignationContractErrors(form)) issues.push({ step, message });
@@ -138,6 +141,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   ) {
     issues.push({
       step,
+      field: "generalHouseGiftDate",
       message:
         "피상속인으로부터 증여받은 날을 입력하세요. (2018.2.13. 이후 증여분만 상속주택 특례에서 제외됩니다)",
     });
@@ -146,6 +150,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   if (generalHouseRightAtInheritanceVisible(form) && !form.generalHouseRightAtInheritance) {
     issues.push({
       step,
+      field: "generalHouseRightAtInheritance",
       message:
         "양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요.",
     });
@@ -290,7 +295,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       acquisitionDate: redevAptHoldingStartDate(primary),
       transferDate: form.transferDate,
     }))
-      issues.push({ step, assetIndex: 0, message });
+      issues.push({ step, message });
   }
   // I-8 — 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없다. 준공일~양도일보다 긴 값만
   //       막는다(⑤가 이 입력을 보이는 조건과 같다 · ⑫ `refinePrimaryAcquisitionInputs` 같은 leaf).
@@ -302,8 +307,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     if (max !== null)
       issues.push({
         step,
-        assetIndex: 0,
-        message: successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate),
+        message: fieldError("residencePeriodMonthsAsset", successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate)),
       });
   }
   return issues;

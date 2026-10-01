@@ -79,6 +79,7 @@ export function ResidenceHistorySection({
               <DateInput
                 value={h.startDate}
                 onChange={(v) => updateHistory(i, { startDate: v })}
+                data-field={`nblResidenceHistories.${i}.startDate`}
               />
             </div>
             <div className="space-y-1">
@@ -86,6 +87,7 @@ export function ResidenceHistorySection({
               <DateInput
                 value={h.endDate}
                 onChange={(v) => updateHistory(i, { endDate: v })}
+                data-field={`nblResidenceHistories.${i}.endDate`}
               />
             </div>
           </div>

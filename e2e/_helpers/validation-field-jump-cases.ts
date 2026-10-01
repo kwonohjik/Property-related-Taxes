@@ -89,8 +89,8 @@ export interface FieldJumpCase {
   field: string;
   /** 테스트 이름 — 같은 키를 여러 분기에서 볼 때 구분한다(없으면 field) */
   name?: string;
-  /** 검증 단계 0~3 */
-  step: 0 | 1 | 3;
+  /** 검증 단계 0~3 (2 = 「감면·공제」) */
+  step: 0 | 1 | 2 | 3;
   /** 오류 목록에서 누를 항목 (메시지 앞부분) */
   message: RegExp;
   /** 자산 수준이면 그 카드 */

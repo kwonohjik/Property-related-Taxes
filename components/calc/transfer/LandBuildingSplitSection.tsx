@@ -147,6 +147,7 @@ function PartAcqStdPrice(props: {
         )}
         <LandPriceLookupField
           label="취득시 토지 공시지가"
+          data-field="standardPricePerSqmAtAcq"
           pricePerSqm={asset.standardPricePerSqmAtAcq}
           onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
           area={parseDecimal(asset.acquisitionArea) || undefined}
@@ -155,7 +156,7 @@ function PartAcqStdPrice(props: {
           hint="토지 취득일 직전 고시 개별공시지가 (원/㎡) — 건물 취득일이 아니다 (소득령 §164③)"
           landStdPriceTestId="split-land-std-acq-total"
         />
-        <FieldCard label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
+        <FieldCard field="acquisitionArea" label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
           <DecimalInput
             value={asset.acquisitionArea}
             onChange={(v) => onChange({ acquisitionArea: v })}
@@ -175,6 +176,7 @@ function PartAcqStdPrice(props: {
       <div className={both ? "grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" : undefined}>
         <div data-testid="split-building-std-acq-card">
           <FieldCard
+            field="buildingStandardPriceAtAcq"
             label="취득시 건물기준시가"
             unit="원"
             hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액에서 역산하면 건물분에 토지 취득시점이 섞인다."
@@ -191,6 +193,7 @@ function PartAcqStdPrice(props: {
         {both && (
           <div data-testid="split-building-std-transfer-card">
             <FieldCard
+              field="buildingStandardPriceAtTransfer"
               label="양도시 건물 기준시가"
               unit="원"
               hint="환산취득가 분모 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
@@ -262,6 +265,7 @@ function PartAcqInputs(props: {
     const isApr = props.mode === "appraisal";
     return (
       <FieldCard
+        field={props.part === "land" ? "landAcquisitionPrice" : "buildingAcquisitionPrice"}
         label={`${label} ${isApr ? "감정가액" : "취득가액"}`}
         hint={
           props.isSeparateAcq
@@ -285,6 +289,7 @@ function PartAcqInputs(props: {
   if (props.mode === "salesCase") {
     return (
       <FieldCard
+        field={props.part === "land" ? "landSalesCaseValue" : "buildingSalesCaseValue"}
         label={`${label} 매매사례가액`}
         hint={
           props.isSeparateAcq
@@ -533,12 +538,12 @@ export function LandBuildingSplitSection(props: Props) {
                 필요하다(그래서 위 ①'가 남는다). */}
       <div className="grid grid-cols-2 gap-2">
         {landOwned && (
-          <FieldCard label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
+          <FieldCard field="landDirectExpenses" label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
             <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
           </FieldCard>
         )}
         {buildingOwned && (
-          <FieldCard label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
+          <FieldCard field="buildingDirectExpenses" label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
             <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
           </FieldCard>
         )}

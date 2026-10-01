@@ -69,6 +69,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       <ToneCard tone="violet" sectionNum={num(0)} title="등록·신분" noDark>
 
         <RegistrationFields
+          fieldType={value.type}
           registrationDate={value.registrationDate}
           isTaxRegistered={value.isTaxRegistered}
           rentalStartDate={value.rentalStartDate}
@@ -81,6 +82,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
           <label className="mb-1 block text-xs font-medium">신축 연도</label>
           <div className="flex items-center gap-2">
             <DecimalInput
+              data-field={`reduction.${value.type}.constructionYear`}
               className="w-24"
               value={value.constructionYear}
               onChange={(v) => onChange({ constructionYear: v })}
@@ -107,6 +109,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {isProviso && (
         <ToneCard tone="amber" sectionNum={num(1)} title="단서 분기 — 100% 감면 요건" noDark>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.provisoCase`}
             name="provisoCase_97"
             tone="amber"
             value={value.provisoCase ?? ""}
@@ -144,6 +147,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             <div>
               <p className="mb-1.5 text-xs text-muted-foreground">공동주택 여부</p>
               <RadioCardGroup
+                data-field={`reduction.${value.type}.isMultiUnitHousing`}
                 name="isMultiUnitHousing"
                 layout="inline"
                 tone="amber"
@@ -160,6 +164,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             <div>
               <p className="mb-1.5 text-xs text-muted-foreground">1986.1.1 현재 입주 사실</p>
               <RadioCardGroup
+                data-field={`reduction.${value.type}.isUnoccupiedAt1986`}
                 name="isUnoccupiedAt1986"
                 layout="inline"
                 tone="amber"
@@ -187,6 +192,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             해당한다</strong>」.
           </p>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.isUnoccupiedAtAcquisition`}
             name="isUnoccupiedAtAcquisition_97"
             layout="inline"
             tone="rose"
@@ -224,6 +230,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             거주자를 말한다. 공동소유는 호수에 지분비율을 곱해 산정한다.
           </p>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.hasMin5RentalUnits`}
             name="hasMin5RentalUnits"
             layout="inline"
             tone="sky"
@@ -244,7 +251,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         </div>
 
         {value.hasMin5RentalUnits === true && (
-          <div className="mt-2 space-y-2 border-t border-sky-200 pt-2">
+          <div className="mt-2 space-y-2 border-t border-sky-200 pt-2" data-field={`reduction.${value.type}.belowMin5UnitsPeriods`}>
             <p className="text-xs font-medium text-sky-800">5호 미만으로 임대한 기간</p>
             <p className="text-micro text-muted-foreground">
               조특령 §97⑤4호 — 5호 미만의 주택을 임대한 기간은 주택임대기간으로 보지 않는다.
@@ -283,6 +290,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* 공통 필드 */}
       <RentalCommonFields
+        fieldType={value.type}
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}

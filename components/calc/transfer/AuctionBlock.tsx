@@ -64,6 +64,7 @@ export function AuctionBlock({
       onCheckedChange={(v) => onChange({ isAuctionTransfer: v })}
     >
       <FieldCard
+        field="auctionPrice"
         label="공매·경락가액"
         unit="원"
         hint="공매 또는 경락(낙찰) 총액 (원). 양도당시 기준시가보다 낮을 때만 특례가 적용됩니다."

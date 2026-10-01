@@ -1,3 +1,12 @@
+/*
+ * 🔑 field(입력칸 이동) 부착 범위 — Phase 4
+ *
+ * 계산기의 장기임대 특례 카드는 `mode="calc"`라 **시나리오·임대주택 호별 정보(① 18필드)를 읽기 전용으로 보여주고**
+ * 「고치려면 판정 메뉴로 돌아가세요」라고 안내한다(`RentalHousingExceptionSection`). 그 값에 대한 오류
+ * (임대주택 0호 · 사업자등록일 · 등록유형·면적·기준시가 · 말소일 · 기타 요건 자기확인 · 이력 선택)는 계산기 화면에
+ * 입력칸이 없으므로 field를 달지 않는다 — 카드로 후퇴하면 그 카드가 이 안내를 보여준다.
+ * 계산기에서 고칠 수 있는 칸(② §161① 안분 · ③ 거주기간·등록 이후 거주기간 · §154⑩ 사실 · 취득일)만 단다.
+ */
 /**
  * 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳)
  *
@@ -16,6 +25,7 @@ import {
   deriveRentalArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
+import { fieldError } from "./transfer-tax-validate-field";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -75,7 +85,7 @@ export function validateRentalHousingException(
     // §154⑩ 표준 경로(I-5) — 1호(등록·운영 사실)만 여기서 확인. 2호(PHRP)는 아래 B 전용 블록
     // (§161 안분 입력과 같은 자리)에서, 보유·거주는 더 아래(OH-15 자리·거주기간 편집기)에서 판정한다.
     if (!rh.wasRegisteredRentalOrChildcare) {
-      return `${label}: 장기임대주택 특례(§154⑩) — 이 주택이 임대주택으로 등록되거나 어린이집으로 설치·운영된 사실이 있는지 확인하세요.`;
+      return fieldError("rentalHousingException.wasRegisteredRentalOrChildcare", `${label}: 장기임대주택 특례(§154⑩) — 이 주택이 임대주택으로 등록되거나 어린이집으로 설치·운영된 사실이 있는지 확인하세요.`);
     }
   }
 
@@ -208,7 +218,7 @@ export function validateRentalHousingException(
   // B 시나리오 추가 검증 — §161① 안분 입력. 판정에는 쓰이지 않으므로 facts 모드에서는 묻지 않는다.
   if (rh.scenario === 'B' && mode === "full") {
     if (!rh.priorResidenceTransferDate) {
-      return `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`;
+      return fieldError("rentalHousingException.priorResidenceTransferDate", `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`);
     }
     // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 — API 변환(④)·UI(⑤)와 동일 ternary (3중 패턴)
     const linked = isPhrpStdPriceLinked(asset);
@@ -221,28 +231,28 @@ export function validateRentalHousingException(
       : parseAmount(rh.standardPriceAtTransferForPhrp ?? "");
 
     if (pAcq <= 0) {
-      return linked
+      return fieldError(linked ? "standardPriceAtAcq" : "rentalHousingException.standardPriceAtAcquisitionForPhrp", linked
         ? `${label}: 임대→거주 전환 주택 시나리오 — 취득 정보의 환산 취득시 기준시가를 입력하세요 (§161① 안분에 연동됩니다).`
-        : `${label}: 임대→거주 전환 주택 시나리오 — 취득 당시 기준시가를 입력하세요.`;
+        : `${label}: 임대→거주 전환 주택 시나리오 — 취득 당시 기준시가를 입력하세요.`);
     }
-    if (pPrior <= 0) return `${label}: 임대→거주 전환 주택 시나리오 — 직전거주주택 양도 당시 기준시가를 입력하세요.`;
+    if (pPrior <= 0) return fieldError("rentalHousingException.standardPriceAtPriorTransfer", `${label}: 임대→거주 전환 주택 시나리오 — 직전거주주택 양도 당시 기준시가를 입력하세요.`);
     if (pTransfer <= 0) {
-      return linked
+      return fieldError(linked ? "standardPriceAtTransfer" : "rentalHousingException.standardPriceAtTransferForPhrp", linked
         ? `${label}: 임대→거주 전환 주택 시나리오 — 취득 정보의 환산 양도시 기준시가를 입력하세요 (§161① 안분에 연동됩니다).`
-        : `${label}: 임대→거주 전환 주택 시나리오 — 현 양도 당시 기준시가를 입력하세요.`;
+        : `${label}: 임대→거주 전환 주택 시나리오 — 현 양도 당시 기준시가를 입력하세요.`);
     }
 
     // 시점 일관성 확인 (경고 수준 — 실무 이례 케이스 차단하지 않고 경고만)
     if (pPrior < pAcq) {
-      return `${label}: PHRP 시나리오 — 직전 양도 당시 기준시가(${pPrior.toLocaleString()})가 취득 당시(${pAcq.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`;
+      return fieldError("rentalHousingException.standardPriceAtPriorTransfer", `${label}: PHRP 시나리오 — 직전 양도 당시 기준시가(${pPrior.toLocaleString()})가 취득 당시(${pAcq.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`);
     }
     if (pTransfer < pPrior) {
-      return `${label}: PHRP 시나리오 — 현 양도 당시 기준시가(${pTransfer.toLocaleString()})가 직전 양도 당시(${pPrior.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`;
+      return fieldError(linked ? "standardPriceAtTransfer" : "rentalHousingException.standardPriceAtTransferForPhrp", `${label}: PHRP 시나리오 — 현 양도 당시 기준시가(${pTransfer.toLocaleString()})가 직전 양도 당시(${pPrior.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`);
     }
 
     // 분모 0 방지
     if (pTransfer === pAcq) {
-      return `${label}: PHRP 시나리오 — 취득 당시와 현 양도 당시 기준시가가 동일하여 §161① 비율을 계산할 수 없습니다.`;
+      return fieldError(linked ? "standardPriceAtTransfer" : "rentalHousingException.standardPriceAtTransferForPhrp", `${label}: PHRP 시나리오 — 취득 당시와 현 양도 당시 기준시가가 동일하여 §161① 비율을 계산할 수 없습니다.`);
     }
   }
 
@@ -265,7 +275,7 @@ export function validateRentalHousingException(
    */
   const needsPostReg = rh.scenario === "B" && (rh.rentalUnits.length > 0 || !preRegime154_10);
   if (needsPostReg && (rh.postRegistrationResidenceMonths ?? "") === "") {
-    return `${label}: 임대→거주 전환 주택 시나리오 — 사업자등록·임대사업자 등록 이후 거주기간(개월)을 입력하세요 (소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`;
+    return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 임대→거주 전환 주택 시나리오 — 사업자등록·임대사업자 등록 이후 거주기간(개월)을 입력하세요 (소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
   }
 
   // 거주주택 취득일 검증 (자산-수준)
@@ -286,7 +296,7 @@ export function validateRentalHousingException(
   if (mode === "facts") return null;
 
   if (!asset.acquisitionDate) {
-    return `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`;
+    return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`);
   }
 
   // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
@@ -296,19 +306,19 @@ export function validateRentalHousingException(
   if (isStandalone154_10 && preRegime154_10) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
     if (wasRegulatedAtAcquisition && (!liveMonthsVal || liveMonthsVal < 24) && !winWinResidenceExempt) {
-      return `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${liveMonthsVal || 0}개월)`;
+      return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${liveMonthsVal || 0}개월)`);
     }
   } else if (rh.scenario === "B") {
     // OH-15 — 등록 이후 거주기간은 전체 거주기간의 일부다. 더 길면 두 입력 중 하나가 틀렸다.
     const postReg = parseInt(rh.postRegistrationResidenceMonths ?? "", 10) || 0;
     if (postReg > (liveMonthsVal || 0)) {
-      return `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${postReg}개월)이 전체 거주기간(${liveMonthsVal || 0}개월)보다 깁니다. 확인 후 재입력하세요.`;
+      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${postReg}개월)이 전체 거주기간(${liveMonthsVal || 0}개월)보다 깁니다. 확인 후 재입력하세요.`);
     }
     if (postReg < 24 && !winWinResidenceExempt) {
-      return `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`;
+      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
     }
   } else if ((!liveMonthsVal || liveMonthsVal < 24) && !winWinResidenceExempt) {
-    return `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`;
+    return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`);
   }
 
   // 보유기간 24개월 검증 (취득일 ~ 양도일) — §154⑩ 표준 경로도 포함(재기산하지 않는다,
@@ -319,7 +329,7 @@ export function validateRentalHousingException(
     if (Number.isFinite(acqMs) && Number.isFinite(trnMs)) {
       const days = Math.floor((trnMs - acqMs) / (1000 * 60 * 60 * 24));
       if (days < 730) {
-        return `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년(730일) 이상이 필요합니다. (취득일~양도일: ${days}일)`;
+        return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년(730일) 이상이 필요합니다. (취득일~양도일: ${days}일)`);
       }
     }
   }

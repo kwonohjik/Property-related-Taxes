@@ -176,6 +176,7 @@ export function Pre1990LandValuationInput({
     <ToggleCard
       tone="amber"
       title="1990.8.30. 이전 취득 토지 기준시가 환산"
+      data-field="pre1990Enabled"
       checked={form.pre1990Enabled}
       onCheckedChange={(v) => onChange({ pre1990Enabled: v })}
     >

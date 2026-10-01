@@ -98,19 +98,19 @@ export function Unsold983InputForm({
           <>
             <div>
               <label className="mb-1 block text-xs font-medium">착공일</label>
-              <DateInput value={value.constructionStartDate983} onChange={(v) => onChange({ constructionStartDate983: v })} />
+              <DateInput data-field="reduction.unsold_98_3.constructionStartDate983" value={value.constructionStartDate983} onChange={(v) => onChange({ constructionStartDate983: v })} />
               <p className="mt-1 text-micro text-muted-foreground">착공일이 불분명하면 착공신고서 제출일 (법 §98의3②)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
-              <DateInput value={value.usageApprovalDate983} onChange={(v) => onChange({ usageApprovalDate983: v })} />
+              <DateInput data-field="reduction.unsold_98_3.usageApprovalDate983" value={value.usageApprovalDate983} onChange={(v) => onChange({ usageApprovalDate983: v })} />
               <p className="mt-1 text-micro text-muted-foreground">착공일과 사용승인일 모두 2009.2.12~2010.2.11 기간 내</p>
             </div>
           </>
         ) : (
           <div>
             <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
-            <DateInput value={value.contractDate983} onChange={(v) => onChange({ contractDate983: v })} />
+            <DateInput data-field="reduction.unsold_98_3.contractDate983" value={value.contractDate983} onChange={(v) => onChange({ contractDate983: v })} />
             <p className="mt-1 text-micro text-muted-foreground">
               2010.2.11까지 매매계약 체결 + 계약금 납부한 경우 포함 (법 §98의3①)
             </p>
@@ -141,11 +141,11 @@ export function Unsold983InputForm({
             <div className="space-y-2">
               <div>
                 <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
-                <DecimalInput value={value.landAreaSqm983} onChange={(v) => onChange({ landAreaSqm983: v })} />
+                <DecimalInput data-field="reduction.unsold_98_3.landAreaSqm983" value={value.landAreaSqm983} onChange={(v) => onChange({ landAreaSqm983: v })} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
-                <DecimalInput value={value.floorAreaSqm983} onChange={(v) => onChange({ floorAreaSqm983: v })} />
+                <DecimalInput data-field="reduction.unsold_98_3.floorAreaSqm983" value={value.floorAreaSqm983} onChange={(v) => onChange({ floorAreaSqm983: v })} />
               </div>
             </div>
           )}
@@ -235,6 +235,7 @@ export function Unsold983InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold983"
+          fieldType="unsold_98_3"
           snapshotKeyPrefix="red983"
         />
       </SectionShell>

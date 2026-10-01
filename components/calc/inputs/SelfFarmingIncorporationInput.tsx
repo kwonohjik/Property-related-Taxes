@@ -161,6 +161,7 @@ export function SelfFarmingIncorporationInput({
           <div className="space-y-1.5">
             <Label className="text-sm">양도일 현재 농지 소재지 (조특령 §66④1호)</Label>
             <select
+              data-field="reduction.self_farming.selfFarmingIncorporationLocation"
               value={selfFarmingIncorporationLocation}
               onChange={(e) =>
                 onChange({
@@ -207,6 +208,7 @@ export function SelfFarmingIncorporationInput({
             </label>
             <StandardPriceInput
               propertyKind="land"
+              data-field="reduction.self_farming.selfFarmingStandardPriceAtIncorporation"
               totalPrice={selfFarmingStandardPriceAtIncorporation}
               onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtIncorporation: v })}
               area={landAreaM2}
@@ -247,6 +249,7 @@ export function SelfFarmingIncorporationInput({
               ) : (
                 <StandardPriceInput
                   propertyKind="land"
+                  data-field="reduction.self_farming.selfFarmingStandardPriceAtAcquisition"
                   totalPrice={selfFarmingStandardPriceAtAcquisition}
                   onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtAcquisition: v })}
                   area={landAreaM2}
@@ -263,6 +266,7 @@ export function SelfFarmingIncorporationInput({
               <label className="block text-sm font-medium">양도시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
               <StandardPriceInput
                 propertyKind="land"
+                data-field="reduction.self_farming.selfFarmingStandardPriceAtTransfer"
                 totalPrice={selfFarmingStandardPriceAtTransfer}
                 onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtTransfer: v })}
                 area={landAreaM2}

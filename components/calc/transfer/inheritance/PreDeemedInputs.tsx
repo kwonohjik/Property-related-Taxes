@@ -234,6 +234,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ① 의제취득일(1985.1.1.) 시점 기준시가 */}
       <div className="space-y-1">
         <FieldCard
+          field="standardPriceAtAcq"
           label={showHouseValuation ? "의제취득일(1985.1.1.) 시점 합계 기준시가" : "의제취득일(1985.1.1.) 시점 기준시가"}
           hint={
             stdPriceAtAcqAutoActive
@@ -314,6 +315,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ② 양도시 기준시가 */}
       <div className="space-y-1">
         <FieldCard
+          field="standardPriceAtTransfer"
           label="양도시 기준시가"
           unit="원"
           hint={

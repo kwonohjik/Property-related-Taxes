@@ -255,6 +255,7 @@ export function ExpropriationBlock({
 
             <CurrencyInput
               label="② 보상가액"
+              data-field="compensationPerSqm"
               value={asset.compensationPerSqm}
               onChange={(v) => onChange({ compensationPerSqm: v })}
               hideUnit
@@ -262,6 +263,7 @@ export function ExpropriationBlock({
             />
             <CurrencyInput
               label="③ 보상산정 기초 기준시가"
+              data-field="compensationBasisStdPrice"
               value={asset.compensationBasisStdPrice}
               onChange={(v) => onChange({ compensationBasisStdPrice: v })}
               hideUnit
@@ -291,12 +293,14 @@ export function ExpropriationBlock({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
             <CurrencyInput
               label="② 보상액 총액"
+              data-field="housingCompensationTotal"
               value={asset.housingCompensationTotal}
               onChange={(v) => onChange({ housingCompensationTotal: v })}
               hideUnit
             />
             <CurrencyInput
               label="③ 보상산정 기초 기준시가 총액"
+              data-field="housingCompensationBasisTotal"
               value={asset.housingCompensationBasisTotal}
               onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
               hideUnit
@@ -329,12 +333,14 @@ export function ExpropriationBlock({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
             <CurrencyInput
               label="② 토지분 보상액 총액"
+              data-field="splitLandCompensationTotal"
               value={asset.splitLandCompensationTotal}
               onChange={(v) => onChange({ splitLandCompensationTotal: v })}
               hideUnit
             />
             <CurrencyInput
               label="③ 토지분 보상산정 기초 기준시가 총액"
+              data-field="splitLandCompensationBasisTotal"
               value={asset.splitLandCompensationBasisTotal}
               onChange={(v) => onChange({ splitLandCompensationBasisTotal: v })}
               hideUnit
@@ -359,12 +365,14 @@ export function ExpropriationBlock({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
               <CurrencyInput
                 label="② 주택분 보상액 총액"
+                data-field="housingCompensationTotal"
                 value={asset.housingCompensationTotal}
                 onChange={(v) => onChange({ housingCompensationTotal: v })}
                 hideUnit
               />
               <CurrencyInput
                 label="③ 주택분 보상산정 기초 기준시가 총액"
+                data-field="housingCompensationBasisTotal"
                 value={asset.housingCompensationBasisTotal}
                 onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
                 hideUnit
@@ -376,12 +384,14 @@ export function ExpropriationBlock({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
               <CurrencyInput
                 label="② 상가분 토지 보상액 총액"
+                data-field="mixedCommercialLandCompensationTotal"
                 value={asset.mixedCommercialLandCompensationTotal}
                 onChange={(v) => onChange({ mixedCommercialLandCompensationTotal: v })}
                 hideUnit
               />
               <CurrencyInput
                 label="③ 상가분 토지 보상산정 기초 개별공시지가 총액"
+                data-field="mixedCommercialLandCompensationBasisTotal"
                 value={asset.mixedCommercialLandCompensationBasisTotal}
                 onChange={(v) => onChange({ mixedCommercialLandCompensationBasisTotal: v })}
                 hideUnit

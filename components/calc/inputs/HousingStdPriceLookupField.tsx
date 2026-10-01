@@ -45,6 +45,8 @@ export interface HousingStdPriceLookupFieldProps {
   onExclusiveArea?: (areaSqm: number) => void;
   /** E2E 셀렉터 prefix */
   testidPrefix: string;
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 루트에 단다. 검증의 `ValidationIssue.field`와 같은 값 */
+  "data-field"?: string;
 }
 
 export function HousingStdPriceLookupField({
@@ -59,6 +61,7 @@ export function HousingStdPriceLookupField({
   hint,
   onExclusiveArea,
   testidPrefix,
+  "data-field": dataField,
 }: HousingStdPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
   const [isManual, setIsManual] = useState(false);
@@ -133,7 +136,7 @@ export function HousingStdPriceLookupField({
   ) : null;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" data-field={dataField}>
       {/* 묶음 라벨 — 두 필드(공시가격 연도 + 기준시가) 공통 헤더 */}
       <div className="flex items-start gap-1 text-sm font-medium">
         {required && (

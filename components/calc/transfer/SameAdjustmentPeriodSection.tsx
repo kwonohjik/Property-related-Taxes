@@ -273,6 +273,7 @@ export function SameAdjustmentPeriodSection({
       {formula === "prev" && priorBasis === "first_notice_rate" && (
         <>
           <FieldCard
+            field="sapFirstNoticeStdPrice"
             label="국세청장이 최초로 고시한 기준시가"
             required
             hint="시행규칙 §80③2호 — 전기의 기준시가가 없는 건물의 대체 기준"
@@ -285,6 +286,7 @@ export function SameAdjustmentPeriodSection({
             />
           </FieldCard>
           <FieldCard
+            field="sapNoticeBaseRate"
             label="고시 기준율"
             required
             unit="%"
@@ -303,6 +305,7 @@ export function SameAdjustmentPeriodSection({
       {formula === "prev" && priorBasis === "ratio_conversion" && (
         <>
           <FieldCard
+            field="sapPriorLandBuildingSum"
             label="전기의 토지·건물 기준시가 합계액"
             required
           >
@@ -314,6 +317,7 @@ export function SameAdjustmentPeriodSection({
             />
           </FieldCard>
           <FieldCard
+            field="sapAcqLandBuildingSum"
             label="취득당시의 토지·건물 기준시가 합계액"
             required
             hint="시행규칙 §80③3호 — 취득당시 기준시가는 위 취득 정보에서 가져온다."
@@ -330,6 +334,7 @@ export function SameAdjustmentPeriodSection({
 
       {formula === "prev" ? (
         <FieldCard
+          field="sapPriorStdPrice"
           label="전기의 기준시가"
           required
           hint={
@@ -368,6 +373,7 @@ export function SameAdjustmentPeriodSection({
         </FieldCard>
       ) : (
         <FieldCard
+          field="sapNewStdPrice"
           label="새로운 기준시가"
           required
           hint="양도일 후 2월이 되는 날이 속하는 월의 말일까지 고시된 기준시가"
@@ -382,6 +388,7 @@ export function SameAdjustmentPeriodSection({
       )}
 
       <FieldCard
+        field="sapAdjustMonths"
         label="기준시가 조정월수"
         unit="개월"
         hint={

@@ -19,6 +19,30 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { isRowReduction } from "./house-count-exclusion-rows";
+import { fieldError, type IssueField } from "./transfer-tax-validate-field";
+
+/**
+ * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
+ * 화면은 한 칸씩 채우므로 **비어 있는 첫 칸**으로 보낸다. 앵커는 `ReductionPhdInput`이 조문 타입별로 단다.
+ * (건물 칸은 취득시 건물 기준시가가 있을 때만 최초공시시 값을 요구한다 — `phd-helper.ts:189`)
+ */
+function phdField(
+  type: string,
+  i: {
+    firstDisclosurePrice: number;
+    landAreaSqm: number;
+    landPricePerSqmAtAcquisition: number;
+    landPricePerSqmAtFirstDisclosure: number;
+  },
+): IssueField {
+  const prop =
+    !(i.firstDisclosurePrice > 0) ? "phdFirstDisclosurePrice"
+    : !(i.landAreaSqm > 0) ? "phdLandAreaSqm"
+    : !(i.landPricePerSqmAtAcquisition > 0) ? "phdLandPricePerSqmAtAcq"
+    : !(i.landPricePerSqmAtFirstDisclosure > 0) ? "phdLandPricePerSqmAtFirst"
+    : "phdBuildingStdAtFirst";
+  return `reduction.${type}.${prop}`;
+}
 
 /**
  * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7) 공용 — 취득 후 5년 경과 양도 시 5년 발생분
@@ -37,14 +61,16 @@ function failIfStdPriceMissingOver5Y(
   std5Y: string | undefined,
   articleLabel: string,
   /** PHD 환산 ON — 취득시 기준시가는 §164⑤ 환산으로 충족되므로 취득시 검증 skip(5년 시점만 검증) */
-  phdSatisfiesAcq?: boolean,
+  phdSatisfiesAcq: boolean | undefined,
+  /** 입력칸 이동 앵커의 조문 타입 — `ReductionStdPriceSection`이 `reduction.${fieldType}.standardPriceAt…`로 단다 */
+  fieldType: string,
 ): ValidationIssue | null {
   if (!asset.acquisitionDate || !form.transferDate) return null;
   if (isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))) return null;
   if (!phdSatisfiesAcq && parseAmount(stdAcq || "0") <= 0)
-    return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`);
+    return fail(fieldError(`reduction.${fieldType}.standardPriceAtAcquisition`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`));
   if (parseAmount(std5Y || "0") <= 0)
-    return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.`);
+    return fail(fieldError(`reduction.${fieldType}.standardPriceAt5Years`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.`));
   return null;
 }
 
@@ -120,30 +146,29 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "public_expropriation") {
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");
-          if (cash + bond <= 0) return fail("현금 또는 채권 보상액 중 최소 하나를 입력하세요.");
+          if (cash + bond <= 0) return fail(fieldError("reduction.public_expropriation.expropriationCash", "현금 또는 채권 보상액 중 최소 하나를 입력하세요."));
           // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지
           const approvalDate = r.expropriationApprovalDate || asset.expropriationNoticeDate;
-          if (!approvalDate) return fail("사업인정고시일을 선택하세요.");
+          if (!approvalDate) return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일을 선택하세요."));
           if (form.transferDate && approvalDate >= form.transferDate)
-            return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
+            return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일은 양도일보다 이전이어야 합니다."));
         }
         if (r.type === "gb_designated_land") {
           // ① 매수 경로 — §17(매수대상토지)과 §20(토지등)은 대상 범위가 달라 사용자 사실 입력이 필요하다.
           if (r.gbBranch === "in_zone") {
             if (!r.gbPurchaseRoute)
-              return fail("개발제한구역 매수 경로(매수청구 §17 / 협의매수 §20)를 선택하세요.");
+              return fail(fieldError("reduction.gb_designated_land.gbPurchaseRoute", "개발제한구역 매수 경로(매수청구 §17 / 협의매수 §20)를 선택하세요."));
             if (r.gbPurchaseRoute === "claim" && !isGbClaimRouteAllowedForAssetKind(asset.assetKind))
-              return fail(
-                "토지매수 청구(개발제한구역법 §17)는 「매수대상토지」에 대한 제도라 토지분만 감면 대상입니다. 협의매수(§20)를 선택했는지 확인하거나 토지 자산으로 입력하세요.",
-              );
+              return fail(fieldError("reduction.gb_designated_land.gbPurchaseRoute", "토지매수 청구(개발제한구역법 §17)는 「매수대상토지」에 대한 제도라 토지분만 감면 대상입니다. 협의매수(§20)를 선택했는지 확인하거나 토지 자산으로 입력하세요.",
+              ));
           }
-          if (!r.gbDesignationDate) return fail("개발제한구역 지정일을 선택하세요.");
-          if (!r.gbTriggerDate) return fail(r.gbBranch === "released" ? "사업인정고시일을 선택하세요." : "매수청구·협의매수일을 선택하세요.");
-          if (r.gbBranch === "released" && !r.gbReleasedDate) return fail("개발제한구역 해제일을 선택하세요.");
+          if (!r.gbDesignationDate) return fail(fieldError("reduction.gb_designated_land.gbDesignationDate", "개발제한구역 지정일을 선택하세요."));
+          if (!r.gbTriggerDate) return fail(fieldError("reduction.gb_designated_land.gbTriggerDate", r.gbBranch === "released" ? "사업인정고시일을 선택하세요." : "매수청구·협의매수일을 선택하세요."));
+          if (r.gbBranch === "released" && !r.gbReleasedDate) return fail(fieldError("reduction.gb_designated_land.gbReleasedDate", "개발제한구역 해제일을 선택하세요."));
         }
         if (r.type === "replacement_land_comp") {
           if (parseAmount(r.rlLandComp || "0") <= 0)
-            return fail("대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상).");
+            return fail(fieldError("reduction.replacement_land_comp.rlLandComp", "대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상)."));
         }
         if (r.type === "self_farming") {
           // 조특령 §66⑪·⑫ — 피상속인 경작기간을 합산하려면 「1년 이상 계속 경작」 또는
@@ -155,9 +180,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             r.heirContinuedFarming1Year !== true &&
             r.meetsDecedentAggregationAlt !== true
           ) {
-            return fail(
-              "자경농지: 피상속인 경작기간을 합산하려면 「상속받은 농지를 1년 이상 계속 경작」(조특령 §66⑪) 또는 §66⑫ 대체요건 중 하나를 확인하세요.",
-            );
+            return fail(fieldError("reduction.self_farming.heirContinuedFarming1Year", "자경농지: 피상속인 경작기간을 합산하려면 「상속받은 농지를 1년 이상 계속 경작」(조특령 §66⑪) 또는 §66⑫ 대체요건 중 하나를 확인하세요.",
+            ));
           }
           // 조특령 §66④1호 3년 배제의 **소재지 요건** — 편입 후 3년이 지난 경우에만 필요하다 (D7-07).
           // 3년 이내면 소재지와 무관하게 배제가 성립하지 않으므로 묻지 않는다(엔진 게이트와 동일 조건).
@@ -168,9 +192,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             new Date(form.transferDate) > addYears(new Date(r.selfFarmingIncorporationDate), 3) &&
             !r.selfFarmingIncorporationLocation
           ) {
-            return fail(
-              "자경농지 편입: 양도일 현재 농지 소재지 구분(특별시·광역시(군 제외)·시 / 그 밖의 지역)을 선택하세요 (조특령 §66④1호).",
-            );
+            return fail(fieldError("reduction.self_farming.selfFarmingIncorporationLocation", "자경농지 편입: 양도일 현재 농지 소재지 구분(특별시·광역시(군 제외)·시 / 그 밖의 지역)을 선택하세요 (조특령 §66④1호).",
+            ));
           }
           // 편입 부분감면(영 §66⑦) 기준시가 3점 필수 — 엔진 silent-0 정확 미러.
           // 발동 조건: 편입 ON + 편입일≥2002-01-01 + 양도일≤편입일+3년(유예 내). 그 외는 엔진이
@@ -188,9 +211,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 parseAmount(r.selfFarmingStandardPriceAtTransfer || "") > 0 ||
                 parseAmount(asset.standardPriceAtTransfer || "") > 0;
               if (!hasAcq || !hasIncorp || !hasTransfer)
-                return fail(
-                  "편입일 부분감면(조특령 §66⑦): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
-                );
+                return fail(fieldError(!hasAcq ? "reduction.self_farming.selfFarmingStandardPriceAtAcquisition" : !hasIncorp ? "reduction.self_farming.selfFarmingStandardPriceAtIncorporation" : "reduction.self_farming.selfFarmingStandardPriceAtTransfer", "편입일 부분감면(조특령 §66⑦): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
+                ));
             }
           }
         }
@@ -203,10 +225,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 기본값 from_builder)와 같은 술어 — 2호(self_built)가 아니면 1호다. 화면(`New993InputForm`)도 미선택을
           // 「1호」로 표시하고, 1호 매매계약일은 자산-수준 칸이라 항상 열려 있다(막다른 길 아님).
           if (r.acquisitionType993 === "self_built") {
-            if (!r.usageApprovalDate993) return fail("§99의3 2호 적용: 사용승인일을 선택하세요.");
+            if (!r.usageApprovalDate993) return fail(fieldError("reduction.new_99_3.usageApprovalDate993", "§99의3 2호 적용: 사용승인일을 선택하세요."));
           } else {
             const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
-            if (!hasContractDate) return fail("§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요.");
+            if (!hasContractDate) return fail(fieldError("assetContractDate", "§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요."));
           }
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary와 동일 소스).
           // 상단 수동 필드는 PHD ON 시 숨겨지므로 빈 값 — canCalcReductionPhd로 대체 검증(UI/API/validate 3중 미러).
@@ -220,17 +242,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst993 || "0"),
             };
             if (!canCalcReductionPhd(phdInput)) {
-              return fail("§99의3 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§99의3 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             }
           } else if (parseAmount(r.standardPriceAtAcquisition993 || "0") <= 0) {
-            return fail("§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
+            return fail(fieldError("reduction.new_99_3.standardPriceAtAcquisition", "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)"));
           }
           // 전용면적 필수 — 2002.12.31 이전 취득 고가주택(165/149㎡ AND 6억) 판정. §99/§98의8/§99의2와 동일 패턴.
           if (!(parseDecimal(r.exclusiveAreaSqm993 || "") > 0))
-            return fail("§99의3 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정).");
+            return fail(fieldError("reduction.new_99_3.exclusiveAreaSqm993", "§99의3 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정)."));
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
-            return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");
+            return fail(fieldError("reduction.new_99_3.standardPriceAt5Years", "§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)"));
           }
           // 양도시 기준시가 — 5년 **후** 양도만 필수 (조특령 §99의3②2호 안분의 분모).
           //
@@ -247,9 +269,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           //    `MISSING_STD_PRICE`로 명시 차단한다 — 조용한 오계산이 아니라 분명한 오류다.
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (§99 선례 — 자동 안분 fallback 금지)
           if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
-            return fail(
-              "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
-            );
+            return fail(fieldError("reduction.new_99_3.previousHouseStdPrice993", "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
+            ));
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
             parseAmount(asset.standardPriceAtTransfer || "0") > 0;
@@ -267,11 +288,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               !!form.transferDate &&
               !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)));
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
-            return fail(
-              r.isRedevelopedNewHouse993
+            return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
                 ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
                 : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
-            );
+            ));
           }
         }
         // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 미선택 차단 (자동 안분 fallback 금지)
@@ -288,22 +308,22 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             rental_97_main: "§97 본문", rental_97_proviso: "§97 단서", rental_97_2: "§97의2",
           };
           const label = articleLabel[r.type];
-          if (!r.rentalStartDate) return fail(`${label} 적용: 임대개시일을 입력하세요.`);
+          if (!r.rentalStartDate) return fail(fieldError(`reduction.${r.type}.rentalStartDate`, `${label} 적용: 임대개시일을 입력하세요.`));
           if ((r.type === "rental_97_3" || r.type === "rental_97_4" || r.type === "rental_97_5") && !r.registrationDate)
-            return fail(`${label} 적용: 임대사업자 등록일을 입력하세요.`);
+            return fail(fieldError(`reduction.${r.type}.registrationDate`, `${label} 적용: 임대사업자 등록일을 입력하세요.`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           if (r.rentIncreaseViolationMode === "")
-            return fail(`${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`);
+            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));
           if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
-            return fail(`${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`);
+            return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`));
           if (r.hasVacancyOverGrace === null) {
             // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),
             // 나머지 넷은 3월(조특령 §97⑤5호 → 조특칙 §44). ⑤UI 질문 문구와 같은 값이어야 한다.
             const grace = r.type === "rental_97_5" ? "6개월" : "3개월";
-            return fail(`${label} 적용: ${grace}을 초과하는 공실 여부(없음/있음)를 선택하세요.`);
+            return fail(fieldError(`reduction.${r.type}.hasVacancyOverGrace`, `${label} 적용: ${grace}을 초과하는 공실 여부(없음/있음)를 선택하세요.`));
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
-            return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+            return fail(fieldError(`reduction.${r.type}.vacancyPeriods`, `${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`));
           /**
            * 🔴 **빈 날짜도 막는다** (2026-09-07 대장 재대조). 종전에는 구간 **개수**만 봤다.
            *
@@ -313,9 +333,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
            * Zod가 영문 필드 경로로 400을 냈다 — 사용자는 어느 칸인지 알 수 없었다.
            */
           if (r.hasVacancyOverGrace === true && r.vacancyPeriods?.some((p) => !p.startDate || !p.endDate))
-            return fail(
-              `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
-            );
+            return fail(fieldError(`reduction.${r.type}.vacancyPeriods`, `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
+            ));
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
           // ⚠️ 종전 규정에도 **등록 시한**이 있다 — 매입임대는 2020.12.31, 건설임대는 2022.12.31
@@ -327,40 +346,36 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             (r as { registrationDate: string }).registrationDate > "2020-12-31" &&
             (r as { isPrivateConstructionRental?: boolean }).isPrivateConstructionRental !== true
           )
-            return fail(
-              (r as { registrationDate: string }).registrationDate >= "2023-01-01"
+            return fail(fieldError(`reduction.${r.type}.isPrivateConstructionRental`, (r as { registrationDate: string }).registrationDate >= "2023-01-01"
                 ? `${label} 적용: 2023.1.1 이후 등록분은 민간건설임대주택(민특법 §2 2호)에 한정합니다 — 해당 여부를 확인하세요 (조특법 §97의3①).`
                 : `${label} 적용: 민간건설임대주택이 아닌 임대주택(민간매입임대)의 등록 시한은 2020.12.31입니다 — 2021.1.1 이후 등록분은 적용되지 않습니다. 민간건설임대주택이면 해당 여부를 확인하세요 (조특법 §97의3① 종전 규정).`,
-            );
+            ));
           // CA-01 — §97의5①3호가 조특령 §97의3③2호를 준용한다. §97의3과 같은 규칙.
           if (
             (r.type === "rental_97_3" || r.type === "rental_97_5") &&
             (r as { isNationalHousingScale?: boolean }).isNationalHousingScale !== true
           )
-            return fail(
-              `${label} 적용: 국민주택규모 이하 요건을 확인하세요 (${r.type === "rental_97_5" ? "§97의5①3호 → " : ""}조특령 §97의3③2호).`,
-            );
+            return fail(fieldError(`reduction.${r.type}.isNationalHousingScale`, `${label} 적용: 국민주택규모 이하 요건을 확인하세요 (${r.type === "rental_97_5" ? "§97의5①3호 → " : ""}조특령 §97의3③2호).`,
+            ));
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
-            return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
+            return fail(fieldError(`reduction.${r.type}.officialPriceAtStart`, `${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`));
           // D2-04 — §97의4 대상 요건 (조특령 §97의4① → 소령 §167의3①2호 가목·다목)
           if (r.type === "rental_97_4") {
             const cat = (r as { rental974Category?: string }).rental974Category;
             if (!cat)
-              return fail(
-                `${label} 적용: 장기임대주택 유형(가목 민간매입 1호↑ / 다목 건설임대 2호↑)을 선택하세요 (소령 §167의3①2호).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.rental974Category`, `${label} 적용: 장기임대주택 유형(가목 민간매입 1호↑ / 다목 건설임대 2호↑)을 선택하세요 (소령 §167의3①2호).`,
+              ));
             const std = parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0");
             if (std <= 0)
-              return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부수토지 합계)를 입력하세요.`);
+              return fail(fieldError(`reduction.${r.type}.officialPriceAtStart`, `${label} 적용: 임대개시일 당시 기준시가(주택+부수토지 합계)를 입력하세요.`));
             // ⑧은 API/UI와 동일한 한도를 써야 한다 — 가목만 수도권 밖 3억 분기가 있다.
             const cap =
               cat === "purchase_a" && (r as { region?: string }).region === "non_capital"
                 ? 300_000_000
                 : 600_000_000;
             if (std > cap)
-              return fail(
-                `${label} 적용: 임대개시일 당시 기준시가 합계가 한도 ${(cap / 100_000_000).toFixed(0)}억원을 초과합니다 — 장기임대주택에 해당하지 않습니다 (소령 §167의3①2호 ${cat === "purchase_a" ? "가목" : "다목"}).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.officialPriceAtStart`, `${label} 적용: 임대개시일 당시 기준시가 합계가 한도 ${(cap / 100_000_000).toFixed(0)}억원을 초과합니다 — 장기임대주택에 해당하지 않습니다 (소령 §167의3①2호 ${cat === "purchase_a" ? "가목" : "다목"}).`,
+              ));
           }
           // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
           // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.
@@ -374,16 +389,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // D2-06 — 안분이 있는 두 조문만. 3-state 미선택을 「계속 임대」로 읽지 않는다.
           if (r.type === "rental_97_3" || r.type === "rental_97_5") {
             if (r.rentalContinuesToTransfer === null || r.rentalContinuesToTransfer === undefined)
-              return fail(
-                `${label} 적용: 임대가 양도일까지 계속되었는지 선택하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5②" : "§97의3⑤"}).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.rentalContinuesToTransfer`, `${label} 적용: 임대가 양도일까지 계속되었는지 선택하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5②" : "§97의3⑤"}).`,
+              ));
             if (
               r.rentalContinuesToTransfer === false &&
               parseAmount(r.stdPriceAtRentalEnd || "0") <= 0
             )
-              return fail(
-                `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
-              );
+              return fail(fieldError(`reduction.${r.type}.stdPriceAtRentalEnd`, `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
+              ));
             /**
              * Q10 — 분모의 두 시점(E 취득당시 · D 양도당시). 감면-수준 override 또는
              * 자산-수준(환산 모드) 값 중 **하나는** 있어야 한다. §66⑦ 블록(:167)과 같은 모양.
@@ -404,20 +417,26 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               const hasTransferStd =
                 parseAmount(r.stdPriceAtTransfer || "") > 0 ||
                 parseAmount(asset.standardPriceAtTransfer || "") > 0;
-              if (!hasAcqStd || !hasTransferStd)
-                return fail(
+              if (!hasAcqStd || !hasTransferStd) {
+                const prorationMsg =
                   `${label} 적용: 안분 산식의 취득 당시·양도 당시 기준시가를 입력하세요 ` +
-                    `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). 자동 안분은 수행하지 않습니다.`,
+                  `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). 자동 안분은 수행하지 않습니다.`;
+                // 두 칸을 한꺼번에 묻는 메시지 — 비어 있는 칸(취득 당시 먼저)으로 보낸다
+                return fail(
+                  !hasAcqStd
+                    ? fieldError(`reduction.${r.type}.stdPriceAtAcquisition`, prorationMsg)
+                    : fieldError(`reduction.${r.type}.stdPriceAtTransfer`, prorationMsg),
                 );
+              }
             }
           }
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
-            return fail(`${label} 적용: 신축 연도를 입력하세요.`);
+            return fail(fieldError(`reduction.${r.type}.constructionYear`, `${label} 적용: 신축 연도를 입력하세요.`));
           // D1-01 — 조특령 §97① 주체 요건. 3-state 미선택을 「충족」으로 읽지 않는다.
           if (r.type === "rental_97_main" || r.type === "rental_97_proviso") {
             const m5 = (r as { hasMin5RentalUnits?: boolean | null }).hasMin5RentalUnits;
             if (m5 === null || m5 === undefined)
-              return fail(`${label} 적용: 임대주택 5호 이상 임대 여부를 선택하세요 (조특령 §97①).`);
+              return fail(fieldError(`reduction.${r.type}.hasMin5RentalUnits`, `${label} 적용: 임대주택 5호 이상 임대 여부를 선택하세요 (조특령 §97①).`));
             // 구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러가므로 여기서 차단한다.
             // 🔴 단, **「5호 이상」일 때만** 요구한다 — ⑤는 이 구간 편집·삭제 UI를
             //    `hasMin5RentalUnits === true` 안에만 두므로(`Rental97MainInputForm.tsx:246`),
@@ -430,9 +449,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                     .belowMin5UnitsPeriods
                 : undefined;
             if (below?.some((p) => !p.startDate || !p.endDate))
-              return fail(
-                `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,
-              );
+              return fail(fieldError(`reduction.${r.type}.belowMin5UnitsPeriods`, `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,
+              ));
           }
           // D1-06 — §97①2호(1985.12.31 이전 신축 공동주택)는 두 사실을 모두 요구한다.
           if (r.type === "rental_97_main" || r.type === "rental_97_proviso") {
@@ -443,11 +461,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 isUnoccupiedAt1986?: boolean | null;
               };
               if (rr.isMultiUnitHousing === null || rr.isMultiUnitHousing === undefined)
-                return fail(`${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97①2호).`);
+                return fail(fieldError(`reduction.${r.type}.isMultiUnitHousing`, `${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97①2호).`));
               if (rr.isUnoccupiedAt1986 === null || rr.isUnoccupiedAt1986 === undefined)
-                return fail(
-                  `${label} 적용: 1986.1.1 현재 입주 사실 여부를 선택하세요 (조특법 §97①2호).`,
-                );
+                return fail(fieldError(`reduction.${r.type}.isUnoccupiedAt1986`, `${label} 적용: 1986.1.1 현재 입주 사실 여부를 선택하세요 (조특법 §97①2호).`,
+                ));
             }
             // D1-07 — §97① 단서 나목(매입임대)은 「취득 당시 입주된 사실이 없는 주택만 해당」
             if (
@@ -457,9 +474,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               const u = (r as { isUnoccupiedAtAcquisition?: boolean | null })
                 .isUnoccupiedAtAcquisition;
               if (u === null || u === undefined)
-                return fail(
-                  `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97① 단서 나목).`,
-                );
+                return fail(fieldError(`reduction.${r.type}.isUnoccupiedAtAcquisition`, `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97① 단서 나목).`,
+                ));
             }
           }
           // D9-01 — §97의2①1호 나목: 1999.8.19 이전 신축 건설임대는 두 사실을 모두 요구한다.
@@ -476,42 +492,39 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               isUnoccupiedAt19990820?: boolean | null;
             };
             if (rr.isMultiUnitHousing972 === null || rr.isMultiUnitHousing972 === undefined)
-              return fail(`${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97의2①1호 나목).`);
+              return fail(fieldError(`reduction.${r.type}.isMultiUnitHousing972`, `${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97의2①1호 나목).`));
             if (rr.isUnoccupiedAt19990820 === null || rr.isUnoccupiedAt19990820 === undefined)
-              return fail(
-                `${label} 적용: 1999.8.20 현재 입주 사실 여부를 선택하세요 (조특법 §97의2①1호 나목).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.isUnoccupiedAt19990820`, `${label} 적용: 1999.8.20 현재 입주 사실 여부를 선택하세요 (조특법 §97의2①1호 나목).`,
+              ));
           }
           // D1-07 — §97의2①2호(매입임대)도 같은 요건
           if (r.type === "rental_97_2" && (r as { rental972Type?: string }).rental972Type === "purchase") {
             const u = (r as { isUnoccupiedAtAcquisition?: boolean | null }).isUnoccupiedAtAcquisition;
             if (u === null || u === undefined)
-              return fail(
-                `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97의2①2호).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.isUnoccupiedAtAcquisition`, `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97의2①2호).`,
+              ));
           }
           // D1-02 — 조특령 §97의2① 주체 요건 (§97의 5호와 다른 조문·다른 숫자)
           if (r.type === "rental_97_2") {
             const u2 = (r as { hasNewRentalPlus2Units?: boolean | null }).hasNewRentalPlus2Units;
             if (u2 === null || u2 === undefined)
-              return fail(
-                `${label} 적용: 신축임대주택 1호 이상을 포함한 2호 이상 임대 여부를 선택하세요 (조특령 §97의2①).`,
-              );
+              return fail(fieldError(`reduction.${r.type}.hasNewRentalPlus2Units`, `${label} 적용: 신축임대주택 1호 이상을 포함한 2호 이상 임대 여부를 선택하세요 (조특령 §97의2①).`,
+              ));
           }
           if (r.type === "rental_97_proviso" && !(r as { provisoCase?: string }).provisoCase)
-            return fail(`${label} 적용: 단서 유형(건설임대/매입임대/10년 이상)을 선택하세요.`);
+            return fail(fieldError(`reduction.${r.type}.provisoCase`, `${label} 적용: 단서 유형(건설임대/매입임대/10년 이상)을 선택하세요.`));
           if (r.type === "rental_97_2" && !(r as { rental972Type?: string }).rental972Type)
-            return fail(`${label} 적용: 건설임대(1호)/매입임대(2호) 유형을 선택하세요.`);
+            return fail(fieldError(`reduction.${r.type}.rental972Type`, `${label} 적용: 건설임대(1호)/매입임대(2호) 유형을 선택하세요.`));
         }
         // P1 §99 신축주택 IMF 1차 (2026-06-11): 유형별 기준일·기준시가·면적 필수 (⑧).
         // 배제 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "new_99") {
           if (r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
-            return fail("§99 적용: 자기건설 주택의 사용승인일을 입력하세요.");
+            return fail(fieldError("reduction.new_99.usageApprovalDate99", "§99 적용: 자기건설 주택의 사용승인일을 입력하세요."));
           // 조특법 §99①2호 — 「최초로 매매계약을 체결하고 계약금을 납부한 자」. 비우면 엔진이 취득일로
           // 대신 읽어 기간 판정이 바뀌었다. §99의3(위)과 같은 자산-수준 fallback 규약.
           if (r.acquisitionType99 !== "self_built" && !(r.contractDate99 || asset.assetContractDate))
-            return fail("§99 적용: 매매계약일을 입력하세요 (자산 매매계약일도 비어 있습니다).");
+            return fail(fieldError("reduction.new_99.contractDate99", "§99 적용: 매매계약일을 입력하세요 (자산 매매계약일도 비어 있습니다)."));
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           if (r.phdMode99) {
             const phdInput = {
@@ -523,15 +536,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst99 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§99 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§99 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
           } else if (parseAmount(r.standardPriceAtAcquisition99 || "0") <= 0) {
-            return fail("§99 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
+            return fail(fieldError(`reduction.${r.type}.standardPriceAtAcquisition`, "§99 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)"));
           }
           if (!(parseDecimal(r.exclusiveAreaSqm99 || "") > 0))
-            return fail("§99 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정).");
+            return fail(fieldError(`reduction.${r.type}.exclusiveAreaSqm`, "§99 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정)."));
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
           if (r.isRedevelopedNewHouse99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
-            return fail("§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요.");
+            return fail(fieldError("reduction.new_99.previousHouseStdPrice99", "§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요."));
         }
         // P1 §98의8 준공후미분양 50% (2026-06-11): 계약일·취득가·면적·임대개시일 필수 (⑧).
         // 자격 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
@@ -540,30 +553,30 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           //    엔진도 같은 fallback을 읽으므로(income-deduction-router `evalUnsold988`) 3중이 맞는다.
           //    종전에는 여기만 조문 전용 필드를 요구해 **같은 날짜를 두 번** 입력해야 했다.
           if (!(r.contractDate988 || asset.assetContractDate))
-            return fail("§98의8 적용: 최초 매매계약일을 펼침 영역 상단에 입력하세요.");
+            return fail(fieldError("assetContractDate", "§98의8 적용: 최초 매매계약일을 펼침 영역 상단에 입력하세요."));
           if (parseAmount(r.acquisitionPrice988 || "0") <= 0)
-            return fail("§98의8 적용: 취득가액을 입력하세요.");
+            return fail(fieldError("reduction.unsold_98_8.acquisitionPrice988", "§98의8 적용: 취득가액을 입력하세요."));
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
-            return fail("§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요.");
+            return fail(fieldError("reduction.unsold_98_8.exclusiveAreaSqm988", "§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요."));
           if (!r.rentalContractDate988)
-            return fail("§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호).");
+            return fail(fieldError("reduction.unsold_98_8.rentalContractDate988", "§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호)."));
           if (!r.rentalStartDate988)
-            return fail("§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
+            return fail(fieldError("reduction.unsold_98_8.rentalStartDate988", "§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
         }
         // P3 §98의3 (2026-06-12): 분기별 일자 + 과밀 면적 필수 (⑧). 토글은 낙관 — 엔진 사유.
         if (r.type === "unsold_98_3") {
           if (r.houseType983 === "self_built") {
             if (!r.constructionStartDate983 || !r.usageApprovalDate983)
-              return fail("§98의3 적용: 자기건설 주택의 착공일과 사용승인일을 입력하세요 (2009.2.12~2010.2.11).");
+              return fail(fieldError(!r.constructionStartDate983 ? "reduction.unsold_98_3.constructionStartDate983" : "reduction.unsold_98_3.usageApprovalDate983", "§98의3 적용: 자기건설 주택의 착공일과 사용승인일을 입력하세요 (2009.2.12~2010.2.11)."));
           } else if (!r.contractDate983) {
-            return fail("§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11).");
+            return fail(fieldError("reduction.unsold_98_3.contractDate983", "§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11)."));
           }
           // 면적 한정(령 §98의3① 단서)은 각 호 주택 = 사업주체 취득분에만 적용된다 (D5-03).
           if (r.isOverconcentration983 && r.houseType983 !== "self_built") {
             if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
-              return fail("§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정).");
+              return fail(fieldError("reduction.unsold_98_3.landAreaSqm983", "§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정)."));
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
-              return fail("§98의3 적용: 수도권과밀억제권역 주택은 연면적(전용면적, ㎡)을 입력하세요 (149㎡ 이내 한정).");
+              return fail(fieldError("reduction.unsold_98_3.floorAreaSqm983", "§98의3 적용: 수도권과밀억제권역 주택은 연면적(전용면적, ㎡)을 입력하세요 (149㎡ 이내 한정)."));
           }
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API·UI echo와 동일 소스, ⑧ 3중 미러).
           let phdOk983 = false;
@@ -577,26 +590,25 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst983 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§98의3 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§98의3 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             phdOk983 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
-          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3", phdOk983);
+          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3", phdOk983, r.type);
           if (i983) return i983;
         }
         // P3 §98의5 (2026-06-12): 계약일·인하율 필수 (⑧).
         if (r.type === "unsold_98_5") {
           if (!r.contractDate985)
-            return fail("§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30).");
+            return fail(fieldError("reduction.unsold_98_5.contractDate985", "§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30)."));
           // D5-02 — **0%도 유효한 값**이다. 조특법 §98의5①1호는 「인하율이 100분의 10 **이하**」로
           //          하한 문언이 없다. 종전의 `> 0`은 정가 매입 사안을 부당 차단했다.
           //          ⑧과 엔진이 같은 게이트를 복제하고 있으므로 **함께** 고쳐야 no-op가 아니다.
           if ((r.priceReductionRatePct985 ?? "").trim() === "")
-            return fail(
-              "§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100. 인하가 없으면 0을 입력하세요.",
-            );
+            return fail(fieldError("reduction.unsold_98_5.priceReductionRatePct985", "§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100. 인하가 없으면 0을 입력하세요.",
+            ));
           if (parseDecimal(r.priceReductionRatePct985 || "") < 0)
-            return fail("§98의5 적용: 분양가격 인하율은 음수일 수 없습니다.");
+            return fail(fieldError("reduction.unsold_98_5.priceReductionRatePct985", "§98의5 적용: 분양가격 인하율은 음수일 수 없습니다."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk985 = false;
           if (r.phdMode985) {
@@ -609,24 +621,24 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst985 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§98의5 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§98의5 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             phdOk985 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
-          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5", phdOk985);
+          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5", phdOk985, r.type);
           if (i985) return i985;
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
         if (r.type === "unsold_98_6") {
           if (parseAmount(r.stdPriceSumAtBase986 || "0") <= 0)
-            return fail("§98의6 적용: 주택과 부수토지의 기준시가 합계를 입력하세요 (6억 한도).");
+            return fail(fieldError("reduction.unsold_98_6.stdPriceSumAtBase986", "§98의6 적용: 주택과 부수토지의 기준시가 합계를 입력하세요 (6억 한도)."));
           if (!(parseDecimal(r.floorAreaSqm986 || "") > 0))
-            return fail("§98의6 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요 (149㎡ 한도).");
+            return fail(fieldError("reduction.unsold_98_6.floorAreaSqm986", "§98의6 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요 (149㎡ 한도)."));
           if (r.hoType986 === "buyer_rented") {
             if (!r.rentalContractDate986)
-              return fail("§98의6 2호 적용: 임대계약 체결일을 입력하세요 (2011.12.31 이전 한정).");
+              return fail(fieldError("reduction.unsold_98_6.rentalContractDate986", "§98의6 2호 적용: 임대계약 체결일을 입력하세요 (2011.12.31 이전 한정)."));
             if (!r.rentalStartDate986)
-              return fail("§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
+              return fail(fieldError("reduction.unsold_98_6.rentalStartDate986", "§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
           }
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk986 = false;
@@ -640,20 +652,20 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst986 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§98의6 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§98의6 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             phdOk986 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (안분용 — stdPriceSumAtBase986과 별개 — F-1). PHD ON이면 취득시 검증 skip.
-          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6", phdOk986);
+          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6", phdOk986, r.type);
           if (i986) return i986;
         }
         // P2 §98의7 9억↓ 미분양 (2026-06-11): 계약일·취득가 필수 (⑧).
         // 자격 토글 4종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "unsold_98_7") {
           if (!r.contractDate987)
-            return fail("§98의7 적용: 최초 매매계약일을 입력하세요 (2012.9.24~2012.12.31).");
+            return fail(fieldError("reduction.unsold_98_7.contractDate987", "§98의7 적용: 최초 매매계약일을 입력하세요 (2012.9.24~2012.12.31)."));
           if (parseAmount(r.acquisitionPrice987 || "0") <= 0)
-            return fail("§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외).");
+            return fail(fieldError("reduction.unsold_98_7.acquisitionPrice987", "§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외)."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk987 = false;
           if (r.phdMode987) {
@@ -666,11 +678,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst987 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§98의7 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§98의7 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             phdOk987 = true;
           }
           // 취득 후 5년 경과 양도 시 안분용 기준시가 필수 (M-4 → F-1 헬퍼 단일화). PHD ON이면 취득시 검증 skip.
-          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7", phdOk987);
+          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7", phdOk987, r.type);
           if (i987) return i987;
         }
         // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 유형별 일자 + 취득가·면적 필수 (⑧).
@@ -678,14 +690,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "unsold_99_2") {
           if (r.houseType992 === "self_built") {
             if (!r.usageApprovalDate992)
-              return fail("§99의2 적용: 자기건설 주택의 사용승인·사용검사일을 입력하세요 (2013.4.1~2013.12.31).");
+              return fail(fieldError("reduction.unsold_99_2.usageApprovalDate992", "§99의2 적용: 자기건설 주택의 사용승인·사용검사일을 입력하세요 (2013.4.1~2013.12.31)."));
           } else if (!r.contractDate992) {
-            return fail("§99의2 적용: 최초 매매계약일을 입력하세요 (2013.4.1~2013.12.31).");
+            return fail(fieldError("reduction.unsold_99_2.contractDate992", "§99의2 적용: 최초 매매계약일을 입력하세요 (2013.4.1~2013.12.31)."));
           }
           if (parseAmount(r.acquisitionPrice992 || "0") <= 0)
-            return fail("§99의2 적용: 실거래 취득가액을 입력하세요 (6억 이하 OR 85㎡ 이하 판정에 필요).");
+            return fail(fieldError("reduction.unsold_99_2.acquisitionPrice992", "§99의2 적용: 실거래 취득가액을 입력하세요 (6억 이하 OR 85㎡ 이하 판정에 필요)."));
           if (!(parseDecimal(r.exclusiveAreaSqm992 || "") > 0))
-            return fail("§99의2 적용: 연면적(공동주택·오피스텔은 전용면적, ㎡)을 입력하세요.");
+            return fail(fieldError("reduction.unsold_99_2.exclusiveAreaSqm992", "§99의2 적용: 연면적(공동주택·오피스텔은 전용면적, ㎡)을 입력하세요."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           let phdOk992 = false;
           if (r.phdMode992) {
@@ -698,11 +710,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst992 || "0"),
             };
             if (!canCalcReductionPhd(phdInput))
-              return fail("§99의2 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+              return fail(fieldError(phdField(r.type, phdInput), "§99의2 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
             phdOk992 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1). PHD ON이면 취득시 검증 skip.
-          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992);
+          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992, r.type);
           if (i992) return i992;
         }
       }

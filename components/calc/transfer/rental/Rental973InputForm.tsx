@@ -73,6 +73,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
+          fieldType={value.type}
           registrationDate={value.registrationDate}
           isTaxRegistered={value.isTaxRegistered}
           rentalStartDate={value.rentalStartDate}
@@ -125,6 +126,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
             건설임대 여부를 물어야 한다 — 엔진·⑧과 같은 경계(2020.12.31). */}
         {value.registrationDate > "2020-12-31" && (
           <ToggleCard
+            data-field={`reduction.${value.type}.isPrivateConstructionRental`}
             variant="chip"
             checked={value.isPrivateConstructionRental}
             onCheckedChange={(v) => onChange({ isPrivateConstructionRental: v })}
@@ -139,6 +141,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
         )}
 
         <ToggleCard
+          data-field={`reduction.${value.type}.isNationalHousingScale`}
           variant="chip"
           checked={value.isNationalHousingScale}
           onCheckedChange={(v) => onChange({ isNationalHousingScale: v })}
@@ -154,6 +157,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
           <CurrencyInput
+            data-field={`reduction.${value.type}.officialPriceAtStart`}
             label=""
             value={value.officialPriceAtStart}
             onChange={(v) => onChange({ officialPriceAtStart: v })}
@@ -181,6 +185,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
+        fieldType={value.type}
         hasGainProration
         vacancyGraceMonths={3}
         value={value}

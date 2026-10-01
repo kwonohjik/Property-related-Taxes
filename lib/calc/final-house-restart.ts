@@ -13,6 +13,7 @@ import type { FinalHouseRestartApiPayload } from "@/lib/api/final-house-restart-
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isFinalOneHouseRestartEra } from "@/lib/tax-engine/one-house/final-house-restart";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import {
   deriveJudgmentHouseCount,
@@ -136,17 +137,17 @@ export function collectFinalHouseRestartErrors(
   if (!inScope || readFinalHouseRestartHistory(form.finalHouseRestartHistory) !== "yes") return [];
   const P = "§154⑤ 단서(최종 1주택 재기산)";
   const rows = readFinalHouseDisposals(form.finalHouseRestartDisposals);
-  if (rows.length === 0) return [`${P}: 처분한 다른 주택을 1건 이상 입력하세요.`];
+  if (rows.length === 0) return [fieldError("finalHouseRestartDisposals", `${P}: 처분한 다른 주택을 1건 이상 입력하세요.`)];
   const transfer = toOptionalDate(form.transferDate);
   const errors: string[] = [];
   rows.forEach((r, i) => {
     const n = `${i + 1}번째 처분`;
-    if (r.kind === "") errors.push(`${P}: ${n}의 유형(양도·증여·용도변경·그 밖)을 선택하세요.`);
+    if (r.kind === "") errors.push(fieldError(`finalHouseRestartDisposals.${i}.kind`, `${P}: ${n}의 유형(양도·증여·용도변경·그 밖)을 선택하세요.`));
     const date = toOptionalDate(r.date);
-    if (!date) errors.push(`${P}: ${n}의 처분일을 입력하세요.`);
-    else if (transfer && date > transfer) errors.push(`${P}: ${n}의 처분일은 이 주택 양도일 이전이어야 합니다.`);
+    if (!date) errors.push(fieldError(`finalHouseRestartDisposals.${i}.date`, `${P}: ${n}의 처분일을 입력하세요.`));
+    else if (transfer && date > transfer) errors.push(fieldError(`finalHouseRestartDisposals.${i}.date`, `${P}: ${n}의 처분일은 이 주택 양도일 이전이어야 합니다.`));
     if (asksTemporaryTwoHouse(r.kind) && r.temporaryTwoHouse === "") {
-      errors.push(`${P}: ${n}이 이 주택과 일시적 2주택 관계였는지 선택하세요.`);
+      errors.push(fieldError(`finalHouseRestartDisposals.${i}.temporaryTwoHouse`, `${P}: ${n}이 이 주택과 일시적 2주택 관계였는지 선택하세요.`));
     }
   });
   return errors;

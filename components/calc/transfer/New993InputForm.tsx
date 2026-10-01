@@ -128,6 +128,7 @@ export function New993InputForm({
       jibun={jibun}
       snapshotKeyPrefix="red993"
       assetId={assetId}
+      fieldType="new_99_3"
       value={{
         phdMode: value.phdMode993,
         firstDisclosureDate: value.phdFirstDisclosureDate993,
@@ -193,6 +194,7 @@ export function New993InputForm({
     <div className="sm:col-span-2">
       <HousingStdPriceLookupField
         label="취득시 기준시가"
+        data-field="reduction.new_99_3.standardPriceAtAcquisition"
         value={value.standardPriceAtAcquisition993}
         onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)}
         jibun={jibun}
@@ -271,7 +273,7 @@ export function New993InputForm({
         {value.acquisitionType993 === "self_built" && (
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인일</label>
-            <DateInput value={value.usageApprovalDate993 ?? ""} onChange={(v) => onUpdate("usageApprovalDate993", v)} />
+            <DateInput data-field="reduction.new_99_3.usageApprovalDate993" value={value.usageApprovalDate993 ?? ""} onChange={(v) => onUpdate("usageApprovalDate993", v)} />
             <p className="mt-1 text-micro text-muted-foreground">2001.5.23~2003.6.30 시한</p>
           </div>
         )}
@@ -290,6 +292,7 @@ export function New993InputForm({
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
             label="5년 시점 기준시가"
+            data-field="reduction.new_99_3.standardPriceAt5Years"
             value={value.standardPriceAt5Years}
             onChange={(v) => onUpdate("standardPriceAt5Years", v)}
             jibun={jibun}
@@ -313,6 +316,7 @@ export function New993InputForm({
                 ? "양도시 기준시가 (필수 — 재개발 변형)"
                 : "양도시 기준시가 (5년 경과 양도 시 필수)"
             }
+            data-field="reduction.new_99_3.standardPriceAtTransfer993"
             value={value.standardPriceAtTransfer993 ?? ""}
             onChange={(v) => onUpdate("standardPriceAtTransfer993", v)}
             jibun={jibun}
@@ -329,7 +333,7 @@ export function New993InputForm({
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
+              <DecimalInput data-field="reduction.new_99_3.exclusiveAreaSqm993" value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
             </div>
             <button
               type="button"
@@ -385,6 +389,7 @@ export function New993InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
           <CurrencyInput
+            data-field="reduction.new_99_3.previousHouseStdPrice993"
             value={value.previousHouseStdPrice993}
             onChange={(v) => onUpdate("previousHouseStdPrice993", v)}
             label=""

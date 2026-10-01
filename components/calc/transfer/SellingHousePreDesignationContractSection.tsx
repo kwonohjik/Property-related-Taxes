@@ -74,6 +74,7 @@ export function SellingHousePreDesignationContractSection({ value, onChange, reg
         <div className="space-y-1 pt-1">
           <label className="block text-caption text-muted-foreground font-medium">양도 매매계약 체결일</label>
           <DateInput
+            data-field="sellingHouseExclusion.saleContractDate"
             value={v.saleContractDate ?? ""}
             onChange={(s) => onChange({ ...v, saleContractDate: s || undefined })}
             data-testid="pre-designation-sale-contract-date"

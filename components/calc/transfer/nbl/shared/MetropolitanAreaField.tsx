@@ -50,7 +50,7 @@ export function MetropolitanAreaField({ asset, onAssetChange }: MetropolitanArea
       : null;
 
   return (
-    <FieldCard label="수도권 여부" badge={badge ?? undefined}>
+    <FieldCard field="nblIsMetropolitanArea" label="수도권 여부" badge={badge ?? undefined}>
         <RadioCardGroup
           name={`nblIsMetropolitanArea-${asset.assetId}`}
           tone="rose"

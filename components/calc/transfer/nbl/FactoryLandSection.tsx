@@ -228,7 +228,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
 
       {enabled && (
         <div className="space-y-2">
-          <div className="space-y-1">
+          <div className="space-y-1" data-field="nblFactoryLocationCategory">
             <p className="text-xs font-medium text-muted-foreground">공장 소재 지역</p>
             <RadioCardGroup
               name={`nblFactoryLocationCategory-${asset.assetId ?? "primary"}`}
@@ -239,6 +239,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
           </div>
 
           <FieldCard
+            field="nblFactoryTotalLandArea"
             label="공장 전체 부속토지 면적"
             unit="㎡"
             hint="하나의 울타리 안 공장 전체 면적입니다 — 양도하는 토지 면적이 아닙니다. 초과 비율은 공장 전체로 계산해 양도분에 적용합니다. 오염피해로 소유자 요구에 따라 취득한 인접토지가 있으면 그 면적도 여기에 합산합니다(별표6 3호마)."
@@ -314,6 +315,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <FieldCard
+                      field={`nblFactorySegments.${i}.floorArea`}
                       label="공장건축물 연면적"
                       unit="㎡"
                       hint="경계구역 안 모든 공장용 건축물 연면적(부대시설 포함) + 옥외 기계장치·저장시설 수평투영면적. 무허가·위법시공 건축물은 제외합니다."
@@ -325,6 +327,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                       />
                     </FieldCard>
                     <FieldCard
+                      field={`nblFactorySegments.${i}.ratePercent`}
                       label="기준공장면적률"
                       unit="%"
                       hint={`「공장입지 기준고시」 별표1의 업종별 값입니다. 지식산업센터는 같은 고시 §4로 ${KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT}%입니다.`}
@@ -341,6 +344,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
               <button
                 type="button"
                 data-testid="nbl-factory-segment-add"
+                data-field="nblFactorySegments"
                 onClick={() => onAssetChange({ nblFactorySegments: [...segments, newSegment()] })}
                 className="text-xs text-primary hover:text-primary/80 px-3 py-1.5 rounded border border-primary/30 hover:bg-primary/10 transition-colors"
               >
@@ -389,6 +393,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                 </p>
 
                 <FieldCard
+                  field="nblFactorySportsEmployeeCount"
                   label="종업원수"
                   unit="명"
                   hint="그 사업장에 근무하는 종업원을 기준으로 합니다 (별표6 3호바 비고 2-가). 시설 면적을 입력하면 필수입니다."
@@ -407,6 +412,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                 */}
                 {sportsEmployeeCount > 0 && sportsEmployeeCount <= 50 && (
                   <FieldCard
+                    field="nblFactorySportsEntityType"
                     label="사업주체"
                     hint="종업원 50명 이하인 「법인」은 코트면적만 기준면적으로 인정됩니다 (별표6 3호바 비고 2-나). 개인사업자는 이 제한을 받지 않습니다."
                   >
@@ -468,6 +474,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
 
           {loc === "urban_other" && (
             <FieldCard
+              field="nblFactoryFootprintArea"
               label="공장용 건축물 바닥면적"
               unit="㎡"
               hint="각 층 중 최대 바닥면적입니다(건축면적이 아닙니다). 건축물 외 시설은 수평투영면적. 위 별표6 경로의 연면적과는 다른 값입니다."

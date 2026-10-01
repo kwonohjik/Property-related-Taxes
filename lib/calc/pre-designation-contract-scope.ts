@@ -15,6 +15,7 @@
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { isHousingLike } from "./housing-like-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 const EFFECTIVE_FROM = PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE.toISOString().slice(0, 10);
@@ -58,8 +59,8 @@ export function collectPreDesignationContractErrors(
 ): string[] {
   const se = form.sellingHouseExclusion;
   if (!se?.saleDepositReceived || !preDesignationContractInScopeOf(form)) return [];
-  if (!se.saleContractDate) return ["양도 주택 공고 전 매매계약: 양도 매매계약 체결일을 입력하세요."];
+  if (!se.saleContractDate) return [fieldError("sellingHouseExclusion.saleContractDate", "양도 주택 공고 전 매매계약: 양도 매매계약 체결일을 입력하세요.")];
   if (se.saleContractDate > form.transferDate)
-    return ["양도 주택 공고 전 매매계약: 매매계약 체결일은 양도일보다 늦을 수 없습니다."];
+    return [fieldError("sellingHouseExclusion.saleContractDate", "양도 주택 공고 전 매매계약: 매매계약 체결일은 양도일보다 늦을 수 없습니다.")];
   return [];
 }

@@ -67,6 +67,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
+          fieldType={value.type}
           registrationDate={value.registrationDate}
           isTaxRegistered={value.isTaxRegistered}
           rentalStartDate={value.rentalStartDate}
@@ -112,6 +113,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
             장기임대주택만 대상으로 합니다 (나목은 §97의4 대상이 아닙니다).
           </p>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.rental974Category`}
             name="rental974Category"
             tone="sky"
             value={value.rental974Category}
@@ -168,6 +170,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
 
         <div className="border-t border-sky-200 pt-2">
           <CurrencyInput
+            data-field={`reduction.${value.type}.officialPriceAtStart`}
             label="임대개시일 당시 기준시가 (주택+부수토지 합계)"
             value={value.officialPriceAtStart}
             onChange={(v) => onChange({ officialPriceAtStart: v })}
@@ -184,6 +187,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ④⑤ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
+        fieldType={value.type}
         value={value}
         onChange={patchCommon}
         sectionOffset={4}

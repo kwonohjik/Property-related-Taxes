@@ -33,6 +33,7 @@ export function VillaLandDetailSection({
           periods={asset.nblVillaUsePeriods}
           onChange={(periods) => onAssetChange({ nblVillaUsePeriods: periods })}
           label="별장 사용기간"
+          fieldPrefix="nblVillaUsePeriods"
         />
       </FieldCard>
 
@@ -55,6 +56,7 @@ export function VillaLandDetailSection({
         「정착면적 미입력 → 인정면적 0 → 전량 비사업용」으로 끝났다.
       */}
       <FieldCard
+        field="nblHousingFootprint"
         label="주택 정착면적"
         unit="㎡"
         hint="별장 요건에 해당하지 않아 주택부수토지로 재분류될 때 인정면적(정착면적 × 용도지역별 배율) 산정에 쓰입니다."

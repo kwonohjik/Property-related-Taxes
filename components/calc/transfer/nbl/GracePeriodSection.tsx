@@ -142,10 +142,10 @@ export function GracePeriodSection({
             {/* event_window / 4호: 개시일·종료일 입력 */}
             {(kind === "event_window" || kind === "anchor_to_input_end") && (
               <div className="grid grid-cols-2 gap-2">
-                <FieldCard label={kind === "anchor_to_input_end" ? "착공일" : "개시일"}>
+                <FieldCard field={`nblGracePeriods.${idx}.anchorDate`} label={kind === "anchor_to_input_end" ? "착공일" : "개시일"}>
                   <DateInput value={p.anchorDate} onChange={(v) => updatePeriod(idx, { anchorDate: v })} />
                 </FieldCard>
-                <FieldCard label={kind === "anchor_to_input_end" ? "제공 종료일" : "종료일"}>
+                <FieldCard field={`nblGracePeriods.${idx}.endDate`} label={kind === "anchor_to_input_end" ? "제공 종료일" : "종료일"}>
                   <DateInput value={p.endDate} onChange={(v) => updatePeriod(idx, { endDate: v })} />
                 </FieldCard>
               </div>
@@ -157,7 +157,7 @@ export function GracePeriodSection({
                 {spec?.anchorFromAcquisition ? (
                   <p className="text-xs text-violet-700 dark:text-violet-300">기산일은 자산 취득일을 자동 사용합니다 (취득일 + {spec.fixedYears}년).</p>
                 ) : (
-                  <FieldCard label="기산일" hint={`이 날부터 ${spec?.fixedYears}년까지 가산`}>
+                  <FieldCard field={`nblGracePeriods.${idx}.anchorDate`} label="기산일" hint={`이 날부터 ${spec?.fixedYears}년까지 가산`}>
                     <DateInput value={p.anchorDate} onChange={(v) => updatePeriod(idx, { anchorDate: v })} />
                   </FieldCard>
                 )}
@@ -169,7 +169,7 @@ export function GracePeriodSection({
               <>
                 <p className="text-xs text-violet-700 dark:text-violet-300">취득일부터 2년은 자산 취득일로 자동 가산됩니다. 착공일 이후 건설 진행 기간을 추가 입력하세요.</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <FieldCard label="착공일">
+                  <FieldCard field={`nblGracePeriods.${idx}.secondaryDate`} label="착공일">
                     <DateInput value={p.secondaryDate ?? ""} onChange={(v) => updatePeriod(idx, { secondaryDate: v })} />
                   </FieldCard>
                   <FieldCard label="건설진행 종료일" hint="미입력 시 양도일까지 진행 가정">

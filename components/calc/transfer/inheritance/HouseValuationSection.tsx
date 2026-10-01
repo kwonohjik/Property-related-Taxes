@@ -382,7 +382,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       )}
 
       {/* ① 토지 면적 */}
-      <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
+      <FieldCard field="inhHouseValLandArea" label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
         {/* 🔴 종전에는 raw `<input>` + `replace(/[^0-9.]/g, "")`였다 (2026-09-07 대장 재대조 · #24).
             그 정규식은 숫자·점만 남길 뿐 **점의 개수를 세지 않아** "1.2.3" 같은 입력을 그대로
             저장했고, 소비처의 `parseFloat`이 "1.2"로 조용히 잘랐다. 소수 입력은 공용
@@ -405,6 +405,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         </div>
         <LandPriceLookupField
           label="양도시 토지 개별공시지가"
+          data-field="inhHouseValLandPricePerSqmAtTransfer"
           referenceDate={transferDate ?? ""}
           pricePerSqm={asset.inhHouseValLandPricePerSqmAtTransfer}
           onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtTransfer: v })}
@@ -434,6 +435,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         </div>
         <LandPriceLookupField
           label="최초고시 토지 개별공시지가"
+          data-field="inhHouseValLandPricePerSqmAtFirst"
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
           pricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
           onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
@@ -443,6 +445,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         <StandardPriceInput
           propertyKind="house_individual"
           totalPrice={asset.inhHouseValHousePriceAtFirst}
+          data-field="inhHouseValHousePriceAtFirst"
           onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
           jibun={asset.addressJibun || undefined}
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
@@ -513,6 +516,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
                 조회 위젯을 쓰고 있어 **같은 화면에서 세 칸의 기능이 달랐다**. */
           <LandPriceLookupField
             label={`${acqTimeLabel} 토지 개별공시지가`}
+            data-field="inhHouseValLandPricePerSqmAtInheritance"
             hint={`${acqTimeLabel} 직전 공시된 개별공시지가.`}
             referenceDate={inheritanceDate || ""}
             pricePerSqm={asset.inhHouseValLandPricePerSqmAtInheritance}

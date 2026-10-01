@@ -100,6 +100,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
         <div>
           <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
           <DateInput
+            data-field={`reduction.${value.type}.registrationDate`}
             value={value.registrationDate}
             onChange={(v) => onChange({ registrationDate: v })}
           />
@@ -129,7 +130,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
 
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
-          <DateInput value={value.rentalStartDate} onChange={(v) => onChange({ rentalStartDate: v })} />
+          <DateInput data-field={`reduction.${value.type}.rentalStartDate`} value={value.rentalStartDate} onChange={(v) => onChange({ rentalStartDate: v })} />
         </div>
       </ToneCard>
 
@@ -139,6 +140,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
           <CurrencyInput
+            data-field={`reduction.${value.type}.officialPriceAtStart`}
             label=""
             value={value.officialPriceAtStart}
             onChange={(v) => onChange({ officialPriceAtStart: v })}
@@ -150,6 +152,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
 
         {/* CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 */}
         <ToggleCard
+          data-field={`reduction.${value.type}.isNationalHousingScale`}
           variant="chip"
           checked={value.isNationalHousingScale}
           onCheckedChange={(v) => onChange({ isNationalHousingScale: v })}
@@ -176,6 +179,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
 
       {/* ③④ 공통 필드 */}
       <RentalCommonFields
+        fieldType={value.type}
         hasGainProration
         vacancyGraceMonths={6}
         value={value}

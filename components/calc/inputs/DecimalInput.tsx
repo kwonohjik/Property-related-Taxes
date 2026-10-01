@@ -26,6 +26,8 @@ export interface DecimalInputProps {
   thousandSeparator?: boolean;
   /** E2E·단위 테스트 셀렉터용 data-testid (내부 input에 전달) */
   "data-testid"?: string;
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 래퍼에 단다. 검증의 `ValidationIssue.field`와 같은 값 */
+  "data-field"?: string;
 }
 
 /** 소수점 유지하며 정수부에 천단위 콤마 적용. */
@@ -45,6 +47,7 @@ export function DecimalInput({
   className,
   thousandSeparator = false,
   "data-testid": dataTestId,
+  "data-field": dataField,
 }: DecimalInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +67,7 @@ export function DecimalInput({
     : (value ?? "");
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative", className)} data-field={dataField}>
       <input
         ref={inputRef}
         type="text"

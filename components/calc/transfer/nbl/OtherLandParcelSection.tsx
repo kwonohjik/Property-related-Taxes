@@ -74,12 +74,12 @@ export function OtherLandParcelSection({ asset, onAssetChange }: OtherLandParcel
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <FieldCard label="면적 (㎡)" unit="㎡">
+                <FieldCard field={`nblOtherParcels.${i}.landArea`} label="면적 (㎡)" unit="㎡">
                   <DecimalInput value={p.landArea} onChange={(v) => updateParcel(i, { landArea: v })} />
                 </FieldCard>
                 <div className="space-y-1">
                   <label className="block text-xs text-muted-foreground">취득일</label>
-                  <DateInput value={p.acquisitionDate} onChange={(v) => updateParcel(i, { acquisitionDate: v })} />
+                  <DateInput value={p.acquisitionDate} onChange={(v) => updateParcel(i, { acquisitionDate: v })} data-field={`nblOtherParcels.${i}.acquisitionDate`} />
                 </div>
               </div>
               <ToggleCard
@@ -90,7 +90,7 @@ export function OtherLandParcelSection({ asset, onAssetChange }: OtherLandParcel
                 onCheckedChange={(c) => updateParcel(i, { hasBuilding: c })}
               />
               {p.hasBuilding && (
-                <FieldCard label="건축물 바닥면적 (㎡)" unit="㎡" hint="§168의11⑤2호 — 바닥면적분은 사업용으로 유지(비사업용 귀속 후보에서 제외)">
+                <FieldCard field={`nblOtherParcels.${i}.buildingFootprintArea`} label="건축물 바닥면적 (㎡)" unit="㎡" hint="§168의11⑤2호 — 바닥면적분은 사업용으로 유지(비사업용 귀속 후보에서 제외)">
                   <DecimalInput value={p.buildingFootprintArea} onChange={(v) => updateParcel(i, { buildingFootprintArea: v })} />
                 </FieldCard>
               )}
@@ -99,6 +99,7 @@ export function OtherLandParcelSection({ asset, onAssetChange }: OtherLandParcel
           <button
             type="button"
             data-testid="nbl-other-parcel-add"
+            data-field="nblOtherParcels"
             onClick={addParcel}
             className="text-xs text-primary hover:text-primary/80 px-3 py-1.5 rounded border border-primary/30 hover:bg-primary/10 transition-colors"
           >

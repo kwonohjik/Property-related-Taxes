@@ -470,6 +470,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                         type="number"
                         className={AREA_INPUT_CLASS}
                         data-testid={`parcel-${i}-compensation-per-sqm`}
+                        data-field={`parcels.${i}.compensationPerSqm`}
                         value={p.compensationPerSqm}
                         onChange={(e) => update(i, { compensationPerSqm: e.target.value })}
                         placeholder="보상가액 단가"
@@ -481,6 +482,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                         type="number"
                         className={AREA_INPUT_CLASS}
                         data-testid={`parcel-${i}-compensation-basis-std-price`}
+                        data-field={`parcels.${i}.compensationBasisStdPrice`}
                         value={p.compensationBasisStdPrice}
                         onChange={(e) => update(i, { compensationBasisStdPrice: e.target.value })}
                         placeholder="보상 산정 기준시가 단가"
