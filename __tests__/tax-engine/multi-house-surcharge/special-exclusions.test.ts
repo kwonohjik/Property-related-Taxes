@@ -211,7 +211,7 @@ describe("MH-17: ③ 조특법 감면 임대주택 → 3주택+ 중과배제", (
       rentalPeriodYears: 5,
       isNationalSizeHousing: true,
     });
-    expect(isTaxIncentiveRentalHousingExempt(house)).toBe(true);
+    expect(isTaxIncentiveRentalHousingExempt(house, new Date("2026-05-10"))).toBe(true);
   });
 });
 

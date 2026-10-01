@@ -15,7 +15,12 @@ import { MULTI_HOUSE } from "./legal-codes";
 import { isWithinDeadline } from "./civil-period";
 import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
-import { RA_CUT } from "./rental-article/rules";
+import {
+  RA_CUT,
+  APT_TRANSFER_DEADLINE_FLOOR,
+  resolveAptTransferDeadline,
+  hasAnyAptDeadlineExtensionFact,
+} from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { passesRankingGate } from "./transfer-inheritance-exclusion";
 import type { SharedRentalArticle } from "./rental-article/types";
@@ -383,12 +388,68 @@ export function isSmallNewHouseSpecial(house: HouseInfo, transferDate: Date): bo
 // ③ 조특법 감면 임대주택 판정
 // ============================================================
 
-export function isTaxIncentiveRentalHousingExempt(house: HouseInfo): boolean {
+function isTaxIncentiveRentalBaseEligible(house: HouseInfo): boolean {
   return !!(
     house.isTaxIncentiveRental &&
     calcRentalPeriodYears(house) >= 5 &&
     house.isNationalSizeHousing
   );
+}
+
+/**
+ * §167조의3①3호 후단(대통령령 제36737호) 게이트 대상 여부 — 「매입 + (장기일반|단기) 민간임대주택 중
+ * 아파트(도시형 생활주택인 아파트 제외)」인지를 세 사실로 판정한다.
+ *
+ * true(게이트 대상) / false(대상 아님: 건설임대·다른 등록유형·도시형 생활주택) /
+ * undefined("모른다" — 세 사실 중 판정에 필요한 어느 하나라도 미제공). 판정 메뉴 입력 경로가
+ * 아직 없어(후속) 지금은 모든 house가 undefined로 떨어진다 — Q-1(2호)과 같은 1안으로 호출부가
+ * "모른다"를 "종전 기준 유지 + 확인 필요 notice"로 처리한다(법 근거 없이 불리 적용 금지).
+ */
+export function isTaxIncentiveRentalAptGateApplicable(house: HouseInfo): boolean | undefined {
+  if (house.isTaxIncentiveRentalPurchase === undefined) return undefined;
+  if (!house.isTaxIncentiveRentalPurchase) return false; // 건설임대 → 후단 미적용
+  if (house.taxIncentiveRentalRegistrationType === undefined) return undefined;
+  if (house.taxIncentiveRentalRegistrationType === "other") return false; // 장기일반·단기 외 유형
+  if (house.isUrbanLifeHousingApartment === undefined) return undefined;
+  if (house.isUrbanLifeHousingApartment) return false; // 도시형 생활주택인 아파트는 제외
+  return true;
+}
+
+/**
+ * ③ 감면대상장기임대주택의 §167조의3①3호 후단 아파트 양도기한 — 바닥(2027.12.31) 이내면
+ * 영향이 없고, 넘겼는데 게이트 대상 여부·연장 사실을 모르면 종전 기준(exempt 유지)을 지키며
+ * `isTaxIncentiveRentalAptDeadlinePending`이 "확인 필요" notice를 담당한다.
+ */
+export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
+  if (!isTaxIncentiveRentalBaseEligible(house)) return false;
+  if (!house.isApartment) return true; // 후단은 아파트에만 걸린다
+  if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return true;
+
+  const gateApplicable = isTaxIncentiveRentalAptGateApplicable(house);
+  if (gateApplicable !== true) return true; // false(대상 아님) · undefined(모름, 종전 기준 유지)
+
+  if (!hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension)) {
+    return true; // 연장 사실 모름 → 판정 보류, 종전 기준 유지
+  }
+  const deadline = resolveAptTransferDeadline(house.taxIncentiveRentalAptDeadlineExtension);
+  return transferDate.getTime() <= deadline;
+}
+
+/**
+ * Q-1 후속(판정 보류) — 이 house의 §167조의3①3호 후단 아파트 양도기한을 "모름"으로 보류했는가.
+ * `isAptTransferDeadlinePending`(2호 가·나·라·마목)과 같은 역할 — 성공 경로에서만 보이면 실패
+ * 사유가 가려진다(feedback_success_only_breakdown_hides_failures).
+ */
+export function isTaxIncentiveRentalAptDeadlinePending(house: HouseInfo, transferDate: Date): boolean {
+  if (!isTaxIncentiveRentalBaseEligible(house)) return false;
+  if (!house.isApartment) return false;
+  if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return false;
+
+  const gateApplicable = isTaxIncentiveRentalAptGateApplicable(house);
+  if (gateApplicable === undefined) return true; // 게이트 대상 여부 자체를 모름
+  if (gateApplicable === false) return false;
+
+  return !hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension);
 }
 
 // ============================================================

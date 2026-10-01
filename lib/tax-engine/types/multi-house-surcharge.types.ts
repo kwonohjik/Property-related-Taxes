@@ -8,6 +8,8 @@
  * 소령 §167-3 (주택 수 산정), §167-10 (2주택 중과 배제) 기반.
  */
 
+import type { AptTransferDeadlineExtension } from "../rental-article/rules";
+
 // ============================================================
 // 타입 정의
 // ============================================================
@@ -173,6 +175,29 @@ export interface HouseInfo {
    * 조세특례제한법 §97 등 — 국민주택규모 5년 이상 임대.
    */
   isTaxIncentiveRental?: boolean;
+  /**
+   * §167조의3①3호 후단(대통령령 제36737호, 2026.9.30. 공포·2026.10.1. 시행) — ③ 감면대상장기임대주택이
+   * 「민간매입임대주택」(매입)인지. 건설임대(false)는 후단 게이트 대상이 아니다.
+   * 미제공(undefined)은 "모른다" — 판정 메뉴 입력 경로가 아직 없어(후속) 판정을 보류하고
+   * 종전 기준(③ 그대로 적용)을 유지한다(Q-1 2호와 같은 1안).
+   */
+  isTaxIncentiveRentalPurchase?: boolean;
+  /**
+   * ③ 감면대상장기임대주택의 등록 유형 — 종전 「민간임대주택에 관한 특별법」§2 5호(장기일반) vs
+   * 6호(단기). 후단 게이트는 이 둘만 겨냥한다("other"=그 외 유형 → 게이트 대상 아님).
+   * 미제공은 "모른다".
+   */
+  taxIncentiveRentalRegistrationType?: "long_term_general" | "short_term" | "other";
+  /**
+   * ③ 감면대상장기임대주택 아파트가 「주택법」상 도시형 생활주택인 아파트인지 — 후단이 명시
+   * 제외한다(도시형 생활주택인 아파트는 게이트 대상 아님). 미제공은 "모른다".
+   */
+  isUrbanLifeHousingApartment?: boolean;
+  /**
+   * §167조의3⑪ 기한 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·이전고시일) — ③ 전용.
+   * 2호 가·나·라·마목(`rental-article/rules.ts` `AptTransferDeadlineExtension`)과 같은 모양을 재사용.
+   */
+  taxIncentiveRentalAptDeadlineExtension?: AptTransferDeadlineExtension;
   // ── 아파트/오피스텔 ──
   /** 아파트 여부 */
   isApartment: boolean;
