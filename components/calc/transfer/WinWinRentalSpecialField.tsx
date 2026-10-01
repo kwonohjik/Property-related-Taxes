@@ -79,6 +79,16 @@ export function WinWinRentalSpecialField({ value, onChange }: Props) {
             onChange={(v) => onChange({ winWinRentalLeaseMonths: v === undefined ? "" : String(v) })}
           />
         </FieldCard>
+        <FieldCard
+          label="상생임대차 임대기간이 종료된 날"
+          hint="2026년 10월 1일 이후 양도분부터 양도기한 판정에 필요합니다(2026.9.30. 개정)"
+        >
+          <DateInput
+            data-testid="ww-lease-end-date"
+            value={value.winWinRentalLeaseEndDate}
+            onChange={(winWinRentalLeaseEndDate) => onChange({ winWinRentalLeaseEndDate })}
+          />
+        </FieldCard>
       </div>
     </ToggleCard>
   );

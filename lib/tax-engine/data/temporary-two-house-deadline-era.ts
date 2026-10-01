@@ -13,11 +13,22 @@
  * | 조정→조정, 신규 취득 ≥ 2018-09-14 | 신규취득일 | **2년** | §155① 괄호(MST 204914, 2018-10-23 시행) |
  * | 조정→조정, 신규 취득 ≥ 2019-12-17 · 양도 2020-02-11 ~ 2022-05-09 | 둘 다 | **1년** + 1년 내 세대전원 전입 | §155①2호 가·나목(MST 218373), 제30395호 부칙 제15조 |
  * | 조정→조정, 양도 2022-05-10 ~ 2023-01-11 | 양도일 | **2년** | §155①2호(MST 242735), 제32654호 부칙 제3조 |
- * | 양도 ≥ 2023-01-12 | 양도일 | 3년(본문) | 2호 삭제(MST 248191), 제33267호 부칙 제8조 |
+ * | 양도 2023-01-12 ~ 2026-09-30 | 양도일 | 3년(본문) | 2호 삭제(MST 248191), 제33267호 부칙 제8조 |
+ * | 조정→조정, 양도 ≥ 2026-10-01 · 신규 취득(또는 계약) ≥ 2026-08-04 | 둘 다 | **2년** | §155①1호(MST 290841), 제36737호 부칙 제2조① |
+ * | 양도 ≥ 2026-10-01 · 1호 외(신규 취득·계약이 2026-08-03 이전 등) | — | 3년(2호) | §155①2호(MST 290841), 제36737호 부칙 제2조②1·2호 |
  *
  * 부칙 원문(대통령령 제30395호 제15조): 「① 제155조제1항의 개정규정은 이 영 시행 이후 양도하는 분부터
  * 적용한다. ② … 2019년 12월 16일 이전에 조정대상지역에 있는 신규 주택 … 을 취득한 경우 …
  * 종전의 규정에 따른다.」 제29242호 제2조②는 같은 구조로 2018-09-13을 기준으로 한다.
+ *
+ * 부칙 원문(대통령령 제36737호 제2조 — 2026.9.30. 공포·2026.10.1. 시행, MST 290841 실독): 「①
+ * 제155조제1항제1호의 개정규정은 조정대상지역에 종전의 주택을 보유한 1세대가 2026년 8월 4일 이후에
+ * 조정대상지역에 있는 신규 주택을 취득하는 경우(제2항 각 호에 해당하는 경우는 제외한다)로서 이 영 시행
+ * 이후 종전의 주택을 양도하는 경우부터 적용한다. ② 다음 각 호의 어느 하나에 해당하는 경우에는 제155조
+ * 제1항제1호의 개정규정에도 불구하고 종전의 제155조제1항에 따른다. 1. … 2026년 8월 3일 이전에 …
+ * 신규 주택(신규 주택을 취득할 수 있는 권리를 포함한다) … 을 취득한 경우 2. … 2026년 8월 3일 이전에 …
+ * 매매계약을 체결하고 계약금을 지급한 사실이 증명서류에 의해 확인되는 경우」 — 구조는 제29242호
+ * 제2조②·제30395호 제15조②와 같다(이르면 기준일, 취득·계약 중 이른 날 기준).
  *
  * 🔑 A2b(2026-09-26)에서 아래를 이 leaf에 넣었다:
  *   1. 2019-12-17 체제 **2호 가목(1년 내 세대전원 이사·전입신고)** — `moveInDate`가 있으면 판정하고
@@ -51,6 +62,10 @@ export const TT_REGULATED_1Y_NEW_ACQ_START = new Date("2019-12-17");
 export const TT_REGULATED_2022_TRANSFER_START = new Date("2022-05-10");
 /** 제33267호 부칙 제8조① — 이 날 이후 양도분부터 조정 구분 없이 본문 3년. */
 export const TT_REGULATED_ABOLISHED_TRANSFER_START = new Date("2023-01-12");
+/** 제36737호 시행(부칙 제1조)일 — 이 날 이후 양도분부터 2026 개정 §155①(1호 2년·2호 3년) 체제. */
+export const TT_REGULATED_2026_TRANSFER_START = new Date("2026-10-01");
+/** 제36737호 부칙 제2조①·②1·2호 — 신규 취득(또는 계약)이 이 날 **전**(2026-08-03 이전)이면 종전 규정(3년). */
+export const TT_REGULATED_2026_NEW_ACQ_START = new Date("2026-08-04");
 
 export interface TemporaryTwoHouseDeadlineEra {
   /** 처분기한(년) — 「신규 주택을 취득한 날부터 N년 이내」 */
@@ -113,6 +128,16 @@ export function resolveTemporaryTwoHouseDeadlineEra(p: {
   const acq = p.newAcquisitionDate?.getTime();
   const contract = p.newContractDate?.getTime();
   const n = acq === undefined ? undefined : contract === undefined ? acq : Math.min(acq, contract);
+  // 2026 개정(제36737호) — §155①1호 「신규 취득일 현재 조정→조정」 + 신규 취득(또는 계약)이
+  //   2026-08-04 이후인 경우만 2년. 그 밖은 「제1호 외의 경우」(2호)로 본문 3년 — n 미확정(호출부가
+  //   항상 넘긴다는 전제가 깨진 경우)도 1호를 확정할 수 없으므로 2호로 둔다(법 근거 없이 유리하게
+  //   적용하지 않는다).
+  if (t >= TT_REGULATED_2026_TRANSFER_START.getTime()) {
+    if (n !== undefined && n >= TT_REGULATED_2026_NEW_ACQ_START.getTime()) {
+      return { years: 2, moveInRequirementPending: false };
+    }
+    return base;
+  }
   if (t >= TT_REGULATED_ABOLISHED_TRANSFER_START.getTime()) return base;
   if (t >= TT_REGULATED_2022_TRANSFER_START.getTime()) return { years: 2, moveInRequirementPending: false };
   if (t < TT_REGULATED_2Y_TRANSFER_START.getTime()) return base;
@@ -156,8 +181,8 @@ function resolveMoveInRegime(
 /**
  * 판정 메뉴 입력 노출 — 새 입력이 **결론을 바꿀 수 있는 구간**인가 (⑤·⑧이 같은 술어를 쓴다).
  *
- * - `regulatedAxis`: 양도일이 조정→조정 단축 기한이 있던 2018-10-23 ~ 2023-01-11. 밖이면 두 주택의 조정
- *   여부와 무관하게 본문 3년이다.
+ * - `regulatedAxis`: 양도일이 조정→조정 단축 기한이 있던 2018-10-23 ~ 2023-01-11, 또는 2026 개정
+ *   (제36737호) 시행일 2026-10-01 이후. 밖이면 두 주택의 조정 여부와 무관하게 본문 3년이다.
  * - `moveIn`: 신규 취득(또는 계약) 2019-12-17 이후 · 양도 2020-02-11 ~ 2022-05-09 — 2호 가목·단서 체제.
  *   두 주택이 모두 조정대상지역인지는 호출부가 AND 한다(조정 여부 미확인이면 열어 둔다).
  */
@@ -168,7 +193,8 @@ export function temporaryTwoHouseEraInputRelevance(p: {
 }): { regulatedAxis: boolean; moveIn: boolean } {
   const t = p.transferDate.getTime();
   const regulatedAxis =
-    t >= TT_REGULATED_2Y_TRANSFER_START.getTime() && t < TT_REGULATED_ABOLISHED_TRANSFER_START.getTime();
+    (t >= TT_REGULATED_2Y_TRANSFER_START.getTime() && t < TT_REGULATED_ABOLISHED_TRANSFER_START.getTime()) ||
+    t >= TT_REGULATED_2026_TRANSFER_START.getTime();
   const moveIn =
     resolveTemporaryTwoHouseDeadlineEra({
       bothRegulated: true,

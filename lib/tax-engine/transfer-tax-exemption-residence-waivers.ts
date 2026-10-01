@@ -6,6 +6,7 @@
  */
 import type { TransferTaxInput } from "./types/transfer.types";
 import { resolveLthdTable2Era } from "./data/lthd-table2-era";
+import { periodEndFrom, isOnOrBeforeDeadline } from "./civil-period";
 
 /**
  * §155의2 적용 개시일 — 2005-01-01.
@@ -29,6 +30,48 @@ export const WIN_WIN_MAX_INCREASE_PCT = 5;
 export const WIN_WIN_PRIOR_LEASE_MIN_MONTHS = 18;
 /** §155의3①3호 — 상생임대차계약 임대기간 「2년」 */
 export const WIN_WIN_LEASE_MIN_MONTHS = 24;
+
+/**
+ * §155의3① 양도기한 — 2026-09-30 개정(대통령령 제36737호) 부칙 제1조 시행일. 이 날 **전** 양도에는
+ * 양도기한 자체가 없었다(개정 전 문언 실독 — MST 286211 「… 양도하는 경우에는」, 기한 문구 없음).
+ * 이 조문만의 별도 적용례(부칙 제2조)가 없어 **일반 원칙**(부칙 제1조)대로 시행일 이후 양도부터
+ * 적용한다 — 체결·임대 시점이 그 전이어도 **양도가 시행일 이후**면 새 기한이 걸린다.
+ */
+export const WIN_WIN_TRANSFER_DEADLINE_EFFECTIVE_DATE = new Date("2026-10-01");
+/** §155①(2026 개정) 본문 괄호 — 이 날 이전에 ①3호 임대기간이 종료되면 고정 기한(아래)을 쓴다. */
+export const WIN_WIN_LEASE_END_EARLY_CUTOFF = new Date("2026-12-31");
+/** 위 조건 충족 시 양도기한 — 「2027년 12월 31일까지로 한다」. */
+export const WIN_WIN_TRANSFER_DEADLINE_EARLY_FIXED = new Date("2027-12-31");
+/** 일반 규칙의 상한 — 「… 과 2029년 12월 31일 중 빠른 날」. */
+export const WIN_WIN_TRANSFER_DEADLINE_CAP = new Date("2029-12-31");
+
+/**
+ * ⑤·⑧ 게이트 — 양도일이 2026 개정 양도기한 적용 구간(2026-10-01 이후)인가.
+ * UI(①3호 임대기간 종료일 입력 요구)·validate가 엔진(`qualifiesWinWinRental`)과 같은 경계를 쓴다.
+ */
+export function isWinWinDeadlineEraApplicable(transferDate: Date | undefined): boolean {
+  return !!transferDate && transferDate.getTime() >= WIN_WIN_TRANSFER_DEADLINE_EFFECTIVE_DATE.getTime();
+}
+
+/**
+ * §155의3① 본문(2026 개정) — 상생임대주택 **양도기한** 말일.
+ *
+ * 「제3호에 따른 임대기간이 종료된 날부터 1년이 되는 날과 2029년 12월 31일 중 빠른 날까지(2026년
+ * 12월 31일 이전에 해당 임대기간이 종료되는 경우에는 2027년 12월 31일까지로 한다)」
+ *
+ * 「~이 되는 날」은 초일불산입 + 응당일 전날(민법 §160②) — `periodEndFrom`과 같은 산식(temporary-
+ * two-house-deadline-era.ts의 「~이 되는 날」 선례와 동일 규약). 반환값은 역상 말일이고, 실제
+ * 충족 여부 비교는 호출부가 `isOnOrBeforeDeadline`(민법 §161 토요일·공휴일 익일 반영)로 한다.
+ */
+export function resolveWinWinTransferDeadline(leaseEndDate: Date): Date {
+  if (leaseEndDate.getTime() <= WIN_WIN_LEASE_END_EARLY_CUTOFF.getTime()) {
+    return WIN_WIN_TRANSFER_DEADLINE_EARLY_FIXED;
+  }
+  const plusOneYear = periodEndFrom(leaseEndDate, 1);
+  return plusOneYear.getTime() < WIN_WIN_TRANSFER_DEADLINE_CAP.getTime()
+    ? plusOneYear
+    : WIN_WIN_TRANSFER_DEADLINE_CAP;
+}
 
 /**
  * §155의2 장기저당담보 **계약 요건**(①1~3호) 충족 + ③ 미해당 여부.
@@ -82,17 +125,27 @@ export function qualifiesLongTermMortgageResidenceExemption(
  *    **보는 경우를 포함**」이므로 **의제 1주택 세대에도 적용**된다 ⇒ 공통 술어에 둔다.
  */
 export function qualifiesWinWinRental(
-  input: Pick<TransferTaxInput, "winWinRentalHouse">,
+  input: Pick<TransferTaxInput, "winWinRentalHouse"> & Partial<Pick<TransferTaxInput, "transferDate">>,
 ): boolean {
   const w = input.winWinRentalHouse;
   if (!w) return false;
-  return (
+  const requirements1to3 =
     w.winWinContractDate >= WIN_WIN_CONTRACT_START &&
     w.winWinContractDate <= WIN_WIN_CONTRACT_END &&
     w.increaseRatePct <= WIN_WIN_MAX_INCREASE_PCT &&
     w.priorLeaseMonths >= WIN_WIN_PRIOR_LEASE_MIN_MONTHS &&
-    w.winWinLeaseMonths >= WIN_WIN_LEASE_MIN_MONTHS
-  );
+    w.winWinLeaseMonths >= WIN_WIN_LEASE_MIN_MONTHS;
+  if (!requirements1to3) return false;
+  // 2026 개정(제36737호) 양도기한 — 시행일(2026-10-01) 전 양도는 기한이 없다(종전 동작 유지).
+  // `transferDate` 미주입 호출(과거 호출부·일부 테스트)도 같다 — 새 기한을 판정할 수 없는 호출을
+  // 과거 동작으로 소급 적용하지 않는다(법 근거 없이 불리하게 적용하지도 않는다).
+  if (!input.transferDate || input.transferDate.getTime() < WIN_WIN_TRANSFER_DEADLINE_EFFECTIVE_DATE.getTime()) {
+    return true;
+  }
+  // 시행일 이후 양도 — ①3호 임대기간 종료일이 있어야 기한을 정할 수 있다. 미입력이면 법 근거 없이
+  // 유리하게(기한 없음으로) 보지 않는다 — 불성립.
+  if (!w.winWinLeaseEndDate) return false;
+  return isOnOrBeforeDeadline(input.transferDate, resolveWinWinTransferDeadline(w.winWinLeaseEndDate));
 }
 
 /** 「소득세법 시행령」 §159의4 — 표2 대상 「보유기간 중 **거주기간이 2년 이상**」. */

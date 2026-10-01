@@ -349,6 +349,8 @@ export async function POST(request: NextRequest) {
             increaseRatePct: p.winWinRentalHouse.increaseRatePct,
             priorLeaseMonths: p.winWinRentalHouse.priorLeaseMonths,
             winWinLeaseMonths: p.winWinRentalHouse.winWinLeaseMonths,
+            // 2026 개정(제36737호) 양도기한 산정용 — 단건 route(engine-input.ts)와 같은 변환.
+            winWinLeaseEndDate: toOptionalDate(p.winWinRentalHouse.winWinLeaseEndDate),
           }
         : undefined,
       generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,

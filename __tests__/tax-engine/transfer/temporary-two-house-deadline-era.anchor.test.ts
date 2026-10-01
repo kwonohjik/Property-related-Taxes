@@ -18,7 +18,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import { resolveTemporaryTwoHouseDeadlineEra } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
+import {
+  resolveTemporaryTwoHouseDeadlineEra,
+  temporaryTwoHouseEraInputRelevance,
+} from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
+import { resolveRegulatedAtNewAcquisition } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 
 const mockRates = makeMockRates();
@@ -83,6 +87,59 @@ describe("OH-01 leaf — 조정→조정 처분기한 연혁", () => {
     expect(era("2020-09-01", "2023-01-11").years).toBe(2);
     expect(era("2020-09-01", "2023-01-12").years).toBe(3);
   });
+
+  describe("2026 개정(제36737호) — §155①1호 2년·2호 3년", () => {
+    it("양도 2026-09-30(시행 전) → 3년 / 2026-10-01(시행) → 2년 — 신규취득 2026-08-10", () => {
+      expect(era("2026-08-10", "2026-09-30").years).toBe(3);
+      expect(era("2026-08-10", "2026-10-01")).toEqual({ years: 2, moveInRequirementPending: false });
+    });
+
+    it("신규 취득 2026-08-03 → 3년 / 2026-08-04 → 2년 (부칙 제2조①·②1호) — 양도 2027-01-01", () => {
+      expect(era("2026-08-03", "2027-01-01").years).toBe(3);
+      expect(era("2026-08-04", "2027-01-01")).toEqual({ years: 2, moveInRequirementPending: false });
+    });
+
+    it("계약일 2026-08-03(취득일은 그 뒤) → 3년 — 부칙 제2조②2호(min(취득,계약) 재사용)", () => {
+      expect(
+        resolveTemporaryTwoHouseDeadlineEra({
+          bothRegulated: true,
+          baseDeadlineYears: 3,
+          newAcquisitionDate: new Date("2026-09-01"),
+          newContractDate: new Date("2026-08-03"),
+          transferDate: new Date("2027-01-01"),
+        }).years,
+      ).toBe(3);
+    });
+
+    it("긍정 짝 — 조정→비조정(한쪽만 조정)이면 신규취득 2026-08-10이어도 3년 (양도 2027-01-01)", () => {
+      expect(era("2026-08-10", "2027-01-01", false).years).toBe(3);
+    });
+
+    it("긍정 짝 — 신규취득이 2025년(기준일 전)이면 양도가 2026-10-01 이후여도 3년", () => {
+      expect(era("2025-06-01", "2026-10-01").years).toBe(3);
+    });
+  });
+
+  describe("UI 게이트 temporaryTwoHouseEraInputRelevance — 2026 구간도 연다", () => {
+    it("양도 2026-09-30 → regulatedAxis 닫힘 / 2026-10-01 → 열림", () => {
+      const at = (t: string) =>
+        temporaryTwoHouseEraInputRelevance({
+          newAcquisitionDate: d("2026-08-10"),
+          transferDate: d(t),
+        }).regulatedAxis;
+      expect(at("2026-09-30")).toBe(false);
+      expect(at("2026-10-01")).toBe(true);
+    });
+
+    it("2026-10-01 이후에도 2023-01-12~2026-09-30 구간은 여전히 닫혀 있다(그 사이 본문 3년 고정 구간)", () => {
+      expect(
+        temporaryTwoHouseEraInputRelevance({
+          newAcquisitionDate: d("2024-01-01"),
+          transferDate: d("2024-06-01"),
+        }).regulatedAxis,
+      ).toBe(false);
+    });
+  });
 });
 
 describe("OH-01 통합 — 비과세 판정이 연혁 기한을 따른다", () => {
@@ -118,5 +175,47 @@ describe("OH-01 통합 — 비과세 판정이 연혁 기한을 따른다", () =
     expect(
       exempt(tt("2020-06-01", "2022-09-01", { isRegulatedArea: false, wasRegulatedAtAcquisition: false })),
     ).toBe(true);
+  });
+});
+
+describe("2026 개정(제36737호) 통합 — 비과세 판정이 2년 기한을 따른다", () => {
+  /** 조정→조정, 신규 2026-08-10, 양도 2029-07-10(신규취득일부터 2년 11개월 후 — 2년 초과·3년 이내) */
+  function case2026(transfer: string) {
+    return tt("2026-08-10", transfer);
+  }
+
+  it("★ 2026 개정 리뷰 시나리오 — 신규 2026-08-10 · 양도 2029-07-10 → 2년 도과 → 과세(개정 전 비과세였다)", () => {
+    const result = calculateTransferTax(case2026("2029-07-10"), mockRates) as ReturnType<
+      typeof calculateTransferTax
+    > & { determinedTax: number };
+    // 개정 전(research probe 실측) determinedTax = 0(비과세) → 개정 후 과세로 전환되어야 한다.
+    expect(result.isExempt).toBe(false);
+    expect(result.determinedTax).toBeGreaterThan(0);
+  });
+
+  it("긍정 짝 — 같은 입력의 2년 이내(2028-08-09) 양도는 비과세", () => {
+    expect(exempt(case2026("2028-08-09"))).toBe(true);
+  });
+
+  it("긍정 짝 — 조정→비조정이면 신규 2026-08-10·양도 2029-07-10도 비과세(본문 3년)", () => {
+    expect(
+      exempt(tt("2026-08-10", "2029-07-10", { isRegulatedArea: false, wasRegulatedAtAcquisition: false })),
+    ).toBe(true);
+  });
+
+  it("조정대상지역 공고일 이전 계약 → 3년(부칙 제2조②2호) — 신규취득 2026-08-10·계약 2026-06-01, 신규주택 코드 41310(공고일 2026-07-01)", () => {
+    // resolveRegulatedAtNewAcquisition이 공고일 이전 계약 제외를 적용해 next=false → bothRegulated=false → 3년.
+    const base = tt("2026-08-10", "2029-07-10", {
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2015-01-01"),
+        newAcquisitionDate: new Date("2026-08-10"),
+        newHouseRegionCode: "41310",
+        newHouseRegulatedAtAcquisition: true,
+        newHouseContractDate: new Date("2026-06-01"),
+      },
+    });
+    const reg = resolveRegulatedAtNewAcquisition(base);
+    expect(reg.bothRegulated).toBe(false);
+    expect(exempt(base)).toBe(true);
   });
 });

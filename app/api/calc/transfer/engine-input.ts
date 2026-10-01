@@ -215,6 +215,7 @@ export function buildTransferEngineInput(
         }
       : undefined,
     // ⑭ §155의3 상생임대주택 — `winWinContractDate`만 Date 변환(2021-12-20~2026-12-31 창 판정에 쓰인다).
+    //   `winWinLeaseEndDate`도 2026 개정(제36737호) 양도기한 산정에 Date가 필요해 같이 변환한다.
     winWinRentalHouse: data.winWinRentalHouse
       ? {
           winWinContractDate: toDate(
@@ -224,6 +225,7 @@ export function buildTransferEngineInput(
           increaseRatePct: data.winWinRentalHouse.increaseRatePct,
           priorLeaseMonths: data.winWinRentalHouse.priorLeaseMonths,
           winWinLeaseMonths: data.winWinRentalHouse.winWinLeaseMonths,
+          winWinLeaseEndDate: toOptionalDate(data.winWinRentalHouse.winWinLeaseEndDate),
         }
       : undefined,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)

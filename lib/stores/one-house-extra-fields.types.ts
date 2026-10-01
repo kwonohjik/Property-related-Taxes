@@ -3,7 +3,7 @@
  *
  * ## 왜 별도 파일인가
  *
- * 이 13필드는 두 폼이 함께 쓴다:
+ * 이 14필드는 두 폼이 함께 쓴다:
  *   · 판정 메뉴 폼(`OneHouseJudgmentFormData`)이 **입력**을 받고,
  *   · 계산기 폼(`TransferFormData.importedOneHouseFacts`)이 그것을 **넘겨받아 운반**한다(P5-a).
  *
@@ -61,6 +61,11 @@ export interface OneHouseJudgmentExtraFields {
   winWinRentalPriorLeaseMonths: string;
   /** ①3호 상생임대차계약에 따라 임대한 기간(개월) */
   winWinRentalLeaseMonths: string;
+  /**
+   * ①3호 임대기간이 **종료된 날** — 2026-09-30 개정(대통령령 제36737호) §155① 본문 양도기한
+   * 산정용. 2026-10-01 이후 양도분부터만 필수(그 전에는 양도기한 자체가 없었다).
+   */
+  winWinRentalLeaseEndDate: string;
 }
 
 /** 신규 필드의 초기값 — 어댑터·validate의 fallback과 **문자 단위로 같아야** 한다(3중 패턴). */
@@ -79,4 +84,5 @@ export const oneHouseJudgmentExtraDefaults: OneHouseJudgmentExtraFields = {
   winWinRentalIncreaseRatePct: "",
   winWinRentalPriorLeaseMonths: "",
   winWinRentalLeaseMonths: "",
+  winWinRentalLeaseEndDate: "",
 };
