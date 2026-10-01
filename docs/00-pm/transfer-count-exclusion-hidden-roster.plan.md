@@ -106,4 +106,8 @@ F-2를 같은 방식으로 고치면 창 밖 분기에도 복제된다.
 판정 route는 본문 주택 수를 믿지 않고 `deriveHouseholdHousingCount`(양도 행 + 명부 행 **전부**)로 센다. 실측: 명부 [c⑥] → 전체 2 · 비과세 판정 1 / [c⑥, b] → 3 · 2. ⑥ 행이 늘 주택 수 안에 있어 F-1·R-1 어느 쪽도 생기지 않는다.
 
 - anchor ROW-12(주택 수 = 1 + 명부 행) · ROW-12+(본문 주택 수를 1로 바꿔도 결과 동일) — route가 본문 주택 수를 쓰게 하는 뮤테이션 KILLED
-- 곁가지(미조사): probe의 판정 메뉴 재개발 아파트 [c⑥] 사안이 「비과세 판정 1채」인데 비과세가 아니었다. 픽스처에 재개발 필드(인가일 등)가 없어서일 가능성이 크고 이 축(주택 수)과는 무관하다 — 확인 필요.
+- 곁가지 ✅ 조사 종결(2026-10-02) — probe의 판정 메뉴 재개발 아파트 [c⑥]가 「비과세 판정 1채」인데 비과세가 아니었던 것은 **주택 수와 무관하고, 화면에서 생기지 않는 입력**이다.
+  - 실측: 재개발 아파트는 명부 **없이도**(전체 1 · 판정 1) `isExempt: false`이고 `requirementReview`·`undetermined`가 모두 비어 있다. 같은 픽스처의 주택은 [] · [c⑥] 둘 다 비과세.
+  - 원인: `checkExemption`의 자산 게이트가 `propertyType !== "housing"`이다. 계산기는 `judgeRedevAptOneHouseExemption`(`transfer-tax-redevelopment-apt-exemption.ts`)이 판정 경계에서 `redevelopment_apt` → `housing`으로 번역하지만, 판정 route에는 그 다리가 없다.
+  - 도달 불가: 판정 메뉴 화면은 자산 종류로 「주택」·「조합원입주권」 둘만 쓴다(`one-house-exemption/steps/Step3.tsx:190-196`). store 기본값은 `housing`(`calc-wizard-asset-factory.ts:83`)이고, 판정 store에 쓰는 바깥 경로는 판정 이력 재개뿐이다(`history-resume-entry.ts:124`). `redevelopment_apt`는 API를 직접 부를 때만 들어온다 ⇒ 고치지 않는다.
+  - 남는 성질(기록): 직접 호출로 주택·입주권 밖의 종류를 보내면 route가 사유 없이 「과세」로 답한다. 화면에 재개발 아파트를 열 때는 계산기의 번역 leaf를 판정 route에도 걸어야 한다.
