@@ -11,6 +11,10 @@
  *
  * §155⑳ 자체 정의 괄호는 가목1)의 등록기한만 비적용할 뿐 가목2)를 언급하지 않는다 — ⑳ 경로(말소 전,
  * 현재 보유 중)는 이 게이트를 **그대로** 받는다. ㉓(말소 후 5년 내) 경로만 명시로 비적용된다.
+ *
+ * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 바닥 초과를
+ * 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 종전 기준을 유지하고
+ * (`passed` 불변) `notices`로 확인 필요 고지만 낸다.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -46,21 +50,27 @@ const run = (units: RentalUnitInput[], transferDate: string) =>
   checkEligibility(units, 5, 5, false, ctx(transferDate));
 
 describe("§155⑳ — 가목 아파트 양도기한(§167조의3⑪) Q-1", () => {
-  it("거주주택 양도일 2027.12.31(바닥 경계값) → 기한 내, passed", () => {
+  it("거주주택 양도일 2027.12.31(바닥 경계값) → 기한 내, passed, 고지 없음(no-notice 트윈)", () => {
     const r = run([gaMokApt], "2027-12-31");
     expect(r.passed).toBe(true);
     expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(false);
+    expect(r.notices ?? []).not.toEqual(expect.arrayContaining([expect.stringContaining("§167조의3⑪")]));
   });
 
-  it("거주주택 양도일 2028.1.1(바닥 다음날) → 연장 없이 기한 초과, passed=false", () => {
+  it("거주주택 양도일 2028.1.1(바닥 다음날)·연장 사실 없음 → 판정 보류: passed 유지 + 확인 필요 고지", () => {
     const r = run([gaMokApt], "2028-01-01");
-    expect(r.passed).toBe(false);
-    expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(true);
+    // 1안(사용자 결정) — 연장 사실을 물어본 적이 없으므로 종전 기준(기한 내)을 유지한다.
+    expect(r.passed).toBe(true);
+    expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(false);
+    expect(r.notices ?? []).toEqual(
+      expect.arrayContaining([expect.stringContaining("§167조의3⑪ 아파트 양도기한")]),
+    );
   });
 
-  it("비아파트(가목)는 2028년 이후 양도해도 이 게이트의 영향을 받지 않는다", () => {
+  it("비아파트(가목)는 2028년 이후 양도해도 이 게이트의 영향을 받지 않는다(고지도 없음)", () => {
     const r = run([{ ...gaMokApt, isApartment: false }], "2028-01-01");
     expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(false);
+    expect(r.notices ?? []).not.toEqual(expect.arrayContaining([expect.stringContaining("§167조의3⑪")]));
   });
 });
 

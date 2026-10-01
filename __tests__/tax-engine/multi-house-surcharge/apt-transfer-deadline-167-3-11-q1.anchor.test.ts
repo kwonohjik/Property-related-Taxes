@@ -3,9 +3,13 @@
  * 2026.10.1. 시행 신설)이 다주택 중과 배제(§167의3①2호)에 거는 게이트.
  *
  * 2주택(일반주택 h1 + 장기임대 아파트 h2) 구성에서 h2가 가목 요건을 충족하면 h1은
- * §167의10①10호(h2가 2호 주택)로 중과 배제된다. h2가 **아파트**이고 이 계산(= h1 양도)
- * 시점이 §167의3⑪ 기한(바닥 2027.12.31)을 연장 없이 지났다면, h2는 더 이상 가목 "장기임대주택"으로
- * 인정되지 않아 h1의 배제가 풀리고 중과가 걸린다 — 결정세액이 바뀐다(route-level before→after).
+ * §167의10①10호(h2가 2호 주택)로 중과 배제된다.
+ *
+ * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 바닥(2027.12.31)
+ * 초과를 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지) — 종전 기준(중과 배제 유지)을
+ * 지키고 `multiHouseSurchargeEvaluation.warnings`로 확인 필요 고지만 낸다. 연장 사실이 있는 경우의
+ * 정상 판정(FAIL/PASS)은 공용 leaf predicate(`checkRentalArticle`)에서
+ * `__tests__/tax-engine/rental-article/check.test.ts`가 전담 검증한다(단일 소스, 중복 없음).
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -69,19 +73,28 @@ function household(transferDate: Date, rentalIsLongTermRental = true): TransferT
   } as Partial<TransferTaxInput>);
 }
 
-const tax = (i: TransferTaxInput) => calculateTransferTax(i, loadFallbackTransferRates(i.transferDate)).totalTax;
+const result = (i: TransferTaxInput) => calculateTransferTax(i, loadFallbackTransferRates(i.transferDate));
+const tax = (i: TransferTaxInput) => result(i).totalTax;
 
 describe("Q-1 — §167조의3⑪ 아파트 양도기한이 다주택 중과 배제에 거는 게이트 (route-level)", () => {
-  it("2027.12.31(바닥 경계값 — 기한 내) 양도 → h2 가목 인정 → h1 중과 배제", () => {
-    const before = tax(household(new Date("2027-12-31")));
+  it("2027.12.31(바닥 경계값 — 기한 내) 양도 → h2 가목 인정 → h1 중과 배제, 고지 없음", () => {
+    const r = result(household(new Date("2027-12-31")));
     const noRental = tax(household(new Date("2027-12-31"), false));
     // 중과 배제 상태 — 일반(비임대) h2를 둔 경우보다 세액이 낮거나 같다(배제 vs 중과 비교 기준선).
-    expect(before).toBeLessThan(noRental);
+    expect(r.totalTax).toBeLessThan(noRental);
+    expect(r.multiHouseSurchargeEvaluation?.warnings ?? []).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("§167조의3⑪")]),
+    );
   });
 
-  it("2028.1.1(바닥 다음날 — 연장 없이 기한 초과) 양도 → h2 가목 불인정 → h1 중과 → 결정세액 상승", () => {
-    const beforeFloor = tax(household(new Date("2027-12-31")));
-    const afterFloor = tax(household(new Date("2028-01-01")));
-    expect(afterFloor).toBeGreaterThan(beforeFloor); // 구별력 가드 — 중과가 걸리면 세액이 오른다
+  it("2028.1.1(바닥 다음날)·연장 사실 없음 → 판정 보류: 종전 기준(중과 배제) 유지 + 확인 필요 고지, 결정세액 불변", () => {
+    const before = result(household(new Date("2027-12-31")));
+    const after = result(household(new Date("2028-01-01")));
+    // 1안(사용자 결정) — 연장 사실을 물어본 적이 없으므로 종전 기준(배제 유지)을 지킨다 — 세액 불변.
+    expect(after.totalTax).toBe(before.totalTax);
+    expect(before.totalTax).toBe(133_166_000); // before→after 실측 고정(이 lane head)
+    expect(after.multiHouseSurchargeEvaluation?.warnings ?? []).toEqual(
+      expect.arrayContaining([expect.stringContaining("§167조의3⑪ 아파트 양도기한")]),
+    );
   });
 });

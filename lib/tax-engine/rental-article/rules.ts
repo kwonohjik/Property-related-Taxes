@@ -122,3 +122,20 @@ export function resolveAptTransferDeadline(ext?: AptTransferDeadlineExtension): 
   if (d3 != null && !Number.isNaN(d3)) deadline = Math.max(deadline, plusOneYear(d3));
   return deadline;
 }
+
+/**
+ * ⑪ 세 호 중 하나라도 유효한 날짜가 제공됐는가. 입력 UI가 아직 없어(Q-1 후속) 이 세 사실을
+ * 사용자가 댈 길이 없다 — 「날짜 미제공」과 「연장 사실 없음(실제로 바닥만 적용)」을 구별하지 못하면
+ * 법 근거 없이 불리 적용(2027.12.31 바닥만 적용해 중과)하게 된다. 이 술어로 그 둘을 가른다
+ * (`resolveAptTransferDeadline`과 쌍 — 하나라도 있으면 그 값대로 "안다"고 보고 정상 판정,
+ * 전부 없으면 "모른다"고 보고 호출부가 판정 보류 처리).
+ */
+export function hasAnyAptDeadlineExtensionFact(ext?: AptTransferDeadlineExtension): boolean {
+  if (!ext) return false;
+  const valid = (d?: Date) => d instanceof Date && !Number.isNaN(d.getTime());
+  return (
+    valid(ext.dutyPeriodEndCancellationDate) ||
+    valid(ext.newRegulatedAreaAnnouncementDate) ||
+    valid(ext.relocationAnnouncementDate)
+  );
+}

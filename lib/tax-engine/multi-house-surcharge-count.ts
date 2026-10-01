@@ -245,6 +245,18 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
 }
 
 /**
+ * Q-1 후속(판정 보류) — 이 house의 §167조의3⑪ 아파트 양도기한(가목2)·나목2)·라목8)·마목4))을
+ * "모름"으로 보류했는가. 바닥(2027.12.31) 초과인데 ⑪ 연장 세 호 입력 경로가 아직 없어 그 사실을
+ * 모르는 경우에 true — `isLongTermRentalHousingExempt`의 passed/failed 여부와 무관하게 호출부가
+ * 별도 확인 필요 경고를 내는 데 쓴다(성공 경로에서만 보이면 실패 사유가 가려진다).
+ */
+export function isAptTransferDeadlinePending(house: HouseInfo, transferDate: Date): boolean {
+  if (!house.rentalType) return false;
+  const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
+  return checkRentalArticle(article, toNormalizedFromHouse(house, transferDate)).aptDeadlinePending;
+}
+
+/**
  * 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
  * (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
  * 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).

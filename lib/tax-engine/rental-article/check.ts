@@ -16,6 +16,10 @@
  * Q-1(2026-09-30 대통령령 제36737호, 2026.10.1. 시행): 가목2)·나목2)·라목8)·마목4) 아파트 양도기한
  * (§167조의3⑪, 바닥 2027.12.31) 게이트 추가. 사목 base 검사(skipAptDeadline)·§155㉓ 경로
  * (skipAptTransferDeadlineGate)는 각자의 양도기한이 대체하므로 이 게이트에서 빠진다.
+ *
+ * Q-1 후속(판정 보류): ⑪ 연장 세 호 입력 UI가 없어 바닥 초과 + 연장 사실 전무를 "모름"으로 보고
+ * `ArticleCheckResult.aptDeadlinePending`만 세운다(실패 코드 미추가, 종전 기준 유지) — 연장 사실이
+ * 하나라도 있으면 "안다"고 보고 정상 판정한다.
  */
 
 import {
@@ -23,6 +27,8 @@ import {
   rentalRequiredYears,
   RA_CUT,
   resolveAptTransferDeadline,
+  hasAnyAptDeadlineExtensionFact,
+  APT_TRANSFER_DEADLINE_FLOOR,
   type AptTransferDeadlineExtension,
 } from "./rules";
 import type { SharedRentalArticle } from "./types";
@@ -121,6 +127,12 @@ export type ArticleCheckResult = {
   failCodes: ArticleFailCode[];
   requiredYears: number;
   stdPriceCap: number;
+  /**
+   * Q-1 후속(판정 보류) — 아파트·바닥(2027.12.31) 초과인데 ⑪ 연장 사실(세 호 전부) 입력 경로가
+   * 없어 「연장 없음」과 「모름」을 구별 못 한다. true면 `failCodes`에 APT_TRANSFER_DEADLINE_EXCEEDED를
+   * 넣지 않고(종전 기준 유지) 이 플래그만 세운다 — 호출부가 확인 필요 고지를 낸다.
+   */
+  aptDeadlinePending: boolean;
 };
 
 /** 목별 게이트 메타 (판정 순서 제어). 숫자 상한(cap·기간)은 rules.ts 위임. */
@@ -248,7 +260,7 @@ function checkArticleGates(
   article: SharedRentalArticle,
   u: NormalizedRentalUnit,
   opts: { skipPeriod?: boolean; skipAptDeadline?: boolean } = {},
-): ArticleFailCode[] {
+): { fails: ArticleFailCode[]; aptDeadlinePending: boolean } {
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
   const effTs = effRegDate?.getTime() ?? 0;
@@ -311,6 +323,7 @@ function checkArticleGates(
   // (m) 가목2)·나목2)·라목8)·마목4) 양도기한(§167조의3⑪, 대통령령 제36737호) — 아파트만.
   // 사목 base 검사(skipAptDeadline)·§155㉓ 경로(skipAptTransferDeadlineGate)는 각각 사목 자체
   // 양도기한·㉓ 괄호의 명시 비적용으로 대체되므로 이 게이트를 보지 않는다.
+  let aptDeadlinePending = false;
   if (
     gate.aptDeadlineGate &&
     u.isApartment &&
@@ -318,12 +331,22 @@ function checkArticleGates(
     !u.skipAptTransferDeadlineGate
   ) {
     const t = u.aptTransferDate?.getTime();
-    if (t != null && !Number.isNaN(t) && t > resolveAptTransferDeadline(u.aptDeadlineExtension)) {
-      fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
+    if (t != null && !Number.isNaN(t)) {
+      /**
+       * Q-1 후속 — ⑪ 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·이전고시일) 입력 경로가
+       * 아직 없다. 바닥(2027.12.31)을 넘겼는데 그 사실을 전혀 모른다면 "연장 없음"으로 단정해
+       * 중과를 매기는 것은 법 근거 없이 불리 적용이다(그 사실을 물어본 적이 없다) — 판정을 보류하고
+       * 종전 기준(이 게이트 미적용)을 유지한다. 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다.
+       */
+      if (t > APT_TRANSFER_DEADLINE_FLOOR && !hasAnyAptDeadlineExtensionFact(u.aptDeadlineExtension)) {
+        aptDeadlinePending = true;
+      } else if (t > resolveAptTransferDeadline(u.aptDeadlineExtension)) {
+        fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
+      }
     }
   }
 
-  return fails;
+  return { fails, aptDeadlinePending };
 }
 
 /**
@@ -354,11 +377,19 @@ export function checkRentalArticle(
     if (base == null || !SA_MOK_BASE.includes(base)) {
       fails.push("SAMOK_BASE_REQUIRED");
     } else {
-      fails.push(...checkArticleGates(base, u, { skipPeriod: true, skipAptDeadline: true }));
+      // 사목 base 검사는 skipAptDeadline로 이 게이트 자체를 보지 않으므로 aptDeadlinePending은 항상 false.
+      fails.push(...checkArticleGates(base, u, { skipPeriod: true, skipAptDeadline: true }).fails);
     }
-    return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
+    return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap, aptDeadlinePending: false };
   }
 
-  fails.push(...checkArticleGates(article, u));
-  return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
+  const gated = checkArticleGates(article, u);
+  fails.push(...gated.fails);
+  return {
+    passed: fails.length === 0,
+    failCodes: fails,
+    requiredYears,
+    stdPriceCap,
+    aptDeadlinePending: gated.aptDeadlinePending,
+  };
 }
