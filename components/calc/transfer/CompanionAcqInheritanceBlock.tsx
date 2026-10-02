@@ -22,6 +22,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
+import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -64,7 +65,14 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
             data-field={fieldAcquisitionDate}
             value={asset.acquisitionDate}
             onChange={(v) =>
-              onChange({ acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v })
+              onChange({
+                acquisitionDate: v,
+                inheritanceStartDate: v,
+                inheritanceDate: v,
+                // 의제취득일 前 → 後로 넘어가면 「환산」 토글이 화면에서 사라져 켜짐 래치를 끌 방법이 없다(별건 B3 잔여).
+                // 날짜를 고치는 중간 상태(빈 값)에서는 걸지 않는다 — 연도를 덮어쓰는 동안 토글이 풀리면 안 된다.
+                ...(v ? sec164LandLatchClearPatch({ ...asset, acquisitionDate: v, inheritanceStartDate: v }) : {}),
+              })
             }
           />
         </div>

@@ -732,4 +732,49 @@ test.describe("별건 B3 — §163⑨1호 토지 비교: 5칸이 토글 뒤에 �
       )
       .toEqual({ cause: "gift", latch: false, price: "5000000" });
   });
+
+  /** 「③ 취득」 섹션은 접혀 있다 — 헤더를 눌러 펼친 뒤 상속개시일 연도 칸을 돌려준다. */
+  const openAcquisitionYear = async (page: Page) => {
+    const year = card(page).locator('[data-field="acquisitionDate"]').getByLabel("연도").first();
+    if (!(await year.isVisible())) await card(page).getByRole("button", { name: /^3\s*취득/ }).first().click();
+    await expect(year).toBeVisible();
+    return year;
+  };
+  test("의제취득일 前 상속(환산 켜짐) → 상속개시일만 이후로 수정: 켜짐 래치가 꺼진다 (끌 토글이 사라지는 맥락)", async ({ page }) => {
+    await seedFormAndOpen(
+      page,
+      inheritedLand({ acquisitionDate: "1980-01-01", decedentAcquisitionDate: "1979-01-01", inheritanceStartDate: "1980-01-01", pre1990Enabled: true, pre1990PricePerSqm_1990: "5000000" }),
+    );
+    await expect(card(page).locator('[data-field="pre1990Enabled"]')).toHaveCount(1); // 출발점 — 토글이 있다
+    const year = await openAcquisitionYear(page);
+    await year.fill("1989");
+    await expect(year).toHaveValue("1989");
+    await expect(card(page).locator('[data-field="pre1990Enabled"]')).toHaveCount(0); // 이후 맥락 — 토글이 사라진다
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const a = JSON.parse(sessionStorage.getItem("transfer-tax-wizard") || "{}").state?.formData?.assets?.[0];
+          return { date: a?.inheritanceStartDate, latch: a?.pre1990Enabled, price: a?.pre1990PricePerSqm_1990 };
+        }),
+      )
+      .toEqual({ date: "1989-01-01", latch: false, price: "5000000" });
+  });
+
+  test("🔑 긍정 짝 — 의제취득일 前 안에서 날짜만 바꾸면 켜짐이 유지된다 (토글이 환산 모드를 정한다)", async ({ page }) => {
+    await seedFormAndOpen(
+      page,
+      inheritedLand({ acquisitionDate: "1980-01-01", decedentAcquisitionDate: "1979-01-01", inheritanceStartDate: "1980-01-01", pre1990Enabled: true, pre1990PricePerSqm_1990: "5000000" }),
+    );
+    const year = await openAcquisitionYear(page);
+    await year.fill("1982");
+    await expect(year).toHaveValue("1982");
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const a = JSON.parse(sessionStorage.getItem("transfer-tax-wizard") || "{}").state?.formData?.assets?.[0];
+          return { date: a?.inheritanceStartDate, latch: a?.pre1990Enabled };
+        }),
+      )
+      .toEqual({ date: "1982-01-01", latch: true });
+  });
 });
