@@ -425,3 +425,62 @@ test.describe("별건 — 토지 부담부증여 「시가 + 환산」: 양도�
     await expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
   });
 });
+
+test.describe("N1 — 비사업용 토지: 입력칸이 없는 지목에 남은 빈 기간 행이 막다른 오류를 만들지 않는다", () => {
+  // 농지에서 「+ 기간 추가」로 만든 빈 행은 지목을 바꿔도 지워지지 않는다(스토어에 리셋 없음).
+  // 사업용 사용기간 입력칸은 농지만, 거주 이력 입력칸은 농지·임야만 있다(엔진 소비처와 같다).
+  const emptyBusinessRow = { startDate: "", endDate: "", usageType: "자경" };
+  const emptyResidenceRow = { sigunguCode: "", sigunguName: "", startDate: "", endDate: "", hasResidentRegistration: false };
+  const nblLand = (landType: string, extra: Record<string, unknown>) =>
+    withPrimary({
+      assetKind: "land",
+      landNature: "farmland",
+      acquisitionArea: "1000",
+      transferArea: "1000",
+      // 상세 입력 섹션의 렌더 게이트는 두 플래그가 모두 켜져야 한다(`AssetSectionExtras`)
+      isNonBusinessLand: true,
+      nblUseDetailedJudgment: true,
+      nblLandType: landType,
+      nblZoneType: "agriculture_forest",
+      nblFarmingSelf: true,
+      ...extra,
+    });
+  const goesToHolding = (page: Page) =>
+    expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
+
+  for (const [name, landType, extra] of [
+    ["임야 + 빈 사업용 사용기간 행", "forest", { nblBusinessUsePeriods: [emptyBusinessRow] }],
+    ["기타토지 + 빈 사업용 사용기간 행", "other_land", { nblOtherPropertyTaxType: "separate", nblBusinessUsePeriods: [emptyBusinessRow] }],
+    ["목장 + 빈 거주 이력 행", "pasture", { nblResidenceHistories: [emptyResidenceRow] }],
+  ] as const) {
+    test(`${name} → 막지 않고 다음 단계로`, async ({ page }) => {
+      await seedFormAndOpen(page, nblLand(landType, extra));
+      await next(page).click();
+      // 수정 전에는 이 오류 하나가 떠서 1단계에 갇혔다 — 카드 안에 그 칸(앵커)이 0개라 이동도 못 했다
+      await goesToHolding(page);
+      await expect(panel(page).getByText(/번째 행/)).toHaveCount(0);
+    });
+  }
+
+  test("🔑 긍정 짝 — 농지 + 빈 사업용 사용기간 행은 여전히 막고, 그 칸으로 이동한다", async ({ page }) => {
+    await seedFormAndOpen(page, nblLand("farmland", { nblBusinessUsePeriods: [emptyBusinessRow] }));
+    await next(page).click();
+    const issue = panel(page).getByRole("button", { name: /사업용 사용기간\(자경 등\) 1번째 행/ });
+    await expect(issue).toBeVisible(); // 게이트를 지운 게 아니다 — 이 오류가 먼저 떠야 위 「막지 않는다」가 의미를 갖는다
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="nblBusinessUsePeriods.0.startDate"]')))
+      .toBe(true);
+  });
+
+  test("🔑 긍정 짝 — 임야 + 빈 거주 이력 행은 여전히 막는다 (재촌 판정 대상 — 입력칸이 있다)", async ({ page }) => {
+    await seedFormAndOpen(page, nblLand("forest", { nblResidenceHistories: [emptyResidenceRow] }));
+    await next(page).click();
+    const issue = panel(page).getByRole("button", { name: /거주 이력 1번째 행/ });
+    await expect(issue).toBeVisible();
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="nblResidenceHistories.0.startDate"]')))
+      .toBe(true);
+  });
+});
