@@ -226,3 +226,68 @@ describe("C 세율군 세율", () => {
     expect(groupRateText(group(reported(), "unregistered"))).toBe("(70.0%)");
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// V-2·V-6 실측 고정 (PR #1917 후속 — 계획서 §8)
+// ════════════════════════════════════════════════════════════════════
+
+describe("V-2 군이 하나인 합산 — 같은 오표시", () => {
+  /** 단기 군 하나: S4 주택 1년 미만(70%)이 기본공제로 과세표준 0원 · S3 토지 1~2년(40%) */
+  const singleGroup = () =>
+    agg([
+      item("S4", { propertyType: "housing", transferDate: D("2026-05-01"), acquisitionDate: D("2026-01-08"), transferPrice: 102_000_000, acquisitionPrice: 100_000_000 }),
+      item("S3", { transferDate: D("2026-10-20"), acquisitionDate: D("2025-07-01"), transferPrice: 300_000_000, acquisitionPrice: 160_000_000 }),
+    ]);
+
+  it("🔴 신고서 합계 세율(어댑터)이 40%다 — 종전 70%", () => {
+    const a = singleGroup();
+    expect(a.groupTaxes).toHaveLength(1);
+    expect(a.groupTaxes[0].groupTaxBase, "S4는 0원이어야 격자가 성립한다").toBe(139_500_000);
+    expect(aggregateToFilingResult(a).appliedRate).toBe(0.4);
+  });
+
+  it("🔴 5단계 산식은 40%로 값을 재현하는 닫힌 산식 뒤에 비교문이 붙는다", () => {
+    const a = singleGroup();
+    const f = String(
+      buildStatementItems(aggregateToFilingResult(a), createDefaultTransferFormData(), undefined, { properties: a.properties, aggregated: a } as never, undefined).get("calculatedTax")!.formula,
+    );
+    expect(f).toContain("과세표준 × 세율(40%) − 누진공제 0");
+    expect(f).toContain("방법 B) 55,800,000");
+  });
+});
+
+describe("V-6 감면 + 비교과세 — 채택액이 최대가 아닌 두 방향", () => {
+  const E77 = { type: "public_expropriation", cashCompensation: 600_000_000, bondCompensation: 0, businessApprovalDate: D("2013-01-01") };
+  const BOND5 = { type: "public_expropriation", cashCompensation: 0, bondCompensation: 600_000_000, bondHoldingYears: 5, businessApprovalDate: D("2018-01-01") };
+  const land = (id: string, o: Record<string, unknown>, reductions: unknown[] = []) =>
+    ({
+      ...baseTransferInput({
+        propertyType: "land", isOneHousehold: false, householdHousingCount: 0,
+        transferPrice: 500_000_000, acquisitionPrice: 150_000_000,
+        acquisitionDate: D("2010-01-01"), transferDate: D("2024-06-01"), reductions, ...o,
+      } as never),
+      propertyId: id,
+      propertyLabel: id,
+    }) as unknown as TransferTaxItemInput;
+  const run = (props: TransferTaxItemInput[], year: number) =>
+    calculateTransferTaxAggregate({ taxYear: year, annualBasicDeductionUsed: 0, properties: props }, rates);
+  const formula = (a: ReturnType<typeof run>) =>
+    String(buildStatementItems(aggregateToFilingResult(a), createDefaultTransferFormData(), undefined, { properties: a.properties, aggregated: a } as never, undefined).get("calculatedTax")!.formula);
+
+  it("🔴 감면 전 전체 누진이 크나 감면 후 세율군별이 크다 → 세율군별 214,820,000", () => {
+    const a = run([land("L", { acquisitionDate: D("2023-01-01") }), land("B", {}, [E77])], 2024);
+    expect([a.comparedTaxApplied, a.calculatedTaxByGeneral, a.calculatedTaxByGroups, a.calculatedTax]).toEqual(["groups", 215_850_000, 214_820_000, 214_820_000]);
+    expect(comparativeTaxView(a)).toMatchObject({ reason: "after_reduction", chosenAmount: a.calculatedTax });
+    expect(formula(a)).toContain("감면세액을 뺀 세액이 더 큰 세율군별 214,820,000");
+    expect(formula(a)).not.toContain("큰 금액인");
+  });
+
+  it("🔴 감면 전 세율군별이 크나 감면 후 전체 누진이 크다 → 전체 누진 129,060,000", () => {
+    const y26 = { acquisitionDate: D("2015-01-01"), transferDate: D("2026-06-01") };
+    const a = run([land("L", { ...y26, isNonBusinessLand: true }, [BOND5]), land("B", { ...y26, transferPrice: 300_000_000 })], 2026);
+    expect([a.comparedTaxApplied, a.calculatedTaxByGeneral, a.calculatedTaxByGroups, a.calculatedTax]).toEqual(["general", 129_060_000, 135_735_000, 129_060_000]);
+    expect(comparativeTaxView(a)).toMatchObject({ reason: "after_reduction", chosenAmount: a.calculatedTax });
+    expect(formula(a)).toContain("감면세액을 뺀 세액이 더 큰 전체 누진세율 129,060,000");
+  });
+});
+
