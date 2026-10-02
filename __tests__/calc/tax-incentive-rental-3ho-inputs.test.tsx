@@ -8,7 +8,7 @@
  * ([[feedback_required_field_needs_an_input_path]]). 이 파일이 칸의 존재와 OFF 리셋 규약을 고정한다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { SellingHouseTaxIncentiveRentalSection } from "@/components/calc/transfer/SellingHouseTaxIncentiveRentalSection";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
@@ -179,5 +179,42 @@ describe("⑤ 명부 행 「특례 구분」 3호 칩", () => {
     );
     (sw("장기임대 등록주택") as HTMLElement).click();
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ isLongTermRental: false, rentalPeriodYears: "6" }));
+  });
+});
+
+/**
+ * TU-10 판정 메뉴 **배선** — TU-6은 `HouseEntryEditor` 기본값만 본다(라이브러리 anchor ≠ 배선 증명,
+ * [[feedback_library_anchor_does_not_prove_component_uses_it]]). 판정 메뉴 `Step2`가 `hideSellingHouseExclusion`을
+ * 넘겨 `HousesListSection`이 `taxIncentiveRentalEnabled={false}`로 편집 창을 여는지를 화면째로 고정한다.
+ *
+ * 3호(소령 §167의3①3호)는 다주택 **중과 배제** 열거이고, 판정 route(`app/api/calc/one-house-exemption/route.ts`)는
+ * 중과 엔진을 부르지 않으며 `isTaxIncentiveRental`을 읽는 엔진 코드는 `multi-house-surcharge*`뿐이다 —
+ * 판정 메뉴에 칩을 두면 「입력해도 아무 데도 가지 않는 칸」이 된다(route 무영향은
+ * `transfer.route.tax-incentive-rental-3ho-period-required.anchor.test.ts` P-4).
+ */
+describe("TU-10 판정 메뉴 Step2 — 명부 편집 창에 3호 칩이 없다 (계산기 명부에는 있다)", () => {
+  it("판정 메뉴: 편집 창을 열어도 3호 칩 없음", async () => {
+    const { Step2 } = await import("@/app/calc/one-house-exemption/steps/Step2");
+    const { createInitialOneHouseJudgmentForm } = await import("@/lib/stores/one-house-judgment-form.types");
+    const f = createInitialOneHouseJudgmentForm();
+    const form = {
+      ...f,
+      isOneHousehold: true,
+      transferDate: "2026-03-01",
+      assets: [{ ...f.assets[0], assetKind: "housing" as const, acquisitionDate: "2015-01-01" }],
+      houses: [makeHouse()],
+    };
+    render(<Step2 form={form} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
+    expect(sw("장기임대 등록주택")).not.toBeNull(); // 편집 창이 실제로 열렸다(짝 단언)
+    expect(sw(ROW_CHIP)).toBeNull();
+  });
+
+  it("계산기: 같은 명부 섹션(숨김 prop 없음)에서는 3호 칩이 있다", async () => {
+    const { HousesListSection } = await import("@/app/calc/transfer-tax/steps/step4-sections/HousesListSection");
+    const { createDefaultTransferFormData } = await import("@/lib/stores/calc-wizard-store");
+    render(<HousesListSection form={{ ...createDefaultTransferFormData(), houses: [makeHouse()] }} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
+    expect(sw(ROW_CHIP)).not.toBeNull();
   });
 });
