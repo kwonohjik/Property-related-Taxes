@@ -60,12 +60,15 @@ const specialHouseExclusionSchema = z.array(
     article: z.enum([
       "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
       "unsold_98_7", "unsold_98_8", "unsold_99_2", "new_99", "new_99_3",
+      "rental_97", "rental_97_2",
     ]),
     /** 판정 메뉴 명부 행 id — 「어느 주택인가」(⑫ — 누락 시 침묵 strip) */
     houseId: z.string().optional(),
     houseAcquisitionDate: z.string().date().optional(),
     houseContractDate: z.string().date().optional(),
     isNationalHousing: z.boolean().optional(),
+    /** §97·§97의2 임대개시일 (⑫ — 누락 시 침묵 strip → 엔진은 「미입력」으로 불성립) */
+    houseRentalStartDate: z.string().date().optional(),
     requirementsConfirmed: z.boolean().default(false),
   }),
 ).default([]);

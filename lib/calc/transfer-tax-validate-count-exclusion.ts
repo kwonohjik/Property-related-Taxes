@@ -13,7 +13,11 @@
  *   권리 양도 자산의 선언은 효과가 없다(V-1).
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
+import {
+  collectHouseCountExclusionReductionErrors,
+  collectSpecialHouseExclusionRowErrors,
+} from "./house-count-exclusion-reduction-validate";
+import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { countedHouseRows, resolveHouseholdHousingCount } from "./household-house-count";
 import {
   countExclusionRowsInScope,
@@ -52,7 +56,9 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
         messages.push(`보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.`);
         continue; // 행 내부는 첫 오류 1건
       }
-      if (!she[i].houseAcquisitionDate && !she[i].houseContractDate)
+      if (usesRentalStartDate(she[i].article)) {
+        if (!she[i].houseRentalStartDate) messages.push(`보유 감면주택 ${i + 1}: 임대주택의 임대개시일을 입력하세요.`);
+      } else if (!she[i].houseAcquisitionDate && !she[i].houseContractDate)
         messages.push(`보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.`);
     }
     return messages;
@@ -86,7 +92,7 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
     for (const m of collectHouseCountExclusionReductionErrors(r)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
   }
   for (const e of rowSpecialHouseExclusions(form.houses)) {
-    if (!e.article) messages.push(`보유 주택 ${rowNo(e.houseId)}: 주택 수 제외 — 감면주택의 적용 조문을 선택하세요.`);
+    for (const m of collectSpecialHouseExclusionRowErrors(e)) messages.push(`보유 주택 ${rowNo(e.houseId)}: ${m}`);
   }
 
   return messages;

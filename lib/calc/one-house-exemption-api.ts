@@ -55,6 +55,7 @@ import {
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
+import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 
 
 /**
@@ -224,6 +225,10 @@ export function buildOneHouseExemptionApiBody(
         houseAcquisitionDate: e.houseAcquisitionDate || undefined,
         houseContractDate: e.houseContractDate || undefined,
         isNationalHousing: e.isNationalHousing,
+        // §97·§97의2 임대개시일 — ⑤·⑧과 같은 술어로 게이트(조문을 바꾼 뒤 남은 값은 보내지 않는다)
+        ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
+          ? { houseRentalStartDate: e.houseRentalStartDate }
+          : {}),
         requirementsConfirmed: e.requirementsConfirmed,
       })),
     // §154① 단서 — 계산기와 같은 두 단계 정규화(게이트 → 유효 사유).

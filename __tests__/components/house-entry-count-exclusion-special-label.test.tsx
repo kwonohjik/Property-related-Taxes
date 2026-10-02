@@ -7,6 +7,8 @@
  * 조특령 §98②·⑥ 「다른 주택만을 기준으로 하여」)을 2026-10-02 실독했다(MST 284389·288915). 종전 설명
  * 「§98·§98의2~§98의8·§99·§99의2·§99의3」은 그 효과 규정이 없는 §98의4(비거주자 주택취득 10% 감면)를 범위에
  * 넣었고, 엔진 선택지(`SPECIAL_HOUSE_EXCLUSION_WINDOWS`)에는 §98의4가 없다.
+ * 같은 날 §97②(「임대주택은 그 거주자의 소유주택으로 보지 아니한다」)·§97의2②(§97② 준용)를 추가했다 — 라벨은
+ * 조문 제목(「장기임대주택」·「신축임대주택」)을 쓴다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -51,6 +53,14 @@ describe("special 항목 라벨·설명 = 엔진 판정 조문", () => {
     expect(text).not.toContain("§98의4");
     expect(text).not.toContain("§98의2~");
     expect(text).not.toContain("감면주택");
-    expect(text).toContain("조특법 미분양주택·신축주택 특례");
+    expect(text).toContain("조특법 장기임대주택·신축임대주택·미분양주택·신축주택 특례");
+  });
+
+  it("§97②·§97의2②(임대주택 소유주택 의제)가 설명과 엔진 선택지에 함께 있다 (2026-10-02)", () => {
+    const text = specialOptionText();
+    expect(text).toContain("§97②");
+    expect(text).toContain("§97의2②");
+    expect(SPECIAL_HOUSE_EXCLUSION_WINDOWS.rental_97.legalBasis).toBe("조특법 §97②");
+    expect(SPECIAL_HOUSE_EXCLUSION_WINDOWS.rental_97_2.legalBasis).toBe("조특법 §97의2②");
   });
 });
