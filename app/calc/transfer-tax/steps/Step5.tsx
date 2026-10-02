@@ -12,6 +12,7 @@ import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReducti
 import { ALL_LIMIT_GROUP_TYPES } from "@/lib/tax-engine/aggregate-reduction-limits";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
+import { selfFarmingOwnYearsSufficient } from "@/lib/calc/self-farming-own-years";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -175,14 +176,14 @@ function AssetReductionBlock({
           {/* 피상속인 자경기간 합산 */}
           {asset.acquisitionCause === "inheritance" && (
             <div className="space-y-2 pt-1 border-t border-primary/20">
-              {parseInt(selfFarming.farmingYears) >= 8 ? (
+              {selfFarmingOwnYearsSufficient(selfFarming.farmingYears, selfFarming.disqualifiedTaxPeriodsSelf) ? (
                 <p className="text-xs text-muted-foreground">
-                  ✓ 본인 자경기간 {selfFarming.farmingYears}년 ≥ 8년 — 피상속인 합산 불필요
+                  ✓ 본인 자경기간(결격 과세기간 제외) 8년 이상 — 피상속인 합산 불필요
                 </p>
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    본인 자경기간 {selfFarming.farmingYears}년 {"<"} 8년 → 피상속인 자경기간을 합산할 수 있습니다 (조특령 §66⑪)
+                    본인 자경기간(결격 과세기간 제외)이 8년 미만 → 피상속인 자경기간을 합산할 수 있습니다 (조특령 §66⑪)
                   </p>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-muted-foreground whitespace-nowrap">피상속인 자경기간:</label>

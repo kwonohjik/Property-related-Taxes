@@ -24,6 +24,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { resolveSapPriorStdPrice } from "./transfer-same-adjustment-period-input";
 import { calcStdPriceMonths } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { sec164LandFieldsAlwaysOpen } from "./transfer-163-9-base-date";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 function message(label: string, s: Sec164FieldStatus, field: IssueField = s.missingFields[0]): string {
@@ -54,8 +55,11 @@ export function sec164PartialInputError(asset: AssetForm, label: string): string
   if (!hasPre1990) {
     const land = sec164LandStatus(asset);
     // 이 분기는 「1990.8.30. 이전 취득 토지 기준시가 환산」 토글이 꺼진 상태에서만 닿는다(켜져 있으면 위 `hasPre1990`이
-    // 기존 환산 검증에 넘긴다). 토글이 꺼지면 토지등급·1990.1.1. 공시지가 칸이 숨으므로 입력칸이 아니라 토글로 데려간다.
-    if (isPartiallyFilled(land)) return message(label, land, "pre1990Enabled");
+    // 기존 환산 검증에 넘긴다). §163⑨1호 비교 맥락(`sec164LandFieldsAlwaysOpen`)은 칸이 항상 열려 있으므로 **빈 칸으로** 데려간다.
+    // 그 밖(의제취득일 前 상속)은 토글이 꺼지면 토지등급·1990.1.1. 공시지가 칸이 숨으므로 입력칸이 아니라 토글로 데려간다.
+    if (isPartiallyFilled(land)) {
+      return message(label, land, sec164LandFieldsAlwaysOpen(asset) ? land.missingFields[0] : "pre1990Enabled");
+    }
   }
 
   return null;

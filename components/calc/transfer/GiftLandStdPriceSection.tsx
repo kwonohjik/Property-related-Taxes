@@ -87,6 +87,7 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
         // ② 산출은 엔진이 `pre1990Land` payload로 직접 수행한다 — 여기서 `standardPriceAtAcq`에
         // 쓰면 환산(나목) 경로의 분자를 오염시킨다. `PreDeemedInputs`와 같은 noop.
         onCalculatedPrice={() => {}}
+        alwaysOpen
       />
     </ToneCard>
   );

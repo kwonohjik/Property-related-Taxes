@@ -121,10 +121,11 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
     const sec164Toggle = page.getByRole("switch", {
       name: /1990\.8\.30\. 이전 취득 토지 기준시가 환산/,
     });
-    await expect(sec164Toggle).toBeVisible();
+    // 별건 B3 — 이 맥락(§163⑨1호 비교)은 토글이 없고 칸이 항상 열려 있다(토글은 계산을 바꾸지 않았고, 숨은 값이 취득가액을 바꿨다)
+    await expect(sec164Toggle).toHaveCount(0);
+    await expect(page.getByPlaceholder("㎡당 가액 입력")).toBeVisible();
 
     // ── 2. 입력
-    await sec164Toggle.click();
     await fillGrades(page);
     await expect(page.getByText(/등급가액 [\d,]+/)).toHaveCount(3);
 
@@ -156,10 +157,6 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
     test.setTimeout(90_000);
     await seedAndOpen(page);
 
-    const sec164Toggle = page.getByRole("switch", {
-      name: /1990\.8\.30\. 이전 취득 토지 기준시가 환산/,
-    });
-    await sec164Toggle.click();
     // 등급 3칸 중 2칸만 — all-or-nothing opt-in 위반 상태
     await fillGrades(page, 2);
 

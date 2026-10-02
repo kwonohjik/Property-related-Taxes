@@ -19,6 +19,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { isRowReduction } from "./house-count-exclusion-rows";
+import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /**
@@ -176,6 +177,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 여기서 먼저 막는다(⑧↔엔진 대칭 · D7-09).
           if (
             asset.acquisitionCause === "inheritance" &&
+            !selfFarmingOwnYearsSufficient(r.farmingYears, r.disqualifiedTaxPeriodsSelf) &&
             parseInt(r.decedentFarmingYears ?? "0") > 0 &&
             r.heirContinuedFarming1Year !== true &&
             r.meetsDecedentAggregationAlt !== true

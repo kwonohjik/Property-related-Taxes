@@ -22,6 +22,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
+import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -136,7 +137,20 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 취득가액을 토지·건물로 나누는 유일한 근거가 §166⑥ 기준시가 비율이다. 셋 중 하나라도
   // 비면 `calcAcqStdPair`가 null → `calcApportionRatio` null → `calcSplitGain`이 null을
   // 반환하고 **selfOwns가 무시된다**(조용한 과대과세). 별개취득은 V3·V5·V6가 이미 담당한다.
-  if (selfOwnsSplit && !isSeparateAcquisition(asset)) {
+  //
+  // ⚠️ **비율이 실제로 쓰일 때만** 요구한다(별건 B2) — ⑫(`refineSplitAcquisitionInputs`)·화면 카드와 같은 술어
+  //    `requiresAcqStdPrice`. 본인 파트 취득가액을 직접 입력하면 엔진은 비율을 쓰지 않고(분리 계산 성립) 카드도 닫히는데,
+  //    종전엔 여기만 무조건 요구해 입력 칸 없는 영구 차단이었다. 두 파트가 모두 빈 경우(비율 안분이 유일한 도출 수단)는
+  //    술어가 참이라 종전과 같다.
+  if (
+    selfOwnsSplit &&
+    !isSeparateAcquisition(asset) &&
+    requiresAcqStdPrice(withExpenses(asset), {
+      landMode: effectivePartAcqMode(asset.landAcqMode, asset),
+      buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+      isSeparate: false,
+    })
+  ) {
     const hasPerSqm = opt(asset.standardPricePerSqmAtAcq) != null;
     const hasArea = parseDecimal(asset.acquisitionArea) > 0;
     const hasTotal = opt(asset.standardPriceAtAcq) != null;

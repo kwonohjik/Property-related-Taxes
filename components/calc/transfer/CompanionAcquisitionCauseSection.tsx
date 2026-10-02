@@ -23,6 +23,9 @@ import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { giftEstimationClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gift-163-9";
+import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 
 const ACQUISITION_CAUSE_OPTIONS = [
@@ -98,6 +101,11 @@ export function CompanionAcquisitionCauseSection({
             // 카드가 화면에서 사라져 **사용자가 끌 방법이 없으므로** 여기서 지운다.
             // `migrateCarryoverFields`가 carryover에 대해 쓰는 것과 같은 규약이다.
             ...(value !== "inheritance" ? { familyBusinessInheritance: undefined } : {}),
+            // 매매 → 증여 전환 시 추계 플래그 stale 정리(B1). 증여 카드에는 산정 방식 라디오가 없어 사용자가 끌 수 없다.
+            // 재개발·입주권·일반건물·겸용은 범위 밖 — 플래그 의미가 다르거나 자체 경로가 있다(⑧ 라우팅과 같은 범위).
+            ...(giftEstimationGenericScope(asset) ? giftEstimationClearPatch(value) : {}),
+            // 증여·상속 전환 시 토지등급 환산 래치 정리(B3) — §163⑨1호 맥락은 그 토글이 사라져 남은 켜짐을 끌 수 없다.
+            ...sec164LandLatchClearPatch({ ...asset, acquisitionCause: value as typeof asset.acquisitionCause }),
           })
         }
       />
