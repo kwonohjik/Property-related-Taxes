@@ -656,7 +656,8 @@ export type ReductionType = AssetReductionForm["type"];
 export interface SpecialHouseExclusionFormItem {
   article:
     | "unsold_98" | "unsold_98_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6"
-    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "new_99_3" | "";
+    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "new_99_3"
+    | "rental_97" | "rental_97_2" | "";
   /** 판정 메뉴 명부 행 id — 판정 → 계산기 전달분만 싣는다(「어느 주택인가」) */
   houseId?: string;
   /** 감면주택 취득일 (YYYY-MM-DD) */
@@ -665,6 +666,11 @@ export interface SpecialHouseExclusionFormItem {
   houseContractDate: string;
   /** §99 전용 — 국민주택 여부 (신축주택취득기간 종기 1999.6.30 ↔ 1999.12.31) */
   isNationalHousing: boolean;
+  /**
+   * §97·§97의2 전용 — 임대개시일 (YYYY-MM-DD). 선택 필드 — 이 칸이 생기기 전 기록에는 없다.
+   * ⑤ 입력·④ 전송·⑧ 필수값은 `usesRentalStartDate(article)` 하나로 게이트한다.
+   */
+  houseRentalStartDate?: string;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
 }

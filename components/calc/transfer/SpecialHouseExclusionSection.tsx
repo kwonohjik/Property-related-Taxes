@@ -5,6 +5,7 @@
  *
  * 7개 조문 ②항(§98의2~§98의8·§99의2) + §98 령②·⑥ + §99② — 감면주택 보유 중 다른 주택
  * 양도 시 §89①3호 적용에서 감면주택을 소유주택으로 보지 않음.
+ * + §97②·§97의2② 임대주택(2026-10-02) — 판정 날짜는 취득일이 아니라 임대개시일이다.
  * 비과세 판정 주택수만 제외 — 다주택 중과세율 주택수는 불변.
  */
 
@@ -13,6 +14,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
+import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 
 const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; label: string }> = [
   { value: "unsold_98", label: "§98 미분양 국민주택 (취득 1995.11.1~1997.12.31 / 1998.3.1~12.31)" },
@@ -25,6 +27,8 @@ const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; 
   { value: "unsold_99_2", label: "§99의2 신축주택등 (계약 2013.4.1~12.31)" },
   { value: "new_99", label: "§99 신축주택 IMF 1차 (1998.5.22~1999.6.30 · 국민주택 ~1999.12.31)" },
   { value: "new_99_3", label: "§99의3 신축주택 IMF 2차 (2001.5.23~2003.6.30)" },
+  { value: "rental_97", label: "§97 장기임대주택 (임대개시 ~2000.12.31)" },
+  { value: "rental_97_2", label: "§97의2 신축임대주택 (신축·매매계약 1999.8.20~2001.12.31)" },
 ];
 
 /** 취득기간을 매매계약일만으로 판정하는 조문 (엔진 `basis: "contract_only"`와 단일 축) */
@@ -49,7 +53,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
     <ToggleCard
       tone="violet"
       title="조특법 감면주택 보유 — 주택 수 제외 (§89①3호 의제)"
-      description="§98 시리즈·§99·§99의2 감면주택을 보유 중 다른 주택을 양도하는 경우, 1세대1주택 비과세 판정 주택 수에서 감면주택을 제외합니다. 다주택 중과세율 주택 수는 변하지 않습니다."
+      description="§97·§97의2 임대주택, §98 시리즈·§99·§99의2 감면주택을 보유 중 다른 주택을 양도하는 경우, 1세대1주택 비과세 판정 주택 수에서 그 주택을 제외합니다. 다주택 중과세율 주택 수는 변하지 않습니다."
       trailing={<LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />}
       checked={enabled}
       onCheckedChange={(on) =>
@@ -119,6 +123,8 @@ export function SpecialHouseExclusionItemFields({
   onChange: (patch: Partial<SpecialHouseExclusionFormItem>) => void;
   hideAcquisitionDate?: boolean;
 }) {
+  // §97·§97의2 — 판정 날짜는 임대개시일이다(취득일·매매계약일은 쓰지 않는다). 엔진과 같은 술어.
+  const rental = usesRentalStartDate(item.article);
   return (
     <>
         <div>
@@ -174,7 +180,22 @@ export function SpecialHouseExclusionItemFields({
             onCheckedChange={(v) => onChange({ isNationalHousing: v })}
           />
         )}
-        {!hideAcquisitionDate && (
+        {rental && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">임대개시일</label>
+            <DateInput
+              value={item.houseRentalStartDate ?? ""}
+              onChange={(v) => onChange({ houseRentalStartDate: v })}
+              data-testid="special-house-exclusion-rental-start-date"
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              {item.article === "rental_97"
+                ? "§97①은 2000.12.31 이전에 임대를 개시한 주택입니다. 임대를 개시한 때부터 주택 수에서 뺍니다(국세청 재산46014-259) — 임대개시일이 양도일 뒤면 빼지 않습니다."
+                : "임대를 개시한 때부터 주택 수에서 뺍니다 — 임대개시일이 양도일 뒤면 빼지 않습니다. 신축·매매계약 시기(1999.8.20~2001.12.31)는 아래 요건 확인에 포함됩니다."}
+            </p>
+          </div>
+        )}
+        {!hideAcquisitionDate && !rental && (
           <div>
             <label className="mb-1 block text-xs font-medium">감면주택 취득일</label>
             <DateInput
@@ -183,22 +204,30 @@ export function SpecialHouseExclusionItemFields({
             />
           </div>
         )}
-        <div>
-          <label className="mb-1 block text-xs font-medium">감면주택 매매계약일 (선택)</label>
-          <DateInput
-            value={item.houseContractDate}
-            onChange={(v) => onChange({ houseContractDate: v })}
-          />
-          <p className="mt-1 text-micro text-muted-foreground">
-            {CONTRACT_ONLY_ARTICLES.includes(item.article)
-              ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
-              : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
-          </p>
-        </div>
+        {!rental && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">감면주택 매매계약일 (선택)</label>
+            <DateInput
+              value={item.houseContractDate}
+              onChange={(v) => onChange({ houseContractDate: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              {CONTRACT_ONLY_ARTICLES.includes(item.article)
+                ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
+                : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
+            </p>
+          </div>
+        )}
         <ToggleCard
           tone="violet"
           title="해당 조문 본 요건 충족 확인"
-          description="미분양 확인·최초계약·가액·면적 등 본 요건 충족 — 상세 판정은 그 감면주택을 양도할 때 감면 입력으로 검증됩니다"
+          description={
+            item.article === "rental_97"
+              ? "§97① 각 호의 국민주택 · 양도일 현재 사실상 임대주택 5호 이상 임대(같은 법 시행령 §97①) — 상세 판정은 그 주택을 양도할 때 감면 입력으로 검증됩니다"
+              : item.article === "rental_97_2"
+                ? "§97의2① 각 호의 국민주택(신축·매매계약 1999.8.20~2001.12.31) · 신축임대주택 1호 이상을 포함한 임대주택 2호 이상 임대(같은 법 시행령 §97의2①) — 상세 판정은 그 주택을 양도할 때 감면 입력으로 검증됩니다"
+                : "미분양 확인·최초계약·가액·면적 등 본 요건 충족 — 상세 판정은 그 감면주택을 양도할 때 감면 입력으로 검증됩니다"
+          }
           checked={item.requirementsConfirmed}
           onCheckedChange={(v) => onChange({ requirementsConfirmed: v })}
         />

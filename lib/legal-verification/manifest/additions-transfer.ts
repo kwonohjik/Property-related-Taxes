@@ -275,13 +275,15 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "SPECIAL.LONG_TERM_RENTAL_HOUSE_EXEMPT",
     citation: "조특법 §97",
-    keywords: ["국민주택", "5년 이상 임대", "양도소득세의 100분의 50에 상당하는 세액을 감면"],
+    // ② 「임대주택은 그 거주자의 소유주택으로 보지 아니한다」 — 비과세 주택 수 제외(`RENTAL_HOUSE_COUNT_EXCLUSION`)
+    keywords: ["국민주택", "5년 이상 임대", "양도소득세의 100분의 50에 상당하는 세액을 감면", "그 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {
     id: "SPECIAL.NEW_BUILD_RENTAL_EXEMPT",
     citation: "조특법 §97의2",
-    keywords: ["신축임대주택", "5년 이상 임대한 후 양도", "양도소득세를 면제"],
+    // ② 「제97조제2항부터 제4항까지의 규정을 준용한다」 — 비과세 주택 수 제외(`RENTAL_HOUSE_COUNT_EXCLUSION`)
+    keywords: ["신축임대주택", "5년 이상 임대한 후 양도", "양도소득세를 면제", "제97조제2항부터 제4항까지의 규정을 준용한다"],
     keywordMode: "ALL",
   },
   {

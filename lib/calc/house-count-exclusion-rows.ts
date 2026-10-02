@@ -23,6 +23,8 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { resolveHouseCountExclusion } from "@/lib/tax-engine/transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { SPECIAL_HOUSE_EXCLUSION_WINDOWS } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -156,6 +158,7 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
         houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
         houseContractDate: toOptionalDate(e.houseContractDate),
         isNationalHousing: e.isNationalHousing,
+        houseRentalStartDate: usesRentalStartDate(e.article) ? toOptionalDate(e.houseRentalStartDate) : undefined,
         requirementsConfirmed: e.requirementsConfirmed,
       })),
       transfer,
@@ -283,6 +286,9 @@ export function countExclusionDeclarationLine(
   if ("type" in d) {
     const date = d.type === "unsold_98_9" ? d.unsoldHouseAcquisitionDate : d.ruralHouseAcquisitionDate;
     return `${REDUCTION_TYPE_LABELS[d.type]} — 취득일 ${date || "미입력"}`;
+  }
+  if (d.article && usesRentalStartDate(d.article)) {
+    return `조특법 ${SPECIAL_HOUSE_EXCLUSION_WINDOWS[d.article].label} — 임대개시일 ${d.houseRentalStartDate || "미입력"}`;
   }
   return `조특법 감면주택 (${d.article}) — 취득일 ${d.houseAcquisitionDate || "미입력"}`;
 }

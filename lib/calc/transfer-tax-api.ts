@@ -64,6 +64,7 @@ import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
+import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -515,6 +516,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         houseAcquisitionDate: e.houseAcquisitionDate || undefined,
         houseContractDate: e.houseContractDate || undefined,
         isNationalHousing: e.isNationalHousing,
+        // §97·§97의2 임대개시일 — ⑤·⑧과 같은 술어로 게이트(조문을 바꾼 뒤 남은 값은 보내지 않는다)
+        ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
+          ? { houseRentalStartDate: e.houseRentalStartDate }
+          : {}),
         requirementsConfirmed: e.requirementsConfirmed,
       })),
     // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)

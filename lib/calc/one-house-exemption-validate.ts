@@ -40,6 +40,7 @@ import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { winWinRentalFieldErrors } from "./one-house-extra-facts-payload";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
+import { collectSpecialHouseExclusionRowErrors } from "./house-count-exclusion-reduction-validate";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import {
   deriveJudgmentHouseCount,
@@ -293,8 +294,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
   }
   for (const e of judgmentSpecialHouseExclusions(form)) {
-    if (!e.article) {
-      errors.push(err("houses", `보유 주택 ${rowNo(e.houseId)}: 주택 수 제외 — 감면주택의 적용 조문을 선택하세요.`));
+    for (const message of collectSpecialHouseExclusionRowErrors(e)) {
+      errors.push(err("houses", `보유 주택 ${rowNo(e.houseId)}: ${message}`));
     }
   }
   /**
