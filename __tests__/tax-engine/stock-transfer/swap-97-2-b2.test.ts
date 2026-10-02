@@ -123,11 +123,16 @@ describe("B-2: §97②2호 단서 swap", () => {
         selfMarketCap: 2_000_000_000,
         acquisitionMode: "sale_case",
         acquisitionMarketSamplePrice: 30_000,
+        acquisitionYearNetIncomePerShare: 30_000,
+        acquisitionYearNetAssetPerShare: 30_000,
         expenseMode: "actual",
         actualExpenses: 31_000_000,
       }),
     );
     expect(r.swapApplied).toBeFalsy();
+    // 매매사례는 §97②2호 본문(취득가액 + 개산공제)이다 — 실비 31,000,000은 필요경비가 아니다.
+    expect(r.estimatedDeduction).toBeGreaterThan(0);
+    expect(r.expenses).toBe(r.estimatedDeduction);
   });
 
   it("SW-6: face_value + 실비 > 가목 → swap", () => {

@@ -375,14 +375,10 @@ export type StockTransferInput = {
   acquisitionMode: "actual" | "sale_case" | "estimated" | "face_value";
 
   // ── 매매사례가액 모드 (sale_case 강화 — 영§176의2③1호 비상장 한정) ──
-  /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능 */
+  /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능. 양도측 매매사례가액은 없다(§96① 실지거래가액) */
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
   acquisitionMarketSampleCounterparty?: string;
-  /** 양도 매매사례 1주당 가액 (원) — transferPriceMode === "actual"에서 perShareTransferPrice 대신 우선 적용 */
-  transferMarketSamplePrice?: number;
-  transferMarketSampleDate?: Date;
-  transferMarketSampleCounterparty?: string;
 
   // ── 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12 ──
   capitalAdjustments?: {
@@ -1032,16 +1028,11 @@ export type StockTransferResult = {
   // 매매사례가액 detail (R-1' — sale_case 강화)
   marketSampleDetail?: {
     acquisitionApplied: boolean;
-    transferApplied: boolean;
     acquisitionPerShare?: number;
-    transferPerShare?: number;
     /** 취득 사례 거래일 vs 취득일 차이 (일) */
     acquisitionDeltaDays?: number;
-    /** 양도 사례 거래일 vs 양도일 차이 (일) */
-    transferDeltaDays?: number;
     /** ±3개월 초과 warning 발동 여부 */
     acquisitionOverThreeMonths: boolean;
-    transferOverThreeMonths: boolean;
     warnings: string[];
   };
 

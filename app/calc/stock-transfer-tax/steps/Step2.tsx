@@ -542,6 +542,22 @@ export function Step2({ form, onChange }: Step2Props) {
             <MarketSampleBlock form={form} onChange={onChange} isListed={isListed} />
           )}
 
+          {/* 매매사례가액 취득 — 개산공제 base = 취득당시 기준시가 (소득세법 §97②2호 본문 · 영 §163⑥4).
+              비상장·기타자산 주식등의 기준시가는 §99①4 → 영 §165④ 보충평가 — 취득일 거래정지(C-1)와 같은 취득측 입력을 재사용한다. */}
+          {acquisitionMode === "sale_case" && !isListed && (
+            <ToneCard
+              tone="emerald"
+              sectionNum={2}
+              title="취득 당시 기준시가 — 개산공제 기준 (소령 §163⑥4·§165④)"
+            >
+              <p className="text-xs text-emerald-700/80">
+                매매사례가액으로 취득가액을 정하면 필요경비는 <strong>취득가액 + 취득 당시 기준시가 × 1%</strong>
+                (개산공제)입니다. 실제 경비로 바꾸는 §97②2호 단서는 환산취득가액에만 있습니다.
+              </p>
+              <EstimatedUnlistedBlock form={form} onChange={onChange} acquisitionSideOnly />
+            </ToneCard>
+          )}
+
           {/* 감정가액 모드 제거 — 영§176의2③2호 단서: 주식등 적용 불가 (2026-05-19) */}
 
 

@@ -69,6 +69,9 @@ describe("MS-1: 비상장 + 취득 매매사례 정상 (영§176의2③1호)", (
     acquisitionMode: "sale_case",
     acquisitionMarketSamplePrice: 120_000,                          // 1주당 12만원
     acquisitionMarketSampleDate: new Date("2020-02-15"),            // 취득일 +45일
+    // 개산공제 base = 취득당시 기준시가 (§97②2호 본문 · 영 §163⑥4) — 순손익=순자산이라 가중치·하한 무관 100,000
+    acquisitionYearNetIncomePerShare: 100_000,
+    acquisitionYearNetAssetPerShare: 100_000,
   }));
 
   it("MS-1-01: acquisitionPrice = 120,000,000 (사례가 × 1,000주)", () => {
@@ -83,8 +86,10 @@ describe("MS-1: 비상장 + 취득 매매사례 정상 (영§176의2③1호)", (
   it("MS-1-04: acquisitionOverThreeMonths = false (45 ≤ 90)", () => {
     expect(result.marketSampleDetail?.acquisitionOverThreeMonths).toBe(false);
   });
-  it("MS-1-05: estimatedDeduction = 0 (개산공제 미적용 — 실지거래가액 의제)", () => {
-    expect(result.estimatedDeduction).toBeUndefined();
+  it("MS-1-05: 개산공제 = 취득기준시가 × 1% (§97②2호 본문 · 영 §163⑥4) — 종전 「실지거래가액 의제 → 미적용」은 오기", () => {
+    // 100,000 × 1,000주 × 1% = 1,000,000. 매매사례는 §97①1호 나목(추계)이라 본문의 «자산별 대통령령 금액» 가산 대상이다.
+    expect(result.estimatedDeduction).toBe(1_000_000);
+    expect(result.expenses).toBe(1_000_000);
   });
 });
 
@@ -188,27 +193,28 @@ describe("MS-3: 매매사례 ±3개월 초과 (warning + 계산 진행)", () => 
 });
 
 // ============================================================
-// MS-4: 양도+취득 매매사례 동시 적용
+// MS-4: 취득 매매사례 + 양도 실지거래가액 — 양도가액은 실가 (소득세법 §96①)
+//   종전에는 «양도 매매사례가액»이 실가를 앞질렀다(근거 없음 — §114⑦은 과세관청 추계 축). 입력 자체를 제거했다.
 // ============================================================
 
-describe("MS-4: 양도+취득 매매사례 동시 적용", () => {
+describe("MS-4: 취득 매매사례 + 양도 실지거래가액 — 양도가액은 항상 실가", () => {
   const result = calculateStockTransferTax(baseInput({
     acquisitionMode: "sale_case",
     acquisitionMarketSamplePrice: 100_000,
     acquisitionMarketSampleDate: new Date("2020-02-01"),
-    transferMarketSamplePrice: 250_000,                  // perShareTransferPrice(200,000) 무시
-    transferMarketSampleDate: new Date("2024-06-15"),
+    acquisitionYearNetIncomePerShare: 100_000,
+    acquisitionYearNetAssetPerShare: 100_000,
   }));
 
-  it("MS-4-01: transferPrice = 250,000,000 (사례가 우선)", () => {
-    expect(result.transferPrice).toBe(250_000_000);
+  it("MS-4-01: transferPrice = 200,000,000 (perShareTransferPrice 200,000 × 1,000주 — 실가)", () => {
+    expect(result.transferPrice).toBe(200_000_000);
   });
   it("MS-4-02: acquisitionPrice = 100,000,000", () => {
     expect(result.acquisitionPrice).toBe(100_000_000);
   });
-  it("MS-4-03: marketSampleDetail 양쪽 applied true", () => {
+  it("MS-4-03: marketSampleDetail은 취득측만 applied", () => {
     expect(result.marketSampleDetail?.acquisitionApplied).toBe(true);
-    expect(result.marketSampleDetail?.transferApplied).toBe(true);
+    expect(Object.keys(result.marketSampleDetail ?? {})).not.toContain("transferApplied");
   });
 });
 
@@ -220,7 +226,6 @@ describe("MS-5: 특수관계인 counterparty warning", () => {
   const r = evaluateMarketSample({
     shareCount: 1_000,
     acquisitionDate: new Date("2020-01-01"),
-    transferDate: new Date("2024-06-01"),
     acquisitionMarketSamplePrice: 100_000,
     acquisitionMarketSampleCounterparty: "대표이사 김OO",
   });

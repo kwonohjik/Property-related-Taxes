@@ -32,7 +32,7 @@
  *   근거: 시행령 §165⑤ · 같은 조 ④1호 단서
  *
  *   AP-FV-1~5   (#3)
- *   AP-MS-1~5   (#12)
+ *   AP-MS-1~3   (#12)
  *   AP-PL-1~4   (#20)
  */
 
@@ -182,32 +182,38 @@ describe("AP-FV (#3): 장부분실 액면가도 양도기준시가 입력을 엔
   });
 });
 
-// ============================================================
-// #12 — 양도 매매사례가액 게이트
+// #12 — 양도 매매사례가액 (2026-10-02 입력 자체를 제거 — 소득세법 §96①)
 // ============================================================
 
-describe("AP-MS (#12): 양도 매매사례가액은 취득측과 같은 게이트를 탄다", () => {
-  it("AP-MS-1: 취득모드가 sale_case 가 아니면 stale 값을 싣지 않는다", () => {
+/**
+ * 종전 #12는 양도 매매사례가액이 «취득모드·시장 게이트 없이» 양도가액을 치환하는 것을 막았다.
+ * 그러나 그 우선 적용 자체에 근거가 없었다 — 양도가액은 실지거래가액(§96①)이고, 매매사례가액으로
+ * 갈음하는 것은 §114⑦ 과세관청의 결정·경정 축이다. 게이트를 고치는 대신 **입력을 없앴다.**
+ * 이 블록은 그 사실을 풀스택으로 고정한다(본격 anchor: `stock-sale-case-deduction.anchor.test.ts` SC-3).
+ */
+describe("AP-MS (#12): 양도가액은 항상 실지거래가액 — 양도 매매사례가액 입력은 없다", () => {
+  it("AP-MS-1: 구 저장값(transferMarketSample*)이 폼에 남아도 body에 실리지 않는다", () => {
     const body = buildStockTransferApiBody(
       baseForm({
-        acquisitionMode: "actual",
-        acquisitionActualInputMode: "per_share",
-        perShareAcquisitionPrice: "40000",
-        transferMarketSamplePrice: "10000", // 모드 전환 후 남은 값
+        acquisitionMode: "sale_case",
+        acquisitionMarketSamplePrice: "40000",
+        acquisitionYearNetIncomePerShare: "10000",
+        acquisitionYearNetAssetPerShare: "10000",
+        ...({ transferMarketSamplePrice: "10000" } as object),
       }),
     );
-    expect(body.transferMarketSamplePrice).toBeUndefined();
-    expect(body.transferMarketSampleDate).toBeUndefined();
-    expect(body.transferMarketSampleCounterparty).toBeUndefined();
+    expect(Object.keys(body)).not.toContain("transferMarketSamplePrice");
+    expect(Object.keys(body)).not.toContain("transferMarketSampleDate");
+    expect(Object.keys(body)).not.toContain("transferMarketSampleCounterparty");
   });
 
-  it("AP-MS-2: 그래서 양도가액이 치환되지 않는다", () => {
+  it("AP-MS-2: sale_case + 비상장이어도 양도가액은 실가 (총액 5억 그대로)", () => {
     const run = runFullStack(
       baseForm({
-        acquisitionMode: "actual",
-        acquisitionActualInputMode: "per_share",
-        perShareAcquisitionPrice: "40000",
-        transferMarketSamplePrice: "10000",
+        acquisitionMode: "sale_case",
+        acquisitionMarketSamplePrice: "40000",
+        acquisitionYearNetIncomePerShare: "10000",
+        acquisitionYearNetAssetPerShare: "10000",
       }),
     );
     expect(run.blocked).toBe(false);
@@ -215,52 +221,15 @@ describe("AP-MS (#12): 양도 매매사례가액은 취득측과 같은 게이�
     expect(run.result.transferPrice).toBe(500_000_000);
   });
 
-  it("AP-MS-3: sale_case + 비상장이면 종전대로 적용된다 (회귀 가드)", () => {
-    const run = runFullStack(
-      baseForm({
-        acquisitionMode: "sale_case",
-        perShareAcquisitionPrice: "40000",
-        transferMarketSamplePrice: "10000",
-      }),
-    );
-    expect(run.blocked).toBe(false);
-    if (run.blocked) return;
-    expect(run.result.transferPrice).toBe(100_000_000); // 10,000 × 10,000주
-  });
-
-  it("AP-MS-4: 양도측 단독 적용이어도 §176의2③1호·§163⑫ 인용이 남는다", () => {
-    // 인용은 `appliedRules`(태그 union)가 아니라 `warnings`로 들어간다 — 기존 배선 그대로다.
-    // 종전에는 취득측 분기에만 push가 있어 **양도측 단독이면 인용이 한 건도 안 남았다**.
-    const run = runFullStack(
-      baseForm({
-        acquisitionMode: "sale_case",
-        // 취득측 매매사례는 비우고 1주당 취득가액으로 대체 → 양도측 단독 적용
-        perShareAcquisitionPrice: "40000",
-        transferMarketSamplePrice: "10000",
-      }),
-    );
-    expect(run.blocked).toBe(false);
-    if (run.blocked) return;
-    const notes = run.result.warnings.join(" ");
-    expect(notes).toContain("176의2");
-    expect(notes).toContain("163");
-  });
-
-  it("AP-MS-5: 상장주식은 엔진 가드가 양도측 치환을 막는다 (영§176의2③1호 본문 괄호)", () => {
-    // 상장은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다.
-    // UI 안내가 아니라 엔진이 막아야 한다 — 취득모드를 되돌리면 UI 차단은 사라진다.
-    const run = runFullStack(
+  it("AP-MS-3: 상장주식은 매매사례 모드 자체가 ⑧에서 차단된다 (영§176의2③1호 본문 괄호)", () => {
+    const errors = validateStep2Domestic(
       baseForm({
         marketType: "kospi",
-        acquisitionMode: "actual",
-        acquisitionActualInputMode: "per_share",
-        perShareAcquisitionPrice: "40000",
-        transferMarketSamplePrice: "30000",
+        acquisitionMode: "sale_case",
+        acquisitionMarketSamplePrice: "40000",
       }),
     );
-    expect(run.blocked).toBe(false);
-    if (run.blocked) return;
-    expect(run.result.transferPrice).toBe(500_000_000);
+    expect(errors.some((e) => e.field === "acquisitionMode" && e.severity === "error")).toBe(true);
   });
 });
 

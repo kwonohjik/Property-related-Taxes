@@ -29,7 +29,7 @@ import {
   calcAcquisitionStdPerShareSupplementary,
 } from "./stock-valuation-unlisted";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
-import { STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 
 export interface AcquisitionBasisResult {
   acquisitionPrice: number;
@@ -332,10 +332,32 @@ export function resolveAcquisitionBasis(
       ? Math.floor(input.acquisitionMarketSamplePrice)
       : (input.perShareAcquisitionPrice ?? 0);
     acquisitionPrice = samplePerShare * shareCount;
+
+    /**
+     * 개산공제 base — 취득당시 기준시가 총액 (소령 §163⑥4 「제1호 내지 제3호외의 자산」 ×1/100).
+     * §97②2호 본문은 「제1항제1호나목의 금액(매매사례가액)에 자산별 대통령령 금액을 더한 금액」이다.
+     * 비상장·기타자산 주식등의 취득기준시가는 §99①4 → 영 §165④ 보충평가(§165⑧1호가 기타자산 주식등도 같게 본다).
+     *
+     * 🔑 `usedEstimatedAcquisition`은 **세팅하지 않는다** — 그 플래그는 §97②2호 **단서**(실비로 갈아타기)의
+     *    게이트이고 단서는 «환산취득가액으로 하는 경우»에 한정이라 매매사례에는 없다.
+     *    개산공제 산정은 아래 합류 지점이 `acquisitionMode === "sale_case"`로 따로 받는다.
+     *
+     * 🔑 헬퍼가 첫 인용으로 넣는 §165③(거래정지)은 이 경로와 무관하므로 걸러낸다.
+     */
+    const acqStd = calcAcquisitionStdPerShareSupplementary(input);
+    estimatedBase = acqStd.perShare > 0 ? acqStd.perShare * shareCount : 0;
+    warningsDelta.push(...acqStd.warnings);
+    for (const rule of acqStd.appliedRules) {
+      if (rule !== STOCK.ENFORCEMENT_DECREE_165_3_TRADING_HALT) warningsDelta.push(rule);
+    }
+    warningsDelta.push(STOCK.ENFORCEMENT_DECREE_163_6_4_ESTIMATED_EXPENSE);
+
     valuationDetail = {
       method: "actual_acquisition",
       netAssetFloorApplied: false,
+      acquisitionNetAssetFloorApplied: acqStd.floorApplied,
       finalPerShareValue: samplePerShare,
+      acquisitionStdPriceTotal: estimatedBase,
     };
 
   } else {
@@ -368,7 +390,11 @@ export function resolveAcquisitionBasis(
 
   // 개산공제 계산 (취득기준시가 총액 × 1%) — §163⑥4
   // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가가 아님)
-  if (usedEstimatedAcquisition && estimatedBase !== undefined && estimatedBase > 0) {
+  if (
+    (usedEstimatedAcquisition || acquisitionMode === "sale_case") &&
+    estimatedBase !== undefined &&
+    estimatedBase > 0
+  ) {
     estimatedDeduction = Math.floor(estimatedBase * STOCK_ESTIMATED_EXPENSE_RATE);
   }
 

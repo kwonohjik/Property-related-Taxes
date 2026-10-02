@@ -307,9 +307,6 @@ export const stockTransferInputSchema = z.object({
   acquisitionMarketSamplePrice: z.number().min(0).optional(),
   acquisitionMarketSampleDate: z.union([z.string(), z.date()]).optional(),
   acquisitionMarketSampleCounterparty: z.string().optional(),
-  transferMarketSamplePrice: z.number().min(0).optional(),
-  transferMarketSampleDate: z.union([z.string(), z.date()]).optional(),
-  transferMarketSampleCounterparty: z.string().optional(),
 
   // R-2 자본조정 (무상증자·감자)
   capitalAdjustments: z.array(capitalAdjustmentSchema).max(100).optional(),

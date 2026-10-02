@@ -34,6 +34,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   },
   {
     /**
+     * 양도가액 = 양도 당시 실지거래가액. 주식 양도세 매매사례가액 화면(`MarketSampleDetailCard`)이
+     * 「양도 매매사례가액은 없다」는 근거로 인용한다 — 양도가액을 매매사례가액으로 갈음하는 것은
+     * §114⑦ 과세관청의 결정·경정(추계조사) 축이라 신고 단계의 우선 규정이 없다.
+     */
+    id: "TRANSFER.TRANSFER_PRICE",
+    citation: "소득세법 §96",
+    keywords: ["양도가액", "양도 당시의 양도자와 양수자 간에 실지거래가액에 따른다"],
+    keywordMode: "ALL",
+  },
+  {
+    /**
      * 결과탭 상세명세서 「세액감면대상금액」·「소득금액 감면대상」 행의 근거
      * (`DetailedStatementHelpers.ts` · `reduction-eligible-income.ts`).
      * ①이 세액감면방식(감면액 = 산출세액 × (감면대상 양도소득금액 − 기본공제) ÷ 과세표준 × 감면율),

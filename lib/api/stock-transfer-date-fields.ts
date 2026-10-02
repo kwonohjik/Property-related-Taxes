@@ -37,7 +37,6 @@ export const STOCK_DATE_FIELDS = [
   "transferLots[].transferDate",
   // R-1' 매매사례가액 거래일
   "acquisitionMarketSampleDate",
-  "transferMarketSampleDate",
   // R-2 자본조정 발생일
   "capitalAdjustments[].eventDate",
 ] as const;

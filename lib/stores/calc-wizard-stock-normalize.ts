@@ -210,9 +210,6 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
     acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),
     acquisitionMarketSampleCounterparty: strField("acquisitionMarketSampleCounterparty"),
-    transferMarketSamplePrice: strField("transferMarketSamplePrice"),
-    transferMarketSampleDate: strField("transferMarketSampleDate"),
-    transferMarketSampleCounterparty: strField("transferMarketSampleCounterparty"),
     // R-2 자본조정
     capitalAdjustments: Array.isArray(d.capitalAdjustments)
       ? (d.capitalAdjustments as unknown[]).map((row) => {

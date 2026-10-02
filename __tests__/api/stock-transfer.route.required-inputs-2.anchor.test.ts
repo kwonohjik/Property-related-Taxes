@@ -226,13 +226,22 @@ describe("B11 — 매매사례가액(시행령 §176의2③1호)", () => {
     acquisitionMode: "sale_case",
     expenseMode: "estimated",
     acquisitionMarketSamplePrice: 10000,
+    // 개산공제 base = 취득당시 기준시가(영 §163⑥4 · §165④) — 순손익=순자산이라 10,000으로 가중치 무관
+    acquisitionYearNetIncomePerShare: 10000,
+    acquisitionYearNetAssetPerShare: 10000,
   };
-  it("🟢 매매사례가액 1,420,000 · 1주당 취득가액으로 대체해도 1,420,000", async () => {
-    await expectFinalTax(B11, 1_420_000);
-    await expectFinalTax({ ...without(B11, "acquisitionMarketSamplePrice"), perShareAcquisitionPrice: 10000 }, 1_420_000);
+  // 양도 21,600,000 − 취득 12,000,000 − 개산공제(10,000 × 1,200주 × 1% = 120,000) = 9,480,000
+  // − 기본공제 2,500,000 = 6,980,000 × 20% = 1,396,000. (종전 1,420,000은 개산공제 0원 — 매매사례를 «실가 의제»로 오독)
+  it("🟢 매매사례가액 1,396,000 · 1주당 취득가액으로 대체해도 1,396,000", async () => {
+    await expectFinalTax(B11, 1_396_000);
+    await expectFinalTax({ ...without(B11, "acquisitionMarketSamplePrice"), perShareAcquisitionPrice: 10000 }, 1_396_000);
   });
   it("🔴 둘 다 없음 → 400 (종전 3,820,000)", async () => {
     await expectRejected(without(B11, "acquisitionMarketSamplePrice"), "acquisitionMarketSamplePrice");
+  });
+  it("🔴 취득연도 순손익·순자산 없음 → 400 (개산공제 base 없이 통과하면 필요경비가 조용히 0)", async () => {
+    await expectRejected(without(B11, "acquisitionYearNetIncomePerShare"), "acquisitionYearNetIncomePerShare");
+    await expectRejected(without(B11, "acquisitionYearNetAssetPerShare"), "acquisitionYearNetAssetPerShare");
   });
 });
 
@@ -242,7 +251,14 @@ describe("B11-UI — ⑧도 「사례가액 또는 1주당 취득가액」 하�
   const errs = (form: StockTransferFormData) =>
     validateAllSteps(form).filter((e) => e.severity === "error").map((e) => e.field);
   it("🟢 사례가액만 채우면 통과 (종전: 화면에 없는 1주당 취득가액을 요구해 막힘)", () => {
-    const e = errs(f({ acquisitionMarketSamplePrice: "10000", perShareAcquisitionPrice: "" }));
+    const e = errs(
+      f({
+        acquisitionMarketSamplePrice: "10000",
+        perShareAcquisitionPrice: "",
+        acquisitionYearNetIncomePerShare: "10000",
+        acquisitionYearNetAssetPerShare: "10000",
+      }),
+    );
     expect(e).not.toContain("perShareAcquisitionPrice");
     expect(e).not.toContain("acquisitionMarketSamplePrice");
   });
