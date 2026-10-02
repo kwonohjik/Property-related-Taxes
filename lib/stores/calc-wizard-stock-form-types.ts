@@ -187,9 +187,6 @@ export interface StockTransferFormData {
   acquisitionMarketSamplePrice: string;       // 원
   acquisitionMarketSampleDate: string;         // "YYYY-MM-DD"
   acquisitionMarketSampleCounterparty: string;
-  transferMarketSamplePrice: string;
-  transferMarketSampleDate: string;
-  transferMarketSampleCounterparty: string;
 
   // ── R-2 자본조정 (법§17② 단서 + 집행기준 97-163-12) — 2026-05-19 ──
   capitalAdjustments: CapitalAdjustmentForm[];

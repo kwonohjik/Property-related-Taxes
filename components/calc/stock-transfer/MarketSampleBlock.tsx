@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * MarketSampleBlock — R-1' 매매사례가액 입력 블록 (영§176의2③1호)
+ * MarketSampleBlock — R-1' **취득** 매매사례가액 입력 블록 (영§176의2③1호)
  *
- * 비상장·기타자산 전용. 취득·양도 양쪽 매매사례 입력 가능.
- * ±3개월 (90일) 초과 시 warning, 특수관계인 의심 keyword 안내.
+ * 비상장·기타자산 전용. ±3개월 (90일) 초과 시 warning, 특수관계인 의심 keyword 안내.
+ * 양도 매매사례가액 입력은 없다 — 양도가액은 양도 당시 실지거래가액이다(소득세법 §96①).
+ * 매매사례가액은 §114⑦ 과세관청의 추계 결정·경정 축이고, 취득가액만 §97①1호 단서가 납세자 산정을 허용한다.
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -49,34 +50,6 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
             value={form.acquisitionMarketSampleCounterparty}
             onChange={(e) => onChange({ acquisitionMarketSampleCounterparty: e.target.value })}
             placeholder="거래상대 명의·관계 (예: 제3자, 친족 등)"
-          />
-        </FieldCard>
-      </ToneCard>
-
-      {/* 양도 매매사례 (emerald tone) */}
-      <ToneCard tone="emerald" sectionNum={2} title="양도 매매사례가액 (선택)" bodyClassName="space-y-3" noDark>
-        <p className="text-xs text-emerald-700/80">
-          입력 시 1주당 양도가액 대신 우선 적용됩니다.
-        </p>
-        <CurrencyInput
-          label="1주당 양도 매매사례가액"
-          hint="유사 매매사례 가액 (원) — 양도일 전후 3개월 이내"
-          value={form.transferMarketSamplePrice}
-          onChange={(v) => onChange({ transferMarketSamplePrice: v })}
-        />
-        <FieldCard label="사례 거래일">
-          <DateInput
-            value={form.transferMarketSampleDate}
-            onChange={(v) => onChange({ transferMarketSampleDate: v })}
-          />
-        </FieldCard>
-        <FieldCard label="거래상대 (메타)">
-          <input
-            type="text"
-            className="w-full rounded border border-emerald-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-            value={form.transferMarketSampleCounterparty}
-            onChange={(e) => onChange({ transferMarketSampleCounterparty: e.target.value })}
-            placeholder="거래상대 명의·관계"
           />
         </FieldCard>
       </ToneCard>

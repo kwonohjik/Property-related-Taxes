@@ -1,6 +1,6 @@
 # 주식 양도세 매매사례가액 — ① 양도측 우선 적용 제거 · ② 취득 매매사례 개산공제 배선
 
-> 작성 2026-10-02 · 세목: 주식 양도소득세(비상장) · 상태: **Do 착수 (Q-1=A 확정 · Q-2 = Do 1단계 확인 → 아래 §3·§7)**
+> 작성 2026-10-02 · 세목: 주식 양도소득세(비상장) · 상태: **✅ Do 완료 (구현·검증 끝 — §10 구현 결과 · 별건 §11)**
 > 제보: Step 2 「② 양도 매매사례가액 (선택)」 안내 「입력 시 1주당 양도가액 대신 우선 적용됩니다」(이미지 18) /
 > Step 3 「개산공제 자동 적용 — 취득가액 방식 "매매사례가액"」(이미지 19)인데 기준시가 입력 화면이 없음.
 
@@ -202,7 +202,7 @@ B는 실지양도가액 2억이 입력돼 있는데 1.5억으로 계산됐다.
 | V-4 ✅ | `marketSampleDetail.transfer*`·`transferMarketSample*` 전수 | 필드명 grep: 소비처는 **`MarketSampleDetailCard.tsx`(양도 행 + 하단 문구)** 와 `docs/02-design/.../stock-transfer-pr2-remaining.engine.design.md`·테스트 3파일뿐. **e2e/ 0건**, PDF 0건. 🔴 **같은 카드 하단 문구가 이미 틀려 있다**: 「매매사례가액 = 실지거래가액 의제 (법§97②1호) — §163⑥ 개산공제 미적용, §97②2호 swap 비대상」 → 결함 ②의 정답이 반대다. 문구도 정정 대상 |
 | V-5 ✅ | 이월과세 `acquisitionStdPriceOverridePerShare`를 `sale_case`에 걸지 | `stock-carryover.ts:262`(증여자 실가 알면 `actual`로 되돌림 → 무관) / `:296-306`(나목, 환산 5분기 입력 치환). 나목에서 `sale_case`는 **취득가액 자체**가 증여자 값으로 치환되지 않는 **기존 한계**라 개산공제 기준시가만 따로 승계하면 짝이 안 맞는다 → **이번 범위 밖, override 미적용**으로 두고 별건 기록 |
 | V-6 ✅ | 저장 이력 재계산 시 결과 변화 | 이력은 저장된 `resultData`를 표시(`lib/storage/CLAUDE.md`)하므로 **재계산 경로로 열 때만** 달라진다. 별도 고지 없이 진행 |
-| V-7 🆕 | 비과세 echo 경로 `exempt-informational-acquisition.ts:68-83`가 `sale_case`를 `actual`처럼 `actualAcquisitionTotal(input)`로 계산 | 이 경로는 **`acquisitionMarketSamplePrice`를 읽지 않아** 비과세 echo의 취득가액이 어긋날 수 있다(세액 영향 없음 — 실 세액은 0으로 zeroing). **이번 변경이 `estimatedBase`를 `sale_case`에 채우면 이 sibling도 같은 값을 echo해야** 하는지 Do에서 판단(범위 확장 여부는 확인 후) |
+| V-7 ✅ | 비과세 echo 경로 `exempt-informational-acquisition.ts:68-83`가 `sale_case`를 `actual`처럼 `actualAcquisitionTotal(input)`로 계산 | 이 경로는 **`acquisitionMarketSamplePrice`를 읽지 않아** 비과세 echo의 취득가액이 어긋날 수 있다(세액 영향 없음 — 실 세액은 0으로 zeroing). **이번 변경이 `estimatedBase`를 `sale_case`에 채우면 이 sibling도 같은 값을 echo해야** 하는지 Do에서 판단(범위 확장 여부는 확인 후) |
 
 ---
 
@@ -221,3 +221,49 @@ B는 실지양도가액 2억이 입력돼 있는데 1.5억으로 계산됐다.
 
 - 감정가액(주식 제외 — 영 §176의2③2호), 상장 매매사례(본문 괄호 제외)는 현행 유지.
 - 부동산 양도세 매매사례가액 경로(`transfer-tax-helpers.ts`)는 별개 엔진 — 같은 결함 존재 여부는 별건으로 확인.
+
+---
+
+## 10. 구현 결과 (2026-10-02)
+
+### 10.1 변경 지점 (14 동기화 지점 점검 포함)
+
+| 지점 | 결과 |
+|---|---|
+| 엔진 STEP 2 `stock-transfer-tax.ts` | 양도측 매매사례 분기 제거 — `actual`은 실가(`total`/`per_share`)만. 미사용이 된 `isMarketSampleAllowedMarket` import 제거 |
+| 엔진 STEP 3 `stock-acquisition-basis.ts` | `sale_case`에서 `calcAcquisitionStdPerShareSupplementary` 재사용 → `estimatedBase`. 헬퍼가 첫 인용으로 넣는 §165③(거래정지)은 걸러내고 §163⑥4·§165④1을 남긴다. `usedEstimatedAcquisition`은 **세팅하지 않음**(단서 swap 게이트) |
+| 엔진 STEP 4 | `sale_case`는 `expenseMode`와 무관하게 개산공제(§97②2호 본문) — 엔진 직접 호출로 실비를 줘도 반영되지 않는다 |
+| 엔진 `pr2-detail` · `market-sample` · 타입 | 양도측 평가·`transferApplied`·`transferPerShare`·`transferDeltaDays`·`transferOverThreeMonths` 제거. 모듈 헤더의 「실지거래가액 의제 → 개산공제 미적용」(오기)을 법령대로 정정 |
+| ①②③ store | `transferMarketSample{Price,Date,Counterparty}` 3필드 제거(구 저장값은 normalize가 버림) |
+| ④ API | 양도측 전송 블록 제거 + `sale_case` 취득연도 NI/NA 전송(full 결산서 블록 **뒤**에 두어 stale 값이 이긴다 — V-2) |
+| ⑤ UI | `MarketSampleBlock` 양도 카드 제거 · `Step2` 「취득 당시 기준시가 — 개산공제 기준」 카드(`EstimatedUnlistedBlock acquisitionSideOnly` 재사용) |
+| ⑥ 사이드바 | 영향 없음(필요경비는 엔진값) |
+| ⑦ 결과 | `MarketSampleDetailCard` 양도 행 제거 + 하단 문구 정정(「개산공제 미적용」 → 「취득가액 + 기준시가×1%, 단서 swap 비대상」) |
+| ⑧ validate | `sale_case`+비상장·기타자산 → `validateAcquisitionSideUnlistedFields` (메시지 근거 문구 분기) |
+| ⑨⑩⑪ | 해당 없음 |
+| ⑫ Zod | 양도측 3필드 제거 + 2차 필수 게이트(`stock-transfer-tax-refines.ts`)에 `sale_case` `scope:"acquisition"` 추가 |
+| ⑬⑭ route | 양도측 3필드 제거. `acquisitionYear*`는 기존 매핑 그대로 통과 |
+| 법령 manifest | `TRANSFER.TRANSFER_PRICE`(소득세법 §96) 등록 — 결과탭 컴포넌트가 §96을 인용하므로 `result-tab-citation-coverage` 게이트가 요구했다. `verify:legal` PASS |
+
+### 10.2 검증
+
+| 항목 | 결과 |
+|---|---|
+| 신규 anchor `__tests__/calc/stock-sale-case-deduction.anchor.test.ts` SC-1~10 | Pre-Do **8건 RED**(개산공제 undefined · 실비 31,000,000 반영 · 양도가액 1.5억 치환) → **GREEN 10/10** |
+| 반전한 기존 테스트 | MS-1-05 · MS-4 · MS-5 · SW-5(보강) · AP-MS 블록 재작성 · B11(세액 1,420,000 → **1,396,000**, 손계산: 21,600,000 − 12,000,000 − 120,000 = 9,480,000 − 2,500,000 = 6,980,000 × 20%) |
+| 전체 vitest | 27,367 passed / 0 failed (manifest 등록 후) |
+| `tsc --noEmit` | 0건 · eslint 에러 0 (경고 3건은 변경 전부터 있던 `stock-transfer-tax-schema.ts` 미사용 import) |
+| 브라우저 E2E `e2e/stock-sale-case-deduction.spec.ts` | 폼→계산→결과까지: 양도 카드 부재(부정) + 기준시가 카드·NI/NA 입력(긍정) + 신고서 필요경비 1,000,000 · 개산공제 §163⑥4 1,000,000 · 양도소득금액 **99,000,000**(필요경비 0이면 100,000,000이라 변별) |
+| 인접 E2E 6건(face-value · acquisition-total-input · step-jump-gate) | 통과 |
+
+### 10.3 P5(부담부증여 B/C 안분) — 해당 없음
+
+`gift-burdened-transfer-api.ts:534`의 `acquisitionMode`는 `"actual" | "estimated"` 뿐(`inheritance-gift-estate.types.ts:1011`) — 부담부증여는 `sale_case`를 보내지 않아 개산공제 base 안분과 만나지 않는다.
+
+## 11. 별건 (이번 범위 밖 — 미수정, 기록만)
+
+| ID | 내용 | 실측 |
+|---|---|---|
+| X-1 | **K-OTC 중소·벤처 비과세 + `sale_case`** 결과(`buildExemptResult` → `exempt-informational-acquisition.ts:68-83`)의 취득가액 echo가 **0원**이다. 이 사본은 `sale_case`를 `actual`처럼 `actualAcquisitionTotal(input)`(= `perShareAcquisitionPrice`)로 읽어 `acquisitionMarketSamplePrice`를 못 본다. 세액은 0이라 **표시만** 어긋난다. 비과세 경로는 모든 모드에서 `expenses`·`estimatedDeduction`을 0/undefined로 두는 별개의 규약이라 이번 개산공제 수정과 무관하다 | probe: 비상장 + K-OTC + 중소 + 비대주주, 취득 사례 1,000,000×100주, 양도 2억 → `isExempt:true, acquisitionPrice:0` (실제 1억) |
+| X-2 | **이월과세(나목, 증여자 실가 불명) + `sale_case`**: 취득가액 자체가 증여자 값으로 치환되지 않는다(`stock-carryover.ts:296-306`은 환산 5분기의 입력만 갈아 끼움). 개산공제 기준시가만 승계하면 짝이 안 맞아 이번에 override를 걸지 않았다(V-5) | 코드 정독 — 입력 경로 조합이 UI에서 막혀 있는지는 미확인 |
+| X-3 | `docs/02-design/features/stock-transfer-pr2-remaining.engine.design.md`가 양도 매매사례 우선 적용을 설계로 서술한다 — 이 계획서가 우선한다(역사 문서라 미수정) | grep |

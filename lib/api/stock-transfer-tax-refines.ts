@@ -383,6 +383,21 @@ export function addStockRefines(
         !((data.perShareAcquisitionPrice ?? 0) > 0)
       )
         issue("acquisitionMarketSamplePrice", "취득 매매사례 1주당 가액을 입력하세요 (소득세법 시행령 §176의2③1호)");
+      // 매매사례가액 취득의 개산공제 base = 취득당시 기준시가(영 §163⑥4) → §165④ 보충평가 입력 — ⑧ step2와 공용 술어.
+      if (
+        !splitOrLots &&
+        data.acquisitionMode === "sale_case" &&
+        !["kospi", "kosdaq", "konex"].includes(data.marketType as string)
+      ) {
+        for (const key of requiredUnlistedValuationKeys({
+          scope: "acquisition",
+          niSkip: !!data.netAssetOnlyReason,
+          acqFaceValueOnly: false,
+        })) {
+          if (data[key] === undefined)
+            issue(key, `${UNLISTED_VALUATION_LABEL[key]} 입력하세요 (소득세법 시행령 §163⑥4 개산공제 기준시가 · §165④ 보충적 평가)`);
+        }
+      }
     }
 
     // ── 2차(B13~B17) — 취득원인 보조 입력(소득세법 §104② · §97의2①). ⑧ step1과 공용 술어.

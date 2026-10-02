@@ -376,26 +376,6 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
   }
 
-  /**
-   * R-1' 양도 매매사례가액 — **취득측과 같은 게이트**를 탄다.
-   *
-   * 종전에는 `transferPriceMode === "actual"`만 보고 실었다. 그런데 입력 위젯은
-   * `acquisitionMode === "sale_case"`에서만 렌더되고 모드 전환 시 값을 정리하지 않아,
-   * 사용자가 취득모드를 실가로 되돌리면 **화면에 없는 stale 값**이 그대로 전송됐다.
-   * 엔진은 이 값에 절대 우선순위를 주므로(`perShareTransferPrice`를 앞지른다)
-   * 양도가액이 조용히 치환된다(소득세법 §96①).
-   * 형제 필드 `acquisitionMarketSamplePrice`는 처음부터 `sale_case` 블록 안에 있었다.
-   */
-  if (
-    (form.transferPriceMode || "actual") === "actual" &&
-    acquisitionMode === "sale_case"
-  ) {
-    const trnMS = parseIntOrUndef(form.transferMarketSamplePrice);
-    if (trnMS !== undefined) body.transferMarketSamplePrice = trnMS;
-    if (form.transferMarketSampleDate) body.transferMarketSampleDate = form.transferMarketSampleDate;
-    if (form.transferMarketSampleCounterparty) body.transferMarketSampleCounterparty = form.transferMarketSampleCounterparty;
-  }
-
   // [A-2] R-2 자본조정 — 단일·분할 공통 전송 (분할은 엔진이 lot별 희석 전처리). strip 조건 제거.
   if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
     body.capitalAdjustments = form.capitalAdjustments
@@ -466,6 +446,23 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (!niSkip) body.acquisitionYearNetIncomePerShare = reduced.acqNi;
     body.acquisitionYearNetAssetPerShare = reduced.acqNa;
     // 74 신규 필드는 body 미포함 — Zod stripping/엔진 미도달 위험 0
+  }
+
+  /**
+   * 매매사례가액 취득 — 개산공제 base = 취득당시 기준시가 (소득세법 §97②2호 본문 · 영 §163⑥4).
+   * 비상장·기타자산 주식등의 기준시가는 §99①4 → 영 §165④ 보충평가라 취득연도 순손익·순자산이 필요하다.
+   *
+   * 🔴 **위 full 결산서 블록 «뒤»에 둔다.** 그 블록은 `acquisitionMode`를 보지 않아, 환산에서 full로 채운 뒤
+   *    매매사례로 바꾸면 **화면에 없는 결산서 값**이 `acquisitionYear*`를 덮는다(이 모드 화면은 simple뿐).
+   *    여기서 지우고 simple 입력만 다시 싣는다. 빈값은 undefined로 둔다 — 0이면 ⑫ 필수 게이트를 우회한다.
+   */
+  if (acquisitionMode === "sale_case") {
+    delete (body as Record<string, unknown>).acquisitionYearNetIncomePerShare;
+    delete (body as Record<string, unknown>).acquisitionYearNetAssetPerShare;
+    const smNI = parseFloatOrUndef(form.acquisitionYearNetIncomePerShare);
+    const smNA = parseFloatOrUndef(form.acquisitionYearNetAssetPerShare);
+    if (smNI !== undefined) body.acquisitionYearNetIncomePerShare = smNI;
+    if (smNA !== undefined) body.acquisitionYearNetAssetPerShare = smNA;
   }
 
   // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성

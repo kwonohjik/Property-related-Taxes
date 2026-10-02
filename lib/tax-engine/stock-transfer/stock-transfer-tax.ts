@@ -32,7 +32,6 @@ import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
-import { isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
 import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
 import { allocateLots } from "./lot-allocation";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
@@ -210,27 +209,10 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     // split 모드 — lot 합계 사용
     transferPrice = lotMatchingDetail.totalTransferPrice;
   } else if (input.transferPriceMode === "actual") {
+    // 양도가액 = 양도 당시 실지거래가액 (소득세법 §96①). 매매사례가액으로 갈음하는 것은 §114⑦
+    // 과세관청의 결정·경정(추계조사) 축이라 신고 단계에서 실가보다 앞서지 않는다.
     const actualMode = input.transferActualInputMode ?? "per_share";  // 3중 패턴 default
-    if (
-      input.transferMarketSamplePrice !== undefined &&
-      input.transferMarketSamplePrice > 0 &&
-      isMarketSampleAllowedMarket(input.marketType)
-    ) {
-      // R-1' 매매사례가액 우선 (영§176의2③1호) — perShareTransferPrice 무시
-      transferPrice = Math.floor(input.transferMarketSamplePrice) * shareCount;
-    } else if (
-      input.transferMarketSamplePrice !== undefined &&
-      input.transferMarketSamplePrice > 0
-    ) {
-      // 상장주식은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다 — 실지거래가액으로 간다.
-      warnings.push(
-        `${STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE} 본문 괄호 — 주권상장법인 주식등은 매매사례가액 대상이 아닙니다. 양도 매매사례가액을 적용하지 않고 실지거래가액으로 계산했습니다.`,
-      );
-      transferPrice =
-        actualMode === "total"
-          ? (input.transferTotalPrice ?? 0)
-          : (input.perShareTransferPrice ?? 0) * shareCount;
-    } else if (actualMode === "total") {
+    if (actualMode === "total") {
       transferPrice = input.transferTotalPrice ?? 0;                  // 총액 직접 사용
     } else {
       transferPrice = (input.perShareTransferPrice ?? 0) * shareCount;
@@ -317,7 +299,9 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
         );
       }
     }
-  } else if (expenseMode === "actual") {
+  } else if (expenseMode === "actual" && acquisitionMode !== "sale_case") {
+    // sale_case는 expenseMode와 무관하게 아래 개산공제 — §97②2호 본문(취득가액 + 개산공제). 실비로 갈아타는
+    // 단서는 「환산취득가액으로 하는 경우」 한정이라 매매사례가액에는 없다(엔진 직접 호출 방어).
     expenses = directExpenses;
   } else {
     /**

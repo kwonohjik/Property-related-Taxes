@@ -2,7 +2,7 @@
  * stock-transfer-pr2-detail.ts — PR-2 잔여 detail 산정 헬퍼
  *
  * 800줄 정책에 따라 stock-transfer-tax.ts에서 분리.
- * STEP 3.5 (매매사례가액 detail) + STEP 3.7 (자본조정 detail).
+ * STEP 3.5 (취득 매매사례가액 detail) + STEP 3.7 (자본조정 detail).
  */
 
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
@@ -31,35 +31,23 @@ export function buildPr2Detail(
   let marketSampleDetail: StockTransferResult["marketSampleDetail"];
   let capitalAdjustmentsDetail: StockTransferResult["capitalAdjustmentsDetail"];
 
-  // STEP 3.5: 매매사례가액 detail
+  // STEP 3.5: 매매사례가액 detail — **취득**측만 (양도가액은 §96① 실지거래가액, 매매사례가액 갈음 없음)
   // 상장주식은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다 —
-  // 양도가액 분기와 **같은 술어**를 써서 「세액은 안 쓰는데 화면엔 적용됐다고 뜨는」 갈림을 막는다.
-  if (
-    isMarketSampleAllowedMarket(input.marketType) &&
-    (acquisitionMode === "sale_case" ||
-      (input.transferMarketSamplePrice !== undefined && input.transferMarketSamplePrice > 0))
-  ) {
+  // 취득가액 분기와 **같은 술어**를 써서 「세액은 안 쓰는데 화면엔 적용됐다고 뜨는」 갈림을 막는다.
+  if (isMarketSampleAllowedMarket(input.marketType) && acquisitionMode === "sale_case") {
     const msResult = evaluateMarketSample({
       shareCount,
       acquisitionDate: input.acquisitionDate,
-      transferDate: input.transferDate,
       acquisitionMarketSamplePrice: input.acquisitionMarketSamplePrice,
       acquisitionMarketSampleDate: input.acquisitionMarketSampleDate,
       acquisitionMarketSampleCounterparty: input.acquisitionMarketSampleCounterparty,
-      transferMarketSamplePrice: input.transferMarketSamplePrice,
-      transferMarketSampleDate: input.transferMarketSampleDate,
-      transferMarketSampleCounterparty: input.transferMarketSampleCounterparty,
     });
-    if (msResult.acquisitionApplied || msResult.transferApplied) {
+    if (msResult.acquisitionApplied) {
       marketSampleDetail = {
         acquisitionApplied: msResult.acquisitionApplied,
-        transferApplied: msResult.transferApplied,
         acquisitionPerShare: msResult.acquisitionPerShare,
-        transferPerShare: msResult.transferPerShare,
         acquisitionDeltaDays: msResult.acquisitionDeltaDays,
-        transferDeltaDays: msResult.transferDeltaDays,
         acquisitionOverThreeMonths: msResult.acquisitionOverThreeMonths,
-        transferOverThreeMonths: msResult.transferOverThreeMonths,
         warnings: msResult.warnings,
       };
       warningsDelta.push(...msResult.warnings);

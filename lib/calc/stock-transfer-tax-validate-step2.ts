@@ -155,6 +155,7 @@ function validateUnlistedValuationFields(
 function validateAcquisitionSideUnlistedFields(
   form: StockTransferFormData,
   errors: StockValidationError[],
+  basis: string = "취득일 거래정지 — 소령 §165③·§165④",
 ): void {
   for (const key of requiredUnlistedValuationKeys({
     scope: "acquisition",
@@ -162,10 +163,10 @@ function validateAcquisitionSideUnlistedFields(
     acqFaceValueOnly: false, // 취득측 전용 경로는 액면가 토글을 읽지 않는다(위 주석)
   })) {
     if (key === "acquisitionYearNetIncomePerShare" && isEmpty(form.acquisitionYearNetIncomePerShare)) {
-      errors.push({ field: key, message: "취득연도 1주당 순손익가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+      errors.push({ field: key, message: `취득연도 1주당 순손익가치를 입력하세요 (${basis})`, severity: "error" });
     }
     if (key === "acquisitionYearNetAssetPerShare" && isEmpty(form.acquisitionYearNetAssetPerShare)) {
-      errors.push({ field: key, message: "취득연도 1주당 순자산가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+      errors.push({ field: key, message: `취득연도 1주당 순자산가치를 입력하세요 (${basis})`, severity: "error" });
     }
   }
 }
@@ -598,6 +599,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         message: "취득 매매사례 1주당 가액을 입력하세요 (또는 1주당 취득가액으로 대체)",
         severity: "error",
       });
+    }
+    // 개산공제 base = 취득당시 기준시가 (소득세법 §97②2호 본문 · 영 §163⑥4) — 비상장·기타자산 주식등은
+    // §99①4 → 영 §165④ 보충평가라 취득연도 순손익·순자산이 필요하다. 이 칸이 없으면 필요경비가 0이 된다.
+    if (!isListed) {
+      validateAcquisitionSideUnlistedFields(form, errors, "매매사례가액 개산공제 기준시가 — 소령 §163⑥4·§165④");
     }
   }
 

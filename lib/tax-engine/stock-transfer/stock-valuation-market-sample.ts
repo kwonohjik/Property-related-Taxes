@@ -1,5 +1,5 @@
 /**
- * 주식 양도소득세 — 매매사례가액 평가 모듈 (R-1' PR-2 잔여)
+ * 주식 양도소득세 — **취득** 매매사례가액 평가 모듈 (R-1' PR-2 잔여)
  *
  * 소득세법 §97①1나목 → 시행령 §163⑫ → 시행령 §176의2③1호
  *   "양도일 또는 취득일 전후 각 3개월 이내에 해당 자산
@@ -14,9 +14,13 @@
  *   - 기타자산(`marketType="other_asset"`): ✅
  *   - 코스피·코스닥·코넥스: ❌ (validate·Zod에서 차단)
  *
- * 매매사례가액 = "실지거래가액 의제" (법§97②1호)
- *   → §163⑥ 개산공제 미적용
- *   → §97②2호 단서 swap 비교 비대상 (swap은 환산취득가액 전용)
+ * 매매사례가액으로 취득가액을 산정하면 (법 §97②2호 본문 — 「제1항제1호나목의 금액에 자산별로
+ * 대통령령으로 정하는 금액을 더한 금액」)
+ *   → 시행령 §163⑥4 개산공제(취득당시 기준시가 × 1%) **적용** — 기준시가 산정은 `stock-acquisition-basis.ts`
+ *   → §97②2호 **단서**(실비로 갈아타기)는 「환산취득가액으로 하는 경우」 한정이라 비대상
+ *
+ * ⚠️ **양도**측 매매사례가액은 없다. 양도가액은 §96① 실지거래가액이고, 매매사례가액·기준시가로 갈음하는
+ *    것은 §114⑦ 과세관청의 결정·경정(추계조사) 축이라 신고 단계의 우선 규정이 없다(2026-10-02 제거).
  */
 
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
@@ -38,15 +42,10 @@ export function isMarketSampleAllowedMarket(
 
 export interface MarketSampleEvaluationResult {
   acquisitionApplied: boolean;
-  transferApplied: boolean;
   acquisitionPerShare?: number;
-  transferPerShare?: number;
   acquisitionTotal?: number;
-  transferTotal?: number;
   acquisitionDeltaDays?: number;
-  transferDeltaDays?: number;
   acquisitionOverThreeMonths: boolean;
-  transferOverThreeMonths: boolean;
   warnings: string[];
   appliedRules: string[];
 }
@@ -69,36 +68,25 @@ function isOverThreeMonths(deltaDays: number): boolean {
 }
 
 /**
- * 매매사례가액 평가 — 취득·양도 양쪽 모두 평가 가능
+ * 취득 매매사례가액 평가
  *
- * 호출 위치: stock-transfer-tax.ts STEP 2.5(양도가액) + STEP 3(취득가액)
- *   - acquisitionMode === "sale_case" 시 acquisitionMarketSample* 사용
- *   - transferMarketSamplePrice 입력 시 perShareTransferPrice 우선 무시 (사례가 우선)
+ * 호출 위치: stock-transfer-pr2-detail.ts (acquisitionMode === "sale_case" 시 acquisitionMarketSample* 사용)
  */
 export function evaluateMarketSample(input: {
   shareCount: number;
   acquisitionDate: Date;
-  transferDate: Date;
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
   acquisitionMarketSampleCounterparty?: string;
-  transferMarketSamplePrice?: number;
-  transferMarketSampleDate?: Date;
-  transferMarketSampleCounterparty?: string;
 }): MarketSampleEvaluationResult {
   const warnings: string[] = [];
   const appliedRules: string[] = [];
 
   let acquisitionApplied = false;
-  let transferApplied = false;
   let acquisitionPerShare: number | undefined;
-  let transferPerShare: number | undefined;
   let acquisitionTotal: number | undefined;
-  let transferTotal: number | undefined;
   let acquisitionDeltaDays: number | undefined;
-  let transferDeltaDays: number | undefined;
   let acquisitionOverThreeMonths = false;
-  let transferOverThreeMonths = false;
 
   if (input.acquisitionMarketSamplePrice !== undefined && input.acquisitionMarketSamplePrice > 0) {
     acquisitionApplied = true;
@@ -120,46 +108,12 @@ export function evaluateMarketSample(input: {
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_163_12);
   }
 
-  if (input.transferMarketSamplePrice !== undefined && input.transferMarketSamplePrice > 0) {
-    transferApplied = true;
-    transferPerShare = Math.floor(input.transferMarketSamplePrice);
-    transferTotal = transferPerShare * input.shareCount;
-    if (input.transferMarketSampleDate) {
-      transferDeltaDays = diffDays(input.transferMarketSampleDate, input.transferDate);
-      transferOverThreeMonths = isOverThreeMonths(transferDeltaDays);
-      if (transferOverThreeMonths) {
-        warnings.push(
-          `양도 매매사례 거래일이 양도일과 ${transferDeltaDays}일 차이 — "전후 3개월" 초과.`,
-        );
-      }
-    }
-    if (input.transferMarketSampleCounterparty && /(대표|이사|친족|배우자|자녀|특수관계)/.test(input.transferMarketSampleCounterparty)) {
-      warnings.push(`양도 매매사례 거래상대 "${input.transferMarketSampleCounterparty}" — 특수관계인 의심.`);
-    }
-    /**
-     * 인용은 **양도측에서도** 남긴다 — 종전에는 취득측 분기에만 push가 있어
-     * 양도측 단독 적용(취득은 1주당 취득가액으로 대체) 시 근거가 한 건도 안 남았다.
-     * 중복은 호출부(`buildPr2Detail`)가 이미 걸러낸다.
-     */
-    if (!appliedRules.includes(STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE)) {
-      appliedRules.push(STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE);
-    }
-    if (!appliedRules.includes(STOCK.ENFORCEMENT_DECREE_163_12)) {
-      appliedRules.push(STOCK.ENFORCEMENT_DECREE_163_12);
-    }
-  }
-
   return {
     acquisitionApplied,
-    transferApplied,
     acquisitionPerShare,
-    transferPerShare,
     acquisitionTotal,
-    transferTotal,
     acquisitionDeltaDays,
-    transferDeltaDays,
     acquisitionOverThreeMonths,
-    transferOverThreeMonths,
     warnings,
     appliedRules,
   };

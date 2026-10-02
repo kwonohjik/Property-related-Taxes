@@ -3,7 +3,7 @@
 /**
  * MarketSampleDetailCard — R-1' 매매사례가액 결과 카드
  *
- * 디자인 §8.1 표시 명세에 따라 양도·취득 사례 + ±3개월 검증 결과 표시.
+ * 취득 사례 + ±3개월 검증 결과 표시. (양도 매매사례가액은 없다 — 양도가액은 소득세법 §96① 실지거래가액)
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -18,7 +18,7 @@ function fmt(n?: number) {
 }
 
 export function MarketSampleDetailCard({ detail, shareCount }: Props) {
-  if (!detail.acquisitionApplied && !detail.transferApplied) return null;
+  if (!detail.acquisitionApplied) return null;
 
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-3">
@@ -51,22 +51,6 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
                 </td>
               </tr>
             )}
-            {detail.transferApplied && (
-              <tr>
-                <td className="px-3 py-2">양도 매매사례</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">{fmt(detail.transferPerShare)}원</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {detail.transferPerShare !== undefined
-                    ? fmt(detail.transferPerShare * shareCount)
-                    : "—"}
-                  원
-                </td>
-                <td className={`px-3 py-2 text-center ${detail.transferOverThreeMonths ? "text-amber-700 font-semibold" : ""}`}>
-                  {detail.transferDeltaDays !== undefined ? `${detail.transferDeltaDays}일` : "—"}
-                  {detail.transferOverThreeMonths && " ⚠"}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -80,7 +64,8 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
       )}
 
       <p className="text-xs text-amber-700/80">
-        매매사례가액 = 실지거래가액 의제 (법§97②1호) — §163⑥ 개산공제 미적용, §97②2호 swap 비대상.
+        매매사례가액으로 취득가액을 산정하면 필요경비는 취득가액 + 취득 당시 기준시가 × 1%(개산공제) — 법 §97②2호 본문·영 §163⑥4.
+        실제 경비로 바꾸는 §97②2호 단서(swap)는 환산취득가액에만 적용되어 비대상입니다.
       </p>
     </div>
   );
