@@ -13,7 +13,7 @@
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
- * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영 |
+ * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  */
@@ -29,10 +29,11 @@ import {
   resolveTemporaryTwoHouseDeadline,
 } from "../transfer-tax-temporary-two-house-timing";
 import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
-import { holidayTableUncoveredBefore } from "../civil-period";
+import { holidayTableProvisionalBefore, holidayTableUncoveredBefore } from "../civil-period";
 import {
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
+  PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR,
 } from "../data/public-holidays-kr";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
@@ -160,6 +161,7 @@ export function collectEraUndetermined(
   /*
    * L-1 — 「~이내」 기한(§155①④⑤⑦⑧·§154① 단서·§156의2·§156의3)은 말일이 토요일·공휴일이면 익일로 만료한다
    * (민법 §161). 양도일 직전이 공휴일 표 밖의 해면 토·일요일만 반영했으므로 결론과 무관하게 밝힌다.
+   * 표 안이라도 월력요항 미발표 해(예정 공휴일)면 임시공휴일이 빠져 있어 같은 id로 문구만 달리해 밝힌다.
    * 기한 축을 선언하지 않은 세대에게는 말하지 않는다.
    */
   const hasWithinDeadlineAxis =
@@ -179,6 +181,15 @@ export function collectEraUndetermined(
         `관공서 공휴일 계산표는 ${PUBLIC_HOLIDAY_TABLE_FIRST_YEAR}~${PUBLIC_HOLIDAY_TABLE_LAST_YEAR}년만 담고 있어 ` +
         "양도일 직전 기간의 공휴일(설·추석·대체공휴일·임시공휴일 등)은 반영하지 못하고 토·일요일만 반영했습니다 — " +
         "기한 말일이 공휴일이었다면 직접 확인하세요.",
+    });
+  } else if (hasWithinDeadlineAxis && holidayTableProvisionalBefore(input.transferDate)) {
+    // 같은 고지 채널(id) — 2028~는 표가 덮지만 월력요항 전 예정값이라 임시공휴일·규정 개정이 빠져 있다.
+    out.push({
+      id: "civil-161-holiday-table-uncovered",
+      reason:
+        `「~이내」 기한의 말일이 토요일·공휴일이면 다음 날까지 늘어납니다(${PERIOD_CALCULATION_4} → ${DEADLINE_HOLIDAY_EXTENSION_161}). ` +
+        `${PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR + 1}년 이후 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준으로 반영했습니다 — ` +
+        "임시공휴일·규정 개정은 반영하지 않았으니 기한 말일 무렵이 임시공휴일로 지정됐다면 직접 확인하세요.",
     });
   }
 

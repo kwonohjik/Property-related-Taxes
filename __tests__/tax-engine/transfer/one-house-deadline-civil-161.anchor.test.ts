@@ -20,6 +20,7 @@ import { describe, it, expect } from "vitest";
 import {
   deadlineEnd,
   deadlineEndFrom,
+  deadlineEndNote,
   isWithinDeadline,
   firstDayAfterPeriod,
   isAfterPeriod,
@@ -27,8 +28,10 @@ import {
 } from "@/lib/tax-engine/civil-period";
 import {
   PUBLIC_HOLIDAYS_KR,
+  PUBLIC_HOLIDAY_LONGEST_RUN_DAYS,
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
+  PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR,
 } from "@/lib/tax-engine/data/public-holidays-kr";
 import { checkExemption } from "@/lib/tax-engine/transfer-tax-exemption";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
@@ -82,16 +85,43 @@ describe("민법 §161 헬퍼 — 토요일·공휴일·대체공휴일·표 밖
     expect(iso(deadlineEnd(D("2026-05-01")).end)).toBe("2026-05-04");
     expect(iso(deadlineEnd(D("2026-07-17")).end)).toBe("2026-07-20");
   });
-  it("표 밖(2028) — 토·일만 반영하고 표시한다: 06-03(토) → 06-05 · 10-03(화) → 그대로", () => {
-    const sat = deadlineEnd(D("2028-06-03"));
-    expect([iso(sat.end), sat.extended, sat.holidayTableUncovered]).toEqual(["2028-06-05", true, true]);
-    const wk = deadlineEnd(D("2028-10-03"));
-    expect([iso(wk.end), wk.extended, wk.holidayTableUncovered]).toEqual(["2028-10-03", false, true]);
+  it("예정 공휴일(2028~2035) — 연장하고 「예정」으로 표시: 설·추석+개천절·선거일·대체공휴일", () => {
+    const flags = (s: string) => {
+      const d = deadlineEnd(D(s));
+      return [iso(d.end), d.extended, d.holidayTableUncovered, d.holidayTableProvisional];
+    };
+    // 2028 설 01-26(수)~28(금) + 주말 → 01-31(월)
+    expect(flags("2028-01-26")).toEqual(["2028-01-31", true, false, true]);
+    // 2028 추석 10-02~04 · 10-03 개천절 겹침(평일) → 대체 10-05(목) → 10-06(금)
+    expect(flags("2028-10-03")).toEqual(["2028-10-06", true, false, true]);
+    // 임기만료 선거일(10의2호) — 제23대 국회의원 2028-04-12 · 제10회 지방 2030-06-12(§34② 현충일 다음 주)
+    expect(flags("2028-04-12")).toEqual(["2028-04-13", true, false, true]);
+    expect(flags("2030-06-12")).toEqual(["2030-06-13", true, false, true]);
+    // 대체공휴일 — 2029-05-05(토 어린이날) → 05-07(월 대체) → 05-08 · 2035 추석 09-16(일) → 09-18(화 대체) → 09-19
+    expect(flags("2029-05-05")).toEqual(["2029-05-08", true, false, true]);
+    expect(flags("2035-09-15")).toEqual(["2035-09-19", true, false, true]);
+    // 연장 없는 평일 말일도 예정 표시(부정 짝: 연장 X)
+    const wk = deadlineEnd(D("2028-03-15"));
+    expect([iso(wk.end), wk.extended, wk.holidayTableProvisional]).toEqual(["2028-03-15", false, true]);
+    expect(deadlineEndNote(wk)).toContain("예정 공휴일");
+    expect(deadlineEndNote(deadlineEnd(D("2028-01-26")))).toContain("기한이 2028-01-31까지 늘어났습니다");
   });
-  it("표 끝(2027-12-31 금) — 표 안이면 고지 없음 / 연장이 2028로 넘어가면 고지", () => {
-    expect(deadlineEnd(D("2027-12-31")).holidayTableUncovered).toBe(false);
+  it("표 밖(2036) — 토·일만 반영하고 표시한다: 06-07(토) → 06-09 · 10-03(금 개천절) → 그대로", () => {
+    const sat = deadlineEnd(D("2036-06-07"));
+    expect([iso(sat.end), sat.extended, sat.holidayTableUncovered, sat.holidayTableProvisional]).toEqual([
+      "2036-06-09", true, true, false,
+    ]);
+    const wk = deadlineEnd(D("2036-10-03"));
+    expect([iso(wk.end), wk.extended, wk.holidayTableUncovered]).toEqual(["2036-10-03", false, true]);
+    expect(deadlineEndNote(wk)).toContain("토·일요일만");
+  });
+  it("공식 표 끝(2027-12-31 금) — 고지 없음 · 예정 표 끝(2035-12-29 토 → 12-31 월) — 예정, 표 밖 아님", () => {
+    const last = deadlineEnd(D("2027-12-31"));
+    expect([last.holidayTableUncovered, last.holidayTableProvisional, deadlineEndNote(last)]).toEqual([false, false, undefined]);
     // 2027-12-25(토 기독탄신일)·26(일)·27(월 대체) → 28(화) — 표 안
     expect(iso(deadlineEnd(D("2027-12-25")).end)).toBe("2027-12-28");
+    const end35 = deadlineEnd(D("2035-12-29"));
+    expect([iso(end35.end), end35.holidayTableUncovered, end35.holidayTableProvisional]).toEqual(["2035-12-31", false, true]);
   });
   it("토요일 연장은 2007-12-21 시행분부터 — 2007-12-15(토)는 그대로, 일요일은 연장", () => {
     expect(iso(CIVIL_161_SATURDAY_START)).toBe("2007-12-21");
@@ -127,12 +157,28 @@ describe("공휴일 표 — 범위·월력요항 대조", () => {
     const ours = Object.keys(PUBLIC_HOLIDAYS_KR).filter((k) => k.startsWith("2027-"));
     expect(ours).toEqual(official);
   });
+  it("2028~2035 예정분 — 대체공휴일·임기만료 선거일(현행 규정 §3 · 공직선거법 §34 계산값 고정)", () => {
+    const pick = (re: RegExp) =>
+      Object.entries(PUBLIC_HOLIDAYS_KR)
+        .filter(([k, v]) => Number(k.slice(0, 4)) > PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR && re.test(v))
+        .map(([k]) => k);
+    expect(PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR).toBe(2027);
+    expect(PUBLIC_HOLIDAY_TABLE_LAST_YEAR).toBe(2035);
+    expect(pick(/^대체공휴일/)).toEqual([
+      "2028-10-05", "2029-05-07", "2029-05-21", "2029-09-24", "2030-02-05", "2030-05-06", "2031-03-03",
+      "2032-05-03", "2032-05-17", "2032-07-19", "2032-08-16", "2032-09-21", "2032-10-04", "2032-10-11",
+      "2032-12-27", "2033-02-02", "2033-05-02", "2033-07-18", "2033-10-10", "2033-12-26", "2034-02-21",
+      "2035-05-07", "2035-09-18",
+    ]);
+    expect(pick(/선거/)).toEqual(["2028-04-12", "2030-03-27", "2030-06-12", "2032-04-14", "2034-05-31", "2035-03-28"]);
+    expect(pick(/임시공휴일/)).toEqual([]);
+  });
   it("표 안 최장 연속 휴무(토·일·공휴일)는 10일(2017-09-30~10-09) — 머리 주석의 범위 근거", () => {
     let best = 0;
     let start = "";
     let run = 0;
     let runStart = "";
-    for (let t = Date.UTC(2009, 0, 1); t <= Date.UTC(2027, 11, 31); t += 86_400_000) {
+    for (let t = Date.UTC(PUBLIC_HOLIDAY_TABLE_FIRST_YEAR, 0, 1); t <= Date.UTC(PUBLIC_HOLIDAY_TABLE_LAST_YEAR, 11, 31); t += 86_400_000) {
       const d = new Date(t);
       const off = d.getUTCDay() === 0 || d.getUTCDay() === 6 || PUBLIC_HOLIDAYS_KR[iso(d)] !== undefined;
       if (!off) {
@@ -143,7 +189,8 @@ describe("공휴일 표 — 범위·월력요항 대조", () => {
       run += 1;
       if (run > best) [best, start] = [run, runStart];
     }
-    expect([best, start]).toEqual([10, "2017-09-30"]);
+    expect([best, start]).toEqual([PUBLIC_HOLIDAY_LONGEST_RUN_DAYS, "2017-09-30"]);
+    expect(best).toBe(10);
   });
 });
 
@@ -372,10 +419,35 @@ describe("표 밖 양도 — 판정 보류 고지(토·일만 반영)", () => {
       newAcquisitionDate: D("2025-06-03"),
     } as TransferTaxInput["temporaryTwoHouse"],
   });
-  it("말일 2028-06-03(토) → 06-05(월)까지 비과세 + 표 미포함 고지", () => {
+  it("말일 2028-06-03(토) → 06-05(월)까지 비과세 + 예정 공휴일 고지(같은 id)", () => {
     const r = judge(tt("2028-06-05"));
     expect(r.isExempt).toBe(true);
-    expect(r.undetermined.map((u) => u.id)).toContain("civil-161-holiday-table-uncovered");
+    const u = r.undetermined.find((x) => x.id === "civil-161-holiday-table-uncovered");
+    expect(u?.reason).toContain("예정 공휴일");
+  });
+  it("🔴 2028 설 — 신규 취득 2025-01-26 → 말일 2028-01-26(설날 전날) → 01-31(월)까지 비과세 · 02-01 과세", () => {
+    const seol = (t: string) => ({
+      ...tt(t),
+      temporaryTwoHouse: {
+        previousAcquisitionDate: D("2022-01-01"),
+        newAcquisitionDate: D("2025-01-26"),
+      } as TransferTaxInput["temporaryTwoHouse"],
+    });
+    expect([judge(seol("2028-01-27")).isExempt, judge(seol("2028-01-31")).isExempt]).toEqual([true, true]);
+    expect(judge(seol("2028-02-01")).isExempt).toBe(false);
+  });
+  it("말일 2036-06-07(토) → 06-09(월)까지 비과세 + 표 미포함 고지(토·일만)", () => {
+    const r = judge({
+      ...tt("2036-06-09"),
+      acquisitionDate: D("2030-01-01"),
+      temporaryTwoHouse: {
+        previousAcquisitionDate: D("2030-01-01"),
+        newAcquisitionDate: D("2033-06-07"),
+      } as TransferTaxInput["temporaryTwoHouse"],
+    });
+    expect(r.isExempt).toBe(true);
+    const u = r.undetermined.find((x) => x.id === "civil-161-holiday-table-uncovered");
+    expect(u?.reason).toContain("토·일요일만");
   });
   it("표 안 양도(2024)에는 고지하지 않는다", () => {
     const r = judge({ ...tt(MON), temporaryTwoHouse: { previousAcquisitionDate: D("2018-01-01"), newAcquisitionDate: D("2021-06-01") } as TransferTaxInput["temporaryTwoHouse"], acquisitionDate: D("2018-01-01") });

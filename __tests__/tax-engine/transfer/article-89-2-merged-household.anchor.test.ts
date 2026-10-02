@@ -216,13 +216,15 @@ describe("⑧5호(⑨4호) — 권리만 갖던 자의 권리로 합친 날 **�
 
 describe("⑧ 본문 요건 — 10년 · 최초양도주택", () => {
   it("🔑 합친 날부터 **10년 이내**여야 한다", () => {
-    const inTime = verdict(
-      mergedCase({ ...declare({ kind: "house_only" }), transferDate: new Date("2030-03-01") }),
-    );
-    expect(inTime.status).toBe("exception_met"); // 경계 당일은 「10년 이내」
+    // 역상 말일 2030-03-01은 3·1절(금) → 민법 §161로 03-02(토)·03-03(일)을 넘겨 03-04(월)까지
+    // (공휴일 표 2028~2035 예정분 — 그 전에는 표 밖이라 토·일만 반영해 03-01이 말일이었다)
+    for (const t of ["2030-03-01", "2030-03-04"]) {
+      const inTime = verdict(mergedCase({ ...declare({ kind: "house_only" }), transferDate: new Date(t) }));
+      expect(inTime.status, t).toBe("exception_met"); // 기한 말일 당일까지 「10년 이내」
+    }
 
     const late = verdict(
-      mergedCase({ ...declare({ kind: "house_only" }), transferDate: new Date("2030-03-02") }),
+      mergedCase({ ...declare({ kind: "house_only" }), transferDate: new Date("2030-03-05") }),
     );
     expect(late.status).toBe("excluded");
   });

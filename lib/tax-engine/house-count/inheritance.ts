@@ -25,7 +25,7 @@ export interface Inheritance5YearAssessment {
   excluded: boolean;
   /**
    * 민법 §161 연장이 이 판정을 좌우했을 때(연장이 없었으면 산입됐을 날이 연장 덕에 제외됐을 때),
-   * 또는 공휴일 표 밖이라 판정이 불확실할 때만 붙는 한 줄 안내. 그 외에는 `undefined`.
+   * 또는 공휴일 표 밖·예정 공휴일(임시공휴일 미반영)이라 판정이 불확실할 때만 붙는 한 줄 안내. 그 외에는 `undefined`.
    */
   note?: string;
 }
@@ -67,7 +67,7 @@ export function assessInheritance5YearRule(
   if (!excluded) return { excluded };
 
   const dl = deadlineEndFrom(start, years);
-  if (dl.holidayTableUncovered) {
+  if (dl.holidayTableUncovered || dl.holidayTableProvisional) {
     return { excluded, note: deadlineEndNote(dl, PERIOD_CALCULATION_LOCAL_23) };
   }
   // §161 연장이 없었어도(= 역상 말일까지) 이미 제외 대상이었으면 연장은 이 판정을 바꾸지 않았다 — 안내 생략.
