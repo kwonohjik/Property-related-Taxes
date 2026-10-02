@@ -20,6 +20,7 @@ import { extractSidoSigunguName } from "@/lib/calc/address-sigungu-name";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
+import { nblResidenceHistoryApplies } from "@/lib/calc/nbl-period-rows-scope";
 import { FarmlandDetailSection } from "./FarmlandDetailSection";
 import { ForestDetailSection } from "./ForestDetailSection";
 import { PastureDetailSection } from "./PastureDetailSection";
@@ -244,7 +245,7 @@ export function NblSectionContainer({
                 </FieldCard>
               </div>
             )}
-            {asset.nblLandType !== "pasture" && (
+            {nblResidenceHistoryApplies(asset.nblLandType) && (
               <ResidenceHistorySection
                 asset={asset}
                 onAssetChange={onAssetChange}

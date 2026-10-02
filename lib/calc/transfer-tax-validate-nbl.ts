@@ -25,6 +25,7 @@ import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
+import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "./nbl-period-rows-scope";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
@@ -263,7 +264,7 @@ export function validateNblDetailedJudgment(
     applies: boolean;
     fieldOf: (i: number, part: "startDate" | "endDate") => IssueField;
   }> = [
-    { rows: asset.nblBusinessUsePeriods, what: "사업용 사용기간(자경 등)", applies: true, fieldOf: (i, p) => `nblBusinessUsePeriods.${i}.${p}` },
+    { rows: asset.nblBusinessUsePeriods, what: "사업용 사용기간(자경 등)", applies: nblBusinessUsePeriodsApply(asset.nblLandType), fieldOf: (i, p) => `nblBusinessUsePeriods.${i}.${p}` },
     {
       rows: asset.nblPastureLivestockPeriods,
       what: "목장 축산기간",
@@ -276,7 +277,7 @@ export function validateNblDetailedJudgment(
       applies: asset.nblLandType === "villa_land",
       fieldOf: (i, p) => `nblVillaUsePeriods.${i}.${p}`,
     },
-    { rows: asset.nblResidenceHistories, what: "거주 이력", applies: true, fieldOf: (i, p) => `nblResidenceHistories.${i}.${p}` },
+    { rows: asset.nblResidenceHistories, what: "거주 이력", applies: nblResidenceHistoryApplies(asset.nblLandType), fieldOf: (i, p) => `nblResidenceHistories.${i}.${p}` },
   ];
   for (const { rows, what, applies, fieldOf } of rowArrays) {
     if (!applies) continue;
