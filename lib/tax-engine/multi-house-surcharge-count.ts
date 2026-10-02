@@ -18,7 +18,7 @@ import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/
 import {
   RA_CUT,
   APT_TRANSFER_DEADLINE_FLOOR,
-  resolveAptTransferDeadline,
+  isWithinAptTransferDeadline,
   hasAnyAptDeadlineExtensionFact,
 } from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
@@ -216,6 +216,8 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
     // Q-1 — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한(§167조의3⑪). 이 house 자신의 양도일로 판정
     // (사목 base 검사는 check.ts opts.skipAptDeadline으로 자동 면제 — 별도 플래그 불필요).
     aptTransferDate: transferDate,
+    // ⑪ 연장 사실 — 2호 칸(`rentalAptDeadlineExtension`). 3호 칸(`taxIncentiveRentalAptDeadlineExtension`)과 별개.
+    aptDeadlineExtension: house.rentalAptDeadlineExtension,
   };
 }
 
@@ -431,8 +433,7 @@ export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate
   if (!hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension)) {
     return true; // 연장 사실 모름 → 판정 보류, 종전 기준 유지
   }
-  const deadline = resolveAptTransferDeadline(house.taxIncentiveRentalAptDeadlineExtension);
-  return transferDate.getTime() <= deadline;
+  return isWithinAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension);
 }
 
 /**

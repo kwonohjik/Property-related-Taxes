@@ -403,7 +403,11 @@ function InheritanceSection({ house, onUpdate }: Props) {
 // 섹션 ③ 장기임대 (violet)
 // ============================================================
 
-function LongTermRentalSection({ house, onUpdate }: Props) {
+function LongTermRentalSection({
+  house,
+  onUpdate,
+  aptDeadlineExtensionEnabled,
+}: Pick<Props, "house" | "onUpdate"> & { aptDeadlineExtensionEnabled?: boolean }) {
   return (
     <ToneCard tone="violet" sectionNum="③" bodyClassName="space-y-2.5" title="장기임대 정보" noDark>
 
@@ -511,7 +515,12 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
             </p>
           )}
           {/* 9유형(가~자목) 매트릭스 — 유형 선택 시 유형별 요건 정밀 판정 */}
-          <HouseEntryRentalTypeSection house={house} idPrefix={house.id} onUpdate={onUpdate} />
+          <HouseEntryRentalTypeSection
+            house={house}
+            idPrefix={house.id}
+            onUpdate={onUpdate}
+            aptDeadlineExtensionEnabled={aptDeadlineExtensionEnabled}
+          />
         </div>
       </ToggleCard>
     </ToneCard>
@@ -545,7 +554,8 @@ export function HouseEntryEditor({
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />
       )}
       <InheritanceSection house={house} onUpdate={onUpdate} />
-      <LongTermRentalSection house={house} onUpdate={onUpdate} />
+      {/* ⑪ 연장 사실은 3호 칩과 같은 축(중과) — 계산기만 연다 */}
+      <LongTermRentalSection house={house} onUpdate={onUpdate} aptDeadlineExtensionEnabled={taxIncentiveRentalEnabled} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
       <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} />

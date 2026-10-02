@@ -2,13 +2,14 @@
  * ⑨⑫ 장기임대주택 **거주주택 비과세 특례**(「소득세법 시행령」 제155조 제20항) Zod leaf.
  *
  * `transfer-tax-schema.ts`가 800줄 정책을 넘겨(2026-08-10) 분리했다.
- * zod 외 의존이 없는 **순수 leaf**다 — 역참조 금지(`transfer-tax-schema-rental.ts`와 같은 규약).
+ * zod·순수 leaf(`transfer-tax-schema-apt-deadline.ts`) 외 의존이 없다 — 역참조 금지(`transfer-tax-schema-rental.ts`와 같은 규약).
  *
  * ⚠️ `transfer-tax-schema.ts`가 하위호환으로 **전량 re-export**한다.
  *    기존 소비처(`transfer-tax-schema-sub.ts` · `_rental-engine-input.ts` · 테스트)는 무변경.
  */
 
 import { z } from "zod";
+import { aptDeadlineExtensionSchema } from "./transfer-tax-schema-apt-deadline";
 
 // ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
 
@@ -54,6 +55,8 @@ export const rentalUnitSchema = z.object({
   /** §155㉓ 등록 말소일 — 「말소 이후 5년 이내」 기산일 (I-4) */
   registrationCancellationDate: z.string().datetime().optional(),
   terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
+  /** §167의3⑪ 연장 사실 — 가·나·라·마목 아파트(미전송 = 모름 · 엔진 판정 보류) */
+  aptDeadlineExtension: aptDeadlineExtensionSchema.optional(),
   requirementsConfirmed: z.boolean(),
 });
 

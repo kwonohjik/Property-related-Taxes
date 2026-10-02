@@ -373,6 +373,21 @@ describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파�
     expect(beforeWindow.aptDeadlinePending).toBe(false);
   });
 
+  it("「연장 사유 없음」 확인(confirmedNone) — 「안다」로 보고 바닥(2027.12.31)으로 판정: 2027.12.31 PASS · 2028.1.1 FAIL(보류 아님)", () => {
+    const ext = { confirmedNone: true };
+    const ok = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: FLOOR_OK, aptDeadlineExtension: ext,
+    }));
+    expect(ok.passed).toBe(true);
+    const over = checkRentalArticle("가", base({
+      rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
+      aptTransferDate: PAST_FLOOR, aptDeadlineExtension: ext,
+    }));
+    expect(over.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(over.aptDeadlinePending).toBe(false);
+  });
+
   it("⑪2호: 2027.1.1 이후 조정대상지역 신규지정 공고일+1년 연장 — 연장 사실 있음 → 정상 판정(PASS)", () => {
     const r = checkRentalArticle("마", base({
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),

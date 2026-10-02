@@ -311,6 +311,12 @@ export interface HouseEntry {
   isExcludedShortToLongChange?: boolean;
   /** 계약금 지급 증빙 보유 여부 — H (조정지역 2018.9.14 취득 예외) */
   hasContractDepositProof?: boolean;
+  /**
+   * §167의3⑪ 기한 연장 사실 — 가목2)·나목2)·라목8)·마목4) **아파트**일 때만 묻는다(A·B·D·E).
+   * 미입력(undefined) = 「모름」 → 엔진 판정 보류. ⑤·④·⑧ 범위는 `lib/calc/apt-deadline-extension-scope.ts`.
+   * 3호 칸(`taxIncentiveRentalAptDeadlineExtension`)과 별개다(호마다 입력 화면이 다르다).
+   */
+  rentalAptDeadlineExtension?: AptDeadlineExtensionForm;
 
   // ── P2 특수 배제 사유 (다른 보유 주택 기준 — 2주택 전용·인구감소) ──
   /** 부득이한 사유(취학·근무·질병) 취득 주택 — 소령 §167의10①3호 (기준시가 3억↓·1년↑ 거주) */
@@ -401,14 +407,24 @@ export type RentalDeclaration = Partial<
     | "isExcludedAfter20200711Apt"
     | "isExcludedShortToLongChange"
     | "hasContractDepositProof"
+    // §167의3⑪ 기한 연장 사실 (아파트 가·나·라·마목)
+    | "rentalAptDeadlineExtension"
   >
 >;
 
 /** 3호 후단 등록 유형 — 종전 민특법 §2 5호(장기일반)·6호(단기)·그 외. 미입력(undefined) = 모름. */
 export type TaxIncentiveRentalRegistrationType = "long_term_general" | "short_term" | "other";
 
-/** §167의3⑪ 기한 연장 세 호의 기산일(YYYY-MM-DD) — 엔진 `AptTransferDeadlineExtension`의 폼 문자열판 */
+/**
+ * §167의3⑪ 기한 연장 사실 — 엔진 `AptTransferDeadlineExtension`의 폼 문자열판(YYYY-MM-DD).
+ *
+ * 🔑 3-state(`status`): undefined = 「모름」(판정 보류) · "none" = 「연장 사유 없음」 확인(기한 2027.12.31. 확정) ·
+ *    "has" = 「연장 사유 있음」(아래 날짜). 「있음」을 고른 뒤 날짜가 비어 있어도 그 선택이 유지되도록 모드를
+ *    데이터에서 파생하지 않는다(빈 값 자기-소멸 방지). #1914 이전 저장분(status 없음 + 날짜)은 「있음」으로 읽는다
+ *    — 해석은 `aptDeadlineExtensionStatus` 한 곳(⑤·④·⑧ 공용).
+ */
 export interface AptDeadlineExtensionForm {
+  status?: "none" | "has";
   /** ⑪1호 — 임대의무기간 2027.1.1 이후 종료 주택의 등록말소일 */
   dutyPeriodEndCancellationDate?: string;
   /** ⑪2호 — 2027.1.1 이후 조정대상지역 신규 지정 공고일 */

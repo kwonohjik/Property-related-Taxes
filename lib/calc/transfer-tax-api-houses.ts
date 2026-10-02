@@ -14,6 +14,7 @@ import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
+import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -60,6 +61,10 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
           isExcludedAfter20200711Apt: ltr.isExcludedAfter20200711Apt,
           isExcludedShortToLongChange: ltr.isExcludedShortToLongChange,
           hasContractDepositProof: ltr.hasContractDepositProof,
+          // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목). 범위 밖 stale 값은 싣지 않는다.
+          rentalAptDeadlineExtension: rentalDeclarationAptDeadlineInScope(ltr)
+            ? aptDeadlineExtensionPayload(ltr.rentalAptDeadlineExtension)
+            : undefined,
         }
       : {}),
   };
@@ -352,6 +357,10 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
             isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
             isExcludedShortToLongChange: h.isExcludedShortToLongChange,
             hasContractDepositProof: h.hasContractDepositProof,
+            // §167의3⑪ 연장 사실 — 양도 주택 매핑과 같은 범위 술어
+            rentalAptDeadlineExtension: rentalDeclarationAptDeadlineInScope(h)
+              ? aptDeadlineExtensionPayload(h.rentalAptDeadlineExtension)
+              : undefined,
           }
         : {}),
       /**

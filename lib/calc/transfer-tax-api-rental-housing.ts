@@ -12,6 +12,7 @@ import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
+import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
 
@@ -84,6 +85,8 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       terminatedRegistrationType:
         u.rentalAutoTermination && u.terminatedRegistrationType ? u.terminatedRegistrationType : undefined,
       requirementsConfirmed: u.requirementsConfirmed ?? false,
+      // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외). 「모름」은 미전송.
+      aptDeadlineExtension: rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionPayload(u.aptDeadlineExtension) : undefined,
     })),
     priorResidenceTransferDate: rh.priorResidenceTransferDate
       ? (rh.priorResidenceTransferDate.includes('T')

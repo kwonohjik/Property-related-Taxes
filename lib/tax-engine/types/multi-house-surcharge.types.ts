@@ -198,6 +198,11 @@ export interface HouseInfo {
    * 2호 가·나·라·마목(`rental-article/rules.ts` `AptTransferDeadlineExtension`)과 같은 모양을 재사용.
    */
   taxIncentiveRentalAptDeadlineExtension?: AptTransferDeadlineExtension;
+  /**
+   * §167조의3⑪ 기한 연장 사실 — ② 장기임대주택 가목2)·나목2)·라목8)·마목4) 아파트 전용.
+   * 미제공 = 「모름」(바닥 초과 시 판정 보류 · `isAptTransferDeadlinePending`).
+   */
+  rentalAptDeadlineExtension?: AptTransferDeadlineExtension;
   // ── 아파트/오피스텔 ──
   /** 아파트 여부 */
   isApartment: boolean;
