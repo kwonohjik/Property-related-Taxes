@@ -15,6 +15,7 @@
  * ⇒ 여기 한 곳에 두고 전부 이것을 부른다(memory `feedback_ui_engine_dual_truth_avoidance`).
  */
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
 
 type RedevDetailLike = NonNullable<TransferTaxResult["redevelopmentDetail"]>;
@@ -39,10 +40,10 @@ export function effectiveGrossGain(r: {
 }
 
 /**
- * 취득가액 역산 — 「양도가액 − 양도차익 − 필요경비」.
+ * 취득가액 역산 — 「양도가액 − 양도차익 − 필요경비」 (+ 취득가액 칸으로 옮겨 얹은 자본적지출).
  *
- * ⚠️ 신고서 표시 관행상 **자본적지출은 취득가액에 합산**한다. 그래서 `capEx`를 더한 값을
- *   돌려주고, 필요경비 쪽에서는 그만큼 빼야 한다(`displayExpenses`).
+ * `capEx`에는 **원시 자본적지출이 아니라** `capExInAcquisitionColumn` 결과를 넘긴다 —
+ * 실가 모드는 0이다(자본적지출은 필요경비 칸에 머문다).
  */
 export function inverseAcquisitionForDisplay(a: {
   transferPrice: number;
@@ -51,6 +52,54 @@ export function inverseAcquisitionForDisplay(a: {
   capEx: number;
 }): number {
   return a.transferPrice - a.grossGain - a.expenses + a.capEx;
+}
+
+/**
+ * 신고서 「취득가액」 칸으로 옮겨 얹는 자본적지출 — **실가 모드에서는 0**이다.
+ *
+ * ## 축 (계획서 `docs/00-pm/transfer-depreciation-and-capex-display.plan.md` §3.1)
+ *
+ * 「소득세법」 §97①은 필요경비를 1호 취득가액 · **2호 자본적지출액** · 3호 양도비로 가른다.
+ * 서식(시행규칙 별지 제84호서식 부표3)도 자본적지출(⑥)을 「기타 필요경비」(⑬ → 부표1 ⑭)에 넣는다.
+ * 종전에는 「신고서 양식 표시 관행」이라며 취득가액 칸에 합산하고 필요경비 칸에는 양도비만 적었다 —
+ * 사용자 제보 2026-10-02(취득 28,500,000 · 자본적지출 1,000,000 · 양도비 700,000 →
+ * 취득가액 29,500,000 · 필요경비 700,000).
+ *
+ * ## 예외 둘 — 종전 표시(취득가액 칸 = 자본적지출 포함)를 유지한다
+ *
+ * · **§97②2호 단서(swap)** — 엔진이 취득가액을 차감하지 않고(0) 필요경비 전체를 나목으로 삼는 축이라
+ *   PR #1636이 「취득가액 칸 = 나목」으로 고정했다(사용자 확인 화면). 전용 anchor
+ *   `swap-97-2-display-identity.anchor.test.ts`가 지킨다.
+ * · **이월과세 시나리오 A** — 취득가액 칸에 증여자 취득가액·증여자 자본적지출 승계를 함께 적는
+ *   별도 산식(`carryover-statement-formula.anchor.test.ts`)이라 이번 전환 범위 밖이다.
+ *
+ * ⚠️ 판정은 **이 함수 하나**에서 한다 — 신고서(단건·다건)·명세서 합계·자산별·산식이 각자 판정하면
+ *   칸마다 갈라져 항등식(양도가액 − 취득가액 − 필요경비 = 양도차익)이 깨진다.
+ */
+export function capExInAcquisitionColumn(d: {
+  capitalExpenditureForDisplay?: number;
+  swapApplied?: boolean;
+  carryoverScenarioA?: boolean;
+}): number {
+  return d.swapApplied || d.carryoverScenarioA ? (d.capitalExpenditureForDisplay ?? 0) : 0;
+}
+
+/** 단건 결과 → 취득가액 칸으로 옮겨 얹는 자본적지출. */
+export function capExInAcquisitionColumnOfResult(r: TransferTaxResult): number {
+  return capExInAcquisitionColumn({
+    capitalExpenditureForDisplay: r.capitalExpenditureForDisplay,
+    swapApplied: r.swapApplied,
+    carryoverScenarioA: r.carryoverTaxationDetail?.adoptedScenario === "A",
+  });
+}
+
+/** 자산별(breakdown) → 취득가액 칸으로 옮겨 얹는 자본적지출. */
+export function capExInAcquisitionColumnOfProperty(p: PerPropertyBreakdown): number {
+  return capExInAcquisitionColumn({
+    capitalExpenditureForDisplay: p.capitalExpenditureForDisplay,
+    swapApplied: p.filingDisplay?.swapApplied,
+    carryoverScenarioA: p.carryoverTaxationDetail?.adoptedScenario === "A",
+  });
 }
 
 /** 집계 breakdown(자산별)도 같은 규칙을 탄다. */

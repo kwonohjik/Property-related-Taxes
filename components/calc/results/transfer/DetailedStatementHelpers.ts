@@ -14,6 +14,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
+  capExInAcquisitionColumnOfResult,
+  capExInAcquisitionColumnOfProperty,
 } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -253,14 +255,16 @@ export function buildStatementItems(
       : undefined,
   });
 
-  // 취득가액 — 신고서 양식 표시 관행: 자본적지출은 취득가액에 합산
+  // 취득가액 — 자본적지출은 필요경비 칸에 머문다(§97① 2호). 예외(swap·이월과세 A)만 종전대로
+  // 취득가액 칸에 얹는다 — 신고서 양식과 같은 leaf(`capExInAcquisitionColumn`)가 판정한다.
   const sumAcq = isAggregate
     ? properties.reduce(
-        (s, p) => s + p.acquisitionPrice + p.capitalExpenditureForDisplay,
+        (s, p) => s + p.acquisitionPrice + capExInAcquisitionColumnOfProperty(p),
         0,
       )
     : 0;
-  const capEx = result.capitalExpenditureForDisplay ?? 0;
+  /** 취득가액 칸으로 옮겨 얹는 자본적지출 — 실가 모드는 0. 원시 자본적지출이 아니다. */
+  const capEx = capExInAcquisitionColumnOfResult(result);
   /*
    * 🔴 종전에는 `result.transferGain`을 그대로 뺐다. 전액 비과세 자산은 그 값이 **0**이라
    *   취득가액이 「양도가액 − 0 − 경비」, 즉 사실상 **양도가액 전액**으로 표시됐다
@@ -315,16 +319,16 @@ export function buildStatementItems(
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
-          (p) => p.acquisitionPrice + p.capitalExpenditureForDisplay,
+          (p) => p.acquisitionPrice + capExInAcquisitionColumnOfProperty(p),
           (p) => buildGbAcquisitionFormula(p, gbDetail, primary, burdenedGift),
         )
       : undefined,
   });
 
-  // 필요경비 — 신고서 양식 표시 관행: 양도비만 (자본적지출 분리)
+  // 필요경비 — 실가 모드는 자본적지출 + 양도비 전액(엔진이 차감한 값). 예외(swap·이월과세 A)는 양도비 등만.
   const sumExp = isAggregate
     ? properties.reduce(
-        (s, p) => s + Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
+        (s, p) => s + Math.max(0, p.necessaryExpense - capExInAcquisitionColumnOfProperty(p)),
         0,
       )
     : 0;
@@ -350,7 +354,7 @@ export function buildStatementItems(
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
-          (p) => Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
+          (p) => Math.max(0, p.necessaryExpense - capExInAcquisitionColumnOfProperty(p)),
           (p) => buildGbExpenseFormula(p, gbDetail, burdenedGift),
         )
       : undefined,

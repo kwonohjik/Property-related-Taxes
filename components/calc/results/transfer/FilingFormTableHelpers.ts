@@ -9,6 +9,7 @@
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -526,16 +527,17 @@ export function buildRows(
       );
     }
   } else {
-    // 실가 모드: 자본적지출은 취득가액에 합산 (§97① 가목, 신고서 양식 표시 관행)
+    // 실가 모드: 자본적지출은 필요경비 칸에 머문다 (§97① 2호 · 서식 부표3 ⑥→⑬ → 부표1 ⑭).
+    // 예외(swap·이월과세 A)만 종전대로 취득가액 칸에 얹는다 — `capExInAcquisitionColumn` 참고.
     // 엔진 result.expenses는 capitalExpenditure + transferExpense 합산값. split 입력 케이스에서는 form의 legacy directExpenses 대신 사용.
-    const capExp = result.capitalExpenditureForDisplay ?? 0;
+    const capExShift = capExInAcquisitionColumnOfResult(result);
     const engineExpenses = result.expenses ?? 0;
     const totalEngineExpenses = engineExpenses > 0 ? engineExpenses : totalExpenses;
     // 비과세 자산은 transferGain=0 → exemptGrossGain echo로 취득가액 역산 (그렇지 않으면 취득가액=양도가액−경비로 왜곡).
     const effGainForAcq = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
     const engineAcqPrice = totalTransferPrice - effGainForAcq - totalEngineExpenses;
-    const displayAcqPrice = engineAcqPrice + capExp;
-    const displayExpenses = Math.max(0, totalEngineExpenses - capExp);
+    const displayAcqPrice = engineAcqPrice + capExShift;
+    const displayExpenses = Math.max(0, totalEngineExpenses - capExShift);
     setNum("acquisitionPrice", "total", displayAcqPrice > 0 ? displayAcqPrice : null);
     setNum("expenses", "total", displayExpenses || null);
   }

@@ -134,9 +134,10 @@ export interface TransferTaxResult {
   /** §97② 단서 swap 발동 여부 (환산/감정가액 모드 + 자본+양도비 > 환산+개산공제) */
   swapApplied?: boolean;
   /**
-   * 자본적 지출 표시값 (소득세법 §97① 가목) — 신고서 양식상 취득가액에 합산되어 표시.
-   * UI 신고서 양식에서 `취득가액 = result.acquisitionPrice + capitalExpenditureForDisplay`,
-   * `필요경비 = result.expenses - capitalExpenditureForDisplay`로 분리 표시.
+   * 자본적 지출 표시값 (소득세법 §97① 2호) — 원시 입력의 자본적지출. 표시 전용 echo.
+   * 신고서 양식은 **실가 모드에서 자본적지출을 필요경비 칸**에 그린다(서식 부표3 ⑥→⑬ → 부표1 ⑭).
+   * 취득가액 칸에 얹는 예외(§97②2호 단서 swap · 이월과세 시나리오 A)만
+   * `components/calc/results/transfer/exempt-gross-gain.ts`의 `capExInAcquisitionColumn`이 판정한다.
    */
   capitalExpenditureForDisplay?: number;
   /** §97② 단서 swap 비교 (분리 입력 시만 표시) */

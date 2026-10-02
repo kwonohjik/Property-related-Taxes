@@ -25,9 +25,13 @@
  *
  * ## 정본 축
  *
- * 신고서 표시 관행(자본적지출은 취득가액 칸에 합산·필요경비 칸은 양도비만)을 swap에 적용하면
+ * swap은 자본적지출을 **취득가액 칸**에 합산하고 필요경비 칸은 양도비만 적는다 —
  * 취득가액 = 자본적지출 + (엔진 차감분 0) · 필요경비 = 양도비다. 현행 **단건 신고서가 이미
- * 그 축**이고(`FilingFormTableHelpers.ts:372` `swapApplied ? null`), 사용자 확인 화면이다.
+ * 그 축**이고(`FilingFormTableHelpers.ts` `swapApplied ? null`), 사용자 확인 화면이다.
+ *
+ * ⚠️ 2026-10-02: **실가 모드**는 자본적지출을 필요경비 칸에 두는 쪽으로 전환됐다
+ *   (`capex-actual-mode-display.anchor.test.ts`). swap은 **예외로 유지**한다 —
+ *   판정 leaf `capExInAcquisitionColumn`(`exempt-gross-gain.ts`). 이 파일이 그 예외를 지킨다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";

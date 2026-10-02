@@ -11,6 +11,7 @@ import {
   effectiveGrossGain,
   assetTaxableGain,
   assetExemptGain,
+  capExInAcquisitionColumnOfProperty,
 } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -206,7 +207,7 @@ export function buildAggregateRows(
     setStr("residencePeriod", col, fmtPeriod(residenceMs));
 
     /**
-     * 가격 — 신고서 양식 표시 관행: 자본적지출은 취득가액에 합산, 필요경비는 양도비만.
+     * 가격 — 실가 모드는 자본적지출이 필요경비 칸에 머문다(§97① 2호). 예외(swap·이월과세 A)만 취득가액 칸에 얹는다.
      *
      * 🔴 **환산취득가 모드는 예외다** (2026-09-07 대장 재대조 · 단건 #069와 같은 결함).
      *    §97②2호 **본문**에서 필요경비는 개산공제(§163⑥)로 **갈음**되므로 엔진은 자본적지출·
@@ -218,10 +219,10 @@ export function buildAggregateRows(
      *    단건과 같다.
      */
     const est = aggregateEstimatedDisplay(p);
-    const displayAcq = est ? est.base : p.acquisitionPrice + p.capitalExpenditureForDisplay;
-    const displayExp = est
-      ? est.deduction
-      : Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+    // 실가 모드는 자본적지출이 필요경비 칸에 머문다(swap·이월과세 A만 종전대로 취득가액 칸) — 단건과 같은 leaf.
+    const capExShift = capExInAcquisitionColumnOfProperty(p);
+    const displayAcq = est ? est.base : p.acquisitionPrice + capExShift;
+    const displayExp = est ? est.deduction : Math.max(0, p.necessaryExpense - capExShift);
     setNum("transferPrice", col, p.transferPrice);
     setNum("acquisitionPrice", col, displayAcq);
     setNum("expenses", col, displayExp);

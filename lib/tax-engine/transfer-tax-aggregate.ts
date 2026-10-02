@@ -590,7 +590,7 @@ function computeAggregateOnce(
       transferPrice: r.singleInput.transferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,
       necessaryExpense: effectiveNecessaryExpense,
-      // 신고서 양식: 자본적지출은 취득가액에 합산, 필요경비는 양도비만
+      // 신고서 양식: 실가 모드는 자본적지출이 필요경비 칸에 머문다(예외 swap·이월과세 A는 표시 leaf `capExInAcquisitionColumn`)
       capitalExpenditureForDisplay: r.singleInput.capitalExpenditure ?? 0,
       determinedTax: r.result.determinedTax,
       transferGain: r.result.transferGain,

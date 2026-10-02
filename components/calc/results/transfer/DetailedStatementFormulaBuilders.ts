@@ -44,7 +44,7 @@ export {
   buildGbExpenseFormula,
 } from "./DetailedStatementGbFormulas";
 import { fmt } from "./DetailedStatementGbFormulas";
-import { effectiveGrossGain, assetTaxableGain } from "./exempt-gross-gain";
+import { effectiveGrossGain, assetTaxableGain, capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 
 // ── 단순 산식 (자산별 동일 산식) ──────────────────────────────────
 
@@ -57,8 +57,9 @@ import { effectiveGrossGain, assetTaxableGain } from "./exempt-gross-gain";
  *   같은 화면 신고서 양식은 이미 `effectiveGrossGain`을 쓰고 있어 두 표가 어긋났다.
  */
 export function buildSubGainFormula(p: PerPropertyBreakdown): string {
-  const displayAcq = p.acquisitionPrice + p.capitalExpenditureForDisplay;
-  const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+  const capExShift = capExInAcquisitionColumnOfProperty(p);
+  const displayAcq = p.acquisitionPrice + capExShift;
+  const displayExp = Math.max(0, p.necessaryExpense - capExShift);
   return `${fmt(p.transferPrice)} - ${fmt(displayAcq)} - ${fmt(displayExp)} = ${fmt(effectiveGrossGain(p))}`;
 }
 
@@ -441,7 +442,7 @@ export function buildAcquisitionPriceFormula(
   if (isAggregate) {
     return result.usedEstimatedAcquisition
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
-      : "자산별 실제 거래가액 합계 (자본적지출 §97① 가목 합산)";
+      : "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)";
   }
   // 배우자등 이월과세 Scenario A 채택 — 증여자 취득 당시 취득가액 승계 (§97의2①).
   // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
@@ -614,6 +615,15 @@ export function buildNecessaryExpenseFormula(
     return stdAcq != null
       ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × ${rateLabel} — 소득세법 §97① 나목·시행령 §163⑥`
       : `개산공제 ${ded} (취득시 기준시가 × ${rateLabel}) — §97① 나목·시행령 §163⑥`;
+  }
+  // 실가 모드 — 자본적지출은 취득가액이 아니라 **필요경비**다(§97① 2호). 이 칸은 엔진이 차감한 전액이므로
+  // 자본적지출과 양도비를 풀어 쓴다. (예외 축 swap·이월과세 A는 위 분기가 먼저 처리한다.)
+  const capEx = result.capitalExpenditureForDisplay ?? 0;
+  if (capEx > 0 && capEx <= singleExp) {
+    const transferExp = singleExp - capEx;
+    return transferExp > 0
+      ? `자본적지출 ${capEx.toLocaleString()} + 양도비 ${transferExp.toLocaleString()} (중개수수료·법무사 비용 등) = ${singleExp.toLocaleString()} — §97① 2호·3호`
+      : `자본적지출 ${capEx.toLocaleString()} — §97① 2호`;
   }
   return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
 }
