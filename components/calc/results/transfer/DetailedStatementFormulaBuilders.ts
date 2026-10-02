@@ -105,7 +105,7 @@ export function buildLthFormula(p: PerPropertyBreakdown): string {
  *   392,000,000」이라 적어놓고 옆에는 342,000,000을 찍어 **좌변이 우변을 만들지 못했다**
  *   (결과탭 코드리뷰 #072). 통산 단계를 산식에 드러낸다.
  */
-export function buildIncomeFormula(p: PerPropertyBreakdown): string {
+export function buildIncomeFormula(p: PerPropertyBreakdown, lossGiven = 0): string {
   const tg = p.transferGain;
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
@@ -115,8 +115,13 @@ export function buildIncomeFormula(p: PerPropertyBreakdown): string {
   const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
   // 차손을 **받은** 자산: 통산액이 자기 필드에 실린다.
   if (received > 0) return `${base} − 결손금 통산 ${fmt(received)} = ${fmt(p.incomeAfterOffset)}`;
-  // 차손을 **낸** 자산: 통산액은 상대 자산 쪽에 실리므로 결과만 밝힌다.
-  return `${base} → 다른 자산의 양도소득금액에 통산되어 ${fmt(p.incomeAfterOffset)}`;
+  // 차손을 **낸** 자산: 나간 몫(`lossGiven` — 엔진 `lossOffsetTable`)과 통산되지 못해 **소멸**한 몫을 가른다.
+  //   종전에는 차손 전액이 「통산되어」 0이 된다고 적어, 소멸분(이월 불인정)을 통산으로 오서술했다.
+  const expired = Math.max(0, -p.income - lossGiven);
+  const gave = `이 차손 중 ${fmt(lossGiven)}이 다른 자산의 양도소득금액에서 공제(통산)되었습니다`;
+  return expired > 0
+    ? `${base} → ${gave} — 통산되지 못한 ${fmt(expired)}은 소멸하여 ${fmt(p.incomeAfterOffset)}`
+    : `${base} → ${gave} = ${fmt(p.incomeAfterOffset)}`;
 }
 
 /**

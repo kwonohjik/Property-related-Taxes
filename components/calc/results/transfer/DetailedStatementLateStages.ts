@@ -26,6 +26,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
+import { comparativeTaxView, describeComparativeTax } from "./comparative-tax-display";
 import {
 } from "./FilingFormTableHelpers";
 import {
@@ -94,14 +95,22 @@ export function appendLateStageItems(
     Math.floor(result.taxBase * result.appliedRate) - result.progressiveDeduction,
   );
   const closedFormHolds = closedFormTax === result.calculatedTax;
+  const closedFormText = `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`;
+  const comparative = isAggregate && aggregate ? comparativeTaxView(aggregate.aggregated) : null;
   items.set("calculatedTax", {
     label: "산출세액",
     value: result.calculatedTax,
     formula:
       calcStep?.formula ??
-      (isAggregate && !closedFormHolds
-        ? describeAggregateCalculatedTax(result, aggregate)
-        : `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
+      (comparative
+        ? // 비교과세가 적용된 합산 — A·B 두 금액과 결정 사유를 **항상** 적는다. 닫힌 산식이 값을 재현하면
+          // (단일 호 군) 그 산식을 앞에 두고, 재현하지 못하면 비교 문구가 근거 전부다.
+          closedFormHolds
+          ? `${closedFormText} — ${describeComparativeTax(comparative)}`
+          : describeComparativeTax(comparative)
+        : isAggregate && !closedFormHolds
+          ? describeAggregateCalculatedTax(result, aggregate)
+          : closedFormText),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
     perAsset: isAggregate

@@ -150,20 +150,28 @@ test.describe("§102② 통산 축 — 같은 세율(영 §167의2①1호)", () 
     expect(body.data.totalTax, "종전 65,400,222 — 5,197,222 과대").toBe(60_203_000);
 
     // ─── 화면 — 제보 이미지와 **같은 표**(신고서 양식 합산)에서 확인한다 ─────
-    //   사용자가 본 것은 이 표의 「감면후 소득금액」 행이다. 종전에는 여기에
-    //   59,700,000 / 139,300,000 대신 54,520,548 / 127,214,611이 찍혔다.
+    //   통산은 「양도차손 통산」 **전용 행**이 말한다(종전엔 「감면후 소득금액」 각주였다).
+    //   양도소득금액 → 통산 → 통산 후: 흡수는 −, 차손을 낸 자산은 +.
     const filing = page.locator('[data-print-id="form-table"]');
-    const incomeRow = filing.locator("tr", { hasText: "감면후 소득금액" }).first();
-    await expect(incomeRow).toBeVisible({ timeout: 20000 });
+    const offsetRow = filing.locator("tr", { hasText: "양도차손 통산 (§102②·영 §167의2)" }).first();
+    await expect(offsetRow).toBeVisible({ timeout: 20000 });
 
     // 🔑 1호 — 같은 70% 자산이 19,000,000을 **먼저** 흡수했다
-    await expect(incomeRow).toContainText("결손금 통산 19,000,000 반영");
+    await expect(offsetRow).toContainText("-19,000,000");
     // 🔑 2호 — 잔액 1,000,000만 60:140으로 안분됐다
-    await expect(incomeRow).toContainText("결손금 통산 300,000 반영");
-    await expect(incomeRow).toContainText("결손금 통산 700,000 반영");
-    // 통산 후 자산별 양도소득금액
+    await expect(offsetRow).toContainText("-300,000");
+    await expect(offsetRow).toContainText("-700,000");
+    // 차손을 낸 미등기 자산은 +20,000,000
+    await expect(offsetRow).toContainText("20,000,000");
+    // 통산 후 자산별 소득금액은 「감면후 소득금액」 행
+    const incomeRow = filing.locator("tr", { hasText: "감면후 소득금액" }).first();
     await expect(incomeRow).toContainText("59,700,000");
     await expect(incomeRow).toContainText("139,300,000");
+
+    // ─── 비교과세 — 방법 A·B 두 금액과 결정 사유가 화면에 있다 ──────────────
+    const decision = page.getByTestId("comparative-tax-decision");
+    await expect(decision).toContainText("전체 누진세율 적용 (방법 A)");
+    await expect(decision).toContainText("큰 금액인");
 
     // ─── 결함 ③ — 차손 자산에도 세율구분 코드가 찍힌다 ──────────────
     //   종전에는 미등기 열이 `-`라 **토글이 켜졌는지 화면에서 판별할 수 없었다**.

@@ -200,11 +200,15 @@ describe("B-1 명세서 「양도소득금액」 산식의 우변 = 표시값 (#
     expect(rhs(a.formula!), "산식 우변이 표시값과 다르다").toBe(a.value);
   });
 
-  it("🔴 차손을 낸 자산 — 통산되어 0이 된 사실을 산식이 말한다", () => {
-    const rows = statementPerAsset(lossGrid(), "incomeAmount");
+  it("🔴 차손을 낸 자산 — 통산된 몫이 0으로 이어진 사실을 산식이 말한다", () => {
+    const a = lossGrid();
+    const rows = statementPerAsset(a, "incomeAmount");
     const b = rows.find((r) => r.label === "토지B")!;
     expect(b.value).toBe(0);
-    expect(b.formula).toContain("통산되어 0");
+    // 나간 몫은 엔진 `lossOffsetTable`에서 읽는다(차손 전액을 통산이라 적지 않는다 — 소멸분 구별)
+    const given = a.lossOffsetTable.reduce((s, r) => s + r.amount, 0);
+    expect(b.formula).toContain(`${given.toLocaleString()}이 다른 자산의 양도소득금액에서 공제(통산)`);
+    expect(b.formula).toMatch(/= 0$/);
   });
 });
 
@@ -229,7 +233,9 @@ describe("B-2 신고서 「감면후 소득금액」이 감면 0인 감소를 �
     const income = by("양도소득금액").values["p1"]!;
     const after = by("감면후 소득금액").values["p1"]!;
     expect(after).toBeLessThan(income);
-    expect(by("감면후 소득금액").notes?.["p1"], "사라진 금액의 근거가 없다").toContain("§102②");
+    // 줄어든 금액의 근거는 「양도차손 통산」 전용 행이 말한다(감면후 행 각주 → 전용 행으로 이전)
+    expect(by("양도차손 통산 (§102②·영 §167의2)").values["p1"], "사라진 금액의 근거 행이 없다").toBe(after - income);
+    expect(by("감면후 소득금액").notes).toBeUndefined();
   });
 });
 

@@ -122,9 +122,10 @@ describe("G-2 신고서 표가 카드 ⑤(§102② 통산)를 설명한다 (#066
     expect(Number(n("감면후 소득금액").values["land"])).toBe(0);
   });
 
-  it("🔴 통산으로 줄어든 열에 §102② 근거가 붙는다", () => {
-    const after = rowsOf(LOSS)("감면후 소득금액");
-    expect(after.notes?.["land"], "토지 열에 통산 근거가 없다").toContain("§102②");
-    expect(after.notes?.["building"], "건물 열에 통산 근거가 없다").toContain("§102②");
+  it("🔴 통산은 전용 행이 설명한다 — 받은 열 −, 낸 열 +", () => {
+    const row = rowsOf(LOSS)("양도차손 통산 (§102②·영 §167의2)");
+    expect(Number(row.values["land"]), "토지 열(흡수)").toBeLessThan(0);
+    expect(Number(row.values["building"]), "건물 열(유출)").toBeGreaterThan(0);
+    expect(rowsOf(LOSS)("감면후 소득금액").notes, "각주는 전용 행으로 옮겨졌다").toBeUndefined();
   });
 });
