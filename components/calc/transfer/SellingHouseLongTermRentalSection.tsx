@@ -153,7 +153,8 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
             </p>
           )}
 
-          <HouseEntryRentalTypeSection house={ltr} idPrefix="selling" onUpdate={patch} />
+          {/* 이 섹션은 계산기(중과 축)에만 마운트된다 — ⑪ 연장 사실 칸도 함께 연다 */}
+          <HouseEntryRentalTypeSection house={ltr} idPrefix="selling" onUpdate={patch} aptDeadlineExtensionEnabled />
         </div>
       </ToggleCard>
     </ToneCard>

@@ -19,6 +19,8 @@ import { getRentalTypeLabel } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalDeclaration } from "@/lib/stores/calc-wizard-store";
 import { rentIncreaseContractDateInScope } from "@/lib/calc/rent-cap-contract-date-scope";
+import { rentalDeclarationAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
+import { AptDeadlineExtensionFields } from "@/components/calc/transfer/AptDeadlineExtensionFields";
 
 interface Props {
   /**
@@ -29,6 +31,11 @@ interface Props {
   /** 라디오 그룹 `name` 유일성 — 명부 행은 행 id, 양도 주택은 `"selling"`. */
   idPrefix: string;
   onUpdate: (patch: RentalDeclaration) => void;
+  /**
+   * §167의3⑪ 기한 연장 사실 칸을 연다 — 다주택 중과 엔진을 부르는 계산기 전용. 판정 메뉴는 이 사실로
+   * 판정을 바꾸지 않아(중과 축 미호출) 넘기지 않는다. 범위는 ④·⑧과 같은 술어(`rentalDeclarationAptDeadlineInScope`).
+   */
+  aptDeadlineExtensionEnabled?: boolean;
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
@@ -71,7 +78,7 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   hasContractDepositProof: { kind: "bool", label: "계약금 지급 증빙 보유" },
 };
 
-export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate }: Props) {
+export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDeadlineExtensionEnabled = false }: Props) {
   const rentalType = house.rentalType;
   let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
   // 사목(G) — base 목 선택 시 그 목의 "해당 목의 다른 요건" 필드 동적 추가(중복 제거)
@@ -206,6 +213,15 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate }: Props
             );
           })}
         </div>
+      )}
+
+      {/* 가목2)·나목2)·라목8)·마목4) — 아파트는 ⑪ 기한까지 양도해야 이 목에 해당한다 */}
+      {aptDeadlineExtensionEnabled && rentalDeclarationAptDeadlineInScope(house) && (
+        <AptDeadlineExtensionFields
+          value={house.rentalAptDeadlineExtension}
+          onChange={(next) => onUpdate({ rentalAptDeadlineExtension: next })}
+          idPrefix={`rental-${idPrefix}`}
+        />
       )}
     </div>
   );

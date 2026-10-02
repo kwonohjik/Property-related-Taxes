@@ -32,6 +32,7 @@ export type {
   PriorReductionUsageItem, SpecialHouseExclusionFormItem,
 } from "./calc-wizard-asset-reduction";
 import type { AssetReductionForm } from "./calc-wizard-asset-reduction";
+import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl";
 
 // ── 팩토리·마이그레이션은 별도 모듈 (800줄 정책) ──
 export { makeDefaultAsset, makeDefaultCompanionAsset, migrateAsset } from "./calc-wizard-asset-factory";
@@ -860,6 +861,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
        * short_term = 단기민간임대(4년 → 24개월) · long_term_general = 장기일반민간임대(8년 → 48개월).
        */
       terminatedRegistrationType: "" | "short_term" | "long_term_general";
+      /**
+       * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
+       * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
+       */
+      aptDeadlineExtension?: AptDeadlineExtensionForm;
       /** 기타 요건 충족 자기확인 (5%증액 등) */
       requirementsConfirmed: boolean;
     }>;

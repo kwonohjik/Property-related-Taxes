@@ -82,6 +82,27 @@ describe("⑤ 양도 주택 3호 섹션", () => {
     );
     expect(screen.getByText(/등록 유형/)).toBeTruthy();
     expect(screen.getByText(/도시형 생활주택인 아파트/)).toBeTruthy();
+    // ⑪ 연장 사유는 3-state(모름·없음·있음) — 기본 「모름」이면 날짜 칸은 닫혀 있다
+    expect(screen.getByTestId("apt-deadline-ext-status-tir-selling")).toBeTruthy();
+    expect(screen.queryByText(/⑪3호 — 이전고시일/)).toBeNull();
+  });
+
+  it("TU-3b ⑪ 「연장 사유 있음」(또는 #1914 저장분: 날짜만 있음)이면 세 호 날짜 칸을 연다", () => {
+    render(
+      <SellingHouseTaxIncentiveRentalSection
+        value={{
+          taxIncentiveRental: {
+            isTaxIncentiveRental: true,
+            isApartment: true,
+            isTaxIncentiveRentalPurchase: true,
+            taxIncentiveRentalRegistrationType: "long_term_general",
+            isUrbanLifeHousingApartment: false,
+            taxIncentiveRentalAptDeadlineExtension: { relocationAnnouncementDate: "2027-06-01" },
+          },
+        }}
+        onChange={() => {}}
+      />,
+    );
     expect(screen.getByText(/⑪3호 — 이전고시일/)).toBeTruthy();
   });
 

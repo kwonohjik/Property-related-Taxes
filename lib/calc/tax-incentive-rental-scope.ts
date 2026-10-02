@@ -19,6 +19,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TaxIncentiveRentalFacts } from "@/lib/stores/calc-wizard-asset-nbl";
+import { aptDeadlineExtensionDatesMissing, aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
 
 type SellingExclusion = TransferFormData["sellingHouseExclusion"];
 
@@ -68,13 +69,6 @@ export function effectiveSellingTaxIncentiveRental(se: SellingExclusion): TaxInc
  */
 export function taxIncentiveRentalPayload(f: TaxIncentiveRentalFacts | undefined): object {
   if (!f?.isTaxIncentiveRental) return {};
-  const ext = f.taxIncentiveRentalAptDeadlineExtension;
-  const extPayload = {
-    dutyPeriodEndCancellationDate: ext?.dutyPeriodEndCancellationDate || undefined,
-    newRegulatedAreaAnnouncementDate: ext?.newRegulatedAreaAnnouncementDate || undefined,
-    relocationAnnouncementDate: ext?.relocationAnnouncementDate || undefined,
-  };
-  const hasExt = Object.values(extPayload).some(Boolean);
   return {
     isTaxIncentiveRental: true,
     rentalPeriodYears: f.rentalPeriodYears ? parseFloat(f.rentalPeriodYears) : undefined,
@@ -82,11 +76,24 @@ export function taxIncentiveRentalPayload(f: TaxIncentiveRentalFacts | undefined
     isTaxIncentiveRentalPurchase: f.isTaxIncentiveRentalPurchase,
     taxIncentiveRentalRegistrationType: f.taxIncentiveRentalRegistrationType,
     isUrbanLifeHousingApartment: f.isUrbanLifeHousingApartment,
-    taxIncentiveRentalAptDeadlineExtension: hasExt ? extPayload : undefined,
+    // ⑪ 연장 사실 3-state(모름·없음·날짜) — 2호와 같은 leaf
+    taxIncentiveRentalAptDeadlineExtension: aptDeadlineExtensionPayload(f.taxIncentiveRentalAptDeadlineExtension),
   };
 }
 
 /** ⑧ 임대기간 미입력 판정 — 엔진은 미입력을 0년으로 읽어 3호를 **조용히** 불적용한다. */
 export function taxIncentiveRentalPeriodMissing(f: TaxIncentiveRentalFacts | undefined): boolean {
   return !!f?.isTaxIncentiveRental && !(parseFloat(f.rentalPeriodYears ?? "") > 0);
+}
+
+/**
+ * ⑧ 3호 후단 ⑪ 「연장 사유 있음」인데 날짜가 없다 — ⑤(`TaxIncentiveRentalFields`)가 그 칸을 여는 조건
+ * (아파트 · 민간매입 · 장기일반/단기 · 도시형 생활주택 아님)과 같은 범위에서만 본다.
+ */
+export function taxIncentiveAptDeadlineDatesMissing(f: TaxIncentiveRentalFacts | undefined): boolean {
+  if (!f?.isTaxIncentiveRental || !f.isApartment) return false;
+  if (f.isTaxIncentiveRentalPurchase !== true || f.isUrbanLifeHousingApartment !== false) return false;
+  const t = f.taxIncentiveRentalRegistrationType;
+  if (t !== "long_term_general" && t !== "short_term") return false;
+  return aptDeadlineExtensionDatesMissing(f.taxIncentiveRentalAptDeadlineExtension);
 }

@@ -22,7 +22,12 @@ import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
-import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPeriodMissing } from "./tax-incentive-rental-scope";
+import {
+  effectiveSellingTaxIncentiveRental,
+  taxIncentiveAptDeadlineDatesMissing,
+  taxIncentiveRentalPeriodMissing,
+} from "./tax-incentive-rental-scope";
+import { aptDeadlineExtensionDatesMissing, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 
@@ -96,6 +101,12 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §167의3①3호 감면대상장기임대주택 — 「5년 이상 임대」 판정 칸. 미입력이면 엔진이 0년으로 읽어 조용히 불적용.
       if (taxIncentiveRentalPeriodMissing(h))
         return `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`;
+      // §167의3⑪ 「연장 사유 있음」인데 날짜가 없다 — 그대로면 「모름」으로 읽혀 선택이 조용히 사라진다.
+      // 2호는 ⑤·④와 같은 범위 술어 안에서만, 3호는 ⑤가 칸을 여는 후단 대상(매입·장기일반/단기·비도시형)에서만.
+      if (rentalDeclarationAptDeadlineInScope(h) && aptDeadlineExtensionDatesMissing(h.rentalAptDeadlineExtension))
+        return `${label}: 장기임대 아파트 양도기한 연장 사유(소령 §167의3⑪)의 날짜를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.`;
+      if (taxIncentiveAptDeadlineDatesMissing(h))
+        return `${label}: 조특법 감면 임대주택 양도기한 연장 사유(소령 §167의3⑪)의 날짜를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.`;
       // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
       if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
         return `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`;
@@ -117,6 +128,20 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // ⑧ 양도 주택 §167의3①3호 — 2호 선언이 켜져 있으면 그 칸의 임대기간을 함께 쓴다(⑤·④와 같은 유효 사실).
   if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))
     issues.push({ step, message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
+  // ⑧ 양도 주택 §167의3⑪ 「연장 사유 있음」 + 빈 날짜 — 2호·3호 각자의 범위 술어(⑤·④와 같음)
+  if (
+    rentalDeclarationAptDeadlineInScope(se?.longTermRental) &&
+    aptDeadlineExtensionDatesMissing(se?.longTermRental?.rentalAptDeadlineExtension)
+  )
+    issues.push({
+      step,
+      message: "양도 주택 장기임대 아파트: 양도기한 연장 사유(소령 §167의3⑪)의 날짜를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.",
+    });
+  if (taxIncentiveAptDeadlineDatesMissing(effectiveSellingTaxIncentiveRental(se)))
+    issues.push({
+      step,
+      message: "양도 주택 조특법 감면 임대주택: 양도기한 연장 사유(소령 §167의3⑪)의 날짜를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.",
+    });
 
   // ⑧ 양도 주택 2주택 전용 배제 — §167의10①3호(F-16). 「다른 보유 주택」 행과 같은 요구다.
   //    7호(소송)는 날짜 미입력이 「진행 중」이라는 뜻이므로 요구하지 않는다.

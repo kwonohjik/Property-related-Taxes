@@ -15,12 +15,11 @@
  * 정책: ToggleCard/RadioCardGroup/DateInput/DecimalInput 전용 · onChange 직접 patch(useEffect 미러링 금지).
  */
 
-import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { AptDeadlineExtensionFields } from "@/components/calc/transfer/AptDeadlineExtensionFields";
 import type {
-  AptDeadlineExtensionForm,
   TaxIncentiveRentalFacts,
   TaxIncentiveRentalRegistrationType,
 } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -56,9 +55,6 @@ export function TaxIncentiveRentalFields({
   rentalPeriodSharedWith2ho = false,
   nationalSizeSharedWith2ho = false,
 }: Props) {
-  const ext = v.taxIncentiveRentalAptDeadlineExtension ?? {};
-  const patchExt = (p: AptDeadlineExtensionForm) =>
-    onPatch({ taxIncentiveRentalAptDeadlineExtension: { ...ext, ...p } });
   const typeTargeted =
     v.taxIncentiveRentalRegistrationType === "long_term_general" ||
     v.taxIncentiveRentalRegistrationType === "short_term";
@@ -170,33 +166,11 @@ export function TaxIncentiveRentalFields({
           )}
 
           {v.isTaxIncentiveRentalPurchase === true && typeTargeted && v.isUrbanLifeHousingApartment === false && (
-            <div className="space-y-2">
-              <p className={HINT}>
-                ⑪ 기한 연장 사유가 있으면 그 날을 적으세요 — 2027.12.31.과 각 날부터 1년이 되는 날 중 가장
-                늦은 날이 기한입니다. 하나도 적지 않으면 연장 여부를 모르는 것으로 보아 판정을 보류합니다.
-              </p>
-              <div className="space-y-1">
-                <label className={LABEL}>⑪1호 — 임대주택 등록이 말소되는 날 (임대의무기간 2027.1.1. 이후 종료)</label>
-                <DateInput
-                  value={ext.dutyPeriodEndCancellationDate ?? ""}
-                  onChange={(s) => patchExt({ dutyPeriodEndCancellationDate: s || undefined })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className={LABEL}>⑪2호 — 조정대상지역 공고일 (2027.1.1. 이후 신규 지정)</label>
-                <DateInput
-                  value={ext.newRegulatedAreaAnnouncementDate ?? ""}
-                  onChange={(s) => patchExt({ newRegulatedAreaAnnouncementDate: s || undefined })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className={LABEL}>⑪3호 — 이전고시일 (재건축·재개발·소규모주택정비)</label>
-                <DateInput
-                  value={ext.relocationAnnouncementDate ?? ""}
-                  onChange={(s) => patchExt({ relocationAnnouncementDate: s || undefined })}
-                />
-              </div>
-            </div>
+            <AptDeadlineExtensionFields
+              value={v.taxIncentiveRentalAptDeadlineExtension}
+              onChange={(next) => onPatch({ taxIncentiveRentalAptDeadlineExtension: next })}
+              idPrefix={`tir-${idPrefix}`}
+            />
           )}
         </div>
       )}

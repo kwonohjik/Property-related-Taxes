@@ -17,16 +17,16 @@
  * (§167조의3⑪, 바닥 2027.12.31) 게이트 추가. 사목 base 검사(skipAptDeadline)·§155㉓ 경로
  * (skipAptTransferDeadlineGate)는 각자의 양도기한이 대체하므로 이 게이트에서 빠진다.
  *
- * Q-1 후속(판정 보류): ⑪ 연장 세 호 입력 UI가 없어 바닥 초과 + 연장 사실 전무를 "모름"으로 보고
- * `ArticleCheckResult.aptDeadlinePending`만 세운다(실패 코드 미추가, 종전 기준 유지) — 연장 사실이
- * 하나라도 있으면 "안다"고 보고 정상 판정한다.
+ * Q-1 후속(판정 보류): 바닥 초과인데 ⑪ 연장 사실(세 호 날짜·「연장 사유 없음」 확인)이 전무하면
+ * "모름"으로 보고 `ArticleCheckResult.aptDeadlinePending`만 세운다(실패 코드 미추가, 종전 기준 유지) —
+ * 연장 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다. 입력은 2호 명부 행·양도 주택·§155⑳ 임대주택 카드.
  */
 
 import {
   rentalStdPriceCap,
   rentalRequiredYears,
   RA_CUT,
-  resolveAptTransferDeadline,
+  isWithinAptTransferDeadline,
   hasAnyAptDeadlineExtensionFact,
   APT_TRANSFER_DEADLINE_FLOOR,
   type AptTransferDeadlineExtension,
@@ -112,7 +112,7 @@ export type NormalizedRentalUnit = {
    * 쓴다. 미제공이면 이 게이트를 보지 않는다(날짜를 모르면 기한 위반으로 단정하지 않는다).
    */
   aptTransferDate?: Date;
-  /** ⑪ 각 호 연장 사실 — 미제공이면 바닥(2027.12.31)만 적용. */
+  /** ⑪ 각 호 연장 사실(또는 「연장 사유 없음」 확인) — 전부 미제공이면 바닥 초과 시 판정 보류. */
   aptDeadlineExtension?: AptTransferDeadlineExtension;
   /**
    * §155㉓(말소 후 5년 내 거주주택 양도 특례) 경로 전용 — 그 호의 가목2)·라목8)·마목4) 요건은
@@ -333,14 +333,14 @@ function checkArticleGates(
     const t = u.aptTransferDate?.getTime();
     if (t != null && !Number.isNaN(t)) {
       /**
-       * Q-1 후속 — ⑪ 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·이전고시일) 입력 경로가
-       * 아직 없다. 바닥(2027.12.31)을 넘겼는데 그 사실을 전혀 모른다면 "연장 없음"으로 단정해
-       * 중과를 매기는 것은 법 근거 없이 불리 적용이다(그 사실을 물어본 적이 없다) — 판정을 보류하고
-       * 종전 기준(이 게이트 미적용)을 유지한다. 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다.
+       * Q-1 후속 — 바닥(2027.12.31)을 넘겼는데 ⑪ 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·
+       * 이전고시일)도 「연장 사유 없음」 확인도 없다면 "연장 없음"으로 단정해 중과를 매기는 것은 법 근거
+       * 없이 불리 적용이다 — 판정을 보류하고 종전 기준(이 게이트 미적용)을 유지한다. 사실이 하나라도
+       * 있으면 "안다"고 보고 정상 판정한다(기한 말일 민법 §161 연장 포함 — `isWithinAptTransferDeadline`).
        */
       if (t > APT_TRANSFER_DEADLINE_FLOOR && !hasAnyAptDeadlineExtensionFact(u.aptDeadlineExtension)) {
         aptDeadlinePending = true;
-      } else if (t > resolveAptTransferDeadline(u.aptDeadlineExtension)) {
+      } else if (!isWithinAptTransferDeadline(new Date(t), u.aptDeadlineExtension)) {
         fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
       }
     }

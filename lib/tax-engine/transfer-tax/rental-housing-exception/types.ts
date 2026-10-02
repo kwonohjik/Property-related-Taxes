@@ -8,6 +8,7 @@
  */
 
 import type { ArticleFailCode } from "../../rental-article/check";
+import type { AptTransferDeadlineExtension } from "../../rental-article/rules";
 
 // ============================================================
 // 임대주택 단위 입력
@@ -104,6 +105,11 @@ export type RentalUnitInput = {
    * 소득세법 §167의3 목별 임대기간요건(가목 5년 등)과 **다른 축**이다. 미입력이면 ㉓을 판정하지 않는다.
    */
   terminatedRegistrationType?: "short_term" | "long_term_general";
+  /**
+   * §167조의3⑪ 기한 연장 사실(가목2)·나목2)·라목8)·마목4) 아파트) — 미제공 = 「모름」(바닥 초과 양도면
+   * 판정 보류 + 확인 필요 고지). §155㉓ 경로는 이 요건을 적용하지 않는다(`skipAptTransferDeadlineGate`).
+   */
+  aptDeadlineExtension?: AptTransferDeadlineExtension;
   /**
    * 기타 요건 자기확인 체크
    * (임대료 5% 이내 증액·임대차계약 체결·임대료 지급 등 — LawArticleModal 안내 후 사용자 확인)

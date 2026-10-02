@@ -8,6 +8,8 @@
 import type { z } from "zod";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import type { houseSchema, presaleRightSchema } from "@/lib/api/transfer-tax-schema-sub";
+import type { aptDeadlineExtensionSchema } from "@/lib/api/transfer-tax-schema-apt-deadline";
+import type { AptTransferDeadlineExtension } from "@/lib/tax-engine/rental-article/rules";
 import type { HouseInfo, MultiHouseGracePeriodInput, PresaleRight } from "@/lib/tax-engine/multi-house-surcharge";
 
 type HouseInput = z.infer<typeof houseSchema>;
@@ -23,6 +25,22 @@ type GracePeriodInput = {
   hasTenantInResidence?: boolean;
   areaDesignatedDate?: string;
 };
+
+/**
+ * ⑭ §167의3⑪ 연장 사실 Zod → 엔진 `AptTransferDeadlineExtension` — 2호·3호(houses)·§155⑳ 임대주택(단건·다건)
+ * 공용. 날짜는 date-coerce, `confirmedNone`(「연장 사유 없음」 확인)은 그대로. 미전송이면 undefined(= 모름).
+ */
+export function toEngineAptDeadlineExtension(
+  e: z.infer<typeof aptDeadlineExtensionSchema> | undefined,
+): AptTransferDeadlineExtension | undefined {
+  if (!e) return undefined;
+  return {
+    dutyPeriodEndCancellationDate: toOptionalDate(e.dutyPeriodEndCancellationDate),
+    newRegulatedAreaAnnouncementDate: toOptionalDate(e.newRegulatedAreaAnnouncementDate),
+    relocationAnnouncementDate: toOptionalDate(e.relocationAnnouncementDate),
+    confirmedNone: e.confirmedNone,
+  };
+}
 
 /** Zod houses[] → 엔진 HouseInfo[] (신규 필드 Date 변환 포함) */
 export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[] | undefined {
@@ -82,24 +100,14 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: h.isExcludedShortToLongChange,
     hasContractDepositProof: h.hasContractDepositProof,
+    // ⑭ §167의3⑪ 연장 사실(2호 가·나·라·마목 아파트) — 날짜 Date 변환 + 「연장 사유 없음」 확인
+    rentalAptDeadlineExtension: toEngineAptDeadlineExtension(h.rentalAptDeadlineExtension),
     // ⑭ 소령 §167의3①3호 감면대상장기임대주택 + 후단 4사실 — ⑪ 연장 기산일 3종은 Date 변환(date-coerce).
     isTaxIncentiveRental: h.isTaxIncentiveRental,
     isTaxIncentiveRentalPurchase: h.isTaxIncentiveRentalPurchase,
     taxIncentiveRentalRegistrationType: h.taxIncentiveRentalRegistrationType,
     isUrbanLifeHousingApartment: h.isUrbanLifeHousingApartment,
-    taxIncentiveRentalAptDeadlineExtension: h.taxIncentiveRentalAptDeadlineExtension
-      ? {
-          dutyPeriodEndCancellationDate: toOptionalDate(
-            h.taxIncentiveRentalAptDeadlineExtension.dutyPeriodEndCancellationDate,
-          ),
-          newRegulatedAreaAnnouncementDate: toOptionalDate(
-            h.taxIncentiveRentalAptDeadlineExtension.newRegulatedAreaAnnouncementDate,
-          ),
-          relocationAnnouncementDate: toOptionalDate(
-            h.taxIncentiveRentalAptDeadlineExtension.relocationAnnouncementDate,
-          ),
-        }
-      : undefined,
+    taxIncentiveRentalAptDeadlineExtension: toEngineAptDeadlineExtension(h.taxIncentiveRentalAptDeadlineExtension),
     // P2 특수 배제 (other-house 2주택·인구감소) — 날짜 Date 변환
     isUnavoidableReason: h.isUnavoidableReason,
     unavoidableResidenceYears: h.unavoidableResidenceYears,

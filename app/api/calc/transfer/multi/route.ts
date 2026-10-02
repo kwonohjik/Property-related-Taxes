@@ -28,7 +28,12 @@ import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
-import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
+import {
+  mapHousesToEngine,
+  mapGracePeriodToEngine,
+  mapPresaleRightsToEngine,
+  toEngineAptDeadlineExtension,
+} from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -486,6 +491,7 @@ export async function POST(request: NextRequest) {
               rentalAutoTermination: u.rentalAutoTermination,
               registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
               terminatedRegistrationType: u.terminatedRegistrationType,
+              aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪ (단건과 동일)
               requirementsConfirmed: u.requirementsConfirmed,
             })),
             priorResidenceTransferDate: toOptionalDate(p.rentalHousingException.priorResidenceTransferDate),

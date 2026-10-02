@@ -123,7 +123,7 @@ export function terminationDeadline(cancellationDate: Date): DeadlineEnd {
 }
 
 /** ㉓ 대상 목 — 「제167조의3제1항제2호가목 및 다목부터 마목까지」 */
-function isTerminationEligibleArticle(article: RentalArticle): boolean {
+export function isTerminationEligibleArticle(article: RentalArticle): boolean {
   return article === "가" || article === "다" || article === "라" || article === "마";
 }
 
@@ -483,13 +483,14 @@ export function checkEligibility(
        * 기준으로 그대로 판정한다. ㉓(말소 후 5년 내) 경로만 괄호로 명시 비적용(대통령령 제36737호).
        */
       aptTransferDate: ctx?.transferDate,
+      aptDeadlineExtension: unit.aptDeadlineExtension, // ⑪ 연장 사실(「연장 사유 없음」 확인 포함)
       skipAptTransferDeadlineGate: unit.rentalAutoTermination && isTerminationEligibleArticle(article),
     };
     const result = checkRentalArticle(article, normalized);
 
     /**
-     * Q-1 후속(판정 보류) — ⑪ 연장 세 호 입력 경로가 아직 없어 바닥(2027.12.31) 초과를 「연장 없음」으로
-     * 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 바꾸지 않고(종전 기준 유지) 호별로 확인 필요
+     * Q-1 후속(판정 보류) — ⑪ 연장 사실(날짜·「연장 사유 없음」 확인)이 없으면 바닥(2027.12.31) 초과를
+     * 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 바꾸지 않고(종전 기준 유지) 호별로 확인 필요
      * 고지를 낸다 — 통과·불통과 여부와 무관하게 낸다(성공 사례에서만 보이면 실패 사유가 가려진다).
      */
     if (result.aptDeadlinePending) {

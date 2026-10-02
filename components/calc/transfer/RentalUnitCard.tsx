@@ -34,6 +34,8 @@ import {
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
+import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
+import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -518,6 +520,15 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
             </div>
           )}
         </ToggleCard>
+      )}
+
+      {/* §167의3⑪ — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한. ㉓ 말소 경로는 비적용(④·⑧과 같은 술어) */}
+      {rentalUnitAptDeadlineInScope(unit) && (
+        <AptDeadlineExtensionFields
+          value={unit.aptDeadlineExtension}
+          onChange={(next) => set("aptDeadlineExtension", next)}
+          idPrefix={`unit-${index}`}
+        />
       )}
 
       {/* 규모요건 (대지 298㎡ · 연면적/전용 149㎡) — 건설(다·바·자) + 라목(미분양) */}
