@@ -17,7 +17,6 @@
 
 import { addYears } from "date-fns";
 import { RENTAL_HOUSE_COUNT_EXCLUSION, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { calculateEffectiveRentalPeriod } from "./rental-97-shared-helpers";
 import { NEW_99_PERIOD_START } from "./new-99";
 import { NEW_99_PERIOD_END } from "./new-99";
 import { NEW_99_PERIOD_END_NATIONAL } from "./new-99";
@@ -249,7 +248,7 @@ export interface SpecialHouseExclusionInput {
   isNationalHousing?: boolean;
   /**
    * §97·§97의2 전용 — 그 임대주택의 **임대개시일**(조특령 §97⑤1호 「주택임대기간의 기산일은 주택의 임대를
-   * 개시한 날」). §97①의 시한(「2000년 12월 31일 이전에 임대를 개시하여」)과 5년 임대 경과를 이것으로 본다.
+   * 개시한 날」). §97①의 시한(「2000년 12월 31일 이전에 임대를 개시하여」)과 의제 시점(임대개시 후 양도)을 이것으로 본다.
    */
   houseRentalStartDate?: Date;
   /** 해당 조문 본 요건 충족 확인 (상세 판정은 그 주택 양도 시 모드 1 입력) */
@@ -374,7 +373,7 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
     rentalStartDeadline: D("2000-12-31"), // 법 §97① 「2000년 12월 31일 이전에 임대를 개시하여」
     legalBasis: RENTAL_HOUSE_COUNT_EXCLUSION.RENTAL_97,
     requirementsReason:
-      "§97①의 임대주택 요건(같은 항 각 호의 국민주택 · 임대주택 5호 이상 임대 — 같은 법 시행령 §97①) 충족이 확인되지 않았습니다.",
+      "§97①의 임대주택 요건(같은 항 각 호의 국민주택 · 양도일 현재 사실상 임대주택 5호 이상 임대 — 같은 법 시행령 §97①, 국세청 재산46014-259) 충족이 확인되지 않았습니다.",
   },
   rental_97_2: {
     label: "§97의2 신축임대주택",
@@ -393,8 +392,6 @@ export function usesRentalStartDate(article: string): boolean {
   return (SPECIAL_HOUSE_EXCLUSION_WINDOWS as Record<string, ExclusionWindow | undefined>)[article]?.basis === "rental_start";
 }
 
-/** §97①·§97의2① 「5년 이상 임대」 — 감면 본판정(`rental-97-main.ts`)과 같은 기간 계산 */
-const RENTAL_COUNT_EXCLUSION_MIN_YEARS = 5;
 
 export interface SpecialHouseExclusionEntryResult {
   article: SpecialHouseExclusionArticle;
@@ -498,14 +495,13 @@ function evaluateSpecialHouseExclusion(
  * §97②·§97의2② — 임대개시일 판정. 실패 사유 문구, 통과면 `undefined`.
  *
  * 1. 임대개시일 필수.
- * 2. §97만 — 임대개시 ≤ 2000.12.31(법 §97①). 경계일 포함(「이전에」).
- * 3. **5년 이상 임대 경과**(양도일 기준) — 「임대주택」의 정의가 「…5년 이상 임대한 후 양도하는 경우에는
- *    그 주택(이하 "임대주택"이라 한다)」이라, 다른 주택을 양도하는 날 아직 5년이 차지 않은 주택을 문언상
- *    「임대주택」이라 단정할 수 없다(보수적 문언 해석).
- *    ⚠️ 확인 필요 — 국세청 재산46014-259(2001.03.10.)는 「장기임대주택을 당해 내국인의 소유주택으로 보지 않는
- *    시점은 사실상 5호 이상의 주택임대를 개시한 때부터」라고 회신했다(5년 경과 전에도 의제). 그 해석을 따르면
- *    이 조건은 빠진다. 임대개시가 2000.12.31 이전인 §97은 2006년 이후 양도분에서 두 해석의 결과가 같다.
- *    공실·5호 미만 기간(조특령 §97⑤)은 받지 않는다 — 본 요건 확인 토글로 넘긴다.
+ * 2. §97만 — 임대개시 ≤ 2000.12.31.(법 §97① 「2000년 12월 31일 이전에 임대를 개시하여」). 경계일 포함.
+ * 3. **임대개시일 ≤ 양도일** — 국세청 재산46014-259(2001.03.10.): 「장기임대주택을 당해 내국인의 소유주택으로
+ *    보지 않는 시점은 사실상 5호 이상의 주택임대를 개시한 때부터인 것」. ⇒ 5년 임대를 채우기 **전에도**
+ *    임대를 개시한 뒤 양도한 다른 주택에는 의제가 작동한다(5년 경과는 요구하지 않는다 — 사용자 결정 2026-10-02).
+ *    같은 날은 포함한다 — 「개시한 때부터」이고, 임대기간 기산일도 「주택의 임대를 개시한 날」(조특령 §97⑤1호,
+ *    초일 산입)이다. 이 파일의 다른 날짜 창도 양 끝을 포함한다(`inWindow`).
+ * 「사실상 5호 이상」(§97의2는 령 §97의2① 2호 이상)은 날짜로 보지 않고 본 요건 확인 토글로 받는다.
  */
 function evaluateRentalStart(
   e: SpecialHouseExclusionInput,
@@ -513,13 +509,12 @@ function evaluateRentalStart(
   transferDate: Date,
 ): string | undefined {
   const start = e.houseRentalStartDate;
-  if (!start) return "임대주택의 임대개시일이 입력되지 않았습니다 (임대개시 시한·임대기간 판정에 필요).";
+  if (!start) return "임대주택의 임대개시일이 입력되지 않았습니다 (임대개시 시한·의제 시점 판정에 필요).";
   if (w.rentalStartDeadline && start.getTime() > w.rentalStartDeadline.getTime()) {
     return `${w.legalBasis}의 임대주택은 ${fmtDate(w.rentalStartDeadline)} 이전에 임대를 개시한 주택입니다 — 임대개시일이 그 이후입니다.`;
   }
-  const years = calculateEffectiveRentalPeriod(start, transferDate, [], 0);
-  if (years < RENTAL_COUNT_EXCLUSION_MIN_YEARS) {
-    return `양도일 현재 임대기간이 ${years}년으로 5년 이상 임대 요건(「5년 이상 임대한 후 양도하는 경우에는 그 주택(이하 "임대주택"이라 한다)」)에 미달합니다.`;
+  if (start.getTime() > transferDate.getTime()) {
+    return "임대주택을 소유주택으로 보지 않는 시점은 임대를 개시한 때부터입니다(국세청 재산46014-259, 2001.03.10.) — 임대개시일이 양도일 이후입니다.";
   }
   return undefined;
 }

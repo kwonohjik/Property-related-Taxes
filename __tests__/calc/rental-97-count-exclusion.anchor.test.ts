@@ -16,7 +16,8 @@
  * | R97-1 | §97 요건 충족 행 → 1주택 비과세 0 (계산기 단건 route · Zod 경유) |
  * | R97-2 | 임대개시 경계 — 2000-12-31 비과세 / 2001-01-01 과세 |
  * | R97-3 | 본 요건 확인을 끄면 과세 · 불성립 사유가 결과에 남는다 |
- * | R97-4 | §97의2 경로 · 5년 경계 — 2021-08-01 비과세 / 2021-08-02 과세 |
+ * | R97-4 | §97의2 경로 · 의제 시점(재산46014-259 「임대를 개시한 때부터」) — 임대 5년 미만이어도 개시 후 양도면 비과세 ·
+ * |        | 임대개시 = 양도일 2026-08-01 비과세 / 2026-08-02 과세 |
  * | R97-5 | 축 분리 — 3호(감면대상장기임대주택, 중과 축) 칸만 켜면 비과세 주택 수는 그대로 |
  * | R97-6 | 기존 special 조문(§98의2) 회귀 없음 |
  * | R97-7 | ④ — 임대개시일은 §97·§97의2일 때만 싣는다(조문을 바꾼 뒤 남은 값은 보내지 않는다) |
@@ -174,18 +175,22 @@ describe("R97-3 본 요건(국민주택·5호 이상) 확인", () => {
   });
 });
 
-describe("R97-4 §97의2 경로 · 5년 이상 임대 경계", () => {
-  it("[R97-4] §97의2 · 2021-08-01 임대개시(양도일 현재 5년) → 비과세", async () => {
-    const r = await runCalc([rentalRow({ article: "rental_97_2", houseRentalStartDate: "2021-08-01" }, "2001-06-01")]);
+describe("R97-4 의제 시점 — 임대를 개시한 때부터 (국세청 재산46014-259, 2001.03.10.)", () => {
+  const r972 = (start: string) => rentalRow({ article: "rental_97_2", houseRentalStartDate: start }, "2001-06-01");
+  it("[R97-4] §97의2 · 임대 1년(2025-08-01 개시) — 5년 미만이어도 비과세", async () => {
+    const r = await runCalc([r972("2025-08-01")]);
     expect(r.totalTax).toBe(0);
     expect(r.specialHouseExclusionDetail?.entries[0]).toEqual(
       expect.objectContaining({ article: "rental_97_2", eligible: true }),
     );
   });
-  it("[R97-4+] 2021-08-02 임대개시(4년) → 과세 · 사유", async () => {
-    const r = await runCalc([rentalRow({ article: "rental_97_2", houseRentalStartDate: "2021-08-02" }, "2001-06-01")]);
+  it("[R97-4=] 임대개시 = 양도일(2026-08-01) → 비과세 (「개시한 때부터」 · 령 §97⑤1호 초일 산입)", async () => {
+    expect((await runCalc([r972("2026-08-01")])).totalTax).toBe(0);
+  });
+  it("[R97-4+] 임대개시가 양도일 다음 날(2026-08-02) → 과세 · 사유에 해석례", async () => {
+    const r = await runCalc([r972("2026-08-02")]);
     expect(r.totalTax).toBe(TAXED);
-    expect(r.specialHouseExclusionDetail?.entries[0]?.reason).toContain("5년 이상 임대");
+    expect(r.specialHouseExclusionDetail?.entries[0]?.reason).toContain("재산46014-259");
   });
 });
 
