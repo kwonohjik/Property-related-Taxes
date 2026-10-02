@@ -44,6 +44,7 @@ import {
   buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * ②(§164④~⑦)가 **가목으로 성립**하는가 — 3경로 중 하나라도 완전 충족.
@@ -96,9 +97,12 @@ export function needsClauseADeclaration(asset: AssetForm): boolean {
 export function clauseADeclarationError(asset: AssetForm, label: string): string | null {
   if (!needsClauseADeclaration(asset)) return null;
   if (asset.preDeemedClauseAUnconfirmed === true) return null;
-  return (
-    `${label}: 「소득세법」 §97①1호 단서상 환산 등 추계는 **가목(§163⑨ 평가액)을 확인할 수 없는 경우에 한정**됩니다. ` +
-    `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 「가목을 확인할 수 없음」을 선택하세요.`
+  return fieldError(
+    "preDeemedClauseAUnconfirmed",
+    (
+      `${label}: 「소득세법」 §97①1호 단서상 환산 등 추계는 **가목(§163⑨ 평가액)을 확인할 수 없는 경우에 한정**됩니다. ` +
+      `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 「가목을 확인할 수 없음」을 선택하세요.`
+    ),
   );
 }
 
@@ -162,7 +166,7 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
   // ②도 가목이다 — §163⑨2호 「평가한 가액과 §164⑤~⑦ 가액 **중 많은 금액**」.
   if (isSec164ClauseAFilled(asset)) return null;
 
-  return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
+  return fieldError("publishedValueAtInheritance", `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`);
 }
 
 /**
@@ -205,8 +209,8 @@ export function preDeemedConversionInputError(
     (asset.assetKind === "land" && isSec163_9Cause(asset.acquisitionCause) && "pre1990Land" in buildPre1990LandPayload(asset, td));
   if (clauseB) return null;
   if (!(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
-    return `${label}: 의제취득일(1985.1.1.) 전 상속·증여 자산을 환산하려면 의제취득일 현재 기준시가를 입력하세요 (소득세법 시행령 §176의2④).`;
+    return fieldError("standardPriceAtAcq", `${label}: 의제취득일(1985.1.1.) 전 상속·증여 자산을 환산하려면 의제취득일 현재 기준시가를 입력하세요 (소득세법 시행령 §176의2④).`);
   if (!(parseAmount(asset.standardPriceAtTransfer ?? "") > 0))
-    return `${label}: 의제취득일 전 상속·증여 자산의 환산에는 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④).`;
+    return fieldError("standardPriceAtTransfer", `${label}: 의제취득일 전 상속·증여 자산의 환산에는 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④).`);
   return null;
 }

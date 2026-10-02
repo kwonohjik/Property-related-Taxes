@@ -27,6 +27,7 @@ import {
   isExprMixedUseRequired,
 } from "./expropriation-required-gate";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /**
  * ⑧ 어댑터 — `AssetForm` → 게이트 사실. 판정은 `expropriation-required-gate.ts`가 한다
@@ -72,9 +73,9 @@ export function validateExprValuationAsset(
   if (!isExprPerSqmRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.compensationPerSqm))
-    return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
+    return fieldError("compensationPerSqm", `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`);
   if (!parseAmount(asset.compensationBasisStdPrice))
-    return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
+    return fieldError("compensationBasisStdPrice", `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`);
   return null;
 }
 
@@ -95,10 +96,13 @@ export function validateExprValuationParcel(
   if (parcel.acquisitionMethod !== "estimated") return null;
   if (!isExprValuationDateAndCauseOk(primary, formTransferDate)) return null;
 
+  // 필지별 입력칸의 앵커 키 — `parcels.${i}.…` (`ParcelListInput`)
+  const parcelIdx = Math.max(0, (primary.parcels ?? []).indexOf(parcel));
+
   if (!parseAmount(parcel.compensationPerSqm))
-    return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
+    return fieldError(`parcels.${parcelIdx}.compensationPerSqm`, `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`);
   if (!parseAmount(parcel.compensationBasisStdPrice))
-    return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
+    return fieldError(`parcels.${parcelIdx}.compensationBasisStdPrice`, `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`);
   return null;
 }
 
@@ -120,7 +124,7 @@ export function validateAuctionAsset(
   if (gate !== "required") return null;
 
   if (!parseAmount(asset.auctionPrice))
-    return `${label}: 공매·경락 특례 — 공매·경락가액을 입력하세요.`;
+    return fieldError("auctionPrice", `${label}: 공매·경락 특례 — 공매·경락가액을 입력하세요.`);
   return null;
 }
 
@@ -139,9 +143,9 @@ export function validateHousingExprAsset(
   if (!isExprHousingTotalRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.housingCompensationTotal))
-    return `${label}: 주택 수용 환산 특례 — 보상액 총액을 입력하세요.`;
+    return fieldError("housingCompensationTotal", `${label}: 주택 수용 환산 특례 — 보상액 총액을 입력하세요.`);
   if (!parseAmount(asset.housingCompensationBasisTotal))
-    return `${label}: 주택 수용 환산 특례 — 보상산정 기초 기준시가 총액을 입력하세요.`;
+    return fieldError("housingCompensationBasisTotal", `${label}: 주택 수용 환산 특례 — 보상산정 기초 기준시가 총액을 입력하세요.`);
   return null;
 }
 
@@ -190,9 +194,9 @@ export function validateSplitLandExprAsset(
   if (gate !== "required") return null;
 
   if (!parseAmount(asset.splitLandCompensationTotal))
-    return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`;
+    return fieldError("splitLandCompensationTotal", `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`);
   if (!parseAmount(asset.splitLandCompensationBasisTotal))
-    return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상산정 기초 기준시가 총액을 입력하세요.`;
+    return fieldError("splitLandCompensationBasisTotal", `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상산정 기초 기준시가 총액을 입력하세요.`);
   return null;
 }
 
@@ -209,12 +213,12 @@ export function validateMixedUseExprAsset(
   if (!isExprMixedUseRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
 
   if (!parseAmount(asset.housingCompensationTotal))
-    return `${label}: 겸용주택 수용 — 주택분 보상액 총액을 입력하세요.`;
+    return fieldError("housingCompensationTotal", `${label}: 겸용주택 수용 — 주택분 보상액 총액을 입력하세요.`);
   if (!parseAmount(asset.housingCompensationBasisTotal))
-    return `${label}: 겸용주택 수용 — 주택분 보상산정 기초 기준시가 총액을 입력하세요.`;
+    return fieldError("housingCompensationBasisTotal", `${label}: 겸용주택 수용 — 주택분 보상산정 기초 기준시가 총액을 입력하세요.`);
   if (!parseAmount(asset.mixedCommercialLandCompensationTotal))
-    return `${label}: 겸용주택 수용 — 상가분 토지 보상액 총액을 입력하세요.`;
+    return fieldError("mixedCommercialLandCompensationTotal", `${label}: 겸용주택 수용 — 상가분 토지 보상액 총액을 입력하세요.`);
   if (!parseAmount(asset.mixedCommercialLandCompensationBasisTotal))
-    return `${label}: 겸용주택 수용 — 상가분 토지 보상산정 기초 개별공시지가 총액을 입력하세요.`;
+    return fieldError("mixedCommercialLandCompensationBasisTotal", `${label}: 겸용주택 수용 — 상가분 토지 보상산정 기초 개별공시지가 총액을 입력하세요.`);
   return null;
 }

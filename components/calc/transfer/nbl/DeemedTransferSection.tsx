@@ -55,7 +55,7 @@ export function DeemedTransferSection({
         options={DEEMED_OPTIONS}
       />
       {reason !== "none" && (
-        <FieldCard label="의제 양도일" hint="최초 경매기일·공매일·매각위임일·최초 공고일">
+        <FieldCard field="nblDeemedTransferDate" label="의제 양도일" hint="최초 경매기일·공매일·매각위임일·최초 공고일">
           <DateInput
             value={asset.nblDeemedTransferDate}
             onChange={(v) => onAssetChange({ nblDeemedTransferDate: v })}

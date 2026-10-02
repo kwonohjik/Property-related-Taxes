@@ -7,12 +7,15 @@ export interface BusinessUsePeriodsInputProps {
   periods: NblBusinessUsePeriod[];
   onChange: (periods: NblBusinessUsePeriod[]) => void;
   label?: string;
+  /** 검증 오류 → 입력칸 이동 앵커 접두 — 행의 날짜칸이 `${fieldPrefix}.${i}.startDate`·`.endDate`가 된다 */
+  fieldPrefix?: string;
 }
 
 export function BusinessUsePeriodsInput({
   periods,
   onChange,
   label = "사업용 사용기간",
+  fieldPrefix,
 }: BusinessUsePeriodsInputProps) {
   function addPeriod() {
     onChange([...periods, { startDate: "", endDate: "", usageType: "자경" }]);
@@ -38,11 +41,11 @@ export function BusinessUsePeriodsInput({
         >
           <div className="space-y-1">
             <label className="block text-xs text-muted-foreground">시작일</label>
-            <DateInput value={p.startDate} onChange={(v) => updatePeriod(i, { startDate: v })} />
+            <DateInput value={p.startDate} onChange={(v) => updatePeriod(i, { startDate: v })} data-field={fieldPrefix ? `${fieldPrefix}.${i}.startDate` : undefined} />
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-muted-foreground">종료일</label>
-            <DateInput value={p.endDate} onChange={(v) => updatePeriod(i, { endDate: v })} />
+            <DateInput value={p.endDate} onChange={(v) => updatePeriod(i, { endDate: v })} data-field={fieldPrefix ? `${fieldPrefix}.${i}.endDate` : undefined} />
           </div>
           <div className="space-y-1">
             <label className="block text-xs text-muted-foreground">사용 형태</label>

@@ -35,6 +35,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
+          fieldType={value.type}
           registrationDate={value.registrationDate}
           isTaxRegistered={value.isTaxRegistered}
           rentalStartDate={value.rentalStartDate}
@@ -48,6 +49,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       <ToneCard tone="amber" sectionNum="②" title="임대 유형 (§97의2①)" noDark>
 
         <RadioCardGroup
+          data-field={`reduction.${value.type}.rental972Type`}
           name="rental972Type"
           tone="amber"
           value={value.rental972Type}
@@ -94,6 +96,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
           <div>
             <p className="mb-1.5 text-xs text-muted-foreground">공동주택 여부</p>
             <RadioCardGroup
+              data-field={`reduction.${value.type}.isMultiUnitHousing972`}
               name="isMultiUnitHousing972"
               layout="inline"
               tone="amber"
@@ -110,6 +113,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
           <div>
             <p className="mb-1.5 text-xs text-muted-foreground">1999.8.20 현재 입주 사실</p>
             <RadioCardGroup
+              data-field={`reduction.${value.type}.isUnoccupiedAt19990820`}
               name="isUnoccupiedAt19990820"
               layout="inline"
               tone="amber"
@@ -137,6 +141,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             조특법 §97의2①2호 — 「<strong>취득 당시 입주된 사실이 없는 주택만 해당한다</strong>」.
           </p>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.isUnoccupiedAtAcquisition`}
             name="isUnoccupiedAtAcquisition_972"
             layout="inline"
             tone="rose"
@@ -170,6 +175,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             임대하는 거주자」. 신축임대 1호만으로는 해당하지 않습니다.
           </p>
           <RadioCardGroup
+            data-field={`reduction.${value.type}.hasNewRentalPlus2Units`}
             name="hasNewRentalPlus2Units"
             layout="inline"
             tone="sky"
@@ -196,6 +202,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
 
       {/* 공통 필드 */}
       <RentalCommonFields
+        fieldType={value.type}
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}

@@ -10,6 +10,7 @@
  *  15~17. 지방세 결정세액 → 지방세 기납부 세액 → 납부할 세액
  */
 
+import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
 import { Badge } from "@/components/ui/badge";
 import { effectiveGrossGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,9 +175,7 @@ export function MultiTransferTaxSummaryCard({
             </div>
             {/* §104⑤ 괄호 — 감면이 있으면 「감면세액을 차감한 세액이 더 큰 경우」를 고른다.
                 감면 전 금액만 보면 작은 쪽이 채택된 것처럼 보이므로 그때만 이유를 적는다(F-9). */}
-            {(result.comparedTaxApplied === "general"
-              ? result.calculatedTaxByGroups > result.calculatedTaxByGeneral
-              : result.calculatedTaxByGeneral > result.calculatedTaxByGroups) && (
+            {comparativeTaxView(result)?.reason === "after_reduction" && (
               <p className="text-muted-foreground" data-testid="comparative-after-reduction-note">
                 감면세액을 뺀 세액이 더 큰 방법을 적용했습니다(소득세법 §104⑤ 괄호).
               </p>

@@ -40,6 +40,11 @@ interface Props {
    * §97·§97의2·§97의4는 기준시가 안분이 없어 「임대 종료 시점」을 묻지 않는다.
    */
   hasGainProration?: boolean;
+  /**
+   * 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.…`
+   * (`transfer-tax-validate-reductions.ts`). §97 시리즈 6조문이 이 폼을 공유한다.
+   */
+  fieldType?: string;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -51,7 +56,7 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
 /** 섹션 배지 원문자 — 임대 감면 입력 폼 전체가 공유하는 표기(`Rental97MainInputForm`의 `CIRCLED`와 같은 것). */
 export const CIRCLED_SECTION_NUM = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"] as const;
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified" }: Props) {
   /**
    * 🔴 라디오 `name`이 전역 상수라 **자산 간에 한 그룹으로 묶였다**
    *    (2026-09-07 대장 재대조 · #25). 감면은 자산-수준(`asset.reductions`)이므로 다자산에서
@@ -122,6 +127,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
           <RadioCardGroup
+            data-field={`reduction.${fieldType}.rentIncreaseViolationMode`}
             name={`rentIncreaseViolationMode-${uid}`}
             layout="inline"
             tone="violet"
@@ -138,7 +144,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
         </div>
 
         {value.rentIncreaseViolationMode === "has_violation" && (
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 space-y-2" data-field={`reduction.${fieldType}.rentHistory`}>
             <p className="text-xs font-medium text-violet-800">
               계약 이력 입력 (최소 2건 이상 — 위반 시점 확인용)
             </p>
@@ -223,6 +229,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           </p>
           <p className="mb-1.5 text-micro text-muted-foreground">{graceBasis}</p>
           <RadioCardGroup
+            data-field={`reduction.${fieldType}.hasVacancyOverGrace`}
             name={`hasVacancyOverGrace-${uid}`}
             layout="inline"
             tone="sky"
@@ -239,7 +246,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
         </div>
 
         {value.hasVacancyOverGrace === true && (
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 space-y-2" data-field={`reduction.${fieldType}.vacancyPeriods`}>
             <p className="text-xs font-medium text-sky-800">공실 구간 입력</p>
             {(value.vacancyPeriods ?? []).map((period, idx) => (
               <div key={idx} className="flex items-center gap-2 flex-wrap">
@@ -292,6 +299,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               그 시점 기준시가가 따로 필요합니다.
             </p>
             <RadioCardGroup
+              data-field={`reduction.${fieldType}.rentalContinuesToTransfer`}
               name={`rentalContinuesToTransfer-${uid}`}
               layout="inline"
               tone="violet"
@@ -319,6 +327,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             <div className="mt-2 border-t border-violet-200 pt-2">
               <CurrencyInput
                 label="임대 종료일 당시 기준시가 (주택+부속토지 합계)"
+                data-field={`reduction.${fieldType}.stdPriceAtRentalEnd`}
                 value={value.stdPriceAtRentalEnd}
                 onChange={(v) => onChange({ stdPriceAtRentalEnd: v })}
               />
@@ -340,11 +349,13 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             </p>
             <CurrencyInput
               label="취득 당시 기준시가 (주택+부속토지 합계)"
+              data-field={`reduction.${fieldType}.stdPriceAtAcquisition`}
               value={value.stdPriceAtAcquisition}
               onChange={(v) => onChange({ stdPriceAtAcquisition: v })}
             />
             <CurrencyInput
               label="양도 당시 기준시가 (주택+부속토지 합계)"
+              data-field={`reduction.${fieldType}.stdPriceAtTransfer`}
               value={value.stdPriceAtTransfer}
               onChange={(v) => onChange({ stdPriceAtTransfer: v })}
             />
@@ -391,6 +402,8 @@ interface RegistrationFieldsProps {
   onRegistrationDateChange: (v: string) => void;
   onIsTaxRegisteredChange: (v: boolean) => void;
   onRentalStartDateChange: (v: string) => void;
+  /** 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.registrationDate`·`.rentalStartDate` */
+  fieldType?: string;
 }
 
 export function RegistrationFields({
@@ -400,17 +413,18 @@ export function RegistrationFields({
   onRegistrationDateChange,
   onIsTaxRegisteredChange,
   onRentalStartDateChange,
+  fieldType = "unspecified",
 }: RegistrationFieldsProps) {
   return (
     <div className="space-y-2">
       <div>
         <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
-        <DateInput value={registrationDate} onChange={onRegistrationDateChange} />
+        <DateInput data-field={`reduction.${fieldType}.registrationDate`} value={registrationDate} onChange={onRegistrationDateChange} />
       </div>
       <TaxRegistrationToggle checked={isTaxRegistered} onCheckedChange={onIsTaxRegisteredChange} />
       <div>
         <label className="mb-1 block text-xs font-medium">임대개시일</label>
-        <DateInput value={rentalStartDate} onChange={onRentalStartDateChange} />
+        <DateInput data-field={`reduction.${fieldType}.rentalStartDate`} value={rentalStartDate} onChange={onRentalStartDateChange} />
       </div>
     </div>
   );

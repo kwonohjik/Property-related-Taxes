@@ -118,7 +118,7 @@ Phase 1 — 인프라 + 폼 전역 + 자산 공통
   4. 뮤테이션: field 제거 / data-field 제거 / 강제 펼침 1장 복귀 / focus 제거 → 각각 KILLED
 Phase 2 — 취득(acquisition 87) ✅ 83곳 부착(§7-2)
 Phase 3 — 자산 종류별(gb 55 · redev 45 · bg 27 · commercial 23 · mixed-use 22+) ✅ 11파일 216곳 중 195곳 부착(§7-3)
-Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
+Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타 ✅ 케이스 302건(+보조 29)(§7-4)
 ```
 
 ## 5. 테스트
@@ -307,6 +307,11 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 - 「실거래가를 선택하세요」류는 모드 라디오(`useEstimatedAcquisition`·`bgAcquisitionMethod`), 「조합원 유형을 바꾸세요」는 `isSuccessorRightToMoveIn`, 「취득 원인을 증여로」는 원인 라디오(일반건물 건물 파트는 `gbBuildingAcquisitionCause`).
 - 일반건물 이월과세는 파트별 객체 — 토지 `carryover.*` · 건물 `buildingCarryover.*`(`fieldError(cond ? "a" : "b", …)`).
 
+### #1914 리베이스 반영 (2026-10-02)
+
+push 직전 `origin/master`로 재기반하니 **#1914**(§167의3①3호 감면대상장기임대주택 입력 경로)가 보유 상황 단계에 **새 검증 메시지 2건**을 추가해 있었다(`step1.ts` 보유 주택 행 · 양도 주택 임대기간). 둘 다 field가 없어 같은 방식으로 붙였다 — 보유 주택 행은 `houses.N`(행 「편집」 앵커), 양도 주택은 `sellingHouseExclusion.taxIncentiveRentalYears`(`TaxIncentiveRentalFields`에 선택 prop `fieldRentalPeriod` 추가, 기본값 없음 = 앵커 없음). 케이스 +2 · 뮤테이션(양도 주택 앵커 prop 제거) KILLED. 충돌은 `step1.ts` import 한 줄(양쪽 모두 유지).
+⚠️ **병렬로 머지되는 검증 PR은 새 field 없는 메시지를 계속 만든다** — 정적 게이트는 「키가 앵커 없이 있다」만 보고 「메시지에 키가 없다」는 못 본다. 이관 PR은 푸시 직전 재기반 후 `git diff origin/master -- lib/calc/*validate*`로 새 메시지를 확인할 것.
+
 ### 인프라 변경
 
 - 정적 게이트: `fieldError(조건 ? "a" : "b", …)` · `(data-)field={조건 ? "a" : "b"}`도 읽는다.
@@ -379,6 +384,71 @@ Phase 4 — 감면 fail() 89 · 비사업용토지(nbl 45) · 기타
 **양도세 E2E 전체(118 spec)**: 590 passed · 20 skipped · 1 failed · 2 flaky(재시도 통과). 실패 `transfer-nbl-surcharge-amount.spec.ts:103`은 **기존 flake**다 — origin/master(`d8a5972c`) 대조 워크트리와 데운 서버에서 교차 실행해 **양쪽 모두 6회 중 2회 실패**(같은 비율). 이 spec은 hydration을 기다리지 않고 입력한다(`e2e/CLAUDE.md` §6). flaky 2건 중 `nbl-revenue-deemed-common`은 §6이 기록한 그 spec이다.
 
 **skip 16건 사유**: 음수 금액·음수 개월 수(`CurrencyInput`·`DecimalInput`이 「-」를 지운다) · 형식이 틀린 날짜(`DateInput` clamp) · 세션 복원이 되돌리는 상태(일반건물 M-2·M-2b·`setUnifiedCause`·`migrateCarryoverFields`) · 폐지 필드(겸용 `phdCommercialBuildingStdPriceAtAcq`).
+
+## 7-4. Phase 4 실측 결과 — 비사업용 토지 · 0단계 하위 모듈 · 감면 · 보유 상황 나머지 (2026-10-02)
+
+브랜치·워크트리: `feat/transfer-validation-field-jump-p4` · `.claude/worktrees/transfer-field-jump-p4`. Phase 3와 같은 방식 — 영역별 포크 에이전트 4개(파일 소유 분리)가 구현하고 오케스트레이터가 통합 검증·막다른 오류 재현을 했다.
+
+### 범위 (§4의 근사를 실측으로 보정)
+
+§4는 「감면 fail() 89 · 비사업용토지 45 · 기타」였으나, 취득 검증(`acquisition.ts`)이 부르는 **하위 모듈**(split·expropriation·clause-a·sec164·usage-conversion·rental-exception)이 Phase 2·3에서 빠져 있어 영역 B로 묶었다. 정적 게이트가 읽는 파일도 넓혔다(아래).
+
+| 영역 | 모듈 | 케이스(skip) | 카드 후퇴로 남김 |
+|---|---|---|---|
+| A 비사업용 토지 | `nbl` · `nbl-other` | 58 (1) | 0 |
+| B 0단계 하위 | `split` · `expropriation` · `clause-a` · `sec164` · `usage-conversion` · `rental-exception` | 71 (0) | 조합·미지원 안내 · 장기임대 호별정보 20(계산기 카드 읽기 전용 — 「판정 메뉴로 돌아가세요」 안내가 설계) · `facts` 전용 1 · `gift-163-9`(막다른 오류 — 아래) |
+| C 감면·공제(2단계) | `reductions` · | 120 (29) | 5 — §127⑦ 트랙 교차 · 자경농지 미등기(칸이 1단계) · 주택 감면 게이트 2 · §97의5 중복 |
+| D 보유 상황(1단계) | `step1` · `exemption-proviso` · `residence-interval` · `rental-4ho-proviso` · `final-house-restart` · `pre-designation-contract-scope` | 53 (0) | `validate.ts` 잔여 push 전부 0단계 조합·안내(자산 0건·함께 양도 불가·지분율 합계·미래 양도일) |
+| **계** | | **302 (30)** + 보조 spec 29 | |
+
+- skip 30 = NBL 1(옛 저장값 `residential`로만 도달하는 용도지역 배율 없음) + 감면 29(28 = `hasVacancyOverGrace` 복원 유실로 시드 불가 → 보조 spec `transfer-validation-field-jump-reduction-rental.spec.ts`가 화면에서 값을 고른 뒤 같은 입력으로 검증 · 1 = `DecimalInput`이 「-」를 지움).
+- 키 선택 판단(대표): 한 메시지가 여러 칸이면 **비어 있는 첫 칸**(감면 PHD 5칸·편입 3점·휴양시설 3요소·소유자 분리) · 감면 키는 `reduction.<조문타입>.<속성>`(PHD를 가진 두 조문이 동시에 열릴 수 있어 조문 타입으로 구분) · 보유 주택 행은 모달 편집이라 `houses.N`(행의 「편집」 버튼) · §164④ 토지 일부 입력은 토글 OFF에서만 닿고 그때 칸이 숨어 **토글**(`pre1990Enabled`)로.
+
+### 인프라 변경
+
+- `FieldJumpCase.step`에 **2(감면·공제)** 추가 — 스펙이 「감면·공제」 스텝 버튼을 누른 뒤 「다음」.
+- `Step5.tsx`(2단계 자산별 블록) 루트에 **`data-asset-card-index`** — 2단계에는 이 속성이 없어 `assetIndex`가 붙은 오류가 이동 범위를 못 찾았다(없으면 영역 C 전체가 이동 실패, 뮤테이션 C-M2).
+- 1단계 push의 **`assetIndex: 0` 제거**(거주 구간·I-8 2곳) — 1단계 화면에는 자산 카드가 없어 `validation-jump.ts`의 범위가 `null`이 되어 이동이 항상 실패했다. `assetIndex`의 소비처는 0단계 카드 배너(`TransferTaxCalculator.tsx:75·199`)와 이동 범위뿐이라 잃는 것 없음(오케스트레이터 grep 확인).
+- 정적 게이트가 읽는 검증 파일을 `transfer-tax-validate*` 밖으로 확장: `house-count-exclusion-reduction-validate` · `exemption-proviso-validate` · `residence-interval-validate` · `rental-4ho-proviso` · `final-house-restart` · `pre-designation-contract-scope`. ⚠️ **이 목록은 수동**이다 — 새 하위 검증 모듈에 `fieldError`를 달면 목록에 넣어야 게이트가 본다(없으면 키가 앵커 없이도 통과). 통합 시 전수 grep으로 게이트 밖 `fieldError` 0건 확인.
+- 정적 게이트가 **못 읽는 키**: `fieldError(` 첫 인자가 리터럴이 아닌 것 — 감면 PHD(`phdField` 헬퍼)·편입 3점·행 배열(`배열.i.필드`)·재개발 거주기간. 메시지별 E2E가 유일한 안전망(뮤테이션 C-M1).
+- 공용 위젯: `DecimalInput` · `HousingStdPriceLookupField` · `ToggleCard`(chip·card 두 루트)에 `data-field` 전달, `StandardPriceInput`에 `fieldPricePerSqm`, `ReductionPhdInput`·`ReductionStdPriceSection`에 `fieldType?`(기본값 있음), NBL `BusinessUsePeriodsInput`에 `fieldPrefix?`. `sec164-required-fields.ts`에 `missingFields`(누락 첫 칸 탐색, 기존 동작 불변).
+
+### 🔴 별건 발견 — 막다른 오류·입력 유실 (이 PR은 고치지 않는다)
+
+| # | 증상 | 근거 | 확인 |
+|---|---|---|---|
+| N1 | NBL — **임야·기타토지·목장** 지목에 **빈 자경기간 행**(또는 목장·주택부수토지에 빈 거주 이력 행)이 남으면 오류가 뜨는데 고칠 칸이 없다 | 검증 `nbl.ts` `rowArrays`가 사업용 사용기간·거주 이력에 `applies: true`(지목 무관), 입력 위젯은 농지·목장·별장(자경)·농지·임야(거주)에만. 스토어에 지목 변경 시 행 리셋 없음(grep). 도달: 농지에서 「+ 기간 추가」 후 지목 변경 | ✅ 오케스트레이터가 상태 시드로 재현(임야·기타·목장 → 오류 1·카드 내 앵커 **0**·포커스 없음 / 농지 대조군 앵커 2·이동 정상). 지목 셀렉트의 UI 조작은 완주 못 함(코드로 확인) |
+| C1 | 자경농지 **상속** — 본인 자경 8년 이상이고 피상속인 경작기간이 이전에 남아 있으면 「합산하려면 …확인하세요」로 차단되는데, 본인 8년 이상이면 `Step5.tsx`가 합산 토글·피상속인 칸을 숨긴다 | 에이전트 C 상태 시드 실측(본인 10년·피상속인 5년·토글 꺼짐 → 오류 1·앵커 0) | 미재확인 |
+| C2 | 입력 유실 — §97 시리즈 `hasVacancyOverGrace`를 복원 마이그레이션(`normalizeRentalAndSplitFields`, `calc-wizard-asset-migrate-rental-split.ts`)이 매번 null로 되돌린다. 「없음」을 골라도 새로고침하면 라디오가 풀린다(R1과 같은 부류, 막다른 길은 아님) | 에이전트 C 실제 새로고침으로 확인 | 미재확인 |
+| B1 | `gift-163-9` — 증여 취득에서 환산을 못 쓴다는 오류인데 산정 방식 라디오가 4개 → 0개로 사라져 `useEstimatedAcquisition`이 true로 남는다(주택·토지·건물·분양권·상가 5종). 매매로 되돌려 실거래가 고르고 다시 증여로 가야 풀림 | 에이전트 B 실측. **G3의 형제**(그쪽은 일반건물 분리 OFF만 고쳤다) | 미재확인 |
+| B2 | 소유자 분리 + 매매 + 실거래가 — 검증은 ㎡당 공시지가·면적·총액 3칸을 요구하는데 ㎡당 칸이 화면에 없다(우회: 환산으로 잠깐 바꿔 칸을 연 뒤 되돌림). 케이스는 상속 분기로만 만들고 매매 분기는 카드 후퇴 | 에이전트 B 실측 | 미재확인 |
+| B3 | §164④ 토지 — 토글 OFF 상태의 숨은 입력값 때문에 막힐 수 있다. 토글 이동으로 우회(칸을 여는 것이 아님) | 에이전트 B | 미재확인 |
+
+**해소 (2026-10-02 — 별도 작업, `e2e/transfer-dead-end-defects.spec.ts` N1 · `__tests__/calc/nbl-stale-period-rows.anchor.test.ts`)**:
+- **N1 ✅** — 「입력칸을 여나 / 검증을 좁히나」는 **그 값이 엔진에서 쓰이는가**로 갈랐다. 사업용 사용기간은 농지(`farmland.ts`)만, 거주 이력은 농지·임야(`farmland.ts`·`forest.ts`·`engine.ts` `residenceMatch`)만 쓴다 — 입력칸이 있는 지목과 정확히 일치했고, 코드 주석도 「재촌은 농지(§168의8②)·임야(§168의9②)에만 있고 목장 엔진은 거주 이력을 참조하지 않는다」고 못 박고 있다. 쓰이지 않는 값을 위한 칸은 거짓 입력칸이라 **검증을 소비처로 좁혔다**(`lib/calc/nbl-period-rows-scope.ts` — ⑤ 거주 이력 섹션 렌더와 ⑧ 빈 행 검증이 같은 술어). 빈 행은 매퍼가 이미 버리고(`startDate` 없으면 제외) 채워진 행도 엔진이 안 쓰므로 **세액은 불변**(anchor 엔진 증거: 임야에 채운 사업용 사용기간·목장에 채운 거주 이력 → 판정 deep-equal). 선례: L2 결격 과세기간(`nbl-disqualified-periods-gate.anchor.test.ts`).
+- 🪤 anchor를 처음 쓸 때 **기타토지·별장의 부정 단언이 공허했다** — 앞선 필수 입력(재산세 과세 분류·주택 정착면적)이 행 검사보다 먼저 반환돼(첫 오류 1건 구조) 수정 전에도 통과했다. 바탕에 그 입력을 채우자 실패 5→9건이 됐다(`feedback_negative_anchor_needs_positive_twin`·`feedback_fixture_default_masks_gate_defect`와 같은 부류).
+- 검증: 수정 전 동작(두 술어 항상 true)에서 E2E 「막지 않는다」 3건 FAIL · 긍정 짝(농지·임야는 여전히 막는다) 2건 PASS / 반대 뮤테이션(거주 이력을 농지만) → 임야 긍정 짝 vitest·E2E FAIL. NBL 필드 이동 57/1skip · NBL spec 7개+dead-end 31 PASS.
+- ⚠️ 별건이었던 「지목 변경 시 행을 비울지」는 택하지 않았다 — 값이 쓰이지 않으니 검증을 좁히는 것으로 충분하고, 지목을 되돌릴 때 입력을 보존하는 편이 사용자에게 낫다.
+- 남은 별건: C1 · C2 · B1 · B2 · B3(에이전트 보고, 미재확인).
+
+⚠️ 「미재확인」은 에이전트 보고 그대로다 — 수정 착수 전에 재현 E2E(현행 FAIL)부터 만들 것(Phase 3 별건 8건에서 같은 절차).
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| tsc | 0건 |
+| vitest 전체 | 2462 파일 통과 · 27068 passed · 13 skipped · 4 todo (실패 0) |
+| eslint(변경 파일) | 에러 0 · 경고는 master와 파일별 건수 동일(증가 0) |
+| E2E 키 전수 + 감면 보조 spec(새 서버) | 643건 — **594 passed · 49 skipped · 0 failed**(재시도 없음). skip 49 = Phase 4 30 + 이전 19 |
+| Phase 4 케이스 단독(JSON 리포터) | 300건 — 270 passed · 30 skipped(영역별 NBL 57/1 · leaf 71/0 · 감면 91/29 · step1 51/0). 이후 #1914 반영으로 step1 +2(아래) → 302건 · step1 53 passed |
+| E2E 키 전수 밖 전체(새 서버·4 worker) | 1489건 — 1486 passed · 1 skipped · **2 failed** → 아래 둘 다 판정 완료 |
+| ↳ `transfer-gift-163-9-sec164-flow.spec.ts:261` | 🔴 **이번 변경이 만든 회귀(spec 경합)** — 기준선 master는 5초에 통과, 이 브랜치는 3/3 실패. 원인: 「상속개시일 평가액을 입력하세요」(`clause-a`)에 `publishedValueAtInheritance` 키를 달자 **계산 실패 직후 자동 이동**(Q-2)이 평가방법 칸으로 비동기로 간다(섹션 펼침 + 60ms 타이머 + 포커스). spec이 오류가 보이자마자 그 셀렉트를 열면 뒤늦은 포커스 이동이 팝업을 닫는다(call log: 「not stable」→「not visible」). 해당 `fieldError`만 벗기면 통과(실험) · 프로브에서 오류 표시 후 800ms 대기하면 통과. 사용자는 60ms 안에 셀렉트를 열 수 없어 **제품 결함이 아니다**. spec에 「포커스가 그 칸에 도달할 때까지」 대기를 넣어 해소(파일 6건 3회 연속 통과) |
+| ↳ `transfer-nbl-unconditional-exemption.spec.ts:98` | **기존 flake** — 단독 2/2 통과, 부하(3 worker·12회 반복)에서 이 브랜치 3/24 · **기준선 master도 3/24**(같은 비율) |
+| 800줄 | 변경·신규 파일 최대 `RentalHousingExceptionSection.tsx` 797 |
+| 게이트 밖 `fieldError` | 0건(lib/calc 전수 grep) |
+
+**뮤테이션**(영역 에이전트 27종 전부 KILLED, `--list`로 선택 건수 확인): A 5 · B 10 · C 7 · D 5. 대표: 정적 게이트가 못 보는 `fieldType` prop 제거(C-M1) · `Step5` 카드 인덱스 제거(C-M2) · 공용 위젯 `data-field` 전달 제거(C-M3·M6·M7, B-M4) · 키 오기재(A-M3·C-M4) · 토글 이동 제거(B-M5).
 
 ## 8. 실행 함정 (선행 PR에서 밟은 것 — 반복 금지)
 

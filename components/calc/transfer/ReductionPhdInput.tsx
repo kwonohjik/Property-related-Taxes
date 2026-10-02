@@ -76,6 +76,12 @@ export interface ReductionPhdInputProps {
    * (미전달 시 legacy `${snapshotKeyPrefix}-bsp` fallback — 결과탭 소속 판정 탈락 상태 유지).
    */
   assetId?: string;
+  /**
+   * 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.phd…`.
+   * 감면 그룹 라디오는 category 안에서만 배타라 PHD를 가진 두 조문이 동시에 열릴 수 있다 —
+   * 타입으로 구분해야 오류가 **그 조문의** 입력칸으로 간다(`transfer-tax-validate-reductions.ts`).
+   */
+  fieldType?: string;
 }
 
 // ============================================================================
@@ -92,6 +98,7 @@ export function ReductionPhdInput({
   jibun,
   snapshotKeyPrefix,
   assetId,
+  fieldType = "unspecified",
 }: ReductionPhdInputProps) {
   /**
    * 건물 기준시가 계산서 스냅샷 키 — 취득시·최초공시시 두 모달 버튼이 공유
@@ -216,6 +223,7 @@ export function ReductionPhdInput({
               <label className="mb-1 block text-xs font-medium">최초공시 공동주택가격 (원)</label>
               <CurrencyInput
                 label=""
+                data-field={`reduction.${fieldType}.phdFirstDisclosurePrice`}
                 value={value.firstDisclosurePrice ?? ""}
                 onChange={(v) => onChange({ firstDisclosurePrice: v })}
               />
@@ -224,6 +232,7 @@ export function ReductionPhdInput({
             <div>
               <label className="mb-1 block text-xs font-medium">토지면적 (㎡)</label>
               <DecimalInput
+                data-field={`reduction.${fieldType}.phdLandAreaSqm`}
                 value={value.landAreaSqm ?? ""}
                 onChange={(v) => onChange({ landAreaSqm: v })}
               />
@@ -236,6 +245,7 @@ export function ReductionPhdInput({
                 label="취득시 토지 공시지가 (원/㎡)"
                 hint="취득연도 개별공시지가"
                 hideLandStdPrice
+                data-field={`reduction.${fieldType}.phdLandPricePerSqmAtAcq`}
                 pricePerSqm={value.landPricePerSqmAtAcq ?? ""}
                 onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
                 jibun={jibun}
@@ -248,6 +258,7 @@ export function ReductionPhdInput({
                 label="최초공시시 토지 공시지가 (원/㎡)"
                 hint="최초공시연도 개별공시지가"
                 hideLandStdPrice
+                data-field={`reduction.${fieldType}.phdLandPricePerSqmAtFirst`}
                 pricePerSqm={value.landPricePerSqmAtFirst ?? ""}
                 onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
                 jibun={jibun}
@@ -295,6 +306,7 @@ export function ReductionPhdInput({
               <label className="mb-1 block text-xs font-medium">최초공시시 건물 기준시가 (원)</label>
               <CurrencyInput
                 label=""
+                data-field={`reduction.${fieldType}.phdBuildingStdAtFirst`}
                 value={value.buildingStdAtFirst ?? ""}
                 onChange={(v) => onChange({ buildingStdAtFirst: v })}
               />

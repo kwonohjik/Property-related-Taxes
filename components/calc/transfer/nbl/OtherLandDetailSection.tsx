@@ -222,7 +222,7 @@ export function OtherLandDetailSection({
         onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
       />
 
-      <FieldCard label="재산세 과세 분류">
+      <FieldCard field="nblOtherPropertyTaxType" label="재산세 과세 분류">
         <Select
           value={asset.nblOtherPropertyTaxType ?? ""}
           onValueChange={(v) => v && onAssetChange({ nblOtherPropertyTaxType: v as PropertyTaxType })}
@@ -268,6 +268,7 @@ export function OtherLandDetailSection({
           </FieldCard>
 
           <FieldCard
+            field="nblOtherBuildingFloorArea"
             label="건축물 바닥면적"
             unit="㎡"
             hint="건축물이 있으면 필수. 부속토지 배율 한도(지방세법 시행령 §101①2호) 판정에 쓰입니다. 건물 시가표준액이 토지 시가표준액의 2% 미만인 경우에는 이 바닥면적만 별도합산(사업용)으로 남고 나머지 부속토지는 종합합산으로 안분됩니다(같은 호 나목)."
@@ -298,6 +299,7 @@ export function OtherLandDetailSection({
         {/* parking_attached — 기준면적 직접입력 (별표 자동산출 미지원) */}
         {relatedType === "parking_attached" && (
           <FieldCard
+            field="nblOtherStandardAreaLimit"
             label="기준면적 (㎡)"
             unit="㎡"
             hint="「주차장법」 부설주차장 설치기준면적. 이 면적까지 사업용, 초과분 비사업용"
@@ -310,7 +312,7 @@ export function OtherLandDetailSection({
         {/* F2 Phase B(B-3) — resort: 6호 휴양 §83의4⑫ 3요소 합산 */}
         {relatedType === "resort" && (
           <>
-            <FieldCard label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+            <FieldCard field="nblOtherResortOutdoorArea" label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
               <DecimalInput value={asset.nblOtherResortOutdoorArea} onChange={(v) => onAssetChange({ nblOtherResortOutdoorArea: v })} />
             </FieldCard>
             <FieldCard label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. ×2(2배 이내) 자동 적용">
@@ -335,7 +337,7 @@ export function OtherLandDetailSection({
               asset.nblOtherResortBuildingArea ||
               asset.nblOtherResortBuildingFloorArea
             ) && (
-              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡" hint="위 3요소(옥외방목장·부설주차장·건축물)를 하나도 입력하지 않은 경우에만 사용합니다. 3요소 중 하나라도 입력하면 그 값이 우선하며 이 칸은 쓰이지 않습니다.">
+              <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡" hint="위 3요소(옥외방목장·부설주차장·건축물)를 하나도 입력하지 않은 경우에만 사용합니다. 3요소 중 하나라도 입력하면 그 값이 우선하며 이 칸은 쓰이지 않습니다.">
                 <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
               </FieldCard>
             )}
@@ -359,7 +361,7 @@ export function OtherLandDetailSection({
             {/* workplace(별표3) · business(별표4) — 종목 선택 */}
             {sportsCategory !== "employee" && (
               <>
-                <FieldCard label="체육시설 종목" hint="유형(직장 별표3 / 운동경기업 별표4)에 따라 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
+                <FieldCard field="nblOtherSportsFacilityType" label="체육시설 종목" hint="유형(직장 별표3 / 운동경기업 별표4)에 따라 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
                   <Select
                     value={asset.nblOtherSportsFacilityType || "__clear"}
                     onValueChange={(v) => onAssetChange({ nblOtherSportsFacilityType: v && v !== "__clear" ? v : "" })}
@@ -419,7 +421,7 @@ export function OtherLandDetailSection({
                   </div>
                 )}
                 {!asset.nblOtherSportsFacilityType && (
-                  <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                  <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡">
                     <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
                   </FieldCard>
                 )}
@@ -429,7 +431,7 @@ export function OtherLandDetailSection({
             {/* employee(별표5) — 종업원수 + 보유 시설 다중 */}
             {sportsCategory === "employee" && (
               <>
-                <FieldCard label="종업원 수 (명)" unit="명" hint="별표5 종업원수 구간 기준면적 자동 산출(50인 이하는 코트면적만). 미입력 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
+                <FieldCard field="nblOtherEmployeeCount" label="종업원 수 (명)" unit="명" hint="별표5 종업원수 구간 기준면적 자동 산출(50인 이하는 코트면적만). 미입력 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
                   <DecimalInput value={asset.nblOtherEmployeeCount} onChange={(v) => onAssetChange({ nblOtherEmployeeCount: v })} />
                 </FieldCard>
                 <div className="space-y-1.5">
@@ -450,7 +452,7 @@ export function OtherLandDetailSection({
                   ))}
                 </div>
                 {!(asset.nblOtherEmployeeCount && (asset.nblOtherEmployeeFacilityKinds?.length ?? 0) > 0) && (
-                  <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                  <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡">
                     <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
                   </FieldCard>
                 )}
@@ -462,7 +464,7 @@ export function OtherLandDetailSection({
         {/* F2 Phase A — reserve_forces: 별표6 부대규모·시설 자동 합산, 미선택 시 직접입력 */}
         {relatedType === "reserve_forces" && (
           <>
-            <FieldCard label="부대편성인원 (별표6)" hint="부대규모·시설 선택 시 기준면적 자동 합산. 미선택 시 아래 직접입력." trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+            <FieldCard field="nblOtherReserveUnitSize" label="부대편성인원 (별표6)" hint="부대규모·시설 선택 시 기준면적 자동 합산. 미선택 시 아래 직접입력." trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
               <Select
                 value={asset.nblOtherReserveUnitSize || "__clear"}
                 onValueChange={(v) => onAssetChange({ nblOtherReserveUnitSize: v && v !== "__clear" ? v : "" })}
@@ -494,7 +496,7 @@ export function OtherLandDetailSection({
               </div>
             )}
             {!(asset.nblOtherReserveUnitSize && (asset.nblOtherReserveFacilities?.length ?? 0) > 0) && (
-              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+              <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡">
                 <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
               </FieldCard>
             )}
@@ -502,19 +504,19 @@ export function OtherLandDetailSection({
         )}
 
         {relatedType === "hatchang" && (
-          <FieldCard label="매년 최대 사용면적 (㎡)" unit="㎡" hint="이 면적의 120%까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+          <FieldCard field="nblOtherMaxAnnualArea" label="매년 최대 사용면적 (㎡)" unit="㎡" hint="이 면적의 120%까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
             <DecimalInput value={asset.nblOtherMaxAnnualArea} onChange={(v) => onAssetChange({ nblOtherMaxAnnualArea: v })} />
           </FieldCard>
         )}
 
         {relatedType === "youth_training" && (
-          <FieldCard label="수용정원 (명)" unit="명" hint="수용정원 × 200㎡까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+          <FieldCard field="nblOtherYouthCapacity" label="수용정원 (명)" unit="명" hint="수용정원 × 200㎡까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
             <DecimalInput value={asset.nblOtherYouthCapacity} onChange={(v) => onAssetChange({ nblOtherYouthCapacity: v })} />
           </FieldCard>
         )}
 
         {relatedType === "parking_garage" && (
-          <FieldCard label="최저차고기준면적 (㎡)" unit="㎡" hint="최저차고기준면적 × 1.5까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+          <FieldCard field="nblOtherMinGarageArea" label="최저차고기준면적 (㎡)" unit="㎡" hint="최저차고기준면적 × 1.5까지 사업용, 초과분 비사업용" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
             <DecimalInput value={asset.nblOtherMinGarageArea} onChange={(v) => onAssetChange({ nblOtherMinGarageArea: v })} />
           </FieldCard>
         )}
@@ -551,20 +553,20 @@ export function OtherLandDetailSection({
           />
           {asset.nblOtherMixedUseMode === "single_building" && (
             <>
-              <FieldCard label="특정용도분 연면적 (㎡)" unit="㎡" hint="안분 분자">
+              <FieldCard field="nblOtherMixedUseSpecificFloorArea" label="특정용도분 연면적 (㎡)" unit="㎡" hint="안분 분자">
                 <DecimalInput value={asset.nblOtherMixedUseSpecificFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFloorArea: v })} />
               </FieldCard>
-              <FieldCard label="건축물 전체 연면적 (㎡)" unit="㎡" hint="안분 분모">
+              <FieldCard field="nblOtherMixedUseTotalFloorArea" label="건축물 전체 연면적 (㎡)" unit="㎡" hint="안분 분모">
                 <DecimalInput value={asset.nblOtherMixedUseTotalFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFloorArea: v })} />
               </FieldCard>
             </>
           )}
           {asset.nblOtherMixedUseMode === "multiple_buildings" && (
             <>
-              <FieldCard label="특정용도분 바닥면적 (㎡)" unit="㎡" hint="안분 분자">
+              <FieldCard field="nblOtherMixedUseSpecificFootprint" label="특정용도분 바닥면적 (㎡)" unit="㎡" hint="안분 분자">
                 <DecimalInput value={asset.nblOtherMixedUseSpecificFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFootprint: v })} />
               </FieldCard>
-              <FieldCard label="다수 건축물 전체 바닥면적 (㎡)" unit="㎡" hint="동일 경계 안 전체 — 안분 분모">
+              <FieldCard field="nblOtherMixedUseTotalFootprint" label="다수 건축물 전체 바닥면적 (㎡)" unit="㎡" hint="동일 경계 안 전체 — 안분 분모">
                 <DecimalInput value={asset.nblOtherMixedUseTotalFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFootprint: v })} />
               </FieldCard>
             </>
@@ -604,7 +606,7 @@ export function OtherLandDetailSection({
 
         {asset.nblRevenueBusinessType && (
           <div className="space-y-2">
-            <FieldCard label="당해 과세기간 수입금액" unit="원" hint="해당 기간 중 실제 수입금액(연환산 전). 양도일까지 1과세기간 미만 영위 시 아래에서 1년으로 환산됩니다.">
+            <FieldCard field="nblRevenueCurrentRevenue" label="당해 과세기간 수입금액" unit="원" hint="해당 기간 중 실제 수입금액(연환산 전). 양도일까지 1과세기간 미만 영위 시 아래에서 1년으로 환산됩니다.">
               <CurrencyInput label="당해 수입금액" hideLabel hideUnit value={asset.nblRevenueCurrentRevenue} onChange={(v) => onAssetChange({ nblRevenueCurrentRevenue: v })} />
             </FieldCard>
 
@@ -647,7 +649,7 @@ export function OtherLandDetailSection({
                 onAssetChange({ nblRevenueCurrentLandValue: cur, nblRevenuePriorLandValue: prior })
               }
             />
-            <FieldCard label="당해 토지가액 (양도일 기준시가)" unit="원">
+            <FieldCard field="nblRevenueCurrentLandValue" label="당해 토지가액 (양도일 기준시가)" unit="원">
               <CurrencyInput label="당해 토지가액" hideLabel hideUnit value={asset.nblRevenueCurrentLandValue} onChange={(v) => onAssetChange({ nblRevenueCurrentLandValue: v })} />
             </FieldCard>
             <FieldCard label="직전 과세기간 수입금액" unit="원" hint="입력 시 (당해+직전) 합산비율과 비교해 큰 값 적용 (§168의11②)">
@@ -690,16 +692,16 @@ export function OtherLandDetailSection({
               checked={asset.nblRevenueCommonApportion}
               onCheckedChange={(c) => onAssetChange({ nblRevenueCommonApportion: c })}
             >
-              <FieldCard label="당해 공통수입금액" unit="원">
+              <FieldCard field="nblRevenueCommonRevenue" label="당해 공통수입금액" unit="원">
                 <CurrencyInput label="당해 공통수입금액" hideLabel hideUnit value={asset.nblRevenueCommonRevenue} onChange={(v) => onAssetChange({ nblRevenueCommonRevenue: v })} />
               </FieldCard>
-              <FieldCard label="당해 그 밖의 토지가액" unit="원" hint="안분 분모 = 당해 토지가액 + 그 밖의 토지가액">
+              <FieldCard field="nblRevenueOtherLandValue" label="당해 그 밖의 토지가액" unit="원" hint="안분 분모 = 당해 토지가액 + 그 밖의 토지가액">
                 <CurrencyInput label="당해 그 밖의 토지가액" hideLabel hideUnit value={asset.nblRevenueOtherLandValue} onChange={(v) => onAssetChange({ nblRevenueOtherLandValue: v })} />
               </FieldCard>
-              <FieldCard label="직전 공통수입금액" unit="원" hint="직전 과세기간도 공통수입이 있으면 입력(선택). 공통수입금액·그 밖의 토지가액을 함께 입력.">
+              <FieldCard field="nblRevenuePriorCommonRevenue" label="직전 공통수입금액" unit="원" hint="직전 과세기간도 공통수입이 있으면 입력(선택). 공통수입금액·그 밖의 토지가액을 함께 입력.">
                 <CurrencyInput label="직전 공통수입금액" hideLabel hideUnit value={asset.nblRevenuePriorCommonRevenue} onChange={(v) => onAssetChange({ nblRevenuePriorCommonRevenue: v })} />
               </FieldCard>
-              <FieldCard label="직전 그 밖의 토지가액" unit="원">
+              <FieldCard field="nblRevenuePriorOtherLandValue" label="직전 그 밖의 토지가액" unit="원">
                 <CurrencyInput label="직전 그 밖의 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorOtherLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorOtherLandValue: v })} />
               </FieldCard>
             </ToggleCard>

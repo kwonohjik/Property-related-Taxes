@@ -75,7 +75,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
         (대통령령 제30395호 부칙 제38조). 거주요건만 면제되고 보유 2년은 필요합니다.
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <FieldCard label="사업자등록 신청일" required hint="세무서 — 소득세법 §168①">
+        <FieldCard field="proviso4hoBusinessRegDate" label="사업자등록 신청일" required hint="세무서 — 소득세법 §168①">
           <div data-testid="proviso-4ho-business-date">
             <DateInput
               value={value.proviso4hoBusinessRegDate ?? ""}
@@ -84,6 +84,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
           </div>
         </FieldCard>
         <FieldCard
+          field="proviso4hoRentalRegDate"
           label="임대사업자 등록 신청일"
           required
           hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일"
@@ -103,6 +104,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
             신청 당시 세대가 조정대상지역에 이 주택(분양권 상태였다면 그 분양권) 1채만 보유했나요?
           </label>
           <RadioCardGroup<YesNo>
+            data-field="proviso4hoRegulatedOneHouse"
             name="proviso4hoRegulatedOneHouse"
             layout="inline"
             value={value.proviso4hoRegulatedOneHouse ?? ""}
@@ -115,6 +117,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
       <div className="space-y-1.5">
         <label className="text-sm font-medium">양도일 현재 임대사업자 등록 상태</label>
         <RadioCardGroup<Status>
+          data-field="proviso4hoStatus"
           name="proviso4hoStatus"
           tone="violet"
           value={value.proviso4hoStatus ?? ""}
@@ -128,6 +131,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
           <div className="space-y-1.5">
             <label className="text-sm font-medium">임대의무기간(민간임대주택법 §43) 중에 양도하나요?</label>
             <RadioCardGroup<YesNo>
+              data-field="proviso4hoDuringMandatory"
               name="proviso4hoDuringMandatory"
               layout="inline"
               value={value.proviso4hoDuringMandatory ?? ""}
@@ -138,6 +142,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
           <div className="space-y-1.5">
             <label className="text-sm font-medium">임대보증금·임대료를 연 5% 넘게 올린 적이 있나요?</label>
             <RadioCardGroup<YesNo>
+              data-field="proviso4hoRentOver5"
               name="proviso4hoRentOver5"
               layout="inline"
               value={value.proviso4hoRentOver5 ?? ""}
@@ -150,6 +155,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
 
       {scope.rentIncreaseContractDate && (
         <FieldCard
+          field="proviso4hoRentOver5ContractDate"
           label="5% 넘게 올린 계약의 체결·갱신일"
           required
           hint="여러 번이면 가장 늦은 날 — 2019년 2월 12일 이후 체결·갱신한 계약부터 제외 사유가 됩니다"

@@ -16,6 +16,7 @@
  * | 삭제 전 4호 임대사업자 등록 | 신청일 2개 · 등록 상태 · (②구간) 신청 당시 1주택 · (유지) 임대의무기간·5% | `rental-4ho-proviso.ts` (OH-38) |
  */
 import { collectRental4hoErrors, type Rental4hoFormSlice } from "./rental-4ho-proviso";
+import { fieldError } from "./transfer-tax-validate-field";
 
 export function collectExemptionProvisoErrors(p: {
   /** `effectiveProvisoReason` 적용 후 사유. "" = 해당 없음. */
@@ -28,7 +29,7 @@ export function collectExemptionProvisoErrors(p: {
 }): string[] {
   const errors: string[] = [];
   if ((p.reason === "overseas_migration" || p.reason === "overseas_residence") && !p.departureDate) {
-    errors.push("§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)");
+    errors.push(fieldError("provisoDepartureDate", "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)"));
   }
   /**
    * 수용되는 주택 자체를 양도하는 경우 그 양도가 곧 수용이다 — 수용일에 양도일을 넣으면 된다.
@@ -36,11 +37,11 @@ export function collectExemptionProvisoErrors(p: {
    */
   if (p.reason === "expropriation" && !p.expropriationDate) {
     errors.push(
-      "§154① 단서(공익사업 수용): 수용일을 입력하세요. (수용된 주택 자체를 양도하면 양도일과 같은 날입니다)",
+      fieldError("provisoExpropriationDate", "§154① 단서(공익사업 수용): 수용일을 입력하세요. (수용된 주택 자체를 양도하면 양도일과 같은 날입니다)"),
     );
   }
   if (p.reason === "pre_designation_contract" && !p.preContractNoHouse) {
-    errors.push("§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.");
+    errors.push(fieldError("provisoPreContractNoHouse", "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."));
   }
   if (p.reason === "rental_registration_4ho") errors.push(...collectRental4hoErrors(p.rental4ho ?? {}));
   return errors;

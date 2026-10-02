@@ -56,6 +56,7 @@ export function RentalHousing154_10Block({
         <ToggleCard
           tone="emerald"
           title="임대주택 등록·어린이집 운영 사실 (소령 §154⑩1호)"
+          data-field="rentalHousingException.wasRegisteredRentalOrChildcare"
           description={
             '「민간임대주택에 관한 특별법」§5에 따라 임대주택으로 등록했거나, ' +
             '「영유아보육법」§12·§13에 따라 어린이집으로 설치·운영한 사실이 있습니다.'
@@ -69,6 +70,7 @@ export function RentalHousing154_10Block({
       {showDateInput && (
         <div data-testid="rental-154-10-prior-date">
           <FieldCard
+            field="rentalHousingException.priorResidenceTransferDate"
             label="직전거주주택 양도일"
             required
             hint="소령 §154⑩2호 — 이 주택이 직전거주주택보유주택임을 확인하는 값이자 §161① 비과세 기산점입니다."

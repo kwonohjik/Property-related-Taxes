@@ -555,7 +555,13 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.incomeAfterOffset,
-          buildIncomeFormula,
+          (p) =>
+            buildIncomeFormula(
+              p,
+              (aggregate?.aggregated.lossOffsetTable ?? [])
+                .filter((row) => row.fromPropertyId === p.propertyId)
+                .reduce((sum, row) => sum + row.amount, 0),
+            ),
         )
       : undefined,
   });

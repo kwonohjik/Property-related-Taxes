@@ -73,7 +73,7 @@ export function Unsold985InputForm({
       <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
-          <DateInput value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
+          <DateInput data-field="reduction.unsold_98_5.contractDate985" value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
           <p className="mt-1 text-micro text-muted-foreground">
             2010.2.11 현재 수도권 밖 미분양주택을 2011.4.30까지 사업주체등과 최초 매매계약
             (계약금 납부 포함 — 법 §98의5①)
@@ -85,6 +85,7 @@ export function Unsold985InputForm({
         <div>
           <label className="mb-1 block text-xs font-medium">분양가격 인하율 (%)</label>
           <DecimalInput
+            data-field="reduction.unsold_98_5.priceReductionRatePct985"
             value={value.priceReductionRatePct985}
             onChange={(v) => onChange({ priceReductionRatePct985: v })}
           />
@@ -165,6 +166,7 @@ export function Unsold985InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold985"
+          fieldType="unsold_98_5"
           snapshotKeyPrefix="red985"
         />
       </SectionShell>

@@ -170,6 +170,7 @@ export function ExemptionProvisoSection({
                (`exemption-proviso-validate.ts`).
           */}
           <FieldCard
+            field="provisoExpropriationDate"
             label="수용일"
             required
             hint="필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년 내 양도해야 합니다"
@@ -183,7 +184,7 @@ export function ExemptionProvisoSection({
       )}
 
       {isOverseas && (
-        <FieldCard label="출국일" required hint="출국일부터 2년 내 양도 시 적용 (필수)">
+        <FieldCard field="provisoDepartureDate" label="출국일" required hint="출국일부터 2년 내 양도 시 적용 (필수)">
           <DateInput
             value={provisoDepartureDate}
             onChange={(v) => onChange({ provisoDepartureDate: v })}
@@ -192,14 +193,16 @@ export function ExemptionProvisoSection({
       )}
 
       {effReason === "pre_designation_contract" && (
-        <ToggleCard
-          variant="card"
-          tone="violet"
-          title="계약금 지급일 현재 1세대 무주택"
-          description="조정대상지역 공고일 이전 매매계약 + 계약금 지급일 현재 1세대 무주택임을 확인합니다. (증빙서류 보관 필요)"
-          checked={provisoPreContractNoHouse}
-          onCheckedChange={(v) => onChange({ provisoPreContractNoHouse: v })}
-        />
+        <div data-field="provisoPreContractNoHouse">
+          <ToggleCard
+            variant="card"
+            tone="violet"
+            title="계약금 지급일 현재 1세대 무주택"
+            description="조정대상지역 공고일 이전 매매계약 + 계약금 지급일 현재 1세대 무주택임을 확인합니다. (증빙서류 보관 필요)"
+            checked={provisoPreContractNoHouse}
+            onCheckedChange={(v) => onChange({ provisoPreContractNoHouse: v })}
+          />
+        </div>
       )}
 
       {effReason === "rental_registration_4ho" && (

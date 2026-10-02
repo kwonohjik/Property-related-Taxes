@@ -37,6 +37,8 @@ interface Props {
   rentalPeriodSharedWith2ho?: boolean;
   /** 국민주택(규모)을 2호 칸(나목)에서 가져온다. */
   nationalSizeSharedWith2ho?: boolean;
+  /** 임대기간 칸의 입력칸 이동 앵커(`data-field`) — 검증 오류가 이 칸을 가리킨다. */
+  fieldRentalPeriod?: string;
 }
 
 const LABEL = "block text-caption text-muted-foreground font-medium";
@@ -54,6 +56,7 @@ export function TaxIncentiveRentalFields({
   showApartmentToggle = false,
   rentalPeriodSharedWith2ho = false,
   nationalSizeSharedWith2ho = false,
+  fieldRentalPeriod,
 }: Props) {
   const typeTargeted =
     v.taxIncentiveRentalRegistrationType === "long_term_general" ||
@@ -66,7 +69,7 @@ export function TaxIncentiveRentalFields({
           임대기간·아파트 여부는 위 「장기임대주택」 칸에 적은 값을 함께 씁니다 (같은 주택의 같은 사실).
         </p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1" data-field={fieldRentalPeriod}>
           <label className={LABEL}>임대기간 (년)</label>
           <DecimalInput
             value={v.rentalPeriodYears ?? ""}

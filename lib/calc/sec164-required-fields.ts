@@ -34,6 +34,8 @@ export interface Sec164FieldStatus {
   total: number;
   /** 비어 있는 항목의 사용자 표기 이름 */
   missing: string[];
+  /** `missing`과 같은 순서의 입력칸 식별자(`data-field`) — 검증 오류 → 입력칸 이동 */
+  missingFields: Array<keyof AssetForm>;
   /** §164 **전용** 필드가 하나라도 채워졌는가 — 「이 경로를 쓰겠다」는 의사 표시 */
   triggered: boolean;
 }
@@ -42,6 +44,8 @@ interface FieldSpec {
   /** 값이 있으면 true */
   has: (a: AssetForm) => boolean;
   label: string;
+  /** 이 항목을 입력하는 칸의 식별자(`data-field`) — 검증 오류 → 입력칸 이동 */
+  field: keyof AssetForm;
   /**
    * §164 전용이 **아닌** 공유 필드 — 채워져 있어도 **opt-in 신호로 보지 않는다**.
    *
@@ -58,21 +62,25 @@ interface FieldSpec {
 const amountField = (key: keyof AssetForm, label: string, shared?: boolean): FieldSpec => ({
   has: (a) => parseAmount(String(a[key] ?? "")) > 0,
   label,
+  field: key,
   shared,
 });
 
 const decimalField = (key: keyof AssetForm, label: string, shared?: boolean): FieldSpec => ({
   has: (a) => (parseFloat(String(a[key] ?? "").replace(/,/g, "")) || 0) > 0,
   label,
+  field: key,
   shared,
 });
 
 function tally(a: AssetForm, specs: FieldSpec[]) {
-  const missing = specs.filter((s) => !s.has(a)).map((s) => s.label);
+  const missingSpecs = specs.filter((s) => !s.has(a));
+  const missing = missingSpecs.map((s) => s.label);
   return {
     filled: specs.length - missing.length,
     total: specs.length,
     missing,
+    missingFields: missingSpecs.map((s) => s.field),
     triggered: specs.some((s) => !s.shared && s.has(a)),
   };
 }
@@ -89,6 +97,7 @@ function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164Fiel
     filled: parts.reduce((n, p) => n + p.filled, 0),
     total: parts.reduce((n, p) => n + p.total, 0),
     missing: parts.flatMap((p) => p.missing),
+    missingFields: parts.flatMap((p) => p.missingFields),
     triggered: parts.some((p) => p.triggered),
   };
 }
@@ -114,9 +123,9 @@ export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
 
   const atBaseDate = amountField("inhHouseValLandPricePerSqmAtInheritance", "취득당시 개별공시지가");
   const gradeGroup: FieldSpec[] = [
-    { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급" },
-    { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급" },
-    { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급" },
+    { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
+    { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
+    { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
     amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
   ];
 
@@ -176,9 +185,9 @@ export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
     tally(asset, [
       // 면적은 토지 자산의 **일반 필드**다(취득원인 블록 등에서 입력) ⇒ opt-in 신호 아님
       decimalField("acquisitionArea", "취득 당시 면적", true),
-      { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급" },
-      { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급" },
-      { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급" },
+      { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
+      { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
+      { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
       amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
     ]),
   );

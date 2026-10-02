@@ -52,7 +52,7 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         title="사원용 주택"
         description="종업원에게 10년 이상 무상 제공"
       >
-        <div className="space-y-1 pt-1">
+        <div className="space-y-1 pt-1" data-field="sellingHouseExclusion.freeProvisionYears">
           <label className="block text-caption text-muted-foreground font-medium">무상 제공 기간 (년)</label>
           <DecimalInput
             value={v.freeProvisionYears ?? ""}
@@ -91,7 +91,7 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         title="어린이집 운영 주택"
         description="5년 이상 어린이집으로 운영"
       >
-        <div className="space-y-1 pt-1">
+        <div className="space-y-1 pt-1" data-field="sellingHouseExclusion.dayCareOperationYears">
           <label className="block text-caption text-muted-foreground font-medium">운영 기간 (년)</label>
           <DecimalInput
             value={v.dayCareOperationYears ?? ""}

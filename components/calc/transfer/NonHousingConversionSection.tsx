@@ -131,6 +131,7 @@ export function NonHousingConversionExpandedPanel({ asset, onChange, transferDat
       </div>
 
       <FieldCard
+        field="residentialUseStartDate"
         label="사실상 주거용 사용 개시일"
         hint="사실상 주거용으로 사용한 날. 불분명하면 건축물대장상 용도변경일을 입력하세요. 취득일 이후, 양도일 이전이어야 합니다."
         trailing={

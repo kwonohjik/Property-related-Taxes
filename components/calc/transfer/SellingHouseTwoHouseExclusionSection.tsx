@@ -60,6 +60,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
         <div className="space-y-2 pt-1">
           <div className="space-y-1">
             <CurrencyInput
+              data-field="sellingHouseExclusion.acquisitionOfficialPrice"
               label="취득 당시 기준시가"
               value={v.acquisitionOfficialPrice ?? ""}
               onChange={(s) => patch({ acquisitionOfficialPrice: s || undefined })}
@@ -68,7 +69,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
               3억원을 초과하지 않아야 배제 적용 — 양도 당시가 아니라 취득 당시 값입니다
             </p>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1" data-field="sellingHouseExclusion.unavoidableResidenceYears">
             <label className="block text-caption text-muted-foreground font-medium">거주기간 (년)</label>
             <DecimalInput
               value={v.unavoidableResidenceYears ?? ""}

@@ -26,6 +26,20 @@ export interface ClauseTaxEcho {
 // M-5: 세율군별 집계 + 세율 적용
 // ============================================================
 
+/**
+ * 군 표시용 최고세율 — **과세표준 > 0인 몫**만 후보로 한다.
+ *
+ * 통산(§102②)·기본공제로 과세표준이 0원이 된 호의 세율은 군 산출세액에 한 푼도 기여하지 않는데,
+ * 그 세율이 최고값이면 군 세율로 표시됐다(40% 자산 + 통산으로 0원이 된 70% 자산 → 「70%」).
+ * 전부 0원이면 종전대로 전체의 최고세율을 쓴다 — 0원 군도 자기 세율은 보여야 한다.
+ * 표시 echo 전용이다: 세액·비교과세 판정은 이 값을 읽지 않는다.
+ */
+function pickDisplayRate(parts: { taxBase: number; rate: number }[]): number {
+  const positive = parts.filter((p) => p.taxBase > 0);
+  const pool = positive.length > 0 ? positive : parts;
+  return Math.max(0, ...pool.map((p) => p.rate));
+}
+
 export function aggregateByGroup(
   records: AssetRecord[],
   incomeAfterOffset: number[],
@@ -249,12 +263,14 @@ export function aggregateByGroup(
         buckets.set(k, [...(buckets.get(k) ?? []), p]);
       });
       groupCalculatedTax = 0;
-      appliedRate = 0;
+      // 표시용 최고세율 — 과세표준 > 0인 버킷에서만 고른다(`pickDisplayRate`). 통산으로 0원이 된
+      // 70% 자산이 40% 자산의 군 세율을 70%로 덮어 쓰던 결함의 수정이다.
+      const bucketRates: { taxBase: number; rate: number }[] = [];
       for (const [bucketKey, bucket] of buckets) {
         if (bucket.length === 1) {
           recordBucket(group, bucketKey, bucket, bucket[0].calculatedTax, bucket[0].taxBase);
           groupCalculatedTax += bucket[0].calculatedTax;
-          appliedRate = Math.max(appliedRate, bucket[0].appliedRate); // 표시용 최고세율
+          bucketRates.push({ taxBase: bucket[0].taxBase, rate: bucket[0].appliedRate });
           continue;
         }
         // 합산 과세표준 × 세율로 **1회 floor** — 파트별 floor 합산은 floor 횟수 차이로 ±N원
@@ -269,8 +285,9 @@ export function aggregateByGroup(
         const tr = calcTax(mergedBase, parsedRatesOf(bucket[0].assetIdx), bucket[0].rateInput, bucket[0].mhResult);
         recordBucket(group, bucketKey, bucket, tr.calculatedTax, mergedBase);
         groupCalculatedTax += tr.calculatedTax;
-        appliedRate = Math.max(appliedRate, tr.appliedRate);
+        bucketRates.push({ taxBase: mergedBase, rate: tr.appliedRate });
       }
+      appliedRate = pickDisplayRate(bucketRates);
       surchargeRate = undefined;
       progressiveDeduction = 0;
     } else {
@@ -435,8 +452,11 @@ export function aggregateByGroup(
       // 버킷이 둘 이상이면 호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다 — 0을 유지한다.
       appliedRate = metaReproducesTax
         ? onlyBucketMeta!.appliedRate
-        : Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
-      surchargeRate = Math.max(...clauseParts.map((p) => p.surchargeRate ?? 0));
+        : pickDisplayRate(clauseParts.map((p) => ({ taxBase: p.taxBase, rate: p.appliedRate }))); // 표시용 최고세율
+      // 중과분도 **세율과 같은 후보 집합**에서 고른다 — 다른 호에서 나오면 `+N%p`가 거짓이 된다.
+      surchargeRate = pickDisplayRate(
+        clauseParts.map((p) => ({ taxBase: p.taxBase, rate: p.surchargeRate ?? 0 })),
+      );
       progressiveDeduction = metaReproducesTax ? onlyBucketMeta!.progressiveDeduction : 0;
     }
 

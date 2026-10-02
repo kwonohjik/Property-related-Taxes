@@ -103,12 +103,12 @@ export function New99InputForm({
         {isFromBuilder ? (
           <div>
             <label className="mb-1 block text-xs font-medium">최초 매매계약일 (비우면 자산 매매계약일 사용)</label>
-            <DateInput value={value.contractDate99} onChange={(v) => onChange({ contractDate99: v })} />
+            <DateInput data-field="reduction.new_99.contractDate99" value={value.contractDate99} onChange={(v) => onChange({ contractDate99: v })} />
           </div>
         ) : (
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
-            <DateInput value={value.usageApprovalDate99} onChange={(v) => onChange({ usageApprovalDate99: v })} />
+            <DateInput data-field="reduction.new_99.usageApprovalDate99" value={value.usageApprovalDate99} onChange={(v) => onChange({ usageApprovalDate99: v })} />
           </div>
         )}
       </SectionShell>
@@ -154,6 +154,7 @@ export function New99InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="new99"
+          fieldType="new_99"
           snapshotKeyPrefix="red99"
           areaHint="주택 전용면적만 입력 — 부수토지 면적은 포함하지 마세요. 고가주택 판정용이며, 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용 제외 (법 §99① 단서)"
         />
@@ -170,6 +171,7 @@ export function New99InputForm({
           <div>
             <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
             <CurrencyInput
+              data-field="reduction.new_99.previousHouseStdPrice99"
               value={value.previousHouseStdPrice99}
               onChange={(v) => onChange({ previousHouseStdPrice99: v })}
               label=""

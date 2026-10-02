@@ -103,6 +103,7 @@ export function Unsold986InputForm({
             주택+부속토지 기준시가 합계 ({isBuyerRented ? "취득 당시" : "최초 임대개시 당시"})
           </label>
           <CurrencyInput
+            data-field="reduction.unsold_98_6.stdPriceSumAtBase986"
             value={value.stdPriceSumAtBase986}
             onChange={(v) => onChange({ stdPriceSumAtBase986: v })}
             label=""
@@ -113,7 +114,7 @@ export function Unsold986InputForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
-          <DecimalInput value={value.floorAreaSqm986} onChange={(v) => onChange({ floorAreaSqm986: v })} />
+          <DecimalInput data-field="reduction.unsold_98_6.floorAreaSqm986" value={value.floorAreaSqm986} onChange={(v) => onChange({ floorAreaSqm986: v })} />
           <p className="mt-1 text-micro text-muted-foreground">149㎡ 초과 시 제외됩니다</p>
         </div>
       </SectionShell>
@@ -123,12 +124,12 @@ export function Unsold986InputForm({
           <>
             <div>
               <label className="mb-1 block text-xs font-medium">임대계약 체결일</label>
-              <DateInput value={value.rentalContractDate986} onChange={(v) => onChange({ rentalContractDate986: v })} />
+              <DateInput data-field="reduction.unsold_98_6.rentalContractDate986" value={value.rentalContractDate986} onChange={(v) => onChange({ rentalContractDate986: v })} />
               <p className="mt-1 text-micro text-muted-foreground">2011.12.31 이전 체결에 한정 (법 §98의6①2호)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">임대개시일</label>
-              <DateInput value={value.rentalStartDate986} onChange={(v) => onChange({ rentalStartDate986: v })} />
+              <DateInput data-field="reduction.unsold_98_6.rentalStartDate986" value={value.rentalStartDate986} onChange={(v) => onChange({ rentalStartDate986: v })} />
               <p className="mt-1 text-micro text-muted-foreground">
                 사업자등록(소법 §168)과 임대사업자등록(민특법 §5) 후 임대를 개시한 날부터 기산 (조특령 §98의5⑤1호)
               </p>
@@ -227,6 +228,7 @@ export function Unsold986InputForm({
           assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold986"
+          fieldType="unsold_98_6"
           snapshotKeyPrefix="red986"
         />
       </SectionShell>

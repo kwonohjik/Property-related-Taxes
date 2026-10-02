@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  comparativeTaxView,
+  describeComparativeDecision,
+  groupRateText,
+} from "@/components/calc/results/transfer/comparative-tax-display";
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -358,6 +363,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
 
 function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
   if (!hasGroupTaxCards(result)) return null;
+  const comparative = comparativeTaxView(result);
 
   return (
     <Card>
@@ -378,10 +384,7 @@ function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
               </span>
               <span className="text-muted-foreground">과세표준 {formatKRW(g.groupTaxBase)}</span>
               <span className="ml-auto font-medium">{formatKRW(g.groupCalculatedTax)}</span>
-              <span className="text-muted-foreground text-xs">
-                ({(g.appliedRate * 100).toFixed(1)}%
-                {g.surchargeRate ? ` +${(g.surchargeRate * 100).toFixed(0)}%p` : ""})
-              </span>
+              <span className="text-muted-foreground text-xs">{groupRateText(g)}</span>
             </div>
           ))}
           <Separator />
@@ -389,6 +392,17 @@ function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
             <span>세율군별 합계</span>
             <span>{formatKRW(result.calculatedTaxByGroups)}</span>
           </div>
+          {comparative && (
+            <div className="space-y-1 text-sm" data-testid="comparative-tax-decision">
+              <div className="flex justify-between text-muted-foreground">
+                <span>전체 누진세율 적용 (방법 A)</span>
+                <span>{formatKRW(comparative.methodA)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {describeComparativeDecision(comparative)} (소득세법 §104⑤)
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

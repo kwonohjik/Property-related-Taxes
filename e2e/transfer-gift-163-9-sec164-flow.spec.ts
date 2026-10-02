@@ -281,6 +281,12 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
       timeout: 15_000,
     });
 
+    // 이 오류는 입력칸 이동(Phase 4)이 붙어, 계산 실패 직후 자동 이동이 평가방법 칸으로 비동기로 간다
+    // (섹션 펼침 + 포커스). 그 사이에 셀렉트를 열면 뒤늦은 포커스 이동이 팝업을 닫는다 — 이동이 끝나길 기다린다.
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="publishedValueAtInheritance"]')))
+      .toBe(true);
+
     // ── 2. 통과 경로 — 평가방법 「보충적평가액」 → 보조계산 토글 → 단가·면적
     await page.getByRole("button", { name: "자산 목록" }).first().click();
     await expandAssetSection(page, 3);

@@ -73,6 +73,9 @@ export function NonPurchaseSplitInputsBlock(props: {
         <StandardPriceInput
           propertyKind={toPropertyKind(asset.assetKind)}
           totalPrice={asset.standardPriceAtAcq ?? ""}
+          data-field="standardPriceAtAcq"
+          fieldArea="acquisitionArea"
+          fieldPricePerSqm="standardPricePerSqmAtAcq"
           onTotalPriceChange={(v) => onChange({ standardPriceAtAcq: v })}
           pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
           onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
@@ -108,6 +111,7 @@ export function NonPurchaseSplitInputsBlock(props: {
             <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2">
               <LandPriceLookupField
                 label="취득시 토지 공시지가"
+                data-field="standardPricePerSqmAtAcq"
                 pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
                 onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
                 area={parseDecimal(asset.acquisitionArea) || undefined}
@@ -115,7 +119,7 @@ export function NonPurchaseSplitInputsBlock(props: {
                 jibun={asset.addressJibun}
                 hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 유일한 근거 (§99①1호 가목)"
               />
-              <FieldCard label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
+              <FieldCard field="acquisitionArea" label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
                 <DecimalInput
                   value={asset.acquisitionArea ?? ""}
                   onChange={(v) => onChange({ acquisitionArea: v })}

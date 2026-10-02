@@ -16,6 +16,8 @@
  *
  * 반환: 사람이 읽는 메시지 배열(구간별 첫 오류 1건 + 겹침 건수만큼). 빈 배열이면 통과.
  */
+import { fieldError } from "./transfer-tax-validate-field";
+
 export type ResidenceIntervalLike = { moveInDate: string; moveOutDate: string };
 
 export function collectResidenceIntervalErrors(args: {
@@ -30,16 +32,16 @@ export function collectResidenceIntervalErrors(args: {
   periods.forEach((p, i) => {
     const label = `거주 구간 #${i + 1}`;
     const firstError = (() => {
-      if (!p.moveInDate) return `${label}: 입주일을 입력하세요.`;
+      if (!p.moveInDate) return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일을 입력하세요.`);
       if (!p.moveOutDate)
-        return `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`;
-      if (p.moveOutDate < p.moveInDate) return `${label}: 퇴거일은 입주일보다 이후여야 합니다.`;
+        return fieldError(`residencePeriods.${i}.moveOutDate`, `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`);
+      if (p.moveOutDate < p.moveInDate) return fieldError(`residencePeriods.${i}.moveOutDate`, `${label}: 퇴거일은 입주일보다 이후여야 합니다.`);
       if (acquisitionDate && p.moveInDate < acquisitionDate)
-        return `${label}: 입주일이 취득일(${acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.`;
+        return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 취득일(${acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.`);
       if (transferDate && p.moveInDate > transferDate)
-        return `${label}: 입주일은 양도일 이전이어야 합니다.`;
+        return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일은 양도일 이전이어야 합니다.`);
       if (transferDate && p.moveOutDate > transferDate)
-        return `${label}: 퇴거일은 양도일 이전이어야 합니다.`;
+        return fieldError(`residencePeriods.${i}.moveOutDate`, `${label}: 퇴거일은 양도일 이전이어야 합니다.`);
       return null;
     })();
     if (firstError) errors.push(firstError);
@@ -54,8 +56,12 @@ export function collectResidenceIntervalErrors(args: {
     const prev = complete[i - 1];
     const cur = complete[i];
     if (prev.moveOutDate > cur.moveInDate) {
+      // 나중 구간의 입주일이 앞 구간 퇴거일보다 이르다 — 그 입주일을 고치면 겹침이 풀린다
       errors.push(
-        `거주 구간 #${prev.idx + 1}(퇴거 ${prev.moveOutDate})과 #${cur.idx + 1}(입주 ${cur.moveInDate})이 겹칩니다. 구간이 겹치면 거주기간이 이중 계산되므로 구간을 분리하거나 합쳐서 입력하세요.`,
+        fieldError(
+          `residencePeriods.${cur.idx}.moveInDate`,
+          `거주 구간 #${prev.idx + 1}(퇴거 ${prev.moveOutDate})과 #${cur.idx + 1}(입주 ${cur.moveInDate})이 겹칩니다. 구간이 겹치면 거주기간이 이중 계산되므로 구간을 분리하거나 합쳐서 입력하세요.`,
+        ),
       );
     }
   }
