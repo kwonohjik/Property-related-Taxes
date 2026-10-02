@@ -27,6 +27,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   longTermHoldingRate: number;
   swapApplied: boolean | undefined;
   swapComparison: TransferTaxResult["swapComparison"];
+  depreciationAmount: number | undefined;
   expropriationValuationDetail: TransferTaxResult["expropriationValuationDetail"];
   auctionValuationDetail: TransferTaxResult["auctionValuationDetail"];
   housingExpropriationValuationDetail: TransferTaxResult["housingExpropriationValuationDetail"];
@@ -69,6 +70,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     appliedExpenses,
     swapApplied,
     swapComparison,
+    depreciationAmount,
     expropriationValuationDetail,
     auctionValuationDetail,
     housingExpropriationValuationDetail,
@@ -142,6 +144,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     expenses: appliedExpenses,
     swapApplied,
     swapComparison,
+    depreciationAmount,
     expropriationValuationDetail,
     auctionValuationDetail,
     housingExpropriationValuationDetail,

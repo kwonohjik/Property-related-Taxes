@@ -40,6 +40,7 @@ import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPer
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
+import { depreciationSupport } from "@/lib/calc/depreciation-scope";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -520,6 +521,8 @@ export function computeTransferPerAssetSummary(
     let acqPrice = fractional ? Math.floor(acqSource.value * ratio) : acqSource.value;
     // 미확정 파트·필지가 있으면 계산 후 확정 — 부분합을 총액으로 표시하지 않는다.
     let acqPending = acqSource.pending;
+    /** 아래 분기가 이미 감가상각비를 공제한 값을 내는가(일반건물 카드 합) — 이중 공제 방지. */
+    let depAlreadyDeducted = false;
     if (mixedResult && i === 0) {
       // 겸용주택: 주택+상가 환산취득가액 합(전용 필드, 라벨 파싱 아님).
       acqPrice =
@@ -529,8 +532,10 @@ export function computeTransferPerAssetSummary(
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 취득가액 합. 엔진이 실제 쓴 값이라 환산·실가 모두 정확.
+      // §97③ 감가상각비는 `buildApportionment`가 이미 공제한 **후** 값이다 — 아래에서 또 빼지 않는다.
       acqPrice = bundledCards.acq;
       acqPending = false;
+      depAlreadyDeducted = true;
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 취득가액 합(환산 필지 포함). 계산 전 pending을 여기서 해소한다.
       acqPrice = singleResult.parcelDetails.reduce((s, p) => s + p.acquisitionPrice, 0);
@@ -548,6 +553,8 @@ export function computeTransferPerAssetSummary(
        */
       acqPrice = dedicatedPreview.acqPrice;
       acqPending = false;
+      // 일반건물·상가 프리뷰는 §97③ 감가상각비를 이미 공제한 값이다 — 아래에서 또 빼지 않는다.
+      depAlreadyDeducted = true;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       /**
@@ -610,6 +617,16 @@ export function computeTransferPerAssetSummary(
     } else if (acqPrice === 0 && !result && a.useEstimatedAcquisition) {
       // 멀티 환산 — 프리뷰 미지원
       acqPending = true;
+    }
+
+    // §97③ 감가상각비 — 취득가액에서 공제한 값이 엔진이 차감하는 취득가액이다. 위 체인의 값은 전부
+    // 공제 **전**(입력 실가·환산 `estimatedBase`·상가 환산 총액·안분액)이라 여기서 한 번만 뺀다.
+    // 받을 수 없는 구조(파트별 취득가액 등)는 엔진도 공제하지 않으므로 빼지 않는다(`depreciation-scope.ts`
+    // — ⑤·⑧과 같은 술어). swap(§97②2호 단서)은 취득가액이 0이라 뺄 것이 없다.
+    if (acqPrice > 0 && !depAlreadyDeducted && !singleResult?.swapApplied && depreciationSupport(a).status === "ok") {
+      const depRaw = parseRaw(a.depreciationAmount);
+      const dep = fractional ? Math.floor(depRaw * ratio) : depRaw;
+      if (dep > 0) acqPrice = Math.max(0, acqPrice - dep);
     }
 
     // ── 필요경비 ──

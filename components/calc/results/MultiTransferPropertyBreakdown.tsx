@@ -76,6 +76,7 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
      * 단건 `buildRows`의 `capExInAcquisitionColumnOfResult`가 읽는다 — 없으면 이 두 축의 자산별 신고서가
      * 합산 서식(자산 열)과 **다른 칸**에 자본적지출을 싣는다. 표시 전용 echo다(세액 불변).
      */
+    depreciationAmount: b.depreciationAmount,
     swapApplied: b.filingDisplay?.swapApplied,
     carryoverTaxationDetail: b.carryoverTaxationDetail,
     /*

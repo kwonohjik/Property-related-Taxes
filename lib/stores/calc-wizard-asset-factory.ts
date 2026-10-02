@@ -112,6 +112,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     directExpenses: "0",
     capitalExpenditure: "0",
     transferExpense: "0",
+    depreciationAmount: "0",
     reductions: [],
     transferCause: "general",
     expropriationNoticeDate: "",

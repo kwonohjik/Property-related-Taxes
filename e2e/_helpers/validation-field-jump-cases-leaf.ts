@@ -139,6 +139,15 @@ const MISC_CASES: FieldJumpCase[] = [
     name: "leaf: 주거용 사용 개시일 ≥ 양도일", field: "residentialUseStartDate", step: 0, assetIndex: A, message: /^자산: 주거용 사용 개시일은 양도일 이전이어야 합니다/,
     form: () => withPrimary({ hasNonHousingConversion: true, residentialUseStartDate: "2025-01-01" }),
   },
+  // ── §97③ 감가상각비 (depreciation) — 취득가액 한도 · 받을 수 없는 구조의 stale 값 ──
+  {
+    name: "leaf: 감가상각비 > 취득가액", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 감가상각비\(.*\)가 취득가액\(.*\)보다 클 수 없습니다/,
+    form: () => withPrimary({ assetKind: "building", acquisitionCause: "purchase", fixedAcquisitionPrice: "100000000", depreciationAmount: "200000000" }),
+  },
+  {
+    name: "leaf: 감가상각비 — 건물 없는 자산의 stale 값", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 건물이 없는 자산\(토지·분양권·입주권 등\)은 감가상각비를 입력할 수 없습니다/,
+    form: () => withPrimary({ assetKind: "land", depreciationAmount: "1000" }),
+  },
 ];
 
 /** 의제취득일(1985.1.1.) 전 상속 — 가목(§163⑨ 평가액) 확인 불가를 선언해 나목(환산)으로 가는 바탕 */

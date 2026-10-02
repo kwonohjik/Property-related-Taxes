@@ -425,8 +425,11 @@ export function buildAcquisitionPriceFormula(
   totalTransferPrice: number,
   singleAcq: number,
   capEx: number,
+  /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 0). `singleAcq`는 이미 공제 **후** 값이다. */
+  depreciation = 0,
 ): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
+  const depStr = depreciation > 0 ? ` − 감가상각비 ${depreciation.toLocaleString()} (소득세법 §97③)` : "";
   // 환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) — 분수를 Frac로 표기 (PR #746 표준).
   const estFrac = (prefix: string, stdAcq: number, stdTransfer: number, suffix: string): ReactNode =>
     createElement(
@@ -499,7 +502,7 @@ export function buildAcquisitionPriceFormula(
     // 없는 수를 지어내지 않는다.
     const basis =
       cmp != null
-        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
+        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()}${cmp.depreciation ? ` − 감가상각비 ${cmp.depreciation.toLocaleString()}` : ""} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
         : " (가목보다 커 나목을 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)";
     return head + basis;
   }
@@ -528,11 +531,14 @@ export function buildAcquisitionPriceFormula(
           `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
           stdAcq,
           stdTransfer,
-          `${capExStr} — 시행령 §163·§176의2②${sapNote}`,
+          `${capExStr}${depStr} — 시행령 §163·§176의2②${sapNote}`,
         )
-      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
+      : `취득가액(추계) ${estBase}${capExStr}${depStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
-  return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
+  // 실가 — 값은 공제 후이므로 산식은 「실지거래가액 − 감가상각비」로 적어 값이 자기를 만들게 한다.
+  return depreciation > 0
+    ? `취득가액 ${(singleAcq - capEx + depreciation).toLocaleString()}${capExStr} (실제 거래가액)${depStr}`
+    : `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
 }
 
 /**

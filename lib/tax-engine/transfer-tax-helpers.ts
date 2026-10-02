@@ -219,10 +219,14 @@ interface TransferGainResult {
   necessaryExpenseMode?: "actual" | "estimated_with_deduction" | "swap_to_direct";
   /** §97② 단서 swap 발동 여부 */
   swapApplied?: boolean;
+  /** 엔진이 실제로 쓴 감가상각비(§97③, 취득가액 초과분은 취득가액까지로 절삭) — 표시 전용 echo. swap이면 차감되지 않는다. */
+  depreciationAmount?: number;
   /** swap 비교 정보 (환산/감정가액 모드에서만) */
   swapComparison?: {
-    /** 환산취득가(or 감정가액) + 개산공제 */
+    /** (환산취득가(or 감정가액) − 감가상각비) + 개산공제 — 감가상각비는 `depreciation` */
     estimatedSide: number;
+    /** 비교에 쓰인 감가상각비(§97③) — 있을 때만 */
+    depreciation?: number;
     /** 자본적지출 + 양도비 */
     directSide: number;
     chosen: "estimated" | "direct";
@@ -248,6 +252,7 @@ function calcNecessaryExpense(
   estimatedBase: number,
   estimatedDeduction: number,
   isEstimatedMode: boolean,
+  depreciation = 0,
 ): {
   expensesApplied: number;
   mode: "actual" | "estimated_with_deduction" | "swap_to_direct";
@@ -267,7 +272,10 @@ function calcNecessaryExpense(
     };
   }
 
-  const estimatedSide = estimatedBase + estimatedDeduction;
+  // §97③ — 가목(환산취득가액 + 개산공제)의 취득가액은 감가상각비를 **공제한 후** 값이다(차감 후 비교 —
+  // 사용자 결정 2026-10-02, 해석례 미확보로 계획서 V-1). 비교식은 이 한 곳 + 상업용건물 step
+  // (`transfer-tax-commercial-step.ts`)·일반건물 swap(`general-building-swap.ts`)에서 같은 모양이다.
+  const estimatedSide = estimatedBase - depreciation + estimatedDeduction;
 
   // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우에 한정한다.
   // (감정가액·매매사례가액 모드는 단서 대상 아님 — 본문 = 취득가액 + 개산공제만 적용.)
@@ -279,7 +287,7 @@ function calcNecessaryExpense(
     return {
       expensesApplied: directSide,
       mode: "swap_to_direct",
-      swap: { estimatedSide, directSide, chosen: "direct" },
+      swap: { estimatedSide, directSide, chosen: "direct", ...(depreciation > 0 ? { depreciation } : {}) },
     };
   }
 
@@ -288,7 +296,7 @@ function calcNecessaryExpense(
     expensesApplied: estimatedDeduction,
     mode: "estimated_with_deduction",
     swap: swapEligible
-      ? { estimatedSide, directSide, chosen: "estimated" }
+      ? { estimatedSide, directSide, chosen: "estimated", ...(depreciation > 0 ? { depreciation } : {}) }
       : undefined,
   };
 }
@@ -393,10 +401,17 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     acquisitionCostBase = input.acquisitionPrice;
   }
 
-  const necessary = calcNecessaryExpense(input, estimatedBase, estimatedDeduction, usedEstimated);
+  /**
+   * §97③ 감가상각비 — 사업소득금액 계산 시 필요경비에 산입했거나 산입할 금액은 취득가액에서 공제한다.
+   * 취득가액 초과분은 취득가액까지로 절삭한다(음수 취득가액 방지 — 실가 모드는 ⑧ validate가 먼저 막는다).
+   */
+  const depreciation = Math.min(Math.max(0, input.depreciationAmount ?? 0), Math.max(0, acquisitionCostBase));
+  const necessary = calcNecessaryExpense(input, estimatedBase, estimatedDeduction, usedEstimated, depreciation);
   // §97② 2호 단서 swap(나목 채택) 시 필요경비 = 자본적지출+양도비 단독이므로
   // 환산취득가액(acquisitionCostBase)은 차감하지 않는다(양도차익 = 양도가액 − 나목).
-  const acqCostForGain = necessary.mode === "swap_to_direct" ? 0 : acquisitionCostBase;
+  // 이때 감가상각비도 따로 빼지 않는다 — 뺄 취득가액이 없다(차감 효과는 가목 비교에 이미 반영됐다).
+  const swapped = necessary.mode === "swap_to_direct";
+  const acqCostForGain = swapped ? 0 : acquisitionCostBase - depreciation;
   const gain = input.transferPrice - acqCostForGain - necessary.expensesApplied;
   /**
    * 🔑 **제보된 결함의 진짜 발원지가 여기였다** (2026-09-16).
@@ -416,6 +431,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     necessaryExpenseMode: necessary.mode,
     swapApplied: necessary.mode === "swap_to_direct",
     swapComparison: necessary.swap,
+    depreciationAmount: depreciation > 0 && !swapped ? depreciation : undefined,
     expropriationValuationDetail,
     auctionValuationDetail,
     housingExpropriationValuationDetail,

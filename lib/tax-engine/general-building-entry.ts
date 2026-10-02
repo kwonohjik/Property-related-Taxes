@@ -19,6 +19,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { buildGeneralBuildingAssetCards } from "@/lib/tax-engine/general-building-valuation";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
+import { attachBuildingDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import type { GeneralBuildingInput } from "@/lib/tax-engine/general-building-valuation";
 
 /** `generalBuildingValuation` payload — 엔진 input과 같은 모양. */
@@ -199,7 +200,9 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
     ...gbv,
     isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
   };
-  const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
+  const gbOut0 = buildGeneralBuildingAssetCards(normalizedGbv);
+  // §97③ 감가상각비 — 원건물 카드에 싣는다. swap 비교(아래)와 buildProperties/buildApportionment가 같은 카드를 읽는다.
+  const gbOut = { ...gbOut0, assetCards: attachBuildingDepreciation(gbOut0.assetCards, gbv.depreciationAmount) };
   /**
    * §97②2호 판정 단위 — **혼합 모드**면 파트 축, 그 밖에는 종전 **자산총액**(안 A).
    *

@@ -279,10 +279,12 @@ export function buildStatementItems(
    */
   const estimatedNoSwap =
     result.usedEstimatedAcquisition === true && result.swapApplied !== true;
+  /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 비어 있다). `estimatedBase`는 공제 **전** 값. */
+  const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
   const singleAcq = estimatedNoSwap
     ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
       //   「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨졌다(결과탭 코드리뷰 #069).
-      (result.estimatedBase ?? 0)
+      (result.estimatedBase ?? 0) - depreciation
     : /**
        * 🔴 §97②2호 **단서**(swap)는 환산 축이 아니라 **실가 축**으로 내린다.
        *
@@ -309,6 +311,7 @@ export function buildStatementItems(
     totalTransferPrice,
     singleAcq,
     capEx,
+    depreciation,
   );
 
   items.set("acquisitionPrice", {

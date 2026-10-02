@@ -325,6 +325,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       (parseAmount(primary.capitalExpenditure) || primaryEffectiveTransferExpense)
         ? primaryEffectiveTransferExpense || undefined
         : undefined,
+    // §97③ 감가상각비 — 취득가액에서 공제. 지분 모드는 취득가액·자본적지출과 같은 100% 기준 입력 × ratio.
+    // 0·미입력이면 undefined(종전과 동일). 필지 모드는 ⑧이 막으므로 보내지 않는다.
+    depreciationAmount:
+      parcelModeActive ? undefined :
+      parseAmount(primary.depreciationAmount ?? "")
+        ? primaryFractional
+          ? applyRatio(parseAmount(primary.depreciationAmount ?? ""), primaryRatio) || undefined
+          : parseAmount(primary.depreciationAmount ?? "")
+        : undefined,
     // 겸용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     // 매매사례가액 추계(salesCase)는 useEstimatedAcquisition과 별개 경로 — false 송신

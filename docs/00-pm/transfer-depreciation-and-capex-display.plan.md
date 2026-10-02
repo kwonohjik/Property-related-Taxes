@@ -12,6 +12,32 @@
 
 ---
 
+## 0. 구현 현황 (2026-10-02)
+
+| Phase | 상태 | 커밋·검증 |
+|---|---|---|
+| A 자본적지출 표시 전환 | ✅ 구현 | `3d91f0aac` · anchor 15 · E2E 1 · 뮤테이션 probe(swap·이월과세 예외 leaf) |
+| B 감가상각비 — 일반 경로(주택·건물·상가) | ✅ 구현 | 엔진 anchor 25 · 표시 anchor 11 · 클라이언트 anchor 20 · route anchor 4 · E2E 4 |
+| B-2 일반건물(토지+건물 일괄) | ✅ 구현 | route anchor 3 · 카드/swap anchor 6 · E2E 2 |
+| C 파트 분리 경로(토지·건물 별개 취득 split · 겸용 · PHD · 다필지) | ⏳ 미착수 | validate가 사유와 함께 차단(`depreciation-scope.ts`) |
+
+**구현 중 확정·변경된 설계** (계획서 본문과 다른 점):
+
+- **GB 입력 필드는 새로 만들지 않았다** — 자산 단위 `depreciationAmount` 하나를 쓰고, 일반건물에서는 라벨만 「건물분」이며
+  엔진이 **원건물 카드(`building`·`building#n`)에만** 싣는다(`general-building-depreciation.ts`). 토지·증축분(`building2`)은 불변.
+  (계획서 §3.2는 `buildingDepreciationAmount` 파트 필드를 가정했다 — 일반건물의 「분리」는 파트별 취득가액·모드이지
+  단건 엔진 split 축이 아니라 같은 칸으로 충분했다.)
+- **자산 종류 게이트는 한 술어** `lib/calc/depreciation-scope.ts` — ⑤ 입력 칸(`DepreciationField`)·⑧ validate·⑥ 사이드바가 공유.
+  받을 수 없는 구조는 칸을 숨기고 사유를 고지하며, 남은 값은 validate가 「0으로 지우세요」로 막는다.
+- **엔진 echo** `depreciationAmount`(실제 공제액, swap이면 비어 있음) — 신고서·명세서·다건 자산 열이 공제 전 echo(`estimatedBase`)에서
+  이 값을 한 번만 뺀다. `swapComparison.depreciation`은 비교에 쓰인 값.
+- **환산 가산세 base(V-2)는 공제 전 `estimatedBase` 유지** — 조문이 「환산취득가액」을 지칭한다.
+- **취득가액 초과분은 취득가액까지로 절삭**(엔진) — 실가 매매는 ⑧이 먼저 막고 환산·감정·일반건물은 엔진 절삭만 있다(V-9: 환산에서의
+  초과 입력은 사용자에게 알리지 않는다 — Phase C 전에 고지 여부 결정 필요).
+- **이월과세·부담부증여** — 엔진은 `depreciationAmount`를 지워(이중 공제 방지) validate가 먼저 막는다.
+
+---
+
 ## 1. 법령 근거 (KoreanLaw MCP로 본문 확인)
 
 | 근거 | 내용 | 이 계획에서의 의미 |

@@ -504,6 +504,10 @@ export function buildGeneralBuildingValuation(
       ...(parseAmount(asset.capitalExpenditure)
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
         : {}),
+      // §97③ 감가상각비 — 건물분. 지분 스케일은 `applyShareScale`(gb-shares)이 한다.
+      ...(parseAmount(asset.depreciationAmount ?? "")
+        ? { depreciationAmount: parseAmount(asset.depreciationAmount ?? "") }
+        : {}),
       /**
        * 🔴 **증축에서도 「소비되지 않을 때는」 나목에 넣는다** (2026-08-07 W-1b).
        *
@@ -646,6 +650,10 @@ export function buildGeneralBuildingValuation(
       : {}),
     ...(parseAmount(asset.transferExpense)
       ? { transferExpense: parseAmount(asset.transferExpense) }
+      : {}),
+    // §97③ 감가상각비 — 건물분(실가 경로). 지분 스케일은 `applyShareScale`이 한다.
+    ...(parseAmount(asset.depreciationAmount ?? "")
+      ? { depreciationAmount: parseAmount(asset.depreciationAmount ?? "") }
       : {}),
     // §95④ 단기보유 기산점 — actual 분기 기존 결측 보강 (토지 취득원인·피상속인/증여자 취득일).
     ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"

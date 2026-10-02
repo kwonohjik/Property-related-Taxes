@@ -56,12 +56,14 @@ function aggregateEstimatedDisplay(
 ): { base: number; deduction: number } | null {
   const fd = p.filingDisplay;
   if (!fd || fd.swapApplied) return null;
+  // §97③ 감가상각비 — echo(`estimatedBase`·상가 환산 총액)는 공제 **전** 값이라 취득가액 칸에는 공제 후 값을 싣는다.
+  const dep = p.depreciationAmount ?? 0;
   if (fd.estimatedBase !== undefined) {
-    return { base: fd.estimatedBase, deduction: fd.estimatedDeduction ?? 0 };
+    return { base: fd.estimatedBase - dep, deduction: fd.estimatedDeduction ?? 0 };
   }
   if (fd.commercialEstimatedAcquisition !== undefined) {
     return {
-      base: fd.commercialEstimatedAcquisition,
+      base: fd.commercialEstimatedAcquisition - dep,
       deduction: fd.commercialEstimatedDeduction ?? 0,
     };
   }

@@ -42,6 +42,7 @@ import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { buildCommercialBuildingValuation } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildGeneralBuildingValuation } from "@/lib/calc/transfer-tax-api-gb";
 import { applyCommercialBuildingStep } from "@/lib/tax-engine/transfer-tax-commercial-step";
+import { cardDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import {
   coerceGeneralBuildingPayload,
   buildEstimatedGeneralBuildingCards,
@@ -107,6 +108,9 @@ export function previewCommercialBuildingEstimated(
     expenses: 0,
     capitalExpenditure: parseRaw(asset.capitalExpenditure) || undefined,
     transferExpense: parseRaw(asset.transferExpense) || undefined,
+    // §97③ — swap 판정은 감가상각비 **공제 후** 환산취득가액으로 한다(`applyCommercialBuildingStep`). 빠뜨리면
+    // 감가상각비 때문에 swap으로 뒤집히는 경계에서 사이드바(계산 전)와 결과(계산 후)가 갈린다.
+    depreciationAmount: parseRaw(asset.depreciationAmount) || undefined,
     useEstimatedAcquisition: true,
     acquisitionCause: asset.acquisitionCause || undefined,
     // §104③ 미등기 → 개산공제율 0.3%(§163⑥1호 단서). 폼-전역 값이 그대로 엔진에 가므로
@@ -118,7 +122,10 @@ export function previewCommercialBuildingEstimated(
   const { effectiveInput, cbStep } = applyCommercialBuildingStep(input);
   if (!cbStep) return null; // 상속 등 — 환산 경로 미진입
 
-  return { acqPrice: effectiveInput.acquisitionPrice, expense: effectiveInput.expenses };
+  // §97③ 감가상각비 — 엔진이 차감하는 취득가액(공제 후)을 돌려준다. swap이면 취득가액이 0이라 공제할 것이 없다
+  // (`applyCommercialBuildingStep`이 `acquisitionPrice: 0`·`depreciationAmount: undefined`로 재구성한다).
+  const dep = Math.min(Math.max(0, effectiveInput.depreciationAmount ?? 0), Math.max(0, effectiveInput.acquisitionPrice));
+  return { acqPrice: effectiveInput.acquisitionPrice - dep, expense: effectiveInput.expenses };
 }
 
 /**
@@ -179,7 +186,8 @@ export function previewGeneralBuildingEstimated(
     const swapNabok = swap?.allocation.get(card.propertyId);
     const isSwapCard = swapNabok !== undefined;
     const directAddition = swap?.addition.get(card.propertyId) ?? 0;
-    acqPrice += isSwapCard ? 0 : card.acquisitionPrice;
+    // §97③ — `buildApportionment`와 같은 규칙: 엔진이 차감하는 취득가액(공제 후)
+    acqPrice += isSwapCard ? 0 : card.acquisitionPrice - cardDepreciation(card);
     expense += isSwapCard ? swapNabok : card.expenses + directAddition;
   }
   return { acqPrice, expense };

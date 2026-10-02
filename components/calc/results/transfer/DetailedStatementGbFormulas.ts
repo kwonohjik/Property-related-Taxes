@@ -194,6 +194,27 @@ export function buildGbAcquisitionFormula(
   asset: AssetForm | undefined,
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  /**
+   * §97③ 감가상각비 — `p.acquisitionPrice`는 엔진이 공제한 **후** 값이다. 아래 산식 분기들은 안분·환산 식의
+   * 우변에 그 값을 적으므로 그대로 두면 **좌변이 우변을 만들지 못한다**(산식 = 공제 전 취득가액).
+   * 공제 전 값(`+ 감가상각비`)으로 산식을 만들고 마지막 줄에 공제를 덧붙인다 — 값이 산식 끝에서 자기를 만든다.
+   */
+  const dep = p.depreciationAmount ?? 0;
+  if (dep > 0) {
+    const gross = buildGbAcquisitionFormulaCore({ ...p, acquisitionPrice: p.acquisitionPrice + dep, depreciationAmount: undefined }, gb, asset, burdenedGift);
+    return gross === undefined
+      ? undefined
+      : `${gross}\n        − 감가상각비 ${fmt(dep)} (소득세법 §97③ — 건물분 취득가액에서 공제) = ${fmt(p.acquisitionPrice)}`;
+  }
+  return buildGbAcquisitionFormulaCore(p, gb, asset, burdenedGift);
+}
+
+function buildGbAcquisitionFormulaCore(
+  p: PerPropertyBreakdown,
+  gb: GeneralBuildingOutput | undefined,
+  asset: AssetForm | undefined,
+  burdenedGift?: TransferBurdenedGiftBreakdown,
+): string | undefined {
   // 부담부증여 §159①1호 분기 (우선 적용) — 자산별 취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
@@ -242,7 +263,9 @@ export function buildGbAcquisitionFormula(
     if (capExShift > 0) {
       return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(capExShift)} = ${fmt(p.acquisitionPrice + capExShift)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
     }
-    return `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
+    return p.depreciationAmount
+      ? `자산별 취득가액 = ${fmt(p.acquisitionPrice)} (감가상각비 ${fmt(p.depreciationAmount)} 공제 후 — 소득세법 §97③)`
+      : `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
   }
 
   // 자본적지출은 실가 모드에서 필요경비 칸에 머문다. 예외 축(swap·이월과세 A)만 취득가액에 합산 표시.

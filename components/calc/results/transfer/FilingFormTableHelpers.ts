@@ -377,12 +377,18 @@ export function buildRows(
    *    자기정합이 깨진다 → swap이면 종전 역산을 유지한다(현행 동작 보존).
    */
   const cbDetail = result.commercialBuildingValuationDetail;
+  /**
+   * §97③ 감가상각비 — 엔진이 취득가액에서 **실제로 공제한** 금액(swap이면 비어 있다). 환산 취득가액 echo
+   * (`estimatedBase`·상가 환산 총액)는 공제 **전** 값이라 취득가액 칸에는 공제 후 값을 싣는다 —
+   * 실가 분기는 아래 역산이 이미 공제 후 값이다.
+   */
+  const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
   const estimatedDisplay: { base: number; deduction: number } | null = result.swapApplied
     ? null
     : result.usedEstimatedAcquisition && result.estimatedBase !== undefined
-      ? { base: result.estimatedBase, deduction: result.estimatedDeduction ?? 0 }
+      ? { base: result.estimatedBase - depreciation, deduction: result.estimatedDeduction ?? 0 }
       : cbDetail
-        ? { base: cbDetail.estimatedAcquisitionTotal, deduction: cbDetail.estimatedDeductionTotal }
+        ? { base: cbDetail.estimatedAcquisitionTotal - depreciation, deduction: cbDetail.estimatedDeductionTotal }
         : null;
 
   if (isRedevMode && result.redevelopmentDetail) {
@@ -540,6 +546,16 @@ export function buildRows(
     const displayExpenses = Math.max(0, totalEngineExpenses - capExShift);
     setNum("acquisitionPrice", "total", displayAcqPrice > 0 ? displayAcqPrice : null);
     setNum("expenses", "total", displayExpenses || null);
+  }
+
+  // §97③ 감가상각비 — 서식 부표3 ⑤ 계(= ①+③−④)가 부표1 ⑫ 취득가액으로 가므로 이 칸은 공제 후 값이다.
+  // 한 칸뿐이라 공제 사실을 행 고지로 알린다(환산 본문의 「미차감」 고지와 같은 메커니즘).
+  if (depreciation > 0) {
+    setRoseNote(
+      "acquisitionPrice",
+      "total",
+      `감가상각비 ${depreciation.toLocaleString()}을 공제한 취득가액입니다 (소득세법 §97③ · 별지 제84호서식 부표3 ④)`,
+    );
   }
 
   // §161 적용 분기 (장기임대주택 거주주택 비과세 특례) — 산식 순서:

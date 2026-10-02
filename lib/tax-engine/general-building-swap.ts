@@ -37,6 +37,7 @@
  */
 import { applyRate } from "./tax-utils";
 import type { AssetCardForAggregate } from "./general-building-valuation";
+import { cardDepreciation } from "./general-building-depreciation";
 import type { PartAcqMode } from "./transfer-tax-split-gain";
 
 /**
@@ -154,8 +155,9 @@ export function resolveGeneralBuildingSwap(
     capitalExpenditure !== undefined || transferExpense !== undefined;
   // F8: 환산 카드(usedEstimatedAcquisition=true)만 가목 합산 — 실가 카드는 이미 actual 경로.
   const estimatedCards = cards.filter((c) => c.usedEstimatedAcquisition);
+  // §97③ — 가목의 취득가액은 감가상각비 공제 **후** 값이다(`calcNecessaryExpense`와 같은 비교식).
   const estimatedSideTotal = estimatedCards.reduce(
-    (s, c) => s + c.acquisitionPrice + c.expenses,
+    (s, c) => s + c.acquisitionPrice - cardDepreciation(c) + c.expenses,
     0,
   );
   // 동률(==)은 본문(단서 "적은 경우").
@@ -247,8 +249,9 @@ function resolvePerPart(
     // 갈래 1/2 — 환산 파트: 가목↔나목 택일.
     const estimatedCards = partCards.filter((c) => c.usedEstimatedAcquisition);
     if (estimatedCards.length === 0) continue; // 환산 카드가 없으면 비교 대상이 없다
+    // §97③ — 가목의 취득가액은 감가상각비 공제 **후** 값이다(자산총액 판정과 같은 식).
     const estimatedSide = estimatedCards.reduce(
-      (s, c) => s + c.acquisitionPrice + c.expenses,
+      (s, c) => s + c.acquisitionPrice - cardDepreciation(c) + c.expenses,
       0,
     );
     estimatedSideTotal += estimatedSide;

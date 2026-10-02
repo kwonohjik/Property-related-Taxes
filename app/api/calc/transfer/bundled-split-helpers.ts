@@ -436,6 +436,8 @@ export function buildCompanionEngineInputs(
     expenses: a.allocatedExpenses,
     capitalExpenditure: c.capitalExpenditure,
     transferExpense: c.transferExpense,
+    // ⑭ §97③ 감가상각비 (TS 미감지 침묵 strip 주의)
+    depreciationAmount: c.depreciationAmount,
     /**
      * ⑭ 환산취득가 사용 여부 — **원값만 전달**한다(acquisitionCause 재게이트 금지).
      *

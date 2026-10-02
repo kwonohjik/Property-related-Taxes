@@ -339,6 +339,12 @@ export type GeneralBuildingInput = {
   /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
   transferExpense?: number;
   /**
+   * 감가상각비 (원, §97③) — **건물분**에 귀속된다(조심2013서4988 「건물분 감가상각누계액」).
+   * 원건물 카드(`building`·`building1`)의 취득가액에서 공제하고, §97②2호 단서 비교의 가목은 공제 **후** 값으로 한다.
+   * 증축분(`building2`)·토지 카드에는 적용하지 않는다. `attachBuildingDepreciation`이 카드에 싣는다.
+   */
+  depreciationAmount?: number;
+  /**
    * 파트별 자본적지출+양도비 (원) — **직접 귀속**. 하나라도 주어지면 §97②2호 판정이
    * **파트 단위**로 전환된다(O-1 — `general-building-swap.ts` 참조).
    *
@@ -446,6 +452,11 @@ export type AssetCardForAggregate = {
   transferPrice: number;
   /** 환산취득가 (원) */
   acquisitionPrice: number;
+  /**
+   * 감가상각비 (원, §97③) — **원건물 카드에만** set. 이 카드의 취득가액에서 공제할 금액(취득가액 이하로 절삭).
+   * `acquisitionPrice`는 공제 **전** 값이다 — 공제는 단건 엔진(`calcTransferGain`)이 한 번만 한다.
+   */
+  depreciationAmount?: number;
   /** 개산공제 (원) */
   expenses: number;
   /**

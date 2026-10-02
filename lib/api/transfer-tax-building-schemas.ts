@@ -372,6 +372,8 @@ export const generalBuildingValuationSchema = z.object({
   capitalExpenditure: z.number().int().nonnegative().optional(),
   /** 양도비 (원, 자산총액 — §97① 나목). */
   transferExpense: z.number().int().nonnegative().optional(),
+  /** 감가상각비 (원, §97③) — **건물분**에 귀속, 원건물 카드의 취득가액에서 공제. 침묵 strip 방지 명시. */
+  depreciationAmount: z.number().int().nonnegative().optional(),
   // ── ⑫ §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1). 침묵 stripping 방지 명시 선언. ──
   /** 토지 상속 취득 게이트 (acquisitionCause==="inheritance" && 취득일>=1985-01-01). */
   acquisitionByInheritance: z.boolean().optional(),

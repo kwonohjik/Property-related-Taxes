@@ -375,6 +375,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
   if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
   if (a.capitalExpenditure === undefined) a.capitalExpenditure = "0";
   if (a.transferExpense === undefined) a.transferExpense = "0";
+  if (a.depreciationAmount === undefined) a.depreciationAmount = "0";
   // 공유 지분율 — 단독 소유 100/100 fallback (지분 단계취득 자산은 명시 입력)
   if (!a.ownershipNumerator || a.ownershipNumerator === "") a.ownershipNumerator = "100";
   if (!a.ownershipDenominator || a.ownershipDenominator === "") a.ownershipDenominator = "100";

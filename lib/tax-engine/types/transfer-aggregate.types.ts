@@ -194,6 +194,11 @@ export interface PerPropertyBreakdown
    * 예외 축에서는 `necessaryExpense - capitalExpenditureForDisplay = 양도비(§97① 3호)`.
    */
   capitalExpenditureForDisplay: number;
+  /**
+   * [echo] 엔진이 취득가액에서 실제로 공제한 감가상각비(§97③) — 표시 전용. `acquisitionPrice`는 이미 공제 **후** 값이다.
+   * swap·이월과세·미지원 경로는 공제하지 않으므로 비어 있다.
+   */
+  depreciationAmount?: number;
   /** 건별 결정세액 (단건 엔진 결과) */
   determinedTax: number;
   /** 양도차익 — 차손이면 음수 (§102② 통산 대상) */
@@ -631,5 +636,5 @@ export interface AggregateTransferResult {
    */
   swapApplied?: boolean;
   /** §97②2호 단서 swap 비교 (자산총액). */
-  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct"; depreciation?: number };
 }

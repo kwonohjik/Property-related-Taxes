@@ -546,12 +546,15 @@ function computeAggregateOnce(
       adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail) ??
       (r.result.swapApplied
         ? 0
-        : r.result.usedEstimatedAcquisition
-          ? (r.result.estimatedBase ??
-              (tsfStd > 0
-                ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
-                : 0))
-          : r.singleInput.acquisitionPrice);
+        : // §97③ 감가상각비는 취득가액에서 공제된 뒤의 값이 「엔진이 차감한 취득가액」이다 — swap(위)·이월과세(위)는
+          // 공제하지 않으므로 `depreciationAmount` echo가 비어 있다. 이 값을 빼지 않으면 아래 필요경비 역산이
+          // `필요경비 − 감가상각비`로 오염된다.
+          (r.result.usedEstimatedAcquisition
+            ? (r.result.estimatedBase ??
+                (tsfStd > 0
+                  ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+                  : 0))
+            : r.singleInput.acquisitionPrice) - (r.result.depreciationAmount ?? 0));
     // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
     //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
     // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
@@ -592,6 +595,7 @@ function computeAggregateOnce(
       necessaryExpense: effectiveNecessaryExpense,
       // 신고서 양식: 실가 모드는 자본적지출이 필요경비 칸에 머문다(예외 swap·이월과세 A는 표시 leaf `capExInAcquisitionColumn`)
       capitalExpenditureForDisplay: r.singleInput.capitalExpenditure ?? 0,
+      depreciationAmount: r.result.depreciationAmount,
       determinedTax: r.result.determinedTax,
       transferGain: r.result.transferGain,
       exemptGrossGain: r.result.exemptGrossGain, // [echo] 비과세 gross (표시 전용). transferGain·:444 불변.

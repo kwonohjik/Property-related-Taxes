@@ -339,6 +339,11 @@ export function buildAssetPayload(
       return fractional ? applyRatio(directCapex, ratio) : directCapex;
     })(),
     transferExpense: effectiveTransferExpenseFor(asset, ratio, fractional, totalTransferExpense) || undefined,
+    // §97③ 감가상각비 — 단건 ④와 같은 규칙(지분 모드 × ratio, 0·미입력은 undefined)
+    depreciationAmount: (() => {
+      const dep = parseAmount(asset.depreciationAmount ?? "");
+      return (fractional ? applyRatio(dep, ratio) : dep) || undefined;
+    })(),
     reductions,
     // ④ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf** (D11-02).
     //    종전에는 단건이 `primary.reductions`만 봐서 컴패니언 자산은 항상 undefined였고,

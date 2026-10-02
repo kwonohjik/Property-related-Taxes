@@ -115,8 +115,11 @@ export function buildGainFormula(args: {
   acquisitionPrice: number;
   estimatedBase: number;
   appliedExpenses: number;
+  /** §97③ 감가상각비 — 있으면 취득가에서 공제한 값으로 표기한다(산식이 자기 값을 만들도록). */
+  depreciation?: number;
 }): string {
-  const { swapApplied, useEstimatedAcquisition, transferPrice, acquisitionPrice, estimatedBase, appliedExpenses } = args;
+  const { swapApplied, useEstimatedAcquisition, transferPrice, acquisitionPrice, estimatedBase, appliedExpenses, depreciation = 0 } = args;
+  const depNote = depreciation > 0 && !swapApplied ? ` − 감가상각비 ${depreciation.toLocaleString()}` : "";
   const effectiveInput = { transferPrice, acquisitionPrice, useEstimatedAcquisition };
   let gainFormula: string;
   if (swapApplied) {
@@ -129,13 +132,13 @@ export function buildGainFormula(args: {
   } else if (effectiveInput.useEstimatedAcquisition) {
     gainFormula = [
       `양도가(${effectiveInput.transferPrice.toLocaleString()})`,
-      `취득가(환산 ${estimatedBase.toLocaleString()})`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}${depNote})`,
       `경비(개산공제 ${appliedExpenses.toLocaleString()})`,
     ].join(" - ");
   } else {
     gainFormula = [
       `양도가(${effectiveInput.transferPrice.toLocaleString()})`,
-      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()})`,
+      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()}${depNote})`,
       `경비(${appliedExpenses.toLocaleString()})`,
     ].join(" - ");
   }

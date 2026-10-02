@@ -142,10 +142,20 @@ export interface TransferTaxResult {
   capitalExpenditureForDisplay?: number;
   /** §97② 단서 swap 비교 (분리 입력 시만 표시) */
   swapComparison?: {
+    /** (환산취득가 − 감가상각비) + 개산공제 — 가목. 감가상각비는 `depreciation` */
     estimatedSide: number;
     directSide: number;
     chosen: "estimated" | "direct";
+    /** 비교에 쓰인 감가상각비(§97③) — 있을 때만 */
+    depreciation?: number;
   };
+  /**
+   * [echo] 엔진이 실제로 쓴 감가상각비(§97③) — 표시 전용(세액 불변). 취득가액에서 공제됐다.
+   * 취득가액 초과분은 취득가액까지로 절삭된 값이다. 미입력·0이면 없다.
+   * ⚠️ §97②2호 단서(swap) 채택 시에는 취득가액을 차감하지 않으므로 **공제되지 않는다**
+   *    (이 값은 swap 비교(`swapComparison.depreciation`)에서만 쓰였다) — 표시부는 `swapApplied`로 가른다.
+   */
+  depreciationAmount?: number;
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) — 게이트 충족 시만 */
   expropriationValuationDetail?: ExpropriationValuationDetail;
   /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 게이트 충족 시만. 1호와 배타(P4) */

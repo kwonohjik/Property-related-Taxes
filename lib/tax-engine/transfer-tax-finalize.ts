@@ -689,6 +689,8 @@ export function buildExemptEarlyResult(p: {
      */
     swapApplied: grossForEcho.swapApplied,
     swapComparison: grossForEcho.swapComparison,
+    // [echo] §97③ 감가상각비 — 비과세 조기반환도 정상 경로와 같은 축으로 싣는다(표시 전용).
+    depreciationAmount: grossForEcho.depreciationAmount,
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
     ...(grossForEcho.usedEstimated

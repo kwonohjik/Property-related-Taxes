@@ -315,7 +315,7 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return withUnregisteredNotice(mpBranchResult);
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, depreciationAmount, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
   // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
   // (calcTransferGain은 CB를 실가 모드로 보므로 swapApplied를 내지 않는다.)
   const swapApplied = gainSwapApplied || cbStep?.swapApplied;
@@ -362,6 +362,7 @@ export function calculateTransferTax(
     acquisitionPrice: effectiveInput.acquisitionPrice,
     estimatedBase,
     appliedExpenses,
+    depreciation: depreciationAmount,
   });
   if (selfOwns !== "both" && splitDetail) {
     const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
@@ -680,6 +681,7 @@ export function calculateTransferTax(
     appliedExpenses,
     swapApplied,
     swapComparison,
+    depreciationAmount,
     expropriationValuationDetail,
     auctionValuationDetail,
     housingExpropriationValuationDetail,

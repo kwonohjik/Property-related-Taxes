@@ -38,6 +38,7 @@ const FIELD_LABEL: Record<string, string> = {
   donorAcquisitionDate: "증여자 취득일",
   expenses: "필요경비",
   capitalExpenditure: "자본적 지출",
+  depreciationAmount: "감가상각비",
   transferExpense: "양도비",
 
   // 토지/건물 분리

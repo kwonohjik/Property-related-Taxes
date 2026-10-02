@@ -156,6 +156,8 @@ export async function POST(request: NextRequest) {
       // ⑭ §97② 단서 swap 분리 입력 — 미명시 시 undefined (swap 비활성)
       capitalExpenditure: p.capitalExpenditure,
       transferExpense: p.transferExpense,
+      // ⑭ §97③ 감가상각비 — 취득가액에서 공제 (TS 미감지 침묵 strip 주의)
+      depreciationAmount: p.depreciationAmount,
       // ⑭ §89①4호 가목 1세대1입주권 — 조합원입주권 수 (right_to_move_in 자산 전용)
       householdRightCount: p.householdRightCount,
       useEstimatedAcquisition: p.useEstimatedAcquisition,
