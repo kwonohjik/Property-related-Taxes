@@ -185,8 +185,14 @@ const SEC_MSG = (clause: string) => new RegExp(`^자산: ${clause} 취득당시 
 
 const SEC164_CASES: FieldJumpCase[] = [
   {
-    name: "leaf: §164④ 토지 일부 입력 — 환산 토글(칸이 숨은 상태)", field: "pre1990Enabled", step: 0, assetIndex: A, message: SEC_MSG("§164④"),
+    // §163⑨1호 비교 맥락(의제취득일 이후 상속) — 칸이 항상 열려 있으므로 빈 칸으로 간다(별건 B3 — 종전엔 숨은 토글로 데려갔다)
+    name: "leaf: §164④ 토지 일부 입력 — 빈 등급 칸 (§163⑨1호 비교, 칸 상시 노출)", field: "pre1990Grade_current", step: 0, assetIndex: A, message: SEC_MSG("§164④"),
     form: () => withPrimary({ ...INH, assetKind: "land", acquisitionDate: "1989-01-01", decedentAcquisitionDate: "1988-01-01", acquisitionArea: "100", pre1990Enabled: false, pre1990PricePerSqm_1990: "50000" }),
+  },
+  {
+    // 의제취득일 前 상속 — 토글이 환산 모드를 정하므로 그대로 토글로 간다(칸은 토글 뒤)
+    name: "leaf: §164④ 토지 일부 입력 — 환산 토글(의제취득일 前, 칸이 숨은 상태)", field: "pre1990Enabled", step: 0, assetIndex: A, message: SEC_MSG("§164④"),
+    form: () => withPrimary({ ...INH, assetKind: "land", acquisitionDate: "1980-01-01", decedentAcquisitionDate: "1979-01-01", acquisitionArea: "100", pre1990Enabled: false, pre1990PricePerSqm_1990: "50000" }),
   },
   { name: "leaf: §164⑤~⑦ 주택 일부 입력 — 양도시 개별공시지가", field: "inhHouseValLandPricePerSqmAtTransfer", step: 0, assetIndex: A, message: SEC_MSG("§164⑤~⑦"), form: sec({ inhHouseValLandArea: "100" }) },
   {
@@ -256,8 +262,12 @@ const SPLIT_CASES: FieldJumpCase[] = [
     name: "leaf: split 부수토지 소재지 구분", field: "appurtenantLandZone", step: 0, assetIndex: A, message: /^자산: 토지 면적\(400㎡\)이 건물 정착면적의 3배를 초과합니다/,
     form: spl({ buildingFootprintArea: "100", acquisitionArea: "400", appurtenantLandZone: undefined }),
   },
-  // ※ ㎡당 개별공시지가 칸은 **매매 취득 + 실거래가** 상태의 소유자 분리에는 화면에 없다(막다른 오류 — 보고서 참조).
-//    그래서 이 케이스는 칸이 있는 비-매매(상속) 취득으로 만든다 — `NonPurchaseSplitInputsBlock`.
+  // 매매 취득 + 실거래가의 소유자 분리 — 취득시 기준시가 카드가 열리고(두 파트 비움 = 비율 안분) 주택에는 ㎡당 칸을 연다(별건 B2).
+  // 본인 파트 취득가액을 입력하면 비율이 안 쓰여 요구하지 않는다(⑧ V8 ↔ ⑫·술어) — 그쪽은 `transfer-dead-end-defects.spec.ts`가 고정한다.
+  {
+    name: "leaf: split 소유자 분리 — ㎡당 개별공시지가 (매매 실거래가)", field: "standardPricePerSqmAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면 본인 소유분만 과세/,
+    form: owner({ acquisitionCause: "purchase", ...SALE, acquisitionArea: "100" }),
+  },
   {
     name: "leaf: split 소유자 분리 — ㎡당 개별공시지가 (상속)", field: "standardPricePerSqmAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면 본인 소유분만 과세/,
     form: owner({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2015-03-01", publishedValueAtInheritance: "300000000" }),

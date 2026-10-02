@@ -15,6 +15,8 @@
 import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
@@ -28,6 +30,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -643,6 +646,19 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
+            {/* 소유자 분리 — ⑧ V8의 ㎡당 개별공시지가(별건 B2). 주택은 위 위젯이 총액만 렌더하고, 면적은 ① 기본정보가 받는다. */}
+            {props.asset && (effectiveSelfOwns(props.asset) ?? "both") !== "both" && propertyKind === "house_individual" && (
+              <LandPriceLookupField
+                label="취득시 토지 공시지가"
+                data-field="standardPricePerSqmAtAcq"
+                pricePerSqm={props.standardPricePerSqmAtAcq ?? ""}
+                onPricePerSqmChange={handleAcqPricePerSqmChange}
+                area={parseDecimal(props.acquisitionArea) || undefined}
+                referenceDate={props.acquisitionDate}
+                jibun={props.jibun}
+                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 근거 (§99①1호 가목)"
+              />
+            )}
           </div>
           )}
 

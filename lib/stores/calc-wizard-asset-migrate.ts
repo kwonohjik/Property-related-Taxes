@@ -20,7 +20,9 @@ import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-a
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS, makeDefaultAsset } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
-import { gbUnifiedSec1639ClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbUnifiedSec1639ClearPatch, giftEstimationClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { giftEstimatedModeBlocked } from "@/lib/calc/transfer-tax-validate-gift-163-9";
+import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -570,6 +572,21 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.assetKind === "general_building" && !a.hasSeperateLandAcquisitionDate) {
     Object.assign(a, gbUnifiedSec1639ClearPatch(a.acquisitionCause as string | undefined));
   }
+
+  /**
+   * B1(2026-10-02) — 증여로 바뀐 표준·상가 자산에 남은 추계 플래그. 증여 카드에는 끌 라디오가 없어 복원된 폼이 영구 차단된다.
+   * ⑧과 같은 술어(`giftEstimatedModeBlocked`)가 참일 때만 비운다 — 1985 이전·부담부증여는 ⑧이 막지 않는 영역이라 건드리지 않는다.
+   * 범위는 ⑧ 범용 검사와 같다(`giftEstimationGenericScope` — 일반건물은 위 G3 patch, 재개발·입주권은 자체 검증과 라디오가 있다).
+   */
+  if (giftEstimatedModeBlocked(a as unknown as AssetForm)) {
+    Object.assign(a, giftEstimationClearPatch("gift"));
+  }
+
+  /**
+   * B3(2026-10-02) — §163⑨1호 토지 비교 맥락에서는 「환산」 토글이 화면에서 사라졌다. 복원된 폼의 켜짐 래치를 끌 방법이 없으므로 끈다
+   * (켜도 꺼도 결과가 같은 맥락 — 값은 잃지 않는다). 술어·이유: `sec164LandLatchClearPatch`.
+   */
+  Object.assign(a, sec164LandLatchClearPatch(a as unknown as AssetForm));
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

@@ -32,19 +32,6 @@ type Row = {
   unreachableInUi?: string;
 };
 
-/**
- * 세션 복원(`calc-wizard-asset-migrate-rental-split.ts` `normalizeRentalAndSplitFields`)이 §97 시리즈 감면의
- * `hasVacancyOverGrace`를 **항상 null로 되돌린다** — 화면에서 고른 값도 새로고침하면 사라진다(별건, 보고).
- * 그래서 「공실 여부」 뒤에 나오는 메시지는 시드로 만들 수 없고, 화면에서 그 값을 고른 뒤에야 닿는다.
- * 그런 케이스는 메인 spec이 건너뛰고(`unreachableInUi`), 보조 spec
- * `e2e/transfer-validation-field-jump-reduction-rental.spec.ts`가 같은 입력으로 화면 조작 후 검증한다.
- */
-export const VACANCY_RESET_REASON =
-  "세션 복원이 §97 시리즈 감면의 `hasVacancyOverGrace`를 null로 되돌려 시드로 만들 수 없다 — 보조 spec(`transfer-validation-field-jump-reduction-rental.spec.ts`)이 화면에서 그 값을 고른 뒤 검증한다";
-
-/** 화면에서 「공실 여부」를 고른 뒤에야 닿는 케이스 — 보조 spec이 읽는다 */
-export const REDUCTION_VACANCY_PREPARED: { case: FieldJumpCase; type: string; vacancy: "no" | "yes" }[] = [];
-
 /** 한 조문의 케이스 묶음 — `ok`(감면 행) · `assetOk`(자산)에서 `row`만큼만 어긋나게 만든다. */
 function table(
   type: string,
@@ -52,21 +39,17 @@ function table(
   ok: Record<string, unknown>,
   assetOk: Record<string, unknown>,
   rows: Row[],
-  /** 행 이름 → 보조 spec이 먼저 고를 「공실 여부」 */
-  vacancyFirst: Record<string, "no" | "yes"> = {},
 ): FieldJumpCase[] {
   return rows.map((r) => {
-    const vacancy = vacancyFirst[r.name];
     const c: FieldJumpCase = {
       name: `reduction: ${type} ${r.name}`,
       field: r.prop.includes(".") || r.prop === ASSET_LEVEL ? r.prop : `reduction.${type}.${r.prop}`,
       step: 2 as const,
       assetIndex: A,
       message: r.message,
-      unreachableInUi: r.unreachableInUi ?? (vacancy ? VACANCY_RESET_REASON : undefined),
+      unreachableInUi: r.unreachableInUi,
       form: () => withPrimary({ ...assetOk, ...r.asset, reductions: [{ ...base(), ...ok, ...r.patch }] }),
     };
-    if (vacancy) REDUCTION_VACANCY_PREPARED.push({ case: c, type, vacancy });
     return c;
   });
 }
@@ -223,18 +206,7 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "임대 종료일 기준시가", prop: "stdPriceAtRentalEnd", message: /^§97의3 적용: 임대 종료일 당시 기준시가/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },
-], {
-  "민간건설임대(2021~ 등록)": "no",
-  "민간건설임대(2023~ 등록)": "no",
-  "국민주택규모": "no",
-  "임대개시 당시 기준시가": "no",
-  "임대 계속 여부": "no",
-  "임대 종료일 기준시가": "no",
-  "안분 취득 당시 기준시가": "no",
-  "안분 양도 당시 기준시가": "no",
-  "공실 구간 목록": "yes",
-  "공실 구간 날짜": "yes",
-});
+]);
 
 const r974Ok = { ...rentalBase, rental974Category: "purchase_a", officialPriceAtStart: "300000000", region: "capital" };
 const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
@@ -243,11 +215,7 @@ const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   { name: "임대주택 유형", prop: "rental974Category", message: /^§97의4 적용: 장기임대주택 유형/, patch: { rental974Category: "" } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가\(주택\+부수토지 합계\)를 입력/, patch: { officialPriceAtStart: "" } },
   { name: "기준시가 한도 초과", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가 합계가 한도/, patch: { officialPriceAtStart: "700000000" } },
-], {
-  "임대주택 유형": "no",
-  "임대개시 당시 기준시가": "no",
-  "기준시가 한도 초과": "no",
-});
+]);
 
 const r975Ok = { ...rentalBase, isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
@@ -256,11 +224,7 @@ const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   { name: "국민주택규모", prop: "isNationalHousingScale", message: /^§97의5 적용: 국민주택규모 이하 요건/, patch: { isNationalHousingScale: false } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의5 적용: 임대개시일 당시 기준시가\(주택\+부속토지 합계\)/, patch: { officialPriceAtStart: "" } },
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의5 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
-], {
-  "국민주택규모": "no",
-  "임대개시 당시 기준시가": "no",
-  "임대 계속 여부": "no",
-});
+]);
 
 const rMainOk = { rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, hasMin5RentalUnits: true, belowMin5UnitsPeriods: [] };
 const RENTAL_97_MAIN = table("rental_97_main", hybrid("rental_97_main"), rMainOk, {}, [
@@ -271,23 +235,14 @@ const RENTAL_97_MAIN = table("rental_97_main", hybrid("rental_97_main"), rMainOk
   { name: "5호 미만 임대 기간", prop: "belowMin5UnitsPeriods", message: /^§97 본문 적용: 5호 미만 임대 기간의 시작일·종료일/, patch: { belowMin5UnitsPeriods: [{ startDate: "", endDate: "" }] } },
   { name: "공동주택 여부(1985 이전)", prop: "isMultiUnitHousing", message: /^§97 본문 적용: 공동주택 여부를 선택하세요 \(조특법 §97①2호\)/, patch: { constructionYear: "1980", isMultiUnitHousing: null, isUnoccupiedAt1986: null } },
   { name: "1986.1.1 입주 사실", prop: "isUnoccupiedAt1986", message: /^§97 본문 적용: 1986\.1\.1 현재 입주 사실/, patch: { constructionYear: "1980", isMultiUnitHousing: true, isUnoccupiedAt1986: null } },
-], {
-  "신축 연도": "no",
-  "5호 이상 임대 여부": "no",
-  "5호 미만 임대 기간": "no",
-  "공동주택 여부(1985 이전)": "no",
-  "1986.1.1 입주 사실": "no",
-});
+]);
 
 const rProvisoOk = { provisoCase: "a_construction", rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, hasMin5RentalUnits: true, belowMin5UnitsPeriods: [] };
 const RENTAL_97_PROVISO = table("rental_97_proviso", hybrid("rental_97_proviso"), rProvisoOk, {}, [
   { name: "단서 유형", prop: "provisoCase", message: /^§97 단서 적용: 단서 유형/, patch: { provisoCase: "" } },
   { name: "취득 당시 입주 사실(나목)", prop: "isUnoccupiedAtAcquisition", message: /^§97 단서 적용: 취득 당시 입주 사실 여부를 선택하세요 \(조특법 §97① 단서 나목\)/, patch: { provisoCase: "b_purchase", isUnoccupiedAtAcquisition: null } },
   { name: "임대료 증액 위반 여부", prop: "rentIncreaseViolationMode", message: /^§97 단서 적용: 임대료 5% 증액 위반 이력 여부/, patch: { rentIncreaseViolationMode: "" } },
-], {
-  "단서 유형": "no",
-  "취득 당시 입주 사실(나목)": "no",
-});
+]);
 
 const r972Ok = { rentalStartDate: "2005-06-01", registrationDate: "2005-06-01", rental972Type: "construction", hasNewRentalPlus2Units: true, rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, isUnoccupiedAtAcquisition: true };
 const RENTAL_97_2 = table("rental_97_2", hybrid("rental_97_2"), r972Ok, {}, [
@@ -298,13 +253,7 @@ const RENTAL_97_2 = table("rental_97_2", hybrid("rental_97_2"), r972Ok, {}, [
   { name: "취득 당시 입주 사실(매입임대)", prop: "isUnoccupiedAtAcquisition", message: /^§97의2 적용: 취득 당시 입주 사실 여부를 선택하세요 \(조특법 §97의2①2호\)/, patch: { rental972Type: "purchase", isUnoccupiedAtAcquisition: null } },
   { name: "신축임대 2호 이상", prop: "hasNewRentalPlus2Units", message: /^§97의2 적용: 신축임대주택 1호 이상을 포함한 2호/, patch: { hasNewRentalPlus2Units: null } },
   { name: "건설/매입 유형", prop: "rental972Type", message: /^§97의2 적용: 건설임대\(1호\)\/매입임대\(2호\) 유형/, patch: { rental972Type: "" } },
-], {
-  "공동주택 여부(1999.8.20 전 건설임대)": "no",
-  "1999.8.20 입주 사실": "no",
-  "취득 당시 입주 사실(매입임대)": "no",
-  "신축임대 2호 이상": "no",
-  "건설/매입 유형": "no",
-});
+]);
 
 // ── 개별 감면(자경농지 · 수용 · 개발제한구역 · 대토보상) ───────────────────────
 const SELF_FARMING = table("self_farming", standalone("self_farming"), { farmingYears: "10" }, { assetKind: "land" }, [

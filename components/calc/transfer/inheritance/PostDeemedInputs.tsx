@@ -388,6 +388,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             jibun={asset.addressJibun || undefined}
             acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate}
+            alwaysOpen
           />
         </ToneCard>
       )}

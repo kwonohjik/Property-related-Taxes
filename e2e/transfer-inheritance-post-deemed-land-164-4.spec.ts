@@ -105,10 +105,11 @@ test.describe("post-deemed 상속토지 §164④ 등급환산 (소령 §163⑨1�
     const sec164Toggle = page.getByRole("switch", {
       name: /1990\.8\.30\. 이전 취득 토지 기준시가 환산/,
     });
-    await expect(sec164Toggle).toBeVisible();
+    // 별건 B3 — 이 맥락(§163⑨1호 비교)은 토글이 없고 칸이 항상 열려 있다(토글은 계산을 바꾸지 않았고, 숨은 값이 취득가액을 바꿨다)
+    await expect(sec164Toggle).toHaveCount(0);
+    await expect(page.getByPlaceholder("㎡당 가액 입력")).toBeVisible();
 
-    // ── 2. 입력 — 토글 ON 후 1990.8.30. 개별공시지가 + 토지등급 3종
-    await sec164Toggle.click();
+    // ── 2. 입력 — 1990.8.30. 개별공시지가 + 토지등급 3종 (토글 없이 칸이 열려 있다)
     await page.getByPlaceholder("㎡당 가액 입력").fill("100000");
     // 등급 3칸은 같은 placeholder("등급 번호")를 쓰므로 순서로 구분한다.
     // 렌더 순서 = 현재 / 직전 / 취득시 (Pre1990LandValuationInput 그리드 정의 순).

@@ -49,10 +49,12 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
            * §97·§97의2·§97의3·§97의4의 유예는 3월(조특칙 §44)이므로, 구 세션의 "없음"은
            * 새 질문("3개월 초과 공실이 있는가")의 답이 될 수 없다 —
            * 4개월 공실 보유자가 구 UI에서 "없음"을 골랐을 수 있기 때문이다.
-           * ⇒ 값을 그대로 승계하지 않고 **미선택(null)로 되돌려 다시 묻는다**.
+           * ⇒ 구 키만 있는 세션은 **미선택(null)로 되돌려 다시 묻는다**.
            *    (§97의5는 임계가 그대로지만, 조문별 분기 없이 한 번 다시 묻는 편이 안전하다.)
+           * ⚠️ 새 키(`hasVacancyOverGrace`)가 이미 있으면 그건 **새 질문에 대한 답**이다 — 보존한다.
+           *    이 정규화는 새로고침·이력 불러오기 때마다 돌므로 무조건 null이면 「없음」이 매번 풀린다(C2).
            */
-          hasVacancyOverGrace: null,
+          hasVacancyOverGrace: r.hasVacancyOverGrace ?? null,
           /**
            * D1-01·D1-02 — 주체 요건(§97 5호 / §97의2 2호) 신규 필드.
            * 구 세션에는 값이 없으므로 **미선택**으로 둔다. 미입력을 충족으로 읽으면

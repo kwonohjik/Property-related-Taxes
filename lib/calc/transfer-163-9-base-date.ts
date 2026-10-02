@@ -147,3 +147,28 @@ export const HOUSE_FIRST_DISCLOSURE = "2005-04-30";
 export function isSec163_9House(assetKind: AssetForm["assetKind"] | undefined): boolean {
   return assetKind === "housing" || assetKind === "redevelopment_apt";
 }
+
+/**
+ * §163⑨1호 토지 비교 입력칸(§164④ 등급환산 5칸)이 **토글 없이 항상 열리는** 맥락인가 (별건 B3).
+ *
+ * 상증법 평가액과 §164④ 가액 중 **큰 금액**을 취득가액으로 하는 것은 법이 정한 계산이라(영 §163⑨ 단서 1호 — 「많은 금액」)
+ * 사용자가 켜고 끄는 선택이 아니다. 5칸이 모두 차 있으면 토글과 무관하게 비교에 쓰이므로(실측: 토글 ON·OFF 결과 동일),
+ * 칸을 토글 뒤에 숨기면 안 보이는 값이 취득가액을 바꾼다. 그 맥락 = 증여(`GiftLandStdPriceSection`) 또는
+ * 의제취득일 이후 상속(`PostDeemedInputs`). 의제취득일 前 상속(`PreDeemedInputs`)은 토글이 환산 모드 자체를 정하므로 제외한다.
+ *
+ * 쓰는 곳 — ⑤ 두 카드의 `alwaysOpen` · ⑧ `sec164PartialInputError`의 이동 앵커 · 복원 마이그레이션(래치 정리).
+ */
+export function sec164LandFieldsAlwaysOpen(asset: Sec163_9Asset & { assetKind?: string }): boolean {
+  if (asset.assetKind !== "land") return false;
+  if (asset.acquisitionCause === "gift") return true;
+  return asset.acquisitionCause === "inheritance" && !isSec163_9PreDeemed(asset);
+}
+
+/**
+ * `sec164LandFieldsAlwaysOpen` 맥락에서는 「환산」 토글이 화면에서 사라지므로 **남은 켜짐 래치를 끌 방법이 없다** —
+ * 켜짐이면 `hasPre1990`(환산 모드)이 서서 5칸 완비·양도시 기준시가를 별도로 요구한다(`transfer-tax-validate-asset.ts`).
+ * 그래서 이 맥락으로 들어오는 경로(취득원인 전환 · 복원)에서 래치를 끈다. 켜도 꺼도 결과가 같은 맥락이라 값은 잃지 않는다.
+ */
+export function sec164LandLatchClearPatch(asset: Sec163_9Asset & { assetKind?: string; pre1990Enabled?: boolean }): { pre1990Enabled?: false } {
+  return sec164LandFieldsAlwaysOpen(asset) && asset.pre1990Enabled ? { pre1990Enabled: false } : {};
+}

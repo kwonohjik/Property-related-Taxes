@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { CurrencyInput } from "./CurrencyInput";
 import { ToggleCard } from "./ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RadioCardGroup } from "./RadioCardGroup";
 import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
@@ -45,6 +46,11 @@ interface Props {
   transferDate?: string;
   /** 환산 결과(취득시 기준시가, 원 총액)를 부모에게 전달 — 자동 입력용 */
   onCalculatedPrice?: (standardPriceAtAcq: number) => void;
+  /**
+   * §163⑨1호(상속·증여 토지 — 상증법 평가액과 §164④ 가액 중 큰 금액) 맥락 — 토글 없이 칸을 항상 연다.
+   * 켜는 쪽 술어는 `sec164LandFieldsAlwaysOpen`(⑧ 오류 이동 앵커와 같은 단일 소스).
+   */
+  alwaysOpen?: boolean;
 }
 
 /** 등급 입력을 파싱해 등급가액을 반환. 실패 시 null. */
@@ -76,6 +82,7 @@ export function Pre1990LandValuationInput({
   acquisitionDate,
   transferDate,
   onCalculatedPrice,
+  alwaysOpen,
 }: Props) {
   const mode = form.pre1990GradeMode ?? "number";
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -172,14 +179,7 @@ export function Pre1990LandValuationInput({
     }
   }
 
-  return (
-    <ToggleCard
-      tone="amber"
-      title="1990.8.30. 이전 취득 토지 기준시가 환산"
-      data-field="pre1990Enabled"
-      checked={form.pre1990Enabled}
-      onCheckedChange={(v) => onChange({ pre1990Enabled: v })}
-    >
+  const body = (
       <div className="space-y-4">
           {/* 면적 — 상위 자산 취득 당시 면적 자동 연동 (직접 수정 불필요) */}
           {acquisitionArea && (
@@ -289,6 +289,26 @@ export function Pre1990LandValuationInput({
             1990.1.1. 등급조정이 없었다면 직전 등급은 현재 등급과 동일하게 입력하세요.
           </p>
       </div>
+  );
+
+  // §163⑨1호 비교 맥락(`alwaysOpen`) — 토글 없이 칸을 항상 연다. 이 토글은 그 맥락의 계산을 바꾸지 않는다(켜도 꺼도 결과가 같다 —
+  // 5칸이 모두 차 있으면 토글과 무관하게 비교에 쓰인다). 칸을 토글 뒤에 숨기면 안 보이는 값이 취득가액을 바꾼다(별건 B3).
+  if (alwaysOpen) {
+    return (
+      <ToneCard tone="amber" title="1990.8.30. 이전 취득 토지 기준시가 환산 (§164④)" noDark>
+        {body}
+      </ToneCard>
+    );
+  }
+  return (
+    <ToggleCard
+      tone="amber"
+      title="1990.8.30. 이전 취득 토지 기준시가 환산"
+      data-field="pre1990Enabled"
+      checked={form.pre1990Enabled}
+      onCheckedChange={(v) => onChange({ pre1990Enabled: v })}
+    >
+      {body}
     </ToggleCard>
   );
 }

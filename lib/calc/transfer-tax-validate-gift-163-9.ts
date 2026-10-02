@@ -16,13 +16,38 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
-export function giftEstimatedModeError(asset: AssetForm, label: string): string | null {
-  if (
+/**
+ * 범용 증여 검사가 닿는 자산인가 — `transfer-tax-validate-acquisition.ts`의 라우팅과 같다.
+ * 일반건물·재개발·입주권·겸용주택은 그 앞에서 자체 검증으로 빠진다. 특히 재개발·입주권의 `useEstimatedAcquisition`은
+ * 종전 부동산 §166③ 환산 플래그라 의미가 다르고, 자체 검증(`transfer-tax-validate-redev.ts`)과 라디오가 있다.
+ */
+export function giftEstimationGenericScope(asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse">): boolean {
+  return (
+    asset.assetKind !== "general_building" &&
+    asset.assetKind !== "redevelopment_apt" &&
+    asset.assetKind !== "right_to_move_in" &&
+    asset.isMixedUseHouse !== true
+  );
+}
+
+/**
+ * 이 자산이 §163⑨로 막히는 조합인가 — ⑧ 오류(`giftEstimatedModeError`)와 복원 마이그레이션이 **같은 술어**를 쓴다.
+ * 증여 카드에는 산정 방식 라디오가 없어 사용자가 끌 수 없으므로(B1) 마이그레이션이 이 조합에서만 플래그를 비운다.
+ */
+export function giftEstimatedModeBlocked(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "acquisitionCause" | "transferType" | "acquisitionDate" | "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">,
+): boolean {
+  return (
+    giftEstimationGenericScope(asset) &&
     asset.acquisitionCause === "gift" &&
     asset.transferType !== "burdened_gift" &&
     (asset.acquisitionDate ?? "") >= "1985-01-01" &&
-    (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition || asset.isSalesCaseAcquisition)
-  ) {
+    !!(asset.useEstimatedAcquisition || asset.isAppraisalAcquisition || asset.isSalesCaseAcquisition)
+  );
+}
+
+export function giftEstimatedModeError(asset: AssetForm, label: string): string | null {
+  if (giftEstimatedModeBlocked(asset)) {
     return `${label}: 증여 취득 자산은 환산취득가·감정가액·매매사례가액을 지원하지 않습니다. 실거래가 모드로 증여일 평가액(신고가액)을 취득가액으로 입력하세요. (소득세법 시행령 §163⑨)`;
   }
   return null;

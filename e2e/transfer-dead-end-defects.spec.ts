@@ -13,6 +13,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "../lib/stores/calc-wizard-asset-carryover";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { withPrimary } from "./_helpers/validation-field-jump-cases";
+import { getReductionDefault } from "../components/calc/transfer/UnifiedReductionPanel-defaults";
 
 async function ready(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -482,5 +483,253 @@ test.describe("N1 — 비사업용 토지: 입력칸이 없는 지목에 남은 
     await expect
       .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="nblResidenceHistories.0.startDate"]')))
       .toBe(true);
+  });
+});
+
+test.describe("C1 — 자경농지 상속: 본인 순 자경기간이 8년 이상이면 숨은 피상속인 값이 막다른 오류를 만들지 않는다", () => {
+  // 본인 칸을 8년 미만에서 8년 이상으로 고치면 합산 토글·피상속인 칸이 사라지는데, 값은 스토어에 남는다.
+  const farmingLand = (sf: Record<string, unknown>) =>
+    withPrimary({
+      assetKind: "land",
+      landNature: "farmland",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "2005-01-01",
+      acquisitionArea: "1000",
+      transferArea: "1000",
+      reductions: [
+        { type: "self_farming", farmingYears: "10", decedentFarmingYears: "5", useSelfFarmingIncorporation: false, ...sf },
+      ],
+    });
+  const toReductionStep = async (page: Page) => {
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await next(page).click();
+  };
+  const goesToPenalty = (page: Page) =>
+    expect(page.getByRole("button", { name: "가산세", exact: true })).toHaveAttribute("aria-current", "step");
+  const aggregationBlock = /피상속인 경작기간을 합산하려면/;
+
+  test("본인 10년 + 남은 피상속인 5년 + 토글 꺼짐 → 막지 않고 다음 단계로, 합산 칸은 숨겨져 있다", async ({ page }) => {
+    await seedFormAndOpen(page, farmingLand({}));
+    await toReductionStep(page);
+    // 수정 전에는 이 오류 하나가 떠서 갇혔다 — 오류가 가리키는 칸(합산 토글)이 화면에 없다
+    await goesToPenalty(page);
+    await expect(panel(page).getByText(aggregationBlock)).toHaveCount(0);
+  });
+
+  test("🔑 긍정 짝 — 본인 7년이면 여전히 막고, 그 토글로 이동한다", async ({ page }) => {
+    await seedFormAndOpen(page, farmingLand({ farmingYears: "7" }));
+    await toReductionStep(page);
+    const issue = panel(page).getByRole("button", { name: aggregationBlock });
+    await expect(issue).toBeVisible(); // 게이트를 지운 게 아니다 — 이게 떠야 위 「막지 않는다」가 의미를 갖는다
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="reduction.self_farming.heirContinuedFarming1Year"]')))
+      .toBe(true);
+  });
+
+  test("🔑 긍정 짝 — 본인 8년이라도 결격 2년(순 6년)이면 합산 칸이 보이고 막는다 (엔진은 합산이 필요)", async ({ page }) => {
+    await seedFormAndOpen(page, farmingLand({ farmingYears: "8", disqualifiedTaxPeriodsSelf: "2" }));
+    await toReductionStep(page);
+    const issue = panel(page).getByRole("button", { name: aggregationBlock });
+    await expect(issue).toBeVisible();
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="reduction.self_farming.heirContinuedFarming1Year"]')))
+      .toBe(true);
+  });
+});
+
+test.describe("C2 — §97 시리즈 「3개월 초과 공실」 선택이 새로고침에 사라지지 않는다", () => {
+  // 복원 마이그레이션이 `hasVacancyOverGrace`를 매번 null로 되돌리던 것(구 키 → 3개월 새 질문 이관 의도가 새 키까지 지움)
+  const rental97 = withPrimary({
+    assetKind: "housing",
+    acquisitionDate: "2000-01-01",
+    reductions: [
+      { ...getReductionDefault("rental_97_main"), rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none" },
+    ],
+  });
+  for (const [label, value] of [["없음", "no"], ["있음", "yes"]] as const) {
+    test(`「${label}」를 고른 뒤 새로고침해도 유지`, async ({ page }) => {
+      await seedFormAndOpen(page, rental97);
+      await page.getByRole("button", { name: "감면·공제" }).first().click();
+      const radio = page.locator(`[data-field="reduction.rental_97_main.hasVacancyOverGrace"] input[value="${value}"]`);
+      // 접힌 섹션 안이라 evaluate click, 반영은 checked로 확인
+      await radio.evaluate((el: HTMLInputElement) => el.click());
+      await expect(radio).toBeChecked();
+
+      await page.reload();
+      await ready(page);
+      await page.getByRole("button", { name: "감면·공제" }).first().click();
+      await expect(radio).toBeChecked();
+    });
+  }
+});
+
+test.describe("B1 — 증여로 바꾸면 사라지는 산정 방식 라디오에 남은 추계 플래그가 막다른 오류를 만들지 않는다 (§163⑨)", () => {
+  // 증여 카드에는 「취득가액 산정 방식」 라디오가 없다(`CompanionAcqGiftBlock`). 매매에서 환산·감정가액·매매사례가액을 고른 뒤
+  // 원인을 증여로 바꾸면 플래그가 남아 「실거래가 모드로…」 오류가 뜨는데 고를 라디오가 없었다. ④는 이 플래그를 엔진에 그대로 보내므로
+  // (환산 계산) 검증을 좁히지 않고 원인 전환에서 비운다 — 일반건물 분리 OFF의 G3와 같은 규칙.
+  const blockMsg = /증여 취득 자산은 환산취득가·감정가액·매매사례가액을 지원하지 않습니다/;
+  const radio = (page: Page, sel: string) => page.locator(`[data-asset-card-index="0"] ${sel}`);
+  const clickRadio = async (page: Page, sel: string) => {
+    const r = radio(page, sel);
+    await r.evaluate((el: HTMLInputElement) => el.click());
+    await expect(r).toBeChecked();
+  };
+  const toHolding = (page: Page) =>
+    expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
+
+  for (const [kind, extra] of [
+    ["housing", {}],
+    ["land", { landNature: "farmland", acquisitionArea: "1000", transferArea: "1000" }],
+    ["building", {}],
+    ["presale_right", {}],
+    ["commercial_building", {}],
+  ] as const) {
+    for (const mode of ["estimated", "appraisal", "sales_case"] as const) {
+      test(`${kind}: 매매 → ${mode} → 증여`, async ({ page }) => {
+        await seedFormAndOpen(page, withPrimary({ assetKind: kind, acquisitionCause: "purchase", ...extra }));
+        await clickRadio(page, `input[type="radio"][name^="acqBasisMode"][value="${mode}"]`);
+        await clickRadio(page, 'input[type="radio"][name^="acquisitionCause-"][value="gift"]');
+        // 전제 — 증여 카드에는 산정 방식 라디오가 없다(있으면 막다른 오류가 아니다)
+        await expect(page.locator('[data-asset-card-index="0"] input[name^="acqBasisMode"]')).toHaveCount(0);
+
+        await next(page).click();
+        await expect(panel(page).getByRole("button", { name: blockMsg })).toHaveCount(0);
+        await toHolding(page);
+      });
+    }
+  }
+});
+
+test.describe("별건 B2 — 소유자 분리 + 매매 + 실거래가: 취득시 기준시가는 비율이 쓰일 때만 요구하고, 요구하면 그 칸이 있다 (⑧ V8 ↔ ⑫·술어)", () => {
+  // ⑧ V8은 ㎡당 공시지가·면적·총액을 **무조건** 요구했는데 (가) 본인 파트 취득가액을 입력하면 카드가 닫히고(술어 거짓),
+  // (나) 두 파트를 비우면 카드는 열리지만 주택은 총액 칸만 있고 ㎡당 칸이 없었다. 소유자 분리 토글은 「취득일 다름」을 강제로 켠다
+  // (`CompanionAcquisitionCauseSection` onSelfOwnsChange) — 시드도 그 상태로 만든다.
+  const ownerSplit = (extra: Record<string, unknown>) =>
+    withPrimary({
+      assetKind: "housing",
+      acquisitionCause: "purchase",
+      selfOwns: "land_only",
+      hasSeperateLandAcquisitionDate: true,
+      landAcquisitionDate: "",
+      useEstimatedAcquisition: false,
+      // 양도가액 안분 근거(양도시 기준시가) — 별개 축이라 미리 채워 둔다(비면 그 오류가 먼저 난다)
+      standardPricePerSqmAtTransfer: "3000000",
+      transferArea: "100",
+      acquisitionArea: "100", // ① 기본정보 「토지 면적」은 두 키를 함께 쓴다 — 한쪽만 시드하면 화면엔 100이 보이는데 ⑧은 비었다고 한다
+      buildingStandardPriceAtTransfer: "100000000",
+      ...extra,
+    });
+  const ownerMsg = /토지·건물 소유자가 다르면 본인 소유분만 과세하므로/;
+  const toHolding = (page: Page) =>
+    expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
+  const focusIn = (page: Page, key: string) =>
+    expect.poll(() => page.evaluate((k) => !!document.activeElement?.closest(`[data-field="${k}"]`), key)).toBe(true);
+
+  test("(가) 본인 파트(토지) 취득가액을 입력했으면 기준시가 없이 통과", async ({ page }) => {
+    await seedFormAndOpen(page, ownerSplit({ landAcquisitionPrice: "200000000" }));
+    await next(page).click();
+    await expect(panel(page).getByText(ownerMsg)).toHaveCount(0);
+    await toHolding(page);
+  });
+
+  test("🔑 (나) 두 파트를 비우면 막고 → ㎡당 공시지가 칸으로 이동 → 채우면 통과", async ({ page }) => {
+    await seedFormAndOpen(page, ownerSplit({}));
+    await next(page).click();
+    const issue = panel(page).getByRole("button", { name: ownerMsg });
+    await expect(issue).toBeVisible(); // 게이트를 지운 게 아니다 — 비율이 쓰이는 쪽은 여전히 요구한다
+    await issue.click();
+    await focusIn(page, "standardPricePerSqmAtAcq"); // 수정 전에는 이 칸이 화면에 없어 이동할 곳이 없었다
+
+    const card = page.locator('[data-asset-card-index="0"]');
+    await card.locator('[data-field="standardPricePerSqmAtAcq"] input').first().fill("2000000");
+    await card.locator('[data-field="standardPriceAtAcq"] input').first().fill("500000000");
+    await next(page).click();
+    await expect(panel(page).getByText(ownerMsg)).toHaveCount(0);
+    await toHolding(page);
+  });
+});
+
+test.describe("별건 B3 — §163⑨1호 토지 비교: 5칸이 토글 뒤에 숨지 않는다 (숨은 값이 취득가액을 바꾸던 문제)", () => {
+  // 5칸이 모두 차 있으면 ④는 토글과 무관하게 환산 입력을 보내 취득가액을 바꾼다(실측: 421,052,600 ↔ 비움 100,000,000, 토글 ON·OFF 동일).
+  // 「많은 금액」은 영 §163⑨ 단서 1호가 정한 계산이라 끄는 선택이 아니다 → 칸을 항상 연다.
+  const inheritedLand = (extra: Record<string, unknown>) =>
+    withPrimary({
+      assetKind: "land",
+      landNature: "farmland",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "1989-01-01",
+      decedentAcquisitionDate: "1988-01-01",
+      publishedValueAtInheritance: "100000000",
+      acquisitionArea: "100",
+      transferArea: "100",
+      pre1990Enabled: false,
+      pre1990GradeMode: "value",
+      ...extra,
+    });
+  const card = (page: Page) => page.locator('[data-asset-card-index="0"]');
+  const msg = /§164④ 취득당시 기준시가는 \d+개 항목을 \*\*모두\*\* 입력하거나/;
+
+  test("상속(의제취득일 이후): 토글 없이 칸이 보이고, 일부 입력 오류는 빈 칸으로 이동한다", async ({ page }) => {
+    await seedFormAndOpen(page, inheritedLand({ pre1990PricePerSqm_1990: "5000000" }));
+    // 수정 전에는 토글(`pre1990Enabled`)이 켜져야 칸이 보였고, 꺼진 채 값이 남으면 칸이 숨었다
+    // (접힌 섹션 안이라 `toBeVisible`이 아니라 DOM 존재로 본다 — 토글이 꺼진 칸은 마운트되지 않는다)
+    await expect(card(page).locator('[data-field="pre1990PricePerSqm_1990"] input')).toHaveCount(1);
+    await expect(card(page).locator('[data-field="pre1990Enabled"]')).toHaveCount(0);
+
+    await next(page).click();
+    const issue = panel(page).getByRole("button", { name: msg });
+    await expect(issue).toBeVisible();
+    await issue.click();
+    await expect
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-field="pre1990Grade_current"]')))
+      .toBe(true);
+
+    for (const [k, v] of [["pre1990Grade_current", "100000"], ["pre1990Grade_prev", "90000"], ["pre1990Grade_atAcq", "80000"]] as const) {
+      await card(page).locator(`[data-field="${k}"] input`).first().fill(v);
+    }
+    await next(page).click();
+    await expect(panel(page).getByText(msg)).toHaveCount(0);
+  });
+
+  test("증여: 토글 없이 칸이 보인다", async ({ page }) => {
+    await seedFormAndOpen(page, inheritedLand({ acquisitionCause: "gift", acquisitionDate: "1987-03-01" }));
+    await expect(card(page).locator('[data-field="pre1990PricePerSqm_1990"] input')).toHaveCount(1);
+    await expect(card(page).locator('[data-field="pre1990Enabled"]')).toHaveCount(0);
+  });
+
+  test("🔑 긍정 짝 — 의제취득일 前 상속은 토글이 환산 모드를 정한다: 토글이 있고 꺼지면 칸이 숨는다", async ({ page }) => {
+    await seedFormAndOpen(page, inheritedLand({ acquisitionDate: "1980-01-01", decedentAcquisitionDate: "1979-01-01" }));
+    await expect(card(page).locator('[data-field="pre1990Enabled"]')).toHaveCount(1);
+    await expect(card(page).locator('[data-field="pre1990PricePerSqm_1990"]')).toHaveCount(0);
+  });
+
+  test("켜짐 래치가 남은 비교 맥락에서도 5칸 값이 화면에 그대로 보인다 (래치 정리는 vitest가 고정)", async ({ page }) => {
+    await seedFormAndOpen(page, inheritedLand({ pre1990Enabled: true, pre1990PricePerSqm_1990: "5000000" }));
+    const st = await page.evaluate(() => {
+      const a = JSON.parse(sessionStorage.getItem("transfer-tax-wizard") || "{}").state?.formData?.assets?.[0];
+      return { e: a?.pre1990Enabled, p: a?.pre1990PricePerSqm_1990 };
+    });
+    // E2E 시드는 persist 전까지 원문이다(feedback) — 화면의 값으로 확인한다
+    expect(st.p).toBe("5000000");
+    await expect(card(page).locator('[data-field="pre1990PricePerSqm_1990"] input')).toHaveValue(/5,?000,?000/);
+  });
+  test("매매(환산 켜짐) → 증여 전환: 켜짐 래치가 꺼진다 (끌 토글이 사라지는 맥락)", async ({ page }) => {
+    await seedFormAndOpen(
+      page,
+      inheritedLand({ acquisitionCause: "purchase", acquisitionDate: "1985-05-01", pre1990Enabled: true, pre1990PricePerSqm_1990: "5000000" }),
+    );
+    const r = card(page).locator('input[type="radio"][name^="acquisitionCause-"][value="gift"]');
+    await r.evaluate((el: HTMLInputElement) => el.click());
+    await expect(r).toBeChecked();
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const a = JSON.parse(sessionStorage.getItem("transfer-tax-wizard") || "{}").state?.formData?.assets?.[0];
+          return { cause: a?.acquisitionCause, latch: a?.pre1990Enabled, price: a?.pre1990PricePerSqm_1990 };
+        }),
+      )
+      .toEqual({ cause: "gift", latch: false, price: "5000000" });
   });
 });

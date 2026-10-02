@@ -94,6 +94,26 @@ export function gbUnifiedSec1639ClearPatch(cause: string | undefined): {
   };
 }
 
+/**
+ * 표준·상가 자산의 취득원인이 **증여**가 될 때 추계 플래그를 비우는 patch (2026-10-02 B1 — G3의 형제).
+ *
+ * 증여 카드(`CompanionAcqGiftBlock`)에는 「취득가액 산정 방식」 라디오가 없다. 매매에서 환산·감정가액·매매사례가액을
+ * 고른 뒤 원인을 바꾸면 플래그가 남아 §163⑨ 오류(`giftEstimatedModeError`)가 뜨는데 끌 칸이 없었다.
+ * 검증을 좁히면 안 된다 — ④(`transfer-tax-api.ts`)가 같은 플래그로 환산 계산을 하므로 침묵 오계산이 된다.
+ * 비우는 것은 증여에서 **사용자가 설정할 수 없는 값뿐**이다(증여 카드에 그 라디오가 없다).
+ *
+ * 쓰는 곳 — 화면 전환(`CompanionAcquisitionCauseSection`)과 저장값 복원(`calc-wizard-asset-migrate.ts`,
+ * 복원은 `giftEstimatedModeBlocked`가 참일 때만). 일반건물은 `gbUnifiedSec1639ClearPatch`가 따로 맡는다.
+ */
+export function giftEstimationClearPatch(cause: string | undefined): {
+  useEstimatedAcquisition?: false;
+  isAppraisalAcquisition?: false;
+  isSalesCaseAcquisition?: false;
+} {
+  if (cause !== "gift") return {};
+  return { useEstimatedAcquisition: false, isAppraisalAcquisition: false, isSalesCaseAcquisition: false };
+}
+
 /** `explicit`(land/buildingAcqMode, "" 허용)이 있으면 그대로, 없으면 레거시 파생값. */
 export function effectivePartAcqMode(
   explicit: PartAcqMode | "" | undefined,
