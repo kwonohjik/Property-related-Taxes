@@ -147,7 +147,9 @@ const MISC_CASES: FieldJumpCase[] = [
   {
     // 칸이 사라진 구조의 stale 값 — 이동 대상은 안내 카드의 「지우기」 버튼(`data-field="depreciationAmount"`)이다.
     name: "leaf: 감가상각비 — 받을 수 없는 구조(일부 양도)의 stale 값", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 일부 양도·환지 등으로 면적이 달라지는 경우 .*감가상각비 입력값은 계산에 반영되지 않으므로 0으로 지우세요/,
-    form: () => withPrimary({ assetKind: "building", areaScenario: "partial", depreciationAmount: "1000" }),
+    // `building`은 시나리오가 `same` 단일이라 복원 시 `partial`이 `same`으로 정규화된다(`calc-wizard-asset-migrate.ts`) —
+    // 일부 양도를 실제로 유지하는 건물 보유 자산은 주택이다(`AREA_SCENARIOS_BY_ASSET_KIND`).
+    form: () => withPrimary({ assetKind: "housing", areaScenario: "partial", depreciationAmount: "1000" }),
   },
 ];
 
