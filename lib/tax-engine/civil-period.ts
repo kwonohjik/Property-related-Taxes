@@ -23,6 +23,7 @@ import {
   PUBLIC_HOLIDAYS_KR,
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
+  PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR,
 } from "./data/public-holidays-kr";
 import { DEADLINE_HOLIDAY_EXTENSION_161, PERIOD_CALCULATION_4 } from "./legal-codes/common";
 
@@ -90,11 +91,20 @@ export interface DeadlineEnd {
   extended: boolean;
   /** 연장 판단에 공휴일 표(`data/public-holidays-kr.ts`) 밖의 해가 걸려 토·일요일만 반영했다 */
   holidayTableUncovered: boolean;
+  /**
+   * 연장 판단에 월력요항 미발표 해(표의 예정 공휴일 — 임시공휴일·규정 개정 미반영)가 걸렸다.
+   * 표 밖이 함께 걸리면 false(`holidayTableUncovered`가 우선).
+   */
+  holidayTableProvisional: boolean;
 }
 
 const inHolidayTable = (d: Date) =>
   d.getUTCFullYear() >= PUBLIC_HOLIDAY_TABLE_FIRST_YEAR &&
   d.getUTCFullYear() <= PUBLIC_HOLIDAY_TABLE_LAST_YEAR;
+
+/** 표 안이지만 월력요항이 없는 해(예정 공휴일) */
+const inProvisionalHolidayYears = (d: Date) =>
+  inHolidayTable(d) && d.getUTCFullYear() > PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR;
 
 /** 민법 §161의 「토요일 또는 공휴일」인가. 표 밖의 해는 일요일만 공휴일로 본다(호출부가 고지). */
 function isSaturdayOrPublicHoliday(d: Date): boolean {
@@ -108,15 +118,18 @@ function isSaturdayOrPublicHoliday(d: Date): boolean {
 export function deadlineEnd(calendarEnd: Date): DeadlineEnd {
   let end = new Date(dayKey(calendarEnd));
   let uncovered = !inHolidayTable(end);
+  let provisional = inProvisionalHolidayYears(end);
   while (isSaturdayOrPublicHoliday(end)) {
     end = new Date(dayKey(end) + DAY_MS);
     if (!inHolidayTable(end)) uncovered = true;
+    if (inProvisionalHolidayYears(end)) provisional = true;
   }
   return {
     end,
     calendarEnd: new Date(dayKey(calendarEnd)),
     extended: dayKey(end) !== dayKey(calendarEnd),
     holidayTableUncovered: uncovered,
+    holidayTableProvisional: provisional && !uncovered,
   };
 }
 
@@ -151,7 +164,16 @@ export function holidayTableUncoveredBefore(target: Date): boolean {
 }
 
 /**
- * 기한 안내에 붙이는 한 줄 — 연장됐거나 공휴일 표가 덮지 못할 때만.
+ * `holidayTableUncoveredBefore`와 같은 구간이 표 안이지만 예정 공휴일 해(월력요항 미발표)에 걸리는가 —
+ * 임시공휴일·규정 개정이 반영되지 않았다는 고지용. 표 밖이 걸리면 그쪽(`holidayTableUncoveredBefore`)이 우선한다.
+ */
+export function holidayTableProvisionalBefore(target: Date): boolean {
+  const from = new Date(dayKey(target) - PUBLIC_HOLIDAY_LONGEST_RUN_DAYS * DAY_MS);
+  return inProvisionalHolidayYears(from) || inProvisionalHolidayYears(target);
+}
+
+/**
+ * 기한 안내에 붙이는 한 줄 — 연장됐거나 공휴일 표가 덮지 못하거나 예정 공휴일(2028~)로 판단했을 때만.
  *
  * @param basisLaw 민법 §161을 끌어오는 준용 조문 — 세목마다 다르다(국세: 국세기본법 §4 ·
  *   지방세: 지방세기본법 §23). 기본값은 국세기본법 §4(종전 모든 호출부가 국세 세목).
@@ -162,6 +184,15 @@ export function deadlineEndNote(d: DeadlineEnd, basisLaw: string = PERIOD_CALCUL
     return (
       `역상 말일 ${ymd(d.calendarEnd)} — 이 해의 관공서 공휴일은 계산표에 없어 토·일요일만 반영했습니다` +
       `(${DEADLINE_HOLIDAY_EXTENSION_161}). 말일 또는 그 뒤 날이 공휴일이면 기한이 더 늘어납니다.`
+    );
+  }
+  if (d.holidayTableProvisional) {
+    const head = d.extended
+      ? `역상 말일 ${ymd(d.calendarEnd)}이 토요일·공휴일이라 기한이 ${ymd(d.end)}까지 늘어났습니다(${basisLaw} → ${DEADLINE_HOLIDAY_EXTENSION_161}).`
+      : `기한 말일 ${ymd(d.end)}은 토요일·공휴일이 아닙니다(${basisLaw} → ${DEADLINE_HOLIDAY_EXTENSION_161}).`;
+    return (
+      `${head} 이 해의 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준이라 임시공휴일·규정 개정은 ` +
+      "반영하지 않았습니다 — 말일 또는 그 뒤 날이 임시공휴일로 지정되면 기한이 더 늘어납니다."
     );
   }
   if (d.extended) {

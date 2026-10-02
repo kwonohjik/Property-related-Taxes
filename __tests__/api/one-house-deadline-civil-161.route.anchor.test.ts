@@ -108,3 +108,35 @@ describe("L-1 — §155① 처분기한 말일 토요일 (route)", () => {
     expect(p.deadlineNote).toContain("2024-06-01");
   });
 });
+
+/**
+ * 예정 공휴일(2028~2035 — 월력요항 미발표) — 신규 취득 2025-01-26 → 3년 역상 말일 2028-01-26(설날 전날, 수)
+ * → 설 연휴 01-26~28 + 주말 → 기한 01-31(월). 표가 2027년까지였을 때(실측 2026-10-02)는 토·일만 반영해
+ * 기한 01-26 → 01-27 양도 과세(총 납부세액 `totalTax` 111,166,000)였다.
+ */
+describe("L-1 — 2028 설 연휴 처분기한 (route · 예정 공휴일)", () => {
+  const seol = (transferDate: string) => ({
+    ...body(transferDate),
+    houses: [row("selling", "2018-01-01"), row("h-new", "2025-01-26")],
+    temporaryTwoHouse: { previousAcquisitionDate: "2018-01-01", newAcquisitionDate: "2025-01-26" },
+  });
+
+  it("🔴 단건 — 01-27·01-31 양도 비과세 / 02-01 과세", async () => {
+    for (const t of ["2028-01-27", "2028-01-31"]) {
+      expect((await post(POST_SINGLE, "http://l/api/calc/transfer", seol(t))).result.isExempt, t).toBe(true);
+    }
+    expect((await post(POST_SINGLE, "http://l/api/calc/transfer", seol("2028-02-01"))).result.isExempt).toBe(false);
+  });
+
+  it("🔴 판정 메뉴 — 02-01이면 기한 2028-01-31 + 예정 공휴일 설명 · 예정 공휴일 고지(같은 id)", async () => {
+    const j = (
+      await atToday("2027-12-01", () => post(POST_JUDGE, "http://l/api/calc/one-house-exemption", seol("2028-02-01")))
+    ).judgment;
+    expect(j.isExempt).toBe(false);
+    const p = j.pending.find((x: { id: string }) => x.id === "155-1-disposal-deadline");
+    expect(String(p.deadline).slice(0, 10)).toBe("2028-01-31");
+    expect(p.deadlineNote).toContain("예정 공휴일");
+    const u = j.undetermined.find((x: { id: string }) => x.id === "civil-161-holiday-table-uncovered");
+    expect(u.reason).toContain("예정 공휴일");
+  });
+});
