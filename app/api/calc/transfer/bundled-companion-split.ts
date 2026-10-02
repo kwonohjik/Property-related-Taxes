@@ -212,6 +212,8 @@ export function splitCompanionIntoTwo(
   const expSplit = splitAmount(base.expenses ?? 0);
   const capexSplit = splitAmount(base.capitalExpenditure ?? 0);
   const texpSplit = splitAmount(base.transferExpense ?? 0);
+  // §97③ 감가상각비도 취득가액과 같은 비율로 쪼갠다 — 복제하면 부수토지·초과분 양쪽에서 이중 공제된다.
+  const depSplit = splitAmount(base.depreciationAmount ?? 0);
   const areaSplit = splitAmount(base.transferArea ?? 0);
   const auctionSplit = splitAmount(base.auctionPrice ?? 0);
   const ctSplit = splitCarryover(base.carryoverTaxation, excessRatio);
@@ -226,6 +228,7 @@ export function splitCompanionIntoTwo(
     expenses: expSplit.appurtenant,
     capitalExpenditure: capexSplit.appurtenant > 0 ? capexSplit.appurtenant : undefined,
     transferExpense: texpSplit.appurtenant > 0 ? texpSplit.appurtenant : undefined,
+    depreciationAmount: depSplit.appurtenant > 0 ? depSplit.appurtenant : undefined,
     // §164⑨ 수용 환산의 승수·공매가액 — 금액·면적이라 나눈다(복제하면 2배).
     transferArea: base.transferArea === undefined ? undefined : areaSplit.appurtenant,
     auctionPrice: base.auctionPrice === undefined ? undefined : auctionSplit.appurtenant,
@@ -252,6 +255,7 @@ export function splitCompanionIntoTwo(
     expenses: expSplit.excess,
     capitalExpenditure: capexSplit.excess > 0 ? capexSplit.excess : undefined,
     transferExpense: texpSplit.excess > 0 ? texpSplit.excess : undefined,
+    depreciationAmount: depSplit.excess > 0 ? depSplit.excess : undefined,
     transferArea: base.transferArea === undefined ? undefined : areaSplit.excess,
     auctionPrice: base.auctionPrice === undefined ? undefined : auctionSplit.excess,
     carryoverTaxation: ctSplit.excess,

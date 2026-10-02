@@ -62,6 +62,8 @@ export interface RentalHousingStepArgs {
   transferGain: number;
   /** 환산취득가 사용 여부 */
   usedEstimated: boolean;
+  /** [echo] §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비 — 표시 전용(세액 불변). */
+  depreciationAmount?: number;
   /** 환산취득가 (분리 표기용) */
   estimatedBase: number;
   /** 개산공제 (분리 표기용) */
@@ -292,7 +294,7 @@ export function runRentalHousingExceptionStep(
   args: RentalHousingStepArgs,
 ): TransferTaxResult | null {
   const {
-    effectiveInput, input, transferGain, usedEstimated,
+    effectiveInput, input, transferGain, usedEstimated, depreciationAmount,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
     inheritedAcquisitionStep, generalHouseAcquisitionDate,
   } = args;
@@ -644,6 +646,7 @@ export function runRentalHousingExceptionStep(
     // 환산취득가·개산공제 분리 표기를 위해 result에 명시 (FilingFormTable 환산 분기 진입 조건)
     estimatedBase: usedEstimated ? estimatedBase : undefined,
     estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
+    ...(depreciationAmount ? { depreciationAmount } : {}),
     // 주택분 장특(종전 산식 — 표1 기준 · 분모만 배율 초과분 제외분으로 바뀐다) + 비사토분 표1 장특.
     longTermHoldingDeduction: (rhe.formulaTrace.gain95Table1 > 0
       ? housingGain - rhe.formulaTrace.gain95Table1

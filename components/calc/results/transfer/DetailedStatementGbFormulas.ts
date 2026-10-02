@@ -17,6 +17,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
+import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -193,6 +194,27 @@ export function buildGbAcquisitionFormula(
   asset: AssetForm | undefined,
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  /**
+   * §97③ 감가상각비 — `p.acquisitionPrice`는 엔진이 공제한 **후** 값이다. 아래 산식 분기들은 안분·환산 식의
+   * 우변에 그 값을 적으므로 그대로 두면 **좌변이 우변을 만들지 못한다**(산식 = 공제 전 취득가액).
+   * 공제 전 값(`+ 감가상각비`)으로 산식을 만들고 마지막 줄에 공제를 덧붙인다 — 값이 산식 끝에서 자기를 만든다.
+   */
+  const dep = p.depreciationAmount ?? 0;
+  if (dep > 0) {
+    const gross = buildGbAcquisitionFormulaCore({ ...p, acquisitionPrice: p.acquisitionPrice + dep, depreciationAmount: undefined }, gb, asset, burdenedGift);
+    return gross === undefined
+      ? undefined
+      : `${gross}\n        − 감가상각비 ${fmt(dep)} (소득세법 §97③ — 건물분 취득가액에서 공제) = ${fmt(p.acquisitionPrice)}`;
+  }
+  return buildGbAcquisitionFormulaCore(p, gb, asset, burdenedGift);
+}
+
+function buildGbAcquisitionFormulaCore(
+  p: PerPropertyBreakdown,
+  gb: GeneralBuildingOutput | undefined,
+  asset: AssetForm | undefined,
+  burdenedGift?: TransferBurdenedGiftBreakdown,
+): string | undefined {
   // 부담부증여 §159①1호 분기 (우선 적용) — 자산별 취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
@@ -233,17 +255,22 @@ export function buildGbAcquisitionFormula(
     return `${head} ${fmt(a.acquisitionPrice)}${capexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
 
-  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기
+  // 취득가액 칸으로 옮겨 얹는 자본적지출 — 실가 모드는 0(필요경비 칸에 머문다), swap·이월과세 A만 양수.
+  const capExShift = capExInAcquisitionColumnOfProperty(p);
+
+  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기(예외 축 한정)
   if (!gb) {
-    if (p.capitalExpenditureForDisplay > 0) {
-      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(p.capitalExpenditureForDisplay)} = ${fmt(p.acquisitionPrice + p.capitalExpenditureForDisplay)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
+    if (capExShift > 0) {
+      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(capExShift)} = ${fmt(p.acquisitionPrice + capExShift)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
     }
-    return `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
+    return p.depreciationAmount
+      ? `자산별 취득가액 = ${fmt(p.acquisitionPrice)} (감가상각비 ${fmt(p.depreciationAmount)} 공제 후 — 소득세법 §97③)`
+      : `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
   }
 
-  // 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 합산되어 표시됨.
+  // 자본적지출은 실가 모드에서 필요경비 칸에 머문다. 예외 축(swap·이월과세 A)만 취득가액에 합산 표시.
   // 산식은 안분 결과만 표기하고 자본적지출은 별도 메모 처리 (단순화).
-  const displayValue = p.acquisitionPrice + p.capitalExpenditureForDisplay;
+  const displayValue = p.acquisitionPrice + capExShift;
 
   // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
   // bundledActualAcquisitionPrice가 채워져 있으면 실가 모드.
@@ -345,7 +372,7 @@ function dedRatePct(rate: number | undefined): string {
 
 /**
  * 필요경비 자산별 산식 — 개산공제 = 취득시 기준시가 × 개산공제율(§163⑥ 3% · 미등기 0.3%).
- * 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 흡수되어 본 행에는 양도비만 남음.
+ * 자본적지출은 실가 모드에서 필요경비 칸에 머문다. 예외 축(swap·이월과세 A)만 취득가액에 흡수되어 본 행에는 양도비만 남음.
  */
 export function buildGbExpenseFormula(
   p: PerPropertyBreakdown,
@@ -373,12 +400,22 @@ export function buildGbExpenseFormula(
     }
   }
 
-  const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+  const capExShift = capExInAcquisitionColumnOfProperty(p);
+  const displayExp = Math.max(0, p.necessaryExpense - capExShift);
 
-  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 양도비만 표기
+  // gbDetail 없는 일반 다건(사례 27·28 등) fallback
   if (!gb) {
-    if (p.capitalExpenditureForDisplay > 0) {
-      return `필요경비 ${fmt(p.necessaryExpense)} − 자본적지출 ${fmt(p.capitalExpenditureForDisplay)}(취득가액 흡수) = 양도비 ${fmt(displayExp)}`;
+    // 예외 축(swap·이월과세 A) — 자본적지출이 취득가액 칸에 얹혀 있어 이 칸은 양도비만
+    if (capExShift > 0) {
+      return `필요경비 ${fmt(p.necessaryExpense)} − 자본적지출 ${fmt(capExShift)}(취득가액 흡수) = 양도비 ${fmt(displayExp)}`;
+    }
+    // 실가 모드 — 자본적지출 + 양도비 전액이 이 칸이다(§97① 2호·3호)
+    const capEx = p.capitalExpenditureForDisplay;
+    if (capEx > 0) {
+      const transferExp = Math.max(0, p.necessaryExpense - capEx);
+      return transferExp > 0
+        ? `자본적지출 ${fmt(capEx)} + 양도비 ${fmt(transferExp)} = ${fmt(p.necessaryExpense)} (§97① 2호·3호)`
+        : `자본적지출 ${fmt(capEx)} = ${fmt(p.necessaryExpense)} (§97① 2호)`;
     }
     return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
   }

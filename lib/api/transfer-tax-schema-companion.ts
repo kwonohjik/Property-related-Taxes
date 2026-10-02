@@ -221,6 +221,8 @@ export const companionAssetSchema = z.object({
   capitalExpenditure: z.number().int().nonnegative().optional(),
   /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
   transferExpense: z.number().int().nonnegative().optional(),
+  /** 감가상각비 (소득세법 §97③) — 취득가액에서 공제. 지분 모드는 × ratio 적용된 값 */
+  depreciationAmount: z.number().int().nonnegative().optional(),
   /** 상속·증여·매매(actual) 등 취득가액이 자산별로 확정된 경우 (선택) */
   fixedAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** 상속 보충적평가액 산정용 입력 (선택) — 지정 시 fixedAcquisitionPrice로 주입됨 */

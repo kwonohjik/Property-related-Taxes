@@ -26,6 +26,7 @@ import type {
 } from "@/lib/tax-engine/general-building-valuation";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { attachBuildingDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import {
   buildProperties,
   buildApportionment,
@@ -115,6 +116,11 @@ export interface GeneralBuildingActualPricePayload {
    */
   capitalExpenditure?: number;
   transferExpense?: number;
+  /**
+   * §97③ 감가상각비 — **건물분**(원건물 카드)의 취득가액에서 공제한다. 실가 경로는 swap 대상이 아니라
+   * 비교 없이 공제만 한다(`attachBuildingDepreciation` → 카드 → 단건 엔진 `calcTransferGain`).
+   */
+  depreciationAmount?: number;
   /**
    * 🔴 구분양도(§100②③)·감정평가 basis(부가령 §64①1호 단서)·§166⑧ 예외 — 2026-08-07 신설(P-1).
    *
@@ -608,7 +614,9 @@ export function buildActualGeneralBuildingCards(
   }
 
   return {
-    cards,
+    // §97③ 감가상각비 — 원건물 카드에 싣는다(공제는 카드 → 단건 엔진이 한 번만 한다).
+    // 부담부증여(§159)는 카드 취득가액이 채무비율 안분값이라 공제 대상이 아니다 — 싣지 않는다(⑧ validate가 먼저 막는다).
+    cards: payload.burdenedGiftInfo ? cards : attachBuildingDepreciation(cards, payload.depreciationAmount),
     nonBusinessRatio,
     nblDetail: {
       buildingFootprintArea,

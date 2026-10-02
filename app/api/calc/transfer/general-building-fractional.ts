@@ -117,6 +117,8 @@ export function calculateGeneralBuildingFractional(
   let anySwapApplied = false;
   let swapEstimatedSide = 0;
   let swapDirectSide = 0;
+  /** swap 채택 파트의 가목 비교에 쓰인 §97③ 감가상각비 합 — 안내 카드가 「환산취득가 − 감가상각비 + 개산공제」로 적는다. */
+  let swapDepreciation = 0;
 
   shares.forEach((share, idx) => {
     /**
@@ -203,6 +205,9 @@ export function calculateGeneralBuildingFractional(
       swapDirectSide += applied
         ? applied.reduce((s, p) => s + (p?.directSide ?? 0), 0)
         : swap.directSide;
+      swapDepreciation += applied
+        ? applied.reduce((s, p) => s + (p?.depreciation ?? 0), 0)
+        : (swap.depreciationTotal ?? 0);
     }
 
     allCards.push(...tagged);
@@ -236,6 +241,7 @@ export function calculateGeneralBuildingFractional(
       estimatedSide: swapEstimatedSide,
       directSide: swapDirectSide,
       chosen: "direct",
+      ...(swapDepreciation > 0 ? { depreciation: swapDepreciation } : {}),
     };
   }
 

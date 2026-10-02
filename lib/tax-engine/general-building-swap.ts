@@ -37,6 +37,7 @@
  */
 import { applyRate } from "./tax-utils";
 import type { AssetCardForAggregate } from "./general-building-valuation";
+import { cardDepreciation } from "./general-building-depreciation";
 import type { PartAcqMode } from "./transfer-tax-split-gain";
 
 /**
@@ -76,13 +77,17 @@ export interface PartSwapDetail {
   /** 나목 = 그 파트 자본적지출 + 양도비. */
   directSide: number;
   swapApplied: boolean;
+  /** 가목 비교에 쓰인 §97③ 감가상각비 — 있을 때만(`estimatedSide`는 이미 공제 후 값). */
+  depreciation?: number;
 }
 
 export interface GeneralBuildingSwapDecision {
   /** §97②2호 단서 나목 채택 여부 (파트 단위에서는 **어느 파트든** 발동하면 true). */
   swapApplied: boolean;
-  /** 가목 합계 = Σ(환산 카드 환산취득가 + 개산공제). */
+  /** 가목 합계 = Σ(환산 카드 (환산취득가 − §97③ 감가상각비) + 개산공제). */
   estimatedSideTotal: number;
+  /** 가목 비교(자산총액)에 쓰인 감가상각비 합 — 표시용(「환산취득가 − 감가상각비 + 개산공제」). */
+  depreciationTotal?: number;
   /** 나목 = 자본적지출 + 양도비 (파트 단위에서는 파트 나목의 합). */
   directSide: number;
   /** propertyId → 배분된 나목분 (**택일 발동** 카드만 키 존재). */
@@ -154,8 +159,9 @@ export function resolveGeneralBuildingSwap(
     capitalExpenditure !== undefined || transferExpense !== undefined;
   // F8: 환산 카드(usedEstimatedAcquisition=true)만 가목 합산 — 실가 카드는 이미 actual 경로.
   const estimatedCards = cards.filter((c) => c.usedEstimatedAcquisition);
+  // §97③ — 가목의 취득가액은 감가상각비 공제 **후** 값이다(`calcNecessaryExpense`와 같은 비교식).
   const estimatedSideTotal = estimatedCards.reduce(
-    (s, c) => s + c.acquisitionPrice + c.expenses,
+    (s, c) => s + c.acquisitionPrice - cardDepreciation(c) + c.expenses,
     0,
   );
   // 동률(==)은 본문(단서 "적은 경우").
@@ -168,7 +174,15 @@ export function resolveGeneralBuildingSwap(
     );
   }
 
-  return { swapApplied, estimatedSideTotal, directSide, allocation, addition };
+  const depreciationTotal = estimatedCards.reduce((s, c) => s + cardDepreciation(c), 0);
+  return {
+    swapApplied,
+    estimatedSideTotal,
+    ...(depreciationTotal > 0 ? { depreciationTotal } : {}),
+    directSide,
+    allocation,
+    addition,
+  };
 }
 
 /**
@@ -247,14 +261,21 @@ function resolvePerPart(
     // 갈래 1/2 — 환산 파트: 가목↔나목 택일.
     const estimatedCards = partCards.filter((c) => c.usedEstimatedAcquisition);
     if (estimatedCards.length === 0) continue; // 환산 카드가 없으면 비교 대상이 없다
+    // §97③ — 가목의 취득가액은 감가상각비 공제 **후** 값이다(자산총액 판정과 같은 식).
     const estimatedSide = estimatedCards.reduce(
-      (s, c) => s + c.acquisitionPrice + c.expenses,
+      (s, c) => s + c.acquisitionPrice - cardDepreciation(c) + c.expenses,
       0,
     );
     estimatedSideTotal += estimatedSide;
     // 동률(==)은 본문 — 단서는 「적은 경우」다.
     const swapApplied = partDirectSide > estimatedSide;
-    perPart[part] = { estimatedSide, directSide: partDirectSide, swapApplied };
+    const partDep = estimatedCards.reduce((s, c) => s + cardDepreciation(c), 0);
+    perPart[part] = {
+      estimatedSide,
+      directSide: partDirectSide,
+      swapApplied,
+      ...(partDep > 0 ? { depreciation: partDep } : {}),
+    };
 
     if (swapApplied) {
       anySwap = true;

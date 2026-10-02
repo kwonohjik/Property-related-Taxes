@@ -44,7 +44,7 @@ export {
   buildGbExpenseFormula,
 } from "./DetailedStatementGbFormulas";
 import { fmt } from "./DetailedStatementGbFormulas";
-import { effectiveGrossGain, assetTaxableGain } from "./exempt-gross-gain";
+import { effectiveGrossGain, assetTaxableGain, capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 
 // ── 단순 산식 (자산별 동일 산식) ──────────────────────────────────
 
@@ -57,8 +57,9 @@ import { effectiveGrossGain, assetTaxableGain } from "./exempt-gross-gain";
  *   같은 화면 신고서 양식은 이미 `effectiveGrossGain`을 쓰고 있어 두 표가 어긋났다.
  */
 export function buildSubGainFormula(p: PerPropertyBreakdown): string {
-  const displayAcq = p.acquisitionPrice + p.capitalExpenditureForDisplay;
-  const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+  const capExShift = capExInAcquisitionColumnOfProperty(p);
+  const displayAcq = p.acquisitionPrice + capExShift;
+  const displayExp = Math.max(0, p.necessaryExpense - capExShift);
   return `${fmt(p.transferPrice)} - ${fmt(displayAcq)} - ${fmt(displayExp)} = ${fmt(effectiveGrossGain(p))}`;
 }
 
@@ -424,8 +425,11 @@ export function buildAcquisitionPriceFormula(
   totalTransferPrice: number,
   singleAcq: number,
   capEx: number,
+  /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 0). `singleAcq`는 이미 공제 **후** 값이다. */
+  depreciation = 0,
 ): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
+  const depStr = depreciation > 0 ? ` − 감가상각비 ${depreciation.toLocaleString()} (소득세법 §97③)` : "";
   // 환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) — 분수를 Frac로 표기 (PR #746 표준).
   const estFrac = (prefix: string, stdAcq: number, stdTransfer: number, suffix: string): ReactNode =>
     createElement(
@@ -441,7 +445,7 @@ export function buildAcquisitionPriceFormula(
   if (isAggregate) {
     return result.usedEstimatedAcquisition
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
-      : "자산별 실제 거래가액 합계 (자본적지출 §97① 가목 합산)";
+      : "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)";
   }
   // 배우자등 이월과세 Scenario A 채택 — 증여자 취득 당시 취득가액 승계 (§97의2①).
   // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
@@ -498,7 +502,7 @@ export function buildAcquisitionPriceFormula(
     // 없는 수를 지어내지 않는다.
     const basis =
       cmp != null
-        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
+        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()}${cmp.depreciation ? ` − 감가상각비 ${cmp.depreciation.toLocaleString()}` : ""} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
         : " (가목보다 커 나목을 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)";
     return head + basis;
   }
@@ -527,11 +531,14 @@ export function buildAcquisitionPriceFormula(
           `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
           stdAcq,
           stdTransfer,
-          `${capExStr} — 시행령 §163·§176의2②${sapNote}`,
+          `${capExStr}${depStr} — 시행령 §163·§176의2②${sapNote}`,
         )
-      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
+      : `취득가액(추계) ${estBase}${capExStr}${depStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
-  return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
+  // 실가 — 값은 공제 후이므로 산식은 「실지거래가액 − 감가상각비」로 적어 값이 자기를 만들게 한다.
+  return depreciation > 0
+    ? `취득가액 ${(singleAcq - capEx + depreciation).toLocaleString()}${capExStr} (실제 거래가액)${depStr}`
+    : `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
 }
 
 /**
@@ -614,6 +621,15 @@ export function buildNecessaryExpenseFormula(
     return stdAcq != null
       ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × ${rateLabel} — 소득세법 §97① 나목·시행령 §163⑥`
       : `개산공제 ${ded} (취득시 기준시가 × ${rateLabel}) — §97① 나목·시행령 §163⑥`;
+  }
+  // 실가 모드 — 자본적지출은 취득가액이 아니라 **필요경비**다(§97① 2호). 이 칸은 엔진이 차감한 전액이므로
+  // 자본적지출과 양도비를 풀어 쓴다. (예외 축 swap·이월과세 A는 위 분기가 먼저 처리한다.)
+  const capEx = result.capitalExpenditureForDisplay ?? 0;
+  if (capEx > 0 && capEx <= singleExp) {
+    const transferExp = singleExp - capEx;
+    return transferExp > 0
+      ? `자본적지출 ${capEx.toLocaleString()} + 양도비 ${transferExp.toLocaleString()} (중개수수료·법무사 비용 등) = ${singleExp.toLocaleString()} — §97① 2호·3호`
+      : `자본적지출 ${capEx.toLocaleString()} — §97① 2호`;
   }
   return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
 }

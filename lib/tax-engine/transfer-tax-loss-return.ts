@@ -41,6 +41,8 @@ export interface LossReturnArgs {
   warnings: string[];
   transferGain: number;
   usedEstimated: boolean;
+  /** [echo] §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비 — 표시 전용(세액 불변). 비워 두면 집계 역산 필요경비가 `E − D`로 오염된다. */
+  depreciationAmount?: number;
   exemptionResult: { isPartialExempt: boolean; exemptReason?: string };
   transferBurdenedGiftBreakdown: TransferTaxResult["transferBurdenedGiftBreakdown"];
   multiHouseSurchargeResult: Parameters<typeof buildTransferResultDetails>[0]["multiHouseSurchargeResult"];
@@ -66,6 +68,7 @@ export function buildLossTransferTaxResult({
   warnings,
   transferGain,
   usedEstimated,
+  depreciationAmount,
   exemptionResult,
   transferBurdenedGiftBreakdown,
   multiHouseSurchargeResult,
@@ -151,6 +154,7 @@ export function buildLossTransferTaxResult({
     transferGain: transferGain,
     taxableGain: transferGain,
     usedEstimatedAcquisition: usedEstimated,
+    ...(depreciationAmount ? { depreciationAmount } : {}),
     longTermHoldingDeduction: 0,
     lthdStartDate: resolveLTHDStartDate(effectiveInput),
     longTermHoldingRate: 0,

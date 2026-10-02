@@ -129,6 +129,8 @@ export function applyShareScale(
     // 자산 단위 나목(§97②2호) — swap 비교 대상
     "capitalExpenditure",
     "transferExpense",
+    // §97③ 감가상각비(건물분) — 100% 기준 입력
+    "depreciationAmount",
     // 일괄 취득가액·필요경비 (증축 경로 원건물분)
     "bundledAcquisitionPrice",
     "bundledExpenses",

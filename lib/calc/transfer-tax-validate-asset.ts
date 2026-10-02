@@ -30,6 +30,7 @@ import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
 import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
+import { validateDepreciation } from "./transfer-tax-validate-depreciation";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -297,6 +298,10 @@ export function validateAssetEntry(
       : undefined;
   const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal);
   if (acqError) return acqError;
+
+  // ⑧ §97③ 감가상각비 — 입력 가능 구조인지 · 취득가액 한도 (⑤ 게이트와 같은 술어 `depreciation-scope.ts`)
+  const depreciationError = validateDepreciation(a, label);
+  if (depreciationError) return depreciationError;
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
   // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)

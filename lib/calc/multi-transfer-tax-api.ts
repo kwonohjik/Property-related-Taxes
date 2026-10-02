@@ -4,6 +4,7 @@
  */
 
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -220,6 +221,14 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     // §97② 단서 swap — 둘 다 0이면 undefined로 보내 swap 비활성 (단건과 동일 게이트)
     capitalExpenditure: (capEx || effectiveTransferExpense) ? capEx : undefined,
     transferExpense: (capEx || effectiveTransferExpense) ? (effectiveTransferExpense || undefined) : undefined,
+    // §97③ 감가상각비 — 단건 ④와 같은 규칙(지분 모드 × ratio, 0·미입력은 undefined)
+    depreciationAmount: !primary || depreciationSupport(primary).status !== "ok"
+      ? undefined
+      : parseAmount(primary?.depreciationAmount ?? "")
+      ? primaryFractional
+        ? applyRatio(parseAmount(primary?.depreciationAmount ?? ""), primaryRatio) || undefined
+        : parseAmount(primary?.depreciationAmount ?? "")
+      : undefined,
     useEstimatedAcquisition: isSalesCase ? false : isEstimated,
     // 🔴 감정·매매사례도 개산공제(§163⑥) base로 쓴다 — 단건 ④(`transfer-tax-api.ts`)와 **같은 규칙**.
     //    ⚠️ `|| undefined`가 **필수**다. 종전 형태는 미입력 시 `0`을 보내는데 ⑫ 스키마가

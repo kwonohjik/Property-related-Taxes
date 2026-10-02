@@ -272,6 +272,9 @@ export function calculateGeneralBuildingTransfer(
       ? Object.values(swap.perPart).filter((p) => p.swapApplied)
       : undefined;
     aggregated.swapApplied = true;
+    const swapDepreciation = applied
+      ? applied.reduce((s, p) => s + (p.depreciation ?? 0), 0)
+      : (swap.depreciationTotal ?? 0);
     aggregated.swapComparison = {
       estimatedSide: applied
         ? applied.reduce((s, p) => s + p.estimatedSide, 0)
@@ -280,6 +283,8 @@ export function calculateGeneralBuildingTransfer(
         ? applied.reduce((s, p) => s + p.directSide, 0)
         : swap.directSide,
       chosen: "direct",
+      // §97③ — 가목 비교에 쓰인 감가상각비(안내 카드가 「환산취득가 − 감가상각비 + 개산공제」로 적는다)
+      ...(swapDepreciation > 0 ? { depreciation: swapDepreciation } : {}),
     };
   }
 

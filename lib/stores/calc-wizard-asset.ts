@@ -186,6 +186,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   capitalExpenditure: string;
   /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용 */
   transferExpense: string;
+  /** 감가상각비 계상액 (소득세법 §97③) — 사업소득금액 계산 시 필요경비에 산입한 금액. 취득가액에서 공제 */
+  depreciationAmount: string;
 
   // ── 자산별 감면 (복수 선택 허용, 조특법 §127⑦) ──
   /** 이 자산에 적용할 감면 목록. 복수 체크 가능, 엔진이 §127⑦ 규칙 적용. */

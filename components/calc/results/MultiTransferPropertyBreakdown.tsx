@@ -71,6 +71,14 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     exemptGrossGain: b.exemptGrossGain,
     expenses: b.necessaryExpense,
     capitalExpenditureForDisplay: b.capitalExpenditureForDisplay,
+    /**
+     * 자본적지출이 취득가액 칸에 얹히는 **예외 축**(§97②2호 단서 swap · 이월과세 시나리오 A)의 판정 입력.
+     * 단건 `buildRows`의 `capExInAcquisitionColumnOfResult`가 읽는다 — 없으면 이 두 축의 자산별 신고서가
+     * 합산 서식(자산 열)과 **다른 칸**에 자본적지출을 싣는다. 표시 전용 echo다(세액 불변).
+     */
+    depreciationAmount: b.depreciationAmount,
+    swapApplied: b.filingDisplay?.swapApplied,
+    carryoverTaxationDetail: b.carryoverTaxationDetail,
     /*
      * 🔴 종전에는 `Math.max(0, b.transferGain)` — 12억 초과 고가주택에서 **안분 전** 값이라
      *   과세대상·양도소득금액이 부풀었다(#019). 같은 화면의 합산 서식은 정확히 역산하고

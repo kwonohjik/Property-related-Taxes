@@ -46,6 +46,8 @@ export function buildTransferEngineInput(
     /** §97② 단서 swap 분리 입력 — 미명시 시 undefined 유지 (swap 비활성, legacy expenses 사용) */
     capitalExpenditure: data.capitalExpenditure,
     transferExpense: data.transferExpense,
+    /** §97③ 감가상각비 — 취득가액에서 공제. 미명시 시 undefined(종전과 동일) */
+    depreciationAmount: data.depreciationAmount,
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,

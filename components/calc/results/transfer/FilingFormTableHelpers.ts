@@ -9,6 +9,7 @@
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -376,12 +377,18 @@ export function buildRows(
    *    자기정합이 깨진다 → swap이면 종전 역산을 유지한다(현행 동작 보존).
    */
   const cbDetail = result.commercialBuildingValuationDetail;
+  /**
+   * §97③ 감가상각비 — 엔진이 취득가액에서 **실제로 공제한** 금액(swap이면 비어 있다). 환산 취득가액 echo
+   * (`estimatedBase`·상가 환산 총액)는 공제 **전** 값이라 취득가액 칸에는 공제 후 값을 싣는다 —
+   * 실가 분기는 아래 역산이 이미 공제 후 값이다.
+   */
+  const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
   const estimatedDisplay: { base: number; deduction: number } | null = result.swapApplied
     ? null
     : result.usedEstimatedAcquisition && result.estimatedBase !== undefined
-      ? { base: result.estimatedBase, deduction: result.estimatedDeduction ?? 0 }
+      ? { base: result.estimatedBase - depreciation, deduction: result.estimatedDeduction ?? 0 }
       : cbDetail
-        ? { base: cbDetail.estimatedAcquisitionTotal, deduction: cbDetail.estimatedDeductionTotal }
+        ? { base: cbDetail.estimatedAcquisitionTotal - depreciation, deduction: cbDetail.estimatedDeductionTotal }
         : null;
 
   if (isRedevMode && result.redevelopmentDetail) {
@@ -526,18 +533,29 @@ export function buildRows(
       );
     }
   } else {
-    // 실가 모드: 자본적지출은 취득가액에 합산 (§97① 가목, 신고서 양식 표시 관행)
+    // 실가 모드: 자본적지출은 필요경비 칸에 머문다 (§97① 2호 · 서식 부표3 ⑥→⑬ → 부표1 ⑭).
+    // 예외(swap·이월과세 A)만 종전대로 취득가액 칸에 얹는다 — `capExInAcquisitionColumn` 참고.
     // 엔진 result.expenses는 capitalExpenditure + transferExpense 합산값. split 입력 케이스에서는 form의 legacy directExpenses 대신 사용.
-    const capExp = result.capitalExpenditureForDisplay ?? 0;
+    const capExShift = capExInAcquisitionColumnOfResult(result);
     const engineExpenses = result.expenses ?? 0;
     const totalEngineExpenses = engineExpenses > 0 ? engineExpenses : totalExpenses;
     // 비과세 자산은 transferGain=0 → exemptGrossGain echo로 취득가액 역산 (그렇지 않으면 취득가액=양도가액−경비로 왜곡).
     const effGainForAcq = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
     const engineAcqPrice = totalTransferPrice - effGainForAcq - totalEngineExpenses;
-    const displayAcqPrice = engineAcqPrice + capExp;
-    const displayExpenses = Math.max(0, totalEngineExpenses - capExp);
+    const displayAcqPrice = engineAcqPrice + capExShift;
+    const displayExpenses = Math.max(0, totalEngineExpenses - capExShift);
     setNum("acquisitionPrice", "total", displayAcqPrice > 0 ? displayAcqPrice : null);
     setNum("expenses", "total", displayExpenses || null);
+  }
+
+  // §97③ 감가상각비 — 서식 부표3 ⑤ 계(= ①+③−④)가 부표1 ⑫ 취득가액으로 가므로 이 칸은 공제 후 값이다.
+  // 한 칸뿐이라 공제 사실을 행 고지로 알린다(환산 본문의 「미차감」 고지와 같은 메커니즘).
+  if (depreciation > 0) {
+    setRoseNote(
+      "acquisitionPrice",
+      "total",
+      `감가상각비 ${depreciation.toLocaleString()}을 공제한 취득가액입니다 (소득세법 §97③ · 별지 제84호서식 부표3 ④)`,
+    );
   }
 
   // §161 적용 분기 (장기임대주택 거주주택 비과세 특례) — 산식 순서:

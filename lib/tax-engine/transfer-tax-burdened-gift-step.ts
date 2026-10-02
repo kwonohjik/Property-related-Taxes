@@ -82,6 +82,8 @@ export function runBurdenedGiftStep(
       expenses: totalEstimatedDeduction,
       capitalExpenditure: undefined,
       transferExpense: undefined,
+      // §97③ 감가상각비는 부담부증여에서 미지원(Phase C) — §159 안분 취득가액에서 또 빼지 않는다. ⑧ validate가 먼저 막는다.
+      depreciationAmount: undefined,
       useEstimatedAcquisition: false,
       // §159 안분 취득가액을 **그대로** 쓴다는 신호. 부담부증여 UI는 일반 산정방식(환산·감정·매매사례)을
       // 숨기되 폼 상태는 보존하므로(CompanionAcqPurchaseBlock.tsx:338-341 — 재토글 복원) stale 값이 흘러든다.

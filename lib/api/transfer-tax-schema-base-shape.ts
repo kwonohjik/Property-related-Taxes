@@ -82,6 +82,8 @@ export const propertyBaseShape = {
   capitalExpenditure: z.number().int().nonnegative().optional(),
   /** §97① 나목 양도비 — §97② 단서 swap 분리 입력용 (선택) */
   transferExpense: z.number().int().nonnegative().optional(),
+  /** §97③ 감가상각비 — 사업소득금액 계산 시 필요경비에 산입한 금액. 취득가액에서 공제(선택). 미명시 = 0 */
+  depreciationAmount: z.number().int().nonnegative().optional(),
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),

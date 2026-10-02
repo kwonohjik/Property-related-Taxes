@@ -387,7 +387,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             필요경비 swap 적용 — 소득세법 §97② 2호 단서
           </p>
           <p className="text-xs text-amber-800">
-            환산취득가 + 개산공제 합 {formatKRW(aggregated.swapComparison.estimatedSide)}
+            환산취득가{aggregated.swapComparison.depreciation ? ` − 감가상각비 ${formatKRW(aggregated.swapComparison.depreciation)}` : ""} + 개산공제 합 {formatKRW(aggregated.swapComparison.estimatedSide)}
             {" < "}자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}
           </p>
           <p className="text-xs text-amber-800">

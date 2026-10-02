@@ -16,6 +16,7 @@ import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
 import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { SHARE_ID_SEPARATOR, baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { cardDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 
 export interface BundledLikeApportionmentResult {
   apportioned: Array<{
@@ -179,6 +180,9 @@ export function buildProperties(
       propertyType: card.propertyType,
       transferPrice: card.transferPrice,
       acquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+      // §97③ 감가상각비 — 원건물 카드만. 공제는 단건 엔진이 acquisitionPrice에서 한 번 한다.
+      // swap 카드는 취득가액을 차감하지 않으므로(0) 싣지 않는다(이중 차감 방지).
+      ...(card.depreciationAmount && !isSwapCard ? { depreciationAmount: card.depreciationAmount } : {}),
       expenses: isSwapCard ? swapNabok : card.expenses + directAddition,
       transferDate: card.transferDate,
       acquisitionDate: card.acquisitionDate,
@@ -340,7 +344,8 @@ export function buildApportionment(
         assetLabel: card.propertyLabel,
         assetKind: isLandCard ? "land" : "building",
         allocatedSalePrice: card.transferPrice,
-        allocatedAcquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+        // §97③ — 엔진이 차감하는 취득가액(공제 후)을 표시한다(buildProperties와 같은 규칙).
+        allocatedAcquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice - cardDepreciation(card),
         allocatedExpenses: isSwapCard ? swapNabok : card.expenses + directAddition,
         displayRatio: stdAtTransfer / totalStandAtTransfer,
         standardPriceAtTransfer: stdAtTransfer,

@@ -74,7 +74,7 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER.NECESSARY_EXPENSES",
     citation: "소득세법 §97",
-    keywords: ["필요경비", "실지거래가액", "환산취득가액", "자본적지출액"],
+    keywords: ["필요경비", "실지거래가액", "환산취득가액", "자본적지출액", "감가상각비"],
     keywordMode: "ALL",
   },
   {

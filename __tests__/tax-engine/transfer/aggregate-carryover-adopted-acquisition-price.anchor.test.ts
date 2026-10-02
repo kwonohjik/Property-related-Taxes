@@ -58,6 +58,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { capExInAcquisitionColumnOfProperty } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 const mockRates = makeMockRates();
@@ -65,13 +66,16 @@ const D = (s: string) => new Date(s);
 
 /**
  * 신고서 양식이 **화면에 그리는** 세 열 — clamp 포함.
- * 자본적지출은 취득가액 열로 흡수되고, 필요경비 열은 남은 양도비만 그린다.
+ * 취득가액 칸으로 옮겨 얹는 자본적지출은 표시 leaf(`capExInAcquisitionColumnOfProperty`)가 정한다 —
+ * 실가 모드는 0(필요경비 칸에 머문다), 이월과세 시나리오 A·swap만 취득가액 칸에 흡수된다.
+ * ⚠️ 종전에는 이 식을 테스트 안에 **복제**했다(표시 코드가 바뀌어도 따라가지 못한다) — leaf를 직접 부른다.
  */
 function filingColumns(p: PerPropertyBreakdown) {
+  const shift = capExInAcquisitionColumnOfProperty(p);
   return {
     transferPrice: p.transferPrice,
-    acquisition: p.acquisitionPrice + p.capitalExpenditureForDisplay,
-    expense: Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay),
+    acquisition: p.acquisitionPrice + shift,
+    expense: Math.max(0, p.necessaryExpense - shift),
   };
 }
 

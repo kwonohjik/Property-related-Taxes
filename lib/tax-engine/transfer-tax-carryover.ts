@@ -203,6 +203,9 @@ export function calcCarryoverScenarios(
   //   직접 입력 모드(useEstimatedAcquisition=false)에서는 donorAcqPrice를 명시.
   const inputABase: TransferTaxInput = {
     ...rawInput,
+    // §97③ 감가상각비는 이월과세에서 미지원 — 증여자 취득가액 승계에는 증여자의 감가상각 이력이 필요하다(Phase C).
+    // ⑧ validate가 먼저 막는다. 막히지 않은 경로(API 직접 호출)에서도 수증자 감가상각비를 증여자 취득가액에서 빼지 않는다.
+    depreciationAmount: undefined,
     acquisitionPrice: ct.useEstimatedAcquisition ? 0 : donorAcqPrice,
     acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 단서 보유기간 기산
     /**

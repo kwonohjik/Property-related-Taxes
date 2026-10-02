@@ -139,6 +139,18 @@ const MISC_CASES: FieldJumpCase[] = [
     name: "leaf: 주거용 사용 개시일 ≥ 양도일", field: "residentialUseStartDate", step: 0, assetIndex: A, message: /^자산: 주거용 사용 개시일은 양도일 이전이어야 합니다/,
     form: () => withPrimary({ hasNonHousingConversion: true, residentialUseStartDate: "2025-01-01" }),
   },
+  // ── §97③ 감가상각비 (depreciation) — 취득가액 한도 · 받을 수 없는 구조의 stale 값 ──
+  {
+    name: "leaf: 감가상각비 > 취득가액", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 감가상각비\(.*\)가 취득가액\(.*\)보다 클 수 없습니다/,
+    form: () => withPrimary({ assetKind: "building", acquisitionCause: "purchase", fixedAcquisitionPrice: "100000000", depreciationAmount: "200000000" }),
+  },
+  {
+    // 칸이 사라진 구조의 stale 값 — 이동 대상은 안내 카드의 「지우기」 버튼(`data-field="depreciationAmount"`)이다.
+    name: "leaf: 감가상각비 — 받을 수 없는 구조(일부 양도)의 stale 값", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 일부 양도·환지 등으로 면적이 달라지는 경우 .*감가상각비 입력값은 계산에 반영되지 않으므로 0으로 지우세요/,
+    // `building`은 시나리오가 `same` 단일이라 복원 시 `partial`이 `same`으로 정규화된다(`calc-wizard-asset-migrate.ts`) —
+    // 일부 양도를 실제로 유지하는 건물 보유 자산은 주택이다(`AREA_SCENARIOS_BY_ASSET_KIND`).
+    form: () => withPrimary({ assetKind: "housing", areaScenario: "partial", depreciationAmount: "1000" }),
+  },
 ];
 
 /** 의제취득일(1985.1.1.) 전 상속 — 가목(§163⑨ 평가액) 확인 불가를 선언해 나목(환산)으로 가는 바탕 */
