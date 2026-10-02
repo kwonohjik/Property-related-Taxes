@@ -1,9 +1,12 @@
 /**
  * ⑧ 감가상각비(§97③) 검증 — 입력 가능 범위는 `depreciation-scope.ts` 단일 술어가 정한다.
  *
- * - 이 구조에서는 받을 수 없는데 값이 남아 있으면(stale 저장소·API 직접 호출) 차단한다 —
- *   침묵하면 감가상각비가 **계산에 조용히 빠진다**(memory `feedback_blocked_message_is_not_missing_input_path`).
- *   입력 경로가 없는 상태에서 막으므로 메시지가 「0으로 지우세요」라는 탈출구를 준다.
+ * - **받을 수 없는 구조**(`unsupported` — 겸용·이월과세 등)에 값이 남아 있으면 차단한다 — 침묵하면 감가상각비가
+ *   **계산에 조용히 빠진다**. 막다른 길이 되지 않게 ⑤ 안내 카드(`DepreciationField`)가 값이 남아 있을 때 「지우기」
+ *   버튼(`data-field="depreciationAmount"`)을 낸다 — 메시지의 「0으로 지우세요」가 가리키는 칸이다.
+ * - **건물이 없는 자산**(`not_applicable` — 토지·권리)은 막지 않는다. 자산 종류를 바꾼 뒤 남은 값일 뿐이라
+ *   ④가 보내지 않는다(`depreciationSupport` 게이트) — 칸도 안내도 없는 상태에서 막으면 막다른 길이다
+ *   (memory `feedback_blocked_message_is_not_missing_input_path`).
  * - 취득가액을 확정해 알 수 있는 경우(매매 · 실가)에는 취득가액을 넘을 수 없다. 환산·감정·매매사례는
  *   취득가액이 계산값이라 여기서 알 수 없다 — 엔진이 취득가액까지로 절삭한다(`calcTransferGain`).
  */
@@ -17,12 +20,7 @@ export function validateDepreciation(a: AssetForm, label: string): string | null
   if (!(dep > 0)) return null;
 
   const support = depreciationSupport(a);
-  if (support.status === "not_applicable") {
-    return fieldError(
-      "depreciationAmount",
-      `${label}: 건물이 없는 자산(토지·분양권·입주권 등)은 감가상각비를 입력할 수 없습니다. 감가상각비 입력값을 0으로 지우세요 (소득세법 §97③).`,
-    );
-  }
+  if (support.status === "not_applicable") return null;
   if (support.status === "unsupported") {
     return fieldError(
       "depreciationAmount",

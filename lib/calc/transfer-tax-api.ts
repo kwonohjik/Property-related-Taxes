@@ -7,6 +7,7 @@
  */
 
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
+import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -326,9 +327,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? primaryEffectiveTransferExpense || undefined
         : undefined,
     // §97③ 감가상각비 — 취득가액에서 공제. 지분 모드는 취득가액·자본적지출과 같은 100% 기준 입력 × ratio.
-    // 0·미입력이면 undefined(종전과 동일). 필지 모드는 ⑧이 막으므로 보내지 않는다.
+    // 0·미입력이면 undefined(종전과 동일). 받을 수 없는 구조·건물 없는 자산(`depreciationSupport` ≠ ok)은
+    // 칸이 없는 채 남은 stale 값이므로 **보내지 않는다** — 자산 종류를 바꾼 뒤 값이 엔진에 새면
+    // 토지 취득가액에서 감가상각비가 빠진다(⑤ 게이트와 같은 술어).
     depreciationAmount:
-      parcelModeActive ? undefined :
+      depreciationSupport(primary).status !== "ok" ? undefined :
       parseAmount(primary.depreciationAmount ?? "")
         ? primaryFractional
           ? applyRatio(parseAmount(primary.depreciationAmount ?? ""), primaryRatio) || undefined

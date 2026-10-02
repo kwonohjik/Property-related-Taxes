@@ -400,3 +400,39 @@ describe("B0-7 일반건물 카드 — 감가상각비는 원건물 카드에만
     expect(withDep.perPart?.land?.swapApplied ?? false).toBe(false);
   });
 });
+
+// ── 차손 경로 — echo가 비어 있으면 집계 역산 필요경비가 E − D로 오염된다 ─────
+describe("B0-8 양도차손 — 조기반환 경로도 감가상각비 echo를 싣는다", () => {
+  const LOSS = {
+    transferPrice: 100_000_000,
+    acquisitionPrice: 200_000_000,
+    expenses: 0,
+  };
+
+  it("🔴 단건 — echo가 있다 (차익은 공제 후 값: 100 − (200 − 30) = −70)", () => {
+    const r = calc({ ...LOSS, depreciationAmount: 30_000_000 });
+    expect(r.transferGain).toBe(-70_000_000);
+    expect(r.depreciationAmount).toBe(30_000_000);
+  });
+
+  it("🔴 다건 — 취득가액 echo는 공제 후이고 필요경비가 음수로 오염되지 않는다", () => {
+    const a = calculateTransferTaxAggregate(
+      {
+        taxYear: 2026,
+        annualBasicDeductionUsed: 0,
+        properties: [
+          {
+            ...(baseTransferInput({ ...BASE, ...LOSS, depreciationAmount: 30_000_000 } as Partial<TransferTaxInput>) as never as Record<string, unknown>),
+            propertyId: "A1",
+            propertyLabel: "A1",
+          },
+        ],
+      } as never,
+      rates,
+    );
+    const p = a.properties[0];
+    expect(p.acquisitionPrice).toBe(170_000_000);
+    expect(p.necessaryExpense, "역산 필요경비 = 입력 경비(0) — E − D(−30,000,000)가 아니다").toBe(0);
+    expect(p.transferPrice - p.acquisitionPrice - p.necessaryExpense).toBe(p.transferGain);
+  });
+});

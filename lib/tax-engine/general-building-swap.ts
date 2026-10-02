@@ -77,13 +77,17 @@ export interface PartSwapDetail {
   /** 나목 = 그 파트 자본적지출 + 양도비. */
   directSide: number;
   swapApplied: boolean;
+  /** 가목 비교에 쓰인 §97③ 감가상각비 — 있을 때만(`estimatedSide`는 이미 공제 후 값). */
+  depreciation?: number;
 }
 
 export interface GeneralBuildingSwapDecision {
   /** §97②2호 단서 나목 채택 여부 (파트 단위에서는 **어느 파트든** 발동하면 true). */
   swapApplied: boolean;
-  /** 가목 합계 = Σ(환산 카드 환산취득가 + 개산공제). */
+  /** 가목 합계 = Σ(환산 카드 (환산취득가 − §97③ 감가상각비) + 개산공제). */
   estimatedSideTotal: number;
+  /** 가목 비교(자산총액)에 쓰인 감가상각비 합 — 표시용(「환산취득가 − 감가상각비 + 개산공제」). */
+  depreciationTotal?: number;
   /** 나목 = 자본적지출 + 양도비 (파트 단위에서는 파트 나목의 합). */
   directSide: number;
   /** propertyId → 배분된 나목분 (**택일 발동** 카드만 키 존재). */
@@ -170,7 +174,15 @@ export function resolveGeneralBuildingSwap(
     );
   }
 
-  return { swapApplied, estimatedSideTotal, directSide, allocation, addition };
+  const depreciationTotal = estimatedCards.reduce((s, c) => s + cardDepreciation(c), 0);
+  return {
+    swapApplied,
+    estimatedSideTotal,
+    ...(depreciationTotal > 0 ? { depreciationTotal } : {}),
+    directSide,
+    allocation,
+    addition,
+  };
 }
 
 /**
@@ -257,7 +269,13 @@ function resolvePerPart(
     estimatedSideTotal += estimatedSide;
     // 동률(==)은 본문 — 단서는 「적은 경우」다.
     const swapApplied = partDirectSide > estimatedSide;
-    perPart[part] = { estimatedSide, directSide: partDirectSide, swapApplied };
+    const partDep = estimatedCards.reduce((s, c) => s + cardDepreciation(c), 0);
+    perPart[part] = {
+      estimatedSide,
+      directSide: partDirectSide,
+      swapApplied,
+      ...(partDep > 0 ? { depreciation: partDep } : {}),
+    };
 
     if (swapApplied) {
       anySwap = true;

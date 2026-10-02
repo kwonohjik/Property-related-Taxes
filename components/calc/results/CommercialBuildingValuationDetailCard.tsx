@@ -52,6 +52,11 @@ interface Props {
   buildingGain?: number;
   /** §97②2호 단서 swap 발동 — true면 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용됨. */
   swapApplied?: boolean;
+  /**
+   * §97③ 엔진이 환산취득가에서 실제로 공제한 감가상각비(swap이면 비어 있다). 양도차익 산식이 공제 후 값과 맞도록
+   * 환산취득가에서 빼서 보인다 — 없으면 같은 화면의 신고서·명세서(공제 후)와 산술이 어긋난다.
+   */
+  depreciation?: number;
 }
 
 function Row({ label, value, sub = false, highlight = false }: {
@@ -70,7 +75,7 @@ function Row({ label, value, sub = false, highlight = false }: {
   );
 }
 
-export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied }: Props) {
+export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied, depreciation }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
   /**
    * 환산취득가·개산공제의 **토지·건물 분리** 가능 여부.
@@ -223,6 +228,14 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
                 <td className="py-1 text-right text-xs tabular-nums">{formatKRW(detail.estimatedDeductionBuilding)}</td>
                 <td className="py-1 text-right text-xs tabular-nums font-semibold">{formatKRW(detail.estimatedDeductionTotal)}</td>
               </tr>
+              {depreciation !== undefined && depreciation > 0 && (
+                <tr>
+                  <td className="py-1 text-xs">감가상각비 공제 (§97③)</td>
+                  <td className="py-1 text-right text-xs tabular-nums">—</td>
+                  <td className="py-1 text-right text-xs tabular-nums">—</td>
+                  <td className="py-1 text-right text-xs tabular-nums font-semibold">{formatKRW(depreciation)}</td>
+                </tr>
+              )}
               {(landGain !== undefined || buildingGain !== undefined) && (
                 <tr className="bg-emerald-50/60">
                   <td className="py-1 text-xs font-semibold">양도차익</td>
@@ -242,7 +255,14 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
           <p className="text-xs font-medium text-emerald-800">양도차익 → 세액 산식</p>
           <table className="w-full border-collapse">
             <tbody>
-              <Row label={`양도차익 = 양도가액 ${formatKRW(transferPrice)} − 환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`} value={acquisitionGain} />
+              <Row
+                label={
+                  depreciation !== undefined && depreciation > 0
+                    ? `양도차익 = 양도가액 ${formatKRW(transferPrice)} − (환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 감가상각비 ${formatKRW(depreciation)}) − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`
+                    : `양도차익 = 양도가액 ${formatKRW(transferPrice)} − 환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`
+                }
+                value={acquisitionGain}
+              />
               {holdingText && (
                 <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">보유기간: {holdingText}</td></tr>
               )}

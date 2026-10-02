@@ -145,8 +145,9 @@ const MISC_CASES: FieldJumpCase[] = [
     form: () => withPrimary({ assetKind: "building", acquisitionCause: "purchase", fixedAcquisitionPrice: "100000000", depreciationAmount: "200000000" }),
   },
   {
-    name: "leaf: 감가상각비 — 건물 없는 자산의 stale 값", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 건물이 없는 자산\(토지·분양권·입주권 등\)은 감가상각비를 입력할 수 없습니다/,
-    form: () => withPrimary({ assetKind: "land", depreciationAmount: "1000" }),
+    // 칸이 사라진 구조의 stale 값 — 이동 대상은 안내 카드의 「지우기」 버튼(`data-field="depreciationAmount"`)이다.
+    name: "leaf: 감가상각비 — 받을 수 없는 구조(일부 양도)의 stale 값", field: "depreciationAmount", step: 0, assetIndex: A, message: /^자산: 일부 양도·환지 등으로 면적이 달라지는 경우 .*감가상각비 입력값은 계산에 반영되지 않으므로 0으로 지우세요/,
+    form: () => withPrimary({ assetKind: "building", areaScenario: "partial", depreciationAmount: "1000" }),
   },
 ];
 

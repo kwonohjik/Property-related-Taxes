@@ -37,7 +37,8 @@ import { SplitGainDetailSection } from "@/components/calc/results/transfer/Split
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 
 interface Props {
-  result: TransferValuationDetailSource;
+  /** `depreciationAmount`는 자산별 breakdown이 싣는 §97③ echo — 상가 환산 카드 산식이 공제 후 값과 맞도록 읽는다. */
+  result: TransferValuationDetailSource & { depreciationAmount?: number };
   /**
    * 상가 환산 카드(§164⑥)가 쓰는 자산-수준 금액.
    * 일괄에서는 **안분된 자산별 값**을 넘긴다 — 단건의 총계약가와 의미가 다르므로
@@ -111,6 +112,7 @@ export function ValuationDetailCards({
           acquisitionGain={transferGain}
           longTermDeduction={longTermDeduction}
           taxableIncome={taxableIncome}
+          depreciation={result.depreciationAmount}
         />
       )}
       {result.rentalHousingExceptionDetail && (

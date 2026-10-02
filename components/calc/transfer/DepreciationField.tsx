@@ -11,7 +11,8 @@
  * (파트별 취득가액·이월과세 등)에서는 칸을 숨기고 이유를 알린다(조용히 빠지는 입력을 만들지 않는다).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { depreciationSupport } from "@/lib/calc/depreciation-scope";
 import { isFractionalMode } from "./OwnershipRatioInput";
@@ -25,11 +26,26 @@ export function DepreciationField({ asset, onChange }: Props) {
   const support = depreciationSupport(asset);
   if (support.status === "not_applicable") return null;
   if (support.status === "unsupported") {
+    // 이 구조로 바꾸기 전에 입력한 값이 남아 있으면 지울 수단이 있어야 한다 — ⑧ validate가 그 값을 막고,
+    // 메시지가 가리키는 칸(`data-field`)이 이 버튼이다(칸이 없는 채 막으면 막다른 길).
+    const hasStale = parseAmount(asset.depreciationAmount ?? "") > 0;
     return (
       <ToneCard tone="slate" title="감가상각비 (소득세법 §97③)">
         <p className="text-xs text-muted-foreground" data-testid="depreciation-unsupported">
           {support.reason}
         </p>
+        {hasStale && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-field="depreciationAmount"
+            data-testid="depreciation-clear"
+            onClick={() => onChange({ depreciationAmount: "0" })}
+          >
+            이전에 입력한 감가상각비 지우기
+          </Button>
+        )}
       </ToneCard>
     );
   }

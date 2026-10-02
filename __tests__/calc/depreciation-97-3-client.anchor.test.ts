@@ -96,10 +96,9 @@ describe("C0-2 validateDepreciation — ⑧", () => {
     expect(validateDepreciation(asset({ depreciationAmount: "40000000" }), "자산")).toBeNull();
   });
 
-  it("🔴 건물이 없는 자산에 값이 남아 있으면 차단 — 탈출구(0으로 지우기)를 알려 준다", () => {
-    const m = validateDepreciation(asset({ assetKind: "land", depreciationAmount: "1000" }), "자산");
-    expect(m).toContain("건물이 없는 자산");
-    expect(m).toContain("0으로 지우세요");
+  it("🔴 건물이 없는 자산에 남은 값은 막지 않는다 — 칸도 안내도 없는 상태에서 막으면 막다른 길(자산 종류를 바꾼 stale 값)", () => {
+    expect(validateDepreciation(asset({ assetKind: "land", depreciationAmount: "1000" }), "자산")).toBeNull();
+    expect(validateDepreciation(asset({ assetKind: "presale_right", depreciationAmount: "1000" }), "자산")).toBeNull();
   });
 
   it("🔴 받을 수 없는 구조에 값이 남아 있으면 차단", () => {
@@ -162,6 +161,18 @@ describe("C0-3 ④ 전송 — 단건 body", () => {
     expect(cap.body?.depreciationAmount).toBeUndefined();
   });
 
+  it("🔴 건물이 없는 자산·받을 수 없는 구조의 stale 값은 보내지 않는다 (엔진이 토지 취득가액에서 빼면 안 된다)", async () => {
+    for (const over of [
+      { assetKind: "land" as const },
+      { acquisitionCause: "carryover_gift" as const },
+      { areaScenario: "partial" as const },
+    ]) {
+      const cap = capture();
+      await callTransferTaxAPI(formOf(asset({ ...over, depreciationAmount: "40000000" })));
+      expect(cap.body?.depreciationAmount, JSON.stringify(over)).toBeUndefined();
+    }
+  });
+
   it("지분 모드 — 100% 기준 입력 × 지분율 (취득가액·자본적지출과 같은 규칙)", async () => {
     const cap = capture();
     await callTransferTaxAPI(
@@ -186,6 +197,11 @@ describe("C0-4 ④ 전송 — 다건(multi) payload", () => {
 
   it("긍정 짝 — 0이면 undefined", () => {
     const p = buildPropertyPayload(formOf(asset({ depreciationAmount: "0" })));
+    expect(p.depreciationAmount).toBeUndefined();
+  });
+
+  it("🔴 건물이 없는 자산의 stale 값은 다건에서도 보내지 않는다", () => {
+    const p = buildPropertyPayload(formOf(asset({ assetKind: "land", depreciationAmount: "40000000" })));
     expect(p.depreciationAmount).toBeUndefined();
   });
 });

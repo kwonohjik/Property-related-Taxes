@@ -35,6 +35,24 @@
 - **취득가액 초과분은 취득가액까지로 절삭**(엔진) — 실가 매매는 ⑧이 먼저 막고 환산·감정·일반건물은 엔진 절삭만 있다(V-9: 환산에서의
   초과 입력은 사용자에게 알리지 않는다 — Phase C 전에 고지 여부 결정 필요).
 - **이월과세·부담부증여** — 엔진은 `depreciationAmount`를 지워(이중 공제 방지) validate가 먼저 막는다.
+- **막다른 길 방지(동기화 점검 H-1, 2026-10-02)** — 자산 종류를 바꾸면 값은 남고 칸은 사라진다.
+  ① ④(단건·다건·컴패니언·일반건물)는 `depreciationSupport` ≠ ok면 값을 **보내지 않는다**(토지로 바꾼 뒤 stale 값이 엔진에 새면
+  토지 취득가액에서 감가상각비가 빠진다). ② **건물 없는 자산**(`not_applicable`)의 남은 값은 validate가 막지 않는다(칸·안내가
+  없는 상태에서 막으면 dead-end). ③ **받을 수 없는 구조**(`unsupported`)는 validate가 막되, 안내 카드에 「이전에 입력한 감가상각비
+  지우기」 버튼(`data-field="depreciationAmount"`)을 둬 메시지가 가리키는 칸이 실재한다.
+- **echo 보강(M-1)** — 양도차손(`transfer-tax-loss-return.ts`)·§155⑳ 장기임대 특례(`transfer-tax-rental-housing-step.ts`) 반환도
+  `depreciationAmount`를 싣는다 — 비우면 집계 역산 필요경비가 `E − D`(음수 가능)로 오염된다.
+- **결과 카드(M-2·M-3)** — 상가 환산 카드 산식은 `(환산취득가 − 감가상각비)`, swap 안내 카드는 「환산취득가 − 감가상각비 + 개산공제」로
+  적는다(`swapComparison.depreciation`, 일반건물은 `resolveGeneralBuildingSwap`이 `depreciationTotal`·파트별 `depreciation`을 싣는다).
+
+**알려진 한계 (동기화 점검 Low — 이번에 고치지 않음)**:
+- L-1 `computeTransferSummary`(`calc-wizard-store.ts`)의 `totalAcqPrice`는 공제 후 값이 아니다 — 화면 소비처 없음(죽은 필드로 보임, 확인 필요).
+- L-2 `TRANSFER.DEPRECIATION_DEDUCTION` 상수는 manifest 키워드 검증용으로만 있고 코드 사용처가 없다.
+- L-3 한도 검증(`감가상각비 ≤ 취득가액`)은 매매 실가에만 있다 — 신축·상속·증여·환산·일반건물은 엔진이 조용히 절삭한다(V-9).
+- L-4 `BundledAllocationCard`의 「건물분 취득가액 (상속개시일 평가액)」 라벨에 공제 후 값이 표시될 수 있다.
+- L-5 가업상속 override(`transfer-tax-acquisition-override.ts`)는 §97의2④ 의제취득가액에서도 감가상각비를 공제한다 — **법적 타당성 확인 필요**.
+- L-6 상가 환산의 절삭 한도는 환산 총액(토지 포함)이다 — 조문·판례는 건물분이다.
+- PDF(`lib/pdf/ResultPdfTransferSections.tsx`)의 취득가액은 raw 엔진 값이라 공제 후 값과 일치하는지 **확인 필요**.
 
 ---
 

@@ -5,6 +5,7 @@
  * buildGeneralBuildingValuation)을 분리. 함수 로직 변경 없이 순수 추출 + §163⑨ 상속 게이트.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { depreciationSupport } from "./depreciation-scope";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 // §163⑨ 단서 게이트 — 상가 경로와 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 조문 하나에 두 정책이 된다).
@@ -505,7 +506,7 @@ export function buildGeneralBuildingValuation(
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
         : {}),
       // §97③ 감가상각비 — 건물분. 지분 스케일은 `applyShareScale`(gb-shares)이 한다.
-      ...(parseAmount(asset.depreciationAmount ?? "")
+      ...(depreciationSupport(asset).status === "ok" && parseAmount(asset.depreciationAmount ?? "")
         ? { depreciationAmount: parseAmount(asset.depreciationAmount ?? "") }
         : {}),
       /**
@@ -652,7 +653,7 @@ export function buildGeneralBuildingValuation(
       ? { transferExpense: parseAmount(asset.transferExpense) }
       : {}),
     // §97③ 감가상각비 — 건물분(실가 경로). 지분 스케일은 `applyShareScale`이 한다.
-    ...(parseAmount(asset.depreciationAmount ?? "")
+    ...(depreciationSupport(asset).status === "ok" && parseAmount(asset.depreciationAmount ?? "")
       ? { depreciationAmount: parseAmount(asset.depreciationAmount ?? "") }
       : {}),
     // §95④ 단기보유 기산점 — actual 분기 기존 결측 보강 (토지 취득원인·피상속인/증여자 취득일).

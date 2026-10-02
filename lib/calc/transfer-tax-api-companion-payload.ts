@@ -9,6 +9,7 @@
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { depreciationSupport } from "./depreciation-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
@@ -341,6 +342,7 @@ export function buildAssetPayload(
     transferExpense: effectiveTransferExpenseFor(asset, ratio, fractional, totalTransferExpense) || undefined,
     // §97③ 감가상각비 — 단건 ④와 같은 규칙(지분 모드 × ratio, 0·미입력은 undefined)
     depreciationAmount: (() => {
+      if (depreciationSupport(asset).status !== "ok") return undefined;
       const dep = parseAmount(asset.depreciationAmount ?? "");
       return (fractional ? applyRatio(dep, ratio) : dep) || undefined;
     })(),
