@@ -14,25 +14,20 @@
 
 import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
-import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
 import { CompanionAcqAmountSection } from "./CompanionAcqAmountSection";
+import { CompanionAcqSpecialAssetNotices } from "./CompanionAcqSpecialAssetNotices";
+import { CompanionAcqStdPriceSection } from "./CompanionAcqStdPriceSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
-import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
+import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 
@@ -161,11 +156,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         ];
 
   const acqPricePerSqm = props.standardPricePerSqmAtAcq ?? internalPricePerSqmAtAcq;
-  /**
-   * 취득시 기준시가 위젯이 곱할 면적이 「양도분」인가 — ④와 **같은 술어**를 쓴다(§9-7).
-   * 갈리면 화면이 파생한 총액과 엔진이 쓰는 면적이 어긋난다.
-   */
-  const acqStdUsesTransferArea = usesTransferAreaForAcqStdPrice(props.asset?.areaScenario);
   const onAcqPricePerSqmChange = props.onStandardPricePerSqmAtAcqChange ?? setInternalPricePerSqmAtAcq;
   const transferPricePerSqm = props.standardPricePerSqmAtTransfer ?? internalPricePerSqmAtTransfer;
   const onTransferPricePerSqmChange = props.onStandardPricePerSqmAtTransferChange ?? setInternalPricePerSqmAtTransfer;
@@ -173,14 +163,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isLand = props.assetKind === "land";
   // acqDatePre1990에서 파생된 derived value — useEffect + setState 불필요
   const acqDatePre1990 = !!(props.acquisitionDate && props.acquisitionDate < "1990-08-30");
-  const pre1990ForceYear = acqDatePre1990 ? "1990" : undefined;
   const showPre1990 =
     isLand &&
     !!props.pre1990Form &&
     !!props.onPre1990Change &&
     acqDatePre1990;
-
-  const propertyKind = toPropertyKind(props.assetKind);
 
   // 환산취득가 + 1990.8.30. 이전 취득 토지 → pre1990Enabled 자동 체크
   // [의도적 예외] "useEffect → store 미러링 금지" 정책의 예외로 유지 — MixedUsePreHousingDisclosureSection
@@ -216,14 +203,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [acqDatePrePHD]);
-
-  // 취득시 기준시가 조회 단가 → pre1990PricePerSqm_1990 자동 입력
-  function handleAcqPricePerSqmChange(v: string) {
-    onAcqPricePerSqmChange(v);
-    if (showPre1990) {
-      props.onPre1990Change?.({ pre1990PricePerSqm_1990: v.replace(/,/g, "") });
-    }
-  }
 
   const isSplitable =
     props.assetKind === "housing" || props.assetKind === "building";
@@ -306,9 +285,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
   const isMixedUse = !!props.asset?.isMixedUseHouse;
 
-  // 상업용건물·오피스텔 모드: 환산은 CommercialBuildingBlock(시행령 §164⑥)에서 처리하므로
-  // 일반 자산용 환산 입력(취득시/양도시 기준시가)을 숨긴다.
-  const isCommercialBuilding = props.assetKind === "commercial_building";
   const isGeneralBuilding = props.assetKind === "general_building";
 
   return (
@@ -330,118 +306,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           이 토글이 「취득일 다름」을 강제로 켜므로, 아래에 두면 아래를 눌렀는데 위가 펼쳐지는
           역방향 인과였다. 계획서: transfer-self-owns-toggle-relocation.plan.md §1.1 */}
 
-      {/* 부담부증여 모드 — 취득가액 산정 방식·실거래가 입력 숨김 (§159 자동 산정).
-          폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice 등)는 보존하여
-          양도 형태를 "일반 양도"로 되돌리면 입력값 복원 가능. */}
-      {props.asset?.transferType === "burdened_gift" && (
-        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
-          <p className="text-sm font-semibold text-fuchsia-900">
-            취득가액 — 부담부증여 §159 자동 산정
-          </p>
-          <p className="text-xs text-fuchsia-800">
-            부담부증여(소득세법 시행령 §159)는 취득가액을 <b>증여재산 평가방식</b>에 따라 엔진이 자동 산정합니다
-            — 기준시가 평가 시 취득기준시가 × 채무비율, 시가 평가 시 실지취득가액 또는 환산취득가액(위
-            &lsquo;부담부증여&rsquo; 카드의 <b>취득가액 산정방식</b>에서 선택). 따라서 일반 취득가액 산정 방식·실거래가
-            입력은 여기서 표시하지 않습니다.
-          </p>
-          {/*
-            🔴 **자산별로 문구가 갈린다** (2026-08-12 — O-1 결함 수정).
-
-            종전에는 자산 구분 없이 「취득시 기준시가는 … **자동 도출**됩니다」라고 안내했는데,
-            그것이 참인 것은 `general_building` 뿐이다(gb* 전용 입력이 있다). 나머지 자산은
-            도출할 소스가 없어 **0으로 계산**됐고(취득가액 0 → 과대과세), 이 문구가 그 결함을
-            가려 왔다. 이제 ② 양도정보에 입력칸이 있으므로 그리로 안내한다.
-
-            설계: docs/02-design/features/burdened-gift-acq-std-price-input-path.plan.md §5 Q-3
-          */}
-          <p className="text-caption text-fuchsia-700">
-            {props.asset?.assetKind === "general_building" ? (
-              <>
-                ※ 산식에 필요한 <b>취득시 기준시가</b>는 아래 일반건물 취득 정보의 토지 공시지가·건물
-                기준시가 입력에서 자동 도출됩니다.
-              </>
-            ) : (
-              <>
-                ※ 기준시가 평가 시 산식에 필요한 <b>취득시 기준시가</b>는 위 <b>② 양도정보</b>의
-                &lsquo;취득시 기준시가&rsquo; 카드에서 입력하세요(양도시 기준시가 바로 아래).
-              </>
-            )}{" "}
-            보유기간·기산점 산정에 필요한 <b>취득일·취득원인</b>은 위 라디오에서 그대로 입력하세요.
-          </p>
-        </div>
-      )}
-      {/* 재개발/재건축 APT 모드 — 상단의 일반 "취득가액 산정 방식"·"취득가액" 입력 영역 숨김.
-          §166②1호 인가후 분의 분양가(= 권리가액 ± 청산금)는 결정론적으로 도출되므로
-          사용자 직접 입력이 불필요. 인가전 분의 환산취득가/감정가액은 아래 §166 섹션 내부에서 처리. */}
-      {props.asset?.assetKind === "redevelopment_apt" &&
-        // 🔴 승계조합원(§162①4호)은 제외한다 (2026-08-25 — E2-01).
-        //    아래 §166 ⑤ 섹션이 승계 모드에서 숨겨지므로, 이 카드가 「아래에서 입력한다」고
-        //    안내하면 **두 카드가 서로를 가리키는 순환**이 된다. 실제로 그 상태에서 매매 취득의
-        //    취득가액 입력 칸이 화면 어디에도 없어 0이 엔진에 도달했다.
-        props.asset?.redevIsSuccessorMember !== "yes" && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
-          <p className="text-sm font-semibold text-violet-900">
-            취득가액 — 재개발 §166②1호 자동 산정
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
-            <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
-          </div>
-          <p className="text-xs text-violet-800">
-            재개발/재건축 양도에서 인가후 분의 분양가(= 권리가액 + 청산금 납부액 또는 권리가액 − 청산금 수령액)는
-            아래 <b>§166②1호 재개발 일정·금액</b> 섹션의 입력값에서 엔진이 자동 산정합니다.
-            따라서 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
-          </p>
-          <p className="text-caption text-violet-700">
-            ※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.
-          </p>
-        </div>
-      )}
-      {/* 조합원입주권 모드 — 상단 축 A 숨김. 문구는 **조합원 유형에 따라 갈린다** (2026-08-23).
-          종전에는 이 게이트에 `right_to_move_in`이 빠져 있어 상단 축 A가 그대로 보였는데,
-          그 값은 실거래가 모드에서 **무시**되고(§166 섹션의 전용 필드가 정본) 감정·매매사례를
-          고르면 취득가액이 **0**이 되어 오류 없이 과대과세됐다(계획서 §2.1 실측). */}
-      {props.asset?.assetKind === "right_to_move_in" && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
-          {props.asset?.isSuccessorRightToMoveIn ? (
-            <>
-              <p className="text-sm font-semibold text-violet-900">
-                취득가액 — 승계취득 §97①1호 가목
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호" />
-                <LawArticleModal legalBasis="소득세법 §95 ②" label="§95②" />
-              </div>
-              <p className="text-xs text-violet-800">
-                시행령 §166①은 <b>조합에 기존건물과 그 부수토지를 제공하고 취득한</b> 조합원에게 적용됩니다.
-                승계조합원은 제공한 사실이 없어 §166① 안분(인가전·인가후) 대상이 아니며, 취득가액은
-                아래 <b>조합원입주권 승계취득 정보</b>에서 실지거래가액으로 입력합니다.
-              </p>
-              <p className="text-caption text-violet-700">
-                ※ 장기보유특별공제는 적용되지 않습니다 (§95② — 조합원으로부터 취득한 것은 제외).
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-violet-900">
-                취득가액 — 재개발 §166①1호 인가전 분에서 차감
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <LawArticleModal legalBasis="소득세법 시행령 §166 ① 1호" label="시행령 §166①1호" />
-                <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
-              </div>
-              <p className="text-xs text-violet-800">
-                조합원입주권 양도차익은 인가전 분(권리가액 − 종전 부동산 취득가액)과 인가후 분으로 나누어
-                계산합니다. 종전 부동산의 취득가액은 아래 <b>⑤ 인가전 분 종전 부동산 취득가액</b>에서
-                입력하므로, 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
-              </p>
-              <p className="text-caption text-violet-700">
-                ※ 취득가액을 확인할 수 없는 경우의 대체수단은 §166③ <b>환산</b>입니다(감정가액·매매사례가액 아님).
-              </p>
-            </>
-          )}
-        </div>
-      )}
+      <CompanionAcqSpecialAssetNotices asset={props.asset} />
       {props.asset?.transferType !== "burdened_gift" &&
         // 🔴 승계조합원 완공APT는 **상단 취득가액이 유일한 입력 경로**다 (2026-08-25 — E2-01).
         //    §166 안분을 우회하는 단순 차감 산식(`runSuccessorMember`)이 이 값을 그대로 쓰는데,
@@ -546,163 +411,21 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         isGeneralBuilding={isGeneralBuilding}
       />
 
-      {/* 취득시/양도시 기준시가 — 환산 모드 **또는** 토지·건물 분리 모드에서 노출.
-          ⚠️ **노출은 유지하되 필수 여부는 파트 모드에 따른다**(2026-07-29). 취득시 기준시가는
-          취득가액을 **환산해야 할 때만** 필요하므로, 양쪽 파트가 실지거래가액이면 계산에 쓰이지
-          않는다(사용자 확정 규칙 ③). 필수 표시(`*`)·hint는 `requiresAcqStdPrice` 술어로 구동한다
-          — 엔진·validate와 같은 단일 소스. 종전 주석은 "실거래가여도 **필수**"라고 단정했었다.
-          종전에는 `useEstimatedAcquisition`일 때만 렌더되어, 실거래가 분리 모드에서
-          calcApportionRatio(split-gain.ts:26-36)가 null → calcSplitGain 전체가 null이 되어
-          토지·건물 분리 계산이 **오류 없이 조용히 비활성화**됐다(계획서 §3.1, probe 실측). */}
-      {(props.useEstimatedAcquisition || isSplit) && (
-        isMixedUse ? (
-        // 겸용주택 모드: 양도시·취득시 기준시가는 위 "겸용주택 분리계산" 영역에서 입력.
-        <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 위 겸용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
-        </p>
-      ) : isCommercialBuilding ? (
-        // 상업용건물·오피스텔: 환산은 시행령 §164⑥·§176조의2②2호에 따라
-        // 호별 ㎡당 고시가 + 건물 ㎡당 기준시가 + 개별공시지가로 산정 (CommercialBuildingBlock).
-        <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 아래 상업용건물·오피스텔 환산 영역에서 입력합니다 (호별 고시가·건물 기준시가·개별공시지가).
-        </p>
-      ) : isGeneralBuilding ? (
-        // 일반건물(토지+건물 일괄): 환산은 시행령 §176의2②·§163⑥에 따라
-        // 토지(㎡당 공시지가 × 토지면적) + 건물(기준시가 총액)로 자산별 분리 산정 (GeneralBuildingBlock).
-        <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 아래 일반건물 환산 영역에서 입력합니다 (토지·건물 분리 — 토지 ㎡당 공시지가·건물 기준시가 총액).
-        </p>
-      ) : props.asset?.usePreHousingDisclosure ? (
-        // §164⑤ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
-        // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
-        <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 위 §164⑤ 3-시점 입력으로부터 자동 도출됩니다.
-        </p>
-      ) : (
-        <>
-          {/* 취득시 기준시가 — **실제로 필요할 때만** 렌더한다(2026-07-29 사용자 확정 규칙 ③).
-              양쪽 파트가 실지거래가액이면 이 값은 계산 어디에도 등장하지 않는다.
-              ⚠️ 게이트는 여기(5-way 분기의 마지막 else) 안에만 건다 — 최상위 조건에 붙이면
-                 겸용·상가·일반건물·PHD의 「저기서 입력하세요」 길잡이 문구까지 사라진다.
-              ⚠️ 값은 지우지 않는다 — 파트 모드를 환산·감정·매매사례로 되돌리면 입력값과 함께 복귀. */}
-          {/* 별개취득 — 자산 전체 취득시 기준시가 UI는 **완전히 숨긴다**(2026-07-30 사용자 확정).
-              입력 정본은 파트 카드(`LandBuildingSplitSection`의 `PartAcqStdPrice`)뿐이고,
-              엔진도 파트 독립 경로에서 결합 총액을 참조하지 않는다(split-gain.ts calcAcqStdPair).
-              종전의 읽기 전용 3열 파생 패널(`SplitAcqStdReadonlyPanel`)도 **폐지**했다 — 그 hint
-              "합계 = 개산공제·안분 비율의 base"가 파트별 독립 정책과 어긋났다(실제 base는
-              합계가 아니라 각 파트 자기 기준시가 — §163⑥1호·2호가 별개 호). */}
-          {acqStdPriceRequired && !isSeparateAcq && (
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              취득시 기준시가 (원){" "}
-              <span className="text-destructive" data-testid="acq-std-required-mark">
-                *
-              </span>
-            </label>
-            {isLand && acqDatePre1990 && (
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                1990년 이전 취득은 개별공시지가가 없어 아래 토지등급 환산 기능으로 자동 산정됩니다.
-              </p>
-            )}
-            {/**
-              * 🔴 **§9-7(2026-09-03) — 일부양도에서 곱할 면적은 「양도분」이다.**
-              *
-              * 종전에는 `area={props.acquisitionArea}`(취득 **전체** 면적)를 곱해 총액을 파생했다.
-              * 양도시 칸은 `transferArea`(양도분)를 곱하므로 **분자만 부풀어** 환산비율이 왜곡됐다
-              * (실측: 총세액 27,827,432 vs 79,199,706 = **51,372,274원 과소과세**).
-              *
-              * ⚠️ **B4-1이 이미 고쳤다고 기록돼 있었으나 이 경로는 닿지 않았다.**
-              * B4-1은 엔진 `acquisitionArea`를 양도분으로 배선했는데(`resolveAcqAreaForStdPrice`),
-              * 그 값을 소비하는 것은 **split 경로뿐**이다(`transfer-tax-split-gain.ts:54`).
-              * 비-split 일괄 경로의 환산 분자는 **총액**(`standardPriceAtAcquisition`)이고,
-              * 그 총액을 만드는 것이 바로 이 위젯이다. ⇒ 계획서
-              * `transfer-partial-area-apportionment.plan.md` §1.1의 「`land` 일괄 ✅ B4-1 정정」은 **틀렸다**.
-              *
-              * 근거는 ④와 동일하다 — 「소득세법 시행령」 §176의2②2호의 「취득당시의 기준시가」는
-              * **양도자산의** 것이고, 일부양도에서는 양도한 부분이 그 자산이다(조심 2018부0572).
-              * 술어를 `usesTransferAreaForAcqStdPrice`로 **④와 공유**해 두 층이 갈리지 않게 했다.
-              */}
-            <StandardPriceInput
-              data-field="standardPriceAtAcq"
-              propertyKind={propertyKind}
-              totalPrice={props.standardPriceAtAcq}
-              onTotalPriceChange={props.onStandardPriceAtAcqChange}
-              pricePerSqm={acqPricePerSqm}
-              onPricePerSqmChange={handleAcqPricePerSqmChange}
-              area={acqStdUsesTransferArea ? props.transferArea : props.acquisitionArea}
-              onAreaChange={acqStdUsesTransferArea ? props.onTransferAreaChange : props.onAcquisitionAreaChange}
-              fieldArea={acqStdUsesTransferArea ? "transferArea" : "acquisitionArea"}
-              areaLabel={acqStdUsesTransferArea ? "양도분 면적 (㎡)" : props.acqAreaLabel}
-              jibun={props.jibun}
-              dong={props.dong}
-              ho={props.ho}
-              referenceDate={props.acquisitionDate}
-              hint={
-                props.useEstimatedAcquisition
-                  ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
-                  : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
-              }
-              forceYear={pre1990ForceYear}
-              enableLookup={!(isLand && acqDatePre1990)}
-              pricePerSqmDisabled={isLand && acqDatePre1990}
-            />
-            {/* 소유자 분리 — ⑧ V8의 ㎡당 개별공시지가(별건 B2). 주택은 위 위젯이 총액만 렌더하고, 면적은 ① 기본정보가 받는다. */}
-            {props.asset && (effectiveSelfOwns(props.asset) ?? "both") !== "both" && propertyKind === "house_individual" && (
-              <LandPriceLookupField
-                label="취득시 토지 공시지가"
-                data-field="standardPricePerSqmAtAcq"
-                pricePerSqm={props.standardPricePerSqmAtAcq ?? ""}
-                onPricePerSqmChange={handleAcqPricePerSqmChange}
-                area={parseDecimal(props.acquisitionArea) || undefined}
-                referenceDate={props.acquisitionDate}
-                jibun={props.jibun}
-                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 근거 (§99①1호 가목)"
-              />
-            )}
-          </div>
-          )}
-
-          {/* 1990.8.30. 이전 취득 토지 환산 */}
-          {showPre1990 && (
-            <Pre1990LandValuationInput
-              form={props.pre1990Form!}
-              onChange={props.onPre1990Change!}
-              acquisitionArea={props.acquisitionArea}
-              jibun={props.jibun}
-              acquisitionDate={props.acquisitionDate}
-              transferDate={props.transferDate}
-              onCalculatedPrice={(price) => props.onStandardPriceAtAcqChange(String(price))}
-            />
-          )}
-
-          {/* 양도시 기준시가 — 환산 분모 전용. 분리 모드 비환산 진입에서는 불필요하므로 숨긴다
-              (파트별 양도시 기준시가는 LandBuildingSplitSection에서 별도 입력받는다). */}
-          {props.useEstimatedAcquisition && (
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              양도시 기준시가 (원) <span className="text-destructive">*</span>
-            </label>
-            <StandardPriceInput
-              data-field="standardPriceAtTransfer"
-              propertyKind={propertyKind}
-              totalPrice={props.standardPriceAtTransfer}
-              onTotalPriceChange={props.onStandardPriceAtTransferChange}
-              pricePerSqm={transferPricePerSqm}
-              onPricePerSqmChange={onTransferPricePerSqmChange}
-              area={props.transferArea}
-              onAreaChange={props.onTransferAreaChange}
-              areaLabel={props.transferAreaLabel}
-              jibun={props.jibun}
-              dong={props.dong}
-              ho={props.ho}
-              referenceDate={props.transferDate}
-              hint="환산 분모 — 취득시/양도시 기준시가 비율의 분모"
-            />
-          </div>
-          )}
-        </>
-        )
-      )}
+      <CompanionAcqStdPriceSection
+        block={props}
+        isSplit={isSplit}
+        isMixedUse={isMixedUse}
+        isGeneralBuilding={isGeneralBuilding}
+        isSeparateAcq={isSeparateAcq}
+        acqStdPriceRequired={acqStdPriceRequired}
+        isLand={isLand}
+        acqDatePre1990={acqDatePre1990}
+        showPre1990={showPre1990}
+        acqPricePerSqm={acqPricePerSqm}
+        onAcqPricePerSqmChange={onAcqPricePerSqmChange}
+        transferPricePerSqm={transferPricePerSqm}
+        onTransferPricePerSqmChange={onTransferPricePerSqmChange}
+      />
       </>
       )}
 
