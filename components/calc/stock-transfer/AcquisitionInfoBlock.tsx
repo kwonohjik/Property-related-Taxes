@@ -59,7 +59,11 @@ interface AcquisitionInfoBlockProps {
     | "donorRelation"
     | "donorDeceased"
     | "donorAcquisitionPrice"
+    | "donorAcquisitionMethod"
     | "donorAcquisitionStdPrice"
+    | "donorAcquisitionMarketSamplePrice"
+    | "donorAcquisitionMarketSampleDate"
+    | "marketType"
     | "donorCapitalExpenditure"
     | "giftTaxAmount"
     | "transferredAssetValue"
@@ -73,6 +77,9 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   // 3중 패턴 default — store factory와 일치
   const cause = form.acquisitionCause || "purchase";
   const isGiftLike = cause === "gift" || cause === "carryover_gift";
+  // 3중 패턴 default — store factory·④·⑧과 일치
+  const donorMethod = form.donorAcquisitionMethod || "actual";
+  const isListedMarket = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const dateLabel = isGiftLike ? "수증일" : "취득일";
   // 증여 계열만 보조 정보 노출. purchase 등 자명 케이스는 hint 생략.
   const dateHint =
@@ -290,27 +297,91 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             }
           />
 
-          {/* ── §97의2①1호 — 취득가액 승계 ── */}
+          {/* ── §97의2①1호 — 취득가액 승계: 증여자 취득 당시 §97①1호 금액 (가목/나목) ── */}
+          {/* 수증자 측(다음 단계 취득가액)은 영 §163⑨ 증여일 평가액이라 이 축과 별개다 —
+              계획서 docs/00-pm/stock-carryover-sale-case-donor-basis.plan.md (β) */}
           <FieldCard
-            label="증여자 취득가액 (1주당 · §97의2①1호 가목)"
-            hint="증여자가 취득할 당시의 실지거래가액. 이 값이 있어야 취득가액이 승계됩니다"
+            label="증여자 취득가액 산정 방식 (§97의2①1호)"
+            hint="증여자가 취득할 당시의 금액을 무엇으로 정할지 고릅니다. 실지거래가액을 확인할 수 없을 때만 매매사례가액·환산취득가를 씁니다 (§97①1호 단서)"
           >
-            <CurrencyInput
-              label=""
-              hideLabel              value={form.donorAcquisitionPrice}
-              onChange={(v) => onChange({ donorAcquisitionPrice: v })}
+            <RadioCardGroup
+              name="donorAcquisitionMethod"
+              value={donorMethod}
+              onChange={(v) =>
+                onChange({ donorAcquisitionMethod: v as StockTransferFormData["donorAcquisitionMethod"] })
+              }
+              layout="inline"
+              options={[
+                { value: "actual", label: "실지거래가액" },
+                {
+                  value: "sale_case",
+                  label: "매매사례가액",
+                  // 영 §176의2③1호 본문 괄호 — 주권상장법인 주식등은 매매사례가액 대상이 아니다
+                  disabled: isListedMarket,
+                },
+                { value: "estimated", label: "환산취득가" },
+              ]}
             />
+            {isListedMarket && (
+              <p className="mt-2 text-xs text-amber-800">
+                상장주식은 매매사례가액을 쓸 수 없습니다 (소득세법 시행령 §176의2③1호 — 주권상장법인 주식등 제외).
+              </p>
+            )}
           </FieldCard>
-          <FieldCard
-            label="증여자 취득 당시 기준시가 (1주당 · §97의2①1호 나목)"
-            hint="증여자의 실지거래가액을 확인할 수 없어 환산하는 경우의 분자입니다"
-          >
-            <CurrencyInput
-              label=""
-              hideLabel              value={form.donorAcquisitionStdPrice}
-              onChange={(v) => onChange({ donorAcquisitionStdPrice: v })}
-            />
-          </FieldCard>
+
+          {donorMethod === "actual" && (
+            <FieldCard
+              label="증여자 취득가액 (1주당 · §97의2①1호 가목)"
+              hint="증여자가 취득할 당시의 실지거래가액. 이 값이 있어야 취득가액이 승계됩니다"
+            >
+              <CurrencyInput
+                label=""
+                hideLabel
+                value={form.donorAcquisitionPrice}
+                onChange={(v) => onChange({ donorAcquisitionPrice: v })}
+              />
+            </FieldCard>
+          )}
+
+          {donorMethod === "sale_case" && (
+            <>
+              <FieldCard
+                label="증여자 취득 매매사례가액 (1주당 · 영 §176의2③1호)"
+                hint="증여자 취득일 전후 3개월 이내 같거나 유사한 주식의 매매사례가액"
+              >
+                <CurrencyInput
+                  label=""
+                  hideLabel
+                  value={form.donorAcquisitionMarketSamplePrice}
+                  onChange={(v) => onChange({ donorAcquisitionMarketSamplePrice: v })}
+                />
+              </FieldCard>
+              <FieldCard label="매매사례 거래일" hint="증여자 취득일 ±3개월 권장 (초과 시 경고)">
+                <DateInput
+                  value={form.donorAcquisitionMarketSampleDate ?? ""}
+                  onChange={(v) => onChange({ donorAcquisitionMarketSampleDate: v })}
+                />
+              </FieldCard>
+            </>
+          )}
+
+          {donorMethod !== "actual" && (
+            <FieldCard
+              label="증여자 취득 당시 기준시가 (1주당 · §97의2①1호 나목)"
+              hint={
+                donorMethod === "sale_case"
+                  ? "개산공제 기준입니다 — 필요경비 = 취득가액 + 이 기준시가 × 주식수 × 1% (§97②2호 본문 · 시행령 §163⑥4). 증여자 자본적지출은 매매사례가액에서는 필요경비가 되지 않습니다"
+                  : "증여자 기준 환산의 분자입니다 — 환산취득가는 양도가액에 「이 기준시가를 양도 당시 기준시가로 나눈 비율」을 곱한 금액입니다 (시행령 §176의2②1호). 양도 당시 기준시가는 다음 단계에서 입력합니다"
+              }
+            >
+              <CurrencyInput
+                label=""
+                hideLabel
+                value={form.donorAcquisitionStdPrice}
+                onChange={(v) => onChange({ donorAcquisitionStdPrice: v })}
+              />
+            </FieldCard>
+          )}
 
           {/* ── §97의2①2호 — 증여자 자본적지출 ── */}
           <FieldCard

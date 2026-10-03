@@ -116,8 +116,17 @@ export interface StockTransferFormData {
   donorDeceased: boolean;
   /** ①1호 가목 — 증여자 취득 당시 1주당 실지거래가액 */
   donorAcquisitionPrice: string;
-  /** ①1호 나목 — 증여자 취득 당시 1주당 기준시가 (실가를 확인할 수 없어 환산하는 경우) */
+  /**
+   * ①1호 — 증여자 취득가액 **산정 방식**: 가목 실지거래가액 / 나목 매매사례가액 / 나목 환산취득가액.
+   * 수증자 측(Step 2) 취득가액은 영 §163⑨ 증여일 평가액(실가)이라 이 축과 별개다.
+   */
+  donorAcquisitionMethod: "actual" | "sale_case" | "estimated";
+  /** ①1호 나목 — 증여자 취득 당시 1주당 기준시가 (환산 분자 · 매매사례 개산공제 base) */
   donorAcquisitionStdPrice: string;
+  /** ①1호 나목 매매사례 — 증여자 취득일 전후 3개월 이내 1주당 매매사례가액 (영 §176의2③1호) */
+  donorAcquisitionMarketSamplePrice: string;
+  /** ①1호 나목 매매사례 — 사례 거래일 "YYYY-MM-DD" (±3개월 경고 기준일 = 증여자 취득일) */
+  donorAcquisitionMarketSampleDate: string;
   /** ①2호 — 증여자가 지출한 자본적지출액 총액 (⚠️ 양도비 §97①3호는 제외) */
   donorCapitalExpenditure: string;
   /** ①3호 × 영 §163의2②1호 — 증여세 산출세액 */

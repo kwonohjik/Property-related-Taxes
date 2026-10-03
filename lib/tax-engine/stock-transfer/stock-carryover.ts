@@ -30,6 +30,7 @@
 import { actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
+import { isGiftLikeEstimationBlocked } from "./gift-acquisition-163-9";
 import type { StockTransferInput, AcquisitionLot } from "./types/stock-transfer.types";
 
 /**
@@ -196,13 +197,38 @@ export function apportionStockGiftTax(input: StockTransferInput): number {
  * 승계용 입력은 전부 제거해 하류가 실수로 읽지 못하게 한다.
  */
 export function buildStockScenarioB(input: StockTransferInput): StockTransferInput {
+  /**
+   * 영 §163⑨ — B의 취득가액은 증여일 상증법 평가액이고 이를 «실지거래가액으로 본다»(가목).
+   * 수증자 측에는 나목(매매사례·환산)이 들어설 자리가 없다(국심2007중1761). UI·⑧·⑫가 이 조합을
+   * 막지만, 구 이력·API 직접 호출이 넘긴 추계 모드가 B에 남으면 «평가액이 아닌 값 + 개산공제»로
+   * 계산된다 — 그래서 B에서 실가로 되돌린다. 술어는 ⑧·⑫와 같은 단일 소스다.
+   * 의제취득일 이전 증여(영 §176의2④)는 술어가 거짓이라 건드리지 않는다.
+   */
+  const giftEstimation163_9 = isGiftLikeEstimationBlocked(
+    input.acquisitionCause,
+    input.acquisitionDate,
+    input.acquisitionMode,
+  );
   return {
     ...input,
+    ...(giftEstimation163_9
+      ? {
+          acquisitionMode: "actual" as const,
+          expenseMode: "actual" as const,
+          acquisitionMarketSamplePrice: undefined,
+          acquisitionMarketSampleDate: undefined,
+          acquisitionMarketSampleCounterparty: undefined,
+        }
+      : {}),
     // 배제됐다는 **사실**을 남긴다 — 아래에서 `acquisitionCause`를 되돌리므로 흔적이 사라진다.
     carryoverOutcome: "excluded",
     // A/B 비교 표시용 echo — 아래에서 승계 입력을 전부 지우므로 여기서 떠 둔다.
     carryoverGiftDateValuationPerShare: actualAcquisitionPerShare(input),
-    carryoverDonorPricePerShare: input.donorAcquisitionPrice,
+    // 비교표 「적용」 열 — 증여자 매매사례면 그 사례가가 A의 1주당 취득가액이다(환산은 엔진 산출이라 echo 없음)
+    carryoverDonorPricePerShare:
+      resolveDonorAcquisitionMethod(input) === "sale_case"
+        ? input.donorAcquisitionMarketSamplePrice
+        : input.donorAcquisitionPrice,
     /**
      * split 모드 — **lot도 함께** 되돌린다. 종목 축만 바꾸면 `allocateLots`가 lot의
      * `carryover_gift`를 보고 계속 승계해 「배제됐는데 취득가액은 승계」가 된다.
@@ -224,11 +250,33 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
     donorAcquisitionDate: undefined,
     donorAcquisitionPrice: undefined,
     donorAcquisitionStdPrice: undefined,
+    // `donorAcquisitionMethod`는 남긴다 — B는 `acquisitionCause`가 purchase라 엔진이 읽지 않고, 결과 라벨 echo로만 쓴다
+    donorAcquisitionMarketSamplePrice: undefined,
+    donorAcquisitionMarketSampleDate: undefined,
     donorCapitalExpenditure: undefined,
     giftTaxAmount: undefined,
     transferredAssetValue: undefined,
     giftTaxableValue: undefined,
   };
+}
+
+/**
+ * 증여자 취득가액 **산정 방식** — §97의2①1호 「§97①1호에 따른 금액」의 가목/나목.
+ *
+ * 명시값이 우선이고, 부재(구 이력·API 직접 호출)면 종전 규약을 그대로 도출한다:
+ * 증여자 실가가 있으면 가목, 수증자 `acquisitionMode`가 `estimated`면 환산(Phase 3).
+ * 둘 다 아니면 `undefined` — 승계할 취득가액이 없어 세율 축(§104②2호)·①2호·①3호만 걸린다.
+ *
+ * ⚠️ 종전 `sale_case`(수증자 매매사례)는 **도출하지 않는다** — 그 값은 증여일 기준이라
+ *    증여자 취득 당시 금액이 될 수 없다(§176의2③1호 「취득일 전후 3개월」의 취득일은 증여자의 것).
+ */
+export function resolveDonorAcquisitionMethod(
+  input: Pick<StockTransferInput, "donorAcquisitionMethod" | "donorAcquisitionPrice" | "acquisitionMode">,
+): StockTransferInput["donorAcquisitionMethod"] {
+  if (input.donorAcquisitionMethod) return input.donorAcquisitionMethod;
+  if (input.donorAcquisitionPrice !== undefined) return "actual";
+  if (input.acquisitionMode === "estimated") return "estimated";
+  return undefined;
 }
 
 /**
@@ -238,10 +286,8 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
  * · ①2호 — 증여자 자본적지출을 필요경비에 포함 (⚠️ 양도비 §97①3호는 제외)
  * · ①3호 — 증여세 상당액 산입
  *
- * ⚠️ **환산 모드는 아직 여기서 다루지 않는다**(Phase 3). `donorAcquisitionPrice`가 없으면
- *    취득가액을 건드리지 않으므로 `acquisitionMode: "estimated"` 경로가 그대로 흐른다 —
- *    그 경우 증여자 기준 환산(§97①1호 나목)이 **미반영**이고 anchor N-5·N-6이 실패로 남아
- *    그 사실을 지킨다.
+ * · 나목 — 증여자 매매사례(영 §176의2③1호) · 증여자 기준 환산(Phase 3). 방식은
+ *   `resolveDonorAcquisitionMethod`가 정한다(계획서 `stock-carryover-sale-case-donor-basis.plan.md`).
  *
  * ⚠️ `acquisitionCause`는 `"carryover_gift"`를 **유지**한다 — 세율 축이 증여자 취득일로
  *    기산해야 하기 때문이다(§104②2호).
@@ -251,12 +297,13 @@ function buildStockScenarioABase(
   giftTaxIncluded: number,
 ): StockTransferInput {
   const donorCapex = input.donorCapitalExpenditure ?? 0;
+  const method = resolveDonorAcquisitionMethod(input);
 
   /**
    * ①1호 **가목** — 증여자 취득 당시 실지거래가액을 아는 경우. 실가로 승계한다.
-   * (실가 경로에서는 필요경비가 실비 합산이다 — 개산공제는 환산 모드 전용.)
+   * (실가 경로에서는 필요경비가 실비 합산이다 — 개산공제는 추계(나목) 전용.)
    */
-  if (input.donorAcquisitionPrice !== undefined) {
+  if (method === "actual" && input.donorAcquisitionPrice !== undefined) {
     return {
       ...input,
       acquisitionMode: "actual",
@@ -283,6 +330,35 @@ function buildStockScenarioABase(
   }
 
   /**
+   * ①1호 **나목 — 매매사례가액**(영 §176의2③1호) — 증여자 취득일 전후 3개월 이내 매매사례.
+   *
+   * 취득가액 = 증여자 사례가 × 주식수. §97②2호 **본문**이라 필요경비 = 개산공제(영 §163⑥4)이고,
+   * 그 「취득당시의 기준시가」는 **증여자 취득 당시**의 것(`donorAcquisitionStdPrice`)이다.
+   * 기준시가가 없으면 override를 0으로 둔다 — 비워 두면 basis가 **수증연도** 순손익·순자산으로
+   * 기준시가를 만들어 증여일 기준 개산공제가 섞인다.
+   *
+   * 🔑 증여자 자본적지출(①2호)은 **산입하지 않는다** — §97②2호 본문은 나목 금액에 개산공제만
+   *    더하고 §97①2호 금액을 더하지 않는다(실비로 갈아타는 단서는 환산 한정). echo도 0이다.
+   *    사례가가 없으면 승계할 금액이 없으므로 아래 종전 경로(세율 축만)로 간다.
+   */
+  if (method === "sale_case" && (input.donorAcquisitionMarketSamplePrice ?? 0) > 0) {
+    return {
+      ...input,
+      acquisitionMode: "sale_case",
+      acquisitionMarketSamplePrice: input.donorAcquisitionMarketSamplePrice,
+      acquisitionMarketSampleDate: input.donorAcquisitionMarketSampleDate,
+      acquisitionMarketSampleCounterparty: undefined,
+      acquisitionStdPriceOverridePerShare: input.donorAcquisitionStdPrice ?? 0,
+      expenseMode: "estimated",
+      carryoverGiftTaxExpense: giftTaxIncluded,
+      carryoverOutcome: "applied",
+      carryoverDonorCapexApplied: 0,
+      carryoverGiftDateValuationPerShare: actualAcquisitionPerShare(input),
+      carryoverDonorPricePerShare: input.donorAcquisitionMarketSamplePrice,
+    };
+  }
+
+  /**
    * ①1호 **나목** — 증여자 실지거래가액을 확인할 수 없어 **환산**하는 경우.
    *
    * 환산취득가 = 양도가 × (**취득 당시 기준시가** / 양도 당시 기준시가)이고,
@@ -296,6 +372,13 @@ function buildStockScenarioABase(
   const donorStd = input.donorAcquisitionStdPrice;
   return {
     ...input,
+    /**
+     * 수증자 측 모드는 영 §163⑨로 실가(평가액)다 — 증여자 환산이면 A에서만 환산으로 바꾼다.
+     * 종전(Phase 3)은 수증자 `acquisitionMode: "estimated"`를 그대로 흘려 보냈다.
+     */
+    ...(method === "estimated"
+      ? { acquisitionMode: "estimated" as const, expenseMode: "estimated" as const }
+      : {}),
     ...(donorStd !== undefined
       ? {
           // 상장 1개월 종가평균 경로의 취득측 입력

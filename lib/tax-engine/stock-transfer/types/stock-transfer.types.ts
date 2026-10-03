@@ -203,8 +203,22 @@ export type StockTransferInput = {
   /**
    * §97의2①1호 × §97①1호 **나목** — 증여자 취득 당시의 **1주당 기준시가**.
    * 증여자의 실지거래가액을 확인할 수 없어 **증여자 기준으로 환산**할 때 분자로 쓴다.
+   * 증여자 **매매사례**(`donorAcquisitionMethod: "sale_case"`)에서는 개산공제(영 §163⑥4) base다.
    */
   donorAcquisitionStdPrice?: number;
+  /**
+   * §97의2①1호가 가리키는 「§97①1호에 따른 금액」의 **산정 방식** — 가목(실가) / 나목 매매사례 /
+   * 나목 환산(감정가액은 주식 제외 — 영 §176의2③2호 괄호). 수증자 측 취득가액은 영 §163⑨
+   * 증여일 평가액(실가 의제)이라 이 축과 **별개**다.
+   *
+   * 부재 시(구 이력·API 직접 호출) `resolveDonorAcquisitionMethod`가 도출한다 —
+   * 증여자 실가가 있으면 가목, 수증자 `acquisitionMode`가 `estimated`면 환산(Phase 3 종전 규약).
+   */
+  donorAcquisitionMethod?: "actual" | "sale_case" | "estimated";
+  /** 증여자 취득일 전후 3개월 이내 매매사례 **1주당** 가액 (영 §176의2③1호 — 주권상장법인 주식등 제외) */
+  donorAcquisitionMarketSamplePrice?: number;
+  /** 증여자 매매사례 거래일 — ±3개월 경고의 상대 날짜는 **증여자 취득일** */
+  donorAcquisitionMarketSampleDate?: Date;
   /**
    * §97의2①**2호** — 증여자가 그 자산에 대하여 지출한 §97①2호 금액(총액).
    * ⚠️ **양도비(§97①3호)는 제외**한다 — ①2호가 §97①2호만 열거한다.
@@ -1340,6 +1354,8 @@ export type StockTransferResult = {
     excludedTotalTax: number;
     /** ①1호 — 승계 취득가액(1주당). split 모드는 lot마다 달라 undefined. */
     donorAcquisitionPricePerShare?: number;
+    /** ①1호 증여자 취득가액 산정 방식 echo — 「적용」 열 값이 실가인지 매매사례가액인지 라벨용 */
+    donorAcquisitionMethod?: "actual" | "sale_case" | "estimated";
     /** 시나리오 B의 취득가액(1주당) = 증여 당시 평가액. split 모드는 undefined. */
     giftDateValuationPerShare?: number;
     /** ①2호 — 실제 산입된 증여자 자본적지출 (A 채택 시에만 > 0) */

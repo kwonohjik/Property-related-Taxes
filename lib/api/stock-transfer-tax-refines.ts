@@ -8,6 +8,10 @@
  *    ([[feedback_800line_split_export_preservation]]).
  */
 
+import {
+  isGiftLikeEstimationBlocked,
+  GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
+} from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { z } from "zod";
 import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
@@ -383,6 +387,38 @@ export function addStockRefines(
         !((data.perShareAcquisitionPrice ?? 0) > 0)
       )
         issue("acquisitionMarketSamplePrice", "취득 매매사례 1주당 가액을 입력하세요 (소득세법 시행령 §176의2③1호)");
+      // 영 §163⑨ — 증여·상속 취득가액은 평가액(실가 의제) → 추계 모드 불가(국심2007중1761). ⑧ step2와 같은 술어.
+      if (!splitOrLots && isGiftLikeEstimationBlocked(data.acquisitionCause, data.acquisitionDate as string | Date | undefined, data.acquisitionMode))
+        issue("acquisitionMode", GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE);
+      // 이월과세 증여자 매매사례 — 상장 제외(영 §176의2③1호 본문 괄호) · ⑧ step1과 같은 규칙
+      if (
+        data.acquisitionCause === "carryover_gift" &&
+        data.donorAcquisitionMethod === "sale_case" &&
+        ["kospi", "kosdaq", "konex"].includes(data.marketType as string)
+      )
+        issue("donorAcquisitionMethod", "상장주식은 매매사례가액을 쓸 수 없습니다 (소득세법 시행령 §176의2③1호 — 주권상장법인 주식등 제외)");
+      // 이월과세 증여자 기준 환산의 분모 — ⑧ step2와 같은 조건(비면 A 취득가액 0 → 조용한 과대과세)
+      if (
+        !splitOrLots &&
+        data.acquisitionCause === "carryover_gift" &&
+        data.donorAcquisitionMethod === "estimated" &&
+        data.acquisitionMode !== "estimated"
+      ) {
+        const listed = ["kospi", "kosdaq", "konex"].includes(data.marketType as string);
+        if (listed && !data.tradingHaltAtTransfer) {
+          if (data.transferDatePriceAvg1Month === undefined)
+            issue("transferDatePriceAvg1Month", "양도일 이전 1개월 종가 평균을 입력하세요 (이월과세 증여자 기준 환산의 분모 — 시행령 §176의2②1호)");
+        } else {
+          for (const key of requiredUnlistedValuationKeys({
+            scope: "transfer",
+            niSkip: !!data.netAssetOnlyReason,
+            acqFaceValueOnly: false,
+          })) {
+            if (data[key] === undefined)
+              issue(key, `${UNLISTED_VALUATION_LABEL[key]} 입력하세요 (이월과세 증여자 기준 환산의 분모 — 소득세법 시행령 §165④)`);
+          }
+        }
+      }
       // 매매사례가액 취득의 개산공제 base = 취득당시 기준시가(영 §163⑥4) → §165④ 보충평가 입력 — ⑧ step2와 공용 술어.
       if (
         !splitOrLots &&

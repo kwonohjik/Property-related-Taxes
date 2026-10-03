@@ -75,6 +75,8 @@ function isOverThreeMonths(deltaDays: number): boolean {
 export function evaluateMarketSample(input: {
   shareCount: number;
   acquisitionDate: Date;
+  /** 경고 문구의 기준일 이름 — 이월과세 A는 「증여자 취득일」 (기본 「취득일」) */
+  acquisitionDateLabel?: string;
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
   acquisitionMarketSampleCounterparty?: string;
@@ -97,7 +99,7 @@ export function evaluateMarketSample(input: {
       acquisitionOverThreeMonths = isOverThreeMonths(acquisitionDeltaDays);
       if (acquisitionOverThreeMonths) {
         warnings.push(
-          `취득 매매사례 거래일이 취득일과 ${acquisitionDeltaDays}일 차이 — 시행령 §176의2③1호 본문 "전후 3개월" 초과. 결정·경정 단계 부인 가능성 안내.`,
+          `취득 매매사례 거래일이 ${input.acquisitionDateLabel ?? "취득일"}과 ${acquisitionDeltaDays}일 차이 — 시행령 §176의2③1호 본문 "전후 3개월" 초과. 결정·경정 단계 부인 가능성 안내.`,
         );
       }
     }

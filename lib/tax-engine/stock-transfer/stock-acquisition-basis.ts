@@ -344,8 +344,20 @@ export function resolveAcquisitionBasis(
      *
      * 🔑 헬퍼가 첫 인용으로 넣는 §165③(거래정지)은 이 경로와 무관하므로 걸러낸다.
      */
-    const acqStd = calcAcquisitionStdPerShareSupplementary(input);
+    /**
+     * §97의2① 이월과세 A(증여자 매매사례)면 「취득당시의 기준시가」가 **증여자 취득 당시**의 것이다 —
+     * `stock-carryover.ts`가 `donorAcquisitionStdPrice`로 override를 채운다(없으면 0 → 개산공제 없음).
+     * 보충평가 헬퍼는 수증연도 순손익·순자산을 읽으므로 override가 있으면 부르지 않는다.
+     */
+    const override = input.acquisitionStdPriceOverridePerShare;
+    const acqStd =
+      override !== undefined
+        ? { perShare: Math.floor(override), floorApplied: false, warnings: [] as string[], appliedRules: [] as string[] }
+        : calcAcquisitionStdPerShareSupplementary(input);
     estimatedBase = acqStd.perShare > 0 ? acqStd.perShare * shareCount : 0;
+    if (override !== undefined && !(override > 0)) {
+      warningsDelta.push("증여자 취득 당시 기준시가가 없어 개산공제(소득세법 시행령 §163⑥4)를 적용하지 않았습니다.");
+    }
     warningsDelta.push(...acqStd.warnings);
     for (const rule of acqStd.appliedRules) {
       if (rule !== STOCK.ENFORCEMENT_DECREE_165_3_TRADING_HALT) warningsDelta.push(rule);

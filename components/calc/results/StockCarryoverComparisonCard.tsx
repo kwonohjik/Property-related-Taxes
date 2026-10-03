@@ -86,7 +86,14 @@ export function StockCarryoverComparisonCard({
               {detail.donorAcquisitionPricePerShare !== undefined &&
                 detail.giftDateValuationPerShare !== undefined && (
                   <tr className="border-b border-violet-100">
-                    <td className="px-3 py-2">1주당 취득가액</td>
+                    <td className="px-3 py-2">
+                      1주당 취득가액
+                      {detail.donorAcquisitionMethod === "sale_case" && (
+                        <span className="block text-caption text-violet-600">
+                          적용: 증여자 취득일 전후 3개월 매매사례가액 (시행령 §176의2③1호)
+                        </span>
+                      )}
+                    </td>
                     <Amount value={detail.donorAcquisitionPricePerShare} />
                     <Amount value={detail.giftDateValuationPerShare} />
                   </tr>

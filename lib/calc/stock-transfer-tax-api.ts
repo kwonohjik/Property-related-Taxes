@@ -29,6 +29,11 @@ import {
   parseFloatOrUndef,
   parseIntOrZero,
 } from "./stock-transfer-tax-api-parse";
+import {
+  isDonorConversionForm,
+  appendCarryoverDonorBody,
+  appendDonorConversionDenominator,
+} from "./stock-transfer-tax-api-carryover";
 /**
  * 해외주식·국외전출세 빌더는 **도메인이 갈라져** 형제 파일로 나갔다(800줄 정책).
  * 진입점은 그대로 아래 `buildStockTransferApiBody`의 `marketType` 분기이며,
@@ -102,6 +107,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   const acquisitionMode = form.acquisitionMode || "actual";
   const transferPriceMode = form.transferPriceMode || "actual";
   const acquisitionCause = form.acquisitionCause || "purchase";
+  /** 이월과세 증여자 기준 환산 — 수증자 모드가 실가여도 A가 환산을 탄다(`stock-transfer-tax-api-carryover.ts`) */
+  const isDonorConversion = isDonorConversionForm(form);
   const filingType = form.filingType || "preliminary";
 
   const body: Record<string, unknown> = {
@@ -155,24 +162,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     body.decedentAcquisitionDate = form.decedentAcquisitionDate;
   }
   // §104②2 통산은 **이월과세(carryover_gift)에서만** 일어난다 — 단순 증여(gift)는 수증일 기산.
-  if (acquisitionCause === "carryover_gift") {
-    if (form.donorAcquisitionDate) body.donorAcquisitionDate = form.donorAcquisitionDate;
-    // ── §97의2① 본체(필요경비) ──
-    if (form.donorRelation) body.donorRelation = form.donorRelation;
-    if (form.donorDeceased) body.donorDeceased = true;
-    const donorPrice = parseIntOrUndef(form.donorAcquisitionPrice);
-    if (donorPrice !== undefined) body.donorAcquisitionPrice = donorPrice;      // ①1호 가목
-    const donorStd = parseIntOrUndef(form.donorAcquisitionStdPrice);
-    if (donorStd !== undefined) body.donorAcquisitionStdPrice = donorStd;        // ①1호 나목
-    const donorCapex = parseIntOrUndef(form.donorCapitalExpenditure);
-    if (donorCapex !== undefined) body.donorCapitalExpenditure = donorCapex;     // ①2호
-    const giftTax = parseIntOrUndef(form.giftTaxAmount);
-    if (giftTax !== undefined) body.giftTaxAmount = giftTax;                     // ①3호
-    const transferredVal = parseIntOrUndef(form.transferredAssetValue);
-    if (transferredVal !== undefined) body.transferredAssetValue = transferredVal;
-    const taxableVal = parseIntOrUndef(form.giftTaxableValue);
-    if (taxableVal !== undefined) body.giftTaxableValue = taxableVal;
-  }
+  if (acquisitionCause === "carryover_gift") appendCarryoverDonorBody(body, form);
   if (acquisitionCause === "merger_split" && form.preMergerAcquisitionDate) {
     body.preMergerAcquisitionDate = form.preMergerAcquisitionDate;
   }
@@ -398,7 +388,16 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     ⚠️ ⑫ Zod의 조합 refine(`stock-transfer-tax-schema.ts:419·429`)은 **그대로 둔다.**
        UI가 못 만들 뿐 API 직접 호출은 여전히 만들 수 있다.
   */
-  const stdMode = form.acquisitionStdMode;
+  /**
+   * 증여자 환산이면 분자 갈래(취득후상장·취득일 거래정지)는 분자가 덮어써져 의미가 없다 —
+   * 화면도 분모 두 갈래(1개월 종가평균 / 양도일 거래정지)만 연다. 수증자 환산을 쓰던 때의
+   * stale `acquisitionStdMode`가 갈래를 바꾸지 않도록 여기서 두 갈래로 좁힌다.
+   */
+  const stdMode = isDonorConversion
+    ? form.acquisitionStdMode === "halt_transfer"
+      ? "halt_transfer"
+      : "monthly_avg"
+    : form.acquisitionStdMode;
   /**
    * 거래정지 우회(영 §165③)는 **코스닥·코넥스 전용**이다 — 단일 정본 술어에 위임한다.
    *
@@ -464,6 +463,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (smNI !== undefined) body.acquisitionYearNetIncomePerShare = smNI;
     if (smNA !== undefined) body.acquisitionYearNetAssetPerShare = smNA;
   }
+
+  // 증여자 기준 환산의 분모 — full 결산서 블록 «뒤»여야 한다(이유는 헬퍼 주석)
+  if (isDonorConversion) appendDonorConversionDenominator(body, form);
 
   // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성
   if (

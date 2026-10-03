@@ -28,6 +28,8 @@ import {
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
+import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
+import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfer/CarryoverDonorConversionSection";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -54,6 +56,24 @@ export function Step2({ form, onChange }: Step2Props) {
   const acqInputMode = form.acquisitionStdInputMode || "direct";
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const isSplitMode = form.lotsMode === "split";
+  /**
+   * 영 §163⑨ — 증여·상속 원인이면 취득가액은 평가액(실가 의제)뿐이다. 술어에 모드 «"estimated"»를 넘겨
+   * 원인·날짜 축만 본다(의제취득일 이전이면 거짓 — 영 §176의2④).
+   */
+  const giftValuationOnly = isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, "estimated");
+  // 단건 「1주당 취득가액」 안내 — 분할 lot 카드(`AcquisitionLotCard.tsx`)와 같은 원인별 문구
+  const perShareAcqHint =
+    form.acquisitionCause === "inheritance"
+      ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
+      : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
+        ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
+        : "실제 취득가액 (원)";
+  const totalAcqHint =
+    form.acquisitionCause === "inheritance"
+      ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
+      : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
+        ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
+        : "계약서·거래내역 등에 기재된 총 취득대금 (원)";
 
   // 실가 양도가 합계 미리보기 (per_share 모드)
   const transferTotal = useMemo(() => {
@@ -261,13 +281,24 @@ export function Step2({ form, onChange }: Step2Props) {
             columns={3}
             options={[
               { value: "actual", label: "실가" },
-              { value: "estimated", label: "환산취득가", disabled: isSplitMode },
-              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftValuationOnly },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftValuationOnly },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
               // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
               //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
             ]}
           />
+
+          {/* 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가(국심2007중1761).
+              ⑧·⑫·복원 마이그레이션과 같은 술어. */}
+          {giftValuationOnly && (
+            <p className="text-xs text-amber-800" data-testid="gift-valuation-only-notice">
+              증여·상속받은 주식의 취득가액은 증여일·상속개시일 현재 「상속세 및 증여세법」 제60조~제66조에 따른
+              평가액이며 이를 실지거래가액으로 봅니다 — 환산취득가·매매사례가액은 쓸 수 없습니다 (소득세법 시행령 §163⑨).
+              {form.acquisitionCause === "carryover_gift" &&
+                " 이월과세 적용 시의 증여자 취득가액은 1단계 「증여자 취득가액 산정 방식」에서 정합니다."}
+            </p>
+          )}
 
           {/* 실가 취득가 */}
           {acquisitionMode === "actual" && isSplitMode && (
@@ -325,7 +356,7 @@ export function Step2({ form, onChange }: Step2Props) {
                 <CurrencyInput
                   label="1주당 취득가액"
                   required
-                  hint="실제 취득가액 (원)"
+                  hint={perShareAcqHint}
                   value={form.perShareAcquisitionPrice}
                   onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
                 />
@@ -336,7 +367,7 @@ export function Step2({ form, onChange }: Step2Props) {
                   <CurrencyInput
                     label="취득가액 합계"
                     required
-                    hint="계약서·거래내역 등에 기재된 총 취득대금 (원)"
+                    hint={totalAcqHint}
                     value={form.acquisitionTotalPrice}
                     onChange={(v) => onChange({ acquisitionTotalPrice: v })}
                   />
@@ -375,6 +406,14 @@ export function Step2({ form, onChange }: Step2Props) {
               )}
             </div>
           )}
+
+          {/* 이월과세 증여자 기준 환산 — 수증자 실가(평가액)와 별개로 A의 분모만 받는다 (§97의2①1호 나목) */}
+          {acquisitionMode === "actual" &&
+            !isSplitMode &&
+            form.acquisitionCause === "carryover_gift" &&
+            (form.donorAcquisitionMethod || "actual") === "estimated" && (
+              <CarryoverDonorConversionSection form={form} onChange={onChange} />
+            )}
 
           {/* 환산 — 상장 */}
 {acquisitionMode === "estimated" && isListed && (

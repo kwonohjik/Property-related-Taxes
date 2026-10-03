@@ -43,6 +43,12 @@ interface EstimatedUnlistedBlockProps {
    * acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단 — 3중 정합).
    */
   acquisitionSideOnly?: boolean;
+  /**
+   * 이월과세 **증여자 기준 환산**의 분모 전용 (양도측만). 분자는 증여자 취득 당시 기준시가로
+   * 덮어쓰이므로 취득측·사례49·§165⑨ 토글·full(V2)을 모두 숨긴다(④가 simple 값만 싣는다).
+   * 계획서 docs/00-pm/stock-carryover-sale-case-donor-basis.plan.md V-2
+   */
+  transferSideOnly?: boolean;
 }
 
 const NET_ASSET_ONLY_REASON_OPTIONS = [
@@ -69,12 +75,12 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
   },
 ];
 
-export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false }: EstimatedUnlistedBlockProps) {
+export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   const isNetAssetOnly = netAssetOnlyReason !== "";
   const isHeavyRE = form.isHeavyRealEstateForValuation;
   // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·acquisitionSideOnly 시 강제 simple.
-  const mode = simpleOnly || acquisitionSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
+  const mode = simpleOnly || acquisitionSideOnly || transferSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
 
   // full 모드 — adapter가 계산한 4 값을 미리보기에 주입 (UI·adapter 단일 진실)
   const fullReduced = useMemo(() => {
@@ -249,7 +255,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
       {/* simpleOnly(거래정지 우회 등)·acquisitionSideOnly(C-1)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}
-      {!simpleOnly && !acquisitionSideOnly && (
+      {!simpleOnly && !acquisitionSideOnly && !transferSideOnly && (
       <>
       <FieldCard
         label="입력 방식"
@@ -407,7 +413,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
 
       {/* 취득일 직전 사업연도 입력 — simple 모드 + acqFaceValueOnly 비활성 시만 노출
           [C-1] acquisitionSideOnly는 acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단) */}
-      {mode === "simple" && (acquisitionSideOnly || !acqFaceValueOnly) && (
+      {mode === "simple" && !transferSideOnly && (acquisitionSideOnly || !acqFaceValueOnly) && (
       <div>
         <p className="text-sm font-medium text-slate-700 mb-3">
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
@@ -436,7 +442,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       )}
 
       {/* [사례 49] simple 모드 + acqFaceValueOnly 활성 시 안내 배너 — [C-1] acquisitionSideOnly 시 숨김 */}
-      {mode === "simple" && acqFaceValueOnly && !acquisitionSideOnly && (
+      {mode === "simple" && acqFaceValueOnly && !acquisitionSideOnly && !transferSideOnly && (
         <p
           data-testid="eu-simple-acq-hidden-notice"
           className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
@@ -445,8 +451,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         </p>
       )}
 
-      {/* 취득기준시가 미리보기 — simple·full 양 모드 공통 노출 */}
-      {acquisitionStdPricePreview !== null && (
+      {/* 취득기준시가 미리보기 — simple·full 양 모드 공통 노출 (양도측 전용 모드는 분자가 증여자 값이라 숨김) */}
+      {!transferSideOnly && acquisitionStdPricePreview !== null && (
         <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
           취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
           {acqFaceValueOnly && !acquisitionSideOnly && (
@@ -461,7 +467,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
 
       {/* [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 가산 — 활성 우선 노출
           (acquisitionSideOnly·acqFaceValueOnly 트랙 제외 · 엔진 equal 판정과 동일하게 미리보기 값 비교) */}
-      {!acquisitionSideOnly && !acqFaceValueOnly && (
+      {!acquisitionSideOnly && !transferSideOnly && !acqFaceValueOnly && (
         <MonthlyAccrual81Section
           visible={
             // §165⑤ 후단·§165⑨는 「평가액이 «같은 경우»」라고만 한다 — 양수 요건이 없다.
@@ -485,7 +491,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       )}
 
       {/* [M-4 사례 49] 환산취득가 미리보기 카드 — acqFaceValueOnly 활성 시만 ([C-1] acquisitionSideOnly 제외) */}
-      {acqFaceValueOnly && !acquisitionSideOnly && conversionPreview !== null && transferStdPricePreview && (
+      {acqFaceValueOnly && !acquisitionSideOnly && !transferSideOnly && conversionPreview !== null && transferStdPricePreview && (
         <div
           data-testid="eu-conversion-preview"
           className="mt-2 rounded border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2 text-sm text-fuchsia-800 space-y-1"
