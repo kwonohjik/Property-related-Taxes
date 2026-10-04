@@ -1081,6 +1081,7 @@ export interface BurdenedGiftStockTransferTaxInput {
   netAssetOnlyReason?:
     | "liquidation_or_owner_death"
     | "no_business_or_short_or_closed"
+    | "consecutive_loss_3y"
     | "stock_holding_company"
     | "remaining_term_under_3y";
   /** 소득세법 시행규칙 §81④1호 — 같은 사업연도 취득·양도(양도·취득 평가액 동일 시에만 노출) */

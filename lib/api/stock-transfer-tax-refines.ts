@@ -18,6 +18,7 @@ import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
@@ -340,6 +341,9 @@ export function addStockRefines(
       // §165④를 부르는 분기(환산 — 비상장·거래정지·취득 후 상장 / 매매사례가액 — 개산공제 기준시가)에서만 막는다.
       const transferDateForEra = toOptionalDate(data.transferDate);
       const eraUnsupported = transferDateForEra !== undefined && isSection165_4EraUnsupported(transferDateForEra);
+      // Q-3b — §165④3 사유가 양도일에 없던 사유(⑧ 같은 조건·문구). 사유를 읽는 분기에서만 부른다.
+      const reasonOutOfEra =
+        !eraUnsupported && !isNetAssetOnlyReasonInEra(data.netAssetOnlyReason, transferDateForEra);
       if (!splitOrLots) {
         if (
           data.transferPriceMode === "actual" &&
@@ -387,6 +391,7 @@ export function addStockRefines(
             : null;
         if (eraUnsupported && (scope || (listed && data.acquiredBeforeListing)))
           issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
+        if (scope && reasonOutOfEra) issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
         if (scope) {
           for (const key of requiredUnlistedValuationKeys({
             scope,
@@ -515,6 +520,7 @@ export function addStockRefines(
         !["kospi", "kosdaq", "konex"].includes(data.marketType as string)
       ) {
         if (eraUnsupported) issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
+        if (reasonOutOfEra) issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
         for (const key of requiredUnlistedValuationKeys({
           scope: "acquisition",
           niSkip: netAssetOnly,

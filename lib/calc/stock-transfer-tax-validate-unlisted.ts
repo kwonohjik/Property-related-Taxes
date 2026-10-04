@@ -10,6 +10,7 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { calcSupplementaryPerShare } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
@@ -174,9 +175,14 @@ function validateTransferSupplementaryPositive(
 }
 
 /**
- * S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라(시행규칙 §81②2호 산술평균) 계산하지 않는다.
- * §165④를 부르는 분기에서만 막는다 — 환산(비상장·거래정지·취득 후 상장)과 매매사례가액(비상장 — 개산공제 기준시가).
- * ⑫(`stock-transfer-tax-refines.ts`)와 같은 조건·문구. 양도일 칸은 1단계라 이 화면의 산정방법 칸에 단다.
+ * §165④ 양도일 연혁 — ⑫(`stock-transfer-tax-refines.ts`)와 같은 조건·문구.
+ *
+ * 1. S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라(시행규칙 §81②2호 산술평균) 계산하지 않는다.
+ *    §165④를 부르는 분기에서만 막는다 — 환산(비상장·거래정지·취득 후 상장)과 매매사례가액(비상장 — 개산공제 기준시가).
+ *    양도일 칸은 1단계라 이 화면의 산정방법 칸에 단다.
+ * 2. Q-3b — §165④3 순자산 단독 사유가 양도일에 없던 사유면 사유 칸에서 막는다(`isNetAssetOnlyReasonInEra`).
+ *    사유를 **읽는** 경로(= 사유 칸이 화면에 있는 경로)에서만 — 취득 후 상장(§165⑤)·실지거래가액에 남은 값은
+ *    고칠 칸이 없으므로 막지 않는다.
  */
 export function validateSection165_4Era(
   form: StockTransferFormData,
@@ -184,15 +190,20 @@ export function validateSection165_4Era(
   errors: StockValidationError[],
 ): void {
   const td = parseTransferDate(form.transferDate);
-  if (!td || !isSection165_4EraUnsupported(td)) return;
+  if (!td) return;
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const stdMode = form.acquisitionStdMode;
-  const uses165_4 =
-    (acquisitionMode === "estimated" &&
-      (!isListed || stdMode === "halt_transfer" || stdMode === "halt_acquisition" || stdMode === "post_listing")) ||
+  const readsReason =
+    (acquisitionMode === "estimated" && (!isListed || stdMode === "halt_transfer" || stdMode === "halt_acquisition")) ||
     (acquisitionMode === "sale_case" && !isListed);
-  if (uses165_4) {
-    errors.push({ field: "acquisitionMode", message: UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED, severity: "error" });
+  if (isSection165_4EraUnsupported(td)) {
+    if (readsReason || (acquisitionMode === "estimated" && stdMode === "post_listing")) {
+      errors.push({ field: "acquisitionMode", message: UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED, severity: "error" });
+    }
+    return;
+  }
+  if (readsReason && !isNetAssetOnlyReasonInEra(form.netAssetOnlyReason || undefined, td)) {
+    errors.push({ field: "netAssetOnlyReason", message: UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA, severity: "error" });
   }
 }
 

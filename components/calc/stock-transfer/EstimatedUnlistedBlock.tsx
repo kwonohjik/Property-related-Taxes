@@ -24,6 +24,7 @@ import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { calcNetAssetOnlyValue } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
@@ -61,7 +62,8 @@ interface EstimatedUnlistedBlockProps {
   hideReversalToggle?: boolean;
 }
 
-const NET_ASSET_ONLY_REASON_OPTIONS = [
+// §165④3 사유 — 양도일에 있던 사유만 보인다(`isNetAssetOnlyReasonInEra` · ⑧·⑫와 같은 leaf).
+const NET_ASSET_ONLY_REASON_OPTIONS: { value: StockTransferFormData["netAssetOnlyReason"]; label: string; description: string }[] = [
   { value: "", label: "해당 없음", description: "가중평균 (§165④1 본칙) 적용" },
   {
     value: "liquidation_or_owner_death",
@@ -72,6 +74,11 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
     value: "no_business_or_short_or_closed",
     label: "나목: 사업 개시 전·1년 미만·휴폐업",
     description: "순손익가치 산출이 불가능한 경우",
+  },
+  {
+    value: "consecutive_loss_3y",
+    label: "다목: 3년 연속 결손 (2023.2.27. 이전 양도)",
+    description: "양도일·취득일이 속하는 사업연도 전 3년 이내의 사업연도부터 계속하여 결손금이 있는 법인",
   },
   {
     value: "stock_holding_company",
@@ -120,6 +127,14 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
   const evalDate = eraUnsupported ? undefined : transferDateParsed;
   // 2007.2.27. 이전 양도는 max 산식 — 가중치·반전·80% 하한이 없다. 양도일 미입력이면 현행 기준으로 안내
   const isMaxModel = evalDate !== undefined && getValuationWeights(evalDate).model === "max";
+  // 양도일에 있던 사유만 보인다 — 양도일 미입력이면 현행 사유. 이미 고른 값은 시기가 맞지 않아도 남긴다
+  // (숨기면 ⑧ 오류를 고칠 칸이 없다). 2007.2.27. 이전 양도는 사유가 없어 칸 자체를 숨긴다.
+  const reasonOptions = NET_ASSET_ONLY_REASON_OPTIONS.filter(
+    (o) =>
+      o.value === "" ||
+      o.value === netAssetOnlyReason ||
+      (transferDateParsed ? isNetAssetOnlyReasonInEra(o.value || undefined, transferDateParsed) : o.value !== "consecutive_loss_3y"),
+  );
 
   // 양도기준시가 미리보기 (useMemo — useEffect→store 미러링 금지)
   // [DM-1] full 모드에서도 동일 미리보기 노출 — adapter 결과를 NI/NA로 사용
@@ -365,25 +380,27 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         라벨을 자체 행으로 올리고(stacked) 5개 옵션을 2열로 접는다 — 좌-라벨 + 1열이면
         옵션이 5행을 먹어 화면 절반을 차지한다. 모바일은 RadioCardGroup 이 항상 1열이다.
       */}
-      <FieldCard
-        stacked
-        label="순자산 단독 평가 사유 (§165④3)"
-        hint="해당 사유가 있는 경우만 선택. 없으면 '해당 없음'으로 둡니다."
-      >
-        <RadioCardGroup
-          name="netAssetOnlyReason"
-          value={netAssetOnlyReason}
-          onChange={(v) =>
-            onChange({
-              netAssetOnlyReason: v as StockTransferFormData["netAssetOnlyReason"] | "",
-            })
-          }
-          tone="amber"
-          layout="stack"
-          columns={2}
-          options={NET_ASSET_ONLY_REASON_OPTIONS}
-        />
-      </FieldCard>
+      {reasonOptions.length > 1 && (
+        <FieldCard
+          stacked
+          label="순자산 단독 평가 사유 (§165④3)"
+          hint="해당 사유가 있는 경우만 선택. 없으면 '해당 없음'으로 둡니다."
+        >
+          <RadioCardGroup
+            name="netAssetOnlyReason"
+            value={netAssetOnlyReason}
+            onChange={(v) =>
+              onChange({
+                netAssetOnlyReason: v as StockTransferFormData["netAssetOnlyReason"] | "",
+              })
+            }
+            tone="amber"
+            layout="stack"
+            columns={2}
+            options={reasonOptions}
+          />
+        </FieldCard>
+      )}
 
       {/* [unlisted-direct-calc] full 모드 — 행-수준 계산 컴포넌트 */}
       {mode === "full" && (
