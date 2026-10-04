@@ -427,7 +427,7 @@ export function StockTransferTaxResultView({
         {/* [GAP-2] 비상장 §165④ full 모드 — 행-수준 계산 적용 배지 */}
         {unlistedValuationMode === "full" && (
           <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
-            행-수준 계산 적용 (상증령 §54·§55)
+            행-수준 계산 적용 (소득세법 시행령 §165④1호)
           </span>
         )}
         {/* [사례 49] 취득시 장부분실 액면가 배지 */}

@@ -44,9 +44,10 @@ interface EstimatedUnlistedBlockProps {
    */
   simpleOnly?: boolean;
   /**
-   * [C-1] 취득일 거래정지 — 취득측 입력 전용 모드 (simpleOnly보다 좁음).
-   * 렌더: 순자산 단독 사유 라디오 + 취득연도 NI/NA + 취득기준시가 미리보기만.
-   * 양도연도 섹션·양도 미리보기·full(V2)·사례 49 전부 숨김 (양도측은 1개월 종가평균 유지).
+   * [C-1] 취득측 입력 전용 모드 — 취득일 거래정지 · 매매사례가액 개산공제 기준시가.
+   * 렌더: 입력 방식 토글 + 순자산 단독 사유 라디오 + 취득연도 NI/NA(simple) 또는 결산서 취득 열(full)
+   *       + 취득기준시가 미리보기. 양도연도 섹션·양도 미리보기·사례 49는 숨김.
+   * full 적용 여부는 ④⑧이 `isAcquisitionSideFullValuationForm`으로 같은 조건을 본다.
    * acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단 — 3중 정합).
    */
   acquisitionSideOnly?: boolean;
@@ -92,8 +93,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
   const isRaMokBasis = isNetAssetOnly && netAssetOnlyReason === "";
   // §165④1호 괄호(2:3) — 엔진·⑧·⑫와 같은 leaf
   const isHeavyRE = isReversalCorpForm(form);
-  // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·acquisitionSideOnly 시 강제 simple.
-  const mode = simpleOnly || acquisitionSideOnly || transferSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
+  // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·transferSideOnly 시 강제 simple.
+  const mode = simpleOnly || transferSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
 
   // full 모드 — adapter가 계산한 4 값을 미리보기에 주입 (UI·adapter 단일 진실)
   const fullReduced = useMemo(() => {
@@ -285,16 +286,18 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {!isNetAssetOnly && !hideReversalToggle && !isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
-      {/* simpleOnly(거래정지 우회 등)·acquisitionSideOnly(C-1)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}
-      {!simpleOnly && !acquisitionSideOnly && !transferSideOnly && (
-      <>
+      {/* simpleOnly(증여 부담부)·transferSideOnly(증여자 분모)에서는 숨김 — ④가 simple 값만 싣는다.
+          acquisitionSideOnly는 토글을 연다(④⑧ 술어 `isAcquisitionSideFullValuationForm`) */}
+      {!simpleOnly && !transferSideOnly && (
       <FieldCard
         label="입력 방식"
-        hint="간이는 1주당 가액을 직접 입력, 행-수준 계산은 상증령 §54·§55 산식으로 자동 산출"
+        hint="1주당 가액을 직접 넣거나, 직전 사업연도 결산서를 입력해 자동 산출합니다 (소득세법 시행령 §165④1호)"
         trailing={
+          /* 상증령 §54①은 「최근 3년간」 가중평균이라 양도세 기준시가(소령 §165④1호 가목 「직전 사업연도」)와 다르다.
+             결산서 행 구성은 소법 §99①4 전단의 상증법 §63①1호나목 준용 경로다. */
           <div className="flex flex-wrap gap-1">
-            <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §54" label="상증령§54" />
-            <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §55" label="상증령§55" />
+            <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="소령§165④1" />
+            <LawArticleModal legalBasis="소득세법 §99 ① 4호" label="소법§99①4" />
           </div>
         }
       >
@@ -321,8 +324,11 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         />
         <p className="mt-2 text-xs text-fuchsia-700">ⓘ {UNLISTED_MESSAGES.TOGGLE_DATA_PERSIST}</p>
       </FieldCard>
+      )}
 
-      {/* [사례 49] 취득시 장부분실 액면가 ToggleCard (§99①4 후단) */}
+      {/* [사례 49] 취득시 장부분실 액면가 ToggleCard (§99①4 후단) — 환산 전용(④ 게이트가 estimated 요구)이라 취득측 전용에서도 숨김 */}
+      {!simpleOnly && !acquisitionSideOnly && !transferSideOnly && (
+      <>
       <div className="flex flex-wrap gap-1.5 mb-1">
         <LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" />
       </div>
@@ -382,8 +388,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {/* [unlisted-direct-calc] full 모드 — 행-수준 계산 컴포넌트 */}
       {mode === "full" && (
         <div className="space-y-4">
-          <EstimatedUnlistedNetIncomeStatement form={form} onChange={onChange} />
-          <EstimatedUnlistedNetAssetStatement form={form} onChange={onChange} />
+          <EstimatedUnlistedNetIncomeStatement form={form} onChange={onChange} acquisitionSideOnly={acquisitionSideOnly} />
+          <EstimatedUnlistedNetAssetStatement form={form} onChange={onChange} acquisitionSideOnly={acquisitionSideOnly} />
         </div>
       )}
 

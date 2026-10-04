@@ -201,7 +201,6 @@ export interface StockTransferFormData {
   // ── R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장 (2026-05-19) ──
   acquisitionMarketSamplePrice: string;       // 원
   acquisitionMarketSampleDate: string;         // "YYYY-MM-DD"
-  acquisitionMarketSampleCounterparty: string;
 
   // ── R-2 자본조정 (법§17② 단서 + 집행기준 97-163-12) — 2026-05-19 ──
   capitalAdjustments: CapitalAdjustmentForm[];

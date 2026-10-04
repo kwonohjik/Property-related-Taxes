@@ -7,7 +7,7 @@
  *    자산의 매매사례가 있는 경우 그 가액"
  *
  * 시행령 §176의2③ 단서:
- *   §98① 특수관계인과의 거래로서 객관적으로 부당한 경우 적용 배제
+ *   §98① 특수관계인과의 거래로서 객관적으로 부당한 경우 적용 배제 — 사실판단이라 엔진은 판정하지 않는다
  *
  * 적용 범위:
  *   - 비상장(`marketType="unlisted"`): ✅
@@ -79,7 +79,6 @@ export function evaluateMarketSample(input: {
   acquisitionDateLabel?: string;
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
-  acquisitionMarketSampleCounterparty?: string;
 }): MarketSampleEvaluationResult {
   const warnings: string[] = [];
   const appliedRules: string[] = [];
@@ -102,9 +101,6 @@ export function evaluateMarketSample(input: {
           `취득 매매사례 거래일이 ${input.acquisitionDateLabel ?? "취득일"}과 ${acquisitionDeltaDays}일 차이 — 시행령 §176의2③1호 본문 "전후 3개월" 초과. 결정·경정 단계 부인 가능성 안내.`,
         );
       }
-    }
-    if (input.acquisitionMarketSampleCounterparty && /(대표|이사|친족|배우자|자녀|특수관계)/.test(input.acquisitionMarketSampleCounterparty)) {
-      warnings.push(`취득 매매사례 거래상대 "${input.acquisitionMarketSampleCounterparty}" — 특수관계인 의심. §98① + §176의2③ 단서 검토 권장.`);
     }
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE);
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_163_12);

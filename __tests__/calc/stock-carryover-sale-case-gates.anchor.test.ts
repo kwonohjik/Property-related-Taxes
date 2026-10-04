@@ -268,3 +268,36 @@ describe("AP-1: ④ body — 방식별 입력만 · stale 분자 갈래 차단",
     expect(body.transferDatePriceAvg1Month).toBe(100_000);
   });
 });
+
+describe("AP-2: 이월과세 증여자 매매사례 — 취득측 「평가액 계산」 결산서가 끼어들지 않는다", () => {
+  /**
+   * 엔진은 이월과세 A(증여자 매매사례)면 취득 당시 기준시가를 **증여자 값**으로 덮어쓰고 수증연도 보충평가를
+   * 부르지 않는다(`stock-acquisition-basis.ts` override). 수증자 화면 모드는 실가라 취득측 전용 술어도 열리지 않는다.
+   * 계획서 docs/00-pm/stock-transfer-acq-side-unlisted-full-mode.plan.md §11 (리뷰 게이트 지적 — 안전망 없던 조합)
+   */
+  const donorSaleCase = {
+    ...CARRYOVER,
+    donorAcquisitionMethod: "sale_case",
+    donorAcquisitionMarketSamplePrice: "300000",
+    donorAcquisitionMarketSampleDate: "2015-07-01",
+    donorAcquisitionStdPrice: "50000",
+  } as Partial<StockTransferFormData>;
+  /** 결산서 취득 열 잔존값 — 쓰이면 기준시가 260,000 (300,000×3 + 200,000×2)÷5 */
+  const staleAcqStatement = {
+    unlistedValuationMode: "full",
+    niAddRow1EUAcq: "300000000",
+    niShareCountEUAcq: "10000",
+    naAssetTotalRow1EUAcq: "5000000000",
+    naLiabTotalRow8EUAcq: "3000000000",
+    naShareCountEUAcq: "10000",
+  } as Partial<StockTransferFormData>;
+
+  it("stale full 결산서가 남아 있어도 개산공제는 증여자 기준시가 50,000 × 100주 × 1% = 50,000", () => {
+    const base = runFullStack(form(donorSaleCase));
+    const stale = runFullStack(form({ ...donorSaleCase, ...staleAcqStatement }));
+    if (base.blocked || stale.blocked) throw new Error("blocked");
+    expect(base.result.estimatedDeduction).toBe(50_000);
+    expect(stale.result.estimatedDeduction).toBe(50_000);
+    expect(stale.result.acquisitionPrice).toBe(base.result.acquisitionPrice);
+  });
+});

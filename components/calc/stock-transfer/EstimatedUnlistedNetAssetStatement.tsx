@@ -24,18 +24,24 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 interface Props {
   form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
+  /**
+   * 취득측 전용 경로(매매사례·취득일 거래정지) — 취득 열(EUAcq)만 렌더한다.
+   * 🔴 이때는 `acqFaceValueOnly`를 **무시**한다 — 환산에서 켜 둔 액면가 토글이 남아 취득 열을 숨기면
+   *    ⑧은 취득 열 주식수를 요구하는 막다른 길이 된다(블록의 취득기준시가 미리보기도 같은 규칙).
+   */
+  acquisitionSideOnly?: boolean;
 }
 
-export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
-  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출
-  const hideAcqColumn = form.acqFaceValueOnly === true;
+export function EstimatedUnlistedNetAssetStatement({ form, onChange, acquisitionSideOnly = false }: Props) {
+  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출 (취득측 전용 경로에서는 무시)
+  const hideAcqColumn = !acquisitionSideOnly && form.acqFaceValueOnly === true;
   const cols: StatementColumnSpec[] = useMemo(() => {
-    const base: { col: StatementColumn; label: string }[] = [
-      { col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` },
-    ];
+    const base: { col: StatementColumn; label: string }[] = acquisitionSideOnly
+      ? []
+      : [{ col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` }];
     if (!hideAcqColumn) base.push({ col: "EUAcq", label: `${COL_LABEL.EUAcq} 사업연도` });
     return buildStatementColumns(form, onChange, base);
-  }, [hideAcqColumn, form, onChange]);
+  }, [acquisitionSideOnly, hideAcqColumn, form, onChange]);
 
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4 space-y-3">
@@ -44,7 +50,7 @@ export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
           2
         </span>
         <p className="text-sm font-semibold text-emerald-800">
-          순자산가액 계산서 (소령 §165④1 나목 — {hideAcqColumn ? "양도연도" : "양도/취득연도"})
+          순자산가액 계산서 (소령 §165④1 나목 — {acquisitionSideOnly ? "취득연도" : hideAcqColumn ? "양도연도" : "양도/취득연도"})
         </p>
       </div>
       <p className="text-xs text-amber-700 bg-amber-50/70 border border-amber-200 rounded px-2 py-1.5">

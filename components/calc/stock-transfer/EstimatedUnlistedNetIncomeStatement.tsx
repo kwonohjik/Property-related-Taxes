@@ -30,18 +30,24 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 interface Props {
   form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
+  /**
+   * 취득측 전용 경로(매매사례·취득일 거래정지) — 취득 열(EUAcq)만 렌더한다.
+   * 🔴 이때는 `acqFaceValueOnly`를 **무시**한다 — 환산에서 켜 둔 액면가 토글이 남아 취득 열을 숨기면
+   *    ⑧은 취득 열 주식수를 요구하는 막다른 길이 된다(블록의 취득기준시가 미리보기도 같은 규칙).
+   */
+  acquisitionSideOnly?: boolean;
 }
 
-export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
-  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출
-  const hideAcqColumn = form.acqFaceValueOnly === true;
+export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitionSideOnly = false }: Props) {
+  // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출 (취득측 전용 경로에서는 무시)
+  const hideAcqColumn = !acquisitionSideOnly && form.acqFaceValueOnly === true;
   const cols: StatementColumnSpec[] = useMemo(() => {
-    const base: { col: StatementColumn; label: string }[] = [
-      { col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` },
-    ];
+    const base: { col: StatementColumn; label: string }[] = acquisitionSideOnly
+      ? []
+      : [{ col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` }];
     if (!hideAcqColumn) base.push({ col: "EUAcq", label: `${COL_LABEL.EUAcq} 사업연도` });
     return buildStatementColumns(form, onChange, base);
-  }, [hideAcqColumn, form, onChange]);
+  }, [acquisitionSideOnly, hideAcqColumn, form, onChange]);
 
   // [DM-2] 분기 우선순위: Priority 1 — NA 단독 (전체 비노출) > Priority 2 — 사례 49 (EUAcq만 비노출)
   // [E-6 (1)] 순자산 단독 평가 사유 발생 시 NI 24행 양/취 모두 비노출
@@ -66,7 +72,7 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
           1
         </span>
         <p className="text-sm font-semibold text-sky-800">
-          순손익 계산서 (상증령 §54 — 24행 × {hideAcqColumn ? "양도연도" : "양도/취득연도"})
+          순손익 계산서 (소령 §165④1 가목 — 24행 × {acquisitionSideOnly ? "취득연도" : hideAcqColumn ? "양도연도" : "양도/취득연도"})
         </p>
       </div>
       {hideAcqColumn && (

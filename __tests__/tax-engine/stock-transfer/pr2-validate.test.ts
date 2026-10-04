@@ -60,7 +60,6 @@ function baseForm(overrides: Partial<StockTransferFormData> = {}): StockTransfer
     perShareAcquisitionPrice: "100000",
     acquisitionMarketSamplePrice: "",
     acquisitionMarketSampleDate: "",
-    acquisitionMarketSampleCounterparty: "",
     capitalAdjustments: [],
     transferDatePriceAvg1Month: "",
     acquisitionDatePriceAvg1Month: "",

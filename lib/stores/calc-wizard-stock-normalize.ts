@@ -249,7 +249,6 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
     acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),
-    acquisitionMarketSampleCounterparty: strField("acquisitionMarketSampleCounterparty"),
     // R-2 자본조정
     capitalAdjustments: Array.isArray(d.capitalAdjustments)
       ? (d.capitalAdjustments as unknown[]).map((row) => {

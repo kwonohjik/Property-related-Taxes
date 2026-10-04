@@ -149,7 +149,6 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
     acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,
-    acquisitionMarketSampleCounterparty: coerced.acquisitionMarketSampleCounterparty as string | undefined,
     // R-2 자본조정
     capitalAdjustments: coerced.capitalAdjustments as StockTransferInput["capitalAdjustments"],
     realEstateGroupBasicDeductionUsed: coerced.realEstateGroupBasicDeductionUsed as number,

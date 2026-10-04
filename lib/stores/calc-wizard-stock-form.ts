@@ -122,7 +122,6 @@ export function createInitialStockFormData(): StockTransferFormData {
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: "",
     acquisitionMarketSampleDate: "",
-    acquisitionMarketSampleCounterparty: "",
     // R-2 자본조정
     capitalAdjustments: [],
 

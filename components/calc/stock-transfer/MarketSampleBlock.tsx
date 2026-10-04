@@ -3,7 +3,7 @@
 /**
  * MarketSampleBlock — R-1' **취득** 매매사례가액 입력 블록 (영§176의2③1호)
  *
- * 비상장·기타자산 전용. ±3개월 (90일) 초과 시 warning, 특수관계인 의심 keyword 안내.
+ * 비상장·기타자산 전용. ±3개월 (90일) 초과 시 warning.
  * 양도 매매사례가액 입력은 없다 — 양도가액은 양도 당시 실지거래가액이다(소득세법 §96①).
  * 매매사례가액은 §114⑦ 과세관청의 추계 결정·경정 축이고, 취득가액만 §97①1호 단서가 납세자 산정을 허용한다.
  */
@@ -41,15 +41,6 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
           <DateInput
             value={form.acquisitionMarketSampleDate}
             onChange={(v) => onChange({ acquisitionMarketSampleDate: v })}
-          />
-        </FieldCard>
-        <FieldCard label="거래상대 (메타)" hint="특수관계인 의심 keyword 자동 검출 — §98① 부당거래 검토용">
-          <input
-            type="text"
-            className="w-full rounded border border-amber-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-            value={form.acquisitionMarketSampleCounterparty}
-            onChange={(e) => onChange({ acquisitionMarketSampleCounterparty: e.target.value })}
-            placeholder="거래상대 명의·관계 (예: 제3자, 친족 등)"
           />
         </FieldCard>
       </ToneCard>

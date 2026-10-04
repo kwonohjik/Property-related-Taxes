@@ -26,7 +26,7 @@ export const UNLISTED_MESSAGES = {
   MAX_MODEL_CAPTION:
     "2007.2.27. 이전 양도 — 순손익가치가 순자산가치에 미달하면 순자산가치 (소득세법 시행령 §165④1·2호, 2007.2.28. 개정 전)",
   /** full 모드 사용 시 결과 카드 배지 */
-  FULL_MODE_BADGE: "행-수준 계산 적용 (상증령 §54·§55)",
+  FULL_MODE_BADGE: "행-수준 계산 적용 (소득세법 시행령 §165④1호)",
   /** simple↔full 토글 시 데이터 보존 안내 */
   TOGGLE_DATA_PERSIST: "모드 전환 시 입력값은 양쪽 모두 보존됩니다 (실수 토글 보호)",
   /**

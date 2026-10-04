@@ -47,6 +47,8 @@ import {
 } from "./stock-transfer-tax-api-foreign-exit";
 import { isOtherAssetGroup } from "./stock-other-asset-scope";
 import { isClause9Applicable } from "./stock-other-asset-scope";
+// 취득측 전용 보충평가(매매사례·취득일 거래정지)의 「평가액 계산」 — ⑧과 같은 술어
+import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
@@ -365,7 +367,6 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     const acqMS = parseIntOrUndef(form.acquisitionMarketSamplePrice);
     if (acqMS !== undefined) body.acquisitionMarketSamplePrice = acqMS;
     if (form.acquisitionMarketSampleDate) body.acquisitionMarketSampleDate = form.acquisitionMarketSampleDate;
-    if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
   }
 
   // 의제취득일 전 매수 — 영 §176의2④ ② 입력 (Z-1)
@@ -439,14 +440,20 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 활성 조건: (비상장·기타자산(usesUnlistedSupplementaryValuation) || 거래정지) + estimated 모드 + unlistedValuationMode === "full"
   // [C-2] 거래정지(양도) 상장주식도 비상장 보충평가 → full 결산서 허용(silent strip 해소)
   // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)
+  // 취득측 전용 경로(매매사례·취득일 거래정지)는 결산서 **취득 열만** 화면에 있다 — 양도 열 값은 싣지 않는다.
+  //   취득일 거래정지는 상장주식이라 위 시장 조건 밖이므로 술어로 따로 연다(안 열면 화면의 결산서가 body에 안 실린다).
+  const acqSideFull = isAcquisitionSideFullValuationForm(form);
   if (
-    (usesUnlistedSupplementaryValuation(form.marketType) || form.acquisitionStdMode === "halt_transfer") &&
-    form.unlistedValuationMode === "full"
+    ((usesUnlistedSupplementaryValuation(form.marketType) || form.acquisitionStdMode === "halt_transfer") &&
+      form.unlistedValuationMode === "full") ||
+    acqSideFull
   ) {
     const niSkip = shouldSkipNetIncome(form);
     const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
-    if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;
-    body.transferYearNetAssetPerShare = reduced.transferNa;
+    if (!acqSideFull) {
+      if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;
+      body.transferYearNetAssetPerShare = reduced.transferNa;
+    }
     if (!niSkip) body.acquisitionYearNetIncomePerShare = reduced.acqNi;
     body.acquisitionYearNetAssetPerShare = reduced.acqNa;
     // 74 신규 필드는 body 미포함 — Zod stripping/엔진 미도달 위험 0
@@ -457,10 +464,12 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
    * 비상장·기타자산 주식등의 기준시가는 §99①4 → 영 §165④ 보충평가라 취득연도 순손익·순자산이 필요하다.
    *
    * 🔴 **위 full 결산서 블록 «뒤»에 둔다.** 그 블록은 `acquisitionMode`를 보지 않아, 환산에서 full로 채운 뒤
-   *    매매사례로 바꾸면 **화면에 없는 결산서 값**이 `acquisitionYear*`를 덮는다(이 모드 화면은 simple뿐).
-   *    여기서 지우고 simple 입력만 다시 싣는다. 빈값은 undefined로 둔다 — 0이면 ⑫ 필수 게이트를 우회한다.
+   *    매매사례로 바꾸면 결산서 값이 `acquisitionYear*`를 덮는다. simple이면 여기서 지우고 simple 입력만
+   *    다시 싣는다. 빈값은 undefined로 둔다 — 0이면 ⑫ 필수 게이트를 우회한다.
+   * 🔑 이 블록이 sale_case simple 값의 **유일한 공급원**이다(위 sale_case 분기는 싣지 않는다) — 「평가액 계산」을
+   *    고른 경우에만 건너뛰어 결산서 취득 열 값을 남긴다.
    */
-  if (acquisitionMode === "sale_case") {
+  if (acquisitionMode === "sale_case" && !acqSideFull) {
     delete (body as Record<string, unknown>).acquisitionYearNetIncomePerShare;
     delete (body as Record<string, unknown>).acquisitionYearNetAssetPerShare;
     const smNI = parseFloatOrUndef(form.acquisitionYearNetIncomePerShare);
