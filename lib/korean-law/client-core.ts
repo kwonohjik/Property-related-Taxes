@@ -128,12 +128,15 @@ export function safeCacheKey(str: string): string {
   return str.replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
 }
 
-/** @param allowStale true면 TTL 만료 캐시도 반환 (법제처 접속 차단 시 fallback) */
-export async function readCache<T>(key: string, allowStale = false): Promise<T | null> {
+/**
+ * @param allowStale true면 TTL 만료 캐시도 반환 (법제처 접속 차단 시 fallback)
+ * @param ttlMs 이 키만 더 짧게 볼 때 (기본 30일). 시점이 지나면 바뀌는 목록용 — 예: 행위시법 버전 목록.
+ */
+export async function readCache<T>(key: string, allowStale = false, ttlMs = CACHE_TTL_MS): Promise<T | null> {
   const file = path.join(CACHE_DIR, `${key}.json`);
   try {
     const stat = await fs.stat(file);
-    if (!allowStale && Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - stat.mtimeMs > ttlMs) return null;
     return JSON.parse(await fs.readFile(file, "utf-8")) as T;
   } catch {
     return null;
