@@ -5,8 +5,9 @@
  *
  * 계획서 `docs/00-pm/stock-165-8-1-ra-net-asset-only.plan.md` §5 · Q-3
  *
- *   UI-RA-1  OtherAssetBlock — 라목 + 2024 양도 → «반전» 토글 대신 후단 안내 (엔진도 토글을 읽지 않는다)
- *   UI-RA-2  OtherAssetBlock — 라목 + 2023-02-27 양도 → 토글 그대로 (부칙 제9조 전)
+ *   UI-RA-1  OtherAssetBlock — 라목 + 2024 양도 → 후단 안내 (엔진도 반전을 읽지 않는다)
+ *   UI-RA-2  OtherAssetBlock — 라목 + 2023-02-27 양도 · 상장 → 안내 없음
+ *            («반전» 토글은 S-1c-2에서 평가 입력 영역 `ReversalCorpToggle`로 옮겼다 — `reversal-corp-toggle-ui.anchor.test.tsx`)
  *   UI-RA-3  EstimatedUnlistedBlock(simple) — 라목 + 2024 → 순손익 칸 없음 · 근거 라벨 §165⑧1호 후단
  *   UI-RA-4  EstimatedUnlistedBlock(simple) — 라목 + 2023-02-27 / 라목 아님 → 순손익 칸 있음 (부정 짝)
  *   UI-RA-5  결산서(full) — 라목 + 2024 → 순손익 계산서 대신 후단 안내
@@ -35,30 +36,29 @@ function formOf(o: Partial<StockTransferFormData> = {}): StockTransferFormData {
 const toggle = () => screen.queryAllByText(/보충적 평가 가중치 반전/);
 const niInputs = () => screen.queryAllByRole("textbox", { name: /1주당 순손익가치/ });
 
-describe("UI-RA-1·2: OtherAssetBlock — «반전» 토글", () => {
-  it("라목 + 2024 양도 → 토글 없음 · 후단 안내", () => {
+describe("UI-RA-1·2: OtherAssetBlock — 후단 안내 (반전 토글은 평가 영역으로 옮겼다 · S-1c-2)", () => {
+  it("라목 + 2024 양도 → 후단 안내 · 라목 카드에 반전 토글 없음", () => {
     render(<OtherAssetBlock form={formOf() as never} onChange={vi.fn()} activeClientId={null as never} />);
     expect(toggle()).toHaveLength(0);
     expect(screen.getByTestId("ra-mok-net-asset-only-notice").textContent).toContain("순자산가치 단독");
   });
-  it("라목 + 2023-02-28 양도(시행일 당일) → 토글 없음", () => {
+  it("라목 + 2023-02-28 양도(시행일 당일) → 후단 안내", () => {
     render(
       <OtherAssetBlock form={formOf({ transferDate: "2023-02-28" }) as never} onChange={vi.fn()} activeClientId={null as never} />,
     );
-    expect(toggle()).toHaveLength(0);
+    expect(screen.getByTestId("ra-mok-net-asset-only-notice")).toBeInTheDocument();
   });
-  it("코스닥 + 라목 + 2024 → 토글 그대로 (후단은 §99①4 주식등만 — 상장 후 환산 엔진이 토글을 읽는다)", () => {
+  it("코스닥 + 라목 + 2024 → 안내 없음 (후단은 §99①4 주식등만)", () => {
     render(
       <OtherAssetBlock form={formOf({ marketType: "kosdaq" }) as never} onChange={vi.fn()} activeClientId={null as never} />,
     );
-    expect(toggle()).toHaveLength(1);
     expect(screen.queryByTestId("ra-mok-net-asset-only-notice")).toBeNull();
+    expect(toggle()).toHaveLength(0);
   });
-  it("라목 + 2023-02-27 양도 → 토글 그대로 · 안내 없음", () => {
+  it("라목 + 2023-02-27 양도 → 안내 없음", () => {
     render(
       <OtherAssetBlock form={formOf({ transferDate: "2023-02-27" }) as never} onChange={vi.fn()} activeClientId={null as never} />,
     );
-    expect(toggle()).toHaveLength(1);
     expect(screen.queryByTestId("ra-mok-net-asset-only-notice")).toBeNull();
   });
 });

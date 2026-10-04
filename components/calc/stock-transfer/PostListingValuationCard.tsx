@@ -27,6 +27,8 @@ import { DateInput } from "@/components/ui/date-input";
 //    엔진의 §165⑤ 후단 트리거 판정과 일치한다(80% 하한 단서 + 연혁 게이팅 포함).
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
+import { ReversalCorpToggle } from "./ReversalCorpToggle";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { PostListingCapitalEventSection } from "./PostListingCapitalEventSection";
 import { KiwoomPostListingAutoFetchButton } from "./KiwoomPostListingAutoFetchButton";
@@ -58,7 +60,8 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   // §81④ 토글 노출 조건 — simple 모드는 4필드 가중평균이 동일할 때만 노출(활성 우선),
   // full/listing_only는 합성 산출이라 무조건 노출(엔진 C-7이 평가 상이 시 무시 처리).
   // 동일 판정은 엔진 헬퍼 단일 진실 (PostListingFormulaPreview와 동일 패턴).
-  const heavyRE = form.isHeavyRealEstateForValuation;
+  // §165④1호 괄호(2:3) — 엔진과 같은 leaf
+  const heavyRE = isReversalCorpForm(form);
   // 양도일 미입력·형식오류면 연혁 게이팅 기준이 없다 → 판정 불가로 보고 토글을 노출한다
   // (임의 기준일 fallback 금지. 엔진 C-7이 평가 상이 시 warning으로 정리한다).
   const transferDateForEval = form.transferDate ? new Date(form.transferDate) : undefined;
@@ -148,7 +151,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             <p>
               ②1주당 평가 = 순손익가치 × <Frac top="3" bottom="5" /> + 순자산가치 ×{" "}
               <Frac top="2" bottom="5" />{" "}
-              {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}
+              {heavyRE && "(부동산등 50% 이상 법인 — 2:3 반전)"}
             </p>
             <p>
               [§176의2②1호] 환산취득가 = 양도가 ×{" "}
@@ -271,6 +274,8 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             최상위에 있어 ①의 종가평균까지 지배하는 것처럼 보였다.
             여기까지가 1주당 취득기준시가를 만드는 구간이다 — ③은 그것을 나누는 분모다. */}
         <ToneCard tone="amber" sectionNum={2} title="상장연도·취득연도 평가액" bodyClassName="space-y-3">
+          {/* §165④1호 괄호 — ②의 가중치(3:2 ↔ 2:3)를 정한다. 모든 입력 방식 공통이라 ② 맨 위 */}
+          <ReversalCorpToggle form={form} onChange={onChange} />
           {mode === "simple" ? (
             <>
               {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
