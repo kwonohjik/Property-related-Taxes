@@ -29,6 +29,8 @@ interface GenericSearchEntry {
   심판일련번호?: string;
   일련번호?: string;
   특별행정심판재결례일련번호?: string;
+  자치법규일련번호?: string;
+  조약일련번호?: string;
   결정일?: string;
   선고일자?: string;
   판결일?: string;
@@ -83,7 +85,8 @@ export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: s
   kcc:      { root: "Kcc",            list: "kcc" },
   acr:      { root: "Acr",            list: "acr" },
   ordin:    { root: "OrdinSearch",    list: "law" },
-  public:   { root: "PublicSearch",   list: "public" },
+  // 공공기관 규정 검색 응답은 행정규칙과 같은 `AdmRulSearch.admrul` 이다(2026-10-04 실측) — 종전 매핑으론 0건.
+  public:   { root: "AdmRulSearch",   list: "admrul" },
   trty:     { root: "TrtySearch",     list: "trty" },
 };
 
@@ -295,6 +298,9 @@ export async function searchDecisions(
       e.심판일련번호 ??
       e.일련번호 ??
       e.특별행정심판재결례일련번호 ??
+      // 종전엔 이 둘이 빠져 자치법규·조약의 id 가 빈 문자열이었다(본문 조회 `ID=` 500, 링크 불가).
+      e.자치법규일련번호 ??
+      e.조약일련번호 ??
       "",
     domain,
     caseNo: e.사건번호 ?? e.결정번호 ?? e.안건번호 ?? e.발령번호 ?? e.청구번호 ?? "",

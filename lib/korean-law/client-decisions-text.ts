@@ -92,7 +92,9 @@ export async function getDecisionText(
 
   const data = await fetchJson<Record<string, unknown>>("lawService.do", {
     target: domain,
-    ID: id,
+    // 자치법규의 id 는 자치법규일련번호다. 본문 API 의 `ID=` 는 자치법규ID 체계라 일련번호를 넣으면
+    // **엉뚱한 조례**가 오류 없이 온다(2088205: 춘천시 → 양구군, 2026-10-04 실측) → 일련번호는 `MST=`.
+    ...(domain === "ordin" ? { MST: id } : { ID: id }),
   });
 
   // 법제처 업스트림 에러 감지
