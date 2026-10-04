@@ -117,11 +117,10 @@ export async function getDecisionText(
 
   // 루트 컨테이너 탐색: Service → Search → 최상위 → 도메인 리스트 첫 원소
   const rootSearch = DOMAIN_RESPONSE_KEY[domain].root;
-  const rootService = DOMAIN_RESPONSE_KEY[domain].service ?? rootSearch.replace("Search", "Service");
+  const rootServices = [DOMAIN_RESPONSE_KEY[domain].service ?? rootSearch.replace("Search", "Service")].flat();
   const list = DOMAIN_RESPONSE_KEY[domain].list;
   const candidates = [
-    data[rootService],
-    data[rootService.toLowerCase()],
+    ...rootServices.flatMap((s) => [data[s], data[s.toLowerCase()]]),
     data[rootSearch],
     data[rootSearch.toLowerCase()],
     Array.isArray(data[list]) ? (data[list] as unknown[])[0] : data[list],
@@ -242,7 +241,10 @@ export async function getDecisionText(
   if (!hasAnyContent) return null;
 
   if (!result.holdings && !result.summary && !result.reasoning) {
-    result.reasoning = "본문이 제공되지 않는 결정입니다. 아래 법제처 원문 링크에서 확인하세요.";
+    // 금융위·방통위는 법제처 웹에 상세 페이지가 없어 링크가 없다 — 없는 링크를 가리키지 않는다.
+    result.reasoning = result.sourceUrl
+      ? "본문이 제공되지 않는 결정입니다. 아래 법제처 원문 링크에서 확인하세요."
+      : "본문이 제공되지 않는 결정입니다. 법제처 웹에도 이 결정의 상세 페이지가 없습니다.";
   }
 
   await writeCache(cacheKey, result);
@@ -282,13 +284,119 @@ function normalizeDomainDetail(
   if (domain === "expc") {
     return { ...c, 이유: sectioned([["질의요지", c.질의요지], ["회답", c.회답], ["이유", c.이유]]) };
   }
-  if (domain === "admrul") {
-    // 제목·번호·일자·부처는 `행정규칙기본정보` 안에, 본문은 `조문내용` 에 있다.
-    const info = (c.행정규칙기본정보 ?? {}) as GenericDecisionDetail;
-    const why = (c.제개정이유 as { 제개정이유내용?: unknown } | null | undefined)?.제개정이유내용;
-    return { ...info, 이유: sectioned([["", c.조문내용], ["제개정이유", why]]) };
+  // 아래 도메인은 원응답을 넘기지 않고 **필요한 필드만** 새 객체로 만든다. 원응답엔 당사자 정보
+  // (피심정보·신청인·피신청인·대리인·조치대상자의인적사항·피심인·위원정보·담당자명·전화번호)가 섞여 있고,
+  // 본문이 비면 「가장 긴 문자열」 fallback 이 그것을 집어 화면에 띄울 수 있다.
+  // 공정위·권익위의 `결정요지`는 요지가 아니라 「사건번호 : … 신청인 : …」 머리말 덩어리라 싣지 않는다.
+  // 「주문」 은 원문 필드가 실제로 `주문` 일 때만 ruling 슬롯(화면 라벨 「주문」)에 둔다.
+  if (domain === "admrul" || domain === "public") {
+    // 공공기관 규정도 행정규칙과 같은 모양(AdmRulService)이다.
+    const info = obj(c.행정규칙기본정보);
+    const why = obj(c.제개정이유).제개정이유내용;
+    return {
+      행정규칙명: str(info.행정규칙명),
+      발령번호: str(info.발령번호),
+      소관부처명: str(info.소관부처명),
+      시행일자: str(info.시행일자),
+      발령일자: str(info.발령일자),
+      이유: sectioned([["", c.조문내용], ["제개정이유", why]]),
+    };
+  }
+  if (domain === "ftc") {
+    // 일부 건은 필드가 문자열 "null" 로 온다(결정문일련번호 18701 등) — str() 이 빈 값으로 본다.
+    return {
+      사건명: str(c.사건명),
+      사건번호: str(c.사건번호),
+      의결일자: str(c.의결일자) ?? str(c.결정일자),
+      주문: str(c.주문),
+      이유: sectioned([["", str(c.이유)]]),
+    };
+  }
+  if (domain === "nlrc") {
+    return {
+      제목: str(c.제목),
+      사건번호: str(c.사건번호),
+      기관명: str(c.기관명),
+      결정일: str(c.등록일),
+      이유: sectioned([
+        ["판정사항", c.판정사항],
+        ["판정요지", c.판정요지],
+        ["판정결과", c.판정결과],
+        ["내용", c.내용],
+      ]),
+    };
+  }
+  if (domain === "acr") {
+    const a = obj(c.의결서);
+    return {
+      제목: str(a.제목),
+      안건번호: str(a.의안번호),
+      기관명: str(a.기관명),
+      의결일자: str(a.의결일),
+      주문: str(a.주문),
+      이유: sectioned([["", a.이유]]),
+    };
+  }
+  if (domain === "fsc") {
+    return {
+      안건명: str(c.안건명),
+      결정번호: str(c.의결번호),
+      기관명: str(c.기관명),
+      이유: sectioned([["조치내용", c.조치내용], ["조치이유", c.조치이유]]),
+    };
+  }
+  if (domain === "kcc") {
+    // `사건번호`(조사번호)는 caseNo 체인에서 안건번호보다 앞서므로 넘기지 않는다 — 의결서 번호는 안건번호다.
+    return {
+      사건명: str(c.안건명) ?? str(c.사건명),
+      안건번호: str(c.안건번호),
+      기관명: str(c.기관명),
+      의결일자: str(c.의결일자),
+      주문: str(c.주문),
+      이유: imageOnly(c.이유)
+        ? "【이유】\n법제처가 이 부분을 이미지로만 제공해 앱에서 표시할 수 없습니다."
+        : sectioned([["", c.이유]]),
+    };
+  }
+  if (domain === "ordin") {
+    const info = obj(c.자치법규기본정보);
+    const articles = ([] as unknown[]).concat(obj(c.조문).조 ?? []).map((x) => obj(x).조내용);
+    return {
+      자치법규명: str(info.자치법규명),
+      발령번호: str(info.공포번호),
+      기관명: str(info.지자체기관명),
+      시행일자: str(info.시행일자),
+      이유: sectioned([["", articles], ["제개정이유", obj(c.제개정이유).제개정이유내용]]),
+    };
+  }
+  if (domain === "trty") {
+    const info = obj(c.조약기본정보);
+    return {
+      제목: str(info.조약명_한글),
+      결정번호: str(info.조약번호),
+      시행일자: str(info.발효일자),
+      이유: sectioned([["", obj(c.조약내용).조약내용]]),
+    };
   }
   return c;
+}
+
+/**
+ * 이미지 태그만 있고 글자가 없는 필드 — 방통위 의결서 「이유」는 스캔 이미지 10~19장뿐이다(2026-10-04 실측 3/3).
+ * 그대로 두면 태그 제거 후 빈 문자열 → 「가장 긴 문자열」 fallback 이 엉뚱한 값을 본문에 올린다.
+ */
+function imageOnly(v: unknown): boolean {
+  return typeof v === "string" && /<img\b/i.test(v) && !cleanHtml(v).trim();
+}
+
+/** 객체가 아니면 빈 객체 — 중첩 필드가 null·문자열·누락으로 오는 경우를 한 번에 막는다. */
+function obj(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+}
+
+/** 의미 있는 문자열만 — 공백뿐이거나 문자열 "null"(공정위 일부 건)이면 undefined. */
+function str(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() && v.trim() !== "null" ? v : undefined;
 }
 
 /** 객체의 모든 문자열 필드 중 가장 긴 값을 찾는다. */
