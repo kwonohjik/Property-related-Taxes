@@ -20,10 +20,15 @@ const inputSchema = z.object({
   url: z
     .string()
     .url()
-    .refine(
-      (v) => /(^https?:)?\/\/(www\.)?law\.go\.kr\//i.test(v),
-      "법제처(law.go.kr) URL 만 허용됩니다."
-    ),
+    // 정규식 부분일치는 `https://evil.example/?x=//law.go.kr/` 를 통과시켰다(SSRF) — 호스트를 파싱해 비교.
+    .refine((v) => {
+      try {
+        const u = new URL(v);
+        return /^https?:$/.test(u.protocol) && /^(www\.)?law\.go\.kr$/i.test(u.hostname);
+      } catch {
+        return false; // .url() 실패여도 refine 은 실행된다 — throw 대신 거부
+      }
+    }, "법제처(law.go.kr) URL 만 허용됩니다."),
   type: z.string().max(10).optional(),
   /** 캐시 키 컴포넌트 — {mst}_{annexNo} 형태 권장 */
   mst: z.string().max(30).optional(),

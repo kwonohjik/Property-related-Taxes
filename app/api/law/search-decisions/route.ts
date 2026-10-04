@@ -1,6 +1,6 @@
 /**
  * GET /api/law/search-decisions?q=양도소득세&domain=prec&page=1&pageSize=10
- * 판례·결정례 검색 (17 도메인 enum) — 도메인별 고급 옵션 passthrough.
+ * 판례·결정례 검색 (12 도메인 enum) — 도메인별 고급 옵션 passthrough.
  *
  * 도메인별 추가 쿼리스트링(있으면 반영) — **법제처가 실제로 반영하는 것만** 받는다:
  *   prec:  curt(법원명) · caseNumber(사건번호) · fromDate/toDate(선고일 범위)

@@ -248,7 +248,8 @@ export async function getLawText(
   const normalizedArticleNo = normalizeArticleNo(articleNo);
   let article: LawArticle | null = null;
   try {
-    article = await fetchArticle(meta.mst, meta.lawName, normalizedArticleNo);
+    // lawId → 현행 시행본(eflaw). 공포본(MST)만 넘기면 먼저 시행된 뒤 개정이 빠진다.
+    article = await fetchArticle(meta.mst, meta.lawName, normalizedArticleNo, meta.lawId);
   } catch (err) {
     throw new LawApiError(
       err instanceof Error
