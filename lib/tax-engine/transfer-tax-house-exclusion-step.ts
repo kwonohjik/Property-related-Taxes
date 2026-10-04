@@ -48,21 +48,30 @@ export function resolveExemptionHouseCountExclusions(
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
     specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount,
-    ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail),
+    ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail, hceApplied),
   };
 }
 
 /**
- * 보유 감면주택 제외 중 15호·13호의 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」에
+ * 조특법 제외 중 15호·13호의 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」에
  * 든다고 **해석으로 확인된** 조문만 (E-14a) — `SPECIAL_ACT_15HO_VERIFIED_ARTICLES`. 단건·겸용 공용.
+ *
+ * 두 축을 같은 목록과 대조한다 — 보유 감면주택(STEP 0.95 `entries[].article`)과 §99의4·§98의9(STEP 0.9
+ * `hceApplied[].id`). 🔴 종전에는 앞의 것만 대조해 §99의4·§98의9 제외는 늘 「미확인」으로 셌다(2026-10-04).
  */
-export function verifiedSpecialAct15Exclusions(detail: SpecialHouseExclusionResolution): {
+export function verifiedSpecialAct15Exclusions(
+  detail: SpecialHouseExclusionResolution,
+  hceApplied: ReadonlyArray<{ id: string; legalBasis: string }>,
+): {
   /** 확인된 조문으로 뺀 수 */
   specialActVerified15Count: number;
   /** 그 조문의 인용(표시용) — 중과 배제 사유 detail이 적는다 */
   specialActVerified15Basis: string[];
 } {
-  const verified = detail.entries.filter((e) => e.eligible && SPECIAL_ACT_15HO_VERIFIED_ARTICLES.has(e.article));
+  const verified = [
+    ...hceApplied.filter((d) => SPECIAL_ACT_15HO_VERIFIED_ARTICLES.has(d.id)),
+    ...detail.entries.filter((e) => e.eligible && SPECIAL_ACT_15HO_VERIFIED_ARTICLES.has(e.article)),
+  ];
   return {
     specialActVerified15Count: verified.length,
     specialActVerified15Basis: verified.map((e) => e.legalBasis),
@@ -103,12 +112,21 @@ export function specialActHouseExclusionBasis(p: {
  *   부동산납세과-1627)으로 넣는다. ⚠️ 중과 **주택 수**에서 빼는 것이 아니다 — 영 §167의3① 본문 괄호는 주택 수
  *   불산입을 1호·12호로 한정하고 §97 임대주택(3호)은 산입된다. 여기서 여는 것은 13호·15호 **배제 사유**뿐이다.
  *
+ * - §98의9(준공후미분양)·§99의4(농어촌·고향주택) — `resolveHouseCountExclusion`(STEP 0.9) 축이라 키가 감면 종류
+ *   (`hceApplied[].id`)다. 문형은 위와 다르다 — §98의9① 「… 그 준공후미분양주택을 해당 1세대의 소유주택이 아닌 것으로
+ *   보아 같은 법 제89조제1항제3호를 적용한다」 · §99의4① 「… 그 농어촌주택등을 해당 1세대의 소유주택이 아닌 것으로 보아
+ *   「소득세법」 제89조제1항제3호를 적용한다」(MST 284389). 두 조문에 15호·13호를 적용한 직접 해석은 찾지 못했다
+ *   (국세청 검색 · 계획서 §9.3 E-14a).
+ *   - §98의9 — **사용자 결정 2026-10-04** 「§98의9를 13호·15호 단독 축에서도 확인된 것으로」(§99의4와 같은 문형).
+ *   - §99의4 — §98의9를 여는 근거가 「§99의4와 같은 문형」이라 함께 연다(리드 판단 2026-10-04 — 사용자 명시 결정은
+ *     §98의9뿐). §99의4가 소유주택에서 빠진다는 해석은 서면-2016-법령해석재산-3686(「소유주택에서 제외되므로」) 등.
+ *     1호·2호(농어촌·고향)는 같은 항의 한 문장으로 효과를 받는다.
+ *
  * ⚠️ **넣지 않은 것**(확인 필요 — 종전 동작 유지):
  * - `unsold_98` — 근거가 법률이 아니라 조특법 **시행령** §98②·⑥(「…다른 주택만을 기준으로 하여 「소득세법」
  *   제89조제1항제3호를 적용한다」)이다. 15호는 「「조세특례제한법」에 따라」라고만 한다.
- * - §99의4(농어촌·고향주택)·§98의9(준공후미분양) — `resolveHouseCountExclusion` 축. 문형이 다르고(「…해당 1세대의
- *   소유주택이 아닌 것으로 보아 「소득세법」 제89조제1항제3호를 적용한다」) 그 조문에 15호·13호를 적용한 해석을
- *   찾지 못했다(국세청 검색 · 계획서 §9.3 E-14a).
+ *
+ * §155⑳ 거주주택 구성 축(`RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT`)은 별도 목록이다 — 이 목록을 펼쳐 쓴다.
  */
 export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
   "unsold_98_2",
@@ -122,19 +140,23 @@ export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
   "new_99_3",
   "rental_97",
   "rental_97_2",
+  "unsold_98_9",
+  "new_99_4_rural",
+  "new_99_4_hometown",
 ]);
 
 /**
  * 영 §167의10①15호(·§167의3①13호) **① 요소** 판정용 세대 주택 수 (E-14).
  *
  * 비과세 E-3이 보는 값(`exemptionJudgeInput.householdHousingCount` — §155②③·조특법 제외 후)과 같다.
- * 단 **확인되지 않은 조특법 제외**가 섞인 채 2 미만이 되는 경우는 그 조특법 주택을 센 값을 쓴다 — 15호의
- * 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로 보거나」가 조특법 §99의4·§98의9(「…소유주택이
- * 아닌 것으로 보아 「소득세법」 제89조제1항제3호를 적용한다」)까지 포섭하는지 직접 선례를 확보하지 못했다
- * (확인 필요) ⇒ 그 축은 종전 동작(조특법 주택이 주택 수에 남은 채 §155 의제를 판정)을 유지한다.
+ * 단 **확인되지 않은 조특법 제외**(조특령 §98②·⑥ 등 — `SPECIAL_ACT_15HO_VERIFIED_ARTICLES` 밖)가 섞인 채 2 미만이
+ * 되는 경우는 그 조특법 주택을 센 값을 쓴다 — 15호의 「「조세특례제한법」에 따라 … 1개의 주택을 소유하고 있는 것으로
+ * 보거나」에 드는지 확인되지 않았다(확인 필요) ⇒ 그 축은 종전 동작(조특법 주택이 주택 수에 남은 채 §155 의제를
+ * 판정)을 유지한다.
  *
- * E-14a — 보유 감면주택 중 **해석으로 확인된** 조문(`verifiedSpecialActExcludedCount` —
- * `SPECIAL_ACT_15HO_VERIFIED_ARTICLES`, 부동산납세과-1627)은 빼고 센다. 그래서 그 제외만으로 1이 되면 1이다.
+ * E-14a — **해석으로 확인된** 조특법 제외(`verifiedSpecialActExcludedCount` — `SPECIAL_ACT_15HO_VERIFIED_ARTICLES`:
+ * 보유 감면주택 같은 문형 조문(부동산납세과-1627) · §98의9·§99의4(2026-10-04))는 빼고 센다. 그래서 그 제외만으로
+ * 1이 되면 1이다.
  * 생략하면 0 — 종전 동작과 같다(겸용 경로가 그렇게 부른다).
  */
 export function surcharge15HouseCount(

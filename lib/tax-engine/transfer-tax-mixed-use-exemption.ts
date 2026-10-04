@@ -130,7 +130,7 @@ export function judgeMixedUseOneHouseExemption(
    * 같은 규약이다. 주택 수가 미전달이면 종전 동작(호출부 판정을 그대로 신뢰)을 유지한다.
    */
   let houseCountExclusionApplied = 0;
-  // E-14a — 그중 15호·13호 포섭이 해석으로 확인된 보유 감면주택 조문(단건과 같은 leaf)
+  // E-14a — 그중 15호·13호 포섭이 해석으로 확인된 조특법 제외(보유 감면주택·§99의4·§98의9 — 단건과 같은 leaf)
   let verifiedSpecial: ReturnType<typeof verifiedSpecialAct15Exclusions> = {
     specialActVerified15Count: 0,
     specialActVerified15Basis: [],
@@ -150,7 +150,7 @@ export function judgeMixedUseOneHouseExemption(
     mixedHouseCountExclusionDetails = hce.details.length > 0 ? hce.details : undefined;
     mixedSpecialHouseExclusionDetail = special.entries.length > 0 ? special : undefined;
     houseCountExclusionApplied = hce.appliedList.length + special.excludedCount;
-    verifiedSpecial = verifiedSpecialAct15Exclusions(special);
+    verifiedSpecial = verifiedSpecialAct15Exclusions(special, hce.appliedList);
   }
   const isOneHouseholdForHouseCount = asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false;
   /**

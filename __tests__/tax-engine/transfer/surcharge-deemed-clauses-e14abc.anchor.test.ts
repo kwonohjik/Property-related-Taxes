@@ -341,7 +341,7 @@ describe("surcharge15HouseCount — 확인된 조특법 제외(E-14a)는 빼고 
   it.each([
     // [세대 주택 수, §155②③ 제외, 조특법 제외(전체), 그중 확인된 제외, 기대]
     [2, 0, 1, 1, 1], // 확인된 제외만으로 1 → 1 (15호 조특법 경로)
-    [2, 0, 1, 0, 2], // 미확인(§99의4 등)만으로 1 → 종전 값(조특법 주택 산입)
+    [2, 0, 1, 0, 2], // 미확인(조특령 §98②·⑥ 등)만으로 1 → 종전 값(조특법 주택 산입)
     [3, 0, 2, 1, 2], // 미확인 1 + 확인 1 → 미확인 주택만 센다
     [3, 0, 1, 1, 2], // 확인된 제외 후에도 2 → 비과세 값
     [3, 1, 1, 1, 1], // 상속 + 확인된 조특법 → 1 (경로 게이트는 `resolveSurchargeDeemedOneHouse` 몫)
@@ -524,6 +524,35 @@ describe("겸용주택 — 같은 호 판정·같은 조특법 술어 (E-14a·b)
         { article: "unsold_98", houseAcquisitionDate: D("1996-06-01"), requirementsConfirmed: true },
       ] as MixedUseAssetInput["specialHouseExclusions"],
     });
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
+  });
+
+  /** §98의9(STEP 0.9 `hceApplied`)도 같은 leaf로 대조한다 — 사용자 결정 2026-10-04 (route 관측은 `transfer.route.special-act-15ho-hce-verified`). */
+  const unsold989 = (acq: string) =>
+    [
+      {
+        type: "unsold_98_9",
+        unsoldHouseAcquisitionDate: D(acq),
+        unsoldHouseAcquisitionPrice: 500_000_000,
+        unsoldHouseExclusiveArea: 84,
+        isNonCapitalRegion: true,
+        wasOneHouseholdAtAcquisition: true,
+        meetsSellerAndContractRequirement: true,
+      },
+    ] as MixedUseAssetInput["reductions"];
+  const unsoldHouse = (acq: string) =>
+    makeHouseInfoMock("u", { acquisitionDate: D(acq), region: "non_capital", officialPrice: 400_000_000 });
+
+  it("MX-3 겸용 + §98의9 준공후미분양(공시 4억) → 15호 조특법 경로 배제 (종전 2주택 중과)", () => {
+    const r = mixed([sellingMixed, unsoldHouse("2025-03-01")], { reductions: unsold989("2025-03-01") });
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(false);
+    expect(r.multiHouseSurcharge?.exclusionReasons.map((x) => x.type)).toEqual(["special_act_house_exclusion"]);
+    expect(r.multiHouseSurcharge?.exclusionReasons[0]?.detail).toContain("§98의9");
+  });
+
+  it("MX-3n §98의9 취득기간(2024.1.10.~) 밖 → 제외 불성립 · 2주택 중과 그대로", () => {
+    const r = mixed([sellingMixed, unsoldHouse("2023-06-01")], { reductions: unsold989("2023-06-01") });
     expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
     expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
   });
