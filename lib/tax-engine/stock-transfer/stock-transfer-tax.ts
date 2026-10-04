@@ -355,6 +355,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
         appliedTotalTax: input.carryoverComparison?.appliedTotalTax ?? 0,
         excludedTotalTax: input.carryoverComparison?.excludedTotalTax ?? 0,
         donorAcquisitionPricePerShare: input.carryoverDonorPricePerShare,
+        donorAcquisitionMethod: input.donorAcquisitionMethod,
         giftDateValuationPerShare: input.carryoverGiftDateValuationPerShare,
         donorCapexIncluded: (input.carryoverDonorCapexApplied ?? 0) + lotDonorCapex,
         giftTaxIncluded: singleGiftTax + lotGiftTax,

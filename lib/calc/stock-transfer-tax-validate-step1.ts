@@ -398,14 +398,46 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
      * 다만 **둘 다 비면 승계 효과가 0**이라 §97의2②3호로 배제되는 것이 보통이다.
      * 그 사실은 결과 카드가 알린다(사전 차단하지 않는다 — 법 근거 없이 입력을 막지 않는다).
      */
-    const hasDonorBasis =
-      !isEmpty(form.donorAcquisitionPrice) || !isEmpty(form.donorAcquisitionStdPrice);
-    if (!hasDonorBasis) {
+    /**
+     * 증여자 취득가액 **산정 방식**별 입력(§97의2①1호 → §97①1호 가목/나목) — 2026-10-03 방식 축 신설.
+     * 정책은 종전과 같다: 비어 있으면 **경고**만 한다(승계 효과가 줄 뿐 계산은 성립한다).
+     */
+    const donorMethod = form.donorAcquisitionMethod || "actual";
+    if (donorMethod === "actual" && isEmpty(form.donorAcquisitionPrice)) {
       errors.push({
         field: "donorAcquisitionPrice",
         message:
-          "증여자 취득가액 또는 증여자 취득 당시 기준시가 중 하나를 입력하세요 " +
-          "(§97의2①1호 — 없으면 취득가액이 승계되지 않아 이월과세가 배제됩니다)",
+          "증여자 취득가액(1주당)을 입력하세요 — 확인할 수 없으면 산정 방식을 매매사례가액·환산취득가로 " +
+          "바꾸세요 (§97의2①1호 · §97①1호 — 없으면 취득가액이 승계되지 않아 이월과세가 배제되는 것이 보통입니다)",
+        severity: "warning",
+      });
+    }
+    if (donorMethod === "sale_case") {
+      // 영 §176의2③1호 본문 괄호 — 주권상장법인 주식등은 매매사례가액 대상이 아니다(수증자 측과 같은 게이트).
+      if (["kospi", "kosdaq", "konex"].includes(form.marketType)) {
+        errors.push({
+          field: "donorAcquisitionMethod",
+          message: "상장주식은 매매사례가액을 쓸 수 없습니다 (소득세법 시행령 §176의2③1호 — 주권상장법인 주식등 제외)",
+          severity: "error",
+        });
+      }
+      if (isEmpty(form.donorAcquisitionMarketSamplePrice)) {
+        errors.push({
+          field: "donorAcquisitionMarketSamplePrice",
+          message:
+            "증여자 취득일 전후 3개월 이내 매매사례가액(1주당)을 입력하세요 (소득세법 시행령 §176의2③1호 — " +
+            "없으면 취득가액이 승계되지 않습니다)",
+          severity: "warning",
+        });
+      }
+    }
+    if (donorMethod !== "actual" && isEmpty(form.donorAcquisitionStdPrice)) {
+      errors.push({
+        field: "donorAcquisitionStdPrice",
+        message:
+          donorMethod === "sale_case"
+            ? "증여자 취득 당시 기준시가(1주당)를 입력하세요 — 개산공제(소득세법 시행령 §163⑥4) 기준이며 없으면 개산공제를 적용하지 않습니다"
+            : "증여자 취득 당시 기준시가(1주당)를 입력하세요 — 증여자 기준 환산의 분자입니다 (§97의2①1호 · 시행령 §176의2②1호)",
         severity: "warning",
       });
     }

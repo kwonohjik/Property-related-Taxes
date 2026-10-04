@@ -13,6 +13,11 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    평가액」(단서 80% 하한 + 연혁 게이팅 포함)으로 동일 여부를 판정한다. 본칙만 비교하면
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
+import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
+import {
+  isGiftLikeEstimationBlocked,
+  GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
+} from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import {
   isTradingHaltMarketScopeViolation,
@@ -167,6 +172,43 @@ function validateAcquisitionSideUnlistedFields(
     }
     if (key === "acquisitionYearNetAssetPerShare" && isEmpty(form.acquisitionYearNetAssetPerShare)) {
       errors.push({ field: key, message: `취득연도 1주당 순자산가치를 입력하세요 (${basis})`, severity: "error" });
+    }
+  }
+}
+
+/**
+ * 환산 분모 — 양도일 이전 1개월 종가평균 (§99①3 · 영 §176의2②1호).
+ * 수증자 환산(`estimated`)과 이월과세 증여자 환산이 **같은 검증**을 쓴다(분모는 이월과세와 무관).
+ */
+function validateTransferStdAvg(form: StockTransferFormData, errors: StockValidationError[]): void {
+  const transferAvg = parseI(form.transferDatePriceAvg1Month);
+  // S3: `transferStdInputMode`는 **더 이상 축 전용이 아니다** — 「양도 당시 기준시가」
+  //   블록이 4갈래 위에 항상 있어 어느 모드에서도 되돌릴 수 있다(F-10 dead-end 구조 해소).
+  //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts
+  const mode = form.transferStdInputMode || "direct";
+  if (mode === "direct") {
+    if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
+      errors.push({
+        field: "transferDatePriceAvg1Month",
+        message: "양도일 이전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
+        severity: "error",
+      });
+    }
+  } else {
+    const hasAnyClose = form.transferPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
+    if (!hasAnyClose) {
+      errors.push({
+        field: "transferPriceClosing",
+        message: "일자별 입력 모드: 양도일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
+        severity: "error",
+      });
+    }
+    if (transferAvg <= 0) {
+      errors.push({
+        field: "transferDatePriceAvg1Month",
+        message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
+        severity: "error",
+      });
     }
   }
 }
@@ -343,36 +385,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         });
       }
       if (stdMode !== "halt_transfer") {
-        const transferAvg = parseI(form.transferDatePriceAvg1Month);
-        // S3: `transferStdInputMode`는 **더 이상 축 전용이 아니다** — 「양도 당시 기준시가」
-        //   블록이 4갈래 위에 항상 있어 어느 모드에서도 되돌릴 수 있다(F-10 dead-end 구조 해소).
-        //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts
-        const mode = form.transferStdInputMode || "direct";
-        if (mode === "direct") {
-          if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
-            errors.push({
-              field: "transferDatePriceAvg1Month",
-              message: "양도일 이전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
-              severity: "error",
-            });
-          }
-        } else {
-          const hasAnyClose = form.transferPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
-          if (!hasAnyClose) {
-            errors.push({
-              field: "transferPriceClosing",
-              message: "일자별 입력 모드: 양도일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
-              severity: "error",
-            });
-          }
-          if (transferAvg <= 0) {
-            errors.push({
-              field: "transferDatePriceAvg1Month",
-              message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
-              severity: "error",
-            });
-          }
-        }
+        validateTransferStdAvg(form, errors);
       }
 
       // C-6: 거래정지 우회(§165③) — 취득 후 상장이 아니면 비상장 보충 평가 필수 (자동 fallback 금지)
@@ -604,6 +617,39 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     // §99①4 → 영 §165④ 보충평가라 취득연도 순손익·순자산이 필요하다. 이 칸이 없으면 필요경비가 0이 된다.
     if (!isListed) {
       validateAcquisitionSideUnlistedFields(form, errors, "매매사례가액 개산공제 기준시가 — 소령 §163⑥4·§165④");
+    }
+  }
+
+  // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가 (국심2007중1761) ──
+  // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B와 같은 술어.
+  if (isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, acquisitionMode)) {
+    errors.push({ field: "acquisitionMode", message: GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE, severity: "error" });
+  }
+
+  // ── 이월과세 증여자 기준 환산의 분모 (§97의2①1호 → §97①1호 나목) ──
+  // 분모가 비면 A 취득가액이 0 → A 세액이 커져 ②3호가 A를 «채택»한다 — 조용한 과대과세라 오류로 막는다
+  // (증여자 값 누락은 Phase 3 정책대로 step1 경고 — 계획서 §7.1).
+  if (isDonorConversionForm(form)) {
+    const listed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
+    const haltAtTransfer =
+      form.acquisitionStdMode === "halt_transfer" && !isTradingHaltMarketScopeViolation(form.marketType);
+    if (listed && !haltAtTransfer) {
+      validateTransferStdAvg(form, errors);
+    } else {
+      for (const key of requiredUnlistedValuationKeys({
+        scope: "transfer",
+        niSkip: (form.netAssetOnlyReason ?? "") !== "",
+        acqFaceValueOnly: false,
+      })) {
+        if (key === "acqFaceValuePerShare") continue;
+        if (isEmpty(form[key])) {
+          errors.push({
+            field: key,
+            message: `${SIMPLE_FIELD_MESSAGE[key]} — 이월과세 증여자 기준 환산의 분모(양도 당시 기준시가)`,
+            severity: "error",
+          });
+        }
+      }
     }
   }
 

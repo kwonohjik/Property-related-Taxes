@@ -35,9 +35,16 @@ export function buildPr2Detail(
   // 상장주식은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다 —
   // 취득가액 분기와 **같은 술어**를 써서 「세액은 안 쓰는데 화면엔 적용됐다고 뜨는」 갈림을 막는다.
   if (isMarketSampleAllowedMarket(input.marketType) && acquisitionMode === "sale_case") {
+    /**
+     * 「취득일 전후 3개월」(영 §176의2③1호)의 취득일 — 이월과세 A(증여자 매매사례)면 **증여자 취득일**이다.
+     * `stock-carryover.ts`가 A에서 사례가를 증여자 값으로 치환하고 `carryoverOutcome: "applied"`를 남긴다.
+     */
+    const isDonorSample =
+      input.carryoverOutcome === "applied" && input.donorAcquisitionDate !== undefined;
     const msResult = evaluateMarketSample({
       shareCount,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: isDonorSample ? input.donorAcquisitionDate! : input.acquisitionDate,
+      acquisitionDateLabel: isDonorSample ? "증여자 취득일" : "취득일",
       acquisitionMarketSamplePrice: input.acquisitionMarketSamplePrice,
       acquisitionMarketSampleDate: input.acquisitionMarketSampleDate,
       acquisitionMarketSampleCounterparty: input.acquisitionMarketSampleCounterparty,

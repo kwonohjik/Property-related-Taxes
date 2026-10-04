@@ -29,6 +29,7 @@ const DATE_FIELDS = [
   "priorYearEndDate",
   "filingDate",
   "donorAcquisitionDate",
+  "donorAcquisitionMarketSampleDate",
   "acquisitionLots[].acquisitionDate",
   "acquisitionLots[].donorAcquisitionDate",
   "transferLots[].transferDate",
@@ -109,15 +110,23 @@ describe("W. 단건 — §97의2① 필요경비 입력이 세액까지 도달�
   });
 
   it("W-3 ①1호 나목 — 증여자 취득 당시 기준시가로 환산된다", () => {
+    /**
+     * 2026-10-03 β 이관 — 수증자 측은 영 §163⑨ 증여일 평가액(실가 80,000)이고, 증여자 환산은
+     * 이월과세 카드의 「증여자 취득가액 산정 방식」이 정한다. 종전에는 수증자 `acquisitionMode:
+     * "estimated"`가 A의 방식을 겸했다(B가 추계로 남는 결함 — 계획서
+     * `stock-carryover-sale-case-donor-basis.plan.md` F-2·F-3). 분모(양도일 1개월 종가평균)는
+     * 수증자 모드가 실가여도 ④가 실어야 한다.
+     */
     const { body, result } = runPipeline(
       form({
         ...CARRYOVER,
-        acquisitionMode: "estimated",
+        donorAcquisitionMethod: "estimated",
         donorAcquisitionStdPrice: "20000",
-        acquisitionDatePriceAvg1Month: "80000",
         transferDatePriceAvg1Month: "100000",
       }),
     );
+    expect(body.acquisitionMode).toBe("actual");
+    expect(body.transferDatePriceAvg1Month).toBe(100_000);
     expect(body.donorAcquisitionStdPrice).toBe(20_000);
     expect(result.acquisitionPrice).toBe(200_000_000);
     expect(result.estimatedDeduction).toBe(2_000_000);

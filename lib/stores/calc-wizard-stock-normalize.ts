@@ -8,6 +8,7 @@
  *   factory default = normalize 빈문자 처리 = UI 명시값
  */
 
+import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import {
   type AcquisitionStdMode,
   deriveAcquisitionStdMode,
@@ -102,6 +103,31 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
       ? enumField("listingStdInputMode", ["direct", "daily"], defaults.listingStdInputMode)
       : "direct";
 
+  /**
+   * 영 §163⑨ 복원 마이그레이션 — 증여·상속받은 주식은 증여일·상속개시일 평가액이 실지거래가액이라
+   * 수증자 측 추계 모드(환산·매매사례)를 쓸 수 없다(국심2007중1761). ⑧·⑫가 **같은 술어**로 막으므로
+   * 저장된 폼이 그 조합이면 여기서 실가로 되돌린다 — 그대로 두면 Step 2 라디오가 disabled라
+   * 사용자가 벗어날 수 없다(부동산 형제 `calc-wizard-asset-migrate.ts`의 같은 규약).
+   *
+   * 이월과세는 종전(Phase 3)에 수증자 모드가 **증여자 측 방식**을 겸했다 — 그 의미를 잃지 않도록
+   * `donorAcquisitionMethod`가 저장돼 있지 않으면 종전 모드를 그쪽으로 옮긴다.
+   */
+  const normCause = enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause);
+  const storedAcqMode = enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode);
+  const giftEstimationBlocked = isGiftLikeEstimationBlocked(normCause, strField("acquisitionDate"), storedAcqMode);
+  const storedDonorMethod = enumField<"" | StockTransferFormData["donorAcquisitionMethod"]>(
+    "donorAcquisitionMethod",
+    ["actual", "sale_case", "estimated", ""],
+    "",
+  );
+  const donorAcquisitionMethod: StockTransferFormData["donorAcquisitionMethod"] =
+    storedDonorMethod !== ""
+      ? storedDonorMethod
+      : giftEstimationBlocked && normCause === "carryover_gift" && storedAcqMode !== "actual"
+        ? storedAcqMode
+        : defaults.donorAcquisitionMethod;
+  const acquisitionMode: StockTransferFormData["acquisitionMode"] = giftEstimationBlocked ? "actual" : storedAcqMode;
+
   return {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
     securityName: strField("securityName"),
@@ -155,7 +181,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     donorRelation: enumField("donorRelation", ["spouse", "lineal", "other", ""], defaults.donorRelation),
     donorDeceased: boolField("donorDeceased", defaults.donorDeceased),
     donorAcquisitionPrice: strField("donorAcquisitionPrice"),
+    donorAcquisitionMethod,
     donorAcquisitionStdPrice: strField("donorAcquisitionStdPrice"),
+    donorAcquisitionMarketSamplePrice: strField("donorAcquisitionMarketSamplePrice"),
+    donorAcquisitionMarketSampleDate: strField("donorAcquisitionMarketSampleDate"),
     donorCapitalExpenditure: strField("donorCapitalExpenditure"),
     giftTaxAmount: strField("giftTaxAmount"),
     transferredAssetValue: strField("transferredAssetValue"),
@@ -190,7 +219,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     exchangeCash: strField("exchangeCash"),
     // "face_value"는 목록에서 빠졌다 — stale sessionStorage 가 그 값을 들고 있으면
     // enumField 가 default("actual")로 떨어뜨린다(모르는 키를 통과시키지 않는다).
-    acquisitionMode: enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode),
+    acquisitionMode,
     // 🔴 **구 이력 보호** — 신규 폼 default 는 "total"(합계 직접 입력)이지만, 이 키가 «없는»
     //    record 는 모드 축이 생기기 전에 1주당 단가로 저장된 것이다. 그대로 default 를 먹이면
     //    저장해 둔 단가가 빈 「취득가액 합계」로 뒤바뀐다(=취득가액 0). ⇒ 단가만 들고 있으면 남긴다.

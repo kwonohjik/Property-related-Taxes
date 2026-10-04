@@ -250,6 +250,11 @@ export const stockTransferInputSchema = z.object({
   donorAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** ①1호 나목 — 증여자 취득 당시 1주당 기준시가(환산 분자) */
   donorAcquisitionStdPrice: z.number().int().nonnegative().optional(),
+  /** §97의2①1호 증여자 취득가액 산정 방식 — 가목 / 나목 매매사례 / 나목 환산 */
+  donorAcquisitionMethod: z.enum(["actual", "sale_case", "estimated"]).optional(),
+  /** 나목 매매사례 — 증여자 취득일 전후 3개월 1주당 사례가 (영 §176의2③1호) */
+  donorAcquisitionMarketSamplePrice: z.number().int().nonnegative().optional(),
+  donorAcquisitionMarketSampleDate: z.union([z.string(), z.date()]).optional(),
   /** ①2호 — 증여자 자본적지출 총액 (양도비 §97①3호 제외) */
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
   /** ①3호 × 영 §163의2②1호 — 증여세 산출세액 */

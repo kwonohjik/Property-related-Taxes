@@ -25,6 +25,8 @@ export const STOCK_DATE_FIELDS = [
   "actualPaymentDate",
   "decedentAcquisitionDate",
   "donorAcquisitionDate",
+  // §97의2①1호 나목 — 증여자 매매사례 거래일
+  "donorAcquisitionMarketSampleDate",
   "preMergerAcquisitionDate",
   // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
   "judgmentDateOverride",

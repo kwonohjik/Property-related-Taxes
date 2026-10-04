@@ -24,19 +24,22 @@ export type UnlistedValuationKey =
  * - `scope: "both"` — 비상장·기타자산 환산, 또는 상장 **양도일 거래정지**(시행령 §165③ → ④)
  * - `scope: "acquisition"` — 상장 **취득일 거래정지**(취득측만 §165④). 이때 장부분실 액면가
  *   토글은 읽지 않는다(엔진·UI 모두 취득측 평가를 무조건 쓴다).
+ * - `scope: "transfer"` — 이월과세 **증여자 기준 환산**의 분모(양도측만). 분자는 증여자 취득 당시
+ *   기준시가로 덮어쓰이므로 취득측 평가가 필요 없다(계획서 `stock-carryover-sale-case-donor-basis.plan.md` V-2).
  * - 순자산 단독 평가 사유(§165④3호)가 있으면 순손익가치는 필요 없다.
  * - 취득시 장부분실(소득세법 §99①4호 후단)이면 취득측 대신 **액면가**가 필요하다.
  */
 export function requiredUnlistedValuationKeys(o: {
-  scope: "both" | "acquisition";
+  scope: "both" | "acquisition" | "transfer";
   niSkip: boolean;
   acqFaceValueOnly: boolean;
 }): UnlistedValuationKey[] {
   const keys: UnlistedValuationKey[] = [];
-  if (o.scope === "both") {
+  if (o.scope === "both" || o.scope === "transfer") {
     if (!o.niSkip) keys.push("transferYearNetIncomePerShare");
     keys.push("transferYearNetAssetPerShare");
   }
+  if (o.scope === "transfer") return keys;
   if (o.scope === "both" && o.acqFaceValueOnly) {
     keys.push("acqFaceValuePerShare");
   } else {
