@@ -218,7 +218,6 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
           expenseMode: "actual" as const,
           acquisitionMarketSamplePrice: undefined,
           acquisitionMarketSampleDate: undefined,
-          acquisitionMarketSampleCounterparty: undefined,
         }
       : {}),
     // 배제됐다는 **사실**을 남긴다 — 아래에서 `acquisitionCause`를 되돌리므로 흔적이 사라진다.
@@ -348,7 +347,6 @@ function buildStockScenarioABase(
       acquisitionMode: "sale_case",
       acquisitionMarketSamplePrice: input.donorAcquisitionMarketSamplePrice,
       acquisitionMarketSampleDate: input.donorAcquisitionMarketSampleDate,
-      acquisitionMarketSampleCounterparty: undefined,
       acquisitionStdPriceOverridePerShare: input.donorAcquisitionStdPrice ?? 0,
       expenseMode: "estimated",
       carryoverGiftTaxExpense: giftTaxIncluded,

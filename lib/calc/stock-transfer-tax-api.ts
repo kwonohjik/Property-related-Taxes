@@ -365,7 +365,6 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     const acqMS = parseIntOrUndef(form.acquisitionMarketSamplePrice);
     if (acqMS !== undefined) body.acquisitionMarketSamplePrice = acqMS;
     if (form.acquisitionMarketSampleDate) body.acquisitionMarketSampleDate = form.acquisitionMarketSampleDate;
-    if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
   }
 
   // 의제취득일 전 매수 — 영 §176의2④ ② 입력 (Z-1)

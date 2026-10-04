@@ -405,7 +405,6 @@ export type StockTransferInput = {
   /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능. 양도측 매매사례가액은 없다(§96① 실지거래가액) */
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
-  acquisitionMarketSampleCounterparty?: string;
 
   // ── 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12 ──
   capitalAdjustments?: {

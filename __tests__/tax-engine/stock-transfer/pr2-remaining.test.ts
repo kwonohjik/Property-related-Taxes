@@ -13,7 +13,6 @@
 import { describe, it, expect } from "vitest";
 import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import { adjustShareCountAndCost } from "@/lib/tax-engine/stock-transfer/stock-capital-adjustments";
-import { evaluateMarketSample } from "@/lib/tax-engine/stock-transfer/stock-valuation-market-sample";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 
 import { passingBlockShareholderGate } from "./_block-shareholder-fixture";
@@ -215,23 +214,6 @@ describe("MS-4: 취득 매매사례 + 양도 실지거래가액 — 양도가액
   it("MS-4-03: marketSampleDetail은 취득측만 applied", () => {
     expect(result.marketSampleDetail?.acquisitionApplied).toBe(true);
     expect(Object.keys(result.marketSampleDetail ?? {})).not.toContain("transferApplied");
-  });
-});
-
-// ============================================================
-// MS-5: 특수관계인 의심 (counterparty 메타 keyword 검출)
-// ============================================================
-
-describe("MS-5: 특수관계인 counterparty warning", () => {
-  const r = evaluateMarketSample({
-    shareCount: 1_000,
-    acquisitionDate: new Date("2020-01-01"),
-    acquisitionMarketSamplePrice: 100_000,
-    acquisitionMarketSampleCounterparty: "대표이사 김OO",
-  });
-
-  it("MS-5-01: warnings에 특수관계인 의심 메시지", () => {
-    expect(r.warnings.join("|")).toContain("특수관계인");
   });
 });
 

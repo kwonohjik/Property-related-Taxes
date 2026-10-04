@@ -58,7 +58,6 @@ export function buildPr2Detail(
       acquisitionDateLabel: isDeemedApplied ? "의제취득일" : isDonorSample ? "증여자 취득일" : "취득일",
       acquisitionMarketSamplePrice: input.acquisitionMarketSamplePrice,
       acquisitionMarketSampleDate: input.acquisitionMarketSampleDate,
-      acquisitionMarketSampleCounterparty: input.acquisitionMarketSampleCounterparty,
     });
     if (msResult.acquisitionApplied) {
       marketSampleDetail = {

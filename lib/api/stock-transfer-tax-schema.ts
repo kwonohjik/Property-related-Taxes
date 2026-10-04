@@ -315,7 +315,6 @@ export const stockTransferInputSchema = z.object({
   // R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장
   acquisitionMarketSamplePrice: z.number().min(0).optional(),
   acquisitionMarketSampleDate: z.union([z.string(), z.date()]).optional(),
-  acquisitionMarketSampleCounterparty: z.string().optional(),
 
   // R-2 자본조정 (무상증자·감자)
   capitalAdjustments: z.array(capitalAdjustmentSchema).max(100).optional(),
