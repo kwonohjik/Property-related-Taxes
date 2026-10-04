@@ -113,6 +113,29 @@ const ROUTER_PATTERNS: Pattern[] = [
     },
   },
 
+  // 0-d. 조문 인용 판례 — "소득세법 제89조 판례", "상증법 22조 해석례"
+  //    조문 패턴(priority 1·2)이 판례 키워드(priority 30)보다 먼저 잡아 조문 팝업만 뜨던 것을 판례 탭으로.
+  //    질의는 큰따옴표 구절로 넘긴다 — search-decisions 가 따옴표 질의를 **본문** 구절 검색으로 돌린다.
+  //    (2026-10-04 실측 판례: 사건명 「소득세법 제89조 판례」 0건 · 본문 「"소득세법 제89조"」 643건)
+  {
+    name: "article_decisions",
+    priority: 0,
+    patterns: [
+      /([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?[^가-힣]*(?:.*?)?(판례|판결|선고|판시|결정례|해석례)/,
+    ],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "search_decisions",
+        params: { q: `"${lawName} ${articleNo}"`, domain: m[4] === "해석례" ? "expc" : "prec" },
+        reason: `법령명 + 조문번호 + 판례 키워드 → 그 조문을 본문에서 인용한 판례/결정례 검색`,
+        targetTab: "decision",
+        confidence: "high",
+      };
+    },
+  },
+
   // 1. 특정 조문 조회 — "민법 제750조", "소득세법 제89조의2"
   {
     name: "specific_article",
