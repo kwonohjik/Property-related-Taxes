@@ -2,7 +2,9 @@
  * E2E: 주식 이월과세(§97의2①) × 증여자 매매사례가액 + 영 §163⑨ 수증자 평가액
  *
  * 계획서 `docs/00-pm/stock-carryover-sale-case-donor-basis.plan.md`
- *   부정 — Step 2에서 이월과세 수증자 측 「환산취득가」·「매매사례가액」이 비활성(§163⑨ · 국심2007중1761)
+ *   부정 — Step 2에서 이월과세 수증자 측 「매매사례가액」이 비활성(§163⑨ · 국심2007중1761).
+ *          「환산취득가」는 «취득시점 장부분실»(평가액 확인 불가)일 때만 열리므로 비상장에서는 활성 + 안내가 토글을 안내한다
+ *          (2026-10-04 재기준 — 계획서 stock-163-9-valuation-unavailable-exception.plan.md Q-2)
  *   긍정 — 1단계 「증여자 취득가액 산정 방식: 매매사례가액」으로 결과 신고서 취득가액·개산공제가
  *          증여자 기준이다 (취득가액 30,000,000 · 개산공제 50,000 — 수증자 평가액 기준이면 150,000,000)
  *
@@ -59,10 +61,11 @@ test("이월과세 — 증여자 매매사례가액으로 A 취득가액·개산
   await page.getByRole("button", { name: /^다음/ }).click();
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
 
-  // Step2 — 부정: 수증자 측 추계 모드 비활성 + 안내 (영 §163⑨)
+  // Step2 — 부정: 수증자 측 매매사례 비활성 + 안내 (영 §163⑨). 환산은 장부분실일 때만 열린다 → 비상장은 활성
   await expect(page.getByTestId("gift-valuation-only-notice")).toBeVisible();
-  await expect(page.getByRole("radio", { name: "환산취득가" })).toBeDisabled();
+  await expect(page.getByTestId("gift-valuation-only-notice")).toContainText("취득시점 장부분실");
   await expect(page.getByRole("radio", { name: "매매사례가액" })).toBeDisabled();
+  await expect(page.getByRole("radio", { name: "환산취득가" })).toBeEnabled();
   // 증여자 매매사례면 분모 섹션은 없다(환산 전용)
   await expect(page.getByTestId("carryover-donor-conversion")).toHaveCount(0);
 

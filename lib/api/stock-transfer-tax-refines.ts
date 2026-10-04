@@ -9,6 +9,7 @@
  */
 
 import {
+  isBookLostAtAcquisition,
   isGiftLikeEstimationBlocked,
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
@@ -420,14 +421,18 @@ export function addStockRefines(
         !((data.preDeemedPpiRatio ?? 0) > 0)
       )
         issue("preDeemedPpiRatio", PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE);
-      // 영 §163⑨ — 증여·상속 취득가액은 평가액(실가 의제) → 추계 모드 불가(국심2007중1761). ⑧ step2와 같은 술어.
+      // 영 §163⑨ — 증여·상속 취득가액은 평가액(실가 의제) → 매매사례 불가 · 환산은 장부분실일 때만(국심2007중1761). ⑧ step2와 같은 술어.
       if (
         !splitOrLots &&
         isGiftLikeEstimationBlocked(
           data.acquisitionCause,
-          data.acquisitionDate as string | Date | undefined,
           data.acquisitionMode,
-          is94_4,
+          isBookLostAtAcquisition({
+            acqFaceValueOnly: data.acqFaceValueOnly === true,
+            acqFaceValuePerShare: data.acqFaceValuePerShare,
+            marketType: data.marketType as string | undefined,
+            tradingHaltAtTransfer: data.tradingHaltAtTransfer === true,
+          }),
         )
       )
         issue("acquisitionMode", GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE);
