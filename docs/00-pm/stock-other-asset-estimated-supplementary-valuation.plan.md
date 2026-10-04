@@ -156,7 +156,7 @@ export function usesUnlistedSupplementaryValuation(marketType: string | undefine
 
 | ID | 내용 | 상태 |
 |---|---|---|
-| **S-1c** | 영 §165⑧1호 후문: 라목 주식등이 §99①4에 해당하면 **순자산가치 단독**. 현행 엔진은 `isHeavyRealEstateForValuation`으로 3:2 → 2:3을 뒤집는데 이는 **다목**의 규정이고, 라목의 «단독»은 `netAssetOnlyReason` 4사유와 별개로 적용되는지 확인하지 못했다 | 확인 필요 — 비상장 + 라목 경로 전체에 걸친 쟁점이라 이 PR에서 건드리지 않는다 |
+| **S-1c** | 영 §165⑧1호 후문: 라목 주식등이 §99①4에 해당하면 **순자산가치 단독**. 현행 엔진은 `isHeavyRealEstateForValuation`으로 3:2 → 2:3을 뒤집는데 이는 **다목**의 규정이고, 라목의 «단독»은 `netAssetOnlyReason` 4사유와 별개로 적용되는지 확인하지 못했다 | **✅ 구현(2026-10-04)** — [stock-165-8-1-ra-net-asset-only.plan.md](stock-165-8-1-ra-net-asset-only.plan.md) §11. 기타자산 + 라목 + 장부분실은 375,000,000(468,750,000 아님), 이 계획의 SV·OA anchor 재기준 |
 | **S-1d** | 법인이 상장사인 기타자산 주식등 — §99①3 종가평균(영 §165⑧1호가 §99①3·4 둘 다 가리킨다) | 미지원(Q-2) — 화면에 구분 입력 필요 |
 | **S-1e** | 가목 영업권·나목 시설물이용권(주식등 제외) — 영 §165⑧2·3호가 별도 평가(상증령 §59② · 시가표준액) | 이 앱의 `other_asset`이 주식등만 다루는지(MarketTypeBlock 설명 「과점주주·부동산과다보유법인」) 확인했고 영업권·이용권 계산은 범위 밖 |
 

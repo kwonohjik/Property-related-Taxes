@@ -23,6 +23,7 @@ import {
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import {
   isTradingHaltMarketScopeViolation,
   TRADING_HALT_MARKET_SCOPE_MESSAGE,
@@ -80,7 +81,7 @@ function validateUnlistedSimpleFields(
 ): void {
   for (const key of requiredUnlistedValuationKeys({
     scope: "both",
-    niSkip: (form.netAssetOnlyReason ?? "") !== "",
+    niSkip: shouldSkipNetIncome(form),
     acqFaceValueOnly: form.acqFaceValueOnly === true,
   })) {
     // 액면가는 모드 공통 검사(`validateUnlistedValuationFields`)가 본다 — 여기는 1주당 평가값만.
@@ -97,7 +98,7 @@ function validateUnlistedValuationFields(
   form: StockTransferFormData,
   errors: StockValidationError[],
 ): void {
-  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
+  const niSkip = shouldSkipNetIncome(form);
   const valuationMode = form.unlistedValuationMode || "simple";
   const acqFaceValueOnly = form.acqFaceValueOnly === true;
   if (requiredUnlistedValuationKeys({ scope: "both", niSkip, acqFaceValueOnly }).includes("acqFaceValuePerShare")) {
@@ -168,7 +169,7 @@ function validateAcquisitionSideUnlistedFields(
 ): void {
   for (const key of requiredUnlistedValuationKeys({
     scope: "acquisition",
-    niSkip: (form.netAssetOnlyReason ?? "") !== "",
+    niSkip: shouldSkipNetIncome(form),
     acqFaceValueOnly: false, // 취득측 전용 경로는 액면가 토글을 읽지 않는다(위 주석)
   })) {
     if (key === "acquisitionYearNetIncomePerShare" && isEmpty(form.acquisitionYearNetIncomePerShare)) {
@@ -653,7 +654,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     } else {
       for (const key of requiredUnlistedValuationKeys({
         scope: "transfer",
-        niSkip: (form.netAssetOnlyReason ?? "") !== "",
+        niSkip: shouldSkipNetIncome(form),
         acqFaceValueOnly: false,
       })) {
         if (key === "acqFaceValuePerShare") continue;

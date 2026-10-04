@@ -29,6 +29,7 @@ import {
   calcAcquisitionStdPerShareSupplementary,
 } from "./stock-valuation-unlisted";
 import { usesUnlistedSupplementaryValuation } from "./supplementary-valuation-market";
+import { resolveNetAssetOnlyBasis } from "./net-asset-only-basis";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 
@@ -294,7 +295,8 @@ export function resolveAcquisitionBasis(
         niPerShare: input.acquisitionYearNetIncomePerShare,
         naPerShare: input.acquisitionYearNetAssetPerShare,
         isHeavyRE: input.isHeavyRealEstateForValuation,
-        netAssetOnlyReason: input.netAssetOnlyReason,
+        // 결과뷰가 «순자산 단독» 산식을 고르는 신호 — 엔진 분기와 같은 근거(라목 후단 포함)
+        netAssetOnlyReason: resolveNetAssetOnlyBasis(input),
         acquisitionStdPriceTotal: acqSide.perShare * shareCount,
       };
       warningsDelta.push(...acqSide.warnings);

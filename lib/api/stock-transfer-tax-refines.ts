@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
+import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import {
   isBeforePpiSeries,
   isPreDeemedPurchase,
@@ -324,6 +325,13 @@ export function addStockRefines(
         (data.acquisitionActualInputMode ?? "per_share") === "lots";
       const issue = (path: string, message: string) =>
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+      // 순자산 단독(§165④3 사유 · §165⑧1호 후단 라목)이면 순손익가치를 요구하지 않는다 — 엔진과 같은 leaf.
+      const netAssetOnly =
+        resolveNetAssetOnlyBasis({
+          netAssetOnlyReason: data.netAssetOnlyReason,
+          isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
+          transferDate: toOptionalDate(data.transferDate),
+        }) !== undefined;
       if (!splitOrLots) {
         if (
           data.transferPriceMode === "actual" &&
@@ -349,7 +357,7 @@ export function addStockRefines(
       }
       // 소칙 §81④1호 월할 가산 — 동일 사업연도 토글이면 전전사업연도 평가가 필요하다.
       if (data.acquisitionMode === "estimated" && data.unlistedSameBizYearToggle === true) {
-        if (!data.netAssetOnlyReason && data.prePriorYearNetIncomePerShare === undefined)
+        if (!netAssetOnly && data.prePriorYearNetIncomePerShare === undefined)
           issue("prePriorYearNetIncomePerShare", "전전사업연도 1주당 순손익가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
         if (data.prePriorYearNetAssetPerShare === undefined)
           issue("prePriorYearNetAssetPerShare", "전전사업연도 1주당 순자산가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
@@ -372,7 +380,7 @@ export function addStockRefines(
         if (scope) {
           for (const key of requiredUnlistedValuationKeys({
             scope,
-            niSkip: !!data.netAssetOnlyReason,
+            niSkip: netAssetOnly,
             acqFaceValueOnly: data.acqFaceValueOnly === true,
           })) {
             if (data[key] === undefined)
@@ -457,7 +465,7 @@ export function addStockRefines(
         } else {
           for (const key of requiredUnlistedValuationKeys({
             scope: "transfer",
-            niSkip: !!data.netAssetOnlyReason,
+            niSkip: netAssetOnly,
             acqFaceValueOnly: false,
           })) {
             if (data[key] === undefined)
@@ -473,7 +481,7 @@ export function addStockRefines(
       ) {
         for (const key of requiredUnlistedValuationKeys({
           scope: "acquisition",
-          niSkip: !!data.netAssetOnlyReason,
+          niSkip: netAssetOnly,
           acqFaceValueOnly: false,
         })) {
           if (data[key] === undefined)

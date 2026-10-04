@@ -14,6 +14,7 @@
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
 import { STOCK, STOCK_FLOOR_80_PCT } from "@/lib/tax-engine/legal-codes/stock";
+import { resolveNetAssetOnlyBasis, netAssetOnlyRuleRef } from "./net-asset-only-basis";
 import {
   getValuationWeights,
   calcSection165_4Value,
@@ -61,7 +62,7 @@ export function calcFaceValueTransferEstimated(
 export function calcTransferStdPriceForFaceValue(
   input: StockTransferInput,
 ): { perShare: number; netAssetFloorApplied: boolean; netAssetFloorValue?: number } {
-  const { transferDate, netAssetOnlyReason, isHeavyRealEstateForValuation } = input;
+  const { transferDate, isHeavyRealEstateForValuation } = input;
   const transferNi = input.transferYearNetIncomePerShare ?? 0;
   const transferNa = input.transferYearNetAssetPerShare ?? 0;
 
@@ -74,7 +75,8 @@ export function calcTransferStdPriceForFaceValue(
    * ⚠️ 이 분기는 PR #1350이 넣은 것이고, 이 파일은 PR #1351이 800줄 정책으로 본체에서
    *    떼어낸 것이라 머지 시 조용히 소실됐다. anchor AP-FV-4가 잡았다.
    */
-  if (netAssetOnlyReason) {
+  // §165⑧1호 후단(라목)도 같은 단독이다 — 근거는 `resolveNetAssetOnlyBasis` 하나.
+  if (resolveNetAssetOnlyBasis(input)) {
     return { perShare: Math.floor(transferNa), netAssetFloorApplied: false };
   }
 
@@ -141,7 +143,8 @@ export interface AcquisitionSideSupplementaryResult {
 export function calcAcquisitionStdPerShareSupplementary(
   input: StockTransferInput,
 ): AcquisitionSideSupplementaryResult {
-  const { transferDate, netAssetOnlyReason, isHeavyRealEstateForValuation } = input;
+  const { transferDate, isHeavyRealEstateForValuation } = input;
+  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
   const acquisitionNi = input.acquisitionYearNetIncomePerShare ?? 0;
   const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;
 
@@ -150,26 +153,9 @@ export function calcAcquisitionStdPerShareSupplementary(
     STOCK.ENFORCEMENT_DECREE_165_3_TRADING_HALT,
   ];
 
-  // 순자산 단독 평가 4사유 (§165④3 가~라목) — 취득측 NA 단독
-  if (netAssetOnlyReason) {
-    let ruleRef: string;
-    switch (netAssetOnlyReason) {
-      case "liquidation_or_owner_death":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-        break;
-      case "no_business_or_short_or_closed":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_NA_PRE_BUSINESS;
-        break;
-      case "stock_holding_company":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_DA_HOLDING_CO;
-        break;
-      case "remaining_term_under_3y":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_RA_REMAINING_3Y;
-        break;
-      default:
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-    }
-    appliedRules.push(ruleRef);
+  // 순자산 단독 — §165④3 가~라목 4사유 + §165⑧1호 후단(라목 주식등). 취득측 NA 단독
+  if (netAssetOnlyBasis) {
+    appliedRules.push(netAssetOnlyRuleRef(netAssetOnlyBasis));
     // §165④3호는 「제1호 각 목 외의 부분에도 불구하고」라 1호 단서(하한)도 함께 비껴간다.
     return {
       perShare: Math.floor(acquisitionNa),

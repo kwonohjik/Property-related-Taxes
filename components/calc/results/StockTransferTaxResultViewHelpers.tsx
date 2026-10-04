@@ -12,6 +12,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { STX_CUTOFF_DATE } from "@/lib/tax-engine/data/securities-transaction-tax-rates";
 
@@ -79,7 +80,7 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
         {isHaltAcquisition && detail.conversionAcqStdPerShare !== undefined && (
           <>
             {detail.netAssetOnlyReason ? (
-              <p>취득시 보충평가액 (1주당) = 순자산가치 단독 (§165④3) = {fmt(detail.conversionAcqStdPerShare)}</p>
+              <p>취득시 보충평가액 (1주당) = 순자산가치 단독 ({netAssetOnlyCitationLabel(detail.netAssetOnlyReason)}) = {fmt(detail.conversionAcqStdPerShare)}</p>
             ) : (
               <p>
                 취득시 보충평가액 (1주당) ={" "}

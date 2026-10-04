@@ -606,6 +606,7 @@ export function StockTransferTaxResultView({
           naPerShare={result.valuationDetail.naPerShare ?? 0}
           isHeavyRE={result.valuationDetail.isHeavyRE === true}
           isNetAssetOnly={Boolean(result.valuationDetail.netAssetOnlyReason)}
+          netAssetOnlyReason={result.valuationDetail.netAssetOnlyReason}
           weighted={result.valuationDetail.weightedAvgPerShare ?? 0}
           transferStdPriceAfterFloor={result.valuationDetail.finalPerShareValue}
           floor80Applied={result.valuationDetail.netAssetFloorApplied}

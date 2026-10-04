@@ -17,6 +17,7 @@ import {
   calcNetAssetPerShare,
 } from "./stock-valuation-post-listing";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { resolveNetAssetOnlyBasis } from "./net-asset-only-basis";
 
 export type UnlistedCol = "EUTransfer" | "EUAcq";
 
@@ -28,13 +29,22 @@ export interface UnlistedReduced {
 }
 
 /**
- * [E-6] 순자산 단독 평가 사유 발생 여부 — 5개 지점 단일 진실.
+ * [E-6] 순자산 단독 평가 여부 — 5개 지점 단일 진실.
  * UI(NI 비노출) · adapter(NI skip) · selector(NI weight=0) · validate(NI 검증 skip) · 데이터 보존 모두 본 함수로 분기.
+ *
+ * 근거는 엔진과 같은 `resolveNetAssetOnlyBasis` — §165④3 사유(사용자 선택) 또는 §165⑧1호 후단
+ * (라목 · 양도일 2023-02-28 이후). 사유만 보면 라목에서 «엔진이 쓰지 않는 순손익을 화면·검증이 요구»한다.
  */
 export function shouldSkipNetIncome(
-  form: Pick<StockTransferFormData, "netAssetOnlyReason">,
+  form: Pick<StockTransferFormData, "netAssetOnlyReason" | "isHeavyRealEstateForRate" | "transferDate">,
 ): boolean {
-  return (form.netAssetOnlyReason ?? "") !== "";
+  return (
+    resolveNetAssetOnlyBasis({
+      netAssetOnlyReason: form.netAssetOnlyReason || undefined,
+      isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
+      transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
+    }) !== undefined
+  );
 }
 
 function getStr(form: StockTransferFormData, key: string): string {

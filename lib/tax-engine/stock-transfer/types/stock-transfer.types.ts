@@ -1030,7 +1030,7 @@ export type StockTransferResult = {
     naPerShare?: number;
     /** [사례 49] 부동산과다보유 가중치 반전 (input.isHeavyRealEstateForValuation echo) */
     isHeavyRE?: boolean;
-    /** [사례 49] 순자산 단독 사유 (input.netAssetOnlyReason echo) */
+    /** 순자산 단독 근거 — §165④3 사유(input echo) 또는 §165⑧1호 후단 `"ra_mok_heavy_real_estate"` (`resolveNetAssetOnlyBasis`) */
     netAssetOnlyReason?: string;
     /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount) · [C-1] 보충평가 × shareCount 겸용 */
     acquisitionStdPriceTotal?: number;
