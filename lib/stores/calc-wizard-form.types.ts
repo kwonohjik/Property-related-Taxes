@@ -321,12 +321,16 @@ export interface TransferFormData {
     isUnavoidableReason?: boolean;
     unavoidableResidenceYears?: string;
     unavoidableReasonResolvedDate?: string;
+    /** 「양도일 현재 사유가 해소되지 않음」 — 해소일과 택일(`two-house-exclusion-status.ts`) */
+    unavoidableReasonUnresolved?: boolean;
     /** 3호의 취득 당시 기준시가 (3억 이하 요건) — `officialPrice`(양도 당시)와 다른 칸이다 */
     acquisitionOfficialPrice?: string;
     /** 소송 진행 중이거나 소송 결과로 취득한 주택 (§167의10①7호) */
     isLitigationHousing?: boolean;
     /** 소송 **확정판결일** — 취득일이 아니다. 필드명은 legacy(F-17) */
     litigationAcquisitionDate?: string;
+    /** 「양도일 현재 소송 진행 중」 — 확정판결일과 택일(`two-house-exclusion-status.ts`) */
+    litigationPending?: boolean;
     /**
      * §167의3①**2호** 장기임대주택 — **양도하는 주택 자신**이 등록 장기임대주택인 경우.
      *

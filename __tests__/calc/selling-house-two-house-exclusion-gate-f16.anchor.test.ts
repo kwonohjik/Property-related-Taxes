@@ -85,11 +85,13 @@ describe("F-16 ⑧ 3호 부속값 요구", () => {
     expect(msgs(f)).not.toContain("거주기간");
   });
 
-  it("F16-G8 소송 취득은 날짜를 요구하지 않는다 — 미입력은 「진행 중」이라는 뜻이다", () => {
-    const f = form({
-      householdHousingCount: "2",
-      sellingHouseExclusion: { isLitigationHousing: true },
-    });
-    expect(msgs(f)).not.toContain("소송");
+  // 2026-10-04 정책 변경(사용자 결정 「모름은 납세자에게 불리하게」) — 종전 「날짜를 요구하지 않는다(미입력 = 진행 중)」.
+  //   빈 날짜에 「진행 중」과 「모름」이 겹쳤다 ⇒ 확정판결일 또는 「양도일 현재 소송 진행 중」 택일을 요구한다.
+  it("F16-G8 소송 취득은 확정판결일 또는 「진행 중」 선택을 요구한다 — 둘 중 하나면 통과(긍정 짝)", () => {
+    const f = (se: NonNullable<TransferFormData["sellingHouseExclusion"]>) =>
+      form({ householdHousingCount: "2", sellingHouseExclusion: se });
+    expect(msgs(f({ isLitigationHousing: true }))).toContain("소송 진행 중");
+    expect(msgs(f({ isLitigationHousing: true, litigationPending: true }))).not.toContain("소송");
+    expect(msgs(f({ isLitigationHousing: true, litigationAcquisitionDate: "2024-01-01" }))).not.toContain("소송");
   });
 });

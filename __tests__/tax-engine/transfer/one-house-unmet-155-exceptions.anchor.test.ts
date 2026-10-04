@@ -42,6 +42,11 @@ const RULES = {
   },
 } as unknown as OneHouseSpecialRulesData;
 
+/**
+ * 상속주택 행은 상속개시일을 취득일로 채운다(⑧·⑫가 필수로 받는 값 — 영 §162①5호 「상속이 개시된 날」).
+ * 2026-10-04 「모름은 불리하게」 이후 상속개시일 없는 행은 §155② 괄호 미확인으로 제외되지 않는다 — 이 파일의
+ * 시료는 그 축이 아니라 단서·순위·적격 수를 보므로, 종전 결과(양도 주택 2016 취득 < 상속개시)를 날짜로 고정한다.
+ */
 const house = (id: string, acq: string, extra: Record<string, unknown> = {}) => ({
   id,
   acquisitionDate: new Date(acq),
@@ -53,6 +58,7 @@ const house = (id: string, acq: string, extra: Record<string, unknown> = {}) => 
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  ...(extra.isInherited === true ? { inheritedDate: new Date(acq) } : {}),
   ...extra,
 });
 

@@ -47,7 +47,7 @@ describe("P2 2주택 전용 배제 (다른 보유 주택)", () => {
   it("부득이한 사유 주택(3억↓·거주 2년) → unavoidable_reason_two_house 배제", () => {
     const other = makeHouse("h2", {
       acquisitionOfficialPrice: 250_000_000, // 3호는 **취득 당시** 기준시가로 본다 (F-16)
-      isUnavoidableReason: true,
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,
       unavoidableResidenceYears: 2,
     });
     const input = makeInput([makeHouse("h1", { regionCode: SELLING }), other], { sellingHouseId: "h1", transferDate: TD });

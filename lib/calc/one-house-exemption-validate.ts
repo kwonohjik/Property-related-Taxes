@@ -48,6 +48,7 @@ import {
   judgmentSaleIsHousing,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
+import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -134,6 +135,11 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(
         err(`houses.${i}.inheritedDate`, `보유 주택 ${i + 1}: 상속주택이면 상속개시일을 입력하세요.`),
       );
+    }
+    // §167의10①3호·7호 기산 상태 — 명부 행 ④ 칸이 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
+    const statusIssue = twoHouseExclusionStatusIssue(h);
+    if (statusIssue) {
+      errors.push(err(`houses.${i}.${statusIssue.field}`, `보유 주택 ${i + 1}: ${statusIssue.message}`));
     }
   });
 

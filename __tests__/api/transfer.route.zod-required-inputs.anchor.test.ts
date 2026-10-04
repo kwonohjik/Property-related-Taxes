@@ -237,11 +237,20 @@ describe("명부·상속 — 비우면 400", () => {
   });
 
   it("H-2 부득이한 사유 — 거주기간·취득 당시 기준시가 🔴 각각 생략 400", async () => {
-    const row = { ...ROW, id: "h1", isUnavoidableReason: true, unavoidableResidenceYears: 2, acquisitionOfficialPrice: 100_000_000 };
+    // 2026-10-04 — 3호 기산 상태(해소일 또는 「양도일 현재 미해소」)도 필수가 됐다(빈 값 = 「모름」 차단).
+    const row = {
+      ...ROW,
+      id: "h1",
+      isUnavoidableReason: true,
+      unavoidableResidenceYears: 2,
+      acquisitionOfficialPrice: 100_000_000,
+      unavoidableReasonUnresolved: true,
+    };
     const b = { ...BASE, isRegulatedArea: true, houses: [{ ...ROW, id: "selling" }, row] };
     expect((await single(b)).status).toBe(200);
     await expectRejected({ ...b, houses: [b.houses[0], without(row, "unavoidableResidenceYears")] }, "houses.1.unavoidableResidenceYears");
     await expectRejected({ ...b, houses: [b.houses[0], without(row, "acquisitionOfficialPrice")] }, "houses.1.acquisitionOfficialPrice");
+    await expectRejected({ ...b, houses: [b.houses[0], without(row, "unavoidableReasonUnresolved")] }, "houses.1.unavoidableReasonResolvedDate");
   });
 
   it("H-4 사원용 주택·어린이집 기간 — 🔴 생략 400", async () => {

@@ -74,10 +74,18 @@ describe("OH-12 — 일반주택은 「상속개시 당시 보유한 주택」 (
     expect(excluded(input("2016-03-01", "2016-03-01"))).toBe(1);
   });
 
-  it("상속개시일 미상(API 직접 호출) — 판정할 수 없어 종전 동작(제외) 유지", () => {
-    const i = input("2018-01-01", "2015-01-01");
-    i.houses![1] = { ...i.houses![1], inheritedDate: undefined };
+  // 2026-10-04 정책 변경(사용자 결정 「모름은 납세자에게 불리하게」) — 종전 「종전 동작(제외) 유지」 → 제외 배제.
+  //   ⑧·⑫가 상속개시일을 필수로 받아 route로는 도달하지 않는다(엔진 직접 호출 방어).
+  it("상속개시일 미상(API 직접 호출) — 「상속개시 당시 보유」가 확인되지 않아 제외하지 않는다", () => {
+    // 날짜가 있으면 제외되는 시료(2014 취득 · 2015 상속 — 위 긍정 짝)에서 날짜만 지운다
+    const i = input("2014-01-01", "2015-01-01");
     expect(excluded(i)).toBe(1);
+    i.houses![1] = { ...i.houses![1], inheritedDate: undefined };
+    expect(excluded(i)).toBe(0);
+    // 2013.2.15. 전 취득분은 괄호 한정이 없어 날짜 없이도 제외된다(경계 구별력 보존)
+    const pre = input("2013-02-14", "2015-01-01");
+    pre.houses![1] = { ...pre.houses![1], inheritedDate: undefined };
+    expect(excluded(pre)).toBe(1);
   });
 
   it("§155③ 공동상속 소수지분에는 이 한정이 없다(괄호가 ②에만) — 상속 후 취득이어도 제외", () => {

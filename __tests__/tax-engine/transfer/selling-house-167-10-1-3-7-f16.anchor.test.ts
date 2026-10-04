@@ -85,8 +85,12 @@ describe("F-16 §167의10①7호 — 소송 취득은 양도하는 주택 자신
     expect(excl(i)).not.toContain("litigation_housing_two_house");
   });
 
-  it("F16-3 날짜 미입력은 「소송이 진행 중」 → 배제", () => {
-    expect(calc(two({ isLitigationHousing: true })).totalTax).toBe(EXCLUDED);
+  // 2026-10-04 정책 변경(사용자 결정 「모름은 납세자에게 불리하게」) — 종전 「날짜 미입력 = 진행 중 → 배제」.
+  //   빈 날짜에 「진행 중」과 「모름」이 겹쳐 있었다 ⇒ 「진행 중」은 명시 선언(`litigationPending`)으로만 본다.
+  //   화면·API는 ⑧·⑫가 둘 중 하나를 요구한다(`transfer.route.unknown-unfavorable-1-6-9.anchor.test.ts` U9).
+  it("F16-3 「양도일 현재 소송 진행 중」 선언 → 배제 · 날짜도 선언도 없으면(모름) 배제하지 않는다", () => {
+    expect(calc(two({ isLitigationHousing: true, litigationPending: true })).totalTax).toBe(EXCLUDED);
+    expect(calc(two({ isLitigationHousing: true })).totalTax).toBe(SURCHARGED);
   });
 
   it("F16-3b 경계 — 확정판결일의 3년 응당일은 기간의 말일(배제), 그 하루 전 판결분은 경과(배제 없음)", () => {
@@ -109,10 +113,13 @@ describe("F-16 §167의10①7호 — 소송 취득은 양도하는 주택 자신
 });
 
 describe("F-16 §167의10①3호 — 부득이한 사유 취득도 양도하는 주택 자신에 적용된다", () => {
+  // 「양도일 현재 사유가 해소되지 않음」을 명시한다 — 2026-10-04 이후 해소일·선언이 모두 없으면 「모름」이라 불성립이다.
+  //   (아래 해소일 시료는 날짜가 선언보다 우선한다.)
   const 부득이: Partial<H> = {
     isUnavoidableReason: true,
     unavoidableResidenceYears: 2,
     acquisitionOfficialPrice: 250_000_000,
+    unavoidableReasonUnresolved: true,
   };
 
   it("F16-5 양도 주택이 부득이 취득(취득 당시 2.5억·2년 거주) → 배제 (종전 299,816,000)", () => {
@@ -146,7 +153,7 @@ describe("F-16 §167의10①3호 — 부득이한 사유 취득도 양도하는 
   });
 
   it("F16-10 취득 당시 기준시가 미입력은 「3억 이하」가 아니라 판정 불가 — 배제하지 않고 경고", () => {
-    const i = two({ isUnavoidableReason: true, unavoidableResidenceYears: 2 });
+    const i = two({ isUnavoidableReason: true, unavoidableResidenceYears: 2, unavoidableReasonUnresolved: true });
     expect(calc(i).totalTax).toBe(SURCHARGED);
     expect(warns(i).some((w) => w.includes("취득 당시 기준시가"))).toBe(true);
     // 값이 있으면 경고는 사라진다(긍정 짝)
@@ -156,7 +163,12 @@ describe("F-16 §167의10①3호 — 부득이한 사유 취득도 양도하는 
   it("F16-10b 양도 당시 기준시가가 3억 이하여도 그것으로 갈음하지 않는다", () => {
     // 종전 코드는 `officialPrice`(양도일 연도 조회값)로 3억 요건을 판정했다. 그 칸이 2.5억이고
     // 취득 당시 값이 없으면 「3억 이하」가 아니라 **판정 불가**다 — 배제하지 않는다.
-    const i = two({ isUnavoidableReason: true, unavoidableResidenceYears: 2, officialPrice: 250_000_000 });
+    const i = two({
+      isUnavoidableReason: true,
+      unavoidableResidenceYears: 2,
+      unavoidableReasonUnresolved: true,
+      officialPrice: 250_000_000,
+    });
     expect(calc(i).totalTax).toBe(SURCHARGED);
     expect(excl(i)).not.toContain("unavoidable_reason_two_house");
   });
@@ -197,7 +209,7 @@ describe("F-16 인용 정정 — 소송 취득은 7호다(8호는 2023.2.28 삭�
     expect(MULTI_HOUSE.TWO_HOUSE_LITIGATION).toBe("소득세법 시행령 §167의10①7호");
     expect(MULTI_HOUSE.TWO_HOUSE_UNAVOIDABLE).toBe("소득세법 시행령 §167의10①3호");
     const detail = (
-      calc(two({ isLitigationHousing: true })).multiHouseSurchargeEvaluation?.exclusionReasons ?? []
+      calc(two({ isLitigationHousing: true, litigationPending: true })).multiHouseSurchargeEvaluation?.exclusionReasons ?? []
     )
       .map((e) => e.detail)
       .join(" ");

@@ -15,6 +15,7 @@ import { preDesignationContractInScope } from "./pre-designation-contract-scope"
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
+import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -193,9 +194,8 @@ export function buildHousesPayload(
       se?.isUnavoidableReason && se.unavoidableResidenceYears
         ? parseFloat(se.unavoidableResidenceYears)
         : undefined,
-    unavoidableReasonResolvedDate: se?.isUnavoidableReason
-      ? se.unavoidableReasonResolvedDate || undefined
-      : undefined,
+    // ④⑬ 3호·7호 기산 상태(해소일·미해소 / 확정판결일·진행 중) — ⑤·⑧·⑫와 같은 leaf
+    ...twoHouseExclusionStatusPayload(se ?? {}),
     /**
      * 3호의 기준시가는 「취득 당시」다 — 양도 주택의 `officialPrice`에는 양도 당시 값이 실린다.
      *
@@ -209,9 +209,6 @@ export function buildHousesPayload(
         ? parseAmount(se.acquisitionOfficialPrice)
         : undefined) ?? sellingRentalAcquisitionPrice(se?.longTermRental),
     isLitigationHousing: se?.isLitigationHousing,
-    litigationAcquisitionDate: se?.isLitigationHousing
-      ? se.litigationAcquisitionDate || undefined
-      : undefined,
     /**
      * ④⑬ 공고 전 매매계약 — 영 §167의3①11호 · §167의4③5호 · §167의10①11호 · §167의11①10호.
      *
@@ -321,13 +318,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
         h.isUnavoidableReason && h.unavoidableResidenceYears
           ? parseFloat(h.unavoidableResidenceYears)
           : undefined,
-      unavoidableReasonResolvedDate: h.isUnavoidableReason
-        ? h.unavoidableReasonResolvedDate || undefined
-        : undefined,
+      // ④⑬ 3호·7호 기산 상태 — ⑤·⑧·⑫와 같은 leaf(「미해소·진행 중」이면 남은 날짜는 싣지 않는다)
+      ...twoHouseExclusionStatusPayload(h),
       isLitigationHousing: h.isLitigationHousing,
-      litigationAcquisitionDate: h.isLitigationHousing
-        ? h.litigationAcquisitionDate || undefined
-        : undefined,
       isRedevelopmentZone: h.isRedevelopmentZone,
       isPopulationDeclineArea: h.isPopulationDeclineArea,
       isSecondHomeRegistered: h.isPopulationDeclineArea ? h.isSecondHomeRegistered : undefined,

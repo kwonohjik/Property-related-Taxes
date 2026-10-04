@@ -497,9 +497,14 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
     expect(openArticles(withInheritedHouse)).not.toContain("§156의2 ⑦");
     // 선언이 여전히 의미를 갖는 갈래 — 상속개시일을 모르면(API 직접) 날짜로 확인할 수 없어 판정 불가로 남고,
     //   선언하면 닫힌다(종전 J-25의 구별력을 이 갈래로 옮긴다).
+    //   🔑 공동상속(소수지분)으로 둔다 — §155③에는 「상속개시 당시 보유」 괄호가 없어 날짜 없이도 주택수가 준다.
+    //   단독상속이면 2026-10-04 「모름은 불리하게」로 §155② 제외가 먼저 배제돼 이 갈래에 오지 않는다.
     const undated = {
       ...withInheritedHouse,
-      houses: [withInheritedHouse.houses[0], { ...withInheritedHouse.houses[1], inheritedDate: undefined }],
+      houses: [
+        withInheritedHouse.houses[0],
+        { ...withInheritedHouse.houses[1], inheritedDate: undefined, isCoInherited: true, isLargestCoInheritedShareholder: false },
+      ],
     };
     expect(exempt(undated)).toBe(true);
     expect(openArticles(undated)).toContain("§156의2 ⑦");

@@ -61,3 +61,40 @@ describe("F-17 ⑤ 양도 주택 — 7호 날짜 칸 라벨", () => {
     expect(screen.queryByText(/소송 확정판결일/)).toBeNull();
   });
 });
+
+/**
+ * 2026-10-04 — 빈 날짜의 두 뜻(「진행 중」 / 「모름」)을 가른다(사용자 결정 「모름은 납세자에게 불리하게」).
+ * 종전 라벨 「미입력=진행 중」은 빈 값을 유리한 쪽으로 읽게 했다 — 「양도일 현재 소송 진행 중」 명시 선택으로 바꿨다.
+ */
+describe("7호 「진행 중」은 명시 선택 — 「미입력=진행 중」 라벨 제거", () => {
+  it("F17-5 두 화면 모두 「양도일 현재 소송 진행 중」 선택지가 있고 「미입력=진행 중」 문구가 없다", () => {
+    render(<HouseEntrySpecialExclusionSection house={house({ isLitigationHousing: true })} onUpdate={() => {}} />);
+    expect(screen.getByText("양도일 현재 소송 진행 중")).toBeTruthy();
+    expect(screen.queryByText(/미입력=진행 중/)).toBeNull();
+    cleanup();
+    render(<SellingHouseTwoHouseExclusionSection value={{ isLitigationHousing: true }} onChange={() => {}} />);
+    expect(screen.getByText("양도일 현재 소송 진행 중")).toBeTruthy();
+    expect(screen.queryByText(/미입력=진행 중/)).toBeNull();
+  });
+
+  it("F17-6 「진행 중」을 고르면 확정판결일 칸이 사라진다(남은 날짜는 ④가 싣지 않는다)", () => {
+    render(
+      <SellingHouseTwoHouseExclusionSection value={{ isLitigationHousing: true, litigationPending: true }} onChange={() => {}} />,
+    );
+    expect(screen.queryByText(/소송 확정판결일/)).toBeNull();
+  });
+
+  it("F17-7 3호도 「양도일 현재 사유가 해소되지 않음」을 고르면 해소일 칸이 사라진다", () => {
+    render(
+      <HouseEntrySpecialExclusionSection
+        house={house({ isUnavoidableReason: true, unavoidableReasonUnresolved: true })}
+        onUpdate={() => {}}
+      />,
+    );
+    expect(screen.getByText("양도일 현재 사유가 해소되지 않음")).toBeTruthy();
+    expect(screen.queryByText(/해소된 날부터 3년 이내 양도/)).toBeNull();
+    cleanup();
+    render(<HouseEntrySpecialExclusionSection house={house({ isUnavoidableReason: true })} onUpdate={() => {}} />);
+    expect(screen.getByText(/해소된 날부터 3년 이내 양도/)).toBeTruthy(); // 긍정 짝
+  });
+});

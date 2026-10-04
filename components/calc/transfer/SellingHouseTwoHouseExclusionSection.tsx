@@ -51,6 +51,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
             isUnavoidableReason: b,
             unavoidableResidenceYears: b ? v.unavoidableResidenceYears : undefined,
             unavoidableReasonResolvedDate: b ? v.unavoidableReasonResolvedDate : undefined,
+            unavoidableReasonUnresolved: b ? v.unavoidableReasonUnresolved : undefined,
             acquisitionOfficialPrice: b ? v.acquisitionOfficialPrice : undefined,
           })
         }
@@ -78,16 +79,36 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
             />
             <p className="text-caption text-muted-foreground/70">1년 이상이어야 배제 적용</p>
           </div>
-          <div className="space-y-1">
-            <label className="block text-caption text-muted-foreground font-medium">
-              사유 해소일{" "}
-              <span className="text-muted-foreground/60 font-normal">(해소 시 — 이후 3년 이내 양도)</span>
-            </label>
-            <DateInput
-              value={v.unavoidableReasonResolvedDate ?? ""}
-              onChange={(s) => patch({ unavoidableReasonResolvedDate: s || undefined })}
-            />
-          </div>
+          {/* 3호 괄호 「해당 사유가 해소된 날부터 3년」 — 해소일 또는 「미해소」 택일(빈 값 = 모름은 ⑧이 막는다) */}
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            data-testid="selling-unavoidable-unresolved"
+            checked={v.unavoidableReasonUnresolved === true}
+            onCheckedChange={(b) =>
+              patch(
+                b
+                  ? { unavoidableReasonUnresolved: true, unavoidableReasonResolvedDate: undefined }
+                  : { unavoidableReasonUnresolved: undefined },
+              )
+            }
+            title="양도일 현재 사유가 해소되지 않음"
+          />
+          {v.unavoidableReasonUnresolved !== true && (
+            <div className="space-y-1" data-field="sellingHouseExclusion.unavoidableReasonResolvedDate">
+              <label className="block text-caption text-muted-foreground font-medium">
+                사유 해소일{" "}
+                <span className="text-muted-foreground/60 font-normal">(해소된 날부터 3년 이내 양도)</span>
+              </label>
+              <DateInput
+                value={v.unavoidableReasonResolvedDate ?? ""}
+                onChange={(s) => patch({ unavoidableReasonResolvedDate: s || undefined })}
+              />
+            </div>
+          )}
+          <p className="text-caption text-muted-foreground/70">
+            해소일 또는 「양도일 현재 사유가 해소되지 않음」 중 하나가 필요합니다
+          </p>
         </div>
       </ToggleCard>
 
@@ -100,22 +121,39 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
           patch({
             isLitigationHousing: b,
             litigationAcquisitionDate: b ? v.litigationAcquisitionDate : undefined,
+            litigationPending: b ? v.litigationPending : undefined,
           })
         }
         title="소송 취득·진행 중 주택"
         description="소유권에 관한 소송이 진행 중이거나 그 소송 결과로 취득 (소령 §167의10①7호)"
       >
-        <div className="space-y-1 pt-1">
-          <label className="block text-caption text-muted-foreground font-medium">
-            소송 확정판결일{" "}
-            <span className="text-muted-foreground/60 font-normal">
-              (판결 확정 시 — 그날부터 3년 이내 배제. 미입력=진행 중)
-            </span>
-          </label>
-          <DateInput
-            value={v.litigationAcquisitionDate ?? ""}
-            onChange={(s) => patch({ litigationAcquisitionDate: s || undefined })}
+        <div className="space-y-2 pt-1">
+          {/* 7호 「소송이 진행 중이거나 … 확정판결일부터 3년」 — 확정판결일 또는 「진행 중」 택일(빈 값 = 모름은 ⑧이 막는다) */}
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            data-testid="selling-litigation-pending"
+            checked={v.litigationPending === true}
+            onCheckedChange={(b) =>
+              patch(b ? { litigationPending: true, litigationAcquisitionDate: undefined } : { litigationPending: undefined })
+            }
+            title="양도일 현재 소송 진행 중"
           />
+          {v.litigationPending !== true && (
+            <div className="space-y-1" data-field="sellingHouseExclusion.litigationAcquisitionDate">
+              <label className="block text-caption text-muted-foreground font-medium">
+                소송 확정판결일{" "}
+                <span className="text-muted-foreground/60 font-normal">(판결 확정 시 — 그날부터 3년 이내 배제)</span>
+              </label>
+              <DateInput
+                value={v.litigationAcquisitionDate ?? ""}
+                onChange={(s) => patch({ litigationAcquisitionDate: s || undefined })}
+              />
+            </div>
+          )}
+          <p className="text-caption text-muted-foreground/70">
+            확정판결일 또는 「양도일 현재 소송 진행 중」 중 하나가 필요합니다
+          </p>
         </div>
       </ToggleCard>
     </ToneCard>
