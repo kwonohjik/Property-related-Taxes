@@ -29,6 +29,7 @@
  */
 
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { usesUnlistedSupplementaryValuation } from "./supplementary-valuation-market";
 
 export type GiftLikeCause = "gift" | "carryover_gift" | "inheritance";
 
@@ -51,14 +52,14 @@ export interface BookLostFacts {
  * 취득 당시 기준시가를 확인할 수 없어 액면가액으로 대체하는가 = 상증법 평가액도 확인할 수 없는가.
  *
  * 엔진이 사례 49 분기(`calcUnlistedValuation`의 `acq_face_value_only`)를 타는 조건과 **같다** —
- * 비상장이거나 양도일 거래정지(비상장 보충평가로 우회)일 때만 그 분기가 있고, 액면가가 없으면 분기가
+ * 비상장·기타자산이거나 양도일 거래정지(비상장 보충평가로 우회)일 때만 그 분기가 있고, 액면가가 없으면 분기가
  * 켜지지 않는다. 토글만 켠 반쪽 입력이 §163⑨ 예외의 통로가 되면 안 되므로 액면가까지 요구한다.
  * 폼(문자열) 형태는 `isBookLostAtAcquisitionForm`(⑤⑧③)이 같은 규칙으로 감싼다.
  */
 export function isBookLostAtAcquisition(facts: BookLostFacts): boolean {
   if (facts.acqFaceValueOnly !== true) return false;
   if (!((facts.acqFaceValuePerShare ?? 0) > 0)) return false;
-  return facts.marketType === "unlisted" || facts.tradingHaltAtTransfer === true;
+  return usesUnlistedSupplementaryValuation(facts.marketType) || facts.tradingHaltAtTransfer === true;
 }
 
 /**
@@ -84,5 +85,5 @@ export function isGiftLikeEstimationBlocked(
 export const GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE =
   "증여·상속받은 주식의 취득가액은 증여일·상속개시일 현재 「상속세 및 증여세법」 제60조~제66조에 따른 " +
   "평가액이며 이를 실지거래가액으로 봅니다 — 매매사례가액은 쓸 수 없고, 환산취득가는 장부 분실 등으로 " +
-  "취득 당시 기준시가를 확인할 수 없을 때(「취득시점 장부분실」 — 비상장·거래정지)에만 쓸 수 있습니다 " +
+  "취득 당시 기준시가를 확인할 수 없을 때(「취득시점 장부분실」 — 비상장·기타자산·거래정지)에만 쓸 수 있습니다 " +
   `(${STOCK.ENFORCEMENT_DECREE_163_9_GIFT_VALUATION}). 그 밖에는 「실가」를 고르고 평가액을 입력하세요.`;

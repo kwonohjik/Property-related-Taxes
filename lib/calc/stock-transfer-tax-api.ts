@@ -23,6 +23,7 @@ import {
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
+import { usesUnlistedSupplementaryValuation } from "@/lib/tax-engine/stock-transfer/supplementary-valuation-market";
 
 import {
   parseIntOrUndef,
@@ -416,10 +417,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   body.tradingHaltAtAcquisition = haltAllowed && stdMode === "halt_acquisition";
 
   // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
-  // 활성 조건: (marketType==="unlisted" || 거래정지) + estimated + acqFaceValueOnly===true
+  // 활성 조건: (비상장·기타자산(usesUnlistedSupplementaryValuation) || 거래정지) + estimated + acqFaceValueOnly===true
   // [C-2] 거래정지(양도) 상장주식도 §165③→§165④ 비상장 보충평가 → 사례49 허용(silent strip 해소)
   if (
-    (form.marketType === "unlisted" || form.acquisitionStdMode === "halt_transfer") &&
+    (usesUnlistedSupplementaryValuation(form.marketType) || form.acquisitionStdMode === "halt_transfer") &&
     form.acquisitionMode === "estimated" &&
     form.acqFaceValueOnly === true &&
     form.acqFaceValuePerShare
@@ -435,11 +436,11 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   }
 
   // [unlisted-direct-calc] 비상장 §165④ full 모드 — adapter로 4 필드 자동 합성
-  // 활성 조건: (marketType === "unlisted" || 거래정지) + estimated 모드 + unlistedValuationMode === "full"
+  // 활성 조건: (비상장·기타자산(usesUnlistedSupplementaryValuation) || 거래정지) + estimated 모드 + unlistedValuationMode === "full"
   // [C-2] 거래정지(양도) 상장주식도 비상장 보충평가 → full 결산서 허용(silent strip 해소)
   // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)
   if (
-    (form.marketType === "unlisted" || form.acquisitionStdMode === "halt_transfer") &&
+    (usesUnlistedSupplementaryValuation(form.marketType) || form.acquisitionStdMode === "halt_transfer") &&
     form.unlistedValuationMode === "full"
   ) {
     const niSkip = shouldSkipNetIncome(form);

@@ -74,7 +74,8 @@ export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: s
   // 검색 응답 루트는 `Decc`, 본문 응답 루트는 `SpecialDeccService` (2026-10-04 실측).
   ttSpecialDecc: { root: "Decc", list: "decc", service: "SpecialDeccService" },
   detc:     { root: "DetcSearch",     list: "Detc" },
-  expc:     { root: "Expc",           list: "expc" },
+  // 검색 응답 루트는 `Expc`, 본문 응답 루트는 `ExpcService` — Search→Service 치환 규칙 밖이다(2026-10-04 실측).
+  expc:     { root: "Expc",           list: "expc", service: "ExpcService" },
   admrul:   { root: "AdmRulSearch",   list: "admrul" },
   fsc:      { root: "Fsc",            list: "fsc" },
   ftc:      { root: "Ftc",            list: "ftc" },

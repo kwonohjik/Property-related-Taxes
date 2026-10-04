@@ -4,7 +4,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { getDecisionText, LawApiError } from "@/lib/korean-law/client";
+import { buildDecisionSourceUrl, getDecisionText, LawApiError } from "@/lib/korean-law/client";
 import { decisionTextInputSchema } from "@/lib/korean-law/types";
 import { ensureRateLimit, mapErrorToResponse, parseQuery } from "../_helpers";
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
             "법제처 Open API가 본문을 반환하지 않았습니다. 해당 결정은 웹에서는 공개되나 API 제공 대상이 아닌 경우가 많습니다. 아래 법제처 링크에서 확인하세요.",
           court: "",
           date: "",
-          sourceUrl: `https://www.law.go.kr/LSW/${domain}InfoR.do?ID=${encodeURIComponent(id)}`,
+          sourceUrl: buildDecisionSourceUrl(domain, id),
         },
       });
     }

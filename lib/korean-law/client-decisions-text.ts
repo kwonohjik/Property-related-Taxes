@@ -65,6 +65,12 @@ interface GenericDecisionDetail {
   의결일자?: string;
   관련법령?: string;
   참조결정?: string;
+  // 법령해석례(expc) · 행정규칙(admrul) — 2026-10-04 실측 필드
+  해석일자?: string;
+  질의요지?: string;
+  회답?: string;
+  발령번호?: string;
+  발령일자?: string;
   [key: string]: unknown;
 }
 
@@ -79,7 +85,8 @@ export async function getDecisionText(
 ): Promise<DecisionText | null> {
   const full = options.full ?? false;
   // v2: 구조화 필드 추가로 캐시 포맷 변경
-  const cacheKey = `decision_text_${domain}_${id}_${full ? "full" : "comp"}_v2`;
+  // v3: expc·admrul 본문 파서 수정 — 종전 파서가 남긴 빈약한 결과(제목 없음·부분 본문)를 재사용하지 않는다.
+  const cacheKey = `decision_text_${domain}_${id}_${full ? "full" : "comp"}_v3`;
   const cached = await readCache<DecisionText>(cacheKey);
   if (cached) return cached;
 
@@ -118,9 +125,10 @@ export async function getDecisionText(
     Array.isArray(data[list]) ? (data[list] as unknown[])[0] : data[list],
     data,
   ];
-  const container = candidates.find(
+  const found = candidates.find(
     (c) => c && typeof c === "object" && !Array.isArray(c)
   ) as GenericDecisionDetail | undefined;
+  const container = found && normalizeDomainDetail(domain, found);
 
   if (process.env.NODE_ENV !== "production") {
     console.log(
@@ -175,7 +183,7 @@ export async function getDecisionText(
     id,
     domain,
     // ttSpecialDecc 본문은 청구번호·사건번호가 빈 문자열로 온다 → `||` 로 넘긴다.
-    caseNo: container.사건번호 || container.결정번호 || container.안건번호 || container.청구번호 || "",
+    caseNo: container.사건번호 || container.결정번호 || container.안건번호 || container.청구번호 || container.발령번호 || "",
     title: cleanHtml(
       container.사건명 ??
         container.제목 ??
@@ -220,6 +228,8 @@ export async function getDecisionText(
       container.회신일자 ??
       container.시행일자 ??
       container.의결일자 ??
+      container.해석일자 ??
+      container.발령일자 ??
       "",
     sourceUrl: buildDecisionSourceUrl(domain, id),
     compacted,
@@ -235,6 +245,48 @@ export async function getDecisionText(
 
   await writeCache(cacheKey, result);
   return result;
+}
+
+/**
+ * 문자열 / 문자열 배열 / **배열의 배열** 을 줄 목록으로 편다. 법제처는 문단을 중첩 배열로 주기도 하고
+ * (행정규칙 `제개정이유내용`: `[["◇ 제ㆍ개정 이유", "…", "    "]]`), 항목이 하나뿐이면 배열 대신
+ * 단일 문자열을 준다(`조문내용` 3/17). 공백뿐인 줄은 버린다.
+ */
+function flattenLines(v: unknown): string[] {
+  if (typeof v === "string") return v.trim() ? [v] : [];
+  if (Array.isArray(v)) return v.flatMap(flattenLines);
+  return [];
+}
+
+/** 소제목(【】)을 단 문단들을 이어 붙인다. 소제목이 빈 문자열이면 본문만, 내용이 비면 문단째 생략. */
+function sectioned(parts: ReadonlyArray<readonly [heading: string, value: unknown]>): string {
+  return parts
+    .map(([heading, value]) => [heading, flattenLines(value).join("\n")] as const)
+    .filter(([, text]) => text)
+    .map(([heading, text]) => (heading ? `【${heading}】\n${text}` : text))
+    .join("\n\n");
+}
+
+/**
+ * 도메인별 본문 응답을 공통 필드명으로 맞춘다 — 2026-10-04 실측으로 expc·admrul 본문은 getDecisionText 가
+ * 기대하는 평평한 판례형이 아니었다(둘 다 null). 화면은 holdings·summary·ruling 을 「판시사항」·「판결요지」·
+ * 「주문」으로 고정 표기하므로 해석례·행정규칙에는 쓰지 않고, 중립 라벨 「이유 / 전문」(reasoning) 한 영역에
+ * 소제목과 함께 싣는다. 앞 800자만 보이는 축약에서도 핵심(질의요지·회답)이 먼저 보이도록 순서를 정했다.
+ */
+function normalizeDomainDetail(
+  domain: DecisionDomain,
+  c: GenericDecisionDetail
+): GenericDecisionDetail {
+  if (domain === "expc") {
+    return { ...c, 이유: sectioned([["질의요지", c.질의요지], ["회답", c.회답], ["이유", c.이유]]) };
+  }
+  if (domain === "admrul") {
+    // 제목·번호·일자·부처는 `행정규칙기본정보` 안에, 본문은 `조문내용` 에 있다.
+    const info = (c.행정규칙기본정보 ?? {}) as GenericDecisionDetail;
+    const why = (c.제개정이유 as { 제개정이유내용?: unknown } | null | undefined)?.제개정이유내용;
+    return { ...info, 이유: sectioned([["", c.조문내용], ["제개정이유", why]]) };
+  }
+  return c;
 }
 
 /** 객체의 모든 문자열 필드 중 가장 긴 값을 찾는다. */

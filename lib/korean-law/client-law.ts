@@ -40,19 +40,33 @@ export function buildLawSourceUrl(lawName: string, articleNo?: string): string {
 
 /**
  * 판례·결정례 원문 URL 생성. 도메인별 법제처 페이지가 달라 매핑.
+ *
+ * 🔴 한글주소(`/판례/(…)`)에 **일련번호를 넣으면 열리지 않는다** — 2026-10-04 브라우저 실측
+ *    판례 2·헌재결정례 2·법령해석례 2·행정규칙 1, 7건 전부 「해당 한글주소명을 찾을 수 없습니다」.
+ *    한글주소는 사건번호 계열 식별자를 받는 주소다. 우리가 가진 id 는 DRF 일련번호이므로,
+ *    한글주소가 내부적으로 연결하는 상세 팝업(`LSW/{종류}InfoP.do?{종류}Seq=`)을 일련번호로 직접 연다.
+ *    판별: 대조군(없는 id)은 6KB 껍데기·빈 본문, 실재 id 는 본문 전체(헌재 49~87KB·해석례 53~63KB·
+ *    행정규칙 64~74KB 전건 일치). 판례는 국세청 출처 건이 로더 페이지(33KB 고정)라 브라우저 렌더로
+ *    taxlaw.nts.go.kr 본문과 사건번호 표시를 확인했다.
  */
 export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): string {
+  const seq = encodeURIComponent(id);
   switch (domain) {
     case "prec":
-      return `https://www.law.go.kr/판례/(${encodeURIComponent(id)})`;
+      return `https://www.law.go.kr/LSW/precInfoP.do?precSeq=${seq}`;
     // ⚠ detc=헌재결정례 / expc=법령해석례. 이름의 직관과 반대다(types.ts 주석 참조).
     //   종전엔 반대로 매핑돼 결과를 클릭하면 **다른 종류의 원문 페이지**가 열렸다.
     case "detc":
-      return `https://www.law.go.kr/헌재결정례/(${encodeURIComponent(id)})`;
+      return `https://www.law.go.kr/LSW/detcInfoP.do?detcSeq=${seq}`;
     case "expc":
-      return `https://www.law.go.kr/법령해석례/(${encodeURIComponent(id)})`;
+      return `https://www.law.go.kr/LSW/expcInfoP.do?expcSeq=${seq}`;
     case "admrul":
-      return `https://www.law.go.kr/행정규칙/(${encodeURIComponent(id)})`;
+      return `https://www.law.go.kr/LSW/admRulInfoP.do?admRulSeq=${seq}`;
+    // 조세심판원 재결 — 한글주소 `/조세심판재결례/(청구번호)` 는 청구번호가 비는 건(1.6%)이 있고
+    // 본문 응답에도 청구번호가 없어 쓰지 않는다.
+    // trbClsCd 는 필수(없거나 틀리면 오류 페이지)이며 재결 전건이 조세심판원 = 360101 이다.
+    case "ttSpecialDecc":
+      return `https://www.law.go.kr/LSW/specialDeccInfoP.do?specialDeccSeq=${seq}&trbClsCd=360101`;
     default:
       return `https://www.law.go.kr/LSW/lsScListR.do?query=${encodeURIComponent(id)}`;
   }
