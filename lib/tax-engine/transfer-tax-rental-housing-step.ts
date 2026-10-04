@@ -95,6 +95,10 @@ export interface RentalHousingStepArgs {
    * 같은 이유). 세액 불변(표시 전용).
    */
   specialHouseExclusionDetail?: TransferTaxResult["specialHouseExclusionDetail"];
+  /** [echo] STEP 0.9 §99의4·§98의9 주택수 제외 판정 — `New994DetailCard`·`Unsold989DetailCard`가 읽는다(위와 같은 이유 · 세액 불변). */
+  new994Detail?: TransferTaxResult["new994Detail"];
+  unsold989Detail?: TransferTaxResult["unsold989Detail"];
+  houseCountExclusionDetails?: TransferTaxResult["houseCountExclusionDetails"];
 }
 
 /**
@@ -303,6 +307,7 @@ export function runRentalHousingExceptionStep(
     effectiveInput, input, transferGain, usedEstimated, depreciationAmount,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
     inheritedAcquisitionStep, generalHouseAcquisitionDate, specialHouseExclusionDetail,
+    new994Detail, unsold989Detail, houseCountExclusionDetails,
   } = args;
 
   /**
@@ -653,6 +658,9 @@ export function runRentalHousingExceptionStep(
       ? { inheritedHouseValuationDetail: inheritedAcquisitionStep.houseValuationResult }
       : {}),
     ...(specialHouseExclusionDetail ? { specialHouseExclusionDetail } : {}),
+    ...(new994Detail ? { new994Detail } : {}),
+    ...(unsold989Detail ? { unsold989Detail } : {}),
+    ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
     ...(reductionNotice || lthdNotice || periodPendingNotice || rhe.eligibility.notices?.length
       ? {
