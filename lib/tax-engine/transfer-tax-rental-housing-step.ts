@@ -370,6 +370,16 @@ export function runRentalHousingExceptionStep(
       amount: 0,
       legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
+    // 판정 보류·확인 필요 고지(예: ⑪3호 인가·지정일 모름으로 양도기한 경과)는 미적용 경로에서도 보여야 한다 —
+    // 적용 경로에서만 `warnings`에 실리면 「모름」 때문에 불리하게 계산된 사실이 가려진다.
+    if (rhe.eligibility.notices?.length) {
+      steps.push({
+        label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
+        formula: rhe.eligibility.notices.join(" · "),
+        amount: 0,
+        legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+      });
+    }
     return null;
   }
 

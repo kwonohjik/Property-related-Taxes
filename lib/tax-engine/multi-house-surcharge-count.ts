@@ -18,8 +18,9 @@ import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/
 import {
   RA_CUT,
   APT_TRANSFER_DEADLINE_FLOOR,
-  isWithinAptTransferDeadline,
+  judgeAptTransferDeadline,
   hasAnyAptDeadlineExtensionFact,
+  type AptDeadlinePendingReason,
 } from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { passesRankingGate } from "./transfer-inheritance-exclusion";
@@ -264,6 +265,16 @@ export function isAptTransferDeadlinePending(house: HouseInfo, transferDate: Dat
 }
 
 /**
+ * ⑪3호 판정 보류(인가·지정일 · 이전고시일 · 단서 모름) — 2호 가·나·라·마목 아파트. 결론은
+ * `isLongTermRentalHousingExempt`가 정한 대로 두고 호출부가 확인 필요 고지를 낸다(`isAptTransferDeadlinePending`의 짝).
+ */
+export function aptTransferDeadlineConfirmReasons(house: HouseInfo, transferDate: Date): AptDeadlinePendingReason[] {
+  if (!house.rentalType) return [];
+  const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
+  return checkRentalArticle(article, toNormalizedFromHouse(house, transferDate)).aptDeadlineConfirmReasons;
+}
+
+/**
  * 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
  * (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
  * 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
@@ -430,10 +441,8 @@ export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate
   const gateApplicable = isTaxIncentiveRentalAptGateApplicable(house);
   if (gateApplicable !== true) return true; // false(대상 아님) · undefined(모름, 종전 기준 유지)
 
-  if (!hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension)) {
-    return true; // 연장 사실 모름 → 판정 보류, 종전 기준 유지
-  }
-  return isWithinAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension);
+  // 연장 사실 전무(NO_FACT)면 within=true(판정 보류 · 종전 기준 유지). 3호 인가 시점·단서도 같은 함수가 본다.
+  return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).within;
 }
 
 /**
@@ -451,6 +460,22 @@ export function isTaxIncentiveRentalAptDeadlinePending(house: HouseInfo, transfe
   if (gateApplicable === false) return false;
 
   return !hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension);
+}
+
+/**
+ * ⑪3호 판정 보류(인가·지정일 · 이전고시일 · 단서 모름) — 3호 후단 게이트 대상으로 확인된 감면대상장기임대주택.
+ * `isTaxIncentiveRentalAptDeadlinePending`(사실 전무·게이트 대상 모름)의 짝.
+ */
+export function taxIncentiveRentalAptDeadlineConfirmReasons(
+  house: HouseInfo,
+  transferDate: Date,
+): AptDeadlinePendingReason[] {
+  if (!isTaxIncentiveRentalBaseEligible(house) || !house.isApartment) return [];
+  if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return [];
+  if (isTaxIncentiveRentalAptGateApplicable(house) !== true) return [];
+  return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).pending.filter(
+    (r) => r !== "NO_FACT",
+  );
 }
 
 // ============================================================

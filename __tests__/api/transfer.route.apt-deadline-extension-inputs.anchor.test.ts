@@ -342,7 +342,10 @@ describe("§155⑳ — 임대주택(가목 아파트) ⑪ 기한", () => {
   it("EX-i 모름 → 비과세 유지 + 확인 필요 고지 / 없음 → 부적격(과세) / 기한 내 날짜 → 비과세·고지 없음", async () => {
     const unknown = await single(rheForm({}));
     const none = await single(rheForm({ aptDeadlineExtension: NONE }));
-    const within = await single(rheForm({ aptDeadlineExtension: HAS({ relocationAnnouncementDate: "2027-06-01" }) }));
+    // 3호 연장은 인가·지정일이 기한 전으로 확인돼야 성립한다(#1935 — 모르면 불성립)
+    const within = await single(
+      rheForm({ aptDeadlineExtension: HAS({ relocationAuthorizationDate: "2026-06-01", relocationAnnouncementDate: "2027-06-01" }) }),
+    );
     expect(unknown.totalTax).toBe(0);
     expect(unknown.notices.some((n) => n.includes(PENDING))).toBe(true);
     // 수정 전: 「없음」·날짜가 엔진에 닿지 않아 셋 다 0 + 확인 필요 고지(판정 보류)

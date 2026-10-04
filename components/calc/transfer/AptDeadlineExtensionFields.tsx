@@ -10,17 +10,23 @@
  *   2. 2027년 1월 1일 이후 조정대상지역으로 신규 지정된 지역(2026년 12월 31일 현재 조정대상지역에 해당하는 지역은
  *      제외한다)에 소재하는 주택: 조정대상지역의 공고일부터 1년이 되는 날
  *   3. 2027년 12월 31일 이전 또는 제1호나 제2호에 따른 기한 이전에 … 인가 또는 지정이 있는 경우 해당 사업의 대상이
- *      되는 주택: 해당 목에서 정하는 이전고시일부터 1년이 되는 날
+ *      되는 주택: 해당 목에서 정하는 이전고시일부터 1년이 되는 날. 다만, 해당 사업의 대상이 되는 주택이 「도시 및
+ *      주거환경정비법」 제73조 또는 「빈집 및 소규모주택 정비에 관한 특례법」 제36조에 따른 협의, 수용재결 또는
+ *      매도청구소송에 따라 양도되는 경우에는 이 호에 따른 기한 내에 양도한 것으로 본다.
  *
  * 3-state: 「모름」(기본 — 엔진 판정 보류) / 「연장 사유 없음」(기한 2027.12.31. 확정) / 「연장 사유 있음」(날짜).
  * 상태 전환과 날짜 정리는 `withAptDeadlineExtensionStatus`(④·⑧과 같은 leaf) — onChange 직접 patch, useEffect 미러링 금지.
- * ⚠️ 3호 「인가 또는 지정」 시점 요건은 엔진이 보지 않는다(이전고시일만) — 안내 문구로만 알린다.
+ * 3호: 인가·지정일(비우면 모름 → 3호 불성립) · 이전고시일 또는 「양도일 현재 이전고시 전」(상호 배타 — 켜면 날짜를
+ * 지운다 · 3호 사실이 있으면 둘 중 하나 필수 — ⑧ `aptDeadlineExtensionIncomplete`) ·
+ * 단서 3-state(모름/아니오/예 — 3호 사업 사실이 있을 때만, `aptDeadlineRelocationFactPresent`가 ④와 같은 게이트).
  */
 
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   aptDeadlineExtensionStatus,
+  aptDeadlineRelocationFactPresent,
   withAptDeadlineExtensionStatus,
   type AptDeadlineExtensionStatus,
 } from "@/lib/calc/apt-deadline-extension-scope";
@@ -37,6 +43,10 @@ interface Props {
 
 const LABEL = "block text-caption text-muted-foreground font-medium";
 const HINT = "text-caption text-muted-foreground/70";
+
+type Tri = "unknown" | "no" | "yes";
+const toTri = (b: boolean | undefined): Tri => (b === undefined ? "unknown" : b ? "yes" : "no");
+const fromTri = (t: Tri): boolean | undefined => (t === "unknown" ? undefined : t === "yes");
 
 export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "violet" }: Props) {
   const status = aptDeadlineExtensionStatus(value);
@@ -72,7 +82,7 @@ export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "
 
       {status === "has" && (
         <div className="space-y-2">
-          <p className={HINT}>해당하는 날만 적으세요. 하나 이상 적어야 합니다.</p>
+          <p className={HINT}>해당하는 사실만 적으세요. 하나 이상 있어야 합니다.</p>
           <div className="space-y-1">
             <label className={LABEL}>
               ⑪1호 — 임대주택 등록이 말소되는 날 (임대의무기간 2027.1.1. 이후 종료 · 민간임대주택법 §6⑤)
@@ -91,16 +101,70 @@ export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "
               onChange={(s) => patchDate({ newRegulatedAreaAnnouncementDate: s || undefined })}
             />
           </div>
-          <div className="space-y-1">
-            <label className={LABEL}>⑪3호 — 이전고시일 (재건축·재개발·소규모주택정비)</label>
-            <DateInput
-              data-testid={`apt-deadline-ext-d3-${idPrefix}`}
-              value={ext.relocationAnnouncementDate ?? ""}
-              onChange={(s) => patchDate({ relocationAnnouncementDate: s || undefined })}
+          <div className="space-y-2" data-testid={`apt-deadline-ext-3ho-${idPrefix}`}>
+            <label className={LABEL}>⑪3호 — 재건축·재개발·소규모주택정비 사업의 대상 주택</label>
+            <div className="space-y-1">
+              <label className={LABEL}>
+                인가 또는 지정일 (재건축 조합설립인가·사업시행자 지정 · 재개발 관리처분계획인가 · 가로주택정비·소규모재건축·소규모재개발 조합설립인가·사업시행자 지정)
+              </label>
+              <DateInput
+                data-testid={`apt-deadline-ext-d3auth-${idPrefix}`}
+                value={ext.relocationAuthorizationDate ?? ""}
+                onChange={(s) => patchDate({ relocationAuthorizationDate: s || undefined })}
+              />
+              <p className={HINT}>
+                인가 또는 지정이 2027.12.31. 또는 1·2호에 따른 기한 이전이어야 3호가 적용됩니다. 비워 두면 모름으로 보고
+                3호 연장 없이 계산한 뒤 확인이 필요하다고 안내합니다.
+              </p>
+            </div>
+            <ToggleCard
+              variant="chip"
+              tone={tone}
+              data-testid={`apt-deadline-ext-d3pending-${idPrefix}`}
+              checked={ext.relocationNotYetAnnounced === true}
+              onCheckedChange={(b) =>
+                patchDate(
+                  b
+                    ? { relocationNotYetAnnounced: true, relocationAnnouncementDate: undefined }
+                    : { relocationNotYetAnnounced: undefined },
+                )
+              }
+              title="양도일 현재 이전고시 전"
             />
-            <p className={HINT}>
-              2027.12.31.(또는 1·2호 기한) 이전에 조합설립인가·관리처분계획인가 등이 있은 사업의 대상 주택에 한합니다.
-            </p>
+            <p className={HINT}>3호 사실을 입력하면 이전고시일 또는 「양도일 현재 이전고시 전」 중 하나가 필요합니다.</p>
+            {ext.relocationNotYetAnnounced !== true && (
+              <div className="space-y-1">
+                <label className={LABEL}>이전고시일 (도시 및 주거환경정비법 §86② · 빈집 및 소규모주택 정비에 관한 특례법 §40②)</label>
+                <DateInput
+                  data-testid={`apt-deadline-ext-d3-${idPrefix}`}
+                  value={ext.relocationAnnouncementDate ?? ""}
+                  onChange={(s) => patchDate({ relocationAnnouncementDate: s || undefined })}
+                />
+              </div>
+            )}
+            {aptDeadlineRelocationFactPresent(ext) && (
+              <div className="space-y-1">
+                <label className={LABEL}>
+                  협의, 수용재결 또는 매도청구소송에 따른 양도 (도시 및 주거환경정비법 §73 · 빈집 및 소규모주택 정비에 관한 특례법 §36)
+                </label>
+                <RadioCardGroup<Tri>
+                  name={`apt-deadline-ext-exprop-${idPrefix}`}
+                  data-testid={`apt-deadline-ext-exprop-${idPrefix}`}
+                  layout="inline"
+                  tone={tone}
+                  value={toTri(ext.relocationExpropriationTransfer)}
+                  onChange={(t) => patchDate({ relocationExpropriationTransfer: fromTri(t) })}
+                  options={[
+                    { value: "unknown", label: "모름", testId: `apt-deadline-ext-exprop-unknown-${idPrefix}` },
+                    { value: "no", label: "아니오", testId: `apt-deadline-ext-exprop-no-${idPrefix}` },
+                    { value: "yes", label: "예", testId: `apt-deadline-ext-exprop-yes-${idPrefix}` },
+                  ]}
+                />
+                <p className={HINT}>
+                  해당 사업의 대상 주택을 이 방법으로 양도했다면 3호에 따른 기한 내에 양도한 것으로 봅니다.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

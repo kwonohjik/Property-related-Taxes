@@ -325,6 +325,28 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 소령 §167조의3⑪3호 단서 — 협의·수용재결·매도청구소송 양도는 3호 기한 내 양도로 본다
+    id: "URBAN_RENEWAL.NON_APPLICANT_MEASURES",
+    citation: "도시 및 주거환경정비법 §73",
+    keywords: [
+      "분양신청을 하지 아니한 자",
+      "손실보상에 관한 협의",
+      "수용재결을 신청하거나 매도청구소송을 제기하여야 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // 소령 §167조의3⑪3호 단서 — 소규모주택정비사업의 대응 조문
+    id: "SMALL_SCALE_RENEWAL.NON_APPLICANT_MEASURES",
+    citation: "빈집 및 소규모주택 정비에 관한 특례법 §36",
+    keywords: [
+      "분양신청을 하지 아니한 자",
+      "손실보상에 관한 협의",
+      "수용재결을 신청하거나 제35조에 따른 매도청구소송을 제기하여야 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // 상증법 §39 증자 이익 — 실권주 배정 방식의 근거 조문
     id: "CAPITAL_MARKET.NEW_SHARE_ALLOCATION",
     citation: "자본시장법 §165의6",
