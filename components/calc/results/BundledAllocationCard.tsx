@@ -499,6 +499,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
               const note = formData.assets.find((a) => a.assetId === p.propertyId)?.saleSplitExemptionNote;
               return note ? { exemptionNote: note } : {};
             })()}
+            // 일괄은 단건과 같은 폼 — 엔진 detail의 행 id(`houseId`)는 이 명부를 가리킨다(route 5-a 주 자산 = `...engineInput`).
+            houses={formData.houses}
           />
         ))}
       </div>

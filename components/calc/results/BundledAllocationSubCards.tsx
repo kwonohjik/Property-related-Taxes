@@ -12,6 +12,7 @@ import { ValuationDetailCards } from "@/components/calc/results/transfer/Valuati
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import type { HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 
 
 
@@ -49,6 +50,7 @@ export function PropertyCard({
   ownership,
   assetKind,
   exemptionNote,
+  houses,
 }: {
   breakdown: PerPropertyBreakdown;
   ownership?: { numerator: number; denominator: number };
@@ -56,6 +58,11 @@ export function PropertyCard({
   assetKind?: string;
   /** §166⑧ 예외 근거 문구 — 엔진 미전송이라 폼에서 읽어 내려온다(계획서 §15.3). */
   exemptionNote?: string;
+  /**
+   * 명부 — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(단건·다건과 같은 prop).
+   * 일괄은 단건과 **같은 폼**이라 `formData.houses`이고, 엔진 detail의 행 id도 그 명부를 가리킨다.
+   */
+  houses?: readonly HouseRefRow[];
 }) {
   // 지분 모드(분자 < 분모) 시 "지분 X%" 라벨 표시. 단독 소유(분자 === 분모)는 미표시.
   const isFractional =
@@ -124,6 +131,7 @@ export function PropertyCard({
         longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
         aggregatedContext
         appliedReductionType={breakdown.reductionType}
+        houses={houses}
       />
       {/*
         평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
