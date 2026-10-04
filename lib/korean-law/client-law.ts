@@ -53,6 +53,11 @@ export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): stri
       return `https://www.law.go.kr/법령해석례/(${encodeURIComponent(id)})`;
     case "admrul":
       return `https://www.law.go.kr/행정규칙/(${encodeURIComponent(id)})`;
+    // 조세심판원 재결 — 한글주소 `/조세심판재결례/(청구번호)` 는 청구번호가 비는 건(1.6%)이 있고
+    // 본문 응답에도 청구번호가 없어 쓰지 않는다. 그 주소가 연결되는 상세 팝업을 일련번호로 직접 연다.
+    // trbClsCd 는 필수(없거나 틀리면 오류 페이지)이며 재결 전건이 조세심판원 = 360101 이다.
+    case "ttSpecialDecc":
+      return `https://www.law.go.kr/LSW/specialDeccInfoP.do?specialDeccSeq=${encodeURIComponent(id)}&trbClsCd=360101`;
     default:
       return `https://www.law.go.kr/LSW/lsScListR.do?query=${encodeURIComponent(id)}`;
   }

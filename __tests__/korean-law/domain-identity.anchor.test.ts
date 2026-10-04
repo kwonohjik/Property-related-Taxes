@@ -32,7 +32,8 @@ const REMOVED_INVALID = ["pipc", "oia", "nhrc", "lawnkor"];
 /**
  * 유효하지만 제거한 target — `ppc` 는 조세심판원인 줄 알고 넣었으나 실제로는
  * 개인정보보호위원회(응답 `기관명` 실측)여서 부동산 세무와 무관하다.
- * 다시 넣으려면 «무엇을 위해» 넣는지부터 정하라 — 조세심판원은 여기에 없다.
+ * 다시 넣으려면 «무엇을 위해» 넣는지부터 정하라. (조세심판원 재결은 ppc 가 아니라
+ * `ttSpecialDecc` 다 — 2026-10-04 실측, DECISION_DOMAINS 에 편입됨.)
  */
 const REMOVED_IRRELEVANT = ["ppc"];
 
