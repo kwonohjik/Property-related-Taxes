@@ -449,6 +449,8 @@ export function PropertyBreakdownAccordion({
             longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
             aggregatedContext
             appliedReductionType={breakdown.reductionType}
+            // 명부는 건마다 따로다 — 엔진 detail의 행 id(`houseId`)도 그 건의 명부를 가리킨다(#1954 ⑬ 건별 전송).
+            houses={property?.form?.houses}
           />
           <ValuationDetailCards
             result={breakdown}

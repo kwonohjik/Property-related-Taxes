@@ -384,3 +384,44 @@ describe("MS-12 ⑧ — 다건이 더는 감면주택을 막지 않는다(⑬·�
     expect(validateMultiSupportedMode(form([SPECIAL_ROW("unsold_99_2", "2013-06-01")]))).toBeNull();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * MS-13 결과 카드(`SpecialHouseExclusionDetailCard`)가 읽는 detail — 단건 결과와 다건 자산 breakdown이 **같은 값**을 싣는다.
+ * 계획서 §9.8 「다건 감면주택 판정 카드」. 다건 결과뷰는 `pickReductionDetails`로 받은 이 필드를 공용
+ * `ReductionDetailCards`에 넘긴다 — 필드가 비면 카드가 빈다(`feedback_shared_card_rendered_is_not_field_fed`).
+ *
+ * MS-13b: §155⑳ 특례 경로(`runRentalHousingExceptionStep`)는 조기반환이라 종전에는 이 echo를 싣지 않았다 —
+ * 세액은 102,086,600으로 맞는데 단건·다건 모두 카드가 뜨지 않았다(STEP 「보유 감면주택 주택수 제외」 줄만 있음).
+ */
+describe("MS-13 결과 카드 detail — 단건 = 다건", () => {
+  const detailOf = async (f: Form) => {
+    const sres = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
+    const sj = (await sres.json()) as { data: { result: Obj } };
+    const mres = await post(MULTI, "http://l/api/calc/transfer/multi", await multiBody([f]));
+    const mj = (await mres.json()) as { data: { properties: Obj[] } };
+    return { single: sj.data.result.specialHouseExclusionDetail, multi: mj.data.properties[0].specialHouseExclusionDetail };
+  };
+  const ELIGIBLE_99_2 = {
+    excludedCount: 1,
+    entries: [expect.objectContaining({ article: "unsold_99_2", eligible: true, houseId: "h3", legalBasis: "조특법 §99의2②" })],
+  };
+
+  it("MS-13a §99의2 명부 행 단독(일반 경로)", async () => {
+    const d = await detailOf(form([SPECIAL_ROW("unsold_99_2", "2013-06-01")]));
+    expect(d.single).toEqual(ELIGIBLE_99_2);
+    expect(d.multi).toEqual(d.single);
+  });
+
+  it("MS-13b §99의2 명부 행 + §155⑳ 거주주택 특례(특례 조기반환 경로)", async () => {
+    const d = await detailOf(withRental(form([SPECIAL_ROW("unsold_99_2", "2013-06-01"), RENTAL_ROW])));
+    expect(d.single).toEqual(ELIGIBLE_99_2);
+    expect(d.multi).toEqual(d.single);
+  });
+
+  it("MS-13c (음성) 조특법 제외 없는 일반 행 — 단건·다건 모두 detail 없음", async () => {
+    const d = await detailOf(withRental(form([{ ...ROW, id: "h3" }, RENTAL_ROW])));
+    expect(d.single).toBeUndefined();
+    expect(d.multi).toBeUndefined();
+  });
+});

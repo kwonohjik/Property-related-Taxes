@@ -456,6 +456,8 @@ export function calculateTransferTax(
       steps,
       inheritedAcquisitionStep,
       generalHouseAcquisitionDate: hceGeneralHouseAcquisitionDate,
+      specialHouseExclusionDetail:
+        specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
     });
     if (rheResult) return rheResult;
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
