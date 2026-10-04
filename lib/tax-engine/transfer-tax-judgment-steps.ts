@@ -219,17 +219,23 @@ function noRosterSellingHouse(workingInput: TransferTaxInput): NonNullable<Trans
 }
 
 /**
- * 명부(`houses[]`) 없이 §155①(일시적 2주택)·⑦(농어촌주택) 의제가 선 세대 — 정밀 중과 판정에 넘길 행을
- * 입력된 사실로 구성한다(사용자 결정 2026-10-04 — #1955 「알게 된 것」, 선례 `noRosterRentalResidenceHouses`).
+ * 명부(`houses[]`) 없이 §155①(일시적 2주택)·⑦(농어촌주택) 의제 또는 조특법 제외만의 1주택 의제
+ * (`special_act_house_exclusion`)가 선 세대 — 정밀 중과 판정에 넘길 행을 입력된 사실로 구성한다(사용자 결정
+ * 2026-10-04 — #1955 「알게 된 것」, 선례 `noRosterRentalResidenceHouses`).
  *
  * 🔴 종전에는 명부가 없으면 원시 플래그로 2주택 중과가 붙었다 — 강남 20억 §155①: 명부 없음 422,521,000 ·
  *    같은 세대를 명부에 입력하면 15호(영 §167의10①15호) 배제로 102,086,600.
  * 🔴 #1958은 원시 세대 주택 수 2만 열었다 — 3채 중 1채가 조특법 §99의4로 비과세 주택 수에서 빠져 §155①이 선 세대는
  *    명부 없음 497,046,000 + 고지 · 명부 입력 13호(영 §167의3①13호) 102,086,600이었다(사용자 결정 2026-10-04
  *    「정밀 판정으로 열어라」).
+ * 🔴 #1965는 §155①⑦ 의제만 열었다 — 2채 중 1채가 확인된 조특법 제외(§99의4 등)라 제외만으로 1주택이 된 세대
+ *    (의제 `special_act_house_exclusion` — §155① 아님)는 명부 없음 422,521,000 + 고지 · 명부 입력 15호 102,086,600
+ *    이었다(사용자 결정 2026-10-04 「정밀 판정으로 열어라」). 이 의제는 다른 주택 행 없이 양도 주택 + 확인 제외 주택
+ *    행으로 구성한다(제외 후 주택 수 1 — `specialActHouseExclusionBasis`).
  *
  * 열리는 조건 — 의제는 STEP 0.5가 주입하는 것과 **같은 정본**(`resolveSurchargeDeemedOneHouse` →
- * `resolveDeemedOneHouseBy155`)으로 본다. 세대 주택 수가 의제 구성(종전 + 신규 · 일반 + 농어촌 = 2채)과
+ * `resolveDeemedOneHouseBy155` · `specialActHouseExclusionBasis`)으로 본다. 세대 주택 수가 의제 구성(종전 + 신규 ·
+ * 일반 + 농어촌 = 2채 · 조특법 제외만이면 양도 주택 1채)과
  * **해석으로 확인된** 조특법 제외 주택(`SPECIAL_ACT_15HO_VERIFIED_ARTICLES` — §99의4·§98의9 감면 선언 ·
  * 보유 감면주택)의 합과 맞을 때만 연다 — 맞지 않으면(그 밖의 주택) 의제가 서지 않는다. 확인되지 않은 조문의 제외가
  * 하나라도 있으면(`specialActExcludedCount`가 확인 수보다 크다) 열지 않는다. 미등기는 #1947과 같이 열지 않는다.
@@ -261,7 +267,10 @@ function noRosterTwoHouseDeemingHouses(
       : basis === "rural_house"
         ? (workingInput.ruralHouse?.acquisitionDate ?? workingInput.transferDate)
         : undefined;
-  if (!otherAcquisitionDate) return undefined;
+  // 조특법 제외만으로 1주택(영 §167의10①15호 「「조세특례제한법」에 따라 … 1개의 주택」) — 확인 제외 주택 말고
+  //   다른 주택이 없다(`specialActHouseExclusionBasis` — 제외 후 주택 수 1).
+  const specialActOnly = basis === "special_act_house_exclusion";
+  if (!otherAcquisitionDate && !specialActOnly) return undefined;
   const unknownHouse = (id: string, acquisitionDate: Date) => ({
     id,
     acquisitionDate,
@@ -276,7 +285,7 @@ function noRosterTwoHouseDeemingHouses(
   });
   return [
     noRosterSellingHouse(workingInput),
-    unknownHouse("no-roster-other", otherAcquisitionDate),
+    ...(otherAcquisitionDate ? [unknownHouse("no-roster-other", otherAcquisitionDate)] : []),
     ...Array.from({ length: excluded }, (_, i) =>
       unknownHouse(`no-roster-special-act-${i + 1}`, workingInput.transferDate),
     ),
@@ -285,8 +294,8 @@ function noRosterTwoHouseDeemingHouses(
 
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
- * 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제(확인된 조특법 제외 주택
- * 포함 — `noRosterTwoHouseDeemingHouses`)가 서면 입력된 사실로 행을 구성해 판정한다.
+ * 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
+ * (확인된 조특법 제외 주택 포함 — `noRosterTwoHouseDeemingHouses`)가 서면 입력된 사실로 행을 구성해 판정한다.
  */
 export function runMultiHouseSurchargeStep(
   workingInput: TransferTaxInput,
@@ -360,7 +369,7 @@ export function runMultiHouseSurchargeStep(
         workingInput.isRegulatedArea,
       );
     multiHouseSurchargeResult = judge(housesForSurcharge);
-    // §155①⑦ 구성 행은 중과가 배제될 때만 쓴다 — 중과가 남으면 그 결론을 다른 주택의 모르는 사실(1호·10호 등)이
+    // §155①⑦·조특법 제외 구성 행은 중과가 배제될 때만 쓴다 — 중과가 남으면 그 결론을 다른 주택의 모르는 사실(1호·10호 등)이
     //   가를 수 있으므로 종전대로 원시 플래그 + 「확인 필요」 고지로 돌린다(`noRosterTwoHouseDeemingHouses`).
     //   구성 행(양도 주택 뒤)의 1호 불산입 여부도 모른다 — 산입 수가 줄어든 모든 경우(앞에서부터 자른 구성)에도
     //   배제될 때만 쓴다(2023.2.28. 전 양도분 3채 → 2채면 15호가 없어 중과 · 2021-09-18 실측 13호 219,087,000 ↔
