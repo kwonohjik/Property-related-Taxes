@@ -164,3 +164,45 @@ export function calcSection165_4Value(
   }
   return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false, niWeight, naWeight };
 }
+
+/**
+ * 순자산가치 **단독** 평가액 — 영 §165④3호 각 목 · §165⑧1호 후단의 「제4항제1호나목의 계산식에 따라 평가한 가액」.
+ *
+ * 0 하한(상증령 §55① 후단 준용)은 가중평균(`calcSection165_4Value`)과 **같은 연혁**으로 건다 — 같은 1호 나목의
+ * 순자산가치다. 종전에는 단독 분기마다 `Math.floor(na)`만 써서 자본잠식 법인의 음수 순자산이 그대로 남아
+ * **취득가액이 음수**가 됐다(계획서 `stock-165-4-valuation-followups.plan.md` §1).
+ * 80% 하한은 걸지 않는다 — 3호는 「제1호 각 목 외의 부분에도 불구하고」라 1호 단서도 비켜간다.
+ */
+export function calcNetAssetOnlyValue(netAssetValueRaw: number, transferDate: Date): number {
+  return Math.floor(hasNetAssetZeroFloor(transferDate) ? Math.max(0, netAssetValueRaw) : netAssetValueRaw);
+}
+
+/**
+ * 보충평가 1주당 평가액 — 순자산 단독이면 `calcNetAssetOnlyValue`, 아니면 `calcSection165_4Value`.
+ * ⑧·⑫가 «양도기준시가 0 이하» 차단을 엔진과 같은 값으로 판정하려고 쓴다.
+ */
+export function calcSupplementaryPerShare(
+  netIncomeValueRaw: number,
+  netAssetValueRaw: number,
+  isHeavyRE: boolean,
+  transferDate: Date,
+  netAssetOnly: boolean,
+): number {
+  return netAssetOnly
+    ? calcNetAssetOnlyValue(netAssetValueRaw, transferDate)
+    : calcSection165_4Value(netIncomeValueRaw, netAssetValueRaw, isHeavyRE, transferDate).value;
+}
+
+/**
+ * 양도기준시가(1주당 보충평가액)가 0 이하인가 — ⑧·⑫ 차단 술어(Q-4b). 값은 엔진과 같은 정본에서 낸다.
+ * 0 하한이 걸린 뒤에도 0 이하면 환산 산식의 분모가 0이다 — 종전 엔진은 경고만 남기고 취득가액 0으로 끝냈다.
+ */
+export function isTransferSupplementaryNonPositive(
+  netIncomeValueRaw: number,
+  netAssetValueRaw: number,
+  isHeavyRE: boolean,
+  transferDate: Date,
+  netAssetOnly: boolean,
+): boolean {
+  return calcSupplementaryPerShare(netIncomeValueRaw, netAssetValueRaw, isHeavyRE, transferDate, netAssetOnly) <= 0;
+}

@@ -33,6 +33,7 @@ import {
   mapGracePeriodToEngine,
   mapPresaleRightsToEngine,
   toEngineAptDeadlineExtension,
+  mapSpecialHouseExclusionsToEngine,
 } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
@@ -148,16 +149,17 @@ export async function POST(request: NextRequest) {
       isSelfCultivatedExpropriatedLand: p.isSelfCultivatedExpropriatedLand,
       // ⑭ 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용 (per-asset 단건 엔진 honor)
       assetContractDate: toOptionalDate(p.assetContractDate),
-      // P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — 세대 단위 공통이라 전 자산 주입
-      specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
-        article: e.article,
-        ...(e.houseId ? { houseId: e.houseId } : {}),
-        houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
-        houseContractDate: toOptionalDate(e.houseContractDate),
-        isNationalHousing: e.isNationalHousing,
-        houseRentalStartDate: toOptionalDate(e.houseRentalStartDate),
-        requirementsConfirmed: e.requirementsConfirmed,
-      })),
+      /**
+       * P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — **건별 키**(⑬ `specialHouseExclusionsPayload`)가 정본이다.
+       * 명부가 건마다 따로라 행 id도 그 건의 명부를 가리킨다. 건별 선언이 **비어 있을 때만** top-level(종전 계약 —
+       * API 직접 호출, 전 자산 주입)로 후퇴한다 — ⑬은 선언이 없는 건에도 `[]`를 싣으므로 「키 유무」로 가르면
+       * top-level이 가려진다(R97-10 실측). 둘을 합치지 않는다 — 같은 주택을 두 번 빼게 된다.
+       * 매핑은 단건 `engine-input.ts`와 같은 leaf다.
+       * 🔴 종전에는 top-level만 읽었고 ⑬은 아무것도 싣지 않아 엔진에 늘 빈 배열이 닿았다(Q4).
+       */
+      specialHouseExclusions: mapSpecialHouseExclusionsToEngine(
+        p.specialHouseExclusions?.length ? p.specialHouseExclusions : data.specialHouseExclusions,
+      ),
       expenses: p.expenses,
       // ⑭ §97② 단서 swap 분리 입력 — 미명시 시 undefined (swap 비활성)
       capitalExpenditure: p.capitalExpenditure,

@@ -240,7 +240,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.OLIGOPOLY_SHAREHOLDER",
     citation: "소득세법 시행령 §158",
-    keywords: ["과점주주", "100분의 50을 초과하는 경우", "소급해 3년 내에"],
+    // ⑧ 라목 사업 — 상수 `STOCK.ENFORCEMENT_DECREE_158_8_HEAVY_RE_BUSINESS`(종전 «§158⑤» 오기)
+    keywords: ["과점주주", "100분의 50을 초과하는 경우", "소급해 3년 내에", "골프장업ㆍ스키장업 등 체육시설업"],
     keywordMode: "ALL",
   },
   {

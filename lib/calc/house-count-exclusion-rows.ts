@@ -193,6 +193,29 @@ export function specialHouseExclusionsWithRows(form: CalcFormLike): SpecialHouse
 }
 
 /**
+ * ⑬ 보유 감면주택 본문 — 폼 전역 + (게이트 안이면) 명부 행 ⑥ · 조문 입력분만. **단건·다건 공용**.
+ *
+ * 🔴 다건 ⑬은 종전에 이 키를 싣지 않았다 — 같은 명부 행이 단건 102,086,600 / 다건 1,327,903,500으로
+ *    갈렸다(계획서 `one-house-exemption-fix.plan.md` §9.8 Q4). 두 빌더가 이 함수 하나를 부른다.
+ */
+export function specialHouseExclusionsPayload(form: CalcFormLike) {
+  return specialHouseExclusionsWithRows(form)
+    .filter((e) => e.article)
+    .map((e) => ({
+      article: e.article,
+      ...(e.houseId ? { houseId: e.houseId } : {}),
+      houseAcquisitionDate: e.houseAcquisitionDate || undefined,
+      houseContractDate: e.houseContractDate || undefined,
+      isNationalHousing: e.isNationalHousing,
+      // §97·§97의2 임대개시일 — ⑤·⑧과 같은 술어로 게이트(조문을 바꾼 뒤 남은 값은 보내지 않는다)
+      ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
+        ? { houseRentalStartDate: e.houseRentalStartDate }
+        : {}),
+      requirementsConfirmed: e.requirementsConfirmed,
+    }));
+}
+
+/**
  * **어느 행인지 모르는** 옛 선언 — 행 id가 없거나, 가리키는 행이 명부에 없다.
  *
  * §99의4·§98의9는 **모든 자산**을 훑되, 게이트는 **선언이 붙은 자산 자신의 종류**로 본다 —

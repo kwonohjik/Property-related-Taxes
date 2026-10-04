@@ -23,7 +23,11 @@ import {
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { calcSupplementaryPerShare } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
   isTradingHaltMarketScopeViolation,
   TRADING_HALT_MARKET_SCOPE_MESSAGE,
@@ -125,6 +129,8 @@ function validateUnlistedValuationFields(
     }
   }
 
+  validateTransferSupplementaryPositive(form, errors, niSkip, valuationMode);
+
   // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 동일사업연도 토글 ON 시 (M-4 차단 / M-7 경고)
   if (form.unlistedSameBizYearToggle) {
     /**
@@ -143,16 +149,48 @@ function validateUnlistedValuationFields(
       const heavyRE = form.isHeavyRealEstateForValuation;
       // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
       // 여기만 가중평균으로 재면 엔진은 「같다」, validate는 「다르다」가 되어 거짓 경고가 뜬다.
-      const transferEval = niSkip
-        ? Math.floor(parseF(form.transferYearNetAssetPerShare))
-        : calcSection165_4Value(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td).value;
-      const acqEval = niSkip
-        ? Math.floor(parseF(form.acquisitionYearNetAssetPerShare))
-        : calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td).value;
+      const transferEval = calcSupplementaryPerShare(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td, niSkip);
+      const acqEval = calcSupplementaryPerShare(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td, niSkip);
       if (transferEval > 0 && transferEval !== acqEval) {
         errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
       }
     }
+  }
+}
+
+/**
+ * Q-4b — 양도기준시가(1주당 보충평가액)가 0 이하면 환산 산식의 분모가 0이다. ⑫와 같은 술어·문구.
+ * 입력이 비어 있으면 필수 오류가 따로 뜨므로 여기서는 보지 않는다. 결산서(full) 모드는 ④ 어댑터와 같은 집계로 잰다.
+ */
+function validateTransferSupplementaryPositive(
+  form: StockTransferFormData,
+  errors: StockValidationError[],
+  niSkip: boolean,
+  valuationMode: string,
+): void {
+  const td = parseTransferDate(form.transferDate);
+  if (!td) return;
+  if (valuationMode === "simple") {
+    if (isEmpty(form.transferYearNetAssetPerShare)) return;
+    if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) return;
+    if (
+      isTransferSupplementaryNonPositive(
+        parseF(form.transferYearNetIncomePerShare),
+        parseF(form.transferYearNetAssetPerShare),
+        form.isHeavyRealEstateForValuation,
+        td,
+        niSkip,
+      )
+    ) {
+      errors.push({ field: "transferYearNetAssetPerShare", message: UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE, severity: "error" });
+    }
+    return;
+  }
+  if (parseI(form.naShareCountEUTransfer) <= 0) return;
+  if (!niSkip && parseI(form.niShareCountEUTransfer) <= 0) return;
+  const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
+  if (isTransferSupplementaryNonPositive(reduced.transferNi, reduced.transferNa, form.isHeavyRealEstateForValuation, td, niSkip)) {
+    errors.push({ field: "naAssetTotalRow1EUTransfer", message: UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE, severity: "error" });
   }
 }
 
