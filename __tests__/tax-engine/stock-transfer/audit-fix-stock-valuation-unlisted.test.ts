@@ -12,8 +12,10 @@
  *
  * 기대값은 법령(소득세법 시행령 §165④1 단서)·연혁 모델에서 독립 도출.
  * S-1c-3(2026-10-04): 단서(80% 하한) 시행일은 **2018.4.1. 양도분부터**다(대통령령 제28637호 부칙) — 종전 주석의
- * 「2007.2.28. 시행」은 근거가 없었다. (a) 2005 양도·(c) 2026 양도의 기대값은 경계 이동과 무관해 그대로다.
- * ⚠️ (a)의 2005 양도는 실제로는 max(순손익가치, 순자산가치) 시대다(2006.2.9. 시행본) — S-1c-3 2단계.
+ * 「2007.2.28. 시행」은 근거가 없었다.
+ * S-1c-3 2단계(법령 우선 재기준): 2000.4.3.~2007.2.27. 양도는 max(순손익가치, 순자산가치)이고 2000.4.2. 이전은
+ * 계산하지 않는다(계획서 `stock-165-4-valuation-followups.plan.md` §11). ⇒ (a)는 «하한 없는 3:2» 의도를 지키려고
+ * 2015 양도로 옮기고, 2005 양도는 (a') max로, (b) 1998 양도는 throw로 다시 잡는다.
  */
 import { describe, it, expect } from "vitest";
 import { calcUnlistedValuation } from "@/lib/tax-engine/stock-transfer/stock-valuation-unlisted";
@@ -34,9 +36,9 @@ const acqFaceBase = {
 const TRANSFER_PRICE = 6_000_000_000;
 
 describe("[ref1] acq_face_value_only — 양도일 시기별 연혁 게이팅", () => {
-  it("(a) 2005-06-01 양도(하한 시행 前) — 80% 하한 미발동, 양도기준시가=가중평균 98,000", () => {
+  it("(a) 2015-06-01 양도(하한 시행 前) — 80% 하한 미발동, 양도기준시가=가중평균 98,000", () => {
     const r = calcUnlistedValuation(
-      { ...acqFaceBase, transferDate: new Date("2005-06-01") } as never,
+      { ...acqFaceBase, transferDate: new Date("2015-06-01") } as never,
       TRANSFER_PRICE,
     );
     expect(r.method).toBe("acq_face_value_only");
@@ -47,16 +49,21 @@ describe("[ref1] acq_face_value_only — 양도일 시기별 연혁 게이팅", 
     expect(r.totalAcquisitionPrice).toBe(765_306_122);
   });
 
-  it("(b) 1998-06-01 양도(1999 前) — 순자산 단독 연혁, 양도기준시가=순자산 200,000", () => {
+  it("(a') 2005-06-01 양도(2007.2.27. 이전) — max(30,000, 200,000) = 200,000", () => {
     const r = calcUnlistedValuation(
-      { ...acqFaceBase, transferDate: new Date("1998-06-01") } as never,
+      { ...acqFaceBase, transferDate: new Date("2005-06-01") } as never,
       TRANSFER_PRICE,
     );
     expect(r.netAssetFloorApplied).toBe(false);
-    // pre-1999: 순손익 가중치 0, 순자산 5/5 → (30000×0 + 200000×5)/5 = 200,000
     expect(r.transferStdPriceAfterFloor).toBe(200_000);
     // 환산취득가 = 7.5e13 / 200,000 = 375,000,000
     expect(r.totalAcquisitionPrice).toBe(375_000_000);
+  });
+
+  it("(b) 1998-06-01 양도(2000.4.2. 이전) — 계산하지 않는다(throw · 종전 «순자산 단독»은 근거 없음)", () => {
+    expect(() =>
+      calcUnlistedValuation({ ...acqFaceBase, transferDate: new Date("1998-06-01") } as never, TRANSFER_PRICE),
+    ).toThrow();
   });
 
   it("(c) 2026-05-01 양도(현행) — 80% 하한 발동 유지(무회귀), 양도기준시가=160,000", () => {

@@ -10,7 +10,7 @@
  *   [[feedback_leaf_anchor_skips_zod_layer]]
  *
  * 가중치는 **연혁·§94①4다목 반전이 반영된 실제 적용값**이라 화면이 3/5·2/5를
- * 하드코딩하면 안 된다 — WB-3(반전)·WB-4(1998 이전 순자산 단독)가 그 구별력을 준다.
+ * 하드코딩하면 안 된다 — WB-3(반전)·WB-4(2007.2.27. 이전 max)가 그 구별력을 준다.
  */
 
 import { describe, it, expect, afterEach } from "vitest";
@@ -65,6 +65,7 @@ describe("WB — 취득 후 상장 환산 가중평균 산출근거 (§165④1)"
   it("WB-1 — 엔진이 순손익·순자산 변수값과 실제 가중치를 echo한다", () => {
     const r = conv({});
     expect(r.weightedBasis).toEqual({
+      model: "weighted",
       niWeight: 3,
       naWeight: 2,
       listing: { netIncomeValue: 61_570, netAssetValue: 5_352, weightedRaw: 39_082 },
@@ -103,18 +104,20 @@ describe("WB — 취득 후 상장 환산 가중평균 산출근거 (§165④1)"
     expect(container.textContent).toContain("순손익가치 100 × 25 + 순자산가치 50 × 35 = 70");
   });
 
-  it("WB-4 — 1998년 이전 양도는 순자산 단독(0:5) 가중치를 그대로 보여준다", () => {
+  it("WB-4 — 2007.2.27. 이전 양도는 가중치 없는 max 산식을 보여준다 (0/5 가중치로 펼치지 않는다)", () => {
+    // S-1c-3 2단계 재기준(법령 우선): 종전 «1998 이전 순자산 단독(0:5)»은 근거가 없었다 — 계획서 §11.
     const r = conv({
-      transferDate: new Date("1998-06-30"),
+      transferDate: new Date("2006-06-30"),
       listingYearNetIncomePerShare: 100,
       listingYearNetAssetPerShare: 50,
-      acquisitionYearNetIncomePerShare: 100,
+      acquisitionYearNetIncomePerShare: 30,
       acquisitionYearNetAssetPerShare: 40,
     });
-    expect(r.weightedBasis?.niWeight).toBe(0);
-    expect(r.weightedBasis?.naWeight).toBe(5);
+    expect(r.weightedBasis?.model).toBe("max");
     const { container } = renderCard(r);
-    expect(container.textContent).toContain("순손익가치 100 × 05 + 순자산가치 50 × 55 = 50");
+    expect(container.textContent).toContain("상장연도 1주당 평가액 = 순손익가치 100·순자산가치 50 중 큰 금액 = 100");
+    expect(container.textContent).toContain("취득연도 1주당 평가액 = 순손익가치 30·순자산가치 40 중 큰 금액 = 40");
+    expect(container.textContent).not.toContain("× 05");
   });
 
   it("WB-5 — 80% 하한(§165④1 단서) 발동 시 보정 줄을 한 줄 더 쓴다", () => {

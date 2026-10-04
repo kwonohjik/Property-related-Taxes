@@ -30,6 +30,7 @@ import { calcNetAssetOnlyValue } from "@/lib/tax-engine/stock-transfer/valuation
 import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import { ReversalCorpToggle } from "./ReversalCorpToggle";
 import { getValuationWeights } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
@@ -108,11 +109,16 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
   const isBlank = (s: string | undefined) => !s || s.trim() === "";
 
   // 양도일 = §165④1의 연혁 게이팅 기준(가중치·80% 하한이 시기별로 다르다).
-  const evalDate = useMemo(() => {
+  const transferDateParsed = useMemo(() => {
     if (!form.transferDate) return undefined;
     const d = new Date(form.transferDate);
     return isNaN(d.getTime()) ? undefined : d;
   }, [form.transferDate]);
+  // 2000.4.2. 이전 양도는 산식이 달라 계산하지 않는다(⑧·⑫ 차단) — 미리보기도 값을 내지 않는다.
+  const eraUnsupported = transferDateParsed !== undefined && isSection165_4EraUnsupported(transferDateParsed);
+  const evalDate = eraUnsupported ? undefined : transferDateParsed;
+  // 2007.2.27. 이전 양도는 max 산식 — 가중치·반전·80% 하한이 없다. 양도일 미입력이면 현행 기준으로 안내
+  const isMaxModel = evalDate !== undefined && getValuationWeights(evalDate).model === "max";
 
   // 양도기준시가 미리보기 (useMemo — useEffect→store 미러링 금지)
   // [DM-1] full 모드에서도 동일 미리보기 노출 — adapter 결과를 NI/NA로 사용
@@ -251,12 +257,16 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         <p className="text-xs mt-1">
           {/* 2026-08-09: `acquisitionSideOnly`일 때 "+ 80% 하한"을 빼던 분기를 제거했다 —
               하한은 양도·취득 양쪽에 적용된다(§165④1 단서). 라벨이 엔진과 갈리면 안 된다. */}
-          {isRaMokBasis ? (
+          {eraUnsupported ? (
+            <span data-testid="section165-4-era-unsupported">{UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED}</span>
+          ) : isRaMokBasis ? (
             <span data-testid="ra-mok-net-asset-only-label">
               순자산가치 단독 평가 (§165⑧1호 후단 — §94①4 라목 주식등) — 80% 하한 미적용
             </span>
           ) : isNetAssetOnly ? (
             "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
+          ) : isMaxModel ? (
+            <>평가액 = 순손익가치·순자산가치 중 큰 금액 ({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})</>
           ) : (
             <>
               가중평균 ={" "}
@@ -271,8 +281,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         </p>
       </div>
 
-      {/* §165④1호 괄호 — 2:3 대상 법인. 순자산 단독이면 가중평균이 없으므로 숨긴다 */}
-      {!isNetAssetOnly && !hideReversalToggle && <ReversalCorpToggle form={form} onChange={onChange} />}
+      {/* §165④1호 괄호 — 2:3 대상 법인. 순자산 단독·max 산식(2007.2.27. 이전 양도)이면 가중평균이 없으므로 숨긴다 */}
+      {!isNetAssetOnly && !hideReversalToggle && !isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
       {/* simpleOnly(거래정지 우회 등)·acquisitionSideOnly(C-1)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}

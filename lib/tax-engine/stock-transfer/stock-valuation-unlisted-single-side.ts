@@ -153,16 +153,17 @@ export function calcAcquisitionStdPerShareSupplementary(
   }
 
   // 가중평균 + §165④1 단서 — 공용 정본에 위임 (연혁 분기·부동산과다보유 반전·하한 일괄)
-  appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG);
-  if (isHeavyRealEstateForValuation) {
-    appliedRules.push("부동산과다보유가중치반전");
-  }
   const evaluated = calcSection165_4Value(
     acquisitionNi,
     acquisitionNa,
     isHeavyRealEstateForValuation === true,
     transferDate,
   );
+  appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG);
+  // max 산식(2007.2.27. 이전 양도)에는 가중치가 없어 반전도 없다.
+  if (isHeavyRealEstateForValuation && evaluated.model === "weighted") {
+    appliedRules.push("부동산과다보유가중치반전");
+  }
   if (evaluated.floorApplied) {
     appliedRules.push("80%하한(취득기준시가)");
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);

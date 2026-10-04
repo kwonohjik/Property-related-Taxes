@@ -13,6 +13,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { STX_CUTOFF_DATE } from "@/lib/tax-engine/data/securities-transaction-tax-rates";
 
@@ -81,6 +82,11 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
           <>
             {detail.netAssetOnlyReason ? (
               <p>취득시 보충평가액 (1주당) = 순자산가치 단독 ({netAssetOnlyCitationLabel(detail.netAssetOnlyReason)}) = {fmt(detail.conversionAcqStdPerShare)}</p>
+            ) : detail.section165_4Model === "max" ? (
+              <p>
+                취득시 보충평가액 (1주당) = 순손익가치 {fmt(detail.niPerShare ?? 0)}·순자산가치 {fmt(detail.naPerShare ?? 0)} 중 큰 금액
+                {" "}= {fmt(detail.conversionAcqStdPerShare)} ({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})
+              </p>
             ) : (
               <p>
                 취득시 보충평가액 (1주당) ={" "}

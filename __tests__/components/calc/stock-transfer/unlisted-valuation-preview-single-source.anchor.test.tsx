@@ -9,7 +9,7 @@
  *    `valuation-165-4-basis.ts`는 스스로를 「제4항에 따른 평가액의 **단일 정본**」이라 선언하고
  *    「인자는 **사실**만 받는다(transferDate)」고 못박아 두었다. 미리보기가 그 함수를 부르지 않고
  *    산식을 재구현하면 연혁 게이팅·하한 규칙이 조용히 갈린다.
- *    실측 divergence: 1997 양도 38,000 vs 20,000 · 결손 −22,000 vs 16,000 ·
+ *    실측 divergence: 1997 양도 38,000 vs 20,000(S-1c-3 2단계로 2006 max 50,000 재기준) · 결손 −22,000 vs 16,000 ·
  *    순손익 미입력 20,000 vs 16,000.
  */
 
@@ -75,7 +75,22 @@ const EUB_STD = /양도기준시가 \(1주당\)/;
 // ============================================================
 
 describe("PV-1~6: §165④ 미리보기가 엔진 정본과 같은 값을 낸다", () => {
-  it("PV-1: 1997 양도 → 순자산 단독 연혁(ni 가중치 0) — 20,000 (재구현은 38,000)", () => {
+  it("PV-1: 2006 양도 → max(순손익가치, 순자산가치) — 50,000 (3:2 재구현은 38,000)", () => {
+    // S-1c-3 2단계 재기준(법령 우선): 종전 «1997 양도 순자산 단독 20,000»은 근거가 없었다 — 계획서 §11.
+    render(
+      <Stateful
+        initial={{
+          transferDate: "2006-06-01",
+          transferYearNetIncomePerShare: "50000",
+          transferYearNetAssetPerShare: "20000",
+        }}
+        render={(f, o) => <EstimatedUnlistedBlock form={f} onChange={o} />}
+      />,
+    );
+    expect(shownStdPrice(EUB_STD)).toBe(50_000);
+  });
+
+  it("PV-1b: 1997 양도 → 미리보기를 내지 않고 미지원 안내만 (엔진 throw가 화면을 깨지 않는다)", () => {
     render(
       <Stateful
         initial={{
@@ -86,7 +101,8 @@ describe("PV-1~6: §165④ 미리보기가 엔진 정본과 같은 값을 낸다
         render={(f, o) => <EstimatedUnlistedBlock form={f} onChange={o} />}
       />,
     );
-    expect(shownStdPrice(EUB_STD)).toBe(20_000);
+    expect(screen.queryByText(EUB_STD)).toBeNull();
+    expect(screen.getByTestId("section165-4-era-unsupported")).toBeTruthy();
   });
 
   it("PV-2: 2026 양도 · 결손 → 80% 하한 16,000 (재구현은 -22,000 — weighted>0 가드)", () => {
@@ -158,7 +174,7 @@ describe("PV-1~6: §165④ 미리보기가 엔진 정본과 같은 값을 낸다
     const cases: [string, number, number][] = [
       ["2026-01-01", 50_000, 20_000],
       ["2005-06-01", 50_000, 20_000],
-      ["1997-06-01", 50_000, 20_000],
+      ["2006-06-01", 50_000, 20_000],
       ["2026-01-01", -50_000, 20_000],
       ["2026-01-01", 50_000, -20_000],
     ];

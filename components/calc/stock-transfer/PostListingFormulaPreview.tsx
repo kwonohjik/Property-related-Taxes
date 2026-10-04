@@ -21,6 +21,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 // ⚠️ 본칙 가중평균(`calcUnlistedPerShareWeighted`)이 아니라 「제4항에 따른 평가액」을 보여야
 //    엔진 결과와 일치한다 — §165④1 단서(80% 하한)와 연혁 게이팅이 여기에 들어 있다.
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
   adaptFlatToPostListingDetail,
   buildPostListingFromDetail,
@@ -52,6 +54,8 @@ interface StageData {
   totalAcqPrice: number;
   shareCount: number;
   isHeavyRE: boolean;
+  /** 2007.2.27. 이전 양도 — max 산식(가중치 없음) */
+  isMaxModel: boolean;
 }
 
 function PlaceholderRow({ message }: { message: string }) {
@@ -118,8 +122,9 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
     const stage3Active = acqNI > 0 && acqNA > 0;
 
     // 양도일 미입력·형식오류면 연혁 게이팅 기준이 없다 → 프리뷰 미산출(임의 기준일 fallback 금지)
+    // 2000.4.2. 이전 양도도 미산출 — 산식이 달라 계산하지 않는다(⑧·⑫ 차단)
     const td = form.transferDate ? new Date(form.transferDate) : undefined;
-    const evalDate = td && !isNaN(td.getTime()) ? td : undefined;
+    const evalDate = td && !isNaN(td.getTime()) && !isSection165_4EraUnsupported(td) ? td : undefined;
     const listingSec =
       stage2Active && evalDate
         ? calcSection165_4Value(listingNI, listingNA, isHeavyRE, evalDate)
@@ -144,6 +149,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
       listingFloorApplied: listingSec?.floorApplied ?? false,
       acqFloorApplied: acqSec?.floorApplied ?? false,
       perShareStdPrice, totalAcqPrice, shareCount, isHeavyRE,
+      isMaxModel: (listingSec ?? acqSec)?.model === "max",
     };
   }, [form, mode, isHeavyRE, shareCount]);
 
@@ -170,11 +176,19 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           <p className="font-medium text-violet-800">[2] 상장연도 1주당 평가액</p>
           {(data.listingEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
-              <p>
-                = {(data.listingNI ?? 0).toLocaleString()}×{isHeavyRE ? "2/5" : "3/5"} +{" "}
-                {(data.listingNA ?? 0).toLocaleString()}×{isHeavyRE ? "3/5" : "2/5"} ={" "}
-                <strong>{(data.listingWeightedRaw ?? 0).toLocaleString()}</strong>
-              </p>
+              {data.isMaxModel ? (
+                <p>
+                  = 순손익가치 {(data.listingNI ?? 0).toLocaleString()}·순자산가치{" "}
+                  {(data.listingNA ?? 0).toLocaleString()} 중 큰 금액 ={" "}
+                  <strong>{(data.listingEval ?? 0).toLocaleString()}</strong>
+                </p>
+              ) : (
+                <p>
+                  = {(data.listingNI ?? 0).toLocaleString()}×{isHeavyRE ? "2/5" : "3/5"} +{" "}
+                  {(data.listingNA ?? 0).toLocaleString()}×{isHeavyRE ? "3/5" : "2/5"} ={" "}
+                  <strong>{(data.listingWeightedRaw ?? 0).toLocaleString()}</strong>
+                </p>
+              )}
               {data.listingFloorApplied && (
                 <Floor80Row netAsset={data.listingNA ?? 0} value={data.listingEval ?? 0} />
               )}
@@ -189,11 +203,19 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           <p className="font-medium text-violet-800">[3] 취득연도 1주당 평가액</p>
           {(data.acqEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
-              <p>
-                = {(data.acqNI ?? 0).toLocaleString()}×{isHeavyRE ? "2/5" : "3/5"} +{" "}
-                {(data.acqNA ?? 0).toLocaleString()}×{isHeavyRE ? "3/5" : "2/5"} ={" "}
-                <strong>{(data.acqWeightedRaw ?? 0).toLocaleString()}</strong>
-              </p>
+              {data.isMaxModel ? (
+                <p>
+                  = 순손익가치 {(data.acqNI ?? 0).toLocaleString()}·순자산가치{" "}
+                  {(data.acqNA ?? 0).toLocaleString()} 중 큰 금액 ={" "}
+                  <strong>{(data.acqEval ?? 0).toLocaleString()}</strong>
+                </p>
+              ) : (
+                <p>
+                  = {(data.acqNI ?? 0).toLocaleString()}×{isHeavyRE ? "2/5" : "3/5"} +{" "}
+                  {(data.acqNA ?? 0).toLocaleString()}×{isHeavyRE ? "3/5" : "2/5"} ={" "}
+                  <strong>{(data.acqWeightedRaw ?? 0).toLocaleString()}</strong>
+                </p>
+              )}
               {data.acqFloorApplied && (
                 <Floor80Row netAsset={data.acqNA ?? 0} value={data.acqEval ?? 0} />
               )}
@@ -235,6 +257,10 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           )}
         </div>
       </div>
+
+      {data.isMaxModel && (
+        <p className="mt-2 text-micro text-violet-600">※ {UNLISTED_MESSAGES.MAX_MODEL_CAPTION}</p>
+      )}
 
       {/* 80% 하한 미적용 안내 (D-12 강화) */}
       <div className="mt-3 pt-2 border-t border-violet-200 text-micro text-violet-600">

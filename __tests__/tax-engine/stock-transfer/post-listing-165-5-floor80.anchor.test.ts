@@ -160,21 +160,23 @@ describe("PLF — §165⑤ 환산 분자·분모 80% 하한", () => {
     expect(onward.finalPerShareValue).toBe(6_250);
   });
 
-  it("PLF-5 연혁 게이트 — 1998.12.31. 이하는 순자산 단독 평가다", () => {
+  it("PLF-5 연혁 게이트 — 2007.2.27. 이전 양도는 max(순손익가치, 순자산가치) · 2000.4.2. 이전은 계산하지 않는다", () => {
     // 🔴 이것은 하한과 **별개의 2차 변경**이다. 종전 post-listing은 양도일과 무관하게
     //    항상 3:2로 가중평균했다(§165④ 본체 경로는 이미 연혁을 가르고 있었다).
-    //    §165⑤이 부르는 것이 「제4항에 따른 평가액」인 이상 가중치 연혁도 함께 따라간다.
+    //    §165⑤이 부르는 것이 「제4항에 따른 평가액」인 이상 산식 연혁도 함께 따라간다.
+    // S-1c-3 2단계 재기준(법령 우선): 종전 기대값 «1998.12.31. 이하 순자산 단독»은 근거가 없었다 — 계획서 §11.
     const r = calcPostListingConversion({
       ...base(),
-      transferDate: new Date("1998-12-31"),
+      transferDate: new Date("2006-06-01"),
       listingYearNetIncomePerShare: 50,
       listingYearNetAssetPerShare: 200,
-      acquisitionYearNetIncomePerShare: 100,
+      acquisitionYearNetIncomePerShare: 150,
       acquisitionYearNetAssetPerShare: 100,
     });
-    expect(r.listingYearPerShareValue).toBe(200); // 순자산 단독 (3:2 가중평균 110이 아님)
-    expect(r.acquisitionYearPerShareValue).toBe(100);
-    expect(r.finalPerShareValue).toBe(5_000); // floor(10,000 × 0.5)
+    expect(r.listingYearPerShareValue).toBe(200); // max(50, 200) — 3:2 가중평균 110이 아님
+    expect(r.acquisitionYearPerShareValue).toBe(150); // max(150, 100) — 순자산 단독 100도 3:2 130도 아님
+    expect(r.finalPerShareValue).toBe(7_500); // floor(10,000 × 150 / 200)
+    expect(() => calcPostListingConversion({ ...base(), transferDate: new Date("1998-12-31") })).toThrow();
   });
 
   it("PLF-6 하한이 발동하지 않는 입력은 완전히 불변이다 (회귀 대조군)", () => {
