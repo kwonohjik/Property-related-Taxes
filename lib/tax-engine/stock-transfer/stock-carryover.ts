@@ -30,8 +30,8 @@
 import { actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
+import { isBookLostAtAcquisition } from "./gift-acquisition-163-9";
 import { isGiftLikeEstimationBlocked } from "./gift-acquisition-163-9";
-import { isSection94_4Asset } from "./stock-deemed-acquisition-date";
 import type { StockTransferInput, AcquisitionLot } from "./types/stock-transfer.types";
 
 /**
@@ -203,13 +203,12 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
    * 수증자 측에는 나목(매매사례·환산)이 들어설 자리가 없다(국심2007중1761). UI·⑧·⑫가 이 조합을
    * 막지만, 구 이력·API 직접 호출이 넘긴 추계 모드가 B에 남으면 «평가액이 아닌 값 + 개산공제»로
    * 계산된다 — 그래서 B에서 실가로 되돌린다. 술어는 ⑧·⑫와 같은 단일 소스다.
-   * 의제취득일 이전 증여(영 §176의2④)는 술어가 거짓이라 건드리지 않는다.
+   * 장부분실(법 §99①4 후단)이면 환산이 열려 있어 건드리지 않는다 — 술어가 거짓이다.
    */
   const giftEstimation163_9 = isGiftLikeEstimationBlocked(
     input.acquisitionCause,
-    input.acquisitionDate,
     input.acquisitionMode,
-    isSection94_4Asset(input),
+    isBookLostAtAcquisition(input),
   );
   return {
     ...input,

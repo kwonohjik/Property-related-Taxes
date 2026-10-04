@@ -13,6 +13,8 @@ import {
   resolveStockDeemedDateString,
 } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isPreDeemedPurchase } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
+import { isBookLostAtAcquisition } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
+import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
 
@@ -92,5 +94,27 @@ export function isPreDeemedPurchaseForm(
     acquisitionDate: form.acquisitionDate,
     is94_4: isSection94_4Form(form),
     isSplitOrLots,
+  });
+}
+
+export type BookLostFormFields = Pick<
+  StockTransferFormData,
+  "marketType" | "acqFaceValueOnly" | "acqFaceValuePerShare" | "acquisitionStdMode"
+>;
+
+/**
+ * 폼(⑤⑧③)에서 «취득시점 장부분실»이 성립하는가 — 영 §163⑨ 추계 차단의 예외 신호.
+ *
+ * 판정은 엔진 leaf `isBookLostAtAcquisition` 하나다. 여기서는 폼 → 엔진 입력의 **변환만** 맞춘다:
+ * ④(`stock-transfer-tax-api.ts`)가 `tradingHaltAtTransfer = haltAllowed && acquisitionStdMode === "halt_transfer"`로
+ * 싣는 것과 같은 규칙이다(코스피에서 고른 거래정지 stale 값은 성립하지 않는다).
+ */
+export function isBookLostAtAcquisitionForm(form: BookLostFormFields): boolean {
+  return isBookLostAtAcquisition({
+    acqFaceValueOnly: form.acqFaceValueOnly === true,
+    acqFaceValuePerShare: parseFloatOrUndef(form.acqFaceValuePerShare ?? ""),
+    marketType: form.marketType,
+    tradingHaltAtTransfer:
+      !isTradingHaltMarketScopeViolation(form.marketType) && form.acquisitionStdMode === "halt_transfer",
   });
 }

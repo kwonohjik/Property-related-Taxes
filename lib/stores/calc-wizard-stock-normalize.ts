@@ -9,7 +9,7 @@
  */
 
 import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
-import { isSection94_4Form } from "@/lib/calc/stock-transfer-section94-4-form";
+import { isBookLostAtAcquisitionForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import {
   type AcquisitionStdMode,
   deriveAcquisitionStdMode,
@@ -115,18 +115,14 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
    */
   const normCause = enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause);
   const storedAcqMode = enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode);
-  // 의제취득일이 4호(기타자산) 1985.1.1. · 3호 1986.1.1.로 갈린다 — ⑧·⑫와 같은 판정(영 §162⑦)
-  const is94_4 = isSection94_4Form({
+  // 환산 예외 신호(장부분실) — ⑧·⑫·엔진 B·⑤와 같은 판정(영 §163⑨ · 법 §99①4 후단)
+  const bookLostAtAcquisition = isBookLostAtAcquisitionForm({
     marketType: enumField("marketType", ["kospi", "kosdaq", "konex", "unlisted", "other_asset", "foreign_stock", "exit_tax", ""], ""),
-    isHeavyRealEstateForRate: boolField("isHeavyRealEstateForRate", false),
-    isQualifyingBlockShareholder: boolField("isQualifyingBlockShareholder", false),
-    blockShareholderRealEstateRatio: strField("blockShareholderRealEstateRatio"),
-    blockShareholderOwnershipRatio: strField("blockShareholderOwnershipRatio"),
-    cumulativeTransferRatio: strField("cumulativeTransferRatio"),
-    aggregationFirstTransferDate: strField("aggregationFirstTransferDate"),
-    transferDate: strField("transferDate"),
+    acqFaceValueOnly: boolField("acqFaceValueOnly", false),
+    acqFaceValuePerShare: strField("acqFaceValuePerShare"),
+    acquisitionStdMode,
   });
-  const giftEstimationBlocked = isGiftLikeEstimationBlocked(normCause, strField("acquisitionDate"), storedAcqMode, is94_4);
+  const giftEstimationBlocked = isGiftLikeEstimationBlocked(normCause, storedAcqMode, bookLostAtAcquisition);
   const storedDonorMethod = enumField<"" | StockTransferFormData["donorAcquisitionMethod"]>(
     "donorAcquisitionMethod",
     ["actual", "sale_case", "estimated", ""],
