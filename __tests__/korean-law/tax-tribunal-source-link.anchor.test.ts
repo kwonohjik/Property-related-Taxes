@@ -42,11 +42,25 @@ describe("LINK — 조세심판원 재결 원문 링크", () => {
     expect(new URL(u).searchParams.get("trbClsCd")).toBe("360101");
   });
 
-  it("LINK-3(긍정 짝): 다른 도메인의 링크는 그대로", () => {
-    expect(decodeURIComponent(buildDecisionSourceUrl("prec", "1"))).toContain("/판례/");
-    expect(decodeURIComponent(buildDecisionSourceUrl("detc", "1"))).toContain("/헌재결정례/");
-    expect(decodeURIComponent(buildDecisionSourceUrl("expc", "1"))).toContain("/법령해석례/");
-    expect(decodeURIComponent(buildDecisionSourceUrl("admrul", "1"))).toContain("/행정규칙/");
+  it.each([
+    ["prec", "https://www.law.go.kr/LSW/precInfoP.do?precSeq=624271"],
+    ["detc", "https://www.law.go.kr/LSW/detcInfoP.do?detcSeq=624271"],
+    ["expc", "https://www.law.go.kr/LSW/expcInfoP.do?expcSeq=624271"],
+    ["admrul", "https://www.law.go.kr/LSW/admRulInfoP.do?admRulSeq=624271"],
+  ] as const)(
+    "LINK-3: %s 도 한글주소가 아니라 일련번호로 여는 상세 팝업이다 (한글주소+일련번호는 7/7 미열림)",
+    (domain, expected) => {
+      const u = buildDecisionSourceUrl(domain, "624271");
+      expect(u).toBe(expected);
+      expect(decodeURIComponent(u)).not.toMatch(/\/(판례|헌재결정례|법령해석례|행정규칙)\/\(/);
+    }
+  );
+
+  it("LINK-3b: 상세 팝업이 확인된 5개 도메인은 법령 검색 default 로 떨어지지 않는다", () => {
+    for (const d of ["prec", "detc", "expc", "admrul", "ttSpecialDecc"] as const) {
+      expect(buildDecisionSourceUrl(d, "1")).toMatch(/\/LSW\/\w+InfoP\.do\?/);
+      expect(buildDecisionSourceUrl(d, "1")).not.toContain("lsScListR");
+    }
   });
 });
 

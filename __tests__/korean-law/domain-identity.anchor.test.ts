@@ -43,14 +43,20 @@ describe("DOM — 도메인 라벨은 법제처 실측과 일치한다", () => {
   });
 
   it("DOM-2: 원문 링크도 같은 정체를 가리킨다 (종전엔 클릭 시 다른 종류의 페이지가 열렸다)", () => {
-    expect(decodeURIComponent(buildDecisionSourceUrl("detc", "1"))).toContain("/헌재결정례/");
-    expect(decodeURIComponent(buildDecisionSourceUrl("expc", "1"))).toContain("/법령해석례/");
+    // 정체는 상세 팝업의 «종류»(파일명·파라미터명)가 나른다 — 서로 뒤바뀌면 안 된다.
+    const detc = buildDecisionSourceUrl("detc", "1");
+    const expc = buildDecisionSourceUrl("expc", "1");
+    expect(detc).toContain("detcInfoP.do?detcSeq=1");
+    expect(expc).toContain("expcInfoP.do?expcSeq=1");
+    expect(detc).not.toContain("expc");
+    expect(expc).not.toContain("detc");
   });
 
   it("DOM-3(긍정 짝): 애초에 맞던 도메인은 그대로", () => {
     expect(DECISION_DOMAIN_LABELS.prec).toBe("대법원 판례");
-    expect(decodeURIComponent(buildDecisionSourceUrl("prec", "1"))).toContain("/판례/");
-    expect(decodeURIComponent(buildDecisionSourceUrl("admrul", "1"))).toContain("/행정규칙/");
+    // 라벨은 맞았지만 «원문 링크»는 한글주소에 일련번호를 넣어 7/7 열리지 않았다(2026-10-04 실측).
+    expect(buildDecisionSourceUrl("prec", "1")).toContain("precInfoP.do?precSeq=1");
+    expect(buildDecisionSourceUrl("admrul", "1")).toContain("admRulInfoP.do?admRulSeq=1");
   });
 });
 
