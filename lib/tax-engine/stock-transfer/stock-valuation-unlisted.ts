@@ -32,7 +32,6 @@ import {
 } from "./net-asset-only-basis";
 import {
   STOCK,
-  STOCK_FLOOR_80_PCT,
   STOCK_LOSS_GAIN_DISCOUNT_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
@@ -40,8 +39,8 @@ import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 // 여기에 사본을 두면 같은 조문이 두 곳에서 갈린다. [[feedback_ui_engine_dual_truth_avoidance]]
 import {
   getValuationWeights,
-  calcWeightedAvgPerShare,
   calcSection165_4Value,
+  calcNetAssetOnlyValue,
 } from "./valuation-165-4-basis";
 
 // ============================================================
@@ -265,27 +264,16 @@ export function calcUnlistedValuation(
     const hist = getValuationWeights(transferDate);
     // 1999년 전은 순자산 단독이라 부동산과다보유 반전도 의미가 없다(niWeight=0).
     const useNetAssetOnly = isNetAssetOnly || hist.niWeight === 0;
-    const niW = isHeavyRE ? hist.naWeight : hist.niWeight;
-    const naW = isHeavyRE ? hist.niWeight : hist.naWeight;
-    const weighted = useNetAssetOnly
-      ? naPerShare
-      : Math.floor((niPerShare * niW + naPerShare * naW) / 5);
 
-    // STEP 2: 80% 하한 (가중평균 케이스만) — §165④1 단서.
-    // MAIN 경로(아래 hasFloor80 분기)와 동일하게 `floor80 > weighted`만으로 판정한다.
-    // 결손법인(순손익가치 음수 → weighted ≤ 0)에서도 하한(na×0.8)이 발동해야 하므로
-    // `weighted > 0` 가드를 두지 않는다(두면 0 반환 → MAIN과 dual-truth).
-    // all-zero(ni=0·na=0): floor80=0, `0 > 0`=false → 미발동 → 후속 ≤0 가드가 처리(동작 불변).
-    let transferStdPerShare = weighted;
-    let floor80Applied = false;
-    // 하한은 2007.2.28. 이후 양도에만 존재한다(hist.hasFloor80) — MAIN 경로와 동일 게이팅.
-    if (!useNetAssetOnly && hist.hasFloor80) {
-      const floor80 = Math.floor(naPerShare * 0.8);
-      if (floor80 > weighted) {
-        transferStdPerShare = floor80;
-        floor80Applied = true;
-      }
-    }
+    // STEP 2: 가중평균 + 80% 하한(§165④1 단서) + 0 하한(상증령 §55①·§56① 후단 준용) — **§165④ 정본에 위임**.
+    // 종전에는 가중평균·80% 하한을 여기서 다시 계산해 0 하한이 빠졌다 — 자본잠식 법인의 음수 순자산이
+    // 양도기준시가를 깎았다(S-1c-4 · anchor ZM-4). 순자산 단독도 같은 0 하한을 받는다.
+    const evaluated = useNetAssetOnly
+      ? undefined
+      : calcSection165_4Value(niPerShare, naPerShare, isHeavyRE, transferDate);
+    const weighted = evaluated ? Math.floor(evaluated.weightedRaw) : calcNetAssetOnlyValue(naPerShare, transferDate);
+    const transferStdPerShare = evaluated ? evaluated.value : weighted;
+    const floor80Applied = evaluated?.floorApplied ?? false;
 
     const acquisitionStdPriceTotal = acqFaceValuePerShare * shareCount;
     appliedRules.push(STOCK.SECTION_99_1_4_BACK_BOOK_LOST_AT_ACQ);
@@ -384,10 +372,11 @@ export function calcUnlistedValuation(
     appliedRules.push(netAssetOnlyRuleRef(netAssetOnlyBasis));
 
     // 양도기준시가 = 순자산 단독
-    const transferStdPricePerShare = Math.floor(transferNa);
+    // 0 하한(상증령 §55① 후단 준용)은 가중평균과 같은 연혁 — 없으면 취득가액이 음수가 된다(anchor ZM-2)
+    const transferStdPricePerShare = calcNetAssetOnlyValue(transferNa, transferDate);
     // 취득기준시가 = 순자산 단독 (이월과세면 **증여자 취득 당시** 값으로 대체 — §97의2①1호)
     const acquisitionStdPricePerShare =
-      input.acquisitionStdPriceOverridePerShare ?? Math.floor(acquisitionNa);
+      input.acquisitionStdPriceOverridePerShare ?? calcNetAssetOnlyValue(acquisitionNa, transferDate);
     const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
     if (transferStdPricePerShare <= 0) {
@@ -411,7 +400,7 @@ export function calcUnlistedValuation(
      */
     const naOnlyPrePrior =
       typeof input.prePriorYearNetAssetPerShare === "number"
-        ? Math.floor(input.prePriorYearNetAssetPerShare)
+        ? calcNetAssetOnlyValue(input.prePriorYearNetAssetPerShare, transferDate)
         : undefined;
     const naOnly1659 = applySection165_9(
       input,
@@ -447,10 +436,6 @@ export function calcUnlistedValuation(
   // 가중평균 — 현행 or 시기별
   // ──────────────────────────────────────────────────────────
 
-  // 가중치 반전 (부동산과다보유법인 §165⑤)
-  const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;
-  const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
-
   if (isHeavyRealEstateForValuation) {
     // 2026-07-29 정정(#591 감사 R7 — 라벨 전용, 세액 불변): 부동산과다보유 가중치 반전의
     //   근거는 §165④1(법 §94①4 다목) 괄호이지 **취득후상장 규정 §165⑤이 아니다**.
@@ -465,44 +450,17 @@ export function calcUnlistedValuation(
   }
 
   // ─── 양도기준시가 (양도일 직전 사업연도 기준) ───
-  let transferWeightedRaw: number;
-  if (niWeight === 0) {
-    // 1998 이하 연혁: 순자산 단독
-    transferWeightedRaw = transferNa;
-  } else {
-    transferWeightedRaw = calcWeightedAvgPerShare(transferNi, transferNa, niWeight, naWeight);
-  }
-
-  // 80% 하한 적용 (현행 §165④1 단서)
-  let transferStdPricePerShare: number;
-  let netAssetFloorApplied = false;
-  let netAssetFloorValue: number | undefined;
-
-  if (weights.hasFloor80 && !isHeavyRealEstateForValuation) {
-    // 가중치 반전(부동산과다보유) 시 80% 하한은 별도 검토 — PR-2 범위에서 본칙 적용
-    const floor80 = transferNa * STOCK_FLOOR_80_PCT;
-    if (floor80 > transferWeightedRaw) {
-      netAssetFloorApplied = true;
-      netAssetFloorValue = Math.floor(floor80);
-      transferStdPricePerShare = Math.floor(floor80);
-      appliedRules.push("80%하한");
-      appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);
-    } else {
-      transferStdPricePerShare = Math.floor(transferWeightedRaw);
-    }
-  } else if (weights.hasFloor80 && isHeavyRealEstateForValuation) {
-    // 부동산과다보유 가중치 반전 + 80% 하한: 반전 가중치 가중평균이 순자산 80% 미만인 경우
-    const floor80 = transferNa * STOCK_FLOOR_80_PCT;
-    if (floor80 > transferWeightedRaw) {
-      netAssetFloorApplied = true;
-      netAssetFloorValue = Math.floor(floor80);
-      transferStdPricePerShare = Math.floor(floor80);
-      appliedRules.push("80%하한");
-    } else {
-      transferStdPricePerShare = Math.floor(transferWeightedRaw);
-    }
-  } else {
-    transferStdPricePerShare = Math.floor(transferWeightedRaw);
+  // 가중평균·연혁·80% 하한·0 하한은 §165④ 정본 하나다. 종전에는 이 경로만 인라인 사본이라 0 하한이 빠져
+  // 간이 모드 음수 순자산이 그대로 들어갔다(S-1c-4 · anchor ZM-1·ZM-3).
+  const transferEval = calcSection165_4Value(transferNi, transferNa, isHeavyRealEstateForValuation, transferDate);
+  const transferWeightedRaw = transferEval.weightedRaw;
+  const transferStdPricePerShare = transferEval.value;
+  const netAssetFloorApplied = transferEval.floorApplied;
+  const netAssetFloorValue = transferEval.floorApplied ? transferEval.value : undefined;
+  if (transferEval.floorApplied) {
+    appliedRules.push("80%하한");
+    // 반전(2:3) 경로는 종전에도 조문 상수를 싣지 않았다 — 표시 동작 유지
+    if (!isHeavyRealEstateForValuation) appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);
   }
 
   if (transferStdPricePerShare <= 0) {
@@ -543,25 +501,17 @@ export function calcUnlistedValuation(
   //       단 같은 문서가 상증법 §54① 단서의 하한도 언급하지 않으므로 **침묵은 배제의 근거가 아니다**).
   //       반대 근거는 문언·심판례·집행기준 어디에도 0건이다. 반대 해석이 나오면 재검토할 것.
   //
-  // ⚠️ 연혁 게이팅은 `weights.hasFloor80`(= **양도일** 기준)이다. 가중치(niWeight·naWeight)가 이미
+  // ⚠️ 연혁 게이팅은 정본에 넘기는 `transferDate`(= **양도일** 기준)다. 가중치가 이미
   //    양도일 기준으로 양쪽에 동일 적용되고 있으므로 하한만 취득일 기준으로 가르면 오히려 어긋난다.
-  let acquisitionWeightedRaw: number;
-  if (niWeight === 0) {
-    acquisitionWeightedRaw = acquisitionNa;
-  } else {
-    acquisitionWeightedRaw = calcWeightedAvgPerShare(acquisitionNi, acquisitionNa, niWeight, naWeight);
-  }
-
-  let acquisitionStdPricePerShare = Math.floor(acquisitionWeightedRaw);
-  let acquisitionNetAssetFloorApplied = false;
-  if (weights.hasFloor80) {
-    const acqFloor80 = acquisitionNa * STOCK_FLOOR_80_PCT;
-    if (acqFloor80 > acquisitionWeightedRaw) {
-      acquisitionStdPricePerShare = Math.floor(acqFloor80);
-      acquisitionNetAssetFloorApplied = true;
-      appliedRules.push("80%하한(취득기준시가)");
-    }
-  }
+  const acquisitionEval = calcSection165_4Value(
+    acquisitionNi,
+    acquisitionNa,
+    isHeavyRealEstateForValuation,
+    transferDate,
+  );
+  let acquisitionStdPricePerShare = acquisitionEval.value;
+  let acquisitionNetAssetFloorApplied = acquisitionEval.floorApplied;
+  if (acquisitionEval.floorApplied) appliedRules.push("80%하한(취득기준시가)");
   /**
    * §97의2①1호 — 이월과세면 취득기준시가는 **증여자 취득 당시**의 것이다.
    * 보충평가·80% 하한을 모두 마친 **뒤에** 덮어쓴다 — 증여자 값은 이미 확정된 사실이라

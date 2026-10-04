@@ -13,12 +13,11 @@
  */
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
-import { STOCK, STOCK_FLOOR_80_PCT } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { resolveNetAssetOnlyBasis, netAssetOnlyRuleRef } from "./net-asset-only-basis";
 import {
-  getValuationWeights,
   calcSection165_4Value,
-  calcWeightedAvgPerShare,
+  calcNetAssetOnlyValue,
 } from "./valuation-165-4-basis";
 
 // ============================================================
@@ -77,32 +76,14 @@ export function calcTransferStdPriceForFaceValue(
    */
   // §165⑧1호 후단(라목)도 같은 단독이다 — 근거는 `resolveNetAssetOnlyBasis` 하나.
   if (resolveNetAssetOnlyBasis(input)) {
-    return { perShare: Math.floor(transferNa), netAssetFloorApplied: false };
+    return { perShare: calcNetAssetOnlyValue(transferNa, transferDate), netAssetFloorApplied: false };
   }
 
-  const weights = getValuationWeights(transferDate);
-  const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;
-  const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
-
-  let weightedRaw: number;
-  if (niWeight === 0) {
-    weightedRaw = transferNa;
-  } else {
-    weightedRaw = calcWeightedAvgPerShare(transferNi, transferNa, niWeight, naWeight);
-  }
-
-  if (weights.hasFloor80) {
-    const floor80 = transferNa * STOCK_FLOOR_80_PCT;
-    if (floor80 > weightedRaw) {
-      return {
-        perShare: Math.floor(floor80),
-        netAssetFloorApplied: true,
-        netAssetFloorValue: Math.floor(floor80),
-      };
-    }
-  }
-
-  return { perShare: Math.floor(weightedRaw), netAssetFloorApplied: false };
+  // 가중평균·연혁·80% 하한·0 하한 — §165④ 정본(종전 인라인 사본은 0 하한이 빠졌다 · anchor ZM-8)
+  const evaluated = calcSection165_4Value(transferNi, transferNa, isHeavyRealEstateForValuation, transferDate);
+  return evaluated.floorApplied
+    ? { perShare: evaluated.value, netAssetFloorApplied: true, netAssetFloorValue: evaluated.value }
+    : { perShare: evaluated.value, netAssetFloorApplied: false };
 }
 
 // ============================================================
@@ -158,7 +139,7 @@ export function calcAcquisitionStdPerShareSupplementary(
     appliedRules.push(netAssetOnlyRuleRef(netAssetOnlyBasis));
     // §165④3호는 「제1호 각 목 외의 부분에도 불구하고」라 1호 단서(하한)도 함께 비껴간다.
     return {
-      perShare: Math.floor(acquisitionNa),
+      perShare: calcNetAssetOnlyValue(acquisitionNa, transferDate),
       weightedRaw: acquisitionNa,
       floorApplied: false,
       appliedRules,
