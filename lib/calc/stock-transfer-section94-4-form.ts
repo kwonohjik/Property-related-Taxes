@@ -12,6 +12,7 @@ import {
   isSection94_4Asset,
   resolveStockDeemedDateString,
 } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
+import { isPreDeemedPurchase } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
 
@@ -68,4 +69,28 @@ export function withDeemedBaseReset(
     acquisitionPriceClosing: [],
     acquisitionDatePriceAvg1Month: "",
   };
+}
+
+/**
+ * 의제취득일 전 «매수»·단건 모드인가 (영 §176의2④ — Z-1) — ④·⑤·⑧이 공유한다.
+ * 엔진 `resolvePreDeemedBasis`와 같은 leaf(`isPreDeemedPurchase`)에 폼 단위 입력만 맞춰 넘긴다.
+ * 분할(lot)·lots-only 입력은 엔진 `isSplitMode`와 같이 범위 밖이다.
+ */
+export function isPreDeemedPurchaseForm(
+  form: Section94_4FormFields &
+    Pick<
+      StockTransferFormData,
+      "acquisitionCause" | "acquisitionDate" | "lotsMode" | "acquisitionMode" | "acquisitionActualInputMode"
+    >,
+): boolean {
+  const isSplitOrLots =
+    form.lotsMode === "split" ||
+    ((form.acquisitionMode || "actual") === "actual" && form.acquisitionActualInputMode === "lots");
+  return isPreDeemedPurchase({
+    marketType: form.marketType,
+    acquisitionCause: form.acquisitionCause || "purchase", // 3중 패턴 default
+    acquisitionDate: form.acquisitionDate,
+    is94_4: isSection94_4Form(form),
+    isSplitOrLots,
+  });
 }

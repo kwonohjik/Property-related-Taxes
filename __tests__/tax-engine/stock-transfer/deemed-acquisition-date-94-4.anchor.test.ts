@@ -145,16 +145,22 @@ describe("Y1-5: 매매사례 ±3개월 기준일 = 의제취득일 (영 §176의
   });
 });
 
-describe("Y1-7: 세액 불변 — 의제일 파생은 보유기간에만 닿는다", () => {
+describe("Y1-7: 세액 불변 — 의제일 파생(Y-1)은 보유기간에만 닿는다", () => {
+  // ⚠️ 2026-10-04 Z-1: 의제취득일 «전 매수»는 영 §176의2④2호 생산자물가상승분이 취득가액에 붙어 날짜별로 달라진다
+  //    (`pre-deemed-acquisition-176-2-4.anchor.test.ts`). Y-1 자체의 불변을 보려면 Z-1 대상 밖(증여)으로 격리한다.
   const dates = ["1984-06-01", "1985-06-01", "1986-01-01"];
   it("기타자산: 세 날짜의 산출세액·양도차익 동일", () => {
-    const rs = dates.map((d) => calculateStockTransferTax(base({ acquisitionDate: new Date(d) })));
+    const rs = dates.map((d) =>
+      calculateStockTransferTax(base({ acquisitionCause: "gift", acquisitionDate: new Date(d) })),
+    );
     expect(new Set(rs.map((r) => r.calculatedTax)).size).toBe(1);
     expect(new Set(rs.map((r) => r.transferIncome)).size).toBe(1);
     expect(rs[0].calculatedTax).toBe(51_310_000);
   });
   it("주식(3호): 세 날짜의 산출세액 동일", () => {
-    const rs = dates.map((d) => calculateStockTransferTax(base({ ...UNLISTED_3HO, acquisitionDate: new Date(d) })));
+    const rs = dates.map((d) =>
+      calculateStockTransferTax(base({ ...UNLISTED_3HO, acquisitionCause: "gift", acquisitionDate: new Date(d) })),
+    );
     expect(new Set(rs.map((r) => r.calculatedTax)).size).toBe(1);
     expect(rs[0].calculatedTax).toBe(37_500_000);
   });

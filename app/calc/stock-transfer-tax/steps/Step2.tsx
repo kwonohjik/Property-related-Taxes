@@ -19,6 +19,7 @@ import { TransferStdPriceSection } from "@/components/calc/stock-transfer/Transf
 import { Pre1MonthClosingPriceTable } from "@/components/calc/stock-transfer/Pre1MonthClosingPriceTable";
 import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/AcquisitionStdModeRadio";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
+import { PreDeemedAcquisitionCard } from "@/components/calc/stock-transfer/PreDeemedAcquisitionCard";
 import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
 import { ForeignStockPriceBlock } from "@/components/calc/stock-transfer/ForeignStockPriceBlock";
@@ -307,6 +308,9 @@ export function Step2({ form, onChange }: Step2Props) {
                 " 이월과세 적용 시의 증여자 취득가액은 1단계 「증여자 취득가액 산정 방식」에서 정합니다."}
             </p>
           )}
+
+          {/* 의제취득일 전 매수 — 영 §176의2④ 「① 의제취득일 현재 가액 vs ② 실가 + 생산자물가상승분」 (Z-1) */}
+          <PreDeemedAcquisitionCard form={form} onChange={onChange} />
 
           {/* 실가 취득가 */}
           {acquisitionMode === "actual" && isSplitMode && (

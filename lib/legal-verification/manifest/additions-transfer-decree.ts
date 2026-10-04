@@ -586,6 +586,13 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 영 §176의2④2호의 「생산자물가상승률」 정의 — 의제취득일 전 취득 주식·기타자산 취득가액(Z-1)
+    id: "TRANSFER_RULE.PPI_RATE_85_2",
+    citation: "소득세법 시행규칙 §85의2",
+    keywords: ["연간생산자물가지수", "월간생산자물가지수", "한국은행이 조사한"],
+    keywordMode: "ALL",
+  },
+  {
     // 복합 인용 "소득세법 시행령 §168조의11 ② + 소득세법 시행규칙 §83조의4" 뒤쪽 조문 —
     // 앞 조문만 파싱되던 탓에 그동안 모수 밖이었다.
     id: "TRANSFER_RULE.NBL_OTHER_LAND_AREA",
