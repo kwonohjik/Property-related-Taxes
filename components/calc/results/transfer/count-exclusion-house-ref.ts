@@ -3,8 +3,8 @@
  *
  * 엔진 결과(`new994Detail`·`unsold989Detail`·감면주택 `entries`)는 명부 행에서 온 선언이면 **행 id**를
  * 그대로 싣는다(`evaluateNew994Declarations` 등). 결과 화면이 가진 명부로 그 id를 「보유 주택 N」으로
- * 바꾼다 — 행 id는 내부 값이라 그대로 노출하지 않는다. 명부를 모르는 화면(일괄 하위 카드)이나
- * 행 id가 없는 옛 결과는 표시를 생략한다.
+ * 바꾼다 — 행 id는 내부 값이라 그대로 노출하지 않는다. 명부를 넘기지 않는 화면이나
+ * 행 id가 없는 옛 결과는 표시를 생략한다(단건·겸용·다건·일괄 결과뷰는 모두 명부를 넘긴다).
  */
 export type HouseRefRow = { id: string; acquisitionDate?: string };
 
