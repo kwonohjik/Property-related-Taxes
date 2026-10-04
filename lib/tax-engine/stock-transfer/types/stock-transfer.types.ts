@@ -493,7 +493,7 @@ export type StockTransferInput = {
 
   /**
    * [사례 49] 취득시 장부분실 — 액면가만 사용 (§99①4 후단).
-   *   `marketType === "unlisted" && acquisitionMode === "estimated"` 활성 조건.
+   *   `usesUnlistedSupplementaryValuation(marketType)`(비상장·기타자산) `&& acquisitionMode === "estimated"` 활성 조건.
    *   양도기준시가는 §165④ 보충 평가 정상 적용 (취득시점만 액면가).
    *   기존 `bookLost`(face_value 모드, 양/취 모두 액면가)와 독립.
    *   동시 활성은 validate에서 차단.
@@ -619,7 +619,7 @@ export type StockTransferInput = {
   /**
    * [부담부증여 전용] §159 개산공제 base 안분 비율 — B(채무인수액) / C(증여가액).
    *
-   * 적용 대상: acquisitionMode === "estimated" && marketType === "unlisted" 경로.
+   * 적용 대상: acquisitionMode === "estimated" && usesUnlistedSupplementaryValuation(marketType)(비상장·기타자산) 경로.
    * 비상장 §165④ 보충평가로 산출된 estimatedBase(acquisitionStdPriceTotal, 개산공제 §163⑥4 base)에만 곱함.
    *
    * 이중 안분 금지 — acquisitionPrice(totalAcquisitionPrice)는 양도가(transferPrice=채무B) 기반

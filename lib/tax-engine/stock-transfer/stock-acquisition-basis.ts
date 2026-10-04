@@ -28,6 +28,7 @@ import {
   calcTransferStdPriceForFaceValue,
   calcAcquisitionStdPerShareSupplementary,
 } from "./stock-valuation-unlisted";
+import { usesUnlistedSupplementaryValuation } from "./supplementary-valuation-market";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 
@@ -210,7 +211,7 @@ export function resolveAcquisitionBasis(
         }
       }
 
-    } else if (input.marketType === "unlisted") {
+    } else if (usesUnlistedSupplementaryValuation(input.marketType)) {
       // 비상장 보충 평가 (§165④1 + 80% 하한 + 순자산 단독 4사유)
       const unlistedResult = calcUnlistedValuation(input, transferPrice);
       acquisitionPrice = unlistedResult.totalAcquisitionPrice;

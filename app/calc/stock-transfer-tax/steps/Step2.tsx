@@ -29,6 +29,7 @@ import {
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
 import { isTradingHaltBypassMarket } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
+import { usesUnlistedSupplementaryValuation } from "@/lib/tax-engine/stock-transfer/supplementary-valuation-market";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { isGiftLikeCause } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
@@ -65,11 +66,11 @@ export function Step2({ form, onChange }: Step2Props) {
    *  · 매매사례가액은 언제나 막는다.
    *  · 환산취득가는 «취득시점 장부분실»(법 §99①4 후단 — 평가액도 구할 수 없는 경우)일 때만 열린다.
    *    그 토글은 환산 모드 **안**에 있으므로(`EstimatedUnlistedBlock`) 라디오는 토글이 성립할 수 있는
-   *    시장(비상장·코스닥·코넥스 거래정지 — `isBookLostAtAcquisition`)에서만 연다. 켜지 않은 환산은 ⑧·⑫가 막는다.
+   *    시장(비상장·기타자산·코스닥·코넥스 거래정지 — `isBookLostAtAcquisition`)에서만 연다. 켜지 않은 환산은 ⑧·⑫가 막는다.
    * 날짜는 보지 않는다 — 종전 «의제취득일 전이면 통과»는 평가액 확인 가능성의 대리 지표라 양방향으로 틀렸다.
    */
   const giftLikeCause = isGiftLikeCause(form.acquisitionCause);
-  const bookLostMarket = form.marketType === "unlisted" || isTradingHaltBypassMarket(form.marketType);
+  const bookLostMarket = usesUnlistedSupplementaryValuation(form.marketType) || isTradingHaltBypassMarket(form.marketType);
   const giftEstimatedDisabled = giftLikeCause && !bookLostMarket;
   const is94_4 = isSection94_4Form(form);
   /**
