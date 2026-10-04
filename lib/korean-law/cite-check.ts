@@ -13,6 +13,7 @@
  */
 
 import { getDecisionText } from "./client";
+import { buildDecisionSourceUrl } from "./client-law";
 import {
   LawApiError,
   fetchJson,
@@ -78,11 +79,18 @@ export function isEnBanc(title: string, judgmentType?: string): boolean {
 export { normalizeCaseNo };
 
 /**
- * 본문(전문) 제공 판례인지 — DRF prec는 데이터출처가 "대법원"인 것만 본문 JSON을 제공.
- * "국세법령정보시스템" 등 하급심 출처는 본문 미제공(링크만) → 스캔 대상에서 제외.
+ * 본문(전문) 제공 판례인지 — DRF prec 의 데이터출처별 본문 JSON 제공 여부(2026-10-04 실측):
+ *   대법원·지방세법령정보시스템·근로복지공단산재판례 = 제공 / 국세법령정보시스템 = 「본문 제공 불가」.
+ * 🔴 종전엔 /대법원/ 만 봐서 지방세 출처 대법원 판결(본문 있음)까지 스캔에서 빠졌다.
+ * 근거: __tests__/korean-law/cite-check-source-gap.anchor.test.ts
  */
 export function hasFullTextSource(source: string): boolean {
-  return /대법원/.test(source);
+  return /대법원|지방세법령정보시스템|근로복지공단산재판례/.test(source);
+}
+
+/** 대법원 판결인지 — 국세청 출처는 법원명이 비고 사건번호가 `대법원-2024-두-34092` 형식이다. */
+export function isSupremeCourtCase(c: CitingCase): boolean {
+  return c.court === "대법원" || /^대법원/.test(c.caseNo);
 }
 
 /**
@@ -190,10 +198,14 @@ export async function checkPrecedentStatus(caseNoInput: string): Promise<CiteChe
   const citing = await findCitingCases(caseNo);
   const citingCount = citing.length;
 
-  // 대법원 본문 제공 후속 판례 우선(전원합의체 먼저) 스캔.
+  // 본문 제공 후속 판례를 전원합의체 → 대법원 → 하급심 순으로 스캔(상한 MAX_SCAN 안에서 대법원이 밀리지 않게).
   const scannable = citing
     .filter((c) => c.hasFullText && c.id)
-    .sort((a, b) => Number(b.isEnBanc) - Number(a.isEnBanc));
+    .sort(
+      (a, b) =>
+        Number(b.isEnBanc) - Number(a.isEnBanc) ||
+        Number(isSupremeCourtCase(b)) - Number(isSupremeCourtCase(a))
+    );
 
   const signals: ChangeSignal[] = [];
   let scannedCount = 0;
@@ -226,7 +238,12 @@ export async function checkPrecedentStatus(caseNoInput: string): Promise<CiteChe
   // 전원합의체인데 스캔 못한 것 (본문 미제공 또는 상한 초과) → 수동 확인 권장 대상
   const enBancUnscanned = citing.filter((c) => c.isEnBanc && !scannedIds.has(c.id));
 
+  // 대법원 판결인데 본문을 못 주는 출처 → 원문 링크와 함께 목록으로(종전엔 표시 없이 빠졌다). 전합은 위 목록에.
+  const supremeNoText = citing
+    .filter((c) => !c.hasFullText && !c.isEnBanc && isSupremeCourtCase(c))
+    .map((c) => ({ ...c, sourceUrl: c.id ? buildDecisionSourceUrl("prec", c.id) : undefined }));
+
   const status = decideStatus(signals, enBancUnscanned, citingCount, unscannedCount);
 
-  return { caseNo, citingCount, scannedCount, unscannedCount, signals, enBancUnscanned, status };
+  return { caseNo, citingCount, scannedCount, unscannedCount, signals, enBancUnscanned, supremeNoText, status };
 }
