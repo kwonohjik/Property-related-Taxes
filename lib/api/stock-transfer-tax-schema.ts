@@ -68,6 +68,7 @@ export const acquisitionActualInputModeSchema = z.enum(["per_share", "lots", "to
 export const netAssetOnlyReasonSchema = z.enum([
   "liquidation_or_owner_death",
   "no_business_or_short_or_closed",
+  "consecutive_loss_3y",
   "stock_holding_company",
   "remaining_term_under_3y",
 ]);

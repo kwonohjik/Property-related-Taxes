@@ -503,15 +503,17 @@ export type StockTransferInput = {
   acqFaceValuePerShare?: number;
 
   /**
-   * 순자산 단독 평가 사유 (시행령 §165④3)
-   * 가: 청산 진행·사업자 사망
-   * 나: 사업개시 전·1년 미만·휴폐업
-   * 다: 주식가액 80% 이상 (지주회사형)
-   * 라: 정관상 잔여 존속기한 3년 이내
+   * 순자산 단독 평가 사유 (시행령 §165④3) — 양도일 연혁(`isNetAssetOnlyReasonInEra`)
+   * 가: 청산 진행·사업자 사망 (2007.2.28.~)
+   * 나: 사업개시 전·1년 미만·휴폐업 (2007.2.28.~)
+   * 구 다: 3년 연속 결손 (2007.2.28.~2023.2.27.)
+   * 다: 주식가액 80% 이상 (지주회사형) (2023.2.28.~)
+   * 라: 정관상 잔여 존속기한 3년 이내 (2023.2.28.~)
    */
   netAssetOnlyReason?:
     | "liquidation_or_owner_death"
     | "no_business_or_short_or_closed"
+    | "consecutive_loss_3y"
     | "stock_holding_company"
     | "remaining_term_under_3y";
 

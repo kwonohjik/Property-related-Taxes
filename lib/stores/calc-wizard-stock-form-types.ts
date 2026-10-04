@@ -295,7 +295,7 @@ export interface StockTransferFormData {
 
 
   // ── 순자산 단독 평가 사유 §165④3 ──
-  netAssetOnlyReason: "liquidation_or_owner_death" | "no_business_or_short_or_closed" | "stock_holding_company" | "remaining_term_under_3y" | "";
+  netAssetOnlyReason: "liquidation_or_owner_death" | "no_business_or_short_or_closed" | "consecutive_loss_3y" | "stock_holding_company" | "remaining_term_under_3y" | "";
 
   // ── 필요경비 ──
   expenseMode: "actual" | "estimated";

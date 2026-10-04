@@ -304,7 +304,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     prePriorYearNetIncomePerShare: strField("prePriorYearNetIncomePerShare"),
     prePriorYearNetAssetPerShare: strField("prePriorYearNetAssetPerShare"),
     priorBizYearMonths: strField("priorBizYearMonths") || defaults.priorBizYearMonths,
-    netAssetOnlyReason: enumField("netAssetOnlyReason", ["liquidation_or_owner_death", "no_business_or_short_or_closed", "stock_holding_company", "remaining_term_under_3y", ""], ""),
+    netAssetOnlyReason: enumField("netAssetOnlyReason", ["liquidation_or_owner_death", "no_business_or_short_or_closed", "consecutive_loss_3y", "stock_holding_company", "remaining_term_under_3y", ""], ""),
     expenseMode: enumField("expenseMode", ["actual", "estimated"], "actual"),
     actualExpenses: strField("actualExpenses"),
     filingType: enumField("filingType", ["preliminary", "final", "revised"], defaults.filingType),

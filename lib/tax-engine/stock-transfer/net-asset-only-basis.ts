@@ -3,7 +3,15 @@
  *
  * 영 §165④1호 가중평균(3:2 · 다목 2:3 · 80% 하한)을 비켜 순자산가치(같은 호 나목)만으로 평가하는 근거는 둘이다.
  *
- *  1. 영 §165④3호 가~라목 — 사용자가 고르는 사유 4종(`netAssetOnlyReason`)
+ *  1. 영 §165④3호 각 목 — 사용자가 고르는 사유(`netAssetOnlyReason`). **양도일 연혁**이 있다
+ *     (`isNetAssetOnlyReasonInEra` — ⑤ 선택지 · ⑧·⑫ 차단이 같은 술어를 부른다):
+ *
+ *     | 양도일 | 사유 | 근거(시행본 본문 — 법제처 DRF eflaw 전수 대조) |
+ *     |---|---|---|
+ *     | ~2007.2.27. | 없음 — §165④3호는 순손익액·순자산가액 정의 규정 | 2001.1.1.~2007.2.27. 시행본 |
+ *     | 2007.2.28.~2023.2.27. | 가 · 나 · 다(3년 연속 결손) | 대통령령 제19890호 부칙 제3조 |
+ *     | 2023.2.28.~ | 가 · 나 · 다(주식등 80% 이상) · 라(잔여 존속기한 3년 이내) | 제33267호 부칙 제9조 · 제23조(종전 다목 유지) |
+ *
  *  2. **영 §165⑧1호 후단** — 「법 제94조제1항제4호라목에 따른 주식등이 법 제99조제1항제4호의 주식등에 해당하는
  *     경우에는 이 조 제4항제1호나목의 계산식에 따라 평가한 가액으로 한다」. 대통령령 제33267호(2023.2.28.) 신설,
  *     부칙 제9조 「이 영 시행일 이후 주식등을 양도하는 경우부터 적용」 ⇒ **양도일 2023-02-28 이후**.
@@ -23,10 +31,40 @@
  */
 
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { WEIGHTED_MODEL_EFFECTIVE } from "./valuation-165-4-basis";
 import type { StockTransferInput } from "./types/stock-transfer.types";
 
-/** 영 §165⑧1호 후단 적용 개시 양도일 — 대통령령 제33267호 부칙 제9조 */
+/**
+ * 영 §165⑧1호 후단 적용 개시 양도일 — 대통령령 제33267호 부칙 제9조.
+ * 같은 조가 §165④3호 다목(개정)·라목(신설)의 개시일이기도 하다(`isNetAssetOnlyReasonInEra`).
+ */
 export const RA_MOK_NET_ASSET_ONLY_EFFECTIVE = new Date("2023-02-28");
+
+type NetAssetOnlyReason = NonNullable<StockTransferInput["netAssetOnlyReason"]>;
+
+/**
+ * 영 §165④3호 사유가 **양도일에** 있던 사유인가. 사유 없음·양도일 미상이면 판정하지 않는다(true) —
+ * 날짜 오류는 다른 검증이 내고, 임의 기준일로 판정하면 잘못된 시기의 법을 적용한다.
+ *
+ * - 사유 신설(가·나·구 다목): 대통령령 제19890호(2007.2.28.) 부칙 제3조 — 그 전(max 산식 구간)에는 사유가 없다.
+ * - 다목 개정·라목 신설: 제33267호 부칙 제9조. 그 전 양도분은 부칙 제23조로 **종전 다목(3년 연속 결손)**.
+ */
+export function isNetAssetOnlyReasonInEra(reason: NetAssetOnlyReason | undefined, transferDate: Date | undefined): boolean {
+  if (!reason || !transferDate || Number.isNaN(transferDate.getTime())) return true;
+  const ts = transferDate.getTime();
+  if (ts < WEIGHTED_MODEL_EFFECTIVE.getTime()) return false;
+  const post2023 = ts >= RA_MOK_NET_ASSET_ONLY_EFFECTIVE.getTime();
+  switch (reason) {
+    case "liquidation_or_owner_death":
+    case "no_business_or_short_or_closed":
+      return true;
+    case "consecutive_loss_3y":
+      return !post2023;
+    case "stock_holding_company":
+    case "remaining_term_under_3y":
+      return post2023;
+  }
+}
 
 export type NetAssetOnlyBasis =
   | NonNullable<StockTransferInput["netAssetOnlyReason"]>
@@ -62,6 +100,8 @@ export function netAssetOnlyRuleRef(basis: NetAssetOnlyBasis): string {
       return STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
     case "no_business_or_short_or_closed":
       return STOCK.ENFORCEMENT_DECREE_165_4_3_NA_PRE_BUSINESS;
+    case "consecutive_loss_3y":
+      return STOCK.ENFORCEMENT_DECREE_165_4_3_DA_CONSECUTIVE_LOSS_PRE2023;
     case "stock_holding_company":
       return STOCK.ENFORCEMENT_DECREE_165_4_3_DA_HOLDING_CO;
     case "remaining_term_under_3y":
