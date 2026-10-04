@@ -27,7 +27,7 @@ import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /**
- * 축 — 양도일(§163⑨ 분모) / 취득일(분자).
+ * 축 — 양도일(환산 분모 — 영 §176의2②1호) / 취득일(분자).
  *
  * 🔑 취득일 축은 **거래정지로 막지 않는다**. 상증령 §52의2③이 문제 삼는 것은
  *    「취득일 이전 1개월 «구간»」의 정지이지 조회 시점의 현재 상태가 아니다.

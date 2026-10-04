@@ -215,6 +215,11 @@ const SECTION_94_4_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> =
   "other_asset_heavy_re_nbl",
 ]);
 
+/** 분류 결과가 §94①4호(기타자산)인가 — 의제취득일(영 §162⑦1호) 등 4호 축 판정의 엔진 정본 */
+export function isSection94_4Category(taxCategory: StockTransferResult["taxCategory"]): boolean {
+  return SECTION_94_4_CATEGORIES.has(taxCategory);
+}
+
 function judgeExemption(
   input: StockTransferInput,
   isMajor: boolean,

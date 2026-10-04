@@ -8,6 +8,7 @@
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import { evaluateMarketSample, isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
 import { adjustShareCountAndCost } from "./stock-capital-adjustments";
+import { resolveStockDeemedDate } from "./stock-deemed-acquisition-date";
 
 export interface Pr2DetailResult {
   marketSampleDetail?: StockTransferResult["marketSampleDetail"];
@@ -26,6 +27,8 @@ export function buildPr2Detail(
   shareCount: number,
   acquisitionPrice: number,
   acquisitionMode: StockTransferInput["acquisitionMode"],
+  /** §94①4호(기타자산) 분류 — 의제취득일이 1985.1.1.이다(영 §162⑦1호) */
+  is94_4: boolean,
 ): Pr2DetailResult {
   const warningsDelta: string[] = [];
   let marketSampleDetail: StockTransferResult["marketSampleDetail"];
@@ -41,10 +44,18 @@ export function buildPr2Detail(
      */
     const isDonorSample =
       input.carryoverOutcome === "applied" && input.donorAcquisitionDate !== undefined;
+    /**
+     * 의제취득일 «전» 취득이면 기준일은 의제취득일이다 — 영 §176의2④1호 「의제취득일 현재 제3항제1호
+     * … 가액」. 날짜는 사용자가 입력한 그대로 오므로(비파괴 저장) 여기서 파생한다.
+     */
+    const { effectiveDate: sampleBaseDate, isDeemedApplied } = resolveStockDeemedDate(
+      isDonorSample ? input.donorAcquisitionDate! : input.acquisitionDate,
+      is94_4,
+    );
     const msResult = evaluateMarketSample({
       shareCount,
-      acquisitionDate: isDonorSample ? input.donorAcquisitionDate! : input.acquisitionDate,
-      acquisitionDateLabel: isDonorSample ? "증여자 취득일" : "취득일",
+      acquisitionDate: sampleBaseDate,
+      acquisitionDateLabel: isDeemedApplied ? "의제취득일" : isDonorSample ? "증여자 취득일" : "취득일",
       acquisitionMarketSamplePrice: input.acquisitionMarketSamplePrice,
       acquisitionMarketSampleDate: input.acquisitionMarketSampleDate,
       acquisitionMarketSampleCounterparty: input.acquisitionMarketSampleCounterparty,

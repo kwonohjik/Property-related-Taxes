@@ -15,6 +15,7 @@ import {
 import { z } from "zod";
 import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
+import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -388,7 +389,25 @@ export function addStockRefines(
       )
         issue("acquisitionMarketSamplePrice", "취득 매매사례 1주당 가액을 입력하세요 (소득세법 시행령 §176의2③1호)");
       // 영 §163⑨ — 증여·상속 취득가액은 평가액(실가 의제) → 추계 모드 불가(국심2007중1761). ⑧ step2와 같은 술어.
-      if (!splitOrLots && isGiftLikeEstimationBlocked(data.acquisitionCause, data.acquisitionDate as string | Date | undefined, data.acquisitionMode))
+      if (
+        !splitOrLots &&
+        isGiftLikeEstimationBlocked(
+          data.acquisitionCause,
+          data.acquisitionDate as string | Date | undefined,
+          data.acquisitionMode,
+          // 의제취득일 축(영 §162⑦) — 본문은 엔진 단위(0~1 소수)라 leaf에 그대로 넘기고 날짜만 Date화한다
+          isSection94_4Asset({
+            marketType: data.marketType as string | undefined,
+            isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
+            isQualifyingBlockShareholder: data.isQualifyingBlockShareholder as boolean | undefined,
+            blockShareholderRealEstateRatio: data.blockShareholderRealEstateRatio as number | undefined,
+            blockShareholderOwnershipRatio: data.blockShareholderOwnershipRatio as number | undefined,
+            cumulativeTransferRatio: data.cumulativeTransferRatio as number | undefined,
+            aggregationFirstTransferDate: toOptionalDate(data.aggregationFirstTransferDate),
+            transferDate: toOptionalDate(data.transferDate),
+          }),
+        )
+      )
         issue("acquisitionMode", GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE);
       // 이월과세 증여자 매매사례 — 상장 제외(영 §176의2③1호 본문 괄호) · ⑧ step1과 같은 규칙
       if (

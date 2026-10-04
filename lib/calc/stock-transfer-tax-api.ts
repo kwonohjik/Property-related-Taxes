@@ -304,7 +304,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (transferAvg !== undefined) body.transferDatePriceAvg1Month = transferAvg;
     const acquisitionAvg = parseIntOrUndef(form.acquisitionDatePriceAvg1Month);
     if (acquisitionAvg !== undefined) body.acquisitionDatePriceAvg1Month = acquisitionAvg;
-    // §163⑨ 분모 입력 방식 메타 (산식 영향 없음, UI mirror 패턴 식별용)
+    // 환산 분모(영 §176의2②1호) 입력 방식 메타 (산식 영향 없음, UI mirror 패턴 식별용)
     if (form.transferStdInputMode) body.transferStdInputMode = form.transferStdInputMode;
     // ② §165⑤ 첫 항 입력 방식 메타 (산식 영향 없음 — 결과 배너 표시용).
     // 값 자체는 `listingDatePriceAvg1Month`가 이미 파생돼 실려 간다(resolveListingClosingAvg).

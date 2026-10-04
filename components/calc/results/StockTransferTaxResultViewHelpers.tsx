@@ -11,6 +11,7 @@
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { STX_CUTOFF_DATE } from "@/lib/tax-engine/data/securities-transaction-tax-rates";
 
@@ -252,6 +253,7 @@ const RULE_BADGE: Record<string, string> = {
   "KOTC벤처비과세": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "월할가산": "bg-sky-100 text-sky-700 border-sky-200",
   "의제취득일적용": "bg-amber-100 text-amber-700 border-amber-200",
+  "의제취득일적용(기타자산)": "bg-amber-100 text-amber-700 border-amber-200",
   "장부분실액면가": "bg-amber-100 text-amber-700 border-amber-200",
   "기타자산우선§55누진": "bg-sky-100 text-sky-700 border-sky-200",
   "기본공제부동산그룹합산": "bg-sky-100 text-sky-700 border-sky-200",
@@ -286,7 +288,9 @@ const RULE_BADGE_LAW_MAP: Record<
   "KOTC중소중견비과세": "소득세법 §94①3 나목 단서",
   "KOTC벤처비과세": "조세특례제한법 §14①7호",
   "월할가산": "소득세법 시행규칙 §81④",
-  "의제취득일적용": "소득세법 시행령 §162⑦3호",
+  // 영 §162⑦ — 주식(§94①3호) 3호 1986.1.1. · 기타자산(§94①4호) 1호 1985.1.1.
+  "의제취득일적용": STOCK.ENFORCEMENT_DECREE_162_7_3_DEEMED_STOCK,
+  "의제취득일적용(기타자산)": STOCK.ENFORCEMENT_DECREE_162_7_1_DEEMED_OTHER_ASSET,
   "장부분실액면가": "소득세법 §99①4",
   "기타자산우선§55누진": "소득세법 §55①",
   "기본공제부동산그룹합산": "소득세법 §103①1호",

@@ -29,6 +29,8 @@ import {
 } from "@/lib/stores/calc-wizard-stock-store";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
+import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
+import { isSection94_4Form } from "@/lib/calc/stock-transfer-section94-4-form";
 import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfer/CarryoverDonorConversionSection";
 
 interface Step2Props {
@@ -60,7 +62,13 @@ export function Step2({ form, onChange }: Step2Props) {
    * 영 §163⑨ — 증여·상속 원인이면 취득가액은 평가액(실가 의제)뿐이다. 술어에 모드 «"estimated"»를 넘겨
    * 원인·날짜 축만 본다(의제취득일 이전이면 거짓 — 영 §176의2④).
    */
-  const giftValuationOnly = isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, "estimated");
+  const is94_4 = isSection94_4Form(form);
+  const giftValuationOnly = isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, "estimated", is94_4);
+  /**
+   * 환산 분자(취득일 이전 1개월 종가)의 기준일 — 의제취득일 «전» 취득이면 의제취득일이다
+   * (영 §176의2④ · 사전-2015-법령해석재산-0242). 저장값은 사용자가 입력한 날짜 그대로라 여기서 파생한다.
+   */
+  const acqStdBaseDate = resolveStockDeemedDateString(form.acquisitionDate, is94_4).effectiveDate;
   // 단건 「1주당 취득가액」 안내 — 분할 lot 카드(`AcquisitionLotCard.tsx`)와 같은 원인별 문구
   const perShareAcqHint =
     form.acquisitionCause === "inheritance"
@@ -510,7 +518,7 @@ export function Step2({ form, onChange }: Step2Props) {
                   <KiwoomAutoFetchButton
                     axis="acquisition"
                     securityCode={form.securityCode}
-                    transferDate={form.acquisitionDate}
+                    transferDate={acqStdBaseDate}
                     marketType={form.marketType}
                     tradingHalt={false}
                     onFill={onChange}
@@ -530,7 +538,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       재계산하는 줄이 갈렸던 사고가 분모 축에 있었다(2026-09-01).
                     */
                     <Pre1MonthClosingPriceTable
-                      form={form}
+                      form={{ ...form, acquisitionDate: acqStdBaseDate }}
                       onChange={onChange}
                       axis="acquisition"
                     />

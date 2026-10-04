@@ -31,6 +31,7 @@ import { actualAcquisitionPerShare } from "./stock-actual-acquisition";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
 import { isGiftLikeEstimationBlocked } from "./gift-acquisition-163-9";
+import { isSection94_4Asset } from "./stock-deemed-acquisition-date";
 import type { StockTransferInput, AcquisitionLot } from "./types/stock-transfer.types";
 
 /**
@@ -208,6 +209,7 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
     input.acquisitionCause,
     input.acquisitionDate,
     input.acquisitionMode,
+    isSection94_4Asset(input),
   );
   return {
     ...input,

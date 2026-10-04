@@ -15,6 +15,7 @@ import {
 } from "@/lib/tax-engine/legal-codes/stock";
 import { resolveThresholdFromDate } from "./stock-rate-tables";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
+import { resolveStockDeemedDate } from "./stock-deemed-acquisition-date";
 
 // ============================================================
 // 보유기간 계산 (§104②)
@@ -222,22 +223,19 @@ export function buildAppliedThreshold(
 }
 
 // ============================================================
-// 의제취득일 (시행령 §162① — 1985.12.31. 이전 취득 주식)
+// 의제취득일 (영 §162⑦ — 주식 3호 1986.1.1. · 기타자산 4호 1985.1.1.)
 // ============================================================
 
-const DEEMED_ACQUISITION_DATE = new Date("1986-01-01");
-const DEEMED_ACQUISITION_CUTOFF = new Date("1985-12-31");
-
 /**
- * 의제취득일 처리 — 1985.12.31. 이전 취득 시 1986.1.1. 의제
- * 상속 등으로 피상속인 취득일이 1985.12.31. 이전인 경우 적용
+ * 의제취득일 처리 — 보유기간 기산점(상속은 피상속인 취득일 등 `calcHoldingPeriod`가 고른 날)에 적용.
+ * 4호 여부는 호출부가 **분류 결과**로 넘긴다(`isSection94_4Category`). 날짜 비교는 단일 소스 leaf.
  */
-export function applyDeemedAcquisitionDate(date: Date): {
+export function applyDeemedAcquisitionDate(
+  date: Date,
+  is94_4: boolean,
+): {
   effectiveDate: Date;
   isDeemedApplied: boolean;
 } {
-  if (date <= DEEMED_ACQUISITION_CUTOFF) {
-    return { effectiveDate: DEEMED_ACQUISITION_DATE, isDeemedApplied: true };
-  }
-  return { effectiveDate: date, isDeemedApplied: false };
+  return resolveStockDeemedDate(date, is94_4);
 }

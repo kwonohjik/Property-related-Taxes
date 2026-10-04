@@ -319,7 +319,7 @@ export const stockTransferInputSchema = z.object({
   // 환산 — 상장
   transferDatePriceAvg1Month: z.number().min(0).optional(),
   acquisitionDatePriceAvg1Month: z.number().min(0).optional(),
-  // §163⑨ 분모 입력 방식 (메타·산식 영향 없음 — UI mirror 패턴 식별용)
+  // 환산 분모(영 §176의2②1호) 입력 방식 (메타·산식 영향 없음 — UI mirror 패턴 식별용)
   transferStdInputMode: z.enum(["direct", "daily"]).optional().default("direct"),
   // §165⑤ 첫 항(상장일 이후 1개월 종가) 입력 방식 (메타·산식 영향 없음 — 결과 배너용)
   listingStdInputMode: z.enum(["direct", "daily"]).optional().default("direct"),
