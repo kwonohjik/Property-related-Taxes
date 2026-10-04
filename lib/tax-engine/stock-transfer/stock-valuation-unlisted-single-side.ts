@@ -13,6 +13,7 @@
  */
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
+import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { resolveNetAssetOnlyBasis, netAssetOnlyRuleRef } from "./net-asset-only-basis";
 import {
@@ -61,7 +62,9 @@ export function calcFaceValueTransferEstimated(
 export function calcTransferStdPriceForFaceValue(
   input: StockTransferInput,
 ): { perShare: number; netAssetFloorApplied: boolean; netAssetFloorValue?: number } {
-  const { transferDate, isHeavyRealEstateForValuation } = input;
+  const { transferDate } = input;
+  // §165④1호 괄호(2:3) 대상 법인 — 양측 경로와 같은 leaf(S-1c-2)
+  const isHeavyRealEstateForValuation = isSection165_4_1ReversalCorp(input);
   const transferNi = input.transferYearNetIncomePerShare ?? 0;
   const transferNa = input.transferYearNetAssetPerShare ?? 0;
 
@@ -124,7 +127,9 @@ export interface AcquisitionSideSupplementaryResult {
 export function calcAcquisitionStdPerShareSupplementary(
   input: StockTransferInput,
 ): AcquisitionSideSupplementaryResult {
-  const { transferDate, isHeavyRealEstateForValuation } = input;
+  const { transferDate } = input;
+  // §165④1호 괄호(2:3) 대상 법인 — 양측 경로와 같은 leaf(S-1c-2)
+  const isHeavyRealEstateForValuation = isSection165_4_1ReversalCorp(input);
   const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
   const acquisitionNi = input.acquisitionYearNetIncomePerShare ?? 0;
   const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;

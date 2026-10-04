@@ -25,6 +25,7 @@
  */
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
+import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 import {
   resolveNetAssetOnlyBasis,
   netAssetOnlyRuleRef,
@@ -228,9 +229,10 @@ export function calcUnlistedValuation(
     transferDate,
     bookLost,
     faceValuePerShare,
-    isHeavyRealEstateForValuation,
   } = input;
-  const isHeavyRE = input.isHeavyRealEstateForValuation;
+  // §165④1호 괄호(2:3) 대상 법인 — 사용자 신고 · 다목 부동산등 50% · 라목. 단일 소스(S-1c-2)
+  const isHeavyRealEstateForValuation = isSection165_4_1ReversalCorp(input);
+  const isHeavyRE = isHeavyRealEstateForValuation;
   // 순자산 단독 근거 — §165④3 사유(사용자 선택) 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 단일 소스.
   const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
   const acqFaceValueOnly = input.acqFaceValueOnly === true;

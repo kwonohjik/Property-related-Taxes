@@ -27,6 +27,8 @@ import { calcSupplementaryPerShare } from "@/lib/tax-engine/stock-transfer/valua
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+// §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
+import { isReversalCorpForm } from "./stock-transfer-section94-4-form";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
   isTradingHaltMarketScopeViolation,
@@ -146,7 +148,7 @@ function validateUnlistedValuationFields(
     }
     const td = parseTransferDate(form.transferDate);
     if (valuationMode === "simple" && td) {
-      const heavyRE = form.isHeavyRealEstateForValuation;
+      const heavyRE = isReversalCorpForm(form);
       // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
       // 여기만 가중평균으로 재면 엔진은 「같다」, validate는 「다르다」가 되어 거짓 경고가 뜬다.
       const transferEval = calcSupplementaryPerShare(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td, niSkip);
@@ -177,7 +179,7 @@ function validateTransferSupplementaryPositive(
       isTransferSupplementaryNonPositive(
         parseF(form.transferYearNetIncomePerShare),
         parseF(form.transferYearNetAssetPerShare),
-        form.isHeavyRealEstateForValuation,
+        isReversalCorpForm(form),
         td,
         niSkip,
       )
@@ -189,7 +191,7 @@ function validateTransferSupplementaryPositive(
   if (parseI(form.naShareCountEUTransfer) <= 0) return;
   if (!niSkip && parseI(form.niShareCountEUTransfer) <= 0) return;
   const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
-  if (isTransferSupplementaryNonPositive(reduced.transferNi, reduced.transferNa, form.isHeavyRealEstateForValuation, td, niSkip)) {
+  if (isTransferSupplementaryNonPositive(reduced.transferNi, reduced.transferNa, isReversalCorpForm(form), td, niSkip)) {
     errors.push({ field: "naAssetTotalRow1EUTransfer", message: UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE, severity: "error" });
   }
 }
@@ -602,7 +604,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
           const td5 = parseTransferDate(form.transferDate);
           if (detailMode === "simple" && td5) {
-            const heavyRE = form.isHeavyRealEstateForValuation;
+            const heavyRE = isReversalCorpForm(form);
             const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;
             const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td5).value;
             if (listEval > 0 && listEval !== acqEval) {

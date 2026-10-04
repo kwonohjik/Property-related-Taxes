@@ -40,7 +40,6 @@ interface OtherAssetBlockProps {
     StockTransferFormData,
     | "isQualifyingBlockShareholder"
     | "isHeavyRealEstateForRate"
-    | "isHeavyRealEstateForValuation"
     | "cumulativeTransferRatio"
     | "nblRatioOfCorpAssets"
     | "blockShareholderRealEstateRatio"
@@ -473,26 +472,19 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
         >
           {/*
             영 §165⑧1호 후단 — 라목 주식등은 2023.2.28. 이후 양도분부터 순자산가치 단독이라 «반전»이 설 자리가 없다.
-            엔진도 이 경우 반전 토글을 읽지 않는다(`resolveNetAssetOnlyBasis`). 그 전 양도분은 종전대로 토글을 둔다.
+            엔진도 이 경우 반전 토글을 읽지 않는다(`resolveNetAssetOnlyBasis`).
           */}
-          {raMokNetAssetOnly ? (
+          {raMokNetAssetOnly && (
             <p data-testid="ra-mok-net-asset-only-notice" className="mt-3 text-xs text-rose-800">
               양도일이 2023.2.28. 이후라 라목 주식등은 순자산가치 단독으로 평가합니다 — 가중평균·80% 하한·가중치
               반전은 적용되지 않습니다.{" "}
               <LawArticleModal legalBasis="소득세법 시행령 §165 ⑧ 1호" label="영§165⑧1" />
             </p>
-          ) : (
-            /* 평가 가중치 반전용 (50% 임계 별도) */
-            <div className="mt-3">
-              <ToggleCard
-                checked={form.isHeavyRealEstateForValuation}
-                onCheckedChange={(v) => onChange({ isHeavyRealEstateForValuation: v })}
-                title="보충적 평가 가중치 반전 (자산 50% 이상)"
-                description="소령 §165⑤ 단서 — 부동산 50% 이상 시 순손익 2/5 + 순자산 3/5 (가중치 반전)"
-                tone="fuchsia"
-              />
-            </div>
           )}
+          {/*
+            «보충적 평가 가중치 반전»(영 §165④1호 괄호) 토글은 평가 입력 영역(`ReversalCorpToggle`)으로 옮겼다 —
+            라목 카드 안에서는 다목·일반 비상장이 켤 수 없었다(S-1c-2). 그 전 양도분 라목은 80% ⊃ 50%라 거기서 자동으로 켜진다.
+          */}
         </ToggleCard>
       </div>
 

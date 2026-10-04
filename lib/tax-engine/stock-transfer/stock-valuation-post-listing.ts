@@ -62,6 +62,7 @@ import type {
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 import { calcSection165_4Value, hasNetAssetZeroFloor } from "./valuation-165-4-basis";
+import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 
 // §81④ 월할 헬퍼는 apply-81-4-accrual.ts로 추출(본체·준용 공용). import 경로 보존 위해 re-export.
 export { calcAccrualMonths } from "./apply-81-4-accrual";
@@ -411,8 +412,8 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     };
   }
 
-  // §165⑤ 가중치 반전 (부동산과다보유법인 §94①4 다목 — 별개 임계 50%)
-  const isHeavyRE = input.isHeavyRealEstateForValuation === true;
+  // §165④1호 괄호(2:3) — 「제4항에 따른 평가액」이므로 같은 대상 법인 판정(leaf · S-1c-2)
+  const isHeavyRE = isSection165_4_1ReversalCorp(input);
 
   // 상장일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분모)
   const listingEval = calcSection165_4Value(

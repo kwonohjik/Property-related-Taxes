@@ -30,6 +30,7 @@ import {
 } from "./stock-valuation-unlisted";
 import { usesUnlistedSupplementaryValuation } from "./supplementary-valuation-market";
 import { resolveNetAssetOnlyBasis } from "./net-asset-only-basis";
+import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 
@@ -190,7 +191,7 @@ export function resolveAcquisitionBasis(
         acqFaceValuePerShare: input.acqFaceValuePerShare,
         niPerShare: unlistedResult.netIncomeValue,
         naPerShare: unlistedResult.netAssetValue,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
+        isHeavyRE: isSection165_4_1ReversalCorp(input),
         netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
         acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
         section1659Detail: unlistedResult.section1659Detail,
@@ -237,7 +238,7 @@ export function resolveAcquisitionBasis(
         acqFaceValuePerShare: input.acqFaceValuePerShare,
         niPerShare: unlistedResult.netIncomeValue,
         naPerShare: unlistedResult.netAssetValue,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
+        isHeavyRE: isSection165_4_1ReversalCorp(input),
         netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
         acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
         // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 월할 보정 echo
@@ -294,7 +295,7 @@ export function resolveAcquisitionBasis(
         weightedAvgPerShare: Math.floor(acqSide.weightedRaw),
         niPerShare: input.acquisitionYearNetIncomePerShare,
         naPerShare: input.acquisitionYearNetAssetPerShare,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
+        isHeavyRE: isSection165_4_1ReversalCorp(input),
         // 결과뷰가 «순자산 단독» 산식을 고르는 신호 — 엔진 분기와 같은 근거(라목 후단 포함)
         netAssetOnlyReason: resolveNetAssetOnlyBasis(input),
         acquisitionStdPriceTotal: acqSide.perShare * shareCount,
