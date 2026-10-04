@@ -32,47 +32,76 @@
 
 import { STOCK_FLOOR_80_PCT } from "@/lib/tax-engine/legal-codes/stock";
 
+/**
+ * 「제4항에 따른 평가액」의 산식 — 양도일 연혁.
+ *   - `"weighted"` : 순손익가치·순자산가치 가중평균(3:2 · 반전 법인 2:3) — 2007.2.28.~
+ *   - `"max"`      : 순손익가치가 순자산가치에 미달하면 순자산가치 = max — 2000.4.3.~2007.2.27.
+ */
+export type Section165_4Model = "weighted" | "max";
+
 export interface ValuationWeights {
-  niWeight: number; // 순손익가치 가중치 (합계 5분의)
-  naWeight: number; // 순자산가치 가중치 (합계 5분의)
+  model: Section165_4Model;
+  niWeight: number; // 순손익가치 가중치 (합계 5분의) — max 산식이면 0
+  naWeight: number; // 순자산가치 가중치 (합계 5분의) — max 산식이면 0
   hasFloor80: boolean; // 80% 하한(§165④1 단서) 적용 여부
 }
 
 /** 영 §165④1호 단서(80% 하한) 적용 개시 양도일 — 대통령령 제28637호 부칙 제1조 단서 1호 · 제2조② */
 export const FLOOR_80_EFFECTIVE = new Date("2018-04-01");
 
+/** 영 §165④1호 가중평균(3:2) 적용 개시 양도일 — 대통령령 제19890호(2007.2.28.) 부칙 제1조 본문 · 제3조 */
+export const WEIGHTED_MODEL_EFFECTIVE = new Date("2007-02-28");
+
 /**
- * 양도일 기준 시기별 평가 가중치 조회
+ * 계산을 지원하는 첫 양도일 — 소득세법 시행규칙(재정경제부령 제138호, 2000.4.3.) §81②2호 max 산식 · 부칙 제3조①.
+ * 그 전(시행규칙 §81②2호 1996.3.30.~2000.4.2.)은 「(순자산가치 + 순손익액÷15%) ÷ 2」에 순자산 단독 사유
+ * (직전 사업연도 6월 미만 · 영 §158①1호 가목 법인 · 순손익가치가 순자산가치의 50% 미달 등)가 붙는데,
+ * 그 입력이 없다. ⇒ ⑧·⑫가 차단하고(`isSection165_4EraUnsupported`) 엔진은 값을 내지 않는다.
+ */
+export const SECTION_165_4_SUPPORTED_FROM = new Date("2000-04-03");
+
+/** 양도일이 계산 미지원 구간(2000.4.2. 이전)인가 — ⑧·⑫ 차단 술어 · UI 미리보기 가드 */
+export function isSection165_4EraUnsupported(transferDate: Date): boolean {
+  return transferDate.getTime() < SECTION_165_4_SUPPORTED_FROM.getTime();
+}
+
+/**
+ * 양도일 기준 시기별 평가 산식 조회
  *
- * 연혁 (시행령 §165④ — 시행본 본문 대조, 계획서 `stock-165-4-valuation-followups.plan.md` §4):
- *   ~1998.12.31.          : 순자산 단독 (ni=0, na=5) — ⚠️ 시행본 본문 미대조(확인 필요)
- *   1999.1.1.~2018.3.31.  : 순손익 3/5 + 순자산 2/5, **80% 하한 없음**
+ * 연혁 (시행본 본문 대조 — 계획서 `stock-165-4-valuation-followups.plan.md` §4 · §11):
+ *   ~2000.4.2.            : 시행규칙 §81②2호 산술평균 — **미지원(throw)**. ⑧·⑫가 먼저 막는다.
+ *   2000.4.3.~2007.2.27.  : max(순손익가치, 순자산가치) — 시행규칙 §81②2호 가·나목(제138호) →
+ *                           2001.1.1.부터 영 §165④1·2호(제17032호 · 2006.2.9. 제19327호 동일). 가중치·반전·하한 없음
+ *   2007.2.28.~2018.3.31. : 순손익 3/5 + 순자산 2/5(영 §158①1호 가목 법인 2:3), **80% 하한 없음** — 제19890호
  *   2018.4.1.~            : 3/5 + 2/5 + 80% 하한(§165④1호 단서) — 현행
  *
  * 80% 하한 시행일: 대통령령 제28637호(2018.2.13.) 부칙 제1조 단서 1호 「…제165조제4항…의 개정규정: 2018년 4월 1일」,
  *   제2조② 「양도소득에 관한 개정규정은 이 영 시행 이후 양도하는 분부터 적용」.
  *   2007.2.28.(MST 77490)·2010.2.18.(MST 102729)·2017.2.3.(MST 191522)·2018.2.13.(MST 202148) 시행본 §165④1호에는 단서(하한)가 없다.
- *   종전 경계 2007.2.28.은 출처가 없었다(계획·설계 문서 grep 0건) — S-1c-3.
  *
- * ⚠️ 2007.2.27. 이전 구간은 산식 자체가 다르다 — 2006.2.9. 시행본(MST 72871) §165④는 「순손익가치, 순자산가치에
- *    미달하면 순자산가치」(= max)다. 1999.1.1.~2000.12.28.은 시행규칙에 위임돼 있었다. 본문 확보 후 2단계에서 바꾼다.
+ * 종전 모델(~1998.12.31. 순자산 단독 · 1999.1.1.~ 3:2)은 근거가 없었다 — 1999.1.1. 시행본(제15967호)의 §165①2호
+ * 변경은 「총리령 → 재정경제부령」 명칭뿐이다.
  */
 export function getValuationWeights(transferDate: Date): ValuationWeights {
+  if (isSection165_4EraUnsupported(transferDate)) {
+    throw new Error(
+      `소득세법 시행령 §165④ 보충적 평가 — ${transferDate.toISOString().slice(0, 10)} 양도분은 계산하지 않는다(2000.4.2. 이전 · ⑧·⑫ 차단 누락)`,
+    );
+  }
   const ts = transferDate.getTime();
 
-  // 1998.12.31. 이하 — 순자산 단독
-  const CUTOFF_1998 = new Date("1999-01-01").getTime();
-  if (ts < CUTOFF_1998) {
-    return { niWeight: 0, naWeight: 5, hasFloor80: false };
+  // 2000.4.3.~2007.2.27. — max(순손익가치, 순자산가치)
+  if (ts < WEIGHTED_MODEL_EFFECTIVE.getTime()) {
+    return { model: "max", niWeight: 0, naWeight: 0, hasFloor80: false };
   }
 
   // 2018.4.1. 이상 — 현행 (80% 하한 포함)
   if (ts >= FLOOR_80_EFFECTIVE.getTime()) {
-    return { niWeight: 3, naWeight: 2, hasFloor80: true };
+    return { model: "weighted", niWeight: 3, naWeight: 2, hasFloor80: true };
   }
 
-  // 1999.1.1.~2018.3.31. — 가중평균, 80% 하한 없음
-  return { niWeight: 3, naWeight: 2, hasFloor80: false };
+  // 2007.2.28.~2018.3.31. — 가중평균, 80% 하한 없음
+  return { model: "weighted", niWeight: 3, naWeight: 2, hasFloor80: false };
 }
 
 /**
@@ -99,10 +128,12 @@ export function hasNetAssetZeroFloor(evaluationDate: Date): boolean {
 export interface Section165_4Value {
   /** 「제4항에 따른 평가액」 — 단서(80% 하한)까지 적용한 최종값 (원 미만 절사) */
   value: number;
-  /** 단서 적용 전 가중평균 원값 (절사 전 — 표시·비교용) */
+  /** 단서 적용 전 가중평균 원값 (절사 전 — 표시·비교용). max 산식이면 max 값 */
   weightedRaw: number;
   /** 단서(80% 하한)가 실제로 값을 끌어올렸는지 */
   floorApplied: boolean;
+  /** [표시 전용] 적용된 산식 — `"max"`면 `weightedRaw`는 max(순손익가치, 순자산가치)이고 가중치는 0이다 */
+  model: Section165_4Model;
   /** [표시 전용] 실제 적용된 순손익가치 가중치 (합계 5분의) — 연혁·§94①4다목 반영 */
   niWeight: number;
   /** [표시 전용] 실제 적용된 순자산가치 가중치 (합계 5분의) */
@@ -157,22 +188,25 @@ export function calcSection165_4Value(
     ? Math.max(0, netAssetValueRaw)
     : netAssetValueRaw;
   const weights = getValuationWeights(transferDate);
+
+  // 2000.4.3.~2007.2.27. — 「1호 가액(순손익가치)이 순자산가치에 미달하면 순자산가치」 = max.
+  // 가중치가 없으니 2:3 반전(2007.2.28. 신설)도 80% 하한(2018.4.1. 신설)도 없다.
+  if (weights.model === "max") {
+    const weightedRaw = Math.max(netIncomeValue, netAssetValue);
+    return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false, model: "max", niWeight: 0, naWeight: 0 };
+  }
+
   const niWeight = isHeavyRE ? 2 : weights.niWeight;
   const naWeight = isHeavyRE ? 3 : weights.naWeight;
-
-  // niWeight 0 = 1998 이하 연혁(순자산 단독). isHeavyRE 반전은 이 연혁에 적용되지 않는다.
-  const weightedRaw =
-    weights.niWeight === 0 && !isHeavyRE
-      ? netAssetValue
-      : calcWeightedAvgPerShare(netIncomeValue, netAssetValue, niWeight, naWeight);
+  const weightedRaw = calcWeightedAvgPerShare(netIncomeValue, netAssetValue, niWeight, naWeight);
 
   if (weights.hasFloor80) {
     const floor80 = netAssetValue * STOCK_FLOOR_80_PCT;
     if (floor80 > weightedRaw) {
-      return { value: Math.floor(floor80), weightedRaw, floorApplied: true, niWeight, naWeight };
+      return { value: Math.floor(floor80), weightedRaw, floorApplied: true, model: "weighted", niWeight, naWeight };
     }
   }
-  return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false, niWeight, naWeight };
+  return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false, model: "weighted", niWeight, naWeight };
 }
 
 /**

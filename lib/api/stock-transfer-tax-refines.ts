@@ -19,6 +19,7 @@ import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
@@ -335,6 +336,10 @@ export function addStockRefines(
           isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
           transferDate: toOptionalDate(data.transferDate),
         }) !== undefined;
+      // S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라 계산하지 않는다(⑧ 같은 조건·문구).
+      // §165④를 부르는 분기(환산 — 비상장·거래정지·취득 후 상장 / 매매사례가액 — 개산공제 기준시가)에서만 막는다.
+      const transferDateForEra = toOptionalDate(data.transferDate);
+      const eraUnsupported = transferDateForEra !== undefined && isSection165_4EraUnsupported(transferDateForEra);
       if (!splitOrLots) {
         if (
           data.transferPriceMode === "actual" &&
@@ -380,6 +385,8 @@ export function addStockRefines(
           : data.tradingHaltAtAcquisition
             ? ("acquisition" as const)
             : null;
+        if (eraUnsupported && (scope || (listed && data.acquiredBeforeListing)))
+          issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
         if (scope) {
           for (const key of requiredUnlistedValuationKeys({
             scope,
@@ -392,7 +399,7 @@ export function addStockRefines(
         }
         // Q-4b — 양도기준시가(1주당 보충평가액) 0 이하면 환산 산식의 분모가 0이다. ⑧과 같은 술어·문구.
         // 결산서 모드도 ④ 어댑터가 집계한 값을 같은 필드로 싣는다.
-        if (scope === "both") {
+        if (scope === "both" && !eraUnsupported) {
           const td = toOptionalDate(data.transferDate);
           const na = data.transferYearNetAssetPerShare;
           const ni = data.transferYearNetIncomePerShare;
@@ -507,6 +514,7 @@ export function addStockRefines(
         data.acquisitionMode === "sale_case" &&
         !["kospi", "kosdaq", "konex"].includes(data.marketType as string)
       ) {
+        if (eraUnsupported) issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
         for (const key of requiredUnlistedValuationKeys({
           scope: "acquisition",
           niSkip: netAssetOnly,

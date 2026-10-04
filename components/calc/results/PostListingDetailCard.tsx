@@ -17,6 +17,8 @@
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import type { Section165_4Model } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 
 interface PostListingDetailCardProps {
   result: StockTransferResult;
@@ -32,6 +34,7 @@ interface PostListingDetailCardProps {
 function WeightedAvgRow({
   label,
   basis,
+  model,
   niWeight,
   naWeight,
   floorApplied,
@@ -39,6 +42,7 @@ function WeightedAvgRow({
 }: {
   label: string;
   basis?: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
+  model?: Section165_4Model;
   niWeight?: number;
   naWeight?: number;
   floorApplied: boolean;
@@ -48,6 +52,17 @@ function WeightedAvgRow({
     return (
       <p>
         {label} = <strong>{value.toLocaleString()}</strong>
+      </p>
+    );
+  }
+
+  // 2000.4.3.~2007.2.27. 양도 — 가중치가 없는 산식이다(가중치 0/5로 펼치면 틀린 산식이 된다).
+  if (model === "max") {
+    return (
+      <p>
+        {label} = 순손익가치 {basis.netIncomeValue.toLocaleString()}·순자산가치{" "}
+        {basis.netAssetValue.toLocaleString()} 중 큰 금액 = <strong>{value.toLocaleString()}</strong>{" "}
+        <span className="text-caption">({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})</span>
       </p>
     );
   }
@@ -112,16 +127,18 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           </div>
         )}
         <WeightedAvgRow
-          label="상장연도 1주당 가중평균"
+          label={post.weightedBasis?.model === "max" ? "상장연도 1주당 평가액" : "상장연도 1주당 가중평균"}
           basis={post.weightedBasis?.listing}
+          model={post.weightedBasis?.model}
           niWeight={post.weightedBasis?.niWeight}
           naWeight={post.weightedBasis?.naWeight}
           floorApplied={post.detail?.floor80Applied?.listing === true}
           value={post.listingYearPerShareValue}
         />
         <WeightedAvgRow
-          label="취득연도 1주당 가중평균"
+          label={post.weightedBasis?.model === "max" ? "취득연도 1주당 평가액" : "취득연도 1주당 가중평균"}
           basis={post.weightedBasis?.acquisition}
+          model={post.weightedBasis?.model}
           niWeight={post.weightedBasis?.niWeight}
           naWeight={post.weightedBasis?.naWeight}
           floorApplied={post.detail?.floor80Applied?.acquisition === true}

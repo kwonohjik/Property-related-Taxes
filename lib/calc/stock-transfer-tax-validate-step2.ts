@@ -23,6 +23,7 @@ import {
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
 import { isReversalCorpForm } from "./stock-transfer-section94-4-form";
@@ -47,6 +48,7 @@ import {
   parseI,
   validateUnlistedValuationFields,
   validateAcquisitionSideUnlistedFields,
+  validateSection165_4Era,
   SIMPLE_FIELD_MESSAGE,
 } from "./stock-transfer-tax-validate-unlisted";
 
@@ -434,7 +436,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           }
           // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
           const td5 = parseTransferDate(form.transferDate);
-          if (detailMode === "simple" && td5) {
+          if (detailMode === "simple" && td5 && !isSection165_4EraUnsupported(td5)) {
             const heavyRE = isReversalCorpForm(form);
             const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;
             const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td5).value;
@@ -469,6 +471,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     //    화면(`MarketSampleBlock`)에는 그 칸이 없어 「1주당 취득 매매사례가액」만 채운 사용자가 막혔다
     //    (숨은 칸 요구 = 막다른 길). 필수 규칙은 아래 R-1' 「사례가액 또는 1주당 취득가액」 하나다 — ⑫와 같다.
   }
+
+  validateSection165_4Era(form, acquisitionMode, errors);
 
   // ── R-1' 매매사례가액 (영§176의2③1호) ──
   if (acquisitionMode === "sale_case") {

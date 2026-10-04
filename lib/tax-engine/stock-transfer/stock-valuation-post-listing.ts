@@ -436,6 +436,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   // [표시 전용 echo] 결과 카드가 가중평균 산식을 라벨·변수값으로 펼치기 위한 산출 근거.
   // 가중치는 실제 적용값(연혁·§94①4다목 반전 반영)이라 화면이 3/5·2/5를 추정하지 않아도 된다.
   const weightedBasis: PostListingValuationResult["weightedBasis"] = {
+    model: listingEval.model,
     niWeight: listingEval.niWeight,
     naWeight: listingEval.naWeight,
     listing: {

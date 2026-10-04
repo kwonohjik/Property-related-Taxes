@@ -9,6 +9,7 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { calcSupplementaryPerShare } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
@@ -122,7 +123,7 @@ export function validateUnlistedValuationFields(
       errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
     }
     const td = parseTransferDate(form.transferDate);
-    if (valuationMode === "simple" && td) {
+    if (valuationMode === "simple" && td && !isSection165_4EraUnsupported(td)) {
       const heavyRE = isReversalCorpForm(form);
       // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
       // 여기만 가중평균으로 재면 엔진은 「같다」, validate는 「다르다」가 되어 거짓 경고가 뜬다.
@@ -146,7 +147,8 @@ function validateTransferSupplementaryPositive(
   valuationMode: string,
 ): void {
   const td = parseTransferDate(form.transferDate);
-  if (!td) return;
+  // 2000.4.2. 이전 양도는 산식 자체를 막는다(`validateSection165_4Era`) — 여기서 값을 재지 않는다.
+  if (!td || isSection165_4EraUnsupported(td)) return;
   if (valuationMode === "simple") {
     if (isEmpty(form.transferYearNetAssetPerShare)) return;
     if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) return;
@@ -168,6 +170,29 @@ function validateTransferSupplementaryPositive(
   const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
   if (isTransferSupplementaryNonPositive(reduced.transferNi, reduced.transferNa, isReversalCorpForm(form), td, niSkip)) {
     errors.push({ field: "naAssetTotalRow1EUTransfer", message: UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE, severity: "error" });
+  }
+}
+
+/**
+ * S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라(시행규칙 §81②2호 산술평균) 계산하지 않는다.
+ * §165④를 부르는 분기에서만 막는다 — 환산(비상장·거래정지·취득 후 상장)과 매매사례가액(비상장 — 개산공제 기준시가).
+ * ⑫(`stock-transfer-tax-refines.ts`)와 같은 조건·문구. 양도일 칸은 1단계라 이 화면의 산정방법 칸에 단다.
+ */
+export function validateSection165_4Era(
+  form: StockTransferFormData,
+  acquisitionMode: string,
+  errors: StockValidationError[],
+): void {
+  const td = parseTransferDate(form.transferDate);
+  if (!td || !isSection165_4EraUnsupported(td)) return;
+  const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
+  const stdMode = form.acquisitionStdMode;
+  const uses165_4 =
+    (acquisitionMode === "estimated" &&
+      (!isListed || stdMode === "halt_transfer" || stdMode === "halt_acquisition" || stdMode === "post_listing")) ||
+    (acquisitionMode === "sale_case" && !isListed);
+  if (uses165_4) {
+    errors.push({ field: "acquisitionMode", message: UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED, severity: "error" });
   }
 }
 

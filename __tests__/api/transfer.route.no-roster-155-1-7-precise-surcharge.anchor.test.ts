@@ -17,9 +17,13 @@
  * | A-2 §155⑦ 농어촌(레거시 스칼라) · 명부 없음 | 422,521,000 + 고지 | **102,086,600**(15호) | 102,086,600 |
  * | N-1 §155① 처분기한 경과(신규 2022-01-01) | 1,141,178,500 + 고지 | 불변 | 1,141,178,500 |
  * | N-2 §155① 선언 · 세대 3채 | 1,327,903,500 + 고지 | 불변 | — |
- * | N-3 세대 3채 · 조특법 §99의4 제외로 의제 주택 수 2 | 497,046,000 + 고지 | 불변(그 밖의 주택 — 열지 않음) | 102,086,600 |
+ * | N-3 세대 3채 · 조특법 §99의4 제외로 의제 주택 수 2 | 497,046,000 + 고지 | **102,086,600**(13호 — 정책 변경, 아래) | 102,086,600 |
  * | N-4 §155① 의제는 서나 §154① 미충족(조정 2018 취득 · 거주 0) | 1,141,178,500 + 고지 | 불변(15호 불성립 → 구성 미사용) | 1,141,178,500 |
  * | N-5 일반 2주택(의제 없음) · 비조정(부산) | 582,598,500 | 불변 · 정밀 판정 없음 | — |
+ *
+ * N-3은 #1958에서 「3채 이상이면 열지 않는다」로 고정했다가 사용자 결정(2026-10-04 「정밀 판정으로 열어라」)으로
+ * 확인된 조특법 제외 주택까지 행으로 구성해 연다 — 그 축의 양성·음성 짝은
+ * `transfer.route.no-roster-155-1-special-act-exclusion-precise-surcharge.anchor.test.ts`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -271,12 +275,12 @@ describe("음성 짝 — 열지 않는다(원시 플래그 + #1955 고지 · 세
     expect(s.warnings).toContain(notice(3));
   });
 
-  it("N-3 세대 3채 · §99의4 제외로 의제 주택 수만 2 → 그 밖의 주택이 있어 열지 않는다(497,046,000 + 고지)", async () => {
+  it("N-3 세대 3채 · §99의4 제외로 의제 주택 수 2 → 정책 변경(2026-10-04): 제외 주택까지 구성해 13호 102,086,600 · 고지 없음", async () => {
     const f = temporaryTwoHouse(form({ count: 3 }));
     (f.assets[0] as unknown as { reductions: unknown[] }).reductions = [RURAL_994];
     const s = await single(f);
-    expect(s).toMatchObject({ totalTax: 497_046_000, evaluated: false });
-    expect(s.warnings).toContain(notice(3));
+    expect(s).toMatchObject({ totalTax: EXCLUDED_15, evaluated: true });
+    expect(hasMarker(s.warnings)).toBe(false);
   });
 
   it("N-4 §155① 의제는 서나 §154① 미충족 → 15호 불성립 · 구성 행 미사용(중과 1,141,178,500 + 고지 = 종전)", async () => {

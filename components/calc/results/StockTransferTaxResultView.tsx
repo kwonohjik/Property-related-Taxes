@@ -605,6 +605,7 @@ export function StockTransferTaxResultView({
           niPerShare={result.valuationDetail.niPerShare ?? 0}
           naPerShare={result.valuationDetail.naPerShare ?? 0}
           isHeavyRE={result.valuationDetail.isHeavyRE === true}
+          isMaxModel={result.valuationDetail.section165_4Model === "max"}
           isNetAssetOnly={Boolean(result.valuationDetail.netAssetOnlyReason)}
           netAssetOnlyReason={result.valuationDetail.netAssetOnlyReason}
           weighted={result.valuationDetail.weightedAvgPerShare ?? 0}

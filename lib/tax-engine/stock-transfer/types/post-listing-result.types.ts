@@ -5,6 +5,8 @@
  * (`./stock-valuation-post-listing` · `./types/stock-transfer.types` 양쪽 유효).
  */
 
+import type { Section165_4Model } from "../valuation-165-4-basis";
+
 export type PostListingValuationResult = {
   /** 상장연도 직전 사업연도 1주당 비상장 평가액 (가중평균) */
   listingYearPerShareValue: number;
@@ -38,6 +40,8 @@ export type PostListingValuationResult = {
    * 화면에서 3/5·2/5를 하드코딩하지 말고 이 값을 쓴다.
    */
   weightedBasis?: {
+    /** `"max"`(2000.4.3.~2007.2.27. 양도)면 `weightedRaw`는 max(순손익가치, 순자산가치)이고 가중치는 0이다 */
+    model: Section165_4Model;
     niWeight: number;
     naWeight: number;
     listing: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
