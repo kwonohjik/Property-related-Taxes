@@ -14,6 +14,7 @@
 
 import { getDecisionText } from "./client";
 import { buildDecisionSourceUrl } from "./client-law";
+import { hasFullTextSource } from "./decision-source";
 import {
   LawApiError,
   fetchJson,
@@ -78,15 +79,8 @@ export function isEnBanc(title: string, judgmentType?: string): boolean {
  */
 export { normalizeCaseNo };
 
-/**
- * 본문(전문) 제공 판례인지 — DRF prec 의 데이터출처별 본문 JSON 제공 여부(2026-10-04 실측):
- *   대법원·지방세법령정보시스템·근로복지공단산재판례 = 제공 / 국세법령정보시스템 = 「본문 제공 불가」.
- * 🔴 종전엔 /대법원/ 만 봐서 지방세 출처 대법원 판결(본문 있음)까지 스캔에서 빠졌다.
- * 근거: __tests__/korean-law/cite-check-source-gap.anchor.test.ts
- */
-export function hasFullTextSource(source: string): boolean {
-  return /대법원|지방세법령정보시스템|근로복지공단산재판례/.test(source);
-}
+/** 본문(전문) 제공 출처인지 — 판례 탭 배지와 같은 판정이라 순수 모듈로 옮겼다. 재export 로 표면 유지. */
+export { hasFullTextSource };
 
 /** 대법원 판결인지 — 국세청 출처는 법원명이 비고 사건번호가 `대법원-2024-두-34092` 형식이다. */
 export function isSupremeCourtCase(c: CitingCase): boolean {

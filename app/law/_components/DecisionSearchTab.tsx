@@ -12,6 +12,7 @@ import {
 } from "@/lib/korean-law/types";
 import { parseDateRange } from "@/lib/korean-law/date-parser";
 import { isQuotedPhrase } from "@/lib/korean-law/phrase-query";
+import { hasFullTextSource } from "@/lib/korean-law/decision-source";
 import { HighlightedText } from "./HighlightedText";
 import { RefLawChip } from "./RefLawChip";
 import { RefPrecedentChip } from "./RefPrecedentChip";
@@ -317,7 +318,7 @@ export function DecisionSearchTab({
         <>
           <ul className="divide-y rounded-md border">
             {items.map((it) => {
-              const isFullTextAvailable = it.source === "대법원";
+              const isFullTextAvailable = hasFullTextSource(it.source ?? "");
               return (
                 <li key={it.id || `${it.caseNo}-${it.date}`} className="p-3 text-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -326,6 +327,7 @@ export function DecisionSearchTab({
                       <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         {it.source && (
                           <span
+                            data-testid="decision-source-badge"
                             className={`rounded px-1.5 py-0.5 ${
                               isFullTextAvailable
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
