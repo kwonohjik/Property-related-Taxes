@@ -32,7 +32,7 @@
  * | §98의9 명부 행(공시 3억) + 거주주택 특례 | 1,141,178,500 + 확인 필요 | 102,086,600 (적용 + 13호 배제 · 단건 = 다건) |
  * | §98의9 명부 행(공시 4억 — 중과 주택 수 산입) + 거주주택 특례 | 1,327,903,500 + 확인 필요 | 102,086,600 (같음) |
  * | §98의9 취득기간 밖(요건 미충족) + 거주주택 특례 | 1,141,178,500 · 고지 없음 | 같음 |
- * | §98의9 명부 행(공시 4억) 단독 — 15호 단독 축(E-14a) | 422,521,000 (15호 미개방) | 같음 — 그 축의 목록에는 §99의4도 없다 |
+ * | §98의9 명부 행(공시 4억) 단독 — 15호 단독 축(E-14a) | 422,521,000 (15호 미개방) | 같음(#1956) → 204,355,800 (사용자 결정 2026-10-04 — 그 축에도 §98의9·§99의4 연결 · `transfer.route.special-act-15ho-hce-verified`) |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -407,7 +407,7 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문�
  * 취득가 5억 · 85㎡ 이하. 「취득 당시 1주택 보유 1세대」 등 확인 토글은 사용자 확인 사실이라 엔진이 재판정하지
  * 않는다 — 이 anchor는 §155⑳ 겹침 축만 관측한다.
  */
-describe("조특법 §98의9(§99의4 문형) — §155⑳ 겹침 성립 · 15호 단독 축은 종전 그대로", () => {
+describe("조특법 §98의9(§99의4 문형) — §155⑳ 겹침 성립 · 15호 단독 축도 성립", () => {
   const UNSOLD = {
     type: "unsold_98_9",
     unsoldHouseAcquisitionDate: "",
@@ -462,11 +462,14 @@ describe("조특법 §98의9(§99의4 문형) — §155⑳ 겹침 성립 · 15�
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-D5 (축 분리) §98의9(공시 4억) 단독 — 15호 단독 축(E-14a 목록)은 열지 않는다 422,521,000 (종전과 같음 · 단건 = 다건)", async () => {
+  // 종전(#1956)에는 「축 분리 — 15호 단독 축은 열지 않는다 422,521,000」을 고정했다. 사용자 결정(2026-10-04
+  // 「§98의9를 13호·15호 단독 축에서도 확인된 것으로」)으로 정책이 바뀌어 기대값을 뒤집었다 — 상세 anchor는
+  // `transfer.route.special-act-15ho-hce-verified.anchor.test.ts`(음성 짝 포함).
+  it("UX-D5 §98의9(공시 4억) 단독 — 15호 단독 축(E-14a 목록)도 연다 204,355,800 (종전 422,521,000 · 단건 = 다건)", async () => {
     const f = form([UNSOLD_ROW("2025-03-01", "400000000")]);
     const s = await single(f);
-    expect(s).toMatchObject({ status: 200, totalTax: 422_521_000 });
-    expect(s.exclusions).not.toContain("special_act_house_exclusion");
-    expect(await multi(f)).toBe(422_521_000);
+    expect(s).toMatchObject({ status: 200, totalTax: 204_355_800 });
+    expect(s.exclusions).toContain("special_act_house_exclusion");
+    expect(await multi(f)).toBe(204_355_800);
   });
 });
