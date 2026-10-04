@@ -268,9 +268,13 @@ export const houseSchema = z.object({
   isUnavoidableReason: z.boolean().optional(),
   unavoidableResidenceYears: z.number().nonnegative().optional(),
   unavoidableReasonResolvedDate: z.string().date().optional(),
+  /** 「양도일 현재 부득이한 사유 미해소」 — 해소일과 택일(⑫ `refineHouseExclusionInputs`) */
+  unavoidableReasonUnresolved: z.boolean().optional(),
   isLitigationHousing: z.boolean().optional(),
   /** 소송 **확정판결일**(§167의10①7호 기산점) — 필드명은 legacy(F-17) */
   litigationAcquisitionDate: z.string().date().optional(),
+  /** 「양도일 현재 소송 진행 중」 — 확정판결일과 택일(⑫ `refineHouseExclusionInputs`) */
+  litigationPending: z.boolean().optional(),
   isRedevelopmentZone: z.boolean().optional(),
   isPopulationDeclineArea: z.boolean().optional(),
   isSecondHomeRegistered: z.boolean().optional(),

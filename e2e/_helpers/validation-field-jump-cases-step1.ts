@@ -88,6 +88,9 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
   { name: "step1: 보유 주택 부득이 거주기간", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택의 거주기간\(년\)/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "", acquisitionOfficialPrice: "300000000" })]) },
   { name: "step1: 보유 주택 조특법 감면 임대주택 임대기간", field: R, step: 1, message: /^보유 주택 1: 조특법 감면 임대주택이면 임대기간/, form: holding([row({ isTaxIncentiveRental: true })]) },
   { name: "step1: 보유 주택 부득이 취득 당시 기준시가", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택의 취득 당시 기준시가/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "" })]) },
+  // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(2026-10-04 · 빈 값 = 「모름」 차단)
+  { name: "step1: 보유 주택 부득이 사유 해소 상태", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택: 사유 해소일을 입력하거나/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "250000000" })]) },
+  { name: "step1: 보유 주택 소송 상태", field: R, step: 1, message: /^보유 주택 1: 소송 주택: 소송 확정판결일을 입력하거나/, form: holding([row({ isLitigationHousing: true })]) },
 ];
 
 const SE = "sellingHouseExclusion";
@@ -101,6 +104,14 @@ const SELLING_CASES: FieldJumpCase[] = [
   {
     name: "step1: 양도 주택 부득이한 사유 취득 당시 기준시가", field: `${SE}.acquisitionOfficialPrice`, step: 1, message: /^양도 주택 부득이한 사유: 취득 당시 기준시가/,
     form: holding([row()], { [SE]: { isUnavoidableReason: true, unavoidableResidenceYears: "2" } }),
+  },
+  {
+    name: "step1: 양도 주택 부득이한 사유 해소 상태", field: `${SE}.unavoidableReasonResolvedDate`, step: 1, message: /^양도 주택 부득이한 사유 주택: 사유 해소일을 입력하거나/,
+    form: holding([row()], { [SE]: { isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "250000000" } }),
+  },
+  {
+    name: "step1: 양도 주택 소송 상태", field: `${SE}.litigationAcquisitionDate`, step: 1, message: /^양도 주택 소송 주택: 소송 확정판결일을 입력하거나/,
+    form: holding([row()], { [SE]: { isLitigationHousing: true } }),
   },
   {
     name: "step1: 양도 주택 조특법 감면 임대주택 임대기간", field: `${SE}.taxIncentiveRentalYears`, step: 1, message: /^양도 주택 조특법 감면 임대주택: 임대기간/,

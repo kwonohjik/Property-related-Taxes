@@ -325,10 +325,14 @@ export interface HouseEntry {
   unavoidableResidenceYears?: string;
   /** 부득이한 사유 해소일 (YYYY-MM-DD) — 해소 후 3년 이내 양도 시 배제 유지 */
   unavoidableReasonResolvedDate?: string;
+  /** 「양도일 현재 사유가 해소되지 않음」 — 해소일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단 */
+  unavoidableReasonUnresolved?: boolean;
   /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①7호 */
   isLitigationHousing?: boolean;
-  /** 소송 **확정판결일** (YYYY-MM-DD) — 3년 이내면 배제 (미입력=소송 진행 중). 필드명은 legacy(F-17) */
+  /** 소송 **확정판결일** (YYYY-MM-DD) — 3년 이내면 배제. 필드명은 legacy(F-17). 미입력은 더 이상 「진행 중」이 아니다 */
   litigationAcquisitionDate?: string;
+  /** 「양도일 현재 소송 진행 중」 — 확정판결일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단 */
+  litigationPending?: boolean;
   /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
   isRedevelopmentZone?: boolean;
   /** 인구감소지역 소재 주택 — 소령 §167의3①12 다·라목 (세컨드홈 특례) */

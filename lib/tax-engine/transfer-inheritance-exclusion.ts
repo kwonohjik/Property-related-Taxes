@@ -60,6 +60,12 @@ export interface InheritedHouseExclusionResult {
    * 단독상속 제외가 배제된 상속주택 수. **표시용**(불성립 사유 안내) — 계산은 위 필드가 이미 반영했다.
    */
   generalHouseNotHeldCount: number;
+  /**
+   * 상속개시일을 몰라 §155② 괄호(「상속개시 당시 보유한 주택」)를 판정하지 못해 단독상속 제외를 배제한 상속주택 수.
+   * **표시용**. 「모름」은 그 사실이 있어야 성립하는 특례를 불성립으로 본다(사용자 결정 2026-10-04). ⑧·⑫가
+   * 상속개시일을 필수로 받아 route로는 도달하지 않는다 — 엔진 직접 호출 방어다.
+   */
+  inheritedDateUnknownCount: number;
 }
 
 /** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
@@ -100,23 +106,28 @@ export function resolveInheritedHouseExclusion(
     eligibleSoleCount: 0,
     eligibleCoMinorityCount: 0,
     generalHouseNotHeldCount: 0,
+    inheritedDateUnknownCount: 0,
   };
   if (!houses) return empty;
 
   /**
    * OH-12 — §155② 괄호 「그 밖의 주택(상속개시 당시 보유한 주택 … 만 해당)」은 **단독상속 풀**의 요건이다
    * (§155③ 공동상속주택 조문에는 이 괄호가 없다). 상속주택마다 상속개시일이 다르므로 행별로 본다.
-   * 상속개시일을 모르면(`unknown`) 종전 동작을 유지한다.
+   * 상속개시일을 모르면(`unknown`) 「상속개시 당시 보유」가 확인되지 않은 것이다 — 그 사실이 있어야 성립하는
+   * 특례이므로 **불성립**으로 본다(사용자 결정 2026-10-04 「모름은 납세자에게 불리하게」 · §156의2⑦ 후단
+   * `generalHouseHeldAtInheritanceEstablished`도 같은 leaf에서 `yes`만 성립으로 본다).
    */
-  const heldForSole = (h: HouseInfo) =>
-    !generalHouse ||
-    qualifiesAsInheritanceGeneralHouse({
-      generalHouseAcquisitionDate: generalHouse.acquisitionDate,
-      inheritedDate: h.inheritedDate,
-      transferDate: generalHouse.transferDate,
-      rightAtInheritance: generalHouse.rightAtInheritance,
-      successorRightAcquisitionDate: generalHouse.successorRightAcquisitionDate,
-    }) !== "no";
+  const heldVerdict = (h: HouseInfo) =>
+    !generalHouse
+      ? "yes"
+      : qualifiesAsInheritanceGeneralHouse({
+          generalHouseAcquisitionDate: generalHouse.acquisitionDate,
+          inheritedDate: h.inheritedDate,
+          transferDate: generalHouse.transferDate,
+          rightAtInheritance: generalHouse.rightAtInheritance,
+          successorRightAcquisitionDate: generalHouse.successorRightAcquisitionDate,
+        });
+  const heldForSole = (h: HouseInfo) => heldVerdict(h) === "yes";
 
   /**
    * L-11 — 「상속개시일부터 소급하여 2년 이내에 피상속인으로부터 증여받은 주택 … 은 제외한다. **이하 이 항에서**
@@ -142,7 +153,10 @@ export function resolveInheritedHouseExclusion(
   }
 
   const gatesPassed = inheritedOthers.filter((h) => passesHouseholdGate(h) && passesRankingGate(h));
-  const generalHouseNotHeldCount = gatesPassed.filter((h) => !h.isCoInherited && !heldForSole(h)).length;
+  const generalHouseNotHeldCount = gatesPassed.filter((h) => !h.isCoInherited && heldVerdict(h) === "no").length;
+  const inheritedDateUnknownCount = gatesPassed.filter(
+    (h) => !h.isCoInherited && heldVerdict(h) === "unknown",
+  ).length;
   const eligible = gatesPassed.filter((h) => h.isCoInherited || heldForSole(h));
   const soleCount = eligible.filter((h) => !h.isCoInherited).length;
   const coMinorityCount = eligible.filter(
@@ -171,6 +185,7 @@ export function resolveInheritedHouseExclusion(
     eligibleSoleCount: soleCount,
     eligibleCoMinorityCount: coMinorityCount,
     generalHouseNotHeldCount,
+    inheritedDateUnknownCount,
   };
 }
 
@@ -280,6 +295,14 @@ export function buildInheritedExclusionSteps(
     steps.push({
       label: "상속개시 후 취득한 일반주택 — 주택수 제외 배제 (§155② 괄호)",
       formula: `양도 주택은 상속개시 당시 보유한 주택이 아닙니다(2013.2.15. 이후 취득분 한정 — 대통령령 제24356호 부칙 제20조) — 상속주택 ${result.generalHouseNotHeldCount}채 주택수 제외 대상 아님`,
+      amount: 0,
+      legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
+    });
+  }
+  if (result.inheritedDateUnknownCount > 0) {
+    steps.push({
+      label: "상속개시일 미확인 상속주택 — 주택수 제외 배제 (§155② 괄호)",
+      formula: `상속개시일이 없어 양도 주택이 상속개시 당시 보유한 주택인지 확인되지 않습니다 — 상속주택 ${result.inheritedDateUnknownCount}채 주택수 제외 대상 아님(상속개시일을 입력하면 판정합니다)`,
       amount: 0,
       legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
     });

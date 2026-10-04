@@ -27,7 +27,7 @@
  * | H-1 거주 + 임대 + 다른 일반주택(특례 없음) | 199,997,600 / 0 | 1,327,903,500 (특례 불성립) |
  * | H-2 거주 + 임대 + 상속(§155②) | 199,997,600 / 0 | 102,086,600 (0162 · 13호) |
  * | H-3 거주 + 임대 + 상속 + 신규(3중첩) | 199,997,600 / 0 | 1,327,903,500 (3009) |
- * | H-4 명부 없음 · 주택 수 3(판정 보류) | 199,997,600 / 0 | 199,997,600 (종전 동작) |
+ * | H-4 명부 없음 · 주택 수 3 | 199,997,600 / 0 | 199,997,600 → 2026-10-04 1,327,903,500 (모름 → 불리) |
  * | H-5 임대주택이 유일한 나중 취득 행 + 다른 일반주택 | 102,086,600 / 0 | 1,327,903,500 |
  * | G-3 시나리오 B(RH-B1 · mock 세율) | 67,309,000 / 22,093,500 | 67,309,000 |
  */
@@ -285,10 +285,15 @@ describe("E-14h 비과세 — 「장기임대주택 … 과 그 밖의 1주택�
     expect(await multi(f)).toBe(FULLY_TAXED);
   });
 
-  it("H-4 명부 없음(간이 입력 · 주택 수 3) → 판정 보류 · 종전 동작(특례 적용) 199,997,600", async () => {
+  // 2026-10-04 정책 변경(사용자 결정 「모름은 납세자에게 불리하게」) — 종전 「판정 보류 · 특례 적용 199,997,600」.
+  //   명부가 없으면 세대 주택 수로 「그 밖의 주택」 수를 세고, 그 1채가 §155①·②로 빠지는지 모르면 불성립 + 확인 필요
+  //   (`transfer.route.unknown-unfavorable-1-6-9.anchor.test.ts` U1).
+  it("H-4 명부 없음(간이 입력 · 주택 수 3 = 거주 + 임대 1 + 그 밖 1) → 특례 불성립 1,327,903,500", async () => {
     const f = withRental(form([], { householdHousingCount: "3" }));
-    expect(await single(f)).toMatchObject({ totalTax: 199_997_600, rentalApplied: true, notApplicable: undefined });
-    expect(await multi(f)).toBe(199_997_600);
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.notApplicable).toMatch(/확인되지 않아/);
+    expect(await multi(f)).toBe(FULLY_TAXED);
   });
 
   it("H-5 명부의 유일한 나중 취득 행이 임대주택 + 다른 일반주택 → §155①로 보지 않는다 → 특례 불성립", async () => {

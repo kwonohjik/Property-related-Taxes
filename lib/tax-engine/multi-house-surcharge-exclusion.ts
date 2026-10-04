@@ -186,9 +186,11 @@ function matchesUnavoidableReason(house: HouseInfo, transferDate: Date): boolean
   // 「해당 사유가 해소된 날부터 3년이 경과하지 아니한 경우에 한정」 — 초일불산입 기간의 말일(민법 §161 포함)까지(E-11 ·
   //   `isMortgageExecutionWithin3Years`와 같은 독법).
   if (house.unavoidableReasonResolvedDate) {
-    if (!isWithinDeadline(house.unavoidableReasonResolvedDate, 3, transferDate)) return false;
+    return isWithinDeadline(house.unavoidableReasonResolvedDate, 3, transferDate);
   }
-  return true;
+  // 해소일도 「양도일 현재 미해소」 선언도 없으면 「모름」 — 3년 한정을 확인할 수 없어 불성립(사용자 결정 2026-10-04).
+  // ⑧·⑫가 둘 중 하나를 요구해 route로는 도달하지 않는다(엔진 직접 호출 방어).
+  return house.unavoidableReasonUnresolved === true;
 }
 
 /** 3호를 판정할 수 없는 상태 — 부득이한 사유 주택인데 취득 당시 기준시가가 미입력(0)이다. */
@@ -199,14 +201,16 @@ export function isUnavoidableReasonUndecidable(house: HouseInfo | undefined): bo
 
 /**
  * 7호 — 「주택의 소유권에 관한 소송이 진행 중이거나 해당 소송결과로 취득한 주택(소송으로 인한
- * 확정판결일부터 3년이 경과하지 아니한 경우에 한정한다)」. 날짜 미입력은 소송 진행 중으로 본다.
+ * 확정판결일부터 3년이 경과하지 아니한 경우에 한정한다)」. 「진행 중」은 명시 선언(`litigationPending`)으로만
+ * 본다 — 날짜도 선언도 없으면 「모름」이라 불성립(사용자 결정 2026-10-04 · 종전에는 미입력 = 진행 중).
+ * ⑧·⑫가 둘 중 하나를 요구해 route로는 도달하지 않는다(엔진 직접 호출 방어).
  *
  * 기산점은 **확정판결일**이지 등기 취득일이 아니다(F-17). `litigationAcquisitionDate`라는
  * 필드명은 legacy이고, 담기는 값은 확정판결일이다 — 화면 라벨이 그것을 요구한다.
  */
 function matchesLitigationHousing(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLitigationHousing) return false;
-  if (!house.litigationAcquisitionDate) return true;
+  if (!house.litigationAcquisitionDate) return house.litigationPending === true;
   // 「확정판결일부터 3년이 경과하지 아니한 경우에 한정」 — 초일불산입 기간의 말일(민법 §161 포함)까지(E-11).
   return isWithinDeadline(house.litigationAcquisitionDate, 3, transferDate);
 }

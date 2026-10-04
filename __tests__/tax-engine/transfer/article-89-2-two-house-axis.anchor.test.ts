@@ -227,11 +227,21 @@ describe("§156의2⑪ · §156의3⑧ — 이농주택**만**", () => {
 });
 
 describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () => {
-  /** §155②③이 주택수를 2 → 1로 줄인다. 그래서 U-1이 아니라 ③ 타이밍까지 도달한다. */
+  /**
+   * §155②③이 주택수를 2 → 1로 줄인다. 그래서 U-1이 아니라 ③ 타이밍까지 도달한다.
+   *
+   * 🔑 상속개시일 없는 행은 **공동상속(소수지분)** 으로 둔다 — §155③에는 「상속개시 당시 보유」 괄호가 없어
+   *    날짜 없이도 주택수가 줄고, 그래야 ⑦ 후단의 「판정 불가」 갈래에 도달한다. 단독상속(§155②)이면
+   *    2026-10-04 「모름은 불리하게」로 괄호 미확인 → 제외 배제 → 2주택이라 이 갈래에 오지 않는다
+   *    (`transfer.route.unknown-unfavorable-1-6-9.anchor.test.ts` U6).
+   */
   function inheritedHouseCase(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     return twoHouse({
       sellingHouseId: "sell",
-      houses: [house({ id: "sell" }), house({ id: "inh", isInherited: true })],
+      houses: [
+        house({ id: "sell" }),
+        house({ id: "inh", isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false }),
+      ],
       ...over,
     });
   }

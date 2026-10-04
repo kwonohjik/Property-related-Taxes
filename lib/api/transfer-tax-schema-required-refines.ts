@@ -14,6 +14,8 @@ import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./transfer-tax-schema-household-refines";
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
+import { twoHouseExclusionStatusConflict } from "@/lib/calc/two-house-exclusion-status";
+import { twoHouseExclusionStatusIssue } from "@/lib/calc/two-house-exclusion-status";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -23,6 +25,11 @@ const positive = (v: number | undefined) => typeof v === "number" && v > 0;
 type HouseRow = {
   isUnavoidableReason?: boolean;
   unavoidableResidenceYears?: number;
+  unavoidableReasonResolvedDate?: string;
+  unavoidableReasonUnresolved?: boolean;
+  isLitigationHousing?: boolean;
+  litigationAcquisitionDate?: string;
+  litigationPending?: boolean;
   acquisitionOfficialPrice?: number;
   isEmployeeHousing?: boolean;
   freeProvisionYears?: number;
@@ -48,6 +55,10 @@ export function refineHouseExclusionInputs(
       if (!positive(h.acquisitionOfficialPrice))
         issue(["houses", i, "acquisitionOfficialPrice"], "부득이한 사유 주택은 취득 당시 기준시가가 필요합니다 (소득세법 시행령 §167의10①3호)");
     }
+    // §167의10①3호·7호 — 기산일(해소일·확정판결일)과 「양도일 현재 미해소·진행 중」은 택일이다. ⑧
+    // `twoHouseExclusionStatusIssue`의 거울 + 택일 모순(빈 값 = 「모름」이 엔진에서 불성립으로 조용히 바뀌지 않게 막는다).
+    const statusIssue = twoHouseExclusionStatusIssue(h) ?? twoHouseExclusionStatusConflict(h);
+    if (statusIssue) issue(["houses", i, statusIssue.field], statusIssue.message);
     if (h.isEmployeeHousing && !positive(h.freeProvisionYears))
       issue(["houses", i, "freeProvisionYears"], "사원용 주택은 무상 제공 기간(년)이 필요합니다");
     if (h.isDayCareCenter && !positive(h.dayCareOperationYears))

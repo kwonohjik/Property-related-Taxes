@@ -37,7 +37,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
   it("③ 다른 주택이 부득이한 사유(1년+ 거주) → 2주택 중과배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" }); // 양도 주택
     const h2 = makeHouse("h2", {
-      isUnavoidableReason: true,   // 취학·근무 등
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,   // 취학·근무 등
       unavoidableResidenceYears: 2, // 1년 이상 거주
       acquisitionOfficialPrice: 250_000_000, // 3호는 **취득 당시** 기준시가 3억 이하 (F-16)
     });
@@ -63,7 +63,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
   it("③ 부득이한 사유이지만 거주기간 미달(0년) → 배제 안 됨", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2", {
-      isUnavoidableReason: true,
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,
       unavoidableResidenceYears: 0, // 1년 미만
       acquisitionOfficialPrice: 250_000_000, // 기준시가는 충족 — 거주기간만 실패 사유 (F-16)
     });
@@ -161,7 +161,7 @@ describe("MH-23: 2주택 전용 배제 — ③ 부득이한 사유 + ⑩ 소형 
   it("③ 부득이한 사유·⑩ 소형 저가 모두 3주택에서는 미적용", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" }); // 양도 주택
     const h2 = makeHouse("h2", {
-      isUnavoidableReason: true,
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,
       unavoidableResidenceYears: 2,
       acquisitionOfficialPrice: 250_000_000, // 요건은 충족 — 3주택이라 미적용임을 본다 (F-16)
     });
@@ -327,7 +327,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
   it("3억 이하 + 1년 거주 → 배제 적용", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" }); // 양도 주택 (강남, 조정)
     const h2 = makeHouse("h2", {
-      isUnavoidableReason: true,
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,
       unavoidableResidenceYears: 2,
       acquisitionOfficialPrice: 250_000_000, // 취득 당시 2.5억 → 3억 이하 (F-16)
     });
@@ -346,7 +346,7 @@ describe("MH-NEW-03: 부득이한 사유 ③ 강화 — 3억 이하·사유해�
   it("3억 초과 → 배제 미적용 (기존과 다른 결과)", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2", {
-      isUnavoidableReason: true,
+      isUnavoidableReason: true, unavoidableReasonUnresolved: true,
       unavoidableResidenceYears: 2,
       acquisitionOfficialPrice: 350_000_000, // 취득 당시 3.5억 → 3억 초과 → 배제 안 됨 (F-16)
     });
@@ -416,7 +416,8 @@ describe("MH-NEW-04: 소송 취득 주택 ⑧ — 2주택 중과배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" }); // 양도
     const h2 = makeHouse("h2", {
       isLitigationHousing: true,
-      // litigationAcquisitionDate 미제공 → 소송 진행 중
+      // 확정판결일 미제공 + 「양도일 현재 소송 진행 중」 선언 → 진행 중(2026-10-04 — 선언 없이 비우면 「모름」 = 불성립)
+      litigationPending: true,
     });
 
     const input = makeInput([h1, h2], {
@@ -470,7 +471,7 @@ describe("MH-NEW-04: 소송 취득 주택 ⑧ — 2주택 중과배제", () => {
 
   it("3주택 상황에서 소송 취득 주택 → 2주택 전용 배제 미적용", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
-    const h2 = makeHouse("h2", { isLitigationHousing: true });
+    const h2 = makeHouse("h2", { isLitigationHousing: true, litigationPending: true });
     const h3 = makeHouse("h3");
 
     const input = makeInput([h1, h2, h3], {

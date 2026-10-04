@@ -31,6 +31,7 @@ import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } f
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
+import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -116,6 +117,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // 3호의 기준시가는 「취득 당시」다 — 미입력이면 엔진이 판정 불가로 두고 배제하지 않는다(F-16).
       if (h.isUnavoidableReason && !h.acquisitionOfficialPrice)
         return fieldError(rowKey, `${label}: 부득이한 사유 주택의 취득 당시 기준시가를 입력하세요.`);
+      // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
+      const statusIssue = twoHouseExclusionStatusIssue(h);
+      if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
       return null;
     })();
     if (firstError) issues.push({ step, message: firstError });
@@ -142,13 +146,19 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     issues.push({ step, message: `양도 주택 조특법 감면 임대주택: 양도기한 연장 사유(소령 §167의3⑪) — ${sell3Issue}` });
 
   // ⑧ 양도 주택 2주택 전용 배제 — §167의10①3호(F-16). 「다른 보유 주택」 행과 같은 요구다.
-  //    7호(소송)는 날짜 미입력이 「진행 중」이라는 뜻이므로 요구하지 않는다.
+  //    3호·7호 기산 상태는 날짜 또는 「양도일 현재 미해소·진행 중」 택일이다 — 종전에는 7호 날짜 미입력을
+  //    「진행 중」으로 읽어 요구하지 않았는데, 같은 빈 값에 「모름」이 겹쳤다(사용자 결정 2026-10-04).
   if (se?.isUnavoidableReason) {
     if (!se.unavoidableResidenceYears || parseFloat(se.unavoidableResidenceYears) <= 0)
       issues.push({ step, field: "sellingHouseExclusion.unavoidableResidenceYears", message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
     if (!se.acquisitionOfficialPrice)
       issues.push({ step, field: "sellingHouseExclusion.acquisitionOfficialPrice", message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
   }
+  const sellStatusIssue = se ? twoHouseExclusionStatusIssue(se) : null;
+  if (sellStatusIssue?.field === "unavoidableReasonResolvedDate")
+    issues.push({ step, field: "sellingHouseExclusion.unavoidableReasonResolvedDate", message: `양도 주택 ${sellStatusIssue.message}` });
+  else if (sellStatusIssue)
+    issues.push({ step, field: "sellingHouseExclusion.litigationAcquisitionDate", message: `양도 주택 ${sellStatusIssue.message}` });
   // ⑧ 공고 전 매매계약(영 §167의10①11호 등) — ⑤·④와 같은 범위 술어(`pre-designation-contract-scope.ts`).
   for (const message of collectPreDesignationContractErrors(form)) issues.push({ step, message });
 
