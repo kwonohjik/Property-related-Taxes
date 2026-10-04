@@ -9,6 +9,7 @@
 // 취득 후 상장 환산 결과 — sibling 분리(800줄 정책). import는 StockTransferResult가 참조,
 // export는 외부 import 경로 무변경용 re-export.
 import type { PostListingValuationResult } from "./post-listing-result.types";
+import type { Section165_4Model } from "../valuation-165-4-basis";
 import type { Cross1045Adjustment } from "../../comparative-104-5-cross";
 import type { FraudPortionSplit } from "../../transfer-tax-penalty";
 export type { PostListingValuationResult };
@@ -1030,6 +1031,11 @@ export type StockTransferResult = {
     naPerShare?: number;
     /** [사례 49] 부동산과다보유 가중치 반전 (input.isHeavyRealEstateForValuation echo) */
     isHeavyRE?: boolean;
+    /**
+     * §165④ 산식(양도일 연혁) — `"max"`(2000.4.3.~2007.2.27. 양도)면 결과뷰가 가중평균 대신
+     * max(순손익가치, 순자산가치)를 펼친다. 보충평가를 거친 분기(비상장·거래정지)에서만 싣는다.
+     */
+    section165_4Model?: Section165_4Model;
     /** 순자산 단독 근거 — §165④3 사유(input echo) 또는 §165⑧1호 후단 `"ra_mok_heavy_real_estate"` (`resolveNetAssetOnlyBasis`) */
     netAssetOnlyReason?: string;
     /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount) · [C-1] 보충평가 × shareCount 겸용 */

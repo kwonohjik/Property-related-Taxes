@@ -14,7 +14,8 @@
  *   → 엔진에서 ÷10% 재적용 금지 (PR-1 인계 사항 정정)
  *
  * 시기별 평가 연혁 — 정본은 `valuation-165-4-basis.ts` `getValuationWeights`(시행본 MST·부칙 근거 포함).
- *   80% 하한은 **2018.4.1. 이후 양도**부터다(대통령령 제28637호 부칙). 2007.2.27. 이전 산식은 엔진과 다르다(S-1c-3 2단계).
+ *   80% 하한은 **2018.4.1. 이후 양도**부터다(대통령령 제28637호 부칙). 2000.4.3.~2007.2.27. 양도는 max(순손익가치,
+ *   순자산가치)이고, 2000.4.2. 이전은 ⑧·⑫가 막는다(S-1c-3 2단계 — 계획서 §11).
  *
  * ※ 취득 후 상장 환산비율 계산(분자·분모)에는 80% 하한 미적용
  *    (환산비율 분자·분모는 stock-valuation-post-listing.ts에서 처리)
@@ -254,19 +255,16 @@ export function calcUnlistedValuation(
     // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 분기만 현행 3:2와 80% 하한을
     // 하드코딩해 MAIN 경로(`:292` getValuationWeights)와 **같은 함수 안에서 서로 다른 법을**
     // 적용하고 있었다. 연혁 모델은 이미 `getValuationWeights`에 있다:
-    //   · ~1998.12.31.  순자산 단독 (3:2 아님)
-    //   · 1999.1.1.~2018.3.31.  3:2 가중평균, **80% 하한 없음** (S-1c-3 — 종전 경계 2007.2.28.은 근거 없음)
+    //   · 2000.4.3.~2007.2.27.  max(순손익가치, 순자산가치) (S-1c-3 2단계)
+    //   · 2007.2.28.~2018.3.31.  3:2 가중평균, **80% 하한 없음** (S-1c-3 — 종전 경계 2007.2.28.은 근거 없음)
     //   · 2018.4.1.~  3:2 + 80% 하한(§165④1 단서)
     // 하드코딩 탓에 2007.2.28. 이전 양도에 하한이 잘못 걸려 양도기준시가↑ → 환산취득가↓ →
     // **세액 과대**였다.
-    const hist = getValuationWeights(transferDate);
-    // 1999년 전은 순자산 단독이라 부동산과다보유 반전도 의미가 없다(niWeight=0).
-    const useNetAssetOnly = isNetAssetOnly || hist.niWeight === 0;
 
     // STEP 2: 가중평균 + 80% 하한(§165④1 단서) + 0 하한(상증령 §55①·§56① 후단 준용) — **§165④ 정본에 위임**.
     // 종전에는 가중평균·80% 하한을 여기서 다시 계산해 0 하한이 빠졌다 — 자본잠식 법인의 음수 순자산이
     // 양도기준시가를 깎았다(S-1c-4 · anchor ZM-4). 순자산 단독도 같은 0 하한을 받는다.
-    const evaluated = useNetAssetOnly
+    const evaluated = isNetAssetOnly
       ? undefined
       : calcSection165_4Value(niPerShare, naPerShare, isHeavyRE, transferDate);
     const weighted = evaluated ? Math.floor(evaluated.weightedRaw) : calcNetAssetOnlyValue(naPerShare, transferDate);
@@ -434,17 +432,15 @@ export function calcUnlistedValuation(
   // 가중평균 — 현행 or 시기별
   // ──────────────────────────────────────────────────────────
 
-  if (isHeavyRealEstateForValuation) {
+  // 2000.4.3.~2007.2.27. 양도 — max 산식이라 가중치도 반전도 없다(반전은 2007.2.28. 신설).
+  if (weights.model === "max") {
+    appliedRules.push("2007.2.27. 이전 양도 — 평가액은 순손익가치·순자산가치 중 큰 금액 (소득세법 시행령 §165④1·2호, 2007.2.28. 개정 전)");
+  } else if (isHeavyRealEstateForValuation) {
     // 2026-07-29 정정(#591 감사 R7 — 라벨 전용, 세액 불변): 부동산과다보유 가중치 반전의
     //   근거는 §165④1(법 §94①4 다목) 괄호이지 **취득후상장 규정 §165⑤이 아니다**.
     //   같은 파일 `:650` 주석이 이미 "§165④1 괄호"로 옳게 적고 있어 내부 불일치였다.
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG + "가중치반전");
     appliedRules.push("부동산과다보유가중치반전");
-  }
-
-  // 1998 이하 순자산 단독 연혁 분기 (getValuationWeights에서 niWeight=0, naWeight=5로 처리)
-  if (weights.niWeight === 0 && weights.naWeight === 5 && !isHeavyRealEstateForValuation) {
-    appliedRules.push("시기별평가1998이하순자산단독");
   }
 
   // ─── 양도기준시가 (양도일 직전 사업연도 기준) ───

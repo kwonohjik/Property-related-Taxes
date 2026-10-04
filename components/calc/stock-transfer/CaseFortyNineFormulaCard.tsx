@@ -14,6 +14,7 @@
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 
 interface CaseFortyNineFormulaCardProps {
   transferPrice: number;
@@ -23,6 +24,8 @@ interface CaseFortyNineFormulaCardProps {
   niPerShare: number;
   naPerShare: number;
   isHeavyRE: boolean;
+  /** 2007.2.27. 이전 양도 — max 산식(가중치 없음). `valuationDetail.section165_4Model` echo */
+  isMaxModel: boolean;
   isNetAssetOnly: boolean;
   /** 순자산 단독 근거 echo (`valuationDetail.netAssetOnlyReason`) — 표기 라벨용 */
   netAssetOnlyReason?: string;
@@ -42,6 +45,7 @@ export function CaseFortyNineFormulaCard({
   niPerShare,
   naPerShare,
   isHeavyRE,
+  isMaxModel,
   isNetAssetOnly,
   netAssetOnlyReason,
   weighted,
@@ -72,6 +76,14 @@ export function CaseFortyNineFormulaCard({
             순자산가치 단독 평가 ({netAssetOnlyCitationLabel(netAssetOnlyReason)}) = 1주당 순자산가치 ={" "}
             <strong>{naPerShare.toLocaleString()}</strong>
           </p>
+        ) : isMaxModel ? (
+          <>
+            <p className="text-fuchsia-700">
+              양도기준시가 = 순손익가치 {niPerShare.toLocaleString()}·순자산가치 {naPerShare.toLocaleString()} 중 큰 금액 ={" "}
+              <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>
+            </p>
+            <p className="text-caption text-fuchsia-700">({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})</p>
+          </>
         ) : (
           <>
             <p className="text-fuchsia-700">

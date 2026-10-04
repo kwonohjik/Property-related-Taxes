@@ -259,49 +259,43 @@ describe("케이스 27 — 순자산 단독 평가 시 80% 하한 미적용", ()
 // ============================================================
 
 describe("케이스 19 — 시기별 평가 연혁 (양도일 기준)", () => {
-  // 1998년 이하: 순자산 단독 (niWeight=0, naWeight=5)
-  // 1999~2018.3.31: 가중평균 (80% 하한 없음)
+  // ~2000.4.2.: 계산하지 않는다(시행규칙 §81②2호 산술평균 — 입력 없음). ⑧·⑫가 막고 엔진은 throw
+  // 2000.4.3.~2007.2.27.: max(순손익가치, 순자산가치) — 시행규칙 제138호 §81②2호 → 영 §165④1·2호(제17032호)
+  // 2007.2.28.~2018.3.31.: 가중평균 (80% 하한 없음) — 대통령령 제19890호
   // 2018.4.1.~: 현행 (가중평균 + 80% 하한) — 대통령령 제28637호 부칙 제1조 단서 1호 · 제2조②
-  //   S-1c-3 재기준(법령 우선): 종전 경계 2007.2.28.은 근거가 없었다 — 2007·2010·2017·2018.2.13. 시행본에 하한 없음.
+  //   S-1c-3 재기준(법령 우선): 종전 경계 2007.2.28.(하한)은 근거가 없었다 — 2007·2010·2017·2018.2.13. 시행본에 하한 없음.
+  //   S-1c-3 2단계 재기준: 종전 «~1998 순자산 단독 · 1999~ 3:2»도 근거가 없었다 — 계획서 §11.
 
-  it("C19-01: 1998.12.31. 양도 → 순자산 단독 연혁 분기", () => {
-    const result = calculateStockTransferTax(baseUnlistedInput({
-      transferDate: new Date("1998-12-31"),
-      filingDate: new Date("1999-02-28"),
-      // 1998 이하: niWeight=0 → 가중평균에서 ni 무시
-      // transferNa=200,000이 양도기준시가
-      // 환산취득가 = 500,000,000 × acquisitionNa / transferNa
-      //           = 500,000,000 × 150,000 / 200,000 = 375,000,000
-    }));
-    // 1998 연혁: 순자산 단독 (niWeight=0) → 나목처럼 취급하나
-    // 중요: 이 분기는 netAssetOnlyReason 없이 시기별 자동 분기
-    // 따라서 valuationDetail.method = "weighted_avg" (niWeight=0으로 나오지만 method는 weighted_avg)
-    expect(result.acquisitionPrice).toBe(375_000_000);
-    expect(result.warnings.join(" ")).toMatch(/1998이하|순자산단독/);
+  it("C19-01: 1998.12.31.·1999.1.1. 양도 → 계산하지 않는다(throw — 종전 «순자산 단독»·«3:2» 근거 없음)", () => {
+    for (const [transferDate, filingDate] of [["1998-12-31", "1999-02-28"], ["1999-01-01", "1999-03-01"]]) {
+      expect(() =>
+        calculateStockTransferTax(baseUnlistedInput({
+          transferDate: new Date(transferDate),
+          filingDate: new Date(filingDate),
+        })),
+      ).toThrow();
+    }
   });
 
-  it("C19-02: 1999.1.1. 양도 → 가중평균 + 80% 하한 없음", () => {
+  it("C19-02: 2000.4.3. 양도 → max(순손익가치, 순자산가치)", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
-      transferDate: new Date("1999-01-01"),
-      filingDate: new Date("1999-03-01"),
+      transferDate: new Date("2000-04-03"),
+      filingDate: new Date("2000-05-31"),
     }));
-    // 1999: 가중평균 (3/5+2/5) 하한 없음
-    // weighted = 30,000×3/5 + 200,000×2/5 = 18,000 + 80,000 = 98,000
-    // 하한 미적용 → 양도기준시가 = 98,000
-    // 취득기준시가 = 20,000×3/5 + 150,000×2/5 = 12,000 + 60,000 = 72,000
-    // 환산취득가 = 500,000,000 × 72,000 / 98,000 = floor(367,346,938) = 367,346,938
+    // 양도기준시가 = max(30,000, 200,000) = 200,000 · 취득기준시가 = max(20,000, 150,000) = 150,000
+    // 환산취득가 = 500,000,000 × 150,000 / 200,000 = 375,000,000 (종전 3:2 = 367,346,938)
     expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
-    // 양도기준시가가 98,000 (하한 미발동)이므로 취득가는 다름
-    expect(result.acquisitionPrice).toBe(367_346_938);
+    expect(result.valuationDetail?.section165_4Model).toBe("max");
+    expect(result.acquisitionPrice).toBe(375_000_000);
   });
 
-  it("C19-03: 2007.2.27. 양도 → 가중평균 + 80% 하한 없음", () => {
+  it("C19-03: 2007.2.27. 양도 → max · 80% 하한 없음", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
       transferDate: new Date("2007-02-27"),
       filingDate: new Date("2007-04-27"),
     }));
-    // 2007.2.27 이전: 80% 하한 없음
     expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
+    expect(result.acquisitionPrice).toBe(375_000_000);
   });
 
   it("C19-04: 2007.2.28. 양도 → 가중평균, 80% 하한 없음 (종전 기대값 «하한 발동»은 근거 없는 경계였다)", () => {
@@ -310,6 +304,9 @@ describe("케이스 19 — 시기별 평가 연혁 (양도일 기준)", () => {
       filingDate: new Date("2007-04-28"),
     }));
     expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
+    // 3:2 시작일(대통령령 제19890호) — 500,000,000 × 72,000 / 98,000 = 367,346,938 (C19-03 max 375,000,000과 경계 쌍)
+    expect(result.valuationDetail?.section165_4Model).toBe("weighted");
+    expect(result.acquisitionPrice).toBe(367_346_938);
   });
 
   it("C19-04b: 2018.3.31. 양도 → 하한 없음 · 2018.4.1. 양도 → 하한 발동 (98,000 < 160,000)", () => {

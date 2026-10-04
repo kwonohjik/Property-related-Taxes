@@ -25,6 +25,7 @@ import {
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { calcSupplementaryPerShare } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
@@ -147,7 +148,7 @@ function validateUnlistedValuationFields(
       errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
     }
     const td = parseTransferDate(form.transferDate);
-    if (valuationMode === "simple" && td) {
+    if (valuationMode === "simple" && td && !isSection165_4EraUnsupported(td)) {
       const heavyRE = isReversalCorpForm(form);
       // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
       // 여기만 가중평균으로 재면 엔진은 「같다」, validate는 「다르다」가 되어 거짓 경고가 뜬다.
@@ -171,7 +172,8 @@ function validateTransferSupplementaryPositive(
   valuationMode: string,
 ): void {
   const td = parseTransferDate(form.transferDate);
-  if (!td) return;
+  // 2000.4.2. 이전 양도는 산식 자체를 막는다(`validateSection165_4Era`) — 여기서 값을 재지 않는다.
+  if (!td || isSection165_4EraUnsupported(td)) return;
   if (valuationMode === "simple") {
     if (isEmpty(form.transferYearNetAssetPerShare)) return;
     if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) return;
@@ -193,6 +195,29 @@ function validateTransferSupplementaryPositive(
   const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
   if (isTransferSupplementaryNonPositive(reduced.transferNi, reduced.transferNa, isReversalCorpForm(form), td, niSkip)) {
     errors.push({ field: "naAssetTotalRow1EUTransfer", message: UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE, severity: "error" });
+  }
+}
+
+/**
+ * S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라(시행규칙 §81②2호 산술평균) 계산하지 않는다.
+ * §165④를 부르는 분기에서만 막는다 — 환산(비상장·거래정지·취득 후 상장)과 매매사례가액(비상장 — 개산공제 기준시가).
+ * ⑫(`stock-transfer-tax-refines.ts`)와 같은 조건·문구. 양도일 칸은 1단계라 이 화면의 산정방법 칸에 단다.
+ */
+function validateSection165_4Era(
+  form: StockTransferFormData,
+  acquisitionMode: string,
+  errors: StockValidationError[],
+): void {
+  const td = parseTransferDate(form.transferDate);
+  if (!td || !isSection165_4EraUnsupported(td)) return;
+  const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
+  const stdMode = form.acquisitionStdMode;
+  const uses165_4 =
+    (acquisitionMode === "estimated" &&
+      (!isListed || stdMode === "halt_transfer" || stdMode === "halt_acquisition" || stdMode === "post_listing")) ||
+    (acquisitionMode === "sale_case" && !isListed);
+  if (uses165_4) {
+    errors.push({ field: "acquisitionMode", message: UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED, severity: "error" });
   }
 }
 
@@ -603,7 +628,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           }
           // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
           const td5 = parseTransferDate(form.transferDate);
-          if (detailMode === "simple" && td5) {
+          if (detailMode === "simple" && td5 && !isSection165_4EraUnsupported(td5)) {
             const heavyRE = isReversalCorpForm(form);
             const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;
             const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td5).value;
@@ -638,6 +663,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     //    화면(`MarketSampleBlock`)에는 그 칸이 없어 「1주당 취득 매매사례가액」만 채운 사용자가 막혔다
     //    (숨은 칸 요구 = 막다른 길). 필수 규칙은 아래 R-1' 「사례가액 또는 1주당 취득가액」 하나다 — ⑫와 같다.
   }
+
+  validateSection165_4Era(form, acquisitionMode, errors);
 
   // ── R-1' 매매사례가액 (영§176의2③1호) ──
   if (acquisitionMode === "sale_case") {

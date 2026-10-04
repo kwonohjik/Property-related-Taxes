@@ -26,6 +26,8 @@ import { DateInput } from "@/components/ui/date-input";
 // ⚠️ 본칙 가중평균(`calcUnlistedPerShareWeighted`)이 아니라 「제4항에 따른 평가액」으로 비교해야
 //    엔진의 §165⑤ 후단 트리거 판정과 일치한다(80% 하한 단서 + 연혁 게이팅 포함).
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { getValuationWeights } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import { ReversalCorpToggle } from "./ReversalCorpToggle";
@@ -65,8 +67,13 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   // 양도일 미입력·형식오류면 연혁 게이팅 기준이 없다 → 판정 불가로 보고 토글을 노출한다
   // (임의 기준일 fallback 금지. 엔진 C-7이 평가 상이 시 warning으로 정리한다).
   const transferDateForEval = form.transferDate ? new Date(form.transferDate) : undefined;
+  // 2000.4.2. 이전 양도는 산식이 달라 계산하지 않는다(⑧·⑫ 차단) — 판정 불가와 같이 다룬다.
   const evalDate =
-    transferDateForEval && !isNaN(transferDateForEval.getTime()) ? transferDateForEval : undefined;
+    transferDateForEval && !isNaN(transferDateForEval.getTime()) && !isSection165_4EraUnsupported(transferDateForEval)
+      ? transferDateForEval
+      : undefined;
+  // 2007.2.27. 이전 양도는 max 산식 — 가중치가 없어 2:3 반전 토글도 의미가 없다
+  const isMaxModel = evalDate !== undefined && getValuationWeights(evalDate).model === "max";
   const simpleListingEval = evalDate
     ? calcSection165_4Value(
         parseAmount(form.listingYearNetIncomePerShare),
@@ -274,8 +281,9 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             최상위에 있어 ①의 종가평균까지 지배하는 것처럼 보였다.
             여기까지가 1주당 취득기준시가를 만드는 구간이다 — ③은 그것을 나누는 분모다. */}
         <ToneCard tone="amber" sectionNum={2} title="상장연도·취득연도 평가액" bodyClassName="space-y-3">
-          {/* §165④1호 괄호 — ②의 가중치(3:2 ↔ 2:3)를 정한다. 모든 입력 방식 공통이라 ② 맨 위 */}
-          <ReversalCorpToggle form={form} onChange={onChange} />
+          {/* §165④1호 괄호 — ②의 가중치(3:2 ↔ 2:3)를 정한다. 모든 입력 방식 공통이라 ② 맨 위.
+              max 산식(2007.2.27. 이전 양도)에는 가중치가 없어 숨긴다 */}
+          {!isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
           {mode === "simple" ? (
             <>
               {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
