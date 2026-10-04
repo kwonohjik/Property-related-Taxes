@@ -23,7 +23,7 @@
  *   (그 행이 선순위 상속주택으로 제외)로 빠진다. → 비과세 적용 · 중과 배제 ① 요소 성립.
  * - `exceeded` — 거주주택 외 비임대 주택이 조특법 제외 후에도 2채 이상(3중첩)이거나, 한 채가 어느 특례로도
  *   빠지지 않는다. → 비과세 특례 적용 불가 · 중과 배제 불성립.
- * - `undetermined` — 명부 없음 + 세대 주택 수로 보아 거주주택·임대주택 외 주택이 없음 · 조특법 제외가 섞임 ·
+ * - `undetermined` — 명부 없음 + 세대 주택 수가 임대주택 수보다 작음(입력 모순) · 조특법 제외가 섞임 ·
  *   §155③·④⑤·⑦과의 2중첩(해석 미확보). → **양쪽 모두 종전 동작**(비과세는 적용, 중과 배제는 열지 않음 — 확인 필요).
  *
  * ## 명부 없음 — 「모름」은 불리하게 (사용자 결정 2026-10-04)
@@ -31,7 +31,10 @@
  * 명부가 없으면 세대 주택 수(`householdHousingCount`)에서 거주주택 1채와 임대주택(`rentalUnits`)을 뺀 수가
  * 「그 밖의 주택」이다. 그 수가 **1채**면 그 주택이 §155①·②로 빠지는지 **알 수 없다** — 빠지는 사실이 있어야
  * 성립하는 특례이므로 불성립(`exceeded` + `confirmNotice`)으로 계산하고 「명부에 입력하면 판정한다」를 고지한다.
- * **2채 이상**이면 명부가 있어도 결론이 같아(3중첩) 고지하지 않는다. 0채 이하는 종전대로 판정 보류(적용)다.
+ * **2채 이상**이면 명부가 있어도 결론이 같아(3중첩) 고지하지 않는다. **0채**면 그 밖의 주택이 없다는 사실이
+ * 확정되므로 `met`이다 — 종전에는 판정 보류여서 중과 배제 ① 요소가 열리지 않았고, 명부가 없어 정밀 중과 판정도
+ * 돌지 않아 원시 플래그 중과가 붙었다(거주 + 임대 1 · 20억 167,360,600 vs 명부 입력 102,086,600). 중과 쪽은
+ * `runMultiHouseSurchargeStep`이 같은 사실로 행을 구성해 정밀 판정을 돌린다. 음수(입력 모순)만 판정 보류다.
  */
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption-requirements";
@@ -120,7 +123,10 @@ function resolveWithoutRoster(
 ): RentalResidenceComposition {
   const rentalCount = input.rentalHousingException?.rentalUnits?.length ?? 0;
   const others = input.householdHousingCount - 1 - rentalCount;
-  if (others <= 0) return { status: "undetermined", reason: "no_roster" };
+  // 세대 주택 수가 거주주택 + 임대주택으로 정확히 채워지면 「그 밖의 주택」이 없다는 사실이 입력으로 확정된다 —
+  // 명부의 비임대 행 0채(`others.length === 0`)와 같은 결론이다. 음수(입력 모순)만 판정 보류로 둔다.
+  if (others === 0) return { status: "met", via: "sole" };
+  if (others < 0) return { status: "undetermined", reason: "no_roster" };
   const ex = resolveExemptionHouseCountExclusions(input, generalHouseAcquisitionDate);
   const remaining = others - ex.specialActExcludedCount;
   if (remaining <= 0) return { status: "undetermined", reason: "special_act" };

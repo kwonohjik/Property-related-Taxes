@@ -37,6 +37,7 @@ import {
 } from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
+import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
@@ -155,7 +156,64 @@ function qualifiesRentalResidenceDeeming(
   return resolveRentalResidenceComposition(workingInput, parsedRates, generalHouseAcquisitionDate).status === "met";
 }
 
-/** STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정. */
+/**
+ * 명부(`houses[]`) 없이 §155⑳ 거주주택 의제가 선 세대 — 정밀 중과 판정에 넘길 행을 입력된 사실로 구성한다.
+ *
+ * 🔴 종전에는 명부가 없으면 STEP 0.5가 돌지 않아 원시 플래그(조정지역 · 세대 주택 수 ≥ 2)로 중과가 붙었다.
+ *    같은 세대를 명부에 입력하면 15호(영 §167의10①15호 「제155조 … 에 따라 … 1세대 1주택으로 보아 제154조제1항이
+ *    적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택」)로 배제되는데(102,086,600), 명부가 없으면 같은 사실에
+ *    2주택 중과(167,360,600)였다.
+ *
+ * 열리는 조건 — `qualifiesRentalResidenceDeeming`(§155⑳ 요건 판정 통과 + 세대 구성 `met`). 명부 없는 `met`은
+ * 「세대 주택 수 = 거주주택 1 + 임대주택 카드 수」일 때만이다(`resolveRentalResidenceComposition`). 그 밖에는
+ * 종전대로 원시 플래그다.
+ *
+ * 행 구성 — 모르는 사실은 **불리한 쪽**으로 둔다(사용자 결정 2026-10-04):
+ * - 양도 주택: 명부 경로 ④(`buildHousesPayload`)의 양도 행과 같은 원천(취득일 · 양도 당시 기준시가 · 법정동코드).
+ * - 임대주택(카드마다 1행): 소재지·양도 당시 기준시가를 모른다 → 지역기준(REGION, 무조건 산입)으로 둔다
+ *   (§167의10① 본문 괄호 1호 불산입을 주지 않는다). 영 §167의3①2호 사실(유형 매트릭스)이 없으므로 10호 판정에서
+ *   빠지지 않는다. 취득일을 모른다 → 양도일로 둔다(합가 차감 단서 「혼인 후 취득」에 걸리는 쪽).
+ *   이 셋은 15호(13호)가 서면 결론을 바꾸지 않는다 — 배제의 근거는 양도 주택의 의제다.
+ */
+function noRosterRentalResidenceHouses(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): NonNullable<TransferTaxInput["houses"]> | undefined {
+  if (!qualifiesRentalResidenceDeeming(workingInput, parsedRates, generalHouseAcquisitionDate)) return undefined;
+  const regionCode = workingInput.regionCode || undefined;
+  const selling = {
+    id: "selling",
+    acquisitionDate: workingInput.acquisitionDate,
+    officialPrice: workingInput.standardPriceAtTransfer ?? 0,
+    region:
+      regionCode && classifyRegionCriteriaByCode(regionCode) === "VALUE" ? ("non_capital" as const) : ("capital" as const),
+    regionCode,
+    isInherited: false,
+    isLongTermRental: false,
+    isApartment: false,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+  };
+  const rentals = workingInput.rentalHousingException!.rentalUnits.map((u, i) => ({
+    id: `no-roster-rental-${i + 1}`,
+    acquisitionDate: workingInput.transferDate,
+    officialPrice: 0,
+    region: "capital" as const,
+    regionCriteria: "REGION" as const,
+    isInherited: false,
+    isLongTermRental: true,
+    isApartment: u.isApartment,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+  }));
+  return [selling, ...rentals];
+}
+
+/**
+ * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
+ * 명부가 없어도 §155⑳ 거주주택 의제가 서면 입력된 사실로 행을 구성해 판정한다(`noRosterRentalResidenceHouses`).
+ */
 export function runMultiHouseSurchargeStep(
   workingInput: TransferTaxInput,
   parsedRates: ParsedRates,
@@ -166,11 +224,15 @@ export function runMultiHouseSurchargeStep(
 ): MultiHouseSurchargeResult | undefined {
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
-  if (workingInput.houses && workingInput.houses.length > 0 && parsedRates.houseCountExclusionRules) {
-    const sellingId = workingInput.sellingHouseId ?? workingInput.houses[0].id;
+  const houses =
+    workingInput.houses && workingInput.houses.length > 0
+      ? workingInput.houses
+      : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  if (houses && parsedRates.houseCountExclusionRules) {
+    const sellingId = workingInput.sellingHouseId ?? houses[0].id;
     const housesForSurcharge = surchargeExclusionByReduction.excluded
-      ? workingInput.houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
-      : workingInput.houses;
+      ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
+      : houses;
     if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
     const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
