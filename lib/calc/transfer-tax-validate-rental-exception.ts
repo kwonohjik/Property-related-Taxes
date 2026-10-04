@@ -25,7 +25,7 @@ import {
   deriveRentalArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
-import { aptDeadlineExtensionDatesMissing, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
+import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 
 export function validateRentalHousingException(
@@ -169,10 +169,9 @@ export function validateRentalHousingException(
     if (!u.requirementsConfirmed) {
       return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
     }
-    // §167의3⑪ 「연장 사유 있음」인데 날짜가 없다 — ⑤·④와 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외).
-    if (rentalUnitAptDeadlineInScope(u) && aptDeadlineExtensionDatesMissing(u.aptDeadlineExtension)) {
-      return `${unitLabel}: 아파트 양도기한 연장 사유(소령 §167의3⑪)의 날짜를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.`;
-    }
+    // §167의3⑪ 「연장 사유 있음」 입력 미완 — ⑤·④와 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외).
+    const extIssue = rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionIncomplete(u.aptDeadlineExtension) : null;
+    if (extIssue) return `${unitLabel}: 아파트 양도기한 연장 사유(소령 §167의3⑪) — ${extIssue}`;
     // ㉓1호 자진말소 1/2은 민특법 임대의무기간 기준이다 — 등록 유형 없이는 판정할 수 없다(OH-39).
     // ⑤는 말소 토글 ON + 가·다·라·마목일 때 이 선택지를 띄운다(엔진 `terminationEligibleArticle`과 같은 목).
     if (

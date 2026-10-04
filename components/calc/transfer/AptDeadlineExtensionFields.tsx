@@ -16,7 +16,8 @@
  *
  * 3-state: 「모름」(기본 — 엔진 판정 보류) / 「연장 사유 없음」(기한 2027.12.31. 확정) / 「연장 사유 있음」(날짜).
  * 상태 전환과 날짜 정리는 `withAptDeadlineExtensionStatus`(④·⑧과 같은 leaf) — onChange 직접 patch, useEffect 미러링 금지.
- * 3호: 인가·지정일(비우면 모름) · 이전고시일 또는 「양도일 현재 이전고시 전」(상호 배타 — 켜면 날짜를 지운다) ·
+ * 3호: 인가·지정일(비우면 모름 → 3호 불성립) · 이전고시일 또는 「양도일 현재 이전고시 전」(상호 배타 — 켜면 날짜를
+ * 지운다 · 3호 사실이 있으면 둘 중 하나 필수 — ⑧ `aptDeadlineExtensionIncomplete`) ·
  * 단서 3-state(모름/아니오/예 — 3호 사업 사실이 있을 때만, `aptDeadlineRelocationFactPresent`가 ④와 같은 게이트).
  */
 
@@ -113,7 +114,7 @@ export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "
               />
               <p className={HINT}>
                 인가 또는 지정이 2027.12.31. 또는 1·2호에 따른 기한 이전이어야 3호가 적용됩니다. 비워 두면 모름으로 보고
-                이전고시일 기준으로 계산한 뒤 확인이 필요하다고 안내합니다.
+                3호 연장 없이 계산한 뒤 확인이 필요하다고 안내합니다.
               </p>
             </div>
             <ToggleCard
@@ -130,6 +131,7 @@ export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "
               }
               title="양도일 현재 이전고시 전"
             />
+            <p className={HINT}>3호 사실을 입력하면 이전고시일 또는 「양도일 현재 이전고시 전」 중 하나가 필요합니다.</p>
             {ext.relocationNotYetAnnounced !== true && (
               <div className="space-y-1">
                 <label className={LABEL}>이전고시일 (도시 및 주거환경정비법 §86② · 빈집 및 소규모주택 정비에 관한 특례법 §40②)</label>

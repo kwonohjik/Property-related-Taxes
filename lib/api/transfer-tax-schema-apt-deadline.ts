@@ -5,7 +5,8 @@
  * 미전송 = 「모름」(엔진 판정 보류). `confirmedNone`은 「연장 사유 없음」 확인 — 날짜와 함께 오면 모순이라
  * 400으로 막는다(⑧ 「있음」+빈 날짜 차단과 짝 · ⑤는 상태 전환 때 값을 정리한다).
  * 3호 단서(`relocationExpropriationTransfer`)는 3호 사업 사실(인가·지정일 · 이전고시일 · 「이전고시 전」)이 있을
- * 때만 온다(⑤④ `aptDeadlineRelocationFactPresent`와 같은 게이트) · 이전고시일과 「이전고시 전」은 상호 배타.
+ * 때만 온다(⑤④ `aptDeadlineRelocationFactPresent`와 같은 게이트) · 이전고시일과 「이전고시 전」은 상호 배타 ·
+ * 3호 사업 사실이 있으면 둘 중 하나는 필수(⑧ `aptDeadlineExtensionIncomplete`의 거울 — 사용자 결정 2026-10-04).
  */
 import { z } from "zod";
 
@@ -41,6 +42,9 @@ export const aptDeadlineExtensionSchema = z
   )
   .refine((e) => !(e.relocationNotYetAnnounced && e.relocationAnnouncementDate), {
     message: "이전고시일과 「양도일 현재 이전고시 전」을 함께 보낼 수 없습니다 (소령 §167의3⑪3호).",
+  })
+  .refine((e) => !e.relocationAuthorizationDate || !!(e.relocationAnnouncementDate || e.relocationNotYetAnnounced), {
+    message: "3호 인가·지정일을 보내면 이전고시일 또는 「양도일 현재 이전고시 전」이 필요합니다 (소령 §167의3⑪3호).",
   })
   .refine(
     (e) =>

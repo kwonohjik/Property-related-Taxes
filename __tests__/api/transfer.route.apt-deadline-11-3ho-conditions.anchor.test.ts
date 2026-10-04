@@ -14,8 +14,9 @@
  * - 「인가는 있었으나 양도일 현재 이전고시 전」을 입력할 수 없었다 — 「있음」+빈 날짜는 ⑧이 막고, 「모름」은 판정 보류.
  * - 단서(협의·수용재결·매도청구소송 → 기한 내 간주)가 없었다 — 이전고시일+1년 경과면 늘 기한 초과(과다과세).
  *
- * 판정 보류(사용자 결정 2026-10-04 「모르면 확인 필요」): 인가·지정일 모름 → 종전 결과(3호 후보 인정) + 고지 ·
- * 수용 여부 모름 + 기한 경과 → 종전 결과(기한 초과) + 고지. 고지는 결론을 가를 때만 낸다.
+ * 「모름」 규칙(사용자 결정 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담): 인가·지정일 모름 → 3호 불성립
+ * (기한 = 1·2호까지, 최소 2027.12.31.) + 고지 · 수용 여부 모름 + 기한 경과 → 기한 경과 + 고지. 고지는 결론을 가를
+ * 때만 낸다. 3호 사업 사실이 있으면 이전고시일 또는 「이전고시 전」이 필수(⑧·⑫).
  *
  * ## 실측 (강남 · 양도가액 15억 · 취득 1995-03-01 1억 · 명부 행 가목 아파트 1채 · route 경유)
  *
@@ -24,7 +25,8 @@
  * | C3-b 인가 2028-03-01 · 이전고시 2033-05-01 · 양도 2030-01-01 | 412,071,000(배제) | **926,678,500(중과)** |
  * | C3-e 인가 2027-06-01 · 이전고시 2033-05-01 · 수용 예 · 양도 2035-01-01 | 926,678,500(중과) | **412,071,000(배제)** |
  * | C3-d 인가 2026-01-01 · 이전고시 전 · 양도 2029-06-01 | 412,071,000 + 사실 전무 보류 고지 | 412,071,000 · 고지 없음 |
- * | C3-c 인가 모름 · 이전고시 2033-05-01 · 양도 2030-01-01 | 412,071,000 · 고지 없음 | 412,071,000 + 인가·지정 확인 필요 고지 |
+ * | C3-c 인가 모름 · 이전고시 2033-05-01 · 양도 2030-01-01 | 412,071,000(배제) · 고지 없음 | **926,678,500(중과)** + 인가·지정 확인 필요 고지 |
+ * | C3-d2 인가 모름 · 이전고시 전 · 양도 2029-06-01 | 412,071,000 + 사실 전무 보류 고지 | **926,678,500(중과)** + 인가·지정 확인 필요 고지 |
  * | C3-g 수용 모름 · 양도 2035-01-01 | 926,678,500 · 고지 없음 | 926,678,500 + 단서 확인 필요 고지 |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -131,7 +133,15 @@ const post = (handler: (req: NextRequest) => Promise<Response>, url: string, bod
     }),
   );
 
-type Verdict = { totalTax: number; surcharge?: boolean; mhWarnings: string[]; notices: string[]; rentalRejectText: string };
+type Verdict = {
+  totalTax: number;
+  surcharge?: boolean;
+  mhWarnings: string[];
+  notices: string[];
+  rentalRejectText: string;
+  /** §155⑳ 미적용 경로의 「확인 필요」 단계 문구 */
+  rentalConfirmText: string;
+};
 async function singleBody(body: Obj): Promise<Verdict> {
   const res = await post(SINGLE, "http://l/api/calc/transfer", body);
   const json = (await res.json()) as { data: { result: Obj } };
@@ -145,6 +155,10 @@ async function singleBody(body: Obj): Promise<Verdict> {
     notices: (r.warnings as string[] | undefined) ?? [],
     rentalRejectText: ((r.steps as { label: string; formula?: string }[] | undefined) ?? [])
       .filter((s) => s.label.includes("적용 불가"))
+      .map((s) => s.formula ?? "")
+      .join(" "),
+    rentalConfirmText: ((r.steps as { label: string; formula?: string }[] | undefined) ?? [])
+      .filter((s) => s.label.includes("확인 필요"))
       .map((s) => s.formula ?? "")
       .join(" "),
   };
@@ -199,11 +213,28 @@ describe("⑪3호 인가·지정 시점 조건 (2호 명부 행)", () => {
     expect(await multi(mhForm([rentalRow(ext)], "2030-01-01"))).toBe(r.totalTax);
   });
 
-  it("C3-c 인가 모름 · 이전고시 2033-05-01 · 양도 2030-01-01 → 종전 결과(배제) + 인가·지정 시점 확인 필요 고지", async () => {
+  it("C3-c 인가 모름 · 이전고시 2033-05-01 · 양도 2030-01-01 → 3호 불성립 → 기한 2027.12.31. 경과 → 중과 + 인가·지정 확인 필요 고지", async () => {
+    // 수정 전(#1935 1차): 3호 후보 인정 → 배제 412,071,000
     const r = await single(mhForm([rentalRow(HAS({ relocationAnnouncementDate: "2033-05-01" }))], "2030-01-01"));
-    expect(r.surcharge).toBe(false);
+    expect(r.surcharge).toBe(true);
+    expect(r.totalTax).toBe(926_678_500);
     expect(has(r.mhWarnings, AUTH_NOTICE)).toBe(true);
     expect(has(r.mhWarnings, PENDING)).toBe(false);
+  });
+
+  it("C3-d2 인가 모름 · 양도일 현재 이전고시 전 · 양도 2029-06-01 → 3호 불성립 → 중과 + 인가·지정 확인 필요 고지", async () => {
+    const r = await single(mhForm([rentalRow(HAS({ relocationNotYetAnnounced: true }))], "2029-06-01"));
+    expect(r.surcharge).toBe(true);
+    expect(r.totalTax).toBe(926_678_500);
+    expect(has(r.mhWarnings, AUTH_NOTICE)).toBe(true);
+  });
+
+  it("C3-c3 인가 모름이어도 3호가 결론을 가르지 않으면(3호였어도 기한 경과 · 단서 아니오) 고지 없음", async () => {
+    const r = await single(
+      mhForm([rentalRow(HAS({ relocationAnnouncementDate: "2033-05-01", relocationExpropriationTransfer: false }))], "2035-01-01"),
+    );
+    expect(r.surcharge).toBe(true);
+    expect(has(r.mhWarnings, AUTH_NOTICE)).toBe(false);
   });
 
   it("C3-c2 인가 모름이어도 3호가 결론을 가르지 않으면(1호 기한 안) 고지 없음", async () => {
@@ -282,7 +313,7 @@ describe("⑪3호 단서 — 협의·수용재결·매도청구소송 (2호 명�
     expect(r.surcharge).toBe(true);
   });
 
-  it("C3-z ⑫ — 3호 사실 없이 수용 여부만 · 이전고시일과 「이전고시 전」 동시 · 「없음」+인가일 → 400", async () => {
+  it("C3-z ⑫ — 3호 사실 없이 수용 여부만 · 이전고시일과 「이전고시 전」 동시 · 「없음」+인가일 · 인가일만(이전고시 상태 없음) → 400", async () => {
     const base = await bodyOf(() => callTransferTaxAPI(mhForm([rentalRow(HAS({ dutyPeriodEndCancellationDate: "2028-06-01" }))], "2030-01-01")));
     const send = async (patch: Obj) => {
       const b = structuredClone(base);
@@ -292,7 +323,14 @@ describe("⑪3호 단서 — 협의·수용재결·매도청구소송 (2호 명�
     expect(await send({ dutyPeriodEndCancellationDate: "2028-06-01", relocationExpropriationTransfer: true })).toBe(400);
     expect(await send({ relocationAnnouncementDate: "2033-05-01", relocationNotYetAnnounced: true })).toBe(400);
     expect(await send({ confirmedNone: true, relocationAuthorizationDate: "2027-06-01" })).toBe(400);
-    expect(await send({ relocationAuthorizationDate: "2027-06-01", relocationExpropriationTransfer: true })).toBe(200);
+    // 이전고시 상태 필수(사용자 결정 2026-10-04 · ⑧ 미러) — 음성/양성 짝
+    expect(await send({ relocationAuthorizationDate: "2027-06-01" })).toBe(400);
+    expect(await send({ relocationAuthorizationDate: "2027-06-01", relocationExpropriationTransfer: true })).toBe(400);
+    expect(await send({ relocationAuthorizationDate: "2027-06-01", relocationAnnouncementDate: "2033-05-01" })).toBe(200);
+    expect(await send({ relocationAuthorizationDate: "2027-06-01", relocationNotYetAnnounced: true })).toBe(200);
+    expect(
+      await send({ relocationAuthorizationDate: "2027-06-01", relocationAnnouncementDate: "2033-05-01", relocationExpropriationTransfer: true }),
+    ).toBe(200);
   });
 });
 
@@ -316,7 +354,7 @@ describe("⑪3호 조건 — 감면대상장기임대주택(3호 후단) 경로"
       },
     });
 
-  it("C3-i1 인가 기한 뒤 → 3호 불인정(중과) / 기한 앞 → 배제 / 인가 모름 → 배제 + 고지 / 수용 예 → 배제", async () => {
+  it("C3-i1 인가 기한 뒤 → 3호 불인정(중과) / 기한 앞 → 배제 / 인가 모름 → 중과 + 고지 / 수용 예 → 배제", async () => {
     const late = await single(tir(HAS({ relocationAuthorizationDate: "2028-03-01", relocationAnnouncementDate: "2033-05-01" }), "2030-01-01"));
     const early = await single(tir(HAS({ relocationAuthorizationDate: "2027-06-01", relocationAnnouncementDate: "2033-05-01" }), "2030-01-01"));
     const unknown = await single(tir(HAS({ relocationAnnouncementDate: "2033-05-01" }), "2030-01-01"));
@@ -325,7 +363,7 @@ describe("⑪3호 조건 — 감면대상장기임대주택(3호 후단) 경로"
     );
     expect(late.surcharge).toBe(true);
     expect(early.surcharge).toBe(false);
-    expect(unknown.surcharge).toBe(false);
+    expect(unknown.surcharge).toBe(true);
     expect(has(unknown.mhWarnings, AUTH_NOTICE)).toBe(true);
     expect(exprop.surcharge).toBe(false);
   });
@@ -375,7 +413,7 @@ describe("⑪3호 조건 — §155⑳ 임대주택(가목 아파트)", () => {
   beforeEach(() => vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates()));
   const rhe = async (f: Form) => singleBody(await bodyOf(() => callTransferTaxAPI(f)));
 
-  it("C3-i2 인가 기한 뒤 → 부적격(양도기한) / 인가 모름 → 비과세 + 고지 / 수용 예(기한 경과) → 비과세", async () => {
+  it("C3-i2 인가 기한 뒤 → 부적격(양도기한) / 인가 모름 → 부적격 + 고지 / 수용 예(기한 경과) → 비과세", async () => {
     const late = await rhe(rheForm({ aptDeadlineExtension: HAS({ relocationAuthorizationDate: "2028-03-01", relocationAnnouncementDate: "2033-05-01" }) }, "2030-01-01"));
     const unknown = await rhe(rheForm({ aptDeadlineExtension: HAS({ relocationAnnouncementDate: "2033-05-01" }) }, "2030-01-01"));
     const exprop = await rhe(
@@ -386,8 +424,11 @@ describe("⑪3호 조건 — §155⑳ 임대주택(가목 아파트)", () => {
     );
     expect(late.rentalRejectText).toContain("양도기한");
     expect(late.totalTax).toBeGreaterThan(0);
-    expect(unknown.totalTax).toBe(0);
-    expect(has(unknown.notices, AUTH_NOTICE)).toBe(true);
+    expect(unknown.rentalRejectText).toContain("양도기한");
+    expect(unknown.totalTax).toBe(late.totalTax);
+    // 미적용 경로 — 고지는 「확인 필요」 단계로 보인다(적용 경로의 warnings에는 실리지 않는다)
+    expect(unknown.rentalConfirmText).toContain(AUTH_NOTICE);
+    expect(late.rentalConfirmText).not.toContain(AUTH_NOTICE);
     expect(exprop.totalTax).toBe(0);
   });
 

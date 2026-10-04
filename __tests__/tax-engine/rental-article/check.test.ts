@@ -403,7 +403,8 @@ describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파�
     const r = checkRentalArticle("가", base({
       rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true,
       aptTransferDate: new Date("2028-03-01"),
-      aptDeadlineExtension: { relocationAnnouncementDate: new Date("2027-04-01") },
+      // 인가·지정일 모름이면 3호 불성립(사용자 결정 2026-10-04) — 3호 연장을 보려면 기한 전 인가일을 함께 준다
+      aptDeadlineExtension: { relocationAuthorizationDate: new Date("2026-06-01"), relocationAnnouncementDate: new Date("2027-04-01") },
     }));
     expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
     expect(r.aptDeadlinePending).toBe(false);

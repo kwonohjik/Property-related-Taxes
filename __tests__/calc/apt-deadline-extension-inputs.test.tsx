@@ -18,6 +18,7 @@
  * | AE-7 | ⑧ 차단 — 명부 행·§155⑳ 임대주택 (양성/음성 짝, 범위 밖 stale 값은 막지 않음) |
  * | AE-8 | ⑪3호 — 인가·지정일 칸 · 「이전고시 전」(켜면 이전고시일 삭제·칸 숨김) · 단서 3-state(3호 사실 있을 때만) |
  * | AE-9 | ④·⑧ leaf — 3호 신규 사실의 본문 · 「이전고시 전」만으로 「있음」 성립 · 단서 게이트 |
+ * | AE-10 | ⑧ 3호 사실이 있으면 이전고시일 또는 「이전고시 전」 필수 — leaf · 명부 행 · 양도 주택 · §155⑳ (양성/음성 짝) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
@@ -27,7 +28,7 @@ import { AptDeadlineExtensionFields } from "@/components/calc/transfer/AptDeadli
 import { RentalUnitCard } from "@/components/calc/transfer/RentalUnitCard";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import {
-  aptDeadlineExtensionDatesMissing,
+  aptDeadlineExtensionIncomplete,
   aptDeadlineExtensionPayload,
   aptDeadlineExtensionStatus,
   aptDeadlineRelocationFactPresent,
@@ -150,9 +151,9 @@ describe("AE-6 ④·⑧ leaf", () => {
       confirmedNone: true,
     });
     expect(aptDeadlineExtensionPayload({ status: "has" })).toBeUndefined();
-    expect(aptDeadlineExtensionDatesMissing({ status: "has" })).toBe(true);
-    expect(aptDeadlineExtensionDatesMissing({ status: "has", relocationAnnouncementDate: "2027-06-01" })).toBe(false);
-    expect(aptDeadlineExtensionDatesMissing({ status: "none" })).toBe(false);
+    expect(aptDeadlineExtensionIncomplete({ status: "has" })).toContain("하나 이상");
+    expect(aptDeadlineExtensionIncomplete({ status: "has", relocationAnnouncementDate: "2027-06-01" })).toBeNull();
+    expect(aptDeadlineExtensionIncomplete({ status: "none" })).toBeNull();
   });
 });
 
@@ -240,7 +241,7 @@ describe("AE-8 ⑤ ⑪3호 인가·지정 · 이전고시 전 · 단서", () => 
 
 describe("AE-9 ④·⑧ leaf — ⑪3호 신규 사실", () => {
   it("「이전고시 전」만으로 「있음」이 성립하고(⑧ 통과) 본문에 실린다 · 이전고시일과 함께면 날짜를 빼고 싣는다", () => {
-    expect(aptDeadlineExtensionDatesMissing({ status: "has", relocationNotYetAnnounced: true })).toBe(false);
+    expect(aptDeadlineExtensionIncomplete({ status: "has", relocationNotYetAnnounced: true })).toBeNull();
     expect(aptDeadlineExtensionPayload({ status: "has", relocationNotYetAnnounced: true })).toEqual({ relocationNotYetAnnounced: true });
     expect(
       aptDeadlineExtensionPayload({ status: "has", relocationNotYetAnnounced: true, relocationAnnouncementDate: "2033-05-01" }),
@@ -257,5 +258,51 @@ describe("AE-9 ④·⑧ leaf — ⑪3호 신규 사실", () => {
     expect(aptDeadlineExtensionPayload(live)?.relocationExpropriationTransfer).toBe(true);
     expect(aptDeadlineExtensionPayload({ ...live, relocationExpropriationTransfer: false })?.relocationExpropriationTransfer).toBe(false);
     expect(aptDeadlineExtensionPayload({ ...live, status: "none" })).toEqual({ confirmedNone: true });
+  });
+});
+
+describe("AE-10 ⑧ 3호 이전고시 상태 필수 (사용자 결정 2026-10-04 · ⑫ refine 미러)", () => {
+  const AUTH_ONLY = { status: "has" as const, relocationAuthorizationDate: "2027-06-01" };
+  const msg = (issues: { message: string }[]) => issues.some((i) => i.message.includes("이전고시일을 입력하거나"));
+  it("leaf — 인가일만 → 차단 문구 / +이전고시일 · +이전고시 전 → 통과 / 3호 사실 없는 2호만 → 통과", () => {
+    expect(aptDeadlineExtensionIncomplete(AUTH_ONLY)).toContain("이전고시");
+    expect(aptDeadlineExtensionIncomplete({ ...AUTH_ONLY, relocationAnnouncementDate: "2033-05-01" })).toBeNull();
+    expect(aptDeadlineExtensionIncomplete({ ...AUTH_ONLY, relocationNotYetAnnounced: true })).toBeNull();
+    expect(aptDeadlineExtensionIncomplete({ status: "has", dutyPeriodEndCancellationDate: "2028-06-01" })).toBeNull();
+    // 「없음」으로 바꾸면 stale 3호 값은 보내지 않으므로 막지 않는다
+    expect(aptDeadlineExtensionIncomplete({ ...AUTH_ONLY, status: "none" })).toBeNull();
+  });
+  it("명부 행 · 양도 주택 2호 섹션 — 인가일만 → 차단 / 이전고시일 추가 → 통과", () => {
+    const f = createDefaultTransferFormData();
+    f.householdHousingCount = "2";
+    const base = { rentalPeriodYears: "9", rentalStartOfficialPrice: "300000000" };
+    f.houses = [row({ ...base, rentalAptDeadlineExtension: AUTH_ONLY })];
+    expect(msg(collectStep1Issues(f))).toBe(true);
+    f.houses = [row({ ...base, rentalAptDeadlineExtension: { ...AUTH_ONLY, relocationAnnouncementDate: "2033-05-01" } })];
+    expect(msg(collectStep1Issues(f))).toBe(false);
+    f.houses = [];
+    f.sellingHouseExclusion = {
+      longTermRental: { ...row(base), rentalAptDeadlineExtension: AUTH_ONLY },
+    } as typeof f.sellingHouseExclusion;
+    expect(msg(collectStep1Issues(f))).toBe(true);
+    f.sellingHouseExclusion = {
+      longTermRental: { ...row(base), rentalAptDeadlineExtension: { ...AUTH_ONLY, relocationNotYetAnnounced: true } },
+    } as typeof f.sellingHouseExclusion;
+    expect(msg(collectStep1Issues(f))).toBe(false);
+  });
+  it("§155⑳ 임대주택 — 인가일만 → 차단 / 이전고시 전 추가 → 통과", () => {
+    const f = createDefaultTransferFormData();
+    const asset = { ...f.assets[0], assetKind: "housing" as const };
+    const rh = (u: Unit) => ({ ...asset.rentalHousingException, applyException: true, scenario: "A" as const, rentalUnits: [u] });
+    const full = unit({ standardPriceAtRentalStart: "300,000,000", rentalMonths: "96", requirementsConfirmed: true });
+    const blocked = validateRentalHousingException(rh({ ...full, aptDeadlineExtension: AUTH_ONLY }), asset, 0, "자산1");
+    const ok = validateRentalHousingException(
+      rh({ ...full, aptDeadlineExtension: { ...AUTH_ONLY, relocationNotYetAnnounced: true } }),
+      asset,
+      0,
+      "자산1",
+    );
+    expect(blocked ?? "").toContain("이전고시일을 입력하거나");
+    expect(ok ?? "").not.toContain("§167의3⑪");
   });
 });

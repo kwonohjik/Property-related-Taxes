@@ -19,7 +19,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TaxIncentiveRentalFacts } from "@/lib/stores/calc-wizard-asset-nbl";
-import { aptDeadlineExtensionDatesMissing, aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
+import { aptDeadlineExtensionIncomplete, aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
 
 type SellingExclusion = TransferFormData["sellingHouseExclusion"];
 
@@ -87,13 +87,13 @@ export function taxIncentiveRentalPeriodMissing(f: TaxIncentiveRentalFacts | und
 }
 
 /**
- * ⑧ 3호 후단 ⑪ 「연장 사유 있음」인데 날짜가 없다 — ⑤(`TaxIncentiveRentalFields`)가 그 칸을 여는 조건
- * (아파트 · 민간매입 · 장기일반/단기 · 도시형 생활주택 아님)과 같은 범위에서만 본다.
+ * ⑧ 3호 후단 ⑪ 「연장 사유 있음」 입력이 덜 됐다(`aptDeadlineExtensionIncomplete` 문구) — ⑤(`TaxIncentiveRentalFields`)가
+ * 그 칸을 여는 조건(아파트 · 민간매입 · 장기일반/단기 · 도시형 생활주택 아님)과 같은 범위에서만 본다.
  */
-export function taxIncentiveAptDeadlineDatesMissing(f: TaxIncentiveRentalFacts | undefined): boolean {
-  if (!f?.isTaxIncentiveRental || !f.isApartment) return false;
-  if (f.isTaxIncentiveRentalPurchase !== true || f.isUrbanLifeHousingApartment !== false) return false;
+export function taxIncentiveAptDeadlineIncomplete(f: TaxIncentiveRentalFacts | undefined): string | null {
+  if (!f?.isTaxIncentiveRental || !f.isApartment) return null;
+  if (f.isTaxIncentiveRentalPurchase !== true || f.isUrbanLifeHousingApartment !== false) return null;
   const t = f.taxIncentiveRentalRegistrationType;
-  if (t !== "long_term_general" && t !== "short_term") return false;
-  return aptDeadlineExtensionDatesMissing(f.taxIncentiveRentalAptDeadlineExtension);
+  if (t !== "long_term_general" && t !== "short_term") return null;
+  return aptDeadlineExtensionIncomplete(f.taxIncentiveRentalAptDeadlineExtension);
 }

@@ -6,7 +6,8 @@
  *   ② 「연장 사유 없음」 — `{ confirmedNone: true }`가 실리고 고지가 사라지며 중과가 적용된다
  *   ③ 「연장 사유 있음」 + 등록말소일 2027-06-01 — 날짜가 실리고(기한 2028-06-01) 중과 배제 · 고지 없음
  *   ④ 3호 인가 2028-03-01(2027.12.31. 뒤) · 이전고시 2033-05-01 · 양도 2030-01-01 — 3호 불성립 → 중과
- *   ⑤ 3호 인가 모름 · 양도일 현재 이전고시 전 → 기한 안(배제) + 인가·지정 확인 필요 고지
+ *   ⑤ 3호 인가 모름 · 양도일 현재 이전고시 전 → 3호 불성립(기한 2027.12.31. 경과 · 중과) + 인가·지정 확인 필요 고지
+ *   ⑦ 3호 인가일만 입력(이전고시 상태 없음) → ⑧ 차단(이전고시일 또는 「이전고시 전」 필수)
  *   ⑥ 3호 인가 2027-06-01 · 이전고시 2033-05-01 · 협의·수용재결·매도청구소송 「예」 · 양도 2035-01-01 → 기한 내 간주(배제)
  *
  * 세액은 dev 서버의 세율 원천(DB/fallback)에 따라 달라질 수 있어 단언하지 않는다 — 금액 anchor는
@@ -168,7 +169,7 @@ test.describe("§167의3⑪ 기한 연장 사실 — 2호 명부 행 입력 → 
     expect(mh.surchargeApplicable).toBe(true);
   });
 
-  test("⑤ 3호 인가 모름 · 양도일 현재 이전고시 전 → 기한 안(배제) + 인가·지정 확인 필요 고지", async ({ page }) => {
+  test("⑤ 3호 인가 모름 · 양도일 현재 이전고시 전 → 3호 불성립(중과) + 인가·지정 확인 필요 고지", async ({ page }) => {
     test.setTimeout(90_000);
     await openHolding(page, "2030-01-01");
     const box = await pickStatus(page, "has");
@@ -177,7 +178,7 @@ test.describe("§167의3⑪ 기한 연장 사실 — 2호 명부 행 입력 → 
     await page.getByRole("button", { name: "완료" }).click();
     const { row, mh } = await calculate(page);
     expect(row?.rentalAptDeadlineExtension).toEqual({ relocationNotYetAnnounced: true });
-    expect(mh.surchargeApplicable).toBe(false);
+    expect(mh.surchargeApplicable).toBe(true);
     expect(mh.warnings.some((w) => w.includes("인가 또는 지정"))).toBe(true);
     await expect(page.getByText(/인가 또는 지정이 2027\.12\.31\./).first()).toBeVisible();
   });
@@ -198,5 +199,23 @@ test.describe("§167의3⑪ 기한 연장 사실 — 2호 명부 행 입력 → 
       relocationExpropriationTransfer: true,
     });
     expect(mh.surchargeApplicable).toBe(false);
+  });
+
+  test("⑦ 3호 인가일만 입력(이전고시 상태 없음) → 모달 경고 · 계산 단계 진행 차단", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openHolding(page, "2030-01-01");
+    const box = await pickStatus(page, "has");
+    await fillDate(box, `apt-deadline-ext-d3auth-${ID}`, "2027-06-01");
+    await page.getByRole("button", { name: "완료" }).click();
+    let posted = false;
+    page.on("request", (r) => {
+      if (r.url().includes("/api/calc/transfer") && r.method() === "POST") posted = true;
+    });
+    for (const step of ["감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    await page.getByRole("button", { name: /계산하기/ }).click().catch(() => undefined);
+    await expect(page.getByText(/이전고시일을 입력하거나/).first()).toBeVisible();
+    expect(posted).toBe(false);
   });
 });

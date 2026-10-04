@@ -103,7 +103,8 @@ export type AptTransferDeadlineExtension = {
   /**
    * ⑪3호 — 그 사업의 「인가 또는 지정」일(가목 재건축 조합설립인가·사업시행자 지정 / 재개발 관리처분계획인가 ·
    * 나목 소규모정비 조합설립인가·사업시행자 지정). 3호는 이 날이 「2027년 12월 31일 이전 또는 제1호나 제2호에
-   * 따른 기한 이전」이어야 성립한다. 미제공 = 모름(3호 후보는 인정하고 결론을 가를 때 확인 필요 고지).
+   * 따른 기한 이전」이어야 성립한다. 미제공 = 모름 → 3호 불성립(납세자 불리 · 사용자 결정 2026-10-04 — 모르는 채
+   * 유리하게 적용하면 가산세 부담) + 결론을 가를 때 확인 필요 고지.
    */
   relocationAuthorizationDate?: Date;
   /** ⑪3호 — 인가·지정은 있었으나 **양도일 현재 이전고시가 없다** — 이전고시일+1년은 양도일 뒤라 기한 안이다. */
@@ -170,43 +171,58 @@ function relocationAuthorizationTimely(ext: AptTransferDeadlineExtension | undef
 }
 
 /**
- * ⑪ 판정 보류 사유 — 모두 「법 근거 없이 불리 적용」하지 않으려고 결론을 단정하지 않은 경우다.
+ * ⑪ 판정 보류 사유.
  * - NO_FACT: 바닥 초과인데 연장 사실도 「연장 사유 없음」 확인도 없다(#1910) — 종전 기준(기한 내) 유지
- * - AUTH_DATE_UNKNOWN: 3호가 결론을 가르는데 인가·지정일을 모른다 — 3호 후보 인정(종전 결과)
- * - ANNOUNCEMENT_UNKNOWN: 3호 사업은 있으나 이전고시일도 「이전고시 전」도 모른다 — 기한 내(3호 기한 미상)
- * - EXPROPRIATION_UNKNOWN: 3호 기한마저 지났는데 단서(협의·수용재결·매도청구소송) 해당 여부를 모른다 — 기한
- *   경과(종전 결과) 유지
+ * - AUTH_DATE_UNKNOWN: 인가·지정일을 몰라 3호를 적용하지 않았는데(기한 경과), 3호가 성립했다면 기한 안이었다
+ * - EXPROPRIATION_UNKNOWN: 3호 기한마저 지났는데 단서(협의·수용재결·매도청구소송) 해당 여부를 모른다 — 기한 경과 유지
+ *
+ * 3호의 「모름」은 납세자 불리로 적용한다(사용자 결정 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담).
+ * NO_FACT(#1910)는 이 결정의 범위 밖이라 종전대로 둔다.
  */
-export type AptDeadlinePendingReason =
-  | "NO_FACT"
-  | "AUTH_DATE_UNKNOWN"
-  | "ANNOUNCEMENT_UNKNOWN"
-  | "EXPROPRIATION_UNKNOWN";
+export type AptDeadlinePendingReason = "NO_FACT" | "AUTH_DATE_UNKNOWN" | "EXPROPRIATION_UNKNOWN";
 
 export interface AptDeadlineVerdict {
-  /** 기한 내 양도로 판정(또는 판정 보류로 기한 내 유지) */
+  /** 기한 내 양도로 판정(NO_FACT 판정 보류로 기한 내 유지 포함) */
   within: boolean;
   /** 결론을 가른 미확인 사실 — 비어 있으면 확정 판정 */
   pending: AptDeadlinePendingReason[];
 }
 
 /**
+ * 3호가 성립한다고 보고(인가·지정 시점 충족) 1·2호 기한(`by12`)을 이미 넘긴 양도를 판정한다.
+ * 이전고시일도 「이전고시 전」도 없으면 3호 기한을 정할 수 없어 3호 불성립으로 본다 — ⑧·⑫가 둘 중 하나를
+ * 필수로 받으므로 route 경유로는 오지 않는다(엔진 직접 호출 방어 · 모름 = 불리 원칙과 같은 방향).
+ */
+function judgeWithRelocation(transferDate: Date, ext: AptTransferDeadlineExtension, by12: number): AptDeadlineVerdict {
+  if (ext.relocationExpropriationTransfer === true) return { within: true, pending: [] };
+  if (ext.relocationNotYetAnnounced === true) return { within: true, pending: [] };
+  const d3 = validTs(ext.relocationAnnouncementDate);
+  if (d3 == null) return { within: false, pending: [] };
+  if (isOnOrBeforeDeadline(transferDate, new Date(Math.max(by12, oneYearDayFrom(d3))))) {
+    return { within: true, pending: [] };
+  }
+  return {
+    within: false,
+    pending: ext.relocationExpropriationTransfer === undefined ? ["EXPROPRIATION_UNKNOWN"] : [],
+  };
+}
+
+/**
  * ⑪ 기한 판정 — 2호 가·나·라·마목 · 3호 후단 · §155⑳ 공용 단일 함수.
  *
- * 1. 연장 사실·「없음」 확인이 전무 → 바닥 초과면 NO_FACT(기한 내 유지).
+ * 1. 연장 사실·「없음」 확인이 전무 → 바닥 초과면 NO_FACT(기한 내 유지 · #1910 종전 그대로).
  * 2. 1·2호까지의 기한 안(민법 §161 포함) → 기한 내 · 고지 없음(3호 사실은 결론과 무관).
  * 3. 3호 사업 사실 없음 · 인가·지정이 그 기한 뒤 → 기한 경과(3호 주택이 아니므로 단서도 없다).
- * 4. 단서 「예」 → 기한 내 간주. 「이전고시 전」 → 기한 내(이전고시일+1년이 양도일 뒤).
- * 5. 이전고시일 모름 → ANNOUNCEMENT_UNKNOWN(기한 내 유지). 이전고시일+1년 안 → 기한 내.
- * 6. 그것도 지남 → 기한 경과 — 단서 모름이면 EXPROPRIATION_UNKNOWN 고지.
- * 4·5에서 기한 내 결론이 3호에 기댔는데 인가·지정일을 모르면 AUTH_DATE_UNKNOWN을 함께 낸다.
+ * 4. 인가·지정 시점 충족 → 단서 「예」·「이전고시 전」·이전고시일+1년 안이면 기한 내, 아니면 경과(단서 모름이면 고지).
+ * 5. 인가·지정일 모름 → 3호 불성립(기한 경과). 3호가 성립했다면 결론이 달라졌을 때만 AUTH_DATE_UNKNOWN
+ *    (단서 모름까지 겹치면 둘 다).
  *
  * 기한 = 2027.12.31과 해당 호에서 정하는 날 중 가장 늦은 날(역상 날짜). 양도일은 기한 **당일까지** — 기한 말일이
  * 토요일·공휴일이면 익일까지(민법 §161 · §155의3① 선례 `isOnOrBeforeDeadline`과 같은 처리. ⑪ 신설 문언에 대한
  * 직접 해석례는 없다 — 확인 필요).
  */
 export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDeadlineExtension): AptDeadlineVerdict {
-  if (!hasAnyAptDeadlineExtensionFact(ext)) {
+  if (!ext || !hasAnyAptDeadlineExtensionFact(ext)) {
     return { within: true, pending: transferDate.getTime() > APT_TRANSFER_DEADLINE_FLOOR ? ["NO_FACT"] : [] };
   }
   const by12 = resolveDeadlineBy1And2(ext);
@@ -215,19 +231,11 @@ export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDe
   if (!hasRelocationFact(ext)) return { within: false, pending: [] };
   const timely = relocationAuthorizationTimely(ext, by12);
   if (timely === false) return { within: false, pending: [] };
-  const authPending: AptDeadlinePendingReason[] = timely === null ? ["AUTH_DATE_UNKNOWN"] : [];
-
-  if (ext?.relocationExpropriationTransfer === true) return { within: true, pending: authPending };
-  if (ext?.relocationNotYetAnnounced === true) return { within: true, pending: authPending };
-  const d3 = validTs(ext?.relocationAnnouncementDate);
-  if (d3 == null) return { within: true, pending: ["ANNOUNCEMENT_UNKNOWN", ...authPending] };
-  if (isOnOrBeforeDeadline(transferDate, new Date(Math.max(by12, oneYearDayFrom(d3))))) {
-    return { within: true, pending: authPending };
-  }
-  return {
-    within: false,
-    pending: ext?.relocationExpropriationTransfer === undefined ? ["EXPROPRIATION_UNKNOWN"] : [],
-  };
+  const if3 = judgeWithRelocation(transferDate, ext, by12);
+  if (timely === true) return if3;
+  // 인가·지정일 모름 — 3호 불성립. 성립했다면 기한 안이었거나(또는 단서까지 확인되면 그랬을 수) 있으면 고지.
+  if (if3.within) return { within: false, pending: ["AUTH_DATE_UNKNOWN"] };
+  return { within: false, pending: if3.pending.length ? [...if3.pending, "AUTH_DATE_UNKNOWN"] : [] };
 }
 
 const ART_11_3 = `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}3호`;
@@ -241,13 +249,8 @@ export function aptDeadlineConfirmNotice(reason: Exclude<AptDeadlinePendingReaso
     case "AUTH_DATE_UNKNOWN":
       return (
         `${ART_11_3} — 재건축사업 조합설립인가·재개발사업 관리처분계획인가 등 인가 또는 지정이 2027.12.31. 또는 ` +
-        "1호·2호에 따른 기한 이전에 있어야 이전고시일부터 1년이 되는 날을 기한으로 합니다. 인가·지정일을 몰라 " +
-        "이전고시일 기준 기한으로 계산했습니다 — 확인 필요."
-      );
-    case "ANNOUNCEMENT_UNKNOWN":
-      return (
-        `${ART_11_3} — 이전고시일(또는 양도일 현재 이전고시 전인지)을 몰라 기한 내 양도로 보고 계산했습니다. ` +
-        "이전고시일부터 1년이 지난 뒤 양도했다면 기한이 지난 것입니다 — 확인 필요."
+        "1호·2호에 따른 기한 이전에 있었다면 기한이 이전고시일부터 1년이 되는 날까지 늘어납니다. 인가·지정일을 몰라 " +
+        "3호 연장 없이 계산했습니다 — 확인 필요."
       );
     case "EXPROPRIATION_UNKNOWN":
       return (

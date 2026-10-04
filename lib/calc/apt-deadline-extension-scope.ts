@@ -95,9 +95,19 @@ export function aptDeadlineExtensionPayload(
   };
 }
 
-/** ⑧ 「연장 사유 있음」을 골랐는데 사실(날짜 · 「이전고시 전」)이 하나도 없다 — 그대로 보내면 「모름」으로 읽혀 선택이 조용히 사라진다. */
-export function aptDeadlineExtensionDatesMissing(ext: AptDeadlineExtensionForm | undefined): boolean {
-  return aptDeadlineExtensionStatus(ext) === "has" && !!ext && !hasAnyDate(ext);
+/**
+ * ⑧ 「연장 사유 있음」 입력이 덜 됐다 — 고칠 방법(문구)을 돌려준다. 완결이면 null.
+ * - 사실(날짜 · 「이전고시 전」)이 하나도 없다: 그대로 보내면 「모름」으로 읽혀 선택이 조용히 사라진다.
+ * - 3호 사업 사실은 있는데 이전고시일도 「이전고시 전」도 없다: 3호 기한을 정할 수 없다(사용자 결정 2026-10-04 —
+ *   필수 입력 · ⑫ refine이 같은 조건으로 400).
+ */
+export function aptDeadlineExtensionIncomplete(ext: AptDeadlineExtensionForm | undefined): string | null {
+  if (aptDeadlineExtensionStatus(ext) !== "has" || !ext) return null;
+  if (!hasAnyDate(ext)) return "연장 사유를 하나 이상 입력하거나 「모름」·「연장 사유 없음」을 고르세요.";
+  if (aptDeadlineRelocationFactPresent(ext) && !ext.relocationAnnouncementDate && !ext.relocationNotYetAnnounced) {
+    return "3호 이전고시일을 입력하거나 「양도일 현재 이전고시 전」을 켜세요.";
+  }
+  return null;
 }
 
 const isGated = (article: SharedRentalArticle) => APT_DEADLINE_GATED_ARTICLES.includes(article);
