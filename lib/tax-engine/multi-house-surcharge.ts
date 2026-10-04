@@ -129,8 +129,11 @@ import {
   isUnavoidableReasonUndecidable,
   isAptTransferDeadlinePending,
   isTaxIncentiveRentalAptDeadlinePending,
+  aptTransferDeadlineConfirmReasons,
+  taxIncentiveRentalAptDeadlineConfirmReasons,
 } from "./multi-house-surcharge-helpers";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes";
+import { aptDeadlineConfirmNotice } from "./rental-article/rules";
 
 /**
  * Q-1 후속(판정 보류) — §167조의3⑪ 연장 세 호 입력 경로가 아직 없다. 어느 결과로 귀결되든(배제·중과
@@ -184,6 +187,14 @@ export function determineMultiHouseSurcharge(
   if (input.houses.some((h) => isTaxIncentiveRentalAptDeadlinePending(h, input.transferDate))) {
     warnings.push(TAX_INCENTIVE_RENTAL_APT_DEADLINE_PENDING_WARNING);
   }
+  // ⑪3호 인가·지정일 · 이전고시일 · 단서 모름 — 결론을 가른 경우만(2호·3호 후단 공용 문구, 중복 제거).
+  const confirmReasons = new Set(
+    input.houses.flatMap((h) => [
+      ...aptTransferDeadlineConfirmReasons(h, input.transferDate),
+      ...taxIncentiveRentalAptDeadlineConfirmReasons(h, input.transferDate),
+    ]),
+  );
+  for (const r of confirmReasons) if (r !== "NO_FACT") warnings.push(aptDeadlineConfirmNotice(r));
 
   // Step 1: 주택 수 산정 (effectiveHouseCount는 #2a ⑨ 차감으로 재할당 → let)
   const step1Count = countEffectiveHouses(

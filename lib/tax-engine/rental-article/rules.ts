@@ -7,6 +7,7 @@
 
 import type { SharedRentalArticle } from "./types";
 import { isOnOrBeforeDeadline, periodEndFrom } from "../civil-period";
+import { TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 
 /** 목별 판정 경계일 (getTime() 캐시) */
 export const RA_CUT = {
@@ -100,6 +101,19 @@ export type AptTransferDeadlineExtension = {
   /** ⑪3호 — 재건축 조합설립인가·재개발 관리처분계획인가·소규모정비 조합설립인가에 따른 이전고시일 */
   relocationAnnouncementDate?: Date;
   /**
+   * ⑪3호 — 그 사업의 「인가 또는 지정」일(가목 재건축 조합설립인가·사업시행자 지정 / 재개발 관리처분계획인가 ·
+   * 나목 소규모정비 조합설립인가·사업시행자 지정). 3호는 이 날이 「2027년 12월 31일 이전 또는 제1호나 제2호에
+   * 따른 기한 이전」이어야 성립한다. 미제공 = 모름(3호 후보는 인정하고 결론을 가를 때 확인 필요 고지).
+   */
+  relocationAuthorizationDate?: Date;
+  /** ⑪3호 — 인가·지정은 있었으나 **양도일 현재 이전고시가 없다** — 이전고시일+1년은 양도일 뒤라 기한 안이다. */
+  relocationNotYetAnnounced?: boolean;
+  /**
+   * ⑪3호 단서 — 도정법 §73·빈집법 §36에 따른 협의·수용재결·매도청구소송으로 양도 → 3호 기한 내 양도로 본다.
+   * true 예 · false 아니오 · undefined 모름(기한 경과면 종전 결과 유지 + 확인 필요 고지).
+   */
+  relocationExpropriationTransfer?: boolean;
+  /**
    * ⑪ 각 호 어디에도 해당하지 않음을 **사용자가 확인했다** — 기한은 바닥(2027.12.31.)으로 확정된다.
    * 날짜 미제공(「모름」 → 판정 보류)과 가르기 위한 명시 신호다. 날짜와 함께 오지 않는다(⑫ refine).
    */
@@ -114,45 +128,148 @@ function oneYearDayFrom(ts: number): number {
   return periodEndFrom(new Date(ts), 1).getTime();
 }
 
+const validTs = (d?: Date): number | null => {
+  const t = d instanceof Date ? d.getTime() : NaN;
+  return Number.isNaN(t) ? null : t;
+};
+
 /**
- * §167조의3⑪ 「제11항에 따른 기한」 = 2027.12.31과 해당 호에서 정하는 날 중 가장 늦은 날(역상 날짜).
- * 1·2호는 기산일이 2027.1.1 이후일 때만 호가 성립(「2027년 1월 1일 이후 종료」·「신규 지정」)
- * — 그 전 기산일은 이미 바닥(2027.12.31)보다 이르므로 적용하지 않는다. 3호는 기산일(이전고시일) 자체에
- * 그런 하한이 없다(3호 본문의 인가 시점요건은 바닥보다 느슨해 보수적으로 생략 — 확인 필요).
- * 양도일 비교는 `isWithinAptTransferDeadline`(민법 §161 말일 연장 포함)을 쓴다.
+ * ⑪ 1·2호까지만 반영한 기한 = max(2027.12.31, 1호 날, 2호 날). 1·2호는 기산일이 2027.1.1 이후일 때만 호가
+ * 성립(「2027년 1월 1일 이후 종료」·「신규 지정」) — 그 전 기산일은 이미 바닥보다 이르므로 적용하지 않는다.
+ *
+ * 3호 「2027년 12월 31일 이전 또는 제1호나 제2호에 따른 기한 이전에 … 인가 또는 지정이 있는 경우」의 비교 기준이
+ * 이 값이다 — 세 기준 중 어느 하나 이전이면 되므로(「또는」) 가장 늦은 것과 비교하면 같다. 3호는 이 값에
+ * 의존하지만 이 값은 3호에 의존하지 않는다(순환 없음).
  */
-export function resolveAptTransferDeadline(ext?: AptTransferDeadlineExtension): number {
+function resolveDeadlineBy1And2(ext?: AptTransferDeadlineExtension): number {
   let deadline = APT_TRANSFER_DEADLINE_FLOOR;
-  const d1 = ext?.dutyPeriodEndCancellationDate?.getTime();
-  if (d1 != null && !Number.isNaN(d1) && d1 >= Y2027_01_01) deadline = Math.max(deadline, oneYearDayFrom(d1));
-  const d2 = ext?.newRegulatedAreaAnnouncementDate?.getTime();
-  if (d2 != null && !Number.isNaN(d2) && d2 >= Y2027_01_01) deadline = Math.max(deadline, oneYearDayFrom(d2));
-  const d3 = ext?.relocationAnnouncementDate?.getTime();
-  if (d3 != null && !Number.isNaN(d3)) deadline = Math.max(deadline, oneYearDayFrom(d3));
+  const d1 = validTs(ext?.dutyPeriodEndCancellationDate);
+  if (d1 != null && d1 >= Y2027_01_01) deadline = Math.max(deadline, oneYearDayFrom(d1));
+  const d2 = validTs(ext?.newRegulatedAreaAnnouncementDate);
+  if (d2 != null && d2 >= Y2027_01_01) deadline = Math.max(deadline, oneYearDayFrom(d2));
   return deadline;
 }
 
-/**
- * 양도일이 ⑪ 기한 **당일까지**인가 — 기한 말일이 토요일·공휴일이면 익일까지(민법 §161 · §155의3① 선례
- * `isOnOrBeforeDeadline`과 같은 처리. ⑪ 신설 문언에 대한 직접 해석례는 없다 — 확인 필요).
- */
-export function isWithinAptTransferDeadline(transferDate: Date, ext?: AptTransferDeadlineExtension): boolean {
-  return isOnOrBeforeDeadline(transferDate, new Date(resolveAptTransferDeadline(ext)));
+/** ⑪3호 사업 사실이 있는가 — 인가·지정일 · 이전고시일 · 「이전고시 전」 중 하나 */
+export function hasRelocationFact(ext?: AptTransferDeadlineExtension): boolean {
+  return (
+    validTs(ext?.relocationAuthorizationDate) != null ||
+    validTs(ext?.relocationAnnouncementDate) != null ||
+    ext?.relocationNotYetAnnounced === true
+  );
 }
 
 /**
- * ⑪ 연장 사실을 「안다」고 볼 수 있는가 — 세 호 중 유효한 날짜가 하나라도 있거나, 「연장 사유 없음」을
+ * ⑪3호 인가·지정 시점 조건 — 인가·지정일이 1·2호까지의 기한 **이전**(그날 포함)인가. 모르면 null.
+ * 「이전」은 기준일을 포함한다(법령 용어 관례 — 1·2호 「2027년 1월 1일 이후」를 `>=`로 읽는 이 파일의 처리와 같다).
+ * 인가·지정은 납세자의 행위 기한이 아니라 시점 요건이라 민법 §161(말일 연장)은 적용하지 않는다.
+ */
+function relocationAuthorizationTimely(ext: AptTransferDeadlineExtension | undefined, by12: number): boolean | null {
+  const auth = validTs(ext?.relocationAuthorizationDate);
+  return auth == null ? null : auth <= by12;
+}
+
+/**
+ * ⑪ 판정 보류 사유 — 모두 「법 근거 없이 불리 적용」하지 않으려고 결론을 단정하지 않은 경우다.
+ * - NO_FACT: 바닥 초과인데 연장 사실도 「연장 사유 없음」 확인도 없다(#1910) — 종전 기준(기한 내) 유지
+ * - AUTH_DATE_UNKNOWN: 3호가 결론을 가르는데 인가·지정일을 모른다 — 3호 후보 인정(종전 결과)
+ * - ANNOUNCEMENT_UNKNOWN: 3호 사업은 있으나 이전고시일도 「이전고시 전」도 모른다 — 기한 내(3호 기한 미상)
+ * - EXPROPRIATION_UNKNOWN: 3호 기한마저 지났는데 단서(협의·수용재결·매도청구소송) 해당 여부를 모른다 — 기한
+ *   경과(종전 결과) 유지
+ */
+export type AptDeadlinePendingReason =
+  | "NO_FACT"
+  | "AUTH_DATE_UNKNOWN"
+  | "ANNOUNCEMENT_UNKNOWN"
+  | "EXPROPRIATION_UNKNOWN";
+
+export interface AptDeadlineVerdict {
+  /** 기한 내 양도로 판정(또는 판정 보류로 기한 내 유지) */
+  within: boolean;
+  /** 결론을 가른 미확인 사실 — 비어 있으면 확정 판정 */
+  pending: AptDeadlinePendingReason[];
+}
+
+/**
+ * ⑪ 기한 판정 — 2호 가·나·라·마목 · 3호 후단 · §155⑳ 공용 단일 함수.
+ *
+ * 1. 연장 사실·「없음」 확인이 전무 → 바닥 초과면 NO_FACT(기한 내 유지).
+ * 2. 1·2호까지의 기한 안(민법 §161 포함) → 기한 내 · 고지 없음(3호 사실은 결론과 무관).
+ * 3. 3호 사업 사실 없음 · 인가·지정이 그 기한 뒤 → 기한 경과(3호 주택이 아니므로 단서도 없다).
+ * 4. 단서 「예」 → 기한 내 간주. 「이전고시 전」 → 기한 내(이전고시일+1년이 양도일 뒤).
+ * 5. 이전고시일 모름 → ANNOUNCEMENT_UNKNOWN(기한 내 유지). 이전고시일+1년 안 → 기한 내.
+ * 6. 그것도 지남 → 기한 경과 — 단서 모름이면 EXPROPRIATION_UNKNOWN 고지.
+ * 4·5에서 기한 내 결론이 3호에 기댔는데 인가·지정일을 모르면 AUTH_DATE_UNKNOWN을 함께 낸다.
+ *
+ * 기한 = 2027.12.31과 해당 호에서 정하는 날 중 가장 늦은 날(역상 날짜). 양도일은 기한 **당일까지** — 기한 말일이
+ * 토요일·공휴일이면 익일까지(민법 §161 · §155의3① 선례 `isOnOrBeforeDeadline`과 같은 처리. ⑪ 신설 문언에 대한
+ * 직접 해석례는 없다 — 확인 필요).
+ */
+export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDeadlineExtension): AptDeadlineVerdict {
+  if (!hasAnyAptDeadlineExtensionFact(ext)) {
+    return { within: true, pending: transferDate.getTime() > APT_TRANSFER_DEADLINE_FLOOR ? ["NO_FACT"] : [] };
+  }
+  const by12 = resolveDeadlineBy1And2(ext);
+  if (isOnOrBeforeDeadline(transferDate, new Date(by12))) return { within: true, pending: [] };
+
+  if (!hasRelocationFact(ext)) return { within: false, pending: [] };
+  const timely = relocationAuthorizationTimely(ext, by12);
+  if (timely === false) return { within: false, pending: [] };
+  const authPending: AptDeadlinePendingReason[] = timely === null ? ["AUTH_DATE_UNKNOWN"] : [];
+
+  if (ext?.relocationExpropriationTransfer === true) return { within: true, pending: authPending };
+  if (ext?.relocationNotYetAnnounced === true) return { within: true, pending: authPending };
+  const d3 = validTs(ext?.relocationAnnouncementDate);
+  if (d3 == null) return { within: true, pending: ["ANNOUNCEMENT_UNKNOWN", ...authPending] };
+  if (isOnOrBeforeDeadline(transferDate, new Date(Math.max(by12, oneYearDayFrom(d3))))) {
+    return { within: true, pending: authPending };
+  }
+  return {
+    within: false,
+    pending: ext?.relocationExpropriationTransfer === undefined ? ["EXPROPRIATION_UNKNOWN"] : [],
+  };
+}
+
+const ART_11_3 = `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}3호`;
+
+/**
+ * ⑪3호 판정 보류 고지 문구(NO_FACT 외) — 2호 다주택 `warnings` · 3호 후단 `warnings` · §155⑳ `notices` 공용.
+ * NO_FACT 문구는 경로마다 종전 문구를 그대로 쓴다(#1910).
+ */
+export function aptDeadlineConfirmNotice(reason: Exclude<AptDeadlinePendingReason, "NO_FACT">): string {
+  switch (reason) {
+    case "AUTH_DATE_UNKNOWN":
+      return (
+        `${ART_11_3} — 재건축사업 조합설립인가·재개발사업 관리처분계획인가 등 인가 또는 지정이 2027.12.31. 또는 ` +
+        "1호·2호에 따른 기한 이전에 있어야 이전고시일부터 1년이 되는 날을 기한으로 합니다. 인가·지정일을 몰라 " +
+        "이전고시일 기준 기한으로 계산했습니다 — 확인 필요."
+      );
+    case "ANNOUNCEMENT_UNKNOWN":
+      return (
+        `${ART_11_3} — 이전고시일(또는 양도일 현재 이전고시 전인지)을 몰라 기한 내 양도로 보고 계산했습니다. ` +
+        "이전고시일부터 1년이 지난 뒤 양도했다면 기한이 지난 것입니다 — 확인 필요."
+      );
+    case "EXPROPRIATION_UNKNOWN":
+      return (
+        `${ART_11_3} 단서 — 해당 사업의 대상 주택을 ${TRANSFER_RENTAL_HOUSING.URBAN_RENOVATION_ART_73} 또는 ` +
+        `${TRANSFER_RENTAL_HOUSING.SMALL_HOUSING_ART_36}에 따른 협의, 수용재결 또는 매도청구소송으로 양도했다면 ` +
+        "기한 내에 양도한 것으로 봅니다. 해당 여부를 몰라 기한이 지난 것으로 계산했습니다 — 확인 필요."
+      );
+  }
+}
+
+/**
+ * ⑪ 연장 사실을 「안다」고 볼 수 있는가 — 세 호 중 유효한 사실(날짜 · 3호 인가·지정일 · 「이전고시 전」)이 하나라도 있거나, 「연장 사유 없음」을
  * 확인했으면(`confirmedNone`) 참. 둘 다 아니면 「날짜 미제공」과 「연장 사실 없음(실제로 바닥만 적용)」을
  * 구별하지 못하므로, 법 근거 없이 불리 적용(2027.12.31 바닥만 적용해 중과)하지 않도록 호출부가 판정 보류한다
- * (`resolveAptTransferDeadline`과 쌍).
+ * (`judgeAptTransferDeadline`과 쌍).
  */
 export function hasAnyAptDeadlineExtensionFact(ext?: AptTransferDeadlineExtension): boolean {
   if (!ext) return false;
   if (ext.confirmedNone === true) return true;
-  const valid = (d?: Date) => d instanceof Date && !Number.isNaN(d.getTime());
   return (
-    valid(ext.dutyPeriodEndCancellationDate) ||
-    valid(ext.newRegulatedAreaAnnouncementDate) ||
-    valid(ext.relocationAnnouncementDate)
+    validTs(ext.dutyPeriodEndCancellationDate) != null ||
+    validTs(ext.newRegulatedAreaAnnouncementDate) != null ||
+    hasRelocationFact(ext)
   );
 }

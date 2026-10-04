@@ -28,7 +28,8 @@ type GracePeriodInput = {
 
 /**
  * ⑭ §167의3⑪ 연장 사실 Zod → 엔진 `AptTransferDeadlineExtension` — 2호·3호(houses)·§155⑳ 임대주택(단건·다건)
- * 공용. 날짜는 date-coerce, `confirmedNone`(「연장 사유 없음」 확인)은 그대로. 미전송이면 undefined(= 모름).
+ * 공용. 날짜는 date-coerce, `confirmedNone`(「연장 사유 없음」 확인)·3호 「이전고시 전」·단서 3-state는 그대로.
+ * 미전송이면 undefined(= 모름).
  */
 export function toEngineAptDeadlineExtension(
   e: z.infer<typeof aptDeadlineExtensionSchema> | undefined,
@@ -38,6 +39,9 @@ export function toEngineAptDeadlineExtension(
     dutyPeriodEndCancellationDate: toOptionalDate(e.dutyPeriodEndCancellationDate),
     newRegulatedAreaAnnouncementDate: toOptionalDate(e.newRegulatedAreaAnnouncementDate),
     relocationAnnouncementDate: toOptionalDate(e.relocationAnnouncementDate),
+    relocationAuthorizationDate: toOptionalDate(e.relocationAuthorizationDate),
+    relocationNotYetAnnounced: e.relocationNotYetAnnounced,
+    relocationExpropriationTransfer: e.relocationExpropriationTransfer,
     confirmedNone: e.confirmedNone,
   };
 }

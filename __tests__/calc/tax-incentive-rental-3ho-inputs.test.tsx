@@ -84,7 +84,7 @@ describe("⑤ 양도 주택 3호 섹션", () => {
     expect(screen.getByText(/도시형 생활주택인 아파트/)).toBeTruthy();
     // ⑪ 연장 사유는 3-state(모름·없음·있음) — 기본 「모름」이면 날짜 칸은 닫혀 있다
     expect(screen.getByTestId("apt-deadline-ext-status-tir-selling")).toBeTruthy();
-    expect(screen.queryByText(/⑪3호 — 이전고시일/)).toBeNull();
+    expect(screen.queryByText(/^이전고시일 \(도시 및 주거환경정비법/)).toBeNull();
   });
 
   it("TU-3b ⑪ 「연장 사유 있음」(또는 #1914 저장분: 날짜만 있음)이면 세 호 날짜 칸을 연다", () => {
@@ -103,7 +103,7 @@ describe("⑤ 양도 주택 3호 섹션", () => {
         onChange={() => {}}
       />,
     );
-    expect(screen.getByText(/⑪3호 — 이전고시일/)).toBeTruthy();
+    expect(screen.getByText(/^이전고시일 \(도시 및 주거환경정비법/)).toBeTruthy();
   });
 
   it("TU-4 2호가 켜져 있으면 임대기간·아파트 칸을 다시 그리지 않는다 (같은 사실 두 벌 금지)", () => {

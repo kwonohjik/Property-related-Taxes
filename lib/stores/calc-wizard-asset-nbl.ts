@@ -431,6 +431,15 @@ export interface AptDeadlineExtensionForm {
   newRegulatedAreaAnnouncementDate?: string;
   /** ⑪3호 — 재건축·재개발·소규모정비 이전고시일 */
   relocationAnnouncementDate?: string;
+  /** ⑪3호 — 그 사업의 인가 또는 지정일. 비어 있으면 모름(엔진 판정 보류 — 결론을 가를 때 확인 필요 고지) */
+  relocationAuthorizationDate?: string;
+  /** ⑪3호 — 양도일 현재 이전고시 전(이전고시일과 상호 배타 — ⑤ onChange가 정리) */
+  relocationNotYetAnnounced?: boolean;
+  /**
+   * ⑪3호 단서 — 협의·수용재결·매도청구소송에 따른 양도. undefined = 모름(구 저장분 포함) · false 아니오 · true 예.
+   * 3호 사업 사실이 있을 때만 화면에 나오고 전송된다(`aptDeadlineRelocationFactPresent`).
+   */
+  relocationExpropriationTransfer?: boolean;
 }
 
 /**

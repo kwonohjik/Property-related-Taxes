@@ -26,9 +26,8 @@ import {
   rentalStdPriceCap,
   rentalRequiredYears,
   RA_CUT,
-  isWithinAptTransferDeadline,
-  hasAnyAptDeadlineExtensionFact,
-  APT_TRANSFER_DEADLINE_FLOOR,
+  judgeAptTransferDeadline,
+  type AptDeadlinePendingReason,
   type AptTransferDeadlineExtension,
 } from "./rules";
 import type { SharedRentalArticle } from "./types";
@@ -133,6 +132,11 @@ export type ArticleCheckResult = {
    * 넣지 않고(종전 기준 유지) 이 플래그만 세운다 — 호출부가 확인 필요 고지를 낸다.
    */
   aptDeadlinePending: boolean;
+  /**
+   * ⑪3호 판정 보류 — 인가·지정일 · 이전고시일 · 단서(협의·수용재결·매도청구소송) 중 결론을 가른 미확인 사실
+   * (`judgeAptTransferDeadline`의 NO_FACT 외 사유). 결론은 그 함수가 정한 대로 두고 호출부가 확인 필요 고지를 낸다.
+   */
+  aptDeadlineConfirmReasons: AptDeadlinePendingReason[];
 };
 
 /** 목별 게이트 메타 (판정 순서 제어). 숫자 상한(cap·기간)은 rules.ts 위임. */
@@ -260,7 +264,7 @@ function checkArticleGates(
   article: SharedRentalArticle,
   u: NormalizedRentalUnit,
   opts: { skipPeriod?: boolean; skipAptDeadline?: boolean } = {},
-): { fails: ArticleFailCode[]; aptDeadlinePending: boolean } {
+): { fails: ArticleFailCode[]; aptDeadlinePending: boolean; aptDeadlineConfirmReasons: AptDeadlinePendingReason[] } {
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
   const effTs = effRegDate?.getTime() ?? 0;
@@ -324,6 +328,7 @@ function checkArticleGates(
   // 사목 base 검사(skipAptDeadline)·§155㉓ 경로(skipAptTransferDeadlineGate)는 각각 사목 자체
   // 양도기한·㉓ 괄호의 명시 비적용으로 대체되므로 이 게이트를 보지 않는다.
   let aptDeadlinePending = false;
+  let aptDeadlineConfirmReasons: AptDeadlinePendingReason[] = [];
   if (
     gate.aptDeadlineGate &&
     u.isApartment &&
@@ -336,17 +341,17 @@ function checkArticleGates(
        * Q-1 후속 — 바닥(2027.12.31)을 넘겼는데 ⑪ 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·
        * 이전고시일)도 「연장 사유 없음」 확인도 없다면 "연장 없음"으로 단정해 중과를 매기는 것은 법 근거
        * 없이 불리 적용이다 — 판정을 보류하고 종전 기준(이 게이트 미적용)을 유지한다. 사실이 하나라도
-       * 있으면 "안다"고 보고 정상 판정한다(기한 말일 민법 §161 연장 포함 — `isWithinAptTransferDeadline`).
+       * 있으면 "안다"고 보고 정상 판정한다(기한 말일 민법 §161 연장 · 3호 인가 시점 · 단서 포함 —
+       * `judgeAptTransferDeadline`). 3호 사실 중 결론을 가른 미확인분은 `aptDeadlineConfirmReasons`로 고지.
        */
-      if (t > APT_TRANSFER_DEADLINE_FLOOR && !hasAnyAptDeadlineExtensionFact(u.aptDeadlineExtension)) {
-        aptDeadlinePending = true;
-      } else if (!isWithinAptTransferDeadline(new Date(t), u.aptDeadlineExtension)) {
-        fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
-      }
+      const verdict = judgeAptTransferDeadline(new Date(t), u.aptDeadlineExtension);
+      if (!verdict.within) fails.push("APT_TRANSFER_DEADLINE_EXCEEDED");
+      aptDeadlinePending = verdict.pending.includes("NO_FACT");
+      aptDeadlineConfirmReasons = verdict.pending.filter((r) => r !== "NO_FACT");
     }
   }
 
-  return { fails, aptDeadlinePending };
+  return { fails, aptDeadlinePending, aptDeadlineConfirmReasons };
 }
 
 /**
@@ -380,7 +385,14 @@ export function checkRentalArticle(
       // 사목 base 검사는 skipAptDeadline로 이 게이트 자체를 보지 않으므로 aptDeadlinePending은 항상 false.
       fails.push(...checkArticleGates(base, u, { skipPeriod: true, skipAptDeadline: true }).fails);
     }
-    return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap, aptDeadlinePending: false };
+    return {
+      passed: fails.length === 0,
+      failCodes: fails,
+      requiredYears,
+      stdPriceCap,
+      aptDeadlinePending: false,
+      aptDeadlineConfirmReasons: [],
+    };
   }
 
   const gated = checkArticleGates(article, u);
@@ -391,5 +403,6 @@ export function checkRentalArticle(
     requiredYears,
     stdPriceCap,
     aptDeadlinePending: gated.aptDeadlinePending,
+    aptDeadlineConfirmReasons: gated.aptDeadlineConfirmReasons,
   };
 }

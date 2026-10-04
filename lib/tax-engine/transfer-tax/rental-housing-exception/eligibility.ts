@@ -53,7 +53,7 @@ import {
   isPreLifetimeLimitRegime,
   needsPre2019ArticleScopeNotice,
 } from "../../data/rental-155-20-era";
-import { rentalStdPriceCap, rentalRequiredYears, RA_CUT } from "../../rental-article/rules";
+import { rentalStdPriceCap, rentalRequiredYears, RA_CUT, aptDeadlineConfirmNotice } from "../../rental-article/rules";
 import { deadlineEndFrom, deadlineEndNote, type DeadlineEnd } from "../../civil-period";
 import {
   checkRentalArticle,
@@ -499,6 +499,10 @@ export function checkEligibility(
           "등록말소일·조정대상지역 신규지정 공고일·이전고시일부터 1년 중 늦은 날)을 판정하지 못해 종전 " +
           "기준으로 계산했습니다 — 연장 사유가 없으면 중과 대상일 수 있습니다.",
       );
+    }
+    // ⑪3호 인가·지정일 · 이전고시일 · 단서 모름 — 결론을 가른 경우만(다주택 중과 경로와 같은 문구).
+    for (const reason of result.aptDeadlineConfirmReasons) {
+      if (reason !== "NO_FACT") notices.push(`${i + 1}호: ${aptDeadlineConfirmNotice(reason)}`);
     }
 
     /**

@@ -28,9 +28,20 @@ const DATE_KEYS = [
   "dutyPeriodEndCancellationDate",
   "newRegulatedAreaAnnouncementDate",
   "relocationAnnouncementDate",
+  "relocationAuthorizationDate",
 ] as const;
 
-const hasAnyDate = (ext: AptDeadlineExtensionForm) => DATE_KEYS.some((k) => !!ext[k]);
+/**
+ * ⑪3호 사업 사실이 있는가 — 인가·지정일 · 이전고시일 · 「이전고시 전」(엔진 `hasRelocationFact`의 폼판).
+ * ⑤ 단서(협의·수용재결·매도청구소송) 질문 노출 · ④ 단서 전송 · ⑫ refine이 같은 조건을 쓴다.
+ */
+export function aptDeadlineRelocationFactPresent(ext: AptDeadlineExtensionForm | undefined): boolean {
+  return !!(ext?.relocationAuthorizationDate || ext?.relocationAnnouncementDate || ext?.relocationNotYetAnnounced);
+}
+
+/** 「있음」의 근거가 되는 사실 — 날짜 하나 이상 또는 3호 「이전고시 전」 */
+const hasAnyDate = (ext: AptDeadlineExtensionForm) =>
+  DATE_KEYS.some((k) => !!ext[k]) || ext.relocationNotYetAnnounced === true;
 
 /**
  * 폼 값 → 3-state. `status`가 없고 날짜만 있으면(#1914 저장분) 「있음」으로 읽는다 — ⑤·④·⑧이 같은 해석을 쓴다.
@@ -58,18 +69,33 @@ export function withAptDeadlineExtensionStatus(
  */
 export function aptDeadlineExtensionPayload(
   ext: AptDeadlineExtensionForm | undefined,
-): { confirmedNone?: true; dutyPeriodEndCancellationDate?: string; newRegulatedAreaAnnouncementDate?: string; relocationAnnouncementDate?: string } | undefined {
+):
+  | {
+      confirmedNone?: true;
+      dutyPeriodEndCancellationDate?: string;
+      newRegulatedAreaAnnouncementDate?: string;
+      relocationAnnouncementDate?: string;
+      relocationAuthorizationDate?: string;
+      relocationNotYetAnnounced?: true;
+      relocationExpropriationTransfer?: boolean;
+    }
+  | undefined {
   const status = aptDeadlineExtensionStatus(ext);
   if (status === "none") return { confirmedNone: true };
   if (status !== "has" || !ext || !hasAnyDate(ext)) return undefined;
+  const notYet = ext.relocationNotYetAnnounced === true;
   return {
     dutyPeriodEndCancellationDate: ext.dutyPeriodEndCancellationDate || undefined,
     newRegulatedAreaAnnouncementDate: ext.newRegulatedAreaAnnouncementDate || undefined,
-    relocationAnnouncementDate: ext.relocationAnnouncementDate || undefined,
+    // 「이전고시 전」이면 이전고시일을 싣지 않는다(상호 배타 — ⑫ refine과 짝)
+    relocationAnnouncementDate: notYet ? undefined : ext.relocationAnnouncementDate || undefined,
+    relocationAuthorizationDate: ext.relocationAuthorizationDate || undefined,
+    relocationNotYetAnnounced: notYet ? true : undefined,
+    relocationExpropriationTransfer: aptDeadlineRelocationFactPresent(ext) ? ext.relocationExpropriationTransfer : undefined,
   };
 }
 
-/** ⑧ 「연장 사유 있음」을 골랐는데 날짜가 하나도 없다 — 그대로 보내면 「모름」으로 읽혀 선택이 조용히 사라진다. */
+/** ⑧ 「연장 사유 있음」을 골랐는데 사실(날짜 · 「이전고시 전」)이 하나도 없다 — 그대로 보내면 「모름」으로 읽혀 선택이 조용히 사라진다. */
 export function aptDeadlineExtensionDatesMissing(ext: AptDeadlineExtensionForm | undefined): boolean {
   return aptDeadlineExtensionStatus(ext) === "has" && !!ext && !hasAnyDate(ext);
 }
