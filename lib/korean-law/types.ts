@@ -522,7 +522,7 @@ export interface ChangeSignal {
  *   no_signal:     후속 인용은 있으나 신호 미감지 (현행 유지 확정은 아님)
  *   no_citations:  법제처 수록 범위 내 후속 인용 없음
  */
-export type CiteCheckStatus = "review_needed" | "no_signal" | "no_citations";
+export type CiteCheckStatus = "review_needed" | "scan_incomplete" | "no_signal" | "no_citations";
 
 export interface CiteCheckResult {
   caseNo: string;
@@ -530,6 +530,8 @@ export interface CiteCheckResult {
   citingCount: number;
   /** 본문까지 스캔한 대법원 판례 수 */
   scannedCount: number;
+  /** 스캔하려던(상한 이내) 대법원 판례 중 조회 실패·시간 예산 초과로 못 읽은 수 */
+  unscannedCount: number;
   /** 감지된 변경·폐기 신호 */
   signals: ChangeSignal[];
   /** 전원합의체이나 본문 미확보로 스캔 못한 후속 판례 (수동 확인 권장) */

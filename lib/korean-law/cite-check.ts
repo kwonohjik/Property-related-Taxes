@@ -85,14 +85,19 @@ export function hasFullTextSource(source: string): boolean {
   return /대법원/.test(source);
 }
 
-/** status 판정 (단정 금지 위계) */
+/**
+ * status 판정 (단정 금지 위계).
+ * 스캔하려던 본문을 다 못 읽었으면 「신호 미감지」라 하지 않는다 — 못 읽은 것과 신호 없음은 다르다.
+ */
 export function decideStatus(
   signals: ChangeSignal[],
   enBancUnscanned: CitingCase[],
-  citingCount: number
+  citingCount: number,
+  unscannedCount = 0
 ): CiteCheckStatus {
   if (signals.length > 0) return "review_needed";
   if (enBancUnscanned.length > 0) return "review_needed";
+  if (unscannedCount > 0) return "scan_incomplete";
   if (citingCount > 0) return "no_signal";
   return "no_citations";
 }
@@ -163,6 +168,14 @@ export async function findCitingCases(caseNo: string, display = 50): Promise<Cit
 const MAX_SCAN = 6;
 
 /**
+ * 본문 스캔은 시작 후 이 시간이 지나면 새로 시작하지 않는다.
+ * 호출 1건 최악 ≈ 10.6s(fetchJson 재시도 예산) → 17 + 10.6 ≈ 27.6s 로 라우트 maxDuration 30s 안.
+ * 평소엔 검색+본문 6건이 0.15~1.1s(2026-10-04 실측)라 걸리지 않는다 — 법제처가 매달릴 때만 걸린다.
+ * 근거: __tests__/korean-law/cite-check-deadline.anchor.test.ts
+ */
+const SCAN_BUDGET_MS = 17_000;
+
+/**
  * 판례 생사 확인 — 후속 인용 + 변경·폐기 신호 스캔.
  *
  * @throws LawApiError 사건번호 형식 오류
@@ -172,6 +185,7 @@ export async function checkPrecedentStatus(caseNoInput: string): Promise<CiteChe
   if (!caseNo) {
     throw new LawApiError("사건번호를 입력하세요.", "BAD_REQUEST");
   }
+  const startedAt = Date.now();
 
   const citing = await findCitingCases(caseNo);
   const citingCount = citing.length;
@@ -184,11 +198,14 @@ export async function checkPrecedentStatus(caseNoInput: string): Promise<CiteChe
   const signals: ChangeSignal[] = [];
   let scannedCount = 0;
   const scannedIds = new Set<string>();
+  const targets = scannable.slice(0, MAX_SCAN);
 
-  for (const c of scannable.slice(0, MAX_SCAN)) {
-    scannedIds.add(c.id);
+  for (const c of targets) {
+    if (Date.now() - startedAt > SCAN_BUDGET_MS) break;
     try {
       const text = await getDecisionText(c.id, "prec", { full: true });
+      // 읽은 것만 「스캔함」 — 실패한 전원합의체가 수동 확인 목록에서 빠지지 않게.
+      scannedIds.add(c.id);
       scannedCount++;
       const body = text ? `${text.reasoning ?? ""} ${text.holdings ?? ""} ${text.summary ?? ""}` : "";
       const hit = scanForChangeSignals(body, caseNo);
@@ -201,14 +218,15 @@ export async function checkPrecedentStatus(caseNoInput: string): Promise<CiteChe
         });
       }
     } catch {
-      // 본문 조회 실패는 무시 (graceful) — 미스캔으로 남김
+      // 본문 조회 실패는 무시 (graceful) — 미스캔으로 남김(unscannedCount → scan_incomplete)
     }
   }
+  const unscannedCount = targets.length - scannedCount;
 
   // 전원합의체인데 스캔 못한 것 (본문 미제공 또는 상한 초과) → 수동 확인 권장 대상
   const enBancUnscanned = citing.filter((c) => c.isEnBanc && !scannedIds.has(c.id));
 
-  const status = decideStatus(signals, enBancUnscanned, citingCount);
+  const status = decideStatus(signals, enBancUnscanned, citingCount, unscannedCount);
 
-  return { caseNo, citingCount, scannedCount, signals, enBancUnscanned, status };
+  return { caseNo, citingCount, scannedCount, unscannedCount, signals, enBancUnscanned, status };
 }
