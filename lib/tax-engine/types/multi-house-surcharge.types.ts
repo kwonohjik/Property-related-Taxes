@@ -178,8 +178,8 @@ export interface HouseInfo {
   /**
    * §167조의3①3호 후단(대통령령 제36737호, 2026.9.30. 공포·2026.10.1. 시행) — ③ 감면대상장기임대주택이
    * 「민간매입임대주택」(매입)인지. 건설임대(false)는 후단 게이트 대상이 아니다.
-   * 미제공(undefined)은 "모른다" — 판정 메뉴 입력 경로가 아직 없어(후속) 판정을 보류하고
-   * 종전 기준(③ 그대로 적용)을 유지한다(Q-1 2호와 같은 1안).
+   * 미제공(undefined)은 "모른다" — 후단 대상으로 보고 ⑪ 기한을 적용한다(후단은 3호를 「한정」할 뿐이라 불리 방향 ·
+   * 사용자 결정 2026-10-04). 결론이 갈리면 확인 필요 고지.
    */
   isTaxIncentiveRentalPurchase?: boolean;
   /**
@@ -200,7 +200,7 @@ export interface HouseInfo {
   taxIncentiveRentalAptDeadlineExtension?: AptTransferDeadlineExtension;
   /**
    * §167조의3⑪ 기한 연장 사실 — ② 장기임대주택 가목2)·나목2)·라목8)·마목4) 아파트 전용.
-   * 미제공 = 「모름」(바닥 초과 시 판정 보류 · `isAptTransferDeadlinePending`).
+   * 미제공 = 「모름」(기한 = 바닥 · 바닥 초과면 확인 필요 고지 · `isAptTransferDeadlinePending`).
    */
   rentalAptDeadlineExtension?: AptTransferDeadlineExtension;
   // ── 아파트/오피스텔 ──

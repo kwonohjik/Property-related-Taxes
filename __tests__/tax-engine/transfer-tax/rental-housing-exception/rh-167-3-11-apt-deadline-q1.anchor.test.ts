@@ -12,9 +12,9 @@
  * §155⑳ 자체 정의 괄호는 가목1)의 등록기한만 비적용할 뿐 가목2)를 언급하지 않는다 — ⑳ 경로(말소 전,
  * 현재 보유 중)는 이 게이트를 **그대로** 받는다. ㉓(말소 후 5년 내) 경로만 명시로 비적용된다.
  *
- * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 바닥 초과를
- * 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 종전 기준을 유지하고
- * (`passed` 불변) `notices`로 확인 필요 고지만 낸다.
+ * Q-1 후속: ⑪ 연장 사실을 모르면(세 호 날짜도 「연장 사유 없음」 확인도 없음) 기한을 바닥(2027.12.31.)으로 보고
+ * 경과로 판정한다 — 사용자 결정 2026-10-04 「모름은 불리 적용(모르는 채 유리하게 적용하면 가산세 부담)」. 결론을
+ * 가른 「모름」은 `notices`로 확인 필요 고지. 종전(2026-10-01 1안)은 `passed` 불변 + 고지였다.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -57,13 +57,13 @@ describe("§155⑳ — 가목 아파트 양도기한(§167조의3⑪) Q-1", () =
     expect(r.notices ?? []).not.toEqual(expect.arrayContaining([expect.stringContaining("§167조의3⑪")]));
   });
 
-  it("거주주택 양도일 2028.1.1(바닥 다음날)·연장 사실 없음 → 판정 보류: passed 유지 + 확인 필요 고지", () => {
+  it("거주주택 양도일 2028.1.1(바닥 다음날)·연장 사실 모름 → 기한 경과로 부적격 + 확인 필요 고지", () => {
     const r = run([gaMokApt], "2028-01-01");
-    // 1안(사용자 결정) — 연장 사실을 물어본 적이 없으므로 종전 기준(기한 내)을 유지한다.
-    expect(r.passed).toBe(true);
-    expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(false);
+    // 종전(2026-10-01 1안): passed 유지 · 실패 코드 없음 + 「판정하지 못해」 고지
+    expect(r.passed).toBe(false);
+    expect(r.failReasons.some((f) => f.code === "APT_TRANSFER_DEADLINE_EXCEEDED")).toBe(true);
     expect(r.notices ?? []).toEqual(
-      expect.arrayContaining([expect.stringContaining("§167조의3⑪ 아파트 양도기한")]),
+      expect.arrayContaining([expect.stringContaining("연장 사유를 확인하지 못해")]),
     );
   });
 

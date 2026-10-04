@@ -17,9 +17,10 @@
  * (§167조의3⑪, 바닥 2027.12.31) 게이트 추가. 사목 base 검사(skipAptDeadline)·§155㉓ 경로
  * (skipAptTransferDeadlineGate)는 각자의 양도기한이 대체하므로 이 게이트에서 빠진다.
  *
- * Q-1 후속(판정 보류): 바닥 초과인데 ⑪ 연장 사실(세 호 날짜·「연장 사유 없음」 확인)이 전무하면
- * "모름"으로 보고 `ArticleCheckResult.aptDeadlinePending`만 세운다(실패 코드 미추가, 종전 기준 유지) —
- * 연장 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다. 입력은 2호 명부 행·양도 주택·§155⑳ 임대주택 카드.
+ * Q-1 후속: 바닥 초과인데 ⑪ 연장 사실(세 호 날짜·「연장 사유 없음」 확인)이 전무하면 "모름" — 기한을 바닥
+ * (2027.12.31.)으로 보고 실패 코드를 넣으면서 `ArticleCheckResult.aptDeadlinePending`을 세운다(호출부가 확인 필요
+ * 고지 · 사용자 결정 2026-10-04 「모름은 불리 적용」 — 종전 #1910은 실패 코드 없이 종전 기준 유지였다).
+ * 입력은 2호 명부 행·양도 주택·§155⑳ 임대주택 카드.
  */
 
 import {
@@ -111,7 +112,7 @@ export type NormalizedRentalUnit = {
    * 쓴다. 미제공이면 이 게이트를 보지 않는다(날짜를 모르면 기한 위반으로 단정하지 않는다).
    */
   aptTransferDate?: Date;
-  /** ⑪ 각 호 연장 사실(또는 「연장 사유 없음」 확인) — 전부 미제공이면 바닥 초과 시 판정 보류. */
+  /** ⑪ 각 호 연장 사실(또는 「연장 사유 없음」 확인) — 전부 미제공(모름)이면 기한 = 바닥 + 확인 필요 고지. */
   aptDeadlineExtension?: AptTransferDeadlineExtension;
   /**
    * §155㉓(말소 후 5년 내 거주주택 양도 특례) 경로 전용 — 그 호의 가목2)·라목8)·마목4) 요건은
@@ -127,9 +128,9 @@ export type ArticleCheckResult = {
   requiredYears: number;
   stdPriceCap: number;
   /**
-   * Q-1 후속(판정 보류) — 아파트·바닥(2027.12.31) 초과인데 ⑪ 연장 사실(세 호 전부) 입력 경로가
-   * 없어 「연장 없음」과 「모름」을 구별 못 한다. true면 `failCodes`에 APT_TRANSFER_DEADLINE_EXCEEDED를
-   * 넣지 않고(종전 기준 유지) 이 플래그만 세운다 — 호출부가 확인 필요 고지를 낸다.
+   * Q-1 후속 — 아파트·바닥(2027.12.31) 초과인데 ⑪ 연장 사실(세 호 전부)도 「연장 사유 없음」 확인도 없다(모름).
+   * `failCodes`에 APT_TRANSFER_DEADLINE_EXCEEDED를 넣고(기한 = 바닥 · 불리 적용) 이 플래그로 호출부가
+   * 확인 필요 고지(`aptDeadlineConfirmNotice("NO_FACT")`)를 낸다.
    */
   aptDeadlinePending: boolean;
   /**
@@ -339,9 +340,9 @@ function checkArticleGates(
     if (t != null && !Number.isNaN(t)) {
       /**
        * Q-1 후속 — 바닥(2027.12.31)을 넘겼는데 ⑪ 연장 세 호(등록말소일·조정대상지역 신규지정 공고일·
-       * 이전고시일)도 「연장 사유 없음」 확인도 없다면 "연장 없음"으로 단정해 중과를 매기는 것은 법 근거
-       * 없이 불리 적용이다 — 판정을 보류하고 종전 기준(이 게이트 미적용)을 유지한다. 사실이 하나라도
-       * 있으면 "안다"고 보고 정상 판정한다(기한 말일 민법 §161 연장 · 3호 인가 시점 · 단서 포함 —
+       * 이전고시일)도 「연장 사유 없음」 확인도 없으면 기한을 바닥으로 보고 경과로 판정한다(사용자 결정
+       * 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담) + `aptDeadlinePending`으로 확인 필요 고지.
+       * 사실이 있으면 정상 판정한다(기한 말일 민법 §161 연장 · 3호 인가 시점 · 단서 포함 —
        * `judgeAptTransferDeadline`). 3호 사실 중 결론을 가른 미확인분은 `aptDeadlineConfirmReasons`로 고지.
        */
       const verdict = judgeAptTransferDeadline(new Date(t), u.aptDeadlineExtension);

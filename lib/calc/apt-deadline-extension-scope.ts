@@ -5,7 +5,7 @@
  * 후단에 따른 기한은 2027년 12월 31일로 한다. 다만, 해당 주택이 다음 각 호의 어느 하나에 해당하는 주택인
  * 경우에는 2027년 12월 31일과 해당 호에서 정하는 날 중 가장 늦은 날을 그 기한으로 한다.」
  *
- * 입력은 3-state다(`AptDeadlineExtensionForm.status`) — 「모름」(기본 · 엔진 판정 보류) / 「연장 사유 없음」
+ * 입력은 3-state다(`AptDeadlineExtensionForm.status`) — 「모름」(기본 · 엔진은 기한 2027.12.31. + 확인 필요 고지) / 「연장 사유 없음」
  * (엔진 `confirmedNone` · 기한 2027.12.31. 확정) / 「연장 사유 있음」(날짜). 날짜와 「없음」은 상호 배타다 —
  * 값 정리는 ⑤ onChange가 하고(useEffect 미러링 금지), ④도 상태에 맞는 값만 싣는다.
  */
@@ -65,7 +65,7 @@ export function withAptDeadlineExtensionStatus(
 
 /**
  * ④⑬ 엔진 `AptTransferDeadlineExtension`의 본문 모양. 「모름」·날짜 없는 「있음」은 키를 만들지 않는다
- * (엔진이 「모름」으로 읽어 판정 보류 — 「있음」+빈 날짜는 ⑧이 막는다).
+ * (엔진이 「모름」으로 읽어 기한 2027.12.31. + 확인 필요 고지 — 「있음」+빈 날짜는 ⑧이 막는다).
  */
 export function aptDeadlineExtensionPayload(
   ext: AptDeadlineExtensionForm | undefined,

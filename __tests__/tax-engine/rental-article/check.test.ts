@@ -269,15 +269,15 @@ describe("checkRentalArticle — 사목 base 목 '해당 목의 다른 요건' (
  * Q-1 — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한(§167조의3⑪, 대통령령 제36737호 2026.9.30 신설).
  * 바닥 2027.12.31. 2027.12.31 양도는 항상 기한 내(=floor 경계값) — 2028.1.1부터 바닥을 넘길 수 있다.
  *
- * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 「연장 없음」과
- * 「모름」을 구별 못 한다. 바닥 초과 + 연장 사실 전무 → **실패 코드를 내지 않고** `aptDeadlinePending`만
- * 세운다(법 근거 없이 불리 적용 금지). 연장 사실이 하나라도 있으면 "안다"고 보고 정상 판정한다.
+ * Q-1 후속: 바닥 초과 + 연장 사실 전무(모름) → **실패 코드(APT_TRANSFER_DEADLINE_EXCEEDED)** + `aptDeadlinePending`
+ * (확인 필요 고지). 사용자 결정 2026-10-04 「모름은 불리 적용 — 모르는 채 유리하게 적용하면 가산세 부담」. 종전
+ * (2026-10-01 1안)은 실패 코드 없이 보류만 세웠다. 연장 사실이 하나라도 있으면 정상 판정한다.
  */
 describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한 §167조의3⑪ (Q-1)", () => {
   const FLOOR_OK = new Date("2027-12-31"); // 바닥 경계값 — 항상 기한 내
-  const PAST_FLOOR = new Date("2028-01-01"); // 바닥 다음 날 — 연장 사실 없으면 판정 보류
+  const PAST_FLOOR = new Date("2028-01-01"); // 바닥 다음 날 — 연장 사실 없으면 기한 경과 + 확인 필요
 
-  it("가목: 아파트·양도일 2027.12.31 → 기한 내 passed·보류 아님 / 2028.1.1·연장 사실 없음 → 판정 보류(실패 아님)", () => {
+  it("가목: 아파트·양도일 2027.12.31 → 기한 내 passed·고지 없음 / 2028.1.1·연장 사실 없음 → 기한 경과 실패 + 확인 필요", () => {
     const ok = checkRentalArticle("가", base({
       rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true, aptTransferDate: FLOOR_OK,
     }));
@@ -286,8 +286,9 @@ describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파�
     const pending = checkRentalArticle("가", base({
       rentalStartOfficialPrice: 600_000_000, rentalYears: 5, isApartment: true, aptTransferDate: PAST_FLOOR,
     }));
-    expect(pending.passed).toBe(true); // 종전 기준 유지 — 다른 요건을 다 갖췄으므로 통과
-    expect(pending.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    // 다른 요건을 다 갖췄으므로 기한 경과가 유일한 실패 사유(종전: passed 유지 · 실패 코드 없음)
+    expect(pending.passed).toBe(false);
+    expect(pending.failCodes).toEqual(["APT_TRANSFER_DEADLINE_EXCEEDED"]);
     expect(pending.aptDeadlinePending).toBe(true);
   });
 
@@ -299,32 +300,32 @@ describe("checkRentalArticle — 가목2)·나목2)·라목8)·마목4) 아파�
     expect(r.aptDeadlinePending).toBe(false);
   });
 
-  it("나목: 아파트·바닥 초과·연장 사실 없음 → 판정 보류 (나목2) — 등록기준일 게이트와 독립)", () => {
+  it("나목: 아파트·바닥 초과·연장 사실 없음 → 기한 경과 + 확인 필요 (나목2) — 등록기준일 게이트와 독립)", () => {
     const r = checkRentalArticle("나", base({
       businessRegistrationDate: new Date("2003-01-01"), rentalRegistrationDate: new Date("2003-01-01"),
       acquisitionOfficialPrice: 300_000_000, isNationalSizeHousing: true, hasMinimum2Units: true,
       rentalYears: 5, rentIncreaseUnder5Pct: false, isApartment: true, aptTransferDate: PAST_FLOOR,
     }));
-    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
     expect(r.aptDeadlinePending).toBe(true);
   });
 
-  it("라목: 아파트(라목8)·바닥 초과·연장 사실 없음 → 판정 보류", () => {
+  it("라목: 아파트(라목8)·바닥 초과·연장 사실 없음 → 기한 경과 + 확인 필요", () => {
     const r = checkRentalArticle("라", base({
       isCapitalArea: false, acquisitionOfficialPrice: 300_000_000, rentalYears: 5,
       firstSaleContractDate: new Date("2009-01-01"), landAreaM2: 200, totalFloorAreaM2: 140,
       hasMinimum5UnitsInCity: true, isApartment: true, aptTransferDate: PAST_FLOOR,
     }));
-    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
     expect(r.aptDeadlinePending).toBe(true);
   });
 
-  it("마목: 아파트(마목4)·바닥 초과·연장 사실 없음 → 판정 보류", () => {
+  it("마목: 아파트(마목4)·바닥 초과·연장 사실 없음 → 기한 경과 + 확인 필요", () => {
     const r = checkRentalArticle("마", base({
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
       rentalYears: 10, isApartment: true, aptTransferDate: PAST_FLOOR,
     }));
-    expect(r.failCodes).not.toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
+    expect(r.failCodes).toContain("APT_TRANSFER_DEADLINE_EXCEEDED");
     expect(r.aptDeadlinePending).toBe(true);
   });
 

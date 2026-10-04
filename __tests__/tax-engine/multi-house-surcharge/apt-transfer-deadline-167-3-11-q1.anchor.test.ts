@@ -5,9 +5,10 @@
  * 2주택(일반주택 h1 + 장기임대 아파트 h2) 구성에서 h2가 가목 요건을 충족하면 h1은
  * §167의10①10호(h2가 2호 주택)로 중과 배제된다.
  *
- * Q-1 후속(판정 보류, 사용자 결정 2026-10-01 — 1안): ⑪ 연장 세 호 입력 경로가 없어 바닥(2027.12.31)
- * 초과를 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지) — 종전 기준(중과 배제 유지)을
- * 지키고 `multiHouseSurchargeEvaluation.warnings`로 확인 필요 고지만 낸다. 연장 사실이 있는 경우의
+ * Q-1 후속: ⑪ 연장 사실을 모르면(세 호 날짜도 「연장 사유 없음」 확인도 없음) 기한을 바닥(2027.12.31)으로 보고
+ * 경과로 판정한다 — 사용자 결정 2026-10-04 「모름은 불리 적용(모르는 채 유리하게 적용하면 가산세 부담)」. 종전
+ * (2026-10-01 1안)은 판정 보류로 중과 배제를 유지했다. 결론을 가른 「모름」은
+ * `multiHouseSurchargeEvaluation.warnings`로 확인 필요 고지를 낸다. 연장 사실이 있는 경우의
  * 정상 판정(FAIL/PASS)은 공용 leaf predicate(`checkRentalArticle`)에서
  * `__tests__/tax-engine/rental-article/check.test.ts`가 전담 검증한다(단일 소스, 중복 없음).
  */
@@ -87,14 +88,16 @@ describe("Q-1 — §167조의3⑪ 아파트 양도기한이 다주택 중과 배
     );
   });
 
-  it("2028.1.1(바닥 다음날)·연장 사실 없음 → 판정 보류: 종전 기준(중과 배제) 유지 + 확인 필요 고지, 결정세액 불변", () => {
+  it("2028.1.1(바닥 다음날)·연장 사실 모름 → 기한 경과로 h2 가목 불인정 → h1 중과 + 확인 필요 고지", () => {
     const before = result(household(new Date("2027-12-31")));
     const after = result(household(new Date("2028-01-01")));
-    // 1안(사용자 결정) — 연장 사실을 물어본 적이 없으므로 종전 기준(배제 유지)을 지킨다 — 세액 불변.
-    expect(after.totalTax).toBe(before.totalTax);
-    expect(before.totalTax).toBe(133_166_000); // before→after 실측 고정(이 lane head)
+    const noRental = tax(household(new Date("2028-01-01"), false));
+    expect(before.totalTax).toBe(133_166_000); // 바닥 이내 — 배제(실측 고정)
+    // 종전(2026-10-01 1안): 판정 보류로 133,166,000(배제 유지). 2026-10-04 결정으로 h2가 장기임대주택이 아닌 것과 같다.
+    expect(after.totalTax).toBe(noRental);
+    expect(after.totalTax).toBe(299_816_000);
     expect(after.multiHouseSurchargeEvaluation?.warnings ?? []).toEqual(
-      expect.arrayContaining([expect.stringContaining("§167조의3⑪ 아파트 양도기한")]),
+      expect.arrayContaining([expect.stringContaining("연장 사유를 확인하지 못해")]),
     );
   });
 });

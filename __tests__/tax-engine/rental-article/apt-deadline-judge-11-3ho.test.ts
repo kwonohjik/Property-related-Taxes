@@ -10,9 +10,12 @@ const d = (s: string) => new Date(s);
 const judge = (transfer: string, ext?: AptTransferDeadlineExtension) => judgeAptTransferDeadline(d(transfer), ext);
 
 describe("judgeAptTransferDeadline — ⑪3호", () => {
-  it("사실 전무: 바닥 이내 확정 · 바닥 초과 NO_FACT(기한 내 유지) — #1910 그대로", () => {
+  it("사실 전무: 바닥 이내 확정 · 바닥 초과 기한 경과 + NO_FACT(모름 = 불리 적용 · 사용자 결정 2026-10-04)", () => {
+    // 종전(#1910): 2028-01-01 → { within: true, pending: ["NO_FACT"] }(판정 보류 · 기한 내 유지)
     expect(judge("2027-12-31")).toEqual({ within: true, pending: [] });
-    expect(judge("2028-01-01")).toEqual({ within: true, pending: ["NO_FACT"] });
+    expect(judge("2028-01-01")).toEqual({ within: false, pending: ["NO_FACT"] });
+    // 「없음」 확정과 결론은 같고 확인 필요 사유만 다르다
+    expect(judge("2028-01-01", {})).toEqual({ within: false, pending: ["NO_FACT"] });
     expect(judge("2028-01-01", { confirmedNone: true })).toEqual({ within: false, pending: [] });
   });
 

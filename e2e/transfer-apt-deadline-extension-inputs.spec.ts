@@ -2,7 +2,8 @@
  * E2E: 소령 §167의3⑪ 기한 연장 사실 — 2호 명부 행(장기임대 가목 아파트) 입력 → 요청 본문 → 결과 화면.
  *
  * 2주택 세대(양도 주택 강남 일반 + 다른 주택 장기임대 가목 아파트), 양도 2028-03-01:
- *   ① 「모름」(기본) — 행에 `rentalAptDeadlineExtension`이 실리지 않고 결과에 「판정하지 못해」 고지
+ *   ① 「모름」(기본) — 행에 `rentalAptDeadlineExtension`이 실리지 않고 기한 2027.12.31. 경과로 중과 + 확인 필요 고지
+ *      (사용자 결정 2026-10-04 「모름은 불리 적용」 — 종전 #1910은 중과 배제 유지 + 「판정하지 못해」 고지)
  *   ② 「연장 사유 없음」 — `{ confirmedNone: true }`가 실리고 고지가 사라지며 중과가 적용된다
  *   ③ 「연장 사유 있음」 + 등록말소일 2027-06-01 — 날짜가 실리고(기한 2028-06-01) 중과 배제 · 고지 없음
  *   ④ 3호 인가 2028-03-01(2027.12.31. 뒤) · 이전고시 2033-05-01 · 양도 2030-01-01 — 3호 불성립 → 중과
@@ -19,7 +20,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 const GANGNAM = "1168010100";
-const PENDING = "판정하지 못해";
+/** 연장 사실 「모름」 확인 필요 고지(2026-10-04 이후 문구) */
+const PENDING = "연장 사유를 확인하지 못해";
 
 function seedForm(transferDate = "2028-03-01") {
   return {
@@ -108,12 +110,12 @@ async function pickStatus(page: Page, status: "unknown" | "none" | "has") {
 }
 
 test.describe("§167의3⑪ 기한 연장 사실 — 2호 명부 행 입력 → 요청 → 결과", () => {
-  test("① 모름(기본) → 미전송 + 판정 보류 고지", async ({ page }) => {
+  test("① 모름(기본) → 미전송 + 중과(기한 2027.12.31. 경과) + 확인 필요 고지", async ({ page }) => {
     test.setTimeout(90_000);
     await openHolding(page);
     const { row, mh } = await calculate(page);
     expect(row).not.toHaveProperty("rentalAptDeadlineExtension");
-    expect(mh.surchargeApplicable).toBe(false);
+    expect(mh.surchargeApplicable).toBe(true);
     expect(mh.warnings.some((w) => w.includes(PENDING))).toBe(true);
     await expect(page.getByText(PENDING).first()).toBeVisible();
   });

@@ -265,11 +265,14 @@ describe("3호 — 다른 보유 주택이 감면대상장기임대주택 (10호
 
 describe("3호 후단 — 아파트 민간매입 양도기한 (2027.12.31 이후 양도)", () => {
   const LATE = "2028-03-01";
-  const pendingNotice = (w: string[]) => w.some((s) => s.includes("감면대상장기임대주택") && s.includes("판정하지 못해"));
+  // 확인 필요 고지 — 후단 대상 여부 모름 · ⑪ 연장 사실 모름(2026-10-04 「모름은 불리 적용」 이후 문구)
+  const pendingNotice = (w: string[]) =>
+    w.some((s) => s.includes("3호 후단 대상") || s.includes("연장 사유를 확인하지 못해"));
 
-  it("후단 사실 「모름」 → 판정 보류: 종전 기준(배제) 유지 + 확인 필요 고지", async () => {
+  it("후단 사실 「모름」 → 후단 대상으로 보고 기한(2027.12.31.) 경과 → 배제 해제(중과) + 확인 필요 고지", async () => {
+    // 종전(#1912·#1914): 판정 보류 — 종전 기준(배제) 유지 + 「판정하지 못해」 고지
     const r = await single(form([general("h2")], sellingTir(SELLING_3HO), LATE));
-    expect(r.reasons).toBe("tax_incentive_rental");
+    expect(r.reasons).not.toContain("tax_incentive_rental");
     expect(pendingNotice(r.warnings)).toBe(true);
   });
 
