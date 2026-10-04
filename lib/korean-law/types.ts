@@ -16,12 +16,13 @@ import { z } from "zod";
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * 법제처 API `target` 파라미터에 매핑되는 12개 결정 도메인.
+ * 법제처 API `target` 파라미터에 매핑되는 13개 결정 도메인.
  * 각 값은 `lawSearch.do?target=xxx` 의 xxx 와 1:1 대응.
  * 부동산 세법 활용 우선순위가 높은 상위 도메인을 배열 앞에 배치.
  */
 export const DECISION_DOMAINS = [
   "prec",       // 판례 (대법원)
+  "ttSpecialDecc", // 조세심판원 재결 (응답 `재결청: 조세심판원` 실측, 2026-10-04)
   // 🔴 detc / expc 는 이름의 직관과 반대다 — 법제처 응답이 스스로 밝힌다(2026-09-11 실측):
   //    target=detc → 필드 `헌재결정례상세링크`·`헌재결정례일련번호`, 사건번호 "2011헌바357"
   //    target=expc → 필드 `법령해석례상세링크`·`질의기관명`·`회신기관명`, 안건번호 "17-0358"
@@ -43,6 +44,7 @@ export type DecisionDomain = typeof DECISION_DOMAINS[number];
 /** UI 표기용 한글 레이블 (드롭다운·필터용) */
 export const DECISION_DOMAIN_LABELS: Record<DecisionDomain, string> = {
   prec:     "대법원 판례",
+  ttSpecialDecc: "조세심판원 재결",
   detc:     "헌재결정례",
   expc:     "법령해석례",
   admrul:   "행정규칙",

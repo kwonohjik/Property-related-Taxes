@@ -58,6 +58,13 @@ interface GenericDecisionDetail {
   사건종류명?: string;
   판결유형?: string;
   데이터출처명?: string;
+  // 조세심판원 재결(ttSpecialDecc) — 2026-10-04 실측 필드
+  재결요지?: string;
+  청구번호?: string;
+  재결청?: string;
+  의결일자?: string;
+  관련법령?: string;
+  참조결정?: string;
   [key: string]: unknown;
 }
 
@@ -101,7 +108,7 @@ export async function getDecisionText(
 
   // 루트 컨테이너 탐색: Service → Search → 최상위 → 도메인 리스트 첫 원소
   const rootSearch = DOMAIN_RESPONSE_KEY[domain].root;
-  const rootService = rootSearch.replace("Search", "Service");
+  const rootService = DOMAIN_RESPONSE_KEY[domain].service ?? rootSearch.replace("Search", "Service");
   const list = DOMAIN_RESPONSE_KEY[domain].list;
   const candidates = [
     data[rootService],
@@ -126,7 +133,7 @@ export async function getDecisionText(
   if (!container) return null;
 
   const holdingsRaw = container.판시사항 ?? "";
-  const summaryRaw = container.판결요지 ?? "";
+  const summaryRaw = container.판결요지 ?? container.재결요지 ?? "";
   const holdRulingRaw = container.주문 ?? "";
   const reasoningRaw =
     container.이유 ??
@@ -154,8 +161,8 @@ export async function getDecisionText(
     }
   }
 
-  const refLawsRaw = container.참조조문 ?? "";
-  const refPrecRaw = container.참조판례 ?? "";
+  const refLawsRaw = container.참조조문 ?? container.관련법령 ?? "";
+  const refPrecRaw = container.참조판례 ?? container.참조결정 ?? "";
 
   const refLawsCleaned = refLawsRaw ? cleanHtml(refLawsRaw) : "";
   const refPrecCleaned = refPrecRaw ? cleanHtml(refPrecRaw) : "";
@@ -167,7 +174,8 @@ export async function getDecisionText(
   const result: DecisionText = {
     id,
     domain,
-    caseNo: container.사건번호 ?? container.결정번호 ?? container.안건번호 ?? "",
+    // ttSpecialDecc 본문은 청구번호·사건번호가 빈 문자열로 온다 → `||` 로 넘긴다.
+    caseNo: container.사건번호 || container.결정번호 || container.안건번호 || container.청구번호 || "",
     title: cleanHtml(
       container.사건명 ??
         container.제목 ??
@@ -203,6 +211,7 @@ export async function getDecisionText(
       container.회신기관명 ??
       container.질의기관명 ??
       container.소관부처명 ??
+      container.재결청 ??
       "",
     date:
       container.선고일자 ??
@@ -210,6 +219,7 @@ export async function getDecisionText(
       container.판결일 ??
       container.회신일자 ??
       container.시행일자 ??
+      container.의결일자 ??
       "",
     sourceUrl: buildDecisionSourceUrl(domain, id),
     compacted,
