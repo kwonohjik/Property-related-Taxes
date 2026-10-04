@@ -8,9 +8,10 @@
  * 규정하므로 「취득 당시의 실지거래가액을 확인할 수 없는 경우」(§97①1호 단서)에 해당하지 않아
  * 환산가액으로 산정할 수 없다. 증여도 같은 문장에 있다 ⇒ 나목(매매사례·환산) 모드는 쓸 자리가 없다.
  *
- * 예외 — 의제취득일 이전 상속·증여(영 §176의2④ 「상속 또는 증여받은 자산을 포함한다」).
- * 주식 의제취득일은 1986.1.1.(영 §162⑦3호)이고, UI는 1985.12.31. 이전 취득일을 그 날로 **바꿔 저장**한다
- * (`AcquisitionInfoBlock.tsx` `coerceDeemed`) ⇒ 비교는 **엄격 초과**여야 의제취득 자산을 막지 않는다.
+ * 예외 — 의제취득일 **전** 상속·증여(영 §176의2④ 「의제취득일 전에 취득한 자산(상속 또는 증여받은
+ * 자산을 포함한다)」). 의제취득일은 주식 1986.1.1.(영 §162⑦3호) · 기타자산 1985.1.1.(⑦1호)로 갈린다
+ * (`stock-deemed-acquisition-date.ts`). 날짜는 사용자가 입력한 그대로 오므로(비파괴 저장 — 2026-10-04)
+ * 의제일 «당일» 취득은 «전»이 아니다 ⇒ 차단 대상이다.
  *
  * 형제: 부동산 `lib/calc/transfer-tax-validate-gift-163-9.ts`(증여만). 주식은 상속도 포함한다 —
  * 근거 결정례가 상속 사례이고, 주식에는 상속 전용 취득가액 경로가 따로 없다(계획서 Q-2).
@@ -21,9 +22,7 @@
  */
 
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
-
-/** 주식 의제취득일 — 영 §162⑦3호. `stock-transfer-helpers.ts`의 `DEEMED_ACQUISITION_DATE`와 같은 날이다. */
-const STOCK_DEEMED_ACQUISITION_DATE_MS = Date.UTC(1986, 0, 1);
+import { stockDeemedAcquisitionDate } from "./stock-deemed-acquisition-date";
 
 export type GiftLikeCause = "gift" | "carryover_gift" | "inheritance";
 
@@ -42,18 +41,21 @@ function toUtcMs(date: Date | string): number {
  * 이 취득이 §163⑨로 **추계 모드를 쓸 수 없는** 조합인가.
  *
  * @param acquisitionDate 수증일·상속개시일 (빈 값이면 판정하지 않는다 — 날짜 필수 검증이 따로 막는다)
+ * @param is94_4 §94①4호(기타자산)인가 — 의제취득일이 1985.1.1.로 앞당겨진다. **필수 인자**다:
+ *   빠뜨리면 기타자산이 주식 경계(1986.1.1.)로 조용히 판정된다(호출부 5곳이 같은 판정을 넘겨야 한다).
  */
 export function isGiftLikeEstimationBlocked(
   cause: string | undefined,
   acquisitionDate: Date | string | undefined,
   acquisitionMode: string | undefined,
+  is94_4: boolean,
 ): boolean {
   if (!isGiftLikeCause(cause)) return false;
   if (acquisitionMode !== "estimated" && acquisitionMode !== "sale_case") return false;
   if (!acquisitionDate) return false;
   const ms = toUtcMs(acquisitionDate);
   if (Number.isNaN(ms)) return false;
-  return ms > STOCK_DEEMED_ACQUISITION_DATE_MS;
+  return ms >= toUtcMs(stockDeemedAcquisitionDate(is94_4));
 }
 
 export const GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE =

@@ -26,6 +26,7 @@ import type { ExitTaxInput, ExitTaxResult } from "./types/exit-tax.types";
 import { calculateForeignStockTax } from "./foreign-stock";
 import { calculateExitTax } from "./exit-tax";
 import { classifyStockTransfer } from "./stock-classification";
+import { isSection94_4Category } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { computeCross89Adjustment } from "../comparative-104-5-cross";
 import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
@@ -146,6 +147,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // STEP 1: 과세대상 판정
   // ──────────────────────────────────────────────────────────
   const classification = classifyStockTransfer(input);
+  /** §94①4호(기타자산) — 의제취득일(영 §162⑦1호)·±3개월 기준일이 갈린다 */
+  const is94_4 = isSection94_4Category(classification.taxCategory);
 
   // appliedRules 병합
   for (const rule of classification.appliedRules) {
@@ -249,7 +252,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   const pr2Input = isSplitMode(input)
     ? { ...input, capitalAdjustments: undefined }
     : input;
-  const pr2 = buildPr2Detail(pr2Input, shareCount, acquisitionPrice, acquisitionMode);
+  const pr2 = buildPr2Detail(pr2Input, shareCount, acquisitionPrice, acquisitionMode, is94_4);
   const marketSampleDetail = pr2.marketSampleDetail;
   const capitalAdjustmentsDetail = pr2.capitalAdjustmentsDetail;
   warnings.push(...pr2.warningsDelta);
@@ -479,13 +482,14 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // STEP 8: 보유기간 + 세율 적용
   // ──────────────────────────────────────────────────────────
 
-  // 의제취득일 처리 (1985.12.31. 이전 취득)
+  // 의제취득일 처리 (영 §162⑦ — 주식 1986.1.1. · 기타자산 1985.1.1., 4호는 분류 결과로 판정)
   const rawHoldingResult = calcHoldingPeriod(input);
   const { effectiveDate: holdingStartDate, isDeemedApplied } = applyDeemedAcquisitionDate(
     rawHoldingResult.startDate,
+    is94_4,
   );
   if (isDeemedApplied) {
-    appliedRules.push("의제취득일적용");
+    appliedRules.push(is94_4 ? "의제취득일적용(기타자산)" : "의제취득일적용");
   }
 
   // 의제취득일 적용 시 보유기간 재계산

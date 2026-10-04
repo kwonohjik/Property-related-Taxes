@@ -993,7 +993,7 @@ export type StockTransferResult = {
      */
     acquisitionNetAssetFloorApplied?: boolean;
     finalPerShareValue: number;
-    /** §163⑨ 환산 진단 — 분자(취득시 1주당 기준시가) */
+    /** 환산(영 §176의2②1호) 진단 — 분자(취득시 1주당 기준시가) */
     conversionAcqStdPerShare?: number;
     /** §176의2②1호 환산 진단 — 분모(양도시 1주당 기준시가). 미입력이면 0이고 취득가도 0이다 */
     conversionTransferStd?: number;
@@ -1300,6 +1300,8 @@ export type StockTransferResult = {
     | "KOTC벤처비과세"
     | "월할가산"
     | "의제취득일적용"
+    /** 영 §162⑦1호 — §94①4호(기타자산) 의제취득일 1985.1.1. (주식 3호는 위 키 · ⑦3호) */
+    | "의제취득일적용(기타자산)"
     | "장부분실액면가"
     | "기타자산우선§55누진"
     | "기본공제부동산그룹합산"

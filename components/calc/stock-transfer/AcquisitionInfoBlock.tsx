@@ -14,7 +14,7 @@
  *
  * 안내 카드:
  *  1. 단기 30% (§104②)
- *  2. inheritance 1985.12.31. 이전 의제취득일 (시행령 §162⑦3호)
+ *  2. 의제취득일 — 주식 1986.1.1.(시행령 §162⑦3호) · 기타자산 1985.1.1.(⑦1호)
  *  3. gift 수증일 안내 (§104② 본문 — §97의2① 미해당 선언)
  *  4. carryover_gift 증여자 취득일 입력 + 2025.1.1. 게이트 안내 (§104②2)
  *
@@ -23,12 +23,14 @@
  *    `carryover_gift`(이월과세)를 골라야 §104②2호 통산이 적용된다 — 단순 증여와 구분한다.
  *    계획서: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md
  *
- * 의제취득일 자동 적용 (시행령 §162⑦3호):
- *  - 1985.12.31. 이전 입력 시 onChange 시점에 자동 1986-01-01 patch
- *  - 원래 입력값은 component local state로 보관하여 안내 메시지에 표시
+ * 의제취득일 (시행령 §162⑦ — 2026-10-04 비파괴 전환):
+ *  - 날짜는 **입력값 그대로** 저장한다. 의제취득일은 render마다 분류(§94①3호/4호)로 파생해 안내만 한다.
+ *  - 종전에는 1985.12.31. 이전 입력을 1986-01-01로 **바꿔 저장**했다. 그런데 4호(기타자산 — 의제취득일
+ *    1985.1.1.)는 §94②(부동산과다·과점주주 토글)로도 정해지고 그 토글은 이 블록보다 **뒤에** 입력된다 —
+ *    입력 시점에 바꿔 저장하면 원래 날짜가 사라져 분류가 바뀐 뒤 되돌릴 수 없었다.
+ *  - 계획서: docs/00-pm/stock-deemed-date-other-asset-and-conversion-citation.plan.md
  */
 
-import { useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -36,17 +38,28 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
+import { isSection94_4Form, type Section94_4FormFields } from "@/lib/calc/stock-transfer-section94-4-form";
 
-const DEEMED_CUTOFF = "1985-12-31";
-const DEEMED_DATE = "1986-01-01";
+/** 영 §162⑥⑦ — 주식(3호) / 기타자산(4호) 의제취득일 표기 */
+const DEEMED_LABEL = {
+  stock: { asset: "주식", cutoff: "1985.12.31.", deemed: "1986.1.1.", clause: "§162⑦3호" },
+  otherAsset: { asset: "기타자산(§94①4호)", cutoff: "1984.12.31.", deemed: "1985.1.1.", clause: "§162⑦1호" },
+} as const;
 
-/** 1985.12.31. 이전(포함)이면 1986-01-01 의제취득일로 강제 변환 */
-function coerceDeemed(value: string): { coerced: string; applied: boolean } {
-  if (!value) return { coerced: value, applied: false };
-  if (value <= DEEMED_CUTOFF) {
-    return { coerced: DEEMED_DATE, applied: true };
-  }
-  return { coerced: value, applied: false };
+/** 입력 날짜가 의제취득일 «전»이면 안내한다 — 저장값은 바꾸지 않는다 */
+function DeemedDateNotice({ date, is94_4, subject }: { date: string; is94_4: boolean; subject: string }) {
+  if (!resolveStockDeemedDateString(date, is94_4).isDeemedApplied) return null;
+  const l = is94_4 ? DEEMED_LABEL.otherAsset : DEEMED_LABEL.stock;
+  return (
+    <p
+      data-testid="deemed-acquisition-notice"
+      className="mt-2 rounded-md border border-amber-300 bg-amber-100/70 px-2 py-1.5 text-xs text-amber-900"
+    >
+      ⓘ {subject} {date}은 {l.cutoff} 이전이므로 {l.asset}의 의제취득일 <strong>{l.deemed}</strong>을
+      적용합니다 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={l.clause} />)
+    </p>
+  );
 }
 
 interface AcquisitionInfoBlockProps {
@@ -69,6 +82,8 @@ interface AcquisitionInfoBlockProps {
     | "transferredAssetValue"
     | "giftTaxableValue"
     | "preMergerAcquisitionDate"
+    // 의제취득일 축(§94①3호/4호) 판정용
+    | keyof Section94_4FormFields
   >;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
@@ -81,6 +96,9 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   const donorMethod = form.donorAcquisitionMethod || "actual";
   const isListedMarket = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const dateLabel = isGiftLike ? "수증일" : "취득일";
+  // 의제취득일 — 기타자산(§94①4호)이면 1985.1.1. · 주식이면 1986.1.1. (영 §162⑦1호·3호)
+  const is94_4 = isSection94_4Form(form);
+  const deemed = is94_4 ? DEEMED_LABEL.otherAsset : DEEMED_LABEL.stock;
   // 증여 계열만 보조 정보 노출. purchase 등 자명 케이스는 hint 생략.
   const dateHint =
     cause === "gift"
@@ -89,16 +107,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
         ? "증여받은 날 — 이 날짜가 2025.1.1. 이후여야 §104②2호가 적용됩니다"
         : undefined;
 
-  // 의제취득일 자동 변환 시 사용자 입력 원본을 임시 보관 (안내 메시지용)
-  // store에는 변환된 값만 들어가므로 원본은 local state로만 유지
-  const [acqOriginal, setAcqOriginal] = useState<string | null>(null);
-  const [decedentOriginal, setDecedentOriginal] = useState<string | null>(null);
-  const [donorOriginal, setDonorOriginal] = useState<string | null>(null);
-  const [preMergerOriginal, setPreMergerOriginal] = useState<string | null>(null);
-
   const handleAcqDateChange = (v: string) => {
-    const { coerced, applied } = coerceDeemed(v);
-    setAcqOriginal(applied ? v : null);
     /*
       취득일이 바뀌면 1개월 종가표 잔재를 «모드와 무관하게» 지운다.
 
@@ -111,35 +120,21 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
       ⚠️ 모드로 좁히지 말 것 — direct에서 취득일을 바꾼 뒤 daily로 전환하면 잔재가 살아남는다.
       anchor: `__tests__/components/calc/stock-transfer/acq-one-month-table.anchor.test.tsx`
     */
-    if (coerced !== form.acquisitionDate) {
+    if (v !== form.acquisitionDate) {
       onChange({
-        acquisitionDate: coerced,
+        acquisitionDate: v,
         acquisitionPriceDates: [],
         acquisitionPriceClosing: [],
         acquisitionDatePriceAvg1Month: "",
       });
       return;
     }
-    onChange({ acquisitionDate: coerced });
+    onChange({ acquisitionDate: v });
   };
 
-  const handleDecedentDateChange = (v: string) => {
-    const { coerced, applied } = coerceDeemed(v);
-    setDecedentOriginal(applied ? v : null);
-    onChange({ decedentAcquisitionDate: coerced });
-  };
-
-  const handleDonorDateChange = (v: string) => {
-    const { coerced, applied } = coerceDeemed(v);
-    setDonorOriginal(applied ? v : null);
-    onChange({ donorAcquisitionDate: coerced });
-  };
-
-  const handlePreMergerDateChange = (v: string) => {
-    const { coerced, applied } = coerceDeemed(v);
-    setPreMergerOriginal(applied ? v : null);
-    onChange({ preMergerAcquisitionDate: coerced });
-  };
+  const handleDecedentDateChange = (v: string) => onChange({ decedentAcquisitionDate: v });
+  const handleDonorDateChange = (v: string) => onChange({ donorAcquisitionDate: v });
+  const handlePreMergerDateChange = (v: string) => onChange({ preMergerAcquisitionDate: v });
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-4">
@@ -148,20 +143,14 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
         <span className="text-amber-800 font-semibold text-sm">📋 취득 정보</span>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-2">
-        <LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />
+        <LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={deemed.clause} />
         <LawArticleModal legalBasis="소득세법 §104 ②" label="§104②" />
       </div>
 
       {/* 취득일 (single column) */}
       <FieldCard label={dateLabel} required hint={dateHint}>
         <DateInput value={form.acquisitionDate} onChange={handleAcqDateChange} />
-        {acqOriginal && form.acquisitionDate === DEEMED_DATE && (
-          <p className="mt-2 rounded-md border border-amber-300 bg-amber-100/70 px-2 py-1.5 text-xs text-amber-900">
-            ⓘ 입력하신 {acqOriginal}은 1985.12.31. 이전이므로 의제취득일{" "}
-            <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
-            (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
-          </p>
-        )}
+        <DeemedDateNotice date={form.acquisitionDate} is94_4={is94_4} subject={`입력하신 ${dateLabel}`} />
       </FieldCard>
 
       {/* 취득원인 RadioCardGroup */}
@@ -203,16 +192,10 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
               value={form.decedentAcquisitionDate ?? ""}
               onChange={handleDecedentDateChange}
             />
-            {decedentOriginal && form.decedentAcquisitionDate === DEEMED_DATE && (
-              <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
-                ⓘ 입력하신 피상속인 취득일 {decedentOriginal}은 1985.12.31. 이전이므로
-                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
-                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
-              </p>
-            )}
+            <DeemedDateNotice date={form.decedentAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 피상속인 취득일" />
           </FieldCard>
           <p className="text-xs text-amber-800">
-            ⓘ 1985.12.31. 이전 취득 주식: 의제취득일 1986.1.1. 자동 적용 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
+            ⓘ {deemed.cutoff} 이전 취득 {deemed.asset}: 의제취득일 {deemed.deemed} 적용 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={deemed.clause} />)
           </p>
         </div>
       )}
@@ -242,13 +225,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
               value={form.donorAcquisitionDate ?? ""}
               onChange={handleDonorDateChange}
             />
-            {donorOriginal && form.donorAcquisitionDate === DEEMED_DATE && (
-              <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
-                ⓘ 입력하신 증여자 취득일 {donorOriginal}은 1985.12.31. 이전이므로 의제취득일{" "}
-                <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
-                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
-              </p>
-            )}
+            <DeemedDateNotice date={form.donorAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 증여자 취득일" />
           </FieldCard>
           <p className="text-xs text-amber-800">
             ⓘ 주식은 <strong>2024.12.31. 개정(법률 제20615호)</strong>으로 2025.1.1.부터
@@ -449,13 +426,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
               value={form.preMergerAcquisitionDate ?? ""}
               onChange={handlePreMergerDateChange}
             />
-            {preMergerOriginal && form.preMergerAcquisitionDate === DEEMED_DATE && (
-              <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
-                ⓘ 입력하신 종전 주식 취득일 {preMergerOriginal}은 1985.12.31. 이전이므로
-                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
-                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
-              </p>
-            )}
+            <DeemedDateNotice date={form.preMergerAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 종전 주식 취득일" />
           </FieldCard>
         </div>
       )}

@@ -38,6 +38,7 @@ import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/Security
 import { ForeignStockIdentityBlock } from "@/components/calc/stock-transfer/ForeignStockIdentityBlock";
 import { ExitTaxIdentityBlock } from "@/components/calc/stock-transfer/ExitTaxIdentityBlock";
 import { withAutoSyncMajor } from "@/components/calc/stock-transfer/major-sync";
+import { withDeemedBaseReset } from "@/lib/calc/stock-transfer-section94-4-form";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type {
   StockTransferFormData,
@@ -64,7 +65,12 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 export function Step1({ form, onChange }: Step1Props) {
   // 세무사 모드 의뢰인 격리 — 기신고 이력 후보 필터 축(영 §158② 합산 모달).
   const { activeClientId } = useProfessionalStore();
-  const syncedChange = withAutoSyncMajor(form, onChange);
+  /**
+   * 4호(기타자산) 판정이 바뀌어 의제취득일 기준일이 움직이면 취득측 종가 잔재를 비운다(R-1 — 영 §162⑦).
+   * 판정에 닿는 입력(시장 종류·양도일·라목·다목)이 모두 이 블록의 onChange를 거친다.
+   */
+  const deemedSafeChange = (patch: Partial<StockTransferFormData>) => onChange(withDeemedBaseReset(form, patch));
+  const syncedChange = withAutoSyncMajor(form, deemedSafeChange);
   /** 분할 → 단일 전환 확인 — 확정 전까지 토글·데이터 불변 */
   const [pendingSingle, setPendingSingle] = useState(false);
 
@@ -174,7 +180,7 @@ export function Step1({ form, onChange }: Step1Props) {
           accountNumberMasked={form.accountNumberMasked}
           marketType={form.marketType}
           securityMetaFetchedAt={form.securityMetaFetchedAt}
-          onChange={onChange}
+          onChange={deemedSafeChange}
         />
       ),
     });
@@ -372,7 +378,7 @@ export function Step1({ form, onChange }: Step1Props) {
         key: "other",
         title: "기타자산 해당 여부 (§94①4)",
         render: () => (
-          <OtherAssetBlock form={form} onChange={onChange} activeClientId={activeClientId} />
+          <OtherAssetBlock form={form} onChange={deemedSafeChange} activeClientId={activeClientId} />
         ),
       });
     }

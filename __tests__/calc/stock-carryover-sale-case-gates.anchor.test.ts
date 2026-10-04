@@ -6,7 +6,7 @@
  *   CO-5   단순 증여 + 매매사례 → ⑧·⑫ 차단 (영 §163⑨ · 국심2007중1761)
  *   CO-5b  같은 입력을 실가(평가액)로 → 통과 · 개산공제 없음 (CO-5의 긍정 짝)
  *   CO-6   상속 + 환산 → 차단 (Q-2 상속 포함)
- *   CO-7   의제취득일(1986-01-01로 저장된 1985년 이전 취득) → 차단 안 함 (영 §176의2④)
+ *   CO-7   의제취득일 «전» 증여 → 차단 안 함 (영 §176의2④) · 당일부터 차단 (2026-10-04 비파괴 저장)
  *   CO-8   복원 마이그레이션 — 이월과세 + 수증자 환산 → 증여자 방식으로 이관 · 수증자 실가
  *   CO-3   증여자 매매사례인데 기준시가 없음 → 경고(개산공제 미적용) · 계산은 진행
  *   CO-11  상장 + 증여자 매매사례 → 차단 (영 §176의2③1호 괄호)
@@ -107,11 +107,14 @@ describe("CO-5·5b·6·7: 영 §163⑨ — 증여·상속 자산은 평가액이
     const f = form({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01", acquisitionMode: "estimated" });
     expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
   });
-  it("CO-7: 의제취득일(1986-01-01로 저장) 이전 증여는 막지 않는다 — 영 §176의2④", () => {
-    expect(isGiftLikeEstimationBlocked("gift", "1986-01-01", "estimated")).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "1986-01-02", "estimated")).toBe(true);
-    expect(isGiftLikeEstimationBlocked("purchase", "2025-01-01", "estimated")).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "2025-01-01", "actual")).toBe(false);
+  it("CO-7: 의제취득일 «전» 증여는 막지 않는다 — 영 §176의2④ (주식 의제취득일 1986.1.1.)", () => {
+    // 2026-10-04 — 날짜는 입력값 그대로 저장된다(종전엔 1986-01-01로 바꿔 저장 → 엄격 초과 비교였다).
+    //   의제취득일 «당일»은 «전»이 아니므로 차단된다. 기타자산 경계는 stock-deemed-date-gates Y1-2.
+    expect(isGiftLikeEstimationBlocked("gift", "1985-12-31", "estimated", false)).toBe(false);
+    expect(isGiftLikeEstimationBlocked("gift", "1986-01-01", "estimated", false)).toBe(true);
+    expect(isGiftLikeEstimationBlocked("gift", "1986-01-02", "estimated", false)).toBe(true);
+    expect(isGiftLikeEstimationBlocked("purchase", "2025-01-01", "estimated", false)).toBe(false);
+    expect(isGiftLikeEstimationBlocked("gift", "2025-01-01", "actual", false)).toBe(false);
   });
 });
 
@@ -127,7 +130,7 @@ describe("CO-8: 복원 마이그레이션 — ⑧과 같은 술어일 때만 되
   });
   it("의제취득일 이전 상속 + 환산 → 그대로 (영 §176의2④)", () => {
     const n = normalizeStockFormData({
-      ...form({ acquisitionCause: "inheritance", acquisitionDate: "1986-01-01" }),
+      ...form({ acquisitionCause: "inheritance", acquisitionDate: "1985-09-13" }),
       acquisitionMode: "estimated",
     });
     expect(n.acquisitionMode).toBe("estimated");

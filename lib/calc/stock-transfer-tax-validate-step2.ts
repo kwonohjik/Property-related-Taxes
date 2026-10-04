@@ -14,6 +14,8 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
+import { isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import {
   isGiftLikeEstimationBlocked,
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
@@ -190,7 +192,7 @@ function validateTransferStdAvg(form: StockTransferFormData, errors: StockValida
     if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
       errors.push({
         field: "transferDatePriceAvg1Month",
-        message: "양도일 이전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
+        message: `양도일 이전 1개월 종가 평균을 직접 입력하세요 (환산취득가액 분모 — ${STOCK.ENFORCEMENT_DECREE_176_2_2_1_CONVERSION} · '일자별 입력' 모드 사용 가능)`,
         severity: "error",
       });
     }
@@ -199,7 +201,7 @@ function validateTransferStdAvg(form: StockTransferFormData, errors: StockValida
     if (!hasAnyClose) {
       errors.push({
         field: "transferPriceClosing",
-        message: "일자별 입력 모드: 양도일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
+        message: `일자별 입력 모드: 양도일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (환산취득가액 분모 자동 산정용 — ${STOCK.ENFORCEMENT_DECREE_176_2_2_1_CONVERSION})`,
         severity: "error",
       });
     }
@@ -409,7 +411,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({
               field: "acquisitionDatePriceAvg1Month",
               message:
-                "취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자 — '일자별 입력' 모드 사용 가능)",
+                `취득일 이전 1개월 종가 평균을 입력하세요 (환산취득가액 분자 — ${STOCK.ENFORCEMENT_DECREE_176_2_2_1_CONVERSION} · '일자별 입력' 모드 사용 가능)`,
               severity: "error",
             });
           }
@@ -421,7 +423,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({
               field: "acquisitionPriceClosing",
               message:
-                "일자별 입력 모드: 취득일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분자 자동 산정용)",
+                `일자별 입력 모드: 취득일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (환산취득가액 분자 자동 산정용 — ${STOCK.ENFORCEMENT_DECREE_176_2_2_1_CONVERSION})`,
               severity: "error",
             });
           }
@@ -622,7 +624,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
   // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가 (국심2007중1761) ──
   // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B와 같은 술어.
-  if (isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, acquisitionMode)) {
+  if (isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, acquisitionMode, isSection94_4Form(form))) {
     errors.push({ field: "acquisitionMode", message: GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE, severity: "error" });
   }
 

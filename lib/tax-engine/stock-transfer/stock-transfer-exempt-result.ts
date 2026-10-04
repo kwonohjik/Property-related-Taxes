@@ -12,6 +12,7 @@ import type {
   LotMatchingDetail,
 } from "./types/stock-transfer.types";
 import { classifyStockTransfer } from "./stock-classification";
+import { isSection94_4Category } from "./stock-classification";
 import {
   buildAppliedThreshold,
   calcHoldingPeriod,
@@ -78,11 +79,12 @@ export function buildExemptResult(
    * 보유기간도 정보용으로 산정한다 — 세액에는 쓰이지 않지만 **별지 제84호서식 「05. 보유기간」**이
    * 비과세 뷰에서도 렌더된다. 종전에는 `0` 하드코딩이라 신고서에 「0개월」이 인쇄됐다.
    * 형제 비과세 경로(`applyExemptZeroing`)는 spread라 전부 보존한다 — 같은 비과세인데
-   * 두 경로가 비대칭이었다. 정상 경로와 **같은 헬퍼**를 쓴다(의제취득일 §162의2 포함).
+   * 두 경로가 비대칭이었다. 정상 경로와 **같은 헬퍼**를 쓴다(의제취득일 영 §162⑦ 포함).
    */
   const rawHolding = calcHoldingPeriod(input);
   const { effectiveDate: holdingStartDate, isDeemedApplied } = applyDeemedAcquisitionDate(
     rawHolding.startDate,
+    isSection94_4Category(classification.taxCategory),
   );
   const holding = isDeemedApplied
     ? calcHoldingPeriod({ ...input, acquisitionDate: holdingStartDate })

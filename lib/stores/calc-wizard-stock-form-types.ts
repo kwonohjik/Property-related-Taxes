@@ -204,8 +204,8 @@ export interface StockTransferFormData {
   perShareAcquisitionPrice: string;  // 실가 취득가
 
   // ── 환산 — 상장 (1개월 종가평균) ──
-  transferDatePriceAvg1Month: string;    // 양도일 직전 1개월 평균 (원) — §163⑨ 분모
-  acquisitionDatePriceAvg1Month: string; // 취득일 직전 1개월 평균 (원) — §163⑨ 분자
+  transferDatePriceAvg1Month: string;    // 양도일 직전 1개월 평균 (원) — 환산 분모 (영 §176의2②1호)
+  acquisitionDatePriceAvg1Month: string; // 취득일 직전 1개월 평균 (원) — 환산 분자 (영 §176의2②1호)
   /**
    * 양도시 기준시가 입력 방식 — direct(단일 숫자 직접 입력) | daily(일자별 종가 입력).
    * 3중 패턴 default: "direct" (기존 동작 보존).
