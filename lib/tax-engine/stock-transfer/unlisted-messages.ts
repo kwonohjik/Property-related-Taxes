@@ -17,7 +17,7 @@ export const UNLISTED_MESSAGES = {
   TRANSFER_STD_NON_POSITIVE:
     "양도기준시가(1주당 보충평가액)가 0 이하라 환산취득가액을 계산할 수 없습니다 — 환산 산식(소득세법 시행령 §176의2②1호)의 분모가 0입니다. 양도연도 순손익가치·순자산가치를 확인하세요",
   /** full 모드 사용 시 결과 카드 배지 */
-  FULL_MODE_BADGE: "행-수준 계산 적용 (상증령 §54·§55)",
+  FULL_MODE_BADGE: "행-수준 계산 적용 (소득세법 시행령 §165④1호)",
   /** simple↔full 토글 시 데이터 보존 안내 */
   TOGGLE_DATA_PERSIST: "모드 전환 시 입력값은 양쪽 모두 보존됩니다 (실수 토글 보호)",
   /**

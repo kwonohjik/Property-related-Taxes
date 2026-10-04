@@ -21,7 +21,10 @@
  *   SC-6  취득일 거래정지(C-1) 형제 경로 인용 불변 (P7)
  *   SC-7  취득연도 NI/NA 미입력 → ⑧ validate가 막는다 (P8)
  *   SC-8  상장 + sale_case는 종전대로 차단 (P9)
- *   SC-9  estimated→full→sale_case 전환 후 stale 결산서 값이 기준시가를 덮지 않는다 (V-2)
+ *   SC-9  (2026-10-04 반전) full이면 결산서 취득 열이 기준시가를 만든다 — 취득 열이 비면 ⑧이 막는다.
+ *         종전 단언 「full이어도 stale 결산서 값은 무시」는 이 화면에 「평가액 계산」이 없던 때의 것이다.
+ *         그 단언이 지키던 「화면에 없는 값이 body를 덮지 않는다」는 SC-9b(양도 열)·SC-9c(simple 복귀)가 잇는다.
+ *   SC-9a~f · SC-V1~V3 · SC-H1~H3  취득측 「평가액 계산」 — 계획서 docs/00-pm/stock-transfer-acq-side-unlisted-full-mode.plan.md
  *   SC-10 ⑫ Zod 2차 필수 게이트 — body에 NI/NA가 없으면 서버도 막는다 (V-3)
  */
 
@@ -182,16 +185,13 @@ describe("SC (P8·P9·V-2·V-3): 입력 게이트", () => {
     expect(errors.some((e) => e.field === "acquisitionMode" && e.severity === "error")).toBe(true);
   });
 
-  it("SC-9: estimated(full 결산서)로 채운 뒤 sale_case로 바꿔도 stale 결산서 값이 기준시가를 덮지 않는다", () => {
-    const run = runFullStack(
-      saleCaseForm({
-        unlistedValuationMode: "full",
-        // full 결산서 잔존값 — 화면에는 없지만 adapter가 합성하면 body를 덮는다.
-        // 이 값이 새어 들어가면 기준시가가 100,000이 아니게 되어 개산공제가 달라진다.
-      }),
-    );
-    const { result } = ok(run);
-    expect(result.estimatedDeduction).toBe(100_000);
+  it("SC-9: (반전) full인데 결산서 취득 열이 비어 있으면 1주당 직접 입력값으로 돌아가지 않고 ⑧이 막는다", () => {
+    const errors = validateStep2Domestic(saleCaseForm({ unlistedValuationMode: "full" }));
+    const fields = errors.filter((e) => e.severity === "error").map((e) => e.field);
+    expect(fields).toContain("niShareCountEUAcq");
+    expect(fields).toContain("naShareCountEUAcq");
+    // 화면에 없는 직접 입력 칸은 요구하지 않는다 (픽스처에 값이 있어도 무관 — 쓰이지 않는다)
+    expect(fields).not.toContain("acquisitionYearNetIncomePerShare");
   });
 
   it("SC-10: ⑫ Zod 2차 게이트 — body에 취득연도 NI/NA가 없으면 서버도 막는다", () => {
@@ -204,5 +204,220 @@ describe("SC (P8·P9·V-2·V-3): 입력 게이트", () => {
       const paths = parsed.error.issues.map((i) => i.path.join("."));
       expect(paths).toContain("acquisitionYearNetIncomePerShare");
     }
+  });
+});
+
+// ============================================================
+// 취득측 「평가액 계산」(full) — 계획서 docs/00-pm/stock-transfer-acq-side-unlisted-full-mode.plan.md
+// ============================================================
+
+/**
+ * 취득연도 결산서(EUAcq 열) — 순손익 3억 ÷ 1만 주 = 30,000 → ÷10% = 300,000 /
+ * 순자산 (50억 − 30억) ÷ 1만 주 = 200,000 → 가중평균 (300,000×3 + 200,000×2)÷5 = 260,000.
+ * ⚠️ simple 값(100,000)과 **일부러 다르게** 잡았다 — 같으면 결산서를 안 써도 통과한다.
+ */
+const ACQ_STATEMENT: Partial<StockTransferFormData> = {
+  niAddRow1EUAcq: "300000000",
+  niShareCountEUAcq: "10000",
+  naAssetTotalRow1EUAcq: "5000000000",
+  naLiabTotalRow8EUAcq: "3000000000",
+  naShareCountEUAcq: "10000",
+} as Partial<StockTransferFormData>;
+
+describe("SC (취득측 full): 매매사례 취득기준시가를 결산서로 산출", () => {
+  it("SC-9a: full + 취득연도 결산서 → 개산공제 = 260,000 × 100주 × 1% = 260,000", () => {
+    const { result, body } = ok(
+      runFullStack(saleCaseForm({ unlistedValuationMode: "full", ...ACQ_STATEMENT })),
+    );
+    expect(body.acquisitionYearNetIncomePerShare).toBe(300_000);
+    expect(body.acquisitionYearNetAssetPerShare).toBe(200_000);
+    expect(result.estimatedDeduction).toBe(260_000);
+  });
+
+  it("SC-V1: full이면 화면에 없는 1주당 직접 입력 칸을 ⑧이 요구하지 않는다", () => {
+    const errors = validateStep2Domestic(
+      saleCaseForm({
+        unlistedValuationMode: "full",
+        acquisitionYearNetIncomePerShare: "",
+        acquisitionYearNetAssetPerShare: "",
+        ...ACQ_STATEMENT,
+      }),
+    );
+    const acqErrors = errors.filter(
+      (e) => e.severity === "error" && e.field.startsWith("acquisitionYearNet"),
+    );
+    expect(acqErrors).toEqual([]);
+    expect(errors.filter((e) => e.severity === "error")).toEqual([]);
+  });
+});
+
+describe("SC (취득측 full): 화면에 없는 값·stale 값·판정 규칙", () => {
+  /** 양도 열 결산서 잔존값 — 매매사례 화면에는 양도 열이 없다 */
+  const TRANSFER_STATEMENT = {
+    niAddRow1EUTransfer: "900000000",
+    niShareCountEUTransfer: "10000",
+    naAssetTotalRow1EUTransfer: "9000000000",
+    naShareCountEUTransfer: "10000",
+  } as Partial<StockTransferFormData>;
+
+  it("SC-9b: sale_case + full — 양도 열 결산서 값이 남아 있어도 body에 transferYearNet*가 실리지 않는다", () => {
+    const body = buildStockTransferApiBody(
+      saleCaseForm({ unlistedValuationMode: "full", ...ACQ_STATEMENT, ...TRANSFER_STATEMENT }),
+    );
+    expect(Object.keys(body)).not.toContain("transferYearNetIncomePerShare");
+    expect(Object.keys(body)).not.toContain("transferYearNetAssetPerShare");
+    // 긍정 짝 — 취득 열은 실린다
+    expect(body.acquisitionYearNetAssetPerShare).toBe(200_000);
+  });
+
+  it("SC-9c: simple로 돌아오면 직접 입력값이 정본 — 숨은 결산서 취득 열은 무시", () => {
+    const { result, body } = ok(
+      runFullStack(saleCaseForm({ unlistedValuationMode: "simple", ...ACQ_STATEMENT })),
+    );
+    expect(body.acquisitionYearNetAssetPerShare).toBe(100_000);
+    expect(result.estimatedDeduction).toBe(100_000);
+  });
+
+  it("SC-9d: 환산에서 켜 둔 액면가 토글(stale acqFaceValueOnly)이 취득측 full을 막지 않는다", () => {
+    const form = saleCaseForm({
+      unlistedValuationMode: "full",
+      acqFaceValueOnly: true,
+      acqFaceValuePerShare: "5000",
+      acquisitionYearNetIncomePerShare: "",
+      acquisitionYearNetAssetPerShare: "",
+      ...ACQ_STATEMENT,
+    });
+    expect(validateStep2Domestic(form).filter((e) => e.severity === "error")).toEqual([]);
+    expect(ok(runFullStack(form)).result.estimatedDeduction).toBe(260_000);
+  });
+
+  it("SC-9e: 순자산 단독 사유 + full — 순손익 주식수 없이 통과, NI 미송신, 기준시가 = 순자산 200,000", () => {
+    const form = saleCaseForm({
+      unlistedValuationMode: "full",
+      netAssetOnlyReason: "liquidation_or_owner_death",
+      acquisitionYearNetIncomePerShare: "",
+      acquisitionYearNetAssetPerShare: "",
+      naAssetTotalRow1EUAcq: "5000000000",
+      naLiabTotalRow8EUAcq: "3000000000",
+      naShareCountEUAcq: "10000",
+    } as Partial<StockTransferFormData>);
+    expect(validateStep2Domestic(form).filter((e) => e.severity === "error")).toEqual([]);
+    const { result, body } = ok(runFullStack(form));
+    expect(Object.keys(body)).not.toContain("acquisitionYearNetIncomePerShare");
+    expect(result.estimatedDeduction).toBe(200_000);
+  });
+
+  it("SC-9f: 결손 법인 + full — 80% 하한이 직접 입력과 같은 값으로 발동 (160,000 × 100주 × 1%)", () => {
+    const full = ok(
+      runFullStack(
+        saleCaseForm({
+          unlistedValuationMode: "full",
+          ...ACQ_STATEMENT,
+          niSubRow5EUAcq: "900000000", // 3억 − 9억 → 순손익 음수 → 0 (상증령 §56① 후단 준용)
+        } as Partial<StockTransferFormData>),
+      ),
+    );
+    const simple = ok(
+      runFullStack(
+        saleCaseForm({ acquisitionYearNetIncomePerShare: "0", acquisitionYearNetAssetPerShare: "200000" }),
+      ),
+    );
+    // 가중평균 (0×3 + 200,000×2)÷5 = 80,000 < 200,000 × 80% = 160,000
+    expect(full.result.estimatedDeduction).toBe(160_000);
+    expect(full.result.estimatedDeduction).toBe(simple.result.estimatedDeduction);
+  });
+
+  it("SC-V2: full — 취득 열 발행주식수가 없으면 막지만 양도 열 주식수는 요구하지 않는다", () => {
+    const errors = validateStep2Domestic(
+      saleCaseForm({
+        unlistedValuationMode: "full",
+        ...ACQ_STATEMENT,
+        niShareCountEUAcq: "",
+        naShareCountEUAcq: "",
+      } as Partial<StockTransferFormData>),
+    );
+    const err = errors.filter((e) => e.severity === "error");
+    expect(err.map((e) => e.field).sort()).toEqual(["naShareCountEUAcq", "niShareCountEUAcq"]);
+    // 주식 마법사는 오류 칸으로 이동하지 않는다 — 메시지가 위치를 말해야 한다
+    expect(err[0].message).toContain("취득연도 순손익 계산서");
+    expect(err[0].message).toContain("매매사례가액");
+  });
+
+  it("SC-V3: 순자산 단독이면 순손익 계산서 주식수는 면제", () => {
+    const errors = validateStep2Domestic(
+      saleCaseForm({
+        unlistedValuationMode: "full",
+        netAssetOnlyReason: "liquidation_or_owner_death",
+        ...ACQ_STATEMENT,
+        niShareCountEUAcq: "",
+      } as Partial<StockTransferFormData>),
+    );
+    expect(errors.filter((e) => e.severity === "error")).toEqual([]);
+  });
+});
+
+describe("SC (취득측 full): 취득일 거래정지(halt_acquisition) 형제 경로", () => {
+  /** 코스닥 환산 · 취득일 거래정지 · 양도 당시 기준시가(1개월 종가평균) 300,000 */
+  const haltForm = (o: Partial<StockTransferFormData> = {}) =>
+    saleCaseForm({
+      marketType: "kosdaq",
+      acquisitionMode: "estimated",
+      acquisitionStdMode: "halt_acquisition",
+      transferDatePriceAvg1Month: "300000",
+      acquisitionMarketSamplePrice: "",
+      ...o,
+    } as Partial<StockTransferFormData>);
+
+  it("SC-H1: full + 취득 열 결산서 → body·환산취득가가 결산서 값(260,000)으로", () => {
+    const fullRun = ok(runFullStack(haltForm({ unlistedValuationMode: "full", ...ACQ_STATEMENT })));
+    const simpleRun = ok(runFullStack(haltForm()));
+    expect(fullRun.body.acquisitionYearNetIncomePerShare).toBe(300_000);
+    expect(fullRun.body.acquisitionYearNetAssetPerShare).toBe(200_000);
+    // 환산취득가 = 2억 × 취득기준시가 ÷ 양도기준시가(300,000) — 260,000이면 173,333,333 / simple 100,000이면 66,666,666
+    expect(fullRun.result.acquisitionPrice).toBe(173_333_333);
+    expect(simpleRun.result.acquisitionPrice).toBe(66_666_666);
+  });
+
+  it("SC-H2: full이면 양도 열 결산서 값이 body에 새지 않고, 화면에 없는 직접 입력 칸을 요구하지 않는다", () => {
+    const form = haltForm({
+      unlistedValuationMode: "full",
+      acquisitionYearNetIncomePerShare: "",
+      acquisitionYearNetAssetPerShare: "",
+      ...ACQ_STATEMENT,
+      niAddRow1EUTransfer: "900000000",
+      niShareCountEUTransfer: "10000",
+      naAssetTotalRow1EUTransfer: "9000000000",
+      naShareCountEUTransfer: "10000",
+    } as Partial<StockTransferFormData>);
+    const body = buildStockTransferApiBody(form);
+    expect(Object.keys(body)).not.toContain("transferYearNetIncomePerShare");
+    expect(Object.keys(body)).not.toContain("transferYearNetAssetPerShare");
+    expect(validateStep2Domestic(form).filter((e) => e.severity === "error")).toEqual([]);
+  });
+
+  it("SC-H3: 코스피에 남은 stale 취득일 거래정지는 full이어도 결산서 경로를 열지 않는다", () => {
+    const body = buildStockTransferApiBody(
+      haltForm({ marketType: "kospi", unlistedValuationMode: "full", ...ACQ_STATEMENT }),
+    );
+    expect(body.tradingHaltAtAcquisition).toBe(false);
+    expect(body.acquisitionYearNetAssetPerShare).toBe(100_000);
+  });
+
+  it("SC-H4: 비상장 환산에 남은 stale 취득일 거래정지는 취득측 전용이 아니다 — 양도 열 결산서도 실린다", () => {
+    const body = buildStockTransferApiBody(
+      haltForm({
+        marketType: "unlisted",
+        unlistedValuationMode: "full",
+        ...ACQ_STATEMENT,
+        niAddRow1EUTransfer: "900000000",
+        niShareCountEUTransfer: "10000",
+        naAssetTotalRow1EUTransfer: "9000000000",
+        naShareCountEUTransfer: "10000",
+      } as Partial<StockTransferFormData>),
+    );
+    // 양도 열: 순손익 9억÷1만=90,000 → ÷10% = 900,000 · 순자산 90억÷1만 = 900,000
+    expect(body.transferYearNetIncomePerShare).toBe(900_000);
+    expect(body.transferYearNetAssetPerShare).toBe(900_000);
+    expect(body.acquisitionYearNetAssetPerShare).toBe(200_000);
   });
 });

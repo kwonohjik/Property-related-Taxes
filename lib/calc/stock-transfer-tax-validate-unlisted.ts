@@ -17,6 +17,8 @@ import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-mess
 // 필수 키 집합은 ⑫(`stock-transfer-tax-refines.ts`)와 공용 술어 — 한쪽만 고치면 3중 패턴이 깨진다.
 import { requiredUnlistedValuationKeys } from "./stock-transfer-required-inputs";
 import type { UnlistedValuationKey } from "./stock-transfer-required-inputs";
+// 취득측 전용 경로의 「평가액 계산」 — ④와 같은 술어(한쪽만 열리면 막다른 길 또는 침묵 strip)
+import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
 
 export function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -174,12 +176,24 @@ function validateTransferSupplementaryPositive(
  * validateUnlistedSimpleFields의 취득측 서브셋.
  * - netAssetOnlyReason 있으면 NI 면제
  * - acqFaceValueOnly 잔존값 **무관하게 필수** — UI(acquisitionSideOnly)도 무조건 렌더·엔진도 미참조 (3중 정합)
+ * - 「평가액 계산」이면 1주당 직접 입력 칸이 화면에 없다 → 결산서 취득 열의 발행주식수를 대신 요구한다.
+ *   양도 열은 화면에 없으므로 요구하지 않는다. 주식 마법사는 오류 칸으로 이동하지 않고 첫 메시지만
+ *   보여 주므로(`StockTransferTaxCalculator.tsx` firstInvalidStep) 메시지가 위치를 말해야 한다.
  */
 export function validateAcquisitionSideUnlistedFields(
   form: StockTransferFormData,
   errors: StockValidationError[],
   basis: string = "취득일 거래정지 — 소령 §165③·§165④",
 ): void {
+  if (isAcquisitionSideFullValuationForm(form)) {
+    if (!shouldSkipNetIncome(form) && (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0)) {
+      errors.push({ field: "niShareCountEUAcq", message: `취득연도 순손익 계산서의 사업연도말 발행주식수를 입력하세요 (${basis})`, severity: "error" });
+    }
+    if (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0) {
+      errors.push({ field: "naShareCountEUAcq", message: `취득연도 순자산가액 계산서의 발행주식수를 입력하세요 (${basis})`, severity: "error" });
+    }
+    return;
+  }
   for (const key of requiredUnlistedValuationKeys({
     scope: "acquisition",
     niSkip: shouldSkipNetIncome(form),
