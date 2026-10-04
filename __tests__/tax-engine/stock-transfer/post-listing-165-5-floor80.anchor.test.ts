@@ -131,12 +131,13 @@ describe("PLF — §165⑤ 환산 분자·분모 80% 하한", () => {
     expect(r.warnings.join(" ")).toMatch(/§81④ 2호/);
   });
 
-  it("PLF-4 연혁 게이트 — 2007.2.27.까지는 하한이 없다 (양도일 기준)", () => {
+  // S-1c-3 재기준(법령 우선): 하한 시행일은 2018.4.1.(대통령령 제28637호 부칙). 종전 경계 2007.2.28.은 근거가 없었다.
+  it("PLF-4 연혁 게이트 — 2018.3.31.까지는 하한이 없다 (양도일 기준)", () => {
     // ⚠️ 이 대조군이 없으면 「연혁 무시하고 무조건 하한」이라는 과거 감사 결함
     //    (audit-fix-stock-valuation-unlisted.test.ts)을 그대로 재현해도 아무도 모른다.
     const before = calcPostListingConversion({
       ...base(),
-      transferDate: new Date("2007-02-27"),
+      transferDate: new Date("2018-03-31"),
       listingYearNetIncomePerShare: 50,
       listingYearNetAssetPerShare: 200,
       acquisitionYearNetIncomePerShare: 100,
@@ -149,7 +150,7 @@ describe("PLF — §165⑤ 환산 분자·분모 80% 하한", () => {
     // 하루 뒤(시행일)부터 하한이 산다 — PLF-1과 동일 입력·동일 값
     const onward = calcPostListingConversion({
       ...base(),
-      transferDate: new Date("2007-02-28"),
+      transferDate: new Date("2018-04-01"),
       listingYearNetIncomePerShare: 50,
       listingYearNetAssetPerShare: 200,
       acquisitionYearNetIncomePerShare: 100,
