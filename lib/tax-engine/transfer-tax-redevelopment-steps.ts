@@ -12,7 +12,7 @@ import {
   resolveHighValueHouseThreshold,
   formatHighValueThresholdLabel,
 } from "./one-house/threshold";
-import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
+import { resolveSurchargeApplication, noRosterSurchargeFallbackNotice } from "./transfer-tax-surcharge-predicate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import {
   applyLthdExclusion,
@@ -283,6 +283,15 @@ export function runRedevelopmentGainSteps(
     multiHouseSurchargeResult,
     parsedRates.surchargeSpecialRules,
   );
+  // 명부 없이 원시 플래그로 중과를 건 경우의 「확인 필요」 고지 — 일반 경로와 같은 leaf. 전액 비과세면 세액이 0이라 싣지 않는다.
+  const surchargeFallbackNotice = exemptionResult?.isExempt
+    ? undefined
+    : noRosterSurchargeFallbackNotice({
+        houses: input.houses,
+        householdHousingCount: input.householdHousingCount,
+        multiHouseSurchargeResult,
+        isSurchargeApplied: surchargeApplication.isSurchargeApplied,
+      });
   const lthdExcludedByUnregistered = input.isUnregistered === true;
   // §95② 괄호가 다주택을 담던 시기에만 — 일반 경로 L-1과 같은 leaf(E-14n · 2018.4.1. 전 양도분은 배제 없음).
   const lthdExcludedBySurcharge =
@@ -442,5 +451,5 @@ export function runRedevelopmentGainSteps(
           eligibleAtApprovalDeclared: redevInfo.exemptionEligibleAtApproval === true,
         })
       : [];
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices };
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, surchargeFallbackNotice };
 }

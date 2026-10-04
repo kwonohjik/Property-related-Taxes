@@ -10,7 +10,7 @@ import { TRANSFER } from "./legal-codes";
 import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
 import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
 import { applyRate } from "./tax-utils";
-import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
+import { resolveSurchargeApplication, noRosterSurchargeFallbackNotice } from "./transfer-tax-surcharge-predicate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { runPreCalculationSteps, runSurchargeAndLandSteps } from "./transfer-tax-precalc";
 import { resolveInheritedRedevelopmentAcqPrice } from "./inheritance-acquisition-helpers";
@@ -495,6 +495,14 @@ export function calculateTransferTax(
     multiHouseSurchargeResult,
     parsedRates.surchargeSpecialRules,
   );
+  // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
+  const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
+    houses: effectiveInput.houses,
+    householdHousingCount: effectiveInput.householdHousingCount,
+    multiHouseSurchargeResult,
+    isSurchargeApplied: isSurchargeCase && !suspendedResult,
+  });
+  if (surchargeFallbackNotice) warnings.push(surchargeFallbackNotice);
 
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
