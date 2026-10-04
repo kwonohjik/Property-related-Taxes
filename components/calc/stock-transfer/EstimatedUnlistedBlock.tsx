@@ -29,6 +29,7 @@ import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation
 import { calcNetAssetOnlyValue } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import { ReversalCorpToggle } from "./ReversalCorpToggle";
+import { getValuationWeights } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
@@ -259,7 +260,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           ) : (
             <>
               가중평균 ={" "}
-              <Frac top={`순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}`} bottom="5" /> + 80% 하한
+              <Frac top={`순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}`} bottom="5" />
+              {/* 80% 하한은 2018.4.1. 이후 양도분부터(S-1c-3) — 양도일 미입력이면 현행 기준으로 안내 */}
+              {(!evalDate || getValuationWeights(evalDate).hasFloor80) ? " + 80% 하한" : " (2018.3.31. 이전 양도 — 80% 하한 없음)"}
             </>
           )}
         </p>
