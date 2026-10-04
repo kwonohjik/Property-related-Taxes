@@ -504,6 +504,8 @@ export interface CitingCase {
   id: string;
   /** 대법원 등 본문 제공 출처 여부 */
   hasFullText: boolean;
+  /** 법제처 원문 링크 — 본문을 못 읽은 대법원 판결(supremeNoText)에만 붙인다 */
+  sourceUrl?: string;
 }
 
 /** 후속 판례에서 감지된 변경·폐기 신호 1건 */
@@ -536,6 +538,8 @@ export interface CiteCheckResult {
   signals: ChangeSignal[];
   /** 전원합의체이나 본문 미확보로 스캔 못한 후속 판례 (수동 확인 권장) */
   enBancUnscanned: CitingCase[];
+  /** 대법원 판결이나 법제처가 본문을 주지 않는 출처(국세법령정보시스템)라 스캔 못 한 후속 판례 — 원문 링크로 확인 */
+  supremeNoText: CitingCase[];
   status: CiteCheckStatus;
 }
 

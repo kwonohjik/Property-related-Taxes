@@ -7,8 +7,9 @@
  * - 성립(`met` — 비과세 적용 + 13호·15호 중과 배제 ① 요소, Q1 법문 추론): §155④ 동거봉양(부동산거래관리과-44) ·
  *   §155⑤ 혼인(상속증여세과-21 · 사전-2025-법규재산-1062) · §155⑦3호 귀농(서면-2015-부동산-0193) ·
  *   §155③ 공동상속 소수지분 2중첩(Q3 — 3중첩 불허 0584·0029·2439·4283 · 7265) ·
- *   조특법 §99의2와 같은 문형 조문(Q2 — 2422 등 + 같은 문형) · §99의4(3686 등).
- * - 불성립 + 결론을 가를 때만 「확인 필요」: §155⑦1호·2호 · 조특법 §98(시행령 위임 — 문형 다름) · §98의9.
+ *   조특법 §99의2와 같은 문형 조문(Q2 — 2422 등 + 같은 문형) · §99의4(3686 등) ·
+ *   §99의4와 같은 문형 §98의9(사용자 결정 2026-10-04 — §99의4 해석 기준, §98의9 직접 해석 없음).
+ * - 불성립 + 결론을 가를 때만 「확인 필요」: §155⑦1호·2호 · 조특법 §98(시행령 위임 — 문형 다름).
  *
  * 시료: 강남 · 2015 취득 · 2026-09-18 양도 20억 · 거주 48개월 · 가목 장기일반민간임대 1채(명부 「장기임대」 행) ·
  * 그 밖의 주택 1채(명부 행). mock 아닌 fallback 세율. 「수정 전」 = origin/master(b91a2d0c) 엔진.
@@ -23,6 +24,15 @@
  * | §155⑤ 혼인 · §155④ 동거봉양 | 199,997,600 (적용 · 배제 미개방) | 102,086,600 (적용 · 13호 배제) |
  * | §155⑦3호 귀농 | 167,360,600 | 102,086,600 |
  * | 조특법 §99의2 (명부 행) | 199,997,600 | 102,086,600 (단건 = 다건 — Q4) |
+ *
+ * §98의9(§99의4 문형) — 「수정 전」 = origin/master(84a52134) 엔진:
+ *
+ * | 축 | 수정 전 | 수정 후 |
+ * |---|---|---|
+ * | §98의9 명부 행(공시 3억) + 거주주택 특례 | 1,141,178,500 + 확인 필요 | 102,086,600 (적용 + 13호 배제 · 단건 = 다건) |
+ * | §98의9 명부 행(공시 4억 — 중과 주택 수 산입) + 거주주택 특례 | 1,327,903,500 + 확인 필요 | 102,086,600 (같음) |
+ * | §98의9 취득기간 밖(요건 미충족) + 거주주택 특례 | 1,141,178,500 · 고지 없음 | 같음 |
+ * | §98의9 명부 행(공시 4억) 단독 — 15호 단독 축(E-14a) | 422,521,000 (15호 미개방) | 같음 — 그 축의 목록에는 §99의4도 없다 |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -51,7 +61,7 @@ import {
   rentalResidenceSpecialActConfirmNotice,
 } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
-import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
 type Obj = Record<string, unknown>;
@@ -319,7 +329,7 @@ describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1�
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문형(Q2)·§99의4는 성립, §98·§98의9는 불성립", () => {
+describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문형(Q2)·§99의4는 성립, §98은 불성립", () => {
   const SA_98_NOTICE = rentalResidenceSpecialActConfirmNotice("조특령 §98②·⑥");
 
   it("UX-A1 명부 행 §98의8(같은 문형) → 적용 + 13호 배제 (수정 전 199,997,600 · 단건 = 다건 — Q4)", async () => {
@@ -383,5 +393,80 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문�
     const s = await single(f);
     expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
     expect(s.confirm).toBe(SA_98_NOTICE);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 조특법 §98의9 준공후미분양주택 — §99의4①과 같은 문형(「… 해당 1세대의 소유주택이 아닌 것으로 보아 …
+ * 제89조제1항제3호를 적용한다」, MST 284389) ⇒ §99의4 해석(서면-2016-법령해석재산-3686 등) 기준으로 §155⑳과의
+ * 겹침을 성립으로 본다(사용자 결정 2026-10-04 — §98의9 직접 해석 없음).
+ *
+ * 명부 행 ⑥ reduction 종류(`unsold_98_9`) — ④ `primaryReductionsWithRows`가 감면 선언으로 싣고 엔진
+ * `resolveHouseCountExclusion`(STEP 0.9 `hceApplied`)이 판정한다. 행은 수도권 밖(충북 음성) · 2025-03-01 취득 ·
+ * 취득가 5억 · 85㎡ 이하. 「취득 당시 1주택 보유 1세대」 등 확인 토글은 사용자 확인 사실이라 엔진이 재판정하지
+ * 않는다 — 이 anchor는 §155⑳ 겹침 축만 관측한다.
+ */
+describe("조특법 §98의9(§99의4 문형) — §155⑳ 겹침 성립 · 15호 단독 축은 종전 그대로", () => {
+  const UNSOLD = {
+    type: "unsold_98_9",
+    unsoldHouseAcquisitionDate: "",
+    unsoldHouseAcquisitionPrice: "",
+    unsoldHouseExclusiveArea: "",
+    isNonCapitalRegion: true,
+    wasOneHouseholdAtAcquisition: true,
+    meetsSellerAndContractRequirement: true,
+  } as unknown as RowCountExclusionReduction;
+  const UNSOLD_ROW = (acquisitionDate: string, officialPrice = "300000000"): HouseEntry => ({
+    ...ROW,
+    id: "h3",
+    region: "non_capital",
+    regionCode: "4377037000", // 충북 음성군 (수도권 밖)
+    acquisitionDate,
+    officialPrice,
+    acquisitionPrice: "500000000",
+    exclusiveArea: "84",
+    countExclusion: { kind: "reduction", reduction: UNSOLD },
+  });
+
+  it("UX-D1 명부 행 §98의9(공시 3억) → 적용 + 13호 배제 (수정 전 1,141,178,500 + 확인 필요 · 단건 = 다건)", async () => {
+    const f = withRental(form([UNSOLD_ROW("2025-03-01"), RENTAL_ROW]));
+    const s = await single(f);
+    expect(s).toMatchObject({ status: 200, totalTax: RH_EXCLUDED, rentalApplied: true });
+    expect(s.exclusions).toContain("long_term_rental_residence");
+    expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(RH_EXCLUDED);
+  });
+
+  it("UX-D2 명부 행 §98의9(공시 4억 — 중과 주택 수 산입) → 적용 + 13호 배제 (수정 전 1,327,903,500 + 확인 필요 · 단건 = 다건)", async () => {
+    const f = withRental(form([UNSOLD_ROW("2025-03-01", "400000000"), RENTAL_ROW]));
+    const s = await single(f);
+    expect(s).toMatchObject({ status: 200, totalTax: RH_EXCLUDED, rentalApplied: true });
+    expect(s.exclusions).toContain("long_term_rental_residence");
+    expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(RH_EXCLUDED);
+  });
+
+  it("UX-D3 (음성 짝) 취득기간(2024.1.10.~) 밖 → §98의9 불성립 → 그 밖의 주택 1채로 불성립 · 고지 없음 (종전과 같음)", async () => {
+    const f = withRental(form([UNSOLD_ROW("2023-06-01"), RENTAL_ROW]));
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: TAXED_TWO, rentalApplied: false });
+    expect(s.stepLabels).toContain(NOT_APPLICABLE_LABEL);
+    expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(TAXED_TWO);
+  });
+
+  it("UX-D4 (음성 짝) §98의9 + 거주 0개월 → 적용 불가 · 고지 없음", async () => {
+    const s = await single(withRental(form([UNSOLD_ROW("2025-03-01"), RENTAL_ROW]), "0"));
+    expect(s).toMatchObject({ totalTax: TAXED_TWO, rentalApplied: false });
+    expect(s.confirm).toBeUndefined();
+  });
+
+  it("UX-D5 (축 분리) §98의9(공시 4억) 단독 — 15호 단독 축(E-14a 목록)은 열지 않는다 422,521,000 (종전과 같음 · 단건 = 다건)", async () => {
+    const f = form([UNSOLD_ROW("2025-03-01", "400000000")]);
+    const s = await single(f);
+    expect(s).toMatchObject({ status: 200, totalTax: 422_521_000 });
+    expect(s.exclusions).not.toContain("special_act_house_exclusion");
+    expect(await multi(f)).toBe(422_521_000);
   });
 });
