@@ -149,7 +149,8 @@ describe("§165④1 단서 — 80% 하한의 양도·취득 대칭 적용", () =
     expect(r.acquisitionPrice).toBe(388_235_294);
   });
 
-  it("F-4 하한 신설 전(2007.2.27. 이전 양도)에는 취득측도 발동하지 않는다", () => {
+  // S-1c-3: 하한 시행일은 2018.4.1. 양도분부터(대통령령 제28637호 부칙) — 경계 직전 날짜로 옮겼다(종전 2007-02-27).
+  it("F-4 하한 시행 전(2018.3.31. 이전 양도)에는 취득측도 발동하지 않는다", () => {
     /**
      * 연혁 게이팅은 **양도일** 기준(`getValuationWeights(transferDate).hasFloor80`)이다.
      * 가중치(3:2)가 이미 양도일 기준으로 양쪽에 동일 적용되므로 하한만 취득일 기준으로
@@ -157,8 +158,8 @@ describe("§165④1 단서 — 80% 하한의 양도·취득 대칭 적용", () =
      */
     const r = calculateStockTransferTax(
       base({
-        transferDate: new Date("2007-02-27"),
-        filingDate: new Date("2007-04-30"),
+        transferDate: new Date("2018-03-31"),
+        filingDate: new Date("2018-05-31"),
         acquisitionDate: new Date("2003-01-01"),
         acquisitionYearNetIncomePerShare: 20_000,
         acquisitionYearNetAssetPerShare: 150_000,
