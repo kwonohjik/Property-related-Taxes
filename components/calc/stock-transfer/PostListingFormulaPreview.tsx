@@ -27,6 +27,7 @@ import {
   resolveListingClosingAvg,
 } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingFormulaPreviewProps {
@@ -77,7 +78,8 @@ function Floor80Row({ netAsset, value }: { netAsset: number; value: number }) {
 
 export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewProps) {
   const mode = form.unlistedDetailMode || "simple";
-  const isHeavyRE = form.isHeavyRealEstateForValuation;
+  // §165④1호 괄호(2:3) — 엔진과 같은 leaf
+  const isHeavyRE = isReversalCorpForm(form);
   const shareCount = parseInt(form.shareCount || "0", 10);
 
   // 입력값 합성 (mode별)

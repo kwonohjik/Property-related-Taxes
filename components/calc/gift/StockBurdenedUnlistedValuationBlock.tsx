@@ -138,6 +138,7 @@ export function StockBurdenedUnlistedValuationBlock({ item, bgt, transferDate, o
         </p>
         <EstimatedUnlistedBlock
           simpleOnly
+          hideReversalToggle
           form={form as StockTransferFormData}
           onChange={(patch) => onChange(fromUnlistedBlockPatch(patch))}
         />

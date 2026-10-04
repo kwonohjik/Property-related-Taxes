@@ -5,7 +5,7 @@
  *
  * 시행령 §165④1: 가중평균 (순손익×3 + 순자산×2)÷5 + 80% 하한
  * 시행령 §165④3: 순자산 단독 4사유
- * 시행령 §165⑤: 부동산과다보유법인 가중치 반전 (isHeavyRealEstateForValuation)
+ * 시행령 §165④1호 괄호: 부동산등 50% 이상 법인 가중치 2:3 (`isReversalCorpForm` — 사용자 신고·다목 50%·라목)
  *
  * 입력값 규약:
  *   NetIncomePerShare = 1주당 순손익가치 (= 1주당 순손익액 ÷ 10% 이미 반영한 값)
@@ -26,6 +26,9 @@ import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-fl
 import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { calcNetAssetOnlyValue } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isReversalCorpForm } from "@/lib/calc/stock-transfer-section94-4-form";
+import { ReversalCorpToggle } from "./ReversalCorpToggle";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
@@ -51,6 +54,8 @@ interface EstimatedUnlistedBlockProps {
    * 계획서 docs/00-pm/stock-carryover-sale-case-donor-basis.plan.md V-2
    */
   transferSideOnly?: boolean;
+  /** 2:3 대상 법인 토글을 숨긴다 — 그 필드를 받지 않는 폼(증여 부담부)용. 엔진에 `false`를 보내는 쪽과 짝 */
+  hideReversalToggle?: boolean;
 }
 
 const NET_ASSET_ONLY_REASON_OPTIONS = [
@@ -77,13 +82,14 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
   },
 ];
 
-export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false }: EstimatedUnlistedBlockProps) {
+export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false, hideReversalToggle = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   // 순자산 단독 — §165④3 사유 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 엔진·⑧·⑫와 같은 술어.
   const isNetAssetOnly = shouldSkipNetIncome(form);
   // 사유를 고르지 않았는데 단독이면 근거는 라목 후단뿐이다
   const isRaMokBasis = isNetAssetOnly && netAssetOnlyReason === "";
-  const isHeavyRE = form.isHeavyRealEstateForValuation;
+  // §165④1호 괄호(2:3) — 엔진·⑧·⑫와 같은 leaf
+  const isHeavyRE = isReversalCorpForm(form);
   // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·acquisitionSideOnly 시 강제 simple.
   const mode = simpleOnly || acquisitionSideOnly || transferSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
 
@@ -131,8 +137,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     if (!entered) return null;
 
     if (isNetAssetOnly) {
-      // 순자산 단독(§165④3) → 80% 하한 없음. 정본 밖 분기이므로 여기서 처리한다.
-      return { perShare: Math.floor(na), floor80Applied: false, method: "net_asset_only" as const };
+      // 순자산 단독(§165④3) → 80% 하한 없음 · 0 하한은 엔진과 같은 정본(S-1c-4)
+      return { perShare: calcNetAssetOnlyValue(na, evalDate), floor80Applied: false, method: "net_asset_only" as const };
     }
 
     const v = calcSection165_4Value(ni, na, isHeavyRE, evalDate);
@@ -171,8 +177,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     if (!entered) return null;
 
     if (isNetAssetOnly) {
-      // 순자산 단독(§165④3) → 80% 하한 없음 (양도측과 동일)
-      return Math.floor(na);
+      // 순자산 단독(§165④3) → 80% 하한 없음 · 0 하한 (양도측과 동일)
+      return calcNetAssetOnlyValue(na, evalDate);
     }
 
     // 🔴 **80% 하한은 취득기준시가에도 적용된다** (2026-08-09) — §165④1 단서는 양도·취득을
@@ -230,7 +236,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       >
         <p className="font-semibold">
           비상장 보충적 평가 — 시행령 §165④1
-          {isHeavyRE && !isNetAssetOnly && " (가중치 반전 적용 — §165⑤ 부동산과다보유)"}
+          {isHeavyRE && !isNetAssetOnly && " (가중치 반전 적용 — §165④1호 괄호 · 부동산등 50% 이상 법인)"}
         </p>
         <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
           <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />
@@ -239,9 +245,6 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           )}
           {isRaMokBasis && (
             <LawArticleModal legalBasis="소득세법 시행령 §165 ⑧ 1호" label="§165⑧1" />
-          )}
-          {isHeavyRE && !isNetAssetOnly && (
-            <LawArticleModal legalBasis="소득세법 시행령 §165 ⑤" label="§165⑤" />
           )}
         </div>
         <p className="text-xs mt-1">
@@ -264,6 +267,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           입력값: 순손익가치 = <Frac top="1주당 순손익액" bottom="10%" /> (이미 반영된 값으로 입력)
         </p>
       </div>
+
+      {/* §165④1호 괄호 — 2:3 대상 법인. 순자산 단독이면 가중평균이 없으므로 숨긴다 */}
+      {!isNetAssetOnly && !hideReversalToggle && <ReversalCorpToggle form={form} onChange={onChange} />}
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
       {/* simpleOnly(거래정지 우회 등)·acquisitionSideOnly(C-1)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}

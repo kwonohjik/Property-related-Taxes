@@ -16,6 +16,8 @@ import { isPreDeemedPurchase } from "@/lib/tax-engine/stock-transfer/stock-pre-d
 import { isBookLostAtAcquisition } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
+import { reversalCorpDerivedBasis } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
 
 export type Section94_4FormFields = Pick<
@@ -33,6 +35,36 @@ export type Section94_4FormFields = Pick<
 function pctToRatio(s: string | undefined): number | undefined {
   const n = s ? parseFloatOrUndef(s) : undefined;
   return n === undefined ? undefined : n * 0.01;
+}
+
+/**
+ * 영 §165④1호 괄호(2:3) 대상 법인 — 폼(⑤⑧) 판정. 엔진 leaf `isSection165_4_1ReversalCorp`와 같은 사실을
+ * ④와 같은 단위 규칙(% → 소수)으로 넘긴다.
+ */
+export type ReversalCorpFormFields = Pick<
+  StockTransferFormData,
+  | "isHeavyRealEstateForValuation"
+  | "isQualifyingBlockShareholder"
+  | "blockShareholderRealEstateRatio"
+  | "isHeavyRealEstateForRate"
+>;
+
+function reversalCorpFacts(form: ReversalCorpFormFields) {
+  return {
+    isHeavyRealEstateForValuation: form.isHeavyRealEstateForValuation,
+    isQualifyingBlockShareholder: form.isQualifyingBlockShareholder,
+    blockShareholderRealEstateRatio: pctToRatio(form.blockShareholderRealEstateRatio),
+    isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
+  };
+}
+
+export function isReversalCorpForm(form: ReversalCorpFormFields): boolean {
+  return isSection165_4_1ReversalCorp(reversalCorpFacts(form));
+}
+
+/** 다목·라목 사실로 자동 성립하는 근거 — 화면은 이때 토글을 켠 채 잠근다 */
+export function reversalCorpDerivedBasisForm(form: ReversalCorpFormFields): "ra_mok" | "da_mok_ratio" | undefined {
+  return reversalCorpDerivedBasis(reversalCorpFacts(form));
 }
 
 export function isSection94_4Form(form: Section94_4FormFields): boolean {

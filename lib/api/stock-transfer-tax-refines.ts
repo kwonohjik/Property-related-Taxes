@@ -19,6 +19,7 @@ import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
   isBeforePpiSeries,
@@ -402,7 +403,12 @@ export function addStockRefines(
             isTransferSupplementaryNonPositive(
               ni ?? 0,
               na,
-              data.isHeavyRealEstateForValuation === true,
+              isSection165_4_1ReversalCorp({
+                isHeavyRealEstateForValuation: data.isHeavyRealEstateForValuation as boolean | undefined,
+                isQualifyingBlockShareholder: data.isQualifyingBlockShareholder as boolean | undefined,
+                blockShareholderRealEstateRatio: data.blockShareholderRealEstateRatio as number | undefined,
+                isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
+              }),
               td,
               netAssetOnly,
             )
