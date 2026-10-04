@@ -110,3 +110,15 @@ describe("OPT — 스키마가 옵션 키의 단일 소스다", () => {
     expect(domainSearchOptionsSchema.parse({ curt: "대법원", cls: "양도" })).toEqual({ curt: "대법원" });
   });
 });
+
+describe("OPT — 본문 검색은 도메인 화이트리스트 밖 공통 파라미터다", () => {
+  it("OPT-13: bodySearch → search=2 (화이트리스트가 빈 도메인에서도)", () => {
+    expect(buildDomainParams("expc", { bodySearch: true })).toEqual({ search: "2" });
+    expect(buildDomainParams("ttSpecialDecc", { bodySearch: true })).toEqual({ search: "2" });
+  });
+
+  it("OPT-14(긍정 짝): 지정하지 않으면 search 를 보내지 않는다(사건명 검색 유지)", () => {
+    expect(buildDomainParams("expc", {})).toEqual({});
+    expect(buildDomainParams("prec", { curt: "대법원" })).toEqual({ curt: "대법원" });
+  });
+});
