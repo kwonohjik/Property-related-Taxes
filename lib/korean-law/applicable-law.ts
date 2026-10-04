@@ -173,10 +173,17 @@ export function isSameArticleText(a: string, b: string): boolean {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 2. fetch — 법제처 API (캐시 7일, client-core 공용 인프라)
+// 2. fetch — 법제처 API (client-core 공용 캐시 — 버전 목록만 1일, 나머지 30일)
 // ────────────────────────────────────────────────────────────────────────────
 
 const VERSIONS_PAGE_SIZE = 100;
+/**
+ * 버전 목록 캐시 1일. 공용 30일이면 목록이 캐시된 뒤 공포된 개정이 최대 30일간 빠져, 그 시행일 이후
+ * 기준일을 **옛 버전 조문**으로 답했다(실례: 소득세법 시행령 제36737호, 2026-09-30 공포·10-01 시행).
+ * 조문 본문·부칙 캐시는 (MST, 시행일)로 확정된 키라 30일 그대로다.
+ * 근거·재현: __tests__/korean-law/applicable-law-versions-ttl.anchor.test.ts
+ */
+const VERSIONS_TTL_MS = 24 * 60 * 60 * 1000;
 const VERSIONS_MAX_PAGES = 8;
 
 interface EflawSearchEntry {
@@ -199,9 +206,27 @@ export async function fetchLawVersions(lawNameInput: string): Promise<{
 }> {
   const lawName = resolveLawAlias(lawNameInput.trim());
   const cacheKey = `eflaw_versions_${safeCacheKey(lawName)}`;
-  const cached = await readCache<{ lawName: string; versions: LawVersionEntry[] }>(cacheKey);
+  const cached = await readCache<{ lawName: string; versions: LawVersionEntry[] }>(
+    cacheKey,
+    false,
+    VERSIONS_TTL_MS
+  );
   if (cached) return cached;
 
+  try {
+    return await fetchLawVersionsLive(lawName, cacheKey);
+  } catch (err) {
+    // 법제처 접속 차단(주말·야간·점검) → 만료 목록이라도 반환 (30일 TTL 이 막던 상황)
+    const stale = await readCache<{ lawName: string; versions: LawVersionEntry[] }>(cacheKey, true);
+    if (stale) return stale;
+    throw err;
+  }
+}
+
+async function fetchLawVersionsLive(
+  lawName: string,
+  cacheKey: string
+): Promise<{ lawName: string; versions: LawVersionEntry[] }> {
   const versions: LawVersionEntry[] = [];
   const seen = new Set<string>();
 
