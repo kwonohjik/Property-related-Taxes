@@ -89,6 +89,12 @@ export interface RentalHousingStepArgs {
   };
   /** §99의4·§98의9 「취득 전 보유 주택」 판정 기준일 — STEP 0.9와 같은 값(세대 구성 판정의 조특법 제외용) */
   generalHouseAcquisitionDate?: Date;
+  /**
+   * [echo] STEP 0.9 보유 감면주택 주택수 제외(§89①3호 의제) 판정 — `SpecialHouseExclusionDetailCard`가 읽는다.
+   * 이 step은 조기반환이라 넘겨받지 않으면 단건·다건 결과 화면에서 카드가 사라진다(`inheritedAcquisitionStep`과
+   * 같은 이유). 세액 불변(표시 전용).
+   */
+  specialHouseExclusionDetail?: TransferTaxResult["specialHouseExclusionDetail"];
 }
 
 /**
@@ -296,7 +302,7 @@ export function runRentalHousingExceptionStep(
   const {
     effectiveInput, input, transferGain, usedEstimated, depreciationAmount,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
-    inheritedAcquisitionStep, generalHouseAcquisitionDate,
+    inheritedAcquisitionStep, generalHouseAcquisitionDate, specialHouseExclusionDetail,
   } = args;
 
   /**
@@ -646,6 +652,7 @@ export function runRentalHousingExceptionStep(
     ...(inheritedAcquisitionStep?.houseValuationResult
       ? { inheritedHouseValuationDetail: inheritedAcquisitionStep.houseValuationResult }
       : {}),
+    ...(specialHouseExclusionDetail ? { specialHouseExclusionDetail } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
     ...(reductionNotice || lthdNotice || periodPendingNotice || rhe.eligibility.notices?.length
       ? {

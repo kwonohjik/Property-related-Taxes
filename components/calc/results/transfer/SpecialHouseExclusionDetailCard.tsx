@@ -21,7 +21,10 @@ export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
   if (!detail.entries || detail.entries.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/50 dark:border-violet-800/40 dark:bg-violet-950/20 p-4 space-y-3">
+    <div
+      data-testid="special-house-exclusion-card"
+      className="rounded-lg border border-violet-200 bg-violet-50/50 dark:border-violet-800/40 dark:bg-violet-950/20 p-4 space-y-3"
+    >
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
           조특법 감면주택 보유 — 주택수 제외
