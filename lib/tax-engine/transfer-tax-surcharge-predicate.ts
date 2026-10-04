@@ -191,7 +191,7 @@ const LOW_VALUE_REGIONAL_HOUSE =
  * 세대 보유 주택 목록(`houses[]`) 없이 **원시 플래그로 중과를 실제로 건** 경우의 「확인 필요」 고지.
  *
  * 명부가 없으면 정밀 판정(`determineMultiHouseSurcharge`)이 돌지 않아(예외 — 의제 사실로 행을 구성하는 §155⑳ 거주주택
- * `noRosterRentalResidenceHouses` · §155①⑦ 2주택 `noRosterTwoHouseDeemingHouses`) 다른 주택이 각 호(1호 지방 저가주택 불산입 · 2호 장기임대주택 · 10호 ·
+ * `noRosterRentalResidenceHouses` · §155①⑦ 의제(확인된 조특법 제외 주택 포함) `noRosterTwoHouseDeemingHouses`) 다른 주택이 각 호(1호 지방 저가주택 불산입 · 2호 장기임대주택 · 10호 ·
  * 15호(13호) 등)에 해당하는지 알 수 없다. 모르는 사실은 불리하게 둔다(중과 유지) — 결론을 가를 수 있으므로
  * 그때만 알린다(사용자 결정 2026-10-04 · 선례 #1935·#1939·#1945·#1947·#1949).
  *
