@@ -21,7 +21,8 @@ import type { DecisionDomain, ImpactGroup, ImpactMapResult } from "./types";
 /** 영향 탐색 대상 도메인 (세법 실무 가중) */
 // 조세심판원인 줄 알고 넣었던 ppc 는 실제로 개인정보보호위원회였다(응답 `기관명` 실측).
 // 부동산 세무와 무관해 도메인을 제거했다. 조세심판원 재결은 DRF `target=ttSpecialDecc` 에
-// 있다(2026-10-04 실측: 「양도소득세」 7,303건) — 아직 DECISION_DOMAINS 에 미편입.
+// 있다(2026-10-04 실측: 「양도소득세」 7,303건) — DECISION_DOMAINS·분쟁대응 체인엔 편입했고,
+// 이 영향 그래프엔 아직 넣지 않았다.
 export const IMPACT_DOMAINS: DecisionDomain[] = ["prec", "expc", "ordin"];
 
 /** 도메인당 표시 상위 건수 */

@@ -371,9 +371,10 @@ export function DecisionSearchTab({
         <article className="rounded-md border bg-card p-4">
           <header className="mb-3 space-y-1">
             <h3 className="text-base font-semibold">{detail.title}</h3>
-            {(detail.court || detail.caseNo || detail.date) && (
+            {/* 조세심판원 재결 본문은 청구번호를 빈 값으로 준다 → 목록에서 넘겨받은 번호로 보완 */}
+            {(detail.court || detail.caseNo || detailCaseNo || detail.date) && (
               <p className="text-xs text-muted-foreground">
-                {[detail.court, detail.caseNo, detail.date].filter(Boolean).join(" · ")}
+                {[detail.court, detail.caseNo || detailCaseNo, detail.date].filter(Boolean).join(" · ")}
               </p>
             )}
             {(detail.caseType || detail.judgmentType) && (
