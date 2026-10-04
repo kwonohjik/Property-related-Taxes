@@ -43,3 +43,30 @@ describe("UI — 확인 미완료", () => {
     expect(screen.queryByText(/못 읽음/)).toBeNull();
   });
 });
+
+describe("UI — 본문 미제공 대법원 판결 (cite-check-source-gap.anchor.test.ts)", () => {
+  const nts = (i: number) => ({
+    caseNo: `대법원-2024-두-${i}`, title: "", court: "국세법령정보시스템", date: "2024.05.30", isEnBanc: false,
+    id: String(i), hasFullText: false, sourceUrl: `https://www.law.go.kr/LSW/precInfoP.do?precSeq=${i}`,
+  });
+
+  it("UI-3: 목록·원문 링크·건수를 띄운다 (5건 넘으면 「외 n건」)", async () => {
+    respond({ status: "no_signal", scannedCount: 1, supremeNoText: [1, 2, 3, 4, 5, 6, 7].map(nts) });
+    render(<CitePrecedentStatus caseNo="2018두100" />);
+    fireEvent.click(screen.getByRole("button"));
+    const box = await screen.findByTestId("cite-supreme-no-text");
+    expect(box.textContent).toContain("대법원-2024-두-1");
+    expect(box.querySelector("a")?.getAttribute("href")).toBe("https://www.law.go.kr/LSW/precInfoP.do?precSeq=1");
+    expect(box.textContent).toContain("외 2건");
+    expect(screen.getByText(/대법원 7건 본문 미제공/)).toBeTruthy();
+  });
+
+  it("UI-4(긍정 짝): 없으면 목록도 건수 문구도 없다 (필드가 없는 옛 응답 포함)", async () => {
+    respond({ status: "no_signal", scannedCount: 6 });
+    render(<CitePrecedentStatus caseNo="2018두100" />);
+    fireEvent.click(screen.getByRole("button"));
+    await screen.findByText("변경·폐기 신호 미감지");
+    expect(screen.queryByTestId("cite-supreme-no-text")).toBeNull();
+    expect(screen.queryByText(/본문 미제공/)).toBeNull();
+  });
+});

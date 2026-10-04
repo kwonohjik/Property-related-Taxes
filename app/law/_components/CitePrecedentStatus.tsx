@@ -59,6 +59,7 @@ function CiteResultCard({ result }: { result: CiteCheckResult }) {
         <span className="text-xs text-muted-foreground">
           후속 인용 {result.citingCount}건 · 대법원 본문 {result.scannedCount}건 스캔
           {result.unscannedCount > 0 && ` · ${result.unscannedCount}건 못 읽음(법제처 응답 지연·실패)`}
+          {(result.supremeNoText?.length ?? 0) > 0 && ` · 대법원 ${result.supremeNoText.length}건 본문 미제공`}
         </span>
       </div>
 
@@ -81,6 +82,27 @@ function CiteResultCard({ result }: { result: CiteCheckResult }) {
               <p className="mt-0.5 text-muted-foreground">…{s.excerpt}…</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {(result.supremeNoText?.length ?? 0) > 0 && (
+        <div className="space-y-1" data-testid="cite-supreme-no-text">
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            후속 대법원 판결 (본문 미제공 — 국세법령정보시스템 출처, 원문에서 직접 확인)
+          </p>
+          {result.supremeNoText.slice(0, 5).map((c, i) => (
+            <p key={i} className="text-xs text-muted-foreground">
+              · {c.caseNo} {c.date && `· ${c.date}`}{" "}
+              {c.sourceUrl && (
+                <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                  원문
+                </a>
+              )}
+            </p>
+          ))}
+          {result.supremeNoText.length > 5 && (
+            <p className="text-xs text-muted-foreground">외 {result.supremeNoText.length - 5}건</p>
+          )}
         </div>
       )}
 

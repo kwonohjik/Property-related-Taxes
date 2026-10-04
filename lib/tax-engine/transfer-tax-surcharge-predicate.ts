@@ -48,6 +48,7 @@
 
 import { isSurchargeSuspended } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
+import { MULTI_HOUSE } from "./legal-codes";
 
 /**
  * `tax-utils.ts`의 `SurchargeSpecialRules`는 **미export**다 — 새 export를 만들어
@@ -179,4 +180,51 @@ export function resolveSurchargeApplication(
     effectiveHouseCount,
     surchargeTypeKey,
   };
+}
+
+/** 영 §167의3①1호·§167의10①1호 공통 문언 — 주택의 수에 산입하지 않는 지방 저가주택 */
+const LOW_VALUE_REGIONAL_HOUSE =
+  "수도권 및 광역시ㆍ특별자치시(…) 외의 지역에 소재하는 주택으로서 해당 주택 및 이에 부수되는 토지의 " +
+  "기준시가의 합계액이 해당 주택 또는 그 밖의 주택의 양도 당시 3억원을 초과하지 않는 주택";
+
+/**
+ * 세대 보유 주택 목록(`houses[]`) 없이 **원시 플래그로 중과를 실제로 건** 경우의 「확인 필요」 고지.
+ *
+ * 명부가 없으면 정밀 판정(`determineMultiHouseSurcharge`)이 돌지 않아(§155⑳ 거주주택 세대만 예외 —
+ * `noRosterRentalResidenceHouses`) 다른 주택이 각 호(1호 지방 저가주택 불산입 · 2호 장기임대주택 · 10호 ·
+ * 15호(13호) 등)에 해당하는지 알 수 없다. 모르는 사실은 불리하게 둔다(중과 유지) — 결론을 가를 수 있으므로
+ * 그때만 알린다(사용자 결정 2026-10-04 · 선례 #1935·#1939·#1945·#1947·#1949).
+ *
+ * - 정밀 판정이 있거나(`multiHouseSurchargeResult`) 명부가 입력됐으면(세율 데이터 미로드로 정밀 판정이 빠진 경우)
+ *   이 고지의 전제(「목록이 입력되지 않아」)가 아니다.
+ * - `isSurchargeApplied`(유예 아님)일 때만 — 유예 중에는 중과가 걸리지 않았다(`transfer-tax-mixed-use.ts`와 같은 술어).
+ * - 세액이 0인 경로(비과세 조기반환·차손)는 호출하지 않는다(호출부 책임).
+ *
+ * 문언: 소득세법 시행령 §167의10①·§167의3① 각 호(MST 290841 실독).
+ */
+export function noRosterSurchargeFallbackNotice(args: {
+  houses?: readonly unknown[];
+  householdHousingCount: number;
+  multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
+  isSurchargeApplied: boolean;
+}): string | undefined {
+  if (args.multiHouseSurchargeResult || (args.houses?.length ?? 0) > 0 || !args.isSurchargeApplied) return undefined;
+  const n = args.householdHousingCount;
+  const clauses =
+    n >= 3
+      ? `${MULTI_HOUSE.HOUSE_COUNT_RULE}①은 1호(${LOW_VALUE_REGIONAL_HOUSE})·12호에 해당하는 주택을 주택의 수에 산입하지 않고, ` +
+        `2호(… 민간임대주택으로 등록하여 임대하는 다음 각 목의 어느 하나에 해당하는 주택 — "장기임대주택")·` +
+        `10호(1세대가 제1호부터 제8호까지 및 제8호의2에 해당하는 주택을 제외하고 1개의 주택만을 소유하고 있는 경우의 해당 주택)·` +
+        `13호(제155조 또는 「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 1세대 1주택으로 보아 ` +
+        `제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택) 등에 해당하는 주택을 중과 대상에서 제외합니다`
+      : `${MULTI_HOUSE.TWO_HOUSE_EXCLUSION}①은 1호(${LOW_VALUE_REGIONAL_HOUSE})·12호에 해당하는 주택을 주택의 수에 산입하지 않고, ` +
+        `2호(제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에 해당하는 주택 — 같은 항 2호 "장기임대주택" 등)·` +
+        `10호(1세대가 제1호부터 제7호까지의 규정에 해당하는 주택을 제외하고 1개의 주택만을 소유하고 있는 경우 그 해당 주택)·` +
+        `15호(제155조 또는 「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 1세대 1주택으로 보아 ` +
+        `제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택) 등에 해당하는 주택을 중과 대상에서 제외합니다`;
+  return (
+    `세대 보유 주택 목록이 입력되지 않아 「세대 보유 주택 수」(${n}채)와 조정대상지역 여부만으로 ` +
+    `${n >= 3 ? "1세대 3주택 이상" : "1세대 2주택"} 중과를 적용했습니다. ${clauses} — ` +
+    `보유 주택이 이에 해당하면 중과가 배제될 수 있으니, 세대 보유 주택 목록에 주택을 입력하면 판정합니다(확인 필요)`
+  );
 }
