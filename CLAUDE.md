@@ -342,7 +342,7 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
   - **행위시법**(`applicable-law.ts`): 기준일 시행 조문 + 부칙 경과규정. 법제처 `target=eflaw`(시행일자별)·연혁. `ApplicableLawPanel`. 부칙 발췌는 조문 전용(`articleSpecific`) 우선. "2021년 시행 소득세법 89조".
   - **신구대조**(`time-travel.ts`): `compareLatestAmendment`(distinct MST 거슬러 실제 변경 탐색)·LCS `diffLines`. `amendment_track` 체인 `diff` 섹션 + `LawDiffView`. "소득세법 89조 개정".
   - **현행성 라벨**: 조문 표시 지점에 `CurrentLawBadge`([현행]). 과거 시점은 행위시법 [연혁].
-- 구조화 참조조문(`parsers/ref-parser.ts` `LawRef[]`)·시나리오 8종(`scenarios/`)·판례 12도메인(`DECISION_DOMAINS`).
+- 구조화 참조조문(`parsers/ref-parser.ts` `LawRef[]`)·시나리오 8종(`scenarios/`)·판례 13도메인(`DECISION_DOMAINS` — 조세심판원 재결 `ttSpecialDecc` 포함).
 
 **키움 OpenAPI 자동조회**: 주식 시세 자동조회(양도·상속·증여 공용). 시점 4종·인프라·법령 인용 정정: [lib/kiwoom/CLAUDE.md](lib/kiwoom/CLAUDE.md).
 

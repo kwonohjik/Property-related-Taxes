@@ -36,6 +36,9 @@ interface Pattern {
 // 패턴 레지스트리 (우선순위 낮은 숫자 = 먼저 평가)
 // ────────────────────────────────────────────────────────────────────────────
 
+/** 분쟁·심판 체인 트리거어 */
+const DISPUTE_TRIGGER = /(헌재|헌법\s*재판(?:소)?|조세\s*심판(?:원)?|행정\s*심판|이의\s*신청)/;
+
 const ROUTER_PATTERNS: Pattern[] = [
   // 0. 행위시법 — "2021년 시행 소득세법 89조", "2020.5.1 당시 소득세법 제89조"
   //    조문 패턴(priority 1·2)보다 먼저 평가해야 시점 표현이 선점되지 않는다.
@@ -183,10 +186,15 @@ const ROUTER_PATTERNS: Pattern[] = [
   {
     name: "dispute_prep",
     priority: 15,
-    patterns: [/(헌재|헌법\s*재판|조세\s*심판|행정\s*심판|이의\s*신청)/],
+    patterns: [DISPUTE_TRIGGER],
     extract: (query) => ({
       tool: "run_chain",
-      params: { type: "dispute_prep", query: extractPrimaryTerm(query) },
+      // 트리거어를 검색어에서 뺀다 — 「조세심판 비사업용토지」를 그대로 넘기면 체인의
+      // 모든 결정례 검색이 사건명에 「조세심판」까지 요구해 0건이 된다(2026-10-04 실측).
+      params: {
+        type: "dispute_prep",
+        query: extractPrimaryTerm(query.replace(new RegExp(DISPUTE_TRIGGER.source, "g"), " ").trim() || query),
+      },
       reason: "분쟁·심판 키워드 → 분쟁대응 체인",
       chainType: "dispute_prep",
       targetTab: "chain",

@@ -208,6 +208,11 @@ const disputePrep: Runner = async ({ query }) => {
       const p = await searchDecisions(query, "prec", 1, 5);
       return { kind: "decisions", heading: "대법원 판례", decisions: p.items };
     }),
+    secOrSkip("조세심판원 재결", async () => {
+      // 표제는 「조세심판」을 약속했지만 이 섹션이 없었다 — 「조세심판」 질의도 이 체인으로 온다.
+      const p = await searchDecisions(query, "ttSpecialDecc", 1, 5);
+      return { kind: "decisions", heading: "조세심판원 재결", decisions: p.items };
+    }),
     secOrSkip("헌재결정례", async () => {
       // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
       const p = await searchDecisions(query, "detc", 1, 5);

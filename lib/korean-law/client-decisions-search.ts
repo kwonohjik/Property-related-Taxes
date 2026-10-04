@@ -28,6 +28,7 @@ interface GenericSearchEntry {
   재결일련번호?: string;
   심판일련번호?: string;
   일련번호?: string;
+  특별행정심판재결례일련번호?: string;
   결정일?: string;
   선고일자?: string;
   판결일?: string;
@@ -40,10 +41,12 @@ interface GenericSearchEntry {
   재결일?: string;
   결정일자?: string;
   공포일자?: string;
+  의결일자?: string;
   사건번호?: string;
   결정번호?: string;
   안건번호?: string;
   발령번호?: string;
+  청구번호?: string;
   사건명?: string;
   제목?: string;
   사건내용?: string;
@@ -58,14 +61,18 @@ interface GenericSearchEntry {
   회신기관명?: string;
   질의기관명?: string;
   소관부처명?: string;
+  재결청?: string;
   데이터출처명?: string;
 }
 
 /**
  * 도메인별 법제처 API 응답 루트/리스트 키 매핑 (실측 기반, 2026-04-18).
  */
-export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: string }> = {
+/** `service` — 본문(lawService.do) 응답 루트가 `root` 의 Search→Service 치환과 다를 때만. */
+export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: string; service?: string }> = {
   prec:     { root: "PrecSearch",     list: "prec" },
+  // 검색 응답 루트는 `Decc`, 본문 응답 루트는 `SpecialDeccService` (2026-10-04 실측).
+  ttSpecialDecc: { root: "Decc", list: "decc", service: "SpecialDeccService" },
   detc:     { root: "DetcSearch",     list: "Detc" },
   expc:     { root: "Expc",           list: "expc" },
   admrul:   { root: "AdmRulSearch",   list: "admrul" },
@@ -124,6 +131,7 @@ export interface DomainSearchOptions {
 
 const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof DomainSearchOptions>> = {
   prec:     ["curt", "caseNumber", "fromDate", "toDate"],
+  ttSpecialDecc: [],
   detc:     [],
   expc:     [],
   admrul:   [],
@@ -277,9 +285,10 @@ export async function searchDecisions(
       e.재결일련번호 ??
       e.심판일련번호 ??
       e.일련번호 ??
+      e.특별행정심판재결례일련번호 ??
       "",
     domain,
-    caseNo: e.사건번호 ?? e.결정번호 ?? e.안건번호 ?? e.발령번호 ?? "",
+    caseNo: e.사건번호 ?? e.결정번호 ?? e.안건번호 ?? e.발령번호 ?? e.청구번호 ?? "",
     title: strip(
       e.사건명 ??
       e.제목 ??
@@ -298,6 +307,7 @@ export async function searchDecisions(
       e.회신기관명 ??
       e.질의기관명 ??
       e.소관부처명 ??
+      e.재결청 ??
       "",
     date:
       e.선고일자 ??
@@ -312,6 +322,7 @@ export async function searchDecisions(
       e.재결일 ??
       e.결정일자 ??
       e.공포일자 ??
+      e.의결일자 ??
       "",
     source: e.데이터출처명,
   }));
