@@ -7,10 +7,15 @@
  *
  * 종전엔 detc·expc·admrul·trty·ordin 옵션도 받았으나 전수 차등 실측에서 법제처가
  * 무시하는 것으로 확인돼 제거했다(근거·수치: client-decisions-search.ts:DomainSearchOptions).
+ *
+ * 큰따옴표로 감싼 q(`"소득세법 제89조"`)는 **본문 구절 검색**(search=2)으로 돌린다 — 사건명 검색에서
+ * 따옴표 구절은 거의 걸리지 않는다. 조문 인용 구절이면 법령명을 공식 명칭으로 바꾼다(띄어쓰기가
+ * 다르면 0건). 근거 실측: __tests__/korean-law/article-precedent-routing.anchor.test.ts.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { searchDecisions, LawApiError } from "@/lib/korean-law/client";
+import { searchDecisions, searchLaw, LawApiError } from "@/lib/korean-law/client";
+import { isQuotedPhrase, parseArticleCitationPhrase } from "@/lib/korean-law/phrase-query";
 import {
   searchDecisionsInputSchema,
   domainSearchOptionsSchema,
@@ -45,12 +50,13 @@ export async function GET(req: NextRequest) {
       ? domainSearchOptionsSchema.parse(optionsObj)
       : undefined;
 
+    const phrase = isQuotedPhrase(base.q);
     const result = await searchDecisions(
-      base.q,
+      phrase ? await officialCitationPhrase(base.q) : base.q,
       base.domain,
       base.page,
       base.pageSize,
-      options
+      phrase ? { ...options, bodySearch: true } : options
     );
     // No-result 힌트: 0건이면 다음 액션 가이드 포함 (원본 MCP 패턴).
     if (result.items.length === 0 && base.page === 1) {
@@ -87,4 +93,12 @@ function buildDecisionHint(q: string, domain: string): string {
     return `💡 다음 액션: 도메인을 "prec"(대법원 판례)로 변경하거나, search_law(q="${q}") 로 관련 법령을 먼저 조회하세요.`;
   }
   return `💡 다음 액션: 짧은 키워드로 재시도하거나, run_chain(full_research, query="${q}") 로 여러 도메인을 동시에 검색하세요.`;
+}
+
+/** `"상속세및증여세법 제22조"` → `"상속세 및 증여세법 제22조"`. 조문 인용이 아니거나 법령 검색이 실패하면 그대로. */
+async function officialCitationPhrase(q: string): Promise<string> {
+  const cite = parseArticleCitationPhrase(q);
+  if (!cite) return q;
+  const official = await searchLaw(cite.lawName).catch(() => null);
+  return official?.lawName ? `"${official.lawName} ${cite.articleNo}"` : q;
 }
