@@ -260,8 +260,9 @@ describe("케이스 27 — 순자산 단독 평가 시 80% 하한 미적용", ()
 
 describe("케이스 19 — 시기별 평가 연혁 (양도일 기준)", () => {
   // 1998년 이하: 순자산 단독 (niWeight=0, naWeight=5)
-  // 1999~2007.2.27: 가중평균 (80% 하한 없음)
-  // 2007.2.28~: 현행 (가중평균 + 80% 하한)
+  // 1999~2018.3.31: 가중평균 (80% 하한 없음)
+  // 2018.4.1.~: 현행 (가중평균 + 80% 하한) — 대통령령 제28637호 부칙 제1조 단서 1호 · 제2조②
+  //   S-1c-3 재기준(법령 우선): 종전 경계 2007.2.28.은 근거가 없었다 — 2007·2010·2017·2018.2.13. 시행본에 하한 없음.
 
   it("C19-01: 1998.12.31. 양도 → 순자산 단독 연혁 분기", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
@@ -303,13 +304,25 @@ describe("케이스 19 — 시기별 평가 연혁 (양도일 기준)", () => {
     expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
   });
 
-  it("C19-04: 2007.2.28. 양도 → 현행 가중평균 + 80% 하한", () => {
+  it("C19-04: 2007.2.28. 양도 → 가중평균, 80% 하한 없음 (종전 기대값 «하한 발동»은 근거 없는 경계였다)", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
       transferDate: new Date("2007-02-28"),
       filingDate: new Date("2007-04-28"),
     }));
-    // 2007.2.28~: 80% 하한 발동 (98,000 < 160,000)
-    expect(result.valuationDetail?.netAssetFloorApplied).toBe(true);
+    expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
+  });
+
+  it("C19-04b: 2018.3.31. 양도 → 하한 없음 · 2018.4.1. 양도 → 하한 발동 (98,000 < 160,000)", () => {
+    const before = calculateStockTransferTax(baseUnlistedInput({
+      transferDate: new Date("2018-03-31"),
+      filingDate: new Date("2018-05-31"),
+    }));
+    const onward = calculateStockTransferTax(baseUnlistedInput({
+      transferDate: new Date("2018-04-01"),
+      filingDate: new Date("2018-06-30"),
+    }));
+    expect(before.valuationDetail?.netAssetFloorApplied).toBe(false);
+    expect(onward.valuationDetail?.netAssetFloorApplied).toBe(true);
   });
 
   it("C19-05: 2024.6.1. 양도 → 현행 (기본값 — 80% 하한 발동)", () => {
