@@ -58,6 +58,7 @@ function CiteResultCard({ result }: { result: CiteCheckResult }) {
         <StatusBadge status={result.status} />
         <span className="text-xs text-muted-foreground">
           후속 인용 {result.citingCount}건 · 대법원 본문 {result.scannedCount}건 스캔
+          {result.unscannedCount > 0 && ` · ${result.unscannedCount}건 못 읽음(법제처 응답 지연·실패)`}
         </span>
       </div>
 
@@ -104,6 +105,14 @@ function StatusBadge({ status }: { status: CiteCheckResult["status"] }) {
     return (
       <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
         ⚠ 검토 필요
+      </span>
+    );
+  }
+  if (status === "scan_incomplete") {
+    // 못 읽은 본문이 있으면 「신호 미감지」라 하지 않는다 — 다시 확인하도록.
+    return (
+      <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+        확인 미완료 — 다시 시도
       </span>
     );
   }
