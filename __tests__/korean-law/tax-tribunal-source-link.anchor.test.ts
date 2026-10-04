@@ -37,7 +37,7 @@ describe("LINK — 조세심판원 재결 원문 링크", () => {
   });
 
   it("LINK-2: id 는 인코딩된다 (질의 문자열 주입 금지)", () => {
-    const u = buildDecisionSourceUrl("ttSpecialDecc", "1&trbClsCd=999999");
+    const u = buildDecisionSourceUrl("ttSpecialDecc", "1&trbClsCd=999999")!;
     expect(u).toContain("specialDeccSeq=1%26trbClsCd%3D999999&trbClsCd=360101");
     expect(new URL(u).searchParams.get("trbClsCd")).toBe("360101");
   });
@@ -50,7 +50,7 @@ describe("LINK — 조세심판원 재결 원문 링크", () => {
   ] as const)(
     "LINK-3: %s 도 한글주소가 아니라 일련번호로 여는 상세 팝업이다 (한글주소+일련번호는 7/7 미열림)",
     (domain, expected) => {
-      const u = buildDecisionSourceUrl(domain, "624271");
+      const u = buildDecisionSourceUrl(domain, "624271")!;
       expect(u).toBe(expected);
       expect(decodeURIComponent(u)).not.toMatch(/\/(판례|헌재결정례|법령해석례|행정규칙)\/\(/);
     }

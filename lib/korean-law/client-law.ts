@@ -49,7 +49,7 @@ export function buildLawSourceUrl(lawName: string, articleNo?: string): string {
  *    행정규칙 64~74KB 전건 일치). 판례는 국세청 출처 건이 로더 페이지(33KB 고정)라 브라우저 렌더로
  *    taxlaw.nts.go.kr 본문과 사건번호 표시를 확인했다.
  */
-export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): string {
+export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): string | undefined {
   const seq = encodeURIComponent(id);
   switch (domain) {
     case "prec":
@@ -67,8 +67,27 @@ export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): stri
     // trbClsCd 는 필수(없거나 틀리면 오류 페이지)이며 재결 전건이 조세심판원 = 360101 이다.
     case "ttSpecialDecc":
       return `https://www.law.go.kr/LSW/specialDeccInfoP.do?specialDeccSeq=${seq}&trbClsCd=360101`;
-    default:
-      return `https://www.law.go.kr/LSW/lsScListR.do?query=${encodeURIComponent(id)}`;
+    // 위원회 결정문·자치법규·조약 — 같은 방식. 표본 제목이 본문에 있는지 대조(ftc 7/7·nlrc 7/7·
+    // acr 6/6·ordin 7/7·public 7/7·trty 7/7), 대조군(없는 id)은 껍데기·제목 빈 페이지.
+    case "ftc":
+      return `https://www.law.go.kr/LSW/ftcInfoP.do?ftcSeq=${seq}`;
+    case "nlrc":
+      return `https://www.law.go.kr/LSW/nlrcInfoP.do?nlrcSeq=${seq}`;
+    case "acr":
+      return `https://www.law.go.kr/LSW/acrInfoP.do?acrSeq=${seq}`;
+    case "ordin":
+      return `https://www.law.go.kr/LSW/ordinInfoP.do?ordinSeq=${seq}`;
+    // public 은 행정규칙 팝업(admRulInfoP — 제목 없는 껍데기)이 아니라 공공기관·공단 규정 팝업이다.
+    case "public":
+      return `https://www.law.go.kr/LSW/schlPubRulInfoP.do?schlPubRulSeq=${seq}`;
+    case "trty":
+      return `https://www.law.go.kr/LSW/trtyInfoP.do?trtySeq=${seq}`;
+    // 금융위·방통위 결정문은 법제처 웹에 상세 페이지가 없다(사이트 스크립트의 `*InfoP.do` 목록에 없고
+    // fscInfoP·kccInfoP 는 오류 페이지). 종전 default 는 법령 검색에 일련번호를 넣는 쓸모없는 링크였다
+    // → 링크를 내지 않는다(화면은 `sourceUrl &&` 로 숨긴다). default 를 두지 않아 새 도메인은 컴파일 오류로 드러난다.
+    case "fsc":
+    case "kcc":
+      return undefined;
   }
 }
 
