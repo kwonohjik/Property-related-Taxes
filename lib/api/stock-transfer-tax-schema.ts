@@ -402,7 +402,7 @@ export const stockTransferInputSchema = z.object({
   specificMatchings: z.array(specificMatchingSchema).max(2000).optional(),
 
   // [부담부증여 전용] §159 개산공제 base 안분 비율 B/C (비상장 estimated 경로 전용)
-  // acquisitionMode === "estimated" && marketType === "unlisted" 시에만 유효.
+  // acquisitionMode === "estimated" && 비상장·기타자산(usesUnlistedSupplementaryValuation) 시에만 유효.
   // 범위 0~1 (exclusive 0, inclusive 1). undefined = 일반 주식 양도(기존 동작 보존).
   burdenedGiftDebtRatio: z.number().min(0).max(1).optional(),
 });

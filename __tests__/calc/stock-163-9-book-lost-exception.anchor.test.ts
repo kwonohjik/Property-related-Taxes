@@ -4,7 +4,7 @@
  * 계획서 `docs/00-pm/stock-163-9-valuation-unavailable-exception.plan.md` §1 · §3 · §5
  *
  *   BL-1  술어 — 상속·증여 ∧ 추계 모드 ∧ ¬(환산 ∧ 장부분실). 날짜는 보지 않는다
- *   BL-2  leaf  — 장부분실 = 토글 ∧ 액면가>0 ∧ (비상장 ∨ 양도일 거래정지). 엔진이 그 분기를 타는 조건과 같다
+ *   BL-2  leaf  — 장부분실 = 토글 ∧ 액면가>0 ∧ (비상장·기타자산 ∨ 양도일 거래정지). 엔진이 그 분기를 타는 조건과 같다
  *   BL-3  풀스택(폼 → ④ → ⑫ Zod → ⑭ → 엔진) — 사례 49 수치로 P1~P7
  *   BL-4  ③ 복원 마이그레이션 — 같은 술어
  *   BL-5  엔진 B(이월과세 수증자 측) — 같은 술어
@@ -116,10 +116,13 @@ describe("BL-2: leaf — 엔진이 장부분실 분기를 타는 조건과 같�
     expect(isBookLostAtAcquisition({ ...base, acqFaceValuePerShare: undefined })).toBe(false);
     expect(isBookLostAtAcquisition({ ...base, acqFaceValuePerShare: 0 })).toBe(false);
   });
-  it("상장(거래정지 아님) · 기타자산 → 거짓 — 토글 값이 남아 있어도", () => {
+  it("상장(거래정지 아님) → 거짓 — 토글 값이 남아 있어도", () => {
     expect(isBookLostAtAcquisition({ ...base, marketType: "kospi" })).toBe(false);
     expect(isBookLostAtAcquisition({ ...base, marketType: "kosdaq" })).toBe(false);
-    expect(isBookLostAtAcquisition({ ...base, marketType: "other_asset" })).toBe(false);
+  });
+  it("기타자산 → 참 — 영 §165⑧1호: 기타자산 주식등도 §99①4로 평가한다 (2026-10-04 재기준 — 종전 «기타자산 차단»은 S-1 결함이었다)", () => {
+    expect(isBookLostAtAcquisition({ ...base, marketType: "other_asset" })).toBe(true);
+    expect(isBookLostAtAcquisition({ ...base, marketType: "other_asset", acqFaceValueOnly: false })).toBe(false);
   });
   it("폼 leaf — 같은 판정 (문자열 입력 · 코스피 거래정지 stale은 성립하지 않는다)", () => {
     const f = (o: Partial<StockTransferFormData>) =>
@@ -170,7 +173,7 @@ describe("BL-3: 풀스택 — 사례 49 수치", () => {
     expect(r.blocked).toBe(true);
     if (r.blocked) expect(r.paths).toContain("acquisitionMode");
   });
-  it("P9 상장 코스피 + 환산 + 토글 잔존값 → 차단 (토글은 비상장·거래정지에서만 성립 — 계획서 §8 S-1)", () => {
+  it("P9 상장 코스피 + 환산 + 토글 잔존값 → 차단 (토글은 비상장·기타자산·거래정지에서만 성립)", () => {
     const r = run(form({ marketType: "kospi", acquisitionDate: "1990-01-01", decedentAcquisitionDate: "1988-01-01" }));
     expect(r.blocked).toBe(true);
   });
