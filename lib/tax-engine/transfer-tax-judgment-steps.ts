@@ -184,20 +184,7 @@ function noRosterRentalResidenceHouses(
   generalHouseAcquisitionDate?: Date,
 ): NonNullable<TransferTaxInput["houses"]> | undefined {
   if (!qualifiesRentalResidenceDeeming(workingInput, parsedRates, generalHouseAcquisitionDate)) return undefined;
-  const regionCode = workingInput.regionCode || undefined;
-  const selling = {
-    id: "selling",
-    acquisitionDate: workingInput.acquisitionDate,
-    officialPrice: workingInput.standardPriceAtTransfer ?? 0,
-    region:
-      regionCode && classifyRegionCriteriaByCode(regionCode) === "VALUE" ? ("non_capital" as const) : ("capital" as const),
-    regionCode,
-    isInherited: false,
-    isLongTermRental: false,
-    isApartment: false,
-    isOfficetel: false,
-    isUnsoldHousing: false,
-  };
+  const selling = noRosterSellingHouse(workingInput);
   const rentals = workingInput.rentalHousingException!.rentalUnits.map((u, i) => ({
     id: `no-roster-rental-${i + 1}`,
     acquisitionDate: workingInput.transferDate,
@@ -213,9 +200,79 @@ function noRosterRentalResidenceHouses(
   return [selling, ...rentals];
 }
 
+/** 명부 없는 구성의 양도 주택 행 — 명부 경로 ④(`buildHousesPayload`)의 양도 행과 같은 원천(취득일 · 양도 당시 기준시가 · 법정동코드). */
+function noRosterSellingHouse(workingInput: TransferTaxInput): NonNullable<TransferTaxInput["houses"]>[number] {
+  const regionCode = workingInput.regionCode || undefined;
+  return {
+    id: "selling",
+    acquisitionDate: workingInput.acquisitionDate,
+    officialPrice: workingInput.standardPriceAtTransfer ?? 0,
+    region:
+      regionCode && classifyRegionCriteriaByCode(regionCode) === "VALUE" ? ("non_capital" as const) : ("capital" as const),
+    regionCode,
+    isInherited: false,
+    isLongTermRental: false,
+    isApartment: false,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+  };
+}
+
+/**
+ * 명부(`houses[]`) 없이 §155①(일시적 2주택)·⑦(농어촌주택) 의제가 선 **2주택** 세대 — 정밀 중과 판정에 넘길 행을
+ * 입력된 사실로 구성한다(사용자 결정 2026-10-04 — #1955 「알게 된 것」, 선례 `noRosterRentalResidenceHouses`).
+ *
+ * 🔴 종전에는 명부가 없으면 원시 플래그로 2주택 중과가 붙었다 — 강남 20억 §155①: 명부 없음 422,521,000 ·
+ *    같은 세대를 명부에 입력하면 15호(영 §167의10①15호) 배제로 102,086,600.
+ *
+ * 열리는 조건 — 의제는 STEP 0.5가 주입하는 것과 **같은 정본**(`resolveSurchargeDeemedOneHouse` →
+ * `resolveDeemedOneHouseBy155`)으로 본다. 의제 구성(종전 + 신규 · 일반 + 농어촌 = 2채)과 세대 주택 수가 맞을 때만
+ * (원시 `householdHousingCount === 2`) — 3채 이상이면 그 밖의 주택이 있어 이 두 행으로 세대를 그릴 수 없다
+ * (조특법 제외로 의제 주택 수만 2가 된 경우 포함). 미등기는 #1947과 같이 열지 않는다.
+ *
+ * 다른 주택 행 — 모르는 사실은 **불리한 쪽**(#1947과 같은 원칙):
+ * - 소재지·양도 당시 기준시가 → 지역기준(REGION, 무조건 산입 — 1호 불산입을 주지 않는다).
+ * - 영 §167의3①2호~8호의2 사실(장기임대·상속 5년 등) → 없음(10호 판정에서 빠지지 않는다).
+ * - 취득일 → §155① 신규 주택 취득일(입력) · §155⑦ 3호 귀농주택 취득일(입력), 그 밖에는 양도일.
+ * 이 가정들은 15호가 서면 결론을 바꾸지 않는다 — 배제의 근거는 양도 주택의 의제다. 15호가 서지 않으면(§154① 요건
+ * 미충족 · 2023.2.28. 전 양도분의 구 8호 불성립 등) 결론이 그 모르는 사실에 달리므로 정밀 판정을 쓰지 않는다
+ * (`runMultiHouseSurchargeStep` — 원시 플래그 + `noRosterSurchargeFallbackNotice` 고지, 종전 동작).
+ */
+function noRosterTwoHouseDeemingHouses(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): NonNullable<TransferTaxInput["houses"]> | undefined {
+  if (workingInput.isUnregistered || workingInput.householdHousingCount !== 2) return undefined;
+  const basis = resolveSurchargeDeemedOneHouse(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const otherAcquisitionDate =
+    basis === "temporary_two_house"
+      ? workingInput.temporaryTwoHouse?.newAcquisitionDate
+      : basis === "rural_house"
+        ? (workingInput.ruralHouse?.acquisitionDate ?? workingInput.transferDate)
+        : undefined;
+  if (!otherAcquisitionDate) return undefined;
+  return [
+    noRosterSellingHouse(workingInput),
+    {
+      id: "no-roster-other",
+      acquisitionDate: otherAcquisitionDate,
+      officialPrice: 0,
+      region: "capital" as const,
+      regionCriteria: "REGION" as const,
+      isInherited: false,
+      isLongTermRental: false,
+      isApartment: false,
+      isOfficetel: false,
+      isUnsoldHousing: false,
+    },
+  ];
+}
+
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
- * 명부가 없어도 §155⑳ 거주주택 의제가 서면 입력된 사실로 행을 구성해 판정한다(`noRosterRentalResidenceHouses`).
+ * 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 2주택 의제
+ * (`noRosterTwoHouseDeemingHouses`)가 서면 입력된 사실로 행을 구성해 판정한다.
  */
 export function runMultiHouseSurchargeStep(
   workingInput: TransferTaxInput,
@@ -227,16 +284,20 @@ export function runMultiHouseSurchargeStep(
 ): MultiHouseSurchargeResult | undefined {
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
-  const houses =
-    workingInput.houses && workingInput.houses.length > 0
-      ? workingInput.houses
-      : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const roster = workingInput.houses && workingInput.houses.length > 0 ? workingInput.houses : undefined;
+  const rentalResidenceHouses = roster
+    ? undefined
+    : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const twoHouseDeemingHouses =
+    roster || rentalResidenceHouses
+      ? undefined
+      : noRosterTwoHouseDeemingHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const houses = roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
   if (houses && parsedRates.houseCountExclusionRules) {
     const sellingId = workingInput.sellingHouseId ?? houses[0].id;
     const housesForSurcharge = surchargeExclusionByReduction.excluded
       ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
       : houses;
-    if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
     const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
       houses: housesForSurcharge,
@@ -283,6 +344,10 @@ export function runMultiHouseSurchargeStep(
       parsedRates.surchargeSpecialRules,
       workingInput.isRegulatedArea,
     );
+    // §155①⑦ 구성 행은 중과가 배제될 때만 쓴다 — 중과가 남으면 그 결론을 다른 주택의 모르는 사실(1호·10호 등)이
+    //   가를 수 있으므로 종전대로 원시 플래그 + 「확인 필요」 고지로 돌린다(`noRosterTwoHouseDeemingHouses`).
+    if (twoHouseDeemingHouses && multiHouseSurchargeResult.surchargeType !== "none") return undefined;
+    if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
   }
   return multiHouseSurchargeResult;
 }

@@ -20,7 +20,7 @@
  * | F-6 #1947 0채 met(정밀 판정) | 102,086,600 | 없음 |
  * | F-7 한시 유예(2026-05-09 양도) | 582,598,500 | 없음(중과 미적용) |
  * | F-8 전액 비과세 · 차손 | 0 | 없음(세액 0 — 결론 무관) |
- * | F-9 §155① 일시적 2주택 20억 · 명부 없음 | 422,521,000 | **있음**(명부 입력 시 15호 → 102,086,600) |
+ * | F-9 §155① 일시적 2주택 20억 · 명부 없음 | 102,086,600 | 없음(구성 행 정밀 판정 15호 — 종전 422,521,000 + 고지 · `transfer.route.no-roster-155-1-7-precise-surcharge`) |
  * | F-10 재개발 신축주택 3주택 fallback (엔진) | 불변 | **있음** · 명부 입력 시 없음 |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -275,10 +275,11 @@ describe("명부 없음 · 원시 플래그 중과 — 「확인 필요」 고�
     expect(hasMarker(loss.warnings)).toBe(false);
   });
 
-  it("F-9 §155① 일시적 2주택 20억 · 명부 없음 → 원시 중과 422,521,000 + 고지 (명부 입력 시 15호 → 102,086,600)", async () => {
+  it("F-9 §155① 일시적 2주택 20억 · 명부 없음 → 구성 행 정밀 판정 15호 102,086,600 · 고지 없음 (= 명부 입력)", async () => {
+    // 종전 422,521,000 + 고지 → 의제 사실로 행을 구성해 정밀 판정(`noRosterTwoHouseDeemingHouses`, 사용자 결정 2026-10-04)
     const s = await single(temporaryTwoHouse(form({ count: 2 })));
-    expect(s).toMatchObject({ totalTax: 422_521_000, evaluated: false });
-    expect(s.warnings).toContain(notice(2));
+    expect(s).toMatchObject({ totalTax: EXCLUDED_15, evaluated: true });
+    expect(hasMarker(s.warnings)).toBe(false);
     const newHouse: HouseEntry = {
       ...RENTAL_ROW,
       id: "nh",
