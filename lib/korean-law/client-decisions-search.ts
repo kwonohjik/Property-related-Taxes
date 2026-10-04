@@ -70,8 +70,14 @@ interface GenericSearchEntry {
 /**
  * 도메인별 법제처 API 응답 루트/리스트 키 매핑 (실측 기반, 2026-04-18).
  */
-/** `service` — 본문(lawService.do) 응답 루트가 `root` 의 Search→Service 치환과 다를 때만. */
-export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: string; service?: string }> = {
+/**
+ * `service` — 본문(lawService.do) 응답 루트가 `root` 의 Search→Service 치환과 다를 때만.
+ * 배열이면 그중 있는 것을 쓴다(조약은 양자·다자로 루트 이름이 갈린다).
+ */
+export const DOMAIN_RESPONSE_KEY: Record<
+  DecisionDomain,
+  { root: string; list: string; service?: string | readonly string[] }
+> = {
   prec:     { root: "PrecSearch",     list: "prec" },
   // 검색 응답 루트는 `Decc`, 본문 응답 루트는 `SpecialDeccService` (2026-10-04 실측).
   ttSpecialDecc: { root: "Decc", list: "decc", service: "SpecialDeccService" },
@@ -79,15 +85,16 @@ export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: s
   // 검색 응답 루트는 `Expc`, 본문 응답 루트는 `ExpcService` — Search→Service 치환 규칙 밖이다(2026-10-04 실측).
   expc:     { root: "Expc",           list: "expc", service: "ExpcService" },
   admrul:   { root: "AdmRulSearch",   list: "admrul" },
-  fsc:      { root: "Fsc",            list: "fsc" },
-  ftc:      { root: "Ftc",            list: "ftc" },
-  nlrc:     { root: "Nlrc",           list: "nlrc" },
-  kcc:      { root: "Kcc",            list: "kcc" },
-  acr:      { root: "Acr",            list: "acr" },
-  ordin:    { root: "OrdinSearch",    list: "law" },
+  // 본문 루트 — 2026-10-04 실측(도메인당 5~8건). 위원회 결정문은 검색 루트에 Service 를 붙인 이름이다.
+  fsc:      { root: "Fsc",            list: "fsc",  service: "FscService" },
+  ftc:      { root: "Ftc",            list: "ftc",  service: "FtcService" },
+  nlrc:     { root: "Nlrc",           list: "nlrc", service: "NlrcService" },
+  kcc:      { root: "Kcc",            list: "kcc",  service: "KccService" },
+  acr:      { root: "Acr",            list: "acr",  service: "AcrService" },
+  ordin:    { root: "OrdinSearch",    list: "law",  service: "LawService" },
   // 공공기관 규정 검색 응답은 행정규칙과 같은 `AdmRulSearch.admrul` 이다(2026-10-04 실측) — 종전 매핑으론 0건.
   public:   { root: "AdmRulSearch",   list: "admrul" },
-  trty:     { root: "TrtySearch",     list: "trty" },
+  trty:     { root: "TrtySearch",     list: "trty", service: ["BothTrtyService", "MultTrtyService"] },
 };
 
 /** 검색 응답 container에서 메타데이터 필드명 (리스트로 간주 금지) */
