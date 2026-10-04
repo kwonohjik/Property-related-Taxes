@@ -200,4 +200,35 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       otherHouseCount: 2,
     });
   });
+  it("L-13 조특법 §98의9(§99의4 문형 — 사용자 결정 2026-10-04)로만 그 밖의 주택이 없으면 → met(sole) · 명부 없음이면 판정 보류", () => {
+    const unsold = (acq: string, houseId?: string) =>
+      [
+        {
+          type: "unsold_98_9",
+          ...(houseId ? { houseId } : {}),
+          unsoldHouseAcquisitionDate: D(acq),
+          unsoldHouseAcquisitionPrice: 500_000_000,
+          unsoldHouseExclusiveArea: 84,
+          isNonCapitalRegion: true,
+          wasOneHouseholdAtAcquisition: true,
+          meetsSellerAndContractRequirement: true,
+        },
+      ] as unknown as TransferTaxInput["reductions"];
+    const row = house("unsold", "2025-03-01", { region: "non_capital" });
+    expect(
+      resolveRentalResidenceComposition(input([SELLING, RENTAL, row], { reductions: unsold("2025-03-01", "unsold") }), parsed),
+    ).toEqual({ status: "met", via: "sole" });
+    // (음성 짝) 취득기간 밖이면 제외가 성립하지 않아 그 행이 남는다 — 사실이 확정이라 고지 없음
+    const out = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, house("unsold", "2023-06-01")], { reductions: unsold("2023-06-01", "unsold") }),
+      parsed,
+    );
+    expect(out).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(out.status === "exceeded" && out.confirmNotice).toBeFalsy();
+    const base = { householdHousingCount: 3, rentalHousingException: { rentalUnits: [{}] } } as Partial<TransferTaxInput>;
+    expect(resolveRentalResidenceComposition(input([], { ...base, reductions: unsold("2025-03-01") }), parsed)).toEqual({
+      status: "undetermined",
+      reason: "no_roster",
+    });
+  });
 });
