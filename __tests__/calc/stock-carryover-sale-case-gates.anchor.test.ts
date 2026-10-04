@@ -6,7 +6,7 @@
  *   CO-5   단순 증여 + 매매사례 → ⑧·⑫ 차단 (영 §163⑨ · 국심2007중1761)
  *   CO-5b  같은 입력을 실가(평가액)로 → 통과 · 개산공제 없음 (CO-5의 긍정 짝)
  *   CO-6   상속 + 환산 → 차단 (Q-2 상속 포함)
- *   CO-7   의제취득일 «전» 증여 → 차단 안 함 (영 §176의2④) · 당일부터 차단 (2026-10-04 비파괴 저장)
+ *   CO-7   날짜가 아니라 장부분실로 가른다 — 의제취득일 «전»이어도 장부분실이 아니면 차단 (2026-10-04 재기준 — 계획서 stock-163-9-valuation-unavailable-exception.plan.md)
  *   CO-8   복원 마이그레이션 — 이월과세 + 수증자 환산 → 증여자 방식으로 이관 · 수증자 실가
  *   CO-3   증여자 매매사례인데 기준시가 없음 → 경고(개산공제 미적용) · 계산은 진행
  *   CO-11  상장 + 증여자 매매사례 → 차단 (영 §176의2③1호 괄호)
@@ -79,7 +79,7 @@ const CARRYOVER: Partial<StockTransferFormData> = {
 const errFields = (errs: { field: string; severity: string }[], sev = "error") =>
   errs.filter((e) => e.severity === sev).map((e) => e.field);
 
-describe("CO-5·5b·6·7: 영 §163⑨ — 증여·상속 자산은 평가액이 실지거래가액 (추계 불가)", () => {
+describe("CO-5·5b·6·7: 영 §163⑨ — 증여·상속 자산은 평가액이 실지거래가액 (매매사례 불가 · 환산은 장부분실일 때만)", () => {
   it("CO-5: 단순 증여 + 매매사례 → ⑧ 차단", () => {
     const f = form({ acquisitionCause: "gift", acquisitionMode: "sale_case", acquisitionMarketSamplePrice: "1400000" });
     expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
@@ -107,14 +107,19 @@ describe("CO-5·5b·6·7: 영 §163⑨ — 증여·상속 자산은 평가액이
     const f = form({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01", acquisitionMode: "estimated" });
     expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
   });
-  it("CO-7: 의제취득일 «전» 증여는 막지 않는다 — 영 §176의2④ (주식 의제취득일 1986.1.1.)", () => {
-    // 2026-10-04 — 날짜는 입력값 그대로 저장된다(종전엔 1986-01-01로 바꿔 저장 → 엄격 초과 비교였다).
-    //   의제취득일 «당일»은 «전»이 아니므로 차단된다. 기타자산 경계는 stock-deemed-date-gates Y1-2.
-    expect(isGiftLikeEstimationBlocked("gift", "1985-12-31", "estimated", false)).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "1986-01-01", "estimated", false)).toBe(true);
-    expect(isGiftLikeEstimationBlocked("gift", "1986-01-02", "estimated", false)).toBe(true);
-    expect(isGiftLikeEstimationBlocked("purchase", "2025-01-01", "estimated", false)).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "2025-01-01", "actual", false)).toBe(false);
+  it("CO-7: 날짜가 아니라 장부분실로 가른다 — 의제취득일 «전»이어도 장부분실이 아니면 막는다 (계획서 Q-4)", () => {
+    // 2026-10-04 재기준 — 종전 CO-7은 「의제취득일 전 증여는 막지 않는다(영 §176의2④)」를 고정했다.
+    //   그 괄호는 추계를 «적용하게 된 경우»의 산정 방법이지 허용 근거가 아니며(국심2003부0627),
+    //   술어는 날짜를 받지 않는다. 장부분실은 stock-163-9-book-lost-exception BL-1~5.
+    for (const date of ["1985-12-31", "1986-01-01", "2025-01-01"]) {
+      const f = form({ acquisitionCause: "gift", acquisitionDate: date, acquisitionMode: "estimated" });
+      expect(errFields(validateStep2Domestic(f)), date).toContain("acquisitionMode");
+    }
+    expect(isGiftLikeEstimationBlocked("gift", "estimated", false)).toBe(true);
+    expect(isGiftLikeEstimationBlocked("gift", "estimated", true)).toBe(false); // 긍정 짝 — 장부분실
+    expect(isGiftLikeEstimationBlocked("gift", "sale_case", true)).toBe(true); // 매매사례는 장부분실이어도 막는다
+    expect(isGiftLikeEstimationBlocked("purchase", "estimated", false)).toBe(false);
+    expect(isGiftLikeEstimationBlocked("gift", "actual", false)).toBe(false);
   });
 });
 
@@ -128,9 +133,16 @@ describe("CO-8: 복원 마이그레이션 — ⑧과 같은 술어일 때만 되
     const n = normalizeStockFormData({ ...form({ acquisitionCause: "gift" }), acquisitionMode: "sale_case" });
     expect(n.acquisitionMode).toBe("actual");
   });
-  it("의제취득일 이전 상속 + 환산 → 그대로 (영 §176의2④)", () => {
+  it("의제취득일 이전 상속 + 환산(장부분실 아님) → 실가 (날짜는 기준이 아니다)", () => {
     const n = normalizeStockFormData({
       ...form({ acquisitionCause: "inheritance", acquisitionDate: "1985-09-13" }),
+      acquisitionMode: "estimated",
+    });
+    expect(n.acquisitionMode).toBe("actual");
+  });
+  it("긍정 짝 — 의제취득일 이전 상속 + 환산 + 장부분실 → 그대로 (사례 49)", () => {
+    const n = normalizeStockFormData({
+      ...form({ acquisitionCause: "inheritance", acquisitionDate: "1985-09-13", acqFaceValueOnly: true, acqFaceValuePerShare: "12500" }),
       acquisitionMode: "estimated",
     });
     expect(n.acquisitionMode).toBe("estimated");

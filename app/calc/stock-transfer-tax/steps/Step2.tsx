@@ -28,8 +28,9 @@ import {
   createEmptyAcquisitionLot,
   type StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
+import { isTradingHaltBypassMarket } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
-import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
+import { isGiftLikeCause } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isSection94_4Form } from "@/lib/calc/stock-transfer-section94-4-form";
 import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfer/CarryoverDonorConversionSection";
@@ -60,11 +61,17 @@ export function Step2({ form, onChange }: Step2Props) {
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const isSplitMode = form.lotsMode === "split";
   /**
-   * 영 §163⑨ — 증여·상속 원인이면 취득가액은 평가액(실가 의제)뿐이다. 술어에 모드 «"estimated"»를 넘겨
-   * 원인·날짜 축만 본다(의제취득일 이전이면 거짓 — 영 §176의2④).
+   * 영 §163⑨ — 증여·상속 원인이면 취득가액은 평가액(실지거래가액 의제)이다. 그래서
+   *  · 매매사례가액은 언제나 막는다.
+   *  · 환산취득가는 «취득시점 장부분실»(법 §99①4 후단 — 평가액도 구할 수 없는 경우)일 때만 열린다.
+   *    그 토글은 환산 모드 **안**에 있으므로(`EstimatedUnlistedBlock`) 라디오는 토글이 성립할 수 있는
+   *    시장(비상장·코스닥·코넥스 거래정지 — `isBookLostAtAcquisition`)에서만 연다. 켜지 않은 환산은 ⑧·⑫가 막는다.
+   * 날짜는 보지 않는다 — 종전 «의제취득일 전이면 통과»는 평가액 확인 가능성의 대리 지표라 양방향으로 틀렸다.
    */
+  const giftLikeCause = isGiftLikeCause(form.acquisitionCause);
+  const bookLostMarket = form.marketType === "unlisted" || isTradingHaltBypassMarket(form.marketType);
+  const giftEstimatedDisabled = giftLikeCause && !bookLostMarket;
   const is94_4 = isSection94_4Form(form);
-  const giftValuationOnly = isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, "estimated", is94_4);
   /**
    * 환산 분자(취득일 이전 1개월 종가)의 기준일 — 의제취득일 «전» 취득이면 의제취득일이다
    * (영 §176의2④ · 사전-2015-법령해석재산-0242). 저장값은 사용자가 입력한 날짜 그대로라 여기서 파생한다.
@@ -290,20 +297,24 @@ export function Step2({ form, onChange }: Step2Props) {
             columns={3}
             options={[
               { value: "actual", label: "실가" },
-              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftValuationOnly },
-              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftValuationOnly },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
               // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
               //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
             ]}
           />
 
-          {/* 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가(국심2007중1761).
+          {/* 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 매매사례 불가 · 환산은 장부분실일 때만(국심2007중1761).
               ⑧·⑫·복원 마이그레이션과 같은 술어. */}
-          {giftValuationOnly && (
+          {giftLikeCause && (
             <p className="text-xs text-amber-800" data-testid="gift-valuation-only-notice">
               증여·상속받은 주식의 취득가액은 증여일·상속개시일 현재 「상속세 및 증여세법」 제60조~제66조에 따른
-              평가액이며 이를 실지거래가액으로 봅니다 — 환산취득가·매매사례가액은 쓸 수 없습니다 (소득세법 시행령 §163⑨).
+              평가액이며 이를 실지거래가액으로 봅니다 —{" "}
+              {bookLostMarket
+                ? "매매사례가액은 쓸 수 없습니다. 환산취득가는 장부 분실 등으로 취득 당시 기준시가를 확인할 수 없을 때에만 쓸 수 있으니, 환산취득가를 고른 뒤 「취득시점 장부분실」을 켜세요"
+                : "환산취득가·매매사례가액은 쓸 수 없습니다"}{" "}
+              (소득세법 §99①4 후단 · 시행령 §163⑨).
               {form.acquisitionCause === "carryover_gift" &&
                 " 이월과세 적용 시의 증여자 취득가액은 1단계 「증여자 취득가액 산정 방식」에서 정합니다."}
             </p>

@@ -3,9 +3,11 @@
  *
  * 계획서 `docs/00-pm/stock-deemed-date-other-asset-and-conversion-citation.plan.md` §6
  *
- *   Y1-2   증여 · 기타자산 1985-06-01 · 환산 → ⑧·⑫ 차단 + 복원 마이그레이션이 실가로 (4호 의제일 1985.1.1. 이후)
- *   Y1-2b  같은 날짜의 주식(3호) → 차단 안 함 (영 §176의2④ — 3호 의제일 1986.1.1. 전)   ← Y1-2의 긍정 짝
- *   Y1-2c  기타자산 1984-06-01 → 차단 안 함 · 의제일 당일 1985-01-01 → 차단
+ *   Y1-2   증여 · 기타자산 1985-06-01 · 환산(장부분실 아님) → ⑧·⑫ 차단 + 복원 마이그레이션이 실가로
+ *   Y1-2b·2c  의제취득일 «전»이어도 장부분실이 아니면 차단한다 — 날짜는 §163⑨ 차단의 기준이 아니다
+ *             (2026-10-04 재기준: 종전 「의제일 전이면 통과」는 평가액 확인 가능성의 대리 지표였다 — 계획서
+ *             `stock-163-9-valuation-unavailable-exception.plan.md` Q-4 · 국심2003부0627)
+ *   Y1-2d  긍정 짝 — 같은 날짜라도 비상장 + 장부분실이면 통과
  *   Y1-3   parity — 폼 판정(`isSection94_4Form`) · 입력 판정(`isSection94_4Asset`) == 엔진 분류 전 칸
  *   Y1-6   R-1 — 4호 판정이 바뀌어 기준일이 움직이면 취득측 종가 잔재를 비운다
  *   Y2-1   환산 분자·분모 메시지 4건 — 영 §176의2②1호 (§163⑨ 아님)
@@ -67,7 +69,7 @@ function zodPaths(f: StockTransferFormData): string[] {
   return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
 }
 
-describe("Y1-2: 기타자산 의제취득일은 1985.1.1. — 1985년 증여는 §163⑨ 차단 대상", () => {
+describe("Y1-2: 기타자산 환산(장부분실 아님) — 증여는 §163⑨ 차단 대상", () => {
   const f = form({ ...OTHER_ASSET, ...GIFT_ESTIMATED, acquisitionDate: "1985-06-01" });
   it("⑧ validate 오류", () => {
     expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
@@ -78,30 +80,37 @@ describe("Y1-2: 기타자산 의제취득일은 1985.1.1. — 1985년 증여는 
   it("③ 복원 마이그레이션 → 실가", () => {
     expect(normalizeStockFormData(f).acquisitionMode).toBe("actual");
   });
-  it("§94②(비상장 + 라목)도 같다 — 4호는 분류 결과로 판정", () => {
+  it("§94②(비상장 + 라목)도 같다 — 장부분실이 아니면 차단", () => {
     const g = form({ isHeavyRealEstateForRate: true, ...GIFT_ESTIMATED, acquisitionDate: "1985-06-01" });
     expect(errFields(validateStep2Domestic(g))).toContain("acquisitionMode");
     expect(zodPaths(g)).toContain("acquisitionMode");
   });
 });
 
-describe("Y1-2b·2c: 긍정 짝 — 의제취득일 «전» 증여는 차단하지 않는다 (영 §176의2④)", () => {
-  it("Y1-2b: 주식(3호) 1985-06-01 → 통과 (3호 의제일 1986.1.1. 전)", () => {
+describe("Y1-2b·2c: 날짜는 기준이 아니다 — 의제취득일 «전»이어도 장부분실이 아니면 차단한다", () => {
+  it("Y1-2b: 주식(3호) 1985-06-01 → 차단 (종전엔 3호 의제일 1986.1.1. 전이라 통과)", () => {
     const f = form({ ...GIFT_ESTIMATED, acquisitionDate: "1985-06-01" });
-    expect(errFields(validateStep2Domestic(f))).not.toContain("acquisitionMode");
-    expect(zodPaths(f)).not.toContain("acquisitionMode");
-    expect(normalizeStockFormData(f).acquisitionMode).toBe("estimated");
+    expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
+    expect(zodPaths(f)).toContain("acquisitionMode");
+    expect(normalizeStockFormData(f).acquisitionMode).toBe("actual");
   });
-  it("Y1-2c: 기타자산 1984-06-01 → 통과", () => {
+  it("Y1-2c: 기타자산 1984-06-01 → 차단 (종전엔 의제일 전이라 통과)", () => {
     const f = form({ ...OTHER_ASSET, ...GIFT_ESTIMATED, acquisitionDate: "1984-06-01" });
-    expect(errFields(validateStep2Domestic(f))).not.toContain("acquisitionMode");
-    expect(zodPaths(f)).not.toContain("acquisitionMode");
+    expect(errFields(validateStep2Domestic(f))).toContain("acquisitionMode");
+    expect(zodPaths(f)).toContain("acquisitionMode");
   });
-  it("Y1-2c: 술어 경계 — 의제일 당일은 «전»이 아니다", () => {
-    expect(isGiftLikeEstimationBlocked("gift", "1984-12-31", "estimated", true)).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "1985-01-01", "estimated", true)).toBe(true);
-    expect(isGiftLikeEstimationBlocked("gift", "1985-12-31", "estimated", false)).toBe(false);
-    expect(isGiftLikeEstimationBlocked("gift", "1986-01-01", "estimated", false)).toBe(true);
+  it("Y1-2c: 술어는 날짜를 받지 않는다 — 장부분실이 아니면 어느 날짜든 차단", () => {
+    expect(isGiftLikeEstimationBlocked("gift", "estimated", false)).toBe(true);
+    expect(isGiftLikeEstimationBlocked("gift", "estimated", true)).toBe(false);
+  });
+  it("Y1-2d: 긍정 짝 — 비상장 + 장부분실이면 의제취득일 전·후 모두 통과", () => {
+    const BOOK_LOST: Partial<StockTransferFormData> = { acqFaceValueOnly: true, acqFaceValuePerShare: "5000" };
+    for (const d of ["1985-06-01", "1986-01-01", "1995-06-01"]) {
+      const f = form({ ...GIFT_ESTIMATED, ...BOOK_LOST, acquisitionDate: d });
+      expect(errFields(validateStep2Domestic(f)), d).not.toContain("acquisitionMode");
+      expect(zodPaths(f), d).not.toContain("acquisitionMode");
+      expect(normalizeStockFormData(f).acquisitionMode, d).toBe("estimated");
+    }
   });
 });
 

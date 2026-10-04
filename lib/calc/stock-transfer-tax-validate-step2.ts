@@ -14,7 +14,8 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
-import { isSection94_4Form, isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
+import { isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
+import { isBookLostAtAcquisitionForm } from "./stock-transfer-section94-4-form";
 import { isBeforePpiSeries, PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import {
@@ -634,9 +635,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     errors.push({ field: "preDeemedPpiRatio", message: PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE, severity: "error" });
   }
 
-  // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가 (국심2007중1761) ──
-  // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B와 같은 술어.
-  if (isGiftLikeEstimationBlocked(form.acquisitionCause, form.acquisitionDate, acquisitionMode, isSection94_4Form(form))) {
+  // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 매매사례 불가 · 환산은 장부분실일 때만 (국심2007중1761) ──
+  // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B·⑤와 같은 술어.
+  if (isGiftLikeEstimationBlocked(form.acquisitionCause, acquisitionMode, isBookLostAtAcquisitionForm(form))) {
     errors.push({ field: "acquisitionMode", message: GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE, severity: "error" });
   }
 
