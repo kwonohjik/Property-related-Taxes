@@ -254,6 +254,7 @@ const RULE_BADGE: Record<string, string> = {
   "월할가산": "bg-sky-100 text-sky-700 border-sky-200",
   "의제취득일적용": "bg-amber-100 text-amber-700 border-amber-200",
   "의제취득일적용(기타자산)": "bg-amber-100 text-amber-700 border-amber-200",
+  "의제취득일물가상승가산": "bg-amber-100 text-amber-700 border-amber-200",
   "장부분실액면가": "bg-amber-100 text-amber-700 border-amber-200",
   "기타자산우선§55누진": "bg-sky-100 text-sky-700 border-sky-200",
   "기본공제부동산그룹합산": "bg-sky-100 text-sky-700 border-sky-200",
@@ -291,6 +292,7 @@ const RULE_BADGE_LAW_MAP: Record<
   // 영 §162⑦ — 주식(§94①3호) 3호 1986.1.1. · 기타자산(§94①4호) 1호 1985.1.1.
   "의제취득일적용": STOCK.ENFORCEMENT_DECREE_162_7_3_DEEMED_STOCK,
   "의제취득일적용(기타자산)": STOCK.ENFORCEMENT_DECREE_162_7_1_DEEMED_OTHER_ASSET,
+  "의제취득일물가상승가산": STOCK.ENFORCEMENT_DECREE_176_2_4_PRE_DEEMED,
   "장부분실액면가": "소득세법 §99①4",
   "기타자산우선§55누진": "소득세법 §55①",
   "기본공제부동산그룹합산": "소득세법 §103①1호",

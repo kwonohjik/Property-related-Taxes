@@ -33,6 +33,7 @@ import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
+import { resolvePreDeemedBasis } from "./stock-pre-deemed-acquisition";
 import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
 import { allocateLots } from "./lot-allocation";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
@@ -233,8 +234,14 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // STEP 3: 취득가액 결정 → `stock-acquisition-basis.ts` (800줄 정책 분할)
   //   acquisitionMode 4종 + 환산 5분기를 그 파일이 가른다. 여기서는 결과만 받는다.
   // ──────────────────────────────────────────────────────────
-  const { acquisitionMode } = input;
-  const basis = resolveAcquisitionBasis(input, transferPrice, lotMatchingDetail);
+  // 의제취득일 전 매수는 영 §176의2④ 「① 의제취득일 현재 가액 vs ② 실가 + 생산자물가상승분」 중 큰 쪽(Z-1).
+  // 해당 없으면 종전 그대로 — 필요경비(STEP 4)가 읽는 모드는 ② 채택 시 실가·실비로 바뀐다.
+  const baseBasis = resolveAcquisitionBasis(input, transferPrice, lotMatchingDetail);
+  const preDeemed = resolvePreDeemedBasis(input, is94_4, baseBasis, isSplitMode(input));
+  const basis = preDeemed?.basis ?? baseBasis;
+  const acquisitionMode = preDeemed?.acquisitionMode ?? input.acquisitionMode;
+  appliedRules.push(...(preDeemed?.appliedRulesDelta ?? []));
+  warnings.push(...(preDeemed?.warningsDelta ?? []));
   const {
     acquisitionPrice,
     usedEstimatedAcquisition,
@@ -267,7 +274,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   let expenses = 0;
   let swapApplied = false;
   let swapComparison: StockTransferResult["swapComparison"];
-  const { expenseMode } = input;
+  const expenseMode = preDeemed?.expenseMode ?? input.expenseMode;
 
   /**
    * §97의2①**2호** — split 모드의 증여자 자본적지출. lot마다 「매도된 몫」만 안분해
@@ -665,6 +672,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     valuationDetail,
     marketSampleDetail,
     capitalAdjustmentsDetail,
+    ...(preDeemed?.detail ? { preDeemedAcquisitionDetail: preDeemed.detail } : {}),
 
     basicDeductionGroup: classification.basicDeductionGroup,
 

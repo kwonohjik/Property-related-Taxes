@@ -201,7 +201,12 @@ export function pushAssetAndCostRows(
   // 11. 취득가액
   rows.push({
     // 환산 모드에서는 이 값이 곧 환산취득가액(영 §176의2②1호)이다 — 12-1·12-2가 그 분자·분모다.
-    label: result.usedEstimatedAcquisition ? "11. 취득가액 (② = 환산취득가액)" : "11. 취득가액 (②)",
+    label: result.usedEstimatedAcquisition
+      ? "11. 취득가액 (② = 환산취득가액)"
+      : result.preDeemedAcquisitionDetail?.selected === "clause2"
+        ? // 의제취득일 전 매수 — 실가 + 생산자물가상승분(영 §176의2④2호). 실가 방식이라 개산공제 행은 없다.
+          "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"
+        : "11. 취득가액 (②)",
     values: val(
       result.acquisitionPrice,
       (agg) => agg.items.reduce((s, r) => s + r.acquisitionPrice, 0),

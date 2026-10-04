@@ -308,6 +308,10 @@ export const stockTransferInputSchema = z.object({
    */
   acquisitionTotalPrice: z.number().int().min(0).optional(),
 
+  // 의제취득일 전 매수 — 영 §176의2④ ② 「실가 + 생산자물가상승분」 (Z-1). 침묵 stripping 방지 명시 선언.
+  preDeemedActualPricePerShare: z.number().min(0).optional(),
+  preDeemedPpiRatio: z.number().positive().optional(),
+
   // R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장
   acquisitionMarketSamplePrice: z.number().min(0).optional(),
   acquisitionMarketSampleDate: z.union([z.string(), z.date()]).optional(),

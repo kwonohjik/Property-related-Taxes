@@ -14,7 +14,8 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
-import { isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { isSection94_4Form, isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
+import { isBeforePpiSeries, PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import {
   isGiftLikeEstimationBlocked,
@@ -620,6 +621,17 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     if (!isListed) {
       validateAcquisitionSideUnlistedFields(form, errors, "매매사례가액 개산공제 기준시가 — 소령 §163⑥4·§165④");
     }
+  }
+
+  // ── 영 §176의2④2호 — 1965.01 이전 취득의 ②는 PPI 계열 밖이라 직접 입력 배율이 필요하다 (Z-1) ──
+  // ⑫(`stock-transfer-tax-refines.ts`)와 같은 조건 — ②가 산정되는 입력일 때만(실가 모드 항상 · 환산·매매사례는 실가 동시 입력 시).
+  if (
+    isPreDeemedPurchaseForm(form) &&
+    isBeforePpiSeries(form.acquisitionDate) &&
+    (acquisitionMode === "actual" || parseF(form.preDeemedActualPricePerShare) > 0) &&
+    !(parseF(form.preDeemedPpiRatio) > 0)
+  ) {
+    errors.push({ field: "preDeemedPpiRatio", message: PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE, severity: "error" });
   }
 
   // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 추계 모드 불가 (국심2007중1761) ──

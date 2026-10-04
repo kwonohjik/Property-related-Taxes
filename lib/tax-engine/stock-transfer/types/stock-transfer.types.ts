@@ -388,6 +388,19 @@ export type StockTransferInput = {
   // 취득가액 모드
   acquisitionMode: "actual" | "sale_case" | "estimated" | "face_value";
 
+  // ── 의제취득일 전 매수 — 영 §176의2④2호 「취득 당시 실지거래가액 + 생산자물가상승분」(Z-1) ──
+  /**
+   * 취득 당시 실지거래가액 1주당 (원) — **환산·매매사례 모드에서 ②를 함께 견줄 때** 쓴다.
+   * 실가 모드(`acquisitionMode: "actual"`)는 이 칸 대신 기존 실가 입력(`perShareAcquisitionPrice` 등)이 ②의 기준이다.
+   * 의제취득일 전 «매수»·단건 모드에서만 읽힌다. 미입력이면 ①만 계산한다(종전 동작).
+   */
+  preDeemedActualPricePerShare?: number;
+  /**
+   * 생산자물가상승 배율 직접 입력 — 취득월이 PPI 계열(1965.01~) **이전**일 때만 쓴다(계획서 Q-4).
+   * 배율 = 의제취득일 직전 달 지수 ÷ 취득월 지수. 표로 산정되는 구간에서는 읽지 않는다.
+   */
+  preDeemedPpiRatio?: number;
+
   // ── 매매사례가액 모드 (sale_case 강화 — 영§176의2③1호 비상장 한정) ──
   /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능. 양도측 매매사례가액은 없다(§96① 실지거래가액) */
   acquisitionMarketSamplePrice?: number;
@@ -1039,6 +1052,34 @@ export type StockTransferResult = {
     };
   };
 
+  /**
+   * 의제취득일 전 매수 — 영 §176의2④ 「많은 것」 비교 결과 (Z-1).
+   * ① = 의제취득일 현재 매매사례·환산가액(입력한 모드) / ② = 취득 당시 실가 × 생산자물가상승 배율(규칙 §85의2).
+   */
+  preDeemedAcquisitionDetail?: {
+    /** 의제취득일 (YYYY-MM-DD) — 주식 1986-01-01 · 기타자산 1985-01-01 */
+    deemedDate: string;
+    /** ② 기준 실가 총액 (원) */
+    actualBase: number;
+    /** 배율 산정 구간 — 취득월(YYYY-MM)·의제취득일 직전 달(YYYY-MM) · 지수(2020=100) */
+    acquisitionMonth: string;
+    deemedPrevMonth: string;
+    ppiAtAcquisition?: number;
+    ppiAtDeemedPrev?: number;
+    /** 배율 출처 — table: ECOS 표 · override: 사용자 직접 입력(1965.01 이전 취득) */
+    ratioSource: "table" | "override";
+    ratio?: number;
+    /** ② 금액 (원). 산정 불가면 undefined */
+    clause2Amount?: number;
+    /** ① 금액 (원). 입력한 모드가 환산·매매사례이고 산정됐을 때만 */
+    clause1Amount?: number;
+    clause1Method?: "estimated" | "sale_case";
+    /** 채택된 쪽 — 동액이면 ② (실가 방식 필요경비) */
+    selected: "clause1" | "clause2";
+    /** 필요경비 방식 — ② 채택 시 실비(법 §97②1호 나목) · ① 채택 시 개산공제(§97②2호) */
+    expenseBasis: "actual" | "estimated";
+  };
+
   // 매매사례가액 detail (R-1' — sale_case 강화)
   marketSampleDetail?: {
     acquisitionApplied: boolean;
@@ -1302,6 +1343,8 @@ export type StockTransferResult = {
     | "의제취득일적용"
     /** 영 §162⑦1호 — §94①4호(기타자산) 의제취득일 1985.1.1. (주식 3호는 위 키 · ⑦3호) */
     | "의제취득일적용(기타자산)"
+    /** 영 §176의2④2호 — 의제취득일 전 매수: 취득 당시 실가 + 생산자물가상승분 (Z-1) */
+    | "의제취득일물가상승가산"
     | "장부분실액면가"
     | "기타자산우선§55누진"
     | "기본공제부동산그룹합산"

@@ -143,6 +143,9 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     unpaidTax: coerced.unpaidTax as number | undefined,
     paymentDeadline: coerced.paymentDeadline as Date | undefined,
     actualPaymentDate: coerced.actualPaymentDate as Date | undefined,
+    // 의제취득일 전 매수 (영 §176의2④ — Z-1)
+    preDeemedActualPricePerShare: coerced.preDeemedActualPricePerShare as number | undefined,
+    preDeemedPpiRatio: coerced.preDeemedPpiRatio as number | undefined,
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
     acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,

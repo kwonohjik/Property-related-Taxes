@@ -192,6 +192,12 @@ export interface StockTransferFormData {
    */
   acquisitionMode: "actual" | "sale_case" | "estimated";
 
+  // ── 의제취득일 전 매수 — 영 §176의2④ (Z-1, 2026-10-04) ──
+  /** 취득 당시 실지거래가액 1주당 (원) — 환산·매매사례 모드에서 ② 「실가 + 생산자물가상승분」을 함께 견줄 때(빈 값 = 실가 모름 → ①만) */
+  preDeemedActualPricePerShare: string;
+  /** 생산자물가상승 배율 직접 입력 — 취득월이 PPI 계열(1965.01~) 이전일 때만 (배율 = 의제일 직전 달 지수 ÷ 취득월 지수) */
+  preDeemedPpiRatio: string;
+
   // ── R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장 (2026-05-19) ──
   acquisitionMarketSamplePrice: string;       // 원
   acquisitionMarketSampleDate: string;         // "YYYY-MM-DD"

@@ -247,6 +247,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     ),
     acquisitionTotalPrice: strField("acquisitionTotalPrice"),
     perShareAcquisitionPrice: strField("perShareAcquisitionPrice"),
+    // 의제취득일 전 매수 (영 §176의2④ — Z-1)
+    preDeemedActualPricePerShare: strField("preDeemedActualPricePerShare"),
+    preDeemedPpiRatio: strField("preDeemedPpiRatio"),
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
     acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),

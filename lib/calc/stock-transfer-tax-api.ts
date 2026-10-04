@@ -34,6 +34,7 @@ import {
   appendCarryoverDonorBody,
   appendDonorConversionDenominator,
 } from "./stock-transfer-tax-api-carryover";
+import { appendPreDeemedBody } from "./stock-transfer-tax-api-pre-deemed";
 /**
  * 해외주식·국외전출세 빌더는 **도메인이 갈라져** 형제 파일로 나갔다(800줄 정책).
  * 진입점은 그대로 아래 `buildStockTransferApiBody`의 `marketType` 분기이며,
@@ -365,6 +366,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (form.acquisitionMarketSampleDate) body.acquisitionMarketSampleDate = form.acquisitionMarketSampleDate;
     if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
   }
+
+  // 의제취득일 전 매수 — 영 §176의2④ ② 입력 (Z-1)
+  appendPreDeemedBody(body, form);
 
   // [A-2] R-2 자본조정 — 단일·분할 공통 전송 (분할은 엔진이 lot별 희석 전처리). strip 조건 제거.
   if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
