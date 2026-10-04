@@ -55,7 +55,7 @@ export { propertyBaseShape };
 // ─── 단건 스키마 (기존 inputSchema와 동일) ─────────────────────
 
 // P5 모드 2 (2026-06-12) — 보유 감면주택 주택수 제외 (§89①3호 의제, 7개 조문 ②·§98 령②·§99②)
-const specialHouseExclusionSchema = z.array(
+const specialHouseExclusionItemsSchema = z.array(
   z.object({
     article: z.enum([
       "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
@@ -71,7 +71,10 @@ const specialHouseExclusionSchema = z.array(
     houseRentalStartDate: z.string().date().optional(),
     requirementsConfirmed: z.boolean().default(false),
   }),
-).default([]);
+);
+const specialHouseExclusionSchema = specialHouseExclusionItemsSchema.default([]);
+/** ⑭ 공용 leaf(`mapSpecialHouseExclusionsToEngine`)의 입력 — 단건·다건(건별·top-level)이 같은 모양이다. */
+export type SpecialHouseExclusionInput = z.infer<typeof specialHouseExclusionItemsSchema>[number];
 
 /**
  * 과거 감면 이력에 입력 가능한 조문 — **§133 한도군 전체를 담아야 한다**.
@@ -295,6 +298,12 @@ export const propertyItemSchema = z
     // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
+    /**
+     * ⑫ 보유 감면주택 주택수 제외 — **건별**(명부가 건마다 따로라 `houseId`도 그 건의 명부를 가리킨다).
+     * 건별 선언이 비어 있으면 ⑭가 top-level(종전 계약)로 후퇴한다. 여기에 없으면 ⑬이 실어도
+     * 조용히 strip된다(Q4 — 단건 102,086,600 / 다건 1,327,903,500).
+     */
+    specialHouseExclusions: specialHouseExclusionItemsSchema.optional(),
   })
   .superRefine((data, ctx) => {
     addPropertyRefines(data, ctx);

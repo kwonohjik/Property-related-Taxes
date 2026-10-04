@@ -63,8 +63,7 @@ import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
-import { specialHouseExclusionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
-import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -507,21 +506,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),
     // ⑬ §133 5년 누적 한도 — 과거 4개 과세연도 감면 이력 (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     priorReductionUsage: form.priorReductionUsage ?? [],
-    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (폼 전역 + 명부 행 ⑥ · article 입력분만 전달)
-    specialHouseExclusions: specialHouseExclusionsWithRows(form)
-      .filter((e) => e.article)
-      .map((e) => ({
-        article: e.article,
-        ...(e.houseId ? { houseId: e.houseId } : {}),
-        houseAcquisitionDate: e.houseAcquisitionDate || undefined,
-        houseContractDate: e.houseContractDate || undefined,
-        isNationalHousing: e.isNationalHousing,
-        // §97·§97의2 임대개시일 — ⑤·⑧과 같은 술어로 게이트(조문을 바꾼 뒤 남은 값은 보내지 않는다)
-        ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
-          ? { houseRentalStartDate: e.houseRentalStartDate }
-          : {}),
-        requirementsConfirmed: e.requirementsConfirmed,
-      })),
+    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (폼 전역 + 명부 행 ⑥ · article 입력분만) — 다건 ⑬과 같은 leaf
+    specialHouseExclusions: specialHouseExclusionsPayload(form),
     // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)
     ...buildHouseholdSpecialPayload(form, primary),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)

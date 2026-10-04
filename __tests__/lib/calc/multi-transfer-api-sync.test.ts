@@ -305,7 +305,7 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(msg).not.toBeNull();
   });
 
-  it("[리뷰 H-1] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions) 차단", () => {
+  it("[리뷰 H-1 → Q4] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions)는 더 막지 않는다", () => {
     const form = baseForm();
     form.specialHouseExclusions = [
       {
@@ -316,9 +316,8 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
         requirementsConfirmed: true,
       },
     ];
-    const msg = validateMultiSupportedMode(form);
-    expect(msg).not.toBeNull();
-    expect(msg).toContain("주택수 제외");
+    // 다건 고유 차단은 없다 — 옛 선언(행 id 없음) 차단은 건별 ⑧(`validateStep`)이 단건과 같은 규칙으로 맡는다.
+    expect(validateMultiSupportedMode(form)).toBeNull();
   });
 
   it("[리뷰 H-1 대조군] 다건 지원 감면(자경 §69·§97 시리즈)은 통과", () => {
