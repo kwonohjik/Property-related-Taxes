@@ -121,13 +121,21 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       },
     ] as TransferTaxInput["specialHouseExclusions"];
 
-  it("L-7 조특법 §98의8 제외(해석 미확보)로만 그 밖의 주택이 없으면 → exceeded + 확인 필요", () => {
+  it("L-7 조특법 §98 제외(시행령 위임 — 확인 목록 밖)로만 그 밖의 주택이 없으면 → exceeded + 확인 필요", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, OTHER], { specialHouseExclusions: special("unsold_98", "1996-06-01") }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특령 §98②·⑥");
+  });
+
+  it("L-7b 조특법 §98의8(§99의2와 같은 문형 — Q2)로만 그 밖의 주택이 없으면 → met(sole)", () => {
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, OTHER], { specialHouseExclusions: special("unsold_98_8", "2015-06-01") }),
       parsed,
     );
-    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
-    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특법 §98의8②");
+    expect(r).toEqual({ status: "met", via: "sole" });
   });
 
   it("L-8 §99의2 제외(행 연결) + 남은 1채가 어느 특례에도 안 걸리면 → exceeded · 고지 없음(결론 무관)", () => {
@@ -152,17 +160,17 @@ describe("E-14h resolveRentalResidenceComposition", () => {
     expect(r.status === "exceeded" && r.confirmNotice).toContain("행에 연결");
   });
 
-  it("L-10 명부 없음 · §99의2 제외 후 그 밖의 주택 0 → 판정 보류(no_roster) · §98의8이면 exceeded + 확인 필요", () => {
+  it("L-10 명부 없음 · §99의2 제외 후 그 밖의 주택 0 → 판정 보류(no_roster) · §98이면 exceeded + 확인 필요", () => {
     const base = { householdHousingCount: 3, rentalHousingException: { rentalUnits: [{}] } } as Partial<TransferTaxInput>;
     expect(
       resolveRentalResidenceComposition(input([], { ...base, specialHouseExclusions: special("unsold_99_2", "2013-06-01") }), parsed),
     ).toEqual({ status: "undetermined", reason: "no_roster" });
     const r = resolveRentalResidenceComposition(
-      input([], { ...base, specialHouseExclusions: special("unsold_98_8", "2015-06-01") }),
+      input([], { ...base, specialHouseExclusions: special("unsold_98", "1996-06-01") }),
       parsed,
     );
     expect(r).toMatchObject({ status: "exceeded" });
-    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특법 §98의8②");
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특령 §98②·⑥");
   });
 
   it("L-11 §155④ 동거봉양 합가 → met(부동산거래관리과-44)", () => {
@@ -174,5 +182,22 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       parsed,
     );
     expect(r).toEqual({ status: "met", via: "parental_care_merge" });
+  });
+
+  it("L-12 §155③ 공동상속 소수지분 2중첩 → met(co_inherited_house — Q3) · 3중첩은 exceeded", () => {
+    const co = house("co", "2019-06-01", {
+      isInherited: true,
+      inheritedDate: D("2019-06-01"),
+      isCoInherited: true,
+      isLargestCoInheritedShareholder: false,
+    } as Partial<House>);
+    expect(resolveRentalResidenceComposition(input([SELLING, RENTAL, co]), parsed)).toEqual({
+      status: "met",
+      via: "co_inherited_house",
+    });
+    expect(resolveRentalResidenceComposition(input([SELLING, RENTAL, co, OTHER]), parsed)).toMatchObject({
+      status: "exceeded",
+      otherHouseCount: 2,
+    });
   });
 });

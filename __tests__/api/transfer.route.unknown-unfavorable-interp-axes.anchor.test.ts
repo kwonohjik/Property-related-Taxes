@@ -3,23 +3,24 @@
  * 계획서: docs/00-pm/one-house-exemption-fix.plan.md §9.8 「해석 미확보 축」.
  *
  * #1945가 보류한 세 축(`special_act`·`co_inherited`·`other_special_rule`)은 사실이 아니라 「겹쳐 적용하는가」라는
- * 해석을 모르는 경우였다. taxlaw.nts 재검색(2026-10-04) 결과:
- * - 해석례가 **있는** 겹침 → 그 해석대로 `met`(비과세 적용 + 중과 배제 ① 요소): §155④ 동거봉양(부동산거래관리과-44) ·
+ * 해석을 모르는 경우였다. taxlaw.nts 재검색(2026-10-04) + 사용자 결정(Q1~Q3 (가), 2026-10-04):
+ * - 성립(`met` — 비과세 적용 + 13호·15호 중과 배제 ① 요소, Q1 법문 추론): §155④ 동거봉양(부동산거래관리과-44) ·
  *   §155⑤ 혼인(상속증여세과-21 · 사전-2025-법규재산-1062) · §155⑦3호 귀농(서면-2015-부동산-0193) ·
- *   조특법 §99의2(서면-2015-부동산-2422 · 사전-2019-법령해석재산-0398) · §99의4(서면-2016-법령해석재산-3686).
- * - 해석례가 **없는** 겹침 → 특례 불성립 + 결론을 가를 때만 「확인 필요」: §155③ 공동상속 소수지분 ·
- *   §155⑦1호·2호 · §99의2·§99의4 외 조특법 제외(시료 §98의8).
+ *   §155③ 공동상속 소수지분 2중첩(Q3 — 3중첩 불허 0584·0029·2439·4283 · 7265) ·
+ *   조특법 §99의2와 같은 문형 조문(Q2 — 2422 등 + 같은 문형) · §99의4(3686 등).
+ * - 불성립 + 결론을 가를 때만 「확인 필요」: §155⑦1호·2호 · 조특법 §98(시행령 위임 — 문형 다름) · §98의9.
  *
  * 시료: 강남 · 2015 취득 · 2026-09-18 양도 20억 · 거주 48개월 · 가목 장기일반민간임대 1채(명부 「장기임대」 행) ·
- * 그 밖의 주택 1채(명부 행). mock 아닌 fallback 세율.
+ * 그 밖의 주택 1채(명부 행). mock 아닌 fallback 세율. 「수정 전」 = origin/master(b91a2d0c) 엔진.
  *
  * | 축 | 수정 전 | 수정 후 |
  * |---|---|---|
- * | §155③ 공동상속 소수지분 | 167,360,600 (적용) | 1,141,178,500 + 확인 필요 |
+ * | §155③ 공동상속 소수지분 | 167,360,600 (적용 · 배제 미개방) | 102,086,600 (적용 · 13호 배제 · 단건 = 다건) |
  * | §155⑦1호 상속 농어촌주택 | 167,360,600 (적용) | 1,141,178,500 + 확인 필요 |
- * | 조특법 §98의8 (명부 행) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
- * | 조특법 §98의8 (명부 없음 · 폼 전역) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
- * | §155⑤ 혼인 · §155④ 동거봉양 | 199,997,600 (적용 · 중과 배제 미개방) | 102,086,600 (적용 · 13호 배제) |
+ * | 조특법 §98 (명부 행) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
+ * | 조특법 §98 (명부 없음 · 폼 전역) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
+ * | 조특법 §98의8 (명부 행 · 같은 문형) | 199,997,600 | 102,086,600 (다건 1,327,903,500 — 별건 Q4) |
+ * | §155⑤ 혼인 · §155④ 동거봉양 | 199,997,600 (적용 · 배제 미개방) | 102,086,600 (적용 · 13호 배제) |
  * | §155⑦3호 귀농 | 167,360,600 | 102,086,600 |
  * | 조특법 §99의2 (명부 행) | 199,997,600 | 102,086,600 |
  */
@@ -46,7 +47,6 @@ import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import {
-  RENTAL_RESIDENCE_CO_INHERITED_CONFIRM_NOTICE,
   RENTAL_RESIDENCE_RURAL_CONFIRM_NOTICE,
   rentalResidenceSpecialActConfirmNotice,
 } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
@@ -239,28 +239,34 @@ const SPECIAL_ROW = (article: Special["article"], contract: string): HouseEntry 
   countExclusion: { kind: "special", special: special(article, contract) },
 });
 const OTHER: HouseEntry = { ...ROW, id: "h3" };
-const SA_98_8_NOTICE = rentalResidenceSpecialActConfirmNotice("조특법 §98의8②");
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe("§155③ 공동상속주택 소수지분과의 겹침 — 해석 미확보 → 불성립", () => {
-  it("UX-B1 명부: 거주 + 임대 + 공동상속 소수지분 → 불성립 + 확인 필요 (수정 전 167,360,600 · 단건 = 다건)", async () => {
+describe("§155③ 공동상속주택 소수지분과의 2중첩 — 성립(Q3), 3중첩은 불성립", () => {
+  it("UX-B1 명부: 거주 + 임대 + 공동상속 소수지분 → 적용 + 13호 배제 (수정 전 167,360,600 · 단건 = 다건)", async () => {
     const f = withRental(form([CO_INHERITED, RENTAL_ROW]));
     const s = await single(f);
-    expect(s).toMatchObject({ status: 200, totalTax: TAXED_TWO, rentalApplied: false });
-    expect(s.stepLabels).toContain(NOT_APPLICABLE_LABEL);
-    expect(s.confirm).toBe(RENTAL_RESIDENCE_CO_INHERITED_CONFIRM_NOTICE);
-    expect(await multi(f)).toBe(TAXED_TWO);
+    expect(s).toMatchObject({ status: 200, totalTax: RH_EXCLUDED, rentalApplied: true });
+    expect(s.exclusions).toContain("long_term_rental_residence");
+    expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(RH_EXCLUDED);
   });
 
-  it("UX-B2 (결론 무관) 거주 0개월이면 겹침이 결론을 가르지 않는다 → 적용 불가만 · 확인 필요 없음", async () => {
+  it("UX-B2 (음성 짝) 거주 0개월이면 나머지 요건 불충족 → 적용 불가 · 고지 없음", async () => {
     const s = await single(withRental(form([CO_INHERITED, RENTAL_ROW]), "0"));
     expect(s).toMatchObject({ totalTax: TAXED_TWO, rentalApplied: false });
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-B3 (양성 짝) 같은 행이 §155② 단독상속주택이면 해석 확보(0162) → 적용 · 고지 없음", async () => {
+  it("UX-B3 (양성 짝) 같은 행이 §155② 단독상속주택이면(0162) → 적용 · 고지 없음", async () => {
     const s = await single(withRental(form([SOLE_INHERITED, RENTAL_ROW])));
     expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
+    expect(s.confirm).toBeUndefined();
+  });
+
+  it("UX-B4 3중첩(공동상속 소수지분 + 다른 일반주택) → 불성립 · 고지 없음(0584·0029)", async () => {
+    const s = await single(withRental(form([CO_INHERITED, { ...ROW, id: "h6", acquisitionDate: "2012-01-01" }, RENTAL_ROW])));
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.stepLabels).toContain(NOT_APPLICABLE_LABEL);
     expect(s.confirm).toBeUndefined();
   });
 });
@@ -313,35 +319,36 @@ describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1�
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe("조특법 소유주택 제외와의 겹침 — §99의2·§99의4만 해석 확보", () => {
-  it("UX-A1 명부 행 §98의8 → 불성립 + 확인 필요 (수정 전 단건 199,997,600 · 다건 1,327,903,500 → 둘 다 1,327,903,500)", async () => {
-    const f = withRental(form([SPECIAL_ROW("unsold_98_8", "2015-06-01"), RENTAL_ROW]));
-    const s = await single(f);
-    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
-    expect(s.confirm).toBe(SA_98_8_NOTICE);
-    expect(await multi(f)).toBe(FULLY_TAXED);
+describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문형(Q2)·§99의4는 성립, §98·§98의9는 불성립", () => {
+  const SA_98_NOTICE = rentalResidenceSpecialActConfirmNotice("조특령 §98②·⑥");
+
+  it("UX-A1 명부 행 §98의8(같은 문형) → 적용 + 13호 배제 (수정 전 199,997,600 · 다건은 조특법 제외 미반영 — 별건 Q4)", async () => {
+    const s = await single(withRental(form([SPECIAL_ROW("unsold_98_8", "2015-06-01"), RENTAL_ROW])));
+    expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
+    expect(s.exclusions).toContain("long_term_rental_residence");
+    expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-A2 (결론 무관) §98의8 + 거주 0개월 → 확인 필요 없음", async () => {
+  it("UX-A2 (음성 짝) §98의8 + 거주 0개월 → 적용 불가 · 고지 없음", async () => {
     const s = await single(withRental(form([SPECIAL_ROW("unsold_98_8", "2015-06-01"), RENTAL_ROW]), "0"));
     expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-A3 (양성 짝) 명부 행 §99의2 → 적용 + 13호 중과 배제 (수정 전 199,997,600)", async () => {
+  it("UX-A3 (양성 짝) 명부 행 §99의2 → 적용 + 13호 배제 (수정 전 199,997,600)", async () => {
     const s = await single(withRental(form([SPECIAL_ROW("unsold_99_2", "2013-06-01"), RENTAL_ROW])));
     expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
     expect(s.exclusions).toContain("long_term_rental_residence");
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-A4 명부 없음 · 폼 전역 §98의8 · 세대 3채 → 불성립 + 확인 필요 (수정 전 199,997,600)", async () => {
+  it("UX-A4 명부 없음 · 폼 전역 §98의8 · 세대 3채 → 종전대로 적용(판정 보류) 199,997,600 · 고지 없음", async () => {
     const f = withRental(
       form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_98_8", "2015-06-01")] }),
     );
     const s = await single(f);
-    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
-    expect(s.confirm).toBe(SA_98_8_NOTICE);
+    expect(s).toMatchObject({ totalTax: 199_997_600, rentalApplied: true });
+    expect(s.confirm).toBeUndefined();
   });
 
   it("UX-A5 (양성 짝) 명부 없음 · 폼 전역 §99의2 → 종전대로 적용(판정 보류) 199,997,600 · 고지 없음", async () => {
@@ -351,5 +358,26 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2·§99의4만 �
     const s = await single(f);
     expect(s).toMatchObject({ totalTax: 199_997_600, rentalApplied: true });
     expect(s.confirm).toBeUndefined();
+  });
+
+  it("UX-A6 명부 행 §98(시행령 위임 — 문형 다름) → 불성립 + 확인 필요 (수정 전 199,997,600 · 단건 = 다건)", async () => {
+    const f = withRental(form([SPECIAL_ROW("unsold_98", "1996-06-01"), RENTAL_ROW]));
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toBe(SA_98_NOTICE);
+    expect(await multi(f)).toBe(FULLY_TAXED);
+  });
+
+  it("UX-A7 (결론 무관) §98 + 거주 0개월 → 확인 필요 없음", async () => {
+    const s = await single(withRental(form([SPECIAL_ROW("unsold_98", "1996-06-01"), RENTAL_ROW]), "0"));
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toBeUndefined();
+  });
+
+  it("UX-A8 명부 없음 · 폼 전역 §98 · 세대 3채 → 불성립 + 확인 필요 (수정 전 199,997,600)", async () => {
+    const f = withRental(form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_98", "1996-06-01")] }));
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toBe(SA_98_NOTICE);
   });
 });

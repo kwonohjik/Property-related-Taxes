@@ -110,7 +110,7 @@ export function specialActHouseExclusionBasis(p: {
  *   소유주택이 아닌 것으로 보아 「소득세법」 제89조제1항제3호를 적용한다」) 그 조문에 15호·13호를 적용한 해석을
  *   찾지 못했다(국세청 검색 · 계획서 §9.3 E-14a).
  */
-const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
+export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
   "unsold_98_2",
   "unsold_98_3",
   "unsold_98_5",
