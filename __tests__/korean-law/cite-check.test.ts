@@ -64,7 +64,7 @@ describe("cite-check 순수 함수 — 판정 헬퍼", () => {
     expect(isEnBanc("부당이득금 [전원합의체]")).toBe(true);
     expect(isEnBanc("일반 판결")).toBe(false);
   });
-  it("hasFullTextSource — 대법원만", () => {
+  it("hasFullTextSource — 대법원 출처 본문 있음, 국세청 출처 없음 (지방세 출처는 cite-check-source-gap)", () => {
     expect(hasFullTextSource("대법원")).toBe(true);
     expect(hasFullTextSource("국세법령정보시스템")).toBe(false);
   });
