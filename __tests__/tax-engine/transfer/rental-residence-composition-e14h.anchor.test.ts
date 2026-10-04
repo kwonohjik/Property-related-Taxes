@@ -4,6 +4,10 @@
  * 비과세 STEP 2.5와 중과 배제 ① 요소가 함께 쓰는 판정이다. 세액 관측은 route anchor
  * `__tests__/api/transfer.route.rental-residence-155-20-e14gh.anchor.test.ts`. 여기서는 route로 만들기 번거로운
  * 판정 보류(`undetermined`) 분기를 leaf로 고정한다 — 판정 보류는 비과세 적용·중과 배제 미개방(양쪽 종전 동작)이다.
+ *
+ * 2026-10-04 — 「해석 미확보」 겹침은 불성립(+ 확인 필요)으로, 해석례가 확인된 겹침은 `met`으로 바뀌었다
+ * (route anchor `__tests__/api/transfer.route.unknown-unfavorable-interp-axes.anchor.test.ts`). L-4·L-5는 그 정책 변경으로
+ * 기대값을 갱신했다(종전: `undetermined` other_special_rule · special_act).
  */
 import { describe, it, expect } from "vitest";
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
@@ -68,7 +72,7 @@ describe("E-14h resolveRentalResidenceComposition", () => {
     });
   });
 
-  it("L-4 다른 주택이 §155④⑤ 합가로 빠지면 → 판정 보류(other_special_rule — 2중첩 해석 미확보)", () => {
+  it("L-4 다른 주택이 §155⑤ 혼인 합가로 빠지면 → met(상속증여세과-21 · 사전-2025-법규재산-1062)", () => {
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, OTHER], {
         marriageMerge: { marriageDate: D("2020-01-01") },
@@ -76,10 +80,10 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       }),
       parsed,
     );
-    expect(r).toEqual({ status: "undetermined", reason: "other_special_rule" });
+    expect(r).toEqual({ status: "met", via: "marriage_merge" });
   });
 
-  it("L-5 조특법 감면주택 제외가 섞이면 → 판정 보류(special_act)", () => {
+  it("L-5 조특법 §99의2 감면주택 제외(해석 확인)로 그 밖의 주택이 없으면 → met(서면-2015-부동산-2422)", () => {
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, OTHER], {
         specialHouseExclusions: [
@@ -94,7 +98,7 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       }),
       parsed,
     );
-    expect(r).toEqual({ status: "undetermined", reason: "special_act" });
+    expect(r).toEqual({ status: "met", via: "sole" });
   });
 
   it("L-6 조특법 제외 후에도 거주주택 외 비임대 2채 → exceeded(3중첩)", () => {
@@ -103,5 +107,72 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       parsed,
     );
     expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 2 });
+  });
+
+  const special = (article: string, contract: string, houseId?: string) =>
+    [
+      {
+        article,
+        houseAcquisitionDate: D(contract),
+        houseContractDate: D(contract),
+        isNationalHousing: false,
+        requirementsConfirmed: true,
+        ...(houseId ? { houseId } : {}),
+      },
+    ] as TransferTaxInput["specialHouseExclusions"];
+
+  it("L-7 조특법 §98의8 제외(해석 미확보)로만 그 밖의 주택이 없으면 → exceeded + 확인 필요", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, OTHER], { specialHouseExclusions: special("unsold_98_8", "2015-06-01") }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특법 §98의8②");
+  });
+
+  it("L-8 §99의2 제외(행 연결) + 남은 1채가 어느 특례에도 안 걸리면 → exceeded · 고지 없음(결론 무관)", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, OTHER, house("other2", "2013-01-01")], {
+        specialHouseExclusions: special("unsold_99_2", "2013-06-01", "other"),
+      }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toBeFalsy();
+  });
+
+  it("L-9 조특법 선언이 명부 행에 연결되지 않아 남는 1채를 특정할 수 없으면 → exceeded + 확인 필요", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, OTHER, house("other2", "2013-01-01")], {
+        specialHouseExclusions: special("unsold_99_2", "2013-06-01"),
+      }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded" });
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("행에 연결");
+  });
+
+  it("L-10 명부 없음 · §99의2 제외 후 그 밖의 주택 0 → 판정 보류(no_roster) · §98의8이면 exceeded + 확인 필요", () => {
+    const base = { householdHousingCount: 3, rentalHousingException: { rentalUnits: [{}] } } as Partial<TransferTaxInput>;
+    expect(
+      resolveRentalResidenceComposition(input([], { ...base, specialHouseExclusions: special("unsold_99_2", "2013-06-01") }), parsed),
+    ).toEqual({ status: "undetermined", reason: "no_roster" });
+    const r = resolveRentalResidenceComposition(
+      input([], { ...base, specialHouseExclusions: special("unsold_98_8", "2015-06-01") }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded" });
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특법 §98의8②");
+  });
+
+  it("L-11 §155④ 동거봉양 합가 → met(부동산거래관리과-44)", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, OTHER], {
+        parentalCareMerge: { mergeDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      } as Partial<TransferTaxInput>),
+      parsed,
+    );
+    expect(r).toEqual({ status: "met", via: "parental_care_merge" });
   });
 });

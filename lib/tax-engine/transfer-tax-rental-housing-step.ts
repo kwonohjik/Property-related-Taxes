@@ -320,9 +320,10 @@ export function runRentalHousingExceptionStep(
   /**
    * E-14h — 「장기임대주택 … 과 **그 밖의 1주택**」. 종전에는 세대 구성을 보지 않아 거주 + 임대 + 다른 일반주택
    * (특례 불성립)에도 특례를 적용했다. 중과 배제 ① 요소와 **같은 판정**이다(`resolveRentalResidenceComposition`).
-   * 판정 보류(`undetermined` — 해석 미확보 등)는 종전 동작(적용)을 유지한다. 명부 없이 「그 밖의 주택」 1채의
-   * 특례 해당 여부를 모르면 불성립으로 계산한다(사용자 결정 2026-10-04 — 「확인 필요」는 아래 `rhe`가 나머지
-   * 요건을 모두 충족해 그 사실이 결론을 가를 때만).
+   * 판정 보류(`undetermined` — 명부 없음 · 그 밖의 주택 0채)는 종전 동작(적용)을 유지한다. 명부 없이 「그 밖의 주택」
+   * 1채의 특례 해당 여부를 모르거나, 다른 특례와의 겹침을 인정한 해석이 확인되지 않으면(§155③·⑦1·2호 · §99의2·
+   * §99의4 외 조특법 제외) 불성립으로 계산한다(사용자 결정 2026-10-04 — 「확인 필요」는 아래 `rhe`가 나머지
+   * 요건을 모두 충족해 그것이 결론을 가를 때만).
    */
   const composition = resolveRentalResidenceComposition(effectiveInput, parsedRates, generalHouseAcquisitionDate);
 
