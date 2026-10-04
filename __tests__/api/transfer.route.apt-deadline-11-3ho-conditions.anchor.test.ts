@@ -61,8 +61,8 @@ type Form = TransferFormData;
 type UnitForm = Form["assets"][number]["rentalHousingException"]["rentalUnits"][number];
 
 const GANGNAM = "1168010100";
-/** 종전 「사실 전무」 판정 보류 고지(#1910) */
-const PENDING = "판정하지 못해";
+/** 「사실 전무」 확인 필요 고지 — 2026-10-04 「모름은 불리 적용」 이후 문구(종전 #1910 「판정하지 못해」) */
+const PENDING = "연장 사유를 확인하지 못해";
 /** 신규 — 인가·지정 시점 모름 고지 */
 const AUTH_NOTICE = "인가 또는 지정";
 /** 신규 — 단서(협의·수용재결·매도청구소송) 모름 고지 */

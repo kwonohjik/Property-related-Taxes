@@ -2,7 +2,7 @@
  * ⑫ 소령 §167의3⑪ 기한 연장 사실 Zod leaf — 2호 명부 행·양도 주택(`houseSchema`) · 3호 후단 · §155⑳ 임대주택
  * (`rentalUnitSchema`)이 같은 객체를 쓴다. zod 외 의존 없음(순수 leaf — 순환 import 방지).
  *
- * 미전송 = 「모름」(엔진 판정 보류). `confirmedNone`은 「연장 사유 없음」 확인 — 날짜와 함께 오면 모순이라
+ * 미전송 = 「모름」(엔진은 기한 2027.12.31. + 확인 필요 고지). `confirmedNone`은 「연장 사유 없음」 확인 — 날짜와 함께 오면 모순이라
  * 400으로 막는다(⑧ 「있음」+빈 날짜 차단과 짝 · ⑤는 상태 전환 때 값을 정리한다).
  * 3호 단서(`relocationExpropriationTransfer`)는 3호 사업 사실(인가·지정일 · 이전고시일 · 「이전고시 전」)이 있을
  * 때만 온다(⑤④ `aptDeadlineRelocationFactPresent`와 같은 게이트) · 이전고시일과 「이전고시 전」은 상호 배타 ·

@@ -134,27 +134,20 @@ import {
 } from "./multi-house-surcharge-helpers";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes";
 import { aptDeadlineConfirmNotice } from "./rental-article/rules";
+import type { AptDeadlinePendingReason } from "./rental-article/rules";
 
 /**
- * Q-1 후속(판정 보류) — §167조의3⑪ 연장 세 호 입력 경로가 아직 없다. 어느 결과로 귀결되든(배제·중과
- * 어느 쪽이든) 호출부가 놓치지 않도록 `determineMultiHouseSurcharge`의 모든 반환 경로가 공유하는
- * `warnings`에 싣는다(성공 경로에서만 보이면 실패 사유가 가려진다 — feedback_success_only_breakdown_hides_failures).
+ * Q-3(3호) — §167조의3①3호 후단(대통령령 제36737호). ③ 조특법 감면대상장기임대주택이 후단 대상(매입·장기일반
+ * 또는 단기 아파트, 도시형 생활주택 제외)인지 모르면 대상으로 보고 ⑪ 기한을 적용한다 — 후단은 3호를 「한정」할
+ * 뿐이라 대상으로 보는 쪽이 불리 방향이다(사용자 결정 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담).
+ * 그 때문에 기한 경과로 3호가 불인정됐을 때만 싣는다. 모든 반환 경로가 공유하는 `warnings`에 싣는다
+ * (성공 경로에서만 보이면 실패 사유가 가려진다 — feedback_success_only_breakdown_hides_failures).
  */
-const APT_DEADLINE_PENDING_WARNING =
-  `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} 아파트 양도기한(2027.12.31. 또는 등록말소일·조정대상지역 ` +
-  "신규지정 공고일·이전고시일부터 1년 중 늦은 날)을 판정하지 못해 종전 기준으로 계산했습니다 — " +
-  "연장 사유가 없으면 중과 대상일 수 있습니다.";
-
-/**
- * Q-3(3호) — §167조의3①3호 후단(대통령령 제36737호). ③ 조특법 감면대상장기임대주택이 매입·
- * 장기일반(또는 단기) 아파트(도시형 생활주택 제외)인지, 그리고 ⑪ 연장 사실이 있는지를 판정 메뉴
- * 입력 경로가 아직 없어 모른다 — 2호와 같은 1안(종전 기준 유지 + notice)으로 처리한다.
- */
-const TAX_INCENTIVE_RENTAL_APT_DEADLINE_PENDING_WARNING =
-  `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} — 감면대상장기임대주택(조특법 §97·§97의2·§98)이 ` +
-  "매입 장기일반·단기 민간임대주택 아파트(도시형 생활주택 제외)인지, 그리고 ⑪ 기한 연장 사실이 " +
-  "있는지를 판정하지 못해 종전 기준(③ 그대로 적용)으로 계산했습니다 — 해당 요건에 들고 연장 " +
-  "사유가 없으면 2027.12.31. 초과 양도분은 중과 대상일 수 있습니다.";
+const TAX_INCENTIVE_RENTAL_APT_GATE_UNKNOWN_WARNING =
+  `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} · 같은 조 ①3호 후단 — 감면대상장기임대주택(조특법 §97·§97의2·§98)이 ` +
+  "3호 후단 대상(매입 장기일반·단기 민간임대주택 중 아파트, 도시형 생활주택 제외)인지 확인하지 못해 대상으로 보고 " +
+  "아파트 양도기한을 적용했습니다(기한 경과 → 3호 불인정). 후단 대상이 아니면(건설임대 · 그 밖의 등록 유형 · " +
+  "도시형 생활주택) 기한 없이 3호가 적용됩니다 — 확인 필요.";
 
 /** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
 function usesDutyPeriodPending(house: Parameters<typeof isGroupExcludable>[0], transferDate: Date): boolean {
@@ -179,22 +172,20 @@ export function determineMultiHouseSurcharge(
 ): MultiHouseSurchargeResult {
   const warnings: string[] = [];
 
-  // Q-1 후속(판정 보류) — 결과 분기 전에 먼저 싣는다(모든 반환 경로가 같은 warnings를 공유).
-  if (input.houses.some((h) => isAptTransferDeadlinePending(h, input.transferDate))) {
-    warnings.push(APT_DEADLINE_PENDING_WARNING);
-  }
-  // Q-3(3호) — 위와 같은 이유로 결과 분기 전에 먼저 싣는다.
+  // ⑪ 확인 필요 — 결과 분기 전에 먼저 싣는다(모든 반환 경로가 같은 warnings를 공유). 모름은 불리 적용(기한 경과)했고
+  // 결론을 가른 경우만 싣는다: 3호 후단 대상 여부 모름 · 연장 사실 전무(NO_FACT) · 3호 인가·지정일 · 단서 모름
+  // (2호·3호 후단 공용 문구, 중복 제거).
   if (input.houses.some((h) => isTaxIncentiveRentalAptDeadlinePending(h, input.transferDate))) {
-    warnings.push(TAX_INCENTIVE_RENTAL_APT_DEADLINE_PENDING_WARNING);
+    warnings.push(TAX_INCENTIVE_RENTAL_APT_GATE_UNKNOWN_WARNING);
   }
-  // ⑪3호 인가·지정일 · 이전고시일 · 단서 모름 — 결론을 가른 경우만(2호·3호 후단 공용 문구, 중복 제거).
-  const confirmReasons = new Set(
-    input.houses.flatMap((h) => [
+  const confirmReasons = new Set<AptDeadlinePendingReason>(
+    input.houses.flatMap((h): AptDeadlinePendingReason[] => [
+      ...(isAptTransferDeadlinePending(h, input.transferDate) ? (["NO_FACT"] as const) : []),
       ...aptTransferDeadlineConfirmReasons(h, input.transferDate),
       ...taxIncentiveRentalAptDeadlineConfirmReasons(h, input.transferDate),
     ]),
   );
-  for (const r of confirmReasons) if (r !== "NO_FACT") warnings.push(aptDeadlineConfirmNotice(r));
+  for (const r of confirmReasons) warnings.push(aptDeadlineConfirmNotice(r));
 
   // Step 1: 주택 수 산정 (effectiveHouseCount는 #2a ⑨ 차감으로 재할당 → let)
   const step1Count = countEffectiveHouses(

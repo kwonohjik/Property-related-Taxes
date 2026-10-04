@@ -63,8 +63,8 @@ export function effectiveSellingTaxIncentiveRental(se: SellingExclusion): TaxInc
 /**
  * ④⑬ 3호 사실 → `houseSchema` 필드. 미선언이면 키를 만들지 않는다(`{}`).
  *
- * 후단 4사실은 **미입력이면 그대로 undefined로 둔다** — 엔진이 「모른다」로 읽어 판정을 보류하고
- * (종전 기준 유지) 확인 필요를 고지한다. false로 채우면 근거 없이 「후단 대상 아님」이 된다.
+ * 후단 4사실은 **미입력이면 그대로 undefined로 둔다** — 엔진이 「모른다」로 읽어 후단 대상으로 보고(불리 적용 ·
+ * 사용자 결정 2026-10-04) 결론이 갈리면 확인 필요를 고지한다. false로 채우면 근거 없이 「후단 대상 아님」이 된다.
  * `isApartment`는 여기서 다루지 않는다 — 명부 행은 행 칸이 이미 실리고, 양도 주택은 호출부가 정한다.
  */
 export function taxIncentiveRentalPayload(f: TaxIncentiveRentalFacts | undefined): object {

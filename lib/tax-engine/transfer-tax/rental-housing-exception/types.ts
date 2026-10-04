@@ -107,7 +107,7 @@ export type RentalUnitInput = {
   terminatedRegistrationType?: "short_term" | "long_term_general";
   /**
    * §167조의3⑪ 기한 연장 사실(가목2)·나목2)·라목8)·마목4) 아파트) — 미제공 = 「모름」(바닥 초과 양도면
-   * 판정 보류 + 확인 필요 고지). §155㉓ 경로는 이 요건을 적용하지 않는다(`skipAptTransferDeadlineGate`).
+   * 기한 경과 + 확인 필요 고지 · 사용자 결정 2026-10-04). §155㉓ 경로는 이 요건을 적용하지 않는다(`skipAptTransferDeadlineGate`).
    */
   aptDeadlineExtension?: AptTransferDeadlineExtension;
   /**

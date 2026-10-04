@@ -313,7 +313,7 @@ export interface HouseEntry {
   hasContractDepositProof?: boolean;
   /**
    * §167의3⑪ 기한 연장 사실 — 가목2)·나목2)·라목8)·마목4) **아파트**일 때만 묻는다(A·B·D·E).
-   * 미입력(undefined) = 「모름」 → 엔진 판정 보류. ⑤·④·⑧ 범위는 `lib/calc/apt-deadline-extension-scope.ts`.
+   * 미입력(undefined) = 「모름」 → 엔진은 기한 2027.12.31. + 확인 필요 고지. ⑤·④·⑧ 범위는 `lib/calc/apt-deadline-extension-scope.ts`.
    * 3호 칸(`taxIncentiveRentalAptDeadlineExtension`)과 별개다(호마다 입력 화면이 다르다).
    */
   rentalAptDeadlineExtension?: AptDeadlineExtensionForm;
@@ -418,7 +418,7 @@ export type TaxIncentiveRentalRegistrationType = "long_term_general" | "short_te
 /**
  * §167의3⑪ 기한 연장 사실 — 엔진 `AptTransferDeadlineExtension`의 폼 문자열판(YYYY-MM-DD).
  *
- * 🔑 3-state(`status`): undefined = 「모름」(판정 보류) · "none" = 「연장 사유 없음」 확인(기한 2027.12.31. 확정) ·
+ * 🔑 3-state(`status`): undefined = 「모름」(기한 2027.12.31. + 확인 필요 고지) · "none" = 「연장 사유 없음」 확인(기한 2027.12.31. 확정) ·
  *    "has" = 「연장 사유 있음」(아래 날짜). 「있음」을 고른 뒤 날짜가 비어 있어도 그 선택이 유지되도록 모드를
  *    데이터에서 파생하지 않는다(빈 값 자기-소멸 방지). #1914 이전 저장분(status 없음 + 날짜)은 「있음」으로 읽는다
  *    — 해석은 `aptDeadlineExtensionStatus` 한 곳(⑤·④·⑧ 공용).
@@ -431,7 +431,7 @@ export interface AptDeadlineExtensionForm {
   newRegulatedAreaAnnouncementDate?: string;
   /** ⑪3호 — 재건축·재개발·소규모정비 이전고시일 */
   relocationAnnouncementDate?: string;
-  /** ⑪3호 — 그 사업의 인가 또는 지정일. 비어 있으면 모름(엔진 판정 보류 — 결론을 가를 때 확인 필요 고지) */
+  /** ⑪3호 — 그 사업의 인가 또는 지정일. 비어 있으면 모름(3호 불성립 — 결론을 가를 때 확인 필요 고지) */
   relocationAuthorizationDate?: string;
   /** ⑪3호 — 양도일 현재 이전고시 전(이전고시일과 상호 배타 — ⑤ onChange가 정리) */
   relocationNotYetAnnounced?: boolean;
@@ -448,8 +448,8 @@ export interface AptDeadlineExtensionForm {
  * 법문(MST 290841 실독): 「「조세특례제한법」 제97조ㆍ제97조의2 및 제98조에 따라 양도소득세가 감면되는
  * 임대주택으로서 5년 이상 임대한 국민주택」 + 후단(아파트 민간매입 장기일반·단기 → ⑪ 기한까지 양도).
  *
- * 🔑 후단 4사실은 **3-state**다 — 미입력(undefined)은 「모른다」이고 엔진이 판정 보류(종전 기준 유지 +
- *    확인 필요 고지)로 처리한다(#1912 · `isTaxIncentiveRentalAptDeadlinePending`). false로 채우지 말 것.
+ * 🔑 후단 4사실은 **3-state**다 — 미입력(undefined)은 「모른다」이고 엔진이 불리 적용(후단 대상으로 보고 ⑪ 기한 적용 +
+ *    결론이 갈리면 확인 필요 고지)한다(사용자 결정 2026-10-04 · `isTaxIncentiveRentalAptDeadlinePending`). false로 채우지 말 것.
  * 🔑 명부 행은 `rentalPeriodYears`·`isNationalSizeHousing`·`isApartment`를 2호와 같은 칸으로 쓰고,
  *    양도 주택은 그 세 칸을 `sellingHouseExclusion.taxIncentiveRental` 묶음에 둔다(2호 선언과의 공유는
  *    `lib/calc/tax-incentive-rental-scope.ts`가 정한다).

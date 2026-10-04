@@ -19,7 +19,6 @@ import {
   RA_CUT,
   APT_TRANSFER_DEADLINE_FLOOR,
   judgeAptTransferDeadline,
-  hasAnyAptDeadlineExtensionFact,
   type AptDeadlinePendingReason,
 } from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
@@ -253,10 +252,10 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
 }
 
 /**
- * Q-1 후속(판정 보류) — 이 house의 §167조의3⑪ 아파트 양도기한(가목2)·나목2)·라목8)·마목4))을
- * "모름"으로 보류했는가. 바닥(2027.12.31) 초과인데 ⑪ 연장 세 호 입력 경로가 아직 없어 그 사실을
- * 모르는 경우에 true — `isLongTermRentalHousingExempt`의 passed/failed 여부와 무관하게 호출부가
- * 별도 확인 필요 경고를 내는 데 쓴다(성공 경로에서만 보이면 실패 사유가 가려진다).
+ * Q-1 후속 — 이 house의 §167조의3⑪ 아파트 양도기한(가목2)·나목2)·라목8)·마목4))을 연장 사실 「모름」(세 호
+ * 날짜도 「연장 사유 없음」 확인도 없음) 때문에 바닥(2027.12.31.) 경과로 판정했는가. 결론은
+ * `isLongTermRentalHousingExempt`가 정한 대로(불리 적용 · 사용자 결정 2026-10-04) 두고 호출부가 확인 필요 고지를 낸다.
+ * 다른 요건 불충족으로 어차피 불인정인 주택도 참일 수 있다 — 고지는 그 사실을 알려 줄 뿐 결론을 바꾸지 않는다.
  */
 export function isAptTransferDeadlinePending(house: HouseInfo, transferDate: Date): boolean {
   if (!house.rentalType) return false;
@@ -414,9 +413,9 @@ function isTaxIncentiveRentalBaseEligible(house: HouseInfo): boolean {
  * 아파트(도시형 생활주택인 아파트 제외)」인지를 세 사실로 판정한다.
  *
  * true(게이트 대상) / false(대상 아님: 건설임대·다른 등록유형·도시형 생활주택) /
- * undefined("모른다" — 세 사실 중 판정에 필요한 어느 하나라도 미제공). 판정 메뉴 입력 경로가
- * 아직 없어(후속) 지금은 모든 house가 undefined로 떨어진다 — Q-1(2호)과 같은 1안으로 호출부가
- * "모른다"를 "종전 기준 유지 + 확인 필요 notice"로 처리한다(법 근거 없이 불리 적용 금지).
+ * undefined("모른다" — 세 사실 중 판정에 필요한 어느 하나라도 미제공). 호출부는 "모른다"를 **게이트 대상**으로
+ * 본다 — 후단은 3호를 「한정」(좁히기만)하므로 대상으로 보는 쪽이 불리 방향이다(사용자 결정 2026-10-04 —
+ * 모르는 채 유리하게 적용하면 가산세 부담). 그 때문에 3호가 불인정되면 확인 필요 고지.
  */
 export function isTaxIncentiveRentalAptGateApplicable(house: HouseInfo): boolean | undefined {
   if (house.isTaxIncentiveRentalPurchase === undefined) return undefined;
@@ -429,42 +428,39 @@ export function isTaxIncentiveRentalAptGateApplicable(house: HouseInfo): boolean
 }
 
 /**
- * ③ 감면대상장기임대주택의 §167조의3①3호 후단 아파트 양도기한 — 바닥(2027.12.31) 이내면
- * 영향이 없고, 넘겼는데 게이트 대상 여부·연장 사실을 모르면 종전 기준(exempt 유지)을 지키며
- * `isTaxIncentiveRentalAptDeadlinePending`이 "확인 필요" notice를 담당한다.
+ * ③ 감면대상장기임대주택의 §167조의3①3호 후단 아파트 양도기한 — 바닥(2027.12.31) 이내면 영향이 없고,
+ * 넘겼으면 게이트 대상(대상 여부 모름 포함)에 ⑪ 기한을 적용한다(연장 사실 모름 = 기한 2027.12.31. —
+ * 불리 적용 · 사용자 결정 2026-10-04). 「모름」이 결론을 가르면 `isTaxIncentiveRentalAptDeadlinePending`(대상 여부)·
+ * `taxIncentiveRentalAptDeadlineConfirmReasons`(연장 사실)가 확인 필요 고지를 담당한다.
  */
 export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
   if (!isTaxIncentiveRentalBaseEligible(house)) return false;
   if (!house.isApartment) return true; // 후단은 아파트에만 걸린다
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return true;
 
-  const gateApplicable = isTaxIncentiveRentalAptGateApplicable(house);
-  if (gateApplicable !== true) return true; // false(대상 아님) · undefined(모름, 종전 기준 유지)
+  // false(대상 아님)만 기한 없이 3호. undefined(모름)는 대상으로 본다(불리 적용).
+  if (isTaxIncentiveRentalAptGateApplicable(house) === false) return true;
 
-  // 연장 사실 전무(NO_FACT)면 within=true(판정 보류 · 종전 기준 유지). 3호 인가 시점·단서도 같은 함수가 본다.
+  // 연장 사실 전무(NO_FACT)면 기한 = 2027.12.31.(경과). 3호 인가 시점·단서도 같은 함수가 본다.
   return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).within;
 }
 
 /**
- * Q-1 후속(판정 보류) — 이 house의 §167조의3①3호 후단 아파트 양도기한을 "모름"으로 보류했는가.
- * `isAptTransferDeadlinePending`(2호 가·나·라·마목)과 같은 역할 — 성공 경로에서만 보이면 실패
- * 사유가 가려진다(feedback_success_only_breakdown_hides_failures).
+ * 3호 후단 **대상 여부를 몰라** 대상으로 보고 기한 경과로 3호를 불인정했는가 — 대상이 아니었다면 3호였다(결론을
+ * 가름) → 호출부가 확인 필요 고지. 대상 여부를 알면 false(연장 사실 고지는 `taxIncentiveRentalAptDeadlineConfirmReasons`).
+ * 성공·실패 경로 모두에서 보이도록 호출부가 결과 분기 전에 싣는다(feedback_success_only_breakdown_hides_failures).
  */
 export function isTaxIncentiveRentalAptDeadlinePending(house: HouseInfo, transferDate: Date): boolean {
   if (!isTaxIncentiveRentalBaseEligible(house)) return false;
   if (!house.isApartment) return false;
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return false;
-
-  const gateApplicable = isTaxIncentiveRentalAptGateApplicable(house);
-  if (gateApplicable === undefined) return true; // 게이트 대상 여부 자체를 모름
-  if (gateApplicable === false) return false;
-
-  return !hasAnyAptDeadlineExtensionFact(house.taxIncentiveRentalAptDeadlineExtension);
+  if (isTaxIncentiveRentalAptGateApplicable(house) !== undefined) return false;
+  return !judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).within;
 }
 
 /**
- * ⑪3호 판정 보류(인가·지정일 · 이전고시일 · 단서 모름) — 3호 후단 게이트 대상으로 확인된 감면대상장기임대주택.
- * `isTaxIncentiveRentalAptDeadlinePending`(사실 전무·게이트 대상 모름)의 짝.
+ * ⑪ 확인 필요 사유(연장 사실 전무 · 3호 인가·지정일 · 단서 모름) — 3호 후단 게이트 대상(대상 여부 모름 포함)인
+ * 감면대상장기임대주택. 결론을 가른 사유만 `judgeAptTransferDeadline`이 돌려준다.
  */
 export function taxIncentiveRentalAptDeadlineConfirmReasons(
   house: HouseInfo,
@@ -472,10 +468,8 @@ export function taxIncentiveRentalAptDeadlineConfirmReasons(
 ): AptDeadlinePendingReason[] {
   if (!isTaxIncentiveRentalBaseEligible(house) || !house.isApartment) return [];
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return [];
-  if (isTaxIncentiveRentalAptGateApplicable(house) !== true) return [];
-  return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).pending.filter(
-    (r) => r !== "NO_FACT",
-  );
+  if (isTaxIncentiveRentalAptGateApplicable(house) === false) return [];
+  return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).pending;
 }
 
 // ============================================================

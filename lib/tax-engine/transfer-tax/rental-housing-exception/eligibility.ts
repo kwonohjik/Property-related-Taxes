@@ -489,17 +489,11 @@ export function checkEligibility(
     const result = checkRentalArticle(article, normalized);
 
     /**
-     * Q-1 후속(판정 보류) — ⑪ 연장 사실(날짜·「연장 사유 없음」 확인)이 없으면 바닥(2027.12.31) 초과를
-     * 「연장 없음」으로 단정하지 않는다(법 근거 없이 불리 적용 금지). 결론은 바꾸지 않고(종전 기준 유지) 호별로 확인 필요
-     * 고지를 낸다 — 통과·불통과 여부와 무관하게 낸다(성공 사례에서만 보이면 실패 사유가 가려진다).
+     * Q-1 후속 — ⑪ 연장 사실(날짜·「연장 사유 없음」 확인)이 없는데 바닥(2027.12.31) 초과면 공용 predicate가
+     * 기한 경과로 판정했다(사용자 결정 2026-10-04 — 모름은 불리 적용). 호별로 확인 필요 고지를 낸다 — 미적용
+     * 경로에서도 「확인 필요」 단계로 보인다(`transfer-tax-rental-housing-step.ts`).
      */
-    if (result.aptDeadlinePending) {
-      notices.push(
-        `${i + 1}호: ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} 아파트 양도기한(2027.12.31. 또는 ` +
-          "등록말소일·조정대상지역 신규지정 공고일·이전고시일부터 1년 중 늦은 날)을 판정하지 못해 종전 " +
-          "기준으로 계산했습니다 — 연장 사유가 없으면 중과 대상일 수 있습니다.",
-      );
-    }
+    if (result.aptDeadlinePending) notices.push(`${i + 1}호: ${aptDeadlineConfirmNotice("NO_FACT")}`);
     // ⑪3호 인가·지정일 · 이전고시일 · 단서 모름 — 결론을 가른 경우만(다주택 중과 경로와 같은 문구).
     for (const reason of result.aptDeadlineConfirmReasons) {
       if (reason !== "NO_FACT") notices.push(`${i + 1}호: ${aptDeadlineConfirmNotice(reason)}`);

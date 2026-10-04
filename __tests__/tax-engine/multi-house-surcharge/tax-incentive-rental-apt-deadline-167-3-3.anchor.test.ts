@@ -8,15 +8,17 @@
  * 한정한다」. Q-1(2호 가·나·라·마목)과 같은 바닥(2027.12.31)·연장 세 호를 공유한다
  * (`rental-article/rules.ts` `resolveAptTransferDeadline`/`hasAnyAptDeadlineExtensionFact`).
  *
- * 판정 메뉴 입력 경로가 없어(엔진 전용 필드) 매입 여부·등록 유형·도시형 생활주택 여부·⑪ 연장
- * 사실을 전혀 모른다 — Q-1과 같은 1안(법 근거 없이 불리 적용 금지)으로 종전 기준(③ 그대로 적용)을
- * 유지하고 `warnings`로 확인 필요 고지만 낸다.
+ * 매입 여부·등록 유형·도시형 생활주택 여부·⑪ 연장 사실을 모르면 **불리 적용**한다(사용자 결정 2026-10-04 —
+ * 모르는 채 유리하게 적용하면 가산세 부담): 후단은 3호를 「한정」(좁히기만)하므로 대상 여부를 모르면 대상으로 보고,
+ * 연장 사실을 모르면 기한 = 2027.12.31. 그래서 기한이 지나면 ③ 배제를 잃고, 결론을 가른 「모름」은 `warnings`로
+ * 확인 필요 고지. 종전(#1912)은 판정 보류(③ 그대로 적용)였다.
  */
 import { describe, it, expect } from "vitest";
 import {
   isTaxIncentiveRentalHousingExempt,
   isTaxIncentiveRentalAptDeadlinePending,
 } from "@/lib/tax-engine/multi-house-surcharge";
+import { taxIncentiveRentalAptDeadlineConfirmReasons } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
@@ -55,26 +57,38 @@ describe("Q-3 leaf — §167조의3①3호 후단 아파트 양도기한", () =>
     expect(isTaxIncentiveRentalAptDeadlinePending(h, FLOOR)).toBe(false);
   });
 
-  it("바닥 초과 + 매입·등록유형·도시형 여부 전부 모름 → 종전 기준(exempt) 유지 + pending", () => {
+  it("바닥 초과 + 매입·등록유형·도시형 여부 전부 모름 → 대상으로 보고 기한 경과(exempt 아님) + 대상 여부·연장 확인 필요", () => {
+    // 종전(#1912): exempt 유지(판정 보류) + pending
     const h = baseHouse();
-    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(true);
+    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(false);
     expect(isTaxIncentiveRentalAptDeadlinePending(h, AFTER_FLOOR)).toBe(true);
+    expect(taxIncentiveRentalAptDeadlineConfirmReasons(h, AFTER_FLOOR)).toEqual(["NO_FACT"]);
   });
 
-  it("바닥 초과 + 매입 여부만 알고 등록유형 모름 → 여전히 pending(부분 사실은 불충분)", () => {
+  it("바닥 초과 + 매입 여부만 알고 등록유형 모름 → 여전히 대상 여부 모름(부분 사실은 불충분)", () => {
     const h = baseHouse({ isTaxIncentiveRentalPurchase: true });
-    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(true);
+    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(false);
     expect(isTaxIncentiveRentalAptDeadlinePending(h, AFTER_FLOOR)).toBe(true);
   });
 
-  it("바닥 초과 + 매입·장기일반·비도시형 아파트 + 연장 사실 없음 → 종전 기준 유지 + pending", () => {
+  it("바닥 초과 + 대상 여부 모름이어도 연장 사실로 기한 안 → exempt, 고지 없음(결론을 가르지 않음)", () => {
+    const h = baseHouse({
+      taxIncentiveRentalAptDeadlineExtension: { dutyPeriodEndCancellationDate: new Date("2027-06-01") },
+    });
+    expect(isTaxIncentiveRentalHousingExempt(h, new Date("2028-03-01"))).toBe(true);
+    expect(isTaxIncentiveRentalAptDeadlinePending(h, new Date("2028-03-01"))).toBe(false);
+    expect(taxIncentiveRentalAptDeadlineConfirmReasons(h, new Date("2028-03-01"))).toEqual([]);
+  });
+
+  it("바닥 초과 + 매입·장기일반·비도시형 아파트 + 연장 사실 모름 → 기한 경과(exempt 아님) + 연장 확인 필요만", () => {
     const h = baseHouse({
       isTaxIncentiveRentalPurchase: true,
       taxIncentiveRentalRegistrationType: "long_term_general",
       isUrbanLifeHousingApartment: false,
     });
-    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(true);
-    expect(isTaxIncentiveRentalAptDeadlinePending(h, AFTER_FLOOR)).toBe(true);
+    expect(isTaxIncentiveRentalHousingExempt(h, AFTER_FLOOR)).toBe(false);
+    expect(isTaxIncentiveRentalAptDeadlinePending(h, AFTER_FLOOR)).toBe(false); // 대상 여부는 안다
+    expect(taxIncentiveRentalAptDeadlineConfirmReasons(h, AFTER_FLOOR)).toEqual(["NO_FACT"]);
   });
 
   it("바닥 초과 + 매입·장기일반·비도시형 + 연장 사실(기한 초과) → exempt 아님, pending 없음", () => {
@@ -244,13 +258,18 @@ describe("Q-3 route — §167조의3①3호 후단이 다주택 중과 배제에
     );
   });
 
-  it("2028.1.1(바닥 다음날)·사실 전부 모름 → 판정 보류: ③ 배제 유지 + 확인 필요 고지, 결정세액 불변", () => {
+  it("2028.1.1(바닥 다음날)·사실 전부 모름 → 대상으로 보고 기한 경과: ③ 배제 상실(중과) + 대상 여부·연장 확인 필요 고지", () => {
+    // 종전(#1912): 판정 보류 — ③ 배제 유지, 결정세액 불변
     const before = result(household(FLOOR));
     const after = result(household(AFTER_FLOOR));
-    expect(after.totalTax).toBe(before.totalTax);
-    expect(after.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(false);
+    expect(before.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(false);
+    expect(after.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(true);
+    expect(after.totalTax).toBeGreaterThan(before.totalTax);
     expect(after.multiHouseSurchargeEvaluation?.warnings ?? []).toEqual(
-      expect.arrayContaining([expect.stringContaining("§167조의3⑪")]),
+      expect.arrayContaining([
+        expect.stringContaining("3호 후단 대상"),
+        expect.stringContaining("연장 사유를 확인하지 못해"),
+      ]),
     );
   });
 

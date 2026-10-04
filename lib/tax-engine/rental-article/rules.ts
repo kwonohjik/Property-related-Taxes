@@ -116,7 +116,7 @@ export type AptTransferDeadlineExtension = {
   relocationExpropriationTransfer?: boolean;
   /**
    * ⑪ 각 호 어디에도 해당하지 않음을 **사용자가 확인했다** — 기한은 바닥(2027.12.31.)으로 확정된다.
-   * 날짜 미제공(「모름」 → 판정 보류)과 가르기 위한 명시 신호다. 날짜와 함께 오지 않는다(⑫ refine).
+   * 날짜 미제공(「모름」 → 같은 기한 + 확인 필요 고지)과 가르기 위한 명시 신호다. 날짜와 함께 오지 않는다(⑫ refine).
    */
   confirmedNone?: boolean;
 };
@@ -171,18 +171,18 @@ function relocationAuthorizationTimely(ext: AptTransferDeadlineExtension | undef
 }
 
 /**
- * ⑪ 판정 보류 사유.
- * - NO_FACT: 바닥 초과인데 연장 사실도 「연장 사유 없음」 확인도 없다(#1910) — 종전 기준(기한 내) 유지
+ * ⑪ 확인 필요 사유 — 결론(기한 경과)을 가른 미확인 사실.
+ * - NO_FACT: 연장 사실도 「연장 사유 없음」 확인도 없는데 양도일이 2027.12.31.을 넘었다 — 기한 = 2027.12.31.로 보고 경과
  * - AUTH_DATE_UNKNOWN: 인가·지정일을 몰라 3호를 적용하지 않았는데(기한 경과), 3호가 성립했다면 기한 안이었다
  * - EXPROPRIATION_UNKNOWN: 3호 기한마저 지났는데 단서(협의·수용재결·매도청구소송) 해당 여부를 모른다 — 기한 경과 유지
  *
- * 3호의 「모름」은 납세자 불리로 적용한다(사용자 결정 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담).
- * NO_FACT(#1910)는 이 결정의 범위 밖이라 종전대로 둔다.
+ * 「모름」은 모두 납세자 불리로 적용한다(사용자 결정 2026-10-04 — 모르는 채 유리하게 적용하면 가산세 부담). 종전
+ * NO_FACT(#1910)는 판정 보류(기한 내 유지)였으나 같은 결정으로 기한 경과로 바꿨다.
  */
 export type AptDeadlinePendingReason = "NO_FACT" | "AUTH_DATE_UNKNOWN" | "EXPROPRIATION_UNKNOWN";
 
 export interface AptDeadlineVerdict {
-  /** 기한 내 양도로 판정(NO_FACT 판정 보류로 기한 내 유지 포함) */
+  /** 기한 내 양도로 판정 */
   within: boolean;
   /** 결론을 가른 미확인 사실 — 비어 있으면 확정 판정 */
   pending: AptDeadlinePendingReason[];
@@ -210,8 +210,10 @@ function judgeWithRelocation(transferDate: Date, ext: AptTransferDeadlineExtensi
 /**
  * ⑪ 기한 판정 — 2호 가·나·라·마목 · 3호 후단 · §155⑳ 공용 단일 함수.
  *
- * 1. 연장 사실·「없음」 확인이 전무 → 바닥 초과면 NO_FACT(기한 내 유지 · #1910 종전 그대로).
- * 2. 1·2호까지의 기한 안(민법 §161 포함) → 기한 내 · 고지 없음(3호 사실은 결론과 무관).
+ * 1. 1·2호까지의 기한 안(민법 §161 포함) → 기한 내 · 고지 없음(3호 사실은 결론과 무관). 연장 사실이 전무하면
+ *    이 기한은 2027.12.31.이다.
+ * 2. 연장 사실·「없음」 확인이 전무한데 그 기한을 넘겼다 → 기한 경과 + NO_FACT(「연장 사유 없음」 확정과 같은 결론 ·
+ *    사용자 결정 2026-10-04 — 종전 #1910은 기한 내 유지였다).
  * 3. 3호 사업 사실 없음 · 인가·지정이 그 기한 뒤 → 기한 경과(3호 주택이 아니므로 단서도 없다).
  * 4. 인가·지정 시점 충족 → 단서 「예」·「이전고시 전」·이전고시일+1년 안이면 기한 내, 아니면 경과(단서 모름이면 고지).
  * 5. 인가·지정일 모름 → 3호 불성립(기한 경과). 3호가 성립했다면 결론이 달라졌을 때만 AUTH_DATE_UNKNOWN
@@ -222,11 +224,9 @@ function judgeWithRelocation(transferDate: Date, ext: AptTransferDeadlineExtensi
  * 직접 해석례는 없다 — 확인 필요).
  */
 export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDeadlineExtension): AptDeadlineVerdict {
-  if (!ext || !hasAnyAptDeadlineExtensionFact(ext)) {
-    return { within: true, pending: transferDate.getTime() > APT_TRANSFER_DEADLINE_FLOOR ? ["NO_FACT"] : [] };
-  }
   const by12 = resolveDeadlineBy1And2(ext);
   if (isOnOrBeforeDeadline(transferDate, new Date(by12))) return { within: true, pending: [] };
+  if (!ext || !hasAnyAptDeadlineExtensionFact(ext)) return { within: false, pending: ["NO_FACT"] };
 
   if (!hasRelocationFact(ext)) return { within: false, pending: [] };
   const timely = relocationAuthorizationTimely(ext, by12);
@@ -241,11 +241,17 @@ export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDe
 const ART_11_3 = `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}3호`;
 
 /**
- * ⑪3호 판정 보류 고지 문구(NO_FACT 외) — 2호 다주택 `warnings` · 3호 후단 `warnings` · §155⑳ `notices` 공용.
- * NO_FACT 문구는 경로마다 종전 문구를 그대로 쓴다(#1910).
+ * ⑪ 확인 필요 고지 문구 — 2호 다주택 `warnings` · 3호 후단 `warnings` · §155⑳ `notices` 공용 단일 소스.
  */
-export function aptDeadlineConfirmNotice(reason: Exclude<AptDeadlinePendingReason, "NO_FACT">): string {
+export function aptDeadlineConfirmNotice(reason: AptDeadlinePendingReason): string {
   switch (reason) {
+    case "NO_FACT":
+      return (
+        `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11} 아파트 양도기한 — 연장 사유를 확인하지 못해 기한을 2027.12.31.로 보고 ` +
+        "기한이 지난 것으로 계산했습니다. 1호(2027.1.1. 이후 임대의무기간 종료 주택의 등록말소일) · 2호(2027.1.1. 이후 " +
+        "조정대상지역 신규지정 공고일) · 3호(정비사업 이전고시일)부터 1년이 되는 날 중 늦은 날까지 기한이 늘어나는 사유가 " +
+        "있으면 결과가 달라집니다 — 확인 필요."
+      );
     case "AUTH_DATE_UNKNOWN":
       return (
         `${ART_11_3} — 재건축사업 조합설립인가·재개발사업 관리처분계획인가 등 인가 또는 지정이 2027.12.31. 또는 ` +
@@ -263,9 +269,8 @@ export function aptDeadlineConfirmNotice(reason: Exclude<AptDeadlinePendingReaso
 
 /**
  * ⑪ 연장 사실을 「안다」고 볼 수 있는가 — 세 호 중 유효한 사실(날짜 · 3호 인가·지정일 · 「이전고시 전」)이 하나라도 있거나, 「연장 사유 없음」을
- * 확인했으면(`confirmedNone`) 참. 둘 다 아니면 「날짜 미제공」과 「연장 사실 없음(실제로 바닥만 적용)」을
- * 구별하지 못하므로, 법 근거 없이 불리 적용(2027.12.31 바닥만 적용해 중과)하지 않도록 호출부가 판정 보류한다
- * (`judgeAptTransferDeadline`과 쌍).
+ * 확인했으면(`confirmedNone`) 참. 둘 다 아니면 「모름」 — 기한은 바닥(2027.12.31.)으로 같지만 그 결론이 확인되지
+ * 않은 사실에 기댄 것이므로 `judgeAptTransferDeadline`이 NO_FACT 확인 필요 사유를 단다(사용자 결정 2026-10-04).
  */
 export function hasAnyAptDeadlineExtensionFact(ext?: AptTransferDeadlineExtension): boolean {
   if (!ext) return false;

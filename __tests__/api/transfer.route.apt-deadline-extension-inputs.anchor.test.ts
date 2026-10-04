@@ -49,7 +49,8 @@ type Form = TransferFormData;
 type UnitForm = Form["assets"][number]["rentalHousingException"]["rentalUnits"][number];
 
 const GANGNAM = "1168010100";
-const PENDING = "판정하지 못해";
+/** 연장 사실 「모름」 확인 필요 고지 — 2026-10-04 「모름은 불리 적용」 이후 문구(종전 #1910 「판정하지 못해」) */
+const PENDING = "연장 사유를 확인하지 못해";
 
 // ── 다주택 중과 축 (§167의3①2호 · §167의10①10호) ──────────────────────────────
 
@@ -127,6 +128,8 @@ type Verdict = {
   notices: string[];
   /** §155⑳ 「적용 불가」 단계 사유 문구 — 미적용이면 엔진이 steps에 남긴다 */
   rentalRejectText: string;
+  /** §155⑳ 미적용 경로의 「확인 필요」 단계 문구(#1935) */
+  confirmStepText: string;
 };
 async function singleBody(body: Obj): Promise<Verdict> {
   const res = await post(SINGLE, "http://l/api/calc/transfer", body);
@@ -141,6 +144,10 @@ async function singleBody(body: Obj): Promise<Verdict> {
     notices: (r.warnings as string[] | undefined) ?? [],
     rentalRejectText: ((r.steps as { label: string; formula?: string }[] | undefined) ?? [])
       .filter((s) => s.label.includes("적용 불가"))
+      .map((s) => s.formula ?? "")
+      .join(" "),
+    confirmStepText: ((r.steps as { label: string; formula?: string }[] | undefined) ?? [])
+      .filter((s) => s.label.includes("확인 필요"))
       .map((s) => s.formula ?? "")
       .join(" "),
   };
@@ -170,15 +177,16 @@ const HAS = (d: Partial<AptDeadlineExtensionForm>): AptDeadlineExtensionForm => 
 describe("다주택 중과 — 명부 행 2호 가목 아파트 (§167의10①10호)", () => {
   beforeEach(() => vi.mocked(preloadTaxRates).mockResolvedValue(loadFallbackTransferRates(new Date("2028-03-01"))));
 
-  it("EX-a 모름(기본) · 2028-03-01 → 종전 기준(중과 배제) + 확인 필요 고지", async () => {
+  it("EX-a 모름(기본) · 2028-03-01 → 기한 2027.12.31. 경과(불리 적용) → 중과 + 확인 필요 고지", async () => {
+    // 종전(#1910·#1919): 판정 보류 — 412,071,000(중과 배제 유지) + 고지. 2026-10-04 「모름은 불리 적용」으로 변경.
     const r = await single(mhForm([rentalRow()], "2028-03-01"));
-    expect(r.surcharge).toBe(false);
+    expect(r.surcharge).toBe(true);
     expect(r.mhWarnings.some((w) => w.includes(PENDING))).toBe(true);
-    expect(r.totalTax).toBe(412_071_000);
+    expect(r.totalTax).toBe(926_678_500);
   });
 
   it("EX-b 「연장 사유 없음」 확인 · 2028-03-01 → 기한(2027.12.31.) 경과로 2호 불인정 → 중과, 고지 없음", async () => {
-    // 수정 전: 확정 입력이 없어 EX-a와 같은 412,071,000(판정 보류 · 중과 배제 유지)
+    // #1919 수정 전: 확정 입력이 없어 412,071,000(판정 보류 · 중과 배제 유지). 지금은 결론이 EX-a와 같고 고지만 다르다.
     const r = await single(mhForm([rentalRow(NONE)], "2028-03-01"));
     expect(r.surcharge).toBe(true);
     expect(r.mhWarnings.some((w) => w.includes(PENDING))).toBe(false);
@@ -229,10 +237,12 @@ describe("다주택 중과 — 명부 행 2호 가목 아파트 (§167의10①10
       });
     const unknown = await single(selling());
     const none = await single(selling(NONE));
-    expect(unknown.surcharge).toBe(false);
+    // 종전: 모름이면 자기 배제 유지(none보다 세액 낮음). 2026-10-04 이후 모름도 기한 경과 — 결론 같고 고지만 다르다.
+    expect(unknown.surcharge).toBe(true);
     expect(unknown.mhWarnings.some((w) => w.includes(PENDING))).toBe(true);
     expect(none.surcharge).toBe(true);
-    expect(none.totalTax).toBeGreaterThan(unknown.totalTax);
+    expect(none.mhWarnings.some((w) => w.includes(PENDING))).toBe(false);
+    expect(none.totalTax).toBe(unknown.totalTax);
   });
 
   it("EX-f 건설임대(다목)·비아파트는 연장 사실을 싣지 않고 결과도 그대로", async () => {
@@ -279,10 +289,11 @@ describe("다주택 중과 — 3호 후단 「연장 사유 없음」", () => {
       },
     });
 
-  it("EX-g 모름 → 종전(3호 배제 유지) + 고지 / 없음 → 3호 불인정 → 중과", async () => {
+  it("EX-g 모름 → 3호 불인정(중과) + 고지 / 없음 → 3호 불인정 → 중과, 고지 없음", async () => {
+    // 종전(#1912): 모름 → 3호 배제 유지 + 고지. 2026-10-04 「모름은 불리 적용」으로 변경.
     const unknown = await single(tir());
     const none = await single(tir(NONE));
-    expect(unknown.surcharge).toBe(false);
+    expect(unknown.surcharge).toBe(true);
     expect(unknown.mhWarnings.some((w) => w.includes(PENDING))).toBe(true);
     // 수정 전: 「없음」 확정 경로가 없어 unknown과 같은 값(판정 보류)
     expect(none.surcharge).toBe(true);
@@ -339,17 +350,20 @@ function rheForm(unit: Partial<UnitForm>, transferDate = "2028-03-01"): Form {
 describe("§155⑳ — 임대주택(가목 아파트) ⑪ 기한", () => {
   beforeEach(() => vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates()));
 
-  it("EX-i 모름 → 비과세 유지 + 확인 필요 고지 / 없음 → 부적격(과세) / 기한 내 날짜 → 비과세·고지 없음", async () => {
+  it("EX-i 모름 → 부적격(과세) + 「확인 필요」 단계 / 없음 → 부적격(과세) / 기한 내 날짜 → 비과세·고지 없음", async () => {
     const unknown = await single(rheForm({}));
     const none = await single(rheForm({ aptDeadlineExtension: NONE }));
     // 3호 연장은 인가·지정일이 기한 전으로 확인돼야 성립한다(#1935 — 모르면 불성립)
     const within = await single(
       rheForm({ aptDeadlineExtension: HAS({ relocationAuthorizationDate: "2026-06-01", relocationAnnouncementDate: "2027-06-01" }) }),
     );
-    expect(unknown.totalTax).toBe(0);
-    expect(unknown.notices.some((n) => n.includes(PENDING))).toBe(true);
-    // 수정 전: 「없음」·날짜가 엔진에 닿지 않아 셋 다 0 + 확인 필요 고지(판정 보류)
+    // 종전(#1910·#1919): 모름 → 0(비과세 유지) + 고지. 2026-10-04 「모름은 불리 적용」으로 변경.
+    expect(unknown.totalTax).toBe(118_206_000);
+    expect(unknown.rentalRejectText).toContain("양도기한");
+    expect(unknown.confirmStepText).toContain(PENDING);
+    // #1919 수정 전: 「없음」·날짜가 엔진에 닿지 않아 셋 다 0 + 확인 필요 고지(판정 보류)
     expect(none.rentalRejectText).toContain("양도기한");
+    expect(none.confirmStepText).not.toContain(PENDING);
     expect(none.totalTax).toBe(118_206_000);
     expect(within.totalTax).toBe(0);
     expect(within.notices.some((n) => n.includes(PENDING))).toBe(false);
@@ -370,7 +384,7 @@ describe("§155⑳ — 임대주택(가목 아파트) ⑪ 기한", () => {
     expect(r.totalTax).toBe(0);
   });
 
-  it("EX-k 판정 메뉴 route(같은 ⑫·⑭) — 모름: 충족 + 확인 필요 고지 / 없음: 미충족(양도기한 사유)", async () => {
+  it("EX-k 판정 메뉴 route(같은 ⑫·⑭) — 모름: 미충족 + 확인 필요 고지 / 없음: 미충족(양도기한 사유) · 고지 없음", async () => {
     const f = rheForm({ aptDeadlineExtension: NONE });
     const rheNone = (await bodyOf(() => callTransferTaxAPI(f))).rentalHousingException as Obj;
     const rheUnknown = (await bodyOf(() => callTransferTaxAPI(rheForm({})))).rentalHousingException as Obj;
@@ -400,9 +414,11 @@ describe("§155⑳ — 임대주택(가목 아파트) ⑪ 기한", () => {
     };
     const unknown = await judge(rheUnknown);
     const none = await judge(rheNone);
-    expect(unknown.passed).toBe(true);
+    // 종전: 모름 → 충족(passed) + 고지
+    expect(unknown.passed).toBe(false);
     expect(unknown.notices.some((n) => n.includes(PENDING))).toBe(true);
     expect(none.passed).toBe(false);
+    expect((none.notices ?? []).some((n) => n.includes(PENDING))).toBe(false);
     expect(none.unitFailReasons.some((r) => r.message.includes("양도기한"))).toBe(true);
   });
 });

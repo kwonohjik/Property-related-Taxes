@@ -14,7 +14,8 @@
  *      주거환경정비법」 제73조 또는 「빈집 및 소규모주택 정비에 관한 특례법」 제36조에 따른 협의, 수용재결 또는
  *      매도청구소송에 따라 양도되는 경우에는 이 호에 따른 기한 내에 양도한 것으로 본다.
  *
- * 3-state: 「모름」(기본 — 엔진 판정 보류) / 「연장 사유 없음」(기한 2027.12.31. 확정) / 「연장 사유 있음」(날짜).
+ * 3-state: 「모름」(기본 — 기한 2027.12.31.로 계산 + 결론을 가르면 확인 필요 고지) / 「연장 사유 없음」(기한 2027.12.31. 확정) /
+ * 「연장 사유 있음」(날짜).
  * 상태 전환과 날짜 정리는 `withAptDeadlineExtensionStatus`(④·⑧과 같은 leaf) — onChange 직접 patch, useEffect 미러링 금지.
  * 3호: 인가·지정일(비우면 모름 → 3호 불성립) · 이전고시일 또는 「양도일 현재 이전고시 전」(상호 배타 — 켜면 날짜를
  * 지운다 · 3호 사실이 있으면 둘 중 하나 필수 — ⑧ `aptDeadlineExtensionIncomplete`) ·
@@ -59,7 +60,8 @@ export function AptDeadlineExtensionFields({ value, onChange, idPrefix, tone = "
         <label className={LABEL}>아파트 양도기한 연장 사유 (소령 §167의3⑪)</label>
         <p className={HINT}>
           기한은 2027.12.31.입니다. 아래 사유가 있으면 2027.12.31.과 각 날부터 1년이 되는 날 중 가장 늦은 날까지
-          연장됩니다. 「모름」으로 두면 판정을 보류하고 종전 기준으로 계산한 뒤 확인이 필요하다고 안내합니다.
+          연장됩니다. 「모름」으로 두면 연장 사유가 없는 것으로(기한 2027.12.31.) 계산하고, 그 때문에 결과가 달라지면 확인이
+          필요하다고 안내합니다.
         </p>
         <RadioCardGroup<AptDeadlineExtensionStatus>
           name={`apt-deadline-ext-status-${idPrefix}`}
