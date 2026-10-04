@@ -11,6 +11,8 @@ import type { houseSchema, presaleRightSchema } from "@/lib/api/transfer-tax-sch
 import type { aptDeadlineExtensionSchema } from "@/lib/api/transfer-tax-schema-apt-deadline";
 import type { AptTransferDeadlineExtension } from "@/lib/tax-engine/rental-article/rules";
 import type { HouseInfo, MultiHouseGracePeriodInput, PresaleRight } from "@/lib/tax-engine/multi-house-surcharge";
+import type { SpecialHouseExclusionInput } from "@/lib/api/transfer-tax-schema";
+import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 
 type HouseInput = z.infer<typeof houseSchema>;
 type PresaleRightInput = z.infer<typeof presaleRightSchema>;
@@ -183,4 +185,24 @@ export function mapGracePeriodToEngine(
     hasTenantInResidence: gp.hasTenantInResidence,
     areaDesignatedDate: toOptionalDate(gp.areaDesignatedDate),
   };
+}
+
+/**
+ * ⑭ 보유 감면주택 주택수 제외(P5 모드 2) — Zod(string 일자) → 엔진(Date). **단건·다건 공용**.
+ *
+ * 🔴 종전에는 단건(`engine-input.ts`)과 다건(`multi/route.ts`)이 같은 매핑을 각자 적었고, 다건 ⑬이 값을 싣지 않아
+ *    다건 쪽은 늘 빈 배열을 매핑했다(계획서 `one-house-exemption-fix.plan.md` §9.8 Q4). 키를 늘리면 여기 한 곳이다.
+ */
+export function mapSpecialHouseExclusionsToEngine(
+  list: SpecialHouseExclusionInput[] | undefined,
+): NonNullable<TransferTaxInput["specialHouseExclusions"]> {
+  return (list ?? []).map((e) => ({
+    article: e.article,
+    ...(e.houseId ? { houseId: e.houseId } : {}),
+    houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
+    houseContractDate: toOptionalDate(e.houseContractDate),
+    isNationalHousing: e.isNationalHousing,
+    houseRentalStartDate: toOptionalDate(e.houseRentalStartDate),
+    requirementsConfirmed: e.requirementsConfirmed,
+  }));
 }

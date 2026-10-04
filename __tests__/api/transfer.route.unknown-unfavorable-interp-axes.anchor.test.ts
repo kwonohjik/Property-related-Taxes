@@ -19,10 +19,10 @@
  * | §155⑦1호 상속 농어촌주택 | 167,360,600 (적용) | 1,141,178,500 + 확인 필요 |
  * | 조특법 §98 (명부 행) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
  * | 조특법 §98 (명부 없음 · 폼 전역) | 199,997,600 (적용) | 1,327,903,500 + 확인 필요 |
- * | 조특법 §98의8 (명부 행 · 같은 문형) | 199,997,600 | 102,086,600 (다건 1,327,903,500 — 별건 Q4) |
+ * | 조특법 §98의8 (명부 행 · 같은 문형) | 199,997,600 | 102,086,600 (단건 = 다건 — Q4에서 다건 1,327,903,500 해소) |
  * | §155⑤ 혼인 · §155④ 동거봉양 | 199,997,600 (적용 · 배제 미개방) | 102,086,600 (적용 · 13호 배제) |
  * | §155⑦3호 귀농 | 167,360,600 | 102,086,600 |
- * | 조특법 §99의2 (명부 행) | 199,997,600 | 102,086,600 |
+ * | 조특법 §99의2 (명부 행) | 199,997,600 | 102,086,600 (단건 = 다건 — Q4) |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -322,11 +322,13 @@ describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1�
 describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문형(Q2)·§99의4는 성립, §98·§98의9는 불성립", () => {
   const SA_98_NOTICE = rentalResidenceSpecialActConfirmNotice("조특령 §98②·⑥");
 
-  it("UX-A1 명부 행 §98의8(같은 문형) → 적용 + 13호 배제 (수정 전 199,997,600 · 다건은 조특법 제외 미반영 — 별건 Q4)", async () => {
-    const s = await single(withRental(form([SPECIAL_ROW("unsold_98_8", "2015-06-01"), RENTAL_ROW])));
+  it("UX-A1 명부 행 §98의8(같은 문형) → 적용 + 13호 배제 (수정 전 199,997,600 · 단건 = 다건 — Q4)", async () => {
+    const f = withRental(form([SPECIAL_ROW("unsold_98_8", "2015-06-01"), RENTAL_ROW]));
+    const s = await single(f);
     expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
     expect(s.exclusions).toContain("long_term_rental_residence");
     expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(RH_EXCLUDED);
   });
 
   it("UX-A2 (음성 짝) §98의8 + 거주 0개월 → 적용 불가 · 고지 없음", async () => {
@@ -335,11 +337,13 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문�
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-A3 (양성 짝) 명부 행 §99의2 → 적용 + 13호 배제 (수정 전 199,997,600)", async () => {
-    const s = await single(withRental(form([SPECIAL_ROW("unsold_99_2", "2013-06-01"), RENTAL_ROW])));
+  it("UX-A3 (양성 짝) 명부 행 §99의2 → 적용 + 13호 배제 (수정 전 199,997,600 · 단건 = 다건 — Q4)", async () => {
+    const f = withRental(form([SPECIAL_ROW("unsold_99_2", "2013-06-01"), RENTAL_ROW]));
+    const s = await single(f);
     expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
     expect(s.exclusions).toContain("long_term_rental_residence");
     expect(s.confirm).toBeUndefined();
+    expect(await multi(f)).toBe(RH_EXCLUDED);
   });
 
   it("UX-A4 명부 없음 · 폼 전역 §98의8 · 세대 3채 → 종전대로 적용(판정 보류) 199,997,600 · 고지 없음", async () => {

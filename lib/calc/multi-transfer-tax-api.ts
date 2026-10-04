@@ -41,6 +41,7 @@ import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
+import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -53,7 +54,7 @@ import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows
  */
 export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment = false) {
   const primary = form.assets?.[0];
-  // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 ⑧이 다건에서 막는다.
+  // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 아래 `specialHouseExclusions`(Q4).
   const reductions = toEngineReductions(primaryReductionsWithRows(form), primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
 
@@ -325,6 +326,10 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         : undefined,
     isOneHousehold: form.isOneHousehold,
     reductions,
+    // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제) · 명부 행 ⑥ special — 단건 ④와 **같은 leaf**.
+    //    종전에는 싣지 않아 ⑭가 빈 배열을 주입했다(§99의2 명부 행: 단건 102,086,600 / 다건 1,327,903,500).
+    //    건별 키다 — 명부(`form.houses`)가 건마다 따로라 행 id(`houseId`)도 그 건의 명부를 가리킨다.
+    specialHouseExclusions: specialHouseExclusionsPayload(form),
     // ⑬ §155⑤ 일시적 2주택(§155⑯⑱ 포함) · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 —
     //    단건과 **같은 빌더**를 쓴다. 종전에는 일시적 2주택 두 날짜만 인라인 전송해
     //    §155⑯·⑱ 4필드와 §155⑦·⑧ 블록이 통째로 누락됐다(다건 Step4는 단건 Step4를 그대로 임베드하므로

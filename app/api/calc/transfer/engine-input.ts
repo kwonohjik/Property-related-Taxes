@@ -20,6 +20,7 @@ import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
+import { mapSpecialHouseExclusionsToEngine } from "@/lib/api/transfer-route-multi-house";
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
@@ -234,16 +235,8 @@ export function buildTransferEngineInput(
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     priorReductionUsage: data.priorReductionUsage ?? [],
-    // P5 모드 2 (⑭): string 일자 → Date 변환
-    specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
-      article: e.article,
-      ...(e.houseId ? { houseId: e.houseId } : {}),
-      houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
-      houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
-      isNationalHousing: e.isNationalHousing,
-      houseRentalStartDate: toOptionalDate(e.houseRentalStartDate),
-      requirementsConfirmed: e.requirementsConfirmed,
-    })),
+    // P5 모드 2 (⑭): string 일자 → Date 변환 — 다건 route와 같은 leaf
+    specialHouseExclusions: mapSpecialHouseExclusionsToEngine(data.specialHouseExclusions),
     // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼 (origin/master #223·#224)
     nonBusinessLandDetails: buildNblEngineInput(data.nonBusinessLandRaw),
     // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)

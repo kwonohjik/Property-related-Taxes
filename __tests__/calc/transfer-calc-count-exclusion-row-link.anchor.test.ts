@@ -16,7 +16,7 @@
  * | CR-4 | ④ — 재개발 아파트는 행 선언을 싣고, 입주권은 싣지 않는다 |
  * | CR-5 | ⑧ 게이트 밖(입주권)은 옛 선언·행 필수값을 막지 않는다 |
  * | CR-6 | ⑧ 행 필수값 — 행 번호로 |
- * | CR-7 | 다건 — §99의4 행은 건별로 싣고, 감면주택 행은 차단 |
+ * | CR-7 | 다건 — §99의4 행·감면주택 행 모두 건별로 싣는다(감면주택 차단은 Q4에서 해제) |
  * | CR-8 | 판정 → 계산기 전달 — 행을 그대로 넘긴다(중복 0) |
  * | CR-9 | 옛 기록(Q-5) — 행 id가 있는 저장소 선언은 그 행으로 옮긴다 |
  * | CR-10 | ③ 감면 패널 검증은 세 유형을 보지 않는다(입력 칸이 없다) |
@@ -307,7 +307,7 @@ describe("CR-7 다건", () => {
     expect(payload.reductions).toEqual([expect.objectContaining({ type: "new_99_4_rural", houseId: "r" })]);
   });
 
-  it("[CR-7s] 감면주택 행은 다건에서 차단한다 — 폼 전역 배열만 보면 조용히 사라진다", () => {
+  it("[CR-7s] 감면주택 행 — 다건도 막지 않고 건별 본문에 싣는다(Q4 — 종전 차단 해제)", () => {
     const f = withForm({
       houses: [
         row("s", "2001-01-01", {
@@ -324,7 +324,9 @@ describe("CR-7 다건", () => {
         }),
       ],
     });
-    expect(validateMultiSupportedMode(f)).toContain("단건 계산기에서만 지원됩니다");
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    const payload = buildPropertyPayload(f) as { specialHouseExclusions: { article: string; houseId?: string }[] };
+    expect(payload.specialHouseExclusions).toEqual([expect.objectContaining({ article: "new_99", houseId: "s" })]);
   });
 });
 
