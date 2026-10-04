@@ -127,6 +127,12 @@ export interface DomainSearchOptions {
   fromDate?: string;
   /** prec — 선고일 종료 YYYYMMDD. DRF `prncYd` 범위의 뒤쪽. */
   toDate?: string;
+  /**
+   * 전 도메인 — 본문 검색. DRF `search=2`. 미지정 시 DRF 는 사건명(제목)만 본다.
+   * 공백이 든 구절은 토큰 AND 로 풀리므로 구절 일치가 필요하면 query 를 큰따옴표로 감쌀 것
+   * (2026-10-04 실측: 판례 `소득세법 제999조` 342건 / `"소득세법 제999조"` 0건).
+   */
+  bodySearch?: boolean;
 }
 
 const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof DomainSearchOptions>> = {
@@ -197,6 +203,8 @@ export function buildDomainParams(
     const prncYd = buildPrncYd(options.fromDate, options.toDate);
     if (prncYd) out.prncYd = prncYd;
   }
+  // 도메인 화이트리스트 밖 — search 는 DRF 공통 파라미터다(prec·expc·ordin·ttSpecialDecc 실측).
+  if (options.bodySearch) out.search = "2";
   return out;
 }
 
