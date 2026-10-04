@@ -11,6 +11,7 @@ import {
   type DecisionText,
 } from "@/lib/korean-law/types";
 import { parseDateRange } from "@/lib/korean-law/date-parser";
+import { isQuotedPhrase } from "@/lib/korean-law/phrase-query";
 import { HighlightedText } from "./HighlightedText";
 import { RefLawChip } from "./RefLawChip";
 import { RefPrecedentChip } from "./RefPrecedentChip";
@@ -54,6 +55,7 @@ export function DecisionSearchTab({
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [autoDateHint, setAutoDateHint] = useState<string | null>(null);
+  const [phraseSearch, setPhraseSearch] = useState(false);
   const [noResultHint, setNoResultHint] = useState<string | null>(null);
 
   /**
@@ -96,6 +98,7 @@ export function DecisionSearchTab({
       if (toDate && allow.has("toDate") && !advanced.toDate) {
         params.set("toDate", toDate);
       }
+      setPhraseSearch(isQuotedPhrase(effectiveQuery));
       setAutoDateHint(
         fromDate || toDate
           ? `자동 추출: ${fromDate ?? "?"} ~ ${toDate ?? "?"} (쿼리 "${effectiveQuery}" 로 검색)`
@@ -270,6 +273,15 @@ export function DecisionSearchTab({
       {autoDateHint && (
         <div className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300">
           📅 {autoDateHint}
+        </div>
+      )}
+
+      {phraseSearch && (
+        <div
+          data-testid="decision-phrase-search-hint"
+          className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300"
+        >
+          🔎 큰따옴표 구절 — 사건명이 아니라 결정문 본문에 이 구절이 그대로 나오는 결정을 찾습니다.
         </div>
       )}
 
