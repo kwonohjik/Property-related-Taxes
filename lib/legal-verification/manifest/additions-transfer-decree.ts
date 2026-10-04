@@ -295,6 +295,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "순손익가치",
       "순자산가치",
       "100분의 80을 곱한 금액",
+      // ⑧1호 후단 — 라목 주식등 순자산가치 단독 (`net-asset-only-basis.ts`)
+      "라목에 따른 주식등이 법 제99조제1항제4호의 주식등에 해당하는 경우",
     ],
     keywordMode: "ALL",
   },

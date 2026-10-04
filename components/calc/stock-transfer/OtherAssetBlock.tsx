@@ -32,6 +32,8 @@ import {
   type BlockShareholderAggregation,
 } from "@/lib/calc/stock-prior-transfer-lookup";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { isRaMokNetAssetOnly } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { usesUnlistedSupplementaryValuation } from "@/lib/tax-engine/stock-transfer/supplementary-valuation-market";
 
 interface OtherAssetBlockProps {
   form: Pick<
@@ -113,6 +115,18 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
     [onChange, AGGREGATION_FILLED_KEYS, form.blockShareholderSourceIds.length],
   );
   const isBothActive = form.isQualifyingBlockShareholder && form.isHeavyRealEstateForRate;
+  /**
+   * 영 §165⑧1호 후단 적용 여부 — 엔진 leaf 단일 소스.
+   * 후단은 «법 §99①4의 주식등»(비상장 보충평가)에만 걸린다 ⇒ 비상장·기타자산 시장에서만 안내·토글 숨김.
+   * 상장 시장(코스피·코스닥·코넥스)은 이 블록이 떠도 종전대로 토글을 둔다 — 상장 후 환산(§165⑤) 엔진이
+   * 그 값을 계속 읽으므로 숨기면 켜 둔 값이 보이지 않은 채 남는다(상장 기타자산은 범위 밖 S-1d).
+   */
+  const raMokNetAssetOnly =
+    usesUnlistedSupplementaryValuation(form.marketType) &&
+    isRaMokNetAssetOnly({
+      isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
+      transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
+    });
 
   /**
    * 요건② 임계 문구 — **엔진 leaf 가 고른다**. 손으로 적으면 시행일(2020-02-11) 경계에서
@@ -457,16 +471,28 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
           description="자산총액 80% 이상 부동산 + 골프장·스키장·휴양콘도 등 (시행령 §158⑤)"
           tone="rose"
         >
-          {/* 평가 가중치 반전용 (50% 임계 별도) */}
-          <div className="mt-3">
-            <ToggleCard
-              checked={form.isHeavyRealEstateForValuation}
-              onCheckedChange={(v) => onChange({ isHeavyRealEstateForValuation: v })}
-              title="보충적 평가 가중치 반전 (자산 50% 이상)"
-              description="소령 §165⑤ 단서 — 부동산 50% 이상 시 순손익 2/5 + 순자산 3/5 (가중치 반전)"
-              tone="fuchsia"
-            />
-          </div>
+          {/*
+            영 §165⑧1호 후단 — 라목 주식등은 2023.2.28. 이후 양도분부터 순자산가치 단독이라 «반전»이 설 자리가 없다.
+            엔진도 이 경우 반전 토글을 읽지 않는다(`resolveNetAssetOnlyBasis`). 그 전 양도분은 종전대로 토글을 둔다.
+          */}
+          {raMokNetAssetOnly ? (
+            <p data-testid="ra-mok-net-asset-only-notice" className="mt-3 text-xs text-rose-800">
+              양도일이 2023.2.28. 이후라 라목 주식등은 순자산가치 단독으로 평가합니다 — 가중평균·80% 하한·가중치
+              반전은 적용되지 않습니다.{" "}
+              <LawArticleModal legalBasis="소득세법 시행령 §165 ⑧ 1호" label="영§165⑧1" />
+            </p>
+          ) : (
+            /* 평가 가중치 반전용 (50% 임계 별도) */
+            <div className="mt-3">
+              <ToggleCard
+                checked={form.isHeavyRealEstateForValuation}
+                onCheckedChange={(v) => onChange({ isHeavyRealEstateForValuation: v })}
+                title="보충적 평가 가중치 반전 (자산 50% 이상)"
+                description="소령 §165⑤ 단서 — 부동산 50% 이상 시 순손익 2/5 + 순자산 3/5 (가중치 반전)"
+                tone="fuchsia"
+              />
+            </div>
+          )}
         </ToggleCard>
       </div>
 

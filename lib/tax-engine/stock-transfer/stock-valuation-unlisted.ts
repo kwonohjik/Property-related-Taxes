@@ -26,6 +26,11 @@
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
 import {
+  resolveNetAssetOnlyBasis,
+  netAssetOnlyRuleRef,
+  type NetAssetOnlyBasis,
+} from "./net-asset-only-basis";
+import {
   STOCK,
   STOCK_FLOOR_80_PCT,
   STOCK_LOSS_GAIN_DISCOUNT_RATE,
@@ -76,8 +81,8 @@ export interface UnlistedValuationResult {
   netIncomeValue?: number;
   /** 1주당 순자산가치 */
   netAssetValue?: number;
-  /** 순자산 단독 사유 (netAssetOnlyReason 전달) */
-  netAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
+  /** 순자산 단독 근거 — §165④3 사유 또는 §165⑧1호 후단(라목). `resolveNetAssetOnlyBasis` */
+  netAssetOnlyReason?: NetAssetOnlyBasis;
   /**
    * [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 → §81④ 1호 월할 보정 발동 시 echo (미발동 undefined).
    */
@@ -224,10 +229,11 @@ export function calcUnlistedValuation(
     transferDate,
     bookLost,
     faceValuePerShare,
-    netAssetOnlyReason,
     isHeavyRealEstateForValuation,
   } = input;
   const isHeavyRE = input.isHeavyRealEstateForValuation;
+  // 순자산 단독 근거 — §165④3 사유(사용자 선택) 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 단일 소스.
+  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
   const acqFaceValueOnly = input.acqFaceValueOnly === true;
   const acqFaceValuePerShare = input.acqFaceValuePerShare ?? 0;
 
@@ -244,7 +250,7 @@ export function calcUnlistedValuation(
   if (acqFaceValueOnly && acqFaceValuePerShare > 0) {
     const niPerShare = input.transferYearNetIncomePerShare ?? 0;
     const naPerShare = input.transferYearNetAssetPerShare ?? 0;
-    const isNetAssetOnly = !!netAssetOnlyReason;
+    const isNetAssetOnly = !!netAssetOnlyBasis;
 
     // STEP 1: 양도기준시가 §165④1 — **양도일 시기별 연혁**을 따른다.
     //
@@ -323,7 +329,7 @@ export function calcUnlistedValuation(
       weightedAvgRaw: weighted,
       netIncomeValue: niPerShare,
       netAssetValue: naPerShare,
-      netAssetOnlyReason,
+      netAssetOnlyReason: netAssetOnlyBasis,
       warnings,
       appliedRules,
     };
@@ -371,28 +377,11 @@ export function calcUnlistedValuation(
   const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;
 
   // ──────────────────────────────────────────────────────────
-  // 순자산 단독 평가 4사유 (§165④3 가~라목)
-  // 80% 하한 미적용 (케이스 27)
+  // 순자산 단독 평가 — §165④3 가~라목 4사유 + §165⑧1호 후단(라목 주식등)
+  // 80% 하한 미적용 (케이스 27). 라목이면 «반전» 토글도 여기서 비켜간다.
   // ──────────────────────────────────────────────────────────
-  if (netAssetOnlyReason) {
-    let ruleRef: string;
-    switch (netAssetOnlyReason) {
-      case "liquidation_or_owner_death":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-        break;
-      case "no_business_or_short_or_closed":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_NA_PRE_BUSINESS;
-        break;
-      case "stock_holding_company":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_DA_HOLDING_CO;
-        break;
-      case "remaining_term_under_3y":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_RA_REMAINING_3Y;
-        break;
-      default:
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-    }
-    appliedRules.push(ruleRef);
+  if (netAssetOnlyBasis) {
+    appliedRules.push(netAssetOnlyRuleRef(netAssetOnlyBasis));
 
     // 양도기준시가 = 순자산 단독
     const transferStdPricePerShare = Math.floor(transferNa);
@@ -409,7 +398,7 @@ export function calcUnlistedValuation(
         totalAcquisitionPrice: 0,
         method: "net_asset_only",
         netAssetFloorApplied: false,
-        netAssetOnlyReason,
+        netAssetOnlyReason: netAssetOnlyBasis,
         warnings,
         appliedRules,
       };
@@ -445,7 +434,7 @@ export function calcUnlistedValuation(
       totalAcquisitionPrice,
       method: "net_asset_only",
       netAssetFloorApplied: false, // §165④3 단독 사유 — 80% 하한 미적용
-      netAssetOnlyReason,
+      netAssetOnlyReason: netAssetOnlyBasis,
       netIncomeValue: transferNi,
       netAssetValue: transferNa,
       section1659Detail: naOnly1659.section1659Detail,

@@ -51,7 +51,10 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange }: Props) {
         data-testid="eu-ni-hidden-notice"
         className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-800"
       >
-        ⓘ {UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN}
+        ⓘ{" "}
+        {form.netAssetOnlyReason
+          ? UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN
+          : UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN_RA_MOK}
       </div>
     );
   }

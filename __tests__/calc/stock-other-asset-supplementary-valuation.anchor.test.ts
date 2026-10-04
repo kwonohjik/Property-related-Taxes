@@ -13,6 +13,12 @@
  * 수치: 사례 49 — 6,000,000,000 × 12,500 ÷ 160,000 = 468,750,000 (독립 손계산, 이전 PR과 같은 값).
  *       장부 있음 — 양도기준시가 floor(30,000×3/5 + 200,000×2/5)=98,000 → 하한 160,000 · 취득기준시가 floor(5,000×3/5 + 20,000×2/5)=11,000
  *       → 하한 16,000 → 6,000,000,000 × 16,000 ÷ 160,000 = 600,000,000 (비상장 대조군과 같다)
+ *
+ * 🔁 2026-10-04 재기준 — 영 §165⑧1호 후단(라목 주식등은 순자산가치 단독, 2023.2.28. 이후 양도).
+ *    이 파일의 기타자산 픽스처는 **라목**이라 위 3:2 수치는 비상장 대조군에만 남는다. 기타자산(라목)은:
+ *      장부 있음  : 6,000,000,000 × 20,000 ÷ 200,000 = 600,000,000 (값은 우연히 같다 — 방식이 net_asset_only)
+ *      장부분실   : 6,000,000,000 × 12,500 ÷ 200,000 = 375,000,000 (468,750,000 아님)
+ *    계획서 `docs/00-pm/stock-165-8-1-ra-net-asset-only.plan.md` §8 · anchor `stock-165-8-1-ra-net-asset-only.anchor.test.ts`
  */
 
 import { describe, it, expect } from "vitest";
@@ -103,10 +109,11 @@ describe("SV-2: D-1 — 기타자산 환산(장부 있음)이 비상장과 같�
     expect(control.acq).toBe(600_000_000);
     expect(control.method).toBe("weighted_avg");
   });
-  it("기타자산(라목) → 비상장 대조군과 같은 취득가액 · 방식 (종전: 0 · monthly_avg_listed)", () => {
+  it("기타자산(라목) → 비상장 보충평가 경로 · 600,000,000 (종전: 0 · monthly_avg_listed)", () => {
     const r = ok(run(form({ ...OTHER, ...BOOKS_KEPT })));
     expect(r.acq).toBe(600_000_000);
-    expect(r.method).toBe("weighted_avg");
+    // 라목이라 순자산 단독(영 §165⑧1호 후단) — 대조군(weighted_avg)과 값만 같다
+    expect(r.method).toBe("net_asset_only");
   });
   it("«종가평균이 0 이하» 경고가 더는 나오지 않는다 — 상장 경로를 타지 않는다", () => {
     const r = ok(run(form({ ...OTHER, ...BOOKS_KEPT })));
@@ -115,11 +122,11 @@ describe("SV-2: D-1 — 기타자산 환산(장부 있음)이 비상장과 같�
 });
 
 describe("SV-3: D-2 — 기타자산 + 장부분실 토글이 끝까지 간다", () => {
-  it("④가 토글·액면가를 싣고 ⑫를 통과해 468,750,000 (종전: 취득연도 칸 요구로 차단)", () => {
+  it("④가 토글·액면가를 싣고 ⑫를 통과해 375,000,000 (종전: 취득연도 칸 요구로 차단 · 라목 단독 재기준)", () => {
     const r = ok(run(form({ ...OTHER, ...BOOK_LOST })));
     expect(r.body.acqFaceValueOnly).toBe(true);
     expect(r.body.acqFaceValuePerShare).toBe(12_500);
-    expect(r.acq).toBe(468_750_000);
+    expect(r.acq).toBe(375_000_000);
     expect(r.method).toBe("acq_face_value_only");
   });
   it("§94②(비상장 + 라목)와 같은 값 — 두 입력 경로가 갈리지 않는다", () => {
@@ -134,13 +141,13 @@ describe("SV-3: D-2 — 기타자산 + 장부분실 토글이 끝까지 간다",
 });
 
 describe("SV-4: §163⑨ 예외가 기타자산에도 닿는다 — 상속·증여 + 장부분실", () => {
-  it("1990 상속 + 장부분실 → 통과 · 468,750,000 (종전: ⑧·⑫ 차단)", () => {
+  it("1990 상속 + 장부분실 → 통과 · 375,000,000 (종전: ⑧·⑫ 차단)", () => {
     const r = run(form({ ...OTHER, ...BOOK_LOST, ...INHERIT }));
     expect(r.step2).not.toContain("acquisitionMode");
-    expect(ok(r).acq).toBe(468_750_000);
+    expect(ok(r).acq).toBe(375_000_000);
   });
   it("1990 증여 + 장부분실 → 통과", () => {
-    expect(ok(run(form({ ...OTHER, ...BOOK_LOST, acquisitionCause: "gift" }))).acq).toBe(468_750_000);
+    expect(ok(run(form({ ...OTHER, ...BOOK_LOST, acquisitionCause: "gift" }))).acq).toBe(375_000_000);
   });
   it("부정 짝 — 상속 + 장부 있음(환산)은 차단 (평가액을 구할 수 있다)", () => {
     const r = run(form({ ...OTHER, ...BOOKS_KEPT, ...INHERIT }));

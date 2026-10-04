@@ -8,6 +8,8 @@
 export const UNLISTED_MESSAGES = {
   /** 순자산 단독 평가 사유 발생 시 순손익 계산서 비노출 안내 */
   NET_ASSET_ONLY_HIDDEN: "순자산 단독 평가 (§165④3) — 순손익 산정 불필요",
+  /** 영 §165⑧1호 후단 — 라목 주식등(2023.2.28. 이후 양도) */
+  NET_ASSET_ONLY_HIDDEN_RA_MOK: "순자산 단독 평가 (§165⑧1호 후단 — §94①4 라목 주식등) — 순손익 산정 불필요",
   /** full 모드 사용 시 결과 카드 배지 */
   FULL_MODE_BADGE: "행-수준 계산 적용 (상증령 §54·§55)",
   /** simple↔full 토글 시 데이터 보존 안내 */

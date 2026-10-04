@@ -22,6 +22,8 @@ import { EstimatedUnlistedNetIncomeStatement } from "./EstimatedUnlistedNetIncom
 import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetStatement";
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -77,7 +79,10 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
 
 export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
-  const isNetAssetOnly = netAssetOnlyReason !== "";
+  // 순자산 단독 — §165④3 사유 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 엔진·⑧·⑫와 같은 술어.
+  const isNetAssetOnly = shouldSkipNetIncome(form);
+  // 사유를 고르지 않았는데 단독이면 근거는 라목 후단뿐이다
+  const isRaMokBasis = isNetAssetOnly && netAssetOnlyReason === "";
   const isHeavyRE = form.isHeavyRealEstateForValuation;
   // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·acquisitionSideOnly 시 강제 simple.
   const mode = simpleOnly || acquisitionSideOnly || transferSideOnly ? "simple" : (form.unlistedValuationMode || "simple");
@@ -225,21 +230,28 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       >
         <p className="font-semibold">
           비상장 보충적 평가 — 시행령 §165④1
-          {isHeavyRE && " (가중치 반전 적용 — §165⑤ 부동산과다보유)"}
+          {isHeavyRE && !isNetAssetOnly && " (가중치 반전 적용 — §165⑤ 부동산과다보유)"}
         </p>
         <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
           <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />
-          {isNetAssetOnly && (
+          {isNetAssetOnly && !isRaMokBasis && (
             <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 3호" label="§165④3" />
           )}
-          {isHeavyRE && (
+          {isRaMokBasis && (
+            <LawArticleModal legalBasis="소득세법 시행령 §165 ⑧ 1호" label="§165⑧1" />
+          )}
+          {isHeavyRE && !isNetAssetOnly && (
             <LawArticleModal legalBasis="소득세법 시행령 §165 ⑤" label="§165⑤" />
           )}
         </div>
         <p className="text-xs mt-1">
           {/* 2026-08-09: `acquisitionSideOnly`일 때 "+ 80% 하한"을 빼던 분기를 제거했다 —
               하한은 양도·취득 양쪽에 적용된다(§165④1 단서). 라벨이 엔진과 갈리면 안 된다. */}
-          {isNetAssetOnly ? (
+          {isRaMokBasis ? (
+            <span data-testid="ra-mok-net-asset-only-label">
+              순자산가치 단독 평가 (§165⑧1호 후단 — §94①4 라목 주식등) — 80% 하한 미적용
+            </span>
+          ) : isNetAssetOnly ? (
             "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
           ) : (
             <>
@@ -404,7 +416,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
               <span className="ml-2 text-xs">(80% 하한 발동 — §165④1 단서)</span>
             )}
             {transferStdPricePreview.method === "net_asset_only" && (
-              <span className="ml-2 text-xs">(순자산 단독 — §165④3)</span>
+              <span className="ml-2 text-xs">
+                (순자산 단독 — {netAssetOnlyCitationLabel(isRaMokBasis ? "ra_mok_heavy_real_estate" : netAssetOnlyReason)})
+              </span>
             )}
           </div>
         )}

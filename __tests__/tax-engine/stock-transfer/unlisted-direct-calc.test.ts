@@ -28,13 +28,13 @@ function makeForm(patch: Partial<StockTransferFormData> = {}): StockTransferForm
 
 describe("unlisted-direct-calc — shouldSkipNetIncome (E-6 단일 진실)", () => {
   test("EU-01: netAssetOnlyReason 빈 문자열 → false", () => {
-    expect(shouldSkipNetIncome({ netAssetOnlyReason: "" })).toBe(false);
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "" }))).toBe(false);
   });
   test("EU-02: stock_holding_company → true", () => {
-    expect(shouldSkipNetIncome({ netAssetOnlyReason: "stock_holding_company" })).toBe(true);
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "stock_holding_company" }))).toBe(true);
   });
   test("EU-03: liquidation_or_owner_death → true", () => {
-    expect(shouldSkipNetIncome({ netAssetOnlyReason: "liquidation_or_owner_death" })).toBe(true);
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "liquidation_or_owner_death" }))).toBe(true);
   });
 });
 

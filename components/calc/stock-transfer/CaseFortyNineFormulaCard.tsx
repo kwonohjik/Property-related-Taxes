@@ -13,6 +13,7 @@
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { netAssetOnlyCitationLabel } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 
 interface CaseFortyNineFormulaCardProps {
   transferPrice: number;
@@ -23,6 +24,8 @@ interface CaseFortyNineFormulaCardProps {
   naPerShare: number;
   isHeavyRE: boolean;
   isNetAssetOnly: boolean;
+  /** 순자산 단독 근거 echo (`valuationDetail.netAssetOnlyReason`) — 표기 라벨용 */
+  netAssetOnlyReason?: string;
   /** engine result */
   weighted: number;
   transferStdPriceAfterFloor: number;
@@ -40,6 +43,7 @@ export function CaseFortyNineFormulaCard({
   naPerShare,
   isHeavyRE,
   isNetAssetOnly,
+  netAssetOnlyReason,
   weighted,
   transferStdPriceAfterFloor,
   floor80Applied,
@@ -65,7 +69,7 @@ export function CaseFortyNineFormulaCard({
         <p className="font-semibold text-fuchsia-800">① 양도기준시가 (<LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />)</p>
         {isNetAssetOnly ? (
           <p className="text-fuchsia-700">
-            순자산가치 단독 평가 (§165④3) = 1주당 순자산가치 ={" "}
+            순자산가치 단독 평가 ({netAssetOnlyCitationLabel(netAssetOnlyReason)}) = 1주당 순자산가치 ={" "}
             <strong>{naPerShare.toLocaleString()}</strong>
           </p>
         ) : (
