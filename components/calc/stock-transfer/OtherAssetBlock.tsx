@@ -468,7 +468,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
           checked={form.isHeavyRealEstateForRate}
           onCheckedChange={(v) => onChange({ isHeavyRealEstateForRate: v })}
           title="§94①4 라목 — 부동산과다보유법인"
-          description="자산총액 80% 이상 부동산 + 골프장·스키장·휴양콘도 등 (시행령 §158⑤)"
+          description="자산총액 80% 이상 부동산 + 골프장·스키장·휴양콘도 등 (시행령 §158⑧)"
           tone="rose"
         >
           {/*

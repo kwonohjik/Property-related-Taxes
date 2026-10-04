@@ -18,6 +18,8 @@ import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
   isBeforePpiSeries,
   isPreDeemedPurchase,
@@ -386,6 +388,26 @@ export function addStockRefines(
             if (data[key] === undefined)
               issue(key, `${UNLISTED_VALUATION_LABEL[key]} 입력하세요 (소득세법 시행령 §165④ 보충적 평가)`);
           }
+        }
+        // Q-4b — 양도기준시가(1주당 보충평가액) 0 이하면 환산 산식의 분모가 0이다. ⑧과 같은 술어·문구.
+        // 결산서 모드도 ④ 어댑터가 집계한 값을 같은 필드로 싣는다.
+        if (scope === "both") {
+          const td = toOptionalDate(data.transferDate);
+          const na = data.transferYearNetAssetPerShare;
+          const ni = data.transferYearNetIncomePerShare;
+          if (
+            td &&
+            na !== undefined &&
+            (netAssetOnly || ni !== undefined) &&
+            isTransferSupplementaryNonPositive(
+              ni ?? 0,
+              na,
+              data.isHeavyRealEstateForValuation === true,
+              td,
+              netAssetOnly,
+            )
+          )
+            issue("transferYearNetAssetPerShare", UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE);
         }
         // 취득 후 상장 간이 입력(시행령 §165⑤) — 상세 모드(`postListingDetail`)는 결산 원자료로 따로 온다.
         if (listed && data.acquiredBeforeListing && !data.tradingHaltAtTransfer && !data.postListingDetail) {

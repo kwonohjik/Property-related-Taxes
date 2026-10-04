@@ -1,6 +1,6 @@
 # 비상장 보충평가(영 §165④) 별건 4건 — 수정 계획
 
-> 상태: **계획 · 결정 확정**(2026-10-04 — §6 권장안 전부 확인). 미착수.
+> 상태: **PR-1(S-1c-4 + F4) 구현 완료**(2026-10-04 — 결과 §8). PR-2(S-1c-2)·PR-3(S-1c-3) 미착수. §6 권장안 전부 확정.
 > 출처: `docs/00-pm/stock-165-8-1-ra-net-asset-only.plan.md` §4 · §10-6 · §10-7 · §11.3 (S-1c 구현 중 별건으로 남긴 것)
 > 선행: S-1c(라목 순자산 단독) 브랜치 `fix/stock-165-8-1-ra-net-asset-only` — 이 계획의 줄 번호는 그 작업 트리 기준이다.
 
@@ -47,7 +47,7 @@ ZF 계획서(`section-165-4-zero-floor-sangjeung-junyong.plan.md:86-87`)는 이 
 | ⑧ 미리보기·검증 | `stock-transfer-tax-validate-step2.ts:148`·`:151`·`:568-569` → `calcSection165_4Value` | ✅ (단독 분기 `:147`·`:150`은 ❌) |
 
 anchor ZF-4는 `calcSection165_4Value`를 **직접 호출**해 통과한다 — 함수는 맞지만 배선은 증명하지 않는다([[feedback_library_anchor_does_not_prove_component_uses_it]]).
-결산서(full) 모드는 서식 헬퍼에서 하한이 먼저 걸리는지 **확인 필요**(착수 시 probe 1건).
+결산서(full) 모드도 하한이 없었다 — 어댑터 `aggregateUnlistedNaPerShare`가 `calcNetAssetPerShare`에 평가일을 넘기지 않아 `floorInForce = false`(실측: 자본잠식 취득연도 → −300,000,000, anchor ZM-5 red).
 
 ### 1.3 수정 방향
 
@@ -222,7 +222,28 @@ PR-1을 먼저 하는 이유: 유일하게 **현행 양도분**에서 세액이 
 
 ## 7. 미확인 (착수 전)
 
-- 결산서(full) 모드 음수 순자산의 하한 경로 — probe 1건.
+- ~~결산서(full) 모드 음수 순자산의 하한 경로~~ — 하한 없음 확인(§1.2). 엔진 쪽에서 걸리므로 어댑터는 그대로 둔다.
 - 2017.2.3. 영 개정이유 · 2016.12.20. 법 개정이유 — Q-2a.
 - 1999.1.1.~2000.12.28. 시행규칙 평가 규정 · 2000.12.29. 개정본 §165④ · 1998.12.31. 이전 규정 — Q-3a 2단계.
 - `getValuationWeights` 모델의 원출처 — 계획·설계 문서 grep 0건.
+
+## 8. PR-1 구현 결과 (2026-10-04)
+
+| 층 | 위치 | 변경 |
+|---|---|---|
+| 정본 | `valuation-165-4-basis.ts` | `calcNetAssetOnlyValue`(단독 + 0 하한 + 2009.2.4. 연혁) · `calcSupplementaryPerShare` · `isTransferSupplementaryNonPositive`(Q-4b 술어) 신설 |
+| 엔진 양측 | `stock-valuation-unlisted.ts` | 가중평균 양도·취득을 `calcSection165_4Value`로 위임(인라인 사본·반전 하한 2분기 제거) · 단독 분기 양도·취득·전전연도 → `calcNetAssetOnlyValue` · 사례 49 가중평균도 정본 위임 |
+| 엔진 단측 | `stock-valuation-unlisted-single-side.ts` | 사례 49 양도측 가중평균 정본 위임 · 단독 2곳 → `calcNetAssetOnlyValue` |
+| ⑧ | `stock-transfer-tax-validate-step2.ts` | `validateTransferSupplementaryPositive` — simple은 `transferYearNetAssetPerShare`, full은 ④ 어댑터 집계로 `naAssetTotalRow1EUTransfer`에 오류 · 동일사업연도 미리보기도 `calcSupplementaryPerShare` |
+| ⑫ | `stock-transfer-tax-refines.ts` | scope `both`에서 같은 술어로 `transferYearNetAssetPerShare` 차단 |
+| 문구 | `unlisted-messages.ts` | `TRANSFER_STD_NON_POSITIVE` (⑧·⑫ 공용) |
+| F4 | `OtherAssetBlock.tsx:471` · `legal-codes/stock.ts` · manifest `TRANSFER_DECREE.OLIGOPOLY_SHAREHOLDER` | §158⑧ 정정 · 상수명 `ENFORCEMENT_DECREE_158_8_HEAVY_RE_BUSINESS` · verbatim 키워드 「골프장업ㆍ스키장업 등 체육시설업」 등록 → `verify:legal` PASS |
+
+검증:
+- anchor `__tests__/calc/stock-165-4-zero-floor-main-path.anchor.test.ts` — **red 16건 확인 후** green 20건(ZM-1~ZM-8). 실패 메시지의 현재값이 §1.1 「현재」 열과 전부 일치.
+- 뮤테이션 16건 중 **15 KILLED**. M3(양측 단독 **양도측** 0 하한 원복)은 동치 변이 — 음수든 0이든 같은 `≤ 0` 조기 반환으로 가고, 그 입력은 ⑧·⑫가 먼저 막는다.
+- 전체 vitest 2514파일 · 27,841건 통과 · tsc 0 · lint 오류 0(경고 1건 `STOCK_LOSS_GAIN_DISCOUNT_RATE`는 기존).
+- E2E 주식·비상장 spec 157건 통과.
+- `verify:legal` §158 PASS. 실패 3건(§155의3·§155·§167의3)은 기존.
+
+부수: 정본 위임으로 순손익가치 0 하한(상증령 §56① 후단 — 연혁 무관)도 주 경로에 걸린다. 80% 하한 시대(엔진 기준 2007.2.28.~)에는 순자산이 양수인 한 결과가 같고(하한이 지배), 그 전 양도분만 달라진다 — 전 경로가 이미 같은 정본을 쓰던 §165⑤·C-1과 일치시키는 방향.
