@@ -27,17 +27,18 @@
  * `feedback_unknown_fact_applies_unfavorably`(모름 → 혜택 불성립 + 결론을 가를 때만 「확인 필요」).
  *
  * - **명부 없음 · 양도 주택 행 없음**(`roster_missing`) — 불성립 + 확인 필요.
- * - **명부 행 수 ≠ 판정 주택 수** — 먼저 알려진 제외(상속주택·조특법 감면주택 등) 중 **행으로
- *   특정된 몫**(`knownHouseExclusionHouseIds` — §155②③ `excludedHouses[].houseId` · 조특법
- *   `houseCountExclusionDetails[].houseId`·`specialHouseExclusionDetail.entries[].houseId`)을
- *   명부에서 **빼고** 다시 행 수를 센다(PR-3, 사용자 결정 Q-4 — 상속주택·조특법 감면주택은
- *   합가 당시 주택 수에서 뺀다). `knownHouseExclusionHouseIds`를 넘기는 호출부(STEP 0.9/0.95·
- *   중과 15호·겸용)는 그래도 행 수가 맞지 않으면 어느 행인지 특정되지 않은 것(API 직접 호출의
- *   `houseId` 미연결 선언 등)이므로 `roster_missing`(불성립)이다 — 「모름」을 더는 보류하지
- *   않는다. 이 필드 자체를 넘기지 않는 **레거시 호출부**(§155⑳ 장기임대주택 축 — `isLongTermRental`
- *   행은 「그 밖의 주택」의 합가 구성과 무관한 별도 사실이라 PR-3이 열지 않는다, PR-2 결정 보존)는
- *   `knownHouseExclusionCount`(건수)만으로 가른다 — 건수가 0이면 `roster_missing`, 0보다 크면
- *   종전처럼 `count_mismatch`(판정 보류)다.
+ * - **명부 행 수 ≠ 판정 주택 수** — 먼저 알려진 제외(상속주택·조특법 감면주택·장기임대주택 등) 중
+ *   **행으로 특정된 몫**(`knownHouseExclusionHouseIds` — §155②③ `excludedHouses[].houseId` ·
+ *   조특법 `houseCountExclusionDetails[].houseId`·`specialHouseExclusionDetail.entries[].houseId` ·
+ *   §155⑳ `isLongTermRental` 행)을 명부에서 **빼고** 다시 행 수를 센다(PR-3, 사용자 결정 Q-4 —
+ *   상속주택·조특법 감면주택은 합가 당시 주택 수에서 뺀다 · 2026-10-05 「가」 — §155⑳ 장기임대주택
+ *   행도 같이 뺀다, 이 행은 애초에 「그 밖의 주택」 산정에서 빠지는 별도 사실이지 상속주택·조특법
+ *   감면주택 같은 「합가 당시 주택 수 제외」가 아니지만, 명부에서 빼는 **결과**는 같다). 이 필드를
+ *   넘기는 호출부(STEP 0.9/0.95·중과 15호·겸용·§155⑳ 세대 구성)는 그래도 행 수가 맞지 않으면
+ *   어느 행인지 특정되지 않은 것(API 직접 호출의 `houseId` 미연결 선언 등)이므로 `roster_missing`
+ *   (불성립)이다 — 「모름」을 더는 보류하지 않는다. 이 필드 자체를 넘기지 않는 **레거시 호출부**
+ *   (현재 없음 — 모든 소비처가 행 단위로 추적한다)만 `knownHouseExclusionCount`(건수)만으로
+ *   가른다 — 건수가 0이면 `roster_missing`, 0보다 크면 종전처럼 `count_mismatch`(판정 보류)다.
  * - **합가 전 행의 소유 쪽(`mergeOrigin`)이 비어 있다**(`origin_missing`) — 불성립 + 확인 필요.
  *   날짜만으로 결론이 나는 경우(아래 3-a)만 소유 쪽 없이도 판정한다.
  *
@@ -100,9 +101,10 @@ export type MergeComposition =
       status: "unknown";
       /**
        * `count_mismatch` — **행 단위 추적 없는 레거시 호출부**에서 명부 행 수가 알려진 제외
-       * 건수(`knownHouseExclusionCount`)로 설명될 때만(PR-3 이후에도 §155⑳ 장기임대주택
-       * 축에 한정). `knownHouseExclusionHouseIds`를 넘기는 호출부는 이 경로로 오지 않는다
-       * (행으로 특정되지 않으면 `roster_missing`).
+       * 건수(`knownHouseExclusionCount`)로 설명될 때만(2026-10-05 「가」 이후 모든 소비처가
+       * `knownHouseExclusionHouseIds`를 넘겨 이 경로로 오는 현재 호출부는 없다 — 타입은
+       * 호환을 위해 남긴다). `knownHouseExclusionHouseIds`를 넘기는 호출부는 이 경로로
+       * 오지 않는다(행으로 특정되지 않으면 `roster_missing`).
        */
       reason: "count_mismatch" | "no_roster_input_path";
     }
@@ -124,9 +126,10 @@ export interface MergeCompositionInput {
   mergeDate: Date;
   /**
    * 상속주택·조특법 감면주택 등 **이미 알려진** 주택수 제외 건수(`runHouseCountExclusionStep`의
-   * 합계). `knownHouseExclusionHouseIds`를 **넘기지 않는 레거시 호출부**(§155⑳ 장기임대주택
-   * 축)에서만 쓰인다 — 그 차이가 이 건수로 설명되면 `count_mismatch`(판정 보류)로 두고,
-   * 0이면 `roster_missing`이다.
+   * 합계). `knownHouseExclusionHouseIds`를 **넘기지 않는 레거시 호출부**에서만 쓰인다 —
+   * 그 차이가 이 건수로 설명되면 `count_mismatch`(판정 보류)로 두고, 0이면 `roster_missing`
+   * 이다. 2026-10-05 「가」 이후 §155⑳ 장기임대주택 축도 행 id를 넘기므로 현재 모든 소비처가
+   * `knownHouseExclusionHouseIds`를 넘긴다(아래 필드).
    */
   knownHouseExclusionCount?: number;
   /**
@@ -174,11 +177,11 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
 
   // PR-3 — 알려진 제외 중 행으로 특정된 몫을 먼저 빼고 남은 행으로 구성을 센다(사용자 결정 Q-4).
   // `knownHouseExclusionHouseIds`가 **정의돼 있으면**(빈 배열이어도) 그 호출부는 제외를 행
-  // 단위로 추적한다 — STEP 0.9/0.95·중과 15호·겸용이 이렇다. 그 경우 행으로 특정되지 않는
-  // 나머지(API 직접 호출의 `houseId` 미연결 선언 등)는 더는 판정을 보류하지 않고 불성립이다
-  // (모름 → 불리를 끝까지 적용). 필드 자체를 넘기지 않는 레거시 호출부(§155⑳ 장기임대주택
-  // 축 — `knownHouseExclusionCount`만으로 「알려진 간극이니 신경 쓰지 말라」는 종전 설계를
-  // 보존한다, PR-2 결정)는 `knownHouseExclusionCount`만으로 판정 보류 여부를 가른다.
+  // 단위로 추적한다 — STEP 0.9/0.95·중과 15호·겸용·§155⑳ 세대 구성(2026-10-05 「가」)이 이렇다.
+  // 그 경우 행으로 특정되지 않는 나머지(API 직접 호출의 `houseId` 미연결 선언 등)는 더는
+  // 판정을 보류하지 않고 불성립이다(모름 → 불리를 끝까지 적용). 필드 자체를 넘기지 않는
+  // 레거시 호출부(현재 없음 — 타입 호환을 위해 분기만 남긴다)는 `knownHouseExclusionCount`
+  // 만으로 판정 보류 여부를 가른다.
   const tracksExclusionRows = knownHouseExclusionHouseIds !== undefined;
   const excludedIds = new Set(knownHouseExclusionHouseIds ?? []);
   const effectiveHouses = excludedIds.size > 0 ? houses.filter((h) => !excludedIds.has(h.id)) : houses;
