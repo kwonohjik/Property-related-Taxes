@@ -11,11 +11,11 @@
  * 계획: docs/02-design/features/transfer-surcharge-house-count-divergence.plan.md
  * · docs/00-pm/roster-required-other-assets.plan.md(PR-B — redevelopment_apt F1 확장)
  */
-import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { houseCountSelfOffset, usesHouseCountRoster } from "@/lib/calc/housing-like-asset";
 
 /** computeHouseCountDivergence 입력 — TransferFormData가 구조적으로 satisfy (F4: 테스트 경량화). */
 export interface HouseCountDivergenceInput {
-  /** 양도 대표 자산 종류 (form.assets[0].assetKind). `isOneHouseExemptionAsset`일 때만 게이트 통과 */
+  /** 양도 대표 자산 종류 (form.assets[0].assetKind). `usesHouseCountRoster`일 때만 게이트 통과 */
   primaryKind: string;
   /** ① 세대 보유 "주택" 수 (정확 숫자 문자열) */
   householdHousingCount: string;
@@ -32,32 +32,38 @@ export interface HouseCountDivergenceResult {
   showMismatch: boolean;
   /** ① 선언 주택 수 (정확값) */
   declared: number;
-  /** ④ 기준 구조적 주택 수 = 1(양도주택) + 취득일 있는 다른 주택 수 (분양권 제외) */
+  /** ④ 기준 구조적 주택 수 = 자기 몫(`selfOffset`) + 취득일 있는 다른 주택 수 (분양권 제외) */
   structuralCount: number;
+  /** 양도 자산 자신을 주택 수에 넣는가 — 주택·재개발APT 1, 조합원입주권 0(`houseCountSelfOffset`). 문구 분기용 */
+  selfOffset: number;
 }
 
 /**
  * ① 선언 세대 주택 수와 ④ 목록의 구조적 주택 수를 대조한다.
  *
- * - **F1 게이트**: `isOneHouseExemptionAsset(primaryKind)`(housing·redevelopment_apt)일 때만
- *   노출. 입주권·분양권 양도 시 `householdHousingCount`는 "주택 수"(양도 권리 미포함)라 의미 축이
- *   어긋나 false mismatch가 난다. redevelopment_apt는 housing과 같은 §154① 비과세 판정 대상이라
- *   PR-B(2026-10-05)로 포함됐다 — `household-house-count.ts`의 F1과 같은 집합.
+ * - **F1 게이트**: `usesHouseCountRoster(primaryKind)`(housing·redevelopment_apt·right_to_move_in)
+ *   일 때만 노출 — `household-house-count.ts`의 F1과 같은 집합. 자기 몫은 `houseCountSelfOffset`이
+ *   정한다: 주택·재개발APT는 양도 자산 자신이 주택이라 1, 조합원입주권은 자신이 주택이 아니라 0
+ *   (§89①4호 — 「다른 주택」 수). 종전에는 `1 +`를 고정으로 써서 입주권을 게이트에서 뺐다(PR-C
+ *   범위 밖 · 계획서 `roster-required-other-assets.plan.md` §10 별건 2). 분양권 양도는 명부 대상이
+ *   아니라 여전히 미노출이다.
  * - **F7 분양권 제외**: ①은 "주택"만 센다. 분양권은 ④ 별도 집계이고 pre-2021·3억↓는 엔진 미산입이라
  *   structuralCount에 더하면 이중 오탐 → 주택 행만 카운트(분양권은 populated 게이트에만 반영).
  */
 export function computeHouseCountDivergence(
   input: HouseCountDivergenceInput,
 ): HouseCountDivergenceResult {
-  const isHouseSale = isOneHouseExemptionAsset(input.primaryKind); // F1 게이트
+  const isHouseSale = usesHouseCountRoster(input.primaryKind); // F1 게이트
   const populated = input.houses.length > 0 || input.presaleRights.length > 0; // C-1: 분양권만 입력해도 노출
   const declared = parseInt(input.householdHousingCount || "1", 10); // store default "1"과 일치
+  const selfOffset = houseCountSelfOffset(input.primaryKind);
   const structuralCount =
-    1 + input.houses.filter((h) => h.acquisitionDate).length; // F7: 주택만(양도주택 +1). 분양권 제외
+    selfOffset + input.houses.filter((h) => h.acquisitionDate).length; // F7: 주택만. 분양권 제외
   return {
     showPrecedence: isHouseSale && populated,
     showMismatch: isHouseSale && populated && structuralCount !== declared,
     declared,
     structuralCount,
+    selfOffset,
   };
 }
