@@ -1,6 +1,6 @@
 # 명부 필수화 — 입주권·분양권·재개발APT·겸용주택 (Q-7 후속)
 
-> 작성 2026-10-05 · 상태 **설계(계획서) 단계 — 코드 변경 없음 · 사용자 결정 반영(2026-10-05, §8)** · 대상 화면 양도세 계산기(단건·다건) · 대상 엔진 `lib/calc/household-house-count.ts` · `lib/tax-engine/transfer-tax-redevelopment-transforms.ts` · `lib/tax-engine/transfer-tax-rate-calc.ts`
+> 작성 2026-10-05 · 상태 **✅ 완료(2026-10-06) — PR-B #1983 · PR-D #1984 · PR-C #1985 머지, §10 참조** · 대상 화면 양도세 계산기(단건·다건) · 대상 엔진 `lib/calc/household-house-count.ts` · `lib/tax-engine/transfer-tax-redevelopment-transforms.ts` · `lib/tax-engine/transfer-tax-rate-calc.ts`
 > 선행: [`merge-composition-unknown-unfavorable.plan.md`](merge-composition-unknown-unfavorable.plan.md)(PR-1 #1972 — 주택(`"housing"`) 양도 명부 필수화 완료) §2-8·§7 Q-7 — 「입주권·분양권·재개발 아파트·겸용주택은 ① 의미 축이 달라 별건」으로 남긴 항목의 후속 설계.
 > 지시: 「분양권 자체의 양도는 1세대 1주택 비과세 되는 경우가 없어」(2026-10-05) — 분양권이 비과세 축에 쓰이지 않는다는 전제를 코드·법령으로 확인하고, 다른 쓰임이 없으면 필수화 대상에서 제외하는 안을 권장안으로 제시.
 
@@ -219,8 +219,8 @@ API 직접 호출에서 `presaleRights` 미지정 시 `"clear"`가 되는 엔진
 |---|---|---|
 | PR-A | §4-1 — 겸용주택 "이미 완료" 문서 정정 (선행 계획서 §2-8 각주 추가) | 코드 변경 없음, 즉시 가능 |
 | PR-B | §4-2 — 재개발APT: F1 확장(엔진) + 명부 UX 전환(화면) + ⑧ + 테스트 갱신 | ✅ #1983 머지(2026-10-05) |
-| PR-C | §4-3 — 입주권: 권리 양도용 도출식(엔진, +1 없음) + 명부 UX 전환(화면, "0채" 입력 경로 포함) + ⑧ + 테스트 갱신 | §89①4호 가목 신규 도달 경로 — anchor 필수 |
-| PR-D | §4-5·§4-6 — 세대 보유 분양권·입주권 목록 필수 입력(확인 토글 + ⑧, 주택·겸용·재개발APT·입주권 양도) + 입주권 양도의 입주권 수를 목록에서 도출 | Q-17~20 — **PR-C보다 먼저**(Q-20) |
+| PR-C | §4-3 — 입주권: 권리 양도용 도출식(엔진, +1 없음) + 명부 UX 전환(화면, "0채" 입력 경로 포함) + ⑧ + 테스트 갱신 | ✅ #1985 머지(2026-10-06) |
+| PR-D | §4-5·§4-6 — 세대 보유 분양권·입주권 목록 필수 입력(확인 토글 + ⑧, 주택·겸용·재개발APT·입주권 양도) + 입주권 양도의 입주권 수를 목록에서 도출 | ✅ #1984 머지(2026-10-05) — PR-C보다 먼저(Q-20) |
 
 PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 먼저 해도 입주권에 영향 없음, 역도 성립) — 리스크를 줄이려면 분리 권장.
 
@@ -258,4 +258,24 @@ PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 �
 - [x] 겸용주택이 별도 assetKind가 아니라 `housing` 토글임을 확인 — Q-7의 "별건" 분류가 과잉이었음을 코드로 입증
 - [x] 입주권의 "0채 입력 경로 없음" 결함을 독립적으로 발견·기록
 - [x] PR 분할안 + Q/V 레지스터 작성
-- [ ] (범위 밖) 실제 코드 변경 — PR-A~C는 이 계획서 승인 후 별도 PR
+- [x] 실제 코드 변경 — PR-B #1983 · PR-D #1984 · PR-C #1985 (PR-A는 §4-1대로 코드 변경 없음, 이 문서로 갈음)
+
+## 10. 완료 기록 (2026-10-06)
+
+| PR | 머지 | 내용 |
+|---|---|---|
+| #1982 | 9cd570925 | 이 계획서 |
+| #1983 (PR-B) | cb439187a | 재개발APT — 세대 주택 수를 명부에서 도출(F1 = `isOneHouseExemptionAsset`), 「1/2/3+」 제거, 「다른 보유 주택이 없습니다」 확정 + ⑧, §155① 일시적 2주택 자동 도출 포함(Q-12) |
+| #1984 (PR-D) | a2999c439 | 세대 보유 분양권·입주권 목록 필수 — 「보유한 분양권·조합원입주권이 없습니다」 확인 + ⑧(주택·재개발APT·입주권 양도, `requiresPresaleRightsConfirmation`), 안내 문구 「취득일과 무관하게 모두 입력」, 입주권 양도의 입주권 수를 「양도 입주권 1 + 목록의 조합원입주권 수」로 도출(`resolveHouseholdRightCount` — 판정 메뉴 `deriveHouseholdRightCount` 재사용, 숫자 칸 제거). §89①4호 본문에 입주권 개수 셈의 취득일 제한 없음(KoreanLaw MCP, MST 280405) |
+| #1985 (PR-C) | 088a3417e | 입주권 — 세대 주택 수를 명부에서 도출(오프셋 0: `houseCountSelfOffset`, 집합 `usesHouseCountRoster`), 「1/2/3+」 제거, 확정 시 0채 → §89①4호 가목이 계산기에서 도달. 가목은 분양권·입주권 확인(PR-D)과 함께일 때만 성립함을 양·음 쌍 anchor로 고정(`right-to-move-in-ga-clause-gate.anchor.test.ts`) |
+
+각 머지 후 master에서 `npm run verify:legal` 398/0. #1985는 CI E2E(3/6) A-13(입주권 시드에 확정 누락)이 실패해 리드가 시드를 고친 뒤(cfdeafb1e) 재통과했다 — 레인 보고의 「로컬 통과」와 달리 로컬에서도 재현됐다.
+
+### 남은 별건 (이 프로그램 범위 밖, 착수하지 않음)
+
+1. **판정 메뉴의 「없음」 구별** — 1세대1주택 판정 화면(`lib/calc/one-house-exemption-validate.ts`)에는 주택 목록·분양권·입주권 목록 모두 「입력 안 함」과 「없음」을 구별하는 확인이 없다. 판정 결과를 계산기로 넘길 때(`lib/calc/one-house-judgment-handoff.ts`) 목록이 비면 `householdNoOtherHousesConfirmed`(PR-1부터)·`householdNoPresaleRightsConfirmed`(PR-D)를 `true`로 넘긴다.
+2. **입주권의 ①↔④ 불일치 배너** — `lib/calc/house-count-divergence.ts`가 `1 + 행 수`를 고정으로 써서 입주권(오프셋 0)에서는 배너가 뜨지 않는다(오탐은 없음, anchor A5가 현 상태 고정).
+3. **API 직접 호출의 분양권 미지정** — `oneRightPresaleGate`(`lib/tax-engine/transfer-tax-redevelopment-transforms.ts:97-109`)는 `presaleRights`가 없으면 `"clear"`. 계산기는 PR-D ⑧이 막지만 API 직접 호출에는 남는다(§4-6).
+4. **다건 provisoGate 드리프트** — `lib/calc/multi-transfer-tax-api.ts:166` `isHousing: primaryKind === "housing"`이 단건(OH-20 수정분)과 어긋난다. 다건은 재개발APT를 전면 차단(`validateMultiSupportedMode`)해 지금은 도달하지 않는다(PR-B 레인 발견).
+5. **구 §104①4호 단서(무주택 분양권, 2018.1.1~2021.5.31 양도분)** — 엔진이 영 §167의6 1·2호를 보지 않는다. 계산기 도달 경로 없음, API 직접 호출에서만 도달(§4-4).
+
