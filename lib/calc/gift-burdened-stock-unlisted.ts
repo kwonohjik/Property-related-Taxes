@@ -14,6 +14,10 @@
  * 0·음수는 적법한 값이다(결손·자본잠식) — 「존재」만 본다.
  */
 
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
 type UnlistedFields = Pick<
@@ -99,4 +103,26 @@ export function missingBurdenedUnlistedValuationInputs(bgt: UnlistedFields): str
       missing.push("직전 사업연도 월수(1~12 정수)");
   }
   return missing;
+}
+
+/**
+ * ⑧ — §165④ 양도일(증여일) 연혁. ⑫(`refineSingleModeRequiredInputs`)와 같은 조건·문구다.
+ *
+ * 이 경로는 비상장·환산이라 §165④3 사유를 양측 모두 읽는다(`netAssetOnlyReasonSidesRead`의 «추정 모드 비상장» 행).
+ * 증여일이 없거나 해석되지 않으면 막지 않는다(날짜는 1단계 필수 입력이 따로 잡는다).
+ * 사유를 고른 뒤 증여일을 고쳐 연혁이 어긋나면 ⑫가 합산 호출 전체를 400으로 돌려 JSON 그대로 배너에 나왔다.
+ */
+export function burdenedUnlistedEraError(
+  bgt: Pick<BurdenedGiftStockTransferTaxInput, "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason">,
+  giftDate: string | undefined,
+): string | null {
+  const td = toOptionalDate(giftDate);
+  if (!td) return null;
+  if (isSection165_4EraUnsupported(td)) return UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED;
+  if (
+    !isNetAssetOnlyReasonInEra(bgt.netAssetOnlyReason ?? undefined, td) ||
+    !isNetAssetOnlyReasonInEra(burdenedAcquisitionReason(bgt), td)
+  )
+    return UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA;
+  return null;
 }

@@ -25,7 +25,10 @@ import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-agg
 import { missingPriorRoundInputs } from "@/lib/calc/gift-required-inputs";
 import { foreignGiftTaxBaseMissing } from "@/lib/calc/gift-required-inputs";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
-import { missingBurdenedUnlistedValuationInputs } from "@/lib/calc/gift-burdened-stock-unlisted";
+import {
+  burdenedUnlistedEraError,
+  missingBurdenedUnlistedValuationInputs,
+} from "@/lib/calc/gift-burdened-stock-unlisted";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
 import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
@@ -322,6 +325,9 @@ export function validateStep(step: number, form: FormState): string | null {
       // C-S6b: 비상장 환산 — §165④ 보충적 평가 입력 필수 (B23). 미입력이면 엔진이 양도기준시가
       // 0으로 읽어 취득가액 0이 된다. 규칙은 주식 마법사 ⑧의 거울(0·음수 적법 — 존재만 본다).
       if (sbgt.acquisitionMode === "estimated" && sbgt.marketType === "unlisted") {
+        // 증여일 연혁 — ⑫와 같은 조건(2000.4.2. 이전 · §165④3 사유 시행 시기). 입력 누락보다 먼저 알린다.
+        const eraError = burdenedUnlistedEraError(sbgt, form.giftDate);
+        if (eraError) return `${sbLabel}: ${eraError}`;
         const missingUnlisted = missingBurdenedUnlistedValuationInputs(sbgt);
         if (missingUnlisted.length > 0) {
           return `${sbLabel}: ${missingUnlisted[0]}를 입력하세요. (소령 §165④ 비상장 보충적 평가 — 환산취득가 산정)`;
