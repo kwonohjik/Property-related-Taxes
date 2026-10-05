@@ -15,6 +15,7 @@
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { callTransferTaxAPI, buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
+import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -92,6 +93,25 @@ const PROVISO_5 = {
   provisoReason: "pre_designation_contract",
   provisoPreContractNoHouse: true,
 } as Partial<TransferFormData>;
+
+/**
+ * OH-20 다건 ④ — `buildPropertyPayload`(`multi-transfer-tax-api.ts`)의 provisoGate가 단건과 같은
+ * 술어(`isOneHouseExemptionAsset`)를 쓰는지. 종전 다건은 `primaryKind === "housing"` 리터럴이라
+ * 재개발 완공APT의 단서를 버렸다(계획서 `roster-required-other-assets.plan.md` §10 별건 4).
+ * 다건 화면은 지금 재개발APT를 차단하지만(`validateMultiSupportedMode`) ④ 자체는 단건과 같아야 한다.
+ */
+describe("OH-20 다건 ④ — buildPropertyPayload도 재개발 완공APT 단서를 싣는다", () => {
+  it("🔑 승계조합원 5호 → oneHouseExemptionProviso (단건과 같은 값)", () => {
+    const p = buildPropertyPayload(makeForm(successorAsset(), PROVISO_5)) as Record<string, unknown>;
+    expect(p.oneHouseExemptionProviso).toEqual({ reason: "pre_designation_contract", preContractNoHouse: true });
+  });
+
+  it("부정 짝 — 조합원입주권에는 싣지 않는다", () => {
+    const right = { ...successorAsset(), assetKind: "right_to_move_in", redevSubject: "right", redevIsSuccessorMember: "" } as Asset;
+    const p = buildPropertyPayload(makeForm(right, PROVISO_5)) as Record<string, unknown>;
+    expect(p.oneHouseExemptionProviso).toBeUndefined();
+  });
+});
 
 describe("OH-20 ④ — 재개발 완공APT의 §154① 단서가 body에 실린다", () => {
   it("🔑 승계조합원 5호(공고 전 계약 · 무주택) → oneHouseExemptionProviso 전송 (종전 undefined)", async () => {
