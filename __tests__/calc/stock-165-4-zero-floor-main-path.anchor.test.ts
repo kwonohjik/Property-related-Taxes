@@ -107,7 +107,7 @@ describe("ZM-2: 순자산 단독 — 취득측 음수 순자산은 0 (취득가�
   });
   it("§165④3 가목(청산) → 0", () => {
     const r = ok(
-      run(form({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionYearNetAssetPerShare: "-10000" } as Partial<StockTransferFormData>)),
+      run(form({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death", acquisitionYearNetAssetPerShare: "-10000" } as Partial<StockTransferFormData>)),
     );
     expect(r.acq).toBe(0);
   });

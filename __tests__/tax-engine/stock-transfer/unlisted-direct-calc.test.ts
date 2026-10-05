@@ -28,13 +28,15 @@ function makeForm(patch: Partial<StockTransferFormData> = {}): StockTransferForm
 
 describe("unlisted-direct-calc — shouldSkipNetIncome (E-6 단일 진실)", () => {
   test("EU-01: netAssetOnlyReason 빈 문자열 → false", () => {
-    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "" }))).toBe(false);
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "" }), "transfer")).toBe(false);
   });
   test("EU-02: stock_holding_company → true", () => {
-    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "stock_holding_company" }))).toBe(true);
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "stock_holding_company" }), "transfer")).toBe(true);
+    // 양도 사유는 취득 당시 평가를 건드리지 않는다(계획서 §14)
+    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "stock_holding_company" }), "acquisition")).toBe(false);
   });
   test("EU-03: liquidation_or_owner_death → true", () => {
-    expect(shouldSkipNetIncome(makeForm({ netAssetOnlyReason: "liquidation_or_owner_death" }))).toBe(true);
+    expect(shouldSkipNetIncome(makeForm({ acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" }), "acquisition")).toBe(true);
   });
 });
 
@@ -145,7 +147,7 @@ describe("unlisted-direct-calc — adaptUnlistedFlatToApiBody (4 필드 reduce)"
     expect(reduced.acqNa).toBe(1500);
   });
 
-  test("EU-17b: opts.niSkip 명시 → form.netAssetOnlyReason 비어있어도 skip", () => {
+  test("EU-17b: niSkip 명시 → form.netAssetOnlyReason 비어있어도 skip", () => {
     const form = makeForm({
       unlistedValuationMode: "full",
       netAssetOnlyReason: "",
@@ -155,7 +157,7 @@ describe("unlisted-direct-calc — adaptUnlistedFlatToApiBody (4 필드 reduce)"
       naLiabTotalRow8EUTransfer: "30000000",
       naShareCountEUTransfer: "10000",
     });
-    const reduced = adaptUnlistedFlatToApiBody(form, { niSkip: true });
+    const reduced = adaptUnlistedFlatToApiBody(form, { transfer: true, acquisition: true });
     expect(reduced.transferNi).toBe(0);
     expect(reduced.transferNa).toBe(2000);
   });

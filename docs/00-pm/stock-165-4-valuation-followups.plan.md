@@ -1,6 +1,6 @@
 # 비상장 보충평가(영 §165④) 별건 4건 — 수정 계획
 
-> 상태: **PR-1(S-1c-4 + F4) 머지**(#1953 — 결과 §8) · **PR-2(S-1c-2) 머지**(#1959 — 결과 §9) · **PR-3(S-1c-3) 1단계 머지**(#1962 — 결과 §10) · **PR-4(S-1c-3 2단계) 머지**(#1966 — 결과 §12 — 범위: max 구간 반영 + 2000.4.2. 이전 차단) · **PR-5(Q-3b §165④3 사유 연혁) 구현 완료**(결과 §13). §6 권장안 전부 확정.
+> 상태: **PR-1(S-1c-4 + F4) 머지**(#1953 — 결과 §8) · **PR-2(S-1c-2) 머지**(#1959 — 결과 §9) · **PR-3(S-1c-3) 1단계 머지**(#1962 — 결과 §10) · **PR-4(S-1c-3 2단계) 머지**(#1966 — 결과 §12 — 범위: max 구간 반영 + 2000.4.2. 이전 차단) · **PR-5(Q-3b §165④3 사유 연혁) 머지**(#1970 — 결과 §13) · **PR-6(사유 시점별) 구현 완료**(결과 §14). §6 권장안 전부 확정.
 > 출처: `docs/00-pm/stock-165-8-1-ra-net-asset-only.plan.md` §4 · §10-6 · §10-7 · §11.3 (S-1c 구현 중 별건으로 남긴 것)
 > 선행: S-1c(라목 순자산 단독) 브랜치 `fix/stock-165-8-1-ra-net-asset-only` — 이 계획의 줄 번호는 그 작업 트리 기준이다.
 
@@ -444,6 +444,72 @@ PR-1에서 주 경로를 전부 `calcSection165_4Value`로 모았기 때문에 �
 
 ### 13.5 남은 한계
 
-- 사유는 **양측(양도·취득) 평가에 하나**다. 법문은 「양도일 또는 취득일이 속하는 사업연도」로 평가 시점마다 사실을 본다(예: 취득 당시 사업개시 1년 미만이었으나 양도 당시엔 아님). 종전부터의 모델 단순화이고 이 PR 범위 밖이다.
+- ~~사유는 **양측(양도·취득) 평가에 하나**다~~ → §14에서 시점별로 나눴다.
 - 증여 부담부 주식 ⑧(증여세 폼)에는 날짜 차단이 없다(§12와 같은 한계). 화면은 증여일로 선택지를 거르고 ⑫가 막는다.
 
+
+## 14. PR-6 — §165④3 사유를 양도·취득 평가 시점마다 따로 (2026-10-05)
+
+### 14.1 결함
+
+사유 칸이 하나(`netAssetOnlyReason`)이고 고르면 **양도·취득 양측이 함께** 순자산 단독이 된다(`stock-valuation-unlisted.ts` 순자산 단독 분기). 「양도측만」·「취득측만」을 입력할 방법이 없다. 도메인 최초 커밋(`137d83a8f`, 2026-05-17)부터의 모델이고, 설계서(`stock-transfer-tax.engine.design.md:38·79·210`)에 시점 축 검토 기록이 없다 — 법령 판단이 아니라 근거 없는 단순화다.
+
+### 14.2 법령 — 시점별 판단
+
+- §165④는 「법 제99조제1항제5호 후단(현행 4호 후단)에 따른 **평가기준시기 및 평가액**」 규정이고, 1호 가·나목이 「**양도일 또는 취득일**이 속하는 사업연도」라 양도 당시·취득 당시 기준시가를 **각각** 이 항으로 평가한다. 3호는 그 평가 방법의 일부다.
+- 구 다목(2007.2.28.~2023.2.27.): 「**양도일 또는 취득일이 속하는** 사업연도 전 3년 이내의 사업연도부터 계속하여 결손금」 — 문언상 시점별.
+- 현행 라목: 「**평가기준일** 현재 잔여 존속기한」 — 시점별. 현행 다목(주식등 80%)은 시점 문언이 없으나 자산 구성 사실이라 평가 시점의 사실로 본다.
+- 나목(사업개시 전·1년 미만·휴폐업): 서울고법 2025.10.2. 선고 2024누52016(상고심 대법원 2026.6.5. 선고 2025두35546은 취득가액 쟁점만 판단)은 양도 당시 기준시가에 나목을 적용하면서 「이 사건 2차주식 양도일인 2009. 6. 23.으로부터 **역산하여** 사업개시 후 1년 미만의 법인에 해당」이라 판단했다 — **평가 시점 기준**. 「사업개시 후 1년 미만」 여부는 「법인 설립 후 사업개시일」 기준(대법원 2024. 7. 11. 선고 2021두46445 — 국세청 출처라 본문 미확보, 원심 인용으로 확인).
+- 가목(청산 중 · 사업자 사망 등): 「확정신고기한 이내에 청산절차가 진행 중」의 시점은 신고기한 하나라 양측에 같은 사실일 수 있다 — **해석례 미확보(확인 필요)**. 그래서 사유를 시점별로 **사용자가 고른다**(가목이면 양측 다 고르면 된다). 엔진이 가목을 양측에 자동 복사하지 않는다.
+- §165⑧1호 후단(라목 주식등)은 시점이 아니라 **주식등의 종류**에 따른 규율이라 양측 공통으로 둔다.
+- 연혁 게이트(§13 `isNetAssetOnlyReasonInEra`)는 양측 모두 **양도일** 기준(Q-3c — 부칙 「양도하는 분부터」).
+
+### 14.3 설계
+
+| 항목 | 결정 |
+|---|---|
+| 필드 | `netAssetOnlyReason` = **양도 당시** 평가 사유(이름 유지) · `acquisitionNetAssetOnlyReason` 신설 = **취득 당시** 평가 사유 |
+| leaf | `resolveNetAssetOnlyBasis(f, side)` · `shouldSkipNetIncome(form, side)` — `side` 필수(호출부 누락을 tsc가 잡는다) |
+| 엔진 | 양측 경로: 양측 단독 → 종전 순자산 단독 분기 / 한쪽만 → 가중평균 분기에서 그 쪽만 단독. 양도측만 경로(사례 49·§99①4 액면가)는 양도 사유, 취득측만 경로(취득일 거래정지·매매사례 개산공제·비과세 참고 계산)는 취득 사유. §165⑨ 전전연도는 **양도측** 기준(보정 대상이 양도기준시가) |
+| 필수 입력 ⑧⑫ | `requiredUnlistedValuationKeys`의 `niSkip`을 양·취로 나눈다 |
+| ⑤ | 사유 라디오 2개(양도 당시 · 취득 당시). 취득측만 화면은 취득 사유만, 양도측만 화면(이월과세 증여자 기준 환산)은 양도 사유만. 사례 49(취득측 액면가)면 취득 사유 숨김. 결산서 모드 순손익 표는 열별로 |
+| 저장값 이전 | 종전 레코드의 사유 하나 = 양측. 주식 폼 normalize: `acquisitionNetAssetOnlyReason` **키가 없으면** `netAssetOnlyReason`을 복사. 증여 부담부(normalize 없음): 「명시적 없음」을 `null`로 저장하고, 키 부재(`undefined`)면 양도 사유를 따른다 |
+| ⑦ echo | `valuationDetail.acquisitionNetAssetOnlyReason` — 취득일 거래정지 결과 카드는 이 값을 읽는다 |
+
+### 14.4 구현 결과 (2026-10-05)
+
+| 층 | 위치 | 변경 |
+|---|---|---|
+| leaf | `net-asset-only-basis.ts` | `ValuationSide` · `resolveNetAssetOnlyBasis(f, side)` (side 필수) |
+| leaf | `unlisted-flat-adapter.ts` | `shouldSkipNetIncome(form, side)` · `netIncomeSkipBySide` · 어댑터 열별 skip |
+| 공용 술어 ⑧⑫ | `stock-transfer-required-inputs.ts` | `requiredUnlistedValuationKeys`의 `niSkip`을 `{transfer, acquisition}`으로 · `netAssetOnlyReasonSidesRead` 신설(사유를 읽는 시점 = 사유 칸이 있는 시점) |
+| 엔진 | `stock-valuation-unlisted.ts` | 양측 단독(또는 양도 단독 + 이월과세 취득측 덮어쓰기)이면 종전 분기, 한쪽만이면 가중평균 분기에서 그 쪽만 순자산 단독(0 하한 · 80% 하한 없음). §165⑨ 전전연도는 양도측 기준. 결과에 `acquisitionNetAssetOnlyReason` |
+| 엔진 단측 | `-single-side.ts` · `stock-acquisition-basis.ts` | 액면가 경로 = 양도 사유 · 취득측 보충평가 = 취득 사유 · 취득일 거래정지 echo는 `acquisitionNetAssetOnlyReason` |
+| ①②③ | 폼 타입·초기값·normalize | `acquisitionNetAssetOnlyReason` — **키 없는 종전 레코드는 양도 사유 복사** |
+| ④⑨⑫⑭ | api · Zod · refines · engine-input | 필드 추가 · 시점별 필수/연혁 차단 |
+| ⑤ | `EstimatedUnlistedBlock` · `EstimatedUnlistedNetIncomeStatement` | 사유 칸 둘(화면별 노출 — 취득측만/양도측만/사례 49) · 순손익 칸·결산서 열 시점별 · 한쪽만 단독이면 시점 안내(`net-asset-only-side-caption`) · 2:3 토글은 가중평균 시점이 남으면 유지 |
+| ⑦ | `StockTransferTaxResultViewHelpers` | 취득일 거래정지 분해가 취득 근거를 읽는다 |
+| 증여 부담부 | 타입 · `gift-burdened-stock-unlisted.ts` · 블록 · `StockBurdenedDebtSection` | `null` = «없음», 키 없음 = 종전(양도 사유를 따름 — `burdenedAcquisitionReason`). 새로 켠 레코드는 `null`로 시작, 종전 레코드에서 양도 사유를 바꾸면 취득 사유를 그 값으로 고정 |
+
+부수 정정(Q-3b 누락): 이월과세 **증여자 기준 환산의 분모**(취득은 실지거래가·매매사례)도 양도 사유를 읽는데 연혁 차단이 없었다 — `netAssetOnlyReasonSidesRead`로 ⑧·⑫에 들어갔다(PS-11).
+
+### 14.5 세액 변화 (공통 입력 — 2022 양도, §14 anchor 머리말)
+
+| 사유 | 종전 | 변경 후 |
+|---|---|---|
+| 양도 당시만 | 입력 불가(하나 고르면 양측 300,000,000) | **240,000,000** |
+| 취득 당시만 | 입력 불가 | **352,941,176** |
+| 양측 | 300,000,000 | 300,000,000 |
+| 취득일 거래정지 · 양도 사유만 남음 | 취득측 단독 80,000,000 | 가중평균+하한 **64,000,000**(취득측은 취득 사유만 읽는다) |
+
+### 14.6 검증
+
+- anchor `stock-165-4-3-reason-per-side.anchor.test.ts`(PS 29건) · UI `net-asset-only-reason-per-side-ui.anchor.test.tsx`(UI-PS 14건).
+- 재기준(법령 우선 — 종전 사유 하나 = 양측 단독 의도): `case-13-19-valuation` C14·C27 · `halt-acquisition-c1` C1-ENGINE-2(echo → 취득 근거) · `valuation-165-4-3-and-floor80-c1` · `stock-165-4-zero-floor-main-path` ZM-2 · `stock-sale-case-deduction` SC-4·9e·V3 · `required-inputs-2` B5 · `stock-165-8-1-ra-net-asset-only` RA-1(양측 공통)·RA-8(취득 근거) · `unlisted-direct-calc` EU-01~03·17b · `EstimatedUnlistedBlock` UI-1~4 · `reversal-corp-toggle-ui` UI-RC-4 · `gift-burdened-stock-unlisted-ui` BG-UI-UNL-5 · Q-3b `stock-165-4-3-reason-era`(R = 양측 · 취득측만 경로는 취득 칸).
+- 뮤테이션 **30/30 KILLED** — 처음 25/30(M8 액면가 경로 · M16 사례 49 남은 취득 사유 · M17 증여자 분모 · M28 증여 생성 null · M29 결과뷰) → PS-11·PS-12·UI-PS-7·UI-PS-8 추가 후 전부 KILLED.
+- 전체 vitest 2,541파일 · 28,160건 · tsc 0 · lint 오류 0 · E2E 주식·증여 부담부 132건.
+
+### 14.7 남은 한계
+
+- 가목(청산 중)이 양측 공통 사실인지 해석례 미확보 — 사용자가 시점별로 고른다(자동 복사 안 함).
+- `stock-transfer-tax-refines.ts` 753줄(≥750 위험구간 · 800 미만). 분리는 별건.

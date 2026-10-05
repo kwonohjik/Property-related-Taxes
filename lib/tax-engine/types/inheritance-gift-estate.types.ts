@@ -1077,13 +1077,19 @@ export interface BurdenedGiftStockTransferTaxInput {
   acquisitionYearNetIncomePerShare?: number;
   /** 증여자 취득일 직전 사업연도 1주당 순자산가치 */
   acquisitionYearNetAssetPerShare?: number;
-  /** §165④3 순자산가치 단독 평가 사유 — 설정 시 순손익가치를 쓰지 않는다 */
+  /** **양도(증여) 당시** 평가의 §165④3 순자산가치 단독 평가 사유 — 설정 시 그 시점의 순손익가치를 쓰지 않는다 */
   netAssetOnlyReason?:
     | "liquidation_or_owner_death"
     | "no_business_or_short_or_closed"
     | "consecutive_loss_3y"
     | "stock_holding_company"
     | "remaining_term_under_3y";
+  /**
+   * **취득 당시** 평가의 §165④3 사유(계획서 `stock-165-4-valuation-followups.plan.md` §14).
+   * `null` = 사용자가 고른 «없음». 키 없음(`undefined`) = 종전 레코드 — 사유 칸이 하나였고 양측에 걸렸으므로
+   * `netAssetOnlyReason`을 따른다(`burdenedAcquisitionReason`). 저장(JSON)에서 `undefined`는 사라지므로 «없음»은 `null`이다.
+   */
+  acquisitionNetAssetOnlyReason?: BurdenedGiftStockTransferTaxInput["netAssetOnlyReason"] | null;
   /** 소득세법 시행규칙 §81④1호 — 같은 사업연도 취득·양도(양도·취득 평가액 동일 시에만 노출) */
   unlistedSameBizYearToggle?: boolean;
   /** §81④1호 전전사업연도 1주당 순손익가치 */

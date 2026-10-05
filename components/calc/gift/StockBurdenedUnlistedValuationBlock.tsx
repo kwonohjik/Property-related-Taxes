@@ -21,12 +21,14 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
+import { burdenedAcquisitionReason } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type BlockReadFields = Pick<
   StockTransferFormData,
   | "netAssetOnlyReason"
+  | "acquisitionNetAssetOnlyReason"
   | "isHeavyRealEstateForValuation"
   | "unlistedValuationMode"
   | "transferDate"
@@ -63,6 +65,7 @@ export function toUnlistedBlockForm(
 ): BlockReadFields {
   return {
     netAssetOnlyReason: bgt.netAssetOnlyReason ?? "",
+    acquisitionNetAssetOnlyReason: burdenedAcquisitionReason(bgt) ?? "",
     // ④가 엔진에 `isHeavyRealEstateForValuation: false`를 보낸다 — 미리보기 가중치도 같은 값이어야 한다.
     isHeavyRealEstateForValuation: false,
     unlistedValuationMode: "simple",
@@ -84,9 +87,15 @@ export function toUnlistedBlockForm(
   };
 }
 
-/** 블록 patch → 부담부 입력 patch (블록이 쓰는 키만 옮긴다 — 나머지는 버린다) */
+/**
+ * 블록 patch → 부담부 입력 patch (블록이 쓰는 키만 옮긴다 — 나머지는 버린다)
+ *
+ * `bgt`를 주면 종전 레코드(취득 사유 키 없음 — 양도 사유를 따라감)에서 양도 사유를 바꿀 때 취득 사유를
+ * **그 시점 값으로 고정**한다. 안 하면 양도 칸만 바꿨는데 취득 칸이 따라 바뀐다.
+ */
 export function fromUnlistedBlockPatch(
   patch: Partial<StockTransferFormData>,
+  bgt?: Pick<BurdenedGiftStockTransferTaxInput, "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason">,
 ): Partial<BurdenedGiftStockTransferTaxInput> {
   const out: Partial<BurdenedGiftStockTransferTaxInput> = {};
   const numericKeys = [
@@ -103,6 +112,12 @@ export function fromUnlistedBlockPatch(
   }
   if ("netAssetOnlyReason" in patch) {
     out.netAssetOnlyReason = patch.netAssetOnlyReason || undefined;
+  }
+  // «없음»은 null로 저장한다 — undefined면 종전 레코드로 읽혀 양도 사유를 따라간다
+  if ("acquisitionNetAssetOnlyReason" in patch) {
+    out.acquisitionNetAssetOnlyReason = patch.acquisitionNetAssetOnlyReason || null;
+  } else if ("netAssetOnlyReason" in patch && bgt && bgt.acquisitionNetAssetOnlyReason === undefined) {
+    out.acquisitionNetAssetOnlyReason = burdenedAcquisitionReason(bgt) ?? null;
   }
   if ("unlistedSameBizYearToggle" in patch) {
     out.unlistedSameBizYearToggle = patch.unlistedSameBizYearToggle || undefined;
@@ -140,7 +155,7 @@ export function StockBurdenedUnlistedValuationBlock({ item, bgt, transferDate, o
           simpleOnly
           hideReversalToggle
           form={form as StockTransferFormData}
-          onChange={(patch) => onChange(fromUnlistedBlockPatch(patch))}
+          onChange={(patch) => onChange(fromUnlistedBlockPatch(patch, bgt))}
         />
       </div>
     </ToneCard>

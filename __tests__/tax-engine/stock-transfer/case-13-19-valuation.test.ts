@@ -163,7 +163,7 @@ describe("케이스 14 — 순자산 단독 평가 4사유 (§165④3 가~라목
   it("C14-01: 가목 (청산·사망) → 순자산 단독", () => {
     const result = calculateStockTransferTax({
       ...netAssetOnlyInputBase,
-      netAssetOnlyReason: "liquidation_or_owner_death",
+      netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
     });
     expect(result.valuationDetail?.method).toBe("net_asset_only");
     // 환산취득가 = 500,000,000 × 150,000 / 200,000 = 375,000,000
@@ -173,7 +173,7 @@ describe("케이스 14 — 순자산 단독 평가 4사유 (§165④3 가~라목
   it("C14-02: 나목 (사업개시 전·1년 미만·휴폐업) → 순자산 단독", () => {
     const result = calculateStockTransferTax({
       ...netAssetOnlyInputBase,
-      netAssetOnlyReason: "no_business_or_short_or_closed",
+      netAssetOnlyReason: "no_business_or_short_or_closed", acquisitionNetAssetOnlyReason: "no_business_or_short_or_closed",
     });
     expect(result.valuationDetail?.method).toBe("net_asset_only");
     expect(result.acquisitionPrice).toBe(375_000_000);
@@ -182,7 +182,7 @@ describe("케이스 14 — 순자산 단독 평가 4사유 (§165④3 가~라목
   it("C14-03: 다목 (주식 80% 지주회사) → 순자산 단독", () => {
     const result = calculateStockTransferTax({
       ...netAssetOnlyInputBase,
-      netAssetOnlyReason: "stock_holding_company",
+      netAssetOnlyReason: "stock_holding_company", acquisitionNetAssetOnlyReason: "stock_holding_company",
     });
     expect(result.valuationDetail?.method).toBe("net_asset_only");
     expect(result.acquisitionPrice).toBe(375_000_000);
@@ -191,7 +191,7 @@ describe("케이스 14 — 순자산 단독 평가 4사유 (§165④3 가~라목
   it("C14-04: 라목 (잔여 존속기한 3년 이내) → 순자산 단독", () => {
     const result = calculateStockTransferTax({
       ...netAssetOnlyInputBase,
-      netAssetOnlyReason: "remaining_term_under_3y",
+      netAssetOnlyReason: "remaining_term_under_3y", acquisitionNetAssetOnlyReason: "remaining_term_under_3y",
     });
     expect(result.valuationDetail?.method).toBe("net_asset_only");
     expect(result.acquisitionPrice).toBe(375_000_000);
@@ -217,14 +217,14 @@ describe("케이스 27 — 순자산 단독 평가 시 80% 하한 미적용", ()
 
   it("C27-01: 순자산 단독 → netAssetFloorApplied = false", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
-      netAssetOnlyReason: "liquidation_or_owner_death",
+      netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
     }));
     expect(result.valuationDetail?.netAssetFloorApplied).toBe(false);
   });
 
   it("C27-02: appliedRules에 80%하한미적용 포함", () => {
     const result = calculateStockTransferTax(baseUnlistedInput({
-      netAssetOnlyReason: "no_business_or_short_or_closed",
+      netAssetOnlyReason: "no_business_or_short_or_closed", acquisitionNetAssetOnlyReason: "no_business_or_short_or_closed",
     }));
     expect(result.appliedRules).toContain("80%하한미적용");
   });
@@ -234,7 +234,7 @@ describe("케이스 27 — 순자산 단독 평가 시 80% 하한 미적용", ()
     // transferNa=200,000 그대로 사용
     // 환산취득가 = 500,000,000 × 150,000 / 200,000 = 375,000,000
     const result = calculateStockTransferTax(baseUnlistedInput({
-      netAssetOnlyReason: "liquidation_or_owner_death",
+      netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
     }));
     expect(result.acquisitionPrice).toBe(375_000_000);
   });
@@ -248,7 +248,7 @@ describe("케이스 27 — 순자산 단독 평가 시 80% 하한 미적용", ()
 
     // 순자산 단독 케이스 (하한 미발동)
     const netAssetResult = calculateStockTransferTax(baseUnlistedInput({
-      netAssetOnlyReason: "liquidation_or_owner_death",
+      netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
     }));
     expect(netAssetResult.valuationDetail?.netAssetFloorApplied).toBe(false);
   });

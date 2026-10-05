@@ -362,6 +362,7 @@ export const stockTransferInputSchema = z.object({
 
   // 순자산 단독 평가 사유 §165④3
   netAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
+  acquisitionNetAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
 
   // 필요경비
   expenseMode: expenseModeSchema,

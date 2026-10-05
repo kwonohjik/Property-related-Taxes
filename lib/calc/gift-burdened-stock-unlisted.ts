@@ -9,7 +9,7 @@
  * 규칙은 주식 마법사 ⑧(`validateUnlistedSimpleFields`·동일 사업연도 토글)의 거울이다 —
  * 부담부증여 경로는 간이(simple) 입력만 받고 액면가(§99①4 후단) 토글이 없다.
  *   - 순자산가치(양도·취득)는 항상 필수
- *   - 순손익가치(양도·취득)는 §165④3 순자산 단독 사유가 없을 때 필수
+ *   - 순손익가치(양도·취득)는 그 평가 시점에 §165④3 순자산 단독 사유가 없을 때 필수
  *   - 동일 사업연도 토글(소칙 §81④1호) ON이면 전전사업연도 순자산(+ 사유 없으면 순손익) 필수
  * 0·음수는 적법한 값이다(결손·자본잠식) — 「존재」만 본다.
  */
@@ -23,11 +23,24 @@ type UnlistedFields = Pick<
   | "acquisitionYearNetIncomePerShare"
   | "acquisitionYearNetAssetPerShare"
   | "netAssetOnlyReason"
+  | "acquisitionNetAssetOnlyReason"
   | "unlistedSameBizYearToggle"
   | "prePriorYearNetIncomePerShare"
   | "prePriorYearNetAssetPerShare"
   | "priorBizYearMonths"
 >;
+
+/**
+ * 취득 당시 평가의 §165④3 사유 — 키가 없는 종전 레코드는 양도 사유를 따른다(종전 의미 = 양측).
+ * `null`은 사용자가 고른 «없음»이다. ⑤·④·⑧이 모두 이 함수를 거친다.
+ */
+export function burdenedAcquisitionReason(
+  bgt: Pick<BurdenedGiftStockTransferTaxInput, "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason">,
+): BurdenedGiftStockTransferTaxInput["netAssetOnlyReason"] {
+  return bgt.acquisitionNetAssetOnlyReason === undefined
+    ? bgt.netAssetOnlyReason
+    : (bgt.acquisitionNetAssetOnlyReason ?? undefined);
+}
 
 /**
  * ④ — 비상장·환산 분기에서 stock-transfer body에 얹을 필드.
@@ -54,6 +67,8 @@ export function buildBurdenedUnlistedValuationFields(
     if (v !== undefined) out[k] = v;
   }
   if (bgt.netAssetOnlyReason) out.netAssetOnlyReason = bgt.netAssetOnlyReason;
+  const acqReason = burdenedAcquisitionReason(bgt);
+  if (acqReason) out.acquisitionNetAssetOnlyReason = acqReason;
   // 주식 마법사 ④와 같이 boolean을 항상 싣는다 (stale 이력의 undefined는 OFF).
   out.unlistedSameBizYearToggle = sameBizYear;
   return out;
@@ -61,13 +76,15 @@ export function buildBurdenedUnlistedValuationFields(
 
 /** ⑧ — 누락된 입력의 화면 라벨 목록(순서 = 화면 순서). 비어 있으면 통과. */
 export function missingBurdenedUnlistedValuationInputs(bgt: UnlistedFields): string[] {
+  // 평가 시점마다 따로 — 전전연도는 보정 대상인 양도 기준시가와 같은 기준
   const niSkip = !!bgt.netAssetOnlyReason;
+  const niSkipAcq = !!burdenedAcquisitionReason(bgt);
   const missing: string[] = [];
   if (!niSkip && bgt.transferYearNetIncomePerShare === undefined)
     missing.push("양도일(증여일) 직전 사업연도 1주당 순손익가치");
   if (bgt.transferYearNetAssetPerShare === undefined)
     missing.push("양도일(증여일) 직전 사업연도 1주당 순자산가치");
-  if (!niSkip && bgt.acquisitionYearNetIncomePerShare === undefined)
+  if (!niSkipAcq && bgt.acquisitionYearNetIncomePerShare === undefined)
     missing.push("취득일 직전 사업연도 1주당 순손익가치");
   if (bgt.acquisitionYearNetAssetPerShare === undefined)
     missing.push("취득일 직전 사업연도 1주당 순자산가치");

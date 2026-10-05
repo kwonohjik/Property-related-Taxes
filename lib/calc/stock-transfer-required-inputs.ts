@@ -26,27 +26,54 @@ export type UnlistedValuationKey =
  *   토글은 읽지 않는다(엔진·UI 모두 취득측 평가를 무조건 쓴다).
  * - `scope: "transfer"` — 이월과세 **증여자 기준 환산**의 분모(양도측만). 분자는 증여자 취득 당시
  *   기준시가로 덮어쓰이므로 취득측 평가가 필요 없다(계획서 `stock-carryover-sale-case-donor-basis.plan.md` V-2).
- * - 순자산 단독 평가 사유(§165④3호)가 있으면 순손익가치는 필요 없다.
+ * - 순자산 단독 평가 사유(§165④3호)가 있는 **평가 시점**은 순손익가치가 필요 없다(양도·취득 따로 — 계획서 §14).
  * - 취득시 장부분실(소득세법 §99①4호 후단)이면 취득측 대신 **액면가**가 필요하다.
  */
 export function requiredUnlistedValuationKeys(o: {
   scope: "both" | "acquisition" | "transfer";
-  niSkip: boolean;
+  niSkip: { transfer: boolean; acquisition: boolean };
   acqFaceValueOnly: boolean;
 }): UnlistedValuationKey[] {
   const keys: UnlistedValuationKey[] = [];
   if (o.scope === "both" || o.scope === "transfer") {
-    if (!o.niSkip) keys.push("transferYearNetIncomePerShare");
+    if (!o.niSkip.transfer) keys.push("transferYearNetIncomePerShare");
     keys.push("transferYearNetAssetPerShare");
   }
   if (o.scope === "transfer") return keys;
   if (o.scope === "both" && o.acqFaceValueOnly) {
     keys.push("acqFaceValuePerShare");
   } else {
-    if (!o.niSkip) keys.push("acquisitionYearNetIncomePerShare");
+    if (!o.niSkip.acquisition) keys.push("acquisitionYearNetIncomePerShare");
     keys.push("acquisitionYearNetAssetPerShare");
   }
   return keys;
+}
+
+/**
+ * 영 §165④3 순자산 단독 사유를 **읽는** 평가 시점 — 그 시점의 사유 칸이 화면(⑤ `EstimatedUnlistedBlock`)에
+ * 있는 경우와 같다. ⑧·⑫가 연혁 차단(`isNetAssetOnlyReasonInEra`)을 이 시점에서만 건다 — 칸이 없는 시점에
+ * 남은 값을 막으면 고칠 곳이 없다(계획서 `stock-165-4-valuation-followups.plan.md` §13·§14).
+ *
+ * - 양측: 환산 — 비상장·기타자산 또는 양도일 거래정지(§165③). 취득시 장부분실(사례 49)이면 취득측은 액면가라 취득 사유 없음
+ * - 취득측만: 취득일 거래정지(§165③) · 매매사례가액(비상장 — 개산공제 기준시가)
+ * - 양도측만: 이월과세 증여자 기준 환산의 분모(비상장 또는 양도일 거래정지)
+ */
+export function netAssetOnlyReasonSidesRead(o: {
+  acquisitionMode: string | undefined;
+  listed: boolean;
+  haltAtTransfer: boolean;
+  haltAtAcquisition: boolean;
+  acqFaceValueOnly: boolean;
+  donorConversion: boolean;
+}): { transfer: boolean; acquisition: boolean } {
+  const bothSides = o.acquisitionMode === "estimated" && (!o.listed || o.haltAtTransfer);
+  return {
+    transfer: bothSides || (o.donorConversion && (!o.listed || o.haltAtTransfer)),
+    acquisition:
+      (bothSides && !o.acqFaceValueOnly) ||
+      (o.acquisitionMode === "estimated" && o.listed && !o.haltAtTransfer && o.haltAtAcquisition) ||
+      (o.acquisitionMode === "sale_case" && !o.listed),
+  };
 }
 
 // ── 취득원인 보조 입력(소득세법 §104② · §97의2①) — 단건 ─────────────────────

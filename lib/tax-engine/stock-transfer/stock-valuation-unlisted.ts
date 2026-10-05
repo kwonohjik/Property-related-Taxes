@@ -78,8 +78,10 @@ export interface UnlistedValuationResult {
   netIncomeValue?: number;
   /** 1주당 순자산가치 */
   netAssetValue?: number;
-  /** 순자산 단독 근거 — §165④3 사유 또는 §165⑧1호 후단(라목). `resolveNetAssetOnlyBasis` */
+  /** **양도 당시** 평가의 순자산 단독 근거 — §165④3 사유 또는 §165⑧1호 후단(라목). `resolveNetAssetOnlyBasis` */
   netAssetOnlyReason?: NetAssetOnlyBasis;
+  /** **취득 당시** 평가의 순자산 단독 근거 (계획서 `stock-165-4-valuation-followups.plan.md` §14) */
+  acquisitionNetAssetOnlyReason?: NetAssetOnlyBasis;
   /**
    * [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 → §81④ 1호 월할 보정 발동 시 echo (미발동 undefined).
    */
@@ -231,7 +233,9 @@ export function calcUnlistedValuation(
   const isHeavyRealEstateForValuation = isSection165_4_1ReversalCorp(input);
   const isHeavyRE = isHeavyRealEstateForValuation;
   // 순자산 단독 근거 — §165④3 사유(사용자 선택) 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 단일 소스.
-  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
+  // 양도 당시·취득 당시 평가마다 따로다 — 사유는 평가 시점의 사실이다(계획서 §14).
+  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input, "transfer");
+  const acquisitionNetAssetOnlyBasis = resolveNetAssetOnlyBasis(input, "acquisition");
   const acqFaceValueOnly = input.acqFaceValueOnly === true;
   const acqFaceValuePerShare = input.acqFaceValuePerShare ?? 0;
 
@@ -361,10 +365,15 @@ export function calcUnlistedValuation(
   const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;
 
   // ──────────────────────────────────────────────────────────
-  // 순자산 단독 평가 — §165④3 가~라목 4사유 + §165⑧1호 후단(라목 주식등)
+  // 순자산 단독 평가 — §165④3 사유 + §165⑧1호 후단(라목 주식등) — **양측 모두** 단독인 경우
   // 80% 하한 미적용 (케이스 27). 라목이면 «반전» 토글도 여기서 비켜간다.
+  // 이월과세 증여자 값으로 취득측을 덮어쓰면 취득 사유는 읽을 대상이 없다 — 양도측만 보고 들어온다.
+  // 한쪽만 단독이면 아래 가중평균 분기가 그 쪽만 순자산가치로 평가한다.
   // ──────────────────────────────────────────────────────────
-  if (netAssetOnlyBasis) {
+  if (
+    netAssetOnlyBasis &&
+    (acquisitionNetAssetOnlyBasis || input.acquisitionStdPriceOverridePerShare !== undefined)
+  ) {
     appliedRules.push(netAssetOnlyRuleRef(netAssetOnlyBasis));
 
     // 양도기준시가 = 순자산 단독
@@ -384,6 +393,7 @@ export function calcUnlistedValuation(
         method: "net_asset_only",
         netAssetFloorApplied: false,
         netAssetOnlyReason: netAssetOnlyBasis,
+        acquisitionNetAssetOnlyReason: acquisitionNetAssetOnlyBasis,
         warnings,
         appliedRules,
       };
@@ -420,6 +430,7 @@ export function calcUnlistedValuation(
       method: "net_asset_only",
       netAssetFloorApplied: false, // §165④3 단독 사유 — 80% 하한 미적용
       netAssetOnlyReason: netAssetOnlyBasis,
+      acquisitionNetAssetOnlyReason: acquisitionNetAssetOnlyBasis,
       netIncomeValue: transferNi,
       netAssetValue: transferNa,
       section1659Detail: naOnly1659.section1659Detail,
@@ -446,12 +457,18 @@ export function calcUnlistedValuation(
   // ─── 양도기준시가 (양도일 직전 사업연도 기준) ───
   // 가중평균·연혁·80% 하한·0 하한은 §165④ 정본 하나다. 종전에는 이 경로만 인라인 사본이라 0 하한이 빠져
   // 간이 모드 음수 순자산이 그대로 들어갔다(S-1c-4 · anchor ZM-1·ZM-3).
+  //
+  // 한쪽만 순자산 단독(계획서 §14) — 그 쪽은 §165④3호 「제1호 각 목 외의 부분에도 불구하고」라 가중평균도
+  // 1호 단서(80% 하한)도 비켜 순자산가치(0 하한)다. 다른 쪽은 가중평균 그대로.
   const transferEval = calcSection165_4Value(transferNi, transferNa, isHeavyRealEstateForValuation, transferDate);
-  const transferWeightedRaw = transferEval.weightedRaw;
-  const transferStdPricePerShare = transferEval.value;
-  const netAssetFloorApplied = transferEval.floorApplied;
-  const netAssetFloorValue = transferEval.floorApplied ? transferEval.value : undefined;
-  if (transferEval.floorApplied) {
+  if (netAssetOnlyBasis) appliedRules.push(`${netAssetOnlyRuleRef(netAssetOnlyBasis)} — 양도 당시 순자산가치 단독`);
+  const transferWeightedRaw = netAssetOnlyBasis ? undefined : transferEval.weightedRaw;
+  const transferStdPricePerShare = netAssetOnlyBasis
+    ? calcNetAssetOnlyValue(transferNa, transferDate)
+    : transferEval.value;
+  const netAssetFloorApplied = !netAssetOnlyBasis && transferEval.floorApplied;
+  const netAssetFloorValue = netAssetFloorApplied ? transferEval.value : undefined;
+  if (netAssetFloorApplied) {
     appliedRules.push("80%하한");
     // 반전(2:3) 경로는 종전에도 조문 상수를 싣지 않았다 — 표시 동작 유지
     if (!isHeavyRealEstateForValuation) appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);
@@ -503,9 +520,13 @@ export function calcUnlistedValuation(
     isHeavyRealEstateForValuation,
     transferDate,
   );
-  let acquisitionStdPricePerShare = acquisitionEval.value;
-  let acquisitionNetAssetFloorApplied = acquisitionEval.floorApplied;
-  if (acquisitionEval.floorApplied) appliedRules.push("80%하한(취득기준시가)");
+  if (acquisitionNetAssetOnlyBasis)
+    appliedRules.push(`${netAssetOnlyRuleRef(acquisitionNetAssetOnlyBasis)} — 취득 당시 순자산가치 단독`);
+  let acquisitionStdPricePerShare = acquisitionNetAssetOnlyBasis
+    ? calcNetAssetOnlyValue(acquisitionNa, transferDate)
+    : acquisitionEval.value;
+  let acquisitionNetAssetFloorApplied = !acquisitionNetAssetOnlyBasis && acquisitionEval.floorApplied;
+  if (acquisitionNetAssetFloorApplied) appliedRules.push("80%하한(취득기준시가)");
   /**
    * §97의2①1호 — 이월과세면 취득기준시가는 **증여자 취득 당시**의 것이다.
    * 보충평가·80% 하한을 모두 마친 **뒤에** 덮어쓴다 — 증여자 값은 이미 확정된 사실이라
@@ -527,9 +548,13 @@ export function calcUnlistedValuation(
   //    곧 §165④(단서 = 80% 하한 「평가액으로 한다」)이므로 전전연도에도 하한이 따라온다.
   //    §165⑤ 경로(`stock-valuation-post-listing.ts`)도 **함께** 고쳤다 — 두 경로 대칭.
   //    anchor: `__tests__/tax-engine/stock-transfer/section81-4-preprior-floor80.anchor.test.ts`
-  const weightedPrePrior =
-    typeof input.prePriorYearNetIncomePerShare === "number" &&
-    typeof input.prePriorYearNetAssetPerShare === "number"
+  //    보정 대상은 양도기준시가라 전전연도도 **양도 당시** 평가와 같은 기준(단독이면 단독)으로 잰다.
+  const weightedPrePrior = netAssetOnlyBasis
+    ? typeof input.prePriorYearNetAssetPerShare === "number"
+      ? calcNetAssetOnlyValue(input.prePriorYearNetAssetPerShare, transferDate)
+      : undefined
+    : typeof input.prePriorYearNetIncomePerShare === "number" &&
+        typeof input.prePriorYearNetAssetPerShare === "number"
       ? calcSection165_4Value(
           input.prePriorYearNetIncomePerShare,
           input.prePriorYearNetAssetPerShare,
@@ -573,6 +598,8 @@ export function calcUnlistedValuation(
     weightedAvgRaw: transferWeightedRaw,
     netIncomeValue: transferNi,
     netAssetValue: transferNa,
+    netAssetOnlyReason: netAssetOnlyBasis,
+    acquisitionNetAssetOnlyReason: acquisitionNetAssetOnlyBasis,
     section1659Detail,
     warnings,
     appliedRules,
