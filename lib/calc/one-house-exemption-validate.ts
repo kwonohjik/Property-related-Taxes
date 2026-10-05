@@ -107,18 +107,23 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   }
 
   /**
-   * §155④⑤ 합가 전 보유 쪽 — **차단하지 않는다**. 비워 두면 엔진이 구성을 판정하지 않고
-   * 종전처럼 합가일·선양도만으로 본다(`resolveMergeComposition` → `unknown`). 구 저장분이
-   * 전부 이 상태라 차단하면 기존 판정이 한꺼번에 막힌다. 칸·배지와 같은 게이트·같은 분류를 쓴다.
+   * §155④⑤ 합가 전 보유 쪽 — **차단한다**(2026-10-05 정책 변경).
+   *
+   * 종전에는 경고만 내고 미입력이면 엔진이 구성을 판정하지 않은 채 종전처럼 합가일·선양도만으로
+   * 봤다(`resolveMergeComposition` → `unknown` → 비과세 쪽에 유리하게). 이제 그 「모름」은
+   * 엔진에서 불성립 + 확인 필요로 바뀌었다(`merge-composition-unknown-unfavorable.plan.md` §3-1 ·
+   * memory `feedback_unknown_fact_applies_unfavorably`). 사용자가 기존 저장 데이터를 모두
+   * 삭제했으므로(2026-10-05) 「구 저장분이 한꺼번에 막힌다」는 우려는 더 이상 근거가 아니다.
+   * 칸·배지와 같은 게이트·같은 분류를 쓴다.
    */
   const mergeCtx = judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined;
   if (mergeCtx) {
     form.houses?.forEach((h, i) => {
       if (mergeHouseSideOf(h, mergeCtx) === undefined) {
         errors.push(
-          warn(
+          err(
             `houses.${i}.mergeOrigin`,
-            `보유 주택 ${i + 1}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르면 합가 특례의 「각자 1주택」 요건까지 판정합니다(편집 → 보유자 선택).`,
+            `보유 주택 ${i + 1}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다(편집 → 보유자 선택).`,
           ),
         );
       }

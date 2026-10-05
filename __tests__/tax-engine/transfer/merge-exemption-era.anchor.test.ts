@@ -23,6 +23,19 @@ import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 const mockRates = makeMockRates();
 const d = (s: string) => new Date(s);
 
+const mergeHouse = (id: string, acq: string) => ({
+  id,
+  acquisitionDate: d(acq),
+  officialPrice: 300_000_000,
+  region: "capital" as const,
+  isInherited: false,
+  isLongTermRental: false,
+  isApartment: false,
+  isOfficetel: false,
+  isUnsoldHousing: false,
+  mergeOrigin: "counterpart_side" as const,
+});
+
 /** 2주택 합가 · 양도주택 2010-01-01 취득(합가 전) · 8억 · 비조정 · 먼저 양도 선언 */
 function merge(transfer: string, over: Partial<TransferTaxInput>): TransferTaxInput {
   return baseTransferInput({
@@ -32,6 +45,9 @@ function merge(transfer: string, over: Partial<TransferTaxInput>): TransferTaxIn
     acquisitionDate: d("2010-01-01"),
     transferDate: d(transfer),
     isFirstTransferredInMerge: true,
+    // §155④⑤ 합가 전 구성(2026-10-05 정책) — 모든 합가일보다 먼저 취득한 상대 쪽 주택.
+    houses: [mergeHouse("selling", "2010-01-01"), mergeHouse("h1", "2005-01-01")] as TransferTaxInput["houses"],
+    sellingHouseId: "selling",
     ...over,
   });
 }

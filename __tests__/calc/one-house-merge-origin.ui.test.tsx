@@ -15,7 +15,9 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { HousesListSection } from "@/app/calc/transfer-tax/steps/step4-sections/HousesListSection";
 import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
+import { SurchargeJudgmentSection } from "@/app/calc/transfer-tax/steps/step4-sections/SurchargeJudgmentSection";
 import { validateStep2 } from "@/lib/calc/one-house-exemption-validate";
+import { collectStep1Issues } from "@/lib/calc/transfer-tax-validate-step1";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
   createInitialOneHouseJudgmentForm,
@@ -161,19 +163,87 @@ describe("MO-3 판정 메뉴 배선 — Step2가 두 prop을 넘긴다", () => {
   });
 });
 
-describe("MO-4 ⑧ 보유자 미입력 경고 — 차단하지 않는다", () => {
+describe("MO-4 ⑧ 보유자 미입력 — 차단한다 (2026-10-05 정책: 「모름」은 불리)", () => {
   const warned = (f: OneHouseJudgmentFormData) =>
     validateStep2(f).filter((e) => e.field === "houses.0.mergeOrigin");
 
-  it("혼인 전 취득 · 미입력 → warning 1건(error 아님)", () => {
+  it("혼인 전 취득 · 미입력 → error 1건(차단)", () => {
     const w = warned(judgmentForm(house("2018-01-01")));
     expect(w).toHaveLength(1);
-    expect(w[0].severity).toBe("warning");
+    expect(w[0].severity).toBe("error");
   });
 
-  it("입력했거나 · 혼인 후 취득이거나 · 합가일이 없으면 경고 없음", () => {
+  it("입력했거나 · 혼인 후 취득이거나 · 합가일이 없으면 차단 없음", () => {
     expect(warned(judgmentForm(house("2018-01-01", { mergeOrigin: "seller_side" })))).toHaveLength(0);
     expect(warned(judgmentForm(house("2022-06-01")))).toHaveLength(0);
     expect(warned(judgmentForm(house("2018-01-01"), { marriageDate: "" }))).toHaveLength(0);
+  });
+});
+
+/** 계산기 양도세 마법사 폼 — PR-2(§3-3) 합가 전 소유 쪽 와이어링 시료. */
+function calcMergeForm(h: HouseEntry, over: Partial<TransferFormData> = {}): TransferFormData {
+  const f = createDefaultTransferFormData();
+  f.transferDate = "2026-03-01";
+  f.contractTotalPrice = "500,000,000";
+  f.householdHousingCount = "2";
+  f.isOneHousehold = true;
+  f.isRegulatedArea = false;
+  f.residencePeriodMonths = "120";
+  f.marriageDate = "2020-01-01";
+  f.isFirstTransferredInMerge = true;
+  f.houses = [h];
+  f.assets[0] = {
+    ...f.assets[0],
+    assetKind: "housing",
+    acquisitionDate: "2015-01-01",
+    fixedAcquisitionPrice: "300,000,000",
+  };
+  return { ...f, ...over };
+}
+
+describe("MO-5 계산기 배선(PR-2 §3-3) — SurchargeJudgmentSection이 mergeContext를 넘긴다", () => {
+  it("합가일이 있으면 계산기 편집 창에도 명부 배지가 뜬다", () => {
+    const form = calcMergeForm(house("2018-01-01"));
+    render(
+      <SurchargeJudgmentSection
+        form={form}
+        onChange={() => {}}
+        primaryKind="housing"
+        primaryAcquisitionDate="2015-01-01"
+      />,
+    );
+    expect(screen.getByTestId("house-merge-badge-h1")).toBeTruthy();
+  });
+
+  it("합가일이 없으면 계산기에도 배지가 없다", () => {
+    const form = calcMergeForm(house("2018-01-01"), { marriageDate: "" });
+    render(
+      <SurchargeJudgmentSection
+        form={form}
+        onChange={() => {}}
+        primaryKind="housing"
+        primaryAcquisitionDate="2015-01-01"
+      />,
+    );
+    expect(screen.queryByTestId("house-merge-badge-h1")).toBeNull();
+  });
+});
+
+describe("MO-6 계산기 ⑧ 보유자 미입력 — 차단한다 (PR-2, 2026-10-05 정책)", () => {
+  // `fieldError`(transfer-tax-validate-field.ts)는 입력칸 이동용 field를 전역 수집기
+  // (`collectWithFields`)에 등록할 뿐, `collectStep1Issues`가 바로 돌려주는 객체에는 싣지
+  // 않는다 — 여기서는 「고르지 않으면」 문구의 존재로 차단 여부를 본다.
+  const warned = (f: TransferFormData) =>
+    collectStep1Issues(f).filter((e) => e.message.includes("고르지 않으면 합가 특례를 불성립으로 판정"));
+
+  it("혼인 전 취득 · 미입력 → error 1건(차단)", () => {
+    const w = warned(calcMergeForm(house("2018-01-01")));
+    expect(w).toHaveLength(1);
+  });
+
+  it("입력했거나 · 혼인 후 취득이거나 · 합가일이 없으면 차단 없음", () => {
+    expect(warned(calcMergeForm(house("2018-01-01", { mergeOrigin: "seller_side" })))).toHaveLength(0);
+    expect(warned(calcMergeForm(house("2022-06-01")))).toHaveLength(0);
+    expect(warned(calcMergeForm(house("2018-01-01"), { marriageDate: "" }))).toHaveLength(0);
   });
 });

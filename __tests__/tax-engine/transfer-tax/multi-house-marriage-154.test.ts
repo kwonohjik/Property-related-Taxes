@@ -17,7 +17,11 @@ import {
 } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 
-const marriageHouses = () => [makeHouseInfo("h1", { regionCode: "11680" }), makeHouseInfo("h2")];
+// §155④⑤ 합가 전 구성(2026-10-05 정책) — h2는 상대 쪽이 합가 전부터 보유하던 주택이다.
+const marriageHouses = () => [
+  makeHouseInfo("h1", { regionCode: "11680" }),
+  makeHouseInfo("h2", { mergeOrigin: "counterpart_side" }),
+];
 
 function marriageInput(overrides: Partial<TransferTaxInput>): TransferTaxInput {
   return baseInput({

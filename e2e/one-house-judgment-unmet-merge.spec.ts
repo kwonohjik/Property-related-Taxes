@@ -18,7 +18,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
-const house = (id: string, acquisitionDate: string, officialPrice: string) => ({
+const house = (
+  id: string,
+  acquisitionDate: string,
+  officialPrice: string,
+  mergeOrigin?: "seller_side" | "counterpart_side",
+) => ({
   id,
   region: "capital" as const,
   acquisitionDate,
@@ -28,6 +33,7 @@ const house = (id: string, acquisitionDate: string, officialPrice: string) => ({
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
 });
 
 /** 제보 화면 그대로 — 다른 보유 주택 2채 + 혼인합가 + 일시적 2주택 미선언 */
@@ -50,7 +56,12 @@ function seedForm(over: Record<string, unknown> = {}) {
         contractTotalPrice: "1200000000",
         isOneHousehold: true,
         householdHousingCount: "3",
-        houses: [house("h2", "2024-05-30", "530000000"), house("h3", "2016-08-21", "220000000")],
+        // h3는 합가 전(2017-03-11 이전) 취득 — ⑧이 소유 쪽을 요구한다(2026-10-05 정책).
+        // 이 시나리오의 결론은 양도 주택의 「합가 후 취득」 창 탈락이라 구성과 무관하게 과세다.
+        houses: [
+          house("h2", "2024-05-30", "530000000"),
+          house("h3", "2016-08-21", "220000000", "counterpart_side"),
+        ],
         presaleRights: [],
         isRegulatedArea: true,
         wasRegulatedAtAcquisition: false,
@@ -117,6 +128,10 @@ test.describe("판정 결과 — 선언했으나 적용되지 않은 특례", ()
     /**
      * 제보 사례의 **결정적 원인**을 고친 대조군. 취득일을 합가일 이전으로 옮기고
      * 일시적 2주택을 선언하면 §155①·⑤ 중첩으로 비과세가 난다(엔진 실측 C·D와 같은 축).
+     *
+     * 🔑 h3(합가 전 취득)에 `mergeOrigin: "counterpart_side"`를 명시한다(2026-10-05 정책) —
+     * 소유 쪽을 입력하지 않으면 「모름」으로 보아 합가 구성이 불성립이 되어, 이 대조군이
+     * 겨냥한 「취득일만 고치면 비과세」 결론을 더 이상 재현하지 못한다.
      */
     await gotoResult(page, {
       assets: [
@@ -128,6 +143,7 @@ test.describe("판정 결과 — 선언했으나 적용되지 않은 특례", ()
           residencePeriodMonthsAsset: "102",
         },
       ],
+      houses: [house("h2", "2024-05-30", "530000000"), house("h3", "2016-08-21", "220000000", "counterpart_side")],
       temporaryTwoHouseSpecial: true,
       newHouseAcquisitionDate: "2024-05-30",
     });

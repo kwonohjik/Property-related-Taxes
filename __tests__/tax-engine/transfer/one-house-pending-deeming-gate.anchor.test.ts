@@ -41,10 +41,29 @@ const RESIDENCE_FREE = { wasRegulatedAtAcquisition: false, residencePeriodMonths
  * 혼인 2010-01-01 · 양도 주택 2005-01-01 취득(혼인 전) · 양도 2024-06-01.
  * 2024-11-12 전 양도라 혼인 합가 기한은 5년(대통령령 제34990호 부칙 제2조) ⇒ 기한 2015-01-01.
  */
+const mergeHouse = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
+  id,
+  acquisitionDate: D(acq),
+  officialPrice: 300_000_000,
+  region: "capital" as const,
+  isInherited: false,
+  isLongTermRental: false,
+  isApartment: false,
+  isOfficetel: false,
+  isUnsoldHousing: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
+});
+
+// §155④⑤ 합가 전 구성(2026-10-05 정책) — 기본 2주택 시료는 상대 쪽 주택 1채를 명시한다.
 const MARRIAGE: Partial<TransferTaxInput> = {
   acquisitionDate: D("2005-01-01"),
   marriageMerge: { marriageDate: D("2010-01-01") },
   isFirstTransferredInMerge: true,
+  houses: [
+    mergeHouse("selling", "2005-01-01"),
+    mergeHouse("h1", "2003-01-01", "counterpart_side"),
+  ] as TransferTaxInput["houses"],
+  sellingHouseId: "selling",
   ...RESIDENCE_FREE,
 };
 
@@ -72,6 +91,12 @@ describe("OH-23 합가 축 — 주택 수 요건", () => {
   const OVERLAP = (newAcq: string): Partial<TransferTaxInput> => ({
     ...MARRIAGE,
     householdHousingCount: 3,
+    // 3주택 구성 — 상대 쪽 h1(합가 전) + 신규주택 h2(§155① newAcquisitionDate와 일치).
+    houses: [
+      mergeHouse("selling", "2005-01-01"),
+      mergeHouse("h1", "2003-01-01", "counterpart_side"),
+      mergeHouse("h2", newAcq),
+    ] as TransferTaxInput["houses"],
     temporaryTwoHouse: {
       previousAcquisitionDate: D("2005-01-01"),
       newAcquisitionDate: D(newAcq),

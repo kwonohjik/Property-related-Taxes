@@ -115,6 +115,12 @@ describe("P0-2 엔진이 그 조문을 실제로 낸다 — 상수만 맞고 배
         acquisitionDate: D("2018-01-01"),
         transferDate: D("2025-06-01"),
         isFirstTransferredInMerge: true,
+        // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+        houses: [
+          { id: "selling", acquisitionDate: D("2018-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+          { id: "h1", acquisitionDate: D("2015-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+        ] as TransferTaxInput["houses"],
+        sellingHouseId: "selling",
         ...over,
       }),
       mockRates,

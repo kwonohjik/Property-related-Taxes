@@ -302,6 +302,7 @@ describe("MH-06: §154① 미충족 → 의제 성립해도 배제 부적용 (15
  * 혼인 합가 의제(§155⑤) — 중과 엔진은 재판정하지 않고 caller가 비과세 정본으로 선판정해 넘긴다
  * (영 §167의10①15호 ① 요소). 날짜 조건(10년·합가 전 취득)은 `resolveMergeDeeming`이 본다.
  */
+// §155④⑤ 합가 전 구성(2026-10-05 정책) — h2는 상대 쪽이 합가 전부터 보유하던 주택이다.
 const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
   resolveMergeDeeming({
     householdHousingCount: 2,
@@ -309,12 +310,14 @@ const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
     isFirstTransferredInMerge: true,
     acquisitionDate: new Date("2010-01-01"),
     transferDate: new Date(transferDate),
+    houses: [makeHouse("h1"), makeHouse("h2", { mergeOrigin: "counterpart_side" })],
+    sellingHouseId: "h1",
   });
 
 describe("MH-07: 혼인합가 2주택 중과 배제 (§155⑤ 10년)", () => {
   it("혼인 3년 후 양도 → 배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
-    const h2 = makeHouse("h2");
+    const h2 = makeHouse("h2", { mergeOrigin: "counterpart_side" });
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",

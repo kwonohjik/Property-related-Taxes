@@ -24,6 +24,7 @@ import {
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /** 한시배제 종료일 표시 문자열 — 상수 단일 출처에서 파생(재연장 개정 시 문구 자동 추종, 하드코딩 금지) */
 const SUSPENSION_END_KO = (() => {
@@ -64,6 +65,8 @@ export function SurchargeJudgmentSection({
             form={form}
             onChange={onChange}
             countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
+            // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).
+            mergeContext={mergeContextOf(form)}
           />
         )}
 

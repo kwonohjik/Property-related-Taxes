@@ -28,6 +28,7 @@ import {
   taxIncentiveRentalPeriodMissing,
 } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
+import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
@@ -76,6 +77,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
    * **비과세** 축이라 §104⑦ 중과 한시배제와 무관하다).
    */
   const houses = form.houses ?? [];
+  // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 게이트·같은 분류(PR-2 2026-10-05).
+  //   합가일이 없으면 undefined(묻지 않는다). 「모름」은 엔진에서 불성립이 되므로 차단한다
+  //   (merge-composition-unknown-unfavorable.plan.md §3-3 · memory `feedback_unknown_fact_applies_unfavorably`).
+  const mergeCtx = mergeContextOf(form);
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
     const label = `보유 주택 ${i + 1}`;
@@ -141,6 +146,13 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
+      // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴 ⑧과 같은 판정(`mergeHouseSideOf`).
+      if (mergeCtx && mergeHouseSideOf(h, mergeCtx) === undefined) {
+        return fieldError(
+          rowKey,
+          `${label}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다.`,
+        );
+      }
       return null;
     })();
     if (firstError) issues.push({ step, message: firstError });

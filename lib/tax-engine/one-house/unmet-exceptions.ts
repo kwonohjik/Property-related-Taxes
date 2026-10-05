@@ -149,13 +149,23 @@ function collectMergeUnmet(
     );
   }
 
-  // ── 합가 전 보유 구성 — `resolveMergeComposition`(matchMergeApartFromWindow가 AND하는 같은 술어) ──
-  if (count === 2 || count === 3) {
+  /**
+   * ── 합가 전 보유 구성 — `resolveMergeComposition`(matchMergeApartFromWindow가 AND하는 같은 술어) ──
+   *
+   * `reasons.length === 0`일 때만 사유를 더한다 — 주택 수 축(위 블록)이 이미 사유를 냈으면
+   * (예: 3주택인데 신규주택이 특정 안 됨) 구성은 애초에 판정할 재료가 없다. 두 사유를 함께
+   * 내면 「신규주택부터 특정하라」는 안내 위에 「구성이 모른다」가 덧씌워져 원인이 흐려진다
+   * (`merge-unmet-reasons.anchor.test.ts` UM-1·UM-6·UM-12가 고정하는 「다른 사유가 없을 때만」
+   *  계약과 같은 층위).
+   */
+  if ((count === 2 || count === 3) && reasons.length === 0) {
     const composition = resolveMergeComposition({
       householdHousingCount: count,
       houses: input.houses,
       sellingHouseId: input.sellingHouseId,
       mergeDate,
+      knownHouseExclusionCount: input.knownHouseExclusionCount,
+      noRosterInputPath: input.noMergeRosterInputPath,
     });
     if (composition.status === "fails") {
       const by = isMarriage ? "혼인으로" : "합가로";
@@ -165,7 +175,11 @@ function collectMergeUnmet(
           ? `다른 주택을 ${mergeLabel}(${fmtDate(mergeDate)}) 이후인 ${composition.afterMergeDates.map(fmtDate).join("·")}에 취득했습니다 — ${by} 2주택이 된 것이 아니라 취득으로 늘어난 것이므로, 일시적 2주택 특례(§155①) 요건을 확인하세요.`
           : composition.reason === "seller_side_only"
             ? `${ev} 전 양도자 쪽이 이미 ${composition.sellerSide}주택이었고 상대 쪽은 무주택이었습니다 — 특례는 각자 1주택을 보유하다가 ${by} 2주택이 된 경우에 적용됩니다.`
-            : `${ev} 전 보유 구성(양도자 쪽 ${composition.sellerSide}채 · 상대 쪽 ${composition.counterpartSide}채)이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
+            : composition.reason === "roster_missing"
+              ? `세대 보유 주택을 모두 보유 주택 목록에 입력하지 않아 ${ev} 전 보유 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
+              : composition.reason === "origin_missing"
+                ? `보유 주택 목록에서 ${ev} 전 보유자를 고르지 않아 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
+                : `${ev} 전 보유 구성(양도자 쪽 ${composition.sellerSide}채 · 상대 쪽 ${composition.counterpartSide}채)이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
       );
     }
   }

@@ -343,6 +343,12 @@ describe("§155④⑤·⑦3호·⑧ · §154① 단서 · §156의2⑤ · §89�
         ...(t ? { transferDate: D(t) } : {}),
         marriageMerge: { marriageDate: D("2019-06-01") } as TransferTaxInput["marriageMerge"],
         isFirstTransferredInMerge: true,
+        // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+        houses: [
+          { id: "selling", acquisitionDate: D("2010-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+          { id: "h1", acquisitionDate: D("2008-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+        ] as TransferTaxInput["houses"],
+        sellingHouseId: "selling",
       });
     expect(resolveMergeDeeming(merge(MON))).toBe("marriage_merge");
     expect(resolveMergeDeeming(merge(TUE))).toBeUndefined();

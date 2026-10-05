@@ -39,6 +39,7 @@ import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -725,6 +726,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               onChange={onChange}
               hideGracePeriod
               countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
+              // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).
+              mergeContext={mergeContextOf(form)}
             />
           </div>
         </section>

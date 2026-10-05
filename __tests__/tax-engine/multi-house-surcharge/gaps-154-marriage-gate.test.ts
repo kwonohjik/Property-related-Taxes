@@ -27,8 +27,9 @@ function run(input: Parameters<typeof determineMultiHouseSurcharge>[0]) {
   return determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
 }
 
+// §155④⑤ 합가 전 구성(2026-10-05 정책) — h2는 상대 쪽이 합가 전부터 보유하던 주택이다.
 function base() {
-  return makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
+  return makeInput([makeHouse("h1", REGULATED), makeHouse("h2", { mergeOrigin: "counterpart_side" })], {
     sellingHouseId: "h1",
     marriageMerge: { marriageDate: new Date("2021-06-01") }, // 혼인 3년전 (10년 이내)
     // 15호 ① 요소는 caller가 비과세 정본으로 선판정해 넘긴다 — 이 파일은 ② 게이트만 본다.
@@ -38,6 +39,8 @@ function base() {
       isFirstTransferredInMerge: true,
       acquisitionDate: new Date("2010-01-01"),
       transferDate: new Date("2024-06-01"),
+      houses: [makeHouse("h1"), makeHouse("h2", { mergeOrigin: "counterpart_side" })],
+      sellingHouseId: "h1",
     }),
   });
 }

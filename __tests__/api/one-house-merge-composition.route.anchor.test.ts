@@ -108,7 +108,7 @@ describe("RC-1 판정 메뉴 — 폼 → route → 엔진", () => {
 
 describe("RC-2 계산기(다건 route) — 날짜 검증은 계산기에도 적용된다 (Q-5)", () => {
   /** 계산기 폼 — 세대 2주택 선언 + 명부 1행 · 혼인 2020-01-01 · 양도 2026-03-01. */
-  function calcForm(otherAcq: string) {
+  function calcForm(otherAcq: string, mergeOrigin?: "seller_side" | "counterpart_side") {
     const form = createDefaultTransferFormData();
     form.transferDate = "2026-03-01";
     form.contractTotalPrice = "500,000,000";
@@ -118,7 +118,7 @@ describe("RC-2 계산기(다건 route) — 날짜 검증은 계산기에도 적�
     form.residencePeriodMonths = "120";
     form.marriageDate = "2020-01-01";
     form.isFirstTransferredInMerge = true;
-    form.houses = [house(otherAcq)];
+    form.houses = [house(otherAcq, mergeOrigin ? { mergeOrigin } : {})];
     form.assets[0] = {
       ...form.assets[0],
       assetKind: "housing",
@@ -128,14 +128,16 @@ describe("RC-2 계산기(다건 route) — 날짜 검증은 계산기에도 적�
     return form;
   }
 
-  async function calc(otherAcq: string) {
+  async function calc(otherAcq: string, mergeOrigin?: "seller_side" | "counterpart_side") {
     const res = await multiPOST(
       new NextRequest("http://localhost/api/calc/transfer/multi", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
         body: JSON.stringify({
           taxYear: 2026,
-          properties: [{ propertyId: "p1", propertyLabel: "건1", ...buildPropertyPayload(calcForm(otherAcq)) }],
+          properties: [
+            { propertyId: "p1", propertyLabel: "건1", ...buildPropertyPayload(calcForm(otherAcq, mergeOrigin)) },
+          ],
         }),
       }),
     );
@@ -149,8 +151,15 @@ describe("RC-2 계산기(다건 route) — 날짜 검증은 계산기에도 적�
     expect(r.prop.isExempt).toBe(false);
   });
 
-  it("[RC-2b] 긍정 짝 — 혼인 전 취득(소유 쪽 칸이 없는 계산기 = 판정 안 함)이면 종전대로 비과세", async () => {
+  it("[RC-2b] 혼인 전 취득인데 소유 쪽 미입력 — 불성립(2026-10-05 정책: PR-2가 계산기 화면에 소유 입력을 연다. " +
+    "⑧ 차단으로 화면에선 도달하지 않고, route 직접 호출로만 재현 — 확인 필요 고지는 단건 엔진 anchor가 검증)", async () => {
     const r = await calc("2018-01-01");
+    expect(r.status).toBe(200);
+    expect(r.prop.isExempt).toBe(false);
+  });
+
+  it("[RC-2c] 긍정 짝 — 혼인 전 취득 + 소유 쪽(배우자 쪽) 입력 → 합가 비과세", async () => {
+    const r = await calc("2018-01-01", "counterpart_side");
     expect(r.status).toBe(200);
     expect(r.prop.isExempt).toBe(true);
   });

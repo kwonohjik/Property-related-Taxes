@@ -204,6 +204,17 @@ export function judgeMixedUseOneHouseExemption(
       marriageMerge: asset.multiHouse?.marriageMerge,
       parentalCareMerge: asset.multiHouse?.parentalCareMerge,
       isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
+      /**
+       * §155④⑤ 합가 전 구성(`resolveMergeComposition`) — 겸용은 명부를 **원시 롤스터**
+       * (`asset.multiHouse.houses`)로 갖고 있다. `householdHousingCount`를 위에서 제외 후
+       * 수치(`surcharge15Count`)로 강제하므로 롤스터 행 수와 항상 어긋나는데, 그 어긋남은
+       * 위에서 이미 계산한 제외 건수(`houseCountExclusionApplied`·`inheritedExcludedCount`)로
+       * 설명된다 — `knownHouseExclusionCount`로 알려 종전 동작을 보존한다(모름이 아니다).
+       * 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-1.
+       */
+      houses: asset.multiHouse?.houses,
+      sellingHouseId: asset.multiHouse?.sellingHouseId,
+      knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
     },
     oneHouseSpecialRules,
   );

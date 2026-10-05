@@ -37,7 +37,7 @@ import {
   suspensionNone,
 } from "../_helpers/multi-house-mock";
 
-const house = (id: string, acq: string) => ({
+const house = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
   id,
   acquisitionDate: new Date(acq),
   officialPrice: 300_000_000,
@@ -47,6 +47,7 @@ const house = (id: string, acq: string) => ({
   isLongTermRental: false,
   isApartment: true,
   isOfficetel: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
   isUnsoldHousing: false,
 });
 
@@ -64,7 +65,8 @@ const overlap = (extra: Partial<TransferTaxInput> = {}): TransferTaxInput =>
     householdHousingCount: 3,
     houses: [
       house("selling", "2015-01-01"),
-      house("h2", "2012-01-01"),
+      // h2는 합가 전 상대 쪽이 보유하던 종전주택이다(2026-10-05 정책 — 소유 쪽 명시 필요).
+      house("h2", "2012-01-01", "counterpart_side"),
       house("h3", "2024-02-01"),
     ] as TransferTaxInput["houses"],
     sellingHouseId: "selling",
@@ -81,7 +83,7 @@ const overlap = (extra: Partial<TransferTaxInput> = {}): TransferTaxInput =>
 const twoHouseMerge = (extra: Partial<TransferTaxInput> = {}): TransferTaxInput =>
   overlap({
     householdHousingCount: 2,
-    houses: [house("selling", "2015-01-01"), house("h2", "2012-01-01")] as TransferTaxInput["houses"],
+    houses: [house("selling", "2015-01-01"), house("h2", "2012-01-01", "counterpart_side")] as TransferTaxInput["houses"],
     temporaryTwoHouse: undefined,
     ...extra,
   });
