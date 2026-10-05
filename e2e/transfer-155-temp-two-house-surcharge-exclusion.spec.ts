@@ -22,6 +22,7 @@ function seedForm(over: Record<string, unknown>) {
   return {
     state: {
       formData: {
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",

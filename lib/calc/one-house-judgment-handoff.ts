@@ -32,7 +32,6 @@ import type { useRouter } from "next/navigation";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import {
   deriveJudgmentHouseCount,
-  deriveJudgmentRightCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
@@ -103,12 +102,15 @@ export function toTransferFormPatch(
      */
     householdNoOtherHousesConfirmed: (form.houses?.length ?? 0) === 0,
     /**
-     * 🔴 **입주권 수도 같은 이유로 확정한다**(OH-34). 판정 메뉴엔 이 위젯이 없고 route가 명부로
-     *    도출하는데(`deriveHouseholdRightCount`), 계산기는 스칼라를 직접 보낸다. 판정 폼 기본값
-     *    `"0"`을 그대로 넘기면 §89①4호 가목(「1개 보유」)이 계산기에서 불성립한다.
-     *    3개 이상은 계산기 위젯의 「2개 이상」 값 `"2"`로 맞춘다(엔진은 `=== 1`만 본다).
+     * 분양권·입주권 목록 확인도 같은 이유로 확정한다(PR-D, 2026-10-05). 판정 메뉴가 이미
+     * 세대 보유 분양권·입주권 사실을 다 모았으므로(`form.presaleRights` — 목록이 비면 그 조사의
+     * 결론이 「없음」이다), 계산기에서 같은 확인을 다시 요구하면 판정을 다시 하는 것이 된다
+     * (D-3 위반). `householdRightCount`는 더 쓰지 않는다 — 위 `base`가 넘기는 `presaleRights`
+     * 에서 ④가 직접 도출한다(`resolveHouseholdRightCount`, 판정 메뉴의 `deriveHouseholdRightCount`
+     * 와 같은 leaf). 과거 OH-34가 여기서 스칼라를 캡(`Math.min(…, 2)`)해 넘기던 것은 그 스칼라
+     * 위젯(0/1/2+)이 폐지되며 함께 없어졌다.
      */
-    householdRightCount: String(Math.min(deriveJudgmentRightCount(form), 2)),
+    householdNoPresaleRightsConfirmed: (form.presaleRights?.length ?? 0) === 0,
     /**
      * 🔴 레거시 표식은 **판정 폼 값으로 확정한다**(OH-34 병합 보고). 표식은 이전 이력 record의
      *    「스칼라 우선」 보존용인데, 위 주택 수는 판정 명부에서 새로 파생한 값이다. 계산기에 남은

@@ -136,9 +136,13 @@ describe("[M-2] buildPropertyPayload 자산-수준 취득방식 도출", () => {
 // ─────────────────────────────────────────────────────────
 
 describe("[H-2] 지원 스칼라 필드 전송", () => {
-  it("H2-S1: assetContractDate·householdRightCount 전송", () => {
+  it("H2-S1: assetContractDate 전송 · householdRightCount는 presaleRights에서 도출(PR-D)", () => {
     const form = baseForm();
-    form.householdRightCount = "2";
+    // PR-D(2026-10-05) — 숫자 칸(householdRightCount 스칼라)이 아니라 목록에서 도출한다.
+    form.presaleRights = [
+      { id: "r1", type: "redevelopment_right", acquisitionDate: "2015-01-01", region: "capital" },
+      { id: "r2", type: "redevelopment_right", acquisitionDate: "2016-01-01", region: "capital" },
+    ];
     form.assets[0] = { ...form.assets[0], assetContractDate: "2025-12-01" };
     const payload = buildPropertyPayload(form) as Record<string, unknown>;
     expect(payload.assetContractDate).toBe("2025-12-01");

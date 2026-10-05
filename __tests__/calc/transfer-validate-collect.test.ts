@@ -117,6 +117,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     // 주택 양도는 명부 행 ⑥에서 받는다(`transfer-calc-count-exclusion-row-link.plan.md`) — 폼 전역 섹션은 그 밖
     form.assets[0].assetKind = "right_to_move_in";
     form.householdHousingCount = ""; // 주택 수 미선택
+    form.householdNoPresaleRightsConfirmed = true; // 명부 필수화(PR-D) — 이 테스트의 관심사 밖
     form.specialHouseExclusions = [
       { article: "", houseAcquisitionDate: "", houseContractDate: "" },
       { article: "조특법 §99의2", houseAcquisitionDate: "", houseContractDate: "" },

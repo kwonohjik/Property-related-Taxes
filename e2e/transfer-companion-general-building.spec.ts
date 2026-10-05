@@ -64,6 +64,7 @@ function seedForm(list: Record<string, unknown>[]) {
         householdHousingCount: "2",
         // 명부 필수화(PR-1) — 명부 없이 스칼라 2채 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
         householdNoOtherHousesConfirmed: true,
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         isOneHousehold: false,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,

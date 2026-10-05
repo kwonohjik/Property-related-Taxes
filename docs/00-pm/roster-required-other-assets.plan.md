@@ -163,6 +163,26 @@ Q-7의 "별건" 분류를 철회하고, 선행 계획서 §2-8 표의 "가산 �
 
 **확인 필요(V-5)**: 입주권 양도 화면의 「세대 보유 조합원입주권 수」(`householdRightCount`, 0/1/2+, `Step4.tsx:418-444`)가 이 목록의 `right_to_move_in` 항목과 같은 사실을 따로 받는 두 번째 입력인지 — 그렇다면 PR-C/PR-D에서 하나로 정리해야 한다(같은 사실을 두 곳에서 받으면 어긋난다). PR-C Do 전 확인.
 
+### 4-6. PR-C 사전 확인 결과 — PR-D를 먼저 한다 (Q-20)
+
+PR-C 레인이 구현 전 확인에서 멈췄다(코드 변경 없음). 리드가 코드로 재확인했다.
+
+**V-5 — 이중 입력이다.**
+- 입주권 양도 화면의 「세대 보유 조합원입주권 수」(`householdRightCount`, 0/1/2+, 「양도하는 입주권 자체도 포함」 — `app/calc/transfer-tax/steps/Step4.tsx:418-444`)가 §89①4호 「조합원입주권을 1개 보유한 1세대」 판정의 유일한 입력이다(④ `lib/calc/transfer-tax-api.ts:453`·`lib/calc/multi-transfer-tax-api.ts:293`).
+- 같은 화면의 「분양권·입주권」 목록(`PresaleRightsSection`)에서도 항목 종류로 「조합원입주권」(`type: "redevelopment_right"`, `components/calc/transfer/PresaleRightsSection.tsx:88-92`)을 고를 수 있는데, 입주권 양도 판정은 이 항목을 쓰지 않는다. 목록→입주권 수 도출(`deriveHouseholdRightCount`, `lib/tax-engine/one-house/house-count.ts:124-130`)은 판정 메뉴(`app/api/calc/one-house-exemption/route.ts:176`) 전용이다.
+- ⇒ 목록에 다른 입주권을 넣어도 숫자 칸이 1이면 「1개 보유」로 판정된다(PR-1 이전 주택 수와 같은 종류의 괴리).
+
+**가목 안전성 — 0채를 먼저 열면 「모름 → 유리」가 계산기에서 켜진다.**
+- `oneRightPresaleGate`(`lib/tax-engine/transfer-tax-redevelopment-transforms.ts:97-109`)는 `presaleRights`가 비어 있으면 `"clear"`를 돌려준다 — 분양권 보유를 모르는 것이 「없음」으로 읽힌다(memory `feedback_unknown_fact_applies_unfavorably`와 반대).
+- V-4: 가목은 API·엔진 수준에서 이미 도달 가능하다(`__tests__/tax-engine/transfer/clause1-bucket-echo.anchor.test.ts:42` — `presaleRights` 없이 `householdHousingCount: 0`). 계산기는 0 버튼이 없어 막혀 있을 뿐이다.
+- PR-C가 0채를 먼저 열면 주택 쪽은 확인을 받지만 분양권 쪽은 확인 없이 가목이 성립한다(memory `feedback_ui_gate_expansion_activates_latent_defect`).
+
+**결정(Q-20)**: 순서를 **PR-D → PR-C**로 바꾼다. PR-D에서
+1. 「분양권·입주권」 목록 「없음」 확인 토글 + ⑧(§4-5 그대로) — 이것이 PR-C가 여는 가목 경로의 분양권 쪽 확인이 된다.
+2. 입주권 양도 화면의 `householdRightCount` 숫자 칸을 없애고 **양도하는 입주권 1개 + 목록의 조합원입주권 항목 수**로 도출한다(PR-1 패턴 — 한 곳(leaf)에서 도출, ④ 단건·다건 공유). 도출 대상 항목의 범위(취득일 무관 여부 등)는 §89①4호 본문으로 확인 후 정한다.
+
+API 직접 호출에서 `presaleRights` 미지정 시 `"clear"`가 되는 엔진 동작은 이 프로그램 범위 밖으로 남긴다(계산기는 PR-D의 ⑧이 막는다). 필요하면 별건.
+
 ## 5. 영향
 
 ### 5-1. 다건(`multi-transfer-tax-api.ts`)
@@ -198,9 +218,9 @@ Q-7의 "별건" 분류를 철회하고, 선행 계획서 §2-8 표의 "가산 �
 | PR | 내용 | 비고 |
 |---|---|---|
 | PR-A | §4-1 — 겸용주택 "이미 완료" 문서 정정 (선행 계획서 §2-8 각주 추가) | 코드 변경 없음, 즉시 가능 |
-| PR-B | §4-2 — 재개발APT: F1 확장(엔진) + 명부 UX 전환(화면) + ⑧ + 테스트 갱신 | 가장 크다(E2E 10개 영향) |
+| PR-B | §4-2 — 재개발APT: F1 확장(엔진) + 명부 UX 전환(화면) + ⑧ + 테스트 갱신 | ✅ #1983 머지(2026-10-05) |
 | PR-C | §4-3 — 입주권: 권리 양도용 도출식(엔진, +1 없음) + 명부 UX 전환(화면, "0채" 입력 경로 포함) + ⑧ + 테스트 갱신 | §89①4호 가목 신규 도달 경로 — anchor 필수 |
-| PR-D | §4-5 — 세대 보유 분양권·입주권 목록 필수 입력(확인 토글 + ⑧, 주택·겸용·재개발APT·입주권 양도) | Q-17~19 |
+| PR-D | §4-5·§4-6 — 세대 보유 분양권·입주권 목록 필수 입력(확인 토글 + ⑧, 주택·겸용·재개발APT·입주권 양도) + 입주권 양도의 입주권 수를 목록에서 도출 | Q-17~20 — **PR-C보다 먼저**(Q-20) |
 
 PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 먼저 해도 입주권에 영향 없음, 역도 성립) — 리스크를 줄이려면 분리 권장.
 
@@ -218,7 +238,8 @@ PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 �
 | ~~Q-16~~ | ~~§104①4호 단서에 영 §167의6 반영~~ | — | **폐기** — Q-11 최종 결정으로 계산기 도달 경로가 생기지 않는다. §4-4 별건 기록으로 남김 |
 | Q-17 | 세대 보유 분양권·입주권 목록의 「없음」 확인 방식 | 「다른 보유 주택이 없습니다」와 **별도 토글** | **사용자 결정(2026-10-05): 권장안** |
 | Q-18 | 입력 범위 | 취득일과 무관하게 **보유분 전부**(산입 여부는 엔진이 취득일로 판단) | **사용자 결정(2026-10-05): 권장안** |
-| Q-19 | 진행 방식 | **별도 PR(PR-D)** — 순서 PR-B → PR-C → PR-D | **사용자 결정(2026-10-05): 권장안** |
+| Q-19 | 진행 방식 | **별도 PR(PR-D)** — 순서 PR-B → PR-C → PR-D | **사용자 결정(2026-10-05): 권장안** — 순서는 Q-20으로 바뀜 |
+| Q-20 | PR-C 사전 확인에서 V-5(이중 입력)·가목 안전성 문제가 나왔다(§4-6). 순서와 정리 방법 | **PR-D를 PR-C보다 먼저** 하고, PR-D에서 입주권 양도의 「세대 보유 조합원입주권 수」 숫자 칸을 없애 목록에서 도출 | **사용자 결정(2026-10-05): 그 순서로 진행** |
 
 ### 확인 필요 (V)
 
@@ -227,8 +248,8 @@ PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 �
 | V-1 | 다건(`multi-transfer-tax-api.ts`)의 ⑧ 검증이 단건과 같은 `collectStep1Issues`를 쓰는지, 아니면 별도 검증 경로라 F1 확장이 다건에는 안 먹는지 | PR-B/PR-C Do 전 |
 | V-2 | 겸용주택(`isMixedUseHouse`)이 `assetKind === "redevelopment_apt"` 자산에도 걸릴 수 있는지(설계상 "housing" 전용으로 보이나 자산 폼 정의를 직접 재확인) | PR-B Do 전 |
 | V-3 | vitest 전체에서 `householdHousingCount >= "2"` + `houses` 미선언 + `legacyHouseCountPrecedence` 미선언 + (`right_to_move_in` 또는 `redevelopment_apt`) 조합의 정확한 파일 수(§6의 거친 추정 대체) | PR-B/PR-C Do 전 |
-| V-5 | 입주권 양도 화면 `householdRightCount`(0/1/2+)와 권리 목록 `right_to_move_in` 항목이 같은 사실의 이중 입력인지(§4-5) | PR-C Do 전 |
-| V-4 | §89①4호 가목(householdHousingCount===0)이 현재 **API 직접 호출**로는 도달 가능한지(계산기 UI만 막혀 있고 vitest/route anchor는 이미 0을 테스트하고 있을 가능성) | PR-C 설계 확정 전 |
+| V-5 | 입주권 양도 화면 `householdRightCount`(0/1/2+)와 권리 목록 `right_to_move_in` 항목이 같은 사실의 이중 입력인지(§4-5) | ✅ **이중 입력 확인**(§4-6) |
+| V-4 | §89①4호 가목(householdHousingCount===0)이 현재 **API 직접 호출**로는 도달 가능한지(계산기 UI만 막혀 있고 vitest/route anchor는 이미 0을 테스트하고 있을 가능성) | ✅ **이미 도달 가능**(§4-6) |
 
 ## 9. 완료 기준(DoD) — 이 계획서(문서 전용 PR) 기준
 

@@ -25,6 +25,7 @@ function seedForm(mode: "appraisal" | "salesCase", isUnregistered: boolean) {
     state: {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",

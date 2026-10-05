@@ -122,7 +122,7 @@ export const SELLING_HOUSE_ID = "selling";
  *    `oneRightPresaleGate`가 본다 — 여기 합치면 두 요건이 한 숫자로 뭉개진다.
  */
 export function deriveHouseholdRightCount(
-  presaleRights: { type: "presale_right" | "redevelopment_right" }[] | undefined,
+  presaleRights: readonly { type: "presale_right" | "redevelopment_right" }[] | undefined,
   /** 양도 대상이 조합원입주권인가. */
   sellingIsRedevelopmentRight: boolean,
 ): number {

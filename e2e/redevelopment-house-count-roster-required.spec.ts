@@ -45,6 +45,7 @@ function seedForm(over: Record<string, unknown>) {
         contractTotalPrice: "525000000",
         isOneHousehold: true,
         houses: [],
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         ...over,
       },
       pendingMigration: false,

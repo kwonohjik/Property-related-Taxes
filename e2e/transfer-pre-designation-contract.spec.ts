@@ -20,6 +20,7 @@ function seedForm(transferDate: string, regionCode = GANGNAM) {
   return {
     state: {
       formData: {
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
             ...makeDefaultAsset(1),

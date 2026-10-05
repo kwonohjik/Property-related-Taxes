@@ -93,6 +93,7 @@ function form(houses: HouseEntry[], over: Partial<Form> = {}, price = "2,000,000
     isRegulatedArea: true,
     wasRegulatedAtAcquisition: false,
     houses,
+    householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     ...over,
   });
 }

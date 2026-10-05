@@ -59,6 +59,7 @@ function form(over: Partial<TransferFormData> = {}): TransferFormData {
   f.transferDate = "2022-03-01";
   f.householdHousingCount = "1";
   f.householdNoOtherHousesConfirmed = true; // 명부 필수화(PR-1) — 1주택 고정, 다른 보유 주택 없음
+  f.householdNoPresaleRightsConfirmed = true; // 명부 필수화(PR-D) — 분양권·입주권 없음
   f.isOneHousehold = true;
   f.isRegulatedArea = false;
   f.wasRegulatedAtAcquisition = false;

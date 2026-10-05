@@ -95,6 +95,7 @@ function bundledForm(houses: HouseEntry[]) {
     isRegulatedArea: true,
     wasRegulatedAtAcquisition: false,
     houses,
+    householdNoPresaleRightsConfirmed: true, // roster-required PR-D
   });
 }
 
