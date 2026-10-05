@@ -29,7 +29,7 @@ import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHa
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
-import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { isHousingLike, isOneHouseExemptionAsset, usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
@@ -346,12 +346,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           />
 
           {/*
-            주택 수 — Q-6·Q-7(명부 필수화 PR-1) + PR-B(2026-10-05): `isOneHouseExemptionAsset`
-            (housing·redevelopment_apt — §154① 비과세 판정 대상)만 명부에서 도출한 읽기 전용
-            표시로 바꾼다. 입주권·분양권(나머지 housing-like 2종)은 ①의 의미 축이 달라 종전
-            「1/2/3+」 버튼을 그대로 둔다(PR-C 범위, 계획서 §4-3·§4-4).
+            주택 수 — Q-6·Q-7(명부 필수화 PR-1) + PR-B(2026-10-05, redevelopment_apt) +
+            PR-C(2026-10-05, right_to_move_in): `usesHouseCountRoster`(housing·
+            redevelopment_apt·right_to_move_in)는 명부에서 도출한 읽기 전용 표시로 바꾼다.
+            분양권(나머지 housing-like 1종)만 ①의 의미 축 자체가 없어 「1/2/3+」 버튼을
+            그대로 둔다(계획서 §4-4, Q-11 — 범위 밖).
+
+            입주권은 **오프셋이 다르다**(`houseCountSelfOffset`) — 양도하는 입주권 자신은
+            §89①4호 가목이 말하는 「주택」이 아니라서 명부 0행이 그대로 0채다(+1 없음).
+            housing·redevelopment_apt는 자신이 주택이라 명부 0행 확정 시 1채다.
           */}
-          {isOneHouseExemptionAsset(primaryKind) ? (
+          {usesHouseCountRoster(primaryKind) ? (
             <div className="space-y-1.5" data-field="householdNoOtherHousesConfirmed">
               <label className="block text-sm font-medium">세대 보유 주택 수</label>
               <p className="text-sm" data-testid="household-house-count-derived">
@@ -362,8 +367,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </p>
               {/*
                 명부 0행 — 「없음」을 확정해야 ⑧이 통과한다(행이 생기면 onChange에서 해제, #1919 패턴).
-                확정 시 스칼라를 "1"로 함께 맞춘다 — D-4(0행이면 스칼라 그대로)가 남아 있어, 행을
-                추가했다가 전부 지운 뒤 확정하면 스칼라가 그 전 선언값(예: "3")에 멈춰 있을 수 있다.
+                확정 시 스칼라를 **오프셋 값**으로 맞춘다 — housing·redevelopment_apt는 "1"
+                (자신이 주택), right_to_move_in은 "0"(자신은 주택이 아님, §89①4호 가목).
+                D-4(0행이면 스칼라 그대로)가 남아 있어, 행을 추가했다가 전부 지운 뒤 확정하면
+                스칼라가 그 전 선언값(예: "3")에 멈춰 있을 수 있다.
               */}
               {(form.houses?.length ?? 0) === 0 && (
                 <ToggleCard
@@ -371,11 +378,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   onCheckedChange={(v) =>
                     onChange({
                       householdNoOtherHousesConfirmed: v,
-                      ...(v ? { householdHousingCount: "1" } : {}),
+                      ...(v ? { householdHousingCount: String(houseCountSelfOffset(primaryKind)) } : {}),
                     })
                   }
                   title="다른 보유 주택이 없습니다"
-                  description="양도하는 이 주택 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
+                  description={
+                    primaryKind === "right_to_move_in"
+                      ? "양도하는 이 입주권 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
+                      : "양도하는 이 주택 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
+                  }
                   tone="sky"
                 />
               )}

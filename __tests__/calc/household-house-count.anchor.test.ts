@@ -8,7 +8,9 @@
  * | HC-1 | 명부가 비면 스칼라 그대로 (D-4 간이 입력 유지) |
  * | HC-2 | 명부에 행이 있으면 **1 + 취득일 있는 행 수** — 스칼라를 무시한다 |
  * | HC-3 | 취득일 없는 행은 세지 않는다 |
- * | HC-4 | 주택 양도가 아니면 **스칼라 유지**(F1) — 입주권·분양권은 의미 축이 다르다 |
+ * | HC-4 | 분양권 양도면 **스칼라 유지**(F1, 범위 밖) · housing·redevelopment_apt·
+ *        right_to_move_in(PR-C)은 명부가 이긴다 — 단 right_to_move_in은 **오프셋 0**
+ *        (자신은 §89①4호 가목의 「주택」이 아니다) |
  * | HC-5 | `declared`는 **호출부가 파싱해 넘긴다** — 기본값 규칙을 이 함수가 삼키지 않는다 |
  * | HC-6 | D-6 게이트 시나리오 — 행 추가만으로 §155 특례의 「2채」가 성립한다 |
  * | HC-7 | `houseRosterIsAuthoritative` — 화면이 스칼라 버튼을 잠글 조건 |
@@ -81,12 +83,12 @@ describe("HC-1·2 명부 우선", () => {
   });
 });
 
-describe("HC-4 F1 게이트 — 주택 양도만", () => {
+describe("HC-4 F1 게이트 — 명부가 세대 주택 수의 정본인 자산만", () => {
   /**
    * 🔴 **긍정 짝이 필요하다**. 「명부를 아예 안 본다」와 구별되지 않으면
    *    HC-2가 깨져도 이 단언은 초록이다(`feedback_negative_anchor_needs_positive_twin`).
    */
-  it.each(["right_to_move_in", "presale_right", "land", undefined])(
+  it.each(["presale_right", "land", undefined])(
     "[HC-4] primaryKind=%s → 스칼라 유지",
     (kind) => {
       const n = resolveHouseholdHousingCount(
@@ -111,6 +113,33 @@ describe("HC-4 F1 게이트 — 주택 양도만", () => {
   it("[HC-4-twin2] redevelopment_apt도 housing과 같이 명부가 이긴다 (PR-B)", () => {
     const n = resolveHouseholdHousingCount(
       args({ primaryKind: "redevelopment_apt", declared: 5, houses: [row("2020-01-01")] }),
+    );
+    expect(n).toBe(2);
+  });
+
+  /**
+   * 🔴 PR-C(2026-10-05) — right_to_move_in도 F1 게이트에서 **빠진다**(§89①4호 가목·나목
+   *    판정도 같은 명부가 정본). 단 **오프셋이 다르다** — 입주권 자신은 §89①4호 가목의
+   *    「주택」이 아니라 `0 + rows`(housing·redevelopment_apt는 `1 + rows`).
+   *
+   *    종전(PR-C 이전)에는 이 조합이 HC-4 each에 섞여 「스칼라 유지(5)」를 기대했다 — 명부
+   *    1행이 있어도 무시되는 결함을 그대로 단언하고 있었다는 뜻이다. 명부 1채를 무시하는
+   *    결함의 재현 anchor(이 파일의 git 과거본 HC-4-twin3 참조).
+   */
+  it("[HC-4-twin3] right_to_move_in — 명부 1행 → 0 + 1 = 1 (housing의 1 + 1 = 2와 다른 오프셋)", () => {
+    const n = resolveHouseholdHousingCount(
+      args({ primaryKind: "right_to_move_in", declared: 5, houses: [row("2020-01-01")] }),
+    );
+    expect(n).toBe(1);
+  });
+
+  it("[HC-4-twin4] right_to_move_in — 명부 2행 → 0 + 2 = 2", () => {
+    const n = resolveHouseholdHousingCount(
+      args({
+        primaryKind: "right_to_move_in",
+        declared: 9,
+        houses: [row("2020-01-01"), row("2021-01-01")],
+      }),
     );
     expect(n).toBe(2);
   });
@@ -153,8 +182,8 @@ describe("HC-7 명부가 정본인 상태", () => {
     expect(houseRosterIsAuthoritative("housing", [row()])).toBe(false);
   });
 
-  it("[HC-7c] 주택 양도가 아니면 false", () => {
-    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")])).toBe(false);
+  it("[HC-7c] 분양권 양도(범위 밖)면 false", () => {
+    expect(houseRosterIsAuthoritative("presale_right", [row("2020-01-01")])).toBe(false);
   });
 
   it("[HC-7d] 명부 자체가 없으면 false", () => {
@@ -163,6 +192,10 @@ describe("HC-7 명부가 정본인 상태", () => {
 
   it("[HC-7e] 🔴 PR-B — redevelopment_apt도 housing과 같이 true", () => {
     expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")])).toBe(true);
+  });
+
+  it("[HC-7f] 🔴 PR-C — right_to_move_in도 housing과 같이 true(오프셋만 다르다)", () => {
+    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")])).toBe(true);
   });
 });
 
@@ -187,14 +220,19 @@ describe("HC-8 명부 patch 가 스칼라를 함께 갱신한다", () => {
     expect(housesPatchWithDerivedCount([], "housing", false).householdHousingCount).toBeUndefined();
   });
 
-  it("[HC-8e] 주택 양도가 아니면 갱신하지 않는다 (F1)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false);
+  it("[HC-8e] 분양권 양도(범위 밖)면 갱신하지 않는다 (F1)", () => {
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "presale_right", false);
     expect(p.householdHousingCount).toBeUndefined();
   });
 
   it("[HC-8g] 🔴 PR-B — redevelopment_apt도 housing과 같이 갱신한다", () => {
     const p = housesPatchWithDerivedCount([row("2020-01-01")], "redevelopment_apt", false);
     expect(p.householdHousingCount).toBe("2");
+  });
+
+  it("[HC-8h] 🔴 PR-C — right_to_move_in은 갱신하되 오프셋 0 — '1' (= 0 + 1)", () => {
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false);
+    expect(p.householdHousingCount).toBe("1");
   });
 
   it("[HC-8f] 갱신값은 ④·⑧ leaf 와 같다 — 한 값만 남는다", () => {
@@ -226,12 +264,17 @@ describe("HC-9 잠금은 «정합된 상태»만 고정한다", () => {
     expect(houseCountScalarLocked("housing", [], 1)).toBe(false);
   });
 
-  it("[HC-9d] 주택 양도가 아니면 잠그지 않는다 (F1)", () => {
-    expect(houseCountScalarLocked("right_to_move_in", two, 3)).toBe(false);
+  it("[HC-9d] 분양권 양도(범위 밖)면 잠그지 않는다 (F1)", () => {
+    expect(houseCountScalarLocked("presale_right", two, 3)).toBe(false);
   });
 
   it("[HC-9f] 🔴 PR-B — redevelopment_apt도 housing과 같이 잠긴다", () => {
     expect(houseCountScalarLocked("redevelopment_apt", two, 3)).toBe(true);
+  });
+
+  it("[HC-9g] 🔴 PR-C — right_to_move_in은 오프셋 0으로 잠긴다(declared=2, 명부 2행)", () => {
+    expect(houseCountScalarLocked("right_to_move_in", two, 2)).toBe(true);
+    expect(houseCountScalarLocked("right_to_move_in", two, 3)).toBe(false); // housing의 오프셋(3)으로는 안 잠긴다
   });
 
   it("[HC-9e] HC-8 갱신 직후는 반드시 잠긴 상태다 — 두 술어가 같은 산식을 쓴다", () => {
@@ -256,12 +299,17 @@ describe("HC-10 OH-34 레거시 표식을 붙일 조건", () => {
     expect(houseCountDivergedFromRoster("housing", [], 5)).toBe(false);
   });
 
-  it("[HC-10d] 주택 양도가 아니면 false (F1)", () => {
-    expect(houseCountDivergedFromRoster("right_to_move_in", two, 1)).toBe(false);
+  it("[HC-10d] 분양권 양도(범위 밖)면 false (F1)", () => {
+    expect(houseCountDivergedFromRoster("presale_right", two, 1)).toBe(false);
   });
 
   it("[HC-10f] 🔴 PR-B — redevelopment_apt도 housing과 같이 어긋나면 true", () => {
     expect(houseCountDivergedFromRoster("redevelopment_apt", two, 1)).toBe(true);
+  });
+
+  it("[HC-10g] 🔴 PR-C — right_to_move_in은 오프셋 0 기준(파생값 2)으로 어긋남을 본다", () => {
+    expect(houseCountDivergedFromRoster("right_to_move_in", two, 1)).toBe(true); // 1 ≠ 0+2
+    expect(houseCountDivergedFromRoster("right_to_move_in", two, 2)).toBe(false); // 2 === 0+2
   });
 
   it("[HC-10e] 잠금 술어와 정확히 반대다(명부가 정본인 구간에서) — 같은 산식을 쓴다", () => {
