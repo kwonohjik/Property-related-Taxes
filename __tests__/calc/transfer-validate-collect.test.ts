@@ -118,6 +118,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets[0].assetKind = "right_to_move_in";
     form.householdHousingCount = ""; // 주택 수 미선택
     form.householdNoPresaleRightsConfirmed = true; // 명부 필수화(PR-D) — 이 테스트의 관심사 밖
+    form.householdNoOtherHousesConfirmed = true; // 명부 필수화(PR-C) — 이 테스트의 관심사 밖
     form.specialHouseExclusions = [
       { article: "", houseAcquisitionDate: "", houseContractDate: "" },
       { article: "조특법 §99의2", houseAcquisitionDate: "", houseContractDate: "" },

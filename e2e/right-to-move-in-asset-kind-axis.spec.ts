@@ -26,6 +26,9 @@ function seedForm(
     state: {
       formData: {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
+        // roster-required PR-B·PR-C: 입주권·재개발APT도 명부 0행이면 「없음」 확정이 있어야 ⑧이
+        // 통과한다. houses가 비어 있으므로(D-4) 아래 스칼라 선언값이 그대로 쓰인다(PR-1 Q-8 패턴).
+        householdNoOtherHousesConfirmed: true,
         assets: [{
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind,

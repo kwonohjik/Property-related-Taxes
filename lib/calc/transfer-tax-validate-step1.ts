@@ -15,7 +15,7 @@ import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
-import { isOneHouseExemptionAsset, requiresPresaleRightsConfirmation } from "./housing-like-asset";
+import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
@@ -41,18 +41,18 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     issues.push({ step, field: "householdHousingCount", message: "세대 보유 주택 수를 선택하세요." });
 
   /**
-   * ⑧ 명부 필수화(PR-1·PR-B) — 주택 양도 + 명부 0행이면 「다른 보유 주택이 없습니다」 확정이
-   * 있어야 통과한다. legacy 표식(OH-34 — 저장 당시 스칼라가 명부와 어긋난 구 이력)이 붙은
-   * 레코드는 제외한다 — 그 레코드는 이미 유효한 세액을 보존 중이라 재확인을 요구하지 않는다.
+   * ⑧ 명부 필수화(PR-1·PR-B·PR-C) — 세대 보유 주택 수를 명부에서 도출하는 자산 양도
+   * (`usesHouseCountRoster` — housing·redevelopment_apt·right_to_move_in) + 명부 0행이면
+   * 「다른 보유 주택이 없습니다」 확정이 있어야 통과한다. legacy 표식(OH-34 — 저장 당시
+   * 스칼라가 명부와 어긋난 구 이력)이 붙은 레코드는 제외한다 — 그 레코드는 이미 유효한
+   * 세액을 보존 중이라 재확인을 요구하지 않는다.
    *
-   * Q-7(PR-1)·PR-B: `isOneHouseExemptionAsset`(housing·redevelopment_apt — ①=§154① 비과세
-   * 판정 축). 입주권·분양권은 ①의 의미 축이 달라 범위 밖(PR-C, 계획서
-   * `docs/00-pm/roster-required-other-assets.plan.md` §4-3·§4-4). 겸용주택은 `assetKind`가
-   * 항상 `"housing"`이라 이미 포함된다(별도 판정축 아님, 같은 계획서 §4-1).
+   * Q-7(PR-1)·PR-B·PR-C(계획서 §4-3) — 분양권은 ①의 의미 축 자체가 없어 범위 밖(§4-4).
+   * 겸용주택은 `assetKind`가 항상 `"housing"`이라 이미 포함된다(별도 판정축 아님, §4-1).
    */
   const primaryKind = form.assets?.[0]?.assetKind;
   if (
-    isOneHouseExemptionAsset(primaryKind) &&
+    usesHouseCountRoster(primaryKind) &&
     !form.legacyHouseCountPrecedence &&
     (form.houses?.length ?? 0) === 0 &&
     !form.householdNoOtherHousesConfirmed

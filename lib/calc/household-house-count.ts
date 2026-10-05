@@ -37,22 +37,29 @@
  * **도달 불가를 근거로 규약을 바꾸지 않는다** — stale sessionStorage·이력 복원분은 그 경로를
  * 거치지 않는다. ⇒ 파싱은 호출부에 두고, 이 함수는 **명부 우선 규칙만** 담는다.
  *
- * ## 적용 범위 — §154① 비과세 판정 대상 자산만 (F1 게이트)
+ * ## 적용 범위 — 명부가 세대 주택 수의 정본인 자산만 (F1 게이트)
  *
- * 입주권·분양권 양도에서 스칼라는 「**양도 권리를 뺀** 주택 수」라 의미 축이 다르다
- * (`house-count-divergence.ts` F1 주석). 그 축에 명부 규칙을 얹으면 1채 어긋난다 — 현행 유지.
+ * 분양권 양도는 **제외된다**. §104①1호·3호 단일세율이고 세대 주택 수가 그 세율을 바꾸지
+ * 않는다(계획서 §4-4, Q-11).
  *
  * `redevelopment_apt`(재개발 신축주택)는 **포함된다**(PR-B, 2026-10-05). 재개발 신축주택은
  * §94①1호 「건물」이자 §89①3호가목의 「주택」이라 `checkExemption` 경계에서 `housing`으로
  * 번역되어 §154① 판정을 그대로 받는다(`transfer-tax-redevelopment-apt-exemption.ts` 주석) —
  * 비과세 판정 축에서는 housing과 **같은 의미**다(§155① 일시적 2주택의 "그 주택"도 같다).
- * 게이트는 `isOneHouseExemptionAsset`(`housing-like-asset.ts` — §154① 비과세 판정 대상 2종)과
- * 일치시킨다. 종전에는 이 함수만 `=== "housing"` 단일 리터럴이라 재개발APT는 명부를 채워도
- * §154① 판정이 원시 스칼라로 계산되는 「입력은 받는데 무시한다」 결함이 있었다
- * (계획서 `docs/00-pm/roster-required-other-assets.plan.md` §2-1, memory
+ * 종전에는 이 함수만 `=== "housing"` 단일 리터럴이라 재개발APT는 명부를 채워도 §154① 판정이
+ * 원시 스칼라로 계산되는 「입력은 받는데 무시한다」 결함이 있었다(계획서 §2-1, memory
  * `feedback_ui_gate_removes_sole_input_path`의 변형).
+ *
+ * `right_to_move_in`(조합원입주권)도 **포함된다**(PR-C, 2026-10-05 · 계획서 §4-3). §89①4호
+ * 가목·나목 판정이 쓰는 「세대 보유 주택 수」도 같은 명부(`houses[]`)가 정본이어야 한다 —
+ * 종전에는 이 함수의 F1이 입주권을 아예 제외해 명부를 채워도(화면엔 입력란이 있었다) 판정은
+ * 원시 스칼라만 보는 같은 종류의 결함이 있었고, 그 스칼라 위젯에는 "0채" 버튼조차 없어
+ * 가목(전액 비과세)이 계산기에서 애초에 도달 불가였다. **오프셋만 다르다** — housing·
+ * redevelopment_apt는 자신이 「주택」이라 `1 + rows`, right_to_move_in은 자신이 「주택」이
+ * 아니라(§89①4호 가목 "다른 주택 0채") `0 + rows`다. 오프셋은 `houseCountSelfOffset`
+ * 한 곳에서만 정한다(`usesHouseCountRoster`와 같은 파일).
  */
-import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { isOneHouseExemptionAsset, usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
 import { deriveHouseholdRightCount } from "@/lib/tax-engine/one-house/house-count";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
@@ -67,8 +74,8 @@ export interface HouseRowForCount {
 
 export interface ResolveHouseholdHousingCountArgs {
   /**
-   * 양도 대표 자산 종류(`form.assets[0].assetKind`). `isOneHouseExemptionAsset`(housing·
-   * redevelopment_apt)일 때만 명부를 정본으로 쓴다(PR-B, 2026-10-05).
+   * 양도 대표 자산 종류(`form.assets[0].assetKind`). `usesHouseCountRoster`(housing·
+   * redevelopment_apt·right_to_move_in)일 때만 명부를 정본으로 쓴다(PR-B·PR-C, 2026-10-05).
    */
   primaryKind: string | undefined;
   /** 호출부가 **제 기본값 규칙으로** 파싱한 스칼라 값 (위 🔑 참조). */
@@ -107,10 +114,10 @@ export function resolveHouseholdHousingCount(
   args: ResolveHouseholdHousingCountArgs,
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
-  if (!isOneHouseExemptionAsset(args.primaryKind)) return args.declared; // F1
+  if (!usesHouseCountRoster(args.primaryKind)) return args.declared; // F1
   const rows = countedHouseRows(args.houses);
   if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
-  return 1 + rows;
+  return houseCountSelfOffset(args.primaryKind) + rows;
 }
 
 /** 주택 수에 세어지는 명부 행 수 — 산식 단일 소스(`house-count-divergence.ts`도 이걸 쓴다). */
@@ -125,7 +132,7 @@ export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
 ): boolean {
-  return isOneHouseExemptionAsset(primaryKind) && countedHouseRows(houses) > 0;
+  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses) > 0;
 }
 
 /**
@@ -167,12 +174,12 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
   if (legacyPrecedence) return { houses };
-  const isRosterKind = isOneHouseExemptionAsset(primaryKind);
+  const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses, ...clearConfirm };
   return {
     houses,
-    householdHousingCount: String(1 + countedHouseRows(houses)),
+    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses)),
     ...clearConfirm,
   };
 }
@@ -193,7 +200,7 @@ export function houseCountDivergedFromRoster(
   declared: number,
 ): boolean {
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared !== 1 + countedHouseRows(houses);
+  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
 }
 
 /**
@@ -214,7 +221,7 @@ export function houseCountScalarLocked(
   declared: number,
 ): boolean {
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared === 1 + countedHouseRows(houses);
+  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
 }
 
 /**
@@ -260,7 +267,13 @@ export function houseCountScalarLocked(
  *   그대로 쓴다. 레거시 이력·간이 입력이 이 경로로 계속 동작한다.
  */
 export interface ResolveTemporaryTwoHouseArgs {
-  /** 양도 대표 자산 종류 — `isOneHouseExemptionAsset`일 때만 명부를 정본으로 쓴다(F1과 같은 축, Q-12). */
+  /**
+   * 양도 대표 자산 종류 — `isOneHouseExemptionAsset`(housing·redevelopment_apt)일 때만
+   * 명부를 정본으로 쓴다(Q-12). ⚠️ **PR-C에서도 넓히지 않는다** — `right_to_move_in`은
+   * `usesHouseCountRoster`에 들어가 세대 주택 수 명부가 §89①4호 가목·나목 판정에는 쓰이지만,
+   * §155① 일시적 2주택 자체는 **주택 양도**에만 성립하는 특례이고 입주권 양도는 그 조문의
+   * 적용 대상이 아니다(나목의 N년 기한은 이미 `oneRightClauseNaYears`가 별도로 판정한다).
+   */
   primaryKind: string | undefined;
   /** 양도 대상 주택(= 종전주택) 취득일 `YYYY-MM-DD`. */
   primaryAcquisitionDate: string | undefined;

@@ -108,3 +108,47 @@ export function requiresPresaleRightsConfirmation(
 ): boolean {
   return kind !== undefined && PRESALE_RIGHTS_ROSTER_REQUIRED_ASSET_KINDS.has(kind);
 }
+
+/**
+ * 「세대 보유 **주택** 수를 명부에서 도출하는가」 — `household-house-count.ts`의 F1 게이트
+ * (PR-C, 2026-10-05 · 계획서 `docs/00-pm/roster-required-other-assets.plan.md` §4-3·§7).
+ *
+ * `ONE_HOUSE_EXEMPTION_ASSET_KINDS`(housing·redevelopment_apt)에 `right_to_move_in`을
+ * 더한 집합이다. 셈의 **기준값**(§154① 판정용 housing·redevelopment_apt)과 **대상 요건**
+ * (§89①4호 가목·나목 판정용 right_to_move_in)이 다르지만, 둘 다 「세대 보유 주택 목록
+ * (`houses[]`)이 그 수의 정본」이라는 점은 같다 — 자신을 셀 때의 오프셋만 다르다
+ * (`houseCountSelfOffset` 참조).
+ *
+ * `presale_right`(분양권 양도)는 빠진다 — §104①1호·3호 단일세율이고 세대 주택 수가
+ * 그 세율을 바꾸지 않는다(계획서 §4-4, Q-11).
+ */
+export const HOUSE_COUNT_ROSTER_ASSET_KINDS: ReadonlySet<string> = new Set([
+  "housing",
+  "redevelopment_apt",
+  "right_to_move_in",
+]);
+
+/** 세대 보유 주택 수를 명부에서 도출하는 자산인가 (`household-house-count.ts` F1 게이트). */
+export function usesHouseCountRoster(
+  kind: AssetForm["assetKind"] | string | undefined,
+): boolean {
+  return kind !== undefined && HOUSE_COUNT_ROSTER_ASSET_KINDS.has(kind);
+}
+
+/**
+ * 명부 기준 세대 「주택」 수에 **자산 자신**을 더하는 오프셋 — 자산별로 다르다 (PR-C).
+ *
+ * - `housing`·`redevelopment_apt`: 양도 대상 자신이 §89①3호가목의 「주택」이다 ⇒ **+1**.
+ * - `right_to_move_in`: §89①4호 가목이 요구하는 것은 「다른 **주택**을 보유하지 아니할 것」
+ *   (= 0채)이고, 양도하는 조합원입주권 자신은 그 요건의 「주택」이 아니다(관리처분계획 인가로
+ *   종전주택이 이미 철거·멸실된 권리로 바뀐 상태) ⇒ **+0**. 명부 0행 그대로가 가목의 「0채」이고,
+ *   따로 1을 더하면 가목이 영영 성립하지 않는다(계획서 §3 표 — "입주권 자신은 주택이 아니다").
+ *
+ * 호출부마다 `1 + rows`를 따로 적지 않고 이 함수 **한 곳**에서만 오프셋을 정한다 — 자산을
+ * 추가할 때 오프셋을 빠뜨린 호출부가 생기는 것을 막는다.
+ */
+export function houseCountSelfOffset(
+  kind: AssetForm["assetKind"] | string | undefined,
+): number {
+  return kind === "right_to_move_in" ? 0 : 1;
+}

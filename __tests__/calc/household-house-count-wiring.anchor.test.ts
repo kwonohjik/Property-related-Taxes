@@ -20,7 +20,8 @@
  * | HW-1 | 스칼라 1 + 명부 1행 → 엔진에 **2**가 간다 (§155 특례 게이트가 열리는 값) |
  * | HW-2 | 명부가 비어도 **명부가 정본**(1채) — D-4 폐기(2026-10-05, 명부 필수화 PR-1). 스칼라는 무시된다 |
  * | HW-2b | legacy 표식이 켜지면 0행에서도 스칼라 그대로 — OH-34 세액 보존(D-4 폐기의 유일한 예외) |
- * | HW-3 | 주택 양도가 아니면 스칼라 그대로 (F1) |
+ * | HW-3 | 분양권 양도면 스칼라 그대로 (F1, 범위 밖) |
+ * | HW-3b | PR-C(2026-10-05) — 입주권 양도도 명부가 이긴다. 오프셋만 0(자신은 「주택」이 아니다) |
  * | HW-4 | 취득일 없는 행은 세지 않는다 — ④도 같은 규칙 |
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -114,13 +115,37 @@ describe("HW-2 명부가 비면 스칼라 — D-4 회귀 없음", () => {
   });
 });
 
-describe("HW-3 F1 게이트 — 주택 양도만", () => {
-  it("[HW-3] 입주권 양도 + 명부 1행 → 스칼라 유지", async () => {
+describe("HW-3 F1 게이트 — 분양권 양도는 범위 밖(Q-11)", () => {
+  it("[HW-3] 분양권 양도 + 명부 1행 → 스칼라 유지", async () => {
+    const body = await sentBody(
+      form({
+        householdHousingCount: "4",
+        assets: [asset({ assetKind: "presale_right" })],
+        houses: [houseRow("h1", "2018-01-01")],
+      } as Partial<TransferFormData>),
+    );
+    expect(body.householdHousingCount).toBe(4);
+  });
+});
+
+describe("HW-3b 🔴 PR-C — 입주권 양도도 명부가 엔진 입력을 결정한다(오프셋 0)", () => {
+  it("[HW-3b] 입주권 양도 + 명부 1행 → 엔진에 1 (= 0 + 1, housing의 2(1+1)와 다르다)", async () => {
     const body = await sentBody(
       form({
         householdHousingCount: "4",
         assets: [asset({ assetKind: "right_to_move_in" })],
         houses: [houseRow("h1", "2018-01-01")],
+      } as Partial<TransferFormData>),
+    );
+    expect(body.householdHousingCount).toBe(1);
+  });
+
+  /** HW-3b의 긍정 짝 — 명부가 비면 여전히 스칼라(D-4). */
+  it("[HW-3b-twin] 입주권 양도 + 명부 0행 → 스칼라 유지(D-4)", async () => {
+    const body = await sentBody(
+      form({
+        householdHousingCount: "4",
+        assets: [asset({ assetKind: "right_to_move_in" })],
       } as Partial<TransferFormData>),
     );
     expect(body.householdHousingCount).toBe(4);

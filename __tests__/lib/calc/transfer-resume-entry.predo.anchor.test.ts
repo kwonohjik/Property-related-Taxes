@@ -312,7 +312,28 @@ describe("R-4. OH-34 — 복원 시 레거시 표식", () => {
     expect(flag()).toBe(false);
   });
 
-  it("[R-4e] 주택 양도가 아니면 표식을 붙이지 않는다 (F1)", async () => {
+  it("[R-4e] 분양권 양도(F1 범위 밖)이면 표식을 붙이지 않는다", async () => {
+    const { router } = routerMock();
+    const r = rec({
+      id: "rec-legacy-presale",
+      inputData: {
+        assets: [{ assetKind: "presale_right", addressJibun: "분양권" }],
+        transferDate: "2026-03-03",
+        householdHousingCount: "1",
+        houses: [house("2018-01-01"), house("2019-01-01")],
+      },
+      resultData: { mode: "single", result: { determinedTax: 1 } },
+    });
+    await resumeTransferRecord(r, router);
+    expect(flag()).toBe(false);
+  });
+
+  /**
+   * 🔴 PR-C(2026-10-05) — 입주권은 F1 게이트에 **들어온다**(§89①4호 가목·나목도 같은 명부가
+   *    정본). 오프셋만 0이라 "1(선언) ≠ 0+2(파생)"으로 어긋나 표식이 켜진다 — R-4e(분양권)와
+   *    대조되는 양성 짝.
+   */
+  it("[R-4f] 🔴 PR-C — 입주권은 housing과 같이 어긋나면 표식이 켜진다(오프셋만 다르다)", async () => {
     const { router } = routerMock();
     const r = rec({
       id: "rec-legacy-right",
@@ -320,6 +341,22 @@ describe("R-4. OH-34 — 복원 시 레거시 표식", () => {
         assets: [{ assetKind: "right_to_move_in", addressJibun: "입주권" }],
         transferDate: "2026-03-03",
         householdHousingCount: "1",
+        houses: [house("2018-01-01"), house("2019-01-01")],
+      },
+      resultData: { mode: "single", result: { determinedTax: 1 } },
+    });
+    await resumeTransferRecord(r, router);
+    expect(flag()).toBe(true); // 1 ≠ 0 + 2
+  });
+
+  it("[R-4g] 🔴 PR-C 긍정 짝 — 입주권 선언이 파생값과 정합(0 + 2 = 2)이면 표식이 꺼진다", async () => {
+    const { router } = routerMock();
+    const r = rec({
+      id: "rec-legacy-right-matched",
+      inputData: {
+        assets: [{ assetKind: "right_to_move_in", addressJibun: "입주권" }],
+        transferDate: "2026-03-03",
+        householdHousingCount: "2",
         houses: [house("2018-01-01"), house("2019-01-01")],
       },
       resultData: { mode: "single", result: { determinedTax: 1 } },

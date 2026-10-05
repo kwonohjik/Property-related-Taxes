@@ -18,7 +18,8 @@
  * | SL-1 | 「+ 주택 추가」가 올리는 patch 는 `houses` 만 담는다 — 새 행엔 취득일이 없다 |
  * | SL-2 | 행에 취득일을 넣는 patch 는 `householdHousingCount` 를 **함께** 올린다 |
  * | SL-3 | 행 삭제도 같은 경로 — **남는 행이 있어야** 구별력이 있다 |
- * | SL-4 | 입주권 양도(F1)에서는 스칼라를 갱신하지 않는다 |
+ * | SL-4 | 분양권 양도(F1, 범위 밖)에서는 스칼라를 갱신하지 않는다 ·
+ *        PR-C(2026-10-05)로 입주권은 범위 안 — 오프셋 0으로 갱신한다(SL-4b) |
  * | SL-5~8 | **2026-10-05 명부 필수화(PR-1)로 폐기** — `"housing"`은 버튼 위젯 자체가 사라졌다
  *          (읽기 전용 표시 + 「다른 보유 주택이 없습니다」 확정으로 대체). 잠금 메커니즘은
  *          애초에 `"housing"`에서만 의미가 있었으므로(다른 housing-like 3종은 항상 unlocked)
@@ -127,12 +128,21 @@ describe("SL 명부 편집이 스칼라를 함께 올린다", () => {
     expect(patch.householdHousingCount).toBeUndefined();
   });
 
-  it("[SL-4] 🔴 입주권 양도(F1)에서는 스칼라를 갱신하지 않는다", () => {
+  it("[SL-4] 🔴 분양권 양도(F1, 범위 밖)에서는 스칼라를 갱신하지 않는다", () => {
+    const form = baseForm({ householdHousingCount: "1", houses: [house("h1", "2018-01-01")] });
+    form.assets[0].assetKind = "presale_right";
+    const onChange = renderList(form);
+    fireEvent.click(screen.getByText("+ 주택 추가"));
+    expect(onChange.mock.calls.at(-1)![0].householdHousingCount).toBeUndefined();
+  });
+
+  it("[SL-4b] 🔴 PR-C — 입주권 양도는 housing과 같이 갱신한다(오프셋 0: 1행 → '1')", () => {
     const form = baseForm({ householdHousingCount: "1", houses: [house("h1", "2018-01-01")] });
     form.assets[0].assetKind = "right_to_move_in";
     const onChange = renderList(form);
     fireEvent.click(screen.getByText("+ 주택 추가"));
-    expect(onChange.mock.calls.at(-1)![0].householdHousingCount).toBeUndefined();
+    // 기존 1행(취득일 O, 세어짐 1) + 새 빈 행(취득일 X, 안 세어짐) ⇒ 0 + 1 = "1"
+    expect(onChange.mock.calls.at(-1)![0].householdHousingCount).toBe("1");
   });
 });
 
@@ -147,7 +157,7 @@ describe("SL Step4 ① 표시 — 명부 필수화(PR-1, 2026-10-05) 이후", ()
    * | SL-R2 | 명부 0행 + 미확정 → 「다른 보유 주택이 없습니다」 토글이 보이고 OFF |
    * | SL-R3 | 명부 2행 → 토글이 사라지고 읽기 전용 표시가 "3채"(도출값, 선언 스칼라 무시) |
    * | SL-R4 | 토글을 켜면 확정 + 스칼라를 "1"로 함께 맞춘다(패치 1건) |
-   * | SL-R5 | 입주권(F1)은 그대로 「1/2/3+」 버튼을 쓴다 — Q-7 범위 밖 회귀 없음 |
+   * | SL-R5 | 분양권(F1)은 그대로 「1/2/3+」 버튼을 쓴다 — Q-11 범위 밖 회귀 없음 |
    */
   it("[SL-R1] housing에는 버튼 위젯이 없다", () => {
     render(<Step4 form={baseForm({ houses: [] })} onChange={() => {}} />);
@@ -190,12 +200,72 @@ describe("SL Step4 ① 표시 — 명부 필수화(PR-1, 2026-10-05) 이후", ()
     });
   });
 
-  it("[SL-R5] 입주권 양도는 종전 버튼 위젯을 그대로 쓴다(Q-7 범위 밖)", () => {
+  it("[SL-R5] 분양권 양도는 종전 버튼 위젯을 그대로 쓴다(Q-11 범위 밖)", () => {
     const form = baseForm({ houses: [] });
-    form.assets[0].assetKind = "right_to_move_in";
+    form.assets[0].assetKind = "presale_right";
     render(<Step4 form={form} onChange={() => {}} />);
     expect(screen.getByTestId("household-house-count-buttons")).toBeTruthy();
     expect(screen.queryByText("다른 보유 주택이 없습니다")).toBeNull();
+  });
+});
+
+/**
+ * ── PR-C(2026-10-05) — 입주권도 housing과 같은 명부-필수 UX ──
+ *
+ * `docs/00-pm/roster-required-other-assets.plan.md` §4-3. SL-R1~R4의 입주권 짝.
+ * **오프셋만 다르다** — 입주권 자신은 §89①4호 가목의 「주택」이 아니라 확정 시 스칼라가
+ * "0"(housing·redevelopment_apt는 "1")으로 맞춰진다.
+ */
+describe("SL-PRC Step4 ① 표시 — 입주권(PR-C)", () => {
+  function rightForm(over: Partial<TransferFormData> = {}) {
+    const form = baseForm(over);
+    form.assets[0].assetKind = "right_to_move_in";
+    return form;
+  }
+
+  it("[SL-PRC-1] right_to_move_in에는 버튼 위젯이 없다", () => {
+    render(<Step4 form={rightForm({ houses: [] })} onChange={() => {}} />);
+    expect(screen.queryByTestId("household-house-count-buttons")).toBeNull();
+  });
+
+  it("[SL-PRC-2] 명부 0행 + 미확정 → 확정 토글이 보이고 OFF", () => {
+    render(
+      <Step4
+        form={rightForm({ houses: [], householdNoOtherHousesConfirmed: false })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText(/다른 보유 주택이 없습니다/)).toBeTruthy();
+  });
+
+  it("[SL-PRC-3] 명부 2행 → 토글이 사라지고 도출값(2채, 오프셋 0)을 보여준다", () => {
+    render(
+      <Step4
+        form={rightForm({
+          householdHousingCount: "1", // 어긋난 선언 — 도출값이 이겨야 한다
+          houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
+        })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("다른 보유 주택이 없습니다")).toBeNull();
+    // housing·redevelopment_apt의 "3채"(1+2)와 다르다 — 입주권 자신은 세지 않는다(0+2).
+    expect(screen.getByTestId("household-house-count-derived").textContent).toContain("2채");
+  });
+
+  it("[SL-PRC-4] 토글 ON → 확정 + 스칼라를 \"0\"으로 맞춘다(housing의 \"1\"과 다르다)", () => {
+    const onChange = vi.fn();
+    render(
+      <Step4
+        form={rightForm({ houses: [], householdHousingCount: "3", householdNoOtherHousesConfirmed: false })}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch", { name: /^다른 보유 주택이 없습니다/ }));
+    expect(onChange).toHaveBeenCalledWith({
+      householdNoOtherHousesConfirmed: true,
+      householdHousingCount: "0",
+    });
   });
 });
 

@@ -1,7 +1,8 @@
 /**
- * anchor — `houseCountInputsVisible`·`houseRosterRendered`의 무조건절(F1 확장, PR-B 2026-10-05).
+ * anchor — `houseCountInputsVisible`·`houseRosterRendered`의 무조건절
+ * (F1 확장, PR-B 2026-10-05 재개발APT · PR-C 2026-10-05 입주권).
  *
- * 재개발APT에서 「1/2/3+」 스칼라 버튼을 없애면(Step4.tsx `isOneHouseExemptionAsset` 분기),
+ * 재개발APT·입주권에서 「1/2/3+」 스칼라 버튼을 없애면(Step4.tsx `usesHouseCountRoster` 분기),
  * 이 두 술어가 `"housing"` 하나만 무조건 열면 **명부를 열 화면 자체가 없어진다**
  * (닭-달걀 — `house-count-inputs-scope.ts` 주석 참조). housing과 같이 넓혔는지 직접 고정한다.
  */
@@ -28,8 +29,12 @@ describe("houseCountInputsVisible — F1 무조건절", () => {
     expect(houseCountInputsVisible(form(), "redevelopment_apt")).toBe(true);
   });
 
-  it("[HCIV-3] 입주권(F1 범위 밖) · 0행 · 스칼라 1 → 닫혀 있다(회귀 가드)", () => {
-    expect(houseCountInputsVisible(form(), "right_to_move_in")).toBe(false);
+  it("[HCIV-3] 🔴 PR-C — right_to_move_in · 0행 · 스칼라 1 → housing과 같이 열린다", () => {
+    expect(houseCountInputsVisible(form(), "right_to_move_in")).toBe(true);
+  });
+
+  it("[HCIV-4] 분양권(F1 범위 밖) · 0행 · 스칼라 1 → 닫혀 있다(회귀 가드)", () => {
+    expect(houseCountInputsVisible(form(), "presale_right")).toBe(false);
   });
 });
 
@@ -42,7 +47,11 @@ describe("houseRosterRendered — F1 무조건절", () => {
     expect(houseRosterRendered(form(), "redevelopment_apt")).toBe(true);
   });
 
-  it("[HRR-3] 입주권(F1 범위 밖) · 0행 · 스칼라 1 → 닫혀 있다(회귀 가드)", () => {
-    expect(houseRosterRendered(form(), "right_to_move_in")).toBe(false);
+  it("[HRR-3] 🔴 PR-C — right_to_move_in · 0행 · 스칼라 1 → housing과 같이 열린다", () => {
+    expect(houseRosterRendered(form(), "right_to_move_in")).toBe(true);
+  });
+
+  it("[HRR-4] 분양권(F1 범위 밖) · 0행 · 스칼라 1 → 닫혀 있다(회귀 가드)", () => {
+    expect(houseRosterRendered(form(), "presale_right")).toBe(false);
   });
 });

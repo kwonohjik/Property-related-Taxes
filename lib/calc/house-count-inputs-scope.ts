@@ -22,7 +22,7 @@
  *   컴패니언 NBL 「접기」가 복귀 버튼을 함께 지우던 것과 같은 처방이다.
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { isHousingLike, usesHouseCountRoster } from "@/lib/calc/housing-like-asset";
 
 /** 주택수 판정 입력에 **이미 담긴 데이터**가 있는가 — 있으면 지울 화면도 있어야 한다. */
 export function houseCountInputsHaveData(form: TransferFormData): boolean {
@@ -45,6 +45,9 @@ export function houseCountInputsHaveData(form: TransferFormData): boolean {
  *    「1/2/3+」 스칼라 버튼을 없애고(Step4.tsx) housing과 같은 명부-필수 UX로 바꾸면, 이 무조건절이
  *    없으면 **스칼라를 2로 올릴 버튼 자체가 없어** 이 섹션(명부를 채울 유일한 화면)을 열 방법이
  *    사라진다(닭-달걀, `houseRosterRendered` 주석과 같은 구조).
+ *
+ * 🔴 PR-C(2026-10-05) — `right_to_move_in`도 같은 이유로 `usesHouseCountRoster`에 포함한다.
+ *    입주권도 「1/2/3+」 버튼을 없애고 명부-필수 UX로 바꾸므로 같은 닭-달걀이 생긴다(계획서 §4-3).
  */
 export function houseCountInputsVisible(
   form: TransferFormData,
@@ -53,7 +56,7 @@ export function houseCountInputsVisible(
   if (houseCountInputsHaveData(form)) return true;
   const count = parseInt(form.householdHousingCount || "1", 10);
   if (isHousingLike(primaryKind ?? "") && count >= 2) return true;
-  return isOneHouseExemptionAsset(primaryKind);
+  return usesHouseCountRoster(primaryKind);
 }
 
 /**
@@ -75,10 +78,13 @@ export function houseCountInputsVisible(
  * 🔴 PR-B(2026-10-05) — `redevelopment_apt`도 같은 무조건절로 넓힌다(명부 필수화 대상 확대,
  *    `isOneHouseExemptionAsset`). `right_to_move_in`·`presale_right`(나머지 `isHousingLike` 2종)는
  *    버튼이 그대로 있어 영향 없다(PR-C 범위).
+ *
+ * 🔴 PR-C(2026-10-05) — `right_to_move_in`도 `usesHouseCountRoster`로 들어온다(계획서 §4-3).
+ *    `presale_right`(나머지 `isHousingLike` 1종)만 버튼이 그대로 있어 영향 없다(Q-11, 범위 밖).
  */
 export function houseRosterRendered(form: TransferFormData, primaryKind: string | undefined): boolean {
   if ((form.houses?.length ?? 0) > 0 || (form.specialHouseExclusions?.length ?? 0) > 0) return true;
-  if (isOneHouseExemptionAsset(primaryKind)) return true;
+  if (usesHouseCountRoster(primaryKind)) return true;
   return isHousingLike(primaryKind ?? "") && parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 
