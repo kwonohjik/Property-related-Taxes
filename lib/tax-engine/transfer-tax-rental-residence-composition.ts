@@ -60,7 +60,7 @@
  * `runMultiHouseSurchargeStep`이 같은 사실로 행을 구성해 정밀 판정을 돌린다. 음수(입력 모순)만 판정 보류다.
  */
 import { TRANSFER, TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
-import { resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption-requirements";
+import { resolveDeemedOneHouseBy155, resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import {
   resolveExemptionHouseCountExclusions,
   SPECIAL_ACT_15HO_VERIFIED_ARTICLES,
@@ -211,27 +211,31 @@ function judgeOtherHouse(
 
   /**
    * §155④⑤ 합가 전 구성(`resolveMergeComposition`)은 명부 행 수와 판정 주택수(여기서는 강제로
-   * 2로 둔다)를 대조한다. `input.houses`는 장기임대주택 행을 포함한 **원본 롤스터**라 행 수가
-   * 항상 어긋난다 — 그 어긋남은 장기임대주택이라는 **이미 알려진 사실**로 설명되므로
-   * `knownHouseExclusionCount`로 알려 종전 동작(판정 보류 → met 경로 유지)을 보존한다.
-   * 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-1.
+   * 2로 둔다)를 대조한다. `input.houses`는 장기임대주택 행을 포함한 **원본 롤스터**라 그 행을
+   * 먼저 빼야 한다 — 장기임대주택 행 id를 PR-3의 `knownHouseExclusionHouseIds`(상속주택·조특법
+   * 감면주택 행)에 더해 넘긴다(사용자 결정 2026-10-05 「가」, `merge-composition-unknown-
+   * unfavorable.plan.md` §1 — 이 축도 연다). 남는 [거주주택, 그 밖의 주택] 2행으로 실제 구성
+   * (seller_side/counterpart_side)을 판정한다 — 「그 밖의 주택」에 `mergeOrigin`(합가 전
+   * 양도자 쪽/배우자·합친 가족 쪽)이 비어 있으면 더는 판정을 보류하지 않고 `origin_missing`
+   * (불성립 + 결론을 가를 때만 확인 필요)이다. 날짜만으로 결론이 나는 경우(다른 주택이 합가
+   * 후 취득)도 `resolveMergeComposition`의 3-a가 그대로 가른다.
    *
-   * 🔑 **PR-3(`knownHouseExclusionHouseIds`로 행을 빼고 실제 판정)을 일부러 열지 않는다.**
-   * 사용자 결정 Q-4는 §155②③ 상속주택·조특법 감면주택만 「합가 당시 주택 수에서 뺀다」고
-   * 정했다 — 장기임대주택은 그 결정 밖이다. 장기임대주택 행을 빼고 남는 [거주주택, 그 밖의
-   * 주택] 2행으로 실제 구성(seller_side/counterpart_side)을 판정하면, 「그 밖의 주택」에
-   * `mergeOrigin`을 입력하지 않은 기존 가정(§155⑳은 합가 전 소유자 구분을 요구한 적이 없다)이
-   * 전부 `origin_missing`(불성립)으로 뒤집힌다(실측: `rental-residence-composition-e14h.
-   * anchor.test.ts` L-4/L-179 · `transfer.route.unknown-unfavorable-interp-axes.anchor.
-   * test.ts` UX-C1/UX-C2가 `mergeOrigin` 없이 `met`을 기대) — Q-4가 승인하지 않은 축까지
-   * 조이는 과잉 적용이라 `knownHouseExclusionHouseIds`는 넘기지 않는다(필드 미전달 =
-   * `resolveMergeComposition`의 레거시 분기, `knownHouseExclusionCount`만으로 판정 보류).
+   * 🔴 종전(PR-2까지)에는 이 간극을 `knownHouseExclusionCount`(건수)로만 알려 실제 구성을
+   * 보지 않고 판정을 보류했다(`unknown` → `met` 경로) — 합가 전 양도자 쪽만 2채여도(각자
+   * 1주택이 아닌 구성) 비과세·13호·15호 중과 배제가 났다(뮤테이션으로 고정: 이 필드를 다시
+   * 빼면 그 결함이 재현된다). `rental-residence-composition-e14h.anchor.test.ts` L-4·L-11과
+   * `transfer.route.unknown-unfavorable-interp-axes.anchor.test.ts` UX-C1·UX-C2는 「각자
+   * 1주택 합가」를 의도한 시료였으므로 `mergeOrigin: "counterpart_side"`를 더해 기대값(met)을
+   * 보존했다 — 세액은 그대로다.
    */
-  const rentalRowCount = input.houses?.filter((h) => h.isLongTermRental).length ?? 0;
-  const deemed = resolveDeemedOneHouseBy155(
-    { ...input, householdHousingCount: 2, knownHouseExclusionCount: rentalRowCount },
-    parsedRates.oneHouseSpecialRules,
-  );
+  const rentalHouseIds = input.houses?.filter((h) => h.isLongTermRental).map((h) => h.id) ?? [];
+  const mergeDeemingInput = {
+    ...input,
+    householdHousingCount: 2,
+    knownHouseExclusionCount: rentalHouseIds.length,
+    knownHouseExclusionHouseIds: [...rentalHouseIds, ...ex.knownHouseExclusionHouseIds],
+  };
+  const deemed = resolveDeemedOneHouseBy155(mergeDeemingInput, parsedRates.oneHouseSpecialRules);
   // 명부 도출은 양도 주택보다 나중에 취득한 행을 「신규 주택」으로 고른다 — 그 행이 장기임대주택이면
   // 거주주택 외 일반주택은 §155①로 빠진 것이 아니다. 신규 주택 취득일이 그 일반주택 행과 같을 때만 본다.
   if (
@@ -243,6 +247,21 @@ function judgeOtherHouse(
   }
   // §155④⑤ — 부동산거래관리과-44 · 상속증여세과-21 등(위 표)이 §155⑳과 겹쳐 적용한다.
   if (deemed === "marriage_merge" || deemed === "parental_care_merge") return { status: "met", via: deemed };
+  // 합가는 선언됐으나(`isFirstTransferredInMerge`) 합가 전 구성을 몰라(명부 없음·소유 쪽 미입력)
+  // 성립하지 못했다 — 나머지 요건(기한 등)을 충족해 그것이 결론을 가를 때만 확인 필요를 싣는다
+  // (§155⑳ 선례 — RENTAL_RESIDENCE_RURAL_CONFIRM_NOTICE 등과 같은 모양).
+  const mergeConfirmNotice = resolveMergeCompositionConfirmNotice(mergeDeemingInput);
+  if (mergeConfirmNotice) {
+    const basis = input.marriageMerge ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
+    return {
+      status: "exceeded",
+      otherHouseCount: 1,
+      reason:
+        `거주주택 외 주택 1채가 ${basis}에 따른 합가 전 보유 구성(각자 1주택)을 확인할 수 없어 ` +
+        `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}을 적용하지 않았습니다`,
+      confirmNotice: mergeConfirmNotice,
+    };
+  }
   if (deemed === "rural_house") {
     // §155⑦3호 귀농주택만 회신(서면-2015-부동산-0193)이 있다. 1호 상속·2호 이농은 해석 미확보.
     if (input.ruralHouse?.kind === "return_to_farm") return { status: "met", via: "rural_house" };

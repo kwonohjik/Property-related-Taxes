@@ -1,6 +1,6 @@
 # §155④⑤ 합가 의제 — 「합가 전 보유 구성」을 모를 때 불성립 + 확인 필요
 
-> 작성 2026-10-05 · 상태 **PR-1 완료(#1972 머지) · PR-2 완료 · PR-3 완료** · 대상 엔진 `lib/tax-engine/one-house/merge-composition.ts` · 화면 양도세 계산기(단건·다건)·1세대1주택 판정 메뉴
+> 작성 2026-10-05 · 상태 **PR-1 완료(#1972 머지) · PR-2 완료 · PR-3 완료(#1980 머지) · PR-4 완료** · 대상 엔진 `lib/tax-engine/one-house/merge-composition.ts` · 화면 양도세 계산기(단건·다건)·1세대1주택 판정 메뉴
 > 선행: [`one-house-judgment-merge-house-link.plan.md`](one-house-judgment-merge-house-link.plan.md)(2026-09-29 — 명부 행 `mergeOrigin`·`resolveMergeComposition` 도입) · 원칙: memory `feedback_unknown_fact_applies_unfavorably`(사용자 결정 2026-10-04 — 「모름」은 혜택 불성립 + 결론을 가를 때만 「확인 필요」, 근거: 모르는 상태에서 유리하게 적용하면 가산세 부담)
 
 ## 1. 사용자 결정 (2026-10-05)
@@ -228,10 +228,49 @@ Q-1~Q-4는 §1-1에서 결정됐다.
 
 **PR-3 제외 행** — ✅ 완료(2026-10-05)
 - [x] `knownHouseExclusionHouseIds`(§3-4) — `transfer-tax-house-exclusion-step.ts`의 `collectKnownHouseExclusionIds`가 §155②③ 상속주택(`excludedHouses[].houseId`) · §99의4·§98의9(`hceApplied[].houseId`) · 조특법 보유 감면주택(`specialHouseExclusionDetail.entries[].houseId`, eligible만)에서 houseId 있는 행만 모은다. `resolveMergeComposition`이 그 행을 먼저 빼고 남은 행으로 구성을 판정한다(사용자 결정 Q-4).
-- [x] 4개 소비처 동일 배선 — 비과세 STEP(`runHouseCountExclusionStep`) · 중과 15호(`resolveSurchargeDeemedOneHouseDetail`) · 겸용(`judgeMixedUseOneHouseExemption`)이 같은 `knownHouseExclusionHouseIds`를 받는다. §155⑳ 장기임대주택 축(`transfer-tax-rental-residence-composition.ts`)은 **의도적으로 제외** — Q-4가 승인한 제외 종류(상속·조특법)와 다른 축(장기임대주택)이고, 그 축의 「그 밖의 주택」에 `mergeOrigin`을 요구하면 기존 해석(사전-2025-법규재산-1719 등)이 열어둔 §155⑳+합가 중첩 경로를 과잉으로 조이게 된다(기존 E2E·anchor가 `mergeOrigin` 없이 `met`을 전제).
+- [x] 4개 소비처 동일 배선 — 비과세 STEP(`runHouseCountExclusionStep`) · 중과 15호(`resolveSurchargeDeemedOneHouseDetail`) · 겸용(`judgeMixedUseOneHouseExemption`)이 같은 `knownHouseExclusionHouseIds`를 받는다. §155⑳ 장기임대주택 축(`transfer-tax-rental-residence-composition.ts`)은 **의도적으로 제외** — Q-4가 승인한 제외 종류(상속·조특법)와 다른 축(장기임대주택)이고, 그 축의 「그 밖의 주택」에 `mergeOrigin`을 요구하면 기존 해석(사전-2025-법규재산-1719 등)이 열어둔 §155⑳+합가 중첩 경로를 과잉으로 조이게 된다(기존 E2E·anchor가 `mergeOrigin` 없이 `met`을 전제). ⚠️ **PR-4에서 뒤집힘** — 사용자 결정 2026-10-05 「가」가 이 제외를 폐기하고 이 축도 연다(아래 PR-4).
 - [x] 「모름 → 불리」를 끝까지 적용 — `knownHouseExclusionHouseIds` 필드 자체가 정의된(빈 배열이어도) 호출부는 제외 후에도 행 수가 안 맞으면 더는 `unknown`으로 보류하지 않고 `roster_missing`(불성립 + 확인 필요)이다. 필드를 넘기지 않는 레거시 호출부(§155⑳)는 PR-2 동작(`knownHouseExclusionCount`만으로 판정 보류) 그대로.
 - [x] V-A 기록 — 위 §7 V-A. 반대 취지 해석례 없음.
 - [x] 테스트 — 엔진 단위(`one-house-merge-composition.anchor.test.ts` MC-6, `collectKnownHouseExclusionIds` 포함) · 엔진 파이프라인(`calculateTransferTax`) · 중과 15호·겸용 follow-along(`surcharge-deemed-clauses-e14abc.anchor.test.ts`) · route 단건=다건(`transfer.route.merge-composition-exclusion-rows.anchor.test.ts`, 신규 파일). 뮤테이션 4건(핵심 필터 로직 2건 · 겸용·중과15호 배선 각 1건) 전건 KILL.
 - [x] tsc 0 · lint 0(에러) · vitest 전체 GREEN(28219개) · 관련 E2E 17건 GREEN
+
+**PR-4 §155⑳ 장기임대주택 축도 연다** — ✅ 완료(2026-10-05, 사용자 결정 「가」)
+
+PR-3은 §155④⑤ 합가 전 구성 판정에서 상속주택·조특법 감면주택 행만 빼고(`knownHouseExclusionHouseIds`)
+실제 판정을 열었고, §155⑳ 장기임대주택 축은 `isLongTermRental` 행이 그 결정 밖이라며 레거시(`knownHouseExclusionCount`
+건수만으로 판정 보류 → `met`)로 남겼다. 사용자 결정 2026-10-05 「가」 — 이 축도 연다: 장기임대주택 행을 빼고
+남는 [거주주택, 그 밖의 주택] 2행으로 합가 전 실제 구성(seller_side/counterpart_side)을 판정한다.
+
+- [x] `lib/tax-engine/transfer-tax-rental-residence-composition.ts` `judgeOtherHouse` — 장기임대주택 행 id +
+  PR-3의 `ex.knownHouseExclusionHouseIds`(상속·조특법)를 합쳐 `knownHouseExclusionHouseIds`로 넘긴다.
+  `resolveMergeComposition`이 이제 그 행들을 빼고 남은 2행으로 실제 구성을 판정한다 — 「그 밖의 주택」에
+  `mergeOrigin`이 없으면 더는 보류하지 않고 불성립(+ 결론을 가를 때만 확인 필요, `resolveMergeCompositionConfirmNotice`
+  재사용 · 단일 소스).
+- [x] `lib/tax-engine/one-house/merge-composition.ts` 주석 갱신 — 「§155⑳은 레거시 호출부」라던 서술을
+  「2026-10-05 「가」 이후 모든 소비처가 행 id를 넘긴다」로 정정(타입의 `count_mismatch` 분기는 하위 호환으로 남긴다).
+- [x] 재현(a~d) — (a) 그 밖의 주택이 배우자/합친 가족 쪽(`counterpart_side`) → 성립 그대로 (b) 양도자 쪽
+  (`seller_side`) → **종전 met(잘못 통과) → 수정 후 불성립**(확인 필요 없음, 사실이 확정됐으므로) (c) 소유
+  미입력(API 직접 호출 등) → 불성립 + 확인 필요(모름 → 불리) (d) 합가 후 취득 → 불성립(날짜만으로 결론, 확인
+  필요 없음, 종전과 결론 동일). 중과 배제(13호·15호 ① 요소)는 비과세와 같은 `resolveDeemedOneHouseBy155` 정본을
+  쓰므로 같은 결론으로 따라온다(13호·15호 전용 추가 anchor는 기존 `UX-C1`/`L-4`가 이미 `multiHouseSurchargeEvaluation.exclusionReasons`를
+  관측 — 별도 파일 불필요).
+- [x] 기존 테스트 — 전부 「각자 1주택 합가」 의도 보존(세액 불변) 쪽으로 처리:
+  - `rental-residence-composition-e14h.anchor.test.ts` L-4(혼인)·L-11(동거봉양) — OTHER 행에
+    `mergeOrigin: "counterpart_side"` 추가. L-4b·L-4c·L-4d 신규(뮤테이션 대체 짝 + 소유 미입력 + 합가 후 취득).
+  - `transfer.route.unknown-unfavorable-interp-axes.anchor.test.ts` UX-C1(혼인)·UX-C2(동거봉양) — 공용
+    `merged()` 헬퍼의 `OTHER`를 `OTHER_COUNTERPART`(`mergeOrigin: "counterpart_side"`)로 교체. UX-C1b·
+    UX-C1c·UX-C1d 신규(같은 3갈래, route 경유 세액 실측).
+- [x] 명부 없음 경로(`resolveWithoutRoster`, #1947) 확인 — 이 경로는 애초에 머지 구성을 전혀 보지 않고
+  (「그 밖의 주택」 1채가 있다는 사실만으로 §155①·② 겹침 여부를 몰라) 불성립 + 확인 필요다
+  (`RENTAL_RESIDENCE_NO_ROSTER_CONFIRM_NOTICE`, PR-2 이전부터 기존 동작) — 「모름 → 불리」 원칙과 이미 일치하므로
+  PR-4에서 변경 없음.
+- [x] 세액 실측(route, mock 아닌 fallback 세율) — (a) RH_EXCLUDED(102,086,600, 13호 배제 포함) ·
+  (b)·(c) FULLY_TAXED(1,327,903,500) · (d) FULLY_TAXED. 수정 전 (b)·(c)는 레거시 경로로 RH_EXCLUDED(잘못
+  통과)였다 — 수정 후 둘 다 과세로 바뀐다(핵심 결함 수정).
+- [x] 뮤테이션 — `knownHouseExclusionHouseIds` 필드 제거(레거시 복귀) → L-4b·L-4c·L-4d·UX-C1b·UX-C1c
+  3건(엔진 1 + route 1 세트)이 `met`으로 되돌아가 KILL. 음성 짝(각자 1주택 성립)은 L-4·UX-C1·UX-C2가
+  계속 통과해 과잉 조임이 없음을 함께 고정.
+- [x] tsc 0 · lint 0(에러) · 전체 vitest GREEN · 관련 E2E 30건 GREEN(계산기 합가·§155⑳ 임대주택 능동형 UI·
+  판정 메뉴 합가 전 보유자·검증 경고 표시 스펙)
 
 공통: tsc 0 · lint 0 · 전체 vitest 실패 0.

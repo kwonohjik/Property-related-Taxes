@@ -73,6 +73,31 @@ describe("E-14h resolveRentalResidenceComposition", () => {
   });
 
   it("L-4 다른 주택이 §155⑤ 혼인 합가로 빠지면 → met(상속증여세과-21 · 사전-2025-법규재산-1062)", () => {
+    // 각자 1주택 합가(배우자 쪽) — 2026-10-05 「가」 이후 합가 전 구성을 실제로 판정하므로
+    // OTHER에 `mergeOrigin`을 명시해야 성립(명부 없이도 성립하던 종전 레거시 동작이 아니다).
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, { ...OTHER, mergeOrigin: "counterpart_side" }], {
+        marriageMerge: { marriageDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      }),
+      parsed,
+    );
+    expect(r).toEqual({ status: "met", via: "marriage_merge" });
+  });
+
+  it("L-4b (뮤테이션 대체 짝) 다른 주택이 양도자 쪽 소유면 각자 1주택이 아니므로 → exceeded + 확인 필요", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, { ...OTHER, mergeOrigin: "seller_side" }], {
+        marriageMerge: { marriageDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toBeFalsy();
+  });
+
+  it("L-4c 다른 주택의 합가 전 소유 쪽을 입력하지 않으면 → exceeded + 확인 필요(모름 → 불리)", () => {
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, OTHER], {
         marriageMerge: { marriageDate: D("2020-01-01") },
@@ -80,7 +105,20 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       }),
       parsed,
     );
-    expect(r).toEqual({ status: "met", via: "marriage_merge" });
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toContain("합가 전 보유자");
+  });
+
+  it("L-4d 다른 주택이 합가 후 취득이면 소유 쪽 입력 없이도 → exceeded(날짜만으로 결론, 확인 필요 없음)", () => {
+    const r = resolveRentalResidenceComposition(
+      input([SELLING, RENTAL, house("other", "2021-06-01")], {
+        marriageMerge: { marriageDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      }),
+      parsed,
+    );
+    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
+    expect(r.status === "exceeded" && r.confirmNotice).toBeFalsy();
   });
 
   it("L-5 조특법 §99의2 감면주택 제외(해석 확인)로 그 밖의 주택이 없으면 → met(서면-2015-부동산-2422)", () => {
@@ -174,8 +212,9 @@ describe("E-14h resolveRentalResidenceComposition", () => {
   });
 
   it("L-11 §155④ 동거봉양 합가 → met(부동산거래관리과-44)", () => {
+    // 각자 1주택 합가(합친 가족 쪽) — L-4와 같은 이유로 `mergeOrigin` 명시.
     const r = resolveRentalResidenceComposition(
-      input([SELLING, RENTAL, OTHER], {
+      input([SELLING, RENTAL, { ...OTHER, mergeOrigin: "counterpart_side" }], {
         parentalCareMerge: { mergeDate: D("2020-01-01") },
         isFirstTransferredInMerge: true,
       } as Partial<TransferTaxInput>),

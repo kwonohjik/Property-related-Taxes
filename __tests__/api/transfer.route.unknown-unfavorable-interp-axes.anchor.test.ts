@@ -283,7 +283,10 @@ describe("§155③ 공동상속주택 소수지분과의 2중첩 — 성립(Q3),
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1·2호는 미확보(불성립)", () => {
-  const merged = (over: Partial<Form>) => withRental(form([OTHER, RENTAL_ROW], over));
+  // 각자 1주택 합가(배우자/합친 가족 쪽) — 2026-10-05 「가」 이후 합가 전 구성을 실제로 판정하므로
+  // 「그 밖의 주택」 행에 `mergeOrigin`을 명시해야 성립한다(명부 없이도 성립하던 종전 레거시 동작이 아니다).
+  const OTHER_COUNTERPART: HouseEntry = { ...OTHER, mergeOrigin: "counterpart_side" };
+  const merged = (over: Partial<Form>) => withRental(form([OTHER_COUNTERPART, RENTAL_ROW], over));
 
   it("UX-C1 §155⑤ 혼인 합가 → 적용 + 13호 중과 배제 (수정 전 199,997,600 — 배제 미개방 · 단건 = 다건)", async () => {
     const f = merged({ marriageDate: "2020-01-01", isFirstTransferredInMerge: true });
@@ -292,6 +295,37 @@ describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1�
     expect(s.exclusions).toContain("long_term_rental_residence");
     expect(s.confirm).toBeUndefined();
     expect(await multi(f)).toBe(RH_EXCLUDED);
+  });
+
+  it("UX-C1b (뮤테이션 대체 짝) 그 밖의 주택이 양도자 쪽 소유면 각자 1주택이 아니므로 → 불성립(1,327,903,500)", async () => {
+    const f = withRental(
+      form([{ ...OTHER, mergeOrigin: "seller_side" }, RENTAL_ROW], {
+        marriageDate: "2020-01-01",
+        isFirstTransferredInMerge: true,
+      }),
+    );
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toBeUndefined();
+  });
+
+  it("UX-C1c 그 밖의 주택 소유 쪽을 입력하지 않으면 → 불성립 + 확인 필요(모름 → 불리, API 직접 호출 등)", async () => {
+    const f = withRental(form([OTHER, RENTAL_ROW], { marriageDate: "2020-01-01", isFirstTransferredInMerge: true }));
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toContain("합가 전 보유자");
+  });
+
+  it("UX-C1d 그 밖의 주택이 합가 후 취득이면 소유 쪽 없이도 → 불성립(날짜만으로 결론, 확인 필요 없음)", async () => {
+    const f = withRental(
+      form([{ ...OTHER, acquisitionDate: "2021-06-01" }, RENTAL_ROW], {
+        marriageDate: "2020-01-01",
+        isFirstTransferredInMerge: true,
+      }),
+    );
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
+    expect(s.confirm).toBeUndefined();
   });
 
   it("UX-C2 §155④ 동거봉양 합가 → 적용 + 13호 중과 배제 (수정 전 199,997,600)", async () => {
