@@ -100,11 +100,12 @@ describe("C-1: 취득일 거래정지 — 혼합 환산 (소령 §165③·§165�
 
   it("C1-ENGINE-2: 순자산 단독 (§165④3) → 분자 5,000 → 취득가 5,000,000", () => {
     const r = calculateStockTransferTax(
-      baseInput({ netAssetOnlyReason: "no_business_or_short_or_closed" }),
+      baseInput({ netAssetOnlyReason: "no_business_or_short_or_closed", acquisitionNetAssetOnlyReason: "no_business_or_short_or_closed" }),
     );
     expect(r.acquisitionPrice).toBe(5_000_000);
     expect(r.valuationDetail?.finalPerShareValue).toBe(5_000);
-    expect(r.valuationDetail?.netAssetOnlyReason).toBe("no_business_or_short_or_closed");
+    // 취득일 거래정지는 취득 당시 평가뿐이다 — 결과 카드는 취득 근거를 읽는다(계획서 §14)
+    expect(r.valuationDetail?.acquisitionNetAssetOnlyReason).toBe("no_business_or_short_or_closed");
   });
 
   it("C1-ENGINE-3: 부동산과다보유 가중 반전 (2:3) → 분자 5,400 → 취득가 5,400,000", () => {

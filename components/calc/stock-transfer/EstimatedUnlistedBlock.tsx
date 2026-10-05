@@ -94,10 +94,29 @@ const NET_ASSET_ONLY_REASON_OPTIONS: { value: StockTransferFormData["netAssetOnl
 
 export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false, hideReversalToggle = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
+  const acquisitionNetAssetOnlyReason = form.acquisitionNetAssetOnlyReason || "";
   // 순자산 단독 — §165④3 사유 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 엔진·⑧·⑫와 같은 술어.
-  const isNetAssetOnly = shouldSkipNetIncome(form);
-  // 사유를 고르지 않았는데 단독이면 근거는 라목 후단뿐이다
-  const isRaMokBasis = isNetAssetOnly && netAssetOnlyReason === "";
+  // 평가 시점마다 따로다(양도 당시 · 취득 당시 — 계획서 `stock-165-4-valuation-followups.plan.md` §14).
+  const isTransferNaOnly = shouldSkipNetIncome(form, "transfer");
+  const isAcqNaOnly = shouldSkipNetIncome(form, "acquisition");
+  // 이 화면에 보이는 평가 시점 — 취득시 장부분실(사례 49)이면 취득측은 액면가라 보충평가가 없다
+  const showsTransferSide = !acquisitionSideOnly;
+  const showsAcqSide = !transferSideOnly && (acquisitionSideOnly || form.acqFaceValueOnly !== true);
+  // 보이는 시점이 **모두** 순자산 단독이면 가중평균(안내·2:3 토글)이 필요 없다
+  const isNetAssetOnly = (!showsTransferSide || isTransferNaOnly) && (!showsAcqSide || isAcqNaOnly);
+  // 사유를 고르지 않았는데 단독이면 근거는 라목 후단뿐이다(양측 공통)
+  const isRaMokBasis =
+    isNetAssetOnly &&
+    (!showsTransferSide || netAssetOnlyReason === "") &&
+    (!showsAcqSide || acquisitionNetAssetOnlyReason === "");
+  // 한쪽만 단독 — 가중평균 안내 아래에 어느 시점이 단독인지 덧붙인다
+  const naOnlySideCaption = isNetAssetOnly
+    ? null
+    : showsTransferSide && isTransferNaOnly
+      ? "양도 당시 평가는 순자산가치 단독 (§165④3) — 위 산식은 취득 당시 평가에만"
+      : showsAcqSide && isAcqNaOnly
+        ? "취득 당시 평가는 순자산가치 단독 (§165④3) — 위 산식은 양도 당시 평가에만"
+        : null;
   // §165④1호 괄호(2:3) — 엔진·⑧·⑫와 같은 leaf
   const isHeavyRE = isReversalCorpForm(form);
   // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly·transferSideOnly 시 강제 simple.
@@ -127,14 +146,17 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
   const evalDate = eraUnsupported ? undefined : transferDateParsed;
   // 2007.2.27. 이전 양도는 max 산식 — 가중치·반전·80% 하한이 없다. 양도일 미입력이면 현행 기준으로 안내
   const isMaxModel = evalDate !== undefined && getValuationWeights(evalDate).model === "max";
-  // 양도일에 있던 사유만 보인다 — 양도일 미입력이면 현행 사유. 이미 고른 값은 시기가 맞지 않아도 남긴다
-  // (숨기면 ⑧ 오류를 고칠 칸이 없다). 2007.2.27. 이전 양도는 사유가 없어 칸 자체를 숨긴다.
-  const reasonOptions = NET_ASSET_ONLY_REASON_OPTIONS.filter(
-    (o) =>
-      o.value === "" ||
-      o.value === netAssetOnlyReason ||
-      (transferDateParsed ? isNetAssetOnlyReasonInEra(o.value || undefined, transferDateParsed) : o.value !== "consecutive_loss_3y"),
-  );
+  // 양도일에 있던 사유만 보인다(취득 당시 칸도 양도일 기준 — Q-3c) — 양도일 미입력이면 현행 사유. 이미 고른 값은
+  // 시기가 맞지 않아도 남긴다(숨기면 ⑧ 오류를 고칠 칸이 없다). 2007.2.27. 이전 양도는 사유가 없어 칸 자체를 숨긴다.
+  const reasonOptionsFor = (selected: string) =>
+    NET_ASSET_ONLY_REASON_OPTIONS.filter(
+      (o) =>
+        o.value === "" ||
+        o.value === selected ||
+        (transferDateParsed ? isNetAssetOnlyReasonInEra(o.value || undefined, transferDateParsed) : o.value !== "consecutive_loss_3y"),
+    );
+  const transferReasonOptions = reasonOptionsFor(netAssetOnlyReason);
+  const acqReasonOptions = reasonOptionsFor(acquisitionNetAssetOnlyReason);
 
   // 양도기준시가 미리보기 (useMemo — useEffect→store 미러링 금지)
   // [DM-1] full 모드에서도 동일 미리보기 노출 — adapter 결과를 NI/NA로 사용
@@ -159,7 +181,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       : !(isBlank(form.transferYearNetIncomePerShare) && isBlank(form.transferYearNetAssetPerShare));
     if (!entered) return null;
 
-    if (isNetAssetOnly) {
+    if (isTransferNaOnly) {
       // 순자산 단독(§165④3) → 80% 하한 없음 · 0 하한은 엔진과 같은 정본(S-1c-4)
       return { perShare: calcNetAssetOnlyValue(na, evalDate), floor80Applied: false, method: "net_asset_only" as const };
     }
@@ -172,7 +194,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     fullReduced,
     form.transferYearNetIncomePerShare,
     form.transferYearNetAssetPerShare,
-    isNetAssetOnly,
+    isTransferNaOnly,
     isHeavyRE,
   ]);
 
@@ -199,8 +221,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       : !(isBlank(form.acquisitionYearNetIncomePerShare) && isBlank(form.acquisitionYearNetAssetPerShare));
     if (!entered) return null;
 
-    if (isNetAssetOnly) {
-      // 순자산 단독(§165④3) → 80% 하한 없음 · 0 하한 (양도측과 동일)
+    if (isAcqNaOnly) {
+      // 순자산 단독(§165④3 — 취득 당시 사유) → 80% 하한 없음 · 0 하한 (양도측과 동일)
       return calcNetAssetOnlyValue(na, evalDate);
     }
 
@@ -217,7 +239,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     fullReduced,
     form.acquisitionYearNetIncomePerShare,
     form.acquisitionYearNetAssetPerShare,
-    isNetAssetOnly,
+    isAcqNaOnly,
     isHeavyRE,
   ]);
 
@@ -263,7 +285,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         </p>
         <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
           <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />
-          {isNetAssetOnly && !isRaMokBasis && (
+          {((showsTransferSide && isTransferNaOnly) || (showsAcqSide && isAcqNaOnly)) && !isRaMokBasis && (
             <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 3호" label="§165④3" />
           )}
           {isRaMokBasis && (
@@ -295,6 +317,11 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         <p className="text-xs text-fuchsia-600 mt-1">
           입력값: 순손익가치 = <Frac top="1주당 순손익액" bottom="10%" /> (이미 반영된 값으로 입력)
         </p>
+        {naOnlySideCaption && !eraUnsupported && (
+          <p data-testid="net-asset-only-side-caption" className="text-xs mt-1">
+            {naOnlySideCaption}
+          </p>
+        )}
       </div>
 
       {/* §165④1호 괄호 — 2:3 대상 법인. 순자산 단독·max 산식(2007.2.27. 이전 양도)이면 가중평균이 없으므로 숨긴다 */}
@@ -380,11 +407,11 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         라벨을 자체 행으로 올리고(stacked) 5개 옵션을 2열로 접는다 — 좌-라벨 + 1열이면
         옵션이 5행을 먹어 화면 절반을 차지한다. 모바일은 RadioCardGroup 이 항상 1열이다.
       */}
-      {reasonOptions.length > 1 && (
+      {showsTransferSide && transferReasonOptions.length > 1 && (
         <FieldCard
           stacked
-          label="순자산 단독 평가 사유 (§165④3)"
-          hint="해당 사유가 있는 경우만 선택. 없으면 '해당 없음'으로 둡니다."
+          label="양도 당시 순자산 단독 평가 사유 (§165④3)"
+          hint="양도일이 속하는 사업연도 기준의 사실. 해당 사유가 있는 경우만 선택하고, 없으면 '해당 없음'으로 둡니다."
         >
           <RadioCardGroup
             name="netAssetOnlyReason"
@@ -397,7 +424,28 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             tone="amber"
             layout="stack"
             columns={2}
-            options={reasonOptions}
+            options={transferReasonOptions}
+          />
+        </FieldCard>
+      )}
+      {showsAcqSide && acqReasonOptions.length > 1 && (
+        <FieldCard
+          stacked
+          label="취득 당시 순자산 단독 평가 사유 (§165④3)"
+          hint="취득일이 속하는 사업연도 기준의 사실 — 양도 당시와 다를 수 있습니다(예: 취득 당시 사업개시 1년 미만). 없으면 '해당 없음'으로 둡니다."
+        >
+          <RadioCardGroup
+            name="acquisitionNetAssetOnlyReason"
+            value={acquisitionNetAssetOnlyReason}
+            onChange={(v) =>
+              onChange({
+                acquisitionNetAssetOnlyReason: v as StockTransferFormData["acquisitionNetAssetOnlyReason"] | "",
+              })
+            }
+            tone="amber"
+            layout="stack"
+            columns={2}
+            options={acqReasonOptions}
           />
         </FieldCard>
       )}
@@ -417,7 +465,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           양도일 직전 사업연도 평가 (양도기준시가 산출용)
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {!isNetAssetOnly && (
+          {!isTransferNaOnly && (
             <CurrencyInput
               label="1주당 순손익가치"
               required
@@ -459,7 +507,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             )}
             {transferStdPricePreview.method === "net_asset_only" && (
               <span className="ml-2 text-xs">
-                (순자산 단독 — {netAssetOnlyCitationLabel(isRaMokBasis ? "ra_mok_heavy_real_estate" : netAssetOnlyReason)})
+                (순자산 단독 — {netAssetOnlyCitationLabel(netAssetOnlyReason || "ra_mok_heavy_real_estate")})
               </span>
             )}
           </div>
@@ -475,7 +523,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {!isNetAssetOnly && (
+          {!isAcqNaOnly && (
             <CurrencyInput
               label="1주당 순손익가치 (취득시점)"
               required

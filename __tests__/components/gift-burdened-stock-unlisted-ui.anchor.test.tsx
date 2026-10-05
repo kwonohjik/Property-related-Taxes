@@ -106,13 +106,21 @@ describe("BG-UI-UNL — 비상장 환산 §165④ 입력 (B23)", () => {
     expect((box("1주당 순자산가치") as HTMLInputElement).value).toBe("400,000");
   });
 
-  it("BG-UI-UNL-5: 순자산 단독 사유 선택이 bgt에 저장되고 순손익 칸이 사라진다 (§165④3)", () => {
+  it("BG-UI-UNL-5: 순자산 단독 사유는 양도·취득 시점별로 bgt에 저장되고 그 시점의 순손익 칸만 사라진다 (§165④3 · 계획서 §14)", () => {
     const h = renderControlled({});
-    fireEvent.click(screen.getByText("다목: 주식가액 80% 이상 (지주회사형)"));
+    // 사유 칸은 양도 당시 · 취득 당시 순서로 둘이다
+    fireEvent.click(screen.getAllByText("다목: 주식가액 80% 이상 (지주회사형)")[0]);
     expect(h.get().burdenedGiftStockTransferTax!.netAssetOnlyReason).toBe("stock_holding_company");
     expect(screen.queryByRole("textbox", { name: "1주당 순손익가치" })).toBeNull();
-    fireEvent.click(screen.getByText("해당 없음"));
+    expect(screen.queryByRole("textbox", { name: "1주당 순손익가치 (취득시점)" })).not.toBeNull();
+    fireEvent.click(screen.getAllByText("다목: 주식가액 80% 이상 (지주회사형)")[1]);
+    expect(h.get().burdenedGiftStockTransferTax!.acquisitionNetAssetOnlyReason).toBe("stock_holding_company");
+    expect(screen.queryByRole("textbox", { name: "1주당 순손익가치 (취득시점)" })).toBeNull();
+    fireEvent.click(screen.getAllByText("해당 없음")[0]);
     expect(h.get().burdenedGiftStockTransferTax!.netAssetOnlyReason).toBeUndefined();
+    // 취득 칸의 «없음»은 null — undefined면 종전 레코드로 읽혀 양도 사유를 따라간다
+    fireEvent.click(screen.getAllByText("해당 없음")[1]);
+    expect(h.get().burdenedGiftStockTransferTax!.acquisitionNetAssetOnlyReason).toBeNull();
   });
 
   it("BG-UI-UNL-6: 양도·취득 평가액이 같으면 §81④1호 토글이 뜨고 bgt에 저장된다", () => {

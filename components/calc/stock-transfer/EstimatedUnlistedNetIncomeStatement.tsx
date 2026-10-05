@@ -6,7 +6,8 @@
  * [stock-transfer-unlisted-direct-calc] ui.design §4-A
  * PostListing 표 본체(상증령 §54 동일 산식) 재사용 — cols = EUTransfer / EUAcq.
  *
- * [E-6 (1)] isNetAssetOnly === true 시 컴포넌트 전체 비노출 + 안내 메시지.
+ * [E-6 (1)] 순자산 단독인 평가 시점의 열은 비노출(양도·취득 따로 — 계획서
+ * `stock-165-4-valuation-followups.plan.md` §14). 남는 열이 없으면 컴포넌트 전체 대신 안내 메시지.
  * 데이터 보존 정책: store 키는 그대로 유지, UI만 hidden (실수 토글 보호).
  *
  * 🔑 종전에는 `YearColumn`을 열마다 하나씩 렌더했다. 행 기반 표로 바뀌면서
@@ -41,26 +42,31 @@ interface Props {
 export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitionSideOnly = false }: Props) {
   // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출 (취득측 전용 경로에서는 무시)
   const hideAcqColumn = !acquisitionSideOnly && form.acqFaceValueOnly === true;
+  // 순자산 단독인 평가 시점의 열은 순손익이 필요 없다 — 양도·취득 따로
+  const skipTransfer = !acquisitionSideOnly && shouldSkipNetIncome(form, "transfer");
+  const skipAcq = !hideAcqColumn && shouldSkipNetIncome(form, "acquisition");
+  const showTransfer = !acquisitionSideOnly && !skipTransfer;
+  const showAcq = !hideAcqColumn && !skipAcq;
   const cols: StatementColumnSpec[] = useMemo(() => {
-    const base: { col: StatementColumn; label: string }[] = acquisitionSideOnly
-      ? []
-      : [{ col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` }];
-    if (!hideAcqColumn) base.push({ col: "EUAcq", label: `${COL_LABEL.EUAcq} 사업연도` });
+    const base: { col: StatementColumn; label: string }[] = [];
+    if (showTransfer) base.push({ col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` });
+    if (showAcq) base.push({ col: "EUAcq", label: `${COL_LABEL.EUAcq} 사업연도` });
     return buildStatementColumns(form, onChange, base);
-  }, [acquisitionSideOnly, hideAcqColumn, form, onChange]);
+  }, [showTransfer, showAcq, form, onChange]);
+  // 사용자가 고른 사유로 단독이면 §165④3, 아니면 라목 후단(§165⑧1호)
+  const hiddenMessage =
+    (skipTransfer && form.netAssetOnlyReason) || (skipAcq && form.acquisitionNetAssetOnlyReason)
+      ? UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN
+      : UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN_RA_MOK;
 
-  // [DM-2] 분기 우선순위: Priority 1 — NA 단독 (전체 비노출) > Priority 2 — 사례 49 (EUAcq만 비노출)
-  // [E-6 (1)] 순자산 단독 평가 사유 발생 시 NI 24행 양/취 모두 비노출
-  if (shouldSkipNetIncome(form)) {
+  // [DM-2] 분기 우선순위: Priority 1 — 남는 열 없음(전체 비노출) > Priority 2 — 사례 49·한쪽 단독(그 열만 비노출)
+  if (!showTransfer && !showAcq) {
     return (
       <div
         data-testid="eu-ni-hidden-notice"
         className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-800"
       >
-        ⓘ{" "}
-        {form.netAssetOnlyReason
-          ? UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN
-          : UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN_RA_MOK}
+        ⓘ {hiddenMessage}
       </div>
     );
   }
@@ -72,7 +78,7 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitio
           1
         </span>
         <p className="text-sm font-semibold text-sky-800">
-          순손익 계산서 (소령 §165④1 가목 — 24행 × {acquisitionSideOnly ? "취득연도" : hideAcqColumn ? "양도연도" : "양도/취득연도"})
+          순손익 계산서 (소령 §165④1 가목 — 24행 × {showTransfer && showAcq ? "양도/취득연도" : showTransfer ? "양도연도" : "취득연도"})
         </p>
       </div>
       {hideAcqColumn && (
@@ -81,6 +87,14 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitio
           className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
         >
           ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NI 입력 비노출
+        </p>
+      )}
+      {(skipTransfer || skipAcq) && (
+        <p
+          data-testid="eu-ni-side-hidden-notice"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+        >
+          ⓘ {skipTransfer ? "양도연도" : "취득연도"} — {hiddenMessage}
         </p>
       )}
       <NetIncomeStatementTable form={form} onChange={onChange} cols={cols} />

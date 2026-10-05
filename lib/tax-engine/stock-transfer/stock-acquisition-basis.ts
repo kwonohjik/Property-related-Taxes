@@ -195,6 +195,7 @@ export function resolveAcquisitionBasis(
         isHeavyRE: isSection165_4_1ReversalCorp(input),
         section165_4Model: getValuationWeights(input.transferDate).model,
         netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
+        acquisitionNetAssetOnlyReason: unlistedResult.acquisitionNetAssetOnlyReason,
         acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
         section1659Detail: unlistedResult.section1659Detail,
       };
@@ -243,6 +244,7 @@ export function resolveAcquisitionBasis(
         isHeavyRE: isSection165_4_1ReversalCorp(input),
         section165_4Model: getValuationWeights(input.transferDate).model,
         netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
+        acquisitionNetAssetOnlyReason: unlistedResult.acquisitionNetAssetOnlyReason,
         acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
         // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 월할 보정 echo
         section1659Detail: unlistedResult.section1659Detail,
@@ -300,8 +302,8 @@ export function resolveAcquisitionBasis(
         naPerShare: input.acquisitionYearNetAssetPerShare,
         isHeavyRE: isSection165_4_1ReversalCorp(input),
         section165_4Model: getValuationWeights(input.transferDate).model,
-        // 결과뷰가 «순자산 단독» 산식을 고르는 신호 — 엔진 분기와 같은 근거(라목 후단 포함)
-        netAssetOnlyReason: resolveNetAssetOnlyBasis(input),
+        // 결과뷰가 «순자산 단독» 산식을 고르는 신호 — 엔진 분기와 같은 근거(라목 후단 포함). 취득 당시 평가뿐이다
+        acquisitionNetAssetOnlyReason: resolveNetAssetOnlyBasis(input, "acquisition"),
         acquisitionStdPriceTotal: acqSide.perShare * shareCount,
       };
       warningsDelta.push(...acqSide.warnings);

@@ -31,7 +31,7 @@ describe("EstimatedUnlistedBlock — isNetAssetOnly 연동 (UI-1~3)", () => {
   it("UI-1: full + isNetAssetOnly === true → NI 24행 컴포넌트 비노출", () => {
     const form = makeForm({
       unlistedValuationMode: "full",
-      netAssetOnlyReason: "stock_holding_company",
+      netAssetOnlyReason: "stock_holding_company", acquisitionNetAssetOnlyReason: "stock_holding_company",
     });
     render(<EstimatedUnlistedBlock form={form} onChange={() => {}} />);
     // 순손익 계산서 헤더가 노출되지 않음
@@ -43,7 +43,7 @@ describe("EstimatedUnlistedBlock — isNetAssetOnly 연동 (UI-1~3)", () => {
   it("UI-2: 안내 메시지 텍스트 = UNLISTED_MESSAGES.NET_ASSET_ONLY_HIDDEN 상수와 일치", () => {
     const form = makeForm({
       unlistedValuationMode: "full",
-      netAssetOnlyReason: "stock_holding_company",
+      netAssetOnlyReason: "stock_holding_company", acquisitionNetAssetOnlyReason: "stock_holding_company",
     });
     render(<EstimatedUnlistedBlock form={form} onChange={() => {}} />);
     const notice = screen.getByTestId("eu-ni-hidden-notice");
@@ -53,7 +53,7 @@ describe("EstimatedUnlistedBlock — isNetAssetOnly 연동 (UI-1~3)", () => {
   it("UI-3: full + isNetAssetOnly + isHeavyRE → 가중치 안내 카드 '단독 평가' 분기 표시", () => {
     const form = makeForm({
       unlistedValuationMode: "full",
-      netAssetOnlyReason: "stock_holding_company",
+      netAssetOnlyReason: "stock_holding_company", acquisitionNetAssetOnlyReason: "stock_holding_company",
       isHeavyRealEstateForValuation: true,
     });
     render(<EstimatedUnlistedBlock form={form} onChange={() => {}} />);
@@ -93,7 +93,7 @@ describe("EstimatedUnlistedBlock — 데이터 보존 (UI-4·UI-5)", () => {
     // isNetAssetOnly === true 전환 — store에 NI 값 그대로 보존된다는 가정
     const formNetAssetOnly: StockTransferFormData = {
       ...formWithNi,
-      netAssetOnlyReason: "stock_holding_company",
+      netAssetOnlyReason: "stock_holding_company", acquisitionNetAssetOnlyReason: "stock_holding_company",
     };
     rerender(<EstimatedUnlistedBlock form={formNetAssetOnly} onChange={() => {}} />);
     expect(screen.queryByText(/순손익 계산서/)).toBeNull();

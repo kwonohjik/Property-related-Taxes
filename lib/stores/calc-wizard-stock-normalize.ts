@@ -33,6 +33,15 @@ const STD_MODES: readonly AcquisitionStdMode[] = [
   "halt_transfer",
 ];
 
+const NET_ASSET_ONLY_REASONS = [
+  "liquidation_or_owner_death",
+  "no_business_or_short_or_closed",
+  "consecutive_loss_3y",
+  "stock_holding_company",
+  "remaining_term_under_3y",
+  "",
+] as const;
+
 export function normalizeStockFormData(raw: unknown): StockTransferFormData {
   const d = (raw ?? {}) as Record<string, unknown>;
   const defaults = createInitialStockFormData();
@@ -304,7 +313,14 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     prePriorYearNetIncomePerShare: strField("prePriorYearNetIncomePerShare"),
     prePriorYearNetAssetPerShare: strField("prePriorYearNetAssetPerShare"),
     priorBizYearMonths: strField("priorBizYearMonths") || defaults.priorBizYearMonths,
-    netAssetOnlyReason: enumField("netAssetOnlyReason", ["liquidation_or_owner_death", "no_business_or_short_or_closed", "consecutive_loss_3y", "stock_holding_company", "remaining_term_under_3y", ""], ""),
+    netAssetOnlyReason: enumField("netAssetOnlyReason", NET_ASSET_ONLY_REASONS, ""),
+    // 종전 레코드는 사유 칸이 하나였고 **양측**에 걸렸다 — 취득 사유 키가 없으면 그 값을 이어받는다(계획서 §14).
+    // 키가 있으면 빈 값도 사용자가 고른 «없음»이다.
+    acquisitionNetAssetOnlyReason: enumField(
+      "acquisitionNetAssetOnlyReason" in d ? "acquisitionNetAssetOnlyReason" : "netAssetOnlyReason",
+      NET_ASSET_ONLY_REASONS,
+      "",
+    ),
     expenseMode: enumField("expenseMode", ["actual", "estimated"], "actual"),
     actualExpenses: strField("actualExpenses"),
     filingType: enumField("filingType", ["preliminary", "final", "revised"], defaults.filingType),

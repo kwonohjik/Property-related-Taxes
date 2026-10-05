@@ -132,7 +132,7 @@ describe("SC (P4·P6·P7): 취득기준시가 산정 규율", () => {
     const { result } = ok(
       runFullStack(
         saleCaseForm({
-          netAssetOnlyReason: "liquidation_or_owner_death",
+          netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
           acquisitionYearNetIncomePerShare: "",
           acquisitionYearNetAssetPerShare: "200000",
         }),
@@ -294,7 +294,7 @@ describe("SC (취득측 full): 화면에 없는 값·stale 값·판정 규칙", 
   it("SC-9e: 순자산 단독 사유 + full — 순손익 주식수 없이 통과, NI 미송신, 기준시가 = 순자산 200,000", () => {
     const form = saleCaseForm({
       unlistedValuationMode: "full",
-      netAssetOnlyReason: "liquidation_or_owner_death",
+      netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
       acquisitionYearNetIncomePerShare: "",
       acquisitionYearNetAssetPerShare: "",
       naAssetTotalRow1EUAcq: "5000000000",
@@ -347,7 +347,7 @@ describe("SC (취득측 full): 화면에 없는 값·stale 값·판정 규칙", 
     const errors = validateStep2Domestic(
       saleCaseForm({
         unlistedValuationMode: "full",
-        netAssetOnlyReason: "liquidation_or_owner_death",
+        netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
         ...ACQ_STATEMENT,
         niShareCountEUAcq: "",
       } as Partial<StockTransferFormData>),

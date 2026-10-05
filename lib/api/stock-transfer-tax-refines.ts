@@ -19,6 +19,7 @@ import { toOptionalDate } from "./date-coerce";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { resolveNetAssetOnlyBasis } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
+import { netAssetOnlyReasonSidesRead } from "@/lib/calc/stock-transfer-required-inputs";
 import { isTransferSupplementaryNonPositive } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
@@ -331,19 +332,40 @@ export function addStockRefines(
       const issue = (path: string, message: string) =>
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
       // 순자산 단독(§165④3 사유 · §165⑧1호 후단 라목)이면 순손익가치를 요구하지 않는다 — 엔진과 같은 leaf.
-      const netAssetOnly =
-        resolveNetAssetOnlyBasis({
-          netAssetOnlyReason: data.netAssetOnlyReason,
-          isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
-          transferDate: toOptionalDate(data.transferDate),
-        }) !== undefined;
+      // 평가 시점마다 따로다(양도 당시 · 취득 당시 — 계획서 §14).
+      const naFacts = {
+        netAssetOnlyReason: data.netAssetOnlyReason,
+        acquisitionNetAssetOnlyReason: data.acquisitionNetAssetOnlyReason,
+        isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
+        transferDate: toOptionalDate(data.transferDate),
+      };
+      const niSkip = {
+        transfer: resolveNetAssetOnlyBasis(naFacts, "transfer") !== undefined,
+        acquisition: resolveNetAssetOnlyBasis(naFacts, "acquisition") !== undefined,
+      };
       // S-1c-3 2단계 — 2000.4.2. 이전 양도분은 §165④ 보충적 평가 산식이 달라 계산하지 않는다(⑧ 같은 조건·문구).
       // §165④를 부르는 분기(환산 — 비상장·거래정지·취득 후 상장 / 매매사례가액 — 개산공제 기준시가)에서만 막는다.
       const transferDateForEra = toOptionalDate(data.transferDate);
       const eraUnsupported = transferDateForEra !== undefined && isSection165_4EraUnsupported(transferDateForEra);
-      // Q-3b — §165④3 사유가 양도일에 없던 사유(⑧ 같은 조건·문구). 사유를 읽는 분기에서만 부른다.
-      const reasonOutOfEra =
-        !eraUnsupported && !isNetAssetOnlyReasonInEra(data.netAssetOnlyReason, transferDateForEra);
+      // Q-3b — §165④3 사유가 양도일에 없던 사유면 **그 사유를 읽는 시점**의 칸에서 막는다(⑧ 같은 술어·문구).
+      if (!eraUnsupported && !splitOrLots) {
+        const listedForReason = ["kospi", "kosdaq", "konex"].includes(data.marketType as string);
+        const reads = netAssetOnlyReasonSidesRead({
+          acquisitionMode: data.acquisitionMode,
+          listed: listedForReason,
+          haltAtTransfer: data.tradingHaltAtTransfer === true,
+          haltAtAcquisition: data.tradingHaltAtAcquisition === true,
+          acqFaceValueOnly: data.acqFaceValueOnly === true,
+          donorConversion:
+            data.acquisitionCause === "carryover_gift" &&
+            data.donorAcquisitionMethod === "estimated" &&
+            data.acquisitionMode !== "estimated",
+        });
+        if (reads.transfer && !isNetAssetOnlyReasonInEra(data.netAssetOnlyReason, transferDateForEra))
+          issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
+        if (reads.acquisition && !isNetAssetOnlyReasonInEra(data.acquisitionNetAssetOnlyReason, transferDateForEra))
+          issue("acquisitionNetAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
+      }
       if (!splitOrLots) {
         if (
           data.transferPriceMode === "actual" &&
@@ -369,7 +391,7 @@ export function addStockRefines(
       }
       // 소칙 §81④1호 월할 가산 — 동일 사업연도 토글이면 전전사업연도 평가가 필요하다.
       if (data.acquisitionMode === "estimated" && data.unlistedSameBizYearToggle === true) {
-        if (!netAssetOnly && data.prePriorYearNetIncomePerShare === undefined)
+        if (!niSkip.transfer && data.prePriorYearNetIncomePerShare === undefined)
           issue("prePriorYearNetIncomePerShare", "전전사업연도 1주당 순손익가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
         if (data.prePriorYearNetAssetPerShare === undefined)
           issue("prePriorYearNetAssetPerShare", "전전사업연도 1주당 순자산가치를 입력하세요 (소득세법 시행규칙 §81④1호)");
@@ -391,11 +413,10 @@ export function addStockRefines(
             : null;
         if (eraUnsupported && (scope || (listed && data.acquiredBeforeListing)))
           issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
-        if (scope && reasonOutOfEra) issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
         if (scope) {
           for (const key of requiredUnlistedValuationKeys({
             scope,
-            niSkip: netAssetOnly,
+            niSkip,
             acqFaceValueOnly: data.acqFaceValueOnly === true,
           })) {
             if (data[key] === undefined)
@@ -411,7 +432,7 @@ export function addStockRefines(
           if (
             td &&
             na !== undefined &&
-            (netAssetOnly || ni !== undefined) &&
+            (niSkip.transfer || ni !== undefined) &&
             isTransferSupplementaryNonPositive(
               ni ?? 0,
               na,
@@ -422,7 +443,7 @@ export function addStockRefines(
                 isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
               }),
               td,
-              netAssetOnly,
+              niSkip.transfer,
             )
           )
             issue("transferYearNetAssetPerShare", UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE);
@@ -505,7 +526,7 @@ export function addStockRefines(
         } else {
           for (const key of requiredUnlistedValuationKeys({
             scope: "transfer",
-            niSkip: netAssetOnly,
+            niSkip,
             acqFaceValueOnly: false,
           })) {
             if (data[key] === undefined)
@@ -520,10 +541,9 @@ export function addStockRefines(
         !["kospi", "kosdaq", "konex"].includes(data.marketType as string)
       ) {
         if (eraUnsupported) issue("acquisitionMode", UNLISTED_MESSAGES.SECTION_165_4_ERA_UNSUPPORTED);
-        if (reasonOutOfEra) issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
         for (const key of requiredUnlistedValuationKeys({
           scope: "acquisition",
-          niSkip: netAssetOnly,
+          niSkip,
           acqFaceValueOnly: false,
         })) {
           if (data[key] === undefined)

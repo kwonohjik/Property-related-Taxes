@@ -81,7 +81,8 @@ const AT = (transferDate: string, priorYearEndDate: string, filingDate: string):
   priorYearEndDate,
   filingDate,
 });
-const R = (netAssetOnlyReason: Reason): Partial<StockTransferFormData> => ({ netAssetOnlyReason });
+/** 양도·취득 당시 평가 모두 같은 사유(사유는 시점별 — 계획서 §14) */
+const R = (r: Reason): Partial<StockTransferFormData> => ({ netAssetOnlyReason: r, acquisitionNetAssetOnlyReason: r });
 
 type Run =
   | { blocked: true; issues: { path: string; message: string }[]; step2: { field: string; message: string }[] }
@@ -108,14 +109,14 @@ function ok(r: Run) {
   expect(r.step2).toEqual([]);
   return r;
 }
-/** ⑧·⑫ 둘 다 `netAssetOnlyReason` 칸에서 같은 문구로 막는다 */
-function expectReasonBlocked(r: Run) {
-  expect(r.step2.filter((e) => e.field === "netAssetOnlyReason").map((e) => e.message)).toEqual([
+/** ⑧·⑫ 둘 다 그 시점의 사유 칸에서 같은 문구로 막는다 (양측 경로는 양도 칸 · 취득측만 경로는 취득 칸) */
+function expectReasonBlocked(r: Run, field: "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason" = "netAssetOnlyReason") {
+  expect(r.step2.filter((e) => e.field === field).map((e) => e.message)).toEqual([
     UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA,
   ]);
   expect(r.blocked).toBe(true);
   if (!r.blocked) return;
-  expect(r.issues.filter((i) => i.path === "netAssetOnlyReason").map((i) => i.message)).toEqual([
+  expect(r.issues.filter((i) => i.path === field).map((i) => i.message)).toEqual([
     UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA,
   ]);
 }
@@ -198,11 +199,13 @@ describe("RE-5: 다른 §165④ 경로도 같은 차단", () => {
           ...R("stock_holding_company"),
         }),
       ),
+      "acquisitionNetAssetOnlyReason",
     );
   });
   it("매매사례가액(비상장) + 2022 양도 + 현행 라목 → 차단", () => {
     expectReasonBlocked(
       run(form({ acquisitionMode: "sale_case", acquisitionMarketSamplePrice: "30000", ...R("remaining_term_under_3y") })),
+      "acquisitionNetAssetOnlyReason",
     );
   });
 });

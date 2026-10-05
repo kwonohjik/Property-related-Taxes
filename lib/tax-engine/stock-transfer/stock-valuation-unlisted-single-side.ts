@@ -77,8 +77,8 @@ export function calcTransferStdPriceForFaceValue(
    * ⚠️ 이 분기는 PR #1350이 넣은 것이고, 이 파일은 PR #1351이 800줄 정책으로 본체에서
    *    떼어낸 것이라 머지 시 조용히 소실됐다. anchor AP-FV-4가 잡았다.
    */
-  // §165⑧1호 후단(라목)도 같은 단독이다 — 근거는 `resolveNetAssetOnlyBasis` 하나.
-  if (resolveNetAssetOnlyBasis(input)) {
+  // §165⑧1호 후단(라목)도 같은 단독이다 — 근거는 `resolveNetAssetOnlyBasis` 하나. 양도 당시 평가라 양도 사유.
+  if (resolveNetAssetOnlyBasis(input, "transfer")) {
     return { perShare: calcNetAssetOnlyValue(transferNa, transferDate), netAssetFloorApplied: false };
   }
 
@@ -113,7 +113,7 @@ export interface AcquisitionSideSupplementaryResult {
  * §165⑤ 비적용 판정(계산식이 상장일 기반 취득 후 상장 전제).
  *
  * - 가중치 연혁: getValuationWeights(transferDate) — 양측 경로(calcUnlistedValuation)와 동일 (양도시점 과세)
- * - netAssetOnlyReason 시 취득연도 NA 단독 (§165④3 — 양측 경로와 동일 규율)
+ * - 취득 당시 사유(`acquisitionNetAssetOnlyReason`) 시 취득연도 NA 단독 (§165④3 — 평가 시점의 사실, 계획서 §14)
  * - isHeavyRealEstateForValuation 시 2:3 반전 (§165④1 괄호)
  * - **80% 하한 적용** (§165④1 단서) — 공용 정본 `calcSection165_4Value` 위임
  *
@@ -130,7 +130,7 @@ export function calcAcquisitionStdPerShareSupplementary(
   const { transferDate } = input;
   // §165④1호 괄호(2:3) 대상 법인 — 양측 경로와 같은 leaf(S-1c-2)
   const isHeavyRealEstateForValuation = isSection165_4_1ReversalCorp(input);
-  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input);
+  const netAssetOnlyBasis = resolveNetAssetOnlyBasis(input, "acquisition");
   const acquisitionNi = input.acquisitionYearNetIncomePerShare ?? 0;
   const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;
 

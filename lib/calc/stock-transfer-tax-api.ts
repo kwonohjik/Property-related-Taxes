@@ -18,7 +18,7 @@ import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing
 import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import {
   adaptUnlistedFlatToApiBody,
-  shouldSkipNetIncome,
+  netIncomeSkipBySide,
 } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
@@ -448,13 +448,13 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       form.unlistedValuationMode === "full") ||
     acqSideFull
   ) {
-    const niSkip = shouldSkipNetIncome(form);
-    const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
+    const niSkip = netIncomeSkipBySide(form);
+    const reduced = adaptUnlistedFlatToApiBody(form, niSkip);
     if (!acqSideFull) {
-      if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;
+      if (!niSkip.transfer) body.transferYearNetIncomePerShare = reduced.transferNi;
       body.transferYearNetAssetPerShare = reduced.transferNa;
     }
-    if (!niSkip) body.acquisitionYearNetIncomePerShare = reduced.acqNi;
+    if (!niSkip.acquisition) body.acquisitionYearNetIncomePerShare = reduced.acqNi;
     body.acquisitionYearNetAssetPerShare = reduced.acqNa;
     // 74 신규 필드는 body 미포함 — Zod stripping/엔진 미도달 위험 0
   }
@@ -511,9 +511,12 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // API 직접 호출만 만들 수 있다.
   body.bookLost = false;
 
-  // ── 순자산 단독 평가 사유 ──
+  // ── 순자산 단독 평가 사유 — 양도 당시 · 취득 당시 따로 (계획서 §14) ──
   if (form.netAssetOnlyReason) {
     body.netAssetOnlyReason = form.netAssetOnlyReason;
+  }
+  if (form.acquisitionNetAssetOnlyReason) {
+    body.acquisitionNetAssetOnlyReason = form.acquisitionNetAssetOnlyReason;
   }
 
   // ── 필요경비 ──
