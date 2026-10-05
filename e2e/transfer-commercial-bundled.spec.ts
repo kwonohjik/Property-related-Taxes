@@ -34,6 +34,8 @@ function seedForm(assets: Record<string, unknown>[]) {
         filingDate: "2024-08-31",
         contractTotalPrice: "1200000000",
         householdHousingCount: "0",
+        // 명부 필수화(PR-1) — COMPANION 변형은 assets[0]이 "housing"이라 ⑧이 0행을 요구한다.
+        householdNoOtherHousesConfirmed: true,
         isOneHousehold: false,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,

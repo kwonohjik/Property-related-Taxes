@@ -9,6 +9,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
+import { confirmNoOtherHouses } from "./_helpers/confirm-no-other-houses";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -47,6 +48,9 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   await month(2).fill("03");
   await day(2).fill("10");
   await getInputByLabel(page, "취득가액 (원)").first().fill("800000000");
+
+  // 명부 필수화(PR-1) — 「보유 상황」 단계에서 「다른 보유 주택이 없습니다」를 확정해야 ⑧을 통과한다.
+  await confirmNoOtherHouses(page);
 
   // 가산세 단계로 이동 후 계산
   await page.getByRole("button", { name: "가산세" }).first().click();

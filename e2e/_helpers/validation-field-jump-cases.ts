@@ -30,6 +30,8 @@ export const validBase = () => ({
   filingDate: "2024-05-31",
   contractTotalPrice: "500000000",
   householdHousingCount: "1",
+  // 명부 필수화(PR-1, 2026-10-05) — 주택 양도 + 명부 0행이면 ⑧이 「없음」 확정을 요구한다.
+  householdNoOtherHousesConfirmed: true,
   isOneHousehold: false,
 });
 

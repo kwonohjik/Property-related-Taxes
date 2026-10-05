@@ -65,6 +65,8 @@ async function seedAndOpen(page: Page, list: Record<string, unknown>[]) {
           filingDate: "2024-08-31",
           contractTotalPrice: "1200000000",
           householdHousingCount: "2",
+          // 명부 필수화(PR-1) — 명부 없이 스칼라 2채 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
+          householdNoOtherHousesConfirmed: true,
           isOneHousehold: false,
           isRegulatedArea: false,
           wasRegulatedAtAcquisition: false,

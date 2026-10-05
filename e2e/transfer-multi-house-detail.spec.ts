@@ -3,8 +3,8 @@
  *
  * 양도세 마법사 → Step 4(보유 상황) → "다른 보유 주택 목록" 테이블+모달 + 중과 한시 유예 UI E2E
  *
- * 섹션 노출 조건: 주(主)자산이 housing-like(기본 "housing") + householdHousingCount >= 2.
- * → 보유 상황 단계로 이동 후 "2채" 버튼 클릭으로 섹션을 띄운다.
+ * 섹션 노출 조건(명부 필수화 PR-1, 2026-10-05 이후): 주(主)자산이 `"housing"`이면 명부 목록이
+ * 항상 열려 있다(`houseRosterRendered`, Q-6 — 숫자 칸 버튼 폐지). 보유 상황 단계로 이동만 하면 된다.
  *
  * 셀렉터 전략 (견고성):
  *  - ToggleCard는 <label>이 <Switch role=switch>와 title을 함께 감싼다.
@@ -17,14 +17,13 @@
 
 import { test, expect, type Page, type Locator } from "@playwright/test";
 
-/** 보유 상황(Step 4)으로 이동 + 주택수 2채 설정 → "다른 보유 주택 목록" 섹션 노출 */
+/** 보유 상황(Step 4)으로 이동 — "housing"은 명부 목록이 항상 열려 있다(PR-1) */
 async function gotoHoldingStepWithTwoHouses(page: Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // 스텝퍼 자유 이동(onStepClick=setStep) — Step1 미입력이어도 이동 가능
   await page.getByRole("button", { name: "보유 상황" }).first().click();
-  // 세대 보유 주택 수 "2채" 버튼 클릭
-  await page.getByRole("button", { name: "2채", exact: true }).click();
+  // 명부 필수화(PR-1, 2026-10-05) — "housing"은 "2채" 버튼이 사라졌다(Q-6). 목록은 항상 열려 있다.
   // 섹션 노출 확인 (SectionHeader + 내부 <p> 2곳 매칭 → first)
   await expect(page.getByText("다른 보유 주택 목록", { exact: false }).first()).toBeVisible();
 }
@@ -35,6 +34,39 @@ async function gotoHoldingStepWithTwoHouses(page: Page) {
  */
 async function toggleCardByTitle(scope: Locator | Page, title: string) {
   await scope.getByRole("switch", { name: new RegExp(title) }).click();
+}
+
+/**
+ * 명부 행에 취득일을 채운다(명부 필수화 PR-1 이후 — 엔진 입력 도출 count는 **취득일이 채워진
+ * 행 수**로 세어진다, `countedHouseRows`). "취득일" 레이블의 부모 컨테이너로 스코프해 "준공일"의
+ * 동일 레이블(연도·월·일)과 구분한다.
+ */
+async function fillAcquisitionDate(dialog: Locator, ymd: string) {
+  const [y, m, d] = ymd.split("-");
+  const container = dialog.getByText("취득일", { exact: true }).locator("..");
+  await container.getByLabel("연도").fill(y);
+  await container.getByLabel("월").fill(m);
+  await container.getByLabel("일").fill(d);
+}
+
+/** 명부 행 n개(취득일 채움) 추가 — 「보유 상황」 단계에 이미 있다고 가정. 도출 householdHousingCount = 1+n */
+async function addHouseRowsHere(page: Page, count: number) {
+  for (let i = 0; i < count; i++) {
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
+    await fillAcquisitionDate(dialog, `201${i}-01-01`);
+    await dialog.getByRole("button", { name: "완료" }).click();
+    await expect(dialog).not.toBeVisible({ timeout: 3000 });
+  }
+}
+
+/** 보유 상황(Step 4)으로 이동 + 명부 행 n개(취득일 채움) 추가 */
+async function addHouseRows(page: Page, count: number) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.getByRole("button", { name: "보유 상황" }).first().click();
+  await addHouseRowsHere(page, count);
 }
 
 test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () => {
@@ -92,11 +124,9 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await gotoHoldingStepWithTwoHouses(page);
 
     // gracePeriod 노출 조건: 1세대 + 주택수 2 + 보유 항목 1건 이상.
-    // → 주택을 1건 추가(모달 즉시 닫기)하여 houses.length > 0 충족시킨다.
-    await page.getByRole("button", { name: /주택 추가/ }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3000 });
-    await page.getByRole("dialog").getByRole("button", { name: "완료" }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
+    // 명부 필수화(PR-1) 이후 세대 보유 주택 수(householdHousingCount)는 취득일이 채워진 행
+    // 수에서만 도출된다(countedHouseRows) — 취득일을 채워야 스칼라가 "2"로 따라 올라간다.
+    await addHouseRowsHere(page, 1);
 
     // gracePeriod 섹션: 1세대(기본 ON) + 주택수 2 + houses>0 → 노출
     await expect(page.getByText(/중과 경과조치 조건 입력/, { exact: false })).toBeVisible();
@@ -172,11 +202,8 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
   });
 
   test("양도 주택 3주택+ 전용 배제 특례 — 주택수 3채 시 섹션 노출", async ({ page }) => {
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.getByRole("button", { name: "보유 상황" }).first().click();
-    // 주택수 3채 이상
-    await page.getByRole("button", { name: "3채 이상", exact: true }).click();
+    // 명부 필수화(PR-1) — "3채 이상" 버튼이 사라졌다. 명부 행 2개(취득일 채움)로 도출 3채(1+2).
+    await addHouseRows(page, 2);
 
     await expect(page.getByText("양도 주택 중과배제 특례", { exact: false })).toBeVisible();
     // 사원용 주택 토글 ON → 무상 제공 기간 노출

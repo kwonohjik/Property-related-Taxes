@@ -10,12 +10,13 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { fillAcquisitionDateInDialog } from "./_helpers/add-house-row";
 
 async function gotoHoldingStepWithTwoHouses(page: Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();
-  await page.getByRole("button", { name: "2채", exact: true }).click();
+  // 명부 필수화(PR-1, 2026-10-05) — "housing"은 "2채" 버튼이 사라졌다(Q-6). 목록은 항상 열려 있다.
   await expect(page.getByText("다른 보유 주택 목록", { exact: false }).first()).toBeVisible();
 }
 
@@ -31,6 +32,9 @@ test.describe("#2a 혼인 합가 배우자 단독 보유 chip", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible({ timeout: 3000 });
     await expect(spouseSwitch(dialog)).toHaveCount(0);
+    // 명부 필수화(PR-1) — 취득일을 채워야 세대 주택 수가 "2"로 도출된다(MergedHouseholdRightSection
+    // 가시성 게이트는 householdHousingCount >= 2를 직접 본다).
+    await fillAcquisitionDateInDialog(dialog, "2018-01-01");
     await dialog.getByRole("button", { name: "완료" }).click();
     await expect(dialog).not.toBeVisible({ timeout: 3000 });
 

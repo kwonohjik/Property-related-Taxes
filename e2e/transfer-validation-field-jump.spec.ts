@@ -127,7 +127,12 @@ test.describe("검증 오류 → 입력칸 이동", () => {
   });
 
   test("D-7 1단계 오류도 클릭하면 그 입력으로 (세대 보유 주택 수)", async ({ page }) => {
-    await seedAndOpen(page, { householdHousingCount: "" });
+    // 명부 필수화(PR-1, 2026-10-05) — "housing"은 이 버튼 위젯이 사라졌다(Q-6). 숫자 칸이 남아 있는
+    // 입주권(Q-7 범위 밖)으로 같은 "householdHousingCount 빈 값" 분기를 재현한다.
+    await seedAndOpen(page, {
+      householdHousingCount: "",
+      assets: [{ ...makeDefaultAsset(1), assetKind: "right_to_move_in" }],
+    });
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await next(page).click();
 

@@ -54,6 +54,7 @@ function seedForm(list: Record<string, unknown>[]) {
   return {
     state: {
       formData: {
+        householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         assets: list,
         transferDate: "2024-06-01",
         filingDate: "2024-08-31",

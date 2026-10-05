@@ -39,6 +39,27 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   if (!form.householdHousingCount)
     issues.push({ step, field: "householdHousingCount", message: "세대 보유 주택 수를 선택하세요." });
 
+  /**
+   * ⑧ 명부 필수화(PR-1) — 주택 양도 + 명부 0행이면 「다른 보유 주택이 없습니다」 확정이 있어야
+   * 통과한다. legacy 표식(OH-34 — 저장 당시 스칼라가 명부와 어긋난 구 이력)이 붙은 레코드는
+   * 제외한다 — 그 레코드는 이미 유효한 세액을 보존 중이라 재확인을 요구하지 않는다.
+   *
+   * Q-7: 주택(`"housing"`) 양도만. 입주권·분양권·재개발APT·겸용주택은 ① 의미 축이 달라 범위 밖.
+   */
+  const primaryKind = form.assets?.[0]?.assetKind;
+  if (
+    primaryKind === "housing" &&
+    !form.legacyHouseCountPrecedence &&
+    (form.houses?.length ?? 0) === 0 &&
+    !form.householdNoOtherHousesConfirmed
+  ) {
+    issues.push({
+      step,
+      field: "householdNoOtherHousesConfirmed",
+      message: "다른 보유 주택이 없는지 확인하세요.",
+    });
+  }
+
   // ⑧ 조특법 주택 수 제외 — 명부 행 ⑥ · 옛 선언 차단 · 게이트 밖 감면주택 섹션(D4-03)
   for (const message of collectCountExclusionIssues(form)) issues.push({ step, message });
 

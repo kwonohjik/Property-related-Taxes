@@ -60,9 +60,16 @@ export function houseCountInputsVisible(
  *   - 창 안 분기는 분양권만 있어도 목록을 열어 ② 섹션 분양권 목록과 **두 벌**이 떴다(같은 배열을
  *     두 컴포넌트가 patch). 분양권은 ② 목록이 이미 고칠 화면이므로 목록을 여는 값에서 뺀다 —
  *     넣으면 ②에서 입력하는 순간 그 위젯이 ④로 옮겨 간다.
+ *
+ * 🔴 명부 필수화(PR-1, 2026-10-05) — `"housing"`은 **항상 열린다**(`houseCountInputsVisible`의
+ *    마지막 분기와 같은 무조건 절). 종전엔 스칼라 버튼으로 "2채"를 선언해야 이 목록이 열렸는데,
+ *    그 버튼을 없앴다(Q-6) — 스칼라로 열 수 없으면 명부에 **첫 행을 추가할 화면 자체가 없어진다**
+ *    (닭-달걀: 명부가 0행이라 안 열리고, 안 열려서 행을 못 넣는다). `isHousingLike` 나머지 3종은
+ *    버튼이 그대로 있어 영향 없다.
  */
 export function houseRosterRendered(form: TransferFormData, primaryKind: string | undefined): boolean {
   if ((form.houses?.length ?? 0) > 0 || (form.specialHouseExclusions?.length ?? 0) > 0) return true;
+  if (primaryKind === "housing") return true;
   return isHousingLike(primaryKind ?? "") && parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 

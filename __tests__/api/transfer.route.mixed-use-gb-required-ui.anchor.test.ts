@@ -94,6 +94,9 @@ function mixedForm(over: Record<string, unknown> = {}): Form {
     filingDate: "2024-08-31",
     contractTotalPrice: "1,200,000,000",
     householdHousingCount: "2",
+    // 명부 필수화(PR-1) — 명부 없이 스칼라만으로 선언(D-4 폴백, Q-8). ⑧은 0행이면 「없음」 확정을
+    // 요구하므로 그 게이트만 통과시킨다 — 계산값은 그대로 declared=2(D-4)다.
+    householdNoOtherHousesConfirmed: true,
     residencePeriodMonths: "0",
   });
   return f;

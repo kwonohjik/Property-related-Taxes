@@ -82,6 +82,12 @@ export interface ResolveHouseholdHousingCountArgs {
  *
  * D-4 유지: 1주택자는 명부를 채울 필요가 없다 ⇒ 명부가 비면 스칼라가 그대로 답이다.
  *
+ * ⚠️ **명부 필수화(PR-1) 이후에도 이 함수는 건드리지 않는다.** `houses` 없이 `householdHousingCount`
+ *    스칼라만으로 중과를 판정하는 「명부 없음」 엔진 경로(#1947·#1955·#1958·#1965·#1968)가 이 분기에
+ *    의존한다 — API 직접 호출자는 지금도 명부 없이 보낼 수 있고(Q-8, 계획서 §2-8 「영향」), 그 경우
+ *    「모름 → 불리」로 처리하는 것이 그 기능들의 설계다. PR-1이 막는 것은 **계산기 UI**가 이 경로를
+ *    만드는 것뿐이다(Step4 위젯 제거 + ⑧ 차단) — 이 leaf 자체의 산식은 바꾸지 않는다.
+ *
  * OH-34: 레거시 표식이 켜진 폼은 **저장 당시 스칼라**를 그대로 쓴다(세액 보존) —
  * 사용자가 「명부 기준으로 전환」을 누를 때만 표식이 꺼지고 명부로 센다.
  */
@@ -91,7 +97,7 @@ export function resolveHouseholdHousingCount(
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (args.primaryKind !== "housing") return args.declared; // F1
   const rows = countedHouseRows(args.houses);
-  if (rows === 0) return args.declared; // D-4 간이 입력
+  if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
   return 1 + rows;
 }
 
@@ -132,18 +138,31 @@ export function houseRosterIsAuthoritative(
  *   `useEffect → store` 미러링이 아니라 **onChange 동시 갱신**이다(CLAUDE.md 승인 패턴).
  *
  * ⚠️ 명부를 **비우면** 파생이 성립하지 않는다(D-4 간이 입력으로 복귀) ⇒ 스칼라는 마지막
- *    파생값 그대로 남고 버튼이 다시 열린다. 임의 값을 써넣지 않는다 — 몇 채인지 알 수 없다.
+ *    파생값 그대로 남는다. 임의 값을 써넣지 않는다 — 몇 채인지 알 수 없다. 계산기는 이 상태를
+ *    「다른 보유 주택이 없습니다」 확정(아래) 없이는 ⑧이 통과시키지 않는다(명부 필수화 PR-1).
+ *
+ * ⚠️ 행이 **생기면**(배열 길이 > 0 — 취득일 입력 여부와 무관, `houseRosterIsAuthoritative`의
+ *    `countedHouseRows > 0` 요건보다 느슨하다) 「다른 보유 주택이 없습니다」 확정
+ *    (`householdNoOtherHousesConfirmed`)을 함께 해제한다(Q-5, #1919 패턴) — 새로 추가한 빈 행은
+ *    아직 취득일이 없어 `countedHouseRows`엔 안 잡히지만, 그 순간 「없음」은 더는 사실이 아니다.
+ *    이 patch가 세 쓰기 지점(추가·삭제·수정)의 단일 경유점이라 여기 한 곳만 고치면 된다.
  */
 export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   houses: T[],
   primaryKind: string | undefined,
   legacyPrecedence: boolean,
-): { houses: T[]; householdHousingCount?: string } {
+): { houses: T[]; householdHousingCount?: string; householdNoOtherHousesConfirmed?: false } {
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
   if (legacyPrecedence) return { houses };
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses };
-  return { houses, householdHousingCount: String(1 + countedHouseRows(houses)) };
+  const isHousing = primaryKind === "housing";
+  const clearConfirm = isHousing && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses, ...clearConfirm };
+  return {
+    houses,
+    householdHousingCount: String(1 + countedHouseRows(houses)),
+    ...clearConfirm,
+  };
 }
 
 /**

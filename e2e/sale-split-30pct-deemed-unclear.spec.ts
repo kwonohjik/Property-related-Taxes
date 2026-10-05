@@ -24,6 +24,7 @@ function seedForm(landTransferPrice: string, buildingTransferPrice: string) {
   return {
     state: {
       formData: {
+        householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         assets: [
           {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",

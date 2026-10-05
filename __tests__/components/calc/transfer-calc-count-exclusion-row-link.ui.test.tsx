@@ -240,20 +240,22 @@ describe("⑤ 스칼라 < 2 — 명부 노출과 분양권 목록 유일성 (F-2
     expect(presaleLists()).toBe(1);
   });
 
-  it("[UI-8p] 창 안 · 분양권만 있음 → ② 목록 한 벌 · 명부는 열지 않는다(입력 중인 위젯이 옮겨 가지 않는다)", () => {
+  it("[UI-8p] 창 안 · 분양권만 있음 → ② 목록 한 벌 · 명부(④)는 「housing」이라 항상 열려 있다(PR-1, 명부 필수화)", () => {
     view({ transferDate: IN, presaleRights: [RIGHT] });
-    expect(rowEdits()).toBe(0);
-    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(rowEdits()).toBe(0); // 명부 행은 0건 — 편집 버튼은 없다
+    // 명부 필수화(PR-1, 2026-10-05) 이후 "housing"은 스칼라와 무관하게 명부가 항상 열린다
+    // (houseRosterRendered) — 종전 "열리지 않는다"는 전제가 뒤집혔다. 중복 방지(② 미노출)만 유지된다.
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).not.toBeNull();
     expect(presaleLists()).toBe(1);
   });
 
-  it("[UI-8-] 대조군 — 값이 없으면 창 안팎 모두 명부 없음 · ② 목록 한 벌", () => {
+  it("[UI-8-] 대조군 — 값이 없어도 명부(④)는 「housing」이라 열려 있다 · ② 목록 한 벌(PR-1)", () => {
     view({ transferDate: OUT });
-    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).not.toBeNull();
     expect(presaleLists()).toBe(1);
     cleanup();
     view({ transferDate: IN });
-    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ 주택 추가" })).not.toBeNull();
     expect(presaleLists()).toBe(1);
   });
 

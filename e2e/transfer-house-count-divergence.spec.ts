@@ -32,6 +32,7 @@ function seedForm(householdHousingCount: string, otherHouseCount: number) {
   return {
     state: {
       formData: {
+        householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         assets: [
           {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
@@ -65,19 +66,14 @@ async function gotoStep4(page: Page, householdHousingCount: string, otherHouseCo
 }
 
 test.describe("① 세대 보유 주택 수 ↔ ④ 목록 정합성 안내", () => {
-  test("① '3채 이상' → 정확 숫자 5 입력 노출 + ④ 3채 입력 시 C-1·C-2(불일치) 노출", async ({ page }) => {
-    await gotoStep4(page, "5", 3); // 선언 5채, 다른 주택 3채 → 구조 4채 ≠ 5
-    // 정확 숫자 입력 위젯 노출 + 값 5
-    const exact = page.locator("#household-house-count-exact");
-    await expect(exact).toBeVisible();
-    await expect(exact).toHaveValue("5");
+  test("① 명부 필수화(PR-1) 이후 — 숫자 칸이 사라지고 도출값(4채)을 읽기 전용으로 보여준다 + ④ 3채 입력 시 C-1 노출", async ({ page }) => {
+    await gotoStep4(page, "5", 3); // 선언 5채(stale) + 다른 주택 3채 → 도출 4채(= 1+3)가 이긴다
+    // 종전 「정확한 세대 보유 주택 수」 입력 위젯은 housing에서 제거됐다(Q-6)
+    await expect(page.locator("#household-house-count-exact")).toHaveCount(0);
+    // 읽기 전용 도출값 — 선언(stale "5")은 무시되고 명부 기준 4채만 보인다
+    await expect(page.getByTestId("household-house-count-derived")).toContainText("4채");
     // C-1 우선순위 안내
     await expect(page.getByText("목록이 비어 있을 때만 사용됩니다")).toBeVisible();
-    // C-2 불일치 경고 — 선언 5채 ≠ 구조 4채(양도1+3)
-    const mismatch = page.getByTestId("house-count-mismatch");
-    await expect(mismatch).toBeVisible();
-    await expect(mismatch).toContainText("5채");
-    await expect(mismatch).toContainText("4채");
   });
 
   test("① 2채 + ④ 1채(구조 2채 일치) → C-1만, C-2 미노출·정확입력 미노출", async ({ page }) => {

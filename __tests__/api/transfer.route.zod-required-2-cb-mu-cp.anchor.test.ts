@@ -169,6 +169,8 @@ function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
     filingDate: "2024-08-31",
     contractTotalPrice: "1,200,000,000",
     householdHousingCount: "2",
+    // 명부 필수화(PR-1) — 명부 없이 스칼라만으로 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
+    householdNoOtherHousesConfirmed: true,
     residencePeriodMonths: "0",
   });
   return f;

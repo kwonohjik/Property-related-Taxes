@@ -48,6 +48,7 @@ test.describe("함께양도 — 감면 산출근거 카드", () => {
       {
         state: {
           formData: {
+            householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
             assets: [house, farmland],
             transferDate: "2024-03-01",
             filingDate: "2024-05-31",
