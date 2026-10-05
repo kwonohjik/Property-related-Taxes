@@ -37,6 +37,16 @@
  * **3-a 날짜 검증**은 소유 쪽 입력 없이도 결론이 난다: 2주택인데 다른 주택이 합가 후 취득이면
  * 합가로 2주택이 된 것이 아니다. 3주택에서 합가 후 취득이 2채 이상이어도 같다. 계산기도 명부를
  * 보내므로 이 층은 두 메뉴 모두에 적용된다(계획서 Q-5).
+ *
+ * ## 🔑 예외 — 명부 입력 경로가 없는 화면 (사용자 결정 2026-10-05)
+ *
+ * 부담부증여 양도분(`transferType === "burdened_gift"`)은 증여세 계산기 화면이라 세대 보유
+ * 주택 명부 입력 자체가 없다(`buildGiftBurdenedTransferBody`는 `houses`/`sellingHouseId`를
+ * 싣지 않는다). 입력 경로가 없는 화면에서 「모름」을 불리하게 적용하면 사용자가 고칠 수 없는
+ * 항목으로 불이익을 주게 된다(memory `feedback_required_field_needs_an_input_path`와 같은
+ * 층위) ⇒ **이 호출부만** `noRosterInputPath: true`로 알려 종전 동작(판정 보류 → 합가 허용)을
+ * 유지한다. 증여세 화면에 명부 입력을 추가하는 것은 별건이다. 계산기·판정 메뉴·API 직접
+ * 호출·겸용주택은 이 플래그를 세우지 않으므로 PR-2의 「모름 → 불리」 동작 그대로다.
  */
 import type { HouseInfo, MergeOrigin } from "../types/multi-house-surcharge.types";
 
@@ -79,8 +89,11 @@ const CONFIRM_NOTICE: Record<"roster_missing" | "origin_missing", string> = {
 
 export type MergeComposition =
   | { status: "holds" }
-  /** 명부 행 수가 어긋나는데 알려진 제외로 설명된다 — 어느 행인지 특정되지 않아 판정하지 않는다(PR-3). */
-  | { status: "unknown"; reason: "count_mismatch" }
+  | {
+      status: "unknown";
+      /** 명부 행 수가 어긋나는데 알려진 제외로 설명된다 — 어느 행인지 특정되지 않아 판정하지 않는다(PR-3). */
+      reason: "count_mismatch" | "no_roster_input_path";
+    }
   | {
       status: "fails";
       reason: MergeCompositionFailure;
@@ -103,6 +116,12 @@ export interface MergeCompositionInput {
    * (판정 보류·PR-3)로 두고, 설명되지 않으면 입력하지 않은 주택이 있다고 보아 `roster_missing`이다.
    */
   knownHouseExclusionCount?: number;
+  /**
+   * 이 호출부에 명부 입력 경로가 **없다**(사용자 결정 2026-10-05 — 부담부증여 양도분 전용).
+   * true면 명부·양도 주택 행이 없을 때 `roster_missing`(불성립) 대신 `unknown`(판정 보류 →
+   * 종전 동작)으로 둔다. 입력 경로가 있는 화면(계산기·판정 메뉴·겸용)은 세우지 않는다.
+   */
+  noRosterInputPath?: boolean;
 }
 
 const failWithoutFacts = (
@@ -120,6 +139,7 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
   const { houses, sellingHouseId, householdHousingCount: count, knownHouseExclusionCount = 0 } = input;
   if (count !== 2 && count !== 3) return { status: "unknown", reason: "count_mismatch" };
   if (!houses || !sellingHouseId || !houses.some((h) => h.id === sellingHouseId)) {
+    if (input.noRosterInputPath) return { status: "unknown", reason: "no_roster_input_path" };
     return failWithoutFacts("roster_missing");
   }
   if (houses.length !== count) {

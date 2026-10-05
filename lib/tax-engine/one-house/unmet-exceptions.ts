@@ -165,6 +165,7 @@ function collectMergeUnmet(
       sellingHouseId: input.sellingHouseId,
       mergeDate,
       knownHouseExclusionCount: input.knownHouseExclusionCount,
+      noRosterInputPath: input.noMergeRosterInputPath,
     });
     if (composition.status === "fails") {
       const by = isMarriage ? "혼인으로" : "합가로";

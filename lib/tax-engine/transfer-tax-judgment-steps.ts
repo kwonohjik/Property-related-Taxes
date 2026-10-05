@@ -100,12 +100,14 @@ export function resolveSurchargeDeemedOneHouseDetail(
   );
   if (clause2BlocksSurchargeDeeming(clause2)) return undefined;
 
-  // knownHouseExclusionCount — 비과세 STEP 0.9/0.95와 같은 값(§155④⑤ 합가 전 구성 판정 echo).
+  // knownHouseExclusionCount·noMergeRosterInputPath — 비과세 STEP 0.9/0.95·transfer-tax.ts와
+  // 같은 값(§155④⑤ 합가 전 구성 판정 echo) — 부담부증여는 비과세·중과 배제가 같은 결론을 내야 한다.
   const deemed = resolveDeemedOneHouseBy155(
     {
       ...workingInput,
       householdHousingCount: count,
       knownHouseExclusionCount: inheritedExcluded + ex.specialActExcludedCount,
+      noMergeRosterInputPath: workingInput.transferType === "burdened_gift",
     },
     parsedRates.oneHouseSpecialRules,
   );

@@ -247,6 +247,7 @@ function mergeItems(
     sellingHouseId: input.sellingHouseId,
     mergeDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
+    noRosterInputPath: input.noMergeRosterInputPath,
   });
   const compositionUnknownFacts = composition.status === "fails" &&
     (composition.reason === "roster_missing" || composition.reason === "origin_missing");
@@ -285,7 +286,12 @@ function mergeItems(
                       : `${event} 전 보유 구성이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
           }
         : composition.status === "unknown"
-          ? { note: "제외된 주택이 있어 명부 행만으로는 이 요건을 특정할 수 없습니다." }
+          ? {
+              note:
+                composition.reason === "no_roster_input_path"
+                  ? "이 화면은 세대 보유 주택 명부 입력이 없어 합가 전 구성을 판정하지 않습니다."
+                  : "제외된 주택이 있어 명부 행만으로는 이 요건을 특정할 수 없습니다.",
+            }
           : {}),
     legalBasis: basis,
   });

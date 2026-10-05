@@ -84,6 +84,7 @@ const JUDGE_INPUT_KEYS = [
   "presaleRights",
   "sellingHouseId",
   "knownHouseExclusionCount",
+  "noMergeRosterInputPath",
   "replacementHouse",
   "rightThreeYearException",
   "mergedHouseholdFirstHouse",
@@ -165,6 +166,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   ],
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
+  noMergeRosterInputPath: true,
   replacementHouse: {
     businessApprovalDate: D("2019-02-02"),
     completionDate: D("2023-03-03"),

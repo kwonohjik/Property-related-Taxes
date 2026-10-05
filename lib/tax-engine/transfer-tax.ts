@@ -214,7 +214,16 @@ export function calculateTransferTax(
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
   const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput);
-  const exemptionJudgeInput = rentalPremise.input;
+  /**
+   * 부담부증여 양도분(`transferType === "burdened_gift"`)은 증여세 계산기 화면이라 세대 보유
+   * 주택 명부 입력 경로가 없다 — §155④⑤ 합가 전 구성을 「모름」으로 불리하게 적용하지 않는다
+   * (사용자 결정 2026-10-05, `merge-composition-unknown-unfavorable.plan.md` Q-10).
+   * 계산기·판정 메뉴·API 직접 호출·겸용주택은 이 플래그를 세우지 않는다.
+   */
+  const exemptionJudgeInput = {
+    ...rentalPremise.input,
+    noMergeRosterInputPath: effectiveInput.transferType === "burdened_gift",
+  };
   if (rentalPremise.notice) warnings.push(rentalPremise.notice);
 
   /**

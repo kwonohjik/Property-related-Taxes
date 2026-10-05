@@ -220,6 +220,7 @@ export type MergeDeemingReqInput = Pick<
   | "houses"
   | "sellingHouseId"
   | "knownHouseExclusionCount"
+  | "noMergeRosterInputPath"
 >;
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -719,6 +720,7 @@ function matchMergeGateAndComposition(
     sellingHouseId: input.sellingHouseId,
     mergeDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
+    noRosterInputPath: input.noMergeRosterInputPath,
   });
   return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate, composition };
 }

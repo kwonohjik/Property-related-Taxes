@@ -764,6 +764,14 @@ export interface TransferTaxInput {
    * STEP 0.9/0.95가 채우는 echo다.
    */
   knownHouseExclusionCount?: number;
+  /**
+   * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)에 **명부 입력 경로가 없는 호출부**임을
+   * 알린다(사용자 결정 2026-10-05 — 부담부증여 양도분, `transferType === "burdened_gift"`만
+   * 세운다). true면 명부가 없어도 불성립(`roster_missing`) 대신 판정 보류(`unknown`)로 두어
+   * 종전 동작(합가 허용)을 유지한다 — 입력 경로가 없는 화면에서 「모름」을 불리하게 적용하지
+   * 않는다. 계산기·판정 메뉴·API 직접 호출·겸용주택은 세우지 않는다.
+   */
+  noMergeRosterInputPath?: boolean;
   /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */
   gracePeriod?: MultiHouseGracePeriodInput;
   /**
