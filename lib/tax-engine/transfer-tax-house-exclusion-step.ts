@@ -17,6 +17,27 @@ import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
 
 /**
+ * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`, PR-3)이 명부에서 **빼고** 셀 행 id를
+ * 모은다 — 세 출처 다 houseId가 **있을 때만** 넣는다(없으면 「식별되지 않은 제외」로 남아
+ * `knownHouseExclusionCount`와의 차이로 드러난다 · 계획서 §3-4).
+ *
+ * - `hceApplied` — §99의4·§98의9 적용 건(이미 적격만 필터된 목록을 받는다 전제).
+ * - `specialEntries` — 조특법 보유 감면주택 선언 **전건**(여기서 `eligible`만 거른다).
+ * - `inheritedExcludedHouses` — §155②③ 상속·공동상속주택 제외(항상 houseId가 있다).
+ */
+export function collectKnownHouseExclusionIds(sources: {
+  hceApplied?: ReadonlyArray<{ houseId?: string }>;
+  specialEntries?: ReadonlyArray<{ eligible: boolean; houseId?: string }>;
+  inheritedExcludedHouses?: ReadonlyArray<{ houseId: string }>;
+}): string[] {
+  const ids: string[] = [];
+  for (const h of sources.inheritedExcludedHouses ?? []) ids.push(h.houseId);
+  for (const applied of sources.hceApplied ?? []) if (applied.houseId) ids.push(applied.houseId);
+  for (const entry of sources.specialEntries ?? []) if (entry.eligible && entry.houseId) ids.push(entry.houseId);
+  return ids;
+}
+
+/**
  * STEP 0.9 + 0.95의 **제외 판정만** — step을 쓰지 않는 순수 함수.
  *
  * E-14 — 중과 판정(STEP 0.5)이 영 §167의10①15호 ① 요소를 판정할 때 비과세와 **같은** 세대 주택 수를
@@ -48,6 +69,12 @@ export function resolveExemptionHouseCountExclusions(
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
     specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount,
+    /** §155④⑤ 합가 전 구성 판정(PR-3)이 명부에서 뺄 행 id — 세 출처 중 houseId가 있는 것만. */
+    knownHouseExclusionHouseIds: collectKnownHouseExclusionIds({
+      hceApplied,
+      specialEntries: specialHouseExclusionDetail.entries,
+      inheritedExcludedHouses: inheritedExclusion.excludedHouses,
+    }),
     ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail, hceApplied),
   };
 }
@@ -229,18 +256,27 @@ export function runHouseCountExclusionStep(
   // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 단독상속 풀만 게이트-오프(L-11 — ③ 풀 무관). 최대지분 공동상속(§155③ 단서)은 산입. 중과 주택수는 불변(R-D).
   // 🔑 selling id 폴백 규칙은 `resolveInheritedHouseExclusionFromInput` 안에만 둔다 —
   //    불성립 사유 안내(`collectInheritedUnmet`)가 같은 후보 집합을 봐야 하기 때문.
-  const { hceApplied, new994Detail, unsold989Detail, hceDetails, specialHouseExclusionDetail, inheritedExclusion } =
-    resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
+  const {
+    hceApplied,
+    new994Detail,
+    unsold989Detail,
+    hceDetails,
+    specialHouseExclusionDetail,
+    inheritedExclusion,
+    knownHouseExclusionHouseIds,
+  } = resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
-  // knownHouseExclusionCount — §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)이 명부 행 수와
-  // 판정 주택수의 불일치를 「알려진 제외로 설명됨(판정 보류)」과 「입력 누락(불성립)」으로 가르는 echo.
+  // knownHouseExclusionCount·knownHouseExclusionHouseIds — §155④⑤ 합가 전 구성 판정
+  // (`resolveMergeComposition`)이 명부 행 수와 판정 주택수의 불일치를 「알려진 제외로 설명됨
+  // (행까지 특정되면 그 행을 빼고 판정 · PR-3)」과 「입력 누락(불성립)」으로 가르는 echo.
   const exemptionJudgeInput = {
     ...effectiveInput,
     ...(totalExcluded > 0
       ? { householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
       : {}),
     knownHouseExclusionCount: totalExcluded,
+    knownHouseExclusionHouseIds,
   };
   // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝
   let hceCursor = effectiveInput.householdHousingCount;

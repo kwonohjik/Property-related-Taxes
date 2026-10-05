@@ -17,11 +17,13 @@
  */
 import { describe, it, expect } from "vitest";
 import { checkExemption } from "@/lib/tax-engine/transfer-tax-exemption";
+import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import {
   classifyMergeHouse,
   resolveMergeComposition,
 } from "@/lib/tax-engine/one-house/merge-composition";
+import { collectKnownHouseExclusionIds } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { HouseInfo, MergeOrigin } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -285,4 +287,164 @@ describe("MC-5 합가 요건 행 ⇔ 정본 판정 (행렬 전수)", () => {
             expect(allPass).toBe(merged);
           });
         }
+});
+
+/**
+ * MC-6 — PR-3 「제외 행을 빼고 판정」(계획서 §3-4, 사용자 결정 Q-4).
+ *
+ * §155②③ 상속주택·조특법 감면주택이 명부 행으로 특정되면(`knownHouseExclusionHouseIds`) 그 행을
+ * 빼고 남은 행으로 구성을 **실제로** 판정한다 — PR-2까지는 행 수가 알려진 제외 건수로 설명되기만
+ * 하면 구성을 보지 않고 통과시켰다(`unknown`/`count_mismatch` → `matchMergeApartFromWindow`가
+ * `holds`와 같이 취급). 그래서 상속주택 제외 후 남는 주택이 실제로는 「각자 1주택」이 아니어도
+ * (예: 양도자 쪽이 이미 2주택) 합가 특례가 샜다 — PR-3-d가 그 결함을 고정한다.
+ *
+ * `knownHouseExclusionHouseIds`를 **넘기지 않는** 호출부(§155⑳ 장기임대주택 축)는 PR-2 동작
+ * 그대로다 — MC-3이 그 축을 고정한다.
+ */
+describe("MC-6 PR-3 — 제외 행을 빼고 판정", () => {
+  describe("collectKnownHouseExclusionIds — 세 출처에서 houseId 있는 것만 모은다", () => {
+    it("[P3-0a] §155②③ 상속주택 — basis와 무관하게 항상 모은다", () => {
+      expect(
+        collectKnownHouseExclusionIds({
+          inheritedExcludedHouses: [
+            { houseId: "h-sole" },
+            { houseId: "h-co" },
+          ],
+        }),
+      ).toEqual(["h-sole", "h-co"]);
+    });
+    it("[P3-0b] §99의4·§98의9 적용 건 — houseId 없는 건은 제외된다", () => {
+      expect(
+        collectKnownHouseExclusionIds({
+          hceApplied: [{ houseId: "h-994" }, { houseId: undefined }],
+        }),
+      ).toEqual(["h-994"]);
+    });
+    it("[P3-0c] 조특법 보유 감면주택 — eligible 아닌 행은 houseId가 있어도 제외", () => {
+      expect(
+        collectKnownHouseExclusionIds({
+          specialEntries: [
+            { eligible: true, houseId: "h-special" },
+            { eligible: false, houseId: "h-ineligible" },
+          ],
+        }),
+      ).toEqual(["h-special"]);
+    });
+    it("[P3-0d] 세 출처를 모두 합친다", () => {
+      expect(
+        collectKnownHouseExclusionIds({
+          hceApplied: [{ houseId: "a" }],
+          specialEntries: [{ eligible: true, houseId: "b" }],
+          inheritedExcludedHouses: [{ houseId: "c" }],
+        }),
+      ).toEqual(["c", "a", "b"]);
+    });
+  });
+
+  // 3행 명부 — 상대 쪽 상속주택 "h-inh" + 상대 쪽 일반주택 "h2"(혼인 전 취득). "h-inh"를 빼면 (1,1) 성립.
+  const sellingRow = row("selling", "2015-01-01");
+  const counterpartInherited = row("h-inh", "2014-01-01", "counterpart_side");
+  const counterpartHouse = row("h2", "2017-01-01", "counterpart_side");
+  const sellerSideHouse = row("h2s", "2016-01-01", "seller_side");
+
+  it("[P3-a] 상속주택 1행을 빼고 남은 (1,1) → 성립(수정 전 unknown·수정 후 holds)", () => {
+    const base = {
+      householdHousingCount: 2,
+      houses: [sellingRow, counterpartInherited, counterpartHouse],
+      sellingHouseId: "selling",
+      mergeDate: D(MERGE),
+      knownHouseExclusionCount: 1,
+    };
+    // 수정 전(PR-2) — ids 없이 건수만 넘기면 종전 동작(판정 보류 → 통과와 동일하게 취급).
+    expect(resolveMergeComposition(base).status).toBe("unknown");
+    // 수정 후(PR-3) — 행을 특정하면 실제로 판정해 holds.
+    expect(
+      resolveMergeComposition({ ...base, knownHouseExclusionHouseIds: ["h-inh"] }),
+    ).toEqual({ status: "holds" });
+  });
+
+  it("[P3-d] 상속주택 1행을 빼도 남은 구성이 「각자 1주택」이 아니면 → 불성립(PR-2는 통과시켰던 결함)", () => {
+    const base = {
+      householdHousingCount: 2,
+      houses: [sellingRow, counterpartInherited, sellerSideHouse],
+      sellingHouseId: "selling",
+      mergeDate: D(MERGE),
+      knownHouseExclusionCount: 1,
+    };
+    // 수정 전(PR-2) — 행 수 불일치가 건수로 설명되므로 구성을 보지 않고 통과(holds와 동일 취급) — 결함.
+    expect(resolveMergeComposition(base).status).toBe("unknown");
+    // 수정 후(PR-3) — "h-inh"를 빼면 남은 [selling, h2s]가 둘 다 양도자 쪽 → 불성립.
+    const after = resolveMergeComposition({ ...base, knownHouseExclusionHouseIds: ["h-inh"] });
+    expect(after).toMatchObject({ status: "fails", reason: "seller_side_only", sellerSide: 2, counterpartSide: 0 });
+  });
+
+  it("[P3-e] 알려진 제외가 행으로 특정되지 않으면(API 직접 호출의 houseId 미연결 선언) → 불성립 + 확인 필요", () => {
+    const r = resolveMergeComposition({
+      householdHousingCount: 2,
+      houses: [sellingRow, counterpartInherited, counterpartHouse],
+      sellingHouseId: "selling",
+      mergeDate: D(MERGE),
+      knownHouseExclusionCount: 1,
+      // 필드 자체는 넘기지만(이 호출부는 행 단위로 추적한다) 어느 행인지 특정되지 않았다 — 빈 배열.
+      knownHouseExclusionHouseIds: [],
+    });
+    expect(r).toMatchObject({ status: "fails", reason: "roster_missing" });
+    expect((r as { confirmNotice?: string }).confirmNotice).toBeDefined();
+  });
+
+  it("[P3-f] 부담부증여 예외(noRosterInputPath)는 PR-3과 무관하게 그대로 — 명부 없어도 판정 보류", () => {
+    const r = resolveMergeComposition({
+      householdHousingCount: 2,
+      houses: undefined,
+      sellingHouseId: undefined,
+      mergeDate: D(MERGE),
+      knownHouseExclusionHouseIds: [],
+      noRosterInputPath: true,
+    });
+    expect(r).toEqual({ status: "unknown", reason: "no_roster_input_path" });
+  });
+
+  it("[P3-legacy] §155⑳ 장기임대주택 축처럼 ids 필드를 넘기지 않는 호출부는 PR-2 동작 그대로", () => {
+    // knownHouseExclusionHouseIds를 아예 넘기지 않음 — undefined ≠ [] (P3-e와 대조).
+    const r = resolveMergeComposition({
+      householdHousingCount: 2,
+      houses: [sellingRow, counterpartInherited, counterpartHouse],
+      sellingHouseId: "selling",
+      mergeDate: D(MERGE),
+      knownHouseExclusionCount: 1,
+    });
+    expect(r).toEqual({ status: "unknown", reason: "count_mismatch" });
+  });
+
+  describe("엔진 경유(calculateTransferTax) — STEP 0.9가 만든 knownHouseExclusionHouseIds가 실제로 판정을 가른다", () => {
+    const rates = makeMockRates();
+    const pipelineInput = (otherHouses: HouseInfo[]): TransferTaxInput =>
+      baseTransferInput({
+        propertyType: "housing",
+        // 2013-02-15(§155② 괄호 기산일) 이전 취득 — heldVerdict가 무조건 "yes"라 inheritedDate 없이도 적격.
+        acquisitionDate: D("2010-01-01"),
+        transferDate: D("2026-03-01"),
+        transferPrice: 800_000_000,
+        isOneHousehold: true,
+        householdHousingCount: 2 + otherHouses.length,
+        isFirstTransferredInMerge: true,
+        marriageMerge: { marriageDate: D(MERGE) },
+        houses: [
+          { ...sellingRow, acquisitionDate: D("2010-01-01") },
+          { ...counterpartInherited, isInherited: true },
+          ...otherHouses,
+        ],
+        sellingHouseId: "selling",
+      });
+
+    it("[P3-pipe-a] 상속주택 제외 후 (1,1) 성립 → 비과세", () => {
+      const r = calculateTransferTax(pipelineInput([counterpartHouse]), rates);
+      expect(r.isExempt).toBe(true);
+    });
+
+    it("[P3-pipe-d] 상속주택 제외 후에도 양도자 쪽 2채 → 불성립(합가 특례 미적용) · 과세", () => {
+      const r = calculateTransferTax(pipelineInput([sellerSideHouse]), rates);
+      expect(r.isExempt).toBe(false);
+    });
+  });
 });

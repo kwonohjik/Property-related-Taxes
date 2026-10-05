@@ -165,6 +165,7 @@ function collectMergeUnmet(
       sellingHouseId: input.sellingHouseId,
       mergeDate,
       knownHouseExclusionCount: input.knownHouseExclusionCount,
+      knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
       noRosterInputPath: input.noMergeRosterInputPath,
     });
     if (composition.status === "fails") {

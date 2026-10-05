@@ -27,10 +27,17 @@
  * `feedback_unknown_fact_applies_unfavorably`(모름 → 혜택 불성립 + 결론을 가를 때만 「확인 필요」).
  *
  * - **명부 없음 · 양도 주택 행 없음**(`roster_missing`) — 불성립 + 확인 필요.
- * - **명부 행 수 ≠ 판정 주택 수인데 알려진 제외가 하나도 없다**(`roster_missing`) — 입력하지 않은
- *   주택이 있다는 뜻이다. 알려진 제외(상속주택·조특법 감면주택 등 `knownHouseExclusionCount`)가
- *   있어서 어긋나면 그 제외가 **어느 행인지**는 아직 모르므로(`runHouseCountExclusionStep`은
- *   건수만 뺀다) `count_mismatch`로 두고 판정하지 않는다(PR-3에서 행을 특정해 해소).
+ * - **명부 행 수 ≠ 판정 주택 수** — 먼저 알려진 제외(상속주택·조특법 감면주택 등) 중 **행으로
+ *   특정된 몫**(`knownHouseExclusionHouseIds` — §155②③ `excludedHouses[].houseId` · 조특법
+ *   `houseCountExclusionDetails[].houseId`·`specialHouseExclusionDetail.entries[].houseId`)을
+ *   명부에서 **빼고** 다시 행 수를 센다(PR-3, 사용자 결정 Q-4 — 상속주택·조특법 감면주택은
+ *   합가 당시 주택 수에서 뺀다). `knownHouseExclusionHouseIds`를 넘기는 호출부(STEP 0.9/0.95·
+ *   중과 15호·겸용)는 그래도 행 수가 맞지 않으면 어느 행인지 특정되지 않은 것(API 직접 호출의
+ *   `houseId` 미연결 선언 등)이므로 `roster_missing`(불성립)이다 — 「모름」을 더는 보류하지
+ *   않는다. 이 필드 자체를 넘기지 않는 **레거시 호출부**(§155⑳ 장기임대주택 축 — `isLongTermRental`
+ *   행은 「그 밖의 주택」의 합가 구성과 무관한 별도 사실이라 PR-3이 열지 않는다, PR-2 결정 보존)는
+ *   `knownHouseExclusionCount`(건수)만으로 가른다 — 건수가 0이면 `roster_missing`, 0보다 크면
+ *   종전처럼 `count_mismatch`(판정 보류)다.
  * - **합가 전 행의 소유 쪽(`mergeOrigin`)이 비어 있다**(`origin_missing`) — 불성립 + 확인 필요.
  *   날짜만으로 결론이 나는 경우(아래 3-a)만 소유 쪽 없이도 판정한다.
  *
@@ -91,7 +98,12 @@ export type MergeComposition =
   | { status: "holds" }
   | {
       status: "unknown";
-      /** 명부 행 수가 어긋나는데 알려진 제외로 설명된다 — 어느 행인지 특정되지 않아 판정하지 않는다(PR-3). */
+      /**
+       * `count_mismatch` — **행 단위 추적 없는 레거시 호출부**에서 명부 행 수가 알려진 제외
+       * 건수(`knownHouseExclusionCount`)로 설명될 때만(PR-3 이후에도 §155⑳ 장기임대주택
+       * 축에 한정). `knownHouseExclusionHouseIds`를 넘기는 호출부는 이 경로로 오지 않는다
+       * (행으로 특정되지 않으면 `roster_missing`).
+       */
       reason: "count_mismatch" | "no_roster_input_path";
     }
   | {
@@ -112,10 +124,21 @@ export interface MergeCompositionInput {
   mergeDate: Date;
   /**
    * 상속주택·조특법 감면주택 등 **이미 알려진** 주택수 제외 건수(`runHouseCountExclusionStep`의
-   * 합계). 명부 행 수가 판정 주택 수와 다를 때, 그 차이가 이 건수로 설명되면 `count_mismatch`
-   * (판정 보류·PR-3)로 두고, 설명되지 않으면 입력하지 않은 주택이 있다고 보아 `roster_missing`이다.
+   * 합계). `knownHouseExclusionHouseIds`를 **넘기지 않는 레거시 호출부**(§155⑳ 장기임대주택
+   * 축)에서만 쓰인다 — 그 차이가 이 건수로 설명되면 `count_mismatch`(판정 보류)로 두고,
+   * 0이면 `roster_missing`이다.
    */
   knownHouseExclusionCount?: number;
+  /**
+   * 알려진 제외 중 **어느 명부 행인지 특정된** 몫(PR-3). 이 집합에 든 `houseId`는 행 수
+   * 비교·구성 판정 전에 명부에서 제외한다.
+   *
+   * 🔑 이 필드를 **넘기는 것 자체**가 신호다 — 빈 배열(`[]`)이어도 「이 호출부는 제외를 행
+   * 단위로 추적한다」는 뜻이고, 제외 후에도 행 수가 맞지 않으면 더는 판정을 보류하지 않고
+   * `roster_missing`(불성립)이다. 필드를 **넘기지 않으면**(`undefined`) `knownHouseExclusionCount`
+   * (건수)만으로 판정 보류 여부를 가르는 레거시 동작(PR-2)이 유지된다.
+   */
+  knownHouseExclusionHouseIds?: ReadonlyArray<string>;
   /**
    * 이 호출부에 명부 입력 경로가 **없다**(사용자 결정 2026-10-05 — 부담부증여 양도분 전용).
    * true면 명부·양도 주택 행이 없을 때 `roster_missing`(불성립) 대신 `unknown`(판정 보류 →
@@ -136,20 +159,39 @@ const failWithoutFacts = (
 });
 
 export function resolveMergeComposition(input: MergeCompositionInput): MergeComposition {
-  const { houses, sellingHouseId, householdHousingCount: count, knownHouseExclusionCount = 0 } = input;
+  const {
+    houses,
+    sellingHouseId,
+    householdHousingCount: count,
+    knownHouseExclusionCount = 0,
+    knownHouseExclusionHouseIds,
+  } = input;
   if (count !== 2 && count !== 3) return { status: "unknown", reason: "count_mismatch" };
   if (!houses || !sellingHouseId || !houses.some((h) => h.id === sellingHouseId)) {
     if (input.noRosterInputPath) return { status: "unknown", reason: "no_roster_input_path" };
     return failWithoutFacts("roster_missing");
   }
-  if (houses.length !== count) {
-    // 알려진 제외가 하나도 없는데 행 수가 어긋나면 — 입력하지 않은 주택이 있다는 뜻이다.
+
+  // PR-3 — 알려진 제외 중 행으로 특정된 몫을 먼저 빼고 남은 행으로 구성을 센다(사용자 결정 Q-4).
+  // `knownHouseExclusionHouseIds`가 **정의돼 있으면**(빈 배열이어도) 그 호출부는 제외를 행
+  // 단위로 추적한다 — STEP 0.9/0.95·중과 15호·겸용이 이렇다. 그 경우 행으로 특정되지 않는
+  // 나머지(API 직접 호출의 `houseId` 미연결 선언 등)는 더는 판정을 보류하지 않고 불성립이다
+  // (모름 → 불리를 끝까지 적용). 필드 자체를 넘기지 않는 레거시 호출부(§155⑳ 장기임대주택
+  // 축 — `knownHouseExclusionCount`만으로 「알려진 간극이니 신경 쓰지 말라」는 종전 설계를
+  // 보존한다, PR-2 결정)는 `knownHouseExclusionCount`만으로 판정 보류 여부를 가른다.
+  const tracksExclusionRows = knownHouseExclusionHouseIds !== undefined;
+  const excludedIds = new Set(knownHouseExclusionHouseIds ?? []);
+  const effectiveHouses = excludedIds.size > 0 ? houses.filter((h) => !excludedIds.has(h.id)) : houses;
+
+  if (effectiveHouses.length !== count) {
+    if (tracksExclusionRows) return failWithoutFacts("roster_missing");
+    // 레거시 호출부 — 알려진 제외가 하나도 없는데 행 수가 어긋나면 입력 누락으로 본다.
     if (knownHouseExclusionCount === 0) return failWithoutFacts("roster_missing");
-    // 제외가 있어서 어긋나면 어느 행인지 아직 모른다 — 종전 동작(판정 보류, PR-3에서 해소).
+    // 알려진 제외(건수만)로 설명되면 종전 동작(판정 보류).
     return { status: "unknown", reason: "count_mismatch" };
   }
 
-  const others = houses.filter((h) => h.id !== sellingHouseId);
+  const others = effectiveHouses.filter((h) => h.id !== sellingHouseId);
   const sides = others.map((h) => classifyMergeHouse(h.acquisitionDate, input.mergeDate, h.mergeOrigin));
   const afterMergeDates = others
     .filter((_, i) => sides[i] === "after_merge")

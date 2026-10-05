@@ -215,6 +215,17 @@ function judgeOtherHouse(
    * 항상 어긋난다 — 그 어긋남은 장기임대주택이라는 **이미 알려진 사실**로 설명되므로
    * `knownHouseExclusionCount`로 알려 종전 동작(판정 보류 → met 경로 유지)을 보존한다.
    * 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-1.
+   *
+   * 🔑 **PR-3(`knownHouseExclusionHouseIds`로 행을 빼고 실제 판정)을 일부러 열지 않는다.**
+   * 사용자 결정 Q-4는 §155②③ 상속주택·조특법 감면주택만 「합가 당시 주택 수에서 뺀다」고
+   * 정했다 — 장기임대주택은 그 결정 밖이다. 장기임대주택 행을 빼고 남는 [거주주택, 그 밖의
+   * 주택] 2행으로 실제 구성(seller_side/counterpart_side)을 판정하면, 「그 밖의 주택」에
+   * `mergeOrigin`을 입력하지 않은 기존 가정(§155⑳은 합가 전 소유자 구분을 요구한 적이 없다)이
+   * 전부 `origin_missing`(불성립)으로 뒤집힌다(실측: `rental-residence-composition-e14h.
+   * anchor.test.ts` L-4/L-179 · `transfer.route.unknown-unfavorable-interp-axes.anchor.
+   * test.ts` UX-C1/UX-C2가 `mergeOrigin` 없이 `met`을 기대) — Q-4가 승인하지 않은 축까지
+   * 조이는 과잉 적용이라 `knownHouseExclusionHouseIds`는 넘기지 않는다(필드 미전달 =
+   * `resolveMergeComposition`의 레거시 분기, `knownHouseExclusionCount`만으로 판정 보류).
    */
   const rentalRowCount = input.houses?.filter((h) => h.isLongTermRental).length ?? 0;
   const deemed = resolveDeemedOneHouseBy155(
