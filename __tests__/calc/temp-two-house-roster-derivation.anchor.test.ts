@@ -122,6 +122,20 @@ describe("TTR — §155① 신규주택 명부 도출", () => {
     expect(r).toBeUndefined();
   });
 
+  /** 🔴 PR-B(Q-12) — redevelopment_apt는 §154① 비과세 판정 대상이라 F1 집합에 포함된다. */
+  it("TTR-13 재개발APT(PR-B) — housing과 같이 명부를 정본으로 쓴다", () => {
+    const r = resolveTemporaryTwoHouse({
+      ...base,
+      primaryKind: "redevelopment_apt",
+      houses: [{ acquisitionDate: "2024-05-30" }],
+    });
+    expect(r).toEqual({
+      previousAcquisitionDate: "2017-08-31",
+      newAcquisitionDate: "2024-05-30",
+      source: "roster",
+    });
+  });
+
   it("TTR-10 양도주택 취득일이 없으면 「나중」을 가릴 수 없다 — 도출 안 함", () => {
     const r = resolveTemporaryTwoHouse({
       ...base,

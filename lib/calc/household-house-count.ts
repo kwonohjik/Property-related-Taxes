@@ -37,15 +37,22 @@
  * **도달 불가를 근거로 규약을 바꾸지 않는다** — stale sessionStorage·이력 복원분은 그 경로를
  * 거치지 않는다. ⇒ 파싱은 호출부에 두고, 이 함수는 **명부 우선 규칙만** 담는다.
  *
- * ## 적용 범위 — 주택 양도만 (F1 게이트)
+ * ## 적용 범위 — §154① 비과세 판정 대상 자산만 (F1 게이트)
  *
  * 입주권·분양권 양도에서 스칼라는 「**양도 권리를 뺀** 주택 수」라 의미 축이 다르다
  * (`house-count-divergence.ts` F1 주석). 그 축에 명부 규칙을 얹으면 1채 어긋난다 — 현행 유지.
  *
- * ⚠️ `redevelopment_apt`도 제외된다. `isHousingLike`(4종)가 아니라 **F1과 같은 `=== "housing"`**
- *    을 쓴다 — 넓히려면 그 축의 의미를 먼저 실측할 것(넓히기는 나중에도 되지만, 좁히기는
- *    이미 계산되던 값을 바꾼다).
+ * `redevelopment_apt`(재개발 신축주택)는 **포함된다**(PR-B, 2026-10-05). 재개발 신축주택은
+ * §94①1호 「건물」이자 §89①3호가목의 「주택」이라 `checkExemption` 경계에서 `housing`으로
+ * 번역되어 §154① 판정을 그대로 받는다(`transfer-tax-redevelopment-apt-exemption.ts` 주석) —
+ * 비과세 판정 축에서는 housing과 **같은 의미**다(§155① 일시적 2주택의 "그 주택"도 같다).
+ * 게이트는 `isOneHouseExemptionAsset`(`housing-like-asset.ts` — §154① 비과세 판정 대상 2종)과
+ * 일치시킨다. 종전에는 이 함수만 `=== "housing"` 단일 리터럴이라 재개발APT는 명부를 채워도
+ * §154① 판정이 원시 스칼라로 계산되는 「입력은 받는데 무시한다」 결함이 있었다
+ * (계획서 `docs/00-pm/roster-required-other-assets.plan.md` §2-1, memory
+ * `feedback_ui_gate_removes_sole_input_path`의 변형).
  */
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
 export interface HouseRowForCount {
@@ -57,7 +64,10 @@ export interface HouseRowForCount {
 }
 
 export interface ResolveHouseholdHousingCountArgs {
-  /** 양도 대표 자산 종류(`form.assets[0].assetKind`). `"housing"`일 때만 명부를 정본으로 쓴다. */
+  /**
+   * 양도 대표 자산 종류(`form.assets[0].assetKind`). `isOneHouseExemptionAsset`(housing·
+   * redevelopment_apt)일 때만 명부를 정본으로 쓴다(PR-B, 2026-10-05).
+   */
   primaryKind: string | undefined;
   /** 호출부가 **제 기본값 규칙으로** 파싱한 스칼라 값 (위 🔑 참조). */
   declared: number;
@@ -95,7 +105,7 @@ export function resolveHouseholdHousingCount(
   args: ResolveHouseholdHousingCountArgs,
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
-  if (args.primaryKind !== "housing") return args.declared; // F1
+  if (!isOneHouseExemptionAsset(args.primaryKind)) return args.declared; // F1
   const rows = countedHouseRows(args.houses);
   if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
   return 1 + rows;
@@ -113,7 +123,7 @@ export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
 ): boolean {
-  return primaryKind === "housing" && countedHouseRows(houses) > 0;
+  return isOneHouseExemptionAsset(primaryKind) && countedHouseRows(houses) > 0;
 }
 
 /**
@@ -155,8 +165,8 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
   if (legacyPrecedence) return { houses };
-  const isHousing = primaryKind === "housing";
-  const clearConfirm = isHousing && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
+  const isRosterKind = isOneHouseExemptionAsset(primaryKind);
+  const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses, ...clearConfirm };
   return {
     houses,
@@ -248,7 +258,7 @@ export function houseCountScalarLocked(
  *   그대로 쓴다. 레거시 이력·간이 입력이 이 경로로 계속 동작한다.
  */
 export interface ResolveTemporaryTwoHouseArgs {
-  /** 양도 대표 자산 종류 — `"housing"`일 때만 명부를 정본으로 쓴다(F1과 같은 축). */
+  /** 양도 대표 자산 종류 — `isOneHouseExemptionAsset`일 때만 명부를 정본으로 쓴다(F1과 같은 축, Q-12). */
   primaryKind: string | undefined;
   /** 양도 대상 주택(= 종전주택) 취득일 `YYYY-MM-DD`. */
   primaryAcquisitionDate: string | undefined;
@@ -297,7 +307,7 @@ export function resolveTemporaryTwoHouse(
       : undefined;
 
   if (args.legacyPrecedence) return fallback(); // OH-34 세액 보존
-  if (args.primaryKind !== "housing") return fallback(); // F1 — 권리 양도는 축이 다르다
+  if (!isOneHouseExemptionAsset(args.primaryKind)) return fallback(); // F1 — 권리 양도는 축이 다르다
   if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
 
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).

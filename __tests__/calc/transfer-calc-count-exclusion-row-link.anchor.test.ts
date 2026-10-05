@@ -499,6 +499,12 @@ describe("CR-12 엔진 결과 — 선언 전건 (Q-6)", () => {
  * 빼서 스칼라 1 − ⑥ 1 = **0채** → 1세대1주택 비과세를 잃는다(실측 C 186,846,000 · D 264,600,600).
  * 두 입력이 모순이라(스칼라 1 = 다른 주택 없음 · ⑥ 행 = 다른 주택 있음) 사용자가 고르도록 ⑧이 막는다(Q-1 (a)).
  * 주택 수는 ④와 **같은 leaf**(`resolveHouseholdHousingCount`)로 센다.
+ *
+ * 🔴 PR-B(2026-10-05, `docs/00-pm/roster-required-other-assets.plan.md`) — 재개발 아파트도
+ *    위 leaf의 F1 집합(`isOneHouseExemptionAsset`)에 들어가 **명부가 정본**이 됐다. 그래서
+ *    「스칼라가 주택 수의 정본인데」라는 이 describe 의 전제 자체가 재개발 아파트에는 더 이상
+ *    성립하지 않는다 — 스칼라 값과 무관하게 명부가 항상 이기므로 두 입력이 모순될 수 없다
+ *    (housing과 같아짐, CR-13++ 패턴). 옛 이력 표식(legacy)이 붙은 레코드만 이 전제가 남는다.
  */
 describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면 ⑧이 막는다 (F-1)", () => {
   const MSG = "보유 주택 목록의 주택";
@@ -519,12 +525,13 @@ describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면
     ]);
   });
 
-  it("[CR-13r] 재개발 아파트 · 스칼라 1 · ⑥ 행 → 차단 (종전: 과세 264,600,600) — 명부가 정본이 아니라 버튼이 잠기지 않는다", () => {
+  it("[CR-13r] 🔴 PR-B 이후 — 재개발 아파트는 스칼라 1이어도 막지 않는다(명부가 정본, housing과 동일)", async () => {
     const f = withForm({ houses: [ruralRow("r", "2021-01-01")], householdHousingCount: "1" }, REDEV);
-    expect(blocked(f)).toHaveLength(1);
+    expect(blocked(f)).toEqual([]);
+    expect((await runCalc(f))?.isExempt).toBe(true);
   });
 
-  it("[CR-13s] 감면주택 ⑥ 행도 센다", () => {
+  it("[CR-13s] 감면주택 ⑥ 행도 센다 — PR-B 이후 재개발 아파트는 스칼라와 무관하게 막지 않는다", async () => {
     const special = row("s", "2012-10-15", {
       countExclusion: {
         kind: "special",
@@ -532,7 +539,8 @@ describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면
       },
     });
     const f = withForm({ houses: [special], householdHousingCount: "1" }, REDEV);
-    expect(blocked(f)).toHaveLength(1);
+    expect(blocked(f)).toEqual([]);
+    expect((await runCalc(f))?.isExempt).toBe(true);
   });
 
   it("[CR-13+] 짝 — 스칼라가 ⑥ 행을 포함하면 막지 않고 비과세 (재개발 스칼라 2)", async () => {
@@ -547,13 +555,21 @@ describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면
     expect((await runCalc(f))?.isExempt).toBe(true);
   });
 
-  it("[CR-13-] 대조군 — ⑥이 없으면 막지 않는다(옛 이력 · 재개발 모두 비과세)", async () => {
+  it("[CR-13-] 대조군(옛 이력) — ⑥이 없으면 막지 않는다. 스칼라 1이 정본이라 비과세", async () => {
     const legacy = withForm({ houses: [row("r", "2021-01-01")], householdHousingCount: "1", legacyHouseCountPrecedence: true });
-    const redev = withForm({ houses: [row("r", "2021-01-01")], householdHousingCount: "1" }, REDEV);
     expect(blocked(legacy)).toEqual([]);
-    expect(blocked(redev)).toEqual([]);
     expect((await runCalc(legacy))?.isExempt).toBe(true);
-    expect((await runCalc(redev))?.isExempt).toBe(true);
+  });
+
+  /**
+   * 🔴 PR-B 이후 — ⑥ 선언 없는 평범한 다른 주택은 **명부가 이겨** 정확히 2채로 과세된다.
+   * 종전(F1 미포함)에는 스칼라 "1"이 그대로 쓰여 명부의 r을 못 본 채 **잘못 비과세**였다
+   * (방금 위 legacy 사례의 "옛 이력" 처리와 혼동하기 쉬운 지점 — 여기는 legacy 표식이 없다).
+   */
+  it("[CR-13-redev] 대조군(재개발) — ⑥ 없는 다른 주택은 명부가 이겨 2채로 과세된다(PR-B)", async () => {
+    const redev = withForm({ houses: [row("r", "2021-01-01")], householdHousingCount: "1" }, REDEV);
+    expect(blocked(redev)).toEqual([]);
+    expect((await runCalc(redev))?.isExempt).toBe(false);
   });
 });
 
@@ -563,7 +579,11 @@ describe("CR-13 스칼라 정본 주택 수가 ⑥ 행을 포함하지 않으면
  * 명부 [r⑥, n]인데 스칼라 2 → 엔진 2 − 1 = 1채로 비과세. 명부와 정합하는 스칼라 3이면 3 − 1 = 2채로 과세다 —
  * 스칼라가 n을 빠뜨린 채 r을 빼서 사실상 **n이 빠진다**(실측 비과세 0 ↔ 264,600,600 · 186,846,000).
  * ⇒ ⑥ 행이 있으면 정본 주택 수가 명부의 주택(양도 주택 포함)을 모두 담아야 한다. ⑥이 없으면 종전대로
- * 보지 않는다 — 스칼라·명부 전체 정합성은 재개발 아파트에서 의도적으로 보지 않는 축(F1)이다.
+ * 보지 않는다.
+ *
+ * 🔴 PR-B(2026-10-05) — 재개발 아파트는 이제 F1 집합에 포함되어 **스칼라·명부 전체 정합성을
+ *    더는 「보지 않는 축」이 아니다**(위 문단의 종전 서술은 재개발 아파트에 더 이상 맞지 않는다).
+ *    명부가 항상 이기므로 스칼라 값과 무관하게 정확한 주택 수(3)로 계산된다 — housing과 같다.
  */
 describe("CR-14 ⑥ 행이 있으면 스칼라가 명부의 주택을 모두 담아야 한다 (R-1)", () => {
   const MSG = "보유 주택 목록의 주택";
@@ -578,11 +598,12 @@ describe("CR-14 ⑥ 행이 있으면 스칼라가 명부의 주택을 모두 담
   const H = () => [ruralRow("r", "2021-01-01"), row("n", "2016-01-01")];
   const blocked = (f: TransferFormData) => step1Messages(f).filter((m) => m.includes(MSG));
 
-  it("[CR-14] 재개발 아파트 · 스칼라 2 · 명부 [r⑥, n] → 차단 (종전: 비과세 — 정합 스칼라 3이면 과세 264,600,600)", () => {
+  it("[CR-14] 🔴 PR-B 이후 — 스칼라 2를 선언해도 명부가 이겨 3채(과세 264,600,600)로 계산된다", async () => {
     const f = withForm({ houses: H(), householdHousingCount: "2" }, REDEV);
-    expect(blocked(f)).toEqual([
-      "세대 보유 주택 수(2채)가 보유 주택 목록의 주택(양도 주택 포함 3채)보다 적습니다. 주택 수 제외는 목록의 주택을 세대 보유 주택 수에서 빼는 것이라, 두 값이 어긋나면 어느 주택을 뺐는지 알 수 없습니다 — 세대 보유 주택 수를 3채 이상으로 입력하거나, 목록에서 주택 수 제외 지정을 해제하세요.",
-    ]);
+    expect(blocked(f)).toEqual([]);
+    const r = await runCalc(f);
+    expect(r?.isExempt).toBe(false);
+    expect(r?.totalTax).toBe(264_600_600);
   });
 
   it("[CR-14l] 옛 이력 표식 · 스칼라 2 · 명부 [r⑥, n] → 차단 (종전: 비과세 — 정합 스칼라 3이면 과세 186,846,000)", () => {
@@ -598,11 +619,11 @@ describe("CR-14 ⑥ 행이 있으면 스칼라가 명부의 주택을 모두 담
     expect(r?.totalTax).toBe(264_600_600);
   });
 
-  it("[CR-14++] 짝 — 명부가 불완전해 스칼라가 더 크면(4) 막지 않는다 — ⑥ 행은 스칼라 안에 있다", () => {
+  it("[CR-14++] 짝 — 선언 스칼라가 명부보다 커도(4) 막지 않는다 — PR-B 이후 명부(3)가 그대로 쓰인다", () => {
     expect(blocked(withForm({ houses: H(), householdHousingCount: "4" }, REDEV))).toEqual([]);
   });
 
-  it("[CR-14-] 대조군 — ⑥이 없으면 스칼라가 명부보다 작아도 막지 않는다(F1 축은 이 계획 범위 밖)", () => {
+  it("[CR-14-] 대조군 — ⑥이 없으면 스칼라 선언과 무관하게 막지 않는다(이 가드는 ⑥ 유무에만 반응)", () => {
     const f = withForm({ houses: [row("r", "2021-01-01"), row("n", "2016-01-01")], householdHousingCount: "2" }, REDEV);
     expect(blocked(f)).toEqual([]);
   });

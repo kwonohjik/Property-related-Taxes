@@ -200,6 +200,63 @@ describe("SL Step4 ① 표시 — 명부 필수화(PR-1, 2026-10-05) 이후", ()
 });
 
 /**
+ * ── PR-B(2026-10-05) — 재개발APT도 housing과 같은 명부-필수 UX ──
+ *
+ * `docs/00-pm/roster-required-other-assets.plan.md` §4-2. SL-R1~R4의 재개발APT 짝.
+ */
+describe("SL-PRB Step4 ① 표시 — 재개발APT(PR-B)", () => {
+  function redevForm(over: Partial<TransferFormData> = {}) {
+    const form = baseForm(over);
+    form.assets[0].assetKind = "redevelopment_apt";
+    return form;
+  }
+
+  it("[SL-PRB-1] redevelopment_apt에는 버튼 위젯이 없다", () => {
+    render(<Step4 form={redevForm({ houses: [] })} onChange={() => {}} />);
+    expect(screen.queryByTestId("household-house-count-buttons")).toBeNull();
+  });
+
+  it("[SL-PRB-2] 명부 0행 + 미확정 → 확정 토글이 보이고 OFF", () => {
+    render(
+      <Step4
+        form={redevForm({ houses: [], householdNoOtherHousesConfirmed: false })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText("다른 보유 주택이 없습니다")).toBeTruthy();
+  });
+
+  it("[SL-PRB-3] 명부 2행 → 토글이 사라지고 도출값(3채)을 보여준다 — 선언 스칼라는 무시", () => {
+    render(
+      <Step4
+        form={redevForm({
+          householdHousingCount: "1", // 어긋난 선언 — 도출값이 이겨야 한다
+          houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
+        })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("다른 보유 주택이 없습니다")).toBeNull();
+    expect(screen.getByTestId("household-house-count-derived").textContent).toContain("3채");
+  });
+
+  it("[SL-PRB-4] 토글 ON → 확정 + 스칼라를 \"1\"로 함께 맞춘다", () => {
+    const onChange = vi.fn();
+    render(
+      <Step4
+        form={redevForm({ houses: [], householdHousingCount: "3", householdNoOtherHousesConfirmed: false })}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch", { name: /^다른 보유 주택이 없습니다/ }));
+    expect(onChange).toHaveBeenCalledWith({
+      householdNoOtherHousesConfirmed: true,
+      householdHousingCount: "1",
+    });
+  });
+});
+
+/**
  * ── OH-34 레거시 표식 UI ──
  *
  * | # | 주장 |

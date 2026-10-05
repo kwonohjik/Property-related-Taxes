@@ -9,11 +9,13 @@
  * UI에서 재계산하지 않는다(single-source, feedback_ui_engine_dual_truth_avoidance).
  *
  * 계획: docs/02-design/features/transfer-surcharge-house-count-divergence.plan.md
+ * · docs/00-pm/roster-required-other-assets.plan.md(PR-B — redevelopment_apt F1 확장)
  */
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 /** computeHouseCountDivergence 입력 — TransferFormData가 구조적으로 satisfy (F4: 테스트 경량화). */
 export interface HouseCountDivergenceInput {
-  /** 양도 대표 자산 종류 (form.assets[0].assetKind). "housing"일 때만 게이트 통과 */
+  /** 양도 대표 자산 종류 (form.assets[0].assetKind). `isOneHouseExemptionAsset`일 때만 게이트 통과 */
   primaryKind: string;
   /** ① 세대 보유 "주택" 수 (정확 숫자 문자열) */
   householdHousingCount: string;
@@ -37,15 +39,17 @@ export interface HouseCountDivergenceResult {
 /**
  * ① 선언 세대 주택 수와 ④ 목록의 구조적 주택 수를 대조한다.
  *
- * - **F1 게이트**: `primaryKind === "housing"`일 때만 노출. 입주권·분양권 양도 시
- *   `householdHousingCount`는 "주택 수"(양도 권리 미포함)라 의미 축이 어긋나 false mismatch가 난다.
+ * - **F1 게이트**: `isOneHouseExemptionAsset(primaryKind)`(housing·redevelopment_apt)일 때만
+ *   노출. 입주권·분양권 양도 시 `householdHousingCount`는 "주택 수"(양도 권리 미포함)라 의미 축이
+ *   어긋나 false mismatch가 난다. redevelopment_apt는 housing과 같은 §154① 비과세 판정 대상이라
+ *   PR-B(2026-10-05)로 포함됐다 — `household-house-count.ts`의 F1과 같은 집합.
  * - **F7 분양권 제외**: ①은 "주택"만 센다. 분양권은 ④ 별도 집계이고 pre-2021·3억↓는 엔진 미산입이라
  *   structuralCount에 더하면 이중 오탐 → 주택 행만 카운트(분양권은 populated 게이트에만 반영).
  */
 export function computeHouseCountDivergence(
   input: HouseCountDivergenceInput,
 ): HouseCountDivergenceResult {
-  const isHouseSale = input.primaryKind === "housing"; // F1 게이트
+  const isHouseSale = isOneHouseExemptionAsset(input.primaryKind); // F1 게이트
   const populated = input.houses.length > 0 || input.presaleRights.length > 0; // C-1: 분양권만 입력해도 노출
   const declared = parseInt(input.householdHousingCount || "1", 10); // store default "1"과 일치
   const structuralCount =
