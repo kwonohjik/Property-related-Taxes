@@ -331,11 +331,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           />
 
           {/*
-            주택 수 — Q-6·Q-7(명부 필수화 PR-1): `primaryKind === "housing"`만 명부에서 도출한
-            읽기 전용 표시로 바꾼다. 입주권·분양권·재개발APT(나머지 housing-like 3종)는 ①의 의미
-            축이 달라 종전 「1/2/3+」 버튼을 그대로 둔다(Q-7 범위 밖).
+            주택 수 — Q-6·Q-7(명부 필수화 PR-1) + PR-B(2026-10-05): `isOneHouseExemptionAsset`
+            (housing·redevelopment_apt — §154① 비과세 판정 대상)만 명부에서 도출한 읽기 전용
+            표시로 바꾼다. 입주권·분양권(나머지 housing-like 2종)은 ①의 의미 축이 달라 종전
+            「1/2/3+」 버튼을 그대로 둔다(PR-C 범위, 계획서 §4-3·§4-4).
           */}
-          {primaryKind === "housing" ? (
+          {isOneHouseExemptionAsset(primaryKind) ? (
             <div className="space-y-1.5" data-field="householdNoOtherHousesConfirmed">
               <label className="block text-sm font-medium">세대 보유 주택 수</label>
               <p className="text-sm" data-testid="household-house-count-derived">

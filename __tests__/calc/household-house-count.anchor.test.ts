@@ -86,7 +86,7 @@ describe("HC-4 F1 게이트 — 주택 양도만", () => {
    * 🔴 **긍정 짝이 필요하다**. 「명부를 아예 안 본다」와 구별되지 않으면
    *    HC-2가 깨져도 이 단언은 초록이다(`feedback_negative_anchor_needs_positive_twin`).
    */
-  it.each(["right_to_move_in", "presale_right", "redevelopment_apt", "land", undefined])(
+  it.each(["right_to_move_in", "presale_right", "land", undefined])(
     "[HC-4] primaryKind=%s → 스칼라 유지",
     (kind) => {
       const n = resolveHouseholdHousingCount(
@@ -99,6 +99,18 @@ describe("HC-4 F1 게이트 — 주택 양도만", () => {
   it("[HC-4-twin] 같은 명부라도 housing이면 명부가 이긴다", () => {
     const n = resolveHouseholdHousingCount(
       args({ primaryKind: "housing", declared: 5, houses: [row("2020-01-01")] }),
+    );
+    expect(n).toBe(2);
+  });
+
+  /**
+   * 🔴 PR-B — redevelopment_apt는 F1 게이트에서 **빠진다**(housing과 같은 §154①
+   *    비과세 판정 대상이라 `isOneHouseExemptionAsset` 집합과 일치). 위 HC-4 each 에서
+   *    제외하고 여기로 옮긴다 — housing과 동일하게 명부가 이겨야 한다.
+   */
+  it("[HC-4-twin2] redevelopment_apt도 housing과 같이 명부가 이긴다 (PR-B)", () => {
+    const n = resolveHouseholdHousingCount(
+      args({ primaryKind: "redevelopment_apt", declared: 5, houses: [row("2020-01-01")] }),
     );
     expect(n).toBe(2);
   });
@@ -148,6 +160,10 @@ describe("HC-7 명부가 정본인 상태", () => {
   it("[HC-7d] 명부 자체가 없으면 false", () => {
     expect(houseRosterIsAuthoritative("housing", undefined)).toBe(false);
   });
+
+  it("[HC-7e] 🔴 PR-B — redevelopment_apt도 housing과 같이 true", () => {
+    expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")])).toBe(true);
+  });
 });
 
 describe("HC-8 명부 patch 가 스칼라를 함께 갱신한다", () => {
@@ -174,6 +190,11 @@ describe("HC-8 명부 patch 가 스칼라를 함께 갱신한다", () => {
   it("[HC-8e] 주택 양도가 아니면 갱신하지 않는다 (F1)", () => {
     const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false);
     expect(p.householdHousingCount).toBeUndefined();
+  });
+
+  it("[HC-8g] 🔴 PR-B — redevelopment_apt도 housing과 같이 갱신한다", () => {
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "redevelopment_apt", false);
+    expect(p.householdHousingCount).toBe("2");
   });
 
   it("[HC-8f] 갱신값은 ④·⑧ leaf 와 같다 — 한 값만 남는다", () => {
@@ -209,6 +230,10 @@ describe("HC-9 잠금은 «정합된 상태»만 고정한다", () => {
     expect(houseCountScalarLocked("right_to_move_in", two, 3)).toBe(false);
   });
 
+  it("[HC-9f] 🔴 PR-B — redevelopment_apt도 housing과 같이 잠긴다", () => {
+    expect(houseCountScalarLocked("redevelopment_apt", two, 3)).toBe(true);
+  });
+
   it("[HC-9e] HC-8 갱신 직후는 반드시 잠긴 상태다 — 두 술어가 같은 산식을 쓴다", () => {
     const declared = Number(housesPatchWithDerivedCount(two, "housing", false).householdHousingCount);
     expect(houseCountScalarLocked("housing", two, declared)).toBe(true);
@@ -233,6 +258,10 @@ describe("HC-10 OH-34 레거시 표식을 붙일 조건", () => {
 
   it("[HC-10d] 주택 양도가 아니면 false (F1)", () => {
     expect(houseCountDivergedFromRoster("right_to_move_in", two, 1)).toBe(false);
+  });
+
+  it("[HC-10f] 🔴 PR-B — redevelopment_apt도 housing과 같이 어긋나면 true", () => {
+    expect(houseCountDivergedFromRoster("redevelopment_apt", two, 1)).toBe(true);
   });
 
   it("[HC-10e] 잠금 술어와 정확히 반대다(명부가 정본인 구간에서) — 같은 산식을 쓴다", () => {

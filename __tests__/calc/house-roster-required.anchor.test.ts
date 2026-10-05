@@ -17,10 +17,12 @@
  * | HR-2 | 0행 + 확정 → ⑧ 통과 |
  * | HR-3 | 1행 이상이면 미확정이어도 ⑧ 통과(행이 곧 명부 입력) |
  * | HR-4 | legacy 표식(OH-34)이면 0행 + 미확정도 ⑧ 통과(구 이력 세액 보존) |
- * | HR-5 | Q-7 범위 밖(입주권·분양권·재개발APT) — 0행이어도 차단하지 않는다 |
+ * | HR-5 | Q-7 범위 밖(입주권·분양권) — 0행이어도 차단하지 않는다 |
+ * | HR-5b | PR-B(2026-10-05) — 재개발APT는 범위 안으로 들어왔다. housing과 같이 차단한다 |
  * | HR-6 | ④는 바뀌지 않는다 — 0행 + 스칼라 "3"(D-4) → 엔진 입력 3 (API 직접 호출 시나리오) |
  * | HR-7 | `housesPatchWithDerivedCount` — 행이 생기면(빈 행 포함) 확정을 해제한다 |
- * | HR-8 | `houseRosterRendered` — `"housing"`은 스칼라·행 수와 무관하게 명부가 항상 열린다 |
+ * | HR-8 | `houseRosterRendered` — `isOneHouseExemptionAsset`(housing·redevelopment_apt)은
+ *          스칼라·행 수와 무관하게 명부가 항상 열린다 |
  */
 import { describe, it, expect } from "vitest";
 import { collectStep1Issues } from "@/lib/calc/transfer-tax-validate-step1";
@@ -84,7 +86,7 @@ describe("HR-1~4 ⑧ 명부 필수화 차단", () => {
 });
 
 describe("HR-5 Q-7 범위 밖", () => {
-  it.each(["right_to_move_in", "presale_right", "redevelopment_apt"] as const)(
+  it.each(["right_to_move_in", "presale_right"] as const)(
     "[HR-5-%s] 0행 + 미확정이어도 차단하지 않는다",
     (kind) => {
       const f = form({ houses: [], householdNoOtherHousesConfirmed: false });
@@ -92,6 +94,31 @@ describe("HR-5 Q-7 범위 밖", () => {
       expect(step1FieldsOf(f)).toEqual([]);
     },
   );
+});
+
+/** 🔴 PR-B(2026-10-05) — redevelopment_apt는 §154① 비과세 판정 대상(`isOneHouseExemptionAsset`)이라
+ *    더 이상 「범위 밖」이 아니다. HR-1~4와 같은 차단이 그대로 적용된다(housing과 동일). */
+describe("HR-5b PR-B — 재개발APT는 housing과 같이 차단된다", () => {
+  it("[HR-5b-1] 0행 + 미확정 → 차단", () => {
+    const f = form({ houses: [], householdNoOtherHousesConfirmed: false });
+    f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" };
+    expect(step1FieldsOf(f)).toHaveLength(1);
+  });
+
+  it("[HR-5b-2] 0행 + 확정 → 통과", () => {
+    const f = form({ houses: [], householdNoOtherHousesConfirmed: true });
+    f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" };
+    expect(step1FieldsOf(f)).toEqual([]);
+  });
+
+  it("[HR-5b-3] 1행 이상이면 미확정이어도 통과", () => {
+    const f = form({
+      houses: [{ id: "h1", region: "capital", acquisitionDate: "2018-01-01", officialPrice: "300000000" }] as unknown as TransferFormData["houses"],
+      householdNoOtherHousesConfirmed: false,
+    });
+    f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" };
+    expect(step1FieldsOf(f)).toEqual([]);
+  });
 });
 
 describe("HR-6 ④ 엔진 입력 도출은 바뀌지 않는다 (D-4 보존, Q-8)", () => {
@@ -178,5 +205,14 @@ describe("HR-8 houseRosterRendered — housing은 항상 열린다", () => {
         "right_to_move_in",
       ),
     ).toBe(false);
+  });
+
+  it("[HR-8-redev] 🔴 PR-B — 0행 + 스칼라 1 + 재개발APT → 열린다(housing과 동일)", () => {
+    expect(
+      houseRosterRendered(
+        { houses: [], householdHousingCount: "1" } as unknown as TransferFormData,
+        "redevelopment_apt",
+      ),
+    ).toBe(true);
   });
 });

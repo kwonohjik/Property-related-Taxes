@@ -22,7 +22,7 @@
  *   컴패니언 NBL 「접기」가 복귀 버튼을 함께 지우던 것과 같은 처방이다.
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 /** 주택수 판정 입력에 **이미 담긴 데이터**가 있는가 — 있으면 지울 화면도 있어야 한다. */
 export function houseCountInputsHaveData(form: TransferFormData): boolean {
@@ -39,6 +39,12 @@ export function houseCountInputsHaveData(form: TransferFormData): boolean {
  * 종전 조건(`primaryKind === "housing"` 또는 `isHousingLike && ≥2채`)을 **그대로 유지**하고
  * 「담긴 데이터가 있으면」을 OR로 더한다 — 넓히기만 하므로 기존 노출은 하나도 줄지 않는다.
  * 섹션 안의 세대 보유 주택 목록은 `houseRosterRendered`가 따로 정한다.
+ *
+ * 🔴 PR-B(2026-10-05) — 무조건절을 `primaryKind === "housing"`에서
+ *    `isOneHouseExemptionAsset`(housing·redevelopment_apt)로 넓힌다. redevelopment_apt에서
+ *    「1/2/3+」 스칼라 버튼을 없애고(Step4.tsx) housing과 같은 명부-필수 UX로 바꾸면, 이 무조건절이
+ *    없으면 **스칼라를 2로 올릴 버튼 자체가 없어** 이 섹션(명부를 채울 유일한 화면)을 열 방법이
+ *    사라진다(닭-달걀, `houseRosterRendered` 주석과 같은 구조).
  */
 export function houseCountInputsVisible(
   form: TransferFormData,
@@ -47,7 +53,7 @@ export function houseCountInputsVisible(
   if (houseCountInputsHaveData(form)) return true;
   const count = parseInt(form.householdHousingCount || "1", 10);
   if (isHousingLike(primaryKind ?? "") && count >= 2) return true;
-  return primaryKind === "housing";
+  return isOneHouseExemptionAsset(primaryKind);
 }
 
 /**
@@ -64,12 +70,15 @@ export function houseCountInputsVisible(
  * 🔴 명부 필수화(PR-1, 2026-10-05) — `"housing"`은 **항상 열린다**(`houseCountInputsVisible`의
  *    마지막 분기와 같은 무조건 절). 종전엔 스칼라 버튼으로 "2채"를 선언해야 이 목록이 열렸는데,
  *    그 버튼을 없앴다(Q-6) — 스칼라로 열 수 없으면 명부에 **첫 행을 추가할 화면 자체가 없어진다**
- *    (닭-달걀: 명부가 0행이라 안 열리고, 안 열려서 행을 못 넣는다). `isHousingLike` 나머지 3종은
- *    버튼이 그대로 있어 영향 없다.
+ *    (닭-달걀: 명부가 0행이라 안 열리고, 안 열려서 행을 못 넣는다).
+ *
+ * 🔴 PR-B(2026-10-05) — `redevelopment_apt`도 같은 무조건절로 넓힌다(명부 필수화 대상 확대,
+ *    `isOneHouseExemptionAsset`). `right_to_move_in`·`presale_right`(나머지 `isHousingLike` 2종)는
+ *    버튼이 그대로 있어 영향 없다(PR-C 범위).
  */
 export function houseRosterRendered(form: TransferFormData, primaryKind: string | undefined): boolean {
   if ((form.houses?.length ?? 0) > 0 || (form.specialHouseExclusions?.length ?? 0) > 0) return true;
-  if (primaryKind === "housing") return true;
+  if (isOneHouseExemptionAsset(primaryKind)) return true;
   return isHousingLike(primaryKind ?? "") && parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 

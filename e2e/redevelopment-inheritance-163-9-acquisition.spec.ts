@@ -46,6 +46,9 @@ function seedForm() {
         filingDate: "2026-04-30",
         contractTotalPrice: "525000000",
         householdHousingCount: "2",
+        // roster-required PR-B(재개발APT): 명부 0행 + 미확정이면 ⑧이 차단한다 — houses가 비어
+        // 있으므로(D-4) 확정만 켜면 스칼라 선언값이 그대로 쓰인다(세액 영향 없음, PR-1 패턴 재사용).
+        householdNoOtherHousesConfirmed: true,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,
         isUnregistered: false,

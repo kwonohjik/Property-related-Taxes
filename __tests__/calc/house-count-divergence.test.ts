@@ -92,4 +92,18 @@ describe("computeHouseCountDivergence — anchor A", () => {
     expect(r.showMismatch).toBe(false); // 분양권은 structural 미포함 → 1===1
     expect(r.structuralCount).toBe(1);
   });
+
+  /** 🔴 PR-B — redevelopment_apt는 housing과 같은 §154① 판정 대상이라 F1 게이트를 통과한다. */
+  it("A7: PR-B — redevelopment_apt도 housing처럼 불일치가 노출된다", () => {
+    const r = computeHouseCountDivergence(
+      input({
+        primaryKind: "redevelopment_apt",
+        householdHousingCount: "5",
+        houses: [house("2020-01-01"), house("2021-01-01"), house("2022-01-01")],
+      }),
+    );
+    expect(r.showPrecedence).toBe(true);
+    expect(r.showMismatch).toBe(true);
+    expect(r.structuralCount).toBe(4);
+  });
 });
