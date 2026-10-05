@@ -529,4 +529,19 @@ PR-1에서 주 경로를 전부 `calcSection165_4Value`로 모았기 때문에 �
 
 검증: anchor `gift-burdened-stock-reversal.anchor.test.ts` 6건 · UI `gift-burdened-stock-reversal-ui.anchor.test.tsx` 4건 · 뮤테이션 6/6 KILLED(7번째는 제거한 prop을 다시 넘기는 변이라 tsc 소관). 전체 vitest 2,544파일 28,179건 · tsc 0 · lint 0 · 관련 E2E 10건.
 
-남은 한계: 증여 부담부 ⑧에는 Q-4b(양도기준시가 0 이하) 차단이 없다 — ⑫만 막는다(연혁 차단 갭과 같은 유형, 별건).
+남은 한계: ~~증여 부담부 ⑧에는 Q-4b(양도기준시가 0 이하) 차단이 없다 — ⑫만 막는다(연혁 차단 갭과 같은 유형, 별건).~~ → 해소(2026-10-05, §16).
+
+## 16. 증여 부담부 ⑧의 Q-4b 차단 (2026-10-05)
+
+종전에는 결손·자본잠식 입력으로 양도기준시가가 0 이하가 되면 ⑫만 400을 냈다(⑧은 입력 존재만 확인). 합산 호출이 전체 실패하며 배너에 JSON이 그대로 나왔다 — 세액 오류는 없었다(⑫ fail-closed).
+
+| 층 | 위치 | 변경 |
+|---|---|---|
+| ⑧ | `burdenedTransferStdNonPositiveError`(`lib/calc/gift-burdened-stock-unlisted.ts`) → `gift-tax-form-validate.ts` 비상장·환산 분기 | ⑫와 같은 술어(`isTransferSupplementaryNonPositive`)·문구. 연혁 오류·입력 누락보다 뒤 — 입력이 다 있을 때만 잰다. 2:3 신고·순자산 단독 사유를 반영 |
+
+0 이하가 되는 경우(엔진이 순손익·순자산에 0 하한을 먼저 건다): 순자산 ≤ 0이고(2009.2.4. 이후 0으로 잘림, 그 전에는 가중평균이 음수이면 0) 80% 하한도 0일 때 — 순손익이 음수라는 사실만으로는 막히지 않는다(0으로 잘려 순자산 몫이 남는다).
+
+재기준(법령 우선): `gift-burdened-stock-unlisted-valuation` B23-V3이 양도측 «순자산 −5,000»(평가액 0)을 «적법한 값»으로 통과시켰다 — ⑫가 400을 내던 조합이라 양도측을 양수 평가액(순손익 −1,000 · 순자산 5,000)으로 바꿨다. 취득측 0·음수는 그대로 적법하다.
+
+검증: anchor `gift-burdened-stock-q4b-gate.anchor.test.ts` 13건 — ⑧ 차단 ⇔ ⑫ 차단 날짜 8 × 순손익 7 × 순자산 7 × 사유 2 × 2:3 2 = 1,568조합 전수 일치(차단 조합이 실제로 다수 — 비공허) · 뮤테이션 8/8 KILLED(첫 실행 M7 «Q-4b가 누락보다 먼저» SURVIVED → 5a 추가 후 KILLED).
+

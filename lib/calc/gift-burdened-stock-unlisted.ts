@@ -11,12 +11,16 @@
  *   - 순자산가치(양도·취득)는 항상 필수
  *   - 순손익가치(양도·취득)는 그 평가 시점에 §165④3 순자산 단독 사유가 없을 때 필수
  *   - 동일 사업연도 토글(소칙 §81④1호) ON이면 전전사업연도 순자산(+ 사유 없으면 순손익) 필수
- * 0·음수는 적법한 값이다(결손·자본잠식) — 「존재」만 본다.
+ * 0·음수는 적법한 값이다(결손·자본잠식) — 입력 누락은 「존재」만 본다. 다만 그 값으로 잰 양도기준시가가
+ * 0 이하이면 환산 산식의 분모가 0이라 따로 막는다(`burdenedTransferStdNonPositiveError`).
  */
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isNetAssetOnlyReasonInEra } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
-import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import {
+  isSection165_4EraUnsupported,
+  isTransferSupplementaryNonPositive,
+} from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
@@ -125,4 +129,29 @@ export function burdenedUnlistedEraError(
   )
     return UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA;
   return null;
+}
+
+/**
+ * ⑧ — Q-4b: 양도기준시가(1주당 보충평가액)가 0 이하면 환산 산식의 분모가 0이다. ⑫(`refineSingleModeRequiredInputs`)와
+ * 같은 술어·문구다. 종전에는 ⑧이 통과시키고 ⑫만 400을 내, 합산 호출이 전체 실패하며 배너에 JSON이 그대로 나왔다.
+ *
+ * 입력이 비어 있으면 필수 오류가 따로 뜨므로 여기서는 보지 않고, 2000.4.2. 이전은 연혁 오류가 먼저다
+ * (`burdenedUnlistedEraError`) — 값을 재지 않는다. 이 경로는 비상장·환산이라 ⑫의 `scope === "both"`와 같다.
+ */
+export function burdenedTransferStdNonPositiveError(
+  bgt: Pick<
+    BurdenedGiftStockTransferTaxInput,
+    "netAssetOnlyReason" | "transferYearNetIncomePerShare" | "transferYearNetAssetPerShare" | "isHeavyRealEstateForValuation"
+  >,
+  giftDate: string | undefined,
+): string | null {
+  const td = toOptionalDate(giftDate);
+  if (!td || isSection165_4EraUnsupported(td)) return null;
+  const na = bgt.transferYearNetAssetPerShare;
+  const ni = bgt.transferYearNetIncomePerShare;
+  const niSkip = !!bgt.netAssetOnlyReason;
+  if (na === undefined || (!niSkip && ni === undefined)) return null;
+  return isTransferSupplementaryNonPositive(ni ?? 0, na, bgt.isHeavyRealEstateForValuation === true, td, niSkip)
+    ? UNLISTED_MESSAGES.TRANSFER_STD_NON_POSITIVE
+    : null;
 }

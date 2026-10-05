@@ -164,15 +164,15 @@ describe("B23 ⑧ — 주식 마법사 ⑧(validateUnlistedSimpleFields)의 거�
     expect(validateStep(1, formWith(unlistedItem(bgt)))).toContain(label);
   });
 
-  it("B23-V3: 🟢 모두 있으면 통과 — 0·음수(결손·자본잠식)도 적법한 값이다", () => {
+  it("B23-V3: 🟢 모두 있으면 통과 — 0·음수(결손·자본잠식)도 적법한 값이다 (양도측은 평가액이 양수일 때 — Q-4b: gift-burdened-stock-q4b-gate)", () => {
     expect(validateStep(1, formWith(unlistedItem(FILLED)))).toBeNull();
     expect(
       validateStep(
         1,
         formWith(
           unlistedItem({
-            transferYearNetIncomePerShare: 0,
-            transferYearNetAssetPerShare: -5_000,
+            transferYearNetIncomePerShare: -1_000,
+            transferYearNetAssetPerShare: 5_000,
             acquisitionYearNetIncomePerShare: -1_000,
             acquisitionYearNetAssetPerShare: 0,
           }),
