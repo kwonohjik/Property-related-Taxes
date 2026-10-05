@@ -114,7 +114,7 @@ describe("VL-1659 (#13): 순자산 단독 평가도 §165⑨ 월할 보정을 �
 
   it("VL-1659-2: 순자산 단독 사유가 있어도 §165⑨ 보정이 발동한다", () => {
     const r = calculateStockTransferTax(
-      sameBizYear({ netAssetOnlyReason: "liquidation_or_owner_death" }),
+      sameBizYear({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" }),
     );
     expect(r.valuationDetail?.section1659Detail).toBeDefined();
     expect(r.valuationDetail!.section1659Detail!.prior).toBe(100_000);
@@ -124,13 +124,13 @@ describe("VL-1659 (#13): 순자산 단독 평가도 §165⑨ 월할 보정을 �
     // 전전 NI 를 크게 흔들어도 순자산 단독 경로의 보정값은 바뀌지 않아야 한다.
     const low = calculateStockTransferTax(
       sameBizYear({
-        netAssetOnlyReason: "liquidation_or_owner_death",
+        netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
         prePriorYearNetIncomePerShare: 10_000,
       }),
     );
     const high = calculateStockTransferTax(
       sameBizYear({
-        netAssetOnlyReason: "liquidation_or_owner_death",
+        netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
         prePriorYearNetIncomePerShare: 900_000,
       }),
     );
@@ -141,7 +141,7 @@ describe("VL-1659 (#13): 순자산 단독 평가도 §165⑨ 월할 보정을 �
 
   it("VL-1659-4: 보정이 걸리면 취득가액이 양도가액에 미달한다 (세액이 살아난다)", () => {
     const r = calculateStockTransferTax(
-      sameBizYear({ netAssetOnlyReason: "liquidation_or_owner_death" }),
+      sameBizYear({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" }),
     );
     // 보정 전에는 분모=분자라 취득가액 = 양도가액 전액 → 차익 0 이하 → 세액 0이었다.
     expect(r.acquisitionPrice).toBeLessThan(r.transferPrice);
@@ -151,7 +151,7 @@ describe("VL-1659 (#13): 순자산 단독 평가도 §165⑨ 월할 보정을 �
   it("VL-1659-5: 토글 OFF면 종전대로 M-3 경고만 (회귀 가드)", () => {
     const r = calculateStockTransferTax(
       sameBizYear({
-        netAssetOnlyReason: "liquidation_or_owner_death",
+        netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death",
         unlistedSameBizYearToggle: false,
       }),
     );
@@ -217,7 +217,7 @@ describe("VL-C1 (#18): 취득일 거래정지 경로도 §165④1 단서를 탄�
 
   it("VL-C1-5: 순자산 단독 사유는 하한 대상이 아니다 (§165④3 「제1호 각 목 외의 부분에도 불구하고」)", () => {
     const r = calcAcquisitionStdPerShareSupplementary(
-      haltAcq({ netAssetOnlyReason: "liquidation_or_owner_death" }),
+      haltAcq({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" }),
     );
     expect(r.perShare).toBe(10_000); // 순자산 그대로 — 하한(8,000) 개입 없음
   });

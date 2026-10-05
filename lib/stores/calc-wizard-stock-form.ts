@@ -159,6 +159,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     unlistedSameBizYearToggle: false, // [B-4 §165⑨ 본체] 3중 패턴 default
 
     netAssetOnlyReason: "",
+    acquisitionNetAssetOnlyReason: "",
 
     expenseMode: "actual",
     actualExpenses: "",

@@ -503,7 +503,9 @@ export type StockTransferInput = {
   acqFaceValuePerShare?: number;
 
   /**
-   * 순자산 단독 평가 사유 (시행령 §165④3) — 양도일 연혁(`isNetAssetOnlyReasonInEra`)
+   * **양도 당시** 평가의 순자산 단독 평가 사유 (시행령 §165④3) — 취득 당시는 `acquisitionNetAssetOnlyReason`.
+   * §165④는 양도·취득 당시 기준시가를 각각 평가하고, 사유도 평가 시점의 사실이다(계획서 §14).
+   * 양도일 연혁(`isNetAssetOnlyReasonInEra`) — 양측 모두 양도일 기준:
    * 가: 청산 진행·사업자 사망 (2007.2.28.~)
    * 나: 사업개시 전·1년 미만·휴폐업 (2007.2.28.~)
    * 구 다: 3년 연속 결손 (2007.2.28.~2023.2.27.)
@@ -516,6 +518,8 @@ export type StockTransferInput = {
     | "consecutive_loss_3y"
     | "stock_holding_company"
     | "remaining_term_under_3y";
+  /** **취득 당시** 평가의 순자산 단독 평가 사유 (시행령 §165④3) — 값의 범위·연혁은 `netAssetOnlyReason`과 같다 */
+  acquisitionNetAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
 
   // 필요경비
   expenseMode: "actual" | "estimated";
@@ -1037,8 +1041,10 @@ export type StockTransferResult = {
      * max(순손익가치, 순자산가치)를 펼친다. 보충평가를 거친 분기(비상장·거래정지)에서만 싣는다.
      */
     section165_4Model?: Section165_4Model;
-    /** 순자산 단독 근거 — §165④3 사유(input echo) 또는 §165⑧1호 후단 `"ra_mok_heavy_real_estate"` (`resolveNetAssetOnlyBasis`) */
+    /** **양도 당시** 평가의 순자산 단독 근거 — §165④3 사유(input echo) 또는 §165⑧1호 후단 `"ra_mok_heavy_real_estate"` (`resolveNetAssetOnlyBasis`) */
     netAssetOnlyReason?: string;
+    /** **취득 당시** 평가의 순자산 단독 근거 — 같은 값 집합. 취득일 거래정지 결과 카드가 읽는다 */
+    acquisitionNetAssetOnlyReason?: string;
     /** [사례 49] 취득기준시가 총액 (acqFaceValuePerShare × shareCount) · [C-1] 보충평가 × shareCount 겸용 */
     acquisitionStdPriceTotal?: number;
     /**

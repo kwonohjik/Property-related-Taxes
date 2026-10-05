@@ -83,7 +83,7 @@ describe("UI-RC-4·5: 토글이 없어야 하는 곳", () => {
     expect(card()).toBeNull();
   });
   it("§165④3 사유(청산) → 없음", () => {
-    render(<EstimatedUnlistedBlock form={formOf({ netAssetOnlyReason: "liquidation_or_owner_death" })} onChange={vi.fn()} />);
+    render(<EstimatedUnlistedBlock form={formOf({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" })} onChange={vi.fn()} />);
     expect(card()).toBeNull();
   });
   it("hideReversalToggle(증여 부담부) → 없음", () => {

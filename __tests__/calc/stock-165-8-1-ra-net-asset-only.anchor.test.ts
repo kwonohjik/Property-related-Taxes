@@ -87,6 +87,8 @@ type Run =
       acq: number;
       method?: string;
       basis?: string;
+      /** 취득 당시 평가의 근거 — 취득일 거래정지 결과 카드가 읽는다(계획서 §14) */
+      acqBasis?: string;
       section?: string;
       step2: string[];
     };
@@ -103,6 +105,7 @@ function run(f: StockTransferFormData): Run {
     acq: r.acquisitionPrice,
     method: r.valuationDetail?.method,
     basis: r.valuationDetail?.netAssetOnlyReason,
+    acqBasis: r.valuationDetail?.acquisitionNetAssetOnlyReason,
     section: r.appliedSection94,
     step2,
   };
@@ -234,7 +237,9 @@ describe("RA-1: leaf 경계 — resolveNetAssetOnlyBasis", () => {
     [false, "2024-06-01", undefined],
     [undefined, "2024-06-01", undefined],
   ] as const)("라목=%s · 양도 %s → %s", (ra, date, expected) => {
-    expect(resolveNetAssetOnlyBasis({ isHeavyRealEstateForRate: ra, transferDate: d(date) })).toBe(expected);
+    // 라목 후단은 주식등의 종류에 걸린 규율이라 양측 공통이다(계획서 §14)
+    for (const side of ["transfer", "acquisition"] as const)
+      expect(resolveNetAssetOnlyBasis({ isHeavyRealEstateForRate: ra, transferDate: d(date) }, side)).toBe(expected);
   });
   it("사용자 사유가 있으면 사유가 우선 echo (라목이어도)", () => {
     expect(
@@ -242,7 +247,7 @@ describe("RA-1: leaf 경계 — resolveNetAssetOnlyBasis", () => {
         netAssetOnlyReason: "stock_holding_company",
         isHeavyRealEstateForRate: true,
         transferDate: d("2024-06-01"),
-      }),
+      }, "transfer"),
     ).toBe("stock_holding_company");
   });
   it("양도일 없음·무효 → 라목 후단 미적용 (판정 불가를 불리하게 적용하지 않는다)", () => {
@@ -304,12 +309,12 @@ describe("RA-8: 취득일 거래정지(코스닥·영 §165③) + 라목 — 취
     const r = ok(run(haltForm()));
     expect(r.method).toBe("halt_acquisition_conversion");
     expect(r.acq).toBe(220_000_000);
-    expect(r.basis).toBe("ra_mok_heavy_real_estate");
+    expect(r.acqBasis).toBe("ra_mok_heavy_real_estate");
   });
   it("부정 짝 — 라목 아님 → 196,000,000 · echo 없음", () => {
     const r = ok(run(haltForm({ isHeavyRealEstateForRate: false })));
     expect(r.acq).toBe(196_000_000);
-    expect(r.basis).toBeUndefined();
+    expect(r.acqBasis).toBeUndefined();
   });
 });
 

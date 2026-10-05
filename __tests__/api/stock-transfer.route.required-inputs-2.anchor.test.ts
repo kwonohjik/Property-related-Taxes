@@ -125,7 +125,7 @@ describe("B5 — 비상장 환산 보충적 평가(시행령 §165④)", () => {
   it("🟢 순자산 단독 평가 사유(§165④3호)면 순손익가치 없이 통과 (1,496,800)", async () => {
     await expectFinalTax(
       without(
-        { ...UNLISTED_EST, netAssetOnlyReason: "liquidation_or_owner_death" },
+        { ...UNLISTED_EST, netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" },
         "transferYearNetIncomePerShare",
         "acquisitionYearNetIncomePerShare",
       ),

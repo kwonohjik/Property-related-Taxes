@@ -18,6 +18,7 @@ import {
 } from "./stock-valuation-post-listing";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { resolveNetAssetOnlyBasis } from "./net-asset-only-basis";
+import type { ValuationSide } from "./net-asset-only-basis";
 
 export type UnlistedCol = "EUTransfer" | "EUAcq";
 
@@ -34,17 +35,36 @@ export interface UnlistedReduced {
  *
  * 근거는 엔진과 같은 `resolveNetAssetOnlyBasis` — §165④3 사유(사용자 선택) 또는 §165⑧1호 후단
  * (라목 · 양도일 2023-02-28 이후). 사유만 보면 라목에서 «엔진이 쓰지 않는 순손익을 화면·검증이 요구»한다.
+ * 평가 시점마다 따로다(양도 당시 · 취득 당시 — 계획서 `stock-165-4-valuation-followups.plan.md` §14).
  */
 export function shouldSkipNetIncome(
-  form: Pick<StockTransferFormData, "netAssetOnlyReason" | "isHeavyRealEstateForRate" | "transferDate">,
+  form: Pick<
+    StockTransferFormData,
+    "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason" | "isHeavyRealEstateForRate" | "transferDate"
+  >,
+  side: ValuationSide,
 ): boolean {
   return (
-    resolveNetAssetOnlyBasis({
-      netAssetOnlyReason: form.netAssetOnlyReason || undefined,
-      isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
-      transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
-    }) !== undefined
+    resolveNetAssetOnlyBasis(
+      {
+        netAssetOnlyReason: form.netAssetOnlyReason || undefined,
+        acquisitionNetAssetOnlyReason: form.acquisitionNetAssetOnlyReason || undefined,
+        isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
+        transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
+      },
+      side,
+    ) !== undefined
   );
+}
+
+/** 평가 시점별 순손익가치 생략 여부 — 필수 입력 술어(`requiredUnlistedValuationKeys`)·④ 어댑터 공용 */
+export interface NetIncomeSkip {
+  transfer: boolean;
+  acquisition: boolean;
+}
+
+export function netIncomeSkipBySide(form: Parameters<typeof shouldSkipNetIncome>[0]): NetIncomeSkip {
+  return { transfer: shouldSkipNetIncome(form, "transfer"), acquisition: shouldSkipNetIncome(form, "acquisition") };
 }
 
 function getStr(form: StockTransferFormData, key: string): string {
@@ -108,17 +128,16 @@ export function aggregateUnlistedNaPerShare(
 
 /**
  * Full 모드 — 74 신규 필드를 4 필드로 reduce.
- * niSkip === true 시 NI 호출 skip, transferNi/acqNi = 0.
+ * 순자산 단독인 시점은 NI 호출 skip → 그 열의 Ni = 0 (평가 시점마다 따로).
  */
 export function adaptUnlistedFlatToApiBody(
   form: StockTransferFormData,
-  opts: { niSkip: boolean } = { niSkip: false },
+  niSkip: NetIncomeSkip = netIncomeSkipBySide(form),
 ): UnlistedReduced {
-  const niSkip = opts.niSkip || shouldSkipNetIncome(form);
   return {
-    transferNi: niSkip ? 0 : aggregateUnlistedNiPerShare(form, "EUTransfer"),
+    transferNi: niSkip.transfer ? 0 : aggregateUnlistedNiPerShare(form, "EUTransfer"),
     transferNa: aggregateUnlistedNaPerShare(form, "EUTransfer"),
-    acqNi: niSkip ? 0 : aggregateUnlistedNiPerShare(form, "EUAcq"),
+    acqNi: niSkip.acquisition ? 0 : aggregateUnlistedNiPerShare(form, "EUAcq"),
     acqNa: aggregateUnlistedNaPerShare(form, "EUAcq"),
   };
 }

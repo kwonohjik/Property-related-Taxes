@@ -80,8 +80,8 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
       <div className="space-y-1 text-xs text-amber-700 font-mono">
         {isHaltAcquisition && detail.conversionAcqStdPerShare !== undefined && (
           <>
-            {detail.netAssetOnlyReason ? (
-              <p>취득시 보충평가액 (1주당) = 순자산가치 단독 ({netAssetOnlyCitationLabel(detail.netAssetOnlyReason)}) = {fmt(detail.conversionAcqStdPerShare)}</p>
+            {detail.acquisitionNetAssetOnlyReason ? (
+              <p>취득시 보충평가액 (1주당) = 순자산가치 단독 ({netAssetOnlyCitationLabel(detail.acquisitionNetAssetOnlyReason)}) = {fmt(detail.conversionAcqStdPerShare)}</p>
             ) : detail.section165_4Model === "max" ? (
               <p>
                 취득시 보충평가액 (1주당) = 순손익가치 {fmt(detail.niPerShare ?? 0)}·순자산가치 {fmt(detail.naPerShare ?? 0)} 중 큰 금액

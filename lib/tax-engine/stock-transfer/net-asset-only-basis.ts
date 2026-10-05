@@ -3,7 +3,10 @@
  *
  * 영 §165④1호 가중평균(3:2 · 다목 2:3 · 80% 하한)을 비켜 순자산가치(같은 호 나목)만으로 평가하는 근거는 둘이다.
  *
- *  1. 영 §165④3호 각 목 — 사용자가 고르는 사유(`netAssetOnlyReason`). **양도일 연혁**이 있다
+ *  1. 영 §165④3호 각 목 — 사용자가 **평가 시점마다** 고르는 사유(양도 당시 `netAssetOnlyReason` ·
+ *     취득 당시 `acquisitionNetAssetOnlyReason`). §165④는 양도·취득 당시 기준시가를 각각 평가하고
+ *     사유도 그 평가 시점의 사실이다(계획서 §14 — 구 다목 「양도일 또는 취득일이 속하는 사업연도」 ·
+ *     라목 「평가기준일 현재」 · 나목 서울고법 2024누52016). **양도일 연혁**이 있다
  *     (`isNetAssetOnlyReasonInEra` — ⑤ 선택지 · ⑧·⑫ 차단이 같은 술어를 부른다):
  *
  *     | 양도일 | 사유 | 근거(시행본 본문 — 법제처 DRF eflaw 전수 대조) |
@@ -16,7 +19,8 @@
  *     경우에는 이 조 제4항제1호나목의 계산식에 따라 평가한 가액으로 한다」. 대통령령 제33267호(2023.2.28.) 신설,
  *     부칙 제9조 「이 영 시행일 이후 주식등을 양도하는 경우부터 적용」 ⇒ **양도일 2023-02-28 이후**.
  *
- * 2는 사용자가 따로 고르지 않는다 — 라목 토글(`isHeavyRealEstateForRate`)과 양도일만으로 정해지는 사실이다.
+ * 2는 사용자가 따로 고르지 않는다 — 라목 토글(`isHeavyRealEstateForRate`)과 양도일만으로 정해지는 사실이고,
+ * 평가 시점이 아니라 **주식등의 종류**에 걸린 규율이라 양측 공통이다.
  * 엔진(양측·단측 평가 4곳)·④ 결산서 어댑터·⑤ 순손익 칸 노출·⑧·⑫ 순손익 필수 여부가 **이 함수 하나**를 부른다.
  * 한 층만 손으로 `netAssetOnlyReason`을 보면 «칸은 숨겼는데 검증이 요구하는»·«입력은 받았는데 엔진이 버리는»
  * 결함이 된다.
@@ -70,8 +74,14 @@ export type NetAssetOnlyBasis =
   | NonNullable<StockTransferInput["netAssetOnlyReason"]>
   | "ra_mok_heavy_real_estate";
 
+/** 평가 시점 — 양도 당시 기준시가(분모) · 취득 당시 기준시가(분자) */
+export type ValuationSide = "transfer" | "acquisition";
+
 export interface NetAssetOnlyFacts {
+  /** 양도 당시 평가의 §165④3 사유 */
   netAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
+  /** 취득 당시 평가의 §165④3 사유 */
+  acquisitionNetAssetOnlyReason?: StockTransferInput["acquisitionNetAssetOnlyReason"];
   /** 법 §94①4 라목 (부동산과다보유법인) */
   isHeavyRealEstateForRate?: boolean;
   transferDate?: Date;
@@ -85,11 +95,13 @@ export function isRaMokNetAssetOnly(f: Pick<NetAssetOnlyFacts, "isHeavyRealEstat
 }
 
 /**
- * 순자산 단독의 근거 — 없으면 `undefined`(가중평균).
- * 사용자가 고른 §165④3 사유가 있으면 그것을 echo한다(값은 같은 단독이다).
+ * 그 평가 시점의 순자산 단독 근거 — 없으면 `undefined`(가중평균·max).
+ * 사용자가 고른 그 시점의 §165④3 사유가 있으면 그것을 echo한다(값은 같은 단독이다).
+ * `side`는 필수다 — 한쪽 사유로 양측을 판정하던 종전 결함(계획서 §14)이 호출부에서 재발하지 않게.
  */
-export function resolveNetAssetOnlyBasis(f: NetAssetOnlyFacts): NetAssetOnlyBasis | undefined {
-  if (f.netAssetOnlyReason) return f.netAssetOnlyReason;
+export function resolveNetAssetOnlyBasis(f: NetAssetOnlyFacts, side: ValuationSide): NetAssetOnlyBasis | undefined {
+  const reason = side === "transfer" ? f.netAssetOnlyReason : f.acquisitionNetAssetOnlyReason;
+  if (reason) return reason;
   return isRaMokNetAssetOnly(f) ? "ra_mok_heavy_real_estate" : undefined;
 }
 

@@ -24,7 +24,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
-import { shouldSkipNetIncome } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { netIncomeSkipBySide } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
 import { isReversalCorpForm } from "./stock-transfer-section94-4-form";
 import {
@@ -529,7 +529,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     } else {
       for (const key of requiredUnlistedValuationKeys({
         scope: "transfer",
-        niSkip: shouldSkipNetIncome(form),
+        niSkip: netIncomeSkipBySide(form),
         acqFaceValueOnly: false,
       })) {
         if (key === "acqFaceValuePerShare") continue;

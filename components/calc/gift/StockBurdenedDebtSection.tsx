@@ -234,6 +234,8 @@ export function StockBurdenedDebtSection({
                     marketType: "unlisted" as const,
                     acquisitionDate: "",
                     acquisitionMode: "estimated" as const,
+                    // 취득 당시 사유 «없음»은 null — undefined는 종전 레코드(사유 하나 = 양측)로 읽힌다(계획서 §14)
+                    acquisitionNetAssetOnlyReason: null,
                     actualAcquisitionPrice: undefined,
                     isMajorShareholder: undefined,
                     isSmallMediumEnterprise: undefined,
