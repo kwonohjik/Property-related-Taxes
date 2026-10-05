@@ -40,6 +40,10 @@ test.describe("검증 경고 표시", () => {
           isApartment: true,
           isOfficetel: false,
           isUnsoldHousing: false,
+          // §155④⑤ 합가 전 보유 쪽 — 합가일 이전 취득 행은 고르지 않으면 ⑧이 판정을 막는다
+          // (2026-10-05 `merge-composition-unknown-unfavorable.plan.md` Q-2). 이 spec은 「경고는
+          // 막지 않는다」가 축이므로 차단 사유를 시드에서 지운다.
+          mergeOrigin: "counterpart_side",
         },
       ],
     });
