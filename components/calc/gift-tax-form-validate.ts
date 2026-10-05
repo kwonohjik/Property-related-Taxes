@@ -26,6 +26,7 @@ import { missingPriorRoundInputs } from "@/lib/calc/gift-required-inputs";
 import { foreignGiftTaxBaseMissing } from "@/lib/calc/gift-required-inputs";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 import {
+  burdenedTransferStdNonPositiveError,
   burdenedUnlistedEraError,
   missingBurdenedUnlistedValuationInputs,
 } from "@/lib/calc/gift-burdened-stock-unlisted";
@@ -323,7 +324,7 @@ export function validateStep(step: number, form: FormState): string | null {
         }
       }
       // C-S6b: 비상장 환산 — §165④ 보충적 평가 입력 필수 (B23). 미입력이면 엔진이 양도기준시가
-      // 0으로 읽어 취득가액 0이 된다. 규칙은 주식 마법사 ⑧의 거울(0·음수 적법 — 존재만 본다).
+      // 0으로 읽어 취득가액 0이 된다. 규칙은 주식 마법사 ⑧의 거울(0·음수 적법 — 입력 누락은 존재만 본다).
       if (sbgt.acquisitionMode === "estimated" && sbgt.marketType === "unlisted") {
         // 증여일 연혁 — ⑫와 같은 조건(2000.4.2. 이전 · §165④3 사유 시행 시기). 입력 누락보다 먼저 알린다.
         const eraError = burdenedUnlistedEraError(sbgt, form.giftDate);
@@ -332,6 +333,9 @@ export function validateStep(step: number, form: FormState): string | null {
         if (missingUnlisted.length > 0) {
           return `${sbLabel}: ${missingUnlisted[0]}를 입력하세요. (소령 §165④ 비상장 보충적 평가 — 환산취득가 산정)`;
         }
+        // Q-4b — 양도기준시가 0 이하(⑫와 같은 술어·문구). 입력이 다 있을 때만 잰다.
+        const nonPositive = burdenedTransferStdNonPositiveError(sbgt, form.giftDate);
+        if (nonPositive) return `${sbLabel}: ${nonPositive}`;
       }
       // C-S7: 대주주 판정 기준일 — §157①은 「양도일이 속하는 사업연도의 직전 사업연도 종료일」이다.
       // 미입력이면 ④가 증여일에서 파생하므로 증여일이 있어야 판정이 성립한다.
