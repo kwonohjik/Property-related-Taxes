@@ -9,7 +9,7 @@
  *   UI-RC-2  라목 + 2023-02-27 → 켜짐 · 잠김 (라목 사유)
  *   UI-RC-3  다목 카드 비율 60% → 켜짐 · 잠김 (다목 사유) / 49.9% → 꺼짐 · 열림
  *   UI-RC-4  순자산 단독(라목 2024 · §165④3 사유) → 토글 없음
- *   UI-RC-5  증여 부담부(hideReversalToggle) → 토글 없음
+ *   UI-RC-5  (결번 — 증여 부담부는 토글을 숨기지 않는다: `gift-burdened-stock-reversal.anchor.test.*`)
  *   UI-RC-6  상장 후 환산 카드 → 토글 있음 · 산식 안내·환산 미리보기도 같은 leaf
  */
 
@@ -84,10 +84,6 @@ describe("UI-RC-4·5: 토글이 없어야 하는 곳", () => {
   });
   it("§165④3 사유(청산) → 없음", () => {
     render(<EstimatedUnlistedBlock form={formOf({ netAssetOnlyReason: "liquidation_or_owner_death", acquisitionNetAssetOnlyReason: "liquidation_or_owner_death" })} onChange={vi.fn()} />);
-    expect(card()).toBeNull();
-  });
-  it("hideReversalToggle(증여 부담부) → 없음", () => {
-    render(<EstimatedUnlistedBlock form={formOf()} onChange={vi.fn()} simpleOnly hideReversalToggle />);
     expect(card()).toBeNull();
   });
 });

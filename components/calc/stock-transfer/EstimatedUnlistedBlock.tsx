@@ -58,8 +58,6 @@ interface EstimatedUnlistedBlockProps {
    * 계획서 docs/00-pm/stock-carryover-sale-case-donor-basis.plan.md V-2
    */
   transferSideOnly?: boolean;
-  /** 2:3 대상 법인 토글을 숨긴다 — 그 필드를 받지 않는 폼(증여 부담부)용. 엔진에 `false`를 보내는 쪽과 짝 */
-  hideReversalToggle?: boolean;
 }
 
 // §165④3 사유 — 양도일에 있던 사유만 보인다(`isNetAssetOnlyReasonInEra` · ⑧·⑫와 같은 leaf).
@@ -92,7 +90,7 @@ const NET_ASSET_ONLY_REASON_OPTIONS: { value: StockTransferFormData["netAssetOnl
   },
 ];
 
-export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false, hideReversalToggle = false }: EstimatedUnlistedBlockProps) {
+export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acquisitionSideOnly = false, transferSideOnly = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   const acquisitionNetAssetOnlyReason = form.acquisitionNetAssetOnlyReason || "";
   // 순자산 단독 — §165④3 사유 또는 §165⑧1호 후단(라목 · 2023.2.28. 이후 양도). 엔진·⑧·⑫와 같은 술어.
@@ -325,7 +323,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       </div>
 
       {/* §165④1호 괄호 — 2:3 대상 법인. 순자산 단독·max 산식(2007.2.27. 이전 양도)이면 가중평균이 없으므로 숨긴다 */}
-      {!isNetAssetOnly && !hideReversalToggle && !isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
+      {!isNetAssetOnly && !isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
       {/* simpleOnly(증여 부담부)·transferSideOnly(증여자 분모)에서는 숨김 — ④가 simple 값만 싣는다.

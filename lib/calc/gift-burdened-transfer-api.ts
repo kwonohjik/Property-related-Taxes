@@ -562,7 +562,10 @@ export function buildGiftStockBurdenedTransferBody(
     // 분류 플래그
     isQualifyingBlockShareholder: false,
     isHeavyRealEstateForRate: false,
-    isHeavyRealEstateForValuation: false,
+    // §165④1호 괄호(2:3) — 부동산등 50% 이상 법인 토글(ReversalCorpToggle). 키 없음 = 아니오.
+    // 칸이 있는 비상장·환산에서만 싣는다 — 종목 구분을 바꾼 뒤 남은 값이 엔진에 닿지 않게.
+    isHeavyRealEstateForValuation:
+      !isListed && bgt.acquisitionMode === "estimated" && bgt.isHeavyRealEstateForValuation === true,
     // `nblRatioOfCorpAssets`(§104①9호)는 **의도적으로 생략**한다 — 이 경로에 입력 UI가 없어
     // 값을 알 수 없고, undefined = 9호 미해당(§104①1호)이 「법 근거 없이 불리 적용 금지」에 맞다.
     // 위 분류 플래그가 전부 false라 애초에 기타자산으로 분류되지도 않는다.

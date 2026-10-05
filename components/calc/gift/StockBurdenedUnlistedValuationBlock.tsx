@@ -66,8 +66,8 @@ export function toUnlistedBlockForm(
   return {
     netAssetOnlyReason: bgt.netAssetOnlyReason ?? "",
     acquisitionNetAssetOnlyReason: burdenedAcquisitionReason(bgt) ?? "",
-    // ④가 엔진에 `isHeavyRealEstateForValuation: false`를 보낸다 — 미리보기 가중치도 같은 값이어야 한다.
-    isHeavyRealEstateForValuation: false,
+    // ④가 엔진에 같은 값을 보낸다 — 미리보기 가중치도 이 값이어야 한다.
+    isHeavyRealEstateForValuation: bgt.isHeavyRealEstateForValuation === true,
     unlistedValuationMode: "simple",
     transferDate: ctx.transferDate,
     shareCount: ctx.ownedShares === undefined ? "" : String(ctx.ownedShares),
@@ -119,6 +119,9 @@ export function fromUnlistedBlockPatch(
   } else if ("netAssetOnlyReason" in patch && bgt && bgt.acquisitionNetAssetOnlyReason === undefined) {
     out.acquisitionNetAssetOnlyReason = burdenedAcquisitionReason(bgt) ?? null;
   }
+  if ("isHeavyRealEstateForValuation" in patch) {
+    out.isHeavyRealEstateForValuation = patch.isHeavyRealEstateForValuation || undefined;
+  }
   if ("unlistedSameBizYearToggle" in patch) {
     out.unlistedSameBizYearToggle = patch.unlistedSameBizYearToggle || undefined;
   }
@@ -153,7 +156,6 @@ export function StockBurdenedUnlistedValuationBlock({ item, bgt, transferDate, o
         </p>
         <EstimatedUnlistedBlock
           simpleOnly
-          hideReversalToggle
           form={form as StockTransferFormData}
           onChange={(patch) => onChange(fromUnlistedBlockPatch(patch, bgt))}
         />

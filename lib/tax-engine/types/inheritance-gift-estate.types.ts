@@ -1090,6 +1090,12 @@ export interface BurdenedGiftStockTransferTaxInput {
    * `netAssetOnlyReason`을 따른다(`burdenedAcquisitionReason`). 저장(JSON)에서 `undefined`는 사라지므로 «없음»은 `null`이다.
    */
   acquisitionNetAssetOnlyReason?: BurdenedGiftStockTransferTaxInput["netAssetOnlyReason"] | null;
+  /**
+   * 영 §165④1호 괄호 — 부동산등 비율 50% 이상 법인(법 §94①4 다목 법인 요건)이라 순손익가치 2/5 + 순자산가치 3/5.
+   * 키 없음(`undefined`)은 «아니오»다 — 이 입력 칸이 생기기 전 레코드도 같은 뜻이라 이관이 필요 없다.
+   * 양도·취득 두 평가 시점에 같은 법인이므로 하나다.
+   */
+  isHeavyRealEstateForValuation?: boolean;
   /** 소득세법 시행규칙 §81④1호 — 같은 사업연도 취득·양도(양도·취득 평가액 동일 시에만 노출) */
   unlistedSameBizYearToggle?: boolean;
   /** §81④1호 전전사업연도 1주당 순손익가치 */
