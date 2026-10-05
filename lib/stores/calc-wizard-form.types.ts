@@ -79,6 +79,20 @@ export interface TransferFormData {
   isOneHousehold: boolean;
   householdHousingCount: string;
   /**
+   * 「세대 보유 주택이 양도 주택뿐이고 다른 주택이 없습니다」 확정(Q-5, #1919 선례와 같은 모양).
+   *
+   * 명부 필수화(PR-1, `docs/00-pm/merge-composition-unknown-unfavorable.plan.md`) — 주택 양도에서
+   * 세대 주택 수는 **명부에서 도출**한다(1 + 명부 행 수). 명부가 0행이면 「1채뿐」인지 「입력을
+   * 안 했을 뿐」인지 코드로 구별할 수 없어(자동 안분 fallback 금지와 같은 층위) 이 확정이 필요하다.
+   *
+   * - `false`(기본값) — 미확정. 주택 양도 + 명부 0행 + legacy 표식 없음이면 ⑧이 차단한다.
+   * - `true` — 확정. 명부에 행을 추가하면 onChange에서 **다시 false로 해제**한다(#1919 패턴).
+   *
+   * ⚠️ 엔진은 이 필드를 모른다 — 도출값(항상 1 + 명부 행 수)에 영향을 주지 않는 UI·validate 전용
+   *    게이트다. 0행이면 확정 여부와 무관하게 1채로 계산된다.
+   */
+  householdNoOtherHousesConfirmed: boolean;
+  /**
    * OH-34 레거시 표식 — **저장 당시 스칼라가 명부와 어긋난 이력**을 복원했을 때 켜진다.
    *
    * 켜져 있으면 ④·⑧이 `householdHousingCount`(저장 당시 값)로 계산한다 — P7-2 이후

@@ -8,12 +8,13 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { addHouseRow } from "./_helpers/add-house-row";
 
 async function gotoHoldingStepWithTwoHouses(page: Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();
-  await page.getByRole("button", { name: "2채", exact: true }).click();
+  // 명부 필수화(PR-1, 2026-10-05) — "housing"은 "2채" 버튼이 사라졌다(Q-6). 목록은 항상 열려 있다.
   await expect(page.getByText("분양권·입주권", { exact: false }).first()).toBeVisible();
 }
 
@@ -22,6 +23,10 @@ const spouseSwitch = (page: Page) => page.getByRole("switch", { name: /배우자
 test.describe("#2b 혼인 합가 배우자 분양권/입주권 chip", () => {
   test("혼인합가일 미입력 → chip 숨김 / 입력 → chip 노출 (분양권 항목)", async ({ page }) => {
     await gotoHoldingStepWithTwoHouses(page);
+
+    // 명부 필수화(PR-1) — MergedHouseholdRightSection은 householdHousingCount >= 2를 직접 본다.
+    // 명부가 정본이 됐으므로(명부 필수화) 취득일 있는 행 1개를 추가해 "2"로 도출시킨다.
+    await addHouseRow(page);
 
     // 분양권·입주권 추가
     await page.getByRole("button", { name: "+ 추가", exact: true }).click();

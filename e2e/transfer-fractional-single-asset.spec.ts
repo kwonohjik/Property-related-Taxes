@@ -23,6 +23,7 @@ function seedForm(declared: boolean) {
   return {
     state: {
       formData: {
+        householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         assets: [
           {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
@@ -146,6 +147,7 @@ test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)
     return {
       state: {
         formData: {
+          householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
           assets: [
             {
               ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",

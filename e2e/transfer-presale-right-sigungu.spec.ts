@@ -14,7 +14,7 @@ async function gotoHoldingStepWithTwoHouses(page: Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();
-  await page.getByRole("button", { name: "2채", exact: true }).click();
+  // 명부 필수화(PR-1, 2026-10-05) — "housing"은 "2채" 버튼이 사라졌다(Q-6). 목록은 항상 열려 있다.
   await expect(page.getByText("분양권·입주권", { exact: false }).first()).toBeVisible();
 }
 

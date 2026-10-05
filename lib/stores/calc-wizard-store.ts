@@ -73,6 +73,7 @@ const defaultFormData: TransferFormData = {
   pre1990GradeMode: "number",
   isOneHousehold: true,
   householdHousingCount: "1",
+  householdNoOtherHousesConfirmed: false,
   householdRightCount: "0",
   residencePeriodMonths: "0",
   isRegulatedArea: false,

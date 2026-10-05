@@ -47,6 +47,8 @@ export async function gotoTransferHoldingsStep(
         transferDate: "2024-06-01",
         contractTotalPrice: "900000000",
         householdHousingCount: String(1 + opts.houses.length),
+        // 명부 필수화(PR-1) — 0행이면 「없음」 확정이 없는 한 ⑧이 차단한다.
+        householdNoOtherHousesConfirmed: opts.houses.length === 0,
         isOneHousehold: true,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,

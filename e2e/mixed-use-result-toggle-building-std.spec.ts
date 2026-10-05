@@ -53,6 +53,7 @@ function seedForm() {
   return {
     state: {
       formData: {
+        householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         assets: [mixedUseAsset()],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",

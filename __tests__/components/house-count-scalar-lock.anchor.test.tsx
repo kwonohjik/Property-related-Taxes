@@ -19,10 +19,10 @@
  * | SL-2 | 행에 취득일을 넣는 patch 는 `householdHousingCount` 를 **함께** 올린다 |
  * | SL-3 | 행 삭제도 같은 경로 — **남는 행이 있어야** 구별력이 있다 |
  * | SL-4 | 입주권 양도(F1)에서는 스칼라를 갱신하지 않는다 |
- * | SL-5 | Step4 — 정합 상태에서 버튼 3개가 **잠긴다** + 안내 문구 |
- * | SL-6 | 🔴 어긋난 상태(구 이력 복원)에서는 **열려 있다** — dead-end 방지 |
- * | SL-7 | 명부가 비면 열려 있다 (D-4 간이 입력) |
- * | SL-8 | 잠긴 상태에서 「정확한 주택 수」 입력칸도 잠긴다 |
+ * | SL-5~8 | **2026-10-05 명부 필수화(PR-1)로 폐기** — `"housing"`은 버튼 위젯 자체가 사라졌다
+ *          (읽기 전용 표시 + 「다른 보유 주택이 없습니다」 확정으로 대체). 잠금 메커니즘은
+ *          애초에 `"housing"`에서만 의미가 있었으므로(다른 housing-like 3종은 항상 unlocked)
+ *          그 kind가 버튼을 잃으면 전체가 무의미해진다. 아래 「SL Step4 ① 표시」로 교체 |
  *
  * ## ⚠️ 시료는 스칼라와 명부를 **어긋나게** 둔다
  *
@@ -139,61 +139,63 @@ describe("SL 명부 편집이 스칼라를 함께 올린다", () => {
 // ────────────────────────────────────────────────────────────
 // ⑤ Step4 버튼 잠금
 // ────────────────────────────────────────────────────────────
-describe("SL Step4 스칼라 버튼 잠금", () => {
-  function renderStep4(form: TransferFormData) {
+describe("SL Step4 ① 표시 — 명부 필수화(PR-1, 2026-10-05) 이후", () => {
+  /**
+   * | # | 주장 |
+   * |---|---|
+   * | SL-R1 | `"housing"`은 버튼 위젯 자체가 없다 — `household-house-count-buttons` 미존재 |
+   * | SL-R2 | 명부 0행 + 미확정 → 「다른 보유 주택이 없습니다」 토글이 보이고 OFF |
+   * | SL-R3 | 명부 2행 → 토글이 사라지고 읽기 전용 표시가 "3채"(도출값, 선언 스칼라 무시) |
+   * | SL-R4 | 토글을 켜면 확정 + 스칼라를 "1"로 함께 맞춘다(패치 1건) |
+   * | SL-R5 | 입주권(F1)은 그대로 「1/2/3+」 버튼을 쓴다 — Q-7 범위 밖 회귀 없음 |
+   */
+  it("[SL-R1] housing에는 버튼 위젯이 없다", () => {
+    render(<Step4 form={baseForm({ houses: [] })} onChange={() => {}} />);
+    expect(screen.queryByTestId("household-house-count-buttons")).toBeNull();
+  });
+
+  it("[SL-R2] 명부 0행 + 미확정 → 확정 토글이 보이고 OFF", () => {
+    render(<Step4 form={baseForm({ houses: [], householdNoOtherHousesConfirmed: false })} onChange={() => {}} />);
+    const toggle = screen.getByText("다른 보유 주택이 없습니다");
+    expect(toggle).toBeTruthy();
+  });
+
+  it("[SL-R3] 명부 2행 → 토글이 사라지고 도출값(3채)을 보여준다 — 선언 스칼라는 무시", () => {
+    render(
+      <Step4
+        form={baseForm({
+          householdHousingCount: "1", // 어긋난 선언 — 도출값이 이겨야 한다
+          houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
+        })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("다른 보유 주택이 없습니다")).toBeNull();
+    expect(screen.getByTestId("household-house-count-derived").textContent).toContain("3채");
+  });
+
+  it("[SL-R4] 토글 ON → 확정 + 스칼라를 \"1\"로 함께 맞춘다", () => {
+    const onChange = vi.fn();
+    render(
+      <Step4
+        form={baseForm({ houses: [], householdHousingCount: "3", householdNoOtherHousesConfirmed: false })}
+        onChange={onChange}
+      />,
+    );
+    // 접근성 이름에 description이 함께 실려(ToggleCard aria-labelledby) 제목만으로는 정확히 안 맞는다 — 정규식으로.
+    fireEvent.click(screen.getByRole("switch", { name: /^다른 보유 주택이 없습니다/ }));
+    expect(onChange).toHaveBeenCalledWith({
+      householdNoOtherHousesConfirmed: true,
+      householdHousingCount: "1",
+    });
+  });
+
+  it("[SL-R5] 입주권 양도는 종전 버튼 위젯을 그대로 쓴다(Q-7 범위 밖)", () => {
+    const form = baseForm({ houses: [] });
+    form.assets[0].assetKind = "right_to_move_in";
     render(<Step4 form={form} onChange={() => {}} />);
-    // 「N채」는 불일치 경고 문구에도 나온다 — 버튼군으로 범위를 좁힌다.
-    const group = screen.getByTestId("household-house-count-buttons");
-    const btns = Array.from(group.querySelectorAll("button"));
-    expect(btns.map((b) => b.textContent)).toEqual(["1채", "2채", "3채 이상"]);
-    return btns;
-  }
-
-  it("[SL-5] 정합 상태(선언 3 = 1 + 명부 2행) → 버튼 3개가 잠긴다", () => {
-    const btns = renderStep4(
-      baseForm({
-        householdHousingCount: "3",
-        houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
-      }),
-    );
-    for (const b of btns) expect(b).toBeDisabled();
-    expect(screen.getByText(/자동 산정됩니다/)).toBeTruthy();
-  });
-
-  it("[SL-6] 🔴 어긋난 상태(선언 1 + 명부 2행) → 열려 있다. 잠그면 맞출 화면이 사라진다", () => {
-    const btns = renderStep4(
-      baseForm({
-        householdHousingCount: "1",
-        houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
-      }),
-    );
-    for (const b of btns) expect(b).not.toBeDisabled();
-    expect(screen.queryByText(/자동 산정됩니다/)).toBeNull();
-  });
-
-  it("[SL-7] 명부가 비면 열려 있다 (D-4 간이 입력)", () => {
-    const btns = renderStep4(baseForm({ householdHousingCount: "1", houses: [] }));
-    for (const b of btns) expect(b).not.toBeDisabled();
-  });
-
-  it("[SL-8] 잠기면 「정확한 세대 보유 주택 수」 칸도 잠긴다", () => {
-    renderStep4(
-      baseForm({
-        householdHousingCount: "4",
-        houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01"), house("h3", "2020-01-01")],
-      }),
-    );
-    expect(screen.getByLabelText("정확한 세대 보유 주택 수")).toBeDisabled();
-  });
-
-  it("[SL-8-twin] 어긋나면 그 칸도 열려 있다", () => {
-    renderStep4(
-      baseForm({
-        householdHousingCount: "9",
-        houses: [house("h1", "2018-01-01"), house("h2", "2019-01-01")],
-      }),
-    );
-    expect(screen.getByLabelText("정확한 세대 보유 주택 수")).not.toBeDisabled();
+    expect(screen.getByTestId("household-house-count-buttons")).toBeTruthy();
+    expect(screen.queryByText("다른 보유 주택이 없습니다")).toBeNull();
   });
 });
 

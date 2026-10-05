@@ -97,6 +97,12 @@ export function toTransferFormPatch(
     ...(base as Partial<TransferFormData>),
     householdHousingCount: String(deriveJudgmentHouseCount(form)),
     /**
+     * 명부 필수화(PR-1, 2026-10-05) — 판정 메뉴는 이미 세대 보유 주택 사실을 다 모았다
+     * (명부가 0행이면 「다른 주택 없음」이 그 조사의 결론이다). 계산기에서 같은 확인을
+     * 다시 요구하면 판정을 다시 하는 것이 된다(D-3 위반) — 넘겨받는 시점에 확정한다.
+     */
+    householdNoOtherHousesConfirmed: (form.houses?.length ?? 0) === 0,
+    /**
      * 🔴 **입주권 수도 같은 이유로 확정한다**(OH-34). 판정 메뉴엔 이 위젯이 없고 route가 명부로
      *    도출하는데(`deriveHouseholdRightCount`), 계산기는 스칼라를 직접 보낸다. 판정 폼 기본값
      *    `"0"`을 그대로 넘기면 §89①4호 가목(「1개 보유」)이 계산기에서 불성립한다.

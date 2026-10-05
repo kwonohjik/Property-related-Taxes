@@ -15,6 +15,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { confirmNoOtherHouses } from "./_helpers/confirm-no-other-houses";
 
 const JIBUN = "서울 강남구 대치동 316";
 
@@ -110,6 +111,10 @@ test.describe("계산기 결과의 출처 한 줄", () => {
       scope: page.getByTestId("acq-date-building"),
     });
     await page.getByTestId("fixed-acquisition-price").fill("500000000");
+    // 명부 필수화(PR-1) — 「보유 상황」(1단계)에서 「다른 보유 주택이 없습니다」를 먼저 확정한다.
+    // 탭 클릭은 검증을 타지 않으므로 현재 단계와 무관하게 먼저 눌러 둘 수 있다.
+    await confirmNoOtherHouses(page);
+    await page.getByRole("button", { name: "자산 목록" }).first().click();
     for (let i = 0; i < 3; i++) {
       await page.getByRole("button", { name: "다음" }).click();
       await page.waitForTimeout(300);
