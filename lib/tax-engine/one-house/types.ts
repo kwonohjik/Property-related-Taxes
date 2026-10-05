@@ -78,6 +78,7 @@ export type OneHouseJudgeInput = Pick<
   | "presaleRights"
   | "sellingHouseId"
   | "knownHouseExclusionCount"
+  | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
   | "replacementHouse"
   | "rightThreeYearException"
@@ -173,6 +174,8 @@ export type OneHouseFacts = {
   sellingHouseId?: string;
   /** 비과세 판정용 주택수에서 이미 알려진 제외 건수 — §155④⑤ 합가 전 구성 판정의 echo(§155④⑤ 합가 계획서). */
   knownHouseExclusionCount?: TransferTaxInput["knownHouseExclusionCount"];
+  /** 위 제외 중 명부 행으로 특정된 몫(PR-3) — §155④⑤ 합가 전 구성 판정의 echo. */
+  knownHouseExclusionHouseIds?: TransferTaxInput["knownHouseExclusionHouseIds"];
   /** 명부 입력 경로가 없는 호출부(부담부증여) echo — §155④⑤ 합가 전 구성 판정(사용자 결정 2026-10-05). */
   noMergeRosterInputPath?: TransferTaxInput["noMergeRosterInputPath"];
   replacementHouse?: TransferTaxInput["replacementHouse"];

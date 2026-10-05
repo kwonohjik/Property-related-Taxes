@@ -247,6 +247,7 @@ function mergeItems(
     sellingHouseId: input.sellingHouseId,
     mergeDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
+    knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,
   });
   const compositionUnknownFacts = composition.status === "fails" &&

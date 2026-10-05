@@ -317,6 +317,40 @@ describe("E-14c §156의2·§156의3 — 15호가 아니라 §167의11①13호·
   });
 });
 
+/**
+ * PR-3 「제외 행을 빼고 판정」(계획서 `merge-composition-unknown-unfavorable.plan.md` §3-4)의
+ * 4개 소비처 중 **중과 15호·13호**(`resolveSurchargeDeemedOneHouseDetail`)가 같은 결론으로
+ * 따라오는지 — 비과세 축(`one-house-merge-composition.anchor.test.ts` MC-6)과 같은 배선
+ * (`ex.knownHouseExclusionHouseIds`)이다.
+ */
+describe("E-14/PR-3 중과 15호·13호도 §155②③ 제외 행을 빼고 합가 구성을 판정한다", () => {
+  it("MERGE-PR3-1 상속주택 제외 후 (1,1) 성립 → 3주택(상속 산입)인데도 13호 배제", () => {
+    const r = calc(
+      input({
+        householdHousingCount: 3,
+        houses: [SELLING, INHERITED, { ...GENERAL, mergeOrigin: "counterpart_side" as const }],
+        marriageMerge: { marriageDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      }),
+    );
+    expect(r.reasons).toBe("marriage_merge");
+    expect(r.surchargeType).toBe("none");
+  });
+
+  it("MERGE-PR3-1n 부정 짝 — GENERAL이 양도자 쪽이면(각자 1주택 아님) 상속주택을 빼도 불성립 · 중과 유지", () => {
+    const r = calc(
+      input({
+        householdHousingCount: 3,
+        houses: [SELLING, INHERITED, { ...GENERAL, mergeOrigin: "seller_side" as const }],
+        marriageMerge: { marriageDate: D("2020-01-01") },
+        isFirstTransferredInMerge: true,
+      }),
+    );
+    expect(r.reasons).toBe("");
+    expect(r.surchargeType).toBe("multi_house_3plus");
+  });
+});
+
 describe("E-14a 조특법 감면주택 — 해석이 확인된 조문만 15호(부동산납세과-1627)", () => {
   const special = (article: string, acq: string) =>
     [{ article, houseAcquisitionDate: D(acq), houseContractDate: D(acq), requirementsConfirmed: true }] as never;
@@ -504,6 +538,50 @@ describe("겸용주택 — 같은 호 판정·같은 조특법 술어 (E-14a·b)
 
   it("MX-1n 부정 짝 — 신규 주택 선언 없음(§155① 불성립) → 3주택 중과", () => {
     const r = mixed([sellingMixed, inheritedOld, newHouse]);
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_3plus");
+  });
+
+  /**
+   * PR-3 — 겸용(4개 소비처 중 하나)도 §155②③ 제외 행을 빼고 합가 전 구성을 판정한다
+   * (`transfer-tax-mixed-use-exemption.ts`의 `knownHouseExclusionHouseIds` 배선).
+   */
+  /** `mixed()`의 `over.multiHouse`는 전체를 덮어쓴다(houses·sellingHouseId 소실) — marriageMerge만 더해 직접 조립. */
+  const mixedWithMarriage = (houses: HouseInfo[]) =>
+    calcMixedUseTransferTax(
+      BIG,
+      T,
+      {
+        ...mixedUseCase14(),
+        isOneHouseExempt: false,
+        isOneHousehold: true,
+        householdHousingCountForExclusion: houses.length,
+        multiHouse: {
+          houses,
+          sellingHouseId: "selling",
+          presaleRights: [],
+          isOneHousehold: true,
+          isRegulatedArea: true,
+          marriageMerge: { marriageDate: D("2025-06-01") },
+        } as NonNullable<MixedUseAssetInput["multiHouse"]>,
+        isFirstTransferredInMerge: true,
+        inheritedHouseExclusion: {
+          generalHouseGiftedFromDecedentWithin2yr: undefined,
+          generalHouseGiftDate: undefined,
+          generalHouseRightAtInheritance: undefined,
+        },
+      } as MixedUseAssetInput,
+      makeMockRatesWithHouseEngine(),
+    );
+
+  it("MX-3 겸용 + 상속주택 제외 후 (1,1) 성립(혼인) → 3주택인데도 13호 배제", () => {
+    const r = mixedWithMarriage([sellingMixed, inheritedOld, { ...newHouse, mergeOrigin: "counterpart_side" as const }]);
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(false);
+    expect(r.multiHouseSurcharge?.exclusionReasons[0]?.detail).toContain(MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS);
+  });
+
+  it("MX-3n 부정 짝 — 그 주택이 양도자 쪽이면(각자 1주택 아님) 상속주택을 빼도 불성립 · 3주택 중과", () => {
+    const r = mixedWithMarriage([sellingMixed, inheritedOld, { ...newHouse, mergeOrigin: "seller_side" as const }]);
     expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
     expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_3plus");
   });

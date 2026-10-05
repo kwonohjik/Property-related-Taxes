@@ -84,6 +84,7 @@ const JUDGE_INPUT_KEYS = [
   "presaleRights",
   "sellingHouseId",
   "knownHouseExclusionCount",
+  "knownHouseExclusionHouseIds",
   "noMergeRosterInputPath",
   "replacementHouse",
   "rightThreeYearException",
@@ -166,6 +167,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   ],
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
+  knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
   replacementHouse: {
     businessApprovalDate: D("2019-02-02"),
@@ -448,12 +450,13 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
   });
 
   /**
-   * 참고 — `knownHouseExclusionCount`는 계산기 파이프라인(`calculateTransferTax`)을 거치면
-   * STEP 0.9가 **항상 실제 제외 건수로 재계산**하므로(`runHouseCountExclusionStep`) `exempt()`
-   * (전체 파이프라인)로는 주입값을 관측할 수 없다 — 사용자 입력이 아니라 echo이기 때문이다.
-   * 왕복 자체는 J-1~J-3(MAXIMAL)이 이미 전 필드 공통으로 증명하고, 이 값이 실제로 합가 전 구성
-   * 판정을 가르는 동작은 `one-house-merge-composition.anchor.test.ts`(직접 `checkExemption` 호출,
-   * 파이프라인 재계산 없음)에서 검증한다.
+   * 참고 — `knownHouseExclusionCount`·`knownHouseExclusionHouseIds`는 계산기 파이프라인
+   * (`calculateTransferTax`)을 거치면 STEP 0.9가 **항상 실제 제외 건수·행 id로 재계산**하므로
+   * (`runHouseCountExclusionStep`) `exempt()`(전체 파이프라인)로는 주입값을 관측할 수 없다 —
+   * 사용자 입력이 아니라 echo이기 때문이다. 왕복 자체는 J-1~J-3(MAXIMAL)이 이미 전 필드 공통으로
+   * 증명하고, 이 값이 실제로 합가 전 구성 판정을 가르는 동작은
+   * `one-house-merge-composition.anchor.test.ts`(직접 `checkExemption` 호출, 파이프라인
+   * 재계산 없음)에서 검증한다.
    */
 });
 

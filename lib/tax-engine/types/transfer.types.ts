@@ -765,6 +765,14 @@ export interface TransferTaxInput {
    */
   knownHouseExclusionCount?: number;
   /**
+   * `knownHouseExclusionCount` 중 **어느 명부 행인지 특정된** 몫(PR-3 — `merge-composition-
+   * unknown-unfavorable.plan.md` §3-4). §155②③ 상속주택(`excludedHouses[].houseId`) ·
+   * 조특법 §99의4·§98의9·보유 감면주택(행에 연결된 선언만) — `resolveMergeComposition`이
+   * 이 행들을 명부에서 빼고 합가 전 구성을 판정한다(사용자 결정 Q-4). 사용자 입력이 아니라
+   * STEP 0.9/0.95 등이 채우는 echo다.
+   */
+  knownHouseExclusionHouseIds?: ReadonlyArray<string>;
+  /**
    * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)에 **명부 입력 경로가 없는 호출부**임을
    * 알린다(사용자 결정 2026-10-05 — 부담부증여 양도분, `transferType === "burdened_gift"`만
    * 세운다). true면 명부가 없어도 불성립(`roster_missing`) 대신 판정 보류(`unknown`)로 두어

@@ -19,6 +19,7 @@ import {
   inheritedGeneralHouseSurchargeBasis,
   specialActHouseExclusionBasis,
   verifiedSpecialAct15Exclusions,
+  collectKnownHouseExclusionIds,
 } from "./transfer-tax-house-exclusion-step";
 import {
   resolveInheritedHouseExclusionFromInput,
@@ -139,6 +140,10 @@ export function judgeMixedUseOneHouseExemption(
   let mixedUnsold989Detail: Unsold989Result | undefined;
   let mixedHouseCountExclusionDetails: HouseCountExclusionDetail[] | undefined;
   let mixedSpecialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
+  // PR-3(§155④⑤ 합가 전 구성 — `knownHouseExclusionHouseIds`)가 빼고 셀 행 id 재료 — houseId가
+  // 있는 적용 건만 아래 `collectKnownHouseExclusionIds`가 거른다.
+  let hceAppliedForMerge: HouseCountExclusionDetail[] = [];
+  let specialEntriesForMerge: SpecialHouseExclusionResolution["entries"] = [];
   if (asset.householdHousingCountForExclusion !== undefined) {
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
       generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
@@ -151,6 +156,8 @@ export function judgeMixedUseOneHouseExemption(
     mixedSpecialHouseExclusionDetail = special.entries.length > 0 ? special : undefined;
     houseCountExclusionApplied = hce.appliedList.length + special.excludedCount;
     verifiedSpecial = verifiedSpecialAct15Exclusions(special, hce.appliedList);
+    hceAppliedForMerge = hce.appliedList;
+    specialEntriesForMerge = special.entries;
   }
   const isOneHouseholdForHouseCount = asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false;
   /**
@@ -168,6 +175,12 @@ export function judgeMixedUseOneHouseExemption(
         })
       : undefined;
   const inheritedExcludedCount = inheritedExclusion?.excludedCount ?? 0;
+  // PR-3 — §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)이 명부에서 뺄 행 id(사용자 결정 Q-4).
+  const knownHouseExclusionHouseIds = collectKnownHouseExclusionIds({
+    hceApplied: hceAppliedForMerge,
+    specialEntries: specialEntriesForMerge,
+    inheritedExcludedHouses: inheritedExclusion?.excludedHouses,
+  });
   const effectiveHouseCount =
     asset.householdHousingCountForExclusion !== undefined
       ? Math.max(asset.householdHousingCountForExclusion - houseCountExclusionApplied - inheritedExcludedCount, 0)
@@ -207,14 +220,15 @@ export function judgeMixedUseOneHouseExemption(
       /**
        * §155④⑤ 합가 전 구성(`resolveMergeComposition`) — 겸용은 명부를 **원시 롤스터**
        * (`asset.multiHouse.houses`)로 갖고 있다. `householdHousingCount`를 위에서 제외 후
-       * 수치(`surcharge15Count`)로 강제하므로 롤스터 행 수와 항상 어긋나는데, 그 어긋남은
-       * 위에서 이미 계산한 제외 건수(`houseCountExclusionApplied`·`inheritedExcludedCount`)로
-       * 설명된다 — `knownHouseExclusionCount`로 알려 종전 동작을 보존한다(모름이 아니다).
-       * 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-1.
+       * 수치(`surcharge15Count`)로 강제하므로 롤스터 행 수와 항상 어긋나는데, 위에서 이미
+       * 계산한 제외 건(`hceAppliedForMerge`·`specialEntriesForMerge`·`inheritedExclusion`)
+       * 중 명부 행으로 특정된 몫은 `knownHouseExclusionHouseIds`로 빼고 다시 센다(PR-3,
+       * 사용자 결정 Q-4). 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-4.
        */
       houses: asset.multiHouse?.houses,
       sellingHouseId: asset.multiHouse?.sellingHouseId,
       knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
+      knownHouseExclusionHouseIds,
     },
     oneHouseSpecialRules,
   );

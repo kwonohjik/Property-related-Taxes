@@ -67,6 +67,7 @@ export type MergeDeemingReqInput = Pick<
   | "houses"
   | "sellingHouseId"
   | "knownHouseExclusionCount"
+  | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
 >;
 
@@ -239,6 +240,7 @@ function matchMergeGateAndComposition(
     sellingHouseId: input.sellingHouseId,
     mergeDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
+    knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,
   });
   return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate, composition };
