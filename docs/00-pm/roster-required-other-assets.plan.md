@@ -273,7 +273,7 @@ PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 �
 
 ### 남은 별건 (이 프로그램 범위 밖, 착수하지 않음)
 
-1. **판정 메뉴의 「없음」 구별** — 1세대1주택 판정 화면(`lib/calc/one-house-exemption-validate.ts`)에는 주택 목록·분양권·입주권 목록 모두 「입력 안 함」과 「없음」을 구별하는 확인이 없다. 판정 결과를 계산기로 넘길 때(`lib/calc/one-house-judgment-handoff.ts`) 목록이 비면 `householdNoOtherHousesConfirmed`(PR-1부터)·`householdNoPresaleRightsConfirmed`(PR-D)를 `true`로 넘긴다.
+1. ~~**판정 메뉴의 「없음」 구별**~~ — **✅ 종결: 현행 유지(사용자 결정 2026-10-06 「입력 안 함과 없음을 구별할 필요가 없어. 사용자가 입력을 안 했으면 없음으로 처리하도록 해」)**. 1세대1주택 판정 화면(`lib/calc/one-house-exemption-validate.ts`)에는 주택 목록·분양권·입주권 목록 모두 「입력 안 함」과 「없음」을 구별하는 확인이 없다. 판정 결과를 계산기로 넘길 때(`lib/calc/one-house-judgment-handoff.ts`) 목록이 비면 `householdNoOtherHousesConfirmed`(PR-1부터)·`householdNoPresaleRightsConfirmed`(PR-D)를 `true`로 넘긴다. ⇒ 판정 메뉴는 미입력을 「없음」으로 보는 지금 동작이 정본이다. 확인 칸을 추가하지 않는다.
 2. **입주권의 ①↔④ 불일치 배너** — `lib/calc/house-count-divergence.ts`가 `1 + 행 수`를 고정으로 써서 입주권(오프셋 0)에서는 배너가 뜨지 않는다(오탐은 없음, anchor A5가 현 상태 고정).
 3. **API 직접 호출의 분양권 미지정** — `oneRightPresaleGate`(`lib/tax-engine/transfer-tax-redevelopment-transforms.ts:97-109`)는 `presaleRights`가 없으면 `"clear"`. 계산기는 PR-D ⑧이 막지만 API 직접 호출에는 남는다(§4-6).
 4. **다건 provisoGate 드리프트** — `lib/calc/multi-transfer-tax-api.ts:166` `isHousing: primaryKind === "housing"`이 단건(OH-20 수정분)과 어긋난다. 다건은 재개발APT를 전면 차단(`validateMultiSupportedMode`)해 지금은 도달하지 않는다(PR-B 레인 발견).
