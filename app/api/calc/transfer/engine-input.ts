@@ -64,6 +64,9 @@ export function buildTransferEngineInput(
     housingCompensationTotal: data.housingCompensationTotal, housingCompensationBasisTotal: data.housingCompensationBasisTotal, // 1호 주택총액
     splitLandCompensationTotal: data.splitLandCompensationTotal, splitLandCompensationBasisTotal: data.splitLandCompensationBasisTotal, // 1호 건물 split 토지분(P6)
     householdHousingCount: data.householdHousingCount,
+    // ⑭ §104①4호 단서(영 §167의6 1·2호) — presale_right 전용(TS 미감지 침묵 strip 주의)
+    presaleRightNoOtherRight: data.presaleRightNoOtherRight,
+    presaleRightAgeOrSpouseMet: data.presaleRightAgeOrSpouseMet,
     // ⑭ 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 보유 수 (TypeScript 미감지 영역)
     // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)
     householdRightCount: data.householdRightCount,

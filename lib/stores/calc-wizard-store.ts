@@ -81,6 +81,8 @@ const defaultFormData: TransferFormData = {
   wasRegulatedAtAcquisition: false,
   isRegulatedAreaTouched: false,
   wasRegulatedAtAcquisitionTouched: false,
+  presaleRightNoOtherRight: false,
+  presaleRightAgeOrSpouseMet: false,
   isUnregistered: false,
   temporaryTwoHouseSpecial: false,
   newHouseAcquisitionDate: "",

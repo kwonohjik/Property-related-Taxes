@@ -224,6 +224,9 @@ export async function POST(request: NextRequest) {
       isUrbanArea: p.isUrbanArea,
       appurtenantLandZone: p.appurtenantLandZone,
       householdHousingCount: p.householdHousingCount,
+      // ⑭ §104①4호 단서(영 §167의6 1·2호) — 단건 정본과 같은 leaf(engine-input.ts).
+      presaleRightNoOtherRight: p.presaleRightNoOtherRight,
+      presaleRightAgeOrSpouseMet: p.presaleRightAgeOrSpouseMet,
       residencePeriodMonths: p.residencePeriodMonths,
       isRegulatedArea: p.isRegulatedArea,
       wasRegulatedAtAcquisition: p.wasRegulatedAtAcquisition,

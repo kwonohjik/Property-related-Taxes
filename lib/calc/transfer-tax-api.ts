@@ -456,6 +456,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 그 밖의 자산은 보내지 않는다(3중 패턴).
+    presaleRightNoOtherRight:
+      primary.assetKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
+    presaleRightAgeOrSpouseMet:
+      primary.assetKind === "presale_right" ? form.presaleRightAgeOrSpouseMet : undefined,
     // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
     // 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback.
     regionCode: primary.regionCode || form.regionCode || undefined,

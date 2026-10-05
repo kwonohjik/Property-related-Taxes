@@ -135,6 +135,21 @@ export interface TransferFormData {
   /** 조정대상지역 토글 수동 조작 여부 (UI 전용 — API 미전송). true면 자동판별 결과를 재반영하지 않음 */
   isRegulatedAreaTouched: boolean;
   wasRegulatedAtAcquisitionTouched: boolean;
+  /**
+   * §104①4호 단서(영 §167의6 1호) 확인 — 양도 당시 세대가 **다른** 분양권(주택의 입주자로
+   * 선정된 지위)을 보유하지 않습니다. `presale_right` 자산 + 2018.1.1~2021.5.31 양도 +
+   * 조정대상지역 + 「세대 보유 주택 수 0채」조합에서만 의미가 있다(별건 5, 계획서 §4-4).
+   *
+   * - `false`(기본값) — 미확인. §104①4호 50% 단일세율이 그대로 적용된다(모름 = 혜택 불성립).
+   * - `true` — 확인. 아래 `presaleRightAgeOrSpouseMet`과 「세대 보유 주택 수 0채」가 함께
+   *   확인돼야 비로소 단서가 성립한다.
+   */
+  presaleRightNoOtherRight: boolean;
+  /**
+   * §104①4호 단서(영 §167의6 2호) 확인 — 양도자가 30세 이상이거나 배우자가 있습니다
+   * (미성년자는 제외하며, 배우자가 사망·이혼한 경우를 포함한다). 위 `presaleRightNoOtherRight`와 짝.
+   */
+  presaleRightAgeOrSpouseMet: boolean;
   /** 양도 자산 법정동코드(10자리 — AddressSearch PNU 앞10). 제공 시 정밀 판정, 미제공 시 boolean fallback */
   regionCode?: string;
   isUnregistered: boolean;

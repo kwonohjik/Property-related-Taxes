@@ -133,6 +133,22 @@ export function computeBracketBreakdown(
  * @param specialClauses 그 특례 호(들) — 1호가 이겨도 「해당 호」로 함께 싣는다
  * @returns 1호가 **더 크면** 1호 결과, 아니면 `null`(호출부가 특례 결과를 그대로 반환)
  */
+/**
+ * §104①4호(조정대상지역 주택분양권 50%)가 적용됐을 때, 단서(영 §167의6)가 **왜** 성립하지
+ * 않았는지 결과 화면에 덧붙인다 — 「불성립 사유」가 안 보이면 사용자가 50%를 결함으로 오인한다
+ * (DoD "결과 화면에 단서 적용/불성립 사유가 보이는지 확인").
+ */
+function presaleRightClause4UnmetNote(input: TransferTaxInput): string {
+  if (input.propertyType !== "presale_right") return "";
+  const unmet: string[] = [];
+  if (input.householdHousingCount !== 0) unmet.push("무주택");
+  if (input.presaleRightNoOtherRight !== true) unmet.push("다른 분양권 미보유(영 §167의6 1호)");
+  if (input.presaleRightAgeOrSpouseMet !== true) unmet.push("30세 이상 또는 배우자 있음(영 §167의6 2호)");
+  if (unmet.length > 0) return ` — 단서 미확인: ${unmet.join("·")}`;
+  // 세 요건이 모두 확인됐는데도 4호가 적용됐다면 영 §167의6 시행 전(2018.2.13 전) 양도분이다.
+  return " — 해당 양도일에는 영 제167조의6이 아직 시행되지 않아(2018.2.13 시행) 단서를 적용할 수 없습니다";
+}
+
 export function compareWithClause1(
   taxBase: number,
   brackets: ParsedRates["brackets"],
@@ -455,21 +471,25 @@ export function calcTax(
     ? null
     : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, {
         isRegulatedArea: input.isRegulatedArea,
-        // §104①4호 단서 — 「1세대가 보유하고 있는 주택이 없는 경우로서 대통령령으로 정하는 경우」.
-        // 시행령이 정하는 세부 요건까지는 입력에 없으므로 무주택 사실만 반영한다(과잉 과세 회피).
+        // §104①4호 단서(영 §167의6) — 무주택 + 1호(다른 분양권 미보유) + 2호(연령·배우자)가
+        // 모두 명시적으로 확인될 때만 단서가 성립한다(모름 = 혜택 불성립, Q-18 계획서 §4-4 별건 5).
         householdHasNoHouse: input.householdHousingCount === 0,
+        presaleRightNoOtherRight: input.presaleRightNoOtherRight,
+        presaleRightAgeOrSpouseMet: input.presaleRightAgeOrSpouseMet,
       });
   const shortTermFlatRate = shortTermResolution?.rate ?? null;
   const shortTermNote =
     shortTermFlatRate === null
       ? undefined
       : shortTermResolution?.clause === "104-1-4"
-        ? "조정대상지역 주택분양권 50% 세율(소득세법 §104①4호 — 2018.1.1~2021.5.31 양도분)"
-        : shortTermResolution?.clause === "104-1-1"
-          ? "분양권 60% 세율(소득세법 §104①1호)"
-          : holdingMonthsTotal < 12
-            ? "보유기간 1년 미만 특례세율 적용"
-            : "보유기간 2년 미만 특례세율 적용";
+        ? `조정대상지역 주택분양권 50% 세율(소득세법 §104①4호 — 2018.1.1~2021.5.31 양도분)${presaleRightClause4UnmetNote(input)}`
+        : shortTermResolution?.clause4Excluded
+          ? "단서(소득세법 시행령 §167의6) 요건 충족으로 §104①4호(조정대상지역 주택분양권 50%)가 배제되어 보유기간별 특례세율만 적용"
+          : shortTermResolution?.clause === "104-1-1"
+            ? "분양권 60% 세율(소득세법 §104①1호)"
+            : holdingMonthsTotal < 12
+              ? "보유기간 1년 미만 특례세율 적용"
+              : "보유기간 2년 미만 특례세율 적용";
 
   if (shortTermFlatRate !== null) {
     const shortTermTax = applyRate(taxBase, shortTermFlatRate);
