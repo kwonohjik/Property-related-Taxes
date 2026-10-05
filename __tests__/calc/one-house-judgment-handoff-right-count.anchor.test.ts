@@ -1,13 +1,19 @@
 /**
- * OH-34 앵커 — 판정 메뉴 → 계산기 전달이 **입주권 수**와 **레거시 표식**을 판정 폼 기준으로 확정한다.
- * 리뷰: docs/reviews/one-house-exemption-review-2026-09.md OH-34(+ 병합된 레거시 표식 보고).
+ * OH-34 앵커 — 판정 메뉴 → 계산기 전달이 **분양권·입주권 목록 확인**과 **레거시 표식**을
+ * 판정 폼 기준으로 확정한다. 리뷰: docs/reviews/one-house-exemption-review-2026-09.md OH-34
+ * (+ 병합된 레거시 표식 보고). PR-D(2026-10-05)로 입주권 수 부분을 재작성했다.
  *
- * ## 입주권 수 (§89①4호 가목 「조합원입주권을 1개 보유한 1세대」)
+ * ## 입주권 수 (§89①4호 본문 「조합원입주권을 1개 보유한 1세대」) — PR-D 이후
  *
- * 판정 메뉴에는 입주권 수 위젯이 없다 — route가 명부와 양도 대상으로 **도출**한다
- * (`deriveHouseholdRightCount`, 클라이언트 짝은 `deriveJudgmentRightCount`). 계산기는 스칼라
- * `householdRightCount`를 **직접** 보낸다. 전달이 주택 수만 파생하고 입주권 수는 판정 폼 기본값
- * `"0"`을 그대로 복사해, 판정에서 가목 비과세였던 입주권이 계산기에서 과세로 바뀌었다.
+ * 종전에는 계산기에 「세대 보유 조합원입주권 수」 숫자 칸(0/1/2+, `householdRightCount`)이
+ * 있어 전달이 그 스칼라를 **직접** 써야 했다(판정 폼 기본값 `"0"`을 그대로 복사하면 가목
+ * 비과세였던 입주권이 계산기에서 과세로 바뀌는 결함 — 종전 버전 참조).
+ *
+ * PR-D가 그 숫자 칸을 없애고 ④가 `presaleRights` 목록에서 직접 도출하므로(판정 메뉴의
+ * `deriveJudgmentRightCount`와 같은 leaf `deriveHouseholdRightCount`를 ④가 재사용 —
+ * `resolveHouseholdRightCount`), 전달은 **목록 확인만** 확정하면 된다
+ * (`householdNoPresaleRightsConfirmed`) — `presaleRights` 자체는 `base` 스프레드로 이미 넘어간다.
+ * 계산기에 남은 옛 `householdRightCount` 스칼라는 더 이상 ④가 읽지 않는다(R-7b).
  *
  * ## 레거시 표식 (`legacyHouseCountPrecedence`)
  *
@@ -20,6 +26,7 @@ import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/transfer/route";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { toTransferFormPatch } from "@/lib/calc/one-house-judgment-handoff";
+import { resolveHouseholdRightCount } from "@/lib/calc/household-house-count";
 import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
   createInitialOneHouseJudgmentForm,
@@ -53,42 +60,46 @@ function rightJudgmentForm(over: Partial<OneHouseJudgmentFormData> = {}): OneHou
 }
 
 const otherRight = (id: string): Right =>
-  ({ id, type: "redevelopment_right", acquisitionDate: "2015-01-01" }) as unknown as Right;
+  ({ id, type: "redevelopment_right", acquisitionDate: "2015-01-01", region: "capital" }) as unknown as Right;
 
 /** 계산기 store에 patch를 붓는 것과 같은 병합(`updateFormData` = 얕은 merge). */
 function applyPatch(calc: TransferFormData, patch: Partial<TransferFormData>): TransferFormData {
   return { ...calc, ...patch };
 }
 
-describe("OH-34 입주권 수 — 판정 명부에서 파생해 확정한다", () => {
-  it("R-1 입주권 양도 · 명부 입주권 없음 → 1 (양도 대상 포함)", () => {
-    expect(toTransferFormPatch(rightJudgmentForm()).householdRightCount).toBe("1");
+describe("PR-D 분양권·입주권 목록 — 판정 메뉴에서 넘겨받으면 계산기 확인을 다시 요구하지 않는다", () => {
+  it("R-1 입주권 양도 · 명부 입주권 없음 → 목록 확정 true + 도출값 1 (양도 대상 포함)", () => {
+    const patch = toTransferFormPatch(rightJudgmentForm());
+    expect(patch.householdNoPresaleRightsConfirmed).toBe(true);
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(1);
   });
 
-  it("R-2 명부에 다른 입주권 1개 → 2 (가목 불성립 쪽도 전달된다)", () => {
+  it("R-2 명부에 다른 입주권 1개 → 확정 false + 도출값 2 (가목 불성립 쪽도 전달된다)", () => {
     const patch = toTransferFormPatch(rightJudgmentForm({ presaleRights: [otherRight("r1")] }));
-    expect(patch.householdRightCount).toBe("2");
+    expect(patch.householdNoPresaleRightsConfirmed).toBe(false);
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(2);
   });
 
-  it("R-3 3개 이상은 계산기 위젯의 「2개 이상」 값(\"2\")으로 맞춘다", () => {
+  it("R-3 입주권 2개 보유(자신 포함 3) → 캡 없이 그대로 3을 전달한다(숫자 칸 폐지, PR-D)", () => {
     const patch = toTransferFormPatch(
       rightJudgmentForm({ presaleRights: [otherRight("r1"), otherRight("r2")] }),
     );
-    expect(patch.householdRightCount).toBe("2");
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(3);
   });
 
-  it("R-4 주택 양도 · 입주권 없음 → 0", () => {
+  it("R-4 주택 양도 · 입주권 없음 → 도출값 0 (양도 대상이 주택이면 입주권으로 세지 않는다)", () => {
     const f = rightJudgmentForm();
     const patch = toTransferFormPatch({
       ...f,
       assets: [{ ...f.assets[0], assetKind: "housing" }],
     });
-    expect(patch.householdRightCount).toBe("0");
+    expect(resolveHouseholdRightCount("housing", patch.presaleRights)).toBe(0);
   });
 
-  it("R-5 계산기에 남아 있던 값(\"0\")을 판정 값으로 덮는다 — 「판정 불러오기」 경로", () => {
-    const calc = { ...createDefaultTransferFormData(), householdRightCount: "0" };
-    expect(applyPatch(calc, toTransferFormPatch(rightJudgmentForm())).householdRightCount).toBe("1");
+  it("R-5 계산기에 남아 있던 목록 미확정(false)을 판정 값(true)으로 덮는다 — 「판정 불러오기」 경로", () => {
+    const calc = { ...createDefaultTransferFormData(), householdNoPresaleRightsConfirmed: false };
+    const merged = applyPatch(calc, toTransferFormPatch(rightJudgmentForm()));
+    expect(merged.householdNoPresaleRightsConfirmed).toBe(true);
   });
 });
 
@@ -136,7 +147,7 @@ function withRedevInputs(f: TransferFormData): TransferFormData {
 }
 
 describe("OH-34 판정 — 전달된 폼이 계산기 route에서 가목 비과세를 유지한다", () => {
-  it("R-6 [긍정] 판정 전달 → §166 입력만 채우면 비과세 · 본문 householdRightCount 1", async () => {
+  it("R-6 [긍정] 판정 전달 → §166 입력만 채우면 비과세 · 본문 householdRightCount 1 (presaleRights에서 도출)", async () => {
     const f = withRedevInputs(
       applyPatch(createDefaultTransferFormData(), toTransferFormPatch(rightJudgmentForm())),
     );
@@ -147,13 +158,25 @@ describe("OH-34 판정 — 전달된 폼이 계산기 route에서 가목 비과�
     expect(result?.totalTax).toBe(0);
   });
 
-  it("R-7 [부정 짝] 같은 폼에서 입주권 수만 0이면 과세 — 전달값이 판정을 실제로 가른다", async () => {
+  it("R-7a [부정 짝] 목록에 다른 입주권을 추가하면 과세 — presaleRights가 실제로 판정을 가른다", async () => {
+    const f = withRedevInputs(
+      applyPatch(createDefaultTransferFormData(), toTransferFormPatch(rightJudgmentForm())),
+    );
+    const { status, result } = await route({
+      ...f,
+      presaleRights: [...(f.presaleRights ?? []), otherRight("r-extra")],
+    });
+    expect(status).toBe(200);
+    expect(result?.isExempt).toBe(false);
+  });
+
+  it("R-7b [stale 스칼라 무시, PR-D] 계산기에 남은 옛 householdRightCount를 바꿔도 결과가 그대로다 — ④가 더 이상 읽지 않는다", async () => {
     const f = withRedevInputs(
       applyPatch(createDefaultTransferFormData(), toTransferFormPatch(rightJudgmentForm())),
     );
     const { status, result } = await route({ ...f, householdRightCount: "0" });
     expect(status).toBe(200);
-    expect(result?.isExempt).toBe(false);
+    expect(result?.isExempt).toBe(true);
   });
 });
 

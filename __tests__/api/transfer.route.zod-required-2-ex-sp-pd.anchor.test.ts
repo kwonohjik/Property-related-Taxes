@@ -258,6 +258,7 @@ describe("EX §164⑨ — 비우면 400 (종전 200 + 특례가 조용히 빠진
     householdHousingCount: "2",
     // 명부 필수화(PR-1) — 명부 없이 스칼라만으로 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
     householdNoOtherHousesConfirmed: true,
+    householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     residencePeriodMonths: "0",
   };
   it("EX-5 겸용 — ⚖️ ⑧ 통과 · 🟢 150,265,715 / 🔴 서브객체 4필드 생략 400 (종전 167,408,572·158,037,144)", async () => {
@@ -404,7 +405,7 @@ describe("SP 분리취득 — 비우면 400 + 경로 (종전 경로 없는 400·
   });
 
   // 명부 필수화(PR-1) — 명부 없이 스칼라만으로 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
-  const SPLIT_TOP = { transferDate: "2026-03-01", filingDate: "2026-05-31", contractTotalPrice: "500,000,000", householdHousingCount: "2", householdNoOtherHousesConfirmed: true };
+  const SPLIT_TOP = { transferDate: "2026-03-01", filingDate: "2026-05-31", contractTotalPrice: "500,000,000", householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
   it("⚖️ 별개 취득 주택 폼 — ⑧ 통과 본문은 ⑫를 통과한다", async () => {
     const f = form(
       {

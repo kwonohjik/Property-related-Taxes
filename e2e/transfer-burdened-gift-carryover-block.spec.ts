@@ -73,6 +73,7 @@ function seedForm(over: Record<string, unknown> = {}) {
         householdHousingCount: "1",
         // 명부 필수화(PR-1) — CB-4가 assetKind를 "housing"으로 덮어쓴다. 다른 테스트는 무관(무시됨).
         householdNoOtherHousesConfirmed: true,
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,
         isUnregistered: false,

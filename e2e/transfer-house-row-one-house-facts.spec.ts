@@ -131,6 +131,7 @@ test.describe("OH-30 레거시 미지정 안내", () => {
         state: {
           formData: {
             householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
+            householdNoPresaleRightsConfirmed: true, // roster-required PR-D
             assets: [
               {
                 ...makeDefaultAsset(1),

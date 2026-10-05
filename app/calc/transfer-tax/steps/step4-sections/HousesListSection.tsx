@@ -45,7 +45,7 @@ import { preDesignationContractInScopeOf } from "@/lib/calc/pre-designation-cont
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
-import { housesPatchWithDerivedCount } from "@/lib/calc/household-house-count";
+import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
 
@@ -523,11 +523,14 @@ export function HousesListSection({
         )}
       </div>
 
-      {/* ── 분양권·입주권 ── */}
+      {/* ── 분양권·입주권 ── PR-D(2026-10-05) — 「없음」 확인 토글(목록 0행) + 행 추가 시 해제. */}
       <PresaleRightsSection
         rights={form.presaleRights}
-        onChange={(presaleRights) => onChange({ presaleRights })}
+        onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
         showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
+        primaryKind={form.assets?.[0]?.assetKind}
+        confirmed={form.householdNoPresaleRightsConfirmed}
+        onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
       />
 
       {/* ── 양도 주택 3주택+ 전용 배제 특례 ──

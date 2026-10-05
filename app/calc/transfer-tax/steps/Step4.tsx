@@ -34,7 +34,13 @@ import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
-import { resolveHouseholdHousingCount, houseCountScalarLocked, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import {
+  resolveHouseholdHousingCount,
+  resolveHouseholdRightCount,
+  presaleRightsPatchWithConfirmClear,
+  houseCountScalarLocked,
+  resolveTemporaryTwoHouse,
+} from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
@@ -246,6 +252,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     [primaryKind, form.householdHousingCount, form.houses, form.legacyHouseCountPrecedence],
   );
 
+  /**
+   * 세대 보유 조합원입주권 수 — PR-D(2026-10-05) 표시용 도출값. ④·⑧과 같은
+   * leaf(`resolveHouseholdRightCount`)를 쓴다(3중 패턴) — right_to_move_in 전용.
+   */
+  const derivedHouseholdRightCount = useMemo(
+    () => resolveHouseholdRightCount(primaryKind, form.presaleRights),
+    [primaryKind, form.presaleRights],
+  );
+
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정
   // 토글 아래, 입주권·분양권은 최상단에 렌더.
   const regulatedAutoTip = useRegulatedAreaAutoTip({
@@ -416,35 +431,24 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           )}
 
-          {/* 세대 보유 입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 가목 판정) */}
+          {/*
+            세대 보유 조합원입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 본문 판정).
+            PR-D(2026-10-05, 계획서 §4-6 Q-20) — 숫자 칸(0/1/2+)이 아래 「분양권·입주권」 목록과
+            같은 사실의 **이중 입력**이었다(V-5). 숫자 칸을 없애고 양도 대상 입주권 1개 + 목록의
+            조합원입주권(`type: "redevelopment_right"`) 항목 수로 도출한다 — ④ 단건·다건과 같은
+            leaf(`resolveHouseholdRightCount`, 3중 패턴).
+          */}
           {primaryKind === "right_to_move_in" && (
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium">
-                세대 보유 조합원입주권 수 <span className="text-destructive">*</span>
-              </label>
-              <p className="text-xs text-muted-foreground -mt-0.5">
-                양도하는 입주권 자체도 포함하여 세대 전체 입주권 수를 입력하세요.
-                예: 양도 대상 입주권 1개 + 다른 입주권 없음 → 1개
+              <label className="block text-sm font-medium">세대 보유 조합원입주권 수</label>
+              <p className="text-sm" data-testid="household-right-count-derived">
+                {derivedHouseholdRightCount}개
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  (양도하는 입주권 1개 + 아래 목록의 조합원입주권 항목 수로 자동 산정됩니다)
+                </span>
               </p>
-              <div className="flex gap-2">
-                {["0", "1", "2+"].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => onChange({ householdRightCount: v === "2+" ? "2" : v })}
-                    className={cn(
-                      "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
-                      (v === "2+" ? form.householdRightCount === "2" : form.householdRightCount === v)
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:bg-muted",
-                    )}
-                  >
-                    {v === "2+" ? "2개 이상" : `${v}개`}
-                  </button>
-                ))}
-              </div>
               {/* §89①4호 가목 본문 요건 안내 */}
-              {isOneHouseholdEffective && form.householdRightCount === "1" && form.householdHousingCount === "0" && (
+              {isOneHouseholdEffective && derivedHouseholdRightCount === 1 && form.householdHousingCount === "0" && (
                 <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
@@ -455,16 +459,20 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               )}
 
               {/*
-                세대 보유 분양권 — §89①4호 가목 「다른 주택 **또는 분양권**을 보유하지 아니할 것」.
-                ④ 주택수·중과 판정 섹션은 세대 주택 2채 이상에서만 이 목록을 렌더하는데, 가목이
-                요구하는 상태는 「주택 0채」라 **분양권을 선언할 경로가 전무했다**(L1-03).
+                세대 보유 분양권·입주권 — §89①4호 가목 「다른 주택 **또는 분양권**을 보유하지
+                아니할 것」 + 본문 「조합원입주권을 1개 보유한 1세대」(위 입주권 수도 이 목록에서
+                도출한다). ④ 주택수·중과 판정 섹션은 세대 주택 2채 이상에서만 이 목록을 렌더하는데,
+                가목이 요구하는 상태는 「주택 0채」라 **분양권을 선언할 경로가 전무했다**(L1-03).
                 ④ 목록이 렌더 중이면 중복이므로 그 술어(`houseRosterRendered`)의 부정일 때만 연다 — 값은 같은 `form.presaleRights`다.
               */}
               {!houseRosterRendered(form, primaryKind) && (
                 <PresaleRightsSection
                   rights={form.presaleRights}
-                  onChange={(presaleRights) => onChange({ presaleRights })}
+                  onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
                   showSpouseOwned={!!form.marriageDate}
+                  primaryKind={primaryKind}
+                  confirmed={form.householdNoPresaleRightsConfirmed}
+                  onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
                 />
               )}
             </div>
@@ -509,8 +517,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {!houseRosterRendered(form, primaryKind) && (
               <PresaleRightsSection
                 rights={form.presaleRights}
-                onChange={(presaleRights) => onChange({ presaleRights })}
+                onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
                 showSpouseOwned={!!form.marriageDate}
+                primaryKind={primaryKind}
+                confirmed={form.householdNoPresaleRightsConfirmed}
+                onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
               />
             )}
 

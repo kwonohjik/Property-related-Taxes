@@ -18,7 +18,7 @@ import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingEx
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
-import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
@@ -289,8 +289,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       houses: form.houses,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
-    // §89①4호 가목 1세대1입주권 — 조합원입주권 수 (단건과 동일 fallback "0")
-    householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
+    // §89①4호 가목·나목 — 조합원입주권 수. PR-D(2026-10-05) — 단건과 같은 leaf로 명부에서 도출.
+    householdRightCount: resolveHouseholdRightCount(primaryKind, form.presaleRights),
     // 거주기간 — 단건과 **같은 leaf**(§95⑤2호 주택 보유기간 클램프 포함, 위 주석 참조)
     residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,

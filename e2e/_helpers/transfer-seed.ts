@@ -49,6 +49,9 @@ export async function gotoTransferHoldingsStep(
         householdHousingCount: String(1 + opts.houses.length),
         // 명부 필수화(PR-1) — 0행이면 「없음」 확정이 없는 한 ⑧이 차단한다.
         householdNoOtherHousesConfirmed: opts.houses.length === 0,
+        // 명부 필수화(PR-D) — 이 헬퍼는 분양권·입주권 목록을 만들지 않으므로 기본 확정한다.
+        // `opts.formOver`에서 `presaleRights`를 채우는 호출부는 거기서 함께 override한다.
+        householdNoPresaleRightsConfirmed: true,
         isOneHousehold: true,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,

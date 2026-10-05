@@ -25,6 +25,7 @@ function seedForm(
   return {
     state: {
       formData: {
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [{
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind,

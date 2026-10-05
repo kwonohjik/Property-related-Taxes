@@ -74,6 +74,7 @@ const defaultFormData: TransferFormData = {
   isOneHousehold: true,
   householdHousingCount: "1",
   householdNoOtherHousesConfirmed: false,
+  householdNoPresaleRightsConfirmed: false,
   householdRightCount: "0",
   residencePeriodMonths: "0",
   isRegulatedArea: false,

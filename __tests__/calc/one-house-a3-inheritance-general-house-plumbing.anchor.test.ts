@@ -86,6 +86,7 @@ function cForm(inh = "2015-01-01", over: Partial<TransferFormData> = {}): Transf
       } as AssetForm,
     ],
     houses: [inheritedRow(inh)],
+    householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     ...over,
   };
 }

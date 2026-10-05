@@ -16,15 +16,35 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
+import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 
 interface Props {
   rights: PresaleRightEntry[];
   onChange: (rights: PresaleRightEntry[]) => void;
   /** #2b 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의4⑤) */
   showSpouseOwned?: boolean;
+  /**
+   * 「세대가 보유한 분양권·입주권이 없습니다」 확인 토글 — PR-D(2026-10-05,
+   * 계획서 `docs/00-pm/roster-required-other-assets.plan.md` §4-5·§4-6).
+   *
+   * `requiresPresaleRightsConfirmation(primaryKind)`가 true인 자산(housing·redevelopment_apt·
+   * right_to_move_in)에서만 렌더한다 — 분양권 자신의 양도(`presale_right`)는 대상 아님(Q-11).
+   * 호출부가 `confirmed`·`onConfirmedChange`를 넘기지 않으면(= 이 확인이 필요 없는 맥락) 종전처럼
+   * 「없음」 평문을 그대로 보여준다.
+   */
+  primaryKind?: string;
+  confirmed?: boolean;
+  onConfirmedChange?: (confirmed: boolean) => void;
 }
 
-export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Props) {
+export function PresaleRightsSection({
+  rights,
+  onChange,
+  showSpouseOwned,
+  primaryKind,
+  confirmed,
+  onConfirmedChange,
+}: Props) {
   function add() {
     const entry: PresaleRightEntry = {
       id: `presale_${Date.now()}`,
@@ -56,11 +76,24 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
       noDark
     >
       <p className="text-caption text-muted-foreground/80">
-        2021.1.1 이후 취득한 분양권·조합원입주권은 주택 수 산정에 포함됩니다 (소령 §167의11).
+        세대가 보유한 분양권·조합원입주권을 취득일과 무관하게 모두 입력하세요. 주택 수 산정
+        포함 여부(2021.1.1 이후 취득분, 소령 §167의11)는 입력한 취득일로 자동 판단됩니다.
       </p>
 
       {rights.length === 0 ? (
-        <p className="text-caption text-muted-foreground/70">없음</p>
+        requiresPresaleRightsConfirmation(primaryKind) && onConfirmedChange ? (
+          <div data-field="householdNoPresaleRightsConfirmed">
+            <ToggleCard
+              checked={confirmed === true}
+              onCheckedChange={onConfirmedChange}
+              title="보유한 분양권·조합원입주권이 없습니다"
+              description="세대가 보유한 분양권·조합원입주권이 없으면 켜세요. 있으면 위 「+ 추가」로 입력하세요."
+              tone="sky"
+            />
+          </div>
+        ) : (
+          <p className="text-caption text-muted-foreground/70">없음</p>
+        )
       ) : (
         <div className="space-y-2.5">
           {rights.map((r, idx) => (

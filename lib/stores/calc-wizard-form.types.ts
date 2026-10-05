@@ -93,6 +93,22 @@ export interface TransferFormData {
    */
   householdNoOtherHousesConfirmed: boolean;
   /**
+   * 「세대가 보유한 분양권·입주권이 없습니다」 확정 (PR-D, Q-17 — 위 `householdNoOtherHousesConfirmed`
+   * · #1919와 같은 모양).
+   *
+   * 명부 필수화 확장(`docs/00-pm/roster-required-other-assets.plan.md` §4-5·§4-6) — 주택(겸용 포함)·
+   * 재개발APT·조합원입주권 양도에서 세대 보유 분양권·입주권 목록(`presaleRights`)이 비어 있으면
+   * 「입력을 안 했을 뿐」과 「정말 없음」을 코드로 구별할 수 없다. 위 주택 확정과 **합치지 않는다** —
+   * 주택은 있고 분양권·입주권은 없는 세대가 흔하다(Q-17).
+   *
+   * - `false`(기본값) — 미확정. 대상 자산(`requiresPresaleRightsConfirmation`) + 목록 0행이면
+   *   ⑧이 차단한다.
+   * - `true` — 확정. 목록에 행이 생기면 추가 즉시 다시 false로 해제한다(#1919 패턴).
+   *
+   * 분양권 **자신**의 양도(`presale_right`)는 대상 아님(Q-11) — ⑧이 이 자산에서는 요구하지 않는다.
+   */
+  householdNoPresaleRightsConfirmed: boolean;
+  /**
    * OH-34 레거시 표식 — **저장 당시 스칼라가 명부와 어긋난 이력**을 복원했을 때 켜진다.
    *
    * 켜져 있으면 ④·⑧이 `householdHousingCount`(저장 당시 값)로 계산한다 — P7-2 이후

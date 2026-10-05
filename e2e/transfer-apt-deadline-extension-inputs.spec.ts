@@ -27,6 +27,7 @@ function seedForm(transferDate = "2028-03-01") {
   return {
     state: {
       formData: {
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
             ...makeDefaultAsset(1),

@@ -171,6 +171,7 @@ function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
     householdHousingCount: "2",
     // 명부 필수화(PR-1) — 명부 없이 스칼라만으로 선언(D-4 폴백, Q-8). ⑧ 0행 게이트만 통과시킨다.
     householdNoOtherHousesConfirmed: true,
+    householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     residencePeriodMonths: "0",
   });
   return f;

@@ -21,6 +21,7 @@ import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
 import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
 import { addHouseRow } from "./_helpers/add-house-row";
+import { confirmNoPresaleRights } from "./_helpers/confirm-no-presale-rights";
 
 /** CurrencyInput(htmlFor 미연결) → label 부모 div 탐색 후 input */
 function getInputByLabel(page: Page, labelText: string) {
@@ -56,6 +57,7 @@ async function gotoStep4Household2(page: Page) {
   await expect(page.getByText("세대 보유 주택 수")).toBeVisible();
   await page.getByRole("switch", { name: "1세대 해당" }).setChecked(true);
   await addHouseRow(page);
+  await confirmNoPresaleRights(page);
 }
 
 /** 대체주택 특례 토글 ON + 4필드 (사례 43) — **판정 메뉴 ②** 화면에서. */

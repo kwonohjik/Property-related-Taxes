@@ -47,6 +47,7 @@ function seedForm(over: Record<string, unknown>) {
   return {
     state: {
       formData: {
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [mixedUseAsset()],
         transferDate: "2026-06-01",
         filingDate: "2026-08-31",

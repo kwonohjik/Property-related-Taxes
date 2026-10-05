@@ -15,7 +15,7 @@ import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
-import { isOneHouseExemptionAsset } from "./housing-like-asset";
+import { isOneHouseExemptionAsset, requiresPresaleRightsConfirmation } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
@@ -61,6 +61,25 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       step,
       field: "householdNoOtherHousesConfirmed",
       message: "다른 보유 주택이 없는지 확인하세요.",
+    });
+  }
+
+  /**
+   * ⑧ 분양권·입주권 목록 필수화(PR-D, Q-17 — 계획서 §4-5·§4-6). 대상 자산(housing·
+   * redevelopment_apt·right_to_move_in — `requiresPresaleRightsConfirmation`) + 목록 0행이면
+   * 「세대가 보유한 분양권·입주권이 없습니다」 확정이 있어야 통과한다. legacy 예외는 두지 않는다
+   * (Q-14 — 이 필드를 쓴 기존 저장 기록이 없다). 분양권 자신의 양도(`presale_right`)는 대상
+   * 아님(Q-11) — `requiresPresaleRightsConfirmation`이 그 자산을 제외한다.
+   */
+  if (
+    requiresPresaleRightsConfirmation(primaryKind) &&
+    (form.presaleRights?.length ?? 0) === 0 &&
+    !form.householdNoPresaleRightsConfirmed
+  ) {
+    issues.push({
+      step,
+      field: "householdNoPresaleRightsConfirmed",
+      message: "세대가 보유한 분양권·입주권이 없는지 확인하세요.",
     });
   }
 

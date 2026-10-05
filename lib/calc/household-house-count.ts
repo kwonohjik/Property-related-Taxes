@@ -53,6 +53,8 @@
  * `feedback_ui_gate_removes_sole_input_path`의 변형).
  */
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { deriveHouseholdRightCount } from "@/lib/tax-engine/one-house/house-count";
+import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
 export interface HouseRowForCount {
@@ -330,4 +332,58 @@ export function resolveTemporaryTwoHouse(
 /** §155①이 성립하는가 — `provisoGate` 등 boolean 하나만 필요한 호출부용 얇은 래퍼. */
 export function temporaryTwoHouseApplies(args: ResolveTemporaryTwoHouseArgs): boolean {
   return resolveTemporaryTwoHouse(args) !== undefined;
+}
+
+/**
+ * 세대 보유 조합원입주권 수 (§89①4호 본문 「조합원입주권을 1개 보유한 1세대」) — PR-D
+ * (2026-10-05, 계획서 `docs/00-pm/roster-required-other-assets.plan.md` §4-6·Q-20).
+ *
+ * ## 종전에는 이중 입력이었다
+ *
+ * 입주권 양도 화면의 「세대 보유 조합원입주권 수」 숫자 칸(0/1/2+, `householdRightCount`)이
+ * §89①4호 가목·나목 판정의 **유일한** 입력이었다. 같은 화면의 「분양권·입주권」 목록
+ * (`presaleRights`)에서도 종류로 「조합원입주권」(`type: "redevelopment_right"`)을 고를 수
+ * 있었지만, 판정은 그 목록을 쓰지 않았다 — 목록에 다른 입주권을 추가해도 숫자 칸이 "1"이면
+ * 그대로 「1개 보유」로 판정됐다(PR-1 이전 「세대 보유 주택 수」와 같은 종류의 스칼라-명부 괴리).
+ *
+ * ## 도출 — **양도 대상 입주권 1개 + 목록의 조합원입주권 항목 수**
+ *
+ * 판정 메뉴(`app/api/calc/one-house-exemption/route.ts:176`)가 이미 같은 사실로 같은 값을
+ * 도출한다(`deriveHouseholdRightCount`, `lib/tax-engine/one-house/house-count.ts`) — 재사용한다
+ * (`single-source-engine-helper`). 새로 정의하지 않는 이유는 산식이 **완전히 같기 때문**이다.
+ *
+ * 법령 확인(2026-10-05, KoreanLaw MCP, 소득세법 §89①4호 본문 — [시행 2026-01-01]):
+ * 「조합원입주권을 **1개** 보유한 1세대[…현재 제3호가목에 해당하는 기존주택을 소유하는
+ * 세대]가 다음 각 목의 어느 하나의 요건을 충족하여 양도하는 경우…」 — 조합원입주권을
+ * **몇 개 보유하는지 세는 데는 취득일 제한이 없다**. 분양권 보유에 걸리는 2022-01-01 취득일
+ * 부칙(법률 제18578호 부칙 §7②③, `oneRightPresaleRightBlocks`)은 가·나목의 **분양권 배제**
+ * 축에만 적용되고, 조합원입주권 개수를 세는 이 축과는 무관하다.
+ *
+ * ⚠️ 분양권(`type: "presale_right"`)은 세지 않는다 — §89①4호 본문이 조합원입주권 개수만
+ *    묻는다. 분양권 보유 여부는 가·나목이 **따로** 묻는 축이다(`oneRightPresaleGate`).
+ *
+ * ⚠️ **legacy 예외를 받지 않는다**(Q-14, 2026-10-05) — 사용자 확인: 이 필드(`householdRightCount`
+ *    스칼라)를 쓴 기존 저장 기록이 없다. 오래된 sessionStorage에 그 스칼라가 남아 있더라도
+ *    이 함수는 아예 읽지 않으므로 **항상 새 도출이 이긴다**(OH-34처럼 저장 당시 값을 보존하는
+ *    레거시 분기를 두지 않는다).
+ */
+export function resolveHouseholdRightCount(
+  primaryKind: string | undefined,
+  presaleRights: readonly Pick<PresaleRightEntry, "type">[] | undefined,
+): number {
+  return deriveHouseholdRightCount(presaleRights, primaryKind === "right_to_move_in");
+}
+
+/**
+ * 분양권·입주권 목록 patch — **「없음」 확정을 함께 해제한다**(Q-17, #1919 패턴과 같은 모양).
+ *
+ * `housesPatchWithDerivedCount`와 같은 이유다 — 행이 생기면(배열 길이 > 0) 그 순간 「없음」은
+ * 더는 사실이 아니다. 줄어서 다시 0행이 돼도 **자동으로 재확정하지 않는다**(houses와 동일 —
+ * 「모름 → 유리」 자동 추론 금지, `feedback_unknown_fact_applies_unfavorably`와 같은 층위).
+ */
+export function presaleRightsPatchWithConfirmClear<T>(
+  next: T[],
+): { presaleRights: T[]; householdNoPresaleRightsConfirmed?: false } {
+  if (next.length > 0) return { presaleRights: next, householdNoPresaleRightsConfirmed: false };
+  return { presaleRights: next };
 }

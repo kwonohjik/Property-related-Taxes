@@ -53,6 +53,7 @@ const seedState = (assets: unknown[]) => ({
   state: {
     formData: {
       householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
+      householdNoPresaleRightsConfirmed: true, // roster-required PR-D
       assets,
       transferDate: "2024-03-01",
       filingDate: "2024-05-31",

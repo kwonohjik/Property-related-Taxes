@@ -32,6 +32,8 @@ export const validBase = () => ({
   householdHousingCount: "1",
   // 명부 필수화(PR-1, 2026-10-05) — 주택 양도 + 명부 0행이면 ⑧이 「없음」 확정을 요구한다.
   householdNoOtherHousesConfirmed: true,
+  // 명부 필수화(PR-D, 2026-10-05) — 분양권·입주권 목록 0행도 같은 확정을 요구한다.
+  householdNoPresaleRightsConfirmed: true,
   isOneHousehold: false,
 });
 

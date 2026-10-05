@@ -82,3 +82,29 @@ export function isOneHouseExemptionAsset(
 ): boolean {
   return kind !== undefined && ONE_HOUSE_EXEMPTION_ASSET_KINDS.has(kind);
 }
+
+/**
+ * 「세대 보유 분양권·입주권 목록이 비어 있으면 확인을 요구하는가」(PR-D, 2026-10-05 ·
+ * 계획서 `docs/00-pm/roster-required-other-assets.plan.md` §4-5·§4-6).
+ *
+ * `ONE_HOUSE_EXEMPTION_ASSET_KINDS`(housing·redevelopment_apt)에 `right_to_move_in`을
+ * 더한 집합이다. 「소득세법」 §89②(주택+권리 보유 세대의 주택 비과세 배제)·§89①4호가목
+ * (「다른 주택 또는 분양권을 보유하지 아니할 것」)·§104⑦2호·4호(주택+권리 수 합) 판정이
+ * 전부 이 목록(`presaleRights`)을 직접 입력으로 쓴다.
+ *
+ * `presale_right`(분양권 **자신**의 양도)는 빠진다 — Q-11 최종 결정: 분양권 양도는
+ * §104①1호·3호 단일세율(60%·70%)이고 세대 주택·권리 수가 그 세율을 바꾸지 않는다
+ * (계획서 §4-4).
+ */
+export const PRESALE_RIGHTS_ROSTER_REQUIRED_ASSET_KINDS: ReadonlySet<string> = new Set([
+  "housing",
+  "redevelopment_apt",
+  "right_to_move_in",
+]);
+
+/** 세대 보유 분양권·입주권 목록 「없음」 확인이 필요한 자산인가 (⑤ 렌더 게이트 · ⑧ 차단 공용). */
+export function requiresPresaleRightsConfirmation(
+  kind: AssetForm["assetKind"] | string | undefined,
+): boolean {
+  return kind !== undefined && PRESALE_RIGHTS_ROSTER_REQUIRED_ASSET_KINDS.has(kind);
+}

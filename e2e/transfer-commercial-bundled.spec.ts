@@ -36,6 +36,7 @@ function seedForm(assets: Record<string, unknown>[]) {
         householdHousingCount: "0",
         // 명부 필수화(PR-1) — COMPANION 변형은 assets[0]이 "housing"이라 ⑧이 0행을 요구한다.
         householdNoOtherHousesConfirmed: true,
+        householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         isOneHousehold: false,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,
