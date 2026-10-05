@@ -295,6 +295,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 단건(`transfer-tax-api.ts`)과 같은 게이트.
+    presaleRightNoOtherRight:
+      primaryKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
+    presaleRightAgeOrSpouseMet:
+      primaryKind === "presale_right" ? form.presaleRightAgeOrSpouseMet : undefined,
     isUnregistered: form.isUnregistered,
     // assetKind 게이트는 단건(`transfer-tax-api.ts:501`)과 **같은 조건**이어야 한다 —
     // 다건에만 없어 토지가 아닌 자산의 잔존 플래그가 그대로 중과로 흘렀다 (E6-05).

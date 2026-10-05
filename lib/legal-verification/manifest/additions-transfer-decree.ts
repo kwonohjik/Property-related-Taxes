@@ -324,6 +324,28 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  // ── §104①4호 단서(조정대상지역 주택분양권 50% 제외) ──────────────────
+  {
+    // 별건 5(2026-10-06) — 구 §104①4호(2018.1.1~2021.5.31 양도분) 단서 「1세대가 보유하고
+    // 있는 주택이 없는 경우로서 대통령령으로 정하는 경우」의 위임 조문. efYd=20180213(제28637호)
+    // 실독 — 2018.1.1~2018.2.12는 이 조가 "삭제" 상태로 내용이 없었다(KoreanLaw DRF 실측).
+    //
+    // ⚠️ **`npm run verify:legal`은 이 규칙에서 항상 FAIL한다** — 이 조는 2021-06-01 시행
+    // (공포 2021-02-17, 제31442호)으로 "삭제"됐고, `basis`는 "enforced"(현행)·"announced"
+    // (공포본) 둘뿐이라 **과거 시행본을 검증하는 수단이 없다**(`verifier-types.ts` 참조).
+    // 위 efYd=20180213 조회로 **본문을 이미 실독·확정**했으므로 키워드는 그 verbatim을 유지한다
+    // (keywords: ["삭제"] 같은 현재 상태 매칭으로 바꾸면 검증 자체가 무의미해진다). 커버리지
+    // 게이트(`legal-verification-coverage-complete.test.ts`)는 조문 **존재 여부**만 보므로 PASS.
+    id: "TRANSFER_DECREE.PRESALE_RIGHT_NO_HOUSE_PROVISO",
+    citation: "소득세법 시행령 §167의6",
+    keywords: [
+      "양도소득세가 중과되지 아니하는 주택의 입주자로 선정된 지위의 범위",
+      "양도 당시에 양도자가 속한 1세대가 다른 주택의 입주자로 선정된 지위를 보유하고 있지 아니할 것",
+      "양도자가 30세 이상이거나 배우자가 있을 것",
+    ],
+    keywordMode: "ALL",
+  },
+
   // ── 다주택 중과 ────────────────────────────────────────────────────
   {
     id: "TRANSFER_DECREE.THREE_HOUSE_SCOPE",

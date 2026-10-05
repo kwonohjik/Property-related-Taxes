@@ -299,6 +299,19 @@ export interface TransferTaxInput {
   splitLandCompensationBasisTotal?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
+  /**
+   * §104①4호 단서(영 §167의6 1호) — 양도 당시 양도자가 속한 1세대가 **다른** 분양권
+   * (주택의 입주자로 선정된 지위)을 보유하지 않는지. `propertyType === "presale_right"` +
+   * 2018.1.1~2021.5.31 양도 + 조정대상지역 조합에서만 의미가 있다. 미제공 시 단서 불성립
+   * (모름 = 혜택 불성립) — §104①4호 50% 단일세율이 그대로 적용된다.
+   */
+  presaleRightNoOtherRight?: boolean;
+  /**
+   * §104①4호 단서(영 §167의6 2호) — 양도자가 30세 이상이거나 배우자가 있는지(미성년자는
+   * 제외하며, 배우자가 사망·이혼한 경우를 포함한다). 위 `presaleRightNoOtherRight`와 짝.
+   * 미제공 시 단서 불성립.
+   */
+  presaleRightAgeOrSpouseMet?: boolean;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
   householdRightCount?: number;
   /**

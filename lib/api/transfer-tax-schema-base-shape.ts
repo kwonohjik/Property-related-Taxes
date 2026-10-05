@@ -105,6 +105,9 @@ export const propertyBaseShape = {
   splitLandCompensationTotal: z.number().int().nonnegative().optional(),
   splitLandCompensationBasisTotal: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
+  // ⑫ §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 미제공 시 엔진이 단서 불성립으로 처리.
+  presaleRightNoOtherRight: z.boolean().optional(),
+  presaleRightAgeOrSpouseMet: z.boolean().optional(),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
   householdRightCount: z.number().int().nonnegative().optional(),

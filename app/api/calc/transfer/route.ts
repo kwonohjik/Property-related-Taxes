@@ -387,6 +387,9 @@ export async function POST(request: NextRequest) {
             rightThreeYearException: engineInput.rightThreeYearException,
             isRegulatedArea: engineInput.isRegulatedArea,
             wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+            // §104①4호 단서(영 §167의6) — 세대 단위, 컴패니언 분양권도 같은 사실을 본다.
+            presaleRightNoOtherRight: engineInput.presaleRightNoOtherRight,
+            presaleRightAgeOrSpouseMet: engineInput.presaleRightAgeOrSpouseMet,
             // 부수토지 컴패니언 전용 상속값 (F12) — 세대 단위 3값과 같은 층위.
             residencePeriodMonths: engineInput.residencePeriodMonths,
             propertyType: engineInput.propertyType,
