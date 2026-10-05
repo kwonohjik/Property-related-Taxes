@@ -29,13 +29,14 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRatesWithHouseEngine } from "../tax-engine/_helpers/mock-rates";
 
-const house = (id: string, acq: string) => ({
+const house = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
   id,
   region: "capital" as const,
   acquisitionDate: acq,
   officialPrice: 800_000_000,
   isInherited: false,
   isLongTermRental: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
 });
 
 /** 조정대상지역 · 세대 **2주택** · 겸용주택 양도 · 1세대(합가 의제 판정 대상). */
@@ -56,7 +57,8 @@ const MIXED = {
   annualBasicDeductionUsed: 0,
   residencePeriodMonths: 0,
   // 중과 엔진 진입 — `multiHouse`는 `houses`가 있어야 조립된다.
-  houses: [house("selling", "2014-03-15"), house("h2", "2015-03-01")],
+  // §155④⑤ 합가 전 구성(2026-10-05 정책) — h2는 상대 쪽이 합가 전부터 보유하던 주택이다.
+  houses: [house("selling", "2014-03-15"), house("h2", "2015-03-01", "counterpart_side")],
   sellingHouseId: "selling",
   propertyType: "mixed-use-house" as const,
   mixedUse: {

@@ -20,7 +20,7 @@ import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput } from "../_helpers/mock-rates";
 import { resolveMergeDeeming } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 
-const house = (id: string, acq: string) => ({
+const house = (id: string, acq: string, mergeOrigin: "seller_side" | "counterpart_side" = "counterpart_side") => ({
   id,
   acquisitionDate: new Date(acq),
   officialPrice: 300_000_000,
@@ -31,6 +31,8 @@ const house = (id: string, acq: string) => ({
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  // §155④⑤ 합가 전 소유 쪽(2026-10-05 정책) — h2·h3는 상대 쪽이 합가 전부터 보유하던 주택이다.
+  mergeOrigin,
 });
 
 /** 조정지역(강남구) 8억 양도. n=2면 [양도, 2012 취득], n=3이면 [양도, 2012, 2013]. */
@@ -159,6 +161,9 @@ describe("resolveMergeDeeming — §155④⑤ 합가 의제 정본(비과세 E-3
     isFirstTransferredInMerge: true,
     acquisitionDate: new Date("2010-01-01"),
     transferDate: new Date("2020-01-01"),
+    // §155④⑤ 합가 전 구성(2026-10-05 정책) — 명부·소유 쪽을 채워야 구성이 성립한다.
+    houses: [house("selling", "2010-01-01"), house("h1", "2012-01-01")] as TransferTaxInput["houses"],
+    sellingHouseId: "selling",
   };
   it("성립 — 2주택 · 먼저 양도 · 합가 전 취득 · 10년 이내", () => {
     expect(resolveMergeDeeming(base)).toBe("parental_care_merge");

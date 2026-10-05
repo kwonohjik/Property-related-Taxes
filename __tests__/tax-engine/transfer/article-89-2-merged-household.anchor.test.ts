@@ -275,13 +275,25 @@ describe("⭐ ⑧ 본문은 「1주택과 2조합원입주권」을 명문으로
 });
 
 describe("합가 축은 §155④⑤와 술어를 공유하지 않는다", () => {
-  it("🔑 §155④⑤는 합가 전 보유 구성을 묻지 않는다 — 2주택 합가 비과세는 그대로다", () => {
+  /**
+   * 🔁 2026-10-05 — 제목이 가리키는 「§89② ⑧ 선언」과 「§155④⑤ 합가 전 구성(`resolveMergeComposition`)」은
+   * 여전히 **다른 축**이다(이 테스트의 원래 요점). 다만 §155④⑤ 쪽도 이제 「모름」을 불리하게 보므로
+   * (명부·소유 쪽을 명시해야 성립) 그 구성을 명부로 밝혀야 한다 — 그 사실 자체를 "묻지 않는다"고
+   * 더는 말할 수 없어 제목·시료를 갱신한다.
+   */
+  it("§89② ⑧ 선언과 §155④⑤ 합가 전 구성은 서로 다른 축이다 — 권리 미보유 + 구성 명시 → 2주택 합가 비과세", () => {
     // 권리가 없으면 §89② 자체가 적용되지 않으므로 ⑧ 선언과 무관하게 §155④가 판정한다.
     const r = run(
       mergedCase({
         presaleRights: [],
         householdHousingCount: 2,
         rightThreeYearException: undefined,
+        // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+        houses: [
+          { id: "selling", acquisitionDate: new Date("2015-06-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+          { id: "h1", acquisitionDate: new Date("2012-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+        ] as TransferTaxInput["houses"],
+        sellingHouseId: "selling",
       }),
     );
     expect(r.isExempt).toBe(true);

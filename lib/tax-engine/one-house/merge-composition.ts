@@ -21,12 +21,18 @@
  *
  * 3주택의 **기간** 요건(§155①)은 여기서 보지 않는다 — `resolveMergeOverlapDeeming`이 본다.
  *
- * ## 🔑 판정할 수 없으면 판정하지 않는다 (`unknown` → 종전 동작)
+ * ## 🔑 「모름」은 불리하게 — 단, 제외로 설명되는 행 수 불일치만 예외 (2026-10-05 개정)
  *
- * - 명부가 없거나 양도 주택 행이 없다(계산기 스칼라 입력 · 구 이력).
- * - 명부 행 수 ≠ 판정 주택 수 — 감면주택·상속주택 등이 주택 수에서 빠졌는데 **어느 행인지**는
- *   남지 않는다(`runHouseCountExclusionStep`은 건수만 뺀다). 행으로 세면 빠진 주택을 넣어 세게 된다.
- * - 합가 전 행의 소유 쪽(`mergeOrigin`)이 비어 있다 — 날짜만으로 결론이 나는 경우(아래 3-a)만 판정한다.
+ * 계획서 `docs/00-pm/merge-composition-unknown-unfavorable.plan.md` §3-1. 원칙은 memory
+ * `feedback_unknown_fact_applies_unfavorably`(모름 → 혜택 불성립 + 결론을 가를 때만 「확인 필요」).
+ *
+ * - **명부 없음 · 양도 주택 행 없음**(`roster_missing`) — 불성립 + 확인 필요.
+ * - **명부 행 수 ≠ 판정 주택 수인데 알려진 제외가 하나도 없다**(`roster_missing`) — 입력하지 않은
+ *   주택이 있다는 뜻이다. 알려진 제외(상속주택·조특법 감면주택 등 `knownHouseExclusionCount`)가
+ *   있어서 어긋나면 그 제외가 **어느 행인지**는 아직 모르므로(`runHouseCountExclusionStep`은
+ *   건수만 뺀다) `count_mismatch`로 두고 판정하지 않는다(PR-3에서 행을 특정해 해소).
+ * - **합가 전 행의 소유 쪽(`mergeOrigin`)이 비어 있다**(`origin_missing`) — 불성립 + 확인 필요.
+ *   날짜만으로 결론이 나는 경우(아래 3-a)만 소유 쪽 없이도 판정한다.
  *
  * **3-a 날짜 검증**은 소유 쪽 입력 없이도 결론이 난다: 2주택인데 다른 주택이 합가 후 취득이면
  * 합가로 2주택이 된 것이 아니다. 3주택에서 합가 후 취득이 2채 이상이어도 같다. 계산기도 명부를
@@ -59,11 +65,22 @@ export type MergeCompositionFailure =
   /** 합가 전 양도자 쪽만 2채 이상, 상대 쪽 무주택. */
   | "seller_side_only"
   /** 그 밖에 성립 구성 표에 없는 조합(예: 3주택인데 합가 전 한쪽 3채). */
-  | "composition_mismatch";
+  | "composition_mismatch"
+  /** 명부가 없거나 양도 주택 행이 없거나, 알려진 제외 없이 행 수가 모자란다 — 입력하지 않은 주택이 있다. */
+  | "roster_missing"
+  /** 합가 전 취득 행의 소유 쪽(`mergeOrigin`)을 입력하지 않았다. */
+  | "origin_missing";
+
+/** 1·2번(roster_missing·origin_missing)만 — 입력하면 판정한다는 확인 필요 문구. */
+const CONFIRM_NOTICE: Record<"roster_missing" | "origin_missing", string> = {
+  roster_missing: "세대 보유 주택을 모두 목록에 입력하면 판정합니다.",
+  origin_missing: "합가 전 보유자(양도자 쪽 / 배우자·합친 가족 쪽)를 고르면 판정합니다.",
+};
 
 export type MergeComposition =
   | { status: "holds" }
-  | { status: "unknown" }
+  /** 명부 행 수가 어긋나는데 알려진 제외로 설명된다 — 어느 행인지 특정되지 않아 판정하지 않는다(PR-3). */
+  | { status: "unknown"; reason: "count_mismatch" }
   | {
       status: "fails";
       reason: MergeCompositionFailure;
@@ -71,6 +88,8 @@ export type MergeComposition =
       afterMergeDates: Date[];
       sellerSide: number;
       counterpartSide: number;
+      /** 사실을 몰라 불성립으로 계산했음을 알리는 문구 — roster_missing·origin_missing만. */
+      confirmNotice?: string;
     };
 
 export interface MergeCompositionInput {
@@ -78,15 +97,37 @@ export interface MergeCompositionInput {
   houses?: HouseInfo[];
   sellingHouseId?: string;
   mergeDate: Date;
+  /**
+   * 상속주택·조특법 감면주택 등 **이미 알려진** 주택수 제외 건수(`runHouseCountExclusionStep`의
+   * 합계). 명부 행 수가 판정 주택 수와 다를 때, 그 차이가 이 건수로 설명되면 `count_mismatch`
+   * (판정 보류·PR-3)로 두고, 설명되지 않으면 입력하지 않은 주택이 있다고 보아 `roster_missing`이다.
+   */
+  knownHouseExclusionCount?: number;
 }
 
+const failWithoutFacts = (
+  reason: "roster_missing" | "origin_missing",
+): MergeComposition => ({
+  status: "fails",
+  reason,
+  afterMergeDates: [],
+  sellerSide: 0,
+  counterpartSide: 0,
+  confirmNotice: CONFIRM_NOTICE[reason],
+});
+
 export function resolveMergeComposition(input: MergeCompositionInput): MergeComposition {
-  const { houses, sellingHouseId, householdHousingCount: count } = input;
-  if (count !== 2 && count !== 3) return { status: "unknown" };
+  const { houses, sellingHouseId, householdHousingCount: count, knownHouseExclusionCount = 0 } = input;
+  if (count !== 2 && count !== 3) return { status: "unknown", reason: "count_mismatch" };
   if (!houses || !sellingHouseId || !houses.some((h) => h.id === sellingHouseId)) {
-    return { status: "unknown" };
+    return failWithoutFacts("roster_missing");
   }
-  if (houses.length !== count) return { status: "unknown" };
+  if (houses.length !== count) {
+    // 알려진 제외가 하나도 없는데 행 수가 어긋나면 — 입력하지 않은 주택이 있다는 뜻이다.
+    if (knownHouseExclusionCount === 0) return failWithoutFacts("roster_missing");
+    // 제외가 있어서 어긋나면 어느 행인지 아직 모른다 — 종전 동작(판정 보류, PR-3에서 해소).
+    return { status: "unknown", reason: "count_mismatch" };
+  }
 
   const others = houses.filter((h) => h.id !== sellingHouseId);
   const sides = others.map((h) => classifyMergeHouse(h.acquisitionDate, input.mergeDate, h.mergeOrigin));
@@ -107,8 +148,8 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
   // 3-a — 날짜만으로 결론이 나는 경우(소유 쪽 입력이 없어도 판정)
   if ((count === 2 && p >= 1) || (count === 3 && p >= 2)) return fail("acquired_after_merge");
 
-  // 3-b — 합가 전 행마다 소유 쪽이 있어야 판정할 수 있다
-  if (sides.some((x) => x === undefined)) return { status: "unknown" };
+  // 3-b — 합가 전 행마다 소유 쪽이 있어야 판정할 수 있다 — 비어 있으면 불성립 + 확인 필요.
+  if (sides.some((x) => x === undefined)) return failWithoutFacts("origin_missing");
 
   const holds =
     count === 2

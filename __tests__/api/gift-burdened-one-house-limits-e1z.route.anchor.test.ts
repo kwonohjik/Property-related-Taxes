@@ -526,16 +526,41 @@ describe("G4 ④ — 계산기와 같은 leaf(`buildMergeFacts`)로 싣는다", 
 });
 
 describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 비과세 (계산기와 같은 결론)", () => {
-  it("G4-1 ★ 혼인 2020-01-01 · 증여 2023-06-01 · 세대 2주택: 과세 8,306,400 → 비과세, 계산기 같은 사실도 비과세", async () => {
+  it("G4-1 ★ 혼인 2020-01-01 · 증여 2023-06-01 · 세대 2주택: 과세 8,306,400 → 비과세(계산기) · 부담부증여는 명부 입력 경로가 없어 불성립 유지", async () => {
+    /**
+     * 🔁 2026-10-05 — 부담부증여 양도분(`BurdenedGiftTransferTaxInput`)은 세대 보유 주택
+     * 명부(`houses`) 입력 경로가 없다(사용자 결정 Q-10 — 범위 밖, `merge-composition-unknown-
+     * unfavorable.plan.md` §7). 합가 전 구성을 알려줄 수 없으므로 「모름」이 되어 §155④⑤
+     * 합가 의제가 더는 성립하지 않는다(종전 permissive pass는 정책 변경으로 해소됨).
+     * 계산기(`transfer`)는 명부 입력 경로가 있으므로 그대로 비과세다.
+     */
+    const MERGE_HOUSES = [
+      {
+        id: "h1",
+        region: "capital" as const,
+        acquisitionDate: "2012-01-01",
+        officialPrice: "300000000",
+        isInherited: false,
+        isLongTermRental: false,
+        isApartment: false,
+        isOfficetel: false,
+        isUnsoldHousing: false,
+        mergeOrigin: "counterpart_side" as const,
+      },
+    ];
     const base = await gift("2023-06-01", TWO_HOUSES);
     expect(base.isExempt).toBe(false);
     expect(base.determinedTax).toBe(8_306_400);
     const r = await gift("2023-06-01", { ...TWO_HOUSES, marriageDate: "2020-01-01", isFirstTransferredInMerge: true });
-    expect(r.isExempt).toBe(true);
+    expect(r.isExempt).toBe(false);
     const calc = (over: Partial<TransferFormData>) =>
       transfer(transferForm("2023-06-01", "2015-01-01", { householdHousingCount: "2", ...over }));
     expect((await calc({})).isExempt).toBe(false);
-    expect((await calc({ marriageDate: "2020-01-01", isFirstTransferredInMerge: true })).isExempt).toBe(true);
+    expect(
+      (
+        await calc({ marriageDate: "2020-01-01", isFirstTransferredInMerge: true, houses: MERGE_HOUSES })
+      ).isExempt,
+    ).toBe(true);
   });
   it("G4-2 부정 짝 — 혼인일부터 10년 경과(2013-01-01) 증여면 과세 8,306,400 그대로", async () => {
     const r = await gift("2023-06-01", { ...TWO_HOUSES, marriageDate: "2013-01-01", isFirstTransferredInMerge: true });

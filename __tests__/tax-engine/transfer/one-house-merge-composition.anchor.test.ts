@@ -106,10 +106,10 @@ describe("MC-1 2주택 매트릭스 (M-1 ~ M-4 · M-9)", () => {
     expect(judge(input([row("h1", "2022-06-01")], tth)).isExempt).toBe(false);
   });
 
-  it("[M-4] 혼인 전 취득인데 소유 쪽 미입력 → 판정하지 않고 종전 동작(비과세) 유지", () => {
+  it("[M-4] 혼인 전 취득인데 소유 쪽 미입력 → 불성립(2026-10-05 정책: 「모름」은 불리)", () => {
     const r = judge(input([row("h1", "2018-01-01")]));
-    expect(r.isExempt).toBe(true);
-    expect(ids(r)).toEqual(["155-5-marriage-merge"]);
+    expect(r.isExempt).toBe(false);
+    expect(ids(r)).not.toContain("155-5-marriage-merge");
   });
 
   it("[M-9] 다른 주택을 혼인일 당일 취득 · 배우자 쪽 선택 → 성립", () => {
@@ -163,8 +163,25 @@ describe("MC-2 3주택 매트릭스 (M-5 ~ M-8) — 구성만 본다(§155① �
   });
 });
 
-describe("MC-3 판정할 수 없으면 판정하지 않는다 (unknown → 종전 동작)", () => {
-  it("명부 행 수 ≠ 판정 주택 수(주택 수 제외가 있었다) → 혼인 후 취득 행이 있어도 판정 안 함", () => {
+describe("MC-3 판정할 수 없으면 판정하지 않는다 (unknown → 종전 동작, 알려진 제외로 설명될 때만)", () => {
+  it("명부 행 수 ≠ 판정 주택 수 — 알려진 제외가 있으면(knownHouseExclusionCount) 종전 동작", () => {
+    const i = input([row("h1", "2018-01-01", "counterpart_side"), row("h2", "2022-06-01")], {
+      householdHousingCount: 2,
+      knownHouseExclusionCount: 1,
+    });
+    expect(
+      resolveMergeComposition({
+        householdHousingCount: 2,
+        houses: i.houses,
+        sellingHouseId: "selling",
+        mergeDate: D(MERGE),
+        knownHouseExclusionCount: 1,
+      }).status,
+    ).toBe("unknown");
+    expect(judge(i).isExempt).toBe(true);
+  });
+
+  it("같은 행 수 불일치인데 알려진 제외가 0이면 — 입력 누락으로 보아 불성립(2026-10-05 정책)", () => {
     const i = input([row("h1", "2018-01-01", "counterpart_side"), row("h2", "2022-06-01")], {
       householdHousingCount: 2,
     });
@@ -175,13 +192,13 @@ describe("MC-3 판정할 수 없으면 판정하지 않는다 (unknown → 종�
         sellingHouseId: "selling",
         mergeDate: D(MERGE),
       }).status,
-    ).toBe("unknown");
-    expect(judge(i).isExempt).toBe(true);
+    ).toBe("fails");
+    expect(judge(i).isExempt).toBe(false);
   });
 
-  it("명부가 없는 입력(계산기 스칼라 · 구 이력) → 종전 동작", () => {
+  it("명부가 없는 입력(계산기 스칼라 · 구 이력) → 불성립(2026-10-05 정책: 「모름」은 불리)", () => {
     const i = input([], { householdHousingCount: 2, houses: undefined, sellingHouseId: undefined });
-    expect(judge(i).isExempt).toBe(true);
+    expect(judge(i).isExempt).toBe(false);
   });
 });
 
@@ -211,11 +228,11 @@ describe("MC-4 결과 화면 — 선언했으나 적용되지 않은 사유 · �
     expect(unmet?.reasons.join(" ")).toContain("§155①");
   });
 
-  it("[MC-R3] 소유 쪽 미입력(M-4) → 구성 행은 「미확인」, 결론은 종전 동작(비과세)", () => {
+  it("[MC-R3] 소유 쪽 미입력(M-4) → 구성 행은 「불성립」, 결론은 과세(2026-10-05 정책)", () => {
     const r = judge(input([row("h1", "2018-01-01")]));
-    expect(r.isExempt).toBe(true);
+    expect(r.isExempt).toBe(false);
     const comp = r.requirementReview?.items.find((i) => i.id === "merge-composition");
-    expect(comp?.status).toBe("unchecked");
+    expect(comp?.status).toBe("unmet");
     expect(comp?.note).toContain("혼인 전 보유자를 고르면");
   });
 

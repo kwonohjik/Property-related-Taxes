@@ -41,6 +41,20 @@ const RESIDENCE_BINDS = { wasRegulatedAtAcquisition: true, residencePeriodMonths
 /** 거주요건이 걸리지 않는 시료(취득 당시 비조정) — 보유요건만 남긴다. */
 const RESIDENCE_FREE = { wasRegulatedAtAcquisition: false, residencePeriodMonths: 0 } as const;
 
+/** §155④⑤ 합가 전 구성(2026-10-05 정책) — 명부 행 빌더. */
+const mergeHouse = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
+  id,
+  acquisitionDate: D(acq),
+  officialPrice: 300_000_000,
+  region: "capital" as const,
+  isInherited: false,
+  isLongTermRental: false,
+  isApartment: false,
+  isOfficetel: false,
+  isUnsoldHousing: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
+});
+
 describe("P4-1 pending — §155① 일시적 2주택 처분기한", () => {
   /**
    * 종전 2019-06-01 취득 · 신규 **2020-07-01** 취득 · 비조정 ⇒ 기한 2023-07-01.
@@ -117,6 +131,8 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
       householdHousingCount: 2,
       marriageMerge: { marriageDate: D("2010-01-01") },
       isFirstTransferredInMerge: true,
+      houses: [mergeHouse("selling", "2005-01-01"), mergeHouse("h1", "2003-01-01", "counterpart_side")] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
       ...RESIDENCE_FREE,
     });
     expect(r.pending.map((p) => p.id)).toEqual(["155-5-marriage-merge"]);
@@ -129,6 +145,8 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
       householdHousingCount: 2,
       marriageMerge: { marriageDate: D("2020-01-01") },
       isFirstTransferredInMerge: true,
+      houses: [mergeHouse("selling", "2019-06-01"), mergeHouse("h1", "2015-01-01", "counterpart_side")] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
       ...RESIDENCE_FREE,
     });
     expect(r.isExempt).toBe(true);
@@ -142,6 +160,8 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
       householdHousingCount: 2,
       parentalCareMerge: { mergeDate: D("2012-03-15") },
       isFirstTransferredInMerge: true,
+      houses: [mergeHouse("selling", "2005-01-01"), mergeHouse("h1", "2003-01-01", "counterpart_side")] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
       ...RESIDENCE_FREE,
     });
     expect(r.pending.map((p) => p.id)).toEqual(["155-4-parental-care-merge"]);
@@ -352,6 +372,12 @@ describe("P4-1 appliedExceptions · legalBasis", () => {
   it("[PD-25] 합가 중첩이면 두 조문이 **각각** 행으로 선다", () => {
     const r = judge({
       householdHousingCount: 3,
+      houses: [
+        mergeHouse("selling", "2019-06-01"),
+        mergeHouse("h1", "2015-01-01", "counterpart_side"),
+        mergeHouse("h2", "2023-01-01"),
+      ] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
       temporaryTwoHouse: {
         previousAcquisitionDate: D("2019-06-01"),
         newAcquisitionDate: D("2023-01-01"),

@@ -100,8 +100,13 @@ export function resolveSurchargeDeemedOneHouseDetail(
   );
   if (clause2BlocksSurchargeDeeming(clause2)) return undefined;
 
+  // knownHouseExclusionCount — 비과세 STEP 0.9/0.95와 같은 값(§155④⑤ 합가 전 구성 판정 echo).
   const deemed = resolveDeemedOneHouseBy155(
-    { ...workingInput, householdHousingCount: count },
+    {
+      ...workingInput,
+      householdHousingCount: count,
+      knownHouseExclusionCount: inheritedExcluded + ex.specialActExcludedCount,
+    },
     parsedRates.oneHouseSpecialRules,
   );
   if (deemed) return { basis: deemed };

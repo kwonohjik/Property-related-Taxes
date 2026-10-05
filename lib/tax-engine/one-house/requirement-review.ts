@@ -246,9 +246,12 @@ function mergeItems(
     houses: input.houses,
     sellingHouseId: input.sellingHouseId,
     mergeDate,
+    knownHouseExclusionCount: input.knownHouseExclusionCount,
   });
+  const compositionUnknownFacts = composition.status === "fails" &&
+    (composition.reason === "roster_missing" || composition.reason === "origin_missing");
   const compositionFacts =
-    composition.status === "fails"
+    composition.status === "fails" && !compositionUnknownFacts
       ? [
           { label: `${event} 전 양도자 쪽`, value: `${composition.sellerSide}채` },
           { label: `${event} 전 상대 쪽`, value: `${composition.counterpartSide}채` },
@@ -274,10 +277,15 @@ function mergeItems(
                 ? `다른 주택을 ${event}일 이후에 취득했습니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 된 것이 아닙니다.`
                 : composition.reason === "seller_side_only"
                   ? `${event} 전 양도자 쪽이 이미 ${composition.sellerSide}주택이었고 상대 쪽은 무주택이었습니다.`
-                  : `${event} 전 보유 구성이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
+                  // roster_missing·origin_missing — 「모름」 불성립 + 확인 필요(계획서 §3-1).
+                  : composition.reason === "roster_missing"
+                    ? `보유 주택 목록에 세대 보유 주택을 모두 입력하지 않아 불성립으로 판정했습니다 — 확인 필요: 명부에 모두 입력하면 이 요건까지 판정합니다.`
+                    : composition.reason === "origin_missing"
+                      ? `보유 주택 목록에서 ${event} 전 보유자를 고르지 않아 불성립으로 판정했습니다 — 확인 필요: 보유 주택 목록에서 각 주택의 ${event} 전 보유자를 고르면 이 요건까지 판정합니다.`
+                      : `${event} 전 보유 구성이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
           }
         : composition.status === "unknown"
-          ? { note: `보유 주택 목록에서 각 주택의 ${event} 전 보유자를 고르면 이 요건까지 판정합니다.` }
+          ? { note: "제외된 주택이 있어 명부 행만으로는 이 요건을 특정할 수 없습니다." }
           : {}),
     legalBasis: basis,
   });

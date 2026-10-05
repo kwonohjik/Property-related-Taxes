@@ -233,9 +233,15 @@ export function runHouseCountExclusionStep(
     resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
-  const exemptionJudgeInput = totalExcluded > 0
-    ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
-    : effectiveInput;
+  // knownHouseExclusionCount — §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)이 명부 행 수와
+  // 판정 주택수의 불일치를 「알려진 제외로 설명됨(판정 보류)」과 「입력 누락(불성립)」으로 가르는 echo.
+  const exemptionJudgeInput = {
+    ...effectiveInput,
+    ...(totalExcluded > 0
+      ? { householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
+      : {}),
+    knownHouseExclusionCount: totalExcluded,
+  };
   // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝
   let hceCursor = effectiveInput.householdHousingCount;
   for (const applied of hceApplied) {

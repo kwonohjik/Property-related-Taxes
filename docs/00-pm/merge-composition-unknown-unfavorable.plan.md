@@ -1,6 +1,6 @@
 # §155④⑤ 합가 의제 — 「합가 전 보유 구성」을 모를 때 불성립 + 확인 필요
 
-> 작성 2026-10-05 · 상태 **Plan — Q-1~Q-4 결정(§1-1) · Q-5~Q-10 권장안 채택(§7) · PR-1 착수** · 대상 엔진 `lib/tax-engine/one-house/merge-composition.ts` · 화면 양도세 계산기(단건·다건)·1세대1주택 판정 메뉴
+> 작성 2026-10-05 · 상태 **PR-1 완료(#1972 머지) · PR-2 완료** · 대상 엔진 `lib/tax-engine/one-house/merge-composition.ts` · 화면 양도세 계산기(단건·다건)·1세대1주택 판정 메뉴
 > 선행: [`one-house-judgment-merge-house-link.plan.md`](one-house-judgment-merge-house-link.plan.md)(2026-09-29 — 명부 행 `mergeOrigin`·`resolveMergeComposition` 도입) · 원칙: memory `feedback_unknown_fact_applies_unfavorably`(사용자 결정 2026-10-04 — 「모름」은 혜택 불성립 + 결론을 가를 때만 「확인 필요」, 근거: 모르는 상태에서 유리하게 적용하면 가산세 부담)
 
 ## 1. 사용자 결정 (2026-10-05)
@@ -215,17 +215,16 @@ Q-1~Q-4는 §1-1에서 결정됐다.
 
 ## 8. 완료 기준 (DoD)
 
-**PR-1 명부 필수화**
-- [ ] 주택 양도에서 명부 0행 + 「없음」 미확정이면 다음 단계 차단(단건·다건) · 「없음」 확정이면 통과(RTL · E2E)
-- [ ] 세대 주택 수 = 명부 도출(숫자 칸 없음) · 게이트가 도출값을 본다 · 세액 불변(기존 anchor 세액 그대로)
-- [ ] 깨진 E2E·anchor 갱신(명부를 넣는 쪽으로 — 단언 세액은 그대로) · D-4 폐기를 `one-house-exemption-automation.plan.md`에 기록
+**PR-1 명부 필수화** — ✅ #1972 머지 완료
 
-**PR-2 합가 전 소유**
-- [ ] 계산기 편집 창에 소유 입력(현행 문구) · 미입력 차단(계산기·판정 메뉴)
-- [ ] 엔진 1·2번 불성립 + 확인 필요 — 사례 (a)·(b2)·(c2) anchor(단건 = 다건) · 소유 입력 시 종전 결론
-- [ ] 비과세·중과 배제·§155⑳ 합가 축이 같은 결론으로 따라옴 · 갱신 테스트(§5) · 뮤테이션 전건 KILL
+**PR-2 합가 전 소유** — ✅ 완료(2026-10-05)
+- [x] 계산기 편집 창에 소유 입력(현행 문구) · 미입력 차단(계산기·판정 메뉴) — `Step4.tsx`·`SurchargeJudgmentSection.tsx`에 `mergeContext={mergeContextOf(form)}` · ⑧ `transfer-tax-validate-step1.ts`(계산기)·`one-house-exemption-validate.ts`(판정 메뉴, warn→err)
+- [x] 엔진 1·2번 불성립 + 확인 필요 — `merge-composition.ts`에 `roster_missing`·`origin_missing` 사유 추가(`confirmNotice`). 3번(`count_mismatch`)은 `knownHouseExclusionCount`로 「알려진 제외로 설명됨」만 PR-3로 미룬다. 확인 필요는 `transfer-tax.ts`에 「결론을 가를 때만」(§154① 충족 + 기한 내) 경고로 push
+- [x] 비과세·중과 배제(13·15호)·§155⑳ 합가 축(E-14h)·겸용주택(mixed-use)이 같은 `knownHouseExclusionCount` 배선으로 따라옴
+- [x] 갱신 테스트(§5 목록 + 추가 14파일 — 아래 보고) · 뮤테이션 5건 전건 KILL
+- [x] tsc 0 · lint 0(에러) · vitest 전체 GREEN · 관련 E2E GREEN
 
 **PR-3 제외 행**
-- [ ] 제외 행을 뺀 구성 판정(상속·조특법 각 1건) · V-A 기록 · 뮤테이션
+- [ ] 제외 행을 뺀 구성 판정(상속·조특법 각 1건) · V-A 기록 · 뮤테이션 — 범위 밖(다음 PR)
 
 공통: tsc 0 · lint 0 · 전체 vitest 실패 0.

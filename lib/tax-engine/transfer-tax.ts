@@ -47,7 +47,8 @@ import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
-import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
+import { meetsTable2ResidenceRequirement, meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
@@ -249,6 +250,19 @@ export function calculateTransferTax(
   // OH-38 — 삭제 전 §154①4호를 선택했으나 요건 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
   for (const u of exemptionResult.unmetExceptions ?? [])
     if (u.id === RENTAL_4HO_UNMET_ID) warnings.push(`${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);
+
+  /**
+   * §155④⑤ 합가 — 「모름」으로 불성립했고 그것이 **결론을 가를 때만** 확인 필요를 고지한다
+   * (§155⑳ 선례와 같은 모양 — `transfer-tax-rental-housing-step.ts`의 `confirmNotice` + `rhe.applied`).
+   * 이미 비과세·부분과세(다른 의제 포함)면 합가 외 요건이 §154①(보유·거주)뿐이어도 고지하지 않는다 —
+   * 다른 의제(§155① 등)로 비과세가 선 경우를 가리지 않기 위해서다(계획서 §3-1).
+   */
+  if (!exemptionResult.isExempt && !exemptionResult.isPartialExempt) {
+    const mergeNotice = resolveMergeCompositionConfirmNotice(exemptionJudgeInput);
+    if (mergeNotice && meetsOneHouseHoldingResidence(exemptionJudgeInput, parsedRates.oneHouseSpecialRules.one_house_exemption)) {
+      warnings.push(`§155④⑤ 합가 특례 — 확인 필요: ${mergeNotice}`);
+    }
+  }
 
   // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
   //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다

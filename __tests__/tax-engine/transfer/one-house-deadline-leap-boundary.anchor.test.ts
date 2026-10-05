@@ -162,6 +162,11 @@ describe("§156의2⑨ — 혼인한 날(2019-02-28)부터 5년 이내 먼저 �
 });
 
 describe("§155④⑤ 합가 — 혼인한 날(2019-02-28)부터 5년 이내(2024-11-12 전 양도)", () => {
+  // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+  const MERGE_HOUSES = [
+    { id: "selling", acquisitionDate: D("2010-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+    { id: "h1", acquisitionDate: D("2008-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+  ] as TransferTaxInput["houses"];
   const merge = (transferDate: string) =>
     input({
       householdHousingCount: 2,
@@ -169,6 +174,8 @@ describe("§155④⑤ 합가 — 혼인한 날(2019-02-28)부터 5년 이내(202
       transferDate: D(transferDate),
       marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       isFirstTransferredInMerge: true,
+      houses: MERGE_HOUSES,
+      sellingHouseId: "selling",
     });
 
   it("술어 — 만료일 ✓ · 다음날 ✗", () => {
@@ -181,6 +188,8 @@ describe("§155④⑤ 합가 — 혼인한 날(2019-02-28)부터 5년 이내(202
       acquisitionDate: D("2010-01-01"),
       marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       isFirstTransferredInMerge: true,
+      houses: MERGE_HOUSES,
+      sellingHouseId: "selling",
     });
     expect(r.pending.map((p) => [p.id, iso(p.deadline)])).toEqual([["155-5-marriage-merge", LAST]]);
   });

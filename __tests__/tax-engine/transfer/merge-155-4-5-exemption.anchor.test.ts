@@ -12,6 +12,19 @@ import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 
 const mockRates = makeMockRates();
 
+const mergeHouse = (id: string, acq: string) => ({
+  id,
+  acquisitionDate: new Date(acq),
+  officialPrice: 300_000_000,
+  region: "capital" as const,
+  isInherited: false,
+  isLongTermRental: false,
+  isApartment: false,
+  isOfficetel: false,
+  isUnsoldHousing: false,
+  mergeOrigin: "counterpart_side" as const,
+});
+
 // 합가 2주택 — 혼인일 2020, 양도주택 2018 취득(합가 전), 2025 양도(10년 내), 비조정
 function mergeInput(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
   return baseTransferInput({
@@ -23,6 +36,9 @@ function mergeInput(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     acquisitionDate: new Date("2018-01-01"), // 혼인일(2020) 전 취득
     transferDate: new Date("2025-06-01"), // 혼인일+10년(2030) 내
     isFirstTransferredInMerge: true,
+    // §155④⑤ 합가 전 구성(2026-10-05 정책) — 명부·소유 쪽을 채워야 구성이 성립한다.
+    houses: [mergeHouse("selling", "2018-01-01"), mergeHouse("h1", "2016-01-01")] as TransferTaxInput["houses"],
+    sellingHouseId: "selling",
     ...over,
   });
 }

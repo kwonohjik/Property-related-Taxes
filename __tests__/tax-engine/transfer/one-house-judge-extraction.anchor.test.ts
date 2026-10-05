@@ -83,6 +83,7 @@ const JUDGE_INPUT_KEYS = [
   "houses",
   "presaleRights",
   "sellingHouseId",
+  "knownHouseExclusionCount",
   "replacementHouse",
   "rightThreeYearException",
   "mergedHouseholdFirstHouse",
@@ -163,6 +164,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     { id: "rr", type: "redevelopment_right", acquisitionDate: D("2018-01-01"), region: "capital" },
   ],
   sellingHouseId: "sell",
+  knownHouseExclusionCount: 1,
   replacementHouse: {
     businessApprovalDate: D("2019-02-02"),
     completionDate: D("2023-03-03"),
@@ -298,12 +300,43 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
   });
 
   it("J-11 §155④⑤ 합가 — 합가일·선양도가 모두 있어야 의제", () => {
+    /**
+     * 명부(`houses`+`sellingHouseId`+합가 전 소유 쪽)가 **있어야** 합가 전 구성이 「성립」으로
+     * 판정된다(2026-10-05 정책 — 「모름」은 불성립, `merge-composition-unknown-unfavorable.plan.md`
+     * §3-1). 이 테스트의 관심은 날짜·선양도 축이므로 구성은 항상 성립하게 채운다.
+     */
     const merge = {
       householdHousingCount: 2,
       isFirstTransferredInMerge: true,
       acquisitionDate: D("2018-01-01"),
       transferDate: D("2025-06-01"),
-    } as const;
+      houses: [
+        {
+          id: "sell",
+          region: "capital" as const,
+          acquisitionDate: D("2018-01-01"),
+          officialPrice: 300_000_000,
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: false,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+        },
+        {
+          id: "h1",
+          region: "capital" as const,
+          acquisitionDate: D("2019-01-01"),
+          officialPrice: 300_000_000,
+          isInherited: false,
+          isLongTermRental: false,
+          isApartment: false,
+          isOfficetel: false,
+          isUnsoldHousing: false,
+          mergeOrigin: "counterpart_side" as const,
+        },
+      ],
+      sellingHouseId: "sell",
+    };
     expect(exempt({ ...merge, marriageMerge: { marriageDate: D("2020-01-01") } })).toBe(true);
     expect(exempt({ ...merge, parentalCareMerge: { mergeDate: D("2020-01-01") } })).toBe(true);
     expect(exempt(merge)).toBe(false); // 합가 사실 없음
@@ -411,6 +444,15 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
     expect(exempt({ ...short, regionCode: "4813010100" })).toBe(true);
     expect(exempt(short)).toBe(false);
   });
+
+  /**
+   * 참고 — `knownHouseExclusionCount`는 계산기 파이프라인(`calculateTransferTax`)을 거치면
+   * STEP 0.9가 **항상 실제 제외 건수로 재계산**하므로(`runHouseCountExclusionStep`) `exempt()`
+   * (전체 파이프라인)로는 주입값을 관측할 수 없다 — 사용자 입력이 아니라 echo이기 때문이다.
+   * 왕복 자체는 J-1~J-3(MAXIMAL)이 이미 전 필드 공통으로 증명하고, 이 값이 실제로 합가 전 구성
+   * 판정을 가르는 동작은 `one-house-merge-composition.anchor.test.ts`(직접 `checkExemption` 호출,
+   * 파이프라인 재계산 없음)에서 검증한다.
+   */
 });
 
 /**
@@ -513,5 +555,67 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
 
   it("J-26 권리 자체가 없으면 이 축은 발동하지 않는다 (긍정 짝)", () => {
     expect(openArticles({ householdHousingCount: 1, acquisitionDate: D("2016-01-01") })).toBe("");
+  });
+});
+
+/**
+ * §155④⑤ 합가 — 「모름」 불성립이 **결론을 가를 때만** 계산기 결과(warnings)에 확인 필요를
+ * 고지한다(2026-10-05 `merge-composition-unknown-unfavorable.plan.md` §3-1 — §155⑳ 선례와
+ * 같은 모양). `resolveMergeCompositionConfirmNotice`가 `transfer-tax.ts`까지 도달하는지 본다.
+ */
+describe("P2 — §155④⑤ 합가 「모름」 확인 필요 고지 (결론을 가를 때만)", () => {
+  const mergeHouse = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
+    id,
+    region: "capital" as const,
+    acquisitionDate: D(acq),
+    officialPrice: 300_000_000,
+    isInherited: false,
+    isLongTermRental: false,
+    isApartment: false,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+    ...(mergeOrigin ? { mergeOrigin } : {}),
+  });
+  const base = {
+    acquisitionDate: D("2015-01-01"),
+    marriageMerge: { marriageDate: D("2020-01-01") },
+    isFirstTransferredInMerge: true,
+    householdHousingCount: 2,
+    sellingHouseId: "sell",
+    wasRegulatedAtAcquisition: false,
+  };
+  const mergeNotices = (over: Partial<TransferTaxInput>) =>
+    (run(over).warnings ?? []).filter((w) => w.includes("§155④⑤") && w.includes("확인 필요"));
+
+  it("합가 전 소유 쪽 미입력 — 다른 요건은 전부 충족 → 확인 필요 고지", () => {
+    const houses = [mergeHouse("sell", "2015-01-01"), mergeHouse("h1", "2018-01-01")];
+    expect(mergeNotices({ ...base, houses })).toHaveLength(1);
+  });
+
+  it("긍정 짝 — 소유 쪽을 입력하면(배우자 쪽) 비과세가 되어 고지가 없다", () => {
+    const houses = [mergeHouse("sell", "2015-01-01"), mergeHouse("h1", "2018-01-01", "counterpart_side")];
+    expect(exempt({ ...base, houses })).toBe(true);
+    expect(mergeNotices({ ...base, houses })).toEqual([]);
+  });
+
+  it("음성 짝 — 다른 주택을 합가 후 취득(날짜로 이미 불성립 확정) → 「모름」이 아니므로 고지 없다", () => {
+    const houses = [mergeHouse("sell", "2015-01-01"), mergeHouse("h1", "2022-06-01")];
+    expect(exempt({ ...base, houses })).toBe(false);
+    expect(mergeNotices({ ...base, houses })).toEqual([]);
+  });
+
+  it("음성 짝 — §154① 보유·거주도 미충족(결론이 합가 하나로 갈리지 않음) → 고지 없다", () => {
+    // acquisitionDate를 2017-08-03(거주요건 경과규정 기준일) 이후로 둔다 — 그 전 취득은
+    // `prePolicyExemptResidence`로 거주요건이 면제되어 이 축(§154① 미충족)을 관측하지 못한다.
+    const houses = [mergeHouse("sell", "2018-01-01"), mergeHouse("h1", "2019-01-01")];
+    expect(
+      mergeNotices({
+        ...base,
+        acquisitionDate: D("2018-01-01"),
+        houses,
+        wasRegulatedAtAcquisition: true,
+        residencePeriodMonths: 0,
+      }),
+    ).toEqual([]);
   });
 });

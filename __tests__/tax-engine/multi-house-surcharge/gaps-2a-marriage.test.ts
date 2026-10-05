@@ -140,6 +140,7 @@ describe("#2a-A: §167의3⑨ 3주택 혼인 5년내 배우자 주택수 차감"
  * 혼인 합가 의제(§155⑤) — 중과 엔진은 재판정하지 않고 caller가 비과세 정본으로 선판정해 넘긴다
  * (영 §167의10①15호 ① 요소). 날짜 조건(10년·합가 전 취득)은 `resolveMergeDeeming`이 본다.
  */
+// §155④⑤ 합가 전 구성(2026-10-05 정책) — h2는 상대 쪽이 합가 전부터 보유하던 주택이다.
 const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
   resolveMergeDeeming({
     householdHousingCount: 2,
@@ -147,6 +148,8 @@ const deemMarriage = (marriageDate: string, transferDate = "2024-06-01") =>
     isFirstTransferredInMerge: true,
     acquisitionDate: new Date("2010-01-01"),
     transferDate: new Date(transferDate),
+    houses: [makeHouse("h1"), makeHouse("h2", { mergeOrigin: "counterpart_side", acquisitionDate: new Date("2010-01-01") })],
+    sellingHouseId: "h1",
   });
 
 /*
@@ -160,7 +163,7 @@ const TEN_YEAR_ERA_TRANSFER = "2025-06-01";
 describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", () => {
   it("A-155-7y: 1+1=2, 혼인 7년전 → 10년 이내 전면배제", () => {
     const r = run(
-      makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
+      makeInput([makeHouse("h1", REGULATED), makeHouse("h2", { mergeOrigin: "counterpart_side", acquisitionDate: new Date("2010-01-01") })], {
         sellingHouseId: "h1",
         transferDate: new Date(TEN_YEAR_ERA_TRANSFER),
         marriageMerge: { marriageDate: new Date("2018-06-01") },
@@ -173,7 +176,7 @@ describe("#2a-B: §155⑤ 2주택 혼인합가 1세대1주택 의제 (10년)", (
 
   it("A-155-10y경계: 혼인일 + 정확히 10년 → 이내(경계 포함) 전면배제", () => {
     const r = run(
-      makeInput([makeHouse("h1", REGULATED), makeHouse("h2")], {
+      makeInput([makeHouse("h1", REGULATED), makeHouse("h2", { mergeOrigin: "counterpart_side", acquisitionDate: new Date("2010-01-01") })], {
         sellingHouseId: "h1",
         transferDate: new Date(TEN_YEAR_ERA_TRANSFER),
         marriageMerge: { marriageDate: new Date("2015-06-01") }, // +10년 = 2025-06-01 = transferDate

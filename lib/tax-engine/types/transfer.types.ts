@@ -756,6 +756,14 @@ export interface TransferTaxInput {
   generalHouseRightAtInheritance?: import("../data/inheritance-general-house-era").GeneralHouseRightAtInheritance;
   /** 양도 주택 ID (houses 제공 시) */
   sellingHouseId?: string;
+  /**
+   * 비과세 판정용 주택수에서 **이미 알려진** 제외 건수(상속주택·조특법 감면주택 등 —
+   * `runHouseCountExclusionStep`의 합계). 엔진이 `houses` 롤스터와 `householdHousingCount`를
+   * 대조해 「알려진 제외로 설명되는 불일치」와 「입력하지 않은 주택」을 가른다
+   * (`resolveMergeComposition` — §155④⑤ 합가 전 구성 판정). 사용자 입력이 아니라
+   * STEP 0.9/0.95가 채우는 echo다.
+   */
+  knownHouseExclusionCount?: number;
   /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */
   gracePeriod?: MultiHouseGracePeriodInput;
   /**

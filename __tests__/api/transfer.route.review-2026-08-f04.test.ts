@@ -92,6 +92,21 @@ describe("[F04] §155④⑤ 합가 후 첫 양도 게이트", () => {
     const form = houseForm();
     form.marriageDate = "2020-01-01";
     form.isFirstTransferredInMerge = true;
+    // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시해야 성립한다.
+    form.houses = [
+      {
+        id: "h1",
+        region: "capital",
+        acquisitionDate: "2015-01-01",
+        officialPrice: "300000000",
+        isInherited: false,
+        isLongTermRental: false,
+        isApartment: false,
+        isOfficetel: false,
+        isUnsoldHousing: false,
+        mergeOrigin: "counterpart_side",
+      },
+    ];
     const r = await calc(buildPropertyPayload(form));
     expect(r.status).toBe(200);
     expect(r.json.data.properties[0].isExempt).toBe(true);

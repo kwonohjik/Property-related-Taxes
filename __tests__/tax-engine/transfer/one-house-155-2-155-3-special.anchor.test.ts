@@ -234,13 +234,19 @@ describe("§155의2 — 면제가 **다른 경로로 새지 않는다** (경로 
   });
 
   it("§155⑤ 혼인 합가에도 §155의2 거주면제가 붙지 않는다 (②는 동거봉양 한정)", () => {
-    const merge = {
+    const merge: Partial<TransferTaxInput> = {
       ...RESIDENCE_BINDS,
       householdHousingCount: 2,
       isFirstTransferredInMerge: true,
       acquisitionDate: D("2018-01-01"),
       marriageMerge: { marriageDate: D("2020-01-01") },
-    } as const;
+      // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+      houses: [
+        { id: "selling", acquisitionDate: D("2018-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+        { id: "h1", acquisitionDate: D("2015-01-01"), officialPrice: 300_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+      ] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
+    };
     expect(exempt({ ...merge, wasRegulatedAtAcquisition: false })).toBe(true);
     expect(exempt({ ...merge, longTermMortgageHouse: MORTGAGE_OK })).toBe(false);
   });

@@ -55,12 +55,29 @@ const DEEMED_CASES: Array<[string, Partial<TransferTaxInput>, string]> = [
   ],
   [
     "§155⑤ 혼인 합가",
-    { marriageMerge: { marriageDate: new Date("2024-01-01") }, isFirstTransferredInMerge: true },
+    {
+      marriageMerge: { marriageDate: new Date("2024-01-01") },
+      isFirstTransferredInMerge: true,
+      // §155④⑤ 합가 전 구성(2026-10-05 정책) — 상대 쪽 주택 1채를 명시한다.
+      houses: [
+        { id: "selling", acquisitionDate: new Date("2017-05-02"), officialPrice: 500_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+        { id: "h1", acquisitionDate: new Date("2015-01-01"), officialPrice: 500_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+      ] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
+    },
     "혼인 합가 (§155⑤) 고가주택",
   ],
   [
     "§155④ 동거봉양 합가",
-    { parentalCareMerge: { mergeDate: new Date("2024-01-01") }, isFirstTransferredInMerge: true },
+    {
+      parentalCareMerge: { mergeDate: new Date("2024-01-01") },
+      isFirstTransferredInMerge: true,
+      houses: [
+        { id: "selling", acquisitionDate: new Date("2017-05-02"), officialPrice: 500_000_000, region: "capital", isInherited: false, isLongTermRental: false },
+        { id: "h1", acquisitionDate: new Date("2015-01-01"), officialPrice: 500_000_000, region: "capital", isInherited: false, isLongTermRental: false, mergeOrigin: "counterpart_side" },
+      ] as TransferTaxInput["houses"],
+      sellingHouseId: "selling",
+    },
     "동거봉양 합가 (§155④) 고가주택",
   ],
   [

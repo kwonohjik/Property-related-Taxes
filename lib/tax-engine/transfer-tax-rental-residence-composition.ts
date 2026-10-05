@@ -209,8 +209,16 @@ function judgeOtherHouse(
   // §155② 단독상속(0162) · §155③ 공동상속 소수지분(Q3(가) — 3중첩 불허 회신이 2중첩 허용을 전제 · 7265).
   if (inherited) return { status: "met", via: inherited.basis === "sole" ? "inherited_house" : "co_inherited_house" };
 
+  /**
+   * §155④⑤ 합가 전 구성(`resolveMergeComposition`)은 명부 행 수와 판정 주택수(여기서는 강제로
+   * 2로 둔다)를 대조한다. `input.houses`는 장기임대주택 행을 포함한 **원본 롤스터**라 행 수가
+   * 항상 어긋난다 — 그 어긋남은 장기임대주택이라는 **이미 알려진 사실**로 설명되므로
+   * `knownHouseExclusionCount`로 알려 종전 동작(판정 보류 → met 경로 유지)을 보존한다.
+   * 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-1.
+   */
+  const rentalRowCount = input.houses?.filter((h) => h.isLongTermRental).length ?? 0;
   const deemed = resolveDeemedOneHouseBy155(
-    { ...input, householdHousingCount: 2 },
+    { ...input, householdHousingCount: 2, knownHouseExclusionCount: rentalRowCount },
     parsedRates.oneHouseSpecialRules,
   );
   // 명부 도출은 양도 주택보다 나중에 취득한 행을 「신규 주택」으로 고른다 — 그 행이 장기임대주택이면

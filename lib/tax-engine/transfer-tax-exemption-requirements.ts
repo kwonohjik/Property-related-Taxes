@@ -219,6 +219,7 @@ export type MergeDeemingReqInput = Pick<
   | "transferDate"
   | "houses"
   | "sellingHouseId"
+  | "knownHouseExclusionCount"
 >;
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -698,24 +699,58 @@ function matchMergeWindow(
  * 혼인·동거봉양이 둘 다 있으면 혼인을 본다(`matchMergeWindow`와 같은 순서).
  * **주택 수는 보지 않는다** — `mergeDeemingHouseCountHolds`.
  */
-export function matchMergeApartFromWindow(
+/**
+ * 창(窓)·날짜 게이트(① 「먼저 양도」 선언 ② 합가 이후 양도 ③ 합가 전 취득)를 지나야 비로소
+ * 합가 전 구성(`resolveMergeComposition`)을 묻는다 — 이 게이트들이 먼저 막으면 구성은 아예
+ * 보지 않는다(날짜 자체가 안 맞으면 「모름」을 말할 자리가 없다).
+ */
+function matchMergeGateAndComposition(
   input: MergeDeemingReqInput,
-): { kind: "marriage" | "parental_care"; mergeDate: Date } | undefined {
+): { kind: "marriage" | "parental_care"; mergeDate: Date; composition: ReturnType<typeof resolveMergeComposition> } | undefined {
   if (input.isFirstTransferredInMerge !== true) return undefined;
   const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
   if (!mergeDate) return undefined;
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
-  // 합가 전 각자 1주택 — 판정할 수 없으면(`unknown`) 종전 동작 그대로 둔다(merge-composition.ts).
   const composition = resolveMergeComposition({
     householdHousingCount: input.householdHousingCount,
     houses: input.houses,
     sellingHouseId: input.sellingHouseId,
     mergeDate,
+    knownHouseExclusionCount: input.knownHouseExclusionCount,
   });
-  if (composition.status === "fails") return undefined;
-  return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate };
+  return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate, composition };
+}
+
+export function matchMergeApartFromWindow(
+  input: MergeDeemingReqInput,
+): { kind: "marriage" | "parental_care"; mergeDate: Date } | undefined {
+  const gated = matchMergeGateAndComposition(input);
+  if (!gated) return undefined;
+  // 합가 전 각자 1주택 — 판정할 수 없는 행 수 불일치(`unknown`)는 종전 동작 그대로 둔다
+  // (merge-composition.ts). 「모름」이 확정되는 roster_missing·origin_missing은 `fails`다.
+  if (gated.composition.status === "fails") return undefined;
+  return { kind: gated.kind, mergeDate: gated.mergeDate };
+}
+
+/**
+ * 합가 의제가 성립하지 않은 이유가 **오직** 합가 전 구성을 몰라서(`roster_missing`·
+ * `origin_missing`)일 때만 확인 필요 문구를 돌려준다 — §155⑳ 선례(`confirmNotice` + 호출부의
+ * 「결론을 가를 때만」게이트, `transfer-tax-rental-housing-step.ts`)와 같은 모양이다.
+ *
+ * 창·날짜 게이트가 먼저 막았거나(날짜 자체가 안 맞음) 구성이 이미 성립/다른 사유로 불성립이면
+ * `undefined` — 호출부(`checkExemptionCore` E-3.5)가 §154① 보유·거주까지 **함께** 충족할 때만
+ * 불러 결론을 가르는 경우에만 쓴다.
+ */
+export function resolveMergeCompositionConfirmNotice(input: MergeDeemingReqInput): string | undefined {
+  const gated = matchMergeGateAndComposition(input);
+  if (!gated || gated.composition.status !== "fails" || !gated.composition.confirmNotice) return undefined;
+  // N년 기한도 함께 충족해야 「구성만 알면 비과세가 된다」가 성립한다 — 기한을 넘겼으면
+  // 구성을 몰라서가 아니라 기한 초과로 과세이므로 확인 필요를 말하지 않는다.
+  const years = resolveMergeExemptionYears(gated.kind, input.transferDate);
+  if (!isWithinDeadline(gated.mergeDate, years, input.transferDate)) return undefined;
+  return gated.composition.confirmNotice;
 }
 
 /**

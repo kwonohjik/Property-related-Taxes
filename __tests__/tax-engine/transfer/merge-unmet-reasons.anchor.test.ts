@@ -39,7 +39,7 @@ const RULES = {
   },
 } as unknown as OneHouseSpecialRulesData;
 
-const house = (id: string, acq: string) => ({
+const house = (id: string, acq: string, mergeOrigin?: "seller_side" | "counterpart_side") => ({
   id,
   acquisitionDate: new Date(acq),
   officialPrice: 300_000_000,
@@ -50,6 +50,7 @@ const house = (id: string, acq: string) => ({
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  ...(mergeOrigin ? { mergeOrigin } : {}),
 });
 
 /** 제보 화면 그대로 — 3주택 · 혼인합가 2017-03-11 · 양도주택 2017-08-31 취득 · 일시적2주택 OFF */
@@ -86,7 +87,8 @@ const eligible = (extra: Partial<OneHouseJudgeInput> = {}): OneHouseJudgeInput =
     houses: [
       house("selling", "2016-01-01"),
       house("h2", "2024-05-30"),
-      house("h3", "2016-08-21"),
+      // h3는 합가 전(2017-03-11 이전) 취득 — 소유 쪽을 밝혀야 구성이 성립한다(2026-10-05 정책).
+      house("h3", "2016-08-21", "counterpart_side"),
     ],
     temporaryTwoHouse: TEMP_TWO,
     ...extra,
@@ -177,7 +179,8 @@ describe("UM — §155④⑤ 합가 불성립 사유", () => {
         houses: [
           house("selling", "2018-01-01"),
           house("h2", "2024-05-30"),
-          house("h3", "2016-08-21"),
+          // 합가 전 소유 쪽을 밝혀 구성을 성립시킨다 — 이 anchor가 겨냥한 축은 §154①뿐이다.
+          house("h3", "2016-08-21", "counterpart_side"),
         ],
         temporaryTwoHouse: {
           previousAcquisitionDate: new Date("2018-01-01"),
@@ -216,7 +219,8 @@ describe("UM — §155④⑤ 합가 불성립 사유", () => {
       houses: [
         house("selling", "2012-01-01"),
         house("h2", "2024-05-30"),
-        house("h3", "2011-08-21"),
+        // 합가 전 소유 쪽을 밝혀 구성을 성립시킨다 — 이 anchor가 겨냥한 축은 10년 기한뿐이다.
+        house("h3", "2011-08-21", "counterpart_side"),
       ],
       temporaryTwoHouse: {
         previousAcquisitionDate: new Date("2012-01-01"),

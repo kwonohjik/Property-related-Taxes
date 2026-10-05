@@ -305,7 +305,8 @@ describe("E-14c §156의2·§156의3 — 15호가 아니라 §167의11①13호·
       input({
         householdHousingCount: 3,
         residencePeriodMonths: 48,
-        houses: [SELLING, GENERAL, h("n", "2024-02-01")],
+        // §155④⑤ 합가 전 구성(2026-10-05 정책) — GENERAL은 합가 전 상대 쪽이 보유하던 주택이다.
+        houses: [SELLING, { ...GENERAL, mergeOrigin: "counterpart_side" as const }, h("n", "2024-02-01")],
         parentalCareMerge: { mergeDate: D("2022-01-01") },
         isFirstTransferredInMerge: true,
         temporaryTwoHouse: { previousAcquisitionDate: D("2012-01-01"), newAcquisitionDate: D("2024-02-01") },
