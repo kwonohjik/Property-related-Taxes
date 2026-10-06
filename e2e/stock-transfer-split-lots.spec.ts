@@ -13,6 +13,12 @@
  * SPL-2: 매수 #2 를 「유상증자」로 바꿔도 결과 동일(엔진에는 매매) · 매수 #3 「무상증자(비과세분)」은
  *        자본조정 안내와 함께 다음 단계로 못 간다 (PR-2 · A안)
  *
+ * SPL-3: 단일에서 「상속」(피상속인 취득일 비움) → 분할 전환 → lot 원인을 「매매」로 바꿔도
+ *        화면 밖에 남은 단건 원인으로 막히지 않는다 (막다른 오류 — 2026-10-06 재현)
+ *
+ * SPL-4: 매수 #1 을 1980-06-10 취득으로 — 의제취득일 전 매수 lot 에 영 §176의2④2호 ②
+ *        (1주당 floor(10,000 × 50.57 ÷ 39.17) = 12,910) → Step2·결과 취득가액 127,280,000 · 결과 경고 문구
+ *
  * 실행: E2E_PORT=3217 npx playwright test e2e/stock-transfer-split-lots.spec.ts
  */
 
@@ -148,9 +154,93 @@ test.describe("분할 매수·분할 양도", () => {
     await expect(page.getByTestId("split-preview-acquisition-total")).toHaveCount(0);
 
     // 과세분으로 바꾸면(액면가 500) 진행 — 선입선출은 매수 #1·#2만 쓰므로 취득가액 104,000,000
-    await selectCause(page, 3, "무상증자 (의제배당 과세분)");
+    await selectCause(page, 3, "주식배당·무상증자 (과세분)");
     await expect(page.getByTestId("lot-bonus-untaxed-notice")).toHaveCount(0);
     await page.getByRole("button", { name: /^다음/ }).click();
     await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("104,000,000");
+  });
+  test("SPL-3: 단일 「상속」 잔존값 → 분할 전환 후 막다른 오류 없이 2단계 진입 · 결과 계산", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+    await page.getByPlaceholder("종목명을 입력하세요").fill("잔존원인예제");
+    await page.getByRole("radio", { name: "비상장" }).first().click();
+    // 단일 모드 — 취득일만 넣고 「상속」 선택(피상속인 취득일은 비운다)
+    await fillDate(page.locator("body"), "2024-01-10");
+    await page.getByRole("radio", { name: /^상속/ }).first().click();
+    // 분할 전환 — 첫 매수 건으로 이관된다(원인 「상속」)
+    await page.getByRole("radio", { name: "분할 양도" }).first().click();
+    await selectCause(page, 1, "매매");
+    await fillAcqLot(page, 1, "2024-01-10", "8000", "10000");
+    await page.getByRole("button", { name: /매수 행 추가/ }).click();
+    await fillAcqLot(page, 2, "2025-02-10", "8000", "12000");
+    await page.getByRole("button", { name: /매도 행 추가/ }).click();
+    const sale = trnCard(page, 1);
+    await fillDate(sale, "2026-05-11");
+    await sale.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill("10000");
+    await sale.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill("20000");
+    await page.getByText("선입선출법", { exact: true }).click();
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    // 종전: 「상속의 경우 피상속인 취득일을 입력하세요」 — 분할 화면에는 그 칸이 없다
+    await expect(page.getByText("피상속인 취득일을 입력하세요")).toHaveCount(0);
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("104,000,000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
+    await fillDate(page.locator("body"), "2026-07-31");
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/stock-transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: "결과 보기" }).click();
+    const resp = await calcResponse;
+    expect(resp.status()).toBe(200);
+    expect((await resp.json()).result.acquisitionPrice).toBe(104_000_000);
+  });
+
+  test("SPL-4: 1980 매수 lot — 의제취득일 전 ② 적용 · Step2·결과 127,280,000", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+
+    await page.getByPlaceholder("종목명을 입력하세요").fill("분할양도예제");
+    await page.getByRole("radio", { name: "비상장" }).first().click();
+    await page.getByRole("radio", { name: "분할 양도" }).first().click();
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: /매수 행 추가/ }).click();
+    }
+    await fillAcqLot(page, 1, "1980-06-10", "8000", "10000");
+    await fillAcqLot(page, 2, "2025-02-10", "8000", "12000");
+    await fillAcqLot(page, 3, "2025-12-24", "4000", "5000");
+    await selectCause(page, 3, "증여");
+
+    await page.getByRole("button", { name: /매도 행 추가/ }).click();
+    const sale = trnCard(page, 1);
+    await fillDate(sale, "2026-05-11");
+    await sale.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill("10000");
+    await sale.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill("20000");
+    await page.getByText("선입선출법", { exact: true }).click();
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
+    // ⑤⑥ 미리보기도 엔진과 같은 순서로 ②를 적용한다
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("127,280,000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
+    await fillDate(page.locator("body"), "2026-07-31");
+
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/stock-transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: "결과 보기" }).click();
+    const resp = await calcResponse;
+    expect(resp.status()).toBe(200);
+    const json = await resp.json();
+    expect(json.result.acquisitionPrice).toBe(127_280_000);
+    expect(json.result.appliedRules).toContain("의제취득일물가상승가산");
+    await expect(page.getByText(/매수 lot #1\(1980-06 취득/).first()).toBeVisible({ timeout: 10_000 });
   });
 });

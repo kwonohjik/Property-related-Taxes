@@ -219,7 +219,7 @@ calcPreDeemedAcquisition(input, is94_4) → {
 ## 9. 범위 밖
 
 - **부동산 매수 pre-deemed**(1984.12.31. 이전 매수 토지·건물)도 같은 §176의2④2호가 미구현이다(형제 `inheritance-acquisition-price.ts`는 상속·증여만 — 계획서 `inheritance-pre-deemed-phase3-sec164-candidate.plan.md` §9 「매매(유상) pre-deemed — 미구현 신규 기능」). 데이터 상수(§5.3)를 공용으로 두면 재사용할 수 있다 → 별건 **Z-2**.
-- 분할(lot) 모드 pre-deemed lot.
+- ~~분할(lot) 모드 pre-deemed lot.~~ → ② 적용 완료(`applyPreDeemedToLots`, `stock-split-lots-ui-bugfix.plan.md` PR-6). ①은 lot 입력에 산정 수단이 없어 미비교 · 1965.01 이전 lot은 차단.
 - Q-5 별건: 합병·분할 신주(구주가 의제취득일 전 취득 — 영 §163①4 승계와 겹침) · 이월과세 A의 증여자 pre-deemed 매수(§97의2①1호 → 증여자 기준 §176의2④).
 
 ---

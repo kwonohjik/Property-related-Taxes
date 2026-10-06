@@ -110,7 +110,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
         : cause === "rights_issue"
           ? "신주 인수대금을 납입한 날 — 소득세법 §98 대금청산일"
           : cause === "bonus_taxed"
-            ? "무상주를 취득한 날 — 이 날부터 보유기간을 셉니다"
+            ? "주식배당은 주주총회 결의일 · 잉여금 자본전입은 자본전입 결의일(이사회 결의면 신주배정일) — 이 날부터 보유기간을 셉니다"
             : undefined;
 
   const handleAcqDateChange = (v: string) => {
@@ -177,8 +177,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             { value: "rights_issue", label: "유상증자", description: "납입일 기산 (매매와 같음)" },
             {
               value: "bonus_taxed",
-              label: "무상증자 (의제배당 과세분)",
-              description: "무상주 취득일 기산 · 액면가액",
+              label: "주식배당·무상증자 (과세분)",
+              description: "결의일 기산 · 액면가액",
             },
             {
               value: "bonus_untaxed",

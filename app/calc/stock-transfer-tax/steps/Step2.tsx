@@ -39,6 +39,9 @@ import { SplitAllocationPreviewCard } from "@/components/calc/stock-transfer/Spl
 import { effectiveTransferActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { effectiveAcquisitionActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
+import { isBonusTaxedEstimationBlocked } from "@/lib/calc/stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "@/lib/calc/stock-acquisition-cause";
+import { isPreDeemedPurchaseForm } from "@/lib/calc/stock-transfer-section94-4-form";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -74,11 +77,15 @@ export function Step2({ form, onChange }: Step2Props) {
    *    시장(비상장·기타자산·코스닥·코넥스 거래정지 — `isBookLostAtAcquisition`)에서만 연다. 켜지 않은 환산은 ⑧·⑫가 막는다.
    * 날짜는 보지 않는다 — 종전 «의제취득일 전이면 통과»는 평가액 확인 가능성의 대리 지표라 양방향으로 틀렸다.
    */
-  const giftLikeCause = isGiftLikeCause(form.acquisitionCause);
+  // 단건 취득원인 — 분할 모드는 화면 밖 잔존값이라 「매매」로 파생한다(④·⑧과 같은 leaf)
+  const singleCause = effectiveSingleAcquisitionCause(form);
+  const giftLikeCause = isGiftLikeCause(singleCause);
   const bookLostMarket = usesUnlistedSupplementaryValuation(form.marketType) || isTradingHaltBypassMarket(form.marketType);
   const giftEstimatedDisabled = giftLikeCause && !bookLostMarket;
-  // 과세 무상주 — 취득가액은 액면가액(법정)이라 추계 모드를 열지 않는다(⑧·③과 같은 술어)
-  const bonusTaxed = form.acquisitionCause === "bonus_taxed";
+  // 과세 무상주 — 취득가액은 액면가액(법정)이라 추계 모드를 열지 않는다(⑧·③과 같은 술어).
+  // 의제취득일 전 취득이면 영 §176의2④ ①·② 비교를 위해 연다(`isBonusTaxedEstimationBlocked`).
+  const bonusTaxed = singleCause === "bonus_taxed";
+  const bonusTaxedEstimationClosed = isBonusTaxedEstimationBlocked(singleCause, "estimated", isPreDeemedPurchaseForm(form));
   const is94_4 = isSection94_4Form(form);
   /**
    * 환산 분자(취득일 이전 1개월 종가)의 기준일 — 의제취득일 «전» 취득이면 의제취득일이다
@@ -87,23 +94,23 @@ export function Step2({ form, onChange }: Step2Props) {
   const acqStdBaseDate = resolveStockDeemedDateString(form.acquisitionDate, is94_4).effectiveDate;
   // 단건 「1주당 취득가액」 안내 — 분할 lot 카드(`AcquisitionLotCard.tsx`)와 같은 원인별 문구
   const perShareAcqHint =
-    form.acquisitionCause === "inheritance"
+    singleCause === "inheritance"
       ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
-      : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
+      : singleCause === "gift" || singleCause === "carryover_gift"
         ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
-        : form.acquisitionCause === "rights_issue"
+        : singleCause === "rights_issue"
           ? "1주당 신주 발행가액 — 납입한 인수가액 (원)"
-          : form.acquisitionCause === "bonus_taxed"
+          : singleCause === "bonus_taxed"
             ? "1주당 액면가액 — 의제배당으로 과세된 금액 (원) · 소득세법 시행령 §27①1호 가목"
             : "실제 취득가액 (원)";
   const totalAcqHint =
-    form.acquisitionCause === "inheritance"
+    singleCause === "inheritance"
       ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
-      : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
+      : singleCause === "gift" || singleCause === "carryover_gift"
         ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
-        : form.acquisitionCause === "rights_issue"
+        : singleCause === "rights_issue"
           ? "납입한 신주 인수대금 합계 (원)"
-          : form.acquisitionCause === "bonus_taxed"
+          : singleCause === "bonus_taxed"
             ? "무상주 액면가액 합계 — 의제배당으로 과세된 금액 (원) · 소득세법 시행령 §27①1호 가목"
             : "계약서·거래내역 등에 기재된 총 취득대금 (원)";
 
@@ -314,8 +321,8 @@ export function Step2({ form, onChange }: Step2Props) {
             columns={3}
             options={[
               { value: "actual", label: "실가" },
-              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled || bonusTaxed },
-              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause || bonusTaxed },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled || bonusTaxedEstimationClosed },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause || bonusTaxedEstimationClosed },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
               // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
               //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
@@ -332,12 +339,12 @@ export function Step2({ form, onChange }: Step2Props) {
                 ? "매매사례가액은 쓸 수 없습니다. 환산취득가는 장부 분실 등으로 취득 당시 기준시가를 확인할 수 없을 때에만 쓸 수 있으니, 환산취득가를 고른 뒤 「취득시점 장부분실」을 켜세요"
                 : "환산취득가·매매사례가액은 쓸 수 없습니다"}{" "}
               (소득세법 §99①4 후단 · 시행령 §163⑨).
-              {form.acquisitionCause === "carryover_gift" &&
+              {singleCause === "carryover_gift" &&
                 " 이월과세 적용 시의 증여자 취득가액은 1단계 「증여자 취득가액 산정 방식」에서 정합니다."}
             </p>
           )}
 
-          {bonusTaxed && !isSplitMode && (
+          {bonusTaxedEstimationClosed && !isSplitMode && (
             <p className="text-xs text-amber-800" data-testid="bonus-taxed-face-value-notice">
               {BONUS_TAXED_ACTUAL_ONLY_MESSAGE}
             </p>
@@ -449,7 +456,7 @@ export function Step2({ form, onChange }: Step2Props) {
           {/* 이월과세 증여자 기준 환산 — 수증자 실가(평가액)와 별개로 A의 분모만 받는다 (§97의2①1호 나목) */}
           {acquisitionMode === "actual" &&
             !isSplitMode &&
-            form.acquisitionCause === "carryover_gift" &&
+            singleCause === "carryover_gift" &&
             (form.donorAcquisitionMethod || "actual") === "estimated" && (
               <CarryoverDonorConversionSection form={form} onChange={onChange} />
             )}

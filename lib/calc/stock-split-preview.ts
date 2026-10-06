@@ -5,7 +5,7 @@
  * 무시하고 **팔지 않은 잔량의 원가까지** 더했다(계획서 `stock-split-lots-ui-bugfix.plan.md` D-3).
  *
  * 🔑 매칭을 여기서 다시 구현하지 않는다(single-source-engine-helper). 엔진 경로와 **같은 함수**를
- *    같은 순서로 부른다: ④ body → 날짜 강제 → ⑭ 엔진 input → 자본조정 lot 희석 → `allocateLots`
+ *    같은 순서로 부른다: ④ body → 날짜 강제 → ⑭ 엔진 input → 의제취득일 전 매수 lot ② → 자본조정 lot 희석 → `allocateLots`
  *    (`stock-transfer-tax.ts`의 split 분기와 동일). ⑫ Zod 는 거치지 않는다 — 입력 도중의 미리보기라
  *    검증 오류는 각 단계 validate 가 따로 보여준다.
  *
@@ -19,6 +19,8 @@ import { STOCK_DATE_FIELDS } from "@/lib/api/stock-transfer-date-fields";
 import { buildEngineInput } from "@/lib/api/stock-transfer-engine-input";
 import { allocateLots } from "@/lib/tax-engine/stock-transfer/lot-allocation";
 import { applyCapitalAdjustmentsToLots } from "@/lib/tax-engine/stock-transfer/lot-capital-adjustments";
+import { applyPreDeemedToLots } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
+import { isSection94_4Form } from "./stock-transfer-section94-4-form";
 import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
@@ -43,7 +45,8 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
   try {
     const coerced = coerceDates(buildStockTransferApiBody(form), [...STOCK_DATE_FIELDS]);
     const input = buildEngineInput(coerced);
-    let lots = input.acquisitionLots ?? [];
+    // 엔진 split 분기와 같은 순서 — 의제취득일 전 매수 lot ②(영 §176의2④2호) → 자본조정 희석
+    let lots = applyPreDeemedToLots(input.acquisitionLots ?? [], input.marketType, isSection94_4Form(form)).lots;
     if (input.capitalAdjustments && input.capitalAdjustments.length > 0) {
       lots = applyCapitalAdjustmentsToLots(lots, input.capitalAdjustments).adjustedLots;
     }
