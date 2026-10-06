@@ -58,7 +58,8 @@ export const BONUS_UNTAXED_BLOCK_MESSAGE =
  *    그때 ②의 액면가액은 ⑧이 필수로 받는다(`isBonusTaxedPreDeemedFaceValueMissing`).
  *
  * ⑤ Step2 라디오 · ⑧ validate-step2 · ③ 복원 마이그레이션이 이 술어를 공유한다.
- * ⚠️ ⑫ Zod 는 막지 못한다 — ④가 원인을 「매매」로 매핑해 보내므로(엔진 enum 불변) 서버는 원인을 모른다.
+ * ⑫ Zod(`refineSingleModeRequiredInputs`)도 같은 술어를 쓴다 — ④가 원인을 「매매」로 매핑해 보내므로
+ *    폼 원인은 `acquisitionCauseDetail`로 따로 싣는다(엔진 input 에는 매핑하지 않는다).
  */
 export function isBonusTaxedEstimationBlocked(
   cause: FormAcquisitionCause | undefined,
