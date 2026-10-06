@@ -229,6 +229,7 @@ export function judgeMixedUseOneHouseExemption(
       houses: asset.multiHouse?.houses,
       sellingHouseId: asset.multiHouse?.sellingHouseId,
       knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
+      inheritedHouseExclusionCount: inheritedExcludedCount,
       knownHouseExclusionHouseIds,
     },
     oneHouseSpecialRules,

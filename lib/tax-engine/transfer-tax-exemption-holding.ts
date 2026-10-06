@@ -83,12 +83,15 @@ export function qualifiesRuralHouse(
  * 조특법 §99의4 농어촌주택도 같다: 부동산납세과-2367 · 서면-2024-부동산-1967).
  * 그래서 ⑦ 요건은 **신규 주택을 뺀 2주택 기준**으로 본다(`householdHousingCount: 2`).
  *
- * 🔑 **3주택까지만** — ⑦·⑳·① 세 특례를 함께 적용한 4주택은 부인됐다(부동산납세과-870). §155① 기간 요건은
+ * 🔑 **3주택까지만** — ⑦·⑳·① 세 특례를 함께 적용한 4주택은 부인됐다(부동산납세과-870). §155②③ 상속주택 제외가
+ *    겹친 경우(세 특례)도 성립하지 않는다(`inheritedHouseExclusionCount`). §155① 기간 요건은
  *    여기서 보지 않는다 — 호출부(비과세 E-3 · 중과 15호 `resolveDeemedOneHouseBy155`)가 2주택과 같은 술어로 본다.
  */
 export function ruralTemporaryTwoHouseOverlapCountHolds(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse">,
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
 ): boolean {
+  // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
+  if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
   return input.householdHousingCount === 3 && qualifiesRuralHouse({ ...input, householdHousingCount: 2 });
 }
 

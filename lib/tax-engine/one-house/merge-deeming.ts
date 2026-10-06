@@ -68,6 +68,7 @@ export type MergeDeemingReqInput = Pick<
   | "houses"
   | "sellingHouseId"
   | "knownHouseExclusionCount"
+  | "inheritedHouseExclusionCount"
   | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
 >;
@@ -295,6 +296,8 @@ function mergeOverlapTwoHouseHolds(
   twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
 ): boolean {
   if (input.householdHousingCount !== 3) return false;
+  // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
+  if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
   if (!input.temporaryTwoHouse || !twoHouseRule) return false;
   return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
 }

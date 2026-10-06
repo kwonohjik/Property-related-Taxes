@@ -286,8 +286,16 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
 });
 
 describe("U-1 잔여 — 닫히지 않은 2주택 조합은 그대로 판정 불가다", () => {
-  it("특수주택 선언이 없는 2주택 + 권리 → ⑦·⑩·⑪ 안내", () => {
-    const v = verdict(twoHouse());
+  /**
+   * E011(2026-10-06 사용자 결정 A) — 특수주택(문화유산·이농) 선언이 **없는** 2주택 + 1권리는 남는 예외가 없어
+   * **배제 확정**이다. 종전 「판정 불가」 단언은 지우지 않고 3주택 짝(아래)으로 옮겼다 — 그 갈래는 여전히 열려 있다.
+   */
+  it("특수주택 선언이 없는 2주택 + 권리 → 배제 확정(E011)", () => {
+    expect(verdict(twoHouse()).status).toBe("excluded");
+  });
+
+  it("특수주택 선언이 없는 3주택 + 권리 → ⑦·⑩·⑪ 안내(판정 불가 유지)", () => {
+    const v = verdict(twoHouse({ householdHousingCount: 3 }));
     expect(v.status).toBe("undetermined");
     expect(v.openArticles).toContain("소득세법 시행령 §156의2 ⑦·⑩·⑪");
     expect(v.openArticles).toContain("소득세법 시행령 §156의3 ⑤·⑦·⑧");

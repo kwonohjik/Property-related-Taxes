@@ -117,7 +117,11 @@ function collectMergeUnmet(
 
   // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──
   const count = input.householdHousingCount;
-  if (count === 3) {
+  if (count === 3 && (input.inheritedHouseExclusionCount ?? 0) > 0) {
+    reasons.push(
+      "상속주택(§155②③)을 주택 수에서 뺀 뒤에도 3주택입니다 — 상속주택 특례·일시적 2주택·합가 특례 세 가지가 겹친 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다(확인 필요).",
+    );
+  } else if (count === 3) {
     /**
      * 3주택은 §155①과 **겹친 경우만** 인정된다(F-1 — 사전-2025-법규재산-1240 ·
      * 서면-2022-법규재산-5124). 토글을 켜지 않으면 `temporaryTwoHouse`가 아예 만들어지지 않아

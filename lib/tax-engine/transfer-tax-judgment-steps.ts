@@ -108,6 +108,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
       ...workingInput,
       householdHousingCount: count,
       knownHouseExclusionCount: inheritedExcluded + ex.specialActExcludedCount,
+      inheritedHouseExclusionCount: inheritedExcluded,
       knownHouseExclusionHouseIds: ex.knownHouseExclusionHouseIds,
       noMergeRosterInputPath: workingInput.transferType === "burdened_gift",
     },

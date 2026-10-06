@@ -288,6 +288,7 @@ export function runHouseCountExclusionStep(
       ? { householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
       : {}),
     knownHouseExclusionCount: totalExcluded,
+    inheritedHouseExclusionCount: inheritedExclusion.excludedCount,
     knownHouseExclusionHouseIds,
   };
   // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝
