@@ -21,6 +21,7 @@ import { BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE } from "./stock-acqu
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
 import { isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
+import { validatePreDeemedLotClause1 } from "./stock-transfer-tax-validate-pre-deemed-lots";
 import { isBookLostAtAcquisitionForm } from "./stock-transfer-section94-4-form";
 import { isBeforePpiSeries, PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
@@ -129,6 +130,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         severity: "error",
       });
     }
+    // 의제취득일 전 매수 lot ① 비교(영 §176의2④1호) — 분할은 여기서 조기 반환하므로 그 앞에서 부른다
+    errors.push(...validatePreDeemedLotClause1(form));
     return errors;
   }
 
@@ -200,6 +203,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({ field: `acquisitionLots[${i}].${key}`, message: lotCauseMessage(key, i), severity: "error" });
           }
         });
+        // 의제취득일 전 매수 lot ① 비교(영 §176의2④1호) — ⑫ refine 과 같은 검사 함수
+        errors.push(...validatePreDeemedLotClause1(form));
         // [A-2] 자본조정(무상증자) 시 매수 수량이 희석 전이라 매도>매수가 정당 → 엔진 allocateLots 가드에 위임
         const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const totalAcqLots = form.acquisitionLots.reduce((s, l) => s + parseI(l.shareCount), 0);

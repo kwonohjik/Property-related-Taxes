@@ -12,6 +12,7 @@
 import { z } from "zod";
 import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
+import { refinePreDeemedLotClause1 } from "./stock-transfer-tax-refines-lot-clause1";
 import { refineSingleModeRequiredInputs } from "./stock-transfer-tax-refines-single-mode";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
@@ -424,6 +425,8 @@ export function addStockRefines(
           });
         }
       });
+      // 의제취득일 전 매수 lot ① 비교(영 §176의2④1호) — ⑧ step2 와 같은 검사 함수
+      refinePreDeemedLotClause1(data, ctx, is94_4);
       // specific 매칭 무결성 — 매도 lot별 매칭 합 = 매도 수량
       if (data.costAllocationMethod === "specific" && data.specificMatchings && data.transferLots) {
         for (const trn of data.transferLots) {

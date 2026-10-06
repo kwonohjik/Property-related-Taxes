@@ -20,6 +20,7 @@ import { buildEngineInput } from "@/lib/api/stock-transfer-engine-input";
 import { allocateLots } from "@/lib/tax-engine/stock-transfer/lot-allocation";
 import { applyCapitalAdjustmentsToLots } from "@/lib/tax-engine/stock-transfer/lot-capital-adjustments";
 import { applyPreDeemedToLots } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
+import { buildPreDeemedLotClause1Context } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-lot-clause1";
 import { isSection94_4Form } from "./stock-transfer-section94-4-form";
 import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
@@ -45,8 +46,11 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
   try {
     const coerced = coerceDates(buildStockTransferApiBody(form), [...STOCK_DATE_FIELDS]);
     const input = buildEngineInput(coerced);
-    // 엔진 split 분기와 같은 순서 — 의제취득일 전 매수 lot ②(영 §176의2④2호) → 자본조정 희석
-    let lots = applyPreDeemedToLots(input.acquisitionLots ?? [], input.marketType, isSection94_4Form(form)).lots;
+    // 엔진 split 분기와 같은 순서 — 의제취득일 전 매수 lot ②(영 §176의2④2호) + ① ctx → 자본조정 희석
+    const is94_4 = isSection94_4Form(form);
+    const clause1 = buildPreDeemedLotClause1Context(input, is94_4);
+    const preDeemed = applyPreDeemedToLots(input.acquisitionLots ?? [], input.marketType, is94_4, clause1.ctx !== undefined);
+    let lots = preDeemed.lots;
     if (input.capitalAdjustments && input.capitalAdjustments.length > 0) {
       lots = applyCapitalAdjustmentsToLots(lots, input.capitalAdjustments).adjustedLots;
     }
@@ -58,6 +62,7 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
       false,
       input.isSmallMediumEnterprise,
       input.specificMatchings,
+      preDeemed.applied ? clause1.ctx : undefined,
     );
   } catch {
     // 보조 입력(상속 피상속인 취득일 등)의 날짜가 입력 도중이면 강제 변환이 실패한다

@@ -35,7 +35,7 @@ import {
   appendCarryoverDonorBody,
   appendDonorConversionDenominator,
 } from "./stock-transfer-tax-api-carryover";
-import { appendPreDeemedBody } from "./stock-transfer-tax-api-pre-deemed";
+import { appendPreDeemedBody, appendPreDeemedLotClause1Body } from "./stock-transfer-tax-api-pre-deemed";
 /**
  * 해외주식·국외전출세 빌더는 **도메인이 갈라져** 형제 파일로 나갔다(800줄 정책).
  * 진입점은 그대로 아래 `buildStockTransferApiBody`의 `marketType` 분기이며,
@@ -631,6 +631,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       body.transferDate = oldestTrnDate;
     }
   }
+
+  // 분할·다건 lot ① 비교 (영 §176의2④1호) — transferLots 가 만들어진 뒤
+  appendPreDeemedLotClause1Body(body, form);
 
   return body;
 }

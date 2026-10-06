@@ -197,6 +197,14 @@ export interface StockTransferFormData {
   preDeemedActualPricePerShare: string;
   /** 생산자물가상승 배율 직접 입력 — 취득월이 PPI 계열(1965.01~) 이전일 때만 (배율 = 의제일 직전 달 지수 ÷ 취득월 지수) */
   preDeemedPpiRatio: string;
+  /**
+   * 분할·다건 lot — 의제취득일 전 «매수» lot 의 ① 비교 방식 (영 §176의2④1호 · 계획서 stock-lot-pre-deemed-clause1).
+   * `none` = ②(실가 + 생산자물가상승분)만(기본 — 3중 패턴: factory = normalize = UI 직접 사용, `|| "none"` 금지).
+   * `estimated` = 상장 환산(의제취득일 종가평균 `acquisitionDatePriceAvg1Month` + 매도 lot별 `transferStdPricePerShare`,
+   *   lots-only 는 폼 전역 `transferDatePriceAvg1Month`) · `sale_case` = 비상장·기타자산 매매사례
+   *   (`acquisitionMarketSamplePrice/Date` + 취득측 `acquisitionYearNetIncomePerShare`·`acquisitionYearNetAssetPerShare`).
+   */
+  preDeemedLotClause1Mode: "none" | "estimated" | "sale_case";
 
   // ── R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장 (2026-05-19) ──
   acquisitionMarketSamplePrice: string;       // 원
