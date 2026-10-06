@@ -9,7 +9,7 @@
  * |---|---|---|---|
  * | 양도 < 2002-03-30 | 양도일 | **2년** · 1년 경과 요건 없음 | 1999-01-01 ~ 2002-01-01본 §155①(DRF eflaw 실독 — 1999-01-01 전 시행본은 미확인) |
  * | 2002-03-30 ≤ 양도 < 2008-11-28 | 양도일 | **1년** · 1년 경과 요건 없음 | 2002-03-30본 §155①(제17555호, 공포일 시행) · 같은 부칙 ② 「시행후 최초로 양도하는 분부터」 |
- * | ↳ 그중 신규 취득 < 2002-03-30 | 신규취득일 | 부칙 ③ 경과조치(아래) — **미구현: 종전 2년 + 판정 보류 고지** | 제17555호 부칙 ③ |
+ * | ↳ 그중 신규 취득 < 2002-03-30 | 신규취득일 | 부칙 ③ 경과조치(아래) — 2년으로 계산. **1호 단서만 미구현**: 결론이 갈릴 수 있는 양도일에만 판정 보류 고지 | 제17555호 부칙 ③ |
  * | 2008-11-28 ≤ 양도 < 2012-06-29 | 양도일 | **2년** · 1년 경과 요건 없음 | 2008-11-28본 §155①(제21138호, 부칙 제2조 「시행 후 최초로 양도하는 분부터」) |
  * | 양도 ≥ 2012-06-29 | — | 본문 3년 + 「종전의 주택을 취득한 날부터 1년 이상이 지난 후」 | 2012-06-29본 §155①(제23887호, 공포일 시행) — DRF eflaw 실독 2026-10-06 |
  * | 비조정 또는 한쪽만 조정 | — | 3년(본문) | §155① 본문 |
@@ -53,16 +53,25 @@
  * 신규 취득일 기준으로 판정해 `bothRegulated`로 넘긴다.
  */
 
-import { isOnOrBeforeDeadline, periodEndFrom } from "../civil-period";
+import { isOnOrBeforeDeadline, isWithinDeadline, periodEndFrom } from "../civil-period";
 
 /**
  * 제17555호 시행(공포)일 — 이 날 이후 양도분부터 처분기한 2년 → 1년 (부칙 ②).
  * 부칙 ③(중복보유기간 단축 경과조치): 시행 당시 신규 주택을 이미 취득해 종전 2년이 끝나지 않았으면 1호(시행일까지
  * 1년 이하 — 시행일부터 1년이 되는 날, 단 시행일부터 6월 경과 후 보유기간 충족이면 충족일 + 6월과 취득일부터 2년 중
  * 빠른 날)·2호(1년 초과 — 취득일부터 2년이 되는 날)까지 양도하면 1세대1주택. 보유기간 충족일(당시 §154① 지역별
- * 보유·거주)을 정확히 재현하지 못해 구현하지 않았다 — 종전 2년으로 두고 판정 보류를 고지한다.
+ * 보유·거주)을 정확히 재현하지 못해 구현하지 않았다 — 2년으로 두고, 결론이 갈릴 수 있을 때만 판정 보류를 고지한다:
+ *   - 시행 당시 2년이 이미 끝났다(부칙 ③ 밖 → 개정 1년) · 2호(취득일부터 2년 — 엔진 기한과 같다) → 고지 없음.
+ *   - 1호: 기한은 시행일부터 1년이 되는 날(가장 이른 독법 2003-03-29) 이후 ~ 취득일부터 2년 사이에서 단서로 정해진다.
+ *     그 앞 양도는 어느 독법이든 충족, 2년 기한 뒤 양도는 어느 독법이든 불충족 → **그 사이 양도만** 고지한다.
+ *     「1년을 초과하지 아니한」 경계일(취득일부터 1년의 말일 = 시행일, 2001-03-30 취득)은 초일 산입이면 2호지만 고지 쪽에 둔다.
  */
 export const TT_1Y_DEADLINE_TRANSFER_START = new Date("2002-03-30");
+/**
+ * 부칙 ③ 1호 기한의 가장 이른 날 — 「이 영 시행일부터 1년이 되는 날」을 초일 산입으로 센 날. 단서(보유기간등 충족일
+ * + 6월, 충족일은 시행일부터 6월이 경과하는 날 이후)도 이보다 앞서지 않는다.
+ */
+const TT_2002_TRANSITION_FIRST_CLAUSE_EARLIEST_END = new Date("2003-03-29");
 /** 제21138호 시행(공포)일 — 이 날 이후 양도분부터 처분기한 1년 → 2년 (부칙 제2조). */
 export const TT_2Y_DEADLINE_TRANSFER_START = new Date("2008-11-28");
 /**
@@ -112,7 +121,7 @@ export interface TemporaryTwoHouseDeadlineEra {
    * `undefined`(기한은 `years`로 센다).
    */
   deadlineDate?: Date;
-  /** 제17555호 부칙 ③(2002-03-30 전 신규 취득 · 그 후 양도) 경과조치를 판정하지 않았다 — 판정 보류 고지용. */
+  /** 제17555호 부칙 ③ 1호 단서를 판정하지 않아 결론이 갈릴 수 있다(2002-03-30 전 신규 취득 · 그 후 양도 중 일부) — 판정 보류 고지용. */
   transition2002Unverified?: boolean;
 }
 
@@ -162,8 +171,13 @@ export function resolveTemporaryTwoHouseDeadlineEra(p: {
   // D14 — 조정대상지역 기한이 생기기 전 구간. 지역과 무관하게 양도일로 정한다.
   if (t < TT_1Y_DEADLINE_TRANSFER_START.getTime()) return { years: 2, moveInRequirementPending: false };
   if (t < TT_2Y_DEADLINE_TRANSFER_START.getTime()) {
-    if (p.newAcquisitionDate && p.newAcquisitionDate.getTime() < TT_1Y_DEADLINE_TRANSFER_START.getTime()) {
-      return { years: 2, moveInRequirementPending: false, transition2002Unverified: true };
+    const n = p.newAcquisitionDate;
+    if (n && n.getTime() < TT_1Y_DEADLINE_TRANSFER_START.getTime()) {
+      // 「1호 하한 뒤 · 취득일부터 2년 안」이면 취득일부터 2년의 말일이 2003-03-29 뒤 → 취득 2001-03-30 이후 → 1호다.
+      //   (2호·부칙 ③ 밖은 2년 말일이 2003-03-29 이하라 이 구간에 들지 않는다 — 1호 판정을 따로 두지 않는다.)
+      const outcomeMayDiffer =
+        dayKey(p.transferDate) > dayKey(TT_2002_TRANSITION_FIRST_CLAUSE_EARLIEST_END) && isWithinDeadline(n, 2, p.transferDate);
+      return { years: 2, moveInRequirementPending: false, ...(outcomeMayDiffer ? { transition2002Unverified: true } : {}) };
     }
     return { years: 1, moveInRequirementPending: false };
   }
