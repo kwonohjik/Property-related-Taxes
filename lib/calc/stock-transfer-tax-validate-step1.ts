@@ -14,6 +14,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -250,6 +251,10 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
        * - ①3호 증여세는 **산출세액과 과세가액이 짝**이다 — 영 §163의2②가 둘의 비율로 안분하므로
        *   한쪽만 있으면 계산되지 않고 조용히 0이 된다. 분자는 엔진이 lot에서 구한다.
        */
+      // 의제배당 비과세 무상주는 매수 건이 아니다 — 자본조정 비율로 입력(⑫는 enum 에서 거부)
+      if (lot.acquisitionCause === "bonus_untaxed") {
+        errors.push({ field: `acquisitionLots[${i}].acquisitionCause`, message: `매수 lot #${i + 1}: ${BONUS_UNTAXED_BLOCK_MESSAGE}`, severity: "error" });
+      }
       for (const key of missingLotCauseKeys(
         lot.acquisitionCause,
         (k) => !isEmpty(lot[k]),
@@ -359,6 +364,10 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
 
   // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase")
   const acquisitionCause = form.acquisitionCause || "purchase";
+  // 의제배당 비과세 무상주는 취득 건이 아니다 — 원주로 입력하고 자본조정 비율로 반영(⑫는 enum 에서 거부)
+  if (acquisitionCause === "bonus_untaxed" && (form.lotsMode || "single") === "single") {
+    errors.push({ field: "acquisitionCause", message: BONUS_UNTAXED_BLOCK_MESSAGE, severity: "error" });
+  }
   /**
    * 필수 키 집합은 ⑫(`stock-transfer-tax-refines.ts`)와 **공용 술어**다 — 한쪽만 고치면
    * 「UI 통과 → API 400」 또는 「API 200 + 조용한 세율·필요경비 변경」이 된다.

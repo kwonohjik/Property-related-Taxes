@@ -3,7 +3,7 @@
 /**
  * CapitalAdjustmentsBlock — R-2 자본조정(무상증자·감자) 입력 블록
  *
- * 법§17② 단서 + 집행기준 97-163-12.
+ * 법§17② 단서 + 소득세법 시행령 §27②(무상주 1주당 환산) · 집행기준 97-163-10(무상감자).
  * 4-state type 분기. split 모드에서는 disabled.
  */
 
@@ -56,7 +56,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
     <ToneCard
       tone="violet"
       sectionNum="CA"
-      title="무상증자·무상감자 (자본조정) — 법§17② 단서 + 집행기준 97-163-12"
+      title="무상증자·무상감자 (자본조정) — 법§17② 단서 + 시행령 §27②"
       bodyClassName="space-y-3"
       noDark
       titleExtra={
@@ -90,7 +90,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
 
       {isLotMode && (
         <div className="rounded border border-violet-200 bg-violet-50/70 px-3 py-2 text-xs text-violet-700">
-          매수 다건/분할 모드: 발생일 이전 보유한 매수 건만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(집행기준 97-163-12),
+          매수 다건/분할 모드: 발생일 이전 보유한 매수 건만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(국세청 서면-2019-자본거래-1671),
           각 매수 건의 총취득원가는 불변·1주당 단가만 환산됩니다. 배정 수량은 매수 당시(원주) 기준으로 입력하세요.
         </div>
       )}

@@ -31,7 +31,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-5 py-4 space-y-3">
       <p className="font-semibold text-violet-800 text-sm">
-        자본조정 시계열 (법§17② 단서 + 집행기준 97-163-12)
+        자본조정 시계열 (법§17② 단서 + 시행령 §27②)
       </p>
 
       <div className="rounded-lg border border-violet-100 bg-white dark:bg-gray-900 overflow-hidden">

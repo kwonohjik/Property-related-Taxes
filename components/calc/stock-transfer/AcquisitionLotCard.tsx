@@ -31,9 +31,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-store";
+import { BONUS_UNTAXED_BLOCK_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 export const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], string> = {
   purchase: "매매",
+  /** 엔진에는 「매매」로 간다 — `stock-acquisition-cause.ts` */
+  rights_issue: "유상증자",
+  bonus_taxed: "무상증자 (의제배당 과세분)",
+  /** 매수 건으로 받지 않는다 — 고르면 안내하고 ⑧이 막는다(자본조정으로 입력) */
+  bonus_untaxed: "무상증자 (의제배당 비과세분)",
   inheritance: "상속",
   gift: "증여",
   /** §97의2① 이월과세 — 2025.1.1.~ 증여분. §104②2호로 증여자 취득일 기산 */
@@ -65,6 +72,7 @@ export function AcquisitionLotCard({
   extraFields,
 }: AcquisitionLotCardProps) {
   const isCarryover = lot.acquisitionCause === "carryover_gift";
+  const cause = lot.acquisitionCause;
 
   return (
     <div className="rounded border border-amber-300 bg-white dark:bg-gray-900 p-3 space-y-2">
@@ -83,14 +91,18 @@ export function AcquisitionLotCard({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <FieldCard
           label={
-            lot.acquisitionCause === "gift" || isCarryover ? "수증일" : "취득일"
+            cause === "gift" || isCarryover ? "수증일" : "취득일"
           }
           hint={
-            lot.acquisitionCause === "gift"
+            cause === "gift"
               ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
               : isCarryover
                 ? "증여받은 날 — 2025.1.1. 이후여야 §104②2호 적용"
-                : undefined
+                : cause === "rights_issue"
+                  ? "신주 인수대금을 납입한 날 — 소득세법 §98 대금청산일"
+                  : cause === "bonus_taxed"
+                    ? "무상주를 취득한 날 — 이 날부터 보유기간을 셉니다"
+                    : undefined
           }
         >
           <DateInput
@@ -131,19 +143,31 @@ export function AcquisitionLotCard({
         <CurrencyInput
           label="1주당 단가"
           hint={
-            lot.acquisitionCause === "inheritance"
+            cause === "inheritance"
               ? "상속개시일 §60~66 평가가액 (원) — 소령 §163⑨"
-              : lot.acquisitionCause === "gift" || isCarryover
+              : cause === "gift" || isCarryover
                 ? "수증일 §60~66 평가가액 (원) — 소령 §163⑨"
-                : lot.acquisitionCause === "merger_split"
+                : cause === "merger_split"
                   ? "1주당 가중평균 취득원가 (원) — 소령 §163①4·5호"
-                  : "1주당 실지 매수가 (원)"
+                  : cause === "rights_issue"
+                    ? "1주당 신주 발행가액 — 납입한 인수가액 (원)"
+                    : cause === "bonus_taxed"
+                      ? "1주당 액면가액 — 의제배당으로 과세된 금액 (원) · 소령 §27①1호 가목"
+                      : "1주당 실지 매수가 (원)"
           }
           value={lot.perShareAcquisitionPrice}
           onChange={(v) => onUpdate({ perShareAcquisitionPrice: v })}
         />
 
         {extraFields}
+
+        {cause === "bonus_untaxed" && (
+          <ToneCard tone="rose" className="md:col-span-2">
+            <p role="alert" className="text-xs" data-testid="lot-bonus-untaxed-notice">
+              {BONUS_UNTAXED_BLOCK_MESSAGE}
+            </p>
+          </ToneCard>
+        )}
 
         {lot.acquisitionCause === "inheritance" && (
           <FieldCard label="피상속인 취득일" hint="§104②1 보유기간 기산점">

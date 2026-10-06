@@ -9,6 +9,7 @@
  */
 
 import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
+import { FORM_ACQUISITION_CAUSES } from "@/lib/calc/stock-acquisition-cause";
 import { isBookLostAtAcquisitionForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import {
   type AcquisitionStdMode,
@@ -122,7 +123,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
    * 이월과세는 종전(Phase 3)에 수증자 모드가 **증여자 측 방식**을 겸했다 — 그 의미를 잃지 않도록
    * `donorAcquisitionMethod`가 저장돼 있지 않으면 종전 모드를 그쪽으로 옮긴다.
    */
-  const normCause = enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause);
+  const normCause = enumField("acquisitionCause", FORM_ACQUISITION_CAUSES, defaults.acquisitionCause);
   const storedAcqMode = enumField("acquisitionMode", ["actual", "sale_case", "estimated"], defaults.acquisitionMode);
   // 환산 예외 신호(장부분실) — ⑧·⑫·엔진 B·⑤와 같은 판정(영 §163⑨ · 법 §99①4 후단)
   const bookLostAtAcquisition = isBookLostAtAcquisitionForm({
@@ -191,7 +192,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferDate: strField("transferDate"),
     shareCount: strField("shareCount"),
     totalIssuedShares: strField("totalIssuedShares"),
-    acquisitionCause: enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause),
+    acquisitionCause: enumField("acquisitionCause", FORM_ACQUISITION_CAUSES, defaults.acquisitionCause),
     decedentAcquisitionDate: strField("decedentAcquisitionDate"),
     donorAcquisitionDate: strField("donorAcquisitionDate"),
     // §97의2① 이월과세 본체(필요경비)
@@ -619,7 +620,8 @@ function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
 
 function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
   if (!Array.isArray(raw)) return [];
-  const validCauses = ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"] as const;
+  // 유상증자·무상증자 포함 — 빠지면 복원 때 조용히 「매매」로 바뀐다(단건과 같은 목록)
+  const validCauses = FORM_ACQUISITION_CAUSES;
   return raw
     .map((r): AcquisitionLotForm | null => {
       if (!r || typeof r !== "object") return null;

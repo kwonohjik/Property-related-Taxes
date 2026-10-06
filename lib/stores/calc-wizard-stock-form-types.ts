@@ -105,7 +105,7 @@ export interface StockTransferFormData {
    * `carryover_gift` = 배우자·직계존비속 증여로 **§97의2①이 적용되는** 주식(2025.1.1.~ 증여분).
    * 단순 증여(`gift`)와 갈라 두어야 §104②2호 통산 여부를 사용자가 선언할 수 있다.
    */
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
+  acquisitionCause: "purchase" | "rights_issue" | "bonus_taxed" | "bonus_untaxed" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   decedentAcquisitionDate: string;     // 상속: 피상속인 취득일
   donorAcquisitionDate: string;        // 이월과세(carryover_gift): 증여자 취득일 §104②2
 
@@ -202,7 +202,7 @@ export interface StockTransferFormData {
   acquisitionMarketSamplePrice: string;       // 원
   acquisitionMarketSampleDate: string;         // "YYYY-MM-DD"
 
-  // ── R-2 자본조정 (법§17② 단서 + 집행기준 97-163-12) — 2026-05-19 ──
+  // ── R-2 자본조정 (법§17② 단서 + 시행령 §27②) — 2026-05-19 ──
   capitalAdjustments: CapitalAdjustmentForm[];
   acquisitionActualInputMode: "per_share" | "lots" | "total";  // 3중 패턴 default: "total" — 실가 입력 방식(구 이력 부재값 fallback 은 "per_share")
   acquisitionTotalPrice: string;     // 원 — total 모드 시 취득가액 합계 직접 입력 (양도측 transferTotalPrice와 대구)

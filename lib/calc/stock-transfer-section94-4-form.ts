@@ -19,6 +19,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { reversalCorpDerivedBasis } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
+import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
 
 export type Section94_4FormFields = Pick<
   StockTransferFormData,
@@ -122,7 +123,8 @@ export function isPreDeemedPurchaseForm(
     ((form.acquisitionMode || "actual") === "actual" && form.acquisitionActualInputMode === "lots");
   return isPreDeemedPurchase({
     marketType: form.marketType,
-    acquisitionCause: form.acquisitionCause || "purchase", // 3중 패턴 default
+    // 3중 패턴 default — ④와 같은 매핑(유상증자·과세 무상주 = 매수)이어야 ⑤⑧과 엔진이 갈리지 않는다
+    acquisitionCause: toEngineAcquisitionCause(form.acquisitionCause || "purchase"),
     acquisitionDate: form.acquisitionDate,
     is94_4: isSection94_4Form(form),
     isSplitOrLots,

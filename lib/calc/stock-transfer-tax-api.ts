@@ -50,6 +50,7 @@ import { isClause9Applicable } from "./stock-other-asset-scope";
 // 취득측 전용 보충평가(매매사례·취득일 거래정지)의 「평가액 계산」 — ⑧과 같은 술어
 import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
 import { effectiveTransferActualInputMode } from "./stock-transfer-input-mode";
+import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
@@ -72,7 +73,8 @@ function mapAcquisitionLotToBody(lot: AcquisitionLotForm): Record<string, unknow
     acquisitionDate: lot.acquisitionDate,
     shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
     perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
-    acquisitionCause: lot.acquisitionCause,
+    // 유상증자·과세 무상주 → 「매매」(엔진 enum 불변 — `stock-acquisition-cause.ts`)
+    acquisitionCause: toEngineAcquisitionCause(lot.acquisitionCause),
   };
   if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
     o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
@@ -112,7 +114,13 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 3중 패턴 default 적용 (UI/API/validate 동일)
   const acquisitionMode = form.acquisitionMode || "actual";
   const transferPriceMode = form.transferPriceMode || "actual";
-  const acquisitionCause = form.acquisitionCause || "purchase";
+  // 3중 패턴 default "purchase" — 유상증자·과세 무상주는 엔진에 「매매」로 보낸다(`stock-acquisition-cause.ts`)
+  const formCause = form.acquisitionCause || "purchase";
+  // 분할 모드는 단건 취득원인 칸이 화면에 없다 — 단건에서 고른 「비과세 무상주」(⑧ 단건 전용 차단)가
+  // 남아 있으면 보이지 않는 값으로 ⑫ enum 이 거부한다. 분할에서 이 값은 lot 이 정본이므로 싣지 않는다.
+  const acquisitionCause = toEngineAcquisitionCause(
+    form.lotsMode === "split" && formCause === "bonus_untaxed" ? "purchase" : formCause,
+  );
   /** 이월과세 증여자 기준 환산 — 수증자 모드가 실가여도 A가 환산을 탄다(`stock-transfer-tax-api-carryover.ts`) */
   const isDonorConversion = isDonorConversionForm(form);
   const filingType = form.filingType || "preliminary";
