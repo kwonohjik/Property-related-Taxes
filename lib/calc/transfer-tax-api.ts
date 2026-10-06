@@ -457,6 +457,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 그 밖의 자산은 보내지 않는다(3중 패턴).
+    presaleRightNoOtherRight:
+      primary.assetKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
+    presaleRightAgeOrSpouseMet:
+      primary.assetKind === "presale_right" ? form.presaleRightAgeOrSpouseMet : undefined,
     // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
     // 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback.
     regionCode: primary.regionCode || form.regionCode || undefined,
@@ -533,6 +538,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    // ⑬ §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) — PR-D ⑧ 확인 echo(roster-required-other-assets §4-6).
+    //    목록이 비어 있을 때만 엔진이 보므로 비조건 전송해도 안전하다(⑫가 게이트, strip 방지).
+    householdNoPresaleRightsConfirmed: form.householdNoPresaleRightsConfirmed,
     // §155④⑤ 합가 — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G4)
     ...buildMergeFacts(form),
     ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),

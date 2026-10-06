@@ -74,6 +74,11 @@ function makeInput(overrides: Record<string, unknown> = {}): TransferTaxInput {
     isOneHousehold: true,
     householdHousingCount: 0,
     householdRightCount: 1,
+    // 분양권 「없음」 확정 — 이 파일은 부담부증여 분모 축이 관심사다(2026-10-06, §4-6 남은 별건 3).
+    // 이 anchor는 TRANSFER TAX 계산기 자체의 `transferType: "burdened_gift"` 모드다 —
+    // 증여세 계산기의 별도 `gift-burdened-transfer-api.ts`(right_to_move_in 미지원)와는 다른
+    // 경로이고, Step4의 「분양권·입주권」 목록·확인 토글이 그대로 적용된다(④가 echo한다).
+    householdNoPresaleRightsConfirmed: true,
     reductions: [],
     redevelopment: {
       subject: "right",

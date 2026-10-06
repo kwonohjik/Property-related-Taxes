@@ -299,6 +299,19 @@ export interface TransferTaxInput {
   splitLandCompensationBasisTotal?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
+  /**
+   * §104①4호 단서(영 §167의6 1호) — 양도 당시 양도자가 속한 1세대가 **다른** 분양권
+   * (주택의 입주자로 선정된 지위)을 보유하지 않는지. `propertyType === "presale_right"` +
+   * 2018.1.1~2021.5.31 양도 + 조정대상지역 조합에서만 의미가 있다. 미제공 시 단서 불성립
+   * (모름 = 혜택 불성립) — §104①4호 50% 단일세율이 그대로 적용된다.
+   */
+  presaleRightNoOtherRight?: boolean;
+  /**
+   * §104①4호 단서(영 §167의6 2호) — 양도자가 30세 이상이거나 배우자가 있는지(미성년자는
+   * 제외하며, 배우자가 사망·이혼한 경우를 포함한다). 위 `presaleRightNoOtherRight`와 짝.
+   * 미제공 시 단서 불성립.
+   */
+  presaleRightAgeOrSpouseMet?: boolean;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
   householdRightCount?: number;
   /**
@@ -591,6 +604,24 @@ export interface TransferTaxInput {
    * houses 제공 시 함께 전달 권장.
    */
   presaleRights?: PresaleRight[];
+  /**
+   * 세대가 보유한 분양권·입주권이 **없다고 명시적으로 확인**했는가 — §89①4호 가·나목 분양권
+   * 게이트(`oneRightPresaleGate`) 전용(2026-10-06, 계획서 `roster-required-other-assets.plan.md`
+   * §4-6 남은 별건 3).
+   *
+   * `presaleRights`가 비어 있거나(`undefined`) 미제공일 때만 쓴다 — 목록에 항목이 있으면
+   * 이 필드와 무관하게 그 목록으로 판정한다.
+   *
+   * ⚠️ **미확인(`undefined`·`false`)을 「없음」으로 보지 않는다** — 계산기 ⑧이 「보유한 분양권·
+   *    조합원입주권이 없습니다」(`householdNoPresaleRightsConfirmed`) 확인을 강제하고서야 이
+   *    필드를 `true`로 echo한다. API 직접 호출이 목록 없이 이 필드도 생략하면 가·나목의 분양권
+   *    요건을 「판정할 수 없음」(`"undetermined"`)으로 본다 — 「모름 → 유리」로 비과세를 주지
+   *    않는다(memory `feedback_unknown_fact_applies_unfavorably`).
+   * ⚠️ **판정 메뉴(`/api/calc/one-house-exemption`)는 예외다** — 그 화면은 이 확인 토글이
+   *    없고, 목록이 비면 그 자체가 조사의 결론(「없음」)이다(2026-10-06 사용자 결정,
+   *    `project_judgment_menu_empty_list_is_none`). 그 route가 이 필드를 항상 `true`로 덮어쓴다.
+   */
+  householdNoPresaleRightsConfirmed?: boolean;
   // `multiHouseTemporaryTwoHouse`(중과 전용 `{previousHouseId, newHouseId}`)는 2026-07-31 폐기.
   //   프로덕션에서 아무도 채우지 않아 일시적 2주택 중과배제 분기 전체가 잠들어 있었고(계획서 F-1),
   //   중과 엔진이 §155① 기한을 재구현해 비과세 정본과 어긋났다(F-2).

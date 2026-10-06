@@ -105,6 +105,9 @@ export const propertyBaseShape = {
   splitLandCompensationTotal: z.number().int().nonnegative().optional(),
   splitLandCompensationBasisTotal: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
+  // ⑫ §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 미제공 시 엔진이 단서 불성립으로 처리.
+  presaleRightNoOtherRight: z.boolean().optional(),
+  presaleRightAgeOrSpouseMet: z.boolean().optional(),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
   householdRightCount: z.number().int().nonnegative().optional(),
@@ -151,6 +154,11 @@ export const propertyBaseShape = {
   nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   houses: z.array(houseSchema).optional(),
   presaleRights: z.array(presaleRightSchema).optional(),
+  /**
+   * ⑫ §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) — 「세대 보유 분양권·입주권이
+   * 없습니다」확인(PR-D ⑧). `presaleRights`가 비었을 때만 쓴다 — 엔진이 게이트, strip 방지.
+   */
+  householdNoPresaleRightsConfirmed: z.boolean().optional(),
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   isFirstTransferredInMerge: z.boolean().optional(),

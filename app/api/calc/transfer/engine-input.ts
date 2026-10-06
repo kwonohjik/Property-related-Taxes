@@ -64,6 +64,9 @@ export function buildTransferEngineInput(
     housingCompensationTotal: data.housingCompensationTotal, housingCompensationBasisTotal: data.housingCompensationBasisTotal, // 1호 주택총액
     splitLandCompensationTotal: data.splitLandCompensationTotal, splitLandCompensationBasisTotal: data.splitLandCompensationBasisTotal, // 1호 건물 split 토지분(P6)
     householdHousingCount: data.householdHousingCount,
+    // ⑭ §104①4호 단서(영 §167의6 1·2호) — presale_right 전용(TS 미감지 침묵 strip 주의)
+    presaleRightNoOtherRight: data.presaleRightNoOtherRight,
+    presaleRightAgeOrSpouseMet: data.presaleRightAgeOrSpouseMet,
     // ⑭ 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 보유 수 (TypeScript 미감지 영역)
     // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)
     householdRightCount: data.householdRightCount,
@@ -242,6 +245,8 @@ export function buildTransferEngineInput(
     // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
     houses: mapHousesToEngine(data.houses),
     presaleRights: mapPresaleRightsToEngine(data.presaleRights),
+    // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo (roster-required-other-assets §4-6)
+    householdNoPresaleRightsConfirmed: data.householdNoPresaleRightsConfirmed,
     sellingHouseId: data.sellingHouseId,
     gracePeriod: mapGracePeriodToEngine(data.gracePeriod),
     marriageMerge: data.marriageMerge

@@ -408,7 +408,13 @@ describe("§155④⑤·⑦3호·⑧ · §154① 단서 · §156의2⑤ · §89�
     const c = (t: string) =>
       resolveOneRightExemptionClause(
         { exemptionEligibleAtApproval: true, otherHouseAcquisitionDate: D("2021-06-01") },
-        input({ householdHousingCount: 1, householdRightCount: 1, transferDate: D(t) }),
+        // 분양권 「없음」 확정 — 이 테스트는 민법§161 보정 축이 관심사다(§4-6 남은 별건 3).
+        input({
+          householdHousingCount: 1,
+          householdRightCount: 1,
+          transferDate: D(t),
+          householdNoPresaleRightsConfirmed: true,
+        }),
       );
     expect([c(MON), c(TUE)]).toEqual(["na", undefined]);
   });

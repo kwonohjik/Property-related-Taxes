@@ -224,6 +224,9 @@ export async function POST(request: NextRequest) {
       isUrbanArea: p.isUrbanArea,
       appurtenantLandZone: p.appurtenantLandZone,
       householdHousingCount: p.householdHousingCount,
+      // ⑭ §104①4호 단서(영 §167의6 1·2호) — 단건 정본과 같은 leaf(engine-input.ts).
+      presaleRightNoOtherRight: p.presaleRightNoOtherRight,
+      presaleRightAgeOrSpouseMet: p.presaleRightAgeOrSpouseMet,
       residencePeriodMonths: p.residencePeriodMonths,
       isRegulatedArea: p.isRegulatedArea,
       wasRegulatedAtAcquisition: p.wasRegulatedAtAcquisition,
@@ -387,6 +390,8 @@ export async function POST(request: NextRequest) {
       // ⑭ 세대 보유 분양권·입주권 — 단건 route와 동일 공용 헬퍼(취득일 string→Date).
       //    ⑬과 함께 배선해야 도달한다(P1-02 — 종전에는 두 층 모두 비어 있었다).
       presaleRights: mapPresaleRightsToEngine(p.presaleRights),
+      // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo, 단건 정본과 같은 leaf(engine-input.ts).
+      householdNoPresaleRightsConfirmed: p.householdNoPresaleRightsConfirmed,
       sellingHouseId: p.sellingHouseId,
       // ⑭ 다주택 중과 한시 유예/경과조치 — 단건 route와 동일 공용 헬퍼(Date 변환). 자산별 gracePeriod.
       gracePeriod: mapGracePeriodToEngine(p.gracePeriod),

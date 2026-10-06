@@ -19,6 +19,7 @@ import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
@@ -163,7 +164,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   const effectiveProviso = effectiveProvisoReason(
     provisoGate({
       isOneHousehold: form.isOneHousehold,
-      isHousing: primaryKind === "housing",
+      // OH-20 — 재개발 완공APT도 §154① 단서 대상. 단건 ④(`transfer-tax-api.ts`)와 같은 술어.
+      isHousing: isOneHouseExemptionAsset(primaryKind),
       householdHousingCount: resolveHouseholdHousingCount({
         primaryKind: primaryKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
@@ -295,6 +297,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 단건(`transfer-tax-api.ts`)과 같은 게이트.
+    presaleRightNoOtherRight:
+      primaryKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
+    presaleRightAgeOrSpouseMet:
+      primaryKind === "presale_right" ? form.presaleRightAgeOrSpouseMet : undefined,
     isUnregistered: form.isUnregistered,
     // assetKind 게이트는 단건(`transfer-tax-api.ts:501`)과 **같은 조건**이어야 한다 —
     // 다건에만 없어 토지가 아닌 자산의 잔존 플래그가 그대로 중과로 흘렀다 (E6-05).
@@ -360,6 +367,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).
+    householdNoPresaleRightsConfirmed: form.householdNoPresaleRightsConfirmed,
     // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 단건(`transfer-tax-api.ts:463`)과 같은 형태.
     //    미정의 시 침묵 stripping 방지를 위해 **명시 선언**한다.
     nonHousingToHousingConversion:

@@ -258,6 +258,12 @@ interface CompanionBuildContext {
      * 못 채워도 ④가 남으므로, 이 선언이 컴패니언에 닿지 않으면 컴패니언만 판정 불가로 샌다.
      */
     rightThreeYearException?: TransferTaxItemInput["rightThreeYearException"];
+    /**
+     * §104①4호 단서(영 §167의6 1·2호) — 세대 단위 사실. 컴패니언이 분양권(`presale_right`)이면
+     * 이 값으로 단서를 판정한다. 미제공 시 단서 불성립(모름 = 혜택 불성립).
+     */
+    presaleRightNoOtherRight?: boolean;
+    presaleRightAgeOrSpouseMet?: boolean;
     /** 주택 부수토지 컴패니언이 상속받는 거주기간 (F12) — 세대 단위 3값과 같은 취급. */
     residencePeriodMonths: number;
     propertyType: TransferTaxItemInput["propertyType"];
@@ -485,6 +491,9 @@ export function buildCompanionEngineInputs(
     // ⑭ 세대 단위 — 위 타입 주석 참조(R-5). 이 줄이 없으면 컴패니언 주택이 §89②·§104⑦을 면한다.
     presaleRights: ctx.primaryEngineInput.presaleRights,
     rightThreeYearException: ctx.primaryEngineInput.rightThreeYearException,
+    // ⑭ §104①4호 단서(영 §167의6) — 컴패니언 분양권 전용(세대 단위 사실, 위 타입 주석 참조).
+    presaleRightNoOtherRight: ctx.primaryEngineInput.presaleRightNoOtherRight,
+    presaleRightAgeOrSpouseMet: ctx.primaryEngineInput.presaleRightAgeOrSpouseMet,
     /**
      * ⑬ `buildAssetPayload`가 컴패니언 payload에 `residencePeriodMonths`를 **한 번도 싣지 않아**
      * 컴패니언은 항상 거주 0개월이었다(F12) — 「소득세법 시행령」 §159의4 표2 대상 판정

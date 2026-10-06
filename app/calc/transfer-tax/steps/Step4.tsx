@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
@@ -10,7 +9,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { HouseCountExemptionInputs } from "./step4-sections/HouseCountExemptionInputs";
 import { CalcCountExclusionLegacyNotice } from "./step4-sections/CalcCountExclusionLegacyNotice";
 import { SurchargeJudgmentSection } from "./step4-sections/SurchargeJudgmentSection";
@@ -25,11 +23,13 @@ import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSe
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHandoffNoticeCard";
+import { presaleRightNoHouseExceptionVisible } from "@/lib/calc/presale-right-no-house-exception-scope";
+import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingCountSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
-import { isHousingLike, isOneHouseExemptionAsset, usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
+import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
@@ -309,6 +309,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primaryKind]);
 
+  /**
+   * §104①4호 단서(영 §167의6) 확인 2종 — 노출 범위(`presaleRightNoHouseExceptionVisible`)를
+   * 벗어나면 리셋한다. 값 자체는 ④가 `primaryKind === "presale_right"`에서만 보내므로(3중 패턴)
+   * 다른 자산으로 바꾼 뒤에는 어차피 세액에 영향이 없지만, 같은 presale_right 안에서 양도일·
+   * 조정대상지역·세대 주택 수를 바꿔 범위를 벗어났다가 **되돌아오면** stale `true`가 재확인 없이
+   * 단서를 되살릴 수 있다 — 범위를 벗어날 때마다 지워 재확인을 요구한다.
+   */
+  useEffect(() => {
+    if (presaleRightNoHouseExceptionVisible(form, primaryKind)) return;
+    const patch: Partial<TransferFormData> = {};
+    if (form.presaleRightNoOtherRight) patch.presaleRightNoOtherRight = false;
+    if (form.presaleRightAgeOrSpouseMet) patch.presaleRightAgeOrSpouseMet = false;
+    if (Object.keys(patch).length > 0) onChange(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryKind, form.transferDate, form.isRegulatedArea, form.householdHousingCount]);
+
   return (
     <div className="space-y-5">
       {/*
@@ -345,102 +361,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             disabledReason="토지를 출자한 조합원입주권은 1세대1주택 특례(비과세·장기보유특별공제 표2) 대상이 아닙니다. 관리처분계획 인가일 현재 기존주택을 소유한 세대만 해당합니다 (소득세법 §89①4호 본문·§95② 단서)."
           />
 
-          {/*
-            주택 수 — Q-6·Q-7(명부 필수화 PR-1) + PR-B(2026-10-05, redevelopment_apt) +
-            PR-C(2026-10-05, right_to_move_in): `usesHouseCountRoster`(housing·
-            redevelopment_apt·right_to_move_in)는 명부에서 도출한 읽기 전용 표시로 바꾼다.
-            분양권(나머지 housing-like 1종)만 ①의 의미 축 자체가 없어 「1/2/3+」 버튼을
-            그대로 둔다(계획서 §4-4, Q-11 — 범위 밖).
-
-            입주권은 **오프셋이 다르다**(`houseCountSelfOffset`) — 양도하는 입주권 자신은
-            §89①4호 가목이 말하는 「주택」이 아니라서 명부 0행이 그대로 0채다(+1 없음).
-            housing·redevelopment_apt는 자신이 주택이라 명부 0행 확정 시 1채다.
-          */}
-          {usesHouseCountRoster(primaryKind) ? (
-            <div className="space-y-1.5" data-field="householdNoOtherHousesConfirmed">
-              <label className="block text-sm font-medium">세대 보유 주택 수</label>
-              <p className="text-sm" data-testid="household-house-count-derived">
-                {derivedHouseholdHousingCount}채
-                <span className="ml-1.5 text-xs text-muted-foreground">
-                  (아래 「세대 보유 주택 목록」에서 자동 산정됩니다)
-                </span>
-              </p>
-              {/*
-                명부 0행 — 「없음」을 확정해야 ⑧이 통과한다(행이 생기면 onChange에서 해제, #1919 패턴).
-                확정 시 스칼라를 **오프셋 값**으로 맞춘다 — housing·redevelopment_apt는 "1"
-                (자신이 주택), right_to_move_in은 "0"(자신은 주택이 아님, §89①4호 가목).
-                D-4(0행이면 스칼라 그대로)가 남아 있어, 행을 추가했다가 전부 지운 뒤 확정하면
-                스칼라가 그 전 선언값(예: "3")에 멈춰 있을 수 있다.
-              */}
-              {(form.houses?.length ?? 0) === 0 && (
-                <ToggleCard
-                  checked={form.householdNoOtherHousesConfirmed === true}
-                  onCheckedChange={(v) =>
-                    onChange({
-                      householdNoOtherHousesConfirmed: v,
-                      ...(v ? { householdHousingCount: String(houseCountSelfOffset(primaryKind)) } : {}),
-                    })
-                  }
-                  title="다른 보유 주택이 없습니다"
-                  description={
-                    primaryKind === "right_to_move_in"
-                      ? "양도하는 이 입주권 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
-                      : "양도하는 이 주택 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
-                  }
-                  tone="sky"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1.5" data-field="householdHousingCount">
-              <label className="block text-sm font-medium">
-                세대 보유 주택 수 <span className="text-destructive">*</span>
-              </label>
-              {/* 문구("목록의 3채로 합니다" 등)에도 「N채」가 나와 텍스트 셀렉터가 충돌한다 —
-                  anchor 가 버튼군을 유일하게 집도록 testid 를 둔다. */}
-              <div className="flex gap-2" data-testid="household-house-count-buttons">
-                {["1", "2", "3+"].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    disabled={houseCountLocked}
-                    onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v })}
-                    className={cn(
-                      "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
-                      (v === "3+" ? parseInt(form.householdHousingCount) >= 3 : form.householdHousingCount === v)
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:bg-muted",
-                      houseCountLocked && "cursor-not-allowed opacity-60 hover:bg-transparent",
-                    )}
-                  >
-                    {v === "3+" ? "3채 이상" : `${v}채`}
-                  </button>
-                ))}
-              </div>
-              {houseCountLocked && (
-                <p className="pt-0.5 text-xs text-muted-foreground">
-                  아래 「세대 보유 주택 목록」에 입력한 주택으로 자동 산정됩니다. 바꾸려면 목록을 수정하세요.
-                </p>
-              )}
-              {/* 3채 이상: 정확한 세대 보유 주택 수 — 비과세·장특(§89①3호가목 1주택 요건) 판정에 실제 주택 수 사용.
-                  토글 캡("3")이 4채+를 3으로 저장하면 감면·특례 배제 겹칠 때 1주택 특례를 오부여하므로 정확값을 입력받는다. */}
-              {parseInt(form.householdHousingCount) >= 3 && (
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="shrink-0 text-xs text-muted-foreground">정확한 세대 보유 주택 수</span>
-                  <div className="w-20">
-                    <IntegerInput
-                      id="household-house-count-exact"
-                      value={parseInt(form.householdHousingCount) || 3}
-                      onChange={(n) => onChange({ householdHousingCount: String(Math.max(3, n)) })}
-                      ariaLabel="정확한 세대 보유 주택 수"
-                      disabled={houseCountLocked}
-                    />
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">채</span>
-                </div>
-              )}
-            </div>
-          )}
+          <HouseholdHousingCountSection
+            form={form}
+            onChange={onChange}
+            primaryKind={primaryKind}
+            derivedHouseholdHousingCount={derivedHouseholdHousingCount}
+            houseCountLocked={houseCountLocked}
+          />
 
           {/*
             세대 보유 조합원입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 본문 판정).

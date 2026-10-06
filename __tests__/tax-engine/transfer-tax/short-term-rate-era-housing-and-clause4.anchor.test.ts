@@ -126,8 +126,63 @@ describe("S1-01 후속 B — §104①4호 조정대상지역 주택분양권 50%
     expect(calc(presale("2020-06-01")).appliedRate).toBe(0.5);
   });
 
-  it("B-2: 단서 — 1세대가 보유한 주택이 없으면 4호 적용 제외 ⇒ 1호 누진", () => {
+  /**
+   * 별건 5(2026-10-06) — 단서는 무주택 **하나만으로** 서지 않는다. 시행령 §167의6은
+   * ① 무주택 ② 1호(다른 분양권 미보유) ③ 2호(30세 이상 또는 배우자)를 **모두** 요구한다
+   * (KoreanLaw DRF efYd=20180213 실독). 종전 B-2는 무주택 하나만으로 4호를 배제했다 — 과소과세.
+   */
+  it("B-2a: 무주택만으로는 4호를 배제하지 못한다(영 §167의6 1·2호 미확인) — 여전히 50%", () => {
     const r = calc(presale("2020-06-01", { householdHousingCount: 0 }));
+    expect(r.appliedRate).toBe(0.5);
+  });
+
+  it("B-2b: 무주택 + 영 §167의6 1·2호가 모두 확인되면 4호가 배제되어 1호 누진이다", () => {
+    const r = calc(
+      presale("2020-06-01", {
+        householdHousingCount: 0,
+        presaleRightNoOtherRight: true,
+        presaleRightAgeOrSpouseMet: true,
+      }),
+    );
+    expect(r.appliedRate).not.toBe(0.5);
+    expect(r.progressiveDeduction).toBeGreaterThan(0);
+  });
+
+  it("B-2c: 영 §167의6 요건 중 하나만 확인되면 4호가 그대로 적용된다(모름 = 혜택 불성립)", () => {
+    const r = calc(
+      presale("2020-06-01", {
+        householdHousingCount: 0,
+        presaleRightNoOtherRight: true,
+        // presaleRightAgeOrSpouseMet 미확인
+      }),
+    );
+    expect(r.appliedRate).toBe(0.5);
+  });
+
+  /**
+   * 영 §167의6 자체의 존재 구간은 법 §104①4호(2018.1.1~2021.5.31)보다 43일 좁다 —
+   * 2018.1.1~2018.2.12는 이 조가 "삭제" 상태였다(KoreanLaw DRF efYd 실독, 2026-10-06).
+   * 그 구간에는 세 요건을 전부 확인해도 받을 내용이 없어 단서가 성립할 수 없다.
+   */
+  it("B-2d: 영 §167의6 시행 전(2018.1.1~2018.2.12)은 요건을 다 확인해도 단서가 성립하지 않는다", () => {
+    const r = calc(
+      presale("2018-02-01", {
+        householdHousingCount: 0,
+        presaleRightNoOtherRight: true,
+        presaleRightAgeOrSpouseMet: true,
+      }),
+    );
+    expect(r.appliedRate).toBe(0.5);
+  });
+
+  it("B-2e: 영 §167의6 시행일(2018.2.13) 당일부터는 세 요건 확인 시 단서가 성립한다", () => {
+    const r = calc(
+      presale("2018-02-13", {
+        householdHousingCount: 0,
+        presaleRightNoOtherRight: true,
+        presaleRightAgeOrSpouseMet: true,
+      }),
+    );
     expect(r.appliedRate).not.toBe(0.5);
     expect(r.progressiveDeduction).toBeGreaterThan(0);
   });
@@ -146,5 +201,51 @@ describe("S1-01 후속 B — §104①4호 조정대상지역 주택분양권 50%
 
   it("B-5: 4호 삭제 後(2021-06-01 양도)에는 조정대상지역이어도 **1호 괄호 60%** 다", () => {
     expect(calc(presale("2021-06-01")).appliedRate).toBe(0.6);
+  });
+
+  /**
+   * §104① 후단(각 호 외 부분) — 「하나의 자산이 다음 각 호에 따른 세율 중 둘 이상에 해당할
+   * 때에는 …산출세액 중 큰 것」. 4호(50%, 보유기간 무관)는 1~2호(보유기간별)와 **동시에
+   * 해당**할 수 있다. 종전 `resolveShortTermRate`는 1년 미만·1~2년 구간에서 이 비교 없이
+   * 바로 반환해, 보유 1~2년 분양권이 2호(40%)로 **과소과세**됐다(2026-10-06 수정).
+   */
+  function presaleHeld(transferDate: string, monthsHeld: number, over: Partial<TransferTaxInput> = {}): TransferTaxInput {
+    return baseTransferInput({
+      propertyType: "presale_right",
+      transferPrice: 800_000_000,
+      acquisitionPrice: 500_000_000,
+      acquisitionDate: acqDateFor(transferDate, monthsHeld),
+      transferDate: new Date(transferDate),
+      expenses: 0,
+      useEstimatedAcquisition: false,
+      isOneHousehold: false,
+      householdHousingCount: 2,
+      isRegulatedArea: true,
+      wasRegulatedAtAcquisition: true,
+      residencePeriodMonths: 0,
+      ...over,
+    });
+  }
+
+  it("C-1: 보유 1~2년 분양권은 2호(40%)가 아니라 **4호(50%)**가 더 크다 — 종전 결함", () => {
+    const r = calc(presaleHeld("2020-06-01", 18));
+    expect(r.appliedRate).toBe(0.5);
+  });
+
+  it("C-2: 보유 1년 미만 분양권은 3호(50%)와 4호(50%)가 동률 — 기존 3호 라벨을 유지한다", () => {
+    const r = calc(presaleHeld("2020-06-01", 6));
+    expect(r.appliedRate).toBe(0.5);
+    expect(r.rateClause).toBe("104-1-3");
+  });
+
+  it("C-3: 단서(영 §167의6)가 성립하면 4호가 빠지고 보유기간별 특례세율(2호 40%)만 남는다", () => {
+    const r = calc(
+      presaleHeld("2020-06-01", 18, {
+        householdHousingCount: 0,
+        presaleRightNoOtherRight: true,
+        presaleRightAgeOrSpouseMet: true,
+      }),
+    );
+    expect(r.appliedRate).toBe(0.4);
   });
 });

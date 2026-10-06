@@ -30,6 +30,8 @@ function rightResult(transferDate: string, transferPrice: number) {
       isOneHousehold: true,
       householdHousingCount: 0,
       householdRightCount: 1,
+      // 분양권 「없음」 확정 — 이 파일은 고가 기준금액 표시 축이 관심사다(2026-10-06, §4-6 남은 별건 3).
+      householdNoPresaleRightsConfirmed: true,
       residencePeriodMonths: 24,
       redevelopment: {
         subject: "right",
