@@ -387,8 +387,18 @@ function collectRuralUnmet(
           `2호 이농주택은 이농인이 취득일 후 ${RURAL_HOUSE_RESIDENCE_YEARS}년 이상 거주해야 하는데 입력값이 ${r.ownerResidenceYears ?? 0}년입니다.`,
         );
       }
+      if (r.returnedToFarmExitHouse === true) {
+        reasons.push(
+          "이농한 뒤 이 주택으로 다시 귀농했습니다 — 이 경우 2호 이농주택 특례를 적용하지 않는다는 회신이 있습니다(부동산납세과-67 · 부적용 사유는 회신에 밝혀져 있지 않음).",
+        );
+      }
       break;
     case "return_to_farm":
+      if (r.returnedToFarmExitHouse === true) {
+        reasons.push(
+          "당초 5년 이상 거주하다 이농했던 주택으로 다시 귀농했습니다 — 영농 목적으로 취득한 3호 귀농주택으로 보지 않습니다(재산세과-1504 · 부동산납세과-67).",
+        );
+      }
       if (r.isHighPriceAtAcquisition === true) {
         reasons.push("3호 귀농주택이 취득 당시 고가주택이었습니다 — 귀농주택으로 인정되지 않습니다(§155⑩2호).");
       }

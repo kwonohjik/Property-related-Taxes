@@ -115,10 +115,12 @@ export function qualifiesRuralHouseApartFromDeadline(
       // 1호: 피상속인이 취득 후 5년 이상 거주 + §155② 단서(동일세대 상속 배제 — 동거봉양 합가 전 보유분 예외, D7)
       return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS && passesHouseholdGate(r);
     case "farm_exit":
-      // 2호: 이농인이 취득일 후 5년 이상 거주
-      return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
+      // 2호: 이농인이 취득일 후 5년 이상 거주. 이농했다가 그 주택으로 다시 귀농했으면 적용하지 않는다(부동산납세과-67).
+      return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS && r.returnedToFarmExitHouse !== true;
     case "return_to_farm":
       // 3호 + ⑩ 요건 (⑦ 단서 5년 기한은 호출부 몫)
+      // 당초 5년 이상 거주한 이농주택으로 귀농하면 영농 목적으로 취득한 귀농주택이 아니다(재산세과-1504 · 부동산납세과-67).
+      if (r.returnedToFarmExitHouse === true) return false;
       if (r.isHighPriceAtAcquisition === true) return false; // ⑩2호
       if ((r.landAreaSqm ?? Infinity) > RURAL_RETURN_TO_FARM_MAX_LAND_SQM) return false; // ⑩3호
       if (r.wholeHouseholdMoved !== true) return false; // ⑩5호
