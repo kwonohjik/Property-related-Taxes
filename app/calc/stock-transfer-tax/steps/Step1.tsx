@@ -122,10 +122,15 @@ export function Step1({ form, onChange }: Step1Props) {
             perShareTransferPrice: form.perShareTransferPrice,
           }
         : null;
+      // 폼-전역 일자는 비운다 — 분할 모드에는 그 칸이 없어(lot 일자가 정본) 남기면 화면 밖 stale 값이
+      // 대주주 판정·검증·엔진에 흘러간다. 처음부터 분할로 입력한 폼과 같은 상태가 된다.
+      // (분할→단일 은 `applySingleMode` 가 첫 lot 에서 다시 채운다)
       onChange({
         lotsMode: "split",
         acquisitionLots: newAcqLot ? [newAcqLot] : [],
         transferLots: newTrnLot ? [newTrnLot] : [],
+        acquisitionDate: "",
+        transferDate: "",
       });
     } else {
       /**
