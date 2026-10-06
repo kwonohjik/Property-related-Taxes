@@ -337,6 +337,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
+      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
       excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     }),
   }).mode;

@@ -35,6 +35,7 @@ const base = {
   primaryKind: "housing",
   primaryAcquisitionDate: "2017-08-31",
   transferDate: undefined,
+  mergeContext: undefined,
   legacyPrecedence: false,
   declaredSpecial: false,
   declaredNewHouseDate: "",
