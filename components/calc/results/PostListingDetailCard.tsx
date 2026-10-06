@@ -192,7 +192,8 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
         <p className="font-medium text-violet-900">
           §163⑨ 환산취득가 = 양도가 × <Frac top="1주당 취득기준" bottom="1주당 양도기준" />
           <br />
-          = <strong>{result.transferPrice.toLocaleString()}</strong> ×{" "}
+          {/* 당회차분 — 기신고 합산(영 §158②) 시 `transferPrice`·`acquisitionPrice` 는 합계라 이 산식의 항이 아니다 · 구 이력은 own 이 없다 */}
+          = <strong>{(result.ownTransferPrice ?? result.transferPrice).toLocaleString()}</strong> ×{" "}
           <Frac
             top={
               <strong>
@@ -201,7 +202,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             }
             bottom={<strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>}
           />{" "}
-          = <strong>{result.acquisitionPrice.toLocaleString()}</strong>
+          = <strong>{(result.ownAcquisitionPrice ?? result.acquisitionPrice).toLocaleString()}</strong>
         </p>
         {result.valuationDetail?.transferDailyModeUsed && (
           <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">

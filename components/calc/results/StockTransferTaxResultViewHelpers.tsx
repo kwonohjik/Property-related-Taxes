@@ -106,7 +106,8 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
             <p>
               환산취득가 = 양도가액 ×{" "}
               <Frac top="취득시 보충평가액" bottom="양도시 1개월 종가평균" /> ={" "}
-              <strong>{fmt(result.acquisitionPrice)}</strong>
+              {/* 당회차분 — 기신고 합산(영 §158②) 시 `acquisitionPrice` 는 합계라 환산 결과가 아니다 · 구 이력은 own 이 없다 */}
+              <strong>{fmt(result.ownAcquisitionPrice ?? result.acquisitionPrice)}</strong>
             </p>
           </>
         )}
