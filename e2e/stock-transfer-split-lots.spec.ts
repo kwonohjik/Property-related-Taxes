@@ -151,7 +151,7 @@ test.describe("분할 매수·분할 양도", () => {
     await expect(page.getByTestId("split-preview-acquisition-total")).toHaveCount(0);
 
     // 과세분으로 바꾸면(액면가 500) 진행 — 선입선출은 매수 #1·#2만 쓰므로 취득가액 104,000,000
-    await selectCause(page, 3, "무상증자 (의제배당 과세분)");
+    await selectCause(page, 3, "주식배당·무상증자 (과세분)");
     await expect(page.getByTestId("lot-bonus-untaxed-notice")).toHaveCount(0);
     await page.getByRole("button", { name: /^다음/ }).click();
     await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("104,000,000");
