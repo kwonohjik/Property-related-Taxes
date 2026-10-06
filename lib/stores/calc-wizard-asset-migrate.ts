@@ -21,6 +21,8 @@ import { RENTAL_HOUSING_EXCEPTION_DEFAULTS, makeDefaultAsset } from "./calc-wiza
 import type { AssetForm } from "./calc-wizard-asset";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { gbUnifiedSec1639ClearPatch, giftEstimationClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbSeparateOnRestorePatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbUnifiedCarryoverClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { giftEstimatedModeBlocked } from "@/lib/calc/transfer-tax-validate-gift-163-9";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 
@@ -571,6 +573,16 @@ export function migrateAsset(raw: unknown): AssetForm {
    */
   if (a.assetKind === "general_building" && !a.hasSeperateLandAcquisitionDate) {
     Object.assign(a, gbUnifiedSec1639ClearPatch(a.acquisitionCause as string | undefined));
+    // 이월과세 분리 OFF의 감정·매매사례 플래그(R8의 짝) — 그 카드에도 끌 라디오가 없다.
+    Object.assign(a, gbUnifiedCarryoverClearPatch(a.acquisitionCause as string | undefined));
+  }
+  /**
+   * G-3(A2) — 일반건물 **분리 ON**인데 숨은 레거시 감정·매매사례 플래그가 켜져 있는 저장값. 분리 ON에서는 자산 단위 라디오가 숨어
+   * 그 플래그를 끌 수단이 없고 ④·⑧이 모드를 어긋나게 읽는다. 화면 전환(`gbSeparateOnPatch`)과 같은 규칙으로 승격·소거한다 —
+   * 단 이미 명시된 파트 모드는 보존한다(`gbSeparateOnRestorePatch`). 플래그가 없으면 no-op이라 E2E 시드를 지우지 않는다.
+   */
+  if (a.assetKind === "general_building") {
+    Object.assign(a, gbSeparateOnRestorePatch(a as unknown as AssetForm));
   }
 
   /**

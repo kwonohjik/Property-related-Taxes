@@ -13,6 +13,26 @@ import { addYears } from "date-fns";
 import { applyRate, calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import type { TransferTaxInput } from "./types/transfer.types";
 
+/**
+ * 취득가액 산정방식 × 양도일이 「소득세법」 §114조의2 가산세 **대상 조합**인가 — 엔진·UI 배지가 공유하는 단일 leaf.
+ *
+ * 환산취득가액은 양도일 ≥ 2018-01-01, 감정가액은 양도일 ≥ 2020-01-01. 매매사례가액(`salesCase`)과
+ * 실지거래가액(`actual`)은 조문 문언(「감정가액 또는 환산취득가액」)에 없어 대상이 아니다.
+ * `calculateBuildingPenalty`의 종전 인라인 게이트를 **그대로 추출**했다(거동 동일).
+ *
+ * 소비처가 날짜 게이트를 각자 재기술하면 환산·감정 게이트가 갈리는 순간 dual-truth가 된다(E-4).
+ */
+export function buildingPenaltyMethodApplies(
+  method: TransferTaxInput["acquisitionMethod"],
+  transferDate: Date,
+): boolean {
+  if (transferDate < new Date("2018-01-01")) return false;
+  return (
+    method === "estimated" ||
+    (method === "appraisal" && transferDate >= new Date("2020-01-01"))
+  );
+}
+
 export function calculateBuildingPenalty(
   input: TransferTaxInput,
   acquisitionPriceForPenalty: number,
@@ -22,12 +42,7 @@ export function calculateBuildingPenalty(
   const method = input.acquisitionMethod;
   const transferDate = input.transferDate;
 
-  if (transferDate < new Date("2018-01-01")) return null;
-
-  const isPenaltyMethod =
-    method === "estimated" ||
-    (method === "appraisal" && transferDate >= new Date("2020-01-01"));
-  if (!isPenaltyMethod) return null;
+  if (!buildingPenaltyMethodApplies(method, transferDate)) return null;
 
   if (input.buildingType === "extension") {
     if (transferDate < new Date("2020-01-01")) return null;

@@ -836,6 +836,16 @@ export interface TransferTaxInput {
   appraisalValue?: number;
   /** 매매사례가액 (acquisitionMethod === "salesCase" 시 — §176의2③1호 추계 취득가액) */
   similarSalesValue?: number;
+  /**
+   * §114조의2 **가산세 판정 축** 직접 주입 (2026-10-06 A1 Q-A5) — 일반건물 카드가 쓴다.
+   *
+   * 건물 파트가 감정가액이고 자산 단위 `acquisitionMethod`가 `"actual"`인 카드(`buildProperties`)에서,
+   * 게이트(산정방식)와 base(건물 감정가액)를 **파트-국소 신호**로 싣는다. `acquisitionMethod:"appraisal"`로
+   * 바꿔 싣지 않는 이유 — 단건 `calcTransferGain` 감정 분기가 개산공제를 `standardPriceAtAcquisition`(카드엔 없음)으로
+   * **재계산해 카드 `expenses`를 덮어써** 개산공제가 0이 된다(G-2를 엔진 안에서 재현).
+   * `resolvePenaltyAxis`(`transfer-tax-finalize.ts`)가 splitDetail 축보다 뒤에 읽는다.
+   */
+  penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
   /** 본인 신축·증축 여부 */
   isSelfBuilt?: boolean;
   /** 신축(new) / 증축(extension) */

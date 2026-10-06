@@ -124,6 +124,9 @@ export function applyShareScale(
   for (const k of [
     "landAcquisitionPrice",
     "buildingAcquisitionPrice",
+    // 파트별 매매사례가액(영 §176의2③1호) — 100% 기준 입력. 빠지면 지분 100%로 새어 **과소과세**(F-7).
+    "landSalesCaseValue",
+    "buildingSalesCaseValue",
     "landDirectExpenses",
     "buildingDirectExpenses",
     // 자산 단위 나목(§97②2호) — swap 비교 대상

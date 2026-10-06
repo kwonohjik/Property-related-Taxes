@@ -20,7 +20,7 @@
  *  - placeholder 숫자 예시 금지
  */
 
-import { useMemo } from "react";
+import { useState } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -32,8 +32,16 @@ import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 // BurdenedGiftBlock import 제거 — Phase 2 (2026-05-12): TransferModeBlock에서 사용
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
-import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartCauseModePatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOnPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffPartClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffHasDataToClear } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffFlagsPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffTargetMode } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { gbUnifiedSec1639ClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbUnifiedCarryoverClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -110,8 +118,9 @@ interface Props {
 
 import {
   toBuildingCause,
-  isWithin5Years,
+  gbPenaltyBadgeMethod,
   PartAcqModeField,
+  PART_MODE_LABELS,
   GbBuildingInheritedValueCard,
   GbBuildingCarryoverCard,
 } from "./GeneralBuildingAcquisitionCardsParts";
@@ -122,34 +131,14 @@ export function GeneralBuildingAcquisitionCards({
   transferDate,
   shareAcquisitionOnly = false,
 }: Props) {
-  // §114조의2 가산세 5년 이내 여부 (useMemo — useEffect 미러링 금지 정책)
-  const showPenaltyBadge = useMemo(() => {
-    if (
-      asset.gbBuildingAcquisitionCause !== "newConstruction" ||
-      !asset.acquisitionDate ||
-      !transferDate
-    ) return false;
-    /**
-     * 🔴 **엔진의 두 게이트를 함께 본다** (2026-09-07 대장 재대조).
-     *
-     * `calculateBuildingPenalty`(`transfer-tax-building-penalty.ts:25·28`)는
-     *   ① 양도일 ≥ 2018-01-01 (§114조의2 신설 시행일)
-     *   ② 취득가액 산정방식이 **환산**(`method === "estimated"`)
-     * 을 모두 요구한다. 종전 배지는 「신축 + 5년 이내」만 보고 「가산세 적용 대상」이라 말해,
-     * 실거래가 모드나 2018 이전 양도에서도 떴다.
-     */
-    if (new Date(transferDate) < new Date("2018-01-01")) return false;
-    if (effectivePartAcqMode(asset.buildingAcqMode, asset) !== "estimated") return false;
-    return isWithin5Years(asset.acquisitionDate, transferDate);
-  }, [
-    asset.gbBuildingAcquisitionCause,
-    asset.acquisitionDate,
-    asset.buildingAcqMode,
-    asset.isSalesCaseAcquisition,
-    asset.isAppraisalAcquisition,
-    asset.useEstimatedAcquisition,
-    transferDate,
-  ]);
+  /**
+   * §114조의2 가산세 안내 배지 — 신축 + 5년 이내 + **환산 또는 감정**(엔진 게이트 leaf 공유 — `gbPenaltyBadgeMethod`).
+   * 순수 파생이라 `useEffect → store` 미러링이 아니다.
+   */
+  const penaltyBadgeMethod = gbPenaltyBadgeMethod(asset, transferDate);
+  // 분리 OFF 취득원인 변경 확인 Dialog — 토글 상태(`isSeparate`)와 **분리된** 상태다(memory feedback_dialog_data_discard_confirm).
+  const [confirmSeparateOff, setConfirmSeparateOff] = useState(false);
+  const offTarget = gbSeparateOffTargetMode(asset);
 
   /**
    * M-1a 취득일 기록 — 분리 OFF면 **토지·건물이 같은 값**이어야 한다(불변식·계획서 §3.2(1)).
@@ -180,9 +169,8 @@ export function GeneralBuildingAcquisitionCards({
    * 그래서 조합이 섞이면 파트별 귀속이 있어야 조문대로 계산된다.
    * 두 파트가 모두 환산이면 종전처럼 ④ 필요경비의 자산 단위 칸이 자산총액 판정에 쓰인다.
    */
-  const showPartCapex =
-    effectivePartAcqMode(asset.landAcqMode, asset) !== "estimated" ||
-    effectivePartAcqMode(asset.buildingAcqMode, asset) !== "estimated";
+  const partModes = gbPartModes(asset);
+  const showPartCapex = partModes.land !== "estimated" || partModes.building !== "estimated";
 
   /**
    * 🔴 토지 카드 하위 블록(상속·증여·이월과세)의 `acquisitionDate` 쓰기를 **토지 축으로 라우팅**.
@@ -212,18 +200,30 @@ export function GeneralBuildingAcquisitionCards({
    * 살아 있었다 — **화면에 없는 값이 payload를 가르는** 상태다
    * (`transfer-tax-api-gb.ts:487`이 그대로 싣는다).
    */
-  const setSeparate = (next: boolean) =>
-    onChange(
-      next
-        ? { hasSeperateLandAcquisitionDate: true }
-        : {
-            hasSeperateLandAcquisitionDate: false,
-            landAcquisitionDate: asset.acquisitionDate,
-            gbBuildingAcquisitionCause: toBuildingCause(asset.acquisitionCause),
-            // 분리 OFF의 상속·증여 카드에는 산정 방식 라디오가 없다 — 파트 라디오로 고른 추계를 비운다(G3)
-            ...gbUnifiedSec1639ClearPatch(asset.acquisitionCause),
-          },
-    );
+  /** OFF 전환 patch — 날짜·취득원인 되맞춤 + 파트 값 소거(`gbSeparateOffPartClearPatch`)를 **한 배치**로. */
+  const applySeparateOff = () =>
+    onChange({
+      hasSeperateLandAcquisitionDate: false,
+      landAcquisitionDate: asset.acquisitionDate,
+      gbBuildingAcquisitionCause: toBuildingCause(asset.acquisitionCause),
+      // 분리 OFF의 상속·증여 카드에는 산정 방식 라디오가 없다 — 파트 라디오로 고른 추계를 비운다(G3)
+      ...gbUnifiedSec1639ClearPatch(asset.acquisitionCause),
+      ...gbUnifiedCarryoverClearPatch(asset.acquisitionCause),
+      // 파트 모드·금액·매매사례가액·자본적지출 — 분리 OFF 화면에는 고칠 칸이 없다(A2 · Q-H)
+      ...gbSeparateOffPartClearPatch(),
+      // 파트 모드가 모두 같은 비-actual이면 레거시 플래그로 되돌려 자산 단위 산정방식을 보존한다(`gbSeparateOnPatch`의 대칭 강등).
+      // 플래그를 복원하지 않으면 같은 금액이 조용히 실거래가로 계산된다. 위 두 정리 patch 뒤에 둔다(허용 원인에서만 켜므로 모순 없음).
+      ...gbSeparateOffFlagsPatch(asset),
+    });
+  /**
+   * 분리 토글. ON은 자산 단위 감정·매매사례를 **명시 파트 모드로 승격**하고 숨은 레거시 플래그를 끈다(`gbSeparateOnPatch` · G-3).
+   * OFF는 지울 입력이 있으면 확인 Dialog를 먼저 띄운다 — 토글은 ON으로 남고, 확정 시에만 전환한다.
+   */
+  const setSeparate = (next: boolean) => {
+    if (next) return onChange(gbSeparateOnPatch(asset));
+    if (gbSeparateOffHasDataToClear(asset)) return setConfirmSeparateOff(true);
+    applySeparateOff();
+  };
 
   /**
    * 분리 OFF의 단일 취득원인 — **토지·건물 두 축을 한 배치로** 기록한다 (U-2·U-3).
@@ -237,9 +237,10 @@ export function GeneralBuildingAcquisitionCards({
    */
   const setUnifiedCause = (v: string) => {
     if (v === BUILDING_NEW_SENTINEL) {
+      // 분리 ON 진입이므로 자산 단위 감정·매매사례를 명시 파트 모드로 승격한다(`gbSeparateOnPatch`).
       onChange({
         gbBuildingAcquisitionCause: "newConstruction",
-        hasSeperateLandAcquisitionDate: true,
+        ...gbSeparateOnPatch(asset),
       });
       return;
     }
@@ -249,6 +250,8 @@ export function GeneralBuildingAcquisitionCards({
       gbBuildingAcquisitionCause: toBuildingCause(cause),
       // 매매에서 고른 환산을 상속·증여 카드가 끌 수단이 없다 — 같은 배치에서 비운다(G3)
       ...gbUnifiedSec1639ClearPatch(cause),
+      // 이월과세 카드에도 산정 방식 라디오가 없다 — 감정·매매사례는 같은 배치에서 비운다(R8의 짝)
+      ...gbUnifiedCarryoverClearPatch(cause),
     });
   };
 
@@ -335,6 +338,8 @@ export function GeneralBuildingAcquisitionCards({
               onChange={(v) =>
                 onChange({
                   acquisitionCause: v as AssetForm["acquisitionCause"],
+                  // 상속·증여(·이월과세의 감정·매매사례)로 바뀌면 허용되지 않는 파트 모드를 명시 actual로 — 같은 patch(A2 · §3.6)
+                  ...gbPartCauseModePatch("land", v, partModes.land),
                 })
               }
               options={LAND_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -361,6 +366,11 @@ export function GeneralBuildingAcquisitionCards({
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
             isAppraisalAcquisition={asset.isAppraisalAcquisition}
             onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
+            // 매매사례가액 — 미배선이면 옵션이 안 뜨고 stale 플래그를 끌 수단도 없다(A2 §3.3). 단일 키 patch.
+            isSalesCaseAcquisition={asset.isSalesCaseAcquisition}
+            onIsSalesCaseAcquisitionChange={(v) => onChange({ isSalesCaseAcquisition: v })}
+            similarSalesValue={asset.similarSalesValue}
+            onSimilarSalesValueChange={(v) => onChange({ similarSalesValue: v })}
             // 증축 — 취득가액 칸이 「일괄 취득가액」인지 가르고(읽기), 그 칸 **직전**의
             // 유무 토글이 같은 필드를 쓴다(2026-08-12 UX 정정 — types.ts `gbHasExtension` 주석).
             // 상세 입력(증축일·면적·기준시가·방식)은 `GeneralBuildingBlock` 토글이 계속 전담한다.
@@ -579,7 +589,7 @@ export function GeneralBuildingAcquisitionCards({
               onChange(
                 cause === "newConstruction"
                   ? { gbBuildingAcquisitionCause: cause, hasSeperateLandAcquisitionDate: true }
-                  : { gbBuildingAcquisitionCause: cause },
+                  : { gbBuildingAcquisitionCause: cause, ...gbPartCauseModePatch("building", cause, partModes.building) },
               );
             }}
             options={BUILDING_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -666,11 +676,13 @@ export function GeneralBuildingAcquisitionCards({
           </>
         )}
 
-        {/* §114조의2 가산세 5년 이내 안내 배지 (useMemo 파생) */}
-        {showPenaltyBadge && (
+        {/* §114조의2 가산세 5년 이내 안내 배지 (순수 파생 — 환산·감정) */}
+        {penaltyBadgeMethod && (
           <div className="rounded bg-amber-100/80 border border-amber-300 px-3 py-2 space-y-1">
             <p className="text-xs text-amber-800 font-semibold">
-              환산취득가액 가산세 적용 대상 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)
+              {penaltyBadgeMethod === "appraisal"
+                ? "감정가액 가산세 적용 대상 — 건물 감정가액의 5% (소득세법 §114조의2 ①)"
+                : "환산취득가액 가산세 적용 대상 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)"}
             </p>
             <p className="text-caption text-amber-700">
               ※ 잠정 안내 — 정확한 가산세 발동 여부는 계산 결과에서 확인
@@ -688,6 +700,19 @@ export function GeneralBuildingAcquisitionCards({
       </ToneCard>
       )}
 
+      <ConfirmDialog
+        open={confirmSeparateOff}
+        onOpenChange={setConfirmSeparateOff}
+        title="토지·건물 취득일 다름을 끄시겠습니까?"
+        description={`토지·건물별로 입력한 산정방식·취득가액·매매사례가액·자본적지출이 모두 삭제됩니다. ${
+          offTarget === "actual"
+            ? "자산 전체 취득가액 산정 방식은 「실거래가」로 돌아갑니다."
+            : `자산 전체 취득가액 산정 방식은 「${PART_MODE_LABELS[offTarget]}」 그대로 유지됩니다.`
+        } 되돌릴 수 없습니다.`}
+        confirmLabel="삭제하고 끄기"
+        destructive
+        onConfirm={applySeparateOff}
+      />
     </div>
   );
 }

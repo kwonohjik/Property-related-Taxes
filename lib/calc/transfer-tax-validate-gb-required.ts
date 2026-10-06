@@ -7,6 +7,9 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { PartAcqMode } from "./transfer-tax-split-acq-mode";
+import { gbPartAllowedModes } from "./transfer-tax-gb-toggle-patches";
+// ⑫ refine(Q-A3)과 **같은 문구**를 쓴다 — UI 통과 ↔ 서버 400 문구 불일치 방지.
+import { GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE } from "@/lib/api/transfer-tax-schema-required-refines-gb";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 
@@ -66,7 +69,14 @@ export function validateGbBundledAcquisitionPrice(
   if (asset.acquisitionCause !== "purchase") return null;
   if (asset.gbHasExtension) return null;
   if (landMode === "estimated" || buildingMode === "estimated") return null;
-  if (parseAmount(asset.fixedAcquisitionPrice) > 0) return null;
+  /**
+   * 분리 OFF 자산 단위 **매매사례가액**은 `similarSalesValue`가 총액 칸이다(④ F-2 — 감정·실가는 `fixedAcquisitionPrice`).
+   * ④가 실제로 싣는 칸과 **같은 칸**을 요구해야 「⑧ 통과 ↔ ⑫ 400」이 없다.
+   */
+  const salesCase = landMode === "salesCase" && buildingMode === "salesCase";
+  if (parseAmount(salesCase ? asset.similarSalesValue : asset.fixedAcquisitionPrice) > 0) return null;
+  if (salesCase)
+    return fieldError("similarSalesValue", `${label}: 매매사례가액을 입력하세요. 토지·건물 일괄 매매사례가액입니다 (소득세법 시행령 §176의2③1호).`);
   return fieldError("fixedAcquisitionPrice", `${label}: ${asset.isAppraisalAcquisition ? "감정가액" : "취득가액"}을 입력하세요. 토지·건물 일괄 실지거래가액입니다 (소득세법 §97①1호).`);
 }
 
@@ -89,4 +99,68 @@ export function needsGbSec1639BuildingStdPrice(
   if (!isBeforeBuildingStdPriceNotice(asset.acquisitionDate)) return false;
   if (asset.gbBuildingAcquisitionCause === "inheritance") return true;
   return asset.gbBuildingAcquisitionCause === "gift" && !!asset.hasSeperateLandAcquisitionDate;
+}
+
+/**
+ * R2 — 분리 ON · **매매사례 파트**의 매매사례가액 필수 (A2 · 설계서 §4.1).
+ *
+ * 매매사례 파트의 값은 `*AcquisitionPrice`가 아니라 `*SalesCaseValue`다(④ F-1이 그 칸을 싣고 ⑫ I2가 같은 칸을 요구한다).
+ * 주택 split(`transfer-tax-validate-split.ts`)의 같은 규칙과 문구·필드가 같다. 상속·증여 파트는 V2가 먼저 막으므로 이 분기에 오지 않는다.
+ */
+export function validateGbPartSalesCaseValues(
+  asset: AssetForm,
+  label: string,
+  landMode: PartAcqMode,
+  buildingMode: PartAcqMode,
+): string | null {
+  if (landMode === "salesCase" && !parseAmount(asset.landSalesCaseValue ?? ""))
+    return fieldError("landSalesCaseValue", `${label}: 토지 매매사례가액을 입력하세요 — 매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다 (소득령 §176의2③1호).`);
+  if (buildingMode === "salesCase" && !parseAmount(asset.buildingSalesCaseValue ?? ""))
+    return fieldError("buildingSalesCaseValue", `${label}: 건물 매매사례가액을 입력하세요 — 매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다 (소득령 §176의2③1호).`);
+  return null;
+}
+
+/**
+ * R8 — **이월과세 파트 × 감정가액·매매사례가액** 차단 (stale 방어 · A-통합 Q-A).
+ *
+ * 이월과세 카드가 취득가액을 증여자 취득가액 승계(시나리오 A/B)로 교체하므로 감정·매매사례는 의미가 없다(「소득세법」 §97의2①).
+ * 선택지는 UI 필터(`gbPartAllowedModes`)와 **같은 leaf**로 판정한다 — 이월과세 파트 라디오는 {실거래가, 환산취득가}만 보인다.
+ * 현행 {실거래가, 환산취득가} 경로는 건드리지 않는다.
+ *
+ * 분리 ON은 파트 라디오(`FieldCard field=landAcqMode`)로 점프한다. 분리 OFF는 고칠 칸이 없다 — 화면 전환이 같은 조합의
+ * 감정·매매사례 플래그를 비우므로(`gbUnifiedCarryoverClearPatch`) 여기 도달하는 것은 복원 stale뿐이며, field를 달지 않아 카드로 후퇴한다.
+ */
+export function validateGbCarryoverPartModes(
+  asset: AssetForm,
+  label: string,
+  landMode: PartAcqMode,
+  buildingMode: PartAcqMode,
+): string | null {
+  const isSeparate = !!asset.hasSeperateLandAcquisitionDate;
+  const block = (part: "토지" | "건물") => {
+    const subject = part === "토지" ? "토지는" : "건물은";
+    const msg = `${label}: 이월과세로 취득한 ${subject} 취득가액을 감정가액·매매사례가액으로 산정할 수 없습니다. 이월과세는 증여자의 취득가액을 승계합니다 (소득세법 §97의2①). 「실거래가」를 선택하세요.`;
+    return isSeparate ? fieldError(part === "토지" ? "landAcqMode" : "buildingAcqMode", msg) : msg;
+  };
+  if (asset.acquisitionCause === "carryover_gift" && !gbPartAllowedModes("carryover_gift").includes(landMode)) return block("토지");
+  if (asset.gbBuildingAcquisitionCause === "carryover_gift" && !gbPartAllowedModes("carryover_gift").includes(buildingMode))
+    return block("건물");
+  return null;
+}
+
+/**
+ * R9 — **증축 × 자산 단위(분리 OFF) 감정가액·매매사례가액** 차단 (Q-A3 · 사용자 확정 2026-10-06).
+ *
+ * 3파트 안분(토지·원건물·증축분)은 자산 단위 추계 총액을 모른다 — 파트 값이 없는 파트를 「원건물 일괄 실가」로 계산하고 개산공제를 0으로 둔다
+ * (G-2의 3-way판). 문구는 ⑫ refine(`GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE`)과 같다. 앵커는 자산 단위 라디오(`data-field=useEstimatedAcquisition`).
+ * 분리 ON 파트 감정·매매사례는 파트 값이 있어 3파트 경로가 처리하므로 막지 않는다(`applyPartAcqModes`).
+ */
+export function validateGbExtensionUnifiedEstimate(
+  asset: AssetForm,
+  label: string,
+  landMode: PartAcqMode,
+): string | null {
+  if (asset.hasSeperateLandAcquisitionDate || !asset.gbHasExtension) return null;
+  if (landMode !== "appraisal" && landMode !== "salesCase") return null;
+  return fieldError("useEstimatedAcquisition", `${label}: ${GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE}`);
 }

@@ -29,7 +29,7 @@ test.describe("일반건물 §164⑨ 1호 — 보상 2필드 게이트", () => {
 
     // ③취득정보 — 취득원인 매매 + 환산취득가 모드 ON
     await expandAssetSection(page, 3);
-    await page.getByRole("radio", { name: "매매" }).first().click();
+    await page.getByRole("radio", { name: "매매", exact: true }).first().click();
     await page.getByRole("radio", { name: /환산취득가/ }).first().click();
 
     // ②양도정보 — 양도원인=공익수용
@@ -55,7 +55,7 @@ test.describe("일반건물 §164⑨ 1호 — 보상 2필드 게이트", () => {
     await page.getByRole("button", { name: "일반건물(토지+건물 일괄)" }).click();
     // 취득원인 매매만 선택 — 환산취득가 미선택(기본 실거래가) → 특례 게이트 OFF
     await expandAssetSection(page, 3);
-    await page.getByRole("radio", { name: "매매" }).first().click();
+    await page.getByRole("radio", { name: "매매", exact: true }).first().click();
 
     await expandAssetSection(page, 2);
     await page.getByTestId("expr-cause-radio").click();

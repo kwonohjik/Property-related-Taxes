@@ -122,6 +122,46 @@ export function effectivePartAcqMode(
   return explicit || deriveLegacyPartAcqMode(asset);
 }
 
+interface GbPartModeSource extends LegacyAcqFlags {
+  /** 일반건물 「토지·건물 취득일 다름」 — 분리 ON/OFF */
+  hasSeperateLandAcquisitionDate?: boolean;
+  landAcqMode?: PartAcqMode | "";
+  buildingAcqMode?: PartAcqMode | "";
+}
+
+/**
+ * **일반건물 파트별 유효 취득 모드** — ④ 전송·(A2) ⑤ 표시·⑧ 검증이 공유하는 단일 leaf (2026-10-06 A1).
+ *
+ * - 분리 **ON**: 파트 라디오(`landAcqMode`/`buildingAcqMode`) 우선, 비면 레거시 파생(`effectivePartAcqMode`).
+ * - 분리 **OFF**: 파트 라디오는 화면에 없다 → **explicit을 무시**하고 자산 단위 레거시 3플래그에서만 파생한다
+ *   (두 파트가 같은 값 — 분리 OFF 불변식). 분리를 켰다 끈 뒤 남은 stale 파트 모드가 계산 경로를 가르던
+ *   결함(엔진 설계 S1: 분리 OFF + `landAcqMode:"estimated"` stale → 환산 경로)을 닫는다.
+ *
+ * ⚠️ 거동 변경(Q-A2 「전면」): 종전에는 분리 OFF에서도 explicit이 이겼다. 이 함수는 그것을 바꾼다.
+ */
+export function gbPartModes(asset: GbPartModeSource): { land: PartAcqMode; building: PartAcqMode } {
+  if (!asset.hasSeperateLandAcquisitionDate) {
+    const mode = deriveLegacyPartAcqMode(asset);
+    return { land: mode, building: mode };
+  }
+  return {
+    land: effectivePartAcqMode(asset.landAcqMode, asset),
+    building: effectivePartAcqMode(asset.buildingAcqMode, asset),
+  };
+}
+
+/**
+ * 그 파트가 **자기** 취득시 기준시가를 개산공제(§163⑥)·환산 분자 base로 쓰는가 — 모드가 `actual`이 아니면 참.
+ *
+ * `requiresAcqStdPricePart` 1절과 **같은 식**이다(그쪽이 이 leaf를 부른다 — 주택 split 경로와 공유하므로 거동 동일).
+ * 일반건물 ④·⑫·⑧이 이 leaf를 직접 쓴다. 2~4절(안분 비율)은 포함하지 않는다 — 일반건물 실가 안분 필요는
+ * 전용 술어 `needsGbActualAcqStdPrice`가 정본이다(분리 OFF 실가 일괄에서 이 leaf를 `requiresAcqStdPricePart`
+ * 전체로 바꾸면 시점별 기준시가 런처가 항상 숨는 회귀).
+ */
+export function partNeedsOwnAcqStd(mode: PartAcqMode): boolean {
+  return mode !== "actual";
+}
+
 interface SeparateAcquisitionFlags {
   hasSeperateLandAcquisitionDate?: boolean;
   landAcquisitionDate?: string;
@@ -422,7 +462,7 @@ export function requiresAcqStdPricePart(
 ): boolean {
   const mode = part === "land" ? ctx.landMode : ctx.buildingMode;
   // ① 환산 분자 · ② 개산공제 base · ⑧ echo · ⑨ lumpDeductionBase — 그 파트가 실가가 아니면 필요
-  if (mode !== "actual") return true;
+  if (partNeedsOwnAcqStd(mode)) return true;
   return needsApportionRatio(a, ctx);
 }
 
@@ -518,4 +558,26 @@ export function needsGbActualAcqStdPrice(a: GbActualAcqStdNeedFlags): boolean {
   // ② 자산 단위 자본적지출을 나눠야 한다
   if (!empty(a.capitalExpenditure) && !hasBothPartCapex) return true;
   return false;
+}
+
+/**
+ * 일반건물 ⑤ 「취득시 기준시가」(토지 공시지가·건물 기준시가) 카드 노출 술어 — `GeneralBuildingBlock.showAcqStdPrice`의 단일 소스 (A2 §3.5).
+ *
+ * 비-actual 파트(환산·**감정·매매사례**)는 자기 취득시 기준시가가 개산공제 base라 ⑧ V-5가 요구한다 — 칸이 없으면 막다른 길이다.
+ * 증축·부담부증여·§100② 실가 안분 필요(`needsGbActualAcqStdPrice`)는 종전 그대로다.
+ * `requiresAcqStdPricePart` **전체**가 아니라 1절 leaf(`partNeedsOwnAcqStd`)만 쓴다 — 분리 OFF 실가 일괄에서 안분 절이 참이 되면
+ * 이 카드가 항상 열려 시점별 「건물 기준시가 계산」 런처가 숨는다(CI 회귀: `building-stdprice-apply-timepoint`).
+ * 컴포넌트와 테스트가 이 함수를 **함께** 부른다(UI 술어 복제 금지).
+ */
+export function gbShowsAcqStdPrice(
+  a: GbActualAcqStdNeedFlags & GbPartModeSource & { gbHasExtension?: boolean; transferType?: string },
+): boolean {
+  const m = gbPartModes(a);
+  return (
+    partNeedsOwnAcqStd(m.land) ||
+    partNeedsOwnAcqStd(m.building) ||
+    !!a.gbHasExtension ||
+    a.transferType === "burdened_gift" ||
+    needsGbActualAcqStdPrice(a)
+  );
 }

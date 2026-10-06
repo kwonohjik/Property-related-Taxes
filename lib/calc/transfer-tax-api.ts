@@ -142,6 +142,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     cbValuation,
     cbAppurtenantLand,
     isGeneralBuilding,
+    gbSeparateOn,
     gbValuation,
     gbShares,
     isRedevelopment,
@@ -389,16 +390,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     // ⑬ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호)
     ...buildExpropriationInput(primary),
-    acquisitionMethod: hasPre1990 || isMixed
+    acquisitionMethod: hasPre1990 || isMixed || gbSeparateOn
       ? ("actual" as const)
       : isSalesCase ? "salesCase"
       : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
     // 감정·매매사례 모드는 `acquisitionPrice`가 0이고 이 값이 취득가액이 된다 →
     // 총액과 동일하게 지분 스케일을 적용해야 한다(종전 raw → 지분 자산 취득가 과대 = 세액 과소).
     ownershipRatio: ownershipRatioForDeduction,
-    appraisalValue: !isMixed && isAppraisal ? (ratioed(primary.fixedAcquisitionPrice) ?? 0) : undefined,
+    appraisalValue: !isMixed && !gbSeparateOn && isAppraisal ? (ratioed(primary.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
-    similarSalesValue: isSalesCase ? ratioed(primary.similarSalesValue) : undefined,
+    similarSalesValue: !gbSeparateOn && isSalesCase ? ratioed(primary.similarSalesValue) : undefined,
     // 자산 종류 게이트는 ⑤·⑧과 같은 leaf(`selfBuiltActive`) — 종류를 바꾼 뒤 남은 플래그가
     // 토지 자산에 §114조의2 가산세를 오발동시키던 경로를 막는다.
     isSelfBuilt: (!isMixed && selfBuiltActive(primary)) || undefined,

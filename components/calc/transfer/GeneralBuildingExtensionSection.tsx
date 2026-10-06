@@ -26,7 +26,7 @@ import { buildGeneralBuildingExtensionBatchPoints } from "@/lib/calc/building-st
 import { buildGeneralBuildingExtensionBatchPatch } from "@/lib/calc/building-std-batch-apply";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { AddressValue } from "@/components/ui/address-search";
-import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
@@ -70,7 +70,7 @@ export function GeneralBuildingExtensionSection({
 
   /**
    * 증축 있음 안분 미리보기 — 4가지 조합 모두 지원.
-   * - 원건물: isOriginActual = 파트 취득방식(`effectivePartAcqMode`)이 실가인가
+   * - 원건물: isOriginActual = 파트 취득방식(`gbPartModes`)이 실가인가
    * - 증축분: extMode = gbExtensionAcquisitionMode ("estimated" | "actual")
    * 완전 입력 시에만 결과 표시 (불완전 입력은 null 반환).
    * useEffect → store 미러링 금지 정책 준수.
@@ -94,21 +94,25 @@ export function GeneralBuildingExtensionSection({
      * 파트별 라디오(`landAcqMode`·`buildingAcqMode`)가 실제 계산을 가른다. 그런데 이
      * 미리보기만 옛 자산-단위 플래그 `useEstimatedAcquisition`을 봐서, 두 파트를 환산으로
      * 골라도 「원건물 실가」로 안분하고 화면에서 사라진 stale `fixedAcquisitionPrice`를
-     * 계속 읽었다. 술어는 ④·⑧과 **같은 함수**(`effectivePartAcqMode`)를 쓴다.
+     * 계속 읽었다. 술어는 ④·⑧과 **같은 함수**(`gbPartModes`)를 쓴다.
      *
      * ⚠️ 두 파트 모드가 **서로 다르면** 이 미리보기의 「일괄 취득가 안분」 모델로 표현할 수
      *    없다 — 틀린 수를 보여 주는 대신 미리보기를 내지 않는다(계산은 엔진이 정확히 한다).
      */
     // ⚠️ `asset` **객체 자체**를 넘기면 React Compiler가 이 useMemo의 메모이제이션을 보존하지
     //    못한다(`Compilation Skipped`). 레거시 파생에 필요한 세 플래그만 추려 넘긴다.
-    const legacyFlags = {
+    // ④·⑧과 같은 leaf(`gbPartModes` — 분리 OFF의 stale 파트 모드는 무시)에 필요한 필드만 추려 넘긴다.
+    const { land: landMode, building: buildingMode } = gbPartModes({
+      hasSeperateLandAcquisitionDate: asset.hasSeperateLandAcquisitionDate,
+      landAcqMode: asset.landAcqMode,
+      buildingAcqMode: asset.buildingAcqMode,
       isSalesCaseAcquisition: asset.isSalesCaseAcquisition,
       isAppraisalAcquisition: asset.isAppraisalAcquisition,
       useEstimatedAcquisition: asset.useEstimatedAcquisition,
-    };
-    const landMode = effectivePartAcqMode(asset.landAcqMode, legacyFlags);
-    const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, legacyFlags);
+    });
     if (landMode !== buildingMode) return null;
+    // 이 미리보기는 「일괄 취득가 안분(실가)」·「환산」 두 모델만 안다 — 감정·매매사례 파트(분리 ON 3파트)는 틀린 수 대신 비워 둔다.
+    if (landMode !== "actual" && landMode !== "estimated") return null;
     const isOriginActual = landMode === "actual";
     const extMode = asset.gbExtensionAcquisitionMode || "estimated";
 
@@ -167,6 +171,7 @@ export function GeneralBuildingExtensionSection({
     asset.gbAcqLandPricePerSqm,
     asset.gbAcqBuildingValue,
     asset.useEstimatedAcquisition,
+    asset.hasSeperateLandAcquisitionDate,
     asset.landAcqMode,
     asset.buildingAcqMode,
     asset.isAppraisalAcquisition,

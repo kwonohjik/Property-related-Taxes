@@ -272,6 +272,19 @@ function buildGbAcquisitionFormulaCore(
   // 산식은 안분 결과만 표기하고 자본적지출은 별도 메모 처리 (단순화).
   const displayValue = p.acquisitionPrice + capExShift;
 
+  // ── 감정가액·매매사례가액 파트 (A2 §9.2 D3) ──
+  // 아래 분기들은 취득가액을 「양도가액 × 취득시 기준시가 ÷ 양도시 기준시가」(환산)로 그리는데, 감정·매매사례 파트의 취득가액은
+  // 그 곱이 **아니다** — 적힌 산식이 적힌 값을 못 만드는 거짓 등식이 된다. echo가 있을 때만 가드한다(옛 이력은 현행 유지).
+  // 실가 파트(혼합 환산의 기존 거짓 등식)는 Phase C 범위다(Q-F).
+  const gbModeCard = gb.assetCards.find(
+    (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
+  ) as { acquisitionMode?: string } | undefined;
+  if (gbModeCard?.acquisitionMode === "appraisal" || gbModeCard?.acquisitionMode === "salesCase") {
+    return gbModeCard.acquisitionMode === "appraisal"
+      ? `자산별 취득가액 = ${fmt(displayValue)} (감정가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③2호)`
+      : `자산별 취득가액 = ${fmt(displayValue)} (매매사례가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③1호)`;
+  }
+
   // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
   // bundledActualAcquisitionPrice가 채워져 있으면 실가 모드.
   // §166⑥ 양도시 기준시가 비율로 일괄 취득가액 안분 → 토지·건물별 취득가.
@@ -462,8 +475,13 @@ export function buildGbExpenseFormula(
    */
   const partCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as { usedEstimatedAcquisition?: boolean } | undefined;
-  const isActualPart = partCard?.usedEstimatedAcquisition === false;
+  ) as { usedEstimatedAcquisition?: boolean; acquisitionMode?: string } | undefined;
+  // 🔑 E-1 `acquisitionMode` echo가 정본이다 — boolean만 보면 감정·매매사례 파트(개산공제 적용)가 「실지거래가액 파트」로 읽혀
+  //    「개산공제를 적용하지 않습니다」가 개산공제가 적용된 금액 옆에 붙는다(A2 §9.2 D1). 옛 이력(echo 없음)은 종전 boolean 판정.
+  const isActualPart =
+    partCard?.acquisitionMode !== undefined
+      ? partCard.acquisitionMode === "actual"
+      : partCard?.usedEstimatedAcquisition === false;
   const actualPartFormula = () =>
     displayExp > 0
       ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다.`

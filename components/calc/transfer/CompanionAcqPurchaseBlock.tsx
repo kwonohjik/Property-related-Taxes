@@ -22,6 +22,7 @@ import { CompanionAcqAmountSection } from "./CompanionAcqAmountSection";
 import { CompanionAcqSpecialAssetNotices } from "./CompanionAcqSpecialAssetNotices";
 import { CompanionAcqStdPriceSection } from "./CompanionAcqStdPriceSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
@@ -76,6 +77,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     props.assetKind === "general_building" &&
     props.useEstimatedAcquisition === false &&  // ★ 원건물 실가
     props.isAppraisalAcquisition !== true &&
+    props.isSalesCaseAcquisition !== true &&
     props.gbHasExtension === true;
 
   /**
@@ -125,35 +127,45 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   }
 
   /**
-   * 선택지 — 자산 종류로 갈린다.
-   *   · 일반건물: 감정가액·매매사례가액 **미표시**(§176의2②는 환산취득가만 규정) ⇒ **2옵션**.
-   *     증축은 이 축이 아니라 아래 「증축 있음」 토글이 전담한다(2026-08-12 — 위 `AcqBasisMode` 주석).
-   *   · 그 외: 실거래가·환산·감정가액·매매사례가액(콜백이 있을 때만).
+   * 선택지 — 실거래가·환산취득가·감정가액·매매사례가액(매매사례는 콜백이 있을 때만).
+   *
+   * 일반건물도 **같은 4종**이다(A2). 종전 「§176의2②는 환산취득가만 규정」은 오독이었다 —
+   * 「소득세법 시행령」 §176의2③이 매매사례가액(1호) → 감정가액(2호) → 환산취득가액(3호)을 **순차 적용**하고
+   * 적용 단위는 「해당 자산」이다. 일반건물만 2종으로 줄일 근거가 없다.
+   *
+   * 일반건물 한정 두 가지:
+   *   · 실거래가 description에 증축 안내(토지·원건물 일괄)를 유지한다.
+   *   · **증축이 있으면** 감정가액·매매사례가액을 `disabled`로 둔다(숨기지 않는다 — 숨기면 이미 고른 값이 무선택으로 보인다).
+   *     3파트 안분이 자산 단위 추계 총액을 모른다(Q-A3 — ⑧ R9 · ⑫ refine).
+   *     증축은 이 축이 아니라 위 「증축한 부분이 있음」 토글이 전담한다(2026-08-12 — 위 `AcqBasisMode` 주석).
    */
-  const acqBasisOptions: RadioCardOption<AcqBasisMode>[] =
-    props.assetKind === "general_building"
-      ? [
+  const gbExtBlocked = props.assetKind === "general_building" && props.gbHasExtension === true;
+  const GB_EXT_BLOCK_HINT =
+    "증축분이 있으면 원건물을 감정가액·매매사례가액으로 산정할 수 없습니다 (토지·원건물·증축분 3파트 안분 미지원).";
+  const acqBasisOptions: RadioCardOption<AcqBasisMode>[] = [
+    {
+      value: "actual",
+      label: "실거래가",
+      description: props.assetKind === "general_building" ? "계약서상 실거래가 (증축 시 토지·원건물 일괄)" : "계약서상 실거래가",
+    },
+    { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
+    {
+      value: "appraisal",
+      label: "감정가액",
+      description: "개산공제 자동 적용",
+      ...(gbExtBlocked ? { disabled: true, hint: GB_EXT_BLOCK_HINT } : {}),
+    },
+    ...(props.onIsSalesCaseAcquisitionChange
+      ? ([
           {
-            value: "actual",
-            label: "실거래가",
-            description: "계약서상 실거래가 (증축 시 토지·원건물 일괄)",
+            value: "sales_case",
+            label: "매매사례가액",
+            description: "§176의2③1호 추계",
+            ...(gbExtBlocked ? { disabled: true, hint: GB_EXT_BLOCK_HINT } : {}),
           },
-          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
-        ]
-      : [
-          { value: "actual", label: "실거래가", description: "계약서상 실거래가" },
-          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
-          { value: "appraisal", label: "감정가액", description: "개산공제 자동 적용" },
-          ...(props.onIsSalesCaseAcquisitionChange
-            ? ([
-                {
-                  value: "sales_case",
-                  label: "매매사례가액",
-                  description: "§176의2③1호 추계",
-                },
-              ] as RadioCardOption<AcqBasisMode>[])
-            : []),
-        ];
+        ] as RadioCardOption<AcqBasisMode>[])
+      : []),
+  ];
 
   const acqPricePerSqm = props.standardPricePerSqmAtAcq ?? internalPricePerSqmAtAcq;
   const onAcqPricePerSqmChange = props.onStandardPricePerSqmAtAcqChange ?? setInternalPricePerSqmAtAcq;
@@ -227,8 +239,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     });
   // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
-  const effLandAcqMode = effectivePartAcqMode(props.asset?.landAcqMode, props);
-  const effBuildingAcqMode = effectivePartAcqMode(props.asset?.buildingAcqMode, props);
+  // 일반건물은 ④·⑧과 같은 leaf(`gbPartModes` — 분리 OFF의 stale 파트 모드 무시). 주택·건물 split 거동은 불변.
+  const gbEffModes =
+    props.assetKind === "general_building" && props.asset ? gbPartModes(props.asset) : null;
+  const effLandAcqMode = gbEffModes?.land ?? effectivePartAcqMode(props.asset?.landAcqMode, props);
+  const effBuildingAcqMode = gbEffModes?.building ?? effectivePartAcqMode(props.asset?.buildingAcqMode, props);
 
   /**
    * 취득시 기준시가가 **실제로 필요한가** — 엔진·validate와 **같은 술어**를 쓴다.
@@ -340,10 +355,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <RadioCardGroup
           name="acqBasisMode"
           data-field="useEstimatedAcquisition"
+          data-testid={isGeneralBuilding ? "gb-asset-acq-mode" : undefined}
           tone="amber"
           /* 옵션 수 = 열 수. 종전 `length === 4 ? 4 : 3`은 일반건물이 3옵션일 때 맞았는데,
              2옵션으로 줄면서 오른쪽 1/3이 비고 카드가 좁아져 설명이 단어 중간에서 끊겼다
-             (2026-08-12 브라우저 실측). */
+             (2026-08-12 브라우저 실측). A2에서 일반건물도 4종이라 4열이다. */
           columns={Math.min(acqBasisOptions.length, 4) as 1 | 2 | 3 | 4}
           options={acqBasisOptions}
           value={acqBasisValue}

@@ -62,10 +62,7 @@ import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { isGbFirstDisclosureApplicable } from "@/lib/calc/gb-first-disclosure";
 import { gbFirstDisclosureLandStdPriceOf } from "@/lib/calc/gb-first-disclosure";
 import { gbFirstDisclosureUsesLegacyLandTotal } from "@/lib/calc/gb-first-disclosure";
-import {
-  effectivePartAcqMode,
-  needsGbActualAcqStdPrice,
-} from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbShowsAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { needsGbSec1639BuildingStdPrice } from "@/lib/calc/transfer-tax-validate-gb-required";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -237,14 +234,9 @@ export function GeneralBuildingBlock({
    *    「칸이 없는데 차단」 또는 「칸은 있는데 안 쓰임」이 된다
    *    (메모리 `feedback_ui_gate_removes_sole_input_path` · `feedback_validation_sync_8th_point`).
    */
-  const landAcqModeEff = effectivePartAcqMode(asset.landAcqMode, asset);
-  const buildingAcqModeEff = effectivePartAcqMode(asset.buildingAcqMode, asset);
-  const showAcqStdPrice =
-    landAcqModeEff === "estimated" ||
-    buildingAcqModeEff === "estimated" ||
-    asset.gbHasExtension ||
-    isBurdenedGift ||
-    needsGbActualAcqStdPrice(asset);
+  // 단일 소스 `gbShowsAcqStdPrice` — 비-actual 파트(환산·감정·매매사례)의 자기 취득시 기준시가는 ⑧ V-5가 요구하는 개산공제 base다(A2 §3.5 · F-4).
+  // `requiresAcqStdPricePart` **전체**가 아니라 1절 leaf만 쓰는 이유는 그 함수의 주석(분리 OFF 실가 일괄에서 시점별 런처가 숨는 CI 회귀).
+  const showAcqStdPrice = gbShowsAcqStdPrice(asset);
   /**
    * 2시점 일괄 계산 런처가 실제로 떠 있는가 — 시점별 계산기의 **대체 여부**를 가른다.
    *
@@ -300,6 +292,7 @@ export function GeneralBuildingBlock({
             <ul className="text-blue-700 space-y-0.5">
               <li>• <b>실거래가</b>: 토지·건물 취득가액을 계약서로 입증할 수 있는 경우</li>
               <li>• <b>환산취득가</b>: 입증할 수 없어 양도가 × 기준시가 비율로 환산하는 경우</li>
+              <li>• <b>감정가액·매매사례가액</b>: 입증할 수 없을 때 환산보다 먼저 적용하는 추계 (소득세법 시행령 §176의2③) — 필요경비는 개산공제만 인정</li>
               {/* ⚠️ 아래 토글 제목(「증축 있음」)을 **그대로 인용하지 않는다** — E2E가
                   `getByText("증축 있음")`로 그 토글을 잡으므로 같은 문자열이 안내문에 있으면
                   셀렉터가 두 곳에 걸린다(2026-08-12 실측: 접힌 안내문에 매칭돼 실패). */}

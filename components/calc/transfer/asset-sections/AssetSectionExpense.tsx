@@ -7,6 +7,8 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isFractionalMode } from "../OwnershipRatioInput";
+import { GbDeductionOnlyNotice } from "../GbDeductionOnlyNotice";
+import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 interface Props {
   asset: AssetForm;
@@ -46,6 +48,10 @@ const PARTIAL_TRANSFER_EXPENSE_NOTE =
 
 export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: Props) {
   const isPartial = (asset.areaScenario ?? "same") === "partial";
+  // 일반건물 · 분리 OFF · 자산 단위 감정·매매사례 — 자본적지출·양도비가 계산에 쓰이지 않는다(§97②2호 본문, A2 §3.7).
+  // 분리 ON은 파트 카드가 같은 안내를 띄우고 ⑧ V-8이 자산 단위 칸을 파트 칸으로 안내한다. 모드는 ④·⑧과 같은 leaf.
+  const gbModes = asset.assetKind === "general_building" && !asset.hasSeperateLandAcquisitionDate ? gbPartModes(asset) : null;
+  const showGbDeductionOnly = gbModes?.land === "appraisal" || gbModes?.land === "salesCase";
   return (
     <>
       {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)
@@ -54,6 +60,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
         <p className="text-xs font-semibold text-foreground">
           필요경비 <span className="text-muted-foreground font-normal">(소득세법 §97①·②)</span>
         </p>
+        {showGbDeductionOnly && <GbDeductionOnlyNotice />}
         <CurrencyInput
           label="자본적 지출액 (원) — §97① 가목"
           data-field="capitalExpenditure"
