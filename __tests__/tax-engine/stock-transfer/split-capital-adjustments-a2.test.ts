@@ -3,7 +3,7 @@
  *
  * 계획: docs/00-pm/stock-transfer-split-capital-adjustments-a2.plan.md
  * 설계: docs/02-design/features/stock-transfer-split-capital-adjustments-a2.{engine,ui}.design.md
- * 법령: 소득세법 §17②(의제배당, MST 285523) · 집행기준 97-163-12(무상주, 법령 아님)
+ * 법령: 소득세법 §17②(의제배당, MST 285523) · 소득세법 시행령 §27②(무상주 1주당 장부가액)
  *
  * 무상증자(자본준비금·비의제배당): 총취득원가 불변·주식수 증가·보유기간 원주 통산.
  * 분할 모드는 발생일 이전 보유 lot만 희석 → 매칭·차익에 반영(단일 모드 display-only와 다름).

@@ -5,7 +5,7 @@
  *   소득세법 §17②2호 가목 단서 (1) — 「법인세법」 §16①2호 가목 자본준비금 (의제배당 제외)
  *   소득세법 §17②2호 가목 단서 (2) — 재평가적립금 (의제배당 제외)
  *   소득세법 §17②1호 — 자본감소·잉여금자본전입 (의제배당)
- *   양도소득세 집행기준 97-163-12 — 무상주 1주당 환산
+ *   소득세법 시행령 §27② — 무상주 1주당 환산 · 양도소득세 집행기준 97-163-10 — 무상감자
  *
  * 분기 매트릭스 (4-state):
  *   bonus_capital_reserve     → 양도세 처리 (단가 희석)     count *= (1 + ratio)
@@ -91,12 +91,11 @@ export function adjustShareCountAndCost(
       case "bonus_capital_reserve":
         count = Math.floor(count * (1 + adj.ratio));
         appliedRules.push(STOCK.SECTION_17_2_2_A_PROVISO_CAPITAL_RESERVE);
-        appliedRules.push(STOCK.EXEC_STANDARD_97_163_12);
+        appliedRules.push(STOCK.DECREE_27_2_BONUS_PER_SHARE);
         break;
       case "reduction_proportional":
         count = Math.floor(count * (1 - adj.ratio));
-        appliedRules.push("형식감자 (의제배당 비대상) — 양도소득세 집행기준 97-163-12");
-        appliedRules.push(STOCK.EXEC_STANDARD_97_163_12);
+        appliedRules.push(`형식감자 (의제배당 비대상) — ${STOCK.EXEC_STANDARD_97_163_10}`);
         break;
       case "bonus_retained_earnings":
         skipped = true;

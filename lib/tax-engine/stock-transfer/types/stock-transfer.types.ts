@@ -407,7 +407,7 @@ export type StockTransferInput = {
   acquisitionMarketSamplePrice?: number;
   acquisitionMarketSampleDate?: Date;
 
-  // ── 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12 ──
+  // ── 자본조정 (무상증자·감자) — 법§17② 단서·시행령 §27② ──
   capitalAdjustments?: {
     type:
       | "bonus_capital_reserve"      // 자본준비금 무상증자 (양도세 — 단가 희석)

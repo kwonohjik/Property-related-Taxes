@@ -40,6 +40,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isSection94_4Form, type Section94_4FormFields } from "@/lib/calc/stock-transfer-section94-4-form";
+import { BONUS_UNTAXED_BLOCK_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 /** 영 §162⑥⑦ — 주식(3호) / 기타자산(4호) 의제취득일 표기 */
 const DEEMED_LABEL = {
@@ -105,7 +107,11 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
       ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
       : cause === "carryover_gift"
         ? "증여받은 날 — 이 날짜가 2025.1.1. 이후여야 §104②2호가 적용됩니다"
-        : undefined;
+        : cause === "rights_issue"
+          ? "신주 인수대금을 납입한 날 — 소득세법 §98 대금청산일"
+          : cause === "bonus_taxed"
+            ? "무상주를 취득한 날 — 이 날부터 보유기간을 셉니다"
+            : undefined;
 
   const handleAcqDateChange = (v: string) => {
     /*
@@ -168,6 +174,17 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
           layout="inline"
           options={[
             { value: "purchase", label: "매매", description: "취득일 기산" },
+            { value: "rights_issue", label: "유상증자", description: "납입일 기산 (매매와 같음)" },
+            {
+              value: "bonus_taxed",
+              label: "무상증자 (의제배당 과세분)",
+              description: "무상주 취득일 기산 · 액면가액",
+            },
+            {
+              value: "bonus_untaxed",
+              label: "무상증자 (의제배당 비과세분)",
+              description: "자본준비금 전입 — 자본조정으로 입력",
+            },
             { value: "inheritance", label: "상속", description: "피상속인 취득일 (§104②1)" },
             { value: "gift", label: "증여", description: "수증일 기산 (§104② 본문)" },
             {
@@ -179,6 +196,15 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
           ]}
         />
       </FieldCard>
+
+      {/* 의제배당 비과세 무상주 — 취득 건이 아니다. ⑧이 막는다 (`stock-acquisition-cause.ts`) */}
+      {cause === "bonus_untaxed" && (
+        <ToneCard tone="rose" className="ml-4">
+          <p role="alert" className="text-xs" data-testid="single-bonus-untaxed-notice">
+            {BONUS_UNTAXED_BLOCK_MESSAGE}
+          </p>
+        </ToneCard>
+      )}
 
       {/* inheritance nested 카드 */}
       {cause === "inheritance" && (

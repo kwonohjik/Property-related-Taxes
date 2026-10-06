@@ -88,13 +88,21 @@ export function Step2({ form, onChange }: Step2Props) {
       ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
       : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
         ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 (원) — 소득세법 시행령 §163⑨"
-        : "실제 취득가액 (원)";
+        : form.acquisitionCause === "rights_issue"
+          ? "1주당 신주 발행가액 — 납입한 인수가액 (원)"
+          : form.acquisitionCause === "bonus_taxed"
+            ? "1주당 액면가액 — 의제배당으로 과세된 금액 (원) · 소득세법 시행령 §27①1호 가목"
+            : "실제 취득가액 (원)";
   const totalAcqHint =
     form.acquisitionCause === "inheritance"
       ? "상속개시일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
       : form.acquisitionCause === "gift" || form.acquisitionCause === "carryover_gift"
         ? "증여일 「상속세 및 증여세법」 §60~66 평가가액 합계 (원) — 소득세법 시행령 §163⑨"
-        : "계약서·거래내역 등에 기재된 총 취득대금 (원)";
+        : form.acquisitionCause === "rights_issue"
+          ? "납입한 신주 인수대금 합계 (원)"
+          : form.acquisitionCause === "bonus_taxed"
+            ? "무상주 액면가액 합계 — 의제배당으로 과세된 금액 (원) · 소득세법 시행령 §27①1호 가목"
+            : "계약서·거래내역 등에 기재된 총 취득대금 (원)";
 
   // 실가 양도가 합계 미리보기 (per_share 모드)
   const transferTotal = useMemo(() => {

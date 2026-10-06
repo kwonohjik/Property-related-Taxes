@@ -10,6 +10,9 @@
  * SPL-1: 매수 3건(매매 8,000@10,000 · 매매 8,000@12,000 · 증여 4,000@5,000) + 매도 10,000@20,000
  *        선입선출 → Step2 자동 산출(200,000,000 / 104,000,000) · 결과 계산 성공 · 취득가액 104,000,000
  *
+ * SPL-2: 매수 #2 를 「유상증자」로 바꿔도 결과 동일(엔진에는 매매) · 매수 #3 「무상증자(비과세분)」은
+ *        자본조정 안내와 함께 다음 단계로 못 간다 (PR-2 · A안)
+ *
  * 실행: E2E_PORT=3217 npx playwright test e2e/stock-transfer-split-lots.spec.ts
  */
 
@@ -43,6 +46,12 @@ async function fillAcqLot(page: Page, n: number, date: string, shares: string, p
   await fillDate(card, date);
   await card.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill(shares);
   await card.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill(price);
+}
+
+
+async function selectCause(page: Page, n: number, label: string) {
+  await acqCard(page, n).getByRole("combobox").click();
+  await page.getByRole("option", { name: label, exact: true }).click();
 }
 
 test.describe("분할 매수·분할 양도", () => {
@@ -109,5 +118,39 @@ test.describe("분할 매수·분할 양도", () => {
     expect(json.result.transferPrice).toBe(200_000_000);
     expect(json.result.acquisitionPrice).toBe(104_000_000);
     await expect(page.getByText("Validation failed")).toHaveCount(0);
+  });
+  test("SPL-2: 유상증자 lot 은 매매와 같은 결과 · 비과세 무상주 lot 은 안내 + 진행 차단", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+    await page.getByPlaceholder("종목명을 입력하세요").fill("증자원인예제");
+    await page.getByRole("radio", { name: "비상장" }).first().click();
+    await page.getByRole("radio", { name: "분할 양도" }).first().click();
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: /매수 행 추가/ }).click();
+    }
+    await fillAcqLot(page, 1, "2024-01-10", "8000", "10000");
+    await fillAcqLot(page, 2, "2025-02-10", "8000", "12000");
+    await fillAcqLot(page, 3, "2025-12-24", "4000", "5000");
+    await selectCause(page, 2, "유상증자");
+    await selectCause(page, 3, "무상증자 (의제배당 비과세분)");
+    await expect(page.getByTestId("lot-bonus-untaxed-notice")).toContainText("자본조정");
+
+    await page.getByRole("button", { name: /매도 행 추가/ }).click();
+    const sale = trnCard(page, 1);
+    await fillDate(sale, "2026-05-11");
+    await sale.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill("10000");
+    await sale.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill("20000");
+    await page.getByText("선입선출법", { exact: true }).click();
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+
+    // 비과세 무상주가 남아 있으면 2단계로 가지 못한다
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveCount(0);
+
+    // 과세분으로 바꾸면(액면가 500) 진행 — 선입선출은 매수 #1·#2만 쓰므로 취득가액 104,000,000
+    await selectCause(page, 3, "무상증자 (의제배당 과세분)");
+    await expect(page.getByTestId("lot-bonus-untaxed-notice")).toHaveCount(0);
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("104,000,000");
   });
 });

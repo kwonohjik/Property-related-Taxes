@@ -94,7 +94,7 @@ export const filingViolationSchema = z.enum(["none", "under_report", "non_report
 
 export const expenseModeSchema = z.enum(["actual", "estimated"]);
 
-// R-2 자본조정 (무상증자·감자) — 법§17② 단서·집행기준 97-163-12
+// R-2 자본조정 (무상증자·감자) — 법§17② 단서·시행령 §27②
 export const capitalAdjustmentTypeSchema = z.enum([
   "bonus_capital_reserve",
   "bonus_retained_earnings",

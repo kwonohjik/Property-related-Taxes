@@ -7,6 +7,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
 // 엔진 단일 진실 — 평가액 동일 판정 재구현 금지 (dual-truth 회피)
 //
 // ⚠️ **`calcUnlistedPerShareWeighted`(본칙 가중평균)를 쓰면 안 된다** — 엔진은 「제4항에 따른
@@ -175,6 +176,10 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
            *    이월과세를 고를 수 있는데 관계·증여자 취득일·증여세 짝을 요구하지 않아, 비우면 엔진이
            *    관계를 배우자로(2,620,000), 증여자 취득일 없이 가액만 승계하고 세율은 단기(3,930,000)로 갔다.
            */
+          // 의제배당 비과세 무상주는 매수 건이 아니다 — 분할(step1)과 같은 차단
+          if (lot.acquisitionCause === "bonus_untaxed") {
+            errors.push({ field: `acquisitionLots[${i}].acquisitionCause`, message: `매수 lot #${i + 1}: ${BONUS_UNTAXED_BLOCK_MESSAGE}`, severity: "error" });
+          }
           for (const key of missingLotCauseKeys(
             lot.acquisitionCause,
             (k) => !isEmpty(lot[k]),

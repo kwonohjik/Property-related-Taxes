@@ -27,6 +27,13 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywords: ["환지처분", "사업시행자가 사업완료후에", "보류지", "체비지"],
     keywordMode: "ALL",
   },
+  // ── 의제배당 계산 — 무상주 1주당 장부가액(주식 자본조정)·과세 무상주 가액 ──────
+  {
+    id: "TRANSFER_DECREE.DEEMED_DIVIDEND_CALC",
+    citation: "소득세법 시행령 §27",
+    keywords: ["의제배당의 계산", "액면가액 또는 출자금액", "신ㆍ구주식등의 1주 또는 1좌당 장부가액"],
+    keywordMode: "ALL",
+  },
   {
     id: "TRANSFER_DECREE.ACQ_TRANSFER_TIMING",
     citation: "소득세법 시행령 §162",
