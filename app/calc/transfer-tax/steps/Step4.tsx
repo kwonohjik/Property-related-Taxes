@@ -178,6 +178,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
         // D1 — 조특법 제외 행 + §155②③ 상속주택 제외 행(엔진 정본 판정) — ④와 같은 leaf.
+        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
     // 후보 제외가 양도일·감면주택 선언·상속 관련 세대 사실(증여·권리)까지 읽는다.

@@ -11,6 +11,7 @@ import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/cal
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
@@ -23,6 +24,7 @@ export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): Tempora
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,
+    mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
     excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
   });
 }
@@ -33,7 +35,9 @@ export function judgmentTempTwoHouseVerdict(
 ) {
   const primary = form.assets?.[0];
   return judgeTempTwoHouseFromForm({
-    previousAcquisitionDate: primary?.acquisitionDate ?? "",
+    // D8 — 합가 세대에서 상대 쪽 두 주택이 짝이면 종전주택은 양도 주택이 아니다(사전-2026-법규재산-0643). ④와 같은 짝을 쓴다.
+    previousAcquisitionDate: derivedNewHouse?.previousAcquisitionDate ?? primary?.acquisitionDate ?? "",
+    sellingAcquisitionDate: primary?.acquisitionDate,
     newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
     transferDate: form.transferDate,
     provisoReason: form.provisoReason,

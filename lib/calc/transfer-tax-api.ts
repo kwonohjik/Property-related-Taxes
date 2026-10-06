@@ -64,6 +64,7 @@ import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -573,6 +574,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
       }).mode;
