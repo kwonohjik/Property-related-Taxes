@@ -32,6 +32,13 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
+/**
+ * 격자 전수는 수백 조합을 돌아 호스팅 러너(2 worker)에서 기본 5초에 붙는다 — #2008 CI에서 이 파일 3건이 9,995ms였고,
+ * 샤드 분배가 바뀐 PR(#2009·#2011)에서는 첫 격자가 5초를 넘겨 세 번 연속 타임아웃났다(로컬 Mac 약 1.05초).
+ * 단언은 그대로다 — 시간 제한만 늘린다.
+ */
+const GRID_TIMEOUT_MS = 20_000;
+
 type Mode = "actual" | "estimated";
 interface Combo {
   selfOwns: "both" | "building_only" | "land_only";
@@ -218,7 +225,7 @@ describe("나목(취득시 건물 기준시가) — ⑤노출 ⇔ ⑧필수 ⇔ 
     expect(total).toBeGreaterThan(300);
     expect(leafTrue).toBeGreaterThan(10);
     expect(leafTrue).toBeLessThan(total);
-  });
+  }, GRID_TIMEOUT_MS);
 });
 
 describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 있을 때만", () => {
@@ -251,7 +258,7 @@ describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 
       expect(throwsForHT, `엔진 ${label(c)} ${msg ?? ""}`).toBe(leaf);
     }
     expect(leafTrue).toBeGreaterThan(5);
-  });
+  }, GRID_TIMEOUT_MS);
 });
 
 describe("⑧ 통과 ↔ ⑫ 400 모순 금지 — 취득시 기준시가 3종(㎡당 단가·면적·총액)", () => {
@@ -277,5 +284,5 @@ describe("⑧ 통과 ↔ ⑫ 400 모순 금지 — 취득시 기준시가 3종(�
       ).toBe(true);
     }
     expect(required).toBeGreaterThan(10);
-  });
+  }, GRID_TIMEOUT_MS);
 });
