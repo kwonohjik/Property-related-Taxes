@@ -64,13 +64,14 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 const req = (b: object) =>
   new NextRequest("http://localhost/api/calc/transfer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(b),
+    body: JSON.stringify(withIdentityStdInBody(b)),
   });
 
 const COMMON = {

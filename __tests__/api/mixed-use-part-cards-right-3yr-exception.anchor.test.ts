@@ -13,6 +13,7 @@
  *    주택 카드의 §89② 판정이 `exception_met`, 선언이 없으면 `undetermined`로 갈린다.
  */
 import { describe, it, expect } from "vitest";
+import { withIdentityHousingBuildingStd } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { buildMixedUsePartCards, MIXED_USE_PART_IDS } from "@/app/api/calc/transfer/mixed-use-part-cards";
 import { resolveArticle89Clause2 } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { makeMockRatesWithHouseEngine } from "../tax-engine/_helpers/mock-rates";
@@ -56,7 +57,7 @@ function companion(over: Partial<TransferTaxItemInput> = {}): TransferTaxItemInp
 
 function housingCards(item: TransferTaxItemInput) {
   const asset = { ...mixedUseCase14(), landAcquisitionDate: new Date("2015-03-01"), buildingAcquisitionDate: new Date("2015-03-01") };
-  const cards = buildMixedUsePartCards(item, asset, PRICE, TD, rates, "c1", "자산 2");
+  const cards = buildMixedUsePartCards(item, withIdentityHousingBuildingStd(asset), PRICE, TD, rates, "c1", "자산 2");
   return cards.filter(
     (c) =>
       c.propertyId.startsWith(MIXED_USE_PART_IDS.housingLand) ||

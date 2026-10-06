@@ -13,9 +13,16 @@ import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bri
 import { mixedAcqCommercialBuildingStd } from "./transfer-tax-api-mixed-use";
 import { mixedAcqLandPricePerSqm } from "./transfer-tax-api-mixed-use";
 import {
+  isMixedAcqDatesSeparate,
   mixedAcqLandPricePerSqmAtBuildingAcq,
   needsMixedAcqLandPriceAtBuildingAcq,
 } from "./mixed-use-acq-date-split";
+import {
+  mixedAcqHousingBuildingStd,
+  mixedTransferHousingBuildingStd,
+  needsMixedHousingBuildingStdAtAcq,
+  needsMixedHousingBuildingStdAtTransfer,
+} from "./mixed-use-housing-std-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 
@@ -48,6 +55,14 @@ export function validateMixedUseAsset(
     parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0
   )
     return fieldError("mixedTransferLandPricePerSqm", `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`);
+  // ⑧ S3-2 — 양도시 주택건물 기준시가(나목). 개별주택가격(H_T)을 토지 기준시가 : 건물 기준시가 비율로
+  // 토지분·건물분에 나누는 분모다. 노출(⑤)·전송(④)·⑫·엔진과 **같은 leaf 술어**(`needsMixedHousingBuildingStdAtTransfer`) —
+  // 폴백·뺄셈 후퇴 없음. 조문 인용은 확인 전이라 싣지 않는다.
+  if (needsMixedHousingBuildingStdAtTransfer(asset) && mixedTransferHousingBuildingStd(asset) <= 0)
+    return fieldError(
+      "mixedTransferHousingBuildingStdPrice",
+      `${label}: 양도시 주택건물 기준시가를 입력하세요. 겸용주택의 개별주택가격(주택건물+부수토지)은 토지 기준시가 : 건물 기준시가 비율로 토지분·건물분에 나눕니다 — 주택 부분 연면적 기준으로 계산기에서 산정하거나 직접 입력하세요.`,
+    );
   // ⑧ §164⑨1호 겸용 공익수용 특례 — 수용 시 주택분·상가분 토지 보상 4필드 필수 (P7/D8).
   const mixedExprErr = validateMixedUseExprAsset(asset, label, formTransferDate);
   if (mixedExprErr) return mixedExprErr;
@@ -124,14 +139,28 @@ export function validateMixedUseAsset(
     (commStdMissing || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
   )
     return fieldError(commStdMissing ? "mixedAcqCommercialBuildingPrice" : "mixedAcqLandPricePerSqm", `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (상가분 취득가액 산정)`);
-  // ⑧ B0 — 토지·건물 취득일이 다르면 개별주택공시가격(건물 취득일)에서 빼는 주택부수토지 공시지가도
-  // **건물 취득일 기준**이어야 한다. 노출(⑤)·전송(④)과 같은 술어(`needsMixedAcqLandPriceAtBuildingAcq`)·
+  // ⑧ B0 — 토지·건물 취득일이 다르면 개별주택공시가격(건물 취득일)을 가목:나목 비례로 나눌 때의 가목
+  // (주택부수토지 공시지가)도 **건물 취득일 기준**이어야 한다. 노출(⑤)·전송(④)과 같은 술어(`needsMixedAcqLandPriceAtBuildingAcq`)·
   // 같은 값 해소 — 폴백 없음(토지 취득일 값·PHD·1990 환산으로 대체하지 않는다. ⑫·엔진도 같은 조건으로 막는다).
   if (needsMixedAcqLandPriceAtBuildingAcq(asset) && mixedAcqLandPricePerSqmAtBuildingAcq(asset) <= 0)
     return fieldError(
       "mixedAcqLandPricePerSqmAtBuildingAcq",
-      `${label}: 건물 취득일(${asset.acquisitionDate}) 기준 주택부수토지 개별공시지가(원/㎡)를 입력하세요. 토지 취득일(${asset.landAcquisitionDate || asset.acquisitionDate})과 달라 토지 취득일 기준 공시지가로 대신할 수 없습니다. (개별주택공시가격에서 같은 날짜의 토지분을 뺍니다)`,
+      `${label}: 건물 취득일(${asset.acquisitionDate}) 기준 주택부수토지 개별공시지가(원/㎡)를 입력하세요. 토지 취득일(${asset.landAcquisitionDate || asset.acquisitionDate})과 달라 토지 취득일 기준 공시지가로 대신할 수 없습니다. (개별주택공시가격을 같은 날짜의 토지 기준시가 비율로 나눕니다)`,
     );
+  // ⑧ S3-2 — 취득시 주택건물 기준시가(나목). 환산·실가·감정·상속증여의 취득시 주택 토지분·건물분이 이 비례에 의존한다.
+  // 토지·건물 취득일이 다르면(B0) **건물 취득일** 기준 값. 상가→주택 용도변경·PHD는 술어가 거짓이라 요구하지 않는다.
+  if (needsMixedHousingBuildingStdAtAcq(asset) && mixedAcqHousingBuildingStd(asset) <= 0) {
+    const acqWord =
+      asset.acquisitionCause === "inheritance" ? "상속개시일" : asset.acquisitionCause === "gift" ? "증여일" : "취득시";
+    return fieldError(
+      "mixedAcqHousingBuildingStdPrice",
+      `${label}: ${acqWord} 주택건물 기준시가를 입력하세요${
+        isMixedAcqDatesSeparate(asset)
+          ? `(토지·건물 취득일이 달라 건물 취득일 ${asset.acquisitionDate} 기준 값)`
+          : ""
+      }. 겸용주택의 개별주택가격(주택건물+부수토지)은 토지 기준시가 : 건물 기준시가 비율로 토지분·건물분에 나눕니다 — 주택 부분 연면적 기준으로 계산기에서 산정하거나 직접 입력하세요.`,
+    );
+  }
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   if (asset.usePreHousingDisclosure) {
     if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);

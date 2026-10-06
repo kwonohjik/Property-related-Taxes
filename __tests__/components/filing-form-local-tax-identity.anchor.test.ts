@@ -27,7 +27,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { buildRows, deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { mixedUseToFilingResult } from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";

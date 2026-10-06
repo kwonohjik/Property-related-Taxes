@@ -41,6 +41,9 @@ function mixed(over: Partial<AssetForm> = {}): AssetForm {
     mixedAcqHousingPrice: "400,000,000",
     mixedAcqCommercialBuildingPrice: "80,000,000",
     mixedAcqLandPricePerSqm: "1,200,000",
+    // S3-2 — 주택건물 기준시가(나목)가 ⑧ 필수다. 이 anchor의 주제는 B0(건물 취득일 공시지가)라 값은 임의의 양수.
+    mixedAcqHousingBuildingStdPrice: "200,000,000",
+    mixedTransferHousingBuildingStdPrice: "800,000,000",
     ...over,
   } as AssetForm;
 }

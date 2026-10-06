@@ -30,7 +30,7 @@
  *      조정대상지역을 켜야 한다. ⇒ MX-1·MX-2는 비조정, MX-3·MX-4는 조정으로 **갈라 세운다**.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

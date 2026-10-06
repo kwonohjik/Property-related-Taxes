@@ -2,6 +2,7 @@
  * 건물 기준시가 스냅샷 키 유틸 (단일 출처).
  *
  * 키 규약: 상증 `bsp-estate-${id}` / 양도 `bsp-${assetId}-{gb|cb}-{acq|transfer}`
+ *   · 겸용 주택분 주택건물 기준시가(나목) `bsp-${assetId}-mx-housing-{acq|transfer}` — 시점별 2키(S3-2).
  *   · PHD 3시점 `bsp-${assetId}-phd-{acq|first|transfer}` (상가분은 `…-commercial` 접미).
  *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
  *     계산하므로 시점 세그먼트가 없다(gb/cb와 같은 transfer 모드 단일 스냅샷).
@@ -29,6 +30,9 @@ export function idOfSnapshotKey(key: string): string {
         //    inputData 매칭이 실패해 **증축분 계산서가 조용히 미출력**된다(2026-08-12 실측).
         .replace(/-(?:gb-ext|gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
         .replace(/-mx-commercial$/, "")
+        // 겸용 **주택분** 주택건물 기준시가(나목, S3-2) — 칸이 시점별(취득·양도)이라 시점 세그먼트가 있다.
+        // `-mx-commercial`(상가 통합 모달 · 시점 없음)과 접미가 겹치지 않는다.
+        .replace(/-mx-housing-(?:acq|transfer)$/, "")
         // 별개취득 건물분 취득·양도 **통합 모달**(2026-07-30) — 한 폼에서 2시점을 계산하므로
         // 시점 세그먼트가 없다(mx-commercial과 같은 구조). 시점 필터도 적용하지 않는다.
         .replace(/-split-both$/, "")
@@ -84,8 +88,9 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
   //    양도 맥락으로 되돌린다**. `-bggift`는 진짜 상속·증여 계산이므로 여기서 null이어야
   //    `bsp-estate-*`와 같이 상속·증여 맥락 그대로 간다 — 추가하면 **증여 계산서가 양도
   //    계산서로 둔갑**한다. 「대칭을 맞춘다」는 이유로 넣지 말 것.
-  if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
-  if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-transfer(?:-commercial)?$/.test(key)) return "transfer";
+  // `mx-housing`(겸용 주택분 나목 — 시점별 2키)도 같은 접두 집합에 있어야 한다(한쪽만 고치면 화면·PDF 불일치).
+  if (/-(?:phd|gb-ext|gb|cbinh|cb|split|mx-housing)-acq(?:-commercial)?$/.test(key)) return "acquisition";
+  if (/-(?:phd|gb-ext|gb|cbinh|cb|split|mx-housing)-transfer(?:-commercial)?$/.test(key)) return "transfer";
   return null;
 }
 
@@ -110,6 +115,7 @@ export function snapshotKindLabel(key: string): string | null {
   if (/-cbinh-acq$/.test(key)) return "상가건물(상속취득)";
   if (/-cb-(?:acq|transfer)$/.test(key)) return "상가건물";
   if (/-mx-commercial$/.test(key)) return "겸용 상가분";
+  if (/-mx-housing-(?:acq|transfer)$/.test(key)) return "겸용 주택분";
   if (/-split-(?:acq|transfer|both)$/.test(key)) return "토지·건물 분리 건물분";
   return null;
 }

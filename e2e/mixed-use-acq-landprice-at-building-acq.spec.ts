@@ -13,13 +13,15 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 const FIELD_TID = "mixed-acq-land-price-at-building-acq";
 const INPUT_TID = "mixed-acq-land-price-at-building-acq-input";
 
 function mixedAsset(over: Record<string, unknown> = {}) {
-  return {
+  // S3-2 — 주택건물 기준시가(나목)가 필수라 항등 값을 채운다(이 spec의 주제는 B0).
+  return withMixedHousingStd({
     ...makeDefaultAsset(1),
     addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
@@ -45,7 +47,7 @@ function mixedAsset(over: Record<string, unknown> = {}) {
     // (비워 두면 첫 입력 직후 「총 양도가액을 입력하세요」로 막힌다).
     actualSalePrice: "1500000000",
     ...over,
-  };
+  });
 }
 
 /** 시드 후 ③ 취득 섹션을 연다 — 취득시 기준시가 입력칸이 이 섹션에 있다(접힌 섹션은 DOM엔 있으나 hidden). */

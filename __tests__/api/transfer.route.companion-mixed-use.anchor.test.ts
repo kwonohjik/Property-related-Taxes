@@ -61,6 +61,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -143,7 +144,8 @@ function asset(i: number, over: Record<string, unknown> = {}) {
 
 /** primary 주택 + companion 겸용주택. 기준시가를 같게 두어 안분이 50:50. */
 function bundledForm(): TransferFormData {
-  return {
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     assets: [
       asset(1),
@@ -153,19 +155,19 @@ function bundledForm(): TransferFormData {
     filingDate: "2024-08-31",
     contractTotalPrice: "1200000000",
     householdHousingCount: "2",
-  } as TransferFormData;
+  } as TransferFormData);
 }
 
 /** primary가 겸용인 조합 — **계속 차단**된다(별건 축). */
 function primaryMixedForm(): TransferFormData {
-  return {
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     assets: [asset(1, MIXED_FIELDS), asset(2)],
     transferDate: "2024-06-01",
     filingDate: "2024-08-31",
     contractTotalPrice: "1200000000",
     householdHousingCount: "2",
-  } as TransferFormData;
+  } as TransferFormData);
 }
 
 describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
@@ -214,7 +216,7 @@ describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
      * ④가 그 성분만 스케일하게 고쳐 열었다 — 축 B 60/40 합계 = 단건 100%.
      * 상세 anchor: `mixed-use-fractional-axis-b.anchor.test.ts`.
      */
-    const fractional = {
+    const fractional = withIdentityHousingBuildingStdOnForm({
       ...createDefaultTransferFormData(),
       assets: [
         asset(1, { ...MIXED_FIELDS, ownershipNumerator: "60", ownershipDenominator: "100" }),
@@ -224,7 +226,7 @@ describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
       filingDate: "2024-08-31",
       contractTotalPrice: "1200000000",
       householdHousingCount: "2",
-    } as TransferFormData;
+    } as TransferFormData);
     expect(
       collectStepIssues(0, fractional)
         .map((i) => i.message)

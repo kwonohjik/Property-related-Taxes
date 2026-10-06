@@ -78,6 +78,13 @@ const FIELD_LABEL: Record<string, string> = {
   "mixedUse.nonResidentialFloorArea": "비주거용 면적",
   "mixedUse.totalLandArea": "총 토지면적",
   "mixedUse.preHousingDisclosure.firstDisclosureDate": "겸용주택 최초 고시일",
+  // S3-2 — 겸용 주택분 기준시가 비례 분모(나목) · 양도시 개별주택가격. 컴패니언은 `companionAssets.N.mixedUse…`(인덱스 정규화 후 접두 `companionAssets.`).
+  "mixedUse.acquisitionStandardPrice.housingBuildingPrice": "겸용주택 취득시 주택건물 기준시가",
+  "mixedUse.transferStandardPrice.housingBuildingPrice": "겸용주택 양도시 주택건물 기준시가",
+  "mixedUse.transferStandardPrice.housingPrice": "겸용주택 양도시 개별주택가격",
+  "companionAssets.mixedUse.acquisitionStandardPrice.housingBuildingPrice": "겸용주택 취득시 주택건물 기준시가",
+  "companionAssets.mixedUse.transferStandardPrice.housingBuildingPrice": "겸용주택 양도시 주택건물 기준시가",
+  "companionAssets.mixedUse.transferStandardPrice.housingPrice": "겸용주택 양도시 개별주택가격",
 
   // 일반건물(토지+건물 일괄) 환산취득가 §176의2②
   "generalBuildingValuation.landArea": "토지 부수면적",

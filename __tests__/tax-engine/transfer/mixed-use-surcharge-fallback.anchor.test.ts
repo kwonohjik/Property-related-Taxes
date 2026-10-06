@@ -39,7 +39,7 @@
  *    `householdHousingCount: 0`으로 fallback이 걸리지 않는다.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRatesWithHouseEngine, makeHouseInfo } from "../_helpers/mock-rates";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

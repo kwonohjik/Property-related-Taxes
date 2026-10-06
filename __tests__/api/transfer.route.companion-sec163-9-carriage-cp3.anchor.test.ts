@@ -34,12 +34,22 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+
+/**
+ * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
+ * 종전 뺄셈(`H − 가목`)은 건물분을 0으로 clamp(토지 100%)했지만 비례에는 clamp가 없어 **현실적인 나목을 정해야** 한다.
+ * 취득시 주택건물 기준시가(나목) 90M — 가목:나목 = 360M:90M(4:1) → 토지분 floor(300M × 360/450) = 240M · 건물분 60M.
+ * (양도시는 H_T 900M > L_T 720M이라 항등 나목 180M이 성립 — 값 불변.) 기대값은 이 나목으로 재산출했다.
+ */
+const CLAMP_N = { acqN: 90_000_000 } as const;
+
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -60,8 +70,9 @@ const asset = (id: number, over: Record<string, unknown> = {}): AssetForm =>
     standardPriceAtTransfer: "500000000",
     ...over,
   }) as AssetForm;
+// S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님). 겸용이 아닌 자산은 그대로.
 const form = (assets: AssetForm[], contractTotalPrice = "1600000000"): TransferFormData =>
-  ({
+  withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     transferDate: "2024-03-01",
     filingDate: "2024-05-31",
@@ -71,7 +82,7 @@ const form = (assets: AssetForm[], contractTotalPrice = "1600000000"): TransferF
     householdHousingCount: "2",
     isOneHousehold: false,
     bundledSaleMode: "apportioned",
-  }) as unknown as TransferFormData;
+  } as unknown as TransferFormData, CLAMP_N);
 const issues = (f: TransferFormData) => [0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message));
 
 async function run(f: TransferFormData) {
@@ -189,7 +200,7 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
     expect(r.json.data.result.inheritedAcquisitionDetail.acquisitionPrice).toBe(deemed);
   });
 
-  it("🟢 겸용 컴패니언(1985 前 상속·선언)은 §163⑨ 운반을 싣지 않는다 — 자기 서브객체가 취득가액을 만든다 (328,370,189 · 종전과 같음)", async () => {
+  it("🟢 겸용 컴패니언(1985 前 상속·선언)은 §163⑨ 운반을 싣지 않는다 — 자기 서브객체가 취득가액을 만든다 (328,952,309 — S3-2: 종전 328,370,189)", async () => {
     // 게이트를 빼면 ⑭가 파트 카드마다 STEP 0.45를 다시 돌려 492,297,397이 된다(뮤테이션 실측).
     const MIXED_PRE_DEEMED = {
       assetKind: "housing",
@@ -218,7 +229,8 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
     expect(issues(f)).toEqual([]);
     const r = await run(f);
     expect(r.body.companionAssets[0].inheritedAcquisition).toBeUndefined();
-    expect(bundled(r.json).totalTax).toBe(328_370_189);
+    // S3-2 갱신 — 개산공제 base 합이 라목 가액(H 300M) × 3% = 9,000,000이 됐다(종전 뺄셈은 H < 가목이라 가목 360M 전부 × 3% = 10,800,000으로 H를 넘겼다). 토지·건물 분배 자체는 세액에 안 닿는다(같은 보유기간·초과 없음).
+    expect(bundled(r.json).totalTax).toBe(328_952_309);
   });
 });
 

@@ -10,6 +10,7 @@
  * worktree 실행: E2E_PORT=3xxx npx playwright test e2e/mixed-use-filing-form-4col.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 // 일반 겸용주택(§97 직접 환산, PHD 미적용 — 취득 2010 > 개별주택가격 공시 시작).
@@ -49,7 +50,7 @@ function seedForm() {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [mixedUseAsset()],
+        assets: [withMixedHousingStd(mixedUseAsset())],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",
         contractTotalPrice: "1500000000",
@@ -144,13 +145,13 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
         formData: {
           householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
           householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-          assets: [{
+          assets: [withMixedHousingStd({
             ...mixedUseAsset(),
             hasSeperateLandAcquisitionDate: true,
             landAcquisitionDate: "2005-06-10",
             // B0 — 날짜가 다르고 개별주택가격이 있으면 건물 취득일 기준 공시지가가 필수. L2=L1로 채워 기대값 불변.
             mixedAcqLandPricePerSqmAtBuildingAcq: "2500000",
-          }],
+          })],
           transferDate: "2026-02-16",
           filingDate: "2026-04-30",
           contractTotalPrice: "1500000000",

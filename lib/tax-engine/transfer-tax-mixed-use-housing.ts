@@ -19,6 +19,15 @@ import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
+import {
+  isHousingBuildingStdAtAcqRequired,
+  isHousingBuildingStdAtTransferRequired,
+  isHousingPriceAtAcqRequired,
+  isHousingPriceAtTransferRequired,
+  splitMixedUseHousingStd,
+} from "./mixed-use-housing-std";
+import { apportionByStdPrice } from "./std-price-apportion";
+import type { MixedUseHousingStdSplitDetail } from "./types/transfer-mixed-use.types";
 
 // ──────────────────────────────────────────────────────────────
 // 4. 주택부분 토지/건물 양도차익 분리 (STEP 4)
@@ -37,6 +46,8 @@ export interface HousingGainSplit {
   buildingAppraisalDed: number;
   landStdPriceAtAcq?: number;
   buildingStdPriceAtAcq?: number;
+  /** S3-2 — 비-PHD·비-4부분 경로의 가목:나목 비례 분할 echo (취득·양도). */
+  housingStdSplit?: { acq?: MixedUseHousingStdSplitDetail; transfer?: MixedUseHousingStdSplitDetail };
   landHoldingYears: number;
   buildingHoldingYears: number;
 }
@@ -121,16 +132,6 @@ export function calcHousingGainSplit(
 ): HousingGainSplit {
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
   const effectiveAcqDerived = acqDerived ?? derived;
-
-  // 양도시 토지/건물 기준시가 (양도가액 안분용 + §97②2호 단서의 **양도비** 안분 축).
-  // 개별주택공시가격은 토지+건물 일괄이므로, 양도시 토지분 = 공시지가 × 주택부수토지 면적,
-  // 양도시 건물분 = 개별주택공시가격 - 토지분 (음수 방지).
-  // ⚠️ PHD 분기도 단서 처리에서 이 값을 쓰므로 **분기 위로** 올려둔다(2026-08-13 F18).
-  const transferLandStd =
-    asset.transferStandardPrice.landPricePerSqm * derived.residentialLandArea;
-  const transferHousingTotal = asset.transferStandardPrice.housingPrice;
-  const transferBuildingStd = Math.max(transferHousingTotal - transferLandStd, 0);
-  const transferTotal = transferLandStd + transferBuildingStd;
 
   // PHD 분기 — 산식 상세에서 토지/건물 안분값 직접 사용
   if (housingAcqResult.phdResult) {
@@ -233,13 +234,50 @@ export function calcHousingGainSplit(
       acqDerived: effectiveAcqDerived,
       acqLandStd: phd.landHousingAtAcquisition,
       acqBuildingStd: phd.buildingHousingAtAcquisition,
-      transferLandStd,
-      transferBuildingStd,
+      // 양도비 안분 축 — PHD 자체 양도시 분할(양도가액 안분과 같은 척도). 종전에는 PHD 분기 위에서
+      // 호이스팅한 `H_T − 가목` 뺄셈값을 써서 한 자산 안에 비례(양도가액)·뺄셈(양도비)이 섞였다(S3-2 Q-C).
+      transferLandStd: phd.landHousingAtTransfer,
+      transferBuildingStd: phd.buildingHousingAtTransfer,
       acqStdOverride: { housingStd: phd.estimatedHousingPriceAtAcquisition },
     });
   }
 
   // 기존 §97 분기 — 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분
+
+  // ─── 양도시 주택분 토지/건물 분할 (S3-2 — 뺄셈 `H_T − 가목` → 가목:나목 비례) ───
+  // 개별주택공시가격은 토지+건물 일괄이므로 가목(공시지가 × 주택부수토지 면적):나목(주택건물 기준시가)
+  // 비율로 나눈다. 양도가액 안분·양도비 안분 축·(상가→주택 용도변경의) 취득시 주택 합계 분할이 이 값을 쓴다.
+  // 나목이 없으면 뺄셈으로 후퇴하지 않고 차단한다(자동 안분 fallback 금지). PHD는 위에서 이미 분기했다.
+  const transferBuildingStdInput = asset.transferStandardPrice.housingBuildingPrice;
+  if (
+    // PHD 분기는 위에서 이미 return했다 — 여기 도달하면 PHD 환산 결과(phdResult)가 없다(토글만 켠 비정상 입력 포함).
+    isHousingBuildingStdAtTransferRequired({ usePhd: housingAcqResult.phdResult !== undefined }) &&
+    !(transferBuildingStdInput !== undefined && transferBuildingStdInput > 0)
+  ) {
+    throw new Error(
+      "겸용주택: 양도시 주택건물 기준시가(나목, transferStandardPrice.housingBuildingPrice)가 필요합니다. " +
+        "양도시 주택의 토지분·건물분은 개별주택가격을 가목(개별공시지가 × 주택부수토지 면적):나목(주택건물 기준시가) 비율로 나눕니다.",
+    );
+  }
+  // 양도시 개별주택가격(H_T)도 필수 — 없으면 가목:나목 원값 비율로 대신하지 않고 차단한다(Q-B는 취득시 상속·증여 한정).
+  if (
+    isHousingPriceAtTransferRequired({ usePhd: housingAcqResult.phdResult !== undefined }) &&
+    !(asset.transferStandardPrice.housingPrice > 0)
+  ) {
+    throw new Error(
+      "겸용주택: 양도시 개별주택가격(transferStandardPrice.housingPrice)이 필요합니다. " +
+        "양도시 주택의 토지분·건물분은 이 가격을 가목:나목 비율로 나눕니다.",
+    );
+  }
+  const transferSplit = splitMixedUseHousingStd({
+    housingTotal: asset.transferStandardPrice.housingPrice,
+    landStd: multiplyByArea(asset.transferStandardPrice.landPricePerSqm, derived.residentialLandArea),
+    buildingStd: transferBuildingStdInput as number,
+  });
+  const transferLandStd = transferSplit.landBasis;
+  const transferBuildingStd = transferSplit.buildingBasis;
+  const transferTotal = transferLandStd + transferBuildingStd;
+  let acqSplit: MixedUseHousingStdSplitDetail | undefined;
 
   // 취득시 토지/건물 기준시가 (취득가액 안분 + 개산공제 base)
   let acqLandStd: number;
@@ -265,18 +303,35 @@ export function calcHousingGainSplit(
       );
     }
 
-    // 토지/건물 내부 분리 — 양도시 토지/건물 비율 차용 (취득시 분리값 없음)
-    const transferLandRatioForFallback = transferTotal > 0 ? transferLandStd / transferTotal : 0.5;
-    acqLandStd = Math.floor(acqHousingTotal * transferLandRatioForFallback);
-    acqBuildingStd = acqHousingTotal - acqLandStd;
+    // 토지/건물 내부 분리 — 양도시 가목:나목 분할 비율 차용 (취득시 분리값 없음 · 집행기준 99-164-10).
+    // 취득시 나목은 요구하지 않는다(그 시점에 주택 건물이 없다) — 양도시 나목만 필요.
+    const borrowed = apportionByStdPrice(acqHousingTotal, transferLandStd, transferBuildingStd);
+    acqLandStd = borrowed.land;
+    acqBuildingStd = borrowed.building;
   } else {
     // 기존 일반 겸용주택 분기
-    acqLandStd =
-      asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.residentialLandArea;
+    const acqLandRaw = multiplyByArea(
+      asset.acquisitionStandardPrice.landPricePerSqm,
+      effectiveAcqDerived.residentialLandArea,
+    );
     const acqHousingTotal = asset.acquisitionStandardPrice.housingPrice ?? 0;
-    // 🔴 B0 — 개별주택가격은 **건물 취득일** 공시 결합가다. 토지·건물 취득일이 다르면 그 가격에서
-    // 빼는 주택부수토지분도 **같은 날(건물 취득일)** 공시지가여야 한다(토지 취득일 값으로 대체 금지).
-    // 토지분(`acqLandStd`)은 토지 파트 값이라 토지 취득일 기준 그대로 둔다.
+    const acqBuildingStdInput = asset.acquisitionStandardPrice.housingBuildingPrice;
+    if (
+      isHousingBuildingStdAtAcqRequired({
+        usePhd: housingAcqResult.phdResult !== undefined,
+        partialDirection: asset.partialUsageChange?.direction,
+      }) &&
+      !(acqBuildingStdInput !== undefined && acqBuildingStdInput > 0)
+    ) {
+      throw new Error(
+        "겸용주택: 취득시 주택건물 기준시가(나목, acquisitionStandardPrice.housingBuildingPrice)가 필요합니다. " +
+          "취득시 주택의 토지분·건물분은 개별주택가격을 가목(개별공시지가 × 주택부수토지 면적):나목(주택건물 기준시가) " +
+          "비율로 나눕니다. 토지·건물 취득일이 다르면 건물 취득일 기준 나목입니다.",
+      );
+    }
+    // 🔴 B0 — 개별주택가격은 **건물 취득일** 공시 결합가다. 토지·건물 취득일이 다르면 그 가격을 토지 취득일로
+    // 옮길 비율의 분모에 **같은 날(건물 취득일)** 가목·나목을 쓴다(토지 취득일 값으로 대체 금지). 토지분도 원값이 아니라
+    // 「취득당시 주택가격」의 비례 몫이다(Q-A γ1 — 양도소득세 집행기준 99-164-9의 절차, `splitMixedUseHousingStd`).
     const buildingDayRequired = isBuildingDayLandPriceRequired({
       landDate: asset.landAcquisitionDate,
       buildingDate: asset.buildingAcquisitionDate,
@@ -284,6 +339,7 @@ export function calcHousingGainSplit(
       partialDirection: asset.partialUsageChange?.direction,
       housingPrice: acqHousingTotal,
     });
+    let landStdAtBuildingDay: number | undefined;
     if (buildingDayRequired) {
       const landPerSqmAtBuildingAcq = asset.acquisitionStandardPrice.landPricePerSqmAtBuildingAcq;
       if (landPerSqmAtBuildingAcq === undefined || !(landPerSqmAtBuildingAcq > 0)) {
@@ -293,13 +349,34 @@ export function calcHousingGainSplit(
             "토지 취득일 기준 공시지가로 대신할 수 없습니다.",
         );
       }
-      acqBuildingStd = Math.max(
-        acqHousingTotal - multiplyByArea(landPerSqmAtBuildingAcq, effectiveAcqDerived.residentialLandArea),
-        0,
-      );
-    } else {
-      acqBuildingStd = Math.max(acqHousingTotal - acqLandStd, 0);
+      landStdAtBuildingDay = multiplyByArea(landPerSqmAtBuildingAcq, effectiveAcqDerived.residentialLandArea);
     }
+    // 취득시 개별주택가격(H_A) — 상속·증여 외에는 필수(환산 분자이기도 하다). 없으면 원값 비율로 대신하지 않고 차단.
+    const byInheritanceOrGift = asset.acquisitionByInheritance === true || asset.acquisitionByGift === true;
+    if (
+      isHousingPriceAtAcqRequired({
+        usePhd: housingAcqResult.phdResult !== undefined,
+        partialDirection: asset.partialUsageChange?.direction,
+        byInheritanceOrGift,
+      }) &&
+      !(acqHousingTotal > 0)
+    ) {
+      throw new Error(
+        "겸용주택: 취득시 개별주택가격(acquisitionStandardPrice.housingPrice)이 필요합니다. " +
+          "취득시 주택의 토지분·건물분은 이 가격을 가목:나목 비율로 나눕니다(상속·증여 신고가액 취득만 예외).",
+      );
+    }
+    // H 없음은 상속·증여 신고가액 취득(Q-B)에서만 — 가목:나목 원값 비율로 나눠 「전부 토지분」 침묵 오배분을 없앤다.
+    // 나목은 위에서 > 0임이 확인됐다(필수 경로) — PHD·c2h는 이 분기에 오지 않는다.
+    acqSplit = splitMixedUseHousingStd({
+      allowRawRatio: byInheritanceOrGift,
+      housingTotal: acqHousingTotal,
+      landStd: acqLandRaw,
+      buildingStd: acqBuildingStdInput as number,
+      ...(landStdAtBuildingDay !== undefined ? { landStdAtBuildingDay } : {}),
+    });
+    acqLandStd = acqSplit.landBasis;
+    acqBuildingStd = acqSplit.buildingBasis;
   }
 
   const acqTotal = acqLandStd + acqBuildingStd;
@@ -375,6 +452,7 @@ export function calcHousingGainSplit(
     buildingAppraisalDed,
     landStdPriceAtAcq: acqLandStd,
     buildingStdPriceAtAcq: acqBuildingStd,
+    housingStdSplit: { ...(acqSplit ? { acq: acqSplit } : {}), transfer: transferSplit },
     landHoldingYears,
     buildingHoldingYears,
   };

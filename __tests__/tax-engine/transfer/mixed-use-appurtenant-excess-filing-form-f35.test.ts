@@ -46,7 +46,7 @@
  *     `mixedUseExcessLand()`(전체토지 1,000)는 **발동**.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { mixedUseToFilingResult } from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
 import { buildRows, deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { makeMockRates } from "../_helpers/mock-rates";
@@ -55,6 +55,9 @@ import {
   mixedUseExcessLand,
   CASE14_TRANSFER_PRICE,
   CASE14_TRANSFER_DATE,
+  CASE14_HOUSING_PRICE_AT_TRANSFER,
+  CASE14_COMMERCIAL_BUILDING_AT_TRANSFER,
+  CASE14_LAND_PRICE_PER_SQM_AT_TRANSFER,
 } from "../_helpers/mixed-use-fixture";
 
 const rates = makeMockRates();
@@ -124,102 +127,128 @@ describe("F35 전제: 배율초과 발동 조건", () => {
 //   주택분 양도가액 351,599,527원 ⇒ housingExemptRatio = 0 (분자 proratedTaxableGain = 0)
 // ══════════════════════════════════════════════════════════════════════
 
+/**
+ * S3-2 — 케이스 A fixture는 「토지만 1,000㎡로 키운 변형」이라 양도시 가목(6,100,000 × 216.03㎡ = 1,317,783,000)이
+ * 개별주택가격(872,000,000)을 넘는다. 종전 뺄셈은 건물분을 0으로 clamp(토지 100%)했지만 비례에는 clamp가 없어
+ * **현실적 나목을 정해야** 한다. 건물(나목)은 토지를 키워도 그대로이므로 **사례14의 실제 건물** 값을 쓴다:
+ * 872,000,000 − 6,100,000 × 36.36㎡(실제 주택부수토지, = 221,796,000) = **650,204,000**.
+ * → 양도시 토지분 = floor(872,000,000 × 1,317,783,000 ÷ (1,317,783,000 + 650,204,000)) = 583,899,576 · 건물분 = 288,100,424
+ *   (양도가액 351,599,527원은 이 비율로 토지 235,434,420 · 건물 116,165,106로 나뉜다).
+ * 케이스 A의 기대값은 이 나목으로 재산출했다.
+ *
+ * S3-2 추가 — 사례14 fixture는 취득시 개별주택가격(H_A)이 비어 있어 종전엔 환산 분자 0(취득가액 0)이었다. 취득시 H는 상속·증여 외에는
+ * 필수라 이 파일은 test helper(`mixed-use-identity-std.ts`)가 **항등 H = 가목 + 나목(= L_A + 1)** 으로 채운다. 그래서 취득가액·양도차익·세액 단언은
+ * 모두 H가 있는 값으로 재산출됐고(주택분 양도차익 336,174,985 → 128,863,759 등), 4열 합·자기정합 불변식 단언은 그대로다.
+ * 케이스 B는 H_T 50억 > 가목이라 clamp가 아니다 — 항등 나목(값 불변).
+ */
+const CASE_A_HOUSING_BUILDING_STD_AT_TRANSFER = 650_204_000;
+
 describe("F35 케이스 A: 12억 이하 주택분(전액 비과세) + 배율초과", () => {
-  const o = observe(CASE14_TRANSFER_PRICE, mixedUseExcessLand());
+  const o = observe(
+    CASE14_TRANSFER_PRICE,
+    mixedUseExcessLand({
+      transferStandardPrice: {
+        housingPrice: CASE14_HOUSING_PRICE_AT_TRANSFER,
+        commercialBuildingPrice: CASE14_COMMERCIAL_BUILDING_AT_TRANSFER,
+        landPricePerSqm: CASE14_LAND_PRICE_PER_SQM_AT_TRANSFER,
+        housingBuildingPrice: CASE_A_HOUSING_BUILDING_STD_AT_TRANSFER,
+      },
+    }),
+  );
   const nb = o.breakdown.nonBusinessLandPart!;
 
   it("A-0 엔진 관측값 (비사업용토지 파트)", () => {
-    expect(nb.transferGain).toBe(235_336_494);
-    expect(nb.longTermDeductionAmount).toBe(70_600_948);
-    expect(nb.incomeAmount).toBe(164_735_546);
+    expect(nb.transferGain).toBe(8_889_586);
+    expect(nb.longTermDeductionAmount).toBe(2_666_875);
+    expect(nb.incomeAmount).toBe(6_222_711);
     expect(nb.additionalRate).toBe(0.1);
-    // 비사토 차익은 주택분 토지차익 336,174,985원 **안에서** 잘려 나온 값이다.
-    expect(o.breakdown.housingPart.landTransferGain).toBe(336_174_985);
+    // 비사토 차익은 주택분 토지차익 12,698,653원 **안에서** 잘려 나온 값이다.
+    expect(o.breakdown.housingPart.landTransferGain).toBe(12_698_653);
     expect(o.breakdown.housingPart.proratedTaxableGain).toBe(0);
   });
 
   it("A-1 전체 양도차익 4열 — 실측 고정 · 4열 합 == 합계 (정확)", () => {
-    expect(o.cell("transferGain", "housingLand")).toBe(336_174_985);
-    expect(o.cell("transferGain", "housingBuilding")).toBe(0);
+    expect(o.cell("transferGain", "housingLand")).toBe(12_698_653);
+    expect(o.cell("transferGain", "housingBuilding")).toBe(116_165_106);
     expect(o.cell("transferGain", "commercialLand")).toBe(1_119_934_807);
     expect(o.cell("transferGain", "commercialBuilding")).toBe(7_164_209);
-    expect(o.cell("transferGain", "total")).toBe(1_463_274_001);
+    expect(o.cell("transferGain", "total")).toBe(1_255_962_775);
     expect(o.partSum("transferGain")).toBe(o.cell("transferGain", "total"));
   });
 
   it("A-2 과세대상 양도차익 4열 — 주택분 토지 칸이 비사토 차익 전액", () => {
-    // ✅ F35 수정 완료: 주택분은 전액 비과세(안분 0)지만 배율초과 비사업용토지 235,336,494원은
+    // ✅ F35 수정 완료: 주택분은 전액 비과세(안분 0)지만 배율초과 비사업용토지 8,889,586원은
     //    §104⑤ 대상으로 **과세**되므로 주택분 토지 칸에 그대로 남는다.
-    expect(o.cell("taxableGain", "housingLand")).toBe(235_336_494);
+    expect(o.cell("taxableGain", "housingLand")).toBe(8_889_586);
     expect(o.cell("taxableGain", "housingBuilding")).toBe(0);
     expect(o.cell("taxableGain", "commercialLand")).toBe(1_119_934_807);
     expect(o.cell("taxableGain", "commercialBuilding")).toBe(7_164_209);
-    // ✅ F35: 종전 1,127,099,016 → 비사토 가산 후 1,362,435,510.
-    expect(o.cell("taxableGain", "total")).toBe(1_362_435_510);
+    // ✅ F35: 종전 1,127,099,016 → 비사토 가산 후 1,135,988,602.
+    expect(o.cell("taxableGain", "total")).toBe(1_135_988_602);
   });
 
   it("A-3 비과세 양도차익 4열 — 비사토가 빠진 순수 비과세분", () => {
-    // ✅ F35 수정 완료: 종전 336,174,985원에 섞여 있던 비사업용토지 235,336,494원이 빠져
-    //    100,838,491원(= 336,174,985 − 235,336,494)만 남는다.
-    expect(o.cell("exemptGain", "housingLand")).toBe(100_838_491);
-    expect(o.cell("exemptGain", "housingBuilding")).toBe(0);
+    // ✅ F35 수정 완료: 주택분 양도차익 128,863,759원(토지 12,698,653 + 건물 116,165,106)에 섞여 있던
+    //    비사업용토지 8,889,586원이 빠져 119,974,173원(= 128,863,759 − 8,889,586)만 남는다.
+    expect(o.cell("exemptGain", "housingLand")).toBe(3_809_067);
+    expect(o.cell("exemptGain", "housingBuilding")).toBe(116_165_106);
     expect(o.cell("exemptGain", "commercialLand")).toBe(0);
     expect(o.cell("exemptGain", "commercialBuilding")).toBe(0);
-    expect(o.cell("exemptGain", "total")).toBe(100_838_491);
+    expect(o.cell("exemptGain", "total")).toBe(119_974_173);
   });
 
-  it("A-4 ✅ 비사업용토지 양도차익(235,336,494원)이 과세대상에 계상된다", () => {
+  it("A-4 ✅ 비사업용토지 양도차익(8,889,586원)이 과세대상에 계상된다", () => {
     // 종전 오분류 금액은 **정확히** nonBusinessLandPart.transferGain 이었다 —
     // 수정 후 그 금액이 비과세에서 빠지고 과세대상으로 옮겨 온 것을 양쪽에서 확인한다.
     const nbGain = nb.transferGain;
-    expect(nbGain).toBe(235_336_494);
+    expect(nbGain).toBe(8_889_586);
     // 비과세 = 주택분 양도차익 − 비사토 − 주택분 안분과세분
     expect(o.cell("exemptGain", "total")).toBe(
       o.breakdown.housingPart.transferGain - nbGain - o.breakdown.housingPart.proratedTaxableGain,
     );
-    expect(o.cell("exemptGain", "total")).toBe(100_838_491);
+    expect(o.cell("exemptGain", "total")).toBe(119_974_173);
     // 과세대상 = 주택분 안분과세분 + 상가분 + 비사토
     expect(o.cell("taxableGain", "total")).toBe(
       o.breakdown.housingPart.proratedTaxableGain + o.breakdown.commercialPart.transferGain + nbGain,
     );
-    expect(o.cell("taxableGain", "total")).toBe(1_362_435_510);
+    expect(o.cell("taxableGain", "total")).toBe(1_135_988_602);
   });
 
-  it("A-5 장기보유특별공제 4열 — 비사토 장특 70,600,948원이 주택분 토지 칸에 계상", () => {
+  it("A-5 장기보유특별공제 4열 — 비사토 장특 2,666,875원이 주택분 토지 칸에 계상", () => {
     // ✅ F35 수정 완료: 주택분 장특은 0(안분 과세분 없음)이고 비사토 표1 보유분만 남는다.
-    expect(o.cell("ltDeduction", "housingLand")).toBe(70_600_948);
+    expect(o.cell("ltDeduction", "housingLand")).toBe(2_666_875);
     expect(o.cell("ltDeduction", "housingBuilding")).toBe(0);
     expect(o.cell("ltDeduction", "commercialLand")).toBe(335_980_441);
     expect(o.cell("ltDeduction", "commercialBuilding")).toBe(2_149_262);
-    // ✅ F35: 종전 338,129,704 → 비사토 장특 가산 후 408,730,652.
-    expect(o.cell("ltDeduction", "total")).toBe(408_730_652);
+    // ✅ F35: 종전 338,129,704 → 비사토 장특 가산 후 340,796,579.
+    expect(o.cell("ltDeduction", "total")).toBe(340_796_579);
     // 보유 기간분 행에도 같은 금액이 반영돼 「합계 = 보유분 + 거주분」이 성립한다.
     const ltHolding = o.rows.find((r) => r.label.includes("보유 기간분"))!;
     const ltResidence = o.rows.find((r) => r.label.includes("거주 기간분"))!;
-    expect(ltHolding.values["total"]).toBe(408_730_652);
-    expect(ltHolding.values["housingLand"]).toBe(70_600_948);
+    expect(ltHolding.values["total"]).toBe(340_796_579);
+    expect(ltHolding.values["housingLand"]).toBe(2_666_875);
     expect(
       (ltHolding.values["total"] as number) + (ltResidence.values["total"] as number),
     ).toBe(o.cell("ltDeduction", "total"));
   });
 
-  it("A-6 양도소득금액 4열 — 비사토 양도소득금액 164,735,546원 포함", () => {
-    expect(o.cell("incomeAmount", "housingLand")).toBe(164_735_546);
+  it("A-6 양도소득금액 4열 — 비사토 양도소득금액 6,222,711원 포함", () => {
+    expect(o.cell("incomeAmount", "housingLand")).toBe(6_222_711);
     expect(o.cell("incomeAmount", "housingBuilding")).toBe(0);
     expect(o.cell("incomeAmount", "commercialLand")).toBe(783_954_365);
     expect(o.cell("incomeAmount", "commercialBuilding")).toBe(5_014_946);
-    // ✅ F35: 종전 788,969,312 → 비사토 양도소득금액 가산 후 953,704,858.
-    expect(o.cell("incomeAmount", "total")).toBe(953_704_858);
+    // ✅ F35: 종전 788,969,312 → 비사토 양도소득금액 가산 후 795,192,023.
+    expect(o.cell("incomeAmount", "total")).toBe(795_192_023);
   });
 
   it("A-7 ✅ 표 내부 자기정합: 과세표준 == 양도소득금액 − 기본공제", () => {
     // 과세표준은 엔진값(비사토 포함)이다. 종전에는 양도소득금액 행이 어댑터값(비사토 제외)이라
-    // 같은 표 안에서 두 행이 비사토 양도소득금액(164,735,546원)만큼 어긋났다 — 이제 0이다.
+    // 같은 표 안에서 두 행이 비사토 양도소득금액(6,222,711원)만큼 어긋났다 — 이제 0이다.
     expect(o.cell("basicDeduction", "total")).toBe(2_500_000);
-    expect(o.cell("taxBase", "total")).toBe(951_204_858);
+    expect(o.cell("taxBase", "total")).toBe(792_692_023);
     const gap = o.cell("taxBase", "total") - (o.cell("incomeAmount", "total") - o.cell("basicDeduction", "total"));
     expect(gap).toBe(0);
-    expect(nb.incomeAmount).toBe(164_735_546);
+    expect(nb.incomeAmount).toBe(6_222_711);
   });
 
   it("A-8 「4열 합 = 합계」 불변식 — 수정 후에도 유지", () => {
@@ -233,9 +262,9 @@ describe("F35 케이스 A: 12억 이하 주택분(전액 비과세) + 배율초�
   it("A-9 세액 불변 — 표시 축 정정이 세액에 닿지 않았음을 고정", () => {
     // 과세표준·결정세액은 엔진(`buildTotalTax`)이 비사토를 포함해 산정한 값 그대로다.
     // 아래 3값은 F35 **수정 전과 동일**해야 한다.
-    expect(o.result.taxBase).toBe(951_204_858);
-    expect(o.result.determinedTax).toBe(363_566_040);
-    expect(o.result.totalTax).toBe(399_922_644);
+    expect(o.result.taxBase).toBe(792_692_023);
+    expect(o.result.determinedTax).toBe(296_990_649);
+    expect(o.result.totalTax).toBe(326_689_713);
   });
 });
 
@@ -262,90 +291,90 @@ describe("F35 케이스 B: 12억 초과 주택분(안분 과세) + 배율초과"
   it("B-0 엔진 관측값 (비사업용토지 파트 + 12억 안분 발동)", () => {
     expect(o.breakdown.housingPart.isExempt).toBe(false);
     expect(o.breakdown.apportionment.housingTransferPrice).toBe(5_059_593_409);
-    expect(nb.transferGain).toBe(922_700_197);
-    expect(nb.longTermDeductionAmount).toBe(276_810_059);
-    expect(nb.incomeAmount).toBe(645_890_138);
+    expect(nb.transferGain).toBe(558_482_938);
+    expect(nb.longTermDeductionAmount).toBe(167_544_881);
+    expect(nb.incomeAmount).toBe(390_938_057);
   });
 
   it("B-1 전체 양도차익 4열 — 실측 고정 · 4열 합 == 합계 (정확)", () => {
-    expect(o.cell("transferGain", "housingLand")).toBe(1_318_064_694);
-    expect(o.cell("transferGain", "housingBuilding")).toBe(3_726_104_173);
+    expect(o.cell("transferGain", "housingLand")).toBe(797_785_289);
+    expect(o.cell("transferGain", "housingBuilding")).toBe(3_726_104_171);
     expect(o.cell("transferGain", "commercialLand")).toBe(2_895_152_209);
     expect(o.cell("transferGain", "commercialBuilding")).toBe(69_934_308);
-    expect(o.cell("transferGain", "total")).toBe(8_009_255_384);
+    expect(o.cell("transferGain", "total")).toBe(7_488_975_977);
     expect(o.partSum("transferGain")).toBe(o.cell("transferGain", "total"));
   });
 
   it("B-2 과세대상 양도차익 4열 — 안분 분모에서 비사토 제외 + 비사토 전액 가산", () => {
     // ✅ F35 수정 완료: 안분 비율의 분모가 (주택분 양도차익 − 비사토)로 바뀌어 주택분 토지·건물
-    //    두 칸이 함께 올라가고, 그 위에 비사토 922,700,197원이 주택분 토지 칸에 전액 가산된다.
-    expect(o.cell("taxableGain", "housingLand")).toBe(1_224_294_827);
-    expect(o.cell("taxableGain", "housingBuilding")).toBe(2_842_372_091);
+    //    두 칸이 함께 올라가고, 그 위에 비사토 558,482,938원이 주택분 토지 칸에 전액 가산된다.
+    expect(o.cell("taxableGain", "housingLand")).toBe(741_029_182);
+    expect(o.cell("taxableGain", "housingBuilding")).toBe(2_842_372_090);
     expect(o.cell("taxableGain", "commercialLand")).toBe(2_895_152_209);
     expect(o.cell("taxableGain", "commercialBuilding")).toBe(69_934_308);
-    // ✅ F35: 종전 6,109,053,239 → 7,031,753,436 (= + 922,700,197).
-    expect(o.cell("taxableGain", "total")).toBe(7_031_753_436);
+    // ✅ F35: 종전 5,990,004,852 → 6,548,487,790 (= + 558,482,938).
+    expect(o.cell("taxableGain", "total")).toBe(6_548_487_790);
   });
 
-  it("B-3 비과세 양도차익 4열 — 흡수됐던 비사토 922,700,197원이 빠졌다", () => {
+  it("B-3 비과세 양도차익 4열 — 흡수됐던 비사토 558,482,938원이 빠졌다", () => {
     // ✅ F35 수정 완료: 종전에는 `housingExemptRatio`가 비사토를 분모에만 남겨 주택분 토지·건물
     //    두 칸에 걸쳐 비사토가 「비과세」로 흡수됐다.
-    expect(o.cell("exemptGain", "housingLand")).toBe(93_769_867);
-    expect(o.cell("exemptGain", "housingBuilding")).toBe(883_732_082);
+    expect(o.cell("exemptGain", "housingLand")).toBe(56_756_107);
+    expect(o.cell("exemptGain", "housingBuilding")).toBe(883_732_081);
     expect(o.cell("exemptGain", "commercialLand")).toBe(0);
     expect(o.cell("exemptGain", "commercialBuilding")).toBe(0);
-    // ✅ F35: 종전 1,900,202,145 → 977,501,948 (= − 922,700,197).
-    expect(o.cell("exemptGain", "total")).toBe(977_501_948);
+    // ✅ F35: 종전 1,498,971,125 → 940,488,187 (= − 558,482,938).
+    expect(o.cell("exemptGain", "total")).toBe(940_488_187);
   });
 
-  it("B-4 ✅ 비사업용토지 양도차익(922,700,197원)이 과세대상에 계상된다", () => {
+  it("B-4 ✅ 비사업용토지 양도차익(558,482,938원)이 과세대상에 계상된다", () => {
     const nbGain = nb.transferGain;
-    expect(nbGain).toBe(922_700_197);
+    expect(nbGain).toBe(558_482_938);
     // 비과세 = 주택분 양도차익 − 비사토 이전분 − 주택분 안분과세분
     const properExempt =
       o.breakdown.housingPart.transferGain - nbGain - o.breakdown.housingPart.proratedTaxableGain;
-    expect(properExempt).toBe(977_501_948);
+    expect(properExempt).toBe(940_488_187);
     expect(o.cell("exemptGain", "total")).toBe(properExempt);
     expect(o.cell("taxableGain", "total")).toBe(
       o.breakdown.housingPart.proratedTaxableGain + o.breakdown.commercialPart.transferGain + nbGain,
     );
-    expect(o.cell("taxableGain", "total")).toBe(7_031_753_436);
+    expect(o.cell("taxableGain", "total")).toBe(6_548_487_790);
   });
 
-  it("B-5 장기보유특별공제 4열 — 비사토 장특 276,810,059원이 주택분 토지 칸에 계상", () => {
-    // ✅ F35 수정 완료: 657,226,455 + 276,810,059 = 934,036,514.
-    expect(o.cell("ltDeduction", "housingLand")).toBe(934_036_514);
-    expect(o.cell("ltDeduction", "housingBuilding")).toBe(1_857_946_921);
+  it("B-5 장기보유특별공제 4열 — 비사토 장특 167,544,881원이 주택분 토지 칸에 계상", () => {
+    // ✅ F35 수정 완료: 426,754,078 + 167,544,881 = 594,298,959.
+    expect(o.cell("ltDeduction", "housingLand")).toBe(594_298_959);
+    expect(o.cell("ltDeduction", "housingBuilding")).toBe(1_993_180_588);
     expect(o.cell("ltDeduction", "commercialLand")).toBe(868_545_661);
     expect(o.cell("ltDeduction", "commercialBuilding")).toBe(20_980_292);
-    // ✅ F35: 종전 3,404,699,331 → 3,681,509,390.
-    expect(o.cell("ltDeduction", "total")).toBe(3_681_509_390);
+    // ✅ F35: 종전 3,309,460,621 → 3,477,005,502.
+    expect(o.cell("ltDeduction", "total")).toBe(3_477_005_502);
     // 보유 기간분 행에도 같은 금액이 반영돼 「합계 = 보유분 + 거주분」이 성립한다.
     const ltHolding = o.rows.find((r) => r.label.includes("보유 기간분"))!;
     const ltResidence = o.rows.find((r) => r.label.includes("거주 기간분"))!;
-    expect(ltHolding.values["total"]).toBe(3_681_509_390);
-    expect(ltHolding.values["housingLand"]).toBe(934_036_514);
+    expect(ltHolding.values["total"]).toBe(3_477_005_502);
+    expect(ltHolding.values["housingLand"]).toBe(594_298_959);
     expect(
       (ltHolding.values["total"] as number) + (ltResidence.values["total"] as number),
     ).toBe(o.cell("ltDeduction", "total"));
   });
 
-  it("B-6 양도소득금액 4열 — 비사토 양도소득금액 645,890,138원 포함", () => {
-    // ✅ F35 수정 완료: 164,306,614 + 645,890,138 = 810,196,752.
-    expect(o.cell("incomeAmount", "housingLand")).toBe(810_196_752);
-    expect(o.cell("incomeAmount", "housingBuilding")).toBe(464_486_730);
+  it("B-6 양도소득금액 4열 — 비사토 양도소득금액 390,938,057원 포함", () => {
+    // ✅ F35 수정 완료: 106,688,519 + 390,938,057 = 497,626,576.
+    expect(o.cell("incomeAmount", "housingLand")).toBe(497_626_576);
+    expect(o.cell("incomeAmount", "housingBuilding")).toBe(498_295_148);
     expect(o.cell("incomeAmount", "commercialLand")).toBe(2_026_606_547);
     expect(o.cell("incomeAmount", "commercialBuilding")).toBe(48_954_015);
-    // ✅ F35: 종전 2,704,353,908 → 3,350,244,046.
-    expect(o.cell("incomeAmount", "total")).toBe(3_350_244_046);
+    // ✅ F35: 종전 2,680,544,231 → 3,071,482,288.
+    expect(o.cell("incomeAmount", "total")).toBe(3_071_482_288);
   });
 
   it("B-7 ✅ 표 내부 자기정합: 과세표준 == 양도소득금액 − 기본공제", () => {
     expect(o.cell("basicDeduction", "total")).toBe(2_500_000);
-    expect(o.cell("taxBase", "total")).toBe(3_347_744_046);
+    expect(o.cell("taxBase", "total")).toBe(3_068_982_288);
     const gap = o.cell("taxBase", "total") - (o.cell("incomeAmount", "total") - o.cell("basicDeduction", "total"));
     expect(gap).toBe(0);
-    expect(nb.incomeAmount).toBe(645_890_138);
+    expect(nb.incomeAmount).toBe(390_938_057);
   });
 
   it("B-8 「4열 합 = 합계」 불변식 — 수정 후에도 유지", () => {
@@ -356,8 +385,8 @@ describe("F35 케이스 B: 12억 초과 주택분(안분 과세) + 배율초과"
   });
 
   it("B-9 세액 불변 — 표시 축 정정이 세액에 닿지 않았음을 고정", () => {
-    expect(o.result.taxBase).toBe(3_347_744_046);
-    expect(o.result.determinedTax).toBe(1_449_642_128);
-    expect(o.result.totalTax).toBe(1_594_606_340);
+    expect(o.result.taxBase).toBe(3_068_982_288);
+    expect(o.result.determinedTax).toBe(1_315_102_029);
+    expect(o.result.totalTax).toBe(1_446_612_231);
   });
 });

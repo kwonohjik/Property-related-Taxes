@@ -1,8 +1,13 @@
 /**
  * ⚠️ **S3-1 이후 갱신본(2026-10)** — 일반 주택 비-별개 취득의 뺄셈 역산은 비례 안분으로 교체됐다. 그 경로의 「현행 값 고정」
  * 12건은 `__tests__/api/transfer.route.housing-std-split-proportional.s3-1.predo.anchor.test.ts`(B-1~B-7)가 승계했고
- * 이 파일에서는 제거했다. 남은 것: 겸용 주택분(S3-2 대상 — 아직 뺄셈)·PHD(이미 비례)·양도가액 안분·별개 취득 파트 독립.
- * 아래 본문 중 「현행(뺄셈)」 서술이 **겸용(c)** 에만 해당함에 유의.
+ * 이 파일에서는 제거했다. 남은 것: 겸용 주택분(c)·PHD(이미 비례)·양도가액 안분·별개 취득 파트 독립.
+ *
+ * ⚠️ **S3-2 이후 갱신본(2026-10)** — 겸용 주택분(c)도 엔진이 가목:나목 비례를 **직접** 한다(나목 입력
+ *    `housingBuildingPrice`). 종전의 `vi.mock`(`calcHousingGainSplit` 가로채기) 재현 훅은 필요 없어져 제거했다:
+ *    · 「현행(뺄셈)」 → **항등 나목**(N = H − 가목) 입력 — 비례 = 뺄셈이라 종전 값과 1원 일치(기대값 불변).
+ *    · 「비례」 → 실제 나목(N_T 350M · N_A 150M) 입력 — 종전 훅이 재현하던 값과 1원 일치(기대값 불변).
+ *    이 일치가 「네이티브 비례 = 종전 재현 비례」의 증거다. 아래 본문의 「현행(뺄셈)」 서술은 항등 나목 의미로 읽을 것.
  *
  * S-3 특성화(characterization) anchor — 개별주택가격(부수토지 포함 결합 공시)을 토지분·건물분으로 나누는 방식.
  *
@@ -30,7 +35,7 @@
  * ⚠️ 가상 fixture다(실제 신고 사례 아님). 개별주택가격 ≠ 가목+나목 괴리는 +25%로 뒀다
  *    (실제 Excel 정본 fixture는 +49~58% — d 참조). a1의 기대값은 손계산으로 먼저 확인했다.
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
@@ -55,20 +60,6 @@ import {
 } from "../transfer-tax/_helpers/pre-housing-disclosure-fixture";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-
-// ── 겸용 housing 분할 호출을 가로채 재현 입력을 주입하는 훅 (기본 null = 현행 그대로) ──────────────
-const hook = vi.hoisted(() => ({ fn: null as null | ((a: unknown[]) => unknown[]) }));
-vi.mock("@/lib/tax-engine/transfer-tax-mixed-use-housing", async (orig) => {
-  const m = await orig<typeof import("@/lib/tax-engine/transfer-tax-mixed-use-housing")>();
-  return {
-    ...m,
-    calcHousingGainSplit: (...a: Parameters<typeof m.calcHousingGainSplit>) =>
-      m.calcHousingGainSplit(...((hook.fn ? hook.fn(a) : a) as Parameters<typeof m.calcHousingGainSplit>)),
-  };
-});
-afterEach(() => {
-  hook.fn = null;
-});
 
 const D = (s: string) => new Date(s);
 const rates = makeMockRates();
@@ -280,6 +271,12 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
   const muLpA = propLand(MU.H_A, MU.L_A, MU.N_A); // 125,000,000
   const r2 = makeMockRatesWithHouseEngine();
 
+  /** 나목 입력 — 실제 나목(비례) 또는 항등 나목(N = H − 가목 → 비례 = 종전 뺄셈) */
+  const withN = (nT: number, nA: number) => ({
+    transferStandardPrice: { housingPrice: MU.H_T, commercialBuildingPrice: 200_000_000, landPricePerSqm: 4_000_000, housingBuildingPrice: nT },
+    acquisitionStandardPrice: { housingPrice: MU.H_A, commercialBuildingPrice: 75_000_000, landPricePerSqm: 1_500_000, housingBuildingPrice: nA },
+  });
+  const ID_N = withN(MU.H_T - MU.L_T, MU.H_A - MU.L_A); // 200M · 100M — 종전 뺄셈과 같은 값
   const asset = (over: Partial<MixedUseAssetInput> = {}): MixedUseAssetInput => ({
     ...mixedUseCase14(),
     totalLandArea: 200, // 주택 100 + 상가 100
@@ -288,8 +285,7 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
     landAcquisitionDate: D("2005-03-01"),
     buildingAcquisitionDate: D("2005-03-01"),
     isOneHouseExempt: false,
-    transferStandardPrice: { housingPrice: MU.H_T, commercialBuildingPrice: 200_000_000, landPricePerSqm: 4_000_000 },
-    acquisitionStandardPrice: { housingPrice: MU.H_A, commercialBuildingPrice: 75_000_000, landPricePerSqm: 1_500_000 },
+    ...withN(MU.N_T, MU.N_A),
     ...over,
   });
 
@@ -301,26 +297,6 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
       mode === "actual" ? { ...a, useActualAcquisition: true, acquisitionActualTotalPrice: 700_000_000 } : a,
       r2,
     );
-  const proportional = <R,>(fn: () => R): R => {
-    hook.fn = (args) => {
-      const a = args[2] as MixedUseAssetInput;
-      return [
-        args[0],
-        args[1],
-        {
-          ...a,
-          transferStandardPrice: { ...a.transferStandardPrice, landPricePerSqm: muLpT / 100 },
-          acquisitionStandardPrice: { ...a.acquisitionStandardPrice, landPricePerSqm: muLpA / 100 },
-        },
-        ...args.slice(3),
-      ];
-    };
-    try {
-      return fn();
-    } finally {
-      hook.fn = null;
-    }
-  };
   const h = (r: ReturnType<typeof go>) => ({
     landTransferPrice: r.housingPart.landTransferPrice,
     buildingTransferPrice: r.housingPart.buildingTransferPrice,
@@ -334,13 +310,13 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
     buildingGain: r.housingPart.buildingTransferGain,
   });
 
-  it("재현 값 확인: 비례 토지분 320M·125M (단가 3.2M·1.25M × 100㎡)", () => {
+  it("비례 토지분 320M·125M (손계산) — 엔진이 나목 입력으로 직접 만든다(이전: 단가 3.2M·1.25M 재현 훅)", () => {
     expect(muLpT).toBe(320_000_000);
     expect(muLpA).toBe(125_000_000);
   });
 
-  it("c1 환산 · 현행(뺄셈): 양도 토지비율 400/600 → 토지 양도가 666,666,666 · 취득 토지비율 150/250 → 환산취득가 249,999,999", () => {
-    const cur = go(asset(), "estimated");
+  it("c1 환산 · 항등 나목(= 종전 뺄셈): 양도 토지비율 400/600 → 토지 양도가 666,666,666 · 취득 토지비율 150/250 → 환산취득가 249,999,999", () => {
+    const cur = go(asset(ID_N), "estimated");
     // 주택 양도가액 = 2,000M × 600/(600 + 400 + 200) = 1,000M. 환산 = 1,000M × 250/600 = 416,666,666
     expect(h(cur)).toEqual({
       landTransferPrice: 666_666_666,
@@ -357,8 +333,8 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
     expect(cur.total.transferTax).toBe(314_070_500);
   });
 
-  it("c1 환산 · 비례: 토지 양도가 533,333,333 · 환산취득가 208,333,333 — 주택분 토지·건물 차익이 크게 이동하나 세액은 같다(함께 취득·초과 없음)", () => {
-    const prop = proportional(() => go(asset(), "estimated"));
+  it("c1 환산 · 비례(실제 나목): 토지 양도가 533,333,333 · 환산취득가 208,333,333 — 주택분 토지·건물 차익이 크게 이동하나 세액은 같다(함께 취득·초과 없음)", () => {
+    const prop = go(asset(), "estimated");
     expect(h(prop)).toEqual({
       landTransferPrice: 533_333_333,
       buildingTransferPrice: 466_666_667,
@@ -371,7 +347,7 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
       landGain: 321_250_000,
       buildingGain: 254_583_334,
     });
-    // 재현 검증 — 엔진이 비례분을 그대로 소비했다(토지분 + 건물분 = 결합가)
+    // 엔진이 비례분을 만들었다(토지분 + 건물분 = 결합가) — 종전 재현 훅이 주입하던 값과 1원 일치
     expect(prop.housingPart.landStdPriceAtAcq).toBe(muLpA);
     expect(prop.housingPart.landTransferPrice).toBe(Math.floor((1_000_000_000 * muLpT) / MU.H_T));
     expect(prop.total.transferTax).toBe(314_070_500);
@@ -379,8 +355,8 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
 
   it("c2 환산 · 12억 이하 비과세 + 배율 초과분: 초과분 양도차익 103,041,666 → 80,312,500 · 세액 175,069,750 → 168,657,500 (−6,412,250)", () => {
     const a = asset({ isOneHouseExempt: true, residentialFootprintOverride: 25 }); // 25 × 3 = 75 → 초과 25㎡(25%)
-    const cur = go(a, "estimated");
-    const prop = proportional(() => go(a, "estimated"));
+    const cur = go({ ...a, ...ID_N }, "estimated");
+    const prop = go(a, "estimated");
     expect(cur.housingPart.isExempt).toBe(true);
     expect(cur.nonBusinessLandPart?.transferGain).toBe(103_041_666);
     expect(prop.nonBusinessLandPart?.transferGain).toBe(80_312_500);
@@ -390,8 +366,8 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
     expect(prop.total.totalPayable).toBe(185_523_250);
   });
 
-  it("c3 실가 · 현행(뺄셈): 취득시 토지비율 60% → 토지 취득가 221,052,631 (총 취득가 700M을 주택:상가로 나눈 주택분 368.4M의 60%)", () => {
-    const cur = go(asset(), "actual");
+  it("c3 실가 · 항등 나목(= 종전 뺄셈): 취득시 토지비율 60% → 토지 취득가 221,052,631 (총 취득가 700M을 주택:상가로 나눈 주택분 368.4M의 60%)", () => {
+    const cur = go(asset(ID_N), "actual");
     expect(h(cur)).toMatchObject({
       landTransferPrice: 666_666_666,
       landAcqPrice: 221_052_631,
@@ -403,7 +379,7 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
   });
 
   it("c3 실가 · 비례: 취득시 토지비율 50% → 184,210,526/184,210,526 · 세액은 같다(초과 없음)", () => {
-    const prop = proportional(() => go(asset(), "actual"));
+    const prop = go(asset(), "actual");
     expect(h(prop)).toMatchObject({
       landTransferPrice: 533_333_333,
       landAcqPrice: 184_210_526,
@@ -416,8 +392,8 @@ describe("(c) 겸용주택 주택분 — 뺄셈 vs 비례 (함께 취득 · 가�
 
   it("c4 실가 · 12억 이하 비과세 + 배율 초과분: 초과분 111,403,508 → 87,280,701 · 세액 192,278,421 → 185,186,315 (−7,092,106)", () => {
     const a = asset({ isOneHouseExempt: true, residentialFootprintOverride: 25 });
-    const cur = go(a, "actual");
-    const prop = proportional(() => go(a, "actual"));
+    const cur = go({ ...a, ...ID_N }, "actual");
+    const prop = go(a, "actual");
     expect(cur.nonBusinessLandPart?.transferGain).toBe(111_403_508);
     expect(prop.nonBusinessLandPart?.transferGain).toBe(87_280_701);
     expect(cur.total.transferTax).toBe(192_278_421);

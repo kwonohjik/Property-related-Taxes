@@ -9,7 +9,7 @@
  * 어댑터가 이 역산이 실제 취득가액을 내도록 expenses(개산공제 합계)를 전달하는지 검증한다.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { mixedUseToFilingResult } from "@/components/calc/results/mixed-use/MixedUseResultCard";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";

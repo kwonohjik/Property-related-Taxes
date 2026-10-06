@@ -27,6 +27,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
@@ -34,6 +35,15 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+
+/**
+ * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
+ * 종전 뺄셈(`H − 가목`)은 건물분을 0으로 clamp(토지 100%)했지만 비례에는 clamp가 없어 **현실적인 나목을 정해야** 한다.
+ * 취득시 주택건물 기준시가(나목) 90M — 가목:나목 = 360M:90M(4:1) → 토지분 floor(300M × 360/450) = 240M · 건물분 60M.
+ * (양도시는 H_T 900M > L_T 720M이라 항등 나목 180M이 성립 — 값 불변.) 기대값은 이 나목으로 재산출했다.
+ */
+const CLAMP_N = { acqN: 90_000_000 } as const;
+
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -174,7 +184,8 @@ function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
     householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     residencePeriodMonths: "0",
   });
-  return f;
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
 }
 const ACTUAL = { useEstimatedAcquisition: false, fixedAcquisitionPrice: "500000000" };
 const APPRAISAL = { useEstimatedAcquisition: false, isAppraisalAcquisition: true, fixedAcquisitionPrice: "500000000" };
@@ -190,7 +201,7 @@ const INHERIT = {
 describe("MU-4 겸용 실가·감정 안분 — 총액 필수 (⑧ `validateMixedUseAsset` 매매 실가 블록)", () => {
   it.each([
     ["실거래가 — 🟢 총액 있음 → 169,060,001 / 🔴 생략 → 400 (종전 200 · 315,810,001 — 취득가액 0)", ACTUAL, 169_060_001],
-    ["감정가액 — 🟢 총액 있음 → 163,180,001 / 🔴 생략 → 400 (종전 200 · 309,636,001 — 취득가액 0)", APPRAISAL, 163_180_001],
+    ["감정가액 — 🟢 총액 있음 → 163,684,001(S3-2: 종전 163,180,001 — 개산공제 base 합 H×3%) / 🔴 생략 → 400 (종전 200 · 309,636,001 — 취득가액 0)", APPRAISAL, 163_684_001],
   ] as const)("%s", async (_n, over, tax) => {
     const f = mixedForm(over);
     expect(issues(f)).toEqual([]);
@@ -242,10 +253,11 @@ describe("MU-6 겸용 상속·증여 — 주택분 평가액(신고가액 또는
 });
 
 describe("MU-7 propertyType=mixed-use-house인데 `mixedUse` 없음", () => {
-  it("🟢 있음 → 175,236,001 / 🔴 생략 → 400 (종전 200 · 315,810,000 — 평범한 주택으로 계산)", async () => {
+  it("🟢 있음 → 175,765,201(S3-2: 종전 175,236,001 — 개산공제 base 합 H×3%) / 🔴 생략 → 400 (종전 200 · 315,810,000 — 평범한 주택으로 계산)", async () => {
     const b = await bodyOf(mixedForm());
     expect(b.propertyType).toBe("mixed-use-house");
-    await expectTax(b, 175_236_001);
+    // S3-2 갱신 — 개산공제 base 합이 라목 가액(H 300M) × 3% = 9,000,000이 됐다(종전 뺄셈은 H < 가목이라 가목 360M 전부 × 3% = 10,800,000으로 H를 넘겼다). 토지·건물 분배 자체는 세액에 안 닿는다(같은 보유기간·초과 없음).
+    await expectTax(b, 175_765_201);
     const c = structuredClone(b);
     delete c.mixedUse;
     await expectRejected(c, "mixedUse");
@@ -267,7 +279,7 @@ const asset = (id: number, over: Record<string, unknown> = {}): AssetForm =>
     ...over,
   }) as AssetForm;
 function bundle(companion: Record<string, unknown>): TransferFormData {
-  return {
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     transferDate: "2024-03-01",
     filingDate: "2024-05-31",
@@ -277,7 +289,7 @@ function bundle(companion: Record<string, unknown>): TransferFormData {
     householdHousingCount: "0",
     isOneHousehold: false,
     bundledSaleMode: "apportioned",
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData, CLAMP_N);
 }
 const INH_COMP = {
   acquisitionCause: "inheritance",

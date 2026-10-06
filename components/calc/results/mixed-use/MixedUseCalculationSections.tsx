@@ -23,6 +23,7 @@ import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import { MixedUseTotalTaxSection } from "@/components/calc/results/mixed-use/MixedUseTotalTaxSection";
+import { MixedUseHousingStdSplit } from "@/components/calc/results/mixed-use/MixedUseHousingStdSplit";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { expandToggleClass } from "@/components/calc/results/shared/ExpandToggleButton";
@@ -309,6 +310,8 @@ export function MixedUseCalculationSections({
             />
           );
         })()}
+        {/* S3-2 — 개별주택가격 → 토지분·건물분 분할(양도가액·취득가액 안분·개산공제의 base). echo가 있을 때만 */}
+        {h.housingStdSplit && <MixedUseHousingStdSplit split={h.housingStdSplit} />}
         <Row
           label="주택 양도차익"
           value={fmt(h.transferGain)}
@@ -325,7 +328,7 @@ export function MixedUseCalculationSections({
           formula={
             isDeemedAcq
               ? `양도가액 ${fmtPlain(h.landTransferPrice)} - 취득가액 ${fmtPlain(h.landAcqPrice)}`
-              : `양도가액 ${fmtPlain(h.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(h.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지분 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <Row
@@ -337,7 +340,7 @@ export function MixedUseCalculationSections({
               ? h.buildingAppraisalDed > 0
                 ? `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(h.buildingAppraisalDed)}`
                 : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)}`
-              : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물분 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <DivRow />

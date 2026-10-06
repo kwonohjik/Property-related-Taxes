@@ -40,7 +40,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { judgeRentalHousingEligibility } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
 import { baseTransferInput, makeMockRatesWithHouseEngine, makeHouseInfo as makeHouseInfoMock } from "../_helpers/mock-rates";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 

@@ -31,6 +31,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST as SINGLE } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { buildPenaltyAmendmentPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
@@ -39,7 +40,7 @@ import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/ca
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { effectiveUnpaidTaxMode } from "@/lib/calc/transfer-unpaid-tax-mode";
 import { buildGeneralBuildingValuation } from "@/lib/calc/transfer-tax-api-gb";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import {
   mixedUseCase14,
   CASE14_TRANSFER_PRICE,
@@ -64,7 +65,7 @@ async function post(handler: (req: NextRequest) => Promise<Response>, url: strin
     new NextRequest(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(withIdentityStdInBody(body)),
     }),
   );
   return { status: res.status, json: (await res.json()) as Json };

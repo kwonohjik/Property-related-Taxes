@@ -10,6 +10,7 @@
  * worktree 실행: E2E_PORT=3xxx npx playwright test e2e/mixed-use-amendment.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 /** 일반 겸용주택(§97 직접 환산, PHD 미적용) — 4col 스펙과 동일 자산 */
@@ -46,7 +47,7 @@ function seedForm(correction: Record<string, unknown>) {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [mixedUseAsset()],
+        assets: [withMixedHousingStd(mixedUseAsset())],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",
         contractTotalPrice: "1500000000",

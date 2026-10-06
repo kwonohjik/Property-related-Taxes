@@ -40,6 +40,47 @@ export interface MixedUseStandardPrice {
   commercialBuildingPrice: number;
   /** 개별공시지가 (원/㎡) — 상가부수토지 산정용 */
   landPricePerSqm: number;
+  /**
+   * 주택건물 기준시가(나목) — 국세청 고시 건물 기준시가를 **주택 건물**에 적용한 값(건축물대장 연면적 기준).
+   * 개별주택가격(결합 공시)을 가목(개별공시지가 × 주택부수토지 면적):나목 비례로 토지·건물로 나눌 때 쓴다(S3-2).
+   * 필수 조건은 런타임 술어 `isHousingBuildingStdAtTransferRequired`·`isHousingBuildingStdAtAcqRequired`
+   * (`mixed-use-housing-std.ts`) — 해당 시 없음/0이면 엔진 throw·⑫ 400. 아니면(PHD 등) 무시.
+   * 취득측은 토지·건물 취득일이 다르면(B0) **건물 취득일** 기준 값이다.
+   */
+  housingBuildingPrice?: number;
+}
+
+/**
+ * 주택분 기준시가 토지·건물 분할 echo (S3-2) — 결과 카드가 이 유무로 「개별주택가격 × 가목 ÷ (가목 + 나목)」
+ * 산식을 풀어쓴다(계산 재도출 금지). JSON 직렬화 가능(Map 없음).
+ *
+ * - `proportional`: `landBasis = floor(H × landStd ÷ (landStd + buildingStd))`, `buildingBasis = H − landBasis`.
+ * - `separate_date_converted`(B0 — 토지·건물 취득일 상이, 집행기준 99-164-9): `landStd`·`buildingStd` = **건물 취득일**
+ *   가목·나목, `convertedHousingTotal = floor(H × (landStdAtLandAcq + buildingStd) ÷ (landStd + buildingStd))`,
+ *   `landBasis = floor(convertedHousingTotal × landStdAtLandAcq ÷ (landStdAtLandAcq + buildingStd))`, `buildingBasis` = 잔액.
+ * - `raw_ratio`(H 없음 — 상속·증여 신고가액만 입력): `housingTotal = 0`, `landBasis = landStd`·`buildingBasis = buildingStd`
+ *   (가목:나목 원값 비율로 취득가액을 나눈다).
+ */
+export interface MixedUseHousingStdSplitDetail {
+  /** 개별주택가격(결합 공시). `raw_ratio`이면 0. */
+  housingTotal: number;
+  /** 가목 — 개별공시지가 × 주택부수토지 면적 */
+  landStd: number;
+  /** 나목 — 주택건물 기준시가 */
+  buildingStd: number;
+  /** 그 파트의 기준시가 값(토지분) — 개산공제·취득가액·양도가액 안분의 base */
+  landBasis: number;
+  /** 그 파트의 기준시가 값(건물분) */
+  buildingBasis: number;
+  /**
+   * `separate_date_converted`(토지·건물 취득일 상이 · 집행기준 99-164-9) 전용 — 이때 `housingTotal`·`landStd`·
+   * `buildingStd`는 **건물 취득일** 개별주택가격·가목·나목이고, 아래 둘이 추가된다.
+   */
+  /** 토지 취득일 가목 */
+  landStdAtLandAcq?: number;
+  /** 취득당시 주택가격 = 개별주택가격 × (토지일 가목 + 나목) ÷ (건물일 가목 + 나목) — 토지분 + 건물분 */
+  convertedHousingTotal?: number;
+  kind: "proportional" | "separate_date_converted" | "raw_ratio";
 }
 
 /**
@@ -96,7 +137,7 @@ export interface MixedUseAssetInput {
     housingPrice?: number;
     /**
      * 주택부수토지 ㎡당 개별공시지가 — **건물 취득일 기준** (B0).
-     * 개별주택가격(건물 취득일 공시)에서 같은 날짜의 토지분을 빼 건물분 기준시가를 구하는 용도.
+     * 개별주택가격(건물 취득일 공시)을 가목:나목 비례로 나눌 때 **비례 분모의 가목**(S3-2 — 종전엔 H에서 빼는 감수).
      * `landPricePerSqm`(토지 취득일 기준 — 토지 파트용)과 **다른 값**이며 서로 대체하지 않는다.
      * 필수 조건: `isBuildingDayLandPriceRequired`(`mixed-use-acq-date.ts`) — 해당 시 없음/0이면 엔진 throw,
      * 아니면 무시.
@@ -585,6 +626,11 @@ export interface MixedUseHousingPart {
   buildingAppraisalDed: number;
   /** 취득시 건물분 기준시가 — 개산공제 산식 표시용 */
   buildingStdPriceAtAcq?: number;
+  /**
+   * 주택분 기준시가 토지·건물 분할 echo (S3-2) — 비-PHD·비-4부분 경로에만 존재(PHD·4부분·구 resultData는 없음).
+   * `acq`는 상가→주택 용도변경이면 없다(취득시 주택 합계를 양도시 비율로 나눈다 — 그 비율은 `transfer`).
+   */
+  housingStdSplit?: { acq?: MixedUseHousingStdSplitDetail; transfer?: MixedUseHousingStdSplitDetail };
   /** 12억 이하 → 전액 비과세 */
   isExempt: boolean;
   /** 12억 초과 안분 후 과세대상 양도차익 */

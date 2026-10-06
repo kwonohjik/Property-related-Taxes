@@ -23,7 +23,7 @@
  *   1호 = 조정대상지역 1세대 2주택 / 3호 = 조정대상지역 1세대 3주택 이상
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates, makeMockRatesWithHouseEngine, makeHouseInfo } from "../_helpers/mock-rates";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
@@ -228,18 +228,18 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
    *
    * §104⑤2호 단서상 주택분(§104⑦1·3호)과 상가분(§104①1호)은 **다른 호**이므로 합산되지 않는다.
    *
-   * 목표값은 계획서 §3 E-2의 손계산 2호와 일치해야 한다(B2에서 1호=889,767,350 확인 완료).
+   * 목표값은 계획서 §3 E-2의 손계산 2호와 일치해야 한다(B2에서 1호=822,114,825 확인 완료).
    */
-  const CLAUSE1_AFTER_B2 = 889_767_350;
+  const CLAUSE1_AFTER_B2 = 822_114_825;
 
-  it("B-B11: 조정지역 2주택 → +20%p · 산출세액 1,137,370,975", () => {
+  it("B-B11: 조정지역 2주택 → +20%p · 산출세액 1,039,650,661", () => {
     const r = run({ multiHouse: multiHouse(1) });
-    expect(r.total.transferTax).toBe(1_137_370_975);
+    expect(r.total.transferTax).toBe(1_039_650_661);
   });
 
-  it("B-B12: 조정지역 3주택+ → +30%p · 산출세액 1,288,352,475", () => {
+  it("B-B12: 조정지역 3주택+ → +30%p · 산출세액 1,175,598,267", () => {
     const r = run({ multiHouse: multiHouse(2) });
-    expect(r.total.transferTax).toBe(1_288_352_475);
+    expect(r.total.transferTax).toBe(1_175_598_267);
   });
 
   it("B-B13: 2008 위기취득 — 세율 가산 **0**, 장특 배제는 존속 → B2 값 그대로", () => {
@@ -283,7 +283,7 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
     expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
     // 중과 한계세율 45%+20%p = 65% < 단기 70% → 후단 MAX가 §104①3호를 채택한다.
     expect(r.total.appliedRate).toBe(0.7);
-    expect(r.total.transferTax).toBe(1_495_427_008);
+    expect(r.total.transferTax).toBe(1_390_189_746);
   });
 
   it("B-B17b: 보유 2년 이상 + 중과 → 중과세율 채택 · 표시율 0.65(=45%+20%p)", () => {
@@ -310,7 +310,7 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
     expect(r.total.rateBasis).toBe("progressive");
     // 비사토 가산은 2호 파트 세액 안에서만 계산된다 → 총액에 별도로 얹지 않는다.
     expect(r.total.nonBusinessSurcharge).toBe(0);
-    expect(r.total.transferTax).toBe(559_027_563);
+    expect(r.total.transferTax).toBe(462_899_769);
   });
 });
 

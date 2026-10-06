@@ -15,6 +15,7 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
+import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -182,6 +183,16 @@ export function MixedUseLegacyStdPrice({
             {/* B0 — 토지·건물 취득일이 다를 때만(술어는 컴포넌트 내부). 취득시 면적은 엔진이 정하므로 면적 미전달 */}
             <MixedUseAcqHousingLandPriceField asset={asset} onChange={onChange} jibun={jibun} />
 
+            {/* S3-2 — 취득시 주택건물 기준시가(나목). 용도변경 상가→주택은 술어가 거짓이라 칸이 없다(취득시 주택이 없다).
+                주택→상가는 취득시 전체가 주택이었으므로 모달 연면적 prefill이 주택+상가 합이다. 이미 amber 박스 안 */}
+            <MixedUseHousingBuildingStdField
+              asset={asset}
+              onChange={onChange}
+              timePoint="acq"
+              transferDate={transferDate}
+              embedded
+            />
+
             {/* 취득시 상가건물 기준시가 — 직접 입력 */}
             <FieldCard
               label="취득시 상가건물 기준시가"
@@ -257,7 +268,7 @@ export function MixedUseLegacyStdPrice({
             )}
             {asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house" && (
               <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-                ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 취득시 상가건물 기준시가 + 개별공시지가를 입력하면 양도시 면적비율로 안분되어 취득시 주택부분 기준시가를 산정합니다.
+                ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 취득시 상가건물 기준시가 + 개별공시지가를 입력하면 양도시 면적비율로 안분되어 취득시 주택부분 기준시가를 산정하고, 그 토지분·건물분은 양도시 토지 기준시가 : 주택건물 기준시가 비율로 나눕니다(양도시 주택건물 기준시가 입력 필요).
               </div>
             )}
 
@@ -318,6 +329,16 @@ export function MixedUseLegacyStdPrice({
             hint="주택건물+주택부수토지 일괄"
           />
         )}
+
+        {/* S3-2 — 양도시 주택건물 기준시가(나목). 상가→주택도 양도시 나목은 쓴다(취득시 주택 합계를 양도시 비율로 나눈다) */}
+        <MixedUseHousingBuildingStdField
+          asset={asset}
+          onChange={onChange}
+          timePoint="transfer"
+          transferDate={transferDate}
+          landArea={derived.residentialLandArea}
+          embedded
+        />
 
         {/* Case A(용도변경 4부분)는 자산-우선 위젯(취득시 섹션 PHD, layout=asset-major)이 양도까지 흡수 — 별도 양도 4부분 미렌더. */}
         {!isCaseA && (
