@@ -78,6 +78,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     // §155② 단서·1~4호 순위 게이트 — boolean pass-through
     decedentSameHouseholdAtInheritance: h.decedentSameHouseholdAtInheritance,
     parentalCareMergeInheritedHouse: h.parentalCareMergeInheritedHouse,
+    reInheritedFromSeparateHousehold: h.reInheritedFromSeparateHousehold,
     isRankingDisqualifiedInheritedHouse: h.isRankingDisqualifiedInheritedHouse,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),

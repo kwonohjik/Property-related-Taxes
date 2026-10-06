@@ -120,6 +120,12 @@ export interface HouseEntry {
   decedentSameHouseholdAtInheritance?: boolean;
   /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
   parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * D17 재상속 — 피상속인이 **별도세대**로부터 상속받은 상속주택(§155②)을 피상속인 사망으로 동일세대원인 상속인이
+   * 다시 상속받았다. 상속주택 지위를 이어받아 §155② 단서(동일세대 상속 배제)를 받지 않는다(재산세과-2961 ·
+   * 부동산납세과-624 · 서면-2022-법규재산-4747 등). 동일세대=true 시에만 의미.
+   */
+  reInheritedFromSeparateHousehold?: boolean;
   /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
   isRankingDisqualifiedInheritedHouse?: boolean;
 

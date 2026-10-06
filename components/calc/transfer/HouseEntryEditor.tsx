@@ -291,6 +291,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
               ? house.decedentSameHouseholdAtInheritance
               : undefined,
             parentalCareMergeInheritedHouse: v ? house.parentalCareMergeInheritedHouse : undefined,
+            reInheritedFromSeparateHousehold: v ? house.reInheritedFromSeparateHousehold : undefined,
             isRankingDisqualifiedInheritedHouse: v
               ? house.isRankingDisqualifiedInheritedHouse
               : undefined,
@@ -357,6 +358,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
                 parentalCareMergeInheritedHouse: v
                   ? house.parentalCareMergeInheritedHouse
                   : undefined,
+                reInheritedFromSeparateHousehold: v ? house.reInheritedFromSeparateHousehold : undefined,
               })
             }
             title="상속개시 당시 피상속인과 동일세대"
@@ -370,6 +372,15 @@ function InheritanceSection({ house, onUpdate }: Props) {
                 onCheckedChange={(v) => onUpdate({ parentalCareMergeInheritedHouse: v })}
                 title="동거봉양 합가 + 합가 전 피상속인 보유 주택"
                 description="60세 이상 직계존속 동거봉양을 위해 세대를 합쳐 2주택이 된 경우로서, 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다. (§155② 단서 예외)"
+              />
+              <ToggleCard
+                variant="chip"
+                tone="amber"
+                data-testid="house-row-reinherited-from-separate-household"
+                checked={house.reInheritedFromSeparateHousehold ?? false}
+                onCheckedChange={(v) => onUpdate({ reInheritedFromSeparateHousehold: v || undefined })}
+                title="별도세대에서 받은 상속주택을 다시 상속"
+                description="피상속인이 별도세대로부터 상속받은 주택을, 피상속인이 사망해 동일세대원인 본인이 다시 상속받은 경우입니다. 상속주택 지위를 이어받습니다."
               />
               <p className="text-caption text-muted-foreground/70">
                 동거봉양 합가 전 보유분이면 주택 수에서 제외되고, 그 외 동일세대 상속은 제외되지

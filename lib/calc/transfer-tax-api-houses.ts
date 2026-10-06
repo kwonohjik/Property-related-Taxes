@@ -306,6 +306,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
         h.isInherited && h.decedentSameHouseholdAtInheritance
           ? h.parentalCareMergeInheritedHouse
           : undefined,
+      // D17 재상속 — 동일세대일 때만 의미(동거봉양 예외와 같은 규약)
+      reInheritedFromSeparateHousehold:
+        h.isInherited && h.decedentSameHouseholdAtInheritance ? h.reInheritedFromSeparateHousehold : undefined,
       isRankingDisqualifiedInheritedHouse: h.isInherited
         ? h.isRankingDisqualifiedInheritedHouse
         : undefined,

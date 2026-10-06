@@ -90,13 +90,20 @@ export interface InheritanceGeneralHouseFacts {
 
 /**
  * 동거봉양 단서(§155② 단서) 게이트 — 별도세대이거나 동거봉양 합가 전 보유분이면 통과.
+ * D17 — 별도세대에서 받은 상속주택을 동일세대원이 재상속했으면 상속주택 지위를 이어받아 통과한다(해석 5건 —
+ * `HouseInfo.reInheritedFromSeparateHousehold`). 재상속이면 일반주택 「상속개시 당시 보유」 괄호의 기준일이 최초 상속인지
+ * 재상속인지는 확인되지 않아 입력된 상속개시일(재상속일)로 보고 판정 보류를 고지한다(`era-undetermined.ts`).
  * 중과 7호(「제155조제2항에 해당하는 상속받은 주택」)도 이 게이트를 쓴다 — 단일 소스(D16).
  * §155⑦1호 상속 농어촌주택도 같다(단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」 — D7, `qualifiesRuralHouse`).
  */
 export function passesHouseholdGate(
-  h: Pick<HouseInfo, "decedentSameHouseholdAtInheritance" | "parentalCareMergeInheritedHouse">,
+  h: Pick<HouseInfo, "decedentSameHouseholdAtInheritance" | "parentalCareMergeInheritedHouse" | "reInheritedFromSeparateHousehold">,
 ): boolean {
-  return h.decedentSameHouseholdAtInheritance !== true || h.parentalCareMergeInheritedHouse === true;
+  return (
+    h.decedentSameHouseholdAtInheritance !== true ||
+    h.parentalCareMergeInheritedHouse === true ||
+    h.reInheritedFromSeparateHousehold === true
+  );
 }
 
 /** 순위(§155②1~4호) 게이트 — 순위 부적격 선언이 없으면 통과. 중과 7호도 공용(D16). */
