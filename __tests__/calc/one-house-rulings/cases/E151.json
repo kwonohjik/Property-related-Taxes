@@ -1,0 +1,42 @@
+[
+  {
+    "id": "E151-era",
+    "docNo": "대법원-2004-두-10869",
+    "docDate": "2005.12.23.",
+    "basis": "era",
+    "today": "2005-12-23",
+    "summary": "귀농주택(②, 1995 취득)·서울 아파트(①)·③ 3주택 세대가 ③을 먼저 양도(2002.1.)한 뒤 귀농주택과 일반주택(①, 상속 취득)만 보유한 상태에서 ① 양도(2002.2.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-02-04",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-08-14",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1993-04-27"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "1995-09-11",
+          "ruralHouseKind": "return_to_farm",
+          "ruralLandAreaSqm": "408",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false,
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:return_to_farm"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D15 수정 후). 귀농주택 1995-09-11 취득 → 2002-02-04 일반주택 양도(6년 5개월). §155⑦ 단서(귀농주택 취득일부터 5년 이내 양도 한정)는 대통령령 제26982호(2016.2.17.)가 신설했고 부칙 제10조·제22조로 2016.2.17. 이후 귀농주택 취득분에만 적용된다 → 이 건은 단서 없음 → 비과세(155-7-rural:return_to_farm). 종전에는 단서를 취득일 연혁 없이 적용해 과세였다. 짝: 귀농주택 2016-02-17 이후 취득 + 5년 초과 양도는 과세(엔진 anchor one-house-era-deadlines-d13-d14-d15)."
+  }
+]

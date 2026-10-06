@@ -1,0 +1,36 @@
+[
+  {
+    "id": "SMOKE-1",
+    "docNo": "(하네스 점검용 — 해석례 아님)",
+    "docDate": "-",
+    "basis": "current",
+    "today": "2024-07-01",
+    "summary": "비조정 1주택 5년 보유 양도 — 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-06-01",
+      "contractTotalPrice": "1000000000",
+      "residencePeriodMonths": "60",
+      "asset": { "assetKind": "housing", "acquisitionDate": "2019-06-01" }
+    },
+    "expected": { "isExempt": true },
+    "bucket": "match"
+  },
+  {
+    "id": "SMOKE-2",
+    "docNo": "(하네스 점검용 — 해석례 아님)",
+    "docDate": "-",
+    "basis": "current",
+    "today": "2024-07-01",
+    "summary": "1주택 1년 보유 양도 — 보유기간 미달 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-06-01",
+      "contractTotalPrice": "1000000000",
+      "residencePeriodMonths": "12",
+      "asset": { "assetKind": "housing", "acquisitionDate": "2023-06-01" }
+    },
+    "expected": { "isExempt": false },
+    "bucket": "match"
+  }
+]

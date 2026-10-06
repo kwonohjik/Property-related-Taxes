@@ -1,0 +1,39 @@
+[
+  {
+    "docNo": "서면-2017-부동산-2005",
+    "docDate": "2017.12.28.",
+    "id": "E036-era",
+    "basis": "era",
+    "today": "2017-12-28",
+    "summary": "A아파트(2003.6.3. 취득)·B아파트(2014.11.10. 취득)가 각각 관리처분계획인가(B 2015.11.12., A 2016.7.25.)로 조합원입주권이 된 상태에서 2016.12.26. A조합원입주권 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-12-26",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2003-06-03",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2014-11-10",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2015-11-12"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "one_right_89_1_4_ga",
+        "one_right_89_1_4_na"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 조합원입주권 2개 보유 상태에서 1개 양도 → 과세. 일자 원문 그대로(양도일 2016-12-26, 회신 2017-12-28). 양도가는 원문에 없어 6억 가정(입주권 가액 중립). 표현: 양도 대상 A는 right_to_move_in(취득일 2003-06-03 = 종전주택 취득일, 관리처분인가일 현재 기존주택 소유 선언 yes), 세대 보유 B는 presaleRights의 조합원입주권(취득 2014-11-10, 관리처분인가 2015-11-12). 양성 짝(프로브): B 입주권을 빼면 §89①4호 가목으로 비과세(applied one_right_89_1_4_ga) → 위 과세는 입주권 2개 보유 때문. 경로는 notAppliedExceptions(가·나목 불성립)로 고정. 한계: 원문은 2017.2.3. 개정 전 영 §155⑰(입주권의 일시적 1세대2주택) 적용 질의인데, 판정 메뉴는 입주권 양도를 §89①4호 가·나목(보유 입주권 수·다른 주택 수) 경로로 판정하며 §155⑰ 별도 입력은 없다."
+  }
+]

@@ -1,0 +1,73 @@
+[
+  {
+    "docNo": "서면인터넷방문상담4팀-2443",
+    "docDate": "2005.12.08.",
+    "id": "E100-era",
+    "basis": "era",
+    "today": "2005-08-20",
+    "summary": "1주택 보유 1세대가 아파트 분양권을 상속받아 그 분양권으로 주택을 취득(2005.2.)한 뒤 종전주택을 1년 이내에 양도 (사실관계·일자 원문 미수록 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-09-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2005-02-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). 사실관계·일자가 원문에 없어 가정: 종전주택 취득 2000-03-15, 분양권 상속으로 취득한 신규주택 2005-02-15, 양도 2005-09-15(신규 취득 후 1년 이내), 양도가 3억. 표현: 분양권 상속으로 취득한 주택은 상속주택이 아니라 다른 주택 취득이므로 상속 표시 없이 명부 1행 → 일시적 2주택(155-1) 비과세. 한계: 상속받은 것이 분양권이라는 사실을 담는 칸이 없어(상속 표시를 하지 않아야 이 경로), 당시 기한 1년은 엔진 연혁에 없다 — 신규 취득 후 1년 7개월에 양도해도 비과세로 나온다(V-E100-1y-plus). 상속 표시를 켜면 §155② 상속주택 제외 경로로 비과세(V-E100-inh) — 같은 결론, 다른 경로."
+  },
+  {
+    "docNo": "서면인터넷방문상담4팀-2443",
+    "docDate": "2005.12.08.",
+    "id": "E100-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택 보유 1세대가 피상속인이 2021.1.1. 이후 취득한 분양권을 상속받아 사업시행 완료 후 취득한 신축주택(2025.6.)을 보유한 채 종전주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2025-06-20",
+          "isInherited": true,
+          "inheritedDate": "2023-04-10",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "new"
+      ],
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(경로 고정). 현행 규칙: 2021.1.1. 이후 양도분부터 피상속인이 2021.1.1. 이후 취득한 분양권을 상속받아 사업시행 완료 후 취득한 신축주택도 상속주택에 포함. 같은 사실 패턴을 상속 2023-04-10, 신축 취득 2025-06-20, 종전주택 취득 2012-03-15, 양도 2026-05-20으로 재구성. 새 축 중립: 비조정, 양도가 7억. 경로 고정: 상속주택 제외(excludedHouses=[new]) + 일시적 2주택 미적용. 한계: 피상속인의 분양권 취득일(2021.1.1. 이후 요건) 입력 칸이 없어 요건 경계는 구별하지 못한다(상속 표시한 주택은 모두 상속주택으로 취급)."
+  }
+]

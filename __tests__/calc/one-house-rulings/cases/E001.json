@@ -1,0 +1,35 @@
+[
+  {
+    "id": "E001-dual",
+    "docNo": "국심-2006-서-3136",
+    "docDate": "2006.12.04.",
+    "basis": "era",
+    "today": "2006-12-04",
+    "summary": "비과세 요건을 갖춘 종전주택(상속 취득)이 재개발로 입주권 상태가 된 뒤 노부모 봉양 합가(2003.12.29.)로 사위 소유 주택을 포함해 2주택이 된 세대가 합가일부터 2개월 이내 입주권 양도(2004.3.3.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2004-03-03",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2003-12-29",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1998-08-01",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2003-12-01",
+        "redevOtherHouseAcquisitionDate": "1995-05-15"
+      },
+      "houses": [
+        {
+          "id": "son-in-law",
+          "region": "capital",
+          "acquisitionDate": "1995-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual — 입장 A(국심-2006-서-3136, 2006.12.04.): 비과세 요건을 갖춘 종전주택의 입주권을 동거봉양 합가일부터 2년 이내 양도하면 §155④ 적용 → 비과세 / 입장 B(조심-2021-서-1117 등): 주택 특례를 입주권에 유추 적용할 수 없고 §89①4호 요건으로만 판정. 현재 엔진 관측: isExempt=false — 입주권 양도는 §89①4호 경로로만 판정하고 합가 입력(parentalCareMergeDate)은 읽지 않는다(B와 같은 결론). 2005.12.31. 이전 양도분이라 다른 주택이 없어야 하는 가목만 보며(사위 주택 보유 → 불성립), 사위 주택 취득일 칸을 채워도 같다(프로브). 합가 입력을 비우고 명부를 비우면 가목으로 비과세(applied one_right_89_1_4_ga) — 합가 상태 자체가 비과세를 막는 유일한 입력. 일자 가정: 사위 주택 1995-05-15, 종전주택 취득(상속) 1998-08-01(원문), 양도가 4억."
+  }
+]

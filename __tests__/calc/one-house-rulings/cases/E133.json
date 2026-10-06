@@ -1,0 +1,50 @@
+[
+  {
+    "id": "E133-era",
+    "docNo": "대법원-2007-두-26544",
+    "docDate": "2010.01.14.",
+    "basis": "era",
+    "today": "2010-01-14",
+    "summary": "일시적 2주택(2002.8.) 보유자가 2주택 보유자와 혼인(2002.10.)해 1세대 4주택이 된 상태에서 혼인 후 1개월에 1주택 양도 (일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-11-27",
+      "contractTotalPrice": "300000000",
+      "marriageDate": "2002-10-19",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1998-05-15"
+      },
+      "houses": [
+        {
+          "id": "p-new",
+          "region": "capital",
+          "acquisitionDate": "2002-08-22",
+          "mergeOrigin": "seller_side"
+        },
+        {
+          "id": "s1",
+          "region": "capital",
+          "acquisitionDate": "1999-05-15",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "s2",
+          "region": "capital",
+          "acquisitionDate": "2001-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(경로: 4주택). 관측: 과세(unmet 155-5-marriage-merge 「세대 주택 수가 4채 — 합가 특례는 2주택(일시적 2주택과 겹친 경우 3주택)까지」). 일자 가정(원문에 없음): 이 사건 주택 1998-05-15, 정JJ 주택 1999-05-15·2001-05-15, 원고의 다른 1주택 2002-08-22(원문), 혼인 2002-10-19·양도 2002-11-27(원문), 양도가 3억, 합가 전 소유 쪽은 원고 2·정 2. 원문 당시 기한(혼인 2년·일시적 1년)은 엔진 연혁에 없으나 이 케이스는 주택 수 사유로 과세라 기한 축과 무관."
+  }
+]

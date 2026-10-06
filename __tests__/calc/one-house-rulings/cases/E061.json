@@ -1,0 +1,31 @@
+[
+  {
+    "docNo": "서면-2021-부동산-2376",
+    "docDate": "2021.09.03.",
+    "id": "E061-era",
+    "basis": "era",
+    "today": "2022-10-01",
+    "summary": "A조합원입주권(2015.5.14. 승계취득)·B조합원입주권(2016.2.19. 승계취득)이 순차 완공(A 2018.12.2., B 2021.12.20.)되어 일시적 2주택이 된 상태에서 B 완공일부터 1년 이내 A주택 양도(2022.11. 예정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-11-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-12-02"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2021-12-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: A·B 모두 승계취득한 조합원입주권이 완공된 주택이라는 취득 경위(B 입주권 취득 2016.2.19.이 A 주택 완성 2018.12.2.보다 앞섬)와 그에 따른 「입주권 상태에서 신규 취득」 판정. 명부 행은 취득일만 받는다. 참고 관측(referenceForm: A 취득 = 완성일 2018-12-02, B = 완성일 2021-12-20): 비과세(applied 155-1) + 보류 155-1-regulated-at-new-acquisition-unverified — 회신(특례 부적용·과세)과 다르다. 입주권 취득일을 취득일로 입력하면(A 2015-05-14, B 2016-02-19) B가 A 취득 후 1년 안이라 과세로 일치하지만 이는 사용자가 회신 논리를 알고 취득일 의미를 바꿔 넣은 것이다(프로브 R-E061-rightDates). 일자: 원문 그대로(양도는 「2022.11. 예정」→ 2022-11-15), 양도가 8억 중립."
+  }
+]

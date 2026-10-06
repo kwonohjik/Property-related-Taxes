@@ -58,6 +58,31 @@ export function isMa1IncludedIn15520(transferDate: Date): boolean {
 }
 
 /**
+ * 부칙 제7조② 경과조치 사유(D11) — 체크(`residenceTransitionUnderAddendum`)만으로는 어느 호인지 모른다.
+ *
+ * - `residing` — 1호 「이 영 시행 당시 거주하고 있는 주택」.
+ * - `contract_with_prior_rental` / `contract_without_prior_rental` — 2호(시행 전 매매계약·계약금 지급).
+ *   2호 경로는 국세청이 「2019.2.12. 전에 지방자치단체 및 세무서에 등록한 임대주택을 소유하고 있는 경우」에만
+ *   종전규정을 준다(서면-2021-법령해석재산-1409 적용 · 서면-2020-법령해석재산-1464 · 서면-2021-법규재산-4760
+ *   부적용). 부칙 문언에는 이 요건이 없다 — 해석 기준이다. 1호 경로에 같은 요건을 둔 해석은 확인하지 못했다.
+ */
+export type AddendumTransitionBasis =
+  | "residing"
+  | "contract_with_prior_rental"
+  | "contract_without_prior_rental";
+
+/**
+ * 경과조치가 **생애 1회·1주택 한정 괄호를 푸는가**. 사유를 모르면(구 기록·미선택) 풀지 않는다 —
+ * 「모름」은 혜택 불성립(사용자 결정 2026-10-04). §154⑩ 거주기간 분기(`isPreLifetimeLimitRegime`)는 이 함수를 쓰지 않는다.
+ */
+export function isAddendumTransitionEffective(
+  transitionUnderAddendum: boolean,
+  basis: AddendumTransitionBasis | "" | undefined,
+): boolean {
+  return transitionUnderAddendum && (basis === "residing" || basis === "contract_with_prior_rental");
+}
+
+/**
  * 생애 1회·직전거주주택보유주택 1주택 한정 괄호가 **이 양도에 적용되는가**.
  *
  * @param residenceAcquisitionDate 양도하는 거주주택(시나리오 B는 직전거주주택보유주택)의 취득일

@@ -1,0 +1,36 @@
+[
+  {
+    "docNo": "국심-2000-서-3156",
+    "docDate": "2001.03.20.",
+    "id": "E109-dual",
+    "basis": "era",
+    "today": "2000-02-01",
+    "summary": "상속받은 농가주택(1984.6., 피상속인 5년 이상 거주 가정)을 처에게 증여(1998.3.) → 청구인이 일반주택(1978)을 양도(1999.11.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1999-11-20",
+      "contractTotalPrice": "200000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1978-01-01"
+      },
+      "houses": [
+        {
+          "id": "farm",
+          "region": "non_capital",
+          "acquisitionDate": "1984-06-09",
+          "isInherited": true,
+          "inheritedDate": "1984-06-09",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false,
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "inherited",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralDecedentResidenceYears": "10"
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual(동일세대 배우자에게 증여한 상속주택). 입장 B 사건: 국심-2000-서-3156(조세심판원) — 상속받은 농가주택을 동일세대원인 처에게 증여해도 세대 주택 수가 같아 보유주택에서 제외, 나아가 증여를 다른 주택 취득으로 보아도 증여 후 당시 기한(2년) 이내 양도라 §155① 일시적 2주택 → 비과세. 입장 A: 서면-2015-부동산-1363(국세청, 참조 재산세과-4080) — 배우자에게 증여한 주택에는 §155② 부적용. 쟁점 조문이 §155⑦이고 보충 논거가 당시 기한에 의존한다는 점에 주의. 현재 엔진 관측: 증여 입력 칸이 없어 농가주택 행을 상속 + 농어촌(inherited)으로 두면 비과세 — §155② 상속주택 제외 경로(§155⑦ 경로가 아님, E160과 같은 현상). 증여를 새 주택 취득으로 입력하면(V-E109-giftnewhouse) 증여 후 1년 8개월 양도라 일시적 2주택(155-1)으로 비과세 — 현행 기한 3년으로 계산돼 당시 2년 기한 의존 논거는 구별력이 없다. 농어촌 표시만 두면(V-E109-ruralonly) 155-7-rural:inherited로 비과세. 가정: 피상속인 5년 이상 거주 요건 충족(원문 인용 요건), 상속 1984-06-09·증여 1998-03-23·양도 1999-11-20(원문), 양도가 2억 중립, 비조정."
+  }
+]

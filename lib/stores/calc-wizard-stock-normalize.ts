@@ -258,6 +258,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // 의제취득일 전 매수 (영 §176의2④ — Z-1)
     preDeemedActualPricePerShare: strField("preDeemedActualPricePerShare"),
     preDeemedPpiRatio: strField("preDeemedPpiRatio"),
+    // 분할·다건 lot ① 비교 방식 — 미지값은 «none»(② 만). 값은 보존하고 ④ 가 해당할 때만 싣는다(stale 가드)
+    preDeemedLotClause1Mode:
+      d.preDeemedLotClause1Mode === "estimated" || d.preDeemedLotClause1Mode === "sale_case"
+        ? d.preDeemedLotClause1Mode
+        : defaults.preDeemedLotClause1Mode,
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
     acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),
@@ -681,6 +686,7 @@ function normalizeTransferLots(raw: unknown): TransferLotForm[] {
         transferDate: typeof o.transferDate === "string" ? o.transferDate : "",
         shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
         perShareTransferPrice: typeof o.perShareTransferPrice === "string" ? o.perShareTransferPrice : "",
+        ...(typeof o.transferStdPricePerShare === "string" ? { transferStdPricePerShare: o.transferStdPricePerShare } : {}),
       };
     })
     .filter((l): l is TransferLotForm => l !== null);

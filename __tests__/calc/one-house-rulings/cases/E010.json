@@ -1,0 +1,37 @@
+[
+  {
+    "id": "E010-era",
+    "docNo": "기획재정부 조세정책과-1199",
+    "docDate": "2024.06.25.",
+    "basis": "era",
+    "today": "2024-06-25",
+    "summary": "각각 2주택을 보유한 갑·을이 혼인(2020.11.)해 4주택이 된 뒤 B·D를 과세 양도하고 양도 당시 1+1이 된 상태에서 혼인 후 5년 이내 A 양도",
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 합가(혼인) 당시 보유했다가 양도 전에 이미 양도한 주택(B·D)과 합가 당시 세대 주택 수(4채). 명부는 양도 당시 보유 주택만 받고, 합가 구성은 그 명부로만 판정한다(merge-composition.ts — 합가 전 각자 1주택). 참조 관측(referenceForm: A 양도·을의 C 보유, 혼인 2020-11-15·먼저 양도 선언): isExempt=true(applied 155-5-marriage-merge) — 원문 결론(적용 불가)과 반대. isFirstTransferredInMerge=false로 답하면 과세(unmet 「먼저 양도하는 주택으로 선언하지 않았습니다」)이나 이는 4주택 사유가 아니다. 현행 규칙: 혼인합가의 「1주택자+1주택자」는 양도일이 아니라 혼인합가 당시 주택 수로 판정. 일자 가정: A 2018-06-15·C 2017-02-05, 양도 2024-09-15(혼인 후 3년 10개월), 양도가 8억.",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2024-09-15",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2020-11-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-06-15"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2017-02-05",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    }
+  }
+]

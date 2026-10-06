@@ -1,0 +1,62 @@
+[
+  {
+    "id": "E190-era",
+    "docNo": "부동산거래관리과-1055",
+    "docDate": "2011.12.16.",
+    "basis": "era",
+    "today": "2012-02-16",
+    "summary": "A(서울 31평형 아파트, 1989.4. 취득, 2011.12. 임대사업자 등록, 공시가격 6억 이하)·B 거주주택(1997.2. 취득, 거주 5년 이상)·C 상속주택(2008.4. 상속, §155② 상속주택 해당 가정) 보유 — B 양도 시 §155⑲(2011.10.14. 신설, 현행 ⑳)와 §155②(상속주택) 중복 적용 (양도일 2012.2. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2012-02-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "120",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2011-12-15",
+              "rentalRegistrationDate": "2011-12-15",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": true,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "500000000",
+              "acquisitionOfficialPrice": "500000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "2",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "acquisitionDate": "2008-04-15",
+          "region": "capital",
+          "isInherited": true,
+          "inheritedDate": "2008-04-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "inh"
+      ],
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 표현: 임대주택 A는 임대호(1989 취득·2011-12-15 등록, 구법 pre_2018, 임대 2개월), 상속주택 C는 명부 행(상속 2008-04-15). 관측: §155⑲(현행 ⑳) 통과 + C가 §155②로 주택 수에서 제외(houseCount.excluded) → 비과세. 최소쌍: C를 빼도, 임대호를 빼도 비과세라 두 특례 모두를 쓰는 입력의 구별력은 없다(원문 결론은 「중복 적용 가능」). 가정: 양도 2012-02-15·거주 120개월·양도가 5억·A 기준시가 5억(6억 이하, 아파트)·수도권. 원문의 「상속개시 당시 일반주택 보유」는 거주주택 B(1997) 기준으로 충족한 것으로 본다(임대주택 A의 1989 취득은 엔진이 보지 않음)."
+  }
+]

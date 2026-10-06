@@ -111,6 +111,11 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     priorRentalExemptionHistory:
       rh.scenario === "A" && rh.priorRentalExemptionHistory ? rh.priorRentalExemptionHistory : undefined,
     residenceTransitionUnderAddendum: rh.residenceTransitionUnderAddendum === true ? true : undefined,
+    // D11 — 체크가 켜졌을 때만 사유를 보낸다(⑤ 노출 조건과 같다). 미선택("")은 보내지 않는다.
+    residenceTransitionBasis:
+      rh.residenceTransitionUnderAddendum === true && rh.residenceTransitionBasis
+        ? rh.residenceTransitionBasis
+        : undefined,
     // §154⑩ 표준 경로(I-5) — rentalUnits 0호(B)일 때만 의미가 있다(⑤가 그때만 노출 — 3중 패턴).
     // 거주기간은 별도 필드 없이 위 postRegistrationResidenceMonths(2019.2.12 이후 취득)를 공유한다 —
     // 2019.2.12 전 취득이면 이 값 없이도 일반 거주기간(자산-수준 residencePeriodMonths)으로 판정한다.

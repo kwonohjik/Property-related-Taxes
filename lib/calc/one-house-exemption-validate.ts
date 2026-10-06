@@ -49,6 +49,7 @@ import {
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
+import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -97,11 +98,18 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   const errors: Errors = [];
 
   // 합가 칸은 ③ 이 화면에 있다 — 노출 게이트(`judgmentMergeInputVisible`)와 같은 조건에서만 경고한다.
-  if (judgmentMergeInputVisible(form) && form.marriageDate && form.parentalCareMergeDate) {
+  // D4 — 혼인 → 동거봉양 순서는 이중 합가(3주택) 특례 입력이라 경고하지 않는다(서면인터넷방문상담4팀-598).
+  //   역순만 경고한다 — 그 순서의 3주택을 인정한 해석이 확인되지 않았다(엔진도 불성립 + 확인 필요).
+  if (
+    judgmentMergeInputVisible(form) &&
+    form.marriageDate &&
+    form.parentalCareMergeDate &&
+    form.parentalCareMergeDate < form.marriageDate
+  ) {
     errors.push(
       warn(
         "marriageDate",
-        "혼인합가일과 동거봉양 합가일이 모두 입력됐습니다. §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
+        "동거봉양 합가 후 혼인한 순서입니다 — 3주택이면 이 순서를 인정한 해석이 확인되지 않아 합가 특례를 불성립으로 판정합니다(확인 필요). 2주택이면 §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
       ),
     );
   }
@@ -140,6 +148,11 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(
         err(`houses.${i}.inheritedDate`, `보유 주택 ${i + 1}: 상속주택이면 상속개시일을 입력하세요.`),
       );
+    }
+    // D7 — §155⑦1호 상속 농어촌주택은 동일세대 여부가 요건이다(§155② 단서 괄호). 「모름」은 불리 — 답을 받는다.
+    const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
+    if (ruralSameHouseholdIssue) {
+      errors.push(err(`houses.${i}.decedentSameHouseholdAtInheritance`, `보유 주택 ${i + 1}: ${ruralSameHouseholdIssue}`));
     }
     // §167의10①3호·7호 기산 상태 — 명부 행 ④ 칸이 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
     const statusIssue = twoHouseExclusionStatusIssue(h);

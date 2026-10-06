@@ -150,4 +150,64 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
     await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
     await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
   });
+
+  /**
+   * D10 — §155⑳2호 「양도일 현재」 등록. 등록일이 양도일 다음날이면 다른 요건을 모두 갖춰도 미충족이고,
+   * 그 사유가 결과 화면 임대주택 카드에 뜬다(종전에는 등록일을 양도일과 비교하지 않아 비과세).
+   */
+  test("[OHR-5] 지자체 등록신청일이 양도일 뒤면 요건 미충족 + 사유", async ({ page }) => {
+    await gotoSaleStep(page);
+    await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
+    await fillDateAndVerify(page, { year: "2015", month: "01", day: "01" }, {
+      scope: page.getByTestId("rental-biz-reg-date-0"),
+    });
+    await fillDateAndVerify(page, { year: "2026", month: "06", day: "02" }, {
+      scope: page.getByTestId("rental-reg-date-0"),
+    });
+    await page.getByTestId("rental-stdprice-0-price-input").getByRole("textbox").fill("300000000");
+    await page.getByRole("switch", { name: /^임대료 5% 상한/ }).click();
+
+    await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, {
+      scope: page.getByTestId("one-house-acq-date"),
+    });
+    await fillDateAndVerify(page, { year: "2026", month: "06", day: "01" }, {
+      scope: page.getByTestId("one-house-sale-date"),
+    });
+    await page.getByTestId("one-house-sale-price").fill("900000000");
+
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
+    await page.getByTestId("one-house-judge-cta").click();
+
+    await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
+    await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
+    await expect(page.getByTestId("one-house-judgment-result")).toContainText("양도일 현재 세무서 사업자등록과 지자체 임대주택 등록");
+  });
+
+  /**
+   * D11 — 2019.2.12 이후 취득 · 2025.2.27 이전 양도 구간에서 경과조치를 켜면 사유를 묻고,
+   * 「계약금 · 그 전 등록 임대주택 없음」이면 종전 규정이 풀리지 않아 이력 질문이 다시 뜬다.
+   */
+  test("[OHR-6] 경과조치 사유 선택지 — 계약금·임대주택 없음이면 이력을 다시 묻는다", async ({ page }) => {
+    await gotoSaleStep(page);
+    await fillDateAndVerify(page, { year: "2019", month: "06", day: "01" }, {
+      scope: page.getByTestId("one-house-acq-date"),
+    });
+    await fillDateAndVerify(page, { year: "2024", month: "06", day: "01" }, {
+      scope: page.getByTestId("one-house-sale-date"),
+    });
+    await toggleSwitch(page, "장기임대주택 보유자 거주주택 비과세 특례 적용").click();
+
+    await expect(page.getByTestId("rental-lifetime-limit-block")).toBeVisible();
+    await expect(page.getByTestId("rental-prior-history-used")).toBeVisible();
+    await page.getByTestId("rental-residence-transition").getByRole("switch").click();
+    await expect(page.getByTestId("rental-transition-basis-residing")).toBeVisible();
+    // 사유를 고르기 전에는 경과조치가 성립하지 않는다(「모름」은 불성립) — 이력 질문이 남는다.
+    await expect(page.getByTestId("rental-prior-history-used")).toBeVisible();
+
+    await page.getByTestId("rental-transition-basis-residing").click();
+    await expect(page.getByTestId("rental-prior-history-used")).toHaveCount(0);
+    await page.getByTestId("rental-transition-basis-contract-without-rental").click();
+    await expect(page.getByTestId("rental-prior-history-used")).toBeVisible();
+  });
 });

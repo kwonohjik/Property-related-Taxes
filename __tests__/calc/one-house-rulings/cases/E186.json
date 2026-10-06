@@ -1,0 +1,62 @@
+[
+  {
+    "id": "E186-era",
+    "docNo": "사전-2022-법규재산-0036 [법규과-3445]",
+    "docDate": "2022.12.02.",
+    "basis": "era",
+    "today": "2022-03-16",
+    "summary": "부천 A아파트(2016.4. 공동명의 취득) 거주주택, 송도 B·C 오피스텔(2019.10. 취득·2019.10.21. 단기 등록) — B·C 임대료가 등록 후 최초 표준임대차계약 대비 5% 이하 증액(등록 전 계약 대비로는 초과)인 경우 A 양도(2022.3.) §155⑳ 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-03-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-04-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "80",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2019-10-21",
+              "rentalRegistrationDate": "2019-10-21",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "28",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2019-10-21",
+              "rentalRegistrationDate": "2019-10-21",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "28",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 임대차계약별 보증금·월세와 5% 판정의 기준 계약(등록 후 최초 표준임대차계약). 판정 메뉴는 「임대료 5% 상한 등 요건 충족」 자기확인 체크 하나만 받는다. 참고 관측: 체크를 켜면 통과·비과세 — 사용자가 5%를 스스로 판정해 체크하는 입력이라 원문 쟁점(기준 계약)을 엔진이 검증하지 못한다. 양도일 2022-03-15(원문 2022.3.)는 2021.1.1.~2022.5.9. 구간이라 「최종 1주택 재기산 이력 미입력」 판정 보류가 붙는다(결론 불변 잡음). 가정: 거주주택 취득 2016-04-15·거주 80개월·양도가 7억, B·C 단기 4년 등록(2019-10-21)을 장기일반 가목·수도권·기준시가 3억으로 입력."
+  }
+]

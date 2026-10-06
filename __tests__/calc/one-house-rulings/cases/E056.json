@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "서면-2020-법령해석재산-1541",
+    "docDate": "2020.04.16.",
+    "id": "E056-era",
+    "basis": "era",
+    "today": "2022-03-20",
+    "summary": "조정대상지역 A아파트(2017.7. 취득) 보유 중 2017.8.14. 조정대상지역 B분양권 매매계약·계약금 지급, B분양권 지분 70%를 2020.4. 같은 세대 배우자에게 증여, B 2020.7. 입주(취득) — 종전주택 양도 허용기간 3년",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2017-08-14",
+      "isOneHousehold": true,
+      "transferDate": "2022-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-07-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-07-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(쟁점 일부 미검증). 원문 일자: 분양권 계약 2017.08.14.는 원문 그대로, A 2017.7.·B 입주 2020.7.는 월 단위라 15일 가정(B 취득), 양도일은 원문에 없어 신규 취득 1년 8개월 후 2022-03-15 가정. 표현: 신규 분양권 계약일 2017-08-14를 신규주택 계약일로 입력 → 2018.9.13. 이전 계약이라 종전 3년(부칙) 적용. 프로브: 계약일을 비우면 신규 취득일 기준 1년+전입 체제라 과세 → 계약일이 결론을 가른다. 한계: 쟁점 사실인 「분양권 지분 70%를 같은 세대 배우자에게 증여(2019.12.17. 이후)」는 입력 칸이 없다 — 세대 내 이전이 계약일 판정에 영향을 주지 않는다는 결론은 사용자가 원 계약일(2017-08-14)을 유지해 입력하는 것으로만 표현되고 엔진이 그것을 검증하지는 않는다. A는 2017.7. 취득이라 거주요건 면제(2017-08-02 이전 취득), 양도가 8억 중립."
+  }
+]

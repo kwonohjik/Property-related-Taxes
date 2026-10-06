@@ -655,6 +655,13 @@ export interface TransferTaxInput {
     isOutsideCapitalEupMyeon: boolean;
     /** 1호 — 피상속인이 취득 후 거주한 연수 (5년 이상) */
     decedentResidenceYears?: number;
+    /**
+     * 1호 — 상속개시 당시 피상속인과 동일세대(D7). §155② 단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」로
+     * 동일세대 상속은 동거봉양 합가 전 보유분이 아니면 1호의 「상속받은 주택」이 아니다. 미입력은 판정 메뉴 ⑧이 막는다.
+     */
+    decedentSameHouseholdAtInheritance?: boolean;
+    /** 1호 — 동거봉양 합가 전부터 보유하던 주택(위 단서의 예외) */
+    parentalCareMergeInheritedHouse?: boolean;
     /** 2호 — 이농인이 취득일 후 거주한 연수 (5년 이상) */
     ownerResidenceYears?: number;
     /** 3호 — 귀농주택 취득일. ⑦ 단서: 취득일부터 5년 이내 일반주택 양도 한정 */
@@ -795,6 +802,16 @@ export interface TransferTaxInput {
    * STEP 0.9/0.95가 채우는 echo다.
    */
   knownHouseExclusionCount?: number;
+  /**
+   * `knownHouseExclusionCount` 중 **§155②③ 상속주택** 몫 — §155 특례 중첩 상한 판정용 echo.
+   *
+   * §155의 두 특례가 겹친 3주택(①+④⑤ · ⑦+①)은 국세청이 인정했지만, 상속주택 제외까지 더해 **세 특례**가 겹친 경우를
+   * 인정한 해석은 확인되지 않았고 불허 회신만 있다(⑳+③+① — 사전-2016-법령해석재산-0584 · 조심-2021-중-5977).
+   * ⇒ 이 값이 1 이상이면 두 중첩 술어(`mergeOverlapTwoHouseHolds` · `ruralTemporaryTwoHouseOverlapCountHolds`)는
+   *    성립하지 않는다(모름=불리 · 확인 필요). 조특법 §99의4형 제외는 §155 특례가 아니라 세지 않는다.
+   * 사용자 입력이 아니라 STEP 0.9/0.95 등이 채우는 echo다.
+   */
+  inheritedHouseExclusionCount?: number;
   /**
    * `knownHouseExclusionCount` 중 **어느 명부 행인지 특정된** 몫(PR-3 — `merge-composition-
    * unknown-unfavorable.plan.md` §3-4). §155②③ 상속주택(`excludedHouses[].houseId`) ·

@@ -120,6 +120,7 @@ describe("resolveHouseCountExclusion (D4-01 — 둘 다 적격이면 각각 1채
   const ctx = {
     generalHouseAcquisitionDate: new Date("2014-01-01"),
     transferDate: new Date("2024-06-01"),
+    mergeOrder: undefined,
   };
   const RURAL = {
     type: "new_99_4_rural",

@@ -27,6 +27,8 @@ import type {
   New994Result,
 } from "./types";
 
+import type { MergeOrigin } from "../types/multi-house-surcharge.types";
+
 /** 취득기간 시기 — rural ①1호 / hometown ①2호 */
 export const NEW_99_4_RURAL_FROM = new Date("2003-08-01");
 export const NEW_99_4_HOMETOWN_FROM = new Date("2009-01-01");
@@ -38,6 +40,49 @@ export const NEW_99_4_STD_PRICE_LIMIT = 300_000_000;
 export const NEW_99_4_STD_PRICE_LIMIT_HANOK = 400_000_000;
 /** ① 의무 보유기간 (3년 — ④ 선적용 허용, ⑥ 추징) */
 export const NEW_99_4_MANDATORY_YEARS = 3;
+
+/**
+ * D5 — §99의4① 「그 농어촌주택등 취득 전에 보유하던 다른 주택(일반주택)」 순서를 볼 **합가 맥락**.
+ *
+ * 합가가 없으면 `undefined`(종전 그대로 — 양도 주택 취득일과 비교). `houses`는 엔진 명부 형태
+ * (`mergeOrigin` — 합가 전 보유 쪽)이고, 판정 메뉴만 그 칸을 채운다.
+ */
+export type New994MergeOrderContext =
+  | {
+      houses: ReadonlyArray<{ id: string; acquisitionDate?: Date; mergeOrigin?: MergeOrigin }>;
+      mergeDate: Date;
+    }
+  | undefined;
+
+/**
+ * D5 — 이 농어촌주택등의 「취득 전 보유 일반주택」 비교 기준일.
+ *
+ * 🔑 합가 **상대방 세대**(`counterpart_side`)가 합가 전부터 보유하던 농어촌주택이면 그 세대의 다른 주택(합가 전 보유)
+ *    중 가장 먼저 취득한 것과 비교한다. 농어촌주택과 일반주택을 보유한 직계존속 세대와 1주택 직계비속 세대가 동거봉양
+ *    합가해 직계비속의 주택을 양도한 사안에서 1세대1주택을 인정했다(기획재정부 재산세제과-795, 2012.9.28. —
+ *    직계비속 주택은 농어촌주택보다 나중 취득, 직계존속의 일반주택이 먼저 취득). 양도 주택과 비교하면 순서 요건이
+ *    거꾸로 걸려 그 세대가 과세된다(해석례 평가셋 `E129-*`).
+ * 🔑 그 밖에는 `fallback`(양도 주택 취득일 — 종전 그대로). 상대방 쪽에 다른 주택이 없어도 그렇다.
+ */
+export function new994GeneralHouseAcquisitionDate(
+  ruralHouseId: string | undefined,
+  order: New994MergeOrderContext,
+  fallback: Date,
+): Date {
+  if (!ruralHouseId || !order) return fallback;
+  const rural = order.houses.find((h) => h.id === ruralHouseId);
+  if (rural?.mergeOrigin !== "counterpart_side") return fallback;
+  const earlier = order.houses
+    .filter(
+      (h) =>
+        h.id !== ruralHouseId &&
+        h.mergeOrigin === "counterpart_side" &&
+        h.acquisitionDate !== undefined &&
+        h.acquisitionDate.getTime() <= order.mergeDate.getTime(),
+    )
+    .map((h) => h.acquisitionDate!.getTime());
+  return earlier.length > 0 ? new Date(Math.min(...earlier)) : fallback;
+}
 
 /** TransferReduction의 §99의4 멤버 구조 (구조적 타이핑 — 순환 import 회피, rental-97-router 패턴) */
 interface New994ReductionLike {
@@ -95,11 +140,14 @@ export function evaluateNew994FromReductions(
  */
 export function evaluateNew994Declarations(
   reductions: ReadonlyArray<{ type: string }>,
-  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
+  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date; mergeOrder: New994MergeOrderContext },
 ): (New994Result & { houseId?: string })[] {
   const declared = reductions.filter(isNew994Like);
   const results = declared.map((r) => ({
-    ...evaluateNew994Declaration(r, ctx),
+    ...evaluateNew994Declaration(r, {
+      ...ctx,
+      generalHouseAcquisitionDate: new994GeneralHouseAcquisitionDate(r.houseId, ctx.mergeOrder, ctx.generalHouseAcquisitionDate),
+    }),
     ...(r.houseId ? { houseId: r.houseId } : {}),
   }));
   if (results.length < 2) return results;

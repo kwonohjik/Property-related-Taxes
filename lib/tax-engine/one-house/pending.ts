@@ -40,6 +40,7 @@ import {
   qualifiesRuralHouseApartFromDeadline,
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
+  ruralReturnToFarmDeadlineApplies,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
@@ -297,7 +298,12 @@ export function collectPendingConditions(
    */
   const rural = input.ruralHouse;
   // 🔴 ⑦ 소재 · ⑩2·3·5호도 같은 술어로 본다(OH-23) — 기한만 남은 세대에게만 기한을 안내한다.
-  if (rural?.kind === "return_to_farm" && rural.acquisitionDate && qualifiesRuralHouseApartFromDeadline(input)) {
+  if (
+    rural?.kind === "return_to_farm" &&
+    rural.acquisitionDate &&
+    ruralReturnToFarmDeadlineApplies(rural.acquisitionDate) && // D15 — 2016-02-17 전 취득분엔 기한이 없다
+    qualifiesRuralHouseApartFromDeadline(input)
+  ) {
     const dl = deadlineEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
     if (
       !isWithinDeadline(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&

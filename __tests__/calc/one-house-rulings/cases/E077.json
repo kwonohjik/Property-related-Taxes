@@ -1,0 +1,36 @@
+[
+  {
+    "docNo": "국심-2007-중-4070",
+    "docDate": "2007.12.31.",
+    "id": "E077-era",
+    "basis": "era",
+    "today": "2006-12-15",
+    "summary": "배우자(동일세대원)로부터 공동상속주택(청구인 지분 최대)을 상속(2000.6.)받은 세대가 상속 전부터 보유한 일반주택(1997)을 양도(2006.12.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-12-21",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-11-14"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2000-06-30",
+          "isInherited": true,
+          "inheritedDate": "2000-06-30",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": true,
+          "isLargestCoInheritedShareholder": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 양도일 원문 기재(2006-12-21), 상속 2000-06-30, 일반주택 취득 1997-11-14. 양도가 4억 중립, 비조정. 표현: 처(동일세대원)로부터 공동상속(청구인 지분 최대)한 주택 → 명부 공동상속주택, 최대지분자 true, 상속개시 당시 동일세대 true. 엔진은 최대지분자를 주택 수에 산입해 과세(houseCount.excluded 없음, unmet 없음) — 원문 이유(동일세대원으로부터 상속받은 주택은 §155②의 상속받은 주택이 아님)와 다른 경로로 같은 결론. 프로브: 최대지분자 표시를 빼도(V-E077-minor)·단독상속으로 바꿔도(V-E077-sole) 동일세대 게이트(unmet 155-2-inherited-house)로 과세 → 원문 이유의 경로는 엔진에 있다."
+  }
+]

@@ -1,0 +1,171 @@
+[
+  {
+    "id": "E022-era",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "era",
+    "today": "2006-03-11",
+    "summary": "농어촌주택(귀농주택)+일반주택 A 보유 세대가 A 양도 전 다른 주택 B를 취득해 일시적 3주택, B 취득일부터 1년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-03-10",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-02-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2003-05-01",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2005-10-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 일시적 3주택이 된 상태에서 종전 일반주택을 양도하면 농어촌주택을 빼고 §155①을 적용(같은 취지 서면인터넷방문상담4팀-3617). 엔진: §155① 분기(E-3)의 주택 수 게이트가 「⑦ 요건(신규 주택을 뺀 2주택 기준)을 갖춘 3주택」도 받는다(lib/tax-engine/transfer-tax-exemption-holding.ts ruralTemporaryTwoHouseOverlapCountHolds) — appliedExceptions에 155-1과 155-7이 함께 실린다. 3주택까지만(⑦·⑳·① 4주택은 부인 — 부동산납세과-870). 가정값: 양도일·취득일 원문 미기재(회신일 직전 2006-03-10 양도), 유형은 회신 제목의 귀농주택(⑦3호), 요건 충족은 원문 전제, 귀농주택이 일반주택보다 먼저 취득."
+  },
+  {
+    "id": "E022-current",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "농어촌주택(귀농주택)+일반주택 A 보유 세대가 A 양도 전 다른 주택 B를 취득해 일시적 3주택, B 취득일부터 3년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-06-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2022-01-10",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2023-09-01"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 일시적 3주택이 된 상태에서 종전 일반주택을 양도하면 농어촌주택을 빼고 §155①을 적용(같은 취지 서면인터넷방문상담4팀-3617). 엔진: §155① 분기(E-3)의 주택 수 게이트가 「⑦ 요건(신규 주택을 뺀 2주택 기준)을 갖춘 3주택」도 받는다(lib/tax-engine/transfer-tax-exemption-holding.ts ruralTemporaryTwoHouseOverlapCountHolds) — appliedExceptions에 155-1과 155-7이 함께 실린다. 3주택까지만(⑦·⑳·① 4주택은 부인 — 부동산납세과-870). 현행 규칙: 신규주택 취득일부터 3년(2023-09-01 → 2026-06-15), 귀농주택 취득 후 5년 이내(⑦ 단서), 비조정·양도가 9억 중립."
+  },
+  {
+    "id": "E022-current-rural-later",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "E022-current의 취득 순서 변형 — 일반주택을 먼저, 귀농주택을 나중에 취득(귀농의 흔한 순서) 후 신규주택 취득",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-06-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2022-01-10",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2023-09-01"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신의 사실관계는 취득 순서를 가리지 않는다(⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득). 귀농주택을 일반주택보다 나중에 취득해도 ⑦ 요건을 갖춘 농어촌주택 행은 §155① 신규 주택 후보가 아니다(lib/calc/temp-two-house-candidate-exclusion.ts ruralCountExcludedHouseIds) — 후보는 신규주택 1채로 도출된다. 귀농주택 2022-01-10 → 양도 2026-06-15는 5년 이내(⑦ 단서), 신규 2023-09-01 → 3년 이내, 종전 2019-06-01 → 신규 취득까지 1년 경과. 비조정·양도가 9억 중립."
+  },
+  {
+    "id": "E022-current-rural-later-unmet",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "E022-current-rural-later의 음성 짝 — 세대 전원이 이사하지 않아 귀농주택이 ⑦3호(⑩5호) 요건 미달",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-06-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2022-01-10",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": false,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2023-09-01"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). ⑩5호(세대 전원 이사) 미달이면 그 귀농주택은 ⑦ 농어촌주택이 아니라 보통 주택이다 — 양도일 현재 3주택이고 ⑦·① 중첩이 성립하지 않아 과세. rural-later와 한 필드만 다른 최소쌍으로 ⑦ 요건 게이트(ruralTemporaryTwoHouseOverlapCountHolds · ruralCountExcludedHouseIds)를 고정한다."
+  }
+]

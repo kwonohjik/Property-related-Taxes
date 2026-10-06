@@ -1,0 +1,41 @@
+[
+  {
+    "docNo": "재산세과-3316",
+    "docDate": "2008.10.16.",
+    "id": "E055-era",
+    "basis": "era",
+    "today": "2008-10-16",
+    "summary": "A주택(1988.10.31. 서울 취득, 거주 중), B주택 2008.10.1. 취득, B 취득일부터 1년 이내(2008.10.중)에 A를 타인의 C주택과 교환 예정 — 교환은 종전주택 양도 후 교환취득",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-10-20",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-10-31",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "240"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2008-10-01"
+        },
+        {
+          "id": "c-exchange",
+          "region": "capital",
+          "acquisitionDate": "2008-10-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 종전주택을 교환하면 종전주택을 먼저 양도한 후 교환취득 주택을 취득한 것으로 보아 §155① 적용. 교환으로 같은 날 취득한 C 행은 양도일 현재 보유 주택이 아니라 주택 수에서 빠진다(E053과 같은 술어 isOwnedAtTransfer). 일자: 원문 그대로 A 1988.10.31.·B 2008.10.1., 교환은 「2008.10.중」이라 2008-10-20 가정(교환취득도 같은 날), 양도가 5억 중립, A는 현재까지 거주(거주 240개월 입력 — 결론 무관)."
+  }
+]

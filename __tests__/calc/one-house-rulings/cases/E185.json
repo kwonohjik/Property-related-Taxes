@@ -1,0 +1,51 @@
+[
+  {
+    "id": "E185-era",
+    "docNo": "서면-2021-법규재산-3659 [법규과-2934(23.11.22.)]",
+    "docDate": "2023.11.22.",
+    "basis": "era",
+    "today": "2024-03-16",
+    "summary": "A주택(2002.2. 취득)과 B(2010.2. 취득, 2018.2. 단기 4년 임대등록, 2021.7. 재건축 멸실)를 보유 — 2021.12. 철거 사유로 자진말소(임대의무기간 1/2 이상 임대) 후 5년 이내 A 양도 (양도일 2024.3. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-03-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2018-02-15",
+              "rentalRegistrationDate": "2018-02-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "41",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2021-12-20",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 표현: 철거 사유 말소도 원문이 「자진말소신청 요건을 갖추고 임대의무기간 1/2 이상 임대」한 경우라고 밝혀 자진말소로 입력 — 말소 호(말소일 2021-12-20, 종전 등록 유형 단기 4년=short_term, 임대 41개월 ≥ 24개월). 관측 §155㉓ 통과(rentalPassed=true). 재건축 멸실 사실 자체는 입력 칸이 없고 엔진은 말소 사유를 구분하지 않는다. 가정: 양도 2024-03-15(말소 후 5년 이내)·A 취득 2002-02-15·거주 100개월·양도가 7억, B 2018-02-15 등록·수도권(아파트 여부 무관 — ㉓ 경로는 아파트 양도기한 비적용)."
+  }
+]

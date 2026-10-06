@@ -1,0 +1,67 @@
+[
+  {
+    "id": "E194-era",
+    "docNo": "조심-2021-중-5977",
+    "docDate": "2022.04.28.",
+    "basis": "era",
+    "today": "2020-12-05",
+    "summary": "쟁점주택(1997.8.1. 취득, 2년 이상 보유·거주)을 2020.12.4. 양도 — 양도 당시 대체주택(취득 후 3년 이내 양도)·공동상속주택 소수지분(청구인 2/11)·장기임대주택(2019.10.11. 등록) 4주택 보유",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2020-12-04",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-08-01",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "200",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2019-10-11",
+              "rentalRegistrationDate": "2019-10-11",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "13",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "repl",
+          "acquisitionDate": "2019-06-15",
+          "region": "capital"
+        },
+        {
+          "id": "co",
+          "acquisitionDate": "2015-03-15",
+          "region": "capital",
+          "isInherited": true,
+          "inheritedDate": "2015-03-15",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ],
+      "temporaryTwoHouseSpecial": true,
+      "newHouseAcquisitionDate": "2019-06-15"
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "match",
+    "note": "match(D12 수정 후). 대체주택·공동상속 소수지분·장기임대주택 4주택 상태의 쟁점주택 양도 — §155①·③·⑳ 3중첩 불인정 → 과세. 표현: 장기임대주택 1호(2019-10-11 등록·임대 14개월), 대체주택(취득 2019-06-15, 쟁점주택 취득일로부터 1년 이상 후·3년 이내 양도)·공동상속 소수지분(청구인 2/11·최대지분 아님, 상속일 2015-03-15 가정)을 명부에, 일시적 2주택은 flat 입력. 가정: 거주 200개월·양도가 6억·임대주택 수도권·기준시가 3억."
+  }
+]

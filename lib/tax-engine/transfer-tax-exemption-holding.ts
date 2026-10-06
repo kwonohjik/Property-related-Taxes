@@ -16,6 +16,7 @@
 
 import { format } from "date-fns";
 import { isWithinDeadline } from "./civil-period";
+import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -35,6 +36,18 @@ export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
 export const RURAL_HOUSE_RESIDENCE_YEARS = 5;
 // §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
 export const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
+/**
+ * D15 — ⑦ 단서는 대통령령 제26982호(2016.2.17. 공포·시행)가 신설했다(2016-01-01본에 없음 · DRF eflaw 실독).
+ * 부칙 제10조 「제155조제7항 각 호 외의 부분 단서 … 의 개정규정은 이 영 시행 이후 **귀농주택을 취득하는 분부터**
+ * 적용한다」 · 제22조 「이 영 시행 전에 귀농주택을 취득한 경우에는 … 종전의 규정에 따른다」 — 기준축은 양도일이
+ * 아니라 귀농주택 취득일이다.
+ */
+export const RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START = new Date("2016-02-17");
+
+/** ⑦ 단서(귀농주택 취득일부터 5년 이내 양도)가 이 귀농주택에 붙는가 — 2016-02-17 전 취득분은 종전 규정(단서 없음). */
+export function ruralReturnToFarmDeadlineApplies(acquisitionDate: Date): boolean {
+  return acquisitionDate.getTime() >= RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START.getTime();
+}
 // §155⑩3호 — 귀농주택 대지면적 상한(㎡).
 export const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
 
@@ -57,8 +70,29 @@ export function qualifiesRuralHouse(
   if (!qualifiesRuralHouseApartFromDeadline(input)) return false;
   const r = input.ruralHouse!;
   if (r.kind !== "return_to_farm") return true;
-  // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정.
+  // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정(2016-02-17 이후 취득분만 — D15).
+  if (!ruralReturnToFarmDeadlineApplies(r.acquisitionDate!)) return true;
   return isWithinDeadline(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
+}
+
+/**
+ * D3 — §155⑦(농어촌주택)과 §155①(일시적 2주택)이 **겹쳐 3주택**인가 — 주택 수 축만 본다.
+ *
+ * ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 3주택이 된 상태에서 종전 일반주택을
+ * 양도하면, 농어촌주택을 빼고 §155①을 적용한다(서면인터넷방문상담4팀-3617 · 서면인터넷방문상담4팀-977 —
+ * 조특법 §99의4 농어촌주택도 같다: 부동산납세과-2367 · 서면-2024-부동산-1967).
+ * 그래서 ⑦ 요건은 **신규 주택을 뺀 2주택 기준**으로 본다(`householdHousingCount: 2`).
+ *
+ * 🔑 **3주택까지만** — ⑦·⑳·① 세 특례를 함께 적용한 4주택은 부인됐다(부동산납세과-870). §155②③ 상속주택 제외가
+ *    겹친 경우(세 특례)도 성립하지 않는다(`inheritedHouseExclusionCount`). §155① 기간 요건은
+ *    여기서 보지 않는다 — 호출부(비과세 E-3 · 중과 15호 `resolveDeemedOneHouseBy155`)가 2주택과 같은 술어로 본다.
+ */
+export function ruralTemporaryTwoHouseOverlapCountHolds(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
+): boolean {
+  // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
+  if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
+  return input.householdHousingCount === 3 && qualifiesRuralHouse({ ...input, householdHousingCount: 2 });
 }
 
 /**
@@ -78,8 +112,8 @@ export function qualifiesRuralHouseApartFromDeadline(
 
   switch (r.kind) {
     case "inherited":
-      // 1호: 피상속인이 취득 후 5년 이상 거주
-      return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
+      // 1호: 피상속인이 취득 후 5년 이상 거주 + §155② 단서(동일세대 상속 배제 — 동거봉양 합가 전 보유분 예외, D7)
+      return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS && passesHouseholdGate(r);
     case "farm_exit":
       // 2호: 이농인이 취득일 후 5년 이상 거주
       return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;

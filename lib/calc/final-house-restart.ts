@@ -69,6 +69,7 @@ export function calcFinalHouseRestartInScope(form: TransferFormData): boolean {
       primaryKind: primary?.assetKind,
       declared: parseInt(form.householdHousingCount || "1", 10) || 0,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     isUnregistered: form.isUnregistered === true,

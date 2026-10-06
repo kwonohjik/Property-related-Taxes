@@ -250,10 +250,11 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
     );
   });
 
-  it("세대 주택 2채 이상 → §156의2⑦·⑩·⑪ 축 미구현", () => {
+  // E011 — 2주택(특수주택 선언 없음)은 배제 확정이라 이 갈래를 3주택으로 옮겼다(`article-89-2-two-house-axis` U-1).
+  it("세대 주택 3채 이상 → §156의2⑦·⑩·⑪ 축 미구현", () => {
     const r = run(
       houseInput({
-        householdHousingCount: 2,
+        householdHousingCount: 3,
         transferDate: new Date("2019-06-01"),
         presaleRights: [right()],
         temporaryTwoHouse: {

@@ -44,7 +44,7 @@ function form(tir?: TaxIncentiveRentalFacts, ltr?: RentalDeclaration, rows: Hous
   return f;
 }
 const rowsOf = (f: TransferFormData) =>
-  buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion) as Payload[];
+  buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Payload[];
 const sellingOf = (f: TransferFormData) => rowsOf(f).find((r) => r.id === "selling")!;
 
 const TIR: TaxIncentiveRentalFacts = {

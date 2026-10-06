@@ -1,0 +1,216 @@
+[
+  {
+    "id": "E182-era",
+    "docNo": "기획재정부 재산세제과-1308",
+    "docDate": "2022.10.18.",
+    "basis": "era",
+    "today": "2023-08-16",
+    "summary": "장기임대주택 A가 임대의무기간 종료로 2020.9.10. 자동말소된 뒤(2021.5.20.) 취득한 주택 B에 2년 이상 거주, A 말소 후 5년 이내 B 양도 (사실관계 상세는 원문에 없어 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-08-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-05-20",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "26",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2015-04-10",
+              "rentalRegistrationDate": "2015-04-10",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "60",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2020-09-10",
+              "terminatedRegistrationType": "short_term"
+            }
+          ],
+          "priorRentalExemptionHistory": "none"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "match",
+    "note": "match. 경로: B(거주주택)를 A 말소(2020-09-10) 후에 취득(2021-05-20)해 ㉓ 호 불성립(「등록 말소일 후에 취득한 거주주택에는 §155⑳ 불적용」) → ⑳ 불통과 → 과세. 짝: E182-era-pos(취득을 말소 전으로 → 비과세). 가정(원문에 상세 사실 없음): A 2015-04-10 등록·2020-09-10 자동말소(terminatedRegistrationType=short_term)·임대 60개월, B 거주 26개월·양도 2023-08-15·양도가 6억. 생애 한 차례 이력 칸(2019.2.12. 이후 취득·2025.2.27. 이전 양도): '없음'."
+  },
+  {
+    "id": "E182-era-pos",
+    "docNo": "기획재정부 재산세제과-1308",
+    "docDate": "2022.10.18.",
+    "basis": "era",
+    "today": "2023-08-16",
+    "summary": "E182-era와 같되 거주주택 B를 장기임대주택 A 말소 전(2018.5.20.)에 취득한 경우 — 경계 짝",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-08-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-05-20",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2015-04-10",
+              "rentalRegistrationDate": "2015-04-10",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "60",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2020-09-10",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. E182-era의 경계 짝 — 거주주택 B를 A 말소(2020-09-10) 전인 2018-05-20에 취득하면 ㉓ 적용·비과세(rentalPassed=true). 나머지 가정은 E182-era와 같다."
+  },
+  {
+    "id": "E182-era-2",
+    "docNo": "기획재정부 재산세제과-1308",
+    "docDate": "2022.10.18.",
+    "basis": "era",
+    "today": "2026-10-06",
+    "summary": "회신2 사안: A·B 장기임대 등록(2003.1.), C 거주주택(2011.9. 취득), A는 2020.8. 자동말소 후 2021.3. 양도, B는 2023.8. 말소 예정, C를 2027.1. 양도 예정 — 5년 기한의 기산점은 최초 말소 주택(이미 양도했어도) 말소일",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2027-01-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-09-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2003-01-20",
+              "rentalRegistrationDate": "2003-01-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "246",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2023-08-10",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 이미 양도했거나 거주주택으로 전환한 최초 말소 임대주택의 말소일. §155㉓ 5년의 기산점은 「최초로 말소되는 장기임대주택(양도일 현재 보유 여부 불문)」의 말소일인데 판정 메뉴는 현재 보유한 임대주택 호만 받는다. 회신2 사실(A·B 2003.1. 장기임대 등록, A는 2020.8. 자동말소 후 2021.3. 양도, B 2023.8. 말소 예정, 거주주택 C 2027.1. 양도 예정): 원문 규칙대로면 A 말소(2020.8.) 기준 5년(2025.8.)이 지나 과세여야 하는데, A를 뺀 입력(referenceForm)은 B 자신의 말소일(2023-08-10) 기준 2028-08까지로 계산해 비과세로 나온다(관측). 엔진도 안내문에서 이 한계를 밝힌다(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:592-600). 입력 가능한 변형은 E182-era-3. 기대: 과세. 가정: 말소일은 원문의 월 단위(2020.8.→20일 등)로, 2003.1. 등록 분양권 임대주택은 장기일반 가목·B 말소 2023-08-10, 거주주택 취득 2011-09-15·거주 100개월·양도 2027-01-15·양도가 7억."
+  },
+  {
+    "id": "E182-era-3",
+    "docNo": "기획재정부 재산세제과-1308",
+    "docDate": "2022.10.18.",
+    "basis": "era",
+    "today": "2026-10-06",
+    "summary": "E182-era-2와 같되 최초 말소된 주택 A도 아직 보유 중인 경우(A 2020.8.20. 자동말소, B 2023.8.10. 자동말소, 거주주택 양도 2026.1.15.) — 5년 기한은 최초 말소일 기준",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-01-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-09-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2003-01-20",
+              "rentalRegistrationDate": "2003-01-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "211",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2020-08-20",
+              "terminatedRegistrationType": "short_term"
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2003-01-25",
+              "rentalRegistrationDate": "2003-01-25",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "246",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2023-08-10",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "match",
+    "note": "match. E182-era-2의 입력 가능 변형 — 최초 말소된 A(2020-08-20)도 아직 보유 중으로 두고 B(2023-08-10)와 함께 입력, 거주주택 양도 2026-01-15. 두 호 모두 최초 말소일(A) 기준 5년(2025-08-20) 경과로 불통과 → 과세. 최소쌍: A를 빼고 B만 입력하면 비과세(프로브) — 5년 기산점이 최초 말소 호라는 규칙을 입력(두 호 보유)으로 가를 수 있다. 가정: 2003-01 등록 분양권 임대주택은 장기일반 가목, 거주주택 취득 2011-09-15·거주 100개월·양도가 7억."
+  }
+]

@@ -20,6 +20,7 @@ import { Pre1MonthClosingPriceTable } from "@/components/calc/stock-transfer/Pre
 import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/AcquisitionStdModeRadio";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
 import { PreDeemedAcquisitionCard } from "@/components/calc/stock-transfer/PreDeemedAcquisitionCard";
+import { PreDeemedLotsClause1Card } from "@/components/calc/stock-transfer/PreDeemedLotsClause1Card";
 import { CapitalAdjustmentsBlock } from "@/components/calc/stock-transfer/CapitalAdjustmentsBlock";
 import { AcquisitionLotsMatrix } from "@/components/calc/stock-transfer/AcquisitionLotsMatrix";
 import { ForeignStockPriceBlock } from "@/components/calc/stock-transfer/ForeignStockPriceBlock";
@@ -168,6 +169,7 @@ export function Step2({ form, onChange }: Step2Props) {
           <p className="text-xs">
             양도가액·취득가액은 1단계의 건별 입력에서 자동 산출되며, 산출 값은 아래 ①·② 에서 확인할 수 있습니다.
             <br />취득가 산정방법은 <strong>실가(actual)</strong>만 지원되며, 환산·매매사례·감정·액면가·교환 모드는 사용할 수 없습니다.
+            <br />의제취득일 전 매수 건이 있으면 ① 의제취득일 현재 가액은 아래 「취득가액」의 ① 비교 카드에서 견줄 수 있습니다.
           </p>
         </div>
       )}
@@ -355,7 +357,11 @@ export function Step2({ form, onChange }: Step2Props) {
 
           {/* 실가 취득가 */}
           {acquisitionMode === "actual" && isSplitMode && (
-            <SplitAllocationPreviewCard form={form} side="acquisition" />
+            <>
+              {/* 분할·다건 lot — 의제취득일 전 매수 ① 비교 입력 (영 §176의2④1호). 입력 → 미리보기 순서 */}
+              <PreDeemedLotsClause1Card form={form} onChange={onChange} />
+              <SplitAllocationPreviewCard form={form} side="acquisition" />
+            </>
           )}
           {acquisitionMode === "actual" && !isSplitMode && (
             <div className="space-y-3">
@@ -448,6 +454,8 @@ export function Step2({ form, onChange }: Step2Props) {
                     }
                     transferShareCount={parseInt(form.shareCount || "0", 10)}
                   />
+                  {/* lots-only — 매트릭스 아래: 취득일을 입력하는 동안 카드가 위에 생겨 입력 위치가 밀리지 않게 한다 */}
+                  <PreDeemedLotsClause1Card form={form} onChange={onChange} />
                 </>
               )}
             </div>
@@ -624,7 +632,13 @@ export function Step2({ form, onChange }: Step2Props) {
 
           {/* R-1' 매매사례가액 — sale_case 모드 강화 (영§176의2③1호) */}
           {acquisitionMode === "sale_case" && (
-            <MarketSampleBlock form={form} onChange={onChange} isListed={isListed} />
+            <MarketSampleBlock
+              form={form}
+              onChange={onChange}
+              isListed={isListed}
+              // 의제취득일 전 매수면 사례 기준일은 의제취득일(영 §176의2④1호) — 엔진 `stock-transfer-pr2-detail.ts`와 같은 기준
+              baseDateLabel={isPreDeemedPurchaseForm(form) ? "의제취득일" : "취득일"}
+            />
           )}
 
           {/* 매매사례가액 취득 — 개산공제 base = 취득당시 기준시가 (소득세법 §97②2호 본문 · 영 §163⑥4).

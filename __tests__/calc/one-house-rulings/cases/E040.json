@@ -1,0 +1,110 @@
+[
+  {
+    "docNo": "서면-2021-법령해석재산-3364",
+    "docDate": "2021.12.13.",
+    "id": "E040-era",
+    "basis": "era",
+    "today": "2021-12-13",
+    "summary": "조정대상지역 A아파트(2016.10. 취득) 보유 중 기존 임차인이 거주하는 조정대상지역 B아파트를 2020.2.15. 취득(임대차 계약종료일 2021.9.25.), 2020.6.15. A 양도, 신규주택 전입은 계약종료일 이전",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseExistingTenant": true,
+      "newHouseTenantLeaseEndDate": "2021-09-25",
+      "isOneHousehold": true,
+      "transferDate": "2020-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-10-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-02-15"
+        }
+      ],
+      "newHouseMoveInDate": "2021-09-20"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자 원문 그대로(B 취득 2020.2.15., A 양도 2020.6.15., 임차인 계약종료일 2021.9.25.), A 취득 2016.10.은 월 단위라 15일 가정(2017-08-02 이전 취득이라 거주요건 면제). 임차인 실제 퇴거일은 입력 칸이 없고 신규주택 전입일만 받는다 — 원문의 「실제 퇴거일과 무관하게 계약종료일까지」와 같은 구조(입력이 계약종료일). 전입일은 계약종료일 이전(2021-09-20)으로 가정. 표현: 신규 취득 당시 종전·신규 모두 조정(yes/yes), 기존 임차인 단서 ON + 전 소유자·임차인 간 계약종료일 2021-09-25. 당시 기한 1년(+1년 내 전입)은 엔진 연혁 2019-12-17 체제로 계산되고 단서로 기한이 계약종료일까지 늘어난다. 최소쌍(프로브): 임차인 단서 OFF → 과세(1년 전입 요건 불충족), 전입일만 2021-09-28로 바꾸면(E040-era-late) 과세. 양도가 8억 중립."
+  },
+  {
+    "docNo": "서면-2021-법령해석재산-3364",
+    "docDate": "2021.12.13.",
+    "id": "E040-era-late",
+    "basis": "era",
+    "today": "2021-12-13",
+    "summary": "위와 같은 사실에서 임차인이 계약종료일(2021.9.25.)보다 늦은 2021.9.27. 퇴거해 신규주택 전입이 계약종료일 이후(2021.9.28.)인 경우",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseExistingTenant": true,
+      "newHouseTenantLeaseEndDate": "2021-09-25",
+      "isOneHousehold": true,
+      "transferDate": "2020-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-10-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-02-15"
+        }
+      ],
+      "newHouseMoveInDate": "2021-09-28"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. E040-era와 전입일만 다름(2021-09-28 = 계약종료일 2021-09-25 이후). 임차인이 계약종료일보다 늦게(원문 예시 2021.9.27.) 퇴거해 세대전원 전입이 계약종료일 이후가 되면 가목 불충족 — 회신이 기한을 실제 퇴거일이 아닌 계약종료일까지로 보기 때문. E040-era(전입 2021-09-20 비과세)와 전입일 하나만 바뀌어 결론이 갈리므로 입력 도달이 확인된다. 기대값은 회신의 기한 규칙에서 도출(회신이 이 일자의 과세 여부를 직접 말한 것은 아님)."
+  },
+  {
+    "docNo": "서면-2021-법령해석재산-3364",
+    "docDate": "2021.12.13.",
+    "id": "E040-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조정대상지역 A(2016.10. 취득) 보유 중 기존 임차인이 거주하는 조정대상지역 B를 2024.2.15. 취득, 신규주택 전입 없이 신규 취득일부터 2년 4개월에 A 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-10-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2024-02-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2023.1.12. 이후 양도분은 조정대상지역 여부와 무관하게 종전주택 양도기한 3년이고 신규주택 1년 내 전입요건은 없다. 신규 취득 2024-02-15 → 양도 2026-06-15는 2년 4개월(구 1년·2년 규정이면 불성립). 프로브: 신규 취득 2022-12-15면 3년 3개월이라 과세. 새 축 중립 고정: 기존 임차인·전입 입력 없음(현행에는 무관), 종전주택 2016.10. 취득(2017-08-02 이전 → 거주요건 면제), 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

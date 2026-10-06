@@ -1,0 +1,82 @@
+[
+  {
+    "id": "E011-era",
+    "docNo": "기획재정부 재산세제과-906 [재산세제과-906(2024.07.31.)]",
+    "docDate": "2024.07.31.",
+    "basis": "era",
+    "today": "2023-10-16",
+    "summary": "종전주택 A + 신규주택 B + 승계 취득 재건축 조합원입주권 C — A 양도 시 일시적 2주택(§155①)과 §156의2③ 중첩 적용 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-10-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-05-10"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2021-07-20"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "c",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2022-09-25",
+          "region": "non_capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 일시적 2주택(§155①)과 §156의2③·§156의3②(권리 보유 특례)는 중첩 적용 불가 → 과세. 엔진: 2주택 + 1권리에서 특수주택(문화유산·이농주택) 선언이 없으면 §89② 예외가 남지 않아 배제 확정(lib/tax-engine/transfer-tax-89-2-exclusion.ts twoHouseAxisClosed) — 종전에는 판정 보류 + 종전 동작(비과세) 유지였다. 3주택 이상·농어촌주택을 선언한 2주택은 종전대로 판정 보류. 원문 사실관계 1 일자 그대로(A 2020-05-10·B 2021-07-20·C 입주권 승계 2022-09-25·A 양도 2023-10-15), 모두 비조정, 양도가 8억(원문에 가액 없음 — 가정)."
+  },
+  {
+    "id": "E011-era-2",
+    "docNo": "기획재정부 재산세제과-906 [재산세제과-906(2024.07.31.)]",
+    "docDate": "2024.07.31.",
+    "basis": "era",
+    "today": "2024-03-16",
+    "summary": "종전주택 A + 2021.1.1. 이후 취득 분양권 B + 신규주택 C — A 양도 시 일시적 2주택과 §156의3②·③ 중첩 적용 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "non_capital",
+          "acquisitionDate": "2023-06-15"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "b",
+          "type": "presale_right",
+          "acquisitionDate": "2021-06-15",
+          "region": "non_capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 일시적 2주택(§155①)과 §156의2③·§156의3②(권리 보유 특례)는 중첩 적용 불가 → 과세. 엔진: 2주택 + 1권리에서 특수주택(문화유산·이농주택) 선언이 없으면 §89② 예외가 남지 않아 배제 확정(lib/tax-engine/transfer-tax-89-2-exclusion.ts twoHouseAxisClosed) — 종전에는 판정 보류 + 종전 동작(비과세) 유지였다. 3주택 이상·농어촌주택을 선언한 2주택은 종전대로 판정 보류. 원문 사실관계 2(일자 없음 — 가정: A 2019-03-15·분양권 B 2021-06-15(2021.1.1. 이후)·C 2023-06-15(A 취득 1년 후·3년 이내)·A 양도 2024-03-15, 비조정, 양도가 8억)."
+  }
+]

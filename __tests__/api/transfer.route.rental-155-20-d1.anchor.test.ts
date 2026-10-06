@@ -5,6 +5,7 @@
  * |---|---|---|
  * | `rentalHousingException.priorRentalExemptionHistory` | OH-40 | Zod 미정의(침묵 strip)·route 매핑 누락 → 이력 「있음」이 비과세로 새어 나간다 |
  * | `rentalHousingException.residenceTransitionUnderAddendum` | OH-40 | 경과조치를 켜도 과세 |
+ * | `rentalHousingException.residenceTransitionBasis` | D11 | 사유가 엔진에 안 닿아 경과조치가 항상 불성립(또는 「임대주택 없음」도 종전 규정) |
  * | `rentalHousingException.postRegistrationResidenceMonths` | OH-15 | B가 항상 불충족(미입력 취급) |
  * | `rentalUnits[].terminatedRegistrationType` | OH-39 | ㉓ 1/2이 판정되지 않아 항상 과세 |
  *
@@ -153,11 +154,31 @@ describe("OH-40 route — 생애 1회 이력·경과조치가 엔진에 닿는�
     expect((r.warnings ?? []).some((w) => w.includes(LIFE))).toBe(true);
   });
 
-  it("D1R-3 경과조치(부칙 제7조②) → 이력 「있음」이어도 비과세", async () => {
+  it("D1R-3 경과조치(부칙 제7조② · 사유 당시 거주) → 이력 「있음」이어도 비과세", async () => {
     const r = await single(
-      form({ priorRentalExemptionHistory: "used", residenceTransitionUnderAddendum: true }),
+      form({
+        priorRentalExemptionHistory: "used",
+        residenceTransitionUnderAddendum: true,
+        residenceTransitionBasis: "residing",
+      }),
     );
     expect(r.totalTax).toBe(0);
+    // ⑭ 다건 매핑 — 사유가 빠지면 「모름」으로 종전 규정이 풀리지 않아 과세된다.
+    expect(
+      await multi(
+        form({ priorRentalExemptionHistory: "used", residenceTransitionUnderAddendum: true, residenceTransitionBasis: "residing" }),
+      ),
+    ).toBe(0);
+  });
+
+  it("D1R-3b (D11) 사유 「계약금 · 2019.2.12. 전 등록 임대주택 없음」 → 이력 「있음」이면 과세 (단건·다건)", async () => {
+    const f = form({
+      priorRentalExemptionHistory: "used",
+      residenceTransitionUnderAddendum: true,
+      residenceTransitionBasis: "contract_without_prior_rental",
+    });
+    expect((await single(f)).totalTax).toBeGreaterThan(0);
+    expect(await multi(f)).toBeGreaterThan(0);
   });
 
   it("D1R-4 다건 route도 같은 결론 (⑭ multi 매핑)", async () => {
@@ -218,5 +239,18 @@ describe("OH-15 route — B 등록 이후 거주기간", () => {
     expect(off).toBe((await single(b("0"))).totalTax);
     expect(on).toBe((await single(b("24"))).totalTax);
     expect(on).not.toBe(off);
+  });
+});
+
+describe("D10 route — 「양도일 현재」 등록(§155⑳2호)", () => {
+  // 양도 2024-06-01. 판정 메뉴 쪽 해석례 시료: one-house-rulings `E163-era`·`E167-era`.
+  const reg = (unit: Partial<UnitForm>) => form({ priorRentalExemptionHistory: "none" }, unit);
+  it("D10R-1 지자체 등록신청일이 양도 다음날 → 과세 / 양도일 당일 → 비과세 (단건·다건)", async () => {
+    expect((await single(reg({ rentalRegistrationDate: "2024-06-02" }))).totalTax).toBeGreaterThan(0);
+    expect((await single(reg({ rentalRegistrationDate: "2024-06-01" }))).totalTax).toBe(0);
+    expect(await multi(reg({ rentalRegistrationDate: "2024-06-02" }))).toBeGreaterThan(0);
+  });
+  it("D10R-2 세무서 사업자등록일만 양도 뒤여도 과세", async () => {
+    expect((await single(reg({ businessRegistrationDate: "2024-06-02" }))).totalTax).toBeGreaterThan(0);
   });
 });

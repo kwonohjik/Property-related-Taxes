@@ -1,0 +1,73 @@
+[
+  {
+    "id": "E196-era",
+    "docNo": "서면-2017-부동산-0186 [부동산납세과-255]",
+    "docDate": "2017.03.06.",
+    "basis": "era",
+    "today": "2017-05-16",
+    "summary": "A(서울 서초 1988.8.20. 취득, 2001년 장기임대 등록 후 등록해제·거주주택 전환, 거주 2년 7개월)·B(용인 2005.6.18. 취득, 2016년 장기임대 등록)·C(부산 1998.4.13. 취득, 2001년 장기임대 등록)·D(서울 송파 2016.9.27. 취득) 보유 — D 취득 후 3년 이내 A 양도 (양도일 2017.5. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2017-05-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-08-20",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "31",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2016-03-15",
+              "rentalRegistrationDate": "2016-03-15",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "14",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2001-06-15",
+              "rentalRegistrationDate": "2001-06-15",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "250000000",
+              "acquisitionOfficialPrice": "250000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "191",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2016-09-27",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 표현: A는 거주주택(1988-08-20 취득·거주 31개월 — 임대 등록 전 1년 + 등록 후 1년 7개월 통산, 등록 해제 후 전환이라 임대호가 아님), B(용인 2005 취득·2016-03-15 등록)·C(부산 1998 취득·2001 등록)는 임대호, D(2016-09-27 취득)는 명부 행(신규주택 자동 도출 → 155-1 적용). 관측: 155-1 + ⑳ 통과 → 비과세. 최소쌍: 임대 B·C를 명부 행으로 바꾸면 과세 — ⑳ 입력이 닿는다. 직전거주주택보유주택이 아니므로(앞서 양도한 거주주택 없음) 등록일 이후 거주기간 제한이 걸리지 않는다. 가정: 양도 2017-05-15(D 취득 후 3년 이내)·양도가 5억, B 임대 14개월·기준시가 3억, C 기준시가 2.5억."
+  }
+]

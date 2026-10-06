@@ -1,0 +1,49 @@
+[
+  {
+    "id": "E172-era",
+    "docNo": "사전-2023-법규재산-0319 [법규과-2615]",
+    "docDate": "2023.10.17.",
+    "basis": "era",
+    "today": "2023-03-16",
+    "summary": "서울 A아파트(2014.5. 취득·거주), B아파트(2014.6. 취득, 2014.8.부터 장기어린이집 운영 — 2022.3.1.부터 휴업), 경북 김천 면지역 C 농어촌주택(2019.7. 취득) 보유 1세대가 A 양도 — 양도일 현재 휴업 중인 장기어린이집을 §155⑳3호 장기어린이집으로 보는지 (양도일 2023.3. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-05-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100"
+      },
+      "houses": [
+        {
+          "id": "daycare",
+          "acquisitionDate": "2014-06-15",
+          "region": "capital"
+        },
+        {
+          "id": "rural",
+          "acquisitionDate": "2019-07-15",
+          "region": "non_capital",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 장기어린이집(§155⑳3호) 보유 — 어린이집 운영 여부·고유번호(§168) 부여·휴업 상태. 판정 메뉴의 §155⑳ 입력은 장기임대주택 호뿐이다(어린이집은 §154⑩ 직전거주주택 확인용 불리언 wasRegisteredRentalOrChildcare만 있고 §155⑳3호 보유 대상으로는 받지 않음). 참고 관측(referenceForm): 어린이집 B를 일반 주택 명부 행으로, C를 조특법 §99의4 농어촌주택(주택 수 제외) 행으로 입력하면 2주택(A+B)이라 과세 — 결론은 일치하나 B의 휴업 사실이 검증된 것이 아니다. 가정: A 양도 2023-03-15·거주 100개월·양도가 8억(원문 미기재)."
+  }
+]

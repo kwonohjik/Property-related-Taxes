@@ -10,7 +10,7 @@ import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-ju
 import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
@@ -19,10 +19,11 @@ export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): Tempora
     primaryKind: primary?.assetKind,
     primaryAcquisitionDate: primary?.acquisitionDate ?? "",
     houses: form.houses,
+    transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,
-    excludedHouseIds: eligibleCountExcludedHouseIds(form),
+    excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
   });
 }
 

@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "부동산납세과-422",
+    "docDate": "2014.06.13.",
+    "id": "E098-era",
+    "basis": "era",
+    "today": "2014-08-01",
+    "summary": "일반주택 A(1999)를 보유한 세대가 별도세대 피상속인의 주택 B(2011 상속)를 멸실·신축한 뒤 A를 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-09-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-05-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "non_capital",
+          "acquisitionDate": "2011-04-15",
+          "isInherited": true,
+          "inheritedDate": "2011-04-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). 양도일 원문 미기재(회신 2014.6.13.) → 2014-09-15 가정, 월 단위 일자 15일, 양도가 5억 중립. A(경기 남양주 1999-05-15)·B(청주 단층 2011 상속, 수도권 밖, 별도세대 피상속인은 회신 전제). 표현: 상속주택 B 행을 그대로 두면 멸실·신축 여부와 무관하게 상속주택 제외로 비과세 — 쟁점(멸실·신축한 주택도 상속받은 주택)은 입력 칸 없이 기본 처리와 일치한다. 연접 매입토지 합병·근린생활시설 겸용 부분은 회신이 판단하지 않아 단언하지 않음."
+  }
+]

@@ -43,7 +43,17 @@ import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
 import { isHeldUnderOneYear } from "./stock-transfer-helpers";
 import { isStockCarryoverEra } from "../data/carryover-scope-era";
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
-import { accrueLotCarryoverExpense, resolveLotAcquisitionPrice } from "./stock-carryover";
+import { accrueLotCarryoverExpense } from "./stock-carryover";
+import {
+  addClause1,
+  addClause1Pooled,
+  buildClause1Summary,
+  newClause1Acc,
+  resolveSubLotBuyPrice,
+  subLotEcho,
+  type Clause1Acc,
+  type PreDeemedLotClause1Ctx,
+} from "./stock-pre-deemed-lot-clause1";
 
 /**
  * §97의2①2호·3호 누적기 — 매칭 3종이 공유한다.
@@ -169,6 +179,8 @@ function applyProgressive(amount: number): { rate: number; tax: number; deductio
  * @param isMajorAndNonSME 단기 30% 게이트 (대주주 + 비SME)
  * @param isSME 중소기업 여부 (비대주주 분기 세율 결정)
  * @param specificMatchings 개별법 매칭 (specific 모드만)
+ * @param preDeemedClause1 의제취득일 전 매수 lot ① 비교 ctx — 있으면 sub-lot 마다 max(①, ②)
+ *   (영 §176의2④1호 · `stock-pre-deemed-lot-clause1.ts`). 없으면 종전 동작 그대로다.
  */
 export function allocateLots(
   acquisitionLots: AcquisitionLot[],
@@ -177,9 +189,11 @@ export function allocateLots(
   isMajorAndNonSME: boolean,
   isSME: boolean,
   specificMatchings?: SpecificMatching[],
+  preDeemedClause1?: PreDeemedLotClause1Ctx,
 ): LotMatchingDetail {
   const warnings: string[] = [];
   const carryover: CarryoverExpenseAcc = { capex: 0, giftTax: 0 };
+  const clause1Acc = preDeemedClause1 ? newClause1Acc(method === "moving_avg") : undefined;
 
   // 분모 0 가드 (validate에서 차단되어야 하지만 방어 코드)
   const totalBuyShares = acquisitionLots.reduce((s, l) => s + l.shareCount, 0);
@@ -218,15 +232,15 @@ export function allocateLots(
         carryoverDonorCapex: 0, carryoverGiftTaxApportioned: 0, warnings,
       };
     }
-    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings, carryover);
+    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
   } else if (method === "moving_avg") {
     // [B-3] 진정 이동평균법 — 단가는 매도 시점 이동평균, 보유기간은 FIFO lot startDate
-    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover);
+    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
     matched = r.matched;
     weightedAvgPerShare = r.finalMovingAvgPrice;
   } else {
     // fifo — lot.acquisitionDate ASC + 매도일 ASC FIFO 매칭 (lot 단가)
-    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover);
+    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
   }
 
   // 합계 산출
@@ -235,6 +249,12 @@ export function allocateLots(
   const totalGain = totalTransferPrice - totalAcquisitionPrice;
   const shortTermGain = matched.filter((m) => m.isShortTerm).reduce((s, m) => s + m.perLotGain, 0);
   const longTermGain = matched.filter((m) => !m.isShortTerm).reduce((s, m) => s + m.perLotGain, 0);
+
+  // ① 비교 집계 — 의제 lot(② 표지)이 하나라도 있을 때만
+  const preDeemedClause1Summary =
+    preDeemedClause1 && clause1Acc && remainingAcqLots.some((l) => l.preDeemedClause2PerShare !== undefined)
+      ? buildClause1Summary(preDeemedClause1, clause1Acc, matched)
+      : undefined;
 
   return {
     method,
@@ -247,6 +267,7 @@ export function allocateLots(
     weightedAvgPerShare,
     carryoverDonorCapex: carryover.capex,
     carryoverGiftTaxApportioned: carryover.giftTax,
+    ...(preDeemedClause1Summary ? { preDeemedClause1Summary } : {}),
     warnings,
   };
 }
@@ -263,6 +284,8 @@ function matchSpecific(
   isSME: boolean,
   warnings: string[],
   carryover: CarryoverExpenseAcc,
+  ctx: PreDeemedLotClause1Ctx | undefined,
+  clause1Acc: Clause1Acc | undefined,
 ): MatchedSubLot[] {
   const matched: MatchedSubLot[] = [];
   const acqById = new Map(acqLots.map((l) => [l.id ?? "", l]));
@@ -291,7 +314,10 @@ function matchSpecific(
     const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
     const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
     // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
-    const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
+    // 의제취득일 전 매수 lot 이면 max(① 의제일 현재, ② 실가+물가) (영 §176의2④ — 이월과세 seam 위)
+    const sp = resolveSubLotBuyPrice(acq, trn, ctx);
+    const perShareBuyPrice = sp.perShare;
+    addClause1(clause1Acc, sp, m.shareCount);
     accrue(carryover, acq, m.shareCount, trn.transferDate); // ①2호·①3호
     const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * m.shareCount;
     const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
@@ -307,6 +333,7 @@ function matchSpecific(
       perLotGain,
       appliedRate,
       subLotTax,
+      ...subLotEcho(acq, trn, sp),
     });
   }
 
@@ -367,6 +394,8 @@ function matchFifo(
   isSME: boolean,
   warnings: string[],
   carryover: CarryoverExpenseAcc,
+  ctx: PreDeemedLotClause1Ctx | undefined,
+  clause1Acc: Clause1Acc | undefined,
 ): MatchedSubLot[] {
   // lot.acquisitionDate ASC (실제 매수일 — §104② 기산일 아님)
   const sortedAcq = [...acqLots].sort(
@@ -397,7 +426,9 @@ function matchFifo(
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
       const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
       // §97의2①1호 — 이월과세 lot 승계(1년 요건은 **매도 시점** 기준)
-      const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
+      const sp = resolveSubLotBuyPrice(acq, trn, ctx); // 의제 lot — max(①, ②)
+      const perShareBuyPrice = sp.perShare;
+      addClause1(clause1Acc, sp, matchedShares);
       accrue(carryover, acq, matchedShares, trn.transferDate); // ①2호·①3호
       const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(
@@ -418,6 +449,7 @@ function matchFifo(
         perLotGain,
         appliedRate,
         subLotTax,
+        ...subLotEcho(acq, trn, sp),
       });
       if (acq.remaining === 0) acqIdx += 1;
     }
@@ -449,6 +481,8 @@ function matchMovingAvg(
   isSME: boolean,
   warnings: string[],
   carryover: CarryoverExpenseAcc,
+  ctx: PreDeemedLotClause1Ctx | undefined,
+  clause1Acc: Clause1Acc | undefined,
 ): { matched: MatchedSubLot[]; finalMovingAvgPrice: number | undefined } {
   const sortedAcq = [...acqLots].sort(
     (a, b) => a.acquisitionDate.getTime() - b.acquisitionDate.getTime(),
@@ -488,10 +522,12 @@ function matchMovingAvg(
       nextAcqToAbsorb += 1;
     }
     // 이 매도 시점 기준으로 잔고 원가를 재도출 (①1호 승계 판정이 매도일에 달려 있다)
-    const balanceCost = priceTrack.reduce(
-      (s, e) => s + e.qty * resolveLotAcquisitionPrice(e.lot, trn.transferDate),
-      0,
-    );
+    // 의제 lot 은 매도 lot 별 max(①, ②) — ① 환산이 매도마다 달라 풀 평균도 매도마다 달라질 수 있다(고지는 엔진 경고)
+    const subPrices = priceTrack.map((e) => ({ e, sp: resolveSubLotBuyPrice(e.lot, trn, ctx) }));
+    const balanceCost = subPrices.reduce((s, x) => s + x.e.qty * x.sp.perShare, 0);
+    const clause1Qty = subPrices.reduce((s, x) => (x.sp.selected === "clause1" ? s + x.e.qty : s), 0);
+    const clause1Fraction = balanceQty > 0 ? clause1Qty / balanceQty : 0;
+    const clause1Missing = ctx !== undefined && subPrices.some((x) => x.sp.selected === "clause2" && x.sp.clause1PerShare === undefined);
     const movingAvgPrice = balanceQty > 0 ? Math.floor(balanceCost / balanceQty) : 0;
     lastMovingAvgPrice = movingAvgPrice;
 
@@ -541,6 +577,9 @@ function matchMovingAvg(
     }
     // 잔고 차감 — 모든 lot의 잔여 지분을 같은 비율로 줄인다(평균 보존)
     const soldQty = trn.shareCount - remainingSaleShares;
+    // ① 채택 지분 — 매도분이 풀을 같은 비율로 소진하므로 ① 몫도 그 비율이다(필요경비 정산 입력)
+    addClause1Pooled(clause1Acc, soldQty, clause1Fraction, ctx?.clause1PerShare(trn));
+    if (clause1Acc && clause1Missing) clause1Acc.unresolvedShares += soldQty;
     const qtyBeforeSale = balanceQty;
     balanceQty = Math.max(0, balanceQty - soldQty);
     const remainRatio = qtyBeforeSale > 0 ? balanceQty / qtyBeforeSale : 0;

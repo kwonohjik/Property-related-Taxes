@@ -109,7 +109,7 @@ export interface HouseEntry {
    * 합가일보다 나중에 취득한 행은 이 값과 무관하게 「합가 후 취득」으로 본다(날짜가 먼저).
    * 미입력이면 구성 판정을 하지 않는다(구 저장분 호환).
    */
-  mergeOrigin?: "seller_side" | "counterpart_side";
+  mergeOrigin?: "seller_side" | "counterpart_side" | "second_merge_side";
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */

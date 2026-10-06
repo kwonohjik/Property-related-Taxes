@@ -1,0 +1,89 @@
+[
+  {
+    "id": "E187-era",
+    "docNo": "기획재정부 재산세제과-1302",
+    "docDate": "2022.10.19.",
+    "basis": "era",
+    "today": "2022-10-20",
+    "summary": "A아파트(2012.9.5. 취득·거주)와 임대주택 B·C(2019.3.29. 단기 등록)·D(2018.8.23. 장기 등록)·E(2020.3.5. 단기 등록) 보유 — 의무임대기간 1/2 경과 단기임대를 자진말소하고 2020.8.18. 이후 장기일반으로 재등록할 때 임대료 5% 증액 제한의 기준 계약 (양도일 2022.10. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-10-19",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-09-05",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2018-08-23",
+              "rentalRegistrationDate": "2018-08-23",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "49",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2019-03-29",
+              "rentalRegistrationDate": "2019-03-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "42",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2019-03-29",
+              "rentalRegistrationDate": "2019-03-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "42",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "e",
+              "businessRegistrationDate": "2020-03-05",
+              "rentalRegistrationDate": "2020-03-05",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "31",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 단기임대 자진말소 후 장기일반 재등록(2020.8.18. 이후) 사실과 임대료 5% 증액 제한의 기준 계약(재등록 이후 최초 표준임대차계약). 말소·재등록 이력을 한 주택에 이어 입력하는 칸이 없고 임대료도 입력하지 않는다(자기확인 체크만). 원문은 기준 계약 규칙만 밝히고 비과세 결론이 없어 기대값을 두지 않았다. 참고 관측(referenceForm)은 4호를 등록 중인 장기일반으로 입력한 것이라 의미가 제한적. 가정: 양도 2022-10-19(회신 전)·거주주택 취득 2012-09-05·거주 100개월·양도가 7억."
+  }
+]

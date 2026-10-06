@@ -19,7 +19,15 @@
  * SPL-4: 매수 #1 을 1980-06-10 취득으로 — 의제취득일 전 매수 lot 에 영 §176의2④2호 ②
  *        (1주당 floor(10,000 × 50.57 ÷ 39.17) = 12,910) → Step2·결과 취득가액 127,280,000 · 결과 경고 문구
  *
+ * SPL-5: 비상장 · 1980 매수 lot · ① 매매사례가액 — Step2 ① 비교 카드 → 미리보기 144,000,000 → 결과 취득가액·개산공제
+ *        (영 §176의2④1호 — ① 15,000 > ② 12,910 인 매수 #1 만 ① 채택) · 요청 본문에 신규 필드
+ *
+ * SPL-6: 코스닥 · 1980 매수 lot · 매도 2건 ① 환산 — 매도 건별 분모 행 · 건별 채택이 갈린다(① 40,000 · ② 12,910)
+ *
+ * SPL-7: lots-only(일자별 다건) · 코스닥 · ① 환산 — 매트릭스 아래 카드 · 사이드바 취득가액이 엔진과 같다(근사 대체)
+ *
  * 실행: E2E_PORT=3217 npx playwright test e2e/stock-transfer-split-lots.spec.ts
+ *       스크린샷: E2E_SHOT_DIR=/tmp/shots 를 주면 Step2 입력 카드·결과 카드를 저장한다
  */
 
 import { test, expect, type Page, type Locator } from "@playwright/test";
@@ -242,5 +250,205 @@ test.describe("분할 매수·분할 양도", () => {
     expect(json.result.acquisitionPrice).toBe(127_280_000);
     expect(json.result.appliedRules).toContain("의제취득일물가상승가산");
     await expect(page.getByText(/매수 lot #1\(1980-06 취득/).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  /** E2E_SHOT_DIR 가 있을 때만 스크린샷 저장 (화면 확인용) */
+  async function shot(page: Page, name: string) {
+    const dir = process.env.E2E_SHOT_DIR;
+    if (dir) await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true });
+  }
+
+  /** Step3 → 결과 보기 — 요청 본문과 응답을 돌려준다 */
+  async function calcFromStep3(page: Page) {
+    await expect(page.getByText("필요경비·신고").first()).toBeVisible({ timeout: 10_000 });
+    await fillDate(page.locator("body"), "2026-07-31");
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/stock-transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: "결과 보기" }).click();
+    const resp = await calcResponse;
+    expect(resp.status()).toBe(200);
+    return { body: JSON.parse(resp.request().postData() ?? "{}"), json: await resp.json() };
+  }
+
+  /** 라디오는 라벨이 아니라 value 로 집는다 — description 에도 「매매사례가액」이 들어 있어 이름 매칭이 둘을 잡는다 */
+  const RADIO_ESTIMATED = 'input[name="preDeemedLotClause1Mode"][value="estimated"]';
+  const RADIO_SALE_CASE = 'input[name="preDeemedLotClause1Mode"][value="sale_case"]';
+  /** 상장 대주주 — 결과가 비과세(장내 비대주주) 정보용 화면이 아니라 과세 결과 화면으로 가게 한다(결과 카드가 거기에만 있다) */
+  async function makeMajorShareholder(page: Page) {
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "본인 단독 지분율" }).locator("input").first().fill("5");
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "본인 단독 시가총액" }).locator("input").first().fill("6000000000");
+  }
+
+  const clause1Card = (page: Page) => page.getByTestId("pre-deemed-lots-clause1-card");
+
+  test("SPL-5: 비상장 1980 lot · ① 매매사례가액 — 카드 입력 → 미리보기 144,000,000 → 결과 취득가액 · 개산공제 800,000", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+
+    await page.getByPlaceholder("종목명을 입력하세요").fill("분할양도예제");
+    await page.getByRole("radio", { name: "비상장" }).first().click();
+    await page.getByRole("radio", { name: "분할 양도" }).first().click();
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: /매수 행 추가/ }).click();
+    await fillAcqLot(page, 1, "1980-06-10", "8000", "10000");
+    await fillAcqLot(page, 2, "2025-02-10", "8000", "12000");
+    await fillAcqLot(page, 3, "2025-12-24", "4000", "5000");
+    await selectCause(page, 3, "증여");
+    await page.getByRole("button", { name: /매도 행 추가/ }).click();
+    const sale = trnCard(page, 1);
+    await fillDate(sale, "2026-05-11");
+    await sale.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill("10000");
+    await sale.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill("20000");
+    await page.getByText("선입선출법", { exact: true }).click();
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
+
+    // ① 기본은 견주지 않음 — ② 만 적용한 미리보기(127,280,000)와 «① 미산정» 안내
+    const card = clause1Card(page);
+    await expect(card).toBeVisible();
+    await expect(page.getByTestId("pre-deemed-lots-none-note")).toContainText("① 미산정");
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("127,280,000");
+    // 비상장은 환산이 막혀 있다(안내) · 매매사례 선택 가능
+    await expect(card.locator(RADIO_ESTIMATED)).toBeDisabled();
+
+    await card.locator(RADIO_SALE_CASE).click();
+    await card.locator(`div:has(> label:has-text('1주당 취득 매매사례가액')) input[type="text"]`).first().fill("15000");
+    await fillDate(card.locator('[data-slot="field-card"]').filter({ hasText: "사례 거래일" }), "1985-12-20");
+    await card.locator('[data-field="acquisitionYearNetIncomePerShare"] input').fill("10000");
+    await card.locator('[data-field="acquisitionYearNetAssetPerShare"] input').fill("10000");
+    await shot(page, "spl5-step2-card");
+
+    // 매수 #1 8,000주만 ① 채택(15,000 > ② 12,910) · 매수 #2 2,000주는 ② — 엔진 anchor 와 같은 144,000,000
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("144,000,000");
+    await expect(page.getByTestId("split-preview-basis").first()).toHaveText("① 매매사례");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByTestId("pre-deemed-lots-expense-note")).toBeVisible();
+    const { body, json } = await calcFromStep3(page);
+    expect(body.preDeemedLotClause1).toBe("sale_case");
+    expect(body.acquisitionMarketSamplePrice).toBe(15000);
+    expect(body.acquisitionYearNetAssetPerShare).toBe(10000);
+    expect(json.result.acquisitionPrice).toBe(144_000_000);
+    expect(json.result.expenses).toBe(800_000);
+    expect(json.result.preDeemedLotsDetail.clause1.settlement.estimatedDeduction).toBe(800_000);
+
+    // 결과 카드 — 건별 ① 채택 · 귀속 근거 · 법령상 명문 없음
+    const result = page.getByTestId("pre-deemed-lots-result-card");
+    await expect(result).toBeVisible({ timeout: 60_000 });
+    await expect(result.getByTestId("pre-deemed-lots-selected").first()).toHaveText("① 채택");
+    await expect(result.getByTestId("pre-deemed-lots-settlement")).toContainText("800,000");
+    await expect(result.getByTestId("pre-deemed-lots-no-statute")).toContainText("법령상 명문은 없어");
+    await shot(page, "spl5-result-card");
+  });
+
+  test("SPL-6: 코스닥 1980 lot · 매도 2건 ① 환산 — 매도 건별 분모 · 건별 채택(① 40,000 / ② 12,910) · 취득가액 52,910,000", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+
+    await page.getByPlaceholder("종목명을 입력하세요").fill("분할양도예제");
+    await page.getByRole("radio", { name: "코스닥" }).first().click();
+    await page.getByRole("radio", { name: "분할 양도" }).first().click();
+    await page.getByRole("button", { name: /매수 행 추가/ }).click();
+    await fillAcqLot(page, 1, "1980-06-10", "2000", "10000");
+    for (const [n, date, price] of [[1, "2025-12-01", "200000"], [2, "2025-12-02", "180000"]] as const) {
+      await page.getByRole("button", { name: /매도 행 추가/ }).click();
+      const sale = trnCard(page, n);
+      await fillDate(sale, date);
+      await sale.locator('[data-slot="field-card"]').filter({ hasText: "주식수" }).locator("input").first().fill("1000");
+      await sale.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).first().fill(price);
+    }
+    await page.getByText("선입선출법", { exact: true }).click();
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+    await makeMajorShareholder(page);
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
+
+    const card = clause1Card(page);
+    await card.locator(RADIO_ESTIMATED).click();
+    // 매매사례는 상장에서 막힌다
+    await expect(card.locator(RADIO_SALE_CASE)).toBeDisabled();
+    await page.getByTestId("pre-deemed-lots-deemed-std").fill("20000");
+    // 의제 lot 을 소진하는 매도 2건 모두 분모 행이 있다
+    await expect(page.getByTestId("pre-deemed-lots-sale-row-0")).toBeVisible();
+    await expect(page.getByTestId("pre-deemed-lots-sale-row-1")).toBeVisible();
+    // 분모 미입력이면 다음 단계로 못 간다(⑧)
+    await page.getByTestId("pre-deemed-lots-sale-std-0").fill("100000");
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByTestId("pre-deemed-lots-clause1-card")).toBeVisible(); // 2단계에 머문다
+    await expect(page.getByText(/매도 #2의 양도일 이전 1개월 종가평균/).first()).toBeVisible();
+    await page.getByTestId("pre-deemed-lots-sale-std-1").fill("2000000");
+    await shot(page, "spl6-step2-card");
+
+    // 매도 #1 ① 환산 40,000 채택 · 매도 #2 ① 1,800 < ② 12,910 → ② — 미리보기 합 40,000,000 + 12,910,000
+    await expect(page.getByTestId("split-preview-acquisition-total")).toHaveText("52,910,000");
+    await expect(page.getByTestId("split-preview-basis")).toHaveText(["① 환산", "② 물가상승"]);
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    const { body, json } = await calcFromStep3(page);
+    expect(body.preDeemedLotClause1).toBe("estimated");
+    expect(body.acquisitionDatePriceAvg1Month).toBe(20000);
+    expect(body.transferLots.map((l: { transferStdPricePerShare?: number }) => l.transferStdPricePerShare)).toEqual([100000, 2000000]);
+    expect(json.result.acquisitionPrice).toBe(52_910_000);
+    expect(json.result.expenses).toBe(200_000);
+
+    const rows = page.getByTestId("pre-deemed-lots-sublot-table").locator("tbody tr");
+    await expect(rows).toHaveCount(2);
+    await expect(page.getByTestId("pre-deemed-lots-selected")).toHaveText(["① 채택", "② 채택"]);
+    await shot(page, "spl6-result-card");
+  });
+
+  test("SPL-7: lots-only(일자별 다건) 코스닥 · ① 환산 — 매트릭스 아래 카드 · 사이드바 취득가액 40,000,000 (엔진 미리보기)", async ({ page }) => {
+    test.setTimeout(150_000);
+    await gotoStockTransferTax(page);
+
+    await page.getByPlaceholder("종목명을 입력하세요").fill("다건예제");
+    await page.getByRole("radio", { name: "코스닥" }).first().click();
+    const year = page.locator('input[type="text"][aria-label="연도"]');
+    const month = page.locator('input[type="text"][aria-label="월"]');
+    const day = page.locator('input[type="text"][aria-label="일"]');
+    await year.nth(0).fill("1980");
+    await month.nth(0).fill("06");
+    await day.nth(0).fill("10");
+    await year.nth(1).fill("2025");
+    await month.nth(1).fill("12");
+    await day.nth(1).fill("01");
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "양도 주식수" }).locator("input").first().fill("1000");
+    await page.locator('[data-slot="field-card"]').filter({ hasText: "발행주식 총수" }).locator("input").first().fill("100000");
+    await makeMajorShareholder(page);
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
+    await page.locator(`div:has(> label:has-text('양도가액 합계')) input[type="text"]`).first().fill("200000000");
+    await page.getByText("일자별 다건", { exact: true }).click();
+    // 매수 #1 — 1980-06-10 1,000주 × 10,000
+    await year.nth(0).fill("1980");
+    await month.nth(0).fill("06");
+    await day.nth(0).fill("10");
+    await page.locator(`div:has(> label:has-text('주식수')) input[type="text"]`).nth(0).fill("1000");
+    await page.locator(`div:has(> label:has-text('1주당 단가')) input[type="text"]`).nth(0).fill("10000");
+
+    // 매트릭스 아래에 카드가 생긴다 · ② 만 적용한 사이드바는 12,910,000
+    const card = clause1Card(page);
+    await expect(card).toBeVisible();
+    await expect(page.getByText("12,910,000").first()).toBeVisible();
+
+    await card.locator(RADIO_ESTIMATED).click();
+    await page.getByTestId("pre-deemed-lots-deemed-std").fill("20000");
+    await page.getByTestId("pre-deemed-lots-transfer-std").fill("100000");
+    await expect(page.getByText("40,000,000").first()).toBeVisible();
+    await shot(page, "spl7-step2-card");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    const { body, json } = await calcFromStep3(page);
+    expect(body.preDeemedLotClause1).toBe("estimated");
+    expect(body.transferLots[0].transferStdPricePerShare).toBe(100000);
+    expect(json.result.acquisitionPrice).toBe(40_000_000);
+    expect(json.result.expenses).toBe(200_000);
+    expect(json.result.preDeemedLotsDetail).toBeTruthy();
+    await expect(page.getByTestId("pre-deemed-lots-result-card")).toBeVisible({ timeout: 60_000 });
   });
 });

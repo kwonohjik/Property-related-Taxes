@@ -37,6 +37,7 @@ import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDeta
 import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
 import { MajorShareholderResultCard } from "@/components/calc/results/StockMajorShareholderResultCard";
 import { PreDeemedAcquisitionResultCard } from "@/components/calc/results/PreDeemedAcquisitionResultCard";
+import { PreDeemedLotsResultCard } from "@/components/calc/results/PreDeemedLotsResultCard";
 import { LotCapitalAdjustmentsCard } from "@/components/calc/results/LotCapitalAdjustmentsCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
@@ -584,8 +585,21 @@ export function StockTransferTaxResultView({
         <PreDeemedAcquisitionResultCard detail={result.preDeemedAcquisitionDetail} />
       )}
 
+      {/* 분할·다건 lot — 의제취득일 전 매수 건별 ②·① 비교 (영 §176의2④) */}
+      {result.preDeemedLotsDetail && (
+        <PreDeemedLotsResultCard
+          detail={result.preDeemedLotsDetail}
+          matched={result.lotMatchingDetail?.matched}
+        />
+      )}
+
       {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
-      {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}
+      {result.lotMatchingDetail && (
+        <LotMatchingDetailCard
+          detail={result.lotMatchingDetail}
+          swapRemovedAcquisition={result.preDeemedLotsDetail?.clause1?.settlement?.swapRemovedAcquisition}
+        />
+      )}
 
       {/* [A-2] lot별 자본조정 희석 상세 (split/다건 + capitalAdjustments) */}
       {result.lotCapitalAdjustmentsDetail && (

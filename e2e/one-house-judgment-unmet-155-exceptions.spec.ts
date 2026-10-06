@@ -179,6 +179,8 @@ test.describe("판정 결과 — §155⑦ 농어촌주택 불성립 사유", () 
           oneHouseRuralHouse: true,
           ruralHouseKind: "inherited",
           ruralDecedentResidenceYears: "2",
+          // D7 — 1호는 상속개시 당시 동일세대 여부가 필수 응답이다(⑧). 이 spec의 축(거주 5년)과 무관한 별도세대로 둔다.
+          decedentSameHouseholdAtInheritance: false,
         }),
       ],
     });

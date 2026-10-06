@@ -24,7 +24,11 @@ import {
   deriveEffectiveRegDate,
   deriveRentalArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
-import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
+import {
+  isLifetimeLimitEra155_20,
+  isAddendumTransitionEffective,
+  isPreLifetimeLimitRegime,
+} from "@/lib/tax-engine/data/rental-155-20-era";
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 
@@ -167,7 +171,12 @@ export function validateRentalHousingException(
     // §155⑳2호(양도일 현재 등록·임대 중·임대료 5% 이내)는 목을 가리지 않는다 — 나·라목 포함(OH-41).
     // 엔진 `checkEligibility`가 전 목에 요구하므로 ⑤도 전 목에 토글을 띄운다(3중 패턴).
     if (!u.requirementsConfirmed) {
-      return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
+      // U2 — 말소 호는 「말소 전까지」 충족을 묻는다(⑤ 문구와 같은 조건 · 기획재정부 재산세제과-151).
+      const terminated =
+        u.rentalAutoTermination && (article === "가" || article === "다" || article === "라" || article === "마");
+      return terminated
+        ? `${unitLabel}: 기타 요건 자기확인이 필요합니다 (등록 말소 전까지 임대료 5% 상한·등록 유지 등 — 말소 후 임대 중단 등은 묻지 않습니다).`
+        : `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
     }
     // §167의3⑪ 「연장 사유 있음」 입력 미완 — ⑤·④와 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외).
     const extIssue = rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionIncomplete(u.aptDeadlineExtension) : null;
@@ -204,17 +213,23 @@ export function validateRentalHousingException(
    * 거주주택을 최초로 양도하는 경우」로 한정된다. 판정 메뉴(`facts`)에서만 묻는다 — 계산기(`calc`)는 판정 사실
    * 칸이 없으므로(P6-c-2) 막지 않고, 엔진이 「판정 보류」 고지를 낸다(침묵 적용 아님).
    */
+  /**
+   * D11 — 경과조치를 켰으면 사유를 묻는다(⑤가 체크 아래에 띄운다 · 구간 안에서만). 2호 계약금 경로는 2019.2.12. 전
+   * 등록 임대주택 소유 여부까지가 사유다 — 엔진 `isAddendumTransitionEffective`와 같은 leaf.
+   */
+  const inLifetimeEraBase =
+    !!asset.acquisitionDate &&
+    !!formTransferDate &&
+    isLifetimeLimitEra155_20(new Date(asset.acquisitionDate), new Date(formTransferDate), false);
+  if (mode === "facts" && inLifetimeEraBase && rh.residenceTransitionUnderAddendum === true && !rh.residenceTransitionBasis) {
+    return `${label}: 2019.2.12 부칙 경과조치의 사유(당시 거주 · 그 전 계약금 지급과 임대주택 등록 여부)를 선택하세요 (대통령령 제29523호 부칙 제7조②).`;
+  }
   if (
     mode === "facts" &&
     rh.scenario === "A" &&
     !rh.priorRentalExemptionHistory &&
-    asset.acquisitionDate &&
-    formTransferDate &&
-    isLifetimeLimitEra155_20(
-      new Date(asset.acquisitionDate),
-      new Date(formTransferDate),
-      rh.residenceTransitionUnderAddendum === true,
-    )
+    inLifetimeEraBase &&
+    !isAddendumTransitionEffective(rh.residenceTransitionUnderAddendum === true, rh.residenceTransitionBasis)
   ) {
     return `${label}: 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 이력이 있는지 선택하세요 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).`;
   }

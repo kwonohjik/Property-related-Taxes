@@ -1,0 +1,23 @@
+[
+  {
+    "docNo": "재일46014-469",
+    "docDate": "1997.03.03.",
+    "id": "E114-era",
+    "basis": "era",
+    "today": "1997-02-01",
+    "summary": "건물은 장남이 단독상속·부수토지는 모·형제와 공동상속한 주택이 공공용지 보상으로 양도(1996.12.) — 비과세 판정 시 부수토지 범위",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1996-12-20",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1983-02-11",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1970-01-01"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: 건물 소유자와 부수토지 공유자가 다른 주택에서 「양도일 현재 건물 소유자 및 그 동일세대원의 토지 지분」으로 비과세 대상 부수토지를 정하는 칸(주택·토지 소유자별 지분과 세대 구성원 여부). 원문은 부수토지 범위만 정하고 최종 비과세 여부(세대 구성원 판정)는 결론짓지 않았다. 당시(1996.12. 양도) 보유 3년·공공용지 협의양도 기준도 엔진 연혁 밖. referenceForm은 건물 단독상속 주택(취득원인 상속, 상속개시 1983-02-11, 피상속인 취득일 가정 1970-01-01)을 1주택으로 단순화 — 관측 비과세는 지분 쟁점을 검증하지 않는다. 양도가 3억 가정."
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "E124-era",
+    "docNo": "국심-2003-중-1253",
+    "docDate": "2003.06.10.",
+    "basis": "era",
+    "today": "2003-06-10",
+    "summary": "1주택 보유 청구인이 2주택 보유 부(父)와 동거봉양 합가(2002.4.) 후 합가일부터 2개월에 청구인 주택 양도 — 1세대 3주택",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-05-30",
+      "contractTotalPrice": "300000000",
+      "parentalCareMergeDate": "2002-04-10",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-07-30"
+      },
+      "houses": [
+        {
+          "id": "f1",
+          "region": "capital",
+          "acquisitionDate": "1996-11-05",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "f2",
+          "region": "capital",
+          "acquisitionDate": "2000-03-08",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch(결론 일치·사유 불일치 — D14 이후). 관측: 과세 — 다만 사유는 원문의 「1주택 보유자가 2주택 보유 직계존속과 합가해 3주택 → §155④ 불가」가 아니라, D14로 들어간 당시 처분기한 1년(2002.3.30.~2008.11.27. 양도분)을 넘겨 겹쳐 있는 일시적 2주택이 불성립했기 때문이다(unmet 155-4: 「겹쳐 있는 일시적 2주택 특례가 기간 요건 … 충족하지 않습니다」). 원문 사유 축(상대 쪽 2주택이면 합가 3주택 중첩 불가)은 D8(보류 — 연혁 선행 + 사전-2026-법규재산-0643 재독)에 남아 있어 match로 옮기지 않는다. D14 전 관측: isExempt=true(applied 155-1 + 155-4). 의심 지점(D8): lib/calc/household-house-count.ts resolveTemporaryTwoHouse가 mergeOrigin을 보지 않음."
+  }
+]

@@ -25,6 +25,7 @@ import { PRE_DESIGNATION_CONTRACT_EXCLUSION } from "./legal-codes";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
   resolveTemporaryTwoHouseDeadlineEra,
+  isOneYearHoldRequiredForTemporaryTwoHouse,
   type TemporaryTwoHouseDeadlineEra,
 } from "./data/temporary-two-house-deadline-era";
 
@@ -81,6 +82,8 @@ export function judgeTemporaryTwoHouseTiming(p: {
   const oneYearMet =
     p.oneYearWaived ||
     p.publicInstitutionRelocation === true ||
+    // D14 — 2012-06-29 전 양도분 §155①에는 이 요건이 없다(제23887호가 도입).
+    !isOneYearHoldRequiredForTemporaryTwoHouse(p.transferDate) ||
     isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
   const dl = p.deadlineDate ? deadlineEnd(p.deadlineDate) : deadlineEndFrom(p.newAcquisitionDate, p.deadlineYears);
   const deadline = dl.end;
@@ -277,6 +280,7 @@ export function resolveTemporaryTwoHouseDeadline(
     baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
     newAcquisitionDate: tt?.newAcquisitionDate,
     newContractDate: tt?.newHouseContractDate,
+    previousAcquisitionDate: tt?.previousAcquisitionDate,
     moveInDate: tt?.wholeHouseholdMoveInDate,
     existingTenantLeaseEndDate: tt?.existingTenantLeaseEndDate,
     transferDate: p.transferDate,

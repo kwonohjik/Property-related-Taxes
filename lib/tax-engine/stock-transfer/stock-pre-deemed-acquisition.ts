@@ -269,7 +269,7 @@ export const PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE =
   "한 번에 취득한 주식이면 일자별 매수 건 대신 단일 입력에서 물가상승 배율을 직접 입력하세요";
 
 /** 의제취득일 전 «매수» lot 인가 — 엔진·⑤⑥ 미리보기·⑧·⑫ 공용 (단건 술어를 lot 값으로 부른다) */
-function isPreDeemedPurchaseLot(lot: Pick<AcquisitionLot, "acquisitionCause" | "acquisitionDate">, marketType: string | undefined, is94_4: boolean): boolean {
+export function isPreDeemedPurchaseLot(lot: Pick<AcquisitionLot, "acquisitionCause" | "acquisitionDate">, marketType: string | undefined, is94_4: boolean): boolean {
   return isPreDeemedPurchase({
     marketType,
     acquisitionCause: lot.acquisitionCause,
@@ -294,8 +294,10 @@ export function isPreDeemedLotBeforePpiSeries(
  * 바꾼다(영 §176의2④2호 — 자산마다, 즉 lot 마다 적용한다). `allocateLots` 직전·자본조정 희석보다 **앞**이다
  * (②는 «취득 당시» 가액의 환산이고, 희석은 그 원가를 늘어난 주식수에 나눌 뿐이다).
  *
- * ⚠️ ① 의제취득일 현재 매매사례·환산가액은 견주지 않는다 — lot 입력은 실가 단가뿐이라 ①을 산정할 입력이 없다.
- *    단건 실가 모드와 같은 한계다(그쪽도 ① 미입력이면 ②로 정한다). 결과 경고 문구로 남긴다.
+ * ①(의제취득일 현재 매매사례·환산가액)은 **이 함수가 견주지 않는다** — 환산 ①은 매도 lot 의 양도가·양도 당시 기준시가에
+ *    의존해 sub-lot(매수 lot × 매도 lot)에서야 정해진다. 그래서 ② 적용 lot 에 표지(`preDeemedClause2PerShare`)만 남기고,
+ *    `allocateLots` 의 sub-lot 단계(`stock-pre-deemed-lot-clause1.ts`)가 `max(①, ②)` 를 고른다.
+ *    `clause1Active` 는 경고 문구만 가른다(① 비교가 켜졌으면 «견줍니다», 아니면 종전 «산정하지 않습니다»).
  * ⚠️ lot 엔진은 1주당 단가로 매칭한다(부분 매도 때문) — ②를 1주당 floor 로 구해 총액 floor 보다 최대 (주식수−1)원 작다.
  *
  * 1965.01 이전 lot 은 배율 입력 칸이 없어 바꾸지 않고 사유를 남긴다 — ⑧·⑫가 먼저 막는다.
@@ -304,8 +306,15 @@ export function applyPreDeemedToLots(
   lots: AcquisitionLot[],
   marketType: string | undefined,
   is94_4: boolean,
-): { lots: AcquisitionLot[]; applied: boolean; warnings: string[] } {
+  clause1Active = false,
+): {
+  lots: AcquisitionLot[];
+  applied: boolean;
+  warnings: string[];
+  details: NonNullable<StockTransferResult["preDeemedLotsDetail"]>["lots"];
+} {
   const warnings: string[] = [];
+  const details: NonNullable<StockTransferResult["preDeemedLotsDetail"]>["lots"] = [];
   let applied = false;
   const prev = deemedPrevMonth(is94_4);
   const ppiPrev = ppiMonthlyX100(prev.year, prev.month);
@@ -323,9 +332,20 @@ export function applyPreDeemedToLots(
     warnings.push(
       `${label}: ② 취득 당시 1주당 실가 + 생산자물가상승분 ${lot.perShareAcquisitionPrice.toLocaleString("ko-KR")} → ` +
         `${price.toLocaleString("ko-KR")} (지수 ${prev.key} ${ppiPrev / 100} ÷ ${acq.key} ${ppiAcq / 100})을 취득가액으로 합니다` +
-        "(① 의제취득일 현재 매매사례·환산가액은 매수 건별 입력에서 산정하지 않습니다).",
+        (clause1Active
+          ? "(① 의제취득일 현재 가액과는 매도 건별로 견줍니다 — 결과의 매수·매도 건별 채택 참조)."
+          : "(① 의제취득일 현재 매매사례·환산가액은 매수 건별 입력에서 산정하지 않습니다)."),
     );
-    return { ...lot, perShareAcquisitionPrice: price };
+    details.push({
+      lotIndex: i,
+      ...(lot.id !== undefined ? { lotId: lot.id } : {}),
+      acquisitionMonth: acq.key,
+      originalPerShare: lot.perShareAcquisitionPrice,
+      clause2PerShare: price,
+      ppiAtAcquisition: ppiAcq / 100,
+      ppiAtDeemedPrev: ppiPrev / 100,
+    });
+    return { ...lot, perShareAcquisitionPrice: price, preDeemedClause2PerShare: price };
   });
-  return { lots: out, applied, warnings };
+  return { lots: out, applied, warnings, details };
 }

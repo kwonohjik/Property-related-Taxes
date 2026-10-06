@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "서면-2024-부동산-0428",
+    "docDate": "2024.07.26.",
+    "id": "E121-era",
+    "basis": "era",
+    "today": "2024-08-01",
+    "summary": "일반주택 A(1997)를 보유한 세대가 부수토지는 별도세대 부로부터 증여(1998), 그 위의 건물은 별도세대 모가 신축(2008)했다가 상속(2009.2.)한 주택 B를 보유하고 A 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-10-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-08-20"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2009-02-22",
+          "isInherited": true,
+          "inheritedDate": "2009-02-22",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). 양도일 원문 미기재(회신 2024.7.26.) → 2024-10-15 가정, 월 단위 일자 15일, 양도가 7억 중립, 비조정. A 1997-08-20 취득, B(건물 모 신축 2008, 상속 2009-02-22). 표현: 건물 소유자 기준으로 B 행을 상속주택(별도세대·단독상속)으로 입력 — 부수토지를 부로부터 증여받은 사실을 담는 칸이 없어 쟁점(토지·건물 소유자가 다를 때 건물 소유자 기준)은 입력으로 구별되지 않고 기본 처리와 일치한다."
+  }
+]

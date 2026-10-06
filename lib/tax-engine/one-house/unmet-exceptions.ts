@@ -4,10 +4,11 @@
  * `pending.ts`(800줄 hard cap)에서 순수 이동했다(2026-09-29 — 판정 기준일·요건 검토 작업의 선행 분리).
  * 동작 변경 없음. 기존 import 경로(`./one-house/pending`)는 `pending.ts`의 재수출로 보존한다.
  */
-import { resolveMergeComposition } from "./merge-composition";
+import { resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
+  passesHouseholdGate,
   resolveInheritedHouseExclusionFromInput,
   resolveInheritedSellingHouseId,
 } from "../transfer-inheritance-exclusion";
@@ -116,7 +117,39 @@ function collectMergeUnmet(
 
   // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──
   const count = input.householdHousingCount;
-  if (count === 3) {
+  // D4 — 혼인·동거봉양 합가일이 **둘 다** 있는 3주택은 이중 합가(`resolveMarriageThenParentalCareDeeming`) 기준으로 안내한다.
+  const doubleMerge = count === 3 && marriageDate !== undefined && parentalCareDate !== undefined;
+  if (doubleMerge && (input.inheritedHouseExclusionCount ?? 0) === 0) {
+    if (parentalCareDate.getTime() < marriageDate.getTime()) {
+      reasons.push(
+        `동거봉양 합가(${fmtDate(parentalCareDate)}) 후 혼인(${fmtDate(marriageDate)})해 3주택이 된 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다 — 혼인 후 동거봉양 합가 순서만 인정합니다(확인 필요).`,
+      );
+    } else {
+      const composition = resolveDoubleMergeComposition({
+        householdHousingCount: count,
+        houses: input.houses,
+        sellingHouseId: input.sellingHouseId,
+        marriageDate,
+        parentalCareMergeDate: parentalCareDate,
+        knownHouseExclusionCount: input.knownHouseExclusionCount,
+        knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
+        noRosterInputPath: input.noMergeRosterInputPath,
+      });
+      if (composition.status === "fails") {
+        reasons.push(
+          composition.reason === "acquired_after_merge"
+            ? `다른 주택을 동거봉양 합가일(${fmtDate(parentalCareDate)}) 이후인 ${composition.afterMergeDates.map(fmtDate).join("·")}에 취득했습니다 — 합가로 3주택이 된 것이 아닙니다.`
+            : composition.reason === "roster_missing" || composition.reason === "origin_missing"
+              ? `혼인·동거봉양 합가 전 보유 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
+              : "혼인 후 동거봉양 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다.",
+        );
+      }
+    }
+  } else if (count === 3 && (input.inheritedHouseExclusionCount ?? 0) > 0) {
+    reasons.push(
+      "상속주택(§155②③)을 주택 수에서 뺀 뒤에도 3주택입니다 — 상속주택 특례·일시적 2주택·합가 특례 세 가지가 겹친 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다(확인 필요).",
+    );
+  } else if (count === 3) {
     /**
      * 3주택은 §155①과 **겹친 경우만** 인정된다(F-1 — 사전-2025-법규재산-1240 ·
      * 서면-2022-법규재산-5124). 토글을 켜지 않으면 `temporaryTwoHouse`가 아예 만들어지지 않아
@@ -158,7 +191,7 @@ function collectMergeUnmet(
    * (`merge-unmet-reasons.anchor.test.ts` UM-1·UM-6·UM-12가 고정하는 「다른 사유가 없을 때만」
    *  계약과 같은 층위).
    */
-  if ((count === 2 || count === 3) && reasons.length === 0) {
+  if ((count === 2 || (count === 3 && !doubleMerge)) && reasons.length === 0) {
     const composition = resolveMergeComposition({
       householdHousingCount: count,
       houses: input.houses,
@@ -326,6 +359,12 @@ function collectRuralUnmet(
           `1호 상속 농어촌주택은 피상속인이 취득 후 ${RURAL_HOUSE_RESIDENCE_YEARS}년 이상 거주해야 하는데 입력값이 ${r.decedentResidenceYears ?? 0}년입니다.`,
         );
       }
+      // D7 — 단서 괄호가 제7항제1호에도 걸린다. 같은 게이트(`passesHouseholdGate`)를 쓴다.
+      if (!passesHouseholdGate(r)) {
+        reasons.push(
+          "상속개시 당시 피상속인과 동일세대였습니다 — 동거봉양 합가 전부터 보유하던 주택이 아니면 1호의 「상속받은 주택」으로 보지 않습니다(§155② 단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」).",
+        );
+      }
       break;
     case "farm_exit":
       if ((r.ownerResidenceYears ?? 0) < RURAL_HOUSE_RESIDENCE_YEARS) {
@@ -421,6 +460,13 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   if (x.inheritedDateUnknownCount > 0) {
     reasons.push(
       `상속주택 ${x.inheritedDateUnknownCount}채의 상속개시일이 없어 양도하는 주택이 「상속개시 당시 보유한 주택」(§155② 괄호)인지 확인되지 않습니다 — 주택 수에서 빼지 않았습니다. 상속개시일을 입력하면 판정합니다.`,
+    );
+  }
+  if (x.sameInheritanceAsSoldCount > 0) {
+    reasons.push(
+      `양도하는 주택도 상속주택이고 상속주택 ${x.sameInheritanceAsSoldCount}채를 같은 날(같은 상속) 함께 상속받았습니다 — ` +
+        "§155②·③은 상속주택 외의 주택을 양도할 때 적용하므로 함께 상속받은 주택을 주택 수에서 빼지 않습니다" +
+        "(서면-2015-부동산-1134 · 조심-2018-서-3806). 피상속인이 다른 별개의 상속이면 상속개시일을 확인하세요.",
     );
   }
   if (x.sameHouseholdDisqualifiedCount > 0) {

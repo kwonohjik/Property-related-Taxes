@@ -61,7 +61,7 @@ describe("otherHouses regionCode 배선 (length(10) 가드)", () => {
   describe("④ 단건 buildHousesPayload", () => {
     function otherHouse(regionCode?: string) {
       const form = housingForm(makeHouseEntry(regionCode ? { regionCode } : {}));
-      const payload = buildHousesPayload(form.assets[0], form.houses, 0) as Record<string, unknown>[];
+      const payload = buildHousesPayload(form.assets[0], form.houses, 0, undefined, undefined) as Record<string, unknown>[];
       return payload.find((h) => (h as { id: string }).id === "h1")!;
     }
     it("10자리 → 전송", () => expect(otherHouse(GIJANG10).regionCode).toBe(GIJANG10));

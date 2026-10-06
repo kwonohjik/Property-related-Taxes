@@ -1,0 +1,217 @@
+[
+  {
+    "id": "E004-era",
+    "docNo": "서면-2016-부동산-2944 [부동산납세과-425]",
+    "docDate": "2016.03.31.",
+    "basis": "era",
+    "today": "2016-06-16",
+    "summary": "상속주택(A')과 일반주택(B)을 보유한 1세대가 B 취득 1년 후 다른 주택(C)을 취득하고 C 취득일부터 3년 이내 B를 양도 — 명부만으로 입력",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-08-12"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2009-02-02",
+          "isInherited": true,
+          "inheritedDate": "2009-02-02",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "inh"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D1 수정 후). 상속주택 A'·일반주택 B 보유 세대가 B 취득 1년 후 C 취득, C 취득일부터 3년 이내 B 양도 → 비과세. 명부만으로 입력(직접 선언 없음): §155②로 주택 수에서 빠지는 상속주택 행이 신규 주택 후보에서도 빠져 C가 유일한 후보 → §155① 도출 → 비과세. 종전에는 상속 행이 후보에 남아 후보 2채로 도출을 포기하고 과세였다. 짝: E004-era-samehh(동일세대 상속 — 상속 행이 제외되지 않아 후보에 남는다). 가정, 양도가 5억, 비조정. 표현: A'는 명부 행(상속, 상속개시 당시 피상속인과 동일세대 + 동거봉양 합가 전부터 보유 → parentalCareMergeInheritedHouse). 원문은 A'를 입주권 상속 후 재건축 완공 취득으로 서술하나 판정은 회신이 전제로 두었다. B의 배우자 공동명의(지분)는 판정 축이 아니라 단일 보유로 표현. 관측: 과세(적용 특례 0, unmet·pending·undetermined 전부 비어 이유 없음). 기대: 비과세(155-1 + 상속주택 제외). 최소쌍: ① 같은 폼에 flat 선언(temporaryTwoHouseSpecial=true + newHouseAcquisitionDate=2015-12-21)을 더하면 비과세(E004-era-declared) ② 상속주택 행을 빼면(C만) 비과세가 되고 ③ 상속 예외 없는 동일세대 상속(parentalCareMergeInheritedHouse=false)이면 과세(§155② 단서 unmet 사유 출력) — 입력은 모두 도달한다. 원인: 명부 도출(resolveTemporaryTwoHouse)이 양도주택보다 늦게 취득한 행을 후보로 세는데 §155②로 주택 수에서 빠지는 상속주택 행(houseCount.excluded)이 후보에 남아 후보가 2채(A'·C)가 되어 신규주택을 도출하지 못한다. 조특법 제외 행은 후보에서 빼는 처리가 있으나(excludedHouseIds) 상속주택 제외 행에는 없다. 의심 지점: lib/calc/household-house-count.ts:329-335(later 필터 — excludedHouseIds만 제외, 상속주택 제외 행은 남음 → later.length 2 → 폴백). 사용자는 일시적 2주택 섹션의 직접 선언 칸을 써야 비과세가 나오고, 선언 없이는 과세 사유 안내도 없다."
+  },
+  {
+    "id": "E004-era-declared",
+    "docNo": "서면-2016-부동산-2944 [부동산납세과-425]",
+    "docDate": "2016.03.31.",
+    "basis": "era",
+    "today": "2016-06-16",
+    "summary": "상속주택(A')과 일반주택(B)을 보유한 1세대가 B 취득 1년 후 다른 주택(C)을 취득하고 C 취득일부터 3년 이내 B를 양도 — 신규주택 직접 선언 병행",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-08-12"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2009-02-02",
+          "isInherited": true,
+          "inheritedDate": "2009-02-02",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21"
+        }
+      ],
+      "temporaryTwoHouseSpecial": true,
+      "newHouseAcquisitionDate": "2015-12-21"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "inh"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(B 2002-08-12·C 2015-12-21·상속개시 2009-02-02). 양도일은 원문에 없어 C 취득 후 6개월인 2016-06-15로 가정, 양도가 5억, 비조정. 표현: A'는 명부 행(상속, 상속개시 당시 피상속인과 동일세대 + 동거봉양 합가 전부터 보유 → parentalCareMergeInheritedHouse). 원문은 A'를 입주권 상속 후 재건축 완공 취득으로 서술하나 판정은 회신이 전제로 두었다. B의 배우자 공동명의(지분)는 판정 축이 아니라 단일 보유로 표현. 명부 도출이 안 되는 구성(후보 2채)이라 일시적 2주택 신규주택을 flat 선언(temporaryTwoHouseSpecial + newHouseAcquisitionDate=C 취득일)으로 지정. 경로: 상속주택 A' 주택 수 제외(§155②) → 일반주택 B + 신규주택 C 일시적 2주택(155-1). 구별력: 상속 예외 없음(parentalCareMergeInheritedHouse=false) 프로브는 과세, 상속 표시를 뺀 일반 행으로 두는 프로브도 과세(3주택) — 원문 전제(상속주택 인정)가 결론을 가른다."
+  },
+  {
+    "id": "E004-era-late",
+    "docNo": "서면-2016-부동산-2944 [부동산납세과-425]",
+    "docDate": "2016.03.31.",
+    "basis": "era",
+    "today": "2019-06-16",
+    "summary": "상속주택(A')과 일반주택(B)을 보유한 1세대가 B 취득 1년 후 다른 주택(C)을 취득하고 C 취득일부터 3년 이내 B를 양도인데 양도가 C 취득 후 3년을 넘김(경계 음성 짝)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2019-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-08-12"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2009-02-02",
+          "isInherited": true,
+          "inheritedDate": "2009-02-02",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21"
+        }
+      ],
+      "temporaryTwoHouseSpecial": true,
+      "newHouseAcquisitionDate": "2015-12-21"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "inh"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(B 2002-08-12·C 2015-12-21·상속개시 2009-02-02). 양도일은 원문에 없어 C 취득 후 6개월인 2016-06-15로 가정, 양도가 5억, 비조정. 표현: A'는 명부 행(상속, 상속개시 당시 피상속인과 동일세대 + 동거봉양 합가 전부터 보유 → parentalCareMergeInheritedHouse). 원문은 A'를 입주권 상속 후 재건축 완공 취득으로 서술하나 판정은 회신이 전제로 두었다. B의 배우자 공동명의(지분)는 판정 축이 아니라 단일 보유로 표현. 음성 짝: 양도일만 2019-06-15(C 취득 후 3년 5개월)로 옮김 — 상속주택은 그대로 제외되고 일시적 2주택 기한만 초과해 과세. 원문 일자와 다른 가정 케이스."
+  },
+  {
+    "id": "E004-era-2",
+    "docNo": "서면-2016-부동산-2944 [부동산납세과-425]",
+    "docDate": "2016.03.31.",
+    "basis": "era",
+    "today": "2016-09-16",
+    "summary": "상속주택(A')을 종전주택으로 삼아 C 취득 1년 이상 후·3년 이내 양도(일반주택 B는 이미 양도)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-09-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-02-02",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2001-06-30"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 질의 2. 양도 대상 = 상속주택 A'(상속개시 2009-02-02 취득, 피상속인 취득일 2001-06-30), 명부 = C(2015-12-21)만 — B는 먼저 양도해 명부에 없다. 양도일은 가정 2016-09-15, 양도가 5억, 비조정. A'의 취득일은 상속개시일로 표현(원문은 입주권 상속 후 2011-01-19 재건축 취득). 경로: 일시적 2주택(155-1). 음성 프로브: C 취득 후 3년 초과(양도 2019-09)면 과세."
+  },
+  {
+    "id": "E004-era-samehh",
+    "docNo": "서면-2016-부동산-2944 [부동산납세과-425]",
+    "docDate": "2016.03.31.",
+    "basis": "era",
+    "today": "2016-06-16",
+    "summary": "E004-era와 같되 상속주택을 상속개시 당시 동일세대 피상속인에게서 받은 경우(동거봉양 예외 아님) — 음성 짝",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-08-12"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2009-02-02",
+          "isInherited": true,
+          "inheritedDate": "2009-02-02",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": false
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 음성 짝 — 동일세대 상속주택은 §155② 단서로 주택 수에서 빠지지 않으므로 신규 주택 후보에도 남는다 → 후보 2채로 §155①을 도출하지 않아 과세(3주택). 후보 제외가 엔진 정본(동일세대 게이트 포함)을 따른다는 것을 고정한다."
+  }
+]

@@ -17,10 +17,10 @@ import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/st
 import { temporaryTwoHouseApplies } from "./household-house-count";
 import { replacementHouseApplies } from "./replacement-house-scope";
 import {
-  eligibleCountExcludedHouseIds,
   rowCountExclusionReductions,
   rowSpecialHouseExclusions,
 } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import type { RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 
 /**
@@ -94,10 +94,11 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       primaryKind: primary?.assetKind,
       primaryAcquisitionDate: primary?.acquisitionDate,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
-      excludedHouseIds: eligibleCountExcludedHouseIds(form),
+      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     }),
   }).mode;
 }

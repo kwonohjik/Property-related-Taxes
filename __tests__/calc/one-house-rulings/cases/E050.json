@@ -1,0 +1,119 @@
+[
+  {
+    "docNo": "재재산-833",
+    "docDate": "2004.07.07.",
+    "id": "E050-era",
+    "basis": "era",
+    "today": "2004-07-07",
+    "summary": "1세대1주택자(A, 1996.6. 취득)가 2003.4. 부 사망으로 B주택을 상속받아 2주택이 된 상태에서 2004.3. 주거이전을 위해 C주택을 취득, C 취득일부터 1년 이내(2005.3. 이내)에 A 양도 예정",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-02-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-06-15"
+      },
+      "houses": [
+        {
+          "id": "b-inherited",
+          "region": "capital",
+          "acquisitionDate": "2003-04-15",
+          "isInherited": true,
+          "inheritedDate": "2003-04-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2004-03-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "b-inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D1 수정 후). 상속주택이 §155②로 주택 수에서 빠지고 신규 주택 후보에서도 빠져 일시적 2주택이 명부에서 도출된다 → 비과세. 가정(원문에 동일세대 여부 없음), 양도가 4억 중립. 당시 기한 1년은 엔진 연혁에 없고 3년으로 계산 — 이 일자(11개월)에서는 구별력 없음. 2005년 이전 일자라 공휴일 표 보류 잡음이 붙는 변형이 있다."
+  },
+  {
+    "docNo": "재재산-833",
+    "docDate": "2004.07.07.",
+    "id": "E050-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택(A, 2015.6. 취득) 보유 중 2020.4. B주택 상속, 2023.3. C주택 취득(종전주택 취득 후 1년 경과) — C 취득일부터 2년 9개월에 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-12-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-06-15"
+      },
+      "houses": [
+        {
+          "id": "b-inherited",
+          "region": "capital",
+          "acquisitionDate": "2020-04-15",
+          "isInherited": true,
+          "inheritedDate": "2020-04-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2023-03-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "b-inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D1 수정 후). E050-era와 같은 구조를 현행 기한으로 구성 — 상속 행이 후보에서 빠져 §155① 도출 → 비과세."
+  },
+  {
+    "docNo": "재재산-833",
+    "docDate": "2004.07.07.",
+    "id": "E050-current-within1y",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택(A, 2022.6. 취득) 보유 중 종전주택 취득 후 1년이 지나기 전(2022.12.)에 C주택 취득 — 2024.9. A 양도(상속주택 행은 두지 않고 1년 경과 요건만 시험)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-09-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-06-15"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2022-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 일시적 2주택 특례는 종전주택을 취득한 날부터 1년 이상 지난 후 신규주택을 취득해야 한다. 사실: A 2022-06-15 → C 2022-12-15(6개월) 취득 → 요건 불충족으로 과세. 상속주택 행은 두지 않았다 — 상속주택 행이 있으면 신규주택 도출이 안 되어(E050-current mismatch) 이 요건에 판정이 닿지 못하고 같은 과세가 다른 이유로 나온다. 요건 순차 검토에서 one-year = unmet로 확인(프로브). 양성 짝(프로브): C 취득 2023-07-15(13개월)이면 비과세. 새 축 중립: 비조정지역, 양도가 8억, 양도일 2026-10-01 이전(A 보유 2년 3개월)."
+  }
+]

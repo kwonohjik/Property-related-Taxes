@@ -1,0 +1,35 @@
+[
+  {
+    "id": "E002-dual",
+    "docNo": "조심-2010-서-1322",
+    "docDate": "2010.12.20.",
+    "basis": "era",
+    "today": "2010-12-20",
+    "summary": "비과세 요건을 갖춘 종전주택이 관리처분인가(2005.5.10.)로 입주권이 된 뒤 1주택 소유자와 혼인(2007.3.30.), 혼인일부터 1년 이내 입주권을 24.2억원에 양도(2008.3.27.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-03-27",
+      "contractTotalPrice": "2424368000",
+      "marriageDate": "2007-03-30",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1996-04-16",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2005-05-10",
+        "redevOtherHouseAcquisitionDate": "2000-05-15"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "region": "capital",
+          "acquisitionDate": "2000-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual — 입장 A(조심-2010-서-1322, 2010.12.20.): 비과세 요건을 갖춘 종전주택의 입주권을 혼인일부터 2년 이내 양도하면 §155⑤ 적용(양도가 6억 초과분은 고가주택 과세) / 입장 B(조심-2021-서-1117 등): 주택 특례는 입주권에 유추 불가, §89①4호 요건으로만 판정. 현재 엔진 관측: isExempt=false(clause 없음) — 입주권 양도는 §89①4호 가·나목만 보며 혼인합가 입력(marriageDate)은 읽지 않는다(B와 같은 결론). 나목은 세대 보유 1주택(배우자 주택 2000-05-15) 취득일부터 3년 이내 양도여야 하는데 초과. 배우자 주택을 2006-12-01 취득으로 바꿔도(3년 이내) 과세 관측(프로브 — 당시 시행본의 나목 시행일 제한 사유 가능, 확인 필요). 일자 가정: 배우자 주택 2000-05-15, 종전주택 1996-04-16·관리처분 2005-05-10·혼인 2007-03-30·양도 2008-03-27(원문), 양도가 24.2억(6억 초과 — 고가주택 부분 과세 축은 비과세가 성립해야 보이므로 미관측)."
+  }
+]

@@ -40,7 +40,7 @@ import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 
@@ -170,16 +170,18 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         primaryKind: primaryKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
-        excludedHouseIds: eligibleCountExcludedHouseIds(form),
+        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
     }).mode,
     form.provisoReason,
@@ -289,6 +291,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       primaryKind,
       declared: parseInt(form.householdHousingCount) || 0,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // §89①4호 가목·나목 — 조합원입주권 수. PR-D(2026-10-05) — 단건과 같은 leaf로 명부에서 도출.

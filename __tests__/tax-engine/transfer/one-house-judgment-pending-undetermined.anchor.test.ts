@@ -192,10 +192,16 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
     }) as TransferTaxInput["ruralHouse"];
 
   it("[PD-9] 귀농주택 5년 초과 — 기한은 귀농주택 취득일 + 5년", () => {
-    const r = judge({ householdHousingCount: 2, ruralHouse: RURAL("2015-01-01"), ...RESIDENCE_FREE });
+    const r = judge({ householdHousingCount: 2, ruralHouse: RURAL("2017-01-01"), ...RESIDENCE_FREE });
     expect(r.pending.map((p) => p.id)).toEqual(["155-7-3ho-return-to-farm"]);
-    // L-1 — 역상 말일 2020-01-01(1월 1일 공휴일) → 기한 01-02(민법 §161).
-    expect(iso(r.pending[0].deadline)).toBe("2020-01-02");
+    // L-1 — 역상 말일 2022-01-01(토요일·1월 1일 공휴일) → 기한 01-03 월요일(민법 §161).
+    expect(iso(r.pending[0].deadline)).toBe("2022-01-03");
+  });
+
+  it("[PD-9b] D15 — 2016-02-17 전 취득 귀농주택은 5년 단서가 없다 → 비과세 · pending 없음", () => {
+    const r = judge({ householdHousingCount: 2, ruralHouse: RURAL("2015-01-01"), ...RESIDENCE_FREE });
+    expect(r.isExempt).toBe(true);
+    expect(r.pending).toEqual([]);
   });
 
   it("[PD-10] 긍정 짝 — 5년 내면 비과세 · pending 없음", () => {
