@@ -70,6 +70,9 @@ function input(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
     householdHousingCount: 0,
     householdRightCount: 1,
     residencePeriodMonths: 0,
+    // 분양권 「없음」 확정 — 기본값(2026-10-06, §4-6 남은 별건 3). `presaleRights`를 채우는
+    // 오버라이드는 이 값과 무관하게 목록으로 판정한다(`oneRightPresaleGate`).
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: redevInfo(),
     ...overrides,
   });

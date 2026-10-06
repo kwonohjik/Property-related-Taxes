@@ -154,6 +154,11 @@ export const propertyBaseShape = {
   nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   houses: z.array(houseSchema).optional(),
   presaleRights: z.array(presaleRightSchema).optional(),
+  /**
+   * ⑫ §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) — 「세대 보유 분양권·입주권이
+   * 없습니다」확인(PR-D ⑧). `presaleRights`가 비었을 때만 쓴다 — 엔진이 게이트, strip 방지.
+   */
+  householdNoPresaleRightsConfirmed: z.boolean().optional(),
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   isFirstTransferredInMerge: z.boolean().optional(),

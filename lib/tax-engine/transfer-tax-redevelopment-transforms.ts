@@ -86,20 +86,35 @@ export { applySettlementExemption } from "./transfer-tax-redevelopment-settlemen
  *    개수는 본문과 `householdRightCount`가 이미 본다 — 길이로 세면 양도 대상 입주권 자신을
  *    목록에 적어 넣은 사용자가 근거 없이 비과세를 잃는다.
  *
- * ⚠️ **미제공(undefined)은 「보유하지 않음」으로 본다.** 비과세를 배제하는 방향이 불리 적용이라,
- *    사실이 입력되지 않았다는 이유만으로 납세자에게 불리하게 단정하지 않는다.
+ * 🔴 **빈 목록(또는 미제공)을 더는 「보유하지 않음」으로 보지 않는다**(2026-10-06 정정 —
+ *    계획서 `roster-required-other-assets.plan.md` §4-6 남은 별건 3). 종전 문구는 "미제공은
+ *    보유하지 않음으로 본다"였다 — 분양권 보유를 **모르는 것**이 「없음」으로 읽혀 비과세를
+ *    주는 방향(유리)으로 단정한 것인데, 이는 memory `feedback_unknown_fact_applies_unfavorably`
+ *    (「모름」=혜택 불성립+확인 필요)와 정반대다. 계산기 ⑧이 「보유한 분양권·조합원입주권이
+ *    없습니다」확인을 강제하고서야 `householdNoPresaleRightsConfirmed`를 `true`로 echo하므로,
+ *    목록이 비어 있을 때는 **그 확인 여부**로 가른다 — API 직접 호출이 확인 없이 빈 목록만
+ *    보내면 "undetermined"다(계산기는 ⑧이 이 경로 자체를 막는다).
+ *
+ * ⚠️ 목록에 **항목이 있으면** 이 함수는 여전히 각 항목을 개별 판정한다 — 확인 플래그는
+ *    목록이 빈 경우에만 쓰고, 조합원입주권만 적어 둔 목록(분양권 0건)도 "clear"로 본다
+ *    (사용자가 사실을 이미 제공했다).
  *
  * - `"blocks"` — 걸리는 분양권이 있다.
- * - `"undetermined"` — 2022-01-01 이후 취득 분양권이 있는데 입주권 인가일을 모른다(판정 메뉴 미입력).
+ * - `"undetermined"` — 2022-01-01 이후 취득 분양권이 있는데 입주권 인가일을 모른다(판정 메뉴
+ *   미입력), 또는 목록이 비어 있는데 「없음」 확인이 없다(API 직접 호출).
  *   호출부는 나목 취득일 미입력과 같이 불성립으로 두고 사유를 안내한다.
- * - `"clear"` — 걸리는 분양권이 없다.
+ * - `"clear"` — 걸리는 분양권이 없다(목록에 분양권이 없거나, 목록이 비어 있고 「없음」이 확인됨).
  */
 export function oneRightPresaleGate(
   input: TransferTaxInput,
   facts: OneRightExemptionFacts,
 ): "blocks" | "undetermined" | "clear" {
+  const rights = input.presaleRights ?? [];
+  if (rights.length === 0) {
+    return input.householdNoPresaleRightsConfirmed === true ? "clear" : "undetermined";
+  }
   let undetermined = false;
-  for (const p of input.presaleRights ?? []) {
+  for (const p of rights) {
     if (p.type !== "presale_right") continue;
     const r = oneRightPresaleRightBlocks(p.acquisitionDate, facts.approvalDate);
     if (r === true) return "blocks";

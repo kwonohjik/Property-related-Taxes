@@ -537,6 +537,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    // ⑬ §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) — PR-D ⑧ 확인 echo(roster-required-other-assets §4-6).
+    //    목록이 비어 있을 때만 엔진이 보므로 비조건 전송해도 안전하다(⑫가 게이트, strip 방지).
+    householdNoPresaleRightsConfirmed: form.householdNoPresaleRightsConfirmed,
     // §155④⑤ 합가 — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G4)
     ...buildMergeFacts(form),
     ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),

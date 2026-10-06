@@ -65,6 +65,9 @@ function input(o: Partial<TransferTaxInput> = {}): TransferTaxInput {
     householdHousingCount: 0,
     householdRightCount: 1,
     residencePeriodMonths: 0,
+    // 분양권 「없음」 확정 — 이 파일은 가·나목 클로즈 판정이 관심사다(2026-10-06, §4-6 남은 별건 3).
+    // 분양권 보유 케이스(아래)는 `presaleRights`를 채워 이 값과 무관하게 목록으로 판정된다.
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: redevInfo(),
     ...o,
   });

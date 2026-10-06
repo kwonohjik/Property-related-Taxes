@@ -174,6 +174,15 @@ export async function POST(request: NextRequest) {
       ...baseInput,
       householdHousingCount: deriveHouseholdHousingCount(baseInput.houses, !isRightSale),
       householdRightCount: deriveHouseholdRightCount(baseInput.presaleRights, isRightSale),
+      /**
+       * §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) 전용 — **판정 메뉴는 예외**
+       * (2026-10-06 사용자 결정, 계획서 §10 남은 별건 1 「입력 안 함과 없음을 구별할 필요가
+       * 없어」). 이 화면에는 「세대 보유 분양권·입주권이 없습니다」확인 토글 자체가 없다 —
+       * 목록이 비어 있으면 그 자체가 조사의 결론(「없음」)이고, 계산기 전용 확인 플래그가
+       * 없다는 이유로 가·나목을 "undetermined"로 떨어뜨리면 판정을 다시 요구하는 것이 된다.
+       * 목록에 항목이 있으면 이 값은 게이트가 아예 보지 않는다(`oneRightPresaleGate` 참조).
+       */
+      householdNoPresaleRightsConfirmed: true,
     };
 
     // 단계 5: 세율 로드 — 계산기와 동일한 graceful fallback 정책

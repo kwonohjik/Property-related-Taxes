@@ -103,6 +103,11 @@ function runEngine(over: Partial<TransferTaxInput> = {}) {
     householdHousingCount: 0,
     householdRightCount: 1,
     residencePeriodMonths: 0,
+    // §4-6 남은 별건 3(2026-10-06) — `householdNoPresaleRightsConfirmed`가 ⑧의 「분양권·입주권
+    // 없음」확인을 엔진에 echo한다. GA-1의 두 확인(주택·분양권)이 모두 true일 때의 엔진 입력이
+    // 정확히 이 조합이다 — 빠지면 presaleRights가 비어도 `oneRightPresaleGate`가 "undetermined"를
+    // 돌려줘 가목이 성립하지 않는다(API 직접 호출의 「모름」을 더는 「없음」으로 보지 않는다).
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: rightInfo(),
     ...over,
   });
@@ -113,8 +118,10 @@ function runEngine(over: Partial<TransferTaxInput> = {}) {
 describe("GA-5 엔진 — ⑧이 요구하는 조합이 실제로 가목(전액 비과세)을 낸다", () => {
   /**
    * 🔑 **양성** — GA-1의 두 확인이 ④로 번역하는 엔진 입력과 정확히 같다(명부 0행 →
-   *    householdHousingCount 0, 분양권 목록 0행 → presaleRights 미지정 = 빈 배열과 동치,
-   *    `oneRightPresaleGate`의 빈 배열 루프 미실행 → "clear").
+   *    householdHousingCount 0, 분양권 목록 0행 + 확인 → presaleRights 미지정 +
+   *    `householdNoPresaleRightsConfirmed: true` → `oneRightPresaleGate`가 "clear").
+   *    확인이 없으면(API 직접 호출) 같은 빈 배열도 "undetermined"가 되어 가목이 성립하지
+   *    않는다 — GA-5-03(아래)이 그 경로를 고정한다.
    */
   it("[GA-5-00] householdHousingCount: 0 + presaleRights 없음 → 가목 전액 비과세", () => {
     const { result, detail } = runEngine();
@@ -146,6 +153,20 @@ describe("GA-5 엔진 — ⑧이 요구하는 조합이 실제로 가목(전액 
         { id: "p1", type: "presale_right", acquisitionDate: new Date("2023-01-01"), region: "capital" },
       ],
     });
+    expect(detail.oneRightExemptionApplied).toBeFalsy();
+    expect(result.totalTax).toBeGreaterThan(0);
+  });
+
+  /**
+   * 🔴 **부정 짝(API 직접 호출)** — 계산기 ⑧은 이 상태를 막지만, `/api/calc/transfer`를 직접
+   *    호출하면 `presaleRights`도 `householdNoPresaleRightsConfirmed`도 보내지 않을 수 있다.
+   *    종전에는 빈 배열이 곧 "clear"였다(= 「모름」을 「없음」으로 봐 비과세를 줬다). 지금은
+   *    확인이 없으면 "undetermined"로 떨어져 가목이 성립하지 않는다(계획서
+   *    `roster-required-other-assets.plan.md` §4-6 남은 별건 3, memory
+   *    `feedback_unknown_fact_applies_unfavorably`).
+   */
+  it("[GA-5-03] 부정 짝(API 직접 호출) — presaleRights·확인 둘 다 없음 → 가목 불성립(종전 전액 비과세)", () => {
+    const { result, detail } = runEngine({ householdNoPresaleRightsConfirmed: undefined });
     expect(detail.oneRightExemptionApplied).toBeFalsy();
     expect(result.totalTax).toBeGreaterThan(0);
   });
