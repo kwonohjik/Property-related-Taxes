@@ -91,9 +91,16 @@ export function buildLossTransferTaxResult({
     : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
         ? (estimatedBase || effectiveInput.estimatedBase || 0)
         : 0);
+  // 일반건물 카드의 §114조의2 판정 축(건물 파트 감정가액) — 손실(산출세액 0)에도 적용된다(법 §114의2②).
+  //    정상 경로 finalize와 같은 필드(`input.penaltyAxis`)를 같은 순서로 읽는다(dual-truth 방지).
+  const penaltyAxis = input.penaltyAxis;
+  if (penaltyAxis) pb0 = penaltyAxis.base;
   // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지)
   pb0 = resolveExtensionPenaltyBase(input, pb0);
-  const pr0 = calculateBuildingPenalty(effectiveInput, pb0);
+  const pr0 = calculateBuildingPenalty(
+    penaltyAxis ? { ...effectiveInput, acquisitionMethod: penaltyAxis.acquisitionMethod } : effectiveInput,
+    pb0,
+  );
   const pt0 = pr0?.penalty ?? 0;
   const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
   if (pt0 > 0) {

@@ -69,6 +69,8 @@ function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
 
 /** 토지 실가 4억 + 건물 환산 · 양도비 3억 — F22 실패 시나리오의 축. */
 const MIXED = {
+  // A1 Q-A2: 분리 OFF는 파트 라디오를 무시하고 레거시 플래그로 통일한다 — 혼합 모드는 분리 ON에서만 성립한다.
+  hasSeperateLandAcquisitionDate: true,
   landAcqMode: "actual",
   buildingAcqMode: "estimated",
   landAcquisitionPrice: "400000000",

@@ -193,7 +193,8 @@ describe("E3-3 — ⑧ validate가 증축 조합을 허용하되 평가액은 �
   });
 
   it("상속 파트의 추계는 여전히 차단한다 (V2 — §97①1호 단서)", () => {
-    expect(v(withExtension({ landAcqMode: "estimated" }))).toMatch(
+    // A1 Q-A2 — 분리 OFF는 파트 라디오를 무시한다. 추계의 현행 입력 경로는 레거시 플래그(`useEstimatedAcquisition`)다.
+    expect(v(withExtension({ useEstimatedAcquisition: true } as Partial<AssetForm>))).toMatch(
       /환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다/,
     );
   });

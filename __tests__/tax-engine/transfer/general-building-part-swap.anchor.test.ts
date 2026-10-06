@@ -162,6 +162,7 @@ describe("A-14 — 실가 파트의 자본적지출은 가산이다 (§97②1호
    * 현행은 실가 파트 카드의 expenses가 0이라 이 금액이 어디에도 반영되지 않는다.
    */
   const MIXED = gbAsset({
+    hasSeperateLandAcquisitionDate: true, // A1 Q-A2: 혼합 모드는 분리 ON에서만 성립 (분리 OFF는 파트 라디오 무시)
     landAcqMode: "actual",
     buildingAcqMode: "estimated",
     landAcquisitionPrice: "400000000",
@@ -218,6 +219,7 @@ describe("A-16 — 혼합 모드 end-to-end (엔진 전 경로)", () => {
    */
   function runMixed(landCapex?: number) {
     const asset = gbAsset({
+      hasSeperateLandAcquisitionDate: true, // A1 Q-A2: 혼합 모드는 분리 ON에서만 성립 (분리 OFF는 파트 라디오 무시)
       landAcqMode: "actual",
       buildingAcqMode: "estimated",
       landAcquisitionPrice: "400000000",
@@ -241,6 +243,7 @@ describe("A-16 — 혼합 모드 end-to-end (엔진 전 경로)", () => {
   it("환산 파트 단독 자본적지출은 택일이라 가목보다 작으면 세액 불변", () => {
     const base = runMixed().result;
     const asset = gbAsset({
+      hasSeperateLandAcquisitionDate: true, // A1 Q-A2: 혼합 모드는 분리 ON에서만 성립 (분리 OFF는 파트 라디오 무시)
       landAcqMode: "actual",
       buildingAcqMode: "estimated",
       landAcquisitionPrice: "400000000",
@@ -319,6 +322,7 @@ describe("A-19 — 양도비가 나목에 포함된다", () => {
 
   it("🔴 end-to-end — 양도비가 **세액에 도달**한다 (원단위 고정)", () => {
     const mixed = {
+      hasSeperateLandAcquisitionDate: true, // A1 Q-A2: 혼합 모드는 분리 ON에서만 성립 (분리 OFF는 파트 라디오 무시)
       landAcqMode: "actual",
       buildingAcqMode: "estimated",
       landAcquisitionPrice: "400000000",
@@ -345,6 +349,7 @@ describe("A-19 — 양도비가 나목에 포함된다", () => {
   it("실가 파트의 가산액에도 양도비 안분분이 포함된다 (§97②1호)", () => {
     const cards = cardsOf(
       gbAsset({
+        hasSeperateLandAcquisitionDate: true, // A1 Q-A2: 혼합 모드는 분리 ON에서만 성립 (분리 OFF는 파트 라디오 무시)
         landAcqMode: "actual",
         buildingAcqMode: "estimated",
         landAcquisitionPrice: "400000000",

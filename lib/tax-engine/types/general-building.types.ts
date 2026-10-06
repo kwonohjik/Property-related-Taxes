@@ -132,9 +132,23 @@ export type GeneralBuildingInput = {
    */
   landAcqMode?: PartAcqMode;
   buildingAcqMode?: PartAcqMode;
-  /** 파트별 실지거래가액(§97①1호) — 비-환산 파트에서 필수 */
+  /** 파트별 실지거래가액(§97①1호) — 비-환산 파트에서 필수 (감정가액 파트는 이 칸에 감정가액이 실린다) */
   landAcquisitionPrice?: number;
   buildingAcquisitionPrice?: number;
+  /**
+   * 파트별 **매매사례가액**(영 §176의2③1호) — `landAcqMode`/`buildingAcqMode === "salesCase"`인 파트의 취득가액.
+   * 감정가액은 위 `*AcquisitionPrice` 슬롯을 공유하지만 매매사례가액은 주택 split 규약대로 별도 필드다.
+   */
+  landSalesCaseValue?: number;
+  buildingSalesCaseValue?: number;
+  /**
+   * 토지·건물 **일괄** 취득가액 — 분리 OFF(자산 단위) 감정가액·매매사례가액의 총액 (2026-10-06 A1 F-2).
+   *
+   * 두 파트 모드가 같은 `appraisal`/`salesCase`이고 파트 값이 둘 다 없을 때 **취득시 기준시가 비율**로
+   * 토지·건물에 나눈다(`usesBundledPartAcquisition` — 「소득세법」 §100② 본문 「취득 당시」).
+   * 증축(`extensionInfo`) 경로는 이 필드를 **원건물 일괄 실가**로 따로 쓰므로 이 규칙을 적용하지 않는다.
+   */
+  bundledAcquisitionPrice?: number;
   /**
    * 신축취득 여부. 라우트 헬퍼에서 `buildingAcquisitionCause === "newConstruction"` 으로 도출.
    * 엔진 input에는 boolean으로 normalize 후 전달 (단일 진실 원천 유지).
@@ -503,6 +517,14 @@ export type AssetCardForAggregate = {
   /** 파트별 실지거래가액(§97①1호) — 비-환산 파트에서 필수 */
   landAcquisitionPrice?: number;
   buildingAcquisitionPrice?: number;
+  /**
+   * 이 카드의 **취득가액 산정 방식 echo** (2026-10-06 A1 E-1) — 결과 표시(⑦)와 §114조의2 판정이 소비한다.
+   *
+   * boolean `usedEstimatedAcquisition`은 환산 여부만 알아 감정·매매사례 파트가 「실거래가」로 읽혔다
+   * (개산공제가 적용된 파트에 「실지거래가액 파트라 개산공제 미적용」이 붙는 거짓 문구).
+   * **옛 이력(저장 결과)에는 필드가 없다 — `undefined`는 현행 동작 유지**(소비처가 판정 불가로 처리).
+   */
+  acquisitionMode?: PartAcqMode;
   /**
    * 건물 카드에만 set. 토지 카드는 undefined.
    * `propertyType === "general_building_unit"` 카드에만 의미 있음.

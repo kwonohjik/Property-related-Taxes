@@ -567,6 +567,7 @@ export function buildActualGeneralBuildingCards(
   // §95④ 단기보유 기산점 보강 (actual 분기 기존 결측 — 상속·증여 취득원인 + 피상속인/증여자 취득일).
   // 토지 카드는 landAcquisitionCause, 건물 카드는 buildingAcquisitionCause로 buildProperties가 판독.
   for (const c of cards) {
+    c.acquisitionMode = "actual"; // E-1 echo — 실가 경로는 두 파트가 모두 실지거래가액(감정·매매사례는 환산 경로로 간다)
     if (c.propertyType === "land") {
       if (landAcquisitionCause) c.landAcquisitionCause = landAcquisitionCause;
       if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;

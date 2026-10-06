@@ -13,7 +13,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { gbPartModes } from "./transfer-tax-split-acq-mode";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** `isGbFirstDisclosureApplicable`가 읽는 필드만. */
@@ -21,6 +21,7 @@ type GateAsset = Pick<
   AssetForm,
   | "landAcqMode"
   | "buildingAcqMode"
+  | "hasSeperateLandAcquisitionDate"
   | "isSalesCaseAcquisition"
   | "isAppraisalAcquisition"
   | "useEstimatedAcquisition"
@@ -45,10 +46,9 @@ type GateAsset = Pick<
  * PHD는 토지·건물 파트 분리 축이 없는 자산용이라 전제가 다르다.
  */
 export function isGbFirstDisclosureApplicable(asset: GateAsset): boolean {
-  return (
-    effectivePartAcqMode(asset.landAcqMode, asset) === "estimated" ||
-    effectivePartAcqMode(asset.buildingAcqMode, asset) === "estimated"
-  );
+  // ④ `anyEstimated`와 **같은 leaf**(`gbPartModes`) — 분리 OFF의 stale 파트 모드를 무시하는 규칙까지 같이 간다(A1 Q-A2).
+  const { land, building } = gbPartModes(asset);
+  return land === "estimated" || building === "estimated";
 }
 
 /** `gbFirstDisclosureLandStdPriceOf`가 읽는 필드만. */

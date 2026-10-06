@@ -7,7 +7,8 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { depreciationSupport } from "./depreciation-scope";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { partAcquisitionDates, gbPartModes } from "./transfer-tax-split-acq-mode";
+import { partNeedsOwnAcqStd } from "./transfer-tax-split-acq-mode";
 // §163⑨ 단서 게이트 — 상가 경로와 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 조문 하나에 두 정책이 된다).
 import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
@@ -338,9 +339,23 @@ export function buildGeneralBuildingValuation(
    * 파트별 취득 방식 (2026-08-05 P3) — 미선택이면 자산 전체 레거시 플래그에서 파생한다
    * (`effectivePartAcqMode` 단일 소스). 분리 OFF에서는 두 파트가 같은 값이라 종전과 동일하다.
    */
-  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
-  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const separate = !!asset.hasSeperateLandAcquisitionDate;
+  // 분리 OFF는 파트 라디오가 화면에 없다 → stale explicit을 무시하고 레거시 3플래그로 통일(`gbPartModes` — A1 Q-A2 「전면」).
+  const { land: landMode, building: buildingMode } = gbPartModes(asset);
   const anyEstimated = landMode === "estimated" || buildingMode === "estimated";
+  /**
+   * D-1 라우팅 술어 — **하나라도 `actual`이 아니면** 환산 경로(개산공제 §163⑥ 구조를 가진 유일한 경로)로 보낸다.
+   * `anyEstimated`(환산만)가 감정·매매사례 파트를 실가 경로에 떨궈 개산공제를 0으로 만들었다(G-2).
+   * ⚠️ 아래 **최초공시 블록 게이트(`anyEstimated`)는 이 술어로 바꾸지 않는다**(D-1′) — 그 블록은 환산 한정이다.
+   */
+  const anyNonActual = landMode !== "actual" || buildingMode !== "actual";
+  /**
+   * 부담부증여(§159)는 **실가 경로**가 취득가액·개산공제를 채무비율로 정한다. 환산 경로는 `burdenedGiftInfo`를
+   * 소비하지 않으므로, stale 감정·매매사례 플래그가 새로 환산 경로로 새면 §159가 침묵 소실된다 — 신규 술어에만 건다
+   * (환산·증축의 종전 라우팅은 그대로).
+   */
+  const isBurdenedGiftGb =
+    asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift";
   /**
    * 파트별 자본적지출 — **두 파트가 모두 환산인 경우를 뺀 전부**에서 보낸다(O-1 해소).
    *
@@ -399,17 +414,41 @@ export function buildGeneralBuildingValuation(
         sec164BuildingValue,
       );
 
+  /**
+   * 분리 OFF **자산 단위** 감정가액·매매사례가액(F-2) — 총액 하나가 `bundledAcquisitionPrice`로 간다.
+   * 감정 → `fixedAcquisitionPrice`, 매매사례 → `similarSalesValue`(기존 필드 · 신규 폼 필드 없음).
+   * 두 파트 모드가 같은 `appraisal`/`salesCase`일 때만(분리 OFF 불변식). 증축은 아래 증축 spread가 같은 키를
+   * **원건물 일괄 실가**로 따로 쓰므로 여기서 싣지 않는다(Q-A3이 증축 × 자산 단위 감정·매매사례를 서버에서 차단한다).
+   * 이때 stale 파트 값(분리를 켰다 끈 뒤 남은 값)은 싣지 않는다 — 엔진은 총액과 파트 값이 같이 오면 파트 값을 쓴다.
+   */
+  const unifiedMode = !separate && landMode === buildingMode ? landMode : undefined;
+  const bundledEstimateTotal =
+    !asset.gbHasExtension && !isBurdenedGiftGb && (unifiedMode === "appraisal" || unifiedMode === "salesCase")
+      ? parseAmount(unifiedMode === "salesCase" ? asset.similarSalesValue : asset.fixedAcquisitionPrice)
+      : 0;
+  const ownPartValues = bundledEstimateTotal > 0
+    ? {} // 총액이 원천 — 파트 값 미전송
+    : {
+        ...(landPartPrice ? { landAcquisitionPrice: landPartPrice } : {}),
+        ...(buildingPartPrice ? { buildingAcquisitionPrice: buildingPartPrice } : {}),
+      };
+  /** F-1 — 파트별 매매사례가액은 **분리 ON + 그 파트가 매매사례일 때만** 싣는다(0이면 미전송). */
+  const landSalesCase = separate && landMode === "salesCase" ? parseAmount(asset.landSalesCaseValue) : 0;
+  const buildingSalesCase = separate && buildingMode === "salesCase" ? parseAmount(asset.buildingSalesCaseValue) : 0;
+
   const partModePayload = {
     landAcqMode: landMode,
     buildingAcqMode: buildingMode,
     ...partExpensePayload,
-    ...(landPartPrice ? { landAcquisitionPrice: landPartPrice } : {}),
-    ...(buildingPartPrice ? { buildingAcquisitionPrice: buildingPartPrice } : {}),
+    ...ownPartValues,
+    ...(landSalesCase ? { landSalesCaseValue: landSalesCase } : {}),
+    ...(buildingSalesCase ? { buildingSalesCaseValue: buildingSalesCase } : {}),
+    ...(bundledEstimateTotal > 0 ? { bundledAcquisitionPrice: bundledEstimateTotal } : {}),
   };
 
-  // 한 파트라도 환산이면 **환산 경로**로 보낸다(혼합 모드 라우팅 확정 2026-08-05).
+  // 한 파트라도 **actual이 아니면**(환산·감정·매매사례) 환산 경로로 보낸다(혼합 모드 라우팅 확정 2026-08-05 · D-1 2026-10-06).
   // 그 경로만 파트별 기준시가·개산공제 구조를 갖는다 — 계획서 §3.3·`general-building-part-acq.ts`.
-  if (anyEstimated || asset.gbHasExtension) {
+  if (anyEstimated || asset.gbHasExtension || (anyNonActual && !isBurdenedGiftGb)) {
     // 취득시 기준시가 — **환산 파트만** 필수다(2026-08-05 P7 정정).
     //
     // 🔴 종전에는 두 값을 무조건 요구해 `undefined`를 반환했다. validate V-5는 실가 파트의
@@ -420,8 +459,9 @@ export function buildGeneralBuildingValuation(
     const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
     const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
     const buildingArea = parseDecimal(asset.gbBuildingArea) || parseDecimal(asset.gbBuildingFootprintArea);
-    const needLandStd = landMode === "estimated" || asset.gbHasExtension;
-    const needBuildingStd = buildingMode === "estimated" || asset.gbHasExtension;
+    // 비-actual 파트(환산·감정·매매사례)는 자기 취득시 기준시가가 개산공제 base다 — ⑧·⑫와 같은 leaf(`partNeedsOwnAcqStd`, F-4).
+    const needLandStd = partNeedsOwnAcqStd(landMode) || asset.gbHasExtension;
+    const needBuildingStd = partNeedsOwnAcqStd(buildingMode) || asset.gbHasExtension;
     if (needLandStd && !acquisitionLandPricePerSqm) return undefined;
     if (needBuildingStd && !acquisitionBuildingStdPrice) return undefined;
     if (!buildingArea) return undefined;

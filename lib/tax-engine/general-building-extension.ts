@@ -363,6 +363,13 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const building1UsedEstimated = buildingPartApplied
     ? false
     : buildingIsConverted || originUsedEstimated;
+  /** 카드 `acquisitionMode` echo(E-1) — 파트 값으로 대체된 파트는 그 모드, 아니면 원건물 모드(환산/실가). */
+  const landCardMode: NonNullable<GeneralBuildingInput["landAcqMode"]> = landPartApplied
+    ? (input.landAcqMode ?? "estimated")
+    : landUsedEstimated ? "estimated" : "actual";
+  const building1CardMode: NonNullable<GeneralBuildingInput["buildingAcqMode"]> = buildingPartApplied
+    ? (input.buildingAcqMode ?? "estimated")
+    : building1UsedEstimated ? "estimated" : "actual";
 
   // ── Step 3: 건물2 취득가·필요경비 결정 (건물2 모드 분기) ─────────────
   //
@@ -461,6 +468,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       acquisitionPrice: landBusinessAcq,
       expenses: landBusinessExp,
       usedEstimatedAcquisition: landUsedEstimated,
+      acquisitionMode: landCardMode,
       estimatedBase: landUsedEstimated ? landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landBusinessExp : 0,
       acquisitionDate: landAcqDate,
@@ -479,6 +487,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       acquisitionPrice: landAcq - landBusinessAcq,
       expenses: landExp - landBusinessExp,
       usedEstimatedAcquisition: landUsedEstimated,
+      acquisitionMode: landCardMode,
       estimatedBase: landUsedEstimated ? landAcq - landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp - landBusinessExp : 0,
       acquisitionDate: landAcqDate,
@@ -498,6 +507,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       acquisitionPrice: landAcq,
       expenses: landExp,
       usedEstimatedAcquisition: landUsedEstimated,
+      acquisitionMode: landCardMode,
       estimatedBase: landUsedEstimated ? landAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp : 0,
       acquisitionDate: landAcqDate,
@@ -524,6 +534,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     acquisitionPrice: building1Acq,
     expenses: building1Exp,
     usedEstimatedAcquisition: building1UsedEstimated,
+    acquisitionMode: building1CardMode,
     estimatedBase: building1UsedEstimated ? building1Acq : 0,
     estimatedDeduction: building1UsedEstimated ? building1Exp : 0,
     acquisitionDate: building1AcqDate,
@@ -580,6 +591,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     acquisitionPrice: building2Acq,
     expenses: building2EstDeduction,
     usedEstimatedAcquisition: extensionUsedEstimated,
+    acquisitionMode: extensionUsedEstimated ? "estimated" : "actual",
     estimatedBase: extensionUsedEstimated ? building2Acq : 0,
     estimatedDeduction: extensionUsedEstimated ? building2EstDeduction : 0,
     acquisitionDate: ext.extensionDate,

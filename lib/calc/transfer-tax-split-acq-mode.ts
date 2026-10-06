@@ -122,6 +122,46 @@ export function effectivePartAcqMode(
   return explicit || deriveLegacyPartAcqMode(asset);
 }
 
+interface GbPartModeSource extends LegacyAcqFlags {
+  /** 일반건물 「토지·건물 취득일 다름」 — 분리 ON/OFF */
+  hasSeperateLandAcquisitionDate?: boolean;
+  landAcqMode?: PartAcqMode | "";
+  buildingAcqMode?: PartAcqMode | "";
+}
+
+/**
+ * **일반건물 파트별 유효 취득 모드** — ④ 전송·(A2) ⑤ 표시·⑧ 검증이 공유하는 단일 leaf (2026-10-06 A1).
+ *
+ * - 분리 **ON**: 파트 라디오(`landAcqMode`/`buildingAcqMode`) 우선, 비면 레거시 파생(`effectivePartAcqMode`).
+ * - 분리 **OFF**: 파트 라디오는 화면에 없다 → **explicit을 무시**하고 자산 단위 레거시 3플래그에서만 파생한다
+ *   (두 파트가 같은 값 — 분리 OFF 불변식). 분리를 켰다 끈 뒤 남은 stale 파트 모드가 계산 경로를 가르던
+ *   결함(엔진 설계 S1: 분리 OFF + `landAcqMode:"estimated"` stale → 환산 경로)을 닫는다.
+ *
+ * ⚠️ 거동 변경(Q-A2 「전면」): 종전에는 분리 OFF에서도 explicit이 이겼다. 이 함수는 그것을 바꾼다.
+ */
+export function gbPartModes(asset: GbPartModeSource): { land: PartAcqMode; building: PartAcqMode } {
+  if (!asset.hasSeperateLandAcquisitionDate) {
+    const mode = deriveLegacyPartAcqMode(asset);
+    return { land: mode, building: mode };
+  }
+  return {
+    land: effectivePartAcqMode(asset.landAcqMode, asset),
+    building: effectivePartAcqMode(asset.buildingAcqMode, asset),
+  };
+}
+
+/**
+ * 그 파트가 **자기** 취득시 기준시가를 개산공제(§163⑥)·환산 분자 base로 쓰는가 — 모드가 `actual`이 아니면 참.
+ *
+ * `requiresAcqStdPricePart` 1절과 **같은 식**이다(그쪽이 이 leaf를 부른다 — 주택 split 경로와 공유하므로 거동 동일).
+ * 일반건물 ④·⑫·⑧이 이 leaf를 직접 쓴다. 2~4절(안분 비율)은 포함하지 않는다 — 일반건물 실가 안분 필요는
+ * 전용 술어 `needsGbActualAcqStdPrice`가 정본이다(분리 OFF 실가 일괄에서 이 leaf를 `requiresAcqStdPricePart`
+ * 전체로 바꾸면 시점별 기준시가 런처가 항상 숨는 회귀).
+ */
+export function partNeedsOwnAcqStd(mode: PartAcqMode): boolean {
+  return mode !== "actual";
+}
+
 interface SeparateAcquisitionFlags {
   hasSeperateLandAcquisitionDate?: boolean;
   landAcquisitionDate?: string;
@@ -422,7 +462,7 @@ export function requiresAcqStdPricePart(
 ): boolean {
   const mode = part === "land" ? ctx.landMode : ctx.buildingMode;
   // ① 환산 분자 · ② 개산공제 base · ⑧ echo · ⑨ lumpDeductionBase — 그 파트가 실가가 아니면 필요
-  if (mode !== "actual") return true;
+  if (partNeedsOwnAcqStd(mode)) return true;
   return needsApportionRatio(a, ctx);
 }
 

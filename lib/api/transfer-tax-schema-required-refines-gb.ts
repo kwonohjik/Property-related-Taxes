@@ -13,6 +13,7 @@
  *     `useEstimatedAcquisition`)이 필요한 규칙. `refinePropertyRequiredInputs`(단건·다건 주 자산)에서 부른다.
  */
 import { z } from "zod";
+import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-part-acq";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx, prefix: (string | number)[]): Issue => (path, message) =>
@@ -43,6 +44,8 @@ export type GbValuationLike = {
   buildingAcqMode?: PartMode;
   landAcquisitionPrice?: number;
   buildingAcquisitionPrice?: number;
+  landSalesCaseValue?: number;
+  buildingSalesCaseValue?: number;
   landDirectExpenses?: number;
   buildingDirectExpenses?: number;
   capitalExpenditure?: number;
@@ -86,19 +89,51 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
   )
     issue(["buildingDecedentAcquisitionDate"], "상속으로 취득한 건물은 피상속인 취득일이 필요합니다 (소득세법 §95④·§104②1호)");
 
-  // I2 — 환산 경로(증축 없음)의 **비-환산 파트**는 그 파트의 실지거래가액이 필요하다. 비우면 엔진이
+  // I2 — 환산 경로(증축 없음)의 **비-환산 파트**는 그 파트의 취득가액이 필요하다. 비우면 엔진이
   //      `TaxCalculationError`(경로 없음)를 던졌다. ⑧ `transfer-tax-validate-gb.ts` V-7(상속 파트는
-  //      평가액이 ④에서 이 칸으로 실린다 — V3·V4). 매매사례 파트는 이 칸을 읽지 않으므로 제외한다.
+  //      평가액이 ④에서 이 칸으로 실린다 — V3·V4). 감정·실가 = `*AcquisitionPrice`, 매매사례 = `*SalesCaseValue`
+  //      (2026-10-06 A1 F-1 — 종전엔 매매사례를 「이 칸을 읽지 않는다」며 제외했으나 값 필드가 신설됐다).
+  //      분리 OFF 자산 단위 감정·매매사례는 파트 값 대신 일괄 총액(`bundledAcquisitionPrice`)이 원천이다 —
+  //      엔진과 **같은 술어**(`usesBundledPartAcquisition`)로 판정한다.
   if (v.actualPriceMode !== true && v.extensionInfo === undefined) {
     const lm = v.landAcqMode ?? "estimated";
     const bm = v.buildingAcqMode ?? "estimated";
-    const readsOwnPrice = (m: PartMode) => m === "actual" || m === "appraisal";
-    if (readsOwnPrice(lm) && !positive(v.landAcquisitionPrice))
-      issue(["landAcquisitionPrice"], "환산이 아닌 토지 파트는 토지 취득가액(실지거래가액)이 필요합니다 (소득세법 §97①1호)");
-    if (readsOwnPrice(bm) && !positive(v.buildingAcquisitionPrice))
-      issue(["buildingAcquisitionPrice"], "환산이 아닌 건물 파트는 건물 취득가액(실지거래가액)이 필요합니다 (소득세법 §97①1호)");
+    const usesBundled = usesBundledPartAcquisition({ ...v, landAcqMode: lm, buildingAcqMode: bm });
+    if (!usesBundled) {
+      if (lm !== "estimated" && !positive(lm === "salesCase" ? v.landSalesCaseValue : v.landAcquisitionPrice))
+        issue(
+          [lm === "salesCase" ? "landSalesCaseValue" : "landAcquisitionPrice"],
+          `환산이 아닌 토지 파트는 토지 취득가액(${lm === "salesCase" ? "매매사례가액" : lm === "appraisal" ? "감정가액" : "실지거래가액"})이 필요합니다 (소득세법 §97①1호)`,
+        );
+      if (bm !== "estimated" && !positive(bm === "salesCase" ? v.buildingSalesCaseValue : v.buildingAcquisitionPrice))
+        issue(
+          [bm === "salesCase" ? "buildingSalesCaseValue" : "buildingAcquisitionPrice"],
+          `환산이 아닌 건물 파트는 건물 취득가액(${bm === "salesCase" ? "매매사례가액" : bm === "appraisal" ? "감정가액" : "실지거래가액"})이 필요합니다 (소득세법 §97①1호)`,
+        );
+    }
+  }
+
+  // Q-A3 — 증축(3파트) × **자산 단위(분리 OFF)** 감정가액·매매사례가액 **차단** (2026-10-06 사용자 확정).
+  //        3파트 안분은 파트 값이 없는 파트를 「원건물 일괄 실가」로 계산하고 개산공제를 0으로 둔다 — 감정·매매사례 모드가
+  //        **조용히 무시**된다(G-2의 3-way판). 파트 값이 있는 분리 ON 파트 감정·매매사례는 `applyPartAcqModes`가 처리하므로
+  //        여기서 막지 않는다. ⑧ R9(A2)의 거울.
+  if (v.extensionInfo !== undefined) {
+    const own = (m: PartMode | undefined, price?: number, sales?: number) =>
+      m === "salesCase" ? positive(sales) : positive(price);
+    const landBlocked =
+      (v.landAcqMode === "appraisal" || v.landAcqMode === "salesCase") &&
+      !own(v.landAcqMode, v.landAcquisitionPrice, v.landSalesCaseValue);
+    const buildingBlocked =
+      (v.buildingAcqMode === "appraisal" || v.buildingAcqMode === "salesCase") &&
+      !own(v.buildingAcqMode, v.buildingAcquisitionPrice, v.buildingSalesCaseValue);
+    if (landBlocked || buildingBlocked)
+      issue([landBlocked ? "landAcqMode" : "buildingAcqMode"], GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE);
   }
 }
+
+/** Q-A3 차단 문구 — ⑧ R9(A2)와 **같은 문자열**을 쓴다(UI 통과 ↔ 서버 400 문구 불일치 방지). */
+export const GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE =
+  "증축분이 있으면 원건물 취득가액을 감정가액·매매사례가액으로 산정할 수 없습니다. 「실거래가」 또는 「환산취득가」를 선택하세요.";
 
 type GbPropertyLike = {
   transferType?: string;
@@ -165,11 +200,11 @@ export function refineGbPropertyRequired(data: GbPropertyLike, ctx: z.Refinement
   } else if (v.extensionInfo !== undefined) {
     // X1 — 증축(3파트) 실가: 토지·건물1 일괄 취득가액. 비우면 route가 0을 주입했다.
     //      ⑧ 「토지·건물 일괄 취득가액을 입력하세요」(상속 파트·환산·분리 ON 제외) — 분리 ON은 파트 칸이 대신한다.
-    const partSatisfied = (m: PartMode | undefined, price: number | undefined) =>
-      (m ?? "estimated") === "estimated" || positive(price);
+    const partSatisfied = (m: PartMode | undefined, price: number | undefined, sales: number | undefined) =>
+      (m ?? "estimated") === "estimated" || positive(m === "salesCase" ? sales : price);
     const partsSatisfied =
-      partSatisfied(v.landAcqMode, v.landAcquisitionPrice) &&
-      partSatisfied(v.buildingAcqMode, v.buildingAcquisitionPrice);
+      partSatisfied(v.landAcqMode, v.landAcquisitionPrice, v.landSalesCaseValue) &&
+      partSatisfied(v.buildingAcqMode, v.buildingAcquisitionPrice, v.buildingSalesCaseValue);
     if (!anyInherited && !data.useEstimatedAcquisition && !partsSatisfied && !(bundled > 0))
       issue(["bundledAcquisitionPrice"], "증축이 있는 일반건물 — 토지·건물1 일괄 취득가액이 필요합니다 (사례 33 · 소득세법 §97①1호)");
   }

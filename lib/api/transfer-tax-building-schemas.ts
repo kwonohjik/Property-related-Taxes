@@ -11,6 +11,7 @@
 import { z } from "zod";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
+import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물 공통. */
 const carryoverExclusionShape = z.object({
@@ -189,6 +190,13 @@ export const generalBuildingValuationSchema = z.object({
   /** 파트별 실지거래가액(§97①1호) — 비-환산 파트 필수 */
   landAcquisitionPrice: z.number().int().nonnegative().optional(),
   buildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /**
+   * 파트별 **매매사례가액**(영 §176의2③1호) — `salesCase` 파트의 취득가액 (2026-10-06 A1 F-1).
+   * ⚠️ 여기 없으면 Zod가 **조용히 strip**해 매매사례 파트 값이 엔진에 도달하지 못한다(감정은 위 슬롯을 공유).
+   * 지분 스케일 목록(`applyShareScale`)에도 함께 넣는다 — 빠지면 지분 100%로 새어 과소과세.
+   */
+  landSalesCaseValue: z.number().int().nonnegative().optional(),
+  buildingSalesCaseValue: z.number().int().nonnegative().optional(),
   /** 파트별 자본적지출(§97①2호) — 직접 귀속분. 「소득세법」 §100② 후문상 안분 대상이 아니다. */
   landDirectExpenses: z.number().int().nonnegative().optional(),
   buildingDirectExpenses: z.number().int().nonnegative().optional(),
@@ -456,8 +464,9 @@ export const generalBuildingValuationSchema = z.object({
    */
   if (val.actualPriceMode !== true) {
     const hasExtension = val.extensionInfo !== undefined;
-    const needLandStd = (val.landAcqMode ?? "estimated") === "estimated" || hasExtension;
-    const needBuildingStd = (val.buildingAcqMode ?? "estimated") === "estimated" || hasExtension;
+    // 비-actual 파트(환산·감정·매매사례)는 자기 취득시 기준시가가 개산공제·환산 base다(`partNeedsOwnAcqStd` — ④·⑧과 같은 leaf).
+    const needLandStd = partNeedsOwnAcqStd(val.landAcqMode ?? "estimated") || hasExtension;
+    const needBuildingStd = partNeedsOwnAcqStd(val.buildingAcqMode ?? "estimated") || hasExtension;
     if (needLandStd && !val.acquisitionLandPricePerSqm) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["acquisitionLandPricePerSqm"], message: "취득시 토지 공시지가를 입력하세요." });
     }

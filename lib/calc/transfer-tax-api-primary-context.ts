@@ -130,6 +130,15 @@ export function buildPrimaryContext(
   const gbValuation = isGeneralBuilding
     ? buildGeneralBuildingValuation(primary, form.transferDate)
     : undefined;
+  /**
+   * E-3 — **일반건물 분리 ON**이면 최상위 `acquisitionMethod`는 `"actual"`로 고정하고 `appraisalValue`·`similarSalesValue`는 싣지 않는다.
+   *
+   * 분리 ON의 취득 방식은 **파트 모드**(`generalBuildingValuation.land/buildingAcqMode`)가 정한다. 최상위 값은 레거시
+   * 자산 단위 플래그(`isAppraisalAcquisition`·`isSalesCaseAcquisition`)에서 오는데, 분리 ON에서는 그 플래그를 끌 화면이
+   * 없다 — 남은 stale 플래그가 `acquisitionMethod:"appraisal"`로 가면 ⑩ refine(`appraisalValue` 필수)이 400으로 막는다
+   * (G-3의 막다른 길 실체). UI 전환 patch·복원 정규화(A2)와 별개로 **전송 층에도 방어선을 둔다**(3중).
+   */
+  const gbSeparateOn = isGeneralBuilding && !!primary.hasSeperateLandAcquisitionDate;
 
   /**
    * ⑬ 일반건물 × **지분(%) 분할 취득** — 지분별 완결 payload 배열.
@@ -209,6 +218,7 @@ export function buildPrimaryContext(
     cbValuation,
     cbAppurtenantLand,
     isGeneralBuilding,
+    gbSeparateOn,
     gbValuation,
     gbShares,
     isRedevelopment,

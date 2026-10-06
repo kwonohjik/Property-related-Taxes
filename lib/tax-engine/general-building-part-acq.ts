@@ -27,6 +27,9 @@
  * 주택·건물 split 경로와 같은 함수다(dual-truth 회피).
  */
 import { calcPartAcquisitionPrice, type PartAcqMode } from "./transfer-tax-split-gain";
+import { safeMultiplyThenDivide } from "./tax-utils";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 export interface PartAcqModeInput {
   /** 토지 파트 취득 방식 — 미주입 시 환산(이 경로의 기본) */
@@ -38,6 +41,17 @@ export interface PartAcqModeInput {
   buildingAcquisitionPrice?: number;
   landSalesCaseValue?: number;
   buildingSalesCaseValue?: number;
+  /**
+   * 토지·건물 **일괄** 취득가액 — 분리 OFF(자산 단위) 감정가액·매매사례가액의 총액.
+   * 적용 조건은 `usesBundledPartAcquisition` 한 곳이 정한다.
+   */
+  bundledAcquisitionPrice?: number;
+  /** 증축(3파트) 경로는 `bundledAcquisitionPrice`를 원건물 일괄 실가로 쓰므로 이 규칙에서 제외한다. */
+  extensionInfo?: unknown;
+  /** 일괄 총액 안분 base — 취득시 기준시가(토지 ㎡당 × 면적 · 건물 총액). 비-actual 파트가 이미 요구하는 값이다. */
+  acquisitionLandPricePerSqm?: number;
+  acquisitionBuildingStdPrice?: number;
+  landArea?: number;
 }
 
 export interface PartPair {
@@ -51,8 +65,63 @@ export interface PartAcqModeResult {
   /** 카드의 `usedEstimatedAcquisition`·`estimatedBase` 판정 — 파트별 */
   landUsedEstimated: boolean;
   buildingUsedEstimated: boolean;
+  /** 카드 `acquisitionMode` echo(E-1) — 파트별 유효 취득 방식 */
+  landMode: PartAcqMode;
+  buildingMode: PartAcqMode;
   /** 미입력 파트 이름 — 비어 있지 않으면 호출부가 차단해야 한다 */
   missingParts: string[];
+}
+
+/**
+ * **자산 단위(분리 OFF) 감정가액·매매사례가액 일괄 총액을 토지·건물로 나눠야 하는가** — 엔진·⑫ refine이 공유하는 단일 술어.
+ *
+ * 성립 조건(모두):
+ *   · 증축 없음(증축은 `bundledAcquisitionPrice`를 원건물 일괄 실가로 쓴다)
+ *   · 두 파트 모드가 **같은** `appraisal` 또는 `salesCase`(분리 OFF 불변식 — 두 파트가 같은 값)
+ *   · 그 모드가 읽는 **파트 값이 둘 다 없음**(감정 = `*AcquisitionPrice` · 매매사례 = `*SalesCaseValue`)
+ *   · 일괄 총액 > 0
+ * 파트 값이 **한쪽만** 있으면 이 술어는 거짓이고 `applyPartAcqModes`가 그 반대 파트를 `missingParts`로 돌려준다 —
+ * 잔액으로 메우지 않는다(자동 안분 fallback 금지).
+ */
+export function usesBundledPartAcquisition(input: {
+  landAcqMode?: PartAcqMode;
+  buildingAcqMode?: PartAcqMode;
+  landAcquisitionPrice?: number;
+  buildingAcquisitionPrice?: number;
+  landSalesCaseValue?: number;
+  buildingSalesCaseValue?: number;
+  bundledAcquisitionPrice?: number;
+  extensionInfo?: unknown;
+}): boolean {
+  if (input.extensionInfo !== undefined) return false;
+  const mode = input.landAcqMode;
+  if (mode !== input.buildingAcqMode) return false;
+  if (mode !== "appraisal" && mode !== "salesCase") return false;
+  if (!((input.bundledAcquisitionPrice ?? 0) > 0)) return false;
+  const [land, building] =
+    mode === "salesCase"
+      ? [input.landSalesCaseValue, input.buildingSalesCaseValue]
+      : [input.landAcquisitionPrice, input.buildingAcquisitionPrice];
+  return !((land ?? 0) > 0) && !((building ?? 0) > 0);
+}
+
+/**
+ * 일괄 총액을 **취득시 기준시가 비율**로 토지·건물에 나눈다 — 「소득세법」 제100조 제2항 본문 「취득 당시」.
+ * 토지 = floor(총액 × 토지 기준시가 ÷ (토지 + 건물 기준시가)), 건물 = 총액 − 토지(잔액 흡수).
+ * 중간곱이 2^53을 넘을 수 있어 `safeMultiplyThenDivide`를 쓴다. 분모가 0이면 조용히 0으로 메우지 않고 던진다.
+ */
+function splitBundledByAcquisitionStd(input: PartAcqModeInput, total: number): PartPair {
+  const landStd = multiplyByArea(input.acquisitionLandPricePerSqm ?? 0, input.landArea ?? 0);
+  const buildingStd = input.acquisitionBuildingStdPrice ?? 0;
+  if (!(landStd > 0) || !(buildingStd > 0)) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "일반건물: 감정가액·매매사례가액 총액을 토지·건물로 나눌 수 없습니다 — 취득시 토지 공시지가와 건물 기준시가를 입력하세요 (소득세법 §100②).",
+      { landStd, buildingStd },
+    );
+  }
+  const land = Math.floor(safeMultiplyThenDivide(total, landStd, landStd + buildingStd));
+  return { land, building: total - land };
 }
 
 /** 두 파트가 모두 환산인가 — 종전 경로와 동일한지 판정(회귀 0 조기 반환). */
@@ -83,6 +152,8 @@ export function applyPartAcqModes(
       estimatedDeduction,
       landUsedEstimated: true,
       buildingUsedEstimated: true,
+      landMode,
+      buildingMode,
       missingParts: [],
     };
   }
@@ -117,14 +188,21 @@ export function applyPartAcqModes(
 
   const missingParts: string[] = [];
 
+  // 분리 OFF 자산 단위 감정·매매사례 — 총액을 취득시 기준시가 비율로 나눈다(`usesBundledPartAcquisition`).
+  const bundledPair = usesBundledPartAcquisition({ ...input, landAcqMode: landMode, buildingAcqMode: buildingMode })
+    ? splitBundledByAcquisitionStd(input, input.bundledAcquisitionPrice!)
+    : null;
+
   // 환산 파트는 이미 계산된 값을 유지하고, 비-환산 파트만 파트 값으로 교체한다.
   // 기준시가 인자는 환산 모드에서만 소비되므로 여기서는 0을 넘겨도 무해하다.
-  const landRaw =
-    landMode === "estimated"
+  const landRaw = bundledPair
+    ? bundledPair.land
+    : landMode === "estimated"
       ? acquisition.land
       : calcPartAcquisitionPrice(landMode, true, 0, 0, 0, ctx);
-  const buildingRaw =
-    buildingMode === "estimated"
+  const buildingRaw = bundledPair
+    ? bundledPair.building
+    : buildingMode === "estimated"
       ? acquisition.building
       : calcPartAcquisitionPrice(buildingMode, false, 0, 0, 0, ctx);
 
@@ -140,6 +218,8 @@ export function applyPartAcqModes(
     },
     landUsedEstimated: landMode === "estimated",
     buildingUsedEstimated: buildingMode === "estimated",
+    landMode,
+    buildingMode,
     missingParts,
   };
 }

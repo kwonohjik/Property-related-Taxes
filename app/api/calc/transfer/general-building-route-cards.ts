@@ -214,6 +214,13 @@ export function buildProperties(
       // 건물 카드만 §114조의2 가산세 발동 정보 패스스루
       // 토지 카드는 소득세법 §114조의2 ① 적용 대상 아님
       acquisitionMethod: isBuilding && card.usedEstimatedAcquisition ? "estimated" : "actual",
+      // §114조의2 — 건물 파트 **감정가액**(Q-A5). 카드는 환산이 아니므로 위 값이 "actual"이라 게이트가 닫힌다 →
+      //   파트-국소 축을 직접 싣는다. ⚠️ `acquisitionMethod:"appraisal"`로 싣지 말 것 — 단건 `calcTransferGain`
+      //   감정 분기가 개산공제를 `standardPriceAtAcquisition`(카드엔 없음)으로 재계산해 카드 `expenses`를 0으로 덮는다(G-2 재현).
+      //   매매사례는 조문 대상이 아니라 싣지 않는다(`buildingPenaltyMethodApplies`).
+      ...(isBuilding && card.acquisitionMode === "appraisal"
+        ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: card.acquisitionPrice } }
+        : {}),
       isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,

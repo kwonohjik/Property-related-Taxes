@@ -66,7 +66,14 @@ export function validateGbBundledAcquisitionPrice(
   if (asset.acquisitionCause !== "purchase") return null;
   if (asset.gbHasExtension) return null;
   if (landMode === "estimated" || buildingMode === "estimated") return null;
-  if (parseAmount(asset.fixedAcquisitionPrice) > 0) return null;
+  /**
+   * 분리 OFF 자산 단위 **매매사례가액**은 `similarSalesValue`가 총액 칸이다(④ F-2 — 감정·실가는 `fixedAcquisitionPrice`).
+   * ④가 실제로 싣는 칸과 **같은 칸**을 요구해야 「⑧ 통과 ↔ ⑫ 400」이 없다.
+   */
+  const salesCase = landMode === "salesCase" && buildingMode === "salesCase";
+  if (parseAmount(salesCase ? asset.similarSalesValue : asset.fixedAcquisitionPrice) > 0) return null;
+  if (salesCase)
+    return fieldError("similarSalesValue", `${label}: 매매사례가액을 입력하세요. 토지·건물 일괄 매매사례가액입니다 (소득세법 시행령 §176의2③1호).`);
   return fieldError("fixedAcquisitionPrice", `${label}: ${asset.isAppraisalAcquisition ? "감정가액" : "취득가액"}을 입력하세요. 토지·건물 일괄 실지거래가액입니다 (소득세법 §97①1호).`);
 }
 

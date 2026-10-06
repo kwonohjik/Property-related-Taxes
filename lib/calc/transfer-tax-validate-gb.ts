@@ -8,7 +8,9 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { partAcquisitionDates } from "./transfer-tax-split-acq-mode";
+import { gbPartModes } from "./transfer-tax-split-acq-mode";
+import { partNeedsOwnAcqStd } from "./transfer-tax-split-acq-mode";
 import { needsGbActualAcqStdPrice } from "./transfer-tax-split-acq-mode";
 // §163⑨ 단서 게이트 — ④ API 변환과 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 두 정책이 된다).
 import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
@@ -125,8 +127,9 @@ export function validateGeneralBuildingAsset(
    * `effectivePartAcqMode`는 파트 라디오가 비면 레거시 플래그에서 파생하므로 **상위 호환**이다.
    */
   const isSeparate = !!asset.hasSeperateLandAcquisitionDate;
-  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
-  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  // ④와 **같은 leaf**(`gbPartModes`, A1) — 분리 OFF의 stale 파트 모드는 무시하고 레거시 3플래그로 통일한다.
+  // 어긋나면 「⑧ 통과 ↔ ④ payload 침묵 drop」(취득시 기준시가 요구 조건이 갈림)이 생긴다.
+  const { land: landMode, building: buildingMode } = gbPartModes(asset);
 
   /**
    * §163⑨ 상속·증여 파트는 **추계가 법적으로 불가**하다 (O-3).
@@ -432,7 +435,7 @@ export function validateGeneralBuildingAsset(
 
   // 환산취득가 모드 OR 사례 33 일괄 모드(실가+증축) 공통: 취득시 기준시가·건물 취득원인 검증.
   // 두 모드 모두 풀세트 payload(취득시 기준시가 + buildingAcquisitionCause)가 필요.
-  if (landMode === "estimated" || buildingMode === "estimated" || asset.gbHasExtension) {
+  if (partNeedsOwnAcqStd(landMode) || partNeedsOwnAcqStd(buildingMode) || asset.gbHasExtension) {
     // 건물 연면적 — 환산 모드에서만 필수 (사례 33 일괄에서는 buildingFootprintArea로 대체 가능)
     if (asset.useEstimatedAcquisition && !parseDecimal(asset.gbBuildingArea))
       return fieldError("gbBuildingArea", `${label}: 건물 연면적을 입력하세요.`);
@@ -443,8 +446,9 @@ export function validateGeneralBuildingAsset(
      * (`requiresAcqStdPricePart`와 같은 취지 · dead-end 금지).
      * ⚠️ 증축(3파트)은 종전대로 둘 다 필요하다 — 안분 분모를 구성한다.
      */
-    const needLandStd = landMode === "estimated" || asset.gbHasExtension;
-    const needBuildingStd = buildingMode === "estimated" || asset.gbHasExtension;
+    // 비-actual 파트(환산·감정·매매사례)는 자기 취득시 기준시가가 개산공제·환산 base다 — ④·⑫와 같은 leaf(A1 F-4).
+    const needLandStd = partNeedsOwnAcqStd(landMode) || asset.gbHasExtension;
+    const needBuildingStd = partNeedsOwnAcqStd(buildingMode) || asset.gbHasExtension;
     if (needLandStd && !parseAmount(asset.gbAcqLandPricePerSqm))
       return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요.`);
     if (needBuildingStd && !parseAmount(asset.gbAcqBuildingValue))

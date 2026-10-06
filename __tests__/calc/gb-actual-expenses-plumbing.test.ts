@@ -141,10 +141,9 @@ describe("⑧ V-5b — 실가 경로 취득시 기준시가 (P-2)", () => {
 
 describe("🔑 경로 대조 — 환산 분기도 같이 싣는다", () => {
   it("환산 경로 payload에도 두 필드가 있다", () => {
-    const p = payload({
-      landAcqMode: "estimated",
-      buildingAcqMode: "estimated",
-    } as Partial<AssetForm>);
+    // A1 Q-A2 — 분리 OFF는 파트 라디오를 무시하고 레거시 플래그에서 모드를 파생한다(`gbPartModes`).
+    //   「자산 전체 환산」의 현행 입력 경로는 `useEstimatedAcquisition`이다.
+    const p = payload({ useEstimatedAcquisition: true } as Partial<AssetForm>);
     expect(p.actualPriceMode).toBeUndefined(); // 환산 분기
     expect(p.capitalExpenditure).toBe(30_000_000);
     expect(p.transferExpense).toBe(10_000_000);
