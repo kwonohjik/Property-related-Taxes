@@ -338,6 +338,13 @@ export interface GeneralBuildingFormSlice {
   mixedAcqCommercialBuildingPrice: string;
   /** 취득시 개별공시지가 (원/㎡) */
   mixedAcqLandPricePerSqm: string;
+  /**
+   * 취득시 ㎡당 개별공시지가 — **건물 취득일 기준** (원/㎡, 문자열). 토지·건물 취득일이 다를 때만 쓰인다.
+   * 개별주택공시가격(건물 취득일 기준)에서 같은 날짜의 주택부수토지분을 빼는 용도 — 토지 취득일 기준인
+   * `mixedAcqLandPricePerSqm`과 **다른 값**이며 서로 대체하지 않는다. 노출·전송·필수 술어:
+   * `lib/calc/mixed-use-acq-date-split.ts` `needsMixedAcqLandPriceAtBuildingAcq`.
+   */
+  mixedAcqLandPricePerSqmAtBuildingAcq: string;
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
   /**

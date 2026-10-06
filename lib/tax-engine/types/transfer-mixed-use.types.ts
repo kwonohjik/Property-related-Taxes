@@ -94,6 +94,14 @@ export interface MixedUseAssetInput {
   /** 취득시 기준시가. housingPrice 미제공 시 PHD 환산 경로로 분기 */
   acquisitionStandardPrice: Omit<MixedUseStandardPrice, "housingPrice"> & {
     housingPrice?: number;
+    /**
+     * 주택부수토지 ㎡당 개별공시지가 — **건물 취득일 기준** (B0).
+     * 개별주택가격(건물 취득일 공시)에서 같은 날짜의 토지분을 빼 건물분 기준시가를 구하는 용도.
+     * `landPricePerSqm`(토지 취득일 기준 — 토지 파트용)과 **다른 값**이며 서로 대체하지 않는다.
+     * 필수 조건: `isBuildingDayLandPriceRequired`(`mixed-use-acq-date.ts`) — 해당 시 없음/0이면 엔진 throw,
+     * 아니면 무시.
+     */
+    landPricePerSqmAtBuildingAcq?: number;
   };
 
   /** PHD 3-시점 자동 환산 옵션 (1992~2005 개별주택가격 미공시 케이스) */

@@ -148,6 +148,8 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
             ...mixedUseAsset(),
             hasSeperateLandAcquisitionDate: true,
             landAcquisitionDate: "2005-06-10",
+            // B0 — 날짜가 다르고 개별주택가격이 있으면 건물 취득일 기준 공시지가가 필수. L2=L1로 채워 기대값 불변.
+            mixedAcqLandPricePerSqmAtBuildingAcq: "2500000",
           }],
           transferDate: "2026-02-16",
           filingDate: "2026-04-30",

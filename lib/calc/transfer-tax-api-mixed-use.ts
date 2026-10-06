@@ -11,6 +11,10 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isMixedUseCaseA } from "./mixed-use-case";
+import {
+  mixedAcqLandPricePerSqmAtBuildingAcq,
+  needsMixedAcqLandPriceAtBuildingAcq,
+} from "./mixed-use-acq-date-split";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -155,6 +159,11 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
       commercialBuildingPrice: mixedAcqCommercialBuildingStd(primary),
       landPricePerSqm: mixedAcqLandPricePerSqm(primary, form.transferDate),
+      // B0 — 건물 취득일 기준 공시지가. 필수 술어가 참일 때만 키를 싣는다(거짓이면 키 자체 없음 — Q20 규약).
+      // 폴백 없음: 토지 취득일 값·PHD·1990 환산으로 메우지 않는다(자동 대체 금지).
+      ...(needsMixedAcqLandPriceAtBuildingAcq(primary)
+        ? { landPricePerSqmAtBuildingAcq: mixedAcqLandPricePerSqmAtBuildingAcq(primary) }
+        : {}),
     },
     usePreHousingDisclosure: primary.usePreHousingDisclosure,
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.

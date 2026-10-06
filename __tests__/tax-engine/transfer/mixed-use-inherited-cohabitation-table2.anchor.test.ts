@@ -34,6 +34,8 @@ function base40(overrides?: Partial<MixedUseAssetInput>): MixedUseAssetInput {
       housingPrice: 500_000_000,
       commercialBuildingPrice: 30_000_000,
       landPricePerSqm: 2_380_000,
+      // B0 — 토지·건물 취득일(1992/1997)이 달라 건물 취득일 기준 공시지가가 필수. L2=L1로 채워 기대값 불변.
+      landPricePerSqmAtBuildingAcq: 2_380_000,
     },
     isOneHouseExempt: true,
     ...overrides,

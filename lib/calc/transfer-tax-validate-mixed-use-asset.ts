@@ -12,6 +12,10 @@ import { validateMixedUseInheritanceAsset } from "./transfer-tax-validate-mixed-
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { mixedAcqCommercialBuildingStd } from "./transfer-tax-api-mixed-use";
 import { mixedAcqLandPricePerSqm } from "./transfer-tax-api-mixed-use";
+import {
+  mixedAcqLandPricePerSqmAtBuildingAcq,
+  needsMixedAcqLandPriceAtBuildingAcq,
+} from "./mixed-use-acq-date-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 
@@ -120,6 +124,14 @@ export function validateMixedUseAsset(
     (commStdMissing || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
   )
     return fieldError(commStdMissing ? "mixedAcqCommercialBuildingPrice" : "mixedAcqLandPricePerSqm", `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (상가분 취득가액 산정)`);
+  // ⑧ B0 — 토지·건물 취득일이 다르면 개별주택공시가격(건물 취득일)에서 빼는 주택부수토지 공시지가도
+  // **건물 취득일 기준**이어야 한다. 노출(⑤)·전송(④)과 같은 술어(`needsMixedAcqLandPriceAtBuildingAcq`)·
+  // 같은 값 해소 — 폴백 없음(토지 취득일 값·PHD·1990 환산으로 대체하지 않는다. ⑫·엔진도 같은 조건으로 막는다).
+  if (needsMixedAcqLandPriceAtBuildingAcq(asset) && mixedAcqLandPricePerSqmAtBuildingAcq(asset) <= 0)
+    return fieldError(
+      "mixedAcqLandPricePerSqmAtBuildingAcq",
+      `${label}: 건물 취득일(${asset.acquisitionDate}) 기준 주택부수토지 개별공시지가(원/㎡)를 입력하세요. 토지 취득일(${asset.landAcquisitionDate || asset.acquisitionDate})과 달라 토지 취득일 기준 공시지가로 대신할 수 없습니다. (개별주택공시가격에서 같은 날짜의 토지분을 뺍니다)`,
+    );
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   if (asset.usePreHousingDisclosure) {
     if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);

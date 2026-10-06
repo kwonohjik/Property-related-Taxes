@@ -14,6 +14,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
+import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
+import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
@@ -177,6 +179,9 @@ export function MixedUseLegacyStdPrice({
                 />
               )}
 
+            {/* B0 — 토지·건물 취득일이 다를 때만(술어는 컴포넌트 내부). 취득시 면적은 엔진이 정하므로 면적 미전달 */}
+            <MixedUseAcqHousingLandPriceField asset={asset} onChange={onChange} jibun={jibun} />
+
             {/* 취득시 상가건물 기준시가 — 직접 입력 */}
             <FieldCard
               label="취득시 상가건물 기준시가"
@@ -217,6 +222,9 @@ export function MixedUseLegacyStdPrice({
               />
             </div>
 
+            {isMixedAcqDatesSeparate(asset) && (
+              <p className="text-caption text-slate-500">토지 취득일 기준</p>
+            )}
             <LandPriceLookupField
               pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
               data-field="mixedAcqLandPricePerSqm"
