@@ -84,6 +84,7 @@ const JUDGE_INPUT_KEYS = [
   "presaleRights",
   "sellingHouseId",
   "knownHouseExclusionCount",
+  "inheritedHouseExclusionCount",
   "knownHouseExclusionHouseIds",
   "noMergeRosterInputPath",
   "replacementHouse",
@@ -167,6 +168,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   ],
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
+  inheritedHouseExclusionCount: 1,
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
   replacementHouse: {

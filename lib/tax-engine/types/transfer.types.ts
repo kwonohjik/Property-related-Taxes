@@ -803,6 +803,16 @@ export interface TransferTaxInput {
    */
   knownHouseExclusionCount?: number;
   /**
+   * `knownHouseExclusionCount` 중 **§155②③ 상속주택** 몫 — §155 특례 중첩 상한 판정용 echo.
+   *
+   * §155의 두 특례가 겹친 3주택(①+④⑤ · ⑦+①)은 국세청이 인정했지만, 상속주택 제외까지 더해 **세 특례**가 겹친 경우를
+   * 인정한 해석은 확인되지 않았고 불허 회신만 있다(⑳+③+① — 사전-2016-법령해석재산-0584 · 조심-2021-중-5977).
+   * ⇒ 이 값이 1 이상이면 두 중첩 술어(`mergeOverlapTwoHouseHolds` · `ruralTemporaryTwoHouseOverlapCountHolds`)는
+   *    성립하지 않는다(모름=불리 · 확인 필요). 조특법 §99의4형 제외는 §155 특례가 아니라 세지 않는다.
+   * 사용자 입력이 아니라 STEP 0.9/0.95 등이 채우는 echo다.
+   */
+  inheritedHouseExclusionCount?: number;
+  /**
    * `knownHouseExclusionCount` 중 **어느 명부 행인지 특정된** 몫(PR-3 — `merge-composition-
    * unknown-unfavorable.plan.md` §3-4). §155②③ 상속주택(`excludedHouses[].houseId`) ·
    * 조특법 §99의4·§98의9·보유 감면주택(행에 연결된 선언만) — `resolveMergeComposition`이
