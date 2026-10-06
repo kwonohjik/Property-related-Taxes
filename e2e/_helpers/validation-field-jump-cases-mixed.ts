@@ -62,6 +62,13 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: mixed({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "" }),
   },
 
+  {
+    // B0 — 토지·건물 취득일이 다르면 개별주택가격(건물 취득일)과 짝인 건물 취득일 기준 공시지가가 필수
+    name: "mixed: mixedAcqLandPricePerSqmAtBuildingAcq (건물 취득일 기준 공시지가)", field: "mixedAcqLandPricePerSqmAtBuildingAcq", step: 0, assetIndex: A,
+    message: /^자산: 건물 취득일\(2010-03-15\) 기준 주택부수토지/,
+    form: est({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2005-06-10" }),
+  },
+
   // ── 면적 정보 ──
   { name: "mixed: residentialFloorArea", field: "residentialFloorArea", step: 0, assetIndex: A, message: /^자산: 주택 연면적\(㎡\)을 입력하세요/, form: mixed({ residentialFloorArea: "" }) },
   { name: "mixed: nonResidentialFloorArea", field: "nonResidentialFloorArea", step: 0, assetIndex: A, message: /^자산: 상가 연면적\(㎡\)을 입력하세요/, form: mixed({ nonResidentialFloorArea: "" }) },

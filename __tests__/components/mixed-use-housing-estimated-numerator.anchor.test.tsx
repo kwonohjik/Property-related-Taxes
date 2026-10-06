@@ -51,6 +51,8 @@ function disclosed() {
       acquisitionStandardPrice: {
         ...base.acquisitionStandardPrice,
         housingPrice: DISCLOSED_HOUSING_PRICE,
+        // B0 — 토지·건물 취득일(1992/1997)이 달라 건물 취득일 기준 공시지가가 필수. L2=L1로 채워 기대값 불변.
+        landPricePerSqmAtBuildingAcq: base.acquisitionStandardPrice.landPricePerSqm,
       },
     },
     makeMockRatesWithHouseEngine(),

@@ -18,6 +18,7 @@ import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-ta
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
 
 // ──────────────────────────────────────────────────────────────
 // 4. 주택부분 토지/건물 양도차익 분리 (STEP 4)
@@ -273,7 +274,32 @@ export function calcHousingGainSplit(
     acqLandStd =
       asset.acquisitionStandardPrice.landPricePerSqm * effectiveAcqDerived.residentialLandArea;
     const acqHousingTotal = asset.acquisitionStandardPrice.housingPrice ?? 0;
-    acqBuildingStd = Math.max(acqHousingTotal - acqLandStd, 0);
+    // 🔴 B0 — 개별주택가격은 **건물 취득일** 공시 결합가다. 토지·건물 취득일이 다르면 그 가격에서
+    // 빼는 주택부수토지분도 **같은 날(건물 취득일)** 공시지가여야 한다(토지 취득일 값으로 대체 금지).
+    // 토지분(`acqLandStd`)은 토지 파트 값이라 토지 취득일 기준 그대로 둔다.
+    const buildingDayRequired = isBuildingDayLandPriceRequired({
+      landDate: asset.landAcquisitionDate,
+      buildingDate: asset.buildingAcquisitionDate,
+      usePhd: asset.usePreHousingDisclosure,
+      partialDirection: asset.partialUsageChange?.direction,
+      housingPrice: acqHousingTotal,
+    });
+    if (buildingDayRequired) {
+      const landPerSqmAtBuildingAcq = asset.acquisitionStandardPrice.landPricePerSqmAtBuildingAcq;
+      if (landPerSqmAtBuildingAcq === undefined || !(landPerSqmAtBuildingAcq > 0)) {
+        throw new Error(
+          "겸용주택: 토지·건물 취득일이 달라 건물 취득일 기준 주택부수토지 개별공시지가" +
+            "(acquisitionStandardPrice.landPricePerSqmAtBuildingAcq)가 필요합니다. " +
+            "토지 취득일 기준 공시지가로 대신할 수 없습니다.",
+        );
+      }
+      acqBuildingStd = Math.max(
+        acqHousingTotal - multiplyByArea(landPerSqmAtBuildingAcq, effectiveAcqDerived.residentialLandArea),
+        0,
+      );
+    } else {
+      acqBuildingStd = Math.max(acqHousingTotal - acqLandStd, 0);
+    }
   }
 
   const acqTotal = acqLandStd + acqBuildingStd;

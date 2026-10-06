@@ -12,6 +12,8 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
+import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
+import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -247,6 +249,13 @@ export function MixedUseAssetMajorStdPrice({
               />
             </div>
           )}
+          {/* B0 — 토지·건물 취득일이 다를 때만(술어는 컴포넌트 내부) 건물 취득일 기준 공시지가 */}
+          <MixedUseAcqHousingLandPriceField
+            asset={asset}
+            onChange={onChange}
+            jibun={jibun}
+            area={derived.residentialLandArea}
+          />
         </div>
 
         {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
@@ -399,7 +408,12 @@ export function MixedUseAssetMajorStdPrice({
         </div>
 
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
-        <p className="text-xs font-medium text-slate-600">상가부수토지 개별공시지가</p>
+        <p className="text-xs font-medium text-slate-600">
+          상가부수토지 개별공시지가
+          {isMixedAcqDatesSeparate(asset) && (
+            <span className="ml-1 text-caption font-normal text-slate-500">토지 취득일 기준</span>
+          )}
+        </p>
         <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
           <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <LandPriceLookupField

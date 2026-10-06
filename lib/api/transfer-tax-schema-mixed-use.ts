@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { isBuildingDayLandPriceRequired } from "@/lib/tax-engine/mixed-use-acq-date";
 // preHousingDisclosureSchema를 직접 참조하면 순환 참조 발생 — 필요 필드만 인라인으로 정의
 // 겸용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
 
@@ -50,6 +51,12 @@ export const mixedUseAssetSchema = z.object({
   transferStandardPrice: mixedUseStandardPriceSchema,
   acquisitionStandardPrice: mixedUseStandardPriceSchema.extend({
     housingPrice: z.number().int().nonnegative().optional(),
+    /**
+     * ⑫ B0 — 건물 취득일 기준 ㎡당 공시지가(주택부수토지). **취득측에만** 둔다(양도측은 양도일 단일).
+     * 비엄격 z.object라 여기 없으면 침묵 strip된다. 필수 조건은 아래 superRefine
+     * (`isBuildingDayLandPriceRequired` — 엔진·UI 어댑터와 같은 leaf).
+     */
+    landPricePerSqmAtBuildingAcq: z.number().int().nonnegative().optional(),
   }),
   usePreHousingDisclosure: z.boolean().optional(),
   /** PHD 3-시점 환산 입력 (겸용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
@@ -149,6 +156,24 @@ export const mixedUseAssetSchema = z.object({
     !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)
   ) {
     ctx.addIssue({ code: "custom", message: "상속·증여 겸용주택은 주택분 평가액(신고가액) 또는 취득시 개별주택가격이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
+  }
+  // B0 — 별개 취득(두 취득일 다름)이면 개별주택가격(건물 취득일)에서 빼는 주택부수토지 공시지가도
+  // 건물 취득일 기준이어야 한다. 미입력·0 → 400 (토지 취득일 값으로 대체하지 않는다 · 엔진 throw 거울).
+  if (
+    isBuildingDayLandPriceRequired({
+      landDate: v.landAcquisitionDate,
+      buildingDate: v.buildingAcquisitionDate,
+      usePhd: v.usePreHousingDisclosure,
+      partialDirection: v.partialUsageChange?.direction,
+      housingPrice: v.acquisitionStandardPrice.housingPrice,
+    })
+  ) {
+    const atBuildingAcq = v.acquisitionStandardPrice.landPricePerSqmAtBuildingAcq;
+    if (atBuildingAcq === undefined) {
+      ctx.addIssue({ code: "custom", message: "토지·건물 취득일이 달라 건물 취득일 기준 주택부수토지 개별공시지가(landPricePerSqmAtBuildingAcq)가 필요합니다", path: ["acquisitionStandardPrice", "landPricePerSqmAtBuildingAcq"] });
+    } else if (!(atBuildingAcq > 0)) {
+      ctx.addIssue({ code: "custom", message: "건물 취득일 기준 주택부수토지 개별공시지가(landPricePerSqmAtBuildingAcq)는 0보다 커야 합니다", path: ["acquisitionStandardPrice", "landPricePerSqmAtBuildingAcq"] });
+    }
   }
   if (!fourPart) {
     if (!(v.acquisitionStandardPrice.commercialBuildingPrice > 0))

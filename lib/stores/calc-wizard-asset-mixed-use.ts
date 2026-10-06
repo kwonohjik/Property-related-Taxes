@@ -53,6 +53,7 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedAcqHousingPrice"
   | "mixedAcqCommercialBuildingPrice"
   | "mixedAcqLandPricePerSqm"
+  | "mixedAcqLandPricePerSqmAtBuildingAcq"
   | "mixedIsMetropolitanArea"
   | "mixedZoneType"
   | "mixedHousingInheritedValueOverride"
@@ -90,6 +91,7 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedAcqHousingPrice: "",
   mixedAcqCommercialBuildingPrice: "",
   mixedAcqLandPricePerSqm: "",
+  mixedAcqLandPricePerSqmAtBuildingAcq: "",
   mixedIsMetropolitanArea: true,
   /**
    * 부수토지 배율 판정 용도지역 (영 §168의12·§154⑦) — `""`는 **미선택**이다 (2026-09-06 · UI 리뷰).
@@ -177,6 +179,7 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedAcqHousingPrice) a.mixedAcqHousingPrice = "";
   if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";
   if (!a.mixedAcqLandPricePerSqm) a.mixedAcqLandPricePerSqm = "";
+  if (!a.mixedAcqLandPricePerSqmAtBuildingAcq) a.mixedAcqLandPricePerSqmAtBuildingAcq = "";
   if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
   if (a.mixedZoneType === undefined) a.mixedZoneType = "";
 
