@@ -33,6 +33,7 @@ import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
 import { buildTransferEngineInput } from "../transfer/engine-input";
 import { parseRatesFromMap, presaleRightStartDate } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
+import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { resolveJudgmentBaseDate } from "@/lib/api/judgment-base-date";
 import {
@@ -225,7 +226,13 @@ export async function POST(request: NextRequest) {
      * 가지 않으므로 여기서 **같은 leaf**를 부른다. 부르지 않으면 임대 요건을 하나도 보지 않은 채
      * 「1주택 → 비과세」가 나온다(over-exemption).
      */
-    const rentalVerdict = buildRentalHousingVerdict(engineInput);
+    // D12 — 세대 구성(3중첩 불가 등)도 계산기 STEP 2.5와 같은 판정을 거친다. 주택 수 제외 기준일은 위 단계 6과 같다.
+    const rentalVerdict = buildRentalHousingVerdict(
+      engineInput,
+      engineInput.rentalHousingException?.applyException
+        ? resolveRentalResidenceComposition(engineInput, parsedRates)
+        : undefined,
+    );
     const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
 
     /**
