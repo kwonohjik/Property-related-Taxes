@@ -34,6 +34,7 @@ import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
 import { resolvePreDeemedBasis } from "./stock-pre-deemed-acquisition";
+import { applyPreDeemedToLots } from "./stock-pre-deemed-acquisition";
 import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
 import { allocateLots } from "./lot-allocation";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
@@ -177,8 +178,12 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       !input.isSmallMediumEnterprise &&
       (classification.taxCategory === "listed_major" ||
         classification.taxCategory === "unlisted_major");
+    // 의제취득일 전 매수 lot — 영 §176의2④2호 ② (자본조정 희석보다 앞 · ⑤⑥ 미리보기와 같은 순서)
+    const preDeemedLots = applyPreDeemedToLots(input.acquisitionLots!, input.marketType, is94_4);
+    warnings.push(...preDeemedLots.warnings);
+    if (preDeemedLots.applied) appliedRules.push("의제취득일물가상승가산");
     // [A-2] 자본조정 lot 전처리 — 발생일 이전 보유 lot만 희석 (allocateLots 직전)
-    let effectiveLots = input.acquisitionLots!;
+    let effectiveLots = preDeemedLots.lots;
     if (input.capitalAdjustments && input.capitalAdjustments.length > 0) {
       const ca = applyCapitalAdjustmentsToLots(effectiveLots, input.capitalAdjustments);
       effectiveLots = ca.adjustedLots;

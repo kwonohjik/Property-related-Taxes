@@ -13,6 +13,8 @@ import { z } from "zod";
 import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
 import { refineSingleModeRequiredInputs } from "./stock-transfer-tax-refines-single-mode";
+import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
+import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -391,7 +393,25 @@ export function addStockRefines(
       // cause별 보조 입력 필수 — ⑧ 분할(step1)·일자별 다건(step2)과 공용 술어.
       // 2차(B18): 이월과세 lot의 관계·증여자 취득일·증여세 짝을 더했다(종전엔 상속·합병만 —
       // 관계를 비우면 배우자로, 증여자 취득일을 비우면 가액만 승계되고 세율은 단기로 갔다).
+      // 의제취득일 전 매수 lot ②(영 §176의2④2호) — 1965.01 이전이면 산정 불가(⑧ step1·step2와 공용 술어)
+      const is94_4 = isSection94_4Asset({
+        marketType: data.marketType as string | undefined,
+        isHeavyRealEstateForRate: data.isHeavyRealEstateForRate as boolean | undefined,
+        isQualifyingBlockShareholder: data.isQualifyingBlockShareholder as boolean | undefined,
+        blockShareholderRealEstateRatio: data.blockShareholderRealEstateRatio as number | undefined,
+        blockShareholderOwnershipRatio: data.blockShareholderOwnershipRatio as number | undefined,
+        cumulativeTransferRatio: data.cumulativeTransferRatio as number | undefined,
+        aggregationFirstTransferDate: toOptionalDate(data.aggregationFirstTransferDate),
+        transferDate: toOptionalDate(data.transferDate),
+      });
       data.acquisitionLots?.forEach((lot, i) => {
+        if (isPreDeemedLotBeforePpiSeries({ acquisitionCause: lot.acquisitionCause, acquisitionDate: lot.acquisitionDate as string | Date | undefined }, data.marketType as string | undefined, is94_4)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["acquisitionLots", i, "acquisitionDate"],
+            message: `매수 lot #${i + 1}: ${PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE}`,
+          });
+        }
         for (const key of missingLotCauseKeys(
           lot.acquisitionCause,
           (k) => !!lot[k],
