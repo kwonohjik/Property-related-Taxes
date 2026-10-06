@@ -20,7 +20,9 @@ import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-st
 import { TRANSFER_RENTAL_HOUSING } from "../legal-codes/transfer";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
+import { revokeOneHouseExemption } from "./revoke-exemption";
 import type { CancellationWindow } from "../transfer-tax/rental-housing-exception/types";
+import type { RentalResidenceComposition } from "../transfer-tax-rental-residence-composition";
 
 /** 판정 메뉴 ④가 읽는 §155⑳ 결론. 금액·안분은 담지 않는다(세액은 계산기의 몫). */
 export type OneHouseRentalHousingVerdict = {
@@ -32,6 +34,11 @@ export type OneHouseRentalHousingVerdict = {
   residenceFailReasons: string[];
   /** 임대주택 호별 미충족 사유 */
   unitFailReasons: { unitIndex: number; message: string }[];
+  /**
+   * 세대 구성(「장기임대주택과 그 밖의 1주택」) 불성립 사유 — 다른 특례를 둘 이상 겹쳐야 하는 경우 등(D12).
+   * 계산기 STEP 2.5와 같은 판정(`resolveRentalResidenceComposition`)이다.
+   */
+  compositionFailReason?: string;
   /** §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 대상임을 알린다 */
   periodPendingUnitIndexes: number[];
   /** 결론을 바꾸지 않는 판정 보류·확인 필요 고지(OH-40 생애 1회 이력 미입력 · 계획서 §7-5) */
@@ -47,19 +54,28 @@ export type OneHouseRentalHousingVerdict = {
  */
 export function buildRentalHousingVerdict(
   input: TransferTaxInput,
+  /**
+   * D12 — 계산기 STEP 2.5와 같은 세대 구성 판정. `exceeded`면 호별·거주 요건을 모두 갖춰도 불충족이다
+   * (§155⑳+③+① 3중첩 불가 — 사전-2016-법령해석재산-0584 · 조심-2021-중-5977). 종전에는 판정 메뉴가 이 판정을
+   * 부르지 않아 3중첩에도 비과세가 났다. 「확인 필요」 고지는 나머지 요건을 충족해 결론을 가를 때만 싣는다.
+   */
+  composition?: RentalResidenceComposition,
 ): OneHouseRentalHousingVerdict | null {
   const eligibility = judgeRentalHousingEligibility(input);
   if (!eligibility) return null;
+  const exceeded = composition?.status === "exceeded" ? composition : undefined;
+  const compositionNotice = exceeded?.confirmNotice && eligibility.passed ? [exceeded.confirmNotice] : [];
   return {
     scenario: input.rentalHousingException?.scenario ?? "A",
-    passed: eligibility.passed,
+    passed: eligibility.passed && !exceeded,
     residenceFailReasons: eligibility.residenceFailReasons,
     unitFailReasons: eligibility.failReasons.map((f) => ({
       unitIndex: f.unitIndex,
       message: f.message,
     })),
+    ...(exceeded ? { compositionFailReason: exceeded.reason } : {}),
     periodPendingUnitIndexes: eligibility.periodPendingUnitIndexes ?? [],
-    notices: eligibility.notices ?? [],
+    notices: [...(eligibility.notices ?? []), ...compositionNotice],
     ...(eligibility.cancellationWindow ? { cancellationWindow: eligibility.cancellationWindow } : {}),
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   };
@@ -85,20 +101,5 @@ export function applyRentalHousingVerdict(
   verdict: OneHouseRentalHousingVerdict | null,
 ): OneHouseJudgment {
   if (!verdict || verdict.passed) return judgment;
-  /**
-   * 🔴 비과세를 끄면 **비과세 사유도 함께 지운다**(OH-53). 코어 판정이 남긴
-   *    `exemptReason`(「1세대1주택 비과세」)과 `appliedExceptions`는 **비과세였을 때의 근거**다.
-   *    그대로 두면 결과 화면이 「과세」 배지 바로 아래에 「1세대1주택 비과세」와 「적용된 특례」
-   *    카드를 함께 그린다. 코어 판정도 과세일 때는 두 필드를 비워 낸다 — 같은 불변식을 지킨다.
-   */
-  //    요건 순차 검토(`requirementReview`)도 같은 이유로 지운다 — 코어 판정 기준으로 「전 요건 충족」인
-  //    행을 과세 배지 아래에 그리면 모순이다. §155⑳ 불충족 사유는 임대주택 카드가 말한다(2026-09-29).
-  return {
-    ...judgment,
-    isExempt: false,
-    isPartialExempt: false,
-    exemptReason: undefined,
-    appliedExceptions: [],
-    requirementReview: undefined,
-  };
+  return revokeOneHouseExemption(judgment);
 }

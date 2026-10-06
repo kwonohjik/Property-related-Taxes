@@ -42,7 +42,7 @@
       "isExempt": false,
       "rentalPassed": false
     },
-    "bucket": "mismatch",
-    "note": "mismatch. 관측: isExempt=true·rentalPassed=true / 기대: 과세 — 양도일 현재 「소득세법」 §168 세무서 사업자등록이 없으면(구청 임대사업자 등록만으로는) 장기임대주택이 아니다. 표현: 세무서 사업자등록일 2015-12-07(양도 2014-10-30 이후)·지자체 등록 2014-04-03을 원문 그대로 입력, 임대 2개월(전세계약 2014-08-22), 구법 등록 유형(pre_2018), ⑧ 오류 0. 최소쌍: 세무서 사업자등록일을 양도일 전(2014-04-03)으로 바꿔도 결과가 같다(프로브) — E163-era와 같은 원인(등록일이 양도일과 비교되지 않음). 의심 지점: lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:447-589, lib/tax-engine/rental-article/check.ts:374, lib/calc/transfer-tax-validate-rental-exception.ts:98-99. 가정: 거주주택 거주 120개월·양도가 3억·임대주택 수도권 서초·기준시가 1억(원문 미기재)."
+    "bucket": "match",
+    "note": "match(D10 수정 후). 세무서 사업자등록일(2015-12-07)이 양도일(2014-10-30) 뒤 → 「양도일 현재」 사업자등록 불충족(행위시 §155⑲ → §167의3①2호 경유)·과세. E163-era는 지자체 쪽, 이 케이스는 세무서 쪽 단독. 가정: 거주주택 거주 120개월·양도가 3억·임대주택 수도권 서초·기준시가 1억(원문 미기재)."
   }
 ]

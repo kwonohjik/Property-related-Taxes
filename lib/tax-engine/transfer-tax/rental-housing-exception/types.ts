@@ -9,6 +9,7 @@
 
 import type { ArticleFailCode } from "../../rental-article/check";
 import type { AptTransferDeadlineExtension } from "../../rental-article/rules";
+import type { AddendumTransitionBasis } from "../../data/rental-155-20-era";
 
 // ============================================================
 // 임대주택 단위 입력
@@ -170,6 +171,11 @@ export type RentalHousingExceptionInput = {
    * 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인된다(종전 규정 적용). 미입력 = false.
    */
   residenceTransitionUnderAddendum?: boolean;
+  /**
+   * D11 — 위 경과조치의 사유(부칙 제7조② 1호 거주 · 2호 계약금 + 2019.2.12. 전 등록 임대주택 소유 여부).
+   * 생애 1회 제한(OH-40)은 `isAddendumTransitionEffective`로만 푼다 — 사유가 없으면 풀지 않는다.
+   */
+  residenceTransitionBasis?: AddendumTransitionBasis;
   /**
    * §154⑩1호(I-5) — 이 주택이 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록되거나
    * 「영유아보육법」 §12·§13에 따른 어린이집으로 설치·운영된 사실이 있는가. `rentalUnits`가 0호인

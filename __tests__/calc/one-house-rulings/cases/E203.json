@@ -35,7 +35,9 @@
               "requirementsConfirmed": true
             }
           ],
-          "residenceTransitionUnderAddendum": true
+          "residenceTransitionUnderAddendum": true,
+          "residenceTransitionBasis": "contract_without_prior_rental",
+          "priorRentalExemptionHistory": "used"
         }
       }
     },
@@ -43,8 +45,8 @@
       "isExempt": false,
       "rentalPassed": false
     },
-    "bucket": "mismatch",
-    "note": "mismatch. 관측: isExempt=true·rentalPassed=true / 기대: 과세 — 2019.2.12. 전 장기임대주택을 보유하지 않은 상태에서 계약한 대체 분양권 C는 부칙 §7② 종전규정을 적용받지 못해, B 양도로 이미 쓴 생애 한 차례 제한에 걸린다. E175-era와 같은 원인: 경과조치 체크(C분양권 2018.3. 계약·계약금)를 사실대로 켜면 엔진이 종전규정을 부여하고, 임대주택 A의 등록일(2019-07-15, 2019.2.12. 이후)은 보지 않는다. 최소쌍: 체크를 끄고 이력 'used'로 바꾸면 과세(rentalPassed=false). 의심 지점: lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:385-386 → lib/tax-engine/data/rental-155-20-era.ts:68-80, components/calc/transfer/RentalHousingExceptionSection.tsx:261-270. 가정: 원문 양도예정일 2026.4.는 2025.2.28. 이후라 횟수 제한 폐지 후 — 원문 당시(2022) 법을 적용하려고 양도일을 2024-04-15로 가정, C 취득 2020-11-15·거주 40개월·양도가 8억, A 장기일반 2019-07-15 등록·수도권·기준시가 3억."
+    "bucket": "match",
+    "note": "match(D11 수정 후). 경과조치 체크를 켜고 사유를 「그 전 계약금 지급 · 2019.2.12. 전 등록 임대주택 없음」으로 원문 사실대로 입력 → 종전규정 미적용 → B 양도로 이미 쓴 생애 한 차례 제한(이력 '있음')에 걸려 과세. 종전에는 체크 하나로 종전규정을 부여해 비과세였다. 가정: 원문 양도예정일 2026.4.는 2025.2.28. 이후라 횟수 제한 폐지 후 — 원문 당시(2022) 법을 적용하려고 양도일을 2024-04-15로 가정, C 취득 2020-11-15·거주 40개월·양도가 8억, A 장기일반 2019-07-15 등록·수도권·기준시가 3억."
   },
   {
     "id": "E203-current",

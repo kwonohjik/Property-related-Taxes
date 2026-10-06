@@ -29,6 +29,7 @@
  * | H-3 거주 + 임대 + 상속 + 신규(3중첩) | 199,997,600 / 0 | 1,327,903,500 (3009) |
  * | H-4 명부 없음 · 주택 수 3 | 199,997,600 / 0 | 199,997,600 → 2026-10-04 1,327,903,500 (모름 → 불리) |
  * | H-5 임대주택이 유일한 나중 취득 행 + 다른 일반주택 | 102,086,600 / 0 | 1,327,903,500 |
+ * | H-6 H-3을 임대주택 행 없이(D12) | 102,086,600 (§155②·① 고가 비과세) | 304,887,000 (특례 불성립) |
  * | G-3 시나리오 B(RH-B1 · mock 세율) | 67,309,000 / 22,093,500 | 67,309,000 |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -156,6 +157,7 @@ interface Single {
   totalTax: number;
   rentalApplied: boolean;
   notApplicable: string | undefined;
+  warnings: string[];
 }
 async function single(f: Form): Promise<Single> {
   const res = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
@@ -167,6 +169,7 @@ async function single(f: Form): Promise<Single> {
     totalTax: r.totalTax as number,
     rentalApplied: (r.rentalHousingExceptionDetail as { applied?: boolean } | undefined)?.applied === true,
     notApplicable: steps.find((s) => s.label === "장기임대주택 거주주택 비과세 특례 — 적용 불가")?.formula,
+    warnings: (r.warnings ?? []) as string[],
   };
 }
 async function multi(f: Form): Promise<number> {
@@ -294,6 +297,32 @@ describe("E-14h 비과세 — 「장기임대주택 … 과 그 밖의 1주택�
     expect(s).toMatchObject({ totalTax: FULLY_TAXED, rentalApplied: false });
     expect(s.notApplicable).toMatch(/확인되지 않아/);
     expect(await multi(f)).toBe(FULLY_TAXED);
+  });
+
+  /**
+   * D12 — 임대주택 행을 명부에 넣지 않으면(카드 안내대로 「임대주택 제외」) STEP 1이 §155②·①로 비과세를 내고,
+   * 호별·거주 요건을 충족하면 STEP 1a 조기반환으로 STEP 2.5(세대 구성)에 닿지 않았다 → 3중첩에도 비과세 0.
+   * 판정 메뉴 시료: one-house-rulings `E193`·`E194`.
+   */
+  it("H-6 H-3과 같은 3중첩을 임대주택 행 없이 입력 → 특례 불성립·과세 (단건 = 다건)", async () => {
+    const f = withRental(
+      form([INHERITED, NEW_HOUSE], {
+        temporaryTwoHouseSpecial: true,
+        newHouseAcquisitionDate: "2025-01-01",
+      }),
+    );
+    const s = await single(f);
+    // 수정 전 102,086,600은 §155②·① 고가주택 비과세(12억 초과분만 과세) — 「> 0」으로는 구별되지 않는다.
+    // 304,887,000은 임대주택이 명부에 없어 중과 주택 수에서도 빠진 값(기본세율) — 그 사실을 고지한다.
+    expect(s).toMatchObject({ totalTax: 304_887_000, rentalApplied: false });
+    expect(s.notApplicable).toMatch(/2채/);
+    expect(s.warnings.some((w) => w.includes("목록에 「장기임대」로 넣어"))).toBe(true);
+    expect(await multi(f)).toBe(s.totalTax);
+  });
+
+  it("H-6+ 긍정 짝 — 임대주택 행 없이 상속주택 하나(§155⑳·② 2중첩) → 특례 유지·비과세 판정", async () => {
+    const f = withRental(form([INHERITED]));
+    expect(await single(f)).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
   });
 
   it("H-5 명부의 유일한 나중 취득 행이 임대주택 + 다른 일반주택 → §155①로 보지 않는다 → 특례 불성립", async () => {

@@ -10,6 +10,7 @@
  * | W-16 | OH-16 | 마목 918 안내가 양도일(2021-02-16/17)에 따라 갈린다 — 엔진과 같은 leaf |
  * | W-15 | OH-15 | B면 ③에 「등록 이후 거주기간」 칸이 모든 모드에 뜬다(A는 없다 — 짝) |
  * | W-40 | OH-40 | 판정 메뉴 구간 내에서만 경과조치·이력 입력이 뜨고, 계산기엔 없다 |
+ * | W-U2 | U2 | 말소 호의 ⑳2호 자기확인은 「말소 전까지」 충족을 묻는다(재산세제과-151) — 말소 OFF면 「양도일 현재」(짝) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -161,9 +162,27 @@ describe("W-40 생애 1회 구간 입력", () => {
     renderSection(sectionAsset({}, "2019-06-01"), "facts", "2025-02-28");
     expect(screen.queryByTestId("rental-lifetime-limit-block")).toBeNull();
   });
-  it("W-40c 경과조치 ON이면 이력 라디오를 묻지 않는다", () => {
-    renderSection(sectionAsset({ residenceTransitionUnderAddendum: true }, "2019-06-01"), "facts", "2024-06-01");
+  it("W-40c 경과조치 ON + 사유(당시 거주)면 이력 라디오를 묻지 않는다", () => {
+    renderSection(
+      sectionAsset({ residenceTransitionUnderAddendum: true, residenceTransitionBasis: "residing" }, "2019-06-01"),
+      "facts",
+      "2024-06-01",
+    );
     expect(screen.queryByTestId("rental-prior-history-used")).toBeNull();
+  });
+  it("W-40c2 (D11) 경과조치 ON이면 사유 선택지가 뜨고, 「계약금 · 임대주택 없음」이면 이력 라디오를 다시 묻는다", () => {
+    renderSection(sectionAsset({ residenceTransitionUnderAddendum: true }, "2019-06-01"), "facts", "2024-06-01");
+    expect(screen.getByTestId("rental-transition-basis-contract-without-rental")).toBeTruthy();
+    cleanup();
+    renderSection(
+      sectionAsset(
+        { residenceTransitionUnderAddendum: true, residenceTransitionBasis: "contract_without_prior_rental" },
+        "2019-06-01",
+      ),
+      "facts",
+      "2024-06-01",
+    );
+    expect(screen.getByTestId("rental-prior-history-used")).toBeTruthy();
   });
   it("W-40d 계산기(calc)에는 판정 사실 칸이 없다", () => {
     renderSection(sectionAsset({}, "2019-06-01"), "calc", "2024-06-01");
@@ -175,5 +194,25 @@ describe("W-40 생애 1회 구간 입력", () => {
     cleanup();
     renderSection(sectionAsset({}, "2019-06-01"), "calc", "2024-06-01");
     expect(screen.queryByTestId("imported-rental-lifetime-facts")).toBeNull();
+  });
+});
+
+describe("W-U2 말소 호 자기확인 문구", () => {
+  const unit = (terminated: boolean): Unit => ({
+    ...makeDefaultRentalUnit(),
+    businessRegistrationDate: "2017-01-20",
+    rentalRegistrationDate: "2017-01-20",
+    rentalAutoTermination: terminated,
+  });
+  const title = () => screen.getByTestId("rental-requirements-confirmed-0").textContent ?? "";
+  it("W-U2a 말소 ON → 「등록 말소 전까지」", () => {
+    renderCard(unit(true), "2023-03-15");
+    expect(title()).toContain("등록 말소 전까지");
+    expect(title()).not.toContain("양도일 현재");
+  });
+  it("W-U2b 말소 OFF → 「양도일 현재」(짝)", () => {
+    renderCard(unit(false), "2023-03-15");
+    expect(title()).toContain("양도일 현재");
+    expect(title()).not.toContain("등록 말소 전까지");
   });
 });

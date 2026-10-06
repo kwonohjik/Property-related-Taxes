@@ -233,6 +233,10 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
               {rental.residenceFailReasons.map((r, i) => (
                 <li key={`res-${i}`}>{r}</li>
               ))}
+              {/* D12 — 세대 구성 불성립(3중첩 등). 구 응답엔 필드가 없다. */}
+              {rental.compositionFailReason && (
+                <li data-testid="one-house-rental-composition">{rental.compositionFailReason}</li>
+              )}
               {rental.unitFailReasons.map((u, i) => (
                 <li key={`unit-${i}`}>
                   임대주택 {u.unitIndex + 1}호 — {u.message}
