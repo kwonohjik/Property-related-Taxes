@@ -35,6 +35,18 @@ export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
 export const RURAL_HOUSE_RESIDENCE_YEARS = 5;
 // §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
 export const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
+/**
+ * D15 — ⑦ 단서는 대통령령 제26982호(2016.2.17. 공포·시행)가 신설했다(2016-01-01본에 없음 · DRF eflaw 실독).
+ * 부칙 제10조 「제155조제7항 각 호 외의 부분 단서 … 의 개정규정은 이 영 시행 이후 **귀농주택을 취득하는 분부터**
+ * 적용한다」 · 제22조 「이 영 시행 전에 귀농주택을 취득한 경우에는 … 종전의 규정에 따른다」 — 기준축은 양도일이
+ * 아니라 귀농주택 취득일이다.
+ */
+export const RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START = new Date("2016-02-17");
+
+/** ⑦ 단서(귀농주택 취득일부터 5년 이내 양도)가 이 귀농주택에 붙는가 — 2016-02-17 전 취득분은 종전 규정(단서 없음). */
+export function ruralReturnToFarmDeadlineApplies(acquisitionDate: Date): boolean {
+  return acquisitionDate.getTime() >= RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START.getTime();
+}
 // §155⑩3호 — 귀농주택 대지면적 상한(㎡).
 export const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
 
@@ -57,7 +69,8 @@ export function qualifiesRuralHouse(
   if (!qualifiesRuralHouseApartFromDeadline(input)) return false;
   const r = input.ruralHouse!;
   if (r.kind !== "return_to_farm") return true;
-  // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정.
+  // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정(2016-02-17 이후 취득분만 — D15).
+  if (!ruralReturnToFarmDeadlineApplies(r.acquisitionDate!)) return true;
   return isWithinDeadline(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
 }
 

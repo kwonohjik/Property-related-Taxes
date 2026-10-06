@@ -7,6 +7,11 @@
  *
  * | 구간 | 기준축 | 기한 | 근거 |
  * |---|---|---|---|
+ * | 양도 < 2002-03-30 | 양도일 | **2년** · 1년 경과 요건 없음 | 1999-01-01 ~ 2002-01-01본 §155①(DRF eflaw 실독 — 1999-01-01 전 시행본은 미확인) |
+ * | 2002-03-30 ≤ 양도 < 2008-11-28 | 양도일 | **1년** · 1년 경과 요건 없음 | 2002-03-30본 §155①(제17555호, 공포일 시행) · 같은 부칙 ② 「시행후 최초로 양도하는 분부터」 |
+ * | ↳ 그중 신규 취득 < 2002-03-30 | 신규취득일 | 부칙 ③ 경과조치(아래) — **미구현: 종전 2년 + 판정 보류 고지** | 제17555호 부칙 ③ |
+ * | 2008-11-28 ≤ 양도 < 2012-06-29 | 양도일 | **2년** · 1년 경과 요건 없음 | 2008-11-28본 §155①(제21138호, 부칙 제2조 「시행 후 최초로 양도하는 분부터」) |
+ * | 양도 ≥ 2012-06-29 | — | 본문 3년 + 「종전의 주택을 취득한 날부터 1년 이상이 지난 후」 | 2012-06-29본 §155①(제23887호, 공포일 시행) — DRF eflaw 실독 2026-10-06 |
  * | 비조정 또는 한쪽만 조정 | — | 3년(본문) | §155① 본문 |
  * | 조정→조정, 양도 < 2018-10-23 | 양도일 | 3년(본문) | 대통령령 제29242호 부칙 제2조① |
  * | 조정→조정, 신규 취득 ≤ 2018-09-13 | 신규취득일 | 3년(본문) | 제29242호 부칙 제2조②1호 |
@@ -50,6 +55,27 @@
 
 import { isOnOrBeforeDeadline, periodEndFrom } from "../civil-period";
 
+/**
+ * 제17555호 시행(공포)일 — 이 날 이후 양도분부터 처분기한 2년 → 1년 (부칙 ②).
+ * 부칙 ③(중복보유기간 단축 경과조치): 시행 당시 신규 주택을 이미 취득해 종전 2년이 끝나지 않았으면 1호(시행일까지
+ * 1년 이하 — 시행일부터 1년이 되는 날, 단 시행일부터 6월 경과 후 보유기간 충족이면 충족일 + 6월과 취득일부터 2년 중
+ * 빠른 날)·2호(1년 초과 — 취득일부터 2년이 되는 날)까지 양도하면 1세대1주택. 보유기간 충족일(당시 §154① 지역별
+ * 보유·거주)을 정확히 재현하지 못해 구현하지 않았다 — 종전 2년으로 두고 판정 보류를 고지한다.
+ */
+export const TT_1Y_DEADLINE_TRANSFER_START = new Date("2002-03-30");
+/** 제21138호 시행(공포)일 — 이 날 이후 양도분부터 처분기한 1년 → 2년 (부칙 제2조). */
+export const TT_2Y_DEADLINE_TRANSFER_START = new Date("2008-11-28");
+/**
+ * 제23887호 시행(공포)일 — 이 날 이후 양도분부터 처분기한 2년 → 3년과 「종전의 주택을 취득한 날부터
+ * 1년 이상이 지난 후 다른 주택을 취득」 요건(부칙 제2조 「이 영 시행 후 최초로 양도하는 분부터」).
+ */
+export const TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START = new Date("2012-06-29");
+
+/** 요건 A(종전주택 취득 후 1년 경과 후 신규 취득)가 이 양도에 있는가 — 2012-06-29 전 양도분에는 없다. */
+export function isOneYearHoldRequiredForTemporaryTwoHouse(transferDate: Date): boolean {
+  return transferDate.getTime() >= TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START.getTime();
+}
+
 /** 제29242호 시행(공포)일 — 이 날 이후 양도분부터 조정→조정 2년 (부칙 제2조①). */
 export const TT_REGULATED_2Y_TRANSFER_START = new Date("2018-10-23");
 /** 제29242호 부칙 제2조② — 신규 취득이 이 날 **전**(2018-09-13 이전)이면 종전 3년. */
@@ -86,6 +112,8 @@ export interface TemporaryTwoHouseDeadlineEra {
    * `undefined`(기한은 `years`로 센다).
    */
   deadlineDate?: Date;
+  /** 제17555호 부칙 ③(2002-03-30 전 신규 취득 · 그 후 양도) 경과조치를 판정하지 않았다 — 판정 보류 고지용. */
+  transition2002Unverified?: boolean;
 }
 
 /** UTC 달력일 키 — `civil-period.ts`와 같은 규약(date-coerce 운영 경로 = UTC 자정). */
@@ -96,8 +124,9 @@ const dayKey = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getU
  *
  * @param bothRegulated 「종전 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을
  *   취득」했는가 — 호출부가 신규 취득일 기준으로 판정해 넘긴다.
- * @param baseDeadlineYears §155① 본문 기한(3년). 규칙 행 `temporary_two_house.disposalDeadlineYears`
- *   — 연혁 없이 전 구간 3년이라(각 시행본 본문 실독) 연혁 값이 아니다.
+ * @param baseDeadlineYears §155① 본문 기한(3년). 규칙 행 `temporary_two_house.disposalDeadlineYears`.
+ *   🔴 종전 주석은 「연혁 없이 전 구간 3년」이었으나 틀렸다 — 2012-06-29 전 양도분은 2년, 2002-03-30 ~
+ *   2008-11-27 양도분은 1년, 그 전은 2년이다(D14). 그 구간들은 아래에서 이 값보다 먼저 정한다.
  */
 export function resolveTemporaryTwoHouseDeadlineEra(p: {
   bothRegulated: boolean;
@@ -114,6 +143,14 @@ export function resolveTemporaryTwoHouseDeadlineEra(p: {
    * (「증빙서류에 의하여 확인되는 경우」 — 자기선언 입력이다.)
    */
   newContractDate?: Date;
+  /**
+   * 종전주택 취득일(D13) — 부칙 제29242호 제2조②·제30395호 제15조②·제36737호 제2조②는 모두 「조정대상지역에
+   * 종전의 주택을 **보유한** 1세대가 … 이전에 신규 주택을 취득(계약)한 경우」다. 종전주택을 보유하기 **전에**
+   * 신규 분양권을 계약했으면 그 계약은 경과조치의 기준이 아니고 종전주택 취득시점이 기준이다
+   * (기획재정부 재산세제과-512, 2021.5.25. 별첨 Case 2 — 분양권 2개면 먼저 주택이 되는 시점).
+   * ⚠️ 같은 Case 2는 조정대상지역 여부도 「해당 시점들」로 보지만, 호출부의 `bothRegulated`는 신규 취득일 기준이다(확인 필요).
+   */
+  previousAcquisitionDate?: Date;
   /** 2019-12-17 체제 2호 가목 — 세대전원 이사·전입신고를 마친 날. */
   moveInDate?: Date;
   /** 2019-12-17 체제 2호 단서 — 신규 취득일 현재 거주하던 기존 임차인과 전 소유자의 임대차계약 종료일. */
@@ -121,13 +158,25 @@ export function resolveTemporaryTwoHouseDeadlineEra(p: {
   transferDate: Date;
 }): TemporaryTwoHouseDeadlineEra {
   const base = { years: p.baseDeadlineYears, moveInRequirementPending: false };
-  if (!p.bothRegulated) return base;
   const t = p.transferDate.getTime();
+  // D14 — 조정대상지역 기한이 생기기 전 구간. 지역과 무관하게 양도일로 정한다.
+  if (t < TT_1Y_DEADLINE_TRANSFER_START.getTime()) return { years: 2, moveInRequirementPending: false };
+  if (t < TT_2Y_DEADLINE_TRANSFER_START.getTime()) {
+    if (p.newAcquisitionDate && p.newAcquisitionDate.getTime() < TT_1Y_DEADLINE_TRANSFER_START.getTime()) {
+      return { years: 2, moveInRequirementPending: false, transition2002Unverified: true };
+    }
+    return { years: 1, moveInRequirementPending: false };
+  }
+  if (t < TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START.getTime()) return { years: 2, moveInRequirementPending: false };
+  if (!p.bothRegulated) return base;
   // 부칙 경과조치의 기준 — 「…이전에 취득한 경우」(1호) 또는 「…이전에 매매계약을 체결하고 계약금을
   //   지급한 경우」(2호). 둘 중 하나라도 기준일 이전이면 종전 규정이므로 이른 날짜가 기준이다.
   const acq = p.newAcquisitionDate?.getTime();
   const contract = p.newContractDate?.getTime();
-  const n = acq === undefined ? undefined : contract === undefined ? acq : Math.min(acq, contract);
+  const earliest = acq === undefined ? undefined : contract === undefined ? acq : Math.min(acq, contract);
+  // D13 — 종전주택 보유 전의 계약·취득은 「종전의 주택을 보유한 1세대가」의 기준이 될 수 없다 — 종전주택 취득시점.
+  const prev = p.previousAcquisitionDate?.getTime();
+  const n = earliest === undefined || prev === undefined ? earliest : Math.max(earliest, prev);
   // 2026 개정(제36737호) — §155①1호 「신규 취득일 현재 조정→조정」 + 신규 취득(또는 계약)이
   //   2026-08-04 이후인 경우만 2년. 그 밖은 「제1호 외의 경우」(2호)로 본문 3년 — n 미확정(호출부가
   //   항상 넘긴다는 전제가 깨진 경우)도 1호를 확정할 수 없으므로 2호로 둔다(법 근거 없이 유리하게
