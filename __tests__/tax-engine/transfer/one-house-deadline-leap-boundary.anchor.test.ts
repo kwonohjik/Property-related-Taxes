@@ -277,10 +277,16 @@ describe("§156의2⑤ 대체주택 — 신축주택 완성일(2021-02-28) 후 3
 });
 
 describe("§89①4호나목 — 그 1주택 취득일부터 3년 이내 입주권 양도", () => {
+  // 분양권 「없음」 확정 — 이 describe는 윤년 경계 축이 관심사다(§4-6 남은 별건 3).
   const clause = (otherHouse: string, t: string) =>
     resolveOneRightExemptionClause(
       { exemptionEligibleAtApproval: true, otherHouseAcquisitionDate: D(otherHouse) },
-      input({ householdHousingCount: 1, householdRightCount: 1, transferDate: D(t) }),
+      input({
+        householdHousingCount: 1,
+        householdRightCount: 1,
+        transferDate: D(t),
+        householdNoPresaleRightsConfirmed: true,
+      }),
     );
 
   it("평년 2/28 취득 → 윤년 2/29 만료: 만료일 ✓ · 다음날 ✗", () => {

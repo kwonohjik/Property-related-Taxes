@@ -60,6 +60,8 @@ function run(over: Partial<TransferTaxInput> = {}, redevOver: Partial<Redevelopm
     householdHousingCount: 0,
     householdRightCount: 1,
     residencePeriodMonths: 0,
+    // 분양권 「없음」 확정 — 이 파일은 본문 세대 구성 요건이 관심사다(2026-10-06, §4-6 남은 별건 3).
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: rightInfo(redevOver),
     ...over,
   });

@@ -367,6 +367,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).
+    householdNoPresaleRightsConfirmed: form.householdNoPresaleRightsConfirmed,
     // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 단건(`transfer-tax-api.ts:463`)과 같은 형태.
     //    미정의 시 침묵 stripping 방지를 위해 **명시 선언**한다.
     nonHousingToHousingConversion:

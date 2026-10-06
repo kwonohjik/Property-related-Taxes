@@ -245,6 +245,8 @@ export function buildTransferEngineInput(
     // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
     houses: mapHousesToEngine(data.houses),
     presaleRights: mapPresaleRightsToEngine(data.presaleRights),
+    // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo (roster-required-other-assets §4-6)
+    householdNoPresaleRightsConfirmed: data.householdNoPresaleRightsConfirmed,
     sellingHouseId: data.sellingHouseId,
     gracePeriod: mapGracePeriodToEngine(data.gracePeriod),
     marriageMerge: data.marriageMerge

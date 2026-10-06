@@ -95,7 +95,8 @@ const RIGHT_ONE_HOUSEHOLD = {
   settlementAmount: 50_000_000,
   exemptionEligibleAtApproval: true,
 };
-const RIGHT_INPUT = { householdHousingCount: 0, householdRightCount: 1 };
+// 분양권 「없음」 확정 — 이 파일은 LTHD 분해 정합이 관심사다(2026-10-06, §4-6 남은 별건 3)
+const RIGHT_INPUT = { householdHousingCount: 0, householdRightCount: 1, householdNoPresaleRightsConfirmed: true };
 
 describe("E3-05 · 마스킹 3경로의 LTHD 분해 정합", () => {
   it("E3-05-01: 🔑 청산금 수령 비과세(applySettlementExemption) — 마스킹된 열의 보유분도 0이다", () => {

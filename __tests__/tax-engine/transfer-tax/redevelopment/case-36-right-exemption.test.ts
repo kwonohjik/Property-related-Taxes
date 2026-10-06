@@ -92,6 +92,8 @@ function exemptBaseInput(overrides: Partial<TransferTaxInput> = {}): TransferTax
     householdHousingCount: 0,  // 다른 주택 없음 (조건 4)
     householdRightCount: 1,    // 1입주권 (조건 5)
     residencePeriodMonths: 0,
+    // 분양권 「없음」 확정 — 비과세 조건 충족 fixture의 기본값(2026-10-06, §4-6 남은 별건 3)
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: redevInfoExemptPay(),
     ...overrides,
   });

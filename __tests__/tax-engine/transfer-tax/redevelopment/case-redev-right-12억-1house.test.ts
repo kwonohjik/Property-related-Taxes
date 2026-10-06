@@ -100,6 +100,8 @@ function baseInput(overrides?: Partial<TransferTaxInput>): TransferTaxInput {
     householdHousingCount: 1,
     householdRightCount: 1,
     residencePeriodMonths: 24, // 거주 2년 (표2 진입 가드)
+    // 분양권 「없음」 확정 — 이 파일은 12억 안분 축이 관심사다(2026-10-06, §4-6 남은 별건 3)
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: baseRedevInfo(),
     ...overrides,
   });

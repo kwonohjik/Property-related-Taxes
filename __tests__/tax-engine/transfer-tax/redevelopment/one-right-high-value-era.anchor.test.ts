@@ -59,6 +59,8 @@ function rightInput(transferDate: string, transferPrice: number, approvalDate = 
     householdHousingCount: 0,
     householdRightCount: 1,
     residencePeriodMonths: 24,
+    // 분양권 「없음」 확정 — 이 파일은 고가 기준금액 연혁이 관심사다(2026-10-06, §4-6 남은 별건 3).
+    householdNoPresaleRightsConfirmed: true,
     redevelopment: redevInfo(approvalDate),
   });
 }

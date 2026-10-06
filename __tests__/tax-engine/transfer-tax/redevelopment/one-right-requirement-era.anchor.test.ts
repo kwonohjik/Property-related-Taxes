@@ -60,6 +60,9 @@ function input(transferDate: string, price: number, o: Opt = {}): TransferTaxInp
     householdHousingCount: o.houses ?? 0,
     householdRightCount: o.rights ?? 1,
     residencePeriodMonths: 24,
+    // 분양권 「없음」 확정 — 이 파일의 테스트는 요건 연혁(나목 기한·고가 기준)이 관심사이고
+    // `o.presale` 미지정은 "세대가 분양권을 보유하지 않음"을 뜻한다(2026-10-06, §4-6 남은 별건 3).
+    householdNoPresaleRightsConfirmed: true,
     ...(o.presale
       ? {
           presaleRights: o.presale.map((p, i) => ({
