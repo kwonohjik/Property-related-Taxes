@@ -1,0 +1,43 @@
+[
+  {
+    "id": "E124-era",
+    "docNo": "국심-2003-중-1253",
+    "docDate": "2003.06.10.",
+    "basis": "era",
+    "today": "2003-06-10",
+    "summary": "1주택 보유 청구인이 2주택 보유 부(父)와 동거봉양 합가(2002.4.) 후 합가일부터 2개월에 청구인 주택 양도 — 1세대 3주택",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-05-30",
+      "contractTotalPrice": "300000000",
+      "parentalCareMergeDate": "2002-04-10",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-07-30"
+      },
+      "houses": [
+        {
+          "id": "f1",
+          "region": "capital",
+          "acquisitionDate": "1996-11-05",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "f2",
+          "region": "capital",
+          "acquisitionDate": "2000-03-08",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: isExempt=true(applied 155-1-temporary-two-house + 155-4-parental-care-merge) / 기대: 과세(1주택 보유자가 2주택 보유 직계존속과 합가해 3주택 — 동거봉양 합가 특례 적용 불가). ⑧ 오류 0. 최소쌍: 부의 둘째 주택 취득일을 양도 주택보다 앞선 1996-12-05로 바꾸면 과세(unmet 「신규 주택이 하나로 특정되지 않습니다」) → 원문 일자(부의 둘째 주택 2000-03-08이 양도 주택 1997-07-30보다 늦음)에서는 상대 쪽(부) 주택이 양도 세대의 「신규 주택」으로 도출되어 §155①+④ 중첩 3주택이 성립한다. 의심 지점: lib/calc/household-house-count.ts:310(resolveTemporaryTwoHouse — 양도 주택보다 늦게 취득한 행이면 소유 쪽과 무관하게 신규 주택으로 도출), lib/tax-engine/one-house/merge-composition.ts(3주택 (1,2,0) 구성 허용 — holds 식)·merge-deeming.ts:291(mergeOverlapTwoHouseHolds). 일자: 원문 그대로(취득 1997-07-30, 부 1996-11-05·2000-03-08, 합가 2002-04-10, 양도 2002-05-30) — 양도가 3억 가정, 당시 기한(합가 2년·일시적 1년)은 엔진 연혁에 없고 이 케이스는 기한 이내라 기한 축 구별력 없음."
+  }
+]

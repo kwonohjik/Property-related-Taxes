@@ -1,0 +1,33 @@
+[
+  {
+    "docNo": "서면인터넷방문상담5팀-1237",
+    "docDate": "2008.06.10.",
+    "id": "E082-era",
+    "basis": "era",
+    "today": "2008-07-01",
+    "summary": "상속인 A·B·C가 주택을 각 1/3씩 공동상속(A 대표) — 상속개시 당시 B가, 양도 당시 C가 거주. §155③1호 「거주하는 자」의 판정기준일 (양도일·상속개시일 원문 미기재 — 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2008-09-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      },
+      "houses": [
+        {
+          "id": "co",
+          "region": "capital",
+          "acquisitionDate": "2002-06-15",
+          "isInherited": true,
+          "inheritedDate": "2002-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false,
+          "isLargestCoInheritedShareholder": true
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: 지분이 같은 공동상속인 중 「당해 주택에 거주하는 자」(§155③ 단서 1호)를 가르는 사실 — 거주 여부와 판정 기준일(상속개시일/양도일)을 담는 칸이 없다. 명부 행에는 「본인이 최대지분 상속인」 자기선언 하나뿐(화면 안내문에 거주자·최연장자 순서는 있으나 기준일은 없음). 회신 결론: 판정기준일은 상속개시일(사안상 B가 소유자로 산입). referenceForm은 B가 일반주택을 양도하는 경우를 산입(최대지분자 true)으로 표현 — 관측 과세. 최대지분자를 false로 바꾸면(C가 양도하는 경우의 표현) 소수지분 제외·비과세(V-E082-notlargest). 즉 엔진은 입력한 자기선언을 그대로 따를 뿐 기준일 쟁점을 검증하지 않는다. 가정: 양도일 2008-09-15, 상속개시 2002-06-15, 일반주택 취득 2000-03-15, 양도가 4억."
+  }
+]

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "E094-dual",
+    "docNo": "조심-2021-서-1117",
+    "docDate": "2022.08.10.",
+    "basis": "era",
+    "today": "2022-08-10",
+    "summary": "전환전주택(2007)이 입주권(2016.3.)이 된 뒤 모친과 동거봉양 합가(2016.8.), 모친 사망으로 모친 주택(합가 당시 모친의 유일 주택) 상속(2016.12.), 합가 3년 8개월 후 입주권 양도(2020.4.29.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2020-04-29",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2016-08-16",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2007-02-09",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2016-03-18",
+        "redevOtherHouseAcquisitionDate": "2016-12-20"
+      },
+      "houses": [
+        {
+          "id": "mother-house",
+          "region": "capital",
+          "acquisitionDate": "2016-12-20",
+          "isInherited": true,
+          "inheritedDate": "2016-12-20",
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true,
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual — 입장 A(합가 특례 적용 쪽 E001·E002): 입주권에도 §155②④ 적용 / 입장 B(조심-2021-서-1117, 2022.08.10.): 입주권 양도에 §155②·④를 유추 적용할 수 없고 §89①4호 요건만 본다 — 상속주택 보유·그 주택 취득일부터 3년 경과 양도는 비과세 불가. 현재 엔진 관측: isExempt=false — 상속주택은 주택 수에서 제외(houseCount.excluded §155②, counted 0)되지만 §89①4호 나목은 그 주택 취득일(redevOtherHouseAcquisitionDate=2016-12-20)부터 3년 이내 양도를 요구해 「3년을 넘겼습니다」로 과세(B와 같은 결론, 합가·상속 입력은 입주권 판정에서 읽히지 않음). 일자: 원문 그대로(전환전주택 2007-02-09, 관리처분 2016-03-18, 합가 2016-08-16, 상속 2016-12-20, 양도 2020-04-29), 양도가 8억 가정."
+  }
+]

@@ -1,0 +1,84 @@
+[
+  {
+    "id": "E143-era",
+    "docNo": "사전-2017-법령해석재산-0038",
+    "docDate": "2017.02.16.",
+    "basis": "era",
+    "today": "2016-12-21",
+    "summary": "1주택자(갑)와 다가구 공유지분자(을)가 혼인 후 신규주택을 공동취득하고 혼인 전 보유 주택을 양도 — 혼인일부터 5년·신규주택 취득일부터 3년 이내",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-12-20",
+      "contractTotalPrice": "500000000",
+      "marriageDate": "2013-04-13",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2007-08-28"
+      },
+      "houses": [
+        {
+          "id": "spouse-multi",
+          "region": "capital",
+          "acquisitionDate": "1991-02-25",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2016-05-25"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 사실관계는 원문 일자 그대로. 표현 메모: ① 갑의 A주택은 상속 취득이나 상속을 고르면 피상속인 취득일이 필수(⑫)인데 원문에 없고 판정에 영향이 없어 매매로 표현. ② 을의 다가구주택은 지분별 취득일이 다르나(1991·1993·2010.8.18. 증여 지분) 양도주택(2007) 뒤 취득분이 섞이면 신규주택(B) 도출이 모호해지므로 최초 취득일 1991-02-25를 쓴 단일 행으로 둠(합가 전 취득이라 분류는 동일). ③ 신규주택 B는 혼인 후 취득이라 날짜로 합가 후 취득 행으로 분류되고, 다른 한 행(다가구)의 합가 전 보유 쪽만 counterpart_side로 지정. 엔진 경로: 3주택 = §155⑤ 합가 + §155① 일시적 2주택 중첩(applied 155-1, 155-5). 프로브 음성 짝: 양도일 2019-06-01(B 취득 후 3년 초과)·보유 쪽 미지정 → 과세/⑧ 오류. 신규주택·종전주택 기간은 당시 기한(5년·3년) 이내."
+  },
+  {
+    "id": "E143-current",
+    "docNo": "사전-2017-법령해석재산-0038",
+    "docDate": "2017.02.16.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택자 갑과 1주택자 을이 혼인 후 신규주택을 공동취득하고 혼인 전 보유 주택을 혼인일부터 8년 1개월·신규주택 취득일부터 2년 2개월에 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2018-04-13",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-08-28"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "region": "capital",
+          "acquisitionDate": "2005-02-25",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2024-03-01"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 혼인합가 후 먼저 양도하는 주택의 기한 10년(2024.11.12. 이후 양도분 — 종전 5년), 신규주택 취득일부터 3년. 혼인 2018-04-13 → 양도 2026-05-15는 8년 1개월 — 5년 규정이면 불성립이라 구별력 있음(프로브: 혼인 2014-04-13(12년)이면 과세, 2022-04-13(4년)이면 비과세). 신규주택 공동취득 2024-03-01(양도 시 2년 2개월). 원문 패턴의 다가구 공유지분 세부는 판정과 무관해 일반 1주택(을)으로 단순화. 새 축 중립 고정: 비조정지역(거주요건 없음), 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E067-era",
+    "docNo": "기획재정부 재산세제과-1033",
+    "docDate": "2023.09.04.",
+    "basis": "era",
+    "today": "2023-09-04",
+    "summary": "1주택(A)과 2020.12.31. 이전 취득 분양권(B) 보유자가 2021.1.1. 이후 사망, 동일세대원 배우자가 A·B를 상속 후 A 양도 (구체 사실 없음 — 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-04-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "b",
+          "type": "presale_right",
+          "acquisitionDate": "2021-02-10",
+          "region": "capital",
+          "isInherited": true,
+          "decedentSameHouseholdAtInheritance": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "undetermined",
+    "note": "undetermined — 관측: isExempt=true이나 §89② 경로가 판정 보류(undetermined 89-2-open: 시행령 §156의3 ③·시행규칙 §75 ①)로 남는다. 기대: 비과세(분양권을 상속받아도 2020.12.31. 이전 피상속인 취득분이면 주택 수 산입 대상이 아니라 §155①이 적용). 입력 표현: 분양권 행(presaleRights) acquisitionDate=상속개시일 2021-02-10·isInherited·동일세대. 상속 분양권은 엔진이 「판정 불가 신호」로만 읽는다(calc-wizard-asset-nbl.ts PresaleRightEntry 주석). 최소쌍: acquisitionDate를 피상속인 취득일(2019-06-15)로 넣으면 article89Clause2=not_applicable·보류 없이 비과세 — 즉 결정적 사실(피상속인 취득일)을 담을 전용 칸이 없고 어느 날짜를 넣느냐에 따라 보류/확정이 갈린다. 일자 가정: A 취득 2015-03-15, 상속개시 2021-02-10, 양도 2024-04-15(상속개시 후 3년 초과 — 분양권을 주택 수에 산입하면 §156의3② 기한을 넘기도록)."
+  }
+]

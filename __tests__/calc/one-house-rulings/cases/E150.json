@@ -1,0 +1,38 @@
+[
+  {
+    "id": "E150-era",
+    "docNo": "서면-2017-부동산-2045",
+    "docDate": "2017.08.28.",
+    "basis": "era",
+    "today": "2017-08-28",
+    "summary": "별도세대 부(5년 이상 거주)에게서 상속(2003)받은 수도권 밖 면지역 주택(멸실·신축)을 보유한 세대가 일반주택(2009) 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2017-10-20",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-09-18"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2003-12-29",
+          "ruralHouseKind": "inherited",
+          "ruralDecedentResidenceYears": "29",
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자: 원문 그대로(상속 2003-12-29, 일반주택 A 2009-09-18), 양도 2017-10-20(원문 「2017년 양도 예정」, today 2017-08-28)·양도가 4억·A는 비조정 가정(2017-08-03 이후 양도이나 취득이 2009). 농어촌주택은 상속 표시(isInherited) 없이 §155⑦ 경로(kind=inherited, 피상속인 거주 29년)로 입력해 applied 155-7-rural:inherited. 멸실·신축 후에도 상속받은 주택으로 본다는 쟁점은 입력 칸이 없고(엔진은 행의 취득일=상속일만 본다) 결론은 일치. 「일반주택을 수차례 취득·양도해도 계속 적용」은 단건 판정이라 검증하지 않음. 최소쌍: 농어촌 행의 표시를 빼면 2주택 과세."
+  }
+]

@@ -1,0 +1,87 @@
+[
+  {
+    "id": "E210-era",
+    "docNo": "서면-2023-법규재산-0085 [법규과-926(2024.4.18.)]",
+    "docDate": "2024.04.18.",
+    "basis": "era",
+    "today": "2025-03-16",
+    "summary": "A(2021.8.29.)·B(2022.2.6.) 4년 단기 임대주택 자동말소, C(2022.8.1.) 자진말소(1/2 이상 임대) 후 B 지분 40%를 별도세대 자녀에게 증여하고 아내 소유 거주주택(2년 이상 거주) 양도 — 최초 말소일 5년 이내 (양도일 2025.3. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "120",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2017-08-29",
+              "rentalRegistrationDate": "2017-08-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2021-08-29",
+              "terminatedRegistrationType": "short_term"
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2018-02-06",
+              "rentalRegistrationDate": "2018-02-06",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2022-02-06",
+              "terminatedRegistrationType": "short_term"
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2018-08-01",
+              "rentalRegistrationDate": "2018-08-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2022-08-01",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 말소된 임대주택(B) 지분 40%를 별도세대 자녀에게 증여한 사실. 호에 지분·증여 칸이 없다. 참고 관측(referenceForm): A·B·C 3호를 모두 말소 호(2021-08-29·2022-02-06·2022-08-01, 단기 4년)로 입력, 양도 2025-03-15(최초 말소일 +5년 이내) → ㉓ 통과·비과세 — 증여 후에도 B가 남은 말소 임대주택으로 인정되는지는 검증되지 않는다. 5년 기산점(최초 말소일)은 E182-era-3이 단언한다. 가정: 양도일 2025-03-15·거주주택 취득 2010-03-15·거주 120개월·양도가 7억, 임대 48개월·수도권·기준시가 3억."
+  }
+]

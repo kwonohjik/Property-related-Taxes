@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E026-era",
+    "docNo": "서면인터넷방문상담4팀-2249",
+    "docDate": "2006.07.13.",
+    "basis": "era",
+    "today": "2006-06-16",
+    "summary": "일시적 2주택 기간 중 종전주택(A)을 동일세대원(남편)에게 매매로 양도 — 양도 후에도 2주택이라 특례 부적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2006-06-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-10-15"
+      },
+      "houses": [
+        {
+          "id": "gift",
+          "region": "non_capital",
+          "acquisitionDate": "2005-07-08"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 양수자가 동일세대원인지(처 → 남편 매매) — E025와 같은 축. 원문: A주택 1996-10 처 취득(월 단위 → 15일 가정)·장모 증여 신규주택 2005-07-08 → 양도 2006-06(15일 가정). 양도가 3억 가정, 비조정. 참고 관측(referenceForm): 비과세(155-1) — 원문 결론(부적용)과 반대. 별도세대 증여 취득 신규주택은 정상 도출."
+  }
+]

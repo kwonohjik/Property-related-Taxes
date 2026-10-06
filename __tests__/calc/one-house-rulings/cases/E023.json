@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E023-era",
+    "docNo": "부동산납세과-474",
+    "docDate": "2014.07.04.",
+    "basis": "era",
+    "today": "2015-03-16",
+    "summary": "별도세대인 부친으로부터 주택(경북 상주 겸용주택)을 증여받은 경우에도 일시적 2주택 특례 적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-03-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2014-09-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문은 증여 예정·일자 없는 질의 → 가정: 종전주택(노원 A아파트) 취득 2005-03-15·증여 취득 2014-09-15(회신 후)·양도 2015-03-15(증여 후 6개월), 양도가 6억, 비조정. 표현: 증여 취득 주택은 명부 행(취득 원인 칸은 없고 엔진은 원인과 무관하게 신규주택으로 봄 — 원문 결론과 같은 처리). 별도세대 증여라 주택 수에 영향. 고향주택(조특법 §99의4, 취득기한 2011.12.31.)은 취득이 기한 뒤라 해당 없음 — 원문도 사실판단 사항으로 남겼다."
+  }
+]

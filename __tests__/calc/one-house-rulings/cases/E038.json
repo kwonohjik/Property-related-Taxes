@@ -1,0 +1,37 @@
+[
+  {
+    "docNo": "서면-2023-법규재산-3968",
+    "docDate": "2024.09.06.",
+    "id": "E038-era",
+    "basis": "era",
+    "today": "2024-09-06",
+    "summary": "수도권(경기) 1주택(2016.12. 취득, C기관 근무)을 보유한 1세대가 이전 전(2021.2.) 세종 신규주택을 취득했고 C기관 일부 부서가 2021.7. 세종으로 이전했으나 양도일까지 이전 부서에 근무하지 않은 채 종전주택 양도 예정",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-20",
+      "contractTotalPrice": "800000000",
+      "publicInstitutionRelocation": true,
+      "relocatedSigunguCode": "3611000000",
+      "newHouseSigunguCode": "3611000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-12-15"
+      },
+      "houses": [
+        {
+          "id": "sejong",
+          "region": "non_capital",
+          "acquisitionDate": "2021-02-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: ① 신규주택 취득 당시 이전 대상 공공기관 종사자였는지(종사자 요건) ② 이전 후에도 그 기관에 종사하는지. 판정 메뉴에는 §155⑯ 토글(공공기관·법인 지방이전)과 이전 기관·신규주택 소재지(시·군 코드)만 있고 종사 여부를 묻지 않는다 — 토글 ON이면 종사 이력과 무관하게 같은 결과다. 참고 관측(referenceForm): 토글 ON + 이전 기관·신규주택 모두 세종 → 비과세(applied 155-1, 155-16), 토글 OFF → 과세, 양도가 신규 취득 후 5년 초과(2026-03-20)면 과세(pending 155-1-disposal-deadline), 연접하지 않는 시·군 코드면 과세. 종전주택 소재지를 비수도권(경북)으로 바꿔도 같은 결과 — 법문 「수도권에 1주택을 소유한 경우에 한정」 입력·판정도 없다. 결론(회신): 공공기관 이전 전에 종사자인 1세대가 이전지 주택을 취득했다면 이전 후 종사하지 않아도 §155⑯ 적용 — 엔진은 그 결론과 같은 값을 내지만 종사 요건 자체를 검증하지 못한다. 일자 가정: 월 단위(종전주택 2016.12.·세종 주택 취득 2021.2.) → 15일, 양도는 「예정」이라 회신(2024.9.6.) 후 2025-03-20(신규 취득 3년 경과·5년 이내)으로 가정, 양도가 8억 중립."
+  }
+]

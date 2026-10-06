@@ -1,0 +1,82 @@
+[
+  {
+    "id": "E011-era",
+    "docNo": "기획재정부 재산세제과-906 [재산세제과-906(2024.07.31.)]",
+    "docDate": "2024.07.31.",
+    "basis": "era",
+    "today": "2023-10-16",
+    "summary": "종전주택 A + 신규주택 B + 승계 취득 재건축 조합원입주권 C — A 양도 시 일시적 2주택(§155①)과 §156의2③ 중첩 적용 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-10-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-05-10"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2021-07-20"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "c",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2022-09-25",
+          "region": "non_capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "undetermined",
+    "note": "원문 사실관계 1 일자 그대로(A 2020-05-10·B 2021-07-20·C 입주권 승계 2022-09-25·A 양도 2023-10-15), 모두 비조정, 양도가 8억(원문에 가액 없음 — 가정). 관측: 비과세(155-1 적용) + 판정 보류 2건(89-2-open: 시행령 §156의2 ⑦·⑩·⑪ · §156의3 ⑤·⑦·⑧). 기대: 과세(중첩 적용 불가). 엔진은 「주택 2채 + 권리 1개」를 §89② 배제 확정으로 보지 않고 「종전 동작 유지 + 경고」로 두어(transfer-tax-89-2-exclusion.ts:267-268 `householdHousingCount >= 2 && twoHouseVia === undefined` → open) §155①만으로 비과세를 낸다. 보류 사유가 가리키는 조문(⑦·⑩·⑪ — 상속·문화유산·이농 특수주택)은 이 사안의 사유(일시적 2주택 특례와 일시적 1주택·1권리 특례의 중첩 불가)와 다르다. 명부 행에 문화유산·농어촌·상속 표시를 명시적으로 false로 주어도 보류는 그대로(프로브). 참고: 주택 1채 + 입주권 1개(B 없음)이면 §156의2③ 충족으로 비과세(적용 특례 id 없음) — 중첩이 문제 되는 구성은 주택이 둘일 때뿐."
+  },
+  {
+    "id": "E011-era-2",
+    "docNo": "기획재정부 재산세제과-906 [재산세제과-906(2024.07.31.)]",
+    "docDate": "2024.07.31.",
+    "basis": "era",
+    "today": "2024-03-16",
+    "summary": "종전주택 A + 2021.1.1. 이후 취득 분양권 B + 신규주택 C — A 양도 시 일시적 2주택과 §156의3②·③ 중첩 적용 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "non_capital",
+          "acquisitionDate": "2023-06-15"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "b",
+          "type": "presale_right",
+          "acquisitionDate": "2021-06-15",
+          "region": "non_capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "undetermined",
+    "note": "원문 사실관계 2(일자 없음 — 가정: A 2019-03-15·분양권 B 2021-06-15(2021.1.1. 이후)·C 2023-06-15(A 취득 1년 후·3년 이내)·A 양도 2024-03-15, 비조정, 양도가 8억). 관측: 비과세(155-1 적용) + 판정 보류 2건(89-2-open: 시행령 §156의2 ⑦·⑩·⑪ · §156의3 ⑤·⑦·⑧). 기대: 과세(중첩 적용 불가). 엔진은 「주택 2채 + 권리 1개」를 §89② 배제 확정으로 보지 않고 「종전 동작 유지 + 경고」로 두어(transfer-tax-89-2-exclusion.ts:267-268 `householdHousingCount >= 2 && twoHouseVia === undefined` → open) §155①만으로 비과세를 낸다. 보류 사유가 가리키는 조문(⑦·⑩·⑪ — 상속·문화유산·이농 특수주택)은 이 사안의 사유(일시적 2주택 특례와 일시적 1주택·1권리 특례의 중첩 불가)와 다르다. 명부 행에 문화유산·농어촌·상속 표시를 명시적으로 false로 주어도 보류는 그대로(프로브). 참고: 주택 1채 + 입주권 1개(B 없음)이면 §156의2③ 충족으로 비과세(적용 특례 id 없음) — 중첩이 문제 되는 구성은 주택이 둘일 때뿐."
+  }
+]

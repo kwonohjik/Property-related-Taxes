@@ -1,0 +1,72 @@
+[
+  {
+    "id": "E127-era",
+    "docNo": "조심-2016-서-1393",
+    "docDate": "2016.07.04.",
+    "basis": "era",
+    "today": "2016-07-04",
+    "summary": "1주택 청구인이 1주택 보유 모(母)와 분가(2009.10.) 후 재합가(2009.12.18.), 재합가일부터 5년 이내 양도(2014.12.) — 업무용 오피스텔은 주택 아님 (모 주택 취득일 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-12-02",
+      "contractTotalPrice": "500000000",
+      "parentalCareMergeDate": "2009-12-18",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-02-29"
+      },
+      "houses": [
+        {
+          "id": "mother",
+          "region": "capital",
+          "acquisitionDate": "1990-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자: 원문 그대로(양도 주택 1996-02-29, 분가 2009-10-20·재합가 2009-12-18, 양도 2014-12-02), 어머니 주택 취득일은 가정(1990-05-15), 양도가 5억. 합가일 칸에 최초 합가가 아니라 재합가일을 넣는다(분가가 실재했다는 원문 인용 사실 전제). 업무용 오피스텔은 주택이 아니므로 명부에 넣지 않았다 — 주택 여부(주거용 사용 사실)를 묻는 칸은 없고, 오피스텔 행을 넣으면 3주택으로 계산된다(프로브). 최소쌍: 합가일을 재합가일 5년 초과로 두면 과세. 당시 합가 기한 5년은 엔진 연혁에 있다."
+  },
+  {
+    "id": "E127-current",
+    "docNo": "조심-2016-서-1393",
+    "docDate": "2016.07.04.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택 자녀가 1주택 보유 모(60세 이상)와 분가 후 재합가(2018.5.15.), 재합가일부터 7년 10개월에 자녀 주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2018-05-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-02-29"
+      },
+      "houses": [
+        {
+          "id": "mother",
+          "region": "capital",
+          "acquisitionDate": "1995-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 동거봉양 합가 후 먼저 양도하는 주택의 기한 10년(2018.2.13. 이후 양도분 — 종전 5년), 분가 후 재합가는 재합가일부터 기산. 재합가 2018-05-15 → 양도 2026-03-20은 7년 10개월(5년이면 불성립이라 구별력 있음, 최소쌍: 합가일을 2012-04-09로 두면 과세). 새 축 중립: 비조정, 양도가 8억, 양도일 2026-10-01 이전, 직계존속 60세 이상 전제(연령 입력 칸 없음 — 파일럿 M-1/M-2와 같은 축이나 이 케이스의 쟁점은 기산일)."
+  }
+]

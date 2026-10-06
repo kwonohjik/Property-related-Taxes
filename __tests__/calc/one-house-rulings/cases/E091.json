@@ -1,0 +1,123 @@
+[
+  {
+    "docNo": "재산세과-2922",
+    "docDate": "2008.09.24.",
+    "id": "E091-era",
+    "basis": "era",
+    "today": "2008-09-30",
+    "summary": "일반주택 1채와 소수지분 공동상속주택 2채(같은 피상속인)를 보유한 세대가 일반주택을 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-12-10",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-06-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2004-06-15",
+          "isInherited": true,
+          "inheritedDate": "2004-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "C",
+          "region": "capital",
+          "acquisitionDate": "2004-06-15",
+          "isInherited": true,
+          "inheritedDate": "2004-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 양도일 원문 미기재 → 2008-12-10 가정, 양도가 4억 중립. 원문 표에서 갑의 A주택(2003 상속)을 양도 일반주택으로 단순화(취득 2003-06-15, 지분 정보 생략), B·C는 2004 공동상속 소수지분 2채(같은 피상속인 — 별도세대·최대지분자 아님), 을의 D주택은 갑 세대(2006 혼인 후 별도세대)가 아니므로 제외. 관측: 과세 — 엔진은 제외 요건을 갖춘 소수지분 공동상속주택이 2채면 선순위를 특정하지 못해 0채 제외(unmet 「선순위 1채를 특정할 수 없습니다」), 3주택으로 과세. 원문: 소수지분 2채 보유 시 일반주택 비과세 불가."
+  },
+  {
+    "docNo": "재산세과-2922",
+    "docDate": "2008.09.24.",
+    "id": "E091-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "일반주택 1채와 피상속인이 보유하던 2채의 소수지분 공동상속주택을 보유한 세대가 일반주택 양도 — 선순위 1채만 제외",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2018-06-15",
+          "isInherited": true,
+          "inheritedDate": "2018-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "C",
+          "region": "capital",
+          "acquisitionDate": "2018-06-15",
+          "isInherited": true,
+          "inheritedDate": "2018-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false,
+          "isRankingDisqualifiedInheritedHouse": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 피상속인이 상속개시 당시 2 이상의 주택을 소유한 경우 공동상속주택으로 보는 것은 선순위 1주택(소유기간 > 거주기간 > 상속개시 당시 거주 > 기준시가 순)뿐이고 나머지 소수지분은 주택 수에 포함(2017.2.3. 이후 양도분). 같은 사실 패턴: B(선순위)·C(순위 밖 — isRankingDisqualifiedInheritedHouse 자기선언) 공동상속 소수지분(상속 2018-06-15, 별도세대), 일반주택 2012-03-15 → 양도 2026-05-20. 관측: 과세(B만 제외, C 산입 → 2주택). 새 축 중립: 비조정, 양도가 7억. 순위는 사용자 선언(엔진은 피상속인 보유 포트폴리오를 모름)."
+  },
+  {
+    "docNo": "재산세과-2922",
+    "docDate": "2008.09.24.",
+    "id": "E091-current-single",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "양성 짝 — 같은 사실에서 공동상속주택이 선순위 1채뿐인 경우 (E091-current에서 순위 밖 1채를 뺌)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2018-06-15",
+          "isInherited": true,
+          "inheritedDate": "2018-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(양성 짝). E091-current에서 순위 밖 C를 뺀 경우 — 비과세(B 제외). 순위 밖 선언 하나가 결론을 가른다."
+  }
+]

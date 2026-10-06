@@ -1,0 +1,180 @@
+[
+  {
+    "id": "E132-era",
+    "docNo": "서면-2022-법규재산-4283",
+    "docDate": "2024.06.27.",
+    "basis": "era",
+    "today": "2024-06-27",
+    "summary": "거주주택·장기임대주택 2채 보유 남과 일반주택 1·장기임대 1 보유 여가 혼인(2021.6.), 혼인 후 5년 이내 거주주택(B) 양도 예정 — 거주·임대 요건 충족 전제",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-09-15",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2021-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "priorRentalExemptionHistory": "none",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2018-10-14",
+              "rentalRegistrationDate": "2018-10-14",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "66",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2018-10-14",
+              "rentalRegistrationDate": "2018-10-14",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "60",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "e",
+              "businessRegistrationDate": "2020-05-29",
+              "rentalRegistrationDate": "2020-05-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "47",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "2016-03-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: isExempt=true(applied 155-5-marriage-merge) / 기대: 과세(각자 장기임대주택(§155⑳)과 거주주택을 보유한 자끼리 혼인 — 혼인합가 특례 적용 불가: 혼인합가 당시 주택 수 기준·특례 중첩 불허). ⑧ 오류 0(경고: 임대주택은 명부에 넣지 말라 — 임대 3호는 rentalUnits로 입력). 최소쌍: 임대 선언을 빼도 비과세, 혼인 입력을 빼면 과세(A가 있어 거주주택이 1채가 아님) → 합가 특례가 임대주택을 합가 당시 주택 수에서 빼고 판정한다. 의심 지점: merge-deeming.ts:197(resolveMergeDeeming이 주택 수 2만 본다)·merge-composition.ts:179-190(알려진 제외 행을 구성에서 뺀 뒤 행 수를 센다). 일자: 원문 그대로(A 2016-03·B 2019-02·C 2018-10-14 등록·D 2018-10-14 등록·E 2020-05-29 등록, 혼인 2021-06), 월 단위 15일, 양도 예정 2024-09-15, 거주 36개월·임대 요건 충족 전제, 양도가 8억. 현행 규칙: 혼인합가 당시 주택 수로 판정, 합가 기한 10년(2024.11.12. 이후 양도분 — 종전 5년)."
+  },
+  {
+    "id": "E132-current",
+    "docNo": "서면-2022-법규재산-4283",
+    "docDate": "2024.06.27.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "거주주택·장기임대주택 2채 보유 남과 일반주택 1·장기임대 1 보유 여가 혼인(2019.6.), 혼인 후 6년 11개월에 거주주택 양도 — 거주·임대 요건 충족 전제",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2019-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "priorRentalExemptionHistory": "none",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2017-03-15",
+              "rentalRegistrationDate": "2017-03-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "110",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2017-10-15",
+              "rentalRegistrationDate": "2017-10-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "100",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "e",
+              "businessRegistrationDate": "2018-05-29",
+              "rentalRegistrationDate": "2018-05-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "95",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "2016-03-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — E132-era와 같은 사유. 현행 규칙: 혼인합가 기한 10년(2024.11.12. 이후 양도분), 주택 수는 혼인합가 당시 기준·§155⑳과 중첩 불허. 혼인 2019-06-15 → 양도 2026-05-20은 6년 11개월(기한 5년이면 불성립이라 기한이 아닌 구성 사유로 가르는 구성), 일자는 임대 3호가 모두 혼인 전 보유가 되도록 옮김(A 2016-03·B 2017-02·임대 C 2017-03·D 2017-10·E 2018-05 등록). 새 축 중립: 비조정, 양도가 8억, 거주 36개월·임대 요건 충족 전제. 관측: isExempt=true(155-5). 최소쌍 V: 임대 선언을 빼도 비과세."
+  }
+]

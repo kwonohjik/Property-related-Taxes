@@ -1,0 +1,42 @@
+[
+  {
+    "id": "E145-era",
+    "docNo": "조심-2015-부-5667",
+    "docDate": "2016.04.21.",
+    "basis": "era",
+    "today": "2016-04-01",
+    "summary": "일반주택 양도(2014) 당시 동일세대 배우자에게서 공동상속(청구인 3/11)받은 농어촌주택 보유",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-09-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2009-06-15",
+          "isInherited": true,
+          "inheritedDate": "2009-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": true,
+          "ruralHouseKind": "inherited",
+          "ruralDecedentResidenceYears": "10",
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-7-rural:inherited"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: isExempt=true(applied 155-7-rural:inherited) / 기대: 과세(동일세대 배우자에게서 상속받은 농어촌주택은 §155⑦1호의 상속받은 주택이 아님 — §155② 단서 취지). ⑧ 검증 오류 0. 최소쌍: 농어촌 표시(oneHouseRuralHouse·kind)를 빼면 §155② 단서로 과세(unmet 155-2-inherited-house 「동일세대였습니다」) → decedentSameHouseholdAtInheritance는 ④·route에 닿지만 §155⑦ 경로에서는 읽히지 않는다. 의심 지점: lib/calc/one-house-row-facts.ts:154-176(toRuralPayload — inherited 유형은 decedentResidenceYears만 싣고 동일세대 여부를 안 싣는다), lib/tax-engine/transfer-tax-exemption-holding.ts:54-62(qualifiesRuralHouse inherited는 피상속인 거주 5년만 판정). 일자 가정(원문 일자 비공개): 상속개시 2009-06-15, 일반주택 2005-03-15, 양도 2014-09-15(상속 후 3년 초과로 일시적 2주택 §155①이 우연히 성립하지 않도록), 지분 3/11(최대지분자 아님)·피상속인 거주 10년·소재 요건 충족 전제."
+  }
+]

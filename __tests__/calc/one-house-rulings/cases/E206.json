@@ -1,0 +1,67 @@
+[
+  {
+    "id": "E206-era",
+    "docNo": "기획재정부 재산세제과-1591",
+    "docDate": "2022.12.27.",
+    "basis": "era",
+    "today": "2022-08-16",
+    "summary": "A(2015. 취득, 2018. 단기 등록 → 2021. 배우자에게 포괄승계 증여 → 2022. 자동말소)·B(2018. 취득, 2021. 장기 10년 등록)·C조합원입주권(2016. 취득 → 2020. 준공·거주) 보유 — 2022. C 양도 시 §155⑳ 적용(1세대 기준) (일자 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-08-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "29",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2018-04-10",
+              "rentalRegistrationDate": "2018-04-10",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2022-04-10",
+              "terminatedRegistrationType": "short_term"
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2021-03-10",
+              "rentalRegistrationDate": "2021-03-10",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "17",
+              "requirementsConfirmed": true
+            }
+          ],
+          "priorRentalExemptionHistory": "none"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: A를 2020.7.11. 이후 동일세대원(배우자)에게 포괄승계 증여한 사실과 그 뒤 자동말소. 임대주택 호에 증여·승계 이력 칸이 없고 엔진은 1세대 단위로만 호를 모은다. 참고 관측(referenceForm): A를 말소 호(2022-04-10)로, B를 현재 등록 호로 입력하면 ⑳㉓ 통과·비과세 — 결론은 일치하나 증여 사실은 검증되지 않는다. 가정: C 준공(취득) 2020-03-15·거주 29개월·양도 2022-08-15(원문 「2022.」)·양도가 7억, 생애 한 차례 이력 '없음', A 단기 4년 등록 2018-04-10, B 장기일반 마목 2021-03-10(수도권·기준시가 3억)."
+  }
+]

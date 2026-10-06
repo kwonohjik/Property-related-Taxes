@@ -1,0 +1,42 @@
+[
+  {
+    "id": "E151-era",
+    "docNo": "대법원-2004-두-10869",
+    "docDate": "2005.12.23.",
+    "basis": "era",
+    "today": "2005-12-23",
+    "summary": "귀농주택(②, 1995 취득)·서울 아파트(①)·③ 3주택 세대가 ③을 먼저 양도(2002.1.)한 뒤 귀농주택과 일반주택(①, 상속 취득)만 보유한 상태에서 ① 양도(2002.2.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-02-04",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-08-14",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1993-04-27"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "1995-09-11",
+          "ruralHouseKind": "return_to_farm",
+          "ruralLandAreaSqm": "408",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false,
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:return_to_farm"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: 과세(applied 없음, unmet·pending 비어 있음) / 기대: 비과세(귀농 후 비과세 요건이 갖춰진 상태에서 최초 양도하는 일반주택 — 귀농주택 ②·일반주택 ①만 보유한 상태의 ① 양도). ⑧ 오류 0. 최소쌍: 귀농주택 취득일 1995-09-11을 1999-09-11로 바꾸면 비과세(applied 155-7-rural:return_to_farm) → 원인은 귀농주택 취득일부터 5년 이내 양도 단서(⑦ 단서): 취득 1995-09-11 → 양도 2002-02-04는 6년 5개월. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:37·61(RURAL_RETURN_TO_FARM_TRANSFER_YEARS=5를 양도일 연혁 없이 적용). 이 단서가 2002년 시행본에 있었는지는 법제처 조회 장애(500)로 확인하지 못했다 — 확인 필요(원문 당시 구 시행령에 없었다면 연혁 게이트 부재, 있었다면 기대값 재검토). 입력: 양도 주택 ①은 상속 취득(상속개시 1999-08-14, 피상속인 취득 1993-04-27), ③ 먼저 양도(2002-01-03)는 입력 칸이 없어 표현하지 않음(양도 후 상태만 입력), 양도가 3억 가정."
+  }
+]

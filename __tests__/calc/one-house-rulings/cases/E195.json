@@ -1,0 +1,152 @@
+[
+  {
+    "id": "E195-era",
+    "docNo": "사전-2016-법령해석재산-0198 [법령해석과-1978]",
+    "docDate": "2017.07.10.",
+    "basis": "era",
+    "today": "2015-12-31",
+    "summary": "2001.1.23. 상속받은 거주주택(2년 이상 거주)·2004.7.8. 취득한 아파트(2015.12.1.·2. 임대 등록)·2015.8.20. 취득 조특법 §99의4 농어촌주택 보유 1세대가 2015.12.11. 일반주택 취득 후 3년 이내 2015.12.30. 거주주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-12-30",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-01-23",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2015-12-02",
+              "rentalRegistrationDate": "2015-12-01",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": true,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "1",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "acquisitionDate": "2015-08-20",
+          "region": "non_capital",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        },
+        {
+          "id": "gen",
+          "acquisitionDate": "2015-12-11",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "rural"
+      ],
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 표현: 상속받은 거주주택(2001-01-23)은 취득원인 상속 입력에 피상속인 취득일이 필수(⑫)이나 판정에 영향이 없어 매매 취득으로 입력(경로 단순화). 임대호 A(2004 취득·2015-12-01/02 등록, 구법 pre_2018·아파트·임대 1개월), 조특법 §99의4 농어촌주택(주택 수 제외 행, 2015-08-20), 일반주택(2015-12-11)을 명부에 — 일시적 2주택(155-1)은 일반주택이 유일한 신규 후보라 자동 도출. 관측: 155-1 적용 + §155⑲ 통과 → 비과세. 최소쌍: 임대호를 명부 행으로 바꾸면(주택 수 이중 계상) 과세 — ⑳ 입력이 닿는다. 가정: 거주 100개월·양도가 5억·임대주택 수도권·기준시가 3억. 원문의 항번호 §155⑲은 현행 ⑳."
+  },
+  {
+    "id": "E195-current",
+    "docNo": "사전-2016-법령해석재산-0198 [법령해석과-1978]",
+    "docDate": "2017.07.10.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(거주주택 + 장기임대주택 + 조특법 §99의4 농어촌주택 + 일반주택 취득 후 3년 이내 양도)을 2026.3.15. 양도로 구성",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-01-23",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2018-06-15",
+              "rentalRegistrationDate": "2018-06-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "93",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "acquisitionDate": "2024-08-20",
+          "region": "non_capital",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        },
+        {
+          "id": "gen",
+          "acquisitionDate": "2024-12-11",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "rural"
+      ],
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 같은 패턴을 양도 2026-03-15로 구성 — 현행 항번호 ⑳, 조특법 §99의4 농어촌주택 취득기간(2025.12.31.까지) 안에서 농어촌주택 2024-08-20·일반주택 2024-12-11 취득(양도 3년 이내), 임대호 장기일반 2018-06-15 등록(아파트 아님). 관측: 155-1 적용 + ⑳ 통과 → 비과세. 새 축 중립 고정: 비조정, 양도가 5억."
+  }
+]

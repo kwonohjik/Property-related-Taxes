@@ -1,0 +1,45 @@
+[
+  {
+    "id": "E201-era",
+    "docNo": "서면-2022-법규재산-4972 [법규과-1281(2024.5.27.)]",
+    "docDate": "2024.05.27.",
+    "basis": "era",
+    "today": "2024-08-16",
+    "summary": "'19년 취득 A주택(서울 강동) 거주, B다세대(2002. 취득, 2016.4. 장기 임대등록)의 지분 20%를 2022.11. 배우자에게 증여하고 공동명의로 변경해 계속 임대 — 이전 지분의 의무임대기간은 증여자·수증자 통산 (A 양도일 2024.8. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2024-08-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2016-04-15",
+              "rentalRegistrationDate": "2016-04-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "100",
+              "requirementsConfirmed": true
+            }
+          ],
+          "priorRentalExemptionHistory": "none"
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 장기임대주택 지분을 동일세대원에게 증여한 사실과 증여자·수증자 임대기간 통산. 또한 임대기간 미충족은 §155㉑로 통과해 의무임대기간 충족 여부가 ⑳ 통과 결론을 가르지 못한다(㉒ 사후관리 안내만 달라짐). 참고 관측(referenceForm): 임대 개월을 직접 입력(2016-04-15부터 2024-08-15까지 96개월)하면 통과·비과세 — 통산 여부와 무관. 원문은 규칙만 밝히고 비과세 결론이 없어 기대값 없음. 가정: A 취득 2019-03-15(생애 한 차례 구간 — 이력 '없음')·거주 60개월·양도 2024-08-15·양도가 7억."
+  }
+]

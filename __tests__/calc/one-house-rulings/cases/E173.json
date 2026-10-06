@@ -1,0 +1,64 @@
+[
+  {
+    "id": "E173-era",
+    "docNo": "사전-2020-법규재산-1104 [법규과-667]",
+    "docDate": "2022.02.23.",
+    "basis": "era",
+    "today": "2020-09-23",
+    "summary": "가정어린이집 C(2012.8. 매입, 2020.3.24. 폐원, 2020.5.31.부터 주택 임대) 보유 1세대가 거주주택 A(2016.1. 취득) 2020.9.22. 양도 — 양도일 현재 가정어린이집 미운영(사용 중단 후 6개월 이내)이면 §155⑳ 장기가정어린이집 특례 적용 여부",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2020-09-22",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-01-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "50"
+      },
+      "houses": [
+        {
+          "id": "daycare",
+          "acquisitionDate": "2012-08-24",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 장기(가정)어린이집 보유(양도일 현재 운영 여부, 사용 중단 후 6개월 이내 여부). E172와 같은 이유로 판정 메뉴에 §155⑳ 어린이집 입력이 없다. 참고 관측(referenceForm): 폐원한 가정어린이집 C를 일반 주택 명부 행으로 입력하면 2주택이라 과세 — 결론은 일치하나 어린이집 사실은 검증되지 않는다. 가정: A 취득 2016-01-15·거주 50개월·양도가 5억(원문 미기재, 양도일 2020-09-22는 원문)."
+  },
+  {
+    "id": "E173-current",
+    "docNo": "사전-2020-법규재산-1104 [법규과-667]",
+    "docDate": "2022.02.23.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(어린이집 보유 1세대가 거주주택 양도)에서 어린이집이 국공립·직장·협동 어린이집 등 현행 장기어린이집으로 양도일 현재 운영 중인 경우, 2026.3.20. 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-01-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100"
+      },
+      "houses": [
+        {
+          "id": "daycare",
+          "acquisitionDate": "2012-08-24",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 장기어린이집 보유. 현행 규칙: 장기어린이집은 양도일 현재 「소득세법」 §168에 따라 고유번호를 부여받고 운영 중이어야 하며, 2022.2.15. 이후 양도분부터 국공립·직장·협동 어린이집 등도 대상에 포함된다. 기대: 같은 패턴에서 어린이집이 현행 대상(국공립 등)으로 양도일 현재 운영 중이면 §155⑳ 적용(비과세). 참고 관측(referenceForm)은 어린이집을 일반 주택으로 넣어 과세로 나와 기대와 다르다(입력 경로가 없어서). 양도 2026-03-20·A 취득 2016-01-15·거주 100개월·양도가 5억."
+  }
+]

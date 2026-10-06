@@ -1,0 +1,68 @@
+[
+  {
+    "id": "E007-era",
+    "docNo": "서일46014-10603",
+    "docDate": "2002.05.08.",
+    "basis": "era",
+    "today": "2002-06-15",
+    "summary": "고급주택(양도가액 6억 초과)도 일시적 2주택 특례 대상이며 비과세 범위 초과분만 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-06-14",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1995-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2001-09-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문은 일자 없는 일반 질의 → 종전주택 1995-03-15·신규 2001-09-15·양도 2002-06-14(회신 직후)로 가정. 양도가 8억(당시 고급주택 기준 6억 초과). 엔진의 고가주택 판정은 양도가액 기준(양도일 6억 이하 구간)만 보며 당시 고급주택의 면적 기준은 입력이 없다. 결과: 부분 비과세(isPartialExempt) + 155-1."
+  },
+  {
+    "id": "E007-current",
+    "docNo": "서일46014-10603",
+    "docDate": "2002.05.08.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "고가주택(양도가액 12억 초과)을 일시적 2주택 상태에서 양도 — 특례 적용, 12억 초과분만 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-07-10",
+      "contractTotalPrice": "1500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2024-09-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "현행 규칙: 고가주택(양도가액 12억 초과)도 일시적 2주택 특례 대상이고 12억 초과분만 과세. 새 축 중립 고정: 비조정(거주요건 없음), 양도일 2026-10-01 이전, 종전 2018-03-15·신규 2024-09-15(1년 9개월)·양도 2026-07-10, 양도가 15억."
+  }
+]

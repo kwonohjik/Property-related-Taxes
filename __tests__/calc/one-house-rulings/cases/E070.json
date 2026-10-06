@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "서면-2021-부동산-5845",
+    "docDate": "2023.03.23.",
+    "id": "E070-era",
+    "basis": "era",
+    "today": "2023-05-20",
+    "summary": "일반주택 A를 보유한 1세대가 별도세대 직계존속으로부터 상속주택 B를 받은 뒤, A를 멸실·재건축해 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-06-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-04-10"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2020-03-10",
+          "isInherited": true,
+          "inheritedDate": "2020-03-10",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "inh"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). 양도일 원문 미기재(회신 2023.3.23.) → 2023-06-15 가정, 월·일 미기재 일자는 15일로 가정, 양도가 7억(12억 이하 중립), 비조정. 표현: 일반주택 A의 취득일 칸에 멸실 전 기존주택의 취득일(2012-04-10)을 넣고, 상속주택 B(별도세대 직계존속·단독상속)를 명부에 둔다 → 상속주택 제외로 비과세. 한계: 멸실·재건축 사실을 담는 칸이 없어 쟁점(기존주택 취득일 승계)은 사용자가 기존 취득일을 골라 넣어야 성립한다. 신축 완공일(2022-09-15)을 넣으면 ⑧이 「상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지」 선택을 요구하고 선택지에 직접 재건축이 없어 과세로 나온다(프로브 V-E070-newdate)."
+  }
+]

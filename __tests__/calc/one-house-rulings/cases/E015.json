@@ -1,0 +1,98 @@
+[
+  {
+    "id": "E015-era",
+    "docNo": "서면-2023-부동산-0225 [부동산납세과-675]",
+    "docDate": "2023.03.13.",
+    "basis": "era",
+    "today": "2026-03-21",
+    "summary": "무주택 상태에서 2021.8. 분양권(A) → 2023.12. 주택(B) 순차 취득, A 완공(2024.2.) 후 A 양도 — §155① 부적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-02-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2023-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 질의 1. 원문 일자(분양권 2021.8.·B 2023.12.·A 완공 2024.2.) 중 월 단위의 일은 15일로 가정, 양도일 2026-03-20(A 입주 후 2년 이상 거주 가정, 비조정, 양도가 7억). 표현: A 주택 취득일 = 완공(잔금) 2024-02-15, B 명부 행 2023-12-15 — A가 B보다 나중 취득이라 신규주택(양도주택보다 늦게 취득한 주택)이 없고 2주택 과세. 경로 다름: 원문은 분양권(2021.8.)이 주택 수에 포함된다는 이유로 부적용을 말하지만 엔진은 주택 취득일의 선후만으로 같은 결론을 낸다(분양권 취득일은 입력하지 않음). A 취득일을 분양권 취득일(2021-08)로 쓰면 B가 신규주택이 되어 비과세로 뒤집힌다(프로브)."
+  },
+  {
+    "id": "E015-era-2",
+    "docNo": "서면-2023-부동산-0225 [부동산납세과-675]",
+    "docDate": "2023.03.13.",
+    "basis": "era",
+    "today": "2026-06-16",
+    "summary": "주택(A)을 취득한 날부터 1년 이상 지난 후 신규주택(B) 취득, B 취득일부터 3년 이내 A 양도 — §155① 적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-02-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2025-02-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 질의 2(B를 A 취득 1년 후인 2025.2.에 취득하는 경우). A 완공 취득 2024-02-15·B 취득 2025-02-20(1년 5일 후)·양도 2026-06-15(B 취득 후 약 1년 4개월), 비조정, 양도가 7억. 일은 가정."
+  },
+  {
+    "id": "E015-era-2-early",
+    "docNo": "서면-2023-부동산-0225 [부동산납세과-675]",
+    "docDate": "2023.03.13.",
+    "basis": "era",
+    "today": "2026-06-16",
+    "summary": "신규주택(B)을 종전주택(A) 취득 후 1년이 지나기 전에 취득 — §155① 불성립(경계 음성 짝)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-02-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2024-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "E015-era-2에서 B 취득일만 2024-12-15(A 취득 10개월 후)로 옮김 — 「종전의 주택을 취득한 날부터 1년 이상이 지난 후」 요건 미충족으로 과세. 원문 질의 2의 요건 문언에 대한 음성 짝(가정 케이스)."
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "E183-era",
+    "docNo": "기획재정부 재산세제과-1420",
+    "docDate": "2024.12.11.",
+    "basis": "era",
+    "today": "2026-08-16",
+    "summary": "A주택(2005.5. 취득·거주), B(2014.8. 취득, 2015.4. 단기 5년 등록 → 2021.5. 자동말소 후 2021.8. 양도), C(2016.11. 오피스텔 준공공 8년)·D(2017.12. 준공공 8년 등록, 폐지되지 않은 유형)를 보유한 상태에서 A 양도 — §155㉓ 5년 처분기한 미적용 (A 양도일 2026.8. 가정: B 말소일로부터 5년 경과)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-08-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-05-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2016-11-20",
+              "rentalRegistrationDate": "2016-11-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "116",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2017-12-15",
+              "rentalRegistrationDate": "2017-12-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "104",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 이미 말소·양도한 임대주택 B의 이력(2021.5. 자동말소, 2021.8. 양도). 결론(§155㉓ 5년 처분기한 미적용)을 가르는 사실은 「폐지유형 주택이 말소 후 양도되고 폐지되지 않은 유형(C·D)만 보유」인데 판정 메뉴는 현재 보유한 임대주택 호만 받는다. 참고 관측(referenceForm): C·D만 입력하면 §155⑳ 통과·비과세 — 결론은 일치하나 B의 사실이 입력되지 않아 쟁점이 검증되지 않는다. 원문은 비과세 결론을 직접 말하지 않고 ㉓ 불적용만 답했다 — 기대값은 ⑳ 일반 요건 충족 시 비과세로 둔다. 가정: 양도 2026-08-15(B 말소 2021-05로부터 5년 경과 시점), 거주주택 취득 2005-05-15·거주 100개월·양도가 7억, C·D 장기일반 가목(오피스텔 — 아파트 아님) 등록 2016-11-20·2017-12-15."
+  }
+]

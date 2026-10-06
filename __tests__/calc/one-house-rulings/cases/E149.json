@@ -1,0 +1,78 @@
+[
+  {
+    "id": "E149-era",
+    "docNo": "서면-2023-법규재산-2790",
+    "docDate": "2024.03.29.",
+    "basis": "era",
+    "today": "2024-03-29",
+    "summary": "귀농주택(A, 1981 취득)을 일반주택보다 먼저 취득한 세대가 귀농 이전 취득 일반주택을 세대전원 귀농 후 양도(일반주택 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-04-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-03-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "1981-07-15",
+          "ruralHouseKind": "return_to_farm",
+          "ruralLandAreaSqm": "500",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false,
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:return_to_farm"
+      ]
+    },
+    "bucket": "pending",
+    "note": "pending — 기대값 확정 불가. 원문 일자 그대로(귀농주택 A 1981-07-15 취득, 일반주택·양도 일자는 원문에 없어 2006-03-15·2024-04-15로 가정) 입력하면 엔진은 과세(귀농주택 취득일부터 5년 이내 일반주택 양도라는 §155⑦ 단서를 넘김). 회신은 §155⑦·⑩~⑫ 요건 충족을 전제로 취득 순서만 답하고 5년 단서를 언급하지 않아, 1981 취득이라는 사실과 회신 결론(적용)이 현행 단서와 함께 성립할 수 있는지 불명이다. 취득 순서 축만 분리한 E149-era-5y가 구별력 있게 검증한다."
+  },
+  {
+    "id": "E149-era-5y",
+    "docNo": "서면-2023-법규재산-2790",
+    "docDate": "2024.03.29.",
+    "basis": "era",
+    "today": "2024-03-29",
+    "summary": "귀농주택(2021 취득)을 일반주택(2021 취득)보다 먼저 취득한 세대가 귀농 후 5년 이내 일반주택 양도(일자 가정 — 원문 일자는 5년 단서와 충돌)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-04-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-09-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2021-05-15",
+          "ruralHouseKind": "return_to_farm",
+          "ruralLandAreaSqm": "500",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false,
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:return_to_farm"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(원문 사실을 5년 단서 안으로 옮긴 변형 — 취득 순서 축 검증용). 귀농주택 2021-05-15 취득 후 일반주택 2021-09-15 취득(귀농주택을 먼저 취득), 양도 2024-04-15(귀농주택 취득 후 약 2년 11개월), 세대전원 귀농·대지 500㎡·소재 요건 충족 전제. 관측: 비과세(applied 155-7-rural:return_to_farm) — 취득 순서는 엔진이 묻지 않는다. 원문 일자(1981)는 위 E149-era 참조."
+  }
+]

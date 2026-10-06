@@ -1,0 +1,130 @@
+[
+  {
+    "id": "E193-era",
+    "docNo": "사전-2016-법령해석재산-0584 [법령해석과-803]",
+    "docDate": "2017.03.27.",
+    "basis": "era",
+    "today": "2016-09-24",
+    "summary": "A거주주택(2003.6.5. 취득)·처의 장기임대주택 B(2009.5.6. 취득, 2015.5.11.·6.16. 등록)·처가 상속받은 공동상속주택 소수지분 C(2012.12.11.)·처가 취득한 일반주택 D 공유지분(2016.6.30.) 4주택 상태에서 D 취득 후 3년 이내 A를 2016.9.23. 565백만원에 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-09-23",
+      "contractTotalPrice": "565000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-06-05",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2015-06-16",
+              "rentalRegistrationDate": "2015-05-11",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "200000000",
+              "acquisitionOfficialPrice": "200000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "15",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "co",
+          "acquisitionDate": "2012-12-11",
+          "region": "capital",
+          "isInherited": true,
+          "inheritedDate": "2012-12-11",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": false,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "gen",
+          "acquisitionDate": "2016-06-30",
+          "region": "capital"
+        }
+      ],
+      "temporaryTwoHouseSpecial": true,
+      "newHouseAcquisitionDate": "2016-06-30"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 관측: isExempt=true(155-1-temporary-two-house 적용·rentalPassed=true·공동상속 소수지분 C 주택 수 제외) / 기대: 과세 — 거주주택+장기임대주택+공동상속 소수지분+일반주택 취득 후 3년 이내 양도의 4주택은 §155①·③·⑲(현행 ⑳) 중첩 불인정. 표현: 임대호 B(처 2009 취득·2015-06-16 등록), 공동상속 소수지분 C(처 2/11·상속 2012-12-11, 최대지분 아님), 일반주택 D(처 2016-06-30 취득)를 명부에, 일시적 2주택은 flat 입력(temporaryTwoHouseSpecial=true·신규주택 취득일 2016-06-30 — C가 A보다 늦게 취득돼 신규주택 자동 도출이 안 되는 경우의 폴백). ⑧ 오류 0. 최소쌍(프로브): flat 입력 없이 명부만으로는 일시적 2주택이 도출되지 않아 과세로 나오지만(폼 한계), flat 입력을 주면 비과세 — 임대호를 빼도(C·D만) 비과세, C를 빼도 비과세 ⇒ 엔진은 ①·③·⑳을 독립적으로 합산하고 중첩 상한을 두지 않는다. 의심 지점: lib/tax-engine/one-house/house-count.ts:224(countedForExemption = 총 주택 − 제외 수, 특례 간 중첩 조합 검사 없음), app/api/calc/one-house-exemption/route.ts:228-229(⑳ 결론은 비과세를 끄는 방향으로만 반영), lib/tax-engine/transfer-tax-exemption.ts:306(E-3은 제외 후 2주택만 봄). 가정: 거주 100개월, A 양도가 565백만원(원문)·임대주택 수도권·기준시가 2억·임대 15개월."
+  },
+  {
+    "id": "E193-current",
+    "docNo": "사전-2016-법령해석재산-0584 [법령해석과-803]",
+    "docDate": "2017.03.27.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(거주주택 + 장기임대주택 + 공동상속 소수지분 + 일반주택 취득 후 3년 이내 양도 4주택)을 2026.3.15. 양도로 구성",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "565000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-06-05",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2019-05-11",
+              "rentalRegistrationDate": "2019-05-11",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "200000000",
+              "acquisitionOfficialPrice": "200000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "82",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "co",
+          "acquisitionDate": "2012-12-11",
+          "region": "capital",
+          "isInherited": true,
+          "inheritedDate": "2012-12-11",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": false,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "gen",
+          "acquisitionDate": "2024-06-30",
+          "region": "capital"
+        }
+      ],
+      "temporaryTwoHouseSpecial": true,
+      "newHouseAcquisitionDate": "2024-06-30"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 같은 패턴(거주주택 + 장기임대주택 + 공동상속 소수지분 + 일반주택 취득 후 3년 이내 양도)을 양도 2026-03-15로 구성. 현행 규칙: 항번호만 ⑳으로 바뀌었고 중첩 불인정 결론은 같다(E194 심판 결정도 같은 취지). 관측: isExempt=true(155-1 적용) / 기대: 과세. 원인·의심 지점은 E193-era와 같다. 새 축 중립 고정: 비조정, 양도가 565백만원, 임대호 장기일반 2019-05-11 등록(아파트 아님), D 취득 2024-06-30, 일시적 2주택 flat 입력."
+  }
+]

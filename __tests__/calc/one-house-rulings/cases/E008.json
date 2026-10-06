@@ -1,0 +1,68 @@
+[
+  {
+    "id": "E008-era",
+    "docNo": "심사양도2002-0086",
+    "docDate": "2002.05.10.",
+    "basis": "era",
+    "today": "2001-09-08",
+    "summary": "고급주택도 다른 주택 취득 후 (당시) 2년 이내 양도하면 일시적 2주택 특례 적용, 비과세 범위 초과분만 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2001-09-07",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1983-02-10"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2001-03-29"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(취득 1983-02-10·다른 주택 2001-03-29·양도 2001-09-07). 양도가액은 원문에 없어 7억으로 가정(당시 6억 초과). 고급주택의 면적 기준(대지 100.579㎡·건물 196.7㎡)은 입력 경로가 없고 엔진은 가액만 본다. 두 번째 쟁점(예규 변경 해석의 적용시기)은 판정 메뉴 밖. 기한은 신규 취득 후 5개월이라 당시 2년·엔진 3년 모두 이내."
+  },
+  {
+    "id": "E008-current",
+    "docNo": "심사양도2002-0086",
+    "docDate": "2002.05.10.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "고가주택(양도가액 12억 초과)을 신규주택 취득 후 2년 6개월에 양도 — 특례 적용, 12억 초과분만 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-20",
+      "contractTotalPrice": "2000000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-04-12"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2023-12-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "현행 규칙: 고가주택도 일시적 2주택 특례 대상, 종전주택 양도기한 3년(신규 취득 후 2년 6개월은 2년 규정이면 불성립), 12억 초과분만 과세. 새 축 중립 고정: 비조정, 양도일 2026-10-01 이전, 종전 2010-04-12·신규 2023-12-20·양도 2026-06-20, 양도가 20억."
+  }
+]
