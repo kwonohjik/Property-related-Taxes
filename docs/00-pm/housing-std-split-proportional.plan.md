@@ -98,3 +98,30 @@
 - 국세청 고시 제2025-26호 현행 산식(법제처 본문이 이미지라 텍스트 미확인).
 - 공시 후 아파트(공동주택) 양도소득세 정면 사안 — 상증(조심2010서1098)·미공시(부동산거래관리과-436)만 확인.
 - 개별주택가격 ↔ 가목+나목 괴리 표본.
+
+---
+
+## 8. S3-1 설계 통합 결정 (2026-10-06)
+
+설계서: 엔진 `docs/02-design/features/housing-std-split-proportional-s3-1.engine.design.md` · UI `…s3-1.ui.design.md`. Pre-Do anchor `__tests__/api/transfer.route.housing-std-split-proportional.s3-1.predo.anchor.test.ts` — **19 passed · 9 skipped** 재실행 확인(skip 9건 해제가 완료 기준).
+
+| # | 쟁점 | 결정 | 근거 |
+|---|---|---|---|
+| UI 입구 | 비-별개 분할의 화면 입구 | **소유자 분리(`selfOwns≠both`)뿐**(매매 + 같은 날/토지일 빈칸, 비-매매 `NonPurchaseSplitInputsBlock`). 「취득일 다름 + 같은 날짜」는 입구 아님(토지 단가 칸 없음 → 엔진 분할 포기) | UI 화면 실측 |
+| 필드 | 취득시 건물 나목 | **신규 필드 없음** — 폼 `buildingStandardPriceAtAcq` ↔ 엔진 `buildingStandardPriceAtAcquisition` 재사용(①②③⑨⑩⑫정의⑬⑭ 기존재) | 양 설계 일치 |
+| 술어 | 필수·노출·④ 전송 | **엔진 leaf 1곳**: 주택 ∧ 비-별개 ∧ 소유자 분리 ∧ `requiresAcqStdPrice`(양 파트 OR — 비례에선 토지분도 나목에 의존). UI는 어댑터, ④·⑤·⑧·⑫·엔진 공유. 소유자 분리가 아닌 비-별개는 나목 없으면 **분할 포기**(throw 아님) | UI E-4(소유자 분리 켰다 끈 stale 단가 → 칸 없는 throw) 수용, E-8 전송 게이트 통일 |
+| 산식 | 취득시 토지·건물 | 토지분 = floor(H × L ÷ (L + N)), 건물분 = H − 토지분 — 양도가액 안분의 `apportion()`(`sale-split-apportion-basis.ts:103-107`)을 공용 leaf로 올려 같은 함수 사용 | 집행기준 99-164-9 절사 순서와 동일 |
+| **D-1** | 환산 **분모**(양도시)도 비례로 | ✅ **ⓑ 함께 바꾼다** — 양도시 개별주택가격 H_T(`standardPriceAtTransfer`) 입력 경로(④·⑫·⑧·UI 축 A 카드) 개방 | 「양도시는 이미 비례」는 **양도가액 안분에만** 해당 — 환산 분모는 양도시 가목·나목 원값. 취득시만 바꾸면(ⓐ) 현행에서 일관되던 토지 파트 환산이 깨진다(토지 환산취득가 205,714,285 → 164,571,428). 엔진 판정 「ⓐ 단독 출시 불가」. 근거 N12·PHD 정본(양 시점 비례). Q-1 「고친다」의 일관된 이행 |
+| D-2 | 별개 취득 + 나목 생략 레거시 후퇴(`calcAcqStdPair:63-68`) | **포함 — 차단** | 같은 뺄셈 leaf. UI 영향 없음(API 직접 호출만 400) |
+| A3 | 양도시 후퇴 fallback 뺄셈 | **엔진 throw + ⑫ 필수화** | engine-audit의 「대체로 미도달」은 오류 — 감정평가 양쪽 + 환산 + 양도시 기준시가 없음이 HTTP 200으로 도달(141,615,200 / 199,849,680) |
+| E-2 | 결과 표시 | **`splitDetail.stdSplit { housingTotal, landStd, buildingStd, landBasis, buildingBasis }` echo 신설** — 결과 카드가 유무로 분기 | 비례 산식 표시 필요 |
+| E-3 | `assetKind==="building"` | **불변**(결합 공시 아님) — leaf housing 한정 | |
+| E-6 | 나목 지분 스케일 | **안 함** | |
+| Q-4 / Q-U1 | 나목 입력 | **건물 기준시가 계산 모달 + 직접 입력 허용**(새 컴포넌트 `AcqBuildingStdField`, 토지 단가 바로 아래 — 총액 → 토지 → 건물 순). testid `acq-building-std-card`(별개 경로 `split-building-std-acq-card`와 분리) | 양도시 나목 칸이 이미 직접 편집 가능 |
+| Q-U2 | 「취득일 다름」만 켠 경우 | 칸 열지 않음 | 입구 아님 |
+| 문구 | stale 안내 | 화면 4곳(`CompanionAcqStdPriceSection.tsx:171·187`, `NonPurchaseSplitInputsBlock.tsx:88·120`, `SplitGainDetailSection.tsx:127-135`) + 주석 6곳, 「역산이 정본」 주석 삭제 | 역방향 grep 전수 |
+| 테스트 | 깨질 기존 테스트 | 엄격 동작 기준 **61건/14파일**: 입력 보충만(값 불변) 59건/13파일 + 기대값 갱신 2건(`split-acq-std-price-independent.test.ts` — 「나목 입력 무시」 단언 반전, H10 개산공제 항등성 1원 → 독립 floor가 정본이라 ±1원 완화) · 특성화 anchor 12건은 본 anchor가 승계 · E2E `transfer-dead-end-defects.spec.ts` B2(나)·`owner-split-acq-std-gate-b2.anchor.test.ts:48-52` · DOM/E2E 나머지 미측정 | 변형 실측 |
+
+**anchor 수치(mock 세율, 산출세액)**: a1 133,780,000 → 129,860,000 · a2(ⓑ) 220,433,040 → 184,060,368 · a3 건물만 97,380,000 → 74,870,000 / 토지만 21,905,000 → 42,950,000 · b1 후퇴 경로 차단 · 회귀선(전후 동일): 함께 취득 141,060,000 · 별개 취득 182,874,960 · PHD 26,100,130 · 양도가액 안분 480M/720M · 일반건물 236,137,680 · 양쪽 실가 + 직접입력 141,060,000(나목 불요).
+
+**확인 필요(구현 중 실측)**: `refines.ts:156-157` `hasIndependentAcqStd`가 비례 분자 H 필수 검사를 면제하는지 · 소유자 분리 OFF stale 단가 세션의 동작 변화(뺄셈 분할 → 분할 포기) · 일부양도 + 소유자 분리의 N 의미 · 컴패니언 Zod SP refine 부재(기존 갭) · 상속·증여 취득시 결합가 출처 · 모달이 1985 의제취득·2000 이전 N을 내는지(Q-U3) · 공동주택 취득시 N 산정(Q-U5).
