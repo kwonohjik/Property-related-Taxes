@@ -276,3 +276,43 @@ export function settlePreDeemedLotExpenses(args: {
     expenses: otherSideActual + lotDonorCapex + (swapApplied ? clause1SideActual : estimatedDeduction),
   };
 }
+
+/**
+ * 단기(가목 1)·장기(가목 2) 세율 안분용 그룹 순이익 — ① 정산이 있을 때만(`calcSplitModeTax`가 읽는다).
+ *
+ * 종전 안분 비율은 sub-lot 총이익(양도가 − 취득가)이라 정산이 그룹마다 다르게 깎는 필요경비를 보지 않았다:
+ *   · ① 채택 몫 = 개산공제(영 §163⑥4) — swap 이면 ① 몫 실비이고, 빠진 ① 환산 취득가액은 되더한다(법 §97②2호 단서)
+ *   · 그 외 몫  = 양도 주식수 비례 실비 + 증여자 자본적지출(사용자 결정 A안)
+ * 몫은 sub-lot 의 ① 채택 주식수(c)와 그 외 주식수(o)로 나눈다. moving_avg(풀)는 sub-lot 선택이 없어 매도 주식수 비례로 근사한다.
+ *
+ * 단기 그룹은 종전과 같이 총이익이 양(+)인 단기 sub-lot 만 모은다. 분모는 전 sub-lot 순이익 합(= 양도소득금액).
+ */
+export function settledGroupGains(
+  lotDetail: LotMatchingDetail,
+  settlement: Pick<PreDeemedLotSettlement, "clause1SideActual" | "estimatedDeduction" | "swapApplied" | "swapRemovedAcquisition" | "expenses">,
+): { shortGain: number; totalGain: number } | undefined {
+  const summary = lotDetail.preDeemedClause1Summary;
+  if (!summary || !(summary.clause1Shares > 0)) return undefined;
+  const clause1Expense = settlement.swapApplied ? settlement.clause1SideActual : settlement.estimatedDeduction;
+  const otherExpense = settlement.expenses - clause1Expense;
+  const clause1Ratio = summary.soldShares > 0 ? summary.clause1Shares / summary.soldShares : 0;
+  let shortGross = 0;
+  let shortC = 0;
+  let shortO = 0;
+  for (const m of lotDetail.matched) {
+    if (!(m.isShortTerm && m.perLotGain > 0)) continue;
+    const c = summary.pooled ? m.saleShares * clause1Ratio : m.preDeemedSelected === "clause1" ? m.saleShares : 0;
+    shortGross += m.perLotGain;
+    shortC += c;
+    shortO += m.saleShares - c;
+  }
+  const shortGain =
+    shortGross -
+    mulDivFloor(clause1Expense, shortC, summary.clause1Shares) -
+    (summary.otherShares > 0 ? mulDivFloor(otherExpense, shortO, summary.otherShares) : 0) +
+    mulDivFloor(settlement.swapRemovedAcquisition, shortC, summary.clause1Shares);
+  return {
+    shortGain,
+    totalGain: lotDetail.totalGain - settlement.expenses + settlement.swapRemovedAcquisition,
+  };
+}
