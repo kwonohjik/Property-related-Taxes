@@ -117,7 +117,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   const transferPriceMode = form.transferPriceMode || "actual";
   // 3중 패턴 default "purchase" — 유상증자·과세 무상주는 엔진에 「매매」로 보낸다(`stock-acquisition-cause.ts`)
   // 분할 모드는 단건 취득원인 칸이 화면에 없다(lot 이 정본) — 남은 단건 값은 싣지 않는다(⑧과 같은 leaf)
-  const acquisitionCause = toEngineAcquisitionCause(effectiveSingleAcquisitionCause(form));
+  const formAcquisitionCause = effectiveSingleAcquisitionCause(form);
+  const acquisitionCause = toEngineAcquisitionCause(formAcquisitionCause);
   /** 이월과세 증여자 기준 환산 — 수증자 모드가 실가여도 A가 환산을 탄다(`stock-transfer-tax-api-carryover.ts`) */
   const isDonorConversion = isDonorConversionForm(form);
   const filingType = form.filingType || "preliminary";
@@ -167,6 +168,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     // ── 보유기간 기산점 ──
     acquisitionCause,                               // 3중 패턴 default: "purchase"
   };
+
+  // 폼 전용 원인은 따로 싣는다 — ⑫가 과세 무상주 규칙을 ⑧과 같은 술어로 강제한다(엔진 미매핑)
+  if (formAcquisitionCause !== acquisitionCause) body.acquisitionCauseDetail = formAcquisitionCause;
 
   // 보조 일자 (취득원인별 조건부)
   if (acquisitionCause === "inheritance" && form.decedentAcquisitionDate) {

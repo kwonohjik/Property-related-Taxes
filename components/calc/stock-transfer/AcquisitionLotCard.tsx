@@ -38,7 +38,7 @@ export const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], str
   purchase: "매매",
   /** 엔진에는 「매매」로 간다 — `stock-acquisition-cause.ts` */
   rights_issue: "유상증자",
-  bonus_taxed: "무상증자 (의제배당 과세분)",
+  bonus_taxed: "주식배당·무상증자 (과세분)", // 의제배당·배당소득으로 과세된 무상주 — 주식배당(상법 §462의2) 포함
   /** 매수 건으로 받지 않는다 — 고르면 안내하고 ⑧이 막는다(자본조정으로 입력) */
   bonus_untaxed: "무상증자 (의제배당 비과세분)",
   inheritance: "상속",
@@ -101,7 +101,7 @@ export function AcquisitionLotCard({
                 : cause === "rights_issue"
                   ? "신주 인수대금을 납입한 날 — 소득세법 §98 대금청산일"
                   : cause === "bonus_taxed"
-                    ? "무상주를 취득한 날 — 이 날부터 보유기간을 셉니다"
+                    ? "주식배당은 주주총회 결의일 · 잉여금 자본전입은 자본전입 결의일(이사회 결의면 신주배정일) — 이 날부터 보유기간을 셉니다"
                     : undefined
           }
         >

@@ -51,6 +51,8 @@ describe("매수 lot 카드", () => {
     renderLot("bonus_taxed");
     expect(screen.getByText(/1주당 액면가액 — 의제배당으로 과세된 금액/)).toBeTruthy();
     expect(screen.queryByTestId("lot-bonus-untaxed-notice")).toBeNull();
+    // 취득시기 — 주식배당은 주주총회 결의일(서면-2020-법규재산-2209)
+    expect(screen.getByText(/주식배당은 주주총회 결의일 · 잉여금 자본전입은 자본전입 결의일/)).toBeTruthy();
   });
 
   it("UI-3 비과세 무상주 — 자본조정 안내", () => {
@@ -68,7 +70,7 @@ describe("단건 취득 정보", () => {
       />,
     );
     expect(screen.getByText("유상증자")).toBeTruthy();
-    expect(screen.getByText("무상증자 (의제배당 과세분)")).toBeTruthy();
+    expect(screen.getByText("주식배당·무상증자 (과세분)")).toBeTruthy();
     expect(screen.getByText("무상증자 (의제배당 비과세분)")).toBeTruthy();
     expect(screen.getByTestId("single-bonus-untaxed-notice").textContent).toContain("원주 취득 건으로 입력");
   });
