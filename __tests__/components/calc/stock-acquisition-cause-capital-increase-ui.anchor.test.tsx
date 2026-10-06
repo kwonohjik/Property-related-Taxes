@@ -9,6 +9,7 @@
  *   UI-4  단건 취득원인 라디오에 세 선택지 · 비과세분이면 안내
  *   UI-5  과세 무상주 — Step2 추계 모드(환산·매매사례) 비활성 · 라벨 「1주당 액면가액」 · 안내 / 매매는 그대로
  *   UI-6  과세 무상주 lot — 단가 칸 라벨 「1주당 액면가액」
+ *   UI-7  의제취득일 전(1980) 과세 무상주 — 추계 모드 열림(영 §176의2④ ①·② 비교) · 카드 ② 칸 「취득 당시 1주당 액면가액」
  */
 
 import { describe, it, expect, afterEach } from "vitest";
@@ -111,5 +112,30 @@ describe("과세 무상주 — 액면가액만", () => {
     renderLot("bonus_taxed");
     expect(screen.getByText("1주당 액면가액")).toBeTruthy();
     expect(screen.queryByText("1주당 단가")).toBeNull();
+  });
+});
+
+describe("의제취득일 전 과세 무상주", () => {
+  it("UI-7 1980 취득 — 환산·매매사례 열림 · 액면가액 전용 안내 없음 · 카드 ② 칸이 액면가액", () => {
+    render(
+      <Step2
+        form={{
+          ...createInitialStockFormData(),
+          marketType: "kospi",
+          acquisitionDate: "1980-06-01",
+          acquisitionCause: "bonus_taxed",
+          acquisitionMode: "estimated",
+        }}
+        onChange={() => {}}
+      />,
+    );
+    const radio = (value: string) =>
+      document.querySelector(`input[name="acquisitionMode"][value="${value}"]`) as HTMLInputElement;
+    expect(radio("estimated").disabled).toBe(false);
+    expect(radio("sale_case").disabled).toBe(false);
+    expect(screen.queryByTestId("bonus-taxed-face-value-notice")).toBeNull();
+    expect(screen.getByTestId("pre-deemed-acquisition-card")).toBeTruthy();
+    expect(screen.getByText("취득 당시 1주당 액면가액")).toBeTruthy();
+    expect(screen.queryByText("취득 당시 실지거래가액 (1주당, 선택)")).toBeNull();
   });
 });

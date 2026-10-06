@@ -39,6 +39,8 @@ import { SplitAllocationPreviewCard } from "@/components/calc/stock-transfer/Spl
 import { effectiveTransferActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { effectiveAcquisitionActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
+import { isBonusTaxedEstimationBlocked } from "@/lib/calc/stock-acquisition-cause";
+import { isPreDeemedPurchaseForm } from "@/lib/calc/stock-transfer-section94-4-form";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -77,8 +79,10 @@ export function Step2({ form, onChange }: Step2Props) {
   const giftLikeCause = isGiftLikeCause(form.acquisitionCause);
   const bookLostMarket = usesUnlistedSupplementaryValuation(form.marketType) || isTradingHaltBypassMarket(form.marketType);
   const giftEstimatedDisabled = giftLikeCause && !bookLostMarket;
-  // 과세 무상주 — 취득가액은 액면가액(법정)이라 추계 모드를 열지 않는다(⑧·③과 같은 술어)
+  // 과세 무상주 — 취득가액은 액면가액(법정)이라 추계 모드를 열지 않는다(⑧·③과 같은 술어).
+  // 의제취득일 전 취득이면 영 §176의2④ ①·② 비교를 위해 연다(`isBonusTaxedEstimationBlocked`).
   const bonusTaxed = form.acquisitionCause === "bonus_taxed";
+  const bonusTaxedEstimationClosed = isBonusTaxedEstimationBlocked(form.acquisitionCause, "estimated", isPreDeemedPurchaseForm(form));
   const is94_4 = isSection94_4Form(form);
   /**
    * 환산 분자(취득일 이전 1개월 종가)의 기준일 — 의제취득일 «전» 취득이면 의제취득일이다
@@ -314,8 +318,8 @@ export function Step2({ form, onChange }: Step2Props) {
             columns={3}
             options={[
               { value: "actual", label: "실가" },
-              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled || bonusTaxed },
-              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause || bonusTaxed },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled || bonusTaxedEstimationClosed },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause || bonusTaxedEstimationClosed },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
               // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
               //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
@@ -337,7 +341,7 @@ export function Step2({ form, onChange }: Step2Props) {
             </p>
           )}
 
-          {bonusTaxed && !isSplitMode && (
+          {bonusTaxedEstimationClosed && !isSplitMode && (
             <p className="text-xs text-amber-800" data-testid="bonus-taxed-face-value-notice">
               {BONUS_TAXED_ACTUAL_ONLY_MESSAGE}
             </p>

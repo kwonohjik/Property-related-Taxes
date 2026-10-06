@@ -65,12 +65,23 @@ export function PreDeemedAcquisitionCard({ form, onChange }: Props) {
             ①과 견주려면 위에서 「환산취득가」 또는 「매매사례가액」을 고르고 취득 당시 실가를 함께 입력하세요.
           </p>
         ) : (
-          <CurrencyInput
-            label="취득 당시 실지거래가액 (1주당, 선택)"
-            hint="알고 있으면 입력하세요 — ② 실가 + 생산자물가상승분과 위 ①을 견줍니다. 비우면 ①만 계산합니다."
-            value={form.preDeemedActualPricePerShare}
-            onChange={(v) => onChange({ preDeemedActualPricePerShare: v })}
-          />
+          form.acquisitionCause === "bonus_taxed" ? (
+            // 과세 무상주 — ②의 실지거래가액은 법정 액면가액이라 언제나 확인된다 → 필수(⑧)
+            <CurrencyInput
+              label="취득 당시 1주당 액면가액"
+              required
+              hint="의제배당으로 과세된 금액(소득세법 시행령 §27①1호 가목) — ② 액면가액 + 생산자물가상승분과 위 ①을 견줍니다."
+              value={form.preDeemedActualPricePerShare}
+              onChange={(v) => onChange({ preDeemedActualPricePerShare: v })}
+            />
+          ) : (
+            <CurrencyInput
+              label="취득 당시 실지거래가액 (1주당, 선택)"
+              hint="알고 있으면 입력하세요 — ② 실가 + 생산자물가상승분과 위 ①을 견줍니다. 비우면 ①만 계산합니다."
+              value={form.preDeemedActualPricePerShare}
+              onChange={(v) => onChange({ preDeemedActualPricePerShare: v })}
+            />
+          )
         )}
 
         {needsRatio && (
