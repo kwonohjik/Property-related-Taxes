@@ -16,6 +16,7 @@ import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope"
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
+import { housesOwnedAtTransfer } from "./household-house-count";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -102,9 +103,13 @@ export function buildHousesPayload(
   primary: AssetForm,
   houses: HouseEntry[],
   presaleRightsCount: number,
-  sellingExclusion?: TransferFormData["sellingHouseExclusion"],
-  /** 공고 전 매매계약(11호) 범위 판정용 양도일 — 미제공이면 그 사실을 싣지 않는다(판정 메뉴) */
-  transferDate?: string,
+  sellingExclusion: TransferFormData["sellingHouseExclusion"] | undefined,
+  /**
+   * 양도일 — ① 그날 이후(같은 날 포함) 취득한 명부 행은 양도일 현재 보유 주택이 아니라 싣지 않는다
+   * (`isOwnedAtTransfer` — D2). ② 공고 전 매매계약(11호) 범위 판정. 판정 메뉴는 `sellingExclusion`을
+   * 넘기지 않으므로 ②는 그쪽에서 실리지 않는다. 필수: 빠뜨린 호출부를 컴파일러가 찾는다.
+   */
+  transferDate: string | undefined,
 ): object[] | undefined {
   const hasMultiHouseEntries = houses.length > 0 || presaleRightsCount > 0;
   if (!isHousingLike(primary.assetKind) || !hasMultiHouseEntries) return undefined;
@@ -231,7 +236,7 @@ export function buildHousesPayload(
       : {}),
   };
 
-  return [sellingHouse, ...buildOtherHousesPayload(houses)];
+  return [sellingHouse, ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate))];
 }
 
 /**

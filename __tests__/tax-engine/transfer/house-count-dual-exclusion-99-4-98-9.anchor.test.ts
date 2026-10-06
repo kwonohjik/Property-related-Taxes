@@ -71,6 +71,7 @@ describe("D4-01 §99의4 + §98의9 동시 적격 — 각각 1채씩 제외", ()
   const ctx = {
     generalHouseAcquisitionDate: new Date("2014-01-01"),
     transferDate: new Date("2024-06-01"),
+    mergeOrder: undefined,
   };
 
   it("D4-01-1: resolve가 2건을 §99의4 → §98의9 순으로 반환한다", () => {

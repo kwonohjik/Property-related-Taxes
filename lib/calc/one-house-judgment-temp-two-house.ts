@@ -19,6 +19,7 @@ export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): Tempora
     primaryKind: primary?.assetKind,
     primaryAcquisitionDate: primary?.acquisitionDate ?? "",
     houses: form.houses,
+    transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,

@@ -90,7 +90,7 @@ function form(ltr?: RentalDeclaration): TransferFormData {
 
 function sellingRow(ltr?: RentalDeclaration): Payload {
   const f = form(ltr);
-  const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion) as Payload[];
+  const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Payload[];
   return rows.find((r) => r.id === "selling")!;
 }
 
@@ -163,7 +163,7 @@ describe("LR ④⑬ — 양도 주택의 장기임대 선언이 페이로드에 
       isUnavoidableReason: true,
       acquisitionOfficialPrice: "250000000",
     };
-    const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion) as Payload[];
+    const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Payload[];
     expect(rows.find((r) => r.id === "selling")!.acquisitionOfficialPrice).toBe(250_000_000);
   });
 

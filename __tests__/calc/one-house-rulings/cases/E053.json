@@ -33,7 +33,41 @@
         "155-1-temporary-two-house"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch. 회신: 같은 날 1주택을 취득하면서 기존 1주택을 양도하면 양도한 후 취득한 것으로 보아 §155① 적용 → 양도 시점의 주택은 종전주택·신규주택 2채(일시적 2주택). 관측: 과세 — 같은 날 취득한 주택(swap) 행도 세대 주택 수에 산입해 3주택이 된다. 폼 확인: ⑧ 오류 0. 최소쌍(프로브): 같은 날 취득 행을 빼면 비과세(applied 155-1), 같은 날이 아니라 다음 날 취득으로 바꿔도 과세 — 명부 행은 취득일과 양도일의 선후와 무관하게 전부 산입한다(양도일 이후 취득 행에 대한 ⑧ 경고도 없음). 의심 지점: lib/tax-engine/one-house/house-count.ts:108-109(deriveHouseholdHousingCount = 명부 행 수), lib/calc/household-house-count.ts:329(후보 필터 h.acquisitionDate > prev — 같은 날 취득 행 포함). 일자 가정(원문에 일자 없음): 종전주택 2000-03-15, 신규주택 2007-10-15(1년 이내 양도), 교환·수의계약 취득·양도 2008-04-15, 양도가 4억 중립. 당시 기한 1년은 엔진 연혁에 없어 3년으로 계산(이 일자에서는 구별력 없음)."
+    "bucket": "match",
+    "note": "match. 회신: 같은 날 1주택을 취득하면서 기존 1주택을 양도하면 양도한 후 취득한 것으로 보아 §155① 적용 → 양도 시점의 주택은 종전주택·신규주택 2채(일시적 2주택). 양도일 당일·이후 취득한 명부 행은 양도일 현재 보유 주택이 아니라 주택 수·신규주택 후보·엔진 명부에서 뺀다(lib/calc/household-house-count.ts isOwnedAtTransfer). 음성 짝 E053-era-daybefore: 같은 주택을 양도 전날 취득하면 양도일 현재 3주택 → 과세. 일자 가정(원문에 일자 없음): 종전주택 2000-03-15, 신규주택 2007-10-15(1년 이내 양도), 교환·수의계약 취득·양도 2008-04-15, 양도가 4억 중립."
+  },
+  {
+    "docNo": "서면인터넷방문상담5팀-354",
+    "docDate": "2008.02.22.",
+    "id": "E053-era-daybefore",
+    "basis": "era",
+    "today": "2008-02-22",
+    "summary": "E053-era의 음성 짝 — 갈아탈 주택을 양도 전날 취득(양도일 현재 3주택)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-04-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2007-10-15"
+        },
+        {
+          "id": "swap",
+          "region": "capital",
+          "acquisitionDate": "2008-04-14"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 같은 날이 아니라 양도 전날 취득하면 양도일 현재 종전·신규·교환취득 주택 3채 — §155① 불성립(일시적 2주택이 아니다). E053-era와 하루 차이만 둔 최소쌍으로 isOwnedAtTransfer의 경계(취득일 < 양도일)를 고정한다."
   }
 ]

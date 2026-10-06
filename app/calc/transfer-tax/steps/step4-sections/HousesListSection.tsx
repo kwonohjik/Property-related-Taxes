@@ -46,6 +46,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
+import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
 
@@ -114,6 +115,8 @@ interface RowProps {
   mergeContext?: MergeContext;
   /** 조특법 주택 수 제외 배지 — 행 편집 ⑥이 열려 있을 때만 단다. */
   countExclusionEnabled?: boolean;
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 행에 「주택 수 제외」 배지를 단다(D2 · `isOwnedAtTransfer`). */
+  transferDate: string | undefined;
 }
 
 /** 조특법 주택 수 제외 사유 — 「특례」 열 배지 문구. 어느 주택이 무슨 사유로 빠지는지 표에서 보인다. */
@@ -125,7 +128,7 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled }: RowProps) {
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, transferDate }: RowProps) {
   const badges = resolveHouseBadges(house);
   const exclusionLabel = countExclusionEnabled ? countExclusionBadgeLabel(house) : undefined;
   const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
@@ -148,6 +151,11 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclus
               {b.label}
             </span>
           ))}
+          {!isOwnedAtTransfer(house.acquisitionDate, transferDate) && (
+            <span className={`${CHIP_BASE} ${CHIP_AMBER}`} data-testid={`house-after-transfer-badge-${house.id}`}>
+              양도일(같은 날 포함) 이후 취득 — 주택 수 제외
+            </span>
+          )}
           {exclusionLabel && (
             <span className={`${CHIP_BASE} ${CHIP_EMERALD}`} data-testid={`house-count-exclusion-badge-${house.id}`}>
               {exclusionLabel}
@@ -260,6 +268,7 @@ export function HousesListSection({
       form.assets?.[0]?.assetKind,
       // OH-34: 레거시 표식이 켜져 있으면 스칼라를 덮지 않는다(전환 버튼만이 끈다).
       form.legacyHouseCountPrecedence ?? false,
+      form.transferDate,
     );
   }
 
@@ -444,6 +453,7 @@ export function HousesListSection({
                     onRemove={() => removeHouse(h.id)}
                     mergeContext={mergeContext}
                     countExclusionEnabled={countExclusionEnabled}
+                    transferDate={form.transferDate}
                   />
                 ))}
               </tbody>

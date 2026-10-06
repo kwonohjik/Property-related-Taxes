@@ -62,14 +62,14 @@ describe("주택 계열 술어 — 단일 소스", () => {
   });
 
   it("HL-04: 🔴 ④가 재개발APT에 `houses[]`를 **싣는다** (종전 undefined)", () => {
-    const payload = buildHousesPayload(asset("redevelopment_apt"), houses, 0, undefined);
+    const payload = buildHousesPayload(asset("redevelopment_apt"), houses, 0, undefined, undefined);
     expect(payload).toBeDefined();
     expect(payload).toHaveLength(3); // 양도주택(selling) + 보유 2채
   });
 
   it("HL-05: 대조군 — 토지는 여전히 미전송 (게이트를 통째로 연 것이 아니다)", () => {
-    expect(buildHousesPayload(asset("land"), houses, 0, undefined)).toBeUndefined();
-    expect(buildHousesPayload(asset("building"), houses, 0, undefined)).toBeUndefined();
+    expect(buildHousesPayload(asset("land"), houses, 0, undefined, undefined)).toBeUndefined();
+    expect(buildHousesPayload(asset("building"), houses, 0, undefined, undefined)).toBeUndefined();
   });
 
   it("HL-06: ⚠️ 엔진 §104⑦ 집합과 **원소가 갈린다** — 합치면 정정이 입력 경로를 끊는다", () => {

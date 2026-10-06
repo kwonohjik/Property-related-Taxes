@@ -76,7 +76,7 @@ function housingForm(houses: HouseEntry[]): TransferFormData {
 /** 단건 경로 — `callTransferTaxAPI`·판정 메뉴가 공유하는 빌더. */
 function singleRows(houses: HouseEntry[]): Payload[] {
   const form = housingForm(houses);
-  return buildHousesPayload(form.assets[0], houses, 0, form.sellingHouseExclusion) as Payload[];
+  return buildHousesPayload(form.assets[0], houses, 0, form.sellingHouseExclusion, undefined) as Payload[];
 }
 
 /** 다건(신고 단위) 경로 — 인라인 map이 따로 있어 단건과 어긋날 수 있다. */
@@ -112,7 +112,7 @@ describe("CH ④⑬ — 행 선언이 중과 칸(`isCulturalHeritage`)에 실린
       form.assets[0],
       form.houses,
       0,
-      form.sellingHouseExclusion,
+      form.sellingHouseExclusion, undefined,
     ) as Payload[];
     expect(withSelling.find((r) => r.id === "selling")!.isCulturalHeritage).toBe(true);
   });

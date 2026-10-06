@@ -38,6 +38,7 @@ import { migrateAsset } from "./calc-wizard-asset-migrate";
  */
 import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
 import { oneHouseJudgmentExtraDefaults } from "./one-house-extra-fields.types";
+import { housesOwnedAtTransfer } from "@/lib/calc/household-house-count";
 export type { OneHouseJudgmentExtraFields };
 export { oneHouseJudgmentExtraDefaults };
 
@@ -101,9 +102,10 @@ export function normalizeOneHouseJudgmentForm(
  * 🔑 분양권·조합원입주권은 더하지 않는다 — §89①3호의 「주택 수」가 아니라 §89②의 별개 축이다.
  */
 export function deriveJudgmentHouseCount(
-  form: Pick<OneHouseJudgmentFormData, "houses" | "assets">,
+  form: Pick<OneHouseJudgmentFormData, "houses" | "assets" | "transferDate">,
 ): number {
-  return (judgmentSaleIsHousing(form) ? 1 : 0) + (form.houses?.length ?? 0);
+  // 양도일 이후(같은 날 포함) 취득 행은 세지 않는다 — ④ `buildHousesPayload`·route와 같은 술어(D2).
+  return (judgmentSaleIsHousing(form) ? 1 : 0) + housesOwnedAtTransfer(form.houses, form.transferDate).length;
 }
 
 /**

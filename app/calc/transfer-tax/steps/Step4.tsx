@@ -173,6 +173,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence === true,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
@@ -196,6 +197,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           primaryKind,
           declared: parseInt(form.householdHousingCount || "1", 10) || 0,
           houses: form.houses,
+          transferDate: form.transferDate,
           legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         }),
         temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
@@ -213,6 +215,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       primaryKind,
       form.householdHousingCount,
       form.houses,
+      form.transferDate,
       form.legacyHouseCountPrecedence,
       tempTwoHouseDates,
     ],
@@ -229,8 +232,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         primaryKind,
         form.houses,
         parseInt(form.householdHousingCount || "1", 10) || 0,
+        form.transferDate,
       ),
-    [primaryKind, form.houses, form.householdHousingCount],
+    [primaryKind, form.houses, form.householdHousingCount, form.transferDate],
   );
 
   /**
@@ -243,9 +247,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         primaryKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-    [primaryKind, form.householdHousingCount, form.houses, form.legacyHouseCountPrecedence],
+    [primaryKind, form.householdHousingCount, form.houses, form.transferDate, form.legacyHouseCountPrecedence],
   );
 
   /**

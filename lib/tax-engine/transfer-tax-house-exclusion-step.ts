@@ -10,6 +10,7 @@
 
 import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps } from "./transfer-inheritance-exclusion";
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
+import type { New994MergeOrderContext } from "./transfer-reductions/new-99-4";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
 import type { SpecialHouseExclusionResolution } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -38,6 +39,16 @@ export function collectKnownHouseExclusionIds(sources: {
 }
 
 /**
+ * D5 — §99의4 순서를 합가 상대방 세대 기준으로 볼 맥락(`new994GeneralHouseAcquisitionDate`). 합가일은 혼인을 먼저 본다
+ * (판정 메뉴 `mergeContextOf`와 같은 순서). 합가가 없거나 명부가 없으면 `undefined` — 종전 그대로.
+ */
+function new994MergeOrderOf(input: TransferTaxInput): New994MergeOrderContext {
+  const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
+  if (!mergeDate || !input.houses) return undefined;
+  return { houses: input.houses, mergeDate };
+}
+
+/**
  * STEP 0.9 + 0.95의 **제외 판정만** — step을 쓰지 않는 순수 함수.
  *
  * E-14 — 중과 판정(STEP 0.5)이 영 §167의10①15호 ① 요소를 판정할 때 비과세와 **같은** 세대 주택 수를
@@ -53,6 +64,7 @@ export function resolveExemptionHouseCountExclusions(
     {
       generalHouseAcquisitionDate: generalHouseAcquisitionDate ?? effectiveInput.acquisitionDate,
       transferDate: effectiveInput.transferDate,
+      mergeOrder: new994MergeOrderOf(effectiveInput),
     },
   );
   const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
