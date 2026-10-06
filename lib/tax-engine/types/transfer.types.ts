@@ -655,6 +655,13 @@ export interface TransferTaxInput {
     isOutsideCapitalEupMyeon: boolean;
     /** 1호 — 피상속인이 취득 후 거주한 연수 (5년 이상) */
     decedentResidenceYears?: number;
+    /**
+     * 1호 — 상속개시 당시 피상속인과 동일세대(D7). §155② 단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」로
+     * 동일세대 상속은 동거봉양 합가 전 보유분이 아니면 1호의 「상속받은 주택」이 아니다. 미입력은 판정 메뉴 ⑧이 막는다.
+     */
+    decedentSameHouseholdAtInheritance?: boolean;
+    /** 1호 — 동거봉양 합가 전부터 보유하던 주택(위 단서의 예외) */
+    parentalCareMergeInheritedHouse?: boolean;
     /** 2호 — 이농인이 취득일 후 거주한 연수 (5년 이상) */
     ownerResidenceYears?: number;
     /** 3호 — 귀농주택 취득일. ⑦ 단서: 취득일부터 5년 이내 일반주택 양도 한정 */

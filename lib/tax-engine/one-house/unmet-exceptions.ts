@@ -8,6 +8,7 @@ import { resolveMergeComposition } from "./merge-composition";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
+  passesHouseholdGate,
   resolveInheritedHouseExclusionFromInput,
   resolveInheritedSellingHouseId,
 } from "../transfer-inheritance-exclusion";
@@ -326,6 +327,12 @@ function collectRuralUnmet(
           `1호 상속 농어촌주택은 피상속인이 취득 후 ${RURAL_HOUSE_RESIDENCE_YEARS}년 이상 거주해야 하는데 입력값이 ${r.decedentResidenceYears ?? 0}년입니다.`,
         );
       }
+      // D7 — 단서 괄호가 제7항제1호에도 걸린다. 같은 게이트(`passesHouseholdGate`)를 쓴다.
+      if (!passesHouseholdGate(r)) {
+        reasons.push(
+          "상속개시 당시 피상속인과 동일세대였습니다 — 동거봉양 합가 전부터 보유하던 주택이 아니면 1호의 「상속받은 주택」으로 보지 않습니다(§155② 단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」).",
+        );
+      }
       break;
     case "farm_exit":
       if ((r.ownerResidenceYears ?? 0) < RURAL_HOUSE_RESIDENCE_YEARS) {
@@ -421,6 +428,13 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   if (x.inheritedDateUnknownCount > 0) {
     reasons.push(
       `상속주택 ${x.inheritedDateUnknownCount}채의 상속개시일이 없어 양도하는 주택이 「상속개시 당시 보유한 주택」(§155② 괄호)인지 확인되지 않습니다 — 주택 수에서 빼지 않았습니다. 상속개시일을 입력하면 판정합니다.`,
+    );
+  }
+  if (x.sameInheritanceAsSoldCount > 0) {
+    reasons.push(
+      `양도하는 주택도 상속주택이고 상속주택 ${x.sameInheritanceAsSoldCount}채를 같은 날(같은 상속) 함께 상속받았습니다 — ` +
+        "§155②·③은 상속주택 외의 주택을 양도할 때 적용하므로 함께 상속받은 주택을 주택 수에서 빼지 않습니다" +
+        "(서면-2015-부동산-1134 · 조심-2018-서-3806). 피상속인이 다른 별개의 상속이면 상속개시일을 확인하세요.",
     );
   }
   if (x.sameHouseholdDisqualifiedCount > 0) {

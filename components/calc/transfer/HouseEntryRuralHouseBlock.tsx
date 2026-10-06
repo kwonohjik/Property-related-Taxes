@@ -180,6 +180,49 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               unit="년"
             />
             <p className="text-xs text-muted-foreground">취득 후 5년 이상이어야 합니다.</p>
+            {/*
+              D7 — §155② 단서 괄호(「이하 제3항, 제7항제1호 … 에서 같다」)가 1호에도 걸린다. 상속주택 카드의 토글과
+              같은 칸(단일 진실)이지만 여기서는 「아직 답하지 않음」을 가질 수 있게 라디오로 묻는다(⑧ 필수 — 모름은 불리).
+            */}
+            <RadioCardGroup
+              name={`ruralSameHousehold-${house.id}`}
+              data-testid="house-row-rural-same-household"
+              tone="emerald"
+              layout="stack"
+              options={[
+                { value: "no", label: "상속개시 당시 피상속인과 별도세대였습니다", testId: "house-row-rural-same-household-no" },
+                {
+                  value: "yes",
+                  label: "상속개시 당시 피상속인과 동일세대였습니다",
+                  description: "동거봉양 합가 전부터 보유하던 주택이 아니면 1호의 상속받은 주택으로 보지 않습니다(§155② 단서).",
+                  testId: "house-row-rural-same-household-yes",
+                },
+              ]}
+              value={
+                house.decedentSameHouseholdAtInheritance === true
+                  ? "yes"
+                  : house.decedentSameHouseholdAtInheritance === false
+                    ? "no"
+                    : ""
+              }
+              onChange={(v) =>
+                onUpdate({
+                  decedentSameHouseholdAtInheritance: v === "yes",
+                  parentalCareMergeInheritedHouse: v === "yes" ? house.parentalCareMergeInheritedHouse : undefined,
+                })
+              }
+            />
+            {house.decedentSameHouseholdAtInheritance === true && (
+              <ToggleCard
+                variant="chip"
+                tone="emerald"
+                data-testid="house-row-rural-parental-care-merge"
+                checked={house.parentalCareMergeInheritedHouse ?? false}
+                onCheckedChange={(v) => onUpdate({ parentalCareMergeInheritedHouse: v })}
+                title="동거봉양 합가 전부터 보유하던 주택"
+                description="1주택 보유자가 60세 이상 직계존속을 동거봉양하려 세대를 합치기 전부터 보유한 주택이면 상속받은 주택으로 봅니다."
+              />
+            )}
           </div>
         )}
 

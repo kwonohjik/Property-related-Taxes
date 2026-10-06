@@ -40,6 +40,8 @@ export type OneHouseFactRow = Partial<
     | "ruralOutsideCapitalEupMyeon"
     | "ruralUrbanZone"
     | "ruralDecedentResidenceYears"
+    | "decedentSameHouseholdAtInheritance"
+    | "parentalCareMergeInheritedHouse"
     | "ruralOwnerResidenceYears"
     | "ruralLandAreaSqm"
     | "ruralWholeHouseholdMoved"
@@ -58,6 +60,8 @@ export interface RuralHousePayload {
   kind: "inherited" | "farm_exit" | "return_to_farm";
   isOutsideCapitalEupMyeon: boolean;
   decedentResidenceYears?: number;
+  decedentSameHouseholdAtInheritance?: boolean;
+  parentalCareMergeInheritedHouse?: boolean;
   ownerResidenceYears?: number;
   acquisitionDate?: string;
   isHighPriceAtAcquisition?: boolean;
@@ -151,6 +155,18 @@ export function findUnavoidableOutsideCapitalRow(
 const num = (s: string | undefined) => parseFloat(s ?? "") || 0;
 
 /**
+ * ⑧ D7 — §155⑦1호 상속 농어촌주택으로 표시한 행인데 상속개시 당시 동일세대 여부를 답하지 않았다.
+ * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오가 유일한 입력 경로 — 3중 패턴).
+ */
+export function ruralInheritedSameHouseholdIssue(
+  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind" | "decedentSameHouseholdAtInheritance">,
+): string | null {
+  if (row.oneHouseRuralHouse !== true || row.ruralHouseKind !== "inherited") return null;
+  if (row.decedentSameHouseholdAtInheritance !== undefined) return null;
+  return "상속받은 농어촌주택(§155⑦1호)은 상속개시 당시 피상속인과 동일세대였는지 선택하세요(§155② 단서 — 동일세대 상속은 원칙적으로 특례 대상이 아닙니다).";
+}
+
+/**
  * 행 하나 → ④ `ruralHouse` payload.
  *
  * ⚠️ **유형별로 무의미한 필드는 싣지 않는다** — 종전 ④ 규약을 그대로 지킨다
@@ -163,7 +179,12 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
     kind,
     isOutsideCapitalEupMyeon: resolveRuralLocationQualified(row),
     ...(kind === "inherited"
-      ? { decedentResidenceYears: num(row.ruralDecedentResidenceYears) }
+      ? {
+          decedentResidenceYears: num(row.ruralDecedentResidenceYears),
+          // D7 — §155② 단서가 ⑦1호에도 걸린다. 행의 상속 사실을 그대로 싣는다(§155② 경로와 같은 칸 — 단일 진실).
+          decedentSameHouseholdAtInheritance: row.decedentSameHouseholdAtInheritance === true,
+          parentalCareMergeInheritedHouse: row.parentalCareMergeInheritedHouse === true,
+        }
       : {}),
     ...(kind === "farm_exit" ? { ownerResidenceYears: num(row.ruralOwnerResidenceYears) } : {}),
     ...(kind === "return_to_farm"

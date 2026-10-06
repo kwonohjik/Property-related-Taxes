@@ -41,6 +41,9 @@ export const ruralHouseSchema = z.object({
   kind: z.enum(["inherited", "farm_exit", "return_to_farm"]),
   isOutsideCapitalEupMyeon: z.boolean(),
   decedentResidenceYears: z.number().nonnegative().optional(),
+  /** D7 — 1호 상속개시 당시 피상속인과 동일세대 · 동거봉양 합가 전 보유 예외 */
+  decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  parentalCareMergeInheritedHouse: z.boolean().optional(),
   ownerResidenceYears: z.number().nonnegative().optional(),
   acquisitionDate: z.string().date().optional(),
   isHighPriceAtAcquisition: z.boolean().optional(),
