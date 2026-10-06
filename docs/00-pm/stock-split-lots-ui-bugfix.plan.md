@@ -249,6 +249,30 @@ transferActualInputMode     분할 모드에서는 양도가액 합계 직접 �
 
 **검증**: anchor PD-1~4·UI-7, mutation 3종(예외 제거·② 필수 제거·카드 라벨 분기 제거)이 모두 해당 anchor에 잡혔다.
 
+### PR-5 결과 (2026-10-06) — 분할 모드에 남은 «화면 밖» 단건 취득원인 (세션 미결 5번)
+
+**재현** (probe + E2E):
+- 경로: 단일에서 「상속」(피상속인 취득일 비움) → 분할 전환(첫 lot으로 이관) → lot 원인을 「매매」로 바꾼다.
+- 폼-전역 `acquisitionCause`는 「상속」으로 남는다. 분할 화면에는 그 칸과 보조 칸이 없다.
+
+| 잔존 단건 원인 | ⑧ | ⑫ |
+|---|---|---|
+| 상속(피상속인 취득일 비움) | `decedentAcquisitionDate` 오류 | 400 |
+| 이월과세(정보 비움·일부) | 증여자 취득일·관계·증여세 짝 오류 | 400 |
+| 합병·분할(종전 취득일 비움) | `preMergerAcquisitionDate` 오류 | 400 |
+
+- 막다른 오류다. 벗어나려면 단일로 되돌려 lot을 버려야 했다.
+- E2E(종전 코드): 「피상속인 취득일을 입력하세요」가 떠서 2단계로 가지 못했다.
+
+**수정**: leaf `effectiveSingleAcquisitionCause`를 추가했다. 분할 모드에서는 단건 원인을 「매매」(입력 없음)로 **파생**하고, 저장값은 바꾸지 않는다. 단일로 되돌릴 때 첫 lot에서 다시 채우기 때문이다.
+
+- 적용: ④ body(PR-2의 `bonus_untaxed` 한정 필터를 일반화), ⑧ step1 원인 보조 검증, ⑧ step2(증여 §163⑨·과세 무상주 술어), 이월과세 증여자 환산 술어(`isDonorConversionForm`), ⑤ Step2(단건 원인 참조 14곳 → `singleCause`).
+- 단일 모드 동작은 무변경이다(파생값 = 저장값).
+
+**검증**
+- anchor ST-1~3, UI-8, E2E SPL-3.
+- mutation 3종(leaf 분할 분기 제거, ⑧ step1만 원복, ④만 원복)이 모두 해당 anchor에 잡혔다. leaf를 원복하면 E2E SPL-3도 같은 오류 문구로 실패한다.
+
 ## 5. 검증 계획 (Definition of Done)
 
 1. **Pre-Do anchor**(실패 먼저 확인)

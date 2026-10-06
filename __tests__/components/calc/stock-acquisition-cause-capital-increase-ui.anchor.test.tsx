@@ -9,6 +9,7 @@
  *   UI-4  단건 취득원인 라디오에 세 선택지 · 비과세분이면 안내
  *   UI-5  과세 무상주 — Step2 추계 모드(환산·매매사례) 비활성 · 라벨 「1주당 액면가액」 · 안내 / 매매는 그대로
  *   UI-6  과세 무상주 lot — 단가 칸 라벨 「1주당 액면가액」
+ *   UI-8  분할 모드에 남은 단건 원인(증여)은 Step2 에 증여 안내를 띄우지 않는다 (화면 밖 잔존값)
  *   UI-7  의제취득일 전(1980) 과세 무상주 — 추계 모드 열림(영 §176의2④ ①·② 비교) · 카드 ② 칸 「취득 당시 1주당 액면가액」
  */
 
@@ -137,5 +138,16 @@ describe("의제취득일 전 과세 무상주", () => {
     expect(screen.getByTestId("pre-deemed-acquisition-card")).toBeTruthy();
     expect(screen.getByText("취득 당시 1주당 액면가액")).toBeTruthy();
     expect(screen.queryByText("취득 당시 실지거래가액 (1주당, 선택)")).toBeNull();
+  });
+});
+
+describe("분할 모드 — 화면 밖 단건 원인", () => {
+  it("UI-8 잔존 「증여」 → 증여 평가액 안내 없음 · 단일이면 표시", () => {
+    const base = { ...createInitialStockFormData(), marketType: "kospi" as const, acquisitionCause: "gift" as const };
+    const { unmount } = render(<Step2 form={{ ...base, lotsMode: "split" }} onChange={() => {}} />);
+    expect(screen.queryByTestId("gift-valuation-only-notice")).toBeNull();
+    unmount();
+    render(<Step2 form={{ ...base, lotsMode: "single" }} onChange={() => {}} />);
+    expect(screen.getByTestId("gift-valuation-only-notice")).toBeTruthy();
   });
 });

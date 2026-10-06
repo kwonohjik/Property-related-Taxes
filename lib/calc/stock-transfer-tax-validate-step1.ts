@@ -15,6 +15,7 @@
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -362,10 +363,11 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
     }
   }
 
-  // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase")
-  const acquisitionCause = form.acquisitionCause || "purchase";
+  // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase").
+  // 분할 모드는 단건 원인·보조 칸이 화면에 없다(lot 원인이 정본) → 「매매」로 파생해 화면 밖 칸으로 막지 않는다.
+  const acquisitionCause = effectiveSingleAcquisitionCause(form);
   // 의제배당 비과세 무상주는 취득 건이 아니다 — 원주로 입력하고 자본조정 비율로 반영(⑫는 enum 에서 거부)
-  if (acquisitionCause === "bonus_untaxed" && (form.lotsMode || "single") === "single") {
+  if (acquisitionCause === "bonus_untaxed") {
     errors.push({ field: "acquisitionCause", message: BONUS_UNTAXED_BLOCK_MESSAGE, severity: "error" });
   }
   /**
