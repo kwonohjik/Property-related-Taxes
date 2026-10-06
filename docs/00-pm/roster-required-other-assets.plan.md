@@ -274,8 +274,15 @@ PR-B·PR-C는 서로 다른 도출식이라 **분리 가능**(재개발APT만 �
 ### 남은 별건 (이 프로그램 범위 밖, 착수하지 않음)
 
 1. ~~**판정 메뉴의 「없음」 구별**~~ — **✅ 종결: 현행 유지(사용자 결정 2026-10-06 「입력 안 함과 없음을 구별할 필요가 없어. 사용자가 입력을 안 했으면 없음으로 처리하도록 해」)**. 1세대1주택 판정 화면(`lib/calc/one-house-exemption-validate.ts`)에는 주택 목록·분양권·입주권 목록 모두 「입력 안 함」과 「없음」을 구별하는 확인이 없다. 판정 결과를 계산기로 넘길 때(`lib/calc/one-house-judgment-handoff.ts`) 목록이 비면 `householdNoOtherHousesConfirmed`(PR-1부터)·`householdNoPresaleRightsConfirmed`(PR-D)를 `true`로 넘긴다. ⇒ 판정 메뉴는 미입력을 「없음」으로 보는 지금 동작이 정본이다. 확인 칸을 추가하지 않는다.
-2. **입주권의 ①↔④ 불일치 배너** — `lib/calc/house-count-divergence.ts`가 `1 + 행 수`를 고정으로 써서 입주권(오프셋 0)에서는 배너가 뜨지 않는다(오탐은 없음, anchor A5가 현 상태 고정).
-3. **API 직접 호출의 분양권 미지정** — `oneRightPresaleGate`(`lib/tax-engine/transfer-tax-redevelopment-transforms.ts:97-109`)는 `presaleRights`가 없으면 `"clear"`. 계산기는 PR-D ⑧이 막지만 API 직접 호출에는 남는다(§4-6).
-4. **다건 provisoGate 드리프트** — `lib/calc/multi-transfer-tax-api.ts:166` `isHousing: primaryKind === "housing"`이 단건(OH-20 수정분)과 어긋난다. 다건은 재개발APT를 전면 차단(`validateMultiSupportedMode`)해 지금은 도달하지 않는다(PR-B 레인 발견).
+2. ~~**입주권의 ①↔④ 불일치 배너**~~ — **✅ 해소(#1991, 2026-10-06)**: 집합 `usesHouseCountRoster`·자기 몫 `houseCountSelfOffset`(입주권 0)으로 대조, 문구 「양도 입주권 제외」·「조합원입주권 비과세 판정(§89①4호)」 분기. 분양권 양도는 미노출 유지.
+3. ~~**API 직접 호출의 분양권 미지정**~~ — **✅ 해소(#1992, 2026-10-06)**: `oneRightPresaleGate`는 목록이 비면 `householdNoPresaleRightsConfirmed === true`일 때만 `"clear"`, 아니면 `"undetermined"`(가·나목 불성립). 계산기 단건·다건 ④가 확인을 echo(⑫⑬⑭ 포함), 판정 메뉴 route는 「미입력 = 없음」 결정대로 `true`로 세운다. 증여세 부담부증여는 입주권을 다루지 않아 도달하지 않음(코드 확인).
+4. ~~**다건 provisoGate 드리프트**~~ — **✅ 해소(#1990, 2026-10-06)**: 다건 `buildPropertyPayload`도 단건과 같은 `isOneHouseExemptionAsset`.
 5. ~~**구 §104①4호 단서(무주택 분양권, 2018.1.1~2021.5.31 양도분)**~~ — **✅ 해소(#1988, 2026-10-06)**: 단서는 무주택·영 §167의6 1호(다른 분양권 미보유)·2호(30세 이상 또는 배우자) 세 사실이 모두 확인될 때만 적용, 영 §167의6 내용 존재 구간(2018-02-13~2021-05-31)으로 한정. 계산기는 분양권 양도에 「0채」 버튼 + 해당 구간·조정대상지역에서 1·2호 확인 토글. 같이 발견한 보유 1~2년 과소과세(§104① 후단 「큰 것」 비교 누락 — 40% → 50%)도 수정. 영 §167의6은 현행 「삭제」라 verify:legal 규칙은 삭제 상태 감시로 둔다(과거 본문은 MST 202148·214261 실독).
+
+### 새로 발견한 같은 패턴 (#1992 레인 보고 — 착수하지 않음)
+
+분양권·입주권 목록이 비면 「없음」으로 읽는 축이 두 곳 더 있다. 계산기는 PR-D ⑧이 「없음」 확인을 강제하므로 영향은 API 직접 호출 경로다. 각각 조문·판정 맥락이 달라 따로 분석해야 한다.
+
+- 소득세법 §89② 배제 판정 — `lib/tax-engine/transfer-tax-89-2-exclusion.ts:238`: 빈 목록이면 `not_applicable`(§89①3호 그대로 적용).
+- 소득세법 §104⑦ 다주택 중과 주택 수 — `lib/tax-engine/multi-house-surcharge.ts`(`countEffectiveHouses`·`rawHouseCount`): 빈 목록이면 권리 미산입.
 
