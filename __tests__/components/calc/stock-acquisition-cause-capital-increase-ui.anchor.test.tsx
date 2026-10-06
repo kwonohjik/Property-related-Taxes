@@ -141,6 +141,21 @@ describe("의제취득일 전 과세 무상주", () => {
     expect(screen.getByText("취득 당시 1주당 액면가액")).toBeTruthy();
     expect(screen.queryByText("취득 당시 실지거래가액 (1주당, 선택)")).toBeNull();
   });
+
+  it("UI-7b 1980 비상장 매매사례 — 사례 기준일 안내가 의제취득일 · 2010 은 취득일", () => {
+    const step2 = (acquisitionDate: string) =>
+      render(
+        <Step2
+          form={{ ...createInitialStockFormData(), marketType: "unlisted", acquisitionDate, acquisitionMode: "sale_case" }}
+          onChange={() => {}}
+        />,
+      );
+    const { unmount } = step2("1980-06-01");
+    expect(screen.getByText(/의제취득일 전후 3개월 이내/)).toBeTruthy();
+    unmount();
+    step2("2010-06-01");
+    expect(screen.getByText(/— 취득일 전후 3개월 이내/)).toBeTruthy();
+  });
 });
 
 describe("분할 모드 — 화면 밖 단건 원인", () => {

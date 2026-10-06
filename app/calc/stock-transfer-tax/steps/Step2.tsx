@@ -632,7 +632,13 @@ export function Step2({ form, onChange }: Step2Props) {
 
           {/* R-1' 매매사례가액 — sale_case 모드 강화 (영§176의2③1호) */}
           {acquisitionMode === "sale_case" && (
-            <MarketSampleBlock form={form} onChange={onChange} isListed={isListed} />
+            <MarketSampleBlock
+              form={form}
+              onChange={onChange}
+              isListed={isListed}
+              // 의제취득일 전 매수면 사례 기준일은 의제취득일(영 §176의2④1호) — 엔진 `stock-transfer-pr2-detail.ts`와 같은 기준
+              baseDateLabel={isPreDeemedPurchaseForm(form) ? "의제취득일" : "취득일"}
+            />
           )}
 
           {/* 매매사례가액 취득 — 개산공제 base = 취득당시 기준시가 (소득세법 §97②2호 본문 · 영 §163⑥4).
