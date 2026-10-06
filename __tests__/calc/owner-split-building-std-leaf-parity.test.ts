@@ -218,7 +218,7 @@ describe("나목(취득시 건물 기준시가) — ⑤노출 ⇔ ⑧필수 ⇔ 
     expect(total).toBeGreaterThan(300);
     expect(leafTrue).toBeGreaterThan(10);
     expect(leafTrue).toBeLessThan(total);
-  });
+  }, 30_000); // 격자 전수 — 2코어 CI 러너에서 5s 기본 timeout 초과(로컬 2.5s · CI 5.3s 실측)
 });
 
 describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 있을 때만", () => {
@@ -251,7 +251,7 @@ describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 
       expect(throwsForHT, `엔진 ${label(c)} ${msg ?? ""}`).toBe(leaf);
     }
     expect(leafTrue).toBeGreaterThan(5);
-  });
+  }, 30_000); // 격자 전수 — 2코어 CI 러너에서 5s 기본 timeout 초과(로컬 2.5s · CI 5.3s 실측)
 });
 
 describe("⑧ 통과 ↔ ⑫ 400 모순 금지 — 취득시 기준시가 3종(㎡당 단가·면적·총액)", () => {
@@ -277,5 +277,5 @@ describe("⑧ 통과 ↔ ⑫ 400 모순 금지 — 취득시 기준시가 3종(�
       ).toBe(true);
     }
     expect(required).toBeGreaterThan(10);
-  });
+  }, 30_000); // 격자 전수 — 2코어 CI 러너에서 5s 기본 timeout 초과(로컬 2.5s · CI 5.3s 실측)
 });
