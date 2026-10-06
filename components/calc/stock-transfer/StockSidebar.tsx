@@ -17,6 +17,7 @@ import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } 
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { previewSplitAllocation } from "@/lib/calc/stock-split-preview";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
@@ -262,12 +263,9 @@ export function StockSidebar({
       // 결과 없음 — 실가 취득가 직접 계산
       let acqPrice: number | null = null;
       if (isSplitMode) {
-        const lotSum = formData.acquisitionLots.reduce(
-          (s, l) =>
-            s + parseAmount(l.perShareAcquisitionPrice) * parseInt(l.shareCount || "0", 10),
-          0,
-        );
-        acqPrice = lotSum > 0 ? lotSum : null;
+        // 양도한 주식수만큼 **매칭된** 매수 건의 원가 — 엔진 매칭과 같은 함수(Step2 카드와 공용).
+        // 종전 Σ(전 매수 lot)은 팔지 않은 잔량의 원가까지 더했다(D-3).
+        acqPrice = previewSplitAllocation(formData)?.totalAcquisitionPrice ?? null;
       } else {
         // single 모드 — acquisitionActualInputMode 분기 (per_share / lots / total)
         const acqInputMode = formData.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
