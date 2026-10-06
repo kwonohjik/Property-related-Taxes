@@ -216,7 +216,8 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {/* 매수 건(`AcquisitionLotCard`)과 같은 2열 — 3열이면 FieldCard 라벨 칸 때문에 양도일 입력이 잘린다 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FieldCard label="양도일">
                   <DateInput
                     value={lot.transferDate}

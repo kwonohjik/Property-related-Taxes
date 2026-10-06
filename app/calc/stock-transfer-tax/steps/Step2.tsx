@@ -35,6 +35,9 @@ import { isGiftLikeCause } from "@/lib/tax-engine/stock-transfer/gift-acquisitio
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isSection94_4Form } from "@/lib/calc/stock-transfer-section94-4-form";
 import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfer/CarryoverDonorConversionSection";
+import { SplitAllocationPreviewCard } from "@/components/calc/stock-transfer/SplitAllocationPreviewCard";
+import { effectiveTransferActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
+import { effectiveAcquisitionActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -54,9 +57,10 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 export function Step2({ form, onChange }: Step2Props) {
   const transferPriceMode = form.transferPriceMode || "actual";
-  const transferActualInputMode = form.transferActualInputMode || "total"; // 3중 패턴 default
+  // 3중 패턴 default — 분할 모드는 lot 단가가 정본이라 per_share 로 파생(④와 같은 leaf · D-4)
+  const transferActualInputMode = effectiveTransferActualInputMode(form);
   const acquisitionMode = form.acquisitionMode || "actual";
-  const acquisitionActualInputMode = form.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
+  const acquisitionActualInputMode = effectiveAcquisitionActualInputMode(form);
   // 취득 당시 기준시가 입력 방식 — 3중 패턴 default(분모 축 `transferStdInputMode`와 같은 형태)
   const acqInputMode = form.acquisitionStdInputMode || "direct";
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
@@ -144,7 +148,7 @@ export function Step2({ form, onChange }: Step2Props) {
         <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-4 text-sm text-violet-900">
           <p className="font-semibold mb-1">🔀 분할 양도 모드 활성</p>
           <p className="text-xs">
-            양도가액·취득가액은 1단계의 건별 입력에서 자동 산출됩니다. 본 단계의 1주당 단가 입력은 비활성화됩니다.
+            양도가액·취득가액은 1단계의 건별 입력에서 자동 산출되며, 산출 값은 아래 ①·② 에서 확인할 수 있습니다.
             <br />취득가 산정방법은 <strong>실가(actual)</strong>만 지원되며, 환산·매매사례·감정·액면가·교환 모드는 사용할 수 없습니다.
           </p>
         </div>
@@ -170,8 +174,13 @@ export function Step2({ form, onChange }: Step2Props) {
             ]}
           />
 
+          {/* 분할 모드 — 1단계 매도 건 합계 (입력칸 없음 · D-3) */}
+          {transferPriceMode === "actual" && isSplitMode && (
+            <SplitAllocationPreviewCard form={form} side="transfer" />
+          )}
+
           {/* 실가 양도가 — 서브 입력 방식 분기 */}
-          {transferPriceMode === "actual" && (
+          {transferPriceMode === "actual" && !isSplitMode && (
             <div className="space-y-3">
               {/* 서브 입력 방식 (per_share / total) */}
               <FieldCard label="입력 방식">
@@ -187,10 +196,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     {
                       value: "total",
                       label: "합계 직접 입력",
-                      description: isSplitMode
-                        ? "분할 모드에서는 건별 단가만 지원됩니다 (1단계)"
-                        : "양도가액 총액을 원 단위로 직접 입력 (§96① 실지거래가액)",
-                      disabled: isSplitMode,
+                      description: "양도가액 총액을 원 단위로 직접 입력 (§96① 실지거래가액)",
                     },
                     {
                       value: "per_share",
@@ -207,8 +213,7 @@ export function Step2({ form, onChange }: Step2Props) {
                   <CurrencyInput
                     label="1주당 양도가액"
                     required
-                    disabled={isSplitMode}
-                    hint={isSplitMode ? "분할 모드에서는 매도 건에서 자동 산출됩니다 (1단계 참조)" : "실제 거래 가격 (원)"}
+                    hint="실제 거래 가격 (원)"
                     value={form.perShareTransferPrice}
                     onChange={(v) => onChange({ perShareTransferPrice: v })}
                   />
@@ -326,14 +331,7 @@ export function Step2({ form, onChange }: Step2Props) {
 
           {/* 실가 취득가 */}
           {acquisitionMode === "actual" && isSplitMode && (
-            <CurrencyInput
-              label="1주당 취득가액"
-              required
-              disabled
-              hint="분할 모드에서는 매수 건에서 자동 산출됩니다 (1단계 참조)"
-              value={form.perShareAcquisitionPrice}
-              onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
-            />
+            <SplitAllocationPreviewCard form={form} side="acquisition" />
           )}
           {acquisitionMode === "actual" && !isSplitMode && (
             <div className="space-y-3">
