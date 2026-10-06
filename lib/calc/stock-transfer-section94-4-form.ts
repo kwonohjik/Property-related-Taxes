@@ -159,6 +159,18 @@ export function preDeemedLotIndexesForm(form: StockTransferFormData): number[] {
     .filter((i) => i >= 0);
 }
 
+/**
+ * 분할·다건 lot 의 ① 비교(영 §176의2④1호)가 «켜져 있는가» — lot 모드 ∧ 방식 선택 ∧ 의제 대상 매수 건 ≥ 1.
+ * ④ 전송 게이트·⑤ 사이드바/Step3 안내가 같은 답을 내도록 한 곳에 둔다(엔진이 켜는 조건과 같다).
+ */
+export function isPreDeemedLotClause1On(form: StockTransferFormData): boolean {
+  return (
+    isLotsModeForm(form) &&
+    (form.preDeemedLotClause1Mode === "estimated" || form.preDeemedLotClause1Mode === "sale_case") &&
+    preDeemedLotIndexesForm(form).length > 0
+  );
+}
+
 export type BookLostFormFields = Pick<
   StockTransferFormData,
   "marketType" | "acqFaceValueOnly" | "acqFaceValuePerShare" | "acquisitionStdMode"

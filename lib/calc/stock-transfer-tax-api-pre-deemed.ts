@@ -7,7 +7,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isBeforePpiSeries } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
-import { isLotsModeForm, isPreDeemedPurchaseForm, preDeemedLotIndexesForm } from "./stock-transfer-section94-4-form";
+import { isPreDeemedLotClause1On, isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
 import { parseFloatOrUndef, parseIntOrUndef } from "./stock-transfer-tax-api-parse";
 
 export function appendPreDeemedBody(body: Record<string, unknown>, form: StockTransferFormData): void {
@@ -33,10 +33,8 @@ export function appendPreDeemedBody(body: Record<string, unknown>, form: StockTr
  * ⚠️ `body.transferLots` 가 이미 만들어진 **뒤에** 불러야 한다(분할은 본체 끝, lots-only 는 합성 매도 lot 1건).
  */
 export function appendPreDeemedLotClause1Body(body: Record<string, unknown>, form: StockTransferFormData): void {
-  if (!isLotsModeForm(form)) return;
-  const mode = form.preDeemedLotClause1Mode;
-  if (mode !== "estimated" && mode !== "sale_case") return;
-  if (preDeemedLotIndexesForm(form).length === 0) return;
+  if (!isPreDeemedLotClause1On(form)) return;
+  const mode = form.preDeemedLotClause1Mode as "estimated" | "sale_case";
   body.preDeemedLotClause1 = mode;
 
   if (mode === "estimated") {

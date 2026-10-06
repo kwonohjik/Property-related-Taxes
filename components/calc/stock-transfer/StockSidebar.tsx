@@ -18,6 +18,7 @@ import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { previewSplitAllocation } from "@/lib/calc/stock-split-preview";
+import { isLotsModeForm, isPreDeemedLotClause1On } from "@/lib/calc/stock-transfer-section94-4-form";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
@@ -93,7 +94,6 @@ export function StockSidebar({
 
   const summary = useMemo((): WizardSidebarSummaryItem[] => {
     const items: WizardSidebarSummaryItem[] = [];
-    const isSplitMode = formData.lotsMode === "split";
 
     // ── ⑥ 다종목 합산신고 ──
     //
@@ -262,27 +262,17 @@ export function StockSidebar({
     } else {
       // 결과 없음 — 실가 취득가 직접 계산
       let acqPrice: number | null = null;
-      if (isSplitMode) {
-        // 양도한 주식수만큼 **매칭된** 매수 건의 원가 — 엔진 매칭과 같은 함수(Step2 카드와 공용).
-        // 종전 Σ(전 매수 lot)은 팔지 않은 잔량의 원가까지 더했다(D-3).
+      if (isLotsModeForm(formData)) {
+        // 분할 양도 + lots-only(다건 취득) — 양도한 주식수만큼 **매칭된** 매수 건의 원가. 엔진 매칭과 같은 함수
+        // (Step2 카드와 공용 · 의제취득일 전 매수 ②·① 반영). 종전 Σ(전 매수 lot)은 팔지 않은 잔량의 원가까지 더했고
+        // lots-only 의 가중평균 근사는 ②·①을 반영하지 못해 결과(엔진)와 갈렸다.
         acqPrice = previewSplitAllocation(formData)?.totalAcquisitionPrice ?? null;
       } else {
-        // single 모드 — acquisitionActualInputMode 분기 (per_share / lots / total)
+        // single 모드 — acquisitionActualInputMode 분기 (per_share / total)
         const acqInputMode = formData.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
-        if (acqInputMode === "lots" && formData.acquisitionLots.length > 0) {
-          // 가중평균 단가 × 양도 주식수 (근사치 — FIFO는 차이 가능, 정확값은 result 우선)
-          const totalShares = formData.acquisitionLots.reduce(
-            (s, l) => s + parseInt(l.shareCount || "0", 10),
-            0,
-          );
-          const totalCost = formData.acquisitionLots.reduce(
-            (s, l) =>
-              s + parseAmount(l.perShareAcquisitionPrice) * parseInt(l.shareCount || "0", 10),
-            0,
-          );
-          const weightedAvg = totalShares > 0 ? Math.floor(totalCost / totalShares) : 0;
-          const transferCount = parseInt(formData.shareCount || "0", 10);
-          acqPrice = weightedAvg > 0 && transferCount > 0 ? weightedAvg * transferCount : null;
+        if (acqInputMode === "lots") {
+          // 환산·매매사례 모드에 남은 취득 lot 잔존값 — 계산에 쓰이지 않는다
+          acqPrice = null;
         } else if (acqInputMode === "total") {
           // 합계 직접 입력 — 나눗셈 없이 그대로다(양도측 total 과 같은 규약).
           const total = parseAmount(formData.acquisitionTotalPrice);
@@ -299,7 +289,8 @@ export function StockSidebar({
 
       // 필요경비 (실가 모드만 — [B-2] 환산 모드 실비는 §97②2호 단서 비교 입력이라 차감 확정 전 → 결과 도착 후 표시)
       const isActualAcq = (formData.acquisitionMode || "actual") === "actual";
-      const expenses = isActualAcq && (formData.expenseMode || "actual") === "actual"
+      // ① 비교가 켜진 lot 모드는 필요경비가 «개산공제 + 귀속 실비»라 입력 실비 합계와 다르다 — 결과 도착 후 표시
+      const expenses = isActualAcq && (formData.expenseMode || "actual") === "actual" && !isPreDeemedLotClause1On(formData)
         ? parseAmount(formData.actualExpenses)
         : null;
       if (expenses && expenses > 0) {

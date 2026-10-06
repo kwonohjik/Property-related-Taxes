@@ -174,3 +174,24 @@ Step3 안내(`Step3.tsx:222-262`): lot 모드 + ① 채택 가능 시 «취득�
 ## 10. 작업 규모 가늠 (Do 단계 참고 — 추정이 아니라 파일 수)
 
 신규 3(`PreDeemedLotsClause1Card.tsx` · `PreDeemedLotsResultCard.tsx` · ⑧ 헬퍼) + 수정 약 13(types 2 · form · normalize · api-pre-deemed · api 본체 2곳 · schema · refines · engine-input · Step2 · preview · sidebar · SplitAllocationPreviewCard · result view · 신고서 라벨 · Step3 문구) + 테스트 신규 3. 엔진 E1~E8 확정 전에는 ④⑬⑭ 필드명을 고정하지 말 것.
+
+---
+
+## 11. UI Do 결과 (2026-10-06)
+
+사용자 결정 반영: Q-1(비상장 기준시가 직접 입력)·Q-2(기본 none + 「① 미산정」 고지)·Q-3(직접 입력 + 키움, 일자별 표 제외)·Q-5(신고서 11행 라벨만)·Q-7(상장 `monthly_avg`만)·Q-8(lots-only 사이드바를 엔진 미리보기로 교체). 엔진 확정 사항 — 범위는 «상장 환산 + 비상장·기타자산 매매사례», 비상장 환산·자본조정 동반 환산은 차단, 이동평균법 ① 허용(고지), 실비는 양도 주식수 비례 귀속(법령상 명문 없음 고지).
+
+| 지점 | 변경 |
+|---|---|
+| ⑤ | 신규 `components/calc/stock-transfer/PreDeemedLotsClause1Card.tsx`(Step2 분할 슬롯 · lots-only 매트릭스 아래) · `MarketSampleBlock` `baseDateLabel` prop(의제취득일) · `Step2` 분할 배너 한 줄 · `SplitLotsBlock` 매도일 변경 시 그 건의 분모 리셋 · `SplitAllocationPreviewCard` 산정 열·요약 · `Step3` 개산공제·귀속 안내 |
+| ⑥ | `previewSplitAllocation` 이 lots-only(합성 매도 lot) 도 덮는다 → 사이드바 근사(가중평균) 제거 · ① 가 켜진 lot 모드는 입력 실비 행을 숨긴다(`isPreDeemedLotClause1On` — ④ 전송 게이트와 같은 leaf) |
+| ⑦ | 신규 `components/calc/results/PreDeemedLotsResultCard.tsx`(② 표 · 건별 ①/② 표 · 귀속·개산공제·swap · 법령상 명문 없음 고지) · `LotMatchingDetailCard` swap 총액 안내 · 신고서 11행 라벨 · 지수 각주 상수를 단건 카드와 공유 |
+
+엔진 파일은 `isPreDeemedLotClause1On` 도입으로 `stock-transfer-tax-api-pre-deemed.ts` 의 ④ 게이트 1곳만 같은 leaf 로 교체했다(동작 불변).
+
+알려진 한계·확인 필요
+- 비과세(장내 비대주주) 정보용 결과 화면에는 비교 카드를 싣지 않는다(신고서 11행 라벨과 «정보용 취득가액»만). 상장 대주주 과세 화면에서만 카드가 보인다.
+- 비상장·기타자산 매매사례 ①의 개산공제 기준은 직접 입력(순손익·순자산가치) — 순자산 단독 사유·결산서 상세는 미지원(카드 hint 에 명시).
+- 키움 조회의 1985.12 데이터 가용성은 미실측(단건과 같은 위젯 · 실패 시 직접 입력).
+- 단건 의제 매수 + 매매사례의 `MarketSampleBlock` 은 아직 «취득일 ±3개월» 문구다(엔진은 의제취득일 기준) — lot 카드에서만 `baseDateLabel` 을 넘겼다.
+- `RadioCardGroup` disabled 옵션이 fullPage 스크린샷에서 청록색으로 보인다(Step2 상단 기존 disabled 라디오도 동일 — 이번 변경과 무관한 기존 현상, 미조사).

@@ -21,7 +21,7 @@ import { allocateLots } from "@/lib/tax-engine/stock-transfer/lot-allocation";
 import { applyCapitalAdjustmentsToLots } from "@/lib/tax-engine/stock-transfer/lot-capital-adjustments";
 import { applyPreDeemedToLots } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { buildPreDeemedLotClause1Context } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-lot-clause1";
-import { isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { isLotsModeForm, isSection94_4Form } from "./stock-transfer-section94-4-form";
 import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
@@ -39,8 +39,26 @@ function isSplitInputComplete(form: StockTransferFormData): boolean {
   return acqOk && trnOk;
 }
 
+/**
+ * 분할 양도가 아닌 lots-only(단일 양도 · 다건 취득) — 합성 매도 lot 1건의 입력이 다 찼는가.
+ * 합성 매도 lot 은 ④ 가 폼 전역 양도 정보로 만든다(`stock-transfer-tax-api.ts` 합성 transferLots).
+ */
+function isLotsOnlyInputComplete(form: StockTransferFormData): boolean {
+  if (form.acquisitionLots.length === 0) return false;
+  const acqOk = form.acquisitionLots.every(
+    (l) => isFullDate(l.acquisitionDate) && toInt(l.shareCount) > 0 && toInt(l.perShareAcquisitionPrice) > 0,
+  );
+  const priceOk =
+    (form.transferActualInputMode || "total") === "total"
+      ? toInt(form.transferTotalPrice) > 0
+      : toInt(form.perShareTransferPrice) > 0;
+  return acqOk && isFullDate(form.transferDate) && toInt(form.shareCount) > 0 && priceOk;
+}
+
 export function previewSplitAllocation(form: StockTransferFormData): LotMatchingDetail | null {
-  if (!isSplitLotsMode(form) || !isSplitInputComplete(form)) return null;
+  // 분할 양도 + lots-only(다건 취득) 둘 다 같은 엔진 매칭을 쓴다 — 사이드바의 lots-only 가중평균 근사를 대체한다
+  if (!isLotsModeForm(form)) return null;
+  if (!(isSplitLotsMode(form) ? isSplitInputComplete(form) : isLotsOnlyInputComplete(form))) return null;
 
   let detail: LotMatchingDetail;
   try {
@@ -71,7 +89,9 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
 
   // 매도 수량 전부가 매칭됐을 때만 — 개별법 배정이 덜 됐거나 매도 > 보유면 부분 합계다
   const soldShares = detail.matched.reduce((s, m) => s + m.buyShares, 0);
-  const transferShares = form.transferLots.reduce((s, l) => s + toInt(l.shareCount), 0);
+  const transferShares = isSplitLotsMode(form)
+    ? form.transferLots.reduce((s, l) => s + toInt(l.shareCount), 0)
+    : toInt(form.shareCount);
   if (detail.matched.length === 0 || soldShares !== transferShares) return null;
   return detail;
 }

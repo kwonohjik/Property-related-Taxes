@@ -18,9 +18,15 @@ interface MarketSampleBlockProps {
   form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
   isListed: boolean;
+  /**
+   * 사례 거래일의 기준일 라벨 — 기본 「취득일」. 분할·다건 lot 의 의제취득일 전 매수 ①(영 §176의2④1호)은
+   * 기준이 **의제취득일**이다(엔진 `evaluateMarketSample` 도 의제취득일 기준으로 ±3개월을 본다).
+   */
+  baseDateLabel?: "취득일" | "의제취득일";
 }
 
-export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBlockProps) {
+export function MarketSampleBlock({ form, onChange, isListed, baseDateLabel = "취득일" }: MarketSampleBlockProps) {
+  const deemed = baseDateLabel === "의제취득일";
   return (
     <div className="space-y-4">
       {isListed && (
@@ -30,14 +36,14 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
       )}
 
       {/* 취득 매매사례 (amber tone) */}
-      <ToneCard tone="amber" sectionNum={1} title="취득 매매사례가액 (영§176의2③1호)" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="amber" sectionNum={1} title={deemed ? "의제취득일 현재 매매사례가액 (영§176의2③1호·④1호)" : "취득 매매사례가액 (영§176의2③1호)"} bodyClassName="space-y-3" noDark>
         <CurrencyInput
           label="1주당 취득 매매사례가액"
-          hint="유사 매매사례 가액 (원) — 취득일 전후 3개월 이내"
+          hint={`유사 매매사례 가액 (원) — ${baseDateLabel} 전후 3개월 이내`}
           value={form.acquisitionMarketSamplePrice}
           onChange={(v) => onChange({ acquisitionMarketSamplePrice: v })}
         />
-        <FieldCard label="사례 거래일" hint="취득일 ±3개월 권장 (초과 시 warning)">
+        <FieldCard label="사례 거래일" hint={`${baseDateLabel} ±3개월 권장 (초과 시 warning)`}>
           <DateInput
             value={form.acquisitionMarketSampleDate}
             onChange={(v) => onChange({ acquisitionMarketSampleDate: v })}
