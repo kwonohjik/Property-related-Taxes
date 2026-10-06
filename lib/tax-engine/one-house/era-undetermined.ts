@@ -11,6 +11,7 @@
  * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | OH-22(I-1)에서 입력 경로가 생겼다(보유 중 다른 주택 처분 이력). 이력 미답만 고지 — 판정은 `final-house-restart.ts` |
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | OH-38 입력 레인에서 입력 경로가 생겼다(§154① 단서 「4호 임대사업자 등록」). 사유 미선택 또는 선택했으나 사실 미입력만 고지 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
+ * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③(2002-03-30 전 신규 취득 · 2002-03-30 ~ 2008-11-27 양도) | 경과 기한(시행일부터 1년 · 보유기간 충족일 + 6월 단서) — 미구현, 종전 2년으로 계산 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
@@ -49,6 +50,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-5-final-one-house-restart-unverified",
   "154-1-4ho-rental-registration-unverified",
   "155-1-move-in-requirement-unverified",
+  "155-1-2002-transition-unverified",
   "155-1-regulated-at-new-acquisition-unverified",
   "155-1-regulated-announcement-date-unverified",
   "civil-161-holiday-table-uncovered",
@@ -129,6 +131,7 @@ export function collectEraUndetermined(
         baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
         newAcquisitionDate: tt.newAcquisitionDate,
         newContractDate: tt.newHouseContractDate,
+        previousAcquisitionDate: tt.previousAcquisitionDate,
         transferDate: input.transferDate,
       }).years;
     const regulatedAxisMatters = !meetsPublicInstitutionRelocationRegion(tt) && eraFor(true) !== eraFor(false);
@@ -144,6 +147,15 @@ export function collectEraUndetermined(
           `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
           "주소나 조정대상지역 여부가 입력되지 않아 양도일 기준 양도주택의 조정대상지역 여부로 대신 계산했습니다 — " +
           "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요.",
+      });
+    }
+    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
+      out.push({
+        id: "155-1-2002-transition-unverified",
+        reason:
+          `2002년 3월 30일 전에 신규주택을 취득하고 그 후 종전주택을 양도하면 처분기한이 2년에서 1년으로 줄어든 ` +
+          `개정의 경과조치(대통령령 제17555호 부칙 ③ — 시행일부터 1년이 되는 날 등)가 적용됩니다. ` +
+          "이 경과조치는 판정하지 않았고 종전 기한(신규주택 취득일부터 2년)으로 계산했습니다 — 확인이 필요합니다.",
       });
     }
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending) {

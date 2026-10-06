@@ -38,6 +38,6 @@
       ]
     },
     "bucket": "mismatch",
-    "note": "mismatch — 관측: isExempt=true(applied 155-1-temporary-two-house + 155-4-parental-care-merge) / 기대: 과세(1주택 보유자가 2주택 보유 직계존속과 합가해 3주택 — 동거봉양 합가 특례 적용 불가). ⑧ 오류 0. 최소쌍: 부의 둘째 주택 취득일을 양도 주택보다 앞선 1996-12-05로 바꾸면 과세(unmet 「신규 주택이 하나로 특정되지 않습니다」) → 원문 일자(부의 둘째 주택 2000-03-08이 양도 주택 1997-07-30보다 늦음)에서는 상대 쪽(부) 주택이 양도 세대의 「신규 주택」으로 도출되어 §155①+④ 중첩 3주택이 성립한다. 의심 지점: lib/calc/household-house-count.ts:310(resolveTemporaryTwoHouse — 양도 주택보다 늦게 취득한 행이면 소유 쪽과 무관하게 신규 주택으로 도출), lib/tax-engine/one-house/merge-composition.ts(3주택 (1,2,0) 구성 허용 — holds 식)·merge-deeming.ts:291(mergeOverlapTwoHouseHolds). 일자: 원문 그대로(취득 1997-07-30, 부 1996-11-05·2000-03-08, 합가 2002-04-10, 양도 2002-05-30) — 양도가 3억 가정, 당시 기한(합가 2년·일시적 1년)은 엔진 연혁에 없고 이 케이스는 기한 이내라 기한 축 구별력 없음."
+    "note": "mismatch(결론 일치·사유 불일치 — D14 이후). 관측: 과세 — 다만 사유는 원문의 「1주택 보유자가 2주택 보유 직계존속과 합가해 3주택 → §155④ 불가」가 아니라, D14로 들어간 당시 처분기한 1년(2002.3.30.~2008.11.27. 양도분)을 넘겨 겹쳐 있는 일시적 2주택이 불성립했기 때문이다(unmet 155-4: 「겹쳐 있는 일시적 2주택 특례가 기간 요건 … 충족하지 않습니다」). 원문 사유 축(상대 쪽 2주택이면 합가 3주택 중첩 불가)은 D8(보류 — 연혁 선행 + 사전-2026-법규재산-0643 재독)에 남아 있어 match로 옮기지 않는다. D14 전 관측: isExempt=true(applied 155-1 + 155-4). 의심 지점(D8): lib/calc/household-house-count.ts resolveTemporaryTwoHouse가 mergeOrigin을 보지 않음."
   }
 ]
