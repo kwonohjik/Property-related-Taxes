@@ -535,6 +535,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       lotMatchingDetail,
       classification.taxCategory,
       input.isSmallMediumEnterprise,
+      lotClause1Settlement,
     );
     rateResult = split.rate;
     if (split.mixedNote) warnings.push(split.mixedNote);
