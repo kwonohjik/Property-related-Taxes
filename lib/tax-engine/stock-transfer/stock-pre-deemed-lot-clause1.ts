@@ -285,7 +285,8 @@ export function settlePreDeemedLotExpenses(args: {
  *   · 그 외 몫  = 양도 주식수 비례 실비 + 증여자 자본적지출(사용자 결정 A안)
  * 몫은 sub-lot 의 ① 채택 주식수(c)와 그 외 주식수(o)로 나눈다. moving_avg(풀)는 sub-lot 선택이 없어 매도 주식수 비례로 근사한다.
  *
- * 단기 그룹은 종전과 같이 총이익이 양(+)인 단기 sub-lot 만 모은다. 분모는 전 sub-lot 순이익 합(= 양도소득금액).
+ * 단기 그룹은 차손 sub-lot 까지 모은 순이익이다(음수 가능 — 영 §167의2① 통산은 `calcSplitModeTax`가 한다).
+ * 분모는 전 sub-lot 순이익 합(= 양도소득금액).
  */
 export function settledGroupGains(
   lotDetail: LotMatchingDetail,
@@ -300,7 +301,7 @@ export function settledGroupGains(
   let shortC = 0;
   let shortO = 0;
   for (const m of lotDetail.matched) {
-    if (!(m.isShortTerm && m.perLotGain > 0)) continue;
+    if (!m.isShortTerm) continue;
     const c = summary.pooled ? m.saleShares * clause1Ratio : m.preDeemedSelected === "clause1" ? m.saleShares : 0;
     shortGross += m.perLotGain;
     shortC += c;

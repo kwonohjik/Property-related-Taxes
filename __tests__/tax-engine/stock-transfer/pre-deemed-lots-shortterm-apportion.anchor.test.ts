@@ -115,7 +115,7 @@ describe("ST-5 이동평균법(풀)", () => {
     const r = calculateStockTransferTax(input(10_000_000, { costAllocationMethod: "moving_avg" }));
     const d = r.lotMatchingDetail!;
     expect(d.preDeemedClause1Summary?.pooled).toBe(true);
-    const short = d.matched.filter((m) => m.isShortTerm && m.perLotGain > 0);
+    const short = d.matched.filter((m) => m.isShortTerm);
     expect(short.length).toBeGreaterThan(0);
     const shortShares = short.reduce((s, m) => s + m.saleShares, 0);
     const shortGross = short.reduce((s, m) => s + m.perLotGain, 0);
