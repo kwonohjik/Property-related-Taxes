@@ -30,7 +30,11 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
 
 /** 세대 구성원이 보유한 주택 1채 정보 */
 /** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
-export type MergeOrigin = "seller_side" | "counterpart_side";
+/**
+ * 합가 전 보유 쪽. `second_merge_side` — **혼인 후 동거봉양 합가**(D4)에서 동거봉양으로 합친 가족(직계존속) 쪽.
+ * 그때 `counterpart_side`는 배우자 쪽이다. 단일 합가에서는 쓰지 않는다(구성 판정이 불성립으로 센다).
+ */
+export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
 
 export interface HouseInfo {
   /** 내부 식별자 */

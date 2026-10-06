@@ -289,7 +289,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
        * 「미입력 = 구성 판정 안 함」이 안전측이다.
        */
       mergeOrigin:
-        h.mergeOrigin === "seller_side" || h.mergeOrigin === "counterpart_side" ? h.mergeOrigin : undefined,
+        h.mergeOrigin === "seller_side" || h.mergeOrigin === "counterpart_side" || h.mergeOrigin === "second_merge_side"
+          ? h.mergeOrigin
+          : undefined,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
       // §155③ 공동상속 (2-A2) — isInherited=true 일 때만 전달

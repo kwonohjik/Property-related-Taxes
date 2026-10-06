@@ -27,6 +27,8 @@ import type {
   New994Result,
 } from "./types";
 
+import type { MergeOrigin } from "../types/multi-house-surcharge.types";
+
 /** 취득기간 시기 — rural ①1호 / hometown ①2호 */
 export const NEW_99_4_RURAL_FROM = new Date("2003-08-01");
 export const NEW_99_4_HOMETOWN_FROM = new Date("2009-01-01");
@@ -47,7 +49,7 @@ export const NEW_99_4_MANDATORY_YEARS = 3;
  */
 export type New994MergeOrderContext =
   | {
-      houses: ReadonlyArray<{ id: string; acquisitionDate?: Date; mergeOrigin?: "seller_side" | "counterpart_side" }>;
+      houses: ReadonlyArray<{ id: string; acquisitionDate?: Date; mergeOrigin?: MergeOrigin }>;
       mergeDate: Date;
     }
   | undefined;
