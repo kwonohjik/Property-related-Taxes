@@ -169,12 +169,27 @@ function collectMergeUnmet(
     } else if (
       // 규칙 행이 없으면 정본(`resolveMergeOverlapDeeming`)도 기간을 보지 않고 불성립시킨다 —
       // 여기서도 「기간 미충족」이라 단정하지 않는다(규칙을 못 읽은 것과 요건 미충족은 다르다).
-      oneHouseRules.temporary_two_house !== undefined &&
-      !evaluateTemporaryTwoHouseTiming(input, oneHouseRules.temporary_two_house).timing.overall
+      oneHouseRules.temporary_two_house !== undefined
     ) {
-      reasons.push(
-        "겹쳐 있는 일시적 2주택 특례가 기간 요건(종전주택 취득 후 1년 경과 후 신규주택 취득 · 신규주택 취득일부터 처분기한 내 양도)을 충족하지 않습니다.",
-      );
+      // 어느 요건이 어느 날짜로 깨졌는지 밝힌다 — 종전 문구는 두 요건을 양도 연도와 무관하게 함께 나열해
+      // 2012-06-29 전 양도분(1년 요건 없음)에도 1년 요건을 말했다. 합가로 3주택이 된 경우에도 신규주택
+      // 취득일부터 처분기한 안에 양도해야 한다(사전-2026-법규재산-0643).
+      const { timing, era } = evaluateTemporaryTwoHouseTiming(input, oneHouseRules.temporary_two_house);
+      const tt = input.temporaryTwoHouse;
+      const lead = "겹쳐 있는 일시적 2주택 특례의 기간 요건을 충족하지 않습니다";
+      if (!timing.oneYearMet) {
+        reasons.push(
+          `${lead} — 종전주택 취득일(${fmtDate(tt.previousAcquisitionDate)})부터 1년이 지난 뒤(${fmtDate(timing.oneYearThreshold)}부터) 신규주택을 취득해야 하는데 ${fmtDate(tt.newAcquisitionDate)}에 취득했습니다.`,
+        );
+      }
+      if (!timing.threeYearMet) {
+        reasons.push(
+          `${lead} — 신규주택 취득일(${fmtDate(tt.newAcquisitionDate)})부터 처분기한 ${era.years}년의 말일(${fmtDate(timing.deadline)})이 지난 ${fmtDate(input.transferDate)}에 양도했습니다. 합가로 3주택이 된 경우에도 이 기한 안에 양도해야 합니다.`,
+        );
+      }
+      if (timing.moveInMet === false) {
+        reasons.push(`${lead} — 세대전원 이사·전입신고 기한 요건(§155①2호 가목)을 충족하지 않습니다.`);
+      }
     }
   } else if (count !== undefined && count !== 2) {
     reasons.push(

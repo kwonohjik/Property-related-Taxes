@@ -164,6 +164,44 @@ describe("UM — §155④⑤ 합가 불성립 사유", () => {
     expect(rs.some((x) => x.includes("기간 요건"))).toBe(true);
   });
 
+  /**
+   * UM-5b~d — 기간 사유는 **깨진 요건과 그 날짜**를 말한다(E124 — 국심-2003-중-1253). 종전 문구는 두 요건을
+   * 양도 연도와 무관하게 함께 나열해, 1년 요건이 없던 2012-06-29 전 양도분에도 그것을 사유로 댔다.
+   */
+  it("UM-5b 처분기한 경과 — 신규주택 취득일·기한 연수·말일·양도일을 밝히고 1년 요건은 말하지 않는다", () => {
+    const rs = reasonsOf(eligible({ transferDate: new Date("2028-01-01") } as Partial<OneHouseJudgeInput>));
+    const deadline = rs.filter((x) => x.includes("처분기한"));
+    expect(deadline).toHaveLength(1);
+    expect(deadline[0]).toMatch(/신규주택 취득일\(2024-05-30\)부터 처분기한 \d년의 말일\(\d{4}-\d{2}-\d{2}\)이 지난 2028-01-01에 양도했습니다/);
+    expect(rs.some((x) => x.includes("1년이 지난 뒤"))).toBe(false);
+  });
+
+  it("UM-5c 종전주택 취득 후 1년 안에 신규 취득 — 그 사유만 내고 기한 사유는 내지 않는다", () => {
+    const rs = reasonsOf(
+      eligible({
+        temporaryTwoHouse: { previousAcquisitionDate: new Date("2024-01-01"), newAcquisitionDate: new Date("2024-05-30") },
+      } as Partial<OneHouseJudgeInput>),
+    );
+    expect(rs).toContain(
+      "겹쳐 있는 일시적 2주택 특례의 기간 요건을 충족하지 않습니다 — 종전주택 취득일(2024-01-01)부터 1년이 지난 뒤(2025-01-02부터) 신규주택을 취득해야 하는데 2024-05-30에 취득했습니다.",
+    );
+    expect(rs.some((x) => x.includes("처분기한"))).toBe(false);
+  });
+
+  it("UM-5d 2012-06-29 전 양도 — 1년 요건이 없던 때라 같은 취득 간격이어도 그 사유를 내지 않는다", () => {
+    const rs = reasonsOf(
+      eligible({
+        transferDate: new Date("2011-01-03"),
+        acquisitionDate: new Date("2007-01-01"),
+        marriageMerge: { marriageDate: new Date("2008-01-01") },
+        houses: [house("selling", "2007-01-01"), house("h2", "2007-06-01"), house("h3", "2006-01-01", "counterpart_side")],
+        temporaryTwoHouse: { previousAcquisitionDate: new Date("2007-01-01"), newAcquisitionDate: new Date("2007-06-01") },
+      } as Partial<OneHouseJudgeInput>),
+    );
+    expect(rs.some((x) => x.includes("1년이 지난 뒤"))).toBe(false);
+    expect(rs.some((x) => x.includes("신규주택 취득일(2007-06-01)부터 처분기한 2년의 말일(2009-06-01)"))).toBe(true);
+  });
+
   it("UM-6 §154① 보유·거주만 미충족 — 다른 사유가 없을 때 그것을 낸다", () => {
     /**
      * 취득 당시 조정대상지역 + 거주 0개월 → 거주 2년 미충족. 합가 창·주택 수는 전부 통과.
