@@ -51,8 +51,10 @@ describe("D14 처분기한 연혁 — 양도일 경계", () => {
     expect(flag("2003-03-29", "2001-03-29")).toBeUndefined();
     // 2호(1년 초과): 취득일부터 2년 — 엔진 기한과 같다
     expect(flag("2002-12-01", "2001-01-01")).toBeUndefined();
-    // 시행 당시 2년이 이미 끝났다 → 부칙 ③ 밖(개정 1년) — 어느 쪽이든 기한 경과
-    expect(flag("2002-06-01", "2000-01-01")).toBeUndefined();
+    // 시행 당시 2년이 이미 끝났다 → 부칙 ③ 밖 → 개정 1년(보류 신호 없음) · 2년 말일이 시행일이면 아직 안 끝났다(부칙 ③)
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-01-01") })).toEqual({ years: 1, moveInRequirementPending: false });
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-03-29") }).years).toBe(1); // 2년 말일 2002-03-29
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-03-30") }).years).toBe(2); // 2년 말일 2002-03-30
     // 시행일 이후 취득은 경과조치 대상이 아니다
     expect(flag("2002-06-01", "2002-03-30")).toBeUndefined();
   });
