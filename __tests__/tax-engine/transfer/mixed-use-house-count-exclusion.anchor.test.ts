@@ -13,7 +13,7 @@
 // 종전: `isOneHouseExempt`가 폼의 원본 주택 수만 보고 false → 주택분 12억 비과세 미적용 +
 //   proratio=1 + 표1 적용 ⇒ **과다과세** (크기는 겸용 안분 비율에 종속).
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14, CASE14_TRANSFER_DATE } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

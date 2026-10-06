@@ -28,6 +28,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStd, withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 /** 건물·토지 2018-06-01 취득 · 2026-06-01 10억 양도 · 1세대 · 세대 주택 1채(겸용 자신) · 거주 5년 */
@@ -95,7 +96,7 @@ async function postHousing(over: object = {}): Promise<HousingResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, propertyType: "housing", mixedUse: undefined, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, propertyType: "housing", mixedUse: undefined, ...over })),
     }),
   );
   expect(res.status).toBe(200);
@@ -107,7 +108,7 @@ async function post(over: object = {}): Promise<RouteResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, ...over })),
     }),
   );
   expect(res.status).toBe(200);
@@ -299,7 +300,7 @@ describe("E-7 겸용 파트 카드 — 서브엔진 §154③ 본문이 카드 §
       }) as never;
     const cards = (presaleRights: unknown[], exception?: unknown) =>
       buildMixedUseCompanionItems(
-        { ...MIXED.mixedUse, isMetropolitanArea: true } as never,
+        withIdentityHousingBuildingStd({ ...MIXED.mixedUse, isMetropolitanArea: true }) as never,
         item(presaleRights, exception),
         {
           transferDate: TD,

@@ -16,6 +16,7 @@
  * worktree 실행: E2E_PORT=3xxx npx playwright test e2e/mixed-use-surcharge-fallback.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function mixedUseAsset() {
@@ -52,7 +53,7 @@ function seedForm(withHouses: boolean, over: Record<string, unknown> = {}) {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [mixedUseAsset()],
+        assets: [withMixedHousingStd(mixedUseAsset())],
         transferDate: "2026-06-01",
         filingDate: "2026-08-31",
         contractTotalPrice: "4000000000",

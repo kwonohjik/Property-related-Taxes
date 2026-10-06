@@ -41,6 +41,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 /** §155의3① 1~3호를 모두 충족하는 값 — **계약일은 string**(Zod 입력 형태 그대로). */
@@ -108,7 +109,7 @@ async function call(over: Record<string, unknown> = {}): Promise<MixedResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, ...over })),
     }),
   );
   const json = (await res.json()) as { data: { mode: string; result: MixedResult } };

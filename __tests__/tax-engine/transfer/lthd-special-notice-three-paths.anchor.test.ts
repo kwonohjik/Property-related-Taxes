@@ -26,7 +26,7 @@
 // **계약일이 기준**이라, 계약일은 시한 내인데 취득일이 시한 외인 사안이 침묵 차단됐다(불리).
 import { describe, it, expect } from "vitest";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p3";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14, CASE14_TRANSFER_DATE } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

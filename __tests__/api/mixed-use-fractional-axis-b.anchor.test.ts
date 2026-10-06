@@ -35,6 +35,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -70,7 +71,8 @@ const MIXED = {
 };
 
 function form(assets: Record<string, unknown>[]): TransferFormData {
-  return {
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     assets,
     transferDate: "2024-06-01",
@@ -79,7 +81,7 @@ function form(assets: Record<string, unknown>[]): TransferFormData {
     householdHousingCount: "1",
     isOneHousehold: true,
     residencePeriodMonths: "120",
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 const A = (i: number, o: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(i),

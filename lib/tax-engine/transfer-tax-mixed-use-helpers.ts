@@ -660,6 +660,7 @@ export function buildHousingPart(
     buildingAcqPrice: gainSplit.buildingAcqPrice,
     buildingAppraisalDed: gainSplit.buildingAppraisalDed,
     buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
+    ...(gainSplit.housingStdSplit ? { housingStdSplit: gainSplit.housingStdSplit } : {}),
     isExempt,
     proratedTaxableGain,
     highValueBase,

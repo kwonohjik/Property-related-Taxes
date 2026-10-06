@@ -12,6 +12,7 @@
  *  computeTransferPerAssetSummary가 mixed-use 결과로 취득가액을 채운다.)
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function seedForm() {
@@ -20,7 +21,7 @@ function seedForm() {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [{
+        assets: [withMixedHousingStd({
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
@@ -44,7 +45,7 @@ function seedForm() {
           fixedAcquisitionPrice: "700000000",
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2010-03-15", moveOutDate: "2022-02-16" }],
-        }],
+        })],
         transferDate: "2022-02-16",
         filingDate: "2022-04-30",
         contractTotalPrice: "4000000000",

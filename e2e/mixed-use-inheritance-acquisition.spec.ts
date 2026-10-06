@@ -13,6 +13,7 @@
  * PR #710 (feat/mixed-use-inheritance-acquisition) 회귀 가드.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function seedForm() {
@@ -21,7 +22,7 @@ function seedForm() {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [{
+        assets: [withMixedHousingStd({
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "inheritance",
@@ -45,7 +46,7 @@ function seedForm() {
           mixedIsMetropolitanArea: true,
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2017-09-15", moveOutDate: "2025-06-01" }],
-        }],
+        })],
         transferDate: "2025-06-01",
         filingDate: "2025-08-31",
         contractTotalPrice: "3300000000", // 33억

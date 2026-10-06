@@ -13,6 +13,7 @@ import {
   idOfSnapshotKey,
   phdTimepointLabel,
   snapshotKeyTimepoint,
+  snapshotKindLabel,
 } from "@/lib/calc/building-std-snapshot-keys";
 
 describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
@@ -202,5 +203,36 @@ describe("B1 — 배치 모달 스냅샷 교체 삭제 범위", () => {
   it("감면 PHD 통합 모달 키(-red-phd)는 자산-PHD 배치 삭제 대상이 아니다 — 충돌 방지", () => {
     // `bsp-a1-red-phd`는 `bsp-a1-phd-` 접두 불일치 → 배치 재적용 시 생존(자산-수준 PHD와 독립).
     expect(survivesBatchReapply("bsp-a1-red-phd")).toBe(true);
+  });
+});
+
+describe("S3-2 겸용 주택분 주택건물 기준시가 키 — `-mx-housing-{acq|transfer}`", () => {
+  it("idOfSnapshotKey: 시점 세그먼트까지 떼어 assetId로 환원 (미등재면 그 자산 계산서가 조용히 미출력)", () => {
+    expect(idOfSnapshotKey("bsp-a1-mx-housing-acq")).toBe("a1");
+    expect(idOfSnapshotKey("bsp-a1-mx-housing-transfer")).toBe("a1");
+    const uuid = "3f9a1c2e-7b40-4d55-9f11-8ac2e6d0b7aa";
+    expect(idOfSnapshotKey(`bsp-${uuid}-mx-housing-acq`)).toBe(uuid);
+    // 상가 통합 키와 접미가 겹치지 않는다
+    expect(idOfSnapshotKey("bsp-a1-mx-commercial")).toBe("a1");
+  });
+
+  it("snapshotKeyTimepoint: 시점 필터 — 취득 키는 취득, 양도 키는 양도 (화면·PDF 공용)", () => {
+    expect(snapshotKeyTimepoint("bsp-a1-mx-housing-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-mx-housing-transfer")).toBe("transfer");
+    // 상가 통합 모달은 2시점을 한 폼에서 계산 — 필터 없음(종전 그대로)
+    expect(snapshotKeyTimepoint("bsp-a1-mx-commercial")).toBeNull();
+  });
+
+  it("snapshotKindLabel: 「겸용 주택분」 — 상가분과 구별", () => {
+    expect(snapshotKindLabel("bsp-a1-mx-housing-acq")).toBe("겸용 주택분");
+    expect(snapshotKindLabel("bsp-a1-mx-housing-transfer")).toBe("겸용 주택분");
+    expect(snapshotKindLabel("bsp-a1-mx-commercial")).toBe("겸용 상가분");
+  });
+
+  it("PHD 배치 재적용이 이 키를 지우지 않는다 (배치 키 집합에 없음 — 실제 함수로 확인)", () => {
+    const batch = new Set(batchSnapshotKeys("bsp-a1-phd"));
+    expect(batch.has("bsp-a1-mx-housing-acq")).toBe(false);
+    expect(batch.has("bsp-a1-mx-housing-transfer")).toBe(false);
+    expect(batch.has("bsp-a1-phd-acq")).toBe(true); // 대조: 배치 키는 실제로 집합에 있다
   });
 });

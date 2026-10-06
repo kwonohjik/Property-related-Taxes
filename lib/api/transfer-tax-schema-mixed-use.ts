@@ -5,6 +5,11 @@
 
 import { z } from "zod";
 import { isBuildingDayLandPriceRequired } from "@/lib/tax-engine/mixed-use-acq-date";
+import {
+  isHousingBuildingStdAtAcqRequired,
+  isHousingBuildingStdAtTransferRequired,
+  isHousingPriceAtTransferRequired,
+} from "@/lib/tax-engine/mixed-use-housing-std";
 // preHousingDisclosureSchema를 직접 참조하면 순환 참조 발생 — 필요 필드만 인라인으로 정의
 // 겸용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
 
@@ -33,6 +38,12 @@ const mixedUseStandardPriceSchema = z.object({
   housingPrice: z.number().int().nonnegative(),
   commercialBuildingPrice: z.number().int().nonnegative(),
   landPricePerSqm: z.number().int().nonnegative(),
+  /**
+   * ⑫ S3-2 — 주택건물 기준시가(나목). 취득측(아래 `.extend`)·양도측이 이 정의를 공유한다.
+   * 비엄격 z.object라 여기 없으면 침묵 strip된다. 필수 조건은 아래 superRefine
+   * (`isHousingBuildingStdAtAcqRequired`·`isHousingBuildingStdAtTransferRequired` — 엔진·UI 어댑터와 같은 leaf).
+   */
+  housingBuildingPrice: z.number().int().nonnegative().optional(),
 });
 
 export const mixedUseAssetSchema = z.object({
@@ -157,8 +168,8 @@ export const mixedUseAssetSchema = z.object({
   ) {
     ctx.addIssue({ code: "custom", message: "상속·증여 겸용주택은 주택분 평가액(신고가액) 또는 취득시 개별주택가격이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
   }
-  // B0 — 별개 취득(두 취득일 다름)이면 개별주택가격(건물 취득일)에서 빼는 주택부수토지 공시지가도
-  // 건물 취득일 기준이어야 한다. 미입력·0 → 400 (토지 취득일 값으로 대체하지 않는다 · 엔진 throw 거울).
+  // B0 — 별개 취득(두 취득일 다름)이면 개별주택가격(건물 취득일)을 가목:나목 비례로 나눌 때의 가목
+  // (주택부수토지 공시지가)도 건물 취득일 기준이어야 한다. 미입력·0 → 400 (토지 취득일 값으로 대체하지 않는다 · 엔진 throw 거울).
   if (
     isBuildingDayLandPriceRequired({
       landDate: v.landAcquisitionDate,
@@ -173,6 +184,24 @@ export const mixedUseAssetSchema = z.object({
       ctx.addIssue({ code: "custom", message: "토지·건물 취득일이 달라 건물 취득일 기준 주택부수토지 개별공시지가(landPricePerSqmAtBuildingAcq)가 필요합니다", path: ["acquisitionStandardPrice", "landPricePerSqmAtBuildingAcq"] });
     } else if (!(atBuildingAcq > 0)) {
       ctx.addIssue({ code: "custom", message: "건물 취득일 기준 주택부수토지 개별공시지가(landPricePerSqmAtBuildingAcq)는 0보다 커야 합니다", path: ["acquisitionStandardPrice", "landPricePerSqmAtBuildingAcq"] });
+    }
+  }
+  // S3-2 — 주택분 기준시가의 토지·건물 분할은 가목:나목 비례(뺄셈 아님)라 주택건물 기준시가(나목)가 필수다.
+  // 필수 여부는 엔진·UI 어댑터와 **같은 leaf**. 미입력·0 → 400 (뺄셈 fallback 없음 · 엔진 throw 거울).
+  // 개별주택가격(H)은 요구하지 않는다 — 상속·증여 신고가액만 입력하면 가목:나목 원값 비율로 나눈다(Q-B).
+  // 양도시 개별주택가격(H_T)도 필수(비-PHD) — `.nonnegative()`가 0을 허용해 엔진이 조용히 0으로 끝나던 입력을 막는다.
+  // 취득시 H는 위 환산·실가·감정·상속증여 규칙이 이미 같은 조건(`isHousingPriceAtAcqRequired` ⊆ 이 규칙들)으로 요구한다.
+  if (isHousingPriceAtTransferRequired({ usePhd: v.usePreHousingDisclosure }) && !(v.transferStandardPrice.housingPrice > 0)) {
+    ctx.addIssue({ code: "custom", message: "겸용주택 양도시 개별주택가격이 필요합니다 — 양도시 주택의 토지분·건물분은 이 가격을 가목:나목 비율로 나눕니다", path: ["transferStandardPrice", "housingPrice"] });
+  }
+  if (isHousingBuildingStdAtTransferRequired({ usePhd: v.usePreHousingDisclosure })) {
+    if (!((v.transferStandardPrice.housingBuildingPrice ?? 0) > 0)) {
+      ctx.addIssue({ code: "custom", message: "겸용주택 양도시 주택건물 기준시가(나목)가 필요합니다 — 양도시 주택의 토지분·건물분은 개별주택가격을 가목:나목 비율로 나눕니다", path: ["transferStandardPrice", "housingBuildingPrice"] });
+    }
+  }
+  if (isHousingBuildingStdAtAcqRequired({ usePhd: v.usePreHousingDisclosure, partialDirection: v.partialUsageChange?.direction })) {
+    if (!((v.acquisitionStandardPrice.housingBuildingPrice ?? 0) > 0)) {
+      ctx.addIssue({ code: "custom", message: "겸용주택 취득시 주택건물 기준시가(나목)가 필요합니다 — 취득시 주택의 토지분·건물분은 개별주택가격을 가목:나목 비율로 나눕니다(토지·건물 취득일이 다르면 건물 취득일 기준)", path: ["acquisitionStandardPrice", "housingBuildingPrice"] });
     }
   }
   if (!fourPart) {

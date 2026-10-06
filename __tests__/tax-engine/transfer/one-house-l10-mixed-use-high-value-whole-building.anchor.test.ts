@@ -28,7 +28,7 @@
  * 「12억 이하 비과세」로 판정했다. **과세 양도차익은 어느 쪽이든 0**이라 세액은 불변 — 판정 라벨·echo만 바뀐다.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax, withIdentityHousingBuildingStd } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { buildMixedUsePartCards } from "@/app/api/calc/transfer/mixed-use-part-cards";
@@ -209,7 +209,7 @@ describe("L-10 ⑦ 파트 카드 — 단건 겸용과 과세표준·산출세액
   ] as const)("%s", (_n, price, over) => {
     const a = asset(over as Partial<MixedUseAssetInput>);
     const single = calcMixedUseTransferTax(price, TD, a, rates);
-    const cards = buildMixedUsePartCards(companion(price), a, price, TD, rates, "c1", "자산 2");
+    const cards = buildMixedUsePartCards(companion(price), withIdentityHousingBuildingStd(a), price, TD, rates, "c1", "자산 2");
     const agg = calculateTransferTaxAggregate({ taxYear: 2024, properties: cards, annualBasicDeductionUsed: 0 }, rates);
     expect(agg.taxBase).toBe(single.total.taxBase);
     // 주택 카드 12억 분모 = 엔진 산식 분모(주택분) — 전체로 바꾸면 일반 엔진이 그 값으로 **안분**까지 해 과다과세.

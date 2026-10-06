@@ -10,6 +10,7 @@
  *   (스크린샷의 취득 1997은 개별주택가격 공시 이전이라 §164⑤ PHD 환산 발동 — 별도 필드 필요해 E2E는 비-PHD로 단순화.)
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function seedForm() {
@@ -18,7 +19,7 @@ function seedForm() {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [{
+        assets: [withMixedHousingStd({
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
@@ -42,7 +43,7 @@ function seedForm() {
           // 보유상황 거주: 취득~양도(약 12년)
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2010-03-15", moveOutDate: "2022-02-16" }],
-        }],
+        })],
         transferDate: "2022-02-16",
         filingDate: "2022-04-30",
         // 40억 → 주택분 20억 > 12억 (비과세 + 표2 가시화)

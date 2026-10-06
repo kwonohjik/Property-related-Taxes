@@ -33,7 +33,8 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+// S3-2 — 겸용 주택분이 가목:나목 비례라 나목(주택건물 기준시가)이 필수다. 나목이 없는 fixture에 항등 나목(N = H − 가목)을 채워 호출한다.
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import {

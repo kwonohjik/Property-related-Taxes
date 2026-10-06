@@ -26,6 +26,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { buildMixedUsePayload } from "@/lib/calc/transfer-tax-api-mixed-use";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -84,7 +85,7 @@ async function post(over: object = {}): Promise<RouteResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, ...over })),
     }),
   );
   expect(res.status).toBe(200);
@@ -169,11 +170,11 @@ describe("OH-17 route — §154③ 본문(주택 60 > 상가 40 · 10억 · 1세
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(withIdentityStdInBody({
           ...MIXED,
           householdHousingCount: 1,
           mixedUse: { ...MIXED.mixedUse, isOneHouseExempt: true },
-        }),
+        })),
       }),
     );
     expect(res.status).toBe(200);
@@ -190,7 +191,7 @@ describe("OH-17 route — §154③ 본문(주택 60 > 상가 40 · 10억 · 1세
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(withIdentityStdInBody({
           ...MIXED,
           householdHousingCount: 1,
           mixedUse: {
@@ -199,7 +200,7 @@ describe("OH-17 route — §154③ 본문(주택 60 > 상가 40 · 10억 · 1세
             nonResidentialFloorArea: 60,
             isOneHouseExempt: true,
           },
-        }),
+        })),
       }),
     );
     const r = (await res.json()).data.result as { commercialPart: { incomeAmount: number } };

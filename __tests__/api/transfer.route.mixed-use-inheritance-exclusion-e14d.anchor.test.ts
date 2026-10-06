@@ -22,6 +22,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -71,7 +72,8 @@ const INH: HouseEntry = {
 const PLAIN: HouseEntry = { ...INH, isInherited: false, inheritedDate: undefined };
 
 function form(other: HouseEntry, over: Partial<TransferFormData> = {}, assetOver: Record<string, unknown> = {}) {
-  return {
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...MIXED, ...assetOver }],
     transferDate: "2024-06-01",
@@ -82,7 +84,7 @@ function form(other: HouseEntry, over: Partial<TransferFormData> = {}, assetOver
     residencePeriodMonths: "120",
     houses: [other],
     ...over,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 
 type MixedResult = {

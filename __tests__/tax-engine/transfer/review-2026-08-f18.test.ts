@@ -25,10 +25,11 @@
  *                  남고 상가분만 9억 → totalPayable **130,648,678**
  *                  수정 후 주택분 588,432,521 · 상가분 311,567,479(합 9억) → **155,166,000**
  *   양도비 9억:    수정 전 상가분 337,500,000만 반영(주택분 562,500,000 **증발**) → 200,372,813
- *                  수정 후 562,500,000 + 337,500,000 = 9억 → **162,866,000**
+ *                  수정 후 562,500,000 + 337,500,000 = 9억 → 162,866,000
+ *                  S3-2 Q-C(양도비 안분 축을 PHD 자체 양도시 분할로) → **155,166,000**
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
@@ -125,7 +126,11 @@ describe("F18 — PHD(§164⑦ 미공시) × §97②2호 단서", () => {
     expect(r.hDed).toBe(562_500_000); // 수정 전 0
     expect(r.cDed).toBe(337_500_000);
     expect(r.hDed + r.cDed).toBe(NAMOK); // 수정 전 337,500,000 뿐(562,500,000 소실)
-    expect(r.totalPayable).toBe(162_866_000); // 수정 전 200,372,813 (과다과세)
+    // S3-2 Q-C — 양도비 안분 축을 PHD 자체 양도시 분할(양도가액과 같은 60:40)로 교체했다. 종전에는 PHD 분기 위에서
+    // 호이스팅한 뺄셈값(`H_T − 가목`, 토지 75%)을 써서 양도가액은 60:40 · 양도비는 75:25로 한 자산 안에서 척도가 섞였다.
+    // 주택분 합(hDed 562,500,000)은 그대로이고 토지:건물 배분만 바뀌어 총세액 162,866,000 → 155,166,000
+    // (자본적지출 9억 경로 P7-2와 같은 값 — 두 축이 같은 척도가 된 결과). 수정 전(S3-2 이전) 200,372,813은 별개의 과다과세.
+    expect(r.totalPayable).toBe(155_166_000);
   });
 
   it("P7-5 PHD + 상속은 §163⑨ 의제라 단서 대상이 아니다(회귀 가드)", () => {

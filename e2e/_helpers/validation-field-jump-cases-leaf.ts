@@ -68,6 +68,9 @@ const mixedExpr = (patch: Record<string, unknown> = {}) => () =>
       mixedAcqHousingPrice: "300000000",
       mixedAcqLandPricePerSqm: "2500000",
       mixedAcqCommercialBuildingPrice: "50000000",
+      // S3-2 — 주택건물 기준시가(나목) 항등 값(N = H − 가목)
+      mixedAcqHousingBuildingStdPrice: "50000000",
+      mixedTransferHousingBuildingStdPrice: "100000000",
       mixedIsMetropolitanArea: true,
       fixedAcquisitionPrice: "700000000",
       useEstimatedAcquisition: true,

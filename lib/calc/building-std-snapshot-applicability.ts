@@ -25,12 +25,19 @@
  *
  *  · `-redev-phd` — 재개발 §164⑦ 환산 섹션의 가시성 5중 게이트
  *  · `-red{조문}-phd` — 감면 조문 PHD 환산(§164⑤). 그 조문이 후보에 있고 PHD 모드가 켜졌는가
+ *  · `-mx-housing-{acq|transfer}` — 겸용 주택분 나목(S3-2). 그 시점의 나목이 아직 **쓰이는가**
+ *    (PHD ON·용도변경 상가→주택으로 술어가 거짓이 되면 계산서는 어디에도 쓰이지 않는다)
  *
  * 계획서: `docs/00-pm/redev-phd-snapshot-staleness-gate.plan.md` ·
  *         `docs/00-pm/red-phd-snapshot-followups.plan.md` (B-2)
  */
 import { isRedevPhdSectionActive } from "@/lib/calc/redev-phd-trigger";
 import { idOfSnapshotKey, redPhdArticle } from "@/lib/calc/building-std-snapshot-keys";
+import {
+  needsMixedHousingBuildingStdAtAcq,
+  needsMixedHousingBuildingStdAtTransfer,
+} from "@/lib/calc/mixed-use-housing-std-split";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 function matchAsset(list: unknown, assetId: string): Record<string, unknown> | undefined {
   if (!Array.isArray(list)) return undefined;
@@ -167,6 +174,20 @@ export function isBuildingStdSnapshotApplicable(
     // 트리거(모드+날짜)만이 아니라 **섹션 가시성 5중 게이트** 전체를 본다 —
     // 승계조합원·자산종류 변경·§164⑤ 분기 전환도 이 계산을 무효로 만든다.
     return isRedevPhdSectionActive(asset);
+  }
+
+  // 겸용 주택분 나목(S3-2) — 노출·전송·⑧과 **같은 술어**. 입력이 술어를 거짓으로 돌리면 이 계산서는 쓰이지 않는다.
+  const mxHousing = key.match(/-mx-housing-(acq|transfer)$/);
+  if (mxHousing) {
+    const asset = findAsset(inputData, idOfSnapshotKey(key));
+    // 자산을 못 찾으면 판정 불능 — 소속 판정이 이미 통과시킨 상태라 새로 막지 않는다(redev와 같은 원칙).
+    if (!asset) return true;
+    // 구조가 다른 inputData(서버 PDF 입력 등)를 방어 — 판정 근거 필드가 없으면 통과.
+    if (!("isMixedUseHouse" in asset)) return true;
+    const form = asset as unknown as AssetForm;
+    return mxHousing[1] === "acq"
+      ? needsMixedHousingBuildingStdAtAcq(form)
+      : needsMixedHousingBuildingStdAtTransfer(form);
   }
 
   // 감면 조문 PHD 환산(§164⑤) — 그 조문이 아직 후보에 있고 PHD 모드가 켜져 있는가.

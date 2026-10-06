@@ -9,7 +9,7 @@
  *   상가토지분 2억·기초 2.5억. 검증: 각 부분 환산취득가↑·양도가액 안분 landTransferPrice **불변**.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14, CASE14_TRANSFER_PRICE, CASE14_TRANSFER_DATE } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

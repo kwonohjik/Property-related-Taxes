@@ -22,6 +22,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 /** §99의4 농어촌주택 — 겸용주택(2009 취득)보다 뒤에 취득 ⇒ 취득순서 요건 성립 */
@@ -81,7 +82,7 @@ async function post(over: object = {}) {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, ...over })),
     }),
   );
   expect(res.status).toBe(200);
