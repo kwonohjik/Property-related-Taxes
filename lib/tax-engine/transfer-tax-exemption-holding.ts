@@ -16,6 +16,7 @@
 
 import { format } from "date-fns";
 import { isWithinDeadline } from "./civil-period";
+import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -91,8 +92,8 @@ export function qualifiesRuralHouseApartFromDeadline(
 
   switch (r.kind) {
     case "inherited":
-      // 1호: 피상속인이 취득 후 5년 이상 거주
-      return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
+      // 1호: 피상속인이 취득 후 5년 이상 거주 + §155② 단서(동일세대 상속 배제 — 동거봉양 합가 전 보유분 예외, D7)
+      return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS && passesHouseholdGate(r);
     case "farm_exit":
       // 2호: 이농인이 취득일 후 5년 이상 거주
       return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;

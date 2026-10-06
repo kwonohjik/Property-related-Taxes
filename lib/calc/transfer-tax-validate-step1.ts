@@ -20,7 +20,7 @@ import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 import {
   effectiveSellingTaxIncentiveRental,
@@ -33,6 +33,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
+import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -168,6 +169,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
+      // D7 — §155⑦1호 상속 농어촌주택 동일세대 여부(판정 메뉴 ⑧과 같은 leaf).
+      const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
+      if (ruralSameHouseholdIssue) return fieldError(rowKey, `${label}: ${ruralSameHouseholdIssue}`);
       // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴 ⑧과 같은 판정(`mergeHouseSideOf`).
       if (mergeCtx && mergeHouseSideOf(h, mergeCtx) === undefined) {
         return fieldError(
@@ -327,7 +331,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
-      excludedHouseIds: eligibleCountExcludedHouseIds(form),
+      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     }),
   }).mode;
   /**

@@ -43,7 +43,7 @@ import {
 } from "@/lib/calc/household-house-count";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
@@ -176,15 +176,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         legacyPrecedence: form.legacyHouseCountPrecedence === true,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
-        excludedHouseIds: eligibleCountExcludedHouseIds({
-          houses: form.houses,
-          assets: form.assets,
-          specialHouseExclusions: form.specialHouseExclusions,
-          transferDate: form.transferDate,
-        }),
+        // D1 — 조특법 제외 행 + §155②③ 상속주택 제외 행(엔진 정본 판정) — ④와 같은 leaf.
+        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
-    // `eligibleCountExcludedHouseIds`가 양도일·감면주택 선언까지 읽는다(판정 메뉴에서 넘겨받은 조특법 제외 행).
-    [form.assets, form.houses, form.legacyHouseCountPrecedence, form.temporaryTwoHouseSpecial, form.newHouseAcquisitionDate, form.transferDate, form.specialHouseExclusions],
+    // 후보 제외가 양도일·감면주택 선언·상속 관련 세대 사실(증여·권리)까지 읽는다.
+    [form],
   );
 
   // §154① 단서 카드 노출·맥락 — one_house(1주택)/temporary_two_house(2주택+일시적특례)/미노출 (Part B 단일 파생, store 미러링 금지)

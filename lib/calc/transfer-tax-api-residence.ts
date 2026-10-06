@@ -17,7 +17,7 @@ import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers"
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -64,7 +64,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
-        excludedHouseIds: eligibleCountExcludedHouseIds(form),
+        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
     }).mode,
     form.provisoReason,
