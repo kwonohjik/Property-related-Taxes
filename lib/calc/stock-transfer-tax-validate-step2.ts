@@ -10,6 +10,7 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
 import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "./stock-acquisition-cause";
 import { isBonusTaxedEstimationBlocked } from "./stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import { isBonusTaxedPreDeemedFaceValueMissing } from "./stock-acquisition-cause";
 import { BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE } from "./stock-acquisition-cause";
 // 엔진 단일 진실 — 평가액 동일 판정 재구현 금지 (dual-truth 회피)
@@ -522,18 +523,18 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
   // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 매매사례 불가 · 환산은 장부분실일 때만 (국심2007중1761) ──
   // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B·⑤와 같은 술어.
-  if (isGiftLikeEstimationBlocked(form.acquisitionCause, acquisitionMode, isBookLostAtAcquisitionForm(form))) {
+  if (isGiftLikeEstimationBlocked(effectiveSingleAcquisitionCause(form), acquisitionMode, isBookLostAtAcquisitionForm(form))) {
     errors.push({ field: "acquisitionMode", message: GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE, severity: "error" });
   }
 
   // ── 과세 무상주 — 취득가액은 액면가액(법정)이라 실가 모드만 (소령 §27①1호 가목) ──
   // ⑤ 라디오·③ 복원과 같은 술어. ⑫는 원인을 모른다(④가 「매매」로 매핑) — 여기가 실질 관문이다.
   const preDeemed = isPreDeemedPurchaseForm(form);
-  if (isBonusTaxedEstimationBlocked(form.acquisitionCause, acquisitionMode, preDeemed)) {
+  if (isBonusTaxedEstimationBlocked(effectiveSingleAcquisitionCause(form), acquisitionMode, preDeemed)) {
     errors.push({ field: "acquisitionMode", message: BONUS_TAXED_ACTUAL_ONLY_MESSAGE, severity: "error" });
   }
   // 의제취득일 전 과세 무상주 — 추계 모드면 ②의 액면가액 필수 (영 §176의2④ 「많은 것」 비교)
-  if (isBonusTaxedPreDeemedFaceValueMissing(form.acquisitionCause, acquisitionMode, preDeemed, form.preDeemedActualPricePerShare)) {
+  if (isBonusTaxedPreDeemedFaceValueMissing(effectiveSingleAcquisitionCause(form), acquisitionMode, preDeemed, form.preDeemedActualPricePerShare)) {
     errors.push({ field: "preDeemedActualPricePerShare", message: BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE, severity: "error" });
   }
 

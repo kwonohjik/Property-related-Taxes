@@ -91,3 +91,21 @@ export const BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE =
 export const BONUS_TAXED_ACTUAL_ONLY_MESSAGE =
   "의제배당으로 과세된 무상주의 취득가액은 액면가액(의제배당 금액)으로 정해져 있어 환산취득가·매매사례가액을 쓸 수 없습니다(의제취득일 전에 받은 무상주는 예외) — " +
   "「실가」를 고르고 1주당 액면가액을 입력하세요 (소득세법 시행령 §27①1호 가목)";
+
+/**
+ * **단건** 취득원인의 유효값 — 분할 모드에서는 「매매」(= 입력 없음).
+ *
+ * 분할 모드(`lotsMode === "split"`)는 단건 취득원인 칸과 그 보조 칸(피상속인 취득일·증여자 정보·
+ * 종전 주식 취득일)을 **렌더하지 않는다** — lot 마다의 원인이 정본이다. 그런데 단일에서 고른 값은
+ * 분할 전환 뒤에도 폼에 남는다. 그 값을 그대로 읽으면 ⑧·⑫가 화면에 없는 칸으로 막아, 사용자가
+ * 벗어나려면 단일로 되돌려 lot 을 버려야 했다(2026-10-06 재현 — `stock-split-stale-single-cause.anchor`).
+ *
+ * 저장값은 바꾸지 않고 **쓰는 곳에서 파생**한다 — 단일로 되돌릴 때는 첫 lot 에서 다시 채운다(Step1).
+ * ④ · ⑧(step1·step2) · ⑤ Step2 · 이월과세 증여자 환산 술어가 공유한다.
+ */
+export function effectiveSingleAcquisitionCause(
+  form: Pick<StockTransferFormData, "lotsMode" | "acquisitionCause">,
+): FormAcquisitionCause {
+  if (form.lotsMode === "split") return "purchase";
+  return form.acquisitionCause || "purchase"; // 3중 패턴 default
+}

@@ -51,6 +51,7 @@ import { isClause9Applicable } from "./stock-other-asset-scope";
 import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
 import { effectiveTransferActualInputMode } from "./stock-transfer-input-mode";
 import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
@@ -115,12 +116,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   const acquisitionMode = form.acquisitionMode || "actual";
   const transferPriceMode = form.transferPriceMode || "actual";
   // 3중 패턴 default "purchase" — 유상증자·과세 무상주는 엔진에 「매매」로 보낸다(`stock-acquisition-cause.ts`)
-  const formCause = form.acquisitionCause || "purchase";
-  // 분할 모드는 단건 취득원인 칸이 화면에 없다 — 단건에서 고른 「비과세 무상주」(⑧ 단건 전용 차단)가
-  // 남아 있으면 보이지 않는 값으로 ⑫ enum 이 거부한다. 분할에서 이 값은 lot 이 정본이므로 싣지 않는다.
-  const acquisitionCause = toEngineAcquisitionCause(
-    form.lotsMode === "split" && formCause === "bonus_untaxed" ? "purchase" : formCause,
-  );
+  // 분할 모드는 단건 취득원인 칸이 화면에 없다(lot 이 정본) — 남은 단건 값은 싣지 않는다(⑧과 같은 leaf)
+  const acquisitionCause = toEngineAcquisitionCause(effectiveSingleAcquisitionCause(form));
   /** 이월과세 증여자 기준 환산 — 수증자 모드가 실가여도 A가 환산을 탄다(`stock-transfer-tax-api-carryover.ts`) */
   const isDonorConversion = isDonorConversionForm(form);
   const filingType = form.filingType || "preliminary";

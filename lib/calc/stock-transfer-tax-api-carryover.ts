@@ -12,6 +12,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { parseIntOrUndef, parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 
 /**
  * 증여자 기준 **환산**인가 — 수증자 모드가 실가여도 엔진 A가 환산을 탄다. 분자는 증여자 취득 당시
@@ -20,7 +21,8 @@ import { parseIntOrUndef, parseFloatOrUndef } from "./stock-transfer-tax-api-par
  */
 export function isDonorConversionForm(form: StockTransferFormData): boolean {
   return (
-    (form.acquisitionCause || "purchase") === "carryover_gift" &&
+    // 분할 모드에 남은 단건 원인은 입력이 아니다 — ④·⑧과 같은 leaf
+    effectiveSingleAcquisitionCause(form) === "carryover_gift" &&
     (form.donorAcquisitionMethod || "actual") === "estimated" &&
     (form.acquisitionMode || "actual") !== "estimated"
   );
