@@ -49,6 +49,8 @@ export const ruralHouseSchema = z.object({
   isHighPriceAtAcquisition: z.boolean().optional(),
   landAreaSqm: z.number().nonnegative().optional(),
   wholeHouseholdMoved: z.boolean().optional(),
+  /** 2호·3호 — 5년 이상 거주하다 이농한 뒤 다시 그 주택으로 귀농 */
+  returnedToFarmExitHouse: z.boolean().optional(),
 });
 
 /**

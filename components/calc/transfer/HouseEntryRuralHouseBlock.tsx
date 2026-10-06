@@ -112,6 +112,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
                 ruralLandAreaSqm: undefined,
                 ruralWholeHouseholdMoved: undefined,
                 ruralHighPriceAtAcquisition: undefined,
+                ruralReturnedToFarmExitHouse: undefined,
               },
         )
       }
@@ -235,6 +236,43 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               unit="년"
             />
             <p className="text-xs text-muted-foreground">취득일 후 5년 이상이어야 합니다.</p>
+          </div>
+        )}
+
+        {(house.ruralHouseKind === "farm_exit" || house.ruralHouseKind === "return_to_farm") && (
+          <div className="space-y-1.5">
+            {/*
+              이농 후 그 주택으로 다시 귀농 — 2호·3호 모두 부적용(부동산납세과-67 · 재산세과-1504).
+              「아직 답하지 않음」을 가질 수 있게 라디오로 묻는다(⑧ 필수 — 모름은 불리).
+            */}
+            <label className="text-sm font-medium">이농 후 이 주택으로 다시 귀농</label>
+            <RadioCardGroup
+              name={`ruralReturned-${house.id}`}
+              data-testid="house-row-rural-returned"
+              tone="emerald"
+              layout="stack"
+              options={[
+                {
+                  value: "no",
+                  label: "아닙니다",
+                  testId: "house-row-rural-returned-no",
+                },
+                {
+                  value: "yes",
+                  label: "이 주택에 5년 이상 살다가 이농했고, 그 뒤 다시 이 주택으로 돌아와 살고 있습니다",
+                  description: "이 경우 이농주택(2호)·귀농주택(3호) 특례를 적용하지 않습니다.",
+                  testId: "house-row-rural-returned-yes",
+                },
+              ]}
+              value={
+                house.ruralReturnedToFarmExitHouse === true
+                  ? "yes"
+                  : house.ruralReturnedToFarmExitHouse === false
+                    ? "no"
+                    : ""
+              }
+              onChange={(v) => onUpdate({ ruralReturnedToFarmExitHouse: v === "yes" })}
+            />
           </div>
         )}
 

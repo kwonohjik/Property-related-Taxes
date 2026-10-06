@@ -24,7 +24,8 @@
           "ruralOutsideCapitalEupMyeon": true,
           "ruralLandAreaSqm": "300",
           "ruralWholeHouseholdMoved": true,
-          "ruralHighPriceAtAcquisition": false
+          "ruralHighPriceAtAcquisition": false,
+          "ruralReturnedToFarmExitHouse": false
         },
         {
           "id": "new",
@@ -67,7 +68,8 @@
           "ruralOutsideCapitalEupMyeon": true,
           "ruralLandAreaSqm": "300",
           "ruralWholeHouseholdMoved": true,
-          "ruralHighPriceAtAcquisition": false
+          "ruralHighPriceAtAcquisition": false,
+          "ruralReturnedToFarmExitHouse": false
         },
         {
           "id": "new",
@@ -110,7 +112,8 @@
           "ruralOutsideCapitalEupMyeon": true,
           "ruralLandAreaSqm": "300",
           "ruralWholeHouseholdMoved": true,
-          "ruralHighPriceAtAcquisition": false
+          "ruralHighPriceAtAcquisition": false,
+          "ruralReturnedToFarmExitHouse": false
         },
         {
           "id": "new",
@@ -153,7 +156,8 @@
           "ruralOutsideCapitalEupMyeon": true,
           "ruralLandAreaSqm": "300",
           "ruralWholeHouseholdMoved": false,
-          "ruralHighPriceAtAcquisition": false
+          "ruralHighPriceAtAcquisition": false,
+          "ruralReturnedToFarmExitHouse": false
         },
         {
           "id": "new",

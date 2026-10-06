@@ -73,7 +73,12 @@ export type TempTwoHouseVerdict =
  * 폼 primitive → 일시적 2주택 요건 판정. previousAcquisitionDate는 양도 자산 취득일(단일소스).
  */
 export function judgeTempTwoHouseFromForm(p: {
-  previousAcquisitionDate: string; // = 양도 자산 취득일 (assets[0].acquisitionDate)
+  previousAcquisitionDate: string; // = 일시적 2주택의 종전주택 취득일 — 대개 양도 자산 취득일(합가 상대 쪽 짝이면 다르다 — D8)
+  /**
+   * §154① 단서(1년 요건 면제) 판정의 양도 주택 취득일 — 엔진 `waivesPriorHouseOneYearGap`이 `input.acquisitionDate`를
+   * 보므로 같은 값을 쓴다. 없으면 `previousAcquisitionDate`(종전 동작).
+   */
+  sellingAcquisitionDate?: string;
   newHouseAcquisitionDate: string;
   transferDate: string;
   // waiver 판정용 — mode=temporary_two_house에서 유효한 사유(1·2가·3호)만 실효
@@ -110,11 +115,15 @@ export function judgeTempTwoHouseFromForm(p: {
     return { status: "pending" };
   }
 
+  const validOr = (v: string | undefined, d: Date) => {
+    const x = v ? new Date(v) : d;
+    return Number.isNaN(x.getTime()) ? d : x;
+  };
   // waiver — 엔진 resolveExemptionProviso 단일소스 재사용 (whitelist 사유 + proviso 조건충족)
   let oneYearWaived = false;
   if (p.provisoReason && TEMP_TWO_HOUSE_PROVISO_REASONS.has(p.provisoReason)) {
     const relax = resolveExemptionProviso({
-      acquisitionDate: prev,
+      acquisitionDate: validOr(p.sellingAcquisitionDate, prev),
       transferDate: transfer,
       residencePeriodMonths: parseInt(p.residencePeriodMonths || "0", 10) || 0,
       wasRegulatedAtAcquisition: false, // resolveExemptionProviso 미사용 필드 — 타입 충족용

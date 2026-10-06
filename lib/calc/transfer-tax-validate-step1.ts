@@ -34,6 +34,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
+import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -172,6 +173,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // D7 — §155⑦1호 상속 농어촌주택 동일세대 여부(판정 메뉴 ⑧과 같은 leaf).
       const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
       if (ruralSameHouseholdIssue) return fieldError(rowKey, `${label}: ${ruralSameHouseholdIssue}`);
+      // §155⑦2호·3호 — 이농 후 그 주택으로 재귀농 여부(판정 메뉴 ⑧과 같은 leaf).
+      const ruralReturnedIssue = ruralReturnedToFarmExitIssue(h);
+      if (ruralReturnedIssue) return fieldError(rowKey, `${label}: ${ruralReturnedIssue}`);
       // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴 ⑧과 같은 판정(`mergeHouseSideOf`).
       if (mergeCtx && mergeHouseSideOf(h, mergeCtx) === undefined) {
         return fieldError(
@@ -333,6 +337,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
+      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
       excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     }),
   }).mode;

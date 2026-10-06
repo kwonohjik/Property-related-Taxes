@@ -158,8 +158,9 @@ function TempTwoHouseCoreBlocks({
               */}
               <p className="text-xs text-muted-foreground">
                 같은 화면의 <strong>보유 주택 목록</strong>에서{" "}
-                <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로 찾아 반영합니다 —
-                목록을 고치면 판정도 함께 바뀝니다.
+                <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로 찾아 반영합니다(혼인·동거봉양 합가
+                세대는 합가 전 같은 쪽 안에서 나중에 취득한 주택이나 합가 후 취득한 주택) — 목록을 고치면 판정도
+                함께 바뀝니다.
               </p>
             </div>
           </div>

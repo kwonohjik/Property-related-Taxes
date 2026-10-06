@@ -18,6 +18,7 @@ import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/ca
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -66,6 +67,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
     }).mode,

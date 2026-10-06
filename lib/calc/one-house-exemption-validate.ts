@@ -50,6 +50,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
+import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -153,6 +154,11 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
     if (ruralSameHouseholdIssue) {
       errors.push(err(`houses.${i}.decedentSameHouseholdAtInheritance`, `보유 주택 ${i + 1}: ${ruralSameHouseholdIssue}`));
+    }
+    // §155⑦2호·3호 — 이농했다가 그 주택으로 다시 귀농했는가(그러면 두 특례 모두 부적용). 「모름」은 불리 — 답을 받는다.
+    const ruralReturnedIssue = ruralReturnedToFarmExitIssue(h);
+    if (ruralReturnedIssue) {
+      errors.push(err(`houses.${i}.ruralReturnedToFarmExitHouse`, `보유 주택 ${i + 1}: ${ruralReturnedIssue}`));
     }
     // §167의10①3호·7호 기산 상태 — 명부 행 ④ 칸이 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
     const statusIssue = twoHouseExclusionStatusIssue(h);

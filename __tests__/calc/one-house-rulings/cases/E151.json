@@ -26,7 +26,8 @@
           "ruralWholeHouseholdMoved": true,
           "ruralHighPriceAtAcquisition": false,
           "oneHouseRuralHouse": true,
-          "ruralOutsideCapitalEupMyeon": true
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralReturnedToFarmExitHouse": false
         }
       ]
     },

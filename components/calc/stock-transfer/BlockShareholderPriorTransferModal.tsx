@@ -192,6 +192,11 @@ export function BlockShareholderPriorTransferModal({
                     <span className="font-mono tabular-nums">취득 {formatKRW(c.acquisitionPrice)}</span>
                     <span className="font-mono tabular-nums">산출 {formatKRW(c.calculatedTax)}</span>
                   </div>
+                  {c.acquisitionExcludedBySwap && (
+                    <p className="mt-0.5 text-caption text-slate-500" data-testid={`prior-transfer-swap-note-${c.calculationId}`}>
+                      그 회차는 §97②2호 단서로 환산취득가액을 차감하지 않아 취득가액을 0으로 합산합니다(필요경비는 그 회차 실제 경비).
+                    </p>
+                  )}
                 </div>
               </label>
             ))}
