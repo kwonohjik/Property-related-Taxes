@@ -1,0 +1,56 @@
+[
+  {
+    "id": "E047-era",
+    "docNo": "기획재정부 재산세제과-1312",
+    "docDate": "2022.10.19.",
+    "basis": "era",
+    "today": "2023-04-01",
+    "summary": "무주택 세대가 조정대상지역 공고 이전 오피스텔 분양계약, 공고 이후 완공·주거용 사용 — 2022.10.19. 이후 양도분 거주요건 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-03-20",
+      "contractTotalPrice": "500000000",
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-06-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "12"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 양도 자산이 「오피스텔 분양계약(공고 전)·공고 후 완공·주거용 사용」이라는 사실과 이에 따른 5호(공고 전 계약·무주택) 거주요건 면제 배제. 판정 메뉴에서 공고 전 계약을 표현하는 유일한 길은 §154① 단서 5호(provisoReason=pre_designation_contract)이고, 엔진은 자산이 오피스텔 분양권에서 온 것인지 구분하지 않아 5호 면제를 준다. 참조 관측(referenceForm: 5호 선택·거주 12개월·2023-03-20 양도): isExempt=true(applied 154-1-proviso:pre_designation_contract) — 원문 결론(2022.10.19. 이후 양도분은 거주요건 적용 → 거주 2년 미만이면 과세)과 반대. 5호를 고르지 않으면 과세(최소쌍 확인)이나 그 경우는 공고 전 계약 사실을 입력하지 않은 것이다. 일자 가정: 취득(완공) 2020-06-15·조정대상지역 취득, 양도 2023-03-20, 양도가 5억."
+  },
+  {
+    "id": "E047-era-pre",
+    "docNo": "기획재정부 재산세제과-1312",
+    "docDate": "2022.10.19.",
+    "basis": "era",
+    "today": "2022-10-10",
+    "summary": "무주택 세대가 조정대상지역 공고 이전 분양계약한 오피스텔을 2022.10.19. 전에 양도 — 거주요건 미적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "500000000",
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-06-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "12"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(원문 적용시기 해석에서 도출한 음성 짝). 같은 사실에서 양도가 2022.10.19. 이전(2022-09-15)이면 거주요건을 적용하지 않는다는 취지로 읽어 기대=비과세. 엔진은 5호(공고 전 계약·무주택) 거주 면제로 비과세(applied 154-1-proviso:pre_designation_contract) — 경로는 5호 면제이며 오피스텔 구분은 없다. 최소쌍: 5호를 빼고 거주 12개월이면 과세, 거주 24개월이면 비과세. 일자 가정: 취득(완공) 2020-06-15, 양도가 5억."
+  }
+]

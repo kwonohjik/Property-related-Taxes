@@ -80,9 +80,10 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
     primaryKind: form.assets?.[0]?.assetKind,
     declared: parseInt(form.householdHousingCount) || 0,
     houses: form.houses,
+    transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
   });
-  const requiredCount = 1 + countedHouseRows(form.houses);
+  const requiredCount = 1 + countedHouseRows(form.houses, form.transferDate);
   if (rowDeclarations > 0 && effectiveCount < requiredCount)
     messages.push(COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE(effectiveCount, requiredCount));
 

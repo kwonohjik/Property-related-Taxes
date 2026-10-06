@@ -1,0 +1,75 @@
+[
+  {
+    "docNo": "사전-2020-법령해석재산-0638",
+    "docDate": "2020.09.29.",
+    "id": "E057-era",
+    "basis": "era",
+    "today": "2020-09-29",
+    "summary": "조정대상지역 A(2014. 소유권이전등기) 보유 중 2020.2.15. 조정대상지역 B 매매취득 — 기존 임차인의 임차 시작일이 B 취득일과 동일(전세기간 2020.2.15.~2022.2.14.), A 2021.10.15. 양도 예정",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseExistingTenant": true,
+      "newHouseTenantLeaseEndDate": "2022-02-14",
+      "isOneHousehold": true,
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-03-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-02-15"
+        }
+      ],
+      "transferDate": "2021-10-15",
+      "newHouseMoveInDate": "2022-02-10"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 사전답변 회신(2020.9.29.) 시점에는 A 양도(2021.**.)가 예정이라 양도일은 2021-10-15로 가정(잔금일 2021년, 신규 취득 1년 경과 후), 월·일이 비공개인 일자는 가정(A 소유권이전등기 「2014년」 → 2014-03-15, B 취득 2020.02.** → 2020-02-15, 전세 2020.02.**~2022.02.** → 2020-02-15 ~ 2022-02-14). 임차인 입주일이 신규주택 취득일과 같다 → 「취득일 현재 기존 임차인이 거주」로 입력(임차 시작일 입력 칸은 없어 사용자가 자기선언), 전세 2020-02-15 ~ 2022-02-14 → 계약종료일 2022-02-14(취득일부터 2년 한도와 같음), 세대전원 전입 2022-02-10. 최소쌍(프로브): 임차인 단서 OFF → 과세(양도·전입이 1년 기한 밖), 전입일 비움 → 비과세 + 전입요건 미판정 보류. 기대값은 회신의 단서 적용 가능에서 도출(회신은 양도일·기한 충족 여부를 판단하지 않음). 양도가 8억 중립."
+  },
+  {
+    "docNo": "사전-2020-법령해석재산-0638",
+    "docDate": "2020.09.29.",
+    "id": "E057-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조정대상지역 A(2014.3. 취득) 보유 중 기존 임차인이 있는 조정대상지역 B를 2023.3.15. 취득(임차 시작일 동일, 전세 2023.3.15.~2025.3.14.), 전입 없이 신규 취득일부터 2년 11개월에 A 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "isOneHousehold": true,
+      "transferDate": "2026-02-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-03-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2023-03-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2023.1.12. 이후 양도분은 지역 무관 3년이고 신규주택 1년 내 전입요건·기존 임차인 단서가 없다. 조정대상지역 A(2014.3. 취득, 거주요건 면제) 보유 중 기존 임차인이 있는 B를 2023-03-15 취득 → 전입 없이 신규 취득 후 2년 11개월(2026-02-20)에 양도(2년이면 불성립). 프로브: 신규 취득 2022-12-15면 3년 3개월이라 과세. 새 축 중립: 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

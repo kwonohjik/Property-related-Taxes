@@ -11,6 +11,7 @@
  * 여기서는 브라우저에서 ① 겸용 자산 카드에 ④ 거주 위젯이 사라졌고, ② 겸용 계산 흐름이 깨지지 않음을 확인.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 // 겸용주택(§97 직접환산) — mixed-use-filing-form-4col.spec.ts와 동일한 known-valid 시드.
@@ -20,7 +21,7 @@ function seedForm() {
       formData: {
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [{
+        assets: [withMixedHousingStd({
           ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
@@ -42,7 +43,7 @@ function seedForm() {
           // 결과 화면에 도달하지 못한다("자산: 겸용주택 취득 실거래가액을 입력하세요").
           // 정본 시드는 mixed-use-filing-form-4col.spec.ts.
           fixedAcquisitionPrice: "700000000",
-        }],
+        })],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",
         contractTotalPrice: "1500000000",

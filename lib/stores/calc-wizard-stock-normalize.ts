@@ -10,6 +10,8 @@
 
 import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { FORM_ACQUISITION_CAUSES } from "@/lib/calc/stock-acquisition-cause";
+import { isBonusTaxedEstimationBlocked } from "@/lib/calc/stock-acquisition-cause";
+import { isPreDeemedPurchaseForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import { isBookLostAtAcquisitionForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import {
   type AcquisitionStdMode,
@@ -146,7 +148,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
         : defaults.donorAcquisitionMethod;
   const acquisitionMode: StockTransferFormData["acquisitionMode"] = giftEstimationBlocked ? "actual" : storedAcqMode;
 
-  return {
+  const out: StockTransferFormData = {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
     securityName: strField("securityName"),
     securityCode: strField("securityCode"),
@@ -256,6 +258,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     // 의제취득일 전 매수 (영 §176의2④ — Z-1)
     preDeemedActualPricePerShare: strField("preDeemedActualPricePerShare"),
     preDeemedPpiRatio: strField("preDeemedPpiRatio"),
+    // 분할·다건 lot ① 비교 방식 — 미지값은 «none»(② 만). 값은 보존하고 ④ 가 해당할 때만 싣는다(stale 가드)
+    preDeemedLotClause1Mode:
+      d.preDeemedLotClause1Mode === "estimated" || d.preDeemedLotClause1Mode === "sale_case"
+        ? d.preDeemedLotClause1Mode
+        : defaults.preDeemedLotClause1Mode,
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: strField("acquisitionMarketSamplePrice"),
     acquisitionMarketSampleDate: strField("acquisitionMarketSampleDate"),
@@ -544,6 +551,13 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     ),
     fsTransferInstallmentReceipts: normalizeFsInstallmentReceipts(d.fsTransferInstallmentReceipts),
   };
+  // 과세 무상주도 같은 규약 — 취득가액이 법정(액면가액)이라 추계 모드는 Step 2 라디오가 막는다.
+  // 단 의제취득일 전 취득은 영 §176의2④ ①·② 비교라 추계 모드를 보존한다 — 판정에 시장·취득일·분할 여부가
+  // 모두 필요해 정규화가 끝난 폼으로 판정한다(⑤·⑧과 같은 `isPreDeemedPurchaseForm`).
+  if (isBonusTaxedEstimationBlocked(out.acquisitionCause, out.acquisitionMode, isPreDeemedPurchaseForm(out))) {
+    return { ...out, acquisitionMode: "actual" };
+  }
+  return out;
 }
 
 // ============================================================
@@ -672,6 +686,7 @@ function normalizeTransferLots(raw: unknown): TransferLotForm[] {
         transferDate: typeof o.transferDate === "string" ? o.transferDate : "",
         shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
         perShareTransferPrice: typeof o.perShareTransferPrice === "string" ? o.perShareTransferPrice : "",
+        ...(typeof o.transferStdPricePerShare === "string" ? { transferStdPricePerShare: o.transferStdPricePerShare } : {}),
       };
     })
     .filter((l): l is TransferLotForm => l !== null);

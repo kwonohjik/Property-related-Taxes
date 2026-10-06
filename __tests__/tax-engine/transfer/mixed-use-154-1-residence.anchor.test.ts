@@ -26,7 +26,7 @@
  *    §154⑧3호 동일세대 상속 통산분은 `table2ResidencePeriodYears`(통산 완료값)에 담긴다.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
@@ -65,11 +65,11 @@ function run(over: Partial<MixedUseAssetInput> = {}) {
  * ⇒ 주택·상가 **건물분** 장특이 표1 16%(종전 14%) · 표2 보유분 32%(종전 28%)다. 토지분(1992 취득)은 상한이라 불변.
  */
 /** 비과세 유지 시 주택 소득금액(12억 초과분 안분) — 보유 8년·거주 0년 */
-const EXEMPT_HOUSING_INCOME = 252_933_751;
-const EXEMPT_TAX = 329_103_528;
+const EXEMPT_HOUSING_INCOME = 231_057_628;
+const EXEMPT_TAX = 319_915_557;
 /** 비과세 배제 시 주택 소득금액(양도차익 전액 − 장특 건물분 16%·토지분 30%) */
-const TAXED_HOUSING_INCOME = 1_216_762_904;
-const TAXED_TAX = 758_901_185;
+const TAXED_HOUSING_INCOME = 1_111_525_643;
+const TAXED_TAX = 711_544_417;
 
 describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
   it("B-A0: 2017-08-03 **이전** 취득은 조정대상지역이어도 거주요건 면제 (부칙 경과규정)", () => {
@@ -77,9 +77,9 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     const r = run({ buildingAcquisitionDate: D("1997-09-12"), wasRegulatedAtAcquisition: true });
     expect(r.housingPart.incomeAmount).toBeLessThan(r.housingPart.transferGain);
     // 조정지역 여부와 무관하게 같은 값이어야 한다 — 경과규정이 거주요건을 통째로 면제하므로.
-    expect(r.total.transferTax).toBe(313_306_431);
+    expect(r.total.transferTax).toBe(304_118_459);
     expect(run({ buildingAcquisitionDate: D("1997-09-12"), wasRegulatedAtAcquisition: false })
-      .total.transferTax).toBe(313_306_431);
+      .total.transferTax).toBe(304_118_459);
   });
 
   it("B-A1: 취득 당시 조정대상지역 + 거주 0년 → 비과세 배제 (본문 후단)", () => {
@@ -102,7 +102,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
   it("B-A3: 조정대상지역 취득이어도 **실거주** 2년 이상이면 비과세 유지 + 표2 적용", () => {
     const r = run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 });
     expect(r.housingPart.longTermDeductionTable).toBe(2);
-    expect(r.total.transferTax).toBe(299_419_774);
+    expect(r.total.transferTax).toBe(292_594_423);
   });
 
   it("B-A5: 거주요건은 **§154⑧3호 통산값**(table2ResidencePeriodYears)으로 판정한다", () => {
@@ -110,7 +110,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     // (표2 '거주분 공제율'은 실거주 0년이라 붙지 않는다 — 대상판정/공제율 분리, 사전법령해석재산 2021-202)
     const consolidated = run({ wasRegulatedAtAcquisition: true, table2ResidencePeriodYears: 2 });
     expect(consolidated.housingPart.longTermDeductionTable).toBe(2);
-    expect(consolidated.total.transferTax).toBe(309_982_654);
+    expect(consolidated.total.transferTax).toBe(302_107_250);
 
     // 통산이 1년이면 여전히 미충족 — **이중 통산이 없음**을 반증한다
     // (한 번 더 더해졌다면 2년이 되어 충족했을 것이다).
@@ -122,7 +122,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 1 }).total.transferTax)
       .toBe(TAXED_TAX); // 미충족
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 }).total.transferTax)
-      .toBe(299_419_774); // 충족
+      .toBe(292_594_423); // 충족
   });
 });
 
@@ -140,7 +140,7 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
     landAcquisitionDate: D("2025-06-01"),
     buildingAcquisitionDate: D("2025-06-01"),
   };
-  const SHORT_HOLD_TAXED_TAX = 1_256_734_205;
+  const SHORT_HOLD_TAXED_TAX = 1_166_530_838;
 
   it("B-A4: 단서 2호가(수용) → 조정지역 취득·거주 0년이어도 **거주요건 면제**", () => {
     const r = run({ wasRegulatedAtAcquisition: true, ...EXPROPRIATION });
@@ -168,10 +168,10 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
   it("🔴 B-A7 (E-3): 단서 2호가(수용) + **보유 1년** → 비과세 유지 — 단서는 **보유요건도** 면제한다", () => {
     // P3a(PR #937)는 단서를 무시해 이 케이스를 과세했다(과다과세).
     const r = run({ ...SHORT_HOLD, ...EXPROPRIATION });
-    expect(r.housingPart.incomeAmount).toBe(314_371_438); // 12억 초과분 안분 — 비과세 살아 있음
-    expect(r.total.transferTax).toBe(537_968_068);
+    expect(r.housingPart.incomeAmount).toBe(283_119_834); // 12억 초과분 안분 — 비과세 살아 있음
+    expect(r.total.transferTax).toBe(519_217_106);
     // 단서가 없으면 여전히 전액 과세여야 한다(게이트가 과도하게 열리지 않았음).
-    expect(run({ ...SHORT_HOLD }).housingPart.incomeAmount).toBe(1_512_314_999);
+    expect(run({ ...SHORT_HOLD }).housingPart.incomeAmount).toBe(1_361_976_054);
   });
 
   it("B-A8(회귀): 단서 **미입력** + 보유 1년 → 비과세 배제 유지 (P3a 동작 불변)", () => {

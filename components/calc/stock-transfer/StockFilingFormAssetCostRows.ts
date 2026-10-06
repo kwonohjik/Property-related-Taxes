@@ -20,6 +20,12 @@ import {
   acquisitionModeLabel,
   taxCategoryLabel,
 } from "./StockFilingFormLabels";
+import {
+  deductedAcquisitionPrice,
+  deductedOwnAcquisitionPrice,
+  appliedEstimatedDeduction,
+  swapExcludedAcquisitionPrice,
+} from "@/lib/calc/stock-swap-display";
 
 /** 구간 빌더가 공유하는 최소 문맥 — `buildRows` 지역 헬퍼를 그대로 넘긴다. */
 export interface FilingRowCtx {
@@ -201,16 +207,25 @@ export function pushAssetAndCostRows(
   // 11. 취득가액
   rows.push({
     // 환산 모드에서는 이 값이 곧 환산취득가액(영 §176의2②1호)이다 — 12-1·12-2가 그 분자·분모다.
-    label: result.usedEstimatedAcquisition
+    label: result.swapApplied
+      ? // §97②2호 단서 — 환산취득가액을 차감하지 않았다(필요경비 = 실비). 표의 ①−②−③ 이 18행과 맞도록 차감된 값만 싣는다.
+        `11. 취득가액 (② — §97②2호 단서로 환산취득가액 ${swapExcludedAcquisitionPrice(result).toLocaleString()} 미차감)`
+      : result.usedEstimatedAcquisition
       ? "11. 취득가액 (② = 환산취득가액)"
       : result.preDeemedAcquisitionDetail?.selected === "clause2"
         ? // 의제취득일 전 매수 — 실가 + 생산자물가상승분(영 §176의2④2호). 실가 방식이라 개산공제 행은 없다.
           "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"
-        : "11. 취득가액 (②)",
+        : result.preDeemedLotsDetail
+          ? // 분할·다건 lot — ① 비교가 켜지면 매수 건·매도 건마다 채택이 갈린다(환산 분모가 매도 건별이라 12-1·12-2 단일 행 불가).
+            // 꺼져 있으면 ② 만 적용한 값이다.
+            result.preDeemedLotsDetail.clause1
+            ? "11. 취득가액 (영 §176의2④ 많은 것 — 매수 건별 ①·② 채택은 결과 카드)"
+            : "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"
+          : "11. 취득가액 (②)",
     values: val(
-      result.acquisitionPrice,
-      (agg) => agg.items.reduce((s, r) => s + r.acquisitionPrice, 0),
-      (item) => item.acquisitionPrice,
+      deductedAcquisitionPrice(result),
+      (agg) => agg.items.reduce((s, r) => s + deductedAcquisitionPrice(r), 0),
+      (item) => deductedAcquisitionPrice(item),
     ),
   });
 
@@ -228,9 +243,9 @@ export function pushAssetAndCostRows(
     rows.push({
       label: "11-2.  당회차분",
       values: val(
-        result.ownAcquisitionPrice,
-        (agg) => agg.items.reduce((s, r) => s + r.ownAcquisitionPrice, 0),
-        (item) => item.ownAcquisitionPrice,
+        deductedOwnAcquisitionPrice(result),
+        (agg) => agg.items.reduce((s, r) => s + deductedOwnAcquisitionPrice(r), 0),
+        (item) => deductedOwnAcquisitionPrice(item),
       ),
       indent: true,
     });
@@ -334,7 +349,7 @@ export function pushAssetAndCostRows(
   // 16. 매매수수료·기타 양도비용
   const otherExpenses = (r: StockTransferResult) =>
     r.expenseMode === "actual"
-      ? r.expenses - (r.estimatedDeduction ?? 0)
+      ? r.expenses - (appliedEstimatedDeduction(r) ?? 0)
       : null;
 
   rows.push({
@@ -357,9 +372,9 @@ export function pushAssetAndCostRows(
   rows.push({
     label: "17.   개산공제 §163⑥4 (취득기준시가 × 1%)",
     values: val(
-      result.estimatedDeduction ?? null,
-      () => aggregate?.items.reduce((s, r) => s + (r.estimatedDeduction ?? 0), 0) ?? null,
-      (item) => item.estimatedDeduction ?? null,
+      appliedEstimatedDeduction(result) ?? null,
+      () => aggregate?.items.reduce((s, r) => s + (appliedEstimatedDeduction(r) ?? 0), 0) ?? null,
+      (item) => appliedEstimatedDeduction(item) ?? null,
     ),
     indent: true,
     separatorAfter: true,

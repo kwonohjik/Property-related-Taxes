@@ -69,6 +69,11 @@ export interface PriorStockTransferCandidate {
    *    ⇒ 전액 합산하고, 어떤 조문으로 신고된 건인지는 **배지로 알리기만** 한다.
    */
   wasAlreadyBlockShareholder: boolean;
+  /**
+   * 그 회차가 §97②2호 단서(단건 환산)로 **환산취득가액을 차감하지 않은** 건인가 — 그래서
+   * `acquisitionPrice` 를 0 으로 가져왔다(표시 사유용).
+   */
+  acquisitionExcludedBySwap: boolean;
   createdAt: string;
   title: string;
 }
@@ -155,14 +160,19 @@ function resolveShareCount(
  * 그때는 합산 자체가 폼 레벨이었으므로 저장된 총액이 사실상 그 회차분인 경우가 많지만,
  * **합산해 신고한 건이라면 총액이다** — 그래서 모달이 값을 그대로 보여 주고 사용자가
  * 확인·수정할 수 있게 남긴다.
+ *
+ * 🔴 2순위로 내려가는 조건은 **키가 없을 때뿐**이다 — 당회차분 0 원은 정상 값이다(필요경비 0 ·
+ *    ① lot 단서로 당회차 취득가액 0). 종전 `own > 0` 판정은 0 을 「없음」으로 읽어 합산 총액으로
+ *    내려갔고, 그 총액에 든 앞 회차분이 **두 번** 더해졌다(실측: 취득가액 100,000,000 이중 →
+ *    다음 회차 42,000,000 과소).
  */
 function ownAmount(
   result: Record<string, unknown>,
   ownKey: string,
   totalKey: string,
 ): number {
-  const own = num(result[ownKey]);
-  if (own > 0) return own;
+  const own = result[ownKey];
+  if (typeof own === "number" && Number.isFinite(own)) return own;
   return num(result[totalKey]);
 }
 
@@ -286,6 +296,7 @@ export function filterPriorStockTransferCandidates(
     }
 
     const appliedSection94 = str(result.appliedSection94);
+    const acquisitionExcludedBySwap = result.swapApplied === true;
     candidates.push({
       calculationId: rec.id,
       transferDate: dateStr,
@@ -294,11 +305,15 @@ export function filterPriorStockTransferCandidates(
       ...(securityCode ? { securityCode } : {}),
       shareCount,
       transferPrice,
-      acquisitionPrice: ownAmount(result, "ownAcquisitionPrice", "acquisitionPrice"),
+      // §97②2호 단서(단건 환산) 회차는 환산취득가액을 차감하지 않았다 — echo 된 취득가액은 그 회차가 실제로 뺀
+      // 금액이 아니다(필요경비는 대체된 실비 그대로). 그대로 가져오면 다음 회차가 그만큼 더 뺀다(실측 33,600,000 과소).
+      // ① lot 부분 swap 은 엔진이 `ownAcquisitionPrice` 에서 이미 뺐고 `swapApplied` 는 false 다.
+      acquisitionPrice: acquisitionExcludedBySwap ? 0 : ownAmount(result, "ownAcquisitionPrice", "acquisitionPrice"),
       expenses: ownAmount(result, "ownExpenses", "expenses"),
       calculatedTax: num(result.calculatedTax),
       appliedSection94,
       wasAlreadyBlockShareholder: appliedSection94 === "①4다",
+      acquisitionExcludedBySwap,
       createdAt: rec.createdAt,
       title: rec.title,
     });

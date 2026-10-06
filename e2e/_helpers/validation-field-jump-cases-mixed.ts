@@ -24,6 +24,9 @@ const mixedAsset = {
   mixedAcqHousingPrice: "300000000",
   mixedAcqLandPricePerSqm: "2500000",
   mixedAcqCommercialBuildingPrice: "50000000",
+  // S3-2 — 주택건물 기준시가(나목, 비례 분모): 항등(N = H − 가목) 값 — 취득 300M − 2.5M×100㎡ · 양도 600M − 5M×100㎡
+  mixedAcqHousingBuildingStdPrice: "50000000",
+  mixedTransferHousingBuildingStdPrice: "100000000",
   mixedIsMetropolitanArea: true,
   fixedAcquisitionPrice: "700000000",
 };
@@ -67,6 +70,18 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "mixed: mixedAcqLandPricePerSqmAtBuildingAcq (건물 취득일 기준 공시지가)", field: "mixedAcqLandPricePerSqmAtBuildingAcq", step: 0, assetIndex: A,
     message: /^자산: 건물 취득일\(2010-03-15\) 기준 주택부수토지/,
     form: est({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2005-06-10" }),
+  },
+
+  {
+    // S3-2 — 주택분 기준시가 비례 분모(나목). 비-PHD면 취득시·양도시 모두 필수
+    name: "mixed: mixedAcqHousingBuildingStdPrice (취득시 주택건물 기준시가)", field: "mixedAcqHousingBuildingStdPrice", step: 0, assetIndex: A,
+    message: /^자산: 취득시 주택건물 기준시가를 입력하세요/,
+    form: est({ mixedAcqHousingBuildingStdPrice: "" }),
+  },
+  {
+    name: "mixed: mixedTransferHousingBuildingStdPrice (양도시 주택건물 기준시가)", field: "mixedTransferHousingBuildingStdPrice", step: 0, assetIndex: A,
+    message: /^자산: 양도시 주택건물 기준시가를 입력하세요/,
+    form: est({ mixedTransferHousingBuildingStdPrice: "" }),
   },
 
   // ── 면적 정보 ──

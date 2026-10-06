@@ -1,0 +1,46 @@
+[
+  {
+    "docNo": "법규재산2013-96",
+    "docDate": "2013.03.20.",
+    "id": "E095-era",
+    "basis": "era",
+    "today": "2013-03-20",
+    "summary": "서울 A주택(2001.7.30. 취득)·B주택(2011.1. 취득)을 보유한 세대에서 배우자가 2012.3.7. 별도세대 피상속인의 충북 영동 주택 C를 상속 취득해 3주택, A 매매계약 2013.1.23.(양도일 미기재) — B 취득일부터 3년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2013-02-28",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-07-30"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2011-01-15"
+        },
+        {
+          "id": "c-inherited",
+          "region": "non_capital",
+          "acquisitionDate": "2012-03-07",
+          "isInherited": true,
+          "inheritedDate": "2012-03-07",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "c-inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D1 수정 후). 상속주택 행(c-inherited)이 §155②로 빠지고 신규 주택 후보에서도 빠져 §155① 도출 → 비과세. 가정(B 취득 후 2년 1개월 — 2년 규정이면 과세·3년이면 비과세), 양도가 4억 중립."
+  }
+]

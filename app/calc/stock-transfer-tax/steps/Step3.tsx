@@ -27,6 +27,7 @@ import {
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
 import { isOtherAssetGroup } from "@/lib/calc/stock-other-asset-scope";
+import { isPreDeemedLotClause1On } from "@/lib/calc/stock-transfer-section94-4-form";
 import { isClause9Applicable } from "@/lib/calc/stock-other-asset-scope";
 import { ForeignStockExpenseBlock } from "@/components/calc/stock-transfer/ForeignStockExpenseBlock";
 import { ExitTaxSettlementBlock } from "@/components/calc/stock-transfer/ExitTaxSettlementBlock";
@@ -241,6 +242,14 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
                 실가 취득에서는 개산공제(§163⑥4)가 적용되지 않으며, 증권거래세·매매수수료 등
                 실제 발생한 경비를 직접 입력해야 합니다.
               </p>
+              {isPreDeemedLotClause1On(form) && (
+                <p className="text-xs text-sky-700 mt-1" data-testid="pre-deemed-lots-expense-note">
+                  다만 의제취득일 전 매수 건의 ① 의제취득일 현재 가액(영 §176의2④1호)이 채택된 부분은 개산공제
+                  (의제취득일 기준시가 × 1% — 영 §163⑥4)가 적용되고 실제 경비는 산입되지 않습니다. 입력한 실제 경비는 양도 주식수
+                  비례로 ① 채택분과 그 외 몫에 나뉘어 그 외 몫만 필요경비가 됩니다(귀속 기준에 대한 법령상 명문은 없습니다 —
+                  결과 화면의 비교 카드에서 근거를 확인하세요). 환산취득가액은 §97②2호 단서(실제 경비가 더 크면 실제 경비)가 따릅니다.
+                </p>
+              )}
             </div>
           )}
 

@@ -183,6 +183,11 @@ export const transferLotSchema = z.object({
   transferDate: requiredDateSchema,
   shareCount: z.number().int().positive(),
   perShareTransferPrice: z.number().int().positive(),
+  /**
+   * 양도 당시 1주당 기준시가 — 의제취득일 전 매수 lot ① 환산의 분모(영 §176의2②1호 · 상장은 양도일 이전 1개월 종가평균).
+   * `preDeemedLotClause1: "estimated"` 일 때만 읽는다. ⚠️ 누락하면 Zod 가 침묵으로 strip 한다(⑫ — grep 자가점검).
+   */
+  transferStdPricePerShare: z.number().positive().optional(),
 });
 
 export const specificMatchingSchema = z.object({
@@ -236,6 +241,12 @@ export const stockTransferInputSchema = z.object({
 
   // 보유기간 기산점 §104②
   acquisitionCause: acquisitionCauseSchema,
+  /**
+   * 폼 전용 취득원인 — ④가 `acquisitionCause`를 「매매」로 매핑해 보내므로(`lib/calc/stock-acquisition-cause.ts`)
+   * 서버가 원래 원인을 알 수 있게 따로 싣는다. 과세 무상주 규칙(추계 차단·의제취득일 전 액면가액 필수)을
+   * ⑫가 ⑧과 같은 술어로 강제하는 데만 쓴다 — 엔진 input 에는 매핑하지 않는다(⑭).
+   */
+  acquisitionCauseDetail: z.enum(["rights_issue", "bonus_taxed"]).optional(),
   decedentAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
@@ -312,6 +323,8 @@ export const stockTransferInputSchema = z.object({
   // 의제취득일 전 매수 — 영 §176의2④ ② 「실가 + 생산자물가상승분」 (Z-1). 침묵 stripping 방지 명시 선언.
   preDeemedActualPricePerShare: z.number().min(0).optional(),
   preDeemedPpiRatio: z.number().positive().optional(),
+  // 분할·다건 lot 의제취득일 전 매수 ① 비교 방식 (영 §176의2④1호 — 계획서 stock-lot-pre-deemed-clause1)
+  preDeemedLotClause1: z.enum(["estimated", "sale_case"]).optional(),
 
   // R-1' 매매사례가액 (영§176의2③1호) — sale_case 모드 확장
   acquisitionMarketSamplePrice: z.number().min(0).optional(),

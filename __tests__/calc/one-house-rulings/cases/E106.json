@@ -1,0 +1,29 @@
+[
+  {
+    "docNo": "부동산거래관리과-307",
+    "docDate": "2011.04.11.",
+    "id": "E106-era",
+    "basis": "era",
+    "today": "2011-03-01",
+    "summary": "갑 부부가 갑의 부(별도세대, B주택만 소유)로부터 B주택을 공동 유증받음(2005) — 법정상속인 아닌 아내 지분이 상속주택인지, 갑이 일반주택 A(1988) 양도 (양도일 원문 미기재 — 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2011-06-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-05-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2005-06-15",
+          "isInherited": false
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: ① 상속받은 주택인지 유증받은 주택인지, 취득자가 법정상속인(「민법」 §1000~§1005)인지 ② 한 주택 안에서 지분별로 상속주택 해당 여부가 갈리는 경우(甲 지분과 아내 지분을 따로 판정). 명부 행은 주택 단위의 상속 표시 하나뿐이다. referenceForm: B를 상속 표시 없는 주택으로 입력(아내 지분 불인정을 사용자가 미리 반영) → 과세 관측(회신 결론과 같지만 입력이 결론을 정한 것). 상속 표시를 켜면 소수지분 제외·비과세로 나온다(V-E106-inh·V-E106-inh-sole). 가정: 양도일 2011-06-15, 유증 2005-06-15, 양도가 4억, 비조정."
+  }
+]

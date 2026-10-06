@@ -118,6 +118,9 @@ test("[CCX-3] 겸용주택 — 행 ⑥ 농어촌주택이 본문에 행 id로 �
       mixedAcqHousingPrice: "300000000",
       mixedAcqLandPricePerSqm: "2500000",
       mixedAcqCommercialBuildingPrice: "50000000",
+      // S3-2 — 주택건물 기준시가(나목) 항등: 양도 1.6B − 12M×100㎡ · 취득 300M − 2.5M×100㎡
+      mixedTransferHousingBuildingStdPrice: "400000000",
+      mixedAcqHousingBuildingStdPrice: "50000000",
       mixedIsMetropolitanArea: false,
     },
     formOver: { transferDate: "2026-06-01", filingDate: "2026-08-31", contractTotalPrice: "2000000000" },

@@ -68,6 +68,9 @@ const mixedExpr = (patch: Record<string, unknown> = {}) => () =>
       mixedAcqHousingPrice: "300000000",
       mixedAcqLandPricePerSqm: "2500000",
       mixedAcqCommercialBuildingPrice: "50000000",
+      // S3-2 — 주택건물 기준시가(나목) 항등 값(N = H − 가목)
+      mixedAcqHousingBuildingStdPrice: "50000000",
+      mixedTransferHousingBuildingStdPrice: "100000000",
       mixedIsMetropolitanArea: true,
       fixedAcquisitionPrice: "700000000",
       useEstimatedAcquisition: true,
@@ -293,6 +296,19 @@ const SPLIT_CASES: FieldJumpCase[] = [
   {
     name: "leaf: split 소유자 분리 — 기준시가 총액", field: "standardPriceAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면 본인 소유분만 과세/,
     form: owner({ acquisitionArea: "100", standardPricePerSqmAtAcq: "1000000" }),
+  },
+  // S3-1 — 주택 소유자 분리는 개별주택가격(총액)을 가목:나목 비례로 안분하므로 단가·면적·총액 다음에 **취득시 건물 기준시가(나목)** 를 요구한다.
+  // 칸은 토지 단가 바로 아래(`acq-building-std-card`)에 열려 있다 — 요구와 노출이 같은 술어다.
+  {
+    name: "leaf: split 소유자 분리 — 취득시 건물 기준시가 (매매 실거래가)", field: "buildingStandardPriceAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면 본인 소유분만 과세/,
+    form: owner({ acquisitionCause: "purchase", ...SALE, acquisitionArea: "100", standardPricePerSqmAtAcq: "1000000", standardPriceAtAcq: "250000000" }),
+  },
+  {
+    name: "leaf: split 소유자 분리 — 취득시 건물 기준시가 (상속)", field: "buildingStandardPriceAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면 본인 소유분만 과세/,
+    form: owner({
+      acquisitionCause: "inheritance", decedentAcquisitionDate: "2015-03-01", publishedValueAtInheritance: "300000000",
+      acquisitionArea: "100", standardPricePerSqmAtAcq: "1000000", standardPriceAtAcq: "250000000",
+    }),
   },
   {
     name: "leaf: split 건물분 기준시가 입력 시 토지분 단가", field: "standardPricePerSqmAtAcq", step: 0, assetIndex: A, message: /^자산: 건물분 취득시 기준시가를 입력하면 토지분도/,

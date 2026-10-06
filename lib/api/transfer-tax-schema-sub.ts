@@ -41,11 +41,16 @@ export const ruralHouseSchema = z.object({
   kind: z.enum(["inherited", "farm_exit", "return_to_farm"]),
   isOutsideCapitalEupMyeon: z.boolean(),
   decedentResidenceYears: z.number().nonnegative().optional(),
+  /** D7 — 1호 상속개시 당시 피상속인과 동일세대 · 동거봉양 합가 전 보유 예외 */
+  decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  parentalCareMergeInheritedHouse: z.boolean().optional(),
   ownerResidenceYears: z.number().nonnegative().optional(),
   acquisitionDate: z.string().date().optional(),
   isHighPriceAtAcquisition: z.boolean().optional(),
   landAreaSqm: z.number().nonnegative().optional(),
   wholeHouseholdMoved: z.boolean().optional(),
+  /** 2호·3호 — 5년 이상 거주하다 이농한 뒤 다시 그 주택으로 귀농 */
+  returnedToFarmExitHouse: z.boolean().optional(),
 });
 
 /**
@@ -217,7 +222,7 @@ export const houseSchema = z.object({
   // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감)
   isSpouseOwned: z.boolean().optional(),
   // §155④⑤ 합가 전 보유 쪽 — 판정 메뉴 명부 입력(merge-composition.ts)
-  mergeOrigin: z.enum(["seller_side", "counterpart_side"]).optional(),
+  mergeOrigin: z.enum(["seller_side", "counterpart_side", "second_merge_side"]).optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
   // §155③ 공동상속 (2-A2)
@@ -226,6 +231,8 @@ export const houseSchema = z.object({
   // §155② 단서(동거봉양·동일세대)·1~4호 순위 게이트
   decedentSameHouseholdAtInheritance: z.boolean().optional(),
   parentalCareMergeInheritedHouse: z.boolean().optional(),
+  /** D17 재상속 — 별도세대에서 받은 상속주택을 동일세대원이 재상속 */
+  reInheritedFromSeparateHousehold: z.boolean().optional(),
   isRankingDisqualifiedInheritedHouse: z.boolean().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),

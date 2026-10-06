@@ -42,6 +42,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -141,7 +142,8 @@ const IMPORTED_WIN_WIN: OneHouseJudgmentExtraFields = {
  * primary **토지** + companion **겸용주택**. 세대 주택 수는 1(겸용 1채)로 유지한다.
  */
 function form(over: Partial<TransferFormData> = {}): TransferFormData {
-  return {
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(),
     assets: [
       asset(1, { assetKind: "land", standardPriceAtTransfer: "500000000" }),
@@ -156,7 +158,7 @@ function form(over: Partial<TransferFormData> = {}): TransferFormData {
     // 🔴 관측 축 — 조정대상지역 취득이라야 §154① 거주요건이 실제로 걸린다.
     wasRegulatedAtAcquisition: true,
     ...over,
-  } as TransferFormData;
+  } as TransferFormData);
 }
 
 describe("컴패니언 겸용주택 × §155의3 상생임대", () => {

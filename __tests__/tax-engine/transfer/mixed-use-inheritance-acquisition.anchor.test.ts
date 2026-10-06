@@ -18,7 +18,7 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { makeMockRates } from "../_helpers/mock-rates";
 import {
@@ -159,15 +159,28 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
   // 배부"는 중과 gain에서 공제를 원천 배제했던 버그). footprint 30·부수토지 800 → 배율초과 유도, 취득시
   // 토지 기준시가가 건물을 압도해 10,000,000 전액 토지분 배부.
   it("케이스#10-비사업용: 배율초과 존재 시 주택 필요경비가 비사업용(토지) 중과 gain을 줄여 세액 변동", () => {
+    // S3-2 — 「토지만 800㎡로 키운 변형」이라 주택부수토지 400㎡ 기준 가목이 개별주택가격보다 크다
+    //   (취득시 2M×400 = 800M > 500M · 양도시 3M×400 = 1,200M > 800M). 종전 뺄셈은 건물분을 0으로 clamp(토지 100%)했으나
+    //   비례에는 clamp가 없어 **현실적 나목**을 정한다 — 건물은 토지를 키워도 그대로이므로 기본 fixture(200㎡)의
+    //   실제 건물 값: 취득시 500M − 2M×100㎡ = 300M · 양도시 800M − 3M×100㎡ = 500M.
     const excessBase = (o?: Partial<MixedUseAssetInput>) =>
-      inheritedBase({ buildingFootprintArea: 30, totalLandArea: 800, ...o });
+      inheritedBase({
+        buildingFootprintArea: 30,
+        totalLandArea: 800,
+        transferStandardPrice: { housingPrice: 800_000_000, commercialBuildingPrice: 500_000_000, landPricePerSqm: 3_000_000, housingBuildingPrice: 500_000_000 },
+        acquisitionStandardPrice: { housingPrice: 500_000_000, commercialBuildingPrice: 300_000_000, landPricePerSqm: 2_000_000, housingBuildingPrice: 300_000_000 },
+        ...o,
+      });
     const noExp = run(excessBase());
     const withExp = run(excessBase({ housingInheritedExpense: 10_000_000 }));
     // 배율초과 부수토지 존재 확인
     expect(noExp.nonBusinessLandPart).not.toBeNull();
-    // 필요경비 전액 토지분 배부(취득시 토지 기준시가 압도)
-    expect(withExp.housingPart.landAppraisalDed).toBe(10_000_000);
-    expect(withExp.housingPart.buildingAppraisalDed).toBe(0);
+    // 필요경비를 취득시 토지:건물 기준시가 비례분으로 배부 — S3-2: 500M × 800M/1,100M = 토지분 363,636,363 ·
+    // 건물분 136,363,637 → 10,000,000 × 363,636,363/500,000,000 = 토지 7,272,727 · 건물 2,727,273
+    // (종전 뺄셈은 건물분 0으로 clamp해 전액 10,000,000을 토지분에 배부했다).
+    expect(withExp.housingPart.landStdPriceAtAcq).toBe(363_636_363);
+    expect(withExp.housingPart.landAppraisalDed).toBe(7_272_727);
+    expect(withExp.housingPart.buildingAppraisalDed).toBe(2_727_273);
     // 토지분 공제 → 비사업용 중과대상 gain 감소 → 총세액 감소(non-neutral, 정정 방향)
     //
     // ⚠️ P6(2026-08-02 · 계획서 D-8) 이후 관측 필드가 바뀌었다 — 비사토 가산은 §104⑤2호
@@ -177,10 +190,13 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
     //   종전 값은 모델 A(합산 누진 + 가산)로 §104⑤ MAX를 초과한 과다과세였다.
     //   이후 보유기간 초일 산입(§95④)으로 5년→6년이 되어 655,712,475 → 639,501,720 /
     //   651,758,662 → 635,635,770으로 다시 내려갔다(장특 표2 44→48% · 표1 10→12%).
+    //   S3-2(주택분 기준시가 가목:나목 비례) — 위 현실적 나목으로 토지:건물 분배가 바뀌어(토지분 100% → 72.7%)
+    //   639,501,720 → 572,147,360 / 635,635,770 → 569,335,761. 필요경비 10,000,000이 토지분 7,272,727만큼만
+    //   중과 gain을 줄여 세액 차이도 3,865,950 → 2,811,599로 줄었다(방향은 그대로 — 필요경비가 세액을 줄인다).
     expect(noExp.total.nonBusinessSurcharge).toBe(0);
     expect(withExp.total.nonBusinessSurcharge).toBe(0);
-    expect(noExp.total.totalPayable).toBe(639_501_720);
-    expect(withExp.total.totalPayable).toBe(635_635_770);
+    expect(noExp.total.totalPayable).toBe(572_147_360);
+    expect(withExp.total.totalPayable).toBe(569_335_761);
     // 주장의 핵심 — 필요경비가 실제로 세액을 줄인다(tax-neutral이 아니다).
     expect(withExp.total.totalPayable).toBeLessThan(noExp.total.totalPayable);
   });

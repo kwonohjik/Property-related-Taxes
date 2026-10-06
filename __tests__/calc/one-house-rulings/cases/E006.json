@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E006-era",
+    "docNo": "국심-2001-서-3220",
+    "docDate": "2002.04.26.",
+    "basis": "era",
+    "today": "2001-02-01",
+    "summary": "다른 주택 취득 후 2년 내 종전주택을 부담부증여(채무 인수분 양도)한 경우에도 일시적 2주택 특례 적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2001-01-31",
+      "contractTotalPrice": "41500000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1986-09-23"
+      },
+      "houses": [
+        {
+          "id": "other",
+          "region": "capital",
+          "acquisitionDate": "1999-02-18"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(쟁점주택 1986-09-23·다른 주택 1999-02-18·양도 2001-01-31). 양도가액 = 인수 채무 합계 41,500,000원(원문의 유일한 가액). 표현: 판정 메뉴에는 양도 원인(부담부증여)·수증자 세대 칸이 없고 양도로만 본다 — 원문 쟁점(채무인수분 양도에도 §155① 적용)과 같은 처리라 결론이 일치한다. 수증자(子)의 세대 구분은 원문에 없다. 당시 기한 2년·현행 엔진 3년 모두 이내(1년 11개월)라 기한 구별력은 없음."
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "서면-2022-법규재산-0842",
+    "docDate": "2022.04.29.",
+    "id": "E119-era",
+    "basis": "era",
+    "today": "2023-03-01",
+    "summary": "동거봉양 합가한 부(조합원입주권 1개 보유)가 합가 후 사망한 자녀의 주택을 상속(2022)한 뒤 입주권을 양도(2023.4. 예정, 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-04-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "acquisitionDate": "1986-07-15"
+      },
+      "houses": [
+        {
+          "id": "childhouse",
+          "region": "capital",
+          "acquisitionDate": "2022-10-15",
+          "isInherited": true,
+          "inheritedDate": "2022-10-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경로 확인). 양도일·상속일 원문 미기재 → 상속(자녀 사망) 2022-10-15, 양도 2023-04-20 가정, today=질의 시점 2023-03-01, 양도가 7억 중립. 표현: 동거봉양 합가 후 직계비속이 사망해 직계존속(부)이 상속받는 경우의 상속주택 행(상속개시 당시 동일세대 true + 합가 전 보유분 예외 true — 원문 ① 직계존속이 상속받는 경우에도 §155② 단서 적용 가능), 양도 대상은 부의 조합원입주권(취득 1986). 관측: 과세 — 상속주택 제외는 입주권 양도에 쓰이지 않아 가목(다른 주택 0채) 불성립(houseCount total=1), 나목은 취득일 미입력. 합가 예외 표시를 꺼도 결과 동일(V-E119-nocare), 상속주택을 빼면 가목으로 비과세(V-E119-nohouse). 표시 한계: houseCount는 상속주택을 「주택 수 제외」(countedForExemption=0)로 표시하지만 입주권 판정은 total을 쓰고 불성립 사유에는 나목 사유만 나온다(E093과 같음)."
+  }
+]

@@ -24,7 +24,7 @@
 import { isWithinDeadline } from "../civil-period";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "../legal-codes";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
-import { resolveMergeComposition } from "./merge-composition";
+import { resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "../types/multi-house-surcharge.types";
@@ -38,6 +38,7 @@ import {
   type ResidenceReqInput,
   resolveExemptionProviso,
   qualifiesRuralHouse,
+  ruralTemporaryTwoHouseOverlapCountHolds,
 } from "../transfer-tax-exemption-holding";
 
 /**
@@ -67,6 +68,7 @@ export type MergeDeemingReqInput = Pick<
   | "houses"
   | "sellingHouseId"
   | "knownHouseExclusionCount"
+  | "inheritedHouseExclusionCount"
   | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
 >;
@@ -166,8 +168,9 @@ export function resolveDeemedOneHouseBy155(
   if (overlap) return overlap;
   // E-14 — §155① 「1주택을 소유한 1세대가 … 일시적으로 2주택」: 비과세 E-3과 같은 주택 수 2 게이트
   //   (3주택 세대의 명부가 중과 불산입 주택을 「신규 주택」으로 도출해 15호가 새던 결함 · 부동산납세과-1179).
+  //   D3 — ⑦ 농어촌주택이 겹친 3주택도 비과세 E-3과 같은 게이트로 본다.
   if (
-    input.householdHousingCount === 2 &&
+    (input.householdHousingCount === 2 || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule &&
     evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
@@ -293,8 +296,45 @@ function mergeOverlapTwoHouseHolds(
   twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
 ): boolean {
   if (input.householdHousingCount !== 3) return false;
+  // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
+  if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
   if (!input.temporaryTwoHouse || !twoHouseRule) return false;
   return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
+}
+
+/**
+ * D4 — **혼인 후 동거봉양 합가**로 3주택이 된 경우의 1세대1주택 의제 (서면인터넷방문상담4팀-598, 2008.3.10.).
+ *
+ * > 1주택(A)을 보유한 자가 1주택을 보유한 자와 혼인함으로써 1세대가 2주택을 보유한 상태에서 1주택을 보유하고 있는
+ * > 60세 이상의 직계존속을 동거봉양하기 위하여 세대를 합침으로써 1세대가 3주택을 보유하게 되는 경우 혼인한 날부터
+ * > 2년 이내에 양도하는 A주택은 「소득세법 시행령」 제154조 제1항 규정을 적용받을 수 있습니다.
+ *
+ * 🔑 **혼인 → 동거봉양 순서만** 인정한다(2026-10-06 사용자 결정 — 반대 순서를 인정한 해석은 확인되지 않았다).
+ *    기한은 **혼인일** 기준(현행 혼인 기한 — `resolveMergeExemptionYears`; 회신 당시 2년은 연혁에 없다).
+ * 🔑 3주택까지만이고, §155②③ 상속주택 제외가 겹치면 세 특례라 성립하지 않는다(`inheritedHouseExclusionCount`).
+ * 🔑 구성은 `resolveDoubleMergeComposition`이 본다 — 「모름」은 불성립(holds만 인정 — 종전 동작이 없는 새 갈래다).
+ */
+export function resolveMarriageThenParentalCareDeeming(input: MergeDeemingReqInput): boolean {
+  const marriageDate = input.marriageMerge?.marriageDate;
+  const parentalCareMergeDate = input.parentalCareMerge?.mergeDate;
+  if (!marriageDate || !parentalCareMergeDate) return false;
+  if (marriageDate.getTime() > parentalCareMergeDate.getTime()) return false;
+  if (input.householdHousingCount !== 3 || (input.inheritedHouseExclusionCount ?? 0) > 0) return false;
+  if (input.isFirstTransferredInMerge !== true) return false;
+  if (input.transferDate < parentalCareMergeDate || input.acquisitionDate > marriageDate) return false;
+  const years = resolveMergeExemptionYears("marriage", input.transferDate);
+  if (!isWithinDeadline(marriageDate, years, input.transferDate)) return false;
+  const composition = resolveDoubleMergeComposition({
+    householdHousingCount: input.householdHousingCount,
+    houses: input.houses,
+    sellingHouseId: input.sellingHouseId,
+    marriageDate,
+    parentalCareMergeDate,
+    knownHouseExclusionCount: input.knownHouseExclusionCount,
+    knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
+    noRosterInputPath: input.noMergeRosterInputPath,
+  });
+  return composition.status === "holds";
 }
 
 /**

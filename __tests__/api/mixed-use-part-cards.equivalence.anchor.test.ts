@@ -9,14 +9,14 @@
  *
  * | 결정 | 지우면 무슨 일이 나는가 (실측) |
  * |---|---|
- * | 주택을 **토지·건물 2카드**로 나눈다 | 주택분 장특은 토지·건물 **각각의 보유기간**으로 계산해 더한다. 1카드로 합치면 취득일이 하나뿐이라 재현 불가 — 토지 11년·건물 6년에서 219,750,439 vs 181,477,799(**38,272,640 차이**) |
+ * | 주택을 **토지·건물 2카드**로 나눈다 | 주택분 장특은 토지·건물 **각각의 보유기간**으로 계산해 더한다. 1카드로 합치면 취득일이 하나뿐이라 재현 불가 — 토지 11년·건물 6년에서 219,750,439 vs 181,477,799(**38,272,640 차이** — 재산출 전 측정값, 이후 테스트 fixture 보충으로 수치는 달라졌으나 주장은 불변) |
  * | 그 2카드에 **`totalPropertyTransferPrice`**(주택분 합계)를 싣는다 | §89① 12억 판정이 **카드 단위**라, 없으면 두 장이 각각 12억 이하가 되어 주택분이 통째로 비과세 — MUT-1이 그것을 잰다 |
  * | 상가·비사토 카드에 **세대 축을 싣지 않는다** | 상가가 1세대1주택 표2 80% 장특을 받는다 — MUT-2가 그것을 잰다 |
  *
  * 설계문서: `docs/02-design/features/transfer-bundled-subengine-hosting.design.md` §10
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax, withIdentityHousingBuildingStd } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { buildMixedUsePartCards } from "@/app/api/calc/transfer/mixed-use-part-cards";
 import { makeMockRatesWithHouseEngine, makeHouseInfo } from "../tax-engine/_helpers/mock-rates";
@@ -65,7 +65,7 @@ function aggregateOf(items: TransferTaxItemInput[]) {
  */
 function compare(asset: MixedUseAssetInput, companion: TransferTaxItemInput) {
   const single = calcMixedUseTransferTax(PRICE, TD, asset, rates);
-  const cards = buildMixedUsePartCards(companion, asset, PRICE, TD, rates, "c1", "자산 2");
+  const cards = buildMixedUsePartCards(companion, withIdentityHousingBuildingStd(asset), PRICE, TD, rates, "c1", "자산 2");
   const agg = aggregateOf(cards);
   return { single, cards, agg };
 }
@@ -88,7 +88,7 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(agg.taxBase).toBe(single.total.taxBase);
     expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
     // 값이 0이면 위 두 단언이 공허해진다 — 실제로 세금이 나오는 구간인지 고정한다.
-    expect(single.total.taxBase).toBe(1_670_099_614);
+    expect(single.total.taxBase).toBe(1_564_862_353);
   });
 
   it("EQ-2 🔑 보유기간 상이·표1 미포화 — 주택분 장특 블렌딩이 재현된다", () => {
@@ -99,7 +99,7 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(single.housingPart.longTermDeductionAmount).not.toBe(
       Math.floor(single.housingPart.transferGain * single.housingPart.longTermDeductionRate),
     );
-    expect(single.housingPart.longTermDeductionAmount).toBe(219_750_439);
+    expect(single.housingPart.longTermDeductionAmount).toBe(186_675_871);
     expect(agg.taxBase).toBe(single.total.taxBase);
     expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
   });
@@ -194,7 +194,7 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
   it("MUT-1 🔴 주택 2카드에서 `totalPropertyTransferPrice`를 지우면 12억 판정이 무너진다", () => {
     const asset: MixedUseAssetInput = { ...mixedUseCase14(), isOneHouseExempt: true };
     const companion = companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 });
-    const cards = buildMixedUsePartCards(companion, asset, PRICE, TD, rates, "c1", "자산 2");
+    const cards = buildMixedUsePartCards(companion, withIdentityHousingBuildingStd(asset), PRICE, TD, rates, "c1", "자산 2");
     const stripped = cards.map((c) =>
       c.propertyId.startsWith("mu-house")
         ? ({ ...c, totalPropertyTransferPrice: undefined } as TransferTaxItemInput)
@@ -206,7 +206,7 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
   it("MUT-2 🔴 상가 카드에 세대 축을 실으면 상가가 1세대1주택 표2 장특을 받는다", () => {
     const asset: MixedUseAssetInput = { ...mixedUseCase14(), isOneHouseExempt: true };
     const companion = companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 });
-    const cards = buildMixedUsePartCards(companion, asset, PRICE, TD, rates, "c1", "자산 2");
+    const cards = buildMixedUsePartCards(companion, withIdentityHousingBuildingStd(asset), PRICE, TD, rates, "c1", "자산 2");
     /**
      * 뮤테이션은 **실제로 저지를 수 있는 실수**를 그대로 재현해야 한다 — `nonHousing` 중화를
      * 빼먹어 `companionEngine`의 세대 축이 상가 카드로 흘러드는 상태다.

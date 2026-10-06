@@ -1,0 +1,51 @@
+[
+  {
+    "id": "E180-era",
+    "docNo": "기획재정부 재산세제과-151",
+    "docDate": "2022.01.24.",
+    "basis": "era",
+    "today": "2023-03-16",
+    "summary": "甲이 A아파트(2012. 취득, 2년 이상 거주)와 B(2017. 취득·단기임대 등록 — 자동말소 전까지 요건 충족, 2021.1. 자동말소)를 보유 — B에 전입·거주(임대 중단)·임대료 5% 미준수·세무서 사업자등록 미유지 상태에서 말소 후 5년 이내 A 양도 (양도일 2023.3. 가정)",
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match(U2 수정 후). 말소 호의 ⑳2호 자기확인 문구가 「등록 말소 전까지」 충족을 묻도록 바뀌어, 원문 사실(말소 전까지 요건 충족, 말소 후 전입·임대 중단·5% 미준수·사업자등록 미유지)대로 체크를 켤 수 있다 → §155㉓ 통과·비과세. 엔진은 바뀌지 않았다(체크 의미만 명확해짐). 가정: 양도 2023-03-15(말소 2021-01-20로부터 5년 이내)·거주주택 취득 2012-09-15·거주 60개월·양도가 6억, B 단기 4년 등록 2017-01-20(장기일반 가목·terminatedRegistrationType=short_term)·임대 48개월·수도권.",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-03-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-09-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2017-01-20",
+              "rentalRegistrationDate": "2017-01-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2021-01-20",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    }
+  }
+]

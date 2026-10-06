@@ -32,7 +32,7 @@ import {
   resolveOldMergeRightClause,
 } from "@/lib/tax-engine/data/surcharge-old-clauses-era";
 import { baseTransferInput, makeMockRatesWithHouseEngine, makeHouseInfo as makeHouseInfoMock } from "../_helpers/mock-rates";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 

@@ -401,6 +401,17 @@ export type StockTransferInput = {
    * 배율 = 의제취득일 직전 달 지수 ÷ 취득월 지수. 표로 산정되는 구간에서는 읽지 않는다.
    */
   preDeemedPpiRatio?: number;
+  /**
+   * 분할·다건 lot 모드 — 의제취득일 전 «매수» lot 의 ① 비교 방식 (영 §176의2④1호 · 계획서 stock-lot-pre-deemed-clause1).
+   * 미지정이면 ②(실가 + 생산자물가상승분)만 적용한다(PR #2006 동작 — «① 미산정» 경고).
+   *  - `estimated`: 상장(코스피·코스닥·코넥스) 환산 ① — 의제취득일 이전 1개월 종가평균(`acquisitionDatePriceAvg1Month`)과
+   *    매도 lot별 양도 당시 기준시가(`TransferLot.transferStdPricePerShare`)로 sub-lot마다 산정.
+   *    비상장·기타자산 환산은 Phase 2(⑧·⑫ 차단 — 엔진 직접 호출은 ②만 + 경고).
+   *  - `sale_case`: 비상장·기타자산 매매사례가액(`acquisitionMarketSamplePrice`) — 상장 불가(영 §176의2③1호 괄호).
+   *    개산공제 base 는 취득측 §165④ 보충평가(`acquisitionYear*PerShare`)다.
+   * 의제 대상 lot 이 없거나 자본조정(`capitalAdjustments`)이 동반되면 무시한다(Q-6 — 경고).
+   */
+  preDeemedLotClause1?: "estimated" | "sale_case";
 
   // ── 매매사례가액 모드 (sale_case 강화 — 영§176의2③1호 비상장 한정) ──
   /** 취득 매매사례 1주당 가액 (원) — sale_case 모드 활성 시 perShareAcquisitionPrice 대신 우선 적용 가능. 양도측 매매사례가액은 없다(§96① 실지거래가액) */
@@ -790,6 +801,11 @@ export interface AcquisitionLot {
   donorRelation?: "spouse" | "lineal" | "other";
   /** ① 관계 요건 — 증여자 사망 사실 */
   donorDeceased?: boolean;
+  /**
+   * 🔒 엔진 내부 표지 — `applyPreDeemedToLots` 가 ②(영 §176의2④2호)를 적용한 lot 에만 부여한다(1주당 ②).
+   * 의제취득일 전 «매수» lot 임을 뜻하며 ①(영 §176의2④1호) 비교 대상이다. 입력(Zod)이 아니다 — 밖에서 주입하지 않는다.
+   */
+  preDeemedClause2PerShare?: number;
 }
 
 export interface TransferLot {
@@ -797,6 +813,12 @@ export interface TransferLot {
   transferDate: Date;
   shareCount: number;
   perShareTransferPrice: number;
+  /**
+   * 양도 당시 **1주당 기준시가** — 의제취득일 전 매수 lot ① 환산의 분모(영 §176의2②1호 · ③3호).
+   * 상장: 양도일 이전 1개월 종가평균(법 §99①3). lots-only(합성 매도 lot)는 ④가 폼 전역 `transferDatePriceAvg1Month` 를 싣는다.
+   * ① 환산(`preDeemedLotClause1: "estimated"`)일 때만 읽는다.
+   */
+  transferStdPricePerShare?: number;
 }
 
 export interface SpecificMatching {
@@ -829,6 +851,17 @@ export interface MatchedSubLot {
   appliedRate: number;
   /** sub-lot별 산출세액 (절사 전, 비대주주 분기에서는 0 — 합산 단일 세율) */
   subLotTax: number;
+  /**
+   * 의제취득일 전 «매수» lot × ① 비교가 켜진 경우만 채워지는 echo — fifo·specific 에서 sub-lot(매수 lot × 매도 lot) 단위.
+   * moving_avg 는 풀 평균이라 sub-lot 별 선택이 없다(`preDeemedClause1Summary.pooled`).
+   */
+  acquisitionLotId?: string;
+  transferLotId?: string;
+  preDeemedSelected?: "clause1" | "clause2";
+  /** ① 1주당(이 매도 lot 기준) — 산정됐을 때만 */
+  preDeemedClause1PerShare?: number;
+  /** ② 1주당(lot 단가 — 영 §176의2④2호) */
+  preDeemedClause2PerShare?: number;
 }
 
 export interface LotMatchingDetail {
@@ -855,6 +888,27 @@ export interface LotMatchingDetail {
    * 한도(양도가액 − §97①·②의 금액)는 종목 단위라 오케스트레이터가 건다.
    */
   carryoverGiftTaxApportioned: number;
+  /**
+   * 의제취득일 전 매수 lot ① 비교 집계 — `preDeemedLotClause1` 이 켜졌고 ctx 가 만들어졌을 때만(필요경비 정산의 입력).
+   * ⚠️ 계산 echo 다 — 화면이 sub-lot 에서 다시 합산하지 않는다.
+   */
+  preDeemedClause1Summary?: {
+    method: "estimated" | "sale_case";
+    /** 의제취득일 현재 1주당 기준시가 — 환산 분자 · 개산공제 base (영 §163⑥4) */
+    deemedStdPerShare: number;
+    /** 매도 주식수 합 */
+    soldShares: number;
+    /** ① 채택 sub-lot 의 매도 주식수 합 (moving_avg 는 풀 비율 안분이라 소수 가능) */
+    clause1Shares: number;
+    /** 그 외(② 채택·의제 대상 아님) 매도 주식수 합 = soldShares − clause1Shares */
+    otherShares: number;
+    /** ① 채택 sub-lot 의 취득가액 합 (총액 floor) — 단서 비교·swap 제거분 */
+    clause1Amount: number;
+    /** ① 을 산정하지 못해 ②만 쓴 의제 lot 매도 주식수(양도 당시 기준시가 누락 등) — 있을 때만 */
+    unresolvedShares?: number;
+    /** moving_avg — 풀 평균 단가라 sub-lot 별 ①·② 선택 없이 풀 비율로 안분했다 */
+    pooled: boolean;
+  };
   warnings: string[];
 }
 
@@ -1091,6 +1145,57 @@ export type StockTransferResult = {
     selected: "clause1" | "clause2";
     /** 필요경비 방식 — ② 채택 시 실비(법 §97②1호 나목) · ① 채택 시 개산공제(§97②2호) */
     expenseBasis: "actual" | "estimated";
+  };
+
+  /**
+   * 분할·다건 lot — 의제취득일 전 «매수» lot 의 ②·① 비교 + 필요경비 정산 echo (계획서 stock-lot-pre-deemed-clause1).
+   * ⚠️ 화면은 이 값을 그대로 쓴다 — `lotMatchingDetail.matched[]` 에서 역산하지 않는다.
+   */
+  preDeemedLotsDetail?: {
+    /** 의제취득일 (YYYY-MM-DD) */
+    deemedDate: string;
+    /** ② 가 적용된 매수 lot (입력 순서 인덱스) */
+    lots: {
+      lotIndex: number;
+      lotId?: string;
+      /** 취득월 YYYY-MM */
+      acquisitionMonth: string;
+      /** 입력 1주당 실가 */
+      originalPerShare: number;
+      /** ② 1주당(floor) */
+      clause2PerShare: number;
+      ppiAtAcquisition: number;
+      ppiAtDeemedPrev: number;
+    }[];
+    /** ① 비교 — 방식을 고르지 않았거나 ctx 를 만들 수 없으면 undefined(② 만) */
+    clause1?: {
+      method: "estimated" | "sale_case";
+      deemedStdPerShare: number;
+      soldShares: number;
+      clause1Shares: number;
+      otherShares: number;
+      clause1Amount: number;
+      unresolvedShares?: number;
+      pooled: boolean;
+      /** ① 채택 sub-lot 이 있을 때만 — 필요경비 정산 */
+      settlement?: {
+        /** 입력 실비(자본적지출 + 양도비) 합계 */
+        totalActualExpenses: number;
+        /** 양도 주식수 비례 귀속 — ① 채택분 몫 / 그 외 몫 (잔액은 그 외 몫이 흡수) */
+        clause1SideActual: number;
+        otherSideActual: number;
+        /** 개산공제 base = 의제일 기준시가 × ① 채택 주식수 · 개산공제 = floor(base × 1%) */
+        estimatedBase: number;
+        estimatedDeduction: number;
+        /** §97②2호 단서 — 환산이고 ① 몫 실비 > (환산 + 개산공제)일 때 true */
+        swapApplied: boolean;
+        swapComparison?: { estimatedSide: number; directSide: number; chosen: "direct" | "estimated" };
+        /** swap 으로 취득가액 차감에서 제외된 ① 환산 취득가액 */
+        swapRemovedAcquisition: number;
+        /** 최종 필요경비 = 그 외 몫 실비 + 증여자 자본적지출 + (swap ? ① 몫 실비 : 개산공제) */
+        expenses: number;
+      };
+    };
   };
 
   // 매매사례가액 detail (R-1' — sale_case 강화)

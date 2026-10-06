@@ -141,7 +141,8 @@ describe("OH-23 귀농 3호 축 — ⑦ 소재 · ⑩2·3·5호", () => {
     ({
       kind: "return_to_farm",
       isOutsideCapitalEupMyeon: true,
-      acquisitionDate: D("2015-01-01"),
+      // D15 — ⑦ 단서(5년)는 2016-02-17 이후 귀농주택 취득분에만 붙는다(대통령령 제26982호 부칙 제10조).
+      acquisitionDate: D("2017-01-01"),
       isHighPriceAtAcquisition: false,
       landAreaSqm: 300,
       wholeHouseholdMoved: true,
@@ -151,11 +152,11 @@ describe("OH-23 귀농 3호 축 — ⑦ 소재 · ⑩2·3·5호", () => {
   const ids = (over: Record<string, unknown>) =>
     judge({ householdHousingCount: 2, ruralHouse: RURAL(over), ...RESIDENCE_FREE }).pending.map((p) => p.id);
 
-  // L-1 — 역상 말일 2020-01-01(1월 1일 공휴일) → 기한 01-02(국세기본법 §4 → 민법 §161).
-  it("[C2-23c+] 긍정 짝 — 요건을 모두 갖춘 귀농주택은 5년 기한(2020-01-02)을 낸다", () => {
+  // L-1 — 역상 말일 2022-01-01(토요일·1월 1일 공휴일) → 기한 01-03 월요일(국세기본법 §4 → 민법 §161).
+  it("[C2-23c+] 긍정 짝 — 요건을 모두 갖춘 귀농주택은 5년 기한(2022-01-03)을 낸다", () => {
     const r = judge({ householdHousingCount: 2, ruralHouse: RURAL(), ...RESIDENCE_FREE });
     expect(r.pending.map((p) => p.id)).toEqual(["155-7-3ho-return-to-farm"]);
-    expect(iso(r.pending[0].deadline)).toBe("2020-01-02");
+    expect(iso(r.pending[0].deadline)).toBe("2022-01-03");
   });
 
   it("[C2-23c] 대지 800㎡(⑩3호 660㎡ 초과) → 기한 안이어도 과세 → pending 없음", () => {

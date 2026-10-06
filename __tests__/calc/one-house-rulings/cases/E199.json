@@ -1,0 +1,100 @@
+[
+  {
+    "id": "E199-era",
+    "docNo": "서면-2020-법령해석재산-3660 [법령해석과-1721]",
+    "docDate": "2021.05.13.",
+    "basis": "era",
+    "today": "2022-06-16",
+    "summary": "A주택(2002.12. 취득)과 B아파트(2014.4. 취득, 2014.5. 단기 임대등록)를 보유 — B가 재건축으로 2020.8.18. 전(2018.5.) 멸실돼 등록 말소(신고)된 경우 §155㉓ 적용 (양도일 2022.6. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-12-10",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "150",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2014-05-15",
+              "rentalRegistrationDate": "2014-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": true,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2018-05-15",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "match",
+    "note": "match. 표현: B(2014-05-15 등록, 단기 4년=short_term, 아파트)를 말소 호(말소일 2018-05-15, 재건축 멸실 후 말소 신고)로 입력. 관측: 「등록 말소일(2018-05-15)이 2020.8.18. 전이라 §155㉓ 말소 특례 대상이 아님」 → ⑳ 불통과 → 과세(rentalPassed=false). 원문은 ㉓ 부적용만 답했고 엔진은 ⑳ 불통과로 B를 주택 수에 포함해 과세로 귀결 — 기대 isExempt=false는 이 엔진 경로의 결론이다. 짝: E199-era-pos(말소 2020-09-15 → 통과·비과세). 가정: 양도 2022-06-15(원문 회신 2021.5.13. 이후, 판정 보류 구간 회피)·거주주택 취득 2002-12-10·거주 150개월·양도가 6억, B 임대 48개월·수도권·기준시가 3억. 임대호 구분은 가목 장기일반(2014 등록 구법 단기를 가목으로 입력 — ㉓ 대상 목)."
+  },
+  {
+    "id": "E199-era-pos",
+    "docNo": "서면-2020-법령해석재산-3660 [법령해석과-1721]",
+    "docDate": "2021.05.13.",
+    "basis": "era",
+    "today": "2022-06-16",
+    "summary": "E199-era와 같되 말소가 2020.8.18. 이후(2020.9.15.)인 경우 — 경계 짝",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-12-10",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "150",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2014-05-15",
+              "rentalRegistrationDate": "2014-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": true,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2020-09-15",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. E199-era의 경계 짝 — 말소일을 2020-09-15(2020.8.18. 이후)로 바꾸면 ㉓ 적용·비과세(rentalPassed=true). 나머지 가정은 E199-era와 같다."
+  }
+]

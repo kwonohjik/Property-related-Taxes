@@ -57,7 +57,7 @@ const row = (acquisitionDate?: string) => ({ acquisitionDate });
 
 /** 기본: 주택 양도 · 스칼라 1 · 명부 비었음. */
 function args(over: Partial<Parameters<typeof resolveHouseholdHousingCount>[0]> = {}) {
-  return { primaryKind: "housing", declared: 1, houses: [], legacyPrecedence: false, ...over };
+  return { primaryKind: "housing", declared: 1, houses: [], transferDate: undefined, legacyPrecedence: false, ...over };
 }
 
 describe("HC-1·2 명부 우선", () => {
@@ -79,7 +79,7 @@ describe("HC-1·2 명부 우선", () => {
       args({ declared: 1, houses: [row("2020-01-01"), row(), row(undefined)] }),
     );
     expect(n).toBe(2); // 1 + 1
-    expect(countedHouseRows([row("2020-01-01"), row()])).toBe(1);
+    expect(countedHouseRows([row("2020-01-01"), row()], undefined)).toBe(1);
   });
 });
 
@@ -175,71 +175,72 @@ describe("HC-6 D-6 게이트 시나리오 — 이 PR의 존재 이유", () => {
 
 describe("HC-7 명부가 정본인 상태", () => {
   it("[HC-7a] 주택 양도 + 취득일 있는 행 → true", () => {
-    expect(houseRosterIsAuthoritative("housing", [row("2020-01-01")])).toBe(true);
+    expect(houseRosterIsAuthoritative("housing", [row("2020-01-01")], undefined)).toBe(true);
   });
 
   it("[HC-7b] 행은 있으나 취득일 미입력 → false (아직 세어지지 않는다)", () => {
-    expect(houseRosterIsAuthoritative("housing", [row()])).toBe(false);
+    expect(houseRosterIsAuthoritative("housing", [row()], undefined)).toBe(false);
   });
 
   it("[HC-7c] 분양권 양도(범위 밖)면 false", () => {
-    expect(houseRosterIsAuthoritative("presale_right", [row("2020-01-01")])).toBe(false);
+    expect(houseRosterIsAuthoritative("presale_right", [row("2020-01-01")], undefined)).toBe(false);
   });
 
   it("[HC-7d] 명부 자체가 없으면 false", () => {
-    expect(houseRosterIsAuthoritative("housing", undefined)).toBe(false);
+    expect(houseRosterIsAuthoritative("housing", undefined, undefined)).toBe(false);
   });
 
   it("[HC-7e] 🔴 PR-B — redevelopment_apt도 housing과 같이 true", () => {
-    expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")])).toBe(true);
+    expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")], undefined)).toBe(true);
   });
 
   it("[HC-7f] 🔴 PR-C — right_to_move_in도 housing과 같이 true(오프셋만 다르다)", () => {
-    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")])).toBe(true);
+    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")], undefined)).toBe(true);
   });
 });
 
 describe("HC-8 명부 patch 가 스칼라를 함께 갱신한다", () => {
   it("[HC-8a] 취득일 있는 행 2개 → 스칼라 '3' (= 1 + 2)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01"), row("2021-01-01")], "housing", false);
+    const p = housesPatchWithDerivedCount([row("2020-01-01"), row("2021-01-01")], "housing", false, undefined);
     expect(p.householdHousingCount).toBe("3");
     expect(p.houses).toHaveLength(2);
   });
 
   it("[HC-8b] 행 1개 → '2'", () => {
-    expect(housesPatchWithDerivedCount([row("2020-01-01")], "housing", false).householdHousingCount).toBe("2");
+    expect(housesPatchWithDerivedCount([row("2020-01-01")], "housing", false, undefined).householdHousingCount).toBe("2");
   });
 
   it("[HC-8c] 취득일 없는 행은 세지 않는다 — 갱신 자체가 없다", () => {
-    const p = housesPatchWithDerivedCount([row()], "housing", false);
+    const p = housesPatchWithDerivedCount([row()], "housing", false, undefined);
     expect(p.householdHousingCount).toBeUndefined();
     expect(p.houses).toHaveLength(1);
   });
 
   it("[HC-8d] 명부를 비우면 갱신하지 않는다 — 몇 채인지 알 수 없다(D-4 복귀)", () => {
-    expect(housesPatchWithDerivedCount([], "housing", false).householdHousingCount).toBeUndefined();
+    expect(housesPatchWithDerivedCount([], "housing", false, undefined).householdHousingCount).toBeUndefined();
   });
 
   it("[HC-8e] 분양권 양도(범위 밖)면 갱신하지 않는다 (F1)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01")], "presale_right", false);
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "presale_right", false, undefined);
     expect(p.householdHousingCount).toBeUndefined();
   });
 
   it("[HC-8g] 🔴 PR-B — redevelopment_apt도 housing과 같이 갱신한다", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01")], "redevelopment_apt", false);
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "redevelopment_apt", false, undefined);
     expect(p.householdHousingCount).toBe("2");
   });
 
   it("[HC-8h] 🔴 PR-C — right_to_move_in은 갱신하되 오프셋 0 — '1' (= 0 + 1)", () => {
-    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false);
+    const p = housesPatchWithDerivedCount([row("2020-01-01")], "right_to_move_in", false, undefined);
     expect(p.householdHousingCount).toBe("1");
   });
 
   it("[HC-8f] 갱신값은 ④·⑧ leaf 와 같다 — 한 값만 남는다", () => {
     const houses = [row("2020-01-01"), row("2021-01-01"), row()];
-    const derived = housesPatchWithDerivedCount(houses, "housing", false).householdHousingCount;
+    const derived = housesPatchWithDerivedCount(houses, "housing", false, undefined).householdHousingCount;
     const leaf = resolveHouseholdHousingCount({
       primaryKind: "housing",
+      transferDate: undefined,
       declared: 1,
       houses,
       legacyPrecedence: false,
@@ -252,34 +253,34 @@ describe("HC-9 잠금은 «정합된 상태»만 고정한다", () => {
   const two = [row("2020-01-01"), row("2021-01-01")]; // 파생 = 3
 
   it("[HC-9a] 선언값이 파생값과 같으면 잠근다", () => {
-    expect(houseCountScalarLocked("housing", two, 3)).toBe(true);
+    expect(houseCountScalarLocked("housing", two, 3, undefined)).toBe(true);
   });
 
   it("[HC-9b] 🔴 어긋나면 잠그지 않는다 — 구 이력 복원분의 dead-end 방지", () => {
-    expect(houseCountScalarLocked("housing", two, 1)).toBe(false);
-    expect(houseCountScalarLocked("housing", two, 5)).toBe(false);
+    expect(houseCountScalarLocked("housing", two, 1, undefined)).toBe(false);
+    expect(houseCountScalarLocked("housing", two, 5, undefined)).toBe(false);
   });
 
   it("[HC-9c] 명부가 비면 잠그지 않는다 (D-4 간이 입력)", () => {
-    expect(houseCountScalarLocked("housing", [], 1)).toBe(false);
+    expect(houseCountScalarLocked("housing", [], 1, undefined)).toBe(false);
   });
 
   it("[HC-9d] 분양권 양도(범위 밖)면 잠그지 않는다 (F1)", () => {
-    expect(houseCountScalarLocked("presale_right", two, 3)).toBe(false);
+    expect(houseCountScalarLocked("presale_right", two, 3, undefined)).toBe(false);
   });
 
   it("[HC-9f] 🔴 PR-B — redevelopment_apt도 housing과 같이 잠긴다", () => {
-    expect(houseCountScalarLocked("redevelopment_apt", two, 3)).toBe(true);
+    expect(houseCountScalarLocked("redevelopment_apt", two, 3, undefined)).toBe(true);
   });
 
   it("[HC-9g] 🔴 PR-C — right_to_move_in은 오프셋 0으로 잠긴다(declared=2, 명부 2행)", () => {
-    expect(houseCountScalarLocked("right_to_move_in", two, 2)).toBe(true);
-    expect(houseCountScalarLocked("right_to_move_in", two, 3)).toBe(false); // housing의 오프셋(3)으로는 안 잠긴다
+    expect(houseCountScalarLocked("right_to_move_in", two, 2, undefined)).toBe(true);
+    expect(houseCountScalarLocked("right_to_move_in", two, 3, undefined)).toBe(false); // housing의 오프셋(3)으로는 안 잠긴다
   });
 
   it("[HC-9e] HC-8 갱신 직후는 반드시 잠긴 상태다 — 두 술어가 같은 산식을 쓴다", () => {
-    const declared = Number(housesPatchWithDerivedCount(two, "housing", false).householdHousingCount);
-    expect(houseCountScalarLocked("housing", two, declared)).toBe(true);
+    const declared = Number(housesPatchWithDerivedCount(two, "housing", false, undefined).householdHousingCount);
+    expect(houseCountScalarLocked("housing", two, declared, undefined)).toBe(true);
   });
 });
 
@@ -287,35 +288,35 @@ describe("HC-10 OH-34 레거시 표식을 붙일 조건", () => {
   const two = [row("2020-01-01"), row("2021-01-01")]; // 파생 = 3
 
   it("[HC-10a] 저장 당시 스칼라가 명부와 어긋나면 true", () => {
-    expect(houseCountDivergedFromRoster("housing", two, 1)).toBe(true);
-    expect(houseCountDivergedFromRoster("housing", two, 5)).toBe(true);
+    expect(houseCountDivergedFromRoster("housing", two, 1, undefined)).toBe(true);
+    expect(houseCountDivergedFromRoster("housing", two, 5, undefined)).toBe(true);
   });
 
   it("[HC-10b] 정합이면 false — 표식을 붙이지 않는다", () => {
-    expect(houseCountDivergedFromRoster("housing", two, 3)).toBe(false);
+    expect(houseCountDivergedFromRoster("housing", two, 3, undefined)).toBe(false);
   });
 
   it("[HC-10c] 명부가 비면 false (D-4 — 스칼라가 원래 정본)", () => {
-    expect(houseCountDivergedFromRoster("housing", [], 5)).toBe(false);
+    expect(houseCountDivergedFromRoster("housing", [], 5, undefined)).toBe(false);
   });
 
   it("[HC-10d] 분양권 양도(범위 밖)면 false (F1)", () => {
-    expect(houseCountDivergedFromRoster("presale_right", two, 1)).toBe(false);
+    expect(houseCountDivergedFromRoster("presale_right", two, 1, undefined)).toBe(false);
   });
 
   it("[HC-10f] 🔴 PR-B — redevelopment_apt도 housing과 같이 어긋나면 true", () => {
-    expect(houseCountDivergedFromRoster("redevelopment_apt", two, 1)).toBe(true);
+    expect(houseCountDivergedFromRoster("redevelopment_apt", two, 1, undefined)).toBe(true);
   });
 
   it("[HC-10g] 🔴 PR-C — right_to_move_in은 오프셋 0 기준(파생값 2)으로 어긋남을 본다", () => {
-    expect(houseCountDivergedFromRoster("right_to_move_in", two, 1)).toBe(true); // 1 ≠ 0+2
-    expect(houseCountDivergedFromRoster("right_to_move_in", two, 2)).toBe(false); // 2 === 0+2
+    expect(houseCountDivergedFromRoster("right_to_move_in", two, 1, undefined)).toBe(true); // 1 ≠ 0+2
+    expect(houseCountDivergedFromRoster("right_to_move_in", two, 2, undefined)).toBe(false); // 2 === 0+2
   });
 
   it("[HC-10e] 잠금 술어와 정확히 반대다(명부가 정본인 구간에서) — 같은 산식을 쓴다", () => {
     for (const declared of [1, 2, 3, 4, 5]) {
-      expect(houseCountDivergedFromRoster("housing", two, declared)).toBe(
-        !houseCountScalarLocked("housing", two, declared),
+      expect(houseCountDivergedFromRoster("housing", two, declared, undefined)).toBe(
+        !houseCountScalarLocked("housing", two, declared, undefined),
       );
     }
   });
@@ -328,6 +329,7 @@ describe("HC-11 레거시 표식이 켜지면 저장 당시 스칼라로 계산�
     expect(
       resolveHouseholdHousingCount({
         primaryKind: "housing",
+        transferDate: undefined,
         declared: 1,
         houses: two,
         legacyPrecedence: true,
@@ -339,6 +341,7 @@ describe("HC-11 레거시 표식이 켜지면 저장 당시 스칼라로 계산�
     expect(
       resolveHouseholdHousingCount({
         primaryKind: "housing",
+        transferDate: undefined,
         declared: 1,
         houses: two,
         legacyPrecedence: false,
@@ -347,19 +350,20 @@ describe("HC-11 레거시 표식이 켜지면 저장 당시 스칼라로 계산�
   });
 
   it("[HC-11b] 표식 ON 이면 명부를 편집해도 스칼라를 덮지 않는다 — 전환 버튼만이 끈다", () => {
-    const p = housesPatchWithDerivedCount(two, "housing", true);
+    const p = housesPatchWithDerivedCount(two, "housing", true, undefined);
     expect(p.householdHousingCount).toBeUndefined();
     expect(p.houses).toHaveLength(2);
   });
 
   it("[HC-11b-twin] 표식 OFF 면 갱신한다 — 구별력 확인", () => {
-    expect(housesPatchWithDerivedCount(two, "housing", false).householdHousingCount).toBe("3");
+    expect(housesPatchWithDerivedCount(two, "housing", false, undefined).householdHousingCount).toBe("3");
   });
 
   it("[HC-11c] 표식은 F1 게이트보다 앞선다 — 입주권 이력도 저장 당시 값을 쓴다", () => {
     expect(
       resolveHouseholdHousingCount({
         primaryKind: "right_to_move_in",
+        transferDate: undefined,
         declared: 4,
         houses: two,
         legacyPrecedence: true,

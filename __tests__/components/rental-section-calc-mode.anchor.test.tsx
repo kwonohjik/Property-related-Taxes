@@ -191,9 +191,9 @@ describe("RM-8 중과 축 — 명부 `isLongTermRental`은 별개 필드다", ()
       },
     ] as unknown as Parameters<typeof buildHousesPayload>[1];
 
-    const withException = JSON.stringify(buildHousesPayload(declaredAsset(), houses, 0));
+    const withException = JSON.stringify(buildHousesPayload(declaredAsset(), houses, 0, undefined, undefined));
     const withoutException = JSON.stringify(
-      buildHousesPayload(declaredAsset({ applyException: false }), houses, 0),
+      buildHousesPayload(declaredAsset({ applyException: false }), houses, 0, undefined, undefined),
     );
     expect(withException).toBe(withoutException);
     expect(withException).toContain('"isLongTermRental":true');

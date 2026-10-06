@@ -28,6 +28,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStd, withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
 /** 건물·토지 2018-06-01 취득 · 2026-06-01 10억 양도 · 1세대 · 세대 주택 1채(겸용 자신) · 거주 5년 */
@@ -95,7 +96,7 @@ async function postHousing(over: object = {}): Promise<HousingResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, propertyType: "housing", mixedUse: undefined, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, propertyType: "housing", mixedUse: undefined, ...over })),
     }),
   );
   expect(res.status).toBe(200);
@@ -107,7 +108,7 @@ async function post(over: object = {}): Promise<RouteResult> {
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...MIXED, ...over }),
+      body: JSON.stringify(withIdentityStdInBody({ ...MIXED, ...over })),
     }),
   );
   expect(res.status).toBe(200);
@@ -232,7 +233,12 @@ describe("E-7 겸용 단건 × §89② — 중과 배제 ① 요소(§156의2 �
     expect((await postHousing({ ...over, mixedUse: undefined })).surchargeType ?? "none").toBe("none");
   });
 
-  it("🔴 §155① 일시적 2주택 + 입주권 판정 보류 → 15호 의제 불성립(단건과 같은 게이트) · 168,318,240 → 176,561,800", async () => {
+  /**
+   * E011(2026-10-06) — 특수주택 선언이 없는 2주택 + 1권리는 §89② **배제 확정**이다(종전: 판정 보류 + 비과세 종전 동작).
+   * 그래서 고가주택 부분 비과세가 사라져 세액이 176,561,800 → 796,172,800이 됐다. 이 케이스가 지키는 성질
+   * (15호 의제 불성립 · 3주택+ 중과 — 단건과 같은 게이트)은 그대로다.
+   */
+  it("🔴 §155① 일시적 2주택 + 입주권(특수주택 선언 없음) → §89② 배제 확정 · 15호 의제 불성립(단건과 같은 게이트) · 796,172,800", async () => {
     const over = {
       ...HIGH,
       householdHousingCount: 2,
@@ -242,7 +248,7 @@ describe("E-7 겸용 단건 × §89② — 중과 배제 ① 요소(§156의2 �
     };
     const r = await post(over);
     expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_3plus");
-    expect(r.total.determinedTax).toBe(176_561_800);
+    expect(r.total.determinedTax).toBe(796_172_800);
     expect((await postHousing({ ...over, mixedUse: undefined })).surchargeType).toBe("multi_house_3plus");
   });
 
@@ -294,7 +300,7 @@ describe("E-7 겸용 파트 카드 — 서브엔진 §154③ 본문이 카드 §
       }) as never;
     const cards = (presaleRights: unknown[], exception?: unknown) =>
       buildMixedUseCompanionItems(
-        { ...MIXED.mixedUse, isMetropolitanArea: true } as never,
+        withIdentityHousingBuildingStd({ ...MIXED.mixedUse, isMetropolitanArea: true }) as never,
         item(presaleRights, exception),
         {
           transferDate: TD,

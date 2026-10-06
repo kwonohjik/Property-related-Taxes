@@ -109,7 +109,7 @@ export interface HouseEntry {
    * 합가일보다 나중에 취득한 행은 이 값과 무관하게 「합가 후 취득」으로 본다(날짜가 먼저).
    * 미입력이면 구성 판정을 하지 않는다(구 저장분 호환).
    */
-  mergeOrigin?: "seller_side" | "counterpart_side";
+  mergeOrigin?: "seller_side" | "counterpart_side" | "second_merge_side";
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
@@ -120,6 +120,12 @@ export interface HouseEntry {
   decedentSameHouseholdAtInheritance?: boolean;
   /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
   parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * D17 재상속 — 피상속인이 **별도세대**로부터 상속받은 상속주택(§155②)을 피상속인 사망으로 동일세대원인 상속인이
+   * 다시 상속받았다. 상속주택 지위를 이어받아 §155② 단서(동일세대 상속 배제)를 받지 않는다(재산세과-2961 ·
+   * 부동산납세과-624 · 서면-2022-법규재산-4747 등). 동일세대=true 시에만 의미.
+   */
+  reInheritedFromSeparateHousehold?: boolean;
   /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
   isRankingDisqualifiedInheritedHouse?: boolean;
 
@@ -187,6 +193,12 @@ export interface HouseEntry {
   ruralWholeHouseholdMoved?: boolean;
   /** 3호 §155⑩2호 — 취득 당시 고가주택 해당(해당하면 귀농주택 요건 불충족). */
   ruralHighPriceAtAcquisition?: boolean;
+  /**
+   * 2호·3호 — 이 주택에 5년 이상 거주하다 이농한 뒤 **다시 이 주택으로 돌아와** 영농·영어에 종사하고 있다(재귀농).
+   * 그러면 영농 목적으로 취득한 귀농주택이 아니고(재산세과-1504 · 부동산납세과-67) 이농주택 특례도 적용되지
+   * 않는다(부동산납세과-67). `undefined`는 「아직 답하지 않음」 — ⑧이 막는다(모름은 불리).
+   */
+  ruralReturnedToFarmExitHouse?: boolean;
   // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
   //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
 

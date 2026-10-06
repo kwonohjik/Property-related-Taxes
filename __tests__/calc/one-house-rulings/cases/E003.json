@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E003-era",
+    "docNo": "서면-2016-법령해석재산-3189 [법령해석과-2507]",
+    "docDate": "2016.07.29.",
+    "basis": "era",
+    "today": "2018-03-16",
+    "summary": "수도권 소재 공공기관이 지방으로 이전한 뒤 이전 지역 주택을 취득할 당시 그 기관에 종사하지 않았다면 §155⑯(처분기한 5년) 부적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2018-03-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2007-12-07"
+      },
+      "houses": [
+        {
+          "id": "sejong",
+          "region": "non_capital",
+          "acquisitionDate": "2014-07-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-16-public-institution-relocation"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 이전 공공기관 종사 여부(신규주택 취득 당시 시점). §155⑯은 자기선언 boolean(publicInstitutionRelocation) 하나뿐이라 선언 자체가 결론이다 — 사실(종사 여부·시점)을 입력받아 엔진이 판정하는 경로가 없다. 가정: 원문에 양도일 없음 → 신규주택(세종 2014-07-21) 취득 후 3년 7개월인 2018-03-15로 가정(3년 초과·5년 이내라 ⑯ 적용 여부가 결론을 가름), 화성 아파트 2007-12-07 종전주택. 비조정, 양도가 4억. 참고 관측(referenceForm = ⑯ 미선언): 과세·적용 특례 없음 = 원문 결론과 같다. ⑯을 선언하면(publicInstitutionRelocation=true) 비과세(155-1 + 155-16, 5년 적용). 원문이 말한 「취득 당시 비종사」가 이 선언을 막는 사실인데 엔진은 그 사실을 묻지 않는다."
+  }
+]

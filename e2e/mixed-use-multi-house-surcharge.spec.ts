@@ -13,6 +13,7 @@
  * worktree 실행: E2E_PORT=3xxx npx playwright test e2e/mixed-use-multi-house-surcharge.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function mixedUseAsset() {
@@ -48,7 +49,7 @@ function seedForm(over: Record<string, unknown>) {
     state: {
       formData: {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
-        assets: [mixedUseAsset()],
+        assets: [withMixedHousingStd(mixedUseAsset())],
         transferDate: "2026-06-01",
         filingDate: "2026-08-31",
         contractTotalPrice: "4000000000",
@@ -132,7 +133,7 @@ test.describe("겸용주택 다주택 중과 (§104⑦·§95②)", () => {
     // 부칙 §9270호 §14① · 서울행정법원 2024구단72950 — 세율과 장특의 술어가 다르다는 것이
     // 실제 화면에서 갈리는지 본다.
     await seedAndCalc(page, {
-      assets: [{ ...mixedUseAsset(), acquisitionDate: "2010-03-15" }],
+      assets: [withMixedHousingStd({ ...mixedUseAsset(), acquisitionDate: "2010-03-15" })],
     });
     await expect(page.getByText("장기보유공제 (배제)").first()).toBeVisible();
     // 세율 가산이 없으므로 §104⑤2호가 채택되지 않는다.

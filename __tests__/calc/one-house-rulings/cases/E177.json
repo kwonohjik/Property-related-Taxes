@@ -1,0 +1,126 @@
+[
+  {
+    "id": "E177-era",
+    "docNo": "서면-2021-법령해석재산-1409 [법령해석과-1476]",
+    "docDate": "2021.04.27.",
+    "basis": "era",
+    "today": "2022-06-16",
+    "summary": "2016.9. D분양권 계약, 2017.4.·8. 장기임대 B·C 취득·등록(2019.2.12. 전), 乙이 2019.7. 거주주택 A 양도(특례 적용) 후 완공된 D주택(2019.7.) 재차 양도 — 부칙 §7 종전규정 적용 (양도일 2022.6. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-07-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "30",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2017-04-30",
+              "rentalRegistrationDate": "2017-04-30",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "61",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2017-08-31",
+              "rentalRegistrationDate": "2017-08-31",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "57",
+              "requirementsConfirmed": true
+            }
+          ],
+          "residenceTransitionUnderAddendum": true,
+          "residenceTransitionBasis": "contract_with_prior_rental"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 경과조치 체크 + 사유 「그 전 계약금 지급(D 분양권 2016.9.) · 2019.2.12. 전 등록 임대주택(B·C 2017 등록) 소유」 → 종전규정 적용·§155⑳ 통과(D11 이후 사유가 결론을 가른다 — E175-era·E203-era는 같은 체크에 「임대주택 없음」이라 과세). 가정: 양도 2022-06-15(원문 미기재 — 2021.1.1.~2022.5.9. 판정 보류 구간 회피), D 취득(완공) 2019-07-15·거주 30개월, 양도가 7억, 장기임대 B·C 등록 2017-04-30·2017-08-31(장기일반 가목 입력 — 2020.7.9. 단기→장기 전환은 입력 칸 없음), 기준시가 3억·수도권. C는 임대 57개월이라 의무기간 미경과(§155㉑ 통과)."
+  },
+  {
+    "id": "E177-current",
+    "docNo": "서면-2021-법령해석재산-1409 [법령해석과-1476]",
+    "docDate": "2021.04.27.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(2019.2.12. 전 계약 D분양권·임대주택, D 완공 후 재차 양도)을 2026.3.15. 양도로 구성",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-07-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2017-04-30",
+              "rentalRegistrationDate": "2017-04-30",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "106",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2017-08-31",
+              "rentalRegistrationDate": "2017-08-31",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "102",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2025.2.28. 이후 양도분부터 횟수 제한 폐지. 같은 패턴을 양도 2026-03-15로 구성 → 비과세(경과조치 체크 없이 통과 — era 케이스는 체크로, 이 케이스는 제한 폐지로 통과해 경로가 다르다). 새 축 중립 고정: 비조정, 양도가 7억, 임대주택 아파트 아님, D 거주 60개월."
+  }
+]

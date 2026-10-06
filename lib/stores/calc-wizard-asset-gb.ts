@@ -340,11 +340,20 @@ export interface GeneralBuildingFormSlice {
   mixedAcqLandPricePerSqm: string;
   /**
    * 취득시 ㎡당 개별공시지가 — **건물 취득일 기준** (원/㎡, 문자열). 토지·건물 취득일이 다를 때만 쓰인다.
-   * 개별주택공시가격(건물 취득일 기준)에서 같은 날짜의 주택부수토지분을 빼는 용도 — 토지 취득일 기준인
+   * 개별주택공시가격(건물 취득일 기준)을 가목(같은 날짜의 주택부수토지 기준시가) : 나목(주택건물 기준시가) 비례로 나누는 분모(S3-2) — 토지 취득일 기준인
    * `mixedAcqLandPricePerSqm`과 **다른 값**이며 서로 대체하지 않는다. 노출·전송·필수 술어:
    * `lib/calc/mixed-use-acq-date-split.ts` `needsMixedAcqLandPriceAtBuildingAcq`.
    */
   mixedAcqLandPricePerSqmAtBuildingAcq: string;
+  /**
+   * 취득시 **주택건물 기준시가**(나목, 원, 문자열) — 국세청 건물 기준시가 중 **주택 부분 연면적만**의 값(상가 부분·토지 제외).
+   * 개별주택가격(H)을 가목(토지 기준시가) : 나목 비율로 토지분·건물분에 나누는 비례 분모다(S3-2). 토지·건물 취득일이
+   * 다르면 **건물 취득일** 기준. 노출·전송·필수 술어: `lib/calc/mixed-use-housing-std-split.ts`
+   * `needsMixedHousingBuildingStdAtAcq` (엔진 leaf `isHousingBuildingStdAtAcqRequired` 어댑터).
+   */
+  mixedAcqHousingBuildingStdPrice: string;
+  /** 양도시 **주택건물 기준시가**(나목, 원, 문자열) — 양도시 가목 : 나목 비례 분모. 술어: `needsMixedHousingBuildingStdAtTransfer`. */
+  mixedTransferHousingBuildingStdPrice: string;
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
   /**

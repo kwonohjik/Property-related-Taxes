@@ -62,6 +62,9 @@
 import { isOneHouseExemptionAsset, usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
 import { deriveHouseholdRightCount } from "@/lib/tax-engine/one-house/house-count";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
+import { mergeHouseSideOf } from "@/lib/calc/merge-house-origin";
+import type { MergeContext } from "@/lib/calc/merge-house-origin";
+import type { MergeOrigin } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
 export interface HouseRowForCount {
@@ -70,6 +73,33 @@ export interface HouseRowForCount {
   acquisitionDate?: string;
   /** 법정동코드(10자리) — §155①2호 신규 주택 조정 여부 판정에만 쓴다(`resolveTemporaryTwoHouse`). */
   regionCode?: string;
+  /** 합가 전 보유 쪽 — 합가 맥락에서 §155① 짝을 같은 쪽 안에서 고를 때만 쓴다(`resolveTemporaryTwoHouse` D8). */
+  mergeOrigin?: MergeOrigin;
+}
+
+/**
+ * 양도일 현재 보유 주택인가 — 명부 행을 주택 수·신규 주택 후보·엔진 명부에 넣을지 가르는 **단일 술어** (D2).
+ *
+ * 🔑 **같은 날 취득한 주택은 양도일 현재 보유 주택이 아니다** — 동일자에 1주택을 취득하고 다른 1주택을
+ *    양도하면 「양도한 후 취득한 것으로 본다」(서면인터넷방문상담4팀-1697 §155① · 재재산-836 §104·§162의2 ·
+ *    서면인터넷방문상담5팀-354 · 재산세과-3316 교환). 그 뒤에 취득한 주택은 말할 것도 없다. 비과세(§154·§155)와
+ *    중과(§104) 양쪽에 같은 규칙이다.
+ * 🔴 종전에는 명부 행을 취득일과 양도일의 선후와 무관하게 전부 세어, 같은 날 갈아탄 일시적 2주택이
+ *    3주택으로 과세됐다(해석례 평가셋 `E053-era`·`E055-era`).
+ * 🔑 양도일이 없거나 형식이 아니면 거르지 않는다(종전 그대로) — 비교 기준이 없다. 문자열
+ *    `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
+ */
+export function isOwnedAtTransfer(acquisitionDate: string | undefined, transferDate: string | undefined): boolean {
+  if (!acquisitionDate || !transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return true;
+  return acquisitionDate < transferDate;
+}
+
+/** 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer`. */
+export function housesOwnedAtTransfer<T extends HouseRowForCount>(
+  houses: readonly T[] | undefined,
+  transferDate: string | undefined,
+): T[] {
+  return (houses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
 }
 
 export interface ResolveHouseholdHousingCountArgs {
@@ -82,6 +112,8 @@ export interface ResolveHouseholdHousingCountArgs {
   declared: number;
   /** ④ 다른 보유 주택 목록. */
   houses: readonly HouseRowForCount[] | undefined;
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`isOwnedAtTransfer`). 필수: 빠뜨린 호출부를 컴파일러가 찾는다. */
+  transferDate: string | undefined;
   /**
    * OH-34 레거시 표식(`form.legacyHouseCountPrecedence`). 켜져 있으면 **명부보다 스칼라가 앞선다**.
    *
@@ -115,7 +147,7 @@ export function resolveHouseholdHousingCount(
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (!usesHouseCountRoster(args.primaryKind)) return args.declared; // F1
-  const rows = countedHouseRows(args.houses);
+  const rows = countedHouseRows(args.houses, args.transferDate);
   if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
   return houseCountSelfOffset(args.primaryKind) + rows;
 }
@@ -123,16 +155,19 @@ export function resolveHouseholdHousingCount(
 /** 주택 수에 세어지는 명부 행 수 — 산식 단일 소스(`house-count-divergence.ts`도 이걸 쓴다). */
 export function countedHouseRows(
   houses: readonly HouseRowForCount[] | undefined,
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`isOwnedAtTransfer`). */
+  transferDate: string | undefined,
 ): number {
-  return (houses ?? []).filter((h) => h.acquisitionDate).length;
+  return housesOwnedAtTransfer(houses, transferDate).filter((h) => h.acquisitionDate).length;
 }
 
 /** 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다. */
 export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
+  transferDate: string | undefined,
 ): boolean {
-  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses) > 0;
+  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses, transferDate) > 0;
 }
 
 /**
@@ -170,16 +205,17 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   houses: T[],
   primaryKind: string | undefined,
   legacyPrecedence: boolean,
+  transferDate: string | undefined,
 ): { houses: T[]; householdHousingCount?: string; householdNoOtherHousesConfirmed?: false } {
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
   if (legacyPrecedence) return { houses };
   const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses, ...clearConfirm };
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return { houses, ...clearConfirm };
   return {
     houses,
-    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses)),
+    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)),
     ...clearConfirm,
   };
 }
@@ -198,9 +234,10 @@ export function houseCountDivergedFromRoster(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
   declared: number,
+  transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
 /**
@@ -219,9 +256,10 @@ export function houseCountScalarLocked(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
   declared: number,
+  transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
 /**
@@ -278,11 +316,21 @@ export interface ResolveTemporaryTwoHouseArgs {
   /** 양도 대상 주택(= 종전주택) 취득일 `YYYY-MM-DD`. */
   primaryAcquisitionDate: string | undefined;
   houses: readonly HouseRowForCount[] | undefined;
+  /**
+   * 양도일 — 그날 이후(같은 날 포함) 취득한 행은 신규 주택 후보가 아니다(`isOwnedAtTransfer`). 같은 날
+   * 갈아탄 주택이 후보에 남으면 「나중 취득 행이 정확히 1채」가 깨진다(E053·E055). 필수.
+   */
+  transferDate: string | undefined;
   /** OH-34 레거시 표식 — 켜져 있으면 명부를 보지 않는다. */
   legacyPrecedence: boolean;
   /** 종전 flat 필드 — 도출이 성립하지 않을 때만 쓰인다. */
   declaredSpecial: boolean;
   declaredNewHouseDate: string | undefined;
+  /**
+   * 혼인·동거봉양 합가 맥락(`mergeContextOf(form)`) — 있으면 §155① 짝을 **합가 전 같은 쪽 안에서** 또는
+   * **합가 후 취득분**으로 고른다(D8). 🔑 **필수 인자다** — 합가 폼에서 넘기지 않으면 상대 쪽 주택을 신규 주택으로 오인한다.
+   */
+  mergeContext: MergeContext | undefined;
   /**
    * 조특법(§99의4·§98의9·보유 감면주택)으로 **소유주택으로 보지 않는** 명부 행 id —
    * `eligibleCountExcludedHouseIds`(`lib/calc/house-count-exclusion-rows.ts`)가 만든다.
@@ -325,21 +373,64 @@ export function resolveTemporaryTwoHouse(
   if (!isOneHouseExemptionAsset(args.primaryKind)) return fallback(); // F1 — 권리 양도는 축이 다르다
   if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
 
-  // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
-  const later = (args.houses ?? []).filter(
-    (h) =>
-      h.acquisitionDate !== undefined &&
-      h.acquisitionDate > prev &&
-      !(h.id !== undefined && args.excludedHouseIds.has(h.id)),
+  const owned = housesOwnedAtTransfer(args.houses, args.transferDate).filter(
+    (h) => h.acquisitionDate !== undefined && !(h.id !== undefined && args.excludedHouseIds.has(h.id)),
   );
+  // D8 — 합가 전(당일 포함) 취득한 주택을 양도하는 합가 세대는 쪽을 보고 짝을 고른다.
+  if (args.mergeContext && prev <= args.mergeContext.mergeDate) {
+    const pair = mergeSidePair(prev, owned, args.mergeContext);
+    return pair ? toRosterDates(pair.previous, pair.next) : fallback();
+  }
+  // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
+  const later = owned.filter((h) => h.acquisitionDate! > prev);
   if (later.length !== 1) return fallback(); // 0채·2채 이상 — 억측으로 고르지 않는다
+  return toRosterDates(prev, later[0]);
+}
 
+function toRosterDates(previousAcquisitionDate: string, next: HouseRowForCount): TemporaryTwoHouseDates {
   return {
-    previousAcquisitionDate: prev,
-    newAcquisitionDate: later[0].acquisitionDate!,
+    previousAcquisitionDate,
+    newAcquisitionDate: next.acquisitionDate!,
     source: "roster",
-    ...(later[0].regionCode ? { newHouseRegionCode: later[0].regionCode } : {}),
+    ...(next.regionCode ? { newHouseRegionCode: next.regionCode } : {}),
   };
+}
+
+/**
+ * D8 — 합가 세대의 §155① 짝. §155①은 「1주택을 소유한 1세대가 … 다른 주택을 취득」한 경우라, 합가 전에는
+ * **각 세대 안에서**, 합가 후에는 **합친 세대가 새로 취득**한 경우에만 짝이 된다. 상대 쪽이 합가 전에 취득한 주택은
+ * 양도자 세대가 대체취득한 주택이 아니다.
+ *
+ * | 합가 전 구성(양도 주택 제외) | 짝(종전 → 신규) | 근거 |
+ * |---|---|---|
+ * | 합가 후 취득 1채 | 양도 주택 → 그 주택 | 서면-2022-법규재산-5124 · 사전-2025-법규재산-1240 |
+ * | 양도자 쪽 1채(양도 주택보다 나중 취득) | 양도 주택 → 그 주택 | 기본통칙 89-155…2① |
+ * | 상대 쪽 2채(양도자 쪽 다른 주택 없음) | 상대 쪽 먼저 취득 → 나중 취득 | 사전-2026-법규재산-0643 — A 또는 B 양도 |
+ * | 그 밖(합가 후 2채 이상 · 상대 쪽 1채뿐 · 쪽 미선택 등) | 없음 | 억측으로 고르지 않는다 |
+ *
+ * 쪽 분류는 판정 메뉴 명부 배지·엔진 구성 판정과 같은 `mergeHouseSideOf`다.
+ */
+function mergeSidePair(
+  prev: string,
+  owned: readonly HouseRowForCount[],
+  ctx: MergeContext,
+): { previous: string; next: HouseRowForCount } | undefined {
+  const sides = owned.map((h) => ({ h, side: mergeHouseSideOf({ acquisitionDate: h.acquisitionDate!, mergeOrigin: h.mergeOrigin }, ctx) }));
+  if (sides.some((x) => x.side === undefined)) return undefined; // 쪽을 모르면 짝도 모른다(⑧이 고르게 한다)
+  const of = (side: string) => sides.filter((x) => x.side === side).map((x) => x.h);
+  const afterMerge = of("after_merge");
+  if (afterMerge.length > 0) return afterMerge.length === 1 ? { previous: prev, next: afterMerge[0] } : undefined;
+  const sellerOthers = of("seller_side");
+  const otherSides = [of("counterpart_side"), of("second_merge_side")];
+  if (sellerOthers.length === 1 && otherSides.every((g) => g.length < 2)) {
+    return sellerOthers[0].acquisitionDate! > prev ? { previous: prev, next: sellerOthers[0] } : undefined;
+  }
+  const pairSide = otherSides.find((g) => g.length === 2);
+  if (sellerOthers.length === 0 && pairSide) {
+    const [a, b] = [...pairSide].sort((x, y) => (x.acquisitionDate! < y.acquisitionDate! ? -1 : 1));
+    return a.acquisitionDate! < b.acquisitionDate! ? { previous: a.acquisitionDate!, next: b } : undefined;
+  }
+  return undefined;
 }
 
 /** §155①이 성립하는가 — `provisoGate` 등 boolean 하나만 필요한 호출부용 얇은 래퍼. */

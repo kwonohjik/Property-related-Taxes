@@ -1,0 +1,42 @@
+[
+  {
+    "id": "E145-era",
+    "docNo": "조심-2015-부-5667",
+    "docDate": "2016.04.21.",
+    "basis": "era",
+    "today": "2016-04-01",
+    "summary": "일반주택 양도(2014) 당시 동일세대 배우자에게서 공동상속(청구인 3/11)받은 농어촌주택 보유",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-09-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2009-06-15",
+          "isInherited": true,
+          "inheritedDate": "2009-06-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": true,
+          "ruralHouseKind": "inherited",
+          "ruralDecedentResidenceYears": "10",
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-7-rural:inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D7 수정 후). 동일세대 배우자에게서 공동상속받은 농어촌주택 — §155② 단서 괄호(「이하 제3항, 제7항제1호 … 에서 같다」)로 ⑦1호의 「상속받은 주택」이 아니다 → 일반주택 양도 과세(notApplied 155-7-rural:inherited). 종전에는 ⑦ 경로가 동일세대 사실을 읽지 않아 비과세였다. 가정(원문 일자 비공개): 상속개시 2009-06-15, 일반주택 2005-03-15, 양도 2014-09-15(상속 후 3년 초과로 일시적 2주택 §155①이 우연히 성립하지 않도록), 지분 3/11(최대지분자 아님)·피상속인 거주 10년·소재 요건 충족 전제."
+  }
+]

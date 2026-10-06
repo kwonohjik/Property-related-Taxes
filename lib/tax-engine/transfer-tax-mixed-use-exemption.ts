@@ -148,6 +148,7 @@ export function judgeMixedUseOneHouseExemption(
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
       generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
       transferDate,
+      mergeOrder: undefined, // 겸용 경로에는 합가 전 보유 쪽(`mergeOrigin`) 입력이 없다 — 판정 메뉴 전용
     });
     const special = resolveSpecialHouseExclusions(asset.specialHouseExclusions, transferDate);
     mixedNew994Detail = hce.new994Detail;
@@ -228,6 +229,7 @@ export function judgeMixedUseOneHouseExemption(
       houses: asset.multiHouse?.houses,
       sellingHouseId: asset.multiHouse?.sellingHouseId,
       knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
+      inheritedHouseExclusionCount: inheritedExcludedCount,
       knownHouseExclusionHouseIds,
     },
     oneHouseSpecialRules,

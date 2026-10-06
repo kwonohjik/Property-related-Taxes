@@ -32,6 +32,12 @@ import {
   PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import {
+  isBonusTaxedEstimationBlocked,
+  isBonusTaxedPreDeemedFaceValueMissing,
+  BONUS_TAXED_ACTUAL_ONLY_MESSAGE,
+  BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE,
+} from "@/lib/calc/stock-acquisition-cause";
+import {
   requiredUnlistedValuationKeys,
   type UnlistedValuationKey,
 } from "@/lib/calc/stock-transfer-required-inputs";
@@ -226,6 +232,27 @@ export function refineSingleModeRequiredInputs(data: StockInput, ctx: z.Refineme
     !((data.preDeemedPpiRatio ?? 0) > 0)
   )
     issue("preDeemedPpiRatio", PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE);
+  // 과세 무상주(소령 §27①1호 가목 — 액면가액) — ⑧ step2와 같은 술어. 의제취득일 전이면 §176의2④ 비교라 추계를 연다.
+  if (!splitOrLots) {
+    const preDeemed = isPreDeemedPurchase({
+      marketType: data.marketType as string | undefined,
+      acquisitionCause: data.acquisitionCause,
+      acquisitionDate: data.acquisitionDate as string | Date | undefined,
+      is94_4,
+      isSplitOrLots: false,
+    });
+    if (isBonusTaxedEstimationBlocked(data.acquisitionCauseDetail, data.acquisitionMode, preDeemed))
+      issue("acquisitionMode", BONUS_TAXED_ACTUAL_ONLY_MESSAGE);
+    if (
+      isBonusTaxedPreDeemedFaceValueMissing(
+        data.acquisitionCauseDetail,
+        data.acquisitionMode,
+        preDeemed,
+        String(data.preDeemedActualPricePerShare ?? ""),
+      )
+    )
+      issue("preDeemedActualPricePerShare", BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE);
+  }
   // 영 §163⑨ — 증여·상속 취득가액은 평가액(실가 의제) → 매매사례 불가 · 환산은 장부분실일 때만(국심2007중1761). ⑧ step2와 같은 술어.
   if (
     !splitOrLots &&

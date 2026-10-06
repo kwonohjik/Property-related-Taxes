@@ -1,0 +1,38 @@
+[
+  {
+    "id": "E197-dual",
+    "docNo": "조심-2019-서-3806",
+    "docDate": "2019.12.17.",
+    "basis": "era",
+    "today": "2019-12-17",
+    "summary": "관리처분인가(2016.6.30.)로 종전주택이 입주권이 된 세대가 장기임대주택 2호(본인·배우자 명의)를 보유한 채 입주권 양도(2018.10.10.) — §155⑳ 거주주택 특례의 입주권 적용 여부",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2018-10-10",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2007-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2016-06-30"
+      },
+      "houses": [
+        {
+          "id": "rental1",
+          "region": "capital",
+          "acquisitionDate": "2012-04-01",
+          "isLongTermRental": true
+        },
+        {
+          "id": "rental2",
+          "region": "capital",
+          "acquisitionDate": "2012-04-01",
+          "isLongTermRental": true
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual — 입장 A(주택 특례를 입주권에 적용 쪽 E001·E002): 거주주택이 입주권으로 전환돼도 장기임대주택 특례(§155⑳) 등 주택 특례가 적용 / 입장 B(조심-2019-서-3806, 2019.12.17.): §155⑳은 주택 비과세 요건의 특례일 뿐 입주권 양도에는 적용되지 않으며 입주권은 §89①4호로만 판정 — 장기임대주택 보유 중 입주권 양도는 비과세 불가. 현재 엔진 관측(명부에 임대주택 2채 입력): isExempt=false — 「다른 주택이 2채입니다. 가목은 0채, 나목은 1채」(B와 같은 결론). 같은 사실을 §155⑳ 선언(rentalHousingException, 임대 2호)으로 입력하면 isExempt=true(applied one_right_89_1_4_ga, rentalHousingException.passed=false) — 선언된 임대주택이 주택 수에서 빠져 가목이 성립한다(§155⑳ 자체는 불성립인데 결과는 A처럼 비과세 — 입력 방식에 따라 갈리는 점이 화면 요구사항). 일자: 원문 그대로(종전주택 2007-05-15·관리처분 2016-06-30·양도 2018-10-10), 임대주택 취득일 2012-04-01 가정, 양도가 8억."
+  }
+]

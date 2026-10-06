@@ -50,7 +50,9 @@ export type ArticleFailCode =
   | "RENTAL_TERMINATION_RESTRICTED"
   | "SAMOK_BASE_REQUIRED"
   | "REQUIREMENTS_NOT_CONFIRMED"
-  | "APT_TRANSFER_DEADLINE_EXCEEDED";
+  | "APT_TRANSFER_DEADLINE_EXCEEDED"
+  /** §155⑳2호 「양도일 현재」 등록 — 세무서·지자체 등록일 중 하나라도 양도일 뒤(⑳ 경로 전용, eligibility.ts) */
+  | "REGISTERED_AFTER_TRANSFER";
 
 /** 사목 base 목 (§167조의3①2호 "가목 및 다목부터 마목까지") */
 export type SaMokBaseArticle = "가" | "다" | "라" | "마";

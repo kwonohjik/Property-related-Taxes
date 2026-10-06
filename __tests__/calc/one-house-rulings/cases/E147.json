@@ -1,0 +1,41 @@
+[
+  {
+    "id": "E147-era",
+    "docNo": "기획재정부 재산세제과-612",
+    "docDate": "2016.09.19.",
+    "basis": "era",
+    "today": "2016-09-10",
+    "summary": "귀농주택의 대지 일부·전부가 별도세대 자녀 소유이고 대지면적이 660㎡ 초과 — 귀농주택 해당 여부(상세 사실 없음, 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-20",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-09-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2012-04-15",
+          "ruralHouseKind": "return_to_farm",
+          "ruralLandAreaSqm": "800",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false,
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralReturnedToFarmExitHouse": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-7-rural:return_to_farm"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 원문에 사실관계가 없어 가정: 귀농주택 취득 2012-04-15(일반주택 2012-09-15보다 먼저 — 일시적 2주택 §155①이 우연히 성립하지 않도록), 양도 2016-06-20, 양도가 3억, 세대전원 귀농·소재 요건 충족. 대지면적은 별도세대 자녀 소유 부분을 합산한 총 800㎡로 입력(소유자 구분 칸은 없으나 합계 면적만으로 판정). 관측: 과세(unmet 155-7-rural:return_to_farm 「대지면적 800㎡가 상한 660㎡ 초과」). 최소쌍: 600㎡면 비과세(applied 155-7-rural:return_to_farm)."
+  }
+]

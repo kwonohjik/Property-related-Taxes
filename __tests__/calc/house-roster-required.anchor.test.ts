@@ -151,6 +151,7 @@ describe("HR-6 ④ 엔진 입력 도출은 바뀌지 않는다 (D-4 보존, Q-8)
   it("[HR-6] 0행 + 스칼라 3 → 엔진 입력 3 (API 직접 호출 — ⑧을 거치지 않는다)", () => {
     const n = resolveHouseholdHousingCount({
       primaryKind: "housing",
+      transferDate: undefined,
       declared: 3,
       houses: [],
       legacyPrecedence: false,
@@ -161,6 +162,7 @@ describe("HR-6 ④ 엔진 입력 도출은 바뀌지 않는다 (D-4 보존, Q-8)
   it("[HR-6b] 1행 있으면 명부가 이긴다(스칼라 무시) — 종전과 같다", () => {
     const n = resolveHouseholdHousingCount({
       primaryKind: "housing",
+      transferDate: undefined,
       declared: 9,
       houses: [{ acquisitionDate: "2018-01-01" }],
       legacyPrecedence: false,
@@ -174,13 +176,13 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     const patch = housesPatchWithDerivedCount(
       [{ id: "new", acquisitionDate: "" }],
       "housing",
-      false,
+      false, undefined,
     );
     expect(patch.householdNoOtherHousesConfirmed).toBe(false);
   });
 
   it("[HR-7b] 0행 그대로면 확정 필드를 건드리지 않는다", () => {
-    const patch = housesPatchWithDerivedCount([], "housing", false);
+    const patch = housesPatchWithDerivedCount([], "housing", false, undefined);
     expect(patch).not.toHaveProperty("householdNoOtherHousesConfirmed");
   });
 
@@ -188,7 +190,7 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     const patch = housesPatchWithDerivedCount(
       [{ id: "h1", acquisitionDate: "2018-01-01" }],
       "housing",
-      false,
+      false, undefined,
     );
     expect(patch.householdNoOtherHousesConfirmed).toBe(false);
     expect(patch.householdHousingCount).toBe("2");
@@ -198,7 +200,7 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     const patch = housesPatchWithDerivedCount(
       [{ id: "new", acquisitionDate: "" }],
       "housing",
-      true,
+      true, undefined,
     );
     expect(patch).not.toHaveProperty("householdNoOtherHousesConfirmed");
     expect(patch).not.toHaveProperty("householdHousingCount");
@@ -208,7 +210,7 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     const patch = housesPatchWithDerivedCount(
       [{ id: "new", acquisitionDate: "" }],
       "presale_right",
-      false,
+      false, undefined,
     );
     expect(patch).not.toHaveProperty("householdNoOtherHousesConfirmed");
   });
@@ -217,7 +219,7 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     const patch = housesPatchWithDerivedCount(
       [{ id: "h1", acquisitionDate: "2018-01-01" }],
       "right_to_move_in",
-      false,
+      false, undefined,
     );
     expect(patch.householdNoOtherHousesConfirmed).toBe(false);
     expect(patch.householdHousingCount).toBe("1"); // 0 + 1, housing의 "2"(1+1)와 다르다

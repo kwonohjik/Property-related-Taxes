@@ -186,6 +186,8 @@ describe("CM-5 읽기 전용 요약 — ③ 값을 실제로 그린다", () => {
          */
         temporaryTwoHouse={resolveTemporaryTwoHouse({
           primaryKind: "housing",
+          transferDate: undefined,
+          mergeContext: undefined,
           primaryAcquisitionDate: "2018-01-01",
           houses: [],
           legacyPrecedence: false,

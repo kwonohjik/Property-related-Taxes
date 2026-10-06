@@ -27,10 +27,21 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+
+/**
+ * S3-2 — (폼 경유 테스트: 나목을 body shim이 아니라 폼 필드에 넣는다 — ④가 폼 값을 실제로 싣는지가 검증 대상)
+ * 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
+ * 종전 뺄셈(`H − 가목`)은 건물분을 0으로 clamp(토지 100%)했지만 비례에는 clamp가 없어 **현실적인 나목을 정해야** 한다.
+ * 취득시 주택건물 기준시가(나목) 90M — 가목:나목 = 360M:90M(4:1) → 토지분 floor(300M × 360/450) = 240M · 건물분 60M.
+ * (양도시는 H_T 900M > L_T 720M이라 항등 나목 180M이 성립 — 값 불변.) 기대값은 이 나목으로 재산출했다.
+ */
+const CLAMP_N = { acqN: 90_000_000 } as const;
+
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
 
@@ -100,18 +111,20 @@ function mixedForm(over: Record<string, unknown> = {}): Form {
     householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     residencePeriodMonths: "0",
   });
-  return f;
+  // S3-2 ④ — 나목은 폼 필드(`mixedAcqHousingBuildingStdPrice`·`mixedTransferHousingBuildingStdPrice`)에서 실려 간다(body shim 아님).
+  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
 }
 const detTax = (json: { data: { result: { total: { determinedTax: number } } } }) =>
   json.data.result.total.determinedTax;
 
 describe("겸용주택 — 취득시 기준시가", () => {
-  it("🟢 모두 있음 → ⑧ 통과 · 200 · 175,236,001", async () => {
+  it("🟢 모두 있음 → ⑧ 통과 · 200 · 175,765,201 (S3-2: 종전 175,236,001)", async () => {
     const f = mixedForm();
     expect(issues(f)).toEqual([]);
     const r = await run(f);
     expect(r.status).toBe(200);
-    expect(detTax(r.json)).toBe(175_236_001);
+    // S3-2 갱신 — 개산공제 base 합이 라목 가액(H 300M) × 3% = 9,000,000이 됐다(종전 뺄셈은 H < 가목이라 가목 360M 전부 × 3% = 10,800,000으로 H를 넘겼다). 토지·건물 분배 자체는 세액에 안 닿는다(같은 보유기간·초과 없음).
+    expect(detTax(r.json)).toBe(175_765_201);
   });
 
   it("MU-1 🔴 취득시 개별주택공시가격 빈 칸 → ⑧ 차단 · ⑫ 400 (종전 200 · 주택분 0 · 238,236,001)", async () => {

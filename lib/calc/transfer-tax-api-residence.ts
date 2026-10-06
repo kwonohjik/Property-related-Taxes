@@ -17,7 +17,8 @@ import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers"
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
-import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -55,16 +56,19 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         primaryKind: primary?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
-        excludedHouseIds: eligibleCountExcludedHouseIds(form),
+        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
+        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
       }),
     }).mode,
     form.provisoReason,
@@ -109,6 +113,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
       primaryKind: primary?.assetKind,
       declared: parseInt(form.householdHousingCount || "1", 10) || 0,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // 사유는 ④와 같은 게이트를 통과한 값이다 — 근거는 `effectiveReason` 선언부 참조.

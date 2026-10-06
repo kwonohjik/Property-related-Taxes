@@ -380,6 +380,7 @@ function aggregateCore(
             r.lotMatchingDetail,
             r.taxCategory,
             smeFlag(input),
+            r.preDeemedLotsDetail?.clause1?.settlement,
           ).rate
         : applyStockTaxRate(
             taxBaseAfterDeduction,

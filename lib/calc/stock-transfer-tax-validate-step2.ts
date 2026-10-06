@@ -8,6 +8,11 @@
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
+import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "./stock-acquisition-cause";
+import { isBonusTaxedEstimationBlocked } from "./stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
+import { isBonusTaxedPreDeemedFaceValueMissing } from "./stock-acquisition-cause";
+import { BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE } from "./stock-acquisition-cause";
 // 엔진 단일 진실 — 평가액 동일 판정 재구현 금지 (dual-truth 회피)
 //
 // ⚠️ **`calcUnlistedPerShareWeighted`(본칙 가중평균)를 쓰면 안 된다** — 엔진은 「제4항에 따른
@@ -16,8 +21,12 @@ import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
 import { isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
+import { validatePreDeemedLotClause1 } from "./stock-transfer-tax-validate-pre-deemed-lots";
 import { isBookLostAtAcquisitionForm } from "./stock-transfer-section94-4-form";
 import { isBeforePpiSeries, PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
+import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
+import { isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import {
   isGiftLikeEstimationBlocked,
@@ -121,6 +130,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         severity: "error",
       });
     }
+    // 의제취득일 전 매수 lot ① 비교(영 §176의2④1호) — 분할은 여기서 조기 반환하므로 그 앞에서 부른다
+    errors.push(...validatePreDeemedLotClause1(form));
     return errors;
   }
 
@@ -180,6 +191,10 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           if (lot.acquisitionCause === "bonus_untaxed") {
             errors.push({ field: `acquisitionLots[${i}].acquisitionCause`, message: `매수 lot #${i + 1}: ${BONUS_UNTAXED_BLOCK_MESSAGE}`, severity: "error" });
           }
+          // 의제취득일 전 매수 lot 의 ②(영 §176의2④2호)는 PPI 계열(1965.01~) 밖이면 산정할 수 없다 — ⑫·엔진과 공용 술어
+          if (isPreDeemedLotBeforePpiSeries({ acquisitionCause: toEngineAcquisitionCause(lot.acquisitionCause), acquisitionDate: lot.acquisitionDate }, form.marketType, isSection94_4Form(form))) {
+            errors.push({ field: `acquisitionLots[${i}].acquisitionDate`, message: `매수 lot #${i + 1}: ${PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE}`, severity: "error" });
+          }
           for (const key of missingLotCauseKeys(
             lot.acquisitionCause,
             (k) => !isEmpty(lot[k]),
@@ -188,6 +203,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({ field: `acquisitionLots[${i}].${key}`, message: lotCauseMessage(key, i), severity: "error" });
           }
         });
+        // 의제취득일 전 매수 lot ① 비교(영 §176의2④1호) — ⑫ refine 과 같은 검사 함수
+        errors.push(...validatePreDeemedLotClause1(form));
         // [A-2] 자본조정(무상증자) 시 매수 수량이 희석 전이라 매도>매수가 정당 → 엔진 allocateLots 가드에 위임
         const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const totalAcqLots = form.acquisitionLots.reduce((s, l) => s + parseI(l.shareCount), 0);
@@ -518,8 +535,19 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
   // ── 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 매매사례 불가 · 환산은 장부분실일 때만 (국심2007중1761) ──
   // ⑫(`stock-transfer-tax-refines.ts`)·복원 마이그레이션·엔진 B·⑤와 같은 술어.
-  if (isGiftLikeEstimationBlocked(form.acquisitionCause, acquisitionMode, isBookLostAtAcquisitionForm(form))) {
+  if (isGiftLikeEstimationBlocked(effectiveSingleAcquisitionCause(form), acquisitionMode, isBookLostAtAcquisitionForm(form))) {
     errors.push({ field: "acquisitionMode", message: GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE, severity: "error" });
+  }
+
+  // ── 과세 무상주 — 취득가액은 액면가액(법정)이라 실가 모드만 (소령 §27①1호 가목) ──
+  // ⑤ 라디오·③ 복원과 같은 술어. ⑫는 원인을 모른다(④가 「매매」로 매핑) — 여기가 실질 관문이다.
+  const preDeemed = isPreDeemedPurchaseForm(form);
+  if (isBonusTaxedEstimationBlocked(effectiveSingleAcquisitionCause(form), acquisitionMode, preDeemed)) {
+    errors.push({ field: "acquisitionMode", message: BONUS_TAXED_ACTUAL_ONLY_MESSAGE, severity: "error" });
+  }
+  // 의제취득일 전 과세 무상주 — 추계 모드면 ②의 액면가액 필수 (영 §176의2④ 「많은 것」 비교)
+  if (isBonusTaxedPreDeemedFaceValueMissing(effectiveSingleAcquisitionCause(form), acquisitionMode, preDeemed, form.preDeemedActualPricePerShare)) {
+    errors.push({ field: "preDeemedActualPricePerShare", message: BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE, severity: "error" });
   }
 
   // ── 이월과세 증여자 기준 환산의 분모 (§97의2①1호 → §97①1호 나목) ──

@@ -31,9 +31,14 @@ function formatDate(d: Date): string {
 
 interface Props {
   detail: LotMatchingDetail;
+  /**
+   * §97②2호 단서(의제취득일 전 매수 ① 환산 채택분)로 취득가액 차감에서 빠진 금액 — 엔진 echo.
+   * 이 표의 매수단가·합계는 총액이라 결과의 취득가액과 이만큼 다르다(`transferPrice − 취득가액 − 필요경비 = 양도소득금액`이 결과 기준).
+   */
+  swapRemovedAcquisition?: number;
 }
 
-export function LotMatchingDetailCard({ detail }: Props) {
+export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props) {
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -126,6 +131,13 @@ export function LotMatchingDetailCard({ detail }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {swapRemovedAcquisition !== undefined && swapRemovedAcquisition > 0 && (
+        <p className="mt-3 rounded bg-amber-50 border border-amber-200 p-2 text-xs text-amber-900" data-testid="lot-swap-removed-note">
+          §97②2호 단서 적용 — 위 표의 매수단가·취득가액 합계는 ① 환산 채택분 {swapRemovedAcquisition.toLocaleString()}을 포함한 총액입니다.
+          결과의 취득가액은 이 금액을 차감하지 않은 값이며, 실제 필요경비가 대신 반영됩니다.
+        </p>
       )}
 
       {detail.warnings.length > 0 && (

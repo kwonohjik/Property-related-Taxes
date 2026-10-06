@@ -264,7 +264,21 @@ export function resolveArticle89Clause2(
    * ⇒ 특수주택이 무엇인지 판정되면 타이밍 판정을 그대로 태우고, 아니면 판정 불가로 남긴다.
    */
   const twoHouseVia = resolveTwoHouseSpecialArticle(input, rights.length);
-  if (input.householdHousingCount >= 2 && twoHouseVia === undefined) {
+  /**
+   * E011 — **2주택 + 1권리**에서 특수주택(문화유산·이농주택)을 선언하지 않았으면 2주택 축은 **결론이 난 것**이다.
+   * 두 사실 모두 명부 행에 선언 칸이 있으므로 미선언은 사실의 표시이고(위 「있는데 선언하지 않았다 ⇒ 미해당
+   * 확정」과 같은 규약), 상속받은 주택(⑦1호)은 §155②③ 제외가 count를 먼저 줄여 여기 오지 않는다.
+   * 일시적 2주택(§155①)과 §156의2③·§156의3②의 중첩은 국세청이 부인했다(해석례 평가셋 `E011-era`·`E011-era-2`).
+   * 3주택 이상은 「각각 1개씩」을 벗어나 입력 경로가 없으므로 종전대로 판정 불가로 둔다.
+   * 🔑 농어촌주택을 **선언했는데** ⑪(이농)이 아닌 경우(상속·귀농)는 닫지 않는다 — 결정 범위가 「선언 없음」이다.
+   */
+  const twoHouseAxisClosed =
+    input.householdHousingCount === 2 &&
+    rights.length === 1 &&
+    twoHouseVia === undefined &&
+    input.culturalHeritageHouse !== true &&
+    input.ruralHouse === undefined;
+  if (input.householdHousingCount >= 2 && twoHouseVia === undefined && !twoHouseAxisClosed) {
     open.push(...openArticlesForTwoHouseAxis(input));
   }
 
@@ -342,6 +356,7 @@ export function resolveArticle89Clause2(
    * ⇒ 두 축이 모두 결론난 2권리 세대에는 적용될 예외가 **남지 않는다**.
    */
   if (isTwoRightShape) return { status: "excluded" };
+  if (twoHouseAxisClosed) return { status: "excluded" };
 
 
   /**

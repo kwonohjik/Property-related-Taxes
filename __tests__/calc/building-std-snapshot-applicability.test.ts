@@ -136,3 +136,45 @@ describe("판정 불능·비대상은 현행 유지(true) — 과잉 차단 방�
     expect(isBuildingStdSnapshotApplicable(KEY, { estateItems: [] })).toBe(true);
   });
 });
+
+describe("겸용 주택분 나목 스냅샷(`-mx-housing-*`, S3-2) — 그 시점의 나목이 아직 쓰이는가", () => {
+  const input = (over: Record<string, unknown>) => ({
+    assets: [{
+      assetId: "asset-m",
+      assetKind: "housing",
+      isMixedUseHouse: true,
+      acquisitionCause: "purchase",
+      acquisitionDate: "2010-03-15",
+      usePreHousingDisclosure: false,
+      hasPartialUsageChange: false,
+      partialChangeDirection: "",
+      ...over,
+    }],
+  });
+  const ACQ = "bsp-asset-m-mx-housing-acq";
+  const TR = "bsp-asset-m-mx-housing-transfer";
+
+  it("긍정: 비-PHD 겸용 — 두 시점 모두 적용", () => {
+    expect(isBuildingStdSnapshotApplicable(ACQ, input({}))).toBe(true);
+    expect(isBuildingStdSnapshotApplicable(TR, input({}))).toBe(true);
+  });
+  it("PHD ON — 나목이 쓰이지 않으므로 둘 다 적용 불가 (위 긍정의 짝)", () => {
+    const i = input({ usePreHousingDisclosure: true });
+    expect(isBuildingStdSnapshotApplicable(ACQ, i)).toBe(false);
+    expect(isBuildingStdSnapshotApplicable(TR, i)).toBe(false);
+  });
+  it("용도변경 상가→주택 — 취득시만 적용 불가", () => {
+    const i = input({ hasPartialUsageChange: true, partialChangeDirection: "commercial_to_house" });
+    expect(isBuildingStdSnapshotApplicable(ACQ, i)).toBe(false);
+    expect(isBuildingStdSnapshotApplicable(TR, i)).toBe(true);
+  });
+  it("겸용 해제 — 둘 다 적용 불가", () => {
+    const i = input({ isMixedUseHouse: false });
+    expect(isBuildingStdSnapshotApplicable(ACQ, i)).toBe(false);
+    expect(isBuildingStdSnapshotApplicable(TR, i)).toBe(false);
+  });
+  it("판정 불능은 통과 — 자산을 못 찾거나 판정 근거 필드가 없는 구조", () => {
+    expect(isBuildingStdSnapshotApplicable(ACQ, { assets: [] })).toBe(true);
+    expect(isBuildingStdSnapshotApplicable(ACQ, { assets: [{ assetId: "asset-m" }] })).toBe(true);
+  });
+});

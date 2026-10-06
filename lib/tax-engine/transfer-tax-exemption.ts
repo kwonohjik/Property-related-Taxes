@@ -44,6 +44,7 @@ import {
   PROVISO_LABEL,
   resolveExemptionProviso,
   qualifiesRuralHouse,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   qualifiesUnavoidableOutsideCapital,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
@@ -51,6 +52,7 @@ import {
   qualifiesWinWinRental,
   resolveMergeDeeming,
   resolveMergeOverlapDeeming,
+  resolveMarriageThenParentalCareDeeming,
   RURAL_HOUSE_LABEL,
   UNAVOIDABLE_REASON_LABEL,
 } from "./transfer-tax-exemption-requirements";
@@ -302,8 +304,9 @@ function checkExemptionCore(
     }
   }
 
-  // E-3: 일시적 2주택
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3: 일시적 2주택 — ⑦ 농어촌주택이 겹친 3주택도 같은 분기로 본다(D3 · `ruralTemporaryTwoHouseOverlapCountHolds`).
+  const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
+  if ((input.householdHousingCount === 2 || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
@@ -350,6 +353,15 @@ function checkExemptionCore(
           legalBasis: TRANSFER.TEMPORARY_TWO_HOUSE,
         },
       ];
+      // D3 — 중첩이면 두 조문이 함께 근거다(합가 중첩 E-3.5와 같은 규약: 행을 나눈다).
+      if (ruralOverlap) {
+        basisParts.push(`§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]} 농어촌주택 제외`);
+        exceptions.push({
+          id: `155-7-rural:${input.ruralHouse!.kind}`,
+          label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
+          legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
+        });
+      }
       if (provisoRelaxesHolding) {
         basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
         exceptions.push({
@@ -469,10 +481,17 @@ function checkExemptionCore(
   // 여기서는 §154① 보유·거주(②)만 더 본다.
   {
     // F-1 — ①(일시적 2주택)과 겹쳐 3주택이 된 경우도 국세청 해석상 §154①이 적용된다.
-    const mergeBasis = resolveMergeDeeming(input) ?? resolveMergeOverlapDeeming(input, twoHouseRule);
+    // D4 — 혼인 후 동거봉양 합가 3주택(서면인터넷방문상담4팀-598). 두 합가 조문이 함께 근거다.
+    const mergeBasis =
+      resolveMergeDeeming(input) ??
+      resolveMergeOverlapDeeming(input, twoHouseRule) ??
+      (resolveMarriageThenParentalCareDeeming(input) ? ("marriage_then_parental_care" as const) : undefined);
     if (mergeBasis && meetsOneHouseHoldingResidence(input, rule)) {
       const isMarriage = mergeBasis.startsWith("marriage");
-      const mergeLabel = mergeBasis.endsWith("_overlap")
+      const isDouble = mergeBasis === "marriage_then_parental_care";
+      const mergeLabel = isDouble
+        ? `혼인 합가 후 동거봉양 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)}·${PARENTAL_CARE_CLAUSE})`
+        : mergeBasis.endsWith("_overlap")
         ? `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}①·${isMarriage ? MARRIAGE_CLAUSE : PARENTAL_CARE_CLAUSE})`
         : isMarriage
           ? `혼인 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)})`
@@ -480,7 +499,12 @@ function checkExemptionCore(
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       // 중첩(§155①·④⑤)이면 두 조문이 함께 근거다 — 한 줄로 합치지 않고 행을 나눈다.
-      const exceptions: OneHouseAppliedException[] = mergeBasis.endsWith("_overlap")
+      const exceptions: OneHouseAppliedException[] = isDouble
+        ? [
+            { id: "155-5-marriage-merge", label: "혼인 합가", legalBasis: TRANSFER.MARRIAGE_MERGE_EXEMPT },
+            { id: "155-4-parental-care-merge", label: "동거봉양 합가", legalBasis: TRANSFER.PARENTAL_CARE_MERGE_EXEMPT },
+          ]
+        : mergeBasis.endsWith("_overlap")
         ? [
             { id: "155-1-temporary-two-house", label: "일시적 2주택", legalBasis: TRANSFER.TEMPORARY_TWO_HOUSE },
             {

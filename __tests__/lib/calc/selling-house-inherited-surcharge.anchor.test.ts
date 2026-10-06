@@ -74,7 +74,7 @@ function form(over: Partial<AssetForm> = {}): TransferFormData {
 
 function sellingRow(over: Partial<AssetForm> = {}): Payload {
   const f = form(over);
-  const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion) as Payload[];
+  const rows = buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Payload[];
   return rows.find((r) => r.id === "selling")!;
 }
 

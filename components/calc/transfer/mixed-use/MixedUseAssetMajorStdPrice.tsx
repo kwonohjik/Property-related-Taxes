@@ -13,6 +13,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
+import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
@@ -256,6 +257,14 @@ export function MixedUseAssetMajorStdPrice({
             jibun={jibun}
             area={derived.residentialLandArea}
           />
+          {/* S3-2 — 주택건물 기준시가(나목, 비례 분모). 취득시 sub-block 맨 아래(H·B0 다음) — 술어는 컴포넌트 내부 */}
+          <MixedUseHousingBuildingStdField
+            asset={asset}
+            onChange={onChange}
+            timePoint="acq"
+            transferDate={transferDate}
+            acqLabel={acqLabel}
+          />
         </div>
 
         {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
@@ -271,6 +280,15 @@ export function MixedUseAssetMajorStdPrice({
               referenceDate={transferDate}
               label="개별주택공시가격"
               hint="주택건물+주택부수토지 일괄"
+            />
+            {/* S3-2 — 양도시 주택건물 기준시가(나목). 이미 emerald 시점 박스 안이라 톤 카드를 두르지 않는다 */}
+            <MixedUseHousingBuildingStdField
+              asset={asset}
+              onChange={onChange}
+              timePoint="transfer"
+              transferDate={transferDate}
+              landArea={derived.residentialLandArea}
+              embedded
             />
           </div>
         )}

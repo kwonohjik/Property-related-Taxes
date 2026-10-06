@@ -1,0 +1,41 @@
+[
+  {
+    "id": "E160-era",
+    "docNo": "서면-2022-법규재산-1668",
+    "docDate": "2023.05.24.",
+    "basis": "era",
+    "today": "2022-12-10",
+    "summary": "무주택 1세대가 별도세대 피상속인의 농어촌주택(A)과 일반주택(B)을 함께 상속(2002.11.)받고 B를 양도(2022.12. 예정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-12-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-11-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1996-04-15"
+      },
+      "houses": [
+        {
+          "id": "rural-a",
+          "region": "non_capital",
+          "acquisitionDate": "2002-11-15",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "inherited",
+          "ruralOutsideCapitalEupMyeon": true,
+          "isInherited": true,
+          "inheritedDate": "2002-11-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false,
+          "ruralDecedentResidenceYears": "10"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 양도일은 원문의 「2022.12. 예정」 → 2022-12-20, today는 그 전(2022-12-10)으로 둠. 상속·취득 월 단위 일자는 15일로 가정, 농어촌주택 요건(피상속인 취득 후 5년 이상 거주·수도권 밖 읍·면)은 원문 전제라 거주 10년·소재 충족으로 입력. 표현: 양도 주택(B)은 취득원인 상속(상속개시 2002-11-15, 피상속인 취득 1996-04-15), 농어촌주택(A)은 명부 행에 상속주택 + 농어촌주택(kind inherited) 이중 표시. 엔진은 A를 §155② 상속주택으로 먼저 주택 수에서 제외(houseCount.excluded=상속주택, 근거 §155②)해 1주택 비과세 — 원문이 든 §155⑦ 경로가 아니다. 프로브: A를 농어촌주택으로만 표시(상속주택 표시 제거)하면 §155⑦ 경로(applied 155-7-rural:inherited)로도 비과세 — 일반주택 취득순서를 묻지 않는다는 원문 쟁점은 이쪽에서 확인된다."
+  }
+]

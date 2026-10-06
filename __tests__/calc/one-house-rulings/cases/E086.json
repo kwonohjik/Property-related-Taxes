@@ -1,0 +1,32 @@
+[
+  {
+    "docNo": "조심-2023-중-7006",
+    "docDate": "2024.04.22.",
+    "id": "E086-dual",
+    "basis": "era",
+    "today": "2021-08-20",
+    "summary": "동일세대원 부 사망(2003.1.)으로 모 3/5·청구인 2/5 공동상속, 모 지분은 2015 강제경매로 제3자에게 이전 — 청구인이 일반주택(2016.11.)을 양도(2021.7.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-07-30",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-11-23"
+      },
+      "houses": [
+        {
+          "id": "inh",
+          "region": "capital",
+          "acquisitionDate": "2003-01-25",
+          "isInherited": true,
+          "inheritedDate": "2003-01-25",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": true
+        }
+      ]
+    },
+    "bucket": "dual",
+    "note": "dual(동일세대원 상속 공동상속주택 소수지분). 입장 B 사건: 조심-2023-중-7006(조세심판원) — 소수지분권자(모 3/5·청구인 2/5)에게는 §155② 단서를 적용하지 않으므로 동일세대 상속이어도 §155③ 적용 → 비과세(인용). 입장 A: 서면-2021-법규재산-0843·사전-2021-법령해석재산-0199(국세청) — 단서 해당 시에만 §155③ 적용. 현재 엔진 관측: 입장 A와 같다 — 과세(동일세대 게이트 unmet 155-2-inherited-house). 동일세대 표시를 끄거나(V-E086-notsame) 합가 전 보유분 표시를 켜면(V-E086-parentcare) 비과세 + 판정 보류 154-5-final-one-house-restart-unverified(양도일 2021-07-30가 재기산 판정 구간 — S-1). 모 지분 3/5의 2015 강제경매 이전은 입력 칸이 없어 상속 당시 소수지분 2/5로만 표현. 참고: 같은 사실 패턴(동일세대원 상속 소수지분 + 상속 후 취득 일반주택 양도)에서 조심-2009-서-3229(E076)는 §155② 부적용으로 기각했다. 양도 2021-07-30·일반주택 취득 2016-11-23(원문), 양도가 8억 중립, 비조정."
+  }
+]

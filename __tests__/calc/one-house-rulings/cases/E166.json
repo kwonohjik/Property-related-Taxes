@@ -1,0 +1,139 @@
+[
+  {
+    "id": "E166-era",
+    "docNo": "서면-2015-법령해석재산-0222 [법령해석과-2530]",
+    "docDate": "2015.10.01.",
+    "basis": "era",
+    "today": "2015-09-16",
+    "summary": "A(경남 창원 2006.3.16.)·B(경남 김해 2004.10.13.) 매입임대 + D(부산 강서 2014.2.21. 취득, 준공공임대 등록) 임대주택 3채와 거주주택 C(2011.6.3. 취득, 세대전원 2년 이상 거주) 보유 1세대가 C 양도 — 준공공임대주택이 §155⑲(현행 ⑳) 장기임대주택(매입임대)에 포함되는지",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-09-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-06-03",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2006-04-30",
+              "rentalRegistrationDate": "2006-04-30",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "209000000",
+              "acquisitionOfficialPrice": "209000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "112",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2005-01-05",
+              "rentalRegistrationDate": "2005-01-05",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "118000000",
+              "acquisitionOfficialPrice": "118000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "128",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2014-09-27",
+              "rentalRegistrationDate": "2014-09-27",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "124000000",
+              "acquisitionOfficialPrice": "124000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "11",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 표현: 준공공임대주택 D는 임대구분 '장기일반'(long_general)으로 입력 — 엔진 입력에 준공공 별도 구분이 없고 장기일반이 이를 포함하므로 쟁점(준공공의 장기임대주택 포함 여부)은 이 선택으로 표현된다. 관측 §155⑳ passed=true, D는 임대 11개월이라 의무기간 미경과(§155㉑ 통과). 가정: A·B는 구 임대주택법 등록 매입임대(pre_2018), 임대사업자 등록일은 원문의 임대개시일로 가정, 소재는 경남·부산(수도권 밖), 기준시가는 원문 값(209·118·124백만원). 거주주택 C는 2011-06-03 취득·거주 36개월·양도가 4억, 양도일 2015-09-15(원문 미기재 — E주택은 그 전에 양도한 것으로 보아 입력 없음)."
+  },
+  {
+    "id": "E166-current",
+    "docNo": "서면-2015-법령해석재산-0222 [법령해석과-2530]",
+    "docDate": "2015.10.01.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(매입임대 2채 + 장기일반민간임대주택(구 준공공) + 거주주택)을 2026.3.20. 양도로 구성",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-06-03",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2019-04-01",
+              "rentalRegistrationDate": "2019-04-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "200000000",
+              "acquisitionOfficialPrice": "200000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "83",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2019-09-27",
+              "rentalRegistrationDate": "2019-09-27",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "non-metro",
+              "standardPriceAtRentalStart": "200000000",
+              "acquisitionOfficialPrice": "200000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "77",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 장기일반민간임대주택(종전 준공공임대주택)의 등록은 임대사업자 등록에 포함되어 장기임대주택으로 인정된다. 같은 패턴(매입임대 2호 + 거주주택)을 장기일반 2호(2019-04-01·2019-09-27 등록, 수도권 밖, 기준시가 2억)와 거주주택(2015-06-03 취득·거주 36개월), 양도 2026-03-20·양도가 4억으로 구성. 새 축 중립 고정: 비조정, 임대주택은 아파트 아님(2026.10.1. 시행 아파트 양도기한 게이트 회피)."
+  }
+]

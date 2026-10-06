@@ -20,7 +20,8 @@ import { render, cleanup } from "@testing-library/react";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+// S3-2 — 겸용 주택분이 가목:나목 비례라 나목(주택건물 기준시가)이 필수다. 나목이 없는 fixture에 항등 나목(N = H − 가목)을 채워 호출한다.
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { makeMockRatesWithHouseEngine } from "../tax-engine/_helpers/mock-rates";
 import { mixedUseCase14 } from "../tax-engine/_helpers/mixed-use-fixture";
 
@@ -28,14 +29,20 @@ afterEach(cleanup);
 
 const D = (s: string) => new Date(s);
 
-/** 취득시 개별주택가격 미공시 — 저장소 픽스처가 그대로 이 케이스다. */
+/**
+ * 취득시 개별주택가격 미공시 — **구 저장 이력(S3-2 이전 resultData)** 형태.
+ *
+ * S3-2 이후 비-PHD 겸용 주택분은 취득시 개별주택가격(H)이 없으면 엔진이 throw하고(상속·증여 신고가액 취득만 예외 —
+ * 그때는 환산이 아니라 §163⑨ 의제 경로다) ⑫·⑧도 막는다. 그래서 「H = 0인 §97 환산 결과」는 새로 만들 수 없고
+ * 저장 이력으로만 남는다. 이 카드가 그 결과를 여전히 「(미공시)」로 읽어 내는지를 보려고, 공시 결과에서 분자·환산취득가와
+ * 분할 echo를 0/없음으로 되돌린 **저장 형태**를 만든다(카드는 resultData만 읽는다).
+ */
 function undisclosed() {
-  return calcMixedUseTransferTax(
-    3_000_000_000,
-    D("2026-06-01"),
-    { ...mixedUseCase14(), isOneHouseExempt: false },
-    makeMockRatesWithHouseEngine(),
-  );
+  const b = JSON.parse(JSON.stringify(disclosed())) as ReturnType<typeof disclosed>;
+  b.housingPart.acqHousingStandardPrice = 0;
+  b.housingPart.estimatedAcquisitionPrice = 0;
+  delete b.housingPart.housingStdSplit;
+  return b;
 }
 
 /** 취득시 개별주택가격 공시 — 같은 분기에서 분자가 실제 값을 가진다. */

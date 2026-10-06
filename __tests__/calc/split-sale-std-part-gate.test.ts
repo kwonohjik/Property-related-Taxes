@@ -122,6 +122,8 @@ describe("A. 구분양도에서도 양도시 기준시가 **양쪽** 필수 (§1
         standardPricePerSqmAtAcq: "1,000,000",
         acquisitionArea: "100",
         standardPriceAtAcq: "250,000,000",
+        // S3-1 — 주택 소유자 분리의 취득시 건물 기준시가(나목, 비례 안분의 분모). 없으면 ⑧ V8-N이 먼저 막는다.
+        buildingStandardPriceAtAcq: "150,000,000",
       }),
       "자산 1",
     );

@@ -15,6 +15,10 @@
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "./stock-acquisition-cause";
+import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
+import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
+import { isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -255,6 +259,10 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
       if (lot.acquisitionCause === "bonus_untaxed") {
         errors.push({ field: `acquisitionLots[${i}].acquisitionCause`, message: `매수 lot #${i + 1}: ${BONUS_UNTAXED_BLOCK_MESSAGE}`, severity: "error" });
       }
+      // 의제취득일 전 매수 lot 의 ②(영 §176의2④2호)는 PPI 계열(1965.01~) 밖이면 산정할 수 없다 — ⑫·엔진과 공용 술어
+      if (isPreDeemedLotBeforePpiSeries({ acquisitionCause: toEngineAcquisitionCause(lot.acquisitionCause), acquisitionDate: lot.acquisitionDate }, form.marketType, isSection94_4Form(form))) {
+        errors.push({ field: `acquisitionLots[${i}].acquisitionDate`, message: `매수 lot #${i + 1}: ${PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE}`, severity: "error" });
+      }
       for (const key of missingLotCauseKeys(
         lot.acquisitionCause,
         (k) => !isEmpty(lot[k]),
@@ -362,10 +370,11 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
     }
   }
 
-  // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase")
-  const acquisitionCause = form.acquisitionCause || "purchase";
+  // 취득원인 보조 일자 검증 (3중 패턴: acquisitionCause || "purchase").
+  // 분할 모드는 단건 원인·보조 칸이 화면에 없다(lot 원인이 정본) → 「매매」로 파생해 화면 밖 칸으로 막지 않는다.
+  const acquisitionCause = effectiveSingleAcquisitionCause(form);
   // 의제배당 비과세 무상주는 취득 건이 아니다 — 원주로 입력하고 자본조정 비율로 반영(⑫는 enum 에서 거부)
-  if (acquisitionCause === "bonus_untaxed" && (form.lotsMode || "single") === "single") {
+  if (acquisitionCause === "bonus_untaxed") {
     errors.push({ field: "acquisitionCause", message: BONUS_UNTAXED_BLOCK_MESSAGE, severity: "error" });
   }
   /**

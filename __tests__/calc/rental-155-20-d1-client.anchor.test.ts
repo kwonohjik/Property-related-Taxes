@@ -7,6 +7,7 @@
  * | V-15 | OH-15 | B는 등록 이후 거주기간이 필수이고, 24개월 판정도 그 값으로 한다 |
  * | V-39 | OH-39 | 말소 토글 ON(가·다·라·마목)이면 등록 유형 필수 |
  * | V-41 | OH-41 | 나·라목도 ⑳2호 자기확인 필수 |
+ * | V-U2 | U2 | 말소 호의 자기확인 오류 문구는 「말소 전까지」 |
  * | V-40 | OH-40 | 판정 메뉴(facts)는 구간 내 A의 이력 선택을 요구, 계산기(full)는 막지 않는다 |
  * | A-*  | ④ | 신규 필드 전송 규약 |
  * | R-58 | OH-58 | Step4 빌더가 상생임대 사실을 실어 거주요건 경고가 엔진과 일치 |
@@ -155,17 +156,43 @@ describe("V-39 · V-41 — 호별 판정 사실", () => {
     expect(V(na(false))).toContain("기타 요건 자기확인");
     expect(V(na(true))).toBeNull();
   });
+  it("V-U2 말소 호(가목) 미확인 → 「말소 전까지」를 묻는다 / 일반 호는 종전 문구(짝)", () => {
+    const terminated = asset({
+      rentalUnits: [
+        unit({
+          requirementsConfirmed: false,
+          rentalAutoTermination: true,
+          terminatedRegistrationType: "short_term",
+          registrationCancellationDate: "2020-12-01",
+        }),
+      ],
+    });
+    expect(V(terminated)).toContain("등록 말소 전까지");
+    expect(V(asset({ rentalUnits: [unit({ requirementsConfirmed: false })] }))).not.toContain("등록 말소 전까지");
+  });
 });
 
 describe("V-40 OH-40 — 구간 내 A 이력(판정 메뉴에서만 요구)", () => {
-  const inEra = (h: "" | "none" | "used", transition = false) =>
-    asset({ priorRentalExemptionHistory: h, residenceTransitionUnderAddendum: transition }, { acquisitionDate: "2019-06-01" });
+  const inEra = (
+    h: "" | "none" | "used",
+    transition = false,
+    basis: AssetForm["rentalHousingException"]["residenceTransitionBasis"] = transition ? "residing" : "",
+  ) =>
+    asset(
+      { priorRentalExemptionHistory: h, residenceTransitionUnderAddendum: transition, residenceTransitionBasis: basis },
+      { acquisitionDate: "2019-06-01" },
+    );
   it("V-40a facts 모드 · 2019-06-01 취득 · 2024-06-01 양도 · 미선택 → 차단", () => {
     expect(V(inEra(""), "2024-06-01", "facts")).toContain("이력");
   });
   it("V-40b 선택하면 통과 · 경과조치면 묻지 않는다", () => {
     expect(V(inEra("none"), "2024-06-01", "facts")).toBeNull();
     expect(V(inEra("", true), "2024-06-01", "facts")).toBeNull();
+  });
+  it("V-40b2 (D11) 경과조치 체크만 · 사유 미선택 → 사유를 묻는다 / 「계약금 · 임대주택 없음」 → 이력을 묻는다", () => {
+    expect(V(inEra("none", true, ""), "2024-06-01", "facts")).toContain("경과조치의 사유");
+    expect(V(inEra("", true, "contract_without_prior_rental"), "2024-06-01", "facts")).toContain("이력");
+    expect(V(inEra("none", true, "contract_without_prior_rental"), "2024-06-01", "facts")).toBeNull();
   });
   it("V-40c 구간 밖(2025-02-28 양도) → 묻지 않는다(경계 짝)", () => {
     expect(V(inEra(""), "2025-02-28", "facts")).toBeNull();

@@ -1,0 +1,123 @@
+[
+  {
+    "id": "E178-era",
+    "docNo": "기획재정부 재산세제과-192",
+    "docDate": "2020.02.18.",
+    "basis": "era",
+    "today": "2022-06-16",
+    "summary": "2019.2.12. 전 거주주택·장기임대주택 2채 보유 세대가 2019.2.12. 이후 이사 목적 신규주택 취득 후 종전 거주주택을 양도해 §155⑳ 거주주택 비과세를 한 차례 적용받은 뒤, 그 신규주택(거주용)을 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-20",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "30",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "u",
+              "businessRegistrationDate": "2015-04-01",
+              "rentalRegistrationDate": "2015-04-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "80",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "u2",
+              "businessRegistrationDate": "2015-04-01",
+              "rentalRegistrationDate": "2015-04-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "80",
+              "requirementsConfirmed": true
+            }
+          ],
+          "priorRentalExemptionHistory": "used"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 양도일 원문 미기재(회신 2020.02.18.은 가정 사실에 대한 회신이고, 신규주택이 2019.2.12. 이후 취득이라 보유 2년을 채우려면 2021.3. 이후여야 함) → 2022-06-15로 가정(2021.1.1.~2022.5.9. 구간은 §154⑤ 단서 판정 보류가 붙어 회피). 표현: 양도 대상 = 신규주택(2019-03-20 취득, 거주 30개월), 장기임대주택 2채는 명부가 아니라 §155⑳ 임대주택 호(rentalUnits)로 입력(명부에 넣으면 이중 계상), 종전 거주주택 양도로 이미 특례를 적용받은 이력은 priorRentalExemptionHistory='used'. 관측 isExempt=false의 이유는 §155⑳ 불충족(「이미 거주주택을 양도해 특례를 적용받은 이력」)이다 — 프로브 짝: 이력을 'none'으로 바꾸면 passed=true·비과세(임대주택 호 입력은 정상). 임대 개시·보증금 등은 원문에 없어 장기일반·등록 2015-04-01 등 임의값."
+  },
+  {
+    "id": "E178-current",
+    "docNo": "기획재정부 재산세제과-192",
+    "docDate": "2020.02.18.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "2019.2.12. 전 거주주택·장기임대주택 2채 보유 세대가 2019.2.12. 이후 취득한 신규주택(거주용)을 2025.2.28. 이후 양도, 종전 거주주택 양도 때 이미 §155⑳ 비과세를 적용받은 이력 있음",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-20",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "u",
+              "businessRegistrationDate": "2015-04-01",
+              "rentalRegistrationDate": "2015-04-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "130",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "u2",
+              "businessRegistrationDate": "2015-04-01",
+              "rentalRegistrationDate": "2015-04-01",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "130",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2025.2.28. 이후 양도분부터 §155⑳ 거주주택 비과세 횟수 제한 없음(종전: 2019.2.12. 이후 취득분은 생애 한 차례). 같은 패턴(종전 거주주택 양도로 특례 적용 후 신규주택 양도)을 2026-03-20 양도로 구성 — 이력 입력 칸(priorRentalExemptionHistory)은 2025.2.27. 이전 양도에서만 묻는 칸이라 비움. 관측 §155⑳ passed=true. 새 축 중립 고정: 비조정, 양도가 8억(12억 이하), 신규주택 취득 2019-03-20·거주 60개월, 임대주택 호는 era와 같은 값(임대 130개월)."
+  }
+]

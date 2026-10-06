@@ -1,0 +1,76 @@
+[
+  {
+    "docNo": "사전-2022-법규재산-0637",
+    "docDate": "2022.11.09.",
+    "id": "E045-era",
+    "basis": "era",
+    "today": "2022-10-01",
+    "summary": "서울 A주택(2009.9. 취득)을 2022.4.6. 양도, 경기 고양시 주거용 오피스텔 B(분양권 2016.1. 비조정 시 취득, 잔금 2019.5.14. 조정대상지역) 보유, 종전주택 양도기한 3년(2022.10.18.까지 양도분)",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2016-01-15",
+      "isOneHousehold": true,
+      "transferDate": "2022-04-06",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-09-15"
+      },
+      "houses": [
+        {
+          "id": "officetel",
+          "region": "capital",
+          "acquisitionDate": "2019-05-14",
+          "isOfficetel": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 있음). 원문 일자: 양도 2022.4.6., 분양권 취득 2016.1.·A 취득 2009.9.는 월 단위라 15일 가정, 잔금 2019.05.14. 표현: 양도일 기준 조정(isRegulatedArea) + 신규 취득(잔금) 당시 종전·신규 모두 조정(yes/yes) 선언, 분양권 계약일 2016-01-15를 신규주택 계약일로 입력 — 계약일이 2018.9.13. 이전이라 종전 3년 적용. 주거용 오피스텔은 명부 행(isOfficetel). 신규 취득(2019-05-14) 후 2년 10개월에 양도: 2년이면 과세·3년이면 비과세. 프로브: 계약일을 비우면 신규 취득일(2019-05-14, 2019-12-17 이전)로 2년이 적용돼 과세 → 계약일 입력이 결론을 가른다. today는 양도일 직후(2022-10-01); 원문은 「2022.10.18.까지 양도분」 한정이고 본 사안 양도일은 그 전. 양도가 8억 중립."
+  },
+  {
+    "docNo": "사전-2022-법규재산-0637",
+    "docDate": "2022.11.09.",
+    "id": "E045-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조정대상지역 A(2009.9. 취득) 보유 중 주거용 오피스텔 분양권(2021.3. 계약)이 2023.8.15. 완공·취득, 신규 취득일부터 2년 9개월에 A 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2021-03-15",
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-09-15"
+      },
+      "houses": [
+        {
+          "id": "officetel",
+          "region": "capital",
+          "acquisitionDate": "2023-08-15",
+          "isOfficetel": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2023.1.12. 이후 양도분은 지역 무관 종전주택 양도기한 3년. 오피스텔 분양권 2021.3. 계약·2023.8.15. 완공 취득 → 양도 2026-05-15는 신규 취득 후 2년 9개월(2년이면 불성립). 프로브: 신규 취득 2022-12-15면 3년 5개월이라 과세. 새 축 중립 고정: 종전주택 2009.9. 취득(거주요건 면제), 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

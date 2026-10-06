@@ -16,7 +16,8 @@
  *   배율 = (의제취득일의 직전일이 속하는 달의 생산자물가지수) ÷ (취득일이 속하는 달의 생산자물가지수)
  *   ② = floor(실가 총액 × 배율) — 정수 연산(BigInt, 지수 ×100 고정소수).
  *
- * 적용 범위: 단건 모드 · 취득원인 매수 · 취득일(원값) < 의제취득일. 상속·증여·합병·이월과세·lot 모드는 범위 밖.
+ * 적용 범위: 취득원인 매수 · 취득일(원값) < 의제취득일. 상속·증여·합병·이월과세는 범위 밖.
+ *   단건 모드는 `resolvePreDeemedBasis`(①·② 비교), 분할·다건 lot 모드는 `applyPreDeemedToLots`(② — lot 입력은 실가뿐).
  * 입력 날짜는 비파괴 저장이라 원값이 그대로 온다(Y-1) — 의제 여부는 `resolveStockDeemedDate`로 판정한다.
  */
 
@@ -30,7 +31,7 @@ import {
   PPI_MONTHLY_LAST_YEAR,
 } from "../data/producer-price-index";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
-import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
+import type { AcquisitionLot, StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 
 export type PreDeemedDetail = NonNullable<StockTransferResult["preDeemedAcquisitionDetail"]>;
 
@@ -255,4 +256,96 @@ export function resolvePreDeemedBasis(
     appliedRulesDelta,
     warningsDelta,
   };
+}
+
+// ============================================================
+// 분할·다건 lot 모드 — 영 §176의2④2호 ②
+// ============================================================
+
+/** 1965.01 이전 취득 lot — ⑧·⑫ 공용 문구. lot 에는 배율 입력 칸이 없어 산정할 수 없다. */
+export const PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE =
+  "1965년 1월 이전에 취득한 매수 건은 생산자물가지수 계열(1965.01~) 밖이라 매수 건별 입력으로는 " +
+  `② 취득 당시 실가 + 생산자물가상승분(${STOCK.ENFORCEMENT_DECREE_176_2_4_PRE_DEEMED}2호)을 산정할 수 없습니다 — ` +
+  "한 번에 취득한 주식이면 일자별 매수 건 대신 단일 입력에서 물가상승 배율을 직접 입력하세요";
+
+/** 의제취득일 전 «매수» lot 인가 — 엔진·⑤⑥ 미리보기·⑧·⑫ 공용 (단건 술어를 lot 값으로 부른다) */
+export function isPreDeemedPurchaseLot(lot: Pick<AcquisitionLot, "acquisitionCause" | "acquisitionDate">, marketType: string | undefined, is94_4: boolean): boolean {
+  return isPreDeemedPurchase({
+    marketType,
+    acquisitionCause: lot.acquisitionCause,
+    acquisitionDate: lot.acquisitionDate,
+    is94_4,
+    isSplitOrLots: false,
+  });
+}
+
+/** ⑧·⑫ — 이 lot 은 ②를 산정할 수 없는가(의제취득일 전 매수 + 1965.01 이전 취득). 날짜는 원값 문자열도 받는다. */
+export function isPreDeemedLotBeforePpiSeries(
+  lot: { acquisitionCause: string | undefined; acquisitionDate: Date | string | undefined },
+  marketType: string | undefined,
+  is94_4: boolean,
+): boolean {
+  if (!isBeforePpiSeries(lot.acquisitionDate)) return false;
+  return isPreDeemedPurchase({ marketType, acquisitionCause: lot.acquisitionCause, acquisitionDate: lot.acquisitionDate, is94_4, isSplitOrLots: false });
+}
+
+/**
+ * 분할·다건 lot — 의제취득일 전 «매수» lot 의 1주당 단가를 ② 「취득 당시 실지거래가액 + 생산자물가상승분」으로
+ * 바꾼다(영 §176의2④2호 — 자산마다, 즉 lot 마다 적용한다). `allocateLots` 직전·자본조정 희석보다 **앞**이다
+ * (②는 «취득 당시» 가액의 환산이고, 희석은 그 원가를 늘어난 주식수에 나눌 뿐이다).
+ *
+ * ①(의제취득일 현재 매매사례·환산가액)은 **이 함수가 견주지 않는다** — 환산 ①은 매도 lot 의 양도가·양도 당시 기준시가에
+ *    의존해 sub-lot(매수 lot × 매도 lot)에서야 정해진다. 그래서 ② 적용 lot 에 표지(`preDeemedClause2PerShare`)만 남기고,
+ *    `allocateLots` 의 sub-lot 단계(`stock-pre-deemed-lot-clause1.ts`)가 `max(①, ②)` 를 고른다.
+ *    `clause1Active` 는 경고 문구만 가른다(① 비교가 켜졌으면 «견줍니다», 아니면 종전 «산정하지 않습니다»).
+ * ⚠️ lot 엔진은 1주당 단가로 매칭한다(부분 매도 때문) — ②를 1주당 floor 로 구해 총액 floor 보다 최대 (주식수−1)원 작다.
+ *
+ * 1965.01 이전 lot 은 배율 입력 칸이 없어 바꾸지 않고 사유를 남긴다 — ⑧·⑫가 먼저 막는다.
+ */
+export function applyPreDeemedToLots(
+  lots: AcquisitionLot[],
+  marketType: string | undefined,
+  is94_4: boolean,
+  clause1Active = false,
+): {
+  lots: AcquisitionLot[];
+  applied: boolean;
+  warnings: string[];
+  details: NonNullable<StockTransferResult["preDeemedLotsDetail"]>["lots"];
+} {
+  const warnings: string[] = [];
+  const details: NonNullable<StockTransferResult["preDeemedLotsDetail"]>["lots"] = [];
+  let applied = false;
+  const prev = deemedPrevMonth(is94_4);
+  const ppiPrev = ppiMonthlyX100(prev.year, prev.month);
+  const out = lots.map((lot, i) => {
+    if (!isPreDeemedPurchaseLot(lot, marketType, is94_4)) return lot;
+    const acq = monthKey(lot.acquisitionDate);
+    const ppiAcq = ppiMonthlyX100(acq.year, acq.month);
+    const label = `${STOCK.ENFORCEMENT_DECREE_176_2_4_PRE_DEEMED} — 매수 lot #${i + 1}(${acq.key} 취득 · 의제취득일 ${stockDeemedAcquisitionDate(is94_4)} 전)`;
+    if (ppiAcq === undefined || ppiPrev === undefined) {
+      warnings.push(`${label}: 생산자물가지수 계열(1965.01~) 이전이라 ②를 산정하지 않았습니다.`);
+      return lot;
+    }
+    const price = mulDivFloor(lot.perShareAcquisitionPrice, BigInt(ppiPrev), BigInt(ppiAcq));
+    applied = true;
+    warnings.push(
+      `${label}: ② 취득 당시 1주당 실가 + 생산자물가상승분 ${lot.perShareAcquisitionPrice.toLocaleString("ko-KR")} → ` +
+        `${price.toLocaleString("ko-KR")} (지수 ${prev.key} ${ppiPrev / 100} ÷ ${acq.key} ${ppiAcq / 100})을 취득가액으로 합니다` +
+        (clause1Active
+          ? "(① 의제취득일 현재 가액과는 매도 건별로 견줍니다 — 결과의 매수·매도 건별 채택 참조)."
+          : "(① 의제취득일 현재 매매사례·환산가액은 매수 건별 입력에서 산정하지 않습니다)."),
+    );
+    details.push({
+      lotIndex: i,
+      ...(lot.id !== undefined ? { lotId: lot.id } : {}),
+      acquisitionMonth: acq.key,
+      originalPerShare: lot.perShareAcquisitionPrice,
+      clause2PerShare: price,
+      ppiAtAcquisition: ppiAcq / 100,
+      ppiAtDeemedPrev: ppiPrev / 100,
+    });
+    return { ...lot, perShareAcquisitionPrice: price, preDeemedClause2PerShare: price };
+  });
+  return { lots: out, applied, warnings, details };
 }

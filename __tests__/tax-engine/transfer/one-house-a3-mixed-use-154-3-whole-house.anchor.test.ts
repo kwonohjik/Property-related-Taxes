@@ -15,7 +15,7 @@
  * 결함: 겸용 엔진이 면적 우열·전체 가액을 보지 않고 항상 상가분을 과세했다(리뷰 실측 12,262,104원).
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax, withIdentityHousingBuildingStd } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { buildMixedUsePartCards } from "@/app/api/calc/transfer/mixed-use-part-cards";
@@ -124,7 +124,7 @@ function companion(price: number): TransferTaxItemInput {
 }
 
 function aggregate(a: MixedUseAssetInput, price: number) {
-  const cards = buildMixedUsePartCards(companion(price), a, price, TD, rates, "c1", "자산 2");
+  const cards = buildMixedUsePartCards(companion(price), withIdentityHousingBuildingStd(a), price, TD, rates, "c1", "자산 2");
   return {
     cards,
     agg: calculateTransferTaxAggregate({ taxYear: 2024, properties: cards, annualBasicDeductionUsed: 0 }, rates),

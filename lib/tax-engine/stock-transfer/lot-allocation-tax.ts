@@ -2,7 +2,8 @@
  * 주식 양도세 split 모드 sub-lot 세율 적용 헬퍼 (stock-transfer-tax.ts 800줄 정책 분리)
  *
  * basicDeduction 안분 산식: subLotTaxBase = floor(taxBase × subLotGain / totalGain)
- * - 음수 sub-lot 제외 (taxBase 안분 시 0)
+ *   ① 정산(의제취득일 전 매수 lot — `settledGroupGains`)이 있으면 subLotGain·totalGain 은 필요경비를 그룹별로 뺀 순이익
+ * - 차손 sub-lot 은 영 §167의2① 순서로 통산 — 같은 세율 그룹 안에서 먼저, 남으면 다른 그룹에서 (`calcSplitModeTax`)
  * - 대주주+비SME: 단기 30% / 누진 (§104①11호 가목 1)·2))
  * - 비대주주: 단일 세율 (§104①11호 나목)
  */
@@ -15,6 +16,7 @@ import {
   STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { applyStockTaxRate, type RateCalcResult } from "./stock-transfer-rate-calc";
+import { settledGroupGains, type PreDeemedLotSettlement } from "./stock-pre-deemed-lot-clause1";
 
 export interface SplitModeTaxResult {
   calculatedTax: number;
@@ -52,8 +54,16 @@ export function resolveSplitRateResult(
   lotDetail: LotMatchingDetail,
   taxCategory: StockTransferResult["taxCategory"],
   isSME: boolean,
+  /** ① 정산(의제취득일 전 매수 lot) — 있으면 단기·장기 안분을 그룹 순이익으로 한다(`settledGroupGains`) */
+  clause1Settlement?: Pick<PreDeemedLotSettlement, "clause1SideActual" | "estimatedDeduction" | "swapApplied" | "swapRemovedAcquisition" | "expenses">,
 ): { rate: RateCalcResult; mixedNote?: string } {
-  const splitTax = calcSplitModeTax(taxBase, lotDetail, taxCategory, isSME);
+  const splitTax = calcSplitModeTax(
+    taxBase,
+    lotDetail,
+    taxCategory,
+    isSME,
+    clause1Settlement ? settledGroupGains(lotDetail, clause1Settlement) : undefined,
+  );
   return {
     rate: {
       // 혼합이면 0 — UI 가 "혼합" 라벨로 읽는 기존 규약을 유지한다.
@@ -87,8 +97,11 @@ export function calcSplitModeTax(
   lotDetail: LotMatchingDetail,
   taxCategory: StockTransferResult["taxCategory"],
   isSME: boolean,
+  /** 안분 비율 override — ① 정산이 있으면 필요경비를 그룹별로 뺀 순이익(없으면 sub-lot 총이익) */
+  groupGains?: { shortGain: number; totalGain: number },
 ): SplitModeTaxResult {
-  if (taxBase <= 0 || lotDetail.totalGain <= 0) {
+  const totalGain = groupGains?.totalGain ?? lotDetail.totalGain;
+  if (taxBase <= 0 || totalGain <= 0) {
     return { calculatedTax: 0, isMixedRate: false };
   }
 
@@ -125,12 +138,20 @@ export function calcSplitModeTax(
   // (실측: 장기 2 lot·과세표준 4.5억에서 per-lot 90,000,000 vs 집계 97,500,000).
   // §104⑤2호 단서가 "동일한 호의 세율이 적용되고 그 적용세율이 둘 이상인 경우 **합산**"으로
   // 같은 취지를 규정한다. 전량 장기이면 장기 그룹 = 전체라 단건 경로와 정확히 일치한다.
-  let shortGain = 0;
+  //
+  // 차손 sub-lot 은 영 §167의2①대로 통산한다 — 1호 같은 세율 그룹 안에서 먼저, 2호 남은 차손은 다른 그룹 이익에서.
+  // 그룹이 단기·장기 둘뿐이라 2호 안분 대상도 하나다 ⇒ 단기 몫 = 단기 그룹 순이익을 [0, 전체 순이익]으로 자른 값.
+  //   · 단기 그룹이 순차손이면 0 (장기 이익에서 공제됨) · 장기 그룹이 순차손이면 전체 순이익 (단기 이익에서 공제됨)
+  // 종전에는 양(+)인 단기 sub-lot 만 더해 단기 몫이 과세표준을 넘을 수 있었다
+  // (장기 −80,000,000·단기 +100,000,000 → 과세표준 17,500,000 에 세액 26,250,000 — 전액 30% 여도 5,250,000).
+  let shortNet = 0;
   for (const sub of lotDetail.matched) {
-    if (sub.perLotGain > 0 && sub.isShortTerm) shortGain += sub.perLotGain;
+    if (sub.isShortTerm) shortNet += sub.perLotGain;
   }
+  if (groupGains) shortNet = groupGains.shortGain;
+  const shortGain = Math.min(shortNet, totalGain); // 음수(단기 순차손)는 아래 `shortGain > 0` 가드가 0 으로 둔다
   // 안분 잔액은 장기 그룹이 흡수 — Σ = taxBase 불변식 (memory `feedback_floor_residual_absorption`).
-  const shortBase = shortGain > 0 ? Math.floor((taxBase * shortGain) / lotDetail.totalGain) : 0;
+  const shortBase = shortGain > 0 ? Math.floor((taxBase * shortGain) / totalGain) : 0;
   const longBase = taxBase - shortBase;
 
   const shortTax =

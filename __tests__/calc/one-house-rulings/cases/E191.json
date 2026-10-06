@@ -1,0 +1,31 @@
+[
+  {
+    "id": "E191-era",
+    "docNo": "부동산거래관리과-1031",
+    "docDate": "2011.12.13.",
+    "basis": "era",
+    "today": "2017-03-16",
+    "summary": "2주택 소유자가 B주택을 임대등록한 후 거주주택 A를 양도하고, 임대기간 5년을 채운 뒤 B 양도 — 직전거주주택(A) 양도일 후 기간분만 1세대1주택 비과세, 장기보유특별공제는 §95② 표2(최고 80%) (A 양도 2011.12.·B 양도 2017.3. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2017-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "B",
+          "rentalUnits": [],
+          "wasRegisteredRentalOrChildcare": true,
+          "priorResidenceTransferDate": "2011-12-20",
+          "postRegistrationResidenceMonths": "60"
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력(출력): 직전거주주택 양도일 후의 기간분만 1세대1주택으로 보는 §161① 기간 안분과 장기보유특별공제(§95② 표2 최고 80%) — 판정 메뉴는 §155⑳(B 시나리오)의 안분을 보지 않는다(Q-7 분할선: 세액은 계산기). 참고 관측(referenceForm: B 시나리오, 임대주택 0호 §154⑩ 경로·직전거주주택 양도 2011-12-20·등록 후 거주 60개월): isExempt=true — 원문은 전부가 아니라 기간분만 비과세라는 결론이라 이 값은 원문 결론을 표현하지 못한다. 가정: 양도 2017-03-15·양도가 5억·취득 2005-03-15."
+  }
+]

@@ -164,6 +164,16 @@ export const companionAssetSchema = z.object({
   standardPriceAtTransferForApportion: z.number().int().positive().optional(),
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
+  /**
+   * ⑫ 토지분 취득시 기준시가 = ㎡당 개별공시지가 × 면적(소득법 §99①1호 가목) — 분리 축(소유자 분리·별개 취득) 전용.
+   *
+   * 🔴 종전엔 칸이 없어 ④가 실어도 **조용히 strip**됐다 → `calcSplitGain` null → `selfOwns` 무시(비소유 파트 과세).
+   *    단건 스키마(`transfer-tax-schema-base-shape.ts`)와 같은 정의. ④는 분리 축이 활성일 때만 싣는다.
+   * ⚠️ `areaM2`(G-2 토지 컴패니언 부수토지 한도 판정)와 **다른 칸**이다. ⑭는 둘 다 엔진 `acquisitionArea`로 보내지만
+   *    이 칸은 주택·건물(분리 축)에서만, `areaM2`는 토지 컴패니언에서만 쓰여 같은 자산에서 겹치지 않는다.
+   */
+  standardPricePerSqmAtAcquisition: z.number().positive().optional(),
+  acquisitionArea: z.number().positive().optional(),
   /** ⑫ §164⑧ 환산 — 컴패니언 자산도 자기 취득·양도일 축으로 판정된다 */
   sameAdjustmentPeriod: sameAdjustmentPeriodSchema.optional(),
   /**

@@ -34,8 +34,12 @@ import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
 import { resolvePreDeemedBasis } from "./stock-pre-deemed-acquisition";
-import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
-import { allocateLots } from "./lot-allocation";
+import {
+  settlePreDeemedLotExpenses,
+  type PreDeemedLotSettlement,
+} from "./stock-pre-deemed-lot-clause1";
+import { buildPreDeemedLotsDetail } from "./stock-pre-deemed-lots-detail";
+import { prepareSplitLots, type SplitPrepared } from "./stock-transfer-split-prepare";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
 import { buildExemptResult } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
@@ -172,34 +176,15 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // ──────────────────────────────────────────────────────────
   let lotMatchingDetail: LotMatchingDetail | undefined;
   let lotCapitalAdjustmentsDetail: StockTransferResult["lotCapitalAdjustmentsDetail"];
+  let preDeemedLotDetails: SplitPrepared["preDeemedLotDetails"] = [];
   if (isSplitMode(input)) {
-    const isMajorAndNonSME =
-      !input.isSmallMediumEnterprise &&
-      (classification.taxCategory === "listed_major" ||
-        classification.taxCategory === "unlisted_major");
-    // [A-2] 자본조정 lot 전처리 — 발생일 이전 보유 lot만 희석 (allocateLots 직전)
-    let effectiveLots = input.acquisitionLots!;
-    if (input.capitalAdjustments && input.capitalAdjustments.length > 0) {
-      const ca = applyCapitalAdjustmentsToLots(effectiveLots, input.capitalAdjustments);
-      effectiveLots = ca.adjustedLots;
-      lotCapitalAdjustmentsDetail = ca.perLotApplied;
-      warnings.push(...ca.warnings);
-      // 자본조정 규칙은 warnings로 전달 — 단일모드(pr2-detail.ts) 패턴 일치, appliedRules union 미변경
-      for (const r of ca.appliedRules) if (!warnings.includes(r)) warnings.push(r);
-    }
-    lotMatchingDetail = allocateLots(
-      effectiveLots,
-      input.transferLots!,
-      input.costAllocationMethod!,
-      isMajorAndNonSME,
-      input.isSmallMediumEnterprise,
-      input.specificMatchings,
-    );
-    // appliedRules push
-    if (input.costAllocationMethod === "specific") appliedRules.push("로트개별법");
-    else if (input.costAllocationMethod === "fifo") appliedRules.push("로트선입선출");
-    else if (input.costAllocationMethod === "moving_avg") appliedRules.push("로트이동평균");
-    warnings.push(...lotMatchingDetail.warnings);
+    // ① ctx → 의제취득일 전 매수 lot ② → 자본조정 희석 → 매칭 (`stock-transfer-split-prepare.ts` — ⑤⑥ 미리보기와 같은 순서)
+    const split = prepareSplitLots(input, classification, is94_4);
+    lotMatchingDetail = split.lotMatchingDetail;
+    lotCapitalAdjustmentsDetail = split.lotCapitalAdjustmentsDetail;
+    preDeemedLotDetails = split.preDeemedLotDetails;
+    warnings.push(...split.warnings);
+    appliedRules.push(...split.appliedRules);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -287,8 +272,31 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
    */
   const lotDonorCapex = lotMatchingDetail?.carryoverDonorCapex ?? 0;
   const directExpenses = (input.actualExpenses ?? 0) + lotDonorCapex;
+  /** 부분 swap(§97②2호 단서) 으로 취득가액 차감에서 빠진 ① 환산 취득가액 — 아래 정산이 채운다 */
+  let lotSwapRemoved = 0;
 
-  if (usedEstimatedAcquisition && estimatedDeduction !== undefined && estimatedDeduction > 0) {
+  // 의제취득일 전 매수 lot ① 채택분이 있으면 필요경비를 방식별로 가른다(법 §97②1호 나목 / ②2호 + 단서) — 없으면 undefined
+  const lotClause1Settlement: PreDeemedLotSettlement | undefined = lotMatchingDetail?.preDeemedClause1Summary
+    ? settlePreDeemedLotExpenses({
+        summary: lotMatchingDetail.preDeemedClause1Summary,
+        actualExpenses: input.actualExpenses ?? 0,
+        lotDonorCapex,
+      })
+    : undefined;
+
+  const preDeemedLots = buildPreDeemedLotsDetail({
+    is94_4,
+    lots: preDeemedLotDetails,
+    summary: lotMatchingDetail?.preDeemedClause1Summary,
+    settlement: lotClause1Settlement,
+  });
+  warnings.push(...preDeemedLots.warnings);
+
+  if (lotClause1Settlement) {
+    expenses = lotClause1Settlement.expenses;
+    lotSwapRemoved = lotClause1Settlement.swapRemovedAcquisition;
+    if (lotClause1Settlement.swapApplied) appliedRules.push("§97②단서swap");
+  } else if (usedEstimatedAcquisition && estimatedDeduction !== undefined && estimatedDeduction > 0) {
     const directSide = directExpenses; // 자본적지출 + 양도비 합계 (expenseMode 무관)
     const estimatedSide = acquisitionPrice + estimatedDeduction; // 가목 = 환산취득가 + 개산공제
     if (directSide > estimatedSide) {
@@ -344,7 +352,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   if (lotGiftTaxRaw > 0) {
     const preGiftIncome = swapApplied
       ? transferPrice - expenses
-      : transferPrice - acquisitionPrice - expenses;
+      : transferPrice - (acquisitionPrice - lotSwapRemoved) - expenses;
     lotGiftTax = Math.min(lotGiftTaxRaw, Math.max(0, preGiftIncome - singleGiftTax));
   }
   expenses += singleGiftTax + lotGiftTax;
@@ -415,7 +423,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   //   🔑 §97의2①3호 증여세 한도(바로 위)도 **당회차 잔액** 기준이라 seam 앞에 둔다.
   // ──────────────────────────────────────────────────────────
   const ownTransferPrice = transferPrice;
-  const ownAcquisitionPrice = acquisitionPrice;
+  // 부분 swap 은 ① 환산 sub-lot 의 취득가액을 차감하지 않는다 — `swapApplied`(전체 제거 의미)는 재사용하지 않는다
+  const ownAcquisitionPrice = acquisitionPrice - lotSwapRemoved;
   const ownExpenses = expenses;
 
   const priorAggregation = buildPriorAggregation(input, isClause168_2Applicable);
@@ -526,6 +535,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       lotMatchingDetail,
       classification.taxCategory,
       input.isSmallMediumEnterprise,
+      lotClause1Settlement,
     );
     rateResult = split.rate;
     if (split.mixedNote) warnings.push(split.mixedNote);
@@ -673,6 +683,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     marketSampleDetail,
     capitalAdjustmentsDetail,
     ...(preDeemed?.detail ? { preDeemedAcquisitionDetail: preDeemed.detail } : {}),
+    ...(preDeemedLots.detail ? { preDeemedLotsDetail: preDeemedLots.detail } : {}),
 
     basicDeductionGroup: classification.basicDeductionGroup,
 

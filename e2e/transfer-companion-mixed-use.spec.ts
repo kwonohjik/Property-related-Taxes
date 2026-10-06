@@ -10,10 +10,11 @@
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/transfer-companion-mixed-use.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 /** 겸용주택 — 주택 60㎡ · 상가 40㎡ · 정착 50㎡ · 대지 600㎡(주거지역 3배 → 배율초과 발생). */
-const MIXED = {
+const MIXED = withMixedHousingStd({
   assetKind: "housing",
   isMixedUseHouse: true,
   acquisitionCause: "purchase",
@@ -32,7 +33,9 @@ const MIXED = {
   mixedAcqHousingPrice: "300000000",
   mixedAcqCommercialBuildingPrice: "100000000",
   mixedAcqLandPricePerSqm: "1000000",
-};
+// S3-2 — 주택건물 기준시가(나목). 양도는 항등(N = H − 가목), 취득은 H(300M) < 가목(1.0M × 360㎡)이라 항등 불가 →
+// 현실적 나목 90M(가목:나목 4:1 — 엔진 테스트 CLAMP_N과 같은 값).
+}, { acqN: 90_000_000 });
 
 /** 겸용을 **주 자산(1번)** 으로 둔 거울상 — 자리만 바뀌므로 세액이 같아야 한다. */
 function mirrored(assets: Record<string, unknown>[]) {

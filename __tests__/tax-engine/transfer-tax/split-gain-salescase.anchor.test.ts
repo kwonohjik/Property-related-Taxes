@@ -26,6 +26,8 @@ const base = {
   standardPricePerSqmAtAcquisition: 10_000,
   acquisitionArea: 60,
   standardPriceAtAcquisition: 1_000_000,
+  // S3-1 — 나목 = H − L(40만): 비례 쌍 {60만, 40만}이 종전 뺄셈과 같다(H = L + N → landRatio 0.6 불변).
+  buildingStandardPriceAtAcquisition: 400_000,
   standardPriceAtTransfer: 2_000_000,
   // 양도가액 안분 근거 — 소득령 §166⑥ → 부가세령 §64①1호(양도 **현재** 기준시가 비율).
   // 종전에는 취득시 비율(60%)로 후퇴하는 엔진 fallback에 의존했으나 그 fallback이 폐지됐다.

@@ -17,11 +17,12 @@ import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/st
 import { temporaryTwoHouseApplies } from "./household-house-count";
 import { replacementHouseApplies } from "./replacement-house-scope";
 import {
-  eligibleCountExcludedHouseIds,
   rowCountExclusionReductions,
   rowSpecialHouseExclusions,
 } from "@/lib/calc/house-count-exclusion-rows";
+import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import type { RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
+import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /**
  * §155①⑥⑦⑧⑯⑱ 섹션 — 2주택 이상일 때만 의미가 있다.
@@ -94,10 +95,12 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       primaryKind: primary?.assetKind,
       primaryAcquisitionDate: primary?.acquisitionDate,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,
-      excludedHouseIds: eligibleCountExcludedHouseIds(form),
+      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
+      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     }),
   }).mode;
 }

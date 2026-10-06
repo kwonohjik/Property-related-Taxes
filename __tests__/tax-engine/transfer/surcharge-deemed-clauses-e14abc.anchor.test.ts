@@ -40,7 +40,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { judgeRentalHousingEligibility } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
 import { baseTransferInput, makeMockRatesWithHouseEngine, makeHouseInfo as makeHouseInfoMock } from "../_helpers/mock-rates";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
@@ -287,8 +287,10 @@ describe("E-14c §156의2·§156의3 — 15호가 아니라 §167의11①13호·
     expect(r.appliedRate).toBe(0.38);
   });
 
-  it("R-2n 부정 짝 — 주택 2 + 입주권 1에서 §89② 예외 판정 보류(undetermined) → 중과 배제에 기대지 않는다 497,046,000", () => {
-    // 비과세는 판정 보류를 종전 동작(적용)으로 두고 경고한다. 중과는 그 가정에 기대지 않는다(확인 필요).
+  it("R-2n 부정 짝 — 주택 2 + 입주권 1(특수주택 선언 없음) → §89② 배제 확정 · 중과 배제에 기대지 않는다 1,327,903,500", () => {
+    // E011(2026-10-06) — 종전에는 §89② 판정 보류라 비과세를 종전 동작(고가주택 부분 비과세)으로 두어 497,046,000이었다.
+    //   특수주택 선언이 없는 2주택 + 1권리는 남는 예외가 없어 배제 확정 → §89①3호가 꺼져 전액 과세된다.
+    //   이 짝이 지키는 성질(중과가 §155 의제에 기대지 않는다 — 3주택+ 중과 그대로)은 같다.
     const r = calc(
       input({
         householdHousingCount: 2,
@@ -297,7 +299,7 @@ describe("E-14c §156의2·§156의3 — 15호가 아니라 §167의11①13호·
         presaleRights: [{ ...RIGHT_2025, acquisitionDate: D("2012-01-01") }] as never,
       }),
     );
-    expect(r).toMatchObject({ totalTax: 497_046_000, reasons: "", surchargeType: "multi_house_3plus" });
+    expect(r).toMatchObject({ totalTax: 1_327_903_500, reasons: "", surchargeType: "multi_house_3plus" });
   });
 
   it("R-3n 부정 짝(실흐름) — 주택 3 + 분양권 1 + 동거봉양 합가·일시적 2주택 중첩 → §89② 판정 보류라 의제 미주입 · 중과 497,046,000", () => {

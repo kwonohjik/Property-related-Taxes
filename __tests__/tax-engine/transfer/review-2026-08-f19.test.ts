@@ -31,7 +31,7 @@
  *   (F19 게이트 판정 — proviso·취득가액·개산공제 — 은 보유기간과 무관해 그대로다.)
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 

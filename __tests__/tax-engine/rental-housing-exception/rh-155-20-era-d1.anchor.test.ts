@@ -205,12 +205,40 @@ describe("OH-40 생애 한 차례 제한(A) — 거주주택 취득일·양도�
     expect(e.passed).toBe(true);
   });
 
-  it("OH40-4 경과조치(부칙 제7조② — 시행 당시 거주·시행 전 계약금 지급) → 종전 규정", () => {
-    const e = checkEligibility(
+  it("OH40-4 경과조치(부칙 제7조② — 시행 당시 거주·시행 전 계약금 지급 + 그 전 등록 임대주택) → 종전 규정", () => {
+    const at = (basis: "residing" | "contract_with_prior_rental") =>
+      checkEligibility(
+        [unitOk], 5, 5, false,
+        ctxA("2019-06-01", "2024-06-01", {
+          priorRentalExemptionHistory: "used",
+          residenceTransitionUnderAddendum: true,
+          residenceTransitionBasis: basis,
+        }),
+      );
+    expect(at("residing").passed).toBe(true);
+    expect(at("contract_with_prior_rental").passed).toBe(true);
+  });
+
+  /**
+   * D11 — 2호(계약금) 경로는 2019.2.12. 전 등록 임대주택이 없으면 종전 규정을 받지 못한다(서면-2020-법령해석재산-1464 ·
+   * 서면-2021-법규재산-4760). 사유를 모르면(체크만 · 구 기록) 풀지 않는다(「모름」은 혜택 불성립) — 고지한다.
+   */
+  it("OH40-4b 경과조치 체크 + 계약금·임대주택 없음 / 사유 미입력 → 생애 한 차례 제한 적용", () => {
+    const without = checkEligibility(
+      [unitOk], 5, 5, false,
+      ctxA("2019-06-01", "2024-06-01", {
+        priorRentalExemptionHistory: "used",
+        residenceTransitionUnderAddendum: true,
+        residenceTransitionBasis: "contract_without_prior_rental",
+      }),
+    );
+    expect(without.passed).toBe(false);
+    const unknown = checkEligibility(
       [unitOk], 5, 5, false,
       ctxA("2019-06-01", "2024-06-01", { priorRentalExemptionHistory: "used", residenceTransitionUnderAddendum: true }),
     );
-    expect(e.passed).toBe(true);
+    expect(unknown.passed).toBe(false);
+    expect((unknown.notices ?? []).some((n) => n.includes("사유"))).toBe(true);
   });
 
   it("OH40-5 이력 없음(최초 양도) → 적용", () => {

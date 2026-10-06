@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import type { AmendmentInput } from "@/lib/tax-engine/types/transfer-amendment.types";
 import { makeMockRates } from "../_helpers/mock-rates";
 import {

@@ -23,7 +23,7 @@
  *   X4. 환산 모드는 **개산공제 정본** — 공통 비용이 세액을 움직이지 않는다(§97②2호 본문)
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 

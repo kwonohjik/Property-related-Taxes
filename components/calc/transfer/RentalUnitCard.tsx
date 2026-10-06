@@ -197,6 +197,11 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           />
         </FieldCard>
       </div>
+      {/* D10 — 엔진은 입력한 날짜를 양도일과 비교한다. 신청일과 실제 등록일이 다를 수 있음을 알린다. */}
+      <p className="text-caption text-muted-foreground px-1">
+        ※ 두 등록은 거주주택 양도일 현재 마쳐져 있어야 합니다. 신청은 양도 전에 했어도 등록이 양도일 뒤에
+        됐다면 특례가 적용되지 않으므로, 이 경우 실제 등록일을 확인하세요.
+      </p>
 
       {/* 취득 방법 (나·라목은 매입임대 전용 — 숨김) */}
       {isLockedPurchase ? (
@@ -664,11 +669,23 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         size="sm"
         tone="violet"
         data-testid={`rental-requirements-confirmed-${index}`}
-        title="임대료 5% 상한, 임대사업자 등록 유지(양도일 현재 등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
+        title={
+          /**
+           * U2 — 말소된 호는 양도일 현재 등록·임대 중일 수 없다. ㉓은 말소 전까지 요건을 갖췄으면 말소 후 임대 중단·
+           * 5% 미준수·사업자등록 미유지여도 적용된다(기획재정부 재산세제과-151, 2022.1.24.) — 확인 대상은 말소 전까지다.
+           */
+          showTermination && unit.rentalAutoTermination
+            ? "등록 말소 전까지 임대료 5% 상한, 임대사업자 등록 유지(등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족했습니다."
+            : "임대료 5% 상한, 임대사업자 등록 유지(양도일 현재 등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
+        }
         description={
           unit.requirementsConfirmed
             ? undefined
-            : "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호). 5% 상한은 2019년 2월 12일 이후, " +
+            : (showTermination && unit.rentalAutoTermination
+                ? "말소 후 임대를 중단했거나 임대료·사업자등록 요건을 지키지 않았어도 말소 전까지 충족했으면 체크하세요 " +
+                  "(소령 §155㉓ · 기획재정부 재산세제과-151). "
+                : "") +
+              "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호). 5% 상한은 2019년 2월 12일 이후, " +
               "1년 이내 재증액 금지는 2020년 2월 11일 이후 체결·갱신한 임대차계약분부터 적용됩니다(대통령령 제29523호 " +
               "부칙 제6조 · 제30395호 부칙 제16조) — 그 전 계약에서 올린 것은 보지 않고, 2019년 2월 12일 이후 처음 " +
               "체결·갱신한 표준임대차계약이 비교 기준입니다(서면-2020-부동산-3300)."

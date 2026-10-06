@@ -19,6 +19,8 @@ import {
   applyDeemedAcquisitionDate,
 } from "./stock-transfer-helpers";
 import { allocateLots } from "./lot-allocation";
+import { applyPreDeemedToLots } from "./stock-pre-deemed-acquisition";
+import { buildPreDeemedLotClause1Context } from "./stock-pre-deemed-lot-clause1";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
 import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 
@@ -61,13 +63,18 @@ export function buildExemptResult(
   // 비과세 분기에서도 split 모드면 lotMatchingDetail 검산용 echo
   let lotMatchingDetail: LotMatchingDetail | undefined;
   if (isSplitMode(input)) {
+    // 정상 경로와 같은 헬퍼 — 의제취득일 전 매수 lot ②(영 §176의2④2호) 후 ① 비교 ctx (single-source · 계획서 Q-10)
+    const is94_4 = isSection94_4Category(classification.taxCategory);
+    const clause1 = buildPreDeemedLotClause1Context(input, is94_4);
+    const preDeemed = applyPreDeemedToLots(input.acquisitionLots!, input.marketType, is94_4, clause1.ctx !== undefined);
     lotMatchingDetail = allocateLots(
-      input.acquisitionLots!,
+      preDeemed.lots,
       input.transferLots!,
       input.costAllocationMethod!,
       false, // 비과세 분기에서 단기 30% 게이트 무의미
       input.isSmallMediumEnterprise,
       input.specificMatchings,
+      preDeemed.applied ? clause1.ctx : undefined,
     );
   }
 

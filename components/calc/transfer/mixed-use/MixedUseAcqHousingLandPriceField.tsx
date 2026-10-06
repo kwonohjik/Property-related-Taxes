@@ -20,8 +20,9 @@ interface Props {
 /**
  * 겸용주택 — 주택부수토지 개별공시지가 (**건물 취득일 기준**) 입력칸 (B0).
  *
- * 개별주택공시가격(건물 취득일 공시)에서 같은 날짜의 토지분을 빼야 건물분이 되는데, 토지·건물 취득일이
- * 다르면 기존 「토지 취득일 기준」 공시지가로는 그 짝을 맞출 수 없다. 노출 술어는 ④ 전송·⑧ 필수와 같은
+ * 개별주택공시가격(건물 취득일 공시)은 토지+건물 결합가라 가목(같은 날짜의 토지 기준시가) : 나목(주택건물 기준시가)
+ * 비율로 나누는데(S3-2 — 종전 뺄셈 아님), 토지·건물 취득일이 다르면 기존 「토지 취득일 기준」 공시지가로는
+ * 그 비례의 가목을 건물 취득일과 맞출 수 없다. 노출 술어는 ④ 전송·⑧ 필수와 같은
  * `needsMixedAcqLandPriceAtBuildingAcq` — 거짓이면 **미렌더**(값은 store에 남되 보내지도 요구하지도 않는다).
  *
  * 폴백 없음: `mixedAcqLandPricePerSqm`(토지 취득일 값)·PHD·1990 환산으로 채우지 않는다.
@@ -45,7 +46,7 @@ export function MixedUseAcqHousingLandPriceField({ asset, onChange, jibun, area 
           referenceDate={asset.acquisitionDate}
           jibun={jibun}
           label="주택부수토지 개별공시지가 (원/㎡) — 건물 취득일 기준"
-          hint="개별주택공시가격은 토지+건물 일괄가액이라, 건물분을 구하려면 같은 기준일의 토지분(공시지가 × 주택부수토지 면적)을 빼야 합니다. 상가부수토지 개별공시지가(토지 취득일 기준)로 대신하지 않습니다."
+          hint="개별주택공시가격은 토지+건물 일괄가액이라, 이를 토지분·건물분으로 나누려면 같은 기준일(건물 취득일)의 토지 기준시가(공시지가 × 주택부수토지 면적)가 필요합니다. 상가부수토지 개별공시지가(토지 취득일 기준)로 대신하지 않습니다."
           placeholder="건물 취득일 기준 개별공시지가 /㎡"
           pricePerSqmTestId="mixed-acq-land-price-at-building-acq-input"
           landStdPriceTestId={area !== undefined ? "mixed-acq-land-std-at-building-acq" : undefined}

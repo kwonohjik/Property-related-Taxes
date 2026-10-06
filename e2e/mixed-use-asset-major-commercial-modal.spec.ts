@@ -73,7 +73,8 @@ test.describe("겸용주택 자산-우선 — 상가건물 통합 모달", () =>
     await expect(page.getByText("상가 기준시가", { exact: true })).toBeVisible();
 
     // ── 상가 섹션 통합 모달 열기 ──
-    await page.getByRole("button", { name: "건물 기준시가 계산" }).click();
+    // S3-2 — 주택 섹션에 「취득시/양도시 주택건물 기준시가 계산」 런처가 생겨 부분 일치로는 3개가 잡힌다 — 상가 통합 모달 런처는 정확 일치.
+    await page.getByRole("button", { name: "건물 기준시가 계산", exact: true }).click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 

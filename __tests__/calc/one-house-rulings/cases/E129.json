@@ -1,0 +1,155 @@
+[
+  {
+    "id": "E129-era",
+    "docNo": "기획재정부 재산세제과-795",
+    "docDate": "2012.09.28.",
+    "basis": "era",
+    "today": "2012-09-28",
+    "summary": "조특법 §99의4 농어촌주택과 일반주택을 보유한 직계존속(60세 이상) 세대와 1주택 직계비속 세대가 동거봉양 합가(2010.6.), 직계비속이 합가 전부터 보유한 주택을 합가 후 6개월에 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-12-15",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2010-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2007-05-15"
+      },
+      "houses": [
+        {
+          "id": "f-seoul",
+          "region": "capital",
+          "acquisitionDate": "2001-12-15",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "f-rural",
+          "region": "non_capital",
+          "acquisitionDate": "2003-11-15",
+          "mergeOrigin": "counterpart_side",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 조특법 §99의4 요건을 갖춘 농어촌주택과 일반주택을 보유한 직계존속 세대와 1주택 직계비속 세대가 동거봉양 합가 — 직계비속이 합가 전부터 보유한 주택을 기한 내 양도하면 1세대1주택(§155④). 「농어촌주택 취득 전 보유 일반주택」 순서는 합가 상대방 세대(농어촌주택을 보유하던 쪽)의 다른 주택과 비교한다(lib/tax-engine/transfer-reductions/new-99-4.ts new994GeneralHouseAcquisitionDate) — 양도 주택(직계비속 주택)은 농어촌주택보다 나중 취득이다. 음성 짝 E129-era-noprior: 직계존속의 다른 주택도 농어촌주택보다 나중 취득이면 순서 불성립 → 과세. 일자: 원문 그대로(부 주택 2001-12, 농어촌 2003-11, 아들 2007-05, 합가 2010-06, 양도 2010-12) 월 단위는 15일, 양도가 4억, 당시 합가 기한 5년."
+  },
+  {
+    "id": "E129-current",
+    "docNo": "기획재정부 재산세제과-795",
+    "docDate": "2012.09.28.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조특법 §99의4 농어촌주택과 일반주택을 보유한 직계존속(60세 이상) 세대와 1주택 직계비속 세대가 동거봉양 합가(2018.5.), 직계비속이 합가 전부터 보유한 주택을 합가 후 7년 11개월에 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-04-20",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2018-05-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-05-15"
+      },
+      "houses": [
+        {
+          "id": "f-seoul",
+          "region": "capital",
+          "acquisitionDate": "2005-12-15",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "f-rural",
+          "region": "non_capital",
+          "acquisitionDate": "2010-11-15",
+          "mergeOrigin": "counterpart_side",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 조특법 §99의4 요건을 갖춘 농어촌주택과 일반주택을 보유한 직계존속 세대와 1주택 직계비속 세대가 동거봉양 합가 — 직계비속이 합가 전부터 보유한 주택을 기한 내 양도하면 1세대1주택(§155④). 「농어촌주택 취득 전 보유 일반주택」 순서는 합가 상대방 세대(농어촌주택을 보유하던 쪽)의 다른 주택과 비교한다(lib/tax-engine/transfer-reductions/new-99-4.ts new994GeneralHouseAcquisitionDate) — 양도 주택(직계비속 주택)은 농어촌주택보다 나중 취득이다. 음성 짝 E129-era-noprior: 직계존속의 다른 주택도 농어촌주택보다 나중 취득이면 순서 불성립 → 과세. 현행 규칙: 동거봉양 합가 기한 10년. 합가 2018-05-15 → 양도 2026-04-20, 직계존속 주택 2005-12-15·농어촌주택 2010-11-15, 직계비속 주택 2012-05-15. 비조정·양도가 8억 중립."
+  },
+  {
+    "id": "E129-era-noprior",
+    "docNo": "기획재정부 재산세제과-795",
+    "docDate": "2012.09.28.",
+    "basis": "era",
+    "today": "2012-09-28",
+    "summary": "E129-era의 음성 짝 — 직계존속의 서울 주택을 농어촌주택보다 나중에 취득(농어촌주택 취득 전 보유 일반주택 없음)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-12-15",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2010-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2007-05-15"
+      },
+      "houses": [
+        {
+          "id": "f-seoul",
+          "region": "capital",
+          "acquisitionDate": "2004-05-15",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "f-rural",
+          "region": "non_capital",
+          "acquisitionDate": "2003-11-15",
+          "mergeOrigin": "counterpart_side",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 합가 상대방 세대에 농어촌주택(2003-11-15)보다 먼저 취득한 다른 주택이 없으면 §99의4 「취득 전 보유 일반주택」 순서가 성립하지 않아 농어촌주택이 주택 수에서 빠지지 않는다 — 3주택 합가로 과세. E129-era와 직계존속 주택 취득일 하나만 다른 최소쌍."
+  }
+]

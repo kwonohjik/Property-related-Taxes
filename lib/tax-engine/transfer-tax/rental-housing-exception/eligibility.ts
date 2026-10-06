@@ -50,6 +50,7 @@ import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
 import {
   isMa1IncludedIn15520,
   isLifetimeLimitEra155_20,
+  isAddendumTransitionEffective,
   isPreLifetimeLimitRegime,
   needsPre2019ArticleScopeNotice,
 } from "../../data/rental-155-20-era";
@@ -96,6 +97,7 @@ export type EligibilityContext = {
   | "postRegistrationResidenceMonths"
   | "priorRentalExemptionHistory"
   | "residenceTransitionUnderAddendum"
+  | "residenceTransitionBasis"
   | "priorResidenceTransferDate"
   | "wasRegisteredRentalOrChildcare"
 >;
@@ -297,6 +299,11 @@ function buildFailMessage(
     }
     case "REQUIREMENTS_NOT_CONFIRMED":
       return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
+    case "REGISTERED_AFTER_TRANSFER":
+      return (
+        `${n}호: 거주주택 양도일 현재 세무서 사업자등록과 지자체 임대주택 등록을 모두 마쳐야 합니다 ` +
+        `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 2호) — 입력한 등록일 중 양도일보다 늦은 날이 있습니다.`
+      );
     case "APT_TRANSFER_DEADLINE_EXCEEDED":
       return (
         `${n}호: 해당 유형(${article}목)의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
@@ -382,8 +389,20 @@ export function checkEligibility(
    * (전단)의 문언이라 §154⑩ 표준 경로(`isStandalone154_10`)에는 적용되지 않는다.
    */
   if (!isStandalone154_10 && ctx) {
-    const transition = ctx.residenceTransitionUnderAddendum === true;
-    if (isLifetimeLimitEra155_20(ctx.residenceAcquisitionDate, ctx.transferDate, transition)) {
+    // D11 — 경과조치는 사유까지 있어야 괄호를 푼다(2호 계약금 경로는 2019.2.12. 전 등록 임대주택 소유 필요).
+    const claimed = ctx.residenceTransitionUnderAddendum === true;
+    const transition = isAddendumTransitionEffective(claimed, ctx.residenceTransitionBasis);
+    const inEra = isLifetimeLimitEra155_20(ctx.residenceAcquisitionDate, ctx.transferDate, transition);
+    if (inEra && claimed && !ctx.residenceTransitionBasis) {
+      notices.push(
+        "2019.2.12 부칙 경과조치(대통령령 제29523호 부칙 제7조②)의 사유(당시 거주 · 그 전 계약금 지급)가 입력되지 않아 종전 규정을 적용하지 않았습니다 — 판정 메뉴에서 사유를 선택하세요(확인 필요).",
+      );
+    } else if (inEra && ctx.residenceTransitionBasis === "contract_without_prior_rental") {
+      notices.push(
+        "2019.2.12 전에 계약금을 지급했더라도 그 전에 지방자치단체·세무서에 등록한 임대주택을 소유하지 않았으면 부칙 경과조치(종전 규정)를 적용받지 못해 생애 한 차례 제한이 적용됩니다(서면-2020-법령해석재산-1464 · 서면-2021-법규재산-4760).",
+      );
+    }
+    if (inEra) {
       if (ctx.scenario === "B") {
         // 「민간임대주택으로 등록한 사실이 있는 주택인 경우에는 1주택 외의 주택을 모두 양도한 후
         //   1주택을 보유하게 된 경우로 한정」 — 임대주택을 계속 보유 중이면 직전거주주택보유주택이 아니다.
@@ -507,6 +526,20 @@ export function checkEligibility(
      */
     if (!unit.requirementsConfirmed && !result.failCodes.includes("REQUIREMENTS_NOT_CONFIRMED")) {
       result.failCodes.push("REQUIREMENTS_NOT_CONFIRMED");
+      result.passed = false;
+    }
+    /**
+     * D10 — 같은 2호의 「양도일 현재」 사업자등록·민간임대주택 등록은 두 등록이 모두 양도일 당일까지 돼
+     * 있어야 한다(조심-2016-서-0143 지자체 등록이 양도 후 · 조심-2016-서-1629 세무서 등록이 양도 후 → 불충족).
+     * 종전에는 두 날짜를 목·의무기간 도출에만 쓰고 양도일과 비교하지 않았다. 말소 호도 등록은 양도 전이다.
+     */
+    if (
+      ctx &&
+      [unit.businessRegistrationDate, unit.rentalRegistrationDate].some(
+        (d) => d && !Number.isNaN(d.getTime()) && dayOf(d) > dayOf(ctx.transferDate),
+      )
+    ) {
+      result.failCodes.push("REGISTERED_AFTER_TRANSFER");
       result.passed = false;
     }
 

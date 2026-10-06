@@ -15,7 +15,7 @@
  *   `!input.isOneHousehold` 게이트, 겸용 상속 제외(E-14d)는 `isOneHouseholdForHouseCount` 게이트가 이미 막고 있었다.
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14, CASE14_TRANSFER_DATE } from "../_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

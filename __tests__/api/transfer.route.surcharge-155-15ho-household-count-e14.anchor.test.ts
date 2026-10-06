@@ -38,6 +38,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST as SINGLE } from "@/app/api/calc/transfer/route";
+import { withIdentityStdInBody } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -149,7 +150,7 @@ const post = (handler: (req: NextRequest) => Promise<Response>, url: string, bod
     new NextRequest(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(withIdentityStdInBody(body)),
     }),
   );
 

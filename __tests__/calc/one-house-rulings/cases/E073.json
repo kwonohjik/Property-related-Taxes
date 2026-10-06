@@ -1,0 +1,107 @@
+[
+  {
+    "docNo": "사전-2020-법령해석재산-0178",
+    "docDate": "2020.12.01.",
+    "id": "E073-era",
+    "basis": "era",
+    "today": "2019-12-20",
+    "summary": "1분양권(2013 계약)을 보유한 세대가 별도세대 피상속인으로부터 주택 B를 상속(2014.10.)받은 뒤, 분양권으로 취득(2015.3.)한 주택 A를 양도(2019.12.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2019-12-03",
+      "contractTotalPrice": "500000000",
+      "generalHouseRightAtInheritance": "none",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-31"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2014-10-28",
+          "isInherited": true,
+          "inheritedDate": "2014-10-28",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 사실 일자는 원문 기재(분양계약 2013-03-23, 상속 2014-10-28, 잔금·취득 2015-03-31, 양도 2019-12-03). 양도가 5억 중립, 비조정. 표현: 분양권(2013 계약)은 2021.1.1. 이후 취득분이 아니므로 신축주택 선언은 「해당 없음」(generalHouseRightAtInheritance=none), 상속주택 B는 별도세대·단독상속. 관측: 과세 — 양도 주택이 상속개시 후 취득이라 §155② 괄호의 일반주택이 아님(unmet 155-2-inherited-house). 「분양권으로 취득한 신축주택」 선언으로 바꿔도 양도일이 2021.1.1. 이전이라 같은 결과(V-E073-presale)."
+  },
+  {
+    "docNo": "사전-2020-법령해석재산-0178",
+    "docDate": "2020.12.01.",
+    "id": "E073-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "2021.1.1. 이후 취득한 분양권을 보유한 세대가 별도세대 피상속인으로부터 주택 B를 상속받은 뒤, 그 분양권으로 사업시행 완료 후 취득한 신축주택 A를 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "generalHouseRightAtInheritance": "presale_right",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-05-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2021-09-10",
+          "isInherited": true,
+          "inheritedDate": "2021-09-10",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2021.1.1. 이후 양도분부터, 상속개시 당시 보유한 분양권(2021.1.1. 이후 취득분)으로 사업시행 완료 후 취득한 신축주택도 상속주택 특례의 일반주택에 포함. 같은 사실 패턴을 상속 2021-09-10, 신축 취득 2024-05-15, 양도 2026-05-20으로 재구성(분양권 취득이 2021.1.1. 이후라는 사실은 선택지 「2021.1.1. 이후 취득한 분양권」이 담보). 새 축 중립: 비조정, 양도가 7억, 양도일 2026-10-01 이전, 상속주택 B는 별도세대·단독상속. 관측: 비과세, B 제외."
+  },
+  {
+    "docNo": "사전-2020-법령해석재산-0178",
+    "docDate": "2020.12.01.",
+    "id": "E073-current-neg",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "경계 음성 짝 — 분양권 취득이 2021.1.1. 이전(2020.12.)인 경우 (나머지는 E073-current와 같음)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "generalHouseRightAtInheritance": "none",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-05-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2021-09-10",
+          "isInherited": true,
+          "inheritedDate": "2021-09-10",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경계 음성 짝). E073-current에서 분양권 취득이 2021.1.1. 이전이라 「해당 없음」을 고른 경우 — 일반주택 요건 불충족으로 과세(unmet 155-2-inherited-house). 선택지 하나가 결론을 가르므로 엔진이 이 축을 실제로 본다."
+  }
+]

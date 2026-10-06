@@ -1,0 +1,82 @@
+[
+  {
+    "id": "E146-era",
+    "docNo": "사전-2017-법령해석재산-0289",
+    "docDate": "2017.06.15.",
+    "basis": "era",
+    "today": "2017-06-10",
+    "summary": "동일세대원(父)에게서 수도권 밖 면지역 주택(피상속인 5년 이상 거주)을 상속(1990)받은 뒤 배우자가 취득한 수도권 일반주택(2013)을 양도(2017.3.)",
+    "form": {
+      "isOneHousehold": true,
+      "generalHouseRightAtInheritance": "none",
+      "transferDate": "2017-03-27",
+      "contractTotalPrice": "270000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-06-14"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "1990-09-18",
+          "isInherited": true,
+          "inheritedDate": "1990-09-18",
+          "decedentSameHouseholdAtInheritance": true,
+          "ruralHouseKind": "inherited",
+          "ruralDecedentResidenceYears": "10",
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-7-rural:inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(D7 수정 후). 동일세대원(父)에게서 상속(1990)받은 면지역 주택 — ⑦1호에도 §155② 단서가 걸려 「상속받은 주택」이 아니다 → 배우자 취득 일반주택 양도 과세. 종전에는 비과세. ⚠️ §155② 단서 자체는 2010.2.18. 개정(대통령령 제22034호, 시행 후 최초 양도분부터)으로 생긴 문언이고 이 건 양도는 2017년이라 문언 적용 구간이다. 가정."
+  },
+  {
+    "id": "E146-era-pos",
+    "docNo": "사전-2017-법령해석재산-0289",
+    "docDate": "2017.06.15.",
+    "basis": "era",
+    "today": "2017-06-10",
+    "summary": "E146-era와 같되 상속개시 당시 피상속인과 별도세대였던 경우 — 양성 짝",
+    "form": {
+      "isOneHousehold": true,
+      "generalHouseRightAtInheritance": "none",
+      "transferDate": "2017-03-27",
+      "contractTotalPrice": "270000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-06-14"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "1990-09-18",
+          "isInherited": true,
+          "inheritedDate": "1990-09-18",
+          "decedentSameHouseholdAtInheritance": false,
+          "ruralHouseKind": "inherited",
+          "ruralDecedentResidenceYears": "10",
+          "oneHouseRuralHouse": true,
+          "ruralOutsideCapitalEupMyeon": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-7-rural:inherited"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 짝 — 별도세대 상속이면 §155② 단서가 걸리지 않아 ⑦1호 상속 농어촌주택으로 일반주택 양도 비과세."
+  }
+]

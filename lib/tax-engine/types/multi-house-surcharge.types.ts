@@ -30,7 +30,11 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
 
 /** 세대 구성원이 보유한 주택 1채 정보 */
 /** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
-export type MergeOrigin = "seller_side" | "counterpart_side";
+/**
+ * 합가 전 보유 쪽. `second_merge_side` — **혼인 후 동거봉양 합가**(D4)에서 동거봉양으로 합친 가족(직계존속) 쪽.
+ * 그때 `counterpart_side`는 배우자 쪽이다. 단일 합가에서는 쓰지 않는다(구성 판정이 불성립으로 센다).
+ */
+export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
 
 export interface HouseInfo {
   /** 내부 식별자 */
@@ -88,6 +92,12 @@ export interface HouseInfo {
    * decedentSameHouseholdAtInheritance === true(동일세대)일 때만 의미. true면 동일세대라도 특례 적용(제외).
    */
   parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * D17 재상속 — 피상속인이 별도세대로부터 상속받은 §155② 상속주택을 피상속인 사망으로 동일세대원인 상속인이 다시
+   * 상속받았다. `decedentSameHouseholdAtInheritance === true`일 때만 의미. true면 상속주택 지위를 이어받아 단서를 받지 않는다
+   * (서일46014-10689 · 서면5팀-1763 · 재산세과-2961 · 부동산납세과-624 · 서면-2022-법규재산-4747).
+   */
+  reInheritedFromSeparateHousehold?: boolean;
   /**
    * 피상속인이 상속개시 당시 2 이상 주택을 소유했고, 이 주택이 §155②1~4호 순위상 상속주택(1주택)이
    * 아닌지 — 순위 부적격. true = 특례 부적격(제외 안 함) / false·미제공 = 적격(또는 피상속인 단일주택).

@@ -30,11 +30,21 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { POST as SINGLE } from "@/app/api/calc/transfer/route";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+
+/**
+ * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
+ * 종전 뺄셈(`H − 가목`)은 건물분을 0으로 clamp(토지 100%)했지만 비례에는 clamp가 없어 **현실적인 나목을 정해야** 한다.
+ * 취득시 주택건물 기준시가(나목) 90M — 가목:나목 = 360M:90M(4:1) → 토지분 floor(300M × 360/450) = 240M · 건물분 60M.
+ * (양도시는 H_T 900M > L_T 720M이라 항등 나목 180M이 성립 — 값 불변.) 기대값은 이 나목으로 재산출했다.
+ */
+const CLAMP_N = { acqN: 90_000_000 } as const;
+
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
 
@@ -100,7 +110,8 @@ function form(asset: Record<string, unknown>, top: Record<string, unknown>): For
   const f = createDefaultTransferFormData();
   f.assets[0] = { ...f.assets[0], ...asset } as Form["assets"][number];
   Object.assign(f, top);
-  return f;
+  // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님). 겸용이 아닌 자산은 그대로.
+  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
 }
 
 const BASE = {
@@ -261,11 +272,12 @@ describe("EX §164⑨ — 비우면 400 (종전 200 + 특례가 조용히 빠진
     householdNoPresaleRightsConfirmed: true, // 명부 필수화(PR-D) — 분양권·입주권 없음
     residencePeriodMonths: "0",
   };
-  it("EX-5 겸용 — ⚖️ ⑧ 통과 · 🟢 150,265,715 / 🔴 서브객체 4필드 생략 400 (종전 167,408,572·158,037,144)", async () => {
+  it("EX-5 겸용 — ⚖️ ⑧ 통과 · 🟢 150,769,715(S3-2: 종전 150,265,715) / 🔴 서브객체 4필드 생략 400 (종전 167,408,572·158,037,144)", async () => {
     const f = form(MIXED, MIXED_TOP);
     expect(issues(f)).toEqual([]);
     const b = await bodyOf(f);
-    await expectTax(b, 150_265_715);
+    // S3-2 갱신 — 개산공제 base 합이 라목 가액(H 300M) × 3% = 9,000,000이 됐다(종전 뺄셈은 H < 가목이라 가목 360M 전부 × 3% = 10,800,000으로 H를 넘겼다). 토지·건물 분배 자체는 세액에 안 닿는다(같은 보유기간·초과 없음).
+    await expectTax(b, 150_769_715);
     // SP 범위 밖 — 겸용 서브객체가 있으면 분리취득 refine은 요구하지 않는다(겸용 엔진이 자체 안분).
     const asHousing = await single({ ...b, propertyType: "housing", landAcquisitionDate: "2009-03-01" });
     expect(Object.keys(asHousing.json.error?.fieldErrors ?? {})).not.toContain("landStandardPriceAtTransfer");

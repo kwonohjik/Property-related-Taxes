@@ -677,6 +677,14 @@ export function migrateAsset(raw: unknown): AssetForm {
       rhe.priorRentalExemptionHistory = "";
     }
     if (typeof rhe.residenceTransitionUnderAddendum !== "boolean") rhe.residenceTransitionUnderAddendum = false;
+    // D11 — 경과조치 사유. 구 세션엔 없다 → 미선택(엔진은 사유 없이 종전 규정을 주지 않는다 · 판정 메뉴 ⑧이 묻는다)
+    if (
+      rhe.residenceTransitionBasis !== "residing" &&
+      rhe.residenceTransitionBasis !== "contract_with_prior_rental" &&
+      rhe.residenceTransitionBasis !== "contract_without_prior_rental"
+    ) {
+      rhe.residenceTransitionBasis = "";
+    }
     // §154⑩ 표준 경로(I-5) 신규 필드 — 구 세션엔 없다 → 미입력(엔진이 「판정 불가」로 다룬다)
     if (typeof rhe.wasRegisteredRentalOrChildcare !== "boolean") rhe.wasRegisteredRentalOrChildcare = false;
     // 구 브랜치(PR #1903 초판)의 residenceMonthsAfterPriorResidenceTransfer 필드는 폐기 —

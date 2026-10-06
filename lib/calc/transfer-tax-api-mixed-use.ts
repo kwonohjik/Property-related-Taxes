@@ -15,6 +15,12 @@ import {
   mixedAcqLandPricePerSqmAtBuildingAcq,
   needsMixedAcqLandPriceAtBuildingAcq,
 } from "./mixed-use-acq-date-split";
+import {
+  mixedAcqHousingBuildingStd,
+  mixedTransferHousingBuildingStd,
+  needsMixedHousingBuildingStdAtAcq,
+  needsMixedHousingBuildingStdAtTransfer,
+} from "./mixed-use-housing-std-split";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -154,6 +160,12 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         parseAmount(primary.mixedTransferLandPricePerSqm) ||
         parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
         0,
+      // S3-2 — 양도시 주택건물 기준시가(나목). 개별주택가격(H_T)을 가목:나목 비례로 토지분·건물분에 나누는 분모.
+      // 필수 술어가 참일 때만 키를 싣는다(거짓이면 키 자체 없음 — stale 값 차단 · B0 Q20 규약).
+      // 지분 스케일 안 함(기준시가 전부 100% — 분모·분자가 같은 스케일이어야 비례가 성립). 폴백 없음(미입력은 ⑧ 차단).
+      ...(needsMixedHousingBuildingStdAtTransfer(primary)
+        ? { housingBuildingPrice: mixedTransferHousingBuildingStd(primary) }
+        : {}),
     },
     acquisitionStandardPrice: {
       housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
@@ -163,6 +175,11 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       // 폴백 없음: 토지 취득일 값·PHD·1990 환산으로 메우지 않는다(자동 대체 금지).
       ...(needsMixedAcqLandPriceAtBuildingAcq(primary)
         ? { landPricePerSqmAtBuildingAcq: mixedAcqLandPricePerSqmAtBuildingAcq(primary) }
+        : {}),
+      // S3-2 — 취득시 주택건물 기준시가(나목). 토지·건물 취득일이 다르면 건물 취득일 기준 값이다.
+      // 술어 거짓(PHD·용도변경 상가→주택)이면 키를 싣지 않는다 — 양도측과 같은 규약.
+      ...(needsMixedHousingBuildingStdAtAcq(primary)
+        ? { housingBuildingPrice: mixedAcqHousingBuildingStd(primary) }
         : {}),
     },
     usePreHousingDisclosure: primary.usePreHousingDisclosure,
@@ -276,6 +293,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         primaryKind: primary.assetKind,
         declared: parseInt(form.householdHousingCount) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }) === 1,
     // ④ §164⑨1호 공익수용 특례 (계획 P7/D8) — 목별 독립: 주택분(P5 필드 재사용)·상가분(신규 2필드).

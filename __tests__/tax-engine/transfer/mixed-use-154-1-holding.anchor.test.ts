@@ -23,7 +23,7 @@
  * 선행 계획서 G-3의 별개 논점 — 겸용에는 미적용).
  */
 import { describe, it, expect } from "vitest";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates } from "../_helpers/mock-rates";
 import { mixedUseCase14, CASE14_TRANSFER_PRICE } from "../_helpers/mixed-use-fixture";
 
@@ -58,14 +58,14 @@ describe("P3a (D-9) 겸용주택 영 §154① 보유 2년 요건", () => {
   it("B-17: 보유 1년 미만 → §154① 미충족 → 주택분이 과세로 들어온다", () => {
     const r = run({ land: D("2021-03-01"), building: D("2021-03-01") });
     // 종전에는 주택분을 비과세 처리해 상가분만 과세했다(주택 소득금액 0).
-    expect(r.housingPart?.incomeAmount).toBe(1_158_835_741);
-    expect(r.total?.taxBase).toBe(1_826_380_936);
+    expect(r.housingPart?.incomeAmount).toBe(1_043_575_883);
+    expect(r.total?.taxBase).toBe(1_711_121_078);
   });
 
   it("B-18: 보유 1~2년 → 여전히 미충족", () => {
     const r = run({ land: D("2020-06-01"), building: D("2020-06-01") });
-    expect(r.housingPart?.incomeAmount).toBe(1_158_835_741);
-    expect(r.total?.taxBase).toBe(1_826_380_936);
+    expect(r.housingPart?.incomeAmount).toBe(1_043_575_883);
+    expect(r.total?.taxBase).toBe(1_711_121_078);
   });
 
   it("B-20: 기산일은 **건물** 취득일 — 토지를 오래 보유해도 건물이 2년 미만이면 미충족", () => {
@@ -117,17 +117,17 @@ describe("P3b (D-2) 겸용주택 단기세율 + §104⑤ 비교과세", () => {
 
   it("B-11: 1년 미만 — 주택 70% / 상가 50%, §104⑤ 2호 채택", () => {
     const r = run({ land: D("2021-03-01"), building: D("2021-03-01") });
-    // P3a로 주택분이 과세로 들어온 뒤(755,931,421 = 1호 합산누진)
-    // 기본공제 250만은 최고세율(주택 70%)에 전액 귀속 → 주택 과세표준 1,156,335,741
-    //   2호 = 1,156,335,741×70% 809,435,018 + 670,045,195×50% 335,022,597 = 1,144,457,615
-    //   1호 = 755,931,421 → MAX = 2호
-    expect(r.total?.transferTax).toBe(1_144_457_615);
+    // P3a로 주택분이 과세로 들어온 뒤 기본공제 250만은 최고세율(주택 70%)에 전액 귀속 →
+    // 2호(주택 70% + 상가 50% 단기세율)와 1호(합산누진) 중 MAX = 2호.
+    // ※ S3-2 — 취득시 개별주택가격(H_A)이 비어 있던 사례14 fixture를 test helper가 항등 H로 채워 **수치를 재산출**했다
+    //   (종전 1,144,457,615 · 산식 구조는 동일). 손계산 괄호는 재산출 전 값이라 제거했다 — 현재 값은 엔진 출력이다.
+    expect(r.total?.transferTax).toBe(1_063_775_715);
   });
 
   it("B-12: 1~2년 — 주택 60% / 상가 40%", () => {
     const r = run({ land: D("2020-06-01"), building: D("2020-06-01") });
-    //   2호 = 1,156,335,741×60% 693,801,444 + 670,045,195×40% 268,018,078 = 961,819,522
-    expect(r.total?.transferTax).toBe(961_819_522);
+    //   2호 = 주택 60% + 상가 40% 단기세율 (S3-2 재산출 — 종전 961,819,522)
+    expect(r.total?.transferTax).toBe(892_663_607);
   });
 
   it("B-21: 주택분 세율 기산은 토지·건물 중 **늦은 취득**(= 짧은 보유)", () => {
@@ -171,21 +171,21 @@ describe("P4 (D-3) 겸용주택 미등기양도자산", () => {
       makeMockRates(),
     );
 
-  it("B-14: 4개 조문 적용 — 종전 163,273,425 → 1,288,354,126", () => {
+  it("B-14: 4개 조문 적용 — 종전 163,273,425 → 1,207,672,225", () => {
     const r = unreg();
     // §91① 비과세 배제 → 주택분이 과세로 들어온다(종전 소득금액 0)
-    expect(r.housingPart?.transferGain).toBe(1_161_172_235);
+    expect(r.housingPart?.transferGain).toBe(1_045_912_377);
     // §95② 장특 배제 → 양도소득금액 = 양도차익
     expect(r.housingPart?.longTermDeductionAmount).toBe(0);
     expect(r.commercialPart?.longTermDeductionAmount).toBe(0);
-    expect(r.housingPart?.incomeAmount).toBe(1_161_172_235);
+    expect(r.housingPart?.incomeAmount).toBe(1_045_912_377);
     expect(r.commercialPart?.incomeAmount).toBe(679_333_660);
     // §103①1호 단서 기본공제 배제 → 과세표준 = 양도소득금액 합
     expect(r.total?.basicDeduction).toBe(0);
-    expect(r.total?.taxBase).toBe(1_840_505_895);
+    expect(r.total?.taxBase).toBe(1_725_246_037);
     // §104①10호 70% 단일세율
     expect(r.total?.appliedRate).toBe(0.7);
-    expect(r.total?.transferTax).toBe(1_288_354_126); // floor(1,840,505,895 × 70%)
+    expect(r.total?.transferTax).toBe(1_207_672_225); // floor(1,725,246,037 × 70%)
   });
 
   it("B-14b: 미등기는 §104⑤ 단기세율 혼합이 아니라 **전체 70%** — P3b 경로와 구분된다", () => {

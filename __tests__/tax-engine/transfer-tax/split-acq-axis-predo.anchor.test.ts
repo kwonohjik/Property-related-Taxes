@@ -28,6 +28,10 @@ const housingBase = (over: Record<string, unknown> = {}) =>
     standardPricePerSqmAtAcquisition: 1_000_000,
     acquisitionArea: 200,
     standardPriceAtAcquisition: 500_000_000,
+    // S3-1 — 나목 = H − L(3억): 비례 쌍 {2억, 3억}이 종전 뺄셈과 같다(H = L + N).
+    //        환산 파트의 분모도 비례라 양도시 개별주택가격 = 가목 + 나목(10억)을 둔다(분모 값 불변).
+    buildingStandardPriceAtAcquisition: 300_000_000,
+    standardPriceAtTransfer: 1_000_000_000,
     landStandardPriceAtTransfer: 600_000_000,
     buildingStandardPriceAtTransfer: 400_000_000,
     ...over,

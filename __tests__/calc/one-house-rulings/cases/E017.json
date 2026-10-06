@@ -1,0 +1,71 @@
+[
+  {
+    "id": "E017-era",
+    "docNo": "국심-2001-중-2326",
+    "docDate": "2001.11.26.",
+    "basis": "era",
+    "today": "2000-04-26",
+    "summary": "일시적 3주택 중 1채(연립주택)를 먼저 양도한 뒤 신규주택(농촌주택) 취득일부터 (당시) 2년 이내 종전주택 양도 — 양도일 현재 2주택으로 판정, 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2000-04-25",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1989-04-03"
+      },
+      "houses": [
+        {
+          "id": "farm",
+          "region": "non_capital",
+          "acquisitionDate": "1998-09-05"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(쟁점주택 1989-04-03·농촌주택 1998-09-05·연립주택 경락 1999-12-20·연립 양도 2000-04-15·쟁점 양도 2000-04-25). 이미 양도한 연립주택은 명부에 넣지 않는다 — 양도일 현재 주택 수로 판정하는 것이 쟁점. 양도가 3억 가정, 거주·농촌주택 소재 비조정. 농촌주택 취득 후 1년 7개월(당시 2년·엔진 3년 모두 이내)."
+  },
+  {
+    "id": "E017-era-neg",
+    "docNo": "국심-2001-중-2326",
+    "docDate": "2001.11.26.",
+    "basis": "era",
+    "today": "2000-04-26",
+    "summary": "같은 사실에서 연립주택을 아직 양도하지 않고 3주택을 보유한 채 쟁점주택 양도(경계 음성 짝)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2000-04-25",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1989-04-03"
+      },
+      "houses": [
+        {
+          "id": "farm",
+          "region": "non_capital",
+          "acquisitionDate": "1998-09-05"
+        },
+        {
+          "id": "rowhouse",
+          "region": "capital",
+          "acquisitionDate": "1999-12-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "E017-era에서 연립주택(1999-12-20)을 명부에 남김 — 양도일 현재 3주택이라 일시적 2주택 불성립, 과세. 원문의 「양도일 현재 기준」을 가르는 음성 짝(가정 케이스)."
+  }
+]

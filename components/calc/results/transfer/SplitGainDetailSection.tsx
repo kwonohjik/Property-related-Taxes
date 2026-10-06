@@ -45,6 +45,7 @@ function AcqCell({ owned, part }: { owned: boolean; part: SplitPart }) {
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
+import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import { cn } from "@/lib/utils";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
@@ -124,11 +125,38 @@ export function SplitGainDetailSection({
                 <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × 3%</span>
               )}
             </span>
-            {splitDetail.building.stdPriceDerivedFromTotal && (
+            {/*
+              S3-1 — 개별주택가격(부수토지 포함 결합 공시)을 토지·건물 기준시가 비율로 **비례 안분**한 내역.
+              엔진이 `stdSplit`을 실을 때(일반 주택 비-별개)만 렌더하고 그 값을 **그대로 읽는다**(재계산 금지 —
+              `feedback_engine_result_display_drift`). 건물분은 잔액 흡수(`개별주택가격 − 토지분`)다.
+              `stdSplit`이 없는 결과(별개 취득·일반건물·종전 저장 이력의 뺄셈 결과)는 아래 종전 안내를 유지한다.
+            */}
+            {splitDetail.stdSplit && (
+              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground/80 leading-snug" data-testid="split-std-split-detail">
+                <span className="block font-medium text-foreground/80">
+                  개별주택가격 분할 (취득시 — 소득세법 §99①1호 라목·시행령 §166⑥)
+                </span>
+                <FLine>
+                  토지분 기준시가 = 개별주택가격 {splitDetail.stdSplit.housingTotal.toLocaleString()} ×{" "}
+                  <Frac
+                    top={`토지 기준시가 ${splitDetail.stdSplit.landStd.toLocaleString()}`}
+                    bottom={`토지 기준시가 ${splitDetail.stdSplit.landStd.toLocaleString()} + 건물 기준시가 ${splitDetail.stdSplit.buildingStd.toLocaleString()}`}
+                  />{" "}
+                  = <span className="font-mono tabular-nums" data-testid="split-std-split-land">{splitDetail.stdSplit.landBasis.toLocaleString()}</span>
+                </FLine>
+                <FLine>
+                  건물분 기준시가 = 개별주택가격 {splitDetail.stdSplit.housingTotal.toLocaleString()} − 토지분{" "}
+                  {splitDetail.stdSplit.landBasis.toLocaleString()} ={" "}
+                  <span className="font-mono tabular-nums" data-testid="split-std-split-building">{splitDetail.stdSplit.buildingBasis.toLocaleString()}</span>
+                </FLine>
+              </div>
+            )}
+            {!splitDetail.stdSplit && splitDetail.building.stdPriceDerivedFromTotal && (
               <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug">
                 {/* 결함 표식이 아니다 — 의미가 propertyType별로 정반대다.
-                    주택(라목)은 부수토지 포함 결합 공시라 역산이 법정 정상 경로이고,
-                    일반 건물은 가목·나목이 각각 공시되므로 역산이 한시 후퇴다. */}
+                    일반 건물은 가목·나목이 각각 공시되므로 총액에서 안분한 값이 한시 후퇴다.
+                    주택(라목)은 이제 `stdSplit`(비례 안분)이 위에서 표시된다 — 이 갈래의 주택 문구는
+                    `stdSplit`이 없는 종전 저장 이력(뺄셈으로 계산된 결과 스냅샷)에서만 보인다. */}
                 {assetKind === "building"
                   ? "건물 취득시 기준시가를 직접 입력하지 않아 결합 총액에서 안분한 값입니다 — 건물 취득일 기준 고시분을 입력하면 더 정확합니다 (소득세법 §99①1호 나목)."
                   : "개별주택가격(부수토지 포함)에서 토지분을 분리한 값입니다 (소득세법 시행령 §163⑥2호가목)."}

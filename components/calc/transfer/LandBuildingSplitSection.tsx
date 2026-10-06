@@ -27,6 +27,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { TransferLandStdPartCard } from "./TransferStdPriceCards";
 import { TransferBuildingStdPartCard } from "./TransferStdPriceCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -171,6 +172,14 @@ function PartAcqStdPrice(props: {
   // 양도시 칸이 같은 카드에 오면 **취득·양도를 한 번에 계산**하는 통합 모달을 쓴다(2026-07-30).
   // 두 시점 값이 하나의 건물 계산서에서 나오므로 런처를 2개 두는 것이 오히려 중복이었다.
   const both = !!props.showTransfer;
+  // 취득시 단독 칸은 비-별개(소유자 분리) 경로와 **같은 컴포넌트**를 쓴다(S3-1 — 모달 prefill 사본 3중화 방지).
+  if (!both) {
+    return (
+      <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)" noDark>
+        <AcqBuildingStdField asset={asset} onChange={onChange} transferDate={props.transferDate} variant="separate" />
+      </ToneCard>
+    );
+  }
   return (
     <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)" noDark>
       <div className={both ? "grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" : undefined}>
@@ -179,7 +188,7 @@ function PartAcqStdPrice(props: {
             field="buildingStandardPriceAtAcq"
             label="취득시 건물기준시가"
             unit="원"
-            hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액에서 역산하면 건물분에 토지 취득시점이 섞인다."
+            hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액을 나눠 쓰면 건물분에 토지 취득시점이 섞인다."
           >
             <CurrencyInput
               label=""
@@ -343,10 +352,10 @@ export function LandBuildingSplitSection(props: Props) {
   // 게이트다(`AssetSectionBasic`). 그래서 주택 별개취득의 환산·감정·매매사례 파트는
   // 취득가액이 조용히 0으로 산출됐다.
   //
-  // **건물분 명시 입력은 여전히 `building` 전용**이다 — 주택(라목)은 부수토지를 포함한
-  // 결합 공시라 건물분 단독 공시가 존재하지 않고, `결합 총액 − 토지분` 역산만이
-  // `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜 개산공제 합계를 법정액(§163⑥2호가목)에
-  // 맞춘다. 주택에 파트 독립 입력을 열면 그 항등성이 깨진다.
+  // **별개 취득의 건물분 명시 입력은 주택·건물 공통이다** — 이 카드는 토지·건물 취득일이 다른 경우의
+  // 파트 독립 입력이다. 같은 날 취득한 주택(소유자 분리)은 개별주택가격(부수토지 포함 결합 공시)을
+  // 가목:나목 **비례로 안분**하며 그 나목 칸은 `CompanionAcqStdPriceSection`·`NonPurchaseSplitInputsBlock`가
+  // 같은 `AcqBuildingStdField`로 받는다(S3-1). 종전의 「결합 총액 − 토지분 역산」은 제거됐다.
   //
   // **노출 게이트는 `requiresAcqStdPrice` 술어**다(2026-07-29). 취득시 기준시가는 취득가액을
   // **환산해야 할 때만** 필요하므로, 양쪽 파트가 실지거래가액이면 계산 어디에도 등장하지 않는다.
@@ -456,9 +465,9 @@ export function LandBuildingSplitSection(props: Props) {
 
       {/* ①' 토지 비소유(`selfOwns === "building_only"`) — 기준시가 카드만 별도 렌더.
           **소유 여부 ≠ 계산 입력 필요 여부.** 토지분 기준시가는 소유권이 아니라 건물분 도출·안분의
-          소스다 — 주택(라목)은 `결합 총액 − 토지분` 역산이 건물분의 유일한 경로이므로, 이 카드가
-          없으면 `calcAcqStdPair`가 null → `TaxCalculationError`("취득시 ㎡당 개별공시지가와 토지
-          면적이 필요합니다")로 **입력 칸 없는 차단**이 된다(계획서 D6, probe 실측).
+          소스다 — 주택(라목)은 토지분 기준시가(가목)가 개별주택가격을 토지·건물로 나누는 비례의
+          분자이므로, 이 카드가 없으면 `calcAcqStdPair`가 null → `TaxCalculationError`("취득시 ㎡당
+          개별공시지가와 토지 면적이 필요합니다")로 **입력 칸 없는 차단**이 된다(계획서 D6, probe 실측).
           엔진도 같은 비대칭을 전제한다 — 취득가액 미입력은 비소유 파트에 한해 허용하면서
           (transfer-tax-split-gain.ts:298) 기준시가는 소유와 무관하게 요구한다(:46-48).
           ⚠️ 취득가액 방식 라디오·금액 칸은 렌더하지 않는다 — 토지 gain은 폐기되므로
@@ -469,7 +478,7 @@ export function LandBuildingSplitSection(props: Props) {
           asset={props.asset!}
           onChange={props.onAssetChange!}
           transferDate={props.transferDate}
-          notOwnedReason="토지는 타인 소유이나, 건물분 취득시 기준시가를 결합 공시액에서 도출하려면 토지분이 필요합니다 (소득세법 §99①1호 가목·라목)."
+          notOwnedReason="토지는 타인 소유이나, 토지분 기준시가는 환산취득가·개산공제 계산에 필요합니다 (소득세법 §99①1호 가목)."
         />
       )}
 

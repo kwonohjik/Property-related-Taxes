@@ -86,7 +86,7 @@ describe("④ 전송 — 범위 안 + 수령 ✅ + 계약일이 있을 때만", 
   });
   it("양도일 미제공(판정 메뉴 경로) → 싣지 않는다", () => {
     const f = form();
-    const s = (buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion) as Record<string, unknown>[])[0];
+    const s = (buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Record<string, unknown>[])[0];
     expect(s.contractDate).toBeUndefined();
   });
   it("③ 구 기록·stale sessionStorage(새 필드 부재) → 싣지 않고 막지도 않는다", () => {

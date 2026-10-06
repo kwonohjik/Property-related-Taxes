@@ -17,6 +17,10 @@ import {
   resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption-requirements";
 import type { TransferTaxInput } from "./types/transfer.types";
+import type { ParsedRates } from "./transfer-tax-helpers";
+import type { OneHouseJudgment } from "./one-house/types";
+import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
+import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 
 /**
  * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
@@ -44,6 +48,7 @@ export function buildEligibilityContext(effectiveInput: TransferTaxInput): Eligi
     postRegistrationResidenceMonths: rhe.postRegistrationResidenceMonths,
     priorRentalExemptionHistory: rhe.priorRentalExemptionHistory,
     residenceTransitionUnderAddendum: rhe.residenceTransitionUnderAddendum,
+    residenceTransitionBasis: rhe.residenceTransitionBasis,
     // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 checkEligibility가 참조한다.
     priorResidenceTransferDate: rhe.priorResidenceTransferDate,
     wasRegisteredRentalOrChildcare: rhe.wasRegisteredRentalOrChildcare,
@@ -171,5 +176,40 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
       `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}) 요건을 충족하지 못해 임대주택 ${units}호를 ` +
       `세대 주택 수에 넣어(${1 + units}주택) 계산했습니다 — 1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 ` +
       `적용하지 않습니다. 임대주택이 다른 특례(일시적 2주택 등)에 해당하면 임대주택을 포함한 주택 수로 다시 입력하세요.`,
+  };
+}
+
+/**
+ * D12 — STEP 1 직후: §155⑳ A의 세대 구성이 불성립(`exceeded` — 다른 특례 둘을 겹쳐야 하는 3중첩 등)이면
+ * 「임대주택 제외」 전제로 낸 비과세를 거둔다(사전-2016-법령해석재산-0584 · 조심-2021-중-5977).
+ *
+ * 🔴 종전: STEP 2.5가 ⑳만 끄고 일반 경로로 넘겨, STEP 1이 이미 낸 다른 특례(§155①·③) 비과세가 그대로 남았다 —
+ *    호별·거주 요건을 충족하면 STEP 1a 조기반환으로 STEP 2.5에 닿지도 않았다. 판정 메뉴
+ *    (`applyRentalHousingVerdict`)와 같은 불변식이다. 구성 판정·사유 고지는 STEP 2.5가 그대로 한다.
+ * 🔑 B(§161 안분)는 STEP 2.5 뒤 종전 고지를 유지한다.
+ */
+export function revokeExemptionOnRentalCompositionExceeded(
+  exemption: OneHouseJudgment,
+  effectiveInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): { judgment: OneHouseJudgment; notice?: string } {
+  const rhe = effectiveInput.rentalHousingException;
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return { judgment: exemption };
+  if (!exemption.isExempt && !exemption.isPartialExempt) return { judgment: exemption };
+  const composition = resolveRentalResidenceComposition(effectiveInput, parsedRates, generalHouseAcquisitionDate);
+  if (composition.status !== "exceeded") return { judgment: exemption };
+  // 명부에 장기임대주택 행이 없으면 중과 주택 수에서도 임대주택이 빠진다 — 세액이 과소일 수 있음을 알린다.
+  const rentalRowMissing = !(effectiveInput.houses ?? []).some((h) => h.isLongTermRental);
+  return {
+    judgment: revokeOneHouseExemption(exemption),
+    ...(rentalRowMissing
+      ? {
+          notice:
+            `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})가 세대 구성 요건을 충족하지 못해 ` +
+            "임대주택을 주택 수에서 뺀 전제의 1세대1주택 비과세를 적용하지 않았습니다. 세대 보유 주택 목록에 임대주택이 " +
+            "없어 다주택 중과 판정에서도 빠져 있으므로, 임대주택을 목록에 「장기임대」로 넣어 다시 계산하세요.",
+        }
+      : {}),
   };
 }

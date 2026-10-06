@@ -24,6 +24,7 @@ import type {
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep, isPrhpScenarioB, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
 import { restoreRentalUnitsToHouseCount } from "./transfer-tax-rental-housing-judge";
+import { revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
 import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
@@ -233,11 +234,15 @@ export function calculateTransferTax(
    * `OneHouseFacts`로 분해했다가 다시 조립한다 — 「사실만으로 같은 판정이 나오는가」를 매
    * 테스트마다 증명시키기 위해서다(`one-house/judge.ts` 머리 주석).
    */
-  const exemptionResult = judgeOneHouseExemptionFromInput(
-    exemptionJudgeInput,
-    parsedRates.oneHouseSpecialRules,
-    presaleRightStartDate(parsedRates),
+  // D12 — §155⑳ A 세대 구성 불성립(3중첩 등)이면 「임대주택 제외」 전제의 비과세를 거둔다(판정 메뉴와 같은 불변식).
+  const rentalComposition = revokeExemptionOnRentalCompositionExceeded(
+    judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
+    effectiveInput,
+    parsedRates,
+    hceGeneralHouseAcquisitionDate,
   );
+  const exemptionResult = rentalComposition.judgment;
+  if (rentalComposition.notice) warnings.push(rentalComposition.notice);
 
   /**
    * §89② 후속 경고 — 판정 보류 고지 · §156의2⑬·§156의3⑩ 사후관리(추징) 고지.

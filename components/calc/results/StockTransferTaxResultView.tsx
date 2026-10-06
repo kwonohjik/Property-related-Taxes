@@ -37,11 +37,17 @@ import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDeta
 import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
 import { MajorShareholderResultCard } from "@/components/calc/results/StockMajorShareholderResultCard";
 import { PreDeemedAcquisitionResultCard } from "@/components/calc/results/PreDeemedAcquisitionResultCard";
+import { PreDeemedLotsResultCard } from "@/components/calc/results/PreDeemedLotsResultCard";
 import { LotCapitalAdjustmentsCard } from "@/components/calc/results/LotCapitalAdjustmentsCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
+import {
+  deductedAcquisitionPrice,
+  deductedOwnAcquisitionPrice,
+  swapExcludedAcquisitionPrice,
+} from "@/lib/calc/stock-swap-display";
 import { Cross1045AdjustmentCard } from "@/components/calc/stock-transfer/Cross1045AdjustmentCard";
 import {
   fmt,
@@ -334,7 +340,10 @@ export function StockTransferTaxResultView({
           </div>
           <div className="divide-y divide-emerald-100">
             <ResultRow label="양도가액" value={result.transferPrice} />
-            <ResultRow label={result.swapApplied ? "취득가액 (환산 — 차감 제외)" : "취득가액"} value={result.acquisitionPrice} />
+            <ResultRow label="취득가액" value={deductedAcquisitionPrice(result)} />
+            {result.swapApplied && (
+              <ResultRow label="　└ 환산취득가액 (§97②2호 단서 — 차감 제외)" value={swapExcludedAcquisitionPrice(result)} />
+            )}
             <ResultRow label="필요경비" value={result.expenses} />
             <ResultRow label="양도소득금액" value={result.transferIncome} highlight />
             <ResultRow label="기본공제" value={result.basicDeduction} />
@@ -460,15 +469,23 @@ export function StockTransferTaxResultView({
               <ResultRow label="　└ 당회차분" value={result.ownTransferPrice} />
             </>
           )}
-          <ResultRow label={result.swapApplied ? "취득가액 (환산 — 차감 제외)" : "취득가액"} value={result.acquisitionPrice} />
+          {/*
+            §97②2호 단서(단건 환산) — 취득가액 행은 양도차익 계산에서 **실제로 뺀 값**만 싣는다(leaf `stock-swap-display`).
+            차감하지 않은 당회차 환산취득가액은 보조 행으로 따로 적는다 — 종전에는 「환산 — 차감 제외」 라벨에
+            기신고분(차감되는 값)까지 섞인 합계가 실렸다.
+          */}
+          <ResultRow label="취득가액" value={deductedAcquisitionPrice(result)} />
           {result.priorAggregation && (
             <>
               <ResultRow
                 label="　└ 기신고분 합산 (영 §158②)"
                 value={result.priorAggregation.acquisitionPrice}
               />
-              <ResultRow label="　└ 당회차분" value={result.ownAcquisitionPrice} />
+              <ResultRow label="　└ 당회차분" value={deductedOwnAcquisitionPrice(result)} />
             </>
+          )}
+          {result.swapApplied && (
+            <ResultRow label="　└ 환산취득가액 (§97②2호 단서 — 차감 제외)" value={swapExcludedAcquisitionPrice(result)} />
           )}
           <ResultRow label="필요경비" value={result.expenses} />
           {result.priorAggregation && (
@@ -584,8 +601,21 @@ export function StockTransferTaxResultView({
         <PreDeemedAcquisitionResultCard detail={result.preDeemedAcquisitionDetail} />
       )}
 
+      {/* 분할·다건 lot — 의제취득일 전 매수 건별 ②·① 비교 (영 §176의2④) */}
+      {result.preDeemedLotsDetail && (
+        <PreDeemedLotsResultCard
+          detail={result.preDeemedLotsDetail}
+          matched={result.lotMatchingDetail?.matched}
+        />
+      )}
+
       {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
-      {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}
+      {result.lotMatchingDetail && (
+        <LotMatchingDetailCard
+          detail={result.lotMatchingDetail}
+          swapRemovedAcquisition={result.preDeemedLotsDetail?.clause1?.settlement?.swapRemovedAcquisition}
+        />
+      )}
 
       {/* [A-2] lot별 자본조정 희석 상세 (split/다건 + capitalAdjustments) */}
       {result.lotCapitalAdjustmentsDetail && (

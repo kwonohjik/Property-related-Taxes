@@ -1,0 +1,44 @@
+[
+  {
+    "id": "E139-era",
+    "docNo": "서면-2016-부동산-2938",
+    "docDate": "2016.02.25.",
+    "basis": "era",
+    "today": "2016-02-25",
+    "summary": "일시적 2주택(B 2005, C 2014.1.) 세대가 분가했던 1주택 직계존속(A, 60세 이상)과 재합가(2014.8.)해 3주택 — 재합가 후 B 양도 예정(분가·합가 실질 전제)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-15",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2014-08-05",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-08-15"
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "non_capital",
+          "acquisitionDate": "2000-03-31",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "c",
+          "region": "non_capital",
+          "acquisitionDate": "2014-01-03",
+          "mergeOrigin": "seller_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자: 원문 그대로(A 2000-03-31·B 2005-08·C 2014-01-03·재합가 2014-08-05), B 월 단위 15일, 양도 예정 2016-06-15(today 2016-02-25, C 취득 후 2년 5개월·합가 후 1년 10개월), 양도가 4억. 분가·합가 실질은 원문 전제로 두고 합가일 칸에 재합가일을 입력. C는 합가 전 취득이라 양도자 쪽(seller_side), A는 상대 쪽 — 합가 전 구성 (2,1). 경로: applied 155-1 + 155-4 중첩. 최소쌍: 합가 입력을 빼면 일시적 2주택만(2주택으로 계산), 양도일을 2017-06-15로 늦추면 과세(신규주택 3년 초과). 직계존속 60세 이상(1941년생)은 입력 칸 없음 — 파일럿 M-1/M-2와 같은 축."
+  }
+]

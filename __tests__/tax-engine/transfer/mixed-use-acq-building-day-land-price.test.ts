@@ -10,7 +10,7 @@ import {
   areMixedAcqDatesSeparate,
   isBuildingDayLandPriceRequired,
 } from "@/lib/tax-engine/mixed-use-acq-date";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

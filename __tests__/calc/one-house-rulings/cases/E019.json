@@ -1,0 +1,66 @@
+[
+  {
+    "id": "E019-era-1",
+    "docNo": "재산46014-10135",
+    "docDate": "2002.11.22.",
+    "basis": "era",
+    "today": "2002-12-01",
+    "summary": "사례①: A주택 재건축 준공 후 재건축하지 않은 B주택 양도 — 재건축 주택을 기존주택의 연장으로 보면 신규주택 취득이 아니라 과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2002-11-30",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1991-05-12"
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "1990-07-05"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 재건축한 주택을 기존주택의 연장으로 볼지(취득일 = 기존주택 취득일) 준공일에 새로 취득한 주택으로 볼지 — 명부 행·양도주택은 취득일 하나뿐이고 멸실·준공 이력을 연결하는 칸·규칙이 없다. 사용자가 취득일에 무엇을 쓰느냐로 결론이 갈린다. 원문 일자 그대로(A 취득 1990-07-05·B 취득 1991-05-12·A 멸실 1999-05-12·준공 2001-12-28·B 양도 2002-11-30), 양도가 3억 가정. 참고 관측: referenceForm(A를 기존 취득일 1990-07-05로 입력) = 과세 — 원문 결론(새 예규)과 같다. A를 준공일 2001-12-28로 입력하면 B 취득 후라 신규주택이 되어 비과세(155-1) — 종전 예규의 결론이다. 새 예규는 2002.11.23. 이후 결정분부터 적용."
+  },
+  {
+    "id": "E019-era-2",
+    "docNo": "재산46014-10135",
+    "docDate": "2002.11.22.",
+    "basis": "era",
+    "today": "2002-12-01",
+    "summary": "사례②: 재건축 중 B주택을 취득하고 재건축한 A주택을 양도 — 재건축 주택을 기존주택의 연장으로 보면 B가 신규주택이라 비과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2002-11-30",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1990-07-05"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2002-02-28"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 재건축한 주택을 기존주택의 연장으로 볼지(취득일 = 기존주택 취득일) 준공일에 새로 취득한 주택으로 볼지 — 명부 행·양도주택은 취득일 하나뿐이고 멸실·준공 이력을 연결하는 칸·규칙이 없다. 사용자가 취득일에 무엇을 쓰느냐로 결론이 갈린다. 원문 일자 그대로(A 취득 1990-07-05·멸실 2001-05-12·B 취득 2002-02-28·A 준공 2002-11-30·A 양도 2002-11-30(질문란은 12-28로 표기 불일치)), 양도가 3억 가정. 참고 관측: referenceForm(A를 기존 취득일 1990-07-05로 입력) = 비과세(155-1) — 원문 결론과 같다. A를 준공일로 입력하면 양도일과 같아 입력 오류(취득일은 양도일 이전이어야 함, 400), 하루 앞 2002-11-29면 B보다 늦어 과세."
+  }
+]

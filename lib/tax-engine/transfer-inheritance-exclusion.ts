@@ -26,6 +26,9 @@ import {
   type GeneralHouseRightAtInheritance,
 } from "./data/inheritance-general-house-era";
 
+/** UTC 달력일 키 — date-coerce 운영 경로(UTC 자정)와 같은 규약. */
+const dayKey = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
 export interface InheritedHouseExclusionResult {
   /** §155② 단독상속 상속주택 제외 수 (0 또는 1) */
   soleExcludedCount: number;
@@ -66,6 +69,14 @@ export interface InheritedHouseExclusionResult {
    * 상속개시일을 필수로 받아 route로는 도달하지 않는다 — 엔진 직접 호출 방어다.
    */
   inheritedDateUnknownCount: number;
+  /**
+   * D6 — 양도하는 주택도 상속주택이고 **같은 상속**(상속개시일이 같은 날 — 같은 상속 사건의 대리 지표)으로 받은
+   * 상속주택 수. §155②는 「일반주택을 양도하는 경우」, §155③은 「공동상속주택 외의 다른 주택을 양도하는 때」다 —
+   * 같은 상속으로 받은 두 주택 중 하나를 양도하면 다른 하나를 주택 수에서 빼지 않는다(서면-2015-부동산-1134 ·
+   * 조심-2018-서-3806). 서로 다른 상속(상속개시일이 다른 날)이면 먼저 상속받은 주택을 양도해도 적용한다
+   * (집행기준 89-155-9). **표시용** — 계산은 위 필드가 이미 반영했다.
+   */
+  sameInheritanceAsSoldCount: number;
 }
 
 /** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
@@ -79,10 +90,20 @@ export interface InheritanceGeneralHouseFacts {
 
 /**
  * 동거봉양 단서(§155② 단서) 게이트 — 별도세대이거나 동거봉양 합가 전 보유분이면 통과.
+ * D17 — 별도세대에서 받은 상속주택을 동일세대원이 재상속했으면 상속주택 지위를 이어받아 통과한다(해석 5건 —
+ * `HouseInfo.reInheritedFromSeparateHousehold`). 재상속이면 일반주택 「상속개시 당시 보유」 괄호의 기준일이 최초 상속인지
+ * 재상속인지는 확인되지 않아 입력된 상속개시일(재상속일)로 보고 판정 보류를 고지한다(`era-undetermined.ts`).
  * 중과 7호(「제155조제2항에 해당하는 상속받은 주택」)도 이 게이트를 쓴다 — 단일 소스(D16).
+ * §155⑦1호 상속 농어촌주택도 같다(단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」 — D7, `qualifiesRuralHouse`).
  */
-export function passesHouseholdGate(h: HouseInfo): boolean {
-  return h.decedentSameHouseholdAtInheritance !== true || h.parentalCareMergeInheritedHouse === true;
+export function passesHouseholdGate(
+  h: Pick<HouseInfo, "decedentSameHouseholdAtInheritance" | "parentalCareMergeInheritedHouse" | "reInheritedFromSeparateHousehold">,
+): boolean {
+  return (
+    h.decedentSameHouseholdAtInheritance !== true ||
+    h.parentalCareMergeInheritedHouse === true ||
+    h.reInheritedFromSeparateHousehold === true
+  );
 }
 
 /** 순위(§155②1~4호) 게이트 — 순위 부적격 선언이 없으면 통과. 중과 7호도 공용(D16). */
@@ -107,6 +128,7 @@ export function resolveInheritedHouseExclusion(
     eligibleCoMinorityCount: 0,
     generalHouseNotHeldCount: 0,
     inheritedDateUnknownCount: 0,
+    sameInheritanceAsSoldCount: 0,
   };
   if (!houses) return empty;
 
@@ -135,11 +157,15 @@ export function resolveInheritedHouseExclusion(
    * 「이하 제3항 … 에서 같다」는 연결도 없다 ⇒ 증여 게이트는 **단독상속 풀**만 비운다. ③ 풀은 그대로 판정한다
    * (종전에는 두 풀을 모두 비워 ③ 특례를 근거 없이 껐다). 형제 선례: 위 `heldForSole`(보유 괄호)도 ② 풀에만.
    */
-  const inheritedOthers = houses.filter(
-    (h) =>
-      h.isInherited &&
-      h.id !== sellingHouseId &&
-      !(generalHouseGiftedFromDecedentWithin2yr && !h.isCoInherited),
+  const sold = houses.find((h) => h.id === sellingHouseId);
+  const soldInheritedKey = sold?.isInherited && sold.inheritedDate ? dayKey(sold.inheritedDate) : undefined;
+  // D6 — 같은 상속(상속개시일 같은 날)으로 받은 상속주택은 양도 주택이 「일반주택」이 아니어서 제외하지 않는다.
+  const fromSameInheritance = (h: HouseInfo) =>
+    soldInheritedKey !== undefined && h.inheritedDate !== undefined && dayKey(h.inheritedDate) === soldInheritedKey;
+  const otherInherited = houses.filter((h) => h.isInherited && h.id !== sellingHouseId);
+  const sameInheritanceAsSoldCount = otherInherited.filter(fromSameInheritance).length;
+  const inheritedOthers = otherInherited.filter(
+    (h) => !fromSameInheritance(h) && !(generalHouseGiftedFromDecedentWithin2yr && !h.isCoInherited),
   );
 
   // 표시용 부적격 카운트 — 제외 후보(단독 or 공동 소수지분)만 대상. household 사유 우선.
@@ -186,6 +212,7 @@ export function resolveInheritedHouseExclusion(
     eligibleCoMinorityCount: coMinorityCount,
     generalHouseNotHeldCount,
     inheritedDateUnknownCount,
+    sameInheritanceAsSoldCount,
   };
 }
 

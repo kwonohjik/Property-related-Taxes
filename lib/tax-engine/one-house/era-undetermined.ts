@@ -11,13 +11,16 @@
  * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | OH-22(I-1)에서 입력 경로가 생겼다(보유 중 다른 주택 처분 이력). 이력 미답만 고지 — 판정은 `final-house-restart.ts` |
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | OH-38 입력 레인에서 입력 경로가 생겼다(§154① 단서 「4호 임대사업자 등록」). 사유 미선택 또는 선택했으나 사실 미입력만 고지 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
+ * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③(2002-03-30 전 신규 취득 · 2002-03-30 ~ 2008-11-27 양도) | 경과 기한(시행일부터 1년 · 보유기간 충족일 + 6월 단서) — 미구현, 종전 2년으로 계산 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
+ * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 해석 미확보, 입력된 재상속일로 판정 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  */
 import { DEADLINE_HOLIDAY_EXTENSION_161, PERIOD_CALCULATION_4, TRANSFER } from "../legal-codes";
+import { INHERITED_HOUSE } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import {
   meetsOneHouseResidenceRequirement,
@@ -49,8 +52,10 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-5-final-one-house-restart-unverified",
   "154-1-4ho-rental-registration-unverified",
   "155-1-move-in-requirement-unverified",
+  "155-1-2002-transition-unverified",
   "155-1-regulated-at-new-acquisition-unverified",
   "155-1-regulated-announcement-date-unverified",
+  "155-2-reinheritance-reference-date-unverified",
   "civil-161-holiday-table-uncovered",
 ]);
 
@@ -129,6 +134,7 @@ export function collectEraUndetermined(
         baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
         newAcquisitionDate: tt.newAcquisitionDate,
         newContractDate: tt.newHouseContractDate,
+        previousAcquisitionDate: tt.previousAcquisitionDate,
         transferDate: input.transferDate,
       }).years;
     const regulatedAxisMatters = !meetsPublicInstitutionRelocationRegion(tt) && eraFor(true) !== eraFor(false);
@@ -144,6 +150,15 @@ export function collectEraUndetermined(
           `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
           "주소나 조정대상지역 여부가 입력되지 않아 양도일 기준 양도주택의 조정대상지역 여부로 대신 계산했습니다 — " +
           "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요.",
+      });
+    }
+    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
+      out.push({
+        id: "155-1-2002-transition-unverified",
+        reason:
+          `2002년 3월 30일 전에 신규주택을 취득하고 그 후 종전주택을 양도하면 처분기한이 2년에서 1년으로 줄어든 ` +
+          `개정의 경과조치(대통령령 제17555호 부칙 ③ — 시행일부터 1년이 되는 날 등)가 적용됩니다. ` +
+          "이 경과조치는 판정하지 않았고 종전 기한(신규주택 취득일부터 2년)으로 계산했습니다 — 확인이 필요합니다.",
       });
     }
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending) {
@@ -173,6 +188,27 @@ export function collectEraUndetermined(
     !!input.oneHouseExemptionProviso ||
     (input.presaleRights?.length ?? 0) > 0 ||
     !!input.replacementHouse;
+  /*
+   * D17 — 재상속(별도세대에서 받은 상속주택을 동일세대원이 다시 상속)으로 §155② 단서를 통과한 행이 있으면, 일반주택
+   * 「상속개시 당시 보유」 괄호를 재상속일로 판정했다는 것을 밝힌다(최초 상속일 기준인지 해석이 확보되지 않았다).
+   */
+  const reInherited = (input.houses ?? []).some(
+    (h) =>
+      h.isInherited &&
+      h.decedentSameHouseholdAtInheritance === true &&
+      h.parentalCareMergeInheritedHouse !== true &&
+      h.reInheritedFromSeparateHousehold === true,
+  );
+  if (reInherited) {
+    out.push({
+      id: "155-2-reinheritance-reference-date-unverified",
+      reason:
+        `별도세대에서 받은 상속주택을 동일세대원이 다시 상속받은 주택은 상속주택 지위를 이어받는 것으로 보았습니다(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서 — ` +
+        "재산세과-2961 · 부동산납세과-624 · 서면-2022-법규재산-4747 등). 일반주택을 「상속개시 당시 보유한 주택」으로 한정하는 요건은 " +
+        "입력한 상속개시일(재상속일)로 판정했습니다 — 최초 상속일을 기준으로 보는지는 확인되지 않았으니, 일반주택을 최초 상속 뒤에 취득했다면 확인이 필요합니다.",
+    });
+  }
+
   if (hasWithinDeadlineAxis && holidayTableUncoveredBefore(input.transferDate)) {
     out.push({
       id: "civil-161-holiday-table-uncovered",

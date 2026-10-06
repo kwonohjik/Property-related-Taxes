@@ -1,0 +1,97 @@
+[
+  {
+    "id": "E203-era",
+    "docNo": "서면-2021-법규재산-4760 [법규과-2767]",
+    "docDate": "2022.09.29.",
+    "basis": "era",
+    "today": "2024-04-16",
+    "summary": "A주택(2014.6. 취득, 2019.7. 장기임대 등록), B분양권(2016.11. 계약 → 2019.3. 취득·거주)·C분양권(2018.3. 계약 → 2020.11. 취득) 보유 1세대가 2021.3. B 양도로 §155⑳ 거주주택 특례를 생애 최초 적용 — C 양도 시 부칙 §7② 종전규정(횟수 제한 없음) 적용 여부 (원문 양도예정일 2026.4.는 2025.2.28. 이후라 폐지 후 — 원문 당시 법 적용을 위해 2024.4. 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-04-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-11-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "40",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2019-07-15",
+              "rentalRegistrationDate": "2019-07-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "57",
+              "requirementsConfirmed": true
+            }
+          ],
+          "residenceTransitionUnderAddendum": true,
+          "residenceTransitionBasis": "contract_without_prior_rental",
+          "priorRentalExemptionHistory": "used"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "match",
+    "note": "match(D11 수정 후). 경과조치 체크를 켜고 사유를 「그 전 계약금 지급 · 2019.2.12. 전 등록 임대주택 없음」으로 원문 사실대로 입력 → 종전규정 미적용 → B 양도로 이미 쓴 생애 한 차례 제한(이력 '있음')에 걸려 과세. 종전에는 체크 하나로 종전규정을 부여해 비과세였다. 가정: 원문 양도예정일 2026.4.는 2025.2.28. 이후라 횟수 제한 폐지 후 — 원문 당시(2022) 법을 적용하려고 양도일을 2024-04-15로 가정, C 취득 2020-11-15·거주 40개월·양도가 8억, A 장기일반 2019-07-15 등록·수도권·기준시가 3억."
+  },
+  {
+    "id": "E203-current",
+    "docNo": "서면-2021-법규재산-4760 [법규과-2767]",
+    "docDate": "2022.09.29.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(B 양도로 이미 §155⑳ 적용 후 C 양도)을 2026.4.15. 양도로 구성 — 2025.2.28. 이후 양도분",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-04-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-11-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2019-07-15",
+              "rentalRegistrationDate": "2019-07-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "81",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2025.2.28. 이후 양도분부터 횟수 제한 폐지 → 같은 사실(B 양도로 이미 특례 적용 후 C 양도, 2019.2.12. 전 장기임대 미보유 상태 계약)을 양도 2026-04-15로 구성하면 비과세. E203-era와 사실이 같고 양도일만 달라 결론이 뒤집힌다. 새 축 중립 고정: 비조정, 양도가 8억, 임대주택 아파트 아님, C 거주 60개월."
+  }
+]

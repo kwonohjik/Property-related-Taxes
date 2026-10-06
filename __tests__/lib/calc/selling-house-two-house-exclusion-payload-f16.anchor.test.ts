@@ -47,7 +47,7 @@ function build(
 ): { selling: Payload; other: Payload } {
   const form = createDefaultTransferFormData();
   form.assets[0] = { ...form.assets[0], assetKind: "housing" };
-  const payload = buildHousesPayload(form.assets[0], [house], 0, sellingExclusion) as Payload[];
+  const payload = buildHousesPayload(form.assets[0], [house], 0, sellingExclusion, undefined) as Payload[];
   const selling = payload.find((h) => h.id === "selling")!;
   const other = payload.find((h) => h.id === "h1")!;
   return { selling, other };

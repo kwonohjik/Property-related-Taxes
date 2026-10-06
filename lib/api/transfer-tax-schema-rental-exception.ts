@@ -81,6 +81,10 @@ export const rentalHousingExceptionSchema = z
     priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
     /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
     residenceTransitionUnderAddendum: z.boolean().optional(),
+    /** D11 — 경과조치 사유(1호 거주 · 2호 계약금 + 2019.2.12. 전 등록 임대주택 소유 여부) */
+    residenceTransitionBasis: z
+      .enum(["residing", "contract_with_prior_rental", "contract_without_prior_rental"])
+      .optional(),
     /**
      * §154⑩1호(I-5) — 임대주택 등록·어린이집 운영 사실. rentalUnits 0호 경로에서만 판정에 쓴다.
      * 거주기간은 별도 필드 없이 취득 시기에 따라 `postRegistrationResidenceMonths`(2019.2.12 이후

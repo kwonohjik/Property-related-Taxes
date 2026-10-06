@@ -28,6 +28,8 @@ const base = (over: Record<string, unknown> = {}) =>
     standardPricePerSqmAtAcquisition: 1_000_000,
     acquisitionArea: 200,
     standardPriceAtAcquisition: 500_000_000,
+    // S3-1 — 나목 = H − L(3억). 비례 쌍 {2억, 3억}이 종전 뺄셈과 같다(H = L + N). 이 테스트의 주제는 양도가액 축이다.
+    buildingStandardPriceAtAcquisition: 300_000_000,
     ...over,
   });
 

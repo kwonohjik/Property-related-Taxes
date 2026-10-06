@@ -1,0 +1,44 @@
+[
+  {
+    "id": "E174-era",
+    "docNo": "서면-2022-부동산-2643 [부동산납세과-3385]",
+    "docDate": "2022.11.02.",
+    "basis": "era",
+    "today": "2022-12-16",
+    "summary": "父가 2009.8. 자기 소유 A주택을 母(5/6)·子(1/6)에게 증여(子는 증여 당시 별도세대, 2018.8. 세대합가) — §155⑳1호 거주기간 계산: 증여받은 날 이후 실제 거주기간, 동일세대원 간 증여는 증여 전 동일세대 거주기간 통산",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-12-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-08-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "120",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2018-08-20",
+              "rentalRegistrationDate": "2018-08-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "51",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 증여받은 거주주택의 거주기간 산정 — 수증자가 증여 당시 별도세대면 증여일 이후 실제 거주기간만, 동일세대원 간 증여면 증여 전 동일세대 거주기간을 통산한다는 규칙을 적용하는 입력·판정이 없다. 거주기간은 사용자가 개월 수(또는 구간)로 직접 입력하는 값이고 증여자·수증자의 세대 관계 칸도 없다. 원문은 계산 규칙만 밝히고 이 사안의 비과세 결론이 없어 기대값을 두지 않았다. 참고 관측은 거주 120개월을 직접 넣은 것이라 의미가 없다."
+  }
+]

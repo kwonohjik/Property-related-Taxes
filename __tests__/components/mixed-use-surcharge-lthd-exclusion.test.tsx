@@ -16,7 +16,8 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
-import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+// S3-2 — 겸용 주택분이 가목:나목 비례라 나목(주택건물 기준시가)이 필수다. 나목이 없는 fixture에 항등 나목(N = H − 가목)을 채워 호출한다.
+import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../tax-engine/_helpers/mixed-use-identity-std";
 import { makeMockRatesWithHouseEngine, makeHouseInfo } from "../tax-engine/_helpers/mock-rates";
 import { mixedUseCase14 } from "../tax-engine/_helpers/mixed-use-fixture";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";

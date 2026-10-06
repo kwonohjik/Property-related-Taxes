@@ -1,0 +1,73 @@
+[
+  {
+    "docNo": "서면인터넷방문상담5팀-354",
+    "docDate": "2008.02.22.",
+    "id": "E053-era",
+    "basis": "era",
+    "today": "2008-02-22",
+    "summary": "일시적 1세대2주택 소유자(종전주택 2000.3. 취득, 신규주택 2007.10. 취득)가 종전주택을 자산관리공사 공매 의뢰, 상대방(같은 처지)의 공매물건을 수의계약으로 같은 일자(2008.4.15.)에 취득·양도 — 동일자 취득·양도는 양도 선행",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-04-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2007-10-15"
+        },
+        {
+          "id": "swap",
+          "region": "capital",
+          "acquisitionDate": "2008-04-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 같은 날 1주택을 취득하면서 기존 1주택을 양도하면 양도한 후 취득한 것으로 보아 §155① 적용 → 양도 시점의 주택은 종전주택·신규주택 2채(일시적 2주택). 양도일 당일·이후 취득한 명부 행은 양도일 현재 보유 주택이 아니라 주택 수·신규주택 후보·엔진 명부에서 뺀다(lib/calc/household-house-count.ts isOwnedAtTransfer). 음성 짝 E053-era-daybefore: 같은 주택을 양도 전날 취득하면 양도일 현재 3주택 → 과세. 일자 가정(원문에 일자 없음): 종전주택 2000-03-15, 신규주택 2007-10-15(1년 이내 양도), 교환·수의계약 취득·양도 2008-04-15, 양도가 4억 중립."
+  },
+  {
+    "docNo": "서면인터넷방문상담5팀-354",
+    "docDate": "2008.02.22.",
+    "id": "E053-era-daybefore",
+    "basis": "era",
+    "today": "2008-02-22",
+    "summary": "E053-era의 음성 짝 — 갈아탈 주택을 양도 전날 취득(양도일 현재 3주택)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-04-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2007-10-15"
+        },
+        {
+          "id": "swap",
+          "region": "capital",
+          "acquisitionDate": "2008-04-14"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 같은 날이 아니라 양도 전날 취득하면 양도일 현재 종전·신규·교환취득 주택 3채 — §155① 불성립(일시적 2주택이 아니다). E053-era와 하루 차이만 둔 최소쌍으로 isOwnedAtTransfer의 경계(취득일 < 양도일)를 고정한다."
+  }
+]

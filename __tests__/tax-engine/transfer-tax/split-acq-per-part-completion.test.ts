@@ -35,6 +35,11 @@ const sep = (over: Record<string, unknown> = {}) =>
     standardPricePerSqmAtAcquisition: 1_000_000,
     acquisitionArea: 200,
     standardPriceAtAcquisition: 500_000_000,
+    // S3-1 — 별개 취득 + 나목 생략의 한시 후퇴(총액 − 토지분)는 제거됐다(D-2). 나목 = 5억 − 2억을 명시해 종전과 같은 값을 쓴다.
+    //        동시 취득(`isSeparateAcquisition: false`) 케이스에서는 같은 값이 비례 쌍 {2억, 3억}이 된다(H = L + N).
+    buildingStandardPriceAtAcquisition: 300_000_000,
+    //        비례 쌍에서는 환산 분모도 비례라 양도시 개별주택가격(= 가목 + 나목 10억)이 필요하다 — 분모 값은 불변.
+    standardPriceAtTransfer: 1_000_000_000,
     landStandardPriceAtTransfer: 600_000_000,
     buildingStandardPriceAtTransfer: 400_000_000,
     isSeparateAcquisition: true,

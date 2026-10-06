@@ -1,0 +1,43 @@
+[
+  {
+    "id": "E125-era",
+    "docNo": "조심-2017-중-4678",
+    "docDate": "2017.12.29.",
+    "basis": "era",
+    "today": "2017-12-29",
+    "summary": "1주택 보유 청구인(부모) 세대가 각 1주택씩 보유한 자녀 세대(2주택)와 합가(2012.11.) 후 청구인 주택 양도(2016.4.) — 1세대 3주택 (취득일 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-04-29",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2012-11-05",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-03-15"
+      },
+      "houses": [
+        {
+          "id": "c1",
+          "region": "capital",
+          "acquisitionDate": "2003-05-15",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "c2",
+          "region": "capital",
+          "acquisitionDate": "2006-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 관측: 과세(unmet 155-4-parental-care-merge 「신규주택 취득일(2006-05-15)부터 처분기한 3년의 말일(2009-05-15)이 지난 2016-04-29에 양도」 — D8로 자녀 쪽 두 채(2003→2006)가 일시적 2주택 짝이 됐다. D8 전에는 「신규 주택이 하나로 특정되지 않습니다」) / 원문 사유는 직계존속 측 1주택·자녀 세대 2주택으로 합가 전 1+2 구성. 원문에 취득일이 없어 가정: 양도 주택(청구인) 2010-03-15, 자녀 주택 2003-05-15·2006-05-15(둘 다 양도 주택보다 먼저), 합가 2012-11-05, 양도 2016-04-29, 양도가 4억. 주의: 자녀 주택 하나를 양도 주택보다 늦게(2012-03-15) 취득한 것으로 가정하면 신규 주택 도출로 §155① 중첩 판정을 타고(프로브: 기한 요건 불충족 사유로 과세), E124처럼 일자에 따라 경로가 달라진다. 당시 합가 기한 5년은 엔진 연혁(양도 2018-02-13 전 5년)에 있다."
+  }
+]
