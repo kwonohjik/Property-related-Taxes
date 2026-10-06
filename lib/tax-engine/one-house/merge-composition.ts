@@ -161,7 +161,12 @@ const failWithoutFacts = (
   confirmNotice: CONFIRM_NOTICE[reason],
 });
 
-export function resolveMergeComposition(input: MergeCompositionInput): MergeComposition {
+/**
+ * 명부 정합 전처리 — 알려진 제외 행을 빼고 행 수를 판정 주택 수와 대조한 뒤 **양도 주택 외 행**을 돌려준다.
+ * 결론이 나면(명부 없음·행 수 불일치) 그 `MergeComposition`을 돌려준다. 단일 합가(`resolveMergeComposition`)와
+ * 혼인 → 동거봉양 이중 합가(`resolveDoubleMergeComposition`)가 같은 규약을 쓴다.
+ */
+function mergeRosterOthers(input: MergeCompositionInput): MergeComposition | { others: HouseInfo[] } {
   const {
     houses,
     sellingHouseId,
@@ -169,7 +174,6 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
     knownHouseExclusionCount = 0,
     knownHouseExclusionHouseIds,
   } = input;
-  if (count !== 2 && count !== 3) return { status: "unknown", reason: "count_mismatch" };
   if (!houses || !sellingHouseId || !houses.some((h) => h.id === sellingHouseId)) {
     if (input.noRosterInputPath) return { status: "unknown", reason: "no_roster_input_path" };
     return failWithoutFacts("roster_missing");
@@ -194,7 +198,15 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
     return { status: "unknown", reason: "count_mismatch" };
   }
 
-  const others = effectiveHouses.filter((h) => h.id !== sellingHouseId);
+  return { others: effectiveHouses.filter((h) => h.id !== sellingHouseId) };
+}
+
+export function resolveMergeComposition(input: MergeCompositionInput): MergeComposition {
+  const { householdHousingCount: count } = input;
+  if (count !== 2 && count !== 3) return { status: "unknown", reason: "count_mismatch" };
+  const roster = mergeRosterOthers(input);
+  if ("status" in roster) return roster;
+  const { others } = roster;
   const sides = others.map((h) => classifyMergeHouse(h.acquisitionDate, input.mergeDate, h.mergeOrigin));
   const afterMergeDates = others
     .filter((_, i) => sides[i] === "after_merge")
@@ -222,4 +234,38 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
       : (s === 1 && c === 2 && p === 0) || (s === 2 && c === 1 && p === 0) || (s === 1 && c === 1 && p === 1);
   if (holds) return { status: "holds" };
   return fail(c === 0 ? "seller_side_only" : "composition_mismatch");
+}
+
+/**
+ * D4 — **혼인 후 동거봉양 합가**로 3주택이 된 세대의 합가 전 보유 구성 (서면인터넷방문상담4팀-598).
+ *
+ * 성립 구성: 양도 주택(양도자 쪽 · 혼인 전 보유) 외에 **배우자 쪽 1**(`counterpart_side` · 혼인일 이전 취득)과
+ * **동거봉양으로 합친 가족 쪽 1**(`second_merge_side` · 동거봉양 합가일 이전 취득). 동거봉양 합가일 이후 취득 행이
+ * 있거나 쪽이 이와 다르면 불성립이다. 소유 쪽이 비면 불성립 + 확인 필요(단일 합가와 같은 규약).
+ */
+export function resolveDoubleMergeComposition(
+  input: Omit<MergeCompositionInput, "mergeDate"> & { marriageDate: Date; parentalCareMergeDate: Date },
+): MergeComposition {
+  if (input.householdHousingCount !== 3) return { status: "unknown", reason: "count_mismatch" };
+  const roster = mergeRosterOthers({ ...input, mergeDate: input.parentalCareMergeDate });
+  if ("status" in roster) return roster;
+  const { others } = roster;
+  const afterMergeDates = others
+    .filter((h) => h.acquisitionDate.getTime() > input.parentalCareMergeDate.getTime())
+    .map((h) => h.acquisitionDate);
+  const spouse = others.filter(
+    (h) => h.mergeOrigin === "counterpart_side" && h.acquisitionDate.getTime() <= input.marriageDate.getTime(),
+  ).length;
+  const family = others.filter((h) => h.mergeOrigin === "second_merge_side").length;
+  const fail = (reason: MergeCompositionFailure): MergeComposition => ({
+    status: "fails",
+    reason,
+    afterMergeDates,
+    sellerSide: 1 + others.filter((h) => h.mergeOrigin === "seller_side").length,
+    counterpartSide: spouse + family,
+  });
+  if (afterMergeDates.length > 0) return fail("acquired_after_merge");
+  if (others.some((h) => h.mergeOrigin === undefined)) return failWithoutFacts("origin_missing");
+  if (spouse === 1 && family === 1) return { status: "holds" };
+  return fail(spouse + family === 0 ? "seller_side_only" : "composition_mismatch");
 }

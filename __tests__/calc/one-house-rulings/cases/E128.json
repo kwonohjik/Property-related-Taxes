@@ -28,7 +28,7 @@
           "id": "parents",
           "region": "capital",
           "acquisitionDate": "1998-01-01",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "second_merge_side"
         }
       ]
     },
@@ -38,8 +38,8 @@
         "155-5-marriage-merge"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch — 관측: isExempt=false (unmet 155-5-marriage-merge, 사유 「겹쳐 있는 일시적 2주택 특례가 기간 요건을 충족하지 않습니다」) / 기대: 비과세(혼인한 날부터 2년 이내 양도하는 혼인 전 보유 주택은 §154① 적용). 원문에 일자 없음 → 전부 가정(혼인 2007-06-01, 동거봉양 합가 2007-12-01, 양도 2008-02-20). 폼 충실성 확인: 혼인합가일·동거봉양 합가일 둘 다 입력(⑧은 「해당하는 쪽만 남기세요」 경고를 낼 뿐 막지 않음)하고, 배우자 주택·직계존속 주택을 명부에 합가 전 보유 쪽(counterpart_side)으로 입력. 프로브: 혼인합가만(주택 2채 구성) → 비과세(applied 155-5); 3채에서 혼인만 또는 동거봉양만 입력 → unmet 「합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용」. → 혼인합가 후 동거봉양 합가로 3주택이 되는 구성을 엔진이 모델하지 않는다. 의심 지점: lib/tax-engine/one-house/merge-deeming.ts:200(resolveMergeDeeming이 주택 2채만), :291-296(3주택은 일시적 2주택 중첩 때만), lib/tax-engine/one-house/unmet-exceptions.ts:134·148(같은 한계를 사유로 노출). 엔진 결함(미구현) 후보. 참고: 당시 기한(혼인일부터 2년)과 직계존속 연령 요건(60세, 여자 55세)은 엔진 연혁·입력에 없음 — 이 케이스는 두 기한 모두 이내이고 연령은 입력 자체가 없다."
+    "bucket": "match",
+    "note": "match. 회신: 1주택자가 1주택자와 혼인해 2주택이 된 상태에서 1주택 직계존속을 동거봉양 합가해 3주택이 되면, 혼인한 날부터 기한 내 양도하는 혼인 전 보유 주택은 §154① 적용. 엔진: 혼인 → 동거봉양 순서·3주택·혼인일 기준 기한·구성(배우자 쪽 1 + 동거봉양으로 합친 가족 쪽 1 — 명부 합가 전 보유자 second_merge_side)을 본다(lib/tax-engine/one-house/merge-deeming.ts resolveMarriageThenParentalCareDeeming). 음성 짝: E128-era-reverse(역순) · E128-era-spouse2(두 주택 모두 배우자 쪽 — 배우자 혼인 전 2주택). 일자(원문에 일자 없음 — 가정): 혼인 2007-06-01, 동거봉양 합가 2007-12-01, 양도 2008-02-20. 당시 기한 2년은 엔진 연혁에 없다(현행 연혁 5·10년 — 이 일자에서는 구별력 없음)."
   },
   {
     "id": "E128-current",
@@ -70,7 +70,7 @@
           "id": "parents",
           "region": "capital",
           "acquisitionDate": "2005-01-01",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "second_merge_side"
         }
       ]
     },
@@ -80,7 +80,85 @@
         "155-5-marriage-merge"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch — 관측: isExempt=false (unmet 155-5-marriage-merge) / 기대: 비과세. 현행 규칙: 혼인합가 후 먼저 양도하는 주택의 기한 10년(2024.11.12. 이후 양도분 — 종전 5년). 혼인 2019-03-01 → 양도 2026-04-10은 7년 1개월(5년 규정이면 불성립). 새 축 중립 고정: 비조정지역, 양도가 8억, 양도일 2026-10-01 이전. 불일치 원인·의심 지점은 E128-era와 같다(혼인합가 + 동거봉양 합가 3주택 미지원, merge-deeming.ts:200·291-296)."
+    "bucket": "match",
+    "note": "match. 회신: 1주택자가 1주택자와 혼인해 2주택이 된 상태에서 1주택 직계존속을 동거봉양 합가해 3주택이 되면, 혼인한 날부터 기한 내 양도하는 혼인 전 보유 주택은 §154① 적용. 엔진: 혼인 → 동거봉양 순서·3주택·혼인일 기준 기한·구성(배우자 쪽 1 + 동거봉양으로 합친 가족 쪽 1 — 명부 합가 전 보유자 second_merge_side)을 본다(lib/tax-engine/one-house/merge-deeming.ts resolveMarriageThenParentalCareDeeming). 음성 짝: E128-era-reverse(역순) · E128-era-spouse2(두 주택 모두 배우자 쪽 — 배우자 혼인 전 2주택). 현행 규칙: 혼인합가 기한 10년(2024.11.12. 이후 양도분). 혼인 2019-03-01 → 양도 2026-04-10(7년 1개월). 비조정·양도가 8억 중립."
+  },
+  {
+    "id": "E128-era-reverse",
+    "docNo": "서면인터넷방문상담4팀-598",
+    "docDate": "2008.03.10.",
+    "basis": "era",
+    "today": "2008-02-21",
+    "summary": "E128-era의 음성 짝 — 동거봉양 합가(2007-03-01)를 먼저 하고 혼인(2007-06-01)해 3주택",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-02-20",
+      "contractTotalPrice": "400000000",
+      "marriageDate": "2007-06-01",
+      "parentalCareMergeDate": "2007-03-01",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-03-10"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "region": "capital",
+          "acquisitionDate": "2004-05-01",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "parents",
+          "region": "capital",
+          "acquisitionDate": "1998-01-01",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 동거봉양 합가 후 혼인한 순서의 3주택을 인정한 해석이 확인되지 않아 불성립 + 확인 필요(2026-10-06 사용자 결정 — 혼인 → 동거봉양 순서만 인정). 역순이면 화면의 합가 맥락이 단일(혼인)이라 「동거봉양으로 합친 가족 쪽」 선택지가 없어, 부모 주택도 상대방 쪽으로 입력한다."
+  },
+  {
+    "id": "E128-era-spouse2",
+    "docNo": "서면인터넷방문상담4팀-598",
+    "docDate": "2008.03.10.",
+    "basis": "era",
+    "today": "2008-02-21",
+    "summary": "E128-era의 음성 짝 — 두 주택을 모두 배우자 쪽(혼인 전 배우자 보유)으로 입력",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-02-20",
+      "contractTotalPrice": "400000000",
+      "marriageDate": "2007-06-01",
+      "parentalCareMergeDate": "2007-12-01",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-03-10"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "region": "capital",
+          "acquisitionDate": "2004-05-01",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "parents",
+          "region": "capital",
+          "acquisitionDate": "1998-01-01",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 배우자가 혼인 전 2주택이었다면 혼인 후 동거봉양 합가 구성(배우자 쪽 1 + 합친 가족 쪽 1)이 아니다 — 불성립. E128-era와 합가 전 보유자 한 칸만 다른 최소쌍."
   }
 ]

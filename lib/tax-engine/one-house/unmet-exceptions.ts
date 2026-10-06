@@ -4,7 +4,7 @@
  * `pending.ts`(800줄 hard cap)에서 순수 이동했다(2026-09-29 — 판정 기준일·요건 검토 작업의 선행 분리).
  * 동작 변경 없음. 기존 import 경로(`./one-house/pending`)는 `pending.ts`의 재수출로 보존한다.
  */
-import { resolveMergeComposition } from "./merge-composition";
+import { resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
@@ -117,7 +117,35 @@ function collectMergeUnmet(
 
   // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──
   const count = input.householdHousingCount;
-  if (count === 3 && (input.inheritedHouseExclusionCount ?? 0) > 0) {
+  // D4 — 혼인·동거봉양 합가일이 **둘 다** 있는 3주택은 이중 합가(`resolveMarriageThenParentalCareDeeming`) 기준으로 안내한다.
+  const doubleMerge = count === 3 && marriageDate !== undefined && parentalCareDate !== undefined;
+  if (doubleMerge && (input.inheritedHouseExclusionCount ?? 0) === 0) {
+    if (parentalCareDate.getTime() < marriageDate.getTime()) {
+      reasons.push(
+        `동거봉양 합가(${fmtDate(parentalCareDate)}) 후 혼인(${fmtDate(marriageDate)})해 3주택이 된 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다 — 혼인 후 동거봉양 합가 순서만 인정합니다(확인 필요).`,
+      );
+    } else {
+      const composition = resolveDoubleMergeComposition({
+        householdHousingCount: count,
+        houses: input.houses,
+        sellingHouseId: input.sellingHouseId,
+        marriageDate,
+        parentalCareMergeDate: parentalCareDate,
+        knownHouseExclusionCount: input.knownHouseExclusionCount,
+        knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
+        noRosterInputPath: input.noMergeRosterInputPath,
+      });
+      if (composition.status === "fails") {
+        reasons.push(
+          composition.reason === "acquired_after_merge"
+            ? `다른 주택을 동거봉양 합가일(${fmtDate(parentalCareDate)}) 이후인 ${composition.afterMergeDates.map(fmtDate).join("·")}에 취득했습니다 — 합가로 3주택이 된 것이 아닙니다.`
+            : composition.reason === "roster_missing" || composition.reason === "origin_missing"
+              ? `혼인·동거봉양 합가 전 보유 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
+              : "혼인 후 동거봉양 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다.",
+        );
+      }
+    }
+  } else if (count === 3 && (input.inheritedHouseExclusionCount ?? 0) > 0) {
     reasons.push(
       "상속주택(§155②③)을 주택 수에서 뺀 뒤에도 3주택입니다 — 상속주택 특례·일시적 2주택·합가 특례 세 가지가 겹친 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다(확인 필요).",
     );
@@ -163,7 +191,7 @@ function collectMergeUnmet(
    * (`merge-unmet-reasons.anchor.test.ts` UM-1·UM-6·UM-12가 고정하는 「다른 사유가 없을 때만」
    *  계약과 같은 층위).
    */
-  if ((count === 2 || count === 3) && reasons.length === 0) {
+  if ((count === 2 || (count === 3 && !doubleMerge)) && reasons.length === 0) {
     const composition = resolveMergeComposition({
       householdHousingCount: count,
       houses: input.houses,
