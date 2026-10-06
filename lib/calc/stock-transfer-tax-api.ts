@@ -49,6 +49,8 @@ import { isOtherAssetGroup } from "./stock-other-asset-scope";
 import { isClause9Applicable } from "./stock-other-asset-scope";
 // 취득측 전용 보충평가(매매사례·취득일 거래정지)의 「평가액 계산」 — ⑧과 같은 술어
 import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
+import { effectiveTransferActualInputMode } from "./stock-transfer-input-mode";
+import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
@@ -217,7 +219,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 양도가액 ──
   body.transferPriceMode = transferPriceMode;         // 3중 패턴 default: "actual"
   if (transferPriceMode === "actual") {
-    const actualMode = form.transferActualInputMode || "total";  // 3중 패턴 default
+    // 3중 패턴 default "total" — 분할 모드는 lot 단가가 정본이라 per_share 로 파생한다(D-4)
+    const actualMode = effectiveTransferActualInputMode(form);
     body.transferActualInputMode = actualMode;
     if (actualMode === "total") {
       const total = parseIntOrUndef(form.transferTotalPrice);
@@ -239,7 +242,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 취득가액 ──
   body.acquisitionMode = acquisitionMode;             // 3중 패턴 default: "actual"
   if (acquisitionMode === "actual") {
-    const acqInputMode = form.acquisitionActualInputMode || "per_share";  // 3중 패턴 default
+    // 3중 패턴 default "per_share" — 분할 모드는 lot 단가가 정본이라 per_share 로 파생한다(D-4)
+    const acqInputMode = effectiveAcquisitionActualInputMode(form);
     body.acquisitionActualInputMode = acqInputMode;   // ⑬ body spread 명시
 
     if (acqInputMode === "lots" && form.lotsMode === "single") {
@@ -622,6 +626,22 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   return body;
 }
 
+/**
+ * 오류 응답 → 화면 메시지. Zod `issues`가 있으면 **사유를 그대로** 보여준다.
+ * 종전에는 `err.error`(「Validation failed」)만 던져 어디서 막혔는지 알 수 없는 막다른 오류였다
+ * (계획서 `stock-split-lots-ui-bugfix.plan.md` D-4 부수 결함).
+ */
+export function formatStockApiError(
+  err: { error?: string; issues?: { message?: string }[] },
+  status: number,
+): string {
+  const messages = [
+    ...new Set((err.issues ?? []).map((i) => i.message).filter((m): m is string => !!m)),
+  ];
+  if (messages.length > 0) return `입력값을 확인하세요: ${messages.join(" · ")}`;
+  return err.error ?? `HTTP ${status}`;
+}
+
 // ============================================================
 // ⑬ callStockTransferTaxAPI — POST /api/calc/stock-transfer
 // ============================================================
@@ -649,7 +669,7 @@ export async function callStockTransferTaxAPI(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error ?? `HTTP ${res.status}`);
+    throw new Error(formatStockApiError(err, res.status));
   }
 
   const data = await res.json();
@@ -698,7 +718,7 @@ export async function callStockTransferTaxAggregateAPI(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error ?? `HTTP ${res.status}`);
+    throw new Error(formatStockApiError(err, res.status));
   }
 
   const data = await res.json();
