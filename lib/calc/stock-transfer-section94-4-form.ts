@@ -131,6 +131,46 @@ export function isPreDeemedPurchaseForm(
   });
 }
 
+/** 분할·다건 lot 모드인가 — `isPreDeemedPurchaseForm` 의 `isSplitOrLots` 와 같은 정의(단일 소스) */
+export function isLotsModeForm(
+  form: Pick<StockTransferFormData, "lotsMode" | "acquisitionMode" | "acquisitionActualInputMode">,
+): boolean {
+  return form.lotsMode === "split" || ((form.acquisitionMode || "actual") === "actual" && form.acquisitionActualInputMode === "lots");
+}
+
+/**
+ * 폼의 의제취득일 전 «매수» lot 인덱스(입력 순서) — 엔진 술어 `isPreDeemedPurchase` 에 lot 값을 넘긴다.
+ * ⑤(① 카드 노출)·④(전송 게이트)·⑧ 이 같은 답을 내야 한다. 유상증자·과세 무상주는 「매수」다(`toEngineAcquisitionCause`).
+ */
+export function preDeemedLotIndexesForm(form: StockTransferFormData): number[] {
+  const is94_4 = isSection94_4Form(form);
+  return (form.acquisitionLots ?? [])
+    .map((l, i) =>
+      isPreDeemedPurchase({
+        marketType: form.marketType,
+        acquisitionCause: toEngineAcquisitionCause(l.acquisitionCause),
+        acquisitionDate: l.acquisitionDate,
+        is94_4,
+        isSplitOrLots: false,
+      })
+        ? i
+        : -1,
+    )
+    .filter((i) => i >= 0);
+}
+
+/**
+ * 분할·다건 lot 의 ① 비교(영 §176의2④1호)가 «켜져 있는가» — lot 모드 ∧ 방식 선택 ∧ 의제 대상 매수 건 ≥ 1.
+ * ④ 전송 게이트·⑤ 사이드바/Step3 안내가 같은 답을 내도록 한 곳에 둔다(엔진이 켜는 조건과 같다).
+ */
+export function isPreDeemedLotClause1On(form: StockTransferFormData): boolean {
+  return (
+    isLotsModeForm(form) &&
+    (form.preDeemedLotClause1Mode === "estimated" || form.preDeemedLotClause1Mode === "sale_case") &&
+    preDeemedLotIndexesForm(form).length > 0
+  );
+}
+
 export type BookLostFormFields = Pick<
   StockTransferFormData,
   "marketType" | "acqFaceValueOnly" | "acqFaceValuePerShare" | "acquisitionStdMode"

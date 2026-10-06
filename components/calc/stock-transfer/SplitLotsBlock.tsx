@@ -121,7 +121,12 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
     onChange({ transferLots: [...form.transferLots, newLot] });
   };
   const updateTransferLot = (idx: number, patch: Partial<TransferLotForm>) => {
-    const next = form.transferLots.map((l, i) => (i === idx ? { ...l, ...patch } : l));
+    // 양도일이 바뀌면 그 매도 건의 양도 당시 기준시가(① 환산 분모 — 양도일 이전 1개월 종가평균)는 무효다.
+    // 폼 전역 양도일 변경 시 `transferDatePriceAvg1Month` 를 지우는 것과 같은 규약(Step1) — onChange patch 동승.
+    const dateChanged = patch.transferDate !== undefined && patch.transferDate !== form.transferLots[idx]?.transferDate;
+    const next = form.transferLots.map((l, i) =>
+      i === idx ? { ...l, ...patch, ...(dateChanged ? { transferStdPricePerShare: "" } : {}) } : l,
+    );
     // 대주주 판정 기준일 제안 — split 모드는 폼-전역 transferDate가 비고 lot별 양도일만 있다.
     // 미입력일 때만 제안하고 사용자 입력은 덮어쓰지 않는다(onChange patch 동승 — useEffect 미러링 금지).
     const suggested = form.priorYearEndDate ? "" : suggestPriorYearEndDateFromLots(next);

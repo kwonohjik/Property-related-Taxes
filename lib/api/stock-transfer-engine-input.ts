@@ -147,6 +147,8 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     // 의제취득일 전 매수 (영 §176의2④ — Z-1)
     preDeemedActualPricePerShare: coerced.preDeemedActualPricePerShare as number | undefined,
     preDeemedPpiRatio: coerced.preDeemedPpiRatio as number | undefined,
+    // 분할·다건 lot ① 비교 방식 (⑭ — TypeScript 미감지)
+    preDeemedLotClause1: coerced.preDeemedLotClause1 as StockTransferInput["preDeemedLotClause1"],
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: coerced.acquisitionMarketSamplePrice as number | undefined,
     acquisitionMarketSampleDate: coerced.acquisitionMarketSampleDate as Date | undefined,

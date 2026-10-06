@@ -122,6 +122,8 @@ export interface TransferLotForm {
   transferDate: string;
   shareCount: string;
   perShareTransferPrice: string;
+  /** 양도 당시 1주당 기준시가 — 의제취득일 전 매수 lot ① 환산의 분모(`preDeemedLotClause1Mode === "estimated"` 일 때만 전송) */
+  transferStdPricePerShare?: string;
 }
 
 export interface SpecificMatchingForm {

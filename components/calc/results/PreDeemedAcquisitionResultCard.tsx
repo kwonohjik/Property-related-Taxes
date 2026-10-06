@@ -16,6 +16,10 @@ type Detail = NonNullable<StockTransferResult["preDeemedAcquisitionDetail"]>;
 
 const num = (n: number) => n.toLocaleString("ko-KR");
 
+/** 단건·분할 lot 결과 카드 공용 — 지수 출처 각주 (문구 드리프트 방지) */
+export const PRE_DEEMED_PPI_FOOTNOTE =
+  "※ 생산자물가지수는 한국은행 통계(2020=100)이며 소수 둘째 자리까지입니다. 당시 고시 기준년과 배율이 미세하게 다를 수 있습니다 (소득세법 시행규칙 §85의2).";
+
 export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
   const picked2 = detail.selected === "clause2";
   const clause1Label = detail.clause1Method === "sale_case" ? "매매사례가액" : "환산취득가액";
@@ -86,10 +90,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
             ? "② 채택 — 필요경비는 개산공제 없이 실제 지출액(자본적지출·양도비)입니다 (법 §97②1호 나목)."
             : "① 채택 — 필요경비는 개산공제(환산취득가액이면 §97②2호 단서 비교 포함)입니다."}
         </p>
-        <p className="text-caption text-slate-500">
-          ※ 생산자물가지수는 한국은행 통계(2020=100)이며 소수 둘째 자리까지입니다. 당시 고시 기준년과 배율이
-          미세하게 다를 수 있습니다 (소득세법 시행규칙 §85의2).
-        </p>
+        <p className="text-caption text-slate-500">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>
     </ToneCard>
   );

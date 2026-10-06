@@ -206,7 +206,13 @@ export function pushAssetAndCostRows(
       : result.preDeemedAcquisitionDetail?.selected === "clause2"
         ? // 의제취득일 전 매수 — 실가 + 생산자물가상승분(영 §176의2④2호). 실가 방식이라 개산공제 행은 없다.
           "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"
-        : "11. 취득가액 (②)",
+        : result.preDeemedLotsDetail
+          ? // 분할·다건 lot — ① 비교가 켜지면 매수 건·매도 건마다 채택이 갈린다(환산 분모가 매도 건별이라 12-1·12-2 단일 행 불가).
+            // 꺼져 있으면 ② 만 적용한 값이다.
+            result.preDeemedLotsDetail.clause1
+            ? "11. 취득가액 (영 §176의2④ 많은 것 — 매수 건별 ①·② 채택은 결과 카드)"
+            : "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"
+          : "11. 취득가액 (②)",
     values: val(
       result.acquisitionPrice,
       (agg) => agg.items.reduce((s, r) => s + r.acquisitionPrice, 0),

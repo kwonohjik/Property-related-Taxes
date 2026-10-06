@@ -119,6 +119,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     // 의제취득일 전 매수 (영 §176의2④ — Z-1)
     preDeemedActualPricePerShare: "",
     preDeemedPpiRatio: "",
+    preDeemedLotClause1Mode: "none",     // 3중 패턴 default — ② 만(① 비교 끔)
     // R-1' 매매사례가액
     acquisitionMarketSamplePrice: "",
     acquisitionMarketSampleDate: "",
