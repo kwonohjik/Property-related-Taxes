@@ -136,7 +136,7 @@ describe("CA-1: 자본준비금 무상증자 단일 (단가 희석)", () => {
   it("CA-1-04: applied[0].skipped = false", () => {
     expect(r.applied[0].skipped).toBe(false);
   });
-  it("CA-1-05: appliedRules에 §17②2호 가목 단서 자본준비금 포함", () => {
+  it("CA-1-05: appliedRules에 §17②2호 가목(단서) 자본준비금 포함", () => {
     expect(r.appliedRules.some((x) => x.includes("자본준비금"))).toBe(true);
   });
 });
