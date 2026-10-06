@@ -1,0 +1,33 @@
+[
+  {
+    "id": "E162-era",
+    "docNo": "사전-2024-법규재산-0319",
+    "docDate": "2024.06.20.",
+    "basis": "era",
+    "today": "2024-06-20",
+    "summary": "서울 상속주택(A) 보유 세대가 근무상 형편으로 수도권 밖에서 수도권 밖으로 수회 이전한 뒤 최종 근무지 지역 주택(B, 2017 취득)을 취득, 부득이한 사유 해소 전 A 양도(2024.4.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2024-04-11",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-08-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "non_capital",
+          "acquisitionDate": "2017-02-03",
+          "oneHouseUnavoidableOutsideCapital": true,
+          "unavoidableOutsideCapitalReason": "work"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 일자: 원문 그대로(A 상속 취득 2010-08, 양도 2024-04-11, B 2017-02-03), 양도가 8억 가정, A 상속 취득이나 피상속인 취득일이 원문에 없어 취득원인을 매매로 표현. B 행에 ⑧ 선언(사유 근무상 형편, 해소일 미입력 = 해소 전 양도 전제). 관측: 비과세(applied 155-8-unavoidable:work) + undetermined 155-8-resolved-date-missing(해소일 미입력 안내 — 결론 영향 없음). 쟁점 「수도권 밖→밖 수회 이전 후 재취업지 주택」은 수도권 밖 소재(행 지역)와 사유 선택만으로 표현 — 이전 이력 입력 칸은 없고 엔진도 묻지 않는다. 최소쌍: ⑧ 선언을 빼면 과세."
+  }
+]

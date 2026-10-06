@@ -1,0 +1,48 @@
+[
+  {
+    "docNo": "재산세과-764",
+    "docDate": "2009.04.17.",
+    "id": "E115-era",
+    "basis": "era",
+    "today": "2009-05-20",
+    "summary": "일반주택 A(1985) + 별도세대 부친으로부터 상속한 주택 B(1987) + 배우자가 장인으로부터 상속한 소수지분(2/30) 공동상속주택 C(2003) 보유 세대가 A 양도 (양도일 원문 미기재 — 가정, A는 관리처분인가 후 현금청산 예정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1985-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "1987-05-15",
+          "isInherited": true,
+          "inheritedDate": "1987-05-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "C",
+          "region": "capital",
+          "acquisitionDate": "2003-05-15",
+          "isInherited": true,
+          "inheritedDate": "2003-05-15",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B",
+        "C"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 양도일 원문 미기재(회신 2009.4.17.) → 2009-06-15 가정, 월 단위 일자 15일(A 1985-03-15, B 1987-05-15, C 2003-05-15), 양도가 5억 중립, 비조정. 표현: 부친 상속 B(별도세대, 단독상속 §155②) + 아내가 장인으로부터 공동상속한 소수지분 C(별도세대, 최대지분자 아님 §155③) 두 행 → 둘 다 주택 수에서 제외(excludedHouses=[B,C]) 후 A 1주택 비과세. A는 관리처분인가 후 현금청산 예정이나 회신이 주택 양도로 판단하므로 일반주택으로 입력(입력 칸 없음, 쟁점 아님)."
+  }
+]

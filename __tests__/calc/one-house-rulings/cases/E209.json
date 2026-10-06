@@ -1,0 +1,95 @@
+[
+  {
+    "id": "E209-era",
+    "docNo": "기획재정부 재산세제과-140",
+    "docDate": "2024.01.22.",
+    "basis": "era",
+    "today": "2023-12-16",
+    "summary": "2019.2.12. 이후 §155⑳ 특례를 적용받은 자와 적용받은 적 없는 자가 혼인해 1세대가 된 뒤, 특례 미적용자 명의 주택(2020.3.10. 취득)을 거주주택 요건을 갖춰 장기임대주택 보유 상태에서 양도 (일자 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-12-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-03-10",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "40",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2017-06-15",
+              "rentalRegistrationDate": "2017-06-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "78",
+              "requirementsConfirmed": true
+            }
+          ],
+          "priorRentalExemptionHistory": "none"
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 생애 한 차례 이력의 귀속 명의자(혼인 전 특례를 적용받은 자 vs 양도 주택 명의자). 판정 메뉴의 이력 칸은 1세대 단위로 묻는다. 참고 관측(referenceForm): 양도 주택 명의자 기준 '없음'(none)을 고르면 통과·비과세, 세대 기준 '있음'(used)을 고르면 과세(프로브) — 원문 쟁점(명의자 기준)에 따른 선택은 사용자가 해야 한다. 원문에 사실관계 기재가 없어 모두 가정: 미적용자 명의 주택 취득 2020-03-10(2019.2.12. 이후)·거주 40개월·양도 2023-12-15·양도가 7억, 장기일반 2017-06-15 등록."
+  },
+  {
+    "id": "E209-current",
+    "docNo": "기획재정부 재산세제과-140",
+    "docDate": "2024.01.22.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "같은 패턴(특례 기적용자와 미적용자가 혼인한 1세대)을 2026.3.15. 양도로 구성 — 2025.2.28. 이후 양도분",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-03-10",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2019-06-15",
+              "rentalRegistrationDate": "2019-06-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "81",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2025.2.28. 이후 양도분부터 횟수 제한 폐지 — 특례 기적용자와 혼인한 1세대여도 이력 제한이 없어 거주주택 요건만 보면 된다. 같은 패턴을 양도 2026-03-15로 구성 → 비과세. 중립 고정: 비조정, 양도가 7억, 임대호 장기일반 2019-06-15 등록(8년 만료 전)·아파트 아님, 거주 60개월."
+  }
+]

@@ -1,0 +1,88 @@
+[
+  {
+    "id": "E022-era",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "era",
+    "today": "2006-03-11",
+    "summary": "농어촌주택(귀농주택)+일반주택 A 보유 세대가 A 양도 전 다른 주택 B를 취득해 일시적 3주택, B 취득일부터 1년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-03-10",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-02-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2003-05-01",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2005-10-20"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: isExempt=false (unmet 155-7-rural:return_to_farm, 사유 「세대 주택 수가 3채」) / 기대: 비과세(농어촌주택을 포함한 일시적 3주택에서도 §155① 적용). 가정값: 양도일·취득일 전부 원문 미기재(회신일 2006.04.14. 직전 2006-03-10 양도로 가정), 농어촌주택 유형은 회신 제목의 귀농주택(⑦3호)으로 둠, 요건 충족은 원문 전제. 폼 충실성 확인: (a) 최소쌍 프로브 — 농어촌주택 행만 빼면 §155① 비과세(applied 155-1), 신규주택 행만 빼면 §155⑦ 비과세(applied 155-7, 귀농주택) → 두 입력이 모두 route·엔진에 닿고 3채가 겹칠 때만 탈락; (b) 날짜는 YYYY-MM-DD 문자열; (c) 신규주택은 양도주택보다 늦게 취득한 행이 정확히 1채가 되도록(농어촌주택은 더 먼저 취득) 두어 명부에서 도출됨. 의심 지점: lib/tax-engine/transfer-tax-exemption.ts:306(§155① 분기가 householdHousingCount===2만 통과), lib/tax-engine/transfer-tax-exemption-holding.ts:75(§155⑦도 2주택만), lib/tax-engine/one-house/merge-deeming.ts:161(⑦은 ①과 양립하지 않는다는 전제 주석). 엔진 결함(미구현) 후보. 기한 축 한계: 원문 당시 기한 1년은 엔진 연혁에 없으나(2018 이전은 본문 3년) 이 케이스는 신규주택 취득 후 약 5개월 양도라 기한 축은 구별력 없음."
+  },
+  {
+    "id": "E022-current",
+    "docNo": "서면인터넷방문상담4팀-977",
+    "docDate": "2006.04.14.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "농어촌주택(귀농주택)+일반주택 A 보유 세대가 A 양도 전 다른 주택 B를 취득해 일시적 3주택, B 취득일부터 3년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-06-01"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2022-01-10",
+          "oneHouseRuralHouse": true,
+          "ruralHouseKind": "return_to_farm",
+          "ruralOutsideCapitalEupMyeon": true,
+          "ruralLandAreaSqm": "300",
+          "ruralWholeHouseholdMoved": true,
+          "ruralHighPriceAtAcquisition": false
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2023-09-01"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 관측: isExempt=false (unmet 155-7-rural:return_to_farm, 「세대 주택 수가 3채」) / 기대: 비과세. 현행 규칙: 종전주택 양도기한은 신규주택 취득일부터 3년(신규 취득 2023-09-01 → 양도 2026-06-15는 2년 9개월 — 1년 규정이면 불성립). 새 축 중립 고정: 비조정지역, 양도가 9억(12억 이하), 귀농주택은 취득 후 5년 이내 양도(⑦ 단서)·세대전원 이사 충족, 양도일 2026-10-01 이전. 프로브 최소쌍: 농어촌주택 행 제거 → §155① 비과세(applied 155-1-temporary-two-house); 신규주택 행 제거 → §155⑦ 비과세. 의심 지점은 E022-era와 같다(transfer-tax-exemption.ts:306, transfer-tax-exemption-holding.ts:75)."
+  }
+]

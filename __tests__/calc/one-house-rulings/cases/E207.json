@@ -1,0 +1,33 @@
+[
+  {
+    "id": "E207-era",
+    "docNo": "기획재정부 재산세제과-194",
+    "docDate": "2023.02.02.",
+    "basis": "era",
+    "today": "2023-06-16",
+    "summary": "피상속인(父)의 거주주택과 장기임대주택을 미성년 자녀 2명이 1/2씩 공동상속 — 상속 임대주택은 공동상속인 명의로 세무서 사업자등록만 하고 미성년자라 지자체 임대등록 불가(민특법 §5의6), 상속받은 거주주택 양도 (일자 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-05-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "100"
+      },
+      "houses": [
+        {
+          "id": "rental",
+          "acquisitionDate": "2005-03-15",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 임대사업자 등록을 하지 못한(미성년 상속인 — 민특법 §5의6) 임대주택. 임대주택 호는 지자체 등록신청일이 필수라 「등록하지 못한 임대주택」을 입력할 수 없다(비우면 ⑧·Zod가 차단). 참고 관측(referenceForm): 상속 임대주택을 일반 주택 명부 행으로 입력하면 2주택이라 과세 — 결론은 일치하나 미등록 사실은 검증되지 않는다. 가정: 거주주택 취득 2010-05-15·양도 2023-06-15·양도가 5억."
+  }
+]

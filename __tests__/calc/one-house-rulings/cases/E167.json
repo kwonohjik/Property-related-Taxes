@@ -1,0 +1,48 @@
+[
+  {
+    "id": "E167-era",
+    "docNo": "조심-2016-서-1629",
+    "docDate": "2016.06.21.",
+    "basis": "era",
+    "today": "2014-10-31",
+    "summary": "쟁점주택(1993.12.28. 취득) 양도일 2014.10.30. — 임대주택(2013.6. 분양 취득)은 2014.4.3. 구청 「임대주택법」 §6 등록, 세무서 「소득세법」 §168 사업자등록은 2015.12.7.(양도 이후), 전세계약 2014.8.22.",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-10-30",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1993-12-28",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "120",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2015-12-07",
+              "rentalRegistrationDate": "2014-04-03",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "100000000",
+              "acquisitionOfficialPrice": "100000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "2",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 관측: isExempt=true·rentalPassed=true / 기대: 과세 — 양도일 현재 「소득세법」 §168 세무서 사업자등록이 없으면(구청 임대사업자 등록만으로는) 장기임대주택이 아니다. 표현: 세무서 사업자등록일 2015-12-07(양도 2014-10-30 이후)·지자체 등록 2014-04-03을 원문 그대로 입력, 임대 2개월(전세계약 2014-08-22), 구법 등록 유형(pre_2018), ⑧ 오류 0. 최소쌍: 세무서 사업자등록일을 양도일 전(2014-04-03)으로 바꿔도 결과가 같다(프로브) — E163-era와 같은 원인(등록일이 양도일과 비교되지 않음). 의심 지점: lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:447-589, lib/tax-engine/rental-article/check.ts:374, lib/calc/transfer-tax-validate-rental-exception.ts:98-99. 가정: 거주주택 거주 120개월·양도가 3억·임대주택 수도권 서초·기준시가 1억(원문 미기재)."
+  }
+]

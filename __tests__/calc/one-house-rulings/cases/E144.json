@@ -1,0 +1,50 @@
+[
+  {
+    "id": "E144-era",
+    "docNo": "재산세과-3048",
+    "docDate": "2008.09.30.",
+    "basis": "era",
+    "today": "2008-09-30",
+    "summary": "수도권 아파트(A, 2004 취득) 보유 세대가 B 취득(2008.6.)으로 일시적 2주택인 상태에서 미등기(건축허가 없음) 농어촌주택(C) 취득 후 B 취득일부터 1년 이내 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-12-20",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-05-15"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2008-12-01",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        },
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2008-06-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자 가정: 양도 2008-12-20(회신 2008.09.30. 이후 예정), 농어촌주택(C) 취득 2008-12-01('2008.12.말 이전 취득 예정'), B 2008-06-15, A 2004-05-15, 양도가 5억. 미등기(건축허가 없어 등기 불가) 사실은 입력 칸이 없으나 엔진이 등기 여부를 요건으로 보지 않아 결론은 원문과 같다(쟁점 사실이 입력되지 않은 채 일치 — 「입력 없음, 영향 없음」). 경로: 조특법 §99의4 제외 후 §155① 일시적 2주택. 최소쌍: 제외 선언을 빼면 3주택 과세. 기한 축: 원문 당시 1년·엔진 3년 모두 B 취득 후 6개월 양도라 구별력 없음. 양도일 2009 이전이라 공휴일 표 보류 안내가 붙는다(결론 무관)."
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "E074-era",
+    "docNo": "재정경제부 재산세제과-938",
+    "docDate": "2006.08.04.",
+    "basis": "era",
+    "today": "2006-06-16",
+    "summary": "피상속인(배우자 포함 동일세대) 소유 1주택을 배우자(5/10)·자·자가 공동상속한 뒤 지분 최대 배우자가 자기 일반주택을 먼저 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-06-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1995-05-10"
+      },
+      "houses": [
+        {
+          "id": "inherited",
+          "region": "capital",
+          "acquisitionDate": "1999-06-15",
+          "isInherited": true,
+          "inheritedDate": "1999-06-15",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": true,
+          "decedentSameHouseholdAtInheritance": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 양도일 원문 미기재(회신 2006.08.04.) → 2006-06-15 가정, 상속개시 1999 → 1999-06-15 가정. 표현: 피상속인과 모(배우자)는 동일세대(decedentSameHouseholdAtInheritance=true), 모는 공동상속 최대 지분자(5/10). 엔진은 모를 최대지분자로 보아 공동상속주택을 주택 수에 산입(§155③ 단서 경로)해 과세 — 원문의 이유(동일세대원 상속주택은 §155②의 상속받은 주택이 아님)와 다른 경로로 같은 결론. 프로브: 최대지분자 아님 + 동일세대 → §155② 단서 사유로 불성립(unmet 155-2-inherited-house), 별도세대 + 소수지분 → 주택 수 제외로 비과세. 즉 동일세대 게이트 자체는 엔진에 있다. 원문 질의 (나)(소수지분 2인의 상속주택 양도)는 회신이 직접 답하지 않아 단언하지 않는다."
+  },
+  {
+    "id": "E074-current",
+    "docNo": "재정경제부 재산세제과-938",
+    "docDate": "2006.08.04.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "동거봉양 합가한 직계존속(합가 전 보유 주택)이 사망해 동일세대원이던 子가 그 주택을 상속, 상속받기 전부터 보유한 일반주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-04-10"
+      },
+      "houses": [
+        {
+          "id": "inherited-f",
+          "region": "capital",
+          "acquisitionDate": "2022-03-10",
+          "isInherited": true,
+          "inheritedDate": "2022-03-10",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": true,
+          "parentalCareMergeInheritedHouse": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 상속인과 피상속인이 상속개시 당시 동일세대인 경우 그 주택은 원칙적으로 상속받은 주택이 아니지만, 동거봉양 합가일 이전부터 피상속인이 보유하던 주택을 상속한 경우는 상속주택으로 보아 본인이 상속 전부터 보유한 일반주택 양도 시 비과세(2010.2.18. 이후 양도분). 이 케이스는 원문 패턴(동일세대 상속)에 현행 예외(합가 전 보유분)를 더한 변형으로, 원문 패턴 그대로(예외 없음)는 era 케이스와 같이 부적용이다. 표현: 상속주택 행에 decedentSameHouseholdAtInheritance=true + parentalCareMergeInheritedHouse=true (합가일 칸은 §155④ 별개 경로라 입력하지 않음). 구별력 확인(프로브): parentalCareMergeInheritedHouse=false이면 unmet 155-2-inherited-house로 과세. 새 축 중립 고정: 비조정, 양도가 7억, 양도일 2026-10-01 이전."
+  }
+]

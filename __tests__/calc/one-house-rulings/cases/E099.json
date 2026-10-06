@@ -1,0 +1,23 @@
+[
+  {
+    "docNo": "재산46014-183",
+    "docDate": "2003.06.05.",
+    "id": "E099-era",
+    "basis": "era",
+    "today": "2001-12-20",
+    "summary": "1세대1주택자(갑) 사망으로 동일세대원 처가 A아파트 상속(1999.4.), 재건축 사업계획 승인(1999.6.) 후 입주권을 양도(2001.11.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2001-11-28",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "acquisitionDate": "1999-02-05"
+      }
+    },
+    "bucket": "pending",
+    "note": "pending(기대값 미정). 원문(재산46014-183)이 최종 비과세 여부를 결론짓지 않는다 — 회신은 (1) 사업계획 승인일(1999.6.3.) 현재 비과세 요건을 갖춘 기존주택의 입주권을 양도일 현재 다른 주택이 없는 상태로 양도하면 1세대1주택으로 보고, (2) 동일세대원 상속은 §155② 미적용이며 보유기간 등은 상속 전후를 통산한다는 원칙만 제시. 승인일 현재 통산 보유가 약 4개월이라 당시 요건 충족 여부가 갈리나 원문이 답하지 않아 expected를 두지 않는다. referenceForm 관측: 비과세(one_right_89_1_4_ga) — 엔진은 「승인일 현재 비과세 요건을 갖춘 기존주택」을 자기선언(redevExemptionEligibleAtApproval)으로만 받고, 2001년 연혁(당시 보유기간·승인일 기준)과 상속 전후 보유기간 통산 입력이 없다. 선언을 끄면 과세(V-E099-noelig). 처의 입주권만 보유(명부 없음), 양도일 2001-11-28(원문), 양도가 3억 가정(2003.3.1. 이전 양도는 고가 기준 미지원 — 엔진 thresholdNotice)."
+  }
+]

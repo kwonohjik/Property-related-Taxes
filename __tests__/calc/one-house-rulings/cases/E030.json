@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E030-era",
+    "docNo": "부동산거래관리과-160",
+    "docDate": "2012.03.15.",
+    "basis": "era",
+    "today": "2013-12-21",
+    "summary": "신축 목적으로 주택을 매입해 즉시 멸실·신축한 경우 신축주택의 취득시기는 기존주택(매입) 취득일",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2013-12-20",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-11-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2010-05-19"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 신축 목적 매입·즉시 멸실·신축 경위 → 취득일 도출 — 명부 행은 취득일 하나뿐이다(E029와 같은 축). 원문은 취득시기만 물어 양도 결론이 없다: 원문 일자 그대로(A 2008.11.→15일 가정·B 매입 2010-05-19·멸실 2010-06-13·보존등기 2011-01-05). 결론을 보이려 양도일 2013-12-20(매입일부터 3년 7개월·준공일부터 2년 11개월)을 가정했고, 양도가 5억, 비조정. 참고 관측: referenceForm(B를 매입일 2010-05-19로 입력) = 과세 — 취득시기를 매입일로 본 결론과 같다. 준공일 2011-01-05로 입력하면 비과세(155-1)."
+  }
+]

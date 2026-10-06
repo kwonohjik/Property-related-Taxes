@@ -1,0 +1,38 @@
+[
+  {
+    "docNo": "기획재정부 재산세제과-1031",
+    "docDate": "2023.09.04.",
+    "id": "E103-era",
+    "basis": "era",
+    "today": "2023-09-20",
+    "summary": "일반주택 A(2013.2.) 보유 중 공동상속주택 B의 소수지분(1/3)을 상속(2017.6.)받고, 이후 다른 공동상속인의 지분 각 1/3을 매매·경매로 취득(2019.12.·2020.9.)해 B를 단독소유 — A 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-12-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-02-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2017-06-15",
+          "isInherited": true,
+          "inheritedDate": "2017-06-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "B"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). 양도일 원문 미기재(회신 2023.9.4.) → 2023-12-15 가정, A 취득 2013-02월 → 2013-02-15, 상속 2017-06월 → 2017-06-15, 양도가 7억 중립, A·B 비조정. 표현: 상속받은 B를 단독 상속주택 행(isCoInherited=false)으로 두고 일반주택 A 양도 → 상속주택 제외 비과세. 상속 후 매매·경매로 나머지 지분을 취득했다는 사실을 담는 칸이 없다 — 공동상속 소수지분(§155③)으로 표현해도 비과세로 같고(V-E103-co), 상속 표시를 끄면 과세(V-E103-notinh). 즉 쟁점(추가 취득분이 있어도 §155② 적용 가능)은 입력으로 구별되지 않고 사용자가 상속 표시를 유지하는 방식으로만 반영된다."
+  }
+]

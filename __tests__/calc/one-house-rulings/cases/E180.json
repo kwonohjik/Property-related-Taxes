@@ -1,0 +1,51 @@
+[
+  {
+    "id": "E180-era",
+    "docNo": "기획재정부 재산세제과-151",
+    "docDate": "2022.01.24.",
+    "basis": "era",
+    "today": "2023-03-16",
+    "summary": "甲이 A아파트(2012. 취득, 2년 이상 거주)와 B(2017. 취득·단기임대 등록 — 자동말소 전까지 요건 충족, 2021.1. 자동말소)를 보유 — B에 전입·거주(임대 중단)·임대료 5% 미준수·세무서 사업자등록 미유지 상태에서 말소 후 5년 이내 A 양도 (양도일 2023.3. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-03-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-09-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2017-01-20",
+              "rentalRegistrationDate": "2017-01-20",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "rentalAutoTermination": true,
+              "registrationCancellationDate": "2021-01-20",
+              "terminatedRegistrationType": "short_term"
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 말소 후 상태(B 전입·거주로 임대 중단, 임대료 5% 미준수, 세무서 사업자등록 미유지). 호별 「기타 요건 자기확인」은 필수 체크이고 문구가 「임대료 5% 상한, 임대사업자 등록 유지(양도일 현재 등록·임대 중)…」라 말소 호에도 요구된다 — 원문 사실대로 해제하면 ⑧이 「기타 요건 자기확인이 필요합니다」로 차단하고 엔진도 REQUIREMENTS_NOT_CONFIRMED로 불통과(프로브). 원문 결론(말소 후 요건을 충족하지 않아도 §155㉓ 적용)은 체크를 켜야만 나오므로 사실과 다른 입력이 필요하다 ⇒ 엔진/UI 결함 후보(㉓ 말소 호에 양도일 현재 요건 자기확인을 면제하지 않음). 의심 지점: lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:508-511(말소 호에도 REQUIREMENTS_NOT_CONFIRMED 부과), components/calc/transfer/RentalUnitCard.tsx:666-681(체크 문구). 참고 관측(referenceForm): 체크를 켜면 §155㉓ 통과·비과세. 가정: 양도 2023-03-15(말소 2021-01-20로부터 5년 이내)·거주주택 취득 2012-09-15·거주 60개월·양도가 6억, B 단기 4년 등록 2017-01-20(장기일반 가목·terminatedRegistrationType=short_term)·임대 48개월·수도권."
+  }
+]

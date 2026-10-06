@@ -1,0 +1,47 @@
+[
+  {
+    "id": "E198-era",
+    "docNo": "서면-2017-부동산-0313 [부동산납세과-823]",
+    "docDate": "2017.07.19.",
+    "basis": "era",
+    "today": "2017-08-16",
+    "summary": "甲이 서울 서초 A아파트(1999.3.2. 취득·거주)와 서울 강남 B아파트(2002.3.4. 취득, 2011.11.25. 임대 등록)를 보유 — B가 관리처분계획인가(2017.7. 예정)로 조합원입주권으로 전환된 뒤 A 양도 (양도일 2017.8. 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2017-08-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-03-02",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "200",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2011-11-25",
+              "rentalRegistrationDate": "2011-11-25",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": true,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "500000000",
+              "acquisitionOfficialPrice": "500000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "68",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 장기임대주택이 관리처분계획인가로 조합원입주권으로 전환된 상태(멸실·권리 전환). 임대주택 호는 등록일·임대 개월·자기확인만 받는다(E184와 같은 한계). 참고 관측(referenceForm): B를 계속 임대 중인 주택으로 입력하면 통과·비과세 — 결론은 일치하나 전환 사실은 검증되지 않는다. 가정: 양도 2017-08-15·거주 200개월·양도가 5억, B 구법 등록 2011-11-25·아파트·기준시가 5억·수도권."
+  }
+]

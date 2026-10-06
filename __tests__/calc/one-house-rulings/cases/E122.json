@@ -1,0 +1,66 @@
+[
+  {
+    "id": "E122-era",
+    "docNo": "재산세과-291",
+    "docDate": "2009.09.23.",
+    "basis": "era",
+    "today": "2009-09-23",
+    "summary": "직계존속(1953년생 여자, 1주택)과 자녀(1주택)가 2007년 동거봉양 합가, 2008년 1주택 양도 — 합가일 54세·양도일 55세 이상, 연령 판정 기준일이 합가일인가 양도일인가 (일자 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2008-09-15",
+      "contractTotalPrice": "300000000",
+      "parentalCareMergeDate": "2007-03-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-05-15"
+      },
+      "houses": [
+        {
+          "id": "parent",
+          "region": "capital",
+          "acquisitionDate": "1995-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 합가 당시 직계존속의 나이(연령 판정 기준일이 합가일인가 양도일인가). 파일럿 M-1/M-2와 같은 축(E141 — 직계존속 연령 입력 없음). 기대(원문은 결론을 명시하지 않음): 합가일 기준이면 합가 당시 54세(당시 요건 55세 미만)라 특례 불성립 → 과세로 둠(파생 결론). 참조 관측(referenceForm, 연령 없이 구성): isExempt=true(applied 155-4-parental-care-merge) — 연령과 무관하게 비과세가 나온다. 일자 가정: 합가 2007-03-15, 양도 2008-09-15(자녀 주택), 자녀 주택 2003-05-15·직계존속 주택 1995-05-15, 양도가 3억."
+  },
+  {
+    "id": "E122-current",
+    "docNo": "재산세과-291",
+    "docDate": "2009.09.23.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "직계존속(합가일 58세·양도일 61세, 1주택)과 자녀(1주택)의 동거봉양 합가 후 합가일부터 7년 10개월에 자녀 주택 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-20",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2018-05-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2012-05-15"
+      },
+      "houses": [
+        {
+          "id": "parent",
+          "region": "capital",
+          "acquisitionDate": "2000-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 합가일 현재 직계존속의 나이. 파일럿 M-1/M-2와 같은 축(E141). 현행 규칙: 동거봉양 합가의 직계존속 연령은 합가일 기준으로 60세 이상(직계존속 중 한 사람이 60세 이상이면 족함, 중대한 질병이 있는 60세 미만도 포함)이고 합가일부터 10년 이내 먼저 양도. 이 케이스는 합가일 58세로 요건 미충족 → 과세로 둠. 참조 관측(referenceForm, 연령 없이 구성): isExempt=true(applied 155-4-parental-care-merge). 새 축 중립: 비조정, 양도가 8억, 양도일 2026-10-01 이전, 합가 후 7년 10개월(10년 이내)."
+  }
+]

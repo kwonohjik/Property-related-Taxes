@@ -1,0 +1,71 @@
+[
+  {
+    "docNo": "기획재정부 재산세제과-40",
+    "docDate": "2022.01.07.",
+    "id": "E063-era",
+    "basis": "era",
+    "today": "2022-01-07",
+    "summary": "원문에 사실관계 없음(일반 질의). 가정 사실: 조정대상지역 A 보유 중 지역주택조합 조합원 가입 2018.6.15.(공고 전), 사업계획승인 2020.8.15.(공고 후), B 완공 취득 2020.12.15. — 신규주택을 취득할 수 있는 권리는 사업계획승인일 이후",
+    "referenceForm": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2018-06-15",
+      "isOneHousehold": true,
+      "transferDate": "2022-03-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-03-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 지역주택조합 조합원 지위 취득일과 주택법 §15 사업계획승인일 — 「신규주택을 취득할 수 있는 권리」가 인정되는 시점(승인일 이후)을 판정할 칸이 없다. 입력은 신규주택 매매계약 체결일(newHouseContractDate) 하나뿐이다. 원문에 사실관계가 없어(일반 질의) 가정 사실로 구성: 조정대상지역 종전주택 보유, 조합 가입 2018-06-15(공고·2018-09-14 이전), 사업계획승인 2020-08-15, B 완공 취득 2020-12-15, 종전주택 양도 2022-03-20(신규 취득 후 1년 3개월). 참고 관측(referenceForm: 계약일 = 가입일 2018-06-15): 비과세(3년) — 회신 취지(권리는 승인일 이후)와 다르다. 계약일을 승인일 2020-08-15로 넣으면 1년+전입 체제라 과세로 회신 취지와 일치(프로브 R-E063-approvalDate) — 사용자가 승인일을 알고 그 날짜를 계약일 칸에 넣어야 한다. 기대값(과세)은 이 가정 사실에 회신 규칙을 적용한 값."
+  },
+  {
+    "docNo": "기획재정부 재산세제과-40",
+    "docDate": "2022.01.07.",
+    "id": "E063-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조정대상지역 A(2014.3. 취득) 보유 중 지역주택조합 조합원 지위로 취득한 B를 2023.8.15. 취득(조합 가입 2018.6., 사업계획승인 2021.9.) — 신규 취득일부터 2년 10개월(2026.6.)에 A 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2018-06-15",
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-03-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2023-08-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2023.1.12. 이후 양도분은 지역 무관 3년이라 신규주택을 취득할 수 있는 권리의 취득 시점(조합 가입·사업계획승인)에 따른 단축기간 판정이 필요 없다. 조합 가입 2018-06-15(계약일 입력)·B 취득 2023-08-15 → 양도 2026-06-15는 신규 취득 후 2년 10개월(2년이면 불성립). 프로브: 신규 취득 2022-12-15면 3년 6개월이라 과세. 새 축 중립: 종전주택 2014.3. 취득(거주요건 면제), 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

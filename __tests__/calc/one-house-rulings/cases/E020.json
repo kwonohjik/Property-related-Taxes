@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E020-era",
+    "docNo": "심사양도2003-3062",
+    "docDate": "2003.11.24.",
+    "basis": "era",
+    "today": "2002-10-01",
+    "summary": "쟁점주택 양도일에 주택 2채를 취득했으나 양도잔금으로 취득주택2 잔금을 지급한 사실이 확인되면 양도일 현재 일시적 2주택으로 비과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2002-09-30",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1984-10-10"
+      },
+      "houses": [
+        {
+          "id": "h1",
+          "region": "capital",
+          "acquisitionDate": "2002-09-30"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 같은 날 이루어진 양도·취득의 선후와 자금 흐름(양도대금으로 취득잔금을 지급) — 명부 행은 취득일 하나뿐이라 같은 날 두 주택을 넣으면 양도일 현재 3주택으로 읽힌다. 원문 일자 그대로(쟁점 1984-10-10·양도 2002-09-30·취득주택1 2002-09-30·취득주택2 잔금 2002-09-30(등기접수 2002-10-01)), 양도가 3억 가정. 참고 관측: referenceForm(취득주택2를 명부에서 뺌 = 양도 후 취득으로 본 입력) = 비과세(155-1) — 원문 결론과 같으나 사용자가 결론을 미리 반영한 입력이다. 취득주택2를 잔금일 2002-09-30로 넣으면 3주택 과세, 등기접수일 2002-10-01(원문이 취득일로 보지 않은 날)로 넣어도 3주택 과세 — 양도일 이후 취득 행이 주택 수에 산입됨(lib/tax-engine/one-house/house-count.ts:103-109, 날짜 필터 없음)."
+  }
+]

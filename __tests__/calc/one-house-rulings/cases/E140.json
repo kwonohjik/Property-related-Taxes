@@ -1,0 +1,72 @@
+[
+  {
+    "id": "E140-era",
+    "docNo": "서일46014-11547",
+    "docDate": "2003.10.30.",
+    "basis": "era",
+    "today": "2003-10-30",
+    "summary": "1주택 모(母)가 차남 집에 합가(1991)했다 삼남 집에서 2년 이상 거주 후 차남 집에 재합가(2001.2.22.), 재합가일부터 1년 1개월에 모 주택 양도(2002.3.) — 기산일은 재합가일",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-03-15",
+      "contractTotalPrice": "200000000",
+      "parentalCareMergeDate": "2001-02-22",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1980-05-15"
+      },
+      "houses": [
+        {
+          "id": "son",
+          "region": "capital",
+          "acquisitionDate": "1990-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자: 원문 그대로(어머니 아파트 1980, 재합가 2001-02-22, 양도 2002-03 → 15일로 가정, 차남 주택은 취득일 가정 1990-05-15), 양도가 2억. 합가일 칸에 재합가일을 입력(분가 후 재합가는 재합가일부터 기산). 최소쌍: 최초 합가일 1991-04-09를 넣으면 과세 — 기산일 축이 판정을 가른다. 당시 기한 2년은 엔진 연혁에 없고(엔진 5년) 재합가 후 1년 1개월이라 기한 축은 구별력 없음; 연령(60세 이상 모) 입력 칸 없음 — 파일럿 M-1/M-2와 같은 축이나 쟁점은 기산일."
+  },
+  {
+    "id": "E140-current",
+    "docNo": "서일46014-11547",
+    "docDate": "2003.10.30.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택 모(60세 이상)가 아들 집에 합가(2012.4.)했다 분가 후 재합가(2018.5.15.), 최초 합가일로는 10년을 넘었으나 재합가일부터 7년 10개월에 모 주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2018-05-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1990-05-15"
+      },
+      "houses": [
+        {
+          "id": "son",
+          "region": "capital",
+          "acquisitionDate": "2000-05-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 동거봉양 합가 기한 10년(종전 2년), 분가 후 재합가는 재합가일부터 기산, 직계존속 60세 이상(입력 칸 없음 — 파일럿 M-1/M-2와 같은 축). 최초 합가 2012-04-09(이미 13년 경과)·재합가 2018-05-15 → 양도 2026-03-15는 재합가일부터 7년 10개월 — 최소쌍: 합가일에 최초 합가일을 넣으면 과세. 새 축 중립: 비조정, 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]

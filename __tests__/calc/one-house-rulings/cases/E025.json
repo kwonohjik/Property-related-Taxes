@@ -1,0 +1,34 @@
+[
+  {
+    "id": "E025-era",
+    "docNo": "국심-2004-서-3790",
+    "docDate": "2005.10.31.",
+    "basis": "era",
+    "today": "2002-12-24",
+    "summary": "신주택 취득 후 1년 내 종전주택을 동일세대원인 군복무 중 아들에게 부담부증여로 양도 — 양도 후에도 2주택이라 특례 부적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2002-12-23",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-08-27"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2002-08-29"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 양수자가 동일세대원인지(군복무 사병 아들은 별도세대 아님) — 판정 메뉴는 양수자·양도 원인 칸이 없어 제3자 양도로만 본다. 양도 후 세대 주택 수를 판정할 방법이 없다. 원문 일자 그대로(종전 1997-08-27·배우자 신주택 2002-08-29·양도 2002-12-23), 양도가는 전세보증금 인수액 9,500만원이나 총가액 불명 → 3억 가정. 참고 관측(referenceForm): 비과세(155-1) — 원문 결론(과세)과 반대. 양수자 사실이 없는 입력이라 엔진이 가릴 수 없다."
+  }
+]

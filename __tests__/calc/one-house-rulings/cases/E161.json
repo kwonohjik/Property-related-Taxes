@@ -1,0 +1,36 @@
+[
+  {
+    "id": "E161-era",
+    "docNo": "기획재정부 재산세제과-882",
+    "docDate": "2023.07.19.",
+    "basis": "era",
+    "today": "2023-07-10",
+    "summary": "수도권 주택(A, 2008) 보유 세대가 공공기관 지방이전으로 수도권 밖 신규주택(C, 2017) 취득, A 양도 예정 — §155⑯ 적용 전제, §155⑧ 적용 여부",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-09-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-03-15"
+      },
+      "houses": [
+        {
+          "id": "c",
+          "region": "non_capital",
+          "acquisitionDate": "2017-06-15",
+          "oneHouseUnavoidableOutsideCapital": true,
+          "unavoidableOutsideCapitalReason": "work"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-8-unavoidable:work"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: §155⑧의 「근무상 형편」이 공공기관의 수도권 밖 이전(§155⑯)에 해당하는지. ⑧ 부득이 사유는 study/work/illness/other 선택뿐이고 §155⑯ 플래그(publicInstitutionRelocation)와 상호 배제되지 않는다. 참조 관측(referenceForm: ⑧ work 선언): isExempt=true(applied 155-8-unavoidable:work, undetermined 155-8-resolved-date-missing) — 원문 결론(⑧ 부적용)과 반대이며 ⑯ 플래그를 함께 켜도 같다(프로브). ⑧을 선언하지 않으면 과세. 기대 결론: 일시적 2주택 ⑯ 기한 5년을 넘긴 일반주택 양도는 ⑧로 구제되지 않아 과세로 둠(원문은 ⑧ 부적용만 답함 — isExempt 단언은 일자 가정에 의존). 일자 가정: A 2008-03-15, C 2017-06-15, 양도 2023-09-15, 양도가 8억."
+  }
+]

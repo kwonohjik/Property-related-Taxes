@@ -1,0 +1,50 @@
+[
+  {
+    "id": "E028-era",
+    "docNo": "부동산납세과-2367",
+    "docDate": "2015.02.02.",
+    "basis": "era",
+    "today": "2015-01-20",
+    "summary": "광주 아파트(B, 1994 취득) 보유 세대가 조특법 §99의4 농어촌주택(C, 2010 취득)을 보유한 채 다른 아파트(D)를 신규 취득해 일시적 3주택 — B 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-03-20",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1994-07-23"
+      },
+      "houses": [
+        {
+          "id": "rural",
+          "region": "non_capital",
+          "acquisitionDate": "2010-11-30",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "100000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        },
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2014-10-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 일자 가정: 양도 예정 2015-03-20, 신규 아파트(D) 2014-10-15, 농어촌주택(C) 건물 취득 2010-11-30(원문 일자 그대로), 종전 아파트(B) 1994-07-23, 양도가 4억. 농어촌주택은 명부 행에 조특법 §99의4 주택 수 제외(countExclusion, 기준시가 1억·소재지 요건 확인)로 표현 — 요건 충족은 원문 전제. 질의1(대지 선취득·건물 후취득)은 건물 취득일을 취득일로 입력하면 취득기간 판정이 통과하며 대지 취득일 칸은 따로 없다(1991 대지 취득일을 넣으면 취득기간 밖으로 판정될 것). 경로: houseCount.excluded=rural(§99의4) 후 §155① 일시적 2주택(applied 155-1). 최소쌍: 제외 선언을 빼면 3주택 과세. 기한 축 구별력 없음(신규 취득 후 5개월 양도 — 원문 당시 3년 기준과 엔진 3년 모두 이내)."
+  }
+]

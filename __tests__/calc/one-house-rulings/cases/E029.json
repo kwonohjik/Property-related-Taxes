@@ -1,0 +1,37 @@
+[
+  {
+    "id": "E029-era",
+    "docNo": "사전-2020-법령해석재산-1167 [법령해석과-1205]",
+    "docDate": "2021.04.05.",
+    "basis": "era",
+    "today": "2020-12-16",
+    "summary": "조정대상지역 종전주택(A)이 있는 상태에서 조정대상지역의 B주택을 매입·멸실·재건축 — 신규주택 취득일은 매입일이라 2019.12.16. 이전 취득분 2년 이내 양도로 §155① 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2020-12-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-11-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2019-03-14"
+        }
+      ],
+      "isRegulatedArea": true,
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 신규주택을 신축 목적으로 매입 후 멸실·재건축한 경위(취득시기 = 기존주택의 연장인 매입일, 준공일 아님) — 명부 행은 취득일 하나뿐이고 그 날짜 규칙을 엔진이 갖지 않는다. 같은 회신의 주택신축판매업 재고주택 불산입도 입력이 없어 명부에서 뺐다(결론 전제). 원문: A 2015.11.·B 매입 2019-03-14·멸실 2019-11-13·사용승인 2020.2.·A 양도 2020.12.(월 단위 → A 2015-11-15, 양도 2020-12-15 가정), 서울·성남 조정대상지역 가정(조정 선언 yes·yes), 양도가 8억. 참고 관측(referenceForm = B를 매입일로 입력): 비과세(155-1, 2년 체제) = 원문 결론. B를 사용승인일(2020-02-15)로 입력하면 신규 취득 2019.12.17. 이후라 1년+전입 체제로 바뀌어 같은 비과세지만 전입일 미입력 보류(155-1-move-in-requirement-unverified)가 붙는다 — 이 양도일에서는 결론이 같아 날짜 선택의 영향이 헤드라인에 안 드러난다."
+  }
+]

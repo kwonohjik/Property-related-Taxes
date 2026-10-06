@@ -1,0 +1,124 @@
+[
+  {
+    "id": "E163-era",
+    "docNo": "조심-2016-서-0143",
+    "docDate": "2016.03.14.",
+    "basis": "era",
+    "today": "2014-08-23",
+    "summary": "임대주택 2채(2014.4.30.·2014.7.10. 취득, 세무서 사업자등록)를 둔 1세대가 2014.8.22. 거주주택 양도 후 §155⑲(현행 ⑳) 적용 신고 — 구청 「임대주택법」 §6 임대사업자 등록은 2015.7.1.(양도 이후)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-08-22",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2014-04-30",
+              "rentalRegistrationDate": "2015-07-01",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "3",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2014-07-10",
+              "rentalRegistrationDate": "2015-07-01",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "1",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "rentalPassed": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 관측: isExempt=true·rentalPassed=true(§155⑳ 통과) / 기대: 과세 — 거주주택 양도일 현재 구청 「임대주택법」 §6 임대사업자 등록이 없으면 장기임대주택이 아니다. 표현: 임대주택 2호의 세무서 사업자등록일(2014-04-30·2014-07-10)과 지자체 등록신청일(2015-07-01, 양도일 이후)을 원문 그대로 입력, ⑧ 오류 0. 임대 개월은 양도일까지 3·1개월, 임대구분은 구 임대주택법 등록 유형(pre_2018). 최소쌍: 지자체 등록일을 양도일 전(2014-05-02·2014-07-12, E163-era-pos)으로 바꿔도 결과가 같다 ⇒ 입력한 등록일이 양도일과 비교되지 않는다(날짜 칸이 비어 있으면 ⑧·Zod가 막지만 양도일 뒤 날짜는 통과). 의심 지점: lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:447-589(호별 판정 루프 — 두 등록일은 deriveEffectiveRegDate(:149)로 목·의무임대기간 도출에만 쓰이고 ctx.transferDate와 비교하지 않음), lib/tax-engine/rental-article/check.ts:374(등록 완비 = 두 날짜가 존재하는지만 봄), lib/calc/transfer-tax-validate-rental-exception.ts:98-99(⑧도 필수 입력 여부만 확인). 가정(원문 미기재): 거주주택 취득 2005-03-15·거주 36개월·양도가 5억, 임대주택 소재 수도권·기준시가 3억."
+  },
+  {
+    "id": "E163-era-pos",
+    "docNo": "조심-2016-서-0143",
+    "docDate": "2016.03.14.",
+    "basis": "era",
+    "today": "2014-08-23",
+    "summary": "E163-era와 같되 구청 임대사업자 등록이 양도일 전(2014.5.2.·2014.7.12.)인 경우 — 경계 짝",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2014-08-22",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "a",
+              "businessRegistrationDate": "2014-04-30",
+              "rentalRegistrationDate": "2014-05-02",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "3",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "b",
+              "businessRegistrationDate": "2014-07-10",
+              "rentalRegistrationDate": "2014-07-12",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "1",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "match. E163-era의 짝 — 지자체 등록신청일이 양도일 전(2014-05-02·2014-07-12)이면 §155⑲(현행 ⑳) 통과·비과세. 등록일이 양도일 전이든 후든 결과가 같아 이 짝은 등록 시점에 대한 구별력이 없다(그 점이 E163-era mismatch의 근거). 가정은 E163-era와 같다."
+  }
+]

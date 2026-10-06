@@ -1,0 +1,37 @@
+[
+  {
+    "docNo": "서면-2015-부동산-1134",
+    "docDate": "2015.07.14.",
+    "id": "E071-era",
+    "basis": "era",
+    "today": "2015-08-20",
+    "summary": "별도세대 피상속인으로부터 A·B 2주택을 한꺼번에 상속받은 1세대가 피상속인 보유기간이 짧은 B를 일반주택으로 보아 양도 (양도일 원문 미기재 — 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-09-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-06-29",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1991-04-09"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "region": "non_capital",
+          "acquisitionDate": "2002-06-29",
+          "isInherited": true,
+          "inheritedDate": "2002-06-29",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 관측: 비과세(명부 A를 §155② 상속주택으로 주택 수에서 제외, 양도 주택 B를 일반주택으로 취급 — houseCount.excluded=[A]) / 기대: 과세(별도세대 피상속인에게서 상속받은 2주택 중 1개를 양도할 때는 §155② 특례 적용 불가 — 양도 주택 자체가 상속주택이라 「그 밖의 주택(일반주택)」이 아니다). 폼: 양도 주택 취득원인 상속(상속개시 2002-06-29, 피상속인 취득 1991-04-09), 명부 A = 상속주택(별도세대·단독상속·수도권 밖), ⑧ 오류 0. 양도일 원문 미기재(회신 2015.7.14.) → 2015-09-15 가정, 양도가 4억 중립, 비조정. 최소쌍: 양도 주택 취득원인을 매매로 바꿔도 결과 동일(V-E071-purchase) → 취득원인이 상속주택 제외 판정에 쓰이지 않음 / 양도 주택 취득일을 상속개시 다음 날로 바꿔도 동일(V-E071-dayafter; 2013.2.15. 이전 취득은 「상속개시 당시 보유」 한정을 보지 않음) / A를 동일세대 상속으로 바꾸면 과세(V-E071-A-same, 동거봉양 단서 게이트 경로로 쟁점 사유와 다름). 의심 지점(코드 확인): lib/tax-engine/transfer-inheritance-exclusion.ts:138-142 (제외 후보 inheritedOthers가 isInherited && id !== sellingHouseId만 보고 양도 주택의 취득원인은 안 봄), lib/tax-engine/data/inheritance-general-house-era.ts:59 (2013-02-15 이전 취득 일반주택은 무조건 yes). acquisitionCause는 보유·거주기간 통산에만 쓰인다(lib/tax-engine/transfer-tax-exemption-holding.ts:276·439)."
+  }
+]

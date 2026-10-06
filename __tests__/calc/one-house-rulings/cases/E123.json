@@ -1,0 +1,84 @@
+[
+  {
+    "id": "E123-era",
+    "docNo": "기획재정부 재산세제과-182",
+    "docDate": "2008.05.16.",
+    "basis": "era",
+    "today": "2007-06-16",
+    "summary": "남편이 1주택 보유 60세 이상 시부모와 동거봉양 합가한 뒤 부인이 대체주택을 취득해 일시적 3주택, 합가일부터 2년·신규주택 취득일부터 1년 이내 부인 소유 주택 양도 (월 단위 원문 — 일자 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-06-15",
+      "contractTotalPrice": "400000000",
+      "parentalCareMergeDate": "2006-03-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-05-15"
+      },
+      "houses": [
+        {
+          "id": "parents",
+          "region": "capital",
+          "acquisitionDate": "1990-01-01",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2006-08-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(기한 구별력 없음). 원문은 월 단위(취득 2003.5·합가 2006.3·대체주택 2006.8·양도 2007.6) → 일(日)은 15일로 가정. 시부모 주택 취득일은 원문에 없어 양도주택(2003-05-15)보다 앞선 1990-01-01로 가정(양도주택 뒤 취득 행이 신규주택 1채로 도출되도록). 표현: 동거봉양 합가일 + 먼저 양도 선언, 시부모 주택은 합가 전 보유 쪽(counterpart_side), 대체주택(신규)은 합가 후 취득 행. 엔진 경로: 동거봉양 합가 + 일시적 2주택 중첩 3주택(applied 155-1, 155-4). 한계: 당시 기한(합가 2년·신규주택 1년)은 엔진 연혁에 없고(2018 이전도 현행 값 사용), 이 케이스는 두 기한 이내라 구별력 없음 — 구별은 E123-current가 한다. 직계존속 연령(60세, 여자 55세)은 입력이 없다."
+  },
+  {
+    "id": "E123-current",
+    "docNo": "기획재정부 재산세제과-182",
+    "docDate": "2008.05.16.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "1주택자가 1주택 보유 60세 이상 직계존속과 동거봉양 합가한 뒤 신규주택을 취득해 일시적 3주택, 합가일부터 7년 3개월·신규주택 취득일부터 1년 10개월에 기존주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "parentalCareMergeDate": "2019-03-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-05-15"
+      },
+      "houses": [
+        {
+          "id": "parents",
+          "region": "capital",
+          "acquisitionDate": "2000-01-01",
+          "mergeOrigin": "counterpart_side"
+        },
+        {
+          "id": "new",
+          "region": "capital",
+          "acquisitionDate": "2024-08-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 동거봉양 합가일부터 10년·신규주택 취득일부터 3년 이내 종전(기존)주택 양도. 합가 2019-03-15 → 양도 2026-06-15는 7년 3개월(5년 규정이면 불성립), 신규주택 2024-08-15 → 1년 10개월(1년 규정이면 불성립)이라 구별력 있음(프로브 음성 짝: 양도주택 취득 2010-01-15·합가 2014-03-15(12년 3개월)이면 과세, 합가 2017-03-15(9년 3개월)이면 비과세 — 합가 기한 10년 경계 확인; 신규 취득 2022-01-15이면 과세). 새 축 중립 고정: 비조정지역, 양도가 9억, 양도일 2026-10-01 이전. 직계존속 연령 요건은 입력이 없다."
+  }
+]

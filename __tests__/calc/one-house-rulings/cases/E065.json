@@ -1,0 +1,32 @@
+[
+  {
+    "docNo": "기획재정부 재산세제과-1356",
+    "docDate": "2022.10.27.",
+    "id": "E065-era",
+    "basis": "era",
+    "today": "2022-10-27",
+    "summary": "男 2019.5. 조정대상지역 분양권 취득, 女 2019.11. 입주권 승계취득(2020.4. 주택으로 완공), 2020.11. 혼인(1분양권+1주택), 2021.11. 분양권이 주택으로 완공(2주택) — 혼인한 날에 종전주택과 신규주택을 취득할 수 있는 권리를 취득한 것으로 보아 §155① 적용 여부 판단(원문에 양도일·결론 없음)",
+    "referenceForm": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2019-05-15",
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2021-11-15"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 혼인한 날을 종전주택·「신규주택을 취득할 수 있는 권리」의 취득 시점으로 보는 기준(혼인으로 세대에 편입된 분양권의 취득 시점 간주)과 분양권 완공 전 보유 구간. 명부 행은 완공 취득일 하나만 받는다. 원문에 양도일·결론이 없고(판단 방법 회신) 사실관계는 일자 표뿐이라 expected를 두지 않는다. 가정 사실: 종전주택 = 女 입주권이 완공된 주택(취득 2020-04-15), 신규주택 = 男 분양권(계약 2019-05-15)이 2021-11-15 완공, 양도 2022-06-15. 참고 관측(referenceForm: B 취득일 = 완공일 2021-11-15, 분양권 계약일 2019-05-15): 비과세(applied 155-1). 신규주택 취득일을 혼인일 2020-11-15로 바꿔 넣으면(권리를 혼인일에 취득한 것으로 보는 회신 취지) A 취득 후 1년 미경과라 과세(프로브 R-E065-marriageAcq) — 사용자가 간주일을 직접 계산해 넣어야 하고 결론이 그 선택에 좌우된다. 혼인일 입력(marriageDate)은 합가 특례용이라 이 간주를 하지 않는다."
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "docNo": "기획재정부 재산세제과-512",
+    "docDate": "2021.05.25.",
+    "id": "E049-era",
+    "basis": "era",
+    "today": "2022-05-01",
+    "summary": "서울(조정대상지역) A분양권·B분양권을 2017.9. 취득, A주택 2018.12. 취득(준공·잔금), B주택 2020.2. 취득(준공·잔금) — 종전주택 취득시점('18.12.) 기준 허용기간 2년. 신규 취득일부터 2년 2개월에 종전주택 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true,
+      "newHouseContractDate": "2017-09-15",
+      "isOneHousehold": true,
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-12-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "40"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-02-15"
+        }
+      ],
+      "transferDate": "2022-04-15"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 회신: 허용기간 2년(종전주택 취득시점 '18.12. 기준 — 별첨 Case 2: 종전주택이 없는 상태에서 신규주택 분양권 계약). 이를 적용하면 신규 취득(2020-02-15) 후 2년 2개월에 양도하면 과세. 관측: 비과세(applied 155-1) — 엔진은 허용기간 3년을 적용한다. 원인: 신규 분양권 계약일(2017-09-15)이 2018-09-13 이전이라 부칙(종전 3년)으로 처리하고, 계약 당시 종전주택을 보유했는지(Case 1 vs Case 2)를 가르지 않는다. 폼 확인: ⑧ 오류 0. 소재지 코드(서울 법정동코드)로 입력해도 같은 결과(계약일이 공고일 2017-11-10 이전). 계약일을 비우면 신규 취득일(2020-02-15 ≥ 2019-12-17) 기준 1년+전입 체제가 되어 과세(+전입요건 미판정 보류) — 결과만 같을 뿐 2년이 아니다. 2년이 되는 입력은 계약일에 종전주택 취득일(2018-12-15)을 넣는 것뿐(프로브: 이때 양도 2022-04-15 과세·2021-06-15 비과세) — 사용자가 회신의 Case 2 규칙을 알고 계약일 칸에 다른 날짜를 넣어야 한다. 의심 지점: lib/tax-engine/data/temporary-two-house-deadline-era.ts:129-130(n = min(취득일, 계약일) — 계약 시점 종전주택 보유 조건 없음)·:145, lib/tax-engine/transfer-tax-temporary-two-house-timing.ts:235-251(공고 전 계약 제외도 같은 조건 없음). 일자: 원문 월 단위(분양권 2017.9.·A 2018.12.·B 2020.2.) → 15일, 양도일은 원문에 없어 신규 취득 2년 2개월 후 2022-04-15 가정, 양도가 8억. A는 조정 취득(wasRegulatedAtAcquisition)이라 거주 40개월로 거주요건 충족."
+  },
+  {
+    "docNo": "기획재정부 재산세제과-512",
+    "docDate": "2021.05.25.",
+    "id": "E049-era-within2y",
+    "basis": "era",
+    "today": "2021-09-01",
+    "summary": "위와 같은 사실에서 신규 취득일부터 1년 4개월(2년 이내)에 종전주택 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true,
+      "newHouseContractDate": "2017-09-15",
+      "isOneHousehold": true,
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-12-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "40"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2020-02-15"
+        }
+      ],
+      "transferDate": "2021-06-15"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(구별력 한계). E049-era와 같은 사실에서 신규 취득 1년 4개월(2021-06-15)에 양도 — 2년·3년 허용기간 모두 이내라 비과세로 일치하지만 2년 규정을 확인하는 것은 아니다. 2년 대 3년의 구별은 E049-era(mismatch)가 한다. 계약일을 비우면 1년+전입 체제라 과세로 바뀐다(프로브)."
+  },
+  {
+    "docNo": "기획재정부 재산세제과-512",
+    "docDate": "2021.05.25.",
+    "id": "E049-current",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "조정대상지역 A분양권·B분양권(각 2020.9. 계약), A주택 2022.3. 취득, B주택 2024.2. 취득 — 신규 취득일부터 2년 7개월(2026.9.)에 종전주택 양도",
+    "form": {
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "isRegulatedArea": true,
+      "newHouseContractDate": "2020-09-15",
+      "isOneHousehold": true,
+      "transferDate": "2026-09-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "40"
+      },
+      "wasRegulatedAtAcquisition": true,
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2024-02-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 2023.1.12. 이후 양도분은 지역 무관 3년이고 1년 내 이사·전입요건이 없다. A분양권·B분양권(2020.9. 각 계약)이 A 2022-03-15·B 2024-02-15 취득(종전주택 취득 후 1년 이상)으로 완공 — 신규 취득 후 2년 7개월(2026-09-20) 양도(2년이면 불성립). 프로브: B 취득 2023-06-15면 3년 3개월이라 과세. 새 축 중립 고정: A 조정 취득이라 거주 40개월 입력(거주요건 충족용), 양도가 8억, 양도일 2026-10-01 이전."
+  }
+]
