@@ -38,6 +38,7 @@ import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfe
 import { SplitAllocationPreviewCard } from "@/components/calc/stock-transfer/SplitAllocationPreviewCard";
 import { effectiveTransferActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { effectiveAcquisitionActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
+import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -76,6 +77,8 @@ export function Step2({ form, onChange }: Step2Props) {
   const giftLikeCause = isGiftLikeCause(form.acquisitionCause);
   const bookLostMarket = usesUnlistedSupplementaryValuation(form.marketType) || isTradingHaltBypassMarket(form.marketType);
   const giftEstimatedDisabled = giftLikeCause && !bookLostMarket;
+  // 과세 무상주 — 취득가액은 액면가액(법정)이라 추계 모드를 열지 않는다(⑧·③과 같은 술어)
+  const bonusTaxed = form.acquisitionCause === "bonus_taxed";
   const is94_4 = isSection94_4Form(form);
   /**
    * 환산 분자(취득일 이전 1개월 종가)의 기준일 — 의제취득일 «전» 취득이면 의제취득일이다
@@ -311,8 +314,8 @@ export function Step2({ form, onChange }: Step2Props) {
             columns={3}
             options={[
               { value: "actual", label: "실가" },
-              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled },
-              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause },
+              { value: "estimated", label: "환산취득가", disabled: isSplitMode || giftEstimatedDisabled || bonusTaxed },
+              { value: "sale_case", label: "매매사례가액", disabled: isSplitMode || giftLikeCause || bonusTaxed },
               // 감정가액 모드 제거 — 영§176의2③2호 단서에 의해 주식등 적용 불가
               // 액면가(장부분실) 모드 제거 — 법 §99①4 후단은 §165④ 보충평가 «안에서»
               //   분자를 대체하는 단서라 환산취득가 하위 토글(`acqFaceValueOnly`)로 일원화했다
@@ -331,6 +334,12 @@ export function Step2({ form, onChange }: Step2Props) {
               (소득세법 §99①4 후단 · 시행령 §163⑨).
               {form.acquisitionCause === "carryover_gift" &&
                 " 이월과세 적용 시의 증여자 취득가액은 1단계 「증여자 취득가액 산정 방식」에서 정합니다."}
+            </p>
+          )}
+
+          {bonusTaxed && !isSplitMode && (
+            <p className="text-xs text-amber-800" data-testid="bonus-taxed-face-value-notice">
+              {BONUS_TAXED_ACTUAL_ONLY_MESSAGE}
             </p>
           )}
 
@@ -384,7 +393,7 @@ export function Step2({ form, onChange }: Step2Props) {
 
               {acquisitionActualInputMode === "per_share" && (
                 <CurrencyInput
-                  label="1주당 취득가액"
+                  label={bonusTaxed ? "1주당 액면가액" : "1주당 취득가액"}
                   required
                   hint={perShareAcqHint}
                   value={form.perShareAcquisitionPrice}
@@ -395,7 +404,7 @@ export function Step2({ form, onChange }: Step2Props) {
               {acquisitionActualInputMode === "total" && (
                 <>
                   <CurrencyInput
-                    label="취득가액 합계"
+                    label={bonusTaxed ? "액면가액 합계" : "취득가액 합계"}
                     required
                     hint={totalAcqHint}
                     value={form.acquisitionTotalPrice}

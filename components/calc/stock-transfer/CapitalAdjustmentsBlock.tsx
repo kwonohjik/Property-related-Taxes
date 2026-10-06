@@ -73,12 +73,12 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
         <p>
           <strong>의제배당 분기 (배당소득 — 이 계산기에서 계산하지 않음)</strong>:
-          이익잉여금 자본전입 무상증자 (§17②2호 가목 본문) /
+          이익잉여금 자본전입 무상증자 (§17②2호 본문) /
           자본환급 무상감자 (§17②1호)
         </p>
         <p>
           <strong>양도세 분기 (단가 환산만)</strong>:
-          자본준비금 무상증자 (§17②2호 가목 단서 (1)·(2)) /
+          자본준비금·재평가적립금 무상증자 (§17②2호 단서 가목·나목) /
           비례감자·결손보전 (형식감자)
         </p>
         <p className="text-slate-500">
@@ -117,7 +117,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                 </div>
                 {/* 4개를 세로로 쌓으면 자본조정 행 하나가 4행을 먹는다 — 2열 2행으로 접는다.
                     ⚠️ inline(한 행·설명 미렌더)이 아니라 columns다 — 이 그룹의 description은
-                       **조문과 과세 구분**(§17②2호 가목 단서 (1) / 본문, §17②1호)이라
+                       **조문과 과세 구분**(§17②2호 단서 가목 / 본문, §17②1호)이라
                        지우면 무상증자 두 종류를 가를 근거가 사라진다.
                     anchor: capital-adjustment-radio-columns.anchor.test.tsx CA-1 */}
                 <RadioCardGroup
@@ -131,12 +131,12 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                     {
                       value: "bonus_capital_reserve",
                       label: "무상증자 — 자본준비금 (양도세 처리)",
-                      description: "§17②2호 가목 단서 (1) — 법§16①2호 가목 본문 자본준비금 (의제배당 제외)",
+                      description: "§17②2호 단서 가목 — 「상법」 §459① 자본준비금 전입 (의제배당 제외)",
                     },
                     {
                       value: "bonus_retained_earnings",
                       label: "무상증자 — 이익잉여금 (배당소득 — 별도 처리)",
-                      description: "§17②2호 가목 본문 — 의제배당(배당소득). 주식수·단가를 조정하지 않습니다",
+                      description: "§17②2호 본문 — 의제배당(배당소득). 주식수·단가를 조정하지 않습니다",
                     },
                     {
                       value: "reduction_proportional",

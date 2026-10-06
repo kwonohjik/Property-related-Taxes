@@ -10,6 +10,7 @@
 
 import { isGiftLikeEstimationBlocked } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
 import { FORM_ACQUISITION_CAUSES } from "@/lib/calc/stock-acquisition-cause";
+import { isBonusTaxedEstimationBlocked } from "@/lib/calc/stock-acquisition-cause";
 import { isBookLostAtAcquisitionForm } from "@/lib/calc/stock-transfer-section94-4-form";
 import {
   type AcquisitionStdMode,
@@ -144,7 +145,9 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
       : giftEstimationBlocked && normCause === "carryover_gift" && storedAcqMode !== "actual"
         ? storedAcqMode
         : defaults.donorAcquisitionMethod;
-  const acquisitionMode: StockTransferFormData["acquisitionMode"] = giftEstimationBlocked ? "actual" : storedAcqMode;
+  // 과세 무상주도 같은 규약 — 취득가액이 법정(액면가액)이라 추계 모드는 Step 2 라디오가 막는다.
+  const acquisitionMode: StockTransferFormData["acquisitionMode"] =
+    giftEstimationBlocked || isBonusTaxedEstimationBlocked(normCause, storedAcqMode) ? "actual" : storedAcqMode;
 
   return {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
