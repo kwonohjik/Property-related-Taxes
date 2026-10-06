@@ -6,7 +6,7 @@
  *    (재export는 eslint가 「미사용」으로 지운다 — memory feedback_800line_split_export_preservation).
  *    `deriveLegacyPartAcqMode`·`PartAcqMode`는 원본이 정본이다(여기서 import).
  */
-import { deriveLegacyPartAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-mode";
+import { deriveLegacyPartAcqMode, effectivePartAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-mode";
 
 interface LegacyAcqFlags {
   isSalesCaseAcquisition?: boolean;
@@ -91,27 +91,77 @@ export function gbSeparateOffPartClearPatch(): {
   };
 }
 
+interface GbOffModeSource extends LegacyAcqFlags {
+  landAcqMode?: PartAcqMode | "";
+  buildingAcqMode?: PartAcqMode | "";
+  /** 토지·건물 소유자 분리 — 본인 소유가 아닌 파트는 자산 단위 산정방식을 정하지 못한다. */
+  selfOwns?: "both" | "building_only" | "land_only";
+  gbHasExtension?: boolean;
+  /** 분리 OFF의 단일 취득원인(= 토지 원인) */
+  acquisitionCause?: string;
+}
+
+/**
+ * 분리 OFF 전환 후 **자산 단위(레거시 3플래그)가 표현할 산정방식** — ON 승격(`gbSeparateOnPatch`)의 대칭 강등 (A2 후속 · 세액 조용한 변경 방지).
+ *
+ * 소유 파트(`selfOwns` 반영)의 명시 모드가 **모두 같고 `actual`이 아니면** 그 모드를 유지한다. 아래는 자산 단위로 표현할 수 없어 `actual`이다:
+ *  - 파트 모드가 서로 다르다(혼합) — 기존 Dialog가 손실을 알린다
+ *  - 그 취득원인에서 허용되지 않는 모드(`gbPartAllowedModes` — 상속·증여의 비-actual, 이월과세의 감정·매매사례)
+ *  - 증축이 있는데 감정·매매사례 — ⑧ R9가 자산 단위 감정·매매사례를 차단한다(환산은 증축과 함께 허용)
+ * 금액 칸(감정=`fixedAcquisitionPrice`, 매매사례=`similarSalesValue`)은 건드리지 않는다 — 비어 있으면 ⑧이 요구한다(파트 금액을 합쳐 지어내지 않는다).
+ */
+export function gbSeparateOffTargetMode(a: GbOffModeSource): PartAcqMode {
+  const selfOwns = a.selfOwns ?? "both";
+  const owned: PartAcqMode[] = [];
+  if (selfOwns !== "building_only") owned.push(effectivePartAcqMode(a.landAcqMode, a));
+  if (selfOwns !== "land_only") owned.push(effectivePartAcqMode(a.buildingAcqMode, a));
+  const mode = owned[0];
+  if (!mode || mode === "actual" || owned.some((m) => m !== mode)) return "actual";
+  if (!gbPartAllowedModes(a.acquisitionCause).includes(mode)) return "actual";
+  if (a.gbHasExtension && (mode === "appraisal" || mode === "salesCase")) return "actual";
+  return mode;
+}
+
+/**
+ * 분리 OFF 전환 시 **레거시 3플래그를 파트 모드에서 되돌리는** patch — `gbSeparateOffTargetMode`의 값을 세 플래그로 쓴다.
+ *
+ * 세 플래그를 **항상 전부** 쓴다(한 patch). 일부만 쓰면 ON 중 남은 `useEstimatedAcquisition` 등이 되살아나 파트 선택과 다른 산정방식이 된다.
+ * `gbUnifiedSec1639ClearPatch`·`gbUnifiedCarryoverClearPatch`와 모순되지 않는다 — 두 patch가 끄는 조합은 `gbPartAllowedModes`가 이미 강등 대상에서 뺀다.
+ */
+export function gbSeparateOffFlagsPatch(a: GbOffModeSource): {
+  useEstimatedAcquisition: boolean;
+  isAppraisalAcquisition: boolean;
+  isSalesCaseAcquisition: boolean;
+} {
+  const mode = gbSeparateOffTargetMode(a);
+  return {
+    useEstimatedAcquisition: mode === "estimated",
+    isAppraisalAcquisition: mode === "appraisal",
+    isSalesCaseAcquisition: mode === "salesCase",
+  };
+}
+
 /**
  * 분리 OFF 전환이 **사용자가 입력한 값을 지우는가** — 참이면 확인 Dialog를 띄운다(A-통합 Q-H).
  *
- * 지워지는 것: ① 파트 금액 6칸 중 양수 ② 레거시 파생값과 **다른** 명시 파트 모드(= 사용자가 고른 산정방식 — 그 취득원인에서 허용되는 모드만).
- * 분리 ON 직후(`gbSeparateOnPatch`가 모드를 레거시 파생값 그대로 승격)에는 둘 다 없어 즉시 전환된다.
+ * 지워지는 것: ① 파트 금액 6칸 중 양수 ② 전환 후 자산 단위 모드(`gbSeparateOffTargetMode`)와 **다른** 명시 파트 모드(= 사용자가 고른 산정방식 —
+ * 그 취득원인에서 허용되는 모드만). 강등으로 **보존되는 선택은 잃는 값이 아니다** — 분리 ON 직후(승격 그대로)에는 즉시 전환된다.
  */
 export function gbSeparateOffHasDataToClear(
-  a: LegacyAcqFlags &
+  a: GbOffModeSource &
     Partial<Record<(typeof GB_PART_AMOUNT_KEYS)[number], string>> & {
-      landAcqMode?: PartAcqMode | "";
-      buildingAcqMode?: PartAcqMode | "";
-      /** 파트 취득원인 — 그 원인에서 **허용되지 않는** 명시 모드(상속·증여의 환산 등 stale)는 사용자 입력이 아니라 지우는 값으로 세지 않는다. */
-      acquisitionCause?: string;
       gbBuildingAcquisitionCause?: string;
     },
 ): boolean {
   if (GB_PART_AMOUNT_KEYS.some((k) => raw(a[k]) > 0)) return true;
-  const legacy = deriveLegacyPartAcqMode(a);
-  const chosen = (mode: PartAcqMode | "" | undefined, cause: string | undefined) =>
-    !!mode && mode !== legacy && gbPartAllowedModes(cause).includes(mode);
-  return chosen(a.landAcqMode, a.acquisitionCause) || chosen(a.buildingAcqMode, a.gbBuildingAcquisitionCause);
+  const target = gbSeparateOffTargetMode(a);
+  const selfOwns = a.selfOwns ?? "both";
+  const lost = (mode: PartAcqMode | "" | undefined, cause: string | undefined) =>
+    !!mode && mode !== target && gbPartAllowedModes(cause).includes(mode);
+  return (
+    (selfOwns !== "building_only" && lost(a.landAcqMode, a.acquisitionCause)) ||
+    (selfOwns !== "land_only" && lost(a.buildingAcqMode, a.gbBuildingAcquisitionCause))
+  );
 }
 
 /**

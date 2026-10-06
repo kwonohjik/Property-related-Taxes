@@ -115,6 +115,10 @@ describe("A-6 — 분리 토글과 취득일 칸", () => {
       landAcquisitionDate: BUILDING,
       gbBuildingAcquisitionCause: "purchase",
       ...gbSeparateOffPartClearPatch(),
+      // 파트 모드가 모두 실가 → 레거시 3플래그도 전부 false로 되돌린다(`gbSeparateOffFlagsPatch`)
+      useEstimatedAcquisition: false,
+      isAppraisalAcquisition: false,
+      isSalesCaseAcquisition: false,
     });
   });
 });

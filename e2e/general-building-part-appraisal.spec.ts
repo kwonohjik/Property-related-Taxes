@@ -13,6 +13,7 @@
  *   T4. 증축 + 자산 단위 감정 → 차단 메시지(Q-A3)
  *   T5. G-3 — 분리 OFF 감정 → 분리 ON 전환: 파트 라디오가 감정으로 승격되고 body 최상위 acquisitionMethod=actual
  *   T6. 분리 OFF — 입력이 있으면 확인 Dialog(취소=불변 · 확정=소거)
+ *   T8. ON → OFF 왕복 — 자산 단위 감정이 실거래가로 돌아가지 않는다(대칭 강등)
  *   T7. G-3 — 「건물(토지 제외)」 감정 → 「일반건물」 전환: 감정 승계(분리 OFF) → 분리 ON 승격, 막다른 길 없음
  *
  * ⚠️ 세액 수치의 정본은 vitest anchor(`general-building-part-appraisal-salescase.a1*.anchor.test.ts`)다. 이 스펙의 금액 단언은
@@ -254,5 +255,33 @@ test.describe("일반건물 — 감정가액·매매사례가액 (A2)", () => {
     await page.getByText("토지·건물 취득일 다름").first().click();
     await expect(page.getByTestId("gb-land-acq-mode-appraisal")).toBeChecked();
     await expect(page.getByTestId("gb-building-acq-mode-appraisal")).toBeChecked();
+  });
+
+  test("T8: ON → OFF 왕복 — 자산 단위 감정가액 선택이 실거래가로 돌아가지 않는다(대칭 강등)", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      hasSeperateLandAcquisitionDate: false,
+      landAcquisitionDate: "2015-03-01",
+      landAcqMode: "",
+      buildingAcqMode: "",
+      landAcquisitionPrice: "",
+      buildingAcquisitionPrice: "",
+      isAppraisalAcquisition: true,
+      fixedAcquisitionPrice: "420000000",
+    });
+    await expandAssetSection(page, 3);
+    const toggle = () => page.getByRole("switch", { name: /토지·건물 취득일 다름/ });
+    await toggle().click();
+    await expect(page.getByTestId("gb-land-acq-mode-appraisal")).toBeChecked();
+    await toggle().click(); // 지울 입력이 없으니 Dialog 없이 즉시
+    await expect(page.getByText("삭제하고 끄기")).toHaveCount(0);
+    await expect(toggle()).not.toBeChecked();
+    await expect(page.locator('input[name^="acqBasisMode"][value="appraisal"]')).toBeChecked();
+    await expect(page.getByTestId("fixed-acquisition-price")).toHaveValue("420,000,000");
+
+    // ④ — 왕복 전과 같은 감정 경로(개산공제 포함 결정세액)
+    const body = (await calculate(page)) as Record<string, unknown>;
+    expect(body.acquisitionMethod).toBe("appraisal");
+    expect(body.appraisalValue).toBe(420_000_000);
   });
 });

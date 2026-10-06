@@ -62,7 +62,7 @@ export function gbPenaltyBadgeMethod(
 }
 
 
-const PART_MODE_LABELS: Record<PartAcqMode, string> = {
+export const PART_MODE_LABELS: Record<PartAcqMode, string> = {
   actual: "실거래가",
   estimated: "환산취득가",
   appraisal: "감정가액",

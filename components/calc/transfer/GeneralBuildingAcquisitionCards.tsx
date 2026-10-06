@@ -37,6 +37,8 @@ import { gbPartCauseModePatch } from "@/lib/calc/transfer-tax-gb-toggle-patches"
 import { gbSeparateOnPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { gbSeparateOffPartClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { gbSeparateOffHasDataToClear } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffFlagsPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { gbSeparateOffTargetMode } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { gbUnifiedSec1639ClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { gbUnifiedCarryoverClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -118,6 +120,7 @@ import {
   toBuildingCause,
   gbPenaltyBadgeMethod,
   PartAcqModeField,
+  PART_MODE_LABELS,
   GbBuildingInheritedValueCard,
   GbBuildingCarryoverCard,
 } from "./GeneralBuildingAcquisitionCardsParts";
@@ -135,6 +138,7 @@ export function GeneralBuildingAcquisitionCards({
   const penaltyBadgeMethod = gbPenaltyBadgeMethod(asset, transferDate);
   // 분리 OFF 취득원인 변경 확인 Dialog — 토글 상태(`isSeparate`)와 **분리된** 상태다(memory feedback_dialog_data_discard_confirm).
   const [confirmSeparateOff, setConfirmSeparateOff] = useState(false);
+  const offTarget = gbSeparateOffTargetMode(asset);
 
   /**
    * M-1a 취득일 기록 — 분리 OFF면 **토지·건물이 같은 값**이어야 한다(불변식·계획서 §3.2(1)).
@@ -207,6 +211,9 @@ export function GeneralBuildingAcquisitionCards({
       ...gbUnifiedCarryoverClearPatch(asset.acquisitionCause),
       // 파트 모드·금액·매매사례가액·자본적지출 — 분리 OFF 화면에는 고칠 칸이 없다(A2 · Q-H)
       ...gbSeparateOffPartClearPatch(),
+      // 파트 모드가 모두 같은 비-actual이면 레거시 플래그로 되돌려 자산 단위 산정방식을 보존한다(`gbSeparateOnPatch`의 대칭 강등).
+      // 플래그를 복원하지 않으면 같은 금액이 조용히 실거래가로 계산된다. 위 두 정리 patch 뒤에 둔다(허용 원인에서만 켜므로 모순 없음).
+      ...gbSeparateOffFlagsPatch(asset),
     });
   /**
    * 분리 토글. ON은 자산 단위 감정·매매사례를 **명시 파트 모드로 승격**하고 숨은 레거시 플래그를 끈다(`gbSeparateOnPatch` · G-3).
@@ -697,7 +704,11 @@ export function GeneralBuildingAcquisitionCards({
         open={confirmSeparateOff}
         onOpenChange={setConfirmSeparateOff}
         title="토지·건물 취득일 다름을 끄시겠습니까?"
-        description="토지·건물별로 입력한 산정방식·취득가액·매매사례가액·자본적지출이 모두 삭제됩니다. 되돌릴 수 없습니다."
+        description={`토지·건물별로 입력한 산정방식·취득가액·매매사례가액·자본적지출이 모두 삭제됩니다. ${
+          offTarget === "actual"
+            ? "자산 전체 취득가액 산정 방식은 「실거래가」로 돌아갑니다."
+            : `자산 전체 취득가액 산정 방식은 「${PART_MODE_LABELS[offTarget]}」 그대로 유지됩니다.`
+        } 되돌릴 수 없습니다.`}
         confirmLabel="삭제하고 끄기"
         destructive
         onConfirm={applySeparateOff}
