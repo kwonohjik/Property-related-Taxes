@@ -1327,6 +1327,7 @@ export type {
   SplitPartResult,
   SplitGainResult,
   SplitLandExpropriationValuationDetail,
+  StdSplitDetail,
 } from "./transfer-split-gain.types";
 
 /**

@@ -24,6 +24,8 @@ import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
+import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
+import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
@@ -163,6 +165,18 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     }
   }
 
+  // ── V8-N. 주택 소유자 분리 — 취득시 건물 기준시가(나목) 필수 (S3-1) ─────────────────
+  // 개별주택가격(결합 공시)을 토지분·건물분으로 나누는 법정 방식은 가목:나목 **비례 안분**이라 나목이 분모다
+  // (뺄셈 fallback 금지 — Q-3). 엔진 `calcSplitGain`·⑫(`refineSplitAcquisitionInputs`)·⑤ 카드 노출·④ 전송이
+  // **같은 술어**(`ownerSplitHousingNeedsBuildingStd`)를 쓰므로 칸이 열린 상태에서만 요구된다(막다른 길 없음).
+  // 메시지 접두는 위 3종과 같게 둔다 — 검증 이동 케이스가 한 접두로 유지된다.
+  if (ownerSplitHousingNeedsBuildingStd(asset) && opt(asset.buildingStandardPriceAtAcq) == null) {
+    return fieldError(
+      "buildingStandardPriceAtAcq",
+      `${label}: 토지·건물 소유자가 다르면 본인 소유분만 과세하므로 개별주택가격을 토지·건물 기준시가 비율로 나눠야 합니다 — 취득시 건물 기준시가를 계산기로 산정하거나 직접 입력하세요 (소득세법 §99①1호 나목·시행령 §166⑥).`,
+    );
+  }
+
   // ── V1·V2. 별개 취득 — 취득가액 파트별 필수 (함수 최상단 필수) ──────────────
   // 아래 §7.2 검증과 `saleSplitMode !== "actual"` early-return(:57 상당)·`skipTotals`(지분·
   // 부담부증여·재개발 제외)보다 **앞**에 둔다. 뒤에 놓으면 그 경로들이 미검증이 되어,
@@ -220,7 +234,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
         isSeparate: true,
       })
     ) {
-      return fieldError("buildingStandardPriceAtAcq", `${label}: 건물분 취득시 기준시가를 입력하세요 — 토지·건물 취득시기가 달라 각 파트가 자기 취득일의 직전 고시분을 쓰므로, 결합 총액에서 역산하면 건물분에 토지 취득시점이 섞입니다(소득세법 §99①1호 나목·시행령 §164③).`);
+      return fieldError("buildingStandardPriceAtAcq", `${label}: 건물분 취득시 기준시가를 입력하세요 — 토지·건물 취득시기가 달라 각 파트가 자기 취득일의 직전 고시분을 쓰므로, 결합 총액에서 건물분을 도출하면 건물분에 토지 취득시점이 섞입니다(소득세법 §99①1호 나목·시행령 §164③).`);
     }
   }
 
@@ -305,6 +319,16 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   }
   if (needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
     return fieldError("buildingStandardPriceAtTransfer", `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`);
+  }
+
+  // ── V7-H. 양도시 개별주택가격 — 주택 소유자 분리 + 환산 파트 (S3-1 D-1 ⓑ) ──────────────
+  // 환산취득가액의 분모도 취득시와 같은 비례 척도(양도시 개별주택가격 × 가목 ÷ (가목 + 나목))다. 값이 없으면 엔진이
+  // 던지므로(`calcSplitAcquisitionPrice`) 여기서 필드 오류로 먼저 알린다. 노출 술어와 같은 leaf를 쓴다.
+  if (ownerSplitHousingNeedsTransferTotal(asset) && opt(asset.standardPriceAtTransfer) == null) {
+    return fieldError(
+      "standardPriceAtTransfer",
+      `${label}: 개별주택가격으로 환산취득가액을 구하려면 양도시 개별주택가격이 필요합니다 — 취득시와 같은 방식으로 양도시 토지 기준시가·건물 기준시가 비율로 나눕니다 (소득세법 §99①1호 가목·나목·시행령 §164⑤·§166⑥).`,
+    );
   }
 
   // ── V8. 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────────

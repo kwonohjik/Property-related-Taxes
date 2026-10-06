@@ -13,6 +13,8 @@
  */
 
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveSelfOwns } from "./self-owns-scope";
 
 export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
@@ -256,15 +258,16 @@ export function calcLandStdPriceAtAcq(pricePerSqm: number, area: number): number
 }
 
 /**
- * 건물분 취득시 기준시가 — **결합 총액에서 토지분을 뺀 역산** (소득세법 §99①1호 라목).
+ * 건물분 취득시 기준시가 — **결합 총액에서 토지분을 뺀 역산 (일반건물 한시 후퇴 전용)**.
  *
- * 주택의 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**라 건물분 단독 공시가
- * 존재하지 않는다. 이 역산이 정본이며, `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜
- * 개산공제 합계를 법정액(시행령 §163⑥2호가목 = 라목 가액 × 3/100)과 일치시킨다.
+ * ⚠️ **주택에 쓰지 말 것.** 주택(라목)의 개별주택가격·공동주택가격은 부수토지를 포함한 결합 공시이고,
+ * 이를 토지분·건물분으로 나누는 법정 방식은 뺄셈이 아니라 **기준시가 비례 안분**이다
+ * (`토지분 = 주택가격 × 가목 ÷ (가목 + 나목)` — 양도소득세 집행기준 99-164-9, 조심2016중0801,
+ * 기재부 재산세제과-802). 주택은 `lib/tax-engine/transfer-tax-split-acq-price.ts`의 `calcAcqStdPair`가
+ * `apportionByStdPrice`(`lib/tax-engine/std-price-apportion.ts`)로 나눈다(S3-1).
  *
- * **엔진(`calcAcqStdPair`)과 UI 읽기 전용 표시가 공유하는 단일 소스**다 — UI가 같은 식을
- * 재구현하면 clamp 규약이 갈려 표시값과 계산값이 어긋난다
- * (`feedback_ui_engine_dual_truth_avoidance`). 총액 미입력(≤0)은 산출 불가라 `null`이다.
+ * 남은 소비자는 일반건물(`propertyType === "building"`) 비-별개 취득의 한시 후퇴 1곳뿐이다.
+ * 총액 미입력(≤0)은 산출 불가라 `null`이다.
  */
 export function calcDerivedBuildingStdAtAcq(total: number, landStd: number): number | null {
   if (!(total > 0)) return null;
@@ -415,6 +418,77 @@ export function requiresAcqStdPrice(
   return (
     requiresAcqStdPricePart("land", a, ctx) || requiresAcqStdPricePart("building", a, ctx)
   );
+}
+
+/**
+ * **일반 주택 비-별개 취득의 취득시 건물 기준시가(나목)가 필수인가** (S3-1 — 엔진·⑫·⑧·UI 어댑터의 단일 소스).
+ *
+ * 비-별개 취득에서 개별주택가격(결합 공시)을 토지분·건물분으로 나누는 법정 방식은 **비례 안분**이다
+ * (`토지분 = 주택가격 × 가목 ÷ (가목 + 나목)` — 집행기준 99-164-9). 나목이 비례의 분모이므로 **양 파트 OR**
+ * (`requiresAcqStdPrice`)로 판정한다 — 토지분도 나목에 의존하기 때문이다(토지만 환산이어도 필요).
+ * 별개 취득의 파트별 술어(`requiresAcqStdPricePart("building")`)를 쓰면 「토지 환산 + 건물 실가」에서
+ * 나목 없이 통과해 엔진이 던진다(⑧↔엔진 모순).
+ *
+ * **소유자 분리(`selfOwns ≠ both`)에서만 필수**다 — 그 경로만 UI에 토지 단가·나목 칸이 열린다. 소유자
+ * 분리가 아닌 비-별개는 나목이 없으면 분할을 포기한다(`calcSplitGain` null, 종전 규약) — 칸 없는 throw
+ * (막다른 길) 방지. 분할 값이 세액에 닿지 않는 경우(양쪽 실가 + 파트 취득가액 직접입력)에는 요구하지 않는다.
+ *
+ * 폼 전용 플래그(겸용·부담부증여·PHD 양쪽 환산)는 여기 넣지 않는다 — UI 어댑터
+ * (`ownerSplitHousingNeedsBuildingStd`)가 더한다. 엔진은 같은 제외를 입력 자체로 이미 거른다.
+ */
+export function requiresHousingBuildingStdAtAcq(
+  g: { isHousing: boolean; isSeparate: boolean; isOwnerSplit: boolean },
+  a: AcqStdPriceNeedFlags,
+  ctx: Omit<AcqStdPriceNeedContext, "isSeparate">,
+): boolean {
+  return (
+    g.isHousing &&
+    !g.isSeparate &&
+    g.isOwnerSplit &&
+    requiresAcqStdPrice(a, { ...ctx, isSeparate: false })
+  );
+}
+
+/**
+ * 위 엔진 leaf(`requiresHousingBuildingStdAtAcq`)의 **`AssetForm` 어댑터** — ⑤ 카드 노출·④ 전송·⑧ 필수가 공유한다.
+ *
+ * 폼 전용 제외를 어댑터가 더한다: 겸용주택(자체 4부분 안분)·부담부증여(④가 분할 축을 안 보냄)·
+ * PHD(④가 결합 총액을 안 보내 비례의 분자가 없다 — 엔진은 같은 제외를 입력 자체로 이미 거른다).
+ * 노출 ⇔ 요구 ⇔ 전송이 **한 값**이라 칸이 없는 요구(막다른 길)도, 숨은 stale 값의 전송도 없다.
+ */
+export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
+  if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return false;
+  if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift") return false;
+  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  // PHD(§164⑦)가 켜진 자산은 ④가 결합 총액(`standardPriceAtAcquisition`)을 보내지 않아(`transfer-tax-api.ts` usesPhd)
+  // 비례 안분의 분자가 없다 — 양쪽 환산이면 엔진이 3-시점 경로로 early-return하고, 한쪽만 환산이어도 쌍이 안 만들어진다.
+  // 즉 이 입력은 엔진에 **도달하지 않는다**(노출 ⇔ 도달 — 요구하면 거짓 요구).
+  if (asset.usePreHousingDisclosure) return false;
+  return requiresHousingBuildingStdAtAcq(
+    {
+      isHousing: true,
+      isSeparate: isSeparateAcquisition(asset),
+      isOwnerSplit: (effectiveSelfOwns(asset) ?? "both") !== "both",
+    },
+    { ...asset, expenses: raw(asset.directExpenses) },
+    { landMode, buildingMode },
+  );
+}
+
+/**
+ * **양도시 개별주택가격(결합)이 필요한가** — 위 어댑터 ∧ 본인 소유 파트 중 환산(estimated) 파트가 있다.
+ *
+ * 취득시 개별주택가격을 가목:나목 비례로 안분하면 환산취득가액의 분모(양도시)도 같은 척도여야 한다
+ * (양도시 개별주택가격 × 양도시 가목 ÷ (가목 + 나목) — 계획서 §8 D-1 ⓑ). 환산 파트가 없으면 분모가 소비되지 않는다.
+ * ④ 전송(`standardPriceAtTransfer`)·⑧ 필수·⑤ 카드 노출이 이 술어를 공유한다.
+ */
+export function ownerSplitHousingNeedsTransferTotal(asset: AssetForm): boolean {
+  if (!ownerSplitHousingNeedsBuildingStd(asset)) return false;
+  const selfOwns = effectiveSelfOwns(asset) ?? "both";
+  const landEst = effectivePartAcqMode(asset.landAcqMode, asset) === "estimated" && selfOwns !== "building_only";
+  const buildingEst = effectivePartAcqMode(asset.buildingAcqMode, asset) === "estimated" && selfOwns !== "land_only";
+  return landEst || buildingEst;
 }
 
 /**

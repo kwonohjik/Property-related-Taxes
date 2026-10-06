@@ -1,4 +1,9 @@
 /**
+ * ⚠️ **S3-1 이후 갱신본(2026-10)** — 일반 주택 비-별개 취득의 뺄셈 역산은 비례 안분으로 교체됐다. 그 경로의 「현행 값 고정」
+ * 12건은 `__tests__/api/transfer.route.housing-std-split-proportional.s3-1.predo.anchor.test.ts`(B-1~B-7)가 승계했고
+ * 이 파일에서는 제거했다. 남은 것: 겸용 주택분(S3-2 대상 — 아직 뺄셈)·PHD(이미 비례)·양도가액 안분·별개 취득 파트 독립.
+ * 아래 본문 중 「현행(뺄셈)」 서술이 **겸용(c)** 에만 해당함에 유의.
+ *
  * S-3 특성화(characterization) anchor — 개별주택가격(부수토지 포함 결합 공시)을 토지분·건물분으로 나누는 방식.
  *
  * 조사 문서: `docs/02-design/features/housing-std-split-proportional.engine-audit.md`
@@ -38,6 +43,7 @@ import {
   PHD_TRANSFER_PRICE,
   PHD_P_A_EST,
   PHD_LAND_AREA,
+  PHD_BLDG_STD_AT_ACQ,
   PHD_LAND_SQM_AT_ACQ,
   PHD_LAND_STD_AT_ACQ,
   PHD_LAND_STD_AT_TRANSFER,
@@ -109,18 +115,27 @@ describe("S-3 재현 전제 — 비례값과 현행 뺄셈값", () => {
     expect(calcDerivedBuildingStdAtAcq(0, 150_000_000)).toBeNull();
   });
 
-  it("calcAcqStdPair — 별개취득+건물 나목 입력 시 파트 독립(역산 아님) / 그 밖은 레거시 뺄셈(buildingDerived=true)", () => {
+  it("calcAcqStdPair — 주택: 비-별개 + 나목 → 비례 쌍(buildingDerived=true, stdSplit echo) / 나목 없으면 쌍 없음 / 별개 + 나목 → 파트 독립 / 별개 + 나목 없음 → 건물분 null (S3-1)", () => {
     const base = baseTransferInput({
       standardPricePerSqmAtAcquisition: 2_400_000,
       acquisitionArea: 100,
       standardPriceAtAcquisition: A.H,
     });
-    expect(calcAcqStdPair(base)).toEqual({ land: A.L, building: A.H - A.L, buildingDerived: true });
+    // 비-별개 + 나목: 토지분 = floor(480M × 240M ÷ 600M) = 192M, 건물분 = 480M − 192M = 288M (뺄셈이었다면 240M/240M)
+    expect(calcAcqStdPair({ ...base, buildingStandardPriceAtAcquisition: A.N })).toEqual({
+      land: A_LP,
+      building: A.H - A_LP,
+      buildingDerived: true,
+      stdSplit: { housingTotal: A.H, landStd: A.L, buildingStd: A.N, landBasis: A_LP, buildingBasis: A.H - A_LP },
+    });
+    // 비-별개 + 나목 없음: 뺄셈으로 후퇴하지 않는다 — 쌍 없음
+    expect(calcAcqStdPair(base)).toBeNull();
     const separate = { ...base, isSeparateAcquisition: true, buildingStandardPriceAtAcquisition: A.N };
     expect(calcAcqStdPair(separate)).toEqual({ land: A.L, building: A.N, buildingDerived: false });
-    // 별개취득이어도 나목이 없으면 레거시 뺄셈으로 후퇴한다(한시 후퇴 — API 직접 입력에서만 도달)
-    const separateNoBuilding = { ...base, isSeparateAcquisition: true };
-    expect(calcAcqStdPair(separateNoBuilding)?.buildingDerived).toBe(true);
+    // 별개취득 + 나목 없음(D-2): 한시 후퇴(뺄셈)가 제거되어 건물분 null — 호출부가 건물분을 지목해 차단한다
+    expect(calcAcqStdPair({ ...base, isSeparateAcquisition: true })).toEqual({ land: A.L, building: null, buildingDerived: false });
+    // 일반건물(`building`)은 이번 범위 밖 — 레거시 뺄셈 유지
+    expect(calcAcqStdPair({ ...base, propertyType: "building" })).toEqual({ land: A.L, building: A.H - A.L, buildingDerived: true });
   });
 
   it("양도시 토지·건물 양도가액 안분은 이미 가목:나목 비례다 — 개별주택가격(standardPriceAtTransfer)을 바꿔도 불변", () => {
@@ -140,6 +155,7 @@ describe("S-3 재현 전제 — 비례값과 현행 뺄셈값", () => {
       standardPriceAtAcquisition: A.H,
       standardPricePerSqmAtAcquisition: 2_400_000,
       acquisitionArea: 100,
+      buildingStandardPriceAtAcquisition: A.N, // S3-1 — 비례 쌍의 분모(없으면 분할 포기)
     };
     const a = run({ ...common, standardPriceAtTransfer: 600_000_000 });
     const b = run({ ...common, standardPriceAtTransfer: 2_400_000_000 });
@@ -154,118 +170,13 @@ describe("S-3 재현 전제 — 비례값과 현행 뺄셈값", () => {
  * (a) 일반 주택 · 토지·건물 보유기간이 다름 · 취득가액 총액(실가) 안분.
  *
  * ⚠️ 도달성: `landAcquisitionDate ≠ acquisitionDate` + `isSeparateAcquisition=false` + 총액 실가는 **엔진 직접 입력**이다
- *    (UI는 취득일이 다르면 `isSeparateAcquisition=true`를 파생해 보내고, 그 경로는 파트별 실가 완결이라 뺄셈을 타지 않는다).
- *    UI에서 도달하는 근접 경로는 a3(소유자 분리·취득일 동일)다.
+ *    (UI는 취득일이 다르면 `isSeparateAcquisition=true`를 파생해 보내고, 그 경로는 파트별 실가 완결이다).
+ *    UI에서 도달하는 근접 경로는 a3(소유자 분리·취득일 동일)다 — S3-1에서 취득시 건물분은 뺄셈이 아니라 비례 안분이다.
  */
-describe("(a) 일반 주택 split — 취득시 결합가 뺄셈 vs 비례", () => {
-  const a1 = (extra: Partial<TransferTaxInput>) =>
-    run({
-      propertyType: "housing",
-      transferPrice: 1_200_000_000,
-      transferDate: D("2026-06-30"),
-      acquisitionDate: D("2018-03-02"), // 건물 8년
-      landAcquisitionDate: D("2006-05-10"), // 토지 20년
-      acquisitionPrice: 700_000_000, // 취득가액 총액(실가)
-      isOneHousehold: false,
-      householdHousingCount: 2,
-      isSeparateAcquisition: false,
-      landAcqMode: "actual",
-      buildingAcqMode: "actual",
-      standardPriceAtAcquisition: A.H,
-      landStandardPriceAtTransfer: T.L,
-      buildingStandardPriceAtTransfer: T.N,
-      ...extra,
-    });
-
-  it("a1 현행(뺄셈): 취득시 토지비율 240/480 = 50% → 취득가 350M/350M · 세액 133,780,000", () => {
-    const cur = a1({ acquisitionArea: 100, standardPricePerSqmAtAcquisition: A.L / 100 });
-    expect(snap(cur)).toEqual({
-      calculatedTax: 133_780_000,
-      totalTax: 147_158_000,
-      taxBase: 399_300_000,
-      transferGain: 500_000_000,
-      // 양도 1,200M × 560/1,400 = 480M / 720M. 토지 20년(30%)·건물 8년(16%)
-      land: { transferPrice: 480_000_000, acquisitionPrice: 350_000_000, appraisalDeduction: 0, gain: 130_000_000, longTermRate: 0.3 },
-      building: { transferPrice: 720_000_000, acquisitionPrice: 350_000_000, appraisalDeduction: 0, gain: 370_000_000, longTermRate: 0.16 },
-    });
-    expect(cur.splitDetail?.building.stdPriceDerivedFromTotal).toBe(true);
-  });
-
-  it("a1 재현 검증: 같은 값을 면적 1㎡ 단가로 바꿔 넣어도 현행과 동일(1원 일치)", () => {
-    const cur = a1({ acquisitionArea: 100, standardPricePerSqmAtAcquisition: A.L / 100 });
-    const re = a1({ acquisitionArea: 1, standardPricePerSqmAtAcquisition: A.L });
-    expect(snap(re)).toEqual(snap(cur));
-  });
-
-  it("a1 비례: 취득시 토지비율 192/480 = 40% → 취득가 280M/420M · 세액 129,860,000 (현행 대비 −3,920,000)", () => {
-    const prop = a1({ acquisitionArea: 1, standardPricePerSqmAtAcquisition: A_LP });
-    expect(snap(prop)).toEqual({
-      calculatedTax: 129_860_000,
-      totalTax: 142_846_000,
-      taxBase: 389_500_000,
-      transferGain: 500_000_000, // 총 양도차익은 같다 — 토지·건물에 어떻게 나뉘느냐만 달라진다
-      land: { transferPrice: 480_000_000, acquisitionPrice: 280_000_000, appraisalDeduction: 0, gain: 200_000_000, longTermRate: 0.3 },
-      building: { transferPrice: 720_000_000, acquisitionPrice: 420_000_000, appraisalDeduction: 0, gain: 300_000_000, longTermRate: 0.16 },
-    });
-    // 차이 = 토지(장특 30%) 양도차익이 70M 늘고 건물(16%)이 70M 줄어 장특 9.8M 증가 × 한계세율 40%
-    expect(133_780_000 - 129_860_000).toBe(Math.round(70_000_000 * (0.3 - 0.16) * 0.4));
-  });
-
-  const a2 = (extra: Partial<TransferTaxInput>) =>
-    run({
-      propertyType: "housing",
-      transferPrice: 1_200_000_000,
-      transferDate: D("2026-06-30"),
-      acquisitionDate: D("2018-03-02"),
-      landAcquisitionDate: D("2006-05-10"),
-      acquisitionPrice: 0,
-      useEstimatedAcquisition: true,
-      isOneHousehold: false,
-      householdHousingCount: 2,
-      isSeparateAcquisition: false,
-      landAcqMode: "estimated",
-      buildingAcqMode: "estimated",
-      standardPriceAtAcquisition: A.H,
-      standardPriceAtTransfer: T.H,
-      ...extra,
-    });
-
-  it("a2 현행(환산): 분자는 결합−토지(240M), 분모는 양도시 나목 입력(840M) — 척도가 달라 건물 환산취득가가 205.7M로 낮아진다", () => {
-    const cur = a2({
-      acquisitionArea: 100,
-      standardPricePerSqmAtAcquisition: A.L / 100,
-      landStandardPriceAtTransfer: T.L,
-      buildingStandardPriceAtTransfer: T.N,
-    });
-    // 건물: 720M × (480M − 240M)/840M = 205,714,285 (분자는 결합−토지 역산, 분모는 나목)
-    // 토지: 480M × 240M/560M = 205,714,285
-    expect(snap(cur)).toEqual({
-      calculatedTax: 220_433_040,
-      totalTax: 242_476_344,
-      taxBase: 610_412_002,
-      transferGain: 774_171_430,
-      land: { transferPrice: 480_000_000, acquisitionPrice: 205_714_285, appraisalDeduction: 7_200_000, gain: 267_085_715, longTermRate: 0.3 },
-      building: { transferPrice: 720_000_000, acquisitionPrice: 205_714_285, appraisalDeduction: 7_200_000, gain: 507_085_715, longTermRate: 0.16 },
-    });
-  });
-
-  it("a2 비례: 취득·양도 모두 결합가의 가목:나목 분할(192M/288M · 448M/672M) → 건물 환산취득가 308.6M · 세액 184,060,368 (−36,372,672)", () => {
-    const prop = a2({
-      acquisitionArea: 1,
-      standardPricePerSqmAtAcquisition: A_LP,
-      landStandardPriceAtTransfer: T_LP,
-      buildingStandardPriceAtTransfer: T.H - T_LP,
-    });
-    // 건물: 720M × 288M/672M = 308,571,428 — 토지와 같은 환산율(0.42857)
-    expect(snap(prop)).toEqual({
-      calculatedTax: 184_060_368,
-      totalTax: 202_466_404,
-      taxBase: 523_810_402,
-      transferGain: 671_314_287,
-      land: { transferPrice: 480_000_000, acquisitionPrice: 205_714_285, appraisalDeduction: 5_760_000, gain: 268_525_715, longTermRate: 0.3 },
-      building: { transferPrice: 720_000_000, acquisitionPrice: 308_571_428, appraisalDeduction: 8_640_000, gain: 402_788_572, longTermRate: 0.16 },
-    });
-  });
+describe("(a) 일반 주택 split — 소유자 분리(UI 입구) · 취득시 결합가 비례 안분 (S3-1)", () => {
+  // a1(일반·토지 20년/건물 8년) · a2(환산) 의 「현행(뺄셈)」 vs 「비례」 고정은 S3-1에서 predo anchor B-1·B-2가 승계했다
+  //   — 비례: a1 129,860,000 · a2 184,060,368 (나목 입력 + 환산 분모도 양도시 개별주택가격 비례).
+  // a1·a2 모두 엔진 직접 입력 경로(UI 입구는 소유자 분리 a3뿐)이고, 나목이 없으면 분할을 포기한다(B-4b).
 
   describe("a3 소유자 분리(취득일 동일) — UI에서 도달하는 경로", () => {
     const a3 = (selfOwns: "building_only" | "land_only" | "both", extra: Partial<TransferTaxInput>) =>
@@ -287,26 +198,16 @@ describe("(a) 일반 주택 split — 취득시 결합가 뺄셈 vs 비례", () 
         ...(selfOwns === "both" ? {} : { selfOwns }),
         ...extra,
       });
-    const CUR = { acquisitionArea: 100, standardPricePerSqmAtAcquisition: A.L / 100 };
-    const PROP = { acquisitionArea: 1, standardPricePerSqmAtAcquisition: A_LP };
+    const WITH_N = { acquisitionArea: 100, standardPricePerSqmAtAcquisition: A.L / 100, buildingStandardPriceAtAcquisition: A.N };
 
-    it("건물만 소유: 세액 97,380,000 → 74,870,000 (−22,510,000)", () => {
-      expect(a3("building_only", CUR).calculatedTax).toBe(97_380_000);
-      expect(a3("building_only", PROP).calculatedTax).toBe(74_870_000);
-      expect(a3("building_only", CUR).totalTax).toBe(107_118_000);
-      expect(a3("building_only", PROP).totalTax).toBe(82_357_000);
-    });
-
-    it("토지만 소유: 세액 21,905,000 → 42,950,000 (+21,045,000)", () => {
-      expect(a3("land_only", CUR).calculatedTax).toBe(21_905_000);
-      expect(a3("land_only", PROP).calculatedTax).toBe(42_950_000);
-      expect(a3("land_only", CUR).totalTax).toBe(24_095_500);
-      expect(a3("land_only", PROP).totalTax).toBe(47_245_000);
+    // 건물만 97,380,000 → 74,870,000 / 토지만 21,905,000 → 42,950,000 은 predo anchor B-3이 승계했다(Route).
+    it("건물만 소유·토지만 소유: 나목을 넣으면 비례 안분 — 74,870,000 / 42,950,000 (뺄셈은 97,380,000 / 21,905,000이었다)", () => {
+      expect(a3("building_only", WITH_N).calculatedTax).toBe(74_870_000);
+      expect(a3("land_only", WITH_N).calculatedTax).toBe(42_950_000);
     });
 
     it("둘 다 소유 + 취득일 동일 + 장특공제율 동일이면 분할 방식이 세액에 영향 없다(토지·건물 합 불변)", () => {
-      expect(a3("both", CUR).calculatedTax).toBe(141_060_000);
-      expect(a3("both", PROP).calculatedTax).toBe(141_060_000);
+      expect(a3("both", WITH_N).calculatedTax).toBe(141_060_000);
     });
   });
 });
@@ -315,10 +216,10 @@ describe("(a) 일반 주택 split — 취득시 결합가 뺄셈 vs 비례", () 
  * (b) 고가주택(12억 초과) 1세대1주택 + 부수토지 배율 초과분 — 단건 주택.
  *
  * 배율 초과분 판정(G-2)은 `isSeparateAcquisition === true` 전용이다(`transfer-tax-appurtenant-land.ts:154-157`).
- * 별개취득의 UI 경로는 건물 나목을 파트 독립으로 입력하므로 뺄셈이 타지 않는다. 아래는 **API 직접 입력**
- * (`buildingStandardPriceAtAcquisition` 생략 + 결합 총액)으로 레거시 뺄셈에 후퇴하는 경우다.
+ * 별개취득은 건물 나목을 파트 독립으로 입력한다. 종전의 「나목 생략 → 레거시 뺄셈 후퇴」는 S3-1 D-2에서 차단으로 바뀌었다
+ * (predo anchor B-6).
  */
-describe("(b) 단건 주택 고가 + 부수토지 배율 초과분 (별개취득 · 레거시 뺄셈 후퇴 경로)", () => {
+describe("(b) 단건 주택 고가 + 부수토지 배율 초과분 (별개취득 · 파트 독립 경로)", () => {
   const b = (extra: Partial<TransferTaxInput>) =>
     run({
       propertyType: "housing",
@@ -341,38 +242,10 @@ describe("(b) 단건 주택 고가 + 부수토지 배율 초과분 (별개취득
       ...extra,
     });
 
-  const legacyInput = {
-    standardPriceAtAcquisition: A.H, // 나목 없음 → 레거시 뺄셈
-    standardPricePerSqmAtAcquisition: A.L / 100,
-    landStandardPriceAtTransfer: T.L,
-    buildingStandardPriceAtTransfer: T.N,
-  };
+  // 「별개 취득 + 나목 생략 → 레거시 뺄셈 후퇴」(세액 45,128,160)는 S3-1 D-2에서 **차단**으로 바뀌었다 — predo anchor B-6.
+  //  나목을 입력하는 파트 독립 경로의 값은 아래 「비례」 테스트가 고정한다.
 
-  it("현행(뺄셈): 건물 환산 분자 240M ÷ 분모 840M → 건물 환산취득가 342.9M · 세액 45,128,160 · 초과분 양도차익 112,485,714", () => {
-    const cur = b(legacyInput);
-    expect(cur.splitDetail?.nonBusinessLandPart?.gain).toBe(112_485_714); // 토지 양도차익 449,942,858 × 25%
-    expect(snap(cur)).toMatchObject({
-      calculatedTax: 45_128_160,
-      totalTax: 49_640_976,
-      taxBase: 171_232_001,
-      land: { transferPrice: 800_000_000, acquisitionPrice: 342_857_142, appraisalDeduction: 7_200_000, gain: 449_942_858 },
-      building: { transferPrice: 1_200_000_000, acquisitionPrice: 342_857_142, appraisalDeduction: 7_200_000, gain: 849_942_858 },
-    });
-  });
-
-  it("재현 검증: 건물 나목 칸에 H−L을 명시 입력한 파트 독립 경로가 레거시 뺄셈과 1원 일치", () => {
-    const cur = b(legacyInput);
-    const explicit = b({
-      standardPricePerSqmAtAcquisition: A.L / 100,
-      buildingStandardPriceAtAcquisition: A.H - A.L,
-      landStandardPriceAtTransfer: T.L,
-      buildingStandardPriceAtTransfer: T.N,
-    });
-    expect(snap(explicit)).toEqual(snap(cur));
-    expect(explicit.splitDetail?.nonBusinessLandPart?.gain).toBe(cur.splitDetail?.nonBusinessLandPart?.gain);
-  });
-
-  it("비례: 건물 환산취득가 514.3M · 세액 40,001,547 (−5,126,613) · 초과분 양도차익 112,845,714 (+360,000 — 토지 개산공제 7.2M→5.76M)", () => {
+  it("파트 독립(나목 입력): 건물 환산취득가 514.3M · 세액 40,001,547 · 초과분 양도차익 112,845,714 (토지 개산공제 5.76M)", () => {
     const prop = b({
       standardPricePerSqmAtAcquisition: A_LP / 100,
       buildingStandardPriceAtAcquisition: A.H - A_LP,
@@ -593,24 +466,33 @@ describe("(d) PHD §164⑦ — 이미 비례 · 같은 입력을 뺄셈으로 �
     expect(PHD_LAND_STD_AT_ACQ).toBeGreaterThan(PHD_P_A_EST);
   });
 
-  it("재현 검증: PHD가 만든 비례 토지분을 split 경로 입력으로 넣으면 PHD 모듈과 1원 일치(세액 26,100,130)", () => {
+  it("🔄 S3-1 정합: 같은 입력(추정 취득시 개별주택가격 + 가목·나목)을 split 경로에 넣으면 비례 안분이 PHD 모듈과 같은 토지분을 만든다", () => {
+    // PHD가 쓰는 입력 그대로 — 추정 취득시 개별주택가격 484,828,268 · 가목 500,320,000 · 나목 220,890,540 /
+    // 양도시 개별주택가격 627M · 가목 739,032,000 · 나목 252,871,000. split 경로는 이제 같은 비례 산식을 쓴다.
     const re = run({
       ...common,
       isSeparateAcquisition: false,
       landAcqMode: "estimated",
       buildingAcqMode: "estimated",
       standardPriceAtAcquisition: PHD_P_A_EST,
-      standardPricePerSqmAtAcquisition: detail.landHousingAtAcquisition,
-      acquisitionArea: 1,
+      standardPricePerSqmAtAcquisition: PHD_LAND_SQM_AT_ACQ,
+      acquisitionArea: PHD_LAND_AREA,
+      buildingStandardPriceAtAcquisition: PHD_BLDG_STD_AT_ACQ,
       standardPriceAtTransfer: PHD_TRANSFER_HOUSING_PRICE,
-      landStandardPriceAtTransfer: detail.landHousingAtTransfer,
-      buildingStandardPriceAtTransfer: PHD_TRANSFER_HOUSING_PRICE - detail.landHousingAtTransfer,
+      landStandardPriceAtTransfer: PHD_LAND_STD_AT_TRANSFER,
+      buildingStandardPriceAtTransfer: PHD_BLDG_STD_AT_TRANSFER,
     });
-    expect(snap(re)).toEqual(snap(phd));
+    // 취득시 토지분·건물분 = PHD 모듈의 값과 1원 일치
+    expect(re.splitDetail?.stdSplit?.landBasis).toBe(PHD_LAND_HOUSING_AT_ACQ);
+    expect(re.splitDetail?.stdSplit?.buildingBasis).toBe(PHD_BLDG_HOUSING_AT_ACQ);
+    // 환산 분모(양도시)도 PHD와 같은 척도: 627M × 739,032,000 ÷ 991,903,000 = 467,155,623
+    expect(re.splitDetail?.land.acquisitionPrice).toBe(
+      Math.floor((detail.landHousingAtAcquisition / detail.landHousingAtTransfer) * re.splitDetail!.land.transferPrice),
+    );
   });
 
-  it("뺄셈 경로로 같은 입력을 계산: 건물 취득시 기준시가 0 → 건물 환산취득가 0 · 세액 86,234,106 (PHD 비례 대비 +60,133,976)", () => {
-    const sub = run({
+  it("🔄 S3-1: 나목이 없으면 뺄셈으로 후퇴하지 않는다 — 분할을 포기한다(종전: 건물분 0 clamp → 건물 환산취득가 0 · 세액 86,234,106)", () => {
+    const noN = run({
       ...common,
       isSeparateAcquisition: false,
       landAcqMode: "estimated",
@@ -622,10 +504,7 @@ describe("(d) PHD §164⑦ — 이미 비례 · 같은 입력을 뺄셈으로 �
       landStandardPriceAtTransfer: PHD_LAND_STD_AT_TRANSFER,
       buildingStandardPriceAtTransfer: PHD_BLDG_STD_AT_TRANSFER,
     });
-    expect(sub.splitDetail?.building.acquisitionPrice).toBe(0);
-    expect(sub.splitDetail?.building.appraisalDeduction).toBe(0);
-    expect(sub.splitDetail?.land.acquisitionPrice).toBe(360_648_974);
-    expect(sub.calculatedTax).toBe(86_234_106);
-    expect(sub.calculatedTax - phd.calculatedTax).toBe(60_133_976);
+    expect(noN.splitDetail).toBeUndefined();
+    expect(noN.calculatedTax).not.toBe(86_234_106);
   });
 });

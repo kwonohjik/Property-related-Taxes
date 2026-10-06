@@ -37,7 +37,7 @@
  * 비율로 양쪽을 각각 계산하면 합이 총액과 어긋난다(메모리 `feedback_floor_residual_absorption`).
  * 분자가 MAX_SAFE_INTEGER를 넘을 수 있어 `safeMultiplyThenDivide`(BigInt fallback)를 쓴다.
  */
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { apportionByStdPrice } from "./std-price-apportion";
 import type { SaleSplitPair } from "./sale-split-deemed-unclear";
 
 export type ApportionBasisKind = "appraisal" | "std_price";
@@ -95,11 +95,9 @@ function usableAppraisal(pair: SaleSplitPair | undefined): boolean {
   return !!pair && pair.land > 0 && pair.building > 0;
 }
 
-/** 잔액 흡수 안분 — `토지 + 건물 = 총액` 불변식. */
+/** 잔액 흡수 안분 — `토지 + 건물 = 총액` 불변식. 공용 leaf(개별주택가격 분할과 같은 함수). */
 function apportion(total: number, basis: SaleSplitPair): SaleSplitPair {
-  const denom = basis.land + basis.building;
-  const land = Math.floor(safeMultiplyThenDivide(total, basis.land, denom));
-  return { land, building: total - land };
+  return apportionByStdPrice(total, basis.land, basis.building);
 }
 
 /**

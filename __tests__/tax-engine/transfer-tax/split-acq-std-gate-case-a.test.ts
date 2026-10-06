@@ -115,6 +115,8 @@ describe("케이스 b·c — 환산 파트가 있으면 취득시 기준시가�
         standardPricePerSqmAtAcquisition: 1_000_000,
         acquisitionArea: 200,
         standardPriceAtAcquisition: 500_000_000,
+        // S3-1 — 별개 취득 + 나목 생략의 한시 후퇴(총액 − 토지분)는 제거됐다(D-2). 나목 = 5억 − 2억(토지분)을 명시.
+        buildingStandardPriceAtAcquisition: 300_000_000,
         landStandardPriceAtTransfer: 300_000_000,
         buildingStandardPriceAtTransfer: 200_000_000,
       }),

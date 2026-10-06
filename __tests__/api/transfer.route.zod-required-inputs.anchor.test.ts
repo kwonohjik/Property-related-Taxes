@@ -452,6 +452,8 @@ describe("다건 — 단건과 같은 규칙", () => {
           standardPricePerSqmAtAcquisition: 100_000,
           acquisitionArea: 1000,
           standardPriceAtAcquisition: 200_000_000,
+          // S3-1 — 주택 소유자 분리는 개별주택가격(결합 공시)을 가목:나목 비례로 안분하므로 나목이 필요하다(⑫ V8-N).
+          buildingStandardPriceAtAcquisition: 100_000_000,
           landStandardPriceAtTransfer: 300_000_000,
           buildingStandardPriceAtTransfer: 100_000_000,
         },
