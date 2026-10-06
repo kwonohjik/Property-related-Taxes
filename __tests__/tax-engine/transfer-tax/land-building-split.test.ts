@@ -32,6 +32,10 @@ describe("S1: housing 2주택 + 환산취득가 + 안분 모드 (이미지 케�
     standardPriceAtTransfer: 627_000_000,          // 2022.1.1. 개별주택가격
     standardPricePerSqmAtAcquisition: 2_369_000,   // 2014.1.1. 개별공시지가 /㎡
     acquisitionArea: 212,                          // 토지면적
+    // S3-1 — 개별주택가격(결합 공시)을 가목:나목 비례로 안분하므로 취득시 건물 기준시가(나목)가 필요하다.
+    //        종전 뺄셈은 이 사안(H 4.83억 < 가목 5.02억)에서 건물분을 0으로 clamp했으나, 비례는 건물분을 양(+)으로 낸다.
+    //        나목 값은 이 테스트가 가정한 값이다(보유연수·splitDetail 존재가 주제).
+    buildingStandardPriceAtAcquisition: 150_000_000,
     expenses: 34_000_000,                          // 자본적지출
     // Phase B (부가세령 §64①1호 "양도시" 기준시가 안분 — 2026-07-28 정정): 양도가액 일괄 안분은
     // 취득시가 아니라 양도시 기준시가 비율을 써야 한다. 토지:건물 = 501,600,000:125,400,000 = 0.8:0.2
@@ -51,10 +55,23 @@ describe("S1: housing 2주택 + 환산취득가 + 안분 모드 (이미지 케�
   it("calcSplitGain: 토지/건물 분리 결과 반환", () => {
     const result = calcSplitGain(input);
     expect(result).not.toBeNull();
-    // 토지 기준시가 = 2,369,000 × 212 = 502,228,000 → 전체(483,000,000) 초과로 클램핑
-    // 토지 안분비율 = 1.0 (클램핑), 건물 = 0
-    expect(result!.apportionRatio!.land).toBeCloseTo(1.0, 5);
-    expect(result!.apportionRatio!.building).toBeCloseTo(0, 5);
+    // 토지 기준시가(가목) L = 2,369,000 × 212 = 502,228,000 > 개별주택가격 H = 483,000,000.
+    // 종전(뺄셈)은 건물분 = max(H − L, 0) = 0으로 clamp해 토지 100%였다(S3-1 이전).
+    // 비례 안분: 토지분 = floor(H × L ÷ (L + N)), 건물분 = H − 토지분 — 독립 BigInt 재구현으로 기대값을 산출한다.
+    const H = 483_000_000n;
+    const L = 502_228_000n;
+    const N = 150_000_000n;
+    const landBasis = Number((H * L) / (L + N)); // 371,... (건물분은 잔액)
+    expect(result!.stdSplit).toEqual({
+      housingTotal: 483_000_000,
+      landStd: 502_228_000,
+      buildingStd: 150_000_000,
+      landBasis,
+      buildingBasis: 483_000_000 - landBasis,
+    });
+    expect(result!.apportionRatio!.land).toBeCloseTo(landBasis / 483_000_000, 10);
+    expect(result!.apportionRatio!.building).toBeCloseTo(1 - landBasis / 483_000_000, 10);
+    expect(result!.apportionRatio!.building).toBeGreaterThan(0);
   });
 
   it("calcSplitGain: 보유연수 분리 계산", () => {
@@ -261,6 +278,8 @@ describe("S4: 안분 fallback — landTransferPrice만 직접 입력", () => {
     standardPriceAtTransfer: stdAtTransfer,
     standardPricePerSqmAtAcquisition: sqm,
     acquisitionArea: area,
+    // S3-1 — 나목 = H − L(2억)이면 비례 쌍 {2억, 2억}이 종전 뺄셈과 같다(H = L + N). 비례를 검증하는 테스트가 아니다.
+    buildingStandardPriceAtAcquisition: stdAtAcq - sqm * area,
     expenses: 10_000_000,
     landSplitMode: "actual",
     landTransferPrice: 600_000_000, // 직접 입력 (60%)

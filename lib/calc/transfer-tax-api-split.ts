@@ -10,6 +10,8 @@ import { applyRatio } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
+import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
+import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 
@@ -85,7 +87,7 @@ export function buildSplitPayload(
   // 어긋나면 "UI 통과 ↔ validate 차단" 모순이 생긴다(⑧ 규칙).
   //
   // ⚠️ **기준시가 필드로 확대하지 않는다** — 비소유 토지의 취득시 기준시가 카드는 일부러
-  //    렌더된다(주택 라목 결합 공시에서 건물분을 역산하는 유일 경로). 물건 속성값이라 소유 축과 무관하다.
+  //    렌더된다(주택 라목 결합 공시를 토지분·건물분으로 나누는 비례 안분의 분모). 물건 속성값이라 소유 축과 무관하다.
   const selfOwnsEff = effectiveSelfOwns(primary);
   const selfOwns = selfOwnsEff ?? "both";
   const landOwned = selfOwns !== "building_only";
@@ -138,23 +140,36 @@ export function buildSplitPayload(
     ...(isSplitActive
       ? { landAcqMode, buildingAcqMode, saleSplitMode, isSeparateAcquisition: separateAcquisition }
       : {}),
-    // 건물분 취득시 기준시가(§99①1호 나목) — **별개 취득 전용**(자산 종류 무관, 2026-07-30).
-    // 주택도 포함한다: §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액"을 요구하는데,
-    // 토지를 먼저 취득하고 건물을 나중에 취득했다면 토지 취득 당시엔 주택이 없어 라목 결합
-    // 공시가 존재하지 않는다 → 각 파트가 자기 취득일 기준으로 §163⑥1호·2호를 따른다.
+    // 건물분 취득시 기준시가(§99①1호 나목) — **별개 취득** 또는 **주택 비-별개 + 소유자 분리**에서만 전송한다.
+    // · 별개 취득(자산 종류 무관, 2026-07-30): §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액"을 요구하는데,
+    //   토지를 먼저 취득하고 건물을 나중에 취득했다면 토지 취득 당시엔 주택이 없어 라목 결합 공시가 존재하지
+    //   않는다 → 각 파트가 자기 취득일 기준으로 §163⑥1호·2호를 따른다(파트 독립 — 결합 총액 미참조).
+    // · 주택 비-별개 + 소유자 분리(S3-1): 개별주택가격(결합 공시)을 가목:나목 **비례**로 토지분·건물분에 나눈다
+    //   (집행기준 99-164-9). 나목이 비례의 분모라 결합 총액과 함께 보낸다 — **총액은 덮어쓰지 않는다**.
+    // 전송 조건 = ⑤ 노출·⑧ 필수와 **같은 술어**(`ownerSplitHousingNeedsBuildingStd`) — 숨은 stale 나목이
+    // 비례에 쓰이는 것을 막는다(3중 패턴).
+    ...(separateAcquisition || ownerSplitHousingNeedsBuildingStd(primary)
+      ? { buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined }
+      : {}),
     ...(separateAcquisition
       ? {
-          buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined,
           // **결합 총액 전송 차단**(2026-07-29 Phase 3). 이 조합에서 자산 전체 취득시 기준시가
           // 블록은 읽기 전용 파생 표시로 바뀌어 사용자가 총액을 더는 입력하지 않는다. 폼에 남은
-          // 옛 값이 계속 전송되면 엔진이 legacy 역산(calcAcqStdPair :58-61)으로 그 값을 써
-          // **화면에 보이지 않는 값이 계산에 쓰인다**. 폼 값은 지우지 않는다(토글 복귀 시 복원).
+          // 옛 값이 계속 전송되면 엔진이 그 값을 써 **화면에 보이지 않는 값이 계산에 쓰인다**.
+          // 폼 값은 지우지 않는다(토글 복귀 시 복원).
           //
           // ⚠️ 본체(`transfer-tax-api.ts:269`)가 설정한 값을 **덮어쓰는 방식**이다 —
           //    이 빌더의 spread(:316)가 뒤에 오므로 override가 성립한다. 별도 플래그를 body에
           //    넣으면 Zod 스키마에 없는 키가 되어 침묵 strip되거나 검증 오류가 된다.
           standardPriceAtAcquisition: undefined,
         }
+      : {}),
+    // 양도시 개별주택가격(결합) — 주택 비-별개 + 소유자 분리에서 **환산 파트가 있을 때만** 보낸다(S3-1 D-1 ⓑ).
+    // 환산취득가액의 분모도 취득시와 같은 비례 척도(양도시 개별주택가격 × 가목 ÷ (가목 + 나목))여야 한다.
+    // 본체는 자산 전체 환산 플래그(`useEstimatedAcquisition`)일 때만 보내므로, 파트 모드만 환산인 경우를 여기서 연다.
+    // 값이 있을 때만 싣는다 — 본체가 다른 출처(이월과세 증여자 시점 등)의 값을 이미 실은 경우 빈 값으로 덮어쓰지 않는다.
+    ...(!usesPhd && ownerSplitHousingNeedsTransferTotal(primary) && parseAmount(primary.standardPriceAtTransfer) > 0
+      ? { standardPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) }
       : {}),
     // 양도가액 2필드 — 구분양도 게이트.
     ...(saleDirectActive

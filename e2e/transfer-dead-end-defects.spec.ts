@@ -645,6 +645,11 @@ test.describe("별건 B2 — 소유자 분리 + 매매 + 실거래가: 취득시
     const card = page.locator('[data-asset-card-index="0"]');
     await card.locator('[data-field="standardPricePerSqmAtAcq"] input').first().fill("2000000");
     await card.locator('[data-field="standardPriceAtAcq"] input').first().fill("500000000");
+    // S3-1 — 개별주택가격을 가목:나목 비례로 안분하므로 취득시 건물 기준시가(나목)도 요구한다. 칸이 열려 있어야 한다.
+    await next(page).click();
+    await panel(page).getByRole("button", { name: ownerMsg }).click();
+    await focusIn(page, "buildingStandardPriceAtAcq");
+    await card.locator('[data-field="buildingStandardPriceAtAcq"] input').first().fill("300000000");
     await next(page).click();
     await expect(panel(page).getByText(ownerMsg)).toHaveCount(0);
     await toHolding(page);

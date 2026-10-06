@@ -18,6 +18,8 @@ import type {
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import { resolveTransferPriceSplit } from "./transfer-tax-split-sale-price";
 import {
@@ -84,6 +86,30 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     // 엔진은 별개취득을 재판정하지 않는다 — API 변환이 파생해 전달한다(:187-190 주석).
     isSeparate: input.isSeparateAcquisition === true,
   };
+  // 🔴 S3-1 — **주택 비-별개 + 소유자 분리**에서 나목이 없으면 던진다. 비례 안분의 분모(나목)가 없어
+  //    쌍이 안 만들어지는데, 소유자 분리에서 여기서 null을 내면 `selfOwns`가 통째로 무시되어(transfer-tax.ts)
+  //    비소유 파트까지 과세된다(침묵 오답). 소유자 분리가 아닌 비-별개는 아래 종전 규약(null — 분할 포기)을 따른다.
+  //    L·H 미입력은 종전대로 아래 missingStd 경로(null)다 — 쌍이 실제로 만들어질 수 있는 경우만 던진다.
+  //    부담부증여는 제외한다 — ④가 분할 축(모드·양도시 기준시가)을 보내지 않아(`isSplitPayloadActive`) 나목 입력 경로 자체가 없다.
+  const stdNeedGate = {
+    isHousing: input.propertyType === "housing" && input.transferType !== "burdened_gift",
+    isSeparate: input.isSeparateAcquisition === true,
+    isOwnerSplit: (input.selfOwns ?? "both") !== "both",
+  };
+  if (
+    requiresHousingBuildingStdAtAcq(stdNeedGate, input, { landMode: earlyLandMode, buildingMode: earlyBuildingMode }) &&
+    calcLandStdPriceAtAcq(input.standardPricePerSqmAtAcquisition ?? 0, input.acquisitionArea ?? 0) != null &&
+    (input.standardPriceAtAcquisition ?? 0) > 0 &&
+    !((input.buildingStandardPriceAtAcquisition ?? 0) > 0)
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "개별주택가격(결합 공시)을 토지분·건물분으로 나누려면 취득시 건물 기준시가(나목)가 필요합니다 — "
+        + "토지분 = 개별주택가격 × 가목 ÷ (가목 + 나목) (소득세법 §99①1호 가목·나목, 시행령 §166⑥).",
+      { missingBuildingStdAtAcq: true },
+    );
+  }
+
   const missingStd: string[] = [];
   if (requiresAcqStdPricePart("land", input, stdNeedCtx) && acqStd?.land == null) {
     missingStd.push("토지분(취득시 ㎡당 개별공시지가 × 토지 면적 — 소득세법 §99①1호 가목)");
@@ -113,7 +139,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // 개산공제·환산 분자 어디에도 쓰이지 않는다(landNonActual/buildingNonActual 게이트).
   const landStdAtAcq = acqStd?.land ?? 0;
   const buildingStdAtAcq = acqStd?.building ?? 0;
-  // 건물분이 결합 총액에서 역산된 값인가 — 주택(라목)은 **법정 정상 경로**, 건물은 한시 후퇴 표식.
+  // 건물분이 결합 총액에서 도출된 값인가 — 주택(라목)은 비례 안분(**법정 정상 경로**), 일반건물은 한시 후퇴 표식.
   // 취득시 기준시가를 실제로 쓴 경우에만 "역산" 안내를 띄운다 — 실가 파트는 그 값을
   // 쓰지 않았으므로 안내가 거짓이 된다(결과 카드 fine-print, SplitGainDetailSection).
   // ⚠️ 산출 지점(`calcAcqStdPair`)이 직접 알려준다 — 호출부가 조건을 재구성하면 분기가 늘 때마다
@@ -154,6 +180,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landStdAtAcq,
     buildingStdAtAcq,
     landRatio,
+    acqStd?.stdSplit,
   );
 
   // ③ 필요경비(자본적지출) 분리
@@ -301,6 +328,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
     // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.
     ...(landRatio != null && buildingRatio != null ? { apportionRatio: { land: landRatio, building: buildingRatio } } : {}),
+    // 개별주택가격 비례 안분 내역 — 주택 비-별개에서만(별개·일반건물·구 resultData는 없다). UI가 유무로 분기한다.
+    ...(acqStd?.stdSplit ? { stdSplit: acqStd.stdSplit } : {}),
     // §100③ 판정 — 구분 기재가 있고 안분값도 산출된 경우에만 존재한다(위 resolveTransferPriceSplit).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     // 비율 미산출 시 사유 문구는 **파트 모드로 갈린다**(2026-07-30). 종전에는 무조건

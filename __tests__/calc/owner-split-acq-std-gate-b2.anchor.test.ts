@@ -45,9 +45,29 @@ describe("⑧ V8 — 비율이 쓰이는가로 좁힌다 (⑫와 같은 술어)"
   it("긍정 짝: 환산이면 요구한다 (환산 분자)", () => {
     expect(v8({ useEstimatedAcquisition: true })).toMatch(OWNER_MSG);
   });
-  it("긍정 짝: 요구하는 쪽에서 3종을 채우면 통과", () => {
+  it("긍정 짝: 요구하는 쪽에서 3종 + 취득시 건물 기준시가(나목)를 채우면 통과 (S3-1 — 비례 안분의 분모가 4번째 요구)", () => {
     expect(
-      v8({ standardPricePerSqmAtAcq: "2000000", acquisitionArea: "100", standardPriceAtAcq: "500000000" }),
+      v8({
+        standardPricePerSqmAtAcq: "2000000",
+        acquisitionArea: "100",
+        standardPriceAtAcq: "500000000",
+        buildingStandardPriceAtAcq: "300000000",
+      }),
+    ).not.toMatch(OWNER_MSG);
+  });
+  it("🔑 S3-1 3종만 채우고 나목이 비면 여전히 요구한다 — 뺄셈 fallback 금지(Q-3), 필드는 buildingStandardPriceAtAcq", () => {
+    const msg = v8({ standardPricePerSqmAtAcq: "2000000", acquisitionArea: "100", standardPriceAtAcq: "500000000" });
+    expect(msg).toMatch(OWNER_MSG);
+    expect(msg).toMatch(/건물 기준시가/);
+  });
+  it("🔑 S3-1 부정 짝: 본인 파트 취득가액을 입력하면 비율이 안 쓰이므로 나목도 요구하지 않는다(거짓 요구 금지)", () => {
+    expect(
+      v8({
+        landAcquisitionPrice: "200000000",
+        standardPricePerSqmAtAcq: "2000000",
+        acquisitionArea: "100",
+        standardPriceAtAcq: "500000000",
+      }),
     ).not.toMatch(OWNER_MSG);
   });
 });

@@ -10,12 +10,14 @@ import type {
   TransferTaxInput,
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
+import type { StdSplitDetail } from "./types/transfer-split-gain.types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calcLandStdPriceAtAcq,
   calcDerivedBuildingStdAtAcq,
 } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { applySplitLandExpropriationValuation } from "./transfer-tax-expropriation-valuation";
+import { apportionByStdPrice } from "./std-price-apportion";
 
 /**
  * 취득시 기준시가 — 토지분·건물분 산출 (축 B). 산출 불가 시 null.
@@ -23,20 +25,29 @@ import { applySplitLandExpropriationValuation } from "./transfer-tax-expropriati
  * 토지분은 항상 `㎡당 개별공시지가 × 면적`(소득세법 §99①1호 가목)이다.
  * 건물분은 자산 종류에 따라 **공시 구조가 다르다**:
  *
- * - **주택(라목)**: 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**다.
- *   건물분 단독 공시가 존재하지 않으므로 `결합 총액 − 토지분` 역산이 정본이며,
- *   이 역산이 `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜 개산공제 합계를
- *   법정액(§163⑥2호가목 = 라목 가액 × 3/100)과 일치시킨다.
+ * - **주택(라목)**: 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**다. 건물분 단독 공시가
+ *   없으므로 결합 총액 H를 가목(토지 기준시가 L)·나목(건물 기준시가 N) **비율로 안분**한다
+ *   (S3-1 — 양도소득세 집행기준 99-164-9, 조심2016중0801, 기재부 재산세제과-802):
+ *   `토지분 = floor(H × L ÷ (L + N))` · `건물분 = H − 토지분`(잔액 흡수 → `토지분 + 건물분 ≡ H`).
+ *   종전의 `H − L` 뺄셈은 `H = L + N`일 때만 같고, 아니면 건물분을 틀리게(H < L이면 음수→0) 만든다.
+ *   나목이 없으면 쌍을 만들지 않는다 — 뺄셈으로 후퇴하지 않는다(Q-3, 자동 안분 fallback 금지).
  *
  * - **일반 건물(가목 토지 + 나목 건물)**: 개별공시지가와 국세청장 산정 건물 기준시가가
  *   **각각 별도로 공시**된다. 결합 총액이라는 공시 자체가 없고 사용자가 더한 값일 뿐이다.
  *   토지·건물 취득시점이 다르면 각 파트는 **자기 취득일의 고시분**으로 조회해야 하는데
  *   (§164③ 직전 고시분), 총액에서 역산하면 건물분에 토지 취득시점이 섞인다.
  *   → 별개 취득 + 건물 기준시가 명시 입력 시 **파트별 독립**으로 전환한다.
+ *   (일반건물의 비-별개 + 나목 미입력은 종전 한시 후퇴 `총액 − 토지분`을 유지한다 — S3-1 범위 밖.)
  */
 export function calcAcqStdPair(
   input: TransferTaxInput,
-): { land: number | null; building: number | null; buildingDerived: boolean } | null {
+): {
+  land: number | null;
+  building: number | null;
+  buildingDerived: boolean;
+  /** 주택 비-별개 비례 안분 내역 — 이 경우에만 존재 */
+  stdSplit?: StdSplitDetail;
+} | null {
   // 산식은 `lib/calc`의 단일 소스를 쓴다 — UI 표시가 같은 함수를 공유해야
   // 절사 규약이 갈리지 않는다(표시 411,459 vs 계산 411,460 드리프트 방지).
   const landStd = calcLandStdPriceAtAcq(
@@ -45,6 +56,7 @@ export function calcAcqStdPair(
   );
 
   const buildingStd = input.buildingStandardPriceAtAcquisition;
+  const isHousing = input.propertyType === "housing";
   // **주택도 포함**한다(2026-07-30). §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액 × 3/100"
   // 이라 **취득 당시 라목 주택으로서의 가액이 존재**해야 적용된다. 토지를 먼저 취득하고 건물을
   // 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합 공시 자체가 없고,
@@ -60,14 +72,39 @@ export function calcAcqStdPair(
     return { land: landStd, building: buildingStd, buildingDerived: false };
   }
 
-  // 레거시 역산 — 주택(정상 경로) 및 건물 기준시가 미입력 시(한시 후퇴).
-  // 산식은 `lib/calc`의 단일 소스를 쓴다.
-  if (landStd != null) {
+  if (isHousing) {
+    // 주택 비-별개: 결합 공시를 가목:나목 비례로 안분한다. 나목·총액·토지분 중 하나라도 없으면 쌍이 없다.
+    // 별개 + 나목 생략의 종전 한시 후퇴(뺄셈)도 같은 이유로 제거했다 — 별개는 아래에서 건물분 null로
+    // 반환되어 호출부(`calcSplitGain`)가 건물분을 지목해 차단한다(D-2).
+    const total = input.standardPriceAtAcquisition ?? 0;
+    if (
+      input.isSeparateAcquisition !== true &&
+      landStd != null &&
+      buildingStd != null &&
+      buildingStd > 0 &&
+      total > 0
+    ) {
+      const split = apportionByStdPrice(total, landStd, buildingStd);
+      return {
+        land: split.land,
+        building: split.building,
+        buildingDerived: true,
+        stdSplit: {
+          housingTotal: total,
+          landStd,
+          buildingStd,
+          landBasis: split.land,
+          buildingBasis: split.building,
+        },
+      };
+    }
+  } else if (landStd != null) {
+    // 일반건물 한시 후퇴 — 건물 기준시가 미입력 시 결합 총액 − 토지분.
     const building = calcDerivedBuildingStdAtAcq(input.standardPriceAtAcquisition ?? 0, landStd);
     if (building != null) return { land: landStd, building, buildingDerived: true };
   }
 
-  // 역산 불가(총액 미입력 등). **별개취득만** 파트별 부분 산출로 후퇴한다 — 실가 파트의 기준시가는
+  // 산출 불가(총액·나목 미입력 등). **별개취득만** 파트별 부분 산출로 후퇴한다 — 실가 파트의 기준시가는
   // 계산에 등장하지 않으므로 한쪽만 알아도 그 파트는 정상 산출된다(필요 여부는 호출부가 판정).
   // 비-별개취득은 총액 안분이 전제라 부분 산출이 의미 없으므로 **종전대로 쌍 전체 null**.
   if (input.isSeparateAcquisition !== true) return null;
@@ -274,6 +311,8 @@ export function calcSplitAcquisitionPrice(
   landStdAtAcq: number,
   buildingStdAtAcq: number,
   landRatio: number | null,
+  /** 취득시 개별주택가격을 비례 안분한 경우(주택 비-별개)의 내역 — 있으면 환산 분모(양도시)도 같은 척도로 비례 안분한다 */
+  stdSplit?: StdSplitDetail,
 ): {
   land: number;
   building: number;
@@ -289,14 +328,53 @@ export function calcSplitAcquisitionPrice(
   // 재구현하면 dual-truth가 된다.
   const isSeparate = input.isSeparateAcquisition === true;
 
-  // 환산(estimated) 분모 — 양도시 기준시가 파트별.
-  // ⚠️ `landRatio`(취득시 비율) 후퇴는 **비율이 산출된 경우에만** 가능하다. 케이스 a(양쪽 실가)는
-  //    비율 자체가 없고 이 값도 쓰이지 않으므로 0으로 둔다(환산 파트가 없어 분모가 소비되지 않음).
+  // 환산(estimated) 분모 — 양도시 기준시가 파트별. **취득시와 같은 척도**여야 한다.
+  //
+  // 🔴 주택 비-별개(`stdSplit` 있음): 분자(취득시)가 개별주택가격의 비례 몫이므로 분모(양도시)도
+  //    양도시 개별주택가격 H_T를 양도시 가목 L_T·나목 N_T 비율로 안분한 몫이다
+  //    (`H_T × L_T ÷ (L_T + N_T)` — 양도시 가목·나목 원값을 쓰면 분자·분모 척도가 갈려 토지 환산취득가가
+  //    틀어진다. 계획서 §8 D-1 ⓑ, 집행기준 99-164-9, PHD §164⑦ 정본 `pre-housing-disclosure.ts`와 같은 척도).
+  // 별개 취득·일반건물: 파트가 독립이므로 양도시 가목·나목 원값이 분모다.
+  //
+  // ⚠️ **취득시 비율로 양도시를 나누는 후퇴(`총액 × landRatio`·`총액 − 토지분`)는 제거했다** — 두 시점의
+  //    비율이 크게 다르고 근거가 없다(S3-1 A3). 값이 없으면 환산 파트에 한해 **차단**한다(0으로 메우지 않는다).
+  const selfOwnsForGate = input.selfOwns ?? "both";
+  const landEstimatedOwned = landMode === "estimated" && selfOwnsForGate !== "building_only";
+  const buildingEstimatedOwned = buildingMode === "estimated" && selfOwnsForGate !== "land_only";
+  const rawLandAtTransfer = input.landStandardPriceAtTransfer ?? 0;
+  const rawBuildingAtTransfer = input.buildingStandardPriceAtTransfer ?? 0;
   const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
-  const landStdAtTransferBase = input.landStandardPriceAtTransfer
-    ?? (landRatio != null ? Math.floor(totalStdAtTransfer * landRatio) : 0);
-  const buildingStdAtTransfer = input.buildingStandardPriceAtTransfer
-    ?? Math.max(totalStdAtTransfer - landStdAtTransferBase, 0);
+  let landStdAtTransferBase = rawLandAtTransfer;
+  let buildingStdAtTransfer = rawBuildingAtTransfer;
+  if (stdSplit) {
+    if (rawLandAtTransfer > 0 && rawBuildingAtTransfer > 0 && totalStdAtTransfer > 0) {
+      const atTransfer = apportionByStdPrice(totalStdAtTransfer, rawLandAtTransfer, rawBuildingAtTransfer);
+      landStdAtTransferBase = atTransfer.land;
+      buildingStdAtTransfer = atTransfer.building;
+    } else if (landEstimatedOwned || buildingEstimatedOwned) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "개별주택가격(결합 공시)으로 환산취득가액을 구하려면 양도시 개별주택가격과 양도시 토지·건물 기준시가가 필요합니다 — "
+          + "취득시와 같은 방식으로 토지분·건물분에 나눕니다 (소득세법 §99①1호 가목·나목, 시행령 §164⑤·§166⑥).",
+        { missingTransferStd: true, standardPriceAtTransfer: totalStdAtTransfer },
+      );
+    } else {
+      landStdAtTransferBase = 0;
+      buildingStdAtTransfer = 0;
+    }
+  } else {
+    const missing: string[] = [];
+    if (landEstimatedOwned && !(rawLandAtTransfer > 0)) missing.push("토지");
+    if (buildingEstimatedOwned && !(rawBuildingAtTransfer > 0)) missing.push("건물");
+    if (missing.length > 0) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `환산취득가액의 분모인 양도시 ${missing.join("·")} 기준시가가 필요합니다 — 취득시 비율로 대신 나누지 않습니다 `
+          + "(소득세법 §99①1호, 시행령 §164③).",
+        { missingTransferStdParts: missing },
+      );
+    }
+  }
 
   // §164⑨1호 공익수용 특례 — **토지분이 환산(estimated) 모드일 때만** 분모를 min[]로 낮춘다
   // (건물분 무변경 — 시행규칙 §80⑧, 계획 D16-GB). 미충족 시 null → landStdAtTransferBase 유지(회귀 0).
@@ -348,7 +426,7 @@ export function calcSplitAcquisitionPrice(
 
   // 미입력 차단 — **본인 소유 파트만** 대상. `selfOwns≠both`이면 비소유 파트의 gain은
   // 상위(transfer-tax.ts:315)에서 버려지므로 그 파트의 미입력은 오답을 만들지 않는다.
-  const selfOwns = input.selfOwns ?? "both";
+  const selfOwns = selfOwnsForGate;
   const missing: string[] = [];
   if (landRaw == null && selfOwns !== "building_only") missing.push("토지");
   if (buildingRaw == null && selfOwns !== "land_only") missing.push("건물");

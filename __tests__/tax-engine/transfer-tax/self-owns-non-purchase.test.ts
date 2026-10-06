@@ -158,6 +158,8 @@ function inheritedAsset(over: Partial<AssetForm> = {}): AssetForm {
     standardPricePerSqmAtAcq: "1,000,000",
     acquisitionArea: "100",
     standardPriceAtAcq: "250,000,000",
+    // S3-1 — 취득시 건물 기준시가(나목): 개별주택가격 250M을 가목 100M : 나목 150M 비례로 토지분·건물분에 나눈다.
+    buildingStandardPriceAtAcq: "150,000,000",
     ...over,
   } as AssetForm;
 }
@@ -181,8 +183,14 @@ describe("N7 — API ⑬: 토지 취득일 미입력이어도 acquisitionDate로
 });
 
 describe("N8 — validate ⑧: 취득시 기준시가가 없으면 차단한다", () => {
-  it("3요소 완비 → 통과", () => {
+  it("3요소 + 취득시 건물 기준시가(나목) 완비 → 통과", () => {
     expect(validateSplitDirectInputs(inheritedAsset(), "자산 1")).toBeNull();
+  });
+
+  it("🔴 S3-1 나목 미입력 → 차단 (비례 안분의 분모 — 뺄셈 fallback 금지)", () => {
+    expect(
+      validateSplitDirectInputs(inheritedAsset({ buildingStandardPriceAtAcq: "" }), "자산 1"),
+    ).toMatch(/건물 기준시가/);
   });
 
   it("🔴 ㎡당 공시지가 미입력 → 차단 (엔진이 조용히 selfOwns를 무시하기 전에)", () => {
@@ -191,7 +199,7 @@ describe("N8 — validate ⑧: 취득시 기준시가가 없으면 차단한다"
     ).toMatch(/개별공시지가/);
   });
 
-  it("🔴 기준시가 총액 미입력 → 차단 (건물분 = 총액 − 토지분)", () => {
+  it("🔴 기준시가 총액 미입력 → 차단 (비례 안분의 분자)", () => {
     expect(
       validateSplitDirectInputs(inheritedAsset({ standardPriceAtAcq: "" }), "자산 1"),
     ).toMatch(/기준시가 총액/);
