@@ -614,20 +614,22 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       }));
     }
 
-    // ⑪ acquisitionDate FIFO fallback — 가장 오래된 매수 lot 일자를 단건 필드에도 채움
-    //   (legacy calcHoldingPeriod / STT 호환. 엔진은 split 모드에서 이 값을 무시하고 lot 사용)
+    // ⑪ acquisitionDate FIFO — 가장 오래된 매수·매도 lot 일자를 단건 필드에 싣는다
+    //   (legacy calcHoldingPeriod / STT·대주주 임계 연도 호환). 폼-전역 값이 있어도 **덮어쓴다** —
+    //   분할 모드에는 그 칸이 없어 남아 있다면 단건 시절의 stale 값이다(단건→분할 전환 잔존·저장 이력).
+    //   종전 「비었을 때만」은 그 값을 그대로 실어 증권거래세율·대주주 임계·보유기간을 화면 밖 날짜로 쟀다.
     const oldestLotDate = form.acquisitionLots
       .map((l) => l.acquisitionDate)
       .filter((d) => d && d.length > 0)
       .sort()[0];
-    if (oldestLotDate && !body.acquisitionDate) {
+    if (oldestLotDate) {
       body.acquisitionDate = oldestLotDate;
     }
     const oldestTrnDate = form.transferLots
       .map((l) => l.transferDate)
       .filter((d) => d && d.length > 0)
       .sort()[0];
-    if (oldestTrnDate && !body.transferDate) {
+    if (oldestTrnDate) {
       body.transferDate = oldestTrnDate;
     }
   }
