@@ -9,7 +9,7 @@
  *   ⇔ ⑫ 요구 ⇔ 엔진 throw.
  * 한쪽만 막으면 「UI 통과 ↔ API 400」 또는 「화면에 없는 값이 계산에 쓰임」이 된다(`feedback_fe8_vs_12_parity_grid`).
  *
- * 격자 축: selfOwns 3 × 취득원인 2 × 별개 여부 2 × 파트 모드 조합 4 × PHD 2 × 부담부증여 2 × 겸용 2.
+ * 격자 축: selfOwns 3 × 취득원인 2 × 별개 여부 2 × 파트 모드 조합 4 × PHD 2 × 부담부증여 2 × 겸용 2 × 비소유 파트 stale 가격 2.
  * ⚠️ ④·⑫·엔진 입력은 **④의 실제 페이로드**(`buildSplitPayload` + `buildLandStdAtAcquisitionPayload`)에서 만든다 —
  *    조건을 이 파일에서 재기술하지 않는다.
  */
@@ -41,6 +41,8 @@ interface Combo {
   phd: boolean;
   burdened: boolean;
   mixed: boolean;
+  /** 비소유 파트에 **stale 취득가액**이 남은 상태 — 소유 토글은 값을 지우지 않고 ④는 그 값을 보내지 않는다 */
+  stale: boolean;
 }
 
 const ratioed = (v: string | undefined) => parseAmount(v ?? "") || undefined;
@@ -71,6 +73,9 @@ function assetOf(c: Combo, over: Partial<AssetForm> = {}): AssetForm {
     ...(c.modes === "aa-direct"
       ? { landAcquisitionPrice: "300,000,000", buildingAcquisitionPrice: "400,000,000" }
       : {}),
+    // 비소유 파트의 잔존 가격 — 술어가 폼 원본값으로 판정하면 UI(칸 닫힘)와 ⑫·엔진(두 파트 비었다고 요구)이 갈린다
+    ...(c.stale && c.selfOwns === "building_only" ? { landAcquisitionPrice: "200,000,000" } : {}),
+    ...(c.stale && c.selfOwns === "land_only" ? { buildingAcquisitionPrice: "200,000,000" } : {}),
     useEstimatedAcquisition: false,
     saleSplitMode: "apportioned",
     actualSalePrice: "1,200,000,000",
@@ -94,11 +99,14 @@ function* grid(): Generator<Combo> {
         for (const modes of ["ae", "ee", "aa-direct", "aa-blank"] as const)
           for (const phd of [false, true])
             for (const burdened of [false, true])
-              for (const mixed of [false, true]) {
-                // 별개 취득은 매매만(비-매매는 취득일이 하나)
-                if (separate && cause !== "purchase") continue;
-                yield { selfOwns, cause, separate, modes, phd, burdened, mixed };
-              }
+              for (const mixed of [false, true])
+                for (const stale of [false, true]) {
+                  // 별개 취득은 매매만(비-매매는 취득일이 하나)
+                  if (separate && cause !== "purchase") continue;
+                  // stale 축은 소유자 분리일 때만 의미가 있다(both에는 비소유 파트가 없다)
+                  if (stale && selfOwns === "both") continue;
+                  yield { selfOwns, cause, separate, modes, phd, burdened, mixed, stale };
+                }
 }
 
 const label = (c: Combo) => JSON.stringify(c);
@@ -207,7 +215,7 @@ describe("나목(취득시 건물 기준시가) — ⑤노출 ⇔ ⑧필수 ⇔ 
       }
     }
     // 격자가 비어 있지 않고 leaf 참/거짓 양쪽이 실제로 존재한다(공허한 통과 방지)
-    expect(total).toBeGreaterThan(200);
+    expect(total).toBeGreaterThan(300);
     expect(leafTrue).toBeGreaterThan(10);
     expect(leafTrue).toBeLessThan(total);
   });
@@ -243,5 +251,31 @@ describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 
       expect(throwsForHT, `엔진 ${label(c)} ${msg ?? ""}`).toBe(leaf);
     }
     expect(leafTrue).toBeGreaterThan(5);
+  });
+});
+
+describe("⑧ 통과 ↔ ⑫ 400 모순 금지 — 취득시 기준시가 3종(㎡당 단가·면적·총액)", () => {
+  it("격자 전수: ⑫가 3종을 요구하면 ⑧도 같은 필드를 요구한다 (⑧ ⊇ ⑫ — 화면이 먼저 막고 칸으로 이동시킨다)", () => {
+    let required = 0;
+    for (const c of grid()) {
+      if (c.separate) continue;
+      const blank3 = assetOf(c, {
+        standardPricePerSqmAtAcq: "",
+        acquisitionArea: "",
+        standardPriceAtAcq: "",
+        buildingStandardPriceAtAcq: "",
+      });
+      const issues = refineIssues(bodyOf(blank3, c));
+      const needs3 = ["standardPricePerSqmAtAcquisition", "acquisitionArea", "standardPriceAtAcquisition"].some((k) => issues.includes(k));
+      if (!needs3) continue;
+      required++;
+      const { result, fieldOf } = collectWithFields(() => validateSplitDirectInputs(blank3, "자산 1"));
+      const f = result != null ? fieldOf(result) : undefined;
+      expect(
+        f === "standardPricePerSqmAtAcq" || f === "acquisitionArea" || f === "standardPriceAtAcq",
+        `⑧이 막지 않았는데 ⑫가 400 ${label(c)} → ⑧ field=${String(f)}`,
+      ).toBe(true);
+    }
+    expect(required).toBeGreaterThan(10);
   });
 });

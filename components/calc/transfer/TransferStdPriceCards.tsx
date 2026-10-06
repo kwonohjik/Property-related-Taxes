@@ -19,7 +19,9 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { ownerSplitHousingNeedsTransferTotal } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface FieldProps {
@@ -31,10 +33,9 @@ interface FieldProps {
 /**
  * 양도시 **토지** 기준시가 — `㎡당 개별공시지가 × 면적`(§99①1호 **가목**).
  *
- * ⚠️ 주택(라목)이라도 **양도시 축에서는 역산(`결합 총액 − 토지분`)을 쓰지 않는다.**
- * 취득시 축의 역산은 개산공제 합계를 법정액(§163⑥2호가목)에 맞추기 위한 것이고,
- * 양도시 축은 양도대가를 파트로 나누는 것이라 목적이 다르다 — 부가가치세법 시행령 §64①1호가
- * 정한 대로 **각 파트의 고유 기준시가**를 쓴다. 취득시 규칙을 양도시로 옮기면 안 된다.
+ * ⚠️ 주택(라목)이라도 **양도시 토지·건물 기준시가는 각자의 고유 값을 입력받는다**(결합 총액에서 빼서 만들지 않는다).
+ * 양도가액 안분은 부가가치세법 시행령 §64①1호가 정한 대로 **각 파트의 고유 기준시가** 비율이다. 환산취득가의 분모는
+ * 취득시와 같은 비례 척도(`양도시 개별주택가격 × 가목 ÷ (가목 + 나목)`, S3-1)이며 그 비례의 분자·분모가 이 값들이다.
  *
  * 기준일은 **양도일**이다 — 취득일이 아니다(§164③ 직전 고시분).
  */
@@ -91,7 +92,7 @@ export function TransferLandStdFields({ asset, onChange, transferDate }: FieldPr
  * (반면 토지분(가목)은 `개별공시지가 × 면적`이 정의 그 자체라 별도 고시 총액이 없어
  * 수동 입력 칸을 두지 않는다 — 위 「토지기준시가」 자동 표시가 최종값.)
  *
- * 주택·일반건물 **모두** 계산기 경로로 산정한다(라목 역산 금지 — 위 주석 참조).
+ * 주택·일반건물 **모두** 계산기 경로로 산정한다(결합 총액에서 뺄셈으로 도출 금지 — 위 주석 참조).
  */
 export function TransferBuildingStdFields({
   asset,
@@ -156,11 +157,53 @@ export function TransferBuildingStdFields({
   );
 }
 
+/**
+ * 양도시 **개별주택가격**(결합 공시 — §99①1호 라목) — 환산취득가의 분모 척도 (S3-1 D-1 ⓑ).
+ *
+ * 취득시 개별주택가격을 가목:나목 비례로 안분하면(소유자 분리), 환산취득가액의 분모(양도시)도 같은 척도여야 한다 —
+ * `양도시 개별주택가격 × 양도시 가목 ÷ (가목 + 나목)`. 아래 토지·건물 기준시가가 그 비례의 분자·분모다.
+ * 매매 경로의 환산 토글(`CompanionAcqStdPriceSection`)이 이미 같은 폼 필드를 받는 경우에는 그쪽이 입력 정본이라
+ * 여기서 중복 노출하지 않는다(`showTransferHousingTotalInAxisA`).
+ */
+function TransferHousingTotalField({ asset, onChange, transferDate }: FieldProps) {
+  return (
+    <div data-testid="split-housing-std-transfer-card" className="space-y-1.5">
+      <label className="text-sm font-medium">
+        양도시 개별주택가격 (원) <span className="text-destructive">*</span>
+      </label>
+      <StandardPriceInput
+        data-field="standardPriceAtTransfer"
+        propertyKind="house_individual"
+        totalPrice={asset.standardPriceAtTransfer ?? ""}
+        onTotalPriceChange={(v) => onChange({ standardPriceAtTransfer: v })}
+        jibun={asset.addressJibun}
+        dong={asset.addressDong}
+        ho={asset.addressHo}
+        referenceDate={transferDate}
+        hint="환산취득가 분모 — 취득시와 같은 방식으로 개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 나눕니다 (§99①1호 라목)"
+      />
+    </div>
+  );
+}
+
+/**
+ * 축 A 카드가 양도시 개별주택가격 칸을 **직접** 여는가.
+ *
+ * 노출 술어(`ownerSplitHousingNeedsTransferTotal`)가 정본이다 — ⑧ 필수·④ 전송·⑫ 요구·엔진이 같은 술어를 쓴다.
+ * 단 매매 + 자산 환산 토글이 켜져 있으면 `CompanionAcqStdPriceSection`이 같은 폼 필드 칸을 이미 갖고 있어 제외한다
+ * (같은 `data-field`가 한 화면에 둘이 되지 않게).
+ */
+export function showTransferHousingTotalInAxisA(asset: AssetForm): boolean {
+  if (!ownerSplitHousingNeedsTransferTotal(asset)) return false;
+  return !(asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition);
+}
+
 /** 축 A(일괄양도) 래퍼 — 토지·건물을 한 카드에. 안분 비율은 두 값이 함께 있어야 성립한다. */
 export function TransferStdPriceCard(props: FieldProps) {
   return (
     <div data-testid="split-sale-std-card">
       <ToneCard tone="emerald" title="양도시 기준시가 (§99①1호 가목·나목)" noDark>
+        {showTransferHousingTotalInAxisA(props.asset) && <TransferHousingTotalField {...props} />}
         <TransferLandStdFields {...props} />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start">
           <TransferBuildingStdFields {...props} placement="saleAxis" />

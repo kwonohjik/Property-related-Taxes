@@ -319,3 +319,7 @@ export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean
 - 모달(`BuildingStdPriceModalButton`)을 비-별개 경로(다른 `snapshotKey`·토지 prefill 소스)에서 실제로 열어 값 적용까지 해 본 **화면 실측은 하지 않았다**(이 설계는 입구 가시성·testid·field 앵커 실측까지). Do 단계 E6에서 확인.
 - 공시 전 취득·PHD 혼합(한쪽만 환산) 상태에서 leaf 6항·`isPhdBothEstimated` 일치 여부는 코드 대조만(실행 안 함).
 - `CompanionAcqPurchaseBlock`이 이미 계산한 `acqStdPriceRequired`와 asset 기반 leaf 7항이 모든 격자에서 같은 값을 내는지는 §7.3 #U-1이 증명할 일이다(미실행).
+
+## §10 Do 환류 (2026-10-06)
+
+구현 결과는 계획서 §9 참조. UI 설계와 달라진 지점: (1) 노출 leaf `ownerSplitHousingNeedsBuildingStd`가 PHD **켜짐 전체**를 제외(§2.3 6항 「양쪽 환산」보다 넓다 — ④가 PHD에서 총액을 안 보냄) (2) D-1 ⓑ로 §2.9가 §2로 승격 — 축 A 카드에 양도시 개별주택가격 칸(`TransferHousingTotalField`, testid `split-housing-std-transfer-card`, `data-field=standardPriceAtTransfer`), 매매 + 자산 환산 토글 ON이면 취득 블록의 기존 칸이 정본이라 중복 노출하지 않음 (3) 별개 취득 `PartAcqStdPrice`의 non-both 분기는 `AcqBuildingStdField variant="separate"`로 위임(DOM의 의미 없는 빈 wrapper `<div>` 1개 제거, testid·입력 testid 불변) (4) 결과 카드 echo는 `stdSplit {housingTotal, landStd, buildingStd, landBasis, buildingBasis}`(요청안의 3값보다 풍부 — 한국어 산식이 가목·나목 원값을 그대로 표시) (5) E2E는 `e2e/transfer-housing-acq-building-std-nonseparate.spec.ts` 13건(E1~E9·E-4).

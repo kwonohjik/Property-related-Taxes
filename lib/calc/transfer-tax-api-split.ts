@@ -167,8 +167,9 @@ export function buildSplitPayload(
     // 양도시 개별주택가격(결합) — 주택 비-별개 + 소유자 분리에서 **환산 파트가 있을 때만** 보낸다(S3-1 D-1 ⓑ).
     // 환산취득가액의 분모도 취득시와 같은 비례 척도(양도시 개별주택가격 × 가목 ÷ (가목 + 나목))여야 한다.
     // 본체는 자산 전체 환산 플래그(`useEstimatedAcquisition`)일 때만 보내므로, 파트 모드만 환산인 경우를 여기서 연다.
-    ...(!usesPhd && ownerSplitHousingNeedsTransferTotal(primary)
-      ? { standardPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) || undefined }
+    // 값이 있을 때만 싣는다 — 본체가 다른 출처(이월과세 증여자 시점 등)의 값을 이미 실은 경우 빈 값으로 덮어쓰지 않는다.
+    ...(!usesPhd && ownerSplitHousingNeedsTransferTotal(primary) && parseAmount(primary.standardPriceAtTransfer) > 0
+      ? { standardPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) }
       : {}),
     // 양도가액 2필드 — 구분양도 게이트.
     ...(saleDirectActive

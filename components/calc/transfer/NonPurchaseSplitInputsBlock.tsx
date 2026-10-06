@@ -28,6 +28,8 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement, effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { isLandBuildingSplitable } from "./AssetOwnershipSplitSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -51,6 +53,8 @@ export function NonPurchaseSplitInputsBlock(props: {
   const saleStdPlace = saleStdPlacement();
 
   const ownedLabel = asset.selfOwns === "building_only" ? "건물" : "토지";
+  // 주택 소유자 분리 — 개별주택가격 비례 안분의 분모(나목). 매매 경로(`CompanionAcqStdPriceSection`)와 같은 술어를 쓴다.
+  const showAcqBuildingStd = ownerSplitHousingNeedsBuildingStd(asset);
 
   return (
     <div className="space-y-3" data-testid="non-purchase-split-inputs">
@@ -61,8 +65,9 @@ export function NonPurchaseSplitInputsBlock(props: {
         </p>
       </ToneCard>
 
-      {/* ① 취득시 기준시가 — 취득가액 안분 비율의 유일한 소스(§99①1호 가목·나목).
-          토지분 = ㎡당 개별공시지가 × 면적, 건물분 = 총액 − 토지분.
+      {/* ① 취득시 기준시가 — 취득가액 안분 비율의 소스(§99①1호 가목·나목).
+          토지 기준시가 = ㎡당 개별공시지가 × 면적, 주택은 개별주택가격(총액)을 토지 : 건물(나목) 기준시가 비율로
+          토지분·건물분에 **비례 안분**한다(S3-1 — 종전의 「건물분 = 총액 − 토지분」 뺄셈은 제거됐다).
           ⚠️ 의제취득일(1985.1.1.) 이전 상속은 `PreDeemedInputs`가 같은 `standardPriceAtAcq`
              필드에 총액을 넣는다 — 같은 폼 필드를 공유하므로 값이 어긋나지 않는다
              (components/calc/CLAUDE.md "같은 의미 폼 필드의 양방향 read/write" 규약). */}
@@ -85,7 +90,11 @@ export function NonPurchaseSplitInputsBlock(props: {
           dong={asset.addressDong}
           ho={asset.addressHo}
           referenceDate={asset.acquisitionDate}
-          hint="토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+          hint={
+            showAcqBuildingStd
+              ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
+              : "토지·건물 안분 비율 산정 기준 (§166⑥)"
+          }
         />
         {/*
           🔴 **주택은 여기서 막다른 길이었다** (2026-09-05 · 코드리뷰 Q14).
@@ -117,7 +126,7 @@ export function NonPurchaseSplitInputsBlock(props: {
                 area={parseDecimal(asset.acquisitionArea) || undefined}
                 referenceDate={asset.acquisitionDate}
                 jibun={asset.addressJibun}
-                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 유일한 근거 (§99①1호 가목)"
+                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 토지 기준시가(개별주택가격을 나누는 비율의 토지 몫) 산정 근거 (§99①1호 가목)"
               />
               <FieldCard field="acquisitionArea" label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
                 <DecimalInput
@@ -125,6 +134,15 @@ export function NonPurchaseSplitInputsBlock(props: {
                   onChange={(v) => onChange({ acquisitionArea: v })}
                 />
               </FieldCard>
+              {/* 비례 안분의 분모(나목) — 계산 순서(총액 → 토지 → 건물)대로 토지 칸 바로 아래. 노출 ⇔ ⑧ 필수 ⇔ ④ 전송 ⇔ ⑫ 요구. */}
+              {showAcqBuildingStd && (
+                <AcqBuildingStdField
+                  asset={asset}
+                  onChange={onChange}
+                  transferDate={props.transferDate}
+                  variant="proportional"
+                />
+              )}
             </div>
           )}
       </div>

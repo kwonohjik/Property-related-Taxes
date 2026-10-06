@@ -241,3 +241,7 @@ UI 시니어 설계서를 읽고 **엔진 초안의 오류 3건을 정정**했�
 ### 9.3 확인 필요
 
 ① `refines.ts:156-157` `hasIndependentAcqStd` 면제(`!!N`이면 H 면제)가 비-별개 housing에 닿는지 — 비례의 분자 H가 필수여야 하므로 면제 조건에 `isSeparateAcquisition` 추가 필요 가능 ② 일반건물 `building` 비-별개 레거시의 H 의미(E-3) ③ 상속·증여 취득 비-별개의 취득시 결합가 출처(`inheritance-acquisition-helpers.ts:215-221` — audit 인용, 본인 미열람)와 N의 시점(상속개시일) ④ 컴패니언은 SP refine 부재(§4) ⑤ **stale 토지 단가 + 소유자 분리 OFF 세션**: 종전 뺄셈 분할 → S3-1 후 분할 포기(단일 자산 경로) — 사용자 영향(세액 변화) 확인 ⑥ DOM 프로젝트(`.test.tsx`)·E2E 영향 미측정(UI §7) ⑦ 일부양도 + 소유자 분리 주택의 N 의미(E-7) ⑧ 공동주택(아파트) 취득시 N의 국세청 산정(집합건물 전유부분 — UI Q-U5와 공통) ⑨ 1985.1.1. 이전 의제취득 N(UI Q-U3).
+
+## §10 Do 환류 (2026-10-06)
+
+구현 결과·설계와의 차이·「확인 필요」 실측은 계획서 `docs/00-pm/housing-std-split-proportional.plan.md` **§9**에 모았다. 이 문서와 달라진 지점: 술어의 PHD 제외 범위(PHD 켜짐 전체) · 엔진 게이트의 부담부증여 제외 · anchor B-2(ⓐ) 삭제와 B-5 기대값(205,714,285) · `hasIndependentAcqStd` 면제를 주택 비-별개에서 제외한 것이 §9.3 ①의 실측 결과다.

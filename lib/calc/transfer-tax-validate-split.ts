@@ -25,6 +25,7 @@ import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
+import { acqStdNeedFlagsOfAsset } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -147,7 +148,8 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   if (
     selfOwnsSplit &&
     !isSeparateAcquisition(asset) &&
-    requiresAcqStdPrice(withExpenses(asset), {
+    // ④가 보내는 값 기준(비소유 파트 stale 가격 제외) — ⑫·엔진·나목 술어와 같은 입력이어야 칸 없는 400이 없다.
+    requiresAcqStdPrice(acqStdNeedFlagsOfAsset(asset), {
       landMode: effectivePartAcqMode(asset.landAcqMode, asset),
       buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
       isSeparate: false,

@@ -18,7 +18,9 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
+import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
+import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 
 interface Props {
@@ -63,6 +65,11 @@ export function CompanionAcqStdPriceSection({
    * 갈리면 화면이 파생한 총액과 엔진이 쓰는 면적이 어긋난다.
    */
   const acqStdUsesTransferArea = usesTransferAreaForAcqStdPrice(props.asset?.areaScenario);
+  /**
+   * 주택 비-별개 + 소유자 분리 — 개별주택가격을 가목:나목 비례로 안분하므로 **취득시 건물 기준시가(나목)** 칸이 필요하다
+   * (S3-1). ⑧ 필수·④ 전송·⑫ 요구·엔진이 같은 술어를 쓴다 — 칸이 열린 상태에서만 요구된다(막다른 길 없음).
+   */
+  const showAcqBuildingStd = !!props.asset && !!props.onAssetChange && ownerSplitHousingNeedsBuildingStd(props.asset);
 
   // 취득시 기준시가 조회 단가 → pre1990PricePerSqm_1990 자동 입력
   function handleAcqPricePerSqmChange(v: string) {
@@ -168,7 +175,11 @@ export function CompanionAcqStdPriceSection({
               hint={
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
-                  : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+                  : propertyKind === "house_individual"
+                    ? showAcqBuildingStd
+                      ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
+                      : "토지·건물 안분 비율 산정 기준 (§166⑥)"
+                    : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
               }
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}
@@ -184,7 +195,16 @@ export function CompanionAcqStdPriceSection({
                 area={parseDecimal(props.acquisitionArea) || undefined}
                 referenceDate={props.acquisitionDate}
                 jibun={props.jibun}
-                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 근거 (§99①1호 가목)"
+                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 토지 기준시가(개별주택가격을 나누는 비율의 토지 몫) 산정 근거 (§99①1호 가목)"
+              />
+            )}
+            {/* 소유자 분리 — 비례 안분의 분모(나목). 계산 순서(총액 → 토지 → 건물)대로 토지 단가 바로 아래에 둔다. */}
+            {showAcqBuildingStd && (
+              <AcqBuildingStdField
+                asset={props.asset!}
+                onChange={props.onAssetChange!}
+                transferDate={props.transferDate}
+                variant="proportional"
               />
             )}
           </div>

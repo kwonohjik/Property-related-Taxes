@@ -731,11 +731,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   useStandardPriceAtTransferOverride: boolean;
 
   /**
-   * 건물분 취득시 기준시가 (원) — `assetKind==="building"` + 토지·건물 취득시기 상이 전용.
-   *
-   * 소득세법 §99①1호 나목(국세청장 산정·고시). 기준일은 **건물 취득일**의 직전 고시분(소득령 §164③) —
-   * 토지분(㎡당 공시지가 × 면적)은 토지 취득일 기준이라 시점이 다르다.
-   * 미입력 시 `standardPriceAtAcq` 총액에서 역산으로 후퇴한다(한시).
+   * 건물분 취득시 기준시가 (원) — 소득세법 §99①1호 나목(국세청장 산정·고시). 주택·건물 공용.
+   * · 별개 취득(토지·건물 취득일 상이): 기준일은 **건물 취득일**의 직전 고시분(소득령 §164③) — 파트 독립 입력.
+   * · 주택 비-별개 + 소유자 분리(S3-1): 개별주택가격(`standardPriceAtAcq`, 부수토지 포함 결합 공시)을
+   *   토지 기준시가 : 이 값의 비율로 비례 안분하는 분모다. 미입력은 ⑧이 차단한다(뺄셈 fallback 금지).
+   *   (일반건물 비-별개의 한시 후퇴만 미입력을 허용한다.)
    */
   buildingStandardPriceAtAcq: string;
 

@@ -9,8 +9,8 @@
 import type {
   TransferTaxInput,
   SplitLandExpropriationValuationDetail,
-  StdSplitDetail,
 } from "./types/transfer.types";
+import type { StdSplitDetail } from "./types/transfer-split-gain.types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calcLandStdPriceAtAcq,

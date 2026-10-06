@@ -456,6 +456,25 @@ export function requiresHousingBuildingStdAtAcq(
  * PHD(④가 결합 총액을 안 보내 비례의 분자가 없다 — 엔진은 같은 제외를 입력 자체로 이미 거른다).
  * 노출 ⇔ 요구 ⇔ 전송이 **한 값**이라 칸이 없는 요구(막다른 길)도, 숨은 stale 값의 전송도 없다.
  */
+/**
+ * 취득시 기준시가 **술어 입력 플래그** — ④가 실제로 전송하는 값과 같은 기준으로 만든다.
+ *
+ * ④(`buildSplitPayload`)는 **비소유 파트의 취득가액을 보내지 않는다**(소유 토글은 값을 지우지 않아 stale이 남는다 —
+ * `landAcqDirectActive`/`buildingAcqDirectActive`의 소유 게이트). 그런데 술어를 폼 원본값으로 판정하면
+ * 「비소유 토지 stale 가격만 남고 소유 건물 가격은 빈」 상태에서 UI는 비율이 안 쓰인다고 보고(칸 닫힘 · ⑧ 통과)
+ * 엔진·⑫는 두 파트가 모두 비었다고 보아 요구한다 → **칸 없는 400**. 술어 입력까지 ④와 같아야 단일 소스다.
+ * (⑧ V8 3종·⑤ 취득시 기준시가 블록도 이 플래그를 쓴다.)
+ */
+export function acqStdNeedFlagsOfAsset(asset: AssetForm) {
+  const selfOwns = effectiveSelfOwns(asset) ?? "both";
+  return {
+    ...asset,
+    expenses: raw(asset.directExpenses),
+    ...(selfOwns === "building_only" ? { landAcquisitionPrice: "" } : {}),
+    ...(selfOwns === "land_only" ? { buildingAcquisitionPrice: "" } : {}),
+  };
+}
+
 export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
   if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return false;
   if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift") return false;
@@ -471,7 +490,7 @@ export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
       isSeparate: isSeparateAcquisition(asset),
       isOwnerSplit: (effectiveSelfOwns(asset) ?? "both") !== "both",
     },
-    { ...asset, expenses: raw(asset.directExpenses) },
+    acqStdNeedFlagsOfAsset(asset),
     { landMode, buildingMode },
   );
 }

@@ -304,3 +304,57 @@ describe("`stdSplit` echo 범위 · 정밀도", () => {
     expect((r?.stdSplit?.landBasis ?? 0) + (r?.stdSplit?.buildingBasis ?? 0)).toBe(483_000_000);
   });
 });
+
+describe("A3 — 양도시 후퇴 fallback 제거: 환산 파트의 분모(양도시 기준시가)가 없으면 엔진이 던진다", () => {
+  const sep = (over: Partial<TransferTaxInput>) =>
+    baseTransferInput({
+      propertyType: "housing",
+      transferPrice: 1_200_000_000,
+      transferDate: new Date("2026-06-30"),
+      acquisitionDate: new Date("2018-03-02"),
+      landAcquisitionDate: new Date("2006-05-10"),
+      acquisitionPrice: 0,
+      useEstimatedAcquisition: true,
+      isSeparateAcquisition: true,
+      landAcqMode: "estimated",
+      buildingAcqMode: "estimated",
+      standardPricePerSqmAtAcquisition: 2_400_000,
+      acquisitionArea: 100,
+      buildingStandardPriceAtAcquisition: 360_000_000,
+      // 양도가액 안분은 감정평가가액으로 — 양도시 기준시가 없이도 안분은 성립한다(분모는 별개로 필요)
+      landAppraisalAtTransfer: 500_000_000,
+      buildingAppraisalAtTransfer: 700_000_000,
+      saleSplitMode: "appraisal",
+      ...over,
+    });
+
+  it("별개 취득 + 양도시 토지·건물 기준시가 없음 → throw (종전: 결합 총액 × 취득시 비율로 양도시를 채웠다)", () => {
+    expect(() => calcSplitGain(sep({ standardPriceAtTransfer: 1_120_000_000 }))).toThrow(/양도시 토지·건물 기준시가/);
+  });
+
+  it("건물만 환산이면 건물 양도시 기준시가만 요구한다", () => {
+    const r = () =>
+      calcSplitGain(
+        sep({
+          landAcqMode: "actual",
+          landAcquisitionPrice: 100_000_000,
+          buildingAcqMode: "estimated",
+          standardPriceAtTransfer: 1_120_000_000,
+          landStandardPriceAtTransfer: 560_000_000,
+        }),
+      );
+    expect(r).toThrow(/양도시 건물 기준시가/);
+  });
+
+  it("긍정 짝: 양도시 기준시가를 주면 계산된다(별개 취득 — 파트 독립, 원값 분모)", () => {
+    const r = calcSplitGain(
+      sep({
+        landStandardPriceAtTransfer: 560_000_000,
+        buildingStandardPriceAtTransfer: 840_000_000,
+      }),
+    );
+    // 양도가액은 감정평가가액 비율(500M : 700M)로 안분 — 토지 환산 = 500M × 240M ÷ 560M · 건물 환산 = 700M × 360M ÷ 840M
+    expect(r?.land.acquisitionPrice).toBe(Math.floor((500_000_000 * 240_000_000) / 560_000_000));
+    expect(r?.building.acquisitionPrice).toBe(Math.floor((700_000_000 * 360_000_000) / 840_000_000));
+  });
+});
