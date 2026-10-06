@@ -22,6 +22,9 @@ import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import { validateGbCarryover } from "./transfer-tax-validate-gb-carryover";
 import { validateGbSaleAxis } from "./transfer-tax-validate-gb-sale";
 import { validateGbDecedentDates, validateGbBundledAcquisitionPrice } from "./transfer-tax-validate-gb-required";
+import { validateGbPartSalesCaseValues } from "./transfer-tax-validate-gb-required";
+import { validateGbCarryoverPartModes } from "./transfer-tax-validate-gb-required";
+import { validateGbExtensionUnifiedEstimate } from "./transfer-tax-validate-gb-required";
 import { needsGbSec1639BuildingStdPrice } from "./transfer-tax-validate-gb-required";
 import { fieldError } from "./transfer-tax-validate-field";
 
@@ -308,6 +311,11 @@ export function validateGeneralBuildingAsset(
       }
     }
   }
+  // R8·R9 (A2) — I3′보다 먼저: 이월과세 파트 × 감정·매매사례(stale) · 증축 × 자산 단위 감정·매매사례(Q-A3)
+  const modeBlockIssue =
+    validateGbCarryoverPartModes(asset, label, landMode, buildingMode) ??
+    validateGbExtensionUnifiedEstimate(asset, label, landMode);
+  if (modeBlockIssue) return modeBlockIssue;
   const bundledIssue = validateGbBundledAcquisitionPrice(asset, label, landMode, buildingMode); // I3′ (2026-09-30)
   if (bundledIssue) return bundledIssue;
 
@@ -407,26 +415,34 @@ export function validateGeneralBuildingAsset(
     const landOverriddenByInheritance = isLandInherited;
     const buildingOverriddenByInheritance = isBuildingInherited;
     /** 증여 파트는 그 파트의 증여 신고가액이 취득가액이다(§163⑨) — 문구를 나눈다. */
-    const partPriceError = (part: "토지" | "건물", byGift: boolean) => {
+    const partPriceError = (part: "토지" | "건물", byGift: boolean, isAppraisal: boolean) => {
       const isLandPart = part === "토지";
       return fieldError(isLandPart ? "landAcquisitionPrice" : "buildingAcquisitionPrice", byGift
         ? `${label}: ${part} 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다 (소득세법 시행령 §163⑨).`
-        : `${label}: ${part} 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`);
+        : isAppraisal
+          ? `${label}: ${part} 감정가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦).`
+          : `${label}: ${part} 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`);
     };
+    // R1 — 실거래가·감정가액 파트는 `*AcquisitionPrice`가 값이다. 매매사례 파트는 이 칸을 읽지 않는다(R2가 `*SalesCaseValue`를 요구).
+    //      종전엔 `!== "estimated"`라 매매사례 파트에도 이 칸을 요구했다 — UI에 없는 칸이라 A1 이후 거짓 차단이 된다.
+    const readsOwnPrice = (m: typeof landMode) => m === "actual" || m === "appraisal";
     if (
       !landOverriddenByInheritance &&
-      landMode !== "estimated" &&
+      readsOwnPrice(landMode) &&
       !parseAmount(asset.landAcquisitionPrice)
     ) {
-      return partPriceError("토지", isLandGift);
+      return partPriceError("토지", isLandGift, landMode === "appraisal");
     }
     if (
       !buildingOverriddenByInheritance &&
-      buildingMode !== "estimated" &&
+      readsOwnPrice(buildingMode) &&
       !parseAmount(asset.buildingAcquisitionPrice)
     ) {
-      return partPriceError("건물", isBuildingGift);
+      return partPriceError("건물", isBuildingGift, buildingMode === "appraisal");
     }
+    // R2 — 매매사례 파트의 `*SalesCaseValue` (④ F-1 · ⑫ I2와 같은 칸)
+    const salesCaseIssue = validateGbPartSalesCaseValues(asset, label, landMode, buildingMode);
+    if (salesCaseIssue) return salesCaseIssue;
   }
 
   // ⑧ 정합성 가드(삭제): 4가지 조합 모두 허용 — useEstimatedAcquisition 강제 조건 제거.

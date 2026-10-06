@@ -617,3 +617,22 @@ export function gbSeparateOnPatch(a: Pick<AssetForm,"landAcqMode"|"buildingAcqMo
 | ⑨~⑭ | 엔진 | E-2(⑫ 필드)·E-3(⑩ 재검토)·⑭ 변경 없음 |
 
 **수동 확인(브라우저)·Playwright·vitest·tsc는 이 작업에서 수행하지 않았다**(설계 문서만 작성, 소스 미수정).
+
+## §13 A2 구현 결과 — 설계 대비 달라진 점 (2026-10-06, Do 단계 환류)
+
+| # | 설계 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | §3.6 이월과세 라디오 숨김 | **{실거래가, 환산취득가} 2종 유지**, 감정·매매사례만 비노출(`gbPartAllowedModes`) | A-통합 Q-A·C-2 — 현행 환산 경로 보존. ⑧ R8은 stale 방어로 유지 |
+| 2 | §3.6 `gbPartCauseModePatch(part, cause)` | `(part, cause, currentMode)` — **허용되지 않는 모드일 때만** 명시 actual | 이월과세의 환산처럼 허용되는 모드를 덮어쓰지 않기 위해 |
+| 3 | §3.9 `gbSeparateOnPatch`가 `effectivePartAcqMode(explicit, …)`로 승격 | **레거시 파생값(`deriveLegacyPartAcqMode`)** 으로 승격 | A1 `gbPartModes`가 분리 OFF에서 explicit을 무시하므로, OFF 화면이 보여 준 값이 레거시 파생값이다. stale explicit을 쓰면 화면↔승격값이 갈린다 |
+| 4 | §7.3 복원 정규화 = `gbSeparateOnPatch` 동일 | **`gbSeparateOnRestorePatch`** — 명시 파트 모드는 보존, 빈 파트만 승격 | 사용자가 고른 명시 모드를 레거시 파생값으로 덮으면 입력 손실 |
+| 5 | (없음) | **`gbUnifiedCarryoverClearPatch`** 신설 — 분리 OFF 이월과세에서 감정·매매사례 플래그 소거(전환·OFF·복원) | 이월과세 카드에는 라디오가 없어 R8이 막아도 끌 칸이 없다(막다른 오류 방지) |
+| 6 | §3.9 OFF는 즉시 소거(설계 기본) | **A-통합 Q-H — 소거할 값이 있으면 `ConfirmDialog`**(파트 금액 6칸 양수 또는 레거시 파생값과 다른 명시 모드), 없으면 즉시 | 사용자 확정 |
+| 7 | 신고 진입 경로 `BUILDING_NEW_SENTINEL`은 언급 없음 | 「건물 신축」 진입도 `gbSeparateOnPatch` 승격 | 분리 ON 진입 경로 전부에서 G-3를 닫기 위해 |
+| 8 | §3.5 `showAcqStdPrice` 식을 컴포넌트에 인라인 | **`gbShowsAcqStdPrice`** leaf로 추출(컴포넌트·테스트 공용) | 테스트가 UI 술어를 복제하던 가드가 거짓이 되는 것을 막는다(`gb-separate-validate` A-5 갱신) |
+| 9 | §4 R8 field 앵커 | 분리 ON = `landAcqMode`/`buildingAcqMode`, **분리 OFF = field 없음**(카드 후퇴) | OFF에서는 화면 전환·복원이 그 조합을 비우므로 도달하지 않는다 |
+| 10 | 위치 `GeneralBuildingExtensionSection` 미리보기 | 감정·매매사례(분리 ON 3파트)에서는 **미리보기를 비운다** | 미리보기 모델이 실가·환산 두 가지뿐 — 틀린 수 대신 빈 칸 |
+| 11 | 신규 ⑧ 규칙 위치 | `transfer-tax-validate-gb-required.ts`에 `validateGbPartSalesCaseValues`(R2)·`validateGbCarryoverPartModes`(R8)·`validateGbExtensionUnifiedEstimate`(R9). R1은 `validate-gb.ts` V-7 조건 좁힘 | 800줄 정책 |
+| 12 | 신규 leaf 위치 | 전환 patch·원인 필터는 `lib/calc/transfer-tax-gb-toggle-patches.ts`로 분리 | `transfer-tax-split-acq-mode.ts` 737줄 → 583줄 |
+
+남은 한계(확인 필요): ⑫ refine은 R8(이월과세 × 감정·매매사례)을 막지 않는다 — ⑧만 막는다(UI 통과 ↔ ⑫ 거절 모순은 없고 ⑧이 더 엄격). `computeTransferSummary.totalAcqPrice`는 분리 ON + 같은 취득일에서 파트 값을 보지 않는다(실가 파트도 동일, 종전 거동) — 사이드바 자산별 행(`computeTransferPerAssetSummary`)만 보정했다.

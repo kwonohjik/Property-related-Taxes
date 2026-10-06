@@ -24,6 +24,7 @@ import { GeneralBuildingAcquisitionCards } from "@/components/calc/transfer/Gene
 import { GeneralBuildingConversionSection } from "@/components/calc/transfer/GeneralBuildingConversionSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { gbSeparateOffPartClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 
 afterEach(cleanup);
 
@@ -108,10 +109,12 @@ describe("A-6 — 분리 토글과 취득일 칸", () => {
     const onChange = renderCards(SEPARATE_ON);
     fireEvent.click(screen.getByRole("switch", { name: /토지·건물 취득일 다름/ }));
     // 취득원인 되맞춤은 U-5가 상세히 고정한다 — 여기서는 날짜와 **한 배치**임을 본다.
+    // A2: 같은 배치에 파트 모드·금액 소거(`gbSeparateOffPartClearPatch`)가 함께 실린다 — 지울 입력이 없으면 Dialog 없이 즉시 전환.
     expect(onChange).toHaveBeenCalledWith({
       hasSeperateLandAcquisitionDate: false,
       landAcquisitionDate: BUILDING,
       gbBuildingAcquisitionCause: "purchase",
+      ...gbSeparateOffPartClearPatch(),
     });
   });
 });

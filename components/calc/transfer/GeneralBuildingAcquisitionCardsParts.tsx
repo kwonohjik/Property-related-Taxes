@@ -18,8 +18,12 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { effectivePartAcqMode, type PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { gbPartModes, type PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartAllowedModes } from "@/lib/calc/transfer-tax-gb-toggle-patches";
+import { buildingPenaltyMethodApplies } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import { capexHint } from "./capexHint";
+import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
 
 export function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
@@ -39,6 +43,39 @@ export function isWithin5Years(buildingAcqDate: string, transferDateStr: string)
   return (trans - acq) / msPerYear < 5;
 }
 
+/**
+ * §114조의2 가산세 안내 배지의 **대상 산정방식** — 신축 건물 파트가 환산·감정이고 5년 이내이면 그 방식, 아니면 null (A2 · §3.11).
+ *
+ * 날짜 게이트(환산 ≥2018-01-01 · 감정 ≥2020-01-01)는 **엔진 leaf `buildingPenaltyMethodApplies`를 그대로 부른다** —
+ * 배지가 날짜를 재기술하면 환산·감정 게이트가 갈리는 순간 dual-truth가 된다(E-4). 매매사례는 조문 문언에 없어 비대상.
+ * 건물 파트 모드는 ④·⑧과 같은 `gbPartModes`(분리 OFF의 stale 파트 모드 무시).
+ */
+export function gbPenaltyBadgeMethod(
+  asset: AssetForm,
+  transferDate: string | undefined,
+): "estimated" | "appraisal" | null {
+  if (asset.gbBuildingAcquisitionCause !== "newConstruction" || !asset.acquisitionDate || !transferDate) return null;
+  const method = gbPartModes(asset).building;
+  if (method !== "estimated" && method !== "appraisal") return null;
+  if (!buildingPenaltyMethodApplies(method, new Date(transferDate))) return null;
+  return isWithin5Years(asset.acquisitionDate, transferDate) ? method : null;
+}
+
+
+const PART_MODE_LABELS: Record<PartAcqMode, string> = {
+  actual: "실거래가",
+  estimated: "환산취득가",
+  appraisal: "감정가액",
+  salesCase: "매매사례가액",
+};
+
+/** testid 접미 — `gb-{part}-acq-mode-{actual|estimated|appraisal|salescase}` */
+const PART_MODE_TESTID: Record<PartAcqMode, string> = {
+  actual: "actual",
+  estimated: "estimated",
+  appraisal: "appraisal",
+  salesCase: "salescase",
+};
 
 /**
  * 파트별 「취득가액 산정 방식」 + 그 파트의 실지거래가액·자본적지출 (분리 ON 전용).
@@ -46,18 +83,15 @@ export function isWithin5Years(buildingAcqDate: string, transferDateStr: string)
  * ⚠️ **모듈 스코프에 둔다** — 렌더 안에서 선언하면 매 렌더 새 컴포넌트 타입이 되어
  *    입력 상태가 초기화된다(`react-hooks/static-components`, pre-commit 하드블록).
  *
- * 값은 `effectivePartAcqMode` 단일 소스로 도출한다 — 파트 라디오를 아직 고르지 않았으면
+ * 값은 `gbPartModes`(④·⑧과 같은 leaf)로 도출한다 — 파트 라디오를 아직 고르지 않았으면
  * 자산 전체 레거시 플래그에서 파생되므로, 분리를 켠 직후 화면이 종전 선택을 그대로 이어받는다
  * (UI 표시 ≠ 전송값이 되는 dual-truth 회피 — memory `feedback_ui_engine_dual_truth_avoidance`).
  *
- * 선택지는 **실거래가·환산취득가 2종**이다. 감정가액·매매사례가액은 일반건물 자산 단위
- * 라디오에도 없고, 「토지·건물 일괄(증축분 별도)」는 3파트 축이라 분리 ON에서 차단된다(V-3).
+ * 선택지는 **4종**(실거래가·환산취득가·감정가액·매매사례가액)이고 **취득원인으로 필터**한다
+ * (`gbPartAllowedModes` — 상속·증여 1종 / 이월과세 {실거래가, 환산취득가} / 매매·신축 4종).
+ * 라벨은 주택 split(`LandBuildingSplitSection`)과 같다 — description은 달지 않는다(inline 4칸에서 단어 중간에 끊긴다).
+ * 증축분(건물2)의 취득방식은 별개 축이라 실거래가·환산취득가 2종을 유지한다(`GeneralBuildingExtensionSection`).
  */
-const PART_MODE_OPTIONS = [
-  { value: "actual", label: "실거래가", description: "계약서상 실지거래가액" },
-  { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
-];
-
 export function PartAcqModeField({
   part,
   asset,
@@ -72,10 +106,16 @@ export function PartAcqModeField({
 }) {
   const isLand = part === "land";
   const label = isLand ? "토지" : "건물";
-  const mode: PartAcqMode = effectivePartAcqMode(
-    isLand ? asset.landAcqMode : asset.buildingAcqMode,
-    asset,
-  );
+  // ④·⑧과 **같은 leaf**(`gbPartModes`) — 분리 ON이면 명시 파트 모드 우선, 비면 레거시 파생.
+  const modes = gbPartModes(asset);
+  const mode: PartAcqMode = isLand ? modes.land : modes.building;
+  const partCause = isLand ? asset.acquisitionCause : asset.gbBuildingAcquisitionCause;
+  const modeOptions: RadioCardOption<PartAcqMode>[] = gbPartAllowedModes(partCause).map((m) => ({
+    value: m,
+    label: PART_MODE_LABELS[m],
+    testId: `gb-${part}-acq-mode-${PART_MODE_TESTID[m]}`,
+  }));
+  const partKey = isLand ? "land" : "building";
   /**
    * §163⑨ 상속 파트는 **평가액이 취득가액이다** — 파트 취득가액 칸을 노출하지 않는다.
    *
@@ -123,15 +163,16 @@ export function PartAcqModeField({
         <RadioCardGroup
           name={`gb${isLand ? "Land" : "Building"}AcqMode`}
           layout="inline"
+          data-testid={`gb-part-acq-mode-${partKey}`}
           value={mode}
           onChange={(v) =>
             onChange(isLand ? { landAcqMode: v as PartAcqMode } : { buildingAcqMode: v as PartAcqMode })
           }
-          options={PART_MODE_OPTIONS}
+          options={modeOptions}
         />
       </FieldCard>
-      {/* 실거래가 파트만 금액을 받는다 — 환산 파트는 기준시가로 산정하므로 입력 자체가 없다.
-          비-환산 파트의 미입력은 엔진이 차단한다(`general-building-part-acq.ts`).
+      {/* 파트 금액 — 실가·감정은 `*AcquisitionPrice`(같은 슬롯, 주택 split과 동일), 매매사례는 `*SalesCaseValue`.
+          환산 파트는 기준시가로 산정하므로 입력 자체가 없다. 비-환산 파트의 미입력은 ⑧ V-7·R2가 차단한다.
           상속 파트는 위 주석대로 평가액이 정본이라 이 칸을 띄우지 않는다. */}
       {mode === "actual" && !isInheritedPart && (
         <FieldCard
@@ -143,12 +184,55 @@ export function PartAcqModeField({
           <CurrencyInput
             label={`${label} 취득가액`}
             hideUnit
+            data-testid={`gb-${partKey}-act-price`}
             value={isLand ? asset.landAcquisitionPrice : asset.buildingAcquisitionPrice}
             onChange={(v) =>
               onChange(isLand ? { landAcquisitionPrice: v } : { buildingAcquisitionPrice: v })
             }
           />
         </FieldCard>
+      )}
+      {mode === "appraisal" && (
+        <FieldCard
+          field={isLand ? "landAcquisitionPrice" : "buildingAcquisitionPrice"}
+          label={`${label} 감정가액`}
+          unit="원"
+          hint="취득시기가 다르므로 나머지 금액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦)"
+        >
+          <CurrencyInput
+            label={`${label} 감정가액`}
+            hideUnit
+            required
+            data-testid={`gb-${partKey}-apr-price`}
+            value={isLand ? asset.landAcquisitionPrice : asset.buildingAcquisitionPrice}
+            onChange={(v) =>
+              onChange(isLand ? { landAcquisitionPrice: v } : { buildingAcquisitionPrice: v })
+            }
+          />
+        </FieldCard>
+      )}
+      {mode === "salesCase" && (
+        <FieldCard
+          field={isLand ? "landSalesCaseValue" : "buildingSalesCaseValue"}
+          label={`${label} 매매사례가액`}
+          unit="원"
+          hint="매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다 (소득령 §176의2③1호)"
+        >
+          <CurrencyInput
+            label={`${label} 매매사례가액`}
+            hideUnit
+            required
+            data-testid={`gb-${partKey}-sc-value`}
+            value={isLand ? (asset.landSalesCaseValue ?? "") : (asset.buildingSalesCaseValue ?? "")}
+            onChange={(v) =>
+              onChange(isLand ? { landSalesCaseValue: v } : { buildingSalesCaseValue: v })
+            }
+          />
+        </FieldCard>
+      )}
+      {/* 감정·매매사례는 개산공제만 인정 — 자본적지출 칸 위에 알린다(허용 원인 파트에서만; stale 값에는 ⑧이 오류를 낸다). */}
+      {(mode === "appraisal" || mode === "salesCase") && gbPartAllowedModes(partCause).includes(mode) && (
+        <GbDeductionOnlyNotice />
       )}
       {/* 자본적지출 — 직접 귀속분은 안분하지 않는다(「소득세법」 제100조 제2항 후문의 유추). */}
       {showCapex && (

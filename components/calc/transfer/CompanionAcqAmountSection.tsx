@@ -38,6 +38,22 @@ export function CompanionAcqAmountSection({
   if (props.useEstimatedAcquisition || isSeparateAcq || props.hideAssetAcqAxis) return null;
 
   /* 매매사례가액 추계(§176의2③1호) 모드 */
+  // 일반건물(토지+건물 일괄)은 `SalesCaseSection`을 쓰지 않는다 — RTMS 아파트 자동조회·취득 당시 면적·**단일** 취득시 기준시가 칸은
+  // 집합건물 전용 의미이고, 일반건물의 개산공제 base는 ①②의 **두 칸**(`gbAcqLandPricePerSqm`·`gbAcqBuildingValue`)이라
+  // 단일 칸이 있으면 두 칸이 같은 것을 다투는 dual-truth가 된다(A2 §3.4 · Q-C). 단순 금액칸만 둔다.
+  if (props.isSalesCaseAcquisition && isGeneralBuilding) {
+    return (
+      <CurrencyInput
+        label="매매사례가액 (원)"
+        value={props.similarSalesValue ?? ""}
+        onChange={props.onSimilarSalesValueChange ?? (() => {})}
+        required
+        data-testid="gb-asset-sc-value"
+        data-field="similarSalesValue"
+        hint="「소득세법 시행령」 §176의2③1호: 취득일 전후 3개월 내 유사 면적·용도 매매사례 확인 가격(토지·건물 일괄). 토지·건물로는 취득시 기준시가 비율로 안분합니다."
+      />
+    );
+  }
   if (props.isSalesCaseAcquisition) {
     return (
       <SalesCaseSection
@@ -118,7 +134,9 @@ export function CompanionAcqAmountSection({
             : isMixedUse && !props.isAppraisalAcquisition
               ? "겸용주택 취득 실거래가(계약서상): 법 §100②에 따라 취득시 기준시가 비율로 주택분·상가분, 각 토지·건물에 자동 안분합니다. (위 “겸용주택 분리계산”의 취득시 기준시가가 안분 비율로 사용됩니다.)"
               : props.isAppraisalAcquisition
-                ? (isMixedUse
+                ? (isGeneralBuilding
+                  ? "공인감정기관의 감정가액(토지·건물 일괄). 토지·건물로는 취득시 기준시가 비율로 안분합니다 (소득세법 시행령 §166⑥·§176의2③2호)."
+                  : isMixedUse
                     ? "공인감정기관의 감정가액(겸용 전체). 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분하며, §163⑥ 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
                     : "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다.")
                 : undefined
@@ -162,7 +180,7 @@ export function CompanionAcqAmountSection({
       )}
       {/* 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(`SalesCaseSection`)와 같은 규칙.
           필수·hint 근거는 그쪽 주석 참조. */}
-      {props.isAppraisalAcquisition && (
+      {props.isAppraisalAcquisition && !isGeneralBuilding && (
         <CurrencyInput
           label="취득시 기준시가 (원) — 개산공제 기준액"
           required

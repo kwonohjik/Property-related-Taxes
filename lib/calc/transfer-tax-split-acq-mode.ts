@@ -559,3 +559,25 @@ export function needsGbActualAcqStdPrice(a: GbActualAcqStdNeedFlags): boolean {
   if (!empty(a.capitalExpenditure) && !hasBothPartCapex) return true;
   return false;
 }
+
+/**
+ * 일반건물 ⑤ 「취득시 기준시가」(토지 공시지가·건물 기준시가) 카드 노출 술어 — `GeneralBuildingBlock.showAcqStdPrice`의 단일 소스 (A2 §3.5).
+ *
+ * 비-actual 파트(환산·**감정·매매사례**)는 자기 취득시 기준시가가 개산공제 base라 ⑧ V-5가 요구한다 — 칸이 없으면 막다른 길이다.
+ * 증축·부담부증여·§100② 실가 안분 필요(`needsGbActualAcqStdPrice`)는 종전 그대로다.
+ * `requiresAcqStdPricePart` **전체**가 아니라 1절 leaf(`partNeedsOwnAcqStd`)만 쓴다 — 분리 OFF 실가 일괄에서 안분 절이 참이 되면
+ * 이 카드가 항상 열려 시점별 「건물 기준시가 계산」 런처가 숨는다(CI 회귀: `building-stdprice-apply-timepoint`).
+ * 컴포넌트와 테스트가 이 함수를 **함께** 부른다(UI 술어 복제 금지).
+ */
+export function gbShowsAcqStdPrice(
+  a: GbActualAcqStdNeedFlags & GbPartModeSource & { gbHasExtension?: boolean; transferType?: string },
+): boolean {
+  const m = gbPartModes(a);
+  return (
+    partNeedsOwnAcqStd(m.land) ||
+    partNeedsOwnAcqStd(m.building) ||
+    !!a.gbHasExtension ||
+    a.transferType === "burdened_gift" ||
+    needsGbActualAcqStdPrice(a)
+  );
+}

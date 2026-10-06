@@ -34,17 +34,27 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
    * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §4 D-9
    */
   const gbCards = aggregated.generalBuildingValuationDetail?.assetCards;
-  const isEstimatedOf = (propertyId: string): boolean | undefined =>
-    gbCards?.find((c) => c.propertyId === propertyId)?.usedEstimatedAcquisition;
-  const landEstimated = isEstimatedOf("land");
-  const bld1Estimated = isEstimatedOf("building1");
-  const bld2Estimated = isEstimatedOf("building2");
+  const cardOf = (propertyId: string) => gbCards?.find((c) => c.propertyId === propertyId);
+  const bld2Estimated = cardOf("building2")?.usedEstimatedAcquisition;
 
-  /** 취득가액 옆 산정 방식 배지 — 카드를 못 찾으면 아무것도 붙이지 않는다(거짓 표시 금지). */
-  const acqBadge = (estimated: boolean | undefined, tone: string) =>
-    estimated === undefined ? null : (
-      <span className={`ml-1 text-micro ${tone}`}>{estimated ? "(환산)" : "(실거래가)"}</span>
-    );
+  /**
+   * 취득가액 옆 산정 방식 배지 — 카드를 못 찾으면 아무것도 붙이지 않는다(거짓 표시 금지).
+   *
+   * 🔑 E-1 `acquisitionMode` echo가 있으면 4종을 그대로 읽는다 — boolean `usedEstimatedAcquisition`만 보면 감정·매매사례 파트가
+   *    「(실거래가)」로 찍힌다(A2 §9.2 D2). **옛 이력**(echo 없음)은 종전대로 boolean 2종 — 표시 회귀 없음.
+   */
+  const MODE_BADGE = { actual: "(실거래가)", estimated: "(환산)", appraisal: "(감정가액)", salesCase: "(매매사례가액)" } as const;
+  const acqBadge = (propertyId: string, tone: string) => {
+    const card = cardOf(propertyId);
+    const label = card?.acquisitionMode
+      ? MODE_BADGE[card.acquisitionMode]
+      : card?.usedEstimatedAcquisition === undefined
+        ? null
+        : card.usedEstimatedAcquisition
+          ? MODE_BADGE.estimated
+          : MODE_BADGE.actual;
+    return label === null ? null : <span className={`ml-1 text-micro ${tone}`}>{label}</span>;
+  };
 
   /**
    * 통산 분배 — **결손이 어느 자산에서 나오든** 같은 규칙으로 읽는다.
@@ -121,15 +131,15 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className="py-1 pr-2 text-muted-foreground">취득가액</td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(land.acquisitionPrice)}
-                {acqBadge(landEstimated, "text-sky-600")}
+                {acqBadge("land", "text-sky-600")}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld1.acquisitionPrice)}
-                {acqBadge(bld1Estimated, "text-emerald-600")}
+                {acqBadge("building1", "text-emerald-600")}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld2.acquisitionPrice)}
-                {acqBadge(bld2Estimated, "text-fuchsia-600")}
+                {acqBadge("building2", "text-fuchsia-600")}
               </td>
               <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}

@@ -19,6 +19,8 @@ import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
@@ -114,6 +116,16 @@ function isRedevelopmentPath(a: AssetForm): boolean {
  */
 function isLumpSumMode(a: AssetForm): boolean {
   return a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition;
+}
+
+/**
+ * 일반건물에 비-actual(환산·감정·매매사례) 파트가 있는가 — ④·⑧과 **같은 leaf**(`gbPartModes` · `partNeedsOwnAcqStd`).
+ * 분리 ON은 명시 파트 모드, OFF는 레거시 3플래그 파생이라 `isLumpSumMode`가 못 보는 파트 모드를 본다.
+ */
+function isGbNonActualPart(a: AssetForm): boolean {
+  if (a.assetKind !== "general_building") return false;
+  const m = gbPartModes(a);
+  return partNeedsOwnAcqStd(m.land) || partNeedsOwnAcqStd(m.building);
 }
 
 /**
@@ -231,7 +243,13 @@ function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
   //    자산 전체 값이 있으면 그쪽이 우선 — stale 파트 값에 밀리지 않게 한다.
   const fixed = parseRaw(a.fixedAcquisitionPrice);
   if (fixed > 0) return { value: fixed, pending: false };
-  if (parseRaw(a.landAcquisitionPrice) > 0 || parseRaw(a.buildingAcquisitionPrice) > 0) {
+  // 매매사례 파트 값(`*SalesCaseValue`)도 파트 값이다 — 분리 ON + 같은 취득일(`isSeparateAcquisition` false)에서 놓치지 않는다(A2 §8.1).
+  if (
+    parseRaw(a.landAcquisitionPrice) > 0 ||
+    parseRaw(a.buildingAcquisitionPrice) > 0 ||
+    parseRaw(a.landSalesCaseValue) > 0 ||
+    parseRaw(a.buildingSalesCaseValue) > 0
+  ) {
     const { sum, pending } = separateAcqPartsSum(a);
     return { value: pending ? 0 : sum, pending };
   }
@@ -664,6 +682,11 @@ export function computeTransferPerAssetSummary(
       // 발동한 경우에만 실제 경비가 채택되며, 그 판정도 프리뷰 함수 안에서 끝난다.
       expense = dedicatedPreview.expense;
       expensePending = false;
+    } else if (!result && isGbNonActualPart(a)) {
+      // 일반건물 파트 모드가 비-actual(환산·감정·매매사례) — 필요경비는 개산공제(§163⑥)뿐이라 파트 자본적지출은 계산에 쓰이지 않는다.
+      // 입력분(`landDirectExpenses`+`buildingDirectExpenses`)을 부분합으로 보이면 쓰이지 않는 금액을 보여 준다(A2 §8.2).
+      // ⚠️ `dedicatedPreview`(환산 전용 프리뷰) **뒤**에 둔다 — 앞에 두면 환산 프리뷰를 가로채 사이드바 spec 2건이 깨진다.
+      expense = 0;
     } else if (isSingle && singleResult) {
       // 계산 후 — 엔진이 **실제 차감한** 필요경비(`expensesApplied`). 환산 본문은 개산공제,
       // §97②2호 단서(swap)는 자본적지출·양도비다. 종전에는 폼에 자본적지출이 남아 있으면 그 합을
@@ -682,7 +705,7 @@ export function computeTransferPerAssetSummary(
       const rate = estimatedDeductionRate(unregistered, a.assetKind);
       expense = computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
     }
-    if (expense === 0 && !result && isLumpSumMode(a)) expensePending = true;
+    if (expense === 0 && !result && (isLumpSumMode(a) || isGbNonActualPart(a))) expensePending = true;
 
     return {
       assetId: a.assetId,

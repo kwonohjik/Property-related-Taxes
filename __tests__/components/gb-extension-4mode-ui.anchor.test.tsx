@@ -57,6 +57,8 @@ function renderAcqBlock(
       onUseEstimatedChange={() => {}}
       isAppraisalAcquisition={asset.isAppraisalAcquisition}
       onIsAppraisalAcquisitionChange={() => {}}
+      isSalesCaseAcquisition={asset.isSalesCaseAcquisition}
+      onIsSalesCaseAcquisitionChange={() => {}}
       gbHasExtension={asset.gbHasExtension}
       fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
       onFixedAcquisitionPriceChange={() => {}}
@@ -69,9 +71,15 @@ function renderAcqBlock(
   );
 }
 
-// ── U1 · 라디오 2옵션 ───────────────────────────────────────────────────
+// ── U1 · 라디오 4옵션 (A2 — 종전 2옵션) ───────────────────────────────────
 
-describe("U1 — 일반건물 취득가액 산정 방식은 2옵션이다", () => {
+describe("U1 — 일반건물 취득가액 산정 방식은 4옵션이다 (A2 · 시행령 §176의2③ 순차 적용)", () => {
+  it("감정가액·매매사례가액이 비-GB와 같이 열린다 — 종전 「§176의2②는 환산취득가만」 오독의 정정", () => {
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
+    expect(screen.getByText("감정가액")).toBeInTheDocument();
+    expect(screen.getByText("매매사례가액")).toBeInTheDocument();
+  });
+
   it("「토지·건물 일괄 (증축분 별도)」 옵션이 없다", () => {
     renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
     expect(screen.queryByText("토지·건물 일괄 (증축분 별도)")).toBeNull();
@@ -412,6 +420,36 @@ function makeAggregated(modes: {
     },
   } as unknown as AggregateTransferResult;
 }
+
+describe("U5b — 배지는 E-1 `acquisitionMode` echo를 4종으로 읽는다 (A2 §9.2 D2)", () => {
+  const withModes = (modes: Record<string, "actual" | "estimated" | "appraisal" | "salesCase" | undefined>, legacyEstimated: boolean) => {
+    const base = makeAggregated({ land: legacyEstimated, building1: legacyEstimated, building2: false });
+    return {
+      ...base,
+      generalBuildingValuationDetail: {
+        assetCards: Object.entries(modes).map(([propertyId, acquisitionMode]) => ({
+          propertyId,
+          // boolean은 감정·매매사례도 false=「실거래가」로 읽히던 것 — echo가 이긴다
+          usedEstimatedAcquisition: acquisitionMode === "estimated",
+          acquisitionMode,
+        })),
+      },
+    } as unknown as AggregateTransferResult;
+  };
+
+  it("토지 감정 · 건물1 매매사례 · 건물2 실가 — 「(감정가액)」「(매매사례가액)」「(실거래가)」", () => {
+    render(<GeneralBuilding3WayTable aggregated={withModes({ land: "appraisal", building1: "salesCase", building2: "actual" }, false)} />);
+    expect(screen.getByText("(감정가액)")).toBeInTheDocument();
+    expect(screen.getByText("(매매사례가액)")).toBeInTheDocument();
+    expect(screen.getAllByText("(실거래가)")).toHaveLength(1);
+  });
+
+  it("(긍정 짝) 옛 이력(echo 없음)은 boolean 2종 그대로 — 표시 회귀 없음", () => {
+    render(<GeneralBuilding3WayTable aggregated={withModes({ land: undefined, building1: undefined, building2: undefined }, false)} />);
+    expect(screen.getAllByText("(실거래가)")).toHaveLength(3);
+    expect(screen.queryByText("(감정가액)")).toBeNull();
+  });
+});
 
 describe("U5 — 결과 표 배지는 카드에서 파생된다 (하드코딩 금지)", () => {
   it("조합 A(원건물 실가 + 증축 환산) — 건물2 「(환산)」·「(개산공제 §163⑥)」", () => {

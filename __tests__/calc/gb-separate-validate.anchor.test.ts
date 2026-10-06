@@ -16,7 +16,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { validateGeneralBuildingAsset } from "@/lib/calc/transfer-tax-validate-gb";
-import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { gbShowsAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -182,15 +182,11 @@ describe("A-17 — V-8 자본적지출 귀속 (O-1 해소)", () => {
 });
 
 describe("A-5 — UI 게이트 ↔ validate 정합", () => {
+  // A2: UI 술어를 테스트 안에 **복제하지 않는다** — 컴포넌트(`GeneralBuildingBlock`)가 부르는 단일 소스 `gbShowsAcqStdPrice`를 그대로 호출한다.
+  //     종전 복제(`=== "estimated"` 식)는 술어가 바뀌어도 통과해 가드가 거짓이 됐다.
   it("혼합 모드는 UI 술어도 취득시 기준시가 섹션을 연다", () => {
     const mixed = base({ buildingAcqMode: "estimated", buildingAcquisitionPrice: "" });
-    // UI: GeneralBuildingBlock.showAcqStdPrice 와 동일 식
-    const uiShows =
-      effectivePartAcqMode(mixed.landAcqMode, mixed) === "estimated" ||
-      effectivePartAcqMode(mixed.buildingAcqMode, mixed) === "estimated" ||
-      mixed.gbHasExtension ||
-      mixed.transferType === "burdened_gift";
-    expect(uiShows).toBe(true);
+    expect(gbShowsAcqStdPrice(mixed)).toBe(true);
 
     // validate: 같은 조건에서 기준시가를 요구한다
     expect(v({ ...mixed, gbAcqBuildingValue: "" } as AssetForm)).toMatch(/취득시 건물기준시가/);
@@ -198,12 +194,47 @@ describe("A-5 — UI 게이트 ↔ validate 정합", () => {
 
   it("두 파트 실가는 UI도 섹션을 닫고 validate도 요구하지 않는다", () => {
     const both = base({ gbAcqLandPricePerSqm: "", gbAcqBuildingValue: "" });
-    const uiShows =
-      effectivePartAcqMode(both.landAcqMode, both) === "estimated" ||
-      effectivePartAcqMode(both.buildingAcqMode, both) === "estimated" ||
-      both.gbHasExtension ||
-      both.transferType === "burdened_gift";
-    expect(uiShows).toBe(false);
+    expect(gbShowsAcqStdPrice(both)).toBe(false);
     expect(v(both)).toBeNull();
+  });
+
+  // A2 — 감정·매매사례 파트도 자기 취득시 기준시가가 개산공제 base다(F-4). ⑤ 칸 노출 ↔ ⑧ 요구가 같은 결론이어야 막다른 길이 없다.
+  it.each([
+    ["토지 감정", { landAcqMode: "appraisal" }],
+    ["건물 감정", { buildingAcqMode: "appraisal" }],
+    ["토지 매매사례", { landAcqMode: "salesCase", landSalesCaseValue: "300000000" }],
+    ["건물 매매사례", { buildingAcqMode: "salesCase", buildingSalesCaseValue: "120000000" }],
+  ] as const)("%s 파트 — UI 칸이 열리고 validate가 기준시가를 요구한다", (_n, over) => {
+    const a = base({ ...over, gbAcqLandPricePerSqm: "", gbAcqBuildingValue: "" } as Partial<AssetForm>);
+    expect(gbShowsAcqStdPrice(a)).toBe(true);
+    expect(v(a)).toMatch(/취득시 (토지 공시지가|건물기준시가)/);
+  });
+
+  it("분리 OFF — stale 파트 모드(explicit)는 UI 칸 노출도 validate 요구도 일으키지 않는다 (`gbPartModes`)", () => {
+    const stale = base({
+      hasSeperateLandAcquisitionDate: false,
+      landAcquisitionDate: BUILDING,
+      landAcqMode: "estimated",
+      buildingAcqMode: "estimated",
+      gbAcqLandPricePerSqm: "",
+      gbAcqBuildingValue: "",
+      fixedAcquisitionPrice: "",
+    } as Partial<AssetForm>);
+    expect(gbShowsAcqStdPrice(stale)).toBe(false);
+  });
+
+  it("분리 OFF — 레거시 감정 플래그면 UI 칸이 열린다 (stale explicit 없이도)", () => {
+    const apr = base({
+      hasSeperateLandAcquisitionDate: false,
+      landAcquisitionDate: BUILDING,
+      landAcqMode: "",
+      buildingAcqMode: "",
+      isAppraisalAcquisition: true,
+      fixedAcquisitionPrice: "420000000",
+      gbAcqLandPricePerSqm: "",
+      gbAcqBuildingValue: "",
+    } as Partial<AssetForm>);
+    expect(gbShowsAcqStdPrice(apr)).toBe(true);
+    expect(v(apr)).toMatch(/취득시 토지 공시지가/);
   });
 });
