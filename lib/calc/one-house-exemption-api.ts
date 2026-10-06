@@ -100,6 +100,7 @@ export function buildOneHouseExemptionApiBody(
     form.presaleRights.length,
     // §167의10 중과 축이라 판정 메뉴에는 입력 위젯이 없다 — 미전송(§3.2-C).
     undefined,
+    form.transferDate,
   );
   const presaleRightsPayload = buildPresaleRightsPayload(primary.assetKind, form.presaleRights);
 

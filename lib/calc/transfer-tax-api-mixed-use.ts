@@ -267,6 +267,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         primaryKind: primary.assetKind,
         declared: parseInt(form.householdHousingCount) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }) === 1,
     // ④ §164⑨1호 공익수용 특례 (계획 P7/D8) — 목별 독립: 주택분(P5 필드 재사용)·상가분(신규 2필드).

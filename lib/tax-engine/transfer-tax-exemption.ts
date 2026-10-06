@@ -44,6 +44,7 @@ import {
   PROVISO_LABEL,
   resolveExemptionProviso,
   qualifiesRuralHouse,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   qualifiesUnavoidableOutsideCapital,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
@@ -302,8 +303,9 @@ function checkExemptionCore(
     }
   }
 
-  // E-3: 일시적 2주택
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3: 일시적 2주택 — ⑦ 농어촌주택이 겹친 3주택도 같은 분기로 본다(D3 · `ruralTemporaryTwoHouseOverlapCountHolds`).
+  const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
+  if ((input.householdHousingCount === 2 || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
@@ -350,6 +352,15 @@ function checkExemptionCore(
           legalBasis: TRANSFER.TEMPORARY_TWO_HOUSE,
         },
       ];
+      // D3 — 중첩이면 두 조문이 함께 근거다(합가 중첩 E-3.5와 같은 규약: 행을 나눈다).
+      if (ruralOverlap) {
+        basisParts.push(`§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]} 농어촌주택 제외`);
+        exceptions.push({
+          id: `155-7-rural:${input.ruralHouse!.kind}`,
+          label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
+          legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
+        });
+      }
       if (provisoRelaxesHolding) {
         basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
         exceptions.push({

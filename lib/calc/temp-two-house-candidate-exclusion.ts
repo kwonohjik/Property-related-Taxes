@@ -11,8 +11,16 @@
  *    순위·상속개시 당시 보유·증여 괄호·같은 상속)를 여기서 다시 쓰지 않는다. 명부 payload는 route와 같은
  *    빌더(`buildHousesPayload`)로 만들고 날짜만 route(⑭)와 같은 규칙으로 바꾼다.
  * 🔑 `eligibleCountExcludedHouseIds`에 섞지 않는다 — 그 집합의 크기는 다른 화면 문구가 쓴다(조특법 제외 행 수).
+ *
+ * D3 — §155⑦ 요건을 갖춘 농어촌주택 행도 뺀다(`ruralCountExcludedHouseIds`). 귀농주택은 대개 일반주택보다 **나중에**
+ * 취득하므로, 그 행이 후보에 남으면 「농어촌주택 + 일반주택 + 신규주택」에서 후보가 2채가 되어 ⑦·① 중첩
+ * (`ruralTemporaryTwoHouseOverlapCountHolds`)이 엔진에 닿지 않는다. 2주택(일반 + 농어촌)이면 ⑦이 직접 성립하므로
+ * 후보에서 빼도 결론이 같다. 요건을 못 갖춘 농어촌주택은 보통 주택이라 후보에 남긴다(①의 신규 주택일 수 있다).
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { qualifiesRuralHouse } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-row-facts";
 import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -76,9 +84,28 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
   return new Set(r.excludedHouses.map((e) => e.houseId));
 }
 
-/** §155① 신규 주택 후보에서 뺄 행 — 조특법 제외 ∪ 상속주택 제외. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
+/**
+ * §155⑦ 요건을 갖춘 농어촌주택 명부 행 id(엔진 판정 — 신규 주택을 뺀 2주택 기준). 양도일이 없거나 요건 미달이면 빈 집합.
+ * 엔진에 실리는 것과 같은 행·같은 payload다(`findRuralHouseRow` · `deriveOneHouseFactsFromHouses`).
+ */
+export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+  const ruralRow = findRuralHouseRow(form.houses);
+  const row = form.houses?.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
+  const rural = deriveOneHouseFactsFromHouses(form.houses).ruralHouse;
+  const transferDate = toOptionalDate(form.transferDate);
+  if (!row?.id || !rural || !transferDate) return new Set();
+  const qualifies = qualifiesRuralHouse({
+    householdHousingCount: 2,
+    transferDate,
+    ruralHouse: { ...rural, acquisitionDate: toOptionalDate(rural.acquisitionDate) } as TransferTaxInput["ruralHouse"],
+  });
+  return qualifies ? new Set([row.id]) : new Set();
+}
+
+/** §155① 신규 주택 후보에서 뺄 행 — 조특법 제외 ∪ 상속주택 제외 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
 export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(eligibleCountExcludedHouseIds(form));
   for (const id of inheritedCountExcludedHouseIds(form)) ids.add(id);
+  for (const id of ruralCountExcludedHouseIds(form)) ids.add(id);
   return ids;
 }

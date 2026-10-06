@@ -55,12 +55,14 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         primaryKind: primary?.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
@@ -109,6 +111,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
       primaryKind: primary?.assetKind,
       declared: parseInt(form.householdHousingCount || "1", 10) || 0,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // 사유는 ④와 같은 게이트를 통과한 값이다 — 근거는 `effectiveReason` 선언부 참조.

@@ -72,6 +72,31 @@ export interface HouseRowForCount {
   regionCode?: string;
 }
 
+/**
+ * 양도일 현재 보유 주택인가 — 명부 행을 주택 수·신규 주택 후보·엔진 명부에 넣을지 가르는 **단일 술어** (D2).
+ *
+ * 🔑 **같은 날 취득한 주택은 양도일 현재 보유 주택이 아니다** — 동일자에 1주택을 취득하고 다른 1주택을
+ *    양도하면 「양도한 후 취득한 것으로 본다」(서면인터넷방문상담4팀-1697 §155① · 재재산-836 §104·§162의2 ·
+ *    서면인터넷방문상담5팀-354 · 재산세과-3316 교환). 그 뒤에 취득한 주택은 말할 것도 없다. 비과세(§154·§155)와
+ *    중과(§104) 양쪽에 같은 규칙이다.
+ * 🔴 종전에는 명부 행을 취득일과 양도일의 선후와 무관하게 전부 세어, 같은 날 갈아탄 일시적 2주택이
+ *    3주택으로 과세됐다(해석례 평가셋 `E053-era`·`E055-era`).
+ * 🔑 양도일이 없거나 형식이 아니면 거르지 않는다(종전 그대로) — 비교 기준이 없다. 문자열
+ *    `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
+ */
+export function isOwnedAtTransfer(acquisitionDate: string | undefined, transferDate: string | undefined): boolean {
+  if (!acquisitionDate || !transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return true;
+  return acquisitionDate < transferDate;
+}
+
+/** 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer`. */
+export function housesOwnedAtTransfer<T extends HouseRowForCount>(
+  houses: readonly T[] | undefined,
+  transferDate: string | undefined,
+): T[] {
+  return (houses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
+}
+
 export interface ResolveHouseholdHousingCountArgs {
   /**
    * 양도 대표 자산 종류(`form.assets[0].assetKind`). `usesHouseCountRoster`(housing·
@@ -82,6 +107,8 @@ export interface ResolveHouseholdHousingCountArgs {
   declared: number;
   /** ④ 다른 보유 주택 목록. */
   houses: readonly HouseRowForCount[] | undefined;
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`isOwnedAtTransfer`). 필수: 빠뜨린 호출부를 컴파일러가 찾는다. */
+  transferDate: string | undefined;
   /**
    * OH-34 레거시 표식(`form.legacyHouseCountPrecedence`). 켜져 있으면 **명부보다 스칼라가 앞선다**.
    *
@@ -115,7 +142,7 @@ export function resolveHouseholdHousingCount(
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (!usesHouseCountRoster(args.primaryKind)) return args.declared; // F1
-  const rows = countedHouseRows(args.houses);
+  const rows = countedHouseRows(args.houses, args.transferDate);
   if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
   return houseCountSelfOffset(args.primaryKind) + rows;
 }
@@ -123,16 +150,19 @@ export function resolveHouseholdHousingCount(
 /** 주택 수에 세어지는 명부 행 수 — 산식 단일 소스(`house-count-divergence.ts`도 이걸 쓴다). */
 export function countedHouseRows(
   houses: readonly HouseRowForCount[] | undefined,
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`isOwnedAtTransfer`). */
+  transferDate: string | undefined,
 ): number {
-  return (houses ?? []).filter((h) => h.acquisitionDate).length;
+  return housesOwnedAtTransfer(houses, transferDate).filter((h) => h.acquisitionDate).length;
 }
 
 /** 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다. */
 export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
+  transferDate: string | undefined,
 ): boolean {
-  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses) > 0;
+  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses, transferDate) > 0;
 }
 
 /**
@@ -170,16 +200,17 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   houses: T[],
   primaryKind: string | undefined,
   legacyPrecedence: boolean,
+  transferDate: string | undefined,
 ): { houses: T[]; householdHousingCount?: string; householdNoOtherHousesConfirmed?: false } {
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
   if (legacyPrecedence) return { houses };
   const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return { houses, ...clearConfirm };
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return { houses, ...clearConfirm };
   return {
     houses,
-    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses)),
+    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)),
     ...clearConfirm,
   };
 }
@@ -198,9 +229,10 @@ export function houseCountDivergedFromRoster(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
   declared: number,
+  transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
 /**
@@ -219,9 +251,10 @@ export function houseCountScalarLocked(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
   declared: number,
+  transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses);
+  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
 /**
@@ -278,6 +311,11 @@ export interface ResolveTemporaryTwoHouseArgs {
   /** 양도 대상 주택(= 종전주택) 취득일 `YYYY-MM-DD`. */
   primaryAcquisitionDate: string | undefined;
   houses: readonly HouseRowForCount[] | undefined;
+  /**
+   * 양도일 — 그날 이후(같은 날 포함) 취득한 행은 신규 주택 후보가 아니다(`isOwnedAtTransfer`). 같은 날
+   * 갈아탄 주택이 후보에 남으면 「나중 취득 행이 정확히 1채」가 깨진다(E053·E055). 필수.
+   */
+  transferDate: string | undefined;
   /** OH-34 레거시 표식 — 켜져 있으면 명부를 보지 않는다. */
   legacyPrecedence: boolean;
   /** 종전 flat 필드 — 도출이 성립하지 않을 때만 쓰인다. */
@@ -326,7 +364,7 @@ export function resolveTemporaryTwoHouse(
   if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
 
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
-  const later = (args.houses ?? []).filter(
+  const later = housesOwnedAtTransfer(args.houses, args.transferDate).filter(
     (h) =>
       h.acquisitionDate !== undefined &&
       h.acquisitionDate > prev &&

@@ -151,6 +151,7 @@ export async function resumeTransferRecord(
     migrated?.assets?.[0]?.assetKind,
     migrated?.houses,
     parseInt(migrated?.householdHousingCount || "1", 10) || 0,
+    migrated?.transferDate,
   );
   updateFormData({ ...migrated, legacyHouseCountPrecedence });
   setStep(0);

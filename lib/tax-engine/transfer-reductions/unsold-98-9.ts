@@ -18,7 +18,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { evaluateNew994Declarations } from "./new-99-4";
+import { evaluateNew994Declarations, type New994MergeOrderContext } from "./new-99-4";
 import type {
   New994Result,
   Unsold989EvaluationInput,
@@ -242,7 +242,8 @@ export interface HouseCountExclusionResolution {
  */
 export function resolveHouseCountExclusion(
   reductions: ReadonlyArray<{ type: string }>,
-  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date },
+  /** `mergeOrder` — §99의4 순서를 합가 상대방 세대 기준으로 볼 맥락(D5 · `new994GeneralHouseAcquisitionDate`). 필수. */
+  ctx: { generalHouseAcquisitionDate: Date; transferDate: Date; mergeOrder: New994MergeOrderContext },
 ): HouseCountExclusionResolution {
   const details994 = evaluateNew994Declarations(reductions, ctx);
   let details989: (Unsold989Result & { houseId?: string })[] = reductions

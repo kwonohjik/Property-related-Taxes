@@ -94,6 +94,7 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       primaryKind: primary?.assetKind,
       primaryAcquisitionDate: primary?.acquisitionDate,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       declaredSpecial: form.temporaryTwoHouseSpecial === true,
       declaredNewHouseDate: form.newHouseAcquisitionDate,

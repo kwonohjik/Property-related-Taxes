@@ -76,6 +76,23 @@ export function qualifiesRuralHouse(
 }
 
 /**
+ * D3 — §155⑦(농어촌주택)과 §155①(일시적 2주택)이 **겹쳐 3주택**인가 — 주택 수 축만 본다.
+ *
+ * ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 3주택이 된 상태에서 종전 일반주택을
+ * 양도하면, 농어촌주택을 빼고 §155①을 적용한다(서면인터넷방문상담4팀-3617 · 서면인터넷방문상담4팀-977 —
+ * 조특법 §99의4 농어촌주택도 같다: 부동산납세과-2367 · 서면-2024-부동산-1967).
+ * 그래서 ⑦ 요건은 **신규 주택을 뺀 2주택 기준**으로 본다(`householdHousingCount: 2`).
+ *
+ * 🔑 **3주택까지만** — ⑦·⑳·① 세 특례를 함께 적용한 4주택은 부인됐다(부동산납세과-870). §155① 기간 요건은
+ *    여기서 보지 않는다 — 호출부(비과세 E-3 · 중과 15호 `resolveDeemedOneHouseBy155`)가 2주택과 같은 술어로 본다.
+ */
+export function ruralTemporaryTwoHouseOverlapCountHolds(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse">,
+): boolean {
+  return input.householdHousingCount === 3 && qualifiesRuralHouse({ ...input, householdHousingCount: 2 });
+}
+
+/**
  * §155⑦ 농어촌주택 요건 중 **⑦ 단서의 5년 기한만 뺀** 나머지 — `qualifiesRuralHouse`와
  * pending 귀농 축(`one-house/pending.ts`)의 **같은 술어**(OH-23).
  *

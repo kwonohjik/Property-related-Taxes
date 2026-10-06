@@ -446,6 +446,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primaryKind: primary.assetKind,
       declared: parseInt(form.householdHousingCount) || 0,
       houses: form.houses,
+      transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
     }),
     // 사례 36 §89①4호 가목·나목 — 조합원입주권 수 (양도일 현재). PR-D(2026-10-05) — 스칼라
@@ -560,12 +561,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         primaryKind: primary.assetKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
         temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
+        transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,

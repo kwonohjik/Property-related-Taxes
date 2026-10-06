@@ -99,6 +99,9 @@ type FormLike = {
   assets?: Pick<AssetForm, "acquisitionDate" | "acquisitionCause" | "reductions">[];
   specialHouseExclusions?: SpecialHouseExclusionFormItem[];
   transferDate?: string;
+  /** D5 — §99의4 순서의 합가 맥락(엔진 `new994MergeOrderOf`와 같은 순서: 혼인 먼저). */
+  marriageDate?: string;
+  parentalCareMergeDate?: string;
 };
 
 /**
@@ -143,9 +146,21 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
       }
       return r;
     });
+    const mergeDate = toOptionalDate(form.marriageDate || form.parentalCareMergeDate);
     const resolution = resolveHouseCountExclusion(engineReductions, {
       generalHouseAcquisitionDate: general,
       transferDate: transfer,
+      // D5 — route(⑭)와 같은 명부: 행 id · 취득일(Date) · 합가 전 보유 쪽
+      mergeOrder: mergeDate
+        ? {
+            houses: (form.houses ?? []).map((h) => ({
+              id: h.id,
+              acquisitionDate: toOptionalDate(h.acquisitionDate),
+              mergeOrigin: h.mergeOrigin,
+            })),
+            mergeDate,
+          }
+        : undefined,
     });
     for (const d of resolution.appliedList) if (d.houseId) ids.add(d.houseId);
   }

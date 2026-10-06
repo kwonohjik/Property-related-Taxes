@@ -115,6 +115,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
     primaryKind: primary?.assetKind,
     primaryAcquisitionDate: primary?.acquisitionDate,
     houses: form.houses,
+    transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,

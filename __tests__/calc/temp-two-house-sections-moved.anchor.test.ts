@@ -170,7 +170,7 @@ describe("TM-2·3·4 판정 메뉴 ⑧ — **긍정 짝**", () => {
     const f = judgmentForm({
       temporaryTwoHouseSpecial: false,
       newHouseAcquisitionDate: "",
-      houses: [houseRow("h2", "2024-05-30")],
+      houses: [houseRow("h2", "2023-05-30")],
     });
     // ⑧이 막지 않는다 — 없는 칸을 요구하지 않는다
     expect(judgeMsgs(f)).not.toContain("일시적 2주택: 신규 주택 취득일을 입력하세요.");
@@ -179,15 +179,15 @@ describe("TM-2·3·4 판정 메뉴 ⑧ — **긍정 짝**", () => {
       f as never,
       f.assets[0] as never,
     ) as Record<string, { newAcquisitionDate?: string }>;
-    expect(payload.temporaryTwoHouse?.newAcquisitionDate).toBe("2024-05-30");
+    expect(payload.temporaryTwoHouse?.newAcquisitionDate).toBe("2023-05-30");
   });
 
   it("[TM-2b] 명부에서 신규 주택을 특정할 수 없으면 §155①을 싣지 않는다", () => {
     const f = judgmentForm({
       temporaryTwoHouseSpecial: false,
       newHouseAcquisitionDate: "",
-      // 양도주택(2019-03-01)보다 나중 취득이 2채 — 어느 것이 신규 주택인지 알 수 없다
-      houses: [houseRow("h2", "2024-05-30"), houseRow("h3", "2025-01-01")],
+      // 양도주택(2019-03-01)보다 나중·양도일(2024-03-01)보다 먼저 취득이 2채 — 어느 것이 신규 주택인지 알 수 없다
+      houses: [houseRow("h2", "2023-05-30"), houseRow("h3", "2023-11-01")],
     });
     const payload = buildHouseholdSpecialPayload(
       f as never,
