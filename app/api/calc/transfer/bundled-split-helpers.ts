@@ -455,6 +455,9 @@ export function buildCompanionEngineInputs(
      */
     useEstimatedAcquisition: c.useEstimatedAcquisition ?? false,
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
+    // ⑭ 토지분 취득시 기준시가 단가(소득법 §99①1호 가목) — 면적은 아래 `acquisitionArea`.
+    //    없으면 `calcAcqStdPair`가 토지분을 못 만들어 소유자 분리가 조용히 무시된다(침묵 strip 주의).
+    standardPricePerSqmAtAcquisition: c.standardPricePerSqmAtAcquisition,
     standardPriceAtTransfer: c.standardPriceAtTransfer,
     // ⑭ §164⑧ 동일조정기간 환산 — 컴패니언도 자기 취득·양도일 축으로 판정된다.
     //    이 명시 매핑이 없으면 ⑫를 통과한 값이 엔진에 도달하지 못한다(침묵 strip).
@@ -568,7 +571,8 @@ export function buildCompanionEngineInputs(
     manualHoldingPeriodOverride: effectiveOverride,
     landNature: c.landNature,
     primaryContextForCompanionRate: ctx.primaryCtxForSplit,
-    acquisitionArea: c.areaM2,
+    // 분리 축(주택·건물)의 토지 면적이 우선, 없으면 G-2 토지 컴패니언 면적. 두 칸은 같은 자산에서 겹치지 않는다(⑫ 주석).
+    acquisitionArea: c.acquisitionArea ?? c.areaM2,
   } satisfies TransferTaxItemInput;
 
   /**

@@ -27,6 +27,9 @@ import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
+import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
+import { isSplitPayloadActive } from "./transfer-tax-api-split";
+import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildCommercialAppurtenantLand, buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
@@ -161,6 +164,9 @@ export function buildAssetPayload(
     ? applyRatio(totalContractPrice, ratio)
     : fixedSalePriceRaw;
 
+  // 분리 축(소유자 분리·별개 취득) 활성 — 단건 `transfer-tax-api.ts`의 `isSplitActive`와 같은 술어.
+  const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift");
+
   return {
     /**
      * ④ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 공용 빌더**를 쓴다.
@@ -182,6 +188,17 @@ export function buildAssetPayload(
       usesPhd: false,
       ratioed: makeRatioed(ratio, fractional),
     }),
+    /**
+     * ④ 토지분 취득시 기준시가 채널(㎡당 개별공시지가 × 면적, 소득법 §99①1호 가목) — 단건과 **같은 leaf**.
+     *
+     * 🔴 종전에는 싣지 않았다. ⑤는 칸을 열고 ⑧ V8은 필수로 받는데 엔진에 닿지 않아 `calcAcqStdPair`가 토지분을
+     *    못 만들고 `calcSplitGain`이 null → **`selfOwns`가 통째로 무시**되어 비소유 파트까지 과세됐다
+     *    (실측: `both`·`building_only`·`land_only` 결정세액 동일). 별개 취득 + 토지 환산은 400(경로 없음)이었다.
+     *
+     * ⚠️ 분리 축이 활성일 때만 싣는다 — 토지 컴패니언의 세율 판정(`transfer-tax-rate-calc.ts` 부수토지 면적)이
+     *    `acquisitionArea`를 읽으므로, 무게이트로 두면 분리와 무관한 자산의 세율 판정이 바뀐다.
+     */
+    ...(splitActive ? buildLandStdAtAcquisitionPayload(asset) : {}),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     /**
@@ -265,9 +282,14 @@ export function buildAssetPayload(
     //    매매사례는 여기에 넣지 않는다 — 컴패니언 salesCase는 ⑧이 이미 명시 차단하므로
     //    (`companion-sales-case-single-only-review-2026-08-f41`) ④에 도달하지 않는다(실측).
     //    도달하지 않는 조건을 적으면 「지원된다」는 거짓 신호가 된다.
+    //
+    // 🔴 **소유자 분리(동시 취득)도 싣는다**(2026-10-07) — §166⑥ 기준시가 비율의 분모(결합 총액)다. 단건은
+    //    `isSplitActive`에서 이미 싣는다(`transfer-tax-api.ts` standardPriceAtAcquisition). 별개 취득은 싣지 않는다 —
+    //    파트별 독립이라 결합 총액을 참조하지 않고(`buildSplitPayload`의 「결합 총액 전송 차단」), 화면에서도 읽기 전용 파생값이다.
     standardPriceAtAcquisition:
-      asset.acquisitionCause === "purchase" &&
-      (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition) &&
+      ((asset.acquisitionCause === "purchase" &&
+        (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
+        (splitActive && !isSeparateAcquisition(asset))) &&
       asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq) || undefined
         : undefined,
