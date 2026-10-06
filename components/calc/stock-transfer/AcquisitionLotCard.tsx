@@ -141,7 +141,7 @@ export function AcquisitionLotCard({
         </FieldCard>
 
         <CurrencyInput
-          label="1주당 단가"
+          label={cause === "bonus_taxed" ? "1주당 액면가액" : "1주당 단가"}
           hint={
             cause === "inheritance"
               ? "상속개시일 §60~66 평가가액 (원) — 소령 §163⑨"

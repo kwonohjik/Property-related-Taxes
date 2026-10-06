@@ -45,3 +45,22 @@ export const BONUS_UNTAXED_BLOCK_MESSAGE =
   "의제배당으로 과세되지 않은 무상주(자본준비금 전입)는 매수 건으로 입력하지 않습니다 — " +
   "원주 취득 건으로 입력하고, 무상증자는 2단계 「무상증자·무상감자 (자본조정)」에 비율로 입력하세요 " +
   "(취득일은 원주 취득일·취득가액 0 — 국세청 서면-2019-자본거래-1671)";
+
+/**
+ * 과세 무상주의 취득가액은 **법정**이다 — 의제배당으로 과세된 금액 = 액면가액(소득세법 시행령
+ * §27①1호 가목 · 무액면주식은 §27⑥). 실지거래가액을 확인할 수 없을 때 쓰는 추계(환산취득가·
+ * 매매사례가액 — 법 §97①1호 나목)가 들어설 자리가 없으므로 실가 모드만 허용한다.
+ *
+ * ⑤ Step2 라디오 · ⑧ validate-step2 · ③ 복원 마이그레이션이 이 술어를 공유한다.
+ * ⚠️ ⑫ Zod 는 막지 못한다 — ④가 원인을 「매매」로 매핑해 보내므로(엔진 enum 불변) 서버는 원인을 모른다.
+ */
+export function isBonusTaxedEstimationBlocked(
+  cause: FormAcquisitionCause | undefined,
+  acquisitionMode: string | undefined,
+): boolean {
+  return cause === "bonus_taxed" && (acquisitionMode || "actual") !== "actual";
+}
+
+export const BONUS_TAXED_ACTUAL_ONLY_MESSAGE =
+  "의제배당으로 과세된 무상주의 취득가액은 액면가액(의제배당 금액)으로 정해져 있어 환산취득가·매매사례가액을 쓸 수 없습니다 — " +
+  "「실가」를 고르고 1주당 액면가액을 입력하세요 (소득세법 시행령 §27①1호 가목)";
