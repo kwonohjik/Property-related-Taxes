@@ -29,6 +29,7 @@ import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 
@@ -251,9 +252,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
    * 필수(`*`)로 표시하면 거짓이 된다(2026-07-29 사용자 확정 규칙 ③).
    * 조건을 여기서 다시 쓰면 엔진 요건이 바뀔 때 UI가 조용히 어긋난다(dual-truth).
    */
+  // ④가 보내는 값 기준 — 소유 토글은 비소유 파트의 입력값을 지우지 않지만 ④는 그 값을 보내지 않으므로
+  // 술어도 같은 기준으로 판정한다(S3-1 — `acqStdNeedFlagsOfAsset`와 같은 규칙. 어긋나면 칸 없는 400).
+  const acqStdSelfOwns = props.asset ? (effectiveSelfOwns(props.asset) ?? "both") : (props.selfOwns ?? "both");
   const acqStdNeedFlags = {
-    landAcquisitionPrice: props.landAcquisitionPrice,
-    buildingAcquisitionPrice: props.buildingAcquisitionPrice,
+    landAcquisitionPrice: acqStdSelfOwns === "building_only" ? "" : props.landAcquisitionPrice,
+    buildingAcquisitionPrice: acqStdSelfOwns === "land_only" ? "" : props.buildingAcquisitionPrice,
     landTransferPrice: props.landTransferPrice,
     buildingTransferPrice: props.buildingTransferPrice,
     landDirectExpenses: props.landDirectExpenses,

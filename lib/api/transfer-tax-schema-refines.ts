@@ -96,6 +96,8 @@ export function addPropertyRefines(
     assetContractDate?: string;
     selfOwns?: string;
     landAcquisitionDate?: string;
+    /** 별개 취득 — 주택 비-별개에서는 나목이 있어도 결합 총액이 비례 안분의 분자라 필수(S3-1) */
+    isSeparateAcquisition?: boolean;
     houses?: ReadonlyArray<{ isInherited: boolean; inheritedDate?: string }>;
     decedentSameHouseholdBeforeInheritance?: boolean;
     decedentCohabitationHoldingStartDate?: string;
@@ -153,7 +155,11 @@ export function addPropertyRefines(
   const isSubObjectEstimated = isCommercialBuildingEstimated || isGeneralBuildingEstimated || isRedevelopmentEstimated;
   // 축 B 파트별 독립(building + 별개 취득): 토지분은 ㎡당 공시지가 × 면적(§99①1호 가목),
   // 건물분은 나목 명시 입력으로 산출한다 → **결합 총액이 애초에 공시되지 않으므로** 필수가 아니다.
-  const hasIndependentAcqStd = !!data.buildingStandardPriceAtAcquisition;
+  // ⚠️ 주택 **비-별개**에서는 면제하지 않는다 — 개별주택가격(총액 H)이 가목:나목 비례 안분의 **분자**라 필수다(S3-1).
+  //    나목이 있어도 H가 없으면 쌍이 안 만들어져 분할이 조용히 사라진다. 별개 취득·일반건물만 면제한다.
+  const hasIndependentAcqStd =
+    !!data.buildingStandardPriceAtAcquisition &&
+    !(data.propertyType === "housing" && data.isSeparateAcquisition !== true);
   if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd && !hasIndependentAcqStd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

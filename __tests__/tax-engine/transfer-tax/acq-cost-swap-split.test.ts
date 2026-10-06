@@ -29,6 +29,9 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
       standardPriceAtTransfer: 500_000_000,
       standardPricePerSqmAtAcquisition: 800_000,
       acquisitionArea: 100, // 토지 기준시가 = 80M (잔여 20M = 건물)
+      // S3-1 — 비-별개 주택의 취득시 건물 분할은 비례 안분이라 나목이 필요하다. N = H − L(= 20M)이면
+      //        비례 쌍 = {80M, 20M}로 종전 뺄셈과 같다(H = L + N). 이 테스트는 비례를 검증하지 않는다.
+      buildingStandardPriceAtAcquisition: 20_000_000,
       ...extra,
     });
   }

@@ -58,6 +58,8 @@ const house = (over: Record<string, unknown> = {}) =>
     standardPricePerSqmAtAcquisition: 1_000_001,
     acquisitionArea: 200,
     standardPriceAtAcquisition: TOTAL_STD,
+    // S3-1 — 별개 취득 + 나목 생략의 한시 후퇴(총액 − 토지분)는 제거됐다(D-2). 나목 = 총액 − 토지분을 명시해 종전과 같은 값을 쓴다.
+    buildingStandardPriceAtAcquisition: BLDG_STD,
     landStandardPriceAtTransfer: 300_000_000,
     buildingStandardPriceAtTransfer: 200_000_000,
     isSeparateAcquisition: true,

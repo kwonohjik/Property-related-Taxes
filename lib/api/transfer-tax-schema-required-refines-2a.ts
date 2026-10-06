@@ -21,6 +21,7 @@ import {
   isExprMixedUseRequired,
 } from "@/lib/calc/expropriation-required-gate";
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 
 type Issue = (path: (string | number)[], message: string) => void;
@@ -188,6 +189,56 @@ function partMode(explicit: string | undefined, d: Required2aLike): PartAcqMode 
 }
 
 /**
+ * 환산(estimated) 파트의 **분모 = 양도시 기준시가** 요구 — 엔진 `calcSplitAcquisitionPrice`가 던지는 조건과 같다.
+ *
+ * 주택 비-별개(개별주택가격 비례 안분 쌍이 만들어지는 경우)는 분모도 양도시 개별주택가격을 양도시 가목:나목으로
+ * 안분하므로 H_T·L_T·N_T 셋이 모두 필요하다(D-1 ⓑ). 별개 취득·일반건물은 그 파트의 원값만 필요하다.
+ * 본인 소유 파트의 환산만 대상이다(비소유 파트의 gain은 상위에서 버려진다).
+ */
+function refineEstimatedTransferStd(
+  d: Required2aLike,
+  landMode: PartAcqMode,
+  buildingMode: PartAcqMode,
+  separate: boolean,
+  issue: Issue,
+  /** V7이 파트 기준시가를 이미 요구하는 경로 — 양도시 개별주택가격(H_T)만 본다 */
+  onlyTotal = false,
+) {
+  const landEst = landMode === "estimated" && d.selfOwns !== "building_only";
+  const buildingEst = buildingMode === "estimated" && d.selfOwns !== "land_only";
+  if (!landEst && !buildingEst) return;
+
+  const landStdKnown = positive(d.standardPricePerSqmAtAcquisition) && positive(d.acquisitionArea);
+  const proportional =
+    d.propertyType === "housing" &&
+    !separate &&
+    landStdKnown &&
+    positive(d.standardPriceAtAcquisition) &&
+    positive(d.buildingStandardPriceAtAcquisition);
+  const legacyBuilding =
+    d.propertyType === "building" && !separate && landStdKnown && positive(d.standardPriceAtAcquisition);
+
+  const landMsg = "환산취득가액에는 양도시 기준시가 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목)";
+  const buildingMsg = "환산취득가액에는 양도시 기준시가 건물분이 필요합니다 (소득세법 §99①1호 나목)";
+  if (proportional) {
+    if (!positive(d.standardPriceAtTransfer))
+      issue(
+        ["standardPriceAtTransfer"],
+        "개별주택가격으로 환산취득가액을 구하려면 양도시 개별주택가격이 필요합니다 — 취득시와 같은 방식으로 토지분·건물분에 나눕니다 (소득세법 §99①1호 라목·시행령 §164⑤·§166⑥)",
+      );
+    if (onlyTotal) return;
+    if (!positive(d.landStandardPriceAtTransfer)) issue(["landStandardPriceAtTransfer"], landMsg);
+    if (!positive(d.buildingStandardPriceAtTransfer)) issue(["buildingStandardPriceAtTransfer"], buildingMsg);
+    return;
+  }
+  if (onlyTotal) return;
+  if (separate || legacyBuilding) {
+    if (landEst && !positive(d.landStandardPriceAtTransfer)) issue(["landStandardPriceAtTransfer"], landMsg);
+    if (buildingEst && !positive(d.buildingStandardPriceAtTransfer)) issue(["buildingStandardPriceAtTransfer"], buildingMsg);
+  }
+}
+
+/**
  * 분리취득 (⑧ `transfer-tax-validate-split.ts` `validateSplitDirectInputs` V1·V2·V4~V8).
  *
  * 범위: 주택·건물 단일 자산의 분리 축(④ `isSplitPayloadActive` — 부담부증여 제외)만. 겸용·PHD·다필지는
@@ -217,6 +268,25 @@ export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.Refinemen
     if (!positive(d.acquisitionArea)) issue(["acquisitionArea"], msg);
     if (!positive(d.standardPriceAtAcquisition)) issue(["standardPriceAtAcquisition"], msg);
   }
+  // V8-N — 주택 비-별개 + 소유자 분리: 개별주택가격(결합 공시)을 가목:나목 **비례**로 안분하므로 나목이 필수다
+  // (S3-1 — 뺄셈 fallback 금지). 엔진 `calcSplitGain`이 던지는 조건과 같은 술어(`requiresHousingBuildingStdAtAcq`)이고,
+  // 3종(단가·면적·총액)이 이미 있을 때만 요구한다(엔진은 쌍이 실제로 만들어질 수 있을 때만 던진다 — 위 3종은 위에서 지목).
+  if (
+    requiresHousingBuildingStdAtAcq(
+      { isHousing: d.propertyType === "housing", isSeparate: separate, isOwnerSplit: selfOwnsSplit },
+      d,
+      { landMode, buildingMode },
+    ) &&
+    positive(d.standardPricePerSqmAtAcquisition) &&
+    positive(d.acquisitionArea) &&
+    positive(d.standardPriceAtAcquisition) &&
+    !positive(d.buildingStandardPriceAtAcquisition)
+  ) {
+    issue(
+      ["buildingStandardPriceAtAcquisition"],
+      "토지·건물 소유자가 다르면 개별주택가격을 토지·건물 기준시가 비율로 나눠야 합니다 — 취득시 건물 기준시가(나목)가 필요합니다 (소득세법 §99①1호 나목·시행령 §166⑥)",
+    );
+  }
 
   if (separate) {
     // V1·V2 — 별개 취득은 파트별 취득가액이 실재한다(총액 잔액·비율 안분 금지).
@@ -240,23 +310,32 @@ export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.Refinemen
       if (!positive(d.acquisitionArea))
         issue(["acquisitionArea"], "환산·감정·매매사례 취득가액 계산에는 토지 면적이 필요합니다 (소득세법 §99①1호 가목)");
     }
-    // ④는 별개 취득에서 결합 총액을 보내지 않는다 — 총액(legacy 역산)이 오면 엔진이 쓰므로 요구하지 않는다.
+    // 주택은 별개 취득이면 건물 기준시가(나목)가 **필수**다 — 종전 「총액에서 역산」 후퇴를 제거했다(S3-1 D-2).
+    // 일반건물(`building`)만 한시 후퇴(총액 − 토지분)가 남아 총액이 오면 요구하지 않는다.
     if (
       requiresAcqStdPricePart("building", d, need) &&
       !positive(d.buildingStandardPriceAtAcquisition) &&
-      !positive(d.standardPriceAtAcquisition)
+      (d.propertyType === "housing" || !positive(d.standardPriceAtAcquisition))
     )
       issue(["buildingStandardPriceAtAcquisition"], "토지·건물 취득시기가 다른 자산은 건물분 취득시 기준시가가 필요합니다 (소득세법 §99①1호 나목·시행령 §164③)");
   }
 
   // 양도시 감정평가가액 양쪽이 있으면 엔진은 그것을 안분 basis 1순위로 쓴다(부가령 §64①1호 단서) —
   // ⑧ V4·V7은 기준시가를 요구하지만 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지).
-  if (positive(d.landAppraisalAtTransfer) && positive(d.buildingAppraisalAtTransfer)) return;
+  if (positive(d.landAppraisalAtTransfer) && positive(d.buildingAppraisalAtTransfer)) {
+    // A3 — 감정평가가액이 안분 basis여도 **환산 파트의 분모**(양도시 기준시가)는 별개로 필요하다. 아래 V7이 건너뛰어져
+    //      엔진이 던지는 400(경로 없음)이 되던 구간이다(S3-1: 취득시 비율로 양도시를 나누는 후퇴 제거).
+    refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue);
+    return;
+  }
 
   // V4 — 구분양도인데 파트 양도가액도 양도시 기준시가 비율도 없음.
   const hasSaleRatio = positive(d.landStandardPriceAtTransfer) && positive(d.buildingStandardPriceAtTransfer);
   if (d.saleSplitMode === "actual" && !positive(d.landTransferPrice) && !positive(d.buildingTransferPrice) && !hasSaleRatio)
     issue(["landTransferPrice"], "구분양도는 토지·건물 양도가액 또는 양도시 토지·건물 기준시가가 필요합니다 (소득세법 시행령 §166⑥)");
+
+  // 환산 파트 분모 — 주택 비-별개는 양도시 개별주택가격(H_T)도 필요하다(비례 안분 쌍, D-1 ⓑ). 파트 기준시가는 아래 V7.
+  refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue, true);
 
   // V7 — 양도시 기준시가 파트별 (일괄양도 안분 · §100③ 30% 판정의 비교 대상).
   if (!positive(d.landStandardPriceAtTransfer))

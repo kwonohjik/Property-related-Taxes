@@ -31,6 +31,26 @@ export interface SplitLandExpropriationValuationDetail {
   denominator: number;
 }
 
+/**
+ * 개별주택가격(결합 공시 — 소득세법 §99①1호 라목)을 취득시 토지분·건물분으로 **비례 안분**한 내역
+ * (S3-1, 2026-10). 일반 주택 비-별개 취득에서만 존재한다 — 별개 취득(파트 독립)·일반건물·구 resultData는 없다.
+ *
+ * `landBasis = floor(housingTotal × landStd ÷ (landStd + buildingStd))`, `buildingBasis = housingTotal − landBasis`.
+ * 표시 계층은 이 값을 **그대로 읽는다** — 재계산하면 엔진과 어긋난다(`feedback_engine_result_display_drift`).
+ */
+export interface StdSplitDetail {
+  /** 취득시 개별주택가격(결합 공시) */
+  housingTotal: number;
+  /** 토지 기준시가(가목) = ㎡당 개별공시지가 × 면적 */
+  landStd: number;
+  /** 건물 기준시가(나목) */
+  buildingStd: number;
+  /** 안분된 토지분 */
+  landBasis: number;
+  /** 안분된 건물분 (잔액 흡수) */
+  buildingBasis: number;
+}
+
 /** 토지/건물 분리 계산 결과 */
 export interface SplitPartResult {
   transferPrice: number;
@@ -151,6 +171,11 @@ export interface SplitGainResult {
    * 존재하지 않는다**(계획서 transfer-split-acq-std-gate-relaxation §4.3 — `{0,0}` 금지).
    */
   apportionRatio?: { land: number; building: number };
+  /**
+   * 취득시 개별주택가격의 토지·건물 비례 안분 내역 — **일반 주택 비-별개 취득**에서만 존재한다(S3-1).
+   * UI는 이 필드의 유무로 비례 산식 표시를 분기한다(`stdPriceDerivedFromTotal`의 의미에 의존하지 않는다).
+   */
+  stdSplit?: StdSplitDetail;
   /**
    * §100③ 판정 내역 — **구분 기재가 있고 안분값도 산출된 경우에만** 존재한다.
    *
