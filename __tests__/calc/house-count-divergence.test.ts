@@ -68,10 +68,36 @@ describe("computeHouseCountDivergence — anchor A", () => {
     expect(r.showMismatch).toBe(true);
   });
 
-  it("A5: F1 게이트 — 입주권 양도(primaryKind≠housing)면 ④ 채워도 미노출", () => {
+  it("A5: 입주권 양도 — 자기 몫 0(§89①4호 「다른 주택」 수): 목록 1채 + ① 0채 → 불일치 노출", () => {
     const r = computeHouseCountDivergence(
       input({
         primaryKind: "right_to_move_in",
+        householdHousingCount: "0",
+        houses: [house("2020-01-01")],
+      }),
+    );
+    expect(r.selfOffset).toBe(0);
+    expect(r.structuralCount).toBe(1); // 입주권 자신은 세지 않는다(+1 없음)
+    expect(r.showPrecedence).toBe(true);
+    expect(r.showMismatch).toBe(true);
+  });
+
+  it("A5b: 입주권 양도 — 목록 1채 + ① 1채면 일치(주택 기준 `1 +`였다면 2로 오탐)", () => {
+    const r = computeHouseCountDivergence(
+      input({
+        primaryKind: "right_to_move_in",
+        householdHousingCount: "1",
+        houses: [house("2020-01-01")],
+      }),
+    );
+    expect(r.structuralCount).toBe(1);
+    expect(r.showMismatch).toBe(false);
+  });
+
+  it("A5c: 분양권 양도는 명부 대상이 아니다 — ④ 채워도 미노출", () => {
+    const r = computeHouseCountDivergence(
+      input({
+        primaryKind: "presale_right",
         householdHousingCount: "0",
         houses: [house("2020-01-01")],
       }),
