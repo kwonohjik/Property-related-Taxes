@@ -184,6 +184,31 @@ Pre-Do anchor: `__tests__/api/transfer.route.gb-part-appraisal-salescase.predo.a
 - 상가분도 같은 검사: 상가부수토지 기준시가(공시지가 × 면적)와 상가건물 기준시가가 각각 어느 날짜로 조회되는지 확인(V-10).
 - anchor: 두 날짜 공시지가가 다른 픽스처에서 `acqBuildingStd`가 건물 취득일 공시지가로 계산됨 + 세액 변화 실측(V-1).
 
+#### B0-통합. 설계 통합 결정 (2026-10-06)
+
+설계서: 엔진 `docs/02-design/features/mixed-use-acq-std-date-mismatch.engine.design.md` · UI `…ui.design.md`. Pre-Do anchor `__tests__/api/transfer.route.mixed-use-acq-std-date-mismatch.predo.anchor.test.ts` — 6 passed · 4 skipped 재실행 확인.
+
+- **V-1 실측**(가상 fixture 토지 2005-06-10·L1=1.2M / 건물 2010-03-15·L2=1.8M): 주택 건물분 취득시 기준시가 현행 280,000,000 → 수정 후 220,000,000. 결정세액 변화(수정 후 값은 현행 3모드와 1원 일치를 확인한 재구현 산출 — 패치 실측은 Do에서): 환산 +780,360 / 실가 −1,725,151 / 감정·매매사례 −3,863,551 — 부호 혼재(파트별 장기보유공제율·개산공제·주택 건물 차손 0 처리 중첩). **함께 취득(날짜 같음)은 불변**(C-5·C-6 회귀선).
+- **V-10**: 상가부수토지 공시지가=토지 취득일, 상가건물 기준시가=건물 취득일 — 각 항이 자기 파트 날짜인 **합산**이라 뺄셈 결함 없음.
+- 법령: 「개별주택가격 − 공시지가×면적」 역산의 **명문 근거는 없다**(엔진 §8 — 「소득세법」 §99①1호 가·라목, 「소득세법 시행령」 §163⑥·§164③⑦·§166⑥ 본문 확인). 근거는 결합 공시의 항등성(토지분+건물분 = 라목 가액)이고 **같은 날짜일 때만 성립** — B0는 그 전제를 복원한다.
+
+| # | 쟁점 | 결정 | 근거 |
+|---|---|---|---|
+| 범위 | B0에서 고칠 곳 | **뺄셈 1곳**(`transfer-tax-mixed-use-housing.ts:275-276`)만. 토지분(`:273-274`)은 토지일 값 유지 | 뺄셈 소비처 전수표 E1~E15·F1~F10에서 1곳뿐 |
+| Q-3 | 주택:상가 안분 비율(`helpers.ts:179`)·상가분 환산 합산·PHD §164⑦ 3시점 합산(`transfer-tax-pre-housing-disclosure.ts:198-216`)·용도변경(상가→주택) | **B1 이관** | 뺄셈이 아닌 합산·비율이고, 별개 취득에서 「취득 당시」가 어느 날짜인지 법령상 정해지지 않는다(「부가가치세법 시행령」 §64①1호 단일 시점 전제, 「소득세법」 §100② 「함께 취득」 전제). ⚠️ 안분 비율만 건물일로 통일해도 결정세액 약 −2.6M — B1에서 반드시 다룬다 |
+| 필드 | 신규 입력 | 폼 `mixedAcqLandPricePerSqmAtBuildingAcq` ↔ 엔진 `acquisitionStandardPrice.landPricePerSqmAtBuildingAcq?: number`(⑫ 취득측 extend에만 — 양도측 공유 스키마 불변) | 비엄격 z.object 침묵 strip 방지 |
+| 술어 | 필수·노출 | 겸용 ∧ ④가 보내는 두 취득일 다름 ∧ PHD OFF ∧ 용도변경 `commercial_to_house` 아님 ∧ 취득시 개별주택가격 > 0. **엔진 leaf 1곳**, UI `lib/calc/` 쪽은 얇은 어댑터. ⑤·④·⑧·⑫·엔진 공유 | dual-truth 금지 |
+| Q-1 | 필수 판정 축 | **날짜가 다르면 항상 필수**(기준연도가 같아도 면제 안 함) | 면제는 토지일 값 대체 = 자동 fallback 금지 정책과 충돌 |
+| Q-2 | 토지분 날짜 | **토지 취득일 값 유지**(M안) | 토지 파트의 기준시가는 그 파트 취득 시점 — 파트별 보유기간·개산공제 규약과 정합 |
+| 미입력 | 처리 | 엔진 throw / ⑫ 400 / ⑧ 오류. 필수가 아닐 때 온 값은 무시 | 자동 대체 금지 |
+| UI Q-1 | 칸 배치 | **주택 취득 블록의 개별주택공시가격 바로 아래**(새 컴포넌트, AssetMajor·Legacy 두 레이아웃 공통), 기존 토지일 칸엔 「토지 취득일 기준」 캡션 | 계산 순서(결합가 − 같은 날 토지분) = 표시 순서 |
+| Q-4 | 분리 OFF·상속 시 `landAcquisitionDate` 잔존 | **B0 범위 밖**(기존 별건) — 술어는 ④가 실제로 보내는 날짜 기준 | 막다른 길 아님 |
+| Q-5·Q-6 | 산출근거 echo·결과 행 | **추가 안 함** | 결과·신고서·사이드바는 엔진 echo를 읽어 자동 추종 — 요청 범위 밖 |
+
+**깨질 기존 fixture**(L2=L1로 채우면 값 불변): `expropriation-mixed-use.anchor.test.ts` · `mixed-use-inherited-cohabitation-table2.anchor.test.ts` · `mixed-use-housing-estimated-numerator.anchor.test.tsx` · `mixed-use-part-cards.equivalence.anchor.test.ts`(확인 필요) · E2E `mixed-use-filing-form-4col.spec.ts:145-151`.
+
+**별건 기록(B0 밖)**: 주택 건물 차손 0 처리 vs 상가 통산 비대칭(의도 여부 확인 필요) · 상속·증여의 토지 취득일 칸 노출에 대한 `CompanionAcqDateSection.tsx:152-165` ↔ ⑧ 주석(`validate-mixed-use-asset.ts:25-30`) 모순.
+
 ### B1. 엔진 — 파트별 산정방식 모델
 
 **입력 신설**(`MixedUseAssetInput`): `isSeparateAcquisition`, `landAcqMode`, `buildingAcqMode`, `landAcquisitionPrice`, `buildingAcquisitionPrice`(감정·매매사례값 포함 규약은 주택 split과 동일하게 맞출지 D-3).
