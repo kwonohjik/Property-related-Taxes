@@ -63,7 +63,13 @@ describe("§154⑧3호 동일세대 상속 거주 통산 — 표2·비과세 (�
 
   it("통산 거주 12개월(<2년) → 거주요건 미충족 → 표1·전액과세 (경계)", () => {
     const r = calculateTransferTax(
-      imageCase({ decedentCohabitationResidenceMonths: 12, residencePeriodMonths: 0 }),
+      // M4 — 동일세대 보유 개시가 2017.8.2. 이전이면 경과규정으로 거주요건 자체가 없다(서면-2020-법령해석재산-3884).
+      //   통산 개월의 경계를 보려면 개시일을 2017.8.3. 이후로 둔다(보유 8년 — 표1 16% 불변).
+      imageCase({
+        decedentCohabitationResidenceMonths: 12,
+        residencePeriodMonths: 0,
+        decedentCohabitationHoldingStartDate: new Date("2017-08-10"),
+      }),
       mockRates,
     );
     expect(r.taxableGain).toBe(900_000_000); // 비과세 실패 → 전액

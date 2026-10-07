@@ -138,6 +138,9 @@ describe("OH-18 §154⑧3호 동일세대 상속 통산 — 판정 메뉴 ④ �
         { wasRegulatedAtAcquisition: true },
         {
           ...SAME_HOUSEHOLD,
+          // M4 — 동일세대 보유 개시가 2017.8.2. 이전이면 경과규정으로 거주요건이 없다(서면-2020-법령해석재산-3884).
+          //   통산 개월이 판정에 닿는지 보려면 개시일을 2017.8.3. 이후로 둔다.
+          decedentCohabitationHoldingStartDate: "2018-01-01",
           decedentCohabitationResidenceMonths: months,
           residenceInputMode: "direct",
           residencePeriodMonthsAsset: "6",
