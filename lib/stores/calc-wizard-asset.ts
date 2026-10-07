@@ -868,6 +868,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
        * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
        */
       aptDeadlineExtension?: AptDeadlineExtensionForm;
+      /**
+       * 혼인합가(§155⑤) — 이 임대주택의 혼인 전 보유자(판정 메뉴 전용 · 명부 밖 임대주택). undefined = 미선택.
+       * 각각 2주택 이상인 사람끼리의 혼인이면 특례 불가(기획재정부 조세정책과-1199)라 양쪽 주택 수에 센다.
+       */
+      mergeOrigin?: "seller_side" | "counterpart_side" | "after_merge";
       /** 기타 요건 충족 자기확인 (5%증액 등) */
       requirementsConfirmed: boolean;
     }>;

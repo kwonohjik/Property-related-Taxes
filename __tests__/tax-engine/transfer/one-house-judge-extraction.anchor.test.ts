@@ -87,6 +87,8 @@ const JUDGE_INPUT_KEYS = [
   "inheritedHouseExclusionCount",
   "knownHouseExclusionHouseIds",
   "noMergeRosterInputPath",
+  // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자
+  "rentalHousingException",
   "replacementHouse",
   "rightThreeYearException",
   "mergedHouseholdFirstHouse",
@@ -171,6 +173,11 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   inheritedHouseExclusionCount: 1,
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
+  rentalHousingException: {
+    applyException: true,
+    scenario: "A",
+    rentalUnits: [{ mergeOrigin: "counterpart_side" }],
+  } as unknown as TransferTaxInput["rentalHousingException"],
   replacementHouse: {
     businessApprovalDate: D("2019-02-02"),
     completionDate: D("2023-03-03"),

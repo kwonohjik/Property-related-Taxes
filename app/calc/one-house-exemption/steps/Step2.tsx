@@ -38,6 +38,7 @@ import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import {
+  judgmentMarriageRentalOriginVisible,
   judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
   judgmentTemporaryTwoHouseVisible,
@@ -49,6 +50,7 @@ import {
   judgmentTempTwoHouseVerdict,
 } from "@/lib/calc/one-house-judgment-temp-two-house";
 import { LegacyCountExclusionNotice } from "./LegacyCountExclusionNotice";
+import { RentalUnitsMarriageOriginSection } from "./RentalUnitsMarriageOriginSection";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import {
   deriveJudgmentHouseCount,
@@ -195,6 +197,9 @@ export function Step2({ form, onChange }: Props) {
           */
         />
       )}
+
+      {/* 혼인합가 1199 — ②에서 선언한 장기임대주택(명부 밖)의 혼인 전 보유자. 혼인일 바로 다음에 둔다. */}
+      {judgmentMarriageRentalOriginVisible(form) && <RentalUnitsMarriageOriginSection form={form} onChange={onChange} />}
 
       {/* §89② 배제의 예외 3종 — 각자 내부 게이트를 갖고 있어 해당 없으면 스스로 숨는다. */}
       <RightThreeYearExceptionSection form={viewForm} onChange={onChange} />
