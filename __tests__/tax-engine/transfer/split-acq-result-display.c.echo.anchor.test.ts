@@ -292,6 +292,21 @@ describe("T-4 문구는 「파트 합 = 전체 과세 양도차익」을 단정�
   });
 });
 
+describe("T-4b 새 문구는 `/`·`÷`를 쓰지 않는다 — FormulaText가 `숫자 / 숫자`를 분수로 치환한다", () => {
+  for (const [scnKey, scn] of [["N", SCN_N], ["H", SCN_H]] as const) {
+    for (const [key, combo] of ALL) {
+      it(`${scnKey}:${key} 양도차익·장특·보유분·거주분 문구`, () => {
+        const r = run(scn, combo);
+        for (const label of ["양도차익 계산", "장기보유특별공제", "보유 기간분 장특", "거주 기간분 장특"]) {
+          const st = step(r, label);
+          if (!st) continue; // 표1은 sub-step이 없다
+          expect(st.formula, `${label} 문구`).not.toMatch(/[/÷]/);
+        }
+      });
+    }
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════
 // T-5 — 겸용 MixedUseStep 미렌더(정적 확인)
 // ═══════════════════════════════════════════════════════════════════════
