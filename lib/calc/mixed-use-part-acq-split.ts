@@ -16,6 +16,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { areMixedAcqDatesSeparate } from "@/lib/tax-engine/mixed-use-acq-date";
 import {
   isMixedExpenseDeclared,
@@ -238,4 +239,19 @@ export function mixedPartAcqSum(a: SourceFields): { sum: number; pending: boolea
     landSalesCaseValue: a.landSalesCaseValue,
     buildingSalesCaseValue: a.buildingSalesCaseValue,
   });
+}
+
+/**
+ * 겸용 결과의 **표시 취득가액** — 결과 카드 어댑터·사이드바가 같은 값을 쓰는 단일 소스.
+ *
+ * B1 파트 모델은 실제로 차감되는 값(echo 4부분 합 — §97②2호 단서가 나목을 채택한 파트는 0)이다.
+ * `estimatedAcquisitionPrice`는 단서 판정 **전** 합이라, 그것을 쓰면 단서 나목 채택 시
+ * 「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨지고 사이드바만 다른 값을 말한다.
+ * 총액 모델(echo 없음)은 종전 그대로 주택분 + 상가분 `estimatedAcquisitionPrice`.
+ */
+export function mixedUseDisplayedAcqPrice(b: MixedUseGainBreakdown): number {
+  const sep = b.separateAcquisition;
+  return sep
+    ? Object.values(sep.parts).reduce((sum, x) => sum + x.acquisitionPrice, 0)
+    : b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
 }

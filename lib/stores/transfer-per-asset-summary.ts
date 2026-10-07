@@ -19,7 +19,7 @@ import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { isMixedUsePerPartAcq, mixedPartAcqSum } from "@/lib/calc/mixed-use-part-acq-split";
+import { isMixedUsePerPartAcq, mixedPartAcqSum, mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import {
@@ -549,10 +549,8 @@ export function computeTransferPerAssetSummary(
     /** 아래 분기가 이미 감가상각비를 공제한 값을 내는가(일반건물 카드 합) — 이중 공제 방지. */
     let depAlreadyDeducted = false;
     if (mixedResult && i === 0) {
-      // 겸용주택: 주택+상가 환산취득가액 합(전용 필드, 라벨 파싱 아님).
-      acqPrice =
-        mixedResult.housingPart.estimatedAcquisitionPrice +
-        mixedResult.commercialPart.estimatedAcquisitionPrice;
+      // 겸용주택: 결과 카드와 같은 단일 소스(B1 파트 모델은 단서 판정 후 실제 차감값).
+      acqPrice = mixedUseDisplayedAcqPrice(mixedResult);
     } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
     } else if (bundledCards) {

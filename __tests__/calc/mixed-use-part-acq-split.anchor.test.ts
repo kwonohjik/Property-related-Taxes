@@ -34,6 +34,12 @@ import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset, migrateAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
+import { mixedUseToFilingResult } from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
+import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
+import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 
 const TRANSFER_DATE = "2024-08-20";
 
@@ -480,5 +486,53 @@ describe("⑥ 사이드바 합계 — 파트 값 합 · 환산 파트면 계산 
   });
   it("총액 모델(토글 OFF)은 종전대로 총액 칸을 쓴다 — 긍정 짝", () => {
     expect(sum(pp({ mixedAcqPerPartMode: false, landAcqMode: "", buildingAcqMode: "", fixedAcquisitionPrice: "700,000,000" }))).toBe(700_000_000);
+  });
+});
+
+describe("⑥ 사이드바 ↔ ⑦ 결과 — §97②2호 단서가 나목을 채택해도 같은 취득가액 (단일 소스 mixedUseDisplayedAcqPrice)", () => {
+  // pp()와 같은 수치의 엔진 입력 — 토지 실거래가 500M / 건물 환산, 자본적지출이 커서 환산 파트 묶음 단서가 나목(직접 경비)을 채택한다.
+  const D = (s: string) => new Date(s);
+  function engineInput(capex: number): MixedUseAssetInput {
+    return {
+      isMixedUseHouse: true,
+      residentialFloorArea: 100,
+      nonResidentialFloorArea: 100,
+      buildingFootprintArea: 100,
+      totalLandArea: 200,
+      landAcquisitionDate: D("2005-06-10"),
+      buildingAcquisitionDate: D("2010-03-15"),
+      transferStandardPrice: { housingPrice: 1_600_000_000, commercialBuildingPrice: 100_000_000, landPricePerSqm: 12_000_000, housingBuildingPrice: 800_000_000 },
+      acquisitionStandardPrice: { housingPrice: 400_000_000, commercialBuildingPrice: 80_000_000, landPricePerSqm: 1_200_000, landPricePerSqmAtBuildingAcq: 1_800_000, housingBuildingPrice: 320_000_000 },
+      residencePeriodYears: 0,
+      isMetropolitanArea: true,
+      zoneType: "general_residential",
+      isOneHouseExempt: false,
+      capitalExpenditure: capex,
+      separateAcquisition: { landMode: "actual", buildingMode: "estimated", landAcquisitionPrice: 500_000_000 },
+    } as unknown as MixedUseAssetInput;
+  }
+  const resultOf = (capex: number) =>
+    calcMixedUseTransferTax(3_000_000_000, D(TRANSFER_DATE), engineInput(capex), makeMockRates());
+  const sidebarAcq = (r: ReturnType<typeof resultOf>) =>
+    computeTransferPerAssetSummary(
+      formOf(pp({ buildingAcqMode: "estimated", buildingAcquisitionPrice: "" })),
+      { mode: "mixed-use", result: r } as unknown as TransferAPIResult,
+    ).rows[0].acqPrice;
+
+  it("단서 나목 채택 — 사이드바 = 결과 카드 어댑터 = echo 4부분 합(500,000,000), 단서 전 합(estimatedAcquisitionPrice)이 아니다", () => {
+    const r = resultOf(600_000_001);
+    expect(r.separateAcquisition?.provisoGroup?.chosen).toBe("direct");
+    const preProviso = r.housingPart.estimatedAcquisitionPrice + r.commercialPart.estimatedAcquisitionPrice;
+    expect(preProviso).not.toBe(500_000_000); // 구별력 — 두 값이 갈리는 조합이다
+    expect(mixedUseDisplayedAcqPrice(r)).toBe(500_000_000); // 토지 실가 500M + 건물 환산 파트 0(나목 채택)
+    expect(sidebarAcq(r)).toBe(500_000_000);
+    expect(mixedUseToFilingResult(r).estimatedBase).toBe(500_000_000); // 상세 명세서 값 칸
+  });
+
+  it("단서 가목 — 세 값이 모두 단서 전 합과 같다(긍정 짝)", () => {
+    const r = resultOf(0);
+    const preProviso = r.housingPart.estimatedAcquisitionPrice + r.commercialPart.estimatedAcquisitionPrice;
+    expect(mixedUseDisplayedAcqPrice(r)).toBe(preProviso);
+    expect(sidebarAcq(r)).toBe(preProviso);
   });
 });
