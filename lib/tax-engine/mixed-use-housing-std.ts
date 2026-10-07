@@ -18,11 +18,13 @@ import { apportionByStdPrice } from "./std-price-apportion";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { multiplyByArea } from "./area-utils";
 import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
+import { mixedPartAcqNeedsOf } from "./mixed-use-part-acq";
 import type {
   MixedUseAssetInput,
   MixedUseDerivedAreas,
   MixedUseHousingStdSplitDetail,
 } from "./types/transfer-mixed-use.types";
+import type { MixedPartAcqNeeds } from "./types/transfer-mixed-use-part-acq.types";
 
 /** 보유 중 일부 용도변경 방향 (`MixedUseAssetInput.partialUsageChange.direction`와 같은 값). */
 export type HousingStdPartialDirection = "house_to_commercial" | "commercial_to_house";
@@ -37,6 +39,11 @@ export interface HousingStdNeedInput {
    * 신고가액이 취득가액이라 H 없이도 계산이 성립하는 유일한 경로(Q-B)다. 나목 술어는 이 값을 보지 않는다.
    */
   byInheritanceOrGift?: boolean;
+  /**
+   * B1 파트 모델이면 `mixedPartAcqNeeds` 결과 — **취득측** 술어(`isHousingPriceAtAcqRequired`·`isHousingBuildingStdAtAcqRequired`)가
+   * AND로 받는다(쓰이지 않는 값을 요구하지 않는다). 미지정(총액 모델) = 기존 동작 불변. 양도시 술어는 보지 않는다.
+   */
+  partAcqNeeds?: MixedPartAcqNeeds | undefined;
 }
 
 /**
@@ -57,7 +64,7 @@ export function isHousingBuildingStdAtTransferRequired(i: HousingStdNeedInput): 
  * 토지·건물 취득일이 다르면(B0) 이 값은 **건물 취득일** 기준 나목이다 — 필수 여부는 같다.
  */
 export function isHousingBuildingStdAtAcqRequired(i: HousingStdNeedInput): boolean {
-  return i.usePhd !== true && i.partialDirection !== "commercial_to_house";
+  return i.usePhd !== true && i.partialDirection !== "commercial_to_house" && (i.partAcqNeeds?.housingBuildingStdAtAcq ?? true);
 }
 
 /**
@@ -77,7 +84,12 @@ export function isHousingPriceAtTransferRequired(i: HousingStdNeedInput): boolea
  * 없으면 차단한다 — 원값 비율로 대신하지 않는다(자동 안분 fallback 금지).
  */
 export function isHousingPriceAtAcqRequired(i: HousingStdNeedInput): boolean {
-  return i.usePhd !== true && i.partialDirection !== "commercial_to_house" && i.byInheritanceOrGift !== true;
+  return (
+    i.usePhd !== true &&
+    i.partialDirection !== "commercial_to_house" &&
+    i.byInheritanceOrGift !== true &&
+    (i.partAcqNeeds?.housingPriceAtAcq ?? true)
+  );
 }
 
 export interface SplitMixedUseHousingStdArgs {
@@ -166,6 +178,7 @@ export function acqHousingStdNumerator(asset: MixedUseAssetInput, acqDerived: Mi
     usePhd: asset.usePreHousingDisclosure,
     partialDirection: asset.partialUsageChange?.direction,
     housingPrice: housingTotal,
+    partAcqNeeds: mixedPartAcqNeedsOf(asset),
   });
   const perSqmAtBuildingAcq = sp.landPricePerSqmAtBuildingAcq;
   const buildingStd = sp.housingBuildingPrice;

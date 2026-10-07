@@ -25,6 +25,8 @@ import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { MixedUseSeparateAcqBlock } from "./mixed-use/MixedUseSeparateAcqBlock";
+import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -303,6 +305,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
   const isMixedUse = !!props.asset?.isMixedUseHouse;
+  /**
+   * 겸용 **별개 취득 파트 모델**(B1) — 토지·건물 파트가 각각 산정방식·금액을 갖는다. ⑤ 상단 축 A(라디오·총액 칸)를 숨기고
+   * `MixedUseSeparateAcqBlock`이 대신한다. 판정은 ④·⑧·⑥과 **같은 술어**(`isMixedUsePerPartAcq`) — 토글 OFF이면 거짓이라 현행 총액 화면이다.
+   */
+  const isMixedPerPart = !!props.asset && isMixedUsePerPartAcq(props.asset);
 
   const isGeneralBuilding = props.assetKind === "general_building";
 
@@ -335,6 +342,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           props.asset?.redevIsSuccessorMember === "yes") &&
         props.asset?.assetKind !== "right_to_move_in" && (
       <>
+      {/* 겸용 별개 취득 — 모델 토글(날짜 2열 바로 아래) + 파트 블록. 후보가 아니면 null(현행 화면). 아래 축 A는 파트 모델에서만 숨는다. */}
+      {props.asset && props.onAssetChange && (
+        <MixedUseSeparateAcqBlock asset={props.asset} onChange={props.onAssetChange} />
+      )}
       {/* 별개 취득(토지·건물 취득시기 상이) — 자산 전체 축 A 입력을 숨긴다.
           "총 취득가액"은 사후 합계일 뿐 실재하지 않으므로(소득세법 §97①1호·§114⑦,
           소득령 §176의2③) 파트별로만 입력받는다. 취득시 기준시가(축 B)·PHD 토글은
@@ -345,7 +356,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           ⚠️ 종전의 안내 카드(`split-acq-total-note` — "총 취득가액이 존재하지 않습니다")는
              **삭제**했다(2026-07-30 사용자 확정 — 화면 밀도 우선). 바로 아래 「취득가액 산정 방식
              — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
-      {!isSeparateAcq && !props.hideAssetAcqAxis && (
+      {!isSeparateAcq && !props.hideAssetAcqAxis && !isMixedPerPart && (
       <div className="space-y-2">
         {/* 증축이 있으면 이 라디오가 고르는 것은 **원취득분(토지·원건물)**의 방식뿐이다 —
             증축분은 증축 카드의 「증축분 취득 방식」이 따로 정한다(별개 축).
@@ -359,7 +370,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <RadioCardGroup
           name="acqBasisMode"
           data-field="useEstimatedAcquisition"
-          data-testid={isGeneralBuilding ? "gb-asset-acq-mode" : undefined}
+          data-testid={isGeneralBuilding ? "gb-asset-acq-mode" : isMixedUse ? "mixed-asset-acq-mode" : undefined}
           tone="amber"
           /* 옵션 수 = 열 수. 종전 `length === 4 ? 4 : 3`은 일반건물이 3옵션일 때 맞았는데,
              2옵션으로 줄면서 오른쪽 1/3이 비고 카드가 좁아져 설명이 단어 중간에서 끊겼다
@@ -425,7 +436,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           파생값은 여기서 **1회 계산해 주입**하고 저쪽에서 재파생하지 않는다. */}
       <CompanionAcqAmountSection
         block={props}
-        isSeparateAcq={isSeparateAcq}
+        isSeparateAcq={isSeparateAcq || isMixedPerPart}
         isBundledExtension={isBundledExtension}
         isMixedUse={isMixedUse}
         isGeneralBuilding={isGeneralBuilding}

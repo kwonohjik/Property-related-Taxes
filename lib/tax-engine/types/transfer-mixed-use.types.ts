@@ -7,6 +7,10 @@ import type {
   MultiHouseSurchargeInput,
   MultiHouseSurchargeResult,
 } from "./multi-house-surcharge.types";
+import type {
+  MixedSeparateAcquisition,
+  MixedUseSeparateAcquisitionEcho,
+} from "./transfer-mixed-use-part-acq.types";
 
 /** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
 export interface MixedUseExpropriationDetail {
@@ -468,6 +472,15 @@ export interface MixedUseAssetInput {
    * useActualAcquisition·byInheritance·byGift와 상호배타. PHD·용도변경·공익수용 조합 미지원(throw).
    */
   useAppraisalSalesAcquisition?: boolean;
+  /**
+   * 🔴 B1 — **별개 취득 파트 모델**: 토지·건물 파트가 각각 {실거래가·환산·감정·매매사례}를 고른다.
+   * **존재 = 파트 모델 / 부재 = 총액 모델**(구 이력 무영향). 토지·건물 취득일이 달라야 하고(X-5),
+   * 위 총액 플래그(`useActualAcquisition`·`useAppraisalSalesAcquisition`·`acquisitionActualTotalPrice`)와 동시 지정할 수 없다(X-4).
+   * 판정·분할·가드: `lib/tax-engine/mixed-use-part-acq.ts` — 설계 `mixed-use-separate-acq-per-part.engine.design.md`.
+   * 파트 실제 필요경비는 기존 `housingInheritedExpense`·`commercialInheritedExpense`(주택분·상가분)와 자산 단위
+   * `capitalExpenditure`·`transferExpense`를 읽는다(actual 파트만 가산).
+   */
+  separateAcquisition?: MixedSeparateAcquisition;
   /**
    * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
    *
@@ -1028,4 +1041,10 @@ export interface MixedUseGainBreakdown {
 
   /** 상속 취득 게이트 echo (asset.acquisitionByInheritance 그대로) — UI 재판정 방지용 단일 소스. */
   acquisitionByInheritance?: boolean;
+
+  /**
+   * B1 — 별개 취득 파트 모델 echo. 있으면 결과는 **이 유무로 분기하고 값을 재도출하지 않는다**.
+   * 총액 모델·구 이력은 undefined.
+   */
+  separateAcquisition?: MixedUseSeparateAcquisitionEcho;
 }

@@ -11,6 +11,7 @@ import type {
   MixedUseTotalTax,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
 
 /** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
 export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
@@ -19,14 +20,19 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
   // 취득 모드 판별 — 본문 계산 섹션(isDeemedAcq)과 동일 기준. 실가(§100²·§97①1호가목)·상속/증여
   // 의제(§163⑨)는 실제 취득가액을 표시(개산공제 미표시), 환산·감정/매매사례(§176의2 추계)는 추계 분기.
   const acqRoute = b.calculationRoute.acquisitionConversionRoute;
+  // B1 — 별개 취득 파트 모델은 route가 갱신되지 않는다(`section97_direct`/`phd_corrected`). echo 유무가 먼저다.
+  const sepEcho = b.separateAcquisition;
   const isDeemedOrActual =
-    acqRoute === "section97_actual" ||
+    !sepEcho &&
+    (acqRoute === "section97_actual" ||
     acqRoute === "inheritance_direct" ||
     acqRoute === "inheritance_phd_max" ||
     acqRoute === "gift_direct" ||
-    acqRoute === "gift_phd_max";
+    acqRoute === "gift_phd_max");
   // 취득가액 = 주택분 + 상가분 (해당 모드 값이 estimatedAcquisitionPrice에 담김).
-  const acqPrice = b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
+  // B1 파트 모델은 **실제로 차감되는 값**(echo 4부분 합 — 단서 나목 채택 파트는 0)이다. `estimatedAcquisitionPrice`는 단서 판정 전 합이라
+  // 단서가 나목을 채택하면 「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨진다.
+  const acqPrice = mixedUseDisplayedAcqPrice(b);
   // 필요경비 = 개산공제 합계(환산·감정/매매사례) 또는 실제 필요경비(의제) — appraisalDed 필드가 담음. 실가는 0.
   // 상세명세서 실가 분기(취득가액 = 양도가액 − 양도차익 − expenses)가 acqPrice를 정확히 역산하도록 전달.
   const acqDeduction =

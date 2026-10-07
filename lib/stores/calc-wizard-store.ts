@@ -16,6 +16,7 @@ import {
 } from "./calc-wizard-asset";
 import type { AssetForm, HouseEntry, PresaleRightEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { isMixedUsePerPartAcq, mixedPartAcqSum } from "@/lib/calc/mixed-use-part-acq-split";
 
 export type {
   AssetForm,
@@ -361,7 +362,12 @@ export function computeTransferSummary(
     // 별개 취득(토지·건물 취득시기 상이): 자산 전체 취득가액 입력이 UI에서 숨겨지므로
     // 파트 합계로 대체한다. 미확정 파트(환산·미입력)가 있으면 0 — 부분합을 합계로
     // 표시하면 총액으로 오독된다(feedback_engine_result_display_drift).
-    const sep = isSeparateAcquisition(a) ? separateAcqPartsSum(a) : null;
+    // B1 — 겸용 별개 취득 파트 모델도 파트 합으로 대체한다(`isSeparateAcquisition`은 겸용을 제외하므로 서로 배타).
+    const sep = isMixedUsePerPartAcq(a)
+      ? mixedPartAcqSum(a)
+      : isSeparateAcquisition(a)
+        ? separateAcqPartsSum(a)
+        : null;
     const raw = sep
       ? (sep.pending ? 0 : sep.sum)
       : a.isSalesCaseAcquisition

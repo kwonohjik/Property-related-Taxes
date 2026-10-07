@@ -25,6 +25,8 @@ import {
 } from "./mixed-use-housing-std-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
+import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
+import { validateMixedUsePartAcq } from "./transfer-tax-validate-mixed-use-part-acq";
 
 export function validateMixedUseAsset(
   asset: AssetForm,
@@ -63,6 +65,14 @@ export function validateMixedUseAsset(
       "mixedTransferHousingBuildingStdPrice",
       `${label}: 양도시 주택건물 기준시가를 입력하세요. 겸용주택의 개별주택가격(주택건물+부수토지)은 토지 기준시가 : 건물 기준시가 비율로 토지분·건물분에 나눕니다 — 주택 부분 연면적 기준으로 계산기에서 산정하거나 직접 입력하세요.`,
     );
+  // ⑧ B1 — 겸용 별개 취득 **파트 모델**(토지·건물 파트가 각각 산정방식·금액). 결합 제외 7종·값 누락·필수 기준시가를
+  // 엔진 leaf와 같은 술어로 막는다. 아래 총액 모델 블록(레거시 3플래그·`fixedAcquisitionPrice`)은 파트 모델에서 **화면에 없는 값**이라
+  // 건너뛴다 — 요구하면 칸 없는 막다른 길이다. 날짜·면적·양도시 검증 직후에 두는 이유: 뒤에 두면 PHD·용도변경 분기가 미검증이 된다.
+  const perPart = isMixedUsePerPartAcq(asset);
+  if (perPart) {
+    const partErr = validateMixedUsePartAcq(asset, label, formTransferDate);
+    if (partErr) return partErr;
+  }
   // ⑧ §164⑨1호 겸용 공익수용 특례 — 수용 시 주택분·상가분 토지 보상 4필드 필수 (P7/D8).
   const mixedExprErr = validateMixedUseExprAsset(asset, label, formTransferDate);
   if (mixedExprErr) return mixedExprErr;
@@ -71,7 +81,7 @@ export function validateMixedUseAsset(
   if (mixedInheritanceErr) return mixedInheritanceErr;
   // ⑧ 겸용 취득가액 총액 안분 (법 §100²) — 매매 + (실거래가 §97①1호가목 / 감정·매매사례 §176의2②③).
   // 셋 다 취득시 기준시가 비율 안분(감정·매매사례는 개산공제 유지). 환산 모드는 아래 별도.
-  if (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
+  if (!perPart && asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
     const isAppraisal = asset.isAppraisalAcquisition === true;
     const isSalesCase = asset.isSalesCaseAcquisition === true;
     // ⚠️ 3종 모두 **받침 있는 "액"으로 끝나게** 유지한다 — `:73`이 `${basisLabel}을`로 조사를
@@ -120,11 +130,14 @@ export function validateMixedUseAsset(
   // (`transfer-tax-mixed-use-helpers.ts` 주택분 `housingPrice ?? 0` · `-commercial.ts` 상가분 필수).
   // 비우면 주택분 취득가액이 조용히 0이 되거나(세액 증가) 상가분에서 500이 났다(2026-09-30).
   // 실거래가·감정·매매사례 매매는 위 블록이 이미 요구한다. ⑫ `mixedUseAssetSchema` superRefine이 거울이다.
+  // 파트 모델은 이 두 요구(H·상가 취득시 기준시가)를 위 `validateMixedUsePartAcq`가 `mixedPartAcqNeeds`로 대체한다.
+  // `isPurchaseActualLike`가 거짓이 되는 것(레거시 환산 플래그 stale)으로 쓰이지 않는 값을 요구하지 않도록 `!perPart`를 함께 건다.
   const isPurchaseActualLike = asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition;
   const isPostDeemedInheritOrGift =
     (asset.acquisitionCause === "inheritance" || asset.acquisitionCause === "gift") &&
     asset.acquisitionDate >= "1985-01-01";
   if (
+    !perPart &&
     !isPurchaseActualLike &&
     !isPostDeemedInheritOrGift &&
     !asset.usePreHousingDisclosure &&
@@ -134,6 +147,7 @@ export function validateMixedUseAsset(
     return fieldError("mixedAcqHousingPrice", `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분 환산취득가 분자 — 미공시 주택이면 §164⑦ 3-시점 환산을 켜세요)`);
   const commStdMissing = mixedAcqCommercialBuildingStd(asset) <= 0;
   if (
+    !perPart &&
     !isPurchaseActualLike &&
     !(asset.usePreHousingDisclosure && isMixedUseCaseA(asset)) &&
     (commStdMissing || mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
@@ -162,7 +176,8 @@ export function validateMixedUseAsset(
     );
   }
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
-  if (asset.usePreHousingDisclosure) {
+  // B1 — 파트 모델은 **실효 PHD**(환산 파트가 있을 때만)로 판정한다. 환산 파트가 없으면 ④가 PHD를 보내지 않으므로 요구하지 않는다.
+  if (mixedUsePhdEffective(asset)) {
     if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
     // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
     if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))

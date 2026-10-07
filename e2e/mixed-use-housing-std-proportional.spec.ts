@@ -118,6 +118,10 @@ async function calcAndCapture(page: Page): Promise<CapturedMixedUse> {
 const H2C = { hasPartialUsageChange: true, partialChangeDirection: "house_to_commercial", partialChangeDate: "2020-01-01" };
 const C2H = { hasPartialUsageChange: true, partialChangeDirection: "commercial_to_house", partialChangeDate: "2020-01-01" };
 const SEPARATE = {
+  // B1 — 별개 취득 셀은 **총액 모델**(토글 OFF)의 B0·나목을 본다. 신규 자산 initial이 파트 모델 ON이라 명시한다(시드 보강 — 의도 반전 아님).
+  // ON이어도 이 시드(환산 `useEstimatedAcquisition: true`)는 양쪽 환산으로 파생돼 통과하지만, 그러면 총액 모델의 옛 축 커버리지가 조용히 사라진다.
+  // 파트 모델의 H·B0·나목 노출은 `mixed-use-separate-acq-per-part.spec.ts` M7~M14가 맡는다.
+  mixedAcqPerPartMode: false,
   hasSeperateLandAcquisitionDate: true,
   landAcquisitionDate: "2005-06-10",
   mixedAcqLandPricePerSqmAtBuildingAcq: "1800000",

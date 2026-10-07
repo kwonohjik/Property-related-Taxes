@@ -27,6 +27,7 @@ import {
   splitMixedUseHousingStd,
 } from "./mixed-use-housing-std";
 import { apportionByStdPrice } from "./std-price-apportion";
+import { mixedPartAcqNeedsOf } from "./mixed-use-part-acq";
 import type { MixedUseHousingStdSplitDetail } from "./types/transfer-mixed-use.types";
 
 // ──────────────────────────────────────────────────────────────
@@ -132,6 +133,8 @@ export function calcHousingGainSplit(
 ): HousingGainSplit {
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
   const effectiveAcqDerived = acqDerived ?? derived;
+  // B1 — 파트 모델이면 무엇이 쓰이는가(총액 모델은 undefined = 기존 술어 불변)
+  const partAcqNeeds = mixedPartAcqNeedsOf(asset);
 
   // PHD 분기 — 산식 상세에서 토지/건물 안분값 직접 사용
   if (housingAcqResult.phdResult) {
@@ -308,6 +311,11 @@ export function calcHousingGainSplit(
     const borrowed = apportionByStdPrice(acqHousingTotal, transferLandStd, transferBuildingStd);
     acqLandStd = borrowed.land;
     acqBuildingStd = borrowed.building;
+  } else if (partAcqNeeds !== undefined && !partAcqNeeds.housingPriceAtAcq) {
+    // B1 파트 모델 — 양쪽 실가(+경비 선언 없음)는 취득시 개별주택가격·건물 취득일 공시지가·γ1 basis가 쓰이지 않는다.
+    // (`mixedPartAcqNeeds`: H_A·L_b 요구와 같은 술어 — 소비처가 없으면 요구도, 계산도 하지 않는다.)
+    acqLandStd = 0;
+    acqBuildingStd = 0;
   } else {
     // 기존 일반 겸용주택 분기
     const acqLandRaw = multiplyByArea(
@@ -320,6 +328,7 @@ export function calcHousingGainSplit(
       isHousingBuildingStdAtAcqRequired({
         usePhd: housingAcqResult.phdResult !== undefined,
         partialDirection: asset.partialUsageChange?.direction,
+        partAcqNeeds,
       }) &&
       !(acqBuildingStdInput !== undefined && acqBuildingStdInput > 0)
     ) {
@@ -338,6 +347,7 @@ export function calcHousingGainSplit(
       usePhd: asset.usePreHousingDisclosure,
       partialDirection: asset.partialUsageChange?.direction,
       housingPrice: acqHousingTotal,
+      partAcqNeeds,
     });
     let landStdAtBuildingDay: number | undefined;
     if (buildingDayRequired) {
@@ -358,6 +368,7 @@ export function calcHousingGainSplit(
         usePhd: housingAcqResult.phdResult !== undefined,
         partialDirection: asset.partialUsageChange?.direction,
         byInheritanceOrGift,
+        partAcqNeeds,
       }) &&
       !(acqHousingTotal > 0)
     ) {

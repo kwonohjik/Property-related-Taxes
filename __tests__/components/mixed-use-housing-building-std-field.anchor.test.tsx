@@ -49,6 +49,8 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
     assetKind: "housing",
     isMixedUseHouse: true,
     acquisitionCause: "purchase",
+    // B1 — 이 anchor는 **총액 모델**(토글 OFF)의 나목·B0 칸을 본다. 신규 자산 initial이 파트 모델 ON이라 명시한다(시드 보강 — 의도 반전 아님).
+    mixedAcqPerPartMode: false,
     acquisitionDate: "2010-03-15",
     residentialFloorArea: "100",
     nonResidentialFloorArea: "60",

@@ -20,6 +20,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
+import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 
 const MIN_ACQ_DATE = "1985-01-01";
@@ -141,9 +142,18 @@ export function CompanionAcqDateSection(props: {
         {isSplit && isMixedUse && (
           <ToneCard tone="amber" noDark bodyClassName="space-y-1">
             <p className="text-xs text-amber-900" data-testid="split-acq-date-mixed-note">
-              겸용주택은 토지·건물 취득일을 <strong>각각</strong> 입력합니다. 같은 날 취득했다면 같은
-              날짜를 넣으세요 — 두 값이 주택분·상가분 4부분 안분과 장기보유특별공제 기산에 각각
-              쓰입니다 (소득세법 시행령 §166⑥).
+              {/* B1 — 취득일이 다르고 「각각 입력」이 켜져 있으면 파트 모델 문구, 그 밖에는 종전 문구.
+                  종전 문구의 「시행령 §166⑥」 인용은 본문 미대조(계획서 M-2·V-9 — 오기 의심)라 싣지 않는다. */}
+              {p.asset && isMixedUsePerPartAcq(p.asset) ? (
+                <>
+                  토지·건물 취득일이 달라 취득가액을 <strong>토지·건물 각각</strong> 입력합니다.
+                </>
+              ) : (
+                <>
+                  겸용주택은 토지·건물 취득일을 <strong>각각</strong> 입력합니다. 같은 날 취득했다면 같은
+                  날짜를 넣으세요 — 두 값이 주택분·상가분 4부분 안분과 장기보유특별공제 기산에 각각 쓰입니다.
+                </>
+              )}
             </p>
           </ToneCard>
         )}
