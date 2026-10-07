@@ -45,13 +45,19 @@ export function judgmentTemporaryTwoHouseVisible(form: OneHouseJudgmentFormData)
  * |---|---|
  * | 주택 수 ≥ 2 | `TemporaryTwoHouseSection`의 `<MergeDateSection>` |
  * | 분양권·입주권 > 0 && 주택 수 < 2 | `MergedHouseholdRightSection`(`MergedHouseholdRightSection.tsx:78·83`) |
+ * | 입주권 양도 && 다른 주택 1채 && 분양권·입주권 0 | `Step2`의 단독 `<MergeDateSection>` — 혼인 전 배우자 주택을 §89①4호 「다른 주택」에서 뺀다(M9) |
  * | 그 밖(1주택 · 권리 없음) | **없음** — §155④⑤는 합가로 2주택이 된 경우라 입력할 이유가 없다 |
  *
  * 🔴 칸이 사라지는 조건(명부에서 주택을 지워 1주택이 됨)에서 남은 날짜를 보내면, 사용자가
  *    볼 수 없는 합가 안내가 결과에 뜬다 ⇒ ④·⑧도 이 술어로 게이트한다.
  */
 export function judgmentMergeInputVisible(form: OneHouseJudgmentFormData): boolean {
-  return deriveJudgmentHouseCount(form) >= 2 || (form.presaleRights?.length ?? 0) > 0;
+  return deriveJudgmentHouseCount(form) >= 2 || (form.presaleRights?.length ?? 0) > 0 || judgmentRightSaleMergeOwnsInput(form);
+}
+
+/** 입주권 양도 + 다른 주택 1채 + 명부 권리 없음 — 위 두 소유자가 모두 숨는 구간이라 `Step2`가 합가 칸을 따로 그린다(M9). */
+export function judgmentRightSaleMergeOwnsInput(form: OneHouseJudgmentFormData): boolean {
+  return !judgmentSaleIsHousing(form) && deriveJudgmentHouseCount(form) === 1 && (form.presaleRights?.length ?? 0) === 0;
 }
 
 /**
