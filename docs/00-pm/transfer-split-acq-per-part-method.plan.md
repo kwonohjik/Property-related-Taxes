@@ -296,6 +296,23 @@ Pre-Do anchor: `__tests__/api/transfer.route.gb-part-appraisal-salescase.predo.a
 
 ---
 
+### C-통합. 설계 통합 결정 (2026-10-07 — 사용자 「권장안대로」)
+
+설계: `docs/02-design/features/transfer-split-acq-result-display.{engine,ui}.design.md`. 재실측으로 H-5(다건·컴패니언 분리 자산 취득가액 0·필요경비에 합산, 5개 화면)·H-6(개산공제 3% 하드코딩)·H-7(swap 파트 신고서 항등식)·F-1(split 장특 float 1원 과소 — **세액**)이 추가됐다. 세액이 바뀌는 것은 F-1뿐.
+
+| # | 결정 | 확정안 |
+|---|---|---|
+| 1 | F-1 | C 안 **선행 별 커밋** — `transfer-tax-lthd.ts` split 분기 `applyRate` → `applyLthdRate`. 같은 파일 상속 합산·장기임대 분기(`applyRate`)도 같은 결함인지 실측해 같은 커밋에서 판정 |
+| 2 | H-2 엔진 단계 문구 | 파트별로 풀어 쓴다(문구 그대로 계산하면 금액). 표2 보유/거주 sub-step 금액 정정. step 개수·순서·라벨 불변. 신고서의 sub-step 존재·거주분>0 계약 유지 |
+| 3 | 정본 값 | 엔진 leaf `summarizeSplitGain`(신규 `transfer-tax-split-display.ts`)을 상세명세서·step 문구가 공유. 분기는 응답 실재 값 `splitDetail` 파트 echo |
+| 4 | H-5 다건 | 엔진 echo 정정(E-U1 — 분리 자산 `acquisitionPrice` = 소유 파트 차감 취득가 합) → 5곳 자동 추종. 합산 화면 숫자가 바뀐다 |
+| 5 | swap 파트 | 취득가액 0 + 필요경비 = 직접경비 + 안내 |
+| 6 | G-4 | 평범한 환산 자산 포함 집계 소제목 전체 정정 — echo 3종 파생(`splitDetail`·`assetCards[].acquisitionMode`·`estimatedBase`) |
+| 7 | Q-F | 엔진 echo `actualSource?: "part_input" \| "bundled_apportion"`(E-U2) + 일괄 실가 안분 산식 분모를 취득시로 교정 |
+| 8 | 신고서 장특 | float 재안분 → 엔진 echo(`SplitPartResult` 보유·거주 율·공제액 4필드) 소비 |
+| 9 | 라벨 | 「실거래가·환산취득가·감정가액·매매사례가액」(입력 라디오 어휘) 전 뷰 통일, 카드 「실지취득가액」 포함 |
+| 10 | 기타 | H-4 낡은 주석 2건 + 설계서 각주 포함 · 겸용 `MixedUseStep` 보류(미렌더) · 다건 건별 신고서 토지/건물 열 미도입 · H-6 `lumpDeductionRate` echo(E-U3) · 결과 단일 플래그(`usedEstimatedAcquisition`·`expenses`·`longTermHoldingRate`) 의미 불변 |
+
 ## 7. 검증 항목 (V-n) — 미검증, 「확인 필요」
 
 | # | 내용 | 착수 조건? |

@@ -13,6 +13,7 @@ import { isTable2Applied } from "@/components/calc/results/transfer/lthd-split-d
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-helpers";
+import { sumSplitLthdAmounts } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildLthdFallbackFormulas } from "./DetailedStatementLthdFormulas";
 import {
   holdingMonthsFromDates,
@@ -103,6 +104,10 @@ export function setLongTermDeductionItems(
 
   // 다건 모드 자산별 보유/거주분 (자산별 holdingMs 기준)
   const splitForAsset = (p: PerPropertyBreakdown) => {
+    // 토지·건물 분리 자산은 엔진 echo(소유 파트 보유분·거주분 합)가 정본이다 — 공제 총액을 폼값으로 다시 안분하지 않는다.
+    // 신고서(`FilingFormTableAggregateHelpers`)가 읽는 `filingDisplay.lthd*`와 같은 값이다. echo가 없는 구 이력은 아래 종전 재안분.
+    const echo = p.splitDetail ? sumSplitLthdAmounts(p.splitDetail, p.longTermHoldingDeduction) : null;
+    if (echo) return echo;
     // 자산별 거주 개월수 — 거주 사실이 없는 자산은 0이 되어 거주분이 배정되지 않는다.
     const rms = residenceMsOf(p.propertyId);
     return splitLtDeduction(
@@ -119,6 +124,22 @@ export function setLongTermDeductionItems(
       isTable2Applied(result.steps, rms >= 24),
     );
   };
+  /**
+   * 합계 행 — 분리 자산(echo 있음)이 하나라도 있으면 **자산별 보유분·거주분의 합**이다(신고서 합계 열과 같은 정의).
+   * 종전에는 합계 공제액을 대표 자산의 폼값으로 한 번에 안분해 자산별 행과 합계가 어긋났다. 분리 자산이 없으면 종전 그대로.
+   */
+  const aggLthdTotals =
+    isAggregate && properties.some((p) => p.splitDetail && sumSplitLthdAmounts(p.splitDetail, p.longTermHoldingDeduction))
+      ? properties.reduce(
+          (acc, p) => {
+            const s = splitForAsset(p);
+            return { holdingAmount: acc.holdingAmount + s.holdingAmount, residenceAmount: acc.residenceAmount + s.residenceAmount };
+          },
+          { holdingAmount: 0, residenceAmount: 0 },
+        )
+      : undefined;
+  const aggSumFormula = (pick: (s: { holdingAmount: number; residenceAmount: number }) => number) =>
+    `자산별 합계 — ${properties.map((p) => `${p.propertyLabel} ${pick(splitForAsset(p)).toLocaleString()}`).join(" + ")}`;
   const ltHoldingPerAsset = isAggregate
     ? properties.map((p) => ({ label: p.propertyLabel, value: splitForAsset(p).holdingAmount }))
     : undefined;
@@ -201,8 +222,8 @@ export function setLongTermDeductionItems(
   } else {
     items.set("ltHoldingPart", {
       label: " 보유 기간분 장특",
-      value: lthHoldingStep?.amount ?? lthSplit.holdingAmount,
-      formula: lthHoldingStep?.formula ?? lthHoldingFallbackFormula,
+      value: aggLthdTotals?.holdingAmount ?? lthHoldingStep?.amount ?? lthSplit.holdingAmount,
+      formula: aggLthdTotals ? aggSumFormula((s) => s.holdingAmount) : (lthHoldingStep?.formula ?? lthHoldingFallbackFormula),
       legalBasis: lthHoldingStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
       note: lthdExclusionLabel
         ? lthdExclusionLabel
@@ -216,8 +237,8 @@ export function setLongTermDeductionItems(
     });
     items.set("ltResidencePart", {
       label: " 거주 기간분 장특",
-      value: lthResidenceStep?.amount ?? lthSplit.residenceAmount,
-      formula: lthResidenceStep?.formula ?? lthResidenceFallbackFormula,
+      value: aggLthdTotals?.residenceAmount ?? lthResidenceStep?.amount ?? lthSplit.residenceAmount,
+      formula: aggLthdTotals ? aggSumFormula((s) => s.residenceAmount) : (lthResidenceStep?.formula ?? lthResidenceFallbackFormula),
       legalBasis: lthResidenceStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
       perAsset: ltResidencePerAsset,
     });

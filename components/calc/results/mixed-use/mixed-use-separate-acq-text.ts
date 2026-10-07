@@ -7,24 +7,17 @@
  * 표시 분기는 **echo 유무가 route보다 먼저**여야 한다(실거래가 파트에 「환산취득가액」 거짓 라벨 방지).
  */
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import type {
   MixedUseGainBreakdown,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { MixedPartKey } from "@/lib/tax-engine/types/transfer-mixed-use-part-acq.types";
 
-/** 산정방식 표시명 — 화면 라디오·신고서 열 주석·결과 카드가 같은 어휘를 쓴다. */
-export function sepAcqModeLabel(mode: PartAcqMode): string {
-  switch (mode) {
-    case "actual":
-      return "실거래가";
-    case "estimated":
-      return "환산취득가";
-    case "appraisal":
-      return "감정가액";
-    case "salesCase":
-      return "매매사례가액";
-  }
-}
+/**
+ * 산정방식 표시명 — 화면 라디오·신고서 열 주석·결과 카드가 같은 어휘를 쓴다.
+ * 어휘의 **단일 소스는 엔진 leaf `splitAcqModeLabel`**(Phase C 결정 9 — 별개 취득 split 결과뷰와 겸용 결과뷰가 같은 문자열).
+ */
+export const sepAcqModeLabel: (mode: PartAcqMode) => string = splitAcqModeLabel;
 
 const fmt = (n: number) => n.toLocaleString();
 

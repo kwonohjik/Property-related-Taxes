@@ -399,3 +399,9 @@ Phase E. 전체 회귀 + 완료 보고
 - 법령: 소득세법 시행령 §166⑥ (MST 286211), 부가가치세법 시행령 §64① (MST 283641) — KoreanLaw 조회 완료 2026-07-27
 - 케이스 매트릭스 현행: `land-building-split.test.ts` S1~S5 (혼합 케이스 0건)
 - 양도 모드 2-레벨(중복 아님): `bundledSaleMode` 자산 간 폼-전역(`calc-wizard-store.ts:61`·`:232` default apportioned) ↔ `saleSplitMode` 자산 내 토지·건물(신규). 단건 판정 `CompanionAssetsSection.tsx:87`
+
+---
+
+### 정정 각주 (2026-10-07 · Phase C H-4 — 본문은 이력이라 재작성하지 않는다)
+
+- **:378 「단기세율 혼합 … 현행 `transfer-tax-split-gain.ts:155-158` 알려진 한계 유지」는 낡았다.** G-1이 파트별 세율을 구현했다(`transfer-tax-split-rate.ts` · `transfer-split-part-rate-shortterm.plan.md`). 해당 주석 자체도 Phase C에서 정정됐다.

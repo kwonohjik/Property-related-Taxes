@@ -144,6 +144,7 @@ export function PropertyCard({
         longTermDeduction={breakdown.longTermHoldingDeduction}
         taxableIncome={breakdown.incomeAfterOffset}
         assetKind={assetKind}
+        isExempt={breakdown.isExempt}
         {...(exemptionNote ? { exemptionNote } : {})}
       />
     </div>

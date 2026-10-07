@@ -50,10 +50,10 @@ export {
  * preHousingDisclosure 제공 시: §164⑤ 3-시점 알고리즘으로 취득시 기준시가 추정 후 안분.
  * 미제공 시: 기존 standardPricePerSqmAtAcquisition × acquisitionArea 기반 안분.
  *
- * [알려진 한계] 단기세율 혼합 케이스:
- *   토지 보유기간은 길지만 건물 보유기간이 2년 미만인 경우, 현재는 acquisitionDate(건물 취득일)
- *   기준 단일 세율이 전체에 적용된다. 건물에만 단기세율, 토지에는 누진세율을 파트별로 분리
- *   적용하는 로직은 미구현 (실무 발생 빈도 극히 낮음, 향후 과제).
+ * 단기세율 혼합 케이스(토지 장기 + 건물 2년 미만 등): 구현됨 — 파트별 세율은
+ * `transfer-tax-split-rate.ts`(G-1: 비주택은 파트별 세율, 주택은 `max(토지, 주택)` 기산일)가 담당한다.
+ * 이 함수는 양도차익·파트 echo만 만든다. (종전 「미구현」 주석은 G-1 종결 후에도 남은 낡은 기재였다 —
+ * docs/00-pm/transfer-split-part-rate-shortterm.plan.md, `split-part-rate.anchor.test.ts` 37건.)
  */
 export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   if (!input.landAcquisitionDate) return null;
@@ -294,6 +294,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     lumpDeductionBase: landNonActual
       ? computeLumpSumDeductionBase(landStdAtAcq, ownRatio)
       : undefined,
+    lumpDeductionRate: landNonActual ? dedRate : undefined,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
@@ -313,6 +314,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     lumpDeductionBase: buildingNonActual
       ? computeLumpSumDeductionBase(buildingStdAtAcq, ownRatio)
       : undefined,
+    lumpDeductionRate: buildingNonActual ? dedRate : undefined,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
@@ -483,6 +485,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     directExpenses: phdLandSwap.effectiveDirect,
     appraisalDeduction: phdLandSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.landHousingAtAcquisition,
+    lumpDeductionRate: phd.estimatedDeductionRate,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
@@ -497,6 +500,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     directExpenses: phdBuildingSwap.effectiveDirect,
     appraisalDeduction: phdBuildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.buildingHousingAtAcquisition,
+    lumpDeductionRate: phd.estimatedDeductionRate,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,

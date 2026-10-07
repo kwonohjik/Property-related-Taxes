@@ -2,7 +2,7 @@
  * A2 ⑦ — 일반건물 감정가액·매매사례가액 파트의 결과 표시 (설계서 §9.2 D1·D3, E-1 `acquisitionMode` echo 소비)
  *
  * 고정 계약:
- *   R-1 감정·매매사례 파트에 「실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다」가 붙지 않는다(거짓 문구) — 개산공제 산식이 나온다
+ *   R-1 감정·매매사례 파트에 「실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다」가 붙지 않는다(거짓 문구) — 개산공제 산식이 나온다
  *   R-2 (긍정 짝) 실가 파트는 종전대로 그 문구가 붙는다
  *   R-3 취득가액 산식이 환산 곱(「양도가액 × 취득시 ÷ 양도시」)을 인쇄하지 않는다 — 적힌 식이 적힌 값을 못 만드는 거짓 등식
  *   R-4 (긍정 짝) 환산 파트는 종전 환산 산식 그대로
@@ -62,7 +62,7 @@ describe("A2 ⑦ — 감정·매매사례 파트 결과 표시", () => {
   it("R-2 (긍정 짝) 같은 계산의 실가 건물 파트는 종전 문구를 쓴다", () => {
     const out = run(LAND_APPRAISAL);
     expect(card(out, "building").acquisitionMode).toBe("actual");
-    expect(buildGbExpenseFormula(prop(out, "building"), out)).toContain("실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다");
+    expect(buildGbExpenseFormula(prop(out, "building"), out)).toContain("실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다");
   });
 
   it("R-3 감정 파트 취득가액 — 환산 곱을 인쇄하지 않고 감정가액으로 표기한다", () => {
@@ -86,7 +86,7 @@ describe("A2 ⑦ — 감정·매매사례 파트 결과 표시", () => {
     expect(f).not.toContain("감정가액");
   });
 
-  it("R-5 옛 이력(echo 없음) — boolean 판정 그대로: 환산이 아니면 실지거래가액 파트 문구", () => {
+  it("R-5 옛 이력(echo 없음) — boolean 판정 그대로: 환산이 아니면 실거래가 파트 문구", () => {
     const out = run(LAND_APPRAISAL);
     // echo 이전에 저장된 결과를 흉내낸다
     const legacy = { ...out, assetCards: out.assetCards.map((c) => ({ ...c, acquisitionMode: undefined })) };

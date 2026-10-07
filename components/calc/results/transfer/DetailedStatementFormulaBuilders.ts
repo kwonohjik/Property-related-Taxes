@@ -19,6 +19,14 @@ import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/cal
 import { createElement, Fragment, type ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { SplitAcqMode } from "@/lib/tax-engine/transfer-tax-split-display";
+import {
+  aggregateAcqHeading,
+  aggregateExpenseHeading,
+  formatLumpRate,
+  splitAcqFormulaText,
+  splitExpenseText,
+} from "./split-acq-text";
 
 /**
  * 엔진 §95③ 12억 초과 안분 STEP formula(문자열)를 Frac 분수 표기로 변환 (PR #746 표준).
@@ -428,6 +436,11 @@ export function buildAcquisitionPriceFormula(
   capEx: number,
   /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 0). `singleAcq`는 이미 공제 **후** 값이다. */
   depreciation = 0,
+  /**
+   * 집계 자산들의 산정방식 집합(echo 파생 — `aggregateAcqModes`). 어댑터가 `usedEstimatedAcquisition`을 상수로 내려
+   * 보내므로 집계 소제목은 이 집합이 정본이다. 미지정이면 종전 플래그로 후퇴한다.
+   */
+  aggModes?: Set<SplitAcqMode>,
 ): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
   const depStr = depreciation > 0 ? ` − 감가상각비 ${depreciation.toLocaleString()} (소득세법 §97③)` : "";
@@ -444,6 +457,8 @@ export function buildAcquisitionPriceFormula(
       suffix,
     );
   if (isAggregate) {
+    const heading = aggModes && aggregateAcqHeading(aggModes);
+    if (heading) return heading;
     return result.usedEstimatedAcquisition
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
       : "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)";
@@ -475,6 +490,13 @@ export function buildAcquisitionPriceFormula(
         : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
     }
     return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
+  }
+  // 토지·건물 별개 취득(split) — 파트별 산정방식·취득가액을 엔진 `splitDetail` echo로 그린다(H-1).
+  // 겸용(B1)은 위에서 `mixedUseDetail` echo로 이미 처리됐고, 겸용 echo가 없는 구 이력은 여기로 오지 않게 막는다.
+  // `result.usedEstimatedAcquisition`·`result.expenses`는 분리 조합에서 신호가 되지 못한다(항상 false·직접경비만).
+  if (!result.mixedUseDetail) {
+    const splitText = splitAcqFormulaText(result.splitDetail);
+    if (splitText) return splitText;
   }
   /**
    * §97②2호 **단서**(swap) — 취득가액 칸은 **나목(자본적지출 + 양도비)** 이다.
@@ -547,19 +569,6 @@ export function buildAcquisitionPriceFormula(
 }
 
 /**
- * 개산공제율 표기 — `0.03 → "3%"` · `0.003 → "0.3%"` · `0.01 → "1%"`.
- *
- * 🔴 율을 문자열로 **박지 않는다**. 종전에는 `× 3%`가 하드코딩돼 있어 미등기(시행령 §163⑥1호·2호
- *    단서 3/1000)·§163⑥4호(조합원입주권·분양권 1/100)에서 **등식이 거짓**이었다 —
- *    「개산공제 300,000 = 취득시 기준시가 100,000,000 × 3%」(실측). 환산 모드 + 미등기에서
- *    이미 도달 가능한 활성 결함이었다.
- */
-function formatLumpRate(rate: number | undefined): string {
-  if (rate === undefined || !Number.isFinite(rate) || rate <= 0) return "개산공제율";
-  return `${Number((rate * 100).toFixed(4))}%`;
-}
-
-/**
  * 필요경비 산식 — 단건은 실제 변수값. 환산모드 본문은 개산공제(취득시 기준시가 × 3%),
  * §97② 단서 swap 시 직접경비(양도비), 실거래는 양도비 합계.
  */
@@ -573,8 +582,12 @@ export function buildNecessaryExpenseFormula(
    * 미지정이면 율 대신 「개산공제율」이라고만 적는다(거짓 등식을 만들지 않는다).
    */
   lumpRate?: number,
+  /** 집계 자산들의 산정방식 집합 — `buildAcquisitionPriceFormula`의 같은 인자. */
+  aggModes?: Set<SplitAcqMode>,
 ): string {
   if (isAggregate) {
+    const heading = aggModes && aggregateExpenseHeading(aggModes);
+    if (heading) return heading;
     return result.usedEstimatedAcquisition
       ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
       : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
@@ -615,6 +628,12 @@ export function buildNecessaryExpenseFormula(
       : "";
     const body = parts.length > 1 ? `${parts.join(" + ")} = ${fmt(singleExp)}` : parts[0];
     return body + guardNote;
+  }
+  // 토지·건물 별개 취득(split) — 파트별 자본적지출·양도비 + 개산공제. 개산공제·swap 파트가 없으면(실거래가/실거래가)
+  // 종전 문구를 그대로 쓴다. 겸용은 위 B1 분기가 먼저 처리한다.
+  if (!result.mixedUseDetail) {
+    const splitText = splitExpenseText(result.splitDetail, lumpRate);
+    if (splitText) return splitText;
   }
   if (result.usedEstimatedAcquisition) {
     if (result.swapApplied) {

@@ -22,6 +22,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
+import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   fmtDate,
@@ -59,6 +60,7 @@ export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatement
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import { aggregateAcqModes } from "./split-acq-text";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
@@ -231,18 +233,44 @@ export function buildStatementItems(
   });
 
   // ── 2단계: 양도차익 산정 ─────────────────────────────────────
+  /**
+   * 토지·건물 별개 취득(split) 정본 합 — 엔진 leaf `summarizeSplitGain`(신고서·카드·step 문구와 한 정의).
+   *
+   * 🔴 종전에는 아래 역산(`양도가액 − 양도차익 − result.expenses`)이었다. split의 `result.expenses`는 직접경비 합뿐이라
+   *   개산공제가 **취득가액 칸으로** 들어가고 필요경비는 0이 됐다(6조합 중 5조합 — 실측 2026-10-07). 분기 신호는
+   *   `usedEstimatedAcquisition`(항상 false)이 아니라 응답에 실재하는 `splitDetail`이다.
+   * 위계: 겸용(B1 echo — 별도 산식)·이월과세 시나리오 A(증여자 취득가액 승계)가 우선한다 — 산식 빌더와 같은 순서.
+   */
+  const splitSummary =
+    !isAggregate &&
+    result.splitDetail &&
+    !result.mixedUseDetail &&
+    result.carryoverTaxationDetail?.adoptedScenario !== "A"
+      ? summarizeSplitGain(result.splitDetail)
+      : undefined;
+  /**
+   * 소유자 분리(토지만·건물만) 단건의 신고 단위 양도가액 — **소유 파트의 양도가 합**이다. `totalTransferPrice`는 폼의 일괄 총액이라
+   * 비소유 파트분이 섞인다. 신고서(`FilingFormTableHelpers` split-2col 합계 열)와 같은 정의·같은 leaf를 읽는다 —
+   * 두 카드가 같은 결과에 양도가액을 다르게 적으면(900,000,000 vs 675,000,000) 검증이 안 된다.
+   * `selfOwns = both`는 지분 반영 `totalTransferPrice`를 그대로 쓴다(종전과 동일).
+   */
+  const ownerSplitTransfer =
+    splitSummary && result.splitDetail && result.splitDetail.selfOwns !== "both" ? splitSummary : undefined;
+
   const sumPropTransfer = isAggregate
     ? properties.reduce((s, p) => s + p.transferPrice, 0)
     : 0;
 
   items.set("transferPrice", {
     label: "양도가액",
-    value: isAggregate ? sumPropTransfer : totalTransferPrice,
+    value: isAggregate ? sumPropTransfer : ownerSplitTransfer ? ownerSplitTransfer.transferPrice : totalTransferPrice,
     formula: burdenedGift
       ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()} 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
-        : "사용자 입력 (실제 매매계약서상 거래금액)",
+        : ownerSplitTransfer
+          ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중 · 소령 §166⑥·§168②)`
+          : "사용자 입력 (실제 매매계약서상 거래금액)",
     legalBasis: burdenedGift
       ? "소득세법 시행령 §159·§166"
       : "소득세법 시행령 §166",
@@ -281,7 +309,9 @@ export function buildStatementItems(
     result.usedEstimatedAcquisition === true && result.swapApplied !== true;
   /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 비어 있다). `estimatedBase`는 공제 **전** 값. */
   const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
-  const singleAcq = estimatedNoSwap
+  const singleAcq = splitSummary
+    ? splitSummary.acquisitionDeducted
+    : estimatedNoSwap
     ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
       //   「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨졌다(결과탭 코드리뷰 #069).
       (result.estimatedBase ?? 0) - depreciation
@@ -305,6 +335,8 @@ export function buildStatementItems(
         capEx,
       });
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
+  // 집계 소제목은 어댑터 상수 플래그가 아니라 자산별 echo(`splitDetail`·GB 카드 `acquisitionMode`·`filingDisplay`)에서 파생한다(G-4).
+  const aggModes = isAggregate ? aggregateAcqModes(properties, gbDetail) : undefined;
   const acqFormula = buildAcquisitionPriceFormula(
     result,
     isAggregate,
@@ -312,6 +344,7 @@ export function buildStatementItems(
     singleAcq,
     capEx,
     depreciation,
+    aggModes,
   );
 
   items.set("acquisitionPrice", {
@@ -340,14 +373,16 @@ export function buildStatementItems(
   // 🔴 그런데도 종전에는 거기서 `capEx`를 **또** 뺐다. 개산공제가 자본적지출보다 작으면 필요경비가
   //   0으로 눌려(실측 3,000,000 − 20,000,000 → 0) 「양도 − 취득 − 경비 = 차익」이 깨졌다.
   //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
-  const singleExp = estimatedNoSwap
+  const singleExp = splitSummary
+    ? splitSummary.necessaryExpense
+    : estimatedNoSwap
     ? (result.expenses ?? 0)
     : Math.max(0, (result.expenses ?? 0) - capEx);
   // 개산공제율은 **엔진 leaf**가 정한다(§163⑥ 1·2호 3% / 미등기 단서 0.3% / 4호 1%).
   // `assetKind`는 ④가 엔진 `propertyType`으로 그대로 보내는 값이라 같은 인자다
   // (`transfer-tax-api.ts:251`) — 사이드바 합계(`calc-wizard-store.ts`)와도 같은 호출이다.
   const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
-  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate);
+  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate, aggModes);
 
   items.set("expenses", {
     label: "필요경비",

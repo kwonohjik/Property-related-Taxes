@@ -8,6 +8,7 @@ import type {
   MixedUseNonBusinessLandPart,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
+import { splitPartAcquisitionDeducted } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { ColumnKey } from "./FilingFormTableHelpers";
 
 export function fourPartFinancials(
@@ -92,8 +93,10 @@ export function splitTwoColFinancials(
 ) {
   setNum("transferPrice", "land", land.transferPrice);
   setNum("transferPrice", "building", building.transferPrice);
-  setNum("acquisitionPrice", "land", land.acquisitionPrice);
-  setNum("acquisitionPrice", "building", building.acquisitionPrice);
+  // §97②2호 단서 swap 파트는 취득가액을 차감하지 않는다(0) — 합계 열(`summarizeSplitGain`)과 같은 정의라야
+  // 「양도가 − 취득가 − 경비 = 양도차익」 항등식이 열별로도 성립한다(H-7).
+  setNum("acquisitionPrice", "land", splitPartAcquisitionDeducted(land));
+  setNum("acquisitionPrice", "building", splitPartAcquisitionDeducted(building));
   setNum("expenses", "land", land.directExpenses + land.appraisalDeduction);
   setNum("expenses", "building", building.directExpenses + building.appraisalDeduction);
   setNum("transferGain", "land", land.gain);

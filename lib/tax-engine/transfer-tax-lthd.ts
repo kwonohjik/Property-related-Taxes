@@ -33,6 +33,7 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement, resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
@@ -388,8 +389,10 @@ export function calcLongTermHoldingDeduction(
 
     const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
     const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
-    const landDed = ownsLand ? applyRate(Math.max(landTaxableGain, 0), landRate) : 0;
-    const buildingDed = ownsBuilding ? applyRate(Math.max(buildingTaxableGain, 0), buildingRate) : 0;
+    // F-1 (2026-10-07): D10-06이 이 분기를 빠뜨렸다 — `landRate`는 표2에서 보유분+거주분을 double로 더한
+    //   값이라(0.6799999999999999) applyRate면 파트 공제액이 1원 과소가 된다(실측 652,799,999 ↔ 652,800,000).
+    const landDed = ownsLand ? applyLthdRate(Math.max(landTaxableGain, 0), landRate) : 0;
+    const buildingDed = ownsBuilding ? applyLthdRate(Math.max(buildingTaxableGain, 0), buildingRate) : 0;
 
     // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
     // 과세 양도차익도 함께 역기입 — 소비자(파트별 세율 §104⑤)가 `gain`(안분 전)과
@@ -400,6 +403,21 @@ export function calcLongTermHoldingDeduction(
     splitDetail.land.longTermDeduction = landDed;
     splitDetail.building.longTermRate = buildingRate;
     splitDetail.building.longTermDeduction = buildingDed;
+    // 보유분·거주분 분해 echo(E-1, 표시 전용) — 소유 파트에만. 거주 0으로 부른 공제율이 보유분이다.
+    const holdOnlyRate = (years: number): number =>
+      calcLongTermRate(years, 0, useTable2, false, input.transferDate);
+    if (ownsLand) {
+      Object.assign(
+        splitDetail.land,
+        deriveSplitLthdEcho({ totalRate: landRate, holdingOnlyRate: holdOnlyRate(splitDetail.land.holdingYears), deduction: landDed }),
+      );
+    }
+    if (ownsBuilding) {
+      Object.assign(
+        splitDetail.building,
+        deriveSplitLthdEcho({ totalRate: buildingRate, holdingOnlyRate: holdOnlyRate(splitDetail.building.holdingYears), deduction: buildingDed }),
+      );
+    }
 
     // 배율 초과 부수토지(비사업용 토지) 파트 — 「소득세법」 제95조 제2항 **표1**(일반)을 쓴다.
     // 1세대1주택 표2는 비과세 대상 주택·부수토지 전용이고, 배율 초과분은 §104의3①5호로
@@ -464,10 +482,12 @@ export function calcLongTermHoldingDeduction(
     const decedentGain = applyRateFraction(positiveGain, Math.round(fbl.appliedRate * 1_000_000), 1_000_000);
     const heirGain = positiveGain - decedentGain; // 잔액 흡수 — Σ = positiveGain
 
+    // F-1: `residencePart = rate − heirHoldRate`는 double 뺄셈이라 0.07999999999999999 같은 값이 나온다
+    //   (표2 보유 4년 + 거주 2년 등 — 실측). 세 항 모두 정수 분수연산으로 적용한다.
     const deduction =
-      applyRate(decedentGain, decedentHoldRate) +
-      applyRate(heirGain, heirHoldRate) +
-      applyRate(positiveGain, residencePart);
+      applyLthdRate(decedentGain, decedentHoldRate) +
+      applyLthdRate(heirGain, heirHoldRate) +
+      applyLthdRate(positiveGain, residencePart);
     const blendedRate =
       fbl.appliedRate * decedentHoldRate + (1 - fbl.appliedRate) * heirHoldRate + residencePart;
 
@@ -501,7 +521,11 @@ export function calcLongTermHoldingDeduction(
     const positiveGain = Math.max(taxableGain, 0);
     const rentalGain = applyRate(positiveGain, rental97Eval.rentalGainRatio);
     const nonRentalGain = positiveGain - rentalGain;
-    const deduction = applyRate(rentalGain, rental97Eval.overrideRate) + applyRate(nonRentalGain, rate);
+    // F-1: 공제율(임대분 0.7·0.5, 비임대분 `rate`)은 정수 % 상수라 정수 분수연산을 쓴다 — `applyRate(g, 0.7)`은
+    //   g=700에서 489(정확 490)다. `rentalGainRatio`는 기준시가 비율(임의 소수)이라 위 `applyRate`를 유지한다
+    //   (`applyLthdRate`는 소수 4자리로 반올림하므로 비율 안분에 쓰면 세액이 바뀐다).
+    const deduction =
+      applyLthdRate(rentalGain, rental97Eval.overrideRate) + applyLthdRate(nonRentalGain, rate);
     const blendedRate =
       rental97Eval.overrideRate * rental97Eval.rentalGainRatio + rate * (1 - rental97Eval.rentalGainRatio);
     return {

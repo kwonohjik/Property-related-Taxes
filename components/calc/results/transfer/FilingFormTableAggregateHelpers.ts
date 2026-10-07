@@ -56,6 +56,11 @@ function aggregateEstimatedDisplay(
 ): { base: number; deduction: number } | null {
   const fd = p.filingDisplay;
   if (!fd || fd.swapApplied) return null;
+  // 🔴 토지·건물 분리 자산(`splitDetail`)은 파트별 echo가 정본이다 — 취득가액·필요경비는 엔진이 소유 파트로 낸
+  //    `p.acquisitionPrice`·`p.necessaryExpense`(`summarizeSplitGain`)를 그대로 읽는다. `filingDisplay.estimatedBase`는 자산 단위
+  //    **레거시 환산 플래그**에서 파생된 값(양 파트 취득가 합 · 비소유 파트 포함)이라, 별개 취득 ON 전에 고른 자산 단위 환산이
+  //    stale로 남으면 파트 echo를 덮어 항등식을 깬다.
+  if (p.splitDetail) return null;
   // §97③ 감가상각비 — echo(`estimatedBase`·상가 환산 총액)는 공제 **전** 값이라 취득가액 칸에는 공제 후 값을 싣는다.
   const dep = p.depreciationAmount ?? 0;
   if (fd.estimatedBase !== undefined) {

@@ -18,6 +18,7 @@ import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/trans
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
+import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -255,6 +256,13 @@ function buildGbAcquisitionFormulaCore(
     return `${head} ${fmt(a.acquisitionPrice)}${capexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
 
+  /**
+   * 토지·건물 별개 취득(split) 분리 자산 — 파트별 산정방식·취득가액을 엔진 `splitDetail` echo로 그린다(H-5 표시 보강).
+   * 종전에는 이 자산이 `!gb` fallback으로 떨어져 「자산별 취득가액 = 0」이라 적혔다. 값은 엔진 echo(E-U1)가 정본이다.
+   */
+  const splitText = splitAcqFormulaText(p.splitDetail);
+  if (splitText) return splitText;
+
   // 취득가액 칸으로 옮겨 얹는 자본적지출 — 실가 모드는 0(필요경비 칸에 머문다), swap·이월과세 A만 양수.
   const capExShift = capExInAcquisitionColumnOfProperty(p);
 
@@ -278,11 +286,21 @@ function buildGbAcquisitionFormulaCore(
   // 실가 파트(혼합 환산의 기존 거짓 등식)는 Phase C 범위다(Q-F).
   const gbModeCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as { acquisitionMode?: string } | undefined;
+  ) as { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" } | undefined;
   if (gbModeCard?.acquisitionMode === "appraisal" || gbModeCard?.acquisitionMode === "salesCase") {
     return gbModeCard.acquisitionMode === "appraisal"
       ? `자산별 취득가액 = ${fmt(displayValue)} (감정가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③2호)`
       : `자산별 취득가액 = ${fmt(displayValue)} (매매사례가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③1호)`;
+  }
+
+  // ── 실거래가 파트 직접 입력 (Q-F) ──
+  // 별개 취득이라 파트별 실거래가를 **각각 입력**한 카드다 — 값은 입력 그대로이고 어떤 안분·환산식도 이 값을 만들지 못한다.
+  // 종전에는 아래 분기들이 「양도가액 × 취득시 ÷ 양도시 기준시가 = 실가」·「0 × … = 실가」·「잔액 보정」을 붙여 좌변이 우변을
+  // 못 만드는 거짓 등식이 됐다(실측 505,748,404 ≠ 300,000,000). `acquisitionMode:"actual"`만으로는 일괄 실가 안분(사례 35)과 구별되지
+  // 않으므로 엔진 echo `actualSource`가 정본이다 — 숨은 자산 단위 총액(stale)·`bundledActualAcquisitionPrice`로 가르지 않는다.
+  // echo가 없는 구 이력은 종전 산식을 유지한다. 증축분(건물2)은 별도 직접 입력 문구가 아래에 있어 제외한다.
+  if (gbModeCard?.acquisitionMode === "actual" && gbModeCard.actualSource === "part_input" && !isBuilding2Prop(p.propertyId)) {
+    return `자산별 취득가액 = ${fmt(displayValue)} (실거래가 — 소득세법 §97①1호 가목)`;
   }
 
   // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
@@ -295,11 +313,15 @@ function buildGbAcquisitionFormulaCore(
     !asset?.useEstimatedAcquisition
   ) {
     const bundledAcq = gb.bundledActualAcquisitionPrice;
-    const landStd = gb.landStdTotal;
-    const buildingStd = gb.buildingStdTotal;
+    // 엔진은 일괄 실가를 **취득시** 기준시가 비율로 안분한다(`general-building-route-actual.ts` P-2 — 소득세법 §100② 본문
+    // 「취득 당시」). echo `actualSource:"bundled_apportion"`이 있으면 분모를 취득시 값으로 맞춘다 — 종전 양도시 분모는
+    // 적힌 식이 적힌 값을 못 만들었다(684,656,902 ≠ 691,818,892). echo가 없는 구 이력은 종전 식을 유지한다.
+    const apportionAtAcq = gbModeCard?.actualSource === "bundled_apportion";
+    const landStd = apportionAtAcq ? gb.acqLandStdTotal : gb.landStdTotal;
+    const buildingStd = apportionAtAcq ? gb.acqBuilding1StdTotal : gb.buildingStdTotal;
     if (landStd && buildingStd) {
       if (isLandProp(p.propertyId)) {
-        // 토지 취득가 = 일괄 실가 × 양도시 토지기준시가 / (토지+건물 기준시가)
+        // 토지 취득가 = 일괄 실가 × 토지기준시가 / (토지+건물 기준시가) — 기준시가 시점은 위 `apportionAtAcq`
         return buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
       }
       if (isBuildingProp(p.propertyId)) {
@@ -413,6 +435,10 @@ export function buildGbExpenseFormula(
     }
   }
 
+  // 토지·건물 별개 취득(split) 분리 자산 — 파트별 자본적지출·양도비 + 개산공제(echo). 개산공제 파트가 없으면 종전 문구.
+  const splitExpText = splitExpenseText(p.splitDetail);
+  if (splitExpText) return splitExpText;
+
   const capExShift = capExInAcquisitionColumnOfProperty(p);
   const displayExp = Math.max(0, p.necessaryExpense - capExShift);
 
@@ -484,8 +510,8 @@ export function buildGbExpenseFormula(
       : partCard?.usedEstimatedAcquisition === false;
   const actualPartFormula = () =>
     displayExp > 0
-      ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
-      : `필요경비 없음 — 실지거래가액 파트라 §163⑥ 개산공제를 적용하지 않습니다.`;
+      ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
+      : `필요경비 없음 — 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`;
 
   if (isLandProp(p.propertyId)) {
     if (isActualPart) return actualPartFormula();

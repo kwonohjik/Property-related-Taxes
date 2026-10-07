@@ -16,6 +16,7 @@
  * (자산 자체는 비사업용 토지이고 장특공제는 표1이 유지된다.)
  */
 
+import { aggregateAcqModes, allEstimated } from "@/components/calc/results/transfer/split-acq-text";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
@@ -85,7 +86,9 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
      *   있었으므로 두 표가 어긋났다. 이제 같은 leaf를 부른다.
      */
     taxableGain: assetTaxableGain(b),
-    usedEstimatedAcquisition: false,
+    // 자산 echo(`splitDetail`·`filingDisplay`)에서 파생 — 종전 상수 `false`는 환산 자산도 실가로 읽혔다(G-4).
+    // `estimatedBase`는 싣지 않으므로 신고서 환산 분기(`estimatedDisplay`)는 종전과 같이 비활성이다.
+    usedEstimatedAcquisition: allEstimated(aggregateAcqModes([b], undefined)),
     longTermHoldingDeduction: b.longTermHoldingDeduction,
     longTermHoldingRate: 0,
     lthdStartDate: new Date(0), // multi 결과 변환 mock: 표시용, 실값 미사용
@@ -127,6 +130,18 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,
   };
+}
+
+/**
+ * 건별 신고서(단일 열)가 쓸 **양도가액 override**.
+ *
+ * 소유자 분리(토지만·건물만) 자산은 신고 단위 양도가액이 **소유 파트의 합**(`breakdown.transferPrice`)이다. 어댑터
+ * (`breakdownToFilingResult`)가 `splitDetail`을 싣지 않아 표가 폼의 일괄 총액으로 취득가액을 역산하면
+ * (양도가 − 양도차익 − 필요경비) 비소유 파트분이 취득가액에 섞인다(land_only 실측: 취득 425,000,000 · 정답 200,000,000).
+ * 그 외 자산은 `undefined` — 종전처럼 폼 값과 지분 안분(`ownRatio`)을 그대로 쓴다.
+ */
+export function filingTransferPriceOverride(b: PerPropertyBreakdown): number | undefined {
+  return b.splitDetail && b.splitDetail.selfOwns !== "both" ? b.transferPrice : undefined;
 }
 
 /**
@@ -459,6 +474,7 @@ export function PropertyBreakdownAccordion({
             longTermDeduction={breakdown.longTermHoldingDeduction}
             taxableIncome={breakdown.incomeAfterOffset}
             assetKind={property?.form?.assets?.[0]?.assetKind}
+            isExempt={breakdown.isExempt}
             {...(property?.form?.assets?.[0]?.saleSplitExemptionNote
               ? { exemptionNote: property.form.assets[0].saleSplitExemptionNote }
               : {})}
@@ -475,6 +491,7 @@ export function PropertyBreakdownAccordion({
                 <FilingFormTable
                   result={filingResult}
                   formData={property?.form}
+                  transferPriceOverride={filingTransferPriceOverride(breakdown)}
                   redevSubject={
                     hasRedev
                       ? ((assetForm?.redevSubject || (assetForm?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")

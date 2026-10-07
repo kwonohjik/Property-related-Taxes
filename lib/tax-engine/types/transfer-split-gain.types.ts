@@ -66,6 +66,13 @@ export interface SplitPartResult {
    * 단독소유면 기준시가와 같다.
    */
   lumpDeductionBase?: number;
+  /**
+   * 개산공제에 **실제 적용한 율**(0.03 · 미등기 0.003) — 개산공제 base를 가진 파트(`stdPriceAtAcq`가 있는
+   * 환산·감정·매매사례 파트)에만 채운다. 결과 카드 「× 3%」 리터럴 대신 이 값을 읽는다(미등기 split은 0.3%
+   * 인데 3%로 표기되면 「50,000,000 × 3%」가 표시된 150,000을 못 만든다 — E-U3, 표시 전용).
+   * 구 `resultData`에는 없다 — 소비처는 `undefined`면 종전 표기를 유지한다.
+   */
+  lumpDeductionRate?: number;
   gain: number;
   /**
    * 이 파트의 **과세 대상** 양도차익 — 12억 안분(영 §160①)·1세대1주택 비과세 제외를 반영한 값.
@@ -78,6 +85,17 @@ export interface SplitPartResult {
   holdingYears: number;
   longTermRate: number;
   longTermDeduction: number;
+  /**
+   * 장기보유특별공제의 **보유기간분·거주기간분 분해 echo**(표시 전용·세액 불변 — E-1). 소유 파트에만 채운다
+   * (`selfOwns`로 제외된 파트·구 `resultData`는 `undefined`). 공제율은 `longTermRate`와 같은 **분수**(0.4 = 40%)
+   * 이고 정수 % 단위로 나눈 뒤 되돌린 값이다(`0.68 − 0.4` 같은 double 뺄셈 금지). 표1·단일축 시기(2009~2020
+   * 표2)는 거주분이 0이다. 금액은 `거주분 = floor(공제액 × 거주% ÷ (보유% + 거주%))`, `보유분 = 공제액 − 거주분`
+   * (잔액 흡수) — 겸용 echo(`buildHousingLthdEcho`)와 같은 규약이라 `보유분 + 거주분 = longTermDeduction`.
+   */
+  holdingDeductionRate?: number;
+  residenceDeductionRate?: number;
+  holdingDeductionAmount?: number;
+  residenceDeductionAmount?: number;
   /** §97② 단서 swap 발동 여부 (자산 단위) */
   swapApplied?: boolean;
   /** 파트별 취득 방식 echo (결과뷰 라벨 전용, 계산 로직 무영향) */
