@@ -62,6 +62,7 @@ export function judgmentMergeInputVisible(form: OneHouseJudgmentFormData): boole
 export function judgmentMarriageRentalOriginVisible(form: OneHouseJudgmentFormData): boolean {
   const rh = form.assets?.[0]?.rentalHousingException;
   return (
+    judgmentSaleIsHousing(form) && // 입주권 양도에는 ⑳ 선언이 없다(G066)
     judgmentMergeInputVisible(form) &&
     !!form.marriageDate &&
     rh?.applyException === true &&
