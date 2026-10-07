@@ -15,12 +15,16 @@
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 해석 미확보, 입력된 재상속일로 판정 |
+ * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  */
 import { DEADLINE_HOLIDAY_EXTENSION_161, PERIOD_CALCULATION_4, TRANSFER } from "../legal-codes";
 import { INHERITED_HOUSE } from "../legal-codes";
+
+/** 대통령령 제22034호 시행일 — §155② 동일세대 단서(동거봉양 예외 포함)는 이 날 이후 양도분부터(부칙 제3조). */
+const SAME_HOUSEHOLD_PROVISO_TRANSFER_START = new Date("2010-02-18");
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import {
   meetsOneHouseResidenceRequirement,
@@ -56,6 +60,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "155-1-regulated-at-new-acquisition-unverified",
   "155-1-regulated-announcement-date-unverified",
   "155-2-reinheritance-reference-date-unverified",
+  "155-2-pre2010-parental-care-exception-unverified",
   "civil-161-holiday-table-uncovered",
 ]);
 
@@ -209,6 +214,30 @@ export function collectEraUndetermined(
         `별도세대에서 받은 상속주택을 동일세대원이 다시 상속받은 주택은 상속주택 지위를 이어받는 것으로 보았습니다(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서 — ` +
         "재산세과-2961 · 부동산납세과-624 · 서면-2022-법규재산-4747 등). 일반주택을 「상속개시 당시 보유한 주택」으로 한정하는 요건은 " +
         "입력한 상속개시일(재상속일)로 판정했습니다 — 최초 상속일을 기준으로 보는지는 확인되지 않았으니, 일반주택을 최초 상속 뒤에 취득했다면 확인이 필요합니다.",
+    });
+  }
+
+  /*
+   * 동일세대 상속 배제는 단서 신설(2010.2.18.) 전 양도분에도 적용한다(조세심판관합동회의 조심2009서2497 — 게이트 주석).
+   * 그 단서의 동거봉양 예외를 그 전 양도분에 인정한 해석은 확보하지 못했다 — 예외를 인정해 판정하고 밝힌다(사용자 결정 2026-10-07).
+   */
+  const parentalCarePre2010 =
+    input.transferDate.getTime() < SAME_HOUSEHOLD_PROVISO_TRANSFER_START.getTime() &&
+    (input.houses ?? []).some(
+      (h) =>
+        h.isInherited &&
+        h.decedentSameHouseholdAtInheritance === true &&
+        h.parentalCareMergeInheritedHouse === true &&
+        h.reInheritedFromSeparateHousehold !== true,
+    );
+  if (parentalCarePre2010) {
+    out.push({
+      id: "155-2-pre2010-parental-care-exception-unverified",
+      reason:
+        `동거봉양 합가 전부터 보유하던 주택은 동일세대원으로부터 상속받아도 상속주택으로 보는 예외(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서)는 ` +
+        "2010년 2월 18일 이후 양도분부터 적용되는 규정입니다(대통령령 제22034호 부칙 제3조). 그 전 양도분도 동일세대원으로부터 상속받은 주택은 " +
+        "상속주택 특례 대상이 아니라고 보지만(조세심판관합동회의 조심2009서2497), 동거봉양 예외를 그 전 양도분에 인정했는지는 확인되지 않았습니다 — " +
+        "예외를 인정해 판정했으니 확인이 필요합니다.",
     });
   }
 
