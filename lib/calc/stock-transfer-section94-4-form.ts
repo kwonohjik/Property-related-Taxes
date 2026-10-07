@@ -85,6 +85,25 @@ export function isSection94_4Form(form: Section94_4FormFields): boolean {
 }
 
 /**
+ * R-1 의 취득측 기준 — 분할 모드는 **가장 이른 매수 lot 일자**다.
+ * 의제취득일은 모든 의제 매수 lot 에 공통이고(① 분자 `acquisitionDatePriceAvg1Month` 1칸), 의제 lot 이
+ * 하나라도 있으면 가장 이른 lot 이 의제 lot 이다. 분할 모드의 폼-전역 취득일은 빈 값이라 그것으로 재면
+ * 4호가 뒤집혀도 늘 「같다」가 된다.
+ */
+function deemedBaseAcquisitionDate(
+  f: Pick<StockTransferFormData, "acquisitionDate"> &
+    Partial<Pick<StockTransferFormData, "lotsMode" | "acquisitionLots">>,
+): string {
+  if (f.lotsMode !== "split") return f.acquisitionDate;
+  return (
+    (f.acquisitionLots ?? [])
+      .map((l) => l.acquisitionDate)
+      .filter((d) => d && d.length > 0)
+      .sort()[0] ?? ""
+  );
+}
+
+/**
  * R-1 — 4호 판정이 바뀌어 **환산 분자의 기준일**(의제취득일)이 움직이면 취득측 1개월 종가 잔재를 비운다.
  *
  * 의제 대상(1985년 이전 취득)에서 라목·다목 토글·시장 종류를 바꾸면 기준일이 1986.1.1. ↔ 1985.1.1.로
@@ -93,13 +112,16 @@ export function isSection94_4Form(form: Section94_4FormFields): boolean {
  * onChange patch에 동승시킨다(useEffect 미러링 금지). 취득일 자체를 바꾸는 patch는 그쪽이 이미 처리한다.
  */
 export function withDeemedBaseReset(
-  form: Section94_4FormFields & Pick<StockTransferFormData, "acquisitionDate">,
+  form: Section94_4FormFields &
+    Pick<StockTransferFormData, "acquisitionDate"> &
+    Partial<Pick<StockTransferFormData, "acquisitionLots">>,
   patch: Partial<StockTransferFormData>,
 ): Partial<StockTransferFormData> {
-  if ("acquisitionDate" in patch) return patch;
+  // 취득일(분할 = 매수 lot 일자) 자체를 바꾸는 patch 는 4호 판정을 움직이지 않는다 — 단일은 그쪽이 이미 처리한다
+  if ("acquisitionDate" in patch || "acquisitionLots" in patch) return patch;
   const next = { ...form, ...patch };
-  const before = resolveStockDeemedDateString(form.acquisitionDate, isSection94_4Form(form)).effectiveDate;
-  const after = resolveStockDeemedDateString(next.acquisitionDate, isSection94_4Form(next)).effectiveDate;
+  const before = resolveStockDeemedDateString(deemedBaseAcquisitionDate(form), isSection94_4Form(form)).effectiveDate;
+  const after = resolveStockDeemedDateString(deemedBaseAcquisitionDate(next), isSection94_4Form(next)).effectiveDate;
   if (before === after) return patch;
   return {
     ...patch,

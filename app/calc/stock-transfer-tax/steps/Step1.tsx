@@ -328,7 +328,8 @@ export function Step1({ form, onChange }: Step1Props) {
             </div>
           ) : (
             <>
-              <SplitLotsBlock form={form} onChange={onChange} />
+              {/* lot 일자가 곧 양도일이다 — 단일 양도일 칸과 같은 래퍼(대주주 자동 판정 + 4호 R-1)를 탄다 */}
+              <SplitLotsBlock form={form} onChange={syncedChange} />
               <FieldCard label="발행주식 총수" required>
                 <DecimalInput
                   value={form.totalIssuedShares}
