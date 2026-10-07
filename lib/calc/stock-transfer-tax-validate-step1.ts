@@ -28,6 +28,7 @@ import {
   missingLotCauseKeys,
   lotCauseMessage,
 } from "./stock-transfer-required-inputs";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 function parseF(s: string): number {
   const n = parseFloat(s.replace(/,/g, ""));
@@ -554,7 +555,8 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
 
     // 요건 판정은 **엔진 leaf 단일 소스**에 위임한다 — 임계(양도일 종속 「초과/이상」)를
     // 여기서 다시 쓰면 판정이 두 벌이 된다.
-    const transferDate = form.transferDate ? new Date(form.transferDate) : undefined;
+    const transferDateStr = effectiveTransferDate(form);
+    const transferDate = transferDateStr ? new Date(transferDateStr) : undefined;
     const firstDate = form.aggregationFirstTransferDate
       ? new Date(form.aggregationFirstTransferDate)
       : undefined;

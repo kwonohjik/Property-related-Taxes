@@ -26,6 +26,7 @@ import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/f
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockAggregateMeta } from "@/components/calc/stock-transfer/StockFilingFormTableHelpers";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 interface Step4Props {
   result: StockTransferResult | null;
@@ -71,7 +72,7 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
     securityName: form.securityName,
     securityCode: form.securityCode,
     brokerage: form.brokerage,
-    transferDate: form.transferDate,
+    transferDate: effectiveTransferDate(form), // 분할 = 가장 이른 매도 lot 일자(엔진 양도일)
     accountNumberMasked: form.accountNumberMasked,
     kiwoomLastFetchedAt: form.kiwoomLastFetchedAt,
   };

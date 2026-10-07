@@ -14,6 +14,11 @@ import { describe, it, expect } from "vitest";
 import { resolveTemporaryTwoHouseDeadlineEra } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
 import { judgeTemporaryTwoHouseTiming } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { qualifiesRuralHouse } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import { collectEraUndetermined } from "@/lib/tax-engine/one-house/era-undetermined";
+import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
+import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
+import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
+import { makeMockRates } from "../_helpers/mock-rates";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const era = (transfer: string, extra: Partial<Parameters<typeof resolveTemporaryTwoHouseDeadlineEra>[0]> = {}) =>
@@ -31,10 +36,27 @@ describe("D14 처분기한 연혁 — 양도일 경계", () => {
     expect(era("2002-03-29")).toEqual({ years: 2, moveInRequirementPending: false });
     expect(era("2002-03-30", { newAcquisitionDate: d("2002-04-01") }).years).toBe(1);
   });
-  it("2002-03-30 전 신규 취득 · 그 후 양도 → 부칙 ③ 경과조치 미구현: 종전 2년 + 보류 신호", () => {
-    const r = era("2002-06-01", { newAcquisitionDate: d("2002-03-29") });
-    expect(r).toMatchObject({ years: 2, transition2002Unverified: true });
-    expect(era("2002-06-01", { newAcquisitionDate: d("2002-03-30") }).transition2002Unverified).toBeUndefined();
+  it("2002-03-30 전 신규 취득 · 그 후 양도 → 2년으로 계산 · 보류 신호는 부칙 ③ 1호 단서로 결론이 갈리는 양도일에만", () => {
+    const flag = (transfer: string, acq: string) => era(transfer, { newAcquisitionDate: d(acq) }).transition2002Unverified;
+    // 1호(취득~시행일 1년 이하): 2003-03-29 뒤 ~ 취득일부터 2년의 말일(2004-03-29) 안 → 단서에 달렸다
+    expect(era("2003-06-01", { newAcquisitionDate: d("2002-03-29") })).toMatchObject({ years: 2, transition2002Unverified: true });
+    expect(flag("2003-03-30", "2002-03-29")).toBe(true);
+    expect(flag("2004-03-29", "2002-03-29")).toBe(true);
+    // 1호지만 시행일부터 1년(가장 이른 독법) 안 → 어느 독법이든 충족 / 2년 기한 뒤 → 어느 독법이든 불충족
+    expect(flag("2002-06-01", "2002-03-29")).toBeUndefined();
+    expect(flag("2003-03-29", "2002-03-29")).toBeUndefined();
+    expect(flag("2004-03-30", "2002-03-29")).toBeUndefined();
+    // 1호 경계: 취득일부터 1년의 말일 = 시행일(2001-03-30 취득)은 1호 쪽 · 하루 앞(2001-03-29)은 2호 — 2년 말일이 2003-03-29라 1호 하한과 겹치지 않는다
+    expect(flag("2003-03-30", "2001-03-30")).toBe(true);
+    expect(flag("2003-03-29", "2001-03-29")).toBeUndefined();
+    // 2호(1년 초과): 취득일부터 2년 — 엔진 기한과 같다
+    expect(flag("2002-12-01", "2001-01-01")).toBeUndefined();
+    // 시행 당시 2년이 이미 끝났다 → 부칙 ③ 밖 → 개정 1년(보류 신호 없음) · 2년 말일이 시행일이면 아직 안 끝났다(부칙 ③)
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-01-01") })).toEqual({ years: 1, moveInRequirementPending: false });
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-03-29") }).years).toBe(1); // 2년 말일 2002-03-29
+    expect(era("2002-06-01", { newAcquisitionDate: d("2000-03-30") }).years).toBe(2); // 2년 말일 2002-03-30
+    // 시행일 이후 취득은 경과조치 대상이 아니다
+    expect(flag("2002-06-01", "2002-03-30")).toBeUndefined();
   });
   it("2008-11-27 → 1년 / 2008-11-28 → 2년 / 2012-06-28 → 2년 / 2012-06-29 → 본문(3년)", () => {
     const after = { newAcquisitionDate: d("2008-01-01") };
@@ -99,5 +121,27 @@ describe("D15 귀농주택 5년 단서 — 귀농주택 취득일 2016-02-17 이
   it("2016-02-16 취득 · 8년 후 양도 → 단서 없음(충족) / 2016-02-17 취득 → 5년 초과로 불충족", () => {
     expect(rural("2016-02-16")).toBe(true);
     expect(rural("2016-02-17")).toBe(false);
+  });
+});
+
+describe("D14 부칙 ③ 판정 보류 — 판정 메뉴 고지 배선", () => {
+  const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules as OneHouseSpecialRulesData;
+  const ids = (transfer: string, acq: string) =>
+    collectEraUndetermined(
+      {
+        propertyType: "housing",
+        isOneHousehold: true,
+        householdHousingCount: 2,
+        transferDate: d(transfer),
+        temporaryTwoHouse: { previousAcquisitionDate: d("1995-01-01"), newAcquisitionDate: d(acq) },
+      } as unknown as OneHouseJudgeInput,
+      rules,
+      true,
+    ).map((u) => u.id);
+  const ID = "155-1-2002-transition-unverified";
+  it("1호 단서 구간 양도만 고지 · 1호라도 시행일부터 1년 안이거나 2호면 고지 없음", () => {
+    expect(ids("2003-06-01", "2002-03-29")).toContain(ID);
+    expect(ids("2002-06-01", "2002-03-29")).not.toContain(ID);
+    expect(ids("2002-12-01", "2001-01-01")).not.toContain(ID);
   });
 });

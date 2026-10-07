@@ -41,6 +41,7 @@ import { calculateProgressiveTax } from "./tax-utils";
 import { computeDerivedAreas, round2 } from "./mixed-use-derived-areas";
 import { residualArea } from "./area-utils";
 import { multiplyByArea } from "./area-utils";
+import { acqHousingStdNumerator } from "./mixed-use-housing-std";
 
 // ──────────────────────────────────────────────────────────────
 // 1. 면적 파생값 계산
@@ -380,8 +381,8 @@ export function calcHousingEstimatedAcq(
     return { estimatedAcq: inherited.estimatedAcq, inheritedAcquisitionDetail: inherited.detail };
   }
 
-  // 기존 §97 직접 환산
-  let stdAtAcq = asset.acquisitionStandardPrice.housingPrice ?? 0;
+  // 기존 §97 직접 환산 — 토지·건물 취득일이 다르면 분자는 취득당시 주택가격 P(집행기준 99-164-9)
+  let stdAtAcq = acqHousingStdNumerator(asset, acqDerived ?? derived);
 
   // ─── 보유 중 일부 용도변경 (상가→주택) — 시행령 §166⑥ 미러 ───
   // 취득시점에 주택이 없었으므로 취득시 상가 기준시가(건물+토지)를 양도시 면적비율로 안분.

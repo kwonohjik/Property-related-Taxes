@@ -19,6 +19,7 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { resolveNetAssetOnlyBasis } from "./net-asset-only-basis";
 import type { ValuationSide } from "./net-asset-only-basis";
+import { effectiveTransferDate, type EffectiveTransferDateFields } from "@/lib/calc/stock-effective-transfer-date";
 
 export type UnlistedCol = "EUTransfer" | "EUAcq";
 
@@ -41,16 +42,19 @@ export function shouldSkipNetIncome(
   form: Pick<
     StockTransferFormData,
     "netAssetOnlyReason" | "acquisitionNetAssetOnlyReason" | "isHeavyRealEstateForRate" | "transferDate"
-  >,
+  > &
+    EffectiveTransferDateFields,
   side: ValuationSide,
 ): boolean {
+  // 분할 모드는 가장 이른 매도 lot 일자(④가 엔진에 싣는 값) — 순자산 단독 사유의 시행일 축
+  const td = effectiveTransferDate(form);
   return (
     resolveNetAssetOnlyBasis(
       {
         netAssetOnlyReason: form.netAssetOnlyReason || undefined,
         acquisitionNetAssetOnlyReason: form.acquisitionNetAssetOnlyReason || undefined,
         isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
-        transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
+        transferDate: td ? new Date(td) : undefined,
       },
       side,
     ) !== undefined

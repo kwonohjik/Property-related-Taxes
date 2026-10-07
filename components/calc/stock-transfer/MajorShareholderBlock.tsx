@@ -52,6 +52,7 @@ import {
   CombinedShareHintsCard,
   ListingConversionHint,
 } from "./MajorShareholderCheckpointHints";
+import { effectiveTransferDate, type EffectiveTransferDateFields } from "@/lib/calc/stock-effective-transfer-date";
 
 type MajorShareholderFormSlice = Pick<
   StockTransferFormData,
@@ -82,7 +83,8 @@ type MajorShareholderFormSlice = Pick<
   // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override
   | "judgmentDateOverride"
   | "judgmentBasis"
->;
+> &
+  EffectiveTransferDateFields; // 분할 모드 양도일 = 가장 이른 매도 lot 일자
 
 /**
  * 주식수로부터 지분율(%) 산출.
@@ -131,13 +133,15 @@ interface MajorShareholderBlockProps {
 
 export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockProps) {
   const [thresholdHistoryOpen, setThresholdHistoryOpen] = useState(false);
+  // 분할 모드는 가장 이른 매도 lot 일자 — ④가 엔진에 싣는 양도일과 같은 leaf
+  const effTransferDate = effectiveTransferDate(form);
   // 엔진 함수로 시기별 임계 산출
   // 상장(kospi/kosdaq/konex) + 비상장(unlisted) 모두 자동 판정 지원
   // 기타자산(other_asset)은 §94①4 별도 트랙 — null 반환
   // 🔑 임계표 **행 선택은 양도일**(부칙 「양도하는 분부터」), 측정값은 판정기준일 기준 입력.
   //    둘 다 있어야 미리보기를 띄운다 — 한쪽만으로 추정하지 않는다.
   const threshold = useMemo(() => {
-    if (!form.priorYearEndDate || !form.transferDate) return null;
+    if (!form.priorYearEndDate || !effTransferDate) return null;
     if (
       form.marketType !== "kospi" &&
       form.marketType !== "kosdaq" &&
@@ -148,7 +152,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     }
     return getMajorShareholderThreshold(
       form.marketType,
-      new Date(form.transferDate),
+      new Date(effTransferDate),
       // 엔진(`stock-classification.ts`)과 **같은 인자 집합**으로 부른다 — 여기만 안 넘기면
       // 임계는 10억으로 판정되는데 화면은 계속 40억을 보여준다(리뷰 #14 세팅 지점 2곳).
       { isVentureCompany: form.isVentureCompany, isKOTCTrading: form.isKOTCTrading },
@@ -156,7 +160,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     // `priorYearEndDate`는 위 가드가 읽으므로 deps에 남긴다(행 선택 인자는 양도일이다).
   }, [
     form.marketType,
-    form.transferDate,
+    effTransferDate,
     form.priorYearEndDate,
     form.isVentureCompany,
     form.isKOTCTrading,
@@ -178,7 +182,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     }
     // 대차·사모펀드 가산 — 엔진과 **같은 함수**(산식 복제 금지). 본인·합산 양쪽에 더한다.
     const { ratioAugment } = computeShareRatioAugmentation({
-      transferDate: new Date(form.transferDate),
+      transferDate: new Date(effTransferDate),
       lentSharesCount: parseDecimal(form.lentSharesCount),
       pefIndirectSharesCount: parseDecimal(form.pefIndirectSharesCount),
       totalIssuedShares: parseDecimal(form.totalIssuedShares),
@@ -211,7 +215,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     form.combinedShareRatio,
     form.combinedMarketCap,
     // 가산 축 — 빠뜨리면 대차주식을 입력해도 배지가 갱신되지 않는다
-    form.transferDate,
+    effTransferDate,
     form.lentSharesCount,
     form.pefIndirectSharesCount,
     form.totalIssuedShares,
@@ -299,9 +303,9 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
 
   // F-15·F-16 (2026-05-19) — 양도일 2013.2.15. 이후 자동 가산 게이트
   const f15f16Eligible = useMemo(() => {
-    if (!form.transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(form.transferDate)) return false;
-    return form.transferDate >= "2013-02-15";
-  }, [form.transferDate]);
+    if (!effTransferDate || !/^\d{4}-\d{2}-\d{2}$/.test(effTransferDate)) return false;
+    return effTransferDate >= "2013-02-15";
+  }, [effTransferDate]);
 
   const innerContent = (
     <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
@@ -323,7 +327,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
               {resolveThresholdFromDate(
                 form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
-                new Date(form.transferDate),
+                new Date(effTransferDate),
               )}~ 적용
             </p>
             {form.marketType === "unlisted" && threshold.isVentureRule && (
@@ -518,7 +522,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             </span>
             {!f15f16Eligible && (
               <span className="text-micro text-slate-500">
-                {form.transferDate ? `양도일 ${form.transferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
+                {effTransferDate ? `양도일 ${effTransferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
               </span>
             )}
           </div>

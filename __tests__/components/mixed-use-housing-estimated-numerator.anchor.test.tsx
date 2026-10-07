@@ -66,6 +66,41 @@ function disclosed() {
   );
 }
 
+/** 같은 취득일 — B0 비대상이라 분자는 입력 H 그대로. */
+function sameDay() {
+  const base = mixedUseCase14();
+  return calcMixedUseTransferTax(
+    3_000_000_000,
+    D("2026-06-01"),
+    {
+      ...base,
+      isOneHouseExempt: false,
+      buildingAcquisitionDate: base.landAcquisitionDate,
+      acquisitionStandardPrice: { ...base.acquisitionStandardPrice, housingPrice: DISCLOSED_HOUSING_PRICE },
+    },
+    makeMockRatesWithHouseEngine(),
+  );
+}
+
+/** 취득일 상이 + 건물일 공시지가가 토지일의 1.5배 — 분자 P ≠ H. */
+function separateConverted() {
+  const base = mixedUseCase14();
+  return calcMixedUseTransferTax(
+    3_000_000_000,
+    D("2026-06-01"),
+    {
+      ...base,
+      isOneHouseExempt: false,
+      acquisitionStandardPrice: {
+        ...base.acquisitionStandardPrice,
+        housingPrice: DISCLOSED_HOUSING_PRICE,
+        landPricePerSqmAtBuildingAcq: Math.floor(base.acquisitionStandardPrice.landPricePerSqm * 1.5),
+      },
+    },
+    makeMockRatesWithHouseEngine(),
+  );
+}
+
 // ── N-0 구별력 ──────────────────────────────────────────────────────
 describe("N-0 격자 — 두 케이스가 §97 직접 환산 분기를 탄다", () => {
   it("PHD 역산 분기가 아니다 (그 분기는 다른 산식을 그린다)", () => {
@@ -84,10 +119,30 @@ describe("N-0 격자 — 두 케이스가 §97 직접 환산 분기를 탄다", 
 
 // ── N-1 분자가 화면에 값으로 나온다 ─────────────────────────────────
 describe("N-1 「주택 환산취득가액」 분수의 분자", () => {
-  it("공시 — 분자에 실제 금액이 그려진다", () => {
+  it("공시 — 분자에 실제 금액이 그려진다 (토지·건물 취득일 상이 → 취득당시 주택가격 라벨)", () => {
+    // fixture는 토지 1992 · 건물 1997(B0)이라 분자는 「취득당시 주택가격」이다. L2 = L1이라 값은 H 그대로.
     const { container } = render(<MixedUseResultCard breakdown={disclosed()} />);
     const text = container.textContent ?? "";
+    expect(text).toContain(`취득당시 주택가격(토지·건물 취득일 상이 환산) ${DISCLOSED_HOUSING_PRICE.toLocaleString()}`);
+    expect(text).not.toContain("취득시 개별주택공시가격 ");
+  });
+
+  it("공시 + 같은 취득일 — 분자 라벨은 「취득시 개별주택공시가격」", () => {
+    const { container } = render(<MixedUseResultCard breakdown={sameDay()} />);
+    const text = container.textContent ?? "";
     expect(text).toContain(`취득시 개별주택공시가격 ${DISCLOSED_HOUSING_PRICE.toLocaleString()}`);
+    expect(text).not.toContain("취득당시 주택가격(토지·건물 취득일 상이 환산)");
+  });
+
+  it("취득일 상이 + 건물일 공시지가 ≠ 토지일 — 분자 = 취득당시 주택가격 P(분할 환산값)이고 H가 아니다", () => {
+    const b = separateConverted();
+    const h = b.housingPart;
+    const p = h.housingStdSplit?.acq?.convertedHousingTotal;
+    expect(p).toBeDefined();
+    expect(p).not.toBe(DISCLOSED_HOUSING_PRICE);
+    expect(h.acqHousingStandardPrice).toBe(p);
+    const { container } = render(<MixedUseResultCard breakdown={b} />);
+    expect(container.textContent ?? "").toContain(`취득당시 주택가격(토지·건물 취득일 상이 환산) ${p!.toLocaleString()}`);
   });
 
   it("미공시 — 0과 그 사유를 함께 적는다", () => {
@@ -100,8 +155,8 @@ describe("N-1 「주택 환산취득가액」 분수의 분자", () => {
     for (const b of [disclosed(), undisclosed()]) {
       const { container } = render(<MixedUseResultCard breakdown={b} />);
       const text = container.textContent ?? "";
-      // 「취득시 개별주택공시가격」 뒤에는 반드시 숫자가 온다.
-      expect(text).toMatch(/취득시 개별주택공시가격\s[\d,]/);
+      // 분자 라벨 뒤에는 반드시 숫자가 온다.
+      expect(text).toMatch(/(취득시 개별주택공시가격|취득당시 주택가격\(토지·건물 취득일 상이 환산\))\s[\d,]/);
       cleanup();
     }
   });
@@ -110,11 +165,12 @@ describe("N-1 「주택 환산취득가액」 분수의 분자", () => {
 // ── N-2 산식이 값을 만든다 ──────────────────────────────────────────
 describe("N-2 분수가 표시된 환산취득가액을 재현한다", () => {
   it("주택 양도가액 × (분자 ÷ 분모) = 주택 환산취득가액", () => {
-    const b = disclosed();
-    const h = b.housingPart;
-    const a = b.apportionment;
-    expect(
-      Math.floor((a.housingTransferPrice * (h.acqHousingStandardPrice ?? 0)) / a.housingStandardPrice),
-    ).toBe(h.estimatedAcquisitionPrice);
+    for (const b of [disclosed(), sameDay(), separateConverted()]) {
+      const h = b.housingPart;
+      const a = b.apportionment;
+      expect(
+        Math.floor((a.housingTransferPrice * (h.acqHousingStandardPrice ?? 0)) / a.housingStandardPrice),
+      ).toBe(h.estimatedAcquisitionPrice);
+    }
   });
 });
