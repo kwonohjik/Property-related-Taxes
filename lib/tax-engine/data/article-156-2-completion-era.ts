@@ -29,9 +29,35 @@ export const COMPLETION_DEADLINE_3Y_TRANSFER_START = new Date("2023-01-12");
 /** 대통령령 제32420호 시행일 — 이 날 이후 취득한 권리부터 ④에 1년 요건 (부칙 제12조). */
 export const CLAUSE4_ONE_YEAR_RULE_RIGHT_START = new Date("2022-02-15");
 
+/**
+ * M7 — §156의2 신설(대통령령 제19254호, 2006-01-01) 이후 ③④의 「조합원입주권을 취득한 날부터 N년」과
+ * 완성 후 기한의 **이전 연혁**(법제처 시행본 실독 2026-10-07 — MST 72432·83140·89889·124667·126479).
+ * 개정 부칙은 모두 「이 영 시행 후 최초로 양도하는 분부터」(양도일 기준)다.
+ *
+ * | 양도일 | ③ 「N년 이내」 · ④ 「N년이 지나」 | ③ 「종전주택 취득 후 1년 이상 지난 후 권리 취득」 | 완성 후 기한 |
+ * |---|---|---|---|
+ * | 2006-01-01 ~ 2008-11-27 | 1년 | 없음 | 1년 |
+ * | 2008-11-28 ~ 2012-06-28 | 2년(제21138호 부칙 제2조) | 없음 | 2년 |
+ * | 2012-06-29 ~ | 3년(제23887호 부칙 제2조) | 있음 | 2년(2023-01-12부터 3년) |
+ */
+export const CLAUSE3_2Y_TRANSFER_START = new Date("2008-11-28");
+export const CLAUSE3_3Y_TRANSFER_START = new Date("2012-06-29");
+
+/** §156의2③ 「취득한 날부터 N년 이내」 · ④ 「N년이 지나」의 N — §156의3②③(분양권, 2021 신설)도 같은 값(3년)이다. */
+export function resolve1562Clause3Years(transferDate: Date): 1 | 2 | 3 {
+  const t = transferDate.getTime();
+  return t < CLAUSE3_2Y_TRANSFER_START.getTime() ? 1 : t < CLAUSE3_3Y_TRANSFER_START.getTime() ? 2 : 3;
+}
+
+/** §156의2③에 「종전주택 취득 후 1년 이상이 지난 후 권리 취득」 요건이 붙는가 — 양도일 기준(제23887호). */
+export function clause3RequiresOneYearGap(transferDate: Date): boolean {
+  return transferDate.getTime() >= CLAUSE3_3Y_TRANSFER_START.getTime();
+}
+
 /** 「(신축)주택이 완성된 후 N년 이내」의 N — §156의2④1·2호 · ⑤2·3호 · §156의3③1·2호. */
-export function resolve1562DeadlineYears(transferDate: Date): 2 | 3 {
-  return transferDate.getTime() >= COMPLETION_DEADLINE_3Y_TRANSFER_START.getTime() ? 3 : 2;
+export function resolve1562DeadlineYears(transferDate: Date): 1 | 2 | 3 {
+  const t = transferDate.getTime();
+  return t >= COMPLETION_DEADLINE_3Y_TRANSFER_START.getTime() ? 3 : t >= CLAUSE3_2Y_TRANSFER_START.getTime() ? 2 : 1;
 }
 
 /** §156의2④ · §156의3③에 「종전주택 취득 후 1년이 지난 후 권리 취득」 요건이 붙는가 — 권리 취득일 기준. */
