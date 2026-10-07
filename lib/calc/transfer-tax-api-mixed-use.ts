@@ -16,6 +16,13 @@ import {
   needsMixedAcqLandPriceAtBuildingAcq,
 } from "./mixed-use-acq-date-split";
 import {
+  buildMixedSeparateAcquisition,
+  isMixedUsePerPartAcq,
+  mixedAnyPartActual,
+  mixedPartAcqNeedsOfForm,
+  mixedUsePhdEffective,
+} from "./mixed-use-part-acq-split";
+import {
   mixedAcqHousingBuildingStd,
   mixedTransferHousingBuildingStd,
   needsMixedHousingBuildingStdAtAcq,
@@ -113,6 +120,24 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
   const share = (v: number | undefined): number | undefined =>
     v === undefined ? undefined : applyRatio(v, ratio);
 
+  /**
+   * 🔴 B1 — 별개 취득 **파트 모델**(토지·건물 파트가 각각 산정방식·금액을 가진다). 판정은 ⑤·⑧·⑥과 **같은 술어**다.
+   *
+   * 파트 모델이면:
+   *  · `separateAcquisition` 서브객체를 싣는다(키 존재 = 파트 모델 trigger). 아니면 키 자체가 없다(구 이력 무영향).
+   *  · 총액 플래그 3종(`useActualAcquisition`·`useAppraisalSalesAcquisition`·`acquisitionActualTotalPrice`)은
+   *    싣지 않는다 — 동시 지정이면 엔진·⑫가 막는다(X-4, U-4). 계약액 0·미입력 = 계약액 없음.
+   *  · 실비 카드(`mixedHousingActualExpense`·`mixedCommercialActualExpense`)는 **실거래가 파트가 있을 때** 엔진의
+   *    `housingInheritedExpense`·`commercialInheritedExpense`로 싣는다(U-2 — 현행은 레거시 `isMixedActualAcquisition`일 때만이라 침묵 소실).
+   *  · PHD는 **실효값**(환산 파트가 있을 때만 — X-7) · 취득시 H는 `mixedPartAcqNeeds`가 참일 때만(B0·나목은 아래 어댑터가 같은 술어).
+   */
+  const isPerPart = isMixedUsePerPartAcq(primary);
+  const partNeeds = isPerPart ? mixedPartAcqNeedsOfForm(primary) : undefined;
+  const separateAcquisition = isPerPart ? buildMixedSeparateAcquisition(primary, share) : undefined;
+  const phdOn = isPerPart ? mixedUsePhdEffective(primary) : primary.usePreHousingDisclosure;
+  /** U-2 — 파트 모델은 실거래가 파트가 있을 때만 실비 카드를 싣는다(카드 노출 술어와 같다). */
+  const perPartActualExpense = (v: string | undefined): number => (mixedAnyPartActual(primary) ? parseAmount(v ?? "") : 0);
+
   // 거주 개월 단일 소스 — 실거주(공제율)와 §154⑧3호 통산(표2 대상 판정) 둘 다 여기서 도출.
   const resMonths = deriveResidencePeriodMonths(
     primary,
@@ -168,7 +193,11 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         : {}),
     },
     acquisitionStandardPrice: {
-      housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
+      // 파트 모델은 `mixedPartAcqNeeds.housingPriceAtAcq`가 참일 때만 싣는다(양쪽 실가 + 경비 없음이면 쓰이지 않는다 — 노출 ⇔ 전송).
+      housingPrice:
+        isPerPart && !partNeeds?.housingPriceAtAcq
+          ? undefined
+          : parseAmount(primary.mixedAcqHousingPrice) || undefined,
       commercialBuildingPrice: mixedAcqCommercialBuildingStd(primary),
       landPricePerSqm: mixedAcqLandPricePerSqm(primary, form.transferDate),
       // B0 — 건물 취득일 기준 공시지가. 필수 술어가 참일 때만 키를 싣는다(거짓이면 키 자체 없음 — Q20 규약).
@@ -182,7 +211,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         ? { housingBuildingPrice: mixedAcqHousingBuildingStd(primary) }
         : {}),
     },
-    usePreHousingDisclosure: primary.usePreHousingDisclosure,
+    usePreHousingDisclosure: phdOn,
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
     // 누락 시 schema의 z.number().int().positive() 검증에서 0으로 실패하기 때문.
     preHousingDisclosure: (() => {
@@ -194,7 +223,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       const landSqmAtTransfer =
         parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
         parseAmount(primary.mixedTransferLandPricePerSqm);
-      return primary.usePreHousingDisclosure &&
+      return phdOn &&
         primary.phdFirstDisclosureDate &&
         parseAmount(primary.phdFirstDisclosureHousingPrice) > 0 &&
         landSqmAtAcq > 0 &&
@@ -329,14 +358,18 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     // 실비(자본적지출·양도비) — 상속/증여/매매실가 공용 엔진 슬롯(usesDeemedAcq 경로 건물분 차감).
     // ⚠️ 취득원인 종속 선택(stale 방지): 매매→Actual·증여→Gift·그 외(상속)→Inherited.
     housingInheritedExpense: share(
-      (isMixedActualAcquisition
+      (isPerPart
+        ? perPartActualExpense(primary.mixedHousingActualExpense)
+        : isMixedActualAcquisition
         ? parseAmount(primary.mixedHousingActualExpense)
         : primary.acquisitionCause === "gift"
           ? parseAmount(primary.mixedHousingGiftExpense)
           : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
     ),
     commercialInheritedExpense: share(
-      (isMixedActualAcquisition
+      (isPerPart
+        ? perPartActualExpense(primary.mixedCommercialActualExpense)
+        : isMixedActualAcquisition
         ? parseAmount(primary.mixedCommercialActualExpense)
         : primary.acquisitionCause === "gift"
           ? parseAmount(primary.mixedCommercialGiftExpense)
@@ -356,11 +389,16 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     transferExpense: share(parseAmount(primary.transferExpense) || undefined),
     // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
     // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
-    useActualAcquisition: isMixedActualAcquisition,
+    // 파트 모델은 총액 플래그를 모두 끈다(U-4 — 동시 지정이면 X-4). 레거시 3플래그의 stale 값이 파트 모델로 새지 않는다.
+    useActualAcquisition: isPerPart ? false : isMixedActualAcquisition,
     // 감정가액·매매사례가액 추계 안분 (R-B) — 개산공제 유지(실거래가와 배타).
-    useAppraisalSalesAcquisition: isMixedAppraisalSales,
+    useAppraisalSalesAcquisition: isPerPart ? false : isMixedAppraisalSales,
+    // B1 — 파트 모델 서브객체. 키 존재 = 파트 모델(⑫·엔진 trigger), 총액 모델은 키 자체가 없다.
+    ...(separateAcquisition ? { separateAcquisition } : {}),
     acquisitionActualTotalPrice: share(
-      isMixedActualAcquisition
+      isPerPart
+        ? undefined
+        : isMixedActualAcquisition
         ? parseAmount(primary.fixedAcquisitionPrice) || undefined
         : isMixedAppraisalSales
           ? mixedAppraisalSalesTotal || undefined

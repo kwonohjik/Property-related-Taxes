@@ -10,6 +10,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "@/lib/calc/mixed-use-part-acq-split";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
@@ -102,7 +103,10 @@ export function MixedUseExpandedPanel({
       )}
 
       {/* 4-way 결합 모드 가이드 — 환산 + PHD 활성 시 노출 */}
-      {useEstimatedAcquisition && asset.usePreHousingDisclosure && (
+      {/* B1 — 파트 모델은 상단 3플래그 대신 파트 모드로 파생한 PHD 실효값(환산 파트 있음 ∧ PHD)을 본다. */}
+      {(isMixedUsePerPartAcq(asset)
+        ? mixedUsePhdEffective(asset)
+        : useEstimatedAcquisition && asset.usePreHousingDisclosure) && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 space-y-1">
           <p className="font-semibold">겸용주택 + 환산취득가 + 토지/건물 분리 + §164⑤ 미공시 4-way 적용</p>
           <ol className="ml-4 list-decimal space-y-0.5 leading-relaxed">

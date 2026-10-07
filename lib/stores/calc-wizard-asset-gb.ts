@@ -402,6 +402,19 @@ export interface GeneralBuildingFormSlice {
   /** 매매(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. */
   mixedCommercialActualExpense: string;
 
+  // ── 겸용 별개 취득 — 토지·건물 파트별 산정방식·취득가액 (B1) ──
+  /**
+   * 파트 모델 opt-in — 토지·건물 취득일이 달라(별개 취득) 각 파트가 산정방식(실가·환산·감정·매매사례)과 금액을 따로 갖는다.
+   * ⚠️ **신규 자산 initial `true` / 부재 기록 normalize `false`는 의도된 비대칭**이다 — 구 이력(필드 없음)은 총액 모델로 해석된다
+   * (기본값 뒤집기 금지, memory `feedback_flipping_enum_default_rewrites_absent_records`). 접근부는 `=== true`로만 읽는다.
+   * 술어·파생: `lib/calc/mixed-use-part-acq-split.ts`(`isMixedUsePerPartAcq`).
+   */
+  mixedAcqPerPartMode: boolean;
+  /** S-2 — 건물 파트가 실거래가일 때 「용도별 계약액이 구분돼 있음」 토글(주택건물 계약액 입력). 술어: `mixedBuildingContractActive`. */
+  mixedAcqBuildingContractSplit: boolean;
+  /** S-2 — 주택건물 계약액(원, 문자열). 상가건물 = 건물 취득가액 − 이 값(표시 전용 도출, store에 쓰지 않는다). */
+  mixedAcqHousingBuildingContractPrice: string;
+
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   hasPartialUsageChange: boolean;

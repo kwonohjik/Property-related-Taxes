@@ -10,6 +10,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
@@ -149,8 +150,10 @@ export function MixedUseLegacyStdPrice({
           onCheckedChange={(checked) => {
             onChange({
               usePreHousingDisclosure: checked,
-              // PHD는 환산취득가 모드에서만 의미 있으므로 체크 시 자동 전환
-              ...(checked ? { useEstimatedAcquisition: true } : {}),
+              // PHD는 환산취득가 모드에서만 의미 있으므로 체크 시 자동 전환.
+              // B1 — 별개 취득 파트 모델은 레거시 플래그를 쓰지 않는다(토글 OFF 복귀 후 상단 라디오가 조용히 바뀌는 것을 막는다).
+              // (이 레이아웃은 보유 중 용도변경 = 파트 모델과 결합 제외(X-1)라 안내·⑧ 차단 외에는 도달하지 않는다.)
+              ...(checked && !isMixedUsePerPartAcq(asset) ? { useEstimatedAcquisition: true } : {}),
             });
           }}
         >

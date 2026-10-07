@@ -15,6 +15,7 @@
  *  - acqLandStdTotal·acqBuilding1StdTotal·acqExtensionStdTotal (취득시 분모)
  */
 
+import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { createElement, Fragment, type ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -447,6 +448,10 @@ export function buildAcquisitionPriceFormula(
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
       : "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)";
   }
+  // B1 — 겸용 별개 취득 파트 모델: 파트별 산정방식·4부분 값을 echo로 그린다. **route·`usedEstimatedAcquisition`보다 먼저** 봐야 한다 —
+  // 어댑터가 파트 모델을 「추계」 플래그로 내려 보내므로(값 정합용) 아래 분기로 가면 실거래가 파트도 「환산취득가」로 적힌다.
+  const sepAcqText = separateAcqFormulaText(result.mixedUseDetail);
+  if (sepAcqText) return sepAcqText;
   // 배우자등 이월과세 Scenario A 채택 — 증여자 취득 당시 취득가액 승계 (§97의2①).
   // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
   // 환산 여부를 알 수 없어 scenarioA echo를 사용한다.
@@ -574,6 +579,9 @@ export function buildNecessaryExpenseFormula(
       ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
       : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
   }
+  // B1 — 겸용 별개 취득 파트 모델: 실거래가 파트는 실제 필요경비, 그 밖은 개산공제(echo `deemedDeduction`).
+  const sepExpText = separateAcqExpenseText(result.mixedUseDetail, singleExp);
+  if (sepExpText) return sepExpText;
   // 배우자등 이월과세 Scenario A 채택 — 필요경비 = 양도비 등 + 증여세 상당액(§163의2).
   // singleExp = result.expenses − capEx = (양도비 등) + 증여세 상당액 (실가 전환 후 directSide 반영).
   const coA = result.carryoverTaxationDetail;

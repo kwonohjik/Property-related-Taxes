@@ -35,7 +35,8 @@ const codeOf = (p: string) =>
 
 const HOUSING = "components/calc/transfer/LandBuildingSaleSplitSection.tsx";
 const GENERAL_BUILDING = "components/calc/transfer/GeneralBuildingSaleSplitSection.tsx";
-const AXIS_B = "components/calc/transfer/LandBuildingSplitSection.tsx";
+// 축 B 환산 안내(`transferSource`)는 B1에서 `LandBuildingSplitSection`에서 `PartAcqInputs`로 **추출**됐다(문구 이동 — 거동 불변).
+const AXIS_B = "components/calc/transfer/PartAcqInputs.tsx";
 
 describe("T-1 — 제목은 사용자 확정 문구다", () => {
   it("「양도가액 토지·건물 안분 방식」", () => {

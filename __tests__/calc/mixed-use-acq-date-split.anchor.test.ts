@@ -28,6 +28,9 @@ function mixed(over: Partial<AssetForm> = {}): AssetForm {
     isMixedUseHouse: true,
     acquisitionCause: "purchase",
     useEstimatedAcquisition: true,
+    // B1 — 이 격자는 **총액 모델**(토글 OFF)의 술어를 본다. 신규 자산 initial이 파트 모델 ON이라 명시한다(시드 보강 — 의도 반전 아님).
+    // 파트 모델 격자는 `mixed-use-part-acq-split.anchor.test.ts`(⑤⇔④⇔⑧⇔⑫ 16모드)가 짝이다.
+    mixedAcqPerPartMode: false,
     hasSeperateLandAcquisitionDate: true,
     acquisitionDate: "2010-03-15",
     landAcquisitionDate: "2005-06-10",

@@ -19,6 +19,7 @@ import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { isMixedUsePerPartAcq, mixedPartAcqSum } from "@/lib/calc/mixed-use-part-acq-split";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import {
@@ -230,6 +231,12 @@ function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
   // ② 다필지 — 자산 전체 취득가액이 없고 필지별로 실재한다 (API :277 `parcelModeActive` → 0 송신).
   if (isParcelMode(a)) {
     const { sum, pending } = parcelAcqSum(a);
+    return { value: pending ? 0 : sum, pending };
+  }
+  // ③-0 겸용 별개 취득 파트 모델(B1) — 자산 전체 칸이 숨겨지고 토지·건물 파트 값이 입력이다.
+  //     `isSeparateAcquisition`이 겸용을 제외하므로 따로 연다. 숨은 총액(stale `fixedAcquisitionPrice`)이 ⑤ 분기에 남는 것을 막는다.
+  if (isMixedUsePerPartAcq(a)) {
+    const { sum, pending } = mixedPartAcqSum(a);
     return { value: pending ? 0 : sum, pending };
   }
   // ③ 별개 취득(토지·건물 취득시기 상이) — 자산 전체 칸이 숨겨져 파트 합계가 정본.
