@@ -184,12 +184,13 @@ describe("FS-4 ⑧ ⇔ ⑫ 격자 — 같은 입력에 같은 차단/통과", ()
   const twoSales = (o: Partial<StockTransferFormData> = {}) =>
     splitForm({
       // 매수 A 1980(500주) · B 2010(1,500주) → 매도1 500주(A 전량) · 매도2 1,000주(B) — 매도2 는 의제 lot 을 소진하지 않는다
+      // 두 매도는 같은 하반기다 — 예정신고(BASE)에서 반기가 갈리면 신고기간 게이트(§105①2호)가 막는다
       acquisitionLots: [
         { id: "A", acquisitionDate: "1980-06-10", acquisitionCause: "purchase", shareCount: "500", perShareAcquisitionPrice: "10000" },
         { id: "B", acquisitionDate: "2010-03-02", acquisitionCause: "purchase", shareCount: "1500", perShareAcquisitionPrice: "50000" },
       ],
       transferLots: [
-        { id: "t1", transferDate: "2025-06-01", shareCount: "500", perShareTransferPrice: "200000", transferStdPricePerShare: "100000" },
+        { id: "t1", transferDate: "2025-08-01", shareCount: "500", perShareTransferPrice: "200000", transferStdPricePerShare: "100000" },
         { id: "t2", transferDate: "2025-12-01", shareCount: "1000", perShareTransferPrice: "200000" },
       ],
       ...o,
@@ -218,7 +219,7 @@ describe("FS-4 ⑧ ⇔ ⑫ 격자 — 같은 입력에 같은 차단/통과", ()
       name: "차단 — 매도1(의제 lot 소진)의 종가평균 누락 · 매도2 는 불요",
       form: twoSales({
         transferLots: [
-          { id: "t1", transferDate: "2025-06-01", shareCount: "500", perShareTransferPrice: "200000" },
+          { id: "t1", transferDate: "2025-08-01", shareCount: "500", perShareTransferPrice: "200000" },
           { id: "t2", transferDate: "2025-12-01", shareCount: "1000", perShareTransferPrice: "200000" },
         ],
       }),
