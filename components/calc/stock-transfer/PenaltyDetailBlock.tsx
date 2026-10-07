@@ -30,6 +30,7 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { calcPreliminaryDeadline } from "@/lib/calc/stock-filing-type";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 export function PenaltyDetailBlock({
   form,
@@ -170,7 +171,7 @@ export function LatePaymentPenaltyBlock({
 
       <FieldCard
         label="법정납부기한"
-        hint={paymentDeadlineHint(form.transferDate, form.marketType)}
+        hint={paymentDeadlineHint(effectiveTransferDate(form), form.marketType)}
       >
         <DateInput
           value={form.paymentDeadline}

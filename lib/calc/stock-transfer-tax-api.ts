@@ -53,6 +53,7 @@ import { effectiveTransferActualInputMode } from "./stock-transfer-input-mode";
 import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
@@ -625,10 +626,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (oldestLotDate) {
       body.acquisitionDate = oldestLotDate;
     }
-    const oldestTrnDate = form.transferLots
-      .map((l) => l.transferDate)
-      .filter((d) => d && d.length > 0)
-      .sort()[0];
+    const oldestTrnDate = effectiveTransferDate(form); // 화면·검증과 같은 leaf
     if (oldestTrnDate) {
       body.transferDate = oldestTrnDate;
     }

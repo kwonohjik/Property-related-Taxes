@@ -61,6 +61,7 @@ import {
   validateSection165_4Era,
   SIMPLE_FIELD_MESSAGE,
 } from "./stock-transfer-tax-validate-unlisted";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 
 
@@ -457,7 +458,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
           }
           // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
-          const td5 = parseTransferDate(form.transferDate);
+          const td5 = parseTransferDate(effectiveTransferDate(form));
           if (detailMode === "simple" && td5 && !isSection165_4EraUnsupported(td5)) {
             const heavyRE = isReversalCorpForm(form);
             const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;

@@ -34,6 +34,7 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isRaMokNetAssetOnly } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 import { usesUnlistedSupplementaryValuation } from "@/lib/tax-engine/stock-transfer/supplementary-valuation-market";
+import { effectiveTransferDate, type EffectiveTransferDateFields } from "@/lib/calc/stock-effective-transfer-date";
 
 interface OtherAssetBlockProps {
   form: Pick<
@@ -59,7 +60,8 @@ interface OtherAssetBlockProps {
     // 누적 양도비율(요건③) 분자·분모 — 표시 계산 전용
     | "shareCount"
     | "totalIssuedShares"
-  >;
+  > &
+    EffectiveTransferDateFields; // 분할 모드 양도일 = 가장 이른 매도 lot 일자
   /** 세무사 모드 의뢰인 격리 — 이력 후보 필터 축 */
   activeClientId?: string | null;
   onChange: (patch: Partial<StockTransferFormData>) => void;
@@ -73,6 +75,8 @@ function pctToRatio(v: string): number | undefined {
 
 export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBlockProps) {
   const [lookupOpen, setLookupOpen] = useState(false);
+  // 분할 모드는 가장 이른 매도 lot 일자 — ④가 엔진에 싣는 양도일과 같은 leaf
+  const effTransferDate = effectiveTransferDate(form);
 
   /**
    * 자동 채움 이후 **사용자가 값을 고치면 출처 배지를 지운다**(`history-lookup-modal` 규약).
@@ -124,7 +128,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
     usesUnlistedSupplementaryValuation(form.marketType) &&
     isRaMokNetAssetOnly({
       isHeavyRealEstateForRate: form.isHeavyRealEstateForRate,
-      transferDate: form.transferDate ? new Date(form.transferDate) : undefined,
+      transferDate: effTransferDate ? new Date(effTransferDate) : undefined,
     });
 
   /**
@@ -132,12 +136,12 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
    * 화면과 판정이 어긋난다([[feedback_shared_predicate_argument_parity]]).
    */
   const ownershipHint = useMemo(() => {
-    const d = form.transferDate ? new Date(form.transferDate) : undefined;
+    const d = effTransferDate ? new Date(effTransferDate) : undefined;
     const exclusive = d && !Number.isNaN(d.getTime()) ? isOwnershipThresholdExclusive(d) : true;
     return exclusive
       ? "영 §158① — 본인과 기타주주의 소유주식 합계가 법인 주식등 합계액의 50%를 «초과»해야 한다. 기타주주 범위는 대주주 판정(§157)과 같은 주주 집합이나 기준일이 다르다(대주주=직전 사업연도 종료일 / 여기=합산기간 최초 양도일). 판정은 각 주주별로 한다."
       : "영 §158①(2020-02-11 시행 전 양도분 — 대통령령 제30395호 부칙 §41) — 본인과 기타주주의 소유주식 합계가 법인 주식등 합계액의 50% «이상»이면 과점주주다.";
-  }, [form.transferDate]);
+  }, [effTransferDate]);
 
   /**
    * 기신고 합산 적용 — 다섯 값이 **한 소스에서 파생**된다(영 §158② · §168②).
@@ -192,7 +196,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
   /** 게이트 미리보기 — 4칸이 다 차야 의미가 있다. 한쪽만으로 추정하지 않는다. */
   const gate = useMemo(() => {
     if (!form.isQualifyingBlockShareholder) return null;
-    const d = form.transferDate ? new Date(form.transferDate) : undefined;
+    const d = effTransferDate ? new Date(effTransferDate) : undefined;
     const first = form.aggregationFirstTransferDate
       ? new Date(form.aggregationFirstTransferDate)
       : undefined;
@@ -213,7 +217,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
     });
   }, [
     form.isQualifyingBlockShareholder,
-    form.transferDate,
+    effTransferDate,
     form.aggregationFirstTransferDate,
     form.blockShareholderRealEstateRatio,
     form.blockShareholderOwnershipRatio,
@@ -324,9 +328,9 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
                 type="button"
                 variant="modalLauncher"
                 onClick={() => setLookupOpen(true)}
-                disabled={!form.transferDate || !form.securityName}
+                disabled={!effTransferDate || !form.securityName}
                 title={
-                  !form.transferDate || !form.securityName
+                  !effTransferDate || !form.securityName
                     ? "종목명과 양도일을 먼저 입력하세요"
                     : undefined
                 }
@@ -400,7 +404,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
           <BlockShareholderPriorTransferModal
             open={lookupOpen}
             onOpenChange={setLookupOpen}
-            transferDate={form.transferDate}
+            transferDate={effTransferDate}
             securityName={form.securityName}
             securityCode={form.securityCode || undefined}
             activeClientId={activeClientId ?? null}
