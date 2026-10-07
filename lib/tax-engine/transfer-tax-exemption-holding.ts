@@ -23,6 +23,13 @@ import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-residence-waivers";
 import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
 import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
+import {
+  CAPITAL_NEWTOWN_RESIDENCE_YEARS,
+  capitalNewTownLocation,
+  isCapitalNewTownResidenceEra,
+  resolveOneHouseMinHoldingYears,
+  type CapitalNewTownLocation,
+} from "./data/one-house-holding-residence-era";
 import type {
   TransferTaxInput,
   UnavoidableReasonKind,
@@ -377,7 +384,9 @@ export type OneHouseResidenceBasis =
   | "pre_policy"
   | "win_win_rental"
   | "met"
-  | "unmet";
+  | "unmet"
+  // M2 — 2003-11-20 ~ 2011-06-02 양도분인데 서울·과천·5개 신도시 밖(법정동코드로 확정)
+  | "not_capital_newtown";
 
 export function describeOneHouseResidenceRequirement(
   input: ResidenceReqInput,
@@ -385,7 +394,14 @@ export function describeOneHouseResidenceRequirement(
     OneHouseSpecialRulesData["one_house_exemption"],
     "regulatedAreaMinResidenceYears" | "prePolicyDate" | "prePolicyExemptResidence"
   >,
-): { basis: OneHouseResidenceBasis; wasRegulated: boolean; residenceMonths: number; requiredYears: number } {
+): {
+  basis: OneHouseResidenceBasis;
+  wasRegulated: boolean;
+  residenceMonths: number;
+  requiredYears: number;
+  /** 서울 등 거주요건 구간 양도분일 때만 — 양도 주택 소재지 판정 */
+  capitalNewTown?: CapitalNewTownLocation;
+} {
   const proviso = resolveExemptionProviso(input);
   // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
   // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
@@ -399,6 +415,19 @@ export function describeOneHouseResidenceRequirement(
   const residenceYears = Math.floor(residenceMonths / 12);
   // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
   const wasRegulated = resolveWasRegulatedAtAcquisition(input);
+  // M2 — 2003-11-20 ~ 2011-06-02 양도분: 서울·과천·5개 신도시 주택은 보유기간 중 거주 2년
+  //   (`data/one-house-holding-residence-era.ts`). 신도시가 있는 시·구 · 주소 미입력은 요건을 적용한다
+  //   (모르는 사실은 혜택 불성립 — 판정 보류 고지는 `era-undetermined.ts`).
+  if (proviso !== "both" && proviso !== "residence_only" && isCapitalNewTownResidenceEra(input.transferDate)) {
+    const capitalNewTown = capitalNewTownLocation(input.regionCode);
+    const eraBasis: OneHouseResidenceBasis =
+      capitalNewTown === "out"
+        ? "not_capital_newtown"
+        : residenceYears >= CAPITAL_NEWTOWN_RESIDENCE_YEARS
+          ? "met"
+          : "unmet";
+    return { basis: eraBasis, wasRegulated, residenceMonths, requiredYears: CAPITAL_NEWTOWN_RESIDENCE_YEARS, capitalNewTown };
+  }
   const requiredYears = rule.regulatedAreaMinResidenceYears;
   const basis: OneHouseResidenceBasis =
     proviso === "both" || proviso === "residence_only"
@@ -496,14 +525,17 @@ function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
 export function describeOneHouseHoldingRequirement(
   input: ExemptionReqInput,
   rule: Pick<OneHouseSpecialRulesData["one_house_exemption"], "minHoldingYears">,
-): { startDate: Date; years: number; months: number; met: boolean; provisoWaives: boolean } {
+): { startDate: Date; years: number; months: number; requiredYears: number; met: boolean; provisoWaives: boolean } {
   const startDate = resolveExemptionHoldingStartDate(input);
   const holding = calculateHoldingPeriod(startDate, input.transferDate);
+  // M2 — 2012-06-29 전 양도분은 보유 3년(`data/one-house-holding-residence-era.ts`)
+  const requiredYears = resolveOneHouseMinHoldingYears(input.transferDate, rule.minHoldingYears);
   return {
     startDate,
     years: holding.years,
     months: holding.months,
-    met: holding.years >= rule.minHoldingYears,
+    requiredYears,
+    met: holding.years >= requiredYears,
     provisoWaives: resolveExemptionProviso(input) === "both",
   };
 }

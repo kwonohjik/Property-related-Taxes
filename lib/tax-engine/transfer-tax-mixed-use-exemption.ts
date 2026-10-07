@@ -9,6 +9,7 @@
  *
  * `warnings`에 in-place push한다(호출부 배열 순서 유지).
  */
+import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
@@ -295,7 +296,7 @@ export function judgeMixedUseOneHouseExemption(
       `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
         `거주기간 ${exemptionReqInput.residencePeriodMonths / 12}년 · ` +
         `취득 당시 조정대상지역 ${asset.wasRegulatedAtAcquisition ? "해당" : "미해당"} — ` +
-        `1세대1주택 비과세 요건(보유 ${r.minHoldingYears}년, 조정대상지역 취득 시 거주 ` +
+        `1세대1주택 비과세 요건(보유 ${resolveOneHouseMinHoldingYears(transferDate, r.minHoldingYears)}년, 조정대상지역 취득 시 거주 ` +
         `${r.regulatedAreaMinResidenceYears}년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
     );
   }
