@@ -502,6 +502,7 @@ export async function POST(request: NextRequest) {
               registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
               terminatedRegistrationType: u.terminatedRegistrationType,
               aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪ (단건과 동일)
+              mergeOrigin: u.mergeOrigin, // 혼인합가 1199 (단건과 동일)
               requirementsConfirmed: u.requirementsConfirmed,
             })),
             priorResidenceTransferDate: toOptionalDate(p.rentalHousingException.priorResidenceTransferDate),

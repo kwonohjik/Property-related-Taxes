@@ -35,7 +35,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "66",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
             },
             {
               "unitId": "d",
@@ -50,7 +51,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "60",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
             },
             {
               "unitId": "e",
@@ -65,7 +67,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "47",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "counterpart_side"
             }
           ]
         }
@@ -85,8 +88,8 @@
         "155-5-marriage-merge"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch — 관측: isExempt=true(applied 155-5-marriage-merge) / 기대: 과세(각자 장기임대주택(§155⑳)과 거주주택을 보유한 자끼리 혼인 — 혼인합가 특례 적용 불가: 혼인합가 당시 주택 수 기준·특례 중첩 불허). ⑧ 오류 0(경고: 임대주택은 명부에 넣지 말라 — 임대 3호는 rentalUnits로 입력). 최소쌍: 임대 선언을 빼도 비과세, 혼인 입력을 빼면 과세(A가 있어 거주주택이 1채가 아님) → 합가 특례가 임대주택을 합가 당시 주택 수에서 빼고 판정한다. 의심 지점: merge-deeming.ts:197(resolveMergeDeeming이 주택 수 2만 본다)·merge-composition.ts:179-190(알려진 제외 행을 구성에서 뺀 뒤 행 수를 센다). 일자: 원문 그대로(A 2016-03·B 2019-02·C 2018-10-14 등록·D 2018-10-14 등록·E 2020-05-29 등록, 혼인 2021-06), 월 단위 15일, 양도 예정 2024-09-15, 거주 36개월·임대 요건 충족 전제, 양도가 8억. 현행 규칙: 혼인합가 당시 주택 수로 판정, 합가 기한 10년(2024.11.12. 이후 양도분 — 종전 5년)."
+    "bucket": "match",
+    "note": "match(2026-10-07 — 사용자 결정: 조세정책과-1199 반영). 관측: 과세 — 장기임대주택까지 세면 혼인 전 양도자 쪽 3주택(B·C·D) · 배우자 쪽 2주택(A·E)으로 「각각 2주택 이상 소유한 배우자간 혼인하여 1세대가 소유하게 된 주택수가 4주택 이상」(기획재정부 조세정책과-1199, 이 회신이 인용)이라 혼인합가 특례 불성립. 표현: 명부 밖 장기임대주택(rentalUnits)마다 혼인 전 보유자(mergeOrigin — C·D 양도자 쪽, E 배우자 쪽). 종전 mismatch(D9)는 이 입력이 없어 합가 구성에서 임대주택이 빠진 탓. 짝: P-E132-1062(한쪽 1주택 — 허용) · P-E132-seller-rentals-only(임대주택이 모두 양도자 쪽 — 허용). 일자: 원문 그대로(A 2016-03·B 2019-02·C 2018-10-14 등록·D 2018-10-14 등록·E 2020-05-29 등록, 혼인 2021-06), 월 단위 15일, 양도 예정 2024-09-15, 거주 36개월·임대 요건 충족 전제, 양도가 8억. 현행 규칙: 혼인합가 당시 주택 수로 판정, 합가 기한 10년(2024.11.12. 이후 양도분 — 종전 5년)."
   },
   {
     "id": "E132-current",
@@ -124,7 +127,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "110",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
             },
             {
               "unitId": "d",
@@ -139,7 +143,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "100",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
             },
             {
               "unitId": "e",
@@ -154,7 +159,8 @@
               "isNationalSizeHousing": true,
               "hasMinimum2Units": true,
               "rentalMonths": "95",
-              "requirementsConfirmed": true
+              "requirementsConfirmed": true,
+              "mergeOrigin": "counterpart_side"
             }
           ]
         }
@@ -174,7 +180,153 @@
         "155-5-marriage-merge"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch — E132-era와 같은 사유. 현행 규칙: 혼인합가 기한 10년(2024.11.12. 이후 양도분), 주택 수는 혼인합가 당시 기준·§155⑳과 중첩 불허. 혼인 2019-06-15 → 양도 2026-05-20은 6년 11개월(기한 5년이면 불성립이라 기한이 아닌 구성 사유로 가르는 구성), 일자는 임대 3호가 모두 혼인 전 보유가 되도록 옮김(A 2016-03·B 2017-02·임대 C 2017-03·D 2017-10·E 2018-05 등록). 새 축 중립: 비조정, 양도가 8억, 거주 36개월·임대 요건 충족 전제. 관측: isExempt=true(155-5). 최소쌍 V: 임대 선언을 빼도 비과세."
+    "bucket": "match",
+    "note": "match(2026-10-07 — 사용자 결정: 조세정책과-1199 반영). 관측: 과세 — 장기임대주택까지 세면 혼인 전 양도자 쪽 3주택(B·C·D) · 배우자 쪽 2주택(A·E)으로 「각각 2주택 이상 소유한 배우자간 혼인하여 1세대가 소유하게 된 주택수가 4주택 이상」(기획재정부 조세정책과-1199, 이 회신이 인용)이라 혼인합가 특례 불성립. 표현: 명부 밖 장기임대주택(rentalUnits)마다 혼인 전 보유자(mergeOrigin — C·D 양도자 쪽, E 배우자 쪽). 종전 mismatch(D9)는 이 입력이 없어 합가 구성에서 임대주택이 빠진 탓. 짝: P-E132-1062(한쪽 1주택 — 허용) · P-E132-seller-rentals-only(임대주택이 모두 양도자 쪽 — 허용). 혼인 2019-06-15 → 양도 2026-05-20은 6년 11개월(기한 5년이면 불성립이라 기한이 아닌 구성 사유로 가르는 구성), 일자는 임대 3호가 모두 혼인 전 보유가 되도록 옮김(A 2016-03·B 2017-02·임대 C 2017-03·D 2017-10·E 2018-05 등록). 새 축 중립: 비조정, 양도가 8억, 거주 36개월·임대 요건 충족 전제."
+  },
+  {
+    "id": "P-E132-1062",
+    "docNo": "사전-2025-법규재산-1062",
+    "docDate": "2025.11.28.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "사전-2025-법규재산-1062 구조 — 1주택(A) 보유자(여)와 거주주택(B)+장기임대주택 1채(C) 보유자(남)의 혼인 → B 양도: 한쪽이 1주택이라 1199 대상이 아니고 ⑳·⑤ 적용으로 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2019-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "priorRentalExemptionHistory": "none",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2017-03-15",
+              "rentalRegistrationDate": "2017-03-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "110",
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "2016-03-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "짝(사전-2025-법규재산-1062의 구성을 E132-current 일자 위에 얹음 — 결론만 대조, 일자·금액은 E132-current와 같음). 양도자 쪽 2주택(B·C 임대) · 배우자 쪽 1주택(A) → 1199(각각 2주택 이상) 아님 → 혼인합가 성립(원문: 「제155조제20항 및 제5항에 따라 같은 영 제154조제1항을 적용받은 경우」)."
+  },
+  {
+    "id": "P-E132-seller-rentals-only",
+    "docNo": "서면-2022-법규재산-4283",
+    "docDate": "2024.06.27.",
+    "basis": "current",
+    "today": "2026-10-06",
+    "summary": "E132-current의 짝(가정) — 장기임대주택 3채가 모두 양도자 쪽이면 배우자 쪽은 1주택(A)이라 1199 대상이 아니다",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-20",
+      "contractTotalPrice": "800000000",
+      "marriageDate": "2019-06-15",
+      "isFirstTransferredInMerge": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-02-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "priorRentalExemptionHistory": "none",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2017-03-15",
+              "rentalRegistrationDate": "2017-03-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "110",
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
+            },
+            {
+              "unitId": "d",
+              "businessRegistrationDate": "2017-10-15",
+              "rentalRegistrationDate": "2017-10-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "100",
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
+            },
+            {
+              "unitId": "e",
+              "businessRegistrationDate": "2018-05-29",
+              "rentalRegistrationDate": "2018-05-29",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "95",
+              "requirementsConfirmed": true,
+              "mergeOrigin": "seller_side"
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "2016-03-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "짝(가정) — E132-current에서 임대주택 E의 보유자만 양도자 쪽으로 바꾼 최소쌍. 양도자 쪽 4주택 · 배우자 쪽 1주택 → 「각각 2주택 이상」이 아니므로 1199로 막지 않는다(그 밖의 요건은 E132-current와 같음)."
   }
 ]

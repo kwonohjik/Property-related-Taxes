@@ -14,7 +14,7 @@
  * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③ 1호(2001-03-30 ~ 2002-03-29 신규 취득 · 양도가 2003-03-29 뒤 ~ 취득일부터 2년 안) | 1호 단서(보유기간등 충족일 + 6월) — 미구현, 취득일부터 2년으로 계산. 그 밖의 부칙 ③ 구간은 어느 독법이든 결론이 같아 고지하지 않는다 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
- * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 해석 미확보, 입력된 재상속일로 판정 |
+ * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 정면 해석 미확보, 입력된 재상속일로 판정(서면-2019-법령해석재산-3032와 같은 기준). 괄호가 걸리고(일반주택 2013-02-15 이후 취득) 그 행이 실제로 제외될 때만 |
  * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
@@ -45,6 +45,8 @@ import {
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
+import { resolveInheritedHouseExclusionFromInput } from "../transfer-inheritance-exclusion";
+import { INHERITANCE_GENERAL_HOUSE_HELD_START } from "../data/inheritance-general-house-era";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
 export {
@@ -198,22 +200,32 @@ export function collectEraUndetermined(
     !!input.replacementHouse;
   /*
    * D17 — 재상속(별도세대에서 받은 상속주택을 동일세대원이 다시 상속)으로 §155② 단서를 통과한 행이 있으면, 일반주택
-   * 「상속개시 당시 보유」 괄호를 재상속일로 판정했다는 것을 밝힌다(최초 상속일 기준인지 해석이 확보되지 않았다).
+   * 「상속개시 당시 보유」 괄호를 재상속일로 판정했다는 것을 밝힌다(최초 상속일 기준인지 정면 해석은 확보되지 않았다 —
+   * 가장 가까운 것은 서면-2019-법령해석재산-3032: 나머지 지분을 재상속받은 날 현재 보유한 일반주택에 §155② 적용).
+   * 그 괄호가 걸리고(일반주택 2013-02-15 이후 취득 — 제24356호 부칙 제20조) 재상속일 기준으로 그 행이 실제로 제외될
+   * 때만 낸다 — 괄호가 안 걸리면 기준일이 무의미하고, 재상속일로도 제외되지 않으면 최초 상속일로는 더더욱 아니다.
    */
-  const reInherited = (input.houses ?? []).some(
-    (h) =>
-      h.isInherited &&
-      h.decedentSameHouseholdAtInheritance === true &&
-      h.parentalCareMergeInheritedHouse !== true &&
-      h.reInheritedFromSeparateHousehold === true,
-  );
-  if (reInherited) {
+  const reInheritedIds = (input.houses ?? [])
+    .filter(
+      (h) =>
+        h.isInherited &&
+        h.decedentSameHouseholdAtInheritance === true &&
+        h.parentalCareMergeInheritedHouse !== true &&
+        h.reInheritedFromSeparateHousehold === true,
+    )
+    .map((h) => h.id);
+  const reInheritedMatters =
+    reInheritedIds.length > 0 &&
+    input.acquisitionDate >= INHERITANCE_GENERAL_HOUSE_HELD_START &&
+    resolveInheritedHouseExclusionFromInput(input).excludedHouses.some((e) => reInheritedIds.includes(e.houseId));
+  if (reInheritedMatters) {
     out.push({
       id: "155-2-reinheritance-reference-date-unverified",
       reason:
         `별도세대에서 받은 상속주택을 동일세대원이 다시 상속받은 주택은 상속주택 지위를 이어받는 것으로 보았습니다(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서 — ` +
         "재산세과-2961 · 부동산납세과-624 · 서면-2022-법규재산-4747 등). 일반주택을 「상속개시 당시 보유한 주택」으로 한정하는 요건은 " +
-        "입력한 상속개시일(재상속일)로 판정했습니다 — 최초 상속일을 기준으로 보는지는 확인되지 않았으니, 일반주택을 최초 상속 뒤에 취득했다면 확인이 필요합니다.",
+        "입력한 상속개시일(재상속일)로 판정했습니다(재상속받은 날 현재 보유한 일반주택에 적용한 서면-2019-법령해석재산-3032와 같은 기준) — " +
+        "최초 상속일을 기준으로 보는지는 확인되지 않았으니, 일반주택을 최초 상속 뒤에 취득했다면 확인이 필요합니다.",
     });
   }
 

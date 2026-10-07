@@ -27,6 +27,7 @@ import {
   judgmentLegacyCountExclusionCount,
   judgmentSpecialHouseExclusions,
   judgmentMergeInputVisible,
+  judgmentMarriageRentalOriginVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
   judgmentTemporaryTwoHouseVisible,
@@ -133,6 +134,20 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
           err(
             `houses.${i}.mergeOrigin`,
             `보유 주택 ${i + 1}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다(편집 → 보유자 선택).`,
+          ),
+        );
+      }
+    });
+  }
+
+  // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자(칸과 같은 게이트). 고르지 않으면 엔진은 결론을 가를 때 불성립.
+  if (judgmentMarriageRentalOriginVisible(form)) {
+    form.assets[0].rentalHousingException!.rentalUnits.forEach((u, i) => {
+      if (!u.mergeOrigin) {
+        errors.push(
+          err(
+            `rentalUnits.${i}.mergeOrigin`,
+            `장기임대주택 ${i + 1}: 혼인 전 보유자를 고르세요 — 각각 2주택 이상인 사람끼리의 혼인이면 혼인합가 특례가 적용되지 않아(기획재정부 조세정책과-1199) 임대주택도 양쪽 주택 수에 셉니다.`,
           ),
         );
       }

@@ -4,7 +4,12 @@
  * `pending.ts`(800줄 hard cap)에서 순수 이동했다(2026-09-29 — 판정 기준일·요건 검토 작업의 선행 분리).
  * 동작 변경 없음. 기존 import 경로(`./one-house/pending`)는 `pending.ts`의 재수출로 보존한다.
  */
-import { resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
+import {
+  MARRIAGE_BOTH_SIDES_MULTI_HOUSE_BASIS,
+  marriageRentalSidesOf,
+  resolveDoubleMergeComposition,
+  resolveMergeComposition,
+} from "./merge-composition";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
@@ -215,6 +220,7 @@ function collectMergeUnmet(
       knownHouseExclusionCount: input.knownHouseExclusionCount,
       knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
       noRosterInputPath: input.noMergeRosterInputPath,
+      marriageRentals: marriageRentalSidesOf(input, isMarriage),
     });
     if (composition.status === "fails") {
       const by = isMarriage ? "혼인으로" : "합가로";
@@ -228,6 +234,10 @@ function collectMergeUnmet(
               ? `세대 보유 주택을 모두 보유 주택 목록에 입력하지 않아 ${ev} 전 보유 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
               : composition.reason === "origin_missing"
                 ? `보유 주택 목록에서 ${ev} 전 보유자를 고르지 않아 구성을 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
+                : composition.reason === "both_sides_multi_house"
+                  ? `장기임대주택까지 세면 혼인 전 양도자 쪽 ${composition.sellerSide}주택 · 배우자 쪽 ${composition.counterpartSide}주택으로, 각각 2주택 이상인 사람끼리 혼인해 1세대가 4주택 이상이 됐습니다 — 혼인합가 특례는 적용되지 않습니다(${MARRIAGE_BOTH_SIDES_MULTI_HOUSE_BASIS}).`
+                  : composition.reason === "rental_origin_missing"
+                    ? `장기임대주택의 혼인 전 보유자를 고르지 않아, 각각 2주택 이상인 사람끼리의 혼인인지(${MARRIAGE_BOTH_SIDES_MULTI_HOUSE_BASIS}) 판정할 수 없습니다 — 확인 필요: ${composition.confirmNotice}`
                 : `${ev} 전 보유 구성(양도자 쪽 ${composition.sellerSide}채 · 상대 쪽 ${composition.counterpartSide}채)이 「각자 1주택」(일시적 2주택과 겹친 경우 한쪽 2주택)에 맞지 않습니다.`,
       );
     }

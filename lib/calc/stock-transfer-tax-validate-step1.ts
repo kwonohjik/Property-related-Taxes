@@ -29,6 +29,7 @@ import {
   lotCauseMessage,
 } from "./stock-transfer-required-inputs";
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
+import { judgeSplitSalePeriods, splitSalePeriodMessage, splitSalePeriodFacts } from "./stock-split-sale-period-gate";
 
 function parseF(s: string): number {
   const n = parseFloat(s.replace(/,/g, ""));
@@ -287,6 +288,12 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
         errors.push({ field: `transferLots[${i}].perShareTransferPrice`, message: `매도 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다 (C-23)`, severity: "error" });
       }
     });
+    // 매도 건이 한 계산에 담길 수 없는 기간에 걸쳤는가 — 연도·대주주 기준 변경일은 이 칸에서 고친다
+    //   (예정신고 기간은 신고 유형으로도 풀리므로 Step3 — ⑫와 같은 leaf)
+    for (const v of judgeSplitSalePeriods(splitSalePeriodFacts(form))) {
+      if (v.code === "preliminary_period") continue;
+      errors.push({ field: "transferLots", message: splitSalePeriodMessage(v), severity: "error" });
+    }
     // 매도 ≤ 매수
     const totalAcq = (form.acquisitionLots || []).reduce((s, l) => s + parseI(l.shareCount), 0);
     const totalTrn = (form.transferLots || []).reduce((s, l) => s + parseI(l.shareCount), 0);

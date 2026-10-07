@@ -31,13 +31,85 @@
    "isExempt": true,
    "excludedHouses": [
     "A"
+   ]
+  },
+  "bucket": "match",
+  "note": "match(D17 — 2026-10-07). 양도일 원문 미기재 → 2008-12-15 가정, 월 단위 일자 15일, 양도가 4억 중립, 비조정. 표현: 마지막 상속(남편 사망 → 아내 재상속, 2008-05-15)을 상속개시로 입력하고 피상속인(남편)과 동일세대 true, 「별도세대에서 받은 상속주택을 다시 상속」(reInheritedFromSeparateHousehold) true. 관측: 비과세 · A 주택 수 제외. 일반주택 「상속개시 당시 보유」 괄호는 2013-02-15 이후 취득분부터라(제24356호 부칙 제20조) B(2005)에는 걸리지 않아 기준일 판정 보류도 없다 — 괄호가 걸리는 짝은 P-E112-post2013. 해석은 일관되게 재상속 승계: 서일46014-10689(2003) · 서면5팀-1763(2007) · 이 회신 · 부동산납세과-624(2014) · 서면-2022-법규재산-4747(2023). 연혁 메모: §155② 동일세대 단서는 2010.2.18.(대통령령 제22034호) 신설·부칙 제3조 양도분부터 — 2008.12.6. 시행본에는 없다. 엔진은 단서를 연혁 없이 적용한다 — 2010 전 양도분도 동일세대 상속은 배제(조세심판관합동회의 조심2009서2497 · 대법원 2009두9772, 평가셋 T001-era). 음성 짝 N-E112-not-reinherited."
+ },
+ {
+  "docNo": "재산세과-2961",
+  "docDate": "2008.09.29.",
+  "id": "P-E112-post2013",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "E112를 현행으로 옮긴 짝 — 일반주택 B(2016) 취득이 재상속(2020) 전이면 재상속일 기준 「상속개시 당시 보유」로 비과세 · 최초 상속일 기준 여부는 판정 보류",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2016-03-15"
+   },
+   "houses": [
+    {
+     "id": "A",
+     "region": "capital",
+     "acquisitionDate": "1982-06-15",
+     "isInherited": true,
+     "inheritedDate": "2020-05-15",
+     "isCoInherited": false,
+     "decedentSameHouseholdAtInheritance": true,
+     "reInheritedFromSeparateHousehold": true
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "excludedHouses": [
+    "A"
    ],
    "undetermined": [
     "155-2-reinheritance-reference-date-unverified"
    ]
   },
   "bucket": "match",
-  "note": "match(D17 — 2026-10-07). 양도일 원문 미기재 → 2008-12-15 가정, 월 단위 일자 15일, 양도가 4억 중립, 비조정. 표현: 마지막 상속(남편 사망 → 아내 재상속, 2008-05-15)을 상속개시로 입력하고 피상속인(남편)과 동일세대 true, 「별도세대에서 받은 상속주택을 다시 상속」(reInheritedFromSeparateHousehold) true. 관측: 비과세 · A 주택 수 제외 · 판정 보류 1건(재상속이면 일반주택 「상속개시 당시 보유」 기준일 미확인 — B는 최초 상속(1982) 뒤·재상속(2008) 전 취득). 해석은 일관되게 재상속 승계: 서일46014-10689(2003) · 서면5팀-1763(2007) · 이 회신 · 부동산납세과-624(2014) · 서면-2022-법규재산-4747(2023). 연혁 메모: §155② 동일세대 단서는 2010.2.18.(대통령령 제22034호) 신설·부칙 제3조 양도분부터 — 2008.12.6. 시행본에는 없다. 엔진은 단서를 연혁 없이 적용한다 — 2010 전 양도분도 동일세대 상속은 배제(조세심판관합동회의 조심2009서2497 · 대법원 2009두9772, 평가셋 T001-era). 음성 짝 N-E112-not-reinherited."
+  "note": "짝(가정). 일반주택이 2013-02-15 이후 취득이라 「상속개시 당시 보유」 괄호가 걸리고, 재상속일(2020) 기준으로 보유 → A 제외 → 비과세. 정면 해석은 없고 서면-2019-법령해석재산-3032(나머지 지분 재상속받은 날 현재 보유한 일반주택에 §155② 적용)와 같은 기준 — 최초 상속일 기준이면 결론이 달라질 수 있어 판정 보류."
+ },
+ {
+  "docNo": "재산세과-2961",
+  "docDate": "2008.09.29.",
+  "id": "N-E112-post2013-acquired-after",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "P-E112-post2013의 짝 — 일반주택을 재상속 뒤(2021)에 취득했으면 어느 기준일로도 「상속개시 당시 보유」가 아니어서 과세 · 판정 보류 없음",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2021-03-15"
+   },
+   "houses": [
+    {
+     "id": "A",
+     "region": "capital",
+     "acquisitionDate": "1982-06-15",
+     "isInherited": true,
+     "inheritedDate": "2020-05-15",
+     "isCoInherited": false,
+     "decedentSameHouseholdAtInheritance": true,
+     "reInheritedFromSeparateHousehold": true
+    }
+   ],
+   "generalHouseRightAtInheritance": "none"
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "짝(가정). 재상속일로도 상속개시 당시 보유가 아니면 최초 상속일로는 더더욱 아니다 — 기준일이 결론을 바꾸지 않아 판정 보류를 내지 않는다(undetermined 비어 있음은 관측으로 확인)."
  },
  {
   "docNo": "재산세과-2961",

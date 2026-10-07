@@ -42,6 +42,7 @@ export function toRentalHousingExceptionEngineInput(
       registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
       terminatedRegistrationType: u.terminatedRegistrationType,
       aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪
+      mergeOrigin: u.mergeOrigin, // 혼인합가 1199
       requirementsConfirmed: u.requirementsConfirmed,
     })),
     priorResidenceTransferDate: rhe.priorResidenceTransferDate

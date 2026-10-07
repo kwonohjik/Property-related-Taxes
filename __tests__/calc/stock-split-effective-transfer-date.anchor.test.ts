@@ -11,7 +11,7 @@
  *
  *   ET-1  leaf — 분할 = 가장 이른 매도 lot 일자 · 그 외 = 폼-전역 양도일
  *   ET-2  ④ body 양도일 = leaf
- *   ET-3  4호 판정 — 분할 = 같은 날짜의 단일과 동일(참)
+ *   ET-3  4호 판정(3호 시장 다목) — 분할 = 같은 날짜의 단일과 동일 · 3년 창 밖 긍정 짝
  *   ET-4  순자산 단독(라목) — 시행일 전후로 단일과 동일
  *   ET-5  대주주 자동 판정 — 분할에서도 판정한다(단일과 동일)
  *   ET-6  §94①4 다목 요건 게이트 검증 — 분할에서도 막는다 / 긍정 짝
@@ -73,10 +73,20 @@ const BLOCK: Partial<StockTransferFormData> = {
 };
 
 describe("ET-3 §94①4 다목 판정", () => {
+  // 3호 시장(비상장)이라야 4호 여부가 다목 요건(양도일 종속)으로 갈린다 — other_asset 은 날짜와 무관하게 늘 4호다
+  const UNLISTED_BLOCK = { ...BLOCK, marketType: "unlisted" as const };
   it("분할에서도 4호 — 같은 날짜의 단일과 같다", () => {
-    const f = reportedSplitForm(BLOCK);
+    const f = reportedSplitForm(UNLISTED_BLOCK);
     expect(isSection94_4Form(singleTwin(f))).toBe(true);
     expect(isSection94_4Form(f)).toBe(true);
+  });
+  it("긍정 짝 — 매도 lot 이 3년 창 밖이면 4호 아님(단일과 같다)", () => {
+    const f = reportedSplitForm({
+      ...UNLISTED_BLOCK,
+      transferLots: [{ id: "t1", transferDate: "2029-06-01", shareCount: "10000", perShareTransferPrice: "20000" }],
+    });
+    expect(isSection94_4Form(singleTwin(f))).toBe(false);
+    expect(isSection94_4Form(f)).toBe(false);
   });
 });
 

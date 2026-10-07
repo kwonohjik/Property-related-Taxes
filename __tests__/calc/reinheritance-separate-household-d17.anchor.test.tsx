@@ -54,13 +54,15 @@ describe("G-1 엔진 게이트", () => {
 
 describe("U-1 판정 보류 — 재상속 기준일", () => {
   const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules as OneHouseSpecialRulesData;
-  const ids = (h: Record<string, unknown>) =>
+  const ids = (h: Record<string, unknown>, generalAcq = "2016-03-15") =>
     collectEraUndetermined(
       {
         propertyType: "housing",
         isOneHousehold: true,
-        transferDate: new Date("2008-12-15"),
-        houses: [{ id: "A", isInherited: true, ...h }],
+        acquisitionDate: new Date(generalAcq),
+        transferDate: new Date("2026-06-15"),
+        sellingHouseId: "S",
+        houses: [{ id: "A", isInherited: true, isCoInherited: false, inheritedDate: new Date("2020-05-15"), ...h }],
       } as unknown as OneHouseJudgeInput,
       rules,
       true,
@@ -72,6 +74,12 @@ describe("U-1 판정 보류 — 재상속 기준일", () => {
     expect(
       ids({ decedentSameHouseholdAtInheritance: true, parentalCareMergeInheritedHouse: true, reInheritedFromSeparateHousehold: true }),
     ).not.toContain(ID);
+  });
+  it("「상속개시 당시 보유」 괄호가 안 걸리거나(2013-02-15 전 취득) 재상속일로도 제외되지 않으면 고지하지 않는다", () => {
+    const re = { decedentSameHouseholdAtInheritance: true, reInheritedFromSeparateHousehold: true };
+    expect(ids(re, "2013-02-14")).not.toContain(ID);
+    expect(ids(re, "2013-02-15")).toContain(ID);
+    expect(ids(re, "2021-03-15")).not.toContain(ID); // 재상속(2020-05-15) 뒤 취득
   });
 });
 

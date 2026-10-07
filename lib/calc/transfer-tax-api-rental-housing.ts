@@ -87,6 +87,8 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       requirementsConfirmed: u.requirementsConfirmed ?? false,
       // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외). 「모름」은 미전송.
       aptDeadlineExtension: rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionPayload(u.aptDeadlineExtension) : undefined,
+      // 혼인합가 1199 — 판정 메뉴에서만 입력(⑤). 엔진은 혼인합가 판정에서만 읽는다.
+      mergeOrigin: u.mergeOrigin,
     })),
     priorResidenceTransferDate: rh.priorResidenceTransferDate
       ? (rh.priorResidenceTransferDate.includes('T')

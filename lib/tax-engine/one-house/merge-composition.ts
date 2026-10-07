@@ -21,6 +21,17 @@
  *
  * 3주택의 **기간** 요건(§155①)은 여기서 보지 않는다 — `resolveMergeOverlapDeeming`이 본다.
  *
+ * ## 혼인(⑤) — 양쪽이 각각 2주택 이상이면 불성립 (조세정책과-1199)
+ *
+ * 기획재정부 조세정책과-1199(2024.6.25.) — 「각각 2주택 이상 소유한 배우자간 혼인하여 1세대가 소유하게 된 주택수가
+ * 4주택 이상인 경우」 혼인합가 특례 적용 불가. 서면-2022-법규재산-4283(E132 — 장기임대 2채+거주주택 보유자와 장기임대
+ * 1채+일반주택 보유자의 혼인)이 이를 따른다. 위 구성 표는 §155⑳ 장기임대주택을 뺀 행으로 세므로, 그렇게 성립한 혼인
+ * 구성에 **장기임대주택을 다시 넣어** 양쪽 주택 수를 센다 — 둘 다 2채 이상이면 `both_sides_multi_house`. 한쪽이 1채면
+ * 그대로 성립한다(사전-2025-법규재산-1062 — 1주택자와 거주주택+장기임대 1채 보유자의 혼인에 ⑳·⑤ 적용). 동거봉양(④)은
+ * 이 회신의 대상이 아니라 적용하지 않는다(기준-2024-법규재산-0061 — 동거봉양은 1채 + 거주주택+장기임대 1채로 허용).
+ * 장기임대주택의 혼인 전 보유자는 계산기는 명부의 장기임대주택 행(`isLongTermRental` · `mergeOrigin`)에서, 판정 메뉴는
+ * 명부 밖 임대주택 입력(`rentalUnits[].mergeOrigin`)에서 읽는다(`marriageRentalSidesOf`).
+ *
  * ## 🔑 「모름」은 불리하게 — 단, 제외로 설명되는 행 수 불일치만 예외 (2026-10-05 개정)
  *
  * 계획서 `docs/00-pm/merge-composition-unknown-unfavorable.plan.md` §3-1. 원칙은 memory
@@ -87,13 +98,22 @@ export type MergeCompositionFailure =
   /** 명부가 없거나 양도 주택 행이 없거나, 알려진 제외 없이 행 수가 모자란다 — 입력하지 않은 주택이 있다. */
   | "roster_missing"
   /** 합가 전 취득 행의 소유 쪽(`mergeOrigin`)을 입력하지 않았다. */
-  | "origin_missing";
+  | "origin_missing"
+  /** 혼인 — 장기임대주택까지 세면 혼인 전 양쪽이 각각 2주택 이상(기획재정부 조세정책과-1199). */
+  | "both_sides_multi_house"
+  /** 혼인 — 장기임대주택의 혼인 전 보유자를 몰라 1199(양쪽 2주택 이상)를 가를 수 없다(모름 → 불성립 + 확인 필요). */
+  | "rental_origin_missing";
 
 /** 1·2번(roster_missing·origin_missing)만 — 입력하면 판정한다는 확인 필요 문구. */
 const CONFIRM_NOTICE: Record<"roster_missing" | "origin_missing", string> = {
   roster_missing: "세대 보유 주택을 모두 목록에 입력하면 판정합니다.",
   origin_missing: "합가 전 보유자(양도자 쪽 / 배우자·합친 가족 쪽)를 고르면 판정합니다.",
 };
+/** 혼인 양쪽 2주택 이상 불성립의 근거 회신(안내 문구용). */
+export const MARRIAGE_BOTH_SIDES_MULTI_HOUSE_BASIS = "기획재정부 조세정책과-1199";
+/** 1199 — 장기임대주택의 혼인 전 보유자를 몰라 양쪽 2주택 이상 여부를 가를 수 없을 때. */
+const RENTAL_ORIGIN_CONFIRM_NOTICE =
+  "1세대1주택 판정 메뉴에서 장기임대주택마다 혼인 전 보유자(양도자 쪽 / 배우자 쪽 / 혼인 후 취득)를 고르면 판정합니다.";
 
 export type MergeComposition =
   | { status: "holds" }
@@ -115,7 +135,7 @@ export type MergeComposition =
       afterMergeDates: Date[];
       sellerSide: number;
       counterpartSide: number;
-      /** 사실을 몰라 불성립으로 계산했음을 알리는 문구 — roster_missing·origin_missing만. */
+      /** 사실을 몰라 불성립으로 계산했음을 알리는 문구 — roster_missing·origin_missing·rental_origin_missing만. */
       confirmNotice?: string;
     };
 
@@ -148,6 +168,21 @@ export interface MergeCompositionInput {
    * 종전 동작)으로 둔다. 입력 경로가 있는 화면(계산기·판정 메뉴·겸용)은 세우지 않는다.
    */
   noRosterInputPath?: boolean;
+  /**
+   * 혼인(⑤)일 때만 — 조세정책과-1199 판정용 장기임대주택의 혼인 전 위치. `rentalUnitSides`는 명부 밖 임대주택
+   * 입력(`rentalUnits[].mergeOrigin`, 판정 메뉴)이고, 명부에 장기임대주택 행이 있으면(계산기) 그 행이 우선한다.
+   */
+  marriageRentals?: { rentalUnitSides: ReadonlyArray<MergeHouseSide | undefined> };
+}
+
+/** 혼인합가 판정에 넘길 장기임대주택 위치 — 혼인이 아니면 `undefined`(1199 판정 없음). 세 호출부 공용. */
+export function marriageRentalSidesOf(
+  input: { rentalHousingException?: { applyException?: boolean; rentalUnits?: ReadonlyArray<{ mergeOrigin?: MergeHouseSide }> } },
+  isMarriage: boolean,
+): MergeCompositionInput["marriageRentals"] {
+  if (!isMarriage) return undefined;
+  const r = input.rentalHousingException;
+  return { rentalUnitSides: r?.applyException ? (r.rentalUnits ?? []).map((u) => u.mergeOrigin) : [] };
 }
 
 const failWithoutFacts = (
@@ -232,8 +267,45 @@ export function resolveMergeComposition(input: MergeCompositionInput): MergeComp
     count === 2
       ? s === 1 && c === 1
       : (s === 1 && c === 2 && p === 0) || (s === 2 && c === 1 && p === 0) || (s === 1 && c === 1 && p === 1);
-  if (holds) return { status: "holds" };
-  return fail(c === 0 ? "seller_side_only" : "composition_mismatch");
+  if (!holds) return fail(c === 0 ? "seller_side_only" : "composition_mismatch");
+  return input.marriageRentals ? judgeMarriageRentals(input, s, c, afterMergeDates) : { status: "holds" };
+}
+
+/** 1199 — 성립한 혼인 구성에 장기임대주택을 다시 넣어 양쪽이 각각 2주택 이상인지 본다. */
+function judgeMarriageRentals(
+  input: MergeCompositionInput,
+  rosterSeller: number,
+  rosterCounterpart: number,
+  afterMergeDates: Date[],
+): MergeComposition {
+  // 명부에 장기임대주택 행이 있으면 그 행이 정본이다 — 구성에서 이미 센 행(제외되지 않은 행)은 다시 세지 않고, 명부 밖
+  // 임대주택 입력은 보지 않는다(같은 주택을 두 번 세지 않게 — 판정 메뉴는 이중 입력을 ⑧에서 경고한다).
+  const excludedIds = new Set(input.knownHouseExclusionHouseIds ?? []);
+  const rosterRentals = (input.houses ?? []).filter((h) => h.isLongTermRental === true);
+  const sides =
+    rosterRentals.length > 0
+      ? rosterRentals
+          .filter((h) => excludedIds.has(h.id))
+          .map((h) => classifyMergeHouse(h.acquisitionDate, input.mergeDate, h.mergeOrigin))
+      : input.marriageRentals!.rentalUnitSides;
+  const s = rosterSeller + sides.filter((x) => x === "seller_side").length;
+  const c = rosterCounterpart + sides.filter((x) => x === "counterpart_side").length;
+  const unknown = sides.filter((x) => x === undefined).length;
+  // 보유자를 모르는 임대주택을 모두 불리한 쪽에 넣어도 양쪽 2채 이상이 될 수 없으면 결론이 나 있다.
+  if (unknown > 0 && Math.max(0, 2 - s) + Math.max(0, 2 - c) <= unknown) {
+    return {
+      status: "fails",
+      reason: "rental_origin_missing",
+      afterMergeDates: [],
+      sellerSide: s,
+      counterpartSide: c,
+      confirmNotice: RENTAL_ORIGIN_CONFIRM_NOTICE,
+    };
+  }
+  if (s >= 2 && c >= 2) {
+    return { status: "fails", reason: "both_sides_multi_house", afterMergeDates, sellerSide: s, counterpartSide: c };
+  }
+  return { status: "holds" };
 }
 
 /**
