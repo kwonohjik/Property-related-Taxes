@@ -48,6 +48,7 @@
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
 import {
+  isRentalResidenceExceptionEnacted,
   isMa1IncludedIn15520,
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
@@ -347,6 +348,13 @@ export function checkEligibility(
    * (§155⑳ 3요건·호별 판정)을 전부 건너뛰고 §154⑩을 따로 판정한다.
    */
   const isStandalone154_10 = ctx?.scenario === "B" && rentalUnits.length === 0;
+
+  // M3 — 특례 신설(2011.10.14.) 전 양도분. 판정 맥락(양도일)이 없는 직접 호출은 판정하지 않는다 — 종전 동작.
+  if (ctx && !isRentalResidenceExceptionEnacted(ctx.transferDate)) {
+    residenceFailReasons.push(
+      "장기임대주택 보유자 거주주택 특례는 2011.10.14. 이후 양도하는 주택부터 적용됩니다 — 그 전 양도분에는 이 특례가 없습니다 (대통령령 제23218호 부칙 제2조)",
+    );
+  }
 
   // ── 1. 거주주택 요건 ──
   if (isStandalone154_10 && ctx) {

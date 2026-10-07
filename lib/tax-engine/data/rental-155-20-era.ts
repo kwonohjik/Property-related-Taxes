@@ -40,6 +40,18 @@
  *    (`needsPre2019ArticleScopeNotice`).
  */
 
+/**
+ * 대통령령 제23218호 시행일 — 장기임대주택 보유자 거주주택 특례(당시 ⑲, 현행 ⑳) **신설**
+ * (MST 117942 `<신설 2011.10.14>` · 부칙 제2조 「이 영 시행 후 최초로 양도하는 주택부터 적용」).
+ * 그 전 양도분에는 이 특례가 없다(MST 116354 — 2011.8.30. 시행본에 없음).
+ */
+export const RENTAL_155_20_ENACTED_TRANSFER_START = new Date("2011-10-14");
+
+/** 거주주택 양도일에 ⑳(당시 ⑲) 특례가 있었는가 — 제23218호 부칙 제2조 */
+export function isRentalResidenceExceptionEnacted(transferDate: Date): boolean {
+  return transferDate.getTime() >= RENTAL_155_20_ENACTED_TRANSFER_START.getTime();
+}
+
 /** 대통령령 제31442호 시행일 — 이 날 이후 양도분부터 ⑳에 마목 1) 포함(부칙 제2조②). */
 export const RENTAL_155_20_MA1_INCLUSION_TRANSFER_START = new Date("2021-02-17");
 

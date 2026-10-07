@@ -99,10 +99,11 @@
    }
   },
   "expected": {
-   "isExempt": false
+   "isExempt": false,
+   "rentalPassed": false
   },
-  "bucket": "mismatch",
-  "note": "mismatch(유리 방향). 기대: 과세 — 당시 법령에는 등록 임대주택을 주택 수에서 빼는 1세대1주택 특례가 없고 조특법 §97·§97의2 임대주택도 아니다. 관측: 비과세(rentalPassed=true) — 판정 메뉴 §155⑳ 장기임대주택 특례 칸에 임대 5호를 넣으면 2008년 양도에도 특례가 적용된다. 근거·의심 지점: 소득세법 시행령 §155⑲(현행 ⑳) 장기임대주택 보유자 거주주택 특례는 대통령령 제23218호(2011.10.14. 시행)로 신설(<신설 2011.10.14> — KoreanLaw MST 117942 실독, 직전 2011.8.30. 시행본 MST 116354의 §155에는 없음). 엔진 checkEligibility(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:329~)는 양도일을 생애 1회 구간 판정에만 쓰고 신설일 게이트가 없다(lib·app/api 전체에 2011-10-14 상수 없음 — grep). 짝: P-F069-roster(임대주택을 명부에 일반 주택으로 넣으면 과세 — 입력 도달 확인), N-F069-gate-20111013(신설 전날 양도도 비과세 — 게이트 부재 고정), P-F069-gate-20111014. 일자: 원문 그대로(임대사업자 등록 2006-04-10·세무서 2006-06-15·임대주택 취득 2006-09-13·양도 2008-05-31), 거주주택 취득일 2000-05-15·거주 60개월·양도가 3억은 가정(원문 미기재), 임대 20개월."
+  "bucket": "match",
+  "note": "기대: 과세 — 당시 법령에는 등록 임대주택을 주택 수에서 빼는 1세대1주택 특례가 없고 조특법 §97·§97의2 임대주택도 아니다. 엔진: 장기임대주택 보유자 거주주택 특례는 2011.10.14. 이후 양도분만(대통령령 제23218호 부칙 제2조 — rental-155-20-era.ts `isRentalResidenceExceptionEnacted`)."
  },
  {
   "id": "P-F069-roster",
@@ -248,10 +249,11 @@
    }
   },
   "expected": {
-   "isExempt": false
+   "isExempt": false,
+   "rentalPassed": false
   },
-  "bucket": "mismatch",
-  "note": "mismatch(유리). 기대: 과세 — 특례는 2011.10.14. 시행 대통령령 제23218호로 신설. 관측: 비과세(rentalPassed=true). 소득세법 시행령 §155⑲(현행 ⑳) 장기임대주택 보유자 거주주택 특례는 대통령령 제23218호(2011.10.14. 시행)로 신설(<신설 2011.10.14> — KoreanLaw MST 117942 실독, 직전 2011.8.30. 시행본 MST 116354의 §155에는 없음). 엔진 checkEligibility(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:329~)는 양도일을 생애 1회 구간 판정에만 쓰고 신설일 게이트가 없다(lib·app/api 전체에 2011-10-14 상수 없음 — grep). 임대 61개월로 조정(그 밖은 F069-era와 같음)."
+  "bucket": "match",
+  "note": "기대: 과세 — 특례는 2011.10.14. 시행 대통령령 제23218호로 신설. 엔진: 장기임대주택 보유자 거주주택 특례는 2011.10.14. 이후 양도분만(대통령령 제23218호 부칙 제2조 — rental-155-20-era.ts `isRentalResidenceExceptionEnacted`)."
  },
  {
   "id": "P-F069-gate-20111014",
