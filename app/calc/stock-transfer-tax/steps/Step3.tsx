@@ -35,6 +35,7 @@ import {
   PenaltyDetailBlock,
   LatePaymentPenaltyBlock,
 } from "@/components/calc/stock-transfer/PenaltyDetailBlock";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -72,6 +73,8 @@ const ACQUISITION_MODE_LABEL: Record<string, string> = {
 };
 
 export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
+  // 분할 모드는 가장 이른 매도 lot 일자 — ④가 엔진에 싣는 양도일과 같은 leaf
+  const effTransferDate = effectiveTransferDate(form);
   const acquisitionMode = form.acquisitionMode || "actual";
   // 필요경비 방식은 acquisitionMode에서 자동 도출 (소령 §163⑥4) — 사용자 선택 없음.
   // 실가 → 실제 경비 입력 / 비실가(환산·매매사례) → 개산공제 1% 자동.
@@ -94,8 +97,8 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
 
   /** 이 종목의 예정신고 기한 — 국외주식이면 `undefined`(대상 아님) */
   const filingDeadline = useMemo(
-    () => calcPreliminaryDeadline(form.transferDate, form.marketType),
-    [form.transferDate, form.marketType],
+    () => calcPreliminaryDeadline(effTransferDate, form.marketType),
+    [effTransferDate, form.marketType],
   );
   const preliminaryClause = resolvePreliminaryClause(form.marketType);
   /**
@@ -164,8 +167,8 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         isKOTCTrading: form.isKOTCTrading,
         // 증권시장 안/밖은 탄력세율의 전제다(증권거래세법 §8② 괄호) — 미리보기도 같은 축을 탄다.
         isOnMarketTransaction: form.isOnMarketTransaction ?? true,
-        transferDate: form.transferDate
-          ? new Date(form.transferDate)
+        transferDate: effTransferDate
+          ? new Date(effTransferDate)
           : undefined,
       },
       transferPrice,
@@ -185,7 +188,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
     form.marketType,
     form.isKOTCTrading,
     form.isOnMarketTransaction,
-    form.transferDate,
+    effTransferDate,
   ]);
 
   const isDeadlineNear = useMemo(() => {
@@ -471,11 +474,11 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
                 {preliminaryClause === "105-1-1" ? "§105①1호" : "§105①2호"})
               </p>
               <p className="text-xs mt-1">
-                양도일 {form.transferDate} →{" "}
+                양도일 {effTransferDate} →{" "}
                 {preliminaryClause === "105-1-1"
                   ? "그 달의 말일 +2개월"
                   : `${
-                      new Date(form.transferDate).getMonth() + 1 <= 6
+                      new Date(effTransferDate).getMonth() + 1 <= 6
                         ? "상반기(1~6월)"
                         : "하반기(7~12월)"
                     } 말일 +2개월`}{" "}

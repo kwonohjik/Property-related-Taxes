@@ -24,6 +24,7 @@ import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
 import type { UnlistedValuationKey } from "./stock-transfer-required-inputs";
 // 취득측 전용 경로의 「평가액 계산」 — ④와 같은 술어(한쪽만 열리면 막다른 길 또는 침묵 strip)
 import { isAcquisitionSideFullValuationForm } from "./stock-transfer-acq-side-valuation";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 
 export function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -125,7 +126,7 @@ export function validateUnlistedValuationFields(
     if (isEmpty(form.prePriorYearNetAssetPerShare)) {
       errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
     }
-    const td = parseTransferDate(form.transferDate);
+    const td = parseTransferDate(effectiveTransferDate(form));
     if (valuationMode === "simple" && td && !isSection165_4EraUnsupported(td)) {
       const heavyRE = isReversalCorpForm(form);
       // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
@@ -149,7 +150,7 @@ function validateTransferSupplementaryPositive(
   niSkip: boolean,
   valuationMode: string,
 ): void {
-  const td = parseTransferDate(form.transferDate);
+  const td = parseTransferDate(effectiveTransferDate(form));
   // 2000.4.2. 이전 양도는 산식 자체를 막는다(`validateSection165_4Era`) — 여기서 값을 재지 않는다.
   if (!td || isSection165_4EraUnsupported(td)) return;
   if (valuationMode === "simple") {
@@ -191,7 +192,7 @@ export function validateSection165_4Era(
   acquisitionMode: string,
   errors: StockValidationError[],
 ): void {
-  const td = parseTransferDate(form.transferDate);
+  const td = parseTransferDate(effectiveTransferDate(form));
   if (!td) return;
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const stdMode = form.acquisitionStdMode;

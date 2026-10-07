@@ -20,6 +20,7 @@ import { isSection165_4_1ReversalCorp } from "@/lib/tax-engine/stock-transfer/se
 import { reversalCorpDerivedBasis } from "@/lib/tax-engine/stock-transfer/section165-4-reversal-corp";
 import { parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
 import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
+import { effectiveTransferDate, type EffectiveTransferDateFields } from "@/lib/calc/stock-effective-transfer-date";
 
 export type Section94_4FormFields = Pick<
   StockTransferFormData,
@@ -31,7 +32,9 @@ export type Section94_4FormFields = Pick<
   | "cumulativeTransferRatio"
   | "aggregationFirstTransferDate"
   | "transferDate"
->;
+> &
+  // 분할 모드는 가장 이른 매도 lot 일자가 양도일이다(④와 같은 leaf — 엔진 4호 판정과 일치)
+  EffectiveTransferDateFields;
 
 function pctToRatio(s: string | undefined): number | undefined {
   const n = s ? parseFloatOrUndef(s) : undefined;
@@ -77,7 +80,7 @@ export function isSection94_4Form(form: Section94_4FormFields): boolean {
     blockShareholderOwnershipRatio: pctToRatio(form.blockShareholderOwnershipRatio),
     cumulativeTransferRatio: pctToRatio(form.cumulativeTransferRatio),
     aggregationFirstTransferDate: toOptionalDate(form.aggregationFirstTransferDate),
-    transferDate: toOptionalDate(form.transferDate),
+    transferDate: toOptionalDate(effectiveTransferDate(form)),
   });
 }
 

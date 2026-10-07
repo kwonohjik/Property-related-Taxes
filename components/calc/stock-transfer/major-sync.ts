@@ -17,6 +17,7 @@ import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/st
 import { computeShareRatioAugmentation } from "@/lib/tax-engine/stock-transfer/stock-classification";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { effectiveTransferDate, type EffectiveTransferDateFields } from "@/lib/calc/stock-effective-transfer-date";
 
 /** 자동 산출 — 입력 patch가 적용된 가상 form으로 대주주 여부 재계산 */
 export function computeAutoIsMajor(
@@ -43,7 +44,8 @@ export function computeAutoIsMajor(
     | "lentSharesCount"
     | "pefIndirectSharesCount"
     | "totalIssuedShares"
-  >,
+  > &
+    EffectiveTransferDateFields,
   patch: Partial<StockTransferFormData>,
 ): boolean | undefined {
   const merged = { ...form, ...patch };
@@ -59,11 +61,13 @@ export function computeAutoIsMajor(
 
   // 임계표 **행 선택은 양도일**(부칙 축), 측정값은 직전 사업연도 종료일 기준 입력값이다.
   // 둘 다 있어야 판정이 성립한다 — 자동 fallback 금지(미입력이면 미리보기를 띄우지 않는다).
-  if (!merged.priorYearEndDate || !merged.transferDate) return undefined;
+  // 분할 모드는 가장 이른 매도 lot 일자(④가 엔진에 싣는 양도일)
+  const transferDate = effectiveTransferDate(merged);
+  if (!merged.priorYearEndDate || !transferDate) return undefined;
 
   const t = getMajorShareholderThreshold(
     merged.marketType,
-    new Date(merged.transferDate),
+    new Date(transferDate),
     // 엔진(`stock-classification.ts`)·UI 배지(`MajorShareholderBlock.tsx`)와 동일 인자.
     { isVentureCompany: merged.isVentureCompany, isKOTCTrading: merged.isKOTCTrading },
   );
@@ -71,7 +75,7 @@ export function computeAutoIsMajor(
   // 대차·사모펀드 가산 — 엔진과 **같은 함수**를 부른다(산식 복제 금지).
   // 본인·합산 양쪽에 더해진다는 점도 엔진과 같다.
   const { ratioAugment } = computeShareRatioAugmentation({
-    transferDate: new Date(merged.transferDate),
+    transferDate: new Date(transferDate),
     lentSharesCount: parseDecimal(merged.lentSharesCount),
     pefIndirectSharesCount: parseDecimal(merged.pefIndirectSharesCount),
     totalIssuedShares: parseDecimal(merged.totalIssuedShares),
