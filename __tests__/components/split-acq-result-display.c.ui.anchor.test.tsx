@@ -132,6 +132,33 @@ describe("[단건] swap 파트(H-7) — 취득가액 0 · 필요경비 = 직접�
   });
 });
 
+describe("[단건] swap 파트(H-7) — 두 파트 모두 swap이면 토지·건물 열 모두 취득가액 0", () => {
+  const r = run(SCN_N, COMBOS.EE, { landDirectExpenses: 400_000_000, buildingDirectExpenses: 150_000_000 });
+
+  it("신고서 — 합계·토지·건물 열 취득가액 0, 필요경비 550,000,000, 열마다 안내", () => {
+    expect(r.splitDetail!.land.swapApplied).toBe(true);
+    expect(r.splitDetail!.building.swapApplied).toBe(true);
+    const rows = buildRows(r, deriveColumns(r).mode, FORM, undefined, SCN_N.price);
+    const row = (l: string) => rows.find((x) => x.label === l)!;
+    const acq = row("취득가액");
+    expect([Number(acq.values.total ?? 0), Number(acq.values.land ?? 0), Number(acq.values.building ?? 0)]).toEqual([0, 0, 0]);
+    expect(Number(row("필요경비").values.total)).toBe(550_000_000);
+    expect(acq.roseNotes?.land).toContain("토지");
+    expect(acq.roseNotes?.building).toContain("건물");
+    expect(SCN_N.price - 0 - 550_000_000).toBe(r.transferGain);
+  });
+
+  it("명세서 — 취득가액 0 · 필요경비 550,000,000 · 두 파트 모두 안내", () => {
+    const items = buildStatementItems(r, FORM, undefined, undefined, SCN_N.price);
+    expect(items.get("acquisitionPrice")!.value).toBe(0);
+    expect(items.get("expenses")!.value).toBe(550_000_000);
+    const t = text(items.get("acquisitionPrice")!.formula);
+    expect(t).toContain("토지(환산취득가) 0 + 건물(환산취득가) 0");
+    // 환산취득가액(차감되지 않는 값) — 토지 675,000,000 × 150,000,000 ÷ 300,000,000, 건물 225,000,000 × 50,000,000 ÷ 100,000,000
+    expect(t).toContain("토지 취득가액 337,500,000 · 건물 취득가액 112,500,000");
+  });
+});
+
 // ───────────────────────────────────────────────────────────────────────────
 // ②③ 집계 — 소제목(G-4) · 다건 echo(H-5) 추종
 // ───────────────────────────────────────────────────────────────────────────

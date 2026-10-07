@@ -419,3 +419,39 @@ UI 변경(E-U1과 별개의 **표시 보강**):
 - [x] 정책 3종(useEffect 미러링 · 자동 안분 fallback · validate 8번째) 위반 없음 — 표시 전용
 - [x] Pre-Do anchor 작성·실행(37 passed · skip 21 · `C_UNSKIP=1` 20 RED)
 - 코드 수정 0 · 커밋·push 0
+
+---
+
+## 13. 구현 메모 (Do · 2026-10-07 — 설계 대비 차이만 기록)
+
+계획서 「C-통합」 결정 1~10이 최우선이다. 설계와 다르게 구현한 곳과 그 사유.
+
+| # | 설계 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | §3.1 `sepAcqModeLabel`을 `shared/part-acq-mode-label.ts`로 이동 | **이동하지 않고** 엔진 leaf `splitAcqModeLabel`을 단일 소스로 삼아 `sepAcqModeLabel = splitAcqModeLabel`로 위임 | 엔진 Do가 같은 어휘의 leaf를 이미 냈다(결정 9) — UI 사본을 새로 만들면 어휘가 두 곳이 된다. 겸용 소비처 import 경로 무변경 |
+| 2 | §3.1 문구 꼬리 「토지·건물 **취득일이 달라** 파트별로 산정」 | 「토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)」 | `splitDetail`은 별개 취득뿐 아니라 소유자 분리·PHD·일반 주택 비-별개(`stdSplit`)에도 실린다 — 「취득일이 다르다」는 후자에서 거짓이 된다. 취득일 판별 echo가 없고 폼 플래그로 추론하지 않는다 |
+| 3 | §5 `data-statement-formula` 신설 | **신설하지 않음** — 기존 `data-statement-row` + `textContent`로 단언 | 자산별 펼침이 닫힌 상태에서 `hidden`이라 `innerText`에는 빠지지만 `textContent`에는 있다(인쇄 시 항상 펼침). 속성 추가 없이 같은 단언이 된다 |
+| 4 | §3.4 어댑터 상수 `false`는 유지하고 소제목만 파생 | **상수를 echo 파생으로 교체**(`allEstimated(aggregateAcqModes(...))`) — 결정 6 「하드코딩 false 제거」 | `usedEstimatedAcquisition`은 `TransferTaxResult`의 필수 필드라 삭제할 수 없다. 전부 환산일 때만 true — 소비처는 `estimatedBase`를 함께 보므로(어댑터는 싣지 않음) 신고서 환산 분기는 종전과 같이 비활성 |
+| 5 | §3.7 H-7 「`FilingFormTableHelpers.ts:479-490` 인라인 합을 leaf 호출로」 | 합계 열은 `summarizeSplitGain`, **열별 셀은 엔진 leaf에 `splitPartAcquisitionDeducted`를 추가**해 소비 | 비소유 파트(취소선 열)까지 같은 정의를 읽어야 열별 항등식이 선다. 합계 leaf와 한 정의(`summarizeSplitGain`도 이 함수를 호출) |
+| 6 | 엔진 보고 #2 「`transfer-per-asset-summary.ts` 취득가액을 echo로」 | `splitDetail`이 실린 집계 속성에만 적용 + `depAlreadyDeducted = true`. **파일 749줄이라 직접값 추출부(`parseRaw`·`directAcqRaw`·`directExpenseRaw` 등)를 `transfer-per-asset-direct.ts`로 분리**(749 → 593줄) | 비분리 자산에 일괄 적용하면 §97③ 감가상각비를 이중 공제할 수 있다(엔진 `acquisitionPrice`는 공제 후 값). 800줄 정책 기회주의적 분리 |
+| 7 | 엔진 보고 #1 (판단 후 처리) | **포함** — `buildExemptEarlyResult`가 `splitDetail`을 싣는다(`buildTransferResultDetails` 인자로 — 결과 객체에 직접 필드를 쓰면 뒤의 `...buildTransferResultDetails()` 스프레드가 `undefined`로 덮어쓴다) | 화면 실측(§14)으로 비과세 표시와 모순 없음. 세액 불변 |
+| 8 | §3.5 Q-F 가드 | 실거래가 파트 직접 입력은 **증축분(건물2) 제외** — 건물2는 별도 「사용자 직접 입력 (증축 실거래가)」 문구가 이미 있다 | 증축 + part_input 조합의 거동은 미측정(V-U4) — 건드리지 않는다 |
+| 9 | §11 V-U10 `actualPartFormula` 「실지거래가액 파트라」 | 「**실거래가 파트라**」(결정 9 라벨 통일) | 기존 anchor 1건(`gb-part-appraisal-result.a2`) 문구 추종 |
+| 10 | — | 일반건물 3-way 표 배지 「(환산)」 → 「(환산취득가)」 | 결정 9 — 같은 4모드 어휘. 기존 anchor 3건(`gb-extension-4mode-ui`) 문구 추종 |
+| 11 | §3.9 `FilingFormTableHelpers.ts` 746 → ~735(순감소 예고) | 합계 블록이 swap 안내 루프·echo 소비로 +13줄 → 759줄(위험구간 ≥750). **날짜·기간·카드 취득일·장특 재안분 헬퍼를 `FilingFormTableDateHelpers.ts`로 분리**(759 → 657줄, 기존 이름 re-export) | 800줄 정책 기회주의적 분리(≤700 착지) |
+
+### 신규 testid
+`split-card-acq-mode-land|building` · `split-card-acq-land|building` · `split-card-lump-base-land|building` (`SplitGainDetailSection`).
+
+### 14. 화면 실측 (Do · E2E_PORT=3134, 설계 §1 시드와 같은 값)
+
+비과세(엔진 보고 #1) — 1세대1주택 · 900,000,000 · 토지 실가 200,000,000 + 건물 환산:
+
+| 화면 | 수정 전 | 수정 후 |
+|---|---|---|
+| 단건 신고서 | 합계 열 1개 · 취득 314,000,000 · 필요경비 「-」 | 토지·건물 열 · 취득 312,500,000 · 필요경비 1,500,000 · 비과세 양도차익 586,000,000 · 과세대상 0 |
+| 단건 명세서 | 「취득가액 314,000,000 (실제 거래가액)」 | 「토지(실거래가) 200,000,000 + 건물(환산취득가) 112,500,000 …」 · 필요경비 1,500,000 |
+| 단건 카드 | **없음**(`splitDetail` 미탑재) | 파트 값 표시 · 장특공제율 0% · 장특공제액 0 (비과세라 장특 미계산 — 모순 없음) |
+| 다건 건1 합산 신고서 | 취득 0 · 필요경비 314,000,000 | 취득 312,500,000 · 필요경비 1,500,000 |
+| 다건 합산 요약 | 전체 취득가액 −100,000,000 · 전체 필요경비 −314,000,000 | −412,500,000 · −1,500,000 |
+| 세액 | 결정세액 0 · 다건 합산 결정세액 38,390,000 | **동일**(총 납부세액 42,229,000 불변) |
