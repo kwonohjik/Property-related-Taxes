@@ -89,7 +89,9 @@ import {
 } from "./transfer-tax-exemption-requirements";
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import {
+  clause3RequiresOneYearGap,
   clause4RequiresOneYearGap,
+  resolve1562Clause3Years,
   resolve1562DeadlineYears,
 } from "./data/article-156-2-completion-era";
 import {
@@ -98,8 +100,7 @@ import {
   qualifiesAsInheritanceGeneralHouse,
 } from "./data/inheritance-general-house-era";
 
-/** §156의2③·§156의3②의 처분기한 — 조문 문언 그대로 3년(단축·연장 규정 없음). */
-export const ARTICLE_156_2_3_DEADLINE_YEARS = 3;
+/* §156의2③·§156의3②의 처분기한(현행 3년)은 양도일 연혁 — `resolve1562Clause3Years`(M7). */
 
 /*
  * §156의2⑧·⑨의 「합친 날(혼인한 날)부터 N년 이내에 먼저 양도하는 주택」의 N은
@@ -391,17 +392,16 @@ export function resolveArticle89Clause2(
   // 「1년 이상이 지난 후」·「3년 이내」 모두 초일불산입 — 응당일 권리 취득은 1년 미경과(§155①과 같은 문언,
   //   조심2020서1405 · 서면2017법령해석재산-785). ③·②의 직접 선례는 미확보(계획서 §7-1).
   //   후단 — §154①1호·2호가목·3호에 해당하면 1년 요건을 적용하지 않는다(③·④ 모두 · §155① 후단과 같은 술어).
+  // M7 — 1년 요건은 2012-06-29 이후 양도분부터, N년은 양도일 연혁(`data/article-156-2-completion-era.ts`).
   const oneYearMet =
+    !clause3RequiresOneYearGap(input.transferDate) ||
     waivesPriorHouseOneYearGap(input) ||
     isAfterPeriod(input.acquisitionDate, 1, right.acquisitionDate);
-  const dl = deadlineEndFrom(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
+  const clause3Years = resolve1562Clause3Years(input.transferDate);
+  const dl = deadlineEndFrom(right.acquisitionDate, clause3Years);
   const note = deadlineEndNote(dl);
   const deadline = dl.end;
-  const withinDeadline = isWithinDeadline(
-    right.acquisitionDate,
-    ARTICLE_156_2_3_DEADLINE_YEARS,
-    input.transferDate,
-  );
+  const withinDeadline = isWithinDeadline(right.acquisitionDate, clause3Years, input.transferDate);
   const clause = right.type === "redevelopment_right" ? "§156의2 ③" : "§156의3 ②";
 
   /** 준용 근거 — ⑦(상속 축) 또는 ⑩·⑪(2주택 축). 둘 다 아니면 ③이 직접 적용된 것이다. */
@@ -764,7 +764,7 @@ export function isRightThreeYearExceeded(p: {
   rightAcquisitionDate: Date;
   transferDate: Date;
 }): boolean {
-  return !isWithinDeadline(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS, p.transferDate);
+  return !isWithinDeadline(p.rightAcquisitionDate, resolve1562Clause3Years(p.transferDate), p.transferDate);
 }
 
 function dedupe(items: string[]): string[] {
