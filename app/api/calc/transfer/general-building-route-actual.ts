@@ -369,6 +369,8 @@ export function buildActualGeneralBuildingCards(
   let buildingTransfer: number;
   let landAcq: number;
   let buildingAcq: number;
+  // E-U2 — 실거래가의 출처(상속·부담부증여 분기는 채우지 않는다)
+  let actualSource: "part_input" | "bundled_apportion" | undefined;
   let landExp: number;
   let buildingExp: number;
   let transferBurdenedGiftBreakdown:
@@ -459,7 +461,9 @@ export function buildActualGeneralBuildingCards(
     if (hasBothPartPrices) {
       landAcq = landAcquisitionPrice;
       buildingAcq = buildingAcquisitionPrice;
+      actualSource = "part_input";
     } else if (actualAcquisitionPrice > 0) {
+      actualSource = "bundled_apportion";
       // 🔴 **취득시** 비율이다(P-2) — §100② 본문 「취득 당시」. 종전 양도시 비율은 정정 대상이었다.
       requireAcqStd("취득가액");
       landAcq = Math.floor(actualAcquisitionPrice * acqLandRatioNum);
@@ -568,6 +572,7 @@ export function buildActualGeneralBuildingCards(
   // 토지 카드는 landAcquisitionCause, 건물 카드는 buildingAcquisitionCause로 buildProperties가 판독.
   for (const c of cards) {
     c.acquisitionMode = "actual"; // E-1 echo — 실가 경로는 두 파트가 모두 실지거래가액(감정·매매사례는 환산 경로로 간다)
+    if (actualSource) c.actualSource = actualSource; // E-U2 echo — 파트 직접 입력 vs 일괄 총액 안분(표시 전용)
     if (c.propertyType === "land") {
       if (landAcquisitionCause) c.landAcquisitionCause = landAcquisitionCause;
       if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;

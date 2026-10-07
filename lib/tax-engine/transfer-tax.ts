@@ -391,6 +391,7 @@ export function calculateTransferTax(
     estimatedBase,
     appliedExpenses,
     depreciation: depreciationAmount,
+    splitDetail,
   });
   if (selfOwns !== "both" && splitDetail) {
     const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
@@ -604,6 +605,7 @@ export function calculateTransferTax(
     fbLthdFormula,
     appurtenantTable1Applied,
     transferDate: exemptionJudgeInput.transferDate,
+    splitDetail,
   });
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && exemptionJudgeInput.isOneHousehold && (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);

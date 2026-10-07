@@ -33,6 +33,7 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement, resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
@@ -402,6 +403,21 @@ export function calcLongTermHoldingDeduction(
     splitDetail.land.longTermDeduction = landDed;
     splitDetail.building.longTermRate = buildingRate;
     splitDetail.building.longTermDeduction = buildingDed;
+    // 보유분·거주분 분해 echo(E-1, 표시 전용) — 소유 파트에만. 거주 0으로 부른 공제율이 보유분이다.
+    const holdOnlyRate = (years: number): number =>
+      calcLongTermRate(years, 0, useTable2, false, input.transferDate);
+    if (ownsLand) {
+      Object.assign(
+        splitDetail.land,
+        deriveSplitLthdEcho({ totalRate: landRate, holdingOnlyRate: holdOnlyRate(splitDetail.land.holdingYears), deduction: landDed }),
+      );
+    }
+    if (ownsBuilding) {
+      Object.assign(
+        splitDetail.building,
+        deriveSplitLthdEcho({ totalRate: buildingRate, holdingOnlyRate: holdOnlyRate(splitDetail.building.holdingYears), deduction: buildingDed }),
+      );
+    }
 
     // 배율 초과 부수토지(비사업용 토지) 파트 — 「소득세법」 제95조 제2항 **표1**(일반)을 쓴다.
     // 1세대1주택 표2는 비과세 대상 주택·부수토지 전용이고, 배율 초과분은 §104의3①5호로

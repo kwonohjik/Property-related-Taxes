@@ -356,3 +356,19 @@ C-E2  H-4 주석 정정(엔진 파일)
 | V-C11 | PDF 「(0%)」 실제 출력 | 코드 확인만 |
 | V-C12 | e2e·테스트가 **현행 split 문구를 단언**하는 곳 | grep(`취득가(0)`·`× 0% \|`·`보유 N년×2% = 0%`) 0건 — 패턴 한계 있음. Do 때 전수 실행으로 확인 |
 | V-C13 | 12억 초과 안분의 `taxableGainAfterProration ??=`(`transfer-tax-taxable-gain.ts:77-78`)가 `isPartialExempt`일 때만 채워지는 점 — 비과세 아닌 split에서는 `calcLongTermHoldingDeduction`이 `gain`으로 후퇴(`:383`) | 코드 확인(문구는 `taxableGainAfterProration ?? gain`을 읽어야 한다) |
+
+---
+
+## 12. 구현 메모 (Do · 2026-10-07 — 설계 대비 차이만 기록)
+
+| # | 설계 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | F-1: `applyRate` → `applyLthdRate` 3곳(split `:391·392·412`) | **split 2곳 + 가업상속 후단 3항 + 장기임대 §97의3 2항**. 배율초과 부수토지(`nbDed`)·`rentalGainRatio`는 유지 | 같은 파일 `:468-470`·`:502-504` 실측 — 율 격자 6,396조합 × 양도차익 6,000건: 가업상속의 `residencePart = rate − heirHoldRate`(double 뺄셈)는 모든 양도차익에서 1원 과소, 임대분 0.7은 167,796,000 등에서 1원 과소. `rentalGainRatio`는 기준시가 비율(임의 소수)이라 `applyLthdRate`(소수 4자리 반올림)를 쓰면 세액이 달라져 제외. `nbDed`(표1)는 격자에서 어긋남 0건. D10-06 커밋(77e627537)은 「6곳」만 열거하고 제외 근거를 적지 않았다 — 누락 |
+| 2 | echo 율 단위 | **분수**(0.4 = 40%) — `longTermRate`·겸용 echo(`buildHousingLthdEcho`)와 같은 단위. 정수 %로 나눈 뒤 /100 | UI가 한 이름으로 읽는다 |
+| 3 | 문구 태그 `실지거래가/감정가/매매사례가` (Q-C8) | **`실거래가/환산취득가/감정가액/매매사례가액`** | 사용자 확정 결정 9(입력 라디오 어휘 통일). Pre-Do anchor의 `TAG`도 같이 정정 |
+| 4 | 양도차익 문구 가드 없음(§4.1) | 항등식(`양도가 − 취득가 − 경비 = 양도차익`)·파트 모드 부재 시 `null` → 종전 문구 | 사용자 지시 「합계 불변식이 깨지면 종전 문구로 후퇴」 |
+| 5 | E-U1 위치 `transfer-tax-aggregate.ts:545-563` | 집계 본체가 773줄(≥750)이라 **`transfer-tax-aggregate-display-echo.ts`로 분리**(본체 667줄) | 800줄 정책 기회주의적 분리 |
+| 6 | E-U1 필요경비 | 역산 대신 `summarizeSplitGain().necessaryExpense`(직접경비 + 개산공제) | 소유자 분리에서 역산은 일괄 총액 양도가액의 비소유 파트분이 섞인다. 소유 파트 둘 다면 역산값과 같다 |
+| 7 | E-U2 `actualSource` 채우는 곳 `:454-470` | 실가 경로(`general-building-route-actual.ts`) + **환산 경로의 실가 파트**(`general-building-valuation.ts` 카드 5곳) | 환산 경로의 실가 파트도 `acquisitionMode: "actual"`이다 — 둘 다 파트 직접 입력 |
+| 8 | E-U3 PHD 경로 | PHD 파트도 `lumpDeductionRate`(= `phd.estimatedDeductionRate`) | `stdPriceAtAcq`가 있는 파트는 율이 항상 실린다 |
+

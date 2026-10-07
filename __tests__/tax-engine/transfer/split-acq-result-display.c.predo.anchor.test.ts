@@ -4,16 +4,16 @@
  * 설계: `docs/02-design/features/transfer-split-acq-result-display.engine.design.md`
  * 계획: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` §2.1 H-2 · §6
  *
- * ## 이 파일이 고정하는 것
+ * ## 이 파일이 고정하는 것 (Do 완료 후 — Pre-Do 표식은 반전·해제했다)
  *
- *   R   (활성) 현행 **금액** 회귀선 — Phase C는 문구만 바꾼다. 금액 6종(파트 양도차익·파트 장특공제·
- *       양도차익·장특공제 합·과세표준)이 하나라도 달라지면 이 그룹이 깬다. 기대값은 BigInt 정수 나눗셈으로 낸
+ *   R   현행 **금액** 회귀선 — Phase C는 문구만 바꾼다. 금액 6종(파트 양도차익·파트 장특공제·양도차익·
+ *       장특공제 합·과세표준)이 하나라도 달라지면 이 그룹이 깬다. 기대값은 BigInt 정수 나눗셈으로 낸
  *       **독립 산식**이다(엔진 출력 복사 아님).
- *   D-0 (활성) 현행 결함 **표식** — 「양도가 − 취득가 − 경비」 문구를 그대로 계산하면 금액과 어긋난다는
- *       사실, 장특공제 문구가 `× 0%`이고 보유·거주 sub-step 금액이 파트 합과 다르다는 사실을 고정한다.
- *       ⚠️ Do(C)에서 **이 그룹은 반전된다** — 삭제하고 S 그룹의 skip을 해제할 것.
- *   S   (skip) 수정 후 기대 문구·금액. 설계서 §4의 문구 규격 그대로다.
- *   T   (todo) 신규 모듈·echo 필드가 필요해 지금은 타입 검사조차 못 하는 항목.
+ *   S   수정 후 문구·금액(설계서 §4) — skip을 해제했다. 「양도가 − 취득가 − 경비」 문구를 글자 그대로 계산하면
+ *       단계 amount가 나온다(`evalGainFormula`). 종전 결함 표식(D-0 그룹: `취득가(0)`·`× 0%`)은 반전돼 삭제했다.
+ *   F-1 LTHD 「공제율 → 공제액」 부동소수 1원 과소 — **세액이 바뀐 유일한 변경**(별 커밋).
+ *   (신규 echo·leaf·집계 echo anchor는 `split-acq-result-display.c.echo.anchor.test.ts`, 공용 fixture는
+ *    `_helpers/split-acq-display-fixture.ts`.)
  *
  * ## 실측 출처 (2026-10-07, 워크트리 `-c`, master `bf789b0d0`)
  *
@@ -28,6 +28,10 @@ import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calcLongTermHoldingDeduction, parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { TransferTaxInput, TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
+import {
+  D, won, mulDiv, rates, SCN_N, SCN_H, COMBOS, model, run, step,
+  type Mode, type Model, type Combo,
+} from "./_helpers/split-acq-display-fixture";
 import {
   PHD_INPUT,
   PHD_TRANSFER_PRICE,
@@ -56,162 +60,8 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
-const rates = makeMockRates();
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
-const D = (s: string) => new Date(s);
-const won = (n: number) => n.toLocaleString("en-US");
-
-// ═══════════════════════════════════════════════════════════════════════
-// 독립 산식 — 엔진 함수를 부르지 않는다 (BigInt 정수 나눗셈 · floor)
-// ═══════════════════════════════════════════════════════════════════════
-/** floor(a × b ÷ c) — 정수 전용. 부동소수 곱을 쓰지 않는다. */
-const mulDiv = (a: number, b: number, c: number): number => Number((BigInt(a) * BigInt(b)) / BigInt(c));
-const trunc1000 = (n: number): number => Math.floor(n / 1000) * 1000;
-
-type Mode = "actual" | "estimated" | "appraisal" | "salesCase";
-
-/** 시나리오 — N: 다주택(표1, 12억 이하라 안분 없음) / H: 1세대1주택 고가주택(12억 초과 안분 + 표2). */
-interface Scn {
-  price: number;
-  /** 양도시 기준시가 토지 · 건물 */
-  stdT: [number, number];
-  /** 취득시 기준시가 토지(㎡당 × 면적) · 건물(나목) */
-  stdA: [number, number];
-  landYears: number;
-  buildingYears: number;
-  oneHouse: boolean;
-  residenceMonths: number;
-}
-const SCN_N: Scn = {
-  price: 900_000_000, stdT: [300_000_000, 100_000_000], stdA: [150_000_000, 50_000_000],
-  landYears: 15, buildingYears: 7, oneHouse: false, residenceMonths: 0,
-};
-const SCN_H: Scn = {
-  price: 1_500_000_000, stdT: [450_000_000, 150_000_000], stdA: [150_000_000, 50_000_000],
-  landYears: 15, buildingYears: 7, oneHouse: true, residenceMonths: 84,
-};
-
-interface Combo {
-  land: Mode;
-  building: Mode;
-  /** 실가·감정·매매사례 파트의 입력 금액 */
-  landValue?: number;
-  buildingValue?: number;
-}
-const COMBOS: Record<string, Combo> = {
-  AE: { land: "actual", building: "estimated", landValue: 200_000_000 },
-  EA: { land: "estimated", building: "actual", buildingValue: 150_000_000 },
-  EE: { land: "estimated", building: "estimated" },
-  PA: { land: "appraisal", building: "actual", landValue: 210_000_000, buildingValue: 150_000_000 },
-  SE: { land: "salesCase", building: "estimated", landValue: 210_000_000 },
-  AA: { land: "actual", building: "actual", landValue: 200_000_000, buildingValue: 150_000_000 },
-};
-
-function toInput(s: Scn, c: Combo, over: Partial<TransferTaxInput> = {}): TransferTaxInput {
-  const landModeKey = c.land === "appraisal" || c.land === "actual" ? "landAcquisitionPrice" : "landSalesCaseValue";
-  const bldModeKey = c.building === "appraisal" || c.building === "actual" ? "buildingAcquisitionPrice" : "buildingSalesCaseValue";
-  return baseTransferInput({
-    propertyType: "housing",
-    transferPrice: s.price,
-    transferDate: D("2026-07-01"),
-    // 보유연수: 초일 산입 — 2011-06-01 → 15년 · 2019-06-01 → 7년 (2026-07-01 기준)
-    acquisitionDate: D("2019-06-01"),
-    landAcquisitionDate: D("2011-06-01"),
-    acquisitionPrice: 0,
-    expenses: 0,
-    useEstimatedAcquisition: false, // ④ 실측 body — 파트 모드는 환산이어도 이 플래그는 false다
-    acquisitionMethod: "actual",
-    transferCause: "general",
-    isOneHousehold: s.oneHouse,
-    householdHousingCount: s.oneHouse ? 1 : 2,
-    residencePeriodMonths: s.residenceMonths,
-    isSeparateAcquisition: true,
-    saleSplitMode: "apportioned",
-    landAcqMode: c.land,
-    buildingAcqMode: c.building,
-    ...(c.landValue != null ? { [landModeKey]: c.landValue } : {}),
-    ...(c.buildingValue != null ? { [bldModeKey]: c.buildingValue } : {}),
-    landStandardPriceAtTransfer: s.stdT[0],
-    buildingStandardPriceAtTransfer: s.stdT[1],
-    standardPricePerSqmAtAcquisition: 1_000_000,
-    acquisitionArea: s.stdA[0] / 1_000_000,
-    buildingStandardPriceAtAcquisition: s.stdA[1],
-    ...over,
-  } as Partial<TransferTaxInput>);
-}
-
-interface PartModel {
-  transferPrice: number;
-  acquisition: number;
-  deduction: number;
-  gain: number;
-  taxableGain: number;
-  years: number;
-  /** 보유분·거주분 공제율(%) — 표1이면 (총율, 0) */
-  holdPct: number;
-  resPct: number;
-  ltd: number;
-  holdAmt: number;
-  resAmt: number;
-}
-interface Model {
-  land: PartModel;
-  building: PartModel;
-  transferGain: number;
-  taxableGain: number;
-  ltd: number;
-  taxBase: number;
-  holdTotal: number;
-  resTotal: number;
-}
-
-function model(s: Scn, c: Combo): Model {
-  const landT = mulDiv(s.price, s.stdT[0], s.stdT[0] + s.stdT[1]);
-  const bldT = s.price - landT;
-  const one = (
-    mode: Mode, tp: number, stdA: number, stdT: number, given: number | undefined, years: number,
-  ): PartModel => {
-    let acquisition: number;
-    let deduction = 0;
-    if (mode === "estimated") {
-      acquisition = mulDiv(tp, stdA, stdT);
-      deduction = mulDiv(stdA, 3, 100);
-    } else if (mode === "actual") {
-      acquisition = given!;
-    } else {
-      acquisition = given!; // 감정·매매사례 — 값 직접 + 개산공제
-      deduction = mulDiv(stdA, 3, 100);
-    }
-    const gain = tp - acquisition - deduction;
-    const prorated = s.oneHouse ? mulDiv(gain, s.price - 1_200_000_000, s.price) : gain;
-    const table2 = s.oneHouse;
-    const resYears = Math.floor(s.residenceMonths / 12);
-    const holdPct = table2 ? Math.min(years * 4, 40) : Math.min(years * 2, 30);
-    const resPct = table2 ? Math.min(resYears * 4, 40) : 0;
-    const ltd = mulDiv(Math.max(prorated, 0), holdPct + resPct, 100);
-    const resAmt = holdPct + resPct > 0 ? mulDiv(ltd, resPct, holdPct + resPct) : 0;
-    return {
-      transferPrice: tp, acquisition, deduction, gain, taxableGain: prorated, years,
-      holdPct, resPct, ltd, holdAmt: ltd - resAmt, resAmt,
-    };
-  };
-  const land = one(c.land, landT, s.stdA[0], s.stdT[0], c.landValue, s.landYears);
-  const building = one(c.building, bldT, s.stdA[1], s.stdT[1], c.buildingValue, s.buildingYears);
-  const transferGain = land.gain + building.gain;
-  const taxableGain = s.oneHouse ? mulDiv(transferGain, s.price - 1_200_000_000, s.price) : transferGain;
-  const ltd = land.ltd + building.ltd;
-  return {
-    land, building, transferGain, taxableGain, ltd,
-    taxBase: trunc1000(taxableGain - ltd - 2_500_000),
-    holdTotal: land.holdAmt + building.holdAmt,
-    resTotal: land.resAmt + building.resAmt,
-  };
-}
-
-const run = (s: Scn, c: Combo, over: Partial<TransferTaxInput> = {}): TransferTaxResult =>
-  calculateTransferTax(toInput(s, c, over), rates);
-const step = (r: TransferTaxResult, label: string) => r.steps.find((x) => x.label === label);
 
 // ═══════════════════════════════════════════════════════════════════════
 // R — 현행 금액 회귀선 (활성 · Phase C 전후 불변)
@@ -417,7 +267,7 @@ describe("R-9 폼 → ④ → Route 전 구간 (⑫ Zod 경유) — 직접 호�
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// D-0 — 현행 결함 표식 (활성) — ⚠️ Do(C)에서 삭제하고 S의 skip을 해제한다
+// 양도차익 문구 평가기 — 「양도가(…) - 취득가(…) - 경비(…)」를 글자 그대로 계산한다
 // ═══════════════════════════════════════════════════════════════════════
 /**
  * 「양도가(…) - 취득가(…) - 경비(…)」 문구를 **글자 그대로 계산**한다. 괄호 안의 금액(쉼표 있는 수 또는 단독 0)을
@@ -436,118 +286,15 @@ function evalGainFormula(formula: string): number | null {
   return t == null || a == null || e == null ? null : t - a - e;
 }
 
-describe("D-0 현행 결함 표식 — 문구가 금액을 만들지 못한다 (Do에서 반전)", () => {
-  it("D-0a 양도차익 문구를 계산하면 양도차익이 나오지 않는다 — 6조합 전부 (H-2 · transfer-tax-taxable-gain.ts:139-143)", () => {
-    for (const [key, combo] of Object.entries(COMBOS)) {
-      const r = run(SCN_N, combo);
-      const f = step(r, "양도차익 계산")!.formula;
-      expect(f, `${key} 현행 문구`).toBe(`양도가(${won(SCN_N.price)}) - 취득가(0) - 경비(0)`);
-      expect(evalGainFormula(f), `${key} 문구값은 양도가 전액이다`).toBe(SCN_N.price);
-      expect(evalGainFormula(f)).not.toBe(r.transferGain);
-    }
-  });
-
-  it("D-0b 실가/실가(AA)도 같다 — 파트 모드 조합이 아니라 split 경로 전체의 결함", () => {
-    const r = run(SCN_N, COMBOS.AA);
-    expect(step(r, "양도차익 계산")!.formula).toBe(`양도가(${won(SCN_N.price)}) - 취득가(0) - 경비(0)`);
-    expect(r.transferGain).toBe(550_000_000); // 900,000,000 − 200,000,000 − 150,000,000
-  });
-
-  it("D-0c 자본적지출은 경비로 잡히지만 개산공제는 빠진다 — 문구값 ≠ 금액", () => {
-    // 토지 실가 + 건물 환산 + 토지분 자본적지출 5,000,000: 경비(5,000,000)만 찍히고 건물 개산공제 1,500,000은 없다
-    const r = run(SCN_N, COMBOS.AE, { landDirectExpenses: 5_000_000 });
-    const f = step(r, "양도차익 계산")!.formula;
-    expect(f).toBe(`양도가(${won(SCN_N.price)}) - 취득가(0) - 경비(5,000,000)`);
-    expect(r.transferGain).toBe(581_000_000); // 900,000,000 − 312,500,000 − (5,000,000 + 1,500,000)
-    expect(evalGainFormula(f)).not.toBe(r.transferGain);
-  });
-
-  it("D-0d 소유자 분리(land_only) — 양도가는 일괄 총액 그대로, 금액은 토지 파트만", () => {
-    const r = run(SCN_N, COMBOS.AE, { selfOwns: "land_only" });
-    expect(step(r, "양도차익 계산")!.formula).toBe(`양도가(${won(SCN_N.price)}) - 취득가(0) - 경비(0)`);
-    expect(r.transferGain).toBe(475_000_000); // 토지 파트 675,000,000 − 200,000,000
-  });
-
-  it("D-0e §97②2호 단서(swap)가 걸려도 문구는 같다 — 파트에만 swapApplied가 있고 결과 단일 플래그는 없다", () => {
-    const r = run(SCN_N, COMBOS.AE, { buildingDirectExpenses: 150_000_000 });
-    expect(r.splitDetail!.building.swapApplied).toBe(true);
-    expect(r.swapApplied, "결과 단일 swapApplied는 분리 경로에서 채워지지 않는다(별건 — 설계서 F-2)").toBeUndefined();
-    expect(step(r, "양도차익 계산")!.formula).toBe(`양도가(${won(SCN_N.price)}) - 취득가(0) - 경비(150,000,000)`);
-    expect(r.transferGain).toBe(550_000_000); // 900,000,000 − 200,000,000 − 150,000,000(단서: 환산취득가 차감 안 함)
-  });
-
-  it("D-0f 개별주택가격 미공시(PHD) — 취득가는 환산합이 맞지만 경비는 개산공제를 잃는다", () => {
-    const r = calculateTransferTax(
-      baseTransferInput({
-        propertyType: "housing", transferPrice: PHD_TRANSFER_PRICE, transferDate: D("2023-02-16"),
-        acquisitionDate: D("2014-09-14"), landAcquisitionDate: D("2013-06-01"), acquisitionPrice: 0,
-        useEstimatedAcquisition: true, acquisitionMethod: "estimated", expenses: 0,
-        isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
-        landSplitMode: "apportioned", preHousingDisclosure: PHD_INPUT,
-      } as Partial<TransferTaxInput>),
-      rates,
-    );
-    expect(r.transferGain, "Excel 정본 양도차익").toBe(PHD_TOTAL_GAIN);
-    const f = step(r, "양도차익 계산")!.formula;
-    expect(f).toBe(`양도가(${won(PHD_TRANSFER_PRICE)}) - 취득가(환산 ${won(PHD_TOTAL_EST_ACQ)}) - 경비(개산공제 0)`);
-    // 개산공제 = 양도가 − 환산취득가 − 양도차익 (항등식 — 엔진 파트 분해를 쓰지 않는 독립 값)
-    const lump = PHD_TRANSFER_PRICE - PHD_TOTAL_EST_ACQ - PHD_TOTAL_GAIN;
-    expect(lump).toBe(14_544_847);
-    expect(r.splitDetail!.land.appraisalDeduction + r.splitDetail!.building.appraisalDeduction).toBe(lump);
-    expect(evalGainFormula(f)).not.toBe(r.transferGain);
-  });
-
-  it("D-0g 장기보유특별공제 문구 — 공제율 0%·건물 보유연수 하나로 파트별 공제를 설명한다 (lthd-steps.ts:131·138)", () => {
-    const m = model(SCN_N, COMBOS.AE);
-    const r = run(SCN_N, COMBOS.AE);
-    const s = step(r, "장기보유특별공제")!;
-    expect(s.amount).toBe(m.ltd); // 158,040,000 = 토지 142,500,000 (30%) + 건물 15,540,000 (14%)
-    expect(s.formula).toBe(
-      `${won(r.taxableGain)} × 0% | 보유 7년×2% = 0% (30% 한도) | 보유기간 7년 1개월`,
-    );
-    // 문구 그대로면 0%·7년이라 공제가 0이어야 하는데 금액은 158,040,000이다
-  });
-
-  it("D-0h 표2 — 보유·거주 sub-step 금액이 건물 보유연수 하나로 안분된다 (파트 합과 다르다)", () => {
-    const m = model(SCN_H, COMBOS.AE);
-    const r = run(SCN_H, COMBOS.AE);
-    const hold = step(r, "보유 기간분 장특")!.amount;
-    const res = step(r, "거주 기간분 장특")!.amount;
-    // 엔진: 총액 × 28/56 = 총액 ÷ 2 (건물 7년 기준 한 가지 율)
-    expect(hold).toBe(Math.floor(r.longTermHoldingDeduction / 2));
-    // 파트 합(독립): 토지 15년(40%) · 건물 7년(28%) / 거주는 둘 다 28%
-    expect(m.holdTotal).toBe(87_916_000);
-    expect(m.resTotal).toBe(65_716_000);
-    expect(hold).not.toBe(m.holdTotal);
-    expect(res).not.toBe(m.resTotal);
-    // 합은 같다 — 배분만 틀렸다
-    expect(hold + res).toBe(m.holdTotal + m.resTotal);
-  });
-
-  it("D-0i 같은 값을 신고서(split-2col)는 파트별로 다시 안분한다 — 두 카드가 같은 항목에 다른 금액 (엔진 echo가 없어 UI가 재도출)", () => {
-    // 신고서 분기 `FilingFormTableHelpers.ts` 의 `splitLtDeduction`은 파트 공제액을 (보유율 : 거주율)로 나눈다.
-    // 같은 로직을 독립으로 재현해 신고서 값이 87,916,000 / 65,716,000임을 고정한다 — 상세명세서(D-0h)와 다르다.
-    const m = model(SCN_H, COMBOS.AE);
-    const split = (ld: number, hold: number, res: number) => {
-      const total = hold + res;
-      const resAmt = Math.floor((ld * res) / total);
-      return { hold: ld - resAmt, res: resAmt };
-    };
-    const l = split(m.land.ltd, m.land.holdPct, m.land.resPct);
-    const b = split(m.building.ltd, m.building.holdPct, m.building.resPct);
-    expect(l.hold + b.hold).toBe(m.holdTotal);
-    expect(l.res + b.res).toBe(m.resTotal);
-  });
-});
-
 // ═══════════════════════════════════════════════════════════════════════
 // S — 수정 후 기대 (skip) — 설계서 §4 문구 규격. Do(C)에서 skip 해제.
 // ═══════════════════════════════════════════════════════════════════════
+// 결정 9 — 입력 화면 라디오 어휘(실거래가·환산취득가·감정가액·매매사례가액)로 전 뷰 통일
 const TAG: Record<Mode, string> = {
-  actual: "실지거래가",
+  actual: "실거래가",
   estimated: "환산취득가",
-  appraisal: "감정가",
-  salesCase: "매매사례가",
+  appraisal: "감정가액",
+  salesCase: "매매사례가액",
 };
 
 /** 설계서 §4.1 규격 — 독립 조립(엔진 출력을 읽지 않는다). swap이 없는 조합 전용. */
@@ -565,7 +312,7 @@ function expectedGainFormula(m: Model, c: Combo, owned: { land: boolean; buildin
 
 describe("S 수정 후 기대 — 양도차익 문구 (H-2 · 설계서 §4.1)", () => {
   for (const key of Object.keys(COMBOS)) {
-    it.skip(`S-1 N:${key} 문구가 파트 합 기준이고 값이 금액을 만든다`, () => {
+    it(`S-1 N:${key} 문구가 파트 합 기준이고 값이 금액을 만든다`, () => {
       const m = model(SCN_N, COMBOS[key]);
       const r = run(SCN_N, COMBOS[key]);
       const s = step(r, "양도차익 계산")!;
@@ -575,35 +322,35 @@ describe("S 수정 후 기대 — 양도차익 문구 (H-2 · 설계서 §4.1)",
     });
   }
 
-  it.skip("S-2 실가 파트 자본적지출 5,000,000 + 건물 환산 — 경비는 두 갈래 합이다 (D-0c 반전)", () => {
+  it("S-2 실가 파트 자본적지출 5,000,000 + 건물 환산 — 경비는 두 갈래 합이다 (D-0c 반전)", () => {
     const r = run(SCN_N, COMBOS.AE, { landDirectExpenses: 5_000_000 });
     const s = step(r, "양도차익 계산")!;
     expect(s.formula).toBe(
-      `양도가(토지 ${won(675_000_000)} + 건물 ${won(225_000_000)}) - 취득가(토지 실지거래가 ${won(200_000_000)} + 건물 환산취득가 ${won(112_500_000)}) - 경비(토지 자본적지출·양도비 ${won(5_000_000)} + 건물 개산공제 ${won(1_500_000)})`,
+      `양도가(토지 ${won(675_000_000)} + 건물 ${won(225_000_000)}) - 취득가(토지 실거래가 ${won(200_000_000)} + 건물 환산취득가 ${won(112_500_000)}) - 경비(토지 자본적지출·양도비 ${won(5_000_000)} + 건물 개산공제 ${won(1_500_000)})`,
     );
     expect(evalGainFormula(s.formula)).toBe(s.amount);
   });
 
-  it.skip("S-3 소유자 분리 land_only — 소유 파트만 적는다 (D-0d 반전)", () => {
+  it("S-3 소유자 분리 land_only — 소유 파트만 적는다 (D-0d 반전)", () => {
     const r = run(SCN_N, COMBOS.AE, { selfOwns: "land_only" });
     const s = step(r, "양도차익 계산")!;
-    expect(s.formula).toBe(`양도가(토지 ${won(675_000_000)}) - 취득가(토지 실지거래가 ${won(200_000_000)}) - 경비(0)`);
+    expect(s.formula).toBe(`양도가(토지 ${won(675_000_000)}) - 취득가(토지 실거래가 ${won(200_000_000)}) - 경비(0)`);
     expect(evalGainFormula(s.formula)).toBe(s.amount);
     expect(s.amount).toBe(475_000_000);
   });
 
-  it.skip("S-4 §97②2호 단서(swap) — swap 파트는 취득가를 차감하지 않고 필요경비로 대체한다 (D-0e 반전, 조문 번호는 문구에 넣지 않는다)", () => {
+  it("S-4 §97②2호 단서(swap) — swap 파트는 취득가를 차감하지 않고 필요경비로 대체한다 (D-0e 반전, 조문 번호는 문구에 넣지 않는다)", () => {
     const r = run(SCN_N, COMBOS.AE, { buildingDirectExpenses: 150_000_000 });
     const s = step(r, "양도차익 계산")!;
-    // 취득가는 토지 실지거래가만, 경비는 건물 자본적지출·양도비 150,000,000 (환산취득가·개산공제 대신)
+    // 취득가는 토지 실거래가만, 경비는 건물 자본적지출·양도비 150,000,000 (환산취득가·개산공제 대신)
     expect(s.formula).toBe(
-      `양도가(토지 ${won(675_000_000)} + 건물 ${won(225_000_000)}) - 취득가(토지 실지거래가 ${won(200_000_000)}) - 경비(건물 자본적지출·양도비 ${won(150_000_000)} — 환산취득가액·개산공제 대신 적용)`,
+      `양도가(토지 ${won(675_000_000)} + 건물 ${won(225_000_000)}) - 취득가(토지 실거래가 ${won(200_000_000)}) - 경비(건물 자본적지출·양도비 ${won(150_000_000)} — 환산취득가액·개산공제 대신 적용)`,
     );
     expect(evalGainFormula(s.formula)).toBe(s.amount);
     expect(s.amount).toBe(550_000_000);
   });
 
-  it.skip("S-5 PHD — 경비에 파트별 개산공제가 실린다 (D-0f 반전)", () => {
+  it("S-5 PHD — 경비에 파트별 개산공제가 실린다 (D-0f 반전)", () => {
     const r = calculateTransferTax(
       baseTransferInput({
         propertyType: "housing", transferPrice: PHD_TRANSFER_PRICE, transferDate: D("2023-02-16"),
@@ -628,7 +375,7 @@ describe("S 수정 후 기대 — 양도차익 문구 (H-2 · 설계서 §4.1)",
     expect(nums("경비").reduce((a, b) => a + b, 0)).toBe(PHD_TRANSFER_PRICE - PHD_TOTAL_EST_ACQ - PHD_TOTAL_GAIN);
   });
 
-  it.skip("S-6 전액 과세 12억 초과(H) — 양도차익 문구도 같은 규격 (안분 step은 R-8로 불변)", () => {
+  it("S-6 전액 과세 12억 초과(H) — 양도차익 문구도 같은 규격 (안분 step은 R-8로 불변)", () => {
     const m = model(SCN_H, COMBOS.AE);
     const r = run(SCN_H, COMBOS.AE);
     const s = step(r, "양도차익 계산")!;
@@ -638,7 +385,7 @@ describe("S 수정 후 기대 — 양도차익 문구 (H-2 · 설계서 §4.1)",
 });
 
 describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2 · 설계서 §4.2~§4.3)", () => {
-  it.skip("S-7 표1(N:AE) — 파트별 과세 양도차익 × 파트별 공제율 = 파트별 공제액의 합", () => {
+  it("S-7 표1(N:AE) — 파트별 과세 양도차익 × 파트별 공제율 = 파트별 공제액의 합", () => {
     const m = model(SCN_N, COMBOS.AE);
     const r = run(SCN_N, COMBOS.AE);
     const s = step(r, "장기보유특별공제")!;
@@ -651,7 +398,7 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
     expect(s.formula, "공제율 0% · 건물 보유연수 단독 설명 문구가 사라진다").not.toContain("× 0%");
   });
 
-  it.skip("S-8 표2(H:AE) — 파트별 보유율+거주율 · 합 = 장특공제", () => {
+  it("S-8 표2(H:AE) — 파트별 보유율+거주율 · 합 = 장특공제", () => {
     const m = model(SCN_H, COMBOS.AE);
     const r = run(SCN_H, COMBOS.AE);
     const s = step(r, "장기보유특별공제")!;
@@ -663,7 +410,7 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
   });
 
   for (const key of Object.keys(COMBOS)) {
-    it.skip(`S-9 표2 H:${key} — sub-step 금액이 파트 합 (보유분 + 거주분 = 총액, 신고서 split-2col과 같은 값)`, () => {
+    it(`S-9 표2 H:${key} — sub-step 금액이 파트 합 (보유분 + 거주분 = 총액, 신고서 split-2col과 같은 값)`, () => {
       const m = model(SCN_H, COMBOS[key]);
       const r = run(SCN_H, COMBOS[key]);
       const hold = step(r, "보유 기간분 장특")!;
@@ -682,7 +429,7 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
     });
   }
 
-  it.skip("S-10 sub-step 라벨·존재 계약 불변 — isTable2Applied가 읽는 신호 (R-5와 같다)", () => {
+  it("S-10 sub-step 라벨·존재 계약 불변 — isTable2Applied가 읽는 신호 (R-5와 같다)", () => {
     const h = run(SCN_H, COMBOS.AE);
     expect(h.steps.some((x) => x.label === "보유 기간분 장특" && x.sub)).toBe(true);
     expect(h.steps.some((x) => x.label === "거주 기간분 장특" && x.sub && x.amount > 0)).toBe(true);
@@ -690,7 +437,7 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
     expect(n.steps.some((x) => x.label === "보유 기간분 장특")).toBe(false);
   });
 
-  it.skip("S-11 소유 파트만 — land_only(N)는 토지분만 적는다", () => {
+  it("S-11 소유 파트만 — land_only(N)는 토지분만 적는다", () => {
     const m = model(SCN_N, COMBOS.AE);
     const r = run(SCN_N, COMBOS.AE, { selfOwns: "land_only" });
     const s = step(r, "장기보유특별공제")!;
@@ -699,7 +446,7 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
     expect(s.formula).not.toContain("건물분");
   });
 
-  it.skip("S-12 보유 3년 미만 파트 — 공제율 0%임을 문구가 말한다 (건물 2년)", () => {
+  it("S-12 보유 3년 미만 파트 — 공제율 0%임을 문구가 말한다 (건물 2년)", () => {
     // 건물 취득 2024-08-01 → 보유 1년 11개월(2년 미만) · 토지 15년
     const r = run(SCN_N, COMBOS.AE, { acquisitionDate: D("2024-08-01") });
     const s = step(r, "장기보유특별공제")!;
@@ -768,15 +515,4 @@ describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 —
     expect(mulDiv(167_796_000, 70, 100)).toBe(117_457_200);
     expect(r.deduction).toBe(117_457_200);
   });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// T — 신규 모듈·echo 필드가 필요한 항목 (todo)
-// ═══════════════════════════════════════════════════════════════════════
-describe("T 후속 — 신규 echo·leaf (타입이 생기면 작성)", () => {
-  it.todo("T-1 SplitPartResult.holdingDeductionRate · residenceDeductionRate · holdingDeductionAmount · residenceDeductionAmount echo (설계서 §3.2)");
-  it.todo("T-2 summarizeSplitGain(splitDetail) leaf — 취득가 합(swap 파트 0)·경비 합(직접경비+개산공제)·양도가 합 (설계서 §3.3)");
-  it.todo("T-3 장특 파트 합 불변식 가드 — Σ 파트 공제액 ≠ longTermHoldingDeduction(§98의2 특칙 재할당)이면 현행 문구로 후퇴");
-  it.todo("T-4 R-10 fixture에서 장기보유특별공제 문구가 「파트 합 = 전체 과세 양도차익」을 단정하지 않는다(문구에 합계 등식 금지)");
-  it.todo("T-5 겸용(B1) steps — MixedUseStep은 어떤 결과뷰도 렌더하지 않는다(어댑터 steps: [])는 정적 확인을 anchor로 고정");
 });

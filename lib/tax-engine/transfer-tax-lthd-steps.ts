@@ -17,6 +17,8 @@ import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { resolveLthdTable2Era } from "./data/lthd-table2-era";
+import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import { buildSplitLthdFormula, buildSplitLthdSubFormulas } from "./transfer-tax-split-display";
 
 /**
  * 장특공제 보유·거주 분리 sub-step 라벨 — **표시 계층이 이 문자열로 sub-step을 찾는다**.
@@ -63,6 +65,12 @@ export interface LthdStepArgs {
    * 「보유 N년×8%」로 쓰고 거주분 sub-step을 내지 않는다(거주분 공제율 개념이 없다).
    */
   transferDate?: Date;
+  /**
+   * 토지·건물 분리(split) 결과 — 있으면 문구를 **파트별**로 풀어 쓴다(Phase C, 표시 전용).
+   * 공제 금액·율은 이미 파트별로 확정돼 있어 단일 공제율·건물 보유연수 하나로는 설명되지 않는다.
+   * 파트 echo가 없거나 합이 총액과 어긋나면(§98의2 특칙 재할당 등) 종전 문구로 후퇴한다.
+   */
+  splitDetail?: SplitGainResult;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -84,6 +92,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     appurtenantTable1Applied,
     meetsTable2Residence,
     transferDate,
+    splitDetail,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -130,10 +139,25 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${Math.round(longTermHoldingRate * 100)}%`
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
   const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
+  // split: 파트별 풀어 쓰기. 용도변경(§95⑤)·가업상속 후단·§98의2 특칙과는 병용되지 않지만(엔진 분기가 split을 먼저
+  // 반환) 표시 계층도 같은 조건을 가드로 둔다 — 하나라도 걸리면 종전 문구다.
+  const splitArgs =
+    splitDetail && !lthdExcluded && !lthd982Applied && !conv && !fbLthdFormula
+      ? {
+          sd: splitDetail,
+          longTermHoldingDeduction,
+          isTable2: isOneHouseSpecial,
+          singleAxis: singleAxisTable2,
+          residenceYears: residenceYearsForStep,
+        }
+      : undefined;
+  const splitFormula = splitArgs ? buildSplitLthdFormula(splitArgs) : null;
   steps.push({
     label: "장기보유특별공제",
     formula: lthdExcluded
       ? `0 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
+      : splitFormula
+      ? splitFormula
       : [
           `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
           lthdFormulaRate,
@@ -147,7 +171,25 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   // 명세서 카드의 "보유 기간분 장특"·"거주 기간분 장특" 행에 step.formula 자동 매핑 (정확한 안분율 노출).
   // 비특례 케이스는 sub-step 미발생 (보유분 일률 표1 적용 — UI는 표1 안내 노출).
   // 단일축 시기(2009~2020 양도분 표2)는 거주분이 없어 나눌 것이 없다 — sub-step을 내지 않는다.
-  if ((isOneHouseSpecial || conv) && !singleAxisTable2 && longTermHoldingDeduction > 0) {
+  const splitSub = splitFormula ? buildSplitLthdSubFormulas(splitArgs!) : null;
+  if (splitSub && isOneHouseSpecial && !singleAxisTable2 && longTermHoldingDeduction > 0) {
+    // split — 파트별 분해의 합(거주분 = floor(공제액 × 거주% ÷ 총%), 보유분 = 잔액 흡수). 건물 보유연수 하나로 총액을
+    // 안분하던 종전 금액은 신고서(split-2col)가 보이는 파트 합과 달랐다 — 합은 같고 배분만 틀렸다.
+    steps.push({
+      label: LTHD_HOLDING_STEP_LABEL,
+      formula: splitSub.holding.formula,
+      amount: splitSub.holding.amount,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+    });
+    steps.push({
+      label: LTHD_RESIDENCE_STEP_LABEL,
+      formula: splitSub.residence.formula,
+      amount: splitSub.residence.amount,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+    });
+  } else if ((isOneHouseSpecial || conv) && !singleAxisTable2 && longTermHoldingDeduction > 0) {
     const totalRate = holdingPct + residencePct;
     if (totalRate > 0) {
       // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 표2 / §95⑤). floor 잔액(≤1원)은

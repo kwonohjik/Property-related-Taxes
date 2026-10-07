@@ -325,7 +325,8 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       expenses: totalExpenses,
       splitDetail: splitResult,
       necessaryExpenseMode: usedEstimated ? "estimated_with_deduction" : "actual",
-      // 토지/건물 split swap은 자산 단위 적용 — calcSplitGain 내부 처리는 별도 PR
+      // 토지/건물 split swap은 파트별로 calcSplitGain 내부(applyAssetSwap)에서 이미 처리한다(파트 `swapApplied`·
+      // 파트 양도차익 반영). 결과 **단일** swapApplied·swapComparison만 이 반환에 싣지 않는다(설계서 F-2 — 별건).
     };
   }
 

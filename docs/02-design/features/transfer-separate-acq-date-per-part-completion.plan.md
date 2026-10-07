@@ -446,3 +446,9 @@ rev.1의 물질화 마이그레이션은 **폐기**한다:
 | `stdPriceAtAcq`·`acqMode` 기존 존재 | `transfer-split-gain.types.ts:39,47` | 확인 |
 | 다건 split 차단 | `multi-transfer-tax-validate.ts:87-89` | 확인 |
 | general_building 파트별 선례 | `calc-wizard-asset-gb.ts:14-17,41,48` | 확인 |
+
+---
+
+### 정정 각주 (2026-10-07 · Phase C H-4 — 본문은 이력이라 재작성하지 않는다)
+
+- **:365 · :415 · :447 「다건은 `multi-transfer-tax-validate.ts:87-89`가 split 전면 차단」은 현행이 아니다.** 현행 `:87-89`는 `calcPropertyCompletion`이고, `lib/calc/multi-transfer-tax-validate.ts:176-177` 주석이 「토지·건물 취득일 분리·소유자 분리(§166⑥·§168②)는 **차단하지 않는다** — ⑬·⑭가 단건과 같은 leaf로 분리 축을 옮긴다(F-12, 2026-09-19)」라고 명시한다. 따라서 「다건 영향 0」은 성립하지 않고, 다건·컴패니언의 분리 자산 표시 echo는 `transfer-split-acq-result-display.engine.design.md` E-U1이 다룬다.

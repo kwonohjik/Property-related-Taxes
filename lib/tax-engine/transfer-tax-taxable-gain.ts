@@ -19,6 +19,7 @@ import {
   hasHousingLandExemptExclusion,
 } from "./transfer-tax-split-rate";
 import { TRANSFER } from "./legal-codes";
+import { buildSplitGainFormula } from "./transfer-tax-split-display";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
@@ -117,8 +118,18 @@ export function buildGainFormula(args: {
   appliedExpenses: number;
   /** §97③ 감가상각비 — 있으면 취득가에서 공제한 값으로 표기한다(산식이 자기 값을 만들도록). */
   depreciation?: number;
+  /**
+   * 토지·건물 분리(split) 결과 — 있으면 **파트 합 기준**으로 쓴다(Phase C). split은 자산 단위
+   * `acquisitionPrice`(=0)·`appliedExpenses`(=직접경비 합뿐, 개산공제 제외)가 실제 차감값이 아니라
+   * 「양도가 − 0 − 0」이 찍혔다. 파트 echo가 없거나 항등식이 깨지면 종전 분기로 후퇴한다.
+   */
+  splitDetail?: SplitGainResult;
 }): string {
-  const { swapApplied, useEstimatedAcquisition, transferPrice, acquisitionPrice, estimatedBase, appliedExpenses, depreciation = 0 } = args;
+  const { swapApplied, useEstimatedAcquisition, transferPrice, acquisitionPrice, estimatedBase, appliedExpenses, depreciation = 0, splitDetail } = args;
+  if (splitDetail) {
+    const splitFormula = buildSplitGainFormula(splitDetail);
+    if (splitFormula) return splitFormula;
+  }
   const depNote = depreciation > 0 && !swapApplied ? ` − 감가상각비 ${depreciation.toLocaleString()}` : "";
   const effectiveInput = { transferPrice, acquisitionPrice, useEstimatedAcquisition };
   let gainFormula: string;

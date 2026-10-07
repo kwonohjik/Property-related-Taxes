@@ -181,15 +181,16 @@ describe("[다건·컴패니언] 현행 회귀선 — PerPropertyBreakdown echo"
     return calculateTransferTaxAggregate(input, rates);
   }
 
-  it.each(COMBOS)("$name — 분리 자산의 취득가액=0 · 필요경비=취득가액 합+개산공제 (신고서·명세서 합계가 따라 틀린다)", (c) => {
+  // E-U1(엔진 Do, 2026-10-07)로 **의도적으로 뒤집었다** — 종전 단언은 「취득가액 0 · 필요경비 = 취득가액 합 + 개산공제」였다.
+  // `splitDetail` 실재 단언은 남긴다(뒤집으며 지우면 형제 안전망이 같이 사라진다).
+  it.each(COMBOS)("$name — 분리 자산의 취득가액=파트 합 · 필요경비=개산공제 합 (E-U1 — 5개 화면이 이 echo를 읽는다)", (c) => {
     const p = aggregate(c.land, c.building).properties[0];
-    expect(p.splitDetail).toBeDefined(); // 정본은 echo에 실재한다 — 소비층이 안 읽을 뿐
-    // 현행 결함 고정 (실측: 실가/실가도 취득가액 0 · 필요경비 350,000,000)
-    expect(p.acquisitionPrice).toBe(0);
-    expect(p.necessaryExpense).toBe(sum(c.acq) + sum(c.ded));
+    expect(p.splitDetail).toBeDefined(); // 정본은 echo에 실재한다
+    expect(p.acquisitionPrice).toBe(sum(c.acq));
+    expect(p.necessaryExpense).toBe(sum(c.ded));
   });
 
-  redUntilDo.each(COMBOS)("$name (수정 후) — 취득가액 = 파트 합 · 필요경비 = 개산공제 합 (엔진 echo 정합)", (c) => {
+  it.each(COMBOS)("$name (수정 후) — 취득가액 = 파트 합 · 필요경비 = 개산공제 합 (엔진 echo 정합)", (c) => {
     const p = aggregate(c.land, c.building).properties[0];
     expect(p.acquisitionPrice).toBe(sum(c.acq));
     expect(p.necessaryExpense).toBe(sum(c.ded));
