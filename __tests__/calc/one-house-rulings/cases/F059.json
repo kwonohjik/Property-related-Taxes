@@ -1,0 +1,65 @@
+[
+  {
+    "id": "F059-era",
+    "docNo": "국심2004서0593",
+    "docDate": "2004.05.19.",
+    "basis": "era",
+    "today": "2004-05-19",
+    "summary": "쟁점외아파트가 2002.11.29. 재건축사업계획 승인, 2003.4.30. 퇴거·내부시설 철거로 폐가상태 → 권리 기간이라 주택 아님 → 2003.6.2. 쟁점주택(1983 취득) 양도 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-06-02",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1983-10-10"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1990-02-26",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2002-11-29"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 쟁점외아파트를 조합원입주권 행으로 두고 인가일 칸에 재건축사업계획 승인일 2002-11-29를 넣음 — 2006.1.1. 전 인가분이라 주택 수에 들지 않는다(폐가 여부와 별개로 같은 결론). 일자 원문 그대로, 양도가 3억 중립. 사업계획승인 후 단계라 사업시행인가 전 단계를 다룬 대법원 2008두11310(F060, 잠재적 주거기능 → 주택)과 사실 단계가 다르다."
+  },
+  {
+    "id": "F059-current",
+    "docNo": "국심2004서0593",
+    "docDate": "2004.05.19.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "현행 — 1990년 취득한 다른 아파트가 2024.6.14. 관리처분계획인가 후 퇴거·내부시설 철거로 폐가 → 폐가여도 조합원입주권으로 주택 수에 포함 → 2026.6.2. 1983년 취득 주택 양도 비과세 불가 (구성 케이스)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-02",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1983-10-10"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1990-02-26",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2024-06-14"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "현행 규칙: 2006.1.1. 이후 관리처분계획인가를 받은 조합원입주권은 폐가 여부와 관계없이 1세대1주택 판정 시 주택 수에 포함한다(소득세법 §89②). 이 사실 패턴은 양도 주택이 입주권의 기존주택보다 먼저 취득된 것이라 §156의2③ 요건(종전주택 취득 1년 후 입주권 취득)도 따져야 한다 — 입주권 취득일을 기존주택 취득일(1990)로 넣었고 3년이 지나 ③은 서지 않는다. §156의2④·시행규칙 §75① 칸은 「해당 없음」으로 선언(미선언이면 판정 보류 + 비과세 헤드라인). 중립: 비조정·양도가 8억."
+  }
+]

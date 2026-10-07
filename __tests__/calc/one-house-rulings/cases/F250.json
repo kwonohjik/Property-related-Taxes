@@ -1,0 +1,25 @@
+[
+  {
+    "id": "F250-era",
+    "docNo": "기획재정부 재산세제과-1539",
+    "docDate": "2022.12.20.",
+    "basis": "era",
+    "today": "2024-06-01",
+    "summary": "상속받은 무허가주택의 부수토지 일부를 조정대상지역 지정 후 국유지 불하로 유상취득, 취득 후 거주 없음 — 그 토지는 취득일 기준 거주요건 적용 (일자 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2024-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1990-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 상속받은 무허가주택 양도 예정, 부수토지 중 쟁점토지는 지적재조사로 점유 사실이 인정돼 조정대상지역 지정 후 국유지 불하로 유상취득, 취득 후 거주 없음. 가정(원문에 일자 없음): 상속개시 2015-03-15(별도세대, 피상속인 취득 1990-03-15), 쟁점토지 불하 2021-03-15, 양도 2024-06-15, 거주 0, 양도가 5억. 회신: 조정대상지역 공고 후 국유지 불하로 유상취득한 부수토지는 그 취득을 기준으로 보유기간 중 2년 이상 거주요건 적용 → 쟁점토지는 거주 없으면 과세(주택·종전 부수토지는 별개). 없는 입력: 주택과 부수토지의 취득일 분리(부분별 거주요건). 참고 관측: referenceForm = 비과세(쟁점토지 부분을 표현하지 못함). 기대값은 부분별로 갈려 두지 않는다."
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "F388-era",
+    "docNo": "서면인터넷방문상담4팀-2457",
+    "docDate": "2005.12.08.",
+    "basis": "era",
+    "today": "2006-06-20",
+    "summary": "주택(1999년 취득, 거주 2년 미충족) 보유 대학교수가 2년 교환교수로 출국, 대학 재학 중인 딸만 국내 잔류 — 세대전원 출국 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2006-06-15",
+      "contractTotalPrice": "300000000",
+      "provisoReason": "overseas_residence",
+      "provisoDepartureDate": "2006-01-15",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 세대원 일부(대학 재학 딸)가 출국하지 않으면 세대전원 출국 요건 불충족 → 출국 특례 부적용, §154① 일반 요건 충족 시에만 비과세. 없는 입력: 세대전원 출국 여부(세대원 일부 국내 잔류)와 출국 사유 — 2호 다목은 선택지와 출국일만 받고 「세대전원」은 자기확인이다. 참조 관측(2호 다목·출국 2006-01-15): 비과세(applied 154-1-proviso:overseas_residence) — 특례가 적용돼 원문과 반대. 최종 결론은 일반 요건(당시 거주 2년 요건 — 엔진 연혁에 없음)에 달려 기대값 없음. 일자 가정: 취득 1999-06-15, 양도 2006-06-15, 양도가 3억."
+  }
+]

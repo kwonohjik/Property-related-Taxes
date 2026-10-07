@@ -1,0 +1,69 @@
+[
+  {
+    "id": "R014-era",
+    "docNo": "심사양도2011-0038",
+    "docDate": "2011.09.23.",
+    "basis": "era",
+    "today": "2011-09-23",
+    "summary": "단독주택(1986 취득) 보유 세대가 배우자 명의 오피스텔(2007 취득, 임차인 주거 사용, 주민등록 이전 금지 특약)과 대체주택 아파트(2009.5.12. 취득)를 함께 보유한 상태에서 단독주택 양도(2009.10.12.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-10-12",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1986-07-16"
+      },
+      "houses": [
+        {
+          "id": "officetel",
+          "acquisitionDate": "2007-01-03",
+          "isOfficetel": true
+        },
+        {
+          "id": "new",
+          "acquisitionDate": "2009-05-12"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 공부상 오피스텔이라도 붙박이 가전·가구로 주거용 구조를 갖춰 임차인이 주거용으로 쓰면 주택 → 1세대 3주택 → 일시적 2주택 비과세 배제. 표현: 사실상 주거용 사용은 사실판단이라 오피스텔을 명부 주택 행으로 넣는다(isOfficetel 표시, 배우자 보유도 같은 세대라 행 1개). 관측: 주택 3채 → 과세, 155-1 미적용. 양성 짝(P-R014-era-no-officetel): 오피스텔 행을 빼면 155-1로 비과세 — 오피스텔의 주택 산입이 결론을 가른다. 가정: 양도가 8억(원문은 9억 초과 고가주택 — 고가 축 중립화), 비조정, 소재 수도권."
+  },
+  {
+    "id": "P-R014-era-no-officetel",
+    "docNo": "심사양도2011-0038",
+    "docDate": "2011.09.23.",
+    "basis": "era",
+    "today": "2011-09-23",
+    "summary": "R014 양성 짝 — 오피스텔이 주택이 아니라면(명부에서 제외) 단독주택 + 대체주택 2채로 일시적 2주택",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-10-12",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1986-07-16"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2009-05-12"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(양성 짝). 오피스텔 행만 뺀 같은 폼 → 155-1 비과세. R014-era의 과세가 오피스텔 주택 산입 때문임을 고정한다."
+  }
+]

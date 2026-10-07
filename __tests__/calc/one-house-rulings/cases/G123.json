@@ -1,0 +1,42 @@
+[
+  {
+    "id": "G123-era",
+    "docNo": "사전-2020-법령해석재산-0125 [법령해석과-1610]",
+    "docDate": "2020.05.28.",
+    "basis": "era",
+    "today": "2019-12-24",
+    "summary": "재개발 당초 사업시행인가(2011.9.7.) 전 계약·인가 후 잔금(2011.11.16.)으로 취득한 대체주택 B, 변경인가(2015.10.1.)·관리처분(2016.10.13.)·배우자 지분 증여 후 완공(2021.3. 예정) 전 B 양도(2019.12.23.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2019-12-23",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-11-16"
+      },
+      "presaleRights": [
+        {
+          "id": "A",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2000-08-02",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2016-10-13"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2011-09-07",
+      "replCompletionDate": "2021-03-31",
+      "replResidenceMonths": "97",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자 그대로(A 2000-08-02, B 계약 2011-08-25·잔금 2011-11-16, 당초 사업시행인가 2011-09-07, 변경인가 2015-10-01, 관리처분 2016-10-13, 배우자 지분 증여 2018-08-21, B 양도 2019-12-23, 준공 예정 2021-03-31 → 완성 전 양도). B 거주 97개월(2011-11~2019-12; 양도 후 전세 거주는 산입 안 함), 양도가 8억·비조정 가정, today 2019-12-24. 표현: 대체주택 취득일 = 잔금일(소득세법 §98), 사업시행인가일 = 당초 인가일(원문 회신), A는 양도일 현재 입주권 행(취득일 칸은 종전주택 취득일, 인가일 2016-10-13). 배우자 지분 이전은 세대 단위 판정이고 지분 입력 칸이 없어 넣지 않는다(결론 무관). 관측: 비과세(156-2-5). 구별력 한계: 인가일 칸에 변경인가일을 넣거나 취득일 칸에 계약일을 넣어도 비과세(프로브 V-G123-change·V-G123-contract) — 1주택 + 1입주권 세대는 대체주택 요건이 깨져도 §89② 배제가 빠져 일반 1주택으로 비과세되는 결함(N-G125-era) 때문에 두 날짜 축 모두 구별력 0."
+  }
+]

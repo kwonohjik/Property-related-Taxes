@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F247-era",
+    "docNo": "기획재정부 재산세제과-856",
+    "docDate": "2018.10.10.",
+    "basis": "era",
+    "today": "2022-06-01",
+    "summary": "2014.6.5. 매입한 서울 노후주택(거주 안 함)이 재건축돼 2018.4. 준공 — 2017.8.2. 이전 취득분이라 거주요건 미적용 (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2014-06-05",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 2014-05-30 관리처분계획인가, 2014-06-05 서울 노후주택 매입(거주 안 함), 2016-01-18 동·호수 배정, 2017-11-13 조합에 신탁, 2018.4. 준공 예정. 가정: 준공 2018-04-15, 양도 2022-06-15, 거주 0, 취득 당시 조정(토글), 양도가 8억. 회신: 2017.8.2. 이전 취득한 조정대상지역 주택을 재건축해 2017.8.3. 이후 준공하면 거주요건 미적용 → 비과세. 없는 입력: 재건축 신축주택과 종전주택의 연결. 참고 관측: referenceForm(매입일 2014-06-05) = 비과세 / 준공일로 입력하면 과세."
+  }
+]

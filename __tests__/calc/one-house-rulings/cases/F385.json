@@ -1,0 +1,31 @@
+[
+  {
+    "id": "F385-era",
+    "docNo": "서면인터넷방문상담4팀-1786",
+    "docDate": "2005.09.29.",
+    "basis": "era",
+    "today": "2006-03-20",
+    "summary": "성동구 아파트(1996.10. 취득·4년 2개월 거주) 보유 중 해외주재원 근무(2000.12.~), 비거주자 상태에서 과천 아파트 취득(2005.4.) 후 종전 아파트 양도(2006.3.) — 일시적 2주택 부적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2006-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-10-15"
+      },
+      "houses": [
+        {
+          "id": "gwacheon",
+          "region": "capital",
+          "acquisitionDate": "2005-04-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 일시적 2주택 특례는 거주자 대상이라 비거주자 상태에서 다른 주택을 취득해 일시적 2주택이 된 경우 적용 불가. 없는 입력: 양도자(세대)의 거주자·비거주자 신분 — 판정 메뉴는 거주자를 전제하고 신분을 묻지 않는다. 참조 관측(명부에 과천 주택 1행): 비과세(applied 155-1-temporary-two-house) — 원문과 반대. 일자 가정: 취득 1996-10-15, 과천 취득 2005-04-15, 양도 2006-03-15, 양도가 5억."
+  }
+]

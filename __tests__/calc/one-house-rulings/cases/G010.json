@@ -1,0 +1,21 @@
+[
+  {
+    "id": "G010-era",
+    "docNo": "서면인터넷방문상담5팀-1061",
+    "docDate": "2008.05.20.",
+    "basis": "era",
+    "today": "2008-05-20",
+    "summary": "단독주택 멸실 후 신축(1988.9.7.)해 거주, 부수토지는 1973 취득 — 2008.4. 18억에 양도하는 1세대1주택 고가주택의 부수토지 장기보유특별공제율",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2008-04-05",
+      "contractTotalPrice": "1800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-09-07"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문은 장기보유특별공제율(부수토지도 주택 보유기간 기준 표2 76%)만 회신. 장기보유특별공제는 판정 메뉴 출력 밖(P1 E191과 같은 한계). 참고 관측(referenceForm: 주택 취득 1988-09-07·양도 2008-04-05·양도가 18억): 고가주택 부분 과세(isPartialExempt) — 공제율 축은 관측 불가."
+  }
+]

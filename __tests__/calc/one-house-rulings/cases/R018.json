@@ -1,0 +1,40 @@
+[
+  {
+    "id": "R018-era",
+    "docNo": "국심-2004-중-3210",
+    "docDate": "2005.04.01.",
+    "basis": "era",
+    "today": "2005-04-01",
+    "summary": "의왕시 자연녹지·개발제한구역 토지 1,586㎡와 겸용주택(주택 139.14㎡·상가 146.288㎡, 건물 지분 2/3) 양도(2003.4.11.) — 도시계획구역 안이라 부수토지 5배만 비과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2003-04-11",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1990-05-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 겸용주택 면적 구성·주택 정착면적·토지 면적과 도시지역 안/밖 부수토지 배율(5배·10배). 판정 메뉴에 겸용주택·부수토지 면적 입력이 없다(lib/calc/one-house-exemption-api.ts 머리 주석: 겸용 축은 판정 메뉴에 입력 위젯 없음). 참고 관측(referenceForm: 주택 1채로 단순화, 취득 1990-05-15 가정, 양도가 5억): 비과세 — 배율 초과 토지 과세(원문 결론)는 표현되지 않는다."
+  },
+  {
+    "id": "R018-current",
+    "docNo": "국심-2004-중-3210",
+    "docDate": "2005.04.01.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴을 현행으로 — 수도권 도시지역 내 토지 위 주택을 2026년 양도할 때 부수토지 배율이 비과세 범위를 가르는 경우",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 주택 부수토지는 주택 정착면적에 도시지역 안 5배(2022.1.1. 이후 양도분부터 수도권 도시지역 중 주거·상업·공업지역은 3배)·밖 10배를 곱한 면적까지. 없는 입력: 용도지역·토지 면적·정착면적 — 판정 메뉴는 배율 판정을 하지 않는다. 참고 관측(referenceForm: 1주택 2015-03-15 취득·2026-05-15 양도·양도가 8억): 비과세(면적 초과분 과세 여부 미표현)."
+  }
+]

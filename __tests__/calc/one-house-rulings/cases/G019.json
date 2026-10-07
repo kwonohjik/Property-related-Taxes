@@ -1,0 +1,52 @@
+[
+  {
+    "id": "G019-era",
+    "docNo": "국심-2006-서-1229",
+    "docDate": "2007.07.05.",
+    "basis": "era",
+    "today": "2007-07-05",
+    "summary": "구 아파트(1977 취득)를 주택건설촉진법상 재건축조합(설립인가 1998.12.24., 사업계획승인 없음·건축법 허가 2001.1.16.)에 신탁해 받은 입주권을 철거(2001.8.24.) 후 다른 주택 없이 양도(2005.3.21.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-03-21",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1977-06-25",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2001-01-16"
+      }
+    },
+    "bucket": "dual",
+    "note": "dual — 입장 A(국심-2006-서-1229, 2007.07.05.): 사업계획승인 없이 건축법 허가로 시행했어도 주택건설촉진법상 재건축조합 설립인가를 받은 조합의 입주권은 시행령 §155⑯ 특례 대상 → 1세대1주택 의제(고가주택 초과분만 과세) / 입장 B(처분청·국세청 해석): 같은 조문의 재건축은 주택건설촉진법 사업계획승인(현 도시정비법 사업시행인가)을 받은 사업에 한정 → 건축법 허가 재건축 입주권은 비과세 대상 아님. 현재 엔진 관측: 비과세(one_right_89_1_4_ga, 고가 분모 6억 이하) — A와 같다. 단 사업 근거(건축법/주택건설촉진법·도시정비법)를 받는 칸이 없어 엔진은 양쪽을 구별하지 못하고 입주권 자산 선택만으로 A 결론을 낸다. 표현: 입주권 취득 1977-06-25(구 아파트 취득일), 권리 기준일 2001-01-16 가정(사업계획승인 없음 — 건축허가일), 철거일 현재 요건 충족 선언. 가정: 양도가 5억(원문 6.8억 — 당시 6억 초과 고가 축 중립화)."
+  },
+  {
+    "id": "G019-current",
+    "docNo": "국심-2006-서-1229",
+    "docDate": "2007.07.05.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴(철거 당시 요건을 갖춘 기존주택의 입주권을 다른 주택 없이 양도)을 현행 소득세법 §89①4호로",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2015-03-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2022-06-15"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 조합원입주권 양도 비과세 근거는 소득세법 §89①4호 가목(관리처분계획인가일 현재 §89①3호 가목 요건 기존주택 + 양도일 현재 다른 주택·분양권 없음). 관측: one_right_89_1_4_ga 비과세. 건축법 허가 재건축 여부(G019-era 쟁점)는 이 케이스가 시험하지 않는다. 중립 고정: 입주권 취득 2015-03-15·인가 2022-06-15·양도 2026-05-15·양도가 8억, 비조정."
+  }
+]

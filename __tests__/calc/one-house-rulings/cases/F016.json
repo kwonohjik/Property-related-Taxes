@@ -1,0 +1,58 @@
+[
+  {
+    "id": "F016-era",
+    "docNo": "조심2017서4964",
+    "docDate": "2018.01.22.",
+    "basis": "era",
+    "today": "2018-01-22",
+    "summary": "부친 간병을 위해 2011.2. 부모와 같은 주소로 합가했으나 각자 소득·카드·재산세 부담, 보증금·생활비 분담 → 경제적으로 분리된 별도세대 → 모친주택 제외 → 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-08-10",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-06-03"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 모친주택을 명부에 넣지 않음). 입력 규약: 1세대 구성은 판정 메뉴 ① 단계의 사용자 선언이고 명부는 「세대 구성원이 보유한 주택」이다 — 엔진은 생계 동일 여부를 판정하지 않는다. 원문이 판단한 세대 구성대로 명부를 만들었으므로 구별력은 명부 구성에만 있다(세대원 여부 자체는 검증하지 않음). 배우자의 상속주택 1/8 지분은 처분청도 주택 수에 넣지 않아 생략. 양도가 3억 중립. 짝 N-F016-same-household: 처분청 시각(동거봉양 합가 + 모친주택 산입)으로 넣으면 합가일 2011-02-17부터 당시 기한 5년이 지나 과세 — 엔진의 합가 기한 연혁 확인."
+  },
+  {
+    "id": "N-F016-same-household",
+    "docNo": "조심2017서4964",
+    "docDate": "2018.01.22.",
+    "basis": "era",
+    "today": "2018-01-22",
+    "summary": "F016의 음성 짝 — 같은 사실을 처분청처럼 동거봉양 합가(2011.2.17.)로 보고 모친주택을 넣으면 합가일부터 5년이 지난 2016.8.10. 양도라 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-08-10",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-06-03"
+      },
+      "houses": [
+        {
+          "id": "mother",
+          "acquisitionDate": "1997-02-15",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "parentalCareMergeDate": "2011-02-17",
+      "isFirstTransferredInMerge": true
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-4-parental-care-merge"
+      ]
+    },
+    "bucket": "match",
+    "note": "음성 짝(처분청 논리) — 2018.2.13. 전 양도분 동거봉양 합가 기한 5년(합가일 2011-02-17 → 2016-02-17)을 넘긴 양도. 원문은 이 전제(동일세대)를 배척했다."
+  }
+]

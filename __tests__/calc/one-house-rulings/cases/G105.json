@@ -1,0 +1,127 @@
+[
+ {
+  "id": "G105-era",
+  "docNo": "서면인터넷방문상담5팀-1064",
+  "docDate": "2008.05.20.",
+  "basis": "era",
+  "today": "2008-05-20",
+  "summary": "A아파트(1997.10.) 보유 중 재건축 B아파트 입주자 지위 승계(2004.10.22., 관리처분인가 2005.5.6.) → B 입주(2008.9.30. 예정) — A는 B 사용검사필증 교부일부터 1년 이내 양도",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2009-06-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1997-10-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "region": "capital",
+     "acquisitionDate": "2008-09-30"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 다른 주택이 관리처분계획인가(2005.5.6. — 2006.1.1. 전) 후 승계취득한 입주권으로 완공된 재건축주택이라는 취득 경위(취득시기 = 사용검사필증 교부일, 시행령 §162①4호) — 명부 행 취득일 하나뿐. 회신: §155① 처분기한(당시 1년)은 재건축주택 사용검사필증 교부일부터. 참고 관측(referenceForm: A 1997-10-15, B = 입주 예정일 2008-09-30, A 양도 2009-06-15 가정·5억): 비과세(155-1) = 원문. B에 승계일 2004-10-22를 넣으면 과세(V-G105-rightdate). 엔진 기한 3년(당시 1년) — 9개월 후 양도라 구별력 없음."
+ },
+ {
+  "id": "G105-current",
+  "docNo": "서면인터넷방문상담5팀-1064",
+  "docDate": "2008.05.20.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "1주택(2015) 보유 세대가 조합원입주권 승계취득(2024.3., 인가 2023.6.) 후 3년 이내 종전주택 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2024-03-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2023-06-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 1주택 보유 세대가 그 주택 취득일부터 1년이 지난 후 조합원입주권을 취득하고 그 입주권 취득일부터 3년 이내 종전주택을 양도하면 비과세(시행령 §156의2③) (기산점은 입주권 취득일).  구성: A 2015-03-15·입주권 승계 2024-03-15(인가 2023-06-15)·A 양도 2026-06-15·8억·비조정. 관측: 비과세(article89Clause2 exception_met §156의2③, 보류 없음)."
+ },
+ {
+  "id": "N-G105-over3y",
+  "docNo": "서면인터넷방문상담5팀-1064",
+  "docDate": "2008.05.20.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "음성 짝 — 입주권 승계취득(2023.2.) 후 3년을 넘겨 종전주택 양도(2026.6.), 입주권 미완성",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2023-02-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2021-06-15"
+    }
+   ],
+   "rightThreeYearExceptionKind": "none"
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "match(음성 짝). 입주권 승계 2023-02-15(인가 2021-06-15) 후 3년 4개월에 종전주택 양도, 입주권 미완성, 「3년 초과 예외」(§156의2④·규칙 §75①) 해당 없음 → §89② 배제로 과세(excluded)."
+ },
+ {
+  "id": "N-G105-completed",
+  "docNo": "서면인터넷방문상담5팀-1064",
+  "docDate": "2008.05.20.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "음성 짝 — 입주권 승계취득(2022.3.) 후 완공(2025.9.)된 신축주택 보유 중 종전주택 양도(2026.6.): 입주권 취득일부터 3년 경과",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "region": "capital",
+     "acquisitionDate": "2025-09-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible(음성 짝) — 없는 입력: 다른 주택이 종전주택 보유 중 취득한 조합원입주권(2022-03-15 승계)으로 완공(2025-09-15)된 주택이라는 사실. 현행 규칙: 3년 기한은 완공일이 아니라 입주권 취득일부터(§156의2③), 완공 후 3년 이내 양도 + 세대전원 이사·1년 거주는 §156의2④로 따로 본다 → 이사·거주가 없으면 과세. 참고 관측(referenceForm: 완공 주택을 명부 행 2025-09-15로 입력 — 가장 자연스러운 입력): 비과세(155-1) — 원문 기준과 반대(입력이 생기면 유리 방향 불일치 후보). 같은 권리를 입주권 행(2022-03-15)으로 남기면 판정 보류 + 비과세(V-NG105-asright)."
+ }
+]

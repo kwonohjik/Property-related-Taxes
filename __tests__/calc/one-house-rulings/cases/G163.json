@@ -1,0 +1,133 @@
+[
+  {
+    "id": "G163-era",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "각 1주택 보유자(A 2019.3. · B 2020.9.)의 혼인(2021.5.) 후 분양권 C(2022.3.) 취득 — 혼인 후 5년·분양권 취득 후 3년 이내 혼인 전 주택 A 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2022-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": "house_only"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 일자 월 단위 → 15일, 분양권 '22.00. → 2022-03-15, 양도 '22.00. → 2022-09-15 가정(혼인 후 5년·분양권 취득 후 3년 이내; 2021.1.1.~2022.5.9. 구간 회피), today 2022-09-16, 양도가 7억·비조정(경남 양산). 표현: B(배우자 혼인 전 주택) mergeOrigin = counterpart_side(배우자), 혼인일 2021-05-15, 먼저 양도, 분양권 행, 합가 전 보유 구성 '주택 1채만 갖고 있었다'. 관측: 비과세 — appliedExceptions 155-5-marriage-merge, article89Clause2 = §156의2⑨2호(§156의3⑥ 준용). 원문 경로는 §155⑤ + §156의3② 중첩. 함정(프로브): 합가 전 보유 구성을 '어느 것에도 해당하지 않는다'로 고르면(분양권이 혼인 후 취득이라 혼인으로 생긴 구성이 아니라고 보는 경우) §89② 배제 확정 → 과세 — §155⑤로 1주택 의제한 뒤 §156의3②를 태우는 경로가 엔진에 없다. 비워 두면 비과세 + 판정 보류(89-2-open §156의2⑨)."
+  },
+  {
+    "id": "G163-current",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "current",
+    "today": "2026-05-16",
+    "summary": "현행 — 각 1주택 보유자의 혼인 후 분양권 취득, 혼인일부터 7년·분양권 취득일부터 2년 2개월에 혼인 전 주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2018-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2019-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2024-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": "house_only"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 혼인합가 특례는 혼인일부터 10년 이내 양도(2024.11.12. 이후 양도분) — 분양권 취득일부터 3년 이내(§156의3②)와 함께 충족하면 1세대1주택. 구성: A 2017-03-15, B 2018-09-15, 혼인 2019-05-15, 분양권 2024-03-15(B 취득 1년 후), A 양도 2026-05-15(혼인 후 7년 — 종전 5년 기한이면 불충족, 분양권 취득 후 2년 2개월), 비조정·양도가 7억. 관측: 비과세(155-5-marriage-merge, §156의2⑨2호)."
+  },
+  {
+    "id": "N-G163-current",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "current",
+    "today": "2026-05-16",
+    "summary": "경계 음성 짝(현행) — 같은 구성에서 혼인일부터 11년이 지나 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2014-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2015-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2024-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": "house_only"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경계 음성 짝). 같은 구성에서 혼인 2015-05-15 → 양도 2026-05-15(혼인 후 11년) → 합가 축 불성립·§89② 배제 확정 → 과세. 10년 기한 구별력 확인."
+  }
+]

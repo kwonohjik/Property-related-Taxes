@@ -1,0 +1,52 @@
+[
+ {
+  "id": "G068-era",
+  "docNo": "서면인터넷방문상담4팀-1246",
+  "docDate": "2004.08.09.",
+  "basis": "era",
+  "today": "2004-08-09",
+  "summary": "비과세 요건 갖춘 재건축 입주권을 매매가 8억(추가부담금 3.6억 포함, 그중 미도래 중도금·잔금 2.87억 매수자 승계)에 양도(2003.5.10.) — 고가 판정 실지거래가액은 5.13억",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2003-05-10",
+   "contractTotalPrice": "513000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1995-01-03",
+    "redevApprovalDate": "2002-01-26"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도가액 중 양도일 후 납입기일이 도래하는 추가청산금(매수자 승계분) — 판정 메뉴는 양도가액 한 칸이라 그 금액을 빼는 것은 사용자 몫이다. 회신: 비과세 요건을 갖춘 입주권의 고가 판정 실지거래가액에는 양도일 후 납입기일 도래 추가청산금을 포함하지 않는다(이 사안 8억 − 2.87억 = 5.13억 ≤ 당시 6억). 참고 관측(referenceForm: 5.13억 입력, 취득 1995-01-03·사업승인 2002-01-26·양도 2003-05-10·다른 주택 없음): 비과세(가목). 계약서 금액 8억을 그대로 넣으면 부분과세(V-G068-800) — 자연스러운 입력이 원문과 반대 결론."
+ },
+ {
+  "id": "G068-current",
+  "docNo": "서면인터넷방문상담4팀-1246",
+  "docDate": "2004.08.09.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "입주권 매매가 15억 중 양도일 후 납입기일이 오는 추가청산금 4억을 매수자가 승계 — 고가 판정 실지거래가액 11억 (2026 양도)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "1100000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2012-03-15",
+    "redevApprovalDate": "2022-05-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 후 납입기일 도래 추가청산금(G068-era와 같음). 현행 규칙: 고가 조합원입주권 기준 12억(2021.12.8. 이후 양도분), 실지거래가액에서 양도일 후 납입기일 도래 추가청산금은 제외. 구성: 기존주택 2012-03-15·인가 2022-05-15·양도 2026-06-15·매매가 15억 중 미도래 4억 → 11억, 비조정. 참고 관측: 11억 입력 비과세, 15억 입력 부분과세(V-G068cur-1500)."
+ }
+]

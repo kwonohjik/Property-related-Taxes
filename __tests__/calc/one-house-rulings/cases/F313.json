@@ -1,0 +1,26 @@
+[
+ {
+  "id": "F313-era",
+  "docNo": "서면인터넷방문상담4팀-2698",
+  "docDate": "2007.09.14.",
+  "basis": "era",
+  "today": "2007-09-01",
+  "summary": "1주택(1999.6.) 보유자가 독일 유학 출국(2000.1.), 현지 결혼(2002)·출산으로 학업 중단(2005)·영주권 취득(2005.8.) 후 복학 예정 상태에서 양도(2007.12.31. 이전 예정) — 다목 부적용",
+  "expected": {
+   "isExempt": false
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2007-11-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1999-06-15"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2000-01-15"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 출국 사유(취학)가 현지 결혼·출산으로 중단됐다가 재개됐다는 사실(사유의 지속성). 사유 선택이 자기선언이다. 연혁: 2006.2.9. 전 출국분은 2007.12.31.까지 양도하면 종전 규정(양도기한 없음)을 적용하는 경과규정이 있다(2006.2.9. 개정 부칙 — 확인 필요) — 엔진은 2년 기한을 연혁 없이 적용. 참고 관측(referenceForm — 취득 1999-06-15, 다목 출국 2000-01-15, 양도 2007-11-15·3억 가정): 단서 불성립, 본칙(거주자 기준) 비과세 → 기대(과세)와 다름."
+ }
+]

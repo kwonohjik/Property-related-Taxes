@@ -1,0 +1,40 @@
+[
+ {
+  "id": "G088-era",
+  "docNo": "부동산거래관리과-102",
+  "docDate": "2012.02.14.",
+  "basis": "era",
+  "today": "2012-02-14",
+  "summary": "은평구 A주택(2007.10.) 재개발(2008.2. 인가, 청산금 분할납부) 준공(2011.7.) 후 양도(2011.11.) — 증가 부수토지의 세율 적용 보유기간은 사용검사필증 교부일부터",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2011-11-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2007-10-15"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력(출력): 청산금 납부로 증가한 부수토지의 세율(§104①) 적용 보유기간(사용검사필증 교부일부터 — 이 사안 1년 미만 단기세율) — 판정 메뉴는 세율을 내지 않고 부수토지를 증가분과 종전분으로 나누지도 않는다. 참고 관측(referenceForm: A 2007-10-15·준공 2011.7.·양도 2011-11-15·5억, 종전 취득일 입력): 비과세(주택 전체). 원문 결론(증가 부수토지 단기보유 세율)은 비과세 판정 밖의 축이다."
+ },
+ {
+  "id": "G088-current",
+  "docNo": "부동산거래관리과-102",
+  "docDate": "2012.02.14.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "재개발 준공 후 1년 이내 양도 — 청산금 납부로 증가한 부수토지 부분의 단기보유 세율(1년 미만 70%) 판정",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2019-03-15"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력(출력): G088-era와 같음. 현행 규칙: 청산금 납부로 증가한 부수토지는 사용승인일(사용검사필증 교부일)부터 보유기간을 계산하고, 주택 단기보유 세율은 1년 미만 70%·1년 이상 2년 미만 60%. 구성: 종전주택 2019-03-15·준공 2025-09-15·양도 2026-06-15·8억. 참고 관측: 비과세(주택 전체) — 증가분 세율은 출력 밖."
+ }
+]

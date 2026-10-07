@@ -1,0 +1,162 @@
+[
+  {
+    "id": "F340-era",
+    "docNo": "국심-2003-중-3448",
+    "docDate": "2004.02.10.",
+    "basis": "era",
+    "today": "2003-06-01",
+    "summary": "쟁점주택(2001.5.15. 취득)에 거주하다 직장 변경(2002.1.1.) 후 1년여 통근, 직장 인근 주택 취득·세대전원 이사(2003.2.26.) 후 쟁점주택 양도(2003.5.16.) — 1년 거주는 주거 이전일까지 통산",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-05-16",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-05-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2001-05-15",
+            "moveOutDate": "2003-02-26"
+          }
+        ]
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2003-02-26"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:unavoidable"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 원문 결론(인용): 「1년 이상 거주」는 취득일부터 직장 변경일(사유 발생일)까지가 아니라 부득이한 사유로 주거를 이전하는 날까지 통산 → 비과세. 폼은 실제 거주 구간(취득일~이사일, 21개월)을 넣고 3호를 선택했다. 엔진: 일시적 2주택 + 3호 부득이(applied 155-1-temporary-two-house·154-1-proviso:unavoidable). 구별력 한계: 엔진 보유요건은 2년이라(원문 당시 3년) 거주를 직장 변경일까지로 잘라도 일시적 2주택으로 비과세(프로브) — 거주 1년 기산 축은 현행 짝(F340-current·P/N)에서 갈랐다. 원문 날짜 불일치(취득 2001.5.15./2001.4.23., 양도 2003.5.16./2003.2.24.) — 처분개요 일자 사용. 새 주택은 비수도권, 양도가 2억(가정). 판정 보류 civil-161-holiday-table-uncovered는 2009년 전 공휴일 표 안내(결론 무관)."
+  },
+  {
+    "id": "F340-current",
+    "docNo": "국심-2003-중-3448",
+    "docDate": "2004.02.10.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "주택(2024.3.15. 취득)에 거주 중 직장 변경(2024.9.) 후에도 계속 거주하다 새 근무지로 이사(2025.4.20.)·새 주택 취득(2025.4.21.) 후 종전 주택 양도(2025.6.16.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-16",
+      "contractTotalPrice": "800000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2024-03-15",
+            "moveOutDate": "2025-04-20"
+          }
+        ]
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2025-04-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:unavoidable"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 현행 규칙: §154①3호의 1년 이상 거주는 사유 발생일(직장 변경일)까지가 아니라 양도일까지 통산하고, 양도 전에 퇴거했으면 퇴거일까지(소득세법 시행령 §154①3호·시행규칙 §71③). 거주 13개월(직장 변경일까지면 약 5개월) → 3호로 보유요건 면제 → 비과세. 엔진: applied 155-1-temporary-two-house·154-1-proviso:unavoidable. 중립: 비조정(본문 거주요건 없음), 새 주택 비수도권, 양도가 8억, 양도일 2026-10-01 전."
+  },
+  {
+    "id": "P-F340-current-12m",
+    "docNo": "국심-2003-중-3448",
+    "docDate": "2004.02.10.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "F340-current의 경계 양성 짝 — 퇴거일 2025.3.14.(초일 산입 12개월)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-16",
+      "contractTotalPrice": "800000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2024-03-15",
+            "moveOutDate": "2025-03-14"
+          }
+        ]
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2025-04-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:unavoidable"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 현행 규칙: 3호 거주 1년(퇴거일까지 통산, 거주기간은 전입일부터 초일 산입). 2024-03-15~2025-03-14 = 12개월 → 3호 성립 → 비과세. 새 주택 취득일은 2025-04-21로 고정(1년 경과 요건 축을 섞지 않음)."
+  },
+  {
+    "id": "N-F340-current-11m",
+    "docNo": "국심-2003-중-3448",
+    "docDate": "2004.02.10.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "F340-current의 경계 음성 짝 — 퇴거일 2025.3.13.(11개월)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-16",
+      "contractTotalPrice": "800000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2024-03-15",
+            "moveOutDate": "2025-03-13"
+          }
+        ]
+      },
+      "houses": [
+        {
+          "id": "new",
+          "region": "non_capital",
+          "acquisitionDate": "2025-04-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:unavoidable"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 거주 11개월이라 3호 불성립 → 보유 1년 3개월로 보유요건 미달 → 과세(일시적 2주택도 종전 주택이 §154① 요건을 못 갖춰 불성립). 새 주택 취득일 2025-04-21 고정."
+  }
+]

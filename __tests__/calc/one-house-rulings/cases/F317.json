@@ -1,0 +1,26 @@
+[
+ {
+  "id": "F317-era",
+  "docNo": "서면인터넷방문상담5팀-1338",
+  "docDate": "2008.06.26.",
+  "basis": "era",
+  "today": "2008-06-01",
+  "summary": "학업 목적 세대전원 뉴질랜드 출국(2006.8.) 후 랭귀지스쿨(2007.2.)·대학(2008.2.) 입학 — 출국 당시 1년 이상 취학 사유가 아니어서 다목 부적용",
+  "expected": {
+   "isExempt": false
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2008-06-16",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2006-04-17"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2006-08-16"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 출국 당시의 사유(출국 후에 랭귀지스쿨·대학 입학으로 취학 사유가 생김 — 출국 당시 1년 이상 국외거주가 필요한 취학이 아님). 사유 선택이 자기선언이다. 참고 관측(referenceForm — 취득 2006-04-17, 다목 출국 2006-08-16, 양도 2008-06-16·5억 가정): 단서 적용 비과세 → 기대(과세)와 다름."
+ }
+]

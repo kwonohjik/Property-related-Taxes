@@ -1,0 +1,81 @@
+[
+ {
+  "id": "G050-era",
+  "docNo": "재일46014-1838",
+  "docDate": "1999.10.15.",
+  "basis": "era",
+  "today": "1999-10-15",
+  "summary": "재건축으로 철거(1998.10.)된 10년 거주 주택의 입주권 양도(1999.10.) — 그 전에 조특법 §99① 신축주택(1999.5.21.) 취득",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "1999-10-25",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1988-10-15",
+    "redevApprovalDate": "1998-06-15"
+   },
+   "houses": [
+    {
+     "id": "new99",
+     "region": "capital",
+     "acquisitionDate": "1999-05-21",
+     "countExclusion": {
+      "kind": "special",
+      "special": {
+       "article": "new_99",
+       "houseAcquisitionDate": "",
+       "houseContractDate": "",
+       "isNationalHousing": false,
+       "requirementsConfirmed": true
+      }
+     }
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 입주권 양도 시 조특법 §99① 신축주택의 소유주택 제외(G049-era와 같은 게이트 — Step2.tsx:178). 회신: 기존주택이 철거된 재건축 입주권을 1999.1.1. 이후 양도하는 경우 §99① 신축주택은 소유주택으로 보지 않아 비과세. 참고 관측(referenceForm: 10년 거주 기존주택 취득 1988-10-15 가정·사업계획승인 1998-06-15 가정(철거 1998.10. 전)·선언 yes, 명부 §99 행 1999-05-21(원문), 양도 1999-10-25 가정·3억): 과세(2005 이전 양도분 「다른 주택 없어야」). 행을 빼면 비과세(V-G050-norow). 질의는 주택건설촉진법 재건축, 회신 문언은 도시재개발법 재개발 기준."
+ },
+ {
+  "id": "G050-current",
+  "docNo": "재일46014-1838",
+  "docDate": "1999.10.15.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "입주권 양도 세대가 조특법 §99① 신축주택(1999.5.21. 취득)을 보유 — 2008.1.1. 이후 양도분은 신축감면주택을 소유주택에서 빼지 않음 (2026 양도)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2010-03-15",
+    "redevApprovalDate": "2023-05-15",
+    "redevOtherHouseAcquisitionDate": "1999-05-21"
+   },
+   "houses": [
+    {
+     "id": "new99",
+     "region": "capital",
+     "acquisitionDate": "1999-05-21"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "one_right_89_1_4_ga",
+    "one_right_89_1_4_na"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 조특법 §99 신축감면주택을 소유주택에서 빼는 것은 2007.12.31. 이전 양도분에 한하므로, 그 뒤 입주권을 양도하면 §99 신축주택은 다른 주택으로 산입되어 §89①4호 가목 불성립, 나목은 그 주택 취득일부터 3년 이내 양도여야 한다. 구성: 기존주택 2010-03-15·인가 2023-05-15·§99 신축주택 1999-05-21(명부 일반 행 — 입주권 양도에는 제외 칸이 없다)·나목 취득일 칸에 1999-05-21·양도 2026-06-15·8억·비조정. 관측: 과세(나목 3년 초과). 경로 주의: 엔진은 입주권 양도에서 조특법 제외를 아예 받지 않으므로 이 일치는 「현행 규칙상 산입」을 판정한 결과가 아니라 입력 게이트의 결과다. 짝: 행을 빼면 비과세(V-G050cur-norow)."
+ }
+]

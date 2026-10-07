@@ -1,0 +1,65 @@
+[
+ {
+  "id": "G099-era",
+  "docNo": "서면인터넷방문상담4팀-1554",
+  "docDate": "2005.08.31.",
+  "basis": "era",
+  "today": "2005-08-31",
+  "summary": "10년 보유·거주 아파트와 재건축으로 멸실된 다른 아파트(2004 관리처분인가 가정) 보유 — 완성 전 10년 보유 아파트 양도",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2005-10-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1995-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2000-05-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2004-11-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "match. 회신: 1세대 2주택이던 거주자가 그중 1주택이 재개발·재건축 사업으로 멸실된 상태에서 완성 전에 나머지 주택을 양도하면, 그 주택이 보유 3년·거주 2년 요건을 갖추면 비과세(6억 초과 고가주택 제외). 표현: 10년 보유·거주 아파트 1995-03-15 가정, 멸실된 아파트는 세대 보유 조합원입주권 행(취득 2000-05-15 가정·관리처분인가 2004-11-15 가정 — 2006.1.1. 전 인가분이라 §89② 대상 아님), 양도 2005-10-15 가정·5억. 관측: 비과세(§89② not_applicable). 멸실 아파트를 주택 행으로 넣으면 과세(V-G099-houserow) — 멸실 주택은 입주권 행으로 넣어야 한다. 양도일 2009 이전 공휴일 표 보류 안내가 붙는다(결론 무관)."
+ },
+ {
+  "id": "G099-current",
+  "docNo": "서면인터넷방문상담4팀-1554",
+  "docDate": "2005.08.31.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "주택(2010)과 2006.1.1. 이후 관리처분인가(2018.5.)된 조합원입주권 보유 세대가 입주권 완성 전 주택 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2010-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2012-05-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2018-05-15"
+    }
+   ],
+   "rightThreeYearExceptionKind": "none"
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 2006.1.1. 이후 관리처분계획인가분 조합원입주권은 주택 수에 산입되어(소득세법 §89②), 주택과 입주권을 보유하다 주택을 양도하면 §89①3호를 적용하지 않는다(시행령 §156의2 예외 제외). 구성: 주택 2010-03-15·입주권 B(취득 2012-05-15·인가 2018-05-15)·양도 2026-06-15·8억, §156의2④·규칙 §75① 「3년 초과 예외」는 「해당 없음」. 관측: 과세(article89Clause2 excluded). 주의: 「3년 초과 예외」 칸을 비워 두면 판정 보류(89-2-open) + 헤드라인 비과세(V-G099cur-blank3y, ⑧ 오류 없음). 입주권 취득 후 3년 이내면 §156의2③ 비과세(V-G099cur-within3y)."
+ }
+]

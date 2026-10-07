@@ -1,0 +1,25 @@
+[
+  {
+    "id": "G034-era",
+    "docNo": "사전-2024-법규재산-0795",
+    "docDate": "2024.11.20.",
+    "basis": "era",
+    "today": "2024-11-20",
+    "summary": "조정대상지역 서울 A주택(2018.10.16. 취득) — 직전 임대차를 이어 상생임대차계약(2022.1.5.)으로 요건 충족, 관리처분인가(2024.4.1.)로 입주권 전환, 실거주 없이 입주권 양도(2024.9.27., 7.15억)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2024-09-27",
+      "contractTotalPrice": "715000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2018-10-16",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2024-04-01"
+      },
+      "wasRegulatedAtAcquisition": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 상생임대주택(시행령 §155의3) 요건을 갖춘 주택이 입주권으로 전환된 경우 §154① 거주기간 제한을 받지 않는다는 판단. 판정 메뉴의 상생임대 입력은 주택 양도 경로에만 쓰이고, 입주권 경로는 기존주택 요건 자기선언 하나다. 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 참고 관측(referenceForm: 취득 당시 조정, 요건 선언 yes): 가목 비과세 — 상생임대 면제가 선언에 들어 있다. 선언 no면 과세."
+  }
+]

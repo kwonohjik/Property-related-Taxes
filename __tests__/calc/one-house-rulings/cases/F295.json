@@ -1,0 +1,75 @@
+[
+ {
+  "id": "F295-era",
+  "docNo": "서면인터넷방문상담4팀-2105",
+  "docDate": "2004.12.24.",
+  "basis": "era",
+  "today": "2004-12-01",
+  "summary": "국외이주·취학·근무 특례에서 세대원 일부가 대학 재학으로 출국하지 않으면 세대전원 출국 아님(군 입영은 세대전원 출국으로 봄) — 규칙 회신",
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 세대원별 출국 여부와 미출국 사유(대학 재학 = 세대전원 출국 아님, 군 입영 = 세대전원 출국으로 봄). 원문은 규칙만 회신(사실관계·날짜 없음). 둘째 규칙(재건축 사업계획승인 후 멸실 전 실제 거주기간 포함)은 짝 F295-current로 구성."
+ },
+ {
+  "id": "F295-current",
+  "docNo": "서면인터넷방문상담4팀-2105",
+  "docDate": "2004.12.24.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "구성 — 조정 취득(2020.3.16.) 재건축 대상 주택에서 사업계획승인(2021.6.15.) 후에도 멸실 전까지 실제 거주(2022.6.15.까지 27개월)한 기간을 거주기간에 포함 → 거주 2년 충족 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2023-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2020-03-16",
+    "residenceInputMode": "interval",
+    "residencePeriods": [
+     {
+      "moveInDate": "2020-03-16",
+      "moveOutDate": "2022-06-15"
+     }
+    ]
+   },
+   "wasRegulatedAtAcquisition": true
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "match. 구성 케이스 — 원문은 「재건축 사업계획승인 후에도 멸실되지 않아 실제 거주한 기간은 §154① 거주기간에 포함」 규칙만 회신. 거주 구간(2020-03-16~2022-06-15, 27개월)에 승인일(2021-06-15) 뒤 거주를 포함해 입력. 중립: 조정 취득 2020-03-16, 양도 2023-06-15(멸실 전 주택 상태), 양도가 8억. 관측: 거주 2년 충족 본칙 비과세. 반대 규칙 짝 N-F295-excluding-post-approval."
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "docNo": "서면인터넷방문상담4팀-2105",
+  "docDate": "2004.12.24.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F295-current의 반대 규칙 짝 — 사업계획승인일(2021.6.15.)까지만 거주기간으로 보면 15개월이라 거주요건 미충족 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2023-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2020-03-16",
+    "residenceInputMode": "interval",
+    "residencePeriods": [
+     {
+      "moveInDate": "2020-03-16",
+      "moveOutDate": "2021-06-15"
+     }
+    ]
+   },
+   "wasRegulatedAtAcquisition": true
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "반대 규칙 짝(가정) — 거주 구간을 승인일(2021-06-15)에서 끊으면 15개월 → 거주요건 미충족 과세. 판정 보류 2건(거주 충족일 미계산·삭제 전 4호 미입력 안내)은 결론과 무관한 안내."
+ }
+]

@@ -1,0 +1,35 @@
+[
+ {
+  "id": "G079-era",
+  "docNo": "기획재정부 재산세제과-50",
+  "docDate": "2023.01.10.",
+  "basis": "era",
+  "today": "2024-06-16",
+  "summary": "입주권 1개 보유 세대가 새 입주권을 승계취득(2020.2.)해 그 입주권이 완공(2022.9.)된 뒤 3년 이내 종전 입주권 양도(2024.6.) (일자 구성)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2024-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2014-03-15",
+    "redevApprovalDate": "2019-06-15",
+    "redevOtherHouseAcquisitionDate": "2022-09-15"
+   },
+   "houses": [
+    {
+     "id": "new",
+     "region": "capital",
+     "acquisitionDate": "2022-09-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 새 입주권이 완공된 주택이라는 취득 경위 — 나목의 「그 1주택 취득일」 칸에 완공일을 넣을지 새 입주권 취득일을 넣을지가 결론을 가르는데 판정 메뉴는 날짜 하나만 받는다(P1 E061과 같은 축). 회신(기획재정부): 새 입주권이 1주택으로 완공된 후 3년 이내 종전 입주권을 양도하면 §89①4호 나목 적용. 구성 일자: 기존주택 2014-03-15·인가 2019-06-15·새 입주권 승계 2020-02-15·완공 2022-09-15·양도 2024-06-15·8억. 참고 관측(완공일 입력): 비과세(나목) = 원문. 새 입주권 취득일을 넣으면 과세(V-G079-rightdate). 완공일을 주택 취득일로 보는 것은 시행령 §162①4호와 같은 방향이라 자연스러운 입력은 원문과 같다."
+ }
+]

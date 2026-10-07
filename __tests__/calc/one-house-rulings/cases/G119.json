@@ -1,0 +1,124 @@
+[
+  {
+    "id": "G119-era",
+    "docNo": "기획재정부 재산세제과-1270",
+    "docDate": "2023.10.23.",
+    "basis": "era",
+    "today": "2025-03-16",
+    "summary": "구성 — 재건축 대상 A주택 외에 다른 주택 C를 보유한 세대(2주택)가 사업시행인가 후 대체주택 B를 취득·거주하고 신축주택 완공 후 B 양도(C 계속 보유)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2010-03-15",
+          "region": "capital"
+        },
+        {
+          "id": "C",
+          "acquisitionDate": "2012-05-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2018-06-15",
+      "replCompletionDate": "2023-06-15",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 구성 케이스 — 원문은 판단 시점 규칙만 회신(사실관계 미공개, 「귀 질의와 같이 대체주택 취득일 현재 2주택 이상」). 규칙이 결론을 가르는 가장 단순한 사실로 구성: 재건축 대상 A(2010-03-15) 외에 다른 주택 C(2012-05-15)를 보유한 세대가 사업시행인가(2018-06-15) 후 대체주택 B(2019-03-15) 취득·70개월 거주, A 완공(2023-06-15) 후 B 양도(2025-03-15) — C는 양도일까지 계속 보유, 비조정·양도가 8억, today는 해석 적용 시점(2023.10.23. 이후 결정·경정분) 이후. 기대: 대체주택 취득일 현재 2주택 → §156의2⑤ 부적용 → 3주택 과세. 관측: 비과세(156-2-5-replacement-house). 대체주택 선언을 빼면 과세(프로브 V-G119-norepl) — 선언이 결론을 바꾼다. 양성 짝 P-G119-current(C 없음)는 비과세. 의심 지점: lib/tax-engine/transfer-tax-exemption.ts:263-271 — E-5 대체주택 분기는 대체주택 취득일·인가일·거주개월·완성 기한·신축주택 거주 선언만 보고 세대 보유 주택 수(대체주택 취득 당시 1주택 여부)를 보지 않는다. 입력 게이트 lib/calc/replacement-house-scope.ts:21-29는 '2주택 이상이면 연다'라 3주택 세대에서도 열린다. 대체주택 취득 당시 보유했다가 양도 전에 처분·분가한 주택은 입력 자체가 없다(G121)."
+  },
+  {
+    "id": "G119-current",
+    "docNo": "기획재정부 재산세제과-1270",
+    "docDate": "2023.10.23.",
+    "basis": "current",
+    "today": "2026-06-16",
+    "summary": "현행 — 대체주택 취득일 현재 재건축 대상 주택 외 다른 주택을 보유한 2주택 세대의 대체주택 양도(다른 주택 계속 보유)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2012-03-15",
+          "region": "capital"
+        },
+        {
+          "id": "C",
+          "acquisitionDate": "2014-05-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2019-06-15",
+      "replCompletionDate": "2024-03-15",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 현행 규칙: 소득세법 시행령 §156의2⑤의 「국내에 1주택을 소유한 1세대」 여부는 대체주택 취득일 기준 — 대체주택 취득일 현재 2주택 이상이면 부적용. 구성: A 2012-03-15·다른 주택 C 2014-05-15 보유 세대, 인가 2019-06-15, 대체주택 B 2020-04-15 취득·70개월 거주, A 완공 2024-03-15, B 양도 2026-06-15(C 계속 보유), 비조정·양도가 8억. 기대: 과세. 관측: 비과세(156-2-5). 의심 지점: G119-era와 같다(lib/tax-engine/transfer-tax-exemption.ts:263-271)."
+  },
+  {
+    "id": "P-G119-current",
+    "docNo": "기획재정부 재산세제과-1270",
+    "docDate": "2023.10.23.",
+    "basis": "current",
+    "today": "2026-06-16",
+    "summary": "양성 짝(현행) — 같은 사실에서 다른 주택 C가 처음부터 없는 1주택 세대",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2012-03-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2019-06-15",
+      "replCompletionDate": "2024-03-15",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(양성 짝). G119-current에서 다른 주택 C가 처음부터 없는 1주택 세대 → 대체주택 특례로 비과세(156-2-5) — G119-current와 결론이 갈려야 하는 짝."
+  }
+]

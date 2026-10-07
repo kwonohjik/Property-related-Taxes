@@ -1,0 +1,58 @@
+[
+  {
+    "id": "F370-era",
+    "docNo": "기획재정부 재산세제과-1412",
+    "docDate": "2022.11.10.",
+    "basis": "era",
+    "today": "2025-09-20",
+    "summary": "甲이 A주택(2019.7. 취득) 임대 — 직전 ㉠(2020.7.~2022.7.) 후 5% 이하 증액 상생 ㉡(2022.7. 갱신, 2년)을 체결했으나 임차인 사정으로 1년 만에 전출(2023.7.), 같은 조건으로 새 임차인과 ㉢(2023.8., 2년) 체결 — 임대기간 합산",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-09-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-07-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-06-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "12"
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 임차인 중도 퇴거로 종전 임대기간 요건을 못 채운 경우 종전 임대기간과 새 계약(종전 보증금·임대료 이하) 임대기간을 합산 가능 → 특례 적용. 없는 입력: 임차인 중도 퇴거·새 임대차계약에 의한 임대기간 합산(시행령 §155의3) — 엔진은 합산하지 않고 화면도 합산을 안내하지 않아, 사용자가 합산한 개월을 직접 넣어야 한다. 참조 관측(상생 실제 12개월): 과세 — 원문과 반대. 합산값 36개월을 넣으면 비과세(프로브). 일자 가정: 조정 취득 2019-07-15, 상생 체결 2022-06-15, 양도 2025-09-15, 거주 0, 양도가 9억."
+  },
+  {
+    "id": "F370-current",
+    "docNo": "기획재정부 재산세제과-1412",
+    "docDate": "2022.11.10.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "상생임대차계약(2023.3.) 임차인이 1년 만에 임대인에게 계약 해지를 통지하고 퇴거, 종전 이하 임대료로 새 임차인과 2년 계약 — 임대기간 합산",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-08-14",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-03-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-03-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "12"
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 직전·상생임대차계약의 임차인이 임대인에게 계약 해지를 통지하고 퇴거해 임대기간 요건을 못 채운 경우, 종전 임대보증금·임대료 이하로 새로 체결한 계약의 임대기간을 합산(소득세법 시행령 §155의3). 없는 입력: 임차인 중도 퇴거·새 임대차계약에 의한 임대기간 합산(시행령 §155의3) — 엔진은 합산하지 않고 화면도 합산을 안내하지 않아, 사용자가 합산한 개월을 직접 넣어야 한다. 해지 통지 여부를 담을 칸도 없다. 참조 관측(상생 실제 12개월): 과세 — 현행 규칙(합산 36개월 → 비과세)과 반대. 중립: 조정 취득 2021-03-15, 직전 24개월, 상생 체결 2023-03-15, 양도 2026-08-14(2026-10-01 전 — 양도기한 없음), 거주 0, 양도가 9억."
+  }
+]

@@ -1,0 +1,78 @@
+[
+ {
+  "id": "F180-era",
+  "docNo": "서면-2021-법규재산-3490 [법규과-651]",
+  "docDate": "2022.02.23.",
+  "basis": "era",
+  "today": "2022-02-23",
+  "summary": "서울 A(2003.8. 취득, 취득 당시 비조정) + 인천 B·C(2018.5.) → B(2021.4.)·C(2021.5.) 양도로 A가 최종 1주택 → A 양도(2023.6. 예정): 취득 당시 비조정이면 최종 1주택이 된 날 조정대상지역이어도 거주요건 없이 보유요건만 — 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2023-06-15",
+   "contractTotalPrice": "900000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2003-08-15"
+   }
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "match — 관측: 비과세(판정 보류 없음). 경로: 양도 예정일(2023-06-15)은 §154⑤ 단서 삭제(2022.5.10. 이후 양도분) 뒤라 엔진은 A 취득일부터 보유기간을 센다 — 회신이 말한 「최종 1주택이 된 날(2021.5.)부터 2년」으로 세어도 2023.6.이면 충족이라 결론은 같다(경로 다름). 구별력 한계: A는 2017.8.2. 이전 취득이라 취득 당시 조정 여부와 관계없이 거주요건이 없고(경과규정), 「최종 1주택이 된 날의 조정 여부」를 담는 칸도 없다 — 엔진은 거주요건을 취득 당시로만 본다(회신과 같은 구조). 그 축은 구성 짝 P-F180-acq-nonregulated / N-F180-acq-regulated가 고정한다. 일자: 월 단위 15일, 양도가 9억 가정(12억 이하), 2023.6. 양도 당시 비조정으로 둠."
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "docNo": "서면-2021-법규재산-3490 [법규과-651]",
+  "docDate": "2022.02.23.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F180의 구성 짝 — 2018.1. 비조정대상지역에서 취득한 1주택이 나중에 조정대상지역이 된 뒤 거주 없이 양도(2026.3.): 거주요건 없음 — 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-03-20",
+   "contractTotalPrice": "800000000",
+   "isRegulatedArea": true,
+   "wasRegulatedAtAcquisition": false,
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2018-01-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "0"
+   }
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "구성 케이스(가정) — 거주요건은 취득 당시 조정대상지역 여부로 정한다는 회신 취지를 현행 날짜로 구성. 취득 당시 비조정(wasRegulatedAtAcquisition false)·양도 당시 조정(isRegulatedArea true)·거주 0개월 → 보유 8년 → 비과세. 짝 N-F180-acq-regulated(취득 당시 조정으로만 바꾸면 거주 2년 미달 과세). 새 축 중립: 양도가 8억, 2026.10.1. 전 양도. 현행 규칙: 취득 당시 조정대상지역(2017.8.3. 이후 취득)인 주택만 보유기간 중 거주 2년 요건."
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "docNo": "서면-2021-법규재산-3490 [법규과-651]",
+  "docDate": "2022.02.23.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "P-F180-acq-nonregulated의 음성 짝 — 같은 주택이 취득 당시(2018.1.) 이미 조정대상지역이었으면 거주 2년 미달로 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-03-20",
+   "contractTotalPrice": "800000000",
+   "isRegulatedArea": true,
+   "wasRegulatedAtAcquisition": true,
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2018-01-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "0"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — 취득 당시 조정 여부만 뒤집은 최소쌍. 거주 0개월 → 거주요건 미충족 → 과세. 관측의 판정 보류(154-1-residence-deadline-unavailable 등)는 거주 기한 안내 잡음이라 단언하지 않는다."
+ }
+]

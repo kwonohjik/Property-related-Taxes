@@ -1,0 +1,29 @@
+[
+ {
+  "id": "F305-era",
+  "docNo": "부동산거래관리과-1077",
+  "docDate": "2010.08.20.",
+  "basis": "era",
+  "today": "2011-01-01",
+  "summary": "유학 출국(2005.7.) 후 영주권 최초 취득(2009.2.), 본인만 재입국(2009.6.)·재출국(2010.7.) — 영주권 취득일부터 2년 이내 양도(2010.12. 가정)면 해외이주 특례 적용",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2010-12-15",
+   "contractTotalPrice": "600000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2004-07-15"
+   },
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2009-02-15"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 표현: 현지이주 기산일 = 영주권 최초 취득일(2009-02, 15일 가정)을 출국일 칸에 입력, 본인 재입국(2009-06)·재출국(2010-07)은 기산일을 바꾸지 않는다. 양도일 원문 미기재 → 2010-12-15(영주권 취득일부터 2년 이내) 가정, 취득 2004-07-15, 양도가 6억(당시 고가 기준 9억 이하), 비조정. 관측: 해외이주 단서 적용 비과세(경로 고정 — 본칙 보유도 충족하나 appliedExceptions로 단서 경로 단언). 2년 밖 음성 짝은 엔진에 비거주자 축이 없어 본칙(장기 보유)으로 비과세가 나오므로 두지 않았다."
+ }
+]

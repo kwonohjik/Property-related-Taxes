@@ -1,0 +1,91 @@
+[
+  {
+    "id": "R031-era",
+    "docNo": "대법원-2009-두-18288",
+    "docDate": "2010.01.28.",
+    "basis": "era",
+    "today": "2010-01-28",
+    "summary": "구성 케이스 — 임차인으로 거주하던 서울 주택을 취득(2004.3.15.)해 18개월 거주 후 임대, 2007.6.15. 양도(임차 거주 2년을 합하면 2년 이상)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2004-03-15",
+            "moveOutDate": "2005-09-14"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 구성 케이스(원문은 사실관계 미수록, 임차 거주기간은 「보유기간 중 거주기간」에 합산하지 않는다는 법리만 판시). 기대 과세(소유 후 거주 18개월 < 2년), 관측 비과세. 원인: 엔진 거주요건은 취득 당시 조정대상지역(2017.8.3. 이후 취득)만 보고 그 전 취득은 「요건 없음」(pre_policy·not_regulated)으로 판정한다 — 1995~2011.6.2. 서울·과천·5대 신도시 소재 주택의 보유 3년·거주 2년 요건 연혁이 없다(lib/tax-engine/transfer-tax-exemption-holding.ts:398-414 describeOneHouseResidenceRequirement — 코드 확인). 당시 요건 연혁(시행령 시행본별 지역·기간)은 확인 필요. 표현: 거주 구간은 취득일부터만 입력(취득 전 임차 구간을 넣으면 ⑧이 「입주일이 취득일보다 빠릅니다」 오류로 막는다 — 프로브). 가정: 임차 거주 2002-03-15~, 취득 2004-03-15, 퇴거 2005-09-14, 양도 2007-06-15, 양도가 5억, 비조정."
+  },
+  {
+    "id": "R031-current",
+    "docNo": "대법원-2009-두-18288",
+    "docDate": "2010.01.28.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "구성 케이스(현행) — 조정대상지역 주택을 임차 거주 중 취득(2022.3.15.)해 18개월 거주 후 양도(2025.6.16.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-16",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2022-03-15",
+            "moveOutDate": "2023-09-14"
+          }
+        ]
+      },
+      "wasRegulatedAtAcquisition": true
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 구성 케이스 — 현행 규칙: 취득 당시 조정대상지역 주택은 보유기간 중 거주 2년 필요, 소유권 취득 전 임차 거주는 합산하지 않음. 원문 시기(귀속 2007)에는 엔진에 거주요건 연혁이 없어 법리를 시험할 수 없으므로 현행 체제에서 따로 고정한다. 표현: 거주 구간 2022-03-15~2023-09-14(18개월). 관측: 과세(보류 154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified는 거주요건 미충족 과세에 붙는 안내 — 결론 불변). 양성 짝 P-R031-current-24m. 참고 프로브: 직접 입력 42개월(임차 포함)이면 비과세 — 직접 입력에는 취득 전 거주를 거르는 장치가 없다(구간 입력만 ⑧이 막음). 중립 고정: 양도일 비조정, 양도가 8억."
+  },
+  {
+    "id": "P-R031-current-24m",
+    "docNo": "대법원-2009-두-18288",
+    "docDate": "2010.01.28.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "R031-current 양성 짝 — 소유 후 거주 24개월(2022.3.15.~2024.3.15.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-16",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2022-03-15",
+            "moveOutDate": "2024-03-15"
+          }
+        ]
+      },
+      "wasRegulatedAtAcquisition": true
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(양성 짝). 소유 후 거주 2년이면 비과세 — R031-current의 과세가 거주기간 미달 때문임을 고정한다."
+  }
+]

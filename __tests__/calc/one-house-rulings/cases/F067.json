@@ -1,0 +1,43 @@
+[
+  {
+    "id": "F067-era",
+    "docNo": "조심2008중1228",
+    "docDate": "2008.11.28.",
+    "basis": "era",
+    "today": "2008-11-28",
+    "summary": "재건축(신축판매) 목적이라 주장한 연립주택 4호를 10년 임대하고 주택임대업 사업자등록까지 함 → 사업용 재고자산 아님 → 주택 수 포함 → 2007.2.1. 고가주택(11억) 양도는 1세대1주택 비과세 불성립",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-02-01",
+      "contractTotalPrice": "1100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1999-03-26"
+      },
+      "houses": [
+        {
+          "id": "101",
+          "acquisitionDate": "1997-10-07"
+        },
+        {
+          "id": "102",
+          "acquisitionDate": "1997-10-07"
+        },
+        {
+          "id": "201",
+          "acquisitionDate": "1997-10-07"
+        },
+        {
+          "id": "202",
+          "acquisitionDate": "1997-10-07"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 연립 4호를 주택 행으로 명부에 넣음; 엔진은 재고자산 여부를 판정하지 않는다). 일자·양도가 원문 그대로(2007년 고가 기준 6억). 연립을 빼면 고가주택 1세대1주택(6억 초과분 과세)이 되는 것이 처분 전 신고 내용이었다."
+  }
+]

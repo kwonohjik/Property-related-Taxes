@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F372-era",
+    "docNo": "서면-2022-법규재산-3253 [법규과-2768]",
+    "docDate": "2022.09.29.",
+    "basis": "era",
+    "today": "2025-01-20",
+    "summary": "1주택 소유자가 §155의3 요건을 갖춘 상생임대차계약을 법인 임차인과 체결, 법인이 상시 주거용 사택으로 사용 — 특례 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-03-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-06-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 임차인이 법인이어도 그 법인이 상시 주거용 사택으로 사용하면 §155의3 적용. 없는 입력: 임차인 유형(법인)과 사용 용도(상시 주거용 사택) — 엔진은 임차인을 묻지 않으므로 사택 아닌 용도로 쓰는 법인 임차(반대 결론)와 가르지 못한다. 참조 관측(직전 24·상생 2022-06-15 체결 24·증액 5): 비과세 — 결론은 같다. 일자 가정(원문에 없음): 조정 취득 2021-03-15, 양도 2025-01-15, 거주 0, 양도가 9억."
+  }
+]

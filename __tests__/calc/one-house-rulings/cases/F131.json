@@ -1,0 +1,28 @@
+[
+ {
+  "id": "F131-era",
+  "docNo": "국심-2007-중-1776",
+  "docDate": "2007.12.05.",
+  "basis": "era",
+  "today": "2006-06-05",
+  "summary": "건축물대장상 관리사라도 주거 구조·주택분 재산세·농한기 전력 사용 등으로 상시 주거용이면 주택 — 쟁점외주택 양도 비과세 배제",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2006-05-30",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1995-05-15"
+   },
+   "houses": [
+    {
+     "id": "mgr",
+     "region": "non_capital",
+     "acquisitionDate": "2000-12-11"
+    }
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 주택 해당 여부(건물의 사실상 용도·구조·사용 실태)를 묻는 칸 — 판정 메뉴는 명부(다른 보유 주택)에 넣으면 주택, 빼면 주택 아님으로 보아 그 판단을 사용자에게 맡긴다. 참조 관측(referenceForm): 과세 · 보류 civil-161-holiday-table-uncovered(잡음) — 원문 결론(과세)과 같음(쟁점 축은 사용자 입력에 달림). 일자·가정: 원문 양도 2006-05-30, 쟁점외주택 취득일 미기재 → 1995-05-15 가정, 관리사 취득일 미기재 → 주위 농지 취득일 2000-12-11 사용, 양도가 5억 가정(원문은 6억 초과분 신고 — 고가 축 중립화). 관리사를 명부에 넣은 참조."
+ }
+]

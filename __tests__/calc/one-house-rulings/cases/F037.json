@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F037-era",
+    "docNo": "조심2016서0643",
+    "docDate": "2016.06.02.",
+    "basis": "era",
+    "today": "2016-06-02",
+    "summary": "1993년 이혼 후 1998년 같은 배우자와 재혼인신고, 이후 같은 주소를 둔 적 없는 법률상 배우자가 아파트 보유 → 1세대 2주택 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-06-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-05-15"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "acquisitionDate": "2005-05-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 법률상 배우자 아파트를 명부에 넣음). 배우자 범위는 엔진 판정 축이 아님. 양도일(2015년 귀속, 일자 비공개) → 2015-06-15, 쟁점주택 취득 2008-05-15, 배우자 아파트 취득 2005-05-15 가정. 양도가 3억 중립."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "R030-era",
+    "docNo": "국심-2006-서-2040",
+    "docDate": "2006.12.01.",
+    "basis": "era",
+    "today": "2006-12-01",
+    "summary": "서울 아파트(1998.7.15. 취득) — 주민등록상 17개월 등재됐으나 그중 2004.1.~2005.3.은 타인에게 임대, 실제 2년 거주 입증 못 함 → 2005.3.25. 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-03-25",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1998-07-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "4"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 기대 과세(당시 서울 소재 주택 보유 3년·거주 2년 요건 미충족), 관측 비과세. 실제 거주는 주민등록이 아니라 실거주로 보고(임대 기간 제외) 4개월(2003.9.~2003.12. 가정)로 입력. 원인: 엔진 거주요건은 취득 당시 조정대상지역(2017.8.3. 이후 취득)만 보고 그 전 취득은 「요건 없음」(pre_policy·not_regulated)으로 판정한다 — 1995~2011.6.2. 서울·과천·5대 신도시 소재 주택의 보유 3년·거주 2년 요건 연혁이 없다(lib/tax-engine/transfer-tax-exemption-holding.ts:398-414 describeOneHouseResidenceRequirement — 코드 확인). 당시 요건 연혁(시행령 시행본별 지역·기간)은 확인 필요. 거주 개월 입력은 도달하지만 요건 자체가 없어 0개월이어도 비과세(최소쌍 불필요 — 요건 미판정). 가정: 양도가 5억(원문 실가 8억 — 당시 고가 6억 초과를 피해 중립화), 비조정."
+  }
+]

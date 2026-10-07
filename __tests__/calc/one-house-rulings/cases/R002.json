@@ -1,0 +1,28 @@
+[
+  {
+    "id": "R002-era",
+    "docNo": "심사양도2004-0102",
+    "docDate": "2004.08.30.",
+    "basis": "era",
+    "today": "2003-05-20",
+    "summary": "주민등록상 동일세대인 무소득 아들(36세, 아파트 소유)이 독서실(상업용 건물)에 머문 것은 일시적 거소 — 동일세대원으로 보아 1세대 2주택, 쟁점주택(1987.11.4. 취득) 2003.4.22. 양도 비과세 배제",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2003-04-22",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1987-11-04"
+      },
+      "houses": [
+        {
+          "id": "son-apt",
+          "region": "capital",
+          "acquisitionDate": "1986-06-15"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 세대원 판정 사실(생계 동일·소득 없음·독서실 체류의 일시성). 판정 메뉴는 1세대 성립·세대원 범위를 판정하지 않고 사용자 선언(① 세대 · 명부 등재)에 맡긴다(`app/calc/one-house-exemption/steps/Step1.tsx:8`). 참고 관측(referenceForm: 아들 아파트를 명부에 등재): 과세 — 원문과 같다. 명부에서 빼면 비과세 — 결론은 사용자의 세대 판단으로만 갈린다. 가정: 아들 아파트 취득일 원문 미기재 → 1986-06-15(양도 주택보다 먼저 — 일시적 2주택 도출 회피), 양도가 3억."
+  }
+]

@@ -1,0 +1,33 @@
+[
+  {
+    "id": "F036-era",
+    "docNo": "심사양도2002-0013",
+    "docDate": "2002.06.21.",
+    "basis": "era",
+    "today": "2002-06-21",
+    "summary": "주민등록상 세대원인 딸(근로소득·결혼 예정자와 다른 곳에서 동거)은 별도 세대 → 딸 아파트 제외 → 2000.3.24. 취득 빌라와 일시적 2주택 → 쟁점부동산(2000.4.28. 양도)은 1세대1주택",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2000-04-28",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-03-17"
+      },
+      "houses": [
+        {
+          "id": "villa",
+          "acquisitionDate": "2000-03-24"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(세대 구성은 입력 규약 의존 — 딸 아파트를 명부에 넣지 않음; 일시적 2주택은 엔진이 판정). 원문 쟁점부동산은 고급주택이라 당시 1세대1주택이라도 고급주택 과세 대상이었다 — 당시 고급주택 기준(면적·가액)은 엔진 연혁에 없어 양도가를 5억으로 두어 고가 축을 중립화(원문 쟁점은 1세대1주택 해당 여부). 당시 일시적 2주택 기한 1년, 엔진은 3년 — 1개월 만의 양도라 결론 무관."
+  }
+]

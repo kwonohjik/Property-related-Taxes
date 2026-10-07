@@ -1,0 +1,30 @@
+[
+  {
+    "id": "G022-era",
+    "docNo": "기획재정부 재산세제과-394",
+    "docDate": "2010.04.28.",
+    "basis": "era",
+    "today": "2010-04-28",
+    "summary": "관리처분계획인가일 현재 2주택을 보유했던 세대가 양도일 현재 다른 주택 없이 그 조합원입주권(2006.1.1. 이후 인가분) 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2003-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2008-05-15"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: 인가일 현재 1주택 보유는 요건이 아니고, 양도하는 입주권의 기존주택이 인가일 현재 §154① 요건을 갖추고 양도일 현재 다른 주택이 없으면 특례(시행령 §155⑰) 적용. 표현: 인가일 현재 보유했던 다른 주택은 양도 전에 처분됐으므로 입력 없음(인가일 현재 주택 수를 받는 칸 자체가 없고, 엔진은 양도일 보유로만 본다 — 회신과 같은 규칙), 기존주택 요건은 선언. 관측: one_right_89_1_4_ga. 가정(원문에 일자 없음): 입주권(기존주택) 취득 2003-05-15·인가 2008-05-15·양도 2010-03-15, 양도가 5억, 비조정."
+  }
+]

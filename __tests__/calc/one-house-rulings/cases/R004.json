@@ -1,0 +1,21 @@
+[
+  {
+    "id": "R004-era",
+    "docNo": "심사양도2004-0053",
+    "docDate": "2004.08.23.",
+    "basis": "era",
+    "today": "2004-08-23",
+    "summary": "30세 이상·근로소득이 있고 출국 전부터 별도 세대를 구성했던 아들이 미국 근무 중 우편물 수령 목적으로만 부모 주소에 주민등록 — 별도 세대로 보아 아들 주택(2채) 제외, 쟁점아파트(1987.12.31. 취득) 2002.8.8. 양도 비과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2002-08-08",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1987-12-31"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 세대원 판정 사실(출국 전 별도 세대 구성·30세 이상·근로소득·국외 체재 비율). 판정 메뉴는 1세대 성립·세대원 범위를 판정하지 않고 사용자 선언(① 세대 · 명부 등재)에 맡긴다(`app/calc/one-house-exemption/steps/Step1.tsx:8`). 참고 관측(referenceForm: 아들 주택을 명부에 넣지 않음): 비과세 — 원문과 같다. 프로브: 아들 주택 2채를 넣으면 과세. 가정: 양도가 원문 미기재 → 5억, 아들 주택 취득일은 넣지 않음."
+  }
+]

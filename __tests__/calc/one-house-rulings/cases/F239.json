@@ -1,0 +1,44 @@
+[
+  {
+    "id": "F239-era",
+    "docNo": "서면-2015-부동산-1491 [부동산납세과-1519]",
+    "docDate": "2015.09.21.",
+    "basis": "era",
+    "today": "2016-03-01",
+    "summary": "1988 취득·1996 재건축한 거주주택 A(재혼 전 배우자와 2년 이상 거주) 양도, 재혼 배우자 명의 B주택은 2015 임대등록 — 거주주택 특례 거주기간은 멸실·신축 주택 실거주 통산(재혼 전후 배우자 포함) (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2016-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "B",
+              "businessRegistrationDate": "2015-06-15",
+              "rentalRegistrationDate": "2015-06-15",
+              "rentalCategory": "pre_2018",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "9",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 1988 갑 A주택 취득·배우자(을)와 2년 이상 거주, 1996 A 재건축, 을 사망 후 2003 병과 재혼, 2003 병 B주택 취득·임대, 2015 B 구청·세무서 임대등록, 재건축한 A 양도 예정. 가정: A 취득 1988-03-15, 거주 24개월(재혼 전 배우자와), B 등록 2015-06-15(종전 매입임대 — pre_2018), 양도 2016-03-15, 기준시가 3억, 임대 요건 충족 자기확인, 양도가 5억. 회신: 거주주택 특례(당시 §155⑲, 현 ⑳)의 거주기간은 멸실 주택과 재건축 주택의 실제 거주기간(재혼 전·후 배우자와 거주한 기간 포함)을 통산. 없는 입력: 멸실·재건축 전후 거주 구간의 연결과 배우자별 거주 — 거주기간은 개월 수 한 칸뿐이다. 참고 관측: referenceForm = 비과세(rentalPassed true). 임대주택 요건은 회신이 판단하지 않아 기대값을 두지 않는다."
+  }
+]

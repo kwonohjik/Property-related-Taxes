@@ -1,0 +1,121 @@
+[
+  {
+    "id": "F366-era",
+    "docNo": "기획재정부 재산세제과-952",
+    "docDate": "2023.08.10.",
+    "basis": "era",
+    "today": "2025-08-20",
+    "summary": "(질의3) 주택 취득(2021.5.) 후 3년 임대차계약(2021.12.)을 1년 6개월로 단축 종료하고 동일 임차인과 더 낮은 임대료로 2년 새 계약(2023.7.) 체결 후 양도(2025.7. 이후) — 각각 직전·상생임대차계약",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-08-14",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-05-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-07-01",
+      "winWinRentalIncreaseRatePct": "-5",
+      "winWinRentalPriorLeaseMonths": "18",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-3-1-win-win-rental"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 원문 결론(질의3 제1안): 직전임대차계약 요건을 갖춘 종전 계약을 단축 변경하고 새로 체결하면 각각 직전·상생임대차계약으로 보아 §155의3 적용. 폼: 직전 18개월(2022-01-15~2023-07-14 가정)·상생 2023-07-01 체결·24개월·증액률 -5(인하). 엔진: applied 155-3-1-win-win-rental. 짝 N-F366-era-17m으로 직전 1년 6개월 경계 확인. 질의1·2는 F366-era-q1·q2(표현 불가). 일자 가정: 조정 취득 2021-05-15, 양도 2025-08-14(2026-10-01 전), 거주 0, 양도가 9억."
+  },
+  {
+    "id": "N-F366-era-17m",
+    "docNo": "기획재정부 재산세제과-952",
+    "docDate": "2023.08.10.",
+    "basis": "era",
+    "today": "2025-08-20",
+    "summary": "F366-era의 음성 짝 — 직전임대차 17개월",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-08-14",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-05-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-07-01",
+      "winWinRentalIncreaseRatePct": "-5",
+      "winWinRentalPriorLeaseMonths": "17",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-3-1-win-win-rental"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 시행령 §155의3①2호: 직전임대차계약에 따라 임대한 기간 1년 6개월 이상. 17개월이면 불성립 → 거주 미달 과세. 판정 보류 154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified는 조정 취득 + 거주 미달 과세에 붙는 안내(결론 무관)."
+  },
+  {
+    "id": "F366-era-q1",
+    "docNo": "기획재정부 재산세제과-952",
+    "docDate": "2023.08.10.",
+    "basis": "era",
+    "today": "2025-04-20",
+    "summary": "(질의1) 취득(2021.3.31.) 시 전 소유자와 임차인의 계약(2021.3.5.~2023.3.5.)을 승계한 뒤 동일 임차인과 임대인 명의·임대기간만 바꾼 변경 계약(2021.4.1.~2023.3.5.) 체결 — 직전임대차계약 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-04-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-03-31"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-02-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "23",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(질의1 제2안): 직전임대차계약 요건(주택 취득 후 체결)을 못 갖춘 승계 계약을 종료하고 임대기간만 바꿔 새로 체결한 계약도 직전임대차계약이 아님. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 참조 관측(변경 계약 23개월을 직전으로·상생 2023-02-15 체결 24개월): 비과세 — 원문과 반대. 일자 가정: 양도 2025-04-15, 조정 취득, 거주 0, 양도가 9억."
+  },
+  {
+    "id": "F366-era-q2",
+    "docNo": "기획재정부 재산세제과-952",
+    "docDate": "2023.08.10.",
+    "basis": "era",
+    "today": "2027-01-20",
+    "summary": "(질의2) 분양계약(2018.6.14.) 후 취득 전 체결한 임대차계약(2020.10.17., 2021.2.5.~2023.2.5.)을 취득(2021.2.5.) 후 보증금 감액·기간 변경 계약(2022.12.20.~2024.12.19.)으로 다시 체결 — 직전임대차계약 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2027-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-02-05"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2024-12-01",
+      "winWinRentalIncreaseRatePct": "0",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24",
+      "winWinRentalLeaseEndDate": "2026-11-30"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(질의2 제2안): 임대기간과 보증금을 바꿔 새로 체결해도 취득 전 체결 계약을 바꾼 것이면 직전임대차계약이 아님. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 참조 관측(변경 계약 24개월을 직전으로·상생 2024-12-01 체결 24개월·종료일 2026-11-30·양도 2027-01-15): 비과세(applied 155-3-1-win-win-rental) — 원문과 반대(엔진은 변경 계약 여부를 보지 않는다). 일자 가정: 조정 취득, 거주 0, 양도가 9억."
+  }
+]

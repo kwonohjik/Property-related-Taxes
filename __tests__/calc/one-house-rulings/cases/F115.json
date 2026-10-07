@@ -1,0 +1,139 @@
+[
+ {
+  "id": "F115-era",
+  "docNo": "서면-2015-부동산-2422 [부동산납세과-402]",
+  "docDate": "2016.03.25.",
+  "basis": "era",
+  "today": "2016-03-20",
+  "summary": "§155⑲ 장기임대주택(B 과천 아파트·D 다가구) + 조특법 §99의2 감면대상 주택(A, 2013.6.) 보유 1세대가 2013.5.부터 거주한 C(2003.10. 취득)를 2016.3. 양도 — 1주택으로 보아 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2016-03-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2003-10-07",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "34",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "B",
+       "businessRegistrationDate": "2002-02-16",
+       "rentalRegistrationDate": "2002-02-16",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": true,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "168",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "D",
+       "businessRegistrationDate": "2014-01-15",
+       "rentalRegistrationDate": "2014-01-15",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "26",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   },
+   "houses": [
+    {
+     "id": "A",
+     "acquisitionDate": "2013-06-19",
+     "isApartment": true,
+     "countExclusion": {
+      "kind": "special",
+      "special": {
+       "article": "unsold_99_2",
+       "houseAcquisitionDate": "2013-06-19",
+       "houseContractDate": "2013-06-19",
+       "isNationalHousing": false,
+       "requirementsConfirmed": true
+      }
+     }
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "rentalPassed": true,
+   "excludedHouses": [
+    "A"
+   ],
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "match",
+  "note": "match(질의 1). 관측: 비과세 · rentalPassed=true · A 주택 수 제외(조특법 §99의2②) · 일시적 2주택 경로 아님(notApplied). 표현: A는 명부 행 + 조특법 주택 수 제외(§99의2 — 매매계약일 필수: 비우면 「최초 매매계약일 미입력」으로 제외 불성립 → A가 신규주택으로 도출돼 일시적 2주택 경로로 비과세가 나온다, 프로브), B·D는 §155⑳ 칸의 임대주택(명부에 넣지 않음). 짝 N-F115-rental-undeclared: B·D를 명부 일반 주택으로 넣으면 과세. 가정: A 매매계약일 = 취득일 2013-06-19, D 등록 2014-01-15(원문 「2014년 초」), B 관리처분인가 전(회신이 B를 장기임대주택으로 다룸), C 거주 2013.5.~2016.3. 34개월, 임대 요건 충족 전제(원문 「각 호의 요건을 충족」), 양도가 8억. 질의 2~4(감면·직전거주주택 기간 안분·사후관리)는 판정 메뉴 출력 밖."
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "docNo": "서면-2015-부동산-2422 [부동산납세과-402]",
+  "docDate": "2016.03.25.",
+  "basis": "era",
+  "today": "2016-03-20",
+  "summary": "F115의 음성 짝 — 같은 사실에서 장기임대주택 B·D를 §155⑲ 특례 없이 명부 일반 주택으로 넣으면 3주택(A 제외)으로 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2016-03-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2003-10-07",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "34"
+   },
+   "houses": [
+    {
+     "id": "A",
+     "acquisitionDate": "2013-06-19",
+     "isApartment": true,
+     "countExclusion": {
+      "kind": "special",
+      "special": {
+       "article": "unsold_99_2",
+       "houseAcquisitionDate": "2013-06-19",
+       "houseContractDate": "2013-06-19",
+       "isNationalHousing": false,
+       "requirementsConfirmed": true
+      }
+     }
+    },
+    {
+     "id": "B",
+     "acquisitionDate": "2001-02-26",
+     "isApartment": true
+    },
+    {
+     "id": "D",
+     "acquisitionDate": "2013-06-28"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "excludedHouses": [
+    "A"
+   ]
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — 비과세가 §155⑲(현 ⑳) 경로에서 나옴을 고정한다. 관측: 과세 · A만 제외."
+ }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "F355-era",
+    "docNo": "서면-2020-법령해석재산-3974 [법령해석과-779]",
+    "docDate": "2021.03.08.",
+    "basis": "era",
+    "today": "2022-06-20",
+    "summary": "서울 분양권(2017.12.)으로 완공 취득(2019.2.)한 조정대상지역 1주택을 전세 임대, 단기임대 사업자 등록(2019.3.) 후 민간임대주택법 §6①11호로 임대의무기간 내 자진말소하고 양도 — 거주요건 미적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "rental_registration_4ho",
+      "proviso4hoBusinessRegDate": "2019-03-15",
+      "proviso4hoRentalRegDate": "2019-03-15",
+      "proviso4hoRegulatedOneHouse": "yes",
+      "proviso4hoStatus": "voluntary_cancelled",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-02-15"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_registration_4ho"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 원문 결론: 2019.12.16. 이전 사업자등록·임대사업자 등록을 신청한 조정대상지역 1주택이 임대의무기간 내 자진말소돼도 거주기간 제한 없음(구 소득세법 시행령 §154①4호·대통령령 제30395호 부칙 제38조②). 폼: 4호 사유 + 신청일 2019-03-15·신청 당시 조정 1주택 「예」·양도일 현재 「자진말소」. 엔진: applied 154-1-proviso:rental_registration_4ho. 짝 N-F355-era-maintained로 상태 축 구별 확인. 일자 가정: 완공 취득 2019-02-15, 양도 2022-06-15(2021.1.1.~2022.5.9. 재기산 구간 밖), 거주 0, 양도가 9억."
+  },
+  {
+    "id": "N-F355-era-maintained",
+    "docNo": "서면-2020-법령해석재산-3974 [법령해석과-779]",
+    "docDate": "2021.03.08.",
+    "basis": "era",
+    "today": "2022-06-20",
+    "summary": "F355-era의 음성 짝 — 등록을 유지한 채 임대의무기간 중 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "rental_registration_4ho",
+      "proviso4hoBusinessRegDate": "2019-03-15",
+      "proviso4hoRentalRegDate": "2019-03-15",
+      "proviso4hoRegulatedOneHouse": "yes",
+      "proviso4hoStatus": "maintained",
+      "proviso4hoDuringMandatory": "yes",
+      "proviso4hoRentOver5": "no",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-02-15"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:rental_registration_4ho"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 종전 4호 단서: 등록을 유지한 채 민간임대주택법 §43 임대의무기간 중 양도하면 4호 제외 → 조정 취득 거주요건(2년) 미달로 과세(unmet 154-1-4ho-rental-registration). 자진말소(원문)와 결론이 갈리는 축."
+  }
+]

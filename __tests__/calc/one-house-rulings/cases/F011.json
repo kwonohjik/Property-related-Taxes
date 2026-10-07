@@ -1,0 +1,40 @@
+[
+  {
+    "id": "F011-era",
+    "docNo": "대법원 2006두15998",
+    "docDate": "2006.12.21.",
+    "basis": "era",
+    "today": "2006-12-21",
+    "summary": "재개발 입주권(1996 취득 주택 → 2001.6.27. 관리처분인가) 양도(2003.6.7.) 당시 아버지 세대원으로 함께 거주·생계 → 아버지 주택과 본인이 취득한 다른 주택이 있어 1세대1주택 비과세 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-06-07",
+      "contractTotalPrice": "250000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1996-10-05",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes"
+      },
+      "houses": [
+        {
+          "id": "father",
+          "acquisitionDate": "1985-05-15"
+        },
+        {
+          "id": "house3",
+          "acquisitionDate": "2003-04-24"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "one_right_89_1_4_ga",
+        "one_right_89_1_4_na"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 아버지 주택을 명부에 넣음). 입력 규약: 1세대 구성은 판정 메뉴 ① 단계의 사용자 선언이고 명부는 「세대 구성원이 보유한 주택」이다 — 엔진은 생계 동일 여부를 판정하지 않는다. 원문이 판단한 세대 구성대로 명부를 만들었으므로 구별력은 명부 구성에만 있다(세대원 여부 자체는 검증하지 않음). 30세 이상·독자 소득이 있어도 아버지와 생계를 같이하면 동일세대라는 원문 판단을 명부로 반영. 양도 대상은 조합원입주권(취득일 = 종전주택 취득일 1996-10-05, 관리처분인가일 현재 기존주택 요건 yes로 둠 — 쟁점 아님). 아버지 주택 취득일은 원문에 없어 1985-05-15 가정. 양도가 250,000,000원(원문)."
+  }
+]

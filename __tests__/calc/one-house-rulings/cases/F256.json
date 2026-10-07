@@ -1,0 +1,89 @@
+[
+  {
+    "id": "F256-era",
+    "docNo": "서면인터넷방문상담4팀-419",
+    "docDate": "2008.02.20.",
+    "basis": "era",
+    "today": "2010-02-01",
+    "summary": "5년 공공임대아파트에 최초 임대개시(2005.1.)부터 거주한 임차인이 분양전환(2008.3.)받아 1년 11개월에 양도 — 임차일부터 양도일까지 거주 5년 이상이면 보유기간 무관 비과세 (일자 구성)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-02-15",
+      "contractTotalPrice": "500000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "61"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 구성 케이스 — 원문은 기산 규칙만 회신. 원문 사실: 시 도시개발공사 관리 5년 공공임대아파트, 최초 임대개시 2005.1., 2008년 분양전환 예정. 구성: 최초 임대개시일(2005-01-15)부터 거주한 임차인이 2008-03-15 분양전환 취득 후 2010-02-15 양도 → 임차일부터 양도일까지 61개월, 보유 1년 11개월(당시 보유 3년·엔진 2년 모두 미달), 양도가 5억(당시 고가 기준 9억 이하), 비조정. 회신: 건설임대주택 임차일~양도일 거주 5년 이상이면 보유기간과 관계없이 비과세(고가주택 제외), 임차권 승계 시 전 임차인 거주기간 미산입. 관측: 비과세(applied 154-1-proviso:rental_5yr_residence). 승계 축은 입력 칸이 없다(사용자가 본인 거주분만 넣어야 함 — F255 참조). 짝 N-F256-59m(경계)·N-F256-highvalue(고가)."
+  },
+  {
+    "id": "N-F256-59m",
+    "docNo": "서면인터넷방문상담4팀-419",
+    "docDate": "2008.02.20.",
+    "basis": "era",
+    "today": "2010-02-01",
+    "summary": "F256 경계 짝(가정) — 임차일부터 양도일까지 거주가 4년 11개월이면 단서 미적용, 보유 1년 11개월로 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-02-15",
+      "contractTotalPrice": "500000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "59"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ]
+    },
+    "bucket": "match",
+    "note": "경계 짝(가정) — F256-era에서 거주 개월만 59개월(4년 11개월)로 바꾼 최소쌍. 5년 미달이라 단서 1호 미적용 → 보유 1년 11개월로 과세(pending 154-1-holding-years). 엔진은 거주 연수를 개월 ÷ 12 내림으로 본다(60개월부터 5년)."
+  },
+  {
+    "id": "N-F256-highvalue",
+    "docNo": "서면인터넷방문상담4팀-419",
+    "docDate": "2008.02.20.",
+    "basis": "era",
+    "today": "2010-02-01",
+    "summary": "F256 짝(가정) — 같은 사실에서 양도가액이 고가주택 기준(당시 9억원)을 넘으면 초과분 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-02-15",
+      "contractTotalPrice": "1000000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "61"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "짝(가정) — F256-era에서 양도가액만 10억(2010년 고가주택 기준 9억 초과)으로 바꾼 최소쌍. 회신 괄호(고가주택 제외)대로 단서 1호를 적용해도 기준 초과분은 과세 → 부분 과세(isPartialExempt)."
+  }
+]

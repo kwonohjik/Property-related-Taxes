@@ -1,0 +1,77 @@
+[
+  {
+    "id": "G129-era",
+    "docNo": "서면인터넷방문상담4팀-1377",
+    "docDate": "2004.09.01.",
+    "basis": "era",
+    "today": "2004-10-16",
+    "summary": "재개발 조합원 세대가 시행기간 중 동일세대원인 처 명의로 다른 주택 취득·1년 이상 거주 후 신축주택으로 세대전원 이사하고 그 주택 양도(구성 날짜)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2004-10-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2002-03-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "1995-05-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2001-05-15",
+      "replCompletionDate": "2004-03-15",
+      "replResidenceMonths": "24",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 구성 케이스 — 원문은 요건만 회신(일자 없음). 가정: 재개발 대상 A 1995-05-15, 사업시행인가 2001-05-15, 처 명의 대체주택 2002-03-15 취득·24개월 거주, 신축주택 완성 2004-03-15·세대전원 이사, 대체주택 양도 2004-10-15, 양도가 4억·비조정. 표현: 판정 메뉴는 세대 단위라 대체주택 명의자(조합원 본인/동일세대원)를 받는 칸이 없고 엔진도 구분하지 않는다(원문 결론과 같은 방향). 관측: 비과세(156-2-5) + 잡음 보류(2009 이전 양도). 원문은 구 소득세법 시행규칙 §71②3호 적용분 — 엔진은 §156의2⑤ 요건으로 판정(결론 같음)."
+  },
+  {
+    "id": "G129-current",
+    "docNo": "서면인터넷방문상담4팀-1377",
+    "docDate": "2004.09.01.",
+    "basis": "current",
+    "today": "2026-05-16",
+    "summary": "현행 — 사업시행인가 후 동일세대원(배우자) 명의로 취득한 대체주택을 신축주택 완성 후 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2010-03-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2019-10-15",
+      "replCompletionDate": "2025-09-15",
+      "replResidenceMonths": "60",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 소득세법 시행령 §156의2⑤는 「1세대」 기준 — 대체주택을 조합원과 동일세대원인 배우자 명의로 취득해도 적용. 구성: 재개발 대상 A 2010-03-15, 인가 2019-10-15, 배우자 명의 대체주택 2020-04-15·60개월 거주, 완성 2025-09-15, 양도 2026-05-15, 비조정·양도가 8억. 관측: 비과세(156-2-5)."
+  }
+]

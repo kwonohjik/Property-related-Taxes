@@ -1,0 +1,97 @@
+[
+  {
+    "id": "F055-era",
+    "docNo": "국심2005서3349",
+    "docDate": "2006.04.03.",
+    "basis": "era",
+    "today": "2006-04-03",
+    "summary": "쟁점외아파트가 2003.2.8. 재건축사업계획 승인(철거 전·임차인 거주) → 사용검사 전까지 부동산을 취득할 수 있는 권리 → 2003.8.19. 쟁점아파트 양도는 1세대1주택 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-08-19",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-04-15"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1995-05-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2003-02-08"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 쟁점외아파트를 조합원입주권 행(presaleRights)으로 두고 인가일 칸에 주택건설촉진법상 재건축사업계획 승인일 2003-02-08을 넣음(칸 주석이 사업계획승인일을 포함한다고 정함) — 2006.1.1. 전 인가분이라 §89② 대상이 아니어서 주택 수에 들지 않는다. 쟁점외아파트 취득일은 원문에 없어 1995-05-15 가정. 양도가 3억 중립. 짝 N-F055-approval-2006: 인가일만 2006년 이후로 바꾸면 과세 — 판정이 인가일 게이트에서 갈림을 고정."
+  },
+  {
+    "id": "N-F055-approval-2006",
+    "docNo": "국심2005서3349",
+    "docDate": "2006.04.03.",
+    "basis": "era",
+    "today": "2006-04-03",
+    "summary": "F055의 음성 짝 — 같은 사실에서 관리처분계획인가일만 2006.1.1. 이후(2006.2.15.)였다면 §89②로 입주권이 주택 수에 들어 과세 (양도일도 뒤로 옮김)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-08-21",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-04-15"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1995-05-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2006-02-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "음성 짝(가정) — 인가일 게이트 최소쌍. 양도 주택 취득(1997)이 입주권의 기존주택 취득(1995)보다 늦어 §156의2③ 예외도 서지 않는다. 입주권 취득 후 3년 초과 양도라 §156의2④(신축주택 완성 후 이사·거주) 칸에 「해당 없음」을 선언(미선언이면 판정 보류 + 비과세 헤드라인)."
+  },
+  {
+    "id": "F055-current",
+    "docNo": "국심2005서3349",
+    "docDate": "2006.04.03.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "현행 — 2010년 취득한 다른 아파트가 2024.3.15. 관리처분계획인가(철거 전·임차인 거주) → 조합원입주권으로 주택 수에 포함 → 2015년 취득 주택을 2026.5.15. 양도하면 비과세 불가 (구성 케이스)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-16"
+      },
+      "presaleRights": [
+        {
+          "id": "b-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2010-05-14",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2024-03-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "현행 규칙: 2006.1.1. 이후 관리처분계획인가를 받은 조합원입주권은 1세대1주택 판정 시 주택 수에 포함한다(소득세법 §89②, 법률 제7837호 부칙 §12) — 권리 전환 기준일은 관리처분계획인가일. 입주권의 기존주택 취득(2010)이 양도 주택 취득(2015)보다 먼저라 일시적 특례(§156의2③)는 서지 않는다. §156의2④(신축주택 완성 후 이사·거주)·시행규칙 §75① 칸은 「해당 없음」으로 선언 — 미선언이면 엔진이 그 항을 판정 보류로 두고 헤드라인을 비과세로 낸다(관측). 중립: 비조정·양도가 8억."
+  }
+]

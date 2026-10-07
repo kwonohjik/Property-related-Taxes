@@ -1,0 +1,28 @@
+[
+ {
+  "id": "F103-era",
+  "docNo": "국심-2005-서-2658",
+  "docDate": "2005.09.15.",
+  "basis": "era",
+  "today": "2005-02-10",
+  "summary": "처(妻) 소유 아파트를 가정보육시설(어린이놀이방)로 사용해도 독립 주거 구조가 유지되면 주택 — 쟁점주택 양도 1세대 2주택 과세(2005년 양도)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2005-02-03",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2001-11-14"
+   },
+   "houses": [
+    {
+     "id": "daycare",
+     "acquisitionDate": "2002-09-18",
+     "isApartment": true
+    }
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 주택 해당 여부(건물의 사실상 용도·구조·사용 실태)를 묻는 칸 — 판정 메뉴는 명부(다른 보유 주택)에 넣으면 주택, 빼면 주택 아님으로 보아 그 판단을 사용자에게 맡긴다; 가정어린이집 사실을 담을 칸도 없다. 참조 관측(referenceForm): 과세 · 보류 civil-161-holiday-table-uncovered(잡음) — 원문 결론(과세)과 같음(쟁점 축은 사용자 입력에 달림). 일자·가정: 원문 일자(쟁점주택 2001-11-14·쟁점아파트 2002-09-18·양도 2005-02-03), 양도가 3억 가정. 쟁점아파트를 명부에 넣은 참조(나중 취득이라 신규주택으로 도출되나 종전주택 취득 1년 경과 전)."
+ }
+]

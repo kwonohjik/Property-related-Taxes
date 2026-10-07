@@ -1,0 +1,32 @@
+[
+ {
+  "id": "F280-era",
+  "docNo": "서면인터넷방문상담4팀-823",
+  "docDate": "2005.05.27.",
+  "basis": "era",
+  "today": "2005-05-27",
+  "summary": "근무상 형편으로 출국한 세대가 국내 2주택(양평동 2001·잠원동 2005.4.8.) 상태에서 배우자 출국 후 양평동 아파트 양도 예정(2006.4.7. 이내) — 2주택 모두 과세",
+  "expected": {
+   "isExempt": false
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2006-03-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2001-02-09"
+   },
+   "houses": [
+    {
+     "id": "jamwon",
+     "acquisitionDate": "2005-04-08"
+    }
+   ],
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2005-06-15"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 참고 관측(referenceForm — 양평동 2001-02-09 양도 대상, 잠원동 2005-04-08 명부, 다목 출국일 2005-06-15, 양도 2006-03-15, 양도가 5억 가정): 2주택이라 단서 카드가 닫히고(일시적 2주택 모드는 1·2호가·3호만) 거주자 기준 155-1-temporary-two-house 비과세 → 기대(2주택 모두 과세)와 다름. 비거주자 입력이 생기면 mismatch 후보."
+ }
+]

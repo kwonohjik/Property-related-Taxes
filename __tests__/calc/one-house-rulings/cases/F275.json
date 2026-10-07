@@ -1,0 +1,53 @@
+[
+ {
+  "id": "F275-era",
+  "docNo": "국심-2007-서-0470",
+  "docDate": "2007.09.10.",
+  "basis": "era",
+  "today": "2006-08-01",
+  "summary": "출국 전 재개발 철거 후 대지 취득(1995.11.6.), 세대전원 출국(1995.11.14.) 후 관리처분인가(1996.6.20.)·준공 주택 양도(2003.10.10.) — 비거주자 상태 취득이라 국외 근무 특례 부적용 과세",
+  "expected": {
+   "isExempt": false
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2003-10-10",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1996-06-20"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "1995-11-14"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 쟁점(입주권 취득시기 = 관리처분계획인가일이라 세대전원 출국 후 비거주자 상태에서 취득한 주택)은 취득일·출국일로 옮길 수 있으나 엔진은 취득일이 출국일 뒤인지 보지 않는다(짝 N-F275-acquired-after-departure). 참고 관측(referenceForm — 취득 1996-06-20, 출국 1995-11-14, 양도 2003-10-10, 양도가 3억 가정): 2년 기한(연혁 없이 적용)으로 단서 불성립, 본칙(거주자 기준 7년 보유) 비과세 → 기대(과세)와 다름."
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "docNo": "국심-2007-서-0470",
+  "docDate": "2007.09.10.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F275의 현행 짝(구성) — 근무상 형편으로 세대전원 출국(2024.11.15.) 뒤에 취득(2025.3.17.)한 주택을 출국일부터 2년 이내(2026.6.15.) 양도 → 출국일 현재 보유 주택이 아니어서 다목 부적용 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2025-03-17"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2024-11-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(구성 짝). 현행 소득세법 시행령 §154①2호다목 단서 「출국일 현재 1주택을 보유하고 있는 경우로서 출국일부터 2년 이내에 양도」 — 출국(2024-11-15) 뒤 취득(2025-03-17)한 주택은 출국일 현재 보유 주택이 아니다. 무주택 출국 가정, 중립: 비조정·양도가 8억·양도 2026-06-15(보유 1년 3개월). 관측: 154-1-proviso:overseas_residence 적용 → 비과세. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:240-244(나·다목은 departureDate와 2년 상한만 보고 acquisitionDate < departureDate를 확인하지 않음). 화면 설명(components/calc/transfer/ExemptionProvisoSection.tsx:73 「출국일 현재 1주택」)과도 어긋난다."
+ }
+]

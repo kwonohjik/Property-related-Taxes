@@ -1,0 +1,31 @@
+[
+  {
+    "id": "F364-era",
+    "docNo": "서면-2022-법규재산-4596 [법규과-640]",
+    "docDate": "2023.03.13.",
+    "basis": "era",
+    "today": "2027-01-20",
+    "summary": "재건축 원조합원이 준공 전(관리처분 2017.6., 이전고시 2023.2.28. 예정) 신축예정주택 전세계약(2022.9.경, 임대기간 2023.3.10.~2024.12.10.) 후 갱신(2024.12., 2년) — 직전임대차계약 해당",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2027-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-06-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2024-11-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "21",
+      "winWinRentalLeaseMonths": "24",
+      "winWinRentalLeaseEndDate": "2026-12-09"
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 재건축 원조합원이 사용승인 전 공사기간 중 체결한 임대차계약도 「주택을 취득한 후」 체결한 것 → 다른 요건 충족 시 직전임대차계약 해당. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 엔진은 체결일과 취득일의 선후를 보지 않으므로 이 사안(해당)과 F362·F363(미해당)을 가르지 못한다(구별력 0). 참조 관측(직전 21개월·상생 2024-11-15 체결 24개월·종료일 2026-12-09·양도 2027-01-15): 비과세(applied 155-3-1-win-win-rental) — 결론은 같다. 원문 취득일 불일치(2000.6./2006년) — 2006-06-15 사용(2017.8.3. 전 취득이라 본문 거주요건은 원래 없음). 양도가 9억."
+  }
+]

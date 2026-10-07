@@ -1,0 +1,27 @@
+[
+ {
+  "id": "G070-era",
+  "docNo": "서면인터넷방문상담5팀-627",
+  "docDate": "2008.03.24.",
+  "basis": "era",
+  "today": "2008-03-24",
+  "summary": "서울 재개발 주택(2003.6. 취득, 미거주)이 관리처분인가(2008.6.~7. 예정) 후 멸실된 상태에서 해외이주 출국(2008.10.) — 출국 후 입주권 양도",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2009-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "no",
+    "acquisitionDate": "2003-06-15",
+    "redevApprovalDate": "2008-06-30"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 입주권 양도의 §154① 단서(2호 나목 해외이주) — 단서 카드는 주택 양도에만 열린다(one-house-judgment-section-scope.ts:107) — 및 멸실일·출국일 선후. 회신(분기 규칙): 출국일 현재 1주택 보유 세대가 세대전원 출국한 뒤 그 주택이 재개발·재건축으로 멸실되어 입주권으로 양도하거나 완성주택을 양도하면 비과세, 출국일 이전에 멸실된 상태에서 출국 후 양도하면 과세. 이 케이스는 출국 전 멸실 갈래(과세). 구성: 서울 주택 2003-06-15(미거주)·인가 2008-06-30·출국 2008-10(예정)·양도 2009-06-15·4억, 선언 no(당시 서울 거주 2년 미충족). 참고 관측: 과세 — 결론은 같지만 해외이주·멸실 선후를 읽은 결과가 아니다. 출국 후 멸실 갈래(비과세)도 같은 입력이 되어 구별할 수 없다. 선언을 yes로 바꾸면 비과세(V-G070-yes)."
+ }
+]

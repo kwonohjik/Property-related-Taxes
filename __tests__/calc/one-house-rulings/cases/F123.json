@@ -1,0 +1,61 @@
+[
+ {
+  "id": "F123-era",
+  "docNo": "기획재정부 재산세제과-1037",
+  "docDate": "2023.09.01.",
+  "basis": "era",
+  "today": "2026-09-20",
+  "summary": "2021.1.1. 전 지역주택조합 가입(2020.5.)·2021.1.1. 이후 사업계획승인(2022.3.) 후 A 취득(2022.9.), 조합원으로 B 공급(2026.3.) 후 3년 이내 A 양도 — 일시적 2주택 특례",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-09-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2022-09-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "acquisitionDate": "2026-03-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 관측: 비과세 · 155-1-temporary-two-house. 표현: B 취득일 = 조합원으로 주택을 공급받은 날(2026-03-15 — 회신 「주택(B)을 공급받고 그 날부터 3년 이내」). 조합 가입일·사업계획승인일은 입력 칸이 없고, 승인일(2022-03-15)을 B 취득일로 넣으면 A 취득 1년 경과 전 취득이 되어 과세(프로브) — 지위 취득 시점의 의미(분양권 해당 여부)는 사용자가 날짜 선택으로 반영해야 한다. 짝 N-F123-over3y. 일자: 월 단위 15일, A 양도 2026-09-15(B 공급 후 6개월 — 2026-10-01 전), 비조정, 양도가 8억."
+ },
+ {
+  "id": "N-F123-over3y",
+  "docNo": "기획재정부 재산세제과-1037",
+  "docDate": "2023.09.01.",
+  "basis": "era",
+  "today": "2029-03-20",
+  "summary": "F123의 음성 짝 — B 공급일(2026.3.15.)부터 3년을 넘겨(2029.3.16.) A를 양도하면 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2029-03-16",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2022-09-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "acquisitionDate": "2026-03-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "경계 음성 짝(+1일). 관측: 과세(공휴일 표 범위 밖 안내 civil-161-holiday-table-uncovered — 결론 무관 잡음). 2029-03-15는 목요일이라 연장 없음."
+ }
+]

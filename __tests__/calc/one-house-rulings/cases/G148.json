@@ -1,0 +1,56 @@
+[
+  {
+    "id": "G148-era",
+    "docNo": "사전-2019-법령해석재산-0584 [법령해석과-3478]",
+    "docDate": "2019.12.31.",
+    "basis": "era",
+    "today": "2019-10-19",
+    "summary": "거주하던 조정대상지역 A주택 재건축 시행기간 중 조특법 §99의4 농어촌주택(2013.8.30.)과 조정대상지역 B주택(2015.5.28.)을 순차 취득, A 완공(2019.9.) 후 B 양도(2019.10.18.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2019-10-18",
+      "contractTotalPrice": "800000000",
+      "isRegulatedArea": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-05-28"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "1989-05-15",
+          "region": "capital"
+        },
+        {
+          "id": "rural",
+          "acquisitionDate": "2013-08-30",
+          "region": "non_capital",
+          "countExclusion": {
+            "kind": "reduction",
+            "reduction": {
+              "type": "new_99_4_rural",
+              "ruralHouseAcquisitionDate": "",
+              "ruralHouseStdPrice": "19000000",
+              "isRegisteredHanok": false,
+              "isAdjacentArea": false,
+              "meetsLocationRequirement": true
+            }
+          }
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2009-11-15",
+      "replCompletionDate": "2019-09-15",
+      "replResidenceMonths": "52",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 원문 일자(재건축 사업시행인가 2009.11.(→15일), 조특법 §99의4 농어촌주택 2013-08-30(요건 충족 전제), 관리처분 2014-10-27, B 2015-05-28 취득·거주, A 완공 2019.9.(→15일), B 양도 2019-10-18). A 취득 '약 30년 전' → 1989-05-15 가정, B 거주 52개월, 양도가 8억 가정(원문 없음), 양도일 조정대상지역(서울). 표현: 명부에 신축주택 A + 농어촌주택(행의 조특법 §99의4 주택 수 제외 선언), 대체주택 특례 선언. 기대: 재건축 시행기간 중 §99의4 농어촌주택을 먼저 취득한 뒤 취득한 대체주택은 §156의2⑤ 특례 대상 아님 → 과세. 관측: 비과세(156-2-5). 농어촌주택 행을 빼도(프로브 V-G148-norural) 비과세, 대체주택 선언을 빼면 과세 → 엔진은 대체주택 분기에서 세대의 다른 주택(감면주택 포함)을 보지 않는다. 의심 지점: lib/tax-engine/transfer-tax-exemption.ts:263-271(E-5에 세대 구성 판정 없음 — G119와 같은 원인). 질의2(다주택 중과배제 §167의11①1호)는 판정 메뉴 밖."
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "F048-era",
+    "docNo": "사전-2020-법령해석재산-0823",
+    "docDate": "2020.12.14.",
+    "basis": "era",
+    "today": "2020-12-14",
+    "summary": "2003.9. 모와 1/2씩 상속한 서울 주택(다른 주택 없음)을 매매특약에 따라 잔금 전 멸실하고 2020.12.4. 양도(70억): 계약일 현재 기준으로 판정, 공동상속인별로 1세대1주택 판정 → 고가주택 1세대1주택",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2020-12-04",
+      "contractTotalPrice": "7000000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-09-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1990-05-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "원문은 판정 규칙만 회신(멸실 전 계약일 기준 · 공동상속인별 판정 · 9억 초과 표2 가능) — 최종 결론은 내리지 않음. 없는 입력: 매매계약일·잔금 전 멸실 사실(판정기준일 규칙) — 양도일 현재 나대지라는 사실을 넣을 곳이 없고, 주택으로 넣으면 규칙과 무관하게 주택 판정이 된다. 참고 관측(referenceForm = 상속 1/2 지분 주택으로 표현, 상속개시 2003-09-15·피상속인 취득 1990-05-15 가정): 고가주택 부분 과세로 나오면 계약일 기준 결론과 같은 방향 — 쟁점 축은 검증되지 않음."
+  },
+  {
+    "id": "F048-current",
+    "docNo": "사전-2020-법령해석재산-0823",
+    "docDate": "2020.12.14.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "현행 — 같은 상속 주택을 2023.3. 이후 계약하고 매매특약에 따라 잔금 전 멸실해 2023.9.15. 잔금: 양도일 현황(나대지)으로 판정 → 주택 비과세 불가 (구성 케이스)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-09-15",
+      "contractTotalPrice": "7000000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-09-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1990-05-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "현행 규칙: 2022.12.20. 이후 매매계약분은 잔금청산 전 매매특약에 따라 멸실한 경우 양도물건을 양도일(잔금청산일) 현황으로 판정한다(기획재정부 재산세제과-1543). 없는 입력: 매매계약일·잔금 전 멸실 사실. 참고 관측(referenceForm = 주택으로 표현): 고가주택 부분 과세 — 현행 규칙(주택 아님 → 비과세 대상 아님)과 다르다."
+  }
+]

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "G131-era",
+    "docNo": "서면-2022-법규재산-0263 [법규과-1131]",
+    "docDate": "2022.04.08.",
+    "basis": "era",
+    "today": "2021-12-21",
+    "summary": "재건축 시행기간 중 배우자 명의 대체주택(2013.11.) 취득·거주, 관리처분(2018.2.) 후 조합원(남편) 사망으로 배우자가 입주권 상속(2018.10.), 완공(2021.12.) 후 대체주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-12-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-11-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "1989-05-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2005-07-15",
+      "replCompletionDate": "2021-12-01",
+      "replResidenceMonths": "97",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 일자 월 단위 → 15일: A 1989-05-15, 사업시행인가 2005-07-15, 배우자 명의 B 2013-11-15(97개월 거주), 관리처분 2018-02, 갑 사망·배우자 입주권 상속 2018-10, 완공 2021-12-01 가정, B 양도 2021-12-20 가정(완공 후), 양도가 8억(당시 9억 이하)·비조정. 표현: 양도일 현재 A는 완공된 신축주택이라 명부 행(종전 취득일). 동일세대 배우자 상속은 세대 보유가 그대로라 입력하지 않았다 — 상속 행(상속일 2018-10-15·동일세대)으로 표시해도, A를 상속 입주권 행으로 두고 완공 전 양도로 구성해도 비과세(후자는 2021.1.1.~2022.5.9. 구간 잡음 보류 154-5-final-one-house-restart-unverified, 프로브). 관측: 비과세(156-2-5)."
+  }
+]
