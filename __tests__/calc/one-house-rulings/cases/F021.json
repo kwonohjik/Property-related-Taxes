@@ -13,13 +13,15 @@
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "2004-12-15",
-        "acquisitionCause": "gift"
+        "acquisitionCause": "gift",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
       }
     },
     "expected": {
       "isExempt": true
     },
     "bucket": "match",
-    "note": "match(입력 규약 의존 — 내연 배우자 주택을 명부에 넣지 않음). 내연 관계는 배우자가 아니라는 회신을 명부로 반영(엔진은 배우자 범위를 판정하지 않음). 날짜 가정: 증여 2004-12-15, 양도 2009-03-16(당시 보유요건 3년 충족 — 질의 「3년 이상 보유 후」). 남양주는 거주요건 지정지역 아님 → 비조정. 양도가 3억 중립. 증여 취득은 acquisitionCause gift로 표현."
+    "note": "match(입력 규약 의존 — 내연 배우자 주택을 명부에 넣지 않음). 내연 관계는 배우자가 아니라는 회신을 명부로 반영(엔진은 배우자 범위를 판정하지 않음). 날짜 가정: 증여 2004-12-15, 양도 2009-03-16(당시 보유요건 3년 충족 — 질의 「3년 이상 보유 후」). 남양주는 거주요건 지정지역 아님 → 비조정. 양도가 3억 중립. 증여 취득은 acquisitionCause gift로 표현. M2 보강: 2003.11.20.~2011.6.2. 양도분은 서울·과천·5개 신도시면 보유기간 중 거주 2년 — 원문은 소재지를 적지 않고 요건 충족을 전제하므로 거주 24개월을 가정했다."
   }
 ]

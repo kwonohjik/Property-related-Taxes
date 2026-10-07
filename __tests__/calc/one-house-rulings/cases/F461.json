@@ -100,7 +100,7 @@
     "expected": {
       "isExempt": false
     },
-    "bucket": "mismatch",
-    "note": "mismatch — 기대: 과세. 2009.1. 시행 소득세법 시행령 §154①(대통령령 제21215호 시행본, MST 90678 — 원문 회신 1항도 같은 문언 인용) 본문은 「보유기간이 3년 이상」. 관측: isExempt=true(보류·미충족 없음) — 엔진은 2년으로 판정한다. 의심 지점(코드로 확인): `lib/tax-engine/data/transfer-rate-seed-historical.ts:228` 1세대1주택 규칙 fallback(effective 1990-01-01)이 minHoldingYears 2 한 행뿐이라 3년 구간이 없다(판정은 `lib/tax-engine/transfer-tax-exemption-holding.ts` describeOneHouseHoldingRequirement가 rule.minHoldingYears로). 3년→2년 개정 시행 시점은 확인 필요. 영향: 3년 시절 양도분에서 수용 등 §154① 단서의 보유기간 면제가 결론을 가르는 구간(2~3년)이 사라진다. 같은 시기 서울·과천·5개 신도시 거주 2년 요건도 엔진에 없다(이 케이스는 비수도권 가정이라 무관). 가정: 취득 2006-07-15, 그 밖은 F461-era와 같음."
+    "bucket": "match",
+    "note": "mismatch — 기대: 과세. 2009.1. 시행 소득세법 시행령 §154①(대통령령 제21215호 시행본, MST 90678 — 원문 회신 1항도 같은 문언 인용) 본문은 「보유기간이 3년 이상」. 엔진: 2012.6.29. 전 양도분은 보유 3년(대통령령 제23887호 부칙 제2조 — data/one-house-holding-residence-era.ts)."
   }
 ]

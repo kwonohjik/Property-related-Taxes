@@ -37,6 +37,7 @@ const AUDITED_FILES = [
   "lib/tax-engine/data/population-decline-areas.ts",
   "lib/tax-engine/multi-house-surcharge-count.ts",
   "lib/tax-engine/legal-codes/surcharge-transition.ts",
+  "lib/tax-engine/data/one-house-holding-residence-era.ts",
 ] as const;
 
 /**

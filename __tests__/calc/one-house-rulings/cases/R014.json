@@ -48,7 +48,9 @@
       "contractTotalPrice": "800000000",
       "asset": {
         "assetKind": "housing",
-        "acquisitionDate": "1986-07-16"
+        "acquisitionDate": "1986-07-16",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
       },
       "houses": [
         {
@@ -64,6 +66,6 @@
       ]
     },
     "bucket": "match",
-    "note": "match(양성 짝). 오피스텔 행만 뺀 같은 폼 → 155-1 비과세. R014-era의 과세가 오피스텔 주택 산입 때문임을 고정한다."
+    "note": "match(양성 짝). 오피스텔 행만 뺀 같은 폼 → 155-1 비과세. R014-era의 과세가 오피스텔 주택 산입 때문임을 고정한다. M2 보강: 2003.11.20.~2011.6.2. 양도분은 서울·과천·5개 신도시면 보유기간 중 거주 2년 — 원문은 소재지를 적지 않고 요건 충족을 전제하므로 거주 24개월을 가정했다."
   }
 ]

@@ -12,13 +12,14 @@
       "contractTotalPrice": "500000000",
       "asset": {
         "assetKind": "housing",
-        "acquisitionDate": "2004-02-01"
+        "acquisitionDate": "2003-01-15",
+        "regionCode": "3011010100"
       },
       "houses": [
         {
           "id": "rural",
           "region": "non_capital",
-          "acquisitionDate": "2003-05-01",
+          "acquisitionDate": "2002-05-01",
           "oneHouseRuralHouse": true,
           "ruralHouseKind": "return_to_farm",
           "ruralOutsideCapitalEupMyeon": true,
@@ -41,7 +42,7 @@
       ]
     },
     "bucket": "match",
-    "note": "match. 회신: ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 일시적 3주택이 된 상태에서 종전 일반주택을 양도하면 농어촌주택을 빼고 §155①을 적용(같은 취지 서면인터넷방문상담4팀-3617). 엔진: §155① 분기(E-3)의 주택 수 게이트가 「⑦ 요건(신규 주택을 뺀 2주택 기준)을 갖춘 3주택」도 받는다(lib/tax-engine/transfer-tax-exemption-holding.ts ruralTemporaryTwoHouseOverlapCountHolds) — appliedExceptions에 155-1과 155-7이 함께 실린다. 3주택까지만(⑦·⑳·① 4주택은 부인 — 부동산납세과-870). 가정값: 양도일·취득일 원문 미기재(회신일 직전 2006-03-10 양도), 유형은 회신 제목의 귀농주택(⑦3호), 요건 충족은 원문 전제, 귀농주택이 일반주택보다 먼저 취득."
+    "note": "match. 회신: ⑦ 농어촌주택과 일반주택을 각각 1개씩 소유한 1세대가 신규 주택을 취득해 일시적 3주택이 된 상태에서 종전 일반주택을 양도하면 농어촌주택을 빼고 §155①을 적용(같은 취지 서면인터넷방문상담4팀-3617). 엔진: §155① 분기(E-3)의 주택 수 게이트가 「⑦ 요건(신규 주택을 뺀 2주택 기준)을 갖춘 3주택」도 받는다(lib/tax-engine/transfer-tax-exemption-holding.ts ruralTemporaryTwoHouseOverlapCountHolds) — appliedExceptions에 155-1과 155-7이 함께 실린다. 3주택까지만(⑦·⑳·① 4주택은 부인 — 부동산납세과-870). 가정값: 양도일·취득일 원문 미기재(회신일 직전 2006-03-10 양도), 유형은 회신 제목의 귀농주택(⑦3호), 요건 충족은 원문 전제, 귀농주택이 일반주택보다 먼저 취득. M2 보강: 2011.6.2. 이전 양도분 거주요건(서울·과천·5개 신도시)은 소재지가 가른다 — 원문 소재지 대전(법정동코드 입력, 지역 밖). M2 보강: 2012.6.29. 전 양도분은 보유 3년 — 가정 취득일을 귀농주택 2002-05-01 · 일반주택 2003-01-15로 옮겼다(원문 일자 미기재, 요건 충족 전제)."
   },
   {
     "id": "E022-current",
