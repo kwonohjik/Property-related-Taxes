@@ -36,6 +36,7 @@ import {
 } from "./stock-transfer-tax-validate-exit";
 import { validateStep1Domestic } from "./stock-transfer-tax-validate-step1";
 import { validateStep2Domestic } from "./stock-transfer-tax-validate-step2";
+import { judgeSplitSalePeriods, splitSalePeriodMessage, splitSalePeriodFacts } from "./stock-split-sale-period-gate";
 
 export interface StockValidationError {
   field: string;
@@ -131,6 +132,14 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
   const isEstimatedAcq =
     acquisitionMode === "estimated" || acquisitionMode === "sale_case";
   const expenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
+
+  // 분할 매도 건이 예정신고 기간(§105①)을 넘는가 — 신고 유형 칸에서 고친다(Step1 은 연도·대주주 축)
+  if (form.lotsMode === "split") {
+    for (const v of judgeSplitSalePeriods(splitSalePeriodFacts(form))) {
+      if (v.code !== "preliminary_period") continue;
+      errors.push({ field: "filingType", message: splitSalePeriodMessage(v), severity: "error" });
+    }
+  }
 
   // 신고일 필수
   if (isEmpty(form.filingDate)) {

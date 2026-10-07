@@ -30,6 +30,7 @@ import {
   lotCauseMessage,
   type AcquisitionCauseKey,
 } from "@/lib/calc/stock-transfer-required-inputs";
+import { judgeSplitSalePeriods, splitSalePeriodMessage } from "@/lib/calc/stock-split-sale-period-gate";
 
 const ACQUISITION_CAUSE_LABEL: Record<AcquisitionCauseKey, string> = {
   decedentAcquisitionDate: "피상속인 취득일을",
@@ -468,6 +469,22 @@ export function addStockRefines(
           code: z.ZodIssueCode.custom,
           path: ["transferLots"],
           message: `총 매도 수량(${totalTrn})이 총 매수 수량(${totalAcq})을 초과합니다`,
+        });
+      }
+      // 매도 건이 한 계산에 담길 수 없는 기간(과세기간·예정신고 기간·대주주 기준 변경일)에 걸쳤는가 — ⑧과 같은 leaf
+      for (const v of judgeSplitSalePeriods({
+        saleDates: (data.transferLots ?? []).map((l) =>
+          typeof l.transferDate === "string" ? l.transferDate : l.transferDate.toISOString().slice(0, 10),
+        ),
+        marketType: data.marketType,
+        filingType: data.filingType,
+        isVentureCompany: data.isVentureCompany,
+        isKOTCTrading: data.isKOTCTrading,
+      })) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [v.code === "preliminary_period" ? "filingType" : "transferLots"],
+          message: splitSalePeriodMessage(v),
         });
       }
       /**
