@@ -1,0 +1,37 @@
+[
+ {
+  "id": "F289-era",
+  "docNo": "부동산거래관리과-145",
+  "docDate": "2010.01.28.",
+  "basis": "era",
+  "today": "2010-01-28",
+  "summary": "빌라(2005.3.31.) 보유 중 아파트 취득(2008.3.20.)으로 일시적 2주택인 상태에서 해외이주 세대전원 출국(2008.4.27.) — 일시적 2주택 특례·해외이주 특례 모두 부적용, 2주택 모두 과세",
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2010-03-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2005-03-31",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "24"
+   },
+   "houses": [
+    {
+     "id": "mapo",
+     "acquisitionDate": "2008-03-20"
+    }
+   ],
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2008-04-27"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 참고 관측(referenceForm — 빌라 2005-03-31·거주 24개월, 마포 2008-03-20 명부, 해외이주 출국 2008-04-27, 양도 2010-03-15·5억 가정): 해외이주 단서는 2주택이라 카드가 닫혀 미전송(원문과 같은 방향)이나 거주자 기준 155-1-temporary-two-house 비과세 → 기대(과세)와 다름."
+ }
+]

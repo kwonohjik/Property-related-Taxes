@@ -1,0 +1,40 @@
+[
+  {
+    "id": "F459-era",
+    "docNo": "조심-2013-서-0609",
+    "docDate": "2013.04.05.",
+    "basis": "era",
+    "today": "2013-04-05",
+    "summary": "전 배우자와 각 1/2 공유한 아파트(2004.6.7. 취득) 전부를 이혼 후 별도세대인 상태로 하나의 거래로 양도(2010.6.1.) — 소유지분과 무관하게 주택 전체 가액으로 고가주택(9억원) 판정 → 비과세 배제",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2010-06-01",
+      "contractTotalPrice": "1000000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-06-07"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 공유 지분(각 1/2)·공유자 별도세대·전체 일괄 양도. 판정 메뉴는 단일 자산·지분 100% 전제다(`lib/calc/one-house-exemption-api.ts:116` 주석) — 공유 지분·공유자 세대를 담는 칸이 없고 양도가 칸에 어느 금액(전체 가액·자기 지분 가액)을 넣는지에 결론이 갈린다. 참고 관측(referenceForm: 전체 가액 10억 가정): 고가 부분과세 — 원문 결론과 같다. 프로브: 지분 가액 5억을 넣으면 비과세. 가정: 원문은 가액을 밝히지 않음(9억원 초과로 판정) → 전체 10억. 쟁점②(전 소유자 추징세액 필요경비)는 1세대1주택 쟁점이 아니라 제외."
+  },
+  {
+    "id": "F459-current",
+    "docNo": "조심-2013-서-0609",
+    "docDate": "2013.04.05.",
+    "basis": "current",
+    "today": "2026-06-20",
+    "summary": "같은 패턴(별도세대 공유자들이 공유 주택 전부를 하나의 거래로 양도)을 현행으로 구성 — 전체 가액 12억원 초과면 고가주택",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "1400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 고가주택 판정은 1주택 및 딸린 토지의 양도 당시 실지거래가액 합계 12억원 초과 여부, 일부 양도·일부 타인 소유는 전체 가액으로 환산(소득세법 시행령 §156①). 없는 입력: 공유 지분·공유자 세대. 판정 메뉴는 단일 자산·지분 100% 전제다(`lib/calc/one-house-exemption-api.ts:116` 주석) — 공유 지분·공유자 세대를 담는 칸이 없고 양도가 칸에 어느 금액(전체 가액·자기 지분 가액)을 넣는지에 결론이 갈린다. 참고 관측(referenceForm: 전체 가액 14억, 양도 2026-06-15): 부분과세."
+  }
+]

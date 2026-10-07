@@ -1,0 +1,52 @@
+[
+ {
+  "id": "G091-era",
+  "docNo": "서면인터넷방문상담4팀-155",
+  "docDate": "2005.01.20.",
+  "basis": "era",
+  "today": "2005-01-20",
+  "summary": "국·시유지를 주택 부수토지로 장기간 사용하다 불하받아 주택과 함께 재개발조합에 제공 — 입주권 양도 시 보유요건은 인가일 현재 기존주택 보유기간으로 판정 (일자 구성, 2003.9.30. 이전 양도)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2003-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1990-03-15",
+    "redevApprovalDate": "2002-09-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "match(입력 없음, 영향 없음). 회신: 국·시유지를 주택 부수토지로 장기간 사용하다 불하받아 주택과 함께 재개발조합에 제공하고 받은 입주권을 준공 전 양도하면, 인가일 등 현재 기존주택 보유기간이 3년 이상이면 불하받은 부수토지의 보유기간과 관계없이 보유요건 충족, 서울 1주택을 2003.9.30. 이전 양도하면 거주요건 미적용. 판정 메뉴는 부수토지 보유기간을 따로 받지 않고 인가일 현재 기존주택 요건(자기선언)만 본다 — 회신 규칙과 같은 구조라 불하토지 사실이 입력되지 않아도 결론이 같다(P1 E144와 같은 분류). 구성: 기존주택 1990-03-15·불하 2002.·인가 2002-09-15·양도 2003-06-15·4억·다른 주택 없음. 관측: 비과세(가목)."
+ },
+ {
+  "id": "G091-current",
+  "docNo": "서면인터넷방문상담4팀-155",
+  "docDate": "2005.01.20.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "점유 시유지를 인가 직전(2023.6.) 불하받아 기존주택(2015)과 함께 제공한 입주권 양도(2026.6.) — 기존주택 보유 2년 이상이면 불하토지 보유기간과 무관",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2015-03-15",
+    "redevApprovalDate": "2023-09-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "match(입력 없음, 영향 없음). 현행 규칙: 보유요건 2년. 불하받은 부수토지의 보유기간은 따로 따지지 않고 인가일 현재 기존주택 보유기간으로 본다. 구성: 기존주택 2015-03-15·불하 2023-06·인가 2023-09-15·양도 2026-06-15·8억·비조정·다른 주택 없음. 관측: 비과세(가목)."
+ }
+]

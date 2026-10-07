@@ -1,0 +1,89 @@
+[
+ {
+  "id": "F303-era",
+  "docNo": "재산세과-3686",
+  "docDate": "2008.11.07.",
+  "basis": "era",
+  "today": "2008-07-01",
+  "summary": "처·자녀 유학 출국 후 본인 출국으로 현지이주(2007.8.) — 해외이주신고확인서·영주권 등으로 확인되면 해외이주 특례 적용, 출국일 = 세대전원 출국일 (주택·양도 날짜 원문 미기재 — 구성)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2008-06-16",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2007-01-15"
+   },
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2007-08-15"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 구성 — 원문에 주택 취득·양도일 없음: 현지이주(본인 출국 2007-08-15로 세대전원 출국 완료)를 해외이주로 선택, 취득 2007-01-15, 양도 2008-06-16(보유 1년 5개월이라 단서가 결론을 가름), 양도가 4억. 해외이주신고확인서·영주권 등 확인은 사유 선택으로 표현(자기선언), 출국일 사실판단은 세대전원 출국일을 입력. 관측: 해외이주 단서 적용 비과세. civil-161 판정 보류는 잡음."
+ },
+ {
+  "id": "F303-current",
+  "docNo": "재산세과-3686",
+  "docDate": "2008.11.07.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "현행 짝(구성) — 유학 출국(2022.9.15.) 후 현지에서 영주권 최초 취득(2024.6.17.)한 현지이주 → 영주권 취득일부터 2년 이내(2026.6.17.) 양도 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-17",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2021-03-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "12"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2024-06-17"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 해외이주 외 목적으로 출국해 영주권 또는 그에 준하는 장기체류 자격을 취득한 현지이주는 그 자격을 최초로 취득한 날을 출국일로 본다(소득세법 시행규칙 §71⑥). 구성: 유학 출국 2022-09-15, 영주권 최초 취득 2024-06-17을 출국일 칸에 입력, 조정 취득 2021-03-15·거주 12개월, 양도 2026-06-17, 양도가 8억. 관측: 해외이주 단서 적용 비과세. 반대 규칙 짝 N-F303-physical-departure."
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "docNo": "재산세과-3686",
+  "docDate": "2008.11.07.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F303-current의 반대 규칙 짝 — 실제 출국일(2022.9.15.)을 기산일로 보면 2년 경과 → 특례 부적용, 거주 12개월이라 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-17",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2021-03-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "12"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2022-09-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "반대 규칙 짝(가정) — 출국일 칸에 실제 출국일(2022-09-15)을 넣으면 2년 경과 → 단서 불성립, 거주 12개월 과세. 판정 보류 2건은 결론과 무관한 안내."
+ }
+]

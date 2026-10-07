@@ -1,0 +1,60 @@
+[
+  {
+    "id": "F455-era",
+    "docNo": "서일46014-10463",
+    "docDate": "2003.04.14.",
+    "basis": "era",
+    "today": "2003-04-10",
+    "summary": "서울 아파트(1995.5.4. 매입) 재건축 사업계획승인(2001.4.3.)·멸실 후 1세대1주택 요건을 갖춘 입주권을 2003.1.1. 이후 7억원에 양도: 6억원 초과 고가주택으로 보아 초과분 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-04-01",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1995-05-04",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2001-04-03"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 회신은 2003.1.1. 이후 양도분으로 한정해 답했다(질의상 양도일 2002.12.28.에는 결론 없음) → 양도일 2003-04-01 가정(엔진은 2003-03-02 이후를 6억 구간으로 보고 그 전은 고급주택 체제 고지 구간 — `lib/tax-engine/data/one-right-high-value-era.ts`). 질의상 다른 재건축 주택(C)은 회신이 당시 소득세법 시행령 §155⑯ 요건 충족을 전제로 해 입력하지 않았다. 사업계획승인일 현재 비과세 요건 충족(yes — 1995 매입 → 2001 승인, 당시 서울 거주요건은 원문 전제로 충족 처리). 엔진 경로는 §89①4호 가목."
+  },
+  {
+    "id": "F455-current",
+    "docNo": "서일46014-10463",
+    "docDate": "2003.04.14.",
+    "basis": "current",
+    "today": "2026-04-20",
+    "summary": "같은 패턴(1세대1주택 요건을 갖춘 재건축 조합원입주권 단독 보유)을 2026.4.15. 15억원 양도로 구성: 12억원 초과분 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-04-15",
+      "contractTotalPrice": "1500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2012-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2021-04-15"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 현행 규칙: 조합원입주권 1세대1주택 비과세는 소득세법 §89①4호(양도일 현재 다른 주택 없음 — 가목), 양도 당시 실지거래가액 12억원 초과분은 과세(2021.12.8. 이후 양도분). 중립 고정: 비조정, 다른 주택·권리 없음, 종전주택 취득 2012-05-15·관리처분인가 2021-04-15(인가일 현재 비과세 요건 충족)."
+  }
+]

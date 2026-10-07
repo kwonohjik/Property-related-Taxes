@@ -1,0 +1,21 @@
+[
+ {
+  "id": "F140-era",
+  "docNo": "재일46014-2307",
+  "docDate": "1997.09.30.",
+  "basis": "era",
+  "today": "1997-12-20",
+  "summary": "양도주택에만 전용으로 쓰는 별도 필지 도로는 주택부수토지, 다른 세대도 공동 이용하는 사도는 부수토지 아님 — 주택과 함께 양도한 사도",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "1997-12-15",
+   "contractTotalPrice": "200000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1985-05-15"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 부수토지의 범위(별도 필지 사도의 전용·공동 이용 여부) — 판정 메뉴는 부수토지 범위를 판정하지 않는다. 참조 관측(referenceForm): 비과세 (원문은 규칙만 회신 — 결론 대조 대상 아님). 일자·가정: 원문에 일자 없음 → 회신 직후 1997-12-15 양도·1985-05-15 취득·양도가 2억 가정. 주택만 둔 참조(원문은 질의 사도가 어느 쪽인지 판단하지 않음)."
+ }
+]

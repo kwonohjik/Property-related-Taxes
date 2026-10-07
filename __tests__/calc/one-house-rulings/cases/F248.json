@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F248-era",
+    "docNo": "서면-2021-법규재산-0531 [법규과-1367]",
+    "docDate": "2022.04.28.",
+    "basis": "era",
+    "today": "2024-01-01",
+    "summary": "2021.10. 취득한 조정대상지역 세대구분형 아파트(구분소유 불가)의 일부를 임대하고 다른 일부에 1세대가 2년 이상 거주 후 양도 — 전체 비과세 (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2024-01-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-10-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "25"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 2021.10. 조정대상지역 세대구분형 아파트 취득(화장실·주방·현관 분리, 구분소유 불가), 일부 임대·일부에 1세대 2년간 거주 예정. 가정: 취득 2021-10-15, 거주 25개월, 양도 2024-01-15, 취득 당시 조정(토글), 양도가 8억. 회신: 세대구분형 아파트 1주택의 일부를 임대하고 다른 일부에 1세대가 2년 이상 거주하면 주택 전체가 비과세 대상. 없는 입력: 세대구분형·일부 임대 사실 — 판정 메뉴는 주택 한 채와 거주 개월만 받는다. 참고 관측: referenceForm = 비과세(원문과 같음) / 거주 0개월이면 과세 — 일부 임대가 결론을 바꾸는지는 엔진이 묻지 않는다."
+  }
+]

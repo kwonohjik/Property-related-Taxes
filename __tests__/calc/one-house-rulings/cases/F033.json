@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F033-era",
+    "docNo": "대법원 97누19465",
+    "docDate": "1998.05.29.",
+    "basis": "era",
+    "today": "1998-05-29",
+    "summary": "배우자 일방의 내연관계로 별거 중인 법률상 배우자가 아파트 소유 → 배우자는 그 사실만으로 1세대 → 배우자 아파트를 세대 주택 수에 포함 (구성 날짜)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1993-06-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1985-05-15"
+      },
+      "houses": [
+        {
+          "id": "spouse",
+          "acquisitionDate": "1983-05-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 법률상 배우자 아파트를 명부에 넣음). 원문은 파기환송이라 최종 과세 결과는 없으나 배우자 주택 산입이 판단 요지 — 그 결과로 1세대 2주택(과세)을 기대값으로 둠. 날짜는 원문에 없어 양도 주택 취득 1985-05-15, 배우자 아파트 1983-05-15, 양도 1993-06-15(구법 시행 중) 가정. 양도가 3억 중립."
+  }
+]

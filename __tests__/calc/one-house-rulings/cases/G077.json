@@ -1,0 +1,84 @@
+[
+ {
+  "id": "G077-era",
+  "docNo": "사전-2017-법령해석재산-0528 [법령해석과-2961]",
+  "docDate": "2017.10.20.",
+  "basis": "era",
+  "today": "2017-10-20",
+  "summary": "1주택(2003)이 재개발로 입주권 2개(2016.4.22. 인가) → 신규주택 C 취득(2016.12.16.) 후 입주권 2개를 같은 날 양도(2017.5.2.) — 먼저 양도하는 1개",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2017-05-02",
+   "contractTotalPrice": "450000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2003-06-28",
+    "redevApprovalDate": "2016-04-22",
+    "redevOtherHouseAcquisitionDate": "2016-12-16"
+   },
+   "houses": [
+    {
+     "id": "C",
+     "region": "capital",
+     "acquisitionDate": "2016-12-16"
+    }
+   ],
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2003-06-28",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2016-04-22"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "one_right_89_1_4_ga",
+    "one_right_89_1_4_na"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 회신: 1주택이 재개발로 조합원입주권 2개로 전환되고 다른 주택을 취득해 이사한 뒤 그 취득일부터 3년 이내 입주권 2개와 청산금 권리를 같은 날 양도하면, 거주자가 선택해 먼저 양도하는 1개는 과세, 나중 1개는 §89①4호 나목 비과세(가액 구분 불분명 시 §100②·시행령 §166⑥ 안분). 이 케이스는 먼저 양도하는 1개: 양도 대상 입주권(취득 2003-06-28 = 종전주택 취득일, 인가 2016-04-22) + 세대 보유 입주권 B(같은 인가) + C 2016-12-16(부부 각 1/2 — 1채), 양도 2017-05-02, 가액 4.5억 가정. 관측: 과세 — 「입주권이 1개여야 합니다(현재 2개)」. 겸용다가구(주택면적>상가면적)는 전부 주택으로 단순화. 안분 산식은 판정 메뉴 출력 밖."
+ },
+ {
+  "id": "P-G077-later-sold",
+  "docNo": "사전-2017-법령해석재산-0528 [법령해석과-2961]",
+  "docDate": "2017.10.20.",
+  "basis": "era",
+  "today": "2017-10-20",
+  "summary": "같은 사실에서 나중에 양도하는 입주권 1개 — 1입주권 + C(취득 3년 이내)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2017-05-02",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2003-06-28",
+    "redevApprovalDate": "2016-04-22",
+    "redevOtherHouseAcquisitionDate": "2016-12-16"
+   },
+   "houses": [
+    {
+     "id": "C",
+     "region": "capital",
+     "acquisitionDate": "2016-12-16"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "one_right_89_1_4_na"
+   ]
+  },
+  "bucket": "match",
+  "note": "match(양성 짝). 같은 사실의 나중 양도분 — 세대 보유 입주권 1개 + C(취득 2016-12-16, 나목 취득일 칸) → 양도 2017-05-02는 C 취득 후 3년 이내 → 나목 비과세. 가액 4억 가정."
+ }
+]

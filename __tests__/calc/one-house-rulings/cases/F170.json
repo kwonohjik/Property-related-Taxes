@@ -1,0 +1,65 @@
+[
+ {
+  "id": "F170-era",
+  "docNo": "사전-2021-법령해석재산-1773 [법령해석과-4621]",
+  "docDate": "2021.12.24.",
+  "basis": "era",
+  "today": "2021-12-24",
+  "summary": "부(父) A주택(1989)·모(母) B주택(2010.1.) 보유 세대 — B 매매계약(2021.7.) 후 잔금 전 父 사망, A는 별도세대 자녀가 단독상속(2021.8.) → B 잔금(2021.10.): 양도 당시 1주택, 상속은 재기산 사유가 아니어서 보유기간은 B 취득일부터 — 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2021-10-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2010-01-15"
+   },
+   "finalHouseRestartHistory": "yes",
+   "finalHouseRestartDisposals": [
+    {
+     "id": "d0",
+     "kind": "other",
+     "date": "2021-08-15",
+     "temporaryTwoHouse": ""
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "구성 케이스 — 원문은 판단 기준(양도 당시 기준·상속은 §154⑤ 재기산 사유 아님)만 회신. 표현: 양도일(잔금) 2021-10-15 현재 母 세대 1주택(B) + 처분 이력 「있음」·유형 「그 밖」(父 사망으로 별도세대 자녀에게 상속된 A, 2021-08-15). 관측: 재기산 없음 → B 보유 11년 → 비과세(판정 보류 없음). 짝 N-F170-gift(같은 날 A를 「증여」로 처분 → 재기산 → 과세). 母·子가 별도세대라는 것은 원문 전제(isOneHousehold 자기선언). 일자: 월 단위 15일, 양도가 5억 가정, 마산(비조정) 거주요건 없음."
+ },
+ {
+  "id": "N-F170-gift",
+  "docNo": "사전-2021-법령해석재산-1773 [법령해석과-4621]",
+  "docDate": "2021.12.24.",
+  "basis": "era",
+  "today": "2021-12-24",
+  "summary": "F170의 음성 짝(가정) — A가 상속이 아니라 2021.8. 증여로 세대를 떠났다면 증여일부터 재기산 → 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2021-10-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2010-01-15"
+   },
+   "finalHouseRestartHistory": "yes",
+   "finalHouseRestartDisposals": [
+    {
+     "id": "d0",
+     "kind": "gift",
+     "date": "2021-08-15",
+     "temporaryTwoHouse": "no"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — F170-era에서 처분 유형만 「그 밖」→「증여」(2021.2.17. 이후 증여는 처분)로 바꾼 최소쌍. 재기산일 2021-08-15 → 보유 2개월 → 비과세 불가."
+ }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "R023-era",
+    "docNo": "심사양도2014-0036",
+    "docDate": "2014.05.20.",
+    "basis": "era",
+    "today": "2014-05-20",
+    "summary": "상속 취득(1985)한 대지 1,547㎡·주택 99.75㎡ 중 토지 89㎡와 증축 주택 19.23㎡만 소방도로로 수용(2009.5.28.) — 비과세 부수토지 = 전체 비과세 부수토지 × 수용 주택면적 비율",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2009-05-28",
+      "contractTotalPrice": "155900000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1985-11-14",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1970-01-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 주택·부수토지의 일부 양도(수용) 면적과 정착면적·배율 안분. 판정 메뉴는 주택 전체 양도 한 단위만 받는다. 참고 관측(referenceForm: 상속 취득 1985-11-14, 피상속인 취득일 1970-01-15 가정(⑫ 필수), 양도가 155,900,000): 비과세 — 결론은 같으나 면적 산식(498.75×19.23/99.75=96.15㎡ ≥ 89㎡)은 검증되지 않는다."
+  }
+]

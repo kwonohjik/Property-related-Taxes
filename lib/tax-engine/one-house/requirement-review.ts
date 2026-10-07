@@ -393,7 +393,7 @@ function holdingItem(
 ): OneHouseRequirementCheck {
   return {
     id: "holding",
-    label: `${subject ? `${subject} ` : ""}보유기간 ${rule.minHoldingYears}년 이상`,
+    label: `${subject ? `${subject} ` : ""}보유기간 ${holding.requiredYears}년 이상`,
     status,
     facts: [
       { label: "보유 기산일", value: fmt(holding.startDate) },
@@ -409,6 +409,7 @@ const RESIDENCE_STATUS: Record<OneHouseResidenceBasis, OneHouseRequirementStatus
   win_win_rental: "waived",
   not_regulated: "not_required",
   pre_policy: "not_required",
+  not_capital_newtown: "not_required",
   met: "met",
   unmet: "unmet",
 };
@@ -418,6 +419,18 @@ const RESIDENCE_NOTE: Partial<Record<OneHouseResidenceBasis, string>> = {
   win_win_rental: "상생임대주택(§155의3)으로 거주기간의 제한을 받지 않습니다.",
   not_regulated: "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
   pre_policy: "조정대상지역 거주요건 도입(2017.8.3.) 전에 취득해 거주요건이 적용되지 않습니다.",
+  not_capital_newtown:
+    "2011.6.2. 이전 양도분의 거주요건은 서울·과천·5개 신도시(분당·일산·평촌·산본·중동) 주택에만 있었습니다 — 그 밖의 지역이라 거주요건이 없습니다.",
+};
+
+const CAPITAL_NEWTOWN_FACT: Record<
+  NonNullable<ReturnType<typeof describeOneHouseResidenceRequirement>["capitalNewTown"]>,
+  string
+> = {
+  in: "서울·과천",
+  maybe: "신도시가 있는 시·구 — 신도시 지구 안인지 확인 필요",
+  out: "그 밖의 지역",
+  unknown: "주소 미입력 — 확인 필요",
 };
 
 function residenceItem(
@@ -431,12 +444,18 @@ function residenceItem(
   const note = mortgageWaives
     ? "장기저당담보주택(§155의2)으로 거주기간의 제한을 받지 않습니다."
     : RESIDENCE_NOTE[residence.basis];
+  // M2 — 2011.6.2. 이전 양도분은 조정대상지역이 아니라 서울·과천·5개 신도시 소재가 요건을 정한다.
+  const era = residence.capitalNewTown;
   return {
     id: "residence",
-    label: `${subject ? `${subject} ` : ""}거주기간 ${residence.requiredYears}년 이상(취득 당시 조정대상지역인 경우)`,
+    label: era
+      ? `${subject ? `${subject} ` : ""}보유기간 중 거주 ${residence.requiredYears}년 이상(서울·과천·5개 신도시 — 2011.6.2. 이전 양도)`
+      : `${subject ? `${subject} ` : ""}거주기간 ${residence.requiredYears}년 이상(취득 당시 조정대상지역인 경우)`,
     status,
     facts: [
-      { label: "취득 당시 조정대상지역", value: residence.wasRegulated ? "해당" : "비해당" },
+      era
+        ? { label: "소재지", value: CAPITAL_NEWTOWN_FACT[era] }
+        : { label: "취득 당시 조정대상지역", value: residence.wasRegulated ? "해당" : "비해당" },
       { label: "거주기간", value: `${residence.residenceMonths}개월` },
     ],
     ...(note ? { note } : {}),

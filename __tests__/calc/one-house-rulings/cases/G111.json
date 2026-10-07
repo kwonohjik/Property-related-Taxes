@@ -1,0 +1,38 @@
+[
+  {
+    "id": "G111-era",
+    "docNo": "사전-2020-법령해석재산-0357 [법령해석과-1680]",
+    "docDate": "2020.06.04.",
+    "basis": "era",
+    "today": "2020-06-16",
+    "summary": "A·B주택 보유 중 C조합원입주권 승계취득(2015.) → B 먼저 양도 → C 완공(2018.)·입주(2019.) 후 입주권 취득 3년 경과해 A 양도(2020.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2020-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2013-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2015-06-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2014-01-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "new_house",
+      "rightMovedInWithin3Years": true,
+      "rightResidedOneYearOrMore": true,
+      "rightNewHouseCompletionDate": "2018-09-15"
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 일자 가정(원문은 연도·월만, 일부는 'X월'): A 2013-03-15, B 2014-03-15(먼저 양도 — 명부 제외), C 입주권 승계 2015-06-15(인가 2014-01-15 가정), C 완공 2018-09-15, 입주 2019.(완성 후 기한 내), A 양도 2020-06-15(입주권 취득 3년 경과·완성 후 2년 이내), today 2020-06-16, 비조정·양도가 8억. 표현: 양도일 현재 C는 완공된 주택이지만 §156의2④ 선언 경로를 쓰려고 세대 보유 입주권 행으로 두고, 3년 초과 예외 '신축주택 완성 후 양도'(완성일 2018-09-15·세대전원 이사·1년 이상 거주 선언). 관측: 비과세 — article89Clause2 = §156의2④. 다른 표현(프로브): C를 명부 주택(취득 2018-09-15)으로 넣으면 §155① 일시적 2주택으로 비과세 + 판정 보류(155-1-regulated-at-new-acquisition-unverified). 원문 쟁점(입주권 취득 당시 2주택이었어도 양도일 현재 1주택 + 1입주권이면 적용)은 양도일 현재 상태만 입력하므로 엔진 판정과 충돌하지 않는다."
+  }
+]

@@ -1,0 +1,75 @@
+[
+ {
+  "id": "F297-era",
+  "docNo": "재일46014-2018",
+  "docDate": "1997.08.23.",
+  "basis": "era",
+  "today": "1997-08-01",
+  "summary": "1주택(1988) 소유 부친이 미국 이민(1992.12.) — 시민권·영주권 획득 여부와 관계없이 비거주자 상태 양도는 보유기간 제한 없이 비과세, 귀국 후 거주자 상태 양도는 거주자 보유기간 통산 3년",
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함) · 시민권·영주권 획득 여부 · 귀국 후 거주자 상태 양도 시 비거주 기간을 뺀 보유기간 통산. 원문 당시(1997) 국외이주 특례에는 출국 후 양도기한이 없었다. 현행 기한은 짝 F297-current·P-F297-within-2y."
+ },
+ {
+  "id": "F297-current",
+  "docNo": "재일46014-2018",
+  "docDate": "1997.08.23.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "현행 짝(구성) — 해외이주로 세대전원 출국(2024.4.15.) 후 2년이 지난 다음 날(2026.4.16.) 양도 → 해외이주 특례 부적용, 조정 취득·거주 10개월이라 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-04-16",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2022-05-16",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "10"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2024-04-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 해외이주 특례는 출국일 현재 1주택 보유 + 출국일부터 2년 이내 양도분에 한한다(소득세법 시행령 §154①2호나목 단서). 구성: 조정 취득 2022-05-16·거주 10개월(본칙 거주요건 미충족이라 단서가 결론을 가름), 해외이주 세대전원 출국 2024-04-15, 양도 2026-04-16(2년 다음 날), 양도가 8억. 관측: 단서 불성립 과세. 비거주자 축은 입력이 없어 이 단언은 기한 축만 본다. 판정 보류 2건은 결론과 무관한 안내. 경계 짝 P-F297-within-2y."
+ },
+ {
+  "id": "P-F297-within-2y",
+  "docNo": "재일46014-2018",
+  "docDate": "1997.08.23.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F297-current의 경계 짝 — 출국일부터 2년이 되는 날(2026.4.15.) 양도면 해외이주 특례 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-04-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2022-05-16",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "10"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2024-04-15"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "경계 짝(가정) — 양도일만 2026-04-15(출국일부터 2년이 되는 날, 수요일)로 당긴 최소쌍. 해외이주 단서 적용 비과세."
+ }
+]

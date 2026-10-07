@@ -1,0 +1,55 @@
+[
+  {
+    "id": "F255-era",
+    "docNo": "재일46014-1347",
+    "docDate": "1995.06.03.",
+    "basis": "era",
+    "today": "1995-11-01",
+    "summary": "임대주택을 승계입주(1991.4.14.)해 임대 만기 후 분양(1994.4.17.)받아 계속 거주하다 1995.11. 양도 — 승계자 본인 거주분만 통산(4년 7개월)해 5년 미달",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1995-11-15",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1994-04-17",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "55"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 1987-12-04 주택공사 임대주택 신축, 질의자는 전 거주자 이사로 추가모집 승계입주(주민등록 1991-04-14, 사실상 1991-01-10), 1994-04-17 임대 만기 후 분양·계속 거주, 1995.11. 결혼으로 양도 예정. 가정: 양도 1995-11-15, 거주 55개월(주민등록일부터 — 사실상 입주일로도 58개월), 양도가 1억. 회신: 임대승계자는 본인 거주기간만으로 판정하고 임차 거주와 분양 후 거주를 통산해 5년 이상이면 비과세 → 이 사실은 5년 미달·보유 1년 7개월로 과세(회신은 개별 결론을 내지 않음 — 규칙 적용 결과). 없는 입력: 임차권 승계 여부·전 임차인 거주기간 — 엔진은 거주 개월 한 칸만 받으므로 승계자가 전 임차인 기간을 빼고 넣어야 한다. 참고 관측: referenceForm(1호 + 55개월) = 과세. 통산 5년 축은 짝 P-F255-own-62m가 단언한다."
+  },
+  {
+    "id": "P-F255-own-62m",
+    "docNo": "재일46014-1347",
+    "docDate": "1995.06.03.",
+    "basis": "era",
+    "today": "1995-11-01",
+    "summary": "F255 짝(가정) — 본인 임차 입주(1990.9.)부터 분양 후 양도일까지 거주 통산 5년 2개월이면 보유기간(1년 7개월)과 무관하게 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1995-11-15",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1994-04-17",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "62"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 짝(가정) — 승계가 아니라 본인이 1990-09-15에 임차 입주했다면 임차 거주와 분양 후 거주 통산 62개월(5년 2개월)로 §154① 단서 1호(건설임대주택 임차일~양도일 5년 이상 거주) → 보유 1년 7개월이어도 비과세. 관측: applied 154-1-proviso:rental_5yr_residence. 입력 도달: 단서를 빼면 과세(V-F255-noproviso). 판정 보류 civil-161(2009 전 공휴일 표)은 잡음."
+  }
+]

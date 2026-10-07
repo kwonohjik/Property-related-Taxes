@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F047-era",
+    "docNo": "서면인터넷방문상담4팀-809",
+    "docDate": "2007.03.08.",
+    "basis": "era",
+    "today": "2007-03-08",
+    "summary": "1985.1. 취득한 A주택이 2006.3. 화재로 소실 → 2006.10. 다른 곳에 새 주택 신축 → 2007.2. A주택 부수토지 양도: 새 주택 취득일 이후 양도라 과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2007-02-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1985-01-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2006-10-15"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "없는 입력: 천재지변으로 멸실된 주택의 부수토지 양도(멸실일 · 양도 대상이 토지라는 사실) — 판정 메뉴는 멸실 주택 부수토지 비과세 경로를 받지 않는다. 월 단위 날짜는 15일로 가정. 참고 관측(referenceForm = A를 주택으로, 새 주택을 명부에 넣은 가장 가까운 표현): 일시적 2주택으로 비과세가 나오면 원문(과세)과 반대 — 주택이 아닌 토지 양도를 주택 양도로 표현한 탓이다."
+  }
+]

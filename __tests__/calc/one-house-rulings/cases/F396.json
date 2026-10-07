@@ -1,0 +1,100 @@
+[
+  {
+    "id": "F396-era",
+    "docNo": "서면-2021-부동산-6568 [부동산납세과-2998]",
+    "docDate": "2022.10.06.",
+    "basis": "era",
+    "today": "2022-11-20",
+    "summary": "조정대상지역 주택을 2018.7.12. 취득하며 임대사업자 지위를 포괄승계해 같은 날 등록(2019.12.16. 이전 신청) → 2021.4. 임대의무기간 만료로 자동말소 → 거주 없이 양도: 거주기간 제한 없음",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-11-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-07-12",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "rental_registration_4ho",
+      "proviso4hoBusinessRegDate": "2018-07-12",
+      "proviso4hoRentalRegDate": "2018-07-12",
+      "proviso4hoRegulatedOneHouse": "yes",
+      "proviso4hoStatus": "auto_cancelled"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_registration_4ho"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match — 구성 케이스: 원문은 거주요건 적용 여부(규칙)만 회신. 삭제 전 §154①4호 + 부칙<제30395호> 제38조②, 자동말소(민간임대주택법 §6⑤) 후라 임대의무기간·5% 단서를 따지지 않음 → 거주 0개월이어도 비과세. 가정(원문 미기재): 취득 당시 조정대상지역(질의가 거주요건 적용을 묻는 전제), 사업자등록 신청일 = 임대사업자 등록일 2018-07-12, 신청 당시 세대가 조정대상지역 1주택만 보유(부칙<대통령령 제30395호> 제38조② 요건), 양도 예정 → 2022-11-15(회신 후·2021.1.1.~2022.5.9. 구간 밖), 양도가 8억, 거주 0개월. 짝: N-F396-no-proviso(사유 미선언 → 과세), N-F396-registered-20191217(신청 기한 다음 날 → 과세)."
+  },
+  {
+    "id": "N-F396-no-proviso",
+    "docNo": "서면-2021-부동산-6568 [부동산납세과-2998]",
+    "docDate": "2022.10.06.",
+    "basis": "era",
+    "today": "2022-11-20",
+    "summary": "F396의 음성 짝 — 같은 사실에서 임대사업자 등록 사유를 선언하지 않으면 조정대상지역 취득 주택의 2년 거주요건 미충족으로 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-11-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-07-12",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:rental_registration_4ho"
+      ]
+    },
+    "bucket": "match",
+    "note": "음성 짝(가정) — 4호 사유만 뺀 최소쌍. F396-era의 비과세가 4호 경과조치에서 나온 것임을 고정한다. 엔진은 과세와 함께 판정 보류 154-1-4ho-rental-registration-unverified(등록 여부 미입력)를 낸다."
+  },
+  {
+    "id": "N-F396-registered-20191217",
+    "docNo": "서면-2021-부동산-6568 [부동산납세과-2998]",
+    "docDate": "2022.10.06.",
+    "basis": "era",
+    "today": "2022-11-20",
+    "summary": "F396의 경계 짝 — 취득·포괄승계 등록 신청이 2019.12.17.(기한 다음 날)이면 2020.2.11. 이후 양도분에는 삭제 전 4호가 적용되지 않아 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-11-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-12-17",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "rental_registration_4ho",
+      "proviso4hoBusinessRegDate": "2019-12-17",
+      "proviso4hoRentalRegDate": "2019-12-17",
+      "proviso4hoRegulatedOneHouse": "yes",
+      "proviso4hoStatus": "auto_cancelled"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:rental_registration_4ho"
+      ]
+    },
+    "bucket": "match",
+    "note": "경계 짝(가정) — 등록 신청일(=취득일)만 2019-12-17로 옮긴 최소쌍. 부칙<제30395호> 제38조② 「2019년 12월 16일 이전에 … 등록을 신청한 경우」 기한 ±1일. 엔진 unmet 154-1-4ho-rental-registration(신청일이 기한 뒤)."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F231-era",
+    "docNo": "기획재정부 재산세제과-450",
+    "docDate": "2009.03.11.",
+    "basis": "era",
+    "today": "2009-06-01",
+    "summary": "처 명의 고양 아파트(2005.7.29. 취득)에 처만 거주, 남편은 부모 부양 등으로 일시퇴거했다가 2008.6.16. 전입 — 나머지 세대원 거주로 비과세 (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2009-06-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-07-29",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "46"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 고양 아파트(처 명의) 2005-07-29 취득, 처 2005-07-29부터 거주, 남편은 부모 부양 등으로 일시퇴거했다가 2008-06-16 전입. 가정: 양도 2009-06-15(원문 미기재), 처 거주 46개월, 양도가 4억. 회신: 배우자가 사업상 형편 등 부득이한 사유로 처음부터 일시퇴거해도 나머지 세대원이 거주요건을 충족하면 비과세. 없는 입력: 세대원별 거주·일시퇴거 사유. 당시 5개 신도시(일산) 거주요건(보유 3년 중 2년)은 엔진 연혁에 없다. 참고 관측: referenceForm = 비과세(구별력 없음)."
+  }
+]

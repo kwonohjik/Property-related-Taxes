@@ -1,0 +1,34 @@
+[
+  {
+    "id": "F032-era",
+    "docNo": "조심2009서3362",
+    "docDate": "2009.11.11.",
+    "basis": "era",
+    "today": "2009-11-11",
+    "summary": "1995년부터 별거했다는 법률상 배우자가 단독주택 2채(2003.8.14.·2005.5.16.) 보유 → 법률상 혼인관계가 해소되지 않은 이상 1세대 → 비과세 배제",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2008-10-10",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-06-07"
+      },
+      "houses": [
+        {
+          "id": "spouse-1",
+          "acquisitionDate": "2003-08-14"
+        },
+        {
+          "id": "spouse-2",
+          "acquisitionDate": "2005-05-16"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 법률상 배우자 주택 2채를 명부에 넣음). 배우자 범위는 엔진 판정 축이 아님. 일자 원문 그대로, 양도가 3억 중립."
+  }
+]

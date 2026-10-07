@@ -1,0 +1,89 @@
+[
+ {
+  "id": "F187-era",
+  "docNo": "서면인터넷방문상담4팀-82",
+  "docDate": "2006.01.19.",
+  "basis": "era",
+  "today": "2006-01-19",
+  "summary": "아파트 전입(2001.11.9.) 후 다른 아파트 임차로 전입(2003.11.8.) — 거주기간 2년 해당 여부: 주민등록상 전입일부터 전출일까지, 초일 산입",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2006-03-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2001-10-15",
+    "residenceInputMode": "interval",
+    "residencePeriods": [
+     {
+      "moveInDate": "2001-11-09",
+      "moveOutDate": "2003-11-08"
+     }
+    ]
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력(연혁): 당시(2006) 서울·과천·5대 신도시 소재 주택의 거주 2년 요건. 엔진의 거주요건은 「취득 당시 조정대상지역 + 2017.8.3. 이후 취득」뿐이라 2001 취득분은 거주요건 없음으로 판정되어 초일 산입 규칙이 결론에 닿지 않는다. 원문은 계산 규칙만 회신(사안의 2년 충족 여부 미명시) — 규칙대로면 2001-11-09~2003-11-08은 초일 산입으로 정확히 2년. 참고 관측(referenceForm: 취득 2001-10-15·양도 2006-03-15 가정·거주 구간 원문·양도가 5억): 비과세(거주요건 없음 경로). 규칙 자체는 현행 거주요건 위에 구성한 F187-current / N-F187-one-day-short가 단언한다."
+ },
+ {
+  "id": "F187-current",
+  "docNo": "서면인터넷방문상담4팀-82",
+  "docDate": "2006.01.19.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "구성 — 취득 당시 조정대상지역 주택(2019.11.1. 취득)에 2019.11.9. 전입·2021.11.8. 전출 후 양도(2026.3.20.): 초일 산입으로 거주 정확히 2년 — 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-03-20",
+   "contractTotalPrice": "800000000",
+   "wasRegulatedAtAcquisition": true,
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2019-11-01",
+    "residenceInputMode": "interval",
+    "residencePeriods": [
+     {
+      "moveInDate": "2019-11-09",
+      "moveOutDate": "2021-11-08"
+     }
+    ]
+   }
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "구성 케이스 — 원문은 거주기간 계산 규칙만 회신(전입일부터 전출일까지, 초일 산입). 원문의 전입·전출 월일(11.9.~11.8.)을 현행 거주요건(취득 당시 조정대상지역 2년 거주) 위에 옮겼다: 거주 구간 입력(초일 산입 합산)으로 2019-11-09~2021-11-08 = 2년 → 거주요건 충족 → 보유 6년 4개월 → 비과세(판정 보류 없음). 초일 불산입이면 1일 모자라 미충족이 되는 경계다. 짝 N-F187-one-day-short(전출 하루 앞당김 → 과세). 새 축 중립: 양도가 8억, 2026.10.1. 전 양도, 다른 주택 없음."
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "docNo": "서면인터넷방문상담4팀-82",
+  "docDate": "2006.01.19.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F187-current의 음성 짝 — 전출일을 하루 앞당기면(2021.11.7.) 초일을 산입해도 2년에 하루 모자라 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-03-20",
+   "contractTotalPrice": "800000000",
+   "wasRegulatedAtAcquisition": true,
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2019-11-01",
+    "residenceInputMode": "interval",
+    "residencePeriods": [
+     {
+      "moveInDate": "2019-11-09",
+      "moveOutDate": "2021-11-07"
+     }
+    ]
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — 전출일만 2021-11-08 → 2021-11-07로 바꾼 최소쌍. 거주 2년 미달 → 과세. 관측의 판정 보류(거주 기한 안내 등)는 단언하지 않는다."
+ }
+]

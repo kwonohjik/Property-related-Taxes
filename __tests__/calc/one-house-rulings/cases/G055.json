@@ -1,0 +1,84 @@
+[
+ {
+  "id": "G055-era",
+  "docNo": "서면-2015-부동산-1200 [부동산납세과-1347]",
+  "docDate": "2015.08.27.",
+  "basis": "era",
+  "today": "2015-08-27",
+  "summary": "혼인합가(2011.9.25.)로 2주택(乙 A·甲 B) → B가 관리처분인가(2013.4.)로 입주권 → 공동명의 C 취득(2014.12.22.) 후 甲 입주권 양도(2015.6.9.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2015-06-09",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2008-05-31",
+    "redevApprovalDate": "2013-04-15",
+    "redevOtherHouseAcquisitionDate": "2014-12-22"
+   },
+   "houses": [
+    {
+     "id": "A",
+     "region": "capital",
+     "acquisitionDate": "2008-04-05",
+     "mergeOrigin": "counterpart_side"
+    },
+    {
+     "id": "C",
+     "region": "capital",
+     "acquisitionDate": "2014-12-22"
+    }
+   ],
+   "marriageDate": "2011-09-25",
+   "isFirstTransferredInMerge": true
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(불리). 회신: 혼인으로 1세대 2주택(乙 A·甲 B)이 된 뒤 B가 재건축 관리처분인가로 입주권이 되고 새 주택 C를 취득한 상태에서, 혼인한 날부터 5년 이내·C 취득일부터 3년 이내에 입주권을 양도하면 시행령 §154①에 따라 비과세. 같은 쟁점에 부적용 회신(재산세과-4439, 2008 · 서면4팀-1387, 2007)과 적용 결정(조심2010서1322)이 함께 있고 이 회신(2015)은 적용 쪽이다. 표현: 원문 일자 그대로(A 2008-04-05 배우자 쪽, B 2008-05-31, 혼인 2011-09-25, 인가 2013-04-15(월 단위 → 15일), C 2014-12-22 합가 후 취득, 양도 2015-06-09), 양도가 5억, 나목 취득일 칸에 C 일자. 관측: 과세 — 「다른 주택이 2채입니다」. 혼인 입력을 빼도 같은 결과(V-G055-nomerge) — 입주권 판정은 합가 입력을 읽지 않는다. A를 빼면 나목 비과세(V-G055-noA). 의심 지점: lib/tax-engine/transfer-tax-redevelopment-transforms.ts:201-232 (가·나목이 명부 주택 수만 보고 합가 의제가 없음), lib/tax-engine/one-house/one-right-verdict.ts:82-85. P1 C6 묶음(E001·E002·E094 — dual)과 같은 축이다."
+ },
+ {
+  "id": "G055-current",
+  "docNo": "서면-2015-부동산-1200 [부동산납세과-1347]",
+  "docDate": "2015.08.27.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "혼인합가(2018.5.) 2주택 중 양도자 쪽 주택이 입주권(2022.4. 인가) → 신규주택 C 취득(2024.9.) 후 입주권 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2012-03-15",
+    "redevApprovalDate": "2022-04-15",
+    "redevOtherHouseAcquisitionDate": "2024-09-15"
+   },
+   "houses": [
+    {
+     "id": "A",
+     "region": "capital",
+     "acquisitionDate": "2010-04-15",
+     "mergeOrigin": "counterpart_side"
+    },
+    {
+     "id": "C",
+     "region": "capital",
+     "acquisitionDate": "2024-09-15"
+    }
+   ],
+   "marriageDate": "2018-05-15",
+   "isFirstTransferredInMerge": true
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(불리). 현행 규칙: 혼인합가로 2주택이 된 뒤 혼인 전 주택이 조합원입주권으로 전환되고 새 주택을 취득한 경우, 혼인한 날부터 10년 이내·새 주택 취득일부터 3년 이내에 입주권을 양도하면 비과세(혼인합가 기한 2024.11.12. 이후 양도분 10년). 같은 패턴을 2026으로 구성: A 2010-04-15(배우자 쪽)·B 2012-03-15·혼인 2018-05-15·인가 2022-04-15·C 2024-09-15·양도 2026-06-15(혼인 8년 1개월 — 5년 규정이면 불성립)·8억·비조정. 관측: 과세(다른 주택 2채). 의심 지점은 G055-era와 같다."
+ }
+]

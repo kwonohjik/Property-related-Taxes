@@ -16,6 +16,7 @@
  * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 정면 해석 미확보, 입력된 재상속일로 판정(서면-2019-법령해석재산-3032와 같은 기준). 괄호가 걸리고(일반주택 2013-02-15 이후 취득) 그 행이 실제로 제외될 때만 |
  * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
+ * | `154-1-capital-newtown-location-unverified` | §154① 본문(2003-11-20 ~ 2011-06-02 양도 — 서울·과천·5개 신도시 거주 2년) | 양도 주택이 신도시 지구 안인지(법정동코드는 시·구까지) 또는 주소 — 요건을 적용해 판정, 거주요건 때문에 과세될 때만 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
@@ -30,6 +31,11 @@ import {
   meetsOneHouseResidenceRequirement,
   qualifiesLongTermMortgageResidenceExemption,
 } from "../transfer-tax-exemption-requirements";
+import {
+  describeOneHouseHoldingRequirement,
+  describeOneHouseResidenceRequirement,
+} from "../transfer-tax-exemption-holding";
+import { isCapitalNewTownResidenceEra } from "../data/one-house-holding-residence-era";
 import {
   meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
@@ -63,6 +69,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "155-1-regulated-announcement-date-unverified",
   "155-2-reinheritance-reference-date-unverified",
   "155-2-pre2010-parental-care-exception-unverified",
+  "154-1-capital-newtown-location-unverified",
   "civil-161-holiday-table-uncovered",
 ]);
 
@@ -104,8 +111,11 @@ export function collectEraUndetermined(
    * 확인 필요(계획서 §9.7 L-3(a)): 「1주택 보유」 판정 시점 — 신청 당시 **선언**으로 받는다.
    */
   const rental4ho = resolveRental4hoRegistration(input);
+  // M2 — 2011.6.2. 이전 양도분의 거주요건은 서울 등 소재 요건이다(4호 경과조치는 2019년 등록분).
+  const capitalNewTownEra = isCapitalNewTownResidenceEra(input.transferDate);
   if (
     !settled &&
+    !capitalNewTownEra &&
     input.householdHousingCount === 1 &&
     (rental4ho === null || rental4ho.status === "undetermined") &&
     // 취득 당시 비조정이면 거주요건 자체가 없어 아래 술어가 참이다 — 조정 여부를 따로 보지 않는다.
@@ -123,6 +133,30 @@ export function collectEraUndetermined(
           : `삭제 전 ${law("①")}4호(임대사업자 등록)를 선택했지만 다음 사실이 입력되지 않아 판정하지 않았습니다: ` +
             `${rental4ho.missing.join(" · ")}.`,
     });
+  }
+
+  /*
+   * M2 — 2003-11-20 ~ 2011-06-02 양도분 서울·과천·5개 신도시 거주 2년. 소재지가 신도시가 있는 시·구이거나
+   *   주소가 없으면 요건을 적용했다(모름 = 혜택 불성립). 거주요건 때문에 과세된 경우에만 낸다.
+   */
+  if (!settled && capitalNewTownEra) {
+    const residence = describeOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption);
+    const holding = describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption);
+    if (
+      residence.basis === "unmet" &&
+      (residence.capitalNewTown === "maybe" || residence.capitalNewTown === "unknown") &&
+      (holding.met || holding.provisoWaives)
+    ) {
+      out.push({
+        id: "154-1-capital-newtown-location-unverified",
+        reason:
+          `2011년 6월 2일 이전 양도분은 서울특별시·과천시와 분당·일산·평촌·산본·중동 신도시(택지개발예정지구) 주택이면 ` +
+          `보유기간 중 거주 2년이 필요합니다(${law("①")} — 대통령령 제18127호 · 제22950호 부칙 제3조). ` +
+          (residence.capitalNewTown === "unknown"
+            ? "양도 주택 주소가 입력되지 않아 이 요건을 적용했습니다 — 주소를 입력하면 판정합니다."
+            : "양도 주택이 신도시가 있는 시·구에 있어 이 요건을 적용했습니다 — 신도시 지구 밖이면 거주요건이 없습니다(확인 필요)."),
+      });
+    }
   }
 
   /*

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "F235-era",
+    "docNo": "서면-2018-부동산-0935 [부동산납세과-1102]",
+    "docDate": "2018.11.29.",
+    "basis": "era",
+    "today": "2021-06-01",
+    "summary": "계약금 지급일(2015.8.25.) 현재 공동상속주택 소수지분을 보유한 1세대가 2017.8.2. 이전 분양계약한 화성 A주택(2017.10.31. 취득)을 B주택 취득 후 3년 이내 양도 — 무주택 아님 → 거주요건 적용 (양도일·거주 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2021-06-15",
+      "contractTotalPrice": "600000000",
+      "wasRegulatedAtAcquisition": true,
+      "isRegulatedArea": true,
+      "finalHouseRestartHistory": "no",
+      "newHouseContractDate": "2016-10-06",
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-10-31",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2018-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 1984-05-25 동일세대 부 사망으로 공동상속주택 소수지분 취득, 2011-09-25 별도세대 모 사망으로 지분 추가, 2015-08-25 화성 영천동 A주택 분양계약(계약금), 2015-09-16 공동상속주택 지분 양도, 2016-10-06 화성 산척동 B주택 분양계약, 2017-10-31 A 잔금·취득, B 2018.12. 준공 예정, A를 B 취득 후 3년 이내 양도 예정. 가정: B 취득 2018-12-15, 양도 2021-06-15, A 거주 0개월, 취득 당시 두 주택 모두 조정대상지역(토글), 양도가 6억. 회신: 2017.8.2. 이전 계약·계약금 지급 주택의 거주요건 경과규정(대통령령 제28293호 부칙 제2조②)은 계약금 지급일 현재 무주택 세대만 — 공동상속주택 소수지분 보유 세대는 무주택이 아니다 → 거주요건 적용 → 거주 없으면 과세. 없는 입력: 부칙 제2조②2호(2017.8.2. 이전 계약·계약금 지급) 칸과 계약금 지급일 현재 보유 주택(공동상속 소수지분) — 가장 가까운 §154①5호(공고 전 계약)는 무주택을 자기확인 체크로만 받고 계약일을 받지 않는다. 참고 관측: referenceForm = 과세(취득일 2017-10-31이 2017.8.3. 이후라 거주요건 적용 — 원문과 같은 결론이나 경과규정 축은 미검증) / 거주 24개월이면 일시적 2주택 비과세. F240(같은 원문)은 5호 자기확인을 켠 표현."
+  }
+]

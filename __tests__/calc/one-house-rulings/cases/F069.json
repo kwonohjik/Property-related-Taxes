@@ -1,0 +1,468 @@
+[
+ {
+  "id": "F069-era",
+  "docNo": "조심-2009-서-1588",
+  "docDate": "2009.04.30.",
+  "basis": "era",
+  "today": "2008-06-10",
+  "summary": "부부 거주주택 양도(2008.5.31.) — 임대주택법상 등록 임대주택(다세대 5호, 2006.9. 취득·조특법 §97·§97의2 비해당) 보유, 등록 임대주택은 주택 수에 포함되어 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2008-05-31",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2000-05-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "60",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "r1",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "20",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r2",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "20",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r3",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "20",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r4",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "20",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r5",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "20",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(유리 방향). 기대: 과세 — 당시 법령에는 등록 임대주택을 주택 수에서 빼는 1세대1주택 특례가 없고 조특법 §97·§97의2 임대주택도 아니다. 관측: 비과세(rentalPassed=true) — 판정 메뉴 §155⑳ 장기임대주택 특례 칸에 임대 5호를 넣으면 2008년 양도에도 특례가 적용된다. 근거·의심 지점: 소득세법 시행령 §155⑲(현행 ⑳) 장기임대주택 보유자 거주주택 특례는 대통령령 제23218호(2011.10.14. 시행)로 신설(<신설 2011.10.14> — KoreanLaw MST 117942 실독, 직전 2011.8.30. 시행본 MST 116354의 §155에는 없음). 엔진 checkEligibility(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:329~)는 양도일을 생애 1회 구간 판정에만 쓰고 신설일 게이트가 없다(lib·app/api 전체에 2011-10-14 상수 없음 — grep). 짝: P-F069-roster(임대주택을 명부에 일반 주택으로 넣으면 과세 — 입력 도달 확인), N-F069-gate-20111013(신설 전날 양도도 비과세 — 게이트 부재 고정), P-F069-gate-20111014. 일자: 원문 그대로(임대사업자 등록 2006-04-10·세무서 2006-06-15·임대주택 취득 2006-09-13·양도 2008-05-31), 거주주택 취득일 2000-05-15·거주 60개월·양도가 3억은 가정(원문 미기재), 임대 20개월."
+ },
+ {
+  "id": "P-F069-roster",
+  "docNo": "조심-2009-서-1588",
+  "docDate": "2009.04.30.",
+  "basis": "era",
+  "today": "2008-06-10",
+  "summary": "F069의 짝 — 같은 사실에서 등록 임대주택 5호를 명부에 일반 주택으로 넣으면 1세대 6주택으로 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2008-05-31",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2000-05-15"
+   },
+   "houses": [
+    {
+     "id": "r1",
+     "acquisitionDate": "2006-09-13"
+    },
+    {
+     "id": "r2",
+     "acquisitionDate": "2006-09-13"
+    },
+    {
+     "id": "r3",
+     "acquisitionDate": "2006-09-13"
+    },
+    {
+     "id": "r4",
+     "acquisitionDate": "2006-09-13"
+    },
+    {
+     "id": "r5",
+     "acquisitionDate": "2006-09-13"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "짝(같은 사실, 다른 표현). 당시 법령상 등록 임대주택은 그냥 주택이라 명부 표현도 사실에 충실하다 — 이 표현에서는 과세로 원문과 일치. F069-era와 함께 보면 결론이 §155⑳ 칸 사용 여부로만 갈린다."
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "docNo": "조심-2009-서-1588",
+  "docDate": "2009.04.30.",
+  "basis": "era",
+  "today": "2011-10-20",
+  "summary": "F069의 경계 짝 — 같은 사실에서 거주주택을 2011.10.13.(장기임대주택 거주주택 특례 신설 전날)에 양도",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2011-10-13",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2000-05-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "60",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "r1",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r2",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r3",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r4",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r5",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(유리). 기대: 과세 — 특례는 2011.10.14. 시행 대통령령 제23218호로 신설. 관측: 비과세(rentalPassed=true). 소득세법 시행령 §155⑲(현행 ⑳) 장기임대주택 보유자 거주주택 특례는 대통령령 제23218호(2011.10.14. 시행)로 신설(<신설 2011.10.14> — KoreanLaw MST 117942 실독, 직전 2011.8.30. 시행본 MST 116354의 §155에는 없음). 엔진 checkEligibility(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:329~)는 양도일을 생애 1회 구간 판정에만 쓰고 신설일 게이트가 없다(lib·app/api 전체에 2011-10-14 상수 없음 — grep). 임대 61개월로 조정(그 밖은 F069-era와 같음)."
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "docNo": "조심-2009-서-1588",
+  "docDate": "2009.04.30.",
+  "basis": "era",
+  "today": "2011-10-20",
+  "summary": "F069의 경계 짝 — 같은 사실에서 거주주택을 2011.10.14.(특례 시행일)에 양도하면 장기임대주택 거주주택 특례로 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2011-10-14",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2000-05-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "60",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "r1",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r2",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r3",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r4",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r5",
+       "businessRegistrationDate": "2006-06-15",
+       "rentalRegistrationDate": "2006-04-10",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "200000000",
+       "acquisitionOfficialPrice": "200000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "61",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   }
+  },
+  "expected": {
+   "isExempt": true,
+   "rentalPassed": true
+  },
+  "bucket": "match",
+  "note": "짝(시행일 당일). 기대: 비과세 — 신설 §155⑲(장기임대주택과 그 밖의 1주택 소유 1세대가 2년 이상 거주한 거주주택 양도 시 1주택으로 봄, 임대기간요건 충족 전 양도도 적용 — 같은 날 신설 ⑳). 임대 요건(등록·기준시가·호수)은 충족 전제(호별 자기확인). N-F069-gate-20111013과 결론이 같아 엔진은 이 경계를 구별하지 못한다."
+ },
+ {
+  "id": "F069-current",
+  "docNo": "조심-2009-서-1588",
+  "docDate": "2009.04.30.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "등록 임대주택(다세대 5호, 장기일반민간임대 2018.3. 등록) 보유 세대가 5년 거주한 거주주택 양도 — 현행 §155⑳ 장기임대주택 거주주택 특례로 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-05-20",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "60",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "r1",
+       "businessRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "98",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r2",
+       "businessRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "98",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r3",
+       "businessRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "98",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r4",
+       "businessRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "98",
+       "requirementsConfirmed": true
+      },
+      {
+       "unitId": "r5",
+       "businessRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "98",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   }
+  },
+  "expected": {
+   "isExempt": true,
+   "rentalPassed": true
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 소득세법 시행령 §155⑳ — 장기임대주택(§167의3①2호)과 그 밖의 1주택을 소유한 1세대가 2년 이상 거주한 거주주택을 양도하면 국내 1주택으로 보아 §154① 적용(장기임대주택은 주택 수에서 제외). 새 축 중립: 비조정, 양도가 8억, 거주주택 2015-03-15 취득(2019.2.12. 전 취득 — 생애 1회 제한 구간 밖), 양도 2026-05-20(2026-10-01 전), 임대 5호 비아파트·기준시가 3억·등록 2018-03-15·임대 98개월, 호별 요건 자기확인. 원문(2008년) 결론은 F069-era."
+ }
+]

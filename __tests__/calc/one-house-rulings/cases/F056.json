@@ -1,0 +1,70 @@
+[
+  {
+    "id": "F056-era",
+    "docNo": "기획재정부 재산세제과-26",
+    "docDate": "2013.01.10.",
+    "basis": "era",
+    "today": "2013-01-10",
+    "summary": "C상가 관리처분계획인가(2010.2.) 후 동·호수 당첨 → 2010.10.22. 현금청산 신청 → 2010.11.23. B주택 취득 → 2011.9.9. A주택 양도: 입주권을 포기하고 현금청산해도 입주권 취득 후 양도로 보므로 A 양도 당시 입주권을 주택 수에 포함 → 일시적 2주택만으로 비과세 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2011-09-09",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-05-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "acquisitionDate": "2010-11-23"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "c-right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2010-02-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2010-02-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 현금청산 신청한 입주권을 presaleRights에 넣음; 판정 메뉴에 현금청산 칸은 없음). 회신 요지는 「입주권 포기·현금청산 = 입주권 취득 후 양도」라 A 양도일(2011-09-09, 현금청산 결정 2011.9.22. 전) 현재 입주권 보유 — 원문은 A의 최종 결론을 쓰지 않았으므로 기대값(과세)은 그 귀결(주택 2 + 입주권 1은 §155① 단독 경로 없음)로 둠. 상가 원조합원의 입주권 취득일은 관리처분계획인가일(월 단위 → 2010-02-15)로 둠. 월 단위 날짜 15일 가정. 양도가 3억 중립. 양성 짝 P-F056-no-right: 입주권을 빼면 §155① 일시적 2주택으로 비과세."
+  },
+  {
+    "id": "P-F056-no-right",
+    "docNo": "기획재정부 재산세제과-26",
+    "docDate": "2013.01.10.",
+    "basis": "era",
+    "today": "2013-01-10",
+    "summary": "F056의 양성 짝 — 입주권을 주택 수에서 뺀다면(질의 제2안) A주택은 B주택과 일시적 2주택으로 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2011-09-09",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-05-15"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "acquisitionDate": "2010-11-23"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "양성 짝(가정 — 원문이 배척한 입장) — 입주권 행 유무 최소쌍. F056-era 과세가 입주권 산입 때문임을 고정."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F377-era",
+    "docNo": "서면인터넷방문상담4팀-1467",
+    "docDate": "2005.08.19.",
+    "basis": "era",
+    "today": "2005-09-20",
+    "summary": "무허가주택(1983년 취득·거주)이 도로개설사업에 편입돼 보상 후 이주대책으로 특별분양받은 아파트에 1년 거주 후 양도 — 수용된 주택 기간 불통산",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2005-09-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-06-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "12"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 구성 케이스(원문은 기산 규칙만 회신): 종전주택 수용 등으로 특별분양받은 주택의 보유·거주기간에 수용된 주택의 기간을 통산하지 않음. 특별분양 아파트 취득 2004-06-15·양도 2005-09-15(보유 1년 3개월)로 두면 규칙대로 과세, 통산하면 비과세. 없는 입력: 특별분양 경위 — 취득일 칸 하나에 통산 판단을 맡겨, 종전주택 취득일(1983)을 넣으면 비과세가 된다. 참조 관측(특별분양 취득일 입력): 과세 — 규칙과 같다. 양도가 3억(가정)."
+  }
+]

@@ -31,6 +31,24 @@ async function mockApartment(page: Page) {
   );
 }
 
+/**
+ * 개별주택(단독주택) 필지 — 공시가격은 «동·호가 빈 행»으로 온다(실측 명리 745).
+ * 행은 있지만 고를 세대가 없다 ⇒ 동·호를 요구하면 막다른 오류가 된다.
+ * 계획서 `docs/00-pm/transfer-address-unit-gate-detached-house.plan.md`
+ */
+async function mockDetachedHouse(page: Page) {
+  await page.route("**/api/address/search*", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results: [] }) }),
+  );
+  await page.route("**/api/address/standard-price*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ units: [{ dong: "", ho: "", floor: "", price: 17900000, year: "2026" }] }),
+    }),
+  );
+}
+
 async function openBasic(page: Page) {
   await page.goto("/calc/transfer-tax?new=1");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -74,4 +92,26 @@ test.describe("소재지·세대 게이트", () => {
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText(/동·호를 선택하세요/).first()).toBeVisible();
   });
+
+  // UG-3의 짝 — 같은 흐름에서 세대 목록만 개별주택형으로 바꾼다
+  for (const kind of [
+    { label: "주택", button: null },
+    { label: "단순토지", button: "단순토지(나대지,농지,임야)" },
+  ] as const) {
+    test(`UG-4: 단독주택 필지(${kind.label})는 동·호를 요구하지 않는다`, async ({ page }) => {
+      await mockDetachedHouse(page);
+      await openBasic(page);
+      if (kind.button) await page.getByRole("button", { name: kind.button, exact: true }).click();
+      const input = page.getByPlaceholder("도로명 또는 지번 주소 입력").first();
+      await input.fill(JIBUN);
+      await input.press("Enter");
+      await page.getByRole("button", { name: new RegExp(`「${JIBUN}」`) }).first().click();
+      // 세대 조회가 끝나면 «고를 세대 없음» → 동·호 드롭다운 대신 상세주소 입력이 뜬다
+      await expect(page.getByPlaceholder(/상세주소/).first()).toBeVisible();
+      await expect(page.getByText("호수 선택")).toHaveCount(0);
+
+      await page.getByRole("button", { name: "다음" }).click();
+      await expect(page.getByText(/동·호를 선택하세요/)).toHaveCount(0);
+    });
+  }
 });

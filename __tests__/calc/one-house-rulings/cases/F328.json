@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F328-era",
+    "docNo": "기획재정부 재산세제과-278",
+    "docDate": "2010.03.28.",
+    "basis": "era",
+    "today": "2010-03-20",
+    "summary": "1년 이상 거주한 1주택을 「평생교육법」에 의한 학교부설 평생교육기관 취학을 사유로 보유 2년 전에 양도 — 부득이한 사유 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2010-03-15",
+      "contractTotalPrice": "300000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-01-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "13"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 학교부설 평생교육기관은 「고등교육법」에 의한 학교가 아니어서 그 취학은 소득세법 시행규칙 §71③1호의 부득이한 사유가 아님 → 시행령 §154①3호 불적용. 없는 입력: 부득이한 사유의 종류(취학 대상 학교의 법적 구분) — 3호는 「부득이한 사유」 단일 선택지라 사유 해당 여부를 사용자가 판단한다. 참조 관측(3호 선택·거주 13개월·보유 14개월): 비과세(applied 154-1-proviso:unavoidable) — 원문과 반대. 3호를 고르지 않으면 보유 미달로 과세. 일자 가정(원문에 사실관계 없음): 취득 2009-01-15, 양도 2010-03-15, 양도가 3억."
+  }
+]

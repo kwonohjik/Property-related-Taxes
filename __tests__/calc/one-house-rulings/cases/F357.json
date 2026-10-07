@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F357-era",
+    "docNo": "서면-2021-부동산-1886 [부동산납세과-2741]",
+    "docDate": "2022.09.16.",
+    "basis": "era",
+    "today": "2022-07-20",
+    "summary": "무주택 1세대가 경매 매수신청(2020.5.27.)·매각허가결정(2020.6.3.) 후 조정대상지역 지정 공고(2020.6.19.), 매각대금 완납(2020.6.29.)한 주택 양도 — 매각허가결정일을 계약일로 보아 거주요건 미적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-07-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-06-29"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 경매 취득 주택은 매각허가결정일을 매매계약 체결일로 보아 시행령 §154①5호 적용 → 공고 전 매각허가결정·그날 무주택이면 거주요건 미적용. 없는 입력: 취득 경위(경매)와 매각허가결정일·공고일 — 5호는 「공고 전 계약 + 무주택」 자기확인뿐이라 경매를 계약으로 볼지는 사용자가 판단한다. 참조 관측(5호 선택·무주택 확인·거주 0): 비과세(applied 154-1-proviso:pre_designation_contract) — 결론은 같으나 쟁점 축은 검증되지 않는다(5호를 고르지 않으면 과세). 일자 가정: 취득(대금 완납) 2020-06-29, 양도 2022-07-15, 양도가 8억."
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "R043-era",
+    "docNo": "대법원-2000-두-10465",
+    "docDate": "2001.09.28.",
+    "basis": "era",
+    "today": "2001-09-28",
+    "summary": "취득 당시에는 고급주택이 아니었으나 양도 당시 구 시행령 §156 고급주택(면적·시설·가액 기준)에 해당한 부동산 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1997-06-15",
+      "contractTotalPrice": "600000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1990-01-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 구 시행령 §156 고급주택의 면적·시설 기준(엔진 고가 기준은 양도가액 6억·9억·12억 연혁만 있다 — lib/tax-engine/one-house/threshold.ts:15-17, 면적·시설 입력 없음). 원문에 양도일·가액이 없다. 참고 관측(referenceForm: 취득 1990-01-15·양도 1997-06-15·양도가 6억 가정): 판정 시점 축은 엔진도 양도일 기준이나 고급주택 판정 자체가 없어 쟁점 미검증."
+  },
+  {
+    "id": "R043-current",
+    "docNo": "대법원-2000-두-10465",
+    "docDate": "2001.09.28.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴을 현행으로 — 취득(2015.3.15.) 당시에는 고가주택이 아니었고 양도(2026.5.15.) 당시 양도가액 13억으로 12억 초과",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "1300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 고가주택(실지거래가액 12억원 초과, 2021.12.8. 이후 양도분) 해당 여부는 양도 당시 기준 — 취득 당시 해당 여부와 무관하게 초과분(부분) 과세. 관측: isPartialExempt=true. 경계 짝 N-R043-current-12eok(12억 정확히 → 전액 비과세). 중립 고정: 1주택, 비조정."
+  },
+  {
+    "id": "N-R043-current-12eok",
+    "docNo": "대법원-2000-두-10465",
+    "docDate": "2001.09.28.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "R043-current 경계 짝 — 양도가액 12억 정확히(초과 아님)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "1200000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "isPartialExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경계 짝). 12억 이하는 고가주택이 아니어서 전액 비과세 — 기준이 「초과」임을 고정한다."
+  }
+]

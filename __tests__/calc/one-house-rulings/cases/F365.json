@@ -1,0 +1,31 @@
+[
+  {
+    "id": "F365-era",
+    "docNo": "기획재정부 재산세제과-375",
+    "docDate": "2023.03.07.",
+    "basis": "era",
+    "today": "2027-01-20",
+    "summary": "재건축 원조합원이 청산금 납부로 신축주택 부수토지가 늘어난 상태에서 준공 전 임대차계약 체결(2022.9.경, 임대기간 2023.3.10.~2024.12.10.) — 증가 부분도 「주택 취득 후」 체결로 보아 상생임대 특례 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2027-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-06-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2024-11-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "21",
+      "winWinRentalLeaseMonths": "24",
+      "winWinRentalLeaseEndDate": "2026-12-09"
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(제1안): 청산금 납부로 증가한 주택부수토지 부분도 준공 전 체결한 임대차계약에 대해 「주택을 취득한 후」 체결한 것으로 보아 §155의3 적용. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 부수토지 증가분을 구분할 칸도 없다. 참조 관측(F364와 같은 폼): 비과세(applied 155-3-1-win-win-rental) — 결론은 같지만 쟁점 축은 검증되지 않는다. 일자 가정은 F364-era와 같다."
+  }
+]

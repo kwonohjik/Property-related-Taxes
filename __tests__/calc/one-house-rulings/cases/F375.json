@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F375-era",
+    "docNo": "재산세과-809",
+    "docDate": "2009.11.23.",
+    "basis": "era",
+    "today": "2009-11-10",
+    "summary": "공공임대주택(2002.9.6. 계약)에 아버지와 딸이 거주, 딸이 조부모 집으로 주소 이전(2007.1.15.) 후 아버지 사망(2008.1.17.)으로 임차 권리를 상속, 분양받아 양도(2009.11.6.) — 피상속인 거주기간 통산 불해당",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2009-11-06",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2009-06-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "52"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 임대주택 계약자 사망으로 상속인인 동일세대원이 임대계약을 승계해 거주한 경우에만 피상속인 거주기간을 통산하는데 이 사안은 해당하지 않음 → §154①1호 불적용. 없는 입력: 임차권(임대계약) 상속 승계와 피상속인 거주기간 통산 — §154⑧3호 통산 칸은 주택 자체를 상속한 경우용이고, 이 사안은 분양전환으로 산 주택이라 상속 취득으로 넣으면 사실과 다르다. 참조 관측(1호·딸 본인 거주 52개월 직접 입력): 과세 — 원문과 같은 결론이나 통산 축은 검증되지 않는다. 일자 가정: 분양전환 취득 2009-06-15, 양도가 2억."
+  }
+]

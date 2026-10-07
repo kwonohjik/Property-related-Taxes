@@ -15,7 +15,9 @@
       "isFirstTransferredInMerge": true,
       "asset": {
         "assetKind": "housing",
-        "acquisitionDate": "2003-03-10"
+        "acquisitionDate": "2003-03-10",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
       },
       "houses": [
         {
@@ -39,7 +41,7 @@
       ]
     },
     "bucket": "match",
-    "note": "match. 회신: 1주택자가 1주택자와 혼인해 2주택이 된 상태에서 1주택 직계존속을 동거봉양 합가해 3주택이 되면, 혼인한 날부터 기한 내 양도하는 혼인 전 보유 주택은 §154① 적용. 엔진: 혼인 → 동거봉양 순서·3주택·혼인일 기준 기한·구성(배우자 쪽 1 + 동거봉양으로 합친 가족 쪽 1 — 명부 합가 전 보유자 second_merge_side)을 본다(lib/tax-engine/one-house/merge-deeming.ts resolveMarriageThenParentalCareDeeming). 음성 짝: E128-era-reverse(역순) · E128-era-spouse2(두 주택 모두 배우자 쪽 — 배우자 혼인 전 2주택). 일자(원문에 일자 없음 — 가정): 혼인 2007-06-01, 동거봉양 합가 2007-12-01, 양도 2008-02-20. 당시 기한 2년은 엔진 연혁에 없다(현행 연혁 5·10년 — 이 일자에서는 구별력 없음)."
+    "note": "match. 회신: 1주택자가 1주택자와 혼인해 2주택이 된 상태에서 1주택 직계존속을 동거봉양 합가해 3주택이 되면, 혼인한 날부터 기한 내 양도하는 혼인 전 보유 주택은 §154① 적용. 엔진: 혼인 → 동거봉양 순서·3주택·혼인일 기준 기한·구성(배우자 쪽 1 + 동거봉양으로 합친 가족 쪽 1 — 명부 합가 전 보유자 second_merge_side)을 본다(lib/tax-engine/one-house/merge-deeming.ts resolveMarriageThenParentalCareDeeming). 음성 짝: E128-era-reverse(역순) · E128-era-spouse2(두 주택 모두 배우자 쪽 — 배우자 혼인 전 2주택). 일자(원문에 일자 없음 — 가정): 혼인 2007-06-01, 동거봉양 합가 2007-12-01, 양도 2008-02-20. 당시 기한 2년은 엔진 연혁에 없다(현행 연혁 5·10년 — 이 일자에서는 구별력 없음). M2 보강: 2003.11.20.~2011.6.2. 양도분은 서울·과천·5개 신도시면 보유기간 중 거주 2년 — 원문은 소재지를 적지 않고 요건 충족을 전제하므로 거주 24개월을 가정했다."
   },
   {
     "id": "E128-current",

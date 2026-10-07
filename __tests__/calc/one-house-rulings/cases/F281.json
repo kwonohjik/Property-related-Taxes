@@ -1,0 +1,53 @@
+[
+ {
+  "id": "F281-era",
+  "docNo": "사전-2019-법령해석재산-0188",
+  "docDate": "2019.08.20.",
+  "basis": "era",
+  "today": "2019-08-20",
+  "summary": "거주주택(2008)과 §155⑳ 장기임대주택(2010 취득·2016 등록) 보유 세대가 해외 유학으로 세대전원 출국(2017.4.25.) 후 2년 이내 거주주택 양도(2019.2.22.) — 출국일 현재 1주택이 아니어서 다목 비과세 불가",
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2019-02-22",
+   "contractTotalPrice": "173000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2008-04-04",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "48",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "priorRentalExemptionHistory": "none",
+     "rentalUnits": [
+      {
+       "unitId": "mapo",
+       "businessRegistrationDate": "2016-09-20",
+       "rentalRegistrationDate": "2016-08-22",
+       "rentalCategory": "long_general",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": false,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "29",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2017-04-25"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 참고 관측(referenceForm — 거주주택 2008-04-04·거주 48개월, 마포 장기임대 1호(사업자등록 2016-09-20·임대등록 2016-08-22·요건 자기확인), 다목 출국 2017-04-25, 양도 2019-02-22·1.73억, 일반분양권은 2021 전 취득이라 생략): 154-1-proviso:overseas_residence 적용 + 비과세. 원문은 장기임대주택도 출국일 현재 주택 수에 들어가 다목 불가라 했으므로 단서 적용 경로는 원문과 어긋난다 — 엔진은 단서의 「1주택」을 §155⑳ 임대주택을 뺀 양도일 주택 수(householdHousingCount=1)로 본다(lib/tax-engine/transfer-tax-exemption.ts:590, transfer-tax-exemption-holding.ts:240-244). 단서를 빼도 거주자 기준 §155⑳로 비과세라 결론 차이는 비거주자 축에서 난다."
+ }
+]

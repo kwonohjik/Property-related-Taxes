@@ -1,0 +1,23 @@
+[
+  {
+    "id": "F387-era",
+    "docNo": "부동산거래관리과-324",
+    "docDate": "2010.03.02.",
+    "basis": "era",
+    "today": "2010-07-20",
+    "summary": "중국 주재 근무 발령(2010.4.)으로 1급 장애인 큰딸을 제외한 전 가족이 출국 후 서울 1주택(5년 보유·미거주) 양도 — 근무상 형편 출국 특례 부적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2010-07-15",
+      "contractTotalPrice": "500000000",
+      "provisoReason": "overseas_residence",
+      "provisoDepartureDate": "2010-04-15",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-04-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 세대원 중 일부가 국내에 계속 거주하면 시행령 §154①2호 다목 불적용. 없는 입력: 세대전원 출국 여부(세대원 일부 국내 잔류)와 출국 사유 — 2호 다목은 선택지와 출국일만 받고 「세대전원」은 자기확인이다. 참조 관측(2호 다목·출국 2010-04-15): 비과세(applied 154-1-proviso:overseas_residence) — 특례 적용으로 나와 원문과 반대. 최종 과세 여부는 원문이 정하지 않아(당시 서울 보유 중 거주 2년 요건 — 엔진 연혁에 없음) 기대값을 두지 않는다. 일자 가정: 취득 2005-04-15, 양도 2010-07-15, 양도가 5억."
+  }
+]

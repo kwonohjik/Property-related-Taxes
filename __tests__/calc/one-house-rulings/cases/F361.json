@@ -1,0 +1,64 @@
+[
+  {
+    "id": "F361-era",
+    "docNo": "서면-2024-법규재산-1315 [법규과-2376]",
+    "docDate": "2024.09.25.",
+    "basis": "era",
+    "today": "2025-03-20",
+    "summary": "조정대상지역 주택(2020.4. 취득)을 직전임대차(2020.7.3.~2022.7.2.) 후 상생임대차계약(2022.4. 체결, 2022.7.3.~2024.7.2., 증액 5% 이내)으로 임대, 기간 종료 후 5% 초과 증액한 새 계약 체결 후 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-14",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-04-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-3-1-win-win-rental"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 원문 결론: §155의3 요건을 모두 갖춘 상생임대주택은 상생임대차 기간 종료 뒤 새 계약에서 5% 증액 제한을 지키지 않아도 특례 유지. 폼: 상생임대차계약 체결일 2022-04-15·증액률 5·직전 24개월·상생 24개월. 엔진: applied 155-3-1-win-win-rental(거주요건 면제). 후속 임대차계약을 담을 칸이 없어 엔진은 후속 계약을 보지 않는다 — 원문 규칙(후속 계약 무관)과 구조적으로 같은 결과. 짝 N-F361-era-6pct로 5% 한도가 상생임대차계약 자체에 걸리는지 확인. 일자 가정: 취득 2020-04-15, 양도 2025-03-14(2026-10-01 전 — 양도기한 없음), 거주 0, 양도가 9억."
+  },
+  {
+    "id": "N-F361-era-6pct",
+    "docNo": "서면-2024-법규재산-1315 [법규과-2376]",
+    "docDate": "2024.09.25.",
+    "basis": "era",
+    "today": "2025-03-20",
+    "summary": "F361-era의 음성 짝 — 상생임대차계약 자체의 증액률이 6%",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-14",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-04-15",
+      "winWinRentalIncreaseRatePct": "6",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-3-1-win-win-rental"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 시행령 §155의3①1호: 상생임대차계약의 직전임대차 대비 증가율 5% 이하. 6%면 불성립 → 조정 취득 거주 미달 과세. 판정 보류 154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified는 조정 취득 + 거주 미달 과세에 붙는 안내(결론 무관)."
+  }
+]

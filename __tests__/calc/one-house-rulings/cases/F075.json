@@ -1,0 +1,68 @@
+[
+ {
+  "id": "F075-era",
+  "docNo": "기획재정부 재산세제과-1049",
+  "docDate": "2022.08.25.",
+  "basis": "era",
+  "today": "2023-03-20",
+  "summary": "일반주택 A('98)·B('10) 보유 중 조특법 §99의4 농어촌주택 C('13) 취득, B 과세 양도('21.4.) 후 A 양도 — A 보유기간은 A 취득일부터 기산",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2023-03-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1998-06-15"
+   },
+   "houses": [
+    {
+     "id": "C",
+     "region": "non_capital",
+     "acquisitionDate": "2013-06-15",
+     "countExclusion": {
+      "kind": "reduction",
+      "reduction": {
+       "type": "new_99_4_rural",
+       "ruralHouseAcquisitionDate": "",
+       "ruralHouseStdPrice": "100000000",
+       "isRegisteredHanok": false,
+       "isAdjacentArea": false,
+       "meetsLocationRequirement": true
+      }
+     }
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "excludedHouses": [
+    "C"
+   ],
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "match — 구성 케이스(원문은 기산 규칙만 회신: 일반주택·농어촌주택등의 보유기간 기산일은 각 주택의 취득일). 결론을 가르게 A 양도일을 B 과세 양도(2021-04-15 가정)부터 2년이 안 된 2023-03-15로 잡았다 — 규칙대로면 A 보유 24년 → 비과세, B 양도일로 재기산하면 1년 11개월 → 과세. 관측: 비과세 + C 주택 수 제외(조특법 §99의4). B의 과세 양도는 입력 칸이 없고(2022.5.10. 이후 양도분은 재기산 제도 자체가 없다) 엔진은 늘 취득일로 기산하므로 반대 규칙이 나올 경로가 없다(구별력은 C 제외 축에만 있음 — C의 §99의4 선언을 빼면 과세, 프로브). 일자 가정: A 1998-06-15·C 완공 2013-06-15(연·월 단위 원문), C 기준시가 1억·소재 요건 충족, 양도가 8억."
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "docNo": "기획재정부 재산세제과-1049",
+  "docDate": "2022.08.25.",
+  "basis": "era",
+  "today": "2024-09-20",
+  "summary": "F075의 짝 — A를 비과세 양도(2023.3. 가정)한 뒤 남은 농어촌주택 C(2013.6. 취득)를 양도: C 보유기간도 C 취득일부터 기산",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2024-09-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2013-06-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "구성 케이스(원문은 C의 기산일도 C 취득일이라고 회신). 규칙대로면 C 보유 11년 → 비과세, A 양도일 재기산이면 1년 6개월 → 과세. 관측 비과세 — A의 양도 사실은 입력 칸이 없어 엔진은 구조적으로 C 취득일 기산(구별력 0, 반대 규칙 경로 없음). 양도 2024-09-15·양도가 5억 가정."
+ }
+]

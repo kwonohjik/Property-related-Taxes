@@ -1,0 +1,46 @@
+[
+  {
+    "id": "S001-era",
+    "docNo": "대법원-2008-두-21515",
+    "docDate": "2009.01.30.",
+    "basis": "era",
+    "today": "2006-10-17",
+    "summary": "해외이주(2001.7.26.)로 비거주자가 된 후 잔금(2001.7.31.)·등기(2001.8.1.)로 취득한 아파트의 재건축 입주권 양도(2006.10.16.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2006-10-16",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2001-08-01",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2006-01-31"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: 취득·양도 당시 거주자/비거주자 신분(해외이주로 비거주자가 된 뒤 잔금·등기로 취득) — 판정 메뉴에는 거주자 판정 입력이 없고, §154① 단서 해외이주는 주택 양도 전용이다. 참고 관측(referenceForm — 아파트 2001-08-01 취득(등기 접수일), 재건축 신탁 2006-01-31을 인가일로 가정, 입주권 양도 2006-10-16, 인가일 요건 '예', 다른 주택 없음, 5억): 비과세(가목) — 원문 결론(과세)과 반대."
+  },
+  {
+    "id": "S001-current",
+    "docNo": "대법원-2008-두-21515",
+    "docDate": "2009.01.30.",
+    "basis": "current",
+    "today": "2026-06-16",
+    "summary": "현행 — 비거주자가 양도하는 조합원입주권",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2015-08-01",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2022-01-31"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 현행 규칙: 조합원입주권 1세대1입주권 비과세(소득세법 §89①4호)는 거주자에 한하고 비거주자는 적용 배제(소득세법 §121②, 2019.12.31. 개정). 없는 입력: S001-era와 같다(거주자/비거주자 신분). 참고 관측(referenceForm — 2015-08-01 취득, 인가 2022-01-31, 2026-06-15 양도, 다른 주택 없음): 비과세(가목)."
+  }
+]

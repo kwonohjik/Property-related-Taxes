@@ -1,0 +1,38 @@
+[
+ {
+  "id": "F318-era",
+  "docNo": "기획재정부 재산세제과-1042",
+  "docDate": "2010.10.28.",
+  "basis": "era",
+  "today": "2010-10-01",
+  "summary": "혼인으로 1세대 2주택이 된 상태에서 근무상 형편으로 세대전원 출국 — 다목 부적용 (날짜 원문 미기재)",
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2010-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2005-03-15"
+   },
+   "houses": [
+    {
+     "id": "spouse",
+     "acquisitionDate": "2004-03-15",
+     "mergeOrigin": "counterpart_side"
+    }
+   ],
+   "marriageDate": "2008-05-15",
+   "isFirstTransferredInMerge": true,
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2009-03-16"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 원문에 사실관계 없음(회신 문언 기준). 다목 불적용 부분은 2주택이면 단서 카드가 닫혀 같은 방향이지만 결론(isExempt)은 비거주자 축에 달렸다. 참고 관측(referenceForm — 본인 2005-03-15·배우자 2004-03-15(혼인 전 보유), 혼인 2008-05-15, 다목 출국 2009-03-16, 양도 2010-06-15·4억 가정): 단서 미전송 + 거주자 기준 155-5-marriage-merge 비과세."
+ }
+]

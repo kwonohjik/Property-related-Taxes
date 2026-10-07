@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F349-era",
+    "docNo": "부동산거래관리과-707",
+    "docDate": "2010.05.18.",
+    "basis": "era",
+    "today": "2010-06-20",
+    "summary": "의정부 아파트(2008.7. 분양 취득)에 1년 이상 거주 후 남편 직장 관계로 세대전원 광주 이사(2009.10.), 남편 퇴직(회사 부도) 후 양도 — 양도일 현재 부득이한 사유 해소",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2010-06-15",
+      "contractTotalPrice": "300000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2008-07-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2008-07-15",
+            "moveOutDate": "2009-10-14"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(국세청): 양도일 현재 부득이한 사유(근무상 형편)가 해소된 상태에서 양도하면 시행령 §154①3호 불적용. 해석이 갈리는 쟁점(국심2007부2222는 전출 당시 근무상 형편이 입증되면 양도일 현재 퇴직해도 비과세)이나 국세청 해석을 기대값으로 둔다. 없는 입력: 양도일 현재 사유 지속·해소 여부 — 3호는 선택지 하나와 거주 1년만 본다. 참조 관측(3호·거주 15개월·보유 1년 11개월): 비과세(applied 154-1-proviso:unavoidable) — 국세청 결론과 반대(국심2007부2222 결론과 같음). 일자 가정: 취득 2008-07-15, 이사 2009-10-14, 양도 2010-06-15, 양도가 3억."
+  }
+]

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "F393-era",
+    "docNo": "재일46014-506",
+    "docDate": "1997.03.07.",
+    "basis": "era",
+    "today": "1997-02-20",
+    "summary": "남편 명의 삼성동 아파트(1988.12.15. 취득) 보유 세대가 캐나다 이민(1991.8.23.) 후 부인이 귀국해 사업(1994.10.~)·고양시 아파트 취득(1996.2.21.), 삼성동 아파트 양도(1997.2.10.) — 요건 해소로 과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1997-02-10",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-12-15"
+      },
+      "houses": [
+        {
+          "id": "goyang",
+          "region": "capital",
+          "acquisitionDate": "1996-02-21"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 해외이주로 세대전원 출국한 뒤 동일세대원 일부가 재입국해 거주자가 됨으로써 당초 요건이 해소된 상태에서 양도하면 과세. 없는 입력: 양도자(세대)의 거주자·비거주자 신분 — 판정 메뉴는 거주자를 전제하고 신분을 묻지 않는다. 세대원 재입국을 담을 칸도 없다. 참조 관측(명부에 고양시 아파트 1행): 비과세(applied 155-1-temporary-two-house) — 원문과 반대(엔진은 일시적 2주택으로 본다). 해외이주 사유(출국 1991-08-23)로 넣고 고양시 주택을 빼도 보유 요건으로 비과세(프로브). 양도가 3억(가정)."
+  }
+]

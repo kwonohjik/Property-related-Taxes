@@ -1,0 +1,25 @@
+[
+  {
+    "id": "F382-era",
+    "docNo": "대법원-95-누-10112",
+    "docDate": "1996.04.09.",
+    "basis": "era",
+    "today": "1993-03-20",
+    "summary": "주택 신축용 대지를 분양받은 상태에서 근무 형편으로 세대전원 주거 이전, 이후 주택을 신축 취득해 거주 없이 양도 — 대지만 취득한 상태의 이전은 부득이한 사유 아님(구법)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1993-03-15",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1992-06-15"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(대법원 파기환송): 주택 신축 도중 근무 형편으로 이전하면 부득이한 사유가 될 수 있으나, 대지만 취득한 상태에서 이전한 경우는 아님 → 비과세 부정(당시 3년 거주 구법). 없는 입력: 부득이한 사유 발생 시점과 주택 취득(신축) 단계의 선후. 참조 관측(3호·거주 0): 과세 — 현행 3호 「1년 이상 거주」 미달 때문(다른 경로). 일자 가정(원문에 없음): 신축 취득 1992-06-15, 양도 1993-03-15, 양도가 1억."
+  }
+]

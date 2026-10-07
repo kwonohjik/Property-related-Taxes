@@ -1,0 +1,34 @@
+[
+ {
+  "id": "G095-era",
+  "docNo": "부동산납세과-26",
+  "docDate": "2015.01.16.",
+  "basis": "era",
+  "today": "2015-01-16",
+  "summary": "해운대 A주택(2010.10.) 재개발 → AA주택 사용승인(2014.5.) → B아파트 취득(2014.12.) → AA 양도(2016.6. 이후) — §155① 「1년 경과」 판정의 AA 취득일은 A 취득일",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2016-06-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2010-10-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "region": "non_capital",
+     "acquisitionDate": "2014-12-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 재개발주택의 취득일 해석(§155① 1년 경과 판정에서는 구주택 취득일) 및 증가 부수토지의 사용승인서 교부일 기산(증가분 과세 여부는 원문도 결론 없음). 참고 관측(구주택 취득일 2010-10-15 입력, B 2014-12-15 수도권 밖, 양도 2016-06-15 가정·5억): 비과세(155-1) = 원문 (1). 사용승인일 2014-05-15를 넣으면 B가 그로부터 1년 안 취득이라 과세(V-G095-completion) — 질의자 주장 쪽 결론."
+ }
+]

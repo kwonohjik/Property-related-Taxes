@@ -1,0 +1,27 @@
+[
+ {
+  "id": "G061-era",
+  "docNo": "대법원-2006-두-16397",
+  "docDate": "2007.02.22.",
+  "basis": "era",
+  "today": "2007-02-22",
+  "summary": "사업시행인가일 현재 1년 이상 거주한 기존주택의 재건축 입주권을 질병 요양 사유로 양도 — 인가일 기준 보유·거주기간 미충족이어도 비과세 (일자 구성)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2003-03-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "no",
+    "acquisitionDate": "2000-03-15",
+    "redevApprovalDate": "2002-06-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 입주권 양도의 §154① 단서(3호 질병 요양 등 부득이한 사유) — 판정 메뉴는 단서 카드를 양도 대상이 주택일 때만 띄운다(lib/calc/one-house-judgment-section-scope.ts:107 isHousing 게이트 → 사유 미전송). 판결: 비과세 요건을 갖춘 입주권은 주택으로 취급되어, 사업시행인가일 현재 1년 이상 거주한 기존주택의 입주권을 질병 요양 사유로 양도하면 인가일 기준 보유·거주기간 미충족이어도 비과세, 「1년 이상 거주」는 세대전원 거주 불요. 구성 일자(판결문에 일자 없음): 기존주택 2000-03-15·사업시행인가 2002-06-15(보유 2년 3개월 — 당시 3년 미달)·양도 2003-03-15·3억, 인가일 현재 요건 선언 no. 참고 관측: 과세. 선언을 yes로 바꾸면 비과세(V-G061-yes) — 부득이 사유를 선언에 접어 넣어야만 맞는다."
+ }
+]

@@ -1,0 +1,99 @@
+[
+  {
+    "id": "G110-era",
+    "docNo": "재산세과-1708",
+    "docDate": "2008.07.16.",
+    "basis": "era",
+    "today": "2009-03-01",
+    "summary": "1주택(2003.7. 취득) 보유 세대가 보유 상가(2003.8.)의 재개발 관리처분인가(2008.8.)로 조합원입주권 취득 — 인가일부터 1년 이내 종전주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-03-16",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-07-15",
+        "regionCode": "3011010100"
+      },
+      "presaleRights": [
+        {
+          "id": "shop",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2008-08-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2008-08-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 일자 가정: 아파트 2003-07-15(질의 당시 5년 보유), 상가 2003-08-15(원문 2003.8.), 관리처분인가 2008-08-15(원문 2008.8. 예정), 입주권 취득일 = 관리처분인가일(원문 회신이 그렇게 정함), 종전주택 양도 2009-03-16(인가 후 1년 이내), today 2009-03-01, 양도가 7억·비조정. 관측: 비과세 — article89Clause2 = §156의2③. 한계: 원문 당시 ③ 기한은 입주권 취득일부터 1년인데 엔진은 조문 문언 3년 하나로 판정(연혁 없음) → 1년 경계 구별력 없음. 1년 경과 후의 ④ 갈래(당시 완성 후 1년 이내 이사·양도)도 엔진 연혁은 2년·3년만 있다(data/article-156-2-completion-era.ts). 3년 경계는 P-G110-current·N-G110-current가 단언. M2 보강: 2011.6.2. 이전 양도분 거주요건(서울·과천·5개 신도시)은 소재지가 가른다 — 원문 소재지 대전(법정동코드 입력, 지역 밖)."
+  },
+  {
+    "id": "P-G110-current",
+    "docNo": "재산세과-1708",
+    "docDate": "2008.07.16.",
+    "basis": "current",
+    "today": "2026-05-01",
+    "summary": "경계 양성 짝(현행) — 1주택 보유 중 상가 재개발로 입주권 취득(인가 2023.6.) 후 2년 11개월 만에 종전주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "shop",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2023-06-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2023-06-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(경계 양성 짝). 현행 규칙: 종전주택 취득 후 1년이 지나 조합원입주권을 취득하고 입주권 취득일부터 3년 이내 종전주택을 양도하면 1세대1주택으로 본다(소득세법 시행령 §156의2③). 구성: 주택 2018-03-15, 보유 상가의 재개발 관리처분인가 2023-06-15(입주권 취득), 양도 2026-05-15(2년 11개월), 비조정·양도가 8억. 관측: 비과세(article89Clause2 §156의2③)."
+  },
+  {
+    "id": "N-G110-current",
+    "docNo": "재산세과-1708",
+    "docDate": "2008.07.16.",
+    "basis": "current",
+    "today": "2026-06-10",
+    "summary": "경계 음성 짝(현행) — 같은 사실에서 입주권 취득일부터 3년을 넘겨(3년+5일) 양도, 신축주택 완성 후 이사 등 §156의2④ 요건 해당 없음",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-20",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "shop",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2023-06-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2023-06-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(경계 음성 짝). 같은 구성에서 입주권 취득일부터 3년 + 5일(2026-06-20)에 양도하고 3년 초과 예외(§156의2④·시행규칙 §75①)는 '해당 없음' → §89② 배제 → 과세. pending에 156-2-3-right-three-year(기한 2026-06-15)가 뜬다 — 3년 경계 구별력 확인."
+  }
+]

@@ -1,0 +1,107 @@
+[
+ {
+  "id": "G062-era",
+  "docNo": "대법원-2004-두-9456",
+  "docDate": "2005.03.11.",
+  "basis": "era",
+  "today": "2005-03-11",
+  "summary": "기존주택(1994) 보유 중 신주택 취득(1999.4.26.)·사업계획승인(1999.7.29.)으로 입주권 → 신주택 취득일부터 2년 이내 입주권 양도(2001.1.30.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2001-01-30",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1994-05-03",
+    "redevApprovalDate": "1999-07-29",
+    "redevOtherHouseAcquisitionDate": "1999-04-26"
+   },
+   "houses": [
+    {
+     "id": "new",
+     "region": "capital",
+     "acquisitionDate": "1999-04-26"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(불리). 판결: 입주권도 양도 당시 다른 주택이 없고 기준일 현재 기존주택이 §154① 요건을 갖추면 주택으로 취급되고, 입주권 양도 전에 다른 주택을 취득한 경우 그 취득일부터 2년 이내 양도하면 시행령 §155①이 적용되어 비과세. 표현: 원문 일자 그대로(기존주택 1994-05-03·신주택 1999-04-26·사업계획승인 1999-07-29·양도 2001-01-30), 명부에 신주택, 나목 취득일 칸 1999-04-26, 선언 yes, 양도가 3억 가정. 관측: 과세 — 「2005.12.31. 이전 양도분은 양도일 현재 다른 주택이 없어야 합니다 — 1주택 보유 경로는 2006.1.1. 이후 양도분부터」. 엔진은 당시 시행령 §155⑯ 문언대로 2005년 이전 양도분에 1주택 보유 경로를 두지 않는다(설계) — 판례가 인정한 대체취득 특례를 반영하지 않음. 의심 지점: lib/tax-engine/data/one-right-requirement-era.ts:91-94(ga_only → null), lib/tax-engine/transfer-tax-redevelopment-transforms.ts:227. 신주택을 빼면 비과세(V-G062-norow)."
+ },
+ {
+  "id": "G062-current",
+  "docNo": "대법원-2004-두-9456",
+  "docDate": "2005.03.11.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "입주권(2023.3. 인가) 보유 세대가 다른 주택 1채 취득(2024.4.) 후 3년 이내 입주권 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2012-03-15",
+    "redevApprovalDate": "2023-03-15",
+    "redevOtherHouseAcquisitionDate": "2024-04-15"
+   },
+   "houses": [
+    {
+     "id": "new",
+     "region": "capital",
+     "acquisitionDate": "2024-04-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "one_right_89_1_4_na"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 조합원입주권 외에 1주택을 보유한 경우(분양권 미보유) 그 1주택을 취득한 날부터 3년 이내 입주권을 양도하면 비과세(소득세법 §89①4호 나목). 구성: 기존주택 2012-03-15·인가 2023-03-15·다른 주택 2024-04-15(명부 + 나목 취득일 칸)·양도 2026-06-15(2년 2개월)·8억·비조정. 관측: 비과세(나목). 음성 짝 N-G062-over3y."
+ },
+ {
+  "id": "N-G062-over3y",
+  "docNo": "대법원-2004-두-9456",
+  "docDate": "2005.03.11.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "음성 짝 — 다른 주택 취득(2023.2.) 후 3년을 넘겨 입주권 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2012-03-15",
+    "redevApprovalDate": "2023-03-15",
+    "redevOtherHouseAcquisitionDate": "2023-02-15"
+   },
+   "houses": [
+    {
+     "id": "new",
+     "region": "capital",
+     "acquisitionDate": "2023-02-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "one_right_89_1_4_na"
+   ]
+  },
+  "bucket": "match",
+  "note": "match(음성 짝). G062-current에서 다른 주택 취득일만 2023-02-15로 — 양도 2026-06-15는 취득 후 3년 4개월이라 나목 불성립 → 과세(사유: 「3년을 넘겼습니다」)."
+ }
+]

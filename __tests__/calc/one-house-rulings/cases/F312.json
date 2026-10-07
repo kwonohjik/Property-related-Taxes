@@ -1,0 +1,56 @@
+[
+ {
+  "id": "F312-era",
+  "docNo": "재일46014-1488",
+  "docDate": "1997.06.18.",
+  "basis": "era",
+  "today": "1997-06-01",
+  "summary": "해외유학을 예상해 아파트(1993.4. 취득) 양도(1994.6.) 후 입학허가 지연으로 약 11개월 뒤 출국(1995.5.) — 비거주자 상태 양도가 아니어서 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "1994-06-15",
+   "contractTotalPrice": "100000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1993-04-15"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "1995-05-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "bucket": "mismatch",
+  "note": "mismatch. 출국이 확정되지 않은 단계(입학허가서 미발급)에서 양도하고 약 11개월 뒤 출국 — 국세청·심판 어느 쪽 해석으로도 비거주자 상태 양도가 아니어서 과세. 표현: 취득 1993-04-15, 양도 1994-06-15, 출국 1995-05-15(월 단위 15일), 다목 선택, 양도가 1억 가정(원문 미기재). 관측: 단서 적용 비과세. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:240-244 · civil-period.ts:142-143(양도일 < 출국일도 기한 이내로 봄 — 하한 없음). 질의 당시 근거는 구 시행령 §15①3호·시행규칙 §6④1호."
+ },
+ {
+  "id": "F312-current",
+  "docNo": "재일46014-1488",
+  "docDate": "1997.06.18.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "현행 짝(구성) — 유학 예상으로 주택(2024.12.16. 취득) 양도(2025.11.17.) 후 10개월 뒤 세대전원 출국(2026.9.15.) → 출국 전 양도라 다목 부적용, 보유 11개월 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2025-11-17",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2024-12-16"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2026-09-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "bucket": "mismatch",
+  "note": "mismatch. 현행 규칙: 소득세법 시행령 §154①2호다목은 1년 이상 국외거주가 필요한 취학·근무로 세대전원이 출국한 경우로서 출국일 현재 1주택을 보유하고 출국일부터 2년 이내 양도하는 경우 — 출국 전(특히 출국이 확정되지 않은 단계) 양도는 적용되지 않는다. 구성: 취득 2024-12-16, 양도 2025-11-17, 세대전원 유학 출국 2026-09-15(10개월 뒤), 비조정·양도가 5억. 관측: 단서 적용 비과세(보유 11개월인데도). 의심 지점 F312-era와 같음."
+ }
+]

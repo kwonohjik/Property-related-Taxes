@@ -6,7 +6,10 @@
  *
  * 🔑 **집합건물을 가르는 축을 새로 만들지 않는다** — `AddressSearch`가 이미 공동주택
  *    세대 목록을 조회하므로(`components/ui/address-search.tsx:203`) 「세대를 고를 수
- *    있었는데 안 골랐으면 차단」으로 간다. 토지·단독건물은 목록이 비어 자동 면제된다.
+ *    있었는데 안 골랐으면 차단」으로 간다.
+ *    ⚠️ 종전 「토지·단독건물은 목록이 비어 자동 면제」는 **사실이 아니었다** — 개별주택 공시가격이
+ *    동·호가 빈 행으로 온다. 「세대」는 동 또는 호가 있는 행이고(`AddressSearch` U-1), 토지는
+ *    자산 종류로 면제한다(L-2). 계획서 `transfer-address-unit-gate-detached-house.plan.md`
  *
  * ⚠️ N-1 — 신규 asset 필드는 **stale sessionStorage에서 `undefined`로 온다.**
  *    접근부 가드가 유일한 안전망이다 ([[feedback_new_asset_field_stale_sessionstorage_guard]]).
@@ -65,8 +68,9 @@ describe("⑧ 소재지 게이트", () => {
   });
 
   // 🔴 G-2 — 집합건물(세대 목록이 있었다)인데 동·호 미선택
+  //    주택으로 잰다 — 토지는 L-2로 면제되므로 토지로 재면 이 게이트를 관측하지 못한다
   it("G-2: 세대를 고를 수 있었는데 안 골랐으면 차단된다", () => {
-    const a = asset({ addressJibun: JIBUN, hasAddressUnits: true, addressDong: "", addressHo: "" });
+    const a = asset({ assetKind: "housing", addressJibun: JIBUN, hasAddressUnits: true, addressDong: "", addressHo: "" });
     expect(validateAssetEntry(a, 0, form(a)) ?? "").toMatch(UNIT_MSG);
   });
 
@@ -77,8 +81,17 @@ describe("⑧ 소재지 게이트", () => {
   });
 
   // ✅ 유지 — 동·호를 고른 집합건물은 통과
-  it("G-3b: 세대를 골랐으면 통과한다", () => {
-    const a = asset({ addressJibun: JIBUN, hasAddressUnits: true, addressDong: "101동", addressHo: "501" });
+  //    주택으로 잰다(G-2와 같은 이유). 주택 고유 입력이 비어 다른 오류가 날 수 있으므로
+  //    «동·호 오류가 아님»만 단언한다
+  it("G-3b: 세대를 골랐으면 동·호 게이트를 통과한다", () => {
+    const a = asset({ assetKind: "housing", addressJibun: JIBUN, hasAddressUnits: true, addressDong: "101동", addressHo: "501" });
+    expect(validateAssetEntry(a, 0, form(a)) ?? "").not.toMatch(UNIT_MSG);
+  });
+
+  // 🔴 L-2 — 토지는 필지(지번)로 특정된다. 같은 필지에 공동주택이 있어도 동·호는 식별자가 아니다
+  //    (계획서 `transfer-address-unit-gate-detached-house.plan.md` §5-B · Q-1)
+  it("L-2: 토지는 세대 목록이 있어도 동·호를 요구하지 않는다", () => {
+    const a = asset({ addressJibun: JIBUN, hasAddressUnits: true, addressDong: "", addressHo: "" });
     expect(validateAssetEntry(a, 0, form(a))).toBeNull();
   });
 

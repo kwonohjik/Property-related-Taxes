@@ -1,0 +1,41 @@
+[
+  {
+    "id": "F240-era",
+    "docNo": "서면-2018-부동산-0935 [부동산납세과-1102]",
+    "docDate": "2018.11.29.",
+    "basis": "era",
+    "today": "2021-06-01",
+    "summary": "F235와 같은 원문 — 계약금 지급일 공동상속주택 소수지분 보유는 「주택을 보유하지 아니한 경우」가 아님 (참고 폼: 공고 전 계약·무주택 자기확인을 켠 표현)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2021-06-15",
+      "contractTotalPrice": "600000000",
+      "wasRegulatedAtAcquisition": true,
+      "isRegulatedArea": true,
+      "finalHouseRestartHistory": "no",
+      "newHouseContractDate": "2016-10-06",
+      "prevHouseRegulatedAtNewAcquisition": "yes",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-10-31",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "capital",
+          "acquisitionDate": "2018-12-15"
+        }
+      ],
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "F235와 같은 문서(서면-2018-부동산-0935). 사실·가정은 F235-era와 같고, 참고 폼은 사용자가 경과규정을 §154①5호(공고 전 계약 + 계약금 지급일 무주택)로 보고 무주택 자기확인을 켠 표현이다. 회신대로면 소수지분 보유로 무주택이 아니어서 체크 자체가 사실과 다르다. 없는 입력: F235와 같음(부칙 제2조②2호·계약금 지급일 현재 보유 주택). 참고 관측: 과세 — 단, 무주택 체크 때문이 아니라 일시적 2주택 맥락에서 5호 사유가 본문에 실리지 않아서다(lib/calc/transfer-tax-api-helpers.ts:83 `TEMP_TWO_HOUSE_PROVISO_REASONS` 밖 사유 미전송, lib/tax-engine/legal-codes/transfer.ts:548 — 1·2호가·3호만). 1주택 맥락(F253 프로브)에서는 같은 체크로 비과세가 된다. 일시적 2주택 종전주택에 5호 거주요건 면제가 적용되는지는 확인 필요(보고서 부수 발견)."
+  }
+]

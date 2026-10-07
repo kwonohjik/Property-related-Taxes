@@ -1,0 +1,77 @@
+[
+  {
+    "id": "G126-era",
+    "docNo": "서면인터넷방문상담4팀-1120",
+    "docDate": "2006.04.25.",
+    "basis": "era",
+    "today": "2006-03-02",
+    "summary": "재건축 사업시행승인(2002.11.1.) 전 분양계약(2001.10.11.)한 아파트를 시행기간 중 잔금청산(2003.10.1.)으로 취득·거주, 재건축 종료(2006.2.1.) 후 대체주택 양도(2006.3.1.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-03-01",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-10-01"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "1982-12-10",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2002-11-01",
+      "replCompletionDate": "2006-02-01",
+      "replResidenceMonths": "29",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자 그대로(재건축 대상 주택 1982-12-10, 대체주택 분양계약 2001-10-11, 재건축 사업시행승인 2002-11-01, 잔금 2003-10-01, 재건축 종료 2006-02-01, 대체주택 양도 2006-03-01). 거주 29개월(2003-10~2006-03; 본인은 근무상 주말 거주 — 세대 거주로 봄), 양도가 5억·비조정 가정. 표현: 대체주택 취득일 = 잔금일, 명부에 재건축 신축주택(종전 취득일), 완성일 = 재건축 종료일. 관측: 비과세(156-2-5) + 잡음 보류(2009 이전 양도). 원문은 구 소득세법 시행규칙 §71②4호 적용분인데 엔진은 §156의2⑤ 요건(인가 후 취득·1년 거주·완성 후 기한)으로 판정 — 결론 같음. 본인 일부 미거주의 거주기간 산입 쟁점은 원문이 직접 답하지 않았고 입력도 없다."
+  },
+  {
+    "id": "G126-current",
+    "docNo": "서면인터넷방문상담4팀-1120",
+    "docDate": "2006.04.25.",
+    "basis": "current",
+    "today": "2026-05-16",
+    "summary": "현행 — 사업시행인가 전 분양계약하고 인가 후 잔금청산으로 취득한 대체주택을 신축주택 완성 후 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2010-03-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2019-10-15",
+      "replCompletionDate": "2025-09-15",
+      "replResidenceMonths": "60",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 소득세법 시행령 §156의2⑤ — 대체주택은 사업시행인가일 이후 취득해야 하고 취득시기는 소득세법 §98(잔금청산일 원칙)에 따르므로, 인가 전 분양계약·인가 후 잔금청산이면 인가 후 취득에 해당. 구성: 분양계약 2019-05(인가 전 — 입력 칸 없음), 인가 2019-10-15, 잔금 2020-04-15, 신축주택 완성 2025-09-15, 대체주택 양도 2026-05-15, 60개월 거주, 비조정·양도가 8억. 관측: 비과세(156-2-5)."
+  }
+]

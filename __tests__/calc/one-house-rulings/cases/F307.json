@@ -1,0 +1,36 @@
+[
+ {
+  "id": "F307-era",
+  "docNo": "조심-2019-서-3182",
+  "docDate": "2020.02.06.",
+  "basis": "era",
+  "today": "2019-01-17",
+  "summary": "쟁점아파트(2006 증여 취득) 보유 중 오피스텔 주택 취득(2016.9.5.), 해외근무로 출국(2017) 후 비거주자로 쟁점아파트 양도(2018.6.19.) — 비거주자에게 일시적 2주택 특례 부적용 과세",
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2018-06-19",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2006-05-25"
+   },
+   "houses": [
+    {
+     "id": "officetel",
+     "acquisitionDate": "2016-09-05",
+     "isOfficetel": true
+    }
+   ],
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2017-07-24"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 참고 관측(referenceForm — 쟁점아파트 증여 취득 2006-05-25를 매매 취득일로 단순화, 오피스텔 주택 2016-09-05 명부, 다목 출국 2017-07-24, 양도 2018-06-19·8억 가정): 2주택이라 단서 카드 닫힘, 거주자 기준 155-1-temporary-two-house 비과세 → 기대(과세)와 다름."
+ }
+]

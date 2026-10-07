@@ -1,0 +1,88 @@
+[
+  {
+    "id": "F243-era",
+    "docNo": "사전-2020-법령해석재산-1047 [법령해석과-1573]",
+    "docDate": "2021.05.04.",
+    "basis": "era",
+    "today": "2021-06-01",
+    "summary": "모가 2017.3. 취득한 은평 A주택을 2017.12.4. 합가(동일세대)한 아들이 다음 날 상속, 용산 C주택(2020.6.) 취득 후 일시적 2주택으로 A 양도 — 2017.8.3. 이후 동일세대가 됐으므로 거주요건 적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-06-10",
+      "contractTotalPrice": "800000000",
+      "isRegulatedArea": true,
+      "newHouseMoveInDate": "2020-06-20",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-12-05",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2017-03-15",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "2017-12-04",
+        "decedentCohabitationResidenceMonths": "0",
+        "regionCode": "1138010100",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "houses": [
+        {
+          "id": "C",
+          "region": "capital",
+          "acquisitionDate": "2020-06-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(같은 결론, 경로 다름). 원문 사실: 2017.3. 모(甲) 은평 A주택 취득, 2017.10. 신청인 용산 B주택 취득, 2017-12-04 모가 신청인 주소로 전입(세대 합침) → 2017-12-05 모 사망·A 상속, 2020.6. B를 §155② 특례로 양도·용산 C주택 취득, 2021.6. A 양도 예정(§155① 요건 충족 전제). 가정: A 소재지 은평(법정동코드), 동일세대 개시 2017-12-04, A 거주 0(상속 전후 모두 B·C 거주), C 취득 2020-06-15·전입 2020-06-20·취득 당시 조정, 양도 2021-06-10, 양도가 8억. 회신: 2017.8.3. 이후 세대를 합친 상속인은 거주요건 적용. 관측: 과세(일시적 2주택 미적용 — 종전주택 거주요건 미충족). 엔진은 상속개시일(2017-12-05)이 2017.8.3. 이후라서 적용하므로 동일세대가 된 시점(2017.8.3. 전후)은 결론에 쓰이지 않는다 — 동일세대 개시일을 2017-03-15로 바꿔도 과세(V-F243-cohab2012), 그 반대 방향의 결함은 P-F242-no-residence. 양성 짝 P-F243-resided24."
+  },
+  {
+    "id": "P-F243-resided24",
+    "docNo": "사전-2020-법령해석재산-1047 [법령해석과-1573]",
+    "docDate": "2021.05.04.",
+    "basis": "era",
+    "today": "2021-06-01",
+    "summary": "F243 양성 짝(가정) — 같은 사실에서 상속인이 상속 후 A주택에 2년 거주했다면 거주요건을 채워 일시적 2주택 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-06-10",
+      "contractTotalPrice": "800000000",
+      "isRegulatedArea": true,
+      "newHouseMoveInDate": "2020-06-20",
+      "newHouseRegulatedAtAcquisition": "yes",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-12-05",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2017-03-15",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "2017-12-04",
+        "decedentCohabitationResidenceMonths": "0",
+        "regionCode": "1138010100",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
+      },
+      "houses": [
+        {
+          "id": "C",
+          "region": "capital",
+          "acquisitionDate": "2020-06-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "양성 짝(가정) — F243-era에서 상속 후 거주 24개월만 바꾼 최소쌍. 거주요건을 채우면 일시적 2주택(155-1) 비과세 → F243-era의 과세가 거주요건 축에서 나왔음을 확인. 판정 보류 155-1-regulated-at-new-acquisition-unverified 여부는 단언하지 않는다."
+  }
+]

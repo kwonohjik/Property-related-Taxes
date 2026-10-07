@@ -1,0 +1,34 @@
+[
+ {
+  "id": "G092-era",
+  "docNo": "서면-2015-부동산-1886 [부동산납세과-2114]",
+  "docDate": "2015.12.24.",
+  "basis": "era",
+  "today": "2015-12-24",
+  "summary": "A주택(2011.5.25.)·불하 시유지로 받은 입주권이 완공(2015.7.22.) — 같은 구역 B아파트 취득(2015.8.12.) 후 3년 이내 A 신축주택 양도",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2017-06-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2011-05-25"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "region": "capital",
+     "acquisitionDate": "2015-08-12"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도하는 신축주택이 재개발로 완성된 주택이라는 사실(§155① 「종전주택 취득 후 1년 경과」 판정의 기산일 = 구주택 취득일) — 취득일 칸 하나에 구주택 취득일을 넣을지 사용승인일을 넣을지 사용자가 골라야 한다. 회신: 불하 시유지분 보유기간과 무관하게 구주택+공사기간+신축주택 보유기간으로 판정하고, 구주택 취득 1년 후 다른 주택을 취득해 그 취득일부터 3년 이내 신축주택을 양도하면 §155① 적용. 참고 관측(구주택 취득일 2011-05-25 입력, B 2015-08-12, 양도 2017-06-15 가정·5억): 비과세(155-1). 사용승인일 2015-07-22를 넣으면 B가 1년 안 취득이라 과세(V-G092-completion)."
+ }
+]

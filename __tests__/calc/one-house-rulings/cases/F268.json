@@ -1,0 +1,62 @@
+[
+ {
+  "id": "F268-current",
+  "docNo": "서면인터넷방문상담4팀-637",
+  "docDate": "2008.03.13.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "구성 — 배우자·자녀 먼저 출국(2022.6.15.), 본인 출국으로 세대전원 출국(2024.6.17.) 후 2년 이내(2026.6.17.) 양도 → 출국일 = 세대전원 출국일로 2년 이내라 해외이주 특례 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-17",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2021-03-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "12"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2024-06-17"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 구성 케이스 — 원문은 「출국일 = 세대전원이 출국하는 날」 기산 규칙을 회신(재건축 완료 후 주택 양도 비과세·입주권 상태 양도 과세는 입주권 경로라 이 케이스 밖). 규칙은 출국일 칸에 세대전원 출국일(2024-06-17)을 넣는 것으로 표현하고, 배우자·자녀 선출국일(2022-06-15)과 결론이 갈리게 날짜를 잡았다. 중립: 취득 2021-03-15 조정 취득·거주 12개월(본칙 거주요건 미충족이라 단서가 결론을 가름), 양도가 8억, 양도 2026-06-17(출국일+2년 당일). 관측: 해외이주 단서 적용 비과세. 반대 규칙 짝 N-F268-first-member-departure."
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "docNo": "서면인터넷방문상담4팀-637",
+  "docDate": "2008.03.13.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F268-current의 반대 규칙 짝 — 먼저 출국한 배우자의 출국일(2022.6.15.)을 기산일로 보면 2년 경과 → 특례 부적용, 거주 12개월이라 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-17",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2021-03-15",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "12"
+   },
+   "wasRegulatedAtAcquisition": true,
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "2022-06-15"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:overseas_migration"
+   ]
+  },
+  "bucket": "match",
+  "note": "반대 규칙 짝(가정) — 출국일 칸에 먼저 출국한 배우자 출국일(2022-06-15)을 넣으면 2년 경과로 단서 불성립 → 거주 12개월 과세. 판정 보류 2건(거주 충족일 미계산·삭제 전 4호 미입력 안내)은 결론과 무관한 안내."
+ }
+]

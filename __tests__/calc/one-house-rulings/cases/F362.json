@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F362-era",
+    "docNo": "기획재정부 재산세제과-1446 [법규과-3341]",
+    "docDate": "2022.11.18.",
+    "basis": "era",
+    "today": "2025-01-20",
+    "summary": "乙이 甲 소유 조정대상지역 주택 매매계약(2020.9.29.), 甲·丙 임대차계약(2020.10., 임대기간 2020.12.1.~2022.11.30.) 후 잔금일(2020.12.1.)에 임대인 명의를 乙로 바꿔 같은 내용으로 재작성 — 직전임대차계약 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-12-01"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-10-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(제2안): 전 소유자·임차인 간 계약을 신 소유자가 같은 내용으로 다시 작성한 경우 임대기간이 취득 후 시작돼도 시행령 §155의3의 직전임대차계약이 아님 → 특례 부적용. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 참조 관측(직전 24개월·상생 2022-10-15 체결 24개월·증액 5): 비과세(applied 155-3-1-win-win-rental) — 원문과 반대. 일자 가정: 취득 2020-12-01, 상생임대차 체결 2022-10-15, 양도 2025-01-15, 거주 0, 양도가 9억."
+  }
+]

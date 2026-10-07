@@ -1,0 +1,143 @@
+[
+ {
+  "id": "F098-era",
+  "docNo": "조심-2018-서-2134",
+  "docDate": "2018.06.29.",
+  "basis": "era",
+  "today": "2017-04-20",
+  "summary": "공부상 업무시설 오피스텔 39호 중 24호가 사실상 주거용(전입·주거시설·면세 신고) — 호별로 각각 주택이며 단독(다가구)주택이 아님, 양도주택 비과세 배제",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2017-04-10",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1986-09-25"
+   },
+   "houses": [
+    {
+     "id": "ofc01",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc02",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc03",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc04",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc05",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc06",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc07",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc08",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc09",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc10",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc11",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc12",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc13",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc14",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc15",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc16",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc17",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc18",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc19",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc20",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc21",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc22",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc23",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    },
+    {
+     "id": "ofc24",
+     "acquisitionDate": "2015-11-05",
+     "isOfficetel": true
+    }
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 주택 해당 여부(건물의 사실상 용도·구조·사용 실태)를 묻는 칸 — 판정 메뉴는 명부(다른 보유 주택)에 넣으면 주택, 빼면 주택 아님으로 보아 그 판단을 사용자에게 맡긴다; 오피스텔을 다가구주택(1주택)으로 볼 수 없다는 판단도 사용자 몫이다. 참조 관측(referenceForm): 과세 — 원문 결론(과세)과 같음(쟁점 축은 사용자 입력에 달림). 일자·가정: 원문 일자(양도주택 1986-09-25·양도 2017-04-10, 쟁점건물 취득 2015-11-05는 청구인 주장일), 양도가 5억 가정. 주거용 24호를 명부에 넣은 참조."
+ }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F374-era",
+    "docNo": "부동산거래관리과-1066",
+    "docDate": "2010.08.17.",
+    "basis": "era",
+    "today": "2011-09-20",
+    "summary": "건설임대주택 — 母 거주(2005.7.29.~2007.8.5.)·재혼으로 퇴거, 子가 임차권 승계(2007.10.17.)해 거주(子는 2006.7.27.부터 동거), 분양전환(2010.8.) 받아 양도 — 전임차인 거주기간 불산입",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2011-09-15",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-08-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "61"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 구성 케이스(원문은 기산 규칙만 회신): 임차권을 승계받은 경우 전임차인이 임차해 거주한 기간은 §154①1호 5년 거주기간에 산입하지 않음. 규칙이 결론을 가르도록 양도일을 2011-09-15로 두면 승계일(2007-10-17)부터 47개월 → 1호 불성립·보유 1년 1개월 → 과세, 子 실제 동거 시작(2006-07-27)부터면 61개월 → 비과세. 없는 입력: 임차권 승계일과 전임차인 기간 — 거주 칸은 개월(또는 구간)만 받는다. 참조 관측(子의 실제 거주 61개월 직접 입력): 비과세(applied 154-1-proviso:rental_5yr_residence) — 규칙과 반대. 승계일부터 구간으로 넣으면 입주일이 취득일(분양전환)보다 빠르다는 ⑧ 오류가 난다. 일자 가정: 분양전환 취득 2010-08-15, 양도가 2억."
+  }
+]

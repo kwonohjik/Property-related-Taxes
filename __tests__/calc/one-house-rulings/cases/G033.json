@@ -1,0 +1,32 @@
+[
+  {
+    "id": "G033-era",
+    "docNo": "부동산거래관리과-232",
+    "docDate": "2012.04.23.",
+    "basis": "era",
+    "today": "2012-04-23",
+    "summary": "형제에게 증여받은 서울 A주택(2005.12.) — 재개발 관리처분인가·세입자 퇴거(2008.9.) 후 공가, 멸실(2009.10.), 경북 상주 농어촌주택 B(2011) 취득 후 A입주권 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2012-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2005-12-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "no",
+        "redevApprovalDate": "2008-09-15",
+        "redevOtherHouseAcquisitionDate": "2011-05-15"
+      },
+      "houses": [
+        {
+          "id": "rural-b",
+          "region": "non_capital",
+          "acquisitionDate": "2011-05-15"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 인가 후 공가(사실상 주거 미사용) 기간 불산입으로 인가일 현재 보유 3년(당시) 미충족 → 입주권 특례(시행령 §155⑰)와 조세특례제한법 §99의4 농어촌주택 과세특례 모두 불가. 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 조특법 §99의4 입력도 입주권 판정 경로에 닿지 않는다. 참고 관측(referenceForm: 요건 선언 no, B는 명부 비수도권 행 2011-05-15, 양도 2012-03-15·5억 가정): 과세."
+  }
+]

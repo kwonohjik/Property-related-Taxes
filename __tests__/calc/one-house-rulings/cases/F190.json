@@ -1,0 +1,64 @@
+[
+ {
+  "id": "F190-era",
+  "docNo": "조심-2020-서-1405",
+  "docDate": "2020.06.29.",
+  "basis": "era",
+  "today": "2020-06-29",
+  "summary": "종전주택 취득(2016.9.29.) 후 정확히 1년 되는 날(2017.9.29. 잔금) 대체주택 취득 → 종전주택 양도(2019.3.29.): 「취득일부터 1년 이상 지난 후」는 초일 불산입 — 1년 미경과로 일시적 2주택 특례 부적용(기각)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2019-03-29",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2016-09-29"
+   },
+   "houses": [
+    {
+     "id": "replacement",
+     "acquisitionDate": "2017-09-29"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "match",
+  "note": "match — 관측: 과세, 요건 검토에서 「종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득」 미충족(1년 경과일 2017-09-30 > 신규 취득 2017-09-29). 처분기한(3년)·보유 2년 등 다른 요건은 충족이라 과세 사유가 1년 요건임을 확인. 짝 P-F190-one-day-later(대체주택을 하루 늦게 취득 → 비과세 155-1). 원문 일자 그대로, 소재지 미기재 → 비조정·양도가 5억 가정. 공동명의(각 1/2)는 판정에 영향 없어 단독으로 표현."
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "docNo": "조심-2020-서-1405",
+  "docDate": "2020.06.29.",
+  "basis": "era",
+  "today": "2020-06-29",
+  "summary": "F190의 양성 짝(가정) — 대체주택을 하루 늦게(2017.9.30.) 취득했으면 1년 경과 후 취득이라 일시적 2주택 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2019-03-29",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2016-09-29"
+   },
+   "houses": [
+    {
+     "id": "replacement",
+     "acquisitionDate": "2017-09-30"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "match",
+  "note": "양성 짝(가정) — 대체주택 취득일만 하루 늦춘 최소쌍. 초일 불산입 규칙의 경계(응당일 미충족 · 다음 날 충족)를 고정한다."
+ }
+]

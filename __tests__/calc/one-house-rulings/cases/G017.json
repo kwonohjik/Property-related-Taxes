@@ -1,0 +1,68 @@
+[
+  {
+    "id": "G017-era",
+    "docNo": "대법원-2020-두-48338",
+    "docDate": "2020.12.10.",
+    "basis": "era",
+    "today": "2020-12-10",
+    "summary": "구성 케이스 — 원조합원 입주권(종전주택 1999 취득, 사업시행인가는 2006.1.1. 전, 관리처분계획인가 2007.6.15.)을 보유한 세대가 다른 주택(2003 취득)을 양도(2009.5.15.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-05-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-04-15"
+      },
+      "rightThreeYearExceptionKind": "none",
+      "presaleRights": [
+        {
+          "id": "right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1999-05-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2007-06-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 구성 케이스(원문은 원심 요지만 수록 — 사업시행인가일이 2006.1.1. 전이어도 관리처분계획인가일이 그 뒤면 입주권은 주택 수에 포함 → 주택 양도 비과세 배제). 관측: 과세(article89Clause2=excluded). 양성 짝 P-G017-era(인가 2005-12-15 → 대상 아님 → 비과세)로 인가일 축의 구별력을 고정. 가정: 입주권(종전주택) 1999-05-15 취득 — 양도 주택보다 먼저라 §156의2③ 시기 요건 불성립, 완공 후 이사 예외 미해당(none), 양도가 5억, 비조정."
+  },
+  {
+    "id": "P-G017-era-approval-2005",
+    "docNo": "대법원-2020-두-48338",
+    "docDate": "2020.12.10.",
+    "basis": "era",
+    "today": "2020-12-10",
+    "summary": "G017 양성 짝 — 관리처분계획인가가 2006.1.1. 전(2005.12.15.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-05-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-04-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
+      },
+      "rightThreeYearExceptionKind": "none",
+      "presaleRights": [
+        {
+          "id": "right",
+          "type": "redevelopment_right",
+          "acquisitionDate": "1999-05-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2005-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(양성 짝). 2006.1.1. 전 인가분 입주권은 §89② 주택 수 산입 대상이 아니어서 비과세. M2 보강: 2003.11.20.~2011.6.2. 양도분은 서울·과천·5개 신도시면 보유기간 중 거주 2년 — 원문은 소재지를 적지 않고 요건 충족을 전제하므로 거주 24개월을 가정했다."
+  }
+]

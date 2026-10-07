@@ -1,0 +1,33 @@
+[
+ {
+  "id": "F112-era",
+  "docNo": "국심-2002-중-0971",
+  "docDate": "2002.05.31.",
+  "basis": "era",
+  "today": "2000-02-25",
+  "summary": "농장 일부를 임차한 타인의 종업원 가족이 상시 거주하는 농장 내 관리사는 장부상 사업용 자산이라도 주택 — 양도주택 비과세 배제",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2000-02-15",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1983-07-12"
+   },
+   "houses": [
+    {
+     "id": "mgr1",
+     "region": "non_capital",
+     "acquisitionDate": "1983-01-15"
+    },
+    {
+     "id": "mgr2",
+     "region": "non_capital",
+     "acquisitionDate": "1983-01-15"
+    }
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 주택 해당 여부(건물의 사실상 용도·구조·사용 실태)를 묻는 칸 — 판정 메뉴는 명부(다른 보유 주택)에 넣으면 주택, 빼면 주택 아님으로 보아 그 판단을 사용자에게 맡긴다; 사업주 자신의 종업원 숙소인지 타인 종업원의 주거인지를 가를 칸도 없다. 참조 관측(referenceForm): 과세 — 원문 결론(과세)과 같음(쟁점 축은 사용자 입력에 달림). 일자·가정: 원문 일자(양도주택 1983-07-12·양도 2000-02-15), 관리사 취득일 미기재 → 1983-01-15 가정, 양도가 5억 가정(원문은 고급주택 실지거래가 축 — 중립화). 타인 종업원이 거주한 관리사 2동을 명부에 넣은 참조."
+ }
+]

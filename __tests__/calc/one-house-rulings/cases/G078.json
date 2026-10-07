@@ -1,0 +1,24 @@
+[
+ {
+  "id": "G078-era",
+  "docNo": "재산세과-1120",
+  "docDate": "2009.12.28.",
+  "basis": "era",
+  "today": "2009-12-28",
+  "summary": "주택<주택외 겸용건물을 재건축조합에 제공해 받은 입주권 양도(2009.8.17.) — 주택분·주택외분 양도가액은 기존건물·부수토지 평가액으로 안분",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2009-08-17",
+   "contractTotalPrice": "471400000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2000-03-15",
+    "redevApprovalDate": "2008-04-22"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력(출력): 주택<주택외 겸용건물 제공 입주권의 주택분·주택외분 양도가액 안분(기존건물·부수토지 평가액 비율) — 판정 메뉴는 겸용 구분과 안분을 받지 않는다. 참고 관측(referenceForm: 입주권 전체를 주택분으로 입력, 취득 2000-03-15 가정·인가 2008-04-22·양도 2009-08-17·4.714억): 비과세(가목) — 원문 사실상 주택외 부분(근린)은 주택이 아니라 그 부분 비과세는 성립하지 않는다(판정 메뉴는 전부 비과세로 보인다)."
+ }
+]

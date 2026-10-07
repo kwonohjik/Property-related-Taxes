@@ -1,0 +1,29 @@
+[
+ {
+  "id": "F316-era",
+  "docNo": "재산세과-1587",
+  "docDate": "2009.07.31.",
+  "basis": "era",
+  "today": "2009-07-01",
+  "summary": "회사 인사명령으로 1년 이상 해외연수(급여 지급)를 위해 세대전원 출국, 출국일 현재 1주택을 출국일부터 2년 이내 양도 — 다목 적용 (날짜 원문 미기재 — 구성)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2009-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2008-03-17"
+   },
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2008-09-16"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:overseas_residence"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 구성 — 원문에 날짜 없음: 취득 2008-03-17, 회사 인사명령 해외연수로 세대전원 출국 2008-09-16, 양도 2009-06-15(출국일부터 2년 이내·보유 1년 3개월), 양도가 4억. 해외연수(급여 지급)가 근무상 형편에 해당한다는 점은 다목 선택(자기선언)으로 표현. 관측: 다목 단서 적용 비과세."
+ }
+]

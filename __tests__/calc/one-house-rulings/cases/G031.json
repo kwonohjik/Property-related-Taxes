@@ -1,0 +1,24 @@
+[
+  {
+    "id": "G031-era",
+    "docNo": "조심-2018-서-4630",
+    "docDate": "2018.12.27.",
+    "basis": "era",
+    "today": "2018-12-27",
+    "summary": "구주택(2013.11.11. 취득, 세입자 거주) — 관리처분인가(2014.10.27.) 후 세입자 전출(2015.4.20.), 철거(2016.3.~10.), 입주권 양도(2017.7.11.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2017-07-11",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2013-11-11",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "no",
+        "redevApprovalDate": "2014-10-27"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 인가 후 미철거 주택의 보유기간 연장 종점(사실상 주거 사용 종료일 = 세입자 전출일, 철거일 아님) — 이 규칙으로 보유 2년 미달 → 기존주택 요건 불충족 → 과세. 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 참고 관측(referenceForm: 규칙대로 요건 선언 no, 양도가 5억 가정): 과세(가목 불성립 — 사유 「요건을 갖춘 기존주택 소유가 선언되지 않았습니다」). 선언을 yes로 바꾸면 비과세 — 결론이 사용자 판단에 달린다."
+  }
+]

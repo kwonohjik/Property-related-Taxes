@@ -1,0 +1,21 @@
+[
+  {
+    "id": "G012-era",
+    "docNo": "기획재정부 재산세제과-429",
+    "docDate": "2023.03.10.",
+    "basis": "era",
+    "today": "2023-03-10",
+    "summary": "서울 아파트(2005 취득)를 리모델링(2018 허가·2021 준공, 주거전용면적 30% 이내 증축)한 뒤 2022년 양도하는 1세대1주택 고가주택의 장기보유특별공제·세율 계산",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "1500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문은 장기보유특별공제·세율 계산 시 리모델링 전후 면적을 구분하지 않는다는 회신. 판정 메뉴 출력 밖. 참고 관측(referenceForm: 2005-06-15 취득·2022-06-15 양도·15억 가정): 부분 과세."
+  }
+]
