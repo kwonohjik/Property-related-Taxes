@@ -25,6 +25,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { calcLongTermHoldingDeduction, parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { TransferTaxInput, TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import {
@@ -707,14 +708,15 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
   });
 });
 
-describe("S 별건 — LTHD 파트별 공제액의 부동소수 1원 과소 (설계서 F-1)", () => {
+describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 — split · 가업상속 후단 · 장기임대 §97의3 (설계서 F-1)", () => {
   /**
    * 🔴 실측(2026-10-07, 실엔진): 1세대1주택 · 토지 2017-06-01 · 건물 2017-07-01(둘 다 보유 9년) · 거주 96개월 · 양도 30억.
    * 파트 공제율 = 보유 9년×4%(36%) + 거주 8년×4%(32%) = 0.6799999999999999(double).
-   * `transfer-tax-lthd.ts:391·392`가 `applyRate`(= Math.floor(금액 × 율))를 써서 토지 652,799,999 · 건물 448,799,999
-   * (정확값 652,800,000 · 448,800,000)를 낸다. 같은 파일의 다른 지점은 D10-06에서 `applyLthdRate`(정수 분수)로 바꿨다.
+   * `transfer-tax-lthd.ts` split 분기가 `applyRate`(= Math.floor(금액 × 율))를 써서 토지 652,799,999 · 건물 448,799,999
+   * (정확값 652,800,000 · 448,800,000)를 냈다. 같은 파일의 다른 지점은 D10-06(77e627537)에서 `applyLthdRate`
+   * (정수 분수)로 바꿨으나 이 분기와 아래 두 분기는 빠졌다 — 커밋 메시지는 「6곳」만 열거하고 제외 근거를 적지 않았다.
    */
-  it.skip("F-1 파트 공제액 = 정수 분수연산 정확값", () => {
+  it("F-1 split 파트 공제액 = 정수 분수연산 정확값 (토지 652,800,000 · 건물 448,800,000)", () => {
     const r = calculateTransferTax(
       baseTransferInput({
         propertyType: "housing", transferPrice: 3_000_000_000, transferDate: D("2026-07-01"),
@@ -730,27 +732,41 @@ describe("S 별건 — LTHD 파트별 공제액의 부동소수 1원 과소 (설
     const landTaxable = mulDiv(1_600_000_000, 3_000_000_000 - 1_200_000_000, 3_000_000_000); // 960,000,000
     const bldTaxable = mulDiv(1_100_000_000, 3_000_000_000 - 1_200_000_000, 3_000_000_000); // 660,000,000
     expect(sd.land.taxableGainAfterProration).toBe(landTaxable);
+    expect(sd.land.longTermRate, "공제율 자체는 double 합산 그대로(고친 것은 적용이다)").toBe(0.6799999999999999);
     expect(sd.land.longTermDeduction).toBe(mulDiv(landTaxable, 68, 100)); // 652,800,000
     expect(sd.building.longTermDeduction).toBe(mulDiv(bldTaxable, 68, 100)); // 448,800,000
     expect(r.longTermHoldingDeduction).toBe(1_101_600_000);
   });
 
-  it("F-1 현행 표식(활성) — 두 파트 모두 1원 과소 (수정 시 삭제)", () => {
-    const r = calculateTransferTax(
-      baseTransferInput({
-        propertyType: "housing", transferPrice: 3_000_000_000, transferDate: D("2026-07-01"),
-        acquisitionDate: D("2017-07-01"), landAcquisitionDate: D("2017-06-01"), acquisitionPrice: 0,
-        isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 96,
-        isSeparateAcquisition: true, landAcqMode: "actual", buildingAcqMode: "actual",
-        landAcquisitionPrice: 200_000_000, buildingAcquisitionPrice: 100_000_000,
-        landStandardPriceAtTransfer: 600_000_000, buildingStandardPriceAtTransfer: 400_000_000,
-      } as Partial<TransferTaxInput>),
-      rates,
-    );
-    const sd = r.splitDetail!;
-    expect(sd.land.longTermDeduction).toBe(652_799_999);
-    expect(sd.building.longTermDeduction).toBe(448_799_999);
-    expect(r.longTermHoldingDeduction).toBe(1_101_599_998);
+  const rateTable = parseRatesFromMap(makeMockRates());
+  it("F-1b 가업상속 §95④ 후단 — 거주분 율(율 − 보유분 율의 double 뺄셈 0.07999999999999999)도 정확값", () => {
+    // 상속인 보유 4년(16%) + 거주 2년(8%) · 피상속인 취득일 기산 26년(40%) · 가업상속공제적용률 50%
+    const input = baseTransferInput({
+      transferPrice: 3_000_000_000, transferDate: D("2026-07-01"), acquisitionPrice: 500_000_000,
+      acquisitionDate: D("2022-03-01"), isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 24,
+      fbLthdLatter: { appliedRate: 0.5, decedentAcquisitionDate: D("2000-01-01") },
+    } as Partial<TransferTaxInput>);
+    const r = calcLongTermHoldingDeduction(1_000_000_000, input, rateTable.longTermHoldingRules, false, false);
+    // 피상속인분 5억 × 40% + 상속인분 5억 × 16% + 전체 10억 × 8% = 2억 + 0.8억 + 0.8억
+    expect(200_000_000 + 80_000_000 + 80_000_000).toBe(360_000_000);
+    expect(r.deduction).toBe(360_000_000);
+  });
+
+  it("F-1c 장기임대 §97의3 — 임대분 70% 적용도 정수 분수연산 (양도차익 167,796,000 × 70% = 117,457,200)", () => {
+    const input = baseTransferInput({
+      transferPrice: 1_500_000_000, transferDate: D("2026-07-01"), acquisitionPrice: 500_000_000,
+      acquisitionDate: D("2013-01-01"), isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
+      standardPriceAtAcquisition: 200_000_000, standardPriceAtTransfer: 400_000_000,
+      reductions: [{
+        type: "rental_97_3", registrationDate: D("2013-01-01"), rentalStartDate: D("2013-01-01"),
+        isTaxRegistered: true, isNationalHousingScale: true, officialPriceAtStart: 300_000_000, region: "capital",
+        isPrivateConstructionRental: true, rentalContinuesToTransfer: true,
+      }],
+    } as Partial<TransferTaxInput>);
+    const r = calcLongTermHoldingDeduction(167_796_000, input, rateTable.longTermHoldingRules, false, false);
+    expect((r.rental97LthdDetail as { rentalGainRatio?: number } | undefined)?.rentalGainRatio, "임대분 비율 1 — 전액 70%").toBe(1);
+    expect(mulDiv(167_796_000, 70, 100)).toBe(117_457_200);
+    expect(r.deduction).toBe(117_457_200);
   });
 });
 
