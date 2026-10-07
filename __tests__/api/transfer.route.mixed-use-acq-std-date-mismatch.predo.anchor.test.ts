@@ -267,21 +267,23 @@ describe("B0 Pre-Do — 함께 취득(토지=건물 2010-03-15)은 불변", () =
 //   ⚠️ 주택:상가 안분 비율(실가·감정)과 상가분 환산은 B0에서 **바꾸지 않는다**(설계서 §4) — 상가 쪽 값은 현행 그대로.
 // ════════════════════════════════════════════════════════════════
 describe("B0 수정 후 기대값 (건물 취득일 기준 공시지가 L2 입력)", () => {
-  it("S-1 환산 — 건물분 220,000,000 · 개산공제 3,600,000 + 6,600,000 · 결정세액 +780,360", async () => {
+  // 🔁 환산 분자 정정(2026-10-07): 별개 취득이면 분자도 취득당시 주택가격 P = 4억 × (1.2억+2.2억)/(1.8억+2.2억) = 3.4억
+  //    (집행기준 99-164-9 — 분할 기준(토지분·건물분 합)과 같은 값). 종전 분자 4억(건물일 개별주택가격)은 분할 합 3.4억과 어긋났다.
+  it("S-1 환산 — 건물분 220,000,000 · 개산공제 3,600,000 + 6,600,000 · 환산 분자 = 취득당시 주택가격 340,000,000", async () => {
     const r = await call(body("estimated", { landPerSqmAtBuildingAcq: L2 }));
     const h = r.housingPart;
     expect(h.landStdPriceAtAcq).toBe(120_000_000);
     expect(h.buildingStdPriceAtAcq).toBe(220_000_000); // 4억 − 1.8M×100
-    expect(h.estimatedAcquisitionPrice).toBe(413_793_103); // 불변
-    expect(h.landAcqPrice).toBe(146_044_624); // floor(413,793,103 × 120/340)
-    expect(h.buildingAcqPrice).toBe(267_748_479);
+    expect(h.estimatedAcquisitionPrice).toBe(351_724_137); // floor(주택 양도가 1,655,172,413 × 3.4억/16억)
+    expect(h.landAcqPrice).toBe(124_137_930); // floor(351,724,137 × 120/340)
+    expect(h.buildingAcqPrice).toBe(227_586_207);
     expect(h.landAppraisalDed).toBe(3_600_000);
     expect(h.buildingAppraisalDed).toBe(6_600_000); // 개산공제 합계 −1,800,000 (= 3% × (L2−L1)×100)
-    expect(h.incomeAmount).toBe(864_614_410);
+    expect(h.incomeAmount).toBe(908_865_932);
     expect(r.commercialPart.incomeAmount).toBe(792_717_519); // 상가분 불변
-    expect(r.total.determinedTax).toBe(678_734_368); // 현행 677,954,008 대비 +780,360
-    expect(r.total.localTax).toBe(67_873_436);
-    expect(r.total.totalPayable).toBe(746_607_804); // +858,396
+    expect(r.total.determinedTax).toBe(698_647_552); // 분자 4억 시절 678,734,368
+    expect(r.total.localTax).toBe(69_864_755);
+    expect(r.total.totalPayable).toBe(768_512_307);
   });
 
   it("S-2 실가 — 분할 비율 120/340 · 결정세액 −1,725,151", async () => {

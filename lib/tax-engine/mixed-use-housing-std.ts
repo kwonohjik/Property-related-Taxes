@@ -16,7 +16,13 @@
  */
 import { apportionByStdPrice } from "./std-price-apportion";
 import { safeMultiplyThenDivide } from "./tax-utils";
-import type { MixedUseHousingStdSplitDetail } from "./types/transfer-mixed-use.types";
+import { multiplyByArea } from "./area-utils";
+import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
+import type {
+  MixedUseAssetInput,
+  MixedUseDerivedAreas,
+  MixedUseHousingStdSplitDetail,
+} from "./types/transfer-mixed-use.types";
 
 /** 보유 중 일부 용도변경 방향 (`MixedUseAssetInput.partialUsageChange.direction`와 같은 값). */
 export type HousingStdPartialDirection = "house_to_commercial" | "commercial_to_house";
@@ -138,4 +144,39 @@ export function splitMixedUseHousingStd(args: SplitMixedUseHousingStdArgs): Mixe
   }
   const p = apportionByStdPrice(housingTotal, landStd, buildingStd);
   return { housingTotal, landStd, buildingStd, landBasis: p.land, buildingBasis: p.building, kind: "proportional" };
+}
+
+/**
+ * 주택분 §97 환산취득가액의 **분자**(취득당시 기준시가).
+ *
+ * 토지·건물 취득일이 다르면(B0) 분자는 건물 취득일 개별주택가격 H가 아니라 그것을 토지 취득일로 옮긴
+ * **취득당시 주택가격 P**다 — 집행기준 99-164-9에서 비례로 구한 「취득당시 주택가격」(사례 60백만)이 곧
+ * 환산의 취득당시 기준시가이고, 토지분·건물분 분할(`splitMixedUseHousingStd`)의 합도 P다. 분자만 H로 두면
+ * 한 계산 안에서 취득당시 기준시가가 둘(H·P)이 된다.
+ *
+ * B0이 아니면(같은 취득일·PHD·상가→주택·H 없음) H 그대로. B0인데 건물일 공시지가·나목이 없으면 H를 돌려주고
+ * 차단은 `calcHousingGainSplit`이 한다(같은 술어 `isBuildingDayLandPriceRequired` — 여기서 대체값을 만들지 않는다).
+ */
+export function acqHousingStdNumerator(asset: MixedUseAssetInput, acqDerived: MixedUseDerivedAreas): number {
+  const sp = asset.acquisitionStandardPrice;
+  const housingTotal = sp.housingPrice ?? 0;
+  const required = isBuildingDayLandPriceRequired({
+    landDate: asset.landAcquisitionDate,
+    buildingDate: asset.buildingAcquisitionDate,
+    usePhd: asset.usePreHousingDisclosure,
+    partialDirection: asset.partialUsageChange?.direction,
+    housingPrice: housingTotal,
+  });
+  const perSqmAtBuildingAcq = sp.landPricePerSqmAtBuildingAcq;
+  const buildingStd = sp.housingBuildingPrice;
+  if (!required || !(perSqmAtBuildingAcq !== undefined && perSqmAtBuildingAcq > 0) || !(buildingStd !== undefined && buildingStd > 0)) {
+    return housingTotal;
+  }
+  const area = acqDerived.residentialLandArea;
+  return splitMixedUseHousingStd({
+    housingTotal,
+    landStd: multiplyByArea(sp.landPricePerSqm, area),
+    buildingStd,
+    landStdAtBuildingDay: multiplyByArea(perSqmAtBuildingAcq, area),
+  }).convertedHousingTotal as number;
 }

@@ -204,10 +204,12 @@ describe("(C) 회귀선 — 수정 전후 값이 같아야 한다", () => {
     expect(proviso.tax).toBe(604_750_862);
 
     // 별개 취득: 건물일 나목 = H − 건물일 가목×면적 = 220M, 양도시 나목 = H_T − L_T = 400M
+    // 🔁 분할(토지분 = 토지일 가목 원값)은 항등 그대로지만, 환산 분자는 2026-10-07에 H(400M) → 취득당시 주택가격
+    //    P = 120M + 220M = 340M으로 정정됐다(분할 합과 같은 값 — 집행기준 99-164-9). 그래서 취득가·세액은 회귀선이 아니다.
     const b0 = run(P, base(sep(220_000_000), { t: 400_000_000 }));
     expect(b0.std).toEqual([120_000_000, 220_000_000]);
-    expect(b0.acqPrice).toEqual([146_044_624, 267_748_479]);
-    expect(b0.tax).toBe(678_734_368);
+    expect(b0.acqPrice).toEqual([124_137_930, 227_586_207]); // 환산 351,724,137 × 120 : 220 (분자 H 시절 146,044,624 / 267,748,479)
+    expect(b0.tax).toBe(698_647_552); // 분자 H 시절 678,734,368
 
     // NBL 고가: 취득시 나목 280M, 양도시 나목 = 3,200M − 1,200M = 2,000M / 12억 이하: 양도시 나목 400M
     expect(run(5_000_000_000, base(nblHigh(2_000_000_000), { a: 280_000_000 })).tax).toBe(739_278_267);
@@ -281,12 +283,14 @@ describe("(B) 수정 후 — 가목:나목 비례 (설계 프로토타입 실측
     expect(run(P, base({ buildingFootprintArea: 20 })).tax).toBe(697_999_553);
   });
 
-  it("B-5 별개 취득(B0, Q-A γ1 — 집행기준 99-164-9): 취득당시 주택가격 = 400M × (120M+320M)/(180M+320M) = 352M → 토지 96M · 건물 256M · 개산공제 2.88M + 7.68M · 678,734,368 → 680,547,003", () => {
+  it("B-5 별개 취득(B0, Q-A γ1 — 집행기준 99-164-9): 취득당시 주택가격 = 400M × (120M+320M)/(180M+320M) = 352M → 토지 96M · 건물 256M · 개산공제 2.88M + 7.68M · 환산 분자도 352M → 696,513,398", () => {
     const r = run(P, base(sep()));
     expect(r.std).toEqual([96_000_000, 256_000_000]);
-    expect(r.acqPrice).toEqual([112_852_664, 300_940_439]); // 환산취득가 413,793,103 × 96 : 256
+    // 환산취득가 = floor(1,655,172,413 × 352M/1,600M) = 364,137,930 → 96 : 256 (분자 H=400M 시절 413,793,103 → 112,852,664 / 300,940,439)
+    expect(r.acqPrice).toEqual([99_310_344, 264_827_586]);
+    expect(r.acqPrice[0] + r.acqPrice[1]).toBe(Number((1_655_172_413n * 352_000_000n) / 1_600_000_000n));
     expect(r.ded).toEqual([2_880_000, 7_680_000]);
-    expect(r.tax).toBe(680_547_003);
+    expect(r.tax).toBe(696_513_398); // 분자 H 시절 680,547,003
     expect(run(P, base({ ...sep(), ...ACTUAL })).tax).toBe(594_231_865);
     expect(run(P, base({ ...sep(), ...APPRAISAL })).tax).toBe(588_622_345);
   });
@@ -309,6 +313,44 @@ describe("(B) 수정 후 — 가목:나목 비례 (설계 프로토타입 실측
     expect(() => run(P, { ...c2h, transferStandardPrice: { ...c2h.transferStandardPrice, housingBuildingPrice: undefined } } as MixedUseAssetInput)).toThrow(/나목/);
     const h2c = base({ partialUsageChange: { direction: "house_to_commercial", acqResidentialArea: 200, acqCommercialArea: 0, usageChangeDate: D("2018-01-01") } });
     expect(run(P, h2c).std).toEqual([154_838_709, 245_161_291]);
+  });
+
+  // ── 환산 분자 = 취득당시 주택가격 P (2026-10-07 정정) — 리뷰가 짚은 구별력 공백 2분기 (L2 ≠ L1) ──
+  it("B-5a 주택→상가 + 별개 취득 + §97 환산: 취득시 면적이 주택 전체(200㎡)라 P = ⌊400M × (240M+320M) ÷ (360M+320M)⌋ = 329,411,764 — 분자 = P", () => {
+    const r = calcMixedUseTransferTax(
+      P,
+      TD,
+      base({
+        ...sep(),
+        partialUsageChange: { direction: "house_to_commercial", acqResidentialArea: 200, acqCommercialArea: 0, usageChangeDate: D("2018-01-01") },
+      }),
+      rates,
+    );
+    const pIndep = Number((400_000_000n * (240_000_000n + 320_000_000n)) / (360_000_000n + 320_000_000n));
+    expect(pIndep).toBe(329_411_764);
+    expect(r.housingPart.housingStdSplit?.acq?.convertedHousingTotal).toBe(pIndep);
+    expect(r.housingPart.acqHousingStandardPrice).toBe(pIndep);
+    expect(r.housingPart.estimatedAcquisitionPrice).toBe(
+      Number((BigInt(r.apportionment.housingTransferPrice) * BigInt(pIndep)) / BigInt(r.apportionment.housingStandardPrice)),
+    );
+  });
+
+  it("B-5b 공익수용 §164⑨1호 + 별개 취득: 분자는 P(352M), 분모만 수용 특례값 — 수용 아님보다 환산취득가가 크다", () => {
+    const plain = calcMixedUseTransferTax(P, TD, base(sep()), rates);
+    const r = calcMixedUseTransferTax(
+      P,
+      TD,
+      base({ ...sep(), transferCause: "public_expropriation", housingCompensationTotal: 1_200_000_000, housingCompensationBasisTotal: 1_400_000_000 }),
+      rates,
+    );
+    const den = r.expropriationDetail?.housing?.chosen;
+    expect(den).toBeDefined();
+    expect(den).toBeLessThan(1_600_000_000); // 특례가 실제로 분모를 낮췄다(구별력)
+    expect(r.housingPart.acqHousingStandardPrice).toBe(352_000_000);
+    expect(r.housingPart.estimatedAcquisitionPrice).toBe(
+      Number((BigInt(r.apportionment.housingTransferPrice) * 352_000_000n) / BigInt(den!)),
+    );
+    expect(r.housingPart.estimatedAcquisitionPrice).toBeGreaterThan(plain.housingPart.estimatedAcquisitionPrice);
   });
 
   it("B-8 상속·증여: 분배 96M/304M · 세액 불변 704,055,000 — 취득 신고가액 450M + H 400M이면 108M/342M", () => {
@@ -413,18 +455,27 @@ async function post(payload: unknown) {
   return {
     status: res.status,
     json: (await res.json()) as {
-      data?: { mode: string; result: { total: { determinedTax: number }; housingPart: { buildingStdPriceAtAcq: number } } };
+      data?: { mode: string; result: { total: { determinedTax: number }; housingPart: {
+        buildingStdPriceAtAcq: number;
+        acqHousingStandardPrice?: number;
+        housingStdSplit?: { acq?: { kind: string; convertedHousingTotal?: number } };
+      } } };
       error?: unknown;
     },
   };
 }
 
 describe("Route — 신규 중첩 필드 `housingBuildingPrice`가 ⑫를 통과해 엔진에 도달하는가 (strip 아님)", () => {
-  it("R-B1 나목을 실으면 엔진에 도달 — 건물분 256M · 680,547,003 (나목 값을 바꾸면 결과가 바뀐다 = strip 아님)", async () => {
+  it("R-B1 나목을 실으면 엔진에 도달 — 건물분 256M · 696,513,398 (나목 값을 바꾸면 결과가 바뀐다 = strip 아님)", async () => {
     const a = await post(body({ nT: 800_000_000, nA: 320_000_000 }));
     expect(a.status).toBe(200);
     expect(a.json.data!.result.housingPart.buildingStdPriceAtAcq).toBe(256_000_000);
-    expect(a.json.data!.result.total.determinedTax).toBe(680_547_003);
+    expect(a.json.data!.result.total.determinedTax).toBe(696_513_398);
+    // 환산 분자 = 분할 합(취득당시 주택가격 P) — 한 계산 안에 취득당시 기준시가가 둘(H·P)이 되지 않는다
+    const hp = a.json.data!.result.housingPart;
+    expect(hp.housingStdSplit?.acq?.kind).toBe("separate_date_converted");
+    expect(hp.acqHousingStandardPrice).toBe(352_000_000);
+    expect(hp.acqHousingStandardPrice).toBe(hp.housingStdSplit?.acq?.convertedHousingTotal);
     const b = await post(body({ nT: 800_000_000, nA: 160_000_000 }));
     expect(b.json.data!.result.housingPart.buildingStdPriceAtAcq).not.toBe(256_000_000);
   });
