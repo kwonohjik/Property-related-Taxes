@@ -1,22 +1,35 @@
 /**
- * B1 Pre-Do anchor — 겸용주택 **별개 취득**(토지·건물 취득일 상이)의 파트별 취득가액 산정방식·취득가액.
+ * B1 anchor — 겸용주택 **별개 취득**(토지·건물 취득일 상이)의 파트별 취득가액 산정방식·취득가액.
  *
  * 설계서 `docs/02-design/features/mixed-use-separate-acq-per-part.engine.design.md`
- * 계획서 `docs/00-pm/transfer-split-acq-per-part-method.plan.md` §5 B1·B1-V2 · 해석례 조사 `…authority-research.md`
+ * 계획서 `docs/00-pm/transfer-split-acq-per-part-method.plan.md` §5 B1·「B1-통합」 · 해석례 조사 `…authority-research.md`
+ *
+ * ## 이력
+ * Pre-Do(2026-10-07)에는 (B)가 전부 `it.skip`이었고 Do에서 해제했다. 파일명은 그대로 둔다(계획서·설계서 인용 보존).
  *
  * ## 구성
- * - (R) **회귀선** — 지금 통과하고 Do 후에도 **같은 리터럴**이어야 한다: 현행 총액 모델(환산·실가 총액·감정 총액·PHD) ·
- *       양도가액 4분할 불변 · 실가+PHD 차단 · `isSeparateAcquisition` 겸용 제외 유지(D-4 권장).
- * - (P) **현행 고정(Do 시 뒤집힘)** — 신규 필드 `mixedUse.separateAcquisition`이 지금은 ⑫에서 침묵 strip된다.
- *       부정형이므로 아래 (B)의 긍정 짝(R-B1)이 반드시 함께 있다.
- * - (B) **신규 동작 `it.skip`** — 기대값은 **독립 산식**(BigInt 정수 나눗셈·하드 리터럴)으로 적었다. 엔진 함수를 부르지 않는다.
- *       skip 해제 = B1 완료 기준. 세액(`total.transferTax`)은 파트 입력 모델이 아직 없어 Do에서 실측 후 고정한다(확인 필요).
+ * - (R) **회귀선** — 현행 총액 모델(환산·실가 총액·감정 총액·PHD) · 양도가액 4분할 불변 · 실가+PHD 차단 ·
+ *       `isSeparateAcquisition` 겸용 제외 유지(D-4).
+ * - (P) 신규 중첩 필드 `mixedUse.separateAcquisition`이 ⑫에서 **더 이상 strip되지 않는다**(Pre-Do에서는 strip을 고정했다).
+ * - (B) **신규 동작** — 기대값은 **독립 산식**(BigInt 정수 나눗셈·하드 리터럴)이다. 엔진 함수를 부르지 않는다.
+ *
+ * ## ⚠️ PR #2027 정정 반영 (2026-10-07)
+ * 겸용 별개 취득 주택분 §97 환산 **분자**는 건물일 결합가 H_A(400M)가 아니라 취득당시 주택가격 P(352M)다
+ * (`acqHousingStdNumerator`). 환산 파트 값은 Pre-Do의 값에서 **독립 재도출**했다:
+ *   P = ⌊H_A × (토지일 가목 120M + 건물일 나목 320M) ÷ (건물일 가목 180M + 나목 320M)⌋ = 352,000,000
+ *   주택 환산 총액 = ⌊양도 주택분 1,655,172,413 × P ÷ H_T 1.6B⌋ = 364,137,930 (종전 413,793,103)
+ *   주택 토지분 = ⌊총액 × γ1 토지 96M ÷ 352M⌋ = 99,310,344 · 건물분 264,827,586. 상가분은 영향 없음(124,137,930/82,758,621).
+ * 「양쪽 환산 = 현행 환산 모델과 1원 일치」 불변식은 이 **정정 후** 값으로 유지한다.
+ *
+ * ## 세액
+ * 세액은 mock 세율표 기준이다(정본 아님). 파트 양도차익은 독립 대조(`expectParts`)하고, 세액은 **독립 구현**(`indepTax` —
+ * 파트별 장기보유공제 표1 → 합산 → 기본공제 → 누진세율)으로 대조한 뒤 엔진 실측값을 리터럴로 고정했다.
+ * (겸용 엔진은 과세표준 천원 미만 절사를 하지 않는다 — 기존 동작이며 B1 범위 밖. 독립 구현도 같은 규약.)
  *
  * ## 가상 fixture (실제 신고 사례 아님)
  * 주택 100㎡ · 상가 100㎡ · 토지 200㎡(주택부수 100 · 상가부수 100) · 토지 2005-06-10 / 건물 2010-03-15 · 양도 2024-08-20 · 양도가 30억.
  * 취득시: 토지일 ㎡당 1.2M(가목 120M/120M) · 건물일 주택건물 나목 320M · 상가건물 80M · 건물일 개별주택가격 400M · 건물일 ㎡당 1.8M.
  * 양도시: H_T 1.6B · N_T 800M · 상가건물 100M · ㎡당 12M.
- * ⚠️ 세액은 mock 세율표(`makeMockRates`) 실측값(정본 아님).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -144,27 +157,62 @@ const ap = (total: number, a: number, b: number) => {
 };
 const pct3 = (v: number) => Math.floor((v * 3) / 100);
 
+/**
+ * 독립 세액 구현(mock 세율표 기준) — 파트별 장기보유공제 표1(보유 1년당 2%, 최대 30%, 정수 연산) → 합산 → 기본공제 250만 → 누진세율.
+ * 비과세·중과·단기세율이 없는 fixture 전용(전 파트 보유 2년 이상). 엔진 함수를 부르지 않는다.
+ */
+const BRACKETS: ReadonlyArray<readonly [number, number, number]> = [
+  [14_000_000, 6, 0], [50_000_000, 15, 1_260_000], [88_000_000, 24, 5_760_000], [150_000_000, 35, 15_440_000],
+  [300_000_000, 38, 19_940_000], [500_000_000, 40, 25_940_000], [1_000_000_000, 42, 35_940_000], [Number.MAX_SAFE_INTEGER, 45, 65_940_000],
+];
+function indepTax(parts: ReadonlyArray<{ gain: number; years: number }>): number {
+  const income = parts.reduce((sum, p) => {
+    const pct = Math.min(p.years * 2, 30);
+    return sum + p.gain - Math.floor((Math.max(p.gain, 0) * pct) / 100);
+  }, 0);
+  const base = Math.max(0, income - 2_500_000);
+  const [, rate, ded] = BRACKETS.find(([max]) => base <= max)!;
+  return Math.floor((base * rate) / 100) - ded;
+}
+/** 독립 보유연수 — 토지 2005-06-10 / 건물 2010-03-15 → 양도 2024-08-20 */
+const YEARS = { land: 19, building: 14 } as const;
+function gainsOf(r: ReturnType<typeof run>, y: { land: number; building: number } = YEARS) {
+  return [
+    { gain: r.h.gain[0], years: y.land },
+    { gain: r.h.gain[1], years: y.building },
+    { gain: r.c.gain[0], years: y.land },
+    { gain: r.c.gain[1], years: y.building },
+  ];
+}
+
 // 양도가액 4분할 — 모든 모드에서 같아야 한다(양도가액·양도시 안분은 B1이 건드리지 않는다)
 const TP_H = [993_103_447, 662_068_966] as const; // 주택 토지·건물
 const TP_C = [1_241_379_311, 103_448_276] as const; // 상가 토지·건물
 // 현행 환산 모델 값(= 양쪽 환산) — 환산 파트의 정본(상대 파트 모드와 독립)
-const EST_H = [112_852_664, 300_940_439] as const;
-const EST_C = [124_137_930, 82_758_621] as const;
+// ⚠️ PR #2027 이후 값 — 독립 재도출(헤더 참조). 주택: P 352M → 환산 총액 364,137,930 → γ1(96M:256M) 분할.
+const P_H = Number((400_000_000n * (120_000_000n + 320_000_000n)) / (180_000_000n + 320_000_000n)); // 취득당시 주택가격 P
+const EST_H_TOTAL = Number((BigInt(TP_H[0] + TP_H[1]) * BigInt(P_H)) / 1_600_000_000n);
+const EST_H = ap(EST_H_TOTAL, 96_000_000, 256_000_000);
+const EST_C_TOTAL = Number((BigInt(TP_C[0] + TP_C[1]) * 200_000_000n) / 1_300_000_000n); // 상가: 양도 상가분 × 취득시 200M ÷ 양도시 1.3B
+const EST_C = ap(EST_C_TOTAL, 120_000_000, 80_000_000);
 // 개산공제 base(= 현행 취득시 기준시가 basis): 주택 γ1 비례값 96M/256M · 상가 가목·나목 원값 120M/80M
 const BASIS_H = [96_000_000, 256_000_000] as const;
 const BASIS_C = [120_000_000, 80_000_000] as const;
+const PIN_B9 = 752_418_634;
 
 // ═══════════════════════════════════════════════════════════════════════
 // (R) 회귀선 — 수정 전후 같은 리터럴
 // ═══════════════════════════════════════════════════════════════════════
 describe("(R) 회귀선 — 현행 총액 모델은 신규 필드가 없으면 그대로", () => {
-  it("R-1 별개 취득 환산(현행 유일한 별개 취득 모델 = 양쪽 환산): 주택 112,852,664/300,940,439 · 상가 124,137,930/82,758,621 · 개산공제 2.88M/7.68M·3.6M/2.4M · 680,547,003", () => {
+  it("R-1 별개 취득 환산(총액 모델 = 양쪽 환산): 주택 99,310,344/264,827,586 · 상가 124,137,930/82,758,621 · 개산공제 2.88M/7.68M·3.6M/2.4M · 696,513,398 (PR #2027 정정 후 — 종전 112,852,664/300,940,439 · 680,547,003)", () => {
     const r = run(base(sep()));
+    expect(r.h.acq).toEqual([99_310_344, 264_827_586]);
     expect(r.h.acq).toEqual(EST_H);
     expect(r.c.acq).toEqual(EST_C);
     expect(r.h.ded).toEqual([pct3(BASIS_H[0]), pct3(BASIS_H[1])]);
     expect(r.c.ded).toEqual([pct3(BASIS_C[0]), pct3(BASIS_C[1])]);
-    expect(r.tax).toBe(680_547_003);
+    expect(r.tax).toBe(696_513_398);
+    expect(r.tax).toBe(indepTax(gainsOf(r)));
   });
 
   it("R-2 양도가액 4분할은 환산·실가 총액·감정 총액에서 모두 동일 — B1이 양도가액을 바꾸지 않는다는 증거", () => {
@@ -237,10 +285,12 @@ describe("(R) 회귀선 — 현행 총액 모델은 신규 필드가 없으면 �
     ).toBe(true);
   });
 
-  it("R-9 환산 파트 취득가액은 상대 파트 모드와 독립(설계 불변식)의 전제 — 현행 환산 총액 = 주택 413,793,103(= 양도 주택분 × H_A ÷ H_T) · 상가 206,896,551", () => {
+  it("R-9 환산 파트 취득가액은 상대 파트 모드와 독립(설계 불변식)의 전제 — 현행 환산 총액 = 주택 364,137,930(= 양도 주택분 × P ÷ H_T, PR #2027) · 상가 206,896,551", () => {
     const r = run(base(sep()));
-    expect(r.h.acq[0] + r.h.acq[1]).toBe(413_793_103);
+    expect(r.h.acq[0] + r.h.acq[1]).toBe(364_137_930);
+    expect(r.h.acq[0] + r.h.acq[1]).toBe(EST_H_TOTAL);
     expect(r.c.acq[0] + r.c.acq[1]).toBe(206_896_551);
+    expect(r.c.acq[0] + r.c.acq[1]).toBe(EST_C_TOTAL);
   });
 });
 
@@ -326,22 +376,23 @@ const SEP_AA = {
   buildingAcquisitionPrice: 400_000_000,
 };
 
-describe("(P) 현행 고정 — 신규 중첩 필드는 지금 ⑫에서 침묵 strip된다 (Do가 이 단언을 뒤집는다)", () => {
-  it("P-1 mixedUse.separateAcquisition을 실어도 결과가 불변 — 주택 토지 취득가액 112,852,664 · 680,547,003 (환산 모델 그대로). 긍정 짝 = R-B1", async () => {
+describe("(P) 신규 중첩 필드는 ⑫에서 strip되지 않는다 (Pre-Do의 strip 고정을 Do가 뒤집었다)", () => {
+  it("P-1 mixedUse.separateAcquisition을 싣지 않으면 총액-환산 모델(주택 토지 99,310,344 · 696,513,398)이고, 실으면 결과가 바뀐다(250,000,000) — 긍정 짝 R-B1", async () => {
     const plain = await post(body());
     const withField = await post(body({}, { separateAcquisition: SEP_AA }));
     expect(plain.status).toBe(200);
     expect(withField.status).toBe(200);
-    expect(withField.json.data!.result.housingPart.landAcqPrice).toBe(112_852_664);
-    expect(withField.json.data!.result.total.determinedTax).toBe(680_547_003);
-    expect(withField.json.data!.result.total.determinedTax).toBe(plain.json.data!.result.total.determinedTax);
+    expect(plain.json.data!.result.housingPart.landAcqPrice).toBe(99_310_344);
+    expect(plain.json.data!.result.total.determinedTax).toBe(696_513_398);
+    expect(withField.json.data!.result.housingPart.landAcqPrice).toBe(250_000_000);
+    expect(withField.json.data!.result.total.determinedTax).not.toBe(plain.json.data!.result.total.determinedTax);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// (B) 신규 동작 — it.skip. 해제 = B1 완료 기준
+// (B) 신규 동작 — Pre-Do의 skip을 Do에서 전부 해제했다
 // ═══════════════════════════════════════════════════════════════════════
-describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
+describe("(B) B1 신규 동작 (설계서 §3·§7)", () => {
   /** S-1: 토지 파트 → 주택부수토지/상가부수토지 = 토지일 가목 비율(같은 필지 = 면적 비율) 120M : 120M */
   const landSplit = (v: number) => ap(v, 120_000_000, 120_000_000);
   /** S-2: 건물 파트 → 주택건물/상가건물 = 건물일 나목 비율 320M : 80M (용도별 계약액이 있으면 그 금액) */
@@ -349,7 +400,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
 
   function expectParts(
     r: ReturnType<typeof run>,
-    e: { hl: number; hb: number; cl: number; cb: number; dHL: number; dHB: number; dCL: number; dCB: number },
+    e: { hl: number; hb: number; cl: number; cb: number; dHL: number; dHB: number; dCL: number; dCB: number; years?: { land: number; building: number } },
   ) {
     expect(r.h.acq).toEqual([e.hl, e.hb]);
     expect(r.c.acq).toEqual([e.cl, e.cb]);
@@ -359,9 +410,11 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expect(r.c.tp).toEqual(TP_C);
     expect(r.h.gain).toEqual([TP_H[0] - e.hl - e.dHL, TP_H[1] - e.hb - e.dHB]);
     expect(r.c.gain).toEqual([TP_C[0] - e.cl - e.dCL, TP_C[1] - e.cb - e.dCB]);
+    // 세액은 독립 구현과 1원 일치(파트 양도차익 → 표1 장기보유공제 → 누진세율)
+    expect(r.tax).toBe(indepTax(gainsOf(r, e.years)));
   }
 
-  it.skip("B-1 양쪽 실가(토지 500M·건물 400M): S-1 면적비 250M/250M · S-2 나목비 320M/80M · 개산공제 0 · 양도가액 불변 · 취득시 기준시가 H_A·L_b 불요(필수 술어가 모드 키)", () => {
+  it("B-1 양쪽 실가(토지 500M·건물 400M): S-1 면적비 250M/250M · S-2 나목비 320M/80M · 개산공제 0 · 양도가액 불변 · 취득시 기준시가 H_A·L_b 불요(필수 술어가 모드 키)", () => {
     const [hl, cl] = landSplit(500_000_000);
     const [hb, cb] = bldSplit(400_000_000);
     expect([hl, cl, hb, cb]).toEqual([250_000_000, 250_000_000, 320_000_000, 80_000_000]);
@@ -375,9 +428,10 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
       ),
     );
     expectParts(r, { hl, hb, cl, cb, dHL: 0, dHB: 0, dCL: 0, dCB: 0 });
+    expect(r.tax).toBe(597_724_655); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-2 토지 실가 + 건물 감정(400M): 건물 파트만 개산공제 — 주택건물 basis 256M·상가건물 80M × 3% = 7,680,000·2,400,000 · 토지 파트 0", () => {
+  it("B-2 토지 실가 + 건물 감정(400M): 건물 파트만 개산공제 — 주택건물 basis 256M·상가건물 80M × 3% = 7,680,000·2,400,000 · 토지 파트 0", () => {
     const [hl, cl] = landSplit(500_000_000);
     const [hb, cb] = bldSplit(400_000_000);
     const r = run(
@@ -385,9 +439,10 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     );
     expectParts(r, { hl, hb, cl, cb, dHL: 0, dHB: pct3(BASIS_H[1]), dCL: 0, dCB: pct3(BASIS_C[1]) });
     expect([pct3(BASIS_H[1]), pct3(BASIS_C[1])]).toEqual([7_680_000, 2_400_000]);
+    expect(r.tax).toBe(594_458_735); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-3 토지 감정(500M) + 건물 실가(400M): 토지 파트만 개산공제 — 주택부수토지 basis 96M(γ1)·상가부수토지 120M × 3% = 2,880,000·3,600,000", () => {
+  it("B-3 토지 감정(500M) + 건물 실가(400M): 토지 파트만 개산공제 — 주택부수토지 basis 96M(γ1)·상가부수토지 120M × 3% = 2,880,000·3,600,000", () => {
     const [hl, cl] = landSplit(500_000_000);
     const [hb, cb] = bldSplit(400_000_000);
     const r = run(
@@ -395,9 +450,10 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     );
     expectParts(r, { hl, hb, cl, cb, dHL: pct3(BASIS_H[0]), dHB: 0, dCL: pct3(BASIS_C[0]), dCB: 0 });
     expect([pct3(BASIS_H[0]), pct3(BASIS_C[0])]).toEqual([2_880_000, 3_600_000]);
+    expect(r.tax).toBe(595_683_455); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-4 토지 실가(500M) + 건물 환산: 건물 환산 값은 양쪽 환산일 때와 같다(상대 파트 모드와 독립) — 300,940,439/82,758,621 · 개산공제 건물만", () => {
+  it("B-4 토지 실가(500M) + 건물 환산: 건물 환산 값은 양쪽 환산일 때와 같다(상대 파트 모드와 독립) — 264,827,586/82,758,621(PR #2027 정정 후) · 개산공제 건물만", () => {
     const [hl, cl] = landSplit(500_000_000);
     const r = run(
       base(
@@ -410,9 +466,10 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
       hl, hb: EST_H[1], cl, cb: EST_C[1],
       dHL: 0, dHB: pct3(BASIS_H[1]), dCL: 0, dCB: pct3(BASIS_C[1]),
     });
+    expect(r.tax).toBe(611_440_804); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-5 토지 환산 + 건물 실가(400M): 토지 환산 값 112,852,664/124,137,930(양쪽 환산 값과 동일) · 개산공제 토지만 2,880,000/3,600,000", () => {
+  it("B-5 토지 환산 + 건물 실가(400M): 토지 환산 값 99,310,344/124,137,930(양쪽 환산 값과 동일 — PR #2027 정정 후) · 개산공제 토지만 2,880,000/3,600,000", () => {
     const [hb, cb] = bldSplit(400_000_000);
     const r = run(
       base(
@@ -425,16 +482,24 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
       hl: EST_H[0], hb, cl: EST_C[0], cb,
       dHL: pct3(BASIS_H[0]), dHB: 0, dCL: pct3(BASIS_C[0]), dCB: 0,
     });
+    expect(r.tax).toBe(682_797_249); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-6 양쪽 환산을 파트 모델 필드로 보내도 현행 총액-환산 모델과 1원 동일(동치) — 680,547,003", () => {
+  it("B-6 양쪽 환산을 파트 모델 필드로 보내도 현행 총액-환산 모델과 1원 동일(동치) — 696,513,398 (PR #2027 정정 후)", () => {
     const r = run(base(sep({ separateAcquisition: { landMode: "estimated", buildingMode: "estimated" } })));
     expect(r.h.acq).toEqual(EST_H);
     expect(r.c.acq).toEqual(EST_C);
-    expect(r.tax).toBe(680_547_003);
+    expect(r.tax).toBe(696_513_398);
+    // 동치 — 총액 모델(필드 부재)과 모든 파트 값·개산공제·세액이 1원 일치
+    const legacy = run(base(sep()));
+    expect(r.h.acq).toEqual(legacy.h.acq);
+    expect(r.h.ded).toEqual(legacy.h.ded);
+    expect(r.c.acq).toEqual(legacy.c.acq);
+    expect(r.c.ded).toEqual(legacy.c.ded);
+    expect(r.tax).toBe(legacy.tax);
   });
 
-  it.skip("B-7 S-2 용도별 계약액 우선(건물 실가 총액 400M 중 주택건물 도급 300M): 주택건물 300M · 상가건물 100M(= 총액 − 주택건물, 도출) — 나목 비율 320M/80M을 쓰지 않는다", () => {
+  it("B-7 S-2 용도별 계약액 우선(건물 실가 총액 400M 중 주택건물 도급 300M): 주택건물 300M · 상가건물 100M(= 총액 − 주택건물, 도출) — 나목 비율 320M/80M을 쓰지 않는다", () => {
     const r = run(
       base(
         sep({
@@ -448,7 +513,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expect(r.c.acq[0]).toBe(250_000_000);
   });
 
-  it.skip("B-8 매매사례 토지(520M) + 건물 실가: 토지 파트는 salesCase 값으로 분할(260M/260M)·개산공제 · `landSalesCaseValue`가 값 필드 (감정은 landAcquisitionPrice 공용 — 단건 주택 split 규약)", () => {
+  it("B-8 매매사례 토지(520M) + 건물 실가: 토지 파트는 salesCase 값으로 분할(260M/260M)·개산공제 · `landSalesCaseValue`가 값 필드 (감정은 landAcquisitionPrice 공용 — 단건 주택 split 규약)", () => {
     const [hl, cl] = landSplit(520_000_000);
     const [hb, cb] = bldSplit(400_000_000);
     const r = run(
@@ -462,9 +527,10 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
       ),
     );
     expectParts(r, { hl, hb, cl, cb, dHL: pct3(BASIS_H[0]), dHB: 0, dCL: pct3(BASIS_C[0]), dCB: 0 });
+    expect(r.tax).toBe(589_383_455); // mock 세율 실측 — 독립 구현(indepTax)과 일치 확인 후 고정
   });
 
-  it.skip("B-9 S-4 PHD × 파트 모델: 토지 실가 300M + 건물 환산 — 토지 150M/150M(S-1: 토지일 ㎡당 500k 면적비) · 건물 환산은 PHD 값 64,655,172/31,034,483 · 개산공제 건물만 1,875,000/900,000 (R-5와 같은 건물 값)", () => {
+  it("B-9 S-4 PHD × 파트 모델: 토지 실가 300M + 건물 환산 — 토지 150M/150M(S-1: 토지일 ㎡당 500k 면적비) · 건물 환산은 PHD 값 64,655,172/31,034,483 · 개산공제 건물만 1,875,000/900,000 (R-5와 같은 건물 값)", () => {
     const [hl, cl] = ap(300_000_000, 50_000_000, 50_000_000);
     expect([hl, cl]).toEqual([150_000_000, 150_000_000]);
     const r = run(
@@ -477,10 +543,12 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expectParts(r, {
       hl, hb: 64_655_172, cl, cb: 31_034_483,
       dHL: 0, dHB: 1_875_000, dCL: 0, dCB: 900_000,
+      years: { land: 26, building: 24 }, // 토지 1998-01-01 · 건물 2000-01-01 → 양도 2024-08-20
     });
+    expect(r.tax).toBe(PIN_B9); // mock 세율 실측 — 독립 구현과 일치 확인 후 고정
   });
 
-  it.skip("B-10 §97②2호 단서는 **환산 파트 묶음**으로 판정: 양쪽 환산 + 큰 자본적지출 = 현행과 동일 'direct' 584,582,624(R-6 승계) — 한쪽만 환산이면 그 쪽(토지측/건물측)만 비교하고 실가 파트는 §97②1호 가산", () => {
+  it("B-10 §97②2호 단서는 **환산 파트 묶음**으로 판정: 양쪽 환산 + 큰 자본적지출 = 현행과 동일 'direct' 584,582,624(R-6 승계) — 한쪽만 환산이면 그 쪽(토지측/건물측)만 비교하고 실가 파트는 §97②1호 가산", () => {
     const both = run(
       base(
         sep({
@@ -493,7 +561,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expect(both.tax).toBe(584_582_624);
   });
 
-  it.skip("B-11 결합 제외 가드(엔진 throw): 파트 모델 + 용도변경 / 공익수용 / 상속·증여 / 총액 모델 플래그 동시 / 같은 취득일 / 값 누락", () => {
+  it("B-11 결합 제외 가드(엔진 throw): 파트 모델 + 용도변경 / 공익수용 / 상속·증여 / 총액 모델 플래그 동시 / 같은 취득일 / 값 누락", () => {
     const sepAa = { separateAcquisition: SEP_AA };
     expect(() =>
       run(base(sep({ ...sepAa, partialUsageChange: { direction: "house_to_commercial", usageChangeDate: D("2018-01-01") } }))),
@@ -508,7 +576,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     ).toThrow(); // 토지 실가 미입력 — 자동 안분 fallback 금지
   });
 
-  it.skip("R-B1 (P-1의 긍정 짝) Route: separateAcquisition이 ⑫를 통과해 엔진에 도달 — 주택 토지 250,000,000 · 건물 320,000,000 · 상가 250,000,000/80,000,000 · 값을 바꾸면 결과가 바뀐다(strip 아님)", async () => {
+  it("R-B1 (P-1의 긍정 짝) Route: separateAcquisition이 ⑫를 통과해 엔진에 도달 — 주택 토지 250,000,000 · 건물 320,000,000 · 상가 250,000,000/80,000,000 · 값을 바꾸면 결과가 바뀐다(strip 아님)", async () => {
     const a = await post(body({}, { separateAcquisition: SEP_AA }));
     expect(a.status).toBe(200);
     const r = a.json.data!.result;
@@ -518,7 +586,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expect(b.json.data!.result.housingPart.landAcqPrice).toBe(300_000_000);
   });
 
-  it.skip("R-B2 Route 400: 총액 모델 플래그와 동시(useActualAcquisition) · 값 누락 · 같은 취득일 · 용도별 계약액 > 건물 총액", async () => {
+  it("R-B2 Route 400: 총액 모델 플래그와 동시(useActualAcquisition) · 값 누락 · 같은 취득일 · 용도별 계약액 > 건물 총액", async () => {
     const conflict = await post(body({}, { separateAcquisition: SEP_AA, useActualAcquisition: true, acquisitionActualTotalPrice: 900_000_000 }));
     expect(conflict.status).toBe(400);
     const noLand = await post(body({}, { separateAcquisition: { landMode: "actual", buildingMode: "actual", buildingAcquisitionPrice: 400_000_000 } }));
@@ -530,7 +598,7 @@ describe("(B) B1 신규 동작 (skip — 설계서 §3·§7)", () => {
     expect(overContract.status).toBe(400);
   });
 
-  it.skip("R-B3 필수 술어는 모드 키(⑧ 8번째 동기화): 양쪽 실가면 H_A·L_b·건물일 개별주택가격 없이 200 · 한쪽이라도 비-실가(감정)면 H_A 없이 400(housingPrice)", async () => {
+  it("R-B3 필수 술어는 모드 키(⑧ 8번째 동기화): 양쪽 실가면 H_A·L_b·건물일 개별주택가격 없이 200 · 한쪽이라도 비-실가(감정)면 H_A 없이 400(housingPrice)", async () => {
     const noHA = {
       housingPrice: undefined as number | undefined,
       commercialBuildingPrice: 80_000_000,

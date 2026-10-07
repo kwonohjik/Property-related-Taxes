@@ -21,6 +21,11 @@ import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
+import {
+  assertMixedSeparateAcqSupported,
+  isMixedUsePerPartAcq,
+  applyMixedPartAcq,
+} from "./mixed-use-part-acq";
 import type {
   MixedUseAssetInput,
   MixedUseGainBreakdown,
@@ -78,6 +83,10 @@ export function calcMixedUseTransferTax(
       "2022.1.1 이전 양도분은 겸용주택 분리계산 범위 외입니다. 단일 자산 모드로 재계산하세요.",
     );
   }
+
+  // B1 — 파트 모델(`separateAcquisition` 존재)의 결합 제외 7종·값 누락은 계산 전에 막는다(⑫·⑧과 같은 leaf).
+  assertMixedSeparateAcqSupported(asset);
+  const isPartAcqModel = isMixedUsePerPartAcq(asset);
 
   const warnings: string[] = collectWarnings(asset);
   const steps: MixedUseStep[] = [];
@@ -244,7 +253,7 @@ export function calcMixedUseTransferTax(
 
   // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD, 또는 실가 안분분)
   // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
-  const housingAcqResult = calcHousingEstimatedAcq(
+  let housingAcqResult = calcHousingEstimatedAcq(
     apportionment.housingTransferPrice,
     asset,
     derived,
@@ -337,7 +346,34 @@ export function calcMixedUseTransferTax(
   const provisoDeclared =
     asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
   let necessaryExpenseProviso: MixedUseGainBreakdown["necessaryExpenseProviso"];
-  if (provisoEligible && provisoDeclared) {
+  let separateAcquisitionEcho: MixedUseGainBreakdown["separateAcquisition"];
+  if (isPartAcqModel) {
+    /**
+     * B1 파트 모델 — 위 split은 「양쪽 환산」 경로의 값(est)이다. 공통 경비 몫(exp)을 단서 호출로 한 번 더 얻어
+     * 파트별 모드로 갈아끼운다(`applyMixedPartAcq`). 양도가액·보유기간·양도시 안분은 est 그대로다.
+     * 단서(§97②2호)는 자산 단위 `provisoEligible`이 아니라 **환산 파트 묶음**으로 판정한다.
+     */
+    const exp = {
+      housing: calcHousingGainSplit(
+        apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate, acqDerived, true,
+      ),
+      commercial: calcCommercialGainSplit(
+        apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived,
+        housingAcqResult, undefined, true,
+      ),
+    };
+    const applied = applyMixedPartAcq({
+      asset,
+      acqDerived,
+      est: { housing: housingGainSplit, commercial: commercialGainSplit },
+      exp,
+    });
+    housingGainSplit = applied.housing;
+    commercialGainSplit = applied.commercial;
+    housingAcqResult = { ...housingAcqResult, estimatedAcq: applied.housingAcqTotal };
+    necessaryExpenseProviso = applied.proviso;
+    separateAcquisitionEcho = applied.echo;
+  } else if (provisoEligible && provisoDeclared) {
     const gamok =
       housingGainSplit.landAcqPrice + housingGainSplit.buildingAcqPrice +
       housingGainSplit.landAppraisalDed + housingGainSplit.buildingAppraisalDed +
@@ -610,6 +646,7 @@ export function calcMixedUseTransferTax(
       : {}),
     partialUsageChange,
     amendmentDetail,
+    ...(separateAcquisitionEcho ? { separateAcquisition: separateAcquisitionEcho } : {}),
     // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
     acquisitionByInheritance: asset.acquisitionByInheritance,
     // §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분(라목 총액)·상가분(가목 토지). 적용 시만.

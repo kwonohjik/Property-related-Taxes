@@ -1,7 +1,7 @@
 # 겸용주택 별개 취득 — 파트별 취득가액 산정방식·취득가액 (B1) 엔진 설계
 
 > 작성 2026-10-07 · 워크트리 `Property-related-Taxes-b1` · 브랜치 `feat/mixed-use-separate-acq-per-part` (master `7dd290e4d` 병합 기준)
-> 상태: **Design 완료(엔진) — Do 전.** 코드 수정 없음. Pre-Do anchor `__tests__/api/transfer.route.mixed-use-separate-acq-per-part.b1.predo.anchor.test.ts` (10 passed · 14 skipped).
+> 상태: **Do 완료(엔진 + API ⑫⑭ 층, 2026-10-07)** — 구현 결과·UI 회신은 **§11**. 클라이언트 ①~⑧·컴포넌트는 UI 에이전트 몫(미착수). Pre-Do anchor `__tests__/api/transfer.route.mixed-use-separate-acq-per-part.b1.predo.anchor.test.ts` — skip 14건 전부 해제(24 passed).
 > 상위 계획서 `docs/00-pm/transfer-split-acq-per-part-method.plan.md` §5 B1·B1-V2 · 해석례 조사 `mixed-use-separate-acq-authority-research.md` · 선행 `housing-std-split-proportional.plan.md` §10(S3-2).
 > 짝 문서: UI 설계 `mixed-use-separate-acq-per-part.ui.design.md`(다른 에이전트 작성 — 이 문서에서 수정하지 않음).
 > 표기: 「확인 필요」 = 미검증. file:line은 이 워크트리에서 직접 확인한 것만. 수치는 throwaway probe(`__tests__/zz-probe-b1.test.ts` — 삭제함, 원자료 scratchpad `b1-probe.json`) 실측이며 **mock 세율표** 기준이다(정본 세액 아님). fixture는 가상(실제 신고 사례 아님).
@@ -361,3 +361,78 @@ skip 해제 = B1 완료 기준. **뮤테이션 probe는 수행하지 않았다**
 | V-9 | 집행기준 99-164-9 원문 — Q-6 판정용(사용자 제공 원문이 S3-2 §10에 인용돼 있으나 환산 분자 사용 여부 문장 대조 필요) |
 | V-10 | 컴패니언 겸용 ⑧ 경로가 파트 모델 값 필수를 primary와 동일하게 거는지(`validate-asset.ts:299`는 모든 자산 index를 순회하나 isNonPrimary 분기 확인) |
 | V-11 | 이 문서의 file:line 중 「직접 확인」 표시가 없는 `:` 뒤 숫자 생략 항목(`transfer-tax-api-mixed-use.ts` 필드 줄) — Do 진입 시 재확인(memory `feedback_merged_plan_citations_drift`) |
+
+## 11. Do 결과 (2026-10-07) — 구현 요약 · UI 회신 (U-1~U-4) · 설계 대비 편차
+
+> 선행 정정: PR #2027(별개 취득 주택분 §97 환산 **분자** H_A → 취득당시 주택가격 P)이 머지된 뒤의 값이다. §2.4의 Q-6 「분자 H_A vs P」는 **#2027로 해소**됐고, §2.2·§3.2·§7의 환산 파트 수치(주택 112,852,664/300,940,439 · 세액 680,547,003)는 **#2027 이전 값**이다 → 정정 후 주택 환산 총액 364,137,930(토지 99,310,344 · 건물 264,827,586) · 상가 124,137,930/82,758,621 불변 · 양쪽 환산 세액 696,513,398. 위 표는 역사 기록으로 남기고 anchor가 정정 후 값을 독립 산식으로 고정한다.
+
+### 11.1 변경 지점
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 타입 | `lib/tax-engine/types/transfer-mixed-use-part-acq.types.ts`(신규) | `MixedSeparateAcquisition`·`MixedPartAcqNeeds`·echo. (경로: 엔진 타입은 `lib/tax-engine/types/` — 지시서의 `types/…`는 이쪽) |
+| leaf | `lib/tax-engine/mixed-use-part-acq.ts`(신규) | `isMixedUsePerPartAcq` · `mixedPartAcqNeeds`/`mixedPartAcqNeedsOf` · `isMixedExpenseDeclared` · `collectMixedPartAcqIssues`/`assertMixedSeparateAcqSupported` · `applyMixedPartAcq` · `MIXED_PART_ACQ_MODES` |
+| 필수 술어 AND | `mixed-use-acq-date.ts` · `mixed-use-housing-std.ts` | `isBuildingDayLandPriceRequired`·`isHousingPriceAtAcqRequired`·`isHousingBuildingStdAtAcqRequired`에 선택 입력 `partAcqNeeds`(AND). **미지정(총액 모델) = 기존 동작 불변** |
+| 엔진 | `transfer-tax-mixed-use.ts` | 진입 가드 + 파트 모델 분기(est·exp 두 split → `applyMixedPartAcq`) + echo. 단서는 파트 모델에서 자산 단위 `provisoEligible` 대신 환산 묶음 판정 |
+| 엔진 | `transfer-tax-mixed-use-housing.ts` · `-commercial.ts` | 취득시 기준시가가 쓰이지 않는 조합(`needs` false)에서 취득측 요구·계산을 건너뜀(양도시 측은 그대로). 총액 모델은 `needs`가 undefined라 불변 |
+| ⑫ | `lib/api/transfer-tax-schema-mixed-use-part-acq.ts`(신규) · `transfer-tax-schema-mixed-use.ts` | 중첩 객체 정의 + superRefine(leaf 목록) + 기존 취득측 필수 규칙 4개를 `needs`로 AND |
+| ⑭ | `app/api/calc/transfer/mixed-use-asset-input.ts` | **무변경** — `...s.mixedUse` 스프레드로 도달. 키 커버리지 가드가 Zod 키 누락을 컴파일 에러로 잡았다(M7 뮤테이션 + R-B1) |
+| 법령 상수 | `legal-codes/transfer-mixed-use.ts` | `MIXED_USE.PHD_164_7` 1건(기존 §164⑦은 `INHERITANCE_PHD_MAX`로 이미 매니페스트 등록 — 커버리지 테스트 통과) |
+
+### 11.2 UI가 쓰는 함수 시그니처 (⑤ 노출 · ⑧ 필수 · ④ 전송)
+
+```ts
+// lib/tax-engine/mixed-use-part-acq.ts — 모두 순수 함수, Date 변환 없음
+isMixedUsePerPartAcq(a: { separateAcquisition?: unknown }): boolean          // 파트 모델 trigger = 객체 존재
+mixedPartAcqNeeds(i: {
+  modes: { land: PartAcqMode; building: PartAcqMode };
+  usePhd?: boolean; partialDirection?: "house_to_commercial" | "commercial_to_house";
+  expenseDeclared?: boolean;             // isMixedExpenseDeclared (U-1)
+  buildingContractDeclared?: boolean;    // 건물 실가 + 주택건물 계약액 > 0 (건물 나목비가 필요 없다)
+}): { housingPriceAtAcq; landPricePerSqmAtBuildingDay; housingBuildingStdAtAcq; commercialStdAtAcq }  // 전부 boolean
+mixedPartAcqNeedsOf(src): MixedPartAcqNeeds | undefined                       // 엔진 입력·Zod 출력 구조 입력. 파트 모델이 아니면 undefined
+isMixedExpenseDeclared({ capitalExpenditure?, housingInheritedExpense?, commercialInheritedExpense? }): boolean
+collectMixedPartAcqIssues(src): { code: "X-1".."X-7"; message: string; path: string[] }[]   // ⑧이 그대로 사용 — path는 mixedUse 기준
+MIXED_PART_ACQ_MODES                                                          // ["actual","estimated","appraisal","salesCase"]
+```
+
+기존 술어 3개는 `partAcqNeeds`를 **선택 입력**으로 받는다(`isBuildingDayLandPriceRequired({…, partAcqNeeds})` — `Pick<…,"landPricePerSqmAtBuildingDay">`, `isHousingPriceAtAcqRequired`·`isHousingBuildingStdAtAcqRequired`의 `HousingStdNeedInput.partAcqNeeds`). UI는 `mixedPartAcqNeedsOf`와 같은 입력으로 `needs`를 만들어 **그대로 넘기면** ⑤ 노출·⑧ 필수·⑫·엔진이 한 규칙이 된다. `needs`의 4필드 소비처:
+
+| needs | 쓰이는 곳 | false일 때 |
+|---|---|---|
+| `housingPriceAtAcq` · `landPricePerSqmAtBuildingDay` | 비-실가 파트의 환산·개산공제 basis(γ1), 취득측 경비 안분 | 칸 숨김·⑧ 비요구·④ 미전송(전송해도 무시) |
+| `housingBuildingStdAtAcq` | γ1 basis 또는 S-2 나목 비율(계약액 없을 때) | 〃 |
+| `commercialStdAtAcq` | 상가 환산·개산공제 basis·S-2 상가건물 몫·취득측 경비 안분 | 〃 |
+
+### 11.3 회신
+
+**U-1 `expenseDeclared` 확정** — `capitalExpenditure > 0 ∨ housingInheritedExpense > 0 ∨ commercialInheritedExpense > 0`. UI 제안(`transferExpense` 포함)에서 **양도비를 뺐다**: 양도비는 양도시 기준시가(H_T·N_T·상가 양도시 — 항상 필수)로 나뉘어 취득시 기준시가를 소비하지 않는다(EX-4가 취득시 기준시가 전무 + 양도비로 계산되는 것을 고정). 넣으면 쓰이지 않는 값을 요구한다. ⑧ 메시지는 「자본적지출 또는 주택분·상가분 실제 필요경비가 입력되어 …」로 원인을 말할 것.
+
+**U-2 실비 필드** — 엔진은 파트 모델에서 다음을 읽는다: 자산 단위 `capitalExpenditure`·`transferExpense`(공통 경비), **`housingInheritedExpense`·`commercialInheritedExpense`(주택분·상가분 직접 경비)**. 이름은 상속 맥락의 레거시지만 **매매 실비도 같은 필드**다(총액 실가 모델도 그렇다). 따라서 ④는 파트 모델 ∧ `purchase`이면 `mixedHousingActualExpense`→`housingInheritedExpense`, `mixedCommercialActualExpense`→`commercialInheritedExpense`로 싣는다(현행 `isMixedActualAcquisition` 게이트를 파트 모델에서는 열어야 침묵 소실이 없다). 의미: **실가(actual) 파트만 경비를 가산**하고(직접 경비가 있으면 그것, 없으면 공통 경비 몫 — 파트 안 토지:건물은 취득시 기준시가 비율), 감정·매매사례·환산 파트는 **개산공제만**(§97②2호 본문 — 직접 경비도 미반영). ⇒ 두 파트 모두 비-실가이면 실비 카드는 소비처가 없으므로 UI는 숨기는 편이 정합이다(전송해도 무시되지만 입력이 침묵 소실되는 모양이 된다). 환산 파트는 공통 경비만 §97②2호 단서 후보가 된다(직접 경비는 단서에도 들어가지 않는다 — 현행 총액-환산 모델과 같다).
+
+**U-3 PHD 입력 기준일 확정** — `preHousingDisclosure.landPricePerSqmAtAcquisition` = **토지 취득일** 기준 ㎡당 개별공시지가, `preHousingDisclosure.buildingStdPriceAtAcquisition` = **건물 취득일** 기준 주택건물 기준시가(엔진 `Sum_A = landPricePerSqmAtAcquisition × 주택부수토지 면적 + buildingStdPriceAtAcquisition` — `transfer-tax-pre-housing-disclosure.ts:15,91,99`; 대법원 97누15746·조심2008서1720의 「토지 취득 당시 + 건물 취득 당시 대입」). 엔진은 날짜 일치를 검증할 수 없으므로 캡션·라벨이 날짜를 지시해야 한다. 추가: ① 파트 모델 + PHD에서 건물이 비-환산·계약액 없음(S-2 나목비)이면 나목은 **`buildingStdPriceAtAcquisition`**(>0 필수, 아니면 ⑫ 400·`collectMixedPartAcqIssues` X-6 경로 `preHousingDisclosure.buildingStdPriceAtAcquisition`). ② 상가는 PHD와 무관하게 `acquisitionStandardPrice.landPricePerSqm`(토지일)·`commercialBuildingPrice`(건물일)를 쓴다. ③ PHD ON ∧ 환산 파트 없음은 X-7로 막는다(UI는 PHD 칸을 숨김).
+
+**U-4 총액 플래그 false 고정** — 확인. 파트 모델이면 ④는 `useActualAcquisition`·`useAppraisalSalesAcquisition`을 `false`/미전송, **`acquisitionActualTotalPrice`는 반드시 미전송(`undefined`)**으로 한다. ⑫가 `acquisitionActualTotalPrice`에 `.positive()`를 걸고 있어 0을 보내면 별도로 400이다. 셋 중 하나라도 켜지면 X-4(엔진 throw·⑫ 400). 계약액·모드가 쓰지 않는 값 필드는 **무시**되므로(환산 파트에 값이 남아 있어도 통과) 안전하지만, ④는 활성 모드 값만 싣는 편이 입력-전송 일관이다. `housingBuildingContractPrice`는 0·미입력 = 계약액 없음.
+
+### 11.4 설계 대비 편차 · 결정한 것
+
+| # | 설계 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | S-1 = `apportionByStdPrice(값, 토지일 가목×주택부수면적, 토지일 가목×상가부수면적)`; echo `landSplit {basis:"std_price_ratio", housingStd, commercialStd}` | **면적비**(면적 ×100 정수, 단가 불요). echo `landSplit {basis:"area_ratio", housingArea, commercialArea}` | 같은 필지는 ㎡당 단가가 소거되어 같은 비율이고(S-1 결정문 「같은 필지 = 면적비」), §3.2 표·§6 표가 이미 「토지 S-1은 면적만」이라 적었다. 단가를 쓰면 쓰이지 않는 값을 요구하게 된다 |
+| 2 | V-6 `landPricePerSqm`·`commercialBuildingPrice`를 v1은 계속 요구 | **needs.commercialStdAtAcq로 게이트**(⑫·엔진 모두) | 필수 술어가 모드 키여야 한다는 §6 ⚠️와 같은 원리. 엔진 소비처를 건너뛰도록 `housing.ts`·`commercial.ts`에 분기 추가(EX-4가 취득시 기준시가 전무로 계산됨을 고정) |
+| 3 | 단서 echo는 `provisoGroup?` | + 기존 `necessaryExpenseProviso`(estimatedSide·directSide·chosen)도 **묶음 값으로** 채움 | 양쪽 환산이면 현행과 값이 같다(B-10·R-6) — 기존 표시 소비처 무변경 |
+| 4 | — | `housingPart.estimatedAcquisitionPrice`·`commercialPart.estimatedAcquisitionPrice` = **파트 값 합**(단서 판정 전) | 총액 실가 모델이 같은 필드를 취득가액 합으로 쓰는 규약. 양쪽 환산이면 환산 총액과 1원 일치. ⚠️ `acqHousingStandardPrice`(환산 분자 echo)는 환산 경로 값 그대로(P 또는 0) — **환산 산식 표시는 echo의 환산 파트 유무로 분기**할 것 |
+| 5 | — | `calculationRoute.acquisitionConversionRoute`는 **갱신하지 않음**(레거시 플래그로 파생 — 파트 모델은 `section97_direct`/`phd_corrected`로 나온다) | UI 설계 §0.1대로 결과 카드는 `separateAcquisition` echo 분기를 route 분기보다 **먼저** 둔다 |
+
+### 11.5 V-n 처리 결과
+
+| # | 결과 |
+|---|---|
+| V-1 | **해소** — 파트 양도차익은 독립 산식, 세액은 독립 구현(`indepTax`: 파트별 표1 장특 → 합산 → 기본공제 → 누진세율)과 1원 일치 확인 후 엔진 실측값을 리터럴로 고정(B-1~B-9). 겸용 엔진은 과세표준 천원 미만 절사를 하지 않는다(기존 동작 — B1 범위 밖, 아래 「범위 밖 관찰」) |
+| V-4 | **엔진 쪽 해소**(U-3) — UI 라벨·캡션은 UI 몫 |
+| V-5 | 다건 합산(`multi`)은 `mixedUse` 존재를 **거부**(`lib/api/transfer-tax-schema-multi-refines.ts:50` `MULTI_MIXED_USE_UNSUPPORTED_MESSAGE`)해 파트 모델이 도달하지 않는다. 컴패니언은 `buildMixedUseAssetInput`·파트 카드 경유 — 엔진 입력 수준 동치를 `mixed-use-separate-acq-per-part.part-cards.anchor.test.ts`가 고정(CP-1~3). **컴패니언 Route 전체(④ 경유)는 UI 구현 후 E2E 확인 필요** |
+| V-6 | **해소**(편차 2) |
+| V-10 | 확인 필요 — ⑧ 컴패니언 겸용 경로의 파트 값 필수는 UI 에이전트가 `collectMixedPartAcqIssues`를 부르는 지점에서 확인 |
+| V-2·V-3·V-7~V-9·V-11 | 변동 없음(미검증 — 해석례·원문 확보 후) |
+
+**범위 밖 관찰(수정하지 않음)**: ① 겸용 엔진 `buildTotalTax`(`transfer-tax-mixed-use-totals.ts:124`)는 과세표준을 천원 미만 절사하지 않는다 — 단건 엔진도 `truncateToThousand`를 쓰지 않는 것으로 확인했으나(grep) 법령상 정답 여부는 미판정. ② 경비 안분 비율이 날짜 섞인 `apportionAcquisitionPrice`(§3.5 ⚠️)인 점은 그대로 — 별건 Q-6 후반.

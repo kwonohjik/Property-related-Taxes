@@ -10,6 +10,8 @@ import {
   isHousingBuildingStdAtTransferRequired,
   isHousingPriceAtTransferRequired,
 } from "@/lib/tax-engine/mixed-use-housing-std";
+import { mixedPartAcqNeedsOf } from "@/lib/tax-engine/mixed-use-part-acq";
+import { mixedSeparateAcquisitionSchema, refineMixedSeparateAcquisition } from "./transfer-tax-schema-mixed-use-part-acq";
 // preHousingDisclosureSchema를 직접 참조하면 순환 참조 발생 — 필요 필드만 인라인으로 정의
 // 겸용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
 
@@ -115,7 +117,17 @@ export const mixedUseAssetSchema = z.object({
   acquisitionActualTotalPrice: z.number().int().positive().optional(),
   // 감정가액·매매사례가액 추계 안분 (§176의2②③·법 §100², R-B) — acquisitionActualTotalPrice 총액 재사용.
   useAppraisalSalesAcquisition: z.boolean().optional(),
+  /**
+   * ⑫ B1 — 별개 취득 파트 모델(토지·건물 파트별 산정방식·취득가액). **존재 = 파트 모델 / 부재 = 총액 모델.**
+   * 비엄격 z.object라 정의가 없으면 침묵 strip된다 — 정의·제외 조합 규칙은 `transfer-tax-schema-mixed-use-part-acq.ts`.
+   * 필수 조건은 아래 superRefine이 `mixedPartAcqNeedsOf`(엔진 leaf)를 기존 술어에 AND로 건다.
+   */
+  separateAcquisition: mixedSeparateAcquisitionSchema.optional(),
 }).superRefine((v, ctx) => {
+  // B1 — 결합 제외 7종·값 누락(엔진 leaf 규칙). 파트 모델이 아니면 아무 일도 하지 않는다.
+  refineMixedSeparateAcquisition(v, ctx);
+  // 파트 모델이면 무엇이 쓰이는가 — 아래 필수 규칙들이 AND로 받는다(총액 모델은 undefined = 기존 규칙 불변).
+  const partNeeds = mixedPartAcqNeedsOf(v);
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
   if (total <= 0) {
     ctx.addIssue({ code: "custom", message: "주택+상가 연면적 합계는 0보다 커야 합니다", path: ["residentialFloorArea"] });
@@ -135,6 +147,7 @@ export const mixedUseAssetSchema = z.object({
     !v.acquisitionByGift &&
     !phd &&
     v.partialUsageChange?.direction !== "commercial_to_house" &&
+    (partNeeds?.housingPriceAtAcq ?? true) &&
     !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)
   ) {
     ctx.addIssue({ code: "custom", message: "겸용주택 환산 경로는 취득시 개별주택공시가격이 필요합니다", path: ["acquisitionStandardPrice", "housingPrice"] });
@@ -177,6 +190,7 @@ export const mixedUseAssetSchema = z.object({
       usePhd: v.usePreHousingDisclosure,
       partialDirection: v.partialUsageChange?.direction,
       housingPrice: v.acquisitionStandardPrice.housingPrice,
+      partAcqNeeds: partNeeds,
     })
   ) {
     const atBuildingAcq = v.acquisitionStandardPrice.landPricePerSqmAtBuildingAcq;
@@ -199,12 +213,13 @@ export const mixedUseAssetSchema = z.object({
       ctx.addIssue({ code: "custom", message: "겸용주택 양도시 주택건물 기준시가(나목)가 필요합니다 — 양도시 주택의 토지분·건물분은 개별주택가격을 가목:나목 비율로 나눕니다", path: ["transferStandardPrice", "housingBuildingPrice"] });
     }
   }
-  if (isHousingBuildingStdAtAcqRequired({ usePhd: v.usePreHousingDisclosure, partialDirection: v.partialUsageChange?.direction })) {
+  if (isHousingBuildingStdAtAcqRequired({ usePhd: v.usePreHousingDisclosure, partialDirection: v.partialUsageChange?.direction, partAcqNeeds: partNeeds })) {
     if (!((v.acquisitionStandardPrice.housingBuildingPrice ?? 0) > 0)) {
       ctx.addIssue({ code: "custom", message: "겸용주택 취득시 주택건물 기준시가(나목)가 필요합니다 — 취득시 주택의 토지분·건물분은 개별주택가격을 가목:나목 비율로 나눕니다(토지·건물 취득일이 다르면 건물 취득일 기준)", path: ["acquisitionStandardPrice", "housingBuildingPrice"] });
     }
   }
-  if (!fourPart) {
+  // B1 — 양쪽 실가 + 계약액 + 취득측 경비 없음이면 상가 취득시 기준시가가 쓰이지 않는다(`mixedPartAcqNeeds.commercialStdAtAcq`).
+  if (!fourPart && (partNeeds?.commercialStdAtAcq ?? true)) {
     if (!(v.acquisitionStandardPrice.commercialBuildingPrice > 0))
       ctx.addIssue({ code: "custom", message: "겸용주택은 취득시 상가건물 기준시가가 필요합니다", path: ["acquisitionStandardPrice", "commercialBuildingPrice"] });
     if (!(v.acquisitionStandardPrice.landPricePerSqm > 0))
