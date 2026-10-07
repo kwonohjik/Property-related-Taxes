@@ -151,8 +151,17 @@ export function validateAssetEntry(
    * ⚠️ `?? false` — stale sessionStorage에는 이 필드가 **없다**(undefined).
    *    없으면 「집합건물 아님」으로 본다(안전측: 동·호 미요구).
    *    memory `feedback_new_asset_field_stale_sessionstorage_guard`
+   *
+   * 토지(`"land"`)는 면제한다 — 필지(지번)로 특정되므로 같은 필지에 공동주택이 있어도 동·호는
+   * 식별자가 아니다. 플래그가 아니라 자산 종류로 가르므로, 주택으로 주소를 고른 뒤 토지로 바꿔
+   * 플래그가 남아 있어도 통과한다(계획서 `transfer-address-unit-gate-detached-house.plan.md` §5-B).
    */
-  if ((a.hasAddressUnits ?? false) && !a.addressDong?.trim() && !a.addressHo?.trim()) {
+  if (
+    a.assetKind !== "land" &&
+    (a.hasAddressUnits ?? false) &&
+    !a.addressDong?.trim() &&
+    !a.addressHo?.trim()
+  ) {
     return fieldError("addressJibun", `${label}: 동·호를 선택하세요. 같은 지번의 다른 세대와 구분되지 않습니다.`);
   }
 

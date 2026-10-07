@@ -48,6 +48,18 @@ interface UnitItem {
   announcedDate?: string;
 }
 
+/**
+ * 세대로 고를 수 있는 행이 있는가 — **동 또는 호가 있는 행**.
+ *
+ * 개별주택(단독주택) 공시가격은 동·호가 빈 행으로 온다(`route.ts` 개별주택 fallback).
+ * 「세대 있음」 판정(`onUnitsResolved`)과 동·호 드롭다운 렌더가 **이 술어 하나**를 쓴다 —
+ * 종전엔 판정은 행 수로, 드롭다운은 빈 호를 걸러 읽어 양도세 ⑧ 동·호 게이트가 켜진 채
+ * 선택지가 0개였다(계획서 `transfer-address-unit-gate-detached-house.plan.md`).
+ */
+function hasSelectableUnits(units: UnitItem[]): boolean {
+  return units.some((u) => u.dong !== "" || u.ho !== "");
+}
+
 interface AddressResult {
   pnu: string;
   title: string;
@@ -75,6 +87,8 @@ interface AddressSearchProps {
    * 집합건물을 가르는 축이 따로 없어서 필요하다 — `assetKind`의 `"housing"`은 아파트와
    * 단독주택을 함께 담는다. 호출부가 이 값을 폼에 남겨야 ⑧이 「고를 수 있었는데 안 골랐는가」를
    * 판정할 수 있다 (계획서 §4-2).
+   *
+   * 「세대」는 동 또는 호가 있는 행이다(`hasSelectableUnits`) — 개별주택처럼 동·호가 빈 행뿐이면 `false`.
    *
    * ⚠️ **API 실패와 「세대 없음」은 구분되지 않는다**(`catch`가 빈 배열로 흡수) — 실패 시
    *    `false`가 간다. 안전측(동·호 미요구)이며 그것이 확정된 한계다(계획서 §8-2).
@@ -187,7 +201,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
         const data = await res.json();
         if ((data.units ?? []).length > 0) {
           setUnits(data.units);
-          found = true;
+          found = hasSelectableUnits(data.units);
           return;
         }
       }
@@ -387,7 +401,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
             <div className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
               동/호수 조회 중...
             </div>
-          ) : units.length > 0 ? (
+          ) : hasSelectableUnits(units) ? (
             <UnitSelector
               units={units}
               selectedDong={selectedDong}
