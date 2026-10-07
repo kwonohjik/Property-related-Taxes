@@ -428,8 +428,11 @@ export function Step3({ form, onChange }: Props) {
         </div>
       </ToggleCard>
 
-      {/* §155의3 상생임대주택 — 증여세 부담부증여 경로와 같은 위젯(E-1 한계 G2에서 옮겼다 · JSX 그대로) */}
-      <WinWinRentalSpecialField value={form} onChange={onChange} />
+      {/* §155의3 상생임대주택 — 증여세 부담부증여 경로와 같은 위젯(E-1 한계 G2에서 옮겼다 · JSX 그대로).
+          🔑 입주권 양도에는 띄우지 않는다 — §89①4호 판정은 인가일 현재 기존주택 요건을 위 자기선언으로 받는다
+          (상생임대 요건을 갖추면 거주기간 제한이 없으므로 그 선언에 반영한다 — 서면-2024-법규재산-0802).
+          게이트는 ④(`one-house-exemption-api.ts`)·⑧(`validateStep3`)과 같은 `judgmentSaleIsHousing`. */}
+      {!isRightSale && <WinWinRentalSpecialField value={form} onChange={onChange} />}
 
       {/*
         §155⑳ 장기임대주택 보유자 거주주택 특례 (P4-3a · 계획서 Q-7).

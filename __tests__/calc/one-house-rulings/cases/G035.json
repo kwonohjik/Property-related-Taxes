@@ -13,22 +13,16 @@
    "asset": {
     "assetKind": "right_to_move_in",
     "redevSubject": "right",
-    "redevExemptionEligibleAtApproval": "no",
+    "redevExemptionEligibleAtApproval": "yes",
     "acquisitionDate": "2019-09-10",
     "redevApprovalDate": "2023-11-10"
    },
-   "wasRegulatedAtAcquisition": true,
-   "winWinRentalSpecial": true,
-   "winWinRentalContractDate": "2022-01-08",
-   "winWinRentalIncreaseRatePct": "0",
-   "winWinRentalPriorLeaseMonths": "24",
-   "winWinRentalLeaseMonths": "24",
-   "winWinRentalLeaseEndDate": "2024-01-07"
+   "wasRegulatedAtAcquisition": true
   },
   "expected": {
    "isExempt": true
   },
-  "bucket": "mismatch",
-  "note": "mismatch(불리). 회신: 관리처분인가일 이후 철거되지 않은 주택이 입주권으로 전환된 상태에서 시행령 §155의3(상생임대주택) 요건을 마저 충족하면 §154① 거주기간 제한을 받지 않아 §89①4호 요건을 갖춘 입주권 양도는 비과세. 표현: 원문 일자 그대로(A 취득 2019-09-10 조정대상지역, 직전 임대차 2019-12-28·2년, 상생임대차 2022-01-08 계약·2년·보증금 감액(인상률 0 입력)·종료 2024-01-07, 관리처분인가 2023-11-10, 양도 2024-01-30), 양도가 10억(12억 이하 전제). 실거주가 없어 인가일 현재 자기선언(「인가일 기준 보유 2년·조정 취득 시 거주 2년」)은 문언대로 「아니오」, §155의3 상생임대 입력(판정 메뉴 ② 단계에 입주권 양도에도 노출됨)은 켬. 관측: 과세 — §89①4호 판정은 자기선언만 읽고(사유: 「요건을 갖춘 기존주택 소유가 선언되지 않았습니다」) 상생임대 입력은 입주권 경로에 쓰이지 않는다. 의심 지점: lib/tax-engine/transfer-tax-redevelopment-transforms.ts:207 (본문 요건 = exemptionEligibleAtApproval 자기선언 하나), lib/tax-engine/one-house/one-right-verdict.ts:82-85, app/calc/one-house-exemption/steps/Step3.tsx:432(입주권 양도에도 상생임대 칸 노출). 최소쌍: 자기선언을 「예」로 바꾸면 비과세(가목, V-G035-yes-nowin) — 사용자가 회신 논리를 알고 선언을 바꿔야만 맞는다."
+  "bucket": "match",
+  "note": "회신: 관리처분인가일 이후 철거되지 않은 주택이 입주권으로 전환된 상태에서 시행령 §155의3(상생임대주택) 요건을 마저 충족하면 §154① 거주기간 제한을 받지 않아 §89①4호 요건을 갖춘 입주권 양도는 비과세. 표현: 원문 일자 그대로(A 취득 2019-09-10 조정대상지역, 직전 임대차 2019-12-28·2년, 상생임대차 2022-01-08 계약·2년·보증금 감액(인상률 0 입력)·종료 2024-01-07, 관리처분인가 2023-11-10, 양도 2024-01-30), 양도가 10억(12억 이하 전제). 입주권 양도에는 §155의3 칸이 없다 — 상생임대 요건을 갖춰 거주기간 제한이 없으므로 인가일 현재 자기선언을 「예」로 둔다(입력 규약 — 자기선언 안내에 상생임대 명시). 엔진: §89①4호 가목 — 자기선언 「예」 + 1세대1입주권 → 비과세."
  }
 ]

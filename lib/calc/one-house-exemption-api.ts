@@ -263,7 +263,8 @@ export function buildOneHouseExemptionApiBody(
     ...buildFinalHouseRestartPayload(form, judgmentFinalHouseRestartInScope(form)),
 
     // ── 판정 메뉴 고유 (P4-2b-0이 ⑫⑭를 열어 둔 축) ──────────
-    ...buildOneHouseExtraFactsPayload(form),
+    // §155의3 상생임대 — ⑤가 입주권 양도에는 칸을 숨기므로 ④도 싣지 않는다(stale 선언 차단 · ⑧ 같은 게이트).
+    ...buildOneHouseExtraFactsPayload(judgmentSaleIsHousing(form) ? form : { ...form, winWinRentalSpecial: false }),
 
     /**
      * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기의 leaf를 **그대로** 쓴다.

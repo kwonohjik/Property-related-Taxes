@@ -509,7 +509,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   // §155의3 — 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
   //   규칙·문구는 증여세 부담부증여 경로와 공용 leaf다(E-1 한계 G2).
   //   2026 개정 양도기한(종료일 필수)은 양도일로 게이트한다 — ⑤와 같은 경계.
-  for (const e of winWinRentalFieldErrors(form, form.transferDate)) errors.push(err(e.field, e.message));
+  //   입주권 양도에는 칸이 없다(⑤·④와 같은 `judgmentSaleIsHousing` 게이트).
+  if (judgmentSaleIsHousing(form))
+    for (const e of winWinRentalFieldErrors(form, form.transferDate)) errors.push(err(e.field, e.message));
 
   /**
    * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.
@@ -629,7 +631,7 @@ export function computeOneHouseJudgmentSummary(
     // ⑤(섹션)·④·⑧과 같은 게이트 — 섹션이 숨은 세대 구성의 stale 선언은 적지 않는다(OH-05 형제).
     judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial && "대체주택",
     form.longTermMortgageSpecial && "장기저당담보주택",
-    form.winWinRentalSpecial && "상생임대주택",
+    judgmentSaleIsHousing(form) && form.winWinRentalSpecial && "상생임대주택",
     // OH-18·OH-28 — ④가 실제로 싣는 조건(⑤·⑧과 같은 게이트)일 때만 적는다.
     judgmentSaleIsHousing(form) &&
       form.assets[0]?.acquisitionCause === "inheritance" &&

@@ -167,7 +167,7 @@ export function RedevelopmentRightExemptionSection({
             onChange({ redevExemptionEligibleAtApproval: v ? "yes" : "" })
           }
           title="인가일 현재 §89①3호 가목 요건 충족 (자기선언)"
-          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상)"
+          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상 — 상생임대주택(§155의3) 요건을 갖춘 종전주택은 거주기간 제한 없음)"
         >
           <div className="space-y-3 pt-1">
             <FieldCard
