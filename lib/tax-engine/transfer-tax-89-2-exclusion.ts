@@ -82,6 +82,7 @@ import type {
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { deadlineEndFrom, deadlineEndNote, isAfterPeriod, isWithinDeadline } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
+import { meetsReplacementHouse } from "./one-house/replacement-house";
 import {
   waivesPriorHouseOneYearGap,
   type ResidenceReqInput,
@@ -238,8 +239,9 @@ export function resolveArticle89Clause2(
   const rights = (input.presaleRights ?? []).filter((r) => isClause2Right(r, presaleRightStartDate));
   if (rights.length === 0) return { status: "not_applicable" };
 
-  // §156의2⑤ 대체주택 — `checkExemption` E-5가 요건을 판정한다. 선언돼 있으면 그 판정에 맡긴다.
-  if (input.replacementHouse) {
+  // §156의2⑤ 대체주택 — E-5와 같은 술어. 요건을 갖췄을 때만 예외다. 선언만으로 예외를 주면 E-5가
+  //   불성립으로 떨어진 뒤 입주권이 주택 수에서 빠진 채 일반 1주택 비과세가 난다(M6 — 평가셋 N-G125).
+  if (meetsReplacementHouse(input)) {
     return { status: "exception_met", exception: TRANSFER.REPLACEMENT_HOUSE_156_2_5 };
   }
 
