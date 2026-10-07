@@ -23,6 +23,7 @@ import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-residence-waivers";
 import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
 import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
+import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import {
   CAPITAL_NEWTOWN_RESIDENCE_YEARS,
   capitalNewTownLocation,
@@ -181,6 +182,8 @@ export type ResidenceReqInput = Pick<
   | "acquisitionCause"
   | "decedentSameHouseholdBeforeInheritance"
   | "decedentCohabitationResidenceMonths"
+  // M4 — 동일세대 상속이면 거주요건의 「취득 당시」도 동일세대 보유 개시일로 옮긴다.
+  | "decedentCohabitationHoldingStartDate"
   // §154⑤ 단서 — 비주택을 주택으로 용도변경한 경우 보유기간을 주거용 사용일부터 기산한다.
   | "nonHousingToHousingConversion"
   // §155의3① — 상생임대주택은 §154①·§155⑳1호·§159의4의 **거주기간 제한을 받지 않는다**.
@@ -286,8 +289,13 @@ export function resolveExemptionProviso(
  *    엔진·Step4 안내·수동 토글이 서로 다른 날짜를 보면 "화면은 통과인데 엔진은 차단"이 된다.
  */
 function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
-  return input.nonHousingToHousingConversion?.residentialUseStartDate ?? input.acquisitionDate;
+  return (
+    input.nonHousingToHousingConversion?.residentialUseStartDate ??
+    sameHouseholdInheritanceHoldingStart(input) ??
+    input.acquisitionDate
+  );
 }
+
 
 /**
  * 취득 당시 조정대상지역 여부 — 거주요건(§154① 본문) 판정 입력.
@@ -414,8 +422,9 @@ export function describeOneHouseResidenceRequirement(
   // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
   // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
   // 수증자 실제 취득일(residenceTransitionAcquisitionDate) 사용 — §97의2는 필요경비 계산 특례에 한정.
+  // M4 — 동일세대 상속은 동일세대 보유 개시일(`sameHouseholdInheritanceHoldingStart`).
   const residenceTransitionDate =
-    input.residenceTransitionAcquisitionDate ?? input.acquisitionDate;
+    input.residenceTransitionAcquisitionDate ?? sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate;
   const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
   // §154⑧3호: 동일세대 상속이면 상속개시 전 동일세대 통산 거주분을 거주요건 판정에 합산.
   // §154⑤ 단서 재기산이면 재기산일 이후 거주만(재산세제과-1058 — `one-house/final-house-restart.ts`).
@@ -508,15 +517,7 @@ function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
   ) {
     return input.nonHousingToHousingConversion.residentialUseStartDate;
   }
-  if (
-    input.acquisitionCause === "inheritance" &&
-    input.decedentSameHouseholdBeforeInheritance === true &&
-    input.decedentCohabitationHoldingStartDate &&
-    input.decedentCohabitationHoldingStartDate < input.acquisitionDate
-  ) {
-    return input.decedentCohabitationHoldingStartDate;
-  }
-  return input.acquisitionDate;
+  return sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate;
 }
 
 /**

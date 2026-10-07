@@ -34,6 +34,7 @@ import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/R
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 type Props = {
@@ -137,10 +138,31 @@ export function Step3({ form, onChange }: Props) {
    *    들어온 순간 토글을 읽기 전용 자동 판정으로 바꾼다 — 그러지 않으면 사용자가 켠 값이
    *    조용히 버려진다.
    */
+  // M4 — §154⑧3호 동일세대 상속이면 「취득 당시」는 동일세대로 보유하기 시작한 날(엔진과 같은 함수).
+  const sameHouseholdStart = useMemo(
+    () =>
+      primary.acquisitionDate && primary.decedentCohabitationHoldingStartDate
+        ? sameHouseholdInheritanceHoldingStart({
+            acquisitionCause: primary.acquisitionCause,
+            decedentSameHouseholdBeforeInheritance: primary.decedentSameHouseholdBeforeInheritance,
+            decedentCohabitationHoldingStartDate: new Date(primary.decedentCohabitationHoldingStartDate),
+            acquisitionDate: new Date(primary.acquisitionDate),
+          })
+        : undefined,
+    [
+      primary.acquisitionCause,
+      primary.decedentSameHouseholdBeforeInheritance,
+      primary.decedentCohabitationHoldingStartDate,
+      primary.acquisitionDate,
+    ],
+  );
   const regulatedVerdict = useMemo(() => {
     if (!primary.regionCode || !primary.acquisitionDate) return null;
-    return isRegulatedByBjdCode(primary.regionCode, primary.acquisitionDate);
-  }, [primary.regionCode, primary.acquisitionDate]);
+    return isRegulatedByBjdCode(
+      primary.regionCode,
+      sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate,
+    );
+  }, [primary.regionCode, primary.acquisitionDate, primary.decedentCohabitationHoldingStartDate, sameHouseholdStart]);
 
   /**
    * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
@@ -291,10 +313,14 @@ export function Step3({ form, onChange }: Props) {
 
         <RegulatedAreaField
           verdict={regulatedVerdict}
-          autoLabel="취득 당시 조정대상지역"
+          autoLabel={sameHouseholdStart ? "동일세대 보유 개시 당시 조정대상지역" : "취득 당시 조정대상지역"}
           autoTestId="one-house-regulated-auto"
           toggleTestId="one-house-was-regulated"
-          toggleTitle="취득 당시 조정대상지역이었습니다"
+          toggleTitle={
+            sameHouseholdStart
+              ? "피상속인과 동일세대로 보유하기 시작한 당시 조정대상지역이었습니다"
+              : "취득 당시 조정대상지역이었습니다"
+          }
           checked={form.wasRegulatedAtAcquisition}
           onCheckedChange={(wasRegulatedAtAcquisition) => onChange({ wasRegulatedAtAcquisition })}
         />

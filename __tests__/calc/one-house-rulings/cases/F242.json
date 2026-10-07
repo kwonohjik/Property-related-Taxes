@@ -59,7 +59,7 @@
     "expected": {
       "isExempt": true
     },
-    "bucket": "mismatch",
-    "note": "mismatch(불리). 구성 짝 — F242-era에서 동일세대 통산 거주를 0개월로 둔 것(동일세대로 보유만 하고 다른 집에 거주), 소재지는 서울 은평(법정동코드)으로 옮겨 상속개시일 당시 조정대상지역을 주소로 확정. 회신 규칙(2017.8.2. 이전 동일세대 피상속인 취득 + 2017.8.2. 당시부터 동일세대 상속인 → 거주기간 제한 없음)대로면 비과세. 관측: 과세 — 엔진의 경과규정 판정(2017.8.3. 전 취득)이 상속개시일(acquisitionDate)만 보고 피상속인 취득일·동일세대 개시일(decedentCohabitationHoldingStartDate 2012-09-05 — 보유기간 통산에는 쓰임)을 보지 않는다. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:393-395(`residenceTransitionAcquisitionDate ?? acquisitionDate` — 상속 경로에서는 이 값이 비어 있다; 채우는 곳은 이월과세 lib/tax-engine/transfer-tax-carryover.ts:227뿐). 입력 도달: 통산 거주 24개월이면 비과세(V-F242-residence24), 토글로 바꿔도 과세(V-F242p-toggle). 판정 보류 154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified는 거주 미충족 시 붙는 안내."
+    "bucket": "match",
+    "note": "구성 짝 — F242-era에서 동일세대 통산 거주를 0개월로 둔 것(동일세대로 보유만 하고 다른 집에 거주), 소재지는 서울 은평(법정동코드)으로 옮겨 상속개시일 당시 조정대상지역을 주소로 확정. 회신 규칙(2017.8.2. 이전 동일세대 피상속인 취득 + 2017.8.2. 당시부터 동일세대 상속인 → 거주기간 제한 없음)대로면 비과세. 엔진(M4): §154⑧3호 동일세대 상속은 거주요건의 「취득 당시」(조정대상지역 · 2017.8.3. 경과규정)를 동일세대 보유 개시일로 본다(one-house/same-household-inheritance-start.ts)."
   }
 ]
