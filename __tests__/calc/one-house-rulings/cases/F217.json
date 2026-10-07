@@ -72,7 +72,7 @@
         "154-1-proviso:overseas_migration"
       ]
     },
-    "bucket": "mismatch",
-    "note": "mismatch(유리). 짝(가정) — P-F217-after-departure에서 출국일만 양도일 뒤(2005-03-15 예정)로 옮긴 최소쌍. 회신: 국외이주를 계획했더라도 세대전원이 출국하지 않은 상태의 양도는 단서 미적용 → 보유 9개월로 과세. 관측: 비과세(applied 154-1-proviso:overseas_migration) — 엔진은 출국일부터 2년 이내인지만 보고 양도일이 출국일 이후인지는 보지 않는다. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:240-244(`isWithinDeadline(departureDate, 2, transferDate)` — 양도일 ≥ 출국일 조건 없음), ⑧ lib/calc/exemption-proviso-validate.ts:31(출국일 미입력만 검사). 같은 구조인 2호 다목(근무상 형편 국외거주)도 같은 분기를 쓴다(:241-244). 입력 도달: 단서를 빼면 과세(V-F217n-noproviso)."
+    "bucket": "match",
+    "note": "짝(가정) — P-F217-after-departure에서 출국일만 양도일 뒤(2005-03-15 예정)로 옮긴 최소쌍. 회신: 국외이주를 계획했더라도 세대전원이 출국하지 않은 상태의 양도는 단서 미적용 → 보유 9개월로 과세. 엔진: 2호 나·다목은 출국 후 양도만, 2008.2.22. 이후 양도분은 출국일 현재 보유 주택만 단서 적용(transfer-tax-exemption-holding.ts `resolveExemptionProviso`)."
   }
 ]
