@@ -273,7 +273,9 @@ export function buildOneHouseExemptionApiBody(
      *    (`checkEligibility` 인자에 없다), 여기서 골라 빼면 계산기와 다른 payload를 만드는
      *    두 번째 변환이 된다. leaf 하나를 그대로 쓰고 무엇을 읽을지는 엔진이 정한다.
      */
+    // 입주권 양도에는 ⑤가 칸을 숨긴다(⑳은 주택 양도 특례 — G066) ⇒ 남은 선언을 싣지 않는다(⑧ 같은 게이트).
     ...(() => {
+      if (!judgmentSaleIsHousing(form)) return {};
       const rhPayload = toRentalHousingExceptionApi(primary);
       return rhPayload ? { rentalHousingException: rhPayload } : {};
     })(),

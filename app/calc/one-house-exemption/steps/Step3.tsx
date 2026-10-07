@@ -472,7 +472,20 @@ export function Step3({ form, onChange }: Props) {
 
         🔑 여기 선언한 임대주택은 ③ **명부에 다시 넣지 않는다** — 특례가 주택 수에서 빼 주는
            대상이다. 이중 입력은 ⑧이 ③ 단계에서 경고한다.
+
+        🔴 입주권 양도에는 띄우지 않는다(M10 · 평가셋 G066) — ⑳은 주택 양도의 특례라 입주권 양도에 적용되지
+           않는다(서면-2017-법령해석재산-1581). 칸을 띄우면 명부 밖에 둔 임대주택이 §89①4호의 다른 주택 수에서
+           빠져 비과세가 났다. 임대주택은 ③ 명부에 넣게 안내한다 — ⑤·④·⑧ 같은 `judgmentSaleIsHousing` 게이트.
       */}
+      {isRightSale ? (
+        <ToneCard tone="slate">
+          <p className="text-xs leading-relaxed" data-testid="one-house-right-sale-rental-notice">
+            장기임대주택 보유자 거주주택 특례(소득세법 시행령 §155⑳)는 조합원입주권 양도에는 적용되지 않습니다.
+            장기임대주택이 있으면 다음 「보유 주택·권리」 단계의 보유 주택 목록에 넣으세요 — 입주권 비과세(§89①4호)
+            판정에서 다른 주택으로 셉니다.
+          </p>
+        </ToneCard>
+      ) : (
       <RentalHousingExceptionSection
         mode="facts"
         rh={primary.rentalHousingException}
@@ -483,6 +496,7 @@ export function Step3({ form, onChange }: Props) {
         // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시(③)에 쓴다.
         wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
       />
+      )}
 
       <ToggleCard
         data-testid="one-house-unregistered"

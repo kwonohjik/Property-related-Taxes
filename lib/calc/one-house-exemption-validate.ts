@@ -264,6 +264,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    */
   const primary = form.assets[0];
   if (
+    judgmentSaleIsHousing(form) &&
     primary?.rentalHousingException?.applyException &&
     (primary.rentalHousingException.rentalUnits?.length ?? 0) > 0 &&
     (form.houses?.length ?? 0) > 0
@@ -521,7 +522,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
    *    판정이 영구 차단된다(3중 패턴 — ⑤/④/⑧).
    * 🔑 **이중 입력 경고는 여기 없다** — 명부를 보는 경고라 `validateStep2`에 남겼다.
    */
-  if (primary) {
+  // 입주권 양도에는 ⑳ 칸이 없다(⑤·④와 같은 `judgmentSaleIsHousing` 게이트 — G066).
+  if (primary && judgmentSaleIsHousing(form)) {
     const rentalError = validateRentalHousingException(
       primary.rentalHousingException,
       primary,
