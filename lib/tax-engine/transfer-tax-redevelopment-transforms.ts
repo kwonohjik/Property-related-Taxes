@@ -17,6 +17,7 @@
 import { isWithinDeadline } from "./civil-period";
 import { REDEVELOPMENT } from "./legal-codes";
 import { preApprovalNecessaryExpense } from "./redevelopment-split";
+import { oneRightOtherHouseCount } from "./one-house/right-sale-marriage-merge";
 import type {
   TransferTaxInput,
   RedevelopmentResult,
@@ -216,11 +217,14 @@ export function resolveOneRightExemptionClause(
   // 인가일을 몰라 갈리지 않으면 나목 취득일 미입력과 같이 불성립으로 두고 화면이 사유를 안내한다.
   if (oneRightPresaleGate(input, redevInfo) !== "clear") return undefined;
 
+  // 혼인합가(§155⑤) 후 양도면 혼인 전 배우자 쪽 1채를 「다른 주택」에서 뺀다(M9 — 서면-2015-부동산-1200).
+  const otherHouses = oneRightOtherHouseCount(input);
+
   // ── 가목: 다른 주택 0채 ──
-  if (input.householdHousingCount === 0) return "ga";
+  if (otherHouses === 0) return "ga";
 
   // ── 나목: 1주택 + 그 주택 취득일부터 N년 이내 양도 ──
-  if (input.householdHousingCount === 1) {
+  if (otherHouses === 1) {
     // 연혁(E-3 후속): 2005-12-31 이전 양도분은 나목이 없고(영 §155 제16항 — 「다른 주택이 없는 경우」뿐),
     // 기한은 양도일 기준 1년(2006-01-01) → 2년(2008-11-28) → 3년(2012-06-29).
     const naYears = oneRightClauseNaYears(input.transferDate);

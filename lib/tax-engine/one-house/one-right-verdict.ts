@@ -39,6 +39,7 @@ import {
   oneRightClauseNaYears,
   oneRightRequirementEraNotices,
 } from "../data/one-right-requirement-era";
+import { oneRightOtherHouseCount, resolveRightSaleMarriageMerge } from "./right-sale-marriage-merge";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 
@@ -64,6 +65,8 @@ export type OneHouseOneRightVerdict = {
   requirementNotices?: string[];
   /** 나목 성립 시 적용한 기한(년) — 양도일 연혁 1·2·3년(E-3 후속). 가목·미성립이면 없음. */
   naYears?: number;
+  /** 혼인합가(§155⑤)로 배우자 쪽 주택을 「다른 주택」에서 뺐을 때의 안내(M9). 없으면 키를 싣지 않는다. */
+  marriageMergeNotice?: string;
   /** 미성립 사유 — 사용자가 어디가 모자란지 알 수 있게 전부 모은다 */
   reasons: string[];
   legalBasis: string;
@@ -91,6 +94,7 @@ export function buildOneRightVerdict(
     eligibleAtApprovalDeclared: facts.exemptionEligibleAtApproval === true,
   });
   const requirementNotices = eraNotices.length > 0 ? { requirementNotices: eraNotices } : {};
+  const marriageMerge = resolveRightSaleMarriageMerge(input);
   if (clause) {
     const overThreshold = oneRightHighValueBase(input) > highValueThreshold;
     const thresholdNotice = oneRightHighValueEraNotice(input.transferDate);
@@ -102,6 +106,11 @@ export function buildOneRightVerdict(
       ...(thresholdNotice ? { thresholdNotice } : {}),
       ...requirementNotices,
       ...(clause === "na" ? { naYears: oneRightClauseNaYears(input.transferDate) ?? undefined } : {}),
+      ...(marriageMerge?.status === "applies"
+        ? {
+            marriageMergeNotice: `혼인합가(${TRANSFER.MARRIAGE_MERGE_EXEMPT}) — 혼인한 날부터 ${marriageMerge.years}년 이내에 먼저 양도하는 입주권이라 혼인 전 배우자 쪽 주택 1채를 다른 주택에서 빼고 판정했습니다.`,
+          }
+        : {}),
       reasons: [],
       legalBasis: TRANSFER.ONE_RIGHT_EXEMPT,
     };
@@ -138,7 +147,8 @@ export function buildOneRightVerdict(
       `2022.1.1. 이후 취득한 분양권이 있습니다. 양도하는 입주권의 관리처분계획인가일이 2022.1.1. 전이면 분양권 요건이 적용되지 않고(종전 규정 — ${REDEVELOPMENT.ONE_RIGHT_PRESALE_RULING}), 그 뒤면 적용됩니다 — 인가일을 입력하지 않으면 판정할 수 없어 비과세를 적용하지 않습니다.`,
     );
   }
-  const houseCount = input.householdHousingCount;
+  if (marriageMerge?.status === "fails" && marriageMerge.confirmNotice) reasons.push(marriageMerge.confirmNotice);
+  const houseCount = oneRightOtherHouseCount(input);
   // 나목 기한은 양도일 연혁(1년·2년·3년) — 2005.12.31. 이전 양도분은 나목이 없다(E-3 후속).
   const naYears = oneRightClauseNaYears(input.transferDate);
   if (houseCount > 1) {

@@ -41,8 +41,10 @@ import {
   judgmentMarriageRentalOriginVisible,
   judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
+  judgmentRightSaleMergeOwnsInput,
   judgmentTemporaryTwoHouseVisible,
 } from "@/lib/calc/one-house-judgment-section-scope";
+import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { ReplacementHouseSpecialBlock } from "@/app/calc/transfer-tax/steps/step4-sections/ReplacementHouseSpecialBlock";
 import {
@@ -197,6 +199,12 @@ export function Step2({ form, onChange }: Props) {
           */
         />
       )}
+
+      {/*
+        입주권 양도 + 다른 주택 1채 — 위 두 소유자가 모두 숨는 구간(M9). 혼인 전 배우자 쪽 주택은 §89①4호
+        「다른 주택」에서 빠진다(서면-2015-부동산-1200). 배타 규약은 `judgmentRightSaleMergeOwnsInput`.
+      */}
+      {judgmentRightSaleMergeOwnsInput(form) && <MergeDateSection form={form} onChange={onChange} />}
 
       {/* 혼인합가 1199 — ②에서 선언한 장기임대주택(명부 밖)의 혼인 전 보유자. 혼인일 바로 다음에 둔다. */}
       {judgmentMarriageRentalOriginVisible(form) && <RentalUnitsMarriageOriginSection form={form} onChange={onChange} />}

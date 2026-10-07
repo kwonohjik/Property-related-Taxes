@@ -289,6 +289,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
                 ? `나목 성립 — 1주택 취득일부터 ${oneRightNaYears}년 이내 양도입니다`
                 : "요건 미충족 — 비과세가 적용되지 않습니다"}
           </p>
+          {oneRight.marriageMergeNotice && (
+            <p className="text-sm" data-testid="one-house-one-right-marriage-merge">
+              {oneRight.marriageMergeNotice}
+            </p>
+          )}
           {oneRight.isPartialExempt && (
             <p className="text-sm">
               양도가액이 {oneRightThreshold !== undefined ? `${formatHighValueThresholdLabel(oneRightThreshold)}원` : "고가 기준금액"}을
