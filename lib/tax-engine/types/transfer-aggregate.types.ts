@@ -181,7 +181,11 @@ export interface PerPropertyBreakdown
   propertyLabel: string;
   isExempt: boolean;
   exemptReason?: string;
-  /** 양도가액 (입력값) */
+  /**
+   * 양도가액 — **표시 전용**. 일반 자산은 입력값(`singleInput.transferPrice`), 토지·건물 분리 자산은 **소유 파트의 양도가 합**이다
+   * (소유자 분리 `selfOwns ≠ both`에서 비소유 파트의 일괄 총액이 섞이지 않는다 — `summarizeSplitGain`).
+   * 세액·12억 판정은 이 필드를 읽지 않는다.
+   */
   transferPrice: number;
   /** 취득가액 (환산취득가 사용 시 환산 후 값) */
   acquisitionPrice: number;

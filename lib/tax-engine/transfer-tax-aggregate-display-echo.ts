@@ -72,7 +72,7 @@ export function adoptedCarryoverAcquisitionPrice(
 export function resolveDisplayAcquisitionAndExpense(r: {
   result: TransferTaxResult;
   singleInput: TransferTaxInput;
-}): { acquisitionPrice: number; necessaryExpense: number } {
+}): { transferPrice: number; acquisitionPrice: number; necessaryExpense: number } {
   /**
    * 실제 적용 취득가액 — 환산 자산은 **단건 엔진이 낸 `estimatedBase` 가 정본**이다.
    * 필요경비는 §97 개산공제 포함 역산.
@@ -143,6 +143,22 @@ export function resolveDisplayAcquisitionAndExpense(r: {
     : r.result.isExempt
     ? Math.max(0, r.singleInput.transferPrice - effectiveAcquisitionPrice - (r.result.exemptGrossGain ?? 0))
     : r.singleInput.transferPrice - effectiveAcquisitionPrice - r.result.transferGain;
-  return { acquisitionPrice: effectiveAcquisitionPrice, necessaryExpense: effectiveNecessaryExpense };
+  /**
+   * **표시 양도가액** — 분리 자산은 소유 파트의 양도가 합이다(`summarizeSplitGain`).
+   *
+   * 🔴 `singleInput.transferPrice`는 **일괄 총액**이다. 소유자 분리(`selfOwns ≠ both`)에서는 비소유 파트의 양도가가
+   *    섞여, 위의 소유 파트 취득가액·필요경비와 같은 줄에 놓이면 `양도가 − 취득 − 필요경비 = 양도차익`이 깨졌다
+   *    (land_only 실측: 900,000,000 − 200,000,000 − 0 ≠ 475,000,000). 소유 파트 합(675,000,000)이면 맞는다.
+   *    `selfOwns = both`는 두 파트 합 = 일괄 총액이라 값이 같다(anchor `split-acq-result-display.c.owner-split.anchor`).
+   *
+   * 이 값을 읽는 곳은 전부 표시다 — 합산 요약 카드·합산 신고서·명세서·건별 신고서·PDF. 세액 경로
+   * (`taxableAfterReduction`·`groupTaxes`·12억 판정)는 `r.singleInput`·`r.result`를 직접 읽고 이 필드를 읽지 않는다.
+   */
+  const effectiveTransferPrice = splitSummary ? splitSummary.transferPrice : r.singleInput.transferPrice;
+  return {
+    transferPrice: effectiveTransferPrice,
+    acquisitionPrice: effectiveAcquisitionPrice,
+    necessaryExpense: effectiveNecessaryExpense,
+  };
 }
 

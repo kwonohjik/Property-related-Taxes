@@ -455,3 +455,39 @@ UI 변경(E-U1과 별개의 **표시 보강**):
 | 다건 건1 합산 신고서 | 취득 0 · 필요경비 314,000,000 | 취득 312,500,000 · 필요경비 1,500,000 |
 | 다건 합산 요약 | 전체 취득가액 −100,000,000 · 전체 필요경비 −314,000,000 | −412,500,000 · −1,500,000 |
 | 세액 | 결정세액 0 · 다건 합산 결정세액 38,390,000 | **동일**(총 납부세액 42,229,000 불변) |
+
+---
+
+## 15. Check 환류 (2026-10-08 — 소유자 분리 항등식 · F1·F2·F3·F6, 표시 전용 · 세액 불변)
+
+Check 리뷰 2건이 지적한 갭. 설계 §1~§14가 **소유자 분리(`selfOwns ≠ both`)**와 **분리 자산의 PDF·장특 합계**를 다루지 않았다.
+
+### 15.1 소유자 분리 항등식 (리뷰 FAIL)
+
+원인: 다건 집계 `PerPropertyBreakdown.transferPrice`가 **일괄 총액**(`singleInput.transferPrice`)인데 취득가액·필요경비 echo(E-U1)는 소유 파트만 센다. 비과세 `exemptGrossGain`도 양 파트 gross였다(`ownerRawGain`은 소유 파트).
+
+| 결정 | 내용 |
+|---|---|
+| 필드 변경 여부 | **필드를 바꾼다** — `PerPropertyBreakdown.transferPrice` 소비처 전수(합산 요약 카드·합산 신고서·합산 명세서·건별 신고서·PDF·일반건물 카드 산식)가 전부 표시다. 엔진은 이 필드를 읽지 않는다(`transfer-tax-aggregate.ts`가 만들기만 하고, 세액 경로는 `r.singleInput`·`r.result`). 사이드바(`transfer-per-asset-summary.ts`)는 이 필드를 읽지 않는다 |
+| 값 | 분리 자산: `summarizeSplitGain(splitDetail).transferPrice`(소유 파트 합). `selfOwns = both`는 두 파트 합 = 일괄 총액이라 불변(36 조합 실측) |
+| `exemptGrossGain` | 소유자 분리면 `summarizeSplitGain(splitDetail).gain`(= `ownerRawGain`과 같은 축). **표시 전용 확정** — 이 값을 바꿔도 단건 54 · 다건 54 결과의 다른 필드가 전부 동일(탐침 diff) |
+| 건별 신고서(단일 열) | 어댑터가 `splitDetail`을 싣지 않아 폼의 일괄 총액으로 역산 → `filingTransferPriceOverride(breakdown)`(소유자 분리일 때만 `breakdown.transferPrice`) |
+| 단건 명세서 양도가액 | 소유자 분리면 `summarizeSplitGain` 소유 파트 합(신고서 split-2col 합계 열과 같은 leaf) · 산식 문구 「본인 소유 파트 양도가 — 토지 675,000,000 (일괄양도가액 900,000,000 중 · 소령 §166⑥·§168②)」 |
+
+### 15.2 F1 · F2 · F3 · F6
+
+| # | 내용 |
+|---|---|
+| F1 | `DetailedStatementLthdItems` — 분리 자산의 자산별 보유분·거주분은 `sumSplitLthdAmounts`(엔진 leaf — 소유 파트 echo 합 + 배율초과 부수토지분은 보유분). 분리 자산이 있는 집계의 합계 행 = 자산별 합(산식 「자산별 합계 — 건1 … + 건2 …」). echo 없는 구 이력·분리 자산 없는 집계는 종전 |
+| F2 | `aggregateEstimatedDisplay` — `p.splitDetail`이 있으면 `filingDisplay.estimatedBase`(레거시 환산 플래그 파생) 대신 echo. stale 플래그는 **실제로 도달한다**(요청 body `useEstimatedAcquisition: true` 확인) — 발산 조건은 비소유 파트가 환산(land_only + 건물 환산 → 312,500,000 vs 200,000,000) 또는 swap 파트 |
+| F3 | `TransferSplitSection`(PDF) — 산정방식 행(`splitAcqModeLabel`) · 취득가액 = 차감값 · 자본적지출·양도비 / 개산공제 행 분리 · swap 안내 · 소유자 분리 비소유 파트 「(타인 소유)」·「-」. 파트 `acqMode` echo 없는 구 이력은 종전 표 |
+| F6 | `SplitGainDetailSection`·`ValuationDetailCards` `isExempt` prop — 비과세면 장특 행 아래 「비과세 — 장기보유특별공제 없음」(testid `split-card-exempt-lthd-note`). 단건·다건·일괄 호출부 3곳 전달 |
+
+### 15.3 범위 밖(기록)
+- 합산 PDF 자산별 표(`TransferMultiSection`)에는 필요경비 행이 없다 — 양도가 − 취득가 = 양도차익은 필요경비가 0인 자산에서만 성립(종전부터).
+- 사이드바 단건 분리 행(F4a/b/c) · 라벨 「실제 거래가액」(비분리 실가) · 「양도비」 문구 · 구 이력 집계 문구·값 혼재 · 겸용·재개발 `applyRate × 공제율`.
+
+### 15.4 E2E · anchor 위치
+- vitest anchor: `__tests__/tax-engine/transfer/split-acq-result-display.c.owner-split.anchor.test.ts`(엔진 91) · `__tests__/components/split-acq-result-display.c.owner-split.ui.anchor.test.tsx`(49) · `__tests__/lib/pdf/transfer-split-section-pdf.anchor.test.tsx`(8).
+- E2E: `e2e/transfer-split-acq-owner-split-display.spec.ts`(S11·S12·M5~M7) — 시드·표 읽기 헬퍼는 `e2e/_helpers/split-acq-display.ts`(기존 spec과 공유, 800줄 정책 분리).
+

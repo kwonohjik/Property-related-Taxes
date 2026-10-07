@@ -233,18 +233,44 @@ export function buildStatementItems(
   });
 
   // ── 2단계: 양도차익 산정 ─────────────────────────────────────
+  /**
+   * 토지·건물 별개 취득(split) 정본 합 — 엔진 leaf `summarizeSplitGain`(신고서·카드·step 문구와 한 정의).
+   *
+   * 🔴 종전에는 아래 역산(`양도가액 − 양도차익 − result.expenses`)이었다. split의 `result.expenses`는 직접경비 합뿐이라
+   *   개산공제가 **취득가액 칸으로** 들어가고 필요경비는 0이 됐다(6조합 중 5조합 — 실측 2026-10-07). 분기 신호는
+   *   `usedEstimatedAcquisition`(항상 false)이 아니라 응답에 실재하는 `splitDetail`이다.
+   * 위계: 겸용(B1 echo — 별도 산식)·이월과세 시나리오 A(증여자 취득가액 승계)가 우선한다 — 산식 빌더와 같은 순서.
+   */
+  const splitSummary =
+    !isAggregate &&
+    result.splitDetail &&
+    !result.mixedUseDetail &&
+    result.carryoverTaxationDetail?.adoptedScenario !== "A"
+      ? summarizeSplitGain(result.splitDetail)
+      : undefined;
+  /**
+   * 소유자 분리(토지만·건물만) 단건의 신고 단위 양도가액 — **소유 파트의 양도가 합**이다. `totalTransferPrice`는 폼의 일괄 총액이라
+   * 비소유 파트분이 섞인다. 신고서(`FilingFormTableHelpers` split-2col 합계 열)와 같은 정의·같은 leaf를 읽는다 —
+   * 두 카드가 같은 결과에 양도가액을 다르게 적으면(900,000,000 vs 675,000,000) 검증이 안 된다.
+   * `selfOwns = both`는 지분 반영 `totalTransferPrice`를 그대로 쓴다(종전과 동일).
+   */
+  const ownerSplitTransfer =
+    splitSummary && result.splitDetail && result.splitDetail.selfOwns !== "both" ? splitSummary : undefined;
+
   const sumPropTransfer = isAggregate
     ? properties.reduce((s, p) => s + p.transferPrice, 0)
     : 0;
 
   items.set("transferPrice", {
     label: "양도가액",
-    value: isAggregate ? sumPropTransfer : totalTransferPrice,
+    value: isAggregate ? sumPropTransfer : ownerSplitTransfer ? ownerSplitTransfer.transferPrice : totalTransferPrice,
     formula: burdenedGift
       ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()} 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
-        : "사용자 입력 (실제 매매계약서상 거래금액)",
+        : ownerSplitTransfer
+          ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중 · 소령 §166⑥·§168②)`
+          : "사용자 입력 (실제 매매계약서상 거래금액)",
     legalBasis: burdenedGift
       ? "소득세법 시행령 §159·§166"
       : "소득세법 시행령 §166",
@@ -283,21 +309,6 @@ export function buildStatementItems(
     result.usedEstimatedAcquisition === true && result.swapApplied !== true;
   /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 비어 있다). `estimatedBase`는 공제 **전** 값. */
   const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
-  /**
-   * 토지·건물 별개 취득(split) 정본 합 — 엔진 leaf `summarizeSplitGain`(신고서·카드·step 문구와 한 정의).
-   *
-   * 🔴 종전에는 아래 역산(`양도가액 − 양도차익 − result.expenses`)이었다. split의 `result.expenses`는 직접경비 합뿐이라
-   *   개산공제가 **취득가액 칸으로** 들어가고 필요경비는 0이 됐다(6조합 중 5조합 — 실측 2026-10-07). 분기 신호는
-   *   `usedEstimatedAcquisition`(항상 false)이 아니라 응답에 실재하는 `splitDetail`이다.
-   * 위계: 겸용(B1 echo — 별도 산식)·이월과세 시나리오 A(증여자 취득가액 승계)가 우선한다 — 산식 빌더와 같은 순서.
-   */
-  const splitSummary =
-    !isAggregate &&
-    result.splitDetail &&
-    !result.mixedUseDetail &&
-    result.carryoverTaxationDetail?.adoptedScenario !== "A"
-      ? summarizeSplitGain(result.splitDetail)
-      : undefined;
   const singleAcq = splitSummary
     ? splitSummary.acquisitionDeducted
     : estimatedNoSwap

@@ -133,6 +133,18 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
 }
 
 /**
+ * 건별 신고서(단일 열)가 쓸 **양도가액 override**.
+ *
+ * 소유자 분리(토지만·건물만) 자산은 신고 단위 양도가액이 **소유 파트의 합**(`breakdown.transferPrice`)이다. 어댑터
+ * (`breakdownToFilingResult`)가 `splitDetail`을 싣지 않아 표가 폼의 일괄 총액으로 취득가액을 역산하면
+ * (양도가 − 양도차익 − 필요경비) 비소유 파트분이 취득가액에 섞인다(land_only 실측: 취득 425,000,000 · 정답 200,000,000).
+ * 그 외 자산은 `undefined` — 종전처럼 폼 값과 지분 안분(`ownRatio`)을 그대로 쓴다.
+ */
+export function filingTransferPriceOverride(b: PerPropertyBreakdown): number | undefined {
+  return b.splitDetail && b.splitDetail.selfOwns !== "both" ? b.transferPrice : undefined;
+}
+
+/**
  * 자산별 산출세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 `refCalculatedTax`.
  *
  * 🔴 **가드가 있어야 하는 이유**: 결과는 IndexedDB에 저장·복원된다. 옛 저장 결과·HMR 부분
@@ -462,6 +474,7 @@ export function PropertyBreakdownAccordion({
             longTermDeduction={breakdown.longTermHoldingDeduction}
             taxableIncome={breakdown.incomeAfterOffset}
             assetKind={property?.form?.assets?.[0]?.assetKind}
+            isExempt={breakdown.isExempt}
             {...(property?.form?.assets?.[0]?.saleSplitExemptionNote
               ? { exemptionNote: property.form.assets[0].saleSplitExemptionNote }
               : {})}
@@ -478,6 +491,7 @@ export function PropertyBreakdownAccordion({
                 <FilingFormTable
                   result={filingResult}
                   formData={property?.form}
+                  transferPriceOverride={filingTransferPriceOverride(breakdown)}
                   redevSubject={
                     hasRedev
                       ? ((assetForm?.redevSubject || (assetForm?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")

@@ -454,8 +454,11 @@ function computeAggregateOnce(
     }
 
     // 취득가액·필요경비 echo — 800줄 정책 분리. 분리 취득(split) 정정 사유는 leaf 주석(E-U1).
-    const { acquisitionPrice: effectiveAcquisitionPrice, necessaryExpense: effectiveNecessaryExpense } =
-      resolveDisplayAcquisitionAndExpense(r);
+    const {
+      transferPrice: effectiveTransferPrice,
+      acquisitionPrice: effectiveAcquisitionPrice,
+      necessaryExpense: effectiveNecessaryExpense,
+    } = resolveDisplayAcquisitionAndExpense(r);
     // 다건 컨텍스트 자산별 산출세액·결정세액 (참고).
     // 단건 엔진은 skipBasicDeduction=true로 호출되어 r.result.determinedTax는 양도소득금액 기준 부정확.
     // taxBaseShare(= incomeAfterOffset - allocatedBasic) 기준으로 다건 컨텍스트에서 재계산해 노출한다.
@@ -484,7 +487,7 @@ function computeAggregateOnce(
       propertyLabel: r.item.propertyLabel,
       isExempt: r.result.isExempt,
       exemptReason: r.result.exemptReason,
-      transferPrice: r.singleInput.transferPrice,
+      transferPrice: effectiveTransferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,
       necessaryExpense: effectiveNecessaryExpense,
       // 신고서 양식: 실가 모드는 자본적지출이 필요경비 칸에 머문다(예외 swap·이월과세 A는 표시 leaf `capExInAcquisitionColumn`)

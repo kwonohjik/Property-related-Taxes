@@ -213,7 +213,7 @@ function nbReason(years: number, rate: number): string {
  *   ② Σ(소유 파트 공제액) + 배율초과분 = 확정 공제 총액 — §98의2 특칙 재할당 등 총액이 달라진 경우를 거른다
  *   ③ Σ 분해(보유분 + 거주분) + 배율초과분 = 총액
  */
-function guardOk(a: SplitLthdDisplayArgs): boolean {
+function guardOk(a: Pick<SplitLthdDisplayArgs, "sd" | "longTermHoldingDeduction">): boolean {
   const owned = ownedParts(a.sd);
   if (owned.length === 0) return false;
   let partSum = 0;
@@ -251,6 +251,28 @@ export function buildSplitLthdFormula(a: SplitLthdDisplayArgs): string | null {
     );
   }
   return items.join(" + ");
+}
+
+/**
+ * 분리 자산의 **보유 기간분·거주 기간분 장특 합계** — 소유 파트의 엔진 echo 합(+ 배율초과 부수토지분은 보유분).
+ *
+ * 합산 상세명세서 자산별·합계 행이 이 값을 읽는다 — 종전에는 공제 총액을 폼값(거주 개월)으로 다시 안분(`splitLtDeduction`)해
+ * 신고서·단건 step 문구와 다른 숫자를 냈다. `holdingAmount + residenceAmount = longTermHoldingDeduction`이 성립할 때만 값을 낸다
+ * (구 이력·장특 배제 경로는 echo가 없고, §98의2 특칙 재할당 등으로 총액이 달라진 경우도 거른다) — 아니면 `null`(호출부가 종전 재안분).
+ */
+export function sumSplitLthdAmounts(
+  sd: SplitGainResult,
+  longTermHoldingDeduction: number,
+): { holdingAmount: number; residenceAmount: number } | null {
+  if (!guardOk({ sd, longTermHoldingDeduction })) return null;
+  let holdingAmount = 0;
+  let residenceAmount = 0;
+  for (const [, p] of ownedParts(sd)) {
+    holdingAmount += p.holdingDeductionAmount!;
+    residenceAmount += p.residenceDeductionAmount!;
+  }
+  holdingAmount += sd.nonBusinessLandPart?.longTermDeduction ?? 0;
+  return { holdingAmount, residenceAmount };
 }
 
 export interface SplitLthdSubFormula {

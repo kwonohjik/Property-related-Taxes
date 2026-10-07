@@ -56,6 +56,7 @@ export function SplitGainDetailSection({
   splitDetail,
   assetKind,
   exemptionNote,
+  isExempt,
 }: {
   splitDetail: SplitDetail;
   /**
@@ -69,6 +70,11 @@ export function SplitGainDetailSection({
    * 판정 결과(`splitDetail.saleSplitJudgment`)에는 사유(호)만 있고 사용자가 적은 문구는 없다.
    */
   exemptionNote?: string;
+  /**
+   * 전액 비과세 결과인가 — 장특공제는 과세 양도차익에 곱하는 공제라 비과세 결과에는 적용 대상이 없다.
+   * 엔진 파트 echo는 보유연수·공제율을 그대로 싣기 때문에(예: 보유 15년 · 30%·0원) 설명 없이 두면 「공제율은 있는데 공제액이 없다」로 읽힌다.
+   */
+  isExempt?: boolean;
 }) {
     const selfOwns = splitDetail.selfOwns ?? "both";
     const landIsOwned = selfOwns !== "building_only";
@@ -215,6 +221,11 @@ export function SplitGainDetailSection({
             <span className="text-muted-foreground">장특공제액</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.longTermDeduction.toLocaleString()}</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.longTermDeduction.toLocaleString()}</span>
+            {isExempt && (
+              <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-exempt-lthd-note">
+                비과세 — 장기보유특별공제 없음
+              </span>
+            )}
           </div>
           {/*
             §100③ 판정 — **구분 기재가 있고 안분값도 산출된 경우에만** 채워진다. 일괄양도는

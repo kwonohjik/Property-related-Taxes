@@ -17,6 +17,7 @@ import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rura
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
+import { summarizeSplitGain } from "./transfer-tax-split-display";
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
@@ -646,6 +647,16 @@ export function buildExemptEarlyResult(p: {
   // [echo] 표시 전용 gross 양도차익 + 환산 내역 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 1회 호출.
   // 환산 echo 미노출 시 신고서가 실가 역산 분기로 추락해 취득가액에 개산공제가 합산 표시됨(분리표시 정책 위반).
   const grossForEcho = calcTransferGain(p.effectiveInput);
+  /**
+   * 소유자 분리(`selfOwns ≠ both`)의 gross는 **본인 소유 파트의 양도차익**이다 — 비과세가 아닌 경로의 `ownerRawGain`
+   * (`transfer-tax.ts` STEP 2 — 소령 §166⑥·§168②)과 같은 축이다. 종전에는 양 파트 gross를 실어, 같은 결과의 취득가액·필요경비
+   * echo(소유 파트만)와 짝이 안 맞았다(land_only 실측: gross 673,500,000 · 소유 파트 550,000,000).
+   * 🔒 **표시 전용** — 이 값은 비과세 판정·세액·12억 안분 어디에도 쓰이지 않는다(`exemptGrossGain` 소비처 전수 확인).
+   */
+  const ownedGrossGain =
+    grossForEcho.splitDetail && grossForEcho.splitDetail.selfOwns && grossForEcho.splitDetail.selfOwns !== "both"
+      ? summarizeSplitGain(grossForEcho.splitDetail).gain
+      : grossForEcho.gain;
   return {
     isExempt: true,
     // [F1] 경정 결과 비과세 → refund면 전액환급 산출(determinedTax=0)
@@ -657,7 +668,7 @@ export function buildExemptEarlyResult(p: {
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,
-    exemptGrossGain: Math.max(0, grossForEcho.gain),
+    exemptGrossGain: Math.max(0, ownedGrossGain),
     /**
      * [echo] 표시 전용 — 세액 불변.
      *

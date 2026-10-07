@@ -163,3 +163,21 @@ export function model(s: Scn, c: Combo): Model {
 export const run = (s: Scn, c: Combo, over: Partial<TransferTaxInput> = {}): TransferTaxResult =>
   calculateTransferTax(toInput(s, c, over), rates);
 export const step = (r: TransferTaxResult, label: string) => r.steps.find((x) => x.label === label);
+
+/** 소유자 분리(`selfOwns`) 시나리오 — 전액 비과세: 1세대1주택 · 양도가 10억(12억 이하) · 거주 84개월. */
+export const SCN_X: Scn = { ...SCN_H, price: 1_000_000_000, stdT: [300_000_000, 100_000_000] };
+
+/** 소유 파트(`selfOwns` 반영)의 독립 산식 합 — 비소유 파트는 센 적이 없다. */
+export function ownedModel(s: Scn, c: Combo, own: "both" | "land_only" | "building_only") {
+  const m = model(s, c);
+  const parts = [own !== "building_only" ? m.land : null, own !== "land_only" ? m.building : null].filter(
+    (x): x is PartModel => x !== null,
+  );
+  const sum = (f: (p: PartModel) => number) => parts.reduce((a, p) => a + f(p), 0);
+  return {
+    price: sum((p) => p.transferPrice),
+    acq: sum((p) => p.acquisition),
+    exp: sum((p) => p.deduction),
+    gain: sum((p) => p.gain),
+  };
+}

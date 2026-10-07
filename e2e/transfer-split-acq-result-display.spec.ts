@@ -17,47 +17,34 @@
  *   M1     컴패니언(자산 2건)    M2 다건(이력 시드)    M3 다건 비과세·평범한 환산 토지 소제목
  *   G1~G3  일반건물 — 실가 파트 거짓 등식 제거 · 일괄 실가 안분 분모(취득시) · stale 총액
  *
+ * 소유자 분리(selfOwns ≠ both) 항등식(S11·S12·M5~M7)은 `transfer-split-acq-owner-split-display.spec.ts` — 800줄 정책 분리.
+ *
  * ⚠️ 수치의 정본은 vitest anchor(`split-acq-result-display.c.*.anchor.test.*`)다. 이 스펙은 「입력이 엔진을 거쳐 네 화면에 같은 값으로
  *    도달한다」는 배선 확인이다. 워크트리 실행은 E2E_PORT 필수.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import {
+  type Over,
+  card,
+  calculate,
+  formRow,
+  housing,
+  landStandalone,
+  multiForm,
+  multiProps,
+  num,
+  runMulti,
+  seedWizard,
+  singleSeed,
+  stmtRow,
+  stmtText,
+  stmtValue,
+  won,
+} from "./_helpers/split-acq-display";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { putCalculationRecord } from "./_helpers/history-seed";
 import { openHistoryModal } from "./_helpers/navigation";
-
-type Over = Record<string, unknown>;
-const won = (n: number) => n.toLocaleString("en-US");
-const num = (s: string | undefined) => {
-  const m = /^-?[\d,]+/.exec((s ?? "").trim());
-  return m ? Number(m[0].replace(/,/g, "")) : 0;
-};
-
-// ───────────────────────────────────────────────────────────────────────────
-// 시드
-// ───────────────────────────────────────────────────────────────────────────
-/** 주택 · 별개 취득(토지 2010-03-15 / 건물 2018-06-01) · 양도 900,000,000 — 설계서 §1.2 실측 시드와 같은 값 */
-function housing(over: Over = {}) {
-  return {
-    ...makeDefaultAsset(1),
-    addressJibun: "강원특별자치도 춘천시 테스트동 1",
-    regionCode: "5111010100",
-    assetKind: "housing",
-    acquisitionCause: "purchase",
-    acquisitionDate: "2018-06-01",
-    landAcquisitionDate: "2010-03-15",
-    hasSeperateLandAcquisitionDate: true,
-    actualSalePrice: "900000000",
-    acquisitionArea: "200",
-    transferArea: "200",
-    standardPricePerSqmAtAcq: "500000",
-    buildingStandardPriceAtAcq: "50000000",
-    landStandardPriceAtTransfer: "300000000",
-    buildingStandardPriceAtTransfer: "100000000",
-    saleSplitMode: "apportioned",
-    ...over,
-  };
-}
 
 interface Combo {
   name: string;
@@ -80,73 +67,6 @@ const COMBOS: Combo[] = [
   { name: "매매사례/실가", land: "salesCase", building: "actual", labels: ["매매사례가액", "실거래가"], seed: { landSalesCaseValue: "210000000", buildingAcquisitionPrice: "150000000" }, acq: [210_000_000, 150_000_000], ded: [3_000_000, 0] },
 ];
 const sum = (a: [number, number]) => a[0] + a[1];
-
-function singleSeed(assets: Over[], formOver: Over = {}) {
-  return {
-    state: {
-      formData: {
-        assets,
-        transferDate: "2026-02-16",
-        filingDate: "2026-04-30",
-        contractTotalPrice: String(assets.length === 1 ? "900000000" : "1200000000"),
-        householdHousingCount: "2",
-        isOneHousehold: false,
-        householdNoOtherHousesConfirmed: true,
-        householdNoPresaleRightsConfirmed: true,
-        isRegulatedArea: false,
-        wasRegulatedAtAcquisition: false,
-        isUnregistered: false,
-        ...formOver,
-      },
-      pendingMigration: false,
-    },
-    version: 0,
-  };
-}
-
-async function seedWizard(page: Page, seed: unknown) {
-  await page.goto("/calc/transfer-tax");
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seed);
-  await page.reload();
-  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-}
-
-/** 가산세 단계로 가서 계산한다 — 요청 body와 결과 화면 렌더까지 기다린다. */
-async function calculate(page: Page): Promise<Record<string, unknown>> {
-  await page.getByRole("button", { name: "가산세", exact: true }).first().click();
-  const reqP = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
-  await page.getByRole("button", { name: "세금 계산하기" }).click();
-  const body = (await reqP).postDataJSON();
-  await page.locator('[data-print-id="form-table"]').first().waitFor({ timeout: 60_000 });
-  return body;
-}
-
-/** 신고서 표 한 행의 셀 텍스트 — 첫 칸(라벨)이 정확히 일치하는 행. */
-async function formRow(page: Page, label: string): Promise<string[]> {
-  const cells = await page
-    .locator('[data-print-id="form-table"]')
-    .first()
-    .evaluate((el, lbl) => {
-      for (const tr of Array.from(el.querySelectorAll("tr"))) {
-        const c = Array.from(tr.children).map((x) => (x as HTMLElement).innerText.trim());
-        if (c[0] === lbl) return c;
-      }
-      return null;
-    }, label);
-  expect(cells, `신고서에 「${label}」 행이 없다`).not.toBeNull();
-  return cells!;
-}
-
-const stmtRow = (page: Page, label: string) => page.locator(`[data-statement-row="${label}"]`).first();
-/**
- * 명세서 행 전체 텍스트(공백 정규화). **`textContent`**를 읽는다 — 자산별 펼침(▼)은 닫힌 상태에서 `hidden`(display:none)이라 `innerText`에 빠진다.
- * 접힌 자산별 산식도 DOM에는 있고 인쇄 시 항상 펼쳐진다(`hidden print:block`).
- */
-const stmtText = async (page: Page, label: string) =>
-  ((await stmtRow(page, label).evaluate((el) => el.textContent)) ?? "").replace(/\s+/g, " ");
-const stmtValue = async (page: Page, label: string) => num(await stmtRow(page, label).locator("[data-statement-value]").first().innerText());
-const card = (page: Page, id: string) => page.getByTestId(id).first();
 
 // ───────────────────────────────────────────────────────────────────────────
 // S — 단건
@@ -282,27 +202,12 @@ test.describe("단건 — swap · 미등기 · 구 이력 · 비과세", () => {
     // 납부세액 0 — 비과세 판정과 모순되는 세액이 없다
     expect(await stmtValue(page, "결정세액")).toBe(0);
   });
+
 });
 
 // ───────────────────────────────────────────────────────────────────────────
 // M — 컴패니언 · 다건
 // ───────────────────────────────────────────────────────────────────────────
-const landStandalone = (id = 2, over: Over = {}) => ({
-  ...makeDefaultAsset(id),
-  assetKind: "land",
-  addressJibun: `강원특별자치도 춘천시 테스트동 ${id}`,
-  regionCode: "5111010100",
-  acquisitionCause: "purchase",
-  acquisitionDate: "2015-01-01",
-  acquisitionArea: "1000",
-  actualSalePrice: "300000000",
-  fixedAcquisitionPrice: "100000000",
-  directExpenses: "0",
-  landNature: "standalone",
-  standardPriceAtTransfer: "100000000",
-  ...over,
-});
-
 test.describe("컴패니언 · 다건 — 분리 자산의 취득가액·필요경비 echo가 화면 전부에 따라온다", () => {
   test("M1: 컴패니언(주 자산 주택 split + 독립 나대지) — 합산 신고서·명세서 합계·자산별·소제목", async ({ page }) => {
     test.setTimeout(150_000);
@@ -339,67 +244,6 @@ test.describe("컴패니언 · 다건 — 분리 자산의 취득가액·필요�
     expect(acqText).toContain("토지(실거래가) 200,000,000 + 건물(환산취득가) 120,000,000"); // 자산별 행(펼침 전 DOM)
     await expect(stmtRow(page, "필요경비")).toContainText("건물 개산공제 1,500,000");
     await expect(card(page, "split-card-acq-mode-building")).toHaveText("환산취득가");
-  });
-
-  const multiProps = (formFor: (acq: Over) => Over) => [
-    { propertyId: "np1", propertyLabel: "건1", completionPercent: 100, form: formFor(housing({ landAcqMode: "actual", buildingAcqMode: "estimated", landAcquisitionPrice: "200000000" })) },
-    {
-      propertyId: "np2",
-      propertyLabel: "건2",
-      completionPercent: 100,
-      form: {
-        ...createDefaultTransferFormData(),
-        assets: [landStandalone(1, { actualSalePrice: "300000000" })],
-        transferDate: "2026-03-01",
-        contractTotalPrice: "300000000",
-        householdHousingCount: "1",
-        isOneHousehold: false,
-      },
-    },
-  ];
-
-  async function runMulti(page: Page, id: string, title: string, props: unknown[]) {
-    await page.goto("/history");
-    await putCalculationRecord(page, {
-      id,
-      userId: "local-user",
-      taxType: "transfer",
-      title,
-      inputData: {
-        __multiTransfer: true,
-        taxYear: 2026,
-        properties: props,
-        activePropertyIndex: 0,
-        activeStep: "settings",
-        annualBasicDeductionUsed: "0",
-        basicDeductionAllocation: "MAX_BENEFIT",
-      },
-      resultData: { determinedTax: 0, totalTax: 0, properties: [{ propertyId: "np1" }, { propertyId: "np2" }] },
-      taxLawVersion: "2026",
-      linkedCalculationId: null,
-      clientId: null,
-      createdAt: "2026-07-06T00:00:00.000Z",
-      updatedAt: "2026-07-06T00:00:00.000Z",
-    });
-    await page.goto("/calc/transfer-tax/multi");
-    await openHistoryModal(page, page.getByTestId("multi-load-history-btn").first(), page.getByText(title));
-    await page.getByTestId(`load-record-${id}`).click();
-    const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST", { timeout: 30_000 });
-    await page.getByRole("button", { name: "세액 계산" }).click();
-    expect((await respP).status()).toBe(200);
-    await expect(page.getByText("건별 상세").first()).toBeVisible({ timeout: 30_000 });
-  }
-
-  const multiForm = (asset: Over, over: Over = {}) => ({
-    ...createDefaultTransferFormData(),
-    assets: [asset],
-    transferDate: "2026-02-16",
-    contractTotalPrice: "900000000",
-    householdHousingCount: "1",
-    isOneHousehold: false,
-    householdNoOtherHousesConfirmed: true,
-    householdNoPresaleRightsConfirmed: true,
-    ...over,
   });
 
   test("M2: 다건 — 합산 신고서 건1 열 · 합산 요약 카드 · 건별 상세 신고서 · 명세서가 같은 값(취득 312,500,000 · 필요경비 1,500,000)", async ({ page }) => {
@@ -473,6 +317,7 @@ test.describe("컴패니언 · 다건 — 분리 자산의 취득가액·필요�
     expect(acqText).toContain("산정방식: 실거래가·환산취득가");
     expect(acqText).not.toContain("자산별 실제 거래가액 합계");
   });
+
 });
 
 test.describe("다건 — 평범한 자산만으로도 집계 소제목이 거짓말을 하지 않는다 (G-4, 분리 자산 없음)", () => {
