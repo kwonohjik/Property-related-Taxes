@@ -250,6 +250,27 @@ Pre-Do anchor: `__tests__/api/transfer.route.gb-part-appraisal-salescase.predo.a
 
 ⇒ **순서 변경**: B1 착수 전 **S-3 별건**을 먼저 한다(B1의 건물 분할·개산공제 base가 S-3 결론에 의존).
 
+### B1-통합. 설계 통합 결정 (2026-10-07 — 사용자 「권장안대로」)
+
+엔진(`docs/02-design/features/mixed-use-separate-acq-per-part.engine.design.md`)·UI(`….ui.design.md`) 설계가 같은 결론. 충돌 없음.
+
+| # | 결정 | 확정안 |
+|---|---|---|
+| 1 | 용도별 계약액(S-2) | 건물 총액 + 주택건물 계약액 1칸, 상가건물 = 총액 − 주택건물(읽기 전용 도출). 건물 실거래가일 때만 |
+| 2 | 구 이력 ↔ 신규 | opt-in 중첩 필드 `mixedUse.separateAcquisition`(부재 = 총액 모델). 신규 자산 initial ON, 부재 기록은 OFF + 안내 |
+| 3 | 개산공제(S-5) | 비-실가 파트만 취득시 기준시가 × 3%(미등기 3/1000), 성분별 독립 floor. 주택 base = S3-2 γ1 비례값 |
+| 4 | §97②2호 단서 | 환산 파트 묶음 판정(양쪽 환산 = 현행 자산 단위). 직접 해석례 없음 — 일반건물 선례 준용 |
+| 5 | 같은 날 / 총액 모델 존치 | 같은 날은 총액 모델. 날짜 달라도 토글 OFF 총액 모델 허용 + 안내 |
+| 6 | 게이트(D-4) | `isSeparateAcquisition()` 겸용 제외 유지, 전용 술어 `isMixedUsePerPartAcq` 신설 |
+| 7 | 화면(D-5) | `LandBuildingSplitSection` 재사용 안 함. 전용 `MixedUseSeparateAcqBlock` + `PartAcqInputs`·`ACQ_MODE_OPTIONS` 추출 |
+| 8 | PHD | 환산 파트가 있을 때만 노출·의미. 파트 모델 PHD patch는 레거시 `useEstimatedAcquisition`을 쓰지 않는다 |
+| 9 | 결합 제외 7종 | 용도변경·공익수용·상속·증여·총액 플래그 동시·같은 날·값 누락/계약액 ≥ 총액·PHD인데 환산 파트 없음 — 엔진 throw·⑫·⑧ 3중 |
+| 10 | 신고서 4열 | 행 추가 없음, 취득가액 행 열별 notes |
+
+**Do에서 함께 처리**: U-2(파트 모델에서 ④가 겸용 실비 필드를 읽지 않아 침묵 소실) · 필수 술어(`isBuildingDayLandPriceRequired` 등)에 산정방식 키 AND(양쪽 실가에서 쓰이지 않는 값 거짓 요구) · `mixedPartAcqNeeds` 단일 술어(⑤ 노출·⑧ 필수·⑫).
+
+**선행 정정**: 환산 분자 H → P(PR #2027 — S3-2 γ1 분할 합과 분자 일치). B1 회귀선 「양쪽 환산 = 현행」은 이 정정 **이후** 값으로 잡는다.
+
 ### B2. UI·14지점
 
 | 지점 | 변경 |
