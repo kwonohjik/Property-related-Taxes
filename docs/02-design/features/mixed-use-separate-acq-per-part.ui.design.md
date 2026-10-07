@@ -542,3 +542,44 @@ body의 `mixedUse.separateAcquisition`(엔진 §3.1) 단언.
 **DoD (설계 단계)**: ①②③ 필드·initial·normalize·stale 가드 §5.1 ✅ · ④ payload §5.2(엔진 §3.1 정합) ✅ · ⑤ 위젯·testid·활성 조건 §5.3·§7 ✅ · ⑥ 사이드바 §5.4 ✅ · ⑦ 결과·신고서 §5.5(echo 소비) ✅ · ⑧ 메시지·field 이동 키 §5.6 ✅ · ⑨~⑭ 엔진 §6 몫 · 800줄: 신규 파일 3개(`PartAcqInputs.tsx`·`MixedUseSeparateAcqBlock.tsx`·`mixed-use-part-acq-split.ts`)·수정 파일 증가분 작음(`CompanionAcqPurchaseBlock.tsx` 541줄 +~15, `LandBuildingSplitSection.tsx` 562줄 −~80).
 
 **자주 발생하는 누락 패턴 9종 점검**: ①필드 미반영(재사용 확인·신규 3필드) ②API 변환(§5.2) ③initial/normalize(§5.1 — 값이 다른 이유 명시) ④stale 가드(접근부 `=== true`) ⑤결과 노출(§5.5) ⑥산식 숫자 매핑(Frac·변수명 라벨) ⑦활성화 조건(§2.1·§4) ⑧토글 가시성(ToggleCard·RadioCardGroup, OFF tone 유지) ⑨시점별 분기(파트별 취득일·토지/건물 기준일 — §2.4·§2.6 「토지 취득일 기준」·「건물 취득일 기준」 캡션).
+
+---
+
+## §11 Do 결과 (2026-10-07) — 구현 요약 · 설계 대비 편차 · 엔진 회신 반영
+
+> 구현 범위: 14지점 중 ①~⑧ + ⑬ 확인 + E2E. ⑨⑩⑫⑭는 엔진 커밋 `59298d9f2`(엔진 설계 §11). 아래 표의 위치는 이 워크트리 기준.
+
+### 11.1 변경 지점 (14지점 대조)
+
+| 지점 | 상태 | 위치 · 내용 |
+|---|---|---|
+| ① 폼 타입 | ✅ | `lib/stores/calc-wizard-asset-gb.ts` — `mixedAcqPerPartMode` · `mixedAcqBuildingContractSplit` · `mixedAcqHousingBuildingContractPrice` |
+| ② initial | ✅ | `lib/stores/calc-wizard-asset-mixed-use.ts` `MIXED_USE_DEFAULTS` — **`mixedAcqPerPartMode: true`**(신규 자산), 나머지 `false`·`""` |
+| ③ normalize | ✅ | 같은 파일 `migrateMixedUseFields` — **부재 = `false`**. 🔴 `fillMissingFromFactory`(`calc-wizard-asset-migrate.ts:750`)가 migrate **뒤**에 돌아 undefined 칸을 factory 값(`true`)으로 채우므로, 여기서 `false`를 먼저 세우지 않으면 **구 이력이 파트 모델로 뒤집힌다**. 접근부는 `=== true`만(`isMixedUsePerPartAcq`). anchor: `mixed-use-part-acq-split.anchor.test.ts` 「②③ initial ↔ normalize」 + E2E M5(sessionStorage→migrate 경유) |
+| ④ API 변환 | ✅ | `lib/calc/transfer-tax-api-mixed-use.ts` — `separateAcquisition`(키 존재 = trigger, `share()` 스케일 5종) · U-2 실비 필드 · U-4 총액 플래그 `false`/미전송 · PHD 실효값 · H는 `mixedPartAcqNeeds` 참일 때만 · 나머지 필수 술어(`mixed-use-acq-date-split.ts`·`mixed-use-housing-std-split.ts`)는 `partAcqNeeds`·PHD 실효값을 AND |
+| ⑤ UI | ✅ | 신규 `components/calc/transfer/PartAcqInputs.tsx`(추출) · `mixed-use/MixedUseSeparateAcqBlock.tsx` · `CompanionAcqPurchaseBlock.tsx`(축 A 숨김 `!isMixedPerPart`) · `CompanionAcqDateSection.tsx`(안내 2문구) · `MixedUseAssetMajorStdPrice.tsx`(H 노출·PHD 토글·실비 카드·캡션) · `MixedUsePreHousingDisclosureSection.tsx`(U-3 캡션) · `MixedUseSection.tsx`·`MixedUseLegacyStdPrice.tsx`(레거시 플래그 파생·PHD patch) |
+| ⑥ 사이드바 | ✅ | `calc-wizard-store.ts`(합계) · `transfer-per-asset-summary.ts`(자산별 행) — 전용 술어 분기(`isSeparateAcquisition`은 겸용 제외 유지) |
+| ⑦ 결과 | ✅ | `MixedUseCalculationSections.tsx`(echo 분기가 route보다 먼저) · 신규 `MixedUseSeparateAcqRows.tsx` · `mixed-use-separate-acq-text.ts`(순수 문자열) · `MixedUseResultCardAdapter.ts` · `FilingFormTableHelpers.ts`/`FilingFormTableRowDefs.ts`(취득가액 행 열별 notes) · `DetailedStatementFormulaBuilders.ts`(상세 명세서 취득가액·필요경비 문장) |
+| ⑧ validate | ✅ | 신규 `lib/calc/transfer-tax-validate-mixed-use-part-acq.ts` — **엔진 leaf `collectMixedPartAcqIssues`·`mixedPartAcqNeedsOf` 호출**(규칙 재작성 없음). `transfer-tax-validate-mixed-use-asset.ts`는 파트 모델이면 총액 블록·`isPurchaseActualLike` H·상가 요구를 건너뛰고 PHD 블록을 실효값으로 판정 |
+| ⑨⑩⑫⑭ | 엔진 | `59298d9f2` |
+| ⑬ body | ✅ 확인 | `callTransferTaxAPI`는 `buildMixedUsePayload` 결과를 `mixedUse`로 통째로 싣는다(spread 아님 — 명시 빌더 한 곳). 컴패니언은 같은 빌더(`transfer-tax-api-companion-payload.ts:226-230`). E2E M7~M12·M6으로 request body 실측 |
+
+### 11.2 설계 대비 편차 · 추가 결정
+
+| # | 설계 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | §5.1 「③ `normalizeMixedUseFields`」 | 실제 함수명은 `migrateMixedUseFields` | 설계 오기 — 위치는 같다 |
+| 2 | §5.1 「migrateAsset은 현행 포맷 저장본에 안 돈다」 | 실측: `mergePersistedWizard`는 신 스키마에서도 `assets.map(migrateAsset)`을 돌린다(`calc-wizard-store.ts:285`). 접근부 `=== true` 가드는 그대로 유지(이력 재계산·타 경로 방어선) | 가드는 어느 쪽이든 필요 — 설계 서술만 정정 |
+| 3 | §2.6 「H·B0·나목·상가 취득시 기준시가 칸을 지우지 않고 술어로 숨긴다」 | H만 숨김(`mixedPartAcqNeeds.housingPriceAtAcq`). B0·나목은 기존 컴포넌트가 이미 `needsMixed…`(이제 `partAcqNeeds` AND)로 숨긴다. **상가 취득시 기준시가·공시지가 칸은 숨기지 않는다**(선택 입력으로 남는다 — 모달·PHD 패널과 공유하는 칸이라). ⑧·⑫는 `commercialStdAtAcq`로 요구를 게이트한다 | 칸 노출은 ⑤ 정본 술어, 요구는 leaf — 노출이 요구보다 넓은 것은 안전(막다른 길 아님) |
+| 4 | §5.5 「echo 분기」 | 어댑터 `mixedUseToFilingResult`가 파트 모델에서 `usedEstimatedAcquisition: true`·`estimatedBase = echo 4부분 최종 취득가액 합`을 싣는다(단서 나목 채택 파트는 0) | 상세 명세서 값 칸이 「양도가 − 취득가 − 필요경비 = 양도차익」을 지키려면 **차감되는 값**이어야 한다(`estimatedAcquisitionPrice`는 단서 판정 전 합). 문장은 echo 분기가 먼저 만든다 |
+| 5 | §2.4-6 PHD 자동 ON effect 유지 | 유지. 환산 파트가 없으면 토글이 숨고 ④는 PHD를 보내지 않으며(실효값) ⑧도 요구하지 않는다 | 3중 일치 |
+| 6 | (없음) | 엔진 X-6 메시지 「실거래가을」 조사 오류 — ⑧은 입력칸 어휘의 자체 문장으로 대체(판정은 leaf, 문장만 UI) | 엔진 메시지는 ⑫ 응답에 남는다 — 엔진 몫으로 보고 |
+| 7 | §2.8 X-1·X-2 rose 안내 | 안내 표시 술어는 `hasPartialUsageChange ∧ partialChangeDirection`(엔진 X-1 술어와 동일 — 플래그만 켜지고 방향이 빈 stale은 안내하지 않는다) | 안내 ⇔ ⑧ 차단 일치 |
+
+### 11.3 기존 테스트 처리 (의도 반전 / 시드 보강)
+
+| 테스트 | 처리 | 사유 |
+|---|---|---|
+| `__tests__/calc/mixed-use-acq-date-split.anchor.test.ts` · `mixed-use-housing-std-split-parity.anchor.test.ts` · `mixed-use-housing-building-std-field.anchor.test.tsx` | **시드 보강** — 기준 시드에 `mixedAcqPerPartMode: false`(총액 모델 격자임을 명시). 의도 불변 | 신규 자산 initial이 ON이라 격자의 「별개 취득」 셀이 파트 모델로 읽혀(용도변경 × 파트 = X-1 등) 총액 모델의 B0·나목 술어를 더 이상 시험하지 못했다. 파트 모델 격자는 신규 `mixed-use-part-acq-split.anchor.test.ts`가 맡는다 |
+| `__tests__/components/sale-split-section-title-parity.anchor.test.tsx` T-3 | **경로 추종** — `AXIS_B`를 `PartAcqInputs.tsx`로 | 환산 안내(`transferSource`)가 추출되며 파일이 옮겨졌다(문구 불변) |
+| `__tests__/components/split-acq-date-mixed-note.test.tsx` E7-a/b | (아래 11.4에서 확정) | |

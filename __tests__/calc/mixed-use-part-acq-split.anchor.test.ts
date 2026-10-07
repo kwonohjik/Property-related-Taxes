@@ -30,6 +30,7 @@ import { validateMixedUseAsset } from "@/lib/calc/transfer-tax-validate-mixed-us
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
 import { mixedUseAssetSchema } from "@/lib/api/transfer-tax-schema-mixed-use";
 import { createDefaultTransferFormData, computeTransferSummary, mergePersistedWizard } from "@/lib/stores/calc-wizard-store";
+import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset, migrateAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -371,6 +372,28 @@ describe("⑤⇔④⇔⑧⇔⑫ — 취득시 H·B0·나목·상가 취득시 �
   });
 });
 
+describe("PHD 실효값 — stale PHD + 환산 파트 없음에서도 ⑤⇔④⇔⑧⇔⑫가 같은 술어를 본다", () => {
+  // 감정 파트가 있어 취득시 H·B0·나목이 필수인데, 저장된 PHD(환산 파트가 없어 소비처 없음)가 필수 술어를 끄면 안 된다.
+  const a = pp({ landAcqMode: "appraisal", usePreHousingDisclosure: true });
+  it("④ — PHD 미전송 · H·B0·나목 전송", () => {
+    const p = payload(a);
+    expect(p.usePreHousingDisclosure).toBe(false);
+    expect(p.acquisitionStandardPrice.housingPrice).toBe(400_000_000);
+    expect(p.acquisitionStandardPrice.landPricePerSqmAtBuildingAcq).toBe(1_800_000);
+    expect(p.acquisitionStandardPrice.housingBuildingPrice).toBe(320_000_000);
+  });
+  it("⑧ — B0·나목 미입력이면 막는다(raw PHD로 꺼지지 않는다) / ⑫ — 같은 입력을 같이 막는다", () => {
+    expect(validated({ ...a, mixedAcqLandPricePerSqmAtBuildingAcq: "" }).field).toBe("mixedAcqLandPricePerSqmAtBuildingAcq");
+    expect(validated({ ...a, mixedAcqHousingBuildingStdPrice: "" }).field).toBe("mixedAcqHousingBuildingStdPrice");
+    expect(validated(a).msg).toBeNull();
+    const blanked = { ...a, mixedAcqLandPricePerSqmAtBuildingAcq: "", mixedAcqHousingBuildingStdPrice: "" } as AssetForm;
+    const r = mixedUseAssetSchema.safeParse(JSON.parse(JSON.stringify(payload(blanked))));
+    const paths = r.success ? [] : r.error.issues.map((i) => i.path.join("."));
+    expect(paths).toContain("acquisitionStandardPrice.landPricePerSqmAtBuildingAcq");
+    expect(paths).toContain("acquisitionStandardPrice.housingBuildingPrice");
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════
 describe("⑧ validate — 파트 값 · 계약액 · 결합 제외 (입력칸 이동 키)", () => {
   it("M1 토지 실거래가 비움 → landAcquisitionPrice / M2 토지 매매사례 비움 → landSalesCaseValue", () => {
@@ -435,6 +458,16 @@ describe("⑧ validate — 파트 값 · 계약액 · 결합 제외 (입력칸 �
 // ═══════════════════════════════════════════════════════════════════════
 describe("⑥ 사이드바 합계 — 파트 값 합 · 환산 파트면 계산 후 표시 · 숨은 총액 무시", () => {
   const sum = (a: AssetForm) => computeTransferSummary(formOf(a), null).totalAcqPrice;
+  const row = (a: AssetForm) => computeTransferPerAssetSummary(formOf(a), null).rows[0];
+  it("자산별 행(두 번째 사이드바 지점) — 파트 값 합 · stale 총액 무시 · 환산 파트면 계산 후 표시(acqPending)", () => {
+    expect(row(pp({ fixedAcquisitionPrice: "999,999,999" })).acqPrice).toBe(900_000_000);
+    expect(row(pp({ fixedAcquisitionPrice: "999,999,999" })).acqPending).toBe(false);
+    const est = row(pp({ buildingAcqMode: "estimated", fixedAcquisitionPrice: "999,999,999" }));
+    expect(est.acqPrice).toBe(0);
+    expect(est.acqPending).toBe(true);
+    // 총액 모델 짝 — 종전대로 총액 칸
+    expect(row(pp({ mixedAcqPerPartMode: false, landAcqMode: "", buildingAcqMode: "", fixedAcquisitionPrice: "700,000,000" })).acqPrice).toBe(700_000_000);
+  });
   it("실가/실가 — 토지 + 건물 (stale 총액 fixedAcquisitionPrice는 무시)", () => {
     expect(sum(pp({ fixedAcquisitionPrice: "999,999,999" }))).toBe(900_000_000);
   });

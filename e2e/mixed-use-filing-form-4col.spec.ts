@@ -149,6 +149,9 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
             ...mixedUseAsset(),
             hasSeperateLandAcquisitionDate: true,
             landAcquisitionDate: "2005-06-10",
+            // B1 — 이 케이스는 취득일 행(열별 날짜)이 주제이고 취득가액은 총액(`fixedAcquisitionPrice` 700M) 모델이다. 신규 자산 initial이
+            // 파트 모델 ON이라 총액 모델임을 명시한다(시드 보강 — 의도 반전 아님. 파트 모델의 같은 행은 `mixed-use-separate-acq-per-part.spec.ts` M27).
+            mixedAcqPerPartMode: false,
             // B0 — 날짜가 다르고 개별주택가격이 있으면 건물 취득일 기준 공시지가가 필수. L2=L1로 채워 기대값 불변.
             mixedAcqLandPricePerSqmAtBuildingAcq: "2500000",
           })],

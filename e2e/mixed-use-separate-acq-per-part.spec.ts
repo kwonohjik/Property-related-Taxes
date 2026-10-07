@@ -321,6 +321,32 @@ test.describe("B1 파트 모델 — request body (④·⑬ 도달)", () => {
     await expect(count(page, "mixed-phd-part-acq-caption")).toContainText("건물 취득일(2000-01-01)");
   });
 
+  test("M28 취득시 H·B0·나목 칸 매트릭스 — 칸 노출 = mixedPartAcqNeeds (같은 시드에서 모드만 바꿔 data-field 개수 단언 + 같은 날짜 짝)", async ({ page }) => {
+    test.setTimeout(240_000);
+    const H = '[data-field="mixedAcqHousingPrice"]';
+    const B0 = '[data-field="mixedAcqLandPricePerSqmAtBuildingAcq"]';
+    const N = '[data-field="mixedAcqHousingBuildingStdPrice"]';
+    const CONTRACT = { mixedAcqBuildingContractSplit: true, mixedAcqHousingBuildingContractPrice: "120000000" };
+    const cells: Array<[string, Record<string, unknown>, [number, number, number]]> = [
+      ["양쪽 실가 + 계약액 + 경비 없음 → 셋 다 불요", CONTRACT, [0, 0, 0]],
+      ["양쪽 실가 + 계약액 없음(S-2 나목비) → 나목만", {}, [0, 0, 1]],
+      ["양쪽 실가 + 계약액 + 자본적지출 선언 → H·B0·나목 전부", { ...CONTRACT, capitalExpenditure: "10000000" }, [1, 1, 1]],
+      ["토지 감정(비-실가) → H·B0·나목 전부", { landAcqMode: "appraisal" }, [1, 1, 1]],
+      ["건물 환산(비-실가) → H·B0·나목 전부", { buildingAcqMode: "estimated" }, [1, 1, 1]],
+    ];
+    for (const [name, over, [h, b0, n]] of cells) {
+      await seed(page, ppAsset(over));
+      await expect(page.locator(H), `${name} — H`).toHaveCount(h);
+      await expect(page.locator(B0), `${name} — B0`).toHaveCount(b0);
+      await expect(page.locator(N), `${name} — 나목`).toHaveCount(n);
+    }
+    // 짝 — 같은 날짜(총액 모델): H·나목은 항상, B0는 날짜가 같아 없다
+    await seed(page, ppAsset({ landAcquisitionDate: "2010-03-15", mixedAcqLandPricePerSqmAtBuildingAcq: "", fixedAcquisitionPrice: "700000000" }));
+    await expect(page.locator(H)).toHaveCount(1);
+    await expect(page.locator(B0)).toHaveCount(0);
+    await expect(page.locator(N)).toHaveCount(1);
+  });
+
   test("M18 U-2 실비 — 실거래가 파트가 있으면 주택분 실제 필요경비가 housingInheritedExpense로 간다(침묵 소실 없음)", async ({ page }) => {
     test.setTimeout(90_000);
     await seed(page, ppAsset({ mixedHousingActualExpense: "3000000" }));
@@ -452,7 +478,9 @@ test.describe("B1 파트 모델 — 컴패니언(자산 2가 겸용·별개 취�
       standardPriceAtAcq: "250000000",
     };
     const d2 = makeDefaultAsset(2);
-    const second = ppAsset({ assetId: d2.assetId, assetLabel: d2.assetLabel, isPrimaryForHouseholdFlags: d2.isPrimaryForHouseholdFlags, actualSalePrice: "900000000" });
+    const second = ppAsset({ assetId: d2.assetId, assetLabel: d2.assetLabel, isPrimaryForHouseholdFlags: d2.isPrimaryForHouseholdFlags, actualSalePrice: "900000000",
+      // 함께 양도 컴패니언은 자산별 양도시 기준시가가 안분 키다(기존 컴패니언 spec과 같은 시드 규약)
+      standardPriceAtTransfer: "500000000", standardPriceAtAcq: "250000000" });
     await seedForm(page, { ...formOf([first, second]), contractTotalPrice: "1500000000", householdHousingCount: "2" });
     await expandAssetSection(page, 3, 1);
     const card = page.locator('[data-asset-card-index="1"]');

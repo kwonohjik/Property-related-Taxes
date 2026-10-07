@@ -29,6 +29,9 @@ function mixedAsset(over: Record<string, unknown> = {}) {
     isOneHousehold: false,
     isMixedUseHouse: true,
     hasSeperateLandAcquisitionDate: true,
+    // B1 — 이 spec은 **총액 모델**(토지·건물 취득일이 달라도 총 취득가액 하나를 입력)의 B0 칸을 본다. 신규 자산 initial이 파트 모델 ON이라
+    // 명시한다(시드 보강 — 의도 반전 아님). ON이면 양쪽 실가 파생 → B0가 쓰이지 않아 칸이 숨는다(그 짝은 `mixed-use-separate-acq-per-part.spec.ts` M7·M14).
+    mixedAcqPerPartMode: false,
     acquisitionDate: "2010-03-15", // 건물 취득일
     landAcquisitionDate: "2005-06-10", // 토지 취득일 (다름)
     residentialFloorArea: "100",
