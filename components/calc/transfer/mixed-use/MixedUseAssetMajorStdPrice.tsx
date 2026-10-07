@@ -15,6 +15,15 @@ import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclos
 import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
 import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
+import {
+  isMixedUsePerPartAcq,
+  mixedAnyPartActual,
+  mixedAnyPartEstimated,
+  mixedExpenseDeclaredOfForm,
+  mixedPartAcqNeedsOfForm,
+  mixedPartModes,
+  mixedUsePhdEffective,
+} from "@/lib/calc/mixed-use-part-acq-split";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -56,11 +65,30 @@ export function MixedUseAssetMajorStdPrice({
   const isGift = asset.acquisitionCause === "gift";
   const isDeemed163_9 = isInheritance || isGift; // 상속·증여 공통 §163⑨ 라벨 게이트
   // 매매 실가 모드(법 §100² 안분) — 실비(자본적지출·양도비) 입력 노출 게이트. 환산/감정/매매사례는 제외.
-  const isPurchaseActual =
-    asset.acquisitionCause === "purchase" &&
-    !useEstimatedAcquisition &&
-    !asset.isAppraisalAcquisition &&
-    !asset.isSalesCaseAcquisition;
+  // B1 — 파트 모델(별개 취득)은 화면에 없는 레거시 3플래그 대신 **파트 모드**로 판정한다: 실거래가 파트가 하나라도 있으면 카드를 연다
+  //      (엔진은 actual 파트에 실제 필요경비를 가산하고, 감정·매매사례 파트는 개산공제만 쓴다. 환산 파트는 §97②2호 단서로
+  //      이 경비 몫이 「환산취득가액 + 개산공제」보다 크면 그 경비를 쓴다 — U-2). ④의 실비 필드 선택과 같은 술어.
+  const isPerPart = isMixedUsePerPartAcq(asset);
+  const isPurchaseActual = isPerPart
+    ? mixedAnyPartActual(asset)
+    : asset.acquisitionCause === "purchase" &&
+      !useEstimatedAcquisition &&
+      !asset.isAppraisalAcquisition &&
+      !asset.isSalesCaseAcquisition;
+  /** PHD 실효값(파트 모델은 환산 파트가 있을 때만) — H·양도시 박스·PHD 패널을 가르는 같은 술어(④·⑧과 공유). */
+  const phdOn = mixedUsePhdEffective(asset);
+  /** 파트 모델의 취득시 H 노출·필수 — `mixedPartAcqNeeds`(④ 전송·⑧ 필수와 같은 술어). 총액 모델은 항상 노출(불변). */
+  const partNeeds = isPerPart ? mixedPartAcqNeedsOfForm(asset) : undefined;
+  const showHousingPrice = !isPerPart || partNeeds?.housingPriceAtAcq === true;
+  const partModes = mixedPartModes(asset);
+  const housingPriceReason =
+    partModes.land !== "actual" || partModes.building !== "actual"
+      ? "토지 또는 건물 파트가 실거래가가 아니어서 환산취득가·개산공제의 기준시가로 쓰입니다."
+      : mixedExpenseDeclaredOfForm(asset)
+        ? "자본적지출 또는 주택분·상가분 실제 필요경비를 입력하셨으므로 필요합니다 — 경비를 토지·건물 비율로 나누는 데 쓰입니다."
+        : undefined;
+  /** 파트 모델의 PHD 토글 노출 — 환산 파트가 있을 때만(엔진 X-7). 총액 모델은 항상(불변). */
+  const showPhdToggle = !isPerPart || mixedAnyPartEstimated(asset);
   const acqLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시";
   // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
   const acqSummaryLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득";
@@ -207,26 +235,39 @@ export function MixedUseAssetMajorStdPrice({
                 label="자본적지출·양도비 (주택분)"
                 value={asset.mixedHousingActualExpense}
                 onChange={(v) => onChange({ mixedHousingActualExpense: v })}
-                hint="매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 주택분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+                hint={
+                  isPerPart
+                    ? "실거래가 파트에는 개산공제(§163⑥) 대신 실제 필요경비가 가산됩니다. 감정·매매사례 파트는 개산공제만이고, 환산 파트는 이 경비 몫이 환산취득가액과 개산공제의 합보다 크면 그 경비를 씁니다(법 §97②2호 단서). 주택분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+                    : "매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 주택분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+                }
               />
             </ToneCard>
           )}
           <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
+          {showPhdToggle && (
           <ToggleCard
             tone="amber"
             size="sm"
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
-              useEstimatedAcquisition
-                ? "개별주택가격 최초 공시 이전 취득 시 활성화"
-                : "활성화 시 환산취득가 모드로 자동 전환"
+              isPerPart
+                ? "환산취득가로 계산하는 파트에 §164⑦ 3-시점 환산을 적용합니다 (개별주택가격 최초 공시 이전 취득 시 활성화)"
+                : useEstimatedAcquisition
+                  ? "개별주택가격 최초 공시 이전 취득 시 활성화"
+                  : "활성화 시 환산취득가 모드로 자동 전환"
             }
             checked={!!asset.usePreHousingDisclosure}
             onCheckedChange={(checked) => {
-              onChange({
-                usePreHousingDisclosure: checked,
-                ...(checked ? { useEstimatedAcquisition: true } : {}),
-              });
+              // 파트 모델은 `usePreHousingDisclosure` **한 키만** 쓴다 — 레거시 `useEstimatedAcquisition`을 켜면
+              // 토글 OFF(총액 모델) 복귀 후 상단 라디오가 조용히 「환산」으로 바뀐다(왕복 무변화 위반).
+              onChange(
+                isPerPart
+                  ? { usePreHousingDisclosure: checked }
+                  : {
+                      usePreHousingDisclosure: checked,
+                      ...(checked ? { useEstimatedAcquisition: true } : {}),
+                    },
+              );
             }}
           >
             <MixedUsePreHousingDisclosureSection
@@ -235,8 +276,9 @@ export function MixedUseAssetMajorStdPrice({
               onChange={onChange}
             />
           </ToggleCard>
+          )}
 
-          {!asset.usePreHousingDisclosure && (
+          {!phdOn && showHousingPrice && (
             <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2">
               <StandardPriceInput
                 propertyKind="house_individual"
@@ -246,7 +288,11 @@ export function MixedUseAssetMajorStdPrice({
                 jibun={asset.addressJibun || undefined}
                 referenceDate={acqReferenceDate}
                 label="개별주택공시가격"
-                hint="미공시 시 비워두세요 — 위 §164⑦ 토글 사용"
+                hint={
+                  isPerPart
+                    ? `${housingPriceReason ?? "취득시 기준시가 비율 안분에 쓰입니다."} 미공시 시 비워두세요 — 위 §164⑦ 토글 사용`
+                    : "미공시 시 비워두세요 — 위 §164⑦ 토글 사용"
+                }
               />
             </div>
           )}
@@ -268,7 +314,7 @@ export function MixedUseAssetMajorStdPrice({
         </div>
 
         {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
-        {!asset.usePreHousingDisclosure && (
+        {!phdOn && (
           <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
             <p className="text-caption font-semibold text-emerald-700">양도시</p>
             <StandardPriceInput
@@ -362,7 +408,11 @@ export function MixedUseAssetMajorStdPrice({
               label="자본적지출·양도비 (상가분)"
               value={asset.mixedCommercialActualExpense}
               onChange={(v) => onChange({ mixedCommercialActualExpense: v })}
-              hint="매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 상가분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+              hint={
+                isPerPart
+                  ? "실거래가 파트에는 개산공제(§163⑥) 대신 실제 필요경비가 가산됩니다. 감정·매매사례 파트는 개산공제만이고, 환산 파트는 이 경비 몫이 환산취득가액과 개산공제의 합보다 크면 그 경비를 씁니다(법 §97②2호 단서). 상가분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+                  : "매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 상가분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+              }
             />
           </ToneCard>
         )}
@@ -373,6 +423,11 @@ export function MixedUseAssetMajorStdPrice({
           <span className="text-micro font-normal text-slate-500">
             (토지 제외)
           </span>
+          {isPerPart && (
+            <span className="ml-1 text-caption font-normal text-slate-500" data-testid="mixed-part-commercial-building-day-note">
+              취득시는 건물 취득일 기준
+            </span>
+          )}
         </p>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">

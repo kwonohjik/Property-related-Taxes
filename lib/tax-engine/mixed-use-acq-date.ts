@@ -13,6 +13,8 @@
  * 규칙을 두 곳에 쓰면 UI 통과 ↔ 서버 차단 모순이 생긴다(dual-truth).
  */
 
+import type { MixedPartAcqNeeds } from "./types/transfer-mixed-use-part-acq.types";
+
 export interface BuildingDayLandPriceInput {
   /** 토지 취득일 (ISO 날짜 문자열 또는 Date) — 비어 있으면 별개 취득이 아니다. */
   landDate: Date | string | undefined | null;
@@ -24,6 +26,11 @@ export interface BuildingDayLandPriceInput {
   partialDirection?: "house_to_commercial" | "commercial_to_house";
   /** 취득시 개별주택가격 — 비례 분할의 분자(H). 0·미입력이면 소비처가 없다. */
   housingPrice?: number | undefined;
+  /**
+   * B1 파트 모델이면 `mixedPartAcqNeeds` 결과(없으면 총액 모델 — 기존 동작 불변).
+   * 양쪽 실가 등 이 값이 쓰이지 않는 조합에서 거짓 요구를 만들지 않는다(노출 ⇔ 소비) — **AND**로 받는다.
+   */
+  partAcqNeeds?: Pick<MixedPartAcqNeeds, "landPricePerSqmAtBuildingDay"> | undefined;
 }
 
 /** 날짜 단위 키 (YYYY-MM-DD). 비어 있거나 무효면 "". */
@@ -54,6 +61,7 @@ export function isBuildingDayLandPriceRequired(input: BuildingDayLandPriceInput)
     areMixedAcqDatesSeparate(input.landDate, input.buildingDate) &&
     input.usePhd !== true &&
     input.partialDirection !== "commercial_to_house" &&
-    (input.housingPrice ?? 0) > 0
+    (input.housingPrice ?? 0) > 0 &&
+    (input.partAcqNeeds?.landPricePerSqmAtBuildingDay ?? true)
   );
 }

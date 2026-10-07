@@ -14,6 +14,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { mixedPartAcqNeedsOfForm, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
 import {
   isHousingBuildingStdAtAcqRequired,
   isHousingBuildingStdAtTransferRequired,
@@ -30,12 +31,15 @@ function isMixedHousing(a: AssetForm): boolean {
 /** 폼 → leaf 인자. ④가 엔진에 보내는 값과 같은 파생이다. */
 export function housingStdNeedInputOf(a: AssetForm): HousingStdNeedInput {
   return {
-    usePhd: a.usePreHousingDisclosure,
+    // B1 — 파트 모델이면 PHD는 「환산 파트가 있을 때만」(실효값). 총액 모델은 저장값 그대로(불변).
+    usePhd: mixedUsePhdEffective(a),
     partialDirection:
       a.hasPartialUsageChange && a.partialChangeDirection ? a.partialChangeDirection : undefined,
     byInheritanceOrGift:
       (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift") &&
       (a.acquisitionDate ?? "") >= "1985-01-01",
+    // B1 — 파트 모델이면 `mixedPartAcqNeeds`(취득측 술어만 AND로 받는다). 총액 모델은 undefined(불변).
+    partAcqNeeds: mixedPartAcqNeedsOfForm(a),
   };
 }
 

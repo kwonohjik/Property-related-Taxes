@@ -44,6 +44,8 @@ export function buildRowsFromOrder(
   roseNotesMap: Record<string, Record<ColumnKey, string>>,
   acqDateRowLabel: string,
   singleTaxNotes: Record<ColumnKey, string> | undefined,
+  /** B1 — 겸용 별개 취득 파트 모델의 취득가액 행 열별 주석(열마다 산정방식). 행을 추가하지 않는다(별지 서식 행 구성 보존). */
+  acqNotes?: Record<ColumnKey, string>,
 ): RowDef[] {
   const rowOrder: Array<[string, string, Partial<RowDef>?]> = [
     ["transferDate", "양도일자"],
@@ -53,7 +55,7 @@ export function buildRowsFromOrder(
     ["moveIn", "입주일"],
     ["residencePeriod", "거주기간", { separatorAfter: true }],
     ["transferPrice", "양도가액"],
-    ["acquisitionPrice", "취득가액"],
+    ["acquisitionPrice", "취득가액", acqNotes ? { notes: acqNotes } : undefined],
     ["expenses", "필요경비", { separatorAfter: true }],
     ["transferGain", "전체 양도차익"],
     ["exemptGain", "비과세 양도차익"],

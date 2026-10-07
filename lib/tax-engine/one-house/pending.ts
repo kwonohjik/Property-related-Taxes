@@ -24,6 +24,7 @@
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
 import { addDays, addYears } from "date-fns";
+import { resolveOneHouseMinHoldingYears } from "../data/one-house-holding-residence-era";
 import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-period";
 import { TRANSFER } from "../legal-codes";
 import { calculateHoldingPeriod } from "../tax-utils";
@@ -78,7 +79,8 @@ export function meetsTemporaryTwoHousePrevHolding(
     resolveExemptionHoldingStartDate(input),
     input.transferDate,
   );
-  return prevHolding.years >= rule.minHoldingYears;
+  // M2 — 2012-06-29 전 양도분은 보유 3년
+  return prevHolding.years >= resolveOneHouseMinHoldingYears(input.transferDate, rule.minHoldingYears);
 }
 
 /**
@@ -102,8 +104,9 @@ function holdingIsTheOnlyUnmetRequirement(input: OneHouseJudgeInput, rule: OneHo
  */
 function holdingDeadline(input: OneHouseJudgeInput, rule: OneHouseRule): Date {
   const start = resolveExemptionHoldingStartDate(input);
-  const candidate = addDays(addYears(start, rule.minHoldingYears), -1);
-  return calculateHoldingPeriod(start, candidate).years >= rule.minHoldingYears
+  const years = resolveOneHouseMinHoldingYears(input.transferDate, rule.minHoldingYears);
+  const candidate = addDays(addYears(start, years), -1);
+  return calculateHoldingPeriod(start, candidate).years >= years
     ? candidate
     : addDays(candidate, 1);
 }

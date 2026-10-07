@@ -8,6 +8,7 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import {
@@ -739,5 +740,7 @@ export function buildRows(
     ? `취득일자 ${acquisitionDateLabel}`
     : "취득일자";
 
-  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes);
+  // B1 — 겸용 별개 취득 파트 모델: 취득가액 행 열별 주석(엔진 echo 소비 — 재도출 금지)
+  const acqNotes = mode === "fourpart" || mode === "mixed-4col" ? separateAcqFilingNotes(mu) : undefined;
+  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes, acqNotes);
 }

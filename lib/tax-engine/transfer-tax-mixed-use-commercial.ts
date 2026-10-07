@@ -19,6 +19,7 @@ import {
   resolvePartNecessaryExpense,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
+import { mixedPartAcqNeedsOf } from "./mixed-use-part-acq";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
@@ -161,7 +162,10 @@ export function calcCommercialGainSplit(
   const userBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
   const userLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
 
-  if (userBuildingStd <= 0 || userLandPerSqm <= 0) {
+  // B1 파트 모델 — 양쪽 실가 + 계약액 + 취득측 경비 없음이면 상가 취득시 기준시가가 쓰이지 않는다(`mixedPartAcqNeeds`).
+  const partAcqNeeds = mixedPartAcqNeedsOf(asset);
+  const commercialStdUnused = partAcqNeeds !== undefined && !partAcqNeeds.commercialStdAtAcq;
+  if (!commercialStdUnused && (userBuildingStd <= 0 || userLandPerSqm <= 0)) {
     if (asset.partialUsageChange?.direction === "house_to_commercial") {
       throw new Error(
         "보유 중 일부 용도변경(주택→상가): 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요. " +
@@ -179,8 +183,8 @@ export function calcCommercialGainSplit(
     asset.partialUsageChange?.direction === "house_to_commercial"
       ? derived.commercialLandArea
       : effectiveAcqDerived.commercialLandArea;
-  const acqLandStd = userLandPerSqm * landAreaForUserInput;
-  const acqBuildingStd = userBuildingStd;
+  const acqLandStd = commercialStdUnused ? 0 : userLandPerSqm * landAreaForUserInput;
+  const acqBuildingStd = commercialStdUnused ? 0 : userBuildingStd;
   const acqStandardSource = "user_input" as const;
 
   const acqTotalStd = acqLandStd + acqBuildingStd;

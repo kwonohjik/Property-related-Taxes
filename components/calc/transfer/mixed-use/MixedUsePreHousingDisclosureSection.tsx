@@ -23,6 +23,7 @@ import { derivePhdResidentialLandArea } from "@/lib/calc/transfer-pre1990-phd-br
 import { residualArea } from "@/lib/tax-engine/area-utils";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
+import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -206,6 +207,13 @@ export function MixedUsePreHousingDisclosureSection({
         <p className="text-xs font-semibold text-muted-foreground">
           3시점 기준시가 입력 — 토지 단위 공시지가(원/㎡) + 건물 기준시가(원)
         </p>
+        {/* B1 — 별개 취득 파트 모델: 『취득시』 두 값은 **서로 다른 날짜** 기준이다(U-3). 날짜가 라벨에 없으면 사용자가 한 날짜로 맞춰 넣는다. */}
+        {isMixedUsePerPartAcq(asset) && (
+          <p className="text-caption text-muted-foreground" data-testid="mixed-phd-part-acq-caption">
+            취득시 토지 단위 공시지가는 <strong>토지 취득일({asset.landAcquisitionDate})</strong> 기준, 취득시 건물 기준시가는{" "}
+            <strong>건물 취득일({asset.acquisitionDate})</strong> 기준 값을 입력하세요 — 별개 취득이라 두 날짜가 다릅니다.
+          </p>
+        )}
 
         <ThreePointStandardPriceInput
           fieldLandAtAcq="phdLandPricePerSqmAtAcq"

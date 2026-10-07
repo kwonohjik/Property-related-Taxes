@@ -44,7 +44,9 @@
       "contractTotalPrice": "500000000",
       "asset": {
         "assetKind": "housing",
-        "acquisitionDate": "2003-04-15"
+        "acquisitionDate": "2003-04-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "24"
       },
       "rightThreeYearExceptionKind": "none",
       "presaleRights": [
@@ -61,6 +63,6 @@
       "isExempt": true
     },
     "bucket": "match",
-    "note": "match(양성 짝). 2006.1.1. 전 인가분 입주권은 §89② 주택 수 산입 대상이 아니어서 비과세."
+    "note": "match(양성 짝). 2006.1.1. 전 인가분 입주권은 §89② 주택 수 산입 대상이 아니어서 비과세. M2 보강: 2003.11.20.~2011.6.2. 양도분은 서울·과천·5개 신도시면 보유기간 중 거주 2년 — 원문은 소재지를 적지 않고 요건 충족을 전제하므로 거주 24개월을 가정했다."
   }
 ]

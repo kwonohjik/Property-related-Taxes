@@ -9,6 +9,7 @@
  *   · 건물 취득일 = `acquisitionDate`, 토지 취득일 = `landAcquisitionDate || acquisitionDate`
  *   · 용도변경 방향 = `hasPartialUsageChange && partialChangeDirection`일 때만
  *   · 취득시 개별주택가격 = `parseAmount(mixedAcqHousingPrice)`
+ *   · (B1) PHD = `mixedUsePhdEffective`, 파트 모델의 필수 여부 = `mixedPartAcqNeeds` AND
  *
  * 값 해소에 **폴백이 없다** — 토지 취득일 값(`mixedAcqLandPricePerSqm`)·PHD·1990 환산으로 대체하지 않는다.
  */
@@ -18,6 +19,7 @@ import {
   areMixedAcqDatesSeparate,
   isBuildingDayLandPriceRequired,
 } from "@/lib/tax-engine/mixed-use-acq-date";
+import { mixedPartAcqNeedsOfForm, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
 
 type DateFields = Pick<AssetForm, "acquisitionDate" | "landAcquisitionDate">;
 
@@ -32,10 +34,13 @@ export function needsMixedAcqLandPriceAtBuildingAcq(a: AssetForm): boolean {
   return isBuildingDayLandPriceRequired({
     landDate: a.landAcquisitionDate || a.acquisitionDate,
     buildingDate: a.acquisitionDate,
-    usePhd: a.usePreHousingDisclosure,
+    // B1 — 파트 모델이면 PHD는 「환산 파트가 있을 때만」 의미가 있다(실효값). 총액 모델은 저장값 그대로(불변).
+    usePhd: mixedUsePhdEffective(a),
     partialDirection:
       a.hasPartialUsageChange && a.partialChangeDirection ? a.partialChangeDirection : undefined,
     housingPrice: parseAmount(a.mixedAcqHousingPrice) || undefined,
+    // B1 — 파트 모델이면 `mixedPartAcqNeeds`를 AND로 받는다(양쪽 실가 + 잔존 H가 쓰이지 않는 값을 요구하지 않는다). 총액 모델은 undefined.
+    partAcqNeeds: mixedPartAcqNeedsOfForm(a),
   });
 }
 
