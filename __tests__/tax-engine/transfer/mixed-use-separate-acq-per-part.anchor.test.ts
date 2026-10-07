@@ -336,6 +336,32 @@ describe("§97②2호 단서 — 환산 파트 묶음 (한쪽만 환산이면 �
     expect(r.c.acq[1]).toBe(0);
     expect(r.h.acq[0]).toBe(250_000_000); // 실가 토지 파트는 취득가액 유지
   });
+
+  // 리뷰 게이트 FAIL 정정(2026-10-07): 환산 파트의 주택분·상가분 **직접 경비**도 나목 후보다(실가 파트와 같은 규칙 direct ?? common).
+  //   종전에는 환산 묶음 directSide가 공통 경비 몫만 더해, 직접 경비의 건물 몫(아래 436,363,637)이 어디에도 반영되지 않고 단서도 평가되지 않았다.
+  const sepB = { landMode: "actual", buildingMode: "estimated", landAcquisitionPrice: 500_000_000 } as const;
+  // 건물측 환산 묶음 가목 = 주택건물 환산 264,827,586(= 364,137,930 − ⌊364,137,930×96/352⌋) + 상가건물 82,758,621(= 206,896,551 − ⌊206,896,551×120/200⌋) + 개산공제 7,680,000 + 2,400,000
+  const GAMOK_B = 264_827_586 + 82_758_621 + pct3(256_000_000) + pct3(80_000_000);
+
+  it("PV-4 토지 실가 + 건물 환산 + 주택분 직접 경비 600M → 건물 몫 436,363,637이 나목 후보 → 가목 357,666,207보다 커서 나목 채택", () => {
+    expect(GAMOK_B).toBe(357_666_207);
+    const [dl, db] = ap(600_000_000, 96_000_000, 256_000_000);
+    expect([dl, db]).toEqual([163_636_363, 436_363_637]);
+    const r = run(base({ separateAcquisition: sepB, housingInheritedExpense: 600_000_000 }));
+    expect(r.raw.necessaryExpenseProviso).toEqual({ estimatedSide: GAMOK_B, directSide: db, chosen: "direct" });
+    expect(r.h.acq).toEqual([250_000_000, 0]);
+    expect(r.h.ded).toEqual([dl, db]); // 실가 토지 = 직접 경비 토지 몫 · 환산 건물 = 직접 경비 건물 몫(나목)
+    expect(r.c.acq).toEqual([250_000_000, 0]);
+    expect(r.c.ded).toEqual([0, 0]); // 상가 직접 경비·공통 경비 없음
+  });
+
+  it("PV-5 직접 경비가 작으면(50M → 건물 몫 36,363,636) 단서를 평가하되 환산 유지 — 종전에는 단서 자체가 평가되지 않았다", () => {
+    const [dl, db] = ap(50_000_000, 96_000_000, 256_000_000);
+    const r = run(base({ separateAcquisition: sepB, housingInheritedExpense: 50_000_000 }));
+    expect(r.raw.necessaryExpenseProviso).toEqual({ estimatedSide: GAMOK_B, directSide: db, chosen: "estimated" });
+    expect(r.h.acq).toEqual([250_000_000, 264_827_586]);
+    expect(r.h.ded).toEqual([dl, pct3(256_000_000)]);
+  });
 });
 
 describe("지분·미등기 개산공제 · 조합 · echo", () => {

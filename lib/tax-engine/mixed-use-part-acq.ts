@@ -366,12 +366,15 @@ export function applyMixedPartAcq(args: {
 
   // ── §97②2호 단서 — 환산 파트 묶음 판정 ────────────────────────
   const group = parts.filter((p) => p.mode === "estimated");
-  const provisoDeclared = asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
+  // 나목(§97②2호 단서) 후보 = 자본적지출·양도비 — 자산 단위 공통 경비 몫 또는 주택분·상가분 직접 경비(실가 파트와 같은 규칙).
+  const provisoDeclared =
+    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined || group.some((p) => p.direct !== undefined);
   let proviso: MixedPartAcqApplied["proviso"];
   let provisoGroup: MixedUseSeparateAcquisitionEcho["provisoGroup"];
   if (group.length > 0 && provisoDeclared) {
     const estimatedSide = group.reduce((s, p) => s + p.acq + p.lump, 0);
-    const directSide = group.reduce((s, p) => s + p.common, 0);
+    // 직접 경비가 있으면 그것이 이 파트의 나목이다 — 빼면 사용자가 입력한 환산 파트 경비가 어디에도 반영되지 않는다.
+    const directSide = group.reduce((s, p) => s + (p.direct ?? p.common), 0);
     // 동률(==)은 본문 — 단서가 「적은 경우」로 명시한다(현행 자산 단위 판정과 같은 규칙).
     const chosen: "estimated" | "direct" = directSide > estimatedSide ? "direct" : "estimated";
     proviso = { estimatedSide, directSide, chosen };
@@ -385,7 +388,7 @@ export function applyMixedPartAcq(args: {
       // 가목이 「환산취득가액 + 개산공제」의 합계액이라 나목 채택 시 취득가액을 따로 빼면 이중차감 — 취득가액 0 + 경비 몫.
       for (const p of group) {
         finalAcq.set(p.key, 0);
-        finalDed.set(p.key, p.common);
+        finalDed.set(p.key, p.direct ?? p.common);
         deemed.set(p.key, false);
       }
     }
