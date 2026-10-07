@@ -33,9 +33,19 @@ export function FilingFormTable({
 }: FilingFormTableProps) {
   const { columns, mode } = deriveColumns(result, aggregate, redevSubject, redevSettlementDirection);
   // 부담부증여 §159 산정 여부 — 신고서 표 헤더에 배지 표시
-  const isBurdenedGift = Boolean(
-    (result as unknown as { transferBurdenedGiftBreakdown?: unknown }).transferBurdenedGiftBreakdown,
-  );
+  const burdenedGiftBreakdown = (
+    result as unknown as {
+      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: "standard_price" | "actual" | "converted" };
+    }
+  ).transferBurdenedGiftBreakdown;
+  const isBurdenedGift = Boolean(burdenedGiftBreakdown);
+  // 배지 툴팁은 엔진이 실제로 쓴 취득가액 경로를 적는다 — 「기준시가 환산」 일괄 표기는 실지·환산 경로에서 틀린다.
+  const burdenedGiftAcqFormula =
+    burdenedGiftBreakdown?.acquisitionMethodUsed === "actual"
+      ? "실지취득가액 × 채무비율"
+      : burdenedGiftBreakdown?.acquisitionMethodUsed === "converted"
+        ? "환산취득가액(자산별 양도가액 × 취득시 기준시가를 양도시 기준시가로 나눈 비율)"
+        : "취득시 기준시가 × 채무비율";
   const rows = buildRows(
     result,
     mode,
@@ -95,9 +105,9 @@ export function FilingFormTable({
                 {isBurdenedGift && (
                   <span
                     className="inline-flex items-center rounded-full bg-fuchsia-100 px-2 py-0.5 text-caption font-semibold text-fuchsia-700 border border-fuchsia-300"
-                    title="양도가/취득가 모두 소득세법 시행령 §159①1·2호로 채무비율 × 자산별 기준시가 환산"
+                    title={`소득세법 시행령 §159① — 양도가액 = 인수 채무액, 취득가액 = ${burdenedGiftAcqFormula}`}
                   >
-                    §159①1호 환산
+                    §159 채무비율 안분
                   </span>
                 )}
               </div>

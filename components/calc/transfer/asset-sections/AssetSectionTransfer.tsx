@@ -89,9 +89,21 @@ export function AssetSectionTransfer({
             </b>
             으로 엔진이 자동 산정합니다. 채무액·평가액은 위 <b>인수 채무 + 임대 평가 보조</b> 카드에서 입력하세요.
           </p>
-          <p className="text-caption text-fuchsia-700">
-            ※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다 (기준시가 모드).
-          </p>
+          {/* 양도시 기준시가의 입력 위치·쓰임은 자산종류·평가 모드마다 다르다 — 칸이 없는 경우(시가 모드
+              실지취득가·입주권)는 안내하지 않는다. 술어는 아래 CompanionSaleModeBlock 렌더 게이트와 같다. */}
+          {asset.assetKind === "general_building" ? (
+            <p className="text-caption text-fuchsia-700">
+              ※ <b>양도시 기준시가</b>(토지 공시지가·건물기준시가)는 ③ 취득정보의 일반건물 카드에서 입력합니다.
+            </p>
+          ) : !stdPriceAtTransferComesFromElsewhere(asset) && (
+            <p className="text-caption text-fuchsia-700">
+              {asset.bgValuationMode === "sangjeungbeop_market" ? (
+                <>※ 아래 <b>양도시 기준시가</b> 입력은 환산취득가액(양도가액 × 「취득시 기준시가를 양도시 기준시가로 나눈 비율」)의 분모로 쓰입니다. 증여가액은 시가 평가액입니다.</>
+              ) : (
+                <>※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다.</>
+              )}
+            </p>
+          )}
         </div>
       )}
       {/*
