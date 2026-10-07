@@ -13,12 +13,11 @@
  */
 
 import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
-import { isWithinDeadline } from "./civil-period";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
+import { meetsReplacementHouse } from "./one-house/replacement-house";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./one-house/rental-registration-4ho";
-import { resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { TRANSFER, shortArticle } from "./legal-codes";
 import type {
   OneHouseAppliedException,
@@ -260,22 +259,10 @@ function checkExemptionCore(
   // 신축주택+대체주택 2주택이나 대체주택 양도를 1세대1주택으로 의제(§154① 보유·거주 요건 면제).
   // 요건 미충족 시 fall through(일반 과세). 사후관리(§156의2⑬) 추징 경고는 `transfer-tax.ts`가
   // `article89Clause2.exception`을 보고 낸다(2026-08-26 배선 — 종전에는 이 주석만 있고 경고가 없었다).
+  // 요건(취득·거주·양도 시기·신축주택 거주 선언·대체주택 취득 당시 세대 구성)은 `one-house/replacement-house.ts`
+  //   단일 소스 — §89② 배제의 예외(`resolveArticle89Clause2`)와 같은 술어다.
   if (input.replacementHouse) {
-    const rh = input.replacementHouse;
-    // ① 사업시행인가일 이후 대체주택 취득 + 1년 이상 거주
-    const meetsAcquisition =
-      input.acquisitionDate >= rh.businessApprovalDate &&
-      Math.floor(rh.replacementResidenceMonths / 12) >= 1;
-    // ⑤3호 신축주택 완성 전 또는 완성 후 N년 내 대체주택 양도 — N은 양도일 연혁(2023-01-12 이후 3년,
-    //   전 2년). §156의2④·§156의3③과 같은 부칙(대통령령 제33267호 제8조)이라 함수를 공유한다.
-    const deadlineYears = resolve1562DeadlineYears(input.transferDate);
-    const meetsTransferTiming =
-      input.transferDate < rh.completionDate ||
-      isWithinDeadline(rh.completionDate, deadlineYears, input.transferDate);
-    // ③ 신축주택 1년 이상 거주 (전제 — 자기선언, 미충족 시 §156의2⑬ 추징)
-    const meetsNewHouseResidence = rh.willResideNewHouse === true;
-
-    if (meetsAcquisition && meetsTransferTiming && meetsNewHouseResidence) {
+    if (meetsReplacementHouse(input)) {
       const priceCheck =
         input.burdenedGiftDenominator ??
         input.totalPropertyTransferPrice ??
