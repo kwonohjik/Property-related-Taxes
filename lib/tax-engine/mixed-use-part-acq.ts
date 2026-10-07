@@ -200,12 +200,12 @@ export function collectMixedPartAcqIssues(s: MixedPartAcqSource): MixedPartAcqIs
   // X-6 값 누락 — 자동 안분 fallback 금지
   const lf = landValueField(sep.landMode);
   if (lf && !((sep[lf] ?? 0) > 0)) {
-    out.push({ code: "X-6", path: [P, lf], message: `토지 ${sep.landMode === "salesCase" ? "매매사례가액" : sep.landMode === "appraisal" ? "감정가액" : "실거래가"}을 입력하세요 — 토지 취득가액은 값 없이 다른 값으로 대신 정하지 않습니다.` });
+    out.push({ code: "X-6", path: [P, lf], message: `토지 ${sep.landMode === "salesCase" ? "매매사례가액을" : sep.landMode === "appraisal" ? "감정가액을" : "실거래가를"} 입력하세요 — 토지 취득가액은 값 없이 다른 값으로 대신 정하지 않습니다.` });
   }
   const bf = buildingValueField(sep.buildingMode);
   const bv = bf ? sep[bf] ?? 0 : 0;
   if (bf && !(bv > 0)) {
-    out.push({ code: "X-6", path: [P, bf], message: `건물 ${sep.buildingMode === "salesCase" ? "매매사례가액" : sep.buildingMode === "appraisal" ? "감정가액" : "실거래가"}을 입력하세요 — 건물 취득가액은 값 없이 다른 값으로 대신 정하지 않습니다.` });
+    out.push({ code: "X-6", path: [P, bf], message: `건물 ${sep.buildingMode === "salesCase" ? "매매사례가액을" : sep.buildingMode === "appraisal" ? "감정가액을" : "실거래가를"} 입력하세요 — 건물 취득가액은 값 없이 다른 값으로 대신 정하지 않습니다.` });
   }
   const contract = contractOf(sep);
   if (contract > 0) {

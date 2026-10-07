@@ -225,7 +225,7 @@ describe("결합 제외 X-1~X-7 목록 (엔진 throw · ⑫ superRefine · ⑧�
     ).toEqual([]);
   });
   it("엔진은 같은 목록의 첫 이슈로 throw — 값 누락을 다른 값으로 대신하지 않는다", () => {
-    expect(() => run(base({ separateAcquisition: { landMode: "actual", buildingMode: "actual", buildingAcquisitionPrice: 400_000_000 } }))).toThrow(/토지 실거래가을 입력하세요/);
+    expect(() => run(base({ separateAcquisition: { landMode: "actual", buildingMode: "actual", buildingAcquisitionPrice: 400_000_000 } }))).toThrow(/토지 실거래가를 입력하세요/);
     expect(() => run(base({ separateAcquisition: { ...AA, buildingMode: "appraisal" }, usePreHousingDisclosure: true }))).toThrow(/미공시/);
   });
 });
