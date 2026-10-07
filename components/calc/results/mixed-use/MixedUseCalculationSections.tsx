@@ -206,10 +206,16 @@ export function MixedUseCalculationSections({
                   {/* 🔴 종전에는 분자에 **값이 없었다**. 미공시(0)면 「주택 환산취득가액 0」과
                       라벨뿐인 분자가 함께 나와, 0으로 잡힌 것인지 입력이 누락된 것인지
                       화면에서 구별할 수 없었다(#077). 바로 아래 상가분은 분자 값을 보여준다. */}
+                  {/* 토지·건물 취득일이 다르면 분자는 건물 취득일 개별주택가격을 토지 취득일로 옮긴
+                      취득당시 주택가격이다(집행기준 99-164-9) — 「주택분 기준시가 분할」의 환산값과 같은 값. */}
                   <Frac
-                    top={`취득시 개별주택공시가격 ${fmtPlain(h.acqHousingStandardPrice ?? 0)}${
-                      (h.acqHousingStandardPrice ?? 0) > 0 ? "" : " (미공시)"
-                    }`}
+                    top={
+                      h.housingStdSplit?.acq?.kind === "separate_date_converted"
+                        ? `취득당시 주택가격(토지·건물 취득일 상이 환산) ${fmtPlain(h.acqHousingStandardPrice ?? 0)}`
+                        : `취득시 개별주택공시가격 ${fmtPlain(h.acqHousingStandardPrice ?? 0)}${
+                            (h.acqHousingStandardPrice ?? 0) > 0 ? "" : " (미공시)"
+                          }`
+                    }
                     bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
                   />
                 </FLine>
