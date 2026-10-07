@@ -582,4 +582,19 @@ body의 `mixedUse.separateAcquisition`(엔진 §3.1) 단언.
 |---|---|---|
 | `__tests__/calc/mixed-use-acq-date-split.anchor.test.ts` · `mixed-use-housing-std-split-parity.anchor.test.ts` · `mixed-use-housing-building-std-field.anchor.test.tsx` | **시드 보강** — 기준 시드에 `mixedAcqPerPartMode: false`(총액 모델 격자임을 명시). 의도 불변 | 신규 자산 initial이 ON이라 격자의 「별개 취득」 셀이 파트 모델로 읽혀(용도변경 × 파트 = X-1 등) 총액 모델의 B0·나목 술어를 더 이상 시험하지 못했다. 파트 모델 격자는 신규 `mixed-use-part-acq-split.anchor.test.ts`가 맡는다 |
 | `__tests__/components/sale-split-section-title-parity.anchor.test.tsx` T-3 | **경로 추종** — `AXIS_B`를 `PartAcqInputs.tsx`로 | 환산 안내(`transferSource`)가 추출되며 파일이 옮겨졌다(문구 불변) |
-| `__tests__/components/split-acq-date-mixed-note.test.tsx` E7-a/b | (아래 11.4에서 확정) | |
+| `__tests__/components/split-acq-date-mixed-note.test.tsx` E7-a/b | **의도 반전(갱신)** — E7-a: 토글 ON ⇒ 비-겸용 축 B 0건 + `mixed-sep-acq-block` 1 + `fixed-acquisition-price` 0 / E7-b: 총액 유지는 「토글 OFF」·「같은 날」 두 경우로 분리. 종전 E7-b가 통과한 것은 파트 블록 머리말에도 「취득가액 산정 방식」이 있어서였다(같은 문구라 의도가 반대로 읽힘) | 설계 §7.4 예측대로 통과하나 의도가 반대 |
+| `e2e/mixed-use-filing-form-4col.spec.ts`(날짜 행) · `mixed-use-acq-landprice-at-building-acq.spec.ts` · `mixed-use-housing-std-proportional.spec.ts`(`SEPARATE`) | **시드 보강** — `mixedAcqPerPartMode: false`로 총액 모델 명시 | 앞 둘은 ON이면 ⑧이 막거나(파트 금액 비음) B0 칸이 숨어 실패했다. 셋째는 ON이어도 환산 파생으로 **통과**하지만 총액 모델의 옛 축 커버리지가 조용히 사라지므로 명시했다(`feedback_flipping_enum_default_rewrites_absent_records`). 파트 모델 쪽은 신규 spec M7·M14·M28이 맡는다 |
+| `e2e/_helpers/validation-field-jump-cases-mixed.ts` | **무변경** — 별개 취득 환산 셀은 ON이면 환산/환산으로 파생돼 같은 메시지·같은 칸 | 확인: jump spec 통과 |
+
+### 11.4 검증 결과
+
+| 항목 | 결과 |
+|---|---|
+| `npx tsc --noEmit` | 0건 |
+| `npx vitest run __tests__/calc __tests__/components __tests__/api __tests__/tax-engine/transfer __tests__/lib __tests__/stores` | 20,951건 · 실패 0 (보류 3) |
+| 신규 vitest | `mixed-use-part-acq-split.anchor.test.ts`(263) · `mixed-use-separate-acq-block.test.tsx`(24) · `mixed-use-separate-acq-result.anchor.test.tsx`(13) · `mixed-use-part-acq-phd-and-std.test.tsx`(8) |
+| 신규 E2E `e2e/mixed-use-separate-acq-per-part.spec.ts` | 14건 통과(M1~M6·M7~M12·M13~M15·M16·M17·M18·M20·M22·M24·M25·M26·M27·M28) |
+| 겸용·별개 취득 관련 E2E 47 spec | 870 통과 · 스킵 21(`unreachableInUi` 정적 플래그 — 사전존재) · flaky 1(`transfer-dead-end-defects` 날짜 입력 레이스 — 재시도 통과, 이 변경과 무관) · 시드 보강한 3 spec은 수정 후 재실행 통과 |
+| `npm run build` | 성공(엔진 leaf import가 서버 전용 모듈을 끌어오지 않음) |
+| mutation probe 16건 | 전부 KILLED(normalize 부재→true · 총액 플래그 미고정 · needs 어댑터 무력화 · 사이드바 합계/행 분기 · ⑧ 생략 · echo 무시 · PHD patch 레거시 동반 · 축 A 숨김 · 나목 AND · B0 PHD 실효 · 계약액 stale · 환산 stale 값 · U-2 게이트 · 후보 날짜 조건 · 토글 다중 키) |
+| 브라우저 확인 | Playwright로 시드→계산→결과, request body 신규 키·결과 카드·신고서 열별 주석 확인(스크린샷 육안 확인 포함) |
