@@ -77,6 +77,14 @@ function ownedParts(sd: SplitGainResult): Array<[SplitPartKey, SplitPartResult]>
   return out;
 }
 
+/**
+ * 파트 하나의 **차감된** 취득가액 — §97②2호 단서 swap 파트는 0. 신고서 열별 셀(비소유 파트 포함)이 같은 정의를 읽도록
+ * 합계(`summarizeSplitGain`)와 한 곳에서 낸다.
+ */
+export function splitPartAcquisitionDeducted(p: SplitPartResult): number {
+  return p.swapApplied === true ? 0 : p.acquisitionPrice;
+}
+
 /** 취득가액·필요경비·양도차익의 **정본 합** — 엔진 문구와 결과뷰가 같은 정의를 쓴다. */
 export function summarizeSplitGain(sd: SplitGainResult): SplitGainSummary {
   const parts: SplitGainPartSummary[] = ownedParts(sd).map(([key, p]) => {
@@ -87,7 +95,7 @@ export function summarizeSplitGain(sd: SplitGainResult): SplitGainSummary {
       mode: p.acqMode,
       transferPrice: p.transferPrice,
       acquisitionPrice: p.acquisitionPrice,
-      acquisitionDeducted: swapApplied ? 0 : p.acquisitionPrice,
+      acquisitionDeducted: splitPartAcquisitionDeducted(p),
       directExpenses: p.directExpenses,
       appraisalDeduction: p.appraisalDeduction,
       swapApplied,

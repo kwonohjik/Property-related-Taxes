@@ -11,6 +11,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -25,6 +26,7 @@ import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
 } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { SplitPartResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 
 
 // ── Props ──────────────────────────────────────────────────────
@@ -477,19 +479,24 @@ export function buildRows(
     setNum("acquisitionPrice", "total", hp.landAcqPrice + hp.buildingAcqPrice + cp.landAcqPrice + cp.buildingAcqPrice);
     setNum("expenses", "total", hp.landAppraisalDed + hp.buildingAppraisalDed + cp.landAppraisalDed + cp.buildingAppraisalDed);
   } else if (mode === "split-2col" && sp) {
+    // 합계 열 — 엔진 leaf `summarizeSplitGain`(소유 파트의 **차감된** 취득가 합 · 직접경비 + 개산공제 합). 명세서·카드·step 문구와
+    // 한 정의다 — §97②2호 단서 swap 파트는 취득가액 0 + 필요경비 = 직접경비라 항등식이 성립한다(H-7).
+    const ss = summarizeSplitGain(sp);
     if (sp.selfOwns === "building_only" || sp.selfOwns === "land_only") {
       // 본인이 소유한 파트만 신고 대상 — 합계도 소유 파트 단독 (자기정합 + line 613 override).
-      const p = sp.selfOwns === "building_only" ? sp.building : sp.land;
-      setNum("transferPrice", "total", p.transferPrice || null);
-      setNum("acquisitionPrice", "total", p.acquisitionPrice);
-      setNum("expenses", "total", p.directExpenses + p.appraisalDeduction);
-    } else {
-      // both — 토지+건물 합 (지분 반영 totalTransferPrice는 613에서 유지)
-      setNum("acquisitionPrice", "total", sp.land.acquisitionPrice + sp.building.acquisitionPrice);
-      setNum("expenses", "total",
-        sp.land.directExpenses + sp.land.appraisalDeduction +
-        sp.building.directExpenses + sp.building.appraisalDeduction,
-      );
+      setNum("transferPrice", "total", ss.transferPrice || null);
+    }
+    // both면 양도가액은 지분 반영 totalTransferPrice(613)를 유지한다.
+    setNum("acquisitionPrice", "total", ss.acquisitionDeducted);
+    setNum("expenses", "total", ss.necessaryExpense);
+    for (const part of ss.parts) {
+      if (part.swapApplied) {
+        setRoseNote(
+          "acquisitionPrice",
+          part.key,
+          `${part.label}: 「소득세법」 §97②2호 단서 — 환산취득가액 ${part.acquisitionPrice.toLocaleString()}을 차감하지 않고 자본적지출·양도비를 필요경비로 적용`,
+        );
+      }
     }
   } else if (estimatedDisplay !== null) {
     /**
@@ -625,8 +632,14 @@ export function buildRows(
     setNum("ltResidencePart", "commercialLand", 0);
     setNum("ltResidencePart", "commercialBuilding", 0);
   } else if (mode === "split-2col" && sp) {
-    const landSplit = splitLtDeduction(sp.land.longTermDeduction, Math.round(sp.land.holdingYears * 12), residenceMs, useTable2);
-    const buildSplit = splitLtDeduction(sp.building.longTermDeduction, Math.round(sp.building.holdingYears * 12), residenceMs, useTable2);
+    // 보유분·거주분은 **엔진 echo가 정본**이다(E-1 — 파트별 정수 % 분해, 합 = 파트 공제액). 종전에는 파트 공제액을 여기서
+    // `splitLtDeduction`(부동소수 율 재안분)으로 다시 쪼개 1원 어긋날 수 있었다. echo가 없는 구 이력은 종전대로 재안분한다.
+    const lthdOfPart = (part: SplitPartResult) =>
+      part.holdingDeductionAmount !== undefined && part.residenceDeductionAmount !== undefined
+        ? { holdingAmount: part.holdingDeductionAmount, residenceAmount: part.residenceDeductionAmount }
+        : splitLtDeduction(part.longTermDeduction, Math.round(part.holdingYears * 12), residenceMs, useTable2);
+    const landSplit = lthdOfPart(sp.land);
+    const buildSplit = lthdOfPart(sp.building);
     setNum("ltHoldingPart", "total", landSplit.holdingAmount + buildSplit.holdingAmount);
     setNum("ltResidencePart", "total", landSplit.residenceAmount + buildSplit.residenceAmount);
     setNum("ltHoldingPart", "land", landSplit.holdingAmount);

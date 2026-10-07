@@ -719,6 +719,10 @@ export function buildExemptEarlyResult(p: {
       pre1990LandResult: p.pre1990LandResult,
       carryoverDetail: p.carryoverDetail,
       inheritedAcquisitionStep: p.inheritedAcquisitionStep,
+      // [echo] 토지·건물 별개 취득(split) 파트 정본 — 없으면 신고서·명세서·다건 집계가 `양도가 − gross차익 − expenses` 역산으로 떨어져
+      // 개산공제가 취득가액에 섞이고(다건은 취득 0 · 필요경비 = 취득합 + 개산공제) 결과 카드가 사라진다(표시 전용 — 세액 불변).
+      // ⚠️ `buildTransferResultDetails`가 `splitDetail: undefined`를 펼치므로 이 인자로 넘겨야 한다(직접 필드는 덮어써진다).
+      splitDetail: grossForEcho.splitDetail,
     }),
   };
 }

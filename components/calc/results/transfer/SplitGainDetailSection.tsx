@@ -13,16 +13,16 @@ function hasProration(part: SplitPart): boolean {
  * 취득가액 셀 — §97②2호 단서 swap이 발동한 파트는 **차감되지 않았음**을 밝힌다.
  * 금액은 그대로 보여 준다(사용자가 입력·산정한 값이므로 숨기면 그것대로 혼란이다).
  */
-function AcqCell({ owned, part }: { owned: boolean; part: SplitPart }) {
+function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; testId: string }) {
   // 표의 다른 금액 칸과 같은 클래스를 쓴다 — 비소유 파트는 종전대로 취소선·연회색이다.
   const cls = owned
     ? "font-mono tabular-nums text-right"
     : "font-mono tabular-nums text-right text-muted-foreground/50 line-through";
   if (!part.swapApplied) {
-    return <span className={cls}>{part.acquisitionPrice.toLocaleString()}</span>;
+    return <span className={cls} data-testid={testId}>{part.acquisitionPrice.toLocaleString()}</span>;
   }
   return (
-    <span className={cls}>
+    <span className={cls} data-testid={testId}>
       <span className="line-through">{part.acquisitionPrice.toLocaleString()}</span>
       <span className="block text-caption font-normal text-rose-700 dark:text-rose-400">
         차감 안 됨 (§97②2호 단서 — 자본적지출·양도비 택일)
@@ -46,6 +46,8 @@ function AcqCell({ owned, part }: { owned: boolean; part: SplitPart }) {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
+import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
+import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
@@ -76,8 +78,10 @@ export function SplitGainDetailSection({
       owned ? "font-mono tabular-nums text-right" : "font-mono text-right text-muted-foreground/50 line-through";
     const headerCls = (owned: boolean) =>
       owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
-    const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") =>
-      m === "estimated" ? "환산취득가" : m === "appraisal" ? "감정가액" : m === "salesCase" ? "매매사례가액" : "실지취득가액";
+    // 모드 라벨은 입력 화면 라디오·상세명세서·신고서와 **같은 어휘**다(엔진 leaf) — 구 이력(모드 echo 없음)은 실거래가.
+    const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") => splitAcqModeLabel(m ?? "actual");
+    // 개산공제율은 엔진이 적용한 율 echo를 읽는다(미등기 0.3% · 분양권 등 1%). echo가 없는 구 이력은 종전 3%.
+    const lumpRateLabel = (rate?: number) => (rate !== undefined ? formatLumpRate(rate) : "3%");
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -95,8 +99,8 @@ export function SplitGainDetailSection({
             <span className={headerCls(landIsOwned)}>토지{!landIsOwned && " (타인 소유)"}</span>
             <span className={headerCls(buildingIsOwned)}>건물{!buildingIsOwned && " (타인 소유)"}</span>
             <span className="text-muted-foreground">취득 방식</span>
-            <span className={cn(headerCls(landIsOwned), "font-normal")}>{acqModeLabel(splitDetail.land.acqMode)}</span>
-            <span className={cn(headerCls(buildingIsOwned), "font-normal")}>{acqModeLabel(splitDetail.building.acqMode)}</span>
+            <span className={cn(headerCls(landIsOwned), "font-normal")} data-testid="split-card-acq-mode-land">{acqModeLabel(splitDetail.land.acqMode)}</span>
+            <span className={cn(headerCls(buildingIsOwned), "font-normal")} data-testid="split-card-acq-mode-building">{acqModeLabel(splitDetail.building.acqMode)}</span>
             <span className="text-muted-foreground">양도가액</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.transferPrice.toLocaleString()}</span>
@@ -108,21 +112,21 @@ export function SplitGainDetailSection({
                  표와 그것을 반영하지 않은 양도차익이 나란히 놓였다.
             */}
             <span className="text-muted-foreground">취득가액</span>
-            <AcqCell owned={landIsOwned} part={splitDetail.land} />
-            <AcqCell owned={buildingIsOwned} part={splitDetail.building} />
+            <AcqCell owned={landIsOwned} part={splitDetail.land} testId="split-card-acq-land" />
+            <AcqCell owned={buildingIsOwned} part={splitDetail.building} testId="split-card-acq-building" />
             <span className="text-muted-foreground">필요경비 (개산공제)</span>
             <span className={colCls(landIsOwned)}>
               {splitDetail.land.appraisalDeduction.toLocaleString()}
               {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
                   지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
               {splitDetail.land.stdPriceAtAcq != null && (
-                <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × 3%</span>
+                <span className="block text-muted-foreground/70 font-normal" data-testid="split-card-lump-base-land">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.land.lumpDeductionRate)}</span>
               )}
             </span>
             <span className={colCls(buildingIsOwned)}>
               {splitDetail.building.appraisalDeduction.toLocaleString()}
               {splitDetail.building.stdPriceAtAcq != null && (
-                <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × 3%</span>
+                <span className="block text-muted-foreground/70 font-normal" data-testid="split-card-lump-base-building">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.building.lumpDeductionRate)}</span>
               )}
             </span>
             {/*

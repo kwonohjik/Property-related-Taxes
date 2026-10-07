@@ -1,5 +1,6 @@
 "use client";
 
+import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 
@@ -43,7 +44,13 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
    * 🔑 E-1 `acquisitionMode` echo가 있으면 4종을 그대로 읽는다 — boolean `usedEstimatedAcquisition`만 보면 감정·매매사례 파트가
    *    「(실거래가)」로 찍힌다(A2 §9.2 D2). **옛 이력**(echo 없음)은 종전대로 boolean 2종 — 표시 회귀 없음.
    */
-  const MODE_BADGE = { actual: "(실거래가)", estimated: "(환산)", appraisal: "(감정가액)", salesCase: "(매매사례가액)" } as const;
+  // 산정방식 어휘는 입력 화면 라디오·상세명세서·결과 카드와 같은 엔진 leaf다(결정 9 — 종전 「(환산)」은 한 곳만 어긋났다).
+  const MODE_BADGE = {
+    actual: `(${splitAcqModeLabel("actual")})`,
+    estimated: `(${splitAcqModeLabel("estimated")})`,
+    appraisal: `(${splitAcqModeLabel("appraisal")})`,
+    salesCase: `(${splitAcqModeLabel("salesCase")})`,
+  } as const;
   const acqBadge = (propertyId: string, tone: string) => {
     const card = cardOf(propertyId);
     const label = card?.acquisitionMode

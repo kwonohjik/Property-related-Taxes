@@ -4,14 +4,10 @@
  * 설계서: `docs/02-design/features/transfer-split-acq-result-display.ui.design.md`
  * 계획서: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` §2.1 H-1 · §2.2 G-4 · §4 Q-F · §6
  *
- * 이 파일은 두 부분이다.
- *
- *  ① **현행 회귀선(활성)** — 2026-10-07 화면 실측(Playwright, E2E_PORT=3134)으로 확인한 현행 동작을 그대로 고정한다.
- *     「결함을 고정한다」는 뜻이다. Do 단계에서 수정이 들어가면 이 블록의 해당 단언이 **의도적으로** 뒤집힌다 —
- *     그때 같은 케이스의 ② 단언(`C_UNSKIP`)이 켜진다. 뒤집지 않고 지우면 형제 안전망이 같이 사라진다
- *     (memory `feedback_shared_assertion_reversal_erases_sibling_net`).
- *  ② **수정 후 기대(skip)** — `redUntilDo`. `C_UNSKIP=1`로 실행하면 현행에서 RED여야 한다(이 작업에서 확인).
- *     Do 단계가 끝나면 `redUntilDo`를 `it`으로 바꾼다.
+ * **Do 완료(2026-10-07)**: 이 파일은 Pre-Do 때 「현행 결함을 고정」하던 단언과 「수정 후 기대(`redUntilDo` skip)」로 나뉘어 있었다.
+ * Phase C UI Do에서 skip을 모두 해제했고, 결함을 고정하던 단언은 **의도적으로 반전**했다(단건 명세서 값·H-6 카드 율).
+ * 옛 이력(echo 부재)의 종전 표시를 지키는 단언은 「구 이력」 이름으로 남겼다. 집계 소제목(G-4)·신고서 swap(H-7)·일괄 실가
+ * 안분 분모(Q-F-4)·사이드바·라벨 통일은 `split-acq-result-display.c.ui.anchor.test.tsx`가 다룬다.
  *
  * 픽스처 출처: 응답 JSON 값은 실제 `/api/calc/transfer`(single) · `/multi` · bundled 응답을 옮긴 것이다. 손으로 만든 이상적인
  * 값이 아니다(memory `feedback_fixture_default_masks_gate_defect`). GB 픽스처는 응답 `aggregated.generalBuildingValuationDetail`
@@ -37,9 +33,6 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 
 afterEach(cleanup);
-
-/** 수정 후 기대 — Do 단계에서 `it`으로 교체. `C_UNSKIP=1`이면 현행에서 RED임을 확인하는 데 쓴다. */
-const redUntilDo = process.env.C_UNSKIP ? it : it.skip;
 
 const rates = makeMockRates();
 type Mode = "actual" | "estimated" | "appraisal" | "salesCase";
@@ -125,25 +118,25 @@ describe.each(COMBOS)("[단건] $name — 현행 회귀선", (c) => {
     expect(Number(val("필요경비") ?? 0)).toBe(sum(c.ded));
   });
 
-  it("상세명세서(현행): 취득가액은 양도가액−양도차익−result.expenses 역산 — 개산공제가 취득가액에 섞인다(H-1)", () => {
-    const items = buildStatementItems(result, FORM, undefined, undefined, 900_000_000);
-    const acq = items.get("acquisitionPrice")!;
-    const exp = items.get("expenses")!;
-    // 현행 결함 고정: 취득가액 칸 = 파트 취득가액 합 + 개산공제 합, 필요경비 칸 = 0
-    expect(acq.value).toBe(sum(c.acq) + sum(c.ded));
-    expect(exp.value).toBe(0);
-    // 소제목은 항상 「(실제 거래가액)」 — 환산/감정/매매사례 파트가 있어도
-    const { container } = render(createElement("div", null, acq.formula));
-    expect(container.textContent).toContain("(실제 거래가액)");
-  });
-
-  redUntilDo("상세명세서(수정 후): 취득가액 = 파트 합 · 필요경비 = 개산공제 합 — 신고서 표와 같은 값", () => {
+  // Phase C UI Do(2026-10-07)로 **의도적으로 뒤집었다** — 종전 단언은 「취득가액 칸 = 파트 합 + 개산공제 · 필요경비 칸 = 0 · 소제목
+  // (실제 거래가액)」(결함 고정)이었다. 값 단언은 아래 두 건이 이어받고, 소제목 단언은 「토지(…) + 건물(…)」 문구 단언이 이어받는다
+  // (뒤집으며 지우면 형제 안전망이 같이 사라진다).
+  it("상세명세서: 취득가액 = 파트 합 · 필요경비 = 개산공제 합 — 신고서 표와 같은 값 (H-1)", () => {
     const items = buildStatementItems(result, FORM, undefined, undefined, 900_000_000);
     expect(items.get("acquisitionPrice")!.value).toBe(sum(c.acq));
     expect(items.get("expenses")!.value).toBe(sum(c.ded));
   });
 
-  redUntilDo("상세명세서(수정 후): 취득가액 산식이 「토지 ○(산정방식) + 건물 ○(산정방식)」 — 「(실제 거래가액)」 거짓 라벨 없음", () => {
+  it("상세명세서: 개산공제가 취득가액 칸으로 섞이지 않는다 — 항등식 양도가액 − 취득가액 − 필요경비 = 양도차익", () => {
+    const items = buildStatementItems(result, FORM, undefined, undefined, 900_000_000);
+    const acq = items.get("acquisitionPrice")!.value as number;
+    const exp = items.get("expenses")!.value as number;
+    expect(900_000_000 - acq - exp).toBe(result.transferGain);
+    // 종전 결함값(파트 합 + 개산공제)이 아니다 — 개산공제가 있는 조합에서 구별력이 생긴다.
+    if (sum(c.ded) > 0) expect(acq).not.toBe(sum(c.acq) + sum(c.ded));
+  });
+
+  it("상세명세서: 취득가액 산식이 「토지 ○(산정방식) + 건물 ○(산정방식)」 — 「(실제 거래가액)」 거짓 라벨 없음", () => {
     const items = buildStatementItems(result, FORM, undefined, undefined, 900_000_000);
     const { container } = render(createElement("div", null, items.get("acquisitionPrice")!.formula));
     const t = container.textContent ?? "";
@@ -202,11 +195,11 @@ describe("[다건·컴패니언] 현행 회귀선 — PerPropertyBreakdown echo"
 // ───────────────────────────────────────────────────────────────────────────
 // ① 현행 — 집계 소제목(G-4): 어댑터가 usedEstimatedAcquisition을 false로 고정한다
 // ───────────────────────────────────────────────────────────────────────────
-describe("[집계 소제목] G-4 — aggregate 분기는 환산을 못 본다", () => {
+describe("[집계 소제목] G-4 — 산정방식 집합을 못 받은 구 호출은 어댑터 플래그로 후퇴한다", () => {
   /** `aggregateToFilingResult`(BundledAllocationCard.tsx:68-70)·`breakdownToFilingResult`(MultiTransferPropertyBreakdown.tsx:88)와 같은 상수. */
   const adapterLike = { usedEstimatedAcquisition: false } as never;
 
-  it("현행: 환산 자산이 섞여 있어도 「자산별 실제 거래가액 합계」", () => {
+  it("후퇴 경로(aggModes 미지정): 어댑터 상수 false면 「자산별 실제 거래가액 합계」 — 소제목의 정본은 echo 집합(c.ui.anchor)", () => {
     const heading = buildAcquisitionPriceFormula(adapterLike, true, 0, 0, 0);
     expect(heading).toBe("자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)");
   });
@@ -248,11 +241,21 @@ describe("[일반건물] Q-F — 실가 파트에 환산/안분 산식이 붙는
   /** 같은 실가/실가인데 숨은 자산 단위 총액(stale)이 echo에 999,000,000으로 실린 응답 — 「>0이면 안분」 가드는 불충분함을 보인다. */
   const gbActActStale = { ...gbActAct, bundledActualAcquisitionPrice: 999_000_000 } as GeneralBuildingOutput;
 
+  /**
+   * 엔진 echo `actualSource`(E-U2)가 실린 응답 — 실가 카드에 `part_input`(파트 직접 입력)을 붙인다. 옛 이력은 이 필드가 없다 —
+   * 위 fixture(응답 발췌)가 그 경우다.
+   */
+  const withSource = (gb: GeneralBuildingOutput, source: "part_input" | "bundled_apportion"): GeneralBuildingOutput =>
+    ({
+      ...gb,
+      assetCards: gb.assetCards.map((c) => (c.acquisitionMode === "actual" ? { ...c, actualSource: source } : c)),
+    }) as unknown as GeneralBuildingOutput;
+
   const prop = (id: string, acq: number): PerPropertyBreakdown =>
     ({ propertyId: id, propertyLabel: id, transferPrice: 0, acquisitionPrice: acq, necessaryExpense: 0, capitalExpenditureForDisplay: 0 }) as unknown as PerPropertyBreakdown;
   const withTransfer = (p: PerPropertyBreakdown, t: number) => ({ ...p, transferPrice: t }) as PerPropertyBreakdown;
 
-  it("현행: 실가 토지 300,000,000 옆에 「양도가액 × 취득시 기준시가 ÷ 양도시 기준시가 = 300,000,000」 — 좌변은 505,748,404", () => {
+  it("구 이력(actualSource 부재 — 종전 산식 유지): 실가 토지 300,000,000 옆에 「양도가액 × 취득시 기준시가 ÷ 양도시 기준시가 = 300,000,000」 — 좌변은 505,748,404", () => {
     const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gbActEst, undefined)!;
     expect(f).toContain("1,956,162,578");
     expect(f).toContain("238,000,000");
@@ -261,40 +264,49 @@ describe("[일반건물] Q-F — 실가 파트에 환산/안분 산식이 붙는
     expect(Math.floor((1_956_162_578 * 238_000_000) / 920_550_000)).toBe(505_748_404);
   });
 
-  it("현행: 실가 건물 400,000,000에 환산 산식이 붙는다", () => {
+  it("구 이력(actualSource 부재 — 종전 산식 유지): 실가 건물 400,000,000에 환산 산식이 붙는다", () => {
     const f = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), gbEstAct, undefined)!;
     expect(f).toContain("43,837,422");
     expect(f).toContain("= 400,000,000");
   });
 
-  it("현행: 실가/실가인데 「0 × …」 · 「잔액 보정」 산식(bundledActual 0)", () => {
+  it("구 이력(actualSource 부재 — 종전 산식 유지): 실가/실가인데 「0 × …」 · 「잔액 보정」 산식(bundledActual 0)", () => {
     const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gbActAct, undefined)!;
     expect(f).toContain("0 ×");
     const fb = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), gbActAct, undefined)!;
     expect(fb).toContain("잔액 보정");
   });
 
-  it("현행: 숨은 총액(stale 999,000,000)이 echo에 있으면 그 총액으로 안분 산식을 그린다 — echo>0 가드가 불충분한 근거", () => {
+  it("구 이력(actualSource 부재 — 종전 산식 유지): 숨은 총액(stale 999,000,000)이 echo에 있으면 그 총액으로 안분 산식을 그린다 — echo>0 가드가 불충분한 근거", () => {
     const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gbActActStale, undefined)!;
     expect(f).toContain("999,000,000");
     expect(f).toContain("= 300,000,000");
   });
 
-  redUntilDo("(수정 후) 실가 파트는 환산·안분 산식을 그리지 않고 입력값을 그대로 적는다 — 실가/환산 · 환산/실가", () => {
-    const land = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gbActEst, undefined)!;
+  it("(수정 후) 실가 파트는 환산·안분 산식을 그리지 않고 입력값을 그대로 적는다 — 실가/환산 · 환산/실가", () => {
+    const land = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), withSource(gbActEst, "part_input"), undefined)!;
     expect(land).toContain("300,000,000");
     expect(land).not.toContain("×");
     expect(land).toContain("실거래가");
-    const bld = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), gbEstAct, undefined)!;
+    const bld = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), withSource(gbEstAct, "part_input"), undefined)!;
     expect(bld).not.toContain("×");
     expect(bld).toContain("실거래가");
   });
 
-  redUntilDo("(수정 후) 실가/실가 — 「0 ×」·「잔액 보정」 없음", () => {
-    const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gbActAct, undefined)!;
+  it("(수정 후) 실가/실가 — 「0 ×」·「잔액 보정」 없음", () => {
+    const gb = withSource(gbActAct, "part_input");
+    const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), gb, undefined)!;
     expect(f).not.toContain("0 ×");
-    const fb = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), gbActAct, undefined)!;
+    expect(f).toContain("300,000,000");
+    const fb = buildGbAcquisitionFormula(withTransfer(prop("building", 400_000_000), 43_837_422), gb, undefined)!;
     expect(fb).not.toContain("잔액 보정");
+    expect(fb).toContain("400,000,000");
+  });
+
+  it("(수정 후) 숨은 총액(stale 999,000,000)이 echo에 있어도 실가 파트 산식에 쓰지 않는다 — actualSource가 정본", () => {
+    const f = buildGbAcquisitionFormula(withTransfer(prop("land", 300_000_000), 1_956_162_578), withSource(gbActActStale, "part_input"), undefined)!;
+    expect(f).not.toContain("999,000,000");
+    expect(f).toBe("자산별 취득가액 = 300,000,000 (실거래가 — 소득세법 §97①1호 가목)");
   });
 });
 
@@ -312,17 +324,21 @@ describe("[결과 카드] H-6 — 미등기 split의 개산공제 산식 「× 3
     expect(result.splitDetail!.building.lumpDeductionBase).toBe(50_000_000);
   });
 
-  it("현행: 카드는 「취득시 기준시가 50,000,000 × 3%」라 적고 값은 150,000 — 산식이 값을 못 만든다", () => {
-    const { container } = render(createElement(SplitGainDetailSection, { splitDetail: result.splitDetail! }));
-    const t = container.textContent ?? "";
-    expect(t).toContain("취득시 기준시가 50,000,000 × 3%");
-    expect(t).toContain("150,000");
-  });
-
-  redUntilDo("(수정 후) 카드의 율 표기가 엔진이 적용한 율(0.3%)이다", () => {
+  // Phase C UI Do로 **의도적으로 뒤집었다** — 종전 단언은 「카드는 × 3%라 적고 값은 150,000」(결함 고정)이었다.
+  // 구 이력(율 echo 부재) 종전 표기는 아래 별도 건이 지킨다.
+  it("(수정 후) 카드의 율 표기가 엔진이 적용한 율(0.3%)이다", () => {
     const { container } = render(createElement(SplitGainDetailSection, { splitDetail: result.splitDetail! }));
     const t = container.textContent ?? "";
     expect(t).toContain("취득시 기준시가 50,000,000 × 0.3%");
     expect(t).not.toContain("× 3%");
+    expect(t).toContain("150,000");
+  });
+
+  it("구 이력(lumpDeductionRate echo 부재)은 종전 표기 「× 3%」를 유지한다", () => {
+    const old = structuredClone(result.splitDetail!);
+    delete old.land.lumpDeductionRate;
+    delete old.building.lumpDeductionRate;
+    const { container } = render(createElement(SplitGainDetailSection, { splitDetail: old }));
+    expect(container.textContent).toContain("취득시 기준시가 50,000,000 × 3%");
   });
 });

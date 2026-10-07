@@ -452,14 +452,14 @@ describe("U5b — 배지는 E-1 `acquisitionMode` echo를 4종으로 읽는다 (
 });
 
 describe("U5 — 결과 표 배지는 카드에서 파생된다 (하드코딩 금지)", () => {
-  it("조합 A(원건물 실가 + 증축 환산) — 건물2 「(환산)」·「(개산공제 §163⑥)」", () => {
+  it("조합 A(원건물 실가 + 증축 환산) — 건물2 「(환산취득가)」·「(개산공제 §163⑥)」", () => {
     render(
       <GeneralBuilding3WayTable
         aggregated={makeAggregated({ land: false, building1: false, building2: true })}
       />,
     );
     expect(screen.getAllByText("(실거래가)")).toHaveLength(2); // 토지·건물1
-    expect(screen.getByText("(환산)")).toBeInTheDocument(); // 건물2
+    expect(screen.getByText("(환산취득가)")).toBeInTheDocument(); // 건물2
     expect(screen.getByText("(개산공제 §163⑥)")).toBeInTheDocument();
   });
 
@@ -470,18 +470,18 @@ describe("U5 — 결과 표 배지는 카드에서 파생된다 (하드코딩 �
       />,
     );
     expect(screen.getAllByText("(실거래가)")).toHaveLength(3);
-    expect(screen.queryByText("(환산)")).toBeNull();
+    expect(screen.queryByText("(환산취득가)")).toBeNull();
     expect(screen.getByText("(실제 필요경비)")).toBeInTheDocument();
     expect(screen.queryByText("(개산공제 §163⑥)")).toBeNull();
   });
 
-  it("🔴 조합 C(원건물 환산 + 증축 환산) — 세 자산 모두 「(환산)」", () => {
+  it("🔴 조합 C(원건물 환산 + 증축 환산) — 세 자산 모두 「(환산취득가)」", () => {
     render(
       <GeneralBuilding3WayTable
         aggregated={makeAggregated({ land: true, building1: true, building2: true })}
       />,
     );
-    expect(screen.getAllByText("(환산)")).toHaveLength(3);
+    expect(screen.getAllByText("(환산취득가)")).toHaveLength(3);
     expect(screen.queryByText("(실거래가)")).toBeNull();
   });
 
@@ -491,7 +491,7 @@ describe("U5 — 결과 표 배지는 카드에서 파생된다 (하드코딩 �
         aggregated={makeAggregated({ land: true, building1: true, building2: false })}
       />,
     );
-    expect(screen.getAllByText("(환산)")).toHaveLength(2);
+    expect(screen.getAllByText("(환산취득가)")).toHaveLength(2);
     expect(screen.getByText("(실거래가)")).toBeInTheDocument();
     expect(screen.getByText("(실제 필요경비)")).toBeInTheDocument();
   });

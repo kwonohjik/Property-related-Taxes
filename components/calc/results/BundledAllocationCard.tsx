@@ -1,5 +1,6 @@
 "use client";
 
+import { aggregateAcqModes, allEstimated } from "@/components/calc/results/transfer/split-acq-text";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
@@ -67,7 +68,9 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     isExempt: false,
     transferGain: a.totalTransferGain,
     taxableGain: a.totalTransferGain,
-    usedEstimatedAcquisition: false,
+    // 자산별 산정방식 echo에서 파생 — 종전 상수 `false`는 환산 자산이 섞여도 「실제 거래가액」으로 읽혔다(G-4).
+    // 집계에는 단일 플래그가 없다(전부 환산일 때만 true) — 소제목은 `aggregateAcqModes`가 직접 정한다.
+    usedEstimatedAcquisition: allEstimated(aggregateAcqModes(a.properties, a.generalBuildingValuationDetail)),
     longTermHoldingDeduction: a.totalLongTermHoldingDeduction,
     /*
      * 🔴 종전에는 0 하드코딩이라 상세명세서가 「과세대상 양도차익 × **0%**」로 표시했다(#071).

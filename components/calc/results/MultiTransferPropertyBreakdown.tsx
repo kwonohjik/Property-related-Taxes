@@ -16,6 +16,7 @@
  * (자산 자체는 비사업용 토지이고 장특공제는 표1이 유지된다.)
  */
 
+import { aggregateAcqModes, allEstimated } from "@/components/calc/results/transfer/split-acq-text";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
@@ -85,7 +86,9 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
      *   있었으므로 두 표가 어긋났다. 이제 같은 leaf를 부른다.
      */
     taxableGain: assetTaxableGain(b),
-    usedEstimatedAcquisition: false,
+    // 자산 echo(`splitDetail`·`filingDisplay`)에서 파생 — 종전 상수 `false`는 환산 자산도 실가로 읽혔다(G-4).
+    // `estimatedBase`는 싣지 않으므로 신고서 환산 분기(`estimatedDisplay`)는 종전과 같이 비활성이다.
+    usedEstimatedAcquisition: allEstimated(aggregateAcqModes([b], undefined)),
     longTermHoldingDeduction: b.longTermHoldingDeduction,
     longTermHoldingRate: 0,
     lthdStartDate: new Date(0), // multi 결과 변환 mock: 표시용, 실값 미사용
