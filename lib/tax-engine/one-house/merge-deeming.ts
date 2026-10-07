@@ -24,7 +24,7 @@
 import { isWithinDeadline } from "../civil-period";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "../legal-codes";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
-import { resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
+import { marriageRentalSidesOf, resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "../types/multi-house-surcharge.types";
@@ -71,6 +71,7 @@ export type MergeDeemingReqInput = Pick<
   | "inheritedHouseExclusionCount"
   | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
+  | "rentalHousingException"
 >;
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -245,6 +246,7 @@ function matchMergeGateAndComposition(
     knownHouseExclusionCount: input.knownHouseExclusionCount,
     knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,
+    marriageRentals: marriageRentalSidesOf(input, input.marriageMerge !== undefined),
   });
   return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate, composition };
 }
@@ -262,7 +264,7 @@ export function matchMergeApartFromWindow(
 
 /**
  * 합가 의제가 성립하지 않은 이유가 **오직** 합가 전 구성을 몰라서(`roster_missing`·
- * `origin_missing`)일 때만 확인 필요 문구를 돌려준다 — §155⑳ 선례(`confirmNotice` + 호출부의
+ * `origin_missing`·`rental_origin_missing`)일 때만 확인 필요 문구를 돌려준다 — §155⑳ 선례(`confirmNotice` + 호출부의
  * 「결론을 가를 때만」게이트, `transfer-tax-rental-housing-step.ts`)와 같은 모양이다.
  *
  * 창·날짜 게이트가 먼저 막았거나(날짜 자체가 안 맞음) 구성이 이미 성립/다른 사유로 불성립이면

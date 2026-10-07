@@ -57,6 +57,8 @@ export const rentalUnitSchema = z.object({
   terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
   /** §167의3⑪ 연장 사실 — 가·나·라·마목 아파트(미전송 = 모름 · 엔진 판정 보류) */
   aptDeadlineExtension: aptDeadlineExtensionSchema.optional(),
+  /** 혼인합가 1199 — 이 임대주택의 혼인 전 보유자(판정 메뉴) */
+  mergeOrigin: z.enum(["seller_side", "counterpart_side", "after_merge"]).optional(),
   requirementsConfirmed: z.boolean(),
 });
 

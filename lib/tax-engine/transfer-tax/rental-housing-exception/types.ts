@@ -112,6 +112,12 @@ export type RentalUnitInput = {
    */
   aptDeadlineExtension?: AptTransferDeadlineExtension;
   /**
+   * 혼인합가(§155⑤) 판정용 — 이 임대주택을 혼인 전에 누가 보유했는가(양도자 쪽 / 배우자 쪽) 또는 혼인 후 취득.
+   * 각각 2주택 이상인 사람끼리의 혼인이면 특례 불가(기획재정부 조세정책과-1199)라 장기임대주택도 양쪽 주택 수에 센다.
+   * 판정 메뉴처럼 임대주택이 명부 밖일 때만 쓴다(계산기는 명부 행의 `mergeOrigin`).
+   */
+  mergeOrigin?: "seller_side" | "counterpart_side" | "after_merge";
+  /**
    * 기타 요건 자기확인 체크
    * (임대료 5% 이내 증액·임대차계약 체결·임대료 지급 등 — LawArticleModal 안내 후 사용자 확인)
    */

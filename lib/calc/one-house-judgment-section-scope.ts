@@ -55,6 +55,21 @@ export function judgmentMergeInputVisible(form: OneHouseJudgmentFormData): boole
 }
 
 /**
+ * 혼인합가 1199 — 명부 밖 장기임대주택(②의 §155⑳ 선언)마다 혼인 전 보유자를 묻는가. ⑤(칸)·⑧(필수)의 공용 게이트.
+ * 각각 2주택 이상인 사람끼리의 혼인이면 특례 불가(기획재정부 조세정책과-1199)라 임대주택도 양쪽 주택 수에 센다.
+ * 혼인일이 있어야 묻는다(동거봉양은 이 회신의 대상이 아니다 — 엔진 `marriageRentalSidesOf`와 같은 범위).
+ */
+export function judgmentMarriageRentalOriginVisible(form: OneHouseJudgmentFormData): boolean {
+  const rh = form.assets?.[0]?.rentalHousingException;
+  return (
+    judgmentMergeInputVisible(form) &&
+    !!form.marriageDate &&
+    rh?.applyException === true &&
+    (rh.rentalUnits?.length ?? 0) > 0
+  );
+}
+
+/**
  * §156의2⑤ 대체주택 특례 — ⑤(칸 노출)·④(전송)·⑧(필수값)의 **공용 게이트** (OH-05).
  *
  * 법문(「소득세법 시행령」 §156의2⑤)은 「국내에 1주택을 소유한 1세대가 그 주택에 대한
