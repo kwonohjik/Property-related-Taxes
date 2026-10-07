@@ -70,13 +70,13 @@ const OPTIONS: RadioCardOption<ReasonOrNone>[] = [
   {
     value: "overseas_migration",
     label: "해외이주 (2호 나목)",
-    description: "출국일 현재 1주택 + 출국일부터 2년 내 양도. 보유·거주 요건 면제",
+    description: "세대전원 출국 + 출국일 현재 1주택 + 출국 후 2년 내 양도. 보유·거주 요건 면제",
     testId: "proviso-reason-overseas_migration",
   },
   {
     value: "overseas_residence",
     label: "국외거주·취학·근무 (2호 다목)",
-    description: "1년 이상 국외거주 + 출국일부터 2년 내 양도. 보유·거주 요건 면제",
+    description: "1년 이상 국외거주로 세대전원 출국 + 출국일 현재 1주택 + 출국 후 2년 내 양도. 보유·거주 요건 면제",
     testId: "proviso-reason-overseas_residence",
   },
   {

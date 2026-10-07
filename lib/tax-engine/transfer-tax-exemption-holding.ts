@@ -217,6 +217,9 @@ export const PROVISO_LABEL: Record<
   rental_registration_4ho: "4호 임대사업자 등록",
 };
 
+/** §154①2호 나·다목 「출국일 현재 1주택을 보유하고 있는 경우로서」 — 대통령령 제20618호(2008.2.22.) 시행 후 양도분 */
+const OVERSEAS_HELD_AT_DEPARTURE_TRANSFER_START = new Date("2008-02-22");
+
 /**
  * §154① 단서 각호 — 보유·거주 요건 면제 범위 판정 (소득세법 시행령 §154 ① 단서).
  * 반환: "both"(보유+거주 면제 — 1·2·3호) / "residence_only"(거주만 — 5호) / null(미선택 또는 요건 미충족).
@@ -245,11 +248,16 @@ export function resolveExemptionProviso(
         ? "both"
         : null;
     case "overseas_migration":
-    case "overseas_residence":
-      // 2호 나·다목: 출국일부터 2년 이내
-      return p.departureDate && isWithinDeadline(p.departureDate, C.OVERSEAS_TRANSFER_YEARS, input.transferDate)
-        ? "both"
-        : null;
+    case "overseas_residence": {
+      // 2호 나·다목: 「세대전원이 출국하는 경우 … 출국일부터 2년 이내에 양도」 — 출국 **후** 양도만
+      //   (출국 전 양도는 출국이 확정됐어도 미적용 — 재산-995 · 부동산거래-67).
+      // 2008.2.22. 이후 양도분은 「출국일 현재 1주택을 보유하고 있는 경우로서」(대통령령 제20618호 부칙
+      //   제3조 — 시행 후 최초 양도분) → 출국 뒤 취득한 주택은 해당 없음.
+      const d = p.departureDate;
+      if (!d || input.transferDate < d) return null;
+      if (input.transferDate >= OVERSEAS_HELD_AT_DEPARTURE_TRANSFER_START && input.acquisitionDate > d) return null;
+      return isWithinDeadline(d, C.OVERSEAS_TRANSFER_YEARS, input.transferDate) ? "both" : null;
+    }
     case "unavoidable":
       // 3호: 1년 이상 거주
       return residenceYears >= C.UNAVOIDABLE_RESIDENCE_YEARS ? "both" : null;
