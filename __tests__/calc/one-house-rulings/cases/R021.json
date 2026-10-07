@@ -1,0 +1,21 @@
+[
+  {
+    "id": "R021-era",
+    "docNo": "재일46014-2028",
+    "docDate": "1996.09.05.",
+    "basis": "era",
+    "today": "1996-09-05",
+    "summary": "대지 157㎡ 위 겸용주택(주택 118.68㎡·근린생활시설 126.84㎡, 1991.4. 취득) 중 주택부분 49.92㎡를 증축하고 증축분 3년 미만 보유 상태에서 양도(1996.7.12.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1996-07-12",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1991-04-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 겸용주택 주택·비주택 면적과 증축 부분의 별도 취득일(증축분 보유기간 미달 → 증축으로 늘어난 주택부수토지는 비과세 제외). 판정 메뉴는 양도 주택의 취득일 하나만 받는다. 참고 관측(referenceForm: 주택 1채, 1991-04-15 취득·양도가 3억): 비과세 — 증축분 부수토지 과세(원문 결론)는 표현되지 않는다."
+  }
+]

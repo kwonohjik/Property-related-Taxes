@@ -1,0 +1,141 @@
+[
+  {
+    "id": "F068-era",
+    "docNo": "국심2003서1116",
+    "docDate": "2003.06.27.",
+    "basis": "era",
+    "today": "2003-06-27",
+    "summary": "처가 임대사업자 등록한 아파트 4호는 조특법 §97(5호 이상)·§97의2(1999.8.20.~2001.12.31. 계약) 요건 미충족 → 소유주택에서 제외되지 않음 → 2001.9.22. 쟁점아파트 양도 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2001-09-22",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1997-01-10"
+      },
+      "houses": [
+        {
+          "id": "702",
+          "acquisitionDate": "2001-02-26",
+          "isApartment": true,
+          "isSpouseOwned": true
+        },
+        {
+          "id": "902",
+          "acquisitionDate": "2001-02-26",
+          "isApartment": true,
+          "isSpouseOwned": true
+        },
+        {
+          "id": "1103",
+          "acquisitionDate": "2000-12-06",
+          "isApartment": true,
+          "isSpouseOwned": true
+        },
+        {
+          "id": "1203",
+          "acquisitionDate": "2000-12-06",
+          "isApartment": true,
+          "isSpouseOwned": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 조특법 주택 수 제외 요건을 갖추지 못한 임대 아파트 4호를 일반 주택 행으로 넣음, countExclusion 없음). 일자 원문 그대로(양도일은 처분개요 2001-09-22). 양도가 3억 중립."
+  },
+  {
+    "id": "F068-current",
+    "docNo": "국심2003서1116",
+    "docDate": "2003.06.27.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "현행 — 처가 2019.5.15. 장기일반민간임대로 등록한 주택 4호(기준시가 3억)를 임대 중일 때, 2016년 취득해 5년 거주한 주택을 2026.6.15. 양도: §155⑳ 장기임대주택은 거주주택 판정에서 제외 → 비과세 (구성 케이스)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "702",
+              "businessRegistrationDate": "2019-05-15",
+              "rentalRegistrationDate": "2019-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "85",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "902",
+              "businessRegistrationDate": "2019-05-15",
+              "rentalRegistrationDate": "2019-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "85",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "1103",
+              "businessRegistrationDate": "2019-05-15",
+              "rentalRegistrationDate": "2019-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "85",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "1203",
+              "businessRegistrationDate": "2019-05-15",
+              "rentalRegistrationDate": "2019-05-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "85",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "rentalPassed": true
+    },
+    "bucket": "match",
+    "note": "현행 규칙: 2011.10.14. 이후 양도분부터 요건(등록·기준시가 수도권 6억 이하·5% 증액 제한·의무임대)을 갖춘 장기임대주택은 2년 이상 거주한 거주주택 양도 시 주택 수에서 제외(소득세법 시행령 §155⑳); 2020.8.18. 이후 등록분 의무임대 10년. 중립: 비조정·양도가 9억·거주주택 취득 2016(2019.2.12. 전 취득이라 생애 1회 이력 칸 없음)·임대주택은 아파트가 아닌 주택으로 2019년 등록(2020.8.18. 아파트 매입임대 폐지 축 회피). 임대 중(85개월) 양도라 사후 의무임대 충족 조건부."
+  }
+]

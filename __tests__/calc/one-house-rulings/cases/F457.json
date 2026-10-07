@@ -1,0 +1,34 @@
+[
+  {
+    "id": "F457-era",
+    "docNo": "국심-2006-서-1512",
+    "docDate": "2006.09.13.",
+    "basis": "era",
+    "today": "2006-09-13",
+    "summary": "1세대1주택 의제 고가 재건축 입주권(2003.6.26. 1,122,015천원 양도)의 장기보유특별공제 — 대상 양도차익은 기존주택분+입주권분 합계, 보유기간은 기존주택 취득일부터 입주권 양도일까지 통산, 면적별 공제율은 분양받을 아파트 면적 기준",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2003-06-26",
+      "contractTotalPrice": "1122015000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1980-10-17",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2001-04-28"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력(출력): 장기보유특별공제 대상 양도차익·보유기간 통산·면적별 공제율은 판정 메뉴 출력 밖(세액 축은 계산기). 1세대1주택 의제·고가주택 해당은 다툼 없는 전제. 참고 관측(referenceForm: 기존주택 취득 1980-10-17·사업 승인 2001-04-28·양도 1,122,015천원): 고가 부분과세 — 다툼 없는 전제와 같다(쟁점 축은 관측 대상 아님)."
+  },
+  {
+    "id": "F457-current",
+    "docNo": "국심-2006-서-1512",
+    "docDate": "2006.09.13.",
+    "basis": "current",
+    "today": "2026-05-20",
+    "summary": "같은 패턴(1세대1주택 고가 조합원입주권 양도)의 장기보유특별공제를 현행으로 구성",
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 조합원입주권 양도 시 장기보유특별공제는 관리처분계획인가 전 토지·건물분 양도차익에만 적용(소득세법 §95②), 고가 기준 12억원. 없는 입력(출력): 장기보유특별공제 산정은 판정 메뉴 출력 밖."
+  }
+]

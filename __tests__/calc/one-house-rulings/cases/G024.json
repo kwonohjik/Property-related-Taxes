@@ -1,0 +1,30 @@
+[
+  {
+    "id": "G024-era",
+    "docNo": "부동산거래관리과-216",
+    "docDate": "2012.04.18.",
+    "basis": "era",
+    "today": "2012-04-18",
+    "summary": "A·B 2주택 모두 재건축 — B 관리처분인가(2007), A 관리처분인가(2008.7.22., 그 날 B입주권 보유), B입주권 양도(2011.12.) 후 A입주권 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2012-03-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2003-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2008-07-22"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: A 인가일 현재 다른 조합원입주권을 보유했더라도 그것을 먼저 양도해 A입주권 양도일 현재 다른 입주권·주택이 없고 A 기존주택이 인가일 현재 §154① 요건을 충족하면 특례(시행령 §155⑰) 적용. 표현: B입주권은 양도 전 처분이라 입력 없음, A 요건 선언. 관측: one_right_89_1_4_ga. 가정(원문에 일자 일부 없음): A 취득 2003-05-15(인가일 현재 3년 이상 보유), A입주권 양도 2012-03-15(회신일 직전), 양도가 5억, 비조정."
+  }
+]

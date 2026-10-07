@@ -1,0 +1,65 @@
+[
+ {
+  "id": "F175-era",
+  "docNo": "기획재정부 재산세제과-1132",
+  "docDate": "2020.12.24.",
+  "basis": "era",
+  "today": "2020-12-24",
+  "summary": "A·B주택(2018.3. 경기 화성) 보유 → B 과세 양도(2020.3.) → 2021.1.1. 현재 A만 보유 → A 양도(2021.1.20.): 보유기간은 A 취득일부터 — 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2021-01-20",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2018-03-15"
+   },
+   "finalHouseRestartHistory": "yes",
+   "finalHouseRestartDisposals": [
+    {
+     "id": "d0",
+     "kind": "transfer",
+     "date": "2020-03-15",
+     "temporaryTwoHouse": "no"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "구성 케이스 — 원문은 기산일만 회신(2021.1.1. 현재 1주택이면 해당 주택 취득일부터, 제2안). 표현: 처분 이력 「있음」·「양도」 2020-03-15(일시적 2주택 관계 아님). 관측: 2020.12.31. 이전에 처분을 마쳐 재기산 없음 → 보유 2년 10개월 → 비과세(판정 보류 없음). 짝 N-F175-2021(B를 2021-01-05 양도 → 재기산 → 과세)로 기준일 2021.1.1.을 고정. 일자: 월 단위 15일(A·B 2018-03-15, B 양도 2020-03-15), 양도가 5억 가정. 화성시 일부는 2018.3. 당시 조정대상지역이었으나 원문에 소재 세부가 없어 취득 당시 비조정으로 두었다(거주요건 축 중립)."
+ },
+ {
+  "id": "N-F175-2021",
+  "docNo": "기획재정부 재산세제과-1132",
+  "docDate": "2020.12.24.",
+  "basis": "era",
+  "today": "2020-12-24",
+  "summary": "F175의 음성 짝(가정) — B를 2021.1.1. 이후(2021.1.5.) 양도했으면 그날부터 재기산 → 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2021-01-20",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2018-03-15"
+   },
+   "finalHouseRestartHistory": "yes",
+   "finalHouseRestartDisposals": [
+    {
+     "id": "d0",
+     "kind": "transfer",
+     "date": "2021-01-05",
+     "temporaryTwoHouse": "no"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — F175-era에서 B 양도일만 2020-03-15 → 2021-01-05로 옮긴 최소쌍. 2021.1.1. 이후 처분이라 재기산 → 보유 15일 → 비과세 불가."
+ }
+]

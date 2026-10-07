@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F252-era",
+    "docNo": "서면-2024-부동산-2580 [부동산납세과-1242]",
+    "docDate": "2024.07.17.",
+    "basis": "era",
+    "today": "2025-06-01",
+    "summary": "배우자가 조정대상지역 지정 중(2021.12.20.) 취득한 서울 A주택이 해제(2023.1.5.) 뒤 동일세대 배우자에게 상속 — 둘 다 다른 집에 거주, 상속인 양도 시 거주요건 적용 (상속·양도일·소재지 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2024-09-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2021-12-20",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "2021-12-20",
+        "decedentCohabitationResidenceMonths": "0",
+        "regionCode": "1144010100",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "mismatch",
+    "note": "mismatch(유리). 원문 사실: 2021-12-20 甲이 조정대상지역 A주택 취득, 2023-01-05 해제, 동일세대 배우자 乙이 상속 예정, 둘 다 A 취득 후 다른 집에 거주. 가정: 소재지 서울 마포(법정동코드 — 2023-01-05 해제와 원문 일자가 같다), 상속개시 2024-09-15, 동일세대 개시 2021-12-20, 거주 0, 양도 2025-06-15, 양도가 8억. 회신: 동일세대 피상속인이 지정 중 취득한 주택을 해제 후 동일세대 상속인이 상속받아 양도하면 거주요건 적용 → 거주 없으면 과세. 관측: 비과세 — 엔진은 「취득 당시 조정대상지역」을 상속개시일(2024-09-15, 해제 후)로 판정해 거주요건이 없다고 본다. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:273-275(`resolveResidenceJudgmentDate` = acquisitionDate)·:287-296(`resolveWasRegulatedAtAcquisition`) — §154⑧3호 동일세대 상속이어도 피상속인 취득일을 보지 않는다. 입력 도달: 상속개시가 지정 중(2022-06-15)이면 과세(V-F252-inh-during), 주소 대신 토글로 「취득 당시 조정」을 켜면 과세(V-F252-toggle)."
+  }
+]

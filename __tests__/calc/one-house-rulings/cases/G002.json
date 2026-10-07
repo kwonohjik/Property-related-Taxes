@@ -1,0 +1,21 @@
+[
+  {
+    "id": "G002-era",
+    "docNo": "대법원-98-두-3051",
+    "docDate": "1999.12.10.",
+    "basis": "era",
+    "today": "1999-12-10",
+    "summary": "무허가 주택·토지(1988.9.30.경 취득)를 재개발조합에 제공, 주택 철거(1991.7.) 후 잔존 나대지와 조합원 지위를 관리처분계획인가(1996.8.23.) 전에 양도(1995.2.10.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1995-02-10",
+      "contractTotalPrice": "200000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1988-09-30"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 관리처분계획인가 전에 철거된 주택의 잔존 부수토지 + 조합원 지위 양도를 1세대1주택 및 부수토지 양도로 간주하는 경로. 인가 전이라 조합원입주권(right_to_move_in)도 아니고 주택도 아니다. 엔진 입주권 연혁은 1999.1.1. 전 양도분을 미지원(lib/tax-engine/data/one-right-requirement-era.ts:97-104). 참고 관측(referenceForm: 주택 양도로 단순화, 양도가 2억): 비과세 — 쟁점(철거 후 지위 양도의 성격) 미검증. 당시 보유 5년 요건."
+  }
+]

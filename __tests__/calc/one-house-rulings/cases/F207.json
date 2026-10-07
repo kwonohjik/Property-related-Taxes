@@ -1,0 +1,54 @@
+[
+  {
+    "id": "F207-era",
+    "docNo": "재일46014-1775",
+    "docDate": "1995.07.13.",
+    "basis": "era",
+    "today": "1995-01-10",
+    "summary": "남편(1978 취득) 사망으로 동일세대 처가 상속(1993.3.)한 주택을 멸실·재건축(1994.7.) 후 상속개시일부터 1년 10개월에 양도 — 피상속인 보유기간 산입 (양도일 구성)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1995-01-15",
+      "contractTotalPrice": "100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1993-03-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1978-06-15",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "1978-06-15",
+        "decedentCohabitationResidenceMonths": ""
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(경로: §154⑧3호 동일세대 상속 통산). 원문 사실: 남편 1978 취득 → 1993.3. 사망으로 처(동일세대) 상속 → 1994.7. 주택·상가 복합건물 신축, 다른 주택 없음. 가정: 상속개시 1993-03-15, 피상속인 취득 1978-06-15, 양도일을 상속개시일부터 1년 10개월(1995-01-15)로 구성해 피상속인 기간 산입이 결론을 가르게 함, 양도가 1억. 관측: 비과세(피상속인 동일세대 보유기간 통산). 한계: 멸실·재건축 연결은 입력 칸 없이 상속개시일을 그대로 취득일로 두었고, 회신의 두 번째 축(비과세는 주택부분과 멸실 주택 바닥면적 기준 배율 이내 토지에 한정, 상가·초과 토지 과세)은 판정 메뉴 출력 밖이라 단언하지 않는다. 당시 보유요건 연혁은 엔진에 없다(2년으로 계산 — 1년 10개월은 어느 쪽으로도 미달이라 통산 여부가 결론을 가른다). 음성 짝 N-F207-separate."
+  },
+  {
+    "id": "N-F207-separate",
+    "docNo": "재일46014-1775",
+    "docDate": "1995.07.13.",
+    "basis": "era",
+    "today": "1995-01-10",
+    "summary": "F207의 음성 짝(가정) — 피상속인이 상속개시 당시 별도세대였다면 상속개시일부터 1년 10개월로 보유 2년 미달",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1995-01-15",
+      "contractTotalPrice": "100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1993-03-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1978-06-15"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "음성 짝(가정) — F207-era에서 피상속인과 상속개시 당시 동일세대 표시만 끈 최소쌍. 통산 없이 상속개시일(1993-03-15)부터 1년 10개월이라 보유 2년 미달 → 과세(pending 154-1-holding-years). 입력 도달 확인용."
+  }
+]

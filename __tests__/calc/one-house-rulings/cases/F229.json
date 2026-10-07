@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F229-era",
+    "docNo": "국심-2006-서-1082",
+    "docDate": "2006.11.17.",
+    "basis": "era",
+    "today": "2005-03-01",
+    "summary": "배우자·자녀가 가정불화로 별거해 거주하지 않은 아파트(1989.7.3. 취득)를 소유자만 거주 후 2005.3.2. 양도 — 세대원 일부 거주로 거주요건 충족",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2005-03-02",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1989-07-03",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "128"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 일자 그대로(1989-05-03 청구인 전입, 1989-07-03 취득, 배우자·자녀는 거주 사실 없음, 2000-03-31 합가 후 전출, 2005-03-02 양도), 소유자 거주 1989-07~2000-03 약 128개월, 양도가 3억 가정(당시 고가 기준 6억 이하). 결정: 배우자가 가정불화로 별거해 거주하지 않았어도 세대원 일부(소유자)가 거주했으면 거주요건 충족 → 비과세(부과처분 취소). 없는 입력: 세대원별 거주·별거 사유. 당시 서울 등 거주요건(보유 3년 중 2년)은 엔진 연혁에 없다. 참고 관측: referenceForm = 비과세(구별력 없음)."
+  }
+]

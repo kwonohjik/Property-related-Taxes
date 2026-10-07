@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F246-era",
+    "docNo": "서면-2020-부동산-1236 [부동산납세과-1411]",
+    "docDate": "2020.11.30.",
+    "basis": "era",
+    "today": "2022-06-01",
+    "summary": "2017.5.8. 취득한 조정대상지역 동대문 A주택을 임의재건축해 2018.4.13. A´ 취득 — 신축주택 취득시기는 기존주택 취득일이라 거주요건 미적용 (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2017-05-08",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 2017-05-08 서울 동대문 이문동 A주택 취득(조정대상지역), 임의재건축해 2018-04-13 A´ 취득. 가정: 양도 2022-06-15, 거주 0, 취득 당시 조정(토글), 양도가 8억. 회신: 2017.8.2. 이전 취득 주택을 신축 목적으로 멸실하고 2017.8.3. 이후 신축하면 신축주택 취득시기는 기존주택 취득일 → 부칙(대통령령 제28293호) 제2조②1호로 거주요건 미적용 → 비과세. 없는 입력: 멸실·신축 주택과 기존주택의 연결(평가셋 E013·E019와 같은 축). 참고 관측: referenceForm(기존주택 취득일) = 비과세 / 신축 취득일 2018-04-13로 입력하면 과세."
+  }
+]

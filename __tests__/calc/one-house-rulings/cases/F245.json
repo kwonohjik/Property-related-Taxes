@@ -1,0 +1,59 @@
+[
+  {
+    "id": "F245-era",
+    "docNo": "서면-2020-법령해석재산-2718 [법령해석과-1743]",
+    "docDate": "2021.05.17.",
+    "basis": "era",
+    "today": "2022-06-01",
+    "summary": "동일세대 배우자에게서 부담부증여(2017.3.)받은 거주주택 B(증여 전 2003~2011 동일세대 거주)를 장기임대주택(A·C, 2019.10. 등록) 보유 중 2022년 양도 — 채무 부분은 증여일부터, 증여 부분은 증여 전 동일세대 거주 통산 (양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-07-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "96",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "rentalUnits": [
+            {
+              "unitId": "A",
+              "businessRegistrationDate": "2019-10-15",
+              "rentalRegistrationDate": "2019-10-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "32",
+              "requirementsConfirmed": true
+            },
+            {
+              "unitId": "C",
+              "businessRegistrationDate": "2019-10-15",
+              "rentalRegistrationDate": "2019-10-15",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "32",
+              "requirementsConfirmed": true
+            }
+          ]
+        }
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 甲 1998.12. 영등포 A·2001.7. 강남 B(2003~2011 거주)·2014.9. 마포 C오피스텔 취득, 2017.3. B·C를 배우자 乙에게 부담부증여, 2019.10. A·C 임대등록(세무서·지자체), 2022년 乙이 B 양도 예정. 가정: 일자 15일, 양도 2022-06-15, 임대 요건 충족 자기확인, 기준시가 3억, 양도가 8억. 참고 폼은 증여 부분 기준(증여자 취득일·증여 전 동일세대 거주 96개월)으로 표현. 회신: 거주주택(§155⑳) 거주기간은 부담부증여 중 채무승계액(양도로 보는 부분)은 증여받은 날부터, 증여로 보는 부분은 증여 전 동일세대 거주기간 통산. 없는 입력: 부담부증여의 부분별(채무·증여) 취득일·거주기간 — 판정 메뉴는 한 주택을 한 취득일·한 거주기간으로 판정한다. 참고 관측: referenceForm = 비과세(rentalPassed true). 부분별 결론이 갈리므로 기대값을 두지 않는다."
+  }
+]

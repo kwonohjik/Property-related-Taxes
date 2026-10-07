@@ -1,0 +1,30 @@
+[
+  {
+    "id": "G023-era",
+    "docNo": "국심-2007-서-4698",
+    "docDate": "2008.11.07.",
+    "basis": "era",
+    "today": "2008-11-07",
+    "summary": "쟁점아파트(1994.4.26. 취득, 1999.2.까지 거주) — 재건축 사업계획승인일(2003.2.8.) 현재 다른 아파트도 보유, 그 아파트 양도(2003.5.21.) 후 다른 주택 없이 입주권 양도(2006.3.13.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2006-03-13",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1994-04-26",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2003-02-08"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_ga"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 결정(조세심판관합동회의): 사업계획승인일 현재 2주택이었어도 기존주택이 그 날 현재 §154① 요건(보유 3년·거주 2년)을 갖추고 입주권 양도일 현재 다른 주택이 없으면 비과세. 관측: one_right_89_1_4_ga + 연혁 고지(재건축 기준일이 사업시행인가·사업계획승인일). 표현: 권리 기준일 = 사업계획승인일 2003-02-08, 기존주택 요건 선언, 청구외아파트는 양도 전 처분이라 입력 없음. 가정: 양도가 5억(원문 7.05억 — 당시 6억 초과 고가 축 중립화)."
+  }
+]

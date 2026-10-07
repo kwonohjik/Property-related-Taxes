@@ -1,0 +1,24 @@
+[
+ {
+  "id": "F202-era",
+  "docNo": "조심-2008-부-0213",
+  "docDate": "2008.04.24.",
+  "basis": "era",
+  "today": "2008-04-24",
+  "summary": "남편 소유 아파트(1995 취득)가 임의경매로 타인에게 넘어간 뒤(2000.12. 낙찰) 동일세대원인 아내가 낙찰자로부터 매매 취득(2001.3.26.) → 양도(2002.1.28.): 보유기간은 재취득일부터 새로 기산 — 3년 미달 과세(기각)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2002-01-28",
+   "contractTotalPrice": "38000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2001-03-26"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도 주택의 종전 보유자가 동일세대원이었고 그 사이 제3자에게 소유권이 넘어갔다가 재취득했다는 이력(동일세대원 보유기간 통산 여부). 취득 원인은 판정 메뉴 본문에 상속만 실리고(one-house-exemption-api.ts — acquisitionCause는 inheritance일 때만 전송) 증여·매매 취득의 동일세대 통산 칸이 없다(E024와 같은 축). 참고 관측(referenceForm: 취득일 = 재취득일 2001-03-26, 양도가 3,800만원 원문): 과세(보유 2년 미달) — 원문 결론과 같으나 통산 여부는 사용자가 고른 취득일로 정해진 것이다(남편 취득일 1995를 넣으면 비과세가 될 구조)."
+ }
+]

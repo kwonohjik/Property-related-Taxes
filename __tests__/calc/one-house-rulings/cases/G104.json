@@ -1,0 +1,66 @@
+[
+ {
+  "id": "G104-era",
+  "docNo": "조심-2010-서-1329",
+  "docDate": "2010.07.28.",
+  "basis": "era",
+  "today": "2010-07-28",
+  "summary": "최초아파트(1988) 보유 중 재건축 추진 아파트 취득(2001.4.7.) → 사용승인(2007.8.24.) → 최초아파트 양도(2008.5.19.) — 재건축아파트는 종전아파트의 연장",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2008-05-19",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1988-04-27"
+   },
+   "houses": [
+    {
+     "id": "rebuilt",
+     "region": "capital",
+     "acquisitionDate": "2001-04-07"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 재건축 신축주택을 종전주택의 연장으로 볼지(G103과 같은 축). 결정: §155① 처분기한(당시 1년)은 사용승인일(2007-08-24)이 아니라 종전아파트 취득일(2001-04-07)부터 → 기한 경과로 과세(기각). 참고 관측(referenceForm: 최초아파트 1988-04-27, 재건축아파트 = 2001-04-07, 양도 2008-05-19·5억 가정): 과세 = 원문. 사용승인일을 넣으면 비과세(V-G104-completion). 엔진 기한은 3년이라 당시 1년 기한 축은 구별력이 없다(어느 쪽이든 7년 경과). 공휴일 표 보류 안내(결론 무관)."
+ },
+ {
+  "id": "G104-current",
+  "docNo": "조심-2010-서-1329",
+  "docDate": "2010.07.28.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "종전주택(2010) 보유 중 재건축 대상 주택 매입(2019.3.) → 준공(2024.9.) → 종전주택 양도(2026.6.) — 매입일부터 3년 경과",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2010-03-15"
+   },
+   "houses": [
+    {
+     "id": "rebuilt",
+     "region": "capital",
+     "acquisitionDate": "2019-03-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: G104-era와 같음. 현행 규칙: 재건축 신축주택은 기존주택의 연장이므로 일시적 2주택 처분기한(3년)은 그 주택(재건축 전) 취득일부터 기산. 구성: 종전주택 2010-03-15·재건축 대상 주택 매입 2019-03-15·준공 2024-09-15·종전주택 양도 2026-06-15·8억·비조정. 참고 관측(매입일 입력): 과세 = 현행 규칙. 준공일을 넣으면 비과세(V-G104cur-completion)."
+ }
+]

@@ -1,0 +1,59 @@
+[
+  {
+    "id": "R033-era",
+    "docNo": "재일46014-1866",
+    "docDate": "1997.08.02.",
+    "basis": "era",
+    "today": "1997-08-02",
+    "summary": "아파트(1987.7. 매입) 보유 세대가 부친 사망(1991.11.12.)으로 아파트를 상속받아 2주택, 세대전원 뉴질랜드 이주(비거주자) 후 상속주택 양도(1997.8.21.)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1997-08-21",
+      "contractTotalPrice": "200000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1991-11-12",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "1985-01-15"
+      },
+      "houses": [
+        {
+          "id": "general",
+          "acquisitionDate": "1987-07-15"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 양도일 현재 비거주자(세대전원 해외이주) 상태. 연혁: 1996.12.31. 개정 시행령 §155②는 상속으로 2주택이 된 세대가 상속주택을 양도해도 1세대1주택으로 보았는데(2002.12.31. 이전 상속·2004.12.31. 이전 양도분 한정으로 이해됨 — 부칙 확인 필요) 엔진은 상속주택 자체 양도의 의제를 모델링하지 않는다. 참고 관측(referenceForm: 양도 주택=상속 취득 1991-11-12·피상속인 취득 1985-01-15 가정, 명부에 일반주택 1987-07-15, 양도가 2억): 과세(주택 2채) — 원문 결론(비과세)과 반대."
+  },
+  {
+    "id": "R033-current",
+    "docNo": "재일46014-1866",
+    "docDate": "1997.08.02.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴(일반주택 보유 세대가 상속받아 2주택 → 상속주택 자체를 양도)을 현행으로 — 상속 2020.5.15., 양도 2026.3.15.",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-05-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2005-03-15"
+      },
+      "houses": [
+        {
+          "id": "general",
+          "acquisitionDate": "2010-07-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 상속주택 특례(시행령 §155②)는 일반주택을 양도할 때 상속주택을 주택 수에서 빼는 것이고, 상속주택 자체를 양도하면 일반주택이 있어 1세대 2주택 → 과세. 관측: 과세(주택 2채, 제외 없음). 중립 고정: 거주자, 비조정, 양도가 8억, 피상속인 취득 2005-03-15·일반주택 2010-07-15(상속개시 전 보유) 가정."
+  }
+]

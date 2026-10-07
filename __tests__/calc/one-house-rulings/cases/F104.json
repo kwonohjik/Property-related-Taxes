@@ -1,0 +1,21 @@
+[
+ {
+  "id": "F104-era",
+  "docNo": "재산01254-2438",
+  "docDate": "1988.08.29.",
+  "basis": "era",
+  "today": "1988-10-20",
+  "summary": "창고(실제 점포)로만 쓰기로 임대했는데 임차인이 임대인 동의 없이 주거용으로 개조·거주 — 임대인의 주택 수에 넣지 않음, 종전 1주택 양도 비과세",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "1988-10-15",
+   "contractTotalPrice": "50000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1980-05-15"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 주택 해당 여부(건물의 사실상 용도·구조·사용 실태)를 묻는 칸 — 판정 메뉴는 명부(다른 보유 주택)에 넣으면 주택, 빼면 주택 아님으로 보아 그 판단을 사용자에게 맡긴다; 임차인의 무단 용도변경·임대 당시 약정 용도를 담을 칸도 없다. 참조 관측(referenceForm): HTTP 500 — 원문 결론(비과세)과 다름. 부수 발견: 양도일이 1990년 이전이면 판정 route가 HTTP 500(TAX_RATE_NOT_FOUND — 「양도소득세 누진세율(progressive_rate:_default)이 없습니다」)으로 판정 자체가 나오지 않는다(1989-12-31 실패·1990-06-15 성공, 프로브). route가 판정 전에 세율을 읽는다(app/api/calc/one-house-exemption/route.ts:189-201 loadFallbackTransferRates → parseRatesFromMap). 일자·가정: 원문에 양도일·취득일 없음 → 회신 직후 1988-10-15 양도·1980-05-15 취득·양도가 5천만 원 가정. 창고를 뺀 참조."
+ }
+]

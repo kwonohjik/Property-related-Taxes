@@ -1,0 +1,33 @@
+[
+  {
+    "id": "F395-era",
+    "docNo": "서면-2020-부동산-5098 [부동산납세과-1247]",
+    "docDate": "2021.09.08.",
+    "basis": "era",
+    "today": "2022-06-20",
+    "summary": "조정대상지역(2017.8.3. 지정) 오피스텔을 2019.7. 취득해 사무실로 쓰다가 지정 해제(2019.11.8.) 뒤 2019.12.17. 주택으로 용도변경 — 거주요건은 주택 취득시점(용도변경 시점) 기준이라 적용되지 않음",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-07-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": true,
+      "wasRegulatedAtAcquisition": true,
+      "presaleRights": [
+        {
+          "id": "B",
+          "type": "presale_right",
+          "acquisitionDate": "2019-12-28",
+          "region": "capital"
+        }
+      ]
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력(판정 메뉴): 비주택→주택 용도변경일(주거용 사용 개시일). 엔진에는 거주요건 판정 기준일을 주거용 사용 개시일로 옮기는 규칙이 있으나(`lib/tax-engine/transfer-tax-exemption-holding.ts:273` resolveResidenceJudgmentDate — 이 해석례를 인용), 판정 메뉴 ④는 용도변경 사실을 본문에 싣지 않고 거주 개월 계산에만 쓴다(`lib/calc/one-house-exemption-api.ts:75`). 참고 관측(referenceForm: 오피스텔 취득 2019-07-15·취득 당시 조정·거주 0개월): 과세 + 판정 보류 2건(154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified) — 원문(거주요건 미적용 → 비과세)과 반대. 프로브: 취득일을 용도변경일 2019-12-17·취득 당시 비조정으로 넣으면 비과세 — 사용자가 법적 판단을 미리 날짜에 반영해야 맞는다. 가정: 완공 취득 2019.7. → 2019-07-15, 양도일 원문 미기재 → 2022-06-15(용도변경 후 2년 6개월·2021.1.1.~2022.5.9. 구간 밖), 양도가 5억, 양도 당시 조정(2020.6.19. 재지정), B아파트 분양권 2019-12-28(2021.1.1. 전 취득)."
+  }
+]

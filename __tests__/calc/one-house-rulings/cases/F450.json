@@ -1,0 +1,58 @@
+[
+  {
+    "id": "F450-era",
+    "docNo": "재일46014-2250",
+    "docDate": "1997.09.24.",
+    "basis": "era",
+    "today": "1997-09-24",
+    "summary": "고급주택(단독주택 연면적 기준) 판정 시 방·주거시설 없이 보일러실·창고·차고로 쓰는 지하실은 주택 연면적에 불포함",
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 단독주택 연면적·지하실 용도별 면적(2002.12.31. 이전 양도분 고급주택 면적기준). 엔진에는 면적 입력이 없고 그 시기 주택 축은 가액 6억원만 본다(`lib/tax-engine/one-house/threshold.ts` — 2005-02-19 전 미확인). 쟁점은 해석이 갈렸던 축이다 — 입장 A: 재일46014-2250(1997.09.24.)·재일46014-1539(1997.06.24.) 보일러실·창고·차고로 쓰는 지하실은 고급주택 연면적에 불포함 / 입장 B: 국심2003중2600·대법원 96누16254 부대시설 지하실 포함. 현행 고가주택 판정은 가액 기준만 있어(2003.1.1. 이후 양도분 면적기준 없음) 이 쟁점은 현행 1세대1주택 판정에서 의미가 없다 — current 케이스가 가액 기준을 단언한다. 질의 2(분양아파트 취득시기)는 1세대1주택 쟁점이 아니라 제외."
+  },
+  {
+    "id": "F450-current",
+    "docNo": "재일46014-2250",
+    "docDate": "1997.09.24.",
+    "basis": "current",
+    "today": "2026-05-20",
+    "summary": "같은 패턴(보일러실·창고·차고로 쓰는 지하실이 있는 단독주택)을 2026.5.15. 11억원 양도로 구성 — 면적과 무관하게 가액 기준(12억원 이하)으로 전액 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "1100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match — 현행 규칙: 1세대1주택 고가주택은 양도 당시 실지거래가액 합계 12억원 초과 여부로만 판정(소득세법 §89①3호 괄호) — 연면적 기준 없음. 중립 고정: 비조정, 취득 2015-03-15, 다른 주택 없음. 한계: 면적 입력 자체가 없어 지하실 면적 축의 구별력은 0 — 단언은 가액 경계(짝 N-F450-current-over)뿐."
+  },
+  {
+    "id": "N-F450-current-over",
+    "docNo": "재일46014-2250",
+    "docDate": "1997.09.24.",
+    "basis": "current",
+    "today": "2026-05-20",
+    "summary": "F450-current의 짝 — 같은 주택을 13억원에 양도하면 12억원 초과분 과세(면적 기준 없음)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "1300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true
+    },
+    "bucket": "match",
+    "note": "짝(가정) — 양도가만 13억으로 바꾼 최소쌍."
+  }
+]

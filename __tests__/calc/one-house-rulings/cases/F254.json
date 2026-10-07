@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F254-era",
+    "docNo": "재일46014-1465",
+    "docDate": "1995.06.17.",
+    "basis": "era",
+    "today": "1994-06-01",
+    "summary": "무주택으로 임대아파트에 거주(1988.11.~1991.8.)하다 직장 발령으로 세대전원 전출 후 분양(1994.3. 등기)받아 거주 없이 1994.6. 양도 — 임차 거주 5년 미달, 취득 전 이전이라 부득이 단서 미적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1994-06-15",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1994-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "33"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실: 1988.11.부터 무주택으로 목동 임대아파트 거주, 1991.8. 직장 발령으로 세대전원 보령 전출, 분양권 인정받아 1994.3. 등기, 거주하지 못하고 1994.6. 양도. 가정: 일자 15일, 임차 거주 33개월, 양도가 1억. 회신: 건설임대주택은 임차 거주일부터 양도일까지 거주 5년 이상이면 비과세 요건 판정에 포함하지만, 임대주택 취득 전에 근무상 형편으로 세대전원이 이전한 경우는 부득이한 사유 단서(당시 §15①3호) 미적용 → 과세. 없는 입력: 부득이한 사유가 생긴 시점(취득 전 이전)과 임차 거주·소유 후 거주의 구분 — 엔진은 사유 선택과 거주 개월만 본다. 참고 관측: referenceForm(부득이 + 실제 거주 33개월) = 비과세(applied 154-1-proviso:unavoidable) — 원문과 반대 / 소유 후 거주 0개월로 넣으면 과세. 실거래가 과세 질의는 회신이 답하지 않았다."
+  }
+]

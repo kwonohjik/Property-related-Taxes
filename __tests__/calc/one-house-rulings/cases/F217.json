@@ -1,0 +1,78 @@
+[
+  {
+    "id": "F217-era",
+    "docNo": "서면인터넷방문상담4팀-255",
+    "docDate": "2005.02.15.",
+    "basis": "era",
+    "today": "2005-01-15",
+    "summary": "배우자에게서 증여받은(2004.4.13.) 1주택을 협의이혼 후 재결합한 뒤 2005.1.21. 양도 — 증여자 보유기간 통산 안 함",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2005-01-21",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-04-13"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "원문 일자 그대로(배우자 명의 1993.3.~ 보유 → 2004-04-13 증여 → 2004-04-15 협의이혼 → 2004-09-20 재결합 → 2005-01-21 양도 예정), 양도가 3억 가정. 회신 규칙: 동일세대원 간 증여는 증여자 보유·거주기간을 통산하지만 이혼 전 증여 후 이혼·재결합한 경우는 통산하지 않는다 → 증여일부터 9개월로 과세. 없는 입력: 취득 원인(증여)·증여자의 세대·이혼·재결합 이력 — 취득일 한 칸뿐이다. 참고 관측: referenceForm(증여일 2004-04-13) = 과세 / 증여자 취득일 1993-03-15로 입력하면 비과세. 회신의 해외이주 부분은 짝 P-F217-after-departure·N-F217-before-departure."
+  },
+  {
+    "id": "P-F217-after-departure",
+    "docNo": "서면인터넷방문상담4팀-255",
+    "docDate": "2005.02.15.",
+    "basis": "era",
+    "today": "2005-01-15",
+    "summary": "F217 짝(가정) — 해외이주로 세대전원이 출국(2005.1.10.)한 뒤 비거주자 상태에서 양도하면 보유기간 제한 없이 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-01-21",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-04-13"
+      },
+      "provisoReason": "overseas_migration",
+      "provisoDepartureDate": "2005-01-10"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:overseas_migration"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 짝(가정) — F217-era 사실에 해외이주법에 따른 세대전원 출국(2005-01-10, 양도 11일 전)을 더한 것. 회신: 세대전원 출국으로 비거주자가 된 상태에서 양도하면 §154① 단서로 보유·거주기간 제한 없이 비과세. 관측: 비과세(applied 154-1-proviso:overseas_migration). 출국일 현재 1주택 요건은 입력 칸이 없어 충족 전제. 판정 보류 civil-161(2009 전 공휴일 표)은 잡음."
+  },
+  {
+    "id": "N-F217-before-departure",
+    "docNo": "서면인터넷방문상담4팀-255",
+    "docDate": "2005.02.15.",
+    "basis": "era",
+    "today": "2005-01-15",
+    "summary": "F217 짝(가정) — 국외이주를 계획했으나 세대전원 출국(2005.3.15. 예정) 전에 양도하면 해외이주 단서 미적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2005-01-21",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-04-13"
+      },
+      "provisoReason": "overseas_migration",
+      "provisoDepartureDate": "2005-03-15"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:overseas_migration"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch(유리). 짝(가정) — P-F217-after-departure에서 출국일만 양도일 뒤(2005-03-15 예정)로 옮긴 최소쌍. 회신: 국외이주를 계획했더라도 세대전원이 출국하지 않은 상태의 양도는 단서 미적용 → 보유 9개월로 과세. 관측: 비과세(applied 154-1-proviso:overseas_migration) — 엔진은 출국일부터 2년 이내인지만 보고 양도일이 출국일 이후인지는 보지 않는다. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:240-244(`isWithinDeadline(departureDate, 2, transferDate)` — 양도일 ≥ 출국일 조건 없음), ⑧ lib/calc/exemption-proviso-validate.ts:31(출국일 미입력만 검사). 같은 구조인 2호 다목(근무상 형편 국외거주)도 같은 분기를 쓴다(:241-244). 입력 도달: 단서를 빼면 과세(V-F217n-noproviso)."
+  }
+]

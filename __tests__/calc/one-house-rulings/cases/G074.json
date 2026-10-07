@@ -1,0 +1,26 @@
+[
+ {
+  "id": "G074-era",
+  "docNo": "국심-2006-중-2782",
+  "docDate": "2006.12.27.",
+  "basis": "era",
+  "today": "2006-12-27",
+  "summary": "주택 수용(1998.12.22.) 후 이주대책으로 특별공급받은 이주택지 분양권(1999.7.30.)을 양도(2001.8.13.) — 조합원 입주권이 아님",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2001-08-13",
+   "contractTotalPrice": "122000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1999-07-30"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 권리의 성격(공공사업 이주대책으로 특별공급된 이주택지 분양권 — 재개발·재건축 조합을 통한 입주자 지위가 아님). 결정: 조합원분양권 비과세 특례 대상이 아니어서 과세(기각). 참고 관측(조합원입주권으로 입력: 취득 1999-07-30·선언 yes·양도 2001-08-13·실지양도가액 1.22억): 비과세(가목) — 원문과 반대."
+ }
+]

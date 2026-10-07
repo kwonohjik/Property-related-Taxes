@@ -1,0 +1,33 @@
+[
+  {
+    "id": "F389-era",
+    "docNo": "서면인터넷방문상담4팀-1476",
+    "docDate": "2004.09.21.",
+    "basis": "era",
+    "today": "2004-10-20",
+    "summary": "아파트(1998.12. 취득, 2003.1.6.부터 거주) 보유자가 미국 대학 박사과정으로 출국(2003.12.), 이후 미국 연구원 취업·거주 중 양도 — 취학 출국 특례 부적용·과세",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2004-10-15",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "overseas_residence",
+      "provisoDepartureDate": "2003-12-15",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1998-12-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2003-01-06",
+            "moveOutDate": "2003-12-14"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 취학·근무 출국 특례는 사유가 국내에서 생겨 출국하고 양도일 현재에도 그 사유로 양도하는 경우에 적용 — 취학으로 출국했으나 국외에서 취업해 거주하며 양도하면 불적용 → 과세. 없는 입력: 세대전원 출국 여부(세대원 일부 국내 잔류)와 출국 사유 — 2호 다목은 선택지와 출국일만 받고 「세대전원」은 자기확인이다. 양도일 현재 출국 사유 지속 여부도 묻지 않는다. 참조 관측(2호 다목·출국 2003-12-15·거주 11개월): 비과세 — 원문과 반대(당시 서울 등 거주 요건은 엔진 연혁에 없어 일반 요건으로도 비과세). 일자 가정: 취득 1998-12-15, 양도 2004-10-15, 양도가 2억(원문 예상가)."
+  }
+]

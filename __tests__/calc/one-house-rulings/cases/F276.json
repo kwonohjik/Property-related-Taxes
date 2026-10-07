@@ -1,0 +1,63 @@
+[
+ {
+  "id": "F276-era",
+  "docNo": "재일46014-1685",
+  "docDate": "1999.09.14.",
+  "basis": "era",
+  "today": "1999-09-01",
+  "summary": "국외이주 특례는 세대전원 출국이 요건 — 세대원 일부만 출국해 비거주자가 된 상태의 양도는 과세 (사실관계 원문 미기재)",
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 세대전원 출국 여부(세대원 일부만 출국해 비거주자가 된 상태) · 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 원문은 요지·회신만 있고 사실관계가 없다. 상속주택 부분(보유기간 제한 없는 비과세·주택 수 제외)은 구 시행령 §155② 체계라 짝 F276-current로 현행만 단언."
+ },
+ {
+  "id": "F276-current",
+  "docNo": "재일46014-1685",
+  "docDate": "1999.09.14.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "현행 짝(구성) — 별도세대 피상속인에게서 상속(2025.3.17.)받은 주택 자체를 1년 3개월 만에 양도(2026.6.15.) → 보유기간 제한 없는 비과세 없음, 보유 2년 미달 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "600000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2025-03-17",
+    "acquisitionCause": "inheritance",
+    "decedentAcquisitionDate": "2000-05-15"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 상속받은 주택 자체를 양도할 때 보유기간은 상속개시일부터 기산(상속인·피상속인 동일세대면 §154⑧3호 통산) — 보유기간 제한 없는 비과세는 없다. 구성: 별도세대 상속 2025-03-17, 피상속인 취득 2000-05-15, 다른 주택 없음, 비조정, 양도가 6억, 양도 2026-06-15. 관측: 보유 2년 미달 과세(보유 충족일 2027-03-16 pending). 양성 짝 P-F276-held-2y."
+ },
+ {
+  "id": "P-F276-held-2y",
+  "docNo": "재일46014-1685",
+  "docDate": "1999.09.14.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "F276-current의 양성 짝 — 같은 상속주택을 상속개시(2024.3.15.)부터 2년 넘게 보유 후 양도하면 본칙 비과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "600000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2024-03-15",
+    "acquisitionCause": "inheritance",
+    "decedentAcquisitionDate": "2000-05-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "양성 짝(가정) — 상속개시만 2024-03-15로 옮긴 최소쌍. 보유 2년 충족 → 본칙 비과세."
+ }
+]

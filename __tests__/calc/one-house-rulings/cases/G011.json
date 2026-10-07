@@ -1,0 +1,40 @@
+[
+  {
+    "id": "G011-era",
+    "docNo": "서면인터넷방문상담4팀-386",
+    "docDate": "2008.02.18.",
+    "basis": "era",
+    "today": "2008-02-18",
+    "summary": "1~3층 겸용건물(1982 취득)에 4층 주택을 증축(1996)한 1세대1주택 고가주택 일괄양도(2007.8.) — 증축분과 기존분·부수토지의 장기보유특별공제",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2007-08-15",
+      "contractTotalPrice": "1000000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1982-04-10"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문은 장기보유특별공제 적용(기존 건물·부수토지 45%, 증축 4층 30%)만 회신. 장기보유특별공제·증축분 별도 보유기간은 판정 메뉴 출력·입력 밖. 참고 관측(referenceForm: 1982-04-10 취득 주택·양도 2007-08-15·양도가 10억 가정): 고가주택 부분 과세."
+  },
+  {
+    "id": "G011-current",
+    "docNo": "서면인터넷방문상담4팀-386",
+    "docDate": "2008.02.18.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴(증축으로 보유기간이 다른 1세대1주택 고가주택)을 현행 양도로",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "1500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2010-03-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 장기보유특별공제는 증축 부분을 따로 계산하되, 공동주택을 주거전용면적 30% 이내로 증축하는 리모델링은 기존 면적의 보유기간으로 계산(기획재정부 재산세제과-429). 단독 겸용건물 증축이 그 범위인지는 불명. 출력 범위 밖이라 표현 불가. 참고 관측(referenceForm: 2010-03-15 취득·2026-05-15 양도·15억): 부분 과세."
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "S002-era",
+    "docNo": "대법원-2006-두-16397",
+    "docDate": "2007.02.22.",
+    "basis": "era",
+    "today": "2004-06-16",
+    "summary": "사업시행인가일 현재 1년 이상 거주했으나 보유·거주기간 요건 미충족인 기존주택의 재건축 조합원 지위 양도 — 양도 당시 다른 주택 없음·1년 이상 치료·요양 질병",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2004-06-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2001-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "no",
+        "redevApprovalDate": "2002-11-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: 입주권(조합원 지위) 양도에서 인가일 기준 보유·거주 요건을 면제하는 §154① 단서 부득이한 사유(1년 이상 치료·요양이 필요한 질병) — 입주권 양도에는 단서 칸이 없고(judgmentProvisoMode가 주택 양도에만 연다), 인가일 현재 요건은 '예/아니오' 자기선언 하나다. 원문(판결)에 일자 없음 → 참고 관측(referenceForm — 기존주택 2001-05-15, 사업시행인가 2002-11-15, 양도 2004-06-15, 다른 주택 없음, 인가일 요건 '아니오'): 과세 — 원문 결론(비과세)과 반대. '예'로 선언하면 가목 비과세가 되지만 사유 축은 검증되지 않는다."
+  }
+]

@@ -1,0 +1,48 @@
+[
+ {
+  "id": "G066-era",
+  "docNo": "서면-2017-법령해석재산-1581 [법령해석과-1038]",
+  "docDate": "2018.04.18.",
+  "basis": "era",
+  "today": "2018-04-18",
+  "summary": "장기임대주택 A(2000.10.)와 2년 이상 거주한 B(2004.4.) 보유 — B가 관리처분인가(2015.11.)로 입주권이 된 뒤 그 입주권 양도",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2017-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2004-04-15",
+    "redevApprovalDate": "2015-11-15",
+    "rentalHousingException": {
+     "applyException": true,
+     "scenario": "A",
+     "rentalUnits": [
+      {
+       "unitId": "a",
+       "businessRegistrationDate": "2012-03-15",
+       "rentalRegistrationDate": "2012-03-15",
+       "rentalCategory": "pre_2018",
+       "rentalAcquisitionType": "purchase",
+       "isApartment": true,
+       "region": "seoul-metro",
+       "standardPriceAtRentalStart": "300000000",
+       "acquisitionOfficialPrice": "300000000",
+       "isNationalSizeHousing": true,
+       "hasMinimum2Units": true,
+       "rentalMonths": "63",
+       "requirementsConfirmed": true
+      }
+     ]
+    }
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "mismatch",
+  "note": "mismatch(유리). 회신: 장기임대주택과 거주주택을 소유한 1세대가 §155⑳ 요건을 갖춰 거주주택을 양도하면 1주택으로 보지만, 거주주택이 관리처분인가로 조합원입주권이 된 뒤 그 입주권을 양도하면 §155⑳이 적용되지 않는다 → 과세. 표현(판정 메뉴 안내대로 임대주택은 명부가 아니라 §155⑳ 칸에): 입주권(B 2004-04-15·인가 2015-11-15·선언 yes), §155⑳ 임대호 A(2000.10. 취득, 등록 2012-03-15 가정·2018년 전 등록·아파트·수도권·기준시가 3억·임대 63개월·요건 확인), 양도 2017-06-15 가정·8억. 관측: 비과세(가목) — §155⑳은 불성립(rentalHousingException.passed=false)인데 임대호가 명부 밖이라 §89①4호의 다른 주택 수가 0이 된다. 의심 지점: app/api/calc/one-house-exemption/route.ts:176(입주권 양도의 주택 수를 명부 행으로만 셈), app/calc/one-house-exemption/steps/Step3.tsx:447(입주권 양도에도 §155⑳ 칸 노출). 최소쌍: A를 명부 장기임대 행으로 넣으면 과세(V-G066-roster), 임대호를 빼도 비과세(V-G066-norental). P1 E197(dual)과 같은 입력 갈림."
+ }
+]

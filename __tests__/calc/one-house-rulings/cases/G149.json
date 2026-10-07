@@ -1,0 +1,31 @@
+[
+  {
+    "id": "G149-era",
+    "docNo": "서면인터넷방문상담5팀-1268",
+    "docDate": "2008.06.17.",
+    "basis": "era",
+    "today": "2011-06-16",
+    "summary": "거주 주택(2000.) 보유 세대가 상속 업무용건물 지분이 도시환경정비사업 관리처분(2008.4.)으로 입주권(주택 분양)이 된 뒤 거주 주택 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2011-06-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-05-15"
+      },
+      "presaleRights": [
+        {
+          "id": "office",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2008-04-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2008-04-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 없는 입력: 조합원입주권의 정비사업 유형 — 원문 당시 도정법상 주택재개발·주택재건축사업 조합원 지위만 소득세법 §89② 조합원입주권이고 도시환경정비·주거환경개선사업 입주권은 제외. 세대 보유 입주권 행은 사업 유형 없이 모두 §89② 권리로 센다. 참고 관측(referenceForm — 거주 주택 2000-05-15, 상속 업무용건물 지분이 도시환경정비사업 관리처분 2008-04-15로 입주권, 양도 2011-06-15(입주권 취득 3년 경과 — 가정), 3년 초과 예외 '해당 없음', 7억·비조정): 과세(§89② 배제) — 원문(주택 수에 넣지 않음 → 일반 1주택 판정)과 반대. 입주권 행을 아예 빼면(사용자가 규칙을 알고 생략) 일반 1주택 판정이 된다. 공동상속 지분(모 2/5·자녀 각 1/5) 축도 원문 쟁점 아님."
+  }
+]

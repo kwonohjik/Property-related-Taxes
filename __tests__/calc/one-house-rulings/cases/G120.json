@@ -1,0 +1,78 @@
+[
+  {
+    "id": "G120-era",
+    "docNo": "조심-2021-서-5174",
+    "docDate": "2022.11.07.",
+    "basis": "era",
+    "today": "2020-12-23",
+    "summary": "사업시행인가일(2008.4.1.) 현재 2주택이었으나 공유주택 양도(2012.) 후 대체주택(2015.12.10.) 취득 — 재건축 준공(2018.12.31.) 후 2년 이내 대체주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2020-12-22",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-12-10"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "1997-10-02",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2008-04-01",
+      "replCompletionDate": "2018-12-31",
+      "replResidenceMonths": "60",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자 그대로(재건축전주택 1997-10-02, 공유주택 2002-08-19 취득·2012-05-01 양도, 사업시행인가 2008-04-01, 관리처분 2015-01-27, 대체주택 2015-12-10 취득·2015-12-17~2020-12-22 거주(60개월), 준공 2018-12-31, 대체주택 양도 2020-12-22). 양도가 원문 없음 → 8억(당시 9억 이하), 비조정 가정(대체주택은 2017.8.3. 전 취득이라 거주요건 무관). 표현: 양도일 현재 세대 보유 = 신축주택(명부, 종전 취득일) + 대체주택; 2012년에 양도한 공유주택은 명부에 넣지 않는다. 관측: 비과세(156-2-5). 대체주택 선언을 빼면 과세(프로브). 경로 메모: 엔진은 사업시행인가일·대체주택 취득일 당시 주택 수를 입력받지도 판정하지도 않는다 → 「인가일 현재 2주택」이 특례를 막지 않는다는 결론과 같게 나오지만, 대체주택 취득 당시 1주택 요건을 엔진이 확인한 것은 아니다(G119 참조). 양론 메모: 종전 국세청 해석(사업시행인가일 현재 1주택 기준)이면 부적용이던 사안 — 이후 기획재정부 재산세제과-1270(2023.10.23.)·대법원 2023두58664가 대체주택 취득일 기준을 취함."
+  },
+  {
+    "id": "G120-current",
+    "docNo": "조심-2021-서-5174",
+    "docDate": "2022.11.07.",
+    "basis": "current",
+    "today": "2026-06-16",
+    "summary": "현행 — 사업시행인가일 현재 2주택이었으나 다른 주택을 양도해 1주택이 된 뒤 대체주택을 취득한 세대의 대체주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-12-10"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2008-10-02",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2016-04-01",
+      "replCompletionDate": "2024-01-31",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: §156의2⑤의 1주택 판단은 대체주택 취득일 기준 — 사업시행인가일 현재 2주택이었더라도 대체주택 취득 당시 1주택이고 각 호 요건을 갖추면 적용. 구성: 사업시행인가 2016-04-01(당시 2주택 — 다른 주택은 대체주택 취득 전 양도해 명부 밖), 재건축 대상 주택 2008-10-02, 대체주택 2019-12-10 취득·70개월 거주, 준공 2024-01-31, 양도 2026-06-15(완성 후 3년 이내), 비조정·양도가 8억. 관측: 비과세(156-2-5)."
+  }
+]

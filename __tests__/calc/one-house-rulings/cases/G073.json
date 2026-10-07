@@ -1,0 +1,27 @@
+[
+ {
+  "id": "G073-era",
+  "docNo": "서면인터넷방문상담5팀-1782",
+  "docDate": "2007.06.12.",
+  "basis": "era",
+  "today": "2007-06-12",
+  "summary": "주거환경개선사업 지구의 1주택(비과세 요건 충족)이 입주권으로 전환된 뒤 양도 — 조합원입주권 비과세 특례 대상 아님 (일자 구성)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2007-10-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2000-03-15",
+    "redevApprovalDate": "2006-06-15"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 입주권의 사업 유형(도시정비법 주거환경개선사업) — 판정 메뉴의 양도 대상은 「주택」·「조합원입주권」 둘뿐이고 사업 유형을 묻지 않는다. 회신: 주거환경개선사업에는 조합원입주권 비과세 특례(당시 시행령 §155⑰)가 적용되지 않음. 구성 일자(원문에 일자 없음): 기존주택 2000-03-15·인가 2006-06-15·양도 2007-10-15·4억. 참고 관측(조합원입주권으로 입력): 비과세(가목) — 원문과 반대(입력이 생기면 유리 방향 불일치 후보). 주택으로 입력해도 비과세(V-G073-housing)."
+ }
+]

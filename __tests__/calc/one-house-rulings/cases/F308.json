@@ -1,0 +1,32 @@
+[
+ {
+  "id": "F308-era",
+  "docNo": "기획재정부 재산세제과-993",
+  "docDate": "2010.10.18.",
+  "basis": "era",
+  "today": "2010-10-01",
+  "summary": "근무상 형편으로 세대전원 출국 후 1주택 추가 취득, 본칙 요건 미충족 종전주택을 추가 취득일부터 1년 이내·출국일부터 2년 이후 양도 — 비과세 불가 (날짜 원문 미기재)",
+  "expected": {
+   "isExempt": false
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2008-06-16",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2005-06-15"
+   },
+   "houses": [
+    {
+     "id": "new",
+     "acquisitionDate": "2008-01-15"
+    }
+   ],
+   "provisoReason": "overseas_residence",
+   "provisoDepartureDate": "2006-03-15"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함) · 종전주택이 구 시행령 비과세 요건을 못 갖춘 사실(당시 보유 3년·거주 요건은 엔진 연혁 밖). 원문에 날짜 없음. 참고 관측(referenceForm — 종전 2005-06-15, 다목 출국 2006-03-15, 추가 취득 2008-01-15, 양도 2008-06-16·4억 가정): 2주택이라 단서 카드 닫힘, 거주자 기준 155-1-temporary-two-house 비과세 → 기대(과세)와 다름."
+ }
+]

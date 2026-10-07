@@ -1,0 +1,114 @@
+[
+  {
+    "id": "G125-era",
+    "docNo": "서면-2016-법령해석재산-3749 [법령해석과-4339]",
+    "docDate": "2016.12.30.",
+    "basis": "era",
+    "today": "2015-10-21",
+    "summary": "재개발 사업시행인가(2008.12.31.) 후·관리처분(2011.11.25.) 전 그 지역 A주택(2009.9.8.) 취득, 대체주택 B(2011.6.3.) 취득·1년 이상 거주 후 B 양도(2015.10.20.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-10-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-06-03"
+      },
+      "presaleRights": [
+        {
+          "id": "A",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2009-09-08",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2011-11-25"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2008-12-31",
+      "replCompletionDate": "2016-06-15",
+      "replResidenceMonths": "52",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자 그대로(재개발 사업시행인가 2008-12-31, A 2009-09-08, B 2011-06-03, 관리처분 2011-11-25, B 양도 2015-10-20). 완공일 원문 없음 → 양도 뒤(2016-06-15 가정) = 완성 전 양도, B 거주 52개월(1년 이상 거주 — 원문 전제), 양도가 7억·비조정. A는 양도일 현재 입주권 행(취득일 = A 취득일, 인가일 2011-11-25). 관측: 비과세(156-2-5). 원문 쟁점(재개발 대상 주택을 사업시행인가일 이후 취득)은 엔진이 종전주택 취득일과 인가일을 비교하지 않아 막지 않는다(결론 일치)."
+  },
+  {
+    "id": "N-G125-era",
+    "docNo": "서면-2016-법령해석재산-3749 [법령해석과-4339]",
+    "docDate": "2016.12.30.",
+    "basis": "era",
+    "today": "2015-10-21",
+    "summary": "경계 음성 짝 — 같은 사실에서 대체주택 거주가 6개월(1년 미만)이고 신축주택 완성 후 이사 등 §156의2④ 요건도 해당 없는 경우",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-10-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-06-03"
+      },
+      "presaleRights": [
+        {
+          "id": "A",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2009-09-08",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2011-11-25"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2008-12-31",
+      "replCompletionDate": "2016-06-15",
+      "replResidenceMonths": "6",
+      "replWillResideNewHouse": true,
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "mismatch",
+    "note": "mismatch. 경계 음성 짝(구성) — G125-era와 같은 세대에서 대체주택 거주가 6개월(1년 미만 → §156의2⑤1호 불충족)이고 3년 초과 예외(§156의2④·시행규칙 §75①)도 '해당 없음'. 기대: 대체주택 특례 불성립 → 세대가 1주택 + 1조합원입주권이므로 §89②로 §89①3호 배제(§156의2③은 입주권 취득 후 3년 경과로 불성립) → 과세. 관측: 비과세(appliedExceptions 없음, 일반 1세대1주택 판정 — 판정에 세는 주택 1채). 대조 짝 N-G125-norepl(대체주택 선언만 뺌)은 과세(article89Clause2 excluded). 의심 지점: lib/tax-engine/transfer-tax-89-2-exclusion.ts:241-244 — 대체주택이 선언돼 있으면 E-5 요건 충족 여부와 무관하게 exception_met(§156의2⑤)을 돌려주고, lib/tax-engine/transfer-tax-exemption.ts:263-271의 E-5가 요건 미충족으로 fall through하면 일반 §89①3호 경로가 입주권을 주택 수에 넣지 않아 비과세가 된다. 같은 원인으로 인가일·취득일 축도 무력화된다(프로브: 인가일을 대체주택 취득 뒤로, 완성 후 기한 초과로 바꿔도 비과세)."
+  },
+  {
+    "id": "N-G125-norepl",
+    "docNo": "서면-2016-법령해석재산-3749 [법령해석과-4339]",
+    "docDate": "2016.12.30.",
+    "basis": "era",
+    "today": "2015-10-21",
+    "summary": "대조 짝 — N-G125-era에서 대체주택 특례 선언만 뺀 경우(같은 세대·같은 거주기간)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-10-20",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2011-06-03"
+      },
+      "presaleRights": [
+        {
+          "id": "A",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2009-09-08",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2011-11-25"
+        }
+      ],
+      "rightThreeYearExceptionKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(대조 짝). N-G125-era에서 대체주택 특례 선언만 뺀 세대 — 1주택 + 1입주권, 입주권 취득 후 3년 경과·3년 초과 예외 '해당 없음' → §89② 배제 확정 → 과세. N-G125-era와 결론이 같아야 하는 짝(선언이 요건 미충족 대체주택을 비과세로 바꾸지 않아야 한다)."
+  }
+]

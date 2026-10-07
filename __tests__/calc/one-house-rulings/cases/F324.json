@@ -1,0 +1,36 @@
+[
+  {
+    "id": "F324-era",
+    "docNo": "서면인터넷방문상담4팀-410",
+    "docDate": "2005.03.22.",
+    "basis": "era",
+    "today": "2022-09-20",
+    "summary": "조정대상지역 취득 주택에 6개월 거주 후 근무상 형편으로 세대전원 3년 국외 근무, 귀국해 재입주 6개월 후 양도 — 해외 이주 기간을 거주기간에 합산(구성 케이스)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-03-15",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2018-03-15",
+            "moveOutDate": "2018-09-14"
+          },
+          {
+            "moveInDate": "2021-10-15",
+            "moveOutDate": "2022-04-14"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 구성 케이스(원문은 날짜 없이 규칙만 회신): 1년 이상 국외거주를 필요로 하는 근무상 형편으로 세대전원 해외 이주 후 사유 해소로 귀국해 그 주택에 재입주하여 양도하면 해외 이주 기간을 거주기간에 합산, 재입주하지 않으면 합산하지 않음. 규칙이 결론을 가르도록 거주요건이 있는 조정 취득(2018-03-15)으로 구성: 실거주 12개월 + 국외 36개월(2018-09-15~2021-10-14) → 합산 48개월이면 비과세, 불합산이면 과세. 없는 입력: 국외 체류 기간·재입주 여부와 그 합산 — 엔진은 실거주만 본다. 참조 관측(실거주 구간 2개 입력): 과세 — 원문 규칙(합산 → 비과세)과 반대. 합산값 48을 직접 넣어야 맞는 결과가 나온다. 양도가 8억, 다른 주택 없음."
+  }
+]

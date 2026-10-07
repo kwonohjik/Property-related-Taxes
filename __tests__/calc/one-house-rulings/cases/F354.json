@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F354-era",
+    "docNo": "국심-2004-중-0777",
+    "docDate": "2004.06.07.",
+    "basis": "era",
+    "today": "2003-04-20",
+    "summary": "쟁점주택(2001.9.25. 취득)을 남편의 법무사사무실 이전(사업상 형편)에 따른 주거 이전으로 3년 미만 보유 후 양도(2003.4.15.) — 부득이한 사유 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2003-04-15",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "unavoidable",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-09-25",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2001-09-25",
+            "moveOutDate": "2003-03-31"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(기각): 자영 사업자의 사무실 이전에 따른 주거 이전은 사업상 형편이라 1996.1.1. 이후 부득이한 사유에서 제외 → 보유기간 특례 배제 → 과세. 없는 입력: 부득이한 사유의 종류(근무상 형편 vs 사업상 형편) — 3호는 단일 선택지다(설명 문구 「취학·근무·질병요양 등」). 참조 관측(3호·거주 18개월): 비과세(applied 154-1-proviso:unavoidable) — 원문과 반대. 3호를 고르지 않으면 보유 1년 7개월로 과세(최소쌍) — 원문과 같지만 사용자가 사유를 판단한 결과다. 일자 가정: 이사 2003-03-31, 양도가 2억."
+  }
+]

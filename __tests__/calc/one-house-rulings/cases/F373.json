@@ -1,0 +1,89 @@
+[
+  {
+    "id": "F373-era",
+    "docNo": "재일46014-220",
+    "docDate": "1999.02.01.",
+    "basis": "era",
+    "today": "1998-12-20",
+    "summary": "임대아파트에 부모와 거주(1987.12.8.~), 아들 명의로 분양(1996.3.7.) 후 같은 세대원 어머니에게 증여(1996.3.21.), 어머니가 양도(1998.12.10.) — 임차일부터 거주 5년 이상, 다른 주택 없음",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1998-12-10",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-03-21",
+        "acquisitionCause": "gift",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "132"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ]
+    },
+    "bucket": "match",
+    "note": "match — 원문 결론: 건설임대주택을 임차일부터 양도일까지 5년 이상 거주하고 양도일 현재 다른 주택이 없으면 시행령 §154①1호로 비과세, 동일세대원에게 증여한 뒤 그 가족이 양도해도 비과세. 폼: 1호 사유 + 거주 132개월(임차일~양도일, 직접 입력) + 증여 취득 1996-03-21. 엔진: applied 154-1-proviso:rental_5yr_residence. 구별력 한계: 엔진 보유요건 2년(당시 3년)이라 보유 2년 8개월로도 비과세 — 거주 5년 축은 구성 짝(P/N-F373-era)에서 갈랐다. 동일세대원 증여 여부는 엔진이 묻지 않는다. 함정: 거주를 구간 입력으로 넣으면 입주일이 취득일보다 빠르다는 ⑧ 오류가 나 1호의 「임차일부터」 거주를 담지 못한다 — 직접 입력으로 넣었다. 양도가 1억(가정). civil-161 보류는 공휴일 표 안내."
+  },
+  {
+    "id": "P-F373-era-60m",
+    "docNo": "재일46014-220",
+    "docDate": "1999.02.01.",
+    "basis": "era",
+    "today": "1997-01-20",
+    "summary": "F373-era 구성 양성 짝 — 증여 후 10개월(1997.1.10.)에 양도, 임차일부터 거주 60개월",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1997-01-10",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-03-21",
+        "acquisitionCause": "gift",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "60"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 보유 1년 미만으로 1호가 결론을 가르게 구성. 거주 60개월(5년) → 1호 성립 → 비과세. 실제 거주가 60개월이 되도록 거주 개월만 가정했다(구별력 확인용)."
+  },
+  {
+    "id": "N-F373-era-59m",
+    "docNo": "재일46014-220",
+    "docDate": "1999.02.01.",
+    "basis": "era",
+    "today": "1997-01-20",
+    "summary": "F373-era 구성 음성 짝 — 같은 날 양도, 거주 59개월",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "1997-01-10",
+      "contractTotalPrice": "100000000",
+      "provisoReason": "rental_5yr_residence",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-03-21",
+        "acquisitionCause": "gift",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "59"
+      }
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:rental_5yr_residence"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 짝 — 거주 59개월이라 1호 불성립 → 보유 10개월로 과세."
+  }
+]

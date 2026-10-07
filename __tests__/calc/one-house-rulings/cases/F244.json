@@ -1,0 +1,29 @@
+[
+  {
+    "id": "F244-era",
+    "docNo": "기획재정부 재산세제과-858",
+    "docDate": "2018.10.10.",
+    "basis": "era",
+    "today": "2022-06-01",
+    "summary": "무주택 甲이 2016.11. 조정대상지역 주택 분양계약·계약금 지급 후 2017.9.8. 분양권 지분 1/2을 배우자에게 증여 — 증여 지분 포함 거주요건 미적용 (완공·양도일 가정)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 사실(사례1): 2016.11. 무주택 甲이 경기 ○○지구(조정대상지역) A주택 분양계약·계약금 지급 → 2017-09-08 분양권 지분 1/2을 배우자에게 증여. 가정: 완공·잔금 2019-03-15, 거주 0, 양도 2022-06-15, 양도가 8억. 회신: 2017.8.2. 이전 무주택 상태 계약·계약금 지급 주택은 그 뒤 지분 1/2을 배우자에게 증여해도(사례1·사례2) 증여 지분을 포함해 거주요건 미적용 → 비과세. 없는 입력: 부칙 제2조②2호(2017.8.2. 이전 계약) 칸과 분양권 지분의 배우자 증여 — 경과규정을 §154①5호(공고 전 계약 + 계약금 지급일 무주택) 자기확인으로 대신 표현했고, 엔진은 계약일·계약자를 받지 않는다. 참고 관측: referenceForm(5호 자기확인) = 비과세(applied 154-1-proviso:pre_designation_contract) / 단서를 빼면 과세."
+  }
+]

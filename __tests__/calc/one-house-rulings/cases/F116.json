@@ -1,0 +1,23 @@
+[
+ {
+  "id": "F116-era",
+  "docNo": "국심-2003-서-2982",
+  "docDate": "2004.03.05.",
+  "basis": "era",
+  "today": "2002-08-30",
+  "summary": "매매계약 당시 주택이 이미 멸실되어 나대지(신축 시공 중) — 주택의 양도가 아니므로 1세대1주택 부수토지 비과세 불가",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2002-08-23",
+   "contractTotalPrice": "200000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1989-11-02",
+    "acquisitionCause": "inheritance",
+    "decedentAcquisitionDate": "1983-03-29"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 양도 대상이 계약일 현재 멸실된 주택의 나대지라는 사실(멸실일·계약일) — 판정 메뉴의 양도 대상은 주택·조합원입주권뿐이고 멸실·나대지 선택이 없다. 참조 관측(referenceForm): 비과세 — 원문 결론(과세)과 다름. 일자·가정: 원문 일자(남편 취득 1983-03-29·상속 1989-11-02·이전등기 2002-08-23, 계약은 2002.6.21. 이전), 양도가 2억 가정. 주택으로 둔 참조(엔진은 멸실을 모른다)."
+ }
+]

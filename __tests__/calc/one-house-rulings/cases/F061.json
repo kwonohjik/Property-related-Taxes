@@ -1,0 +1,44 @@
+[
+  {
+    "id": "F061-era",
+    "docNo": "국심2004중0117",
+    "docDate": "2004.04.21.",
+    "basis": "era",
+    "today": "2004-04-21",
+    "summary": "차고지 목적으로 공가 상태로 취득(2002.1.22.)해 압류물품 때문에 철거 못 하다 멸실한 공부상 주택은 상시 주거용 아님 → 주택 수 제외 → 쟁점주택(신주택 취득 1년 내 양도·상속주택 보유) 2002.6.28. 양도 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2002-06-28",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1998-03-16"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2001-09-17"
+        },
+        {
+          "id": "inh",
+          "acquisitionDate": "2000-05-15",
+          "isInherited": true,
+          "inheritedDate": "2000-05-15",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ],
+      "excludedHouses": [
+        "inh"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존 — 공부상 주택인 쟁점외건물 2층을 명부에 넣지 않음; 엔진은 사실상 주거용 여부를 판정하지 않는다). 원문은 「쟁점외주택을 주택으로 보지 않으면 비과세라는 점에 다툼 없음」이라 나머지(신주택 일시적 2주택·상속주택)는 그 전제대로 표현. 날짜 가정: 쟁점주택 취득 1998-03-16(3년 이상), 신주택 2001-09-17(양도 1년 내), 상속개시 2000-05-15(별도세대 피상속인). 당시 일시적 2주택 기한 1년, 엔진은 3년 — 9개월 만의 양도라 결론 무관. 양도가 3억 중립."
+  }
+]

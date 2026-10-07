@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F363-era",
+    "docNo": "기획재정부 재산세제과-1440",
+    "docDate": "2022.11.17.",
+    "basis": "era",
+    "today": "2025-04-20",
+    "summary": "주택 매매계약 후 취득 전에 매수인(임대인)이 임차인과 임대차계약을 작성, 임대기간은 취득일 이후 개시 — 직전임대차계약 아님",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-04-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-03-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-02-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(제2안): 주택 취득 전에 작성한 임대차계약은 임대기간이 취득일 이후 개시돼도 §155의3의 직전임대차계약이 아님. 없는 입력: 직전임대차계약의 체결일·당사자(임대인 명의)와 주택 취득일의 선후 — 상생임대 칸은 체결일·증액률·임대 개월만 받고 직전임대차가 「주택 취득 후 체결」인지 묻지 않는다. 참조 관측(직전 24개월·상생 2023-02-15 체결): 비과세 — 원문과 반대. 일자 가정(원문에 사실관계 없음): 조정 취득 2021-03-15, 양도 2025-04-15, 거주 0, 양도가 9억."
+  }
+]

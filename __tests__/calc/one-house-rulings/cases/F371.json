@@ -1,0 +1,30 @@
+[
+  {
+    "id": "F371-era",
+    "docNo": "서면-2023-법규재산-1062",
+    "docDate": "2024.11.18.",
+    "basis": "era",
+    "today": "2025-10-20",
+    "summary": "조정대상지역 주택(2020.12. 취득) — 임차인 요청으로 1년 1차 계약(2022.3.~2023.3.), 다른 임차인과 6개월 2차 계약(2023.3.~2023.9.), 이후 5% 이내 증액 2년 3차 계약 — 1·2차 합산해 직전임대차로 볼 수 없음",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2025-10-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-12-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2023-08-15",
+      "winWinRentalIncreaseRatePct": "5",
+      "winWinRentalPriorLeaseMonths": "6",
+      "winWinRentalLeaseMonths": "24"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 서로 다른 임차인과 순차 체결한 1년·6개월 계약은 임대기간을 합산해 직전임대차계약으로 볼 수 없어 특례 부적용. 없는 입력: 임차인 중도 퇴거·새 임대차계약에 의한 임대기간 합산(시행령 §155의3) — 엔진은 합산하지 않고 화면도 합산을 안내하지 않아, 사용자가 합산한 개월을 직접 넣어야 한다. 참조 관측(직전 = 3차 바로 앞의 2차 6개월): 과세 — 원문과 같지만 사용자 판단에 달렸다. 1·2차를 합산한 18개월을 넣으면 비과세(프로브) — 합산 가부를 엔진이 가르지 못한다. 일자 가정: 취득 2020-12-15, 3차 체결 2023-08-15, 양도 2025-10-15, 거주 0, 양도가 9억."
+  }
+]

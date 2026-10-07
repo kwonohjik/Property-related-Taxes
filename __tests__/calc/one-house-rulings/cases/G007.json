@@ -1,0 +1,24 @@
+[
+  {
+    "id": "G007-era",
+    "docNo": "서면-2015-법령해석재산-1770 [법령해석과-211]",
+    "docDate": "2016.01.22.",
+    "basis": "era",
+    "today": "2016-01-22",
+    "summary": "단독 A주택(1981 신축)과 B아파트(1999 취득)가 같은 재개발구역에 포함돼 관리처분인가(2014.2.13.)로 조합원입주권 1개로 전환 — 그 입주권 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2016-06-15",
+      "contractTotalPrice": "283000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1981-06-02",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2014-02-13"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 2개 주택이 1입주권으로 전환된 사실과 종전주택별 평가액(A 183,693,450 / B 110,062,511) — 회신은 납세자가 선택한 1주택 상당 양도차익만 비과세, 나머지 주택 상당분은 과세(부분 비과세). 판정 메뉴의 입주권은 기존주택 1채를 전제한다. 참고 관측(referenceForm: 입주권 취득 1981-06-02, 인가 2014-02-13, 인가일 요건 선언, 양도 2016-06-15 가정, 양도가 2.83억): 가목 전액 비과세 — 원문(일부 과세)과 다르다."
+  }
+]

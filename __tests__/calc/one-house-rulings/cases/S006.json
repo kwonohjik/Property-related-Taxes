@@ -1,0 +1,72 @@
+[
+  {
+    "id": "S006-era",
+    "docNo": "서면-2017-부동산-1277 [부동산납세과-1270]",
+    "docDate": "2017.11.13.",
+    "basis": "era",
+    "today": "2017-08-18",
+    "summary": "A주택(2003.7.8.) 보유 중 입주권 B 승계취득(2013.6.27.), C주택 취득(2016.9.9.)·양도(2017.5.30.) 후 B 취득 3년 경과해 완공(2017.8.18.) 전 A 양도(2017.8.17.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2017-08-17",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-07-08"
+      },
+      "presaleRights": [
+        {
+          "id": "B",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2013-06-27",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2012-07-04"
+        }
+      ],
+      "rightThreeYearExceptionKind": "before_completion",
+      "rightMovedInWithin3Years": true,
+      "rightResidedOneYearOrMore": true
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자 그대로(A 2003-07-08, 입주권 B 승계취득 2013-06-27(관리처분인가 2012-07-04), C 2016-09-09 취득·2017-05-30 양도(명부 제외), A 양도 2017-08-17, B 완공·입주 2017-08-18). 양도가 8억·비조정 가정(서초 — 2003 취득이라 거주요건 무관), today 2017-08-18. 표현: 3년 초과 예외 '신축주택 완성 전 양도'(완성 후 이사·1년 거주는 장래 요건 선언). 관측: 비과세 — article89Clause2 = §156의2④. 양론 메모: 입주권 상태에서의 추가 입주권 취득 해석은 갈렸으나(서면부동산2021-829 부적용은 삭제, 기획재정부 재산세제과-856 적용), 이 사안 결론은 §156의2④ 적용."
+  },
+  {
+    "id": "S006-current",
+    "docNo": "서면-2017-부동산-1277 [부동산납세과-1270]",
+    "docDate": "2017.11.13.",
+    "basis": "current",
+    "today": "2025-03-16",
+    "summary": "현행 — 1주택 보유 중 입주권 승계취득, 다른 주택 취득·양도 후 입주권 취득 3년이 지나 완공 전 종전주택 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-03-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "B",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2021-06-15",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2020-05-15"
+        }
+      ],
+      "rightThreeYearExceptionKind": "before_completion",
+      "rightMovedInWithin3Years": true,
+      "rightResidedOneYearOrMore": true
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 1주택 보유 중 조합원입주권을 취득하고 다른 주택을 취득·양도해 다시 1주택 + 1입주권이 된 뒤 입주권 취득 3년이 지나 종전주택을 양도하는 경우 §156의2④ 요건(완성 후 3년 이내 세대전원 이사·1년 이상 거주, 완성 전 또는 완성 후 3년 이내 양도)을 갖추면 1세대1주택. 구성: A 2015-03-15, 입주권 B 승계 2021-06-15(인가 2020-05-15), 다른 주택 C 취득·양도(명부 제외), A 양도 2025-03-15(입주권 취득 3년 9개월·완성 전), 비조정·양도가 8억. 관측: 비과세(article89Clause2 §156의2④)."
+  }
+]

@@ -1,0 +1,64 @@
+[
+  {
+    "id": "G121-era",
+    "docNo": "대법원-2023-두-58664",
+    "docDate": "2024.02.29.",
+    "basis": "era",
+    "today": "2021-06-16",
+    "summary": "구성 — 대체주택 취득 당시 2주택(재개발 대상 주택 + 다른 주택)이었고 그 다른 주택을 대체주택 양도 전에 처분한 세대의 대체주택 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2016-03-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2008-03-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2015-06-15",
+      "replCompletionDate": "2021-12-15",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 원문(심리불속행 — 실질 판단은 원심 요지)은 사실관계 미수록, 규칙: 대체주택 취득 시 1주택이 아니면 §156의2⑤ 부적용(국승). 없는 입력: 대체주택 취득일 당시 세대 보유 주택(그 뒤 양도·세대분리로 양도일에는 빠진 주택) — 명부는 양도일 현재 보유분만 받고, 엔진 E-5는 취득 당시 주택 수를 보지 않는다. 참고 관측(referenceForm — 대체주택 취득 당시 함께 보유하던 다른 주택을 양도 전에 처분해 명부에 없는 구성: 재개발 대상 A 2008-03-15, 인가 2015-06-15, 대체주택 2016-03-15 취득·70개월 거주, 완공 2021-12-15, 양도 2022-06-15, 비조정·8억): 비과세(156-2-5) — 원문 결론(부적용)과 반대. 다른 주택을 양도일까지 보유한 경우는 G119-era가 단언한다(mismatch)."
+  },
+  {
+    "id": "G121-current",
+    "docNo": "대법원-2023-두-58664",
+    "docDate": "2024.02.29.",
+    "basis": "current",
+    "today": "2026-06-16",
+    "summary": "현행 — 대체주택 취득 당시 2주택이었고 대체주택 양도 전에 다른 주택을 처분한 세대의 대체주택 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-04-15"
+      },
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2012-03-15",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2019-06-15",
+      "replCompletionDate": "2024-03-15",
+      "replResidenceMonths": "70",
+      "replWillResideNewHouse": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible. 현행 규칙: §156의2⑤는 대체주택 취득일 현재 1주택을 소유한 1세대에 적용 — 취득 당시 2주택 이상이면 그 뒤 다른 주택을 처분했어도 부적용. 없는 입력: G121-era와 같다(대체주택 취득 당시 보유 주택). 참고 관측(referenceForm — 재건축 대상 A 2012-03-15, 인가 2019-06-15, 대체주택 2020-04-15·70개월, 완공 2024-03-15, 양도 2026-06-15, 다른 주택은 양도 전 처분해 명부 밖): 비과세(156-2-5)."
+  }
+]

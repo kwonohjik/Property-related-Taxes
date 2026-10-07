@@ -1,0 +1,26 @@
+[
+ {
+  "id": "F291-era",
+  "docNo": "국심-2001-서-2882",
+  "docDate": "2002.01.21.",
+  "basis": "era",
+  "today": "2001-08-13",
+  "summary": "거주자 때 취득(1977)한 1주택을 해외이주(1994.6.16.) 후 비거주자 상태에서 1·2층 구분등기(2001.3.6.), 1층 증여(2001.6.7.) 후 2층 양도(2001.6.11.) — 새 주택 취득이 아니어서 비과세",
+  "expected": {
+   "isExempt": true
+  },
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2001-06-11",
+   "contractTotalPrice": "140186000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1977-12-27"
+   },
+   "provisoReason": "overseas_migration",
+   "provisoDepartureDate": "1994-06-16"
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 비거주자 상태의 구분등기가 새 주택 취득이 아니라는 판단(구분등기·증여 이력 칸 없음 — 취득일 선택으로만 표현) · 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 연혁: 2001 당시 출국 후 양도기한 없음 — 엔진은 2년 기한을 연혁 없이 적용. 참고 관측(referenceForm — 취득 1977-12-27, 출국 1994-06-16, 양도 2001-06-11·140,186,000): 단서 불성립·본칙(거주자 기준) 비과세 — 결론 같으나 경로 다름."
+ }
+]

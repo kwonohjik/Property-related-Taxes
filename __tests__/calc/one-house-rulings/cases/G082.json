@@ -1,0 +1,24 @@
+[
+ {
+  "id": "G082-era",
+  "docNo": "재산46014-216",
+  "docDate": "2000.02.28.",
+  "basis": "era",
+  "today": "2000-02-28",
+  "summary": "청산금을 추가 납부하고 취득한 재개발주택 양도 — 보유기간은 종전주택 보유기간+공사기간 포함, 초과 부수토지는 사용승인일부터 (일자 구성)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2000-06-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1994-05-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 청산금 추가납부로 취득한 재개발주택의 보유기간 통산(종전주택 + 공사기간, 건물면적 증감 무관)과 종전 부수토지를 초과한 부수토지의 사용승인일 기산. 구성 일자(원문에 일자 없음): 종전주택 1994-05-15·사용승인 1999-03-15·양도 2000-06-15·3억. 참고 관측(종전 취득일 입력): 비과세 — 초과 부수토지 부분의 별도 판정은 판정 메뉴에 없다."
+ }
+]

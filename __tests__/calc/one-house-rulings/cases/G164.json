@@ -1,0 +1,37 @@
+[
+  {
+    "id": "G164-era",
+    "docNo": "서면-2024-부동산-0168 [부동산납세과-1624]",
+    "docDate": "2024.09.25.",
+    "basis": "era",
+    "today": "2025-06-01",
+    "summary": "종전주택 A가 관리처분인가(2019.6.)로 입주권이 된 뒤 완공 전 분양권 B(2021.6.) 취득, A′ 완공(2023.3.)·B 완공(2024.9.) 후 분양권 취득 3년이 지나 A′ 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15"
+      },
+      "presaleRights": [
+        {
+          "id": "B",
+          "type": "presale_right",
+          "acquisitionDate": "2021-06-15",
+          "region": "capital"
+        }
+      ],
+      "rightThreeYearExceptionKind": "new_house",
+      "rightMovedInWithin3Years": true,
+      "rightResidedOneYearOrMore": true,
+      "rightNewHouseCompletionDate": "2024-09-15"
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 사실관계에 일자 없음 → 가정: A 2015-03-15, A 관리처분인가 2019-06(입력 불요), 분양권 B 2021-06-15(A 입주권 완공 전 취득), A′ 완공 2023-03(입력 불요), B 완공 2024-09-15, A′ 양도 2025-06-15(분양권 취득 3년 경과·B 완성 후 3년 이내), today 2025-06-01(양도 예정), 양도가 8억·비조정. 표현: A′ 취득일 = 종전 A 취득일, 분양권 행 + 3년 초과 예외 '신축주택 완성 후 양도'(B 완성일·세대전원 이사·1년 이상 거주 선언 — 이행 전제). 분양권 취득이 2022.2.15. 전이라 종전주택 취득 후 1년 요건 없음. 관측: 비과세 — article89Clause2 = §156의3③. 원문 쟁점(분양권 취득 당시 종전주택이 입주권 상태)은 엔진이 분양권 취득 당시 종전주택 상태를 묻지 않아 막지 않는다(결론 일치). 사후관리(§156의3③1호 미충족 시 2개월 내 신고·납부)는 판정 밖."
+  }
+]

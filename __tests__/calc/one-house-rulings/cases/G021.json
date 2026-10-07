@@ -1,0 +1,139 @@
+[
+  {
+    "id": "G021-era",
+    "docNo": "대법원-2007-두-10501",
+    "docDate": "2008.06.12.",
+    "basis": "era",
+    "today": "2008-06-12",
+    "summary": "구주택(1985 취득)·인천아파트 2주택 상태에서 재건축 사업계획승인(2001.4.28.), 인천아파트 양도(2002.6.5.) 후 신주택 취득(2002.12.12.), 신주택 취득 후 1년 이내 입주권 양도(2003.6.29.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2003-06-29",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "1985-05-16",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2001-04-28",
+        "redevOtherHouseAcquisitionDate": "2002-12-12"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2002-12-12"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "mismatch",
+    "note": "mismatch — 기대 비과세(권리변환일 현재 1주택 보유는 요건이 아니고, 권리변환일 현재 기존주택 요건 + 양도일 기준으로 대체취득 신주택은 일시적 2주택(시행령 §155①, 당시 1년) → 비과세 확정), 관측 과세(유일한 사유: 「2005.12.31. 이전 양도분은 다른 주택이 없어야」). 원인: 엔진 입주권 연혁이 1999.1.1.~2005.12.31. 양도분을 「가목만(나목 없음)」으로 두고 입주권 + 신규주택의 일시적 2주택(§155① 준용) 경로를 두지 않는다(lib/tax-engine/data/one-right-requirement-era.ts:106-129 oneRightClauseNaYears=null → lib/tax-engine/one-house/one-right-verdict.ts:155-162 — 코드 확인). 이 판결은 구 시행령 §155⑯ 입주권 양도에 §155① 일시적 2주택을 적용한 원심을 정당하다고 했다. 양성 짝(프로브): 신주택 행을 빼면 가목 비과세 → 신주택 1채가 결론을 가른다. 표현: 인천아파트는 양도 전 처분이라 입력 없음, 신주택 취득일은 나목 칸에도 입력. 가정: 양도가 5억(당시 6억 이하)."
+  },
+  {
+    "id": "G021-current",
+    "docNo": "대법원-2007-두-10501",
+    "docDate": "2008.06.12.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴(입주권 + 대체취득 1주택)을 현행으로 — 신주택 취득(2023.12.15.) 후 2년 6개월에 입주권 양도(2026.6.15.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2010-03-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2022-05-15",
+        "redevOtherHouseAcquisitionDate": "2023-12-15"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2023-12-15"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_na"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 현행 규칙: 양도일 현재 1조합원입주권 외 1주택을 보유하면 그 주택 취득일부터 3년 이내 입주권 양도 시 비과세(소득세법 §89①4호 나목). 관측: one_right_89_1_4_na. 2년 6개월은 종전 2년 기한이면 불성립. 경계 짝 P-G021-current-3y(만료일 당일)·N-G021-current-3y1d(다음 날). 중립 고정: 입주권 취득 2010-03-15·인가 2022-05-15(요건 선언), 비조정, 양도가 8억."
+  },
+  {
+    "id": "P-G021-current-3y",
+    "docNo": "대법원-2007-두-10501",
+    "docDate": "2008.06.12.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "G021-current 경계 짝 — 신주택 2023.3.10. 취득, 3년 만료일(2026.3.10., 화요일)에 입주권 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-10",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2010-03-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2022-05-15",
+        "redevOtherHouseAcquisitionDate": "2023-03-10"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2023-03-10"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_na"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(경계 짝). 초일불산입으로 2026-03-10까지가 3년 이내 → 나목 비과세. 만료일은 평일로 골랐다(2026-06-14 같은 일요일 만료는 민법 §161로 익일까지 늘어난다 — 프로브에서 확인)."
+  },
+  {
+    "id": "N-G021-current-3y1d",
+    "docNo": "대법원-2007-두-10501",
+    "docDate": "2008.06.12.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "G021-current 경계 짝 — 신주택 2023.3.10. 취득, 3년 만료 다음 날(2026.3.11.) 입주권 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-03-11",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2010-03-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2022-05-15",
+        "redevOtherHouseAcquisitionDate": "2023-03-10"
+      },
+      "houses": [
+        {
+          "id": "new",
+          "acquisitionDate": "2023-03-10"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "one_right_89_1_4_na"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(경계 음성 짝). 3년 경과 → 나목 불성립 → 과세."
+  }
+]

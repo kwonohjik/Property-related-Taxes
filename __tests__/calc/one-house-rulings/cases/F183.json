@@ -1,0 +1,27 @@
+[
+ {
+  "id": "F183-era",
+  "docNo": "국심-2008-서-0110",
+  "docDate": "2008.02.26.",
+  "basis": "era",
+  "today": "2008-02-26",
+  "summary": "남편 소유 서울 연립에서 부부가 9년 8개월 거주(1983~1992) → 협의이혼 위자료로 소유권 이전(1996.11.29.) 후 거주하지 않음 → 재건축(2000.6. 사용승인) 아파트 양도(2006.11.30.): 이전등기 후 거주기간만 인정 — 거주 2년 미달 과세(기각)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2006-11-30",
+   "contractTotalPrice": "500000000",
+   "wasRegulatedAtAcquisition": true,
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1996-11-29",
+    "residenceInputMode": "direct",
+    "residencePeriodMonthsAsset": "0"
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: ① 2011.6.2. 이전 양도분의 서울·과천·5대 신도시 소재 주택 거주 2년 요건(엔진 거주요건은 「취득 당시 조정대상지역 + 2017.8.3. 이후 취득」뿐 — 1996 취득분은 경과규정으로 거주요건 없음으로 판정, 판정 메뉴에 그 연혁 입력이 없음) ② 위자료로 이전받기 전 전 배우자 세대에서의 거주를 통산하지 않는다는 규칙 — 거주기간은 사용자가 개월 수로 넣는 값이라 규칙이 입력에 들어간다. 참고 관측(referenceForm: 취득일 = 이전등기 1996-11-29, 거주 0개월, 취득 당시 조정 표시, 양도가 5억 가정): 비과세 — 원문 결론(과세)과 반대이며 원인은 ①(엔진에 당시 거주요건이 없음). 재건축 공사기간 통산(취득일 선택)도 같은 이유로 검증되지 않는다."
+ }
+]

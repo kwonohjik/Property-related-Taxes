@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F226-era",
+    "docNo": "대법원-97-누-7479",
+    "docDate": "1997.12.26.",
+    "basis": "era",
+    "today": "1992-06-20",
+    "summary": "원고와 자녀 1인은 3년 이상 거주, 처와 자녀 2인은 중간에 전출한 주택(1989.6. 취득) 1992.6.29. 양도 — 세대원 전원 거주 불요",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1992-06-29",
+      "contractTotalPrice": "100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1989-06-01",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "36"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "inexpressible",
+    "note": "원문 일자 그대로(1989.6.1. 무렵 취득, 1991.11.5. 처·자녀 2인 전출, 원고·자녀 1인은 1992.6.29. 양도 시까지 거주), 양도가 1억 가정. 판결: 세대원 전원이 3년 이상 거주할 필요는 없고 원고와 자녀 1인이 3년 이상 거주했으면 1세대 1주택(파기환송). 없는 입력: 세대원별 거주 여부 — 거주기간은 개월 수 한 칸뿐이다. 또 당시 요건(3년 이상 거주)은 엔진 연혁에 없어 2017.8.3. 전 취득분은 거주 개월과 무관하게 판정된다. 참고 관측: referenceForm(거주 36개월) = 비과세 / 거주 0개월로 넣어도 비과세 — 구별력 없음."
+  }
+]

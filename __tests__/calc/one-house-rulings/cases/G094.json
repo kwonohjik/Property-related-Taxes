@@ -1,0 +1,24 @@
+[
+ {
+  "id": "G094-era",
+  "docNo": "서면인터넷방문상담4팀-1055",
+  "docDate": "2007.03.30.",
+  "basis": "era",
+  "today": "2007-03-30",
+  "summary": "재건축 아파트 양도 — 보유기간은 구주택+재건축기간+신주택 합산, 추가 청산금 납부로 증가한 부수토지는 사용검사필증 교부일부터 (일자 구성)",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2007-06-15",
+   "contractTotalPrice": "400000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2002-03-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 재건축 주택 보유기간 통산 + 증가 부수토지의 사용검사필증 교부일 기산(G082·G083과 같은 축). 구성 일자(원문에 일자 없음): 구주택 2002-03-15·사용검사 2006-09-15·양도 2007-06-15·4억. 참고 관측(구주택 취득일 입력): 비과세 — 증가 부수토지(사용검사 후 9개월) 부분은 판정 메뉴가 구분하지 않는다."
+ }
+]

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "G128-era",
+    "docNo": "조심-2008-서-2973",
+    "docDate": "2009.01.19.",
+    "basis": "era",
+    "today": "2007-07-04",
+    "summary": "승계 입주권(2001.7.31.)으로 사용승인(2003.12.24.)받은 쟁점주택을 배우자 쟁점외주택 재건축 시행기간(2003.6.30.~2007.3.27.) 중 취득한 대체주택으로 보아, 재건축 완성 후 1년 이내 10.9억에 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-07-03",
+      "contractTotalPrice": "1090000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2003-12-24"
+      },
+      "houses": [
+        {
+          "id": "other",
+          "acquisitionDate": "2003-04-09",
+          "region": "capital"
+        }
+      ],
+      "replacementHouseSpecial": true,
+      "replBusinessApprovalDate": "2003-06-30",
+      "replCompletionDate": "2007-03-27",
+      "replResidenceMonths": "37",
+      "replWillResideNewHouse": true
+    },
+    "expected": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "appliedExceptions": [
+        "156-2-5-replacement-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자(쟁점주택: 입주권 승계 2001-07-31·사용승인 2003-12-24; 쟁점외주택(배우자): 2003-04-09 취득·재건축 사업계획승인 2003-06-30·사용승인 2007-03-27·세대전원 이사 2007-04-25; 쟁점주택 거주 2004-03-26~2007-04-25(37개월); 쟁점주택 양도 2007-07-03, 양도가 10.9억). 비조정 가정. 표현: 대체주택 취득일 = 사용승인일 2003-12-24(원문 판단 — 소득세법 시행령 §162①4호), 명부에 쟁점외주택(신축, 종전 취득일). 관측: 부분 비과세(고가 — 당시 기준 6억 초과)·156-2-5 + 잡음 보류(2009 이전 양도). 구별력: 취득일 칸에 입주권 승계일 2001-07-31을 넣으면 과세(프로브) — 쟁점 축은 사용자가 넣는 취득일. 당시 완성 후 기한 1년 vs 엔진 2년 — 완성 후 3개월 양도라 무관."
+  }
+]

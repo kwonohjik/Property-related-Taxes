@@ -1,0 +1,65 @@
+[
+  {
+    "id": "F242-era",
+    "docNo": "서면-2020-법령해석재산-3884 [법령해석과-1454]",
+    "docDate": "2021.04.23.",
+    "basis": "era",
+    "today": "2021-09-01",
+    "summary": "피상속인이 2012.9.5. 취득(조정대상지역)·실거주한 A주택을 2012.9.부터 동일세대로 함께 거주한 상속인이 2019.1. 상속받아 2021년 양도 — 거주요건 적용 안 함 (양도일 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-09-15",
+      "contractTotalPrice": "600000000",
+      "wasRegulatedAtAcquisition": true,
+      "finalHouseRestartHistory": "no",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-01-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2012-09-05",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "2012-09-05",
+        "decedentCohabitationResidenceMonths": "52",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(경로 다름). 원문 사실: 피상속인 2012-09-05 고양 A주택 취득(조정대상지역), 2012-08-06~2017.1. 실거주, 상속인은 2012-09-03부터 동일세대로 함께 거주하다 상속개시일까지 동일세대, 2019.1. 상속, 2021년 매도 예정. 가정: 상속개시 2019-01-15, 동일세대 거주·보유 개시 2012-09-05, 동일세대 통산 거주 52개월(2012.9.~2017.1.), 상속 후 거주 0, 취득 당시 조정대상지역(토글), 양도 2021-09-15(최종 1주택 재기산 이력 「없음」 응답), 양도가 6억. 회신: 2017.8.2. 이전 동일세대 피상속인이 취득한 조정대상지역 주택을 2017.8.3. 이후 동일세대 상속인이 상속받아 양도하면 거주요건 적용 안 함. 관측: 비과세 — 단, 엔진은 경과규정이 아니라 §154⑧3호 통산 거주 52개월로 거주요건을 「충족」으로 본다(상속개시일 2019-01-15를 취득일로 써서 경과규정 미적용). 거주가 없던 짝 P-F242-no-residence에서 결론이 갈린다."
+  },
+  {
+    "id": "P-F242-no-residence",
+    "docNo": "서면-2020-법령해석재산-3884 [법령해석과-1454]",
+    "docDate": "2021.04.23.",
+    "basis": "era",
+    "today": "2021-09-01",
+    "summary": "F242 구성 짝 — 같은 사실에서 상속인·피상속인이 그 주택에 거주하지 않았다면(동일세대 보유만) 2017.8.2. 이전 동일세대 피상속인 취득분이라 거주요건 없이 비과세 (소재지 서울로 구성)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2021-09-15",
+      "contractTotalPrice": "600000000",
+      "finalHouseRestartHistory": "no",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-01-15",
+        "acquisitionCause": "inheritance",
+        "decedentAcquisitionDate": "2012-09-05",
+        "decedentSameHouseholdBeforeInheritance": true,
+        "decedentCohabitationHoldingStartDate": "2012-09-05",
+        "decedentCohabitationResidenceMonths": "0",
+        "regionCode": "1138010100",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "mismatch",
+    "note": "mismatch(불리). 구성 짝 — F242-era에서 동일세대 통산 거주를 0개월로 둔 것(동일세대로 보유만 하고 다른 집에 거주), 소재지는 서울 은평(법정동코드)으로 옮겨 상속개시일 당시 조정대상지역을 주소로 확정. 회신 규칙(2017.8.2. 이전 동일세대 피상속인 취득 + 2017.8.2. 당시부터 동일세대 상속인 → 거주기간 제한 없음)대로면 비과세. 관측: 과세 — 엔진의 경과규정 판정(2017.8.3. 전 취득)이 상속개시일(acquisitionDate)만 보고 피상속인 취득일·동일세대 개시일(decedentCohabitationHoldingStartDate 2012-09-05 — 보유기간 통산에는 쓰임)을 보지 않는다. 의심 지점: lib/tax-engine/transfer-tax-exemption-holding.ts:393-395(`residenceTransitionAcquisitionDate ?? acquisitionDate` — 상속 경로에서는 이 값이 비어 있다; 채우는 곳은 이월과세 lib/tax-engine/transfer-tax-carryover.ts:227뿐). 입력 도달: 통산 거주 24개월이면 비과세(V-F242-residence24), 토글로 바꿔도 과세(V-F242p-toggle). 판정 보류 154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified는 거주 미충족 시 붙는 안내."
+  }
+]

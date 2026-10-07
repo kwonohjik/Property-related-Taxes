@@ -1,0 +1,46 @@
+[
+  {
+    "id": "F006-era",
+    "docNo": "부동산거래관리과-105",
+    "docDate": "2010.01.20.",
+    "basis": "era",
+    "today": "2010-01-20",
+    "summary": "1거주자로 보는 법인 아닌 단체(교회)가 신축한 다가구주택을 10년 보유 후 양도: 1세대가 아니므로 1세대1주택 비과세 적용 없음",
+    "form": {
+      "isOneHousehold": false,
+      "transferDate": "2010-03-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(입력 규약 의존). 1거주자로 보는 단체는 1세대를 구성하지 않는다 — 판정 메뉴 ① 「1세대에 해당합니다」를 끈 것으로 표현(자기선언, 엔진은 단체 여부를 판정하지 않음). 날짜 미기재 → 신축 2000-03-15, 양도 2010-03-15(10년 보유) 가정. 양도가 3억 중립. 양성 짝 P-F006-household: 같은 주택을 1세대가 양도했다면 비과세 — 과세 사유가 1세대 선언임을 고정."
+  },
+  {
+    "id": "P-F006-household",
+    "docNo": "부동산거래관리과-105",
+    "docDate": "2010.01.20.",
+    "basis": "era",
+    "today": "2010-01-20",
+    "summary": "F006의 양성 짝 — 같은 주택을 1세대가 10년 보유 후 양도하면 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2010-03-15",
+      "contractTotalPrice": "300000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-03-15"
+      }
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "양성 짝(가정) — 1세대 선언만 뒤집은 최소쌍."
+  }
+]

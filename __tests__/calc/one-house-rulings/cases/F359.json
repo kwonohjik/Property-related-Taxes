@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F359-era",
+    "docNo": "서면-2021-부동산-4730 [부동산납세과-1404]",
+    "docDate": "2023.05.25.",
+    "basis": "era",
+    "today": "2023-03-20",
+    "summary": "무주택 세대가 조정대상지역 공고(2020.2.) 전 별도세대원으로부터 증여받은 조합원입주권(2018.8.)으로 완공 취득(2021.2.)한 주택 양도 — 거주요건 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2023-03-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2021-02-15"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 공고 전에 증여(매매계약 아님)로 취득한 입주권에 기한 주택이 완공 당시 조정대상지역이면 시행령 §154①5호 불해당 → 거주요건(2년) 적용. 없는 입력: 권리의 취득 경위(증여 vs 매매계약) — 5호 자기확인 칸은 계약 형태를 묻지 않는다. 참조 관측(5호 선택·무주택 확인·거주 0): 비과세(applied 154-1-proviso:pre_designation_contract) — 원문과 반대. 5호를 고르지 않으면 거주 미달 과세. 일자 가정: 완공 2021-02-15, 양도 2023-03-15, 거주 0, 양도가 8억."
+  }
+]

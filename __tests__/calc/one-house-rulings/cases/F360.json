@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F360-era",
+    "docNo": "기획재정부 조세법령운용과-988",
+    "docDate": "2021.11.17.",
+    "basis": "era",
+    "today": "2022-09-20",
+    "summary": "父가 공고 전 분양계약·계약금 지급한 양주시 아파트 분양권을 무주택 별도세대 甲이 증여받고(2020.1.) 조정대상지역 지정(2020.6.19.) 후 취득(2020.8.)해 양도 — 거주요건 적용",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "800000000",
+      "wasRegulatedAtAcquisition": true,
+      "provisoReason": "pre_designation_contract",
+      "provisoPreContractNoHouse": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2020-08-15"
+      }
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론(제1안): 공고 전 증여받은 분양권(증여자가 공고 전 계약·계약금 지급)으로 취득한 주택은 시행령 §154①5호 적용대상 아님 → 거주요건 적용(증여자의 계약 시점은 수증자에게 승계되지 않음). 없는 입력: 분양권 취득 경위(증여·승계)와 계약 당사자 — 5호 자기확인 칸뿐. 참조 관측(5호 선택): 비과세 — 원문과 반대. 일자 가정: 취득 2020-08-15, 양도 2022-09-15, 거주 0, 양도가 8억."
+  }
+]

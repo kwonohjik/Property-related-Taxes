@@ -1,0 +1,58 @@
+[
+ {
+  "id": "F262-era",
+  "docNo": "기획재정부 재산세제과-1102",
+  "docDate": "2008.03.28.",
+  "basis": "era",
+  "today": "2008-03-01",
+  "summary": "구 재래시장법 시장환경개선사업으로 사업인정고시 전 취득 주택이 사업시행청에 협의매수·수용 — §154①2호가목 적용 (날짜 원문 미기재 — 구성)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2008-02-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2007-06-15"
+   },
+   "provisoReason": "expropriation",
+   "provisoExpropriationDate": "2008-02-15",
+   "provisoBusinessApprovalDate": "2007-09-14"
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "154-1-proviso:expropriation"
+   ]
+  },
+  "bucket": "match",
+  "note": "match. 구성 — 원문에 날짜 없음: 취득 2007-06-15, 사업인정고시 2007-09-14, 수용일=양도일 2008-02-15, 양도가 3억. 재래시장법 사업이 수용에 해당한다는 점은 사유 선택(자기선언)으로 표현. 관측: 가목 적용 비과세(보유 8개월이라 단서가 결론을 가름). 음성 짝 N-F262-acquired-after-notice."
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "docNo": "기획재정부 재산세제과-1102",
+  "docDate": "2008.03.28.",
+  "basis": "era",
+  "today": "2008-03-01",
+  "summary": "F262의 음성 짝 — 사업인정고시(2007.9.14.) 뒤에 취득한 주택이 수용되면 가목 부적용 → 보유 4개월 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2008-02-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2007-10-15"
+   },
+   "provisoReason": "expropriation",
+   "provisoExpropriationDate": "2008-02-15",
+   "provisoBusinessApprovalDate": "2007-09-14"
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "154-1-proviso:expropriation"
+   ]
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — 취득일만 고시 뒤(2007-10-15)로 옮긴 최소쌍. 가목 불성립 → 보유 4개월 과세."
+ }
+]

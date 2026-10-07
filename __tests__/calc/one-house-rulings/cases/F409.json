@@ -1,0 +1,22 @@
+[
+  {
+    "id": "F409-era",
+    "docNo": "재일01254-3792",
+    "docDate": "1991.12.12.",
+    "basis": "era",
+    "today": "1991-12-20",
+    "summary": "1세대1주택으로서 건축법에 의한 건축허가를 받지 않아 등기가 불가능한 자산에는 허가를 받을 수 있었는데 받지 않은 경우와 받을 수 없어 받지 못한 경우가 모두 포함(미등기양도자산에서 제외)",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1991-11-15",
+      "contractTotalPrice": "100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1985-06-15"
+      },
+      "isUnregistered": true
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 건축허가를 받지 않아(받을 수 없었던 경우 포함) 등기가 불가능한 1세대1주택이라는 사실(미등기양도자산 제외 사유 — 당시 구 소득세법 시행령 §121의2 4호, 현행 대응 조문은 확인 필요). 판정 메뉴의 미등기 토글(`app/calc/one-house-exemption/steps/Step3.tsx:458-465`)은 예외 없이 비과세를 배제한다(`lib/tax-engine/transfer-tax-exemption.ts:221`). 참고 관측(referenceForm: 미등기 토글 ON — 등기하지 않은 주택을 사실대로 표시): 과세 — 원문(미등기양도자산이 아니므로 비과세 판정 대상)과 반대. 프로브: 토글 OFF면 비과세. 원문은 질의 해석(갑설 채택)만 회신 — 가정: 취득 1985-06-15, 양도 1991-11-15, 양도가 1억, 1주택."
+  }
+]

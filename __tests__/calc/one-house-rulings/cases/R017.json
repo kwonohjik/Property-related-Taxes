@@ -1,0 +1,21 @@
+[
+  {
+    "id": "R017-era",
+    "docNo": "재일46014-2549",
+    "docDate": "1997.10.30.",
+    "basis": "era",
+    "today": "1997-10-30",
+    "summary": "1세대 1주택 세대가 주택과 한울타리 안의 농사기구·수확물 보관 창고를 함께 양도 — 창고를 주택 부속 건물로 보아 비과세할 수 있는지",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "1997-12-15",
+      "contractTotalPrice": "100000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1990-05-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 주택에 부속된 건물(농업용 창고)의 주택 포함 여부와 그 부수토지 면적. 판정 메뉴는 양도 주택을 한 단위로만 받는다. 참고 관측(referenceForm: 1주택, 취득 1990-05-15·양도 1997-12-15 가정 — 원문에 일자 없음, 양도가 1억): 비과세 — 창고분 대지 과세 여부(쟁점)는 결론에 나타나지 않는다."
+  }
+]

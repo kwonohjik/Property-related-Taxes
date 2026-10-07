@@ -1,0 +1,53 @@
+[
+ {
+  "id": "F193-era",
+  "docNo": "재재산-577",
+  "docDate": "2004.05.12.",
+  "basis": "era",
+  "today": "2004-05-12",
+  "summary": "모친과 동일세대(1987.9.~1996.3., 2000.4.~2003.2.)이던 자녀가 모친 사망(2003.2.)으로 주택 상속 → 상속 1년 4개월 뒤 양도: 동일세대원으로서 피상속인 보유기간 통산 — 비과세(구성)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2004-06-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2003-02-15",
+    "acquisitionCause": "inheritance",
+    "decedentAcquisitionDate": "1985-05-15",
+    "decedentSameHouseholdBeforeInheritance": true,
+    "decedentCohabitationHoldingStartDate": "2000-04-15"
+   }
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "구성 케이스 — 원문은 기산 규칙만 회신(상속주택 보유기간은 상속개시일부터, 동일세대원이던 피상속인으로부터 상속받으면 동일세대원으로서의 피상속인 보유기간 통산). 표현: 양도 주택 취득원인 상속(상속개시 2003-02-15) + 상속개시 전 동일세대 + 동일세대 보유 시작일 2000-04-15(상속 직전 연속 동일세대 기간의 시작). 관측: 보유 기산 2000-04-15 → 4년 2개월 → 비과세(당시 요건 3년도 충족). 짝 N-F193-separate-household(동일세대 아님 → 상속개시일 기산 1년 4개월 → 과세). 가정: 양도 2004-06-15(원문 양도 예정), 피상속인 취득 1985-05-15, 양도가 3억, 재개발로 멸실된 다른 1주택은 결론 구성에서 뺌(당시 멸실 주택의 주택 수 판정은 회신이 다루지 않음). 2009년 전 양도라 공휴일 표 안내 보류가 붙을 수 있어 보류는 단언하지 않는다."
+ },
+ {
+  "id": "N-F193-separate-household",
+  "docNo": "재재산-577",
+  "docDate": "2004.05.12.",
+  "basis": "era",
+  "today": "2004-05-12",
+  "summary": "F193의 음성 짝(가정) — 상속개시 당시 별도세대였으면 상속개시일부터 기산해 2년 미달 과세",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2004-06-15",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2003-02-15",
+    "acquisitionCause": "inheritance",
+    "decedentAcquisitionDate": "1985-05-15",
+    "decedentSameHouseholdBeforeInheritance": false
+   }
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "음성 짝(가정) — 상속개시 전 동일세대 여부만 뒤집은 최소쌍(동일세대 보유 시작일 칸은 함께 사라짐). 보유 1년 4개월 → 과세."
+ }
+]

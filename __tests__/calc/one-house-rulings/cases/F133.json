@@ -1,0 +1,40 @@
+[
+ {
+  "id": "F133-era",
+  "docNo": "심사양도2011-0294",
+  "docDate": "2012.02.28.",
+  "basis": "era",
+  "today": "2010-05-25",
+  "summary": "주택 99.16㎡·축사 99.16㎡ 복합건물에서 축사를 주택으로 용도변경(2008.1.1.) 후 2년 4개월에 양도 — 용도변경 부분(토지 포함)은 용도변경일부터 보유 3년 미달로 과세",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2010-05-19",
+   "contractTotalPrice": "300000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1998-03-04"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 보유 중 주택 외 부분을 주택으로 용도변경한 날(용도변경 부분의 보유기간 기산)과 겸용 부분별 판정 — 계산기의 용도변경 입력(hasNonHousingConversion·residentialUseStartDate, NonHousingConversionSection)은 판정 메뉴에 없고, 판정 ④ 본문(lib/calc/one-house-exemption-api.ts)은 그 날짜를 거주기간 상한에만 쓰고 nonHousingToHousingConversion을 싣지 않는다(엔진 기산 transfer-tax-exemption-holding.ts:274는 그 키를 읽음). 참조 관측(referenceForm): 비과세 — 원문 결론(부분 과세 — 용도변경 부분)과 다름. 일자·가정: 원문 일자(건물 취득 1998-03-04·용도변경 2008-01-01·양도 2010-05-19), 양도가 3억 가정. 건물 전체를 취득일부터 주택으로 둔 참조(엔진은 전부 비과세)."
+ },
+ {
+  "id": "F133-current",
+  "docNo": "심사양도2011-0294",
+  "docDate": "2012.02.28.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "현행 — 같은 구조의 복합건물에서 주택 외 부분을 주택으로 용도변경(2024.1.15.) 후 2년 4개월에 양도: 용도변경 부분도 용도변경일부터 보유 2년 충족",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2026-05-20",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-15"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력: 용도변경일·겸용 부분별 판정(F133-era와 같음). 참조 관측(referenceForm): 비과세 — 현행 규칙 기대(비과세)와 같음(쟁점 축은 사용자 입력에 달림). 일자·가정: 현행 규칙: 용도변경 부분의 비과세 보유기간은 용도변경일부터 2년(원문 당시 3년). 새 축 중립: 비조정, 양도가 8억, 건물 취득 2015-03-15·용도변경 2024-01-15·양도 2026-05-20. 용도변경 사실 없이 둔 참조."
+ }
+]

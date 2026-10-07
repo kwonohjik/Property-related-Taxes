@@ -1,0 +1,46 @@
+[
+  {
+    "id": "G029-era",
+    "docNo": "부동산납세과-242",
+    "docDate": "2014.04.10.",
+    "basis": "era",
+    "today": "2014-04-10",
+    "summary": "서초구 아파트(2005.7. 취득·거주) — 관리처분인가(2006.10.) 후에도 철거되지 않아 2010.12. 퇴거까지 거주, 2011.11. 멸실, 2014.4. 입주권 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2014-04-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2005-07-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2006-10-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 관리처분계획인가 후 미철거 주택을 사실상 주거용으로 쓴 기간(퇴거일까지)을 보유기간에 산입하는 계산 — 인가일 현재 보유 1년 3개월이라 산입해야 요건 충족. 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 참고 관측(referenceForm: 요건 선언 yes, 일자 월 단위 → 15일 가정, 양도가 8억): 가목 비과세 — 산입 규칙은 사용자 선언에 들어 있다. 종점은 퇴거일(철거일 아님)로 G031·G032·G033과 같은 방향."
+  },
+  {
+    "id": "G029-current",
+    "docNo": "부동산납세과-242",
+    "docDate": "2014.04.10.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴(인가 후 미철거 주택에서 계속 거주)을 현행으로 — 빈집 및 소규모주택 정비에 관한 특례법 사업시행계획인가분 포함",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2023-03-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2024-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 도시정비법 관리처분계획인가일·빈집 및 소규모주택 정비에 관한 특례법 사업시행계획인가일 이후에도 철거되지 않고 사실상 주거용으로 쓴 기간은 주택 보유기간으로 계산. 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 참고 관측(referenceForm: 취득 2023-03-15·인가 2024-06-15·퇴거 2025-06-15 가정·요건 선언 yes·양도 2026-05-15·8억): 가목 비과세."
+  }
+]

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "F369-era",
+    "docNo": "서면-2024-법규재산-2876 [법규과-2788(2024.11.13.)]",
+    "docDate": "2024.11.13.",
+    "basis": "era",
+    "today": "2027-01-20",
+    "summary": "지역주택조합 원조합원 아파트(조정대상지역, 2022.6. 사용승인)를 임대기간 4년 단일 임대차계약(2022.9. 체결, 2022.11.~2026.11.)으로 임대 후 양도 — 2개 계약으로 나눌 수 없음",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2027-01-15",
+      "contractTotalPrice": "900000000",
+      "wasRegulatedAtAcquisition": true,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2022-06-15"
+      },
+      "winWinRentalSpecial": true,
+      "winWinRentalContractDate": "2022-09-15",
+      "winWinRentalIncreaseRatePct": "0",
+      "winWinRentalPriorLeaseMonths": "24",
+      "winWinRentalLeaseMonths": "24",
+      "winWinRentalLeaseEndDate": "2026-11-14"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 원문 결론: 4년 단일 임대차계약을 직전·상생임대차계약 2개로 나누어 볼 수 없어 §155의3 부적용. 없는 입력: 직전임대차계약과 상생임대차계약이 별개의 계약인지 — 칸은 기간·체결일만 받아 한 계약을 둘로 나눠 넣어도 막지 않는다. 참조 관측(직전 24·상생 24·체결일 2022-09-15·종료일 2026-11-14): 비과세 — 원문과 반대. 일자 가정: 사용승인(취득) 2022-06-15, 양도 2027-01-15, 거주 0, 양도가 9억."
+  }
+]

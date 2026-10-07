@@ -1,0 +1,46 @@
+[
+  {
+    "id": "G028-era",
+    "docNo": "기획재정부 재산세제과-948",
+    "docDate": "2011.11.04.",
+    "basis": "era",
+    "today": "2011-11-04",
+    "summary": "1세대1주택이 태풍 등 천재지변으로 멸실된 뒤 관리처분계획인가로 조합원입주권을 취득 — 그 입주권 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2011-09-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2000-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2010-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 천재지변 멸실 주택을 관리처분계획인가일까지 유지된 것으로 보는 의제(멸실 당시 1세대1주택 한정). 엔진은 「관리처분계획인가일 현재 §89①3호 가목 요건을 갖춘 기존주택」을 자기선언 불리언 하나(redevExemptionEligibleAtApproval → oneRightExemptionFacts.eligibleAtApproval, lib/calc/one-house-exemption-api.ts:294)로만 받고 보유기간을 계산하지 않는다. 인가 후 사실상 주거용 사용 칸(redevPostApprovalHousingUse·종료일)은 표시 전용으로 API에 보내지 않는다(lib/stores/calc-wizard-asset-redev.ts:220-236). 원문에 일자 없음. 참고 관측(referenceForm: 취득 2000-05-15·인가 2010-06-15·요건 선언 yes·양도 2011-09-15·5억): 가목 비과세 — 의제 여부는 선언에 들어 있다."
+  },
+  {
+    "id": "G028-current",
+    "docNo": "기획재정부 재산세제과-948",
+    "docDate": "2011.11.04.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "같은 패턴을 현행 소득세법 §89①4호로",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2026-05-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2015-05-15",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2024-06-15"
+      }
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 현행 규칙: 입주권 비과세 근거는 소득세법 §89①4호(종전 시행령 §155⑰). 천재지변 멸실 의제는 입력이 없다(G028-era와 같은 한계). 참고 관측(referenceForm: 취득 2015-05-15·인가 2024-06-15·요건 선언 yes·양도 2026-05-15·8억): 가목 비과세."
+  }
+]

@@ -1,0 +1,81 @@
+[
+  {
+    "id": "G157-era-first",
+    "docNo": "사전-2017-법령해석재산-0528 [법령해석과-2961]",
+    "docDate": "2017.10.20.",
+    "basis": "era",
+    "today": "2017-05-03",
+    "summary": "1주택이 관리처분인가(2016.4.22.)로 입주권 2개가 되고 신규주택 C(2016.12.16.) 취득 후 입주권 2개를 같은 날 양도(2017.5.2.) — 먼저 양도하는 입주권",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2017-05-02",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2003-06-28",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2016-04-22",
+        "redevOtherHouseAcquisitionDate": "2016-12-16"
+      },
+      "houses": [
+        {
+          "id": "C",
+          "acquisitionDate": "2016-12-16",
+          "region": "capital"
+        }
+      ],
+      "presaleRights": [
+        {
+          "id": "B",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2003-06-28",
+          "region": "capital",
+          "managementDisposalApprovalDate": "2016-04-22"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match. 원문 일자(겸용다가구주택 2003-06-28 — 주택면적이 커 전부 주택, 관리처분 2016-04-22로 입주권 2개, 신규주택 C 2016-12-16, 입주권 2개 일괄 양도 2017-05-02). 판정 메뉴는 양도 1건씩이라 같은 날 양도한 두 입주권을 둘로 나눴다 — 이 케이스는 먼저 양도하는 입주권(세대 보유 = 신규주택 C + 다른 입주권 B) → 세대 입주권 2개라 가·나목 불성립 → 과세. 인가일 요건 '예'(원문 전제), 나목 1주택 취득일 = C 취득일. 양도가 각 4억 가정(일괄 8.37억의 구분 — 원문은 §100②·시행령 §166⑥ 안분, 판정 축 밖)."
+  },
+  {
+    "id": "G157-era-second",
+    "docNo": "사전-2017-법령해석재산-0528 [법령해석과-2961]",
+    "docDate": "2017.10.20.",
+    "basis": "era",
+    "today": "2017-05-03",
+    "summary": "같은 사실에서 나중에 양도하는 입주권 — 세대에 신규주택 C와 그 입주권만 남은 상태",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2017-05-02",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "acquisitionDate": "2003-06-28",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "redevApprovalDate": "2016-04-22",
+        "redevOtherHouseAcquisitionDate": "2016-12-16"
+      },
+      "houses": [
+        {
+          "id": "C",
+          "acquisitionDate": "2016-12-16",
+          "region": "capital"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "one_right_89_1_4_na"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match. 나중에 양도하는 입주권 — 먼저 양도분이 빠진 세대 보유 = 신규주택 C(2016-12-16)뿐 → 나목(C 취득일부터 3년 이내 양도) 비과세(one_right_89_1_4_na). 원문: 거주자가 선택해 먼저 양도하는 1개는 과세, 나중 1개는 §89①4호나목 비과세."
+  }
+]

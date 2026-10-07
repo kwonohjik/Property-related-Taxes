@@ -1,0 +1,91 @@
+[
+ {
+  "id": "G100-era",
+  "docNo": "재일46014-2324",
+  "docDate": "1997.09.30.",
+  "basis": "era",
+  "today": "1997-09-30",
+  "summary": "부산 아파트(1988)와 재건축 승인·관리처분(1996.12.)된 서울 아파트(1995) 보유 — 서울 아파트가 철거된 상태에서 부산 아파트 양도",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "1997-10-15",
+   "contractTotalPrice": "200000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1988-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "1995-06-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "1996-12-15"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true
+  },
+  "bucket": "match",
+  "note": "match. 회신: 3년 이상 보유한 주택과 재건축 추진 주택을 함께 소유한 1세대 2주택자가 재건축 시행으로 그 주택이 철거된 상태에서 3년 이상 보유 주택을 양도하면 비과세. 표현: 부산 아파트 1988-03-15 가정, 철거된 서울 아파트는 조합원입주권 행(취득 1995-06-15 가정·관리처분 1996-12-15 가정), 양도 1997-10-15 가정·2억. 관측: 비과세. 공휴일 표 보류 안내(결론 무관)."
+ },
+ {
+  "id": "G100-dual",
+  "docNo": "재일46014-2324",
+  "docDate": "1997.09.30.",
+  "basis": "era",
+  "today": "1997-09-30",
+  "summary": "같은 사실에서 서울 아파트가 관리처분 후에도 철거되지 않은 상태(빈 집)로 부산 아파트 양도",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "1997-10-15",
+   "contractTotalPrice": "200000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1988-03-15"
+   },
+   "houses": [
+    {
+     "id": "B",
+     "region": "capital",
+     "acquisitionDate": "1995-06-15"
+    }
+   ]
+  },
+  "bucket": "dual",
+  "note": "dual — 입장 A(재일46014-2324, 1997.09.30.): 재건축 사업승인을 받았더라도 재건축 추진 주택이 철거되지 않은 상태면 1세대 2주택 → 3년 이상 보유 주택 양도 과세 / 입장 B(국심2005서3349): 2005.12.31. 이전 관리처분계획인가된 경우 권리변환 후에는 주택이 아니므로 다른 주택 양도 시 1주택 → 비과세. 현재 엔진 관측: 미철거 주택을 명부 주택 행으로 넣으면 과세(A와 같음), 같은 사실을 조합원입주권 행(관리처분 1996-12-15)으로 넣으면 비과세(B와 같음, V-G100dual-asright) — 입력 방식에 따라 갈린다. 일자: G100-era와 같다."
+ },
+ {
+  "id": "G100-current",
+  "docNo": "재일46014-2324",
+  "docDate": "1997.09.30.",
+  "basis": "current",
+  "today": "2026-10-07",
+  "summary": "주택(2008)과 2006.1.1. 이후 관리처분인가(2019.6.)된 재건축 대상 주택(미철거) 보유 세대가 다른 주택 양도(2026.6.)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2008-03-15"
+   },
+   "presaleRights": [
+    {
+     "id": "B",
+     "type": "redevelopment_right",
+     "acquisitionDate": "2013-06-15",
+     "region": "capital",
+     "managementDisposalApprovalDate": "2019-06-15"
+    }
+   ],
+   "rightThreeYearExceptionKind": "none"
+  },
+  "expected": {
+   "isExempt": false
+  },
+  "bucket": "match",
+  "note": "match. 현행 규칙: 2006.1.1. 이후 관리처분인가(또는 그 뒤 승계취득)분 조합원입주권은 철거 여부와 관계없이 주택 수에 산입되어(소득세법 §89②) 다른 주택 양도는 §89①3호 비과세를 받을 수 없다(시행령 §156의2 예외 제외). 구성: 주택 2008-03-15·재건축 대상 주택 B(취득 2013-06-15·인가 2019-06-15 — 미철거여도 입주권 행)·양도 2026-06-15·8억, 「3년 초과 예외」 해당 없음. 관측: 과세(excluded)."
+ }
+]

@@ -1,0 +1,24 @@
+[
+ {
+  "id": "G041-era",
+  "docNo": "조심-2021-서-2786",
+  "docDate": "2021.07.20.",
+  "basis": "era",
+  "today": "2021-07-20",
+  "summary": "관리처분인가(2018.4.19.) 후 철거 전 거주하던 아파트를 양도(2019.12.16.) — 입주권 양도로 보아 장기보유특별공제는 인가 전 양도차익에 한정, 경미한 변경인가는 인가일을 바꾸지 않음",
+  "referenceForm": {
+   "isOneHousehold": true,
+   "transferDate": "2019-12-16",
+   "contractTotalPrice": "1500000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "1996-03-31",
+    "redevApprovalDate": "2018-04-19"
+   }
+  },
+  "bucket": "inexpressible",
+  "note": "inexpressible — 없는 입력(출력): 입주권 장기보유특별공제를 관리처분인가 전 양도차익에 한정하는 산정과 변경인가(2020.3.19.)가 인가일을 바꾸는지 — 판정 메뉴 출력 밖. 결정: 인가 후 미철거·거주 중인 주택의 양도도 조합원입주권 양도(기각). 비과세(고가주택) 판정은 다툼 없음. 참고 관측(referenceForm: 입주권으로 입력, 취득 1996-03-31·인가 2018-04-19·양도 2019-12-16, 양도가 15억 가정 — 원문에 가액 없음): 부분과세(가목). 미철거 주택을 「주택」으로 입력해도 고가주택 부분과세라 판정 메뉴의 결론만으로는 두 표현이 구별되지 않는다."
+ }
+]

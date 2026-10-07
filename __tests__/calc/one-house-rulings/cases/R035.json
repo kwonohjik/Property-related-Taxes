@@ -1,0 +1,23 @@
+[
+  {
+    "id": "R035-era",
+    "docNo": "조심-2008-중-0421",
+    "docDate": "2008.09.19.",
+    "basis": "era",
+    "today": "2008-09-19",
+    "summary": "산본 신도시 아파트(1998.2.18. 취득) — 아들을 제외한 세대원만 미국 해외이주(1998.8.30.), 아들은 졸업·군복무 후 별도세대 요건 없이 국내 체류, 2007.8.31. 양도",
+    "referenceForm": {
+      "isOneHousehold": true,
+      "transferDate": "2007-08-31",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1998-02-18"
+      },
+      "provisoReason": "overseas_migration",
+      "provisoDepartureDate": "1998-08-30"
+    },
+    "bucket": "inexpressible",
+    "note": "inexpressible — 없는 입력: 세대원 일부(아들)의 국내 잔류·잔류 세대원이 거주요건을 채울 수 있었는지(세대전원 출국 해당 여부). §154① 단서 해외이주 사유는 선택형 선언이라 「세대전원」 여부를 따로 받지 않는다. 또 당시 신도시 소재 주택 보유 3년·거주 2년 요건 연혁이 엔진에 없다(R030-era와 같은 축). 참고 관측(referenceForm: 해외이주 선언 + 출국일 1998-08-30, 거주 0개월, 양도가 5억): 비과세 — 거주요건이 아예 없어서 나온 결론이라 원문(과세)과 반대."
+  }
+]
