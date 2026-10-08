@@ -6,7 +6,9 @@
     "basis": "era",
     "today": "2022-06-20",
     "summary": "조정대상지역(2017.8.3. 지정) 오피스텔을 2019.7. 취득해 사무실로 쓰다가 지정 해제(2019.11.8.) 뒤 2019.12.17. 주택으로 용도변경 — 거주요건은 주택 취득시점(용도변경 시점) 기준이라 적용되지 않음",
-    "referenceForm": {
+    "bucket": "match",
+    "note": "match — 판정 메뉴 용도변경 칸(§154⑤ 단서 · 거주요건 기준일)으로 표현. 회신: 거주요건은 주택 취득시점(주거용으로 용도변경한 때) 기준 — 조정대상지역 해제(2019.11.8.) 뒤 용도변경(2019.12.17.)했으므로 거주요건 미적용 → 비과세. 표현: 오피스텔 취득 2019-07-15, 용도변경(주거용 사용 개시) 2019-12-17, 2-C 토글 「주거용으로 사용하기 시작한 당시 조정대상지역」 = 아니오(소재지 미입력 — 지정 이력 자료는 대화동 전체를 킨텍스1단계 택지지구 코드로 묶어 2019.11.8. 이후에도 지정으로 판정하므로 소재지를 넣으면 원문 사실(해제)과 어긋난다), 양도 당시 조정, B아파트 분양권 2019-12-28(2021.1.1. 전 취득), 거주 0개월. 가정: 양도일 원문 미기재 → 2022-06-15(용도변경 후 2년 6개월·2021.1.1.~2022.5.9. 구간 밖 · 2024.2.29. 전 양도라 보유는 오피스텔 취득일부터), 양도가 5억. 종전(용도변경 칸 없음)에는 과세 + 판정 보류 2건이었다.",
+    "form": {
       "isOneHousehold": true,
       "transferDate": "2022-06-15",
       "contractTotalPrice": "500000000",
@@ -14,10 +16,12 @@
         "assetKind": "housing",
         "acquisitionDate": "2019-07-15",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "0"
+        "residencePeriodMonthsAsset": "0",
+        "hasNonHousingConversion": true,
+        "residentialUseStartDate": "2019-12-17"
       },
       "isRegulatedArea": true,
-      "wasRegulatedAtAcquisition": true,
+      "wasRegulatedAtAcquisition": false,
       "presaleRights": [
         {
           "id": "B",
@@ -27,7 +31,62 @@
         }
       ]
     },
-    "bucket": "inexpressible",
-    "note": "inexpressible — 없는 입력(판정 메뉴): 비주택→주택 용도변경일(주거용 사용 개시일). 엔진에는 거주요건 판정 기준일을 주거용 사용 개시일로 옮기는 규칙이 있으나(`lib/tax-engine/transfer-tax-exemption-holding.ts:273` resolveResidenceJudgmentDate — 이 해석례를 인용), 판정 메뉴 ④는 용도변경 사실을 본문에 싣지 않고 거주 개월 계산에만 쓴다(`lib/calc/one-house-exemption-api.ts:75`). 참고 관측(referenceForm: 오피스텔 취득 2019-07-15·취득 당시 조정·거주 0개월): 과세 + 판정 보류 2건(154-1-residence-deadline-unavailable·154-1-4ho-rental-registration-unverified) — 원문(거주요건 미적용 → 비과세)과 반대. 프로브: 취득일을 용도변경일 2019-12-17·취득 당시 비조정으로 넣으면 비과세 — 사용자가 법적 판단을 미리 날짜에 반영해야 맞는다. 가정: 완공 취득 2019.7. → 2019-07-15, 양도일 원문 미기재 → 2022-06-15(용도변경 후 2년 6개월·2021.1.1.~2022.5.9. 구간 밖), 양도가 5억, 양도 당시 조정(2020.6.19. 재지정), B아파트 분양권 2019-12-28(2021.1.1. 전 취득)."
+    "expected": {
+      "isExempt": true
+    }
+  },
+  {
+    "id": "F395-current",
+    "docNo": "서면-2020-부동산-5098 [부동산납세과-1247]",
+    "docDate": "2021.09.08.",
+    "basis": "current",
+    "today": "2026-10-08",
+    "summary": "현행 — 비조정 지역 오피스텔(2015 취득)을 2025.3. 주거용으로 용도변경한 뒤 2026.6. 양도: 2024.2.29. 이후 양도분은 보유기간을 주거용 사용일부터 세어 2년 미달 과세(시행령 §154⑤ 단서)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15",
+        "hasNonHousingConversion": true,
+        "residentialUseStartDate": "2025-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": false,
+      "wasRegulatedAtAcquisition": false
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match — 현행 규칙: 주택이 아닌 건물을 사실상 주거용으로 사용하거나 공부상 용도를 주택으로 변경한 경우 보유기간은 주거용으로 사용한 날부터 양도일까지(소득세법 시행령 §154⑤ 단서, 2024.2.29. 이후 양도분 — 대통령령 제34265호). 구성: 오피스텔 취득 2015-03-15, 주거용 사용 개시 2025-03-15, 양도 2026-06-15(주거용 1년 3개월), 비조정, 양도가 5억 → 보유 2년 미달 과세. 짝 P-F395-current-noconv(용도변경 미선언 → 2015년부터 보유 비과세)."
+  },
+  {
+    "id": "P-F395-current-noconv",
+    "docNo": "서면-2020-부동산-5098 [부동산납세과-1247]",
+    "docDate": "2021.09.08.",
+    "basis": "current",
+    "today": "2026-10-08",
+    "summary": "짝 — F395-current에서 용도변경을 선언하지 않으면 2015년 취득일부터 보유로 비과세(칸이 판정에 닿는지 확인용)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2015-03-15",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0"
+      },
+      "isRegulatedArea": false,
+      "wasRegulatedAtAcquisition": false
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(짝) — F395-current와 같은 사실에서 용도변경 칸만 끈 입력. 보유 11년 3개월 → 비과세. 두 케이스의 차이가 용도변경 칸 하나뿐이라 칸이 엔진까지 닿는지를 고정한다."
   }
 ]
