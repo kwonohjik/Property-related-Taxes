@@ -208,13 +208,14 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
     for (const n of needles) expect(joined).toContain(n);
   }
 
-  it("3년 초과 → §156의2④(완성 후 이주)·시행규칙 §75①(경매 등) 입력 경로 없음", () => {
+  it("3년 초과 + §156의2④·시행규칙 §75① 미선언 → 배제(2026-10-08 미선언=불리 — 판정 메뉴에 선언 칸이 있다) + 확인 필요", () => {
     // 입주권 2016-10-01 + 3년 = 2019-10-01 < 양도 2024-06-01
-    warnedButExempt(
-      houseInput({ presaleRights: [right()] }),
-      "§156의2 ④",
-      "소득세법 시행규칙 §75 ①",
-    );
+    const r = run(houseInput({ presaleRights: [right()] }));
+    expect(r.isExempt).toBe(false);
+    const joined = (r.warnings ?? []).join("\n");
+    expect(joined).toContain("§89② 배제를 적용했습니다(확인 필요)");
+    expect(joined).toContain("§156의2 ④");
+    expect(joined).toContain("소득세법 시행규칙 §75 ①");
   });
 
   /**

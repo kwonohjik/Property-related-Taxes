@@ -95,10 +95,10 @@ describe("§156의2③ — 권리 취득일(2021-02-28)부터 3년 이내 · ⑤
       exception: "소득세법 시행령 §156의2 ③",
     });
   });
-  it("다음날 양도 → 3년 초과(④ 선언 대기) · 기한 2024-02-29", () => {
+  it("다음날 양도 → 3년 초과(④ 미선언 = 배제) · 기한 2024-02-29", () => {
     const r = resolveArticle89Clause2(withRight(OVER), undefined);
-    expect(r.status).toBe("undetermined");
-    expect(r.status === "undetermined" && r.deadline && iso(r.deadline)).toBe(LAST);
+    expect(r.status).toBe("excluded");
+    expect(r.deadline && iso(r.deadline)).toBe(LAST);
   });
   it("isRightThreeYearExceeded — 만료일 ✗ · 다음날 ✓", () => {
     const p = (t: string) => ({ rightAcquisitionDate: D("2021-02-28"), transferDate: D(t) });

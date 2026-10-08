@@ -149,6 +149,12 @@ export interface Article89Clause2Result {
   /** 판정 불가 사유 — 사용자에게 「이 항을 직접 확인하라」고 알릴 조문 표기 */
   openArticles?: string[];
   /**
+   * 3년 경과 예외(§156의2④·§156의3③ · 시행규칙 §75①)를 **선언하지 않아** 배제로 판정했다(`excluded`) — 그 조문 표기.
+   * 「모름 → 혜택 불성립 + 확인 필요」(사용자 정책 2026-10-04 · E011 #2009 선례). 확인 필요 고지는 비과세 판정이
+   * 이 배제 때문에만 과세로 갈릴 때 판정 메뉴가(`undeclaredThreeYearExceptionUndetermined`), 계산기는 경고로 낸다.
+   */
+  undeclaredArticles?: string[];
+  /**
    * §156의2③·§156의3② — **권리 취득일부터 3년** 처분기한 (P4-1).
    *
    * 종전에는 `:337` 지역변수로 만들어 비교에만 쓰고 버렸다. 판정 메뉴(P4)의 「조건부·기한」이
@@ -427,8 +433,9 @@ export function resolveArticle89Clause2(
      *   · §156의2④ · §156의3③ — 신축주택 완성 후 N년(양도일 연혁 2·3년) 내 세대전원 이사 + 1년 이상 계속 거주
      *   · 시행규칙 §75① — 3년이 되는 날 현재 매각의뢰·경매·공매 **이고 그 방법으로 양도**
      *
-     * 🔴 **선언이 없으면 판정하지 않는다**(Phase 2). 신규 필드라 기존 저장분에 값이 없고,
-     *    미입력을 「미해당」으로 읽으면 3년 초과 세대 전체가 갑자기 과세로 뒤집힌다.
+     * 🔴 **선언이 없으면 예외 불성립(배제)이다**(2026-10-08 — 종전 「판정 보류 + 비과세」 대체). 종전 근거(신규 필드라
+     *    기존 저장분에 값이 없다)는 저장 데이터 전체 삭제(2026-10-05)로 사라졌고, 선언 칸(판정 메뉴 「3년 경과 예외」)이
+     *    있으므로 「모름 → 혜택 불성립 + 확인 필요」를 따른다(E011 #2009와 같은 모양).
      */
     const fourthClause =
       right.type === "redevelopment_right"
@@ -443,8 +450,8 @@ export function resolveArticle89Clause2(
     const thirdClauseOpen = oneYearMet;
     if (declared === undefined) {
       return {
-        status: "undetermined",
-        openArticles: thirdClauseOpen ? [fourthClause, "소득세법 시행규칙 §75 ①"] : [fourthClause],
+        status: "excluded",
+        undeclaredArticles: thirdClauseOpen ? [fourthClause, "소득세법 시행규칙 §75 ①"] : [fourthClause],
         ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}),
       };
     }

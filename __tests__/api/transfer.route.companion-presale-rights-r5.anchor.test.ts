@@ -168,15 +168,15 @@ describe("R-5 — 일괄양도 컴패니언 주택도 §89② 판정을 받는�
     expect(excluded.agg.totalTax).toBeGreaterThan(77_341_000);
   });
 
-  it("🔑 판정 불가일 때는 컴패니언에도 경고가 남는다 (조용히 넘어가지 않는다)", async () => {
-    // 3년 초과 + 예외 선언 없음 ⇒ `undetermined` — 종전 동작 유지 + 경고.
+  it("🔑 3년 경과 예외 미선언이면 컴패니언도 배제 + 확인 필요 경고 (조용히 넘어가지 않는다)", async () => {
+    // 3년 초과 + 예외 선언 없음 ⇒ `excluded`(미선언=불리, 2026-10-08 — 종전 `undetermined` 비과세 유지) + 경고.
     const r = await run(
       body({
         presaleRights: [{ ...RIGHT[0], acquisitionDate: "2016-10-01" }],
       }),
     );
-    expect(r.companion.isExempt).toBe(true); // 불리하게 뒤집지 않는다
-    expect((r.agg.warnings ?? []).join("\n")).toContain("§89②");
+    expect(r.companion.isExempt).toBe(false);
+    expect((r.agg.warnings ?? []).join("\n")).toMatch(/§89② 배제를 적용했습니다\(확인 필요\)/);
   });
 
   it("⭐ 경고에 **자산 라벨**이 붙는다 — 두 자산이 같은 문구를 내면 구분이 사라진다", async () => {

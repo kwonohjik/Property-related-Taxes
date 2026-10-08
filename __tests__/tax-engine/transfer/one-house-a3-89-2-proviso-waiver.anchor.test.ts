@@ -109,8 +109,9 @@ describe("OH-47 — §156의2④ 후단(3년 초과) · §156의3② 후단(분�
       }),
       undefined,
     );
-    // 면제로 ③(1년)·④ 둘 다 열린다 — ④·§75① 선언이 없으니 판정 불가(종전: 배제 확정)
-    expect(v.status).toBe("undetermined");
+    // 면제로 ③(1년)·④ 둘 다 열린다 — ④·§75① 선언이 없으니 배제 + 두 조문 확인 필요(2026-10-08 미선언=불리)
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredArticles).toEqual(["소득세법 시행령 §156의2 ④", "소득세법 시행규칙 §75 ①"]);
   });
 
   it("🔴 분양권(§156의3②) — 수용 + 1년 미경과 → exception_met", () => {

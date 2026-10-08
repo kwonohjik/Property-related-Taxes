@@ -262,15 +262,16 @@ describe("E-14c §156의2·§156의3 — 15호가 아니라 §167의11①13호·
     expect(r.detail).toContain("§156의2 ③");
   });
 
-  it("R-1n 부정 짝 — 권리 취득 2022(3년 경과 · §156의2④ 미선언 = 판정 보류) → 배제 없음 422,521,000 그대로", () => {
-    const r = calc(
-      input({
-        householdHousingCount: 1,
-        houses: [SELLING],
-        presaleRights: [{ ...RIGHT_2025, acquisitionDate: D("2022-01-01") }] as never,
-      }),
-    );
-    expect(r).toMatchObject({ totalTax: 422_521_000, reasons: "", surchargeType: "multi_house_2" });
+  it("R-1n 부정 짝 — 권리 취득 2022(3년 경과 · §156의2④ 미선언 = 배제, 2026-10-08) → 중과 배제 없음 · 1세대1주택 비과세도 없음 1,141,178,500", () => {
+    const base = {
+      householdHousingCount: 1,
+      houses: [SELLING],
+      presaleRights: [{ ...RIGHT_2025, acquisitionDate: D("2022-01-01") }] as never,
+    };
+    const r = calc(input(base));
+    // 종전 422,521,000은 판정 보류(§89①3호 고가 부분 비과세 유지) 값 — 미선언이 배제가 되며 「해당 없음」 명시 선언과 같아진다.
+    expect(r).toMatchObject({ totalTax: 1_141_178_500, reasons: "", surchargeType: "multi_house_2" });
+    expect(calc(input({ ...base, rightThreeYearException: { kind: "none" } } as never)).totalTax).toBe(1_141_178_500);
   });
 
   it("R-2 서면-2021-법규재산-8497 구조 — 거주 + §155⑳ 임대(2호 아님) + 입주권(§156의2③) → §167의4③7호 배제 102,086,600 (종전 199,997,600)", () => {
