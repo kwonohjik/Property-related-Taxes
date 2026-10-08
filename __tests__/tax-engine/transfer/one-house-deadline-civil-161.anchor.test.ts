@@ -289,7 +289,7 @@ describe("§156의2③·④·⑨ · §89②", () => {
     input({
       acquisitionDate: D("2015-06-01"),
       transferDate: D(t),
-      presaleRights: [{ id: "r1", type: "redevelopment_right", acquisitionDate: D("2021-06-01"), region: "capital" }],
+      presaleRights: [{ id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2021-06-01"), region: "capital" }],
     });
   it("🔴 ③ 권리 취득 3년 — 월 충족 · 화 대기(기한 월요일 + 설명)", () => {
     expect(resolveArticle89Clause2(withRight(MON), undefined).status).toBe("exception_met");
@@ -308,7 +308,7 @@ describe("§156의2③·④·⑨ · §89②", () => {
       input({
         acquisitionDate: D("2015-06-01"),
         transferDate: D(t),
-        presaleRights: [{ id: "r1", type: "redevelopment_right", acquisitionDate: D("2016-10-01"), region: "capital" }],
+        presaleRights: [{ id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2016-10-01"), region: "capital" }],
         rightThreeYearException: {
           kind: "new_house",
           completionDate: D("2021-06-01"),
@@ -324,7 +324,7 @@ describe("§156의2③·④·⑨ · §89②", () => {
       input({
         acquisitionDate: D("2010-01-01"),
         transferDate: D(t),
-        presaleRights: [{ id: "r1", type: "redevelopment_right", acquisitionDate: D("2012-01-01"), region: "capital" }],
+        presaleRights: [{ id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2012-01-01"), region: "capital" }],
         marriageMerge: { marriageDate: D("2019-06-01") } as TransferTaxInput["marriageMerge"],
         mergedHouseholdFirstHouse: { kind: "house_only" },
         isFirstTransferredInMerge: true,

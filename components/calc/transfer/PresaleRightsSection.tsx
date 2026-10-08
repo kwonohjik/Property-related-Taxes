@@ -119,7 +119,13 @@ export function PresaleRightsSection({
                   layout="inline"
                   tone="sky"
                   value={r.type}
-                  onChange={(v) => update(r.id, { type: v as PresaleRightEntry["type"] })}
+                  onChange={(v) =>
+                    update(r.id, {
+                      type: v as PresaleRightEntry["type"],
+                      // 취득 경위는 조합원입주권 전용 — 분양권으로 바꾸면 남기지 않는다.
+                      ...(v === "presale_right" ? { memberOrigin: undefined } : {}),
+                    })
+                  }
                   options={[
                     { value: "presale_right", label: "분양권" },
                     { value: "redevelopment_right", label: "조합원입주권" },
@@ -131,13 +137,57 @@ export function PresaleRightsSection({
                   </p>
                 )}
               </div>
+              {/*
+                취득 경위 — 「소득세법 시행령」 §156의2③·④는 「그 주택을 양도하기 전에 조합원입주권을 취득함으로써」라
+                입주권을 새로 취득한 세대(승계취득 · 상가·토지 원조합원 — 재산세과-1708)의 규정이다. 기존주택 원조합원은
+                §155① 일시적 2주택(사전-2018-법령해석재산-0620, 기존주택 취득일 기준)이다. 날짜 칸의 의미가 경위마다 다르다.
+              */}
+              {r.type === "redevelopment_right" && (
+                <div className="space-y-1">
+                  <span className="block text-caption text-muted-foreground font-medium">취득 경위</span>
+                  <RadioCardGroup
+                    name={`presale-member-origin-${r.id}`}
+                    data-field={`presaleRights.${idx}.memberOrigin`}
+                    layout="inline"
+                    tone="sky"
+                    value={r.memberOrigin ?? ""}
+                    onChange={(v) => update(r.id, { memberOrigin: v as NonNullable<PresaleRightEntry["memberOrigin"]> })}
+                    options={[
+                      { value: "original_house", label: "원조합원(기존 주택)", testId: `presale-member-origin-original-house-${idx}` },
+                      {
+                        value: "original_non_house",
+                        label: "원조합원(상가·토지 등)",
+                        testId: `presale-member-origin-original-non-house-${idx}`,
+                      },
+                      { value: "successor", label: "승계취득", testId: `presale-member-origin-successor-${idx}` },
+                    ]}
+                  />
+                  <span className="block text-caption text-muted-foreground">
+                    원조합원은 보유하던 부동산이 관리처분계획 인가로 입주권이 된 경우, 승계취득은 입주권을 매매 등으로 산
+                    경우입니다.
+                  </span>
+                </div>
+              )}
               <div className="space-y-1">
-                <span className="block text-caption text-muted-foreground font-medium">취득일</span>
+                <span className="block text-caption text-muted-foreground font-medium">
+                  {r.type !== "redevelopment_right"
+                    ? "취득일"
+                    : r.memberOrigin === "original_house"
+                      ? "기존주택 취득일"
+                      : r.memberOrigin === "original_non_house"
+                        ? "입주권 취득일(관리처분계획 인가일)"
+                        : "취득일"}
+                </span>
                 <DateInput
                   data-field={`presaleRights.${idx}.acquisitionDate`}
                   value={r.acquisitionDate}
                   onChange={(v) => update(r.id, { acquisitionDate: v })}
                 />
+                {r.type === "redevelopment_right" && r.memberOrigin === "original_house" && (
+                  <span className="block text-caption text-muted-foreground">
+                    입주권으로 바뀐 기존주택을 취득한 날입니다. 일시적 2주택 기한(§155①)은 이 날부터 셉니다.
+                  </span>
+                )}
               </div>
               {/*
                 §89②의 조합원입주권 축 시행일 게이트 — 법률 제7837호(2006-01-01 시행) 부칙 §12①이

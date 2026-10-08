@@ -85,7 +85,7 @@ describe("§156의2③ — 권리 취득일(2021-02-28)부터 3년 이내 · ⑤
       acquisitionDate: D("2015-06-01"),
       transferDate: D(transferDate),
       presaleRights: [
-        { id: "r1", type: "redevelopment_right", acquisitionDate: D("2021-02-28"), region: "capital" },
+        { id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2021-02-28"), region: "capital" },
       ],
     });
 
@@ -113,7 +113,7 @@ describe("§156의2④2호 — 신축주택 완성일(2021-02-28) 후 3년 이�
       acquisitionDate: D("2015-06-01"),
       transferDate: D(transferDate),
       presaleRights: [
-        { id: "r1", type: "redevelopment_right", acquisitionDate: D("2016-10-01"), region: "capital" },
+        { id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2016-10-01"), region: "capital" },
       ],
       rightThreeYearException: {
         kind: "new_house",
@@ -143,7 +143,7 @@ describe("§156의2⑨ — 혼인한 날(2019-02-28)부터 5년 이내 먼저 �
       acquisitionDate: D("2010-01-01"),
       transferDate: D(transferDate),
       presaleRights: [
-        { id: "r1", type: "redevelopment_right", acquisitionDate: D("2012-01-01"), region: "capital" },
+        { id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2012-01-01"), region: "capital" },
       ],
       marriageMerge: { marriageDate: D("2019-02-28") } as TransferTaxInput["marriageMerge"],
       mergedHouseholdFirstHouse: { kind: "house_only" },

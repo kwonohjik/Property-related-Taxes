@@ -316,6 +316,8 @@ export const presaleRightSchema = z.object({
   // §156의2⑥·⑦ · §156의3④·⑤ — §89② 배제의 상속 예외 축
   /** ⑫ §89② 조합원입주권 축 시행일 게이트 — 법률 제7837호 부칙 §12①(인가일 기준). */
   managementDisposalApprovalDate: z.string().date().optional(),
+  /** ⑫ 조합원입주권 취득 경위 — 기존주택 원조합원은 §155①, 상가·토지 원조합원·승계취득은 §156의2③·④(엔진 `one-house/original-member-right.ts`). */
+  memberOrigin: z.enum(["original_house", "original_non_house", "successor"]).optional(),
   isInherited: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),

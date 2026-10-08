@@ -63,6 +63,7 @@ function rightAt(iso: string, over: Partial<PresaleRight> = {}): PresaleRight {
   return {
     id: "r1",
     type: "redevelopment_right",
+    memberOrigin: "successor",
     acquisitionDate: new Date(iso),
     region: "capital",
     ...over,

@@ -76,6 +76,7 @@ const MIXED = {
 const right = (acquisitionDate: string, over: object = {}) => ({
   id: "r1",
   type: "redevelopment_right" as const,
+  memberOrigin: "successor" as const,
   acquisitionDate,
   region: "capital" as const,
   ...over,
@@ -325,7 +326,7 @@ describe("E-7 겸용 파트 카드 — 서브엔진 §154③ 본문이 카드 §
             c.propertyId.startsWith(MIXED_USE_PART_IDS.commercialBuilding),
         )
         .map((c) => c.propertyType);
-    const RIGHT = { id: "r1", type: "redevelopment_right", acquisitionDate: new Date("2022-06-01"), region: "capital" };
+    const RIGHT = { id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: new Date("2022-06-01"), region: "capital" };
     // 긍정 짝 — 권리 없음: §154③ 본문 성립 → 상가 카드도 주택 카드
     expect(commTypes(cards([]))).toEqual(["housing", "housing"]);
     // §89② 배제 확정 → 본문 불성립

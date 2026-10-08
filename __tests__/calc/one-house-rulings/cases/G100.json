@@ -18,6 +18,7 @@
     {
      "id": "B",
      "type": "redevelopment_right",
+     "memberOrigin": "original_house",
      "acquisitionDate": "1995-06-15",
      "region": "capital",
      "managementDisposalApprovalDate": "1996-12-15"
@@ -75,6 +76,7 @@
     {
      "id": "B",
      "type": "redevelopment_right",
+     "memberOrigin": "original_house",
      "acquisitionDate": "2013-06-15",
      "region": "capital",
      "managementDisposalApprovalDate": "2019-06-15"

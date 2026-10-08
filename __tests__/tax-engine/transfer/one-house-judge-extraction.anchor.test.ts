@@ -168,7 +168,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     },
   ],
   presaleRights: [
-    { id: "rr", type: "redevelopment_right", acquisitionDate: D("2018-01-01"), region: "capital" },
+    { id: "rr", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D("2018-01-01"), region: "capital" },
   ],
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
@@ -484,7 +484,7 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
     householdHousingCount: 1,
     acquisitionDate: D("2016-01-01"),
     presaleRights: [
-      { id: "rr", type: "redevelopment_right" as const, acquisitionDate: D("2018-01-01"), region: "capital" as const },
+      { id: "rr", type: "redevelopment_right" as const, memberOrigin: "successor" as const, acquisitionDate: D("2018-01-01"), region: "capital" as const },
     ],
   };
 

@@ -518,6 +518,13 @@ export interface PresaleRightEntry {
    * 이 값을 쓰지 않는다. 미입력은 원칙(적용)으로 읽는다.
    */
   managementDisposalApprovalDate?: string;
+  /**
+   * 조합원입주권 취득 경위 — **조합원입주권 전용**. `acquisitionDate`는 기존주택 원조합원이면 기존주택 취득일,
+   * 상가·토지 원조합원이면 관리처분계획인가일, 승계취득이면 승계취득일이다.
+   * 기존주택 원조합원은 §155①, 나머지는 §156의2③·④(엔진 `one-house/original-member-right.ts`).
+   * 1세대1주택 비과세 판정 대상(주택 양도)이면 필수(⑧).
+   */
+  memberOrigin?: "original_house" | "original_non_house" | "successor";
   isInherited?: boolean;
   /**
    * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.

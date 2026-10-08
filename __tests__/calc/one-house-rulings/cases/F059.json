@@ -20,7 +20,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1990-02-26",
           "region": "capital",
-          "managementDisposalApprovalDate": "2002-11-29"
+          "managementDisposalApprovalDate": "2002-11-29",
+          "memberOrigin": "original_house"
         }
       ]
     },
@@ -51,7 +52,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1990-02-26",
           "region": "capital",
-          "managementDisposalApprovalDate": "2024-06-14"
+          "managementDisposalApprovalDate": "2024-06-14",
+          "memberOrigin": "original_house"
         }
       ],
       "rightThreeYearExceptionKind": "none"

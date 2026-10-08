@@ -21,7 +21,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1999-05-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2007-06-15"
+          "managementDisposalApprovalDate": "2007-06-15",
+          "memberOrigin": "original_house"
         }
       ]
     },
@@ -55,7 +56,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1999-05-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2005-12-15"
+          "managementDisposalApprovalDate": "2005-12-15",
+          "memberOrigin": "original_house"
         }
       ]
     },

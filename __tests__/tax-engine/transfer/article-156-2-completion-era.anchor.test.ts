@@ -42,7 +42,7 @@ function withRight(p: {
     acquisitionDate: d(p.houseAcq),
     transferDate: d(p.transfer),
     presaleRights: [
-      { id: "r1", type: "redevelopment_right", acquisitionDate: d(p.rightAcq), region: "capital" },
+      { id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: d(p.rightAcq), region: "capital" },
     ],
     rightThreeYearException: p.exception,
   });

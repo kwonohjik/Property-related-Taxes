@@ -159,6 +159,7 @@ export function mapPresaleRightsToEngine(
     managementDisposalApprovalDate: r.managementDisposalApprovalDate
       ? new Date(r.managementDisposalApprovalDate)
       : undefined,
+    memberOrigin: r.memberOrigin,
     isInherited: r.isInherited,
     isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
     isCoInherited: r.isCoInherited,

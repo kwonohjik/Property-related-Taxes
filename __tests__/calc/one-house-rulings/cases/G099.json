@@ -20,6 +20,7 @@
     {
      "id": "B",
      "type": "redevelopment_right",
+     "memberOrigin": "original_house",
      "acquisitionDate": "2000-05-15",
      "region": "capital",
      "managementDisposalApprovalDate": "2004-11-15"
@@ -51,6 +52,7 @@
     {
      "id": "B",
      "type": "redevelopment_right",
+     "memberOrigin": "original_house",
      "acquisitionDate": "2012-05-15",
      "region": "capital",
      "managementDisposalApprovalDate": "2018-05-15"

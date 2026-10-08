@@ -384,6 +384,18 @@ export interface PresaleRight {
    *    2006-01-01 이전인 경우는 인가 후 20년 넘게 준공되지 않은 사업뿐이라 사실상 예외다.
    */
   managementDisposalApprovalDate?: Date;
+  /**
+   * 조합원입주권 취득 경위 — `redevelopment_right` 전용.
+   * · `"original_house"` — 원조합원, 보유하던 **기존주택**이 관리처분계획 인가로 입주권이 됨. `acquisitionDate` = 기존주택 취득일.
+   * · `"original_non_house"` — 원조합원, 보유하던 **상가·토지 등**(주택 아님)이 입주권이 됨. `acquisitionDate` = 관리처분계획인가일.
+   * · `"successor"` — 매매 등으로 승계취득. `acquisitionDate` = 승계취득일.
+   *
+   * §156의2③·④는 「그 주택을 양도하기 전에 조합원입주권을 취득함으로써」 — 입주권을 **새로 취득**한 세대(승계취득 ·
+   * 상가 원조합원 — 재산세과-1708 · 서면-2015-법령해석재산-2306)의 규정이다. 기존주택 원조합원은 §155① 일시적 2주택
+   * (사전-2018-법령해석재산-0620 · 서면-2019-부동산-1050)으로 판정한다(`one-house/original-member-right.ts`).
+   * 미입력 = 모름 — 두 갈래의 결론이 다르면 특례 불성립 + 확인 필요.
+   */
+  memberOrigin?: "original_house" | "original_non_house" | "successor";
   isInherited?: boolean;
   /**
    * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를

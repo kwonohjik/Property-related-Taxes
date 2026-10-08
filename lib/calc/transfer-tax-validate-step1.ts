@@ -9,6 +9,7 @@ import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-hou
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { memberOriginErrors } from "./right-member-origin-scope";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
@@ -260,6 +261,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   for (let i = 0; i < presaleRights.length; i++) {
     if (!presaleRights[i].acquisitionDate)
       issues.push({ step, field: `presaleRights.${i}.acquisitionDate`, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
+  }
+  // ⑧ 조합원입주권 취득 경위 — §89② 판정(주택 양도)에서만 결론을 가른다(판정 메뉴와 같은 leaf).
+  if (isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) {
+    for (const e of memberOriginErrors(presaleRights)) issues.push({ step, ...e });
   }
 
   /**

@@ -43,6 +43,8 @@ export function rightThreeYearExceptionVisible(form: TransferFormData): boolean 
   return (form.presaleRights ?? []).some(
     (r) =>
       r.acquisitionDate &&
+      // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
+      !(r.type === "redevelopment_right" && r.memberOrigin === "original_house") &&
       isRightThreeYearExceeded({
         rightAcquisitionDate: new Date(r.acquisitionDate),
         transferDate,

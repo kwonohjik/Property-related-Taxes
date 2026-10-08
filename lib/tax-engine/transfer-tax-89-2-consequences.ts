@@ -65,6 +65,13 @@ export function article89Clause2Notices(
     );
   }
 
+  // 모르는 사실 때문에 특례를 적용하지 않았다(원조합원·승계취득 미입력 등) — 확인 필요.
+  if (clause2?.status === "excluded") {
+    for (const note of clause2.confirmNotes ?? []) {
+      notices.push(`「소득세법」 §89② 배제를 적용했습니다 — ${note}`);
+    }
+  }
+
   if (clause2?.status === "undetermined") {
     notices.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
@@ -101,6 +108,8 @@ export function clause2SurchargeDeemed(
 ): { basis: DeemedOneHouseBasis; source: string; citedByOldClause1: boolean } | undefined {
   if (clause2.status !== "exception_met" || !clause2.exception) return undefined;
   if (clause2.exception === TRANSFER.REPLACEMENT_HOUSE_156_2_5) return undefined;
+  // 원조합원 §155① — §167의11①13호는 「제156조의2, 제156조의3 또는」 조특법 의제만 받고 제155조를 인용하지 않는다.
+  if (clause2.exception === TRANSFER.ORIGINAL_MEMBER_RIGHT_TEMP_TWO_HOUSE) return undefined;
   return {
     basis: clause2.exception.includes("§156의3") ? "house_with_presale_right" : "house_with_redevelopment_right",
     source: clause2.viaArticle ? `${clause2.exception}(${clause2.viaArticle} 준용)` : clause2.exception,
