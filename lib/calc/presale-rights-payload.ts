@@ -41,6 +41,9 @@ export interface PresaleRightPayloadItem {
   inDesignatedDistrict?: boolean;
   managementDisposalApprovalDate?: string;
   memberOrigin?: PresaleRightEntry["memberOrigin"];
+  originalMemberMoveInDate?: string;
+  originalMemberTenantLeaseEndDate?: string;
+  originalMemberDisposalDelayReason?: string;
   isInherited?: boolean;
   isRankingDisqualifiedInheritedRight?: boolean;
   isCoInherited?: boolean;
@@ -49,6 +52,18 @@ export interface PresaleRightPayloadItem {
   decedentOwnedOtherRightTypeAtDeath?: boolean;
   decedentSameHouseholdAtInheritance?: boolean;
   parentalCareMergeInheritedRight?: boolean;
+}
+
+/** 기존주택 원조합원 행의 §155① 사실(전입일·기존 임차인 단서·§155⑱ 사유). 그 밖의 행이면 빈 객체. */
+function originalMemberFacts(p: PresaleRightEntry): Partial<PresaleRightPayloadItem> {
+  if (p.type !== "redevelopment_right" || p.memberOrigin !== "original_house") return {};
+  return {
+    ...(p.originalMemberMoveInDate ? { originalMemberMoveInDate: p.originalMemberMoveInDate } : {}),
+    ...(p.originalMemberExistingTenant && p.originalMemberTenantLeaseEndDate
+      ? { originalMemberTenantLeaseEndDate: p.originalMemberTenantLeaseEndDate }
+      : {}),
+    ...(p.originalMemberDisposalDelayReason ? { originalMemberDisposalDelayReason: p.originalMemberDisposalDelayReason } : {}),
+  };
 }
 
 /**
@@ -78,6 +93,8 @@ export function buildPresaleRightsPayload(
       managementDisposalApprovalDate: p.managementDisposalApprovalDate || undefined,
       // 취득 경위는 조합원입주권 전용 — 분양권 행에 남은 값은 싣지 않는다.
       memberOrigin: p.type === "redevelopment_right" ? p.memberOrigin : undefined,
+      // 기존주택 원조합원 §155① 사실 — 그 경위일 때만(다른 경위·분양권 행에 남은 값은 싣지 않는다).
+      ...originalMemberFacts(p),
       isInherited: p.isInherited,
       isRankingDisqualifiedInheritedRight: p.isRankingDisqualifiedInheritedRight,
       isCoInherited: p.isCoInherited,

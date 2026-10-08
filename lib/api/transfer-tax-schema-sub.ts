@@ -322,6 +322,14 @@ export const presaleRightSchema = z.object({
   managementDisposalApprovalDate: z.string().date().optional(),
   /** ⑫ 조합원입주권 취득 경위 — 기존주택 원조합원은 §155①, 상가·토지 원조합원·승계취득은 §156의2③·④(엔진 `one-house/original-member-right.ts`). */
   memberOrigin: z.enum(["original_house", "original_non_house", "successor"]).optional(),
+  /** ⑫ 기존주택 원조합원 §155①2호 가목 — 기존주택 세대전원 전입일 */
+  originalMemberMoveInDate: z.string().date().optional(),
+  /** ⑫ 기존주택 원조합원 §155①2호 단서 — 기존 임차인 임대차계약 종료일 */
+  originalMemberTenantLeaseEndDate: z.string().date().optional(),
+  /** ⑫ 기존주택 원조합원 §155⑱ 처분기한 예외 사유 — 일시적 2주택 `disposalDelayReason`과 같은 값 */
+  originalMemberDisposalDelayReason: z
+    .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
+    .optional(),
   isInherited: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),

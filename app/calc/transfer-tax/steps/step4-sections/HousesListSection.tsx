@@ -552,6 +552,7 @@ export function HousesListSection({
         primaryKind={form.assets?.[0]?.assetKind}
         confirmed={form.householdNoPresaleRightsConfirmed}
         onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
+        transferDate={form.transferDate}
       />
 
       {/* ── 양도 주택 3주택+ 전용 배제 특례 ──
