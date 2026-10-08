@@ -570,10 +570,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * `acquisitionCause`는 자산 단위 단일값이라 "건물=신축 / 토지=상속"을 표현할 수 없었다.
    * ""(미설정)이면 토지도 자산 전체 원인을 따른다(종전 동작).
    *
-   * ⚠️ **엔진에는 전달하지 않는다.** 엔진은 파트별 취득 *방식*(`landAcqMode` 4-way)만 알고
-   *    취득 *원인*은 모른다. 이 값은 취득가액 칸의 라벨·안내를 바꾸는 **UI 전용**이며,
-   *    실제 계산은 사용자가 입력한 평가액이 `landAcquisitionPrice`(actual 모드)로 흐른다.
-   *    상속 §163⑨ 평가액·증여 신고가액은 모두 "확인된 취득가액"이라 이 처리가 법령상 정합적이다.
+   * 취득가액은 사용자가 입력한 평가액이 `landAcquisitionPrice`(actual 모드)로 흐른다 — 상속 §163⑨ 평가액·증여
+   * 신고가액은 모두 "확인된 취득가액"이다. 원인 자체도 엔진에 전달되어(`buildLandPartCausePayload`) 상속 토지의
+   * 세율 보유기간 통산(「소득세법」 §104②1호)과 추계 차단(D0)에 쓰인다. 읽는 쪽은 저장값이 아니라
+   * `effectiveLandAcquisitionCause`(lib/calc/transfer-land-part-cause.ts)를 쓴다 — 블록이 닫힌 자산의 잔재는 「없음」.
    */
   landAcquisitionCause: "" | "inheritance" | "gift";
   /**
@@ -581,7 +581,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
    */
   landDecedentAcquisitionDate: string;
-  /** 토지 파트 증여자 취득일 — `landAcquisitionCause === "gift"` 시 §104②2호 통산 */
+  /**
+   * 토지 파트 증여자 취득일 — **입력 칸 없음**(D0 G-8). 단순 증여는 §104②2호 통산 대상이 아니다(2호는 §97의2①
+   * 이월과세 자산만). 종전 칸에서 저장된 값이 남을 수 있으나 ④가 보내지 않는다.
+   */
   landDonorAcquisitionDate: string;
   /**
    * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).

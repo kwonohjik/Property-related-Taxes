@@ -29,6 +29,7 @@ import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price"
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
+import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
@@ -199,6 +200,9 @@ export function buildAssetPayload(
      *    `acquisitionArea`를 읽으므로, 무게이트로 두면 분리와 무관한 자산의 세율 판정이 바뀐다.
      */
     ...(splitActive ? buildLandStdAtAcquisitionPayload(asset) : {}),
+    // ④ 토지 파트 취득원인(§104②1호 통산) — 단건·다건과 같은 leaf(D0 G-4). 종전엔 싣지 않아 ⑫·⑭에 칸이 있는데도
+    //    함께 양도 자산의 토지 상속 통산이 조용히 빠졌다.
+    ...(splitActive ? buildLandPartCausePayload(asset) : {}),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     /**

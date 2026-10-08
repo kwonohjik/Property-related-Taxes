@@ -2,7 +2,7 @@
 
 > 작성 2026-10-08 · 브랜치 `docs/transfer-acq-cause-mixed` · 워크트리 `Property-related-Taxes-d` (base `0211f4558`)
 > 선행: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` A·B·C 머지 완료(#1995·#1999·#2008·#2013·#2022·#2027·#2038·#2044). 그 계획서 H-3(:65)·Q-3(:340)이 이 문서다.
-> 상태: **Plan — 사용자 결정 대기(§6).** Design 전.
+> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 Do 진행 중. Q-7의 「신축 경로 D0 차단」은 D0에서 제외하고 D1 Design에서 결정.
 
 ---
 
@@ -96,6 +96,8 @@
 | **G-9** | 🟡 | 주석 드리프트 — `calc-wizard-asset.ts:571-577`「엔진에 전달하지 않는다, UI 전용」(실제로는 ④가 보냄), `NewConstructionLandAcqBlock.tsx:21-27`·계획서 H-3「단기보유 통산 미반영」(G-4 구현으로 반영됨, 실측 T2·W1) | 코드 |
 | **G-10** | 🟡 | §163⑨ 단서(1990.8.30. 전 토지 → max(평가액, 영 §164④))·의제취득일(1985.1.1.) 전 상속이 **파트에 없다**. 신축 + 토지 상속 경로는 숫자 1칸뿐. 엔진은 1984년 상속 토지도 입력값 그대로·보유 42년 | U2·U2b |
 
+| **G-11** | 🟠 | (D0 Check에서 발견, 기존) **신축 분기 ⑧이 분리 검증에 닿지 않는다** — `transfer-tax-validate-acquisition.ts` 신축 분기가 `return null`로 끝나 `validateSplitDirectInputs`(V1 토지 평가액·V4 양도가액 구분 근거 등)를 건너뛴다. 「신축 + 토지 상속」에서 토지 평가액을 비우면 ⑧ 통과 → ⑫ V1 400(막다른 길). D0는 토지 원인 규칙만 그 분기에서 부르고(`validateLandPartCause`), **분리 검증 전체 연결은 D1**(총액 초과 검사 등이 신축비용=건물분 총액과 만나 새로 깨어날 수 있어 격자 확인 필요) | 정적 + probe |
+
 **법령상 쟁점이지만 결함 판정 보류**:
 - **S3d** — 건물 상속(피상속인 2000, 개시 2025-05-01) + 토지 매매 2025-01-10 → 건물 파트 기본세율, 토지 파트 60%로 **세율이 갈린다**(결정세액 258,060,000, 둘 다 매매인 S2a는 298,500,000). §94①1호 별개 자산 독법으로는 맞을 수 있으나 주택 단기세율(§104①2·3호 「주택(이에 딸린 토지 포함)」)과의 관계를 확인해야 한다(V-2). D2 범위.
 
@@ -132,6 +134,8 @@
 | G-7·G-9 | 인용·주석 정정 | 문서 |
 | G-8 | 단순 증여의 「증여자 취득일」 칸·통산 안내 제거(법 §104②2호는 이월과세만). Q-6 | ⑤ |
 
+**D0 구현 (2026-10-08)**: 엔진 leaf `lib/tax-engine/transfer-split-part-cause.ts`(G-1·G-2·G-3 — 엔진 `calcSplitGain` throw·⑫ `refineSplitPartCause` 주 자산+컴패니언·⑧ `validateLandPartCause` 공유), 클라이언트 leaf `lib/calc/transfer-land-part-cause.ts`(유효 원인 `effectiveLandAcquisitionCause` — 블록 범위 + 분리 ON일 때만, 건물 가격 후퇴 `splitBuildingAcqPriceInput` — ④·⑥·⑧·⑤ 토글 상태 공유). G-6은 저장값을 지우는 전환 patch 대신 **읽는 쪽 파생**으로 해소(남은 값은 「없음」으로 읽는다). G-8은 칸 제거 + ④ 미전송. G-7은 화면·주석·테스트 주석 전역. 검증: Pre-Do anchor RED → GREEN, mutation 14/14 KILLED, 신규 E2E 3건.
+
 ### D1 — 「토지 상속·증여 + 건물 매매」
 
 - 모델: `acquisitionCause = "purchase"`(건물) + `landAcquisitionCause = inheritance | gift`. **엔진 세율 기산은 이미 이 조합을 처리**한다(실측 T2·W1). 새로 필요한 것은 입력 경로·검증·표시다.
@@ -141,6 +145,7 @@
 - §163⑨ 단서(1990.8.30. 전 토지 상속·증여)·1985.1.1. 전 상속: Q-7.
 - 결과 표시: `SplitPartResult`에 `acquisitionCause`·`rateBasisAcquisitionDate` echo → `summarizeSplitGain` 한 곳에서 4뷰(단건 결과·상세명세서·신고서·PDF, 다건)가 받는다. 신고서 split 2열의 폼 기반 일자 계산은 echo 기반으로 교체.
 - 결합 제외(⑧·⑫·엔진 3중 가드): 겸용주택·부담부증여·PHD §164⑤·용도변경·공익수용·재개발/입주권/분양권·가업상속(주택 단위 판정).
+- G-11: 원인 혼합 자산의 ⑧이 분리 검증(`validateSplitDirectInputs`) 전체에 닿게 한다 — 신축 경로 포함, 깨어나는 규칙 격자 확인.
 
 ### D2 — 「건물 상속·증여 + 토지 매매」
 

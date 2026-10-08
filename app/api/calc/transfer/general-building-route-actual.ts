@@ -77,7 +77,7 @@ export interface GeneralBuildingActualPricePayload {
   /** 상속개시일 건물 평가액 (원). */
   inheritedBuildingValue?: number;
   // ── §95④ 단기보유 기산점 — actual 분기 기존 결측(회귀 동반 수정) ──
-  /** 토지 취득원인 — 단기보유 기산점 분기(영 §95④). */
+  /** 토지 취득원인 — 단기보유 기산점 분기(법 §104②). */
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
   /**
    * M-1a 파트 취득일 — `acquisitionDate`(자산 단위)는 **건물** 취득일이고,
@@ -134,11 +134,11 @@ export interface GeneralBuildingActualPricePayload {
   buildingAppraisalAtTransfer?: number;
   saleSplitExemption?: SaleSplitExemption;
   buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
-  /** 상속 시 피상속인 취득일 (영 §95④). */
+  /** 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate?: Date;
   /** 건물 전용 피상속인 취득일 — 비면 `decedentAcquisitionDate` (환산 경로와 같은 fallback · D3 2026-09-30) */
   buildingDecedentAcquisitionDate?: Date;
-  /** 증여 시 증여자 취득일 (영 §95④). */
+  /** 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
   donorAcquisitionDate?: Date;
   /**
    * 🔴 배우자등 이월과세(「소득세법」 §97의2①) — 토지·건물 파트별 서브객체.

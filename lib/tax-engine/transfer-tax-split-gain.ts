@@ -17,6 +17,7 @@ import type {
 } from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -62,6 +63,16 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // 파트별 모드 조기 파생 — PHD 게이트 판정용(혼합 모드 시 오발동 방지).
   const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const earlyBuildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
+
+  // 토지 파트 취득원인 규칙(D0 — 이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — ⑫·⑧과 같은 leaf.
+  const [causeIssue] = collectSplitPartCauseIssues({
+    isSplitable: true,
+    hasLandAcquisitionDate: true,
+    landAcquisitionCause: input.landAcquisitionCause,
+    hasLandDecedentAcquisitionDate: !!input.landDecedentAcquisitionDate,
+    landMode: earlyLandMode,
+  });
+  if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
 
   // ── 개별주택가격 미공시 취득 경로 (§164⑤) ──
   // 토지·건물 **모두** 환산(estimated)일 때만 진입 — 혼합 모드(예: 토지 실가+건물 환산)는

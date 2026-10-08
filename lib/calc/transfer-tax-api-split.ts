@@ -14,6 +14,8 @@ import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
+import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -204,11 +206,8 @@ export function buildSplitPayload(
     ...(buildingAcqDirectActive
       ? {
           // 건물 신축 + 토지 상속·증여(2026-07-30): 건물 취득가액의 정본은 「신축비용」 칸
-          // (`fixedAcquisitionPrice`)이다. 파트 칸을 따로 두면 같은 값을 두 번 입력받게 되므로
-          // 여기서 후퇴시킨다. `landAcquisitionCause`가 설정된 경우에만 적용해 다른 경로는 불변.
-          buildingAcquisitionPrice:
-            ratioed(primary.buildingAcquisitionPrice) ??
-            (primary.landAcquisitionCause ? ratioed(primary.fixedAcquisitionPrice) : undefined),
+          // (`fixedAcquisitionPrice`)이다 — ⑥·⑧과 같은 후퇴 leaf(`splitBuildingAcqPriceInput`, D0 G-5).
+          buildingAcquisitionPrice: ratioed(splitBuildingAcqPriceInput(primary)),
         }
       : {}),
     // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
@@ -254,18 +253,18 @@ export function buildLandStdAtAcquisitionPayload(primary: AssetForm) {
 }
 
 /**
- * ④⑬ §104②1·2호를 **토지 파트**에 적용 (G-4) — 건물과 취득원인이 다른 경우.
- * 원인이 비면 전송하지 않는다: 엔진이 자산 단위 원인을 그대로 쓰도록(회귀 0). 단건·다건 공용(F-12).
+ * ④⑬ §104②1호를 **토지 파트**에 적용 (G-4) — 건물과 취득원인이 다른 경우. 단건·다건·컴패니언 공용(F-12 · D0 G-4).
+ * 원인이 비면 전송하지 않는다: 엔진이 자산 단위 원인을 그대로 쓰도록(회귀 0).
+ * ⚠️ 저장값이 아니라 **유효** 원인을 읽는다(D0 G-6) — 블록이 닫힌 자산의 잔재를 보내지 않는다.
+ * ⚠️ 단순 증여의 증여자 취득일은 보내지 않는다(D0 G-8) — §104②2호 통산은 §97의2① 이월과세 자산만이다.
  */
 export function buildLandPartCausePayload(primary: AssetForm) {
-  if (!primary.landAcquisitionCause) return {};
+  const cause = effectiveLandAcquisitionCause(primary);
+  if (!cause) return {};
   return {
-    landAcquisitionCause: primary.landAcquisitionCause,
-    ...(primary.landAcquisitionCause === "inheritance" && primary.landDecedentAcquisitionDate
+    landAcquisitionCause: cause,
+    ...(cause === "inheritance" && primary.landDecedentAcquisitionDate
       ? { landDecedentAcquisitionDate: primary.landDecedentAcquisitionDate }
-      : {}),
-    ...(primary.landAcquisitionCause === "gift" && primary.landDonorAcquisitionDate
-      ? { landDonorAcquisitionDate: primary.landDonorAcquisitionDate }
       : {}),
   };
 }

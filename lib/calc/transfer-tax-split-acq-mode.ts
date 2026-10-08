@@ -15,6 +15,7 @@
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
+import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 
 export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
@@ -189,6 +190,13 @@ interface SeparateAcquisitionFlags {
  */
 interface SeparatePartAmounts extends LegacyAcqFlags {
   selfOwns?: "both" | "building_only" | "land_only";
+  /** 건물 신축 + 토지 상속·증여의 신축비용 후퇴(`splitBuildingAcqPriceInput`)를 판정하는 칸 — 없으면 후퇴 없음 */
+  acquisitionCause?: string;
+  assetKind?: string;
+  isMixedUseHouse?: boolean;
+  landAcquisitionCause?: "" | "inheritance" | "gift";
+  hasSeperateLandAcquisitionDate?: boolean;
+  fixedAcquisitionPrice?: string;
   landAcqMode?: PartAcqMode | "";
   buildingAcqMode?: PartAcqMode | "";
   landAcquisitionPrice?: string;
@@ -225,7 +233,8 @@ export function separateAcqPartsSum(asset: SeparatePartAmounts): { sum: number; 
     {
       owned: selfOwns !== "land_only",
       mode: effectivePartAcqMode(asset.buildingAcqMode, asset),
-      price: asset.buildingAcquisitionPrice,
+      // ④·⑧과 같은 신축비용 후퇴(D0 G-5) — 종전엔 ⑥만 없어 「신축 + 토지 상속」 합계가 0(미확정)으로 보였다.
+      price: splitBuildingAcqPriceInput(asset),
       salesCase: asset.buildingSalesCaseValue,
     },
   ];
