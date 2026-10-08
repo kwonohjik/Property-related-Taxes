@@ -23,6 +23,8 @@ const EFFECTIVE_FROM = PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE.toISOSt
 export interface PreDesignationContractScopeArgs {
   assetKind: string | undefined;
   regionCode: string | undefined;
+  /** 양도 주택이 지정 지구 안인가(선언) — 소재 동이 지구 한정일 때 코드 판정을 정한다 */
+  regionInDesignatedDistrict?: boolean;
   transferDate: string | undefined;
   houseRows: number;
   presaleRights: number;
@@ -33,7 +35,7 @@ export function preDesignationContractInScope(a: PreDesignationContractScopeArgs
   if (a.houseRows <= 0 && a.presaleRights <= 0) return false;
   if (!a.transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(a.transferDate) || a.transferDate < EFFECTIVE_FROM) return false;
   if (!a.regionCode) return false;
-  return isRegulatedByBjdCode(a.regionCode, a.transferDate).isRegulated;
+  return isRegulatedByBjdCode(a.regionCode, a.transferDate, a.regionInDesignatedDistrict).isRegulated;
 }
 
 /** 폼 편의 래퍼 — ⑤·⑧이 부른다(④는 `buildHousesPayload` 인자로 같은 값을 넘긴다). */
@@ -44,6 +46,7 @@ export function preDesignationContractInScopeOf(
   return preDesignationContractInScope({
     assetKind: primary?.assetKind,
     regionCode: primary?.regionCode,
+    regionInDesignatedDistrict: primary?.regionInDesignatedDistrict,
     transferDate: form.transferDate,
     houseRows: form.houses?.length ?? 0,
     presaleRights: form.presaleRights?.length ?? 0,

@@ -36,15 +36,21 @@ import type { TransferTaxInput } from "../types/transfer.types";
  */
 export const ORIGINAL_MEMBER_BASE_DEADLINE_YEARS = 3;
 
-type OriginalMemberInput = Pick<TransferTaxInput, "acquisitionDate" | "transferDate" | "regionCode">;
+type OriginalMemberInput = Pick<
+  TransferTaxInput,
+  "acquisitionDate" | "transferDate" | "regionCode" | "regionInDesignatedDistrict"
+>;
 
 type TimingOutcome =
   | { kind: "met"; deadline: Date }
   | { kind: "unmet" }
   | { kind: "unknown"; reason: string };
 
-function regulatedAt(code: string | undefined, date: Date): boolean | undefined {
-  return code ? isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd")).isRegulated : undefined;
+function regulatedAt(code: string | undefined, inDistrict: boolean | undefined, date: Date): boolean | undefined {
+  if (!code) return undefined;
+  const j = isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd"), inDistrict);
+  // 지구 한정 동인데 지구 안인지 모르면 코드로 정하지 않는다 — 두 경우를 모두 계산한다.
+  return j.districtOnly ? undefined : j.isRegulated;
 }
 
 /** 기존주택(B) 취득일 기준 §155① 타이밍(1년·처분기한·연혁상 전입 요건). */
@@ -53,8 +59,8 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
   // 양도 주택이 B보다 뒤에 취득됐으면 양도 주택이 「신규 주택」이다 — §155①은 종전 주택 양도만 받는다.
   if (input.acquisitionDate.getTime() >= newAcq.getTime()) return { kind: "unmet" };
 
-  const previous = regulatedAt(input.regionCode, newAcq);
-  const next = regulatedAt(right.regionCode, newAcq);
+  const previous = regulatedAt(input.regionCode, input.regionInDesignatedDistrict, newAcq);
+  const next = regulatedAt(right.regionCode, right.inDesignatedDistrict, newAcq);
   const candidates =
     previous === false || next === false ? [false] : previous === true && next === true ? [true] : [true, false];
 

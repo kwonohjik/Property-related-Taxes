@@ -56,6 +56,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     region: h.region,
     // ⑭ 법정동코드 — sellingHouse에 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정 (string, Date 변환 불필요)
     regionCode: h.regionCode,
+    inDesignatedDistrict: h.inDesignatedDistrict,
     acquisitionDate: new Date(h.acquisitionDate),
     officialPrice: h.officialPrice,
     isInherited: h.isInherited,
@@ -155,6 +156,7 @@ export function mapPresaleRightsToEngine(
     rightValue: r.rightValue,
     isSpouseOwned: r.isSpouseOwned,
     regionCode: r.regionCode,
+    inDesignatedDistrict: r.inDesignatedDistrict,
     // ⑭ 인가일 — `Date < string` 침묵 false 방지(date-coerce 규약). 미입력은 undefined 유지.
     managementDisposalApprovalDate: r.managementDisposalApprovalDate
       ? new Date(r.managementDisposalApprovalDate)

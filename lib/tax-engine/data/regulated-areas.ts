@@ -63,11 +63,15 @@ function activeSubRules<T extends { appliesFrom?: string; appliesTo?: string }>(
  * @param regions 조정대상지역 이력 데이터 (REGULATED_REGIONS 또는 테스트 fixture)
  * @param bjdCode 법정동코드. 10자리(시군구5+동5)면 읍면/지구 예외까지 정밀, 5자리면 시군구 단위만.
  * @param date    YYYY-MM-DD (양도일 또는 취득일)
+ * @param inDistrict 그 주택이 **지정 지구 안**인가(사용자 선언) — 코드가 「동 안 일부 지구만 지정」된 동(`district`)에
+ *   걸렸을 때만 쓴다. 날짜와 무관한 위치 사실이라 취득·양도·신규 취득 판정이 같은 값을 쓴다. 미선언이면 지정(모름=불리)
+ *   + `districtOnly`.
  */
 export function isRegulatedByBjdCodeIn(
   regions: RegulatedRegion[],
   bjdCode: string,
   date: string,
+  inDistrict?: boolean,
 ): RegulatedAreaJudgment {
   if (!bjdCode || !date) {
     return { isRegulated: false, confidence: "low", basis: "법정동코드 또는 날짜 누락" };
@@ -113,12 +117,33 @@ export function isRegulatedByBjdCodeIn(
     const included = activeSubRules(region.includedSubCodes, date);
     if (included.length > 0) {
       const hit = included.find((inc) => bjdCode.startsWith(inc.codePrefix));
+      if (hit?.district && inDistrict !== undefined) {
+        return inDistrict
+          ? {
+              isRegulated: true,
+              confidence: "high",
+              basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name}: ${hit.district} 안(사용자 선언) 지정`,
+            }
+          : {
+              isRegulated: false,
+              confidence: "high",
+              basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name}: ${hit.district} 밖(사용자 선언) — 지정 지구 외 지역`,
+            };
+      }
       return hit
-        ? {
-            isRegulated: true,
-            confidence: "high",
-            basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name} 지정`,
-          }
+        ? hit.district
+          ? {
+              // 동 안 일부 지구만 지정 — 코드로는 지구 안·밖을 못 가른다(모름=불리 기본값 + 호출부가 선언 반영).
+              isRegulated: true,
+              confidence: "medium",
+              basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name}: ${hit.district}만 지정(지구 안인지 확인 필요)`,
+              districtOnly: { district: hit.district, area: `${region.name} ${hit.name}` },
+            }
+          : {
+              isRegulated: true,
+              confidence: "high",
+              basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name} 지정`,
+            }
         : {
             isRegulated: false,
             confidence: "high",
@@ -163,8 +188,8 @@ export function isRegulatedByBjdCodeIn(
 }
 
 /** REGULATED_REGIONS(모듈 데이터) 기준 판정 편의 래퍼. */
-export function isRegulatedByBjdCode(bjdCode: string, date: string): RegulatedAreaJudgment {
-  return isRegulatedByBjdCodeIn(REGULATED_REGIONS, bjdCode, date);
+export function isRegulatedByBjdCode(bjdCode: string, date: string, inDistrict?: boolean): RegulatedAreaJudgment {
+  return isRegulatedByBjdCodeIn(REGULATED_REGIONS, bjdCode, date, inDistrict);
 }
 
 /**
@@ -188,8 +213,9 @@ export function governingDesignationStartIn(
   regions: RegulatedRegion[],
   bjdCode: string,
   date: string,
+  inDistrict?: boolean,
 ): string | null {
-  if (!isRegulatedByBjdCodeIn(regions, bjdCode, date).isRegulated) return null;
+  if (!isRegulatedByBjdCodeIn(regions, bjdCode, date, inDistrict).isRegulated) return null;
   const nextDay = (d: string) => format(addDays(parseISO(d), 1), "yyyy-MM-dd");
   const boundaries = new Set<string>();
   for (const r of regions) {
@@ -202,14 +228,14 @@ export function governingDesignationStartIn(
   const candidates = [...boundaries].filter((b) => b <= date).sort().reverse();
   for (const b of candidates) {
     const dayBefore = format(subDays(parseISO(b), 1), "yyyy-MM-dd");
-    if (!isRegulatedByBjdCodeIn(regions, bjdCode, dayBefore).isRegulated) return b;
+    if (!isRegulatedByBjdCodeIn(regions, bjdCode, dayBefore, inDistrict).isRegulated) return b;
   }
   return null;
 }
 
 /** REGULATED_REGIONS(모듈 데이터) 기준 편의 래퍼. */
-export function governingDesignationStart(bjdCode: string, date: string): string | null {
-  return governingDesignationStartIn(REGULATED_REGIONS, bjdCode, date);
+export function governingDesignationStart(bjdCode: string, date: string, inDistrict?: boolean): string | null {
+  return governingDesignationStartIn(REGULATED_REGIONS, bjdCode, date, inDistrict);
 }
 
 /**
@@ -316,3 +342,22 @@ export function toRegulatedAreaHistory(): RegulatedAreaHistory {
   return toRegulatedAreaHistoryFrom(REGULATED_REGIONS);
 }
 
+/**
+ * 이 법정동코드가 **「동 안 일부 지구만 지정」 규칙**에 걸리는 지구 목록(기간 포함) — 「지구 안인가」 질문을 띄울지,
+ * 무엇을 물을지 정한다(⑤ 질문 · 확인 필요 고지 공용). 10자리 미만이면 하위 규칙을 못 가르므로 빈 목록이다.
+ */
+export function designatedDistrictsForCode(
+  bjdCode: string | undefined,
+): { district: string; area: string; appliesFrom?: string; appliesTo?: string }[] {
+  if (!bjdCode || bjdCode.length < 10) return [];
+  const candidates = expandSigunguAliases(bjdCode);
+  const region = REGULATED_REGIONS.find((r) => candidates.includes(r.code));
+  return (region?.includedSubCodes ?? [])
+    .filter((s) => s.district && bjdCode.startsWith(s.codePrefix))
+    .map((s) => ({
+      district: s.district!,
+      area: `${region!.name} ${s.name}`,
+      ...(s.appliesFrom ? { appliesFrom: s.appliesFrom } : {}),
+      ...(s.appliesTo ? { appliesTo: s.appliesTo } : {}),
+    }));
+}

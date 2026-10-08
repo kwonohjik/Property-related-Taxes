@@ -232,6 +232,7 @@ export async function POST(request: NextRequest) {
       wasRegulatedAtAcquisition: p.wasRegulatedAtAcquisition,
       // ⑭ ④와 짝 — 제공 시 엔진이 `isRegulatedByBjdCode()` 정밀 판정을 쓴다(단건 `engine-input.ts:68`).
       regionCode: p.regionCode,
+      regionInDesignatedDistrict: p.regionInDesignatedDistrict,
       isUnregistered: p.isUnregistered,
       isNonBusinessLand: p.isNonBusinessLand,
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,

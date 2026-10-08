@@ -29,6 +29,8 @@ const schema = z
     regionCode: z.string().min(2).optional(),
     transferDate: z.string().date(),
     acquisitionDate: z.string().date().optional(),
+    /** 소재 동이 「동 안 일부 지구만 조정대상지역」일 때 — 지정 지구 안인가(사용자 선언). 코드 판정에만 쓴다. */
+    inDistrict: z.boolean().optional(),
   })
   .refine((d) => !!d.address || !!d.regionCode, {
     message: "address 또는 regionCode 중 하나는 필요합니다",
@@ -47,11 +49,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const { address, regionCode, transferDate, acquisitionDate } = parsed.data;
+  const { address, regionCode, transferDate, acquisitionDate, inDistrict } = parsed.data;
 
   // regionCode(법정동코드) 우선 → 동 단위 정밀, 없으면 주소 문자열 fallback
   const judge = (date: string): RegulatedAreaResult =>
-    regionCode ? checkRegulatedAreaByCode(regionCode, date) : checkRegulatedArea(address!, date);
+    regionCode ? checkRegulatedAreaByCode(regionCode, date, inDistrict) : checkRegulatedArea(address!, date);
 
   const transfer = judge(transferDate);
   const acquisition = acquisitionDate ? judge(acquisitionDate) : null;

@@ -295,6 +295,7 @@ export interface MixedUseCompanionContext {
   globals: Pick<
     MixedUseAssetInputSources,
     | "regionCode"
+    | "regionInDesignatedDistrict"
     | "oneHouseExemptionProviso"
     | "temporaryTwoHouse"
     | "specialHouseExclusions"

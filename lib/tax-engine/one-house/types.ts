@@ -56,6 +56,7 @@ export type OneHouseJudgeInput = Pick<
   | "isRegulatedArea"
   | "wasRegulatedAtAcquisition"
   | "regionCode"
+  | "regionInDesignatedDistrict"
   // ── 상속 ──
   | "decedentSameHouseholdBeforeInheritance"
   | "decedentCohabitationResidenceMonths"
@@ -146,6 +147,8 @@ export type OneHouseFacts = {
   isRegulatedArea: boolean;
   wasRegulatedAtAcquisition: boolean;
   regionCode?: string;
+  /** 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때 — 지정 지구 안인가(사용자 선언) */
+  regionInDesignatedDistrict?: boolean;
   /** ⚠️ 사용자 입력이 아니다 — 이월과세(§97의2) 경로가 채우는 수증자 실제 취득일. */
   residenceTransitionAcquisitionDate?: Date;
 

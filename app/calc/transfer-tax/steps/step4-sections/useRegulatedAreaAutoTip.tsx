@@ -42,6 +42,7 @@ export function useRegulatedAreaAutoTip({
     transfer: form.isRegulatedAreaTouched,
     acquisition: form.wasRegulatedAtAcquisitionTouched,
   };
+  const primaryInDistrict = form.assets?.[0]?.regionInDesignatedDistrict;
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
     if ((!primaryAddress && !primaryRegionCode) || !form.transferDate || !isHousingLike(primaryKind)) {
@@ -57,6 +58,8 @@ export function useRegulatedAreaAutoTip({
       body: JSON.stringify({
         address: primaryAddress || undefined,
         regionCode: primaryRegionCode || undefined,
+        // 소재 동이 지구 한정이면 「지구 안인가」 선언으로 코드 판정을 정한다(엔진과 같은 값).
+        inDistrict: primaryRegionCode ? primaryInDistrict : undefined,
         transferDate: form.transferDate,
         // 용도변경 시 주거용 사용일 기준 — 자동 판별 결과가 그대로 wasRegulatedAtAcquisition
         // 토글에 반영되므로, 여기서 취득일을 보내면 엔진 판정과 어긋난다.
@@ -93,7 +96,7 @@ export function useRegulatedAreaAutoTip({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryAddress, primaryRegionCode, form.transferDate, residenceJudgmentDate, primaryKind]);
+  }, [primaryAddress, primaryRegionCode, primaryInDistrict, form.transferDate, residenceJudgmentDate, primaryKind]);
 
   // 조정대상지역 자동 판별 안내 — 주택은 섹션② 취득일 조정 토글 아래, 입주권·분양권은 최상단에 렌더
   return isHousingLike(primaryKind) && primaryAddress && (

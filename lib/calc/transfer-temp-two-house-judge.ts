@@ -100,10 +100,14 @@ export function judgeTempTwoHouseFromForm(p: {
   disposalDelayReason?: string;
   /** 양도(종전) 주택 법정동코드 — 엔진과 같이 코드가 있으면 자동 판정 */
   regionCode?: string;
+  /** 양도 주택이 지정 지구 안인가(선언) — 엔진 `regionInDesignatedDistrict`와 같은 값 */
+  regionInDesignatedDistrict?: boolean;
   /** 폼-전역 「양도 당시 조정대상지역」 — 두 주택 조정 여부 미입력 시 엔진과 같은 폴백 */
   isRegulatedArea?: boolean;
   /** 신규 주택 법정동코드 — 명부 행(`resolveTemporaryTwoHouse`)에서만 온다 */
   newHouseRegionCode?: string;
+  /** 신규 주택이 지정 지구 안인가(명부 행 선언) */
+  newHouseInDesignatedDistrict?: boolean;
   /** §155①2호 새 입력(OH-01 A2b) — ④와 같은 leaf(`toTemporaryTwoHouseEraFacts`)로 편다 */
   eraFields?: TemporaryTwoHouseEraFormFields;
 }): TempTwoHouseVerdict {
@@ -148,7 +152,11 @@ export function judgeTempTwoHouseFromForm(p: {
    * 엔진 술어로 가르고 나머지는 3년 하드코딩이라, 조정대상지역 연혁(2년·1년)·전입요건·임차인 단서가
    * 카드에 반영되지 않아 계산 결과와 어긋났다(OH-01 A2b 후속).
    */
-  const facts = toTemporaryTwoHouseEraFacts(p.eraFields ?? {}, p.newHouseRegionCode || undefined);
+  const facts = toTemporaryTwoHouseEraFacts(
+    p.eraFields ?? {},
+    p.newHouseRegionCode || undefined,
+    p.newHouseInDesignatedDistrict,
+  );
   const optDate = (v: string | undefined) => {
     if (!v) return undefined;
     const x = new Date(v);
@@ -158,6 +166,7 @@ export function judgeTempTwoHouseFromForm(p: {
     transferDate: transfer,
     isRegulatedArea: p.isRegulatedArea === true,
     regionCode: p.regionCode || undefined,
+    regionInDesignatedDistrict: p.regionCode ? p.regionInDesignatedDistrict : undefined,
     temporaryTwoHouse: {
       previousAcquisitionDate: prev,
       newAcquisitionDate: nw,
@@ -165,6 +174,7 @@ export function judgeTempTwoHouseFromForm(p: {
       relocatedSigunguCode: p.relocatedSigunguCode || undefined,
       newHouseSigunguCode: p.newHouseSigunguCode || undefined,
       newHouseRegionCode: facts.newHouseRegionCode,
+      newHouseInDesignatedDistrict: facts.newHouseInDesignatedDistrict,
       newHouseRegulatedAtAcquisition: facts.newHouseRegulatedAtAcquisition,
       previousHouseRegulatedAtNewAcquisition: facts.previousHouseRegulatedAtNewAcquisition,
       newHouseContractDate: optDate(facts.newHouseContractDate),

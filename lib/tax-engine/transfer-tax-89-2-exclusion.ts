@@ -195,6 +195,7 @@ export type Article89Clause2Input = Pick<
   | "houses"
   | "sellingHouseId"
   | "regionCode"
+  | "regionInDesignatedDistrict"
 > &
   // §156의2③④·§156의3②③ 후단 — §154① 단서(1호·2호가목·3호) 해당 시 1년 요건 면제(OH-47)
   ResidenceReqInput;

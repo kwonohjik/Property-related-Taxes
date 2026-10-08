@@ -30,6 +30,8 @@ interface Props {
   onChange: (v: SellingExclusion | undefined) => void;
   /** 양도 물건 법정동코드 · 양도일 — 공고일 안내용(범위 판정은 호출부) */
   regionCode: string | undefined;
+  /** 양도 주택이 지정 지구 안인가(선언) — 공고 식별도 같은 판정을 쓴다 */
+  regionInDesignatedDistrict?: boolean;
   transferDate: string;
 }
 
@@ -38,9 +40,15 @@ function dotted(ymd: string): string {
   return `${y}.${Number(m)}.${Number(d)}.`;
 }
 
-export function SellingHousePreDesignationContractSection({ value, onChange, regionCode, transferDate }: Props) {
+export function SellingHousePreDesignationContractSection({
+  value,
+  onChange,
+  regionCode,
+  regionInDesignatedDistrict,
+  transferDate,
+}: Props) {
   const v = value ?? {};
-  const start = regionCode ? governingDesignationStart(regionCode, transferDate) : null;
+  const start = regionCode ? governingDesignationStart(regionCode, transferDate, regionInDesignatedDistrict) : null;
   const announcement = start ? PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES[start] : undefined;
 
   return (

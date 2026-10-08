@@ -37,6 +37,7 @@ import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
 import { housingFlagResetPatchForAssetKind } from "./housing-flag-reset";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
+import { DesignatedDistrictQuestion } from "../DesignatedDistrictQuestion";
 import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 
 const ASSET_KIND_OPTIONS = [
@@ -327,6 +328,10 @@ export function AssetSectionBasic({
             } else if (addressCleared) {
               patch.regionCode = "";
             }
+            // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다.
+            if (patch.regionCode !== undefined && patch.regionCode !== asset.regionCode) {
+              patch.regionInDesignatedDistrict = undefined;
+            }
             // 전체 PNU 19자리 — 건물 기준시가 모달 prefill 시 건축물대장 조회 활성화용(UI 전용).
             if (v.pnu && v.pnu.length === 19) {
               patch.addressPnu = v.pnu;
@@ -359,6 +364,12 @@ export function AssetSectionBasic({
         <p className="text-xs text-muted-foreground">
           ※ 조정대상지역 여부·공시가격 조회에 사용됩니다.
         </p>
+        <DesignatedDistrictQuestion
+          regionCode={asset.regionCode}
+          value={asset.regionInDesignatedDistrict}
+          onChange={(regionInDesignatedDistrict) => onChange({ regionInDesignatedDistrict })}
+          idSuffix="selling"
+        />
       </div>
 
       {/* 입주권 승계조합원 */}

@@ -253,6 +253,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     //    (`isRegulatedByBjdCode` — 지정·해제 이력 기준)이 통째로 빠진다. houses 배열 안에는
     //    이미 싣고 있었는데(`:65`) 최상위만 빠져, 같은 값이 층마다 다르게 쓰였다.
     regionCode: primary?.regionCode || form.regionCode || undefined,
+    regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     // ⑬ §164⑨ 1호(공익수용)·2호(공매·경락) 양도당시 기준시가 특례 — 단건 ④와 같은 leaf(F-12).
     //    종전에는 화면에 입력칸이 뜨는데 ⑬·⑭ 모두 빠져 환산이 특례 없이 계산됐다(49,293,200 → 85,868,200).

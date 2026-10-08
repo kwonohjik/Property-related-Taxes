@@ -603,6 +603,7 @@ export function HousesListSection({
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
           regionCode={form.assets[0]?.regionCode}
+          regionInDesignatedDistrict={form.assets[0]?.regionInDesignatedDistrict}
           transferDate={form.transferDate}
         />
       )}

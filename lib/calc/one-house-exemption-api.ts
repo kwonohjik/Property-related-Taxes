@@ -158,6 +158,8 @@ export function buildOneHouseExemptionApiBody(
      *    빠진 배관은 ④ 하나였다(`judgment-region-code-transport.anchor.test.ts`).
      */
     regionCode: primary.regionCode || undefined,
+    // ④ 지정 지구 안인가 — 소재 동이 「동 안 일부 지구만 조정대상지역」일 때 코드 판정을 정한다.
+    regionInDesignatedDistrict: primary.regionCode ? primary.regionInDesignatedDistrict : undefined,
     /**
      * 🔴 거주기간은 **폼-전역 값을 그대로 읽으면 안 된다**.
      *

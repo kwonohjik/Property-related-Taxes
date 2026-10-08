@@ -267,7 +267,11 @@ export function determineMultiHouseSurcharge(
 
   if (sellingHouse?.regionCode) {
     const transferDateStr = format(input.transferDate, "yyyy-MM-dd");
-    isRegulatedAtTransfer = isRegulatedByBjdCode(sellingHouse.regionCode, transferDateStr).isRegulated;
+    isRegulatedAtTransfer = isRegulatedByBjdCode(
+      sellingHouse.regionCode,
+      transferDateStr,
+      sellingHouse.inDesignatedDistrict,
+    ).isRegulated;
   } else if (sellingHouse) {
     // regionCode 미제공 → isRegulatedFallback(boolean = isRegulatedArea) 유지 (회귀 0 보장)
     warnings.push("양도 주택의 regionCode 미제공 — isRegulatedArea 플래그 사용");

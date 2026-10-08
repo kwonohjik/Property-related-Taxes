@@ -467,6 +467,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
     // 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback.
     regionCode: primary.regionCode || form.regionCode || undefined,
+    // ④ 지정 지구 안인가 — 자산 코드에 붙은 선언이다(폼-전역 코드 폴백에는 선언이 없다).
+    regionInDesignatedDistrict: primary.regionCode ? primary.regionInDesignatedDistrict : undefined,
     isUnregistered: form.isUnregistered,
     // 「비사업용 **토지**」는 「소득세법」 제104조의3이 **토지**에만 규정한 개념이다.
     // 토글은 `assetKind === "land"`에서만 렌더되는데(Step4.tsx) 종류를 바꿔도 폼 값은 남으므로,

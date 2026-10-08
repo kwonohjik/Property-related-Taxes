@@ -75,6 +75,7 @@ export function buildTransferEngineInput(
     wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
     // ⑭ 법정동코드 — Zod 통과 시 string(10), 미제공 시 undefined (Date 변환 불필요)
     regionCode: data.regionCode,
+    regionInDesignatedDistrict: data.regionInDesignatedDistrict,
     isUnregistered: data.isUnregistered,
     isNonBusinessLand: data.isNonBusinessLand,
     // ⑭ §77 농특세 비과세 판정(농특세령 §4①1호) — 미전달 시 엔진이 과세로 처리한다.

@@ -57,6 +57,7 @@ export interface MixedUseAssetInputSources {
   /** 영 §154① 요건 판정. */
   wasRegulatedAtAcquisition: boolean | undefined;
   regionCode: TransferTaxInput["regionCode"];
+  regionInDesignatedDistrict: TransferTaxInput["regionInDesignatedDistrict"];
   /** ⚠️ Date 변환본 — §154① 단서의 `addYears` 비교. */
   oneHouseExemptionProviso: TransferTaxInput["oneHouseExemptionProviso"];
   /** §155① 일시적 2주택 (Date 변환본). */
@@ -180,6 +181,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     // ⑭ 영 §154① 요건 판정 — 폼-전역이라 서브객체에 없다. 누락 시 거주요건·단서 면제가 미판정.
     wasRegulatedAtAcquisition: s.wasRegulatedAtAcquisition,
     regionCode: s.regionCode,
+    regionInDesignatedDistrict: s.regionInDesignatedDistrict,
     oneHouseExemptionProviso: s.oneHouseExemptionProviso,
     // ⑭ §155① 일시적 2주택 — 겸용 서브엔진이 §155① 의제 성립을 선판정해 중과 배제(§167의10①15호)로 넘긴다.
     temporaryTwoHouse: s.temporaryTwoHouse,

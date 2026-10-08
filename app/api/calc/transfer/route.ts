@@ -294,6 +294,7 @@ export async function POST(request: NextRequest) {
         rates,
         globals: {
           regionCode: data.regionCode,
+          regionInDesignatedDistrict: data.regionInDesignatedDistrict,
           oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
           temporaryTwoHouse: engineInput.temporaryTwoHouse,
           // §155의3 상생임대 (P5-c) — ⚠️ Date 변환본(`engineInput`).
@@ -486,6 +487,7 @@ export async function POST(request: NextRequest) {
         assetContractDate: engineInput.assetContractDate,
         wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
         regionCode: data.regionCode,
+        regionInDesignatedDistrict: data.regionInDesignatedDistrict,
         oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
         temporaryTwoHouse: engineInput.temporaryTwoHouse,
         householdHousingCount: data.householdHousingCount,

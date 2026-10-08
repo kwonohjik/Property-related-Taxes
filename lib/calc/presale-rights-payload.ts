@@ -38,6 +38,7 @@ export interface PresaleRightPayloadItem {
   rightValue?: number;
   isSpouseOwned?: boolean;
   regionCode?: string;
+  inDesignatedDistrict?: boolean;
   managementDisposalApprovalDate?: string;
   memberOrigin?: PresaleRightEntry["memberOrigin"];
   isInherited?: boolean;
@@ -72,6 +73,7 @@ export function buildPresaleRightsPayload(
       rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
       isSpouseOwned: p.isSpouseOwned,
       regionCode: p.regionCode || undefined,
+      inDesignatedDistrict: p.regionCode ? p.inDesignatedDistrict : undefined,
       // §89② 조합원입주권 축 시행일 게이트(법률 제7837호 부칙 §12①) — 빈 문자열은 미입력이다.
       managementDisposalApprovalDate: p.managementDisposalApprovalDate || undefined,
       // 취득 경위는 조합원입주권 전용 — 분양권 행에 남은 값은 싣지 않는다.

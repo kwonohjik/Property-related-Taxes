@@ -54,8 +54,10 @@ export function judgmentTempTwoHouseVerdict(
     disposalDelayReason: form.disposalDelayReason,
     // §155①2호 (OH-01 A2b) — ④(`one-house-exemption-api.ts`)가 싣는 값과 같은 소스.
     regionCode: primary?.regionCode,
+    regionInDesignatedDistrict: primary?.regionInDesignatedDistrict,
     isRegulatedArea: form.isRegulatedArea,
     newHouseRegionCode: derivedNewHouse?.newHouseRegionCode,
+    newHouseInDesignatedDistrict: derivedNewHouse?.newHouseInDesignatedDistrict,
     eraFields: form,
   });
 }

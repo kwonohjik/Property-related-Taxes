@@ -365,6 +365,11 @@ export interface HouseEntry {
   latitude?: string;
   /** 법정동 10자리 (PNU 앞 10자리) — §167의3 지역기준 판정. 있으면 지역 구분 자동 파생 */
   regionCode?: string;
+  /**
+   * 소재 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 지정 지구 안인가(사용자 선언). 주소를 바꾸면 지운다.
+   * 엔진 `isRegulatedByBjdCode`의 `inDistrict`. 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
   /** 19자리 PNU — UI 재조회용 */
   addressPnu?: string;
   /** 공시가격·전유면적을 주소조회로 자동채움한 표식 — 사용자 수정 시 제거(조회값 배지) */
@@ -505,6 +510,11 @@ export interface PresaleRightEntry {
    * 주소검색 PNU 앞 10자리 또는 시·군·구 5자리(앞 5자리만 사용).
    */
   regionCode?: string;
+  /**
+   * 소재 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 지정 지구 안인가(사용자 선언). 주소를 바꾸면 지운다.
+   * 엔진 `isRegulatedByBjdCode`의 `inDistrict`. 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
   /** 소재지 주소 요약 — UI 표시 전용(AddressSearch 선택 결과). 엔진/API 미전송. */
   regionName?: string;
   /**

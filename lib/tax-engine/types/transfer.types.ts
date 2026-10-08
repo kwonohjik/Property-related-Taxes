@@ -344,6 +344,11 @@ export interface TransferTaxInput {
    * 미제공 시 boolean fallback 유지 (회귀 0 보장).
    */
   regionCode?: string;
+  /**
+   * 소재지 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 그 주택이 지정 지구 안인가(사용자 선언).
+   * 위치 사실이라 모든 날짜 판정에 같은 값을 쓴다(`isRegulatedByBjdCode`의 `inDistrict`). 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  regionInDesignatedDistrict?: boolean;
   /** 미등기 여부 */
   isUnregistered: boolean;
   isNonBusinessLand: boolean; // 비사업용 토지 여부
@@ -389,6 +394,8 @@ export interface TransferTaxInput {
     //    신규 주택을 취득」 (OH-01 A2b). 판정: `resolveRegulatedAtNewAcquisition`.
     /** 신규 주택 법정동코드(10자리 — 명부 행 주소). 있으면 신규 취득일 기준 정밀 판정(선언보다 우선). */
     newHouseRegionCode?: string;
+    /** 신규 주택이 지정 지구 안인가 — `regionInDesignatedDistrict`와 같은 규약(명부 행 선언). */
+    newHouseInDesignatedDistrict?: boolean;
     /** 코드가 없을 때 — 신규 주택 취득 당시 신규 주택이 조정대상지역이었나(사용자 선언). */
     newHouseRegulatedAtAcquisition?: boolean;
     /** 양도주택 `regionCode`가 없을 때 — 신규 주택 취득 당시 종전 주택이 조정대상지역이었나(사용자 선언). */

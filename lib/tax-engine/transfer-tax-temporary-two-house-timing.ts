@@ -140,10 +140,10 @@ export function meetsPublicInstitutionRelocationRegion(
  *    anchor: `judgment-transfer-regulated-region-code.predo.anchor.test.ts`.
  */
 function resolveIsRegulatedAtTransfer(
-  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "regionCode">,
+  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "regionCode" | "regionInDesignatedDistrict">,
 ): boolean {
   if (p.regionCode) {
-    return isRegulatedByBjdCode(p.regionCode, format(p.transferDate, "yyyy-MM-dd")).isRegulated;
+    return isRegulatedByBjdCode(p.regionCode, format(p.transferDate, "yyyy-MM-dd"), p.regionInDesignatedDistrict).isRegulated;
   }
   return p.isRegulatedArea === true;
 }
@@ -158,7 +158,7 @@ function resolveIsRegulatedAtTransfer(
 export function resolveTemporaryTwoHouseDeadlineYears(
   p: Pick<
     TransferTaxInput,
-    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode"
+    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode" | "regionInDesignatedDistrict"
   >,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
 ): number {
@@ -193,7 +193,7 @@ export function resolveTemporaryTwoHouseDeadlineYears(
  * 그 밖(미입력)은 `determined: false` — 호출부가 종전 대리 지표로 계산하고 판정 보류를 고지한다.
  */
 export function resolveRegulatedAtNewAcquisition(
-  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode">,
+  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode" | "regionInDesignatedDistrict">,
 ): {
   previous?: boolean;
   next?: boolean;
@@ -204,16 +204,31 @@ export function resolveRegulatedAtNewAcquisition(
 } {
   const tt = p.temporaryTwoHouse;
   if (!tt) return { bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false };
-  const at = (code: string | undefined, declared: boolean | undefined, date: Date) =>
-    code ? isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd")).isRegulated : declared;
-  const previous = at(p.regionCode, tt.previousHouseRegulatedAtNewAcquisition, tt.newAcquisitionDate);
-  let next = at(tt.newHouseRegionCode, tt.newHouseRegulatedAtAcquisition, tt.newAcquisitionDate);
+  // `inDistrict` — 「동 안 일부 지구만 지정」된 동이면 그 주택이 지구 안인가(선언). 위치 사실이라 날짜마다 같은 값.
+  const at = (code: string | undefined, inDistrict: boolean | undefined, declared: boolean | undefined, date: Date) =>
+    code ? isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd"), inDistrict).isRegulated : declared;
+  const previous = at(
+    p.regionCode,
+    p.regionInDesignatedDistrict,
+    tt.previousHouseRegulatedAtNewAcquisition,
+    tt.newAcquisitionDate,
+  );
+  let next = at(tt.newHouseRegionCode, tt.newHouseInDesignatedDistrict, tt.newHouseRegulatedAtAcquisition, tt.newAcquisitionDate);
   if (next === true && tt.newHouseRegionCode && tt.newHouseContractDate) {
-    next = isRegulatedByBjdCode(tt.newHouseRegionCode, format(tt.newHouseContractDate, "yyyy-MM-dd")).isRegulated;
+    next = isRegulatedByBjdCode(
+      tt.newHouseRegionCode,
+      format(tt.newHouseContractDate, "yyyy-MM-dd"),
+      tt.newHouseInDesignatedDistrict,
+    ).isRegulated;
   }
   let announcementWarning: string | undefined;
   if (next === true && tt.newHouseRegionCode) {
-    const pre = resolveNewHousePreAnnouncement(tt.newHouseRegionCode, tt.newAcquisitionDate, tt.newHouseContractDate);
+    const pre = resolveNewHousePreAnnouncement(
+      tt.newHouseRegionCode,
+      tt.newAcquisitionDate,
+      tt.newHouseContractDate,
+      tt.newHouseInDesignatedDistrict,
+    );
     if (pre.excluded) next = false;
     announcementWarning = pre.warning;
   }
@@ -239,9 +254,10 @@ function resolveNewHousePreAnnouncement(
   code: string,
   acquisitionDate: Date,
   contractDate: Date | undefined,
+  inDistrict: boolean | undefined,
 ): { excluded: boolean; warning?: string } {
   const acq = format(acquisitionDate, "yyyy-MM-dd");
-  const start = governingDesignationStart(code, acq);
+  const start = governingDesignationStart(code, acq, inDistrict);
   if (!start) return { excluded: false };
   const announcement = PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES[start];
   if (!announcement) {
@@ -262,7 +278,7 @@ function resolveNewHousePreAnnouncement(
 export function resolveTemporaryTwoHouseDeadline(
   p: Pick<
     TransferTaxInput,
-    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode"
+    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode" | "regionInDesignatedDistrict"
   >,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
 ): TemporaryTwoHouseDeadlineEra {
