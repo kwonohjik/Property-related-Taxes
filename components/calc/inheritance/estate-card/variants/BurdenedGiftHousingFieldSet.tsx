@@ -54,6 +54,7 @@ import {
 } from "@/components/calc/transfer/TempTwoHouseDeadlineExceptionInputs";
 import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import {
   giftBurdenedEffectiveIsRegulatedArea,
   giftBurdenedFinalHouseRestartInScope,
@@ -90,7 +91,12 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   //   증여 주택 주소가 있으면 종전 주택 조정 여부는 주소로 자동 판정된다(④가 싣는 `regionCode`와 같은 값).
   const regionCode = giftBurdenedRegionCode(item);
   const eraGate = giftBurdenedTempTwoHouseRegulatedGate(bgt, transferDate, regionCode);
-  const byAddress = giftBurdenedRegulatedByAddress(regionCode, bgt.acquisitionDate, transferDate);
+  const byAddress = giftBurdenedRegulatedByAddress(
+    regionCode,
+    bgt.acquisitionDate,
+    transferDate,
+    bgt.regionInDesignatedDistrict,
+  );
   // 「양도시 조정대상지역」 실효값 — ④⑧과 같은 leaf(E-1 잔여 A)
   const regulatedAtGift = giftBurdenedEffectiveIsRegulatedArea(bgt, regionCode, transferDate);
   // §154① 단서·§154⑤ 단서 재기산(E-1 후속) — ④·⑧과 같은 게이트
@@ -189,6 +195,15 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-house-count"
         />
       </FieldCard>
+
+      {/* 지정 지구 안인가(#2055 후속) — 증여 주택 법정동이 「동 안 일부 지구만 조정대상지역」일 때만 뜬다. 아래 두 조정
+          판정(양도시·취득시)과 ④·⑧이 같은 답을 쓴다. 소재지가 바뀌면 답을 지운다(`giftBurdenedDistrictResetPatch`). */}
+      <DesignatedDistrictQuestion
+        regionCode={regionCode}
+        value={bgt.regionInDesignatedDistrict}
+        onChange={(regionInDesignatedDistrict) => set({ regionInDesignatedDistrict })}
+        idSuffix="bg-gift-house"
+      />
 
       {/* 양도시 조정대상지역 — 양도세 계산기와 같은 규칙(E-1 잔여 A): 주소가 있으면 안 만진 토글은 주소 판정을
           따르고, 만지면 그 선택을 저장해 주소보다 우선한다. ④·⑧은 같은 leaf(`giftBurdenedEffectiveIsRegulatedArea`). */}
@@ -316,10 +331,23 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                     } satisfies AddressValue
                   }
                   onChange={(v) =>
-                    set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedNewHouseAddressPatch(v) } })
+                    set({
+                    temporaryTwoHouse: {
+                      ...bgt.temporaryTwoHouse!,
+                      ...giftBurdenedNewHouseAddressPatch(v, bgt.temporaryTwoHouse?.newHouseRegionCode),
+                    },
+                  })
                   }
                 />
               </div>
+              <DesignatedDistrictQuestion
+                regionCode={bgt.temporaryTwoHouse.newHouseRegionCode || undefined}
+                value={bgt.temporaryTwoHouse.newHouseInDesignatedDistrict}
+                onChange={(newHouseInDesignatedDistrict) =>
+                  set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, newHouseInDesignatedDistrict } })
+                }
+                idSuffix="bg-new-house"
+              />
             </FieldCard>
           )}
           {/* §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 판정 메뉴와 같은 위젯. ⑯의 신규 주택 소재지는 위 칸과 같은 필드에
@@ -333,7 +361,12 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                 }
                 relocationRegionVerdict={judgeRelocationRegion(deadlineFields)}
                 onNewHouseAddress={(v) =>
-                  set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedNewHouseAddressPatch(v) } })
+                  set({
+                    temporaryTwoHouse: {
+                      ...bgt.temporaryTwoHouse!,
+                      ...giftBurdenedNewHouseAddressPatch(v, bgt.temporaryTwoHouse?.newHouseRegionCode),
+                    },
+                  })
                 }
               />
               <TempTwoHouseDelayReasonInput

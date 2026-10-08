@@ -1153,6 +1153,12 @@ export interface BurdenedGiftTransferTaxInput {
    * 주소 판정을 따른다(E-1 잔여 A · `giftBurdenedEffectiveIsRegulatedArea`). 만지면 `true`/`false`를 저장한다.
    */
   isRegulatedArea?: boolean;
+  /**
+   * 증여 주택 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때 — 지정 지구 안인가(사용자 선언, #2055 후속).
+   * 엔진 `regionInDesignatedDistrict`와 같은 값. 미선언 = 지정(모름=불리) + 확인 필요. 주소의 법정동이 바뀌면 지운다
+   * (`giftBurdenedDistrictResetPatch`).
+   */
+  regionInDesignatedDistrict?: boolean;
   /** 취득시 조정대상지역 여부 (거주요건 경과규정 판단) */
   wasRegulatedAtAcquisition?: boolean;
   /**
@@ -1198,6 +1204,8 @@ export interface BurdenedGiftTransferTaxInput {
     newHouseJibun?: string;
     /** 신규 주택 법정동코드 — 소재지 PNU 앞 10자리 */
     newHouseRegionCode?: string;
+    /** 신규 주택이 지정 지구 안인가(사용자 선언 — 「동 안 일부 지구만 조정대상지역」 동일 때만 의미). 소재지가 바뀌면 지운다 */
+    newHouseInDesignatedDistrict?: boolean;
     /*
      * §155① 처분기한 예외 (E-1 한계 G3) — 양도세 폼과 **같은 이름**이다. ⑤는 판정 메뉴와 같은 위젯
      * (`TempTwoHouseDeadlineExceptionInputs`), ④는 같은 leaf(`buildTempTwoHouseDeadlineExceptionFacts`).

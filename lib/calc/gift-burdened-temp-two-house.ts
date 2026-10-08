@@ -48,9 +48,12 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
     provisoBusinessApprovalDate: "",
     residencePeriodMonths: String(bgt.residencePeriodMonths ?? 0),
     regionCode,
+    // 지정 지구 안인가(#2055 후속) — ④와 같은 값(코드가 있을 때만 의미)
+    regionInDesignatedDistrict: regionCode ? bgt.regionInDesignatedDistrict : undefined,
     isRegulatedArea: bgt.isRegulatedArea === true,
     // 신규 주택 소재지 코드(E-1 잔여 B) — ④ `toTemporaryTwoHouseEraFacts`와 같은 값
     newHouseRegionCode: tt.newHouseRegionCode || undefined,
+    newHouseInDesignatedDistrict: tt.newHouseInDesignatedDistrict,
     // §155⑯·⑱(E-1 한계 G3) — ④가 싣는 값과 같다. ⑯이 성립하면 조정 기한 연혁을 덮어 ①2호 칸이 닫힌다
     //   (판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자).
     ...giftBurdenedDeadlineJudgeArgs(bgt),
@@ -65,14 +68,20 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
  * 양도세 계산기 명부 행(`buildHouseAddressPatch`)·증여 주택(`giftBurdenedRegionCode`)과 같은 규칙이다.
  * PNU가 없으면(직접 입력한 주소 · 지우기) 코드를 비운다 — 엔진은 선언으로 판정한다.
  */
-export function giftBurdenedNewHouseAddressPatch(v: {
-  jibun?: string;
-  road?: string;
-  pnu?: string;
-}): { newHouseJibun: string; newHouseRegionCode: string } {
+export function giftBurdenedNewHouseAddressPatch(
+  v: {
+    jibun?: string;
+    road?: string;
+    pnu?: string;
+  },
+  /** 지금 저장된 신규 주택 법정동코드 — 바뀌면 「지정 지구 안인가」 답을 지운다(#2055 후속) */
+  currentRegionCode?: string,
+): { newHouseJibun: string; newHouseRegionCode: string; newHouseInDesignatedDistrict?: undefined } {
+  const newHouseRegionCode = v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "";
   return {
     newHouseJibun: v.jibun || v.road || "",
-    newHouseRegionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "",
+    newHouseRegionCode,
+    ...(newHouseRegionCode !== (currentRegionCode ?? "") ? { newHouseInDesignatedDistrict: undefined } : {}),
   };
 }
 
