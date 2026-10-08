@@ -15,6 +15,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /**
  * 양도가 2억 · 추계 취득가 1억 · 취득시 기준시가 1억 · 2017-03-09 취득 → 2026-02-16 양도.
@@ -28,7 +29,7 @@ function seedForm(mode: "appraisal" | "salesCase", isUnregistered: boolean) {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2017-03-09",

@@ -6,6 +6,7 @@
  */
 import type { Page } from "@playwright/test";
 import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./residence-direct";
 
 export const otherHouse = (id: string, acquisitionDate: string, over: Record<string, unknown> = {}) => ({
   id,
@@ -33,7 +34,7 @@ export async function gotoTransferHoldingsStep(
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
             addressJibun: "강원특별자치도 춘천시 테스트동 1",
             regionCode: "5111010100",
             assetKind: "housing",

@@ -14,6 +14,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /**
  * 사례 44 재개발APT · 양도 2026-06-01 — **유예 종료 후**.
@@ -26,7 +27,7 @@ function seedForm(regulated: boolean) {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+          ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "redevelopment_apt",
           acquisitionCause: "purchase",
           acquisitionDate: "2005-04-09",

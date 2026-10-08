@@ -14,10 +14,11 @@
  */
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /** 주택 1건 + 자경농지(조특법 §69 감면) 1건 함께양도. */
 const house = {
-  ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+  ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "housing",
   acquisitionDate: "2009-03-01",
   fixedAcquisitionPrice: "300000000",
@@ -26,7 +27,7 @@ const house = {
 };
 
 const farmland = {
-  ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
+  ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "land",
   assetLabel: "농지(밭)",
   acquisitionDate: "2005-04-07",

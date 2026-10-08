@@ -45,6 +45,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { putCalculationRecord } from "./_helpers/history-seed";
 import { openHistoryModal } from "./_helpers/navigation";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 interface Combo {
   name: string;
@@ -378,7 +379,7 @@ test.describe("다건 — 평범한 자산만으로도 집계 소제목이 거�
 // ───────────────────────────────────────────────────────────────────────────
 function generalBuilding(over: Over = {}) {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
     addressJibun: "서울 강남구 테스트동 1-1",
     regionCode: "1168010100",
     assetKind: "general_building",

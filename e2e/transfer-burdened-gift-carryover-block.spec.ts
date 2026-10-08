@@ -23,6 +23,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /** ⑧ validate가 「당초 증여자」 값을 요구하는 문구. 종전의 「아직 지원하지 않습니다」를 대체한다. */
 const NEED_CODONOR_MSG = /「당초 증여자」.*입력하세요/;
@@ -35,7 +36,7 @@ function seedForm(over: Record<string, unknown> = {}) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "general_building",
             transferType: "burdened_gift",
             bgValuationMode: "sangjeungbeop_standard",

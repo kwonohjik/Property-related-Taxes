@@ -17,6 +17,8 @@
  * 반환: 사람이 읽는 메시지 배열(구간별 첫 오류 1건 + 겹침 건수만큼). 빈 배열이면 통과.
  */
 import { fieldError } from "./transfer-tax-validate-field";
+import type { IssueField } from "./transfer-tax-validate-field";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 
 export type ResidenceIntervalLike = { moveInDate: string; moveOutDate: string };
 
@@ -67,4 +69,33 @@ export function collectResidenceIntervalErrors(args: {
   }
 
   return errors;
+}
+
+/**
+ * 개월 수 **직접 입력**의 상한 — 거주 산입 시작 기준일(통상 취득일)부터 양도일까지의 개월 수.
+ *
+ * 구간 입력은 위 규칙(입주일 ≥ 기준일 · 퇴거일 ≤ 양도일 · 겹침 금지)으로 이 범위를 넘을 수 없다.
+ * 직접 입력에는 날짜가 없어 같은 상한만 건다 — 두 모드가 허용하는 최댓값이 같아야 한다.
+ * 개월 수는 구간과 같은 §154⑥ 초일 산입 leaf(`residenceIntervalMonths`)로 센다.
+ *
+ * 근거: 「소득세법 시행령」 §154① 괄호 「그 보유기간 중 거주기간」·법 §95⑤.
+ * 날짜가 없거나 역전이면 판정하지 않는다(그 누락은 다른 ⑧이 막는다).
+ *
+ * @returns 오류 메시지(fieldError 형식) 또는 null
+ */
+export function directResidenceMonthsOverflowError(args: {
+  months: number;
+  acquisitionDate?: string;
+  transferDate?: string;
+  field: IssueField;
+}): string | null {
+  const { months, acquisitionDate, transferDate, field } = args;
+  if (!acquisitionDate || !transferDate || transferDate < acquisitionDate) return null;
+  const max = residenceIntervalMonths(acquisitionDate, transferDate);
+  if (months <= max) return null;
+  return fieldError(
+    field,
+    `거주기간: ${months}개월이 취득일(${acquisitionDate})부터 양도일까지의 ${max}개월을 넘습니다. ` +
+      `거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.`,
+  );
 }

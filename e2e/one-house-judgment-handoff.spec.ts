@@ -15,6 +15,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 const JIBUN = "서울 강남구 대치동 316";
 
@@ -36,6 +37,7 @@ async function gotoSaleStep(page: Page) {
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 }
 
 /** ② 에서 §155의3 상생임대 특례를 **성립하도록** 채운다. */

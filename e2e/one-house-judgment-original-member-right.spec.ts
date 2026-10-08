@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 async function seedRight(page: Page) {
   await page.goto("/calc/one-house-exemption");
@@ -38,6 +39,7 @@ async function seedRight(page: Page) {
 async function fillSaleStep(page: Page) {
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   await fillDateAndVerify(page, { year: "2018", month: "01", day: "01" }, {
     scope: page.getByTestId("one-house-acq-date"),
   });

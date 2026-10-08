@@ -17,6 +17,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /** 24억 물건의 40% 지분 · 1세대1주택 — 12억 문턱을 가로지르는 픽스처(anchor H1과 같은 축). */
 function seedForm(declared: boolean) {
@@ -27,7 +28,7 @@ function seedForm(declared: boolean) {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2009-01-01",
@@ -152,7 +153,7 @@ test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)
           householdNoPresaleRightsConfirmed: true, // roster-required PR-D
           assets: [
             {
-              ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+              ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
               assetKind: "redevelopment_apt",
               acquisitionCause: "purchase",
               acquisitionDate: "2010-01-01",

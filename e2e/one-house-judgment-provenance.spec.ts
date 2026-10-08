@@ -17,6 +17,7 @@ import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { confirmNoOtherHouses } from "./_helpers/confirm-no-other-houses";
 import { confirmNoPresaleRights } from "./_helpers/confirm-no-presale-rights";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 const JIBUN = "서울 강남구 대치동 316";
 
@@ -36,6 +37,7 @@ async function judge(page: Page) {
   // ② 양도 대상 주택 (2026-09-23 재배치 — 종전에는 3번째 화면이었다)
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   await fillDateAndVerify(page, { year: "2019", month: "03", day: "10" }, {
     scope: page.getByTestId("one-house-acq-date"),
   });
@@ -116,6 +118,7 @@ test.describe("계산기 결과의 출처 한 줄", () => {
     // 탭 클릭은 검증을 타지 않으므로 현재 단계와 무관하게 먼저 눌러 둘 수 있다.
     await confirmNoOtherHouses(page);
     await confirmNoPresaleRights(page);
+    await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
     await page.getByRole("button", { name: "자산 목록" }).first().click();
     for (let i = 0; i < 3; i++) {
       await page.getByRole("button", { name: "다음" }).click();

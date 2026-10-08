@@ -36,11 +36,12 @@
       "transferDate": "1995-11-15",
       "contractTotalPrice": "100000000",
       "provisoReason": "rental_5yr_residence",
+      "provisoRentalLeaseResidenceMonths": "62",
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "1994-04-17",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "62"
+        "residencePeriodMonthsAsset": "18"
       }
     },
     "expected": {
@@ -50,6 +51,6 @@
       ]
     },
     "bucket": "match",
-    "note": "match. 짝(가정) — 승계가 아니라 본인이 1990-09-15에 임차 입주했다면 임차 거주와 분양 후 거주 통산 62개월(5년 2개월)로 §154① 단서 1호(건설임대주택 임차일~양도일 5년 이상 거주) → 보유 1년 7개월이어도 비과세. 관측: applied 154-1-proviso:rental_5yr_residence. 입력 도달: 단서를 빼면 과세(V-F255-noproviso). 판정 보류 civil-161(2009 전 공휴일 표)은 잡음."
+    "note": "match. 짝(가정) — 승계가 아니라 본인이 1990-09-15에 임차 입주했다면 임차 거주와 분양 후 거주 통산 62개월(5년 2개월)로 §154① 단서 1호(건설임대주택 임차일~양도일 5년 이상 거주) → 보유 1년 7개월이어도 비과세. 관측: applied 154-1-proviso:rental_5yr_residence. 입력 도달: 단서를 빼면 과세(V-F255-noproviso). 판정 보류 civil-161(2009 전 공휴일 표)은 잡음. 임차일부터의 거주 개월은 단서 전용 칸(취득 전 임차 포함 거주 개월)에, 본문 거주기간은 취득일~양도일 전체로 입력한다(본문은 보유기간 중 거주만 — 직접 입력 상한)."
   }
 ]

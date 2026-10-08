@@ -17,12 +17,13 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 function gotoHolding(page: Page, acquisitionDate: string, over: Record<string, unknown>) {
   return gotoJudgmentStep2(page, {
     assets: [
       {
-        ...makeDefaultAsset(1),
+        ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
         addressJibun: "서울 강남구 테스트동 1-1",
         assetKind: "housing",
         acquisitionCause: "purchase",
@@ -124,7 +125,7 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
           formData: {
             assets: [
               {
-                ...makeDefaultAsset(1),
+                ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
                 addressJibun: "서울 강남구 테스트동 1-1",
                 assetKind: "housing",
                 acquisitionCause: "purchase",

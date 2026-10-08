@@ -19,6 +19,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 const SEED = {
   state: {
@@ -27,7 +28,7 @@ const SEED = {
       householdNoPresaleRightsConfirmed: true, // roster-required PR-D
       assets: [
         {
-          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+          ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
           acquisitionDate: "2019-09-10",

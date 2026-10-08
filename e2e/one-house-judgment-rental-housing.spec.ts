@@ -12,6 +12,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 function toggleSwitch(page: Page, titleText: string | RegExp) {
   return page
@@ -31,6 +32,7 @@ async function gotoSaleStep(page: Page) {
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 }
 
 test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
@@ -95,6 +97,7 @@ test.describe("판정 메뉴 §155⑳ 장기임대주택 특례", () => {
     // 배너가 뜨고 ② 단계에 그대로 남는다.
     await expect(page.getByText(/사업자등록일을 입력하세요/)).toBeVisible();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   });
 
   /**

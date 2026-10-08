@@ -44,6 +44,8 @@ import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectFinalHouseRestartErrors, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { winWinRentalFieldErrors } from "./one-house-extra-facts-payload";
@@ -528,6 +530,21 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
     })) {
       errors.push(err("residencePeriods", message));
     }
+  }
+  // 직접 입력 — 구간 모드와 같은 범위(취득일~양도일)를 상한으로 막는다(계산기와 같은 leaf).
+  if (
+    form.isOneHousehold &&
+    primary &&
+    primary.assetKind !== "right_to_move_in" &&
+    primary.residenceInputMode === "direct"
+  ) {
+    const overflow = directResidenceMonthsOverflowError({
+      months: deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths),
+      acquisitionDate: primary.acquisitionDate,
+      transferDate: form.transferDate,
+      field: "residencePeriodMonthsAsset",
+    });
+    if (overflow) errors.push(err("residencePeriodMonthsAsset", overflow));
   }
 
   /**

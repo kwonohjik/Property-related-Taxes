@@ -173,7 +173,7 @@ const MIXED = {
 };
 function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
   const f = createDefaultTransferFormData();
-  f.assets[0] = { ...f.assets[0], ...MIXED, ...over } as TransferFormData["assets"][number];
+  f.assets[0] = { ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], ...MIXED, ...over } as TransferFormData["assets"][number];
   Object.assign(f, {
     transferDate: "2024-06-01",
     filingDate: "2024-08-31",

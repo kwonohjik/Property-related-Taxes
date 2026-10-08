@@ -108,7 +108,7 @@ async function bodyOf(f: Form): Promise<Record<string, unknown>> {
 }
 function form(asset: Record<string, unknown>, top: Record<string, unknown>): Form {
   const f = createDefaultTransferFormData();
-  f.assets[0] = { ...f.assets[0], ...asset } as Form["assets"][number];
+  f.assets[0] = { ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], ...asset } as Form["assets"][number];
   Object.assign(f, top);
   // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님). 겸용이 아닌 자산은 그대로.
   return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);

@@ -15,11 +15,27 @@ export interface ResidencePeriod {
   moveOutDate: string;
 }
 
-export const RESIDENCE_DEFAULTS = {
-  residenceInputMode: "direct" as "interval" | "direct",
-  residencePeriods: [] as ResidencePeriod[],
-  residencePeriodMonthsAsset: "0",
-};
+/**
+ * 신규 자산 기본값 — **구간 입력 + 빈 구간 1개**(2026-10-08 사용자 결정). 화면에 입주일·퇴거일 칸이
+ * 바로 보인다. 거주하지 않았으면 그 구간을 삭제해야 ⑧을 통과한다(빈 구간은 「입주일을 입력하세요」).
+ *
+ * ⚠️ 구 기록의 부재 키는 `migrateResidenceFields`가 **direct로** 남긴다 — 구 기록은 개월 수만
+ *    들고 있으므로 여기 기본값으로 재해석하면 그 값이 버려진다
+ *    (memory `feedback_flipping_enum_default_rewrites_absent_records`).
+ *
+ * 함수인 이유: 배열·구간 객체를 자산마다 새로 만들어야 자산끼리 참조를 공유하지 않는다.
+ */
+export function residenceDefaults(): {
+  residenceInputMode: "interval" | "direct";
+  residencePeriods: ResidencePeriod[];
+  residencePeriodMonthsAsset: string;
+} {
+  return {
+    residenceInputMode: "interval",
+    residencePeriods: [{ moveInDate: "", moveOutDate: "" }],
+    residencePeriodMonthsAsset: "0",
+  };
+}
 
 /** sessionStorage 마이그레이션: legacy AssetForm에 거주 필드가 없으면 기본값 주입 */
 export function migrateResidenceFields(a: Record<string, unknown>): void {

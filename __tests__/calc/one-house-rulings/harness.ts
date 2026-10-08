@@ -107,7 +107,9 @@ export function buildCaseForm(
   return {
     ...base,
     ...top,
-    assets: [migrateAsset({ ...base.assets[0], ...(asset ?? {}) })],
+    // 사례는 거주 기본값이 직접 입력(개월 수)이던 때 작성됐다 — 그 축을 명시해 사례가 보던 것을 그대로 본다.
+    //   구간을 쓰는 사례는 JSON이 `residenceInputMode`·`residencePeriods`를 직접 싣는다(뒤가 우선).
+    assets: [migrateAsset({ ...base.assets[0], residenceInputMode: "direct", residencePeriods: [], ...(asset ?? {}) })],
     houses: (houses ?? []).map((h, i) => makeHouse(h.id ?? `h${i + 1}`, h)),
   } as OneHouseJudgmentFormData;
 }
