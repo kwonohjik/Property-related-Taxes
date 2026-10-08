@@ -18,9 +18,30 @@ export type ExemptionProvisoFormSlice = Pick<
   | "provisoDepartureDate"
   | "provisoExpropriationDate"
   | "provisoBusinessApprovalDate"
+  | "provisoRentalLeaseResidenceMonths"
   | "provisoPreContractNoHouse"
 > &
   Rental4hoFormSlice;
+
+/**
+ * 1호 「임차일부터 양도일까지 세대전원 거주 개월」 — 빈 값·숫자 아님이면 `undefined`(엔진은 본문 거주기간으로 판정).
+ * ④(단건·다건·판정 메뉴·부담부증여)·클라이언트 판정이 **같은 파서**를 쓴다.
+ */
+export function parseRentalLeaseResidenceMonths(raw: string | undefined): number | undefined {
+  const t = raw?.trim();
+  if (!t) return undefined;
+  const n = Math.floor(Number(t));
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/** 1호일 때만 싣는 조각 — 다른 사유로 바꾼 뒤 남은 값은 보내지 않는다. */
+export function rentalLeaseResidencePayload(
+  reason: string,
+  raw: string | undefined,
+): { rentalLeaseResidenceMonths: number } | Record<string, never> {
+  const months = reason === "rental_5yr_residence" ? parseRentalLeaseResidenceMonths(raw) : undefined;
+  return months !== undefined ? { rentalLeaseResidenceMonths: months } : {};
+}
 
 export function buildExemptionProvisoPayload(
   form: ExemptionProvisoFormSlice,
@@ -34,6 +55,7 @@ export function buildExemptionProvisoPayload(
       ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
       ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
       ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+      ...rentalLeaseResidencePayload(reason, form.provisoRentalLeaseResidenceMonths),
       ...(reason === "rental_registration_4ho" ? { rentalRegistration4ho: buildRental4hoPayload(form) } : {}),
       // O4 — 5호 「계약금 지급일 현재 무주택」 확인. ⑫가 true를 요구한다(⑧과 같은 규칙) — 종전엔 싣지 않아 strip됐다.
       ...(reason === "pre_designation_contract" ? { preContractNoHouse: form.provisoPreContractNoHouse === true } : {}),

@@ -185,6 +185,8 @@ export const propertyBaseShape = {
       departureDate: z.string().date().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
+      // ⑫ 1호 임차일부터 세대전원 거주 개월(취득 전 임차 포함) — ⑭ `engine-input.ts`
+      rentalLeaseResidenceMonths: z.number().int().min(0).optional(),
       // ⑫ O4 5호 「계약금 지급일 현재 무주택」 확인 — 종전엔 키가 없어 strip됐다. 엔진은 이 요건을 판정하지 않고
       //    ⑧·⑫가 담보한다(`transfer-tax-schema-household-refines.ts` — 5호면 true 필수). ⑭ 매핑 없음(엔진 미소비).
       preContractNoHouse: z.boolean().optional(),

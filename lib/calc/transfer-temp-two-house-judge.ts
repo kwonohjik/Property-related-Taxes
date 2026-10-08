@@ -25,6 +25,7 @@ import {
 } from "@/lib/calc/temporary-two-house-era-facts";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
+import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 
 /**
  * §155① **본문** 처분기한 3년 — 엔진 규칙 행 `temporary_two_house.disposalDeadlineYears`와 같은 값
@@ -86,6 +87,8 @@ export function judgeTempTwoHouseFromForm(p: {
   provisoDepartureDate: string;
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
+  /** 1호 임차일부터 세대전원 거주 개월 — ④와 같은 파서(`parseRentalLeaseResidenceMonths`) */
+  provisoRentalLeaseResidenceMonths?: string;
   residencePeriodMonths: string;
   /** §155⑯ 공공기관 지방이전 — 기한 5년 + 1년 요건 면제 */
   publicInstitutionRelocation?: boolean;
@@ -134,6 +137,7 @@ export function judgeTempTwoHouseFromForm(p: {
         businessApprovalDate: p.provisoBusinessApprovalDate
           ? new Date(p.provisoBusinessApprovalDate)
           : undefined,
+        ...rentalLeaseResidencePayload(p.provisoReason, p.provisoRentalLeaseResidenceMonths),
       },
     });
     oneYearWaived = relax === "both";

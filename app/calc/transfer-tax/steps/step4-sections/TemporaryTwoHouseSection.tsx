@@ -321,6 +321,7 @@ function TempTwoHouseOtherSpecials({
             provisoDepartureDate={form.provisoDepartureDate}
             provisoExpropriationDate={form.provisoExpropriationDate}
             provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+            provisoRentalLeaseResidenceMonths={form.provisoRentalLeaseResidenceMonths}
             provisoPreContractNoHouse={form.provisoPreContractNoHouse}
             mode={proviso.mode}
             onChange={onChange}

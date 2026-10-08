@@ -19,6 +19,7 @@ import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -129,6 +130,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
           ...(form.provisoBusinessApprovalDate
             ? { businessApprovalDate: toDate(form.provisoBusinessApprovalDate, "provisoBusinessApprovalDate") }
             : {}),
+          ...rentalLeaseResidencePayload(effectiveReason, form.provisoRentalLeaseResidenceMonths),
           // OH-38 — Step4 거주요건 안내도 ④·⑭와 같은 조립·같은 변환(단일 진실)
           ...(effectiveReason === "rental_registration_4ho"
             ? { rentalRegistration4ho: toEngineRental4ho(buildRental4hoPayload(form)) }

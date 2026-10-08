@@ -6,13 +6,15 @@
  * 1·2·3호 = 보유+거주 면제 / 5호 = 거주만 면제 (소득세법 시행령 §154 ① 단서).
  * 삭제 전 4호(임대사업자 등록) = 거주만 면제 — 대통령령 제30395호 부칙 제38조 경과조치(OH-38).
  * 폼은 FLAT(provisoReason 등), API 변환에서 oneHouseExemptionProviso로 조립.
- * 거주 충족(1호 5년·3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용 — 별도 입력 없음.
+ * 거주 충족(3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용. 1호 5년은 「임차일부터」 기산이라 취득 전 임차
+ * 거주를 포함한다 — 전용 칸(provisoRentalLeaseResidenceMonths)을 두고, 비우면 거주기간 입력으로 판정한다.
  *
  * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호만 노출(나·다목·5호 제외).
  *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·5호 선택 후 전환 시 stale 무효값 표시 방지.
  */
 
 import { DateInput } from "@/components/ui/date-input";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -38,6 +40,8 @@ interface Props {
   provisoDepartureDate: string;
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
+  /** 1호 — 임차일부터 양도일까지 세대전원 거주 개월(취득 전 임차 포함) */
+  provisoRentalLeaseResidenceMonths: string;
   provisoPreContractNoHouse: boolean;
   /**
    * 삭제 전 4호 입력(OH-38) — 폼을 그대로 넘긴다. 4호는 `one_house` 맥락에서만 선택되므로
@@ -53,6 +57,7 @@ interface Props {
         provisoDepartureDate: string;
         provisoExpropriationDate: string;
         provisoBusinessApprovalDate: string;
+        provisoRentalLeaseResidenceMonths: string;
         provisoPreContractNoHouse: boolean;
       } & Omit<Rental4hoFormSlice, "transferDate">
     >,
@@ -111,6 +116,7 @@ export function ExemptionProvisoSection({
   provisoDepartureDate,
   provisoExpropriationDate,
   provisoBusinessApprovalDate,
+  provisoRentalLeaseResidenceMonths,
   provisoPreContractNoHouse,
   rental4ho,
   mode,
@@ -209,12 +215,28 @@ export function ExemptionProvisoSection({
         <Rental4hoProvisoFields value={rental4ho ?? {}} onChange={onChange} />
       )}
 
-      {(effReason === "unavoidable" || effReason === "rental_5yr_residence") && (
-        <p className="text-caption text-violet-700">
-          {effReason === "unavoidable"
-            ? "위 거주기간 입력이 1년 이상이어야 적용됩니다."
-            : "위 거주기간 입력이 5년 이상이어야 적용됩니다."}
-        </p>
+      {/*
+        1호는 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간」이다 — 분양전환 전 임차 거주를 포함하므로
+        본문 거주기간(취득일 이후 거주만 — 구간 입력은 취득 전 입주를 막는다)과 따로 받는다. 비우면 엔진은
+        본문 거주기간으로 판정한다(취득일 기산이라 이 기간보다 길 수 없다).
+      */}
+      {effReason === "rental_5yr_residence" && (
+        <FieldCard
+          field="provisoRentalLeaseResidenceMonths"
+          label="임차일부터 세대전원 거주 개월"
+          hint="임대주택에 임차해 입주한 날부터 양도일까지 세대전원이 거주한 개월 수(분양전환·취득 전 임차 기간 포함). 60개월 이상이어야 적용됩니다. 비우면 위 거주기간 입력으로 판정합니다."
+        >
+          <div className="w-32">
+            <DecimalInput
+              value={provisoRentalLeaseResidenceMonths}
+              onChange={(v) => onChange({ provisoRentalLeaseResidenceMonths: v })}
+            />
+          </div>
+        </FieldCard>
+      )}
+
+      {effReason === "unavoidable" && (
+        <p className="text-caption text-violet-700">위 거주기간 입력이 1년 이상이어야 적용됩니다.</p>
       )}
     </div>
   );
