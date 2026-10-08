@@ -151,12 +151,12 @@ describe("OH-28 ⑤ — ③ 명부 행 편집의 주택 수 제외(조특법)", 
     expect(screen.getByTestId("unsold989-row-acq-date").textContent).toContain("2021-01-01");
   });
 
-  it("[C2-28-UI-c] 양도 대상이 조합원입주권이면 ⑥을 띄우지 않는다(④·⑧과 같은 게이트)", () => {
+  it("[C2-28-UI-c] 양도 대상이 조합원입주권이어도 ⑥을 띄운다 — 행 편집 창은 한 벌이고, 판정에 쓰는지는 ④·⑧·배지 공용 술어가 가른다(2026-10-08)", () => {
     render(
       <Step2 form={form({ houses: [ROW] }, { assetKind: "right_to_move_in" } as Partial<AssetForm>)} onChange={() => {}} />,
     );
     openRow();
-    expect(screen.queryByTestId("house-row-count-exclusion")).toBeNull();
+    expect(screen.getByTestId("house-row-count-exclusion")).toBeTruthy();
   });
 
   it("[C2-28-UI-c+] 짝 — 주택 양도면 ⑥이 뜨고, 세대 단위 「조특법 감면주택 보유」 칸은 없다(두 곳에서 받지 않는다)", () => {

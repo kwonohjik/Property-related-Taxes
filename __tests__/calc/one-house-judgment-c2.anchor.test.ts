@@ -279,7 +279,7 @@ describe("OH-28 조특법 §99의4·§98의9 주택 수 제외 — 판정 메뉴
     expect((body.reductions as { type: string }[]).map((r) => r.type)).toEqual(["new_99_4_rural"]);
   });
 
-  it("[C2-28e] 3중 패턴 — 양도 대상이 조합원입주권이면 ⑤가 칸을 숨기므로 ④도 보내지 않고 ⑧도 요구하지 않는다", () => {
+  it("[C2-28e] 3중 패턴 — 양도 대상이 조합원입주권이면 §99의4 선언은 판정에 쓰지 않으므로 ④도 보내지 않고 ⑧도 요구하지 않는다(효과 문언 「일반주택 양도」 — 2026-10-08)", () => {
     const blank = { ...RURAL_994, ruralHouseStdPrice: "" } as AssetReductionForm;
     const f = jForm({ houses: [rowWith(blank)] }, { assetKind: "right_to_move_in" } as Partial<AssetForm>);
     expect(buildOneHouseExemptionApiBody(f).reductions).toEqual([]);
