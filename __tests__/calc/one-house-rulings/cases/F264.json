@@ -1,58 +1,115 @@
 [
- {
-  "id": "F264-era",
-  "docNo": "조심-2008-중-2343",
-  "docDate": "2009.06.30.",
-  "basis": "era",
-  "today": "2007-06-01",
-  "summary": "장기 미집행 도시계획시설 부지 매수청구권 행사로 시에 협의양도(2007.5.10.) — 보상계획 통지일(2007.3.16.)을 사업인정고시일로 보아 그 전 취득(2006.6.1.)이므로 보유기간 제한 없이 비과세",
-  "form": {
-   "isOneHousehold": true,
-   "transferDate": "2007-05-10",
-   "contractTotalPrice": "500000000",
-   "asset": {
-    "assetKind": "housing",
-    "acquisitionDate": "2006-06-01"
-   },
-   "provisoReason": "expropriation",
-   "provisoExpropriationDate": "2007-05-10",
-   "provisoBusinessApprovalDate": "2007-03-16"
+  {
+    "id": "F264-era",
+    "docNo": "조심-2008-중-2343",
+    "docDate": "2009.06.30.",
+    "basis": "era",
+    "today": "2007-06-01",
+    "summary": "장기 미집행 도시계획시설 부지 매수청구권 행사로 시에 협의양도(2007.5.10.) — 보상계획 통지일(2007.3.16.)을 사업인정고시일로 보아 그 전 취득(2006.6.1.)이므로 보유기간 제한 없이 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-05-10",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-06-01"
+      },
+      "provisoReason": "expropriation",
+      "provisoExpropriationDate": "2007-05-10",
+      "provisoBusinessApprovalDate": "2007-03-16"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:expropriation"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 표현: 보상계획 공고를 생략하고 소유자에게 통지한 날(2007-03-16)을 사업인정고시일 칸에 입력(사업인정 없는 협의매수의 고시일 의제), 취득 2006-06-01(임의경매), 수용일=양도일 2007-05-10, 양도가 원문 미기재 → 5억(당시 고가 기준 6억 이하). 국토계획법 §47 매수청구에 따른 협의양도가 협의매수에 해당한다는 점은 사유 선택으로 표현. 관측: 가목 적용 비과세. 음성 짝 N-F264-plan-decision-date."
   },
-  "expected": {
-   "isExempt": true,
-   "appliedExceptions": [
-    "154-1-proviso:expropriation"
-   ]
+  {
+    "id": "N-F264-plan-decision-date",
+    "docNo": "조심-2008-중-2343",
+    "docDate": "2009.06.30.",
+    "basis": "era",
+    "today": "2007-06-01",
+    "summary": "F264의 음성 짝 — 도시계획시설 결정고시일(1978.12.22.)을 사업인정고시일로 보면 고시 후 취득이라 가목 부적용 → 보유 11개월 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-05-10",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-06-01"
+      },
+      "provisoReason": "expropriation",
+      "provisoExpropriationDate": "2007-05-10",
+      "provisoBusinessApprovalDate": "1978-12-22"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:expropriation"
+      ]
+    },
+    "bucket": "match",
+    "note": "반대 규칙 짝(가정) — 고시일 칸에 도시계획시설 결정고시일(1978-12-22)을 넣으면 고시 후 취득이 되어 가목 불성립 → 보유 11개월 과세. 고시일 의제가 결론을 가른다."
   },
-  "bucket": "match",
-  "note": "match. 표현: 보상계획 공고를 생략하고 소유자에게 통지한 날(2007-03-16)을 사업인정고시일 칸에 입력(사업인정 없는 협의매수의 고시일 의제), 취득 2006-06-01(임의경매), 수용일=양도일 2007-05-10, 양도가 원문 미기재 → 5억(당시 고가 기준 6억 이하). 국토계획법 §47 매수청구에 따른 협의양도가 협의매수에 해당한다는 점은 사유 선택으로 표현. 관측: 가목 적용 비과세. 음성 짝 N-F264-plan-decision-date."
- },
- {
-  "id": "N-F264-plan-decision-date",
-  "docNo": "조심-2008-중-2343",
-  "docDate": "2009.06.30.",
-  "basis": "era",
-  "today": "2007-06-01",
-  "summary": "F264의 음성 짝 — 도시계획시설 결정고시일(1978.12.22.)을 사업인정고시일로 보면 고시 후 취득이라 가목 부적용 → 보유 11개월 과세",
-  "form": {
-   "isOneHousehold": true,
-   "transferDate": "2007-05-10",
-   "contractTotalPrice": "500000000",
-   "asset": {
-    "assetKind": "housing",
-    "acquisitionDate": "2006-06-01"
-   },
-   "provisoReason": "expropriation",
-   "provisoExpropriationDate": "2007-05-10",
-   "provisoBusinessApprovalDate": "1978-12-22"
+  {
+    "docNo": "조심-2008-중-2343",
+    "docDate": "2009.06.30.",
+    "id": "N-F264-remnant-2y-era",
+    "basis": "era",
+    "today": "2009-08-01",
+    "summary": "구성 — 수용(2007.5.10.) 후 잔존주택을 2년 2개월 뒤(2009.7.15.) 양도: 2013.2.15. 전 양도는 잔존주택 기한 2년이라 가목 부적용 → 보유 2년 6개월(당시 3년 요건) 과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2009-07-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2007-01-15"
+      },
+      "provisoReason": "expropriation",
+      "provisoExpropriationDate": "2007-05-10",
+      "provisoBusinessApprovalDate": "2007-03-16"
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "154-1-proviso:expropriation"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 케이스(원문 사실 아님) — §154①2호 후단 잔존주택 기한 연혁의 음성 짝. 2013-01-16 시행본(MST 131624)은 「양도일 또는 수용일부터 2년 이내에 양도하는 그 잔존주택」 → 수용일 2007-05-10부터 2년 2개월 뒤 양도는 가목 부적용. 본칙은 2012.6.29. 전 양도라 보유 3년 — 취득 2007-01-15(사업인정 고시 2007-03-16 전)부터 2년 6개월이라 과세. 종전 엔진은 5년을 연혁 없이 적용해 비과세였다(lib/tax-engine/data/expropriation-remnant-era.ts)."
   },
-  "expected": {
-   "isExempt": false,
-   "notAppliedExceptions": [
-    "154-1-proviso:expropriation"
-   ]
-  },
-  "bucket": "match",
-  "note": "반대 규칙 짝(가정) — 고시일 칸에 도시계획시설 결정고시일(1978-12-22)을 넣으면 고시 후 취득이 되어 가목 불성립 → 보유 11개월 과세. 고시일 의제가 결론을 가른다."
- }
+  {
+    "docNo": "조심-2008-중-2343",
+    "docDate": "2009.06.30.",
+    "id": "P-F264-remnant-5y-current",
+    "basis": "current",
+    "today": "2026-10-08",
+    "summary": "구성 — 서울 조정대상지역 취득(2018.1.) 주택 일부 수용(2018.5.10.) 후 잔존주택을 2년 2개월 뒤(2020.7.15.) 양도, 거주 0: 2013.2.15. 이후 양도는 5년 이내라 가목 적용 → 보유·거주 요건 없이 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2020-07-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2018-01-15",
+        "regionCode": "1168010100"
+      },
+      "provisoReason": "expropriation",
+      "provisoExpropriationDate": "2018-05-10",
+      "provisoBusinessApprovalDate": "2018-03-16"
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "154-1-proviso:expropriation"
+      ]
+    },
+    "bucket": "match",
+    "note": "구성 케이스(원문 사실 아님) — 잔존주택 기한 5년(대통령령 제24356호, 2013-02-15 이후 양도분)의 양성 짝. 수용일부터 2년 2개월 뒤 양도라 2년 기한이었다면 불성립이고, 조정대상지역 취득(2018-01-15 서울 강남) · 거주 0이라 본칙으로는 과세된다 — 5년 기한이 결론을 가른다."
+  }
 ]

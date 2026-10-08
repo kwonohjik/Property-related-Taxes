@@ -12,7 +12,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
-import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 
 export function collectHouseCountExclusionReductionErrors(r: AssetReductionForm): string[] {
   const errors: string[] = [];
@@ -37,13 +37,17 @@ export function collectHouseCountExclusionReductionErrors(r: AssetReductionForm)
 /**
  * 명부 행 ⑥ 「감면주택」(`special`) 선언의 필수값 — 계산기·판정 메뉴 공용 leaf.
  *
- * 조문 미선택 · §97·§97의2 임대개시일 미입력(엔진이 「미입력 = 불성립」으로 읽는다). 본 요건 확인 토글은
+ * 조문 미선택 · §97·§97의2 임대개시일 미입력 · §98의8·§99의2 매매계약일 미입력(엔진이 「미입력 = 불성립」으로
+ * 읽는다 — 비워 두면 조용히 다른 경로(일시적 2주택 등)로 판정된다). 본 요건 확인 토글은
  * 막지 않는다 — 엔진이 불성립 사유로 안내한다(낙관 입력 패턴).
  */
 export function collectSpecialHouseExclusionRowErrors(e: SpecialHouseExclusionFormItem): string[] {
   if (!e.article) return ["주택 수 제외 — 감면주택의 적용 조문을 선택하세요."];
   if (usesRentalStartDate(e.article) && !e.houseRentalStartDate) {
     return ["주택 수 제외 — 임대주택의 임대개시일을 입력하세요."];
+  }
+  if (usesContractDateOnly(e.article) && !e.houseContractDate) {
+    return ["주택 수 제외 — 이 조문은 감면주택의 최초 매매계약일로 판정합니다. 매매계약일을 입력하세요."];
   }
   return [];
 }

@@ -392,6 +392,11 @@ export function usesRentalStartDate(article: string): boolean {
   return (SPECIAL_HOUSE_EXCLUSION_WINDOWS as Record<string, ExclusionWindow | undefined>)[article]?.basis === "rental_start";
 }
 
+/** 취득기간을 **최초 매매계약일만**으로 판정하는 조문인가(§98의8·§99의2) — ⑤ 라벨·⑧ 필수값이 같은 술어. */
+export function usesContractDateOnly(article: string): boolean {
+  return (SPECIAL_HOUSE_EXCLUSION_WINDOWS as Record<string, ExclusionWindow | undefined>)[article]?.basis === "contract_only";
+}
+
 
 export interface SpecialHouseExclusionEntryResult {
   article: SpecialHouseExclusionArticle;

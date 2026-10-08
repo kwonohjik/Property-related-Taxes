@@ -9,6 +9,7 @@
  * 정책: RadioCardGroup/DateInput 전용 · useEffect→store 미러링 금지(onChange 직접 set).
  */
 
+import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
@@ -124,6 +125,11 @@ export function PresaleRightsSection({
                     { value: "redevelopment_right", label: "조합원입주권" },
                   ]}
                 />
+                {r.type === "redevelopment_right" && (
+                  <p className="text-micro text-muted-foreground" data-testid="presale-right-scope-hint">
+                    {RIGHT_TO_MOVE_IN_SCOPE_HINT}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">취득일</span>

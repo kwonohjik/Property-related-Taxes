@@ -18,6 +18,8 @@
  * (`HousesListSection.tsx:529`). API 변환 층이 `id:"selling"` 행을 앞에 붙이며 그 행의
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
+import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
+import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import { useMemo } from "react";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -210,7 +212,7 @@ export function Step3({ form, onChange }: Props) {
             {
               value: "right_to_move_in",
               label: "조합원입주권",
-              description: "소득세법 §89①4호 — 다른 주택·분양권 보유 여부와 인가일 기준 요건으로 판정합니다.",
+              description: `소득세법 §89①4호 — 다른 주택·분양권 보유 여부와 인가일 기준 요건으로 판정합니다. ${RIGHT_TO_MOVE_IN_SCOPE_HINT}`,
             },
           ]}
           value={primary.assetKind === "right_to_move_in" ? "right_to_move_in" : "housing"}
@@ -520,7 +522,7 @@ export function Step3({ form, onChange }: Props) {
         checked={form.isUnregistered}
         onCheckedChange={(isUnregistered) => onChange({ isUnregistered })}
         title="미등기 양도자산입니다"
-        description="미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다"
+        description={`미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다. ${UNREGISTERED_EXCLUSION_HINT}`}
         tone="rose"
       />
     </div>
