@@ -9,6 +9,7 @@
  */
 
 import type { AptTransferDeadlineExtension } from "../rental-article/rules";
+import type { TemporaryTwoHouseDelayReason } from "./transfer.types";
 
 // ============================================================
 // 타입 정의
@@ -413,6 +414,16 @@ export interface PresaleRight {
    * 미입력 = 모름 — 두 갈래의 결론이 다르면 특례 불성립 + 확인 필요.
    */
   memberOrigin?: "original_house" | "original_non_house" | "successor";
+  /*
+   * 기존주택 원조합원(`memberOrigin === "original_house"`) 전용 — §155① 일시적 2주택 판정에 쓰는 신규 주택(= 기존주택) 사실.
+   * 일시적 2주택 경로(`temporaryTwoHouse.moveInDate`·`existingTenantLeaseEndDate`·`disposalDelayReason`)와 같은 의미다.
+   */
+  /** §155①2호 가목(2019-12-17 체제) — 기존주택으로 세대전원 이사·전입신고를 마친 날 */
+  originalMemberMoveInDate?: Date;
+  /** §155①2호 단서 — 기존주택 취득일 현재 거주하던 기존 임차인과 전 소유자의 임대차계약 종료일 */
+  originalMemberTenantLeaseEndDate?: Date;
+  /** §155⑱ 처분기한 예외 사유 — 「신규 주택(기존주택)을 취득한 날부터 3년이 되는 날 현재」 해당 */
+  originalMemberDisposalDelayReason?: TemporaryTwoHouseDelayReason;
   isInherited?: boolean;
   /**
    * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를

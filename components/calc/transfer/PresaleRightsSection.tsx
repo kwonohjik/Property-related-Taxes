@@ -19,6 +19,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { OriginalMemberTempTwoHouseInputs } from "@/components/calc/transfer/OriginalMemberTempTwoHouseInputs";
 
 interface Props {
   rights: PresaleRightEntry[];
@@ -37,6 +39,8 @@ interface Props {
   primaryKind?: string;
   confirmed?: boolean;
   onConfirmedChange?: (confirmed: boolean) => void;
+  /** 양도일 — 기존주택 원조합원 행의 §155①2호 가목(2019-12-17 체제) 칸을 열지 정한다(`originalMemberMoveInRelevant`) */
+  transferDate?: string;
 }
 
 export function PresaleRightsSection({
@@ -46,6 +50,7 @@ export function PresaleRightsSection({
   primaryKind,
   confirmed,
   onConfirmedChange,
+  transferDate,
 }: Props) {
   function add() {
     const entry: PresaleRightEntry = {
@@ -190,6 +195,15 @@ export function PresaleRightsSection({
                   </span>
                 )}
               </div>
+              {/* 원조합원 §155① 판정은 주택 양도에서만 일어난다(⑧ `originalMemberFactErrors`와 같은 게이트) — 그 밖에서는 칸을 두지 않는다. */}
+              {r.type === "redevelopment_right" && r.memberOrigin === "original_house" && isOneHouseExemptionAsset(primaryKind) && (
+                <OriginalMemberTempTwoHouseInputs
+                  row={r}
+                  idx={idx}
+                  transferDate={transferDate}
+                  onChange={(patch) => update(r.id, patch)}
+                />
+              )}
               {/*
                 §89②의 조합원입주권 축 시행일 게이트 — 법률 제7837호(2006-01-01 시행) 부칙 §12①이
                 「2006년 1월 1일 이후 최초로 **관리처분계획이 인가된 분**부터」로 정했다.

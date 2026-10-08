@@ -29,6 +29,7 @@ import { validateUsageConversion } from "./transfer-tax-validate-usage-conversio
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import { memberOriginErrors } from "./right-member-origin-scope";
+import { originalMemberFactErrors } from "./right-member-origin-scope";
 import {
   judgmentHouseCountExclusionReductions,
   judgmentLegacyCountExclusionCount,
@@ -248,6 +249,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   // 조합원입주권 취득 경위 — 주택 양도의 §89② 판정에서만 결론을 가른다(계산기와 같은 leaf).
   if (judgmentSaleIsHousing(form)) {
     for (const e of memberOriginErrors(form.presaleRights ?? [])) errors.push(err(e.field, e.message));
+    for (const e of originalMemberFactErrors(form.presaleRights ?? [], form.transferDate)) errors.push(err(e.field, e.message));
   }
 
   /**

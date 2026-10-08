@@ -36,6 +36,10 @@ type RelocationProps = {
 type DelayReasonProps = {
   form: Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason">;
   onChange: (patch: Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason">) => void;
+  /** radio name — 같은 화면에 여러 개가 뜰 때(원조합원 입주권 행) 가른다. 기본 `disposalDelayReason` */
+  name?: string;
+  /** 「신규 주택」을 화면에서 부르는 이름 — 원조합원 입주권 행은 「기존주택」. 기본 「신규 주택」 */
+  newHouseLabel?: string;
 };
 
 /** §155⑯ 공공기관·법인 지방이전 특례 — 토글 + 이전지·신규 주택 소재지 + 연접 판정 안내 */
@@ -117,12 +121,17 @@ export function TempTwoHouseRelocationInputs({
 }
 
 /** §155⑱ 처분기한 예외 사유 — 「신규 주택을 취득한 날부터 3년이 되는 날 현재」 1~5호 */
-export function TempTwoHouseDelayReasonInput({ form, onChange }: DelayReasonProps) {
+export function TempTwoHouseDelayReasonInput({
+  form,
+  onChange,
+  name = "disposalDelayReason",
+  newHouseLabel = "신규 주택",
+}: DelayReasonProps) {
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
       <RadioCardGroup
-        name="disposalDelayReason"
+        name={name}
         value={form.disposalDelayReason}
         onChange={(v) => onChange({ disposalDelayReason: v })}
         options={[
@@ -143,7 +152,7 @@ export function TempTwoHouseDelayReasonInput({ form, onChange }: DelayReasonProp
         ]}
       />
       <p className="text-xs text-muted-foreground">
-        <strong>신규 주택을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
+        <strong>{newHouseLabel}을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
         해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
       </p>
     </div>

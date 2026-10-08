@@ -20,6 +20,13 @@
  * 처분기한은 일시적 2주택 경로와 **같은 leaf**(`resolveTemporaryTwoHouseDeadlineEra`)로 정한다. 「두 주택이 신규 주택
  * 취득일에 조정대상지역인가」는 양도 주택의 `regionCode`와 입주권 행의 `regionCode`(기존주택 = 정비구역 소재지)로
  * 판정한다. 모르면 두 경우를 모두 계산해, 결론이 같을 때만 확정한다(결론을 가르면 특례 불성립 + 확인 필요).
+ *
+ * ## 입주권 행이 받는 §155① 사실 (#2054 후속)
+ *
+ * 일시적 2주택 경로(`temporaryTwoHouse`)와 같은 의미·같은 leaf다 — 신규 주택 = 기존주택.
+ * · `originalMemberMoveInDate`·`originalMemberTenantLeaseEndDate` — §155①2호 가목·단서(2019-12-17 체제, 연혁 leaf가
+ *   그 구간에서만 쓴다). 전입일이 없으면 종전처럼 특례 불성립 + 확인 필요다.
+ * · `originalMemberDisposalDelayReason` — §155⑱ 각 호(기존주택 취득일부터 3년이 되는 날 현재). 기한만 치유한다.
  */
 import { format } from "date-fns";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
@@ -70,12 +77,17 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
       baseDeadlineYears: ORIGINAL_MEMBER_BASE_DEADLINE_YEARS,
       newAcquisitionDate: newAcq,
       previousAcquisitionDate: input.acquisitionDate,
+      // §155①2호 가목·단서 — 일시적 2주택 경로와 같은 leaf에 같은 의미로 넘긴다(신규 주택 = 기존주택).
+      moveInDate: right.originalMemberMoveInDate,
+      existingTenantLeaseEndDate: right.originalMemberTenantLeaseEndDate,
       transferDate: input.transferDate,
     });
     if (era.moveInRequirementPending) {
       return {
         kind: "unknown",
-        reason: "기존주택 취득일부터 1년 안에 세대전원이 이사·전입했는지(§155①2호 가목)를 입력받지 않았습니다",
+        reason:
+          "기존주택 취득일부터 1년 안에 세대전원이 이사·전입했는지(§155①2호 가목)가 입력되지 않았습니다 — " +
+          "분양권·입주권 목록의 그 입주권 행에 기존주택 전입일을 입력하세요",
       };
     }
     const timing = judgeTemporaryTwoHouseTiming({
@@ -86,6 +98,8 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
       oneYearWaived,
       ...(era.deadlineDate ? { deadlineDate: era.deadlineDate } : {}),
       ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),
+      // §155⑱ — 기존주택 취득일부터 3년이 되는 날 현재 각 호 사유면 처분기한을 넘겨도 충족으로 본다.
+      ...(right.originalMemberDisposalDelayReason ? { disposalDelayReason: right.originalMemberDisposalDelayReason } : {}),
     });
     return timing.overall ? { kind: "met", deadline: timing.deadline } : { kind: "unmet" };
   });

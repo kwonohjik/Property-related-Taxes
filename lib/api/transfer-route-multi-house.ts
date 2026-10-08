@@ -163,6 +163,9 @@ export function mapPresaleRightsToEngine(
       ? new Date(r.managementDisposalApprovalDate)
       : undefined,
     memberOrigin: r.memberOrigin,
+    originalMemberMoveInDate: toOptionalDate(r.originalMemberMoveInDate),
+    originalMemberTenantLeaseEndDate: toOptionalDate(r.originalMemberTenantLeaseEndDate),
+    originalMemberDisposalDelayReason: r.originalMemberDisposalDelayReason,
     isInherited: r.isInherited,
     isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
     isCoInherited: r.isCoInherited,

@@ -540,6 +540,17 @@ export interface PresaleRightEntry {
    * 1세대1주택 비과세 판정 대상(주택 양도)이면 필수(⑧).
    */
   memberOrigin?: "original_house" | "original_non_house" | "successor";
+  /*
+   * 기존주택 원조합원 전용(§155① — 엔진 `one-house/original-member-right.ts`). 다른 경위로 바꾸면 ④가 싣지 않는다.
+   */
+  /** §155①2호 가목 — 기존주택으로 세대전원 이사·전입신고한 날(YYYY-MM-DD) */
+  originalMemberMoveInDate?: string;
+  /** §155①2호 단서 — 기존주택 취득일 현재 기존 임차인이 거주했다 */
+  originalMemberExistingTenant?: boolean;
+  /** §155①2호 단서 — 전 소유자와 임차인 간 임대차계약 종료일(YYYY-MM-DD) */
+  originalMemberTenantLeaseEndDate?: string;
+  /** §155⑱ 처분기한 예외 사유("" = 해당 없음) */
+  originalMemberDisposalDelayReason?: string;
   isInherited?: boolean;
   /**
    * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.
