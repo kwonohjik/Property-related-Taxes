@@ -4,7 +4,7 @@
  * 사례 32 입력 베이스에서 토지 acquisitionCause만 inheritance로 변경.
  * 토지 LTHD 기산점 = acquisitionDate(상속개시일 2008-03-17) → 사례 32와 동일.
  * decedentAcquisitionDate(피상속인 취득일)는 단기보유 판정 기산점으로만 영향
- * (영 §95④) — 본 사례는 토지 14.9년 보유로 단기보유 분기 무관 → 결과 동일.
+ * (법 §104②) — 본 사례는 토지 14.9년 보유로 단기보유 분기 무관 → 결과 동일.
  *
  * Anchor 산출 방식: "엔진 도출 결과를 anchor로 고정해 회귀 보호".
  * 향후 inheritance 고유 처리 추가(피상속인취득일 영향 분기 등) 시 회귀 차단.
@@ -22,7 +22,7 @@ import { makeMockRates } from "@/__tests__/tax-engine/_helpers/mock-rates";
 
 const TRANSFER_DATE = new Date("2023-02-19");
 const LAND_INHERITANCE_DATE = new Date("2008-03-17"); // 토지 상속개시일 = LTHD 기산점
-const DECEDENT_ACQ_DATE = new Date("1995-06-15"); // 피상속인 취득일 (영 §95④)
+const DECEDENT_ACQ_DATE = new Date("1995-06-15"); // 피상속인 취득일 (법 §104②)
 const BUILDING_ACQUISITION_DATE = new Date("2018-03-31"); // 건물 신축
 
 const TOTAL_TRANSFER_PRICE = 1_620_000_000;

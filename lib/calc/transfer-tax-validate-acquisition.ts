@@ -39,6 +39,7 @@ import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-r
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { validateLandPartCause } from "./transfer-tax-validate-split";
 import { fieldError } from "./transfer-tax-validate-field";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
@@ -365,7 +366,9 @@ export function validateAssetAcquisition(
     // 신축 + companion 토지가 있고 1년 미만 보유 예상 시 건물 정착면적 필수 (부수토지 한도 산정)
     // 여기서는 보유기간 계산이 어렵고 면적은 있으면 더 좋으므로 강제 차단 대신 경고 수준만 유지.
     // 실제 엔진 분기에서 buildingFootprintArea가 없으면 자동 분기가 비활성됨.
-    return null;
+    // 「토지는 다른 원인으로 취득」(D0 G-1·G-2·G-3) — 이 분기는 아래 `validateSplitDirectInputs`에 닿지 않으므로
+    // 그 규칙만 여기서 부른다(엔진·⑫와 같은 leaf — 막다른 길 방지). 분리 검증 전체 호출은 D1에서 다룬다.
+    return validateLandPartCause(asset, label);
   }
 
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);

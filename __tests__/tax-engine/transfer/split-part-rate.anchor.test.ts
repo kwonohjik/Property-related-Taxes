@@ -413,15 +413,41 @@ describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => 
     expect(r.calculatedTax).toBe(191_490_000);
   });
 
-  it("A-14a: 피상속인 취득일 미입력이면 상속개시일 기준 — 토지분 1~2년 40%(통산 전 값)", () => {
-    const r = run({
-      acquisitionDate: D("2020-01-01"),
-      acquisitionCause: "purchase",
-      landAcquisitionDate: D("2025-06-01"),
-      landAcquisitionCause: "inheritance",
-    });
-    // 2호 = 토지 497,500,000 × 40% 199,000,000 + 건물 44,000,000 누진 5,340,000
-    expect(r.calculatedTax).toBe(204_340_000);
+  it("A-14a: 피상속인 취득일 미입력이면 던진다 — 종전엔 상속개시일 기준 통산 전 값(토지분 1~2년 40%, 204,340,000)으로 조용히 계산", () => {
+    // D0 G-3(docs/00-pm/transfer-acq-cause-mixed.plan.md) — 통산이 빠지면 단기세율이 된다. 일반건물 토지 상속과 같은 필수 규칙.
+    expect(() =>
+      run({
+        acquisitionDate: D("2020-01-01"),
+        acquisitionCause: "purchase",
+        landAcquisitionDate: D("2025-06-01"),
+        landAcquisitionCause: "inheritance",
+      }),
+    ).toThrow("피상속인 취득일이 필요합니다");
+  });
+
+  it("A-14c: 토지 파트 이월과세(carryover_gift)는 던진다 — 엔진은 세율 기산만 반영하고 취득가액·장특 기산·비교과세는 하지 않는다(D0 G-1)", () => {
+    expect(() =>
+      run({
+        acquisitionDate: D("2020-01-01"),
+        acquisitionCause: "purchase",
+        landAcquisitionDate: D("2025-06-01"),
+        landAcquisitionCause: "carryover_gift",
+        landDonorAcquisitionDate: D("2005-01-01"),
+      }),
+    ).toThrow("이월과세로 계산하는 기능은 지원하지 않습니다");
+  });
+
+  it("A-14d: 상속 토지 파트를 환산으로 보내면 던진다 — §163⑨ 평가액이 실지거래가액(D0 G-2)", () => {
+    expect(() =>
+      run({
+        acquisitionDate: D("2020-01-01"),
+        acquisitionCause: "purchase",
+        landAcquisitionDate: D("2025-06-01"),
+        landAcquisitionCause: "inheritance",
+        landDecedentAcquisitionDate: D("2005-01-01"),
+        landAcqMode: "estimated",
+      }),
+    ).toThrow("상속·증여로 취득한 토지는 취득가액을 환산취득가");
   });
 
   it("A-14b(회귀): 토지 취득원인 미제공이면 자산 단위 원인을 그대로 쓴다", () => {

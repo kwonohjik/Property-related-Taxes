@@ -1125,7 +1125,10 @@ export interface TransferTaxInput {
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
   /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
   landDecedentAcquisitionDate?: Date;
-  /** 토지 파트 증여자 취득일 — `landAcquisitionCause`가 증여 계열일 때 §104②2호 통산 */
+  /**
+   * 토지 파트 증여자 취득일 — §104②2호 통산은 `carryover_gift`(§97의2① 자산)만이다(단순 증여는 통산 없음).
+   * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
+   */
   landDonorAcquisitionDate?: Date;
   /** 토지 자본적지출·필요경비 */
   landDirectExpenses?: number;

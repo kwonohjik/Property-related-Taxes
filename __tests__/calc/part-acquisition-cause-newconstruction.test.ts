@@ -29,6 +29,7 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
     acquisitionDate: "2020-06-01", // 사용승인일 → 건물 취득일
     landAcquisitionCause: "inheritance",
     landAcquisitionDate: "2015-03-10", // 상속개시일
+    landDecedentAcquisitionDate: "1990-04-01", // 피상속인 취득일 — §104②1호 통산 기산일(필수 — D0 G-3)
     hasSeperateLandAcquisitionDate: true,
     landAcqMode: "actual",
     buildingAcqMode: "actual",

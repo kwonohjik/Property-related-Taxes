@@ -43,6 +43,8 @@ const FIELD_LABEL: Record<string, string> = {
 
   // 토지/건물 분리
   landAcquisitionDate: "토지 취득일",
+  landAcquisitionCause: "토지 취득원인",
+  landDecedentAcquisitionDate: "토지 피상속인 취득일",
   selfOwns: "본인 소유 부분",
   landSplitMode: "토지/건물 분리 방식", // @deprecated — saleSplitMode로 대체, 하위호환 라벨만 유지
   landAcqMode: "토지 취득가액 방식",

@@ -26,7 +26,7 @@ import { makeMockRates } from "@/__tests__/tax-engine/_helpers/mock-rates";
 
 const TRANSFER_DATE = new Date("2023-02-19");
 const INHERITANCE_START_DATE = new Date("2008-03-17"); // 상속개시일 (토지·건물 동일)
-const DECEDENT_ACQ_DATE = new Date("1995-06-15"); // 피상속인 취득일 (영 §95④)
+const DECEDENT_ACQ_DATE = new Date("1995-06-15"); // 피상속인 취득일 (법 §104②)
 
 const TOTAL_TRANSFER_PRICE = 1_620_000_000;
 const LAND_AREA = 205;
