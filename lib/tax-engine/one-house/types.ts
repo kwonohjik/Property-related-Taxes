@@ -89,6 +89,8 @@ export type OneHouseJudgeInput = Pick<
   | "inheritedRightChoiceWhenBothHeld"
   // ── §154⑤ 단서 최종 1주택 재기산 (OH-22) ──
   | "finalOneHouseRestart"
+  // ── 보유 중 비거주 기간(보유기간 통산 제외 · §154⑧2호) — 판정 메뉴 전용 ──
+  | "nonResidentHoldingPeriod"
 >;
 
 /**
@@ -193,6 +195,9 @@ export type OneHouseFacts = {
   // ── §154⑤ 단서 최종 1주택 재기산 (OH-22) ──
   /** 양도 주택 보유 중 다른 주택 처분 이력 — 미입력이면 판정 보류(2021-01-01~2022-05-09 양도) */
   finalOneHouseRestart?: TransferTaxInput["finalOneHouseRestart"];
+
+  /** 보유 중 비거주 기간 — 보유기간은 거주자 기간만 통산(§154⑧2호 예외). 판정 메뉴 전용 입력. */
+  nonResidentHoldingPeriod?: TransferTaxInput["nonResidentHoldingPeriod"];
 };
 
 /** 판정 대상 양도 정보 — 판정 메뉴는 「양도 예정」, 계산기는 실제 입력값(D-3 재판정). */

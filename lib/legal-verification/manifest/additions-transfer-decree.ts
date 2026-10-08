@@ -20,6 +20,13 @@
 import type { VerificationRule } from "../verifier-types";
 
 export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
+  // ── 비거주자 — 법 §121② 단서의 비거주자 범위(KoreanLaw 현행 본문 실측 2026-10-08) ──
+  {
+    id: "TRANSFER_DECREE.NON_RESIDENT_EXEMPTION_EXCLUSION",
+    citation: "소득세법 시행령 §180의2",
+    keywords: ["대통령령으로 정하는 비거주자", "제154조제1항제2호나목 및 다목의 요건을 충족하는 비거주자는 제외한다"],
+    keywordMode: "ALL",
+  },
   // ── 양도·취득의 정의와 시기 ────────────────────────────────────────
   {
     id: "TRANSFER_DECREE.EXCHANGE_DEFINITION",

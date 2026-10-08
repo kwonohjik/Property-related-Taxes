@@ -12,7 +12,9 @@
     "155-1-temporary-two-house"
    ]
   },
-  "referenceForm": {
+  "bucket": "match",
+  "note": "match(비거주자 입력 신설 2026-10-08). 원문: 일시적 2주택 상태에서 해외이주로 세대전원 출국한 비거주자가 양도 — 일시적 2주택 특례·해외이주 특례 모두 부적용, 과세. 입력: 양도일 현재 비거주자(판정 메뉴 ① 세대 단계 — 2026-10-08 신설). 관측: 과세 — 비거주자에게 §89①3호와 그 특례 배제(소득세법 §121② 단서, 2010.1.1. 이후 양도분)로 일시적 2주택 비과세가 꺼진다(unmet non-resident-121-2). 비거주자 입력을 빼면 155-1-temporary-two-house 비과세(종전 관측). 일자 가정은 종전 그대로(빌라 2005-03-31·거주 24개월, 마포 2008-03-20 명부, 출국 2008-04-27, 양도 2010-03-15·5억).",
+  "form": {
    "isOneHousehold": true,
    "transferDate": "2010-03-15",
    "contractTotalPrice": "500000000",
@@ -29,9 +31,8 @@
     }
    ],
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2008-04-27"
-  },
-  "bucket": "inexpressible",
-  "note": "inexpressible — 없는 입력: 양도일 현재 비거주자 여부(비거주자는 §154①2호나·다목 외 1세대1주택 비과세·§155① 특례를 받지 못함). 참고 관측(referenceForm — 빌라 2005-03-31·거주 24개월, 마포 2008-03-20 명부, 해외이주 출국 2008-04-27, 양도 2010-03-15·5억 가정): 해외이주 단서는 2주택이라 카드가 닫혀 미전송(원문과 같은 방향)이나 거주자 기준 155-1-temporary-two-house 비과세 → 기대(과세)와 다름."
+   "provisoDepartureDate": "2008-04-27",
+   "transferorNonResident": true
+  }
  }
 ]

@@ -19,6 +19,8 @@ export const MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE =
 export const MULTI_PHD_UNSUPPORTED_MESSAGE = "개별주택가격 미공시 환산취득가(영 §164⑦)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE = "가업상속공제(§97의2④) 의제 취득가액은 단건 계산기에서만 지원됩니다.";
 export const MULTI_COMPANION_UNSUPPORTED_MESSAGE = "한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.";
+/** API 전용 — 비거주자 사실은 1세대1주택 판정 메뉴만 받는다(화면은 계산기로 넘기지 않는다). */
+export const MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE = "비거주자 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다.";
 /** API 전용 — 화면(⑧)은 신고가액 공란을 막고, 다건은 신고가액을 `acquisitionPrice`로 직접 쓴다. */
 export const MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE =
   "상속 취득가액 평가(보충적평가·환산)는 단건 계산기에서만 지원됩니다. 다건은 상속세 신고가액을 취득가액으로 입력하세요.";

@@ -32,6 +32,7 @@ import type { useRouter } from "next/navigation";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import {
   deriveJudgmentHouseCount,
+  oneHouseJudgmentNonResidentDefaults,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
@@ -87,7 +88,11 @@ export function toTransferFormPatch(
    */
   judgmentInputHash?: string,
 ): Partial<TransferFormData> {
-  const extras = new Set(Object.keys(oneHouseJudgmentExtraDefaults));
+  // 비거주자 사실은 판정 메뉴 전용이라 넘기지 않는다(`OneHouseJudgmentNonResidentFields` 주석).
+  const extras = new Set([
+    ...Object.keys(oneHouseJudgmentExtraDefaults),
+    ...Object.keys(oneHouseJudgmentNonResidentDefaults),
+  ]);
   const base = {} as Record<string, unknown>;
   for (const [k, v] of Object.entries(form)) {
     if (!extras.has(k)) base[k] = v;

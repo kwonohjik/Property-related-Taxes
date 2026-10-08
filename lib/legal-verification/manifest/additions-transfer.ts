@@ -21,6 +21,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 비거주자 1세대1주택·1입주권 비과세 배제(판정 메뉴 `one-house/non-resident.ts`) — KoreanLaw 현행 본문 실측(2026-10-08). */
+    id: "TRANSFER.NON_RESIDENT_EXEMPTION_EXCLUSION",
+    citation: "소득세법 §121",
+    keywords: ["비거주자에 대한 과세방법", "대통령령으로 정하는 비거주자", "제95조제2항 표 외의 부분 단서는 적용하지 아니한다"],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.TAX_BASE_CALCULATION",
     citation: "소득세법 §92",
     keywords: ["양도소득과세표준", "양도차익", "장기보유 특별공제액", "양도소득 기본공제액"],

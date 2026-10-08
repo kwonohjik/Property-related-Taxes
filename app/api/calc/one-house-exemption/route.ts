@@ -53,6 +53,7 @@ import {
   applyOneRightVerdict,
   type OneHouseOneRightVerdict,
 } from "@/lib/tax-engine/one-house/one-right-verdict";
+import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import {
   resolveExemptionHoldingStartDate,
@@ -248,7 +249,14 @@ export async function POST(request: NextRequest) {
       isRightSale ? oneRightInputAfterSpecialActExclusion(engineInput, exclusion) : engineInput,
       isRightSale,
     );
-    const judgment = applyOneRightVerdict(afterRental, oneRightVerdict);
+    const afterOneRight = applyOneRightVerdict(afterRental, oneRightVerdict);
+
+    /**
+     * 단계 6.7: 양도일 현재 비거주자(소득세법 §121② 단서 · 시행령 §180의2) — 판정 메뉴 전용.
+     * 주택 양도면 §154①2호 나·다목 예외가 아니면 비과세를 끈다(2010.1.1. 전 양도분은 판정 보류).
+     * 입주권 양도는 위 §89①4호 판정이 이미 걸렀다(2020.1.1. 이후).
+     */
+    const judgment = applyNonResidentVerdict(afterOneRight, engineInput, isRightSale);
 
     const houseCount = buildOneHouseCountBreakdown({
       total: engineInput.householdHousingCount,

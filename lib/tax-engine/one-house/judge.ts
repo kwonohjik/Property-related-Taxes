@@ -95,6 +95,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     inheritedRightChoiceWhenBothHeld: facts.inheritedRightChoiceWhenBothHeld,
     // ── §154⑤ 단서 (OH-22) ──
     finalOneHouseRestart: facts.finalOneHouseRestart,
+    nonResidentHoldingPeriod: facts.nonResidentHoldingPeriod,
   } satisfies OneHouseJudgeInput;
 
   /**
@@ -166,6 +167,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     mergedHouseholdFirstHouse: input.mergedHouseholdFirstHouse,
     inheritedRightChoiceWhenBothHeld: input.inheritedRightChoiceWhenBothHeld,
     finalOneHouseRestart: input.finalOneHouseRestart,
+    nonResidentHoldingPeriod: input.nonResidentHoldingPeriod,
   } satisfies OneHouseFacts;
 
   type _Facts = typeof facts;

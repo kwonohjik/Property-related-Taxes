@@ -25,6 +25,7 @@ import { resolveRental4hoRegistration } from "./one-house/rental-registration-4h
 import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
 import { resolveExpropriationRemnantYears } from "./data/expropriation-remnant-era";
 import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
+import { excludeNonResidentHoldingPeriod } from "./one-house/non-resident-holding";
 import {
   CAPITAL_NEWTOWN_RESIDENCE_YEARS,
   capitalNewTownLocation,
@@ -192,6 +193,8 @@ export type ResidenceReqInput = Pick<
   | "winWinRentalHouse"
   // §154⑤ 단서(2021-01-01~2022-05-09 양도) 최종 1주택 재기산 — 보유 기산일·거주요건이 함께 읽는다(OH-22).
   | "finalOneHouseRestart"
+  // 비거주 기간은 보유기간에서 뺀다(§154⑧2호 예외) — `one-house/non-resident.ts`.
+  | "nonResidentHoldingPeriod"
 > &
   Partial<Pick<TransferTaxInput, "householdHousingCount">>;
 
@@ -501,7 +504,7 @@ export function meetsOneHouseResidenceRequirement(
  */
 export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date {
   // §154⑤ 단서(2021-01-01~2022-05-09 양도) 최종 1주택 재기산은 아래 기산일보다 늦으면 그날부터(OH-22).
-  return applyFinalOneHouseRestart(input, resolveBaseHoldingStartDate(input));
+  return applyFinalOneHouseRestart(input, excludeNonResidentHoldingPeriod(input, resolveBaseHoldingStartDate(input)));
 }
 
 function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {

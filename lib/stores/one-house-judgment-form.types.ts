@@ -42,8 +42,38 @@ import { housesOwnedAtTransfer } from "@/lib/calc/household-house-count";
 export type { OneHouseJudgmentExtraFields };
 export { oneHouseJudgmentExtraDefaults };
 
+/**
+ * 비거주자 사실 — **판정 메뉴 전용**(사용자 결정 2026-10-08 「판정 메뉴만」).
+ *
+ * 🔑 §155의2·§155의3 13필드(`OneHouseJudgmentExtraFields`)와 달리 계산기로 넘기지 않는다 — 계산기 엔진은
+ *    비거주자 배제를 하지 않으므로, 넘기면 계산기가 받은 사실 일부만 반영해 판정 메뉴와 다른 답을 낸다.
+ *    `toTransferFormPatch`가 이 키들을 뺀다.
+ */
+export interface OneHouseJudgmentNonResidentFields {
+  /** 양도일 현재 비거주자(소득세법 §121② 단서) */
+  transferorNonResident: boolean;
+  /** 보유 중 비거주자였던 기간이 있다(보유기간은 거주자 기간만 통산) */
+  nonResidentPeriod: boolean;
+  /** 비거주자가 된 날 — 비우면 취득 당시부터 비거주자 */
+  nonResidentStartDate: string;
+  /** 거주자가 된 날 */
+  residentFromDate: string;
+  /** 시행령 §154⑧2호 — 그 주택에서 거주한 상태로 거주자가 됐다 */
+  nonResidentResidedAtConversion: boolean;
+}
+
+export const oneHouseJudgmentNonResidentDefaults: OneHouseJudgmentNonResidentFields = {
+  transferorNonResident: false,
+  nonResidentPeriod: false,
+  nonResidentStartDate: "",
+  residentFromDate: "",
+  nonResidentResidedAtConversion: false,
+};
+
 /** 판정 메뉴 폼 — `TransferFormData` 슈퍼셋(Q-8). */
-export type OneHouseJudgmentFormData = TransferFormData & OneHouseJudgmentExtraFields;
+export type OneHouseJudgmentFormData = TransferFormData &
+  OneHouseJudgmentExtraFields &
+  OneHouseJudgmentNonResidentFields;
 
 
 /**
@@ -56,7 +86,11 @@ export type OneHouseJudgmentFormData = TransferFormData & OneHouseJudgmentExtraF
  *    명부에서 파생한다(G-1). `deriveJudgmentHouseCount`가 유일한 소스다.
  */
 export function createInitialOneHouseJudgmentForm(): OneHouseJudgmentFormData {
-  return { ...createDefaultTransferFormData(), ...oneHouseJudgmentExtraDefaults };
+  return {
+    ...createDefaultTransferFormData(),
+    ...oneHouseJudgmentExtraDefaults,
+    ...oneHouseJudgmentNonResidentDefaults,
+  };
 }
 
 /**

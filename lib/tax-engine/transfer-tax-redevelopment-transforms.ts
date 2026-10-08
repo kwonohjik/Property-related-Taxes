@@ -18,6 +18,7 @@ import { isWithinDeadline } from "./civil-period";
 import { REDEVELOPMENT } from "./legal-codes";
 import { preApprovalNecessaryExpense } from "./redevelopment-split";
 import { oneRightOtherHouseCount } from "./one-house/right-sale-marriage-merge";
+import { nonResidentExcludesOneRight } from "./data/non-resident-exclusion-era";
 import type {
   TransferTaxInput,
   RedevelopmentResult,
@@ -216,6 +217,8 @@ export function resolveOneRightExemptionClause(
   // 연혁(E-3 후속): 2022-01-01 전 취득 입주권·분양권은 대상이 아니다(법률 제18578호 부칙 제7조②·③).
   // 인가일을 몰라 갈리지 않으면 나목 취득일 미입력과 같이 불성립으로 두고 화면이 사유를 안내한다.
   if (oneRightPresaleGate(input, redevInfo) !== "clear") return undefined;
+  // 양도일 현재 비거주자 — 2020.1.1. 이후 양도분은 §89①4호 배제(소득세법 §121② 단서, `one-house/non-resident.ts`).
+  if (nonResidentExcludesOneRight(input)) return undefined;
 
   // 혼인합가(§155⑤) 후 양도면 혼인 전 배우자 쪽 1채를 「다른 주택」에서 뺀다(M9 — 서면-2015-부동산-1200).
   const otherHouses = oneRightOtherHouseCount(input);
