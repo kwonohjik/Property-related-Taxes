@@ -142,6 +142,7 @@ const defaultFormData: TransferFormData = {
   provisoDepartureDate: "",
   provisoExpropriationDate: "",
   provisoBusinessApprovalDate: "",
+  provisoRentalLeaseResidenceMonths: "",
   provisoPreContractNoHouse: false,
   proviso4hoBusinessRegDate: "",
   proviso4hoRentalRegDate: "",

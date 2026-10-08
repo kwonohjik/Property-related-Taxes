@@ -297,6 +297,8 @@ export interface TransferFormData {
   provisoDepartureDate: string;
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
+  /** §154①1호 — 임차일부터 양도일까지 세대전원 거주 개월(취득 전 임차 포함). 빈 값이면 본문 거주기간으로 판정 */
+  provisoRentalLeaseResidenceMonths: string;
   provisoPreContractNoHouse: boolean;
   /**
    * §154① 단서 삭제 전 4호(임대사업자 등록) — `provisoReason === "rental_registration_4ho"`일 때만 쓴다(OH-38).

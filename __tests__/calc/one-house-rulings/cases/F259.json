@@ -6,7 +6,43 @@
     "basis": "era",
     "today": "2007-03-01",
     "summary": "남편 명의로 임차(2001.4.6.)해 전 세대원이 거주하던 건설임대주택을 이혼 후 처 명의로 바꿔(2005.6.) 분양(2006.3.14.)받아 양도 — 당초 임차일부터 거주 5년 이상이면 비과세 (양도일 가정)",
-    "referenceForm": {
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(§154①1호 임차일부터 거주 칸 신설). 원문 사실: 2001-04-06 평택 건설임대아파트를 남편 명의로 임차·전 세대원 입주, 2005.5. 이혼(임대아파트는 처 명의로 하기로 합의), 2005.6. 임차인 처로 변경, 2005.12. 임대기간 만료, 2006-03-14 처 명의 분양, 5년간 주민등록 유지·다른 주택 없음. 가정: 양도 2007-03-15(원문 미기재), 양도가 2억. 회신: 당초 임차일부터 분양주택 양도일까지 거주 5년 이상이면 §154①(건설임대주택) 특례 적용 → 비과세. 표현: 1호 「임차일부터 세대전원 거주 개월」 71(당초 임차일 2001-04-06부터 — 명의 변경일부터 세지 않는다), 본문 거주기간은 취득(분양) 후 구간 2006-03-14~2007-03-15만. 짝 N-F259-lease-unset: 임차일부터 칸을 비우면 본문 거주기간(12개월)으로 판정 → 1호 불성립·보유 1년 → 과세.",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2007-03-15",
+      "contractTotalPrice": "200000000",
+      "provisoReason": "rental_5yr_residence",
+      "provisoRentalLeaseResidenceMonths": "71",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2006-03-14",
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2006-03-14",
+            "moveOutDate": "2007-03-15"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "N-F259-lease-unset",
+    "docNo": "서면인터넷방문상담5팀-1760",
+    "docDate": "2007.06.08.",
+    "basis": "era",
+    "today": "2007-03-01",
+    "summary": "음성 짝 — F259-era에서 1호 「임차일부터 세대전원 거주 개월」을 비움(본문 거주 12개월만)",
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 1호 전용 칸이 비면 엔진은 본문 거주기간(취득일 기산 12개월)으로 1호를 판정한다 — 5년 미달로 단서 불성립, 보유 1년이라 과세. 전용 칸이 결론을 가른다는 것을 고정한다.",
+    "form": {
       "isOneHousehold": true,
       "transferDate": "2007-03-15",
       "contractTotalPrice": "200000000",
@@ -14,14 +50,14 @@
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "2006-03-14",
-        "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "71"
+        "residenceInputMode": "interval",
+        "residencePeriods": [
+          {
+            "moveInDate": "2006-03-14",
+            "moveOutDate": "2007-03-15"
+          }
+        ]
       }
-    },
-    "expected": {
-      "isExempt": true
-    },
-    "bucket": "inexpressible",
-    "note": "원문 사실: 2001-04-06 평택 건설임대아파트를 남편 명의로 임차·전 세대원 입주, 2005.5. 이혼(임대아파트는 처 명의로 하기로 합의), 2005.6. 임차인 처로 변경, 2005.12. 임대기간 만료, 2006-03-14 처 명의 분양, 5년간 주민등록 유지·다른 주택 없음. 가정: 양도 2007-03-15(원문 미기재), 거주 71개월(당초 임차일부터), 양도가 2억. 회신: 당초 임차일부터 분양주택 양도일까지 거주 5년 이상이면 §154①(건설임대주택) 특례 적용 → 비과세. 없는 입력: 임차 명의자와 이혼에 따른 명의 변경 — 엔진은 거주 개월만 받는다. 참고 관측: referenceForm(당초 임차일부터 71개월) = 비과세 / 처 명의 변경일(2005-06)부터 21개월로 세면 과세 — 기산 규칙은 사용자가 넣는 개월 수에 달려 있다."
+    }
   }
 ]

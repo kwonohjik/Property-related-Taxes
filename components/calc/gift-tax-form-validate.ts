@@ -225,6 +225,7 @@ export function validateStep(step: number, form: FormState): string | null {
           reason: effectiveProvisoReason(giftBurdenedProvisoMode(bgt), oneHouse.provisoReason),
           departureDate: oneHouse.provisoDepartureDate,
           expropriationDate: oneHouse.provisoExpropriationDate,
+          rentalLeaseResidenceMonths: oneHouse.provisoRentalLeaseResidenceMonths,
           preContractNoHouse: oneHouse.provisoPreContractNoHouse,
           rental4ho: oneHouse,
         })[0];

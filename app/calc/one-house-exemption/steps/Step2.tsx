@@ -233,6 +233,7 @@ export function Step2({ form, onChange }: Props) {
               provisoDepartureDate={form.provisoDepartureDate}
               provisoExpropriationDate={form.provisoExpropriationDate}
               provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+              provisoRentalLeaseResidenceMonths={form.provisoRentalLeaseResidenceMonths}
               provisoPreContractNoHouse={form.provisoPreContractNoHouse}
               rental4ho={form}
               mode={proviso.mode}

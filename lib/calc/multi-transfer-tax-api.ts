@@ -44,6 +44,7 @@ import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidat
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -408,6 +409,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
             ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
             ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
             ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+            ...rentalLeaseResidencePayload(effectiveProviso, form.provisoRentalLeaseResidenceMonths),
             ...(effectiveProviso === "rental_registration_4ho"
               ? { rentalRegistration4ho: buildRental4hoPayload(form) }
               : {}),

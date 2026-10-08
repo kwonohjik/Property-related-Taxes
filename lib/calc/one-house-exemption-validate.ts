@@ -366,6 +366,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     reason: provisoReason,
     departureDate: form.provisoDepartureDate,
     expropriationDate: form.provisoExpropriationDate,
+    rentalLeaseResidenceMonths: form.provisoRentalLeaseResidenceMonths,
     preContractNoHouse: form.provisoPreContractNoHouse,
     rental4ho: form,
   })) {

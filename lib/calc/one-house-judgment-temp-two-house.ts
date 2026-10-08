@@ -44,6 +44,7 @@ export function judgmentTempTwoHouseVerdict(
     provisoDepartureDate: form.provisoDepartureDate,
     provisoExpropriationDate: form.provisoExpropriationDate,
     provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
+    provisoRentalLeaseResidenceMonths: form.provisoRentalLeaseResidenceMonths,
     // 거주 개월 — ④와 같은 정본(OH-56). 폼-전역 `residencePeriodMonths`는 이 메뉴가 쓰지 않는다.
     residencePeriodMonths: String(deriveJudgmentResidenceMonths(form)),
     publicInstitutionRelocation: form.publicInstitutionRelocation,

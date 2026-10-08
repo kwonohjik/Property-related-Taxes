@@ -264,9 +264,13 @@ export function resolveExemptionProviso(
     case "unavoidable":
       // 3호: 1년 이상 거주
       return residenceYears >= C.UNAVOIDABLE_RESIDENCE_YEARS ? "both" : null;
-    case "rental_5yr_residence":
-      // 1호: 세대전원 거주 5년 이상
-      return residenceYears >= C.RENTAL_RESIDENCE_YEARS ? "both" : null;
+    case "rental_5yr_residence": {
+      // 1호: 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간이 5년 이상」 — 취득 전 임차 거주 포함.
+      //   전용 입력이 없으면 본문 거주기간(취득일 기산 — 이 기간 이하)으로 본다.
+      const leaseMonths = p.rentalLeaseResidenceMonths;
+      const years = leaseMonths !== undefined ? Math.floor(leaseMonths / 12) : residenceYears;
+      return years >= C.RENTAL_RESIDENCE_YEARS ? "both" : null;
+    }
     case "pre_designation_contract":
       // 5호: 거주만 면제 (계약금일 무주택은 ⑧ `exemption-proviso-validate.ts`·⑫ `transfer-tax-schema-household-refines.ts`로 담보)
       return "residence_only";

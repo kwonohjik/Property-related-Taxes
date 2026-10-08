@@ -33,6 +33,7 @@ import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import {
   buildReplacementHousePayload,
@@ -247,6 +248,7 @@ export function buildOneHouseExemptionApiBody(
               ...(form.provisoBusinessApprovalDate
                 ? { businessApprovalDate: form.provisoBusinessApprovalDate }
                 : {}),
+              ...rentalLeaseResidencePayload(reason, form.provisoRentalLeaseResidenceMonths),
               ...(reason === "rental_registration_4ho"
                 ? { rentalRegistration4ho: buildRental4hoPayload(form) }
                 : {}),
