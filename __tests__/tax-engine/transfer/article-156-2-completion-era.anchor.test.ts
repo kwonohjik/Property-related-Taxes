@@ -117,12 +117,12 @@ describe("OH-30b — ④의 1년 요건은 권리 취득일 2022-02-15부터", (
   it("권리 2022-02-15 취득 → 개정 ④(1년 요건) 미충족 → 배제", () => {
     expect(status(at("2022-02-15"))).toBe("excluded");
   });
-  it("선언이 없으면 — 2022-02-14 취득은 구 ④가 남아 판정 불가 / 2022-02-15 취득은 배제 확정", () => {
+  it("선언이 없으면 — 2022-02-14 취득은 구 ④만 확인 필요로 남기고 배제(미선언=불리) / 2022-02-15 취득은 배제 확정", () => {
     const undeclared = (rightAcq: string) => ({ ...at(rightAcq), rightThreeYearException: undefined });
     expect(resolveArticle89Clause2(undeclared("2022-02-14"), undefined)).toMatchObject({
-      status: "undetermined",
+      status: "excluded",
       // ③ 경로(시행규칙 §75①)와 「3년 이내 양도」 기한은 1년 요건 미충족이라 안내하지 않는다
-      openArticles: ["소득세법 시행령 §156의2 ④"],
+      undeclaredArticles: ["소득세법 시행령 §156의2 ④"],
     });
     expect(resolveArticle89Clause2(undeclared("2022-02-14"), undefined).deadline).toBeUndefined();
     expect(status(undeclared("2022-02-15"))).toBe("excluded");

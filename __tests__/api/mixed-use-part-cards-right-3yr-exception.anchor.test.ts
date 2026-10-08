@@ -77,11 +77,14 @@ describe("겸용 파트 카드 — §89② 입력 전달", () => {
     }
   });
 
-  it("🔴 카드 단건 엔진의 §89② 판정이 선언에 따라 갈린다 — 선언 있음: exception_met / 없음: undetermined", () => {
+  it("🔴 카드 단건 엔진의 §89② 판정이 선언에 따라 갈린다 — 선언 있음: exception_met / 없음: excluded(미선언=불리, 2026-10-08)", () => {
     const withDecl = housingCards(companion({ rightThreeYearException: exception as never }))[1];
     const noDecl = housingCards(companion())[1];
     // 카드 item을 그대로 넘긴다 — 단건 엔진 `checkExemption`이 부르는 것과 같은 술어·같은 입력이다.
     expect(resolveArticle89Clause2(withDecl as never, undefined).status).toBe("exception_met");
-    expect(resolveArticle89Clause2(noDecl as never, undefined).status).toBe("undetermined");
+    expect(resolveArticle89Clause2(noDecl as never, undefined)).toMatchObject({
+      status: "excluded",
+      undeclaredArticles: expect.arrayContaining(["소득세법 시행규칙 §75 ①"]),
+    });
   });
 });

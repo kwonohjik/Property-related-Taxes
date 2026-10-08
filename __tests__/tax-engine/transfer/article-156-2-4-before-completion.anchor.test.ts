@@ -63,10 +63,10 @@ function overThreeYears(over: Partial<TransferTaxInput> = {}): TransferTaxInput 
 }
 
 describe("④2호 전단 — 완성일 없이 판정된다", () => {
-  it("기준선: 선언이 없으면 판정 불가로 남는다", () => {
+  it("기준선: 선언이 없으면 배제(미선언=불리, 2026-10-08) — 확인 필요 조문을 싣는다", () => {
     const v = verdict(overThreeYears());
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles).toContain("소득세법 시행령 §156의2 ④");
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredArticles).toContain("소득세법 시행령 §156의2 ④");
   });
 
   it("★ 「완성 전 양도」 선언만으로 예외가 성립한다 — 완성일을 요구하지 않는다", () => {

@@ -353,6 +353,26 @@ export function collectPendingConditions(
 }
 
 /**
+ * §89② 3년 경과 예외 **미선언 → 배제**(모름=불리)의 확인 필요 고지 — 본체 판정은 통과했는데 이 배제 때문에만 과세로
+ * 갈렸을 때만 낸다(결론을 가를 때만). 판정 결과의 「판정하지 않은 부분」에 실린다(M2 소재지 고지와 같은 자리).
+ */
+export function undeclaredThreeYearExceptionUndetermined(
+  article89Clause2: Article89Clause2Result,
+  coreWouldPass: boolean,
+): OneHouseUndetermined[] {
+  const articles = article89Clause2.status === "excluded" ? article89Clause2.undeclaredArticles : undefined;
+  if (!coreWouldPass || !articles?.length) return [];
+  return [
+    {
+      id: "89-2-three-year-exception-undeclared",
+      reason:
+        `권리 취득일부터 3년이 지나 양도했고 그 예외(${articles.join(" · ")}) 해당 여부를 선언하지 않아 예외 없이 과세로 ` +
+        "판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요.",
+    },
+  ];
+}
+
+/**
  * 판정 보류 수집 — 「요건 미충족」이 아니라 **「자료가 없어 판정하지 않았다」**.
  *
  * 둘을 섞지 않는 것이 이 저장소의 확립된 철학이다(§89② 3갈래). 미입력을 미해당으로 읽으면

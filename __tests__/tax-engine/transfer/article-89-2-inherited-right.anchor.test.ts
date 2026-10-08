@@ -115,8 +115,8 @@ describe("§156의2⑥ 본문 괄호·단서 — 인정되지 않는 경우", ()
 
   it("★ 피상속인이 상속개시 당시 **주택**을 보유 → 인정 안 됨 ⇒ 일반 권리로 타이밍 판정", () => {
     const r = disqualified({ decedentOwnedHouseAtDeath: true });
-    // 3년 초과인데 예외 선언이 없으므로 판정 불가로 남는다(과세로 뒤집지 않는다)
-    expect(r.isExempt).toBe(true);
+    // 3년 초과인데 예외 선언이 없다 — 미선언은 배제(2026-10-08 모름=불리) + 확인 필요 경고
+    expect(r.isExempt).toBe(false);
     expect((r.warnings ?? []).join("\n")).toContain("소득세법 시행규칙 §75 ①");
   });
 
