@@ -49,21 +49,29 @@ export interface RateBasisFacts {
   donorAcquisitionDate?: Date;
 }
 
+/** 기산일을 정한 규칙 — 본문(own) · 1호 상속(decedent) · 2호 이월과세(donor). 결과 echo가 날짜 비교로 재추론하지 않게 판정이 직접 말한다. */
+export type RateBasisRule = "own" | "decedent" | "donor";
+
 /**
- * §104② 단서를 적용해 세율 판정용 취득일을 확정한다.
+ * §104② 단서를 적용해 세율 판정용 취득일과 **그 날짜를 정한 규칙**을 확정한다.
  * 어느 호에도 해당하지 않으면 본문 원칙대로 `acquisitionDate`를 그대로 돌려준다.
  */
-export function resolveRateBasisAcquisitionDate(facts: RateBasisFacts): Date {
+export function resolveRateBasis(facts: RateBasisFacts): { date: Date; rule: RateBasisRule } {
   // 1호 — 상속받은 자산
   if (facts.acquisitionCause === "inheritance" && facts.decedentAcquisitionDate) {
-    return facts.decedentAcquisitionDate;
+    return { date: facts.decedentAcquisitionDate, rule: "decedent" };
   }
   // 2호 — §97의2①에 해당하는 자산 (이월과세). 단순 증여(`gift`)는 대상이 아니다.
   if (facts.acquisitionCause === "carryover_gift" && facts.donorAcquisitionDate) {
-    return facts.donorAcquisitionDate;
+    return { date: facts.donorAcquisitionDate, rule: "donor" };
   }
   // 본문 — 해당 자산의 취득일
-  return facts.acquisitionDate;
+  return { date: facts.acquisitionDate, rule: "own" };
+}
+
+/** §104② 세율 판정용 취득일 — `resolveRateBasis`의 날짜만. */
+export function resolveRateBasisAcquisitionDate(facts: RateBasisFacts): Date {
+  return resolveRateBasis(facts).date;
 }
 
 /**

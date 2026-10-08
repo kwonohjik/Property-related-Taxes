@@ -46,7 +46,12 @@ function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; tes
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
-import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
+import {
+  splitAcqModeLabel,
+  splitCauseLabel,
+  splitRateBasisNote,
+  summarizeSplitGain,
+} from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +93,7 @@ export function SplitGainDetailSection({
     const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") => splitAcqModeLabel(m ?? "actual");
     // 개산공제율은 엔진이 적용한 율 echo를 읽는다(미등기 0.3% · 분양권 등 1%). echo가 없는 구 이력은 종전 3%.
     const lumpRateLabel = (rate?: number) => (rate !== undefined ? formatLumpRate(rate) : "3%");
+    const { mixedCause, rateBasisShown } = summarizeSplitGain(splitDetail);
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -107,6 +113,36 @@ export function SplitGainDetailSection({
             <span className="text-muted-foreground">취득 방식</span>
             <span className={cn(headerCls(landIsOwned), "font-normal")} data-testid="split-card-acq-mode-land">{acqModeLabel(splitDetail.land.acqMode)}</span>
             <span className={cn(headerCls(buildingIsOwned), "font-normal")} data-testid="split-card-acq-mode-building">{acqModeLabel(splitDetail.building.acqMode)}</span>
+            {/*
+              D1-3 — 토지·건물 취득원인이 다를 때만(엔진 `mixedCause`) 원인·세율 기산일 행을 낸다(같으면 종전 화면 그대로).
+              값은 엔진 echo를 그대로 읽는다 — 「세율 기산일」은 파트 세율 판정에 쓰인 `appliedRateBasisDate`다.
+            */}
+            {mixedCause && (
+              <>
+                <span className="text-muted-foreground">취득 원인</span>
+                {(["land", "building"] as const).map((k) => (
+                  <span key={k} className={cn(headerCls(true), "font-normal")} data-testid={`split-card-cause-${k}`}>
+                    {splitCauseLabel(splitDetail[k].acquisitionCause!)}
+                  </span>
+                ))}
+                {/* 세율 기산일은 엔진이 파트별 기산일로 세율을 판정했을 때만 — 결손 등으로 자산 단위 세율이면 계산과 어긋난다. */}
+                {rateBasisShown && (
+                  <>
+                    <span className="text-muted-foreground">세율 기산일 (소득세법 §104②)</span>
+                    {(["land", "building"] as const).map((k) => (
+                      <span key={k} className="font-mono tabular-nums text-right" data-testid={`split-card-rate-basis-${k}`}>
+                        {splitDetail[k].appliedRateBasisDate ?? "-"}
+                        {splitRateBasisNote(splitDetail[k]) && (
+                          <span className="block text-caption font-sans font-normal text-muted-foreground/80 text-left leading-snug">
+                            {splitRateBasisNote(splitDetail[k])}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
             <span className="text-muted-foreground">양도가액</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.transferPrice.toLocaleString()}</span>
@@ -212,7 +248,8 @@ export function SplitGainDetailSection({
                 </span>
               </>
             )}
-            <span className="text-muted-foreground">보유연수</span>
+            {/* 원인이 다르면 보유연수(장특 — 상속개시일부터)와 세율 기산일(피상속인 취득일부터)이 다른 개념임을 라벨로 가른다. */}
+            <span className="text-muted-foreground">{mixedCause ? "보유연수 (장기보유특별공제)" : "보유연수"}</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.holdingYears}년</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.holdingYears}년</span>
             <span className="text-muted-foreground">장특공제율</span>

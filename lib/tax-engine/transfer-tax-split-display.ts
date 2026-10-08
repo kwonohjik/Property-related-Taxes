@@ -38,6 +38,51 @@ export function splitAcqModeLabel(mode: SplitAcqMode): string {
   }
 }
 
+export type SplitPartCause = NonNullable<SplitPartResult["acquisitionCause"]>;
+
+/**
+ * 파트 취득원인 표시명 — 입력 화면 「취득 원인」 라디오(`CompanionAcquisitionCauseSection`)와 **같은 어휘**다(D1-3).
+ * 부담부증여는 라디오가 아니라 양도 유형에서 고르지만 같은 단어를 쓴다.
+ */
+export function splitCauseLabel(cause: SplitPartCause): string {
+  switch (cause) {
+    case "purchase":
+      return "매매";
+    case "inheritance":
+      return "상속";
+    case "gift":
+      return "증여";
+    case "carryover_gift":
+      return "이월과세(증여)";
+    case "newConstruction":
+      return "신축(자가건축)";
+    case "burdened_gift":
+      return "부담부증여";
+  }
+}
+
+const RATE_BASIS_RULE: Record<NonNullable<SplitPartResult["rateBasisRule"]>, { label: string; law: string }> = {
+  own: { label: "취득일", law: "소득세법 §104② 본문" },
+  decedent: { label: "피상속인 취득일", law: "소득세법 §104②1호" },
+  donor: { label: "증여자 취득일", law: "소득세법 §104②2호" },
+};
+
+/**
+ * 「세율 기산일」 보조 문구 — 엔진 echo(`rateBasisRule`·두 기산일)를 그대로 읽는다(규칙을 날짜 비교로 재추론하지 않는다).
+ * 법정 기산일과 적용 기산일이 다르면 주택 `max`(주택부수토지로서의 보유기간)가 적용된 것이다 — 그 사실을 밝힌다.
+ * echo가 없는 구 결과는 `undefined`.
+ */
+export function splitRateBasisNote(
+  p: Pick<SplitPartResult, "rateBasisRule" | "rateBasisAcquisitionDate" | "appliedRateBasisDate">,
+): string | undefined {
+  if (!p.rateBasisRule || !p.appliedRateBasisDate) return undefined;
+  const { label, law } = RATE_BASIS_RULE[p.rateBasisRule];
+  if (p.rateBasisAcquisitionDate && p.rateBasisAcquisitionDate !== p.appliedRateBasisDate) {
+    return `${label} ${p.rateBasisAcquisitionDate}(${law})보다 주택 취득일이 늦어 주택 취득일부터 — 주택부수토지로서의 보유기간`;
+  }
+  return `${label} — ${law}`;
+}
+
 export interface SplitGainPartSummary {
   key: SplitPartKey;
   /** 「토지」·「건물」 */
@@ -53,6 +98,12 @@ export interface SplitGainPartSummary {
   appraisalDeduction: number;
   swapApplied: boolean;
   gain: number;
+  /** 엔진 echo 그대로(D1-3) — 구 결과에는 `undefined` */
+  acquisitionCause: SplitPartResult["acquisitionCause"];
+  acquisitionDate: string | undefined;
+  rateBasisAcquisitionDate: string | undefined;
+  rateBasisRule: SplitPartResult["rateBasisRule"];
+  appliedRateBasisDate: string | undefined;
 }
 
 export interface SplitGainSummary {
@@ -66,6 +117,16 @@ export interface SplitGainSummary {
   gain: number;
   /** 소유 파트만 — 토지 → 건물 순서 */
   parts: SplitGainPartSummary[];
+  /**
+   * 토지·건물 취득원인이 다른가 — 소유 파트 **둘 다** 원인 echo가 있고 서로 다를 때만 `true`.
+   * 4뷰가 「취득 원인」·「세율 기산일」 행을 낼지 정하는 **유일한 근거**다(같으면 행을 내지 않아 기존 화면 diff 0).
+   */
+  mixedCause: boolean;
+  /**
+   * 「세율 기산일」 행을 낼 수 있는가 = `mixedCause` ∧ 엔진이 파트별 기산일로 세율을 판정했다(`partRateBasisApplied`).
+   * 결손·세율 특칙 등으로 자산 단위 세율이 쓰였으면 파트 기산일은 계산에 쓰이지 않았다 — 원인 행만 남긴다.
+   */
+  rateBasisShown: boolean;
 }
 
 /** 소유 파트(`selfOwns`)만 토지 → 건물 순서로. */
@@ -100,10 +161,20 @@ export function summarizeSplitGain(sd: SplitGainResult): SplitGainSummary {
       appraisalDeduction: p.appraisalDeduction,
       swapApplied,
       gain: p.gain,
+      acquisitionCause: p.acquisitionCause,
+      acquisitionDate: p.acquisitionDate,
+      rateBasisAcquisitionDate: p.rateBasisAcquisitionDate,
+      rateBasisRule: p.rateBasisRule,
+      appliedRateBasisDate: p.appliedRateBasisDate,
     };
   });
   const sum = (f: (p: SplitGainPartSummary) => number) => parts.reduce((s, p) => s + f(p), 0);
+  const [a, b] = parts;
+  const mixedCause =
+    parts.length === 2 && !!a.acquisitionCause && !!b.acquisitionCause && a.acquisitionCause !== b.acquisitionCause;
   return {
+    mixedCause,
+    rateBasisShown: mixedCause && sd.partRateBasisApplied === true,
     transferPrice: sum((p) => p.transferPrice),
     acquisitionDeducted: sum((p) => p.acquisitionDeducted),
     necessaryExpense: sum((p) => p.directExpenses + p.appraisalDeduction),

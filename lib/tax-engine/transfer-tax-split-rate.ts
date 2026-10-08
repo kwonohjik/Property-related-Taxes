@@ -156,22 +156,33 @@ const PART_RATE_GROUP: RateGroup = "progressive";
  * 게이트를 하나라도 통과하지 못하면 `null` — 호출부는 기존 자산 단위 경로를 유지한다(회귀 0).
  */
 export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateResult | null {
+  return evaluateSplitPartTax(ctx).parts;
+}
+
+/**
+ * `judged` — 파트별 §104② 기산일로 **세율을 실제로 판정했는가**(D1-3, 표시 전용).
+ *   · 파트를 만들었거나, 판정 결과 세율이 모두 같아 자산 단위로 합친 경우(게이트 7) → `true`
+ *   · 그 전 게이트(소유자 분리·세율 특칙·부담부증여·결손·불변식)로 빠진 경우 → `false` — 자산 단위 `calcTax`가
+ *     건물 기산일 하나로 계산했으므로 파트의 「세율 기산일」 echo를 화면에 내면 계산과 어긋난다.
+ */
+const NOT_JUDGED = { parts: null, judged: false } as const;
+function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRateResult | null; judged: boolean } {
   const { splitDetail, taxRateInput: input, parsedRates, taxBase, transferIncome, basicDeduction } = ctx;
 
   // ── 게이트 ──────────────────────────────────────────────
   // 0. 토지·건물 분리 계산 결과가 있어야 한다.
-  if (!splitDetail) return null;
+  if (!splitDetail) return NOT_JUDGED;
   // 1. 토지 기산일이 있어야 파트별 판정이 성립한다.
   //    주택은 `max(토지, 주택)` — 토지를 먼저 샀으면 주택 취득일이 되어 건물 파트와 같아지고,
   //    아래 게이트 8(세율 동일)이 진입을 막는다 ⇒ 조심 2024인3140 정합·회귀 0.
   const landBasisDate = resolveAppurtenantLandRateBasisDate(input);
-  if (!landBasisDate) return null;
+  if (!landBasisDate) return NOT_JUDGED;
   // 2. 소유자 분리 자산은 이미 단독 파트만 신고한다(`transfer-tax.ts` selfOwns 분기).
-  if ((input.selfOwns ?? "both") !== "both") return null;
+  if ((input.selfOwns ?? "both") !== "both") return NOT_JUDGED;
   // 3. 세율 강제 특칙 — 조특법 §98①1호 20% 단일 / P3 특칙(단기세율 배제)은 파트 무관.
-  if (input.forceFlatRate20 || input.suppressShortTermRate) return null;
+  if (input.forceFlatRate20 || input.suppressShortTermRate) return NOT_JUDGED;
   // 4. 부담부증여는 §159 안분이 총액을 override한다(`transfer-tax-api-split.ts`와 동일 사유).
-  if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return null;
+  if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return NOT_JUDGED;
 
   // ── 파트 구성 ───────────────────────────────────────────
   // 파트 양도소득금액은 자산 단위와 같은 소스(splitDetail)에서 만든다.
@@ -235,9 +246,9 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
 
   // 6. 어느 파트든 결손이면 자산 내부에서 이미 통산된 뒤다(`transfer-tax-helpers.ts` 합산).
   //    파트별로 쪼개면 Σ파트 ≠ 자산 과세표준이 되므로 진입하지 않는다.
-  if (seeds.some((s) => s.raw < 0)) return null;
+  if (seeds.some((s) => s.raw < 0)) return NOT_JUDGED;
   const rawSum = seeds.reduce((s, p) => s + p.raw, 0);
-  if (rawSum <= 0) return null;
+  if (rawSum <= 0) return NOT_JUDGED;
 
   // 자산 단위 양도소득금액과 어긋나면(감면 등) 비율 안분 후 잔액은 **마지막 파트가 흡수**한다.
   // 큰 금액의 곱(최대 1e18)이 2^53을 넘길 수 있어 BigInt로 계산한다.
@@ -251,7 +262,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
     allocatedIncome += v;
     return v;
   });
-  if (incomes.some((v) => v < 0)) return null;
+  if (incomes.some((v) => v < 0)) return NOT_JUDGED;
 
   // 1차: 기본공제 배분 전 세율 확인 (§103② MAX_BENEFIT 판정에 적용세율이 필요하다)
   const preRates = seeds.map((s, i) =>
@@ -266,7 +277,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
       r.appliedRate === preRates[0].appliedRate &&
       r.progressiveDeduction === preRates[0].progressiveDeduction,
   );
-  if (uniform) return null;
+  if (uniform) return { parts: null, judged: true };
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
   const allocation = allocateBasicDeductionAcrossParts(
@@ -276,7 +287,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   const allocated = seeds.map((_, i) => allocation.find((a) => a.idx === i)?.amount ?? 0);
   const taxBases = seeds.map((_, i) => Math.max(0, incomes[i] - allocated[i]));
   // 불변식 — 조용한 오답 방지. 배분액이 파트 소득금액을 넘지 않으므로 성립해야 한다.
-  if (taxBases.reduce((s, v) => s + v, 0) !== taxBase) return null;
+  if (taxBases.reduce((s, v) => s + v, 0) !== taxBase) return NOT_JUDGED;
 
   const finals = seeds.map((s, i) =>
     calcTax(taxBases[i], parsedRates, s.rateInput, ctx.multiHouseSurchargeResult),
@@ -362,10 +373,13 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   const aggregateProgressive = calculateProgressiveTax(taxBase, parsedRates.brackets);
 
   return {
-    parts,
-    perAssetTotal,
-    aggregateProgressive,
-    chosen: perAssetTotal >= aggregateProgressive ? "per_asset" : "aggregate",
+    parts: {
+      parts,
+      perAssetTotal,
+      aggregateProgressive,
+      chosen: perAssetTotal >= aggregateProgressive ? "per_asset" : "aggregate",
+    },
+    judged: true,
   };
 }
 
@@ -553,21 +567,22 @@ function computePartialNblTax(
  */
 export function resolveSplitAwareTax(
   ctx: SplitPartRateContext,
-): ReturnType<typeof calcTax> & { splitPartDetail?: SplitPartRateResult } {
+): ReturnType<typeof calcTax> & { splitPartDetail?: SplitPartRateResult; partRateBasisApplied?: boolean } {
   const fallback = () =>
     calcTax(ctx.taxBase, ctx.parsedRates, ctx.taxRateInput, ctx.multiHouseSurchargeResult);
   // 토지·건물 분리취득이 아니어도 **한 필지 안에서** 비사업용/그 외로 갈리면 §104⑤가 걸린다.
   if (!ctx.splitDetail) return computePartialNblTax(ctx, fallback) ?? fallback();
 
-  const parts = computeSplitPartTax(ctx);
-  if (!parts) return fallback();
+  const { parts, judged } = evaluateSplitPartTax(ctx);
+  // 아래 반환은 모두 파트 판정을 거친 것이다 — 이 값 하나로 「세율 기산일」 표시 여부를 정한다(호출부가 splitDetail에 싣는다).
+  if (!parts) return { ...fallback(), partRateBasisApplied: judged };
 
   const chosenTax = Math.max(parts.perAssetTotal, parts.aggregateProgressive);
   if (parts.chosen === "aggregate") {
     const base = fallback();
     // 1호(합산 누진)가 이겼고 그 값이 기존 자산 단위 세액과 같으면 **아무것도 바뀌지 않는다** —
     // 장기보유 split 자산 대부분이 여기다(파트 누진구간만 다름). 산식 문구까지 종전 그대로 둔다.
-    if (base.calculatedTax === chosenTax) return base;
+    if (base.calculatedTax === chosenTax) return { ...base, partRateBasisApplied: true };
     // 기존 경로가 자산 단위 단기세율을 전체에 물려 1호보다 크게 나온 경우 — §104⑤ 위반이므로 정정.
     const { baseRate, deduction } = computeBracketBreakdown(ctx.taxBase, ctx.parsedRates.brackets);
     return {
@@ -579,6 +594,7 @@ export function resolveSplitAwareTax(
         `토지·건물 파트별 세율 비교(소득세법 §104⑤): 합산 누진세액 ${chosenTax.toLocaleString()}이 ` +
         `자산별 합계 ${parts.perAssetTotal.toLocaleString()}보다 크다`,
       splitPartDetail: parts,
+      partRateBasisApplied: true,
     };
   }
   const label: Record<SplitRatePart["kind"], string> = {
@@ -605,5 +621,6 @@ export function resolveSplitAwareTax(
         .join(" + ") +
       ` (합산 누진세액 ${parts.aggregateProgressive.toLocaleString()}과 비교한 큰 세액)`,
     splitPartDetail: parts,
+    partRateBasisApplied: true,
   };
 }

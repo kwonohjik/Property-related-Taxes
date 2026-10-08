@@ -54,6 +54,7 @@ import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-r
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
+import { laterInheritedLandExemptNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
@@ -515,6 +516,9 @@ export function calculateTransferTax(
     isPartialExempt: exemptionResult.isPartialExempt,
     steps,
   });
+  // T-7(D1-3) — 나중 취득 상속 토지분이 비과세에서 빠진 사실 + §154⑧3호 통산 미적용 고지(세액 불변).
+  const laterInheritedNotice = laterInheritedLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
+  if (laterInheritedNotice) warnings.push(laterInheritedNotice);
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
@@ -693,6 +697,7 @@ export function calculateTransferTax(
       : taxRateInputBase;
   // 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세 (transfer-tax-split-rate.ts)
   const taxResult = resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult });
+  if (splitDetail) splitDetail.partRateBasisApplied = taxResult.partRateBasisApplied; // D1-3 「세율 기산일」 표시 게이트
   steps.push(buildCalculatedTaxStep(taxResult, taxBase));
 
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 + 결과 조립 (transfer-tax-normal-return.ts)

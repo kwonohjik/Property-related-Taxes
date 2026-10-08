@@ -8,11 +8,20 @@ export type LandCause = "inheritance" | "gift";
 
 export const LAND_CAUSE_META: Record<
   LandCause,
-  { label: string; dateLabel: string; priceLabel: string; hint: string; fixedMode: string }
+  {
+    label: string;
+    dateLabel: string;
+    /** 가액의 이름(「상속개시일 평가액」) — 결과 상세명세서 파트 태그 `토지(상속개시일 평가액)`도 이 값을 쓴다(D1-3) */
+    valueLabel: string;
+    priceLabel: string;
+    hint: string;
+    fixedMode: string;
+  }
 > = {
   inheritance: {
     label: "상속",
     dateLabel: "상속개시일",
+    valueLabel: "상속개시일 평가액",
     priceLabel: "토지 상속개시일 평가액",
     hint: "상속세 신고서상 토지 평가액 (소득세법 시행령 §163⑨ — 상속개시일 현재 상증법 §60~§66 평가액)",
     fixedMode: "실거래가 · 상속개시일 평가액",
@@ -20,6 +29,7 @@ export const LAND_CAUSE_META: Record<
   gift: {
     label: "증여",
     dateLabel: "증여일",
+    valueLabel: "증여 신고가액",
     priceLabel: "토지 증여 신고가액",
     hint: "증여세 신고서상 토지 평가액 (증여일 현재 시가 또는 보충적 평가액)",
     fixedMode: "실거래가 · 증여 신고가액",

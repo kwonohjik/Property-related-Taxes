@@ -18,6 +18,7 @@ import type {
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
+import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -350,9 +351,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     stdPriceDerivedFromTotal: buildingStdDerivedFromTotal,
   };
 
+  const echo = buildSplitPartCauseEcho(input);
   return {
-    land: landPart,
-    building: buildingPart,
+    land: { ...landPart, ...echo.land },
+    building: { ...buildingPart, ...echo.building },
     // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
     // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.
     ...(landRatio != null && buildingRatio != null ? { apportionRatio: { land: landRatio, building: buildingRatio } } : {}),
@@ -535,9 +537,10 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     swapApplied: phdBuildingSwap.swapApplied,
   };
 
+  const echo = buildSplitPartCauseEcho(input);
   return {
-    land: landPart,
-    building: buildingPart,
+    land: { ...landPart, ...echo.land },
+    building: { ...buildingPart, ...echo.building },
     apportionRatio: phd.transferApportionRatio,
     note: `개별주택가격 미공시(§164⑤) — 토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리`,
     selfOwns: input.selfOwns ?? "both",
