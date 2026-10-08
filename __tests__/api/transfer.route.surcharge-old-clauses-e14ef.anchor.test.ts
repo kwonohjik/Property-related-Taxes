@@ -131,7 +131,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 const RIGHT = (acq: string) =>
-  [{ id: "r1", type: "redevelopment_right", acquisitionDate: acq, region: "capital", regionCode: GANGNAM }] as Form["presaleRights"];
+  [{ id: "r1", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: acq, region: "capital", regionCode: GANGNAM }] as Form["presaleRights"];
 
 describe("E-14e 구 §167의10①8호 — route", () => {
   it("RE-1 2주택(명부 도출 일시적 2주택) · §154① 미충족 → 8호 배제 768,322,500 (수정 전 1,141,772,500 · 단건 = 다건)", async () => {

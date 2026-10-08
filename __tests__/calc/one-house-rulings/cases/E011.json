@@ -26,7 +26,8 @@
           "id": "c",
           "type": "redevelopment_right",
           "acquisitionDate": "2022-09-25",
-          "region": "non_capital"
+          "region": "non_capital",
+          "memberOrigin": "successor"
         }
       ]
     },

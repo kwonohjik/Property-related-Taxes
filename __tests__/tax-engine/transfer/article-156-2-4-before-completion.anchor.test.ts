@@ -41,6 +41,7 @@ function right(over: Partial<PresaleRight> = {}): PresaleRight {
   return {
     id: "r1",
     type: "redevelopment_right",
+    memberOrigin: "successor",
     acquisitionDate: new Date("2016-10-01"),
     region: "capital",
     ...over,

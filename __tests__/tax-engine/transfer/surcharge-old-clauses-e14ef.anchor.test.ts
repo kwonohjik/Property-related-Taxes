@@ -86,7 +86,7 @@ const two = (prev: string, next: string, transfer: string, x: Partial<TransferTa
     temporaryTwoHouse: tt(prev, next),
     ...x,
   });
-const RIGHT = (acq: string) => ({ id: "r", type: "redevelopment_right", acquisitionDate: D(acq), region: "capital", regionCode: GN });
+const RIGHT = (acq: string) => ({ id: "r", type: "redevelopment_right", memberOrigin: "successor" as const, acquisitionDate: D(acq), region: "capital", regionCode: GN });
 /** 주택 1 + 조합원입주권 1 */
 const oneRight = (house: string, right: string, transfer: string, x: Partial<TransferTaxInput> = {}) =>
   input({
@@ -325,7 +325,7 @@ describe("구 호 leaf — 구간 · 인용 범위 · 주택·권리 수", () =>
     officialPrice: 500_000_000,
     region: "capital",
   });
-  const right = { id: "rt", type: "redevelopment_right" as const, acquisitionDate: D("2015-01-01"), region: "capital" as const };
+  const right = { id: "rt", type: "redevelopment_right" as const, memberOrigin: "successor" as const, acquisitionDate: D("2015-01-01"), region: "capital" as const };
   const reason = (t: string, houses: number, rights: number, over: Partial<MultiHouseSurchargeInput>) => {
     const hs = Array.from({ length: houses }, (_, k) => house(k === 0 ? "selling" : `h${k}`));
     const rs = Array.from({ length: rights }, (_, k) => ({ ...right, id: `rt${k}` }));

@@ -20,7 +20,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2013-06-27",
           "region": "capital",
-          "managementDisposalApprovalDate": "2012-07-04"
+          "managementDisposalApprovalDate": "2012-07-04",
+          "memberOrigin": "successor"
         }
       ],
       "rightThreeYearExceptionKind": "before_completion",
@@ -55,7 +56,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2021-06-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2020-05-15"
+          "managementDisposalApprovalDate": "2020-05-15",
+          "memberOrigin": "successor"
         }
       ],
       "rightThreeYearExceptionKind": "before_completion",

@@ -26,7 +26,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2010-02-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2010-02-15"
+          "managementDisposalApprovalDate": "2010-02-15",
+          "memberOrigin": "original_non_house"
         }
       ]
     },

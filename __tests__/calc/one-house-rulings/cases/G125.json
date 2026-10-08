@@ -20,7 +20,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2009-09-08",
           "region": "capital",
-          "managementDisposalApprovalDate": "2011-11-25"
+          "managementDisposalApprovalDate": "2011-11-25",
+          "memberOrigin": "original_house"
         }
       ],
       "replacementHouseSpecial": true,
@@ -60,7 +61,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2009-09-08",
           "region": "capital",
-          "managementDisposalApprovalDate": "2011-11-25"
+          "managementDisposalApprovalDate": "2011-11-25",
+          "memberOrigin": "original_house"
         }
       ],
       "replacementHouseSpecial": true,
@@ -100,7 +102,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2009-09-08",
           "region": "capital",
-          "managementDisposalApprovalDate": "2011-11-25"
+          "managementDisposalApprovalDate": "2011-11-25",
+          "memberOrigin": "original_house"
         }
       ],
       "rightThreeYearExceptionKind": "none"

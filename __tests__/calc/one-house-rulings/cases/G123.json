@@ -20,7 +20,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2000-08-02",
           "region": "capital",
-          "managementDisposalApprovalDate": "2016-10-13"
+          "managementDisposalApprovalDate": "2016-10-13",
+          "memberOrigin": "original_house"
         }
       ],
       "replacementHouseSpecial": true,

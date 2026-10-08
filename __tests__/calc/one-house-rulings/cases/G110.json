@@ -21,7 +21,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2008-08-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2008-08-15"
+          "managementDisposalApprovalDate": "2008-08-15",
+          "memberOrigin": "original_non_house"
         }
       ]
     },
@@ -53,7 +54,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2023-06-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2023-06-15"
+          "managementDisposalApprovalDate": "2023-06-15",
+          "memberOrigin": "original_non_house"
         }
       ]
     },
@@ -85,7 +87,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2023-06-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2023-06-15"
+          "managementDisposalApprovalDate": "2023-06-15",
+          "memberOrigin": "original_non_house"
         }
       ],
       "rightThreeYearExceptionKind": "none"

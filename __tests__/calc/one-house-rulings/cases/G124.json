@@ -20,14 +20,16 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1995-05-15",
           "region": "non_capital",
-          "managementDisposalApprovalDate": "2015-02-04"
+          "managementDisposalApprovalDate": "2015-02-04",
+          "memberOrigin": "original_house"
         },
         {
           "id": "A2",
           "type": "redevelopment_right",
           "acquisitionDate": "1995-05-15",
           "region": "non_capital",
-          "managementDisposalApprovalDate": "2015-02-04"
+          "managementDisposalApprovalDate": "2015-02-04",
+          "memberOrigin": "original_house"
         }
       ],
       "replacementHouseSpecial": true,
@@ -66,7 +68,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "1995-05-15",
           "region": "non_capital",
-          "managementDisposalApprovalDate": "2015-02-04"
+          "managementDisposalApprovalDate": "2015-02-04",
+          "memberOrigin": "original_house"
         }
       ],
       "replacementHouseSpecial": true,

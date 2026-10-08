@@ -20,7 +20,8 @@
           "type": "redevelopment_right",
           "acquisitionDate": "2015-06-15",
           "region": "capital",
-          "managementDisposalApprovalDate": "2014-01-15"
+          "managementDisposalApprovalDate": "2014-01-15",
+          "memberOrigin": "successor"
         }
       ],
       "rightThreeYearExceptionKind": "new_house",

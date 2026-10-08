@@ -27,6 +27,7 @@ const PRICE = 1_500_000_000;
 const RIGHT: PresaleRight = {
   id: "r1",
   type: "redevelopment_right",
+  memberOrigin: "successor",
   acquisitionDate: new Date("2022-06-01"),
   region: "capital",
 };

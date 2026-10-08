@@ -373,6 +373,18 @@ export function undeclaredThreeYearExceptionUndetermined(
 }
 
 /**
+ * §89② 배제가 **모르는 사실 때문에** 특례를 적용하지 않은 것(`confirmNotes` — 원조합원·승계취득 미입력 등)의 확인 필요 고지.
+ * 위 3년 경과 예외 고지와 같이 본체 판정이 통과했을 때만 낸다(결론을 가를 때만).
+ */
+export function article89ConfirmNotesUndetermined(
+  article89Clause2: Article89Clause2Result,
+  coreWouldPass: boolean,
+): OneHouseUndetermined[] {
+  if (!coreWouldPass || article89Clause2.status !== "excluded") return [];
+  return (article89Clause2.confirmNotes ?? []).map((reason, i) => ({ id: `89-2-confirm:${i}`, reason }));
+}
+
+/**
  * 판정 보류 수집 — 「요건 미충족」이 아니라 **「자료가 없어 판정하지 않았다」**.
  *
  * 둘을 섞지 않는 것이 이 저장소의 확립된 철학이다(§89② 3갈래). 미입력을 미해당으로 읽으면
