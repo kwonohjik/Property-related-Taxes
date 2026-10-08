@@ -538,12 +538,11 @@ export const TRANSFER = {
 
 /**
  * §154① 단서 각호 면제 시한 상수 (개정 없는 안정 역사값 — feedback_historical_tax_tables).
- *   2호 가목: 양도일·수용일부터 5년 / 2호 나·다목: 출국일부터 2년
+ *   2호 가목: 양도일·수용일부터 N년 — 연혁(2년→5년)이라 상수가 아니다(`data/expropriation-remnant-era.ts`) /
+ *   2호 나·다목: 출국일부터 2년
  *   1호: 세대전원 거주 5년 / 3호: 1년 이상 거주
  */
 export const EXEMPTION_PROVISO_CONST = {
-  /** 2호 가목 — 양도일·수용일부터 (년) */
-  EXPROPRIATION_TRANSFER_YEARS: 5,
   /** 2호 나·다목 — 출국일부터 (년) */
   OVERSEAS_TRANSFER_YEARS: 2,
   /** 1호 — 세대전원 거주 (년) */

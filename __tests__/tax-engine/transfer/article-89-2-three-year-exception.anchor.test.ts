@@ -159,9 +159,10 @@ describe("시행규칙 §75① — 경매·공매 등 (3년 초과 치유)", () 
 });
 
 describe("⭐ 선언 유무가 판정을 가른다", () => {
-  it("미선언(undefined) → **종전대로 판정 불가** + 경고 유지", () => {
+  it("미선언(undefined) → **배제**(2026-10-08 미선언=불리) + 확인 필요 경고", () => {
     const r = run(overThreeYears(undefined));
-    expect(r.isExempt).toBe(true); // 종전 동작
+    expect(r.isExempt).toBe(false);
+    expect((r.warnings ?? []).join("\n")).toContain("(확인 필요)");
     const joined = (r.warnings ?? []).join("\n");
     expect(joined).toContain("§156의2 ④");
     expect(joined).toContain("소득세법 시행규칙 §75 ①");

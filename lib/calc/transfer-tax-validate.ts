@@ -14,6 +14,10 @@
  * - 자산-수준 검증은 transfer-tax-validate-asset.ts로 분리 (800줄 정책).
  */
 
+import {
+  isTransferDateBeforeSupported,
+  TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
+} from "@/lib/tax-engine/data/transfer-supported-period";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
@@ -70,6 +74,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     // 양도일·신고일 위젯이 주 자산 카드 ① 안으로 이동 — assetIndex 0으로 해당 카드 스크롤·인라인 유도
     // (step은 유지 — 스크롤 게이트가 assetIndex != null AND step === 0 동시 충족 필요)
     if (!form.transferDate) issues.push({ step, assetIndex: 0, field: "transferDate", message: "양도일을 선택하세요." });
+    else if (isTransferDateBeforeSupported(form.transferDate))
+      issues.push({ step, assetIndex: 0, field: "transferDate", message: TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE });
     // 신고일 < 양도일 모순 — 예정신고는 양도 후에만 가능 (법 §105①: 양도일이 속하는 달의 말일부터 2개월).
     // 양도 당일 신고는 허용, 미만만 차단. 기한 초과는 가산세 자동 적용 경고로 별도 처리(차단 아님).
     if (form.filingDate && form.transferDate && form.filingDate < form.transferDate)

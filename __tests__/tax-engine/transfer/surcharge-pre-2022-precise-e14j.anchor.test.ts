@@ -299,7 +299,9 @@ describe("E-14j 그 기간에 있던 호를 새로 넣었다 — 보유 10년 �
     const oneEach = calc(
       input({ acquisitionDate: D("2008-12-01"), transferDate: D("2020-03-02"), householdHousingCount: 1, houses: [h("selling", "2008-12-01")], presaleRights: RIGHT }),
     );
-    expect(oneEach).toMatchObject({ totalTax: 296_841_600, reasons: "long_holding_10y_until_2020_06_30", count: 2 });
+    // 권리 2015 취득 → 3년 경과 · §156의2④ 미선언 = §89② 배제(2026-10-08 미선언=불리 — 종전 판정 보류 296,841,600은
+    // 고가 부분 비과세 유지 값). 중과 배제 사유(11호)는 그대로다.
+    expect(oneEach).toMatchObject({ totalTax: 572_517_000, reasons: "long_holding_10y_until_2020_06_30", count: 2 });
     expect(oneEach.detail).toContain(LONG_HOLDING_TEMPORARY_EXCLUSION.HOUSE_RIGHT_ONE_EACH_BASIS);
     const threePlus = calc(
       input({ acquisitionDate: D("2008-12-01"), transferDate: D("2020-03-02"), householdHousingCount: 2, houses: [h("selling", "2008-12-01"), OTHER], presaleRights: RIGHT }),

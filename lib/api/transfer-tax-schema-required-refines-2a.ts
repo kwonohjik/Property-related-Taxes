@@ -23,6 +23,7 @@ import {
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
+import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -66,6 +67,8 @@ export type Required2aLike = {
   preHousingDisclosure?: unknown;
   // 분리취득 (splitAcquisitionShape)
   landAcquisitionDate?: string;
+  landAcquisitionCause?: string;
+  landDecedentAcquisitionDate?: string;
   selfOwns?: string;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
@@ -179,7 +182,7 @@ export function refineExpropriationInputs(d: Required2aLike, ctx: z.RefinementCt
 // ─── SP · 토지·건물 분리취득 ──────────────────────────────────────────
 
 /** 엔진 `deriveLegacyAcqMode`와 같은 규칙 — 파트 모드 미전송 시 엔진이 쓰는 값 */
-function partMode(explicit: string | undefined, d: Required2aLike): PartAcqMode {
+function partMode(explicit: string | undefined, d: { useEstimatedAcquisition?: boolean; acquisitionMethod?: string }): PartAcqMode {
   if (explicit === "actual" || explicit === "estimated" || explicit === "appraisal" || explicit === "salesCase")
     return explicit;
   if (d.useEstimatedAcquisition) return "estimated";
@@ -344,6 +347,30 @@ export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.Refinemen
     issue(["buildingStandardPriceAtTransfer"], "토지·건물 분리 계산에는 양도시 기준시가 건물분이 필요합니다 (소득세법 §99①1호 나목)");
 }
 
+/**
+ * 토지 파트 취득원인 (D0 — G-1·G-2·G-3). 엔진 `calcSplitGain`·⑧ `validateSplitDirectInputs`와 **같은 leaf**
+ * (`collectSplitPartCauseIssues`). 단건·다건 주 자산과 컴패니언(`companionAssets[i]`, prefix)이 함께 쓴다.
+ * 컴패니언은 자산 종류를 `assetKind`로 보내므로 분리 대상 여부를 호출부가 넘긴다.
+ */
+export function refineSplitPartCause(
+  d: Pick<Required2aLike, "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"> & {
+    useEstimatedAcquisition?: boolean;
+  },
+  isSplitable: boolean,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+) {
+  const issues = collectSplitPartCauseIssues({
+    isSplitable,
+    hasLandAcquisitionDate: !!d.landAcquisitionDate,
+    landAcquisitionCause: d.landAcquisitionCause,
+    hasLandDecedentAcquisitionDate: !!d.landDecedentAcquisitionDate,
+    landMode: partMode(d.landAcqMode, d),
+  });
+  const issue = issuer(ctx);
+  for (const i of issues) issue([...prefix, i.field], i.message);
+}
+
 // ─── PD · 의제취득일 전 상속·증여 취득가액 ─────────────────────────────
 
 /**
@@ -401,6 +428,7 @@ export function refinePreDeemedAcquisitionSource(
 export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) {
   refineExpropriationInputs(d, ctx);
   refineSplitAcquisitionInputs(d, ctx);
+  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", ctx);
   refinePreDeemedAcquisitionSource(d, ctx);
 }
 

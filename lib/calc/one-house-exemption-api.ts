@@ -26,7 +26,6 @@
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
-import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
@@ -34,6 +33,7 @@ import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import {
   buildReplacementHousePayload,
@@ -49,6 +49,7 @@ import {
   judgmentMergeInputVisible,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
+  judgmentUsageConversionStart,
 } from "./one-house-judgment-section-scope";
 import {
   deriveJudgmentHouseCount,
@@ -67,14 +68,18 @@ import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold
  *    거주연수 요건을 늘 미충족으로 보고 「요건 A 미충족」을 띄운 것이 OH-56이다.
  */
 export function deriveJudgmentResidenceMonths(form: OneHouseJudgmentFormData): number {
+  return judgmentResidence(form).months;
+}
+
+function judgmentResidence(form: OneHouseJudgmentFormData) {
   const primary = form.assets[0];
-  if (!primary) return 0;
+  if (!primary) return { months: 0, trimmed: 0 };
   return clampResidenceToHousingPeriod(
     primary,
     form.transferDate,
     form.residencePeriodMonths,
-    isUsageConversionActive(primary) ? primary.residentialUseStartDate : undefined,
-  ).months;
+    judgmentUsageConversionStart(form),
+  );
 }
 
 /** ④ 판정 메뉴 폼 → API 본문. */
@@ -170,6 +175,16 @@ export function buildOneHouseExemptionApiBody(
      */
     residencePeriodMonths: deriveJudgmentResidenceMonths(form),
     householdHousingCount: houseCount,
+    /**
+     * §154⑤ 단서 비주택 → 주택 용도변경 — 계산기 ④(`transfer-tax-api.ts`)와 같은 모양. ⑫⑭·엔진은 이미 읽는다
+     * (보유 기산 2024.2.29. 이후 양도분 · 거주요건 기준일). 종전에는 이 값을 거주 개월 상한에만 쓰고 싣지 않았다.
+     */
+    nonHousingToHousingConversion: (() => {
+      const start = judgmentUsageConversionStart(form);
+      return start
+        ? { residentialUseStartDate: start, residenceMonthsTrimmed: judgmentResidence(form).trimmed }
+        : undefined;
+    })(),
 
     /**
      * §154⑧3호 동일세대 상속 통산 (OH-18) — 계산기와 **같은 leaf**.
@@ -250,6 +265,7 @@ export function buildOneHouseExemptionApiBody(
               ...(form.provisoBusinessApprovalDate
                 ? { businessApprovalDate: form.provisoBusinessApprovalDate }
                 : {}),
+              ...rentalLeaseResidencePayload(reason, form.provisoRentalLeaseResidenceMonths),
               ...(reason === "rental_registration_4ho"
                 ? { rentalRegistration4ho: buildRental4hoPayload(form) }
                 : {}),

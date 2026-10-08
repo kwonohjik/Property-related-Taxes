@@ -56,6 +56,15 @@ export function article89Clause2Notices(
    * 남아 있다. 배제를 켜면 그 예외에 해당하는 세대가 법 근거 없이 불리해지므로 종전 동작을 유지하고 어느 항을 직접
    * 확인해야 하는지 알린다(자동 판정 대신 **판정 불가 고지**).
    */
+  // 3년 경과 예외 미선언 → 배제(모름=불리). 해당하면 판정 메뉴에서 선언하도록 알린다(확인 필요).
+  if (clause2?.status === "excluded" && clause2.undeclaredArticles?.length) {
+    notices.push(
+      `조합원입주권·분양권 취득일부터 3년이 지나 주택을 양도했고, 그 예외(${clause2.undeclaredArticles.join(" · ")}) ` +
+        "해당 여부를 선언하지 않아 「소득세법」 §89② 배제를 적용했습니다(확인 필요). 해당하면 1세대1주택 판정 메뉴의 " +
+        "「3년 경과 예외」에서 선언하세요.",
+    );
+  }
+
   if (clause2?.status === "undetermined") {
     notices.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +

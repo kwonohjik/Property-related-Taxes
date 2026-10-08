@@ -134,6 +134,7 @@ export function giftBurdenedOneHouseSlice(
     provisoDepartureDate: bgt.provisoDepartureDate ?? "",
     provisoExpropriationDate: bgt.provisoExpropriationDate ?? "",
     provisoBusinessApprovalDate: bgt.provisoBusinessApprovalDate ?? "",
+    provisoRentalLeaseResidenceMonths: bgt.provisoRentalLeaseResidenceMonths ?? "",
     provisoPreContractNoHouse: bgt.provisoPreContractNoHouse === true,
     proviso4hoBusinessRegDate: bgt.proviso4hoBusinessRegDate ?? "",
     proviso4hoRentalRegDate: bgt.proviso4hoRentalRegDate ?? "",

@@ -23,6 +23,7 @@ import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-residence-waivers";
 import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
 import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
+import { resolveExpropriationRemnantYears } from "./data/expropriation-remnant-era";
 import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import { excludeNonResidentHoldingPeriod } from "./one-house/non-resident-holding";
 import {
@@ -242,7 +243,7 @@ export function resolveExemptionProviso(
   const residenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
   switch (p.reason) {
     case "expropriation":
-      // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 5년 이내
+      // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 N년 이내(2013-02-15 전 양도 2년 · 이후 5년)
       if (p.businessApprovalDate && input.acquisitionDate >= p.businessApprovalDate) return null;
       // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `?? input.transferDate` fallback은
       //   fail-open이었다. 수용일 미입력 시 `transferDate <= transferDate + 5년`이 **항상 참**이라
@@ -250,7 +251,8 @@ export function resolveExemptionProviso(
       //   §154①2호가목의 5년은 **수용일 기산**이므로, 수용일을 모르면 요건을 판정할 수 없다
       //   → 특례 미적용(null)이 맞다. 미입력을 유리하게 추정할 근거가 없다.
       if (!p.expropriationDate) return null;
-      return isWithinDeadline(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS, input.transferDate)
+      // 기한은 양도일 연혁 — 2013-02-15 전 양도 2년 · 이후 5년(`expropriation-remnant-era.ts`).
+      return isWithinDeadline(p.expropriationDate, resolveExpropriationRemnantYears(input.transferDate), input.transferDate)
         ? "both"
         : null;
     case "overseas_migration":
@@ -267,9 +269,13 @@ export function resolveExemptionProviso(
     case "unavoidable":
       // 3호: 1년 이상 거주
       return residenceYears >= C.UNAVOIDABLE_RESIDENCE_YEARS ? "both" : null;
-    case "rental_5yr_residence":
-      // 1호: 세대전원 거주 5년 이상
-      return residenceYears >= C.RENTAL_RESIDENCE_YEARS ? "both" : null;
+    case "rental_5yr_residence": {
+      // 1호: 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간이 5년 이상」 — 취득 전 임차 거주 포함.
+      //   전용 입력이 없으면 본문 거주기간(취득일 기산 — 이 기간 이하)으로 본다.
+      const leaseMonths = p.rentalLeaseResidenceMonths;
+      const years = leaseMonths !== undefined ? Math.floor(leaseMonths / 12) : residenceYears;
+      return years >= C.RENTAL_RESIDENCE_YEARS ? "both" : null;
+    }
     case "pre_designation_contract":
       // 5호: 거주만 면제 (계약금일 무주택은 ⑧ `exemption-proviso-validate.ts`·⑫ `transfer-tax-schema-household-refines.ts`로 담보)
       return "residence_only";

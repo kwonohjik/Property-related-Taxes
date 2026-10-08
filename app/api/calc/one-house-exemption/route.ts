@@ -33,6 +33,7 @@ import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
 import { buildTransferEngineInput } from "../transfer/engine-input";
 import { parseRatesFromMap, presaleRightStartDate } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
+import { oneRightInputAfterSpecialActExclusion } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { resolveJudgmentBaseDate } from "@/lib/api/judgment-base-date";
@@ -243,7 +244,11 @@ export async function POST(request: NextRequest) {
      *    (`propertyType !== "housing"`)가 입주권을 항상 과세로 돌려보내기 때문에, 켜 주지 않으면
      *    판정 메뉴가 §89①4호 비과세를 영원히 말하지 못한다.
      */
-    const oneRightVerdict = buildOneRightVerdict(engineInput, isRightSale);
+    // 조특법상 소유주택으로 보지 않는 주택은 가·나목 「다른 주택」에서 뺀다(G065 — §155②③ 상속주택 제외는 빼지 않는다).
+    const oneRightVerdict = buildOneRightVerdict(
+      isRightSale ? oneRightInputAfterSpecialActExclusion(engineInput, exclusion) : engineInput,
+      isRightSale,
+    );
     const afterOneRight = applyOneRightVerdict(afterRental, oneRightVerdict);
 
     /**

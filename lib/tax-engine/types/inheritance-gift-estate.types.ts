@@ -1231,6 +1231,7 @@ export interface BurdenedGiftTransferTaxInput {
   provisoDepartureDate?: string;
   provisoExpropriationDate?: string;
   provisoBusinessApprovalDate?: string;
+  provisoRentalLeaseResidenceMonths?: string;
   provisoPreContractNoHouse?: boolean;
   proviso4hoBusinessRegDate?: string;
   proviso4hoRentalRegDate?: string;

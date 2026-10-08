@@ -18,6 +18,8 @@
  * (`HousesListSection.tsx:529`). API 변환 층이 `id:"selling"` 행을 앞에 붙이며 그 행의
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
+import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
+import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import { useMemo } from "react";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -33,6 +35,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
+import { UsageConversionField } from "./UsageConversionField";
+import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
@@ -156,13 +160,15 @@ export function Step3({ form, onChange }: Props) {
       primary.acquisitionDate,
     ],
   );
+  // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
+  const conversionStart = judgmentUsageConversionStart(form);
   const regulatedVerdict = useMemo(() => {
     if (!primary.regionCode || !primary.acquisitionDate) return null;
     return isRegulatedByBjdCode(
       primary.regionCode,
-      sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate,
+      conversionStart ?? (sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate),
     );
-  }, [primary.regionCode, primary.acquisitionDate, primary.decedentCohabitationHoldingStartDate, sameHouseholdStart]);
+  }, [primary.regionCode, primary.acquisitionDate, primary.decedentCohabitationHoldingStartDate, sameHouseholdStart, conversionStart]);
 
   /**
    * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
@@ -206,7 +212,7 @@ export function Step3({ form, onChange }: Props) {
             {
               value: "right_to_move_in",
               label: "조합원입주권",
-              description: "소득세법 §89①4호 — 다른 주택·분양권 보유 여부와 인가일 기준 요건으로 판정합니다.",
+              description: `소득세법 §89①4호 — 다른 주택·분양권 보유 여부와 인가일 기준 요건으로 판정합니다. ${RIGHT_TO_MOVE_IN_SCOPE_HINT}`,
             },
           ]}
           value={primary.assetKind === "right_to_move_in" ? "right_to_move_in" : "housing"}
@@ -289,6 +295,11 @@ export function Step3({ form, onChange }: Props) {
           (UI 순서 = 로직 순서). 입주권 양도에는 이 축이 없다 — ④·⑧과 같은 게이트.
         */}
         {!isRightSale && <InheritedSameHouseholdField asset={primary} onChange={patchAsset} />}
+        {/*
+          §154⑤ 단서 — 비주택 → 주택 용도변경. 보유 기산·거주요건 기준일을 옮기므로 취득일 축 바로 뒤.
+          입주권 양도에는 이 축이 없다 — ④·⑧과 같은 `judgmentUsageConversionStart` 게이트.
+        */}
+        {!isRightSale && <UsageConversionField asset={primary} onChange={patchAsset} />}
 
         <FieldCard
           label="예상 양도가액"
@@ -313,13 +324,21 @@ export function Step3({ form, onChange }: Props) {
 
         <RegulatedAreaField
           verdict={regulatedVerdict}
-          autoLabel={sameHouseholdStart ? "동일세대 보유 개시 당시 조정대상지역" : "취득 당시 조정대상지역"}
+          autoLabel={
+            conversionStart
+              ? "주거용 사용 개시 당시 조정대상지역"
+              : sameHouseholdStart
+                ? "동일세대 보유 개시 당시 조정대상지역"
+                : "취득 당시 조정대상지역"
+          }
           autoTestId="one-house-regulated-auto"
           toggleTestId="one-house-was-regulated"
           toggleTitle={
-            sameHouseholdStart
-              ? "피상속인과 동일세대로 보유하기 시작한 당시 조정대상지역이었습니다"
-              : "취득 당시 조정대상지역이었습니다"
+            conversionStart
+              ? "주거용으로 사용하기 시작한 당시 조정대상지역이었습니다"
+              : sameHouseholdStart
+                ? "피상속인과 동일세대로 보유하기 시작한 당시 조정대상지역이었습니다"
+                : "취득 당시 조정대상지역이었습니다"
           }
           checked={form.wasRegulatedAtAcquisition}
           onCheckedChange={(wasRegulatedAtAcquisition) => onChange({ wasRegulatedAtAcquisition })}
@@ -503,7 +522,7 @@ export function Step3({ form, onChange }: Props) {
         checked={form.isUnregistered}
         onCheckedChange={(isUnregistered) => onChange({ isUnregistered })}
         title="미등기 양도자산입니다"
-        description="미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다"
+        description={`미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다. ${UNREGISTERED_EXCLUSION_HINT}`}
         tone="rose"
       />
     </div>

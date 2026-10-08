@@ -31,6 +31,10 @@ import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { fieldError } from "./transfer-tax-validate-field";
+import { isLandBuildingSplitable } from "./self-owns-scope";
+import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -73,11 +77,8 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
       name: "건물",
       mode: effectivePartAcqMode(asset.buildingAcqMode, asset),
       // 건물 신축 + 토지 상속·증여(2026-07-30): 건물 취득가액의 정본은 「신축비용」 칸
-      // (`fixedAcquisitionPrice`)이다 — API 변환도 같은 후퇴를 적용하므로(transfer-tax-api-split.ts)
-      // 여기서 인식하지 않으면 "API 통과 ↔ validate 차단" 모순이 된다(⑧ 3중 패턴).
-      price:
-        asset.buildingAcquisitionPrice ||
-        (asset.landAcquisitionCause ? asset.fixedAcquisitionPrice : ""),
+      // (`fixedAcquisitionPrice`)이다 — ④·⑥과 같은 후퇴 leaf(`splitBuildingAcqPriceInput`, D0 G-5·G-6).
+      price: splitBuildingAcqPriceInput(asset),
       salesCase: asset.buildingSalesCaseValue,
     },
   ];
@@ -103,6 +104,35 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
 }
 
 /**
+ * 토지 파트 취득원인 규칙(D0 — G-1·G-2·G-3). 엔진·⑫와 **같은 leaf**(`collectSplitPartCauseIssues`)에
+ * ④가 실제로 보내는 값(유효 원인 — `effectiveLandAcquisitionCause`)을 넣는다.
+ *
+ * ⚠️ 신축 분기(`transfer-tax-validate-acquisition.ts`)도 직접 부른다 — 그 분기는 `validateSplitDirectInputs`에
+ *    닿기 전에 반환하는데, 이 규칙의 범위(건물 신축 + 토지 상속·증여)가 정확히 그 분기다.
+ */
+export function validateLandPartCause(asset: AssetForm, label: string): string | null {
+  const selfOwnsSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
+  const [issue] = collectSplitPartCauseIssues({
+    isSplitable: isLandBuildingSplitable(asset.assetKind),
+    // ④ `buildSplitPayload` — 토지 취득일 칸 값, 없으면 PHD·소유자 분리의 건물 취득일 후퇴(같은 식).
+    //    PHD는 컴패니언에서 열리지 않으므로(⑤·⑧ N-6 (B)) 플래그만 봐도 ④(주 자산 `usesPhd`)와 같다.
+    hasLandAcquisitionDate:
+      (!!asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)) ||
+      asset.usePreHousingDisclosure === true ||
+      selfOwnsSplit,
+    landAcquisitionCause: effectiveLandAcquisitionCause(asset),
+    hasLandDecedentAcquisitionDate: !!asset.landDecedentAcquisitionDate,
+    landMode: effectivePartAcqMode(asset.landAcqMode, asset),
+  });
+  if (!issue) return null;
+  const msg = `${label}: ${issue.message}`;
+  // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
+  // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.
+  if (issue.field === "landAcqMode") return `${msg} — 「토지는 다른 원인으로 취득」을 껐다가 다시 켜면 실거래가로 고정됩니다.`;
+  return fieldError(issue.field, msg);
+}
+
+/**
  * 분리 직접 입력 초과 검증. 오류 메시지 또는 null.
  *
  * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
@@ -117,6 +147,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // M2 — ④ `isSplitPayloadActive`와 같은 유효 소유 축(`self-owns-scope.ts`). 토지 등의 잔재는 보지 않는다.
   const selfOwnsSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
   if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit) return null;
+
+  const causeErr = validateLandPartCause(asset, label);
+  if (causeErr) return causeErr;
 
   // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────
   // 토지 면적이 정착면적의 **3배**(최소 배율)를 넘으면 어느 용도지역이든 한도 초과 가능성이

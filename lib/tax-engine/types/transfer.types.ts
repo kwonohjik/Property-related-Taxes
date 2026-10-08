@@ -509,6 +509,12 @@ export interface TransferTaxInput {
     expropriationDate?: Date;
     /** 가목 사업인정 고시일 (acquisitionDate < 고시일 전제). toDate */
     businessApprovalDate?: Date;
+    /**
+     * 1호 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간」(개월). 취득 전 임차 거주를 포함한다 —
+     * 본문 거주요건(보유기간 중 거주)과 기산점이 달라 별도로 받는다. 미입력이면 본문 거주기간으로 판정한다
+     * (그 값은 취득일 기산이라 이 기간보다 길 수 없다 — 유리하게 추정하지 않는다).
+     */
+    rentalLeaseResidenceMonths?: number;
   };
   /**
    * §154⑤ 단서(2021-01-01~2022-05-09 양도) — 다주택 처분 후 **최종 1주택** 보유기간 재기산 판정 사실(OH-22 · I-1).
@@ -1144,7 +1150,10 @@ export interface TransferTaxInput {
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
   /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
   landDecedentAcquisitionDate?: Date;
-  /** 토지 파트 증여자 취득일 — `landAcquisitionCause`가 증여 계열일 때 §104②2호 통산 */
+  /**
+   * 토지 파트 증여자 취득일 — §104②2호 통산은 `carryover_gift`(§97의2① 자산)만이다(단순 증여는 통산 없음).
+   * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
+   */
   landDonorAcquisitionDate?: Date;
   /** 토지 자본적지출·필요경비 */
   landDirectExpenses?: number;

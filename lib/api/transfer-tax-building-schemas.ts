@@ -215,15 +215,15 @@ export const generalBuildingValuationSchema = z.object({
   /**
    * #4-a: 토지 취득원인 (optional — 미입력 시 default purchase).
    * "inheritance"·"gift"·"carryover_gift" 시 단건/aggregate 엔진의
-   * 단기보유 기산점이 decedent/donorAcquisitionDate로 변경됨 (영 §95④).
+   * 단기보유 기산점이 decedent/donorAcquisitionDate로 변경됨 (법 §104②1·2호).
    * 토지에는 newConstruction 미존재(자가신축은 건물 한정).
    */
   landAcquisitionCause: z
     .enum(["purchase", "inheritance", "gift", "carryover_gift"])
     .optional(),
-  /** #4-a: 토지 상속 시 피상속인 취득일 (영 §95④). */
+  /** #4-a: 토지 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate: z.string().date().optional(),
-  /** #4-a: 토지 증여 시 증여자 취득일 (영 §95④). */
+  /** #4-a: 토지 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
   donorAcquisitionDate: z.string().date().optional(),
   /**
    * 다른 피상속인 분리: 건물 전용 피상속인 취득일.

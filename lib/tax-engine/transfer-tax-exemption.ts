@@ -30,6 +30,7 @@ import {
   collectUndetermined,
   collectUnmetExceptions,
   meetsTemporaryTwoHousePrevHolding,
+  undeclaredThreeYearExceptionUndetermined,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
@@ -140,7 +141,10 @@ export function checkExemption(
     article89Clause2,
     appliedExceptions,
     pending,
-    undetermined: collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+    undetermined: [
+      ...collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+      ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
+    ],
     unmetExceptions,
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),

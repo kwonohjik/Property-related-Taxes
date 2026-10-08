@@ -4,7 +4,7 @@
  * 사례 32 입력 베이스에서 토지 acquisitionCause만 "gift"로 변경.
  * 토지 LTHD 기산점 = acquisitionDate(증여일 2008-03-17) → 사례 32와 동일.
  * donorAcquisitionDate(증여자 취득일)는 단기보유 판정 기산점으로만 영향
- * (영 §95④) — 본 사례는 토지 14.9년 보유로 단기보유 분기 무관 → 결과 동일.
+ * (법 §104②) — 본 사례는 토지 14.9년 보유로 단기보유 분기 무관 → 결과 동일.
  *
  * 건물 = newConstruction 그대로 → 가산세 13,300,202 그대로 발동.
  *
@@ -24,7 +24,7 @@ import { makeMockRates } from "@/__tests__/tax-engine/_helpers/mock-rates";
 
 const TRANSFER_DATE = new Date("2023-02-19");
 const LAND_GIFT_DATE = new Date("2008-03-17"); // 토지 증여일 = LTHD 기산점
-const DONOR_ACQ_DATE = new Date("1995-06-15"); // 증여자 취득일 (영 §95④)
+const DONOR_ACQ_DATE = new Date("1995-06-15"); // 증여자 취득일 (법 §104②)
 const BUILDING_ACQUISITION_DATE = new Date("2018-03-31"); // 건물 신축
 
 const TOTAL_TRANSFER_PRICE = 1_620_000_000;

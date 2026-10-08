@@ -278,6 +278,7 @@ export function buildTransferEngineInput(
           departureDate: toOptionalDate(data.oneHouseExemptionProviso.departureDate),
           expropriationDate: toOptionalDate(data.oneHouseExemptionProviso.expropriationDate),
           businessApprovalDate: toOptionalDate(data.oneHouseExemptionProviso.businessApprovalDate),
+          rentalLeaseResidenceMonths: data.oneHouseExemptionProviso.rentalLeaseResidenceMonths,
           rentalRegistration4ho: toEngineRental4ho(data.oneHouseExemptionProviso.rentalRegistration4ho),
         }
       : undefined,

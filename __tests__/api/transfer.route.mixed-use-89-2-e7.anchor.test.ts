@@ -172,10 +172,11 @@ describe("E-7 겸용 단건 × §89② — 단건 주택 경로와 같은 leaf",
     expect(r.warnings.some((w) => w.includes("§156의2⑬"))).toBe(true);
   });
 
-  it("판정 불가 — 3년 초과 · 선언 없음 → 종전 동작(비과세) + 단건과 같은 고지", async () => {
+  it("3년 초과 · 선언 없음 → 배제(미선언=불리, 2026-10-08) + 단건과 같은 확인 필요 고지", async () => {
     const r = await post({ presaleRights: [right("2022-06-01")] });
-    expect(rule(r)).toBe("below_threshold_exempt");
-    expect(r.warnings.some((w) => w.includes("§89②") && w.includes("§156의2 ④"))).toBe(true);
+    expect(rule(r)).toBe("non_one_house_full_taxation");
+    expect(r.warnings.some((w) => w.includes("§89② 배제를 적용했습니다(확인 필요)") && w.includes("§156의2 ④"))).toBe(true);
+    expect((await postHousing({ presaleRights: [right("2022-06-01")] })).isExempt).toBe(false);
   });
 });
 

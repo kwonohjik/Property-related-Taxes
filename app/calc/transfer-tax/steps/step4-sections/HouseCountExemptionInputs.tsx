@@ -39,6 +39,7 @@ import {
   GeneralHouseRightAtInheritanceField,
 } from "@/components/calc/transfer/InheritanceGeneralHouseFields";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 export function HouseCountExemptionInputs({
   form,
@@ -48,6 +49,7 @@ export function HouseCountExemptionInputs({
   hideSpouseOwned = false,
   mergeContext,
   countExclusionEnabled = false,
+  countExclusionApplies,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -66,6 +68,8 @@ export function HouseCountExemptionInputs({
    * `transfer-calc-count-exclusion-row-link.plan.md` Q-2′)를 넘긴다.
    */
   countExclusionEnabled?: boolean;
+  /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다(입주권 양도의 배지 한정). */
+  countExclusionApplies?: (house: HouseEntry) => boolean;
 }) {
   return (
     <>
@@ -78,6 +82,7 @@ export function HouseCountExemptionInputs({
         hideSpouseOwned={hideSpouseOwned}
         mergeContext={mergeContext}
         countExclusionEnabled={countExclusionEnabled}
+        countExclusionApplies={countExclusionApplies}
       />
 
       {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) — 판정 메뉴는 명부 행에서 받는다 */}

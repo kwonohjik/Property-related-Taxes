@@ -548,9 +548,9 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
       ],
       sellingHouseId: "sell",
     };
-    // 🔴 이 축도 세액으로는 안 보인다 — §155②③ 주택수 제외가 count를 1로 줄여 두어
-    //    양쪽 모두 비과세이고, 갈리는 것은 「어느 조문을 확인하라」는 고지뿐이다(실측).
-    expect(exempt(withInheritedHouse)).toBe(true);
+    // 🔴 ⑦ 후단이 날짜로 닫히면 남는 것은 3년 경과 예외(④·§75①) **미선언**뿐이다 — 2026-10-08부터 미선언은
+    //    배제(모름=불리)라 과세다. ⑦이 열린 아래 `undated`는 판정 보류(비과세 유지)라 두 갈래가 결론으로도 갈린다.
+    expect(exempt(withInheritedHouse)).toBe(false);
     // A3 OH-12b(2026-09-26) — 일반주택 2016 취득 · 상속 2021이면 「상속개시 당시 보유」가 **날짜로 확인**된다
     //   (§155② 경로와 같은 leaf `qualifiesAsInheritanceGeneralHouse`) ⇒ 선언 없이도 ⑦ 후단이 닫힌다.
     expect(openArticles(withInheritedHouse)).not.toContain("§156의2 ⑦");

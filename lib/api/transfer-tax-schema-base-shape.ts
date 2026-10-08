@@ -44,11 +44,16 @@ import {
 } from "./transfer-tax-building-schemas";
 import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
 import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
+import {
+  isTransferDateBeforeSupported,
+  TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
+} from "@/lib/tax-engine/data/transfer-supported-period";
 
 export const propertyBaseShape = {
   propertyType: z.enum(["housing", "land", "building", "right_to_move_in", "presale_right", "mixed-use-house", "commercial_building", "general_building", "redevelopment_apt"]),
   transferPrice: z.number().int().positive(),
-  transferDate: z.string().date(),
+  // 1990-01-01 전 양도는 세율 데이터가 없다 — 500 대신 400(필드 오류)으로 막는다(⑧과 같은 leaf).
+  transferDate: z.string().date().refine((d) => !isTransferDateBeforeSupported(d), TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE),
   acquisitionPrice: z.number().int().nonnegative(),
   /**
    * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정).
@@ -194,6 +199,8 @@ export const propertyBaseShape = {
       departureDate: z.string().date().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
+      // ⑫ 1호 임차일부터 세대전원 거주 개월(취득 전 임차 포함) — ⑭ `engine-input.ts`
+      rentalLeaseResidenceMonths: z.number().int().min(0).optional(),
       // ⑫ O4 5호 「계약금 지급일 현재 무주택」 확인 — 종전엔 키가 없어 strip됐다. 엔진은 이 요건을 판정하지 않고
       //    ⑧·⑫가 담보한다(`transfer-tax-schema-household-refines.ts` — 5호면 true 필수). ⑭ 매핑 없음(엔진 미소비).
       preContractNoHouse: z.boolean().optional(),

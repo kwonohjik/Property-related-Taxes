@@ -313,10 +313,19 @@ describe("P4-1 pending — §89② 권리 3년", () => {
     expect(r.pending).toEqual([]);
   });
 
-  it("[PD-20] 판정 불가(예외 미선언)는 `undetermined`로 나오고 조문을 그대로 담는다", () => {
+  it("[PD-20] 3년 경과 예외 미선언은 배제(2026-10-08 미선언=불리) — 확인 필요는 「판정하지 않은 부분」에 조문과 함께", () => {
     const r = judge({ presaleRights: RIGHT("2020-07-01"), ...RESIDENCE_FREE });
-    expect(r.article89Clause2?.status).toBe("undetermined");
-    expect(r.undetermined.some((u) => u.id.startsWith("89-2-open:"))).toBe(true);
+    expect(r.article89Clause2?.status).toBe("excluded");
+    expect(r.isExempt).toBe(false);
+    const u = r.undetermined.find((x) => x.id === "89-2-three-year-exception-undeclared");
+    expect(u?.reason).toMatch(/§156의2 ④.*확인 필요/);
+    expect(r.undetermined.some((x) => x.id.startsWith("89-2-open:"))).toBe(false);
+  });
+
+  it("[PD-20n] 본체 판정이 어차피 과세면(거주요건 미충족) 확인 필요를 내지 않는다 — 결론을 가를 때만", () => {
+    const r = judge({ presaleRights: RIGHT("2020-07-01"), ...RESIDENCE_BINDS });
+    expect(r.article89Clause2?.status).toBe("excluded");
+    expect(r.undetermined.some((x) => x.id === "89-2-three-year-exception-undeclared")).toBe(false);
   });
 });
 

@@ -11,18 +11,22 @@
  * | 사유 | 필수 | 근거 |
  * |---|---|---|
  * | 2호나·다목 해외이주·국외거주 | 출국일 | 「출국일부터 2년 이내에 양도」 |
+ * | 1호 건설·공공매입임대 거주 5년 | (선택) 임차일부터 세대전원 거주 개월 — 넣었으면 0 이상의 수 | 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간」 |
  * | 2호가목 수용 | 수용일 | 엔진이 미입력을 **불성립**으로 본다(#591 R7 fail-closed) — OH-33 |
  * | 5호 조정 공고 전 계약 | 계약금 지급일 현재 무주택 확인 | 「계약금 지급일 현재 주택을 보유하지 아니하는 경우」 |
  * | 삭제 전 4호 임대사업자 등록 | 신청일 2개 · 등록 상태 · (②구간) 신청 당시 1주택 · (유지) 임대의무기간·5% | `rental-4ho-proviso.ts` (OH-38) |
  */
 import { collectRental4hoErrors, type Rental4hoFormSlice } from "./rental-4ho-proviso";
 import { fieldError } from "./transfer-tax-validate-field";
+import { parseRentalLeaseResidenceMonths } from "./exemption-proviso-payload";
 
 export function collectExemptionProvisoErrors(p: {
   /** `effectiveProvisoReason` 적용 후 사유. "" = 해당 없음. */
   reason: string;
   departureDate?: string;
   expropriationDate?: string;
+  /** 1호 임차일부터 세대전원 거주 개월(선택) — ④와 같은 파서 */
+  rentalLeaseResidenceMonths?: string;
   preContractNoHouse?: boolean;
   /** 4호 입력 — 호출부는 폼을 그대로 넘긴다(칸별 노출 범위는 leaf가 정한다) */
   rental4ho?: Partial<Rental4hoFormSlice>;
@@ -39,6 +43,13 @@ export function collectExemptionProvisoErrors(p: {
     errors.push(
       fieldError("provisoExpropriationDate", "§154① 단서(공익사업 수용): 수용일을 입력하세요. (수용된 주택 자체를 양도하면 양도일과 같은 날입니다)"),
     );
+  }
+  if (
+    p.reason === "rental_5yr_residence" &&
+    p.rentalLeaseResidenceMonths?.trim() &&
+    parseRentalLeaseResidenceMonths(p.rentalLeaseResidenceMonths) === undefined
+  ) {
+    errors.push(fieldError("provisoRentalLeaseResidenceMonths", "§154① 단서(임대주택 거주 5년): 임차일부터 거주한 개월 수를 0 이상의 숫자로 입력하세요."));
   }
   if (p.reason === "pre_designation_contract" && !p.preContractNoHouse) {
     errors.push(fieldError("provisoPreContractNoHouse", "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."));

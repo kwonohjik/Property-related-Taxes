@@ -172,16 +172,16 @@ export type GeneralBuildingInput = {
    * 토지 취득원인 (#4-a 후속 PR).
    * 미입력 시 default "purchase" — 사례 31·32 회귀 호환.
    * "inheritance"·"gift"·"carryover_gift" 시 토지 카드의 단기보유 기산점이
-   * decedent/donorAcquisitionDate로 변경됨 (영 §95④).
+   * decedent/donorAcquisitionDate로 변경됨 (법 §104②1·2호).
    */
   landAcquisitionCause?:
     | "purchase"
     | "inheritance"
     | "gift"
     | "carryover_gift";
-  /** 토지 상속 시 피상속인 취득일 (영 §95④). */
+  /** 토지 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate?: Date;
-  /** 토지 증여 시 증여자 취득일 (영 §95④). */
+  /** 토지 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
   donorAcquisitionDate?: Date;
   /**
    * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
@@ -201,13 +201,13 @@ export type GeneralBuildingInput = {
   /**
    * 다른 피상속인 케이스 — 건물 전용 피상속인 취득일.
    * 미입력 시 `decedentAcquisitionDate` fallback (#6 같은 피상속인 호환).
-   * `buildingAcquisitionCause === "inheritance"` 시 단기보유 기산점(영 §95④).
+   * `buildingAcquisitionCause === "inheritance"` 시 단기보유 기산점(법 §104②1호).
    */
   buildingDecedentAcquisitionDate?: Date;
   /**
    * 다른 증여자 케이스 — 건물 전용 증여자 취득일.
    * 미입력 시 `donorAcquisitionDate` fallback (#7-a 같은 증여자 호환).
-   * `buildingAcquisitionCause === "gift"` 시 단기보유 기산점(영 §95④).
+   * `buildingAcquisitionCause === "gift"` 시 단기보유 기산점(법 §104②2호 — 이월과세 자산).
    */
   buildingDonorAcquisitionDate?: Date;
 
@@ -552,16 +552,16 @@ export type AssetCardForAggregate = {
    * 토지 카드에만 set (#4-a 후속 PR). 건물 카드는 undefined.
    * 라우트가 TransferTaxItemInput 매핑 시 acquisitionCause로 전달.
    * "inheritance"·"gift" 시 단건/aggregate 엔진의 단기보유 판정 기산점이
-   * decedent/donorAcquisitionDate로 변경됨 (영 §95④).
+   * decedent/donorAcquisitionDate로 변경됨 (법 §104②1·2호).
    */
   landAcquisitionCause?:
     | "purchase"
     | "inheritance"
     | "gift"
     | "carryover_gift";
-  /** 토지 상속 시 피상속인 취득일 (영 §95④ 단기보유 기산점). */
+  /** 토지 상속 시 피상속인 취득일 (법 §104②1호 단기보유 기산점). */
   decedentAcquisitionDate?: Date;
-  /** 토지 증여 시 증여자 취득일 (영 §95④ 단기보유 기산점). */
+  /** 토지 증여 시 증여자 취득일 (법 §104②2호 단기보유 기산점 — 이월과세 자산). */
   donorAcquisitionDate?: Date;
   /**
    * #7-b: 배우자등 이월과세 (§97조의2) — 토지·건물 카드 각각에 set.

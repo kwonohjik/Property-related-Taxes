@@ -30,7 +30,7 @@ export const splitAcquisitionShape = {
   landAcquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
   /** 토지 파트 피상속인 취득일 (§104②1호) */
   landDecedentAcquisitionDate: z.string().date().optional(),
-  /** 토지 파트 증여자 취득일 (§104②2호) */
+  /** 토지 파트 증여자 취득일 (§104②2호 — 이월과세 자산만. 분리 계산의 토지 이월과세는 미지원으로 차단 — D0 G-1) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /** 토지·건물 소유자 분리 (§166⑥) */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),

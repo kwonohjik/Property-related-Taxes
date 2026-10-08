@@ -294,7 +294,7 @@ describe("§156의2③·④·⑨ · §89②", () => {
   it("🔴 ③ 권리 취득 3년 — 월 충족 · 화 대기(기한 월요일 + 설명)", () => {
     expect(resolveArticle89Clause2(withRight(MON), undefined).status).toBe("exception_met");
     const r = resolveArticle89Clause2(withRight(TUE), undefined);
-    expect(r.status).toBe("undetermined");
+    expect(r.status).toBe("excluded"); // ④·§75① 미선언 = 배제(2026-10-08) — 기한·설명은 그대로 싣는다
     expect(r.deadline && iso(r.deadline)).toBe(MON);
     expect(r.deadlineNote).toContain("민법 §161");
   });
