@@ -20,6 +20,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 const PREV_ACQ = { year: "2017", month: "08", day: "31" };
 
@@ -72,6 +73,7 @@ test.describe("판정 마법사 — 화면 순서", () => {
     // ① → ②: 양도 대상이 **2번째** 화면이다.
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 
     await fillDateAndVerify(page, PREV_ACQ, {
       scope: page.getByTestId("one-house-acq-date"),
@@ -130,6 +132,7 @@ test.describe("판정 마법사 — 화면 순서", () => {
       scope: page.getByTestId("one-house-sale-date"),
     });
     await page.getByTestId("one-house-sale-price").fill("1200000000");
+    await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
 
@@ -147,6 +150,7 @@ test.describe("판정 마법사 — 화면 순서", () => {
     await seedRosterOnly(page);
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 
     await expect(page.getByTestId("one-house-long-term-mortgage")).toBeVisible();
     await expect(page.getByTestId("one-house-win-win-rental")).toBeVisible();

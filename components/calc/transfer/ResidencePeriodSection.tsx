@@ -173,6 +173,8 @@ export function ResidencePeriodSection({
            **구조적으로 도달 불가**였다 — store 기본값이 `residenceInputMode: "direct"`
            (`calc-wizard-asset-residence.ts`)이므로 1세대1주택 주택 사용자가 Step4에 처음 오면
            「거주 기간 입력」 카드 제목만 보이고 **입력칸이 하나도 없었다**.
+           (2026-10-08부터 신규 자산 기본값은 구간 입력 + 빈 구간 1개다. direct는 토글을 끈 경우와
+           구 기록 복원뿐이지만, 그때도 이 칸이 유일한 입력 경로다.)
       */}
       {!isInterval && (
         <FieldCard field="residencePeriodMonthsAsset" label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.">

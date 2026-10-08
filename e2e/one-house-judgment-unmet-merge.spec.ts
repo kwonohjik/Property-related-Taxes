@@ -17,6 +17,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 const house = (
   id: string,
@@ -43,7 +44,7 @@ function seedForm(over: Record<string, unknown> = {}) {
       formData: {
         assets: [
           {
-            ...makeDefaultAsset(1),
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2017-08-31",
@@ -136,7 +137,7 @@ test.describe("판정 결과 — 선언했으나 적용되지 않은 특례", ()
     await gotoResult(page, {
       assets: [
         {
-          ...makeDefaultAsset(1),
+          ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
           assetKind: "housing",
           acquisitionCause: "purchase",
           acquisitionDate: "2016-01-01",

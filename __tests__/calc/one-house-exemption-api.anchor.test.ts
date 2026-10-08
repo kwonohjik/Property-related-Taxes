@@ -56,7 +56,7 @@ function baseForm(over: Partial<OneHouseJudgmentFormData> = {}): OneHouseJudgmen
     transferDate: "2024-06-01",
     contractTotalPrice: "1000000000",
     residencePeriodMonths: "60",
-    assets: [{ ...f.assets[0], assetKind: "housing", acquisitionDate: "2019-06-01" }],
+    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2019-06-01" }],
     ...over,
   };
 }

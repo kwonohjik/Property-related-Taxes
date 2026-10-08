@@ -64,6 +64,8 @@ function form(acquisitionDate: string): OneHouseJudgmentFormData {
     assets: [
       {
         ...makeDefaultAsset(1),
+        residenceInputMode: "direct",
+        residencePeriods: [],
         assetKind: "housing",
         acquisitionCause: "purchase",
         acquisitionDate,

@@ -51,7 +51,7 @@ function formWarningOnly(): OneHouseJudgmentFormData {
   return { ...createInitialOneHouseJudgmentForm(), isOneHousehold: false };
 }
 
-/** 초기 폼 — 화면1 «양도 대상 주택»에 **오류만** 3건. */
+/** 초기 폼 — 화면1 «양도 대상 주택»에 **오류만** 4건. */
 function formErrorOnly(): OneHouseJudgmentFormData {
   return createInitialOneHouseJudgmentForm();
 }
@@ -92,7 +92,8 @@ const count = (form: OneHouseJudgmentFormData, step: number, sev: "error" | "war
 describe("SB-0 (전제) — 세 시료가 실제로 세 갈래다", () => {
   it("경고만 / 오류만 / 둘 다 가 데이터로 갈린다", () => {
     expect([count(formWarningOnly(), 0, "error"), count(formWarningOnly(), 0, "warning")]).toEqual([0, 1]);
-    expect([count(formErrorOnly(), 1, "error"), count(formErrorOnly(), 1, "warning")]).toEqual([3, 0]);
+    // 4건 — 거주 기본값이 「빈 구간 1개」라 그 구간의 입주일 오류가 하나 더 뜬다(2026-10-08).
+    expect([count(formErrorOnly(), 1, "error"), count(formErrorOnly(), 1, "warning")]).toEqual([4, 0]);
 
     const both = formBoth();
     expect(count(both, 2, "error")).toBeGreaterThan(0);

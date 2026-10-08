@@ -86,7 +86,7 @@ function baseForm(): TransferFormData {
   const judged = {
     ...createInitialOneHouseJudgmentForm(),
     assets: [
-      { ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01" },
+      { ...makeDefaultAsset(1), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01" },
     ],
     transferDate: "2024-06-01",
     contractTotalPrice: "900000000",

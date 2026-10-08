@@ -33,6 +33,8 @@ function makeLinkedAsset(over: Partial<AssetForm> = {}): AssetForm {
   a.acquisitionDate = "2009-10-01";
   a.standardPriceAtAcq = "300,000,000";
   a.standardPriceAtTransfer = "500,000,000";
+  a.residenceInputMode = "direct";
+  a.residencePeriods = [];
   a.residencePeriodMonthsAsset = "38";
   return { ...a, ...over };
 }

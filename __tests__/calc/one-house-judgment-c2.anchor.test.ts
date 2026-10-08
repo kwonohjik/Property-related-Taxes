@@ -39,6 +39,8 @@ import { POST } from "@/app/api/calc/one-house-exemption/route";
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
     ...makeDefaultAsset(1),
+    residenceInputMode: "direct",
+    residencePeriods: [],
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2015-01-01",

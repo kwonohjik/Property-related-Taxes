@@ -15,6 +15,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import type { HouseEntry, RowCountExclusionReduction } from "../lib/stores/calc-wizard-asset-nbl";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 const GANGNAM = "1168010100";
 
@@ -68,7 +69,7 @@ function bundledForm(houses: HouseEntry[]) {
   const f = createDefaultTransferFormData();
   f.isOneHousehold = true;
   f.assets[0] = {
-    ...f.assets[0],
+    ...f.assets[0], ...DIRECT_RESIDENCE,
     addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionDate: "2015-01-01",
@@ -77,7 +78,7 @@ function bundledForm(houses: HouseEntry[]) {
     actualSalePrice: "2,000,000,000",
   };
   f.assets.push({
-    ...makeDefaultAsset(2),
+    ...makeDefaultAsset(2), ...DIRECT_RESIDENCE,
     addressJibun: "서울 강남구 테스트동 1-2",
     assetKind: "land",
     landNature: "standalone",

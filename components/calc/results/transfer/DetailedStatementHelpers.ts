@@ -197,8 +197,9 @@ export function buildStatementItems(
       : undefined,
   });
 
+  // 입주일 없는 구간(신규 자산 기본값의 빈 구간)은 거주 사실이 없다 — 퇴거일 칸에 양도일을 찍지 않는다.
   const periods = primary?.residenceInputMode === "interval"
-    ? primary.residencePeriods ?? []
+    ? (primary.residencePeriods ?? []).filter((p) => p.moveInDate)
     : [];
   const firstMoveIn = periods.length > 0 ? periods[0].moveInDate : "";
   const lastMoveOut = periods.length > 0

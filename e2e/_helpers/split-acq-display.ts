@@ -8,6 +8,7 @@ import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData } from "../../lib/stores/calc-wizard-store";
 import { putCalculationRecord } from "./history-seed";
 import { openHistoryModal } from "./navigation";
+import { DIRECT_RESIDENCE } from "./residence-direct";
 
 export type Over = Record<string, unknown>;
 export const won = (n: number) => n.toLocaleString("en-US");
@@ -22,7 +23,7 @@ export const num = (s: string | undefined) => {
 /** 주택 · 별개 취득(토지 2010-03-15 / 건물 2018-06-01) · 양도 900,000,000 — 설계서 §1.2 실측 시드와 같은 값 */
 export function housing(over: Over = {}) {
   return {
-    ...makeDefaultAsset(1),
+    ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
     addressJibun: "강원특별자치도 춘천시 테스트동 1",
     regionCode: "5111010100",
     assetKind: "housing",
@@ -132,7 +133,7 @@ export async function rowsIn(el: Locator): Promise<Record<string, number[]>> {
 }
 
 export const landStandalone = (id = 2, over: Over = {}) => ({
-  ...makeDefaultAsset(id),
+  ...makeDefaultAsset(id), ...DIRECT_RESIDENCE,
   assetKind: "land",
   addressJibun: `강원특별자치도 춘천시 테스트동 ${id}`,
   regionCode: "5111010100",

@@ -11,10 +11,11 @@
  */
 import { createDefaultTransferFormData } from "../../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./residence-direct";
 
 /** 0~2단계를 통과하는 단건 주택 — 3단계(수정신고) 케이스의 바탕 */
 const baseAsset = () => ({
-  ...makeDefaultAsset(1),
+  ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
   addressJibun: "서울 강남구 테스트동 1-1",
   acquisitionDate: "2015-03-01",
   fixedAcquisitionPrice: "300000000",

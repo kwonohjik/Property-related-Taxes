@@ -80,6 +80,8 @@ function form(houses: HouseEntry[], over: Partial<Form> = {}, price = "2,000,000
   f.isOneHousehold = true;
   f.assets[0] = {
     ...f.assets[0],
+    residenceInputMode: "direct",
+    residencePeriods: [],
     assetKind: "housing",
     acquisitionDate: "2015-01-01",
     fixedAcquisitionPrice: "300,000,000",

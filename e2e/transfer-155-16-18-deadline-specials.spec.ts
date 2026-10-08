@@ -19,13 +19,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 /** 판정 메뉴는 주택 수를 **명부**에서 센다 — `householdHousingCount`는 덮어써진다. */
 function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
   return gotoJudgmentStep2(page, {
     assets: [
       {
-        ...makeDefaultAsset(1),
+        ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
         addressJibun: "서울 강남구 테스트동 1-1",
         assetKind: "housing",
         acquisitionCause: "purchase",
@@ -65,7 +66,7 @@ async function gotoCalcHolding(page: Page, over: Record<string, unknown> = {}) {
           householdNoPresaleRightsConfirmed: true, // roster-required PR-D
           assets: [
             {
-              ...makeDefaultAsset(1),
+              ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
               addressJibun: "서울 강남구 테스트동 1-1",
               assetKind: "housing",
               acquisitionCause: "purchase",

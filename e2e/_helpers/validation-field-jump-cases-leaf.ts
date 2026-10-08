@@ -372,7 +372,7 @@ const rh = (o: Record<string, unknown> = {}, units: unknown[] = [unit()]) => ({
 });
 /** 통과하는 장기임대 특례(거주 36개월) — 한 칸씩 비운다 */
 const R = (o: Record<string, unknown> = {}, units?: unknown[], asset: Record<string, unknown> = {}, formPatch: Record<string, unknown> = {}) => () =>
-  withPrimary({ residencePeriodMonthsAsset: "36", rentalHousingException: rh(o, units), ...asset }, formPatch);
+  withPrimary({ residenceInputMode: "direct", residencePeriods: [], residencePeriodMonthsAsset: "36", rentalHousingException: rh(o, units), ...asset }, formPatch);
 const PHRP = { scenario: "B", priorResidenceTransferDate: "2020-01-01", standardPriceAtAcquisitionForPhrp: "100000000", standardPriceAtPriorTransfer: "150000000", standardPriceAtTransferForPhrp: "300000000" };
 
 const RENTAL_CASES: FieldJumpCase[] = [

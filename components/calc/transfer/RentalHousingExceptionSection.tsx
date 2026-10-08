@@ -492,8 +492,8 @@ export function RentalHousingExceptionSection({
                   거주주택 거주기간 <span className="text-rose-500">*</span>
                 </p>
                 {/*
-                  🔴 **direct 모드 echo** (R21). store 기본값이 `residenceInputMode: "direct"`
-                     (`calc-wizard-asset-residence.ts:17`)라, 보유 상황 단계에서 개월 수로
+                  🔴 **direct 모드 echo** (R21). 당시 store 기본값이 `residenceInputMode: "direct"`
+                     였다(2026-10-08부터 신규 자산은 구간 입력 — direct는 토글 OFF·구 기록 복원). 보유 상황 단계에서 개월 수로
                      입력한 사용자가 이 카드를 열면 구간이 비어 **「합계 거주기간 0개월」**이
                      보이는데 바로 아래 실시간 판정은 direct 개월을 읽어 **「✓ 충족」**을 찍었다
                      — 한 카드가 자기 자신과 모순됐다.

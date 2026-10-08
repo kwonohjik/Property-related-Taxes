@@ -14,13 +14,14 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 function seedForm() {
   return {
     state: {
       formData: {
         assets: [{
-          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+          ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
           assetKind: "redevelopment_apt",
           acquisitionCause: "inheritance",
           acquisitionDate: "2005-04-09", // 상속개시일 (≥1985 → post-deemed)

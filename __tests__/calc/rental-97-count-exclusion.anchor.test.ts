@@ -80,7 +80,7 @@ const judged = (houses: HouseEntry[]) =>
   ({
     ...createInitialOneHouseJudgmentForm(),
     assets: [
-      { ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2019-06-01" },
+      { ...makeDefaultAsset(1), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2019-06-01" },
     ],
     transferDate: "2026-08-01",
     contractTotalPrice: "1000000000",

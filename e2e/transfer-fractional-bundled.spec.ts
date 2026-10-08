@@ -13,6 +13,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
 function seedForm() {
   return {
@@ -22,7 +23,7 @@ function seedForm() {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "inheritance",
             ownershipNumerator: "60",
@@ -37,7 +38,7 @@ function seedForm() {
             residencePeriodMonths: "177",
           },
           {
-            ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             ownershipNumerator: "40",

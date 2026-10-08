@@ -11,12 +11,13 @@
       "transferDate": "1998-12-10",
       "contractTotalPrice": "100000000",
       "provisoReason": "rental_5yr_residence",
+      "provisoRentalLeaseResidenceMonths": "132",
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "1996-03-21",
         "acquisitionCause": "gift",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "132"
+        "residencePeriodMonthsAsset": "32"
       }
     },
     "expected": {
@@ -26,7 +27,7 @@
       ]
     },
     "bucket": "match",
-    "note": "match — 원문 결론: 건설임대주택을 임차일부터 양도일까지 5년 이상 거주하고 양도일 현재 다른 주택이 없으면 시행령 §154①1호로 비과세, 동일세대원에게 증여한 뒤 그 가족이 양도해도 비과세. 폼: 1호 사유 + 거주 132개월(임차일~양도일, 직접 입력) + 증여 취득 1996-03-21. 엔진: applied 154-1-proviso:rental_5yr_residence. 구별력 한계: 엔진 보유요건 2년(당시 3년)이라 보유 2년 8개월로도 비과세 — 거주 5년 축은 구성 짝(P/N-F373-era)에서 갈랐다. 동일세대원 증여 여부는 엔진이 묻지 않는다. 함정: 거주를 구간 입력으로 넣으면 입주일이 취득일보다 빠르다는 ⑧ 오류가 나 1호의 「임차일부터」 거주를 담지 못한다 — 직접 입력으로 넣었다. 양도가 1억(가정). civil-161 보류는 공휴일 표 안내."
+    "note": "match — 원문 결론: 건설임대주택을 임차일부터 양도일까지 5년 이상 거주하고 양도일 현재 다른 주택이 없으면 시행령 §154①1호로 비과세, 동일세대원에게 증여한 뒤 그 가족이 양도해도 비과세. 폼: 1호 사유 + 거주 132개월(임차일~양도일, 직접 입력) + 증여 취득 1996-03-21. 엔진: applied 154-1-proviso:rental_5yr_residence. 구별력 한계: 엔진 보유요건 2년(당시 3년)이라 보유 2년 8개월로도 비과세 — 거주 5년 축은 구성 짝(P/N-F373-era)에서 갈랐다. 동일세대원 증여 여부는 엔진이 묻지 않는다. 함정: 거주를 구간 입력으로 넣으면 입주일이 취득일보다 빠르다는 ⑧ 오류가 나 1호의 「임차일부터」 거주를 담지 못한다 — 직접 입력으로 넣었다. 양도가 1억(가정). civil-161 보류는 공휴일 표 안내. 임차일부터의 거주 개월은 단서 전용 칸(취득 전 임차 포함 거주 개월)에, 본문 거주기간은 취득일~양도일 전체로 입력한다(본문은 보유기간 중 거주만 — 직접 입력 상한)."
   },
   {
     "id": "P-F373-era-60m",
@@ -40,12 +41,13 @@
       "transferDate": "1997-01-10",
       "contractTotalPrice": "100000000",
       "provisoReason": "rental_5yr_residence",
+      "provisoRentalLeaseResidenceMonths": "60",
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "1996-03-21",
         "acquisitionCause": "gift",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "60"
+        "residencePeriodMonthsAsset": "9"
       }
     },
     "expected": {
@@ -55,7 +57,7 @@
       ]
     },
     "bucket": "match",
-    "note": "구성 짝 — 보유 1년 미만으로 1호가 결론을 가르게 구성. 거주 60개월(5년) → 1호 성립 → 비과세. 실제 거주가 60개월이 되도록 거주 개월만 가정했다(구별력 확인용)."
+    "note": "구성 짝 — 보유 1년 미만으로 1호가 결론을 가르게 구성. 거주 60개월(5년) → 1호 성립 → 비과세. 실제 거주가 60개월이 되도록 거주 개월만 가정했다(구별력 확인용). 임차일부터의 거주 개월은 단서 전용 칸(취득 전 임차 포함 거주 개월)에, 본문 거주기간은 취득일~양도일 전체로 입력한다(본문은 보유기간 중 거주만 — 직접 입력 상한)."
   },
   {
     "id": "N-F373-era-59m",
@@ -69,12 +71,13 @@
       "transferDate": "1997-01-10",
       "contractTotalPrice": "100000000",
       "provisoReason": "rental_5yr_residence",
+      "provisoRentalLeaseResidenceMonths": "59",
       "asset": {
         "assetKind": "housing",
         "acquisitionDate": "1996-03-21",
         "acquisitionCause": "gift",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "59"
+        "residencePeriodMonthsAsset": "9"
       }
     },
     "expected": {
@@ -84,6 +87,6 @@
       ]
     },
     "bucket": "match",
-    "note": "구성 짝 — 거주 59개월이라 1호 불성립 → 보유 10개월로 과세."
+    "note": "구성 짝 — 거주 59개월이라 1호 불성립 → 보유 10개월로 과세. 임차일부터의 거주 개월은 단서 전용 칸(취득 전 임차 포함 거주 개월)에, 본문 거주기간은 취득일~양도일 전체로 입력한다(본문은 보유기간 중 거주만 — 직접 입력 상한)."
   }
 ]

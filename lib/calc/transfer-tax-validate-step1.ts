@@ -15,6 +15,7 @@ import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/ca
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
+import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
@@ -413,6 +414,16 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
         step,
         message: fieldError("residencePeriodMonthsAsset", successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate)),
       });
+    // 일반 상한 — 보유 기산일~양도일(구간 모드와 같은 기준일 · 승계조합원은 위가 더 구체적인 문구로 먼저 잡는다)
+    else {
+      const overflow = directResidenceMonthsOverflowError({
+        months,
+        acquisitionDate: redevAptHoldingStartDate(primary),
+        transferDate: form.transferDate,
+        field: "residencePeriodMonthsAsset",
+      });
+      if (overflow) issues.push({ step, message: overflow });
+    }
   }
   return issues;
 }

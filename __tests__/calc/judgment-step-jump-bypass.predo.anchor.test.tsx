@@ -88,7 +88,7 @@ function formWithBrokenRoster(acquisitionDate = ""): OneHouseJudgmentFormData {
     isOneHousehold: true,
     transferDate: "2026-06-01",
     contractTotalPrice: "1000000000",
-    assets: [{ ...f.assets[0], assetKind: "housing", acquisitionDate: "2015-03-10" }],
+    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10" }],
     houses: [house(acquisitionDate)],
   } as OneHouseJudgmentFormData;
 }

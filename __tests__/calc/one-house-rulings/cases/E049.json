@@ -54,7 +54,7 @@
         "assetKind": "housing",
         "acquisitionDate": "2018-12-15",
         "residenceInputMode": "direct",
-        "residencePeriodMonthsAsset": "40"
+        "residencePeriodMonthsAsset": "30"
       },
       "houses": [
         {

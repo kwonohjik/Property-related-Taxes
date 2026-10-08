@@ -11,6 +11,7 @@ import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
 import { confirmNoOtherHouses } from "./_helpers/confirm-no-other-houses";
 import { confirmNoPresaleRights } from "./_helpers/confirm-no-presale-rights";
+import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -53,6 +54,7 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   // 명부 필수화(PR-1) — 「보유 상황」 단계에서 「다른 보유 주택이 없습니다」를 확정해야 ⑧을 통과한다.
   await confirmNoOtherHouses(page);
   await confirmNoPresaleRights(page);
+  await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 
   // 가산세 단계로 이동 후 계산
   await page.getByRole("button", { name: "가산세" }).first().click();
