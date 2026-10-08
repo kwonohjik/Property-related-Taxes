@@ -20,6 +20,7 @@
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
+import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
@@ -85,6 +86,30 @@ export function validateStep1(form: OneHouseJudgmentFormData): Errors {
     errors.push(
       warn("isOneHousehold", "1세대에 해당하지 않으면 1세대1주택 비과세 판정 대상이 아닙니다."),
     );
+  }
+
+  // 비거주자 사실은 판정 메뉴 전용이다 — 「이 결과로 세액 계산」으로 넘기면 계산기는 거주자 기준으로 다시 계산한다.
+  if (form.transferorNonResident || judgmentNonResidentPeriodVisible(form)) {
+    errors.push(
+      warn(
+        form.transferorNonResident ? "transferorNonResident" : "nonResidentPeriod",
+        "비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특별공제 포함)으로 다시 계산되니 세액은 따로 확인하세요.",
+      ),
+    );
+  }
+
+  // 보유 중 비거주 기간 — 칸과 같은 게이트. 거주자가 된 날이 있어야 보유기간을 다시 셀 수 있다.
+  if (judgmentNonResidentPeriodVisible(form)) {
+    if (!form.residentFromDate) {
+      errors.push(err("residentFromDate", "거주자가 된 날을 입력하세요 — 보유기간은 그날부터(비거주 전 보유분은 통산) 셉니다."));
+    } else {
+      if (form.nonResidentStartDate && form.nonResidentStartDate >= form.residentFromDate) {
+        errors.push(err("nonResidentStartDate", "비거주자가 된 날은 거주자가 된 날보다 앞이어야 합니다."));
+      }
+      if (form.transferDate && form.residentFromDate > form.transferDate) {
+        errors.push(err("residentFromDate", "거주자가 된 날이 양도일보다 뒤입니다 — 양도일 현재 비거주자라면 위 「양도일 현재 비거주자입니다」를 켜세요."));
+      }
+    }
   }
 
   return errors;

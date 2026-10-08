@@ -31,6 +31,7 @@ import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
+import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
@@ -208,6 +209,8 @@ export function buildOneHouseExemptionApiBody(
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // 합가 3필드 — ⑤·⑧과 **같은 게이트**. 칸이 사라진 뒤(명부를 1주택으로 줄임) 남은 값은 보내지 않는다.
     ...(judgmentMergeInputVisible(form) ? buildMergePayload(form) : {}),
+    // 비거주자(판정 메뉴 전용) — ⑤·⑧과 같은 게이트(`judgmentNonResidentPeriodVisible`)
+    ...buildNonResidentPayload(form),
     ...(form.generalHouseGiftedFromDecedentWithin2yr
       ? { generalHouseGiftedFromDecedentWithin2yr: true }
       : {}),

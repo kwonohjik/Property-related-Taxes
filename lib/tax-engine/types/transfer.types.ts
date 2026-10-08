@@ -466,6 +466,25 @@ export interface TransferTaxInput {
    */
   inheritedRightChoiceWhenBothHeld?: "redevelopment_right" | "presale_right";
   /**
+   * 양도일 현재 **비거주자**(소득세법 §1의2①2호) — 판정 메뉴 전용 입력(계산기는 보내지 않는다).
+   * 소득세법 §121② 단서 · 시행령 §180의2: §89①3호는 2010-01-01 이후 양도분부터 배제(§154①2호 나·다목
+   * 요건 충족자 예외), §89①4호는 2020-01-01 이후 양도분부터 배제. `one-house/non-resident.ts`.
+   */
+  transferorNonResidentAtTransfer?: boolean;
+  /**
+   * 보유 중 **비거주자였던 기간** — 1세대1주택 보유기간은 거주자로서 보유한 기간만 통산한다
+   * (부동산납세과-615 · 서면인터넷방문상담4팀-1424). 예외: 비거주자가 그 주택을 3년 이상 보유하고
+   * 그 주택에서 거주한 상태로 거주자로 전환되면 통산(시행령 §154⑧2호). 판정 메뉴 전용 입력.
+   */
+  nonResidentHoldingPeriod?: {
+    /** 비거주자가 된 날 — 없으면 취득 당시부터 비거주자 */
+    startDate?: Date;
+    /** 거주자가 된 날(입국일 등) */
+    endDate: Date;
+    /** §154⑧2호 — 그 주택에서 거주한 상태로 거주자로 전환됐다(3년 이상 보유는 날짜로 판정) */
+    residedAtConversion?: boolean;
+  };
+  /**
    * §154① 단서 — 1세대1주택 비과세 보유·거주 요건 면제 사유 (소득세법 시행령 §154 ① 단서).
    * 폼은 FLAT(provisoReason 등), API 변환 시 이 nested 객체로 조립. 미지정 시 본문 요건만 판정.
    * 1·2·3호 = 보유+거주 면제, 5호 = 거주만 면제. 거주 충족(1호 5년·3호 1년)은 residencePeriodMonths 재사용.

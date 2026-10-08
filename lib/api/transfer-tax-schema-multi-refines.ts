@@ -22,6 +22,7 @@ import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-t
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
@@ -54,6 +55,9 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   commercialAppurtenantLand: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   commercialInheritanceValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   preHousingDisclosure: whenPresent(MULTI_PHD_UNSUPPORTED_MESSAGE),
+  // 비거주자(판정 메뉴 전용) — 단건 route는 판정 메뉴 경로(`buildTransferEngineInput` 공용)로 엔진에 넘긴다.
+  transferorNonResidentAtTransfer: whenPresent(MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE),
+  nonResidentHoldingPeriod: whenPresent(MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE),
   familyBusinessInheritance: whenPresent(MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE),
   inheritedAcquisition: whenPresent(MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE),
   inheritedHouseValuation: whenPresent(MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE),

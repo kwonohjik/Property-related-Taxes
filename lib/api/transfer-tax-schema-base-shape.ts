@@ -170,6 +170,15 @@ export const propertyBaseShape = {
   generalHouseHeldAtInheritance: z.boolean().optional(),
   inheritedRightChoiceWhenBothHeld: z.enum(["redevelopment_right", "presale_right"]).optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
+  // ⑫ 비거주자(§121② 단서 · 시행령 §154⑧2호) — 판정 메뉴 전용 입력. 계산기는 보내지 않는다.
+  transferorNonResidentAtTransfer: z.boolean().optional(),
+  nonResidentHoldingPeriod: z
+    .object({
+      startDate: z.string().date().optional(),
+      endDate: z.string().date(),
+      residedAtConversion: z.boolean().optional(),
+    })
+    .optional(),
   // ⑨⑩⑫ §154① 단서 — 비과세 보유·거주 요건 면제 사유 (propertyBaseShape 공유 → 단건·다건 동시)
   oneHouseExemptionProviso: z
     .object({

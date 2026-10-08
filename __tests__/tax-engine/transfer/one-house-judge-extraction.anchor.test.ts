@@ -95,6 +95,8 @@ const JUDGE_INPUT_KEYS = [
   "inheritedRightChoiceWhenBothHeld",
   // OH-22 — §154⑤ 단서 최종 1주택 재기산 처분 이력
   "finalOneHouseRestart",
+  // 보유 중 비거주 기간(§154⑧2호) — 판정 메뉴 전용
+  "nonResidentHoldingPeriod",
 ] as const;
 
 const _frozenKeyGuards: [
@@ -196,6 +198,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     hadOtherHouseDisposal: true,
     disposals: [{ kind: "gift", date: D("2021-05-05"), temporaryTwoHouseSpecial: false }],
   },
+  nonResidentHoldingPeriod: { startDate: D("2019-01-01"), endDate: D("2020-06-01"), residedAtConversion: true },
 };
 
 describe("P2 — 판정 입력 왕복 (세액 불변의 근거)", () => {

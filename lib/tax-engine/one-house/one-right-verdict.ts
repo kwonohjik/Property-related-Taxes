@@ -40,6 +40,7 @@ import {
   oneRightRequirementEraNotices,
 } from "../data/one-right-requirement-era";
 import { oneRightOtherHouseCount, resolveRightSaleMarriageMerge } from "./right-sale-marriage-merge";
+import { NON_RESIDENT_ONE_RIGHT_REASON, nonResidentExcludesOneRight } from "../data/non-resident-exclusion-era";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 
@@ -137,6 +138,7 @@ export function buildOneRightVerdict(
       `세대 보유 조합원입주권이 1개여야 합니다 (현재 ${input.householdRightCount ?? 0}개 — 양도 대상 포함).`,
     );
   }
+  if (nonResidentExcludesOneRight(input)) reasons.push(NON_RESIDENT_ONE_RIGHT_REASON);
   const presaleGate = oneRightPresaleGate(input, facts);
   if (presaleGate === "blocks") {
     reasons.push(

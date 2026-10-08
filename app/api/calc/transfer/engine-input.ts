@@ -262,6 +262,15 @@ export function buildTransferEngineInput(
     generalHouseRightAtInheritance: data.generalHouseRightAtInheritance,
     generalHouseHeldAtInheritance: data.generalHouseHeldAtInheritance,
     inheritedRightChoiceWhenBothHeld: data.inheritedRightChoiceWhenBothHeld,
+    // ⑭ 비거주자 — 판정 메뉴 전용 입력(date-coerce)
+    transferorNonResidentAtTransfer: data.transferorNonResidentAtTransfer,
+    nonResidentHoldingPeriod: data.nonResidentHoldingPeriod
+      ? {
+          startDate: toOptionalDate(data.nonResidentHoldingPeriod.startDate),
+          endDate: toDate(data.nonResidentHoldingPeriod.endDate, "nonResidentHoldingPeriod.endDate"),
+          residedAtConversion: data.nonResidentHoldingPeriod.residedAtConversion,
+        }
+      : undefined,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
     oneHouseExemptionProviso: data.oneHouseExemptionProviso
       ? {

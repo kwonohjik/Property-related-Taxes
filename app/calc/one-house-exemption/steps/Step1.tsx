@@ -13,6 +13,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { DateInput } from "@/components/ui/date-input";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { judgmentNonResidentPeriodVisible } from "@/lib/calc/one-house-non-resident";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 type Props = {
@@ -67,6 +70,64 @@ export function Step1({ form, onChange }: Props) {
         description="독립적인 생계를 유지하는 세대"
         tone="violet"
       />
+
+      {/*
+        비거주자 — 판정 메뉴 전용(계산기로 넘기지 않는다). 세대 구성원의 신분이라 이 단계에서 받는다.
+        ⑤·④·⑧ 게이트: `judgmentNonResidentPeriodVisible`(lib/calc/one-house-non-resident.ts).
+      */}
+      <ToggleCard
+        data-testid="one-house-non-resident"
+        checked={form.transferorNonResident}
+        onCheckedChange={(transferorNonResident) => onChange({ transferorNonResident })}
+        title="양도일 현재 비거주자입니다"
+        description="국내에 주소나 183일 이상 거소가 없으면 비거주자입니다. 비거주자는 1세대1주택 비과세를 받지 못합니다 — 해외이주·국외거주로 세대전원 출국 후 2년 이내 양도는 예외(조합원입주권은 예외 없음)."
+        tone="violet"
+      >
+        <div className="flex flex-wrap gap-2 pt-1">
+          <LawArticleModal legalBasis="소득세법 §121" label="법 §121② 단서" />
+          <LawArticleModal legalBasis="소득세법 시행령 §180의2" label="영 §180의2" />
+        </div>
+      </ToggleCard>
+
+      {!form.transferorNonResident && (
+        <ToggleCard
+          data-testid="one-house-non-resident-period"
+          checked={form.nonResidentPeriod}
+          onCheckedChange={(nonResidentPeriod) => onChange({ nonResidentPeriod })}
+          title="양도하는 주택을 보유하는 중에 비거주자였던 기간이 있습니다"
+          description="보유기간은 거주자로서 보유한 기간만 통산합니다. 비거주자가 3년 이상 보유하며 그 주택에 거주한 상태로 거주자가 되면 전체를 통산합니다(시행령 §154⑧2호)."
+          tone="violet"
+        >
+          {judgmentNonResidentPeriodVisible(form) && (
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FieldCard field="nonResidentStartDate" label="비거주자가 된 날" hint="취득 당시 이미 비거주자였으면 비워 두세요">
+                  <DateInput
+                    data-testid="one-house-non-resident-start"
+                    value={form.nonResidentStartDate}
+                    onChange={(nonResidentStartDate) => onChange({ nonResidentStartDate })}
+                  />
+                </FieldCard>
+                <FieldCard field="residentFromDate" label="거주자가 된 날" required hint="입국해 국내에 주소를 둔 날 등">
+                  <DateInput
+                    data-testid="one-house-resident-from"
+                    value={form.residentFromDate}
+                    onChange={(residentFromDate) => onChange({ residentFromDate })}
+                  />
+                </FieldCard>
+              </div>
+              <ToggleCard
+                data-testid="one-house-non-resident-resided-at-conversion"
+                checked={form.nonResidentResidedAtConversion}
+                onCheckedChange={(nonResidentResidedAtConversion) => onChange({ nonResidentResidedAtConversion })}
+                title="그 주택에 거주한 상태로 거주자가 됐습니다"
+                description="취득일부터 거주자가 된 날까지 3년 이상 보유했다면 비거주 기간도 통산합니다(시행령 §154⑧2호)."
+                tone="violet"
+              />
+            </div>
+          )}
+        </ToggleCard>
+      )}
 
       {/*
         합가일(혼인·동거봉양)은 ③ 보유 주택·권리 단계가 받는다 — 합가로 들어온 주택을 입력하는
