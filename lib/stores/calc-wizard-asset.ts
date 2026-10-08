@@ -302,6 +302,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   regionCode?: string;
   /**
+   * 소재 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 지정 지구 안인가(사용자 선언). 주소를 바꾸면 지운다.
+   * 엔진 `isRegulatedByBjdCode`의 `inDistrict`. 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  regionInDesignatedDistrict?: boolean;
+  /**
    * 전체 PNU 19자리 (AddressSearch 결과). UI 전용 — 건물 기준시가 모달 prefill 시
    * 건축물대장 조회(BuildingRegisterLookupField) 활성화용. 엔진/검증 입력 아님.
    * 미제공(레거시·PNU 없는 주소) 시 모달에서 재조회 필요(종전 동작).

@@ -207,6 +207,8 @@ export const houseSchema = z.object({
   region: z.enum(["capital", "non_capital"]),
   /** ⑫ 법정동코드 10자리 — sellingHouse에 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정 */
   regionCode: z.string().length(10).optional(),
+  /** ⑫ 지정 지구 안인가(사용자 선언) — 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때만 의미 */
+  inDesignatedDistrict: z.boolean().optional(),
   acquisitionDate: z.string().date(),
   officialPrice: z.number().int().nonnegative(),
   isInherited: z.boolean(),
@@ -328,6 +330,8 @@ export const presaleRightSchema = z.object({
   parentalCareMergeInheritedRight: z.boolean().optional(),
   // 공급주택 소재지 코드 (시·군·구 5자리 또는 법정동 10자리) — 다·라목 2호 동일 시·군·구 비교
   regionCode: z.string().min(5).optional(),
+  /** ⑫ 지정 지구 안인가(사용자 선언) — 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때만 의미 */
+  inDesignatedDistrict: z.boolean().optional(),
 });
 
 

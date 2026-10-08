@@ -73,6 +73,8 @@ export interface HouseRowForCount {
   acquisitionDate?: string;
   /** 법정동코드(10자리) — §155①2호 신규 주택 조정 여부 판정에만 쓴다(`resolveTemporaryTwoHouse`). */
   regionCode?: string;
+  /** 지정 지구 안인가(행 선언) — 신규 주택이 될 때 `newHouseInDesignatedDistrict`로 넘어간다. */
+  inDesignatedDistrict?: boolean;
   /** 합가 전 보유 쪽 — 합가 맥락에서 §155① 짝을 같은 쪽 안에서 고를 때만 쓴다(`resolveTemporaryTwoHouse` D8). */
   mergeOrigin?: MergeOrigin;
 }
@@ -353,6 +355,8 @@ export interface TemporaryTwoHouseDates {
    * 판정). 직접 선언 경로에는 신규 주택 주소가 없다.
    */
   newHouseRegionCode?: string;
+  /** 신규 주택(명부 행)이 지정 지구 안인가 — 행 선언 그대로 */
+  newHouseInDesignatedDistrict?: boolean;
 }
 
 export function resolveTemporaryTwoHouse(
@@ -393,6 +397,9 @@ function toRosterDates(previousAcquisitionDate: string, next: HouseRowForCount):
     newAcquisitionDate: next.acquisitionDate!,
     source: "roster",
     ...(next.regionCode ? { newHouseRegionCode: next.regionCode } : {}),
+    ...(next.regionCode && next.inDesignatedDistrict !== undefined
+      ? { newHouseInDesignatedDistrict: next.inDesignatedDistrict }
+      : {}),
   };
 }
 

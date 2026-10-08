@@ -121,6 +121,8 @@ export function buildHousesPayload(
     region: deriveHouseRegionFromCode(primary.regionCode),
     // ④⑬ 법정동코드 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 boolean fallback
     regionCode: primary.regionCode || undefined,
+    // ④ 지정 지구 안인가 — 코드와 함께만 의미가 있다(소재 동이 지구 한정일 때)
+    inDesignatedDistrict: primary.regionCode ? primary.regionInDesignatedDistrict : undefined,
     acquisitionDate: primary.acquisitionDate,
     officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
     /**
@@ -228,6 +230,7 @@ export function buildHousesPayload(
     preDesignationContractInScope({
       assetKind: primary.assetKind,
       regionCode: primary.regionCode,
+      regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
       transferDate,
       houseRows: houses.length,
       presaleRights: presaleRightsCount,
@@ -256,6 +259,7 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // ④ 법정동 10자리 — 엔진 §167의3 지역기준(REGION/VALUE) 정밀 판정. houseSchema는
       // regionCode를 정확히 10자리(.length(10))만 수용 → ≠10자리는 undefined(Zod 400 회피).
       regionCode: h.regionCode?.length === 10 ? h.regionCode : undefined,
+      inDesignatedDistrict: h.regionCode?.length === 10 ? h.inDesignatedDistrict : undefined,
       acquisitionDate: h.acquisitionDate,
       officialPrice: parseInt(h.officialPrice) || 0,
       isInherited: h.isInherited,

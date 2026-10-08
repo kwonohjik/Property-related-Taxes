@@ -20,6 +20,8 @@ export interface TemporaryTwoHouseEraFormFields {
 
 export interface TemporaryTwoHouseEraFacts {
   newHouseRegionCode?: string;
+  /** 신규 주택이 지정 지구 안인가(명부 행 선언) — 코드와 함께만 싣는다 */
+  newHouseInDesignatedDistrict?: boolean;
   newHouseRegulatedAtAcquisition?: boolean;
   previousHouseRegulatedAtNewAcquisition?: boolean;
   newHouseContractDate?: string;
@@ -33,11 +35,13 @@ const yesNo = (v: string | undefined): boolean | undefined =>
 export function toTemporaryTwoHouseEraFacts(
   form: TemporaryTwoHouseEraFormFields,
   newHouseRegionCode: string | undefined,
+  newHouseInDesignatedDistrict?: boolean,
 ): TemporaryTwoHouseEraFacts {
   const newReg = yesNo(form.newHouseRegulatedAtAcquisition);
   const prevReg = yesNo(form.prevHouseRegulatedAtNewAcquisition);
   return {
     ...(newHouseRegionCode ? { newHouseRegionCode } : {}),
+    ...(newHouseRegionCode && newHouseInDesignatedDistrict !== undefined ? { newHouseInDesignatedDistrict } : {}),
     ...(newReg !== undefined ? { newHouseRegulatedAtAcquisition: newReg } : {}),
     ...(prevReg !== undefined ? { previousHouseRegulatedAtNewAcquisition: prevReg } : {}),
     ...(form.newHouseContractDate ? { newHouseContractDate: form.newHouseContractDate } : {}),

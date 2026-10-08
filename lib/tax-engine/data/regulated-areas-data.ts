@@ -55,6 +55,12 @@ export interface IncludedSubArea {
   codePrefix: string;
   /** 표시용 명칭 (예: "동탄2택지 반송동") */
   name: string;
+  /**
+   * 지정 고시가 **이 동 안의 일부 지구**(택지개발지구·공공주택지구·도시개발구역 등)만 지정했다 — 그 지구 이름.
+   * 법정동 코드로는 지구 안·밖을 가를 수 없으므로 판정이 `districtOnly`를 달고, 호출부는 사용자 선언(지구 안인가)을
+   * 따른다. 선언이 없으면 지정으로 보고 확인 필요(모름=불리 — 사용자 결정 2026-10-08).
+   */
+  district?: string;
   /** 포함 적용 시작일 (시점별로 포함 지구가 달랐던 경우). 생략 시 전 기간 */
   appliesFrom?: string;
   /** 포함 적용 종료일. 생략 시 현재까지 */
@@ -83,6 +89,11 @@ export interface RegulatedAreaJudgment {
   isRegulated: boolean;
   confidence: "high" | "medium" | "low";
   basis: string;
+  /**
+   * 코드가 「동 안 일부 지구만 지정」된 동에 걸렸다 — 지구 안·밖을 코드로 정할 수 없다(`IncludedSubArea.district`).
+   * `isRegulated`는 모름=불리 기본값(true)이다. 호출부는 `resolveRegulatedWithDistrict`로 사용자 선언을 반영한다.
+   */
+  districtOnly?: { district: string; area: string };
 }
 
 // ============================================================
@@ -102,7 +113,8 @@ export interface RegulatedAreaJudgment {
  *   근거: 국토부 고시(2023.1.5 효력) 교차검증 + 경계 anchor(regulated-area-release-boundary.test.ts).
  *
  * ⚠️ 잔여 근사:
- *   - 광교택지/택지지구 included는 동(洞) 단위 근사 — 동 내 비택지 부분 존재 가능.
+ *   - 광교·동탄2 택지, 고양·남양주 지구 included는 동(洞) 단위 근사 — 동 내 비지구 부분이 있다.
+ *     `district`가 있는 항목은 코드로 확정하지 않고 사용자 선언(지구 안인가)을 받는다(`districtOnly`).
  *   - 지방(부산·대전·대구·세종 등)은 본 단계(수도권) 범위 밖.
  */
 export const REGULATED_REGIONS: RegulatedRegion[] = [
@@ -125,17 +137,17 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41117", name: "경기도 수원시 영통구",
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }],
     includedSubCodes: [
-      { codePrefix: "41117101", name: "광교택지 매탄동", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
-      { codePrefix: "41117102", name: "광교택지 원천동", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
-      { codePrefix: "41117103", name: "광교택지 이의동", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
-      { codePrefix: "41117104", name: "광교택지 하동", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
+      { codePrefix: "41117101", name: "광교택지 매탄동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
+      { codePrefix: "41117102", name: "광교택지 원천동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
+      { codePrefix: "41117103", name: "광교택지 이의동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
+      { codePrefix: "41117104", name: "광교택지 하동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" },
     ] },
   { code: "41115", name: "경기도 수원시 팔달구",
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }],
-    includedSubCodes: [{ codePrefix: "41115140", name: "광교택지 우만동", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
+    includedSubCodes: [{ codePrefix: "41115140", name: "광교택지 우만동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
   { code: "41111", name: "경기도 수원시 장안구",
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }],
-    includedSubCodes: [{ codePrefix: "41111137", name: "광교택지 연무동", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" }] },
+    includedSubCodes: [{ codePrefix: "41111137", name: "광교택지 연무동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2020-02-20" }] },
   { code: "41113", name: "경기도 수원시 권선구", designations: [{ designatedDate: "2020-02-21", releasedDate: "2022-11-13" }] },
 
   // ── 안양·용인·의왕 ──
@@ -143,10 +155,10 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41171", name: "경기도 안양시 만안구", designations: [{ designatedDate: "2020-02-21", releasedDate: "2022-11-13" }] },
   { code: "41465", name: "경기도 용인시 수지구",
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }],
-    includedSubCodes: [{ codePrefix: "41465107", name: "광교택지 상현동", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
+    includedSubCodes: [{ codePrefix: "41465107", name: "광교택지 상현동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
   { code: "41463", name: "경기도 용인시 기흥구",
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2026-07-01", releasedDate: null }],
-    includedSubCodes: [{ codePrefix: "41463111", name: "광교택지 영덕동", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
+    includedSubCodes: [{ codePrefix: "41463111", name: "광교택지 영덕동", district: "광교택지개발지구", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
   { code: "41461", name: "경기도 용인시 처인구",
     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }],
     excludedSubCodes: [
@@ -169,27 +181,27 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41281", name: "경기도 고양시 덕양구",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
     includedSubCodes: [
-      { codePrefix: "41281111", name: "삼송동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41281104", name: "원흥동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41281109", name: "지축동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41281132", name: "향동동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41281131", name: "덕은동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41281112", name: "동산동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281111", name: "삼송동", district: "삼송택지개발지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281104", name: "원흥동", district: "원흥 공공주택지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281109", name: "지축동", district: "지축 공공주택지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281132", name: "향동동", district: "향동 공공주택지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281131", name: "덕은동", district: "덕은 도시개발지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41281112", name: "동산동", district: "삼송택지개발지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
     ] },
   { code: "41285", name: "경기도 고양시 일산동구",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
-    includedSubCodes: [{ codePrefix: "41285104", name: "장항동(한류월드)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" }] },
+    includedSubCodes: [{ codePrefix: "41285104", name: "장항동(한류월드)", district: "고양관광문화단지(한류월드)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" }] },
   { code: "41287", name: "경기도 고양시 일산서구",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
-    includedSubCodes: [{ codePrefix: "41287104", name: "대화동(킨텍스1단계)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" }] },
+    includedSubCodes: [{ codePrefix: "41287104", name: "대화동(킨텍스1단계)", district: "킨텍스1단계 도시개발지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" }] },
 
   // ── 남양주 (2017.8.3 전역 → 2019.11.8~2020.6.18 다산·별내만 → 2020.6.19 전역[화도·수동·조안 제외] → 2022.11.14 해제) ──
   { code: "41360", name: "경기도 남양주시",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
     includedSubCodes: [
-      { codePrefix: "41360109", name: "지금동(다산)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41360110", name: "도농동(다산)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41360111", name: "별내동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360109", name: "지금동(다산)", district: "다산동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360110", name: "도농동(다산)", district: "다산동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360111", name: "별내동", district: "별내동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
     ],
     excludedSubCodes: [
       { codePrefix: "41360256", name: "화도읍", appliesFrom: "2020-06-19" },
@@ -226,9 +238,9 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41590", name: "경기도 화성시",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
     includedSubCodes: [
-      { codePrefix: "41590127", name: "동탄2 반송동" },
-      { codePrefix: "41590128", name: "동탄2 석우동" },
-      { codePrefix: "41590420", name: "동탄2 동탄면" },
+      { codePrefix: "41590127", name: "동탄2 반송동", district: "동탄2택지개발지구" },
+      { codePrefix: "41590128", name: "동탄2 석우동", district: "동탄2택지개발지구" },
+      { codePrefix: "41590420", name: "동탄2 동탄면", district: "동탄2택지개발지구" },
     ] },
 
   // 화성 일반구 신설(만세·효행·병점·동탄) — 부천과 같은 구조다(계획서 D-9).
@@ -279,21 +291,21 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     ],
     includedSubCodes: [
       // 구 41590127·41590128 (동탄면 반송리·석우리 → 동)
-      { codePrefix: "41597102", name: "반송동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597103", name: "석우동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597102", name: "반송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597103", name: "석우동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
       // 구 41590420 동탄면 나머지 리 → 동 (오산동 41597104는 폐지되어 제외)
-      { codePrefix: "41597105", name: "청계동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597106", name: "영천동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597107", name: "중동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597108", name: "신동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597109", name: "목동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597110", name: "산척동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597111", name: "장지동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597112", name: "송동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597113", name: "방교동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597114", name: "금곡동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597105", name: "청계동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597106", name: "영천동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597107", name: "중동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597108", name: "신동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597109", name: "목동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597110", name: "산척동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597111", name: "장지동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597112", name: "송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597113", name: "방교동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597114", name: "금곡동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
       // 신설 동 — 리 목록엔 없으나 동탄2 지구 99.2%라 동탄면 리에서 분할된 것으로 본다
-      { codePrefix: "41597115", name: "여울동", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597115", name: "여울동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
     ] },
 
   // ── 김포 (2020.11.20~2022.11.14, 통진·대곶·월곶·하성면 제외) ──

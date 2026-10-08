@@ -179,6 +179,7 @@ export type ResidenceReqInput = Pick<
   | "residencePeriodMonths"
   | "oneHouseExemptionProviso"
   | "regionCode"
+  | "regionInDesignatedDistrict"
   | "wasRegulatedAtAcquisition"
   | "residenceTransitionAcquisitionDate"
   | "acquisitionCause"
@@ -297,7 +298,7 @@ export function resolveExemptionProviso(
  * ⚠️ **호출부가 기준일을 각자 고르지 않게** 여기서 한 번만 도출한다 —
  *    엔진·Step4 안내·수동 토글이 서로 다른 날짜를 보면 "화면은 통과인데 엔진은 차단"이 된다.
  */
-function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
+export function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
   return (
     input.nonHousingToHousingConversion?.residentialUseStartDate ??
     sameHouseholdInheritanceHoldingStart(input) ??
@@ -321,6 +322,7 @@ export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): bool
     return isRegulatedByBjdCode(
       input.regionCode,
       format(resolveResidenceJudgmentDate(input), "yyyy-MM-dd"),
+      input.regionInDesignatedDistrict,
     ).isRegulated;
   }
   return input.wasRegulatedAtAcquisition === true;

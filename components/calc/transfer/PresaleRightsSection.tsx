@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 
@@ -254,12 +255,21 @@ export function PresaleRightsSection({
                 </span>
                 <AddressSearch
                   value={{ road: "", jibun: r.regionName ?? "", building: "", detail: "", lng: "", lat: "" }}
-                  onChange={(v) =>
+                  onChange={(v) => {
+                    const regionCode = v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : r.regionCode;
                     update(r.id, {
-                      regionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : r.regionCode,
+                      regionCode,
                       regionName: v.jibun || v.road || r.regionName,
-                    })
-                  }
+                      // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다.
+                      ...(regionCode !== r.regionCode ? { inDesignatedDistrict: undefined } : {}),
+                    });
+                  }}
+                />
+                <DesignatedDistrictQuestion
+                  regionCode={r.regionCode}
+                  value={r.inDesignatedDistrict}
+                  onChange={(inDesignatedDistrict) => update(r.id, { inDesignatedDistrict })}
+                  idSuffix={`right-${idx}`}
                 />
                 <p className="text-caption text-muted-foreground/70">
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.

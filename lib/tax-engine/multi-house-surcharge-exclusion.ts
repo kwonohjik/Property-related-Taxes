@@ -356,7 +356,11 @@ function resolvePreDesignationContractExclusion(
 ): { reason?: ExclusionReason; warning?: string } {
   if (input.transferDate < PRE_DESIGNATION_CONTRACT_EXCLUSION_EFFECTIVE_DATE) return {};
   if (!sellingHouse?.contractDate || !sellingHouse.saleDepositReceived || !sellingHouse.regionCode) return {};
-  const start = governingDesignationStart(sellingHouse.regionCode, format(input.transferDate, "yyyy-MM-dd"));
+  const start = governingDesignationStart(
+    sellingHouse.regionCode,
+    format(input.transferDate, "yyyy-MM-dd"),
+    sellingHouse.inDesignatedDistrict,
+  );
   if (!start) return {};
   const announcement = PRE_DESIGNATION_CONTRACT_EXCLUSION.ANNOUNCEMENT_DATES[start];
   if (!announcement) {

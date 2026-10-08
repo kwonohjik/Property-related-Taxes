@@ -121,6 +121,8 @@ export const propertyBaseShape = {
   wasRegulatedAtAcquisition: z.boolean(),
   /** ⑫ 법정동코드 10자리 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback */
   regionCode: z.string().length(10).optional(),
+  /** ⑫ 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때 — 지정 지구 안인가(사용자 선언, `isRegulatedByBjdCode` inDistrict) */
+  regionInDesignatedDistrict: z.boolean().optional(),
   isUnregistered: z.boolean(),
   isNonBusinessLand: z.boolean(),
   /**

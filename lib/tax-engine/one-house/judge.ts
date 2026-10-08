@@ -63,6 +63,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     isRegulatedArea: facts.isRegulatedArea,
     wasRegulatedAtAcquisition: facts.wasRegulatedAtAcquisition,
     regionCode: facts.regionCode,
+    regionInDesignatedDistrict: facts.regionInDesignatedDistrict,
     // ── 상속 ──
     decedentSameHouseholdBeforeInheritance: facts.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationResidenceMonths: facts.decedentCohabitationResidenceMonths,
@@ -139,6 +140,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     isRegulatedArea: input.isRegulatedArea,
     wasRegulatedAtAcquisition: input.wasRegulatedAtAcquisition,
     regionCode: input.regionCode,
+    regionInDesignatedDistrict: input.regionInDesignatedDistrict,
     residenceTransitionAcquisitionDate: input.residenceTransitionAcquisitionDate,
     decedentSameHouseholdBeforeInheritance: input.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationResidenceMonths: input.decedentCohabitationResidenceMonths,

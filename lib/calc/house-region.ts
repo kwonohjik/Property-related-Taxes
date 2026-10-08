@@ -43,7 +43,7 @@ export function deriveRentalRegionFromCode(regionCode?: string): RegionType {
  * partial-guard로 가격/면적 없는 발화가 기존값(수동입력·직전 조회분)을 덮지 않도록 한다.
  * regionCode(10자리)·지역 구분(region)은 매 발화 동시 갱신(useEffect 미러링 금지 — 콜백 내 set).
  */
-export function buildHouseAddressPatch(v: AddressValue): Partial<HouseEntry> {
+export function buildHouseAddressPatch(v: AddressValue, currentRegionCode?: string): Partial<HouseEntry> {
   const patch: Partial<HouseEntry> = {
     addressRoad: v.road,
     addressJibun: v.jibun,
@@ -58,6 +58,8 @@ export function buildHouseAddressPatch(v: AddressValue): Partial<HouseEntry> {
     const code = v.pnu.slice(0, 10);
     patch.regionCode = code;
     patch.region = deriveHouseRegionFromCode(code);
+    // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다(동·호 재발화는 같은 코드라 유지).
+    if (code !== currentRegionCode) patch.inDesignatedDistrict = undefined;
   }
   if (v.pnu && v.pnu.length === 19) patch.addressPnu = v.pnu;
   if (v.standardPrice != null) {

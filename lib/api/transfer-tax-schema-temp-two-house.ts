@@ -21,6 +21,8 @@ export const temporaryTwoHouseSchema = z.object({
   // ── §155①2호 조정대상지역 (OH-01 A2b) — 엔진 `resolveRegulatedAtNewAcquisition`·연혁 leaf ──
   /** 신규 주택 법정동코드(명부 행 주소) — 신규 취득일 기준 정밀 판정 */
   newHouseRegionCode: z.string().optional(),
+  /** 신규 주택이 지정 지구 안인가(명부 행 선언) — 「동 안 일부 지구만 조정대상지역」 동일 때만 의미 */
+  newHouseInDesignatedDistrict: z.boolean().optional(),
   /** 코드 없을 때 선언 — 신규 취득 당시 신규 주택이 조정대상지역 */
   newHouseRegulatedAtAcquisition: z.boolean().optional(),
   /** 양도주택 코드 없을 때 선언 — 신규 취득 당시 종전 주택이 조정대상지역 */

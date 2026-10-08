@@ -66,10 +66,11 @@ export function checkRegulatedArea(address: string, date: string): RegulatedArea
  * 법정동코드(PNU 앞 10자리) 기준 정밀 판별 — 읍·면·동/택지지구 예외까지 반영.
  * @param regionCode 법정동코드(10자리 권장, 5자리는 시군구 단위 medium)
  * @param date YYYY-MM-DD
+ * @param inDistrict 소재 동이 「동 안 일부 지구만 조정대상지역」일 때 — 지정 지구 안인가(사용자 선언)
  */
-export function checkRegulatedAreaByCode(regionCode: string, date: string): RegulatedAreaResult {
+export function checkRegulatedAreaByCode(regionCode: string, date: string, inDistrict?: boolean): RegulatedAreaResult {
   if (!regionCode || !date) {
     return { isRegulated: false, confidence: "low", basis: "법정동코드 또는 날짜가 비어있음" };
   }
-  return isRegulatedByBjdCode(regionCode, date);
+  return isRegulatedByBjdCode(regionCode, date, inDistrict);
 }

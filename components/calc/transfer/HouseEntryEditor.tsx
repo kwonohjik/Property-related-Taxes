@@ -33,6 +33,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
 import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
+import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 
 // ============================================================
 // Props
@@ -81,11 +82,17 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
               lat: house.latitude ?? "",
             } satisfies AddressValue
           }
-          onChange={(v) => onUpdate(buildHouseAddressPatch(v))}
+          onChange={(v) => onUpdate(buildHouseAddressPatch(v, house.regionCode))}
         />
         <p className="text-micro text-muted-foreground">
           공동주택은 동/호 선택 시 공시가격·전유면적이 자동 입력됩니다 (개별주택은 수동 입력).
         </p>
+        <DesignatedDistrictQuestion
+          regionCode={house.regionCode}
+          value={house.inDesignatedDistrict}
+          onChange={(inDesignatedDistrict) => onUpdate({ inDesignatedDistrict })}
+          idSuffix={`house-${house.id}`}
+        />
       </div>
 
       {/* 지역 구분 — 소재지 주소 입력 시 자동 판정(읽기전용), 미입력 시 수동 */}

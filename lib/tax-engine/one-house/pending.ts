@@ -31,6 +31,7 @@ import { calculateHoldingPeriod } from "../tax-utils";
 import { resolveMergeExemptionYears, type MergeExemptionKind } from "../data/merge-exemption-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
+import { designatedDistrictUndeclared } from "./designated-district-undeclared";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
@@ -410,6 +411,9 @@ export function collectUndetermined(
    * §155⑧ — 부득이한 사유 **해소일**이 없으면 3년 기한을 확인하지 않고 통과시킨다
    * (`qualifiesUnavoidableOutsideCapital` 안전측 설계). 그 사실을 숨기지 않는다.
    */
+  // 「동 안 일부 지구만 조정대상지역」 동인데 지구 안·밖을 고르지 않음 — 지구 안으로 판정(모름=불리) + 확인 필요.
+  undetermined.push(...designatedDistrictUndeclared(input));
+
   if (input.unavoidableOutsideCapitalHouse && !input.unavoidableOutsideCapitalHouse.resolvedDate) {
     undetermined.push({
       id: "155-8-resolved-date-missing",

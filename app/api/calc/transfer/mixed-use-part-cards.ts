@@ -340,6 +340,7 @@ export function buildMixedUseCompanionItems(
     // ── 폼-전역(세대 단위) — primary와 같은 값을 상속한다 ──
     wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     regionCode: g.regionCode,
+    regionInDesignatedDistrict: g.regionInDesignatedDistrict,
     oneHouseExemptionProviso: g.oneHouseExemptionProviso,
     temporaryTwoHouse: g.temporaryTwoHouse,
     // §155의3 상생임대 (P5-c) — primary와 같은 폼-전역 값을 상속한다.

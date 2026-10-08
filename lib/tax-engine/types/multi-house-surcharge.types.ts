@@ -66,6 +66,11 @@ export interface HouseInfo {
   isCapitalArea?: boolean;
   /** 시군구 코드 — 조정대상지역 시점 조회 및 ⑪ 공고일 이전 계약 배제 판정용 */
   regionCode?: string;
+  /**
+   * 소재지 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 그 주택이 지정 지구 안인가(사용자 선언).
+   * 위치 사실이라 모든 날짜 판정에 같은 값을 쓴다(`isRegulatedByBjdCode`의 `inDistrict`). 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
   /** 상속주택 여부 */
   isInherited: boolean;
   /** 상속개시일 (isInherited === true 시 필수) */
@@ -355,6 +360,11 @@ export interface PresaleRight {
    * 미제공 시 해당 권리는 시·군·구 비교에서 제외.
    */
   regionCode?: string;
+  /**
+   * 소재지 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 그 주택이 지정 지구 안인가(사용자 선언).
+   * 위치 사실이라 모든 날짜 판정에 같은 값을 쓴다(`isRegulatedByBjdCode`의 `inDistrict`). 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
   /**
    * #2b §167의4⑤ 혼인 차감용 — "양도자의 배우자 단독 보유" 분양권/입주권 여부.
    * 주택+권 합 3↑ + marriageMerge 발동 시 양도일 현재 배우자 보유 권리수를 차감. 미제공=본인 보유.

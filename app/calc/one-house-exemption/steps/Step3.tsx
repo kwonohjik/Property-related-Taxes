@@ -40,6 +40,7 @@ import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-sect
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 
 type Props = {
   form: OneHouseJudgmentFormData;
@@ -167,8 +168,16 @@ export function Step3({ form, onChange }: Props) {
     return isRegulatedByBjdCode(
       primary.regionCode,
       conversionStart ?? (sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate),
+      primary.regionInDesignatedDistrict,
     );
-  }, [primary.regionCode, primary.acquisitionDate, primary.decedentCohabitationHoldingStartDate, sameHouseholdStart, conversionStart]);
+  }, [
+    primary.regionCode,
+    primary.regionInDesignatedDistrict,
+    primary.acquisitionDate,
+    primary.decedentCohabitationHoldingStartDate,
+    sameHouseholdStart,
+    conversionStart,
+  ]);
 
   /**
    * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
@@ -182,8 +191,8 @@ export function Step3({ form, onChange }: Props) {
    */
   const transferRegulatedVerdict = useMemo(() => {
     if (!primary.regionCode || !form.transferDate) return null;
-    return isRegulatedByBjdCode(primary.regionCode, form.transferDate);
-  }, [primary.regionCode, form.transferDate]);
+    return isRegulatedByBjdCode(primary.regionCode, form.transferDate, primary.regionInDesignatedDistrict);
+  }, [primary.regionCode, primary.regionInDesignatedDistrict, form.transferDate]);
 
   return (
     <div className="space-y-6">
@@ -269,10 +278,20 @@ export function Step3({ form, onChange }: Props) {
                  */
                 patch.regionCode = "";
               }
+              // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다.
+              if (patch.regionCode !== undefined && patch.regionCode !== primary.regionCode) {
+                patch.regionInDesignatedDistrict = undefined;
+              }
               patchAsset(patch);
             }}
           />
         </FieldCard>
+        <DesignatedDistrictQuestion
+          regionCode={primary.regionCode}
+          value={primary.regionInDesignatedDistrict}
+          onChange={(regionInDesignatedDistrict) => patchAsset({ regionInDesignatedDistrict })}
+          idSuffix="selling"
+        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <FieldCard label="취득일">

@@ -303,6 +303,8 @@ export interface MixedUseAssetInput {
    * 미제공 시 위 `wasRegulatedAtAcquisition` boolean fallback.
    */
   regionCode?: string;
+  /** 지정 지구 안인가 — `TransferTaxInput.regionInDesignatedDistrict`와 같은 규약. */
+  regionInDesignatedDistrict?: boolean;
 
   /**
    * 영 §154① **단서** 각호 면제 사유.

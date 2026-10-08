@@ -14,6 +14,7 @@ type Parsed = z.infer<typeof temporaryTwoHouseSchema>;
 export function mapTemporaryTwoHouseEraFacts(tt: Parsed) {
   return {
     newHouseRegionCode: tt.newHouseRegionCode,
+    newHouseInDesignatedDistrict: tt.newHouseInDesignatedDistrict,
     newHouseRegulatedAtAcquisition: tt.newHouseRegulatedAtAcquisition,
     previousHouseRegulatedAtNewAcquisition: tt.previousHouseRegulatedAtNewAcquisition,
     newHouseContractDate: toOptionalDate(tt.newHouseContractDate),
