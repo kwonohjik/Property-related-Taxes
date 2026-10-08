@@ -195,6 +195,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
     landAcquisitionCause: "",
+    landCauseHost: "",
     landDecedentAcquisitionDate: "",
     landDonorAcquisitionDate: "",
     landAcqMode: "",

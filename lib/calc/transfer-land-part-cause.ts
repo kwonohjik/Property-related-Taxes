@@ -3,13 +3,15 @@
  *
  * 계획서: docs/00-pm/transfer-acq-cause-mixed.plan.md §2.3 G-5·G-6
  *
- * 유일한 쓰기 지점(`NewConstructionLandAcqBlock`)은 건물 취득원인이 「신축」인 주택·건물(겸용 아님)에서만 렌더된다.
+ * 유일한 쓰기 지점(`LandPartCauseBlock`)은 건물 취득원인이 「신축」·「매매」(D1-2)인 주택·건물(겸용 아님)에서만 렌더된다.
  * 그런데 ④는 저장값만 보고 보냈다 — 신축에서 켠 뒤 원인을 매매로 바꾸면 끄는 칸이 사라진 채 토지 상속 통산·
  * 신축비용 후퇴가 계속 계산에 쓰였다(실측). ⑤·④·⑥·⑧이 이 술어를 함께 쓴다(`self-owns-scope.ts`와 같은 규약 —
  * 범위 밖 잔재는 「없음」으로 읽고 값은 지우지 않는다).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isLandBuildingSplitable } from "./self-owns-scope";
+import { LAND_CAUSE_PRE_1990_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { SEC_163_9_LAND_FIRST_DISCLOSURE } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 구조적 입력 — 사이드바 합계처럼 자산 일부만 들고 오는 호출부도 받는다(없으면 「범위 밖」). */
 interface LandPartCauseScope {
@@ -18,9 +20,15 @@ interface LandPartCauseScope {
   isMixedUseHouse?: boolean;
 }
 
-/** ⑤ 블록 노출 — 건물 신축 + 주택·건물(겸용은 자체 4부분 안분이 축을 지배한다). */
+/** 토글을 둘 수 있는 건물 취득원인(= 호스트). 상속·증여 건물은 D2. */
+export type LandCauseHost = "newConstruction" | "purchase";
+export function isLandCauseHost(cause: string | undefined): cause is LandCauseHost {
+  return cause === "newConstruction" || cause === "purchase";
+}
+
+/** ⑤ 블록 노출 — 건물 신축·매매 + 주택·건물(겸용은 자체 4부분 안분이 축을 지배한다). D1-2에서 매매로 확대. */
 export function landPartCauseApplicable(asset: LandPartCauseScope): boolean {
-  return asset.acquisitionCause === "newConstruction" && isLandBuildingSplitable(asset.assetKind) && !asset.isMixedUseHouse;
+  return isLandCauseHost(asset.acquisitionCause) && isLandBuildingSplitable(asset.assetKind) && !asset.isMixedUseHouse;
 }
 
 /**
@@ -34,9 +42,13 @@ export function effectiveLandAcquisitionCause(
   asset: LandPartCauseScope & {
     landAcquisitionCause?: AssetForm["landAcquisitionCause"];
     hasSeperateLandAcquisitionDate?: boolean;
+    landCauseHost?: string;
   },
 ): AssetForm["landAcquisitionCause"] {
   if (!landPartCauseApplicable(asset) || !asset.hasSeperateLandAcquisitionDate) return "";
+  // D1-2 — 토글을 켠 호스트가 지금 취득원인과 같아야 한다. 신축에서 켠 뒤 매매로 바꾸면 매매에서도 「취득일 다름」이
+  // 켜진 채라(`CompanionAcquisitionCauseSection`은 비-매매 전환에서만 끈다) 잔재가 되살아났다(UI 설계 §3 S1·S2').
+  if (asset.landCauseHost !== asset.acquisitionCause) return "";
   return asset.landAcquisitionCause ?? "";
 }
 
@@ -54,6 +66,19 @@ export function landPartCauseSameDay(
   return !!effectiveLandAcquisitionCause(asset) && !!asset.landAcquisitionDate && asset.landAcquisitionDate === asset.acquisitionDate;
 }
 
+/**
+ * ⑤ 날짜 안내(신축 블록·매매 날짜 영역 공용) — ⑧과 같은 술어. 차단은 ⑧(·⑫)이 하고 여기는 입력 중 안내.
+ * Q-4 같은 날 → Q-7 1990.8.30. 전(영 §163⑨ 단서 1호) 순.
+ */
+export function landPartCauseDateNotice(
+  asset: Parameters<typeof landPartCauseSameDay>[0],
+): string | null {
+  if (landPartCauseSameDay(asset)) return LAND_CAUSE_SAME_DAY_MESSAGE;
+  if (effectiveLandAcquisitionCause(asset) && asset.landAcquisitionDate && asset.landAcquisitionDate < SEC_163_9_LAND_FIRST_DISCLOSURE)
+    return LAND_CAUSE_PRE_1990_MESSAGE;
+  return null;
+}
+
 /** 콤마 제거 후 정수 파싱 (CurrencyInput 저장 규약). */
 function raw(v: string | undefined): number {
   const n = parseInt((v ?? "").replace(/,/g, ""), 10);
@@ -64,6 +89,8 @@ function raw(v: string | undefined): number {
  * 별개 취득 **건물 파트 취득가액 입력값** — 「건물 신축 + 토지 상속·증여」에서는 「신축비용」 칸
  * (`fixedAcquisitionPrice`)이 정본이다(파트 칸을 따로 두면 같은 값을 두 번 받는다).
  * ④ 전송·⑥ 사이드바 합계·⑧ V1 필수가 **같은 후퇴**를 쓴다(3중 패턴 — 종전엔 ⑥만 없어 합계가 0으로 보였다).
+ * ⚠️ 신축 호스트만이다(D1-2) — 매매의 `fixedAcquisitionPrice`는 **총 취득가액**이고 별개 취득 중엔 숨겨진 칸이라,
+ *    후퇴하면 화면에 없는 값이 건물 취득가액이 된다(UI 설계 §3 S7).
  */
 export function splitBuildingAcqPriceInput(
   asset: LandPartCauseScope & {
@@ -74,5 +101,7 @@ export function splitBuildingAcqPriceInput(
   },
 ): string | undefined {
   if (raw(asset.buildingAcquisitionPrice) > 0) return asset.buildingAcquisitionPrice;
-  return effectiveLandAcquisitionCause(asset) ? asset.fixedAcquisitionPrice : asset.buildingAcquisitionPrice;
+  return asset.acquisitionCause === "newConstruction" && effectiveLandAcquisitionCause(asset)
+    ? asset.fixedAcquisitionPrice
+    : asset.buildingAcquisitionPrice;
 }

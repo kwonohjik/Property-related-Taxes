@@ -582,6 +582,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   landAcquisitionCause: "" | "inheritance" | "gift";
   /**
+   * 「토지는 다른 원인으로 취득」 토글을 **어느 건물 취득원인에서 켰는가**(D1-2 — 클라이언트 전용, ④가 보내지 않는다).
+   * 유효 원인은 이 값이 현재 `acquisitionCause`와 같을 때만 성립한다(`effectiveLandAcquisitionCause`). 신축에서 켠 뒤
+   * 매매로 바꾼 잔재가 매매 화면에서 「켜짐」으로 되살아나 토지 원인·신축비용 후퇴가 계산에 쓰이는 것을 막는다
+   * (계획서 transfer-acq-cause-mixed.plan.md §10.2 T-8 · UI 설계 §3). 쓰는 곳은 토글 ON/OFF 한 곳뿐.
+   */
+  landCauseHost: "" | "newConstruction" | "purchase";
+  /**
    * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
    * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
    */

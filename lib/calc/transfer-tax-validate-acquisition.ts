@@ -39,6 +39,7 @@ import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-r
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { validateLandPartCause } from "./transfer-tax-validate-split";
 import { fieldError } from "./transfer-tax-validate-field";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
@@ -372,6 +373,10 @@ export function validateAssetAcquisition(
   }
 
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
+  // D1-2 「토지는 다른 원인으로 취득」(매매 호스트) — 총액·산정 방식 규칙보다 먼저. 늦으면 같은 날·토지일 비움이
+  //   「취득가액 합 초과」 같은 엉뚱한 메시지로 뜬다(UI 설계 §4). 원인이 없으면 null(회귀 0).
+  const landCauseErr = validateLandPartCause(asset, label);
+  if (landCauseErr) return landCauseErr;
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;

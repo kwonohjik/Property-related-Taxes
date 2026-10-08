@@ -25,6 +25,7 @@ import { gbSeparateOnRestorePatch } from "@/lib/calc/transfer-tax-gb-toggle-patc
 import { gbUnifiedCarryoverClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { giftEstimatedModeBlocked } from "@/lib/calc/transfer-tax-validate-gift-163-9";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
+import { deriveLandCauseHost } from "./calc-wizard-asset-migrate-land-cause";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -80,6 +81,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
   // 토지 파트 취득 원인(건물 신축 + 토지 상속·증여, 2026-07-30) — 구 세션 복원 방어
   if (a.landAcquisitionCause === undefined) a.landAcquisitionCause = "";
+  deriveLandCauseHost(a); // D1-2 — 토글을 켠 호스트(구 세션: 신축만 존재)
   // §104②1·2호 토지 파트 통산(2026-07-31) — 구 세션 복원 방어
   if (a.landDecedentAcquisitionDate === undefined) a.landDecedentAcquisitionDate = "";
   if (a.landDonorAcquisitionDate === undefined) a.landDonorAcquisitionDate = "";

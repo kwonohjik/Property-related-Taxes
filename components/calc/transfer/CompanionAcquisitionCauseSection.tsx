@@ -11,7 +11,7 @@ import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
 import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
 import { NonPurchaseSplitInputsBlock } from "./NonPurchaseSplitInputsBlock";
-import { NewConstructionLandAcqBlock } from "./NewConstructionLandAcqBlock";
+import { LandPartCauseBlock } from "./LandPartCauseBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -97,6 +97,9 @@ export function CompanionAcquisitionCauseSection({
             // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
             // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
             ...(value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+            // D1-2 — 토글을 켠 호스트를 떠나면 태그를 비운다(원인 값은 보존). 남기면 매매 → 상속 → 매매 후 「취득일 다름」만
+            // 켜도 그 방문에서 켠 적 없는 토지 원인이 되살아났다(D1-2 Check F2).
+            ...(asset.landCauseHost && asset.landCauseHost !== value ? { landCauseHost: "" as const } : {}),
             // 상속 → 비-상속 전환 시 가업상속공제 §97의2④ stale 정리(A04 · 2026-09-02).
             // 카드가 화면에서 사라져 **사용자가 끌 방법이 없으므로** 여기서 지운다.
             // `migrateCarryoverFields`가 carryover에 대해 쓰는 것과 같은 규약이다.
@@ -155,7 +158,7 @@ export function CompanionAcquisitionCauseSection({
 
       {/* 토지를 상속·증여로 취득하고 그 위에 건물을 신축한 경우 — 토지 파트 입력.
           취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
-      <NewConstructionLandAcqBlock asset={asset} onChange={onChange} transferDate={transferDate} />
+      <LandPartCauseBlock asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (

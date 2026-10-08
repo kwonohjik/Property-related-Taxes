@@ -8,6 +8,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { phdToggleReachable } from "./phd-toggle-scope";
+import { phdFlagEffective } from "./phd-toggle-scope";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
@@ -19,7 +20,8 @@ import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
  * 한 곳에 둔다 — 각자 재기술하면 같은 자산이 한쪽에서만 면제되는 dual-truth가 된다.
  */
 export function usesPhdGate(asset: AssetForm, isNonPrimaryAsset: boolean): boolean {
-  return asset.usePreHousingDisclosure === true && !isNonPrimaryAsset && phdToggleReachable(asset);
+  // D1 T-3 — 토지 원인 혼합이 유효하면 PHD를 무시한다(④ `phdPayloadActive`와 같은 술어 `phdFlagEffective`).
+  return phdFlagEffective(asset) && !isNonPrimaryAsset && phdToggleReachable(asset);
 }
 
 /**

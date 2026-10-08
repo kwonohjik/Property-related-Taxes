@@ -161,6 +161,7 @@ describe("⑫ 컴패니언 경로 — companionAssets[i]에 같은 규칙", () =
       acquisitionDate: "2020-06-01",
       fixedAcquisitionPrice: "400000000",
       landAcquisitionCause: "inheritance",
+      landCauseHost: "newConstruction", // 토글 ON이 함께 쓰는 호스트(D1-2)
       landAcquisitionDate: "2015-03-10",
       landDecedentAcquisitionDate: "1995-01-01",
       hasSeperateLandAcquisitionDate: true,
