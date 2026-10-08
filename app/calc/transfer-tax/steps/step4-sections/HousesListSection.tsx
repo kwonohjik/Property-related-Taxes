@@ -115,6 +115,8 @@ interface RowProps {
   mergeContext?: MergeContext;
   /** 조특법 주택 수 제외 배지 — 행 편집 ⑥이 열려 있을 때만 단다. */
   countExclusionEnabled?: boolean;
+  /** 그 행의 선언을 판정에 쓰는가 — 쓰지 않으면 배지를 달지 않는다(판정 메뉴 입주권 양도). 없으면 전부 쓴다. */
+  countExclusionApplies?: (house: HouseEntry) => boolean;
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 행에 「주택 수 제외」 배지를 단다(D2 · `isOwnedAtTransfer`). */
   transferDate: string | undefined;
 }
@@ -128,9 +130,10 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, transferDate }: RowProps) {
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate }: RowProps) {
   const badges = resolveHouseBadges(house);
-  const exclusionLabel = countExclusionEnabled ? countExclusionBadgeLabel(house) : undefined;
+  const exclusionLabel =
+    countExclusionEnabled && (countExclusionApplies?.(house) ?? true) ? countExclusionBadgeLabel(house) : undefined;
   const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
@@ -212,6 +215,7 @@ export function HousesListSection({
   hideSpouseOwned = false,
   mergeContext,
   countExclusionEnabled = false,
+  countExclusionApplies,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -253,6 +257,8 @@ export function HousesListSection({
   mergeContext?: MergeContext;
   /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 게이트는 호출부(`HouseCountExemptionInputs`)가 정한다. */
   countExclusionEnabled?: boolean;
+  /** 행 선언을 판정에 쓰는가(배지 한정) — `HouseTableRow`로 넘긴다. */
+  countExclusionApplies?: (house: HouseEntry) => boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -453,6 +459,7 @@ export function HousesListSection({
                     onRemove={() => removeHouse(h.id)}
                     mergeContext={mergeContext}
                     countExclusionEnabled={countExclusionEnabled}
+                    countExclusionApplies={countExclusionApplies}
                     transferDate={form.transferDate}
                   />
                 ))}

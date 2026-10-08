@@ -38,6 +38,7 @@ import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import {
+  judgmentCountExclusionRowApplies,
   judgmentMarriageRentalOriginVisible,
   judgmentMergeInputVisible,
   judgmentReplacementHouseVisible,
@@ -56,6 +57,7 @@ import { RentalUnitsMarriageOriginSection } from "./RentalUnitsMarriageOriginSec
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import {
   deriveJudgmentHouseCount,
+  judgmentSaleIsHousing,
   withDerivedHouseCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
@@ -135,7 +137,14 @@ export function Step2({ form, onChange }: Props) {
 
   // 조특법 주택 수 제외 — 요건을 갖춘 행만(엔진 평가기 그대로 · Q-3(b)). 머리말의 주택 수 안내용.
   const countExcludedIds = useMemo(
-    () => eligibleCountExcludedHouseIds(form),
+    // 입주권 양도면 판정에 쓰는 행 선언만(해석례 확인 조문 — ④·⑧·route와 같은 술어)
+    () =>
+      eligibleCountExcludedHouseIds({
+        ...form,
+        houses: (form.houses ?? []).map((h) =>
+          judgmentCountExclusionRowApplies(form, h) ? h : { ...h, countExclusion: undefined },
+        ),
+      }),
     [form],
   );
 
@@ -173,14 +182,27 @@ export function Step2({ form, onChange }: Props) {
         mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
         /*
           조특법 주택 수 제외(§99의4·§98의9·보유 감면주택)는 **명부 행**에서 받는다(행 편집 ⑥ · 「특례」 배지).
-          입주권 양도에도 연다 — §89①4호 다른 주택 수에서도 뺀다(2026-10-08 · 사전-2018-법령해석재산-0143).
+          입주권 양도에도 칸은 연다(행 편집 창이 한 벌이다) — 판정에 쓰는 것은 해석례로 입주권 적용이 확인된 감면주택
+          조문(§98·§98의2·§98의5·§99)뿐이고, 그 밖의 선언은 ④가 보내지 않고 배지도 달지 않으며 아래 안내가 그 사실을 말한다.
           계획서 `docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`.
         */
         countExclusionEnabled
+        countExclusionApplies={(h) => judgmentCountExclusionRowApplies(form, h)}
       />
 
+      {!judgmentSaleIsHousing(form) &&
+        (form.houses ?? []).some((h) => h.countExclusion && !judgmentCountExclusionRowApplies(form, h)) && (
+          <ToneCard tone="amber">
+            <p className="text-xs leading-relaxed" data-testid="right-sale-count-exclusion-unused-notice">
+              조합원입주권 양도(§89①4호)에서 다른 주택 수에서 빼는 조특법 주택은 해석례로 확인된 §98·§98의2·§98의5·§99
+              감면주택뿐입니다. 농어촌·고향주택(§99의4)·준공후미분양주택(§98의9) 등 그 밖의 선언은 이 판정에 쓰지 않고 다른
+              주택으로 셉니다.
+            </p>
+          </ToneCard>
+        )}
+
       {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
-      <LegacyCountExclusionNotice form={form} onChange={onChange} />
+      {judgmentSaleIsHousing(form) && <LegacyCountExclusionNotice form={form} onChange={onChange} />}
 
       {judgmentTemporaryTwoHouseVisible(form) && (
         <TemporaryTwoHouseSection
