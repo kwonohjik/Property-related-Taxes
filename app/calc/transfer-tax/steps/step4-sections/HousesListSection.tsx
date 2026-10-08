@@ -631,6 +631,8 @@ export function HousesListSection({
               countExclusionEnabled={countExclusionEnabled}
               // §167의3①3호는 중과 축 — 판정 메뉴(양도 주택 중과 섹션을 숨기는 화면)에서는 묻지 않는다.
               taxIncentiveRentalEnabled={!hideSellingHouseExclusion}
+              // P4 양론 C1 「동일세대원에게 증여」는 판정 메뉴(쟁점 카드가 있는 화면)에서만 묻는다.
+              householdGiftEnabled={hideSellingHouseExclusion}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

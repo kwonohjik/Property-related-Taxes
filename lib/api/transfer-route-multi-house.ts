@@ -80,6 +80,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     decedentSameHouseholdAtInheritance: h.decedentSameHouseholdAtInheritance,
     parentalCareMergeInheritedHouse: h.parentalCareMergeInheritedHouse,
     reInheritedFromSeparateHousehold: h.reInheritedFromSeparateHousehold,
+    inheritedGiftedToHouseholdMember: h.inheritedGiftedToHouseholdMember,
     isRankingDisqualifiedInheritedHouse: h.isRankingDisqualifiedInheritedHouse,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),

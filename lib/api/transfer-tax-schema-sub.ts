@@ -235,6 +235,8 @@ export const houseSchema = z.object({
   parentalCareMergeInheritedHouse: z.boolean().optional(),
   /** D17 재상속 — 별도세대에서 받은 상속주택을 동일세대원이 재상속 */
   reInheritedFromSeparateHousehold: z.boolean().optional(),
+  /** P4 양론 C1 — 상속주택(지분)을 동일세대원에게 증여(판정 메뉴 양론 표시 전용) */
+  inheritedGiftedToHouseholdMember: z.boolean().optional(),
   isRankingDisqualifiedInheritedHouse: z.boolean().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),

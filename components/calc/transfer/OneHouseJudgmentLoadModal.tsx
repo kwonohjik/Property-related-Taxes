@@ -50,6 +50,7 @@ const VERDICT_CLASS = {
   emerald: "border-emerald-300 text-emerald-700",
   amber: "border-amber-300 text-amber-700",
   rose: "border-rose-300 text-rose-700",
+  violet: "border-violet-300 text-violet-700",
 } as const;
 
 export function OneHouseJudgmentLoadModal({

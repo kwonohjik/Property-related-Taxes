@@ -109,7 +109,10 @@ export function buildOneRightVerdict(
       ...(clause === "na" ? { naYears: oneRightClauseNaYears(input.transferDate) ?? undefined } : {}),
       ...(marriageMerge?.status === "applies"
         ? {
-            marriageMergeNotice: `혼인합가(${TRANSFER.MARRIAGE_MERGE_EXEMPT}) — 혼인한 날부터 ${marriageMerge.years}년 이내에 먼저 양도하는 입주권이라 혼인 전 배우자 쪽 주택 1채를 다른 주택에서 빼고 판정했습니다.`,
+            marriageMergeNotice:
+              marriageMerge.kind === "marriage"
+                ? `혼인합가(${TRANSFER.MARRIAGE_MERGE_EXEMPT}) — 혼인한 날부터 ${marriageMerge.years}년 이내에 먼저 양도하는 입주권이라 혼인 전 배우자 쪽 주택 1채를 다른 주택에서 빼고 판정했습니다.`
+                : `동거봉양 합가(${TRANSFER.PARENTAL_CARE_MERGE_EXEMPT}) — 합가한 날부터 ${marriageMerge.years}년 이내에 먼저 양도하는 입주권이라 합가 전 직계존속 쪽 주택 1채를 다른 주택에서 빼고 판정했습니다.`,
           }
         : {}),
       reasons: [],

@@ -58,6 +58,11 @@ interface Props {
    * 판정 메뉴는 넘기지 않는다(그 화면은 중과 엔진을 부르지 않는다 · 연결은 후속).
    */
   taxIncentiveRentalEnabled?: boolean;
+  /**
+   * 상속주택 행에 「동일세대원에게 증여」 칩을 연다 — 판정 메뉴 전용(P4 양론 C1). 판정 결론은 바꾸지 않고
+   * 「해석이 갈리는 쟁점」 카드를 띄운다. 계산기는 그 카드가 없어 칩이 아무 일도 하지 않으므로 넘기지 않는다.
+   */
+  householdGiftEnabled?: boolean;
 }
 
 // ============================================================
@@ -278,7 +283,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
 // 섹션 ② 상속 (amber)
 // ============================================================
 
-function InheritanceSection({ house, onUpdate }: Props) {
+function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
   return (
     <ToneCard tone="amber" sectionNum="②" bodyClassName="space-y-2.5" title="상속 정보" noDark>
 
@@ -302,6 +307,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
             isRankingDisqualifiedInheritedHouse: v
               ? house.isRankingDisqualifiedInheritedHouse
               : undefined,
+            inheritedGiftedToHouseholdMember: v ? house.inheritedGiftedToHouseholdMember : undefined,
           });
         }}
         title="상속주택"
@@ -412,6 +418,21 @@ function InheritanceSection({ house, onUpdate }: Props) {
             </p>
           </ToggleCard>
         </div>
+
+        {/* P4 양론 C1 — 판정 메뉴 전용. 판정은 상속주택 그대로 두고, 반대 해석의 결론을 쟁점 카드로 함께 보여 준다. */}
+        {householdGiftEnabled && (
+          <div className="pt-2">
+            <ToggleCard
+              variant="chip"
+              tone="amber"
+              data-testid="house-row-inherited-gifted-to-household-member"
+              checked={house.inheritedGiftedToHouseholdMember ?? false}
+              onCheckedChange={(v) => onUpdate({ inheritedGiftedToHouseholdMember: v || undefined })}
+              title="이 상속주택(또는 지분)을 동일세대원에게 증여"
+              description="상속받은 뒤 배우자 등 같은 세대원에게 이 주택이나 그 지분을 증여한 경우입니다. 상속주택으로 볼지 해석이 갈려 판정 결과에 두 입장의 결론을 함께 보여 줍니다."
+            />
+          </div>
+        )}
       </ToggleCard>
     </ToneCard>
   );
@@ -557,6 +578,7 @@ export function HouseEntryEditor({
   mergeContext,
   countExclusionEnabled = false,
   taxIncentiveRentalEnabled = false,
+  householdGiftEnabled = false,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -571,7 +593,7 @@ export function HouseEntryEditor({
       {mergeContext && (
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />
       )}
-      <InheritanceSection house={house} onUpdate={onUpdate} />
+      <InheritanceSection house={house} onUpdate={onUpdate} householdGiftEnabled={householdGiftEnabled} />
       {/* ⑪ 연장 사실은 3호 칩과 같은 축(중과) — 계산기만 연다 */}
       <LongTermRentalSection house={house} onUpdate={onUpdate} aptDeadlineExtensionEnabled={taxIncentiveRentalEnabled} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />

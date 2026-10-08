@@ -313,6 +313,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // D17 재상속 — 동일세대일 때만 의미(동거봉양 예외와 같은 규약)
       reInheritedFromSeparateHousehold:
         h.isInherited && h.decedentSameHouseholdAtInheritance ? h.reInheritedFromSeparateHousehold : undefined,
+      // P4 양론 C1 — 상속주택일 때만(판정 메뉴 양론 표시 전용, 판정 결론에는 쓰이지 않는다)
+      inheritedGiftedToHouseholdMember: h.isInherited ? h.inheritedGiftedToHouseholdMember : undefined,
       isRankingDisqualifiedInheritedHouse: h.isInherited
         ? h.isRankingDisqualifiedInheritedHouse
         : undefined,

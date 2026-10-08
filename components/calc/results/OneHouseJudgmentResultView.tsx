@@ -19,6 +19,7 @@ import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RentalCancellationWindowNote } from "@/components/calc/results/transfer/RentalCancellationWindowNote";
 import { OneHouseRequirementReviewCard } from "@/components/calc/results/OneHouseRequirementReviewCard";
+import { OneHouseContestedIssuesCard } from "@/components/calc/results/OneHouseContestedIssuesCard";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
@@ -75,6 +76,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
     rentalHousingException: rental,
     oneRightExemption: oneRight,
     inheritedPeriodConsolidation: inherited,
+    contestedIssues,
   } = result;
   /**
    * 🔑 배지 술어는 **이력 카드와 공유**한다(P4-2b-3). 여기서만 따지면 결과 화면은 「조건부」인데
@@ -94,6 +96,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
   const verdict = oneHouseVerdictOf(
     judgment,
     oneRight ? oneRightThreshold : transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
+    contestedIssues,
   );
   const pending = judgment.pending as unknown as PendingItem[];
 
@@ -123,6 +126,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           </p>
         )}
       </ToneCard>
+
+      {/* ── 해석이 갈리는 쟁점 (P4) — 배지가 「해석이 갈림」이면 이 카드를 가리키므로 바로 아래에 둔다 ── */}
+      {contestedIssues && contestedIssues.length > 0 && (
+        <OneHouseContestedIssuesCard issues={contestedIssues} sectionNum={nextNo()} />
+      )}
 
       {/* ── 주택 수 산정 ── */}
       <ToneCard tone="sky" sectionNum={nextNo()} title="주택 수 산정">
