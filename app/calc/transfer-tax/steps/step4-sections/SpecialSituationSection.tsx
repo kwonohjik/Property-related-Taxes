@@ -13,6 +13,7 @@
  *  「지방세법 시행령」 §101① 단서, 부속토지 전량 비사업용.)
  */
 
+import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -64,7 +65,7 @@ export function SpecialSituationSection({
             checked={form.isUnregistered}
             onCheckedChange={(v) => onChange({ isUnregistered: v })}
             title="미등기 양도"
-            description="70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
+            description={`70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%. ${UNREGISTERED_EXCLUSION_HINT}`}
             tone="rose"
           />
         )}

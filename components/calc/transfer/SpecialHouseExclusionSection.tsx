@@ -14,7 +14,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
-import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 
 const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; label: string }> = [
   { value: "unsold_98", label: "§98 미분양 국민주택 (취득 1995.11.1~1997.12.31 / 1998.3.1~12.31)" },
@@ -31,11 +31,6 @@ const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; 
   { value: "rental_97_2", label: "§97의2 신축임대주택 (신축·매매계약 1999.8.20~2001.12.31)" },
 ];
 
-/** 취득기간을 매매계약일만으로 판정하는 조문 (엔진 `basis: "contract_only"`와 단일 축) */
-const CONTRACT_ONLY_ARTICLES: ReadonlyArray<SpecialHouseExclusionFormItem["article"]> = [
-  "unsold_98_8",
-  "unsold_99_2",
-];
 
 interface Props {
   items: SpecialHouseExclusionFormItem[];
@@ -157,7 +152,7 @@ export function SpecialHouseExclusionItemFields({
               일자는 참고용으로만 기록됩니다.
             </p>
           )}
-          {CONTRACT_ONLY_ARTICLES.includes(item.article) && (
+          {usesContractDateOnly(item.article) && (
             <p className="mt-1 text-micro text-amber-700">
               이 조문은 <b>최초 매매계약일</b>만을 기준으로 취득기간을 판정합니다 — 취득일이
               기간 안이어도 계약일이 밖이면 적용되지 않습니다.
@@ -206,13 +201,15 @@ export function SpecialHouseExclusionItemFields({
         )}
         {!rental && (
           <div>
-            <label className="mb-1 block text-xs font-medium">감면주택 매매계약일 (선택)</label>
+            <label className="mb-1 block text-xs font-medium">
+              감면주택 매매계약일{usesContractDateOnly(item.article) ? "" : " (선택)"}
+            </label>
             <DateInput
               value={item.houseContractDate}
               onChange={(v) => onChange({ houseContractDate: v })}
             />
             <p className="mt-1 text-micro text-muted-foreground">
-              {CONTRACT_ONLY_ARTICLES.includes(item.article)
+              {usesContractDateOnly(item.article)
                 ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
                 : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
             </p>

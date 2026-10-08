@@ -6,6 +6,7 @@
  *  지분 분할 모드의 「취득 지분율」만 ③에 남는다.)
  * CompanionAssetCard L175–472 JSX를 그대로 이동 (동작 변화 0).
  */
+import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import { Fragment } from "react";
 
 import type {
@@ -200,7 +201,7 @@ export function AssetSectionBasic({
           variant="chip"
           tone="rose"
           title="미등기 양도"
-          description="70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
+          description={`70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%. ${UNREGISTERED_EXCLUSION_HINT}`}
           checked={asset.isUnregistered}
           onCheckedChange={(v) => onChange({ isUnregistered: v })}
         />

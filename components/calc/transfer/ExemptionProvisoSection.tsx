@@ -64,7 +64,7 @@ const OPTIONS: RadioCardOption<ReasonOrNone>[] = [
   {
     value: "expropriation",
     label: "공익사업 수용 (2호 가목)",
-    description: "사업인정 고시일 전 취득 + 양도일·수용일부터 5년 내. 보유·거주 요건 면제",
+    description: "사업인정 고시일 전 취득 + 양도일·수용일부터 5년 내(2013.2.15. 전 양도는 2년). 보유·거주 요건 면제",
     testId: "proviso-reason-expropriation",
   },
   {
@@ -173,7 +173,7 @@ export function ExemptionProvisoSection({
             field="provisoExpropriationDate"
             label="수용일"
             required
-            hint="필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년 내 양도해야 합니다"
+            hint="필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년(2013.2.15. 전 양도는 2년) 내 양도해야 합니다"
           >
             <DateInput
               value={provisoExpropriationDate}

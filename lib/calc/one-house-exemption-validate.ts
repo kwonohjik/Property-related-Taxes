@@ -17,6 +17,10 @@
  * 「요건 미달이라 계산조차 못 하는」 화면이 되어, 사용자가 왜 비과세가 아닌지 알 수 없다.
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
+import {
+  isTransferDateBeforeSupported,
+  TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
+} from "@/lib/tax-engine/data/transfer-supported-period";
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
@@ -413,6 +417,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   const primary = form.assets[0];
 
   if (!form.transferDate) errors.push(err("transferDate", "양도 예정일을 입력하세요."));
+  else if (isTransferDateBeforeSupported(form.transferDate))
+    errors.push(err("transferDate", TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE));
   if (!primary?.acquisitionDate) {
     errors.push(err("acquisitionDate", "양도 대상 주택의 취득일을 입력하세요."));
   }
