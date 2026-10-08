@@ -370,6 +370,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   for (const message of collectExemptionProvisoErrors({
     reason: provisoMode === "one_house" ? provisoReasonEff : "",
     departureDate: form.provisoDepartureDate,
+    departureOnlyHouse: form.provisoDepartureOnlyHouse,
+    transferDate: form.transferDate,
     expropriationDate: form.provisoExpropriationDate,
     rentalLeaseResidenceMonths: form.provisoRentalLeaseResidenceMonths,
     preContractNoHouse: form.provisoPreContractNoHouse,

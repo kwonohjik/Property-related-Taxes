@@ -122,7 +122,7 @@ describe("F09 — E-3 사전게이트의 기산일·삼킴", () => {
       isOneHousehold: true,
       oneHouseExemptionProviso: {
         reason: "overseas_migration",
-        departureDate: new Date("2026-01-01"),
+        departureDate: new Date("2026-01-01"), departureOnlyHouse: true,
       },
       unavoidableOutsideCapitalHouse: { reason: "work" as const },
       ...TEMP_TWO_HOUSE,

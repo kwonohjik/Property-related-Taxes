@@ -31,7 +31,8 @@
    },
    "wasRegulatedAtAcquisition": true,
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2024-04-15"
+   "provisoDepartureDate": "2024-04-15",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": false,
@@ -61,7 +62,8 @@
    },
    "wasRegulatedAtAcquisition": true,
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2024-04-15"
+   "provisoDepartureDate": "2024-04-15",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": true,

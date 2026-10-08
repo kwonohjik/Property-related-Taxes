@@ -15,7 +15,8 @@
     "acquisitionDate": "2007-01-15"
    },
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2007-08-15"
+   "provisoDepartureDate": "2007-08-15",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": true,
@@ -45,7 +46,8 @@
    },
    "wasRegulatedAtAcquisition": true,
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2024-06-17"
+   "provisoDepartureDate": "2024-06-17",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": true,
@@ -75,7 +77,8 @@
    },
    "wasRegulatedAtAcquisition": true,
    "provisoReason": "overseas_migration",
-   "provisoDepartureDate": "2022-09-15"
+   "provisoDepartureDate": "2022-09-15",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": false,

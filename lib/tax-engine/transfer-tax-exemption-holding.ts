@@ -264,7 +264,11 @@ export function resolveExemptionProviso(
       //   제3조 — 시행 후 최초 양도분) → 출국 뒤 취득한 주택은 해당 없음.
       const d = p.departureDate;
       if (!d || input.transferDate < d) return null;
-      if (input.transferDate >= OVERSEAS_HELD_AT_DEPARTURE_TRANSFER_START && input.acquisitionDate > d) return null;
+      if (input.transferDate >= OVERSEAS_HELD_AT_DEPARTURE_TRANSFER_START) {
+        if (input.acquisitionDate > d) return null;
+        // 「출국일 현재 1주택」 — 장기임대주택 등 특례 주택도 센다(사전-2019-법령해석재산-0188). 아니오·미입력은 불성립.
+        if (p.departureOnlyHouse !== true) return null;
+      }
       return isWithinDeadline(d, C.OVERSEAS_TRANSFER_YEARS, input.transferDate) ? "both" : null;
     }
     case "unavoidable":

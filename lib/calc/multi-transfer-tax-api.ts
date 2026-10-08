@@ -45,6 +45,7 @@ import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
+import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -408,6 +409,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
           oneHouseExemptionProviso: {
             reason: effectiveProviso,
             ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+            ...departureOnlyHousePayload(effectiveProviso, form.provisoDepartureOnlyHouse),
             ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
             ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
             ...rentalLeaseResidencePayload(effectiveProviso, form.provisoRentalLeaseResidenceMonths),

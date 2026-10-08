@@ -147,7 +147,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   generalHouseGiftedFromDecedentWithin2yr: true,
   generalHouseGiftDate: D("2019-03-04"),
   generalHouseRightAtInheritance: "redevelopment_right",
-  oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2024-01-15") },
+  oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2024-01-15"), departureOnlyHouse: true },
   temporaryTwoHouse: {
     previousAcquisitionDate: D("2016-03-04"),
     newAcquisitionDate: D("2022-06-07"),
@@ -248,7 +248,7 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
     expect(
       exempt({
         ...REGULATED_SHORT,
-        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2023-09-01") },
+        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2023-09-01"), departureOnlyHouse: true },
       }),
     ).toBe(true);
     expect(exempt(REGULATED_SHORT)).toBe(false);

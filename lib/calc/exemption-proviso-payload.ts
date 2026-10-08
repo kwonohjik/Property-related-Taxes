@@ -16,6 +16,7 @@ export type ExemptionProvisoFormSlice = Pick<
   TransferFormData,
   | "provisoReason"
   | "provisoDepartureDate"
+  | "provisoDepartureOnlyHouse"
   | "provisoExpropriationDate"
   | "provisoBusinessApprovalDate"
   | "provisoRentalLeaseResidenceMonths"
@@ -32,6 +33,18 @@ export function parseRentalLeaseResidenceMonths(raw: string | undefined): number
   if (!t) return undefined;
   const n = Math.floor(Number(t));
   return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/**
+ * 나·다목일 때만 싣는 「출국일 현재 1주택」 조각 — "yes"/"no"만 싣고 미입력은 키를 만들지 않는다(엔진: 불성립).
+ * ④(단건·다건·판정 메뉴·부담부증여)가 같은 함수를 쓴다.
+ */
+export function departureOnlyHousePayload(
+  reason: string,
+  raw: "" | "yes" | "no" | undefined,
+): { departureOnlyHouse: boolean } | Record<string, never> {
+  if (reason !== "overseas_migration" && reason !== "overseas_residence") return {};
+  return raw === "yes" || raw === "no" ? { departureOnlyHouse: raw === "yes" } : {};
 }
 
 /** 1호일 때만 싣는 조각 — 다른 사유로 바꾼 뒤 남은 값은 보내지 않는다. */
@@ -53,6 +66,7 @@ export function buildExemptionProvisoPayload(
     oneHouseExemptionProviso: {
       reason,
       ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+      ...departureOnlyHousePayload(reason, form.provisoDepartureOnlyHouse),
       ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
       ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
       ...rentalLeaseResidencePayload(reason, form.provisoRentalLeaseResidenceMonths),

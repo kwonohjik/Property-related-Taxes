@@ -34,6 +34,7 @@ import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
+import { departureOnlyHousePayload } from "./exemption-proviso-payload";
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import {
   buildReplacementHousePayload,
@@ -261,6 +262,7 @@ export function buildOneHouseExemptionApiBody(
             oneHouseExemptionProviso: {
               reason,
               ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+              ...departureOnlyHousePayload(reason, form.provisoDepartureOnlyHouse),
               ...(form.provisoExpropriationDate
                 ? { expropriationDate: form.provisoExpropriationDate }
                 : {}),

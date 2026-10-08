@@ -10,7 +10,7 @@
  *
  * | 사유 | 필수 | 근거 |
  * |---|---|---|
- * | 2호나·다목 해외이주·국외거주 | 출국일 | 「출국일부터 2년 이내에 양도」 |
+ * | 2호나·다목 해외이주·국외거주 | 출국일 · (2008.2.22. 이후 양도) 출국일 현재 1주택 예/아니오 | 「출국일부터 2년 이내에 양도」 · 「출국일 현재 1주택을 보유하고 있는 경우로서」 |
  * | 1호 건설·공공매입임대 거주 5년 | (선택) 임차일부터 세대전원 거주 개월 — 넣었으면 0 이상의 수 | 「임차일부터 양도일까지의 기간 중 세대전원이 거주한 기간」 |
  * | 2호가목 수용 | 수용일 | 엔진이 미입력을 **불성립**으로 본다(#591 R7 fail-closed) — OH-33 |
  * | 5호 조정 공고 전 계약 | 계약금 지급일 현재 무주택 확인 | 「계약금 지급일 현재 주택을 보유하지 아니하는 경우」 |
@@ -20,10 +20,17 @@ import { collectRental4hoErrors, type Rental4hoFormSlice } from "./rental-4ho-pr
 import { fieldError } from "./transfer-tax-validate-field";
 import { parseRentalLeaseResidenceMonths } from "./exemption-proviso-payload";
 
+/** 나·다목 「출국일 현재 1주택을 보유하고 있는 경우로서」 — 대통령령 제20618호(2008.2.22.) 시행 후 양도분 */
+export const OVERSEAS_DEPARTURE_ONE_HOUSE_TRANSFER_START = "2008-02-22";
+
 export function collectExemptionProvisoErrors(p: {
   /** `effectiveProvisoReason` 적용 후 사유. "" = 해당 없음. */
   reason: string;
   departureDate?: string;
+  /** 나·다목 「출국일 현재 1주택」("yes"/"no") — `transferDate`가 2008.2.22. 이후일 때만 필수 */
+  departureOnlyHouse?: "" | "yes" | "no";
+  /** 양도일(YYYY-MM-DD) — 나·다목 「출국일 현재 1주택」 요건 시행(2008.2.22.) 판정용 */
+  transferDate?: string;
   expropriationDate?: string;
   /** 1호 임차일부터 세대전원 거주 개월(선택) — ④와 같은 파서 */
   rentalLeaseResidenceMonths?: string;
@@ -34,6 +41,19 @@ export function collectExemptionProvisoErrors(p: {
   const errors: string[] = [];
   if ((p.reason === "overseas_migration" || p.reason === "overseas_residence") && !p.departureDate) {
     errors.push(fieldError("provisoDepartureDate", "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)"));
+  }
+  if (
+    (p.reason === "overseas_migration" || p.reason === "overseas_residence") &&
+    (p.transferDate ?? "") >= OVERSEAS_DEPARTURE_ONE_HOUSE_TRANSFER_START &&
+    p.departureOnlyHouse !== "yes" &&
+    p.departureOnlyHouse !== "no"
+  ) {
+    errors.push(
+      fieldError(
+        "provisoDepartureOnlyHouse",
+        "§154① 단서(해외이주·국외거주): 출국일 현재 이 주택 1채만 보유했는지 선택하세요. (장기임대주택 등도 셉니다)",
+      ),
+    );
   }
   /**
    * 수용되는 주택 자체를 양도하는 경우 그 양도가 곧 수용이다 — 수용일에 양도일을 넣으면 된다.

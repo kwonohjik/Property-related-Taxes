@@ -383,7 +383,7 @@ describe("§155④⑤·⑦3호·⑧ · §154① 단서 · §156의2⑤ · §89�
       businessApprovalDate: D("2016-01-01"),
       expropriationDate: D("2019-06-01"),
     } as NonNullable<TransferTaxInput["oneHouseExemptionProviso"]>;
-    const ov = { reason: "overseas_migration", departureDate: D("2022-06-01") } as NonNullable<
+    const ov = { reason: "overseas_migration", departureDate: D("2022-06-01"), departureOnlyHouse: true } as NonNullable<
       TransferTaxInput["oneHouseExemptionProviso"]
     >;
     expect([pr(MON, ex), pr(TUE, ex)]).toEqual(["both", null]);

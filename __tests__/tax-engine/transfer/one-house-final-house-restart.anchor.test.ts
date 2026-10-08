@@ -169,7 +169,7 @@ describe("OH-22 ⑤ 거주기간도 재기산 (재산세제과-1058) — §154�
 describe("OH-22 ⑥ §154① 단서 1~3호는 보유기간 제한 자체를 면제한다 — 재기산이 결론을 바꾸지 못한다", () => {
   it("해외이주(2호 나목) 출국 2021-10-01 · 양도 2022-03-01 → 재기산이 있어도 비과세", () => {
     const i = house("2022-03-01", [disposal("transfer", "2021-06-01")], {
-      oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: d("2021-10-01") },
+      oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: d("2021-10-01"), departureOnlyHouse: true },
     });
     expect(exempt(i)).toBe(true);
   });
