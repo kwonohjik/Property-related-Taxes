@@ -2,7 +2,7 @@
 
 > 작성 2026-10-08 · 브랜치 `docs/transfer-acq-cause-mixed` · 워크트리 `Property-related-Taxes-d` (base `0211f4558`)
 > 선행: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` A·B·C 머지 완료(#1995·#1999·#2008·#2013·#2022·#2027·#2038·#2044). 그 계획서 H-3(:65)·Q-3(:340)이 이 문서다.
-> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 머지(#2052). **D1 Design 확정(2026-10-09 — §10)**: 설계 `docs/02-design/features/transfer-acq-cause-mixed-d1.{engine,ui}.design.md`, 두 문서와 어긋나면 §10이 우선한다.
+> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 머지(#2052). **D1 Design 확정(2026-10-09 — §10)**: 설계 `docs/02-design/features/transfer-acq-cause-mixed-d1.{engine,ui}.design.md`, 두 문서와 어긋나면 §10이 우선한다. D1-1 머지(#2058) · D1-2 머지(#2060) · D1-3 구현(결과 echo·4뷰·T-7).
 
 ---
 
@@ -291,3 +291,18 @@
     - 수정: 공용 술어 `phdFlagEffective`(플래그 ∧ 토지 원인 무효)로 통일했다. `phdPayloadActive`·`usesPhdGate`도 같은 술어를 쓴다.
   - **F2**: 원인 라디오가 토글을 켠 호스트를 떠나면 `landCauseHost`를 비운다(원인 값은 보존). 종전엔 매매 → 상속 → 매매 후 「취득일 다름」만 켜도 그 방문에서 켠 적 없는 원인이 되살아났다.
   - 검증: C12~C14, E2E 1건 추가. mutation P1·P2b·P3·P4 KILLED, P2(토지일 후퇴식의 PHD 항)는 동치 변이다 — 원인 유효 시 `phdFlagEffective`가 항상 거짓이고, 토지일이 비면 G-12에서 먼저 반환된다.
+
+**D1-3 구현 (2026-10-09, 표시 전용 · 세액 불변)**:
+- 엔진 echo — `SplitPartResult`에 5필드(`acquisitionCause`·`acquisitionDate`·`rateBasisAcquisitionDate`·`rateBasisRule`·`appliedRateBasisDate`). 생성은 leaf `transfer-split-part-echo.ts` 한 곳, `calcSplitGain` 두 반환 지점(일반·PHD)이 spread한다. 판정 함수는 새로 쓰지 않았다 — `resolveRateBasis`(규칙까지 내도록 일반화)·`resolveLandRateBasis`·`resolveAppurtenantLandRateBasisDate` 재사용.
+- `summarizeSplitGain`: echo 통과 + `mixedCause`(소유 파트 둘 다 원인이 있고 서로 다름) + `rateBasisShown`. 어휘는 `splitCauseLabel`(입력 라디오와 같은 단어), 보조 문구는 `splitRateBasisNote` — 4뷰가 같은 문장을 쓴다.
+- 4뷰(원인이 같거나 echo 없는 구 이력이면 종전 화면 그대로):
+  - 결과 카드: 「취득 원인」·「세율 기산일 (소득세법 §104②)」 행, 보유연수 라벨 「(장기보유특별공제)」.
+  - 상세명세서: 산출세액 행 ※(명세서 화면은 일자 그룹을 렌더하지 않는다 — 처음 「취득일자」 항목에 달았다가 E2E에서 화면에 안 보이는 것을 발견해 옮겼다), 취득가액 파트 태그 「토지(상속개시일 평가액)」.
+  - 신고서 split-2col: 토지 취득일 = echo, 취득일 칸 각주.
+  - PDF: 카드와 같은 행. 다건 카드는 같은 컴포넌트라 자동.
+- T-7: `laterInheritedLandExemptNotice` — 토지만 나중에 상속받아 2년 미만으로 비과세에서 빠질 때 경고 1줄(영 §154⑧3호 문언 「상속받은 주택」 — MST 290841 본문 확인).
+- **Check 후속(sync 검사, 사용자 「제안대로」)**:
+  - **F1**: 파트 세율 게이트(결손·소유자 분리·세율 특칙 등)로 자산 단위 세율이 쓰이면 파트 「세율 기산일」은 계산에 쓰이지 않았는데 화면에 났다(실측: 건물 2025-03 차손 + 토지 상속 → 화면 피상속인 기산 · 실제 단기세율). `evaluateSplitPartTax`가 `judged`(파트 기산일로 세율 판정 — 세율이 같아 합친 게이트 7 포함)를 내고, 실제 세액 호출부(단건 STEP 7 · 다건 `assetTaxOf`)가 `splitDetail.partRateBasisApplied`로 싣는다(§99의3 감면 전 재계산은 싣지 않는다 — 같은 헬퍼 2회차가 덮어쓰지 않게). 뷰는 `rateBasisShown`일 때만 세율 기산일을 내고, 아니면 원인만.
+  - **F2**: 신고서 토지 취득일 echo는 원인이 다를 때만 — 원인이 같으면 종전 폼(이월과세 증여자 취득일 override가 토지 열에 이어지던 동작 보존).
+- 검증: 엔진 anchor 29건(E-1~E-8·T-7)·UI anchor 19건·E2E 2건 신규, 관련 vitest 18,904건·E2E 46건 통과. mutation 27건 중 26 KILLED — N9(다건 `assetTaxOf` 대입 제거)는 단건 엔진이 같은 객체에 이미 같은 판정을 써 두어 구별 불가(다건 재계산 판정이 단건과 갈리는 시드 미확보).
+- 남긴 것(Low): 다건 상세명세서·건별 신고서에는 ※·각주가 없다(카드는 있음 — 건별 신고서 어댑터가 `splitDetail`을 싣지 않는다) · §155⑳ 임대 특례 경로는 G-3 제외 자체가 없어 T-7도 없다(기존 동작) · 소유자 분리 자산의 `appliedRateBasisDate`는 주택 `max` 값이라 실제 세율 입력(토지일)과 다르다(표시 안 됨 — `rateBasisShown` 거짓).

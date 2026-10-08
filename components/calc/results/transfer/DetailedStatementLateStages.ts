@@ -39,6 +39,7 @@ import {
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevOverrides";
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
 import type { StatementItem } from "./DetailedStatementConfig";
+import { splitCauseDateText } from "./split-acq-text";
 import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 /** 후반 단계 — `items` 에 **append 만** 한다(반환 없음 · out 0 실측). */
@@ -112,7 +113,8 @@ export function appendLateStageItems(
           ? describeAggregateCalculatedTax(result, aggregate)
           : closedFormText),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
-    note: result.shortTermNote,
+    // D1-3 — 토지·건물 취득원인이 다르면 파트별 원인·세율 기산일(§104②) 한 줄(명세서는 일자 그룹을 렌더하지 않는다 — 세율이 있는 이 행에 단다).
+    note: [result.shortTermNote, splitCauseDateText(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,

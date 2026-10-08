@@ -109,6 +109,31 @@ export interface SplitPartResult {
    * UI 문구는 propertyType으로 갈라 쓸 것.
    */
   stdPriceDerivedFromTotal?: boolean;
+  /*
+   * ── 파트 취득원인·기산일 echo (D1-3, 표시 전용 · 세액 불변) ──
+   * 생성은 `buildSplitPartCauseEcho`(`transfer-split-part-echo.ts`) 한 곳이다. 구 `resultData`에는 없다 —
+   * 소비처는 `undefined`면 라벨을 내지 않고 종전 표기를 유지한다.
+   */
+  /**
+   * 이 파트의 **유효 취득원인** — 토지: `landAcquisitionCause ?? acquisitionCause`(엔진 컨벤션), 건물: `acquisitionCause`.
+   * 입력이 미지정이면 **생략**한다(「매매」로 지어내지 않는다).
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /**
+   * 이 파트의 취득일(YYYY-MM-DD) — 상속개시일·증여일(영 §162①5호) / 매매 취득일 = **장특 기산일**(법 §95④).
+   * 장특 기산일을 따로 두지 않는다: 둘이 갈리는 것은 §95④ 단서(이월과세·가업상속공제 자산)뿐이고 그 파트는 D1 범위 밖이다.
+   */
+  acquisitionDate?: string;
+  /** 법 §104② 세율 보유기간 **법정 기산일**(YYYY-MM-DD) — 단서 1호(피상속인)·2호(증여자) 적용 후, 주택 `max` 적용 **전**. */
+  rateBasisAcquisitionDate?: string;
+  /** 위 기산일을 정한 규칙 — 표시 계층이 날짜 비교로 재추론하지 않게 엔진이 직접 말한다. */
+  rateBasisRule?: "own" | "decedent" | "donor";
+  /**
+   * **파트 세율 판정에 쓰였을** 기산일(YYYY-MM-DD) — 주택 토지 파트는 `max(법정 기산일, 건물 취득일)`
+   * (주택부수토지로서의 보유기간 — `resolveAppurtenantLandRateBasisDate`), 그 밖은 법정 기산일과 같다.
+   * 파트 세율이 모두 같아 자산 단위 경로로 계산된 경우에도 세액은 같다(설계 R-4).
+   */
+  appliedRateBasisDate?: string;
 }
 
 /**
@@ -204,6 +229,13 @@ export interface SplitGainResult {
   note: string;
   /** 본인 신고 부분 — UI 결과 뷰 표시용 */
   selfOwns: "both" | "building_only" | "land_only";
+  /**
+   * 산출세액이 파트별 §104② 기산일로 **세율을 판정한 결과인가**(D1-3, 표시 전용) — `resolveSplitAwareTax`가 낸 값을
+   * 실제 세액을 쓰는 호출부(단건 STEP 7 · 다건 `assetTaxOf`)가 싣는다. `false`면 게이트(결손·소유자 분리·세율 특칙 등)로
+   * 자산 단위 `calcTax`가 건물 기산일 하나로 계산했으므로 결과뷰는 파트 「세율 기산일」(`appliedRateBasisDate`)을 내지 않는다.
+   * `undefined` = 세율 단계에 닿지 않음(비과세 조기반환·차손·임대 특례 경로) 또는 구 결과 — 역시 내지 않는다.
+   */
+  partRateBasisApplied?: boolean;
   /** §164⑤ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
   /** §164⑨1호 건물 split 토지분 특례 산출근거 (계획 P6/D6) — 적용 시만 포함 */

@@ -13,7 +13,7 @@
 import { calculateHoldingPeriod } from "./tax-utils";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
-import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
+import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -51,12 +51,19 @@ export function resolveAppurtenantLandRateBasisDate(input: TransferTaxInput): Da
  * 값을 그대로 상속한다(회귀 0 — 종전에는 `calcTax`가 자산 단위 값으로 덮어썼다).
  */
 export function resolveLandStatutoryAcquisitionDate(input: TransferTaxInput): Date | undefined {
+  return resolveLandRateBasis(input)?.date;
+}
+
+/** `resolveLandStatutoryAcquisitionDate`의 날짜 + 그 날짜를 정한 규칙(결과 echo 전용 — D1-3). */
+export function resolveLandRateBasis(
+  input: TransferTaxInput,
+): { date: Date; rule: RateBasisRule } | undefined {
   const land = input.landAcquisitionDate;
   if (!land) return undefined;
   const useLandCause = input.landAcquisitionCause !== undefined;
   // 판정은 `transfer-rate-holding-basis.ts` 단일 소스 — **단순 증여(`gift`)는 통산하지 않는다**.
   // 종전에는 `gift`도 증여자 취득일로 소급해 주택 단기 70%를 회피시켰다(계획서 D-3④).
-  return resolveRateBasisAcquisitionDate({
+  return resolveRateBasis({
     acquisitionCause: useLandCause ? input.landAcquisitionCause : input.acquisitionCause,
     acquisitionDate: land,
     decedentAcquisitionDate: useLandCause
@@ -105,6 +112,29 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   if (input.burdenedGiftDenominator !== undefined) return false;
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return false;
   return true;
+}
+
+/**
+ * T-7 고지(D1-3, 세액 불변) — 주택보다 **나중에 토지만 상속**받아 토지분이 1세대1주택 비과세에서 빠질 때.
+ *
+ * 「소득세법 시행령」 제154조 제8항 제3호의 통산은 문언이 「상속받은 **주택**으로서 상속인과 피상속인이
+ * 상속개시 당시 동일세대인 경우」라 토지만 상속받은 경우에는 적용하지 않는다(정면 해석례 미확보 —
+ * 혜택 불성립 쪽 + 확인 필요). 종전에는 이 사실이 결과 어디에도 없었다(경고 0건).
+ * `applyHousingLandExclusions`가 토지분을 제외하는 조건(비과세·부분비과세 + G-3)과 같은 술어를 쓴다.
+ */
+export function laterInheritedLandExemptNotice(
+  input: TransferTaxInput,
+  splitDetail: SplitGainResult | undefined,
+  exemptApplies: boolean,
+): string | null {
+  if (!exemptApplies || !splitDetail) return null;
+  if (input.landAcquisitionCause !== "inheritance") return null;
+  if (!isLaterAcquiredLandExemptExcluded(input)) return null;
+  return (
+    "주택보다 나중에 상속받은 부수토지는 상속개시일부터 보유기간을 계산해 2년 미만이므로 1세대1주택 비과세에서 제외했습니다. " +
+    "피상속인의 보유기간 통산(「소득세법 시행령」 제154조 제8항 제3호)은 문언이 「상속받은 주택으로서 상속개시 당시 동일세대인 경우」라 " +
+    "토지만 상속받은 경우에는 적용하지 않았습니다 — 확인 필요"
+  );
 }
 
 /**

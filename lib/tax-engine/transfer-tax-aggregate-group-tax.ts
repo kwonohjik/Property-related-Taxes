@@ -158,6 +158,9 @@ export function aggregateByGroup(
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     // 자산은 그룹 하나에만 속하므로 이 대입은 자산당 1회다.
     if (tr.splitPartDetail) assetPartTax[i] = { tax: tr.calculatedTax, note: tr.shortTermNote };
+    // 다건 세액은 이 재계산이 정본이다 — 「세율 기산일」 표시 게이트도 이 판정으로 덮는다(D1-3).
+    const sd = records[i].result.splitDetail;
+    if (sd) sd.partRateBasisApplied = tr.partRateBasisApplied;
     return {
       tax: tr.calculatedTax,
       rate: tr.appliedRate,

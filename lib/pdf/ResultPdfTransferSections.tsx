@@ -11,7 +11,13 @@ import {
 } from "@react-pdf/renderer";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
-import { splitAcqModeLabel, summarizeSplitGain, type SplitGainPartSummary } from "@/lib/tax-engine/transfer-tax-split-display";
+import {
+  splitAcqModeLabel,
+  splitCauseLabel,
+  splitRateBasisNote,
+  summarizeSplitGain,
+  type SplitGainPartSummary,
+} from "@/lib/tax-engine/transfer-tax-split-display";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
@@ -129,6 +135,32 @@ export function TransferSplitSection({ r }: { r: R }) {
             <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => splitAcqModeLabel(p.mode!))}</Text>
             <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => splitAcqModeLabel(p.mode!))}</Text>
           </View>
+        )}
+        {/* D1-3 — 토지·건물 취득원인이 다를 때만(엔진 `mixedCause`) 원인·세율 기산일 행(화면 카드와 같은 문구). */}
+        {modern && summary.mixedCause && (
+          <>
+            <View style={s.row}>
+              <Text style={{ ...s.lbl, flex: 2 }}>취득 원인</Text>
+              <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => splitCauseLabel(p.acquisitionCause!))}</Text>
+              <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => splitCauseLabel(p.acquisitionCause!))}</Text>
+            </View>
+            {/* 세율 기산일은 엔진이 파트별 기산일로 세율을 판정했을 때만(`rateBasisShown`). */}
+            {summary.rateBasisShown && (
+              <View style={s.row}>
+                <Text style={{ ...s.lbl, flex: 2 }}>세율 기산일 (소득세법 §104②)</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => p.appliedRateBasisDate ?? "-")}</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => p.appliedRateBasisDate ?? "-")}</Text>
+              </View>
+            )}
+            {summary.rateBasisShown && summary.parts.map((p) => {
+              const note = splitRateBasisNote(p);
+              return note ? (
+                <View key={p.key} style={s.row}>
+                  <Text style={{ ...s.lbl, flex: 4 }}>{`${p.label} 세율 기산일: ${note}`}</Text>
+                </View>
+              ) : null;
+            })}
+          </>
         )}
         <View style={s.row}>
           <Text style={{ ...s.lbl, flex: 2 }}>양도가액</Text>

@@ -12,6 +12,8 @@ import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixe
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitCauseLabel } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitRateBasisNote } from "@/lib/tax-engine/transfer-tax-split-display";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -336,7 +338,11 @@ export function buildRows(
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
     // 토지·건물 취득일은 상이할 수 있다(별개취득) — 열별 자기 취득일 표시 (:477 4열 모드와 동일 규약).
-    const spLandAcqDate = primary?.landAcquisitionDate || acquisitionDate;
+    // 토지·건물 취득원인이 다르면(D1-3) 토지 열은 엔진 echo(엔진이 실제로 쓴 토지 상속개시일·증여일)를 쓴다.
+    // 원인이 같으면 종전대로 폼 — 이월과세 증여자 취득일 override(`acquisitionDate`)가 토지 열에도 그대로 이어지게 한다.
+    const spLandAcqDate =
+      (summarizeSplitGain(sp).mixedCause ? sp.land.acquisitionDate : undefined) ??
+      (primary?.landAcquisitionDate || acquisitionDate);
     setStr("acquisitionDate", "land", fmtDate(spLandAcqDate));
     setStr("acquisitionDate", "building", fmtDate(acquisitionDate));
     // 보유기간은 일자 차이(월 단위 절사)로 산정한다. 엔진 holdingYears는 만-연수 정수라
@@ -354,6 +360,20 @@ export function buildRows(
       (sp.selfOwns === "land_only" ? 0 : sp.building.gain);
     const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
     splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum);
+    // 세율 기산일(§104②)은 서식 행이 없다 — 원인이 다를 때만 취득일 칸 각주로 밝힌다(D1-3).
+    const spSummary = summarizeSplitGain(sp);
+    if (spSummary.mixedCause) {
+      for (const k of ["land", "building"] as const) {
+        const cause = splitCauseLabel(sp[k].acquisitionCause!);
+        // 세율 판정 기산일은 엔진이 파트별로 판정했을 때만 — 자산 단위 세율이면 원인만 밝힌다.
+        if (!spSummary.rateBasisShown || !sp[k].appliedRateBasisDate) {
+          setRoseNote("acquisitionDate", k, cause);
+          continue;
+        }
+        const note = splitRateBasisNote(sp[k]);
+        setRoseNote("acquisitionDate", k, `${cause} · 세율 판정 기산일 ${sp[k].appliedRateBasisDate}${note ? ` (${note})` : ""}`);
+      }
+    }
   }
 
   setNum("transferPrice", "total", totalTransferPrice || null);

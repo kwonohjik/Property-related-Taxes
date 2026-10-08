@@ -9,8 +9,11 @@
  * 설계: docs/02-design/features/transfer-split-acq-result-display.ui.design.md §3
  */
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
+import { LAND_CAUSE_META } from "@/components/calc/transfer/land-cause-meta";
 import {
   splitAcqModeLabel,
+  splitCauseLabel,
+  splitRateBasisNote,
   summarizeSplitGain,
   type SplitAcqMode,
   type SplitGainPartSummary,
@@ -30,9 +33,33 @@ export function formatLumpRate(rate: number | undefined): string {
   return `${Number((rate * 100).toFixed(4))}%`;
 }
 
-/** 「토지(실거래가)」 — 모드 echo가 없는 구 이력은 라벨 없이 「토지」. */
-function partTag(p: SplitGainPartSummary): string {
+/**
+ * 「토지(실거래가)」 — 모드 echo가 없는 구 이력은 라벨 없이 「토지」.
+ * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3).
+ */
+function partTag(p: SplitGainPartSummary, mixedCause: boolean): string {
+  const cause = p.acquisitionCause;
+  if (mixedCause && (cause === "inheritance" || cause === "gift")) return `${p.label}(${LAND_CAUSE_META[cause].valueLabel})`;
   return p.mode ? `${p.label}(${splitAcqModeLabel(p.mode)})` : p.label;
+}
+
+/**
+ * 상세명세서 「취득일자」 행에 붙이는 파트별 원인·취득일·세율 기산일 한 줄(D1-3) — 원인이 같으면 `undefined`(종전 문구 그대로).
+ * 예: `토지 상속 2025-02-01 · 세율 기산일 2018-03-02 (피상속인 취득일 …) / 건물 매매 2018-03-02 · 세율 기산일 2018-03-02 (취득일 — …)`
+ */
+export function splitCauseDateText(sd: SplitGainResult | undefined): string | undefined {
+  if (!sd) return undefined;
+  const s = summarizeSplitGain(sd);
+  if (!s.mixedCause) return undefined;
+  return s.parts
+    .map((p) => {
+      const head = `${p.label} ${splitCauseLabel(p.acquisitionCause!)} ${p.acquisitionDate ?? "-"}`;
+      // 세율 기산일은 엔진이 파트별로 판정했을 때만(`rateBasisShown`) — 자산 단위 세율이면 계산과 어긋난다.
+      if (!s.rateBasisShown) return head;
+      const note = splitRateBasisNote(p);
+      return `${head} · 세율 기산일 ${p.appliedRateBasisDate ?? "-"}${note ? ` (${note})` : ""}`;
+    })
+    .join(" / ");
 }
 
 /**
@@ -45,7 +72,7 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
   if (!sd) return undefined;
   const s = summarizeSplitGain(sd);
   if (s.parts.length === 0) return undefined;
-  const body = s.parts.map((p) => `${partTag(p)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
+  const body = s.parts.map((p) => `${partTag(p, s.mixedCause)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
   const swapped = s.parts.filter((p) => p.swapApplied);
   const swapNote =
     swapped.length > 0
