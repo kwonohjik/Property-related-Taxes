@@ -2,7 +2,7 @@
 
 > 작성 2026-10-08 · 브랜치 `docs/transfer-acq-cause-mixed` · 워크트리 `Property-related-Taxes-d` (base `0211f4558`)
 > 선행: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` A·B·C 머지 완료(#1995·#1999·#2008·#2013·#2022·#2027·#2038·#2044). 그 계획서 H-3(:65)·Q-3(:340)이 이 문서다.
-> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 Do 진행 중. Q-7의 「신축 경로 D0 차단」은 D0에서 제외하고 D1 Design에서 결정.
+> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 머지(#2052). **D1 Design 확정(2026-10-09 — §10)**: 설계 `docs/02-design/features/transfer-acq-cause-mixed-d1.{engine,ui}.design.md`, 두 문서와 어긋나면 §10이 우선한다.
 
 ---
 
@@ -144,7 +144,7 @@
 - 소유자 분리(`selfOwns`)와 결합: 한쪽 파트만 소유하면 원인 혼합은 의미가 없다 → 토글은 `selfOwns = both`일 때만(Q-5).
 - §163⑨ 단서(1990.8.30. 전 토지 상속·증여)·1985.1.1. 전 상속: Q-7.
 - 결과 표시: `SplitPartResult`에 `acquisitionCause`·`rateBasisAcquisitionDate` echo → `summarizeSplitGain` 한 곳에서 4뷰(단건 결과·상세명세서·신고서·PDF, 다건)가 받는다. 신고서 split 2열의 폼 기반 일자 계산은 echo 기반으로 교체.
-- 결합 제외(⑧·⑫·엔진 3중 가드): 겸용주택·부담부증여·PHD §164⑤·용도변경·공익수용·재개발/입주권/분양권·가업상속(주택 단위 판정).
+- 결합 제외(⑧·⑫·엔진 3중 가드): 겸용주택·부담부증여·PHD(개별주택가격 공시 전 취득 주택 환산 — 영 §164⑦)·용도변경·공익수용·재개발/입주권/분양권·가업상속(주택 단위 판정).
 - G-11: 원인 혼합 자산의 ⑧이 분리 검증(`validateSplitDirectInputs`) 전체에 닿게 한다 — 신축 경로 포함, 깨어나는 규칙 격자 확인.
 
 ### D2 — 「건물 상속·증여 + 토지 매매」
@@ -215,3 +215,61 @@
 - 토글 확대가 `isSeparateAcquisition`을 공유하는 8곳(주택·사이드바·validate·lump-sum 게이트 등)에 상속·증여 자산을 새로 끌어들임(memory `feedback_ui_gate_expansion_activates_latent_defect`) — `hasSeperateLandAcquisitionDate` 비매매 강제 OFF(`:99`)를 푸는 순간 V1·V2 파트 완결 규칙이 비매매에서 켜진다. 「칸 없는 차단」 격자 대조 필수.
 - G-3·Q-7 차단은 기존 저장 이력을 새로 막을 수 있다 — 안내 문구와 입력 칸 위치(필드 이동)를 함께.
 - 다건·컴패니언·단건 3경로의 ④가 갈림(G-4 실례).
+
+---
+
+## 10. D1 Design 확정 — 엔진·UI 설계 대조와 결정 (2026-10-09)
+
+설계: 엔진 `docs/02-design/features/transfer-acq-cause-mixed-d1.engine.design.md`(transfer-tax-senior) · UI `…-d1.ui.design.md`(transfer-tax-ui-senior), Pre-Do anchor `__tests__/api/transfer.route.split-land-part-cause.d1.predo.anchor.test.ts`(활성 26 · skip 1 · todo 11 통과) · `__tests__/calc/transfer-land-part-cause.d1.predo.test.ts`(활성 12 · todo 11 통과). **두 문서와 이 절이 어긋나면 이 절이 우선한다.**
+
+### 10.1 사용자 결정 (2026-10-09, 전부 권장안)
+
+| # | 결정 | 설계 문서에 미치는 영향 |
+|---|---|---|
+| **U-1** (Q-7 = 엔진 Q-D1-1 · UI Q-D1-UI4) | **A — 토지 취득일 < 1990-08-30 인 상속·증여 토지 파트를 엔진·⑫·⑧ 3중 차단**, 이미 열린 「신축 + 토지 상속·증여」 경로 포함. 파트 max 비교 입력(B, 일반건물 선례)은 D1 직후 별도 PR(**D1-4**) | 엔진 R-Q7 · UI §4 Q-7 행 그대로 |
+| **U-2** (G-11 = 엔진 Q-D1-6 · UI Q-D1-UI5) | **D1에 포함** — 신축 블록에 파트 자본적지출 칸(`landDirectExpenses`·`buildingDirectExpenses`) 신설 + 신축 분기 ⑧을 `validateSplitDirectInputs`로 연결 | UI §5 그대로 |
+| **U-3** (Q-5 범위 = UI Q-D1-UI3) | **신축·매매 모두** 소유자 분리 ↔ 토지 원인 토글 상호 잠금. 엔진 R-X4(⑫ 차단)는 호스트 무관 그대로 | **UI 문서 수정**: §4 Q-5 행 「매매만」→「신축·매매」, §7 신축 N 셀 「`selfOwns≠both` 현행 유지」 → 차단, §1.2 셀 14 → Q-5 차단. 매매만 잠그면 신축 셀 14가 「⑧ 통과 ↔ ⑫ 400」 막다른 길이 된다 |
+| **U-4** (결합 제외 = 엔진 Q-D1-2) | **공익수용·비주택→주택 용도변경은 막지 않는다**(엔진이 두 축을 교차해 읽지 않음 — 실측 D1-6c). 막는 것: 부담부증여(R-X1)·PHD(R-X2)·가업상속(R-X3)·소유자 분리(R-X4)·건물 비매매·비신축(R-X5) | **UI 문서 수정**: §4 「결합 제외」 행에서 용도변경·공익수용 제거. 공익수용 + 나중 취득 부수토지 비과세 해석(엔진 R-7)은 원인 무관 기존 동작 — 별건 |
+
+### 10.2 기술 대조 결정 (설계자 간 불일치 해소)
+
+| # | 불일치 | 결정 |
+|---|---|---|
+| T-1 | echo 필드 — 엔진 5필드(`acquisitionCause`·`acquisitionDate`·`rateBasisAcquisitionDate`·`rateBasisRule`·`appliedRateBasisDate`) + `mixedCause` / UI 가칭 2필드 | **엔진안 채택.** 화면 「세율 기산일」은 **`appliedRateBasisDate`**(세율 판정에 실제 쓰인 값 — 주택 토지는 `max(법정 기산일, 건물 취득일)`), 보조 문구는 `rateBasisRule`(「피상속인 취득일」 등 — 날짜 비교로 재추론 금지). 원인·기산일 행은 **`mixedCause`일 때만** 렌더(기존 화면 diff 0). 신고서 split-2열 취득일 = `acquisitionDate` echo, 구 이력은 폼 후퇴 |
+| T-2 | G-12(원인 유효 + 토지 취득일 비움) — UI ⑧만 차단, 엔진 leaf는 토지일 없으면 `[]`(엔진 R-5 「잔여」) | **엔진 leaf에 규칙 추가**(⑧ 차단 ⇔ ⑫ 차단). `isSplitable ∧ 원인 ∈ {상속, 증여} ∧ 토지 취득일 없음` → 「토지 상속개시일(증여일)을 입력하세요」, field `landAcquisitionDate`(`SplitPartCauseField` 확장). 구현 전 `landAcquisitionCause`만 있고 토지일 없는 기존 픽스처를 전수 grep(엔진 R-1) |
+| T-3 | PHD — 엔진 R-X2 ⑫ 전용 메시지 차단 / UI 「무시」(⑤ 미렌더·④ 미전송·⑧ 미요구 — 건물 취득일 < 2005-04-29 자동 ON 플래그) | **둘 다 채택** — 층이 다르다. 화면 경로는 ④가 PHD를 보내지 않아 ⑫에 닿지 않고, R-X2는 API 직접 호출 방어선. 「⑧ 통과 ↔ ⑫ 400」 셀 없음 |
+| T-4 | Q-4 같은 날 | **⑧(⑤)만 차단, ⑫ 비차단**(엔진 Q-D1-3). 같은 날이면 주택 `max`가 통산을 무효로 만들어 엔진 값이 원인 없음과 같다(D1-4a) — ⑧이 더 엄격한 방향이라 막다른 길 아님 |
+| T-5 | 1990.8.30. 상수 | 엔진 leaf `SEC_163_9_LAND_FIRST_DISCLOSURE`가 정본, `lib/calc`의 같은 값 상수는 re-export |
+| T-6 | 의제취득 클램프(`CompanionAcqDateSection.tsx:70-75` — 토지일을 1985-01-01로 덮어씀, UI 발견) | 토지 원인 유효 시 **클램프 비활성**. 끄지 않으면 Q-7(U-1)이 발동하지 않는다 |
+| T-7 | 비과세 축 안내 — 엔진 Q-D1-4(warning 추가) / UI Q-D1-UI10(엔진 결론 후) | **엔진 warning 1줄 추가**(1세대1주택 + 나중 취득 상속 토지로 토지분이 비과세에서 빠질 때 — 세액 불변). 별도 UI caption 없음(V-1·V-5는 「확인 필요」 유지) |
+| T-8 | UI 단독 결정 | 채택: 호스트 태그 `landCauseHost`(Q-D1-UI1 — 클라이언트 전용, ⑨~⑭ 무영향), X안 레이아웃(UI2), `LandPartCauseBlock` 개명(UI6), 매매 호스트 이월과세 고지 카드(UI9), 신고서 echo 우선(UI8), 매매 경로 `validateLandPartCause` 선호출(UI §4), 건물가 신축비용 후퇴를 신축 호스트로 한정(S7) |
+
+### 10.3 PR 순서 (D1 내부)
+
+| PR | 범위 | 이유 |
+|---|---|---|
+| **D1-1** | 엔진 leaf 확장(R-X1~X5·R-Q7·T-2) + ⑫ 사실 공급 + 신축 경로 정비(G-11 연결·파트 자본적지출 칸·G-12·G-13 칸 앵커·Q-5 상호 잠금·T-6 클램프) | 지금 열려 있는 신축 경로의 침묵 오답·막다른 길을 먼저 닫는다. 매매 개방 전에 규칙이 서 있어야 게이트 확대가 결함을 퍼뜨리지 않는다 |
+| **D1-2** | 매매 호스트 개방 — `landCauseHost` ①②③, `landPartCauseApplicable` 확대, X안 위젯, PHD 무시(T-3), ⑧ 순서 | D1 본체 |
+| **D1-3** | 결과 echo(엔진 5필드 + `mixedCause`) + 4뷰·다건 표시 + T-7 warning | 표시 전용(세액 불변) |
+| **D1-4** | Q-7 B — 1990.8.30. 전 상속·증여 토지 파트 max 비교 입력(일반건물 `transfer-pre1990-gb-bridge.ts` 선례) | U-1 후속 |
+
+각 PR: Pre-Do anchor RED → GREEN, mutation probe, ⑧↔⑫ 격자, FULL pre-push, Check(`ui-engine-sync-checker` + `acquisition-cost-review`).
+
+**D1-1 구현 (2026-10-09)**:
+- 엔진 leaf `transfer-split-part-cause.ts`에 D1 규칙 추가. 발동 조건은 `landAcquisitionCause ∈ {상속, 증여}`일 때만이다. 순서 = 구조(R-X1 부담부증여 · R-X2 PHD · R-X3 가업상속 · R-X4 소유자 분리 · R-X5 건물 비매매) → G-12 토지 취득일 → G-1 → Q-7(`< 1990-08-30`) → G-2 → G-3.
+- 엔진 호출을 `calcSplitGain`의 토지 취득일 조기 반환 **앞**으로 옮겼다. 그래야 G-12가 엔진에서도 throw된다. ⑫ `refineSplitPartCause`는 같은 사실을 주 자산·컴패니언 양쪽에 공급하고, ⑧ `validateLandPartCause`는 ④가 실제로 보내는 값으로 공급한다. Q-4 같은 날은 ⑧ 전용이다.
+- 신축 분기 ⑧은 이제 `validateSplitDirectInputs`를 반환한다(G-11).
+- 신축 블록 변경:
+  - 칸 앵커 추가(G-13): `landAcquisitionDate`·`landAcquisitionPrice`·`landAcquisitionCause`.
+  - 파트 자본적지출 칸 신설.
+  - 날짜 안내: Q-4·Q-7.
+- 소유자 분리 ↔ 토지 원인 토글 상호 잠금(Q-5)은 켜는 방향만 막는다.
+- 검증: route anchor 전환 8건(D1-4b·5a·6d·6e·6f·6g + 신규 D1-5a′·5a″·6i), 클라이언트 B1~B8 전환, leaf·엔진·⑫ 컴패니언 테스트 28건, mutation 16/16 KILLED, E2E 신규 3건 + 신축·소유자 분리 관련 E2E 59건 통과.
+- T-6(매매 날짜 칸 의제취득 클램프)은 매매 호스트에만 있어 D1-2로 넘긴다.
+- **Check 후속(sync 검사 F1~F4)** — D1-1이 만들거나 신축으로 넓힌 막다른 길:
+  - **F1**: 매매에서 자동으로 켜진 PHD 플래그가 남은 신축 자산은 끌 토글이 없는데 ⑧ R-X2로 막혔다. T-3를 앞당겨 ④ `phdPayloadActive`가 토지 원인 유효 시 거짓을 반환하게 했다. ⑧ 사실도 같은 값을 쓰고, ⑫ R-X2는 API 직접 호출 방어선으로 남는다. ⑧의 `usesPhdGate`(11칸 요구)는 매매 경로에서만 닿으므로 D1-2에서 같은 조건을 건다.
+  - **F2**: 신축 + 소유자 분리 + 자산 단위 자본적지출이면 파트 칸이 없었다. 공용 `SplitPartCapexFields`를 비-매매 소유자 분리 블록에도 두었다(소유 파트만 렌더). ⑧ 이동 칸은 소유 파트로 정했다(건물만 소유 → 건물 칸 — 매매 호스트의 같은 결함도 해소).
+  - **F3**: 부담부증여 + 소유자 분리에서 ⑧ V4·V7이 화면에 없고 ④도 보내지 않는 양도측 칸을 요구했다. 부담부증여면 요구하지 않는다(매매 꼬리 호출의 기존 막다른 길도 해소).
+  - **F4**: 부담부증여면 토지 원인 토글 켜기를 막는다.
+  - 검증: mutation M17~M19 KILLED. M20(`usesPhdGate`)은 D1-1에서 도달 불가라 그 변경을 되돌렸다.
+- **법령 리뷰 정정**: PHD 메시지 인용 「영 §164⑤」 → **§164⑦**. 영 §164⑤는 「기준시가 고시 전 취득 **건물**」이고, 개별주택가격·공동주택가격 공시 전 취득 **주택**은 ⑦이다(MST 290841 본문). 저장소 주석 약 35곳에 남은 「PHD §164⑤」 관용 표기는 별건이다.

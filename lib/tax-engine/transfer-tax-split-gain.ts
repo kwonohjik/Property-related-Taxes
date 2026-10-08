@@ -56,23 +56,38 @@ export {
  * 이 함수는 양도차익·파트 echo만 만든다. (종전 「미구현」 주석은 G-1 종결 후에도 남은 낡은 기재였다 —
  * docs/00-pm/transfer-split-part-rate-shortterm.plan.md, `split-part-rate.anchor.test.ts` 37건.)
  */
+/** YYYY-MM-DD — Date·문자열 모두. */
+function dayKey(d: Date | string | undefined): string | undefined {
+  if (!d) return undefined;
+  return d instanceof Date ? d.toISOString().slice(0, 10) : d.slice(0, 10);
+}
+
 export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
-  if (!input.landAcquisitionDate) return null;
   if (input.propertyType !== "housing" && input.propertyType !== "building") return null;
 
   // 파트별 모드 조기 파생 — PHD 게이트 판정용(혼합 모드 시 오발동 방지).
   const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const earlyBuildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
 
-  // 토지 파트 취득원인 규칙(D0 — 이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — ⑫·⑧과 같은 leaf.
+  // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호) — ⑫·⑧과 같은 leaf.
+  // 토지 취득일 조기 반환보다 **앞**이다: 토지 상속·증여가 지정됐는데 토지 취득일이 없으면 토지 파트가
+  // 통째로 빠진 채 계산됐다(D1 G-12).
   const [causeIssue] = collectSplitPartCauseIssues({
     isSplitable: true,
-    hasLandAcquisitionDate: true,
+    hasLandAcquisitionDate: !!input.landAcquisitionDate,
     landAcquisitionCause: input.landAcquisitionCause,
     hasLandDecedentAcquisitionDate: !!input.landDecedentAcquisitionDate,
     landMode: earlyLandMode,
+    // ④ payload를 Route 변환 없이 엔진에 바로 넣는 호출부(테스트)도 있다 — 날짜 문자열도 받는다(`mixed-use-acq-date.ts` 같은 규약).
+    landAcquisitionDate: dayKey(input.landAcquisitionDate as Date | string | undefined),
+    buildingAcquisitionCause: input.acquisitionCause,
+    selfOwns: input.selfOwns,
+    isBurdenedGift: input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift",
+    hasPreHousingDisclosure: !!input.preHousingDisclosure,
+    hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
   });
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
+  if (!input.landAcquisitionDate) return null;
 
   // ── 개별주택가격 미공시 취득 경로 (§164⑤) ──
   // 토지·건물 **모두** 환산(estimated)일 때만 진입 — 혼합 모드(예: 토지 실가+건물 환산)는

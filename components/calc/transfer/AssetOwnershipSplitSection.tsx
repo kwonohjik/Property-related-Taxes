@@ -21,6 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { selfOwnsSplitApplicable } from "@/lib/calc/self-owns-scope";
+import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
 
 // 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
 export { isLandBuildingSplitable } from "@/lib/calc/self-owns-scope";
@@ -35,6 +36,9 @@ export function AssetOwnershipSplitSection(props: {
   if (!selfOwnsSplitApplicable(asset)) return null;
 
   const selfOwns = asset.selfOwns ?? "both";
+  // Q-5(D1 U-3) — 「토지는 다른 원인으로 취득」과 상호 잠금(엔진은 소유자 분리에서 토지 원인을 읽지 않는다).
+  //    켜진 상태는 끌 수 있게 「켜는 방향」만 막는다.
+  const landCauseOn = !!effectiveLandAcquisitionCause(asset);
 
   return (
     <div className="space-y-1.5" data-testid="asset-ownership-split">
@@ -43,6 +47,8 @@ export function AssetOwnershipSplitSection(props: {
         tone="amber"
         title="토지·건물 소유자 다름"
         description="배우자·공유자 등"
+        disabled={landCauseOn && selfOwns === "both"}
+        disabledReason="「토지는 다른 원인으로 취득」을 켠 자산에는 쓸 수 없습니다 — 그 토글을 끄면 켤 수 있습니다"
         checked={selfOwns !== "both"}
         onCheckedChange={(checked) => {
           // 다중 키를 **단일 배치 update**로 — 나눠 부르면 stale spread로 한쪽이 덮인다

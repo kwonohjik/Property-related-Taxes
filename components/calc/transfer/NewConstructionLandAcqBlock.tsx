@@ -27,6 +27,12 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { landPartCauseApplicable } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
+import { landPartCauseSameDay } from "@/lib/calc/transfer-land-part-cause";
+import { LAND_CAUSE_SAME_DAY_MESSAGE } from "@/lib/calc/transfer-land-part-cause";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
+import { LAND_CAUSE_PRE_1990_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { SEC_163_9_LAND_FIRST_DISCLOSURE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { SplitPartCapexFields } from "./SplitPartCapexFields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type LandCause = "inheritance" | "gift";
@@ -62,6 +68,17 @@ export function NewConstructionLandAcqBlock(props: {
   const active = !!effectiveLandAcquisitionCause(asset);
   const cause = (asset.landAcquisitionCause || "inheritance") as LandCause;
   const meta = CAUSE_META[cause];
+  // Q-5(D1 U-3) — 소유자 분리와 상호 잠금. 엔진은 소유자 분리에서 토지 원인을 읽지 않는다(⑫·엔진 R-X4).
+  //    켜진 쪽은 언제든 끌 수 있게 「끄는 방향」은 막지 않는다(둘 다 켜진 구 입력이 갇히지 않게).
+  const ownerSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
+  // R-X1 — 부담부증여 양도에는 토지 원인을 지정할 수 없다(⑧·⑫·엔진 같은 leaf). 켜는 방향만 막는다.
+  const isBurdenedGift = asset.transferType === "burdened_gift";
+  // 날짜 안내 — ⑧과 같은 술어(Q-4 같은 날 · Q-7 §163⑨ 단서 1호). 차단은 ⑧(·⑫)이 하고 여기는 입력 중 안내.
+  const dateNotice = landPartCauseSameDay(asset)
+    ? LAND_CAUSE_SAME_DAY_MESSAGE
+    : asset.landAcquisitionDate && asset.landAcquisitionDate < SEC_163_9_LAND_FIRST_DISCLOSURE
+      ? LAND_CAUSE_PRE_1990_MESSAGE
+      : null;
 
   // 양도시 기준시가 배치 — 축 A와 **같은 1회 계산**을 공유한다(하위 재파생 금지 규약).
   // ⏳ Phase 1-D부터 배치는 불변(항상 축 A) — §100③ 판정이 양쪽 기준시가를 요구한다.
@@ -70,10 +87,17 @@ export function NewConstructionLandAcqBlock(props: {
   return (
     <div className="space-y-2" data-testid="newconstruction-land-acq">
       <ToggleCard
+        data-field="landAcquisitionCause"
         variant="chip"
         tone="amber"
         title="토지는 다른 원인으로 취득"
         description="상속·증여받은 땅에 신축"
+        disabled={(ownerSplit || isBurdenedGift) && !active}
+        disabledReason={
+          isBurdenedGift
+            ? "부담부증여로 양도하는 자산에는 쓸 수 없습니다"
+            : "토지·건물 소유자가 다르면 쓸 수 없습니다 — 「토지·건물 소유자 다름」을 끄면 켤 수 있습니다"
+        }
         checked={active}
         onCheckedChange={(checked) => {
           // 다중 키 **단일 배치 update**(feedback_multikey_patch_stale_spread_overwrite).
@@ -136,6 +160,8 @@ export function NewConstructionLandAcqBlock(props: {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start">
             <FieldCard
               label={cause === "inheritance" ? "상속개시일" : "증여일"}
+              field="landAcquisitionDate"
+              required
               hint="토지 취득일 — 장기보유특별공제 기산일 (소득세법 §95④)"
             >
               <DateInput
@@ -144,7 +170,7 @@ export function NewConstructionLandAcqBlock(props: {
                 data-testid="acq-date-land"
               />
             </FieldCard>
-            <FieldCard label={meta.priceLabel} unit="원" hint={meta.hint}>
+            <FieldCard label={meta.priceLabel} field="landAcquisitionPrice" unit="원" hint={meta.hint}>
               <CurrencyInput
                 label=""
                 hideUnit
@@ -170,6 +196,16 @@ export function NewConstructionLandAcqBlock(props: {
               </FieldCard>
             )}
           </div>
+
+          {dateNotice && (
+            <ToneCard tone="amber" noDark>
+              <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{dateNotice}</p>
+            </ToneCard>
+          )}
+
+          {/* 파트 자본적지출(D1 G-11) — 분리 계산은 파트 칸만 읽는다(자산 전체 칸은 계산에 닿지 않아 ⑧이 이 칸으로
+              안내한다). 두 파트 모두 실거래가 고정(토지 = 평가액, 건물 = 신축비용)이라 hint도 실거래가 문구다. */}
+          <SplitPartCapexFields asset={asset} onChange={onChange} landOwned buildingOwned landMode="actual" buildingMode="actual" />
 
           <p className="text-caption text-muted-foreground">
             건물 취득가액은 아래 <strong>신축비용</strong> 칸을, 건물 취득일은 위{" "}

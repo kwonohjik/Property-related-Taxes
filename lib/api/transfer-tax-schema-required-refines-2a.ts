@@ -65,6 +65,7 @@ export type Required2aLike = {
   mixedUse?: MixedUseLike | null;
   parcels?: ReadonlyArray<unknown>;
   preHousingDisclosure?: unknown;
+  familyBusinessInheritance?: unknown;
   // 분리취득 (splitAcquisitionShape)
   landAcquisitionDate?: string;
   landAcquisitionCause?: string;
@@ -348,13 +349,21 @@ export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.Refinemen
 }
 
 /**
- * 토지 파트 취득원인 (D0 — G-1·G-2·G-3). 엔진 `calcSplitGain`·⑧ `validateSplitDirectInputs`와 **같은 leaf**
- * (`collectSplitPartCauseIssues`). 단건·다건 주 자산과 컴패니언(`companionAssets[i]`, prefix)이 함께 쓴다.
- * 컴패니언은 자산 종류를 `assetKind`로 보내므로 분리 대상 여부를 호출부가 넘긴다.
+ * 토지 파트 취득원인 (D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호). 엔진 `calcSplitGain`·
+ * ⑧ `validateSplitDirectInputs`와 **같은 leaf**(`collectSplitPartCauseIssues`). 단건·다건 주 자산과
+ * 컴패니언(`companionAssets[i]`, prefix)이 함께 쓴다. 컴패니언은 자산 종류를 `assetKind`로 보내므로 분리 대상
+ * 여부를 호출부가 넘긴다. 컴패니언 스키마에는 `preHousingDisclosure`·`familyBusinessInheritance`가 없다 —
+ * 그 사실은 생략된다(= 그 결합이 아니다).
  */
 export function refineSplitPartCause(
-  d: Pick<Required2aLike, "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"> & {
+  d: Pick<
+    Required2aLike,
+    "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
+    | "acquisitionCause" | "selfOwns" | "transferType"
+  > & {
     useEstimatedAcquisition?: boolean;
+    preHousingDisclosure?: unknown;
+    familyBusinessInheritance?: unknown;
   },
   isSplitable: boolean,
   ctx: z.RefinementCtx,
@@ -366,6 +375,12 @@ export function refineSplitPartCause(
     landAcquisitionCause: d.landAcquisitionCause,
     hasLandDecedentAcquisitionDate: !!d.landDecedentAcquisitionDate,
     landMode: partMode(d.landAcqMode, d),
+    landAcquisitionDate: d.landAcquisitionDate,
+    buildingAcquisitionCause: d.acquisitionCause,
+    selfOwns: d.selfOwns,
+    isBurdenedGift: d.transferType === "burdened_gift" || d.acquisitionCause === "burdened_gift",
+    hasPreHousingDisclosure: !!d.preHousingDisclosure,
+    hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
   });
   const issue = issuer(ctx);
   for (const i of issues) issue([...prefix, i.field], i.message);

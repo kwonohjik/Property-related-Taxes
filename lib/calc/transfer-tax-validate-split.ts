@@ -34,6 +34,9 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import { landPartCauseSameDay } from "./transfer-land-part-cause";
+import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
+import { phdPayloadActive } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -111,11 +114,21 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
  *    닿기 전에 반환하는데, 이 규칙의 범위(건물 신축 + 토지 상속·증여)가 정확히 그 분기다.
  */
 export function validateLandPartCause(asset: AssetForm, label: string): string | null {
-  const selfOwnsSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
+  const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
+  const selfOwnsSplit = selfOwnsEff !== "both";
+  // ④ `buildSplitPayload`의 토지 취득일 식 그대로 — 토지 취득일 칸 값, 없으면 PHD·소유자 분리의 건물 취득일 후퇴.
+  //    PHD는 컴패니언에서 열리지 않으므로(⑤·⑧ N-6 (B)) 플래그만 봐도 ④(주 자산 `usesPhd`)와 같다.
+  const landDateSent =
+    asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)
+      ? asset.landAcquisitionDate
+      : asset.usePreHousingDisclosure === true || selfOwnsSplit
+        ? asset.acquisitionDate
+        : undefined;
+  // D1 사실도 ④가 실제로 보내는 값으로(3중 패턴): 소유 축 = 유효값, PHD = 페이로드 게이트, 부담부증여 = 단건 ④가
+  // 원인·토지 취득일을 그대로 싣는 조건(⑫ R-X1과 같은 술어). 가업상속은 건물 원인이 상속일 때만 열려 원인 혼합과
+  // 동시에 도달하지 않는다(⑫ R-X3이 API 직접 호출을 막는다).
   const [issue] = collectSplitPartCauseIssues({
     isSplitable: isLandBuildingSplitable(asset.assetKind),
-    // ④ `buildSplitPayload` — 토지 취득일 칸 값, 없으면 PHD·소유자 분리의 건물 취득일 후퇴(같은 식).
-    //    PHD는 컴패니언에서 열리지 않으므로(⑤·⑧ N-6 (B)) 플래그만 봐도 ④(주 자산 `usesPhd`)와 같다.
     hasLandAcquisitionDate:
       (!!asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)) ||
       asset.usePreHousingDisclosure === true ||
@@ -123,7 +136,14 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
     landAcquisitionCause: effectiveLandAcquisitionCause(asset),
     hasLandDecedentAcquisitionDate: !!asset.landDecedentAcquisitionDate,
     landMode: effectivePartAcqMode(asset.landAcqMode, asset),
+    landAcquisitionDate: landDateSent || undefined,
+    buildingAcquisitionCause: asset.acquisitionCause,
+    selfOwns: selfOwnsSplit ? selfOwnsEff : undefined,
+    isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
+    hasPreHousingDisclosure: phdPayloadActive(asset),
   });
+  // Q-4 — ⑫는 막지 않는 ⑤·⑧ 정책(엔진 값은 원인 없음과 같다 — 계획서 §10.2 T-4).
+  if (!issue && landPartCauseSameDay(asset)) return fieldError("landAcquisitionDate", `${label}: ${LAND_CAUSE_SAME_DAY_MESSAGE}`);
   if (!issue) return null;
   const msg = `${label}: ${issue.message}`;
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
@@ -302,9 +322,14 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 규칙 ①은 "구분이 없으면 **양도시** 기준시가 비율"이라 법령과 어긋난다.
   // → 양도가액 구분 입력 **또는** 양도시 기준시가 2필드 중 하나를 요구한다(자동 fallback 금지).
   const separateAcq = isSeparateAcquisition(asset);
+  // 부담부증여는 양도가액 구분·양도시 기준시가 파트 칸을 렌더하지 않고(`LandBuildingSaleSplitSection` 안내만),
+  // ④도 싣지 않는다(`isSplitPayloadActive` 제외 — §159 안분이 자체 기준시가를 쓴다). 요구하면 칸 없는 차단이다
+  // (D1-1 Check F3 — 신축 분기 연결로 소유자 분리 + 부담부증여가 이 함수에 처음 닿았다. 매매 꼬리 호출도 같다).
+  const saleAxisInput = asset.transferType !== "burdened_gift";
   // ⚠️ **별개취득 여부와 무관하게 적용**한다(2026-07-29 확정) — 규칙 ①은 양도가액을 나누는
   //    규칙이라 취득시기 상이 여부와 관계가 없다. 엔진도 같은 범위로 차단한다(취득시 비율 후퇴 폐지).
   if (
+    saleAxisInput &&
     asset.saleSplitMode === "actual" &&
     opt(asset.landTransferPrice) == null &&
     opt(asset.buildingTransferPrice) == null &&
@@ -346,13 +371,13 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 기준시가 칸이 화면에 없다(계획서 §5.5). 노출 술어와 같은 함수로 파트별로 판정한다.
   // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
   // (transfer-tax-validate-split.test.ts:78,86,537,550).
-  if (needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
+  if (saleAxisInput && needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
     const saleLandMsg = `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
     // 단가가 있으면 면적이 빈 것이다(`resolveLandStdAtTransfer` = 단가 × 면적, 또는 총액)
     if (opt(asset.standardPricePerSqmAtTransfer) != null) return fieldError("transferArea", saleLandMsg);
     return fieldError("standardPricePerSqmAtTransfer", saleLandMsg);
   }
-  if (needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
+  if (saleAxisInput && needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
     return fieldError("buildingStandardPriceAtTransfer", `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`);
   }
 
@@ -551,7 +576,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const hasPartCapex =
       opt(asset.landDirectExpenses) != null || opt(asset.buildingDirectExpenses) != null;
     if (!hasPartCapex) {
-      return fieldError("landDirectExpenses", `${label}: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 계산에 반영되지 않습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다). 양도비는 자산 전체 칸을 그대로 쓰면 됩니다.`);
+      // 칸은 소유 파트만 렌더된다 — 건물만 소유면 건물 칸으로 보낸다(D1-1 Check F2: 토지 칸은 화면에 없다).
+      const capexField = effectiveSelfOwns(asset) === "building_only" ? "buildingDirectExpenses" : "landDirectExpenses";
+      return fieldError(capexField, `${label}: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 계산에 반영되지 않습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다). 양도비는 자산 전체 칸을 그대로 쓰면 됩니다.`);
     }
   }
 

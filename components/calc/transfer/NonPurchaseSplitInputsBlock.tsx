@@ -30,6 +30,7 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement, effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
+import { SplitPartCapexFields } from "./SplitPartCapexFields";
 import { toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { isLandBuildingSplitable } from "./AssetOwnershipSplitSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -146,6 +147,16 @@ export function NonPurchaseSplitInputsBlock(props: {
             </div>
           )}
       </div>
+
+      {/* 소유 파트 자본적지출 — 분리 계산은 파트 칸만 읽는다(⑧이 이 칸으로 안내 — D1-1 Check F2). */}
+      <SplitPartCapexFields
+        asset={asset}
+        onChange={onChange}
+        landOwned={asset.selfOwns === "land_only"}
+        buildingOwned={asset.selfOwns === "building_only"}
+        landMode={effectivePartAcqMode(asset.landAcqMode, asset)}
+        buildingMode={effectivePartAcqMode(asset.buildingAcqMode, asset)}
+      />
 
       {/* ② 축 A — 양도가액 구분/일괄 + 양도시 기준시가 */}
       <LandBuildingSaleSplitSection

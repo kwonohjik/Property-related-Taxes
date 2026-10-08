@@ -22,6 +22,7 @@
  * 차단이 아니라 **조용한 오산**이므로 여기서도 같은 술어로 막는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 
 /**
  * 이 자산에서 §164⑤ PHD 토글에 **도달할 수 있는가**.
@@ -81,8 +82,14 @@ export function phdPayloadActive(
     | "usePreHousingDisclosure"
     | "acquisitionCause"
     | "carryover"
+    | "isMixedUseHouse"
+    | "landAcquisitionCause"
   >,
 ): boolean {
   if (carryoverPhdMode(asset)) return true;
+  // D1 T-3 — 「토지는 다른 원인으로 취득」이 유효하면 PHD는 성립하지 않는다(상속·증여 토지는 환산 불가 — 엔진 PHD
+  //    경로는 토지·건물 모두 환산일 때만). 플래그는 매매 블록의 자동 ON 잔재일 수 있고 그 호스트엔 끌 토글이 없다 —
+  //    차단(⑫ R-X2는 API 직접 호출 방어선)이 아니라 **무시**한다.
+  if (effectiveLandAcquisitionCause(asset)) return false;
   return asset.usePreHousingDisclosure === true && phdToggleReachable(asset);
 }
