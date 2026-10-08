@@ -22,6 +22,7 @@ import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split
 import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
+import { phdFlagEffective } from "@/lib/calc/phd-toggle-scope";
 
 interface Props {
   block: BlockProps;
@@ -107,7 +108,7 @@ export function CompanionAcqStdPriceSection({
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 일반건물 환산 영역에서 입력합니다 (토지·건물 분리 — 토지 ㎡당 공시지가·건물 기준시가 총액).
         </p>
-      ) : props.asset?.usePreHousingDisclosure ? (
+      ) : props.asset && phdFlagEffective(props.asset) ? (
         // §164⑤ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
         // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
         <p className="text-xs text-muted-foreground italic">

@@ -195,6 +195,8 @@ interface SeparatePartAmounts extends LegacyAcqFlags {
   assetKind?: string;
   isMixedUseHouse?: boolean;
   landAcquisitionCause?: "" | "inheritance" | "gift";
+  /** 토글을 켠 호스트(D1-2) — 없으면 유효 원인이 성립하지 않아 신축 후퇴도 없다. 호출부는 자산 전체를 넘긴다 */
+  landCauseHost?: string;
   hasSeperateLandAcquisitionDate?: boolean;
   fixedAcquisitionPrice?: string;
   landAcqMode?: PartAcqMode | "";

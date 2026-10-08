@@ -32,6 +32,7 @@ import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
+import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 
@@ -312,6 +313,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isMixedPerPart = !!props.asset && isMixedUsePerPartAcq(props.asset);
 
   const isGeneralBuilding = props.assetKind === "general_building";
+  // 「토지는 다른 원인으로 취득」(D1-2 매매 호스트) — 날짜 영역·파트 블록·PHD 게이트가 같은 값을 쓴다(1회 계산 주입).
+  const landCause = props.asset ? effectiveLandAcquisitionCause(props.asset) : "";
 
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
@@ -322,6 +325,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         isMixedUse={isMixedUse}
         acqDateLabel={acqDateLabel}
         saleStdInSaleAxis={saleStdPlace.saleAxis}
+        landCause={landCause}
       />
 
       {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
@@ -412,6 +416,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         && (props.useEstimatedAcquisition
             || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
         && !props.isNonPrimaryAsset
+        // D1 T-3 — 토지를 상속·증여로 취득하면 토지는 실거래가 고정이라 PHD(양쪽 환산)는 성립하지 않는다.
+        //    ④ `phdPayloadActive`·⑧ `usesPhdGate`도 같은 조건으로 무시한다(자동 ON 잔재는 끌 칸이 없어도 무해).
+        && !landCause
         && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
@@ -484,6 +491,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   CompanionAcqDateSection) — 여기서는 축 B(취득가액 파트별)만 렌더한다. */}
               {props.asset && props.onAssetChange && (
                 <LandBuildingSplitSection
+                  landCause={landCause}
                   selfOwns={props.selfOwns ?? "both"}
                   isBurdenedGift={props.asset.transferType === "burdened_gift"}
                   landAcqMode={effLandAcqMode}

@@ -41,6 +41,9 @@ export function PartAcqInputs(props: {
   testIdPrefix?: string;
   /** 환산 안내 문구 교체 — 지정하면 기본 안내(`○○ 취득시 기준시가 카드` 지시)를 대신한다 */
   estimatedNote?: ReactNode;
+  /** 실거래가 칸 라벨·hint 교체 — 토지를 상속·증여로 취득한 매매 건물(D1-2: 「토지 상속개시일 평가액」 등) */
+  actualLabel?: string;
+  actualHint?: string;
 }) {
   const label = props.part === "land" ? "토지" : "건물";
   const tid = props.testIdPrefix ?? "split";
@@ -49,11 +52,13 @@ export function PartAcqInputs(props: {
     return (
       <FieldCard
         field={props.part === "land" ? "landAcquisitionPrice" : "buildingAcquisitionPrice"}
-        label={`${label} ${isApr ? "감정가액" : "취득가액"}`}
+        label={!isApr && props.actualLabel ? props.actualLabel : `${label} ${isApr ? "감정가액" : "취득가액"}`}
         hint={
-          props.isSeparateAcq
-            ? "취득시기가 다르므로 나머지 금액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦)"
-            : undefined
+          !isApr && props.actualHint
+            ? props.actualHint
+            : props.isSeparateAcq
+              ? "취득시기가 다르므로 나머지 금액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦)"
+              : undefined
         }
       >
         <CurrencyInput

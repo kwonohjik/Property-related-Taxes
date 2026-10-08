@@ -46,6 +46,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
+import { phdFlagEffective } from "./phd-toggle-scope";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -138,7 +139,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
    */
   const isBurdenedGift =
     primary?.transferType === "burdened_gift" || primary?.acquisitionCause === "burdened_gift";
-  const usesPhd = primary?.usePreHousingDisclosure === true;
+  const usesPhd = primary ? phdFlagEffective(primary) : false; // 단건 ④와 같은 술어(D1-2)
   const isSplitActive = primary ? isSplitPayloadActive(primary, isBurdenedGift) : false;
 
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.

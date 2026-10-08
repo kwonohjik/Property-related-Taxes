@@ -37,6 +37,7 @@ import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { phdPayloadActive } from "./phd-toggle-scope";
+import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -121,7 +122,7 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
   const landDateSent =
     asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)
       ? asset.landAcquisitionDate
-      : asset.usePreHousingDisclosure === true || selfOwnsSplit
+      : phdFlagEffective(asset) || selfOwnsSplit
         ? asset.acquisitionDate
         : undefined;
   // D1 사실도 ④가 실제로 보내는 값으로(3중 패턴): 소유 축 = 유효값, PHD = 페이로드 게이트, 부담부증여 = 단건 ④가
@@ -131,7 +132,7 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
     isSplitable: isLandBuildingSplitable(asset.assetKind),
     hasLandAcquisitionDate:
       (!!asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)) ||
-      asset.usePreHousingDisclosure === true ||
+      phdFlagEffective(asset) ||
       selfOwnsSplit,
     landAcquisitionCause: effectiveLandAcquisitionCause(asset),
     hasLandDecedentAcquisitionDate: !!asset.landDecedentAcquisitionDate,

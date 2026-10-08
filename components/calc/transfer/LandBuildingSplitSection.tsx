@@ -35,10 +35,16 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
 import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
+import { LAND_CAUSE_META } from "./land-cause-meta";
 
 export type { PartAcqMode };
 
 interface Props {
+  /**
+   * 토지를 상속·증여로 취득한 매매 건물(D1-2) — 호출부가 `effectiveLandAcquisitionCause`로 **1회 계산해 주입**한다.
+   * 있으면 토지 방식은 실거래가(평가액) 고정 안내, 토지 가액 칸 라벨은 평가액 문구가 된다(추계 불가 — 영 §163⑨).
+   */
+  landCause?: "" | "inheritance" | "gift";
   /** 토지·건물 소유자 분리 — 본인 소유하지 않는 파트는 모드 선택 비노출 */
   selfOwns: "both" | "building_only" | "land_only";
   /** 부담부증여(§159 자동 산정) — 파트별 모드·양도 분리 선택 자체를 숨긴다(안내만 표시) */
@@ -329,16 +335,25 @@ export function LandBuildingSplitSection(props: Props) {
             </span>
             <p className="text-xs font-semibold text-amber-800">토지 취득가액 방식</p>
           </div>
-          <div data-testid="part-acq-mode-land">
-            <RadioCardGroup
-              name={`landAcqMode-${props.asset?.assetId ?? "primary"}`}
-              tone="amber"
-              layout="inline"
-              options={ACQ_MODE_OPTIONS}
-              value={props.landAcqMode}
-              onChange={props.onLandAcqModeChange}
-            />
-          </div>
+          {props.landCause ? (
+            <ToneCard tone="amber" noDark>
+              <p className="text-xs text-amber-900" data-testid="part-acq-mode-land-fixed">
+                <strong>{LAND_CAUSE_META[props.landCause].fixedMode}</strong> — 상속·증여로 취득한 토지는 평가액이
+                취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
+              </p>
+            </ToneCard>
+          ) : (
+            <div data-testid="part-acq-mode-land">
+              <RadioCardGroup
+                name={`landAcqMode-${props.asset?.assetId ?? "primary"}`}
+                tone="amber"
+                layout="inline"
+                options={ACQ_MODE_OPTIONS}
+                value={props.landAcqMode}
+                onChange={props.onLandAcqModeChange}
+              />
+            </div>
+          )}
           {showLandStdPrice && (
             <PartAcqStdPrice
               part="land"
@@ -368,6 +383,8 @@ export function LandBuildingSplitSection(props: Props) {
             salesCaseValue={props.landSalesCaseValue}
             onSalesCaseValueChange={props.onLandSalesCaseValueChange}
             saleStdInPart={props.saleStdInLandPart}
+            actualLabel={props.landCause ? LAND_CAUSE_META[props.landCause].priceLabel : undefined}
+            actualHint={props.landCause ? LAND_CAUSE_META[props.landCause].hint : undefined}
           />
         </div>
       )}

@@ -23,6 +23,7 @@ import {
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
+import { phdFlagEffective } from "./phd-toggle-scope";
 
 /** 주 자산에서 파생되는 값 묶음. 호출부는 구조분해로 받는다. */
 export function buildPrimaryContext(
@@ -93,7 +94,8 @@ export function buildPrimaryContext(
     primary.assetKind === "land" && isSec163_9Cause(primary.acquisitionCause);
   // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
-  const usesPhd = primary.usePreHousingDisclosure === true;
+  // D1-2 — 토지 원인 혼합이 유효하면 PHD 무시(⑧ 토지 취득일 후퇴·⑤ 안내와 같은 술어).
+  const usesPhd = phdFlagEffective(primary);
   // 이월과세 "general" 환산 모드: donorStandardPrice*를 최상위 standardPrice*로 override.
   // PHD/APD 모드와 달리 preHousingDisclosure 없이 기준시가를 직접 입력하므로 usesPhd=false 필요.
   const isCarryoverGeneral =

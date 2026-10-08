@@ -12,7 +12,7 @@
  * 3. D1 후 기대값은 `it.todo`로 남긴다(§11.1 목록과 1:1).
  *
  * ⚠️ 수치는 `makeMockRates()` 실측값이지 정본 세액이 아니다. 같은 시드의 **상대 비교**가 본질이다.
- * ⚠️ 상태 시드(`setCause`·`toggleOn`)는 `CompanionAcquisitionCauseSection`(:92-110)·`NewConstructionLandAcqBlock`(:78-97)의
+ * ⚠️ 상태 시드(`setCause`·`toggleOn`)는 `CompanionAcquisitionCauseSection`(:92-110)·`LandPartCauseBlock`(토글 ON 패치)의
  *    onChange 패치를 **손으로 재현**한 것이다 — 그 패치가 바뀌면 이 시드도 같이 고친다.
  */
 import { describe, it, expect, vi } from "vitest";
@@ -41,6 +41,9 @@ import { validateSplitDirectInputs } from "@/lib/calc/transfer-tax-validate-spli
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
 import { effectiveLandAcquisitionCause, landPartCauseApplicable } from "@/lib/calc/transfer-land-part-cause";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
+import { phdPayloadActive } from "@/lib/calc/phd-toggle-scope";
+import { usesPhdGate } from "@/lib/calc/transfer-lump-sum-base-gate";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -63,6 +66,7 @@ function base(over: Partial<AssetForm> = {}): AssetForm {
     acquisitionDate: "2020-06-01",
     occupancyApprovalDate: "2020-06-01",
     landAcquisitionCause: "inheritance",
+    landCauseHost: "newConstruction", // 토글 ON이 함께 쓰는 호스트(D1-2)
     landAcquisitionDate: "2015-03-10",
     landDecedentAcquisitionDate: "1990-04-01",
     hasSeperateLandAcquisitionDate: true,
@@ -85,6 +89,8 @@ const setCause = (a: AssetForm, value: string): AssetForm => ({
   ...a,
   acquisitionCause: value as AssetForm["acquisitionCause"],
   ...(value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+  // D1-2 — 토글을 켠 호스트를 떠나면 태그를 비운다(원인 값은 보존)
+  ...(a.landCauseHost && a.landCauseHost !== value ? { landCauseHost: "" as const } : {}),
 });
 
 const form = (a: AssetForm): TransferFormData =>
@@ -398,13 +404,163 @@ describe("B′. D1-1 Check 후속 — 신축 호스트의 화면에 없는 플�
 // ─────────────────────────────────────────────────────────────────────────────
 // C. D1 후 기대값 (설계 §11.1과 1:1) — 구현 시 todo → 실제 테스트로 전환
 // ─────────────────────────────────────────────────────────────────────────────
-describe("C. D1 후 기대값 (todo)", () => {
-  it.todo("C1 호스트 태그: 매매 호스트에서 켠 상태(landCauseHost='purchase')는 유효 원인 = 저장값, 신축 호스트 태그는 매매에서 무효");
-  it.todo("C2 normalize: landCauseHost 부재 + 신축 + 원인 설정 → 'newConstruction'; 부재 + 매매 + 원인 설정 → '' (잔재 무효)");
-  it.todo("C3 splitBuildingAcqPriceInput의 fixedAcquisitionPrice 후퇴는 신축 호스트에서만 — 매매에서 건물가 비우면 ⑧ 건물 취득가액 요구");
-  it.todo("C4 ⑥ separateAcqPartsSum: 매매 + 원인 + 건물가 비움 → pending (S7: 현행 게이트 확대만 하면 700,000,000 확정으로 오표시)");
-  it.todo("C6 Q-5 ⑧: 매매 호스트 + 원인 유효 + selfOwns≠both → landAcquisitionCause 칸 이동(신축은 D1-1 B7) · ⑤ 두 토글 상호 잠금");
-  it.todo("C8 결합 제외(매매 호스트): 부담부증여 → ⑧ 차단(토글 칸). 용도변경·공익수용은 막지 않는다(계획서 §10.1 U-4). PHD는 C11(무시)");
-  it.todo("C9 ④ 3경로(단건·다건 buildPropertyPayload·컴패니언 buildAssetPayload) D1 조합 payload 동일 (게이트 확대 시뮬레이션 실측: lac/ldd/lad/lam=actual/bap=350,000,000/sep=true)");
-  it.todo("C11 PHD: 원인 유효이면 phdPayloadActive/usesPhdGate가 거짓 — ④ preHousingDisclosure 미전송 · ⑧ 11칸 미요구");
+describe("C. D1-2 매매 호스트 개방 (설계 §2·§3·§4·§6.3 · 계획서 §10)", () => {
+  /** 매매 호스트 토글 ON 상태: 건물 2018-03-02 매매 3.5억 + 토지 2015-03-10 상속(피상속인 1990-04-01) 평가 3억.
+   *  `fixedAcquisitionPrice` 4억은 별개 취득 중 숨겨진 총 취득가 잔재(S7 재료)로 남겨 둔다. */
+  const purchase = (over: Partial<AssetForm> = {}) =>
+    base({
+      acquisitionCause: "purchase",
+      occupancyApprovalDate: "",
+      acquisitionDate: "2018-03-02",
+      landCauseHost: "purchase",
+      buildingAcquisitionPrice: "350,000,000",
+      ...over,
+    });
+
+  it("C1 호스트 태그: 매매에서 켠 상태는 유효, 다른 호스트·태그 없음은 무효", () => {
+    expect(landPartCauseApplicable(purchase())).toBe(true);
+    expect(effectiveLandAcquisitionCause(purchase())).toBe("inheritance");
+    expect(effectiveLandAcquisitionCause(purchase({ landCauseHost: "newConstruction" }))).toBe("");
+    expect(effectiveLandAcquisitionCause(purchase({ landCauseHost: "" }))).toBe("");
+    expect(v8(purchase()).result).toBeNull();
+  });
+
+  it("C2 normalize: 태그 부재 구 세션 — 신축+원인 → newConstruction · 매매+원인 → \"\"(잔재 무효) · 있으면 유지", () => {
+    const raw = (o: Partial<AssetForm>) => {
+      const r = { ...base(o) } as Record<string, unknown>;
+      delete r.landCauseHost;
+      return r;
+    };
+    expect(migrateAsset(raw({})).landCauseHost).toBe("newConstruction");
+    expect(migrateAsset(raw({ acquisitionCause: "purchase" })).landCauseHost).toBe("");
+    expect(migrateAsset(raw({ landAcquisitionCause: "" })).landCauseHost).toBe("");
+    expect(migrateAsset({ ...purchase() }).landCauseHost).toBe("purchase");
+  });
+
+  it("C3·C4 S7 — 매매에서 건물 가액을 비우면 숨은 총 취득가로 후퇴하지 않는다: ④ 미전송 · ⑥ 미확정 · ⑧ 건물 취득가액 요구", () => {
+    const a = purchase({ buildingAcquisitionPrice: "" });
+    const sp = buildSplitPayload(a, { isBurdenedGift: false, usesPhd: false, ratioed }) as Record<string, unknown>;
+    expect(sp.buildingAcquisitionPrice).toBeUndefined();
+    expect(separateAcqPartsSum(a)).toEqual({ sum: 300_000_000, pending: true });
+    const r = v8(a);
+    expect(r.fieldOf(r.result!)).toBe("buildingAcquisitionPrice");
+    // 신축 호스트 후퇴는 유지(A1)
+    expect(separateAcqPartsSum(base()).sum).toBe(700_000_000);
+  });
+
+  it("C5 Q-4·G-12 ⑧(매매): 같은 날·토지일 비움 → 토지 취득일 칸 — 「취득가액 합 초과」 같은 엉뚱한 메시지보다 먼저", () => {
+    const same = v8(purchase({ landAcquisitionDate: "2018-03-02" }));
+    expect(same.result).toContain("취득일이 같으면");
+    expect(same.fieldOf(same.result!)).toBe("landAcquisitionDate");
+    // 총 취득가 칸이 비어 있어도(같은 날이면 별개 취득이 아니라 그 칸을 요구하는 규칙이 앞에 있다) 원인 규칙이 먼저다
+    const sameNoTotal = v8(purchase({ landAcquisitionDate: "2018-03-02", fixedAcquisitionPrice: "" }));
+    expect(sameNoTotal.fieldOf(sameNoTotal.result!)).toBe("landAcquisitionDate");
+    const empty = v8(purchase({ landAcquisitionDate: "" }));
+    expect(empty.result).toContain("토지 상속개시일(증여일)이 필요합니다");
+    expect(empty.fieldOf(empty.result!)).toBe("landAcquisitionDate");
+  });
+
+  it("C6 Q-5 ⑧(매매): 소유자 분리 + 토지 원인 → 토글 칸", () => {
+    const r = v8(purchase({ selfOwns: "building_only" }));
+    expect(r.fieldOf(r.result!)).toBe("landAcquisitionCause");
+  });
+
+  it("C7 Q-7 ⑧(매매): 1984 상속 토지 → 토지 취득일 칸 · ⑫ 400", async () => {
+    const a = purchase({ landAcquisitionDate: "1984-05-01", landDecedentAcquisitionDate: "1960-01-01" });
+    const r = v8(a);
+    expect(r.result).toContain("1990.8.30.");
+    expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    expect((await run(a)).status).toBe(400);
+  });
+
+  it("C8 R-X1(매매): 부담부증여 + 토지 원인 → 분리 검증이 토글 칸으로 차단(용도변경·공익수용은 막지 않음 — U-4)", () => {
+    const r = v8Split(purchase({ transferType: "burdened_gift" } as Partial<AssetForm>));
+    expect(r.result).toContain("부담부증여로 양도하는 자산에는 토지 취득원인을 따로 지정할 수 없습니다");
+    expect(r.fieldOf(r.result!)).toBe("landAcquisitionCause");
+  });
+
+  it("C9 ④ 3경로(단건·다건·컴패니언) 매매 D1 payload 동일 + route 200·분리 계산·원인 반영", async () => {
+    const a = purchase();
+    const r = await run(a);
+    const pick = (o: Record<string, unknown>) => ({
+      cause: o.landAcquisitionCause,
+      decedent: o.landDecedentAcquisitionDate,
+      landDate: o.landAcquisitionDate,
+      landMode: o.landAcqMode,
+      landPrice: o.landAcquisitionPrice,
+      buildingPrice: o.buildingAcquisitionPrice,
+    });
+    const single = pick(r.body);
+    expect(single).toEqual({
+      cause: "inheritance",
+      decedent: "1990-04-01",
+      landDate: "2015-03-10",
+      landMode: "actual",
+      landPrice: 300_000_000,
+      buildingPrice: 350_000_000,
+    });
+    expect(pick(buildPropertyPayload(form(a)) as Record<string, unknown>)).toEqual(single);
+    expect(pick(buildAssetPayload(a, "apportioned", TRANSFER_DATE) as Record<string, unknown>)).toEqual(single);
+    expect(r.status).toBe(200);
+    expect(r.split).toBeDefined();
+    // 원인이 세액에 닿는지: 토지 상속개시일 2025-02-01(보유 1년 5개월). 상속이면 피상속인 취득일(1990)부터 통산해
+    // 주택 단기세율을 벗어나고(§104②1호), 원인을 끄면(토지 매매) 단기세율 — 세액이 달라야 한다.
+    // (토지 2015 시드는 어느 쪽이든 2년 초과라 같은 값이 정답이다.)
+    const short = { landAcquisitionDate: "2025-02-01" } as Partial<AssetForm>;
+    const withCause = await run(purchase(short));
+    const plain = await run(purchase({ ...short, landAcquisitionCause: "", landCauseHost: "" }));
+    expect(withCause.status).toBe(200);
+    expect(plain.status).toBe(200);
+    expect(withCause.tax!).toBeLessThan(plain.tax!);
+  });
+
+  it("C12 Check F2 — 매매 ON → 상속 → 매매 후 「취득일 다름」만 켜면 토지 원인은 꺼져 있다(켠 적 없는 원인 부활 금지)", () => {
+    for (const via of ["inheritance", "newConstruction"]) {
+      const back = { ...setCause(setCause(purchase(), via), "purchase"), hasSeperateLandAcquisitionDate: true } as AssetForm;
+      expect(back.landAcquisitionCause).toBe("inheritance"); // 값은 보존
+      expect(effectiveLandAcquisitionCause(back)).toBe("");
+      expect(buildLandPartCausePayload(back)).toEqual({});
+    }
+  });
+
+  it("C13 Check F1-a — 오래된 매매 주택(PHD 자동 ON) + 토지 원인 + 토지일 비움 → ⑧이 토지 취득일 칸으로 막는다(건물 취득일 후퇴 금지)", () => {
+    const a = purchase({ acquisitionDate: "2001-05-01", usePreHousingDisclosure: true, landAcquisitionDate: "" } as Partial<AssetForm>);
+    const r = v8(a);
+    expect(r.result).toContain("토지 상속개시일(증여일)이 필요합니다");
+    expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    // ④도 건물 취득일로 후퇴시키지 않는다(같은 술어)
+    expect((buildSplitPayload(a, { isBurdenedGift: false, usesPhd: false, ratioed }) as Record<string, unknown>).landAcquisitionDate).toBeUndefined();
+    expect((buildPropertyPayload(form(a)) as Record<string, unknown>).landAcquisitionDate).toBeUndefined(); // 다건 ④
+  });
+
+  it("C14 Check F1-b — PHD 자동 ON + 토지 원인 + 레거시 환산: ④가 자산 단위 기준시가를 빼지 않는다(⑫ 400 막다른 길 방지)", async () => {
+    const a = purchase({
+      acquisitionDate: "2001-05-01",
+      usePreHousingDisclosure: true,
+      useEstimatedAcquisition: true,
+      buildingAcqMode: "estimated",
+      standardPriceAtAcq: "300,000,000",
+      standardPriceAtTransfer: "900,000,000",
+      buildingStandardPriceAtAcq: "100,000,000",
+    } as Partial<AssetForm>);
+    const r = await run(a);
+    expect(r.body.standardPriceAtTransfer).toBeDefined();
+    expect(Object.keys(r.err?.fieldErrors ?? {})).not.toContain("standardPriceAtTransfer");
+  });
+
+  it("C11 PHD(T-3, 매매): 자동 ON 플래그·3-시점 값이 있어도 원인 유효면 ④ 미전송 · ⑧ 11칸 미요구 · route 200", async () => {
+    const a = purchase({
+      usePreHousingDisclosure: true,
+      phdFirstDisclosureDate: "2005-04-30",
+      phdFirstDisclosureHousingPrice: "300,000,000",
+    } as Partial<AssetForm>);
+    expect(phdPayloadActive(a)).toBe(false);
+    expect(usesPhdGate(a, false)).toBe(false);
+    // 원인을 끄면 종전대로 PHD가 살아난다(긍정 짝)
+    expect(usesPhdGate({ ...a, landCauseHost: "" }, false)).toBe(true);
+    expect(v8(a).result).toBeNull();
+    const r = await run(a);
+    expect(r.body.preHousingDisclosure).toBeUndefined();
+    expect(r.status).toBe(200);
+  });
 });

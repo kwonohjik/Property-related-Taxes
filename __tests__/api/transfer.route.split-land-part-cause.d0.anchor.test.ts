@@ -205,6 +205,7 @@ describe("D0-Z ⑫ 스키마 단독", () => {
         acquisitionDate: "2020-06-01",
         fixedAcquisitionPrice: "400000000",
         landAcquisitionCause: "inheritance",
+        landCauseHost: "newConstruction", // 토글 ON이 함께 쓰는 호스트(D1-2)
         landAcquisitionDate: "2015-03-10",
         hasSeperateLandAcquisitionDate: true,
         landAcqMode: "actual",

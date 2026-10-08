@@ -28,6 +28,7 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
     acquisitionCause: "newConstruction",
     acquisitionDate: "2020-06-01",
     landAcquisitionCause: "inheritance",
+    landCauseHost: "newConstruction", // 토글 ON이 함께 쓰는 호스트(D1-2)
     landAcquisitionDate: "2015-03-10",
     landDecedentAcquisitionDate: "1990-04-01",
     hasSeperateLandAcquisitionDate: true,

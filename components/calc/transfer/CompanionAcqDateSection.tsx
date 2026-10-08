@@ -22,6 +22,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
+import { LAND_CAUSE_META } from "./land-cause-meta";
+import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -45,13 +47,21 @@ export function CompanionAcqDateSection(props: {
    * 호출부(`CompanionAcqPurchaseBlock`)가 축 B와 **같은 1회 계산**으로 내려준다(재파생 금지).
    */
   saleStdInSaleAxis: boolean;
+  /**
+   * 토지를 상속·증여로 취득한 매매 건물(D1-2) — 호출부가 1회 계산해 주입. 있으면 「취득일 다름」은 강제 ON·잠금,
+   * 토지 칸 라벨은 상속개시일·증여일, **의제취득 클램프·배지는 끈다** — 상속개시일·증여일은 사실값이라 저장값을
+   * 1985-01-01로 바꾸지 않는다(원값 저장·사용처 파생). 지금은 1990.8.30. 전이면 어느 쪽이든 차단되지만(영 §163⑨
+   * 단서 1호 — 후속 D1-4), 그 max 비교에서는 원 날짜가 의제취득일(영 §176의2④) 전인지가 산식을 가른다.
+   */
+  landCause?: "" | "inheritance" | "gift";
 }) {
   const { block: p, isSplitable, isSplit, isMixedUse, acqDateLabel } = props;
+  const landCause = props.landCause || undefined;
   const [dateClampMsg, setDateClampMsg] = useState(false);
   const [landDateClampMsg, setLandDateClampMsg] = useState(false);
 
   const isDeemedAcquisitionDate = !!(p.acquisitionDate && p.acquisitionDate <= MIN_ACQ_DATE);
-  const isLandDeemedAcquisitionDate = !!(p.landAcquisitionDate && p.landAcquisitionDate <= MIN_ACQ_DATE);
+  const isLandDeemedAcquisitionDate = !landCause && !!(p.landAcquisitionDate && p.landAcquisitionDate <= MIN_ACQ_DATE);
 
   function handleAcquisitionDateChange(v: string) {
     p.onAcquisitionDateChange(v);
@@ -68,6 +78,7 @@ export function CompanionAcqDateSection(props: {
     setLandDateClampMsg(false);
   }
   function handleLandAcquisitionDateBlur() {
+    if (landCause) return;
     if (p.landAcquisitionDate && p.landAcquisitionDate < MIN_ACQ_DATE) {
       p.onLandAcquisitionDateChange?.(MIN_ACQ_DATE);
       setLandDateClampMsg(true);
@@ -107,8 +118,12 @@ export function CompanionAcqDateSection(props: {
               // 끌 수 있게 두면 "위는 소유자 다름 ON, 아래는 취득일 다름 OFF"라는 모순 상태가
               // 되는데, `isSplitPayloadActive`는 `selfOwns !== "both"`로 여전히 참이라
               // 분리 계산은 계속 돈다 — 화면과 계산이 어긋난다(2026-07-30 두 토글 인접 배치).
-              disabled={(p.selfOwns ?? "both") !== "both"}
-              disabledReason="토지·건물 소유자가 다르면 각각 산정하므로 항상 분리됩니다"
+              disabled={(p.selfOwns ?? "both") !== "both" || !!landCause}
+              disabledReason={
+                landCause
+                  ? "토지를 다른 원인으로 취득한 자산은 토지·건물 취득일을 항상 따로 둡니다"
+                  : "토지·건물 소유자가 다르면 각각 산정하므로 항상 분리됩니다"
+              }
             />
           )}
         </div>
@@ -161,8 +176,9 @@ export function CompanionAcqDateSection(props: {
         {isSplit && (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" data-testid="acq-date-split-grid">
             <FieldCard
-              label="토지 취득일"
+              label={landCause ? `토지 ${LAND_CAUSE_META[landCause].dateLabel}` : "토지 취득일"}
               field="landAcquisitionDate"
+              required={!!landCause}
               trailing={isLandDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput
@@ -195,6 +211,12 @@ export function CompanionAcqDateSection(props: {
               )}
             </FieldCard>
           </div>
+        )}
+        {/* D1-2 — 같은 날(Q-4)·1990.8.30. 전(Q-7) 안내. ⑧과 같은 술어(차단은 ⑧·⑫). */}
+        {landCause && p.asset && landPartCauseDateNotice(p.asset) && (
+          <ToneCard tone="amber" noDark>
+            <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{landPartCauseDateNotice(p.asset)}</p>
+          </ToneCard>
         )}
         {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
         {isDeemedAcquisitionDate && p.hasSeperateLandAcquisitionDate && !isMixedUse && (

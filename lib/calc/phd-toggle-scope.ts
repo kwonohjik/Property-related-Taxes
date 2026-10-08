@@ -68,6 +68,24 @@ export function carryoverPhdMode(
 }
 
 /**
+ * 자산-수준 PHD 플래그가 **유효한가** — 원시 `usePreHousingDisclosure`를 읽는 곳(④ `usesPhd` 단건·다건, ⑧ 토지 취득일
+ * 후퇴, ⑤ 기준시가 안내)이 공유한다(D1-2 Check F1).
+ *
+ * 「토지는 다른 원인으로 취득」이 유효하면 PHD는 성립하지 않는다(상속·증여 토지는 환산 불가 — 엔진 PHD 경로는 양쪽 환산
+ * 전용). 플래그는 건물 취득일 < 2005-04-29 주택에서 매매 블록이 **자동으로 켜므로** 오래된 매매 주택에선 기본 상태다 —
+ * 원시값을 읽으면 ⑧이 빈 토지 취득일을 건물 취득일로 후퇴시켜 G-12를 건너뛰고(토지 원인 침묵 탈락), ④가 자산 단위
+ * 기준시가를 빼 ⑫ 400이 됐다.
+ */
+export function phdFlagEffective(
+  asset: Pick<
+    AssetForm,
+    "usePreHousingDisclosure" | "acquisitionCause" | "assetKind" | "isMixedUseHouse" | "landAcquisitionCause" | "hasSeperateLandAcquisitionDate"
+  > & { landCauseHost?: string },
+): boolean {
+  return asset.usePreHousingDisclosure === true && !effectiveLandAcquisitionCause(asset);
+}
+
+/**
  * ④가 `preHousingDisclosure` 페이로드를 **실어야 하는가** — 두 축의 합집합.
  *
  * ⚠️ `phdToggleReachable`은 **자산-수준 토글 축에만** 건다. 이월과세는 자기 패널·자기 ⑧
@@ -84,12 +102,10 @@ export function phdPayloadActive(
     | "carryover"
     | "isMixedUseHouse"
     | "landAcquisitionCause"
+    | "landCauseHost"
   >,
 ): boolean {
   if (carryoverPhdMode(asset)) return true;
-  // D1 T-3 — 「토지는 다른 원인으로 취득」이 유효하면 PHD는 성립하지 않는다(상속·증여 토지는 환산 불가 — 엔진 PHD
-  //    경로는 토지·건물 모두 환산일 때만). 플래그는 매매 블록의 자동 ON 잔재일 수 있고 그 호스트엔 끌 토글이 없다 —
-  //    차단(⑫ R-X2는 API 직접 호출 방어선)이 아니라 **무시**한다.
-  if (effectiveLandAcquisitionCause(asset)) return false;
-  return asset.usePreHousingDisclosure === true && phdToggleReachable(asset);
+  // D1 T-3 — 토지 원인 혼합이 유효하면 PHD를 **무시**한다(차단은 ⑫ R-X2 — API 직접 호출 방어선). `phdFlagEffective` 참조.
+  return phdFlagEffective(asset) && phdToggleReachable(asset);
 }

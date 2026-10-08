@@ -418,6 +418,7 @@ describe("D1-Z ⑫ 격자 40셀 (현행 = D1 후 동일)", () => {
       landAcquisitionDate: "2022-01-10",
       hasSeperateLandAcquisitionDate: true,
       landAcquisitionCause: (c ?? "") as AssetForm["landAcquisitionCause"],
+      landCauseHost: bc as AssetForm["landCauseHost"], // 토글을 켠 호스트 = 지금 건물 원인(D1-2)
       landDecedentAcquisitionDate: lc === "inh+dec" ? "2005-01-01" : "",
       landAcqMode: mode,
     } as AssetForm;
@@ -439,21 +440,8 @@ describe("D1-Z ⑫ 격자 40셀 (현행 = D1 후 동일)", () => {
     expect([pass, block]).toEqual([12, 28]);
   });
 
-  it("D1-Z2 ⑧ 현행: 건물 신축 셀만 ⑫와 같다 — 건물 매매 셀은 ⑧이 원인을 「없음」으로 읽어 항상 통과(D1 전환 대상: 14셀)", () => {
-    let mismatchPurchase = 0;
-    for (const lc of LCS)
-      for (const mode of MODES) {
-        // 신축: ⑧ ≡ ⑫
-        expect(eight(lc, "newConstruction", mode) === "block", `new/${lc}/${mode}`).toBe(twelve(lc, "newConstruction", mode).length > 0);
-        // 매매: ⑧ 항상 통과
-        expect(eight(lc, "purchase", mode), `purchase/${lc}/${mode}`).toBe("pass");
-        if (twelve(lc, "purchase", mode).length > 0) mismatchPurchase++;
-      }
-    expect(mismatchPurchase).toBe(14);
-  });
-
-  // 전환: ⑧ 노출 범위를 건물 매매로 넓히면 40셀 전부 ⑧ ≡ ⑫ (memory feedback_fe8_vs_12_parity_grid).
-  it.skip("D1-Z3 [D1 후] ⑧ ≡ ⑫ — 40셀 전수", () => {
+  // D1-Z2(종전: 건물 매매 셀은 ⑧이 원인을 「없음」으로 읽어 14셀이 ⑫와 어긋남)는 D1-2 매매 호스트 개방으로 Z3에 흡수.
+  it("D1-Z3 [D1-2] ⑧ ≡ ⑫ — 40셀 전수(건물 신축·매매 × 토지 원인 5 × 토지 모드 4)", () => {
     for (const lc of LCS)
       for (const bc of BCS)
         for (const mode of MODES)
