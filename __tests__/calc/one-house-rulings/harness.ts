@@ -21,6 +21,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import { validateAllSteps } from "@/lib/calc/one-house-exemption-validate";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import type { ContestedVerdict, OneHouseContestedIssue } from "@/lib/tax-engine/one-house/contested-issues";
 
 /** 평가 기준 — 원문 당시 법령(`era`) / 교재 현행 규칙(`current`). */
 export type RulingBasis = "era" | "current";
@@ -28,7 +29,8 @@ export type RulingBasis = "era" | "current";
 /**
  * P1 분류 — `match`만 회귀 단언 대상이다.
  * `dual`: 해석이 갈리고 교재도 현행 입장을 정하지 않은 쟁점 — 엔진이 한쪽으로 단언하면 안 되고
- *         양쪽 입장을 함께 보여 줘야 하는 케이스(관측만 한다).
+ *         양쪽 입장을 함께 보여 줘야 하는 케이스(관측만 한다). 양론 표시(P4)가 붙은 케이스는 `match`로 옮기고
+ *         `expected.contested`로 두 결론을 단언한다.
  */
 export type RulingBucket = "match" | "mismatch" | "inexpressible" | "undetermined" | "pending" | "dual";
 
@@ -48,6 +50,11 @@ export type RulingExpected = {
    * `false`면 보류가 **하나도 없어야** 한다(「비과세 + 보류」가 match로 보이는 것을 막는다).
    */
   undetermined?: string[] | false;
+  /**
+   * 해석이 갈리는 쟁점(P4 `contestedIssues`) 단언 — 배열이면 그 쟁점들이 있고 두 입장의 결론이 같아야 하며(부분집합),
+   * `false`면 쟁점이 **하나도 없어야** 한다.
+   */
+  contested?: { id: string; A: ContestedVerdict; B: ContestedVerdict }[] | false;
 };
 
 export type RulingCase = {
@@ -127,6 +134,8 @@ export type RulingObservation = {
   /** 주택 수에서 제외된 명부 행 id + 근거 */
   excludedHouses: { houseId?: string; legalBasis: string }[];
   rentalPassed?: boolean;
+  /** 해석이 갈리는 쟁점 — id와 두 입장의 결론 */
+  contested: { id: string; enginePosition: string; A: ContestedVerdict; B: ContestedVerdict }[];
   /**
    * 판정 메뉴 ⑧ 검증 **오류**(경고 제외) — UI라면 결과 단계로 못 가는 폼이다.
    * 비어 있지 않은 관측은 화면에서 재현할 수 없는 시료이므로 `match`로 고정하지 않는다.
@@ -171,6 +180,12 @@ export async function observeCase(
         (x: { houseId?: string; legalBasis: string }) => ({ houseId: x.houseId, legalBasis: x.legalBasis }),
       ),
       rentalPassed: json?.data?.rentalHousingException?.passed,
+      contested: ((json?.data?.contestedIssues ?? []) as OneHouseContestedIssue[]).map((c) => ({
+        id: c.id,
+        enginePosition: c.enginePosition,
+        A: c.positions[0].verdict,
+        B: c.positions[1].verdict,
+      })),
       validationErrors,
       ...(res.status !== 200 ? { error: JSON.stringify(json?.error ?? json).slice(0, 400) } : {}),
     };
@@ -189,6 +204,12 @@ export function matchesExpected(o: RulingObservation, e: RulingExpected): boolea
   if ((e.notAppliedExceptions ?? []).some((id) => o.appliedExceptions.includes(id))) return false;
   if (e.undetermined === false && o.undetermined.length > 0) return false;
   if (Array.isArray(e.undetermined) && !e.undetermined.every((id) => o.undetermined.includes(id)))
+    return false;
+  if (e.contested === false && o.contested.length > 0) return false;
+  if (
+    Array.isArray(e.contested) &&
+    !e.contested.every((x) => o.contested.some((c) => c.id === x.id && c.A === x.A && c.B === x.B))
+  )
     return false;
   const excluded = o.excludedHouses.map((x) => x.houseId);
   return (e.excludedHouses ?? []).every((id) => excluded.includes(id));

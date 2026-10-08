@@ -45,7 +45,7 @@ const base = {
 
 describe("M-1 leaf", () => {
   it("배우자 쪽 1채를 뺀다", () => {
-    expect(resolveRightSaleMarriageMerge(base)).toEqual({ status: "applies", excludedHouseIds: ["A"], years: 10 });
+    expect(resolveRightSaleMarriageMerge(base)).toEqual({ status: "applies", kind: "marriage", excludedHouseIds: ["A"], years: 10 });
     expect(oneRightOtherHouseCount(base)).toBe(1);
   });
   it("빼지 않는 경우", () => {

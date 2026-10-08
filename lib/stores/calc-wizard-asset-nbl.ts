@@ -126,6 +126,11 @@ export interface HouseEntry {
    * 부동산납세과-624 · 서면-2022-법규재산-4747 등). 동일세대=true 시에만 의미.
    */
   reInheritedFromSeparateHousehold?: boolean;
+  /**
+   * P4 양론 C1 — 상속받은 이 주택(또는 그 지분)을 동일세대원(배우자 등)에게 증여했다. 판정 메뉴 전용 입력 —
+   * 판정 결론은 바꾸지 않고, 「해석이 갈리는 쟁점」 카드에 반대 입장 결론을 띄운다. 상속주택=true 시에만 의미.
+   */
+  inheritedGiftedToHouseholdMember?: boolean;
   /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
   isRankingDisqualifiedInheritedHouse?: boolean;
 

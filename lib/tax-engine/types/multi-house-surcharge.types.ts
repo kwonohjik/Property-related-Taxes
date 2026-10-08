@@ -104,6 +104,13 @@ export interface HouseInfo {
    */
   reInheritedFromSeparateHousehold?: boolean;
   /**
+   * P4 양론 C1 — 상속받은 이 주택(또는 그 지분)을 **동일세대원**(배우자 등)에게 증여했다. 판정 메뉴 전용 입력.
+   * 엔진 판정은 이 값을 보지 않는다(상속주택 그대로 — 조심-2023-서-10059 쪽). 양론 표시
+   * (`one-house/contested-issues.ts`)만 읽어 반대 입장(서면-2015-부동산-1363 — 증여한 주택에는 §155② 부적용)으로
+   * 한 번 더 판정한다.
+   */
+  inheritedGiftedToHouseholdMember?: boolean;
+  /**
    * 피상속인이 상속개시 당시 2 이상 주택을 소유했고, 이 주택이 §155②1~4호 순위상 상속주택(1주택)이
    * 아닌지 — 순위 부적격. true = 특례 부적격(제외 안 함) / false·미제공 = 적격(또는 피상속인 단일주택).
    * ⚠️ 자기선언 boolean — 엔진은 피상속인 전체 포트폴리오(다른 상속인 상속분 포함)를 알 수 없음.

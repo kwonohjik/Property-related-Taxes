@@ -823,6 +823,12 @@ export interface TransferTaxInput {
   };
   /** 합가·혼인 세대 내 먼저 양도하는 주택 여부 (§155④⑤ "먼저 양도" 요건). 비과세 판정용. */
   isFirstTransferredInMerge?: boolean;
+  /**
+   * P4 양론 C6 — 판정 메뉴 route가 **반대 입장 재판정에서만** 켠다(본문·Zod에는 없다 — 사용자가 보낼 수 없다).
+   * 켜지면 동거봉양 합가(§155④) 후 입주권 양도에도 혼인합가와 같은 「합가 상대 쪽 1채 제외」를 적용한다
+   * (국심-2006-서-3136 쪽). 기본(꺼짐)은 조심-2021-서-1117 쪽 — 입주권에 §155④를 적용하지 않는다.
+   */
+  contestedRightSaleParentalCareMergeApply?: boolean;
   /** 양도(일반)주택이 상속개시일부터 소급 2년 내 피상속인 증여분 여부 (§155② 일반주택 제외 게이트). true면 §155② 단독상속주택 특례 미적용 — §155③ 공동상속주택에는 이 괄호가 없다(L-11). */
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
   /**

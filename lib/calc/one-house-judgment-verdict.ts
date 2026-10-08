@@ -22,10 +22,13 @@ type JudgmentLike = {
 };
 
 export type OneHouseVerdict = {
-  label: "비과세" | "부분 비과세" | "과세";
-  tone: "emerald" | "amber" | "rose";
+  label: "비과세" | "부분 비과세" | "과세" | "해석이 갈림";
+  tone: "emerald" | "amber" | "rose" | "violet";
   detail: string;
 };
+
+/** 해석이 갈리는 쟁점(P4 — `OneHouseExemptionResponse.contestedIssues`)에서 배지가 보는 것만. */
+type ContestedLike = { conclusionsDiffer?: boolean };
 
 /**
  * 판정 배지 — 세 갈래(전액 비과세 / 부분 비과세 / 과세).
@@ -45,7 +48,19 @@ export type OneHouseVerdict = {
 export function oneHouseVerdictOf(
   judgment: JudgmentLike,
   highValueThreshold?: number,
+  contestedIssues?: ContestedLike[],
 ): OneHouseVerdict {
+  /*
+   * P4 — 두 입장의 결론이 다르면 결론을 **단언하지 않는다**(사용자 결정 2026-10-06). 결론이 같으면 그 결론 그대로다.
+   * 이력 목록·불러오기 모달도 이 술어를 거치므로(`oneHouseVerdictFromResult`) 화면마다 라벨이 갈리지 않는다.
+   */
+  if (contestedIssues?.some((c) => c.conclusionsDiffer === true)) {
+    return {
+      label: "해석이 갈림",
+      tone: "violet",
+      detail: "해석이 갈리는 쟁점이 있어 입장에 따라 결론이 다릅니다. 아래 「해석이 갈리는 쟁점」에서 두 입장의 결론과 근거를 확인하세요.",
+    };
+  }
   if (judgment.isExempt) {
     return { label: "비과세", tone: "emerald", detail: "1세대1주택 비과세 요건을 충족합니다." };
   }
@@ -82,7 +97,8 @@ export function oneHouseVerdictFromResult(
 ): OneHouseVerdict | null {
   const judgment = resultData?.judgment as JudgmentLike | undefined;
   if (!judgment || typeof judgment !== "object") return null;
-  return oneHouseVerdictOf(judgment);
+  const contested = resultData?.contestedIssues;
+  return oneHouseVerdictOf(judgment, undefined, Array.isArray(contested) ? (contested as ContestedLike[]) : undefined);
 }
 
 /**
