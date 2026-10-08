@@ -159,25 +159,20 @@ export function isHouseCountExclusionReduction(
  *    세대 단위 선언이라 어느 주택인지 몰랐고, 명부에 없는 주택까지 빼 주었다(P3·P6).
  *    행에서 만든 선언은 취득일·주소 등을 행 값으로 채우고 `houseId`를 싣는다.
  *
- * 🔑 양도 대상이 **주택**일 때만 연다 — 두 조문은 「일반주택(종전주택)을 양도하는 경우」이고,
- *    조합원입주권 양도(§89①4호)에는 주택 수 제외 축이 없다. 입주권으로 바꾼 뒤 남은 선언은
- *    ④가 보내지 않고 ⑧도 요구하지 않는다(값은 지우지 않는다 — 주택으로 되돌리면 복귀).
+ * 🔄 **입주권 양도에도 연다**(2026-10-08 사용자 결정 「해석례대로 전 기간 제외」 — 사전-2018-법령해석재산-0143). 조특법이
+ *    소유주택으로 보지 않는 주택은 §89①4호 가·나목의 「다른 주택」에서도 뺀다(route `oneRightInputAfterSpecialActExclusion`).
+ *    종전(계획서 §7-1 V-3)은 효과 문언 「「소득세법」 제89조제1항제3호를 적용할 때」를 들어 4호에 닿지 않는다고 봤다.
  */
 export function judgmentHouseCountExclusionReductions(
   form: OneHouseJudgmentFormData,
 ): RowCountExclusionReduction[] {
-  if (!judgmentSaleIsHousing(form)) return [];
   return rowCountExclusionReductions(form.houses);
 }
 
-/**
- * 보유 감면주택(§98 등) 선언 — 명부 행에서. 게이트는 위와 같다: 감면 조문의 효과 문언이 모두
- * 「「소득세법」 제89조제1항제3호를 적용할 때」라 입주권 양도(§89①4호)에는 닿지 않는다(계획서 §7-1 V-3).
- */
+/** 보유 감면주택(§98 등) 선언 — 명부 행에서. 게이트는 위와 같다(입주권 양도에도 연다 — G049·G050·G065). */
 export function judgmentSpecialHouseExclusions(
   form: OneHouseJudgmentFormData,
 ): SpecialHouseExclusionFormItem[] {
-  if (!judgmentSaleIsHousing(form)) return [];
   return rowSpecialHouseExclusions(form.houses);
 }
 
@@ -190,7 +185,6 @@ export function judgmentSpecialHouseExclusions(
  *    유일한 해소 경로 — 입력 칸 없는 영구 차단을 만들지 않는다).
  */
 export function judgmentLegacyCountExclusionCount(form: OneHouseJudgmentFormData): number {
-  if (!judgmentSaleIsHousing(form)) return 0;
   const reductions = (form.assets?.[0]?.reductions ?? []).filter(isHouseCountExclusionReduction);
   const specials = (form.specialHouseExclusions ?? []).filter((e) => e.article);
   return reductions.length + specials.length;

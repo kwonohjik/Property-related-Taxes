@@ -279,11 +279,11 @@ describe("OH-28 조특법 §99의4·§98의9 주택 수 제외 — 판정 메뉴
     expect((body.reductions as { type: string }[]).map((r) => r.type)).toEqual(["new_99_4_rural"]);
   });
 
-  it("[C2-28e] 3중 패턴 — 양도 대상이 조합원입주권이면 ⑤가 칸을 숨기므로 ④도 보내지 않고 ⑧도 요구하지 않는다", () => {
+  it("[C2-28e] 3중 패턴 — 양도 대상이 조합원입주권이어도 ⑤가 칸을 띄우므로 ④도 보내고 ⑧도 요구한다(2026-10-08)", () => {
     const blank = { ...RURAL_994, ruralHouseStdPrice: "" } as AssetReductionForm;
     const f = jForm({ houses: [rowWith(blank)] }, { assetKind: "right_to_move_in" } as Partial<AssetForm>);
-    expect(buildOneHouseExemptionApiBody(f).reductions).toEqual([]);
-    expect(errs2(f).filter((m) => m.includes("§99의4"))).toEqual([]);
+    expect(buildOneHouseExemptionApiBody(f).reductions?.map((r) => r.type)).toEqual(["new_99_4_rural"]);
+    expect(errs2(f).filter((m) => m.includes("§99의4")).length).toBe(1);
   });
 
   it("[C2-28f] ⑧ — §99의4 기준시가 · §98의9 전용면적 필수 (취득일·가액·면적은 행 값에서 온다)", () => {

@@ -56,7 +56,6 @@ import { RentalUnitsMarriageOriginSection } from "./RentalUnitsMarriageOriginSec
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
 import {
   deriveJudgmentHouseCount,
-  judgmentSaleIsHousing,
   withDerivedHouseCount,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
@@ -136,7 +135,7 @@ export function Step2({ form, onChange }: Props) {
 
   // 조특법 주택 수 제외 — 요건을 갖춘 행만(엔진 평가기 그대로 · Q-3(b)). 머리말의 주택 수 안내용.
   const countExcludedIds = useMemo(
-    () => (judgmentSaleIsHousing(form) ? eligibleCountExcludedHouseIds(form) : new Set<string>()),
+    () => eligibleCountExcludedHouseIds(form),
     [form],
   );
 
@@ -174,14 +173,14 @@ export function Step2({ form, onChange }: Props) {
         mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
         /*
           조특법 주택 수 제외(§99의4·§98의9·보유 감면주택)는 **명부 행**에서 받는다(행 편집 ⑥ · 「특례」 배지).
-          게이트는 ④·⑧과 같다: 양도 대상이 주택일 때만(`judgmentSaleIsHousing`).
+          입주권 양도에도 연다 — §89①4호 다른 주택 수에서도 뺀다(2026-10-08 · 사전-2018-법령해석재산-0143).
           계획서 `docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`.
         */
-        countExclusionEnabled={judgmentSaleIsHousing(form)}
+        countExclusionEnabled
       />
 
       {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
-      {judgmentSaleIsHousing(form) && <LegacyCountExclusionNotice form={form} onChange={onChange} />}
+      <LegacyCountExclusionNotice form={form} onChange={onChange} />
 
       {judgmentTemporaryTwoHouseVisible(form) && (
         <TemporaryTwoHouseSection
