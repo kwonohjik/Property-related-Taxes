@@ -20,6 +20,7 @@
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
+import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import {
@@ -428,6 +429,12 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
 
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
+  }
+
+  // §154⑤ 단서 용도변경 — 계산기와 같은 leaf. 칸은 주택 양도에만 있다(⑤·④와 같은 `judgmentSaleIsHousing`).
+  if (primary && judgmentSaleIsHousing(form)) {
+    const conversionError = validateUsageConversion(primary, "양도 대상 주택", form.transferDate);
+    if (conversionError) errors.push(err("residentialUseStartDate", conversionError));
   }
 
   /**

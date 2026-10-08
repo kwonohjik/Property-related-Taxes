@@ -13,6 +13,7 @@ import {
   judgmentSaleIsHousing,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { provisoGate, type ProvisoMode } from "./transfer-tax-api-helpers";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset";
 import { temporaryTwoHouseApplies } from "./household-house-count";
 import { replacementHouseApplies } from "./replacement-house-scope";
@@ -194,4 +195,15 @@ export function judgmentLegacyCountExclusionCount(form: OneHouseJudgmentFormData
   const reductions = (form.assets?.[0]?.reductions ?? []).filter(isHouseCountExclusionReduction);
   const specials = (form.specialHouseExclusions ?? []).filter((e) => e.article);
   return reductions.length + specials.length;
+}
+
+/**
+ * §154⑤ 단서 비주택 → 주택 용도변경의 주거용 사용 개시일 — ⑤(Step3 자동 판정 기준일)·④(본문)의 공용 게이트.
+ * 양도 대상이 주택이고 계산기와 같은 술어(`isUsageConversionActive`)가 켜졌을 때만.
+ */
+export function judgmentUsageConversionStart(form: OneHouseJudgmentFormData): string | undefined {
+  const primary = form.assets?.[0];
+  return primary && judgmentSaleIsHousing(form) && isUsageConversionActive(primary)
+    ? primary.residentialUseStartDate
+    : undefined;
 }
