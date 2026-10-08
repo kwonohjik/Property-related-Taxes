@@ -43,6 +43,7 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { VariantBodyProps } from "./types";
 import { RtmsSimilarSalesModal } from "./RtmsSimilarSalesModal";
 import { BurdenedGiftTransferSection } from "./BurdenedGiftTransferSection";
+import { giftBurdenedDistrictResetPatch } from "@/lib/calc/gift-burdened-one-house";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ============================================================
@@ -199,7 +200,8 @@ export function EstateBodyRealEstate({
               }
             }
 
-            set(buildAddressPatch(v, { fishing, sigunguCode }));
+            // 부담부 양도 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다(#2055 후속).
+            set({ ...buildAddressPatch(v, { fishing, sigunguCode }), ...giftBurdenedDistrictResetPatch(item, v.pnu) });
           }}
         />
       </FieldCard>

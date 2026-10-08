@@ -69,19 +69,42 @@ export function giftBurdenedRegulatedByAddress(
   regionCode: string | undefined,
   acquisitionDate: Date | string | undefined,
   giftDate: string | undefined,
+  /** 지정 지구 안인가(`bgt.regionInDesignatedDistrict`) — 엔진과 같은 `inDistrict`. 미선언 = 지정 */
+  inDistrict?: boolean,
 ): { atAcquisition?: boolean; atGift?: boolean } {
   if (!regionCode) return {};
   const acq = toOptionalDate(ymd(acquisitionDate));
   const gift = toOptionalDate(giftDate);
   return {
-    // 코드가 있으면 이 함수는 regionCode·취득일(용도변경 없음)만 읽는다 — 나머지 필드는 판정에 쓰이지 않는다.
+    // 코드가 있으면 이 함수는 regionCode·지구 선언·취득일(용도변경 없음)만 읽는다 — 나머지 필드는 판정에 쓰이지 않는다.
     ...(acq
-      ? { atAcquisition: resolveWasRegulatedAtAcquisition({ regionCode, acquisitionDate: acq } as ResidenceReqInput) }
+      ? {
+          atAcquisition: resolveWasRegulatedAtAcquisition({
+            regionCode,
+            regionInDesignatedDistrict: inDistrict,
+            acquisitionDate: acq,
+          } as ResidenceReqInput),
+        }
       : {}),
     ...(gift
-      ? { atGift: isRegulatedByBjdCode(regionCode, ymd(gift)).isRegulated }
+      ? { atGift: isRegulatedByBjdCode(regionCode, ymd(gift), inDistrict).isRegulated }
       : {}),
   };
+}
+
+/**
+ * 증여 재산 소재지 변경 → 「지정 지구 안인가」 답 초기화 patch (#2055 후속). 답은 그 소재지에 붙는다 — 법정동이
+ * 바뀌면 지운다(양도세 계산기 `AssetSectionBasic`과 같은 규칙). 부담부 양도 입력이 없거나 답이 없으면 빈 patch.
+ */
+export function giftBurdenedDistrictResetPatch(
+  item: Pick<EstateItem, "estateAddress" | "burdenedGiftTransferTax">,
+  nextPnu: string | undefined,
+): Partial<EstateItem> {
+  const bgt = item.burdenedGiftTransferTax;
+  if (!bgt || bgt.regionInDesignatedDistrict === undefined) return {};
+  const next = nextPnu && nextPnu.length >= 10 ? nextPnu.slice(0, 10) : undefined;
+  if (next === giftBurdenedRegionCode(item)) return {};
+  return { burdenedGiftTransferTax: { ...bgt, regionInDesignatedDistrict: undefined } };
 }
 
 /**
@@ -99,12 +122,12 @@ export function giftBurdenedRegulatedByAddress(
  * 이 값은 엔진의 중과(§104⑦ — 양도 주택 명부가 없는 경로의 폴백)·단기세율·§155①2호 폴백 판정에 쓰인다.
  */
 export function giftBurdenedEffectiveIsRegulatedArea(
-  bgt: Pick<BurdenedGiftTransferTaxInput, "isRegulatedArea">,
+  bgt: Pick<BurdenedGiftTransferTaxInput, "isRegulatedArea" | "regionInDesignatedDistrict">,
   regionCode: string | undefined,
   giftDate: string | undefined,
 ): boolean {
   if (bgt.isRegulatedArea !== undefined) return bgt.isRegulatedArea === true;
-  return giftBurdenedRegulatedByAddress(regionCode, undefined, giftDate).atGift ?? false;
+  return giftBurdenedRegulatedByAddress(regionCode, undefined, giftDate, bgt.regionInDesignatedDistrict).atGift ?? false;
 }
 
 /**

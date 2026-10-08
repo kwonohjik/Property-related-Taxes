@@ -316,6 +316,8 @@ export function buildGiftBurdenedTransferBody(
       ...toTemporaryTwoHouseEraFacts(
         bgt.temporaryTwoHouse,
         bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
+        // 지정 지구 안인가(#2055 후속) — leaf가 코드와 함께만 싣는다
+        bgt.temporaryTwoHouse.newHouseInDesignatedDistrict,
       ),
       // §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 계산기·판정 메뉴와 같은 leaf, ⑤와 같은 게이트.
       //   신규 주택 시·군 코드는 신규 주택 소재지(E-1 잔여 B)에서 파생한다.
@@ -336,6 +338,10 @@ export function buildGiftBurdenedTransferBody(
     //   취득시 조정(거주요건)·§155①2호 종전 주택 조정 여부를 선언 대신 코드로 판정한다.
     const regionCode = giftBurdenedRegionCode(item);
     if (regionCode) body.regionCode = regionCode;
+    // 지정 지구 안인가(#2055 후속) — 코드에 붙은 선언이다(계산기 ④와 같은 규약: 코드가 있을 때만).
+    if (regionCode && bgt.regionInDesignatedDistrict !== undefined) {
+      body.regionInDesignatedDistrict = bgt.regionInDesignatedDistrict;
+    }
     // 「양도시 조정대상지역」 — 안 만진 토글은 주소 판정(계산기 `useRegulatedAreaAutoTip`과 같은 규칙 · ⑤⑧과 같은 leaf).
     //   중과(§104⑦ 폴백)·단기세율이 이 값을 쓴다(E-1 잔여 A).
     body.isRegulatedArea = giftBurdenedEffectiveIsRegulatedArea(bgt, regionCode, form.giftDate);
