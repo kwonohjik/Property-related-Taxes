@@ -49,7 +49,7 @@ describe("§154① 단서 — 보유·거주 요건 면제", () => {
         isRegulatedArea: false,
         isOneHousehold: true,
         householdHousingCount: 1,
-        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: new Date("2024-01-01") },
+        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: new Date("2024-01-01"), departureOnlyHouse: true },
       }),
       mockRates,
     );
@@ -68,7 +68,7 @@ describe("§154① 단서 — 보유·거주 요건 면제", () => {
         isRegulatedArea: false,
         isOneHousehold: true,
         householdHousingCount: 1,
-        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: new Date("2022-01-01") },
+        oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: new Date("2022-01-01"), departureOnlyHouse: true },
       }),
       mockRates,
     );
@@ -209,7 +209,7 @@ describe("§154① 단서 — 보유·거주 요건 면제", () => {
         isRegulatedArea: false,
         isOneHousehold: true,
         householdHousingCount: 1,
-        oneHouseExemptionProviso: { reason: "overseas_residence", departureDate: new Date("2024-01-01") },
+        oneHouseExemptionProviso: { reason: "overseas_residence", departureDate: new Date("2024-01-01"), departureOnlyHouse: true },
       }),
       mockRates,
     );

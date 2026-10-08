@@ -402,6 +402,7 @@ export async function POST(request: NextRequest) {
         ? {
             reason: p.oneHouseExemptionProviso.reason,
             departureDate: toOptionalDate(p.oneHouseExemptionProviso.departureDate),
+            departureOnlyHouse: p.oneHouseExemptionProviso.departureOnlyHouse,
             expropriationDate: toOptionalDate(p.oneHouseExemptionProviso.expropriationDate),
             businessApprovalDate: toOptionalDate(p.oneHouseExemptionProviso.businessApprovalDate),
             rentalRegistration4ho: toEngineRental4ho(p.oneHouseExemptionProviso.rentalRegistration4ho),

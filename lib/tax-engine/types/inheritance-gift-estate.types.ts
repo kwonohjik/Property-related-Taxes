@@ -1229,6 +1229,8 @@ export interface BurdenedGiftTransferTaxInput {
     | "pre_designation_contract"
     | "rental_registration_4ho";
   provisoDepartureDate?: string;
+  /** 나·다목 「출국일 현재 1주택」("yes"/"no") — 양도세 폼 `provisoDepartureOnlyHouse`와 같은 의미 */
+  provisoDepartureOnlyHouse?: "" | "yes" | "no";
   provisoExpropriationDate?: string;
   provisoBusinessApprovalDate?: string;
   provisoRentalLeaseResidenceMonths?: string;

@@ -295,6 +295,11 @@ export interface TransferFormData {
     | "pre_designation_contract"
     | "rental_registration_4ho";
   provisoDepartureDate: string;
+  /**
+   * 나·다목 「출국일 현재 1주택」 — 출국일 현재 세대가 이 주택 1채만 보유했는가("yes"/"no", "" = 미입력).
+   * 장기임대주택 등 특례 주택도 센다(사전-2019-법령해석재산-0188). 2008.2.22. 이후 양도분은 답해야 한다(⑧).
+   */
+  provisoDepartureOnlyHouse: "" | "yes" | "no";
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   /** §154①1호 — 임차일부터 양도일까지 세대전원 거주 개월(취득 전 임차 포함). 빈 값이면 본문 거주기간으로 판정 */

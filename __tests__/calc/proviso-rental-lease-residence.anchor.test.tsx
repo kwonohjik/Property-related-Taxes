@@ -107,6 +107,7 @@ describe("L-4 ⑤", () => {
     provisoBusinessApprovalDate: "",
     provisoRentalLeaseResidenceMonths: "",
     provisoPreContractNoHouse: false,
+    provisoDepartureOnlyHouse: "" as const,
     mode: "one_house" as const,
     onChange: () => {},
   };

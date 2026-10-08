@@ -52,7 +52,7 @@ describe("N-1 주택 양도", () => {
     expect(applyNonResidentVerdict(exempt, house("2010-01-01"), false).isExempt).toBe(false);
   });
   it("나·다목 단서 성립이면 유지 · 거주자면 유지 · 2010.1.1. 전은 판정 보류", () => {
-    const proviso = { oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2017-06-01") } };
+    const proviso = { oneHouseExemptionProviso: { reason: "overseas_migration", departureDate: D("2017-06-01"), departureOnlyHouse: true } };
     expect(applyNonResidentVerdict(exempt, house("2018-06-19", proviso), false).isExempt).toBe(true);
     expect(applyNonResidentVerdict(exempt, house("2018-06-19", { transferorNonResidentAtTransfer: false }), false).isExempt).toBe(true);
     const pre = applyNonResidentVerdict(exempt, house("2009-12-31"), false);

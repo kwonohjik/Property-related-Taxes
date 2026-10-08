@@ -562,6 +562,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <ExemptionProvisoSection
                 provisoReason={form.provisoReason}
                 provisoDepartureDate={form.provisoDepartureDate}
+                provisoDepartureOnlyHouse={form.provisoDepartureOnlyHouse}
                 provisoExpropriationDate={form.provisoExpropriationDate}
                 provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
                 provisoRentalLeaseResidenceMonths={form.provisoRentalLeaseResidenceMonths}

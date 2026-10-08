@@ -199,6 +199,8 @@ export const propertyBaseShape = {
         "rental_registration_4ho",
       ]),
       departureDate: z.string().date().optional(),
+      // ⑫ 나·다목 「출국일 현재 1주택」 선언 — ⑭ `engine-input.ts`·다건 route
+      departureOnlyHouse: z.boolean().optional(),
       expropriationDate: z.string().date().optional(),
       businessApprovalDate: z.string().date().optional(),
       // ⑫ 1호 임차일부터 세대전원 거주 개월(취득 전 임차 포함) — ⑭ `engine-input.ts`

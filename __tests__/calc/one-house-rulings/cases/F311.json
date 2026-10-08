@@ -15,7 +15,8 @@
     "acquisitionDate": "2009-03-16"
    },
    "provisoReason": "overseas_residence",
-   "provisoDepartureDate": "2010-01-29"
+   "provisoDepartureDate": "2010-01-29",
+   "provisoDepartureOnlyHouse": "yes"
   },
   "expected": {
    "isExempt": false,

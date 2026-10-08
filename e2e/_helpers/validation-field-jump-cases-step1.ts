@@ -154,7 +154,8 @@ const INHERIT_CASES: FieldJumpCase[] = [
 ];
 
 const PROVISO_CASES: FieldJumpCase[] = [
-  { name: "step1: 단서 출국일", field: "provisoDepartureDate", step: 1, message: /^§154① 단서\(해외이주·국외거주\): 출국일/, form: proviso({ provisoReason: "overseas_migration", provisoDepartureDate: "" }) },
+  { name: "step1: 단서 출국일", field: "provisoDepartureDate", step: 1, message: /^§154① 단서\(해외이주·국외거주\): 출국일을 입력/, form: proviso({ provisoReason: "overseas_migration", provisoDepartureDate: "" }) },
+  { name: "step1: 단서 출국일 현재 1주택", field: "provisoDepartureOnlyHouse", step: 1, message: /^§154① 단서\(해외이주·국외거주\): 출국일 현재 이 주택 1채만/, form: proviso({ provisoReason: "overseas_migration", provisoDepartureDate: "2024-01-15", provisoDepartureOnlyHouse: "" }) },
   { name: "step1: 단서 수용일", field: "provisoExpropriationDate", step: 1, message: /^§154① 단서\(공익사업 수용\): 수용일/, form: proviso({ provisoReason: "expropriation", provisoExpropriationDate: "" }) },
   { name: "step1: 단서 계약금 지급일 무주택", field: "provisoPreContractNoHouse", step: 1, message: /^§154① 단서\(조정 공고 전 계약\)/, form: proviso({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: false }) },
   { name: "step1: 4호 사업자등록 신청일", field: "proviso4hoBusinessRegDate", step: 1, message: reEsc("사업자등록 신청일을 입력하세요"), form: rental4ho({ proviso4hoBusinessRegDate: "" }) },

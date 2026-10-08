@@ -224,6 +224,8 @@ export function validateStep(step: number, form: FormState): string | null {
         const provisoError = collectExemptionProvisoErrors({
           reason: effectiveProvisoReason(giftBurdenedProvisoMode(bgt), oneHouse.provisoReason),
           departureDate: oneHouse.provisoDepartureDate,
+          departureOnlyHouse: oneHouse.provisoDepartureOnlyHouse,
+          transferDate: oneHouse.transferDate,
           expropriationDate: oneHouse.provisoExpropriationDate,
           rentalLeaseResidenceMonths: oneHouse.provisoRentalLeaseResidenceMonths,
           preContractNoHouse: oneHouse.provisoPreContractNoHouse,

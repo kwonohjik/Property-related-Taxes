@@ -400,6 +400,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   for (const message of collectExemptionProvisoErrors({
     reason: provisoReason,
     departureDate: form.provisoDepartureDate,
+    departureOnlyHouse: form.provisoDepartureOnlyHouse,
+    transferDate: form.transferDate,
     expropriationDate: form.provisoExpropriationDate,
     rentalLeaseResidenceMonths: form.provisoRentalLeaseResidenceMonths,
     preContractNoHouse: form.provisoPreContractNoHouse,

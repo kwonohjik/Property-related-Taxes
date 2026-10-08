@@ -277,6 +277,7 @@ export function buildTransferEngineInput(
       ? {
           reason: data.oneHouseExemptionProviso.reason,
           departureDate: toOptionalDate(data.oneHouseExemptionProviso.departureDate),
+          departureOnlyHouse: data.oneHouseExemptionProviso.departureOnlyHouse,
           expropriationDate: toOptionalDate(data.oneHouseExemptionProviso.expropriationDate),
           businessApprovalDate: toOptionalDate(data.oneHouseExemptionProviso.businessApprovalDate),
           rentalLeaseResidenceMonths: data.oneHouseExemptionProviso.rentalLeaseResidenceMonths,

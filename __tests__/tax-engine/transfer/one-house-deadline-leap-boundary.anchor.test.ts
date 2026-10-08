@@ -249,7 +249,7 @@ describe("§154① 단서 — 수용일부터 5년 · 출국일부터 2년 이�
   it("2호나목 출국일 2022-02-28 — 만료일 ✓ · 다음날 ✗", () => {
     const p = {
       reason: "overseas_migration",
-      departureDate: D("2022-02-28"),
+      departureDate: D("2022-02-28"), departureOnlyHouse: true,
     } as NonNullable<TransferTaxInput["oneHouseExemptionProviso"]>;
     expect(proviso(LAST, p)).toBe("both");
     expect(proviso(OVER, p)).toBeNull();

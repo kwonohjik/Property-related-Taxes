@@ -150,6 +150,7 @@ describe("P4-2b-1 — §154① 단서는 파생 주택 수로 게이트된다", 
   const OVERSEAS = {
     provisoReason: "overseas_migration" as const,
     provisoDepartureDate: "2023-06-01",
+    provisoDepartureOnlyHouse: "yes" as const,
     // 거주요건이 **실제로 걸리는** 시료 — 아니면 단서가 사라져도 결과가 같다(구별력 0).
     wasRegulatedAtAcquisition: true,
     residencePeriodMonths: "0",
@@ -160,6 +161,7 @@ describe("P4-2b-1 — §154① 단서는 파생 주택 수로 게이트된다", 
     expect(body.oneHouseExemptionProviso).toEqual({
       reason: "overseas_migration",
       departureDate: "2023-06-01",
+      departureOnlyHouse: true,
     });
   });
 

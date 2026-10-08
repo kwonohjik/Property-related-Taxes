@@ -140,6 +140,7 @@ const defaultFormData: TransferFormData = {
   parentalCareMergeDate: "",
   provisoReason: "",
   provisoDepartureDate: "",
+  provisoDepartureOnlyHouse: "",
   provisoExpropriationDate: "",
   provisoBusinessApprovalDate: "",
   provisoRentalLeaseResidenceMonths: "",

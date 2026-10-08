@@ -512,6 +512,12 @@ export interface TransferTaxInput {
     rentalRegistration4ho?: Rental4hoRegistrationFacts;
     /** 나·다목 출국일 (2년 기산). 라우트에서 toDate 변환 */
     departureDate?: Date;
+    /**
+     * 나·다목 단서 「출국일 현재 1주택을 보유하고 있는 경우로서」 — 출국일 현재 세대가 **이 주택 1채만** 보유했는가
+     * (사용자 선언, 장기임대주택 등 특례 주택도 센다 — 사전-2019-법령해석재산-0188). 2008.2.22. 이후 양도분에만 읽는다.
+     * `true`가 아니면(아니오·미입력) 단서 불성립 — 모름=불리.
+     */
+    departureOnlyHouse?: boolean;
     /** 가목 수용일 (5년 기산; 미제공 시 transferDate). toDate */
     expropriationDate?: Date;
     /** 가목 사업인정 고시일 (acquisitionDate < 고시일 전제). toDate */

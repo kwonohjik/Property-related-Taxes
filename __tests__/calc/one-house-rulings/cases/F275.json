@@ -40,7 +40,8 @@
     "acquisitionDate": "2025-03-17"
    },
    "provisoReason": "overseas_residence",
-   "provisoDepartureDate": "2024-11-15"
+   "provisoDepartureDate": "2024-11-15",
+   "provisoDepartureOnlyHouse": "no"
   },
   "expected": {
    "isExempt": false,

@@ -319,6 +319,7 @@ function TempTwoHouseOtherSpecials({
           <ExemptionProvisoSection
             provisoReason={form.provisoReason}
             provisoDepartureDate={form.provisoDepartureDate}
+            provisoDepartureOnlyHouse={form.provisoDepartureOnlyHouse}
             provisoExpropriationDate={form.provisoExpropriationDate}
             provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
             provisoRentalLeaseResidenceMonths={form.provisoRentalLeaseResidenceMonths}

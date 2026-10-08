@@ -363,6 +363,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
         <ExemptionProvisoSection
           provisoReason={oneHouse.provisoReason}
           provisoDepartureDate={oneHouse.provisoDepartureDate}
+          provisoDepartureOnlyHouse={oneHouse.provisoDepartureOnlyHouse}
           provisoExpropriationDate={oneHouse.provisoExpropriationDate}
           provisoBusinessApprovalDate={oneHouse.provisoBusinessApprovalDate}
           provisoRentalLeaseResidenceMonths={oneHouse.provisoRentalLeaseResidenceMonths}

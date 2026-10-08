@@ -45,6 +45,7 @@ import { giftBurdenedInheritanceSlice } from "@/lib/calc/gift-burdened-one-house
 const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
   provisoReason: undefined,
   provisoDepartureDate: undefined,
+  provisoDepartureOnlyHouse: undefined,
   provisoExpropriationDate: undefined,
   provisoBusinessApprovalDate: undefined,
   provisoPreContractNoHouse: undefined,

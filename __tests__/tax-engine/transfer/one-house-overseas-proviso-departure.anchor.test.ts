@@ -21,7 +21,7 @@ const judge = (acq: string, departure: string, transfer: string, reason: "overse
   resolveExemptionProviso({
     acquisitionDate: D(acq),
     transferDate: D(transfer),
-    oneHouseExemptionProviso: { reason, departureDate: D(departure) },
+    oneHouseExemptionProviso: { reason, departureDate: D(departure), departureOnlyHouse: true },
   } as Parameters<typeof resolveExemptionProviso>[0]);
 
 describe("O-1 출국 후 양도", () => {

@@ -38,6 +38,8 @@ type ReasonOrNone = "none" | ProvisoReason;
 interface Props {
   provisoReason: "" | ProvisoReason;
   provisoDepartureDate: string;
+  /** 나·다목 「출국일 현재 1주택」("yes"/"no"/"") — 장기임대주택 등 특례 주택도 센다 */
+  provisoDepartureOnlyHouse: "" | "yes" | "no";
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   /** 1호 — 임차일부터 양도일까지 세대전원 거주 개월(취득 전 임차 포함) */
@@ -55,6 +57,7 @@ interface Props {
       {
         provisoReason: "" | ProvisoReason;
         provisoDepartureDate: string;
+        provisoDepartureOnlyHouse: "" | "yes" | "no";
         provisoExpropriationDate: string;
         provisoBusinessApprovalDate: string;
         provisoRentalLeaseResidenceMonths: string;
@@ -114,6 +117,7 @@ const OPTIONS: RadioCardOption<ReasonOrNone>[] = [
 export function ExemptionProvisoSection({
   provisoReason,
   provisoDepartureDate,
+  provisoDepartureOnlyHouse,
   provisoExpropriationDate,
   provisoBusinessApprovalDate,
   provisoRentalLeaseResidenceMonths,
@@ -194,6 +198,32 @@ export function ExemptionProvisoSection({
           <DateInput
             value={provisoDepartureDate}
             onChange={(v) => onChange({ provisoDepartureDate: v })}
+          />
+        </FieldCard>
+      )}
+
+      {/*
+        나·다목 단서 「출국일 현재 1주택을 보유하고 있는 경우로서」(2008.2.22. 이후 양도분 — 대통령령 제20618호).
+        장기임대주택(§155⑳)도 센다 — 사전-2019-법령해석재산-0188(거주주택 + 장기임대주택 세대는 다목 부적용).
+        「아니오」면 엔진이 단서를 적용하지 않는다. 미입력은 ⑧이 막는다(2008.2.22. 이후 양도).
+      */}
+      {isOverseas && (
+        <FieldCard
+          field="provisoDepartureOnlyHouse"
+          label="출국일 현재 이 주택 1채만 보유했나요?"
+          required
+          hint="출국일 현재 세대가 보유한 주택을 셉니다. 장기임대주택 등 특례 주택도 포함합니다. 아니면 이 단서를 적용하지 않습니다."
+        >
+          <RadioCardGroup
+            name="proviso-departure-only-house"
+            layout="inline"
+            tone="sky"
+            value={provisoDepartureOnlyHouse}
+            onChange={(v) => onChange({ provisoDepartureOnlyHouse: v as "yes" | "no" })}
+            options={[
+              { value: "yes", label: "예 (1채만)", testId: "proviso-departure-only-house-yes" },
+              { value: "no", label: "아니오 (2채 이상)", testId: "proviso-departure-only-house-no" },
+            ]}
           />
         </FieldCard>
       )}
