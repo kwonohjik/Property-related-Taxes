@@ -40,6 +40,20 @@ export function effectiveLandAcquisitionCause(
   return asset.landAcquisitionCause ?? "";
 }
 
+/**
+ * Q-4(계획서 §6 · D1 §10.2 T-4) — 토지 취득일(상속개시일·증여일)이 건물 취득일과 **같은 날**이면 원인 혼합을 받지 않는다.
+ * 같은 날이면 주택 세율 기산 `max(법정 기산일, 건물 취득일)`이 통산을 무효로 만들고 `isSeparateAcquisition`도
+ * false가 되어 파트 완결 규칙이 꺼진다 — 엔진은 틀리지 않으므로 ⑫는 막지 않고 ⑤ 안내·⑧ 차단만 둔다.
+ */
+export const LAND_CAUSE_SAME_DAY_MESSAGE =
+  "토지와 건물의 취득일이 같으면 토지 취득원인을 따로 지정할 수 없습니다 — 토지 상속개시일(증여일)을 확인하세요";
+
+export function landPartCauseSameDay(
+  asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & { landAcquisitionDate?: string; acquisitionDate?: string },
+): boolean {
+  return !!effectiveLandAcquisitionCause(asset) && !!asset.landAcquisitionDate && asset.landAcquisitionDate === asset.acquisitionDate;
+}
+
 /** 콤마 제거 후 정수 파싱 (CurrencyInput 저장 규약). */
 function raw(v: string | undefined): number {
   const n = parseInt((v ?? "").replace(/,/g, ""), 10);
