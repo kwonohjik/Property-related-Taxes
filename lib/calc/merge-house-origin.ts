@@ -11,25 +11,30 @@ import { classifyMergeHouse, type MergeHouseSide } from "@/lib/tax-engine/one-ho
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 /**
- * `secondMergeDate` — D4 **혼인 후 동거봉양 합가**(혼인일 ≤ 동거봉양 합가일)일 때 동거봉양 합가일. 그때 소유 쪽에
- * 「동거봉양으로 합친 가족 쪽」(`second_merge_side`)이 더해지고, 합가 후 취득의 기준일은 이 날이다
- * (엔진 `resolveDoubleMergeComposition`과 같은 규약).
+ * `secondMergeDate` — D4 **혼인·동거봉양 이중 합가**일 때 나중에 합친 날. `kind`·`mergeDate`는 먼저 합친 쪽이다.
+ * 그때 소유 쪽에 「나중에 합친 쪽」(`second_merge_side` — 혼인이 먼저면 동거봉양으로 합친 가족, 동거봉양이 먼저면
+ * 혼인한 배우자)이 더해지고, 합가 후 취득의 기준일은 이 날이다(엔진 `doubleMergeOrderOf` ·
+ * `resolveDoubleMergeComposition`과 같은 규약 — 같은 날이면 혼인을 먼저 본다).
  */
 export type MergeContext = { kind: "marriage" | "parental_care"; mergeDate: string; secondMergeDate?: string };
 
 /**
- * 폼의 합가 사실 — 혼인·동거봉양이 둘 다 있으면 혼인을 본다(엔진 `matchMergeApartFromWindow`와 같은 순서).
- * 합가일이 없으면 `undefined` — 명부에 소유 쪽 칸을 띄울 이유가 없다.
+ * 폼의 합가 사실 — 혼인·동거봉양이 둘 다 있으면 먼저 합친 쪽을 `kind`로, 나중 날을 `secondMergeDate`로 둔다
+ * (D4 이중 합가 — 같은 날이면 혼인이 먼저). 합가일이 없으면 `undefined` — 명부에 소유 쪽 칸을 띄울 이유가 없다.
  */
 export function mergeContextOf(form: {
   marriageDate?: string;
   parentalCareMergeDate?: string;
 }): MergeContext | undefined {
-  if (form.marriageDate) {
-    const double = !!form.parentalCareMergeDate && form.marriageDate <= form.parentalCareMergeDate;
-    return { kind: "marriage", mergeDate: form.marriageDate, ...(double ? { secondMergeDate: form.parentalCareMergeDate } : {}) };
+  const m = form.marriageDate;
+  const p = form.parentalCareMergeDate;
+  if (m && p) {
+    return m <= p
+      ? { kind: "marriage", mergeDate: m, secondMergeDate: p }
+      : { kind: "parental_care", mergeDate: p, secondMergeDate: m };
   }
-  if (form.parentalCareMergeDate) return { kind: "parental_care", mergeDate: form.parentalCareMergeDate };
+  if (m) return { kind: "marriage", mergeDate: m };
+  if (p) return { kind: "parental_care", mergeDate: p };
   return undefined;
 }
 
@@ -53,6 +58,7 @@ export function mergeHouseSideOf(
 export function mergeSideLabel(side: MergeHouseSide, kind: MergeContext["kind"]): string {
   if (side === "after_merge") return kind === "marriage" ? "혼인 후 취득" : "합가 후 취득";
   if (side === "seller_side") return "양도자 쪽";
-  if (side === "second_merge_side") return "동거봉양으로 합친 가족 쪽";
+  // 나중에 합친 쪽 — 혼인이 먼저면 동거봉양으로 합친 가족, 동거봉양이 먼저면 혼인한 배우자(이중 합가에서만 쓴다).
+  if (side === "second_merge_side") return kind === "marriage" ? "동거봉양으로 합친 가족 쪽" : "혼인한 배우자 쪽";
   return kind === "marriage" ? "배우자 쪽" : "합친 가족 쪽";
 }

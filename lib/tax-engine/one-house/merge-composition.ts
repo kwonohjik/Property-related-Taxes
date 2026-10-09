@@ -309,35 +309,35 @@ function judgeMarriageRentals(
 }
 
 /**
- * D4 — **혼인 후 동거봉양 합가**로 3주택이 된 세대의 합가 전 보유 구성 (서면인터넷방문상담4팀-598).
+ * D4 — **혼인·동거봉양 이중 합가**로 3주택이 된 세대의 합가 전 보유 구성 (서면인터넷방문상담4팀-598 · 역순은 대칭).
  *
- * 성립 구성: 양도 주택(양도자 쪽 · 혼인 전 보유) 외에 **배우자 쪽 1**(`counterpart_side` · 혼인일 이전 취득)과
- * **동거봉양으로 합친 가족 쪽 1**(`second_merge_side` · 동거봉양 합가일 이전 취득). 동거봉양 합가일 이후 취득 행이
- * 있거나 쪽이 이와 다르면 불성립이다. 소유 쪽이 비면 불성립 + 확인 필요(단일 합가와 같은 규약).
+ * 성립 구성: 양도 주택(양도자 쪽 · 먼저 합친 날 전 보유) 외에 **먼저 합친 쪽 1**(`counterpart_side` · 먼저 합친 날
+ * 이전 취득 — 혼인이 먼저면 배우자, 동거봉양이 먼저면 합친 가족)과 **나중에 합친 쪽 1**(`second_merge_side`). 나중에
+ * 합친 날 이후 취득 행이 있거나 쪽이 이와 다르면 불성립이다. 소유 쪽이 비면 불성립 + 확인 필요(단일 합가와 같은 규약).
  */
 export function resolveDoubleMergeComposition(
-  input: Omit<MergeCompositionInput, "mergeDate"> & { marriageDate: Date; parentalCareMergeDate: Date },
+  input: Omit<MergeCompositionInput, "mergeDate"> & { firstMergeDate: Date; secondMergeDate: Date },
 ): MergeComposition {
   if (input.householdHousingCount !== 3) return { status: "unknown", reason: "count_mismatch" };
-  const roster = mergeRosterOthers({ ...input, mergeDate: input.parentalCareMergeDate });
+  const roster = mergeRosterOthers({ ...input, mergeDate: input.secondMergeDate });
   if ("status" in roster) return roster;
   const { others } = roster;
   const afterMergeDates = others
-    .filter((h) => h.acquisitionDate.getTime() > input.parentalCareMergeDate.getTime())
+    .filter((h) => h.acquisitionDate.getTime() > input.secondMergeDate.getTime())
     .map((h) => h.acquisitionDate);
-  const spouse = others.filter(
-    (h) => h.mergeOrigin === "counterpart_side" && h.acquisitionDate.getTime() <= input.marriageDate.getTime(),
+  const firstSide = others.filter(
+    (h) => h.mergeOrigin === "counterpart_side" && h.acquisitionDate.getTime() <= input.firstMergeDate.getTime(),
   ).length;
-  const family = others.filter((h) => h.mergeOrigin === "second_merge_side").length;
+  const secondSide = others.filter((h) => h.mergeOrigin === "second_merge_side").length;
   const fail = (reason: MergeCompositionFailure): MergeComposition => ({
     status: "fails",
     reason,
     afterMergeDates,
     sellerSide: 1 + others.filter((h) => h.mergeOrigin === "seller_side").length,
-    counterpartSide: spouse + family,
+    counterpartSide: firstSide + secondSide,
   });
   if (afterMergeDates.length > 0) return fail("acquired_after_merge");
   if (others.some((h) => h.mergeOrigin === undefined)) return failWithoutFacts("origin_missing");
-  if (spouse === 1 && family === 1) return { status: "holds" };
-  return fail(spouse + family === 0 ? "seller_side_only" : "composition_mismatch");
+  if (firstSide === 1 && secondSide === 1) return { status: "holds" };
+  return fail(firstSide + secondSide === 0 ? "seller_side_only" : "composition_mismatch");
 }

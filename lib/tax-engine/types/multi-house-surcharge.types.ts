@@ -32,7 +32,7 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
 /** 세대 구성원이 보유한 주택 1채 정보 */
 /** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
 /**
- * 합가 전 보유 쪽. `second_merge_side` — **혼인 후 동거봉양 합가**(D4)에서 동거봉양으로 합친 가족(직계존속) 쪽.
+ * 합가 전 보유 쪽. `second_merge_side` — **혼인·동거봉양 이중 합가**(D4)에서 나중에 합친 쪽(혼인이 먼저면 동거봉양으로 합친 가족, 동거봉양이 먼저면 혼인한 배우자).
  * 그때 `counterpart_side`는 배우자 쪽이다. 단일 합가에서는 쓰지 않는다(구성 판정이 불성립으로 센다).
  */
 export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
@@ -530,10 +530,10 @@ export type DeemedOneHouseBasis =
   /** F-1 — §155①+④ 중첩(3주택) — `resolveMergeOverlapDeeming` */
   | "parental_care_merge_overlap"
   /**
-   * D4 — 혼인 합가 후 동거봉양 합가로 3주택(서면인터넷방문상담4팀-598) — `resolveMarriageThenParentalCareDeeming`.
+   * D4 — 혼인·동거봉양 이중 합가로 3주택(서면인터넷방문상담4팀-598 · 역순은 대칭) — `resolveDoubleMergeDeeming`.
    * 영 §167의3①13호 「제155조 … 에 따라 … 1세대 1주택으로 보아 제154조제1항이 적용되는 주택」(사용자 결정 2026-10-09).
    */
-  | "marriage_then_parental_care"
+  | "double_merge"
   /** E-14 — §155②③ 상속주택 + 일반주택 → 일반주택 1주택 의제 — `resolveSurchargeDeemedOneHouse` */
   | "inherited_general_house"
   /** E-14c — §155⑳ 장기임대주택 + 거주주택 → 거주주택 1주택 의제(시나리오 A) — `resolveSurchargeDeemedOneHouse` */
